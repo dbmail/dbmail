@@ -60,6 +60,14 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
 		{
 			trace (TRACE_DEBUG,"pipe_forward(): call to popen() successfull"
 					" opened descriptor %d", fileno(sendmail_pipe));
+			
+			/* first send header if this is a direct pipe through */
+			if (databasemessageid == 0)
+			{
+				/* yes this is a direct pipe-through */
+				fprintf (sendmail_pipe,"%s",header);
+				trace (TRACE_DEBUG,"pipe_forward(): wrote header to pipe");  
+			}
 
 			/* add descriptor to pipe to a descriptors list */
 			if (list_nodeadd(&descriptors, &sendmail_pipe, sizeof(FILE *))==NULL)
@@ -110,14 +118,6 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
 		else
 		
 		{
-			/* first send header 
-			 * this is not nescesairy when sending from the database
-			 * since the database already has the header */
-
-			trace (TRACE_DEBUG,"printing header : [%s]", header);
-			fprintf (sendmail_pipe,"%s",header);
-			trace (TRACE_DEBUG,"pipe_forward(): wrote header to pipe");  
-
 			while (!feof (instream))
 			{
 				/* read in a datablock */
@@ -135,14 +135,11 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
 			
 				if (usedmem>0)
 				{
-					if (usedmem<READ_BLOCK_SIZE)
-						trace (TRACE_DEBUG, "block [%s]",strblock);
-					
 					totalmem = totalmem + usedmem;
 	
 					trace (TRACE_DEBUG,"pipe_forward(): Sending block"
 						"size=%d total=%d (%d\%)", usedmem, totalmem,
-							(100-((usedmem/totalmem)*100))); 
+							(((usedmem/totalmem)*100))); 
 					
 					descriptor_temp = list_getstart(&descriptors);
 					while (descriptor_temp != NULL)
