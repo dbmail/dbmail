@@ -165,7 +165,7 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt, int *def
 			
 	trace (TRACE_DEBUG,"handle_client(): setting timeout timer at %d seconds",server_timeout);	
 	/* setting time for timeout counter */
-	alarm (server_timeout); 
+	/* alarm (server_timeout); */
 
 	/* scanning for commands */
 	while ((done>0) && (buffer=fgets(buffer,INCOMING_BUFFER_SIZE,rx)))
@@ -174,9 +174,9 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt, int *def
 			done = -1;  /* check of client eof  */
 		else 
 		{
-			alarm (server_timeout); 
+			/* alarm (server_timeout);  */
 			done = pop3(tx,buffer); 
-			alarm (server_timeout); 
+			/* alarm (server_timeout);  */
 		}
 	fflush (tx);
 	}
