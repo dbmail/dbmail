@@ -1,35 +1,17 @@
-#!/usr/bin/env python
-
-# Copyright (C) 2004 Paul J Stevens paul at nfg dot nl
-#
-# This program is free software; you can redistribute it and/or 
-# modify it under the terms of the GNU General Public License 
-# as published by the Free Software Foundation; either 
-# version 2 of the License, or (at your option) any later 
-# version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+#!/usr/bin/python2.2
 
 import unittest, imaplib, re
 import traceback
 
 unimplementedError = 'Dbmail testcase unimplemented'
 
-# name of mail host and port of pop3 daemon
-SERVER = ('test01', 10143)
+IMAPSERVER = ('localhost', 10143)
 
 class testDbmailImap(unittest.TestCase):
 
     def setUp(self):
         #self.o.debug = 4
-        self.o = imaplib.IMAP4(SERVER[0], SERVER[1])
+        self.o = imaplib.IMAP4(IMAPSERVER[0], IMAPSERVER[1])
         self.assertEquals(self.o.login('testuser1','test'),('OK',['LOGIN completed']))
 
     def testAppend(self):
@@ -261,12 +243,11 @@ class testDbmailImap(unittest.TestCase):
         self.o.create('testaclbox')
         self.o.setacl('testaclbox','testuser2','slrw')
 
-        p = imaplib.IMAP4(SERVER[0], SERVER[1])
+        p = imaplib.IMAP4(IMAPSERVER[0], IMAPSERVER[1])
         p.login('testuser2','test'),('OK',['LOGIN completed'])
         p.debug = 4
         try:
-            #print p.list()
-            pass
+            print p.list()
         except:
             traceback.print_exc()
 
