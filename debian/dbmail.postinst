@@ -1,0 +1,119 @@
+#!/bin/sh -e
+
+CONFIG=/etc/dbmail/dbmail.conf
+CONFIG_EX=/usr/share/doc/dbmail/examples/dbmail.conf
+
+DEBIAN_CONFIG=/etc/default/dbmail
+DEBIAN_CONFIG_EX=/usr/share/doc/dbmail/examples/default.dbmail
+
+test $DEBIAN_SCRIPT_DEBUG && set -v -x
+
+# summary of how this script can be called:
+#        * <postinst> `configure' <most-recently-configured-version>
+#        * <old-postinst> `abort-upgrade' <new version>
+#        * <conflictor's-postinst> `abort-remove' `in-favour' <package>
+#          <new-version>
+#        * <deconfigured's-postinst> `abort-deconfigure' `in-favour'
+#          <failed-install-package> <version> `removing'
+#          <conflicting-package> <version>
+# for details, see /usr/doc/packaging-manual/
+#
+# quoting from the policy:
+#     Any necessary prompting should almost always be confined to the
+#     post-installation script, and should be protected with a conditional
+#     so that unnecessary prompting doesn't happen if a package's
+#     installation fails and the `postinst' is called with `abort-upgrade',
+#     `abort-remove' or `abort-deconfigure'.
+
+
+case "$1" in
+    install)
+    ;;
+    upgrade)
+    ;;
+    configure)
+
+	. /usr/share/debconf/confmodule
+	db_get dbmail/do_debconf || true; DO_DEBCONF=$RET
+	
+	if [ "$DO_DEBCONF" = "true" ]; then
+		# fetch debconf values
+		db_get dbmail/dbmail/host || true; DB_HOST=$RET
+		db_get dbmail/dbmail/db || true; DB_DATABASE=$RET
+		db_get dbmail/dbmail/user || true; DB_USER=$RET
+		db_get dbmail/dbmail/pass || true; DB_PASS=$RET
+		
+		db_get dbmail/smtp/DBMAIL_FROM_ADDRESS || true; DBMAIL_FROM_ADDRESS=$RET
+		db_get dbmail/smtp/POSTMASTER || true; POSTMASTER=$RET
+	
+		db_get dbmail/start_imapd || true; START_IMAPD=$RET
+		db_get dbmail/start_pop3d || true; START_POP3D=$RET
+	
+		db_get dbmail/start_ssl || true; START_SSL=$RET
+		db_get dbmail/pem_file || true; PEM_FILE=$RET
+	
+	fi
+	
+	# protect the config-file
+	oldmask=`umask`
+	umask 066
+	ucf --debconf-ok $CONFIG_EX $CONFIG
+	ucf --debconf-ok $DEBIAN_CONFIG_EX $DEBIAN_CONFIG
+		
+	if [ "$DO_DEBCONF" = "true" ]; then
+		# edit the configs
+		perl -pi -e "s/^host=.*\$/host=$DB_HOST/" $CONFIG
+		perl -pi -e "s/^user=.*\$/user=$DB_USER/" $CONFIG
+		perl -pi -e "s/^pass=.*\$/pass=$DB_PASS/" $CONFIG
+		perl -pi -e "s/^db=.*\$/db=$DB_DATABASE/" $CONFIG
+
+                sed "s/^DBMAIL_FROM_ADDRESS=.*\$/DBMAIL_FROM_ADDRESS=$DBMAIL_FROM_ADDRESS/" < $CONFIG > \
+                        $CONFIG.tmp && mv $CONFIG.tmp $CONFIG
+                sed "s/^POSTMASTER=.*\$/POSTMASTER=$POSTMASTER/" < $CONFIG > \
+                        $CONFIG.tmp && mv $CONFIG.tmp $CONFIG
+		
+		perl -pi -e 's/^EFFECTIVE_USER=\S+/EFFECTIVE_USER=dbmail/g' $CONFIG
+		perl -pi -e 's/^EFFECTIVE_GROUP=\S+/EFFECTIVE_GROUP=dbmail/g' $CONFIG
+		
+		umask $oldmask
+	
+		if [ "$START_IMAPD" = "true" ]; then
+			perl -pi -e 's/^.*START_IMAPD=.*/START_IMAPD=true/' $DEBIAN_CONFIG
+		else
+			perl -pi -e 's/^.*START_IMAPD=.*/#START_IMAPD=true/' $DEBIAN_CONFIG
+		fi
+		if [ "$START_POP3D" = "true" ]; then
+			perl -pi -e 's/^.*START_POP3D=.*/START_POP3D=true/' $DEBIAN_CONFIG
+		else
+			perl -pi -e 's/^.*START_POP3D=.*/#START_POP3D=true/' $DEBIAN_CONFIG
+		fi
+		if [ "$START_SSL" = "true" ]; then
+			perl -pi -e 's/^.*START_SSL=.*/START_SSL=true/' $DEBIAN_CONFIG
+			perl -pi -e "s/^.*PEM_FILE=.*\$/PEM_FILE=$PEM_FILE/" $DEBIAN_CONFIG
+		else
+			perl -pi -e 's/^.*START_SSL=.*/#START_SSL=true/' $DEBIAN_CONFIG
+			perl -pi -e "s/^.*PEM_FILE=/#PEM_FILE=/" $DEBIAN_CONFIG
+		fi
+	fi
+	
+	db_stop
+	chown dbmail:dbmail $DEBIAN_CONFIG $CONFIG /usr/sbin/dbmail-smtp
+	chmod 0600 $CONFIG
+	chmod 4755 /usr/sbin/dbmail-smtp
+	
+    ;;
+    abort-upgrade)
+    ;;
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 0
+    ;;
+esac
+
+if [ "$1" = "configure" ]; then
+	ldconfig
+fi	
+
+#DEBHELPER#
+
+exit 0

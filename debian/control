@@ -1,0 +1,32 @@
+Source: dbmail
+Section: mail
+Priority: optional
+Maintainer: Paul J Stevens <paul@nfg.nl>
+Build-Depends: automake, debhelper (>= 4.1.16), dpatch, libglib2.0-dev, postgresql-dev, libmysqlclient-dev | libmysqlclient10-dev, pkg-config, libtool
+Standards-Version: 3.6.1
+
+Package: dbmail-pgsql
+Architecture: any
+Depends: ${shlibs:Depends}, debconf (>= 1.0.32), ucf (>= 0.30)
+Provides: imap-server, pop3-server
+Conflicts: imap-server, pop3-server
+Replaces: imap-server, pop3-server
+Suggests: stunnel, exim4 | mail-transport-agent
+Description: Fast and scalable sql based imap and pop mailserver
+ DBMAIL is a collection of programs that enables email to be
+ stored in and retrieved from a sql database.
+ .  
+ This is the Postgresql build.
+
+Package: dbmail-mysql
+Architecture: any
+Depends: ${shlibs:Depends}, debconf (>= 1.0.32), ucf (>= 0.30)
+Provides: imap-server, pop3-server
+Conflicts: imap-server, pop3-server
+Replaces: imap-server, pop3-server
+Suggests: stunnel, exim4 | mail-transport-agent
+Description: Fast and scalable sql based imap and pop mailserver
+ DBMAIL is a collection of programs that enables email to be
+ stored in and retrieved from a sql database.
+ .
+ This is the MySQL build.

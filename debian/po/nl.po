@@ -1,0 +1,231 @@
+#
+#    Translators, if you are not familiar with the PO format, gettext
+#    documentation is worth reading, especially sections dedicated to
+#    this format, e.g. by running:
+#         info -n '(gettext)PO Files'
+#         info -n '(gettext)Header Entry'
+#
+#    Some information specific to po-debconf are available at
+#            /usr/share/doc/po-debconf/README-trans
+#         or http://www.debian.org/intl/l10n/po-debconf/README-trans
+#
+#    Developers do not need to manually edit POT or PO files.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: dbmail 1.2.5-1\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2003-11-03 14:15+0100\n"
+"PO-Revision-Date: 2004-06-09 16:58+0100\n"
+"Last-Translator: Luk Claes <luk.claes@ugent.be>\n"
+"Language-Team: Debian l10n Dutch <debian-l10n-dutch@lists.debian.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=iso-8859-15\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:3
+msgid "Use debconf to manage dbmail configuration?"
+msgstr "Wilt u debconf gebruiken om dbmail te configureren?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:3
+msgid ""
+"Please confirm if you want to allow debconf to manage some parts of your "
+"dbmail configuration. Notice that changes you make to dbmail.conf by hand "
+"will NOT be overwritten should you later choose to re-run dpkg-reconfigure "
+"dbmail."
+msgstr ""
+"U kunt met debconf delen van de dbmail-configuratie beheren. Indien u later "
+"handmatig de configuratie in dbmail.conf wijzigt, zullen uw wijzigingen NIET "
+"worden bij het opnieuw uitvoeren van dpkg-reconfigure."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:11
+msgid "The email address where bounces come from."
+msgstr "Het e-mailadres van waar bounces afkomstig zijn."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:11
+msgid ""
+"Here you must specify the address dbmail will use when sending bounce "
+"messages."
+msgstr ""
+"Hier dient u het afzenderadres op te geven dat dbmail zal gebruiken om "
+"bounce-berichten te verzenden."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:11
+msgid "Example: MAILER-DAEMON@yourdomain.tld"
+msgstr "Voorbeeld: MAILER-DAEMON@uwdomein.be"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:19
+msgid "Postmaster's email address."
+msgstr "Het e-mailadres van de postbeheerder."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:19
+msgid ""
+"This should be a valid email address read by the person responsible for this "
+"email server."
+msgstr ""
+"Hier dient u een geldig e-mailadres op te geven dat gelezen wordt door de "
+"persoon die verantwoordelijk is voor deze e-mailserver."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:19
+msgid "Example: postmaster@yourdomain.tld"
+msgstr "Voorbeeld: postmaster@uwdomein.be"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:27
+msgid "Please enter the hostname of the (my/pg)sql database server."
+msgstr "Geef de computernaam van de (my/pg)sql-databankserver."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:27
+msgid ""
+"On this server you must create a database to hold dbmail's tables. You "
+"should grant full read/write permissions on this database to the dbmail user."
+msgstr ""
+"Op deze server dient u een databank aan te maken welke de dbmail-tabellen "
+"zal bevatten. U dient volledige lees- en schrijfrechten toe te kennen aan de "
+"dbmail-gebruiker."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:34
+msgid "Please enter the name of the database to use."
+msgstr "Wat is de naam van de databank?"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:34
+msgid "This is the name of the database that holds the dbmail tables."
+msgstr "Dit is de naam van de databank welke de dbmail-tabellen bevat."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:39
+msgid "Please enter the name of the database user you want to use."
+msgstr "Geef de naam van de databankgebruiker die u wilt gebruiken."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:39
+msgid "This is the username dbmail will use to connect to the database server."
+msgstr ""
+"Dit is de gebruikersnaam die dbmail zal gebruiken om met de databankserver "
+"te verbinden."
+
+#. Type: password
+#. Description
+#: ../dbmail.templates:44
+msgid "Please enter the password for the database connection"
+msgstr "Geef het wachtwoord voor de databank."
+
+#. Type: password
+#. Description
+#: ../dbmail.templates:44
+msgid "This is the password dbmail will use to connect to the database server."
+msgstr ""
+"Dit is het wachtwoord dat dbmail zal gebruiken om met de databankserver te "
+"verbinden"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:49
+msgid "Start the IMAP server after reboot?"
+msgstr "De IMAP-server starten na het heropstarten van de computer?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:49
+msgid "Do you want to start the IMAP service after a reboot?"
+msgstr "Wilt u de IMAP-server starten na een heropstarten van de computer?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:57
+msgid "Start the POP3 server after reboot?"
+msgstr "De POP3-server starten na het heropstarten van de computer?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:57
+msgid ""
+"Dbmail supports both IMAP and POP3 services. You can choose to run either "
+"one or both services."
+msgstr ""
+"Dbmail ondersteunt zowel IMAP- als POP3-diensten. U kunt er voor kiezen één "
+"of beide op te starten."
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:57
+msgid "Do you want to start the POP3 service after a reboot?"
+msgstr "Wilt u de POP3-dienst starten na een heropstarten van de computer?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:65
+msgid "Do you wish to run the stunnel SSL wrapper from the init script?"
+msgstr "Wilt u de stunnel-SSL-wrapper uitvoeren vanuit het init-script?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:65
+msgid ""
+"The stunnel SSL wrapper allows you to provide secure IMAP and POP services "
+"even though dbmail doesn't support neither IMAPS nor POP3S (yet)."
+msgstr ""
+"De stunnel-SSL-wrapper laat u toe beveiligde IMAP- en POP-diensten aan te "
+"bieden, ookal ondersteunt dbmail (nog) geen IMAPS of POP3S."
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:65
+msgid ""
+"Make sure you have installed stunnel which is provided by a separate package "
+"if you want to use this feature."
+msgstr ""
+"U dient er zelf voor te zorgen dat stunnel, uit een apart pakket, is "
+"geïnstalleerd, indien u hiervan gebruik wilt maken."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:74
+msgid "Please enter the filename for the SSL pem file."
+msgstr "De bestandsnaam van het SSL-pem-bestand."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:74
+msgid ""
+"To be able to run the stunnel SSL wrapper you need to generate a pem file "
+"that should reside in /etc/ssl/certs/. Specify the filename here without  "
+"the directory name."
+msgstr ""
+"Om de stunnel-SSL-wrapper te kunnen gebruiken moet er een z.g. pem-bestand "
+"worden gegenereerd. Dit bestand moet vervolgens worden geïnstalleerd in /etc/"
+"ssl/certs/. Geef hier de bestandsnaam op zonder de mapnaam."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:74
+msgid ""
+"Read /usr/share/doc/stunnel/README.Debian on how to generate such a file."
+msgstr ""
+"Lees /usr/share/doc/stunnel/README.Debian voor meer informatie over het "
+"genereren van zo'n bestand."

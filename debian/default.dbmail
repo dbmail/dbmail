@@ -1,0 +1,17 @@
+# debian specific configuration for dbmail
+
+# comment out to disable the pop3 server
+START_POP3D=true
+
+# comment out to disable the imapd server
+START_IMAPD=true
+
+# uncomment to enable the lmtpd server
+# START_LMTPD=true
+
+# comment out to enable the stunnel SSL wrapper
+#START_SSL=true
+
+# specify the filename for the pem file as 
+# it resides in /etc/ssl/certs
+#PEMFILE="dbmail.pem"

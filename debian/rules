@@ -1,0 +1,176 @@
+#!/usr/bin/make -f
+
+# -*- sh -*-
+
+# Uncomment this to turn on verbose mode. 
+export DH_VERBOSE=1
+
+# This is the debhelper compatibility version to use.
+export DH_COMPAT=3
+export DEB_BUILD_OPTIONS=debug
+
+#export WITH_GC="--with-gc"
+
+CFLAGS = -Wall -O1
+LDFLAGS = -lcrypt
+# These are used for cross-compiling and for saving the configure script
+# from having to guess our platform (since we know it already)
+DEB_HOST_GNU_TYPE   ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
+DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
+
+ifneq (,$(findstring debug,$(DEB_BUILD_OPTIONS)))
+	CFLAGS += -g
+endif
+ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
+	INSTALL_PROGRAM += -s
+endif
+
+# dpatch
+export PACKAGE=dbmail
+#export PACKAGES=dbmail-mysql dbmail-pgsql dbmail-mysql-ldap dbmail-pgsql-ldap
+export PACKAGES=dbmail-mysql dbmail-pgsql
+
+include /usr/share/dpatch/dpatch.make 
+
+CONFFLAGS=--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
+	--prefix=/usr --mandir=\$${prefix}/share/man --sysconfdir=/etc/dbmail/ \
+	--infodir=\$${prefix}/share/info $(WITH_GC)
+
+build: stamps/build
+stamps/build: stamps patch configure $(PACKAGES)
+	touch $@
+
+stamps:
+	mkdir stamps
+	
+configure: stamps/configure
+stamps/configure: 
+	for file in config.in aclocal.m4 configure `find . -name Makefile.in`; do \
+		test -e $$file.orig || mv -v $$file $$file.orig; \
+	done
+	autoreconf -f -i
+	touch $@
+
+
+dbmail-mysql: stamps/dbmail-mysql
+stamps/dbmail-mysql:
+	$(MAKE) clean || true
+	env CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" \
+		./configure $(CONFFLAGS) --with-mysql=/usr/include/mysql
+	$(MAKE)
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/dbmail-mysql
+	rm -f $(CURDIR)/debian/dbmail-mysql/usr/bin/dbmail-readvut
+	touch $@
+
+dbmail-mysql-ldap: stamps/dbmail-mysql-ldap
+stamps/dbmail-mysql-ldap:
+	$(MAKE) clean || true
+	env CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" \
+		./configure $(CONFFLAGS) --with-auth-ldap --with-mysql=/usr/include/mysql
+	$(MAKE)
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/dbmail-mysql-ldap
+	rm -f $(CURDIR)/debian/dbmail-mysql-ldap/usr/bin/dbmail-readvut
+	touch $@
+
+dbmail-pgsql: stamps/dbmail-pgsql	
+stamps/dbmail-pgsql:
+	$(MAKE) clean || true
+	env CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" PATH="$(PATH):/usr/lib/postgresql/bin/" \
+		./configure $(CONFFLAGS) --with-pgsql=/usr/include/postgresql 
+	$(MAKE)
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/dbmail-pgsql
+	rm -f $(CURDIR)/debian/dbmail-pgsql/usr/bin/dbmail-readvut
+	touch $@
+	
+dbmail-pgsql-ldap: stamps/dbmail-pgsql-ldap
+stamps/dbmail-pgsql-ldap:
+	$(MAKE) clean || true
+	env CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" PATH="$(PATH):/usr/lib/postgresql/bin/" \
+		./configure $(CONFFLAGS) --with-auth-ldap --with-pgsql=/usr/include/postgresql
+	$(MAKE)
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/dbmail-pgsql-ldap
+	rm -f $(CURDIR)/debian/dbmail-pgsql-ldap/usr/bin/dbmail-readvut
+	touch $@
+	
+clean: clean1 unpatch
+clean1: 
+	# run clean
+	dh_testroot
+	dh_testdir
+	rm -rf stamps
+	rm -f `find . -name ".#*"`
+	# Add here commands to clean up after the build process.
+	-$(MAKE) clean
+	for d in $(PACKAGES); do \
+		for f in postinst prerm postrm preinst docs config templates manpages; do \
+			rm -f debian/$$d.$$f; \
+		done; \
+		for f in init cron.d; do \
+			rm -f debian/$$d.dbmail.$$f; \
+		done; \
+	done	
+	for file in config.in aclocal.m4 acconfig.h configure `find . -name Makefile.in`; do \
+		test -e $$file.orig && mv -v $$file.orig $$file || true; \
+	done
+	rm -rf autom4te.cache
+	for file in Makefile config.h config.status libtool stamp-h .deps; do \
+		rm -rf `find . -name $$file`; \
+	done
+	rm -f stamp-h.in
+	dh_clean
+
+
+# Build architecture-dependent files here.
+binary-common: build
+	dh_testroot
+	dh_testdir
+#	dh_clean -k
+
+	dh_installdirs -a
+	# Add here commands to install the package into debian/dbmail.
+	for d in $(PACKAGES); do \
+		for f in postinst prerm postrm preinst docs config templates manpages; do \
+			sed -e "s,usr/share/doc/dbmail,usr/share/doc/$$d,g" \
+			< debian/dbmail.$$f > debian/$$d.$$f; \
+		done; \
+		for f in init cron.d; do \
+			cp debian/dbmail.$$f debian/$$d.dbmail.$$f; \
+		done; \
+	done
+	dh_installinit -a --name=dbmail -- defaults 25
+	dh_installcron -a --name=dbmail
+	dh_installdebconf -a
+	dh_installman -a
+	dh_installdocs -a
+	dh_installdocs -A  debian/README.Debian debian/TODO
+	dh_installchangelogs -a
+	dh_installexamples -a
+	dh_installdirs -A etc/dbmail var/run/dbmail
+#	dh_strip -a
+	dh_link -a
+	dh_compress -a
+	dh_fixperms -a
+	dh_installdeb -a
+	# temporary hack until we can build a proper common package 
+	# with subsidiary libdbmail-XXsql packages.
+	dh_makeshlibs -a
+	for p in $(PACKAGES); do \
+		dpkg-shlibdeps -Ldebian/$$p/DEBIAN/shlibs \
+			-Tdebian/$$p.substvars debian/$$p/usr/sbin/*; \
+	done
+	dh_gencontrol -a
+	dh_md5sums -a 
+	dh_builddeb -a
+	
+binary-indep: build install
+
+binary-arch: build install
+	$(MAKE) -f debian/rules DH_OPTIONS=-a binary-common
+
+binary-%: build install
+        make -f debian/rules binary-common $* DH_OPTIONS=-p$*
+	
+binary: binary-indep binary-arch
+
+.PHONY: build clean clean1 patch binary binary-common binary-indep binary-arch unpatch configure install
+

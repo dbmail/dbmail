@@ -1,0 +1,142 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+## 07_bodystructure.dpatch by  <paul@nfg.nl>
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: No description.
+
+@DPATCH@
+diff -urNad dbmail-2.0.1/imaputil.c /tmp/dpep.pq0Ofa/dbmail-2.0.1/imaputil.c
+--- dbmail-2.0.1/imaputil.c	2004-11-22 15:38:59.000000000 +0100
++++ /tmp/dpep.pq0Ofa/dbmail-2.0.1/imaputil.c	2004-11-22 15:40:25.000000000 +0100
+@@ -516,7 +516,9 @@
+ 			     int force_subtype, int only_extension)
+ {
+ 	int idx, delimiter, start, end;
+-
++	char *fieldvalue = (char *)my_malloc(sizeof(char *)*255);
++	char *tmpstring = (char *)my_malloc(sizeof(char *)*255);
++	
+ 	/* find first delimiter */
+ 	for (delimiter = 0;
+ 	     mr->value[delimiter] && mr->value[delimiter] != ';';
+@@ -580,12 +582,9 @@
+ 				break;	/* ?? */
+ 
+ 			/* check if quotation marks are specified */
+-			if (mr->value[idx] == '\"'
+-			    || mr->value[idx] == '\'') {
++			if (mr->value[idx] == '\"' || mr->value[idx] == '\'') {
+ 				start = ++idx;
+-				while (mr->value[idx]
+-				       && mr->value[idx] !=
+-				       mr->value[start - 1])
++				while (mr->value[idx] && mr->value[idx] != mr->value[start - 1])
+ 					idx++;
+ 
+ 				if (!mr->value[idx] || mr->value[idx + 1] != '=')	/* ?? no end quote */
+@@ -595,8 +594,7 @@
+ 				idx += 2;	/* skip to after '=' */
+ 			} else {
+ 				start = idx;
+-				while (mr->value[idx]
+-				       && mr->value[idx] != '=')
++				while (mr->value[idx] && mr->value[idx] != '=')
+ 					idx++;
+ 
+ 				if (!mr->value[idx])	/* ?? no value specified */
+@@ -605,19 +603,14 @@
+ 				end = idx;
+ 				idx++;	/* skip to after '=' */
+ 			}
+-
+-			fprintf(outstream, "\"%.*s\" ", (end - start),
+-				&mr->value[start]);
+-
++			
++			fprintf(outstream, "\"%.*s\" ", (end - start), &mr->value[start]);
+ 
+ 			/* now process the value; practically same procedure */
+ 
+-			if (mr->value[idx] == '\"'
+-			    || mr->value[idx] == '\'') {
++			if (mr->value[idx] == '\"' || mr->value[idx] == '\'') {
+ 				start = ++idx;
+-				while (mr->value[idx]
+-				       && mr->value[idx] !=
+-				       mr->value[start - 1])
++				while (mr->value[idx] && mr->value[idx] != mr->value[start - 1])
+ 					idx++;
+ 
+ 				if (!mr->value[idx])	/* ?? no end quote */
+@@ -628,17 +621,27 @@
+ 			} else {
+ 				start = idx;
+ 
+-				while (mr->value[idx]
+-				       && !isspace(mr->value[idx])
+-				       && mr->value[idx] != ';')
++				while (mr->value[idx] && !isspace(mr->value[idx]) && mr->value[idx] != ';')
+ 					idx++;
+ 
+ 				end = idx;
+ 			}
+ 
+-			fprintf(outstream, "\"%.*s\"", (end - start),
+-				&mr->value[start]);
+-
++			
++			/* Thunderbird doesn't like mime-values that are wrapped, so
++			 * we unwrap mime-values 
++			 *
++			 * this code assumes mime values are no longer than 255 chars.
++			 *
++			 * PJS
++			 */
++			
++			
++			snprintf(tmpstring,255,"\"%.*s\"", (end - start), &mr->value[start]);
++			mime_unwrap(fieldvalue,tmpstring);
++			fprintf(outstream,fieldvalue);
++			//fprintf(outstream, "\"%.*s\"", (end - start), &mr->value[start]);
++			
+ 			/* check for more name/val pairs */
+ 			while (mr->value[idx] && mr->value[idx] != ';')
+ 				idx++;
+@@ -653,7 +656,9 @@
+ 	} else {
+ 		fprintf(outstream, " NIL");
+ 	}
+-
++	my_free(fieldvalue);
++	my_free(tmpstring);
++			
+ 	return 0;
+ }
+ 
+@@ -3124,3 +3129,17 @@
+ 	return 0;
+ }
+ 
++/* unwrap strings */
++int mime_unwrap(char *to, const char *from) 
++{
++	while (*from) {
++		if (((*from == '\n') || (*from == '\r')) && isspace(*(from+1))) {
++			from+=2;
++			continue;
++		}
++		*to++=*from++;
++	}
++	*to='\0';
++	return 0;
++}
++
+diff -urNad dbmail-2.0.1/imaputil.h /tmp/dpep.pq0Ofa/dbmail-2.0.1/imaputil.h
+--- dbmail-2.0.1/imaputil.h	2004-11-22 15:38:59.000000000 +0100
++++ /tmp/dpep.pq0Ofa/dbmail-2.0.1/imaputil.h	2004-11-22 15:39:00.000000000 +0100
+@@ -96,4 +96,5 @@
+ int init_cache(void);
+ void close_cache(void);
+ 
++int mime_unwrap(char *to, const char *from); 
+ #endif

@@ -1,0 +1,79 @@
+Template: dbmail/do_debconf
+Type: boolean
+_Description: Use debconf to manage dbmail configuration?
+ Please confirm if you want to allow debconf to manage some parts of your
+ dbmail configuration. Notice that changes you make to dbmail.conf by hand
+ will NOT be overwritten should you later choose to re-run dpkg-reconfigure
+ dbmail.
+
+Template: dbmail/smtp/DBMAIL_FROM_ADDRESS
+Type: string
+_Description: The email address where bounces come from.
+ Here you must specify the address dbmail will use when sending bounce
+ messages.
+ .
+ Example: MAILER-DAEMON@yourdomain.tld
+
+Template: dbmail/smtp/POSTMASTER
+Type: string
+_Description: Postmaster's email address.
+ This should be a valid email address read by the person responsible for
+ this email server.
+ .
+ Example: postmaster@yourdomain.tld
+
+Template: dbmail/dbmail/host
+Type: string
+_Description: Please enter the hostname of the (my/pg)sql database server.
+ On this server you must create a database to hold dbmail's tables. You
+ should grant full read/write permissions on this database to the dbmail
+ user.
+
+Template: dbmail/dbmail/db
+Type: string
+_Description: Please enter the name of the database to use.
+ This is the name of the database that holds the dbmail tables.
+
+Template: dbmail/dbmail/user
+Type: string
+_Description: Please enter the name of the database user you want to use.
+ This is the username dbmail will use to connect to the database server.
+
+Template: dbmail/dbmail/pass
+Type: password
+_Description: Please enter the password for the database connection
+ This is the password dbmail will use to connect to the database server.
+
+Template: dbmail/start_imapd
+Type: boolean
+_Description: start the imap server after reboot?
+ Dbmail supports both imap and pop3 services. You can choose to run either
+ one or both services.
+ .
+ Do you want to start the imap service after a reboot?
+
+Template: dbmail/start_pop3d
+Type: boolean
+_Description: start the pop3 server after reboot?
+ Dbmail support both imap and pop3 services. You can choose to run either
+ one or both services.
+ .
+ Do you want to start the pop3 service after a reboot?
+
+Template: dbmail/start_ssl
+Type: boolean
+_Description:  Do you wish to run the stunnel SSL wrapper from the init script?
+ The stunnel SSL wrapper allows you to provide secure imap and pop services
+ even though dbmail doesn't support neither imaps nor pop3s (yet). 
+ .
+ Make sure you have installed stunnel which is provided by a separate
+ package if you want to use this feature.
+
+Template: dbmail/pem_file
+Type: string
+_Description:  Please enter the filename for the SSL pem file.
+ To be able to run the stunnel SSL wrapper you need to generate a pem file
+ that should reside in /etc/ssl/certs/. Specify the filename here without 
+ the directory name.
+ .
+ Read /usr/share/doc/stunnel/README.Debian on how to generate such a file.

@@ -1,0 +1,29 @@
+#!/bin/sh 
+set -e 
+# summary of how this script can be called: 
+#        * <new-preinst> install' 
+#        * <new-preinst> install' <old-version> 
+#        * <new-preinst> upgrade' <old-version> 
+#        * <old-preinst> abort-upgrade' <new-version> 
+case "$1" in
+	install|upgrade)
+		# 1. create group if non-existant
+		getent group dbmail &>/dev/null ||\
+			groupadd dbmail 2>/dev/null || true 
+		# 2. create user if non-existant
+		getent passwd dbmail &>/dev/null ||\
+			useradd -g dbmail \
+				-d /dev/null \
+				-c "Dbmail SQL mailserver" dbmail 2>/dev/null || true
+	 ;;
+	 configure)
+	 ;;
+	 abort-upgrade)
+	 ;;
+	 *)
+		 echo "preinst called with unknown argument \$1'" >&2
+		 exit 0
+	 ;;
+esac
+
+#DEBHELPER#
