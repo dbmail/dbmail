@@ -89,7 +89,7 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
   /* 	this loop gets all the users from the list 
 	and check if they're in the database */
 
-  struct element *tmp,*nodecpy;
+  struct element *tmp;
   char *insertquery;
   char *updatequery;
   char *unique_id;
@@ -101,7 +101,7 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
   struct list messageids;
   struct list external_forwards;
   struct list bounces;
-  unsigned long temp_message_record_id,userid;
+  unsigned long temp_message_record_id,userid, bounce_userid;
   int i;
   FILE *instream = stdin;
   
@@ -230,19 +230,10 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 	   * belong to which messages */
 		
 		
-	  if (db_check_sizelimit (strlen(header), temp_message_record_id) == -1 )
-	  {
-			/* add a bounce here */
-	  }
-	  else  
-	  {
-			db_insert_message_block (header,temp_message_record_id);
-			db_update_user_size (db_get_useridnr(temp_message_record_id),strlen(header));
+		db_insert_message_block (header,temp_message_record_id);
 	
-			/* adding this messageid to the message id list */
-			list_nodeadd(&messageids,&temp_message_record_id,sizeof(temp_message_record_id));
-	  }
-	  
+		/* adding this messageid to the message id list */
+		list_nodeadd(&messageids,&temp_message_record_id,sizeof(temp_message_record_id));
 	}
       /* get next item */	
       tmp=tmp->nextnode;
@@ -279,20 +270,8 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 				tmp=list_getstart(&messageids);
 				while (tmp!=NULL)
 				{
-					/* size checking */
-					if (db_check_sizelimit (strlen(strblock), *(unsigned long *)tmp->data) == -1)
-					{
-						/* to big, can't be added to this list anymore */
-						nodecpy = tmp;
-						tmp = tmp->nextnode;
-						list_nodedel (&messageids, nodecpy);
-					}
-					else
-					{
 					db_insert_message_block (strblock,*(unsigned long *)tmp->data);
-					db_update_user_size (db_get_useridnr(*(unsigned long *)tmp->data),strlen(strblock));
 					tmp=tmp->nextnode;
-					}
 				}
 				
 				/* resetting strlen for strblock */
@@ -319,8 +298,18 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 			* even more unique strings */
 			create_unique_id(unique_id,*(unsigned long*)tmp->data); 
 			db_update_message ((unsigned long*)tmp->data,unique_id,totalmem+headersize);
-			trace (TRACE_MESSAGE,"insert_messages(): message id=%lu, size=%lu is inserted",
-			*(unsigned long*)tmp->data, totalmem+headersize);
+
+			/* checking size */
+			if (db_check_sizelimit (totalmem+headersize, *(unsigned long*)tmp->data,&bounce_userid) == -1)
+			{
+				trace (TRACE_DEBUG,"insert_messages(): message NOT inserted. Maxmail exceeded");
+				bounce (header, db_get_userid(&bounce_userid), BOUNCE_STORAGE_LIMIT_REACHED);
+			}
+			else 
+				trace (TRACE_MESSAGE,"insert_messages(): message id=%lu, size=%lu is inserted",
+					*(unsigned long*)tmp->data, totalmem+headersize);
+
+
 			temp_message_record_id=*(unsigned long*)tmp->data;
 			tmp=tmp->nextnode;
 		}

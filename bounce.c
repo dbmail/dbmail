@@ -68,7 +68,7 @@ int bounce (char *header, char *destination_address, int type)
 		case BOUNCE_STORAGE_LIMIT_REACHED:
 			{
 			/* mailbox size exceeded */
-			trace (TRACE_MESSAGE,"bounce(): sending 'mailboxsize exceeded' bounce for destination [%s]",
+			trace (TRACE_MESSAGE,"bounce(): sending 'mailboxsize exceeded' bounce for user [%s]",
 					destination_address);
 			list_init(&from_addresses);
 			/* scan the from header for addresses */
@@ -97,7 +97,7 @@ int bounce (char *header, char *destination_address, int type)
 				fprintf ((FILE *)sendmail_stream,"I'm sorry to inform you that your message, addressed to %s,\n",
 						destination_address);
 				fprintf ((FILE *)sendmail_stream,"could not be delivered due to the following error.\n\n");
-				fprintf ((FILE *)sendmail_stream,"*** E-mail address %s is not known here. ***\n\n",destination_address);
+				fprintf ((FILE *)sendmail_stream,"*** Mailbox of user %s is FULL ***\n\n",destination_address);
 				fprintf ((FILE *)sendmail_stream,"If you think this message is incorrect please contact %s.\n\n",POSTMASTER);
 				fprintf ((FILE *)sendmail_stream,"Header of your message follows...\n\n\n");
 				fprintf ((FILE *)sendmail_stream,"--- header of your message ---\n");

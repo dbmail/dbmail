@@ -17,7 +17,6 @@ CREATE TABLE user (
    passwd varchar(15) NOT NULL,
    clientid bigint(21) DEFAULT '0' NOT NULL,
    maxmail_size bigint(21) DEFAULT '0' NOT NULL,
-	currmail_size bigint(21) DEFAULT '0' NOT NULL,
    PRIMARY KEY (useridnr),
    KEY useridnr (useridnr, userid),
    UNIQUE useridnr_2 (useridnr)

@@ -139,6 +139,84 @@ unsigned long db_get_inboxid (unsigned long *useridnr)
 	return atoi(row[0]);
 }
 
+char *db_get_userid (unsigned long *useridnr)
+{
+	/* returns the mailbox id (of mailbox inbox) for a user or a 0 if no mailboxes were found */
+  char *ckquery;
+  
+  /* allocating memory for query */
+  memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
+
+	sprintf (ckquery,"SELECT userid FROM user WHERE useridnr = %lu",
+			*useridnr);
+
+  trace(TRACE_DEBUG,"db_get_userid(): executing query : [%s]",ckquery);
+  if (db_query(ckquery)==-1)
+    {
+      free(ckquery);
+      return 0;
+    }
+  if ((res = mysql_store_result(&conn)) == NULL) 
+    {
+      trace(TRACE_ERROR,"db_get_userid(): mysql_store_result failed: %s",mysql_error(&conn));
+      free(ckquery);
+      return 0;
+    }
+  if (mysql_num_rows(res)<1) 
+    {
+      trace (TRACE_DEBUG,"db_get_userid(): user has no username?");
+      mysql_free_result(res);
+      free(ckquery);
+      return 0; 
+    } 
+
+	if ((row = mysql_fetch_row(res))==NULL)
+	{
+		trace (TRACE_DEBUG,"db_userid(): fetch_row call failed");
+	}
+	/* return the inbox id */
+	return row[0];
+}
+
+unsigned long db_get_message_mailboxid (unsigned long *messageidnr)
+{
+	/* returns the mailbox id of a message */
+  char *ckquery;
+  
+  /* allocating memory for query */
+  memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
+
+	sprintf (ckquery,"SELECT mailboxidnr FROM message WHERE messageidnr = %lu",
+			*messageidnr);
+
+  trace(TRACE_DEBUG,"db_get_message_mailboxid(): executing query : [%s]",ckquery);
+  if (db_query(ckquery)==-1)
+    {
+      free(ckquery);
+      return 0;
+    }
+  if ((res = mysql_store_result(&conn)) == NULL) 
+    {
+      trace(TRACE_ERROR,"db_get_message_mailboxid(): mysql_store_result failed: %s",mysql_error(&conn));
+      free(ckquery);
+      return 0;
+    }
+  if (mysql_num_rows(res)<1) 
+    {
+      trace (TRACE_DEBUG,"db_get_message_mailboxid(): this message had no mailboxid? Message without a mailbox!");
+      mysql_free_result(res);
+      free(ckquery);
+      return 0; 
+    } 
+
+	if ((row = mysql_fetch_row(res))==NULL)
+	{
+		trace (TRACE_DEBUG,"db_get_mailboxid(): fetch_row call failed");
+	}
+	/* return the inbox id */
+	return atoi(row[0]);
+}
+
 
 unsigned long db_get_useridnr (unsigned long messageidnr)
 {
@@ -846,21 +924,107 @@ int db_update_user_size (unsigned long useridnr, unsigned long addbytes)
 }
 
 
-unsigned long db_check_sizelimit (unsigned long addblocksize, unsigned long messageidnr)
+unsigned long db_check_mailboxsize (unsigned long mailboxid)
+{
+	/* checks the size of a mailbox */
+	char *ckquery;
+
+	/* checking current size */
+	memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
+	sprintf (ckquery, "SELECT SUM(messagesize) FROM message WHERE mailboxidnr = %lu AND status<002",
+			mailboxid);
+
+	trace (TRACE_DEBUG,"db_check_mailboxsize(): executing query [%s]",
+			ckquery);
+
+	if (db_query(ckquery) != 0)
+	{
+		trace (TRACE_ERROR,"db_check_mailboxsize(): could not execute query [%s]",
+				ckquery);
+		free(ckquery);
+		return -1;
+	}
+  
+	if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace (TRACE_ERROR,"db_check_mailboxsize(): mysql_store_result failed:  %s",mysql_error(&conn));
+      free(ckquery);
+      return -1;
+    }
+
+  if (mysql_num_rows(res)<1)
+    {
+		trace (TRACE_ERROR,"db_check_mailboxsize(): weird, cannot execute SUM query");
+      free(ckquery);
+      return 0;
+    }
+
+	row = mysql_fetch_row(res);
+
+	if (row[0]!=NULL)
+		return atol (row[0]);
+	else 
+		return 0;
+}
+
+
+unsigned long db_check_sizelimit (unsigned long addblocksize, unsigned long messageidnr, unsigned long *useridnr)
 {
 	/* returns -1 when a block cannot be inserted 
 		also does a complete rollback when this occurs 
 		returns 0 when situaties is ok */
 
 	char *ckquery;
-	unsigned long useridnr;
-	unsigned long currmail_size, maxmail_size;
+	unsigned long mailboxidnr;
+	unsigned long currmail_size = 0, maxmail_size = 0;
 
-	useridnr = db_get_useridnr (messageidnr);
+	*useridnr = db_get_useridnr (messageidnr);
 	
+	/* looking up messageidnr */
+	mailboxidnr = db_get_message_mailboxid (&messageidnr);
+	
+	/* checking current size */
 	memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
-	sprintf (ckquery, "SELECT currmail_size, maxmail_size FROM user WHERE useridnr = %lu",
-			useridnr);
+	sprintf (ckquery, "SELECT mailboxidnr FROM mailbox WHERE owneridnr = %lu",
+			*useridnr);
+
+	trace (TRACE_DEBUG,"db_check_sizelimit(): executing query [%s]",
+			ckquery);
+
+	if (db_query(ckquery) != 0)
+	{
+		trace (TRACE_ERROR,"db_check_sizelimit(): could not execute query [%s]",
+				ckquery);
+		free(ckquery);
+		return -1;
+	}
+  
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace (TRACE_ERROR,"db_check_sizelimit(): mysql_store_result failed:  %s",mysql_error(&conn));
+      free(ckquery);
+      return -1;
+    }
+
+  if (mysql_num_rows(res)<1)
+    {
+		trace (TRACE_ERROR,"db_check_sizelimit(): user has NO mailboxes");
+      free(ckquery);
+      return 0;
+    }
+
+	while ((row = mysql_fetch_row(res))!=NULL)
+		{
+		trace (TRACE_DEBUG,"db_check_sizelimit(): checking mailbox [%s]",row[0]);
+		currmail_size += db_check_mailboxsize(atol(row[0]));
+		}
+
+	/* current mailsize from INBOX is now known, now check the maxsize for this user */
+	
+	sprintf (ckquery, "SELECT maxmail_size FROM user WHERE useridnr = %lu",
+			*useridnr);
+	trace (TRACE_DEBUG,"db_check_sizelimit(): executing query: %s",
+			ckquery);
 
 	if (db_query(ckquery) != 0)
 	{
@@ -885,16 +1049,17 @@ unsigned long db_check_sizelimit (unsigned long addblocksize, unsigned long mess
     }
 	
 	row = mysql_fetch_row(res);
-	currmail_size = atol (row[0]);
-	maxmail_size = atol (row[1]);
-	
+	maxmail_size = atol(row[0]);
+
 	trace (TRACE_DEBUG, "db_check_sizelimit(): comparing currsize + blocksize  [%d], maxsize [%d]",
-			currmail_size+addblocksize, maxmail_size);
+			currmail_size, maxmail_size);
 	
-	if (((currmail_size + addblocksize) > maxmail_size) && (maxmail_size != 0))
+	/* currmail already represents the current size of messages from this user */
+	
+	if (((currmail_size) > maxmail_size) && (maxmail_size != 0))
 	{
 		trace (TRACE_INFO,"db_check_sizelimit(): mailboxsize of useridnr %lu exceed with %lu bytes", 
-				useridnr, (currmail_size+addblocksize)-maxmail_size);
+				useridnr, (currmail_size)-maxmail_size);
 
 		/* user is exceeding, we're going to execute a rollback now */
 		sprintf (ckquery,"DELETE FROM messageblk WHERE messageidnr = %lu", 
