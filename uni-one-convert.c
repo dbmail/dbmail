@@ -141,7 +141,8 @@ int process_mboxfile(char *file, u64_t userid)
   char newunique[UID_SIZE];
   unsigned cnt,newlines,len;
   u64_t msgid=0, size;
-  
+  char saved;
+
   if ((result = regcomp(&preg, mbox_delimiter_pattern, REG_NOSUB)) != 0)
     {
       trace(TRACE_ERROR,"Regex compilation failed.");
@@ -214,7 +215,12 @@ int process_mboxfile(char *file, u64_t userid)
 	      if (cnt >= READ_BLOCK_SIZE-1)
 		{
 		  /* write block */
+		  saved = blk[READ_BLOCK_SIZE-1];
+
+		  blk[READ_BLOCK_SIZE-1] = 0;
 		  db_insert_message_block(blk, READ_BLOCK_SIZE-1, msgid);
+		  blk[READ_BLOCK_SIZE-1] = saved;
+
 		  memmove(blk, &blk[cnt], cnt - (READ_BLOCK_SIZE-1));
 		  size += cnt;
 		  cnt = 0;
