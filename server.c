@@ -196,7 +196,7 @@ void ParentSigHandler(int sig, siginfo_t *info, void *data)
       ChildSigHandler(sig, info, data); /* this call is for a child but it's handler is not yet installed */
     }
 
-  trace(TRACE_INFO, "ParentSigHandler(): got signal [%d]", sig);
+  trace(TRACE_INFO, "ParentSigHandler(): got signal [%s]", strsignal(sig));
 
   switch (sig)
     {

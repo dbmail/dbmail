@@ -106,6 +106,7 @@ void ChildSigHandler(int sig, siginfo_t *info, void *data)
     default:
       /* bad shit, exit */
       trace(TRACE_DEBUG, "ChildSighandler(): cannot ignore this. Terminating");
+      exit(1);
 
       if (!triedDisconnect)
 	{
