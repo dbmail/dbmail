@@ -694,7 +694,7 @@ int db_check_user (char *username, struct list *userids, int checks)
   {
       /* do a recursive search for myrow[2] */
       trace (TRACE_DEBUG,"db_check_user(): checking user %s to %s",username, myrow[2]);
-      if ((db_check_user (myrow[2], userids, 1)) > 0 ) occurences++;
+      occurences += db_check_user (myrow[2], userids, 1);
   }
   
   /* trace(TRACE_INFO,"db_check_user(): user [%s] has [%d] entries",username,occurences); */
