@@ -118,7 +118,7 @@ int imap_process(ClientInfo *ci)
 {
   char line[MAX_LINESIZE];
   char *tag = NULL,*cpy,**args,*command;
-  int i,done,result,j;
+  int i,done,result;
   imap_userdata_t *ud = ci->userData;
   mailbox_t newmailbox;
 
@@ -295,16 +295,18 @@ int imap_process(ClientInfo *ci)
 	  memset(&newmailbox, 0, sizeof(newmailbox));
 	  newmailbox.uid = ud->mailbox.uid;
 
-	  j = 0;
-	  do
+	  result = db_getmailbox(&newmailbox, ud->userid);
+	  if (result == -1)
 	    {
-	      result = db_getmailbox(&newmailbox, ud->userid);
-	    } while (result == 1 && j++<MAX_RETRIES);
+	      fprintf(ci->tx,"* BYE internal dbase error\r\n");
+	      trace(TRACE_ERROR, "IMAPD: could not get mailbox info\n");
+	      
+	      close_cache();
+	      db_disconnect();
+	      null_free(((imap_userdata_t*)ci->userData)->mailbox.seq_list);
+	      null_free(ci->userData);
 
-	  if (result == 1)
-	    {
-	      fprintf(ci->tx,"* BYE troubles synchronizing dbase\r\n");
-	      done = 1;
+	      return -1;
 	    }
 
 	  if (newmailbox.exists != ud->mailbox.exists)

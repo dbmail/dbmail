@@ -176,7 +176,6 @@ int db_copymsg(unsigned long msgid, unsigned long destmboxid);
 int db_getmailboxname(unsigned long uid, char *name);
 int db_setmailboxname(unsigned long uid, const char *name);
 int db_expunge(unsigned long uid,unsigned long **msgids,int *nmsgs);
-int db_build_msn_list(mailbox_t *mb);
 unsigned long db_first_unseen(unsigned long uid);
 int db_subscribe(unsigned long mboxid);
 int db_unsubscribe(unsigned long mboxid);

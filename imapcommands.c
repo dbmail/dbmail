@@ -21,7 +21,6 @@
 #define MAX_LINESIZE 1024
 #endif
 
-#define MAX_RETRIES 20
 #define IMAP_NFLAGS 6
 const char *imap_flag_desc[IMAP_NFLAGS] = 
 { 
@@ -286,7 +285,7 @@ int _ic_select(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
   unsigned long mboxid,key;
-  int result,i,idx;
+  int result,idx;
   char permstring[80];
 
   if (!check_state_and_args("SELECT", tag, args, 1, IMAPCS_AUTHENTICATED, ci))
@@ -321,17 +320,7 @@ int _ic_select(char *tag, char **args, ClientInfo *ci)
   ud->mailbox.uid = mboxid;
 
   /* read info from mailbox */
-  i = 0;
-  do
-    {
-      result = db_getmailbox(&ud->mailbox, ud->userid);
-    } while (result == 1 && i++<MAX_RETRIES);
-
-  if (result == 1)
-    {
-      fprintf(ci->tx,"* BYE troubles synchronizing dbase\r\n");
-      return -1;
-    }
+  result = db_getmailbox(&ud->mailbox, ud->userid);
 
   if (result == -1)
     {
@@ -413,7 +402,7 @@ int _ic_examine(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
   unsigned long mboxid;
-  int result,i;
+  int result;
 
   if (!check_state_and_args("EXAMINE", tag, args, 1, IMAPCS_AUTHENTICATED, ci))
     return 1; /* error, return */
@@ -448,17 +437,7 @@ int _ic_examine(char *tag, char **args, ClientInfo *ci)
   ud->mailbox.uid = mboxid;
 
   /* read info from mailbox */
-  i = 0;
-  do
-    {
-      result = db_getmailbox(&ud->mailbox, ud->userid);
-    } while (result == 1 && i++<MAX_RETRIES);
-
-  if (result == 1)
-    {
-      fprintf(ci->tx,"* BYE troubles synchronizing dbase\r\n");
-      return -1;
-    }
+  result = db_getmailbox(&ud->mailbox, ud->userid);
 
   if (result == -1)
     {
@@ -1243,18 +1222,8 @@ int _ic_status(char *tag, char **args, ClientInfo *ci)
     }
 
   /* retrieve mailbox data */
-  i = 0;
-  do
-    {
-      result = db_getmailbox(&mb, ud->userid);
-    } while (result == 1 && i++<MAX_RETRIES);
+  result = db_getmailbox(&mb, ud->userid);
 
-  if (result == 1)
-    {
-      fprintf(ci->tx,"* BYE troubles synchronizing dbase\r\n");
-      return -1;
-    }
-  
   if (result == -1)
     {
       fprintf(ci->tx,"* BYE internal dbase error\r\n");
@@ -1533,21 +1502,11 @@ int _ic_expunge(char *tag, char **args, ClientInfo *ci)
 
 
   /* update mailbox info */
-  i = 0;
 
   memset(&newmailbox, 0, sizeof(newmailbox));
   newmailbox.uid = ud->mailbox.uid;
 
-  do
-    {
-      result = db_getmailbox(&newmailbox, ud->userid);
-    } while (result == 1 && i++<MAX_RETRIES);
-
-  if (result == 1)
-    {
-      fprintf(ci->tx,"* BYE troubles synchronizing dbase\r\n");
-      return -1;
-    }
+  result = db_getmailbox(&newmailbox, ud->userid);
   
   if (result == -1)
     {
@@ -1587,15 +1546,11 @@ int _ic_search(char *tag, char **args, ClientInfo *ci)
     }
   
   /* update mailbox info */
-  i = 0;
-  do
-    {
-      result = db_getmailbox(&ud->mailbox, ud->userid);
-    } while (result == 1 && i++<MAX_RETRIES);
+  result = db_getmailbox(&ud->mailbox, ud->userid);
 
-  if (result == 1)
+  if (result == -1)
     {
-      fprintf(ci->tx,"* BYE troubles synchronizing dbase\r\n");
+      fprintf(ci->tx,"* BYE internal dbase error\r\n");
       return -1;
     }
 

@@ -525,7 +525,7 @@ unsigned long db_get_useridnr (unsigned long messageidnr)
  */
 unsigned long db_insert_message (unsigned long *useridnr)
 {
-  char *query, timestr[30];
+  char timestr[30];
   time_t td;
   struct tm tm;
 
@@ -1621,17 +1621,29 @@ int db_findmailbox_by_regex(unsigned long ownerid, const char *pattern,
 /*
  * db_getmailbox()
  * 
- * gets mailbox info from dbase
- * calls db_build_msn_list() to build message sequence number list
+ * gets mailbox info from dbase, builds the message sequence number list
  *
  * returns 
  *  -1  error
  *   0  success
- *   1  warning: operation not completed: msn list not build
- *               getmailbox() should be called again
  */
 int db_getmailbox(mailbox_t *mb, unsigned long userid)
 {
+  unsigned long i;
+
+  /* free existing MSN list */
+  if (mb->seq_list)
+    {
+      free(mb->seq_list);
+      mb->seq_list = NULL;
+    }
+
+  mb->flags = 0;
+  mb->exists = 0;
+  mb->unseen = 0;
+  mb->recent = 0;
+  mb->msguidnext = 0;
+
   /* select mailbox */
   snprintf(query, DEF_QUERYSIZE, 
 	   "SELECT permission,"
@@ -1664,7 +1676,6 @@ int db_getmailbox(mailbox_t *mb, unsigned long userid)
     }
 
   mb->permission = atoi(row[0]);
-  mb->flags = 0;
 
   if (row[1]) mb->flags |= IMAPFLAG_SEEN;
   if (row[2]) mb->flags |= IMAPFLAG_ANSWERED;
@@ -1675,84 +1686,43 @@ int db_getmailbox(mailbox_t *mb, unsigned long userid)
 
   mysql_free_result(res);
 
-
-  /* now select all messages */
-  snprintf(query, DEF_QUERYSIZE, "SELECT COUNT(*) FROM message WHERE mailboxidnr = %lu AND status<2", 
-	   mb->uid);
+  /* select messages */
+  snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr, seen_flag, recent_flag "
+	   "FROM message WHERE mailboxidnr = %lu "
+	   "AND status<2 ORDER BY messageidnr ASC", mb->uid);
 
   if (db_query(query) == -1)
     {
-      trace(TRACE_ERROR, "db_getmailbox(): could not select messages\n");
-      
+      trace(TRACE_ERROR, "db_getmailbox(): could not retrieve messages\n");
       return -1;
     }
 
   if ((res = mysql_store_result(&conn)) == NULL)
     {
       trace(TRACE_ERROR,"db_getmailbox(): mysql_store_result failed: %s\n",mysql_error(&conn));
-      
       return -1;
     }
 
-  row = mysql_fetch_row(res);
-  if (row)
-    mb->exists = atoi(row[0]);
-  else
-    mb->exists = 0;
+  mb->exists = mysql_num_rows(res);
 
-  mysql_free_result(res);
-
-
-  /* now select messages:  RECENT */
-  snprintf(query, DEF_QUERYSIZE, "SELECT COUNT(*) FROM message WHERE recent_flag=1 AND "
-	   "mailboxidnr = %lu AND status<2", mb->uid);
-
-  if (db_query(query) == -1)
+  /* alloc mem */
+  mb->seq_list = (unsigned long*)malloc(sizeof(unsigned long) * mb->exists);
+  if (!mb->seq_list)
     {
-      trace(TRACE_ERROR, "db_getmailbox(): could not select recent messages\n");
-      
+      /* out of mem */
+      mysql_free_result(res);
       return -1;
     }
 
-  if ((res = mysql_store_result(&conn)) == NULL)
+  i=0;
+  while ((row = mysql_fetch_row(res)))
     {
-      trace(TRACE_ERROR,"db_getmailbox(): mysql_store_result failed: %s\n",mysql_error(&conn));
-      
-      return -1;
+      if (row[1][0] == '0') mb->unseen++;
+      if (row[2][0] == '1') mb->recent++;
+
+      mb->seq_list[i++] = strtoul(row[0],NULL,10);
     }
-
-  row = mysql_fetch_row(res);
-  if (row)
-    mb->recent = atoi(row[0]);
-  else
-    mb->recent = 0;
-
-  mysql_free_result(res);
-
-  /* now select messages: UNSEEN */
-  snprintf(query, DEF_QUERYSIZE, "SELECT COUNT(*) FROM message WHERE seen_flag=0 AND "
-	   "mailboxidnr = %lu AND status<2", mb->uid);
-
-  if (db_query(query) == -1)
-    {
-      trace(TRACE_ERROR, "db_getmailbox(): could not select unseen messages\n");
-      
-      return -1;
-    }
-
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace(TRACE_ERROR,"db_getmailbox(): mysql_store_result failed: %s\n",mysql_error(&conn));
-      
-      return -1;
-    }
-
-  row = mysql_fetch_row(res);
-  if (row)
-    mb->unseen = atoi(row[0]);
-  else
-    mb->unseen = 0;
-
+  
   mysql_free_result(res);
 
   
@@ -1787,8 +1757,8 @@ int db_getmailbox(mailbox_t *mb, unsigned long userid)
   mysql_free_result(res);
   
   
-  /* build msn list & done */
-  return db_build_msn_list(mb);
+  /* done */
+  return 0;
 }
 
 
@@ -2360,71 +2330,6 @@ int db_setmailboxname(unsigned long uid, const char *name)
       return -1;
     }
 
-  return 0;
-}
-
-
-/*
- * db_build_msn_list()
- *
- * builds a MSN (message sequence number) list containing msg UID's
- *
- * returns 
- *  -1 error
- *   0 success
- *   1 warning: mailbox data is not up-to-date, list not generated
- */
-int db_build_msn_list(mailbox_t *mb)
-{
-  
-  unsigned long cnt,i;
-
-  /* free existing list */
-  if (mb->seq_list)
-    {
-      free(mb->seq_list);
-      mb->seq_list = NULL;
-    }
-
-  snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message WHERE mailboxidnr = %lu "
-	   "AND status<2 ORDER BY messageidnr ASC", mb->uid);
-
-  if (db_query(query) == -1)
-    {
-      trace(TRACE_ERROR, "db_build_msn_list(): could not retrieve messages\n");
-      return -1;
-    }
-
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace(TRACE_ERROR,"db_build_msn_list(): mysql_store_result failed: %s\n",mysql_error(&conn));
-      return -1;
-    }
-
-  cnt = mysql_num_rows(res);
-  if (cnt != mb->exists)
-    {
-      /* mailbox data type is not uptodate */
-      mb->seq_list = NULL;
-      return 1;
-    }
-
-  /* alloc mem */
-  mb->seq_list = (unsigned long*)malloc(sizeof(unsigned long) * cnt);
-  if (!mb->seq_list)
-    {
-      /* out of mem */
-      mysql_free_result(res);
-      return -1;
-    }
-
-  i=0;
-  while ((row = mysql_fetch_row(res)))
-    {
-      mb->seq_list[i++] = strtoul(row[0],NULL,10);
-    }
-  
-  mysql_free_result(res);
   return 0;
 }
 
