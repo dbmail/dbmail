@@ -1722,13 +1722,16 @@ void close_cache()
       cached_msg.tmpdump = NULL;
     }
 
-  if (unlink(cached_msg.filename) != 0)
+  if (cached_msg.filename[0] && unlink(cached_msg.filename) != 0)
     trace(TRACE_ERROR, "close_cache(): could not unlink temporary file %s [%s]\n", 
 	  cached_msg.filename, strerror(errno));
 
-  if (unlink(cached_msg.tmpname) != 0)
+  if (cached_msg.tmpname[0] && unlink(cached_msg.tmpname) != 0)
     trace(TRACE_ERROR, "close_cache(): could not unlink temporary file %s [%s]\n", 
 	  cached_msg.tmpname, strerror(errno));
+
+  cached_msg.filename[0] = 0;
+  cached_msg.tmpname[0] = 0;
 }
 
 /* 
