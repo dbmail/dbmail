@@ -314,17 +314,26 @@ int do_change(int argc, char *argv[])
 	      retval = -1;
 	    }
 
-          if (argv[i][0] == '+') 
+          switch (argv[i][0])
 	    {
+	    case '+':
 	      /* +p will converse clear text into crypt hash value */
 	      strcat(pw,crypt(argv[i+1], cget_salt()));
 	      result = auth_change_password(userid,pw,"crypt");
-	    } 
-	  else 
-	    {
+	      break;
+	    case '-':
 	      strcpy(pw,argv[i+1]);
 	      result = auth_change_password(userid,pw,"");
+	      break;
+	    case 'x':
+	      /* 'xp' will copy passwd from command line 
+	        assuming that the supplied passwd is crypt encrypted 
+	      */
+	      strcpy(pw,argv[i+1]);
+	      result = auth_change_password(userid,pw,"crypt");
+	      break;
 	    }
+
 	  if (result != 0)
 	    {
 	      quiet_printf("\nWarning: could not change password ");

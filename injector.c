@@ -309,6 +309,8 @@ int main(int argc, char *argv[])
     {
       /* update messages */
       db_update_message_multiple(uniqueid, size, size+newlines);
+
+      
     }
 
   /* cleanup */

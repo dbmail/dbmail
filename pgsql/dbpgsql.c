@@ -200,7 +200,7 @@ char *db_get_config_item (char *item, int type)
     }
 
   value = PQgetvalue (res, 0, 0);
-  result=(char *)my_malloc(strlen(value+1));
+  result=(char *)my_malloc(strlen(value)+1);
   if (result!=NULL)
     {
       strcpy (result, value);
@@ -307,7 +307,7 @@ int db_addalias (u64_t useridnr, char *alias, u64_t clientid)
   PQclear(res);
 
   snprintf (query, DEF_QUERYSIZE,
-            "INSERT INTO aliases (alias,deliver_to,client_idnr) VALUES ('%s','%llu::bigint',%llu::bigint)",
+            "INSERT INTO aliases (alias,deliver_to,client_idnr) VALUES ('%s','%llu',%llu::bigint)",
             alias, useridnr, clientid);
 
 
@@ -380,7 +380,7 @@ int db_addalias_ext(char *alias, char *deliver_to, u64_t clientid)
 int db_removealias (u64_t useridnr,const char *alias)
 {
   snprintf (query, DEF_QUERYSIZE,
-            "DELETE FROM aliases WHERE deliver_to = '%llu::bigint' AND alias ~* '^%s$'", useridnr, alias);
+            "DELETE FROM aliases WHERE deliver_to = '%llu' AND alias ~* '^%s$'", useridnr, alias);
 
   if (db_query(query) == -1)
     {
@@ -602,7 +602,7 @@ int db_update_message_multiple(const char *unique_id, u64_t messagesize, u64_t r
   /* now update for each message */
   for (i=0; i<n; i++)
     {
-      snprintf(newunique, UID_SIZE, "%llu::bigintA%lu", uids[i], time(NULL));
+      snprintf(newunique, UID_SIZE, "%lluA%lu", uids[i], time(NULL));
       snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET "
 	       "messagesize=%llu::bigint, rfcsize = %llu::bigint, unique_id='%s', status='000' "
 	       "WHERE message_idnr=%llu::bigint", messagesize, rfcsize, newunique, uids[i]);
@@ -804,7 +804,7 @@ int db_get_user_aliases(u64_t userid, struct list *aliases)
   list_init(aliases);
 
   /* do a inverted (DESC) query because adding the names to the final list inverts again */
-  snprintf(query, DEF_QUERYSIZE, "SELECT alias FROM aliases WHERE deliver_to = '%llu::bigint' ORDER BY alias "
+  snprintf(query, DEF_QUERYSIZE, "SELECT alias FROM aliases WHERE deliver_to = '%llu' ORDER BY alias "
 	   "DESC", userid);
 
   if (db_query(query) == -1)
@@ -1948,7 +1948,7 @@ int db_insert_message_complete(u64_t useridnr, MEM *hdr, MEM *body,
   my_free(escaped_query);
 
   /* create unique ID */
-  snprintf(unique_id,UID_SIZE,"%llu::bigintA%lu",msgid,td);
+  snprintf(unique_id,UID_SIZE,"%lluA%lu",msgid,td);
 
   snprintf(query, DEF_QUERYSIZE,
 	   "UPDATE messages SET unique_id=\'%s\' where message_idnr=%llu::bigint",
@@ -2726,7 +2726,7 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
     }
 
   /* all done, validate new msg by creating a new unique id for the copied msg */
-  snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET unique_id=\'%llu::bigintA%lu\' "
+  snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET unique_id=\'%lluA%lu\' "
 	   "WHERE message_idnr=%llu::bigint", newmsgid, td, newmsgid);
 
   if (db_query(query) == -1)
