@@ -59,6 +59,7 @@ ChildInfo_t childinfo;
 /* some extra prototypes (defintions are below) */
 static void ParentSigHandler(int sig, siginfo_t * info, void *data);
 static int SetParentSigHandler(void);
+static void server_setup(serverConfig_t *conf);
 
 int SetParentSigHandler()
 {
@@ -85,7 +86,7 @@ int SetParentSigHandler()
 	return 0;
 }
 
-static void server_setup(serverConfig_t *conf)
+void server_setup(serverConfig_t *conf)
 {
 	ParentPID = getpid();
 	Restart = 0;
@@ -108,10 +109,8 @@ int StartCliServer(serverConfig_t * conf)
 	server_setup(conf);	
 	manage_start_cli_server(&childinfo);
 	
-	return Restart;
+	return 0;
 }
-
-
 
 int StartServer(serverConfig_t * conf)
 {
@@ -147,13 +146,8 @@ void ParentSigHandler(int sig, siginfo_t * info, void *data)
 	}
 	
 	if (sig != SIGALRM) {
-#ifdef _USE_STR_SIGNAL
 		trace(TRACE_INFO, "%s,%s: got signal [%s]", __FILE__, __func__, 
 				strsignal(sig));
-#else
-		trace(TRACE_INFO, "%s,%s: got signal [%d]", __FILE__, __func__, 
-				sig);
-#endif
 	}
 	
 	switch (sig) {
