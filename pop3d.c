@@ -20,6 +20,9 @@
 #include "config.h"
 #include "clientinfo.h"
 #include "pop3.h"
+#ifdef PROC_TITLES
+#include "proctitleutils.h"
+#endif
 
 
 #define PNAME "dbmail/pop3d"
@@ -55,7 +58,11 @@ char *myhostname;
 char *apop_stamp;
 char *timeout_setting;
 
+#ifdef PROC_TITLES
+int main(int argc, char *argv[], char **envp)
+#else
 int main(int argc, char *argv[])
+#endif
 {
 	serverConfig_t config;
 	struct list popItems, sysItems;
@@ -82,6 +89,10 @@ int main(int argc, char *argv[])
       mainRestart = 0;
 
       trace(TRACE_DEBUG, "main(): reading config");
+#ifdef PROC_TITLES
+      init_set_proc_title(argc, argv, envp, PNAME);
+      set_proc_title("%s", "Idle");
+#endif
 
       ReadConfig("POP", configFile, &popItems);
       ReadConfig("DBMAIL", configFile, &sysItems);

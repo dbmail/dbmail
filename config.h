@@ -13,6 +13,9 @@
 
 #define FIELDSIZE 1024
 #define FIELDLEN FIELDSIZE
+/* set the process titles to something useful */
+//#define PROC_TITLES
+
 typedef char field_t[FIELDSIZE];
  
 typedef struct

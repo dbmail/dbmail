@@ -2228,19 +2228,23 @@ int quoted_string_out(FILE *outstream, const char *s)
 {
   int i,cnt;
 
-  cnt = fprintf(outstream, "\"");
-
-  for (i=0; s[i]; i++)
+  // check wheter we must use literal string
+  for (i = 0; s[i]; i++) 
     {
-      if (iscntrl(s[i]) || s[i] == (char)0xFF)
-	cnt += fprintf(outstream,"%%%02X",s[i]);
-      else if (s[i] == '"' || s[i] == '\\')
-	cnt += fprintf(outstream, "\\%c",s[i]);
-      else
-	cnt += fprintf(outstream, "%c", s[i]);
+      if (!(s[i] & 0xe0) || (s[i] & 0x80) || (s[i] == '"') || (s[i] == '\\'))
+	{
+	  cnt = fprintf(outstream, "{");
+	  cnt += fprintf(outstream, "%i", strlen(s));
+	  cnt += fprintf(outstream, "}\r\n");
+	  cnt += fprintf(outstream, "%s", s);
+	  return cnt;
+	}
     }
 
+  cnt = fprintf(outstream, "\"");
+  cnt += fprintf(outstream, "%s", s);
   cnt += fprintf(outstream, "\"");
+
   return cnt;
 }
 

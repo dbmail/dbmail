@@ -18,6 +18,9 @@
 #include "debug.h"
 #include "misc.h"
 #include "config.h"
+#ifdef PROC_TITLES
+#include "proctitleutils.h"
+#endif
 
 #define PNAME "dbmail/imap4d"
 
@@ -41,7 +44,11 @@ int mainRestart = 0;
 int mainStop = 0;
 
 
+#ifdef PROC_TITLES
+int main(int argc, char *argv[], char **envp)
+#else
 int main(int argc, char *argv[])
+#endif
 {
   serverConfig_t config;
   struct list imapItems, sysItems;
@@ -68,6 +75,10 @@ int main(int argc, char *argv[])
       mainRestart = 0;
 
       trace(TRACE_DEBUG, "main(): reading config");
+#ifdef PROC_TITLES
+      init_set_proc_title(argc, argv, envp, PNAME);
+      set_proc_title("%s", "Idle");
+#endif
 
       ReadConfig("IMAP", configFile, &imapItems);
       ReadConfig("DBMAIL", configFile, &sysItems);

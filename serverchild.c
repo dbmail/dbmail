@@ -25,6 +25,9 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <signal.h>
+#ifdef PROC_TITLES
+#include "proctitleutils.h"
+#endif
 
 int ChildStopRequested = 0;
 int connected = 0;
@@ -305,6 +308,9 @@ int PerformChildTask(ChildInfo_t *info)
       
       /* streams are ready, perform handling */
       info->ClientHandler(&client);
+#ifdef PROC_TITLES
+      set_proc_title("%s", "Idle");
+#endif
 
       trace(TRACE_DEBUG, "PerformChildTask(): client handling complete, closing streams");
 

@@ -11,6 +11,9 @@
 #include "auth.h"
 #include "clientinfo.h"
 #include "pop3.h"
+#ifdef PROC_TITLES
+#include "proctitleutils.h"
+#endif
 
 #define INCOMING_BUFFER_SIZE 512
 #define APOP_STAMP_SIZE 255
@@ -358,6 +361,9 @@ int pop3 (void *stream, char *buffer, char *client_ip)
 										trace(TRACE_MESSAGE,"pop3(): user %s logged in [messages=%llu, octets=%llu]",
 					 username, curr_session.virtual_totalmessages,
 					 curr_session.virtual_totalsize);
+#ifdef PROC_TITLES
+                    set_proc_title("USER %s [%s]", username, client_ip);
+#endif
 									}
 									return result;
 								}
@@ -640,6 +646,9 @@ case POP3_APOP:
 				trace(TRACE_MESSAGE,"pop3(): user %s logged in [messages=%llu, octets=%llu]",
 			 username, curr_session.virtual_totalmessages,
 			 curr_session.virtual_totalsize);
+#ifdef PROC_TITLES
+        set_proc_title("USER %s [%s]", username, client_ip);
+#endif
 			}
 			return result;
 		}

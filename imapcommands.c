@@ -20,6 +20,10 @@
 #include <sys/types.h>
 #include <time.h>
 #include "debug.h"
+#include "config.h"
+#ifdef PROC_TITLES
+#include "proctitleutils.h"
+#endif
 
 #ifndef MAX_LINESIZE
 #define MAX_LINESIZE 1024
@@ -176,6 +180,9 @@ int _ic_login(char *tag, char **args, ClientInfo *ci)
   /* login ok */
   trace(TRACE_MESSAGE, "_ic_login(): user (id %llu, name %s) login accepted @ %s\r\n",
 	userid,args[0],timestr);
+#ifdef PROC_TITLES
+  set_proc_title("USER %s [%s]", args[0], ci->ip);
+#endif
 
   /* update client info */
   ud->userid = userid;
@@ -281,6 +288,9 @@ int _ic_authenticate(char *tag, char **args, ClientInfo *ci)
 
   trace(TRACE_MESSAGE, "IMAPD [PID %d]: user (id %llu, name %s) login accepted @ %s\r\n",(int)getpid(),
 	userid,username,timestr);
+#ifdef PROC_TITLES
+  set_proc_title("USER %s [%s]", args[0], ci->ip);
+#endif
   
   fprintf(ci->tx,"%s OK AUTHENTICATE completed\r\n",tag);
   return 0;
