@@ -238,7 +238,10 @@ int auth_check_user_ext(const char *username, struct list *userids, struct list 
 
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
 		 "SELECT deliver_to FROM %saliases "
-		 "WHERE lower(alias) = lower('%s')",DBPFX, escaped_username);
+		 "WHERE lower(alias) = lower('%s') "
+		 "AND lower(alias) <> lower(deliver_to)",
+		 DBPFX, escaped_username);
+	
 	dm_free(escaped_username);
 
 	trace(TRACE_DEBUG, "%s,%s: checks [%d]", __FILE__, __func__,
