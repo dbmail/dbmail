@@ -16,6 +16,7 @@
 #include "../dbmd5.h"
 #include <crypt.h>
 #include "../config.h"
+#include <time.h>
 
 #define AUTH_QUERY_SIZE 1024
 
@@ -576,7 +577,14 @@ u64_t auth_validate (char *user, char *password)
 {
   u64_t id;
   int is_validated = 0;
-  
+  char timestr[30];
+  time_t td;
+  struct tm tm;
+
+  time(&td);              /* get time */
+  tm = *localtime(&td);   /* get components */
+  strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
+
   snprintf(__auth_query_data, DEF_QUERYSIZE, "SELECT user_idnr, passwd, encryption_type FROM users "
 	   "WHERE userid = '%s'", user);
 
@@ -613,7 +621,16 @@ u64_t auth_validate (char *user, char *password)
     }
   
   if (is_validated)
-    id = (__auth_row[0]) ? strtoull(__auth_row[0], NULL, 10) : 0;
+    {
+      id = (__auth_row[0]) ? strtoull(__auth_row[0], NULL, 10) : 0;
+
+       /* log login in the dbase */
+      snprintf(__auth_query_data, AUTH_QUERY_SIZE, "UPDATE users SET last_login = '%s' "
+	       "WHERE user_idnr = %llu", timestr, id);
+      
+      if (__auth_query(__auth_query_data)==-1)
+	trace(TRACE_ERROR, "auth_validate(): could not update user login time");
+    }
   else
     id = 0;
 
@@ -629,14 +646,19 @@ u64_t auth_md5_validate (char *username,unsigned char *md5_apop_he, char *apop_s
   char *checkstring;
   unsigned char *md5_apop_we;
   u64_t useridnr;	
+  char timestr[30];
+  time_t td;
+  struct tm tm;
 
-  
+  time(&td);              /* get time */
+  tm = *localtime(&td);   /* get components */
+  strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
   
   snprintf (__auth_query_data, DEF_QUERYSIZE, "SELECT passwd,user_idnr FROM users WHERE userid=\"%s\"",username);
 	
   if (__auth_query(__auth_query_data)==-1)
     {
-      
+      trace(TRACE_ERROR, "auth_md5_validate(): query failed: %s",mysql_error(&__auth_conn));
       return -1;
     }
 	
@@ -676,10 +698,15 @@ u64_t auth_md5_validate (char *username,unsigned char *md5_apop_he, char *apop_s
       trace(TRACE_MESSAGE,"auth_md5_validate(): user [%s] is validated using APOP",username);
 		
       useridnr = (__auth_row && __auth_row[1]) ? strtoull(__auth_row[1], NULL, 10) : 0;
-	
       mysql_free_result(__auth_res);
-      
       my_free(checkstring);
+
+       /* log login in the dbase */
+      snprintf(__auth_query_data, AUTH_QUERY_SIZE, "UPDATE users SET last_login = '%s' "
+	       "WHERE user_idnr = %llu", timestr, useridnr);
+      
+      if (__auth_query(__auth_query_data)==-1)
+	trace(TRACE_ERROR, "auth_validate(): could not update user login time");
 
       return useridnr;
     }

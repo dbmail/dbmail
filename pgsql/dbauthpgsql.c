@@ -17,6 +17,7 @@
 #include "../dbmd5.h"
 #include <crypt.h>
 #include "../config.h"
+#include <time.h>
 
 #define AUTH_QUERY_SIZE 1024
 
@@ -654,7 +655,14 @@ u64_t auth_validate (char *user, char *password)
   u64_t id;
   char *row;
   int is_validated = 0;
-  
+  char timestr[30];
+  time_t td;
+  struct tm tm;
+
+  time(&td);              /* get time */
+  tm = *localtime(&td);   /* get components */
+  strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
+
   snprintf(__auth_query_data, AUTH_QUERY_SIZE, "SELECT user_idnr, passwd, encryption_type FROM users "
 	   "WHERE userid = '%s'", user);
 
@@ -689,6 +697,13 @@ u64_t auth_validate (char *user, char *password)
     {
       row = PQgetvalue(__auth_res, 0, 0);
       id = (row) ? strtoull(row, NULL, 10) : 0;
+
+      /* log login in the dbase */
+      snprintf(__auth_query_data, AUTH_QUERY_SIZE, "UPDATE users SET last_login = '%s' "
+	       "WHERE user_idnr = %llu::bigint", timestr, id);
+      
+      if (__auth_query(__auth_query_data)==-1)
+	trace(TRACE_ERROR, "auth_validate(): could not update user login time");
     }
   else
     {
@@ -709,6 +724,13 @@ u64_t auth_md5_validate (char *username,unsigned char *md5_apop_he, char *apop_s
   unsigned char *md5_apop_we;
   u64_t useridnr;	
   char *value;
+  char timestr[30];
+  time_t td;
+  struct tm tm;
+
+  time(&td);              /* get time */
+  tm = *localtime(&td);   /* get components */
+  strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
   
   snprintf (__auth_query_data, AUTH_QUERY_SIZE, "SELECT passwd,user_idnr FROM users WHERE "
 	    "userid=\'%s\'",username);
@@ -745,14 +767,17 @@ u64_t auth_md5_validate (char *username,unsigned char *md5_apop_he, char *apop_s
     {
       trace(TRACE_MESSAGE,"auth_md5_validate(): user [%s] is validated using APOP",username);
 		
-      value = PQgetvalue (__auth_res, 0, 1); 
-      /* value contains useridnr */
-
+      value = PQgetvalue (__auth_res, 0, 1);     /* value contains useridnr */
       useridnr = (value) ? strtoull(value, NULL, 10) : 0;
-	
       PQclear(__auth_res);
-      
       my_free(checkstring);
+
+       /* log login in the dbase */
+      snprintf(__auth_query_data, AUTH_QUERY_SIZE, "UPDATE users SET last_login = '%s' "
+	       "WHERE user_idnr = %llu::bigint", timestr, useridnr);
+      
+      if (__auth_query(__auth_query_data)==-1)
+	trace(TRACE_ERROR, "auth_validate(): could not update user login time");
 
       return useridnr;
     }
