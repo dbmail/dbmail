@@ -98,19 +98,28 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg, int show_extension_
 
       mime_findfield("content-id", header_to_use, &mr);
       if (mr && strlen(mr->value) > 0)
-	fprintf(outstream, " \"%s\"",mr->value);
+	{
+	  fprintf(outstream, " ");
+	  quoted_string_out(outstream, mr->value);
+	}
       else
 	fprintf(outstream, " NIL");
 
       mime_findfield("content-description", header_to_use, &mr);
       if (mr && strlen(mr->value) > 0)
-	fprintf(outstream, " \"%s\"",mr->value);
+	{
+	  fprintf(outstream, " ");
+	  quoted_string_out(outstream, mr->value);
+	}
       else
 	fprintf(outstream, " NIL");
 
       mime_findfield("content-transfer-encoding", header_to_use, &mr);
       if (mr && strlen(mr->value) > 0)
-	fprintf(outstream, " \"%s\"",mr->value);
+	{
+	  fprintf(outstream, " ");
+	  quoted_string_out(outstream, mr->value);
+	}
       else
 	fprintf(outstream, " \"7BIT\"");
 
@@ -156,7 +165,10 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg, int show_extension_
 	{
 	  mime_findfield("content-md5", header_to_use, &mr);
 	  if (mr && strlen(mr->value) > 0)
-	    fprintf(outstream, " \"%s\"",mr->value);
+	    {
+	      fprintf(outstream, " ");
+	      quoted_string_out(outstream, mr->value);
+	    }
 	  else
 	    fprintf(outstream, " NIL");
 
@@ -172,7 +184,10 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg, int show_extension_
 
 	  mime_findfield("content-language", header_to_use, &mr);
 	  if (mr && strlen(mr->value) > 0)
-	    fprintf(outstream, " \"%s\"",mr->value);
+	    {
+	      fprintf(outstream, " ");
+	      quoted_string_out(outstream, mr->value);
+	    }
 	  else
 	    fprintf(outstream, " NIL");
 	}
@@ -208,13 +223,15 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg, int show_extension_
 		    return -1;
 
 		  *newline = 0;
-		  fprintf(outstream, " \"%s\"", subtype+1);
+		  fprintf(outstream, " ");
+		  quoted_string_out(outstream, subtype+1);
 		  *newline = '\n';
 		}
 	      else
 		{
 		  *extension = 0;
-		  fprintf(outstream, " \"%s\"", subtype+1);
+		  fprintf(outstream, " ");
+		  quoted_string_out(outstream, subtype+1);
 		  *extension = ';';
 		}
 	    }
@@ -255,14 +272,19 @@ int retrieve_envelope(FILE *outstream, struct list *rfcheader)
 
   mime_findfield("date", rfcheader, &mr);
   if (mr && strlen(mr->value) > 0)
-    fprintf(outstream, "\"%s\" ",mr->value);
+    {
+      quoted_string_out(outstream, mr->value);
+      fprintf(outstream, " ");
+    }
   else
     fprintf(outstream, "NIL ");
 
   mime_findfield("subject", rfcheader, &mr);
   if (mr && strlen(mr->value) > 0)
-    fprintf(outstream, "{%d}\r\n%s ",strlen(mr->value),mr->value);
-/*    fprintf(outstream, "\"%s\" ",mr->value);*/
+    {
+      quoted_string_out(outstream, mr->value);
+      fprintf(outstream, " ");
+    }
   else
     fprintf(outstream, "NIL ");
 
@@ -303,13 +325,16 @@ int retrieve_envelope(FILE *outstream, struct list *rfcheader)
 
   mime_findfield("in-reply-to", rfcheader, &mr);
   if (mr && strlen(mr->value) > 0)
-    fprintf(outstream, "\"%s\" ",mr->value);
+    {
+      quoted_string_out(outstream, mr->value);
+      fprintf(outstream, " ");
+    }
   else
     fprintf(outstream, "NIL ");
 
   mime_findfield("message-id", rfcheader, &mr);
   if (mr && strlen(mr->value) > 0)
-    fprintf(outstream, "\"%s\"",mr->value);
+    quoted_string_out(outstream, mr->value);
   else
     fprintf(outstream, "NIL");
 
@@ -453,11 +478,18 @@ int show_mime_parameter_list(FILE *outstream, struct mime_record *mr,
       if (mr->value[idx] && (idx<delimiter || delimiter == -1))
 	{
 	  mr->value[idx] = 0;
-	  fprintf(outstream,"\"%s\" \"%s\"", mr->value, &mr->value[idx+1]);
+
+	  quoted_string_out(outstream, mr->value);
+	  fprintf(outstream, " ");
+	  quoted_string_out(outstream, &mr->value[idx+1]);
+
 	  mr->value[idx] = '/';
 	}
       else
-	fprintf(outstream,"\"%s\" %s", mr->value, force_subtype ? "NIL" : "");
+	{
+	  quoted_string_out(outstream, mr->value);
+	  fprintf(outstream," %s", force_subtype ? "NIL" : "");
+	}
     }
 
   if (delimiter >= 0)
@@ -1704,6 +1736,32 @@ int binary_search(const unsigned long *array, int arraysize, unsigned long key)
   return -1; /* not found */
 }
 
+/* 
+ * sends a string to outstream, escaping the following characters:
+ * "  --> \"
+ * \  --> \\
+ *
+ * double quotes are placed at the beginning and end of the string.
+ *
+ * returns the number of bytes outputted.
+ */
+int quoted_string_out(FILE *outstream, const char *s)
+{
+  int i,cnt;
+
+  cnt = fprintf(outstream, "\"");
+
+  for (i=0; s[i]; i++)
+    {
+      if (s[i] == '"' || s[i] == '\\')
+	cnt += fprintf(outstream, "\\%c",s[i]);
+      else
+	cnt += fprintf(outstream, "%c", s[i]);
+    }
+
+  cnt += fprintf(outstream, "\"");
+  return cnt;
+}
 
 
 /*

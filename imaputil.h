@@ -47,6 +47,7 @@ void base64decode(char *in,char *out);
 char **give_chunks(const char *str, char delimiter);
 void free_chunks(char **chunks);
 int binary_search(const unsigned long *array, int arraysize, unsigned long key);
+int quoted_string_out(FILE *outstream, const char *s);
 
 int init_cache();
 void close_cache();
