@@ -38,6 +38,7 @@
 
 const char *TO_CHAR = "TO_CHAR(%s, 'YYYY-MM-DD HH24:MI:SS' )";
 const char *TO_DATE = "TO_TIMESTAMP('%s', 'YYYY-MM-DD HH:MI:SS')";
+const char *SQL_CURRENT_TIMESTAMP = "CURRENT_TIMESTAMP";
 
 static PGconn *conn;
 static PGresult *res = NULL;

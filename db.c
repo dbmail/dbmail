@@ -54,6 +54,7 @@ static const char *db_flag_desc[] = {
 
 extern const char *TO_CHAR;
 extern const char *TO_DATE;
+extern const char *SQL_CURRENT_TIMESTAMP;
 
 extern db_param_t _db_params;
 
@@ -777,7 +778,7 @@ int db_insert_physmessage(u64_t * physmessage_id)
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "INSERT INTO %sphysmessage (messagesize, internal_date) "
-		 "VALUES ('0', CURRENT_TIMESTAMP)", DBPFX);
+		 "VALUES ('0', %s)", DBPFX, SQL_CURRENT_TIMESTAMP);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: query failed", __FILE__,
@@ -979,8 +980,8 @@ int db_log_ip(const char *ip)
 	if (id) {
 		/* this IP is already in the table, update the 'since' field */
 		snprintf(query, DEF_QUERYSIZE, "UPDATE %spbsp "
-			 "SET since = CURRENT_TIMESTAMP WHERE idnr='%llu'",
-			 DBPFX, id);
+			 "SET since = %s WHERE idnr='%llu'",
+			 DBPFX, SQL_CURRENT_TIMESTAMP, id);
 
 		if (db_query(query) == -1) {
 			trace(TRACE_ERROR,
@@ -993,7 +994,7 @@ int db_log_ip(const char *ip)
 		/* IP not in table, insert row */
 		snprintf(query, DEF_QUERYSIZE,
 			 "INSERT INTO %spbsp (since, ipnumber) "
-			 "VALUES (CURRENT_TIMESTAMP, '%s')", DBPFX, ip);
+			 "VALUES (%s, '%s')", DBPFX, SQL_CURRENT_TIMESTAMP, ip);
 		if (db_query(query) == -1) {
 			trace(TRACE_ERROR,
 			      "%s,%s: could not log IP number to dbase "
@@ -4063,16 +4064,16 @@ int db_user_create(const char *username, const char *password, const char *encty
 		snprintf(query, DEF_QUERYSIZE, "INSERT INTO %susers "
 			"(userid,passwd,client_idnr,maxmail_size,"
 			"encryption_type, last_login) VALUES "
-			"('%s','%s',%llu,'%llu','%s', CURRENT_TIMESTAMP)",
+			"('%s','%s',%llu,'%llu','%s', %s)",
 			DBPFX, escaped_username, escapedpass, clientid, 
-			maxmail, enctype ? enctype : "");
+			maxmail, enctype ? enctype : "", SQL_CURRENT_TIMESTAMP);
 	} else {
 		snprintf(query, DEF_QUERYSIZE, "INSERT INTO %susers "
 			"(userid,user_idnr,passwd,client_idnr,maxmail_size,"
 			"encryption_type, last_login) VALUES "
-			"('%s',%llu,'%s',%llu,'%llu','%s', CURRENT_TIMESTAMP)",
+			"('%s',%llu,'%s',%llu,'%llu','%s', %s)",
 			DBPFX,escaped_username,*user_idnr,escapedpass,clientid, 
-			maxmail, enctype ? enctype : "");
+			maxmail, enctype ? enctype : "", SQL_CURRENT_TIMESTAMP);
 	}
 	dm_free(escaped_username);
 

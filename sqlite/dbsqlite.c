@@ -36,12 +36,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <time.h>
 
 db_param_t _db_params;
 
 /* native format is the character string */
 const char *TO_CHAR = "%s";
 const char *TO_DATE = "%s";
+
+const char *SQL_CURRENT_TIMESTAMP = "CURRENT_TIMESTAMP()";
 
 static sqlite *conn;
 
@@ -51,6 +54,19 @@ struct qtmp {
 };
 
 struct qtmp *lastq = 0, *saveq = 0, *tempq = 0;
+
+
+static void dbsqlite_current_timestamp(sqlite_func *f, int argc UNUSED, const char **argv UNUSED)
+{
+	char timestr[21];
+	struct tm tm;
+	time_t now;
+
+	time(&now);
+	localtime_r(&now, &tm);
+	strftime(timestr, sizeof(timestr)-1, "%Y-%m-%d %H:%M:%S", &tm);
+	(void)sqlite_set_result_string(f,timestr,-1);
+}
 
 int db_connect()
 {
@@ -62,6 +78,16 @@ int db_connect()
 		sqlite_freemem(errmsg);
 		return -1;
 	}
+	if (sqlite_create_function(conn, "CURRENT_TIMESTAMP", 0,
+				dbsqlite_current_timestamp,
+				0) != SQLITE_OK) {
+		sqlite_close(conn);
+		trace(TRACE_ERROR,
+		      "%si,%s: sqlite_create_function failed",
+		      __FILE__, __func__);
+		return -1;
+	}
+
 	return 0;
 }
 
@@ -127,6 +153,7 @@ int db_query(const char *the_query)
 			trace(TRACE_ERROR,
 			      "%si,%s: malloc failed: %s",
 			      __FILE__, __func__, strerror(errno));
+			return -1;
 		}
 	}
 
@@ -138,6 +165,8 @@ int db_query(const char *the_query)
 		sqlite_freemem(errmsg);
 		return -1;
 	}
+
+	return 0;
 }
 unsigned long db_escape_string(char *to, const char *from, unsigned long length)
 {
