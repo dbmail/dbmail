@@ -990,7 +990,7 @@ char *auth_get_deliver_from_alias(const char *alias)
 	if (!(escaped_alias = (char *) malloc(strlen(alias) * 2 + 1))) {
 		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
 		      "escaped alias", __FILE__, __func__);
-		return -1;
+		return NULL;
 	}
 
 	db_escape_string(escaped_alias, alias, strlen(alias));

@@ -196,9 +196,7 @@ int main(int argc, char *argv[])
 #endif
 
 		/* We need smtp config for bounce.c and forward.c */
-		ReadConfig("SMTP", configFile);
-		ReadConfig("TIMSIEVED", configFile);
-		ReadConfig("DBMAIL", configFile);
+                config_read(configFile);
 		SetConfigItems(&config);
 		SetTraceLevel("TIMSIEVED");
 		GetDBParams(&_db_params);
@@ -312,7 +310,7 @@ void SetConfigItems(serverConfig_t * config)
 	field_t val;
 
 	/* read items: NCHILDREN */
-	GetConfigValue("NCHILDREN", "TIMSIEVED", val);
+	config_get_value("NCHILDREN", "TIMSIEVED", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for NCHILDREN in config file");
@@ -328,7 +326,7 @@ void SetConfigItems(serverConfig_t * config)
 
 
 	/* read items: MAXCONNECTS */
-	GetConfigValue("MAXCONNECTS", "TIMSIEVED", val);
+	config_get_value("MAXCONNECTS", "TIMSIEVED", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for MAXCONNECTS in config file");
@@ -344,7 +342,7 @@ void SetConfigItems(serverConfig_t * config)
 
 
 	/* read items: TIMEOUT */
-	GetConfigValue("TIMEOUT", "TIMSIEVED", val);
+	config_get_value("TIMEOUT", "TIMSIEVED", val);
 	if (strlen(val) == 0) {
 		trace(TRACE_DEBUG,
 		      "SetConfigItems(): no value for TIMEOUT in config file");
@@ -359,7 +357,7 @@ void SetConfigItems(serverConfig_t * config)
 
 
 	/* read items: PORT */
-	GetConfigValue("PORT", "TIMSIEVED", val);
+	config_get_value("PORT", "TIMSIEVED", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for PORT in config file");
@@ -374,7 +372,7 @@ void SetConfigItems(serverConfig_t * config)
 
 
 	/* read items: BINDIP */
-	GetConfigValue("BINDIP", "TIMSIEVED", val);
+	config_get_value("BINDIP", "TIMSIEVED", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for BINDIP in config file");
@@ -387,7 +385,7 @@ void SetConfigItems(serverConfig_t * config)
 
 
 	/* read items: RESOLVE_IP */
-	GetConfigValue("RESOLVE_IP", "TIMSIEVED", val);
+	config_get_value("RESOLVE_IP", "TIMSIEVED", val);
 	if (strlen(val) == 0)
 		trace(TRACE_DEBUG,
 		      "SetConfigItems(): no value for RESOLVE_IP in config file");
@@ -399,7 +397,7 @@ void SetConfigItems(serverConfig_t * config)
 
 
 	/* read items: IMAP-BEFORE-SMTP */
-	GetConfigValue("TIMS_BEFORE_SMTP", "TIMSIEVED", val);
+	config_get_value("TIMS_BEFORE_SMTP", "TIMSIEVED", val);
 	if (strlen(val) == 0)
 		trace(TRACE_DEBUG,
 		      "SetConfigItems(): no value for TIMS_BEFORE_SMTP  in config file");
@@ -411,7 +409,7 @@ void SetConfigItems(serverConfig_t * config)
 
 
 	/* read items: EFFECTIVE-USER */
-	GetConfigValue("EFFECTIVE_USER", "TIMSIEVED", val);
+	config_get_value("EFFECTIVE_USER", "TIMSIEVED", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for EFFECTIVE_USER in config file");
@@ -425,7 +423,7 @@ void SetConfigItems(serverConfig_t * config)
 
 
 	/* read items: EFFECTIVE-GROUP */
-	GetConfigValue("EFFECTIVE_GROUP", "TIMSIEVED", val);
+	config_get_value("EFFECTIVE_GROUP", "TIMSIEVED", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for EFFECTIVE_GROUP in config file");

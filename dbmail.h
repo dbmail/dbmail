@@ -126,15 +126,13 @@ typedef struct {
 } item_t;
 
 /**
- * \brief read configuration items for a service
- * \param serviceName name of service to get paramaters for. determines from which
- *        section in the configuration file values are taken.
+ * \brief read configuration from filename
  * \param cfilename name of configuration file 
  * \return
  *     - -1 on error
  *     -  0 on success
  */
-int ReadConfig(const char *serviceName, const char *cfilename);
+int config_read(const char *config_filename);
 
 /**
  * free all memory taken up by config.
@@ -145,14 +143,13 @@ void config_free(void);
  * \brief get configuration value for an item
  * \param name name of configuration item
  * \param service_name name of service
-          ReadConfig()
  * \param value value of configuration item name
  * \return 0
- * \attention value is set to a string beginning with a '\\0' if no configuration
-              item with name is found in items.
+ * \attention value is set to a string beginning with a '\\0' 
+ * if no configuration item with name is found in items.
  */
-int GetConfigValue(const field_t name, const char *service_name,
-		   /*@out@*/ field_t value);
+int config_get_value(const field_t name, const char *service_name,
+                     /*@out@*/ field_t value);
 
 /* some common used functions reading config options */
 /**

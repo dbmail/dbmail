@@ -76,7 +76,7 @@ _ldap_cfg_t _ldap_cfg;
 
 /* Define a macro to cut down on code duplication... */
 #define GETCONFIGVALUE(key, sect, var)		\
-	GetConfigValue(key, sect, var);		\
+	config_get_value(key, sect, var);		\
 	if (strlen(var) == 0)			\
 		trace(TRACE_DEBUG, "%s, %s: no value for "	\
 			#key " in config file section " #sect,	\
@@ -90,7 +90,7 @@ static void __auth_get_config(void);
 
 static void __auth_get_config()
 {
-	ReadConfig("LDAP", configFile);
+	config_read(configFile);
 	SetTraceLevel("LDAP");
 
 	GETCONFIGVALUE("BIND_DN",         "LDAP", _ldap_cfg.bind_dn);

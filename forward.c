@@ -60,7 +60,7 @@ int forward(u64_t msgidnr, struct list *targets, const char *from,
 	tm = *localtime(&td);	/* get components */
 	strftime(timestr, sizeof(timestr), "%a %b %e %H:%M:%S %Y", &tm);
 
-	GetConfigValue("SENDMAIL", "SMTP", sendmail);
+	config_get_value("SENDMAIL", "SMTP", sendmail);
 	if (sendmail[0] == '\0')
 		trace(TRACE_FATAL,
 		      "%s,%s: SENDMAIL not configured (see config file). "

@@ -165,9 +165,7 @@ int main(int argc, char *argv[])
 #endif
 
 		/* We need smtp config for bounce.c and forward.c */
-		ReadConfig("SMTP", configFile);
-		ReadConfig("LMTP", configFile);
-		ReadConfig("DBMAIL", configFile);
+                config_read(configFile);
 		SetConfigItems(&config);
 		SetTraceLevel("LMTP");
 		GetDBParams(&_db_params);
@@ -279,7 +277,7 @@ void SetConfigItems(serverConfig_t * config)
 	field_t val;
 
 	/* read items: NCHILDREN */
-	GetConfigValue("NCHILDREN", "LMTP", val);
+	config_get_value("NCHILDREN", "LMTP", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for NCHILDREN in config file");
@@ -295,7 +293,7 @@ void SetConfigItems(serverConfig_t * config)
 
 
 	/* read items: MAXCONNECTS */
-	GetConfigValue("MAXCONNECTS", "LMTP", val);
+	config_get_value("MAXCONNECTS", "LMTP", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for MAXCONNECTS in config file");
@@ -311,7 +309,7 @@ void SetConfigItems(serverConfig_t * config)
 
 
 	/* read items: TIMEOUT */
-	GetConfigValue("TIMEOUT", "LMTP", val);
+	config_get_value("TIMEOUT", "LMTP", val);
 	if (strlen(val) == 0) {
 		trace(TRACE_DEBUG,
 		      "SetConfigItems(): no value for TIMEOUT in config file");
@@ -326,7 +324,7 @@ void SetConfigItems(serverConfig_t * config)
 
 
 	/* read items: PORT */
-	GetConfigValue("PORT", "LMTP", val);
+	config_get_value("PORT", "LMTP", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for PORT in config file");
@@ -341,7 +339,7 @@ void SetConfigItems(serverConfig_t * config)
 
 
 	/* read items: BINDIP */
-	GetConfigValue("BINDIP", "LMTP", val);
+	config_get_value("BINDIP", "LMTP", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for BINDIP in config file");
@@ -354,7 +352,7 @@ void SetConfigItems(serverConfig_t * config)
 
 
 	/* read items: RESOLVE_IP */
-	GetConfigValue("RESOLVE_IP", "LMTP", val);
+	config_get_value("RESOLVE_IP", "LMTP", val);
 	if (strlen(val) == 0)
 		trace(TRACE_DEBUG,
 		      "SetConfigItems(): no value for RESOLVE_IP in config file");
@@ -366,7 +364,7 @@ void SetConfigItems(serverConfig_t * config)
 
 
 	/* read items: IMAP-BEFORE-SMTP */
-	GetConfigValue("LMTP_BEFORE_SMTP", "LMTP", val);
+	config_get_value("LMTP_BEFORE_SMTP", "LMTP", val);
 	if (strlen(val) == 0)
 		trace(TRACE_DEBUG,
 		      "SetConfigItems(): no value for LMTP_BEFORE_SMTP  in config file");
@@ -378,7 +376,7 @@ void SetConfigItems(serverConfig_t * config)
 
 
 	/* read items: EFFECTIVE-USER */
-	GetConfigValue("EFFECTIVE_USER", "LMTP", val);
+	config_get_value("EFFECTIVE_USER", "LMTP", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for EFFECTIVE_USER in config file");
@@ -392,7 +390,7 @@ void SetConfigItems(serverConfig_t * config)
 
 
 	/* read items: EFFECTIVE-GROUP */
-	GetConfigValue("EFFECTIVE_GROUP", "LMTP", val);
+	config_get_value("EFFECTIVE_GROUP", "LMTP", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for EFFECTIVE_GROUP in config file");
@@ -406,7 +404,7 @@ void SetConfigItems(serverConfig_t * config)
 
 
        /* read items: MINSPARECHILDREN */
-       GetConfigValue("MINSPARECHILDREN", "LMTP", val);
+       config_get_value("MINSPARECHILDREN", "LMTP", val);
        if (strlen(val) == 0)
                trace(TRACE_FATAL,
                        "SetConfigItems(): no value for MINSPARECHILDREN in config file");
@@ -421,7 +419,7 @@ void SetConfigItems(serverConfig_t * config)
 
 
        /* read items: MAXSPARECHILDREN */
-       GetConfigValue("MAXSPARECHILDREN", "LMTP", val);
+       config_get_value("MAXSPARECHILDREN", "LMTP", val);
        if (strlen(val) == 0)
                trace(TRACE_FATAL,
                        "SetConfigItems(): no value for MAXSPARECHILDREN in config file");
@@ -436,7 +434,7 @@ void SetConfigItems(serverConfig_t * config)
 
 
        /* read items: MAXCHILDREN */
-       GetConfigValue("MAXCHILDREN", "LMTP", val);
+       config_get_value("MAXCHILDREN", "LMTP", val);
        if (strlen(val) == 0)
                trace(TRACE_FATAL,
                        "SetConfigItems(): no value for MAXCHILDREN in config file");

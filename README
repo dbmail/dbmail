@@ -11,9 +11,9 @@ Read the INSTALL file for installation of DBMail.
 Read the EXTRAS file about extra features of DBMail.
 
 
-Why is it usefull?
+Why is it useful?
 ==================
-Well, for me it's usefull because a number of reasons. 
+Well, for me it's useful because a number of reasons. 
 - it enables me to create mailboxes without the need of systemusers.
 - mail is more effeciently stored and therefore it can
   be inserted an retrieved much faster dan any regular system 
@@ -64,7 +64,6 @@ Check the INSTALL file.
 
 Future
 ======
-- shared folders in imap
 - more database drivers
 - GUI's
 
@@ -77,6 +76,9 @@ The + is that i would like to know how stuff is working out. So
 If you have DBMail running and you have like 1002919183 users, 
 i would want to know (to bragg about it ;).
 
+We use the iniparser library for parsing the dbmail.conf file.
+This library is included in the DBMail source tree. The license
+for iniparser is located at lib/iniparser-2.14/LICENSE. 
 
 The rest of the licence is described below:
 -------------------------------------------

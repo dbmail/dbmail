@@ -5,3 +5,6 @@ Roel Rozendaal (roel at ic-s dot nl)
 Ilja Booij (ilja at ic-s dot nl)
 Aaron Stone (aaron at serendipity dot cx):
 Paul Stevens (paul at nfg dot nl):
+
+The iniparser library, which is included in lib/iniparser-2.14
+was written by Nicolas Devillard.

@@ -20,7 +20,7 @@ AC_INIT(main.c)
 AC_CONFIG_AUX_DIR(buildtools)
 AM_CONFIG_HEADER(config.h:config.in)
 DBMAIL_MSG_CONFIGURE_START
-AM_INIT_AUTOMAKE(dbmail, 2.0)
+AM_INIT_AUTOMAKE(dbmail, 2.1)
 AM_MAINTAINER_MODE
 
 
@@ -42,6 +42,7 @@ DBMAIL_SIEVE_CONF
 DBMAIL_CHECK_SIEVE_LIBS
 DBMAIL_CHECK_GLIB
 DBMAIL_CHECK_GMIME
+DBMAIL_SET_INIPARSER
 
 AC_PROG_CC
 AC_COMPILE_WARNINGS
@@ -62,6 +63,8 @@ AC_SUBST(SORTALIB)
 AC_SUBST(SORTLTLIB)
 AC_SUBST(AUTHALIB)
 AC_SUBST(AUTHLTLIB)
+AC_SUBST(INIPARSERALIB)
+AC_SUBST(INIPARSERLTLIB)
 AC_SUBST(SIEVELIB)
 AC_SUBST(MYSQLINC)
 AC_SUBST(PGSQLINC)
@@ -71,4 +74,4 @@ AC_SUBST(LDAPINC)
 # libtool patch
 AC_PROG_LIBTOOL
 
-AC_OUTPUT(Makefile mysql/Makefile pgsql/Makefile auth/Makefile sort/Makefile man/Makefile)
+AC_OUTPUT(Makefile mysql/Makefile pgsql/Makefile auth/Makefile sort/Makefile man/Makefile lib/Makefile lib/iniparser-2.14/Makefile lib/iniparser-2.14/src/Makefile)

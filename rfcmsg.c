@@ -759,7 +759,7 @@ int db_parse_as_text(mime_message_t * msg)
 		return -3;
 
 	strcpy(mr.field, "from");
-	GetConfigValue("POSTMASTER", "DBMAIL", postmaster);
+	config_get_value("POSTMASTER", "DBMAIL", postmaster);
 	strncpy(mr.value, postmaster, MIME_VALUE_MAX - 1);
 	el = list_nodeadd(&msg->rfcheader, &mr, sizeof(mr));
 	if (!el)

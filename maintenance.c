@@ -229,7 +229,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	ReadConfig("DBMAIL", configFile);
+	config_read(configFile);
 	SetTraceLevel("DBMAIL");
 	GetDBParams(&_db_params);
 

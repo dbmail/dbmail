@@ -1,3 +1,22 @@
+2004-12-03  Ilja Booij <ilja@ic-s.nl>
+
+	* lib/iniparser-2.14: directory added. Added Makefile.am in 
+	lib/ lib/iniparser-2.14 and lib/iniparser-2.14/src to
+	include it in the build process.
+	* config.c: changed ReadConfig() to config_read() and 
+	GetConfigValue() to config_get_value(). These functions
+	now use the code in the iniparser library to do their
+	job, which simplifies parsing of the ini-file a *lot*.
+	* dbmail.h: changed prototypes for config_read() (was
+	ReadConfig()) and config_get_value() (was 
+	GetConfigValue()).
+	* forward.c, imapd.c, lmtpd.c, main.c, maintenance.c,
+	pipe.c, pop3d.c, rfcmsg.c, sievecmd.c, timsieved.c,
+	user.c, auth/authldap.c, sort/sort.c: changed calls
+	to config_read() and config_get_value().
+	* auth/authsql.c(auth_get_deliver_from_alias): fixed a 
+	return value (-1 was returned instead of NULL).
+	
 2004-11-27  Paul Stevens <paul@nfg.nl>
 
 	* imapcommands.c (_ic_copy, _ic_store): add call to 

@@ -162,8 +162,7 @@ int main(int argc, char *argv[])
 		set_proc_title("%s", "Idle");
 #endif
 
-		ReadConfig("IMAP", configFile);
-		ReadConfig("DBMAIL", configFile);
+		config_read(configFile);
 		SetConfigItems(&config);
 		SetTraceLevel("IMAP");
 		GetDBParams(&_db_params);
@@ -274,7 +273,7 @@ void SetConfigItems(serverConfig_t * config)
 	field_t val;
 
 	/* read items: NCHILDREN */
-	GetConfigValue("NCHILDREN", "IMAP", val);
+	config_get_value("NCHILDREN", "IMAP", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for NCHILDREN in config file");
@@ -290,7 +289,7 @@ void SetConfigItems(serverConfig_t * config)
 
 
 	/* read items: MAXCONNECTS */
-	GetConfigValue("MAXCONNECTS", "IMAP", val);
+	config_get_value("MAXCONNECTS", "IMAP", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for MAXCONNECTS in config file");
@@ -305,7 +304,7 @@ void SetConfigItems(serverConfig_t * config)
 	      config->childMaxConnect);
 
 	/* read items: MINSPARECHILDREN */
-	GetConfigValue("MINSPARECHILDREN", "IMAP", val);
+	config_get_value("MINSPARECHILDREN", "IMAP", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL, 
 			"SetConfigItems(): no value for MINSPARECHILDREN in config file");
@@ -320,7 +319,7 @@ void SetConfigItems(serverConfig_t * config)
 
 	
 	/* read items: MAXSPARECHILDREN */
-	GetConfigValue("MAXSPARECHILDREN", "IMAP", val);
+	config_get_value("MAXSPARECHILDREN", "IMAP", val);
    	if (strlen(val) == 0)
          	trace(TRACE_FATAL, 
 			"SetConfigItems(): no value for MAXSPARECHILDREN in config file");
@@ -335,7 +334,7 @@ void SetConfigItems(serverConfig_t * config)
 
 
 	/* read items: MAXCHILDREN */
-	GetConfigValue("MAXCHILDREN", "IMAP", val);
+	config_get_value("MAXCHILDREN", "IMAP", val);
 	if (strlen(val) == 0)
         	trace(TRACE_FATAL, 
 			"SetConfigItems(): no value for MAXCHILDREN in config file");
@@ -350,7 +349,7 @@ void SetConfigItems(serverConfig_t * config)
 
 	
 	/* read items: TIMEOUT */
-	GetConfigValue("TIMEOUT", "IMAP", val);
+	config_get_value("TIMEOUT", "IMAP", val);
 	if (strlen(val) == 0) {
 		trace(TRACE_DEBUG,
 		      "SetConfigItems(): no value for TIMEOUT in config file");
@@ -365,7 +364,7 @@ void SetConfigItems(serverConfig_t * config)
 
 
 	/* read items: PORT */
-	GetConfigValue("PORT", "IMAP", val);
+	config_get_value("PORT", "IMAP", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for PORT in config file");
@@ -380,7 +379,7 @@ void SetConfigItems(serverConfig_t * config)
 
 
 	/* read items: BINDIP */
-	GetConfigValue("BINDIP", "IMAP", val);
+	config_get_value("BINDIP", "IMAP", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for BINDIP in config file");
@@ -393,7 +392,7 @@ void SetConfigItems(serverConfig_t * config)
 
 
 	/* read items: RESOLVE_IP */
-	GetConfigValue("RESOLVE_IP", "IMAP", val);
+	config_get_value("RESOLVE_IP", "IMAP", val);
 	if (strlen(val) == 0)
 		trace(TRACE_DEBUG,
 		      "SetConfigItems(): no value for RESOLVE_IP in config file");
@@ -405,7 +404,7 @@ void SetConfigItems(serverConfig_t * config)
 
 
 	/* read items: IMAP-BEFORE-SMTP */
-	GetConfigValue("IMAP_BEFORE_SMTP", "IMAP", val);
+	config_get_value("IMAP_BEFORE_SMTP", "IMAP", val);
 	if (strlen(val) == 0)
 		trace(TRACE_DEBUG,
 		      "SetConfigItems(): no value for IMAP_BEFORE_SMTP  in config file");
@@ -417,7 +416,7 @@ void SetConfigItems(serverConfig_t * config)
 
 
 	/* read items: EFFECTIVE-USER */
-	GetConfigValue("EFFECTIVE_USER", "IMAP", val);
+	config_get_value("EFFECTIVE_USER", "IMAP", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for EFFECTIVE_USER in config file");
@@ -431,7 +430,7 @@ void SetConfigItems(serverConfig_t * config)
 
 
 	/* read items: EFFECTIVE-GROUP */
-	GetConfigValue("EFFECTIVE_GROUP", "IMAP", val);
+	config_get_value("EFFECTIVE_GROUP", "IMAP", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for EFFECTIVE_GROUP in config file");

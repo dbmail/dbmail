@@ -73,11 +73,11 @@ dsn_class_t sort_and_deliver(u64_t msgidnr,
 	char *inbox = "INBOX";
 
 
-	GetConfigValue("SQLREGEX", "SMTP", val);
+	config_get_value("SQLREGEX", "SMTP", val);
 	if (strcasecmp(val, "yes") == 0)
 		do_regex = 1;
 
-	GetConfigValue("LIBSIEVE", "SMTP", val);
+	config_get_value("LIBSIEVE", "SMTP", val);
 	if (strcasecmp(val, "yes") == 0)
 		do_sieve = 1;
 

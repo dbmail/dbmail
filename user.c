@@ -383,7 +383,13 @@ int main(int argc, char *argv[])
 	}
 
 	/* read the config file */
-	ReadConfig("DBMAIL", configFile);
+        if (config_read(configFile) == -1) {
+                qerrorf("Failed. Unable to read config file %s\n",
+                        configFile);
+                result = -1;
+                goto freeall;
+        }
+                
 	SetTraceLevel("DBMAIL");
 	GetDBParams(&_db_params);
 

@@ -290,8 +290,7 @@ int main(int argc, char *argv[])
 
 	/* Read in the config file; do it after getopt
 	 * in case -f config.alt was specified. */
-	if (ReadConfig("DBMAIL", configFile) == -1
-	 || ReadConfig("SMTP", configFile) == -1) {
+	if (config_read(configFile) == -1) {
 		trace(TRACE_ERROR,
 		      "main(): error reading alternate config file [%s]", configFile);
 		exitcode = EX_TEMPFAIL;

@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
 
 	setvbuf(stdout, 0, _IONBF, 0);
 
-	ReadConfig("DBMAIL", configFile);
+	config_read(configFile);
 	SetConfigItems(&sysItems);
 	SetTraceLevel("SIEVECMD");
 	GetDBParams(&_db_params);
