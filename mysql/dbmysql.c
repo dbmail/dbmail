@@ -1096,7 +1096,10 @@ int db_createsession (u64_t useridnr, PopSession_t *sessionptr)
   /* first we do a query on the messages of this user */
   struct message tmpmessage;
   u64_t messagecounter=0;
-	
+
+
+  list_init (&sessionptr->messagelist);
+  
   
   /* query is <2 because we don't want deleted messages 
    * the unique_id should not be empty, this could mean that the message is still being delivered */

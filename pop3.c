@@ -406,7 +406,7 @@ int pop3 (void *stream, char *buffer, char *client_ip, PopSession_t *session)
 				if (session->state != TRANSACTION)
 					return pop3_error(session, stream, "-ERR wrong command mode, sir\r\n");
 
-				tmpelement = list_getstart (&(session->messagelst));
+				tmpelement = list_getstart (&session->messagelst);
 				if (value != NULL)
 				{
 					/* they're asking for a specific message */
