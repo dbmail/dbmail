@@ -14,19 +14,12 @@
 #include "dbmysql.h"
 
 #define PNAME "dbmail/imap4"
-#define IMAP_DEF_PORT "143"
 
-int main(int argc, char *argv[])
+
+int main()
 {
   int sock;
-  char *newuser,*newgroup,*port;
-
-  /* check arguments */
-  if (argc < 2)
-    {
-      printf("Usage: imapd <ip nr>\n");
-      return 0;
-    }
+  char *newuser,*newgroup,*port,*bindip;
 
   /* open logs */
   openlog(PNAME, LOG_PID, LOG_MAIL);
@@ -35,15 +28,20 @@ int main(int argc, char *argv[])
   if (db_connect() != 0)
     trace(TRACE_FATAL, "IMAPD: cannot connect to dbase\n");
 
+  /* read options from config */
+  port = db_get_config_item("IMAPD_BIND_PORT",CONFIG_MANDATORY);
+  bindip = db_get_config_item("IMAPD_BIND_IP",CONFIG_MANDATORY);
+
+  if (!port || !bindip)
+    trace(TRACE_FATAL, "IMAPD: port and ip not specified in configuration file!\r\n");
+
   /* open socket */
-  port = db_get_config_item("IMAPD_BIND_PORT",CONFIG_EMPTY);
-  if (!port)
-    sock = SS_MakeServerSock(argv[1], IMAP_DEF_PORT);
-  else
-    sock = SS_MakeServerSock(argv[1], port);
+  sock = SS_MakeServerSock(bindip, port);
 
   free(port);
+  free(bindip);
   port = NULL;
+  bindip = NULL;
 
   if (sock == -1)
     {

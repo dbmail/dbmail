@@ -58,20 +58,23 @@ int SS_MakeServerSock(const char *ipaddr, const char *port)
   saServer.sin_family = AF_INET;
   saServer.sin_port = htons(atoi(port));
 
-  r = inet_aton(ipaddr, &saServer.sin_addr);
-  if (!r)
+  if (ipaddr[0] == '*')
+    saServer.sin_addr.s_addr = htonl(INADDR_ANY); 
+  else
     {
-      /* error */
-      snprintf(ss_error_msg,SS_ERROR_MSG_LEN,"SS_MakeServerSock(): "
-	      "wrong ip-address specified");
-      close(sock);
-      return -1;
+      r = inet_aton(ipaddr, &saServer.sin_addr);
+      if (!r)
+	{
+	  /* error */
+	  snprintf(ss_error_msg,SS_ERROR_MSG_LEN,"SS_MakeServerSock(): "
+		   "wrong ip-address specified");
+	  close(sock);
+	  return -1;
+	}
     }
-
 
   /* set socket option: reuse address */
   setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &so_reuseaddress, sizeof(so_reuseaddress));
-
 
   /* bind the address */
   len = sizeof(saServer);
@@ -319,3 +322,8 @@ void SS_sighandler(int sig)
 }
 
  
+
+
+
+
+
