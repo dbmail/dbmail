@@ -1,6 +1,7 @@
 /* $Id$
  * Functions for reading the pipe from the MTA */
 
+
 #include "config.h"
 #include "pipe.h"
 
@@ -8,8 +9,6 @@
 #define HEADER_BLOCK_SIZE 1024
 #define QUERY_SIZE 255
 /* including the possible all escape strings blocks */
-
-extern struct list users;
 
 void create_unique_id(char *target, unsigned long messageid)
 {
@@ -77,7 +76,7 @@ char *read_header(unsigned long *blksize)
   return header;
 }
 
-int insert_messages(char *firstblock, unsigned long headersize)
+int insert_messages(char *firstblock, unsigned long headersize, struct list *users)
 {
   /* 	this loop gets all the users from the list 
 	and check if they're in the database
@@ -118,7 +117,7 @@ int insert_messages(char *firstblock, unsigned long headersize)
   /* initiating list with messageid's */
   list_init(&messageids);
 	
-  tmp=list_getstart(&users);
+  tmp=list_getstart(users);
 
 	
   while (tmp!=NULL)
@@ -130,18 +129,21 @@ int insert_messages(char *firstblock, unsigned long headersize)
       trace (TRACE_DEBUG,"insert_messages(): user [%s] found total of [%d] aliases",(char *)tmp->data,
 	     userids.total_nodes);
       domain=strchr((char *)tmp->data,'@');
-      if (domain!=NULL)	/* this should always be the case! */
-	{
-	  trace (TRACE_DEBUG,"insert_messages(): checking for domain aliases. Domain = [%s]",domain);
-	  /* checking for domain aliases */
-	  db_check_user(domain,&userids);
-	  trace (TRACE_DEBUG,"insert_messages(): domain [%s] found total of [%d] aliases",domain,
-		 userids.total_nodes);
-	}
-      /* user does not excists in aliases tables
+     
+	  	if (domain!=NULL)	/* this should always be the case! */
+		{
+			trace (TRACE_DEBUG,"insert_messages(): checking for domain aliases. Domain = [%s]",domain);
+			/* checking for domain aliases */
+			db_check_user(domain,&userids);
+			trace (TRACE_DEBUG,"insert_messages(): domain [%s] found total of [%d] aliases",domain,
+				userids.total_nodes);
+		}
+    
+	 	/* user does not excists in aliases tables
 			so bounce this message back with an error message */
       if (userids.total_nodes==0)
-	bounce (firstblock,(char *)tmp->data,BOUNCE_NO_SUCH_USER);
+			bounce (firstblock,(char *)tmp->data,BOUNCE_NO_SUCH_USER);
+
       tmp=tmp->nextnode;
     }
 		
@@ -150,8 +152,6 @@ int insert_messages(char *firstblock, unsigned long headersize)
   while (tmp!=NULL)
     {	
       /* traversing list with userids and creating a message for each userid */
-      trace (TRACE_DEBUG,"insert_messages(): -----> debug tmp is [%d],nextnode is [%d]",
-	     tmp,tmp->nextnode);
 		
 		/* checking if tmp->data is numeric. If so, we should try to 
 		 * insert to that address in the database 
@@ -160,6 +160,9 @@ int insert_messages(char *firstblock, unsigned long headersize)
 		 * FIXME: The id needs to be checked!, it might be so that it is set in the 
 		 * virtual user table but that doesn't mean it's valid! */
 
+		trace (TRACE_DEBUG,"insert_messages(): alias deliver_to is [%s]",
+				(char *)tmp->data);
+		
 		ptr=(char *)tmp->data;
 		i = 0;
 		
@@ -173,13 +176,14 @@ int insert_messages(char *firstblock, unsigned long headersize)
 			{
 				/* it's probably a forward to another address
 				 * to make sure it could be a mailaddress we're checking for a @*/
+				trace (TRACE_DEBUG,"insert_messages(): no numeric value in deliver_to, calling external_forward");
 			}
 
 		else
 		{
 			userid=atol((char *)tmp->data);
 
-	      temp=db_insert_message ((unsigned long*)tmp->data);
+	      temp=db_insert_message ((unsigned long *)&userid);
 
 			/* message id is an array of returned message id's
 			 * all messageblks are inserted for each message id
@@ -192,10 +196,9 @@ int insert_messages(char *firstblock, unsigned long headersize)
 		
 		   /* adding the first header block per user */
 			db_insert_message_block (firstblock,temp);
-			
-		   tmp=tmp->nextnode;
 		}
-
+			/* get next item */	
+		   tmp=tmp->nextnode;
     }
 
   /* reading rest of the pipe and creating messageblocks 

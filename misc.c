@@ -40,5 +40,5 @@ void check_duplicates()
 		tmp=tmp->nextnode;
 	}
 	users=tmplist;
-	printf ("total email addresses found %d\n",list_totalnodes(&users));
+	printf ("total email addresses found %lu\n",list_totalnodes(&users));
 }

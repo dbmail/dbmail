@@ -10,8 +10,6 @@
 #include <unistd.h>
 #include <syslog.h>
 
-#define USE_DEVELOPMENT
-
 /* DATABASE SPECIFIC */
 #define HOST "localhost"
 #define USER "root"

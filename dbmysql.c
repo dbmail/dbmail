@@ -88,7 +88,7 @@ unsigned long db_get_inboxid (unsigned long *useridnr)
 	sprintf (ckquery,"SELECT mailboxidnr FROM mailbox WHERE name='INBOX' AND owneridnr=%lu",
 			*useridnr);
 
-  trace(TRACE_DEBUG,"db_get_mailboxid(): executing query : [%s]",ckquery);
+  trace(TRACE_DEBUG,"db_get_inboxid(): executing query : [%s]",ckquery);
   if (db_query(ckquery)==-1)
     {
       free(ckquery);
@@ -186,7 +186,7 @@ unsigned long db_insert_message_block (char *block, int messageidnr)
 
 int db_check_user (char *username, struct list *userids) 
 {
-  char *ckquery;
+  char *ckquery, *tmp;
   int occurences=0;
 	
   trace(TRACE_DEBUG,"db_check_user(): checking user [%s] in alias table",username);
@@ -216,7 +216,13 @@ int db_check_user (char *username, struct list *userids)
   while ((row = mysql_fetch_row(res))!=NULL)
     {
       occurences++;
-      list_nodeadd(userids, &row[2],sizeof(row[2]));
+		/* created this because it seems that the mysql response (the row[]'s) aren't
+			null terminated */ 
+		tmp=(char *)row[2];
+		tmp[strlen(tmp)+1]='\0';
+		/* --- */
+      list_nodeadd(userids, tmp,strlen(tmp)+1);
+		trace (TRACE_DEBUG,"db_check_user(): adding [%s] to deliver_to address",tmp);
     }
 
   trace(TRACE_INFO,"db_check_user(): user [%s] has [%d] entries",username,occurences);

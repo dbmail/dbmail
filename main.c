@@ -49,7 +49,7 @@ int main (int argc, char *argv[]) {
       /* mail_adr_list_special will take the command line 
        * email addresses and use those addresses for this message 
        * delivery */
-      if (mail_adr_list_special(INDEX_DELIVERY_MODE+1,argc, argv)==0)
+      if (mail_adr_list_special(INDEX_DELIVERY_MODE+1,argc, argv,&users)==0)
 	trace(TRACE_STOP,"main(): could not find any addresses");
     }
   else 
@@ -65,7 +65,7 @@ int main (int argc, char *argv[]) {
     } 
 
   /* inserting messages into the database */
-  insert_messages(header, headersize);
+  insert_messages(header, headersize,&users);
 
   free(header); /* cleanup the header */
   return 0;

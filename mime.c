@@ -321,7 +321,7 @@ void mime_findfield(const char *fname, struct list *mimelist, struct mime_record
       
   
 
-int mail_adr_list_special(int offset, int max, char *address_array[],struct list *users) 
+int mail_adr_list_special(int offset, int max, char *address_array[], struct list *users) 
 {
   int mycount;
 
