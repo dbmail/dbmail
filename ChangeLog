@@ -1,3 +1,7 @@
+2004-02-02  Ilja Booij  <ilja@ic-s.nl>
+
+	* misc.c: added missing #include <time.h>
+
 2004-01-29  Ilja Booij  <ilja@ic-s.nl>
 
 	* imap4.c (IMAPClientHandler): No only rebuilds mailbox_t structure

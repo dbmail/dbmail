@@ -26,9 +26,10 @@
 #include "config.h"
 #endif
 
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
+#include <time.h>
 
 #include "auth.h"
 #include "dbmail.h"
