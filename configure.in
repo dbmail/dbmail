@@ -19,7 +19,7 @@ pgsqllibpaths="/usr/lib /usr/local/lib /lib /usr/freeware/lib \
 pgsqlheaderpaths="/usr/include/pgsql /usr/include /usr/local/include/pgsql \
                   /usr/local/include /usr/freeware/include/pgsql \
                   /usr/freeware/include $HOME/include $HOME/pgsql/include \
-                  $HOME"
+		  /usr/local/pgsql/include $HOME"
 
 DBMAIL_BOTH_SQL_CHECK
 DBMAIL_CHECK_SQL_LIBS
