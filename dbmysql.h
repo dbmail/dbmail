@@ -199,6 +199,7 @@ void db_reverse_msg(mime_message_t *msg);
 int db_fetch_headers(unsigned long msguid, mime_message_t *msg);
 int db_add_mime_children(struct list *brothers, char *splitbound);
 int db_start_msg(mime_message_t *msg, char *stopbound);
+int db_parse_as_text(mime_message_t *msg);
 
 long db_dump_range(FILE *outstream,db_pos_t start, db_pos_t end, unsigned long msguid);
 int db_msgdump(mime_message_t *msg, unsigned long msguid, int level);

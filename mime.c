@@ -176,7 +176,7 @@ int mime_list(char *blkdata, struct list *mimelist)
  * if blkdata[0] == \n no header is expected and the function will return immediately
  * (headersize 0)
  *
- * returns -1 on failure, number of newlines on succes
+ * returns -1 on parse failure, -2 on memory error; number of newlines on succes
  */
 int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist, unsigned long *headersize)
 {
@@ -206,7 +206,7 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist,
   if (!mr)
     {
       trace(TRACE_ERROR, "mime_readheader(): out of memory\n");
-      return -1;
+      return -2;
     }
 
   startptr = blkdata;
@@ -229,8 +229,10 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist,
 
       if (!(*endptr))
 	{
-	  /* end of data block reached */
+	  /* end of data block reached (??) */
 	  free(mr);
+	  *blkidx += (endptr-startptr);
+
 	  return totallines;
 	}
 
@@ -300,7 +302,7 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist,
 	    {
 	      trace(TRACE_ERROR, "mime_readheader(): cannot add element to list\n");
 	      free(mr);
-	      return -1;
+	      return -2;
 	    }
 
 	  /* restore blkdata */
@@ -344,7 +346,7 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist,
 		{
 		  trace(TRACE_ERROR, "mime_readheader(): cannot add element to list\n");
 		  free(mr);
-		  return -1;
+		  return -2;
 		}
 	    }
 	  else
@@ -388,6 +390,8 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist,
 
     }
 
+  /* everything down here should be unreachable */
+
   free(mr); /* no longer need this */
 
   trace(TRACE_DEBUG,"mime_readheader(): mimeloop finished\n");
@@ -397,9 +401,9 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist,
       return -1;
     }
 
-  /* success */
+  /* success ? */
   trace(TRACE_DEBUG," *** mime_readheader() done ***\n");
-  return 0;
+  return totallines;
 }
 
 

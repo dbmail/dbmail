@@ -1797,12 +1797,20 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		  cached_msg.file_dumped = 0;
 		  rewind(cached_msg.filedump);
 
-		  if (db_fetch_headers(thisnum, &cached_msg.msg) == -1)
+		  result = db_fetch_headers(thisnum, &cached_msg.msg);
+		  if (result == -2)
 		    {
-		      fprintf(ci->tx,"\r\n* BAD error fetching message %d\r\n",i+1);
-		      bad_response_send = 1;
-		      continue;
+		      fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
+		      list_freelist(&fetch_list.start);
+		      return -1;
 		    }
+		  if (result == -3)
+		    {
+		      fprintf(ci->tx,"\r\n* BYE out of memory\r\n");
+		      list_freelist(&fetch_list.start);
+		      return -1;
+		    }
+
 		  cached_msg.msg_parsed = 1;
 		  cached_msg.num = thisnum;
 		  db_msgdump(&cached_msg.msg, thisnum, 0);
@@ -1813,7 +1821,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		  result = db_get_msgdate(ud->mailbox.uid, thisnum, date);
 		  if (result == -1)
 		    {
-		      fprintf(ci->tx,"* BYE internal dbase error\r\n");
+		      fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
 		      list_freelist(&fetch_list.start);
 		      return -1;
 		    }
@@ -2341,7 +2349,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		  
 		      break;
 		    default:
-		      fprintf(ci->tx, "* BYE internal server error\r\n");
+		      fprintf(ci->tx, "\r\n* BYE internal server error\r\n");
 		      list_freelist(&fetch_list.start);
 		      return -1;
 		    }

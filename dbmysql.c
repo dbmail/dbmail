@@ -2526,8 +2526,6 @@ int db_set_msgflag(const char *name, unsigned long mailboxuid, unsigned long msg
  */
 int db_get_msgdate(unsigned long mailboxuid, unsigned long msguid, char *date)
 {
-  
-
   snprintf(query, DEF_QUERYSIZE, "SELECT internal_date FROM message WHERE mailboxidnr = %lu "
 	   "AND messageidnr = %lu", mailboxuid, msguid);
 
@@ -2551,8 +2549,9 @@ int db_get_msgdate(unsigned long mailboxuid, unsigned long msguid, char *date)
     }
   else
     {
-      /* ??? no date */
-      date[0] = '\0';
+      /* no date ? let's say 1 jan 1970 */
+      strncpy(date, "1970-01-01 00:00:01", IMAP_INTERNALDATE_LEN);
+      date[IMAP_INTERNALDATE_LEN - 1] = '\0';
     }
 
   mysql_free_result(res);
@@ -2804,7 +2803,9 @@ void db_close_msgfetch()
  * creates a linked-list of headers found
  *
  * returns:
- * -1 error
+ * -3 memory error
+ * -2 dbase error
+ * -1 parse error but msg is retrieved as plaintext
  *  0 success
  */
 int db_fetch_headers(unsigned long msguid, mime_message_t *msg)
@@ -2814,18 +2815,42 @@ int db_fetch_headers(unsigned long msguid, mime_message_t *msg)
   if (db_init_msgfetch(msguid) != 1)
     {
       trace(TRACE_ERROR,"db_fetch_headers(): could not init msgfetch\n");
-      return -1;
+      return -2;
     }
 
   result = db_start_msg(msg, NULL); /* fetch message */
-  if (result == -1)
+  if (result < 0)
     {
       trace(TRACE_ERROR, "db_fetch_headers(): error fetching message, ID: %lu\n",msguid);
       db_close_msgfetch();
       db_free_msg(msg);
+
+      if (result < -1)
+	return result; /* memory/dbase error */
+      /* 
+       * so an error occurred parsing the message. 
+       * An 'emergency' procedure is invoked now to show the message: 
+       * a header will be created and the message will be placed as text/plain
+       */
+
+      if (db_init_msgfetch(msguid) != 1)
+	{
+	  trace(TRACE_ERROR,"db_fetch_headers(): could not init msgfetch\n");
+	  return -2;
+	}
+
+      result = db_parse_as_text(msg);
+      if (result < 0)
+	{
+	  /* probably some serious dbase error */
+	  trace(TRACE_ERROR,"db_fetch_headers(): could not recover message as plain text\n");
+	  return result;
+	}
+
+      db_close_msgfetch();
       return -1;
     }
-
+  
   db_reverse_msg(msg);
 
   db_close_msgfetch();
@@ -2952,7 +2977,7 @@ unsigned long db_give_range_size(db_pos_t *start, db_pos_t *end)
  *
  * parses a msg; uses msgbuf[] as data
  *
- * returns the number of lines parsed or -1 on error
+ * returns the number of lines parsed or -1 on parse error, -2 on dbase error, -3 on memory error
  */
 int db_start_msg(mime_message_t *msg, char *stopbound)
 {
@@ -2966,11 +2991,11 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 
   /* read header */
   if (db_update_msgbuf(MSGBUF_FORCE_UPDATE) == -1)
-    return -1;
+    return -2;
 
   if ((hdrlines = mime_readheader(&msgbuf[msgidx], &msgidx, 
-				  &msg->rfcheader, &msg->rfcheadersize)) == -1)
-    return -1;   /* error reading header */
+				  &msg->rfcheader, &msg->rfcheadersize)) < 0)
+    return hdrlines;   /* error reading header */
 
   db_give_msgpos(&msg->bodystart);
   msg->rfcheaderlines = hdrlines;
@@ -3002,7 +3027,7 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
       if (!(newbound = (char*)malloc(len+1)))
 	{
 	  trace(TRACE_ERROR, "db_start_msg(): out of memory\n");
-	  return -1;
+	  return -3;
 	}
 
       strncpy(newbound, bptr, len);
@@ -3015,7 +3040,7 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 	{
 	  trace(TRACE_ERROR, "db_startmsg(): error updating msgbuf\n");
 	  free(newbound);
-	  return -1;
+	  return -2;
 	}
 
       while (msgbuf[msgidx])
@@ -3041,11 +3066,11 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
       totallines++;                 /* and count it */
 
       /* find MIME-parts */
-      if ((nlines = db_add_mime_children(&msg->children, newbound)) == -1)
+      if ((nlines = db_add_mime_children(&msg->children, newbound)) < 0)
 	{
 	  trace(TRACE_ERROR, "db_start_msg(): error adding MIME-children\n");
 	  free(newbound);
-	  return -1;
+	  return nlines;
 	}
       totallines += nlines;
 
@@ -3085,7 +3110,7 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 	  while (msgbuf[msgidx])
 	    {
 	      if (db_update_msgbuf(sblen+3) == -1)
-		return -1;
+		return -2;
 
 	      if (msgbuf[msgidx] == '\n')
 		msg->bodylines++;
@@ -3145,7 +3170,7 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 
 	      result = db_update_msgbuf(MSGBUF_FORCE_UPDATE);
 	      if (result == -1)
-		return -1;
+		return -2;
 	    } 
 
 	  db_give_msgpos(&msg->bodyend);
@@ -3163,6 +3188,7 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 
 /*
  * assume to enter just after a splitbound 
+ * returns -1 on parse error, -2 on dbase error, -3 on memory error
  */
 int db_add_mime_children(struct list *brothers, char *splitbound)
 {
@@ -3181,10 +3207,10 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
       memset(&part, 0, sizeof(part));
 
       /* should have a MIME header right here */
-      if ((nlines = mime_readheader(&msgbuf[msgidx], &msgidx, &part.mimeheader, &dummy)) == -1)
+      if ((nlines = mime_readheader(&msgbuf[msgidx], &msgidx, &part.mimeheader, &dummy)) < 0)
 	{
 	  trace(TRACE_ERROR,"db_add_mime_children(): error reading MIME-header\n");
-	  return -1;   /* error reading header */
+	  return nlines;   /* error reading header */
 	}
       totallines += nlines;
 
@@ -3195,10 +3221,10 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
 	  trace(TRACE_DEBUG,"db_add_mime_children(): found an RFC822 message\n");
 
 	  /* a message will follow */
-	  if ((nlines = db_start_msg(&part, splitbound)) == -1)
+	  if ((nlines = db_start_msg(&part, splitbound)) < 0)
 	    {
 	      trace(TRACE_ERROR,"db_add_mime_children(): error retrieving message\n");
-	      return -1;
+	      return nlines;
 	    }
 	  trace(TRACE_DEBUG,"db_add_mime_children(): got %d newlines from start_msg()\n",nlines);
 	  totallines += nlines;
@@ -3230,7 +3256,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
 	  if (!(newbound = (char*)malloc(len+1)))
 	    {
 	      trace(TRACE_ERROR, "db_add_mime_children(): out of memory\n");
-	      return -1;
+	      return -3;
 	    }
 
 	  strncpy(newbound, bptr, len);
@@ -3245,7 +3271,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
 	    {
 	      trace(TRACE_ERROR, "db_add_mime_children(): error updating msgbuf\n");
 	      free(newbound);
-	      return -1;
+	      return -2;
 	    }
 
 	  while (msgbuf[msgidx])
@@ -3275,11 +3301,11 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
 	  part.bodylines++;
 	  db_give_msgpos(&part.bodystart); /* remember position */
 
-	  if ((nlines = db_add_mime_children(&part.children, newbound)) == -1)
+	  if ((nlines = db_add_mime_children(&part.children, newbound)) < 0)
 	    {
 	      trace(TRACE_ERROR, "db_add_mime_children(): error adding mime children\n");
 	      free(newbound);
-	      return -1;
+	      return nlines;
 	    }
 	  
 	  free(newbound);
@@ -3310,7 +3336,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
 	  while (msgbuf[msgidx])
 	    {
 	      if (db_update_msgbuf(sblen+3) == -1)
-		return -1;
+		return -2;
 
 	      if (msgbuf[msgidx] == '\n')
 		part.bodylines++;
@@ -3347,7 +3373,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
       if (list_nodeadd(brothers, &part, sizeof(part)) == NULL)
 	{
 	  trace(TRACE_ERROR,"db_add_mime_children(): could not add node\n");
-	  return -1;
+	  return -3;
 	}
 
       /* if double hyphen ('--') follows we're done */
@@ -3387,6 +3413,71 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
 
 
 /*
+ * db_parse_as_text()
+ * 
+ * parses a message as a block of plain text; an explaining header is created
+ * note that this will disturb the length calculations...
+ * this function is called when normal parsing fails.
+ * 
+ * returns -1 on dbase failure, -2 on memory error
+ */
+int db_parse_as_text(mime_message_t *msg)
+{
+  int result;
+  struct mime_record mr;
+  struct element *el = NULL;   
+
+  memset(msg, 0, sizeof(*msg));
+  
+  strcpy(mr.field, "subject");
+  strcpy(mr.value, "dbmail IMAP server info: this message could not be parsed");
+  el = list_nodeadd(&msg->rfcheader, &mr, sizeof(mr));
+  if (!el)
+    return -3;
+
+  strcpy(mr.field, "from");
+  strcpy(mr.value, "imapserver@dbmail.org");
+  el = list_nodeadd(&msg->rfcheader, &mr, sizeof(mr));
+  if (!el)
+    return -3;
+
+  msg->rfcheadersize = strlen("subject: dbmail IMAP server info: this message could not be parsed\r\n")
+    + strlen("from: imapserver@dbmail.org\r\n");
+  msg->rfcheaderlines = 4;
+
+  db_give_msgpos(&msg->bodystart);
+
+  /* walk on till end of buffer */
+  result = 1;
+  while (1)
+    {
+      for ( ; msgidx < buflen-1; msgidx++)
+	if (msgbuf[msgidx] == '\n')
+	  msg->bodylines++;
+	      
+      if (result == 0)
+	{
+	  /* end of msg reached, one char left in msgbuf */
+	  if (msgbuf[msgidx] == '\n')
+	    msg->bodylines++;
+
+	  break; 
+	}
+
+      result = db_update_msgbuf(MSGBUF_FORCE_UPDATE);
+      if (result == -1)
+	return -2;
+    } 
+
+  db_give_msgpos(&msg->bodyend);
+  msg->bodysize = db_give_range_size(&msg->bodystart, &msg->bodyend);
+
+  return 0;
+}
+  
+
+
+/*
  * db_msgdump()
  *
  * dumps a message to stderr
@@ -3406,24 +3497,24 @@ int db_msgdump(mime_message_t *msg, unsigned long msguid, int level)
       return 0;
     }
 
-  spaces = (char*)malloc(2*level + 1);
+  spaces = (char*)malloc(3*level + 1);
   if (!spaces)
     return 0;
 
-  memset(spaces, ' ', 2*level);
+  memset(spaces, ' ', 3*level);
   spaces[2*level] = 0;
 
 
   trace(TRACE_DEBUG,"%sMIME-header: \n",spaces);
   curr = list_getstart(&msg->mimeheader);
   if (!curr)
-    trace(TRACE_DEBUG,"%s  null\n");
+    trace(TRACE_DEBUG,"%s%snull\n",spaces,spaces);
   else
     {
       while (curr)
 	{
 	  mr = (struct mime_record *)curr->data;
-	  trace(TRACE_DEBUG,"%s  [%s] : [%s]\n",spaces,mr->field, mr->value);
+	  trace(TRACE_DEBUG,"%s%s[%s] : [%s]\n",spaces,spaces,mr->field, mr->value);
 	  curr = curr->nextnode;
 	}
     }
@@ -3432,21 +3523,21 @@ int db_msgdump(mime_message_t *msg, unsigned long msguid, int level)
   trace(TRACE_DEBUG,"%sRFC822-header: \n",spaces);
   curr = list_getstart(&msg->rfcheader);
   if (!curr)
-    trace(TRACE_DEBUG,"  null\n");
+    trace(TRACE_DEBUG,"%s%snull\n",spaces,spaces);
   else
     {
       while (curr)
 	{
 	  mr = (struct mime_record *)curr->data;
-	  trace(TRACE_DEBUG,"%s  [%s] : [%s]\n",spaces,mr->field, mr->value);
+	  trace(TRACE_DEBUG,"%s%s[%s] : [%s]\n",spaces,spaces,mr->field, mr->value);
 	  curr = curr->nextnode;
 	}
     }
   trace(TRACE_DEBUG,"%s*** RFC822-header end\n",spaces);
 
   trace(TRACE_DEBUG,"%s*** Body range:\n",spaces);
-  trace(TRACE_DEBUG,"%s    (%lu, %lu) - (%lu, %lu), size: %lu, newlines: %lu\n",
-	spaces,
+  trace(TRACE_DEBUG,"%s%s(%lu, %lu) - (%lu, %lu), size: %lu, newlines: %lu\n",
+	spaces,spaces,
 	msg->bodystart.block, msg->bodystart.pos,
 	msg->bodyend.block, msg->bodyend.pos,
 	msg->bodysize, msg->bodylines);
@@ -3628,9 +3719,14 @@ int db_search_messages(char **search_keys, unsigned long **search_results, int *
 {
   int i,qidx=0;
 
+  trace(TRACE_WARNING, "db_search_messages(): SEARCH requested, arguments: ");
+  for (i=0; search_keys[i]; i++)
+    trace(TRACE_WARNING, "%s ", search_keys[i]);
+  trace(TRACE_WARNING,"\n");
+
   qidx = snprintf(query, DEF_QUERYSIZE,
 		  "SELECT messageidnr FROM message WHERE mailboxidnr = %lu AND status<2",
-		 mboxid);
+		  mboxid);
 
   i = 0;
   while (search_keys[i])
