@@ -138,7 +138,7 @@ int db_check_id (char *id);
 int db_disconnect();
 unsigned long db_insert_result ();
 int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines);
-unsigned long db_validate (char *user, char *password, int ismd5);
+unsigned long db_validate (char *user, char *password);
 unsigned long db_md5_validate (char *username,unsigned char *md5_apop_he, char *apop_stamp);
 int db_createsession (unsigned long useridnr, struct session *sessionptr);
 void db_session_cleanup (struct session *sessionptr);
