@@ -26,9 +26,6 @@
 #include "config.h"
 #endif
 
-/* FIXME: Perhaps there should be an AC_CHECK_SIZEOF
- * in the configure script to ensure that this is really
- * 32 bits / 4 bytes long... */
 typedef unsigned int uint32;
 
 struct GdmMD5Context {

@@ -1,6 +1,9 @@
 2004-03-06  Aaron Stone <aaron@serendipity.cx>
 	* md5.h: removed an old hack that actually broke 32 bit assumptions
 	by making wrong assumptions (they may have been correct circa 1993).
+	* md5.c: added check for WORDS_BIGENDIAN, corresponding to the
+	autoconf script, as a backup in case the system lacks endian.h.
+	* configure.in: added AC_C_BIGENDIAN to test the host for endianness.
 
 2004-03-05  Ilja Booij  <ilja@ic-s.nl>
 

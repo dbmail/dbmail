@@ -49,7 +49,9 @@
 #include <string.h>		/* for memcpy() */
 #include "md5.h"
 
-#if BYTE_ORDER == LITTLE_ENDIAN
+/* If endian.h is present, it will tell us, otherwise
+ * autoconf's AC_C_BIGENDIAN will have tested the host. */
+#if (BYTE_ORDER == LITTLE_ENDIAN) || !defined(WORDS_BIGENDIAN)
 #define byteReverse(buf, len)	/* Nothing */
 #else
 
