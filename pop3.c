@@ -176,12 +176,12 @@ int pop3 (void *stream, char *buffer)
 
 		case POP3_LIST :
 			{
-      if (state!=TRANSACTION)
-			return pop3_error(stream,"-ERR wrong command mode, sir\r\n");
+			if (state!=TRANSACTION)
+				return pop3_error(stream,"-ERR wrong command mode, sir\r\n");
 			
-		tmpelement=list_getstart(&curr_session.messagelst);
-			if (value!=NULL) 
-				{
+			tmpelement=list_getstart(&curr_session.messagelst);
+				if (value!=NULL) 
+					{
 					/* they're asking for a specific message */
 					while (tmpelement!=NULL)
 						{
@@ -196,7 +196,8 @@ int pop3 (void *stream, char *buffer)
 						}
 					if (!found)
 						return pop3_error (stream,"-ERR no such message\r\n");
-				}
+					else return (1);
+					}
 
 				/* just drop the list */
 			fprintf ((FILE *)stream, "+OK %lu messages (%lu octets)\r\n",curr_session.virtual_totalmessages,

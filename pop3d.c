@@ -5,7 +5,8 @@
 #include "dbmysql.h"
 
 #define INCOMING_BUFFER_SIZE 512
-#define MAXTIMEOUT 300
+/* connection timeout in seconds */
+#define MAX_CONNECTION_TIMEOUT 60
 #define IP_ADDR_MAXSIZE 16
 #define APOP_STAMP_SIZE 255
 
@@ -51,6 +52,7 @@ int main (int argc, char *argv[])
 	char *theiraddress;
 
 	time_t timestamp;
+	time_t timeout;
 	
 	struct hostent *clientinfo;
 
@@ -189,24 +191,28 @@ int main (int argc, char *argv[])
 				/* no errors yet */
 				error_count = 0;
 				
+				/* setting time for timeout counter */
+				timeout=time(NULL);
+
 				/* scanning for commands */
-	
 				while ((done>0) && (buffer=fgets(buffer,INCOMING_BUFFER_SIZE,rx)))
 					done=pop3(tx,buffer); 
-
+					
 				/* we've reached the update state */
 				state = UPDATE;
 
 				/* memory cleanup */
 				free(buffer);
 	
-				trace(TRACE_MESSAGE,"pop3(): user %s logging out [message=%lu, octets=%lu]",
+				trace(TRACE_MESSAGE,"main(): user %s logging out [message=%lu, octets=%lu]",
 					username, curr_session.virtual_totalmessages,
 					curr_session.virtual_totalsize);
 
+				/* if everything went well, write down everything and do a cleanup */
 				if (done==0) 
 					db_update_pop(&curr_session);
-				else db_disconnect(); 
+				
+				db_disconnect(); 
 	
 				fclose(tx);
 				shutdown (fileno(rx), SHUT_RDWR);
