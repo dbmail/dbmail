@@ -21,7 +21,7 @@ if SIEVE
 SIEVEPROGS = dbmail-sievecmd dbmail-timsieved
 endif
 
-bin_PROGRAMS = dbmail-readvut $(SIEVEPROGS)
+bin_PROGRAMS = $(SIEVEPROGS)
 sbin_PROGRAMS = dbmail-smtp dbmail-pop3d dbmail-imapd dbmail-util dbmail-users dbmail-lmtpd 
 
 COMMON = config.c debug.c list.c dbmd5.c md5.c db.c misc.c mime.c pidfile.c
@@ -46,9 +46,6 @@ dbmail_util_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LD
 
 dbmail_users_SOURCES = user.c
 dbmail_users_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
-
-dbmail_readvut_SOURCES = vut2dbmail.c
-dbmail_readvut_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
 dbmail_lmtpd_SOURCES = lmtp.c lmtpd.c
 dbmail_lmtpd_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@

@@ -111,7 +111,7 @@ SUBDIRS = mysql pgsql auth sort man
 
 @SIEVE_TRUE@SIEVEPROGS = dbmail-sievecmd dbmail-timsieved
 
-bin_PROGRAMS = dbmail-readvut $(SIEVEPROGS)
+bin_PROGRAMS = $(SIEVEPROGS)
 sbin_PROGRAMS = dbmail-smtp dbmail-pop3d dbmail-imapd dbmail-util dbmail-users dbmail-lmtpd 
 
 COMMON = config.c debug.c list.c dbmd5.c md5.c db.c misc.c mime.c pidfile.c
@@ -135,9 +135,6 @@ dbmail_util_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LD
 
 dbmail_users_SOURCES = user.c
 dbmail_users_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
-
-dbmail_readvut_SOURCES = vut2dbmail.c
-dbmail_readvut_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
 dbmail_lmtpd_SOURCES = lmtp.c lmtpd.c
 dbmail_lmtpd_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
@@ -165,19 +162,16 @@ LIBS = @LIBS@
 libdbmail_la_LDFLAGS = 
 libdbmail_la_DEPENDENCIES = 
 libdbmail_la_OBJECTS =  config.lo debug.lo list.lo dbmd5.lo md5.lo db.lo \
-misc.lo mime.lo pidfile.lo server.lo serverchild.lo header.lo pipe.lo forward.lo \
-dsn.lo
-@SIEVE_FALSE@bin_PROGRAMS =  dbmail-readvut$(EXEEXT)
-@SIEVE_TRUE@bin_PROGRAMS =  dbmail-readvut$(EXEEXT) \
-@SIEVE_TRUE@dbmail-sievecmd$(EXEEXT) dbmail-timsieved$(EXEEXT)
+misc.lo mime.lo pidfile.lo server.lo serverchild.lo header.lo pipe.lo \
+forward.lo dsn.lo
+@SIEVE_FALSE@bin_PROGRAMS = 
+@SIEVE_TRUE@bin_PROGRAMS =  dbmail-sievecmd$(EXEEXT) \
+@SIEVE_TRUE@dbmail-timsieved$(EXEEXT)
 sbin_PROGRAMS =  dbmail-smtp$(EXEEXT) dbmail-pop3d$(EXEEXT) \
-dbmail-imapd$(EXEEXT) dbmail-util$(EXEEXT) \
-dbmail-users$(EXEEXT) dbmail-lmtpd$(EXEEXT)
+dbmail-imapd$(EXEEXT) dbmail-util$(EXEEXT) dbmail-users$(EXEEXT) \
+dbmail-lmtpd$(EXEEXT)
 PROGRAMS =  $(bin_PROGRAMS) $(sbin_PROGRAMS)
 
-dbmail_readvut_OBJECTS =  vut2dbmail.$(OBJEXT)
-dbmail_readvut_DEPENDENCIES =  libdbmail.la
-dbmail_readvut_LDFLAGS = 
 @SIEVE_TRUE@dbmail_sievecmd_OBJECTS =  sievecmd.$(OBJEXT)
 @SIEVE_TRUE@dbmail_sievecmd_DEPENDENCIES =  libdbmail.la
 dbmail_sievecmd_LDFLAGS = 
@@ -225,12 +219,12 @@ DEP_FILES =  .deps/acl.P .deps/config.P .deps/db.P .deps/dbmd5.P \
 .deps/forward.P .deps/header.P .deps/imap4.P .deps/imapcommands.P \
 .deps/imapd.P .deps/imaputil.P .deps/list.P .deps/lmtp.P .deps/lmtpd.P \
 .deps/main.P .deps/maintenance.P .deps/md5.P .deps/memblock.P \
-.deps/mime.P .deps/misc.P .deps/pidfile.P .deps/pipe.P .deps/pop3.P .deps/pop3d.P \
-.deps/quota.P .deps/rfcmsg.P .deps/server.P .deps/serverchild.P \
-.deps/sievecmd.P .deps/timsieve.P .deps/timsieved.P .deps/user.P \
-.deps/vut2dbmail.P
-SOURCES = $(libdbmail_la_SOURCES) $(dbmail_readvut_SOURCES) $(dbmail_sievecmd_SOURCES) $(dbmail_timsieved_SOURCES) $(dbmail_smtp_SOURCES) $(dbmail_pop3d_SOURCES) $(dbmail_imapd_SOURCES) $(dbmail_util_SOURCES) $(dbmail_users_SOURCES) $(dbmail_lmtpd_SOURCES)
-OBJECTS = $(libdbmail_la_OBJECTS) $(dbmail_readvut_OBJECTS) $(dbmail_sievecmd_OBJECTS) $(dbmail_timsieved_OBJECTS) $(dbmail_smtp_OBJECTS) $(dbmail_pop3d_OBJECTS) $(dbmail_imapd_OBJECTS) $(dbmail_util_OBJECTS) $(dbmail_users_OBJECTS) $(dbmail_lmtpd_OBJECTS)
+.deps/mime.P .deps/misc.P .deps/pidfile.P .deps/pipe.P .deps/pop3.P \
+.deps/pop3d.P .deps/quota.P .deps/rfcmsg.P .deps/server.P \
+.deps/serverchild.P .deps/sievecmd.P .deps/timsieve.P .deps/timsieved.P \
+.deps/user.P
+SOURCES = $(libdbmail_la_SOURCES) $(dbmail_sievecmd_SOURCES) $(dbmail_timsieved_SOURCES) $(dbmail_smtp_SOURCES) $(dbmail_pop3d_SOURCES) $(dbmail_imapd_SOURCES) $(dbmail_util_SOURCES) $(dbmail_users_SOURCES) $(dbmail_lmtpd_SOURCES)
+OBJECTS = $(libdbmail_la_OBJECTS) $(dbmail_sievecmd_OBJECTS) $(dbmail_timsieved_OBJECTS) $(dbmail_smtp_OBJECTS) $(dbmail_pop3d_OBJECTS) $(dbmail_imapd_OBJECTS) $(dbmail_util_OBJECTS) $(dbmail_users_OBJECTS) $(dbmail_lmtpd_OBJECTS)
 
 all: all-redirect
 .SUFFIXES:
@@ -393,10 +387,6 @@ uninstall-sbinPROGRAMS:
 	list='$(sbin_PROGRAMS)'; for p in $$list; do \
 	  rm -f $(DESTDIR)$(sbindir)/`echo $$p|sed 's/$(EXEEXT)$$//'|sed '$(transform)'|sed 's/$$/$(EXEEXT)/'`; \
 	done
-
-dbmail-readvut$(EXEEXT): $(dbmail_readvut_OBJECTS) $(dbmail_readvut_DEPENDENCIES)
-	@rm -f dbmail-readvut$(EXEEXT)
-	$(LINK) $(dbmail_readvut_LDFLAGS) $(dbmail_readvut_OBJECTS) $(dbmail_readvut_LDADD) $(LIBS)
 
 dbmail-sievecmd$(EXEEXT): $(dbmail_sievecmd_OBJECTS) $(dbmail_sievecmd_DEPENDENCIES)
 	@rm -f dbmail-sievecmd$(EXEEXT)
