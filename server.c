@@ -128,13 +128,16 @@ void ParentSigHandler(int sig, siginfo_t * info, void *data)
 		      "ParentSigHandler(): i'm no longer father");
 		active_child_sig_handler(sig, info, data); /* this call is for a child but it's handler is not yet installed */
 	}
+	
+	if (sig != SIGALRM) {
 #ifdef _USE_STR_SIGNAL
-	trace(TRACE_INFO, "ParentSigHandler(): got signal [%s]",
-	      strsignal(sig));
+		trace(TRACE_INFO, "ParentSigHandler(): got signal [%s]",
+		      strsignal(sig));
 #else
-	trace(TRACE_INFO, "ParentSigHandler(): got signal [%d]", sig);
+		trace(TRACE_INFO, "ParentSigHandler(): got signal [%d]", sig);
 #endif
-
+	}
+	
 	switch (sig) {
 	case SIGALRM:
 		manage_spare_children();
