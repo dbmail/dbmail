@@ -1,3 +1,4 @@
+/* hoi ik ben eelco */
 /* $Id$
  * Functions for connecting and talking to the Mysql database */
 
