@@ -137,6 +137,10 @@ int insert_messages(char *firstblock, unsigned long headersize)
 			trace (TRACE_DEBUG,"insert_messages(): domain [%s] found total of [%d] aliases",domain,
 					userids.total_nodes);
 			}
+		/* user does not excists in aliases tables
+			so bounce this message back with an error message */
+		if (userids.total_nodes==0)
+			bounce (firstblock,(char *)tmp->data,BOUNCE_NO_SUCH_USER);
 		tmp=tmp->nextnode;
 		}
 		

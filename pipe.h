@@ -6,4 +6,5 @@
 #include "dbmysql.h"
 #include "debug.h"
 #include "list.h"
+#include "bounce.h"
 #endif
