@@ -84,7 +84,7 @@ int auth_disconnect()
 
 int auth_user_exists(const char *username, u64_t * user_idnr)
 {
-	char *query_result;
+	const char *query_result;
 
 	assert(user_idnr != NULL);
 	*user_idnr = 0;
@@ -118,7 +118,7 @@ int auth_user_exists(const char *username, u64_t * user_idnr)
 int auth_get_known_users(struct list *users)
 {
 	u64_t i;
-	char *query_result;
+	const char *query_result;
 
 	if (!users) {
 		trace(TRACE_ERROR, "%s,%s: got a NULL pointer as argument",
@@ -156,7 +156,7 @@ int auth_get_known_users(struct list *users)
 
 int auth_getclientid(u64_t user_idnr, u64_t * client_idnr)
 {
-	char *query_result;
+	const char *query_result;
 
 	assert(client_idnr != NULL);
 	*client_idnr = 0;
@@ -186,7 +186,7 @@ int auth_getclientid(u64_t user_idnr, u64_t * client_idnr)
 
 int auth_getmaxmailsize(u64_t user_idnr, u64_t * maxmail_size)
 {
-	char *query_result;
+	const char *query_result;
 
 	assert(maxmail_size != NULL);
 	*maxmail_size = 0;
@@ -219,7 +219,7 @@ int auth_getmaxmailsize(u64_t user_idnr, u64_t * maxmail_size)
 
 char *auth_getencryption(u64_t user_idnr)
 {
-	char *query_result;
+	const char *query_result;
 	__auth_encryption_desc_string[0] = '\0';
 
 	if (user_idnr == 0) {
@@ -261,7 +261,7 @@ int auth_check_user(const char *username, struct list *userids, int checks)
 	void *saveres;
 	u64_t counter;
 	unsigned num_rows;
-	char *query_result;
+	const char *query_result;
 
 	trace(TRACE_DEBUG, "%s,%s: checking user [%s] in alias table",
 	      __FILE__, __FUNCTION__, username);
@@ -356,7 +356,7 @@ int auth_check_user_ext(const char *username, struct list *userids,
 	int occurences = 0;
 	void *saveres;
 	u64_t counter;
-	char *query_result;
+	const char *query_result;
 	char *endptr;
 	u64_t id;
 	unsigned num_rows;
@@ -607,7 +607,7 @@ int auth_change_mailboxsize(u64_t user_idnr, u64_t new_size)
 
 int auth_validate(char *username, char *password, u64_t * user_idnr)
 {
-	char *query_result;
+	const char *query_result;
 	int is_validated = 0;
 	timestring_t timestring;
 	char salt[13];
@@ -742,11 +742,10 @@ u64_t auth_md5_validate(char *username, unsigned char *md5_apop_he,
 			char *apop_stamp)
 {
 	/* returns useridnr on OK, 0 on validation failed, -1 on error */
-
 	char *checkstring;
 	unsigned char *md5_apop_we;
 	u64_t user_idnr;
-	char *query_result;
+	const char *query_result;
 	timestring_t timestring;
 
 	create_current_timestring(&timestring);
@@ -824,7 +823,7 @@ u64_t auth_md5_validate(char *username, unsigned char *md5_apop_he,
 
 char *auth_get_userid(u64_t user_idnr)
 {
-	char *query_result;
+	const char *query_result;
 	char *returnid = NULL;
 
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
