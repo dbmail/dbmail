@@ -2588,7 +2588,6 @@ int db_get_msgflag(const char *name, u64_t msguid)
  */
 int db_get_msgflag_all(u64_t msguid, int *flags)
 {
-  char *row;
   int i;
 
   memset(flags, 0, sizeof(int) * IMAP_NFLAGS);
