@@ -339,18 +339,20 @@ int pop3 (void *stream, char *buffer)
 	if (value!=NULL) 
 	  {
 				/* they're asking for a specific message */
-	    while (tmpelement!=NULL)
-	      {
-		if (((struct message *)tmpelement->data)->messageid==atol(value)) 
-		  {
-		    fprintf ((FILE *)stream,"+OK %lu %s\r\n",((struct message *)tmpelement->data)->messageid,
-			     ((struct message *)tmpelement->data)->uidl);
-		    found=1;
-		  }
-		tmpelement=tmpelement->nextnode;
-	      }
-	    if (!found)
-	      return pop3_error (stream,"-ERR no such message\r\n");
+			while (tmpelement!=NULL)
+			{
+				if (((struct message *)tmpelement->data)->messageid==atol(value)) 
+				{
+					fprintf ((FILE *)stream,"+OK %lu %s\r\n",((struct message *)tmpelement->data)->messageid,
+						((struct message *)tmpelement->data)->uidl);
+					found=1;
+				}
+			tmpelement=tmpelement->nextnode;
+			}
+			if (!found)
+				return pop3_error (stream,"-ERR no such message\r\n");
+			else
+				return 1;
 	  }
 	/* just drop the list */
 	fprintf ((FILE *)stream, "+OK Some very unique numbers for you\r\n");

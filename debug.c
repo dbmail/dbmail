@@ -21,7 +21,6 @@ void trace (int level, const char *formatstring, ...)
     {
       if (TRACE_VERBOSE)
 	vfprintf (err_out_stream, formatstring, argp);
-		fprintf (err_out_stream,"\n");
       if (TRACE_TO_SYSLOG)
 	{
 	  if (level <= TRACE_WARNING) 
