@@ -84,7 +84,7 @@ int imap_login(ClientInfo *ci)
   if (!ci->userData)
     {
       /* out of mem */
-      trace(TRACE_MESSAGE,"IMAPD: not enough memory.");
+      trace(TRACE_ERROR,"IMAPD: not enough memory.");
       ci->loginStatus = SS_LOGIN_FAIL;
       return SS_LOGIN_FAIL;
     }
@@ -121,7 +121,7 @@ int imap_process(ClientInfo *ci)
   if (db_connect() != 0)
     {
       /* could not connect */
-      trace(TRACE_MESSAGE, "IMAPD: Connection to dbase failed.\n");
+      trace(TRACE_ERROR, "IMAPD: Connection to dbase failed.\n");
       fprintf(ci->tx, "* BAD could not connect to dbase\r\n");
       fprintf(ci->tx, "BYE try again later\r\n");
 
@@ -166,7 +166,7 @@ int imap_process(ClientInfo *ci)
       /* clarify data a little */
       clarify_data(line);
 
-      trace(TRACE_MESSAGE,"COMMAND: [%s]\n",line);
+      trace(TRACE_INFO,"COMMAND: [%s]\n",line);
       
       if (!(*line))
 	{
@@ -241,7 +241,7 @@ int imap_process(ClientInfo *ci)
 	  continue;
 	}
 
-      trace(TRACE_MESSAGE, "IMAPD: Executing command %s...\n",IMAP_COMMANDS[i]);
+      trace(TRACE_INFO, "IMAPD: Executing command %s...\n",IMAP_COMMANDS[i]);
 
       /* check if mailbox status has changed (notify client) */
       if (ud->state == IMAPCS_SELECTED)
@@ -287,7 +287,7 @@ int imap_process(ClientInfo *ci)
 
       fflush(ci->tx); /* write! */
 
-      trace(TRACE_MESSAGE, "IMAPD: Finished command %s\n",IMAP_COMMANDS[i]);
+      trace(TRACE_INFO, "IMAPD: Finished command %s\n",IMAP_COMMANDS[i]);
 
       for (i=0; args[i]; i++) 
 	{
@@ -301,7 +301,7 @@ int imap_process(ClientInfo *ci)
   db_disconnect();
   
   fprintf(ci->tx,"%s OK completed\n",tag);
-  trace(TRACE_MESSAGE,"IMAP: Closing connection for client from IP %s\n",ci->ip);
+  trace(TRACE_MESSAGE,"IMAP: Closing connection for client from IP [%]s\n",ci->ip);
 
   return EOF;
 

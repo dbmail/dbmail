@@ -27,7 +27,7 @@
 #include "serverservice.h"
 #include "debug.h"
 
-#define LOG_USERS 0
+#define LOG_USERS 1
 
 /* error data */
 #define SS_ERROR_MSG_LEN 100
@@ -308,8 +308,8 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 
 	  
 #if LOG_USERS > 0
-	      trace(TRACE_MESSAGE,"** Server: client @ socket %d (IP: %s) accepted\n",
-		    csock, inet_ntoa(saClient.sin_addr));
+	      trace(TRACE_MESSAGE,"IMAPD [PID %d]: client @ socket %d (IP: %s) accepted\n",
+		    getpid(), csock, inet_ntoa(saClient.sin_addr));
 #endif
 
 	      if ((*Login)(&client) == SS_LOGIN_OK)
@@ -327,8 +327,8 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 		  close(csock);
 	  
 #if LOG_USERS > 0
-		  trace(TRACE_MESSAGE,"** Server: client @ socket %d (IP: %s) login refused, "
-			"connection closed\n",
+		  trace(TRACE_MESSAGE,"IMAPD [PID %d]: client @ socket %d (IP: %s) login refused, "
+			"connection closed\n",getpid(),
 			csock, inet_ntoa(saClient.sin_addr));
 #endif
 		  continue;
@@ -346,8 +346,9 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 	      (*ClientHandler)(&client); 
 
 #if LOG_USERS > 0
-	      fprintf(stderr,"** Server: client @ socket %d (IP: %s) logged out, connection closed\n",
-		      csock, client.ip);
+	      trace(TRACE_MESSAGE,"IMAPD [PID %d]: client @ socket %d (IP: %s) logged out, "
+		    "connection closed\n",getpid(),
+		    csock, client.ip);
 #endif
 
 	      if (client.tx && client.rx)
@@ -450,7 +451,8 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 		  setvbuf(client.tx, txbuf, _IOFBF, TXBUFSIZE);
 
 #if LOG_USERS > 0
-		  trace(TRACE_MESSAGE,"** Server: client @ socket %d (IP: %s) accepted\n",
+		  trace(TRACE_MESSAGE,"IMAPD [PID %d]: client @ socket %d (IP: %s) accepted\n",
+			getpid(),
 			csock, inet_ntoa(saClient.sin_addr));
 #endif
 
@@ -466,8 +468,8 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 		      close(csock);
 	  
 #if LOG_USERS > 0
-		      trace(TRACE_MESSAGE,"** Server: client @ socket %d (IP: %s) login refused, "
-			    "connection closed\n",
+		      trace(TRACE_MESSAGE,"IMAPD [PID %d]: client @ socket %d (IP: %s) login refused, "
+			    "connection closed\n",getpid(),
 			    csock, inet_ntoa(saClient.sin_addr));
 #endif
 		      exit(0);
@@ -481,8 +483,9 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 		  (*ClientHandler)(&client); 
 
 #if LOG_USERS > 0
-		  fprintf(stderr,"** Server: client @ socket %d (IP: %s) logged out, connection closed\n",
-			  csock, client.ip);
+		  trace(TRACE_MESSAGE,"IMAPD [PID %d]: client @ socket %d (IP: %s) logged out, "
+			"connection closed\n",getpid(),
+			csock, client.ip);
 #endif
 
 		  if (client.tx && client.rx)

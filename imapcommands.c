@@ -14,6 +14,8 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <time.h>
 
 #ifndef MAX_LINESIZE
 #define MAX_LINESIZE 1024
@@ -92,6 +94,13 @@ int _ic_noop(char *tag, char **args, ClientInfo *ci)
 int _ic_logout(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
+  char timestr[30];
+  time_t td;
+  struct tm tm;
+
+  time(&td);              /* get time */
+  tm = *localtime(&td);   /* get components */
+  strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
 
   if (!check_state_and_args("LOGOUT", tag, args, 0, -1, ci))
     return 1; /* error, return */
@@ -104,6 +113,9 @@ int _ic_logout(char *tag, char **args, ClientInfo *ci)
 
   /* change status */
   ud->state = IMAPCS_LOGOUT;
+
+  trace(TRACE_MESSAGE, "IMAPD [PID %d]: user (id:%d) logging out @ %s\r\n",getpid(),
+	ud->userid,timestr);
 
   fprintf(ci->tx,"* BYE dbmail imap server kisses you goodbye\r\n");
 
@@ -123,12 +135,20 @@ int _ic_login(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
   unsigned long userid;
+  char timestr[30];
+  time_t td;
+  struct tm tm;
+
+  time(&td);              /* get time */
+  tm = *localtime(&td);   /* get components */
+  strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
 
   if (!check_state_and_args("LOGIN", tag, args, 2, IMAPCS_NON_AUTHENTICATED, ci))
     return 1; /* error, return */
 
   userid = db_validate(args[0], args[1]);
-  trace(TRACE_MESSAGE, "IMAPD: user (id:%d) %s tries login\r\n",userid,args[0]);
+  trace(TRACE_MESSAGE, "IMAPD [PID %d]: user (id:%d, name %s) tries login\r\n",getpid(),
+	userid,args[0]);
 
   if (userid == -1)
     {
@@ -142,11 +162,16 @@ int _ic_login(char *tag, char **args, ClientInfo *ci)
   if (userid == 0)
     {
       /* validation failed: invalid user/pass combination */
+      trace(TRACE_MESSAGE, "IMAPD [PID %d]: user (name %s) login rejected @ %s\r\n",
+	    getpid(),args[0],timestr);
       fprintf(ci->tx, "%s NO login rejected\r\n",tag);
       return 1;
     }
 
   /* login ok */
+  trace(TRACE_MESSAGE, "IMAPD [PID %d]: user (id %d, name %s) login accepted @ %s\r\n",getpid(),
+	userid,args[0],timestr);
+
   /* update client info */
   ud->userid = userid;
   ud->state = IMAPCS_AUTHENTICATED;
@@ -174,6 +199,13 @@ int _ic_authenticate(char *tag, char **args, ClientInfo *ci)
   unsigned long userid;
   char username[MAX_LINESIZE],buf[MAX_LINESIZE],pass[MAX_LINESIZE];
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
+  char timestr[30];
+  time_t td;
+  struct tm tm;
+
+  time(&td);              /* get time */
+  tm = *localtime(&td);   /* get components */
+  strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
 
   if (!check_state_and_args("AUTHENTICATE", tag, args, 1, IMAPCS_NON_AUTHENTICATED, ci))
     return 1; /* error, return */
@@ -207,7 +239,8 @@ int _ic_authenticate(char *tag, char **args, ClientInfo *ci)
     {
       /* a db-error occurred */
       fprintf(ci->tx,"* BYE internal db error validating user\r\n");
-      trace(TRACE_ERROR,"IMAPD: authenticate(): db-validate error while validating user %s (pass %s).",
+      trace(TRACE_ERROR,"IMAPD: authenticate(): db-validate error while validating user %s "
+	    "(pass %s).",
 	    username,pass);
       return -1;
     }
@@ -216,7 +249,11 @@ int _ic_authenticate(char *tag, char **args, ClientInfo *ci)
     {
       /* validation failed: invalid user/pass combination */
       fprintf(ci->tx, "%s NO login rejected\r\n",tag);
-      trace(TRACE_MESSAGE, "IMAPD: user %s rejected\r\n",username);
+
+      /* validation failed: invalid user/pass combination */
+      trace(TRACE_MESSAGE, "IMAPD [PID %d]: user (name %s) login rejected @ %s\r\n",
+	    getpid(),username,timestr);
+
       return 1;
     }
 
@@ -225,7 +262,8 @@ int _ic_authenticate(char *tag, char **args, ClientInfo *ci)
   ud->userid = userid;
   ud->state = IMAPCS_AUTHENTICATED;
 
-  trace(TRACE_MESSAGE, "IMAPD: user (id:%d) %s logged in\r\n",userid,username);
+  trace(TRACE_MESSAGE, "IMAPD [PID %d]: user (id %d, name %s) login accepted @ %s\r\n",getpid(),
+	userid,username,timestr);
   
   fprintf(ci->tx,"%s OK AUTHENTICATE completed\r\n",tag);
   return 0;
@@ -568,7 +606,7 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
 	  strcat(cpy, chunks[i]);
 	}
 
-      trace(TRACE_MESSAGE,"checking for '%s'...\r\n",cpy);
+      trace(TRACE_INFO,"checking for '%s'...\r\n",cpy);
 
       /* check if this mailbox already exists */
       mboxid = db_findmailbox(cpy, ud->userid);
