@@ -325,11 +325,7 @@ class testImapServer(unittest.TestCase):
         p = imaplib.IMAP4(HOST,PORT)
         p.login('testuser2','test'),('OK',['LOGIN completed'])
         p.debug = 4
-        try:
-            print p.list()
-        except:
-            traceback.print_exc()
-
+        self.assertEquals(p.list()[1][-1],'() "/" "#Users/testuser1/testaclbox"')
         self.o.delete('testaclbox')
 
     def testSetquota(self):
