@@ -24,6 +24,7 @@ libsortdbmail_la_SOURCES = sort.c sortsieve.c
 AM_CFLAGS = -DSIEVE
 else
 libsortdbmail_la_SOURCES = sort.c
+
 endif
 
 libsortdbmail_la_LIBADD = @SORTLIB@

@@ -65,8 +65,18 @@ libdbmail_la_LIBADD = @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @INIPARSERLTLIB@
 
 if WITHCHECK
 
-TESTS=check_dbmail_common check_dbmail_server check_dbmail_deliver check_dbmail_imapd check_dbmail_message
+TESTS=check_dbmail_common \
+	check_dbmail_server \
+	check_dbmail_deliver \
+	check_dbmail_imapd \
+	check_dbmail_message \
+	check_dbmail_user
+
 noinst_PROGRAMS=$(TESTS)
+
+check_dbmail_user_SOURCES=check_dbmail_user.c
+check_dbmail_user_LDADD=@CHECK_LIBS@ libdbmail.la
+check_dbmail_user_INCLUDES=@CHECK_CFLAGS@
 
 check_dbmail_common_SOURCES=check_dbmail_common.c
 check_dbmail_common_LDADD=@CHECK_LIBS@ libdbmail.la
