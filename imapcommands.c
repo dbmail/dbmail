@@ -2533,7 +2533,8 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
 	}
     }
-      
+
+  mreset(cached_msg.tmpdump);
   list_freelist(&fetch_list.start);
 
   fprintf(ci->tx,"%s OK %sFETCH completed\r\n", tag, imapcommands_use_uid ? "UID " : "");
