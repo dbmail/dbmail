@@ -1537,7 +1537,7 @@ int _ic_search(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
   unsigned long *uids;
-  int nresults,i,result,msn;
+  int nresults,i,result,msn,only_ascii=0;
 
   if (ud->state != IMAPCS_SELECTED)
     {
@@ -1559,7 +1559,7 @@ int _ic_search(char *tag, char **args, ClientInfo *ci)
       /* charset specified */
       if (!args[1])
 	{
-	  fprintf(ci-tx,"%s BAD invalid argument list\r\n",tag);
+	  fprintf(ci->tx,"%s BAD invalid argument list\r\n",tag);
 	  return 1;
 	}
 
