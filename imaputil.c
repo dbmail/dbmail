@@ -168,6 +168,14 @@ int get_fetch_items(char **args, fetch_items_t *fi)
 	      i++; /* now pointing at '[' (not the last arg, parentheses are matched) */
 	      i++; /* now pointing at what should be the item type */
 
+	      if (strcmp(args[i], "]") == 0)
+		{
+		  /* specified body[] or body.peek[] */
+		  fi->getTotal = 1;
+		  i++;
+		  continue;
+		}
+
 	      /* first check if there is a partspecifier (numbers & dots) */
 	      indigit = 0;
 	      for (j=0; args[i][j]; j++)

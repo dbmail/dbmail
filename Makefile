@@ -5,8 +5,9 @@
 
 SMTP_OBJECTS = list.o debug.o pipe.o mime.o dbmysql.o misc.o dbmd5.o md5.o bounce.o
 POP_OBJECTS = pop3.o list.o debug.o dbmysql.o dbmd5.o md5.o
-IMAP_OBJECTS = imap4.o debug.o dbmysql.o serverservice.o list.o dbmd5.o md5.o imaputil.o imapcommands.o mime.o
-DUMP_OBJECTS = debug.o dbmysql.o list.o dbmd5.o md5.o mime.o
+IMAP_OBJECTS = imap4.o debug.o dbmysql.o serverservice.o list.o dbmd5.o md5.o imaputil.o \
+imapcommands.o mime.o
+DUMP_OBJECTS = debug.o dbmysql.o list.o dbmd5.o md5.o mime.o sstack.o
 MAINTENANCE_OBJECTS = debug.o list.o dbmd5.o md5.o dbmysql.o
 CC = cc
 

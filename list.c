@@ -36,7 +36,24 @@ void list_freelist(struct element **start)
   *start = NULL;
 }
 
- 
+
+/* 
+ * list_reverse()
+ *
+ * reverse the order of a linked list
+ */
+void list_reverse(struct element *start)
+{
+  if (!start || !start->next)
+    return; /* nothing to reverse */
+
+  list_reverse(start->next); /* reverse rest of list */
+  start->next->next = start;
+
+  start->next = NULL; /* terminate list */
+}
+
+
 /* 
  * list_nodeadd()
  *
@@ -81,6 +98,28 @@ struct element *list_nodeadd(struct list *tlist, void *data,
   tlist->total_nodes++;
   return tlist->start;
 }
+
+
+/*
+ * list_nodepop()
+ *
+ * pops the first element of a linked list
+ * ! MEMORY SHOULD BE FREED BY CLIENT !
+ */
+struct element *list_nodepop(struct list *list)
+{
+  struct element *ret;
+
+  if (!list || !list->start)
+    return NULL;
+
+  ret = list->start;
+
+  list->start = list->start->next;
+  
+  return ret;
+}
+  
 
 
 /*

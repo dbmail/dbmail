@@ -58,6 +58,7 @@ typedef struct
   int nbodyfetches;
   body_fetch_t *bodyfetches;
 
+  int getTotal;
   int getInternalDate,getFlags,getUID;
   int getMIME_IMB,getEnvelope,getSize;
   int getRFC822Header,getRFC822Text;

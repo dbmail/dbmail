@@ -7,6 +7,7 @@
 #include "/usr/include/mysql/mysql.h"
 #include "debug.h"
 #include "imap4.h"
+#include "mime.h"
 
 struct session;
 struct list;
@@ -76,6 +77,27 @@ typedef struct
 } msgfetch_info_t;
 
 
+typedef struct 
+{
+  unsigned long block,pos;
+} db_pos_t;
+
+
+typedef struct 
+{
+  struct list mimeheaders;
+  db_pos_t headerstart,headerend;
+  db_pos_t bodystart,bodyend;
+  struct list *children;
+
+} mime_message_t;
+
+  
+
+/* 
+ * PROTOTYPES 
+ */
+
 int db_connect();
 int db_query (char *query);
 int db_check_user (char *username, struct list *userids);
@@ -123,6 +145,10 @@ int db_init_msgfetch(unsigned long uid);
 int db_msgfetch_next(char **data);
 void db_close_msgfetch();
 
+int db_fetch_headers(unsigned long msguid, db_header_t **headers, unsigned maxheaders, 
+		     unsigned *nheaders);
+
+int db_update_msgbuf(int *idx, int minlen);
 
 int db_msgdump(unsigned long uid);
 

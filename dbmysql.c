@@ -9,11 +9,14 @@
 #include "mime.h"
 
 #define DEF_QUERYSIZE 1024
+#define MSGBUF_WINDOWSIZE 65536ul
 
 MYSQL conn;  
 MYSQL_RES *res,*_msg_result;
-MYSQL_ROW row,_msg_row;
+MYSQL_ROW row;
 int _msg_fetch_inited = 0;
+char msgbuf[MSGBUF_WINDOWSIZE];
+unsigned lengths[2];
 
 
 int db_connect ()
@@ -1219,7 +1222,7 @@ int db_copymsg(unsigned long msgid, unsigned long destmboxid)
 {
   char query[DEF_QUERYSIZE];
   char *insert;
-  unsigned long newid,*lengths;
+  unsigned long newid,*lengths,len;
 
   /* retrieve message */
   snprintf(query, DEF_QUERYSIZE, "SELECT * FROM message WHERE messageidnr = %lu", msgid);
@@ -1322,18 +1325,33 @@ int db_copymsg(unsigned long msgid, unsigned long destmboxid)
 	  return -1;
 	}
       
-      snprintf(insert, allocsize, ""
-      
-      
+      snprintf(insert, DEF_QUERYSIZE, "INSERT INTO messageblk (messageblk, blocksize, messageidnr) "
+	       "VALUES ('");
 
-  	MESSAGEBLK_MESSAGEBLKNR,
-	MESSAGEBLK_MESSAGEIDNR,
-	MESSAGEBLK_MESSAGEBLK,
-	MESSAGEBLK_BLOCKSIZE
+      len = strlen(insert);
 
+      /* now add messageblk data */
+      memcpy(&insert[len], row[MESSAGEBLK_MESSAGEBLK], lengths[MESSAGEBLK_MESSAGEBLK]);
 
-  
-  
+      /* add rest of query */
+      snprintf(&insert[len+lengths[MESSAGEBLK_MESSAGEBLK]], 
+	       allocsize-len-lengths[MESSAGEBLK_MESSAGEBLK], "', %lu, %lu)",
+	       strtoul(row[MESSAGEBLK_BLOCKSIZE], NULL, 10), newid);
+
+      len += strlen(&insert[len + lengts[MESSAGEBLK_MESSAGEBLK]]) ;
+
+      if (mysql_real_query(&conn, query, len))
+	{
+	  trace(TRACE_ERROR, "db_copymsg(): could not insert new messageblocks\n");
+	  return -1;
+	}
+
+      /* free mem */
+      free(insert);
+      insert = NULL;
+    }
+
+  mysql_free_result(res);
 
   return 0; /* success */
 }
@@ -1675,32 +1693,65 @@ int db_init_msgfetch(unsigned long uid)
     }
 
   _msg_fetch_inited = 1;
+
+  /* save rows (max 2) */
+  _msgrow = mysql_fetch_row(_msg_result);
+  if (!_msgrow)
+    return -1; /* msg should have 1 block at least */
+
+  lengths[0] = (mysql_fetch_lengths(_msgrow))[0];
+  strncpy(msgbuf, _msgrow[0], MSGBUF_WINDOWSIZE-1);
+
+  if (lengths[0] >= MSGBUF_WINDOWSIZE-1)
+    {
+      msgbuf[MSGBUF_WINDOWSIZE-1] = '\0';
+      return 0; /* msgbuf full */
+    }
+  
+  _msgrow = mysql_fetch_row(_msg_result);
+  if (!_msgrow)
+    {
+      lengths[1] = 0;
+    }
+  else
+    {
+      lengths[1] = (mysql_fetch_lengths(_msgrow))[0];
+      strncpy(&msgbuf[lengths[0]], _msgrow[0], MSGBUF_WINDOWSIZE - lengths[0] -1);
+    }
+
+  strcat(msgbuf,""); /* add NULL */
   return 0;
 }
 
 
 /*
- * db_msgfetch_next()
+ * db_update_msgbuf()
  *
- * fetches next msg block
- * stores block in '**data'
+ * updates msgbuf[]; if minlen == -1 the buffer is displaced to maximum new chars,
+ * else we make sure there is at least minlen room to the left of the buffer window
+ * (or end of msgblocks reached)
  *
- * returns -1 on error (not initialized), 0 on success
+ * returns 1 on succes, -1 on error, 0 if could not displace that much
  */
-int db_msgfetch_next(char **data)
+int db_update_msgbuf(int *idx, int minlen)
 {
-  if (!_msg_fetch_inited)
-    return -1;
+  if (lengths[1] == 0)
+    return 1; /* no more */
 
-  _msg_row = mysql_fetch_row(_msg_result);
+  /* check for maximum displacement */
+  if (minlen == -1)
+    {
+      /* try to make idx as low as possible (max displacement) */
+      
 
-  if (_msg_row)
-    *data = row[0];
-  else
-    *data = NULL;
 
-  return 0;
-}
+  /* check if we need a new row */
+  if ((lengths[1]-msgbufend) < minlen)
+
+  row = mysql_fetch_row(_msg_result);
+  if (!row)
+    
+
 
 
 /*
@@ -1716,6 +1767,229 @@ void db_close_msgfetch()
   mysql_free_result(_msg_result);
   _msg_fetch_inited = 0;
 }
+
+
+
+/*
+ * db_fetch_headers()
+ *
+ * builds up an array containing message headers and the start/end position of the 
+ * associated body part(s)
+ *
+ * creates a linked-list of headers found
+ *
+ * returns:
+ * -1 error
+ *  0 success
+ */
+int db_fetch_headers(unsigned long msguid, mime_message_t *msg)
+{
+  char query[DEF_QUERYSIZE],*boundary;
+  int i,end;
+  char *boundary;
+  
+  /* first fetch msgblocks */
+  snprintf(query, DEF_QUERYSIZE, "SELECT messageblk FROM messageblk WHERE messageidnr = %lu",
+	   msguid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_fetch_headers(): could not select messageblocks\n");
+      return (-1);
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_fetch_headers(): mysql_store_result failed: %s\n",
+	    mysql_error(&conn));
+      return (-1);
+    }
+  
+  /* body of first part is total msg */
+  msg->children = NULL;
+  msg->headerstart.block = 0;
+  msg->headerstart.pos   = 0;
+  msg->bodystart.block = 1;
+  msg->bodystart.pos   = 0;
+
+  msg->bodyend.block = mysql_num_rows(res);
+  msg->headerend.block = 0;
+
+  row = mysql_fetch_row(res);
+  msg->headerend.pos = strlen(row[0]);
+
+  /* first block is first header, find MIME-fields */
+  if (mime_list(row[0], &msg->mimeheader) == -1)
+    {
+      mysql_free_result(res);
+      return -1;
+    }
+
+  /* retrieve boundary */
+  boundary = mime_findfield("boundary", &msg->mimeheader, &record);
+  if (boundary)
+    {
+      /* found a boundary item, multipart message */
+      /* read value */
+      boundary += strlen("boundary=");
+      if (*boundary == '\"') boundary++;
+      if (boundary[strlen(boundary)-1] == '\"')
+	boundary[strlen(boundary)-1] = '\0';
+
+    }
+  else
+    {
+      while (row = mysql_fetch_row(res))
+	msg->bodyend.pos = strlen(row[0]);
+
+      mysql_free_result(res);
+      return 0; /* this is a single-part message; done */
+    }
+
+  /* this is a multipart msg
+   * find the next boundary, then read the header that follows it (if present) and
+   */
+			  
+
+  msg->children = (struct list*)malloc(sizeof(struct list));
+  if (!msg->children)
+    {
+      mysql_free_result(res);
+      return -1;
+    }
+
+  list_init(msg->children);
+  row = mysql_fetch_result(res);
+  if (!row)
+    {
+      mysql_free_result(res);
+      free(msg->children);
+      return -1;
+    }
+
+  cnt = 0;
+  blk = 1;
+  if (db_add_mime_children(boundary, 0, &cnt, msg->children) == -1)
+    {
+      mysql_free_result(res);
+      free(msg->children);
+      return -1;
+    }
+
+  msg->bodyend.pos = cnt;
+
+  return 0;
+}
+
+
+
+int db_add_mime_children(char *boundary, unsigned start, unsigned *end, struct list *children)
+{
+  mime_message_t msg;
+  struct mime_record record;
+  char *nextboundary;
+  unsigned nextend;
+  unsigned long length;
+
+  msg.children = NULL;
+  msg.headerstart.block = -1; /* presume no header */
+  msg.headerstart.pos   = -1;
+  msg.bodystart.block = blk;
+  msg.bodystart.pos   = 0;
+  list_init(&msg.mimeheader);
+
+  trace(TRACE_DEBUG,"boundary: '%s'\n",boundary);
+
+  do
+    {
+      length = (mysql_fetch_lengths(res))[0];
+      for (*end = start; msgbuf[*end]; *end++)
+	{
+	  db_update_msgbuf(end, strlen(boundary)+1+1);
+
+	  /* start looking for a new line & boundary */
+	  if (msgbuf[*end] == '\n' && strcmp(&msgbuf[*end+1], boundary) == 0)
+	    {
+	      /* found boundary, maximum msgbuf update */
+	      db_update_msgbuf(end, -1);
+
+	      msg.bodyend.block = blk;
+	      msg.bodyend.pos = *end;
+
+	      *end++;
+	      *end += strlen(boundary); /* skip */
+	      *end++;
+
+	      if (*end == '\n')
+		{
+		  /* end of this msg-part, add this part & exit */
+		  if (!list_nodeadd(children, &msg, sizeof(msg)))
+		    return -1;
+		  
+		  return 0;
+		}
+
+	      /* ok find MIME-header fields */
+	      if (mime_list(&msgbuf[*end], &msg.mimeheader) == -1)
+		return -1;
+
+	      /* skip to end of MIME-header fields (\n\n) */
+	      while (msgbuf[*end])
+		{
+		  if (msgbuf[*end] == '\n' && msgbuf[*end+1] == '\n')
+		    break;
+
+		  *end++;
+		}
+	      
+	      /* check if there will be more kiddos */
+	      nextboundary = mime_findfield("boundary", &msg.mimeheader, &record);
+	      if (nextboundary)
+		{
+		  /* found a boundary item, multipart message */
+		  /* read value */
+		  nextboundary += strlen("boundary=");
+		  if (*nextboundary == '\"') nextboundary++;
+		  if (nextboundary[strlen(nextboundary)-1] == '\"')
+		    nextboundary[strlen(nextboundary)-1] = '\0';
+
+		  msg.children = (struct list*)malloc(sizeof(struct list));
+		  if (!msg.children)
+		    return -1;
+
+		  list_init(msg.children);
+		  
+		  nextend = *end;
+		  if (db_add_mime_children(nextboundary, *end, &nextend, msg.children) == -1)
+		    return -1;
+		  
+		  *end = nextend;
+		}
+	      else
+		{
+		  /* single part message, this is the body */
+		  
+		}
+	      
+  
+  
+		  
+	    }
+	}
+    }
+}    
+		      
+		      
+			  
+
+			  
+			  
+
+      
+
+  
+
+
 
 
 /*
@@ -1765,4 +2039,5 @@ int db_msgdump(unsigned long uid)
   mysql_free_result(res);
   return 0;
 }
+
 

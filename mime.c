@@ -155,6 +155,7 @@ int mime_list(char *blkdata, struct list *mimelist)
 }
 
 
+
 /*
  * mime_findfield()
  *
@@ -164,7 +165,7 @@ int mime_list(char *blkdata, struct list *mimelist)
 void mime_findfield(const char *fname, struct list *mimelist, struct mime_record *mr)
 {
   struct element *current;
-  
+
   current = list_getstart(mimelist);
   while (current)
     {
