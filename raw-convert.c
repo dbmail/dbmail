@@ -615,6 +615,7 @@ int build_user_list(const char *userfile)
 
   for (i=0; i<listsize; i++)
     {
+      printf("doing %lu\n", i);
       fgets(line, MAX_LINESIZE, infile);
       if (line[strlen(line)-1] == '\n')
 	line[strlen(line)-1] = '\0';
@@ -638,6 +639,7 @@ int build_user_list(const char *userfile)
 	}
     }
 
+  fclose(infile);
   return 0;
 }
 
