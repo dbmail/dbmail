@@ -1,5 +1,7 @@
 2004-03-09  Ilja Booij  <ilja@ic-s.nl>
 
+	* db.h: removed db_update_message_multiple()
+
 	* sort/sort.c (sort_and_deliver): uses db_message_set_unique_id()
 	to set the unique id of a message.
 
@@ -15,6 +17,7 @@
 	(db_message_set_unique_id): new function that only updates the
 	unique id of a message.
 	(db_update_message): uses db_message_set_unique_id()
+	(db_update_message_multiple): removed function. Was not in use.
 
 	* forward.c (forward): only send header through pipe if there's no
 	message to send. Otherwise get the whole message from the database.

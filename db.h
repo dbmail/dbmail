@@ -18,6 +18,8 @@
 */
 
 /*
+ * $Id$
+ *
  * dbase driver header file
  * Functions for database communication 
  *
@@ -576,18 +578,6 @@ int db_update_message(u64_t message_idnr, const char *unique_id,
  *     -  0 on success
  */
 int db_message_set_unique_id(u64_t message_idnr, const char *unique_id);
-
-/** 
-* \brief update multiple messages with unique id  unique_id
-* \param unique_id
-* \param message_size size of message
-* \param rfc_size
-* \return 
-*        - -1 on failure
-*        - 0 on success
-*/
-int db_update_message_multiple(const char *unique_id, u64_t message_size,
-		u64_t rfc_size);
 
 /**
  * \brief insert a messageblock for a specific physmessage

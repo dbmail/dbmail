@@ -756,58 +756,6 @@ int db_update_message(u64_t message_idnr, const char *unique_id,
     return 0;
 }
 
-int db_update_message_multiple(const char *unique_id, u64_t message_size,
-			       u64_t rfc_size)
-{
-    u64_t *uids;
-    int n, i;
-    char new_unique[UID_SIZE];
-
-    snprintf(query, DEF_QUERYSIZE,
-	     "SELECT message_idnr FROM messages WHERE "
-	     "unique_id = '%s'", unique_id);
-
-    if (db_query(query) == -1) {
-	trace(TRACE_ERROR, "%s,%s: error executing query\n",
-	      __FILE__, __FUNCTION__);
-	return -1;
-    }
-
-    n = db_num_rows();
-    if (n <= 0) {
-	trace(TRACE_INFO, "%s,%s: nothing to update (?)",
-	      __FILE__, __FUNCTION__);
-	db_free_result();
-	return 0;
-    }
-    if ((uids = (u64_t *) my_malloc(n * sizeof(u64_t))) == 0) {
-	trace(TRACE_ERROR, "%s,%s: out of memory", __FILE__, __FUNCTION__);
-	db_free_result();
-	return -1;
-    }
-
-    for (i = 0; i < n; i++) {
-	uids[i] = db_get_result_u64(i, 0);
-    }
-    db_free_result();
-
-    /* now update for each message */
-    for (i = 0; i < n; i++) {
-	 create_unique_id(new_unique, uids[i]);
-	 if (db_update_message(uids[i], new_unique,
-			       message_size, rfc_size) == -1) {
-	      trace(TRACE_ERROR, "%s,%s error in db_update_message",
-		    __FILE__, __FUNCTION__);
-	      return -1;
-	}
-	 trace(TRACE_INFO, "%s,%s: message [%llu] updated, [%llu] bytes",
-	       __FILE__, __FUNCTION__, uids[i], message_size);
-
-    }
-    my_free(uids);
-    return 0;
-}
-
 int db_insert_message_block_physmessage(const char *block, u64_t block_size,
 					u64_t physmessage_id, 
 					u64_t *messageblk_idnr)
