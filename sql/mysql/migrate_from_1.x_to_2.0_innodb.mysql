@@ -151,7 +151,7 @@ ALTER TABLE dbmail_messageblks
 	ADD INDEX physmessage_id_index (physmessage_id),
 	ADD INDEX physmessage_id_is_header_index (physmessage_id, is_header),
 	ADD FOREIGN KEY physmessage_id_fk (physmessage_id)
-		REFERENCES physmessage_id (id)
+		REFERENCES dbmail_physmessage (id)
 		ON DELETE CASCADE;
 UPDATE dbmail_messageblks SET is_header = '0';
 

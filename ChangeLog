@@ -1,3 +1,8 @@
+2004-08-23  Ilja Booij  <ilja@ic-s.nl>
+
+	* sql/mysql/migrate_from_1.x_to_2.0_innodb.mysql: fixed faulty
+	foreign key reference thanks to ville at thesubmachine dot com
+
 2004-08-20  Aaron Stone  <aaron@serendipity.cx>
 
 	* man/dbmail-users.1: options -s and -S had been left out of
