@@ -687,6 +687,16 @@ END_TEST
 
 #endif
 
+START_TEST(test_dm_stresc)
+{
+	char *to;
+	to = dm_stresc("test");
+	fail_unless(strcmp(to,"test")==0,"dm_stresc failed 1");
+	to = dm_stresc("test's");
+	fail_unless(strcmp(to,"test\\'s")==0,"dm_stresc failed 2");
+	g_free(to);
+}
+END_TEST
 
 Suite *dbmail_deliver_suite(void)
 {
@@ -726,9 +736,14 @@ Suite *dbmail_deliver_suite(void)
 
 	TCase *tc_pipe = tcase_create("Pipe");
 	suite_add_tcase(s, tc_pipe);
-
 	tcase_add_checked_fixture(tc_pipe, setup, teardown);
 	tcase_add_test(tc_pipe, test_insert_messages);
+
+	TCase *tc_misc = tcase_create("Misc");
+	suite_add_tcase(s, tc_misc);
+	tcase_add_checked_fixture(tc_misc, setup, teardown);
+	tcase_add_test(tc_misc, test_dm_stresc);
+	
 	
 	return s;
 }

@@ -62,13 +62,13 @@ int PerformChildTask(ChildInfo_t * info);
 void client_close(void)
 {
 	if (client.tx) {
-		trace(TRACE_DEBUG,"%s,%s: closing write stream", __FILE__,__FUNCTION__);
+		trace(TRACE_DEBUG,"%s,%s: closing write stream", __FILE__,__func__);
 		fflush(client.tx);
 		fclose(client.tx);	/* closes clientSocket as well */
 		client.tx = NULL;
 	}
 	if (client.rx) {
-		trace(TRACE_DEBUG,"%s,%s: closing read stream", __FILE__,__FUNCTION__);
+		trace(TRACE_DEBUG,"%s,%s: closing read stream", __FILE__,__func__);
 		shutdown(fileno(client.rx), SHUT_RDWR);
 		fclose(client.rx);
 		client.rx = NULL;
@@ -82,7 +82,7 @@ void disconnect_all(void)
 	
 	trace(TRACE_DEBUG,
 		"%s,%s: database connection still open, closing",
-		__FILE__,__FUNCTION__);
+		__FILE__,__func__);
 	db_disconnect();
 	auth_disconnect();
 	connected = 0;		/* FIXME a signal between this line and the previous one 
@@ -97,14 +97,14 @@ void noop_child_sig_handler(int sig, siginfo_t *info UNUSED, void *data UNUSED)
 {
 	if (sig == SIGSEGV)
 		_exit(0);
-	trace(TRACE_DEBUG, "%s,%s: ignoring signal [%d]", __FILE__, __FUNCTION__, sig);
+	trace(TRACE_DEBUG, "%s,%s: ignoring signal [%d]", __FILE__, __func__, sig);
 }
 
 void active_child_sig_handler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
 {
 	static int triedDisconnect = 0;
 
-	trace(TRACE_ERROR, "%s,%s: got signal [%s]", __FILE__, __FUNCTION__,
+	trace(TRACE_ERROR, "%s,%s: got signal [%s]", __FILE__, __func__,
 	      strsignal(sig));
 
 	/* perform reinit at SIGHUP otherwise exit, but do nothing on
@@ -112,10 +112,10 @@ void active_child_sig_handler(int sig, siginfo_t * info UNUSED, void *data UNUSE
 	switch (sig) {
 	case SIGCHLD:
 		trace(TRACE_DEBUG, "%s,%s: SIGCHLD received... ignoring",
-			__FILE__, __FUNCTION__);
+			__FILE__, __func__);
 		break;
 	case SIGALRM:
-		trace(TRACE_DEBUG, "%s,%s: timeout received", __FILE__, __FUNCTION__);
+		trace(TRACE_DEBUG, "%s,%s: timeout received", __FILE__, __func__);
 		client_close();
 		break;
 
@@ -126,23 +126,23 @@ void active_child_sig_handler(int sig, siginfo_t * info UNUSED, void *data UNUSE
 		if (ChildStopRequested) {
 			trace(TRACE_DEBUG,
 				"%s,%s: already caught a stop request. Closing right now",
-				__FILE__,__FUNCTION__);
+				__FILE__,__func__);
 
 			/* already caught this signal, exit the hard way now */
 			client_close();
 			disconnect_all();
 			child_unregister();
-			trace(TRACE_DEBUG, "%s,%s: exit",__FILE__,__FUNCTION__);
+			trace(TRACE_DEBUG, "%s,%s: exit",__FILE__,__func__);
 			exit(1);
 		}
-		trace(TRACE_DEBUG, "%s,%s: setting stop request",__FILE__,__FUNCTION__);
+		trace(TRACE_DEBUG, "%s,%s: setting stop request",__FILE__,__func__);
 		DelChildSigHandler();
 	 	ChildStopRequested = 1;
 		break;
 	default:
 		/* bad shtuff, exit */
 		trace(TRACE_DEBUG,
-		      "%s,%s: cannot ignore this. Terminating",__FILE__,__FUNCTION__);
+		      "%s,%s: cannot ignore this. Terminating",__FILE__,__func__);
 
 		/*
 		 * For some reason i have not yet determined the process starts eating up
@@ -159,7 +159,7 @@ void active_child_sig_handler(int sig, siginfo_t * info UNUSED, void *data UNUSE
 			disconnect_all();
 		}
 
-		trace(TRACE_DEBUG, "%s,%s: exit", __FILE__, __FUNCTION__);
+		trace(TRACE_DEBUG, "%s,%s: exit", __FILE__, __func__);
 		child_unregister();
 		exit(1);
 	}
@@ -234,7 +234,7 @@ pid_t CreateChild(ChildInfo_t * info)
 	if (! pid) {
 		if (child_register() == -1) {
 			trace(TRACE_FATAL, "%s,%s: child_register failed", 
-				__FILE__, __FUNCTION__);
+				__FILE__, __func__);
 			exit(0);
 
 		}
@@ -242,7 +242,7 @@ pid_t CreateChild(ChildInfo_t * info)
  		ChildStopRequested = 0;
  		SetChildSigHandler();
  		trace(TRACE_INFO, "%s,%s: signal handler placed, going to perform task now",
-			__FILE__, __FUNCTION__);
+			__FILE__, __func__);
  		PerformChildTask(info);
  		child_unregister();
  		exit(0);

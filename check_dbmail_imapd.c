@@ -43,6 +43,7 @@
 #include "rfcmsg.h"
 #include "dbmsgbuf.h"
 #include "imaputil.h"
+#include "misc.h"
 
 #include "check_dbmail.h"
 

@@ -112,13 +112,16 @@ START_TEST(test_dbmail_message_get_class)
 
 }
 END_TEST
-//struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t id, int filter);
-/*
+//struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t physid, int filter);
 START_TEST(test_dbmail_message_retrieve)
 {
+	struct DbmailMessage *msg = dbmail_message_new();
+	u64_t physid = 191967;
+	msg = dbmail_message_retrieve(msg,physid,DBMAIL_MESSAGE_FILTER_HEAD);	
+	fail_unless(msg != NULL, "dbmail_message_retrieve failed");
+	fail_unless(msg->content != NULL, "dbmail_message_retrieve failed");
 }
 END_TEST
-*/
 //struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *self, const GString *content);
 START_TEST(test_dbmail_message_init_with_string)
 {

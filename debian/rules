@@ -119,6 +119,9 @@ clean1:
 	dh_testdir
 	rm -rf stamps
 	rm -f `find . -name ".#*"`
+	rm -f `find . -name "*.la"`
+	rm -f `find . -name "*.lo"`
+	rm -f `find . -name "*.o"`
 	# Add here commands to clean up after the build process.
 	-$(MAKE) clean
 	for d in $(PACKAGES); do \
@@ -133,7 +136,7 @@ clean1:
 		rm -rf $$file || true; \
 	done
 	rm -rf autom4te.cache
-	for file in Makefile config.h config.status libtool stamp-h .deps; do \
+	for file in Makefile config.h config.status libtool stamp-h .deps .libs; do \
 		rm -rf `find . -name $$file`; \
 	done
 	rm -f stamp-h.in config.log aclocal.m4 configure

@@ -55,7 +55,7 @@ extern db_param_t _db_params;
  */
 void setup(void)
 {
-	configure_debug(4,0,1);
+	configure_debug(5,0,1);
 	config_read(configFile);
 	GetDBParams(&_db_params);
 	db_connect();

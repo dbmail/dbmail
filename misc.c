@@ -533,3 +533,17 @@ GList * g_list_append_printf(GList * list, char * format, ...)
 	return list;
 }
 
+/* 
+ * return newly allocated escaped strings
+ */
+
+char * dm_stresc(const char * from)
+{
+	char *to;
+	if (! (to = g_malloc0(sizeof(from) * strlen(from) * 2 + 1)))
+		return NULL;
+	db_escape_string(to, from, strlen(from));
+	return to;
+}
+	
+

@@ -34,7 +34,7 @@ CREATE TABLE dbmail_headervalue (
 		REFERENCES dbmail_physmessage(id)
 		ON UPDATE CASCADE ON DELETE CASCADE,
 	id		INT8 DEFAULT nextval('dbmail_headervalue_idnr_seq'),
-	headervalue	VARCHAR(255) NOT NULL DEFAULT '',
+	headervalue	TEXT NOT NULL DEFAULT '',
 	PRIMARY KEY (id)
 );
 CREATE UNIQUE INDEX dbmail_headervalue_1 ON dbmail_headervalue(physmessage_id, id);

@@ -1183,6 +1183,12 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 				return -1;
 			}
 
+			if (result == -3) {
+				/* parse error */
+				g_string_free(tmp,TRUE);
+				return 0;
+			}
+
 		} else {
 			/* parse message structure */
 			if (cached_msg.msg_parsed)

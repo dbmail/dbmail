@@ -102,7 +102,7 @@ void SetTraceLevel(const char *service_name)
 		      __FILE__, __func__);
 	if (strlen(val) == 0)
 		configure_debug(TRACE_ERROR, 1, 0);
-	else
+	else 
 		configure_debug(atoi(val), 1, 0);
 }
 

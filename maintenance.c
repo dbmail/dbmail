@@ -122,7 +122,7 @@ int main(int argc, char *argv[])
 
 	/* get options */
 	opterr = 0;		/* suppress error message from getopt() */
-	while ((opt = getopt(argc, argv, "-acbrtl:pud" "i" "f:qnyvVh")) != -1) {
+	while ((opt = getopt(argc, argv, "-acbtl:pud" "i" "f:qnyvVh")) != -1) {
 		/* The initial "-" of optstring allows unaccompanied
 		 * options and reports them as the optarg to opt 1 (not '1') */
 		switch (opt) {
@@ -133,6 +133,7 @@ int main(int argc, char *argv[])
 			set_deleted = 1;
 			check_integrity = 1;
 			null_messages = 1;
+			is_header = 1;
 			do_nothing = 0;
 			break;
 
@@ -668,13 +669,11 @@ int do_header_cache(void)
 	}
 
 	if (yes_to_all) {
-		db_begin_transaction();
 		if (db_set_headercache(lost) < 0) {
 			db_rollback_transaction();
 			qerrorf("Error caching the header values ");
 			has_errors = 1;
 		}
-		db_commit_transaction();
 	}
 
 	g_list_free(lost);

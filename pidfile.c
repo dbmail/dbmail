@@ -102,12 +102,12 @@ void pidfile_create(const char *pidFile, pid_t pid)
 
 	if (oldpid != 0) {
 		trace(TRACE_FATAL, "%s, %s: File [%s] exists and process id [%d] is running.", 
-			__FILE__, __FUNCTION__, pidFile, (int)pid);
+			__FILE__, __func__, pidFile, (int)pid);
 	}
 
 	if (!(f = fopen(pidFile, "w"))) {
 		trace(TRACE_FATAL, "%s, %s: Cannot open pidfile [%s], error was [%s]",
-			__FILE__, __FUNCTION__, pidFile, strerror(errno));
+			__FILE__, __func__, pidFile, strerror(errno));
 	}
 
 	memset(buf, 0, sizeof(buf));

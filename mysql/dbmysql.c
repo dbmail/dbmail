@@ -224,6 +224,7 @@ u64_t db_insert_result(const char *sequence_identifier UNUSED)
 int db_query(const char *the_query)
 {
 	unsigned querysize = 0;
+
 	if (db_check_connection() < 0) {
 		trace(TRACE_ERROR, "%s,%s: no database connection",
 		      __FILE__, __func__);
@@ -232,24 +233,22 @@ int db_query(const char *the_query)
 	if (the_query != NULL) {
 		querysize = (unsigned) strlen(the_query);
 		if (querysize > 0) {
-			trace(TRACE_DEBUG, "%s,%s: "
-			      "executing query [%s]",
-			      __FILE__, __func__, the_query);
-			if (mysql_real_query(&conn,
-					     the_query, querysize) < 0) {
-				trace(TRACE_ERROR, "%s,%s: "
-				      "query [%s] failed",
-				      __FILE__, __func__, the_query);
-				trace(TRACE_ERROR, "%s,%s: "
-				      "mysql_real_query failed: %s",
-				      __FILE__, __func__,
-				      mysql_error(&conn));
+			trace(TRACE_DEBUG, "%s,%s: executing query [%s]",
+			      __FILE__, __func__, 
+			      the_query);
+			if (mysql_real_query(&conn, the_query, querysize) < 0) {
+				trace(TRACE_ERROR, "%s,%s: [%s] [%s]",
+				      __FILE__, __func__, 
+				      mysql_error(&conn), the_query);
 				return -1;
 			}
+			
+			res = mysql_store_result(&conn);
+			res_changed = 1;
+			
 		} else {
-			trace(TRACE_ERROR, "%s,%s: "
-			      "querysize is wrong: [%d]", __FILE__,
-			      __func__, querysize);
+			trace(TRACE_ERROR, "%s,%s: querysize is wrong: [%d]", 
+					__FILE__, __func__, querysize);
 			return -1;
 		}
 	} else {
@@ -259,14 +258,10 @@ int db_query(const char *the_query)
 		return -1;
 	}
 
-	res = mysql_store_result(&conn);
-        res_changed = 1; /*MR*/
-
 	return 0;
 }
 
-unsigned long db_escape_string(char *to,
-			       const char *from, unsigned long length)
+unsigned long db_escape_string(char *to, const char *from, unsigned long length)
 {
 	return mysql_real_escape_string(&conn, to, from, length);
 }
