@@ -641,7 +641,7 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message, u64_t useridnr, cons
 		trace(TRACE_ERROR, "%s,%s: mailbox [%s] not found",
 				__FILE__, __func__,
 				mailbox);
-		return SORT_FAILURE;
+		return DSN_CLASS_FAIL;
 	} else {
 		switch (db_copymsg(msgidnr, mboxidnr, useridnr, &newmsgidnr)) {
 		case -2:
@@ -649,17 +649,17 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message, u64_t useridnr, cons
 					"maxmail exceeded", 
 					__FILE__, __func__, 
 					useridnr);
-			return SORT_OVER_QUOTA;
+			return DSN_CLASS_QUOTA;
 		case -1:
 			trace(TRACE_ERROR, "%s, %s: error copying message to user [%llu]", 
 					__FILE__, __func__, 
 					useridnr);
-			return SORT_WEIRD_ERROR;
+			return DSN_CLASS_TEMP;
 		default:
 			trace(TRACE_MESSAGE, "%s, %s: message id=%llu, size=%d is inserted", 
 					__FILE__, __func__, 
 					newmsgidnr, msgsize);
-			return SORT_SUCCESS;
+			return DSN_CLASS_OK;
 		}
 	}
 }
