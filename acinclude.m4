@@ -196,6 +196,7 @@ if test ! "${authldapheadername-x}" = "x"
 then
   # --with-auth-ldap was specified
   AC_MSG_RESULT([using LDAP authentication])
+  CFLAGS="$CFLAGS -DAUTHLDAP"
   if test "$withval" != "yes"
   then
     AC_MSG_CHECKING([for ldap.h (user supplied)])

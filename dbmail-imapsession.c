@@ -1898,9 +1898,9 @@ int dbmail_imap_session_handle_auth(struct ImapSession * self, char * username, 
 	}
 
 	/* login ok */
-	trace(TRACE_MESSAGE,
-	      "%s,%s: user (id %llu, name %s) login accepted @ %s",
-	      __FILE__, __func__, userid, username, timestring);
+	trace(TRACE_MESSAGE, "%s,%s: user (id %llu, name %s) login accepted @ %s",
+	      __FILE__, __func__, 
+	      userid, username, timestring);
 #ifdef PROC_TITLES
 	set_proc_title("USER %s [%s]", username, self->ci->ip);
 #endif

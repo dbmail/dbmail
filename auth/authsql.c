@@ -311,131 +311,20 @@ int __auth_query(const char *thequery)
 int auth_adduser(const char *username, const char *password, const char *enctype,
 		 u64_t clientid, u64_t maxmail, u64_t * user_idnr)
 {
-	char escapedpass[AUTH_QUERY_SIZE];
-	char *escaped_username;
-
-	assert(user_idnr != NULL);
-	*user_idnr = 0;
-
-#ifdef _DBAUTH_STRICT_USER_CHECK
-	if (!(escaped_username = (char *) dm_malloc(strlen(username) * 2 + 1))) {
-		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
-			"escaped username", __FILE__, __func__);
-		return -1;
-	}
-
-	db_escape_string(escaped_username, username, strlen(username));
-	/* first check to see if this user already exists */
-	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
-		 "SELECT * FROM %susers WHERE userid = '%s'",DBPFX, escaped_username);
-	dm_free(escaped_username);
-
-	if (__auth_query(__auth_query_data) == -1) {
-		/* query failed */
-		trace(TRACE_ERROR, "%s,%s: query failed",
-		      __FILE__, __func__);
-		return -1;
-	}
-
-	if (db_num_rows() > 0) {
-		/* this username already exists */
-		trace(TRACE_ERROR, "%s,%s: user already exists",
-		      __FILE__, __func__);
-		db_free_result();
-		return -1;
-	}
-
-	db_free_result();
-#endif
-
-	if (strlen(password) >= AUTH_QUERY_SIZE) {
-		trace(TRACE_ERROR, "%s,%s: password length is insane",
-		      __FILE__, __func__);
-		return -1;
-	}
-
-	db_escape_string(escapedpass, password, strlen(password));
-
-	if (!(escaped_username = (char *) dm_malloc(strlen(username) * 2 + 1))) {
-		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
-			"escaped username", __FILE__, __func__);
-		return -1;
-	}
-
-	db_escape_string(escaped_username, username, strlen(username));
-
-	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
-		 "INSERT INTO %susers "
-		 "(userid,passwd,client_idnr,maxmail_size,"
-		 "encryption_type, last_login) VALUES "
-		 "('%s','%s',%llu,'%llu','%s', CURRENT_TIMESTAMP)",DBPFX,
-		 escaped_username, escapedpass, clientid, maxmail,
-		 enctype ? enctype : "");
-	dm_free(escaped_username);
-
-	if (__auth_query(__auth_query_data) == -1) {
-		/* query failed */
-		trace(TRACE_ERROR, "%s,%s: query for adding user failed",
-		      __FILE__, __func__);
-		return -1;
-	}
-	*user_idnr = __auth_insert_result("user_idnr");
-
-	return 1;
+	*user_idnr=0; 
+	return db_user_create(username, password, enctype, clientid, maxmail, user_idnr);
 }
+
 
 int auth_delete_user(const char *username)
 {
-	char *escaped_username;
-
-	if (!(escaped_username = (char *) dm_malloc(strlen(username) * 2 + 1))) {
-		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
-			"escaped username", __FILE__, __func__);
-		return -1;
-	}
-
-	db_escape_string(escaped_username, username, strlen(username));
-
-	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
-		 "DELETE FROM %susers WHERE userid = '%s'",
-		 DBPFX, escaped_username);
-	dm_free(escaped_username);
-
-	if (__auth_query(__auth_query_data) == -1) {
-		/* query failed */
-		trace(TRACE_ERROR, "%s,%s: query for removing user failed",
-		      __FILE__, __func__);
-		return -1;
-	}
-
-	return 0;
+	return db_user_delete(username);
 }
+
 
 int auth_change_username(u64_t user_idnr, const char *new_name)
 {
-	char *escaped_new_name;
-
-	if (!(escaped_new_name = (char *) dm_malloc(strlen(new_name) * 2 + 1))) {
-		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
-			"escaped new_name", __FILE__, __func__);
-		return -1;
-	}
-
-	db_escape_string(escaped_new_name, new_name, strlen(new_name));
-
-	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
-		 "UPDATE %susers SET userid = '%s' WHERE user_idnr='%llu'",
-		 DBPFX, escaped_new_name, user_idnr);
-	dm_free(escaped_new_name);
-
-	if (__auth_query(__auth_query_data) == -1) {
-		trace(TRACE_ERROR,
-		      "%s,%s: could not change name for user [%llu]",
-		      __FILE__, __func__, user_idnr);
-		return -1;
-	}
-
-	return 0;
+	return db_user_rename(user_idnr, new_name);
 }
 
 int auth_change_password(u64_t user_idnr, const char *new_pass,

@@ -29,11 +29,7 @@ SERVER = server.c serverchild.c pool.c
 DELIVER = pipe.c forward.c dsn.c
 
 # CFLAGS
-if LDAP
-AM_CFLAGS = -fomit-frame-pointer -DAUTHLDAP
-else
 AM_CFLAGS = -fomit-frame-pointer
-endif
 
 INCLUDES = -I$(top_srcdir)
 
@@ -72,7 +68,6 @@ if WITHCHECK
 
 TESTS=check_dbmail_common check_dbmail_server check_dbmail_deliver check_dbmail_imapd check_dbmail_message
 noinst_PROGRAMS=$(TESTS)
-#noinst_PROGRAMS=check_dbmail_common check_dbmail_server check_dbmail_deliver check_dbmail_imapd check_dbmail_message
 
 check_dbmail_common_SOURCES=$(COMMON) check_dbmail_common.c
 check_dbmail_common_LDADD=$(dbmail_users_LDADD) @CHECK_LIBS@

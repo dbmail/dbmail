@@ -39,10 +39,11 @@ TESTMSG['strict822']=getMessageStrict()
 
 class testImapServer(unittest.TestCase):
 
-    def setUp(self):
+    def setUp(self,username="testuser1",password="test"):
         self.o = imaplib.IMAP4(HOST, PORT)
         self.o.debug = DEBUG
-        self.assertEquals(self.o.login('testuser1','test'),('OK',['LOGIN completed']))
+        result=self.o.login(username,password)
+        return result
 
     def testAppend(self):
         """ 
@@ -202,6 +203,10 @@ class testImapServer(unittest.TestCase):
             Identify the client using a plaintext password.  The PASSWORD will
             be quoted.
         """
+        self.o.logout()
+        result=self.setUp("testuser1","test")
+        self.assertEquals(result,('OK', ['LOGIN completed']))
+        self.failUnlessRaises(Exception,self.setUp,"testuser1","blah")
 
     def testLogin_cram_md5(self):
         """ 

@@ -2541,7 +2541,8 @@ int db_getmailbox(mailbox_t * mb)
 	 * NOTE expunged messages are selected as well in order to be 
 	 * able to restore them 
 	 */
-	snprintf(query, DEF_QUERYSIZE, "SELECT MAX(message_idnr)+1 FROM %smessages",DBPFX);
+	snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr+1 FROM %smessages "
+			"ORDER BY message_idnr DESC LIMIT 1",DBPFX);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: query error [%s]", __FILE__, __func__, query);
@@ -3999,5 +4000,140 @@ int db_user_exists(const char *username, u64_t * user_idnr)
 	*user_idnr = (query_result) ? strtoull(query_result, 0, 10) : 0;
 	db_free_result();
 	return 1;
+}
+
+
+int db_user_create(const char *username, const char *password, const char *enctype,
+		 u64_t clientid, u64_t maxmail, u64_t * user_idnr) 
+{
+	char escapedpass[DEF_QUERYSIZE];
+	char *escaped_username;
+
+	assert(user_idnr != NULL);
+//	*user_idnr = 0;
+
+#ifdef _DBAUTH_STRICT_USER_CHECK
+	if (!(escaped_username = (char *) dm_malloc(strlen(username) * 2 + 1))) {
+		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
+			"escaped username", __FILE__, __func__);
+		return -1;
+	}
+
+	db_escape_string(escaped_username, username, strlen(username));
+	/* first check to see if this user already exists */
+	snprintf(query, DEF_QUERYSIZE,
+		 "SELECT * FROM %susers WHERE userid = '%s'",DBPFX, escaped_username);
+	dm_free(escaped_username);
+
+	if (db_query(query) == -1) {
+		/* query failed */
+		trace(TRACE_ERROR, "%s,%s: query failed",
+		      __FILE__, __func__);
+		return -1;
+	}
+
+	if (db_num_rows() > 0) {
+		/* this username already exists */
+		trace(TRACE_ERROR, "%s,%s: user already exists",
+		      __FILE__, __func__);
+		db_free_result();
+		return -1;
+	}
+
+	db_free_result();
+#endif
+
+	if (strlen(password) >= DEF_QUERYSIZE) {
+		trace(TRACE_ERROR, "%s,%s: password length is insane",
+		      __FILE__, __func__);
+		return -1;
+	}
+
+	db_escape_string(escapedpass, password, strlen(password));
+
+	if (!(escaped_username = (char *) dm_malloc(strlen(username) * 2 + 1))) {
+		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
+			"escaped username", __FILE__, __func__);
+		return -1;
+	}
+
+	db_escape_string(escaped_username, username, strlen(username));
+
+	if (*user_idnr==0) {
+		snprintf(query, DEF_QUERYSIZE, "INSERT INTO %susers "
+			"(userid,passwd,client_idnr,maxmail_size,"
+			"encryption_type, last_login) VALUES "
+			"('%s','%s',%llu,'%llu','%s', CURRENT_TIMESTAMP)",
+			DBPFX, escaped_username, escapedpass, clientid, 
+			maxmail, enctype ? enctype : "");
+	} else {
+		snprintf(query, DEF_QUERYSIZE, "INSERT INTO %susers "
+			"(userid,user_idnr,passwd,client_idnr,maxmail_size,"
+			"encryption_type, last_login) VALUES "
+			"('%s',%llu,'%s',%llu,'%llu','%s', CURRENT_TIMESTAMP)",
+			DBPFX,escaped_username,*user_idnr,escapedpass,clientid, 
+			maxmail, enctype ? enctype : "");
+	}
+	dm_free(escaped_username);
+
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: query for adding user failed",
+		      __FILE__, __func__);
+		return -1;
+	}
+	
+	if (*user_idnr == 0)
+		*user_idnr = db_insert_result("user_idnr");
+
+	return 1;
+}
+
+int db_user_delete(const char * username)
+{
+	char *escaped_username;
+
+	if (!(escaped_username = (char *) dm_malloc(strlen(username) * 2 + 1))) {
+		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
+			"escaped username", __FILE__, __func__);
+		return -1;
+	}
+
+	db_escape_string(escaped_username, username, strlen(username));
+	snprintf(query, DEF_QUERYSIZE, "DELETE FROM %susers WHERE userid = '%s'",
+		 DBPFX, escaped_username);
+	dm_free(escaped_username);
+
+	if (db_query(query) == -1) {
+		/* query failed */
+		trace(TRACE_ERROR, "%s,%s: query for removing user failed",
+		      __FILE__, __func__);
+		return -1;
+	}
+
+	return 0;
+}
+
+int db_user_rename(u64_t user_idnr, const char *new_name) 
+{
+	char *escaped_new_name;
+
+	if (!(escaped_new_name = (char *) dm_malloc(strlen(new_name) * 2 + 1))) {
+		trace(TRACE_ERROR, "%s,%s: out of memory allocating escaped new_name", 
+				__FILE__, __func__);
+		return -1;
+	}
+
+	db_escape_string(escaped_new_name, new_name, strlen(new_name));
+	snprintf(query, DEF_QUERYSIZE, "UPDATE %susers SET userid = '%s' WHERE user_idnr='%llu'",
+		 DBPFX, escaped_new_name, user_idnr);
+	dm_free(escaped_new_name);
+
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR,
+		      "%s,%s: could not change name for user [%llu]",
+		      __FILE__, __func__, user_idnr);
+		return -1;
+	}
+	return 0;
 }
 

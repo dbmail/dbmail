@@ -2,7 +2,12 @@
 
 	* create_tables_innoDB.mysql, create_tables.pgsql, migrate_from_1.x_to_2.0.mysql, 
 	migratie_from_1.x_to_2.0.pgsql: added ON UPDATE CASCADE to all foreign keys.
-
+	* Makefile.am, acinclude.m4: define AUTHLDAP for authldap builds.
+	* auth.h, check_dbmail_deliver.c, db.c, db.h, dbmail-imapsession.c,
+	auth/authldap.c, auth/authsql.c: authldap is now feature complete.
+	* dbmail.schema: ldap schema file which defines dbmailUser and
+	dbmailForwardingAddress objects.
+	* dbmail.conf: LDAP stanza included.
 
 2005-02-07  Paul Stevens <paul@nfg.nl>
 

@@ -297,15 +297,17 @@ END_TEST
 //int auth_change_username(u64_t user_idnr, const char *new_name);
 START_TEST(test_auth_change_username)
 {
-	u64_t user_idnr;
-	char *userid;
-	char *old="testuser1";
-	char *new="asdfasdf1";
+	u64_t user_idnr, new_idnr;
+	char *old="beforerename";
+	char *new="afterrename";
+	int result;
+	auth_adduser(old,"sometestfoopass", "md5", 101, 1024000, &user_idnr);
 	auth_user_exists(old,&user_idnr);
-	
-	userid = auth_get_userid(user_idnr);
-	printf("change username %s -> %s\n", old, new);
-	
+	result = auth_change_username(user_idnr, new);
+	auth_user_exists(new,&new_idnr);
+	auth_delete_user(new);
+	fail_unless(result==0,"auth_change_username failed");
+	fail_unless(user_idnr==new_idnr,"auth_change_username: user_idnr mismatch");
 }
 END_TEST
 
@@ -320,6 +322,18 @@ END_TEST
  */
 //int auth_change_password(u64_t user_idnr,
 //			 const char *new_pass, const char *enctype);
+START_TEST(test_auth_change_password)
+{
+	u64_t user_idnr;
+	int result;
+	char *userid = "testchangepass";
+	auth_adduser(userid,"sometestpass","md5", 101, 1002400, &user_idnr);
+	auth_user_exists(userid, &user_idnr);
+	result = auth_change_password(user_idnr, "newtestpass", "md5");
+	fail_unless(result==0,"auth_change_password failed");
+	auth_delete_user(userid);
+}
+END_TEST
 /**
  * \brief change a users client id
  * \param user_idnr
@@ -329,6 +343,18 @@ END_TEST
  *    -  0 on success
  */
 //int auth_change_clientid(u64_t user_idnr, u64_t new_cid);
+START_TEST(test_auth_change_clientid)
+{
+	u64_t user_idnr;
+	int result;
+	char *userid = "testchangeclientid";
+	auth_adduser(userid, "testpass", "md5", 101, 1000, &user_idnr);
+	auth_user_exists(userid, &user_idnr);
+	result = auth_change_clientid(user_idnr, 102);
+	fail_unless(result==0, "auth_change_clientid failed");
+	auth_delete_user(userid);
+}
+END_TEST
 /**
  * \brief change a user's mailbox size (maxmailsize)
  * \param user_idnr
@@ -338,6 +364,20 @@ END_TEST
  *    -  0 on success
  */
 //int auth_change_mailboxsize(u64_t user_idnr, u64_t new_size);
+START_TEST(test_auth_change_mailboxsize)
+{
+	u64_t user_idnr;
+	int result;
+	char *userid = "testchangemaxm";
+	auth_adduser(userid, "testpass", "md5", 101, 1000, &user_idnr);
+	auth_user_exists(userid, &user_idnr);
+	result = auth_change_mailboxsize(user_idnr, 2000);
+	fail_unless(result==0, "auth_change_mailboxsize failed");
+	auth_delete_user(userid);
+}
+END_TEST
+
+
 /**
  * \brief try to validate a user (used for login to server). 
  * \param username 
@@ -351,6 +391,20 @@ END_TEST
  */
 //int auth_validate(char *username, char *password, u64_t * user_idnr);
 
+START_TEST(test_auth_validate) 
+{
+	int result;
+	u64_t user_idnr = 0;
+	result = auth_validate("testuser1","test",&user_idnr);
+	fail_unless(result==1,"auth_validate positive failure");
+	fail_unless(user_idnr > 0,"auth_validate couldn't find user_idnr");
+	
+	user_idnr = 0;
+	result = auth_validate("testuser1","wqer",&user_idnr);
+	fail_unless(result==0,"auth_validate negative failure");
+	fail_unless(user_idnr == 0,"auth_validate shouldn't find user_idnr");
+}
+END_TEST
 /** 
  * \brief try tp validate a user using md5 hash
  * \param username
@@ -363,7 +417,6 @@ END_TEST
  */
 //u64_t auth_md5_validate(char *username, unsigned char *md5_apop_he,
 //			char *apop_stamp);
-
 /**
  * \brief get username for a user_idnr
  * \param user_idnr
@@ -459,6 +512,13 @@ END_TEST
  */
 //int auth_addalias_ext(const char *alias, const char *deliver_to,
 //		    u64_t clientid);
+START_TEST(test_auth_addalias_ext)
+{
+	int result;
+	result = auth_addalias_ext("foobar@foo.org","foobar@bar.org",0);
+	fail_unless(result==0,"auth_addalias_ext failed");
+}
+END_TEST
 /**
  * \brief remove alias for user
  * \param user_idnr user id
@@ -489,6 +549,13 @@ END_TEST
  *        - 0 on success
  */
 //int auth_removealias_ext(const char *alias, const char *deliver_to);
+START_TEST(test_auth_removealias_ext)
+{
+	int result;
+	result = auth_removealias_ext("foobar@foo.org","foobar@bar.org");
+	fail_unless(result==0,"auth_removealias_ext failed");
+}
+END_TEST
 
 
 #ifdef AUTHLDAP
@@ -537,19 +604,19 @@ Suite *dbmail_deliver_suite(void)
 	tcase_add_test(tc_auth, test_auth_check_user_ext);
 	tcase_add_test(tc_auth, test_auth_adduser);
 	tcase_add_test(tc_auth, test_auth_delete_user);
-//	tcase_add_test(tc_auth, test_auth_change_username);
-//	tcase_add_test(tc_auth, test_auth_change_password);
-//	tcase_add_test(tc_auth, test_auth_change_clientid);
-//	tcase_add_test(tc_auth, test_auth_change_mailboxsize);
-//	tcase_add_test(tc_auth, test_auth_validate);
+	tcase_add_test(tc_auth, test_auth_change_username);
+	tcase_add_test(tc_auth, test_auth_change_password);
+	tcase_add_test(tc_auth, test_auth_change_clientid);
+	tcase_add_test(tc_auth, test_auth_change_mailboxsize);
+	tcase_add_test(tc_auth, test_auth_validate);
 //	tcase_add_test(tc_auth, test_auth_md5_validate);
 	tcase_add_test(tc_auth, test_auth_get_userid);
 //	tcase_add_test(tc_auth, test_auth_get_users_from_clientid);
 	tcase_add_test(tc_auth, test_auth_get_user_aliases);
 	tcase_add_test(tc_auth, test_auth_addalias);
-//	tcase_add_test(tc_auth, test_auth_addalias_ext);
+	tcase_add_test(tc_auth, test_auth_addalias_ext);
 	tcase_add_test(tc_auth, test_auth_removealias);
-//	tcase_add_test(tc_auth, test_auth_removealias_ext);
+	tcase_add_test(tc_auth, test_auth_removealias_ext);
 #ifdef AUTHLDAP
 	tcase_add_test(tc_auth, test_dm_ldap_get_filter);
 	tcase_add_test(tc_auth, test_dm_ldap_get_freeid);
