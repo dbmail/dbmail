@@ -19,6 +19,8 @@
 /* $Id$
 */
 
+BEGIN TRANSACTION;
+
 CREATE SEQUENCE alias_idnr_seq;
 CREATE TABLE aliases (
     alias_idnr INT8 DEFAULT nextval('alias_idnr_seq'),
@@ -57,7 +59,7 @@ CREATE TABLE mailboxes (
    draft_flag INT2 DEFAULT '0' NOT NULL,
    no_inferiors INT2 DEFAULT '0' NOT NULL,
    no_select INT2 DEFAULT '0' NOT NULL,
-   permission INT2 DEFAULT '2',
+   permission INT2 DEFAULT '2' NOT NULL,
    PRIMARY KEY (mailbox_idnr),
    FOREIGN KEY (owner_idnr) REFERENCES users(user_idnr) ON DELETE CASCADE
 );
@@ -66,12 +68,12 @@ CREATE INDEX mailboxes_name_idx ON mailboxes(name);
 CREATE INDEX mailboxes_owner_name_idx ON mailboxes(owner_idnr, name);
 
 CREATE TABLE subscription (
-	user_id INT8 NOT NULL,
-	mailbox_id INT8 NOT NULL,
-	PRIMARY KEY (user_id, mailbox_id),
-	FOREIGN KEY (user_id) REFERENCES users(user_idnr) ON DELETE CASCADE,
-	FOREIGN KEY (mailbox_id) 
-		REFERENCES mailboxes(mailbox_idnr) ON DELETE CASCADE
+   user_id INT8 NOT NULL,
+   mailbox_id INT8 NOT NULL,
+   PRIMARY KEY (user_id, mailbox_id),
+   FOREIGN KEY (user_id) REFERENCES users(user_idnr) ON DELETE CASCADE,
+   FOREIGN KEY (mailbox_id) 
+   	REFERENCES mailboxes(mailbox_idnr) ON DELETE CASCADE
 );
 
 CREATE TABLE acl (
@@ -112,7 +114,7 @@ CREATE TABLE messages (
    recent_flag INT2 DEFAULT '0' NOT NULL,
    draft_flag INT2 DEFAULT '0' NOT NULL,
    unique_id varchar(70) NOT NULL,
-   status INT2 DEFAULT '000' NOT NULL,
+   status INT2 DEFAULT '0' NOT NULL,
    PRIMARY KEY (message_idnr),
    FOREIGN KEY (physmessage_id) REFERENCES physmessage(id) ON DELETE CASCADE,
    FOREIGN KEY (mailbox_idnr) REFERENCES mailboxes(mailbox_idnr) ON DELETE CASCADE
@@ -122,6 +124,7 @@ CREATE INDEX messages_physmessage_idx ON messages(physmessage_id);
 CREATE INDEX messages_seen_flag_idx ON messages(seen_flag);
 CREATE INDEX messages_unique_id_idx ON messages(unique_id);
 CREATE INDEX messages_status_idx ON messages(status);
+CREATE INDEX messages_status_notdeleted_idx ON messages(status) WHERE status < '2';
 
 CREATE SEQUENCE messageblk_idnr_seq;
 CREATE TABLE messageblks (
@@ -148,7 +151,6 @@ CREATE TABLE auto_notifications (
 );
 CREATE INDEX auto_notifications_user_idnr_idx ON auto_notifications(user_idnr);
 
-
 CREATE SEQUENCE auto_reply_seq;
 CREATE TABLE auto_replies (
    auto_reply_idnr INT8 DEFAULT nextval('auto_reply_seq'),
@@ -163,7 +165,7 @@ CREATE SEQUENCE seq_pbsp_id;
 CREATE TABLE pbsp (
   idnr INT8 NOT NULL DEFAULT NEXTVAL('seq_pbsp_id'),
   since TIMESTAMP NOT NULL DEFAULT '1970-01-01 00:00:00',
-  ipnumber VARCHAR(40) NOT NULL DEFAULT '',
+  ipnumber INET NOT NULL DEFAULT '0.0.0.0',
   PRIMARY KEY (idnr)
 );
 CREATE UNIQUE INDEX idx_ipnumber ON pbsp (ipnumber);
@@ -173,3 +175,5 @@ CREATE INDEX idx_since ON pbsp (since);
 INSERT INTO users (userid, passwd, encryption_type) 
 	VALUES ('__@!internal_delivery_user!@__', '', 'md5');
  
+COMMIT;
+

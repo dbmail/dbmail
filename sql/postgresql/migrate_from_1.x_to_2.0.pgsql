@@ -40,7 +40,6 @@ CREATE TABLE aliases (
     client_idnr INT8 DEFAULT '0' NOT NULL,
     PRIMARY KEY (alias_idnr)
 );
-
 CREATE INDEX aliases_alias_idx ON aliases(alias);
 CREATE INDEX aliases_alias_low_idx ON aliases(lower(alias));
 
@@ -69,7 +68,7 @@ CREATE TABLE mailboxes (
    draft_flag INT2 DEFAULT '0' NOT NULL,
    no_inferiors INT2 DEFAULT '0' NOT NULL,
    no_select INT2 DEFAULT '0' NOT NULL,
-   permission INT2 DEFAULT '2',
+   permission INT2 DEFAULT '2' NOT NULL,
    PRIMARY KEY (mailbox_idnr)
 );
 CREATE INDEX mailboxes_owner_idx ON mailboxes(owner_idnr);
@@ -77,9 +76,9 @@ CREATE INDEX mailboxes_name_idx ON mailboxes(name);
 CREATE INDEX mailboxes_owner_name_idx ON mailboxes(owner_idnr, name);
 
 CREATE TABLE subscription (
-	user_id INT8 NOT NULL,
-	mailbox_id INT8 NOT NULL,
-	PRIMARY KEY (user_id, mailbox_id)
+   user_id INT8 NOT NULL,
+   mailbox_id INT8 NOT NULL,
+   PRIMARY KEY (user_id, mailbox_id),
 );
 
 CREATE TABLE acl (
@@ -117,7 +116,7 @@ CREATE TABLE messages (
    recent_flag INT2 DEFAULT '0' NOT NULL,
    draft_flag INT2 DEFAULT '0' NOT NULL,
    unique_id varchar(70) NOT NULL,
-   status INT2 DEFAULT '000' NOT NULL,
+   status INT2 DEFAULT '0' NOT NULL,
    PRIMARY KEY (message_idnr)
 );
 
@@ -126,6 +125,7 @@ CREATE INDEX messages_physmessage_idx ON messages(physmessage_id);
 CREATE INDEX messages_seen_flag_idx ON messages(seen_flag);
 CREATE INDEX messages_unique_id_idx ON messages(unique_id);
 CREATE INDEX messages_status_idx ON messages(status);
+CREATE INDEX messages_status_notdeleted_idx ON messages(status) WHERE status < '2';
 
 CREATE TABLE messageblks (
    messageblk_idnr INT8 DEFAULT nextval('messageblk_idnr_seq'),
@@ -143,7 +143,7 @@ CREATE SEQUENCE seq_pbsp_id;
 CREATE TABLE pbsp (
   idnr INT8 NOT NULL DEFAULT NEXTVAL('seq_pbsp_id'),
   since TIMESTAMP NOT NULL DEFAULT '1970-01-01 00:00:00',
-  ipnumber VARCHAR(40) NOT NULL DEFAULT '',
+  ipnumber INET NOT NULL DEFAULT '0.0.0.0',
   PRIMARY KEY (idnr)
 );
 CREATE UNIQUE INDEX idx_ipnumber ON pbsp (ipnumber);
