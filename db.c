@@ -49,6 +49,12 @@ static const char *db_flag_desc[] = {
     "recent_flag"
 };
 
+#define MAX_COLUMN_LEN 50
+#define MAX_DATE_LEN 50
+
+extern const char *TO_CHAR;
+extern const char *TO_DATE;
+
 /** list of tables used in dbmail */
 const char *DB_TABLENAMES[DB_NTABLES] = {
     "users", "aliases", "mailboxes", "messages", "physmessage",
@@ -70,6 +76,23 @@ static int db_get_message_size(u64_t message_idnr, u64_t *message_size);
 /** find a mailbox with a specific owner */
 static int db_findmailbox_owner(const char *name, u64_t owner_idnr, 
 				u64_t *mailbox_idnr);
+ 
+/**
+ * constructs a string for use in queries. This is used to not be dependent
+ * on the internal representation of a date in the database. Whenever the
+ * date is queried for in a query, this function is used to get the right
+ * database function for the query (TO_CHAR(date,format) for Postgres, 
+ * DATE_FORMAT(date, format) for MySQL).
+ */
+static char *date2char_str(const char *column);
+
+/**
+ * constructs a string for use in queries. This is used to not be dependent
+ * on the date representations a database can handle. Unfortunately, MySQL
+ * only implements a function to handle this in version > 4.1.1. PostgreSQL
+ * implements the TO_DATE function, which handles this very well.
+ */
+static char *char2date_str(const char *date);
 
 int db_get_physmessage_id(u64_t message_idnr, u64_t *physmessage_id)
 {
@@ -534,16 +557,12 @@ u64_t db_get_useridnr(u64_t message_idnr)
 
 int db_insert_physmessage(u64_t *physmessage_id) 
 {
-	timestring_t timestring;
-
 	*physmessage_id = 0;
 
-	create_current_timestring(&timestring);
-
-    
 	snprintf(query, DEF_QUERYSIZE,
 		 "INSERT INTO physmessage (messagesize, internal_date) "
-		 "VALUES ('0', '%s')", timestring);
+		 "VALUES ('0', CURRENT_TIMESTAMP)");
+
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: query failed", __FILE__, __FUNCTION__);
 		return -1;
@@ -615,10 +634,10 @@ int db_insert_message_with_physmessage(u64_t physmessage_id,
 }
 
 int db_insert_message(u64_t user_idnr,
-			const char *mailbox,
-			int create_or_error_mailbox,
-			const char *unique_id,
-			u64_t *message_idnr)
+		      const char *mailbox,
+		      int create_or_error_mailbox,
+		      const char *unique_id,
+		      u64_t *message_idnr)
 {
     u64_t mailboxid;
     u64_t physmessage_id;
@@ -1798,28 +1817,19 @@ u64_t db_check_sizelimit(u64_t addblocksize UNUSED, u64_t message_idnr,
 int db_imap_append_msg(const char *msgdata, u64_t datalen,
 		       u64_t mailbox_idnr, u64_t user_idnr)
 {
-	timestring_t timestring;
-	u64_t message_idnr;
-	u64_t messageblk_idnr;
-	u64_t physmessage_id = 0;
-	u64_t count;
-	int result;
-	char unique_id[UID_SIZE];	/* unique id */
-	
-	create_current_timestring(&timestring);
-    /* first create a new physmessage entry */
-    snprintf(query, DEF_QUERYSIZE,
-	     "INSERT INTO physmessage "
-	     "(messagesize, rfcsize, internal_date) "
-	     "VALUES ('0', '0', '%s')", timestring);
-
-    if (db_query(query) == -1) {
-	trace(TRACE_ERROR, "%s,%s: could not create physmessage",
-	      __FILE__, __FUNCTION__);
-	return -1;
+    u64_t message_idnr;
+    u64_t messageblk_idnr;
+    u64_t physmessage_id = 0;
+    u64_t count;
+    int result;
+    char unique_id[UID_SIZE];	/* unique id */
+    
+    if (db_insert_physmessage(&physmessage_id) < 0) {
+	    trace(TRACE_ERROR, "%s,%s: could not create physmessage",
+		  __FILE__, __FUNCTION__);
+	    return -1;
     }
 
-    physmessage_id = db_insert_result("physmessage_id");
     /* create a msg 
      * status and seen_flag are set to 001, which means the message 
      * has been read 
@@ -3056,11 +3066,16 @@ int db_set_msgflag_range(u64_t msg_idnr_low, u64_t msg_idnr_high,
 int db_get_msgdate(u64_t mailbox_idnr, u64_t msg_idnr, char *date)
 {
     char *query_result;
+    char *to_char_str;
+
+    to_char_str = date2char_str("pm.internal_date");
     snprintf(query, DEF_QUERYSIZE,
-	     "SELECT pm.internal_date FROM physmessage pm, messages msg "
+	     "SELECT %s FROM physmessage pm, messages msg "
 	     "WHERE msg.mailbox_idnr = '%llu' "
 	     "AND msg.message_idnr = '%llu' AND msg.unique_id!='' "
-	     "AND pm.id = msg.physmessage_id", mailbox_idnr, msg_idnr);
+	     "AND pm.id = msg.physmessage_id", 
+	     to_char_str, mailbox_idnr, msg_idnr);
+    my_free(to_char_str);
 
     if (db_query(query) == -1) {
 	trace(TRACE_ERROR, "%s,%s: could not get message",
@@ -3155,20 +3170,24 @@ int db_get_msginfo_range(u64_t msg_idnr_low, u64_t msg_idnr_high,
 {
     unsigned nrows, i, j;
     char *query_result;
+    char *to_char_str;
     *result = 0;
     *resultsetlen = 0;
 
     db_free_result();
-
+    
+    to_char_str = date2char_str("internal_date");
     snprintf(query, DEF_QUERYSIZE,
 	     "SELECT seen_flag, answered_flag, deleted_flag, flagged_flag, "
-	     "draft_flag, recent_flag, internal_date, rfcsize, message_idnr "
+	     "draft_flag, recent_flag, %s, rfcsize, message_idnr "
 	     "FROM messages msg, physmessage pm "
 	     "WHERE pm.id = msg.physmessage_id "
 	     "AND message_idnr BETWEEN '%llu' AND '%llu' "
 	     "AND mailbox_idnr = '%llu' AND status < '2' AND unique_id != '' "
-	     "ORDER BY message_idnr ASC", msg_idnr_low, msg_idnr_high,
+	     "ORDER BY message_idnr ASC", 
+	     to_char_str, msg_idnr_low, msg_idnr_high,
 	     mailbox_idnr);
+    my_free(to_char_str);
 
     if (db_query(query) == -1) {
 	trace(TRACE_ERROR, "%s,%s: could not select message",
@@ -3610,3 +3629,29 @@ u64_t db_get_result_u64(unsigned row, unsigned field)
 	return ( tmp ? strtoull(tmp, NULL, 10) : 0 );
 }
 
+char *date2char_str(const char *column) 
+{
+	unsigned len;
+	char *s;
+	len = strlen(TO_CHAR) + MAX_COLUMN_LEN;
+	
+	s = (char*) my_malloc(len);
+
+	snprintf(s, len, TO_CHAR, column);
+
+	return s;
+}
+
+char *char2date_str(const char *date) 
+{
+	unsigned len;
+	char *s;
+	
+	len = strlen(TO_CHAR) + MAX_DATE_LEN;
+	
+	s = (char*) my_malloc(len);
+
+	snprintf(s, len, TO_DATE, date);
+	
+	return s;
+}

@@ -35,6 +35,10 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <string.h>
+
+const char *TO_CHAR = "TO_CHAR(%s, 'YYYY-MM-DD HH24:MI:SS' )";
+const char *TO_DATE = "TO_TIMESTAMP('%s', 'YYYY-MM-DD HH:MI:SS')";
+
 static PGconn *conn;
 static PGresult *res;
 static PGresult *msgbuf_res;

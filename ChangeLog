@@ -1,3 +1,16 @@
+2004-03-03  Ilja Booij  <ilja@ic-s.nl>
+
+	* db.c (db_get_msgdate): uses the date2char function to construct a 
+	TO_CHAR (PostgreSQL) or DATE_FORMAT (MySQL) string. 
+	(db_get_msginfo_range):  uses the date2char function to construct a 
+	TO_CHAR (PostgreSQL) or DATE_FORMAT (MySQL) string. 
+	(date2char_str): construct date formatter for use in queries. This
+	will always output the same format of date
+	(char2date_str): construct date formatter for use in queries. This
+	will make the database always handle the same format of date.
+	(db_insert_physmessage): inserts the CURRENT_TIMESTAMP instead of
+	making the timestamp using libc() calls.
+
 2004-03-02  Ilja Booij  <ilja@ic-s.nl>
 
 	* sql/postgresql/migrate_from_1.x_to_2.0.pgsql: alter internal_date 
