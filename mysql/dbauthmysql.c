@@ -248,7 +248,7 @@ u64_t db_adduser (char *username, char *password, char *clientid, char *maxmail)
 	size *= 1000;
     }
       
-  snprintf (query, DEF_QUERYSIZE,"INSERT INTO users (userid,passwd,clientid,maxmail_size) VALUES "
+  snprintf (query, DEF_QUERYSIZE,"INSERT INTO users (userid,passwd,client_id,maxmail_size) VALUES "
 	   "('%s','%s',%s,%llu)",
 	   username,password,clientid, size);
 	
@@ -325,7 +325,7 @@ int db_change_password(u64_t useridnr, const char *newpass)
 
 int db_change_clientid(u64_t useridnr, u64_t newcid)
 {
-  snprintf(query, DEF_QUERYSIZE, "UPDATE users SET clientid = %llu WHERE user_idnr=%llu", 
+  snprintf(query, DEF_QUERYSIZE, "UPDATE users SET client_id = %llu WHERE user_idnr=%llu", 
 	   newcid, useridnr);
 
   if (db_query(query) == -1)
