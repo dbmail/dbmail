@@ -58,8 +58,14 @@ int bounce (char *header, unsigned long headersize,char *destination_address, in
 	       destination_address);
 	list_init(&from_addresses);
 	/* scan the from header for addresses */
-	mail_adr_list ("from", &from_addresses,&mimelist);
+	mail_adr_list ("Return-Path", &from_addresses,&mimelist);
 
+    if (list_totalnodes(&from_addresses)==0)
+    {
+        trace (TRACE_INFO,"bounce(): can't find Return-Path values, resorting to From values");
+        mail_adr_list ("From", &from_addresses, &mimelist);
+    }
+    
 	/* loop target addresses */
 	tmpelement=list_getstart (&from_addresses);
 	while (tmpelement!=NULL)
@@ -103,8 +109,16 @@ int bounce (char *header, unsigned long headersize,char *destination_address, in
 	trace (TRACE_MESSAGE,"bounce(): sending 'mailboxsize exceeded' bounce for user [%s]",
 	       destination_address);
 	list_init(&from_addresses);
-	/* scan the from header for addresses */
-	mail_adr_list ("from", &from_addresses,&mimelist);
+	
+    /* scan the Return-Path header for addresses 
+       if they don't exist, resort to From addresses */
+	mail_adr_list ("Return-Path", &from_addresses,&mimelist);
+    
+    if (list_totalnodes(&from_addresses)==0)
+    {
+        trace (TRACE_INFO,"bounce(): can't find Return-Path values, resorting to From values");
+        mail_adr_list ("From", &from_addresses, &mimelist);
+    }
 
 	/* loop target addresses */
 	tmpelement=list_getstart (&from_addresses);

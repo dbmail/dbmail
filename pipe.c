@@ -342,7 +342,7 @@ int insert_messages(char *header, u64_t headersize, struct list *users, struct l
 	    case -1:
 	      trace (TRACE_ERROR,"insert_messages(): message NOT inserted. dbase error");
 	      bounce_id = db_get_userid(&bounce_userid);
-	      bounce (header, headersize, bounce_id, BOUNCE_STORAGE_LIMIT_REACHED);
+          bounce (header, headersize, bounce_id, BOUNCE_STORAGE_LIMIT_REACHED);
 	      my_free (bounce_id);
 	      break;
 
@@ -350,7 +350,7 @@ int insert_messages(char *header, u64_t headersize, struct list *users, struct l
 	      trace (TRACE_ERROR,"insert_messages(): message NOT inserted. "
 		     "Maxmail exceeded AND dbase error");
 	      bounce_id = db_get_userid(&bounce_userid);
-	      bounce (header, headersize, bounce_id, BOUNCE_STORAGE_LIMIT_REACHED);
+          bounce (header, headersize, bounce_id, BOUNCE_STORAGE_LIMIT_REACHED);
 	      my_free (bounce_id);
 	      break;
 
@@ -368,16 +368,16 @@ int insert_messages(char *header, u64_t headersize, struct list *users, struct l
 
   /* handle all bounced messages */
   if (list_totalnodes(&bounces)>0)
-    {
+  {
       /* bouncing invalid messages */
       trace (TRACE_DEBUG,"insert_messages(): sending bounces");
       tmp=list_getstart(&bounces);
       while (tmp!=NULL)
-	{	
-	  bounce (header, headersize, (char *)tmp->data,BOUNCE_NO_SUCH_USER);
-	  tmp=tmp->nextnode;	
-	}
-    }
+      {	
+          bounce (header, headersize, (char *)tmp->data,BOUNCE_NO_SUCH_USER);
+          tmp=tmp->nextnode;	
+      }
+  }
 
   /* do we have forward addresses ? */
   if (list_totalnodes(&external_forwards)>0)
