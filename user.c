@@ -195,8 +195,10 @@ int main(int argc, char *argv[])
 
 	/* get options */
 	opterr = 0;		/* suppress error message from getopt() */
-	while ((opt = getopt(argc, argv, "-a:d:c:e:l::x:" /* Major */
-		"u:W::w:P::p:" /* Minor */ "i" "f:qnyvVh" /* Common */ )) != -1) {
+	while ((opt = getopt(argc, argv,
+		"-a:d:c:e:l::x:" /* Major modes */
+		"W::w:P::p:u:g:m:t:s:S:T:" /* Minor options */
+		"i" "f:qnyvVh" /* Common options */ )) != -1) {
 		/* The initial "-" of optstring allows unaccompanied
 		 * options and reports them as the optarg to opt 1 (not '1') */
 		if (opt == 1)
@@ -293,7 +295,6 @@ int main(int argc, char *argv[])
 
 		case 't':
 			// Add this item to the alias's forwards.
-			// list_nodeadd...
 			if (optarg && (len = strlen(optarg)))
 				list_nodeadd(&fwds_add, optarg, len+1);
 			break;
@@ -433,7 +434,7 @@ int main(int argc, char *argv[])
 		result = do_delete(user);
 		break;
 	case 'c':
-		qprintf("Performing changes for user [%s]...", user);
+		qprintf("Performing changes for user [%s]...\n", user);
 		if (change_flags.newuser) {
 			result |= do_username(useridnr, newuser);
 		}

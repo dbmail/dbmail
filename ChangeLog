@@ -1,7 +1,8 @@
 2004-07-24  Aaron Stone  <aaron@serendipity.cx>
 
-	* main.c, users.c, vut2dbmail.c, maintenance.c: improved handling
+	* main.c, user.c, vut2dbmail.c, maintenance.c: improved handling
 	of several common command line options and added more comments.
+	* user.c: fixed missing options in the optstring argument to getopt.
 
 2004-07-22  Aaron Stone  <aaron@serendipity.cx>
 
