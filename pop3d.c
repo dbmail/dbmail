@@ -28,7 +28,7 @@
 #define POP_TIMEOUT_MSG "-ERR I'm leaving, you're tooo slow"
 
 
-char *configFile = "dbmail.conf";
+char *configFile = "/etc/dbmail.conf";
 
 /* set up database login data */
 extern field_t _db_host;
