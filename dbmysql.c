@@ -1329,7 +1329,7 @@ unsigned long db_findmailbox(const char *name, unsigned long useridnr)
  * finds all the mailboxes owned by ownerid who match the regex pattern pattern.
  */
 int db_findmailbox_by_regex(unsigned long ownerid, const char *pattern, 
-			    unsigned long **children, unsigned *nchildren)
+			    unsigned long **children, unsigned *nchildren, int only_subscribed)
 {
   char query[DEF_QUERYSIZE];
   int result;
@@ -1344,9 +1344,13 @@ int db_findmailbox_by_regex(unsigned long ownerid, const char *pattern,
       return 1;
     }
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT name, mailboxidnr FROM mailbox WHERE "
-	   "owneridnr=%lu", ownerid);
-  
+  if (only_subscribed)
+    snprintf(query, DEF_QUERYSIZE, "SELECT name, mailboxidnr FROM mailbox WHERE "
+	     "owneridnr=%lu AND is_subscribed != 0", ownerid);
+  else
+    snprintf(query, DEF_QUERYSIZE, "SELECT name, mailboxidnr FROM mailbox WHERE "
+	     "owneridnr=%lu", ownerid);
+
   if (db_query(query) == -1)
     {
       trace(TRACE_ERROR,"db_findmailbox_by_regex(): error during mailbox query\r\n");
@@ -2231,6 +2235,50 @@ unsigned long db_first_unseen(unsigned long uid)
   return id;
 }
   
+
+/*
+ * db_subscribe()
+ *
+ * subscribes to a certain mailbox
+ */
+int db_subscribe(unsigned long mboxid)
+{
+  char query[DEF_QUERYSIZE];
+
+  snprintf(query, DEF_QUERYSIZE, "UPDATE mailbox SET is_subscribed = 1 WHERE mailboxidnr = %lu", 
+	   mboxid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_subscribe(): could not update mailbox\n");
+      return (-1);
+    }
+
+  return 0;
+}
+  
+
+/*
+ * db_unsubscribe()
+ *
+ * unsubscribes to a certain mailbox
+ */
+int db_unsubscribe(unsigned long mboxid)
+{
+  char query[DEF_QUERYSIZE];
+
+  snprintf(query, DEF_QUERYSIZE, "UPDATE mailbox SET is_subscribed = 0 WHERE mailboxidnr = %lu", 
+	   mboxid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_unsubscribe(): could not update mailbox\n");
+      return (-1);
+    }
+
+  return 0;
+}
+
   
 /*
  * db_get_msgflag()

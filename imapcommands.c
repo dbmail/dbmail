@@ -926,14 +926,35 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
 /*
  * _ic_subscribe()
  *
- * adds a mailbox to the users' subscription list
+ * subscribe to a specified mailbox
  */
 int _ic_subscribe(char *tag, char **args, ClientInfo *ci)
 {
-/*  imap_userdata_t *ud = (imap_userdata_t*)ci->userData; */
+  imap_userdata_t *ud = (imap_userdata_t*)ci->userData; 
+  unsigned long mboxid;
 
   if (!check_state_and_args("SUBSCRIBE", tag, args, 1, IMAPCS_AUTHENTICATED, ci))
     return 1; /* error, return */
+
+  mboxid = db_findmailbox(args[0], ud->userid);
+  if (mboxid == (unsigned long)(-1))
+    {
+      fprintf(ci->tx,"* BYE internal dbase error\r\n");
+      return -1;
+    }
+
+  if (mboxid == 0)
+    {
+      /* mailbox does not exist */
+      fprintf(ci->tx,"%s NO mailbox does not exist\n", tag);
+      return 0;
+    }
+
+  if (db_subscribe(mboxid) == -1)
+    {
+      fprintf(ci->tx,"* BYE internal dbase error\r\n");
+      return -1;
+    }
 
   fprintf(ci->tx,"%s OK SUBSCRIBE completed\r\n",tag);
   return 0;
@@ -947,10 +968,31 @@ int _ic_subscribe(char *tag, char **args, ClientInfo *ci)
  */
 int _ic_unsubscribe(char *tag, char **args, ClientInfo *ci)
 {
-/*  imap_userdata_t *ud = (imap_userdata_t*)ci->userData;*/
+  imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
+  unsigned long mboxid;
 
   if (!check_state_and_args("UNSUBSCRIBE", tag, args, 1, IMAPCS_AUTHENTICATED, ci))
     return 1; /* error, return */
+
+  mboxid = db_findmailbox(args[0], ud->userid);
+  if (mboxid == (unsigned long)(-1))
+    {
+      fprintf(ci->tx,"* BYE internal dbase error\r\n");
+      return -1;
+    }
+
+  if (mboxid == 0)
+    {
+      /* mailbox does not exist */
+      fprintf(ci->tx,"%s NO mailbox does not exist\n", tag);
+      return 0;
+    }
+
+  if (db_unsubscribe(mboxid) == -1)
+    {
+      fprintf(ci->tx,"* BYE internal dbase error\r\n");
+      return -1;
+    }
 
   fprintf(ci->tx,"%s OK UNSUBSCRIBE completed\r\n",tag);
   return 0;
@@ -1033,7 +1075,7 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
 
   trace(TRACE_INFO,"ic_list(): build the pattern: [%s]\n",pattern);
 
-  result = db_findmailbox_by_regex(ud->userid, pattern, &children, &nchildren);
+  result = db_findmailbox_by_regex(ud->userid, pattern, &children, &nchildren, list_is_lsub);
   if (result == -1)
     {
       fprintf(ci->tx,"* BYE internal dbase error\r\n");

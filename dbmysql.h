@@ -157,7 +157,8 @@ char *db_get_userid (unsigned long *useridnr);
 /* mailbox functionality */
 unsigned long db_findmailbox(const char *name, unsigned long useridnr);
 int db_findmailbox_by_regex(unsigned long ownerid, const char *pattern, 
-			    unsigned long **children, unsigned *nchildren);
+			    unsigned long **children, unsigned *nchildren,
+			    int only_subscribed);
 int db_getmailbox(mailbox_t *mb, unsigned long userid);
 int db_createmailbox(const char *name, unsigned long ownerid);
 int db_listmailboxchildren(unsigned long uid, unsigned long useridnr, 
@@ -175,6 +176,8 @@ int db_setmailboxname(unsigned long uid, const char *name);
 int db_expunge(unsigned long uid,unsigned long **msgids,int *nmsgs);
 int db_build_msn_list(mailbox_t *mb);
 unsigned long db_first_unseen(unsigned long uid);
+int db_subscribe(unsigned long mboxid);
+int db_unsubscribe(unsigned long mboxid);
 
 /* message functionality */
 int db_get_msgflag(const char *name, unsigned long mailboxuid, unsigned long msguid);

@@ -1714,15 +1714,15 @@ void close_cache()
     {
       fclose(cached_msg.filedump);
       cached_msg.filedump = NULL;
-      unlink(cached_msg.filename);
     }
   if (cached_msg.tmpdump)
     {
       fclose(cached_msg.tmpdump);
       cached_msg.tmpdump = NULL;
-      unlink(cached_msg.tmpname);
     }
-  
+
+  unlink(cached_msg.filename);
+  unlink(cached_msg.tmpname);
 }
 
 /* 
