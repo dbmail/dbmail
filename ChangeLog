@@ -1,5 +1,7 @@
 2004-09-08  Ilja Booij  <ilja@ic-s.nl>
 
+	* INSTALL: added notice about the use of GNU Make to INSTALL.
+
 	* imaputil.c (date_sql2imap): now also gets the localtime with
 	time(). Didn't do this before (was a bug).
 

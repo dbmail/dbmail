@@ -14,7 +14,8 @@ What do you need?
 - a working mysql (> 4.0.14) or postgresql installation
 - a working smtp server (Postfix, Exim, QMail or Sendmail)
 - the DBMail source (www.dbmail.org)
-
+- GNU Make. On Linux systems, your standard 'make' program is GNU Make. On
+  *BSD systems, make sure you install and use 'gmake'. 
 
 1.	Setup a database
 
