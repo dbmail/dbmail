@@ -79,13 +79,15 @@ CREATE TABLE messageblks (
 CREATE TABLE auto_notifications (
    auto_notify_idnr bigint(21) default '0' not null auto_increment,
    user_idnr bigint(21) DEFAULT '0' NOT NULL,
-   notify_address VARCHAR(100)
+   notify_address VARCHAR(100),
+   PRIMARY KEY (auto_notify_idnr)
 );
 
 CREATE TABLE auto_replies (
    auto_reply_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
    user_idnr bigint(21) DEFAULT '0' NOT NULL,
-   reply_body mediumtext
+   reply_body mediumtext,
+   PRIMARY KEY (auto_reply_idnr)
 );
 
 
