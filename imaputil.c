@@ -800,6 +800,49 @@ int next_fetch_item(char **args, int idx, fetch_items_t *fi)
 	    fi->bodyfetch.noseen = 1;
 
 	  /* check for a partspecifier */
+	  /* first check if there is a partspecifier (numbers & dots) */
+	  indigit = 0;
+
+	  for (j=0; args[idx][j]; j++)
+	    {
+	      if (isdigit(args[idx][j]))
+		{
+		  indigit = 1;
+		  continue;
+		}
+	      else if (args[idx][j] == '.')
+		{
+		  if (!indigit)
+		    {
+		      /* error, single dot specified */
+		      invalidargs = 1;
+		      break;
+		    }
+
+		  indigit = 0;
+		  continue;
+		}
+	      else
+		break; /* other char found */
+	    }
+
+	  if (invalidargs)
+	    return -2; /* error DONE */
+
+	  if (j > 0)
+	    {
+	      if (indigit && args[idx][j])
+		return -2; /* error DONE */
+
+	      /* partspecifier present, save it */
+	      if (j >= IMAP_MAX_PARTSPEC_LEN)
+		return -2; /* error DONE */
+
+	      strncpy(fi->bodyfetch.partspec, args[idx], j);
+	    }
+
+	  fi->bodyfetch.partspec[j] = '\0';
+
 
 	  shouldclose = 0;
 	  if (strcasecmp(&args[idx][j], "text") == 0)
@@ -1301,7 +1344,7 @@ char **build_args_array(const char *s)
   /* dump args (debug) */
   for (i=0; the_args[i]; i++)
     {
-      trace(TRACE_MESSAGE, "arg[%d]: '%s'\n",i,the_args[i]);
+      trace(TRACE_DEBUG, "arg[%d]: '%s'\n",i,the_args[i]);
     }
 
   return the_args;

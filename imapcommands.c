@@ -1325,12 +1325,21 @@ int _ic_expunge(char *tag, char **args, ClientInfo *ci)
  * _ic_search()
  *
  * search the selected mailbox for messages
+ *
  */
 int _ic_search(char *tag, char **args, ClientInfo *ci)
 {
-/*  imap_userdata_t *ud = (imap_userdata_t*)ci->userData;*/
+  imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
 
-  fprintf(ci->tx,"%s OK %s completed\r\n",tag, imapcommands_use_uid ? "UID" : "SEARCH");
+  if (ud->state != IMAPCS_SELECTED)
+    {
+      fprintf(ci->tx,"%s BAD SEARCH command received in invalid state\r\n", tag);
+      return 1;
+    }
+  
+      
+      
+  fprintf(ci->tx,"%s OK SEARCH completed\r\n",tag);
   return 0;
 }
 
