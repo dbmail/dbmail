@@ -1776,7 +1776,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
   unsigned fn;
   int result,setseen,idx,j,k;
   int only_main_header_parsing = 1, insert_rfcsize;
-  int isfirstout,uid_will_be_fetched;
+  int isfirstout, isfirstfetchout, uid_will_be_fetched;
   int partspeclen,only_text_from_msgpart = 0;
   int bad_response_send = 0;
   u64_t actual_cnt;
@@ -2052,6 +2052,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	      fprintf(ci->tx, "* %u FETCH (", (fn+1));
 	      
 	      curr = list_getstart(&fetch_list);
+	      isfirstfetchout = 1;
 
 	      while (curr)
 		{
@@ -2060,18 +2061,45 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		  fi = (fetch_items_t*)curr->data;
 
 		  if (fi->getInternalDate)
-		    fprintf(ci->tx,"INTERNALDATE \"%s\"", 
-			    date_sql2imap(msginfo[i].internaldate));
+		    {
+		      if (isfirstfetchout)
+			isfirstfetchout = 0;
+		      else
+			fprintf(ci->tx, " ");
+
+		      fprintf(ci->tx,"INTERNALDATE \"%s\"", 
+			      date_sql2imap(msginfo[i].internaldate));
+		    }
 
 		  if (fi->getUID)
-		    fprintf(ci->tx,"UID %llu", msginfo[i].uid);
+		    {
+		      if (isfirstfetchout)
+			isfirstfetchout = 0;
+		      else
+			fprintf(ci->tx, " ");
+	
+		      fprintf(ci->tx,"UID %llu", msginfo[i].uid);
+		    }
 
 		  if (fi->getSize)
-		    fprintf(ci->tx,"RFC822.SIZE %llu", msginfo[i].rfcsize);
+		    {
+		      if (isfirstfetchout)
+			isfirstfetchout = 0;
+		      else
+			fprintf(ci->tx, " ");
+	
+		      fprintf(ci->tx,"RFC822.SIZE %llu", msginfo[i].rfcsize);
+		    }
 
 		  if (fi->getFlags)
 		    {
 		      isfirstout = 1;
+
+		      if (isfirstfetchout)
+			isfirstfetchout = 0;
+		      else
+			fprintf(ci->tx, " ");
+
 		      fprintf(ci->tx, "FLAGS (");
 		      for (j=0; j<IMAP_NFLAGS; j++)
 			{
@@ -2085,7 +2113,6 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		      fprintf(ci->tx, ")");
 		    }
 		  
-		  fprintf(ci->tx, "%s", curr->nextnode ? " " : "");
 		  curr = curr->nextnode;
 		}
 
@@ -2127,6 +2154,8 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	  curr = list_getstart(&fetch_list);
 	  setseen = 0;
 	  bad_response_send = 0;
+
+	  isfirstfetchout = 1;
 
 	  while (curr && !bad_response_send)
 	    {
@@ -2249,14 +2278,31 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		      return -1;
 		    }
 
+		  if (isfirstfetchout)
+		    isfirstfetchout = 0;
+		  else
+		    fprintf(ci->tx, " ");
+
 		  fprintf(ci->tx,"INTERNALDATE \"%s\"", date_sql2imap(date));
 		}
 
 	      if (fi->getUID)
-		fprintf(ci->tx,"UID %llu",thisnum);
-	      
+		{
+		  if (isfirstfetchout)
+		    isfirstfetchout = 0;
+		  else
+		    fprintf(ci->tx, " ");
+
+		  fprintf(ci->tx,"UID %llu",thisnum);
+		}
+
 	      if (fi->getMIME_IMB)
 		{
+		  if (isfirstfetchout)
+		    isfirstfetchout = 0;
+		  else
+		    fprintf(ci->tx, " ");
+
 		  fprintf(ci->tx,"BODYSTRUCTURE ");
 		  result = retrieve_structure(ci->tx, &cached_msg.msg, 1);
 		  if (result == -1)
@@ -2270,6 +2316,11 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
 	      if (fi->getMIME_IMB_noextension)
 		{
+		  if (isfirstfetchout)
+		    isfirstfetchout = 0;
+		  else
+		    fprintf(ci->tx, " ");
+
 		  fprintf(ci->tx,"BODY ");
 		  result = retrieve_structure(ci->tx, &cached_msg.msg, 0);
 		  if (result == -1)
@@ -2283,6 +2334,11 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
 	      if (fi->getEnvelope)
 		{
+		  if (isfirstfetchout)
+		    isfirstfetchout = 0;
+		  else
+		    fprintf(ci->tx, " ");
+
 		  fprintf(ci->tx,"ENVELOPE ");
 		  result = retrieve_envelope(ci->tx, &cached_msg.msg.rfcheader);
 
@@ -2324,6 +2380,11 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		  
 		  mseek(cached_msg.memdump, 0, SEEK_SET);
 
+		  if (isfirstfetchout)
+		    isfirstfetchout = 0;
+		  else
+		    fprintf(ci->tx, " ");
+
 		  fprintf(ci->tx, "RFC822 {%llu}\r\n", cached_msg.dumpsize);
 		  send_data(ci->tx, cached_msg.memdump, cached_msg.dumpsize);
 
@@ -2334,6 +2395,11 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		  
 	      if (fi->getSize)
 		{
+		  if (isfirstfetchout)
+		    isfirstfetchout = 0;
+		  else
+		    fprintf(ci->tx, " ");
+
 		  fprintf(ci->tx,"RFC822.SIZE %llu", rfcsize);
 		}
 
@@ -2363,6 +2429,11 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		      cached_msg.file_dumped = 1;
 		    }
 		  
+		  if (isfirstfetchout)
+		    isfirstfetchout = 0;
+		  else
+		    fprintf(ci->tx, " ");
+
 		  if (fi->bodyfetch.octetstart == -1)
 		    {
 		      mseek(cached_msg.memdump, 0, SEEK_SET);
@@ -2397,6 +2468,11 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		   * otherwise only_main_header_parsing == 1 so retrieve direct
 		   * from the dbase
 		   */
+		  if (isfirstfetchout)
+		    isfirstfetchout = 0;
+		  else
+		    fprintf(ci->tx, " ");
+
 		  if (cached_msg.num == thisnum)
 		    {
 		      mrewind(cached_msg.tmpdump);
@@ -2426,6 +2502,11 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	      
 	      if (fi->getRFC822Text)
 		{
+		  if (isfirstfetchout)
+		    isfirstfetchout = 0;
+		  else
+		    fprintf(ci->tx, " ");
+
 		  mrewind(cached_msg.tmpdump);
 		  tmpdumpsize = db_dump_range(cached_msg.tmpdump, cached_msg.msg.bodystart, 
 					      cached_msg.msg.bodyend, thisnum);
@@ -2508,6 +2589,11 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			  msgpart = &headermsg; 
 			}
 		    }
+
+		  if (isfirstfetchout)
+		    isfirstfetchout = 0;
+		  else
+		    fprintf(ci->tx, " ");
 
 		  if (fi->bodyfetch.noseen)
 		    fprintf(ci->tx, "BODY[%s", fi->bodyfetch.partspec);
@@ -2815,6 +2901,11 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	      /* FLAGS ? */
 	      if (fi->getFlags) 
 		{
+		  if (isfirstfetchout)
+		    isfirstfetchout = 0;
+		  else
+		    fprintf(ci->tx, " ");
+
 		  fprintf(ci->tx,"FLAGS (");
 
 		  isfirstout = 1;
@@ -2844,7 +2935,6 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		  fprintf(ci->tx, ")");
 		}
 
-	      fprintf(ci->tx,"%s",curr->nextnode ? " ":"");
 	      curr = curr->nextnode;
 	    }
 

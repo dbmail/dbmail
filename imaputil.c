@@ -546,7 +546,7 @@ int show_mime_parameter_list(FILE *outstream, struct mime_record *mr,
 
       fprintf(outstream," (");
 
-      if ( start ) fprintf(outstream,"\"CHARSET\" \'US-ASCII\"");
+      if ( start ) fprintf(outstream,"\"CHARSET\" \"US-ASCII\"");
       /* extra params: <name>=<val> [; <name>=<val> [; ...etc...]]
        * note that both name and val may or may not be enclosed by 
        * either single or double quotation marks
