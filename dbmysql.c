@@ -2773,11 +2773,6 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 	{
 	  sblen = strlen(stopbound);
 	  msgidx += (2+sblen); /* double hypen preceeds */
-	  while (msgbuf[msgidx] == '\n')
-	    {
-	      totallines++;
-	      msgidx++;
-	    }
 	}
 
       free(newbound);
