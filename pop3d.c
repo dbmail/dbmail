@@ -72,7 +72,7 @@ int main (int argc, char *argv[])
 	
 
   /* daemonize */
-/*  if (fork ())
+  if (fork ())
     exit (0);
   setsid ();
 		
@@ -81,7 +81,7 @@ int main (int argc, char *argv[])
 		
   close (0);
   close (1);
-  close (2);  */
+  close (2); 
 
   /* reserve memory for hostname */
   memtst((myhostname=(char *)malloc(64))==NULL);
