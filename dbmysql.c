@@ -2299,7 +2299,7 @@ int db_copymsg(unsigned long msgid, unsigned long destmboxid)
   /* copy message info */
   snprintf(query, DEF_QUERYSIZE, "INSERT INTO message (mailboxidnr, messagesize, status, "
 	   "deleted_flag, seen_flag, answered_flag, draft_flag, flagged_flag, recent_flag,"
-       " unique_id, interal_date) "
+       " unique_id, internal_date) "
 	   "SELECT %lu, messagesize, status, deleted_flag, seen_flag, answered_flag, "
 	   "draft_flag, flagged_flag, recent_flag, unique_id, internal_date "
        "FROM tmpmessage WHERE tmpmessage.messageidnr = %lu",
