@@ -877,9 +877,6 @@ int db_createsession (unsigned long useridnr, struct session *sessionptr)
   sessionptr->virtual_totalmessages=sessionptr->totalmessages;
   sessionptr->virtual_totalsize=sessionptr->totalsize;
 
-	/* setting validated flag */
-  sessionptr->validated = 1;  
-  
   mysql_free_result(res); 
   return 1;
 }

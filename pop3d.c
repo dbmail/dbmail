@@ -107,15 +107,7 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 	  password = NULL;
   }
 
-  curr_session.totalsize=0;
-  curr_session.virtual_totalsize=0;
-  curr_session.totalmessages=0;
-  curr_session.virtual_totalmessages=0;
   curr_session.validated=0;
-  if (list_totalnodes(&curr_session.messagelst)>0)
-  {
-	list_freelist(&(curr_session.messagelst.start));
-  }
   /* done resetting */
 
 
@@ -527,7 +519,7 @@ int main (int argc, char *argv[])
 		{
 		/* handle client connection */
 		handle_client(myhostname, c, adr_clnt);
-		return 0;
+		exit(0);
 		}
 	}
 	/* nothing will ever get here */
