@@ -545,8 +545,9 @@ int insert_messages(FILE * instream, char *header, u64_t headersize,
 		int has_2 = 0, has_4 = 0, has_5 = 0;
 		deliver_to_user_t *delivery =
 		    (deliver_to_user_t *) element->data;
-
-		/* Each user may have a list of user_idnr's for local delivery. */
+		
+		/* Each user may have a list of user_idnr's for local
+		 * delivery. */
 		for (userid_elem = list_getstart(delivery->userids);
 		     userid_elem != NULL;
 		     userid_elem = userid_elem->nextnode) {
@@ -596,7 +597,17 @@ int insert_messages(FILE * instream, char *header, u64_t headersize,
 			delivery->dsn.detail = 5;	/* Valid. */
 			break;
 		case DSN_CLASS_TEMP:
-			delivery->dsn.class = DSN_CLASS_TEMP;	/* Temporary transient failure. */
+			/* this following statement seems a bit dirty.. If 
+			 * this is not used the MTA will always receive a 
+			 * TEMP_FAIL messages, even when the only action 
+			 * that is taken is to forward to an external address*/
+			if ((has_4 == 0) && 
+			    (list_totalnodes(delivery->forwards) > 0)) 
+				delivery->dsn.class = DSN_CLASS_OK;
+			else
+				/* Temporary transient failure. */
+				delivery->dsn.class = DSN_CLASS_TEMP;
+
 			delivery->dsn.subject = 1;	/* Address related. */
 			delivery->dsn.detail = 5;	/* Valid. */
 			break;

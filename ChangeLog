@@ -1,5 +1,10 @@
 2004-04-08  Ilja Booij  <ilja@ic-s.nl>
 
+	* pipe.c (insert_messages): now does an extra check. If a recipient is bound
+	to be labelled with TEMP_FAIL, a final check is made to check if perhaps we
+	only need to forward the messages to another server. If this is the case,
+	it gets the DSN_CLASS_OK label.
+
 	* auth/authsql.c (auth_user_exists): removed use of 
 	db_use_auth_result() and db_store_auth_result().
 	(auth_get_known_users): removed use of db_use_auth_result() and 
