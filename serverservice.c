@@ -373,7 +373,10 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 		{
 		  /* def-child has died, re-create */
 		  if (!fork())
-		    break;  /* after this break the if (getpid() == ss_server_pid) will be re-executed */
+		    {
+		      default_child_pids[i] = getpid();
+		      break;  /* after this break the if (getpid() == ss_server_pid) will be re-executed */
+		    }
 		}
 		  
 	      /* wait for a connect then fork if the maximum number of children
