@@ -171,11 +171,13 @@ int mime_list(char *blkdata, struct list *mimelist)
  * field/value strlen()'s plus 4 bytes for each headeritem: ': ' (field/value
  * separator) and '\r\n' to end the line.
  *
- * returns -1 on failure, # '\n' on succes
+ * newlines within value will be expeanded to '\r\n'
+ *
+ * returns -1 on failure, number of newlines on succes
  */
 int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist, unsigned long *headersize)
 {
-  int valid_mime_lines=0,idx,totallines=0;
+  int valid_mime_lines=0,idx,totallines=0,j;
   unsigned fieldlen,vallen;
 	
   char *endptr, *startptr, *delimiter;
@@ -245,8 +247,22 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist,
 
 	  /* &delimiter[idx] is field value, startptr is field name */
 	  fieldlen = snprintf(mr->field, MIME_FIELD_MAX, "%s", startptr);
-	  vallen   = snprintf(mr->value, MIME_VALUE_MAX, "%s", &delimiter[idx]);
-
+	  for (vallen=0,j=0; delimiter[idx+j] && vallen < MIME_VALUE_MAX; j++,vallen++)
+	    {
+	      if (delimiter[idx+j] == '\n')
+		{
+		  mr->value[vallen++] = '\r';
+		  totallines++;
+		}
+	      
+	      mr->value[vallen] = delimiter[idx+j];
+	    }
+	  
+	  if (vallen < MIME_VALUE_MAX)
+	    mr->value[vallen] = 0;
+	  else
+	    mr->value[MIME_VALUE_MAX-1] = 0;
+	  
 	  /* snprintf returns -1 if max is readched (libc <= 2.0.6) or the strlen (libc >= 2.1)
 	   * check the value. it does not count the \0.
 	   */

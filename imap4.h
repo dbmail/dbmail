@@ -10,7 +10,7 @@
 #include "serverservice.h"
 
 #define IMAP_SERVER_VERSION "0.2"
-#define IMAP_CAPABILITY_STRING "IMAP4 IMAP4rev1"
+#define IMAP_CAPABILITY_STRING "IMAP4 IMAP4rev1 LITERAL+"
 
 /* maximum size of a mailbox name */
 #define IMAP_MAX_MAILBOX_NAMELEN 100

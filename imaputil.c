@@ -248,15 +248,15 @@ int retrieve_envelope(FILE *outstream, struct list *rfcheader)
 
   mime_findfield("date", rfcheader, &mr);
   if (mr && strlen(mr->value) > 0)
-    fprintf(outstream, " \"%s\"",mr->value);
+    fprintf(outstream, "\"%s\" ",mr->value);
   else
-    fprintf(outstream, "NIL");
+    fprintf(outstream, "NIL ");
 
   mime_findfield("subject", rfcheader, &mr);
   if (mr && strlen(mr->value) > 0)
-    fprintf(outstream, " {%d}\r\n%s",strlen(mr->value),mr->value);
+    fprintf(outstream, "{%d}\r\n%s ",strlen(mr->value),mr->value);
   else
-    fprintf(outstream, " NIL");
+    fprintf(outstream, "NIL ");
 
   /* now from, sender, reply-to, to, cc, bcc, in-reply-to fields;
    * note that multiple mailaddresses are separated by ','
@@ -276,7 +276,7 @@ int retrieve_envelope(FILE *outstream, struct list *rfcheader)
 	  if (mr && strlen(mr->value) > 0)
 	    show_address_list(outstream, mr);
 	  else /* no from field ??? */
-	    fprintf(outstream, "((NIL NIL \"nobody\" \"nowhere.org\"))");
+	    fprintf(outstream, "((NIL NIL \"nobody\" \"nowhere.nirgendwo\"))");
 	}
       else if (strcasecmp(envelope_items[idx], "sender") == 0)
 	{
@@ -285,26 +285,27 @@ int retrieve_envelope(FILE *outstream, struct list *rfcheader)
 	  if (mr && strlen(mr->value) > 0)
 	    show_address_list(outstream, mr);
 	  else /* no from field ??? */
-	    fprintf(outstream, "((NIL NIL \"nobody\" \"nowhere.org\"))");
+	    fprintf(outstream, "((NIL NIL \"nobody\" \"nowhere.nirgendwo\"))");
 	}
       else
-	fprintf(outstream, " NIL");
-  
+	fprintf(outstream, "NIL");
+
+      fprintf(outstream, " ");
     }
 
   mime_findfield("in-reply-to", rfcheader, &mr);
   if (mr && strlen(mr->value) > 0)
-    fprintf(outstream, " \"%s\"",mr->value);
+    fprintf(outstream, "\"%s\" ",mr->value);
   else
-    fprintf(outstream, " NIL");
+    fprintf(outstream, "NIL ");
 
   mime_findfield("message-id", rfcheader, &mr);
   if (mr && strlen(mr->value) > 0)
-    fprintf(outstream, " \"%s\"",mr->value);
+    fprintf(outstream, "\"%s\"",mr->value);
   else
-    fprintf(outstream, " NIL");
+    fprintf(outstream, "NIL");
 
-  fprintf(outstream,") ");
+  fprintf(outstream,")");
 
   return 0;
 }
@@ -319,7 +320,7 @@ int show_address_list(FILE *outstream, struct mime_record *mr)
 {
   int delimiter,i,inquote,start,has_split;
 
-  fprintf(outstream," (");
+  fprintf(outstream,"(");
       
   /* find ',' to split up multiple addresses */
   delimiter = 0;
@@ -596,8 +597,8 @@ long rfcheader_dump(FILE *outstream, struct list *rfcheader, char **fieldnames, 
   curr = list_getstart(rfcheader);
   if (rfcheader == NULL || curr == NULL)
     {
-      size += fprintf(outstream, "NIL\r\n");
-      return size;
+      /*size += fprintf(outstream, "NIL\r\n");*/
+      return 0;
     }
 
   curr = list_getstart(rfcheader);
@@ -631,8 +632,8 @@ long mimeheader_dump(FILE *outstream, struct list *mimeheader)
   curr = list_getstart(mimeheader);
   if (mimeheader == NULL || curr == NULL)
     {
-      size = fprintf(outstream, "NIL\r\n");
-      return size;
+      /*size = fprintf(outstream, "NIL\r\n");*/
+      return 0;
     }
 
   while (curr)

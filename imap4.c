@@ -243,18 +243,8 @@ int imap_process(ClientInfo *ci)
 
       trace(TRACE_MESSAGE, "IMAPD: Executing command %s...\n",IMAP_COMMANDS[i]);
 
-      result = (*imap_handler_functions[i])(tag, args, ci);
-      if (result == -1)
-	{
-	  /* fatal error occurred, kick this user */
-	  done = 1;
-	}
-
-      if (result == 0 && i == IMAP_COMM_LOGOUT)
-	done = 1;
-
       /* check if mailbox status has changed (notify client) */
-      if (!done && ud->state == IMAPCS_SELECTED)
+      if (ud->state == IMAPCS_SELECTED)
 	{
 	  /* update mailbox info */
 	  memset(&newmailbox, 0, sizeof(newmailbox));
@@ -278,11 +268,19 @@ int imap_process(ClientInfo *ci)
 	  if (newmailbox.recent != ud->mailbox.recent)
 	    fprintf(ci->tx, "* %d RECENT\r\n", newmailbox.recent);
 
-	  if (newmailbox.unseen != ud->mailbox.unseen)
-	    fprintf(ci->tx, "* %d UNSEEN\r\n", newmailbox.unseen);
-
 	  memcpy(&ud->mailbox, &newmailbox, sizeof(newmailbox));
+	  trace(TRACE_DEBUG, "IMAPD: ok update sent\r\n");
 	}
+
+      result = (*imap_handler_functions[i])(tag, args, ci);
+      if (result == -1)
+	{
+	  /* fatal error occurred, kick this user */
+	  done = 1;
+	}
+
+      if (result == 0 && i == IMAP_COMM_LOGOUT)
+	done = 1;
 
 
       fflush(ci->tx); /* write! */
