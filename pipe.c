@@ -33,6 +33,10 @@ char *read_header(unsigned long *blksize)
   memtst ((strblock = (char *)malloc(READ_BLOCK_SIZE))==NULL);
   memtst ((header = (char *)malloc(HEADER_BLOCK_SIZE))==NULL);
 
+	/* resetting */
+  *strblock='\0';
+  *header='\0';
+  
   /* here we will start a loop to read in the message header */
   /* the header will be everything up until \n\n or an EOF of */
   /* in_stream (stdin) */
