@@ -172,9 +172,6 @@ int bounce (char *header, unsigned long headersize,char *destination_address, in
       }
     }
 
-  my_free (dbmail_from_address);
-  my_free (postmaster);
-  my_free (sendmail);
   return 0;
 }
 

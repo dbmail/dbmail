@@ -282,7 +282,6 @@ int pipe_forward(FILE *instream, struct list *targets, char *from, char *header,
       return -1;
     }
 
-  my_free (sendmail);
   my_free (strblock);
   return 0;			
 }
