@@ -50,6 +50,26 @@ extern db_param_t _db_params;
 
 static void find_time(char *timestr, const char *timespec);
 
+int do_showhelp(void) {
+	printf("*** dbmail-maintenance ***\n");
+
+	printf("Use this program to maintain your DBMail database.\n");
+	printf("See the man page for more info. Summary:\n\n");
+	printf("     -c        clean up unlinked message entries\n");
+	printf("     -i        test for message integrity\n");
+	printf("     -n        null message check\n");
+	printf("     -r        repair any integrity problems\n");
+	printf("     -f file   specify an alternative config file\n");
+	printf("     -l time   clear the IP log used for IMAP/POP-before-SMTP\n"
+	       "               the time is specified as <hours>h<minutes>m\n"
+	       "               (don't include the angle brackets, though)\n");
+	printf("     -p        purge messages have the DELETE status set\n");
+	printf("     -d        set DELETE status for deleted messages\n");
+	printf("     -v        show the version\n");
+	printf("     -h        show this help message\n");
+
+	return 0;
+}
 
 int main(int argc, char *argv[])
 {
@@ -68,17 +88,11 @@ int main(int argc, char *argv[])
 	u64_t messages_set_to_delete;
 
 	openlog(PNAME, LOG_PID, LOG_MAIL);
-
-	ReadConfig("DBMAIL", configFile);
-	SetTraceLevel("DBMAIL");
-	GetDBParams(&_db_params);
-
 	setvbuf(stdout, 0, _IONBF, 0);
-	printf("*** dbmail-maintenance ***\n");
 
 	/* get options */
 	opterr = 0;		/* suppress error message from getopt() */
-	while ((opt = getopt(argc, argv, "cfvinl:phd")) != -1) {
+	while ((opt = getopt(argc, argv, "cf:rvinl:phd")) != -1) {
 		switch (opt) {
 		case 'c':
 			vacuum_db = 1;
@@ -101,6 +115,16 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'f':
+			if (optarg && strlen(optarg) > 0)
+				configFile = optarg;
+			else {
+				fprintf(stderr,
+					"dbmail-maintenance: -f requires a filename\n\n" );
+				return 1;
+			}
+			break;
+
+		case 'r':
 			check_integrity = 1;
 			should_fix = 1;
 			do_nothing = 0;
@@ -140,15 +164,14 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (show_help) {
-		printf("\ndbmail maintenance utility\n\n");
-		printf
-		    ("Performs maintenance tasks on the dbmail-databases\n");
-		printf("Use: dbmail-maintenance -[cfiphdl]\n");
-		printf("See the man page for more info\n\n");
-		return 0;
-	}
+	ReadConfig("DBMAIL", configFile);
+	SetTraceLevel("DBMAIL");
+	GetDBParams(&_db_params);
 
+	if (show_help) {
+		do_showhelp();
+		return 1;
+	}
 
 	if (do_nothing) {
 		printf("Ok. Nothing requested, nothing done. "
@@ -274,7 +297,7 @@ int main(int argc, char *argv[])
 			list_freelist(&lostlist.start);
 			printf("\n");
 		} else
-			printf("found 0 physmessages without messageblks");
+			printf("found 0 physmessages without messageblks\n");
 
 		time(&stop);
 		fprintf(stderr,

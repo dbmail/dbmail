@@ -1,3 +1,11 @@
+2004-07-06  Ilja Booij  <ilja@ic-s.nl>
+
+	* maintenance.c (main): gives more useful help. -f options is now
+	used for setting config file, -f for repairing broken integrity.
+
+	* man/dbmail-maintenance.1: updated wrt changes in command line
+	options.
+
 2004-06-29  Ilja Booij  <ilja@ic-s.nl>
 
 	* INSTALL.postfix: updated wrt to return path setting.
