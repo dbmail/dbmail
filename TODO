@@ -5,9 +5,9 @@ For DBMail 2.0
 -   remove unique_id != '' from queries, if possible without
     breaking anything.
 -   check if id BETWEEN x AND x is slower than id = x (I would
-    guess this is optimized away. 
+    guess this is optimized away).
 For DBMail 2.1
--   Database table prefixes
+-   Configurable table prefixes
 -   Sieve scripting language
 -   Header caching (e.g., cache headers like To: From: etc.)
 -   Put some parts of configuration into the database
@@ -18,4 +18,13 @@ For DBMail 2.1
     suspended account, courtesy forwarding address) via LMTP's
     enhanced status codes and via stdout messages to the MTA
 -   Handle NULLs in messages better than currently done (RFC821!).
+-   Separate forwards (varchar) from deliveries (bigint)
+    in the aliases table. Possibly include a mailbox, too.
+-   Rather than always deleting messages after delivery, make
+    it part of dbmail-util to clean out the special delivery user.
+-   Import and export users and mailboxes to mbox format.
+-   Combine the above two to allow for logging of all incoming messages
+    (e.g. USA banks are required to archive all email by law).
+-   Support for subaddress extensions of the form address+mailbox@domain,
+    as this is useful for TMDA systems and Amavis-new, among others.
 
