@@ -20,7 +20,7 @@ int main()
 {
   int sock,d;
   char *newuser,*newgroup,*port,*bindip,*defchld,*maxchld,*daem;
-  char *debug_level,*trace_syslog,*trace_verbose;
+  char *trace_level,*trace_syslog,*trace_verbose;
   int new_level = 2, new_trace_syslog = 1, new_trace_verbose = 0;
 
   /* open logs */
@@ -37,7 +37,7 @@ int main()
   maxchld = db_get_config_item("IMAPD_MAX_CHILD",CONFIG_MANDATORY);
   daem = db_get_config_item("IMAPD_DAEMONIZES", CONFIG_EMPTY);
 
-  debug_level = db_get_config_item("DEBUG_LEVEL", CONFIG_EMPTY);
+  trace_level = db_get_config_item("TRACE_LEVEL", CONFIG_EMPTY);
   trace_syslog = db_get_config_item("TRACE_TO_SYSLOG", CONFIG_EMPTY);
   trace_verbose = db_get_config_item("TRACE_VERBOSE", CONFIG_EMPTY);
 
@@ -57,11 +57,11 @@ int main()
   else
     d = 0;
 
-  if (debug_level)
+  if (trace_level)
     {
-      new_level = atoi(debug_level);
-      free(debug_level);
-      debug_level = NULL;
+      new_level = atoi(trace_level);
+      free(trace_level);
+      trace_level = NULL;
     }
 
   if (trace_syslog)

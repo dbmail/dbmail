@@ -57,7 +57,7 @@ int main (int argc, char *argv[])
   
   char *ipaddr, *port;
 
-  char *debug_level,*trace_syslog,*trace_verbose;
+  char *trace_level,*trace_syslog,*trace_verbose;
   int new_level = 2, new_trace_syslog = 1, new_trace_verbose = 0;
 
   time_t timestamp;
@@ -79,15 +79,15 @@ int main (int argc, char *argv[])
   openlog(PNAME, LOG_PID, LOG_MAIL);
 	
   /* debug settings */
-  debug_level = db_get_config_item("DEBUG_LEVEL", CONFIG_EMPTY);
+  trace_level = db_get_config_item("TRACE_LEVEL", CONFIG_EMPTY);
   trace_syslog = db_get_config_item("TRACE_TO_SYSLOG", CONFIG_EMPTY);
   trace_verbose = db_get_config_item("TRACE_VERBOSE", CONFIG_EMPTY);
 
-  if (debug_level)
+  if (trace_level)
     {
-      new_level = atoi(debug_level);
-      free(debug_level);
-      debug_level = NULL;
+      new_level = atoi(trace_level);
+      free(trace_level);
+      trace_level = NULL;
     }
 
   if (trace_syslog)
