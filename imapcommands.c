@@ -9,6 +9,7 @@
 #include "imaputil.h"
 #include "dbmysql.h"
 #include <string.h>
+#include <ctype.h>
 #include <stdlib.h>
 
 #ifndef MAX_LINESIZE
@@ -458,6 +459,10 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
   while (strlen(args[0]) > 0 && args[0][strlen(args[0]) - 1] == '/')
     args[0][strlen(args[0]) - 1] = '\0';
 
+  /* remove leading '/' if present */
+  for (i=0; args[0][i] && args[0][i] == '/'; i++) ;
+  memmove(&args[0][0],&args[0][i], (strlen(args[0]) - i) * sizeof(char));
+
   /* check if this mailbox already exists */
   mboxid = db_findmailbox(args[0], ud->userid);
   if (mboxid == (unsigned long)(-1))
@@ -692,7 +697,7 @@ int _ic_delete(char *tag, char **args, ClientInfo *ci)
 int _ic_rename(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
-  unsigned long mboxid,newmboxid,*children,oldnamelen;
+  unsigned long mboxid,newmboxid,*children,oldnamelen,parentmboxid;
   int nchildren,i,result;
   char newname[IMAP_MAX_MAILBOX_NAMELEN],name[IMAP_MAX_MAILBOX_NAMELEN];
 
@@ -703,9 +708,14 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
   while (strlen(args[0]) > 0 && args[0][strlen(args[0]) - 1] == '/') args[0][strlen(args[0]) - 1] = '\0';
   while (strlen(args[1]) > 0 && args[1][strlen(args[1]) - 1] == '/') args[1][strlen(args[1]) - 1] = '\0';
 
+  /* remove leading '/' if present for new name */
+  for (i=0; args[1][i] && args[1][i] == '/'; i++) ;
+  memmove(&args[1][0],&args[1][i], (strlen(args[1]) - i) * sizeof(char));
+
+
   /* check if new mailbox exists */
   mboxid = db_findmailbox(args[1], ud->userid);
-  if (mboxid == -1)
+  if (mboxid == (unsigned long)-1)
     {
       /* dbase failure */
       fprintf(ci->tx,"* BYE internal dbase error\n");
@@ -718,10 +728,9 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
       return 1;
     }
 
-
   /* check if original mailbox exists */
   mboxid = db_findmailbox(args[0], ud->userid);
-  if (mboxid == -1)
+  if (mboxid == (unsigned long)-1)
     {
       /* dbase failure */
       fprintf(ci->tx,"* BYE internal dbase error\n");
@@ -739,6 +748,31 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
     {
       fprintf(ci->tx,"%s NO new mailbox name contains invalid characters\n",tag);
       return 1;
+    }
+
+  /* check if structure of new name is valid */
+  /* i.e. only last part (after last '/' can be nonexistent) */
+  for (i=strlen(args[1])-1; i>=0 && args[1][i] != '/'; i--) ;
+  if (i >= 0)
+    {
+      args[1][i] = '\0'; /* note: original char was '/' */
+
+      parentmboxid = db_findmailbox(args[1], ud->userid);
+      if (parentmboxid == (unsigned long)-1)
+	{
+	  /* dbase failure */
+	  fprintf(ci->tx,"* BYE internal dbase error\n");
+	  return -1; /* fatal */
+	}
+      if (parentmboxid == 0)
+	{
+	  /* parent mailbox does not exist */
+	  fprintf(ci->tx,"%s NO new mailbox would invade mailbox structure\n",tag);
+	  return 1;
+	}
+
+      /* ok, reset arg */
+      args[1][i] = '/'; 
     }
 
   /* check if it is INBOX to be renamed */
@@ -1234,7 +1268,7 @@ int _ic_expunge(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
   unsigned long *msgids;
-  int nmsgs,i,idx,result;
+  int nmsgs,i,idx,result,j;
 
   if (!check_state_and_args("EXPUNGE", tag, args, 0, IMAPCS_SELECTED, ci))
     return 1; /* error, return */
@@ -1256,6 +1290,11 @@ int _ic_expunge(char *tag, char **args, ClientInfo *ci)
   /* show expunge info */
   for (i=0; i<nmsgs; i++)
     {
+      /* dump debug info */
+      trace(TRACE_DEBUG,"trying to find %lu...\n",msgids[i]);
+      for (j=0; j<ud->mailbox.exists; j++)
+	trace(TRACE_DEBUG,"member #%d: %lu\n",j,ud->mailbox.seq_list[j]);
+	  
       /* find the message sequence number */
       idx = binary_search(ud->mailbox.seq_list, ud->mailbox.exists, msgids[i]);
 
@@ -1296,7 +1335,7 @@ int _ic_expunge(char *tag, char **args, ClientInfo *ci)
 int _ic_search(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
-
+  
 
   fprintf(ci->tx,"%s OK SEARCH completed\n",tag);
   return 0;
@@ -1311,10 +1350,395 @@ int _ic_search(char *tag, char **args, ClientInfo *ci)
 int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
+  int i,fetch_start,fetch_end,delimpos,result,j;
+  unsigned long mboxid;
+  int inbody,invalidargs;
+  int getInternaldate,getFlags,getUID,getBodyHeader,getBodyText,getBodyMIME;
+  int getMIME_IMB,getEnvelope,getSize;
+  int getRFC822Header,getRFC822Text;
+  int octetstart,octetcnt;
 
-  if (!check_state_and_args("FETCH", tag, args, 2, IMAPCS_SELECTED, ci))
-    return 1; /* error, return */
+  if (ud->state != IMAPCS_SELECTED)
+    {
+      fprintf(ci->tx,"%s BAD FETCH command received in invalid state\n", tag);
+      return 1;
+    }
 
+  if (!args[0] || !args[1])
+    {
+      fprintf(ci->tx,"%s BAD missing argument(s) to FETCH\n", tag);
+      return 1;
+    }
+
+  /* update mailbox info */
+  i = 0;
+  do
+    {
+      result = db_getmailbox(&ud->mailbox, ud->userid);
+    } while (result == 1 && i++<MAX_RETRIES);
+
+  if (result == 1)
+    {
+      fprintf(ci->tx,"* BYE troubles synchronizing dbase\n");
+      return -1;
+    }
+  
+  if (result == -1)
+    {
+      fprintf(ci->tx,"* BYE internal dbase error\n");
+      return -1; /* fatal  */
+    }
+
+
+  /* determine message range */
+  /* first check for a range specifier (':') */
+  for (i=0,delimpos=-1; args[0][i]; i++)
+    {
+      if (args[0][i] == ':')
+	delimpos = i;
+      else if (!isdigit(args[0][i]))
+	{
+	  fprintf(ci->tx, "%s BAD invalid message range specified\n",tag);
+	  return 1;
+	}
+    }
+
+  /* delimiter at start/end ? */
+  if (delimpos == 0 || delimpos == strlen(args[0])-1)
+    {
+      fprintf(ci->tx, "%s BAD invalid message range specified\n",tag);
+      return 1;
+    }
+
+  if (delimpos == -1)
+    {
+      /* no delimiter, just a single number */
+      fetch_start = atoi(args[0]);
+      fetch_end = fetch_start;
+    }
+  else
+    {
+      /* delimiter present */
+      args[0][delimpos] = '\0'; /* split up the two numbers */
+      
+      fetch_start = atoi(args[0]);
+      fetch_end   = atoi(&args[0][delimpos+1]);
+    }
+
+  if (fetch_start == 0 || fetch_end == 0)
+    {
+      /* MSN starts at 1 */
+      fprintf(ci->tx, "%s BAD invalid message range specified\n",tag);
+      return 1;
+    }
+
+  if (fetch_start > ud->mailbox.exists || fetch_end > ud->mailbox.exists)
+    {
+      /* range contains non-existing msgs */
+      fprintf(ci->tx, "%s BAD invalid message range specified\n",tag);
+      return 1;
+    }
+
+  /* make sure start & end are in right order */
+  if (fetch_start > fetch_end)
+    {
+      i = fetch_start;
+      fetch_start = fetch_end;
+      fetch_end = i;
+    }
+
+  /* lower start & end because our indices do start at 0 */
+  fetch_start--;
+  fetch_end--;
+
+
+  /* OK msg MSN boundaries established */
+
+  /* check multiple args: should be parenthesed */
+  if (args[2] && strcmp(args[1],"(") != 0)
+    {
+      fprintf(ci->tx,"%s BAD multiple arguments should be parenthesed\n",tag);
+      return 1;
+    }
+
+  invalidargs = 0;
+  getFlags = getUID = getInternaldate = 0;
+  getBodyHeader = getBodyText = getBodyMIME = 0;
+  getMIME_IMB = getEnvelope = getSize = 0;
+  getRFC822Header = getRFC822Text = 0;
+  octetstart = 0;
+  octetcnt = -1;
+  inbody = 0;
+
+  for (i=1; args[i]; i++)
+    {
+      if (strcasecmp(args[i], "flags") == 0)
+	{
+	  if (inbody) /* cannot specify FLAGS within BODY[] */
+	    {
+	      invalidargs = 1;
+	      break;
+	    }
+	  getFlags = 1;
+	}
+      else if (strcasecmp(args[i], "internaldate") == 0)
+	{
+	  if (inbody) /* cannot specify INTERNALDATE within BODY[] */
+	    {
+	      invalidargs = 1;
+	      break;
+	    }
+	  getInternaldate = 1;
+	}
+      else if (strcasecmp(args[i], "uid") == 0)
+	{
+	  if (inbody) /* cannot specify UID within BODY[] */
+	    {
+	      invalidargs = 1;
+	      break;
+	    }
+	  getUID = 1;
+	}
+      else if (strcasecmp(args[i], "rfc822.header") == 0)
+	{
+	  if (inbody) /* cannot specify rfc822.* within BODY[] */
+	    {
+	      invalidargs = 1;
+	      break;
+	    }
+	  getRFC822Header = 1;
+	}
+      else if (strcasecmp(args[i], "rfc822.size") == 0)
+	{
+	  if (inbody) /* cannot specify rfc822.* within BODY[] */
+	    {
+	      invalidargs = 1;
+	      break;
+	    }
+	  getSize = 1;
+	}
+      else if (strcasecmp(args[i], "rfc822.text") == 0)
+	{
+	  if (inbody) /* cannot specify rfc822.* within BODY[] */
+	    {
+	      invalidargs = 1;
+	      break;
+	    }
+	  getRFC822Text = 1;
+	}
+      else if (strcasecmp(args[i], "body") == 0)
+	{
+	  if (strcmp(args[i+1],"[") != 0)
+	    {
+	      /* just BODY specified */
+	      if (inbody)
+		{
+		  invalidargs = 1;
+		  break;
+		}
+	      else
+		{
+		  getMIME_IMB = 1;
+		}
+	    }
+
+	}
+      else if (strcasecmp(args[i], "text") == 0)
+	{
+	  if (inbody)
+	    {
+	      getBodyText = 1;
+	    }
+	  else
+	    {
+	      invalidargs = 1;
+	      break;
+	    }
+	}
+      else if (strcasecmp(args[i], "header") == 0)
+	{
+	  if (inbody)
+	    {
+	      getBodyHeader = 1;
+	    }
+	  else
+	    {
+	      invalidargs = 1;
+	      break;
+	    }
+	}
+      else if (strcasecmp(args[i], "mime") == 0)
+	{
+	  if (inbody)
+	    {
+	      getBodyMIME = 1;
+	    }
+	  else
+	    {
+	      invalidargs = 1;
+	      break;
+	    }
+	}
+      else if (strcasecmp(args[i], "all") == 0)
+	{
+	  if (inbody)
+	    {
+	      invalidargs = 1;
+	      break;
+	    }
+	  getFlags = 1;
+	  getInternaldate = 1;
+	  getSize = 1;
+	  getEnvelope = 1;
+	}
+      else if (strcasecmp(args[i], "fast") == 0)
+	{
+	  if (inbody)
+	    {
+	      invalidargs = 1;
+	      break;
+	    }
+	  getFlags = 1;
+	  getInternaldate = 1;
+	  getSize = 1;
+	}
+      else if (strcasecmp(args[i], "full") == 0)
+	{
+	  if (inbody)
+	    {
+	      invalidargs = 1;
+	      break;
+	    }
+	  getFlags = 1;
+	  getInternaldate = 1;
+	  getSize = 1;
+	  getEnvelope = 1;
+	  getMIME_IMB = 1;
+	}
+      else if (strcasecmp(args[i], "bodystructure") == 0)
+	{
+	  if (inbody) /* cannot specify BODYSTRUCTURE within BODY[] */
+	    {
+	      invalidargs = 1;
+	      break;
+	    }
+	  getMIME_IMB = 1;
+	}
+      else if (strcasecmp(args[i], "envelope") == 0)
+	{
+	  if (inbody) /* cannot specify ENVELOPE within BODY[] */
+	    {
+	      invalidargs = 1;
+	      break;
+	    }
+	  getEnvelope = 1;
+	}
+      else if (strcmp(args[i], "(") == 0 || strcmp(args[i], ")") == 0)
+	{
+	  continue;
+	}
+      else if (strcmp(args[i], "[") == 0)
+	{
+	  if (strcasecmp(args[i-1],"body") != 0 && strcasecmp(args[i-1],"body.peek") != 0)
+	    {
+	      invalidargs = 1;
+	      break;
+	    }
+	  inbody = 1;
+	}
+      else if (strcmp(args[i], "]") == 0)
+	{
+	  if (inbody) 
+	    {
+	      if (strcmp(args[i-1], "[") == 0)
+		{
+		  getBodyText = 1;
+		  getBodyHeader = 1;
+		}
+	      inbody = 0;
+	    }
+	  else 
+	    {
+	      invalidargs = 1;
+	      break;
+	    }
+	}
+      else if (strcmp(args[i],"<") == 0)
+	{
+	  if (inbody || !args[i+2] || strcmp(args[i+2],">") != 0)
+	    {
+	      invalidargs = 1;
+	      break;
+	    }
+
+	  i++; /* step to size */
+
+	  /* search size specification */
+	  for (j=0; args[i][j]; j++)
+	    {
+	      if (args[i][j] == '.')
+		break;
+	      else if (!isdigit(args[i][j]))
+		{
+		  invalidargs = 1;
+		  break;
+		}
+	    }
+
+	  if (invalidargs) break;
+	  
+	  if (j == 0 || j == strlen(args[i])-1)
+	    {
+	      invalidargs = 1;
+	      break;
+	    }
+
+	  args[i][j] = '\0'; /* split string in 2 */
+	  octetstart = atoi(args[i]);
+	  octetcnt   = atoi(&args[i][j+1]);
+	  
+	  i++; /* step to '>' */
+	}
+      else if (inbody)
+	{
+	  /* unrecognized item, could be a header-item so pass */
+	  continue;
+	}
+      else
+	{
+	  invalidargs = 1;
+	  break;
+	}
+    }
+
+  if (invalidargs)
+    {
+      fprintf(ci->tx,"%s BAD invalid item list for FETCH\n",tag);
+      return 1;
+    }
+
+  /* now fetch results for each msg */
+  for (i=fetch_start; i<=fetch_end; i++)
+    {
+      /* walk by the arguments */
+      if (getFlags) {}
+      if (getInternaldate) {}
+      if (getUID) {}
+      if (getBodyText) {}
+      if (getBodyHeader) {}
+      if (getSize) {}
+      if (getEnvelope) {}
+      if (getMIME_IMB) {}
+      if (getRFC822Header) {}
+      if (getRFC822Text) {}
+      if (getBodyMIME) {}
+    }
+	
+
+      
+      
+
+  
   fprintf(ci->tx,"%s OK FETCH completed\n",tag);
   return 0;
 }

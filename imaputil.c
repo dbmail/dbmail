@@ -155,14 +155,14 @@ int check_state_and_args(const char *command, const char *tag, char **args,
  *
  * builds an dimensional array of strings containing arguments based upon 
  * a series of arguments passed as a single string.
- * Parentheses have special meaning:
- * '(body (all header))' will result in the following array:
+ * normal/square parentheses have special meaning:
+ * '(body [all header])' will result in the following array:
  * [0] = '('
  * [1] = 'body'
- * [2] = '('
+ * [2] = '['
  * [3] = 'all'
  * [4] = 'header'
- * [5] = ')'
+ * [5] = ']'
  * [6] = ')'
  *
  * quoted strings are those enclosed by double quotation marks and returned as a single argument
@@ -175,11 +175,18 @@ int check_state_and_args(const char *command, const char *tag, char **args,
  * Will return NULL upon errors.
  */
 
+/* local defines */
+#define NORMPAR 1 
+#define SQUAREPAR 2
+#define NOPAR 0
+
 char **build_args_array(const char *s)
 {
   char **args;
   char *scpy;
   int nargs=0,inquote=0,i,quotestart,currarg;
+  int nnorm=0,nsquare=0;
+  int lastlefttype=NOPAR;
   
   if (!s)
     return NULL;
@@ -189,7 +196,10 @@ char **build_args_array(const char *s)
     {
       args = (char**)malloc(sizeof(char*));
       if (!args)
-	return NULL;
+	{
+	  trace(TRACE_MESSAGE, "IMAPD: Not enough memory while building up argument array.");
+	  return NULL;
+	}
 
       args[0] = NULL;
       return args;
@@ -197,7 +207,10 @@ char **build_args_array(const char *s)
 
   scpy = (char*)malloc(sizeof(char)*strlen(s));
   if (!scpy)
-    return NULL;
+    {
+      trace(TRACE_MESSAGE, "IMAPD: Not enough memory while building up argument array.");
+      return NULL;
+    }
 
   /* copy original to scpy */
   strcpy(scpy,s);
@@ -214,7 +227,8 @@ char **build_args_array(const char *s)
 	    }
 	}
 
-      if ((scpy[i] == ' ' || scpy[i] == '(' || scpy[i] == ')') && !inquote)
+      if ((scpy[i] == ' ' || scpy[i] == '(' || scpy[i] == ')' ||
+	   scpy[i] == '[' || scpy[i] == ']') && !inquote)
 	{
 	  scpy[i] = '\0';
 	}
@@ -226,9 +240,44 @@ char **build_args_array(const char *s)
       if (!scpy[i])
 	{
 	  /* check for ( or ) in original string */
-	  if (s[i] == '(' || s[i] == ')')
+	  if (s[i] == '(' || s[i] == ')' || s[i] == '[' || s[i] == ']')
 	    nargs++;
-	      
+
+	  /* check parenthese structure */
+	  if (s[i] == ')')
+	    {
+	      if (lastlefttype != NORMPAR)
+		{
+		  free(scpy);
+		  return NULL;
+		}
+	      else
+		nnorm--;
+	    }
+
+	  if (s[i] == ']')
+	    {
+	      if (lastlefttype != SQUAREPAR)
+		{
+		  free(scpy);
+		  return NULL;
+		}
+	      else
+		nsquare--;
+	    }
+
+	  if (s[i] == '(')
+	    {
+	      lastlefttype = NORMPAR;
+	      nnorm++;
+	    }
+
+	  if (s[i] == '[')
+	    {
+	      lastlefttype = SQUAREPAR;
+	      nsquare++;
+	    }
+
 	  continue;
 	}
 
@@ -259,6 +308,7 @@ char **build_args_array(const char *s)
   if (!args)
     {
       /* out of mem */
+      trace(TRACE_MESSAGE, "IMAPD: Not enough memory while building up argument array.");
       free(scpy);
       return NULL;
     }
@@ -270,7 +320,7 @@ char **build_args_array(const char *s)
       if (!scpy[i])
 	{
 	  /* check for ( or ) in original string */
-	  if (s[i] == '(' || s[i] == ')')
+	  if (s[i] == '(' || s[i] == ')' || s[i] == '[' || s[i] ==']')
 	    {
 	      /* add parenthesis */
 	      /* alloc mem */
@@ -280,6 +330,8 @@ char **build_args_array(const char *s)
 		{
 		  /* out of mem */
 		  /* free currently allocated mem */
+		  trace(TRACE_MESSAGE, "IMAPD: Not enough memory while building up argument array.");
+
 		  for (i=0; i<currarg; i++)
 		    free(args[i]);
 	      
@@ -314,6 +366,8 @@ char **build_args_array(const char *s)
 		    {
 		      /* out of mem */
 		      /* free currently allocated mem */
+		      trace(TRACE_MESSAGE, "IMAPD: Not enough memory while building up argument array.");
+
 		      for (i=0; i<currarg; i++)
 			free(args[i]);
 
@@ -338,6 +392,8 @@ char **build_args_array(const char *s)
 	    {
 	      /* out of mem */
 	      /* free currently allocated mem */
+	      trace(TRACE_MESSAGE, "IMAPD: Not enough memory while building up argument array.");
+
 	      for (i=0; i<currarg; i++)
 		free(args[i]);
 	      
@@ -362,6 +418,8 @@ char **build_args_array(const char *s)
 	{
 	  /* out of mem */
 	  /* free currently allocated mem */
+	  trace(TRACE_MESSAGE, "IMAPD: Not enough memory while building up argument array.");
+
 	  for (i=0; i<currarg; i++)
 	    free(args[i]);
 
@@ -387,6 +445,9 @@ char **build_args_array(const char *s)
 
   return args;
 }
+#undef NOPAR
+#undef NORMPAR
+#undef RIGHTPAR
 
 
 /*
@@ -626,7 +687,7 @@ void base64decode(char *in,char *out)
  * binary_search()
  *
  * performs a binary search on array to find key
- * array should be descending in values
+ * array should be ascending in values
  *
  * returns index of key in array or -1 if not found
  */
@@ -640,9 +701,9 @@ int binary_search(const unsigned long *array, int arraysize, unsigned long key)
   while (low <= high)
     {
       mid = (high+low)/2;
-      if (array[mid] > key)
+      if (array[mid] < key)
 	low = mid+1;
-      else if (array[mid] < key)
+      else if (array[mid] > key)
 	high = mid-1;
       else
 	return mid;

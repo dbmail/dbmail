@@ -179,8 +179,7 @@ int imap_process(ClientInfo *ci)
 
       if (!args)
 	{
-	  trace(TRACE_MESSAGE, "IMAPD: Not enough memory while building up argument array.");
-	  fprintf(ci->tx,"* BAD Internal error: out of memory\n");
+	  fprintf(ci->tx,"* BAD Not enough memory OR invalid argument specified\n");
 
 	  /* free used memory */
 	  for (i=0; args[i]; i++) 
@@ -210,7 +209,7 @@ int imap_process(ClientInfo *ci)
       if (i <= IMAP_COMM_NONE || i >= IMAP_COMM_LAST)
 	{
 	  /* unknown command */
-	  fprintf(ci->tx,"* BAD command not recognized\n");
+	  fprintf(ci->tx,"%s BAD command not recognized\n",tag);
 
 	  /* free used memory */
 	  for (i=0; args[i]; i++) 

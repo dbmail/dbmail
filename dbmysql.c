@@ -1047,7 +1047,7 @@ int db_expunge(unsigned long uid,unsigned long **msgids,int *nmsgs)
   i = 0;
   while ((row = mysql_fetch_row(res)))
     {
-      (*msgids)[i++] = strtoul(row[i], NULL, 10);
+      (*msgids)[i++] = strtoul(row[0], NULL, 10);
     }
   mysql_free_result(res);
   
@@ -1175,7 +1175,7 @@ int db_build_msn_list(mailbox_t *mb)
     free(mb->seq_list);
 
   snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message WHERE mailboxidnr = %lu "
-	   "AND status != 3 ORDER BY messageidnr DESC", mb->uid);
+	   "AND status != 3 ORDER BY messageidnr ASC", mb->uid);
 
   if (db_query(query) == -1)
     {
@@ -1208,8 +1208,10 @@ int db_build_msn_list(mailbox_t *mb)
 
   i=0;
   while ((row = mysql_fetch_row(res)))
-    mb->seq_list[i++] = strtoul(row[0],NULL,10);
-
+    {
+      mb->seq_list[i++] = strtoul(row[0],NULL,10);
+    }
+  
 
   mysql_free_result(res);
   return 0;
@@ -1227,7 +1229,7 @@ unsigned long db_first_unseen(unsigned long uid)
   unsigned long id;
 
   snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message WHERE mailboxidnr = %lu "
-	   "AND status != 3 AND seen_flag = 0 ORDER BY messageidnr ASC LIMIT 0,1", uid);
+	   "AND status != 3 AND seen_flag = 0 ORDER BY messageidnr DESC LIMIT 0,1", uid);
 
   if (db_query(query) == -1)
     {
