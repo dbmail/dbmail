@@ -404,6 +404,12 @@ int main(int argc, char *argv[])
 		goto freeall;
 	}
 
+	if (dsnuser_worstcase_list(&dsnusers) == DSN_CLASS_FAIL) {
+		trace(TRACE_DEBUG, "main(): no delivery or forwarding addresses found");
+		exitcode = EX_NOUSER;
+		goto freeall;
+	}
+
 	/* inserting messages into the database */
 	if (insert_messages(header, body, headersize,
 			    body_size, rfcsize,

@@ -1,3 +1,9 @@
+2004-11-23  Aaron Stone  <aaron@serendipity.cx>
+
+	* main.c: added a check to see if there are any deliveries
+	to be made before bothering to store a message not being
+	delivered to anybody.
+
 2004-11-22  Aaron Stone  <aaron@serendipity.cx>
 
 	* sort/sortsieve.c: latest libSieve API.
