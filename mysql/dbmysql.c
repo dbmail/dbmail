@@ -2848,10 +2848,11 @@ int db_get_msgdate(u64_t mailboxuid, u64_t msguid, char *date)
  *
  * returns -1 on failure, 0 on success
  */
-int db_set_rfcsize(u64_t size, u64_t msguid)
+int db_set_rfcsize(u64_t size, u64_t msguid, u64_t mailboxuid)
 {
-  snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET rfcsize = %llu WHERE message_idnr = %llu",
-	   size, msguid);
+  snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET rfcsize = %llu "
+	   "WHERE message_idnr = %llu AND mailbox_idnr = %llu",
+	   size, msguid, mailboxuid);
   
   if (db_query(query) == -1)
     {
@@ -2863,12 +2864,12 @@ int db_set_rfcsize(u64_t size, u64_t msguid)
 }
 
 
-u64_t db_get_rfcsize(u64_t msguid)
+u64_t db_get_rfcsize(u64_t msguid, u64_t mailboxuid)
 {
   u64_t size;
 
   snprintf(query, DEF_QUERYSIZE, "SELECT rfcsize FROM messages WHERE message_idnr = %llu "
-	   "AND status<2 AND unique_id != ''", msguid);
+	   "AND status<2 AND unique_id != '' AND mailbox_idnr = ", msguid, mailboxuid);
 
   if (db_query(query) == -1)
     {
@@ -2920,7 +2921,8 @@ int db_get_msginfo_range(u64_t msguidlow, u64_t msguidhigh, u64_t mailboxuid,
 	   "flagged_flag, draft_flag, recent_flag, internal_date, rfcsize, message_idnr "
 	   "FROM messages WHERE "
 	   "message_idnr >= %llu AND message_idnr <= %llu AND mailbox_idnr = %llu"
-	   "AND status<2 AND unique_id != '' ", msguidlow, msguidhigh, mailboxuid);
+	   "AND status<2 AND unique_id != '' "
+	   "ORDER BY message_idnr ASC", msguidlow, msguidhigh, mailboxuid);
  
   if (db_query(query) == -1)
     {

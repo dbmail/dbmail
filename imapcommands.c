@@ -1770,12 +1770,13 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
   long long cnt;
   int msgflags[IMAP_NFLAGS];
   struct list fetch_list;
-  mime_message_t headermsg; /* only the rfcheader-member of this message will  be used */
+  mime_message_t headermsg; /* for main-header & rfcsize parsing */
   struct element *curr;
   int setSeenSet[IMAP_NFLAGS] = { 1,0,0,0,0,0 };
   msginfo_t *msginfo;
   u64_t lo,hi;
   unsigned nmatching;
+  int no_parsing_at_all = 1, getrfcsize = 0, getinternaldate = 0, getflags = 0;
 
   memset(&fetch_list, 0, sizeof(fetch_list));
   memset(&headermsg, 0, sizeof(headermsg));
@@ -1811,6 +1812,18 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	  list_freelist(&fetch_list.start);
 	  fprintf(ci->tx,"* BYE out of memory\r\n");
 	  return 1;
+	}
+
+      if (fetchitem.msgparse_needed)
+	{
+	  no_parsing_at_all = 0;
+	}
+      else if (no_parsing_at_all)
+	{
+	  if (fetchitem.getFlags) getflags = 1;
+	  if (fetchitem.getSize) getrfcsize = 1;
+	  if (fetchitem.getInternalDate) getinternaldate = 1;
+	  /* the msgUID will be retrieved anyway so if it is requested, it will be fetched */
 	}
 
       if (fetchitem.msgparse_needed && only_main_header_parsing)
@@ -1934,8 +1947,10 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	  fetch_end--;
 	}
 
-      if (!fi->msgparse_needed)
+      if (no_parsing_at_all)
 	{
+	  trace(TRACE_DEBUG,"ic_fetch(): no parsing at all\n");
+
 	  /* all the info we need can be retrieved by a single
 	   * call to db_get_msginfo_range()
 	   */
@@ -1952,16 +1967,18 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	      hi = fetch_end;
 	    }
 	  
+	  /* (always retrieve uid) */
 	  result = db_get_msginfo_range(lo, hi, ud->mailbox.uid, 
-					fi->getFlags, fi->getInternalDate, fi->getSize, fi->getUID,
+					getflags, getinternaldate, getrfcsize, 1,
 					&msginfo, &nmatching);
-
+	  
 	  if (result == -1)
 	    {
 	      list_freelist(&fetch_list.start);
 	      fprintf(ci->tx,"* BYE internal dbase error\r\n");
 	      return -1;
 	    }
+
 	  if (result == -2)
 	    {
 	      list_freelist(&fetch_list.start);
@@ -1971,12 +1988,94 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
 	  for (i=0; i<nmatching; i++)
 	    {
-	      if (fi->getSize && msginfo[i].rfcsize == 0);
+	      if (getrfcsize && msginfo[i].rfcsize == 0)
+		{
+		  /* parse the message to calc the size */
+		  result = db_fetch_headers(msginfo[i].uid, &headermsg);
+		  if (result == -2)
+		    {
+		      fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
+		      list_freelist(&fetch_list.start);
+		      my_free(msginfo);
+		      return -1;
+		    }
+		  if (result == -3)
+		    {
+		      fprintf(ci->tx,"\r\n* BYE out of memory\r\n");
+		      list_freelist(&fetch_list.start);
+		      my_free(msginfo);
+		      return -1;
+		    }
+
+		  msginfo[i].rfcsize = (headermsg.rfcheadersize + 
+					headermsg.bodysize + 
+					headermsg.bodylines);
+
+		  db_set_rfcsize(msginfo[i].rfcsize, msginfo[i].uid, ud->mailbox.uid);
+		  db_free_msg(&headermsg);
+		}
+
+	      fn = binary_search(ud->mailbox.seq_list, ud->mailbox.exists, msginfo[i].uid);
+	      if (fn == (unsigned)(-1))
+		{
+		  /* this is probably some sync error:
+		   * the msgUID belongs to this mailbox but was not found
+		   * when building the mailbox info
+		   * let's call it fatal and let the client re-connect :)
+		   */
+		  fprintf(ci->tx, "* BYE internal syncing error\r\n");
+
+		  list_freelist(&fetch_list.start);
+		  my_free(msginfo);
+		  return -1;
+		}
+      
+	      fprintf(ci->tx, "* %u FETCH (", (fn+1));
+	      
+	      curr = list_getstart(&fetch_list);
+
+	      while (curr)
+		{
+		  fi = (fetch_items_t*)curr->data;
+
+		  if (fi->getInternalDate)
+		    fprintf(ci->tx,"INTERNALDATE \"%s\"", 
+			    date_sql2imap(msginfo[i].internaldate));
+
+		  if (fi->getUID)
+		    fprintf(ci->tx,"UID %llu", msginfo[i].uid);
+
+		  if (fi->getSize)
+		    fprintf(ci->tx,"RFC822.SIZE %llu", msginfo[i].rfcsize);
+
+		  if (fi->getFlags)
+		    {
+		      isfirstout = 1;
+		      fprintf(ci->tx, "FLAGS (");
+		      for (j=0; j<IMAP_NFLAGS; j++)
+			{
+			  if (msginfo[i].flags[j])
+			    {
+			      fprintf(ci->tx, "%s%s", isfirstout ? "" : " ",
+				      imap_flag_desc_escaped[j]);
+			      if (isfirstout) isfirstout = 0;
+			    }
+			}
+		      fprintf(ci->tx, ")");
+		    }
+		  
+		  fprintf(ci->tx, "%s", curr->nextnode ? " " : "");
+		  curr = curr->nextnode;
+		}
+
+	      fprintf(ci->tx, ")\r\n");
 	    }
+
 	  my_free(msginfo);
 	}
-	  
-      for (i=fetch_start; i<=fetch_end; i++)
+      
+      /* if there is no parsing at all, this loop is not needed */
+      for (i=fetch_start; i<=fetch_end && !no_parsing_at_all; i++)
 	{
 	  thisnum = (imapcommands_use_uid ? i : ud->mailbox.seq_list[i]);
 	  insert_rfcsize = 0;
@@ -2019,7 +2118,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	      if (fi->getSize)
 		{
 		  /* ok, try to fetch size from dbase */
-		  rfcsize = db_get_rfcsize(thisnum);
+		  rfcsize = db_get_rfcsize(thisnum, ud->mailbox.uid);
 		  if (rfcsize == -1)
 		    {
 		      fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
@@ -2104,7 +2203,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		      if (insert_rfcsize)
 			{
 			  /* insert the rfc822 size into the dbase */
-			  if (db_set_rfcsize(rfcsize, thisnum) == -1)
+			  if (db_set_rfcsize(rfcsize, thisnum,ud->mailbox.uid) == -1)
 			    {
 			      fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
 			      list_freelist(&fetch_list.start);
@@ -2115,10 +2214,6 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			  insert_rfcsize = 0;
 			}
 			      
-
-		      /*		  trace(TRACE_DEBUG, "ic_fetch(): size of parsed msg: %d\n",
-					  db_msgdump(&cached_msg.msg, thisnum, 0));
-		      */
 		    }
 		}
 
@@ -2758,7 +2853,7 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
   char *endptr;
   u64_t i,store_start,store_end;
   unsigned fn;
-  int result,j;
+  int result,j,isfirstout;
   int be_silent=0,action=IMAPFA_NONE;
   int flaglist[IMAP_NFLAGS], msgflags[IMAP_NFLAGS];
   u64_t thisnum,lo,hi;
@@ -2916,18 +3011,22 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
 	  if (!be_silent)
 	    {
 	      result = db_get_msgflag_all(thisnum, ud->mailbox.uid, msgflags);
+	      if (result == -1)
+		{
+		  fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
+		  return -1;
+		}
 	      
 	      fprintf(ci->tx, "* %llu FETCH (FLAGS (", 
 		      imapcommands_use_uid ? (u64_t)(fn+1) : store_start+1);
 
 	      for (j=0; j<IMAP_NFLAGS; j++)
-		if (msgflags[j])
-		  fprintf(ci->tx, "%s ",imap_flag_desc_escaped[j]);
-
-	      if (result == -1)
 		{
-		  fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
-		  return -1;
+		  if (msgflags[j])
+		    {
+		      fprintf(ci->tx, "%s%s", isfirstout ? "" : " ",imap_flag_desc_escaped[j]);
+		      if (isfirstout) isfirstout = 0;
+		    }
 		}
 
 	      fprintf(ci->tx,"))\r\n");
@@ -2971,17 +3070,22 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
 		    }
 		  
 		  result = db_get_msgflag_all(thisnum, ud->mailbox.uid, msgflags);
-	      
-		  fprintf(ci->tx, "* %llu FETCH (FLAGS (", imapcommands_use_uid ? (u64_t)(fn+1) : i+1);
-
-		  for (j=0; j<IMAP_NFLAGS; j++)
-		    if (msgflags[j])
-		      fprintf(ci->tx, "%s ",imap_flag_desc_escaped[j]);
-
 		  if (result == -1)
 		    {
 		      fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
 		      return -1;
+		    }
+
+		  fprintf(ci->tx, "* %llu FETCH (FLAGS (", 
+			  imapcommands_use_uid ? (u64_t)(fn+1) : i+1);
+
+		  for (j=0; j<IMAP_NFLAGS; j++)
+		    {
+		      if (msgflags[j])
+			{
+			  fprintf(ci->tx, "%s%s", isfirstout ? "" : " ",imap_flag_desc_escaped[j]);
+			  if (isfirstout) isfirstout = 0;
+			}
 		    }
 
 		  fprintf(ci->tx,"))\r\n");

@@ -2681,10 +2681,11 @@ int db_get_msgdate(u64_t mailboxuid, u64_t msguid, char *date)
  *
  * returns -1 on failure, 0 on success
  */
-int db_set_rfcsize(u64_t size, u64_t msguid)
+int db_set_rfcsize(u64_t size, u64_t msguid, u64_t mailboxuid)
 {
-  snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET rfcsize = %llu WHERE message_idnr = %llu",
-	   size, msguid);
+  snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET rfcsize = %llu "
+	   "WHERE message_idnr = %llu AND mailbox_idnr = %llu",
+	   size, msguid, mailboxuid);
   
   if (db_query(query) == -1)
     {
@@ -2696,12 +2697,12 @@ int db_set_rfcsize(u64_t size, u64_t msguid)
 }
 
 
-u64_t db_get_rfcsize(u64_t msguid)
+u64_t db_get_rfcsize(u64_t msguid, u64_t mailboxuid)
 {
   u64_t size;
 
   snprintf(query, DEF_QUERYSIZE, "SELECT rfcsize FROM messages WHERE message_idnr = %llu "
-	   "AND status<2 AND unique_id != ''", msguid);
+	   "AND status<2 AND unique_id != '' AND mailbox_idnr = %llu", msguid, mailboxuid);
 
   if (db_query(query) == -1)
     {
@@ -2718,6 +2719,104 @@ u64_t db_get_rfcsize(u64_t msguid)
   size = strtoull( PQgetvalue(res, 0, 0), NULL, 10);
   return size;
 }
+
+
+
+/*
+ * db_get_msginfo_range()
+ *
+ * retrieves message info in a single query for a range of messages.
+ *
+ * returns 0 on succes, -1 on dbase error, -2 on memory error
+ *
+ * caller should free *result
+ */
+int db_get_msginfo_range(u64_t msguidlow, u64_t msguidhigh, u64_t mailboxuid,
+			 int getflags, int getinternaldate, int getsize, int getuid,
+			 msginfo_t **result, unsigned *resultsetlen)
+{
+  unsigned nrows, i, j;
+  char *row;
+
+  *result = 0;
+  *resultsetlen = 0;
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT seen_flag, answered_flag, deleted_flag, "
+	   "flagged_flag, draft_flag, recent_flag, internal_date, rfcsize, message_idnr "
+	   "FROM messages WHERE "
+	   "message_idnr >= %llu AND message_idnr <= %llu AND mailbox_idnr = %llu"
+	   "AND status<2 AND unique_id != '' "
+	   "ORDER BY message_idnr ASC", msguidlow, msguidhigh, mailboxuid);
+ 
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_get_msginfo_range(): could not select message\n");
+      return (-1);
+    }
+
+   if ((nrows = PQntuples(res)) == 0)
+    {
+      return 0;
+    }
+
+   *result = (msginfo_t*)my_malloc(nrows * sizeof(msginfo_t));
+   if (! (*result)) 
+     {
+      trace(TRACE_ERROR,"db_get_msginfo_range(): out of memory\n");
+      PQclear(res);
+      return -2;
+     }
+
+   memset(*result, 0, nrows * sizeof(msginfo_t));
+
+   for (i=0; i<nrows; i++)
+     {
+       if (getflags)
+	 {
+	   for (j=0; j<IMAP_NFLAGS; j++)
+	     {
+	       row = PQgetvalue(res, i, j);
+	       (*result)[i].flags[j] = (row && row[0] != '0') ? 1 : 0;
+	     }
+	 }
+
+       if (getinternaldate)
+	 {
+	   row = PQgetvalue(res, i, IMAP_NFLAGS);
+	   strncpy((*result)[i].internaldate, 
+		   row ? row : "2001-17-02 23:59:59", 
+		   IMAP_INTERNALDATE_LEN);
+
+	 }
+
+       if (getsize)
+	 {
+	   row = PQgetvalue(res, i, IMAP_NFLAGS+1);
+	   (*result)[i].rfcsize = strtoull(row ? row : "0", NULL, 10);
+	 }
+
+       if (getuid)
+	 {
+	   row = PQgetvalue(res, i, IMAP_NFLAGS+2);
+	   if (!row)
+	     {
+	       my_free(*result);
+	       *result = 0;
+	       PQclear(res);
+
+	       trace(TRACE_ERROR,"db_get_msginfo_range(): message has no UID??");
+	       return -1;
+	     }
+	   (*result)[i].uid = strtoull(row, NULL, 10);
+	 }
+     }
+
+   PQclear(res);
+   *resultsetlen = i; /* should _always_ be equal to nrows */
+
+   return 0;
+}
+
 
 
 /*
