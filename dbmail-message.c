@@ -1,7 +1,7 @@
 /*
   $Id$
 
-  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
+  Copyright (C) 2004-2005 NFG Net Facilities Group BV, info@nfg.nl
 
   This program is free software; you can redistribute it and/or 
   modify it under the terms of the GNU General Public License 
@@ -653,9 +653,8 @@ void _header_cache(const char *header, const char *value, gpointer user_data)
 			"VALUES (%llu,%llu,'%s')", DBPFX, id, self->physid, safe_value);
 	
 	if (db_query(q->str)) {
-		/* possible duplicate key collisions */
-		dm_errno = -1;
-		trace(TRACE_ERROR,"%s,%s: insert  headervalue failed", __FILE__,__func__);
+		/* ignore possible duplicate key collisions */
+		trace(TRACE_WARNING,"%s,%s: insert  headervalue failed", __FILE__,__func__);
 	}
 	g_string_free(q,TRUE);
 	g_free(safe_value);
