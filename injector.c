@@ -38,12 +38,12 @@ int main(int argc, char *argv[])
 {
   char *field_to_scan = NULL;
   struct list userids, bounces, fwds;
-  struct element *thisuser;
+  struct element *thisuser = NULL;
   char uniqueid[UID_SIZE];
   unsigned len,i;
   u64_t size,newlines=0;
-  u64_t *qleft,*uids;
-  FILE **pipes;
+  u64_t *qleft = NULL,*uids = NULL;
+  FILE **pipes = NULL;
 
   openlog(PNAME, LOG_PID, LOG_MAIL);   /* open connection to syslog */
   configure_debug(TRACE_DEBUG, 1, 0);  /* do not spill time on reading settings */
