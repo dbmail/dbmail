@@ -598,9 +598,8 @@ int lmtp(void *stream, void *instream, char *buffer,
 					const char *body;
 					u64_t whole_message_size;
 					u64_t headersize = 0;
-					u64_t headerrfcsize = 0;
 					u64_t body_size = 0;
-					u64_t body_rfcsize = 0;
+					u64_t rfcsize = 0;
 					u64_t dummyidx = 0, dummysize = 0;
 					struct list fromlist, headerfields;
 					struct element *element;
@@ -643,10 +642,9 @@ int lmtp(void *stream, void *instream, char *buffer,
 							  whole_message_size - 1,
 							  &header,
 							  &headersize,
-							  &headerrfcsize,
 							  &body,
 							  &body_size,
-							  &body_rfcsize) < 0) {
+							  &rfcsize) < 0) {
 						trace(TRACE_ERROR, "%s,%s: split_message() failed",
 						      __FILE__, __func__);
 						my_free(whole_message);
@@ -686,8 +684,8 @@ int lmtp(void *stream, void *instream, char *buffer,
 
 					if (insert_messages(
 						    header, body,
-						    headersize, headerrfcsize,
-						    body_size, body_rfcsize,
+						    headersize, 
+						    body_size, rfcsize,
 						    &headerfields, &rcpt,
 						    &fromlist) == -1) {
 						ci_write((FILE *) stream,

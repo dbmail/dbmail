@@ -3849,20 +3849,13 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 				/* set \Seen flag if necessary; note the absence of an error-check 
 				 * for db_get_msgflag()!
 				 */
-				if (setseen
-				    && db_get_msgflag("seen", thisnum,
-						      ud->mailbox.uid) !=
-				    1) {
+				if (setseen && db_get_msgflag("seen", thisnum, ud->mailbox.uid) != 1) {
 					/* only if the user has an ACL which grants
 					   him rights to set the flag should the
 					   flag be set! */
-					result = acl_has_right(ud->userid,
-							       ud->mailbox.uid,
-							       ACL_RIGHT_SEEN);
+					result = acl_has_right(ud->userid, ud->mailbox.uid, ACL_RIGHT_SEEN);
 					if (result == -1) {
-						ci_write(ci->tx,
-							"\r\n *BYE internal dbase "
-							"error\r\n");
+						ci_write(ci->tx, "\r\n *BYE internal dbase error\r\n");
 						list_freelist(&fetch_list.start);
 						db_free_msg(&headermsg);
 						return -1;

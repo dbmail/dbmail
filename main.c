@@ -26,6 +26,7 @@
 #endif
 
 #include "dbmail.h"
+#include "dbmail-message.h"
 #include "main.h"
 #include "pipe.h"
 #include "list.h"
@@ -66,7 +67,6 @@ deliver_to_user_t dsnuser;
 //char *header = NULL;
 char *deliver_to_header = NULL;
 char *deliver_to_mailbox = NULL;
-u64_t headersize, headerrfcsize;
 
 /* loudness and assumptions */
 int yes_to_all = 0;
@@ -89,57 +89,14 @@ int reallyquiet = 0;
 static int read_whole_message_pipe(FILE *instream, char **whole_message,
 				   u64_t *whole_message_size)
 {
-	char *tmpmessage = NULL;
-	size_t read_len = 0;
-	size_t totalmem = 0; 
-	size_t current_pos = 0;
-	char read_buffer[READ_CHUNK_SIZE];
-	int error = 0;
-	
-	while(!feof(instream) && !ferror(instream)) {
-		read_len = fread(read_buffer, sizeof(char), READ_CHUNK_SIZE,
-				 instream);
-		
-		if (read_len < READ_CHUNK_SIZE && ferror(instream)) {
-			error = 1;
-			break;
-		}
-		if (!(tmpmessage = realloc(tmpmessage, totalmem + read_len))) {
-			error = 1;
-			break;
-		}
-		if (!(memcpy((void *) &tmpmessage[current_pos], 
-			     (void *) read_buffer, 
-			     read_len))) {
-			error = 1;
-			break;
-		}
-		totalmem += read_len;
-		current_pos += read_len;
-	}
-	
-	if (ferror(instream)) {
-		trace(TRACE_ERROR, "%s,%s: error reading from instream",
-		      __FILE__, __func__);
-		error = 1;
-	}
-	/* add '\0' to tmpmessage, because fread() will not do that for us.*/
-	totalmem++;
-	if (!(tmpmessage = realloc(tmpmessage, totalmem))) 
-		error = 1;
-	else 
-		tmpmessage[current_pos] = '\0';
-	
-	if (error) {
-		trace(TRACE_ERROR, "%s,%s: error reading message",
-		      __FILE__, __func__);
-		my_free(tmpmessage);
-		return -1;
-	}
-	
-	*whole_message = tmpmessage;
-	*whole_message_size = totalmem;
-	return 0;
+	struct DbmailMessage *message = dbmail_message_new();
+	GMimeStream *stream = g_mime_stream_file_new(instream);
+	message = dbmail_message_init_with_stream(message, stream);
+	GString *msg = g_string_new(g_mime_object_to_string((GMimeObject *)(message->message)));
+	*whole_message = strdup(msg->str);
+	*whole_message_size = message->size;
+	g_string_free(msg,1);
+	return 0;	
 }
 
 int do_showhelp(void) {
@@ -175,8 +132,9 @@ int main(int argc, char *argv[])
 	u64_t whole_message_size;
 	const char *body;
 	u64_t body_size;
-	u64_t body_rfcsize;
+	u64_t rfcsize;
 	char *header = NULL;
+	u64_t headersize;
 	
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 
@@ -367,8 +325,8 @@ int main(int argc, char *argv[])
 
 	/* get pointer to header and to body */
 	if (split_message(whole_message, whole_message_size - 1,
-			  &header, &headersize, &headerrfcsize, 
-			  &body, &body_size, &body_rfcsize) < 0) {
+			  &header, &headersize,
+			  &body, &body_size, &rfcsize) < 0) {
 		trace(TRACE_ERROR, "%s,%s splitmessage failed",
 		      __FILE__, __func__);
 		my_free(whole_message);
@@ -447,8 +405,8 @@ int main(int argc, char *argv[])
 	}
 
 	/* inserting messages into the database */
-	if (insert_messages(header, body, headersize, headerrfcsize,
-			    body_size, body_rfcsize,
+	if (insert_messages(header, body, headersize,
+			    body_size, rfcsize,
 			    &mimelist, &dsnusers, &returnpath) == -1) {
 		trace(TRACE_ERROR, "main(): insert_messages failed");
 		/* Most likely a random failure... */

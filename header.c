@@ -29,6 +29,7 @@
 #endif
 
 #include "dbmail.h"
+#include "dbmail-message.h"
 #include "list.h"
 #include "auth.h"
 #include "mime.h"
@@ -44,7 +45,32 @@
 
 /* Must be at least 998 or 1000 by RFC's */
 #define MAX_LINE_SIZE 1024
+int split_message(const char *whole_message, 
+		  u64_t whole_message_size,
+		  char **header, u64_t *header_size,
+		  const char **body, u64_t *body_size,
+		  u64_t *rfcsize)
+{
+	GString *tmp = g_string_new(whole_message);
+	struct DbmailMessage *_msg = dbmail_message_new();
+	_msg = dbmail_message_init(_msg, tmp);
+	
+	*header = dbmail_message_get_headers_as_string(_msg);
+	*body = dbmail_message_get_body_as_string(_msg);
+	*rfcsize = (u64_t)dbmail_message_get_rfcsize(_msg);
+	
+	tmp = g_string_new(*header);
+	*header_size = (u64_t)tmp->len;
+	
+	tmp = g_string_new(*body);
+	*body_size = (u64_t)tmp->len;
+	
+	g_string_free(tmp,1);
+	dbmail_message_destroy(_msg);
 
+	return 0;
+}
+#ifdef OLD
 /**
  * get the rfc size of the body of a message. This function assumes that
  * the message has lines that end in '\n', not in '\r\n'
@@ -69,13 +95,11 @@ static int consume_header_line(const char *message_content,
 			       size_t *line_size,
 			       size_t *line_rfcsize);
 
-
-int split_message(const char *whole_message, 
+int old_split_message(const char *whole_message, 
 		  u64_t whole_message_size,
 		  char **header, u64_t *header_size,
-		  u64_t *header_rfcsize,
 		  const char **body, u64_t *body_size,
-		  u64_t *body_rfcsize)
+		  u64_t *rfcsize)
 {
 	const char *end_of_header;
 	size_t line_size;
@@ -201,3 +225,4 @@ static int consume_header_line(const char *message_content,
 		return 1;
 	
 }
+#endif

@@ -35,7 +35,6 @@
  * \param instream is a FILE stream where the rest of the message is
  * \param header header of the message
  * \param headersize size of the header
- * \param headerrfcsize rfc size of the header (newlines counted twice)
  * \param users list of users to sent the message to
  * \param errusers list of users who didn't work for some reason
  * \param returnpath From: addresses. Used for bouncing messages.
@@ -46,7 +45,7 @@
  * \return 0
  */
 int insert_messages(const char *header, const char *body, u64_t headersize, 
-		    u64_t headerrfcsize, u64_t bodysize, u64_t bodyrfcsize,
+		    u64_t bodysize, u64_t rfcsize,
 		    struct list *headerfields, struct list *dsnusers,
 		    struct list *returnpath);
 

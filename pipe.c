@@ -368,17 +368,16 @@ int discard_client_input(FILE * instream)
  * \param header the header to the message
  * \param body body of the message
  * \param headersize size of header
- * \param headerrfcsize rfc size of header
  * \param bodysize size of body
- * \param bodyrfcsize rfc size of body
+ * \param rfcsize rfc size of message
  * \param[out] temp_message_idnr message idnr of temporary message
  * \return 
  *     - -1 on error
  *     -  1 on success
  */
 static int store_message_temp(const char *header, const char *body, 
-			      u64_t headersize, u64_t headerrfcsize,
-			      u64_t bodysize, u64_t bodyrfcsize,
+			      u64_t headersize,
+			      u64_t bodysize, u64_t rfcsize,
 			      /*@out@*/ u64_t * temp_message_idnr)
 {
 	int result;
@@ -431,8 +430,7 @@ static int store_message_temp(const char *header, const char *body,
 		return -1;
 	}
 
-	if (db_update_message(msgidnr, unique_id, (headersize + bodysize),
-			      (headerrfcsize + bodyrfcsize)) < 0) {
+	if (db_update_message(msgidnr, unique_id, (headersize + bodysize), rfcsize) < 0) {
 		trace(TRACE_ERROR, "%s,%s: error updating message [%llu]",
 		      __FILE__, __func__, msgidnr);
 		return -1;
@@ -509,15 +507,14 @@ int store_message_in_blocks(const char *message, u64_t message_size,
  *   - -1 on full failure
  */
 int insert_messages(const char *header, const char* body, u64_t headersize,
-		    u64_t headerrfcsize, u64_t bodysize, u64_t bodyrfcsize,
+		    u64_t bodysize, u64_t rfcsize,
 		    struct list *headerfields,
 		    struct list *dsnusers, struct list *returnpath)
 {
 	struct element *element, *ret_path;
-	u64_t msgsize, rfcsize, tmpmsgidnr;
+	u64_t msgsize, tmpmsgidnr;
 
 	msgsize = headersize + bodysize;
-	rfcsize = headerrfcsize + bodyrfcsize;
 
 	/* first start a new database transaction */
 	if (db_begin_transaction() < 0) {
@@ -528,8 +525,8 @@ int insert_messages(const char *header, const char* body, u64_t headersize,
 	}
 
 	switch (store_message_temp
-		(header, body, headersize, headerrfcsize, 
-		 bodysize, bodyrfcsize, &tmpmsgidnr)) {
+		(header, body, headersize, 
+		 bodysize, rfcsize, &tmpmsgidnr)) {
 	case -1:
 		/* Major trouble. Bail out immediately. */
 		trace(TRACE_ERROR,

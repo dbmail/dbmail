@@ -40,7 +40,6 @@
 int split_message(const char *whole_message, 
 		  u64_t whole_message_size,
 		  char **header, u64_t *header_size,
-		  u64_t *header_rfcsize,
 		  const char **body, u64_t *body_size,
 		  u64_t *body_rfcsize);
 

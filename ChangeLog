@@ -1,3 +1,13 @@
+2004-10-06  Paul Stevens <paul@nfg.nl>
+
+	* dbmail-message.c, dbmail-message.h: new files implement
+	DbmailMessage object and interfaces.
+	* Makefile.am: added dbmail-message.c to COMMON files list
+	* acinclude.m4, configure.in: added gmime support
+	* db.c, db.h, header.c, header.h, lmtp.c, main.c, pipe.c, 
+	pipe.h: use new gmime code in dbmail-message.c for message 
+	insertion.
+
 2004-10-05  Paul Stevens <paul@nfg.nl>
 
 	* imapcommands.c (_ic_fetch): check mailbox permissions before

@@ -1104,6 +1104,12 @@ int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags,
 int db_set_msgflag_range(u64_t msg_idnr_low,
 			 u64_t msg_idnr_high, u64_t mailbox_idnr,
 			 int *flags, int action_type);
+
+int db_set_msgflag_recent(u64_t msg_idnr, u64_t mailbox_idnr);
+
+int db_set_msgflag_recent_range(u64_t msg_idnr_lo, u64_t msg_idnr_hi, u64_t mailbox_idnr);
+
+
 /**
  * \brief retrieve internal message date
  * \param mailbox_idnr

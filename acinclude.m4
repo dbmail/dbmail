@@ -428,3 +428,24 @@ else
 fi
 ])
 
+dnl DBMAIL_CHECK_GMIME
+dnl
+AC_DEFUN(DBMAIL_CHECK_GMIME, [dnl
+#Look for include files and libs needed to link
+#use the configuration utilities (pkg-config for this)
+AC_PATH_PROG(gmimeconfig,pkg-config)
+if test [ -z "$gmimeconfig" ]
+then
+	AC_MSG_ERROR([pkg-config executable not found. Make sure pkg-config is in your path])
+else
+	AC_MSG_CHECKING([GMime headers])
+	ac_gmime_cflags=`${gmimeconfig} --cflags gmime-2.0`
+	CFLAGS="$CFLAGS $ac_gmime_cflags"
+	AC_MSG_RESULT([$ac_gmime_cflags])
+        AC_MSG_CHECKING([GMime libraries])
+	ac_gmime_libs=`${gmimeconfig} --libs gmime-2.0`
+	LDFLAGS="$LDFLAGS $ac_gmime_libs"
+        AC_MSG_RESULT([$ac_gmime_libs])
+fi
+])
+

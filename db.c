@@ -3127,6 +3127,7 @@ int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr,
 
 }
 
+	
 int db_set_msgflag_range(u64_t msg_idnr_low, u64_t msg_idnr_high,
 			 u64_t mailbox_idnr, int *flags, int action_type)
 {
@@ -3134,7 +3135,7 @@ int db_set_msgflag_range(u64_t msg_idnr_low, u64_t msg_idnr_high,
 	size_t placed = 0;
 	size_t left;
 
-	snprintf(query, DEF_QUERYSIZE, "UPDATE %smessages SET ",DBPFX);
+	snprintf(query, DEF_QUERYSIZE, "UPDATE %smessages SET recent_flag=0 ",DBPFX);
 
 	for (i = 0; i < IMAP_NFLAGS; i++) {
 		left = DEF_QUERYSIZE - strlen(query);
@@ -3186,6 +3187,27 @@ int db_set_msgflag_range(u64_t msg_idnr_low, u64_t msg_idnr_high,
 		return (-1);
 	}
 
+	return 0;
+}
+
+int db_set_msgflag_recent(u64_t msg_idnr, u64_t mailbox_idnr)
+{
+	return db_set_msgflag_recent_range(msg_idnr, msg_idnr, mailbox_idnr);
+}
+
+int db_set_msgflag_recent_range(u64_t msg_idnr_lo, u64_t msg_idnr_hi, u64_t mailbox_idnr)
+{
+	GString *query = g_string_new("");
+	g_string_printf(query, "UPDATE %smessages SET recent_flag=0 WHERE "
+			" WHERE message_idnr BETWEEN '%llu' AND '%llu' AND "
+			"status < '%d' AND mailbox_idnr = '%llu'",
+			DBPFX, msg_idnr_lo, msg_idnr_hi, MESSAGE_STATUS_DELETE, mailbox_idnr);
+	if (db_query(query->str) == -1) {
+		trace(TRACE_ERROR, "%s,%s: could not update recent_flag",__FILE__,__func__);
+		g_string_free(query,1);
+		return -1;
+	}
+	g_string_free(query,1);
 	return 0;
 }
 
