@@ -108,7 +108,6 @@ int main (int argc, char *argv[]) {
   /* inserting messages into the database */
   insert_messages(header, headersize,&users);
 	trace(TRACE_DEBUG,"main(): freeing memory blocks");
-  free(header); /* cleanup the header */
   trace (TRACE_DEBUG,"main(): they're all free. we're done.");
   return 0;
 }
