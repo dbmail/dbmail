@@ -767,7 +767,6 @@ u64_t auth_md5_validate (char *username,unsigned char *md5_apop_he, char *apop_s
 }
 
 
-/* returns the mailbox id (of mailbox inbox) for a user or a 0 if no mailboxes were found */
 char *auth_get_userid (u64_t *useridnr)
 {
   char *value;

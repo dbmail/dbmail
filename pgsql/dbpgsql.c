@@ -541,12 +541,12 @@ u64_t db_insert_message (u64_t useridnr, const char *deliver_to_mailbox,
 
 
 u64_t db_update_message (u64_t messageidnr, const char *unique_id,
-			 u64_t messagesize)
+			 u64_t messagesize, u64_t rfcsize)
 {
   snprintf (query, DEF_QUERYSIZE,
-            "UPDATE messages SET messagesize=%llu, unique_id=\'%s\', status='000'"
+            "UPDATE messages SET messagesize=%llu, unique_id=\'%s\', status='000', rfcsize = %llu"
 	    " WHERE message_idnr=%llu",
-            messagesize, unique_id, messageidnr);
+            messagesize, unique_id, rfcsize, messageidnr);
 
   if (db_query (query)==-1)
     trace(TRACE_STOP,"db_update_message(): dbquery failed");
@@ -1801,7 +1801,7 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen, u64_t mboxid, u64_t u
   snprintf (unique_id,UID_SIZE,"%lluA%lu",msgid,td);
 
   /* set info on message */
-  db_update_message (msgid, unique_id, datalen);
+  db_update_message (msgid, unique_id, datalen, 0);
 
   return 0;
 }

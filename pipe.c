@@ -367,7 +367,7 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
 	   * a special field is created in the database for other possible 
 	   * even more unique strings */
 	  create_unique_id(unique_id,*(u64_t*)tmp->data); 
-	  db_update_message (*(u64_t*)tmp->data,unique_id,totalmem+headersize);
+	  db_update_message (*(u64_t*)tmp->data,unique_id,totalmem+headersize,0);
 
 	  /* checking size */
 	  switch (db_check_sizelimit (totalmem+headersize, *(u64_t*)tmp->data,

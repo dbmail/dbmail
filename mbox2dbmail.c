@@ -12,7 +12,7 @@
 #include <regex.h>
 
 #define MAX_LINESIZE 1024
-#define SMTP_INJECTOR "./dbmail-smtp-injector"
+#define SMTP_INJECTOR "./dbmail-mini-injector"
 
 const char *mbox_delimiter_pattern = "^From .*@.*  ";
 
@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
       return 1;
     }
 
-  snprintf(cmdstr, MAX_LINESIZE, "%s -u %s", SMTP_INJECTOR, argv[1]);
+  snprintf(cmdstr, MAX_LINESIZE, "%s %s", SMTP_INJECTOR, argv[1]);
   in_msg = 0;
 
   while (!feof(stdin) && !ferror(stdin))

@@ -115,7 +115,7 @@ u64_t db_get_useridnr(u64_t messageidnr);
 u64_t db_get_message_mailboxid(u64_t messageidnr);
 u64_t db_insert_message(u64_t useridnr, const char *deliver_to_mailbox, const char *uniqueid);
 u64_t db_update_message(u64_t messageidnr, const char *unique_id,
-			u64_t messagesize);
+			u64_t messagesize, u64_t rfcsize);
 int db_update_message_multiple(const char *unique_id, u64_t messagesize, u64_t rfcsize);
 u64_t db_insert_message_block(const char *block, u64_t len, u64_t messageidnr);
 int db_insert_message_block_multiple(const char *unique_id, const char *block, u64_t len);
