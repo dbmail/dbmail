@@ -67,7 +67,8 @@ const char AcceptedTagChars[] =
     "!@#$%^&-=_`~\\|'\" ;:,.<>/? ";
 
 const char AcceptedMailboxnameChars[] =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-=/ _.&,+";
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    "-=/ _.&,+@()[]";
 
 extern const char *month_desc[];
 
