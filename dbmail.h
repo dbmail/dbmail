@@ -75,19 +75,25 @@ typedef char timestring_t[TIMESTRING_SIZE];
 
 /** parameters for the database connection */
 typedef struct {
-     field_t host; /**< hostname or ip address of database server */
-     field_t user; /**< username to connect with */
-     field_t pass; /**< password of user */
-     field_t db;   /**< name of database to connect with */
-     unsigned int port; /**< port number of database server */
-     field_t sock; /**< path to local unix socket (local connection) */
+	field_t host;
+		   /**< hostname or ip address of database server */
+	field_t user;
+		   /**< username to connect with */
+	field_t pass;
+		   /**< password of user */
+	field_t db;/**< name of database to connect with */
+	unsigned int port;
+			/**< port number of database server */
+	field_t sock;
+		   /**< path to local unix socket (local connection) */
 } db_param_t;
-     
+
 /** configuration items */
-typedef struct
-{
-  field_t name;    /**< name of configuration item */ 
-  field_t value;   /**< value of configuration item */
+typedef struct {
+	field_t name;
+		   /**< name of configuration item */
+	field_t value;
+		   /**< value of configuration item */
 } item_t;
 
 /**
@@ -101,7 +107,8 @@ typedef struct
  *     - -1 on error
  *     -  0 on success
  */
-int ReadConfig(const char *serviceName, const char *cfilename, struct list *cfg_items);
+int ReadConfig(const char *serviceName, const char *cfilename,
+	       struct list *cfg_items);
 /**
  * \brief get configuration value for an item
  * \param name name of configuration item
@@ -112,7 +119,8 @@ int ReadConfig(const char *serviceName, const char *cfilename, struct list *cfg_
  * \attention value is set to a string beginning with a '\\0' if no configuration
               item with name is found in items.
  */
-int GetConfigValue(const field_t name, struct list *cfg_items, field_t value);
+int GetConfigValue(const field_t name, struct list *cfg_items,
+		   field_t value);
 
 /* some common used functions reading config options */
 /**
@@ -120,7 +128,7 @@ int GetConfigValue(const field_t name, struct list *cfg_items, field_t value);
  \param db_params list of database parameters (db_param_t)
  \param cfg_items list of configuration items
 */
-void GetDBParams(db_param_t *db_params, struct list *cfg_items);
+void GetDBParams(db_param_t * db_params, struct list *cfg_items);
 /** 
  \brief set the overall trace level, using the value in cfg_items
  \param cfg_items list of configuration items

@@ -42,8 +42,9 @@
 
 /** different reasons for bouncing a message */
 typedef enum {
-     BOUNCE_NO_SUCH_USER,        /**< no such user in database */
-     BOUNCE_STORAGE_LIMIT_REACHED/**< user exceeds mail quotum */
+	BOUNCE_NO_SUCH_USER,	 /**< no such user in database */
+	BOUNCE_STORAGE_LIMIT_REACHED
+				 /**< user exceeds mail quotum */
 } bounce_reason_t;
 
 /**
@@ -61,6 +62,7 @@ typedef enum {
  * not checked, which should be done to make sure only valid data is sent
  * to the shell.
  */
-int bounce(const char *header, const char *destination_address, bounce_reason_t reason);
+int bounce(const char *header, const char *destination_address,
+	   bounce_reason_t reason);
 
 #endif

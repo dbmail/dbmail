@@ -53,7 +53,7 @@
  *     - 1 on synchronisation error. (search returned a UID which was not
  *     in the MSN-list -> mailbox should be updated
  */
-int db_search(int *rset, int setlen, const char *key, mailbox_t *mb,
+int db_search(int *rset, int setlen, const char *key, mailbox_t * mb,
 	      int type);
 
 /**
@@ -67,7 +67,7 @@ int db_search(int *rset, int setlen, const char *key, mailbox_t *mb,
  *    - 0 on success
  *    - 1 if mb->exists != setlen
  */
-int db_search_parsed(int *rset, unsigned setlen, 
-		     search_key_t *sk, mailbox_t *mb);
+int db_search_parsed(int *rset, unsigned setlen,
+		     search_key_t * sk, mailbox_t * mb);
 
 #endif

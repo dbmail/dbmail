@@ -49,10 +49,10 @@
 #define MAX_EMAIL_SIZE 250
 
 /* size of the messageblk's */
-#define READ_BLOCK_SIZE (512ul*1024ul)		/* be carefull, MYSQL has a limit */
+#define READ_BLOCK_SIZE (512ul*1024ul)	/* be carefull, MYSQL has a limit */
 
 /* config types */
-#define CONFIG_MANDATORY 1			
+#define CONFIG_MANDATORY 1
 #define CONFIG_EMPTY 0
 
 
@@ -92,7 +92,7 @@ int db_disconnect(void);
  *         - 0 on success
  *         - 1 on failure
  */
-int db_query (const char *the_query);
+int db_query(const char *the_query);
 
 /**
  * \brief get number of rows in result set.
@@ -149,7 +149,7 @@ u64_t db_get_result_u64(unsigned row, unsigned field);
  *          value was generated).
  *       - the id otherwise
  */
-u64_t db_insert_result (const char *sequence_identifier);
+u64_t db_insert_result(const char *sequence_identifier);
 
 /**
  * \brief escape a string for use in query
@@ -159,8 +159,8 @@ u64_t db_insert_result (const char *sequence_identifier);
  * \return length of escaped string
  * \attention behaviour is undefined if to and from overlap
  */
-unsigned long  db_escape_string(char *to, 
-		const char *from, unsigned long length);
+unsigned long db_escape_string(char *to,
+			       const char *from, unsigned long length);
 
 /**
  * \brief get length in bytes of a result field in a result set.
@@ -211,14 +211,14 @@ void db_store_auth_result(void);
  * \return a pointer to a result set
  * \bug this is really ugly and should be dealt with differently!
  */
-void* db_get_result_set(void);
+void *db_get_result_set(void);
 
 /**
  * \brief set the new result set 
  * \param res the new result set
  * \bug this is really ugly and should be dealt with differently!
  */
-void db_set_result_set(void* res);
+void db_set_result_set(void *res);
 
 /* shared implementattion from hereon */
 /**
@@ -233,7 +233,7 @@ void db_set_result_set(void* res);
  * \attention function will fail and halt program if physmessage_id is
  * NULL on call.
  */
-int db_get_physmessage_id(u64_t message_idnr, u64_t *physmessage_id);
+int db_get_physmessage_id(u64_t message_idnr, u64_t * physmessage_id);
 
 /**
  * \brief return number of bytes used by user identified by userid
@@ -244,7 +244,7 @@ int db_get_physmessage_id(u64_t message_idnr, u64_t *physmessage_id);
  *          - -1 on failure<BR>
  *          -  1 otherwise
  */
-int db_get_quotum_used(u64_t user_idnr, u64_t *curmail_size);
+int db_get_quotum_used(u64_t user_idnr, u64_t * curmail_size);
 
 /**
  * \brief finds all users which need to have their curmail_size (amount
@@ -277,7 +277,7 @@ int db_calculate_quotum_used(u64_t user_idnr);
  *      - -1 on database error
  *      -  1 on success
  */
-int db_get_users_from_clientid(u64_t client_id, u64_t **user_ids, 
+int db_get_users_from_clientid(u64_t client_id, u64_t ** user_ids,
 			       unsigned *num_users);
 /**
  * \brief get deliver_to from alias. Gets a list of deliver_to
@@ -289,7 +289,7 @@ int db_get_users_from_clientid(u64_t client_id, u64_t **user_ids,
  *         - deliver_to address otherwise
  * \attention caller needs to free the return value
  */
-char* db_get_deliver_from_alias(const char *alias);
+char *db_get_deliver_from_alias(const char *alias);
 /**
  * \brief get a list of aliases associated with a user's user_idnr
  * \param user_idnr idnr of user
@@ -323,7 +323,8 @@ int db_addalias(u64_t user_idnr, const char *alias, u64_t clientid);
  *        - 0 on success
  *        - 1 if deliver_to already exists for given alias
  */
-int db_addalias_ext(const char *alias, const char *deliver_to, u64_t clientid);
+int db_addalias_ext(const char *alias, const char *deliver_to,
+		    u64_t clientid);
 /**
  * \brief remove alias for user
  * \param user_idnr user id
@@ -354,7 +355,8 @@ int db_removealias_ext(const char *alias, const char *deliver_to);
  *        - 0 on success
  * \attention caller should free the returned script
  */
-int db_get_sievescript_byname(u64_t user_idnr, char *scriptname, char **script);
+int db_get_sievescript_byname(u64_t user_idnr, char *scriptname,
+			      char **script);
 /**
  * \brief get the name of the active sieve script for a user
  * \param user_idnr user id
@@ -389,7 +391,8 @@ int db_get_sievescript_listall(u64_t user_idnr, struct list *scriptlist);
  *        - -1 on database failure
  *        - 0 on success
  */
-int db_replace_sievescript(u64_t user_idnr, char *scriptname, char *script);
+int db_replace_sievescript(u64_t user_idnr, char *scriptname,
+			   char *script);
 /**
  * \brief add a sieve script for a user
  * \param user_idnr user id
@@ -461,7 +464,7 @@ int db_set_sievescript_quota(u64_t user_idnr, u64_t quotasize);
  *        - -1 on database failure
  *        - 0 on success
  */
-int db_get_sievescript_quota(u64_t user_idnr, u64_t *quotasize);
+int db_get_sievescript_quota(u64_t user_idnr, u64_t * quotasize);
 /**
  * \brief get auto-notification address for a user
  * \param user_idnr user id
@@ -484,7 +487,7 @@ int db_get_notify_address(u64_t user_idnr, char **notify_address);
  * \attention caller should free reply_body
  */
 int db_get_reply_body(u64_t user_idnr, char **body);
-	
+
 /**
  * \brief get user idnr of a message. 
  * \param message_idnr idnr of message
@@ -504,7 +507,7 @@ u64_t db_get_useridnr(u64_t message_idnr);
  *     - -1 on failure
  *     -  1 on success
  */
-int db_insert_physmessage(u64_t *physmessage_id);
+int db_insert_physmessage(u64_t * physmessage_id);
 
 /**
  * \brief insert a physmessage with an internal date.
@@ -516,7 +519,7 @@ int db_insert_physmessage(u64_t *physmessage_id);
  *    -  1 on success
  */
 int db_insert_physmessage_with_internal_date(timestring_t internal_date,
-					     u64_t *physmessage_id);
+					     u64_t * physmessage_id);
 /**
  * \Brief update a physmessage by setting messagesize and rfcsize
  * \param physmessage_id the id of the physmessage
@@ -543,16 +546,15 @@ int db_update_physmessage(u64_t physmessage_id, u64_t message_size,
  * 	- -1 on failure
  * 	-  1 on success
  */
-int db_insert_message(u64_t user_idnr, 
-		const char *deliver_to, 
-		int create_or_error_mailbox,
-		const char *unique_id,
-		u64_t *message_idnr);
+int db_insert_message(u64_t user_idnr,
+		      const char *deliver_to,
+		      int create_or_error_mailbox,
+		      const char *unique_id, u64_t * message_idnr);
 
 #define CREATE_IF_MBOX_NOT_FOUND 1
 #define ERROR_IF_MBOX_NOT_FOUND -1
 
-	
+
 /**
  * \brief update unique_id, message_size and rfc_size of
  *        a message identified by message_idnr
@@ -565,7 +567,7 @@ int db_insert_message(u64_t user_idnr,
  *      - 0 on success
  */
 int db_update_message(u64_t message_idnr, const char *unique_id,
-			u64_t message_size, u64_t rfc_size);
+		      u64_t message_size, u64_t rfc_size);
 /**
  * \brief set unique id of a message 
  * \param message_idnr
@@ -587,9 +589,10 @@ int db_message_set_unique_id(u64_t message_idnr, const char *unique_id);
  *      - -1 on failure
  *      -  1 on success
  */
-int db_insert_message_block_physmessage(const char *block, u64_t block_size,
+int db_insert_message_block_physmessage(const char *block,
+					u64_t block_size,
 					u64_t physmessage_id,
-					u64_t *messageblock_idnr);
+					u64_t * messageblock_idnr);
 /**
 * \brief insert a message block into the message block table
 * \param block the message block (which is a string)
@@ -602,7 +605,7 @@ int db_insert_message_block_physmessage(const char *block, u64_t block_size,
 *        - 1 otherwise
 */
 int db_insert_message_block(const char *block, u64_t block_size,
-			    u64_t message_idnr, u64_t *messageblock_idnr);
+			    u64_t message_idnr, u64_t * messageblock_idnr);
 /**
  * \brief log IP-address for POP/IMAP_BEFORE_SMTP. If the IP-address
  *        is already logged, it's timestamp is renewed.
@@ -766,7 +769,8 @@ int db_delete_message(u64_t message_idnr);
 *    - 0 on success
 * \attention this function is unable to delete shared mailboxes
 */
-int db_delete_mailbox(u64_t mailbox_idnr, int only_empty, int update_curmail_size);
+int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
+		      int update_curmail_size);
 
 /**
  * \brief write lines of message to fstream. Does not write the header
@@ -782,19 +786,19 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty, int update_curmail_siz
  * 		- 0 on failure
  * 		- 1 on success
  */
-int db_send_message_lines (void *fstream, u64_t message_idnr,
-		long lines, int no_end_dot);
+int db_send_message_lines(void *fstream, u64_t message_idnr,
+			  long lines, int no_end_dot);
 /**
  * \brief create a new POP3 session. (was createsession() in dbmysql.c)
  * \param user_idnr user idnr 
  * \param session_ptr pointer to POP3 session 
  */
-int db_createsession (u64_t user_idnr, PopSession_t *session_ptr);
+int db_createsession(u64_t user_idnr, PopSession_t * session_ptr);
 /** 
  * \brief Clean up a POP3 Session
  * \param session_ptr pointer to POP3 session
  */
-void db_session_cleanup (PopSession_t *session_ptr);
+void db_session_cleanup(PopSession_t * session_ptr);
 /**
  * \brief update POP3 session
  * \param session_ptr pointer to POP3 session
@@ -805,7 +809,7 @@ void db_session_cleanup (PopSession_t *session_ptr);
  * not be nessecary, because the shared mailboxes are not 
  * touched by POP3
  */
-int db_update_pop (PopSession_t *session_ptr);
+int db_update_pop(PopSession_t * session_ptr);
 /**
  * \brief set deleted status (=3) for all messages that are marked for
  *        delete (=2)
@@ -815,7 +819,7 @@ int db_update_pop (PopSession_t *session_ptr);
  *    - -1 on database failure;
  *    - 1 otherwise
  */
-int db_set_deleted (u64_t *affected_rows);
+int db_set_deleted(u64_t * affected_rows);
 /**
  * \brief purge all messages from the database with a "delete"-status 
  * (status = 3)
@@ -828,7 +832,7 @@ int db_set_deleted (u64_t *affected_rows);
  *     - 1 if a number of messages deleted (affected_rows will hold the number
  *       of deleted messages.
  */
-int db_deleted_purge(u64_t *affected_rows);
+int db_deleted_purge(u64_t * affected_rows);
 /**
  * \brief check if a block of a certain size can be inserted.
  * \param addblocksize size of added blocks (UNUSED)
@@ -845,8 +849,8 @@ int db_deleted_purge(u64_t *affected_rows);
  * \attention when inserting a block would cause a limit run-overrun.
  *            the message insert is automagically rolled back
  */
-u64_t db_check_sizelimit (u64_t addblocksize, u64_t message_idnr, 
-				  u64_t *user_idnr);
+u64_t db_check_sizelimit(u64_t addblocksize, u64_t message_idnr,
+			 u64_t * user_idnr);
 /**
  * \brief insert a message into the database
  * \param msgdata the message
@@ -862,7 +866,7 @@ u64_t db_check_sizelimit (u64_t addblocksize, u64_t message_idnr,
  */
 int db_imap_append_msg(const char *msgdata, u64_t datalen,
 		       u64_t mailbox_idnr, u64_t user_idnr,
-		       timestring_t internal_date, u64_t *msg_idnr);
+		       timestring_t internal_date, u64_t * msg_idnr);
 
 /* mailbox functionality */
 /** 
@@ -876,7 +880,8 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
  *      - 0 if mailbox not found
  *      - 1 if found
  */
-int db_findmailbox(const char *name, u64_t user_idnr, u64_t *mailbox_idnr);
+int db_findmailbox(const char *name, u64_t user_idnr,
+		   u64_t * mailbox_idnr);
 /**
  * \brief finds all the mailboxes owned by owner_idnr who match 
  *        the regex pattern pattern.
@@ -892,8 +897,8 @@ int db_findmailbox(const char *name, u64_t user_idnr, u64_t *mailbox_idnr);
  *      - 0 on success
  *      - 1 on invalid regex pattern
  */
-int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern, 
-			    u64_t **children, unsigned *nchildren,
+int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern,
+			    u64_t ** children, unsigned *nchildren,
 			    int only_subscribed);
 /**
  * \brief get info on a mailbox. Info is filled in in the
@@ -904,7 +909,7 @@ int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern,
  *     - -1 on failure
  *     - 0 on success
  */
-int db_getmailbox(mailbox_t *mb);
+int db_getmailbox(mailbox_t * mb);
 
 /**
  * \brief find owner of a mailbox
@@ -915,7 +920,7 @@ int db_getmailbox(mailbox_t *mb);
  *    -  0 if owner not found
  *    -  1 if owner found
  */
-int db_get_mailbox_owner(u64_t mboxid, u64_t *owner_id);
+int db_get_mailbox_owner(u64_t mboxid, u64_t * owner_id);
 
 /**
  * \brief check if a user is owner of the specified mailbox 
@@ -936,7 +941,8 @@ int db_user_is_mailbox_owner(u64_t userid, u64_t mboxid);
  *    - -1 on failure
  *    -  0 on success
  */
-int db_createmailbox(const char *name, u64_t owner_idnr, u64_t *mailbox_idnr);
+int db_createmailbox(const char *name, u64_t owner_idnr,
+		     u64_t * mailbox_idnr);
 /**
  * \brief find a mailbox, create if not found
  * \param name name of mailbox
@@ -945,7 +951,8 @@ int db_createmailbox(const char *name, u64_t owner_idnr, u64_t *mailbox_idnr);
  *    - -1 on failure
  *    -  0 on success
  */
-int db_find_create_mailbox(const char *name, u64_t owner_idnr, u64_t *mailbox_idnr);
+int db_find_create_mailbox(const char *name, u64_t owner_idnr,
+			   u64_t * mailbox_idnr);
 /**
  * \brief produce a list containing the UID's of the specified
  *        mailbox' children matching the search criterion
@@ -958,8 +965,8 @@ int db_find_create_mailbox(const char *name, u64_t owner_idnr, u64_t *mailbox_id
  *    - -1 on failure
  *    -  0 on success
  */
-int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr, 
-			   u64_t **children, int *nchildren,
+int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
+			   u64_t ** children, int *nchildren,
 			   const char *filter);
 
 /**
@@ -1020,7 +1027,7 @@ int db_movemsg(u64_t mailbox_to, u64_t mailbox_from);
  * 		- 0 on success
  */
 int db_copymsg(u64_t msg_idnr, u64_t mailbox_to,
-	       u64_t user_idnr, u64_t *newmsg_idnr);
+	       u64_t user_idnr, u64_t * newmsg_idnr);
 /**
  * \brief get name of mailbox
  * \param mailbox_idnr
@@ -1057,9 +1064,7 @@ int db_setmailboxname(u64_t mailbox_idnr, const char *name);
  * \attention caller should free msg_idnrs and nmsg
  */
 int db_expunge(u64_t mailbox_idnr,
-	       u64_t user_idnr,
-	       u64_t **msg_idnrs,
-	       u64_t *nmsgs);
+	       u64_t user_idnr, u64_t ** msg_idnrs, u64_t * nmsgs);
 /**
  * \brief get first unseen message in a mailbox
  * \param mailbox_idnr
@@ -1099,8 +1104,8 @@ int db_unsubscribe(u64_t mailbox_idnr, u64_t user_idnr);
  * 		- 0 if flag is not set or a non-existent flag is asked.
  * 		- 1 if flag is set.
  */
-int db_get_msgflag(const char *flag_name, 
-		u64_t msg_idnr, u64_t mailbox_idnr);
+int db_get_msgflag(const char *flag_name,
+		   u64_t msg_idnr, u64_t mailbox_idnr);
 
 /**
  * \brief get all flags for a message
@@ -1130,7 +1135,8 @@ int db_get_msgflag_all(u64_t msg_idnr, u64_t mailbox_idnr, int *flags);
  * 		- -1 on failure
  * 		-  0 on success
  */
-int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, int action_type);
+int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags,
+		   int action_type);
 /**
  * \brief set flags for a range of messages in a mailbox
  * \param msg_idnr_low beginning of range
@@ -1148,10 +1154,10 @@ int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, int action_ty
  * \return 
  * 		- -1 on failure
  * 		-  0 on success
- */ 
-int db_set_msgflag_range(u64_t msg_idnr_low, 
-		u64_t msg_idnr_high, u64_t mailbox_idnr, 
-		int *flags, int action_type);
+ */
+int db_set_msgflag_range(u64_t msg_idnr_low,
+			 u64_t msg_idnr_high, u64_t mailbox_idnr,
+			 int *flags, int action_type);
 /**
  * \brief retrieve internal message date
  * \param mailbox_idnr
@@ -1183,7 +1189,7 @@ int db_set_rfcsize(u64_t rfcsize, u64_t msg_idnr, u64_t mailbox_idnr);
  * 		- -1 on failure
  * 		- 1 on success
  */
-int db_get_rfcsize(u64_t msg_idnr, u64_t mailbox_idnr, u64_t *rfc_size);
+int db_get_rfcsize(u64_t msg_idnr, u64_t mailbox_idnr, u64_t * rfc_size);
 /**
  * \brief get info on a range of messages.
  * \param msg_idnr_low beginning of range
@@ -1202,9 +1208,10 @@ int db_get_rfcsize(u64_t msg_idnr, u64_t mailbox_idnr, u64_t *rfc_size);
  * \attention caller should free result.
  */
 int db_get_msginfo_range(u64_t msg_idnr_low, u64_t msg_idnr_high,
-		u64_t mailbox_idnr, int get_flags, int get_internaldate,
-		int get_rfcsize, int get_msg_idnr,
-		msginfo_t **result, unsigned *resultsetlen);
+			 u64_t mailbox_idnr, int get_flags,
+			 int get_internaldate, int get_rfcsize,
+			 int get_msg_idnr, msginfo_t ** result,
+			 unsigned *resultsetlen);
 
 /**
  * \brief builds a list containing the fields of
@@ -1240,7 +1247,7 @@ int db_mailbox_msg_match(u64_t mailbox_idnr, u64_t message_idnr);
  *     -  0 if no right
  *     -  1 if user has the right
  */
-int db_acl_has_right(u64_t user_idnr, u64_t mailbox_idnr, 
+int db_acl_has_right(u64_t user_idnr, u64_t mailbox_idnr,
 		     const char *right_flag);
 
 /**

@@ -36,17 +36,17 @@
 extern int TRACE_TO_SYSLOG;
 extern int TRACE_VERBOSE;
 
-extern int TRACE_LEVEL;     /* 5: maximum debugging */
-                            /* 2: normal operations */
+extern int TRACE_LEVEL;		/* 5: maximum debugging */
+			    /* 2: normal operations */
 
 typedef enum {
-    TRACE_FATAL = -1,
-    TRACE_STOP,
-    TRACE_MESSAGE,
-    TRACE_ERROR,
-    TRACE_WARNING,
-    TRACE_INFO,
-    TRACE_DEBUG
+	TRACE_FATAL = -1,
+	TRACE_STOP,
+	TRACE_MESSAGE,
+	TRACE_ERROR,
+	TRACE_WARNING,
+	TRACE_INFO,
+	TRACE_DEBUG
 } trace_t;
 
 #define memtst(tstbool) func_memtst (__FILE__,__LINE__,tstbool)
@@ -67,14 +67,14 @@ typedef enum {
 void func_memtst(const char *filename, int line, int tst);
 #ifdef __GNUC__
 void trace(trace_t level, char *formatstring, ...)
-	 __attribute__((format(printf, 2, 3)));
+    __attribute__ ((format(printf, 2, 3)));
 #else
 void trace(trace_t level, char *formatstring, ...);
 #endif
 
 void configure_debug(trace_t level, int trace_syslog, int trace_verbose);
 
-void* __debug_malloc(unsigned long size, const char *fname, int linenr);
+void *__debug_malloc(unsigned long size, const char *fname, int linenr);
 void __debug_free(void *ptr, const char *fname, int linenr);
 
 void __debug_dumpallocs(void);

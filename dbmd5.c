@@ -40,15 +40,15 @@ unsigned char *makemd5(char *buf)
 	unsigned char result[16];
 	unsigned char *md5hash;
 	int i;
-	
-	md5hash=(unsigned char *)my_malloc(33);
-	
-	gdm_md5_init (&mycontext);
-	gdm_md5_update (&mycontext,buf,strlen(buf));
-	gdm_md5_final (result,&mycontext);
-	
+
+	md5hash = (unsigned char *) my_malloc(33);
+
+	gdm_md5_init(&mycontext);
+	gdm_md5_update(&mycontext, buf, strlen(buf));
+	gdm_md5_final(result, &mycontext);
+
 	for (i = 0; i < 16; i++) {
-	    sprintf (&md5hash[i*2],"%02x", result[i]);
+		sprintf(&md5hash[i * 2], "%02x", result[i]);
 	}
 
 	return md5hash;

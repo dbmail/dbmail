@@ -68,7 +68,7 @@ int auth_disconnect(void);
  *    -  0 if user not found
  *    -  1 otherwise
  */
-int auth_user_exists(const char *username, u64_t *user_idnr);
+int auth_user_exists(const char *username, u64_t * user_idnr);
 
 /**
  * \brief get a list of all known users
@@ -91,7 +91,7 @@ int auth_get_known_users(struct list *users);
  *   - -1 on error
  *   -  1 on success
  */
-int auth_getclientid(u64_t user_idnr, u64_t *client_idnr);
+int auth_getclientid(u64_t user_idnr, u64_t * client_idnr);
 
 /**
  * \brief get the maximum mail size for a user
@@ -104,7 +104,7 @@ int auth_getclientid(u64_t user_idnr, u64_t *client_idnr);
  *        maxmail_size of 0.
  *     -  1 otherwise
  */
-int auth_getmaxmailsize(u64_t user_idnr, u64_t *maxmail_size);
+int auth_getmaxmailsize(u64_t user_idnr, u64_t * maxmail_size);
 
 /**
  * \brief returns a string describing the encryption used for the 
@@ -116,7 +116,7 @@ int auth_getmaxmailsize(u64_t user_idnr, u64_t *maxmail_size);
  * \return
  *    - NULL if error
  */
-char* auth_getencryption(u64_t user_idnr);
+char *auth_getencryption(u64_t user_idnr);
 
 /**
  * \brief find all deliver_to addresses for a username (?, code is not exactly
@@ -127,7 +127,8 @@ char* auth_getencryption(u64_t user_idnr);
  * be set to -1 when called!
  * \return number of deliver_to addresses found
  */
-int auth_check_user (const char *username, struct list *userids, int checks);
+int auth_check_user(const char *username, struct list *userids,
+		    int checks);
 /**
  * \brief as auth_check_user() but adds the numeric ID of the user found to
  * userids or the forward to the fwds list
@@ -137,7 +138,8 @@ int auth_check_user (const char *username, struct list *userids, int checks);
  * \param checks used internally, \b should be -1 on call
  * \return number of deliver_to addresses found
  */
-int auth_check_user_ext(const char *username, struct list *userids, struct list *fwds, int checks);
+int auth_check_user_ext(const char *username, struct list *userids,
+			struct list *fwds, int checks);
 /**
  * \brief add a new user to the database (whichever type of database is 
  * implemented)
@@ -155,8 +157,8 @@ int auth_check_user_ext(const char *username, struct list *userids, struct list 
  * \bug this function creates its own query for adding a mailbox. It would probably
  * be a better idea to let db_create_mailbox() handle this.
  */
-int auth_adduser (char *username, char *password, char *enctype, 
-		  char *clientid, char *maxmail, u64_t *user_idnr);
+int auth_adduser(char *username, char *password, char *enctype,
+		 char *clientid, char *maxmail, u64_t * user_idnr);
 /**
  * \brief delete user from the database. Does not delete the user's email!
  * \param username name of user to be deleted
@@ -184,8 +186,8 @@ int auth_change_username(u64_t user_idnr, const char *new_name);
  *    - -1 on failure
  *    -  0 on success
  */
-int auth_change_password(u64_t user_idnr, 
-		const char *new_pass, const char *enctype);
+int auth_change_password(u64_t user_idnr,
+			 const char *new_pass, const char *enctype);
 /**
  * \brief change a users client id
  * \param user_idnr
@@ -215,7 +217,7 @@ int auth_change_mailboxsize(u64_t user_idnr, u64_t new_size);
  *     -  0 if not validated
  *     -  1 if OK
  */
-int auth_validate (char *username, char *password, u64_t *user_idnr);
+int auth_validate(char *username, char *password, u64_t * user_idnr);
 
 /** 
  * \brief try tp validate a user using md5 hash
@@ -227,8 +229,8 @@ int auth_validate (char *username, char *password, u64_t *user_idnr);
  *      -  0 if not validated
  *      -  user_idrn if OK
  */
-u64_t auth_md5_validate (char *username, unsigned char *md5_apop_he,
-		char *apop_stamp);
+u64_t auth_md5_validate(char *username, unsigned char *md5_apop_he,
+			char *apop_stamp);
 
 /**
  * \brief get username for a user_idnr
@@ -238,7 +240,7 @@ u64_t auth_md5_validate (char *username, unsigned char *md5_apop_he,
  *    - username otherwise
  * \attention caller should free username string
  */
-char *auth_get_userid (u64_t user_idnr);
+char *auth_get_userid(u64_t user_idnr);
 
 
 #endif
