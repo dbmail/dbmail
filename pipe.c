@@ -41,13 +41,10 @@ char *read_header(unsigned long *blksize)
   while ((end_of_header==0) && (!feof(stdin)))
     {
 		strblock = fgets (strblock, READ_BLOCK_SIZE, stdin);
-      usedmem=usedmem + strlen(strblock);
+      usedmem += (strlen(strblock)+1);
 		
       if (usedmem>HEADER_BLOCK_SIZE)
-		{
-			/* add one for \0, since we use strlen for size */
-			memtst(((char *)realloc(header,usedmem+1))==NULL);
-		}
+			memtst(((char *)realloc(header,usedmem))==NULL);
 		
       /* now we concatenate all we have to the header array */
       memtst((header=strcat (header,strblock))==NULL);
@@ -145,27 +142,27 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 	     userids.total_nodes);
       
 		if (userids.total_nodes==0)
-			{
-				/* I needed to change this because my girlfriend said so
-					and she was actually right. Domain forwards are last resorts
-					if a delivery cannot be found with an existing address then
-					and only then we need to check if there are domain delivery's */
-				
-				trace (TRACE_INFO,"insert_messages(): no users found to deliver to. Checking for domain forwards");	
-				
-				domain=strchr((char *)tmp->data,'@');
+		{
+			/* I needed to change this because my girlfriend said so
+				and she was actually right. Domain forwards are last resorts
+				if a delivery cannot be found with an existing address then
+				and only then we need to check if there are domain delivery's */
+			
+			trace (TRACE_INFO,"insert_messages(): no users found to deliver to. Checking for domain forwards");	
+			
+			domain=strchr((char *)tmp->data,'@');
 
-				if (domain!=NULL)	/* this should always be the case! */
-				{
-					trace (TRACE_DEBUG,"insert_messages(): checking for domain aliases. Domain = [%s]",domain);
-					/* checking for domain aliases */
-					db_check_user(domain,&userids);
-					trace (TRACE_DEBUG,"insert_messages(): domain [%s] found total of [%d] aliases",domain,
-						userids.total_nodes);
-				}
+			if (domain!=NULL)	/* this should always be the case! */
+			{
+				trace (TRACE_DEBUG,"insert_messages(): checking for domain aliases. Domain = [%s]",domain);
+				/* checking for domain aliases */
+				db_check_user(domain,&userids);
+				trace (TRACE_DEBUG,"insert_messages(): domain [%s] found total of [%d] aliases",domain,
+					userids.total_nodes);
 			}
+		}
     
-	 	/* user does not excists in aliases tables
+	 	/* user does not exists in aliases tables
 			so bounce this message back with an error message */
       if (userids.total_nodes==0)
 		{
@@ -250,11 +247,10 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 		/* we have local deliveries */ 
 		while (!feof(stdin))
 		{
-			strblock = fread (strblock, sizeof(char), READ_BLOCK_SIZE, stdin);
+			usedmem = fread (strblock, sizeof(char), READ_BLOCK_SIZE, stdin);
 			
-			if (strblock!=NULL) /* this happends when a eof occurs */
+			if (usedmem>0) /* this happends when a eof occurs */
 			{
-				usedmem = strlen (strblock);
 				totalmem=totalmem+usedmem;
 			
 				tmp=list_getstart(&messageids);
@@ -373,11 +369,10 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 					{
 						while (!feof(stdin))
 						{
-							strblock = fread (strblock, sizeof(char), READ_BLOCK_SIZE, stdin);
+							usedmem = fread (strblock, sizeof(char), READ_BLOCK_SIZE, stdin);
 									
-							if (strblock!=NULL) /* this happends when a eof occurs */
+							if (usedmem>0) /* this happends when a eof occurs */
 							{
-								usedmem = strlen (strblock);
 								totalmem=totalmem+usedmem;
 
 								trace(TRACE_DEBUG,"insert_messages(): Sending block size=[%d] total=[%d]",
