@@ -3,8 +3,8 @@ USE dbmail;
 # alter wrong def in alias table
 ALTER TABLE aliases CHANGE client_id client_id BIGINT(21) NOT NULL DEFAULT '0';
 
-# alter user table
 
+# alter user table
 ALTER TABLE user CHANGE useridnr user_idnr BIGINT(21) NOT NULL AUTO_INCREMENT;
 ALTER TABLE user CHANGE clientid client_id BIGINT(21) NOT NULL DEFAULT '0';
 ALTER TABLE user RENAME users;
@@ -15,12 +15,25 @@ ALTER TABLE mailbox CHANGE mailboxidnr mailbox_idnr BIGINT(21) DEFAULT '0' NOT N
 ALTER TABLE mailbox CHANGE owneridnr owner_idnr BIGINT(21) DEFAULT '0' NOT NULL;
 ALTER TABLE mailbox RENAME mailboxes;
 
+
 # alter message table
 ALTER TABLE message CHANGE messageidnr message_idnr BIGINT(21) DEFAULT '0' NOT NULL AUTO_INCREMENT;
 ALTER TABLE message CHANGE mailboxidnr mailbox_idnr BIGINT(21) DEFAULT '0' NOT NULL;
 ALTER TABLE message RENAME messages;
 
+
 # alter messageblk table
 ALTER TABLE messageblk CHANGE messageblknr messageblk_idnr BIGINT(21) DEFAULT '0' NOT NULL AUTO_INCREMENT;
 ALTER TABLE messageblk CHANGE messageidnr message_idnr BIGINT(21) DEFAULT '0' NOT NULL;
 ALTER TABLE messageblk RENAME messageblks;
+
+
+# alter tmpmessage table
+ALTER TABLE tmpmessage CHANGE messageidnr message_idnr BIGINT(21) DEFAULT '0' NOT NULL AUTO_INCREMENT;
+ALTER TABLE tmpmessage CHANGE mailboxidnr mailbox_idnr BIGINT(21) DEFAULT '0' NOT NULL;
+
+
+# alter tmpmessageblk table
+ALTER TABLE tmpmessageblk CHANGE messageblknr messageblk_idnr BIGINT(21) DEFAULT '0' NOT NULL AUTO_INCREMENT;
+ALTER TABLE tmpmessageblk CHANGE messageidnr message_idnr BIGINT(21) DEFAULT '0' NOT NULL;
+

@@ -80,3 +80,33 @@ CREATE TABLE config (
 );
 
 
+CREATE TABLE tmpmessage (
+       message_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
+       mailbox_idnr int(21) DEFAULT '0' NOT NULL,
+       messagesize bigint(21) DEFAULT '0' NOT NULL,
+       seen_flag tinyint(1) default '0' not null,
+       answered_flag tinyint(1) default '0' not null,
+       deleted_flag tinyint(1) default '0' not null,
+       flagged_flag tinyint(1) default '0' not null,
+       recent_flag tinyint(1) default '0' not null,
+       draft_flag tinyint(1) default '0' not null,
+       unique_id varchar(70) NOT NULL,
+       internal_date datetime default '0' not null,
+       status tinyint(3) unsigned zerofill default '000' not null,
+
+       PRIMARY KEY (message_idnr),
+       KEY message_idnr (message_idnr),
+       UNIQUE message_idnr_2 (message_idnr)
+);
+
+CREATE TABLE tmpmessageblk (
+       messageblk_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
+       message_idnr bigint(21) DEFAULT '0' NOT NULL,
+       messageblk longtext NOT NULL,
+       blocksize bigint(21) DEFAULT '0' NOT NULL,
+
+       PRIMARY KEY (messageblk_idnr),
+       KEY messageblk_idnr (messageblk_idnr),
+       KEY msg_index (message_idnr),
+       UNIQUE messageblk_idnr_2 (messageblk_idnr)
+) TYPE=MyISAM;
