@@ -41,6 +41,12 @@ u64_t db_user_exists(const char *username)
       return -1;
     }
 
+  if (PGntuples(res) == 0)
+    {
+      PQclear (res);
+      return 0;
+    }
+
   row = PQgetvalue(res, 0, 0);
   
   uid = (row) ? strtoull(row, 0, 0) : 0;
@@ -71,15 +77,18 @@ int db_get_known_users(struct list *users)
       return -1;
     }
 
-  for (PQcounter = 0; PQcounter < PQntuples(res); PQcounter++)
+  if (PQntuples(res)>0)
     {
-      value = PQgetvalue(res, PQcounter, 0);
+      for (PQcounter = 0; PQcounter < PQntuples(res); PQcounter++)
+       {
+        value = PQgetvalue(res, PQcounter, 0);
 
-      if (!list_nodeadd(users, value, strlen(value)+1))
-	{
-	  list_freelist(&users->start);
-	  return -2;
-	}
+          if (!list_nodeadd(users, value, strlen(value)+1))
+	     {
+	    list_freelist(&users->start);
+	    return -2;
+	     }
+        }
     }
       
   PQclear(res);
@@ -97,6 +106,12 @@ u64_t db_getclientid(u64_t useridnr)
     {
       trace(TRACE_ERROR,"db_getclientid(): could not retrieve client id for user [%llu]\n",useridnr);
       return -1;
+    }
+
+  if (PQntuples (res)==0)
+    {
+        PQclear (res);
+        return 0;
     }
 
   row = PQgetvalue (res, 0, 0);
@@ -118,6 +133,12 @@ u64_t db_getmaxmailsize(u64_t useridnr)
     {
       trace(TRACE_ERROR,"db_getmaxmailsize(): could not retrieve client id for user [%llu]\n",useridnr);
       return -1;
+    }
+
+  if (PQntuples (res)==0)
+    {
+        PQclear (res);
+        return 0;
     }
 
   row = PQgetvalue(res, 0, 0);
@@ -174,14 +195,17 @@ int db_check_user (char *username, struct list *userids, int checks)
       
   trace (TRACE_DEBUG,"db_check_user(): into checking loop");
 
+  if (PQntuples(res)>0)
+    {
   /* field nr. 2 of res is the deliver_to field */
-  for (PQcounter=0; PQcounter < PQntuples(res); PQcounter++)
-  {
-      /* do a recursive search for res[2] */
-      value = PQgetvalue(res, PQcounter, 2);
-      trace (TRACE_DEBUG,"db_check_user(): checking user %s to %s",username, value);
-      occurences += db_check_user (value, userids, 1);
-  }
+    for (PQcounter=0; PQcounter < PQntuples(res); PQcounter++)
+        {
+        /* do a recursive search for res[2] */
+        value = PQgetvalue(res, PQcounter, 2);
+        trace (TRACE_DEBUG,"db_check_user(): checking user %s to %s",username, value);
+        occurences += db_check_user (value, userids, 1);
+        }
+    }   
   
   /* trace(TRACE_INFO,"db_check_user(): user [%s] has [%d] entries",username,occurences); */
   PQclear(res);
@@ -348,7 +372,13 @@ u64_t db_validate (char *user, char *password)
 	
   if (db_query(query)==-1)
       return -1;
-	
+
+  if (PQntuples(res) == 0 ) 
+    {
+        PQclear (res);
+        return 0;
+    }
+
   row = PQgetvalue (res, 0, 0);
 
   id = (row) ? strtoull(row, NULL, 10) : 0;
@@ -373,8 +403,8 @@ u64_t db_md5_validate (char *username,unsigned char *md5_apop_he, char *apop_sta
 
   if (PQntuples(res)<1)
     {
+      PQclear(res);  
       /* no such user found */
-      
       return 0;
     }
 	
