@@ -37,7 +37,8 @@ int main(int argc, char *argv[])
       return 1;
     }
 
-  snprintf(cmdstr, MAX_LINESIZE, "%s %s", SMTP_INJECTOR, argv[1]);
+//  snprintf(cmdstr, MAX_LINESIZE, "%s %s", SMTP_INJECTOR, argv[1]);
+  snprintf(cmdstr, MAX_LINESIZE, "%s", SMTP_INJECTOR);
   in_msg = 0;
 
   while (!feof(stdin) && !ferror(stdin))

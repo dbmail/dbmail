@@ -198,7 +198,7 @@ int do_add(int argc, char *argv[])
 	      return -1;  /* dbase failure */
 	    }
 	  
-	  quiet_printf("Failed: user exists [%llu]\n", useridnr);!man
+	  quiet_printf("Failed: user exists [%llu]\n", useridnr);
 	  if (quiet)
 	    printf("%llu\n", useridnr);
 	}
