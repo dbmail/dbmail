@@ -26,9 +26,6 @@ char *myhostname;
 char *apop_stamp;
 char *timeout_setting;
 
-/* in default do not use md5 authorization */
-int md5_auth = 0;
-
 char *buffer;
 
 int resolve_client;
@@ -279,7 +276,6 @@ int main (int argc, char *argv[])
   char *trace_level=NULL,*trace_syslog=NULL,*trace_verbose=NULL;
   int new_level = 2, new_trace_syslog = 1, new_trace_verbose = 0;
   char *resolve_setting=NULL;
-  char *md5auth_setting=NULL;
   
   pid_t processid;
 	  
@@ -303,16 +299,6 @@ int main (int argc, char *argv[])
   trace_verbose = db_get_config_item("TRACE_VERBOSE", CONFIG_EMPTY);
   timeout_setting = db_get_config_item("POP3D_CHILD_TIMEOUT", CONFIG_EMPTY);
   resolve_setting = db_get_config_item("POP3D_IP_RESOLVE",CONFIG_EMPTY);
-  md5auth_setting	= db_get_config_item("MD5_AUTHENTICATION", CONFIG_EMPTY);
-  
-  if (md5auth_setting)
-  {
-	  if (strcasecmp(md5auth_setting,"yes")==0)
-			md5_auth = 1;
-	  else
-		  md5_auth = 0;
-	  free (md5auth_setting);
-  }
   
   if (resolve_setting)
   {

@@ -148,7 +148,7 @@ int pop3 (void *stream, char *buffer)
 	    strncpy (password,value,strlen(value)+1);
 	  }
 				
-	result=db_validate (username,password);
+	result=db_validate (username,password, md5_auth);
 				
 	switch (result)
 	  {
