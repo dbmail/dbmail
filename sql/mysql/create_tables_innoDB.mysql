@@ -28,6 +28,8 @@
 
 #USE dbmail;
 
+SET FOREIGN_KEY_CHECKS=0;
+
 DROP TABLE IF EXISTS aliases;
 CREATE TABLE aliases (
 	alias_idnr bigint(21) NOT NULL auto_increment,
@@ -190,6 +192,7 @@ CREATE TABLE pbsp (
    INDEX since_idx (since)
 ) TYPE=InnoDB;
 
+SET FOREIGN_KEY_CHECKS=1;
 # create the user for the delivery chain
 INSERT INTO users (userid, passwd, encryption_type) 
 	VALUES ('__@!internal_delivery_user!@__', '', 'md5');

@@ -492,8 +492,8 @@ int auth_adduser(char *username, char *password, char *enctype,
 
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
 		 "INSERT INTO users "
-		 "(userid,passwd,client_idnr,maxmail_size,encryption_type) VALUES "
-		 "('%s','%s',%s,'%llu','%s')",
+		 "(userid,passwd,client_idnr,maxmail_size,encryption_type, last_login) VALUES "
+		 "('%s','%s',%s,'%llu','%s', CURRENT_TIMESTAMP)",
 		 username, escapedpass, clientid, size,
 		 enctype ? enctype : "");
 

@@ -1,3 +1,8 @@
+2004-04-22  Ilja Booij  <ilja@ic-s.nl>
+
+	* auth/authsql.c (auth_adduser): now adds the current timestamp
+	in the last_login field of the users table if a user is added.
+
 2004-04-21  Ilja Booij  <ilja@ic-s.nl>
 
 	* imap4.c (IMAPClientHandler): changed i to size_t
