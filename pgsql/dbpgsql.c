@@ -24,6 +24,14 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+/* UNUSED enables us to tell the compiler
+ * about unused variables
+ */
+#ifdef __GNUC__
+#define UNUSED __attribute__((__unused__))
+#else
+#define UNUSED
+#endif
 
 PGconn *conn;  
 PGresult *res;
@@ -1186,7 +1194,7 @@ u64_t db_check_mailboxsize (u64_t mailboxid)
 }
 
 
-u64_t db_check_sizelimit (u64_t addblocksize, u64_t messageidnr, 
+u64_t db_check_sizelimit (u64_t addblocksize UNUSED, u64_t messageidnr, 
 			  u64_t *useridnr)
 {
   /* returns -1 when a block cannot be inserted due to dbase failure
@@ -2580,7 +2588,8 @@ int db_getmailbox(mailbox_t *mb, u64_t userid)
 	   "flagged_flag,"
 	   "recent_flag,"
 	   "draft_flag "
-	   " FROM mailboxes WHERE mailbox_idnr = %llu::bigint", mb->uid);
+	   " FROM mailboxes WHERE mailbox_idnr = %llu::bigint"
+	   " AND owner_idnr = %llu::bigint", mb->uid, userid);
 
   if (db_query(query) == -1)
     {
@@ -2841,7 +2850,9 @@ int db_removemailbox(u64_t uid, u64_t ownerid)
     }
 
   /* now remove mailbox */
-  snprintf(query, DEF_QUERYSIZE, "DELETE FROM mailboxes WHERE mailbox_idnr = %llu::bigint", uid);
+  snprintf(query, DEF_QUERYSIZE, "DELETE FROM mailboxes"
+		                 " WHERE mailbox_idnr = %llu::bigint"
+				 " AND owner_idnr = %llu::bigint", uid, ownerid);
   if (db_query(query) == -1)
     {
       trace(TRACE_ERROR, "db_removemailbox(): could not remove mailbox\n");
@@ -2942,12 +2953,12 @@ int db_noinferiors(u64_t uid)
  * set the noselect flag of a mailbox on/off
  * returns 0 on success, -1 on failure
  */
-int db_setselectable(u64_t uid, int val)
+int db_setselectable(u64_t uid, int select_value)
 {
 
 
   snprintf(query, DEF_QUERYSIZE, "UPDATE mailboxes SET no_select = %d WHERE mailbox_idnr = %llu::bigint",
-	   (!value), uid);
+	   (!select_value), uid);
 
   if (db_query(query) == -1)
     {

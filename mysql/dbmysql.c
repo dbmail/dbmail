@@ -23,6 +23,14 @@
 #include "rfcmsg.h"
 #include "auth.h"
 
+/* #define UNUSED suppresses compiler warnings about unused
+ * variables
+ **/
+#ifdef __GNUC__
+#define UNUSED __attribute__((__unused__))
+#else
+#define UNUSED
+#endif
 
 MYSQL conn;  
 MYSQL_RES *res;
@@ -74,7 +82,7 @@ int db_connect ()
 }
 
 
-u64_t db_insert_result (const char *sequence_identifier)
+u64_t db_insert_result (const char *sequence_identifier UNUSED)
 {
   u64_t insert_result;
   insert_result=mysql_insert_id(&conn);
@@ -1267,7 +1275,7 @@ u64_t db_check_mailboxsize (u64_t mailboxid)
 }
 
 
-u64_t db_check_sizelimit (u64_t addblocksize, u64_t message_idnr, 
+u64_t db_check_sizelimit (u64_t addblocksize UNUSED, u64_t message_idnr, 
 				  u64_t *useridnr)
 {
   /* returns -1 when a block cannot be inserted due to dbase failure
@@ -2504,8 +2512,9 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen, u64_t mboxid, u64_t u
  *
  * returns -1 on failure, 0 on success
  */
-int db_insert_message_complete(u64_t useridnr, MEM *hdr, MEM *body, 
-			       u64_t hdrsize, u64_t bodysize, u64_t rfcsize)
+int db_insert_message_complete(u64_t useridnr UNUSED, MEM *hdr UNUSED, 
+		               MEM *body UNUSED, u64_t hdrsize UNUSED,
+			       u64_t bodysize UNUSED, u64_t rfcsize UNUSED)
 
 {
   return 0;
@@ -2673,7 +2682,7 @@ int db_getmailbox(mailbox_t *mb, u64_t userid)
 	   "flagged_flag,"
 	   "recent_flag,"
 	   "draft_flag "
-	   " FROM mailboxes WHERE mailbox_idnr = %llu", mb->uid);
+	   " FROM mailboxes WHERE mailbox_idnr = %llu AND owner_idnr = %llu", mb->uid, userid);
 
   if (db_query(query) == -1)
     {
@@ -2938,7 +2947,8 @@ int db_removemailbox(u64_t uid, u64_t ownerid)
     }
 
   /* now remove mailbox */
-  snprintf(query, DEF_QUERYSIZE, "DELETE FROM mailboxes WHERE mailbox_idnr = %llu", uid);
+  snprintf(query, DEF_QUERYSIZE, "DELETE FROM mailboxes WHERE mailbox_idnr = %llu"
+		                 " AND owner_idnr = %llu", uid, ownerid);
   if (db_query(query) == -1)
     {
       trace(TRACE_ERROR, "db_removemailbox(): could not remove mailbox\n");
@@ -3047,12 +3057,12 @@ int db_noinferiors(u64_t uid)
  * set the noselect flag of a mailbox on/off
  * returns 0 on success, -1 on failure
  */
-int db_setselectable(u64_t uid, int value)
+int db_setselectable(u64_t uid, int select_value)
 {
   
 
   snprintf(query, DEF_QUERYSIZE, "UPDATE mailboxes SET no_select = %d WHERE mailbox_idnr = %llu",
-	   (!value), uid);
+	   (!select_value), uid);
 
   if (db_query(query) == -1)
     {

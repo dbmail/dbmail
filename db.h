@@ -173,7 +173,7 @@ int db_listmailboxchildren(u64_t uid, u64_t useridnr,
 int db_removemailbox(u64_t uid, u64_t ownerid);
 int db_isselectable(u64_t uid);
 int db_noinferiors(u64_t uid);
-int db_setselectable(u64_t uid, int val);
+int db_setselectable(u64_t uid, int select_value);
 int db_removemsg(u64_t uid);
 int db_movemsg(u64_t to, u64_t from);
 int db_copymsg(u64_t msgid, u64_t destmboxid);
