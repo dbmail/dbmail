@@ -1,3 +1,9 @@
+2004-06-14  Ilja Booij  <ilja@ic-s.nl>
+
+	* pgsql/dbpgsql.c (db_query): now checks and resets the connection
+	by itself. No longer uses db_check_connection.
+	(db_check_connection): removed function. Was no longer in use.
+
 2004-06-13 Aaron Stone <aaron@serendipity.cx>
 
 	* main.c (main): initialize the variable 'header' to NULL
