@@ -1,3 +1,10 @@
+2005-03-07  Paul Stevens <paul@nfg.nl>
+
+	* clientinfo.h: removed file and moved struct to dbmailtypes.h
+	* server.c: stylistic cleanup
+	* user.c: fix handling of lists of aliases so dbmail-user works
+	almost as documented.
+
 2005-03-01  Paul Stevens <paul@nfg.nl>
 
 	* Makefile.am, acinclude.m4: changed the autotools setup to build
