@@ -74,8 +74,13 @@ static int send_notification(const char *to, const char *from,
 	char *sendmail_command = NULL;
 	field_t sendmail;
 	int result;
+	size_t sendmail_command_maxlen;
 
-	GetConfigValue("SENDMAIL", &smtpItems, sendmail);
+	if (GetConfigValue("SENDMAIL", &smtpItems, sendmail) < 0) 
+		trace(TRACE_FATAL,
+		      "%s,%s: error getting Config Values",
+		      __FILE__, __FUNCTION__);
+
 	if (sendmail[0] == '\0')
 		trace(TRACE_FATAL,
 		      "send_notification(): SENDMAIL not configured (see config file). Stop.");
@@ -83,9 +88,11 @@ static int send_notification(const char *to, const char *from,
 	trace(TRACE_DEBUG,
 	      "send_notification(): found sendmail command to be [%s]",
 	      sendmail);
+	
+	sendmail_command_maxlen = strlen((char *) to) + strlen(sendmail) + 2;
 
-
-	sendmail_command = (char *) my_malloc(strlen((char *) (to)) + strlen(sendmail) + 2);	/* +2 for extra space and \0 */
+	sendmail_command = (char *) my_malloc(sendmail_command_maxlen *
+					      sizeof(char));
 	if (!sendmail_command) {
 		trace(TRACE_ERROR, "send_notification(): out of memory");
 		return -1;
@@ -93,7 +100,8 @@ static int send_notification(const char *to, const char *from,
 
 	trace(TRACE_DEBUG, "send_notification(): allocated memory for"
 	      " external command call");
-	sprintf(sendmail_command, "%s %s", sendmail, to);
+	(void) snprintf(sendmail_command, sendmail_command_maxlen,
+		"%s %s", sendmail, to);
 
 	trace(TRACE_INFO, "send_notification(): opening pipe to command "
 	      "%s", sendmail_command);
@@ -103,6 +111,7 @@ static int send_notification(const char *to, const char *from,
 		trace(TRACE_ERROR,
 		      "send_notification(): could not open pipe to sendmail using cmd [%s]",
 		      sendmail);
+		my_free(sendmail_command);
 		return 1;
 	}
 
@@ -120,7 +129,7 @@ static int send_notification(const char *to, const char *from,
 	if (result != 0)
 		trace(TRACE_ERROR,
 		      "send_notification(): reply could not be sent: sendmail error");
-
+	my_free(sendmail_command);
 	return 0;
 }
 
@@ -142,7 +151,12 @@ static int send_reply(struct list *headerfields, const char *body)
 	int result;
 	unsigned int i, j;
 
-	GetConfigValue("SENDMAIL", &smtpItems, sendmail);
+	if (GetConfigValue("SENDMAIL", &smtpItems, sendmail) < 0)
+		trace(TRACE_FATAL,
+		      "%s,%s: error getting config",
+		      __FILE__, __FUNCTION__);
+
+
 	if (sendmail[0] == '\0')
 		trace(TRACE_FATAL,
 		      "send_reply(): SENDMAIL not configured (see config file). Stop.");
@@ -191,6 +205,11 @@ static int send_reply(struct list *headerfields, const char *body)
 	escaped_send_address =
 	    (char *) my_malloc(strlen((send_address) + 1)
 			       * 2 * sizeof(char));
+	if (!escaped_send_address) {
+		trace(TRACE_ERROR, "%s,%s: unable to allocate memory. Memory "
+		      "full?", __FILE__, __FUNCTION__);
+		return 0;
+	}
 	i = 0;
 	j = 0;
 	/* get all characters from send_address, and escape every ' */
@@ -199,13 +218,14 @@ static int send_reply(struct list *headerfields, const char *body)
 			escaped_send_address[j++] = '\\';
 		escaped_send_address[j++] = send_address[i++];
 	}
-	snprintf(comm, MAX_COMM_SIZE, "%s '%s'", sendmail,
+	(void) snprintf(comm, MAX_COMM_SIZE, "%s '%s'", sendmail,
 		 escaped_send_address);
 
 	if (!(mailpipe = popen(comm, "w"))) {
 		trace(TRACE_ERROR,
 		      "send_reply(): could not open pipe to sendmail using cmd [%s]",
 		      comm);
+		my_free(escaped_send_address);
 		return 1;
 	}
 
@@ -223,7 +243,7 @@ static int send_reply(struct list *headerfields, const char *body)
 	if (result != 0)
 		trace(TRACE_ERROR,
 		      "send_reply(): reply could not be sent: sendmail error");
-
+	my_free(escaped_send_address);
 	return 0;
 }
 

@@ -122,7 +122,7 @@ int ReadConfig(const char *serviceName, const char *cfilename,
               item with name is found in items.
  */
 int GetConfigValue(const field_t name, struct list *cfg_items,
-		   field_t value);
+		   /*@out@*/ field_t value);
 
 /* some common used functions reading config options */
 /**
