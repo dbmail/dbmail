@@ -252,7 +252,7 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist,
 	      if (delimiter[idx+j] == '\n')
 		{
 		  mr->value[vallen++] = '\r';
-		  /* dont count newline: this \n is already expanded */
+		  /* dont count newline here: it is already counted */
 		}
 	      
 	      mr->value[vallen] = delimiter[idx+j];
@@ -321,7 +321,6 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist,
 	  trace(TRACE_DEBUG,"Non valid mimeheader found, data [%s]\nfreeing list...\n",startptr);
 	  list_freelist(&mimelist->start);
 	  mimelist->total_nodes = 0;
-	  trace(TRACE_DEBUG,"freeing list done, start: %X\n ",mimelist->start);
 
 	  return -1;
 	}

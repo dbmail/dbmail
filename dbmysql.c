@@ -3253,6 +3253,7 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 
       msgidx += strlen(newbound);   /* skip the boundary */
       msgidx++;                     /* skip \n */
+      totallines++;                 /* and count it */
 
       /* find MIME-parts */
       if ((nlines = db_add_mime_children(&msg->children, newbound)) == -1)
@@ -3271,7 +3272,15 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 	}
 
       free(newbound);
-      db_give_msgpos(&msg->bodyend);
+      if (msgidx == buflen)
+	{
+	  msgidx--;
+	  db_give_msgpos(&msg->bodyend);
+	  msgidx++;
+	}
+      else
+	db_give_msgpos(&msg->bodyend);
+
       msg->bodysize = db_give_range_size(&msg->bodystart, &msg->bodyend);
       msg->bodylines = totallines;
 
@@ -3298,8 +3307,9 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 		  strncmp(&msgbuf[msgidx+3], stopbound, sblen) == 0)
 		{
 		  db_give_msgpos(&msg->bodyend);
-		  msgidx++;
 		  msg->bodysize = db_give_range_size(&msg->bodystart, &msg->bodyend);
+
+		  msgidx++; /* msgbuf[msgidx] == '-' now */
 		  
 		  /* advance to after stopbound */
 		  msgidx += sblen+2; /* (add 2 cause double hyphen preceeds) */
@@ -3310,16 +3320,19 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 		    }
 
 		  trace(TRACE_DEBUG,"db_start_msg(): stopbound reached\n");
-		  return (totallines+msg->bodylines);
+		  return (totallines+msg->bodylines+hdrlines);
 		}
 
 	      msgidx++;
 	    }
 
-	  /* end of buffer reached, bodyend is prev pos */
-	  db_give_msgpos(&msg->bodyend);
-	  msg->bodysize = db_give_range_size(&msg->bodystart, &msg->bodyend);
+	  /* end of buffer reached, invalid message encountered: there should be a stopbound! */
+/*	  db_give_msgpos(&msg->bodyend);
+	  msg->bodysize = db_give_range_size(&msg->bodystart, &msg->bodyend)
 	  totallines += msg->bodylines;
+*/
+	  trace(TRACE_ERROR, "db_start_msg(): no stopbound where expected...");
+	  return -1;
 	}
       else
 	{
@@ -3344,9 +3357,6 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 	      if (result == -1)
 		return -1;
 	    } 
-
-	  if (msgidx < buflen)
-	    msgidx++;
 
 	  db_give_msgpos(&msg->bodyend);
 	  msg->bodysize = db_give_range_size(&msg->bodystart, &msg->bodyend);
@@ -3398,6 +3408,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
 	      trace(TRACE_ERROR,"db_add_mime_children(): error retrieving message\n");
 	      return -1;
 	    }
+	  trace(TRACE_DEBUG,"db_add_mime_children(): got %d newlines from start_msg()\n",nlines);
 	  totallines += nlines;
 	  part.bodylines = nlines;
 
@@ -3425,11 +3436,12 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
 	      msgidx++;
 	    }
 
+	  /* at this point msgbuf[msgidx] is either
+	   * 0 (end of data) -- invalid message!
+	   * or the character right before '--<splitbound>'
+	   */
+
 	  totallines += part.bodylines;
-
-	  if (msgbuf[msgidx] == '\n')
-	    totallines++;
-
 
 	  if (!msgbuf[msgidx])
 	    {
@@ -3438,8 +3450,9 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
 	    }
 
 	  db_give_msgpos(&part.bodyend);
-	  msgidx++;
 	  part.bodysize = db_give_range_size(&part.bodystart, &part.bodyend);
+
+	  msgidx++; /* msgbuf[msgidx] == '-' after this statement */
 
 	  msgidx += sblen+2;   /* skip the boundary & double hypen */
 	}
@@ -3470,16 +3483,20 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
 	  return totallines;
 	}
 
+      /* ok we're not done yet, skip the newline that follows the boundary */
       if (msgbuf[msgidx] == '\n') 
 	{
-/*	  totallines++;*/
-	  msgidx++; /* skip newline */
+	  totallines++;
+	  msgidx++;    /* skip newline */
 	}
     }
   while (msgbuf[msgidx]) ;
 
-  trace(TRACE_DEBUG,"db_add_mime_children(): exit\n");
+/*  trace(TRACE_DEBUG,"db_add_mime_children(): exit\n");
   return totallines;
+*/
+  trace(TRACE_ERROR,"db_add_mime_children(): invalid message (no ending boundary found)\n");
+  return -1;
 }
 
 
@@ -3614,7 +3631,7 @@ long db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long 
   if (start.block == end.block)
     {
       /* dump everything */
-      for (i=start.pos; i<end.pos; i++)
+      for (i=start.pos; i<=end.pos; i++)
 	{
 	  if (row[0][i] == '\n')
 	    outcnt += fprintf(outstream,"\r\n");
@@ -3642,7 +3659,7 @@ long db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long 
 	}
 
       startpos = (i == start.block) ? start.pos : 0;
-      endpos   = (i == end.block) ? end.pos : (mysql_fetch_lengths(res))[0];
+      endpos   = (i == end.block) ? end.pos+1 : (mysql_fetch_lengths(res))[0];
 
       distance = endpos - startpos;
 
@@ -3804,5 +3821,4 @@ int db_search_messages(char **search_keys, unsigned long **search_results, int *
 
   return 0;
 }
-
 
