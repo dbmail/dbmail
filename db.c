@@ -201,10 +201,11 @@ int db_subtract_quotum_used(u64_t user_idnr, u64_t sub_size)
 int db_check_quotum_used(u64_t user_idnr, u64_t msg_size)
 {
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT (maxmail_size > 0) "
-		 "   AND (curmail_size + '%llu' > maxmail_size)"
-		 "  FROM users "
-		 " WHERE user_idnr = '%llu'", msg_size, user_idnr);
+		 "SELECT 1 FROM users "
+		 "WHERE user_idnr = '%llu' "
+		 "AND (maxmail_size > 0) "
+		 "AND (curmail_size + '%llu' > maxmail_size)",
+		 user_idnr, msg_size);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error checking quotum for "
@@ -215,9 +216,10 @@ int db_check_quotum_used(u64_t user_idnr, u64_t msg_size)
 	/* If there is a quotum defined, and the inequality is true,
 	 * then the message would therefore exceed the quotum,
 	 * and so the function returns non-zero. */
-	if (db_get_result_u64(0, 0) == 1)
+	if (db_num_rows() > 0) {
+		db_free_result();
 		return 1;
-
+	}
 	db_free_result();
 	return 0;
 }

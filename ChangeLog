@@ -1,3 +1,11 @@
+2004-04-15  Ilja Booij  <ilja@ic-s.nl>
+
+	* db.c (db_check_quotum_used): changed query so it also returns 1 if
+	over quotum on PostgreSQL (and Oracle). Added db_free_result() to 
+	also free result if over quotum. The function now just checks if the
+	query returns any rows.
+	
+
 2004-04-14  Ilja Booij  <ilja@ic-s.nl>
 
 	* header.c (read_header): use strncat instead of strncpy to add new
