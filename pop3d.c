@@ -76,7 +76,7 @@ int main(int argc, char *argv[], char **envp)
 		  return 0;
 	  }
 	  else
-		  if (strcmp (argv[1],"-f") && (argv[2]))
+		  if (strcmp(argv[1],"-f")==0 && (argv[2]))
 				configFile = argv[2];
     }
 

@@ -62,15 +62,16 @@ int main(int argc, char *argv[])
   openlog(PNAME, LOG_PID, LOG_MAIL);
 
   if (argc >= 2 && argv[1])
-  {
-	  if (strcmp(argv[1],"-v") == 0)
-	  {
-		  printf ("\n*** DBMAIL: dbmail-imap version $Revision$ %s\n",COPYRIGHT);
-		  return 0;
-	  }
-	  else
-		if (argv[2] && (strcmp(argv[1],"-f")))
-			configFile = argv[2];
+    {
+      if (strcmp(argv[1],"-v") == 0)
+	{
+	  printf ("\n*** DBMAIL: dbmail-imap version $Revision$ %s\n",COPYRIGHT);
+	  return 0;
+	}
+      else if (argv[2] && (strcmp(argv[1],"-f") == 0))
+	{
+	  configFile = argv[2];
+	}
     }
 	      
   SetMainSigHandler();
