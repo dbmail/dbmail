@@ -470,8 +470,7 @@ static int store_message_temp(FILE * instream,
 					first_empty_line_skipped = 1;
 					continue;
 				default:
-					trace(TRACE_FATAL, "%s,%s:we shouldn't reach "
-					      "this statement!", __FILE__, __FUNCTION__);
+					break;
 				}
 			}
 			/* Find \n not preceded by \r. */
