@@ -639,7 +639,6 @@ u64_t db_insert_message_block(const char *block, u64_t len, u64_t msgid)
 {
   char *escaped_query = NULL;
   unsigned maxesclen = (READ_BLOCK_SIZE+1) * 2 + DEF_QUERYSIZE, startlen = 0, esclen = 0;
-  unsigned tmp;
 
   if (block == NULL)
     {
@@ -653,14 +652,6 @@ u64_t db_insert_message_block(const char *block, u64_t len, u64_t msgid)
       trace (TRACE_ERROR,"db_insert_message_block(): blocksize [%llu], maximum is [%llu]",
 	     len, READ_BLOCK_SIZE);
       return -1;
-    }
-
-  if ((tmp = strlen(block)) != len)
-    {
-      trace (TRACE_INFO,"db_insert_message_block(): got faulty block size length [%u] "
-	     "instead of [%u]", len, tmp);
-      
-//      len = tmp;
     }
 
   escaped_query = (char*)my_malloc(sizeof(char) * maxesclen);
