@@ -58,7 +58,7 @@ typedef struct
 {
 	int error_count;		/* how many errors have occured? */
 	int state; 			/* what is the current pop state */
-	int cmdtype; 			/* index into commands array of last command issued */
+	int was_apop; 			/* session was apop (no plaintext password) */
 
 	int SessionResult;		/* what happened during the session */
 	

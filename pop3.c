@@ -66,6 +66,7 @@ int pop3_handle_connection (clientinfo_t *ci)
 
 	/* setting Session variables */
 	session.error_count = 0;
+	session.was_apop = 0;
 
 	session.username = NULL;
 	session.password = NULL;
@@ -169,8 +170,7 @@ int pop3_handle_connection (clientinfo_t *ci)
 	my_free(session.apop_stamp);
 	session.apop_stamp = NULL;
 
-	/* there is no plaintext password for APOP (commandstype 11) */
-	if (session.username != NULL && (session.cmdtype == 11 || session.password != NULL))
+	if (session.username != NULL && (session.was_apop || session.password != NULL))
 	{
 		switch (session.SessionResult)
 		{
@@ -293,11 +293,11 @@ int pop3 (void *stream, char *buffer, char *client_ip, PopSession_t *session)
 
 	for (cmdtype = POP3_STRT; cmdtype < POP3_END; cmdtype ++)
 		if (strcasecmp(command, commands[cmdtype]) == 0) {
-			session->cmdtype = cmdtype;
+			session->was_apop = 1;
 			break;
 		}
 
-	trace (TRACE_DEBUG,"pop3(): command looked up as commandtype %d", session->cmdtype);
+	trace (TRACE_DEBUG,"pop3(): command looked up as commandtype %d", cmdtype);
 
 	/* commands that are allowed to have no arguments */
 	if ((value==NULL) && (cmdtype!=POP3_QUIT) && (cmdtype!=POP3_LIST) &&
