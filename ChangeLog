@@ -1,5 +1,8 @@
 2004-01-29  Ilja Booij  <ilja@ic-s.nl>
 
+	* imap4.c (IMAPClientHandler): No only rebuilds mailbox_t structure
+	after a NOOP, CHECK, SELECT or EXPUNGE
+
 	* mysql/dbmysql.c (db_connect): added auto reconnect flag to MYSQL 
 	structure.
 	(db_check_connection): added attempt to reconnect to database.
@@ -8,6 +11,11 @@
 	always free result set.
 	(db_send_message_lines): added a db_free_result statements to always
 	free result set.
+	(db_delete_mailbox): change from getting the owner of the mailbox to 
+	the beginning of the function. The owner_idnr is now found using
+	the db_get_mailbox_owner() function.
+	(db_listmailboxchildren): now does a check to see if any mailboxes
+	can be found instead of using db_get_result() without this check.
 
 2004-01-28  Ilja Booij  <ilja@ic-s.nl>
 

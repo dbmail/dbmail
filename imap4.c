@@ -364,40 +364,45 @@ int IMAPClientHandler(ClientInfo *ci)
       /* check if mailbox status has changed (notify client) */
       if (ud->state == IMAPCS_SELECTED)
 	{
-	  /* update mailbox info */
-	  memset(&newmailbox, 0, sizeof(newmailbox));
-	  newmailbox.uid = ud->mailbox.uid;
+		if (i == IMAP_COMM_NOOP ||
+		    i == IMAP_COMM_CHECK ||
+		    i == IMAP_COMM_SELECT ||
+		    i == IMAP_COMM_EXPUNGE) {
+			/* update mailbox info */
+			memset(&newmailbox, 0, sizeof(newmailbox));
+			newmailbox.uid = ud->mailbox.uid;
 
-	  result = db_getmailbox(&newmailbox);
-	  if (result == -1)
-	    {
-	      fprintf(ci->tx,"* BYE internal dbase error\r\n");
-	      trace(TRACE_ERROR, "IMAPClientHandler(): could not get mailbox info\n");
+			result = db_getmailbox(&newmailbox);
+			if (result == -1)
+			{
+				fprintf(ci->tx,"* BYE internal dbase error\r\n");
+				trace(TRACE_ERROR, "IMAPClientHandler(): could not get mailbox info\n");
 	      
-	      close_cache();
-	      null_free(((imap_userdata_t*)ci->userData)->mailbox.seq_list);
-	      null_free(ci->userData);
+				close_cache();
+				null_free(((imap_userdata_t*)ci->userData)->mailbox.seq_list);
+				null_free(ci->userData);
 
-	      for (i=0; args[i]; i++) 
-		{
-		  my_free(args[i]);
-		  args[i] = NULL;
+				for (i=0; args[i]; i++) 
+				{
+					my_free(args[i]);
+					args[i] = NULL;
+				}
+				
+				return -1;
+			}
+
+			if (newmailbox.exists != ud->mailbox.exists)
+			{
+				fprintf(ci->tx, "* %u EXISTS\r\n", newmailbox.exists);
+				trace(TRACE_INFO, "IMAPClientHandler(): ok update sent\r\n");
+			}
+
+			if (newmailbox.recent != ud->mailbox.recent)
+				fprintf(ci->tx, "* %u RECENT\r\n", newmailbox.recent);
+
+			my_free(ud->mailbox.seq_list);
+			memcpy(&ud->mailbox, &newmailbox, sizeof(newmailbox));
 		}
-	  
-	      return -1;
-	    }
-
-	  if (newmailbox.exists != ud->mailbox.exists)
-	    {
-	      fprintf(ci->tx, "* %u EXISTS\r\n", newmailbox.exists);
-	      trace(TRACE_INFO, "IMAPClientHandler(): ok update sent\r\n");
-	    }
-
-	  if (newmailbox.recent != ud->mailbox.recent)
-	    fprintf(ci->tx, "* %u RECENT\r\n", newmailbox.recent);
-
-	  my_free(ud->mailbox.seq_list);
-	  memcpy(&ud->mailbox, &newmailbox, sizeof(newmailbox));
 	}
       if (this_was_noop) 
 	      fprintf(ci->tx, "%s OK NOOP completed\r\n", tag);

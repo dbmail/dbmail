@@ -3,7 +3,7 @@
 
 For DBMail 2.0
 -   LMTP server (this will speed up MTA -> dbmail communication)
--   stop IMAP from building mailbox_t struct on every command
+-   Database table prefixes
 
 For DBMail 2.1
 -   Sieve scripting language

@@ -1394,7 +1394,21 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty)
     unsigned i, n;
     u64_t *message_idnrs;
     u64_t user_idnr = 0;
+    int result;
 
+    /* get the user_idnr of the owner of the mailbox */
+    result = db_get_mailbox_owner(mailbox_idnr, &user_idnr);
+    if (result < 0) {
+	    trace(TRACE_ERROR, "%s,%s: cannot find owner of mailbox for "
+		  "mailbox [%llu]", __FILE__, __FUNCTION__, mailbox_idnr);
+	    return -1;
+    }
+    if (result == 0) {
+	    trace(TRACE_ERROR, "%s,%s: unable to find owner of mailbox "
+		  "[%llu]", __FILE__, __FUNCTION__, mailbox_idnr);
+	    return 0;
+    }
+    
     /* remove the mailbox */
     if (!only_empty) {
 	    /* delete mailbox */
@@ -1438,10 +1452,6 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty)
     db_free_result();
     /* delete every message in the mailbox */
     for (i = 0; i < n; i++) {
-	/* get the user_idnr of the messages for later use */
-	    if (user_idnr == 0)
-		    user_idnr = db_get_useridnr(message_idnrs[i]);
-	    
 	    if (db_delete_message(message_idnrs[i]) == -1) {
 		    trace(TRACE_ERROR, "%s,%s: error deleting message [%llu] "
 			  "database might be inconsistent. run "
@@ -2399,6 +2409,15 @@ int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
 	return -1;
     }
 
+    if (db_num_rows() == 0) {
+	    trace(TRACE_WARNING, "%s,%s: No mailbox found with mailbox_idnr "
+		  "[%llu]", __FILE__, __FUNCTION__, mailbox_idnr);
+	    db_free_result();
+	    *children = NULL;
+	    *nchildren = 0;
+	    return 0;
+    }
+	
     mailbox_name = db_get_result(0, 0);
     db_free_result();
     if (mailbox_name)
@@ -2418,7 +2437,7 @@ int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
 	return -1;
     }
 
-    if (!db_get_result(0, 0)) {
+    if (db_num_rows() == 0) {
 	/* empty set */
 	*children = NULL;
 	*nchildren = 0;
