@@ -1,3 +1,9 @@
+2004-12-22  Paul Stevens <paul@nfg.nl>
+
+	* check_dbmail_imapd.c, mime.c, rfcmsg.c, dbmail-message.c,
+	dbmail-message.h: correctly handle both messages and messageparts as 
+	parsed by mime_readheader.
+	
 2004-12-21  Aaron Stone  <aaron@serendipity.cx>
 
 	* dbmd5.c (makemd5): return NULL if passed NULL.
@@ -10,6 +16,9 @@
 	* check_dbmail_imapd.c, db.c, imap4.h, imaputil.c, lmtp.c, main.c,
 	mime.c, mime.h: start refactoring of mime_readheader by introducing
 	mime_fetch_headers.
+	* check_dbmail_imapd.c, dbmail-message.c, dbmail-message.h, mime.c,
+	rfcmsg.c: modify mime_readheader to use mime_fetch_headers for actual
+	parsing.
 	
 2004-12-15  Paul Stevens <paul@nfg.nl>
 

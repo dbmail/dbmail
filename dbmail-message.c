@@ -79,11 +79,23 @@ void dbmail_message_set_class(struct DbmailMessage *self, int klass)
 {
 	self->klass = klass;
 }
+int dbmail_message_get_class(struct DbmailMessage *self)
+{
+	return self->klass;
+}
 
 struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *self, const GString *content)
 {
 	_set_content(self,content);
+	/* If there's no From header assume it's a message-part and re-init */
+	if (dbmail_message_get_class(self) == DBMAIL_MESSAGE) {
+		if (! g_mime_message_get_header(GMIME_MESSAGE(self->content),"From")) {
+			dbmail_message_set_class(self, DBMAIL_MESSAGE_PART);
+			_set_content(self, content);
+		}
+	}
 	_map_headers(self);
+	
 	self->rfcsize = dbmail_message_get_rfcsize(self);
 	return self;
 }
@@ -124,7 +136,7 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 	
 	parser = g_mime_parser_new_with_stream(ostream);
 	
-	switch (self->klass) {
+	switch (dbmail_message_get_class(self)) {
 		case DBMAIL_MESSAGE:
 			self->content = GMIME_OBJECT(g_mime_parser_construct_message(parser));
 			break;

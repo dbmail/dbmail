@@ -40,19 +40,55 @@
 #include "dbmail-imapsession.h"
 #include "dbmail-message.h"
 #include "mime.h"
+#include "rfcmsg.h"
+#include "dbmsgbuf.h"
 
 /* we need this one because we can't directly link imapd.o */
 int imap_before_smtp = 0;
+extern char *msgbuf_buf;
+extern u64_t msgbuf_idx;
+extern u64_t msgbuf_buflen;
 
 /* simple testmessage. */
-char *raw_message = "From: someone@foobar.nl\n"
-	"To: nobody@foobar.nl\n"
-	"Subject: testing\n"
-	"Received: at someserver from otherserver\n"
-	"Received: at otherserver from localhost\n"
+char *raw_message = "From: <vol@inter7.com>\n"
+	"To: <vol@inter7.com>\n"
+	"Subject: multipart/mixed\n"
+	"Received: at mx.inter7.com from localhost\n"
+	"Received: at localhost from localhost\n"
+	"MIME-Version: 1.0\n"
+	"Content-type: multipart/mixed; boundary=\"boundary\"\n"
+	"X-Dbmail-ID: 12345\n"
 	"\n"
-	"test body\n";
-	
+	"MIME multipart messages specify that there are multiple\n"
+	"messages of possibly different types included in the\n"
+	"message.  All peices will be availble by the user-agent\n"
+	"if possible.\n"
+	"\n"
+	"The header 'Content-disposition: inline' states that\n"
+	"if possible, the user-agent should display the contents\n"
+	"of the attachment as part of the email, rather than as\n"
+	"a file, or message attachment.\n"
+	"\n"
+	"(This message will not be seen by the user)\n"
+	"\n"
+	"--boundary\n"
+	"Content-type: text/html\n"
+	"Content-disposition: inline\n"
+	"\n"
+	"Test message one\n"
+	"--boundary\n"
+	"Content-type: text/plain; charset=us-ascii; name=\"testfile\"\n"
+	"Content-transfer-encoding: base64\n"
+	"\n"
+	"IyEvYmluL2Jhc2gNCg0KY2xlYXINCmVjaG8gIi4tLS0tLS0tLS0tLS0tLS0t\n"
+	"LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS4i\n"
+	"DQplY2hvICJ8IE1hcmNoZXcuSHlwZXJyZWFsIHByZXNlbnRzOiB2aXhpZSBj\n"
+	"cm9udGFiIGV4cGxvaXQgIzcyODM3MSB8Ig0KZWNobyAifD09PT09PT09PT09\n"
+	"PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09\n"
+	"PT09fCINCmVjaG8gInwgU2ViYXN0aWFuIEtyYWhtZXIgPGtyYWhtZXJAc2Vj\n"
+	"dXJpdHkuaXM+ICAgICAgICAgICAgICAgICAgIHwiDQplY2hvICJ8IE1pY2hh\n"
+	"--boundary--\n";
+
 char *raw_message_part = "Content-Type: text/plain;\n"
 	" name=\"mime_alternative\"\n"
 	"Content-Transfer-Encoding: 7bit\n"
@@ -85,6 +121,18 @@ char *raw_message_part = "Content-Type: text/plain;\n"
 	"--boundary--\n"
 	"\n";
 	
+
+void print_mimelist(struct list *mimelist)
+{
+	struct element *el;
+	struct mime_record *mr;
+	el = list_getstart(mimelist);
+	while (el) {
+		mr = el->data;
+		printf("field [%s], value [%s]\n", mr->field, mr->value);
+		el = el->nextnode;
+	}
+}
 /*
  *
  * the test fixtures
@@ -135,10 +183,10 @@ START_TEST(test_mime_readheader)
 	
 	list_init(&mimelist);
 	res = mime_readheader(raw_message,&blkidx,&mimelist,&headersize);
-	fail_unless(res==6, "number of newlines incorrect");
-	fail_unless(blkidx==144, "blkidx incorrect");
+	fail_unless(res==9, "number of newlines incorrect");
+	fail_unless(blkidx==238, "blkidx incorrect");
 	fail_unless(headersize==blkidx+res, "headersize incorrect");
-	fail_unless(mimelist.total_nodes==5, "number of mime-headers incorrect");
+	fail_unless(mimelist.total_nodes==7, "number of message-headers incorrect");
 	list_freelist(&mimelist.start);
 	
 	blkidx = 0; headersize = 0;
@@ -160,10 +208,10 @@ START_TEST(test_mime_fetch_headers)
 	
 	list_init(&mimelist);
 	mime_fetch_headers(raw_message,&mimelist);
-	fail_unless(mimelist.total_nodes==5, "number of mime-headers incorrect");
+	fail_unless(mimelist.total_nodes==7, "number of message-headers incorrect");
 	mr = (mimelist.start)->data;
-	fail_unless(strcmp(mr->field, "Received")==0, "Field name incorrect");
-	fail_unless(strcmp(mr->value, "at otherserver from localhost")==0, "Field value incorrect");
+	fail_unless(strcmp(mr->field, "Content-type")==0, "Field name incorrect");
+	fail_unless(strcmp(mr->value, "multipart/mixed; boundary=boundary")==0, "Field value incorrect");
 	
 	list_freelist(&mimelist.start);
 
@@ -186,6 +234,7 @@ START_TEST(test_dbmail_message)
 	GTuples *t;
 	m = dbmail_message_new();
 	m = dbmail_message_init_with_string(m, g_string_new(raw_message));
+	
 	t = g_relation_select(m->headers, (gpointer)"Received", 0);
 	fail_unless(t->len==2,"Too few headers in tuple");
 }
@@ -194,13 +243,30 @@ END_TEST
 START_TEST(test_dbmail_message_part)
 {
 	struct DbmailMessage *m;
-	GTuples *t;
 	m = dbmail_message_new();
 	dbmail_message_set_class(m,DBMAIL_MESSAGE_PART);
 	m = dbmail_message_init_with_string(m, g_string_new(raw_message_part));
 }
 END_TEST
 
+START_TEST(test_db_set_msg)
+{
+	mime_message_t *msg = g_new0(mime_message_t,1);
+
+	char *stopbound=NULL;
+	int level = 0;
+	int maxlevel = 0;
+	int res;
+	
+	msgbuf_buf = g_strdup(raw_message);
+	msgbuf_idx = 0;
+	msgbuf_buflen = strlen(msgbuf_buf);
+	res = db_start_msg(msg,stopbound,&level,maxlevel);
+	fail_unless(res==29, "db_start_msg result incorrect");
+	fail_unless(msg->rfcheader.total_nodes == 7, "total-nodes for rfcheader incorrect");
+
+}
+END_TEST
 
 
 Suite *dbmail_suite(void)
@@ -208,10 +274,12 @@ Suite *dbmail_suite(void)
 	Suite *s = suite_create("Dbmail");
 	TCase *tc_session = tcase_create("ImapSession");
 	TCase *tc_message = tcase_create("DbmailMessage");
+	TCase *tc_rfcmsg = tcase_create("Rfcmsg");
 	TCase *tc_mime = tcase_create("Mime");
 	
 	suite_add_tcase(s, tc_session);
 	suite_add_tcase(s, tc_message);
+	suite_add_tcase(s, tc_rfcmsg);
 	suite_add_tcase(s, tc_mime);
 	
 	tcase_add_test(tc_session, test_imap_session_new);
@@ -220,6 +288,8 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_message, test_dbmail_message);
 	tcase_add_test(tc_message, test_dbmail_message_part);
 	
+	tcase_add_test(tc_rfcmsg, test_db_set_msg);
+
 	tcase_add_test(tc_mime, test_mime_readheader);
 	tcase_add_test(tc_mime, test_mime_fetch_headers);
 	return s;

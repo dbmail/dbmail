@@ -64,16 +64,18 @@ static void _register_header(const char *field, const char *value, gpointer mime
 
 int mime_fetch_headers(const char *datablock, struct list *mimelist) 
 {
-	struct DbmailMessage *m = dbmail_message_new();
 	GString *raw = g_string_new(datablock);
+	struct DbmailMessage *m = dbmail_message_new();
+    GMimeMessage *message;
 	m = dbmail_message_init_with_string(m, raw);
-	/* If there's no From header assume it's a message-part and re-init */
-	if (! g_mime_object_get_header(GMIME_OBJECT(m->content),"From")) {
-		dbmail_message_set_class(m, DBMAIL_MESSAGE_PART);
-		m = dbmail_message_init_with_string(m, raw);
-	}
-	g_mime_header_foreach(GMIME_OBJECT(m->content)->headers, _register_header, (gpointer)mimelist);
+	g_mime_header_foreach(m->content->headers, _register_header, (gpointer)mimelist);
 	g_string_free(raw,1);
+
+    if (dbmail_message_get_class(m) == DBMAIL_MESSAGE && GMIME_MESSAGE(m->content)->mime_part) {
+        message = (GMimeMessage *)(m->content);
+        g_mime_header_foreach(GMIME_OBJECT(message->mime_part)->headers, _register_header, (gpointer)mimelist);
+    }
+
 	return 0;	
 }
 	

@@ -118,20 +118,15 @@ int db_fetch_headers(u64_t msguid, mime_message_t * msg)
 	int result, level = 0, maxlevel = -1;
 
 	if (db_init_fetch_message(msguid) != 1) {
-		trace(TRACE_ERROR,
-		      "db_fetch_headers(): could not init msgfetch\n");
+		trace(TRACE_ERROR, "%s,%s: could not init msgfetch\n",
+				__FILE__, __func__);
 		return -2;
 	}
 
 	result = db_start_msg(msg, NULL, &level, maxlevel);	/* fetch message */
 	if (result < 0) {
-		trace(TRACE_INFO,
-		      "db_fetch_headers(): error fetching message, ID: %llu\n",
-		      msguid);
-		trace(TRACE_INFO,
-		      "db_fetch_headers(): got error at level %d\n",
-		      level);
-
+		trace(TRACE_INFO, "%s,%s: error fetching message ID [%llu] at level [%d]\n", 
+				__FILE__, __func__, msguid, level);
 		db_close_msgfetch();
 		db_free_msg(msg);
 
@@ -144,13 +139,12 @@ int db_fetch_headers(u64_t msguid, mime_message_t * msg)
 		 */
 
 		for (maxlevel = level - 1; maxlevel >= 0; maxlevel--) {
-			trace(TRACE_DEBUG,
-			      "db_fetch_headers(): trying to fetch at maxlevel %d...\n",
-			      maxlevel);
+			trace(TRACE_DEBUG, "%s,%s: trying to fetch at maxlevel [%d]...", 
+					__FILE__, __func__, maxlevel);
 
 			if (db_init_fetch_message(msguid) != 1) {
-				trace(TRACE_ERROR,
-				      "db_fetch_headers(): could not init msgfetch\n");
+				trace(TRACE_ERROR, "%s,%s: could not init msgfetch",
+						__FILE__, __func__);
 				return -2;
 			}
 
@@ -171,9 +165,8 @@ int db_fetch_headers(u64_t msguid, mime_message_t * msg)
 		}
 
 		if (result >= 0) {
-			trace(TRACE_WARNING,
-			      "db_fetch_headers(): succesfully recovered erroneous message %llu\n",
-			      msguid);
+			trace(TRACE_WARNING, "%s,%s: succesfully recovered erroneous message [%llu]", 
+					__FILE__, __func__, msguid);
 			db_reverse_msg(msg);
 			return 0;
 		}
@@ -181,22 +174,22 @@ int db_fetch_headers(u64_t msguid, mime_message_t * msg)
 
 		/* ok still problems... try to make a message */
 		if (db_init_fetch_message(msguid) != 1) {
-			trace(TRACE_ERROR,
-			      "db_fetch_headers(): could not init msgfetch\n");
+			trace(TRACE_ERROR, "%s,%s: could not init msgfetch",
+					__FILE__, __func__);
 			return -2;
 		}
 
 		result = db_parse_as_text(msg);
 		if (result < 0) {
 			/* probably some serious dbase error */
-			trace(TRACE_ERROR,
-			      "db_fetch_headers(): could not recover message as plain text\n");
+			trace(TRACE_ERROR, "%s,%s: could not recover message as plain text",
+					__FILE__, __func__);
 			db_free_msg(msg);
 			return result;
 		}
 
-		trace(TRACE_WARNING,
-		      "db_fetch_headers(): message recovered as plain text\n");
+		trace(TRACE_WARNING, "%s,%s: message recovered as plain text",
+				__FILE__, __func__);
 		db_close_msgfetch();
 		return -1;
 	}
