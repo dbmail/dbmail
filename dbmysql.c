@@ -975,7 +975,7 @@ int db_createsession (unsigned long useridnr, struct session *sessionptr)
 
   if ((res = mysql_store_result(&conn)) == NULL)
     {
-      trace (TRACE_ERROR,"db_validate(): mysql_store_result failed:  %s",mysql_error(&conn));
+      trace (TRACE_ERROR,"db_createsession(): mysql_store_result failed:  %s",mysql_error(&conn));
       
       return -1;
     }
@@ -997,7 +997,7 @@ int db_createsession (unsigned long useridnr, struct session *sessionptr)
 	 
   /* filling the list */
 	
-  trace (TRACE_DEBUG,"db_create_session(): adding items to list");
+  trace (TRACE_DEBUG,"db_createsession(): adding items to list");
   while ((row = mysql_fetch_row(res))!=NULL)
     {
       tmpmessage.msize=atol(row[MESSAGE_MESSAGESIZE]);
@@ -1015,9 +1015,11 @@ int db_createsession (unsigned long useridnr, struct session *sessionptr)
       list_nodeadd (&sessionptr->messagelst, &tmpmessage, sizeof (tmpmessage));
     }
 	
+  sessionptr->messagelst.start = list_reverse(sessionptr->messagelst.start);
+  
   trace (TRACE_DEBUG,"db_create_session(): adding succesfull");
 	
-	/* setting all virtual values */
+  /* setting all virtual values */
   sessionptr->virtual_totalmessages=sessionptr->totalmessages;
   sessionptr->virtual_totalsize=sessionptr->totalsize;
 
