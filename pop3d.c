@@ -71,12 +71,16 @@ int main(int argc, char *argv[], char **envp)
 
   openlog(PNAME, LOG_PID, LOG_MAIL);
 
-  if (argc >= 2 && strcmp(argv[1], "-f") == 0)
-    {
-      if (!argv[2])
-	trace(TRACE_FATAL,"main(): no file specified for -f option. Fatal.");
-
-      configFile = argv[2];
+  if (argc >= 2 && (argv[1]))
+  {
+	  if (strcmp (argv[1],"-v") == 0)
+	  {
+		  printf ("\n*** DBMAIL: dbmail-pop3d version $Revision$ %s\n\n",COPYRIGHT);
+		  return 0;
+	  }
+	  else
+		  if (strcmp (argv[1],"-f") && (argv[2]))
+				configFile = argv[2];
     }
 
   SetMainSigHandler();

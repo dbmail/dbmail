@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
 	
   /* get options */
   opterr = 0; /* suppress error message from getopt() */
-  while ((opt = getopt(argc, argv, "cfinl:phd")) != -1)
+  while ((opt = getopt(argc, argv, "cfvinl:phd")) != -1)
     {
       switch (opt)
 	{
@@ -101,6 +101,11 @@ int main(int argc, char *argv[])
 	  check_null_messages = 1;
 	  do_nothing = 0;
 	  break;
+
+	case 'v':
+		printf ("\n*** DBMAIL: dbmail-maintenance version $Revision$ %s\n",COPYRIGHT);
+		return 0;
+
 
 	case 'l':
 	  check_iplog = 1;
