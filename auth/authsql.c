@@ -645,7 +645,7 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 
 	if (!query_result || strcasecmp(query_result, "") == 0) {
 		trace(TRACE_DEBUG,
-		      "%s,%s: validating using cleartext passwords",
+		      "%s,%s: validating using plaintext passwords",
 		      __FILE__, __func__);
 		/* get password from database */
 		query_result = db_get_result(0, 1);

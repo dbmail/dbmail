@@ -1,3 +1,9 @@
+2004-09-01  Aaron Stone  <aaron@serendipity.cx>
+
+	* user.c: changed cleartext -> plaintext in the syntax help.
+	* man/user.1: changed cleartext -> plaintext in the syntax help.
+	* auth/authsql.c: changed cleartext -> plaintext in a debug trace.
+
 2004-08-31  Ilja Booij  <ilja@ic-s.nl>
 	
 	* user.c (main): fixed missing handling of -u command line
