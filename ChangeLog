@@ -1,5 +1,8 @@
 2004-05-06  Ilja Booij  <ilja@ic-s.nl>
 
+	* pipe.c (store_message_temp): makes use of MOD macro to determine
+	position in the ringbuf ring buffer.
+
 	* header.c (read_header): changed some trace formats to have
 	the right format (e.g. %zd for size_t etc)
 

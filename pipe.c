@@ -63,6 +63,10 @@
 #define DBMAIL_DELIVERY_USERNAME "__@!internal_delivery_user!@__"
 #define DBMAIL_TEMPMBOX "INBOX"
 
+#define MOD(x, y) (((x) >= 0 ?\
+ (x) % (y) :\
+ ((x) + (-((x) / (y)) + 1) * (y)) % (y)))
+
 extern struct list smtpItems, sysItems;
 
 /* 
@@ -456,17 +460,18 @@ static int store_message_temp(FILE * instream,
 			ringpos = (ringpos + 1) % RING_SIZE;
 
 			/* Find \n not preceded by \r. */
-			if (ringbuf[(ringpos - 1) % RING_SIZE] == '\n'
-			 && ringbuf[(ringpos - 2) % RING_SIZE] != '\r') {
+			
+			if (ringbuf[MOD(ringpos - 1, RING_SIZE)] == '\n'
+			 && ringbuf[MOD(ringpos - 2, RING_SIZE)] != '\r') {
 				trace(TRACE_DEBUG, "store_message_temp(): counted an rfcline");
 				rfclines++;
 			}
 
 			/* Find the message terminator. */
-			if (ringbuf[(ringpos - 1) % RING_SIZE] == '\n'
-			 && ringbuf[(ringpos - 2) % RING_SIZE] == '\r'
-			 && ringbuf[(ringpos - 3) % RING_SIZE] == '.'
-			 && ringbuf[(ringpos - 4) % RING_SIZE] == '\n') {
+			if (ringbuf[MOD(ringpos - 1, RING_SIZE)] == '\n'
+			 && ringbuf[MOD(ringpos - 2, RING_SIZE)] == '\r'
+			 && ringbuf[MOD(ringpos - 3, RING_SIZE)] == '.'
+			 && ringbuf[MOD(ringpos - 4, RING_SIZE)] == '\n') {
 				/* Back off the trailing ".\r" (final \n not copied yet)
 				 * The \n or \r\n preceding it are part of the message. */
 				if (usedmem > 2) {
