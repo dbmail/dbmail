@@ -31,7 +31,7 @@
  * RT_STORAGE:  "STORAGE"
  */
 typedef enum {
-    RT_STORAGE
+	RT_STORAGE
 } resource_type_t;
 
 /* A resource limit.
@@ -40,9 +40,9 @@ typedef enum {
  * limit: the maximum allowed usage of the resource
  */
 typedef struct {
-    resource_type_t type;
-    u64_t usage;
-    u64_t limit;
+	resource_type_t type;
+	u64_t usage;
+	u64_t limit;
 } resource_limit_t;
 
 /* A quota root and its resource limits.
@@ -52,19 +52,19 @@ typedef struct {
  *              describing a resource limit
  */
 typedef struct {
-    char *root;
-    int n_resources;
-    resource_limit_t resource[0];
+	char *root;
+	int n_resources;
+	resource_limit_t resource[0];
 } quota_t;
 
 
 /* Functions for manipulating quota_t objects */
 quota_t *quota_alloc(int n_resources);
-void quota_free(quota_t *quota);
-void quota_set_resource_limit(quota_t *quota, int resource_idx,
+void quota_free(quota_t * quota);
+void quota_set_resource_limit(quota_t * quota, int resource_idx,
 			      resource_type_t type,
 			      u64_t usage, u64_t limit);
-int quota_set_root(quota_t *quota, char *root);
+int quota_set_root(quota_t * quota, char *root);
 
 /* Functions for querying quota and quota root */
 char *quota_get_quotaroot(u64_t useridnr, const char *mailbox,

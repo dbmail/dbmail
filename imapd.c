@@ -52,10 +52,10 @@ char *configFile = DEFAULT_CONFIG_FILE;
 /* set up database login data */
 extern db_param_t _db_params;
 
-static void SetConfigItems(serverConfig_t *config, struct list *items);
+static void SetConfigItems(serverConfig_t * config, struct list *items);
 static void Daemonize(void);
 static int SetMainSigHandler(void);
-static void MainSigHandler(int sig, siginfo_t *info, void *data);
+static void MainSigHandler(int sig, siginfo_t * info, void *data);
 
 
 int imap_before_smtp = 0;
@@ -69,253 +69,279 @@ int main(int argc, char *argv[], char **envp)
 int main(int argc, char *argv[])
 #endif
 {
-  serverConfig_t config;
-  struct list imapItems, sysItems;
-  int result, status;
-  pid_t pid;
+	serverConfig_t config;
+	struct list imapItems, sysItems;
+	int result, status;
+	pid_t pid;
 
-  openlog(PNAME, LOG_PID, LOG_MAIL);
+	openlog(PNAME, LOG_PID, LOG_MAIL);
 
-  if (argc >= 2 && argv[1])
-    {
-      if (strcmp(argv[1],"-v") == 0)
-	{
-	  printf ("\n*** DBMAIL: dbmail-imap version $Revision$ %s\n",COPYRIGHT);
-	  return 0;
+	if (argc >= 2 && argv[1]) {
+		if (strcmp(argv[1], "-v") == 0) {
+			printf
+			    ("\n*** DBMAIL: dbmail-imap version $Revision$ %s\n",
+			     COPYRIGHT);
+			return 0;
+		} else if (argv[2] && (strcmp(argv[1], "-f") == 0)) {
+			configFile = argv[2];
+		}
 	}
-      else if (argv[2] && (strcmp(argv[1],"-f") == 0))
-	{
-	  configFile = argv[2];
-	}
-    }
-	      
-  SetMainSigHandler();
-  Daemonize();
-  result = 0;
 
-  do
-    {
-      mainStop = 0;
-      mainRestart = 0;
+	SetMainSigHandler();
+	Daemonize();
+	result = 0;
 
-      trace(TRACE_DEBUG, "main(): reading config");
+	do {
+		mainStop = 0;
+		mainRestart = 0;
+
+		trace(TRACE_DEBUG, "main(): reading config");
 #ifdef PROC_TITLES
-      init_set_proc_title(argc, argv, envp, PNAME);
-      set_proc_title("%s", "Idle");
+		init_set_proc_title(argc, argv, envp, PNAME);
+		set_proc_title("%s", "Idle");
 #endif
 
-      ReadConfig("IMAP", configFile, &imapItems);
-      ReadConfig("DBMAIL", configFile, &sysItems);
-      SetConfigItems(&config, &imapItems);
-      SetTraceLevel(&imapItems);
-      GetDBParams(&_db_params, &sysItems);
+		ReadConfig("IMAP", configFile, &imapItems);
+		ReadConfig("DBMAIL", configFile, &sysItems);
+		SetConfigItems(&config, &imapItems);
+		SetTraceLevel(&imapItems);
+		GetDBParams(&_db_params, &sysItems);
 
-      config.ClientHandler = IMAPClientHandler;
-      config.timeoutMsg = IMAP_TIMEOUT_MSG;
+		config.ClientHandler = IMAPClientHandler;
+		config.timeoutMsg = IMAP_TIMEOUT_MSG;
 
-      CreateSocket(&config);
-      trace(TRACE_ERROR, "main(): socket created, starting server");
+		CreateSocket(&config);
+		trace(TRACE_ERROR,
+		      "main(): socket created, starting server");
 
-      switch ( (pid = fork()) )
-	{
-	case -1:
-	  close(config.listenSocket);
-	  trace(TRACE_FATAL, "main(): fork failed [%s]", strerror(errno));
-	  
-	case 0:
-	  /* child process */
-	  drop_privileges(config.serverUser, config.serverGroup);
-	  result = StartServer(&config);
-	  trace(TRACE_INFO, "main(): server done, exit.");
-	  exit(result);
+		switch ((pid = fork())) {
+		case -1:
+			close(config.listenSocket);
+			trace(TRACE_FATAL, "main(): fork failed [%s]",
+			      strerror(errno));
 
-	default:
-	  /* parent process, wait for child to exit */
-	  while (waitpid(pid, &status, WNOHANG|WUNTRACED) == 0) 
-	    {
-	      if (mainStop)
-		kill(pid, SIGTERM);
+		case 0:
+			/* child process */
+			drop_privileges(config.serverUser,
+					config.serverGroup);
+			result = StartServer(&config);
+			trace(TRACE_INFO, "main(): server done, exit.");
+			exit(result);
 
-	      if (mainRestart)
-		kill(pid, SIGHUP);
+		default:
+			/* parent process, wait for child to exit */
+			while (waitpid(pid, &status, WNOHANG | WUNTRACED)
+			       == 0) {
+				if (mainStop)
+					kill(pid, SIGTERM);
 
-	      sleep(2);
-	    }
+				if (mainRestart)
+					kill(pid, SIGHUP);
 
-	  if (WIFEXITED(status))
-	    {
-	      /* child process terminated neatly */
-	      result = WEXITSTATUS(status);
-	      trace(TRACE_DEBUG, "main(): server has exited, exit status [%d]", result);
-	    }
-	  else
-	    {
-	      /* child stopped or signaled, don't like */
-	      /* make sure it is dead */
-	      trace(TRACE_DEBUG, "main(): server has not exited normally. Killing..");
+				sleep(2);
+			}
 
-	      kill(pid, SIGKILL);
-	      result = 0;
-	    }
-	}
+			if (WIFEXITED(status)) {
+				/* child process terminated neatly */
+				result = WEXITSTATUS(status);
+				trace(TRACE_DEBUG,
+				      "main(): server has exited, exit status [%d]",
+				      result);
+			} else {
+				/* child stopped or signaled, don't like */
+				/* make sure it is dead */
+				trace(TRACE_DEBUG,
+				      "main(): server has not exited normally. Killing..");
 
-      list_freelist(&imapItems.start);
-      list_freelist(&sysItems.start);
-      close(config.listenSocket);
-      
-    } while (result == 1 && !mainStop) ; /* 1 means reread-config and restart */
+				kill(pid, SIGKILL);
+				result = 0;
+			}
+		}
 
-  trace(TRACE_INFO, "main(): exit");
-  return 0;
+		list_freelist(&imapItems.start);
+		list_freelist(&sysItems.start);
+		close(config.listenSocket);
+
+	} while (result == 1 && !mainStop);	/* 1 means reread-config and restart */
+
+	trace(TRACE_INFO, "main(): exit");
+	return 0;
 }
 
 
-void MainSigHandler(int sig, siginfo_t *info UNUSED, void *data UNUSED)
+void MainSigHandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
 {
-  trace(TRACE_DEBUG, "MainSigHandler(): got signal [%d]", sig);
+	trace(TRACE_DEBUG, "MainSigHandler(): got signal [%d]", sig);
 
-  if (sig == SIGHUP)
-    mainRestart = 1;
-  else
-    mainStop = 1;
+	if (sig == SIGHUP)
+		mainRestart = 1;
+	else
+		mainStop = 1;
 }
 
 
 void Daemonize()
 {
-  if (fork())
-    exit(0);
-  setsid();
+	if (fork())
+		exit(0);
+	setsid();
 
-  if (fork())
-    exit(0);
-}      
+	if (fork())
+		exit(0);
+}
 
 
 int SetMainSigHandler()
 {
-  struct sigaction act;
+	struct sigaction act;
 
-  /* init & install signal handlers */
-  memset(&act, 0, sizeof(act));
+	/* init & install signal handlers */
+	memset(&act, 0, sizeof(act));
 
-  act.sa_sigaction = MainSigHandler;
-  sigemptyset(&act.sa_mask);
-  act.sa_flags = SA_SIGINFO;
+	act.sa_sigaction = MainSigHandler;
+	sigemptyset(&act.sa_mask);
+	act.sa_flags = SA_SIGINFO;
 
-  sigaction(SIGINT, &act, 0);
-  sigaction(SIGQUIT, &act, 0);
+	sigaction(SIGINT, &act, 0);
+	sigaction(SIGQUIT, &act, 0);
 
-  sigaction(SIGTERM, &act, 0);
-  sigaction(SIGHUP, &act, 0);
+	sigaction(SIGTERM, &act, 0);
+	sigaction(SIGHUP, &act, 0);
 
-  return 0;
+	return 0;
 }
 
 
-void SetConfigItems(serverConfig_t *config, struct list *items)
+void SetConfigItems(serverConfig_t * config, struct list *items)
 {
-  field_t val;
-  
-  /* read items: NCHILDREN */
-  GetConfigValue("NCHILDREN", items, val);
-  if (strlen(val) == 0)
-    trace(TRACE_FATAL, "SetConfigItems(): no value for NCHILDREN in config file");
+	field_t val;
 
-  if ( (config->nChildren = atoi(val)) <= 0)
-    trace(TRACE_FATAL, "SetConfigItems(): value for NCHILDREN is invalid: [%d]", config->nChildren);
+	/* read items: NCHILDREN */
+	GetConfigValue("NCHILDREN", items, val);
+	if (strlen(val) == 0)
+		trace(TRACE_FATAL,
+		      "SetConfigItems(): no value for NCHILDREN in config file");
 
-  trace(TRACE_DEBUG, "SetConfigItems(): server will create  [%d] children", config->nChildren);
+	if ((config->nChildren = atoi(val)) <= 0)
+		trace(TRACE_FATAL,
+		      "SetConfigItems(): value for NCHILDREN is invalid: [%d]",
+		      config->nChildren);
 
-
-  /* read items: MAXCONNECTS */
-  GetConfigValue("MAXCONNECTS", items, val);
-  if (strlen(val) == 0)
-    trace(TRACE_FATAL, "SetConfigItems(): no value for MAXCONNECTS in config file");
-
-  if ( (config->childMaxConnect = atoi(val)) <= 0)
-    trace(TRACE_FATAL, "SetConfigItems(): value for MAXCONNECTS is invalid: [%d]", config->childMaxConnect);
-
-  trace(TRACE_DEBUG, "SetConfigItems(): children will make max. [%d] connections", config->childMaxConnect);
-      
-
-  /* read items: TIMEOUT */
-  GetConfigValue("TIMEOUT", items, val);
-  if (strlen(val) == 0)
-    {
-      trace(TRACE_DEBUG, "SetConfigItems(): no value for TIMEOUT in config file");
-      config->timeout = 0;
-    }
-  else if ( (config->timeout = atoi(val)) <= 30)
-    trace(TRACE_FATAL, "SetConfigItems(): value for TIMEOUT is invalid: [%d]", config->timeout);
-
-  trace(TRACE_DEBUG, "SetConfigItems(): timeout [%d] seconds", config->timeout);
-      
-
-  /* read items: PORT */
-  GetConfigValue("PORT", items, val);
-  if (strlen(val) == 0)
-    trace(TRACE_FATAL, "SetConfigItems(): no value for PORT in config file");
-
-  if ( (config->port = atoi(val)) <= 0)
-    trace(TRACE_FATAL, "SetConfigItems(): value for PORT is invalid: [%d]", config->port);
-
-  trace(TRACE_DEBUG, "SetConfigItems(): binding to PORT [%d]", config->port);
-      
-
-  /* read items: BINDIP */
-  GetConfigValue("BINDIP", items, val);
-  if (strlen(val) == 0)
-    trace(TRACE_FATAL, "SetConfigItems(): no value for BINDIP in config file");
-
-  strncpy(config->ip, val, IPLEN);
-  config->ip[IPLEN-1] = '\0';
-
-  trace(TRACE_DEBUG, "SetConfigItems(): binding to IP [%s]", config->ip);
+	trace(TRACE_DEBUG,
+	      "SetConfigItems(): server will create  [%d] children",
+	      config->nChildren);
 
 
-  /* read items: RESOLVE_IP */
-  GetConfigValue("RESOLVE_IP", items, val);
-  if (strlen(val) == 0)
-    trace(TRACE_DEBUG, "SetConfigItems(): no value for RESOLVE_IP in config file");
+	/* read items: MAXCONNECTS */
+	GetConfigValue("MAXCONNECTS", items, val);
+	if (strlen(val) == 0)
+		trace(TRACE_FATAL,
+		      "SetConfigItems(): no value for MAXCONNECTS in config file");
 
-  config->resolveIP = (strcasecmp(val, "yes") == 0);
+	if ((config->childMaxConnect = atoi(val)) <= 0)
+		trace(TRACE_FATAL,
+		      "SetConfigItems(): value for MAXCONNECTS is invalid: [%d]",
+		      config->childMaxConnect);
 
-  trace(TRACE_DEBUG, "SetConfigItems(): %sresolving client IP", config->resolveIP ? "" : "not ");
-
-
-  /* read items: IMAP-BEFORE-SMTP */
-  GetConfigValue("IMAP_BEFORE_SMTP", items, val);
-  if (strlen(val) == 0)
-    trace(TRACE_DEBUG, "SetConfigItems(): no value for IMAP_BEFORE_SMTP  in config file");
-
-  imap_before_smtp = (strcasecmp(val, "yes") == 0);
-
-  trace(TRACE_DEBUG, "SetConfigItems(): %s IMAP-before-SMTP", 
-	imap_before_smtp ? "Enabling" : "Disabling");
+	trace(TRACE_DEBUG,
+	      "SetConfigItems(): children will make max. [%d] connections",
+	      config->childMaxConnect);
 
 
-  /* read items: EFFECTIVE-USER */
-  GetConfigValue("EFFECTIVE_USER", items, val);
-  if (strlen(val) == 0)
-    trace(TRACE_FATAL, "SetConfigItems(): no value for EFFECTIVE_USER in config file");
+	/* read items: TIMEOUT */
+	GetConfigValue("TIMEOUT", items, val);
+	if (strlen(val) == 0) {
+		trace(TRACE_DEBUG,
+		      "SetConfigItems(): no value for TIMEOUT in config file");
+		config->timeout = 0;
+	} else if ((config->timeout = atoi(val)) <= 30)
+		trace(TRACE_FATAL,
+		      "SetConfigItems(): value for TIMEOUT is invalid: [%d]",
+		      config->timeout);
 
-  strncpy(config->serverUser, val, FIELDSIZE);
-  config->serverUser[FIELDSIZE-1] = '\0';
-
-  trace(TRACE_DEBUG, "SetConfigItems(): effective user shall be [%s]", config->serverUser);
-
-
-  /* read items: EFFECTIVE-GROUP */
-  GetConfigValue("EFFECTIVE_GROUP", items, val);
-  if (strlen(val) == 0)
-    trace(TRACE_FATAL, "SetConfigItems(): no value for EFFECTIVE_GROUP in config file");
-
-  strncpy(config->serverGroup, val, FIELDSIZE);
-  config->serverGroup[FIELDSIZE-1] = '\0';
-
-  trace(TRACE_DEBUG, "SetConfigItems(): effective group shall be [%s]", config->serverGroup);
+	trace(TRACE_DEBUG, "SetConfigItems(): timeout [%d] seconds",
+	      config->timeout);
 
 
-  
+	/* read items: PORT */
+	GetConfigValue("PORT", items, val);
+	if (strlen(val) == 0)
+		trace(TRACE_FATAL,
+		      "SetConfigItems(): no value for PORT in config file");
+
+	if ((config->port = atoi(val)) <= 0)
+		trace(TRACE_FATAL,
+		      "SetConfigItems(): value for PORT is invalid: [%d]",
+		      config->port);
+
+	trace(TRACE_DEBUG, "SetConfigItems(): binding to PORT [%d]",
+	      config->port);
+
+
+	/* read items: BINDIP */
+	GetConfigValue("BINDIP", items, val);
+	if (strlen(val) == 0)
+		trace(TRACE_FATAL,
+		      "SetConfigItems(): no value for BINDIP in config file");
+
+	strncpy(config->ip, val, IPLEN);
+	config->ip[IPLEN - 1] = '\0';
+
+	trace(TRACE_DEBUG, "SetConfigItems(): binding to IP [%s]",
+	      config->ip);
+
+
+	/* read items: RESOLVE_IP */
+	GetConfigValue("RESOLVE_IP", items, val);
+	if (strlen(val) == 0)
+		trace(TRACE_DEBUG,
+		      "SetConfigItems(): no value for RESOLVE_IP in config file");
+
+	config->resolveIP = (strcasecmp(val, "yes") == 0);
+
+	trace(TRACE_DEBUG, "SetConfigItems(): %sresolving client IP",
+	      config->resolveIP ? "" : "not ");
+
+
+	/* read items: IMAP-BEFORE-SMTP */
+	GetConfigValue("IMAP_BEFORE_SMTP", items, val);
+	if (strlen(val) == 0)
+		trace(TRACE_DEBUG,
+		      "SetConfigItems(): no value for IMAP_BEFORE_SMTP  in config file");
+
+	imap_before_smtp = (strcasecmp(val, "yes") == 0);
+
+	trace(TRACE_DEBUG, "SetConfigItems(): %s IMAP-before-SMTP",
+	      imap_before_smtp ? "Enabling" : "Disabling");
+
+
+	/* read items: EFFECTIVE-USER */
+	GetConfigValue("EFFECTIVE_USER", items, val);
+	if (strlen(val) == 0)
+		trace(TRACE_FATAL,
+		      "SetConfigItems(): no value for EFFECTIVE_USER in config file");
+
+	strncpy(config->serverUser, val, FIELDSIZE);
+	config->serverUser[FIELDSIZE - 1] = '\0';
+
+	trace(TRACE_DEBUG,
+	      "SetConfigItems(): effective user shall be [%s]",
+	      config->serverUser);
+
+
+	/* read items: EFFECTIVE-GROUP */
+	GetConfigValue("EFFECTIVE_GROUP", items, val);
+	if (strlen(val) == 0)
+		trace(TRACE_FATAL,
+		      "SetConfigItems(): no value for EFFECTIVE_GROUP in config file");
+
+	strncpy(config->serverGroup, val, FIELDSIZE);
+	config->serverGroup[FIELDSIZE - 1] = '\0';
+
+	trace(TRACE_DEBUG,
+	      "SetConfigItems(): effective group shall be [%s]",
+	      config->serverGroup);
+
+
+
 }

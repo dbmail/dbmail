@@ -38,7 +38,7 @@
 /* processes */
 
 #define MAXCHILDREN 5
-#define DEFAULT_CHILDREN 5 
+#define DEFAULT_CHILDREN 5
 
 #define TIMS_DEF_MAXCONNECT 1500
 
@@ -58,22 +58,23 @@ const char *commands [] =
 	"HAVESPACE", "PUTSCRIPT"
 }; */
 
-#define TIMS_STRT 0 /* lower bound of array - 0 */
+#define TIMS_STRT 0		/* lower bound of array - 0 */
 #define TIMS_LOUT 0
 #define TIMS_STLS 1
 #define TIMS_CAPA 2
-#define TIMS_LIST 3 
-#define TIMS_NOARGS 4 /* use with if( cmd < TIMS_NOARGS )... */
+#define TIMS_LIST 3
+#define TIMS_NOARGS 4		/* use with if( cmd < TIMS_NOARGS )... */
 #define TIMS_AUTH 4
 #define TIMS_DELS 5
 #define TIMS_GETS 6
 #define TIMS_SETS 7
-#define TIMS_ONEARG 8 /* use with if( cmd < TIMS_ONEARG )... */
+#define TIMS_ONEARG 8		/* use with if( cmd < TIMS_ONEARG )... */
 #define TIMS_SPAC 8
 #define TIMS_PUTS 9
-#define TIMS_END 10 /* upper bound of array + 1 */
+#define TIMS_END 10		/* upper bound of array + 1 */
 
-int tims (void *stream, void *instream, char *buffer, char *client_ip, PopSession_t *session);
-int tims_handle_connection (clientinfo_t *ci);
+int tims(void *stream, void *instream, char *buffer, char *client_ip,
+	 PopSession_t * session);
+int tims_handle_connection(clientinfo_t * ci);
 
 #endif

@@ -82,15 +82,14 @@ int forward(u64_t msgidnr, struct list *targets, const char *from,
 	}
 
 	target = list_getstart(targets);
-	
+
 	while (target != NULL) {
 		if ((((char *) target->data)[0] == '|')
 		    || (((char *) target->data)[0] == '!')) {
 
 			/* external pipe command */
-			command =
-				(char *) 
-				my_malloc(strlen((char *) (target->data)));
+			command = (char *)
+			    my_malloc(strlen((char *) (target->data)));
 			if (!command) {
 				trace(TRACE_ERROR,
 				      "%s,%s: out of memory",
@@ -101,10 +100,10 @@ int forward(u64_t msgidnr, struct list *targets, const char *from,
 			strcpy(command, (char *) (target->data) + 1);
 		} else {
 			/* pipe to sendmail */
-			command = (char *) 
-				my_malloc(strlen((char *)
-						 (target->data)) + 
-					  strlen(sendmail) + 2);
+			command = (char *)
+			    my_malloc(strlen((char *)
+					     (target->data)) +
+				      strlen(sendmail) + 2);
 			/* +2 for extra space and \0 */
 			if (!command) {
 				trace(TRACE_ERROR,
@@ -170,7 +169,8 @@ int forward(u64_t msgidnr, struct list *targets, const char *from,
 					 * is no message to send. */
 					trace(TRACE_DEBUG,
 					      "%s,%s: writing header to "
-					      "pipe", __FILE__, __FUNCTION__);
+					      "pipe", __FILE__,
+					      __FUNCTION__);
 					fprintf(pipe, "%s", header);
 				}
 

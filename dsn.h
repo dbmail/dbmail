@@ -12,28 +12,25 @@
  * accessed by functions in dsn.c
  */
 
-typedef enum
-{
-  DSN_CLASS_OK = 2,
-  DSN_CLASS_TEMP = 4,
-  DSN_CLASS_FAIL = 5
+typedef enum {
+	DSN_CLASS_OK = 2,
+	DSN_CLASS_TEMP = 4,
+	DSN_CLASS_FAIL = 5
 } dsn_class_t;
 
-typedef struct
-{
-  dsn_class_t class;
-  int subject;
-  int detail;
+typedef struct {
+	dsn_class_t class;
+	int subject;
+	int detail;
 } delivery_status_t;
 
-typedef struct
-{
-  u64_t useridnr; /* Specific user id recipient (from outside). */
-  const char *address; /* Envelope recipient (from outside). */
-  const char *mailbox; /* Default mailbox to use for userid deliveries (from outside). */
-  struct list *userids; /* List of u64_t* -- internal useridnr's to deliver to (internal). */
-  struct list *forwards; /* List of char* -- external addresses to forward to (internal). */
-  delivery_status_t dsn; /* Return status of this "delivery basket" (to outside). */
+typedef struct {
+	u64_t useridnr;		/* Specific user id recipient (from outside). */
+	const char *address;	/* Envelope recipient (from outside). */
+	const char *mailbox;	/* Default mailbox to use for userid deliveries (from outside). */
+	struct list *userids;	/* List of u64_t* -- internal useridnr's to deliver to (internal). */
+	struct list *forwards;	/* List of char* -- external addresses to forward to (internal). */
+	delivery_status_t dsn;	/* Return status of this "delivery basket" (to outside). */
 } deliver_to_user_t;
 
 /**
@@ -43,9 +40,9 @@ typedef struct
  *   - 0 on success
  *   - -1 on failure
  */
-int dsnuser_init(deliver_to_user_t *dsnuser);
+int dsnuser_init(deliver_to_user_t * dsnuser);
 
-void dsnuser_free(deliver_to_user_t *dsnuser);
+void dsnuser_free(deliver_to_user_t * dsnuser);
 void dsnuser_free_list(struct list *deliveries);
 
 /**
@@ -86,4 +83,4 @@ dsn_class_t dsnuser_worstcase_list(struct list *deliveries);
  */
 dsn_class_t dsnuser_worstcase_int(int has_2, int has_4, int has_5);
 
-#endif /* DSN_H */
+#endif				/* DSN_H */

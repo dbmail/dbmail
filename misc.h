@@ -44,7 +44,7 @@
         - -1 on error
 	-  0 on success
 */
-int drop_privileges (char *newuser, char *newgroup);
+int drop_privileges(char *newuser, char *newgroup);
 
 /**
  * \brief convert integer to string (length 42, long enough for 
@@ -52,7 +52,7 @@ int drop_privileges (char *newuser, char *newgroup);
  * \param i the integer
  * \return string
  */
-char * itoa (int i);
+char *itoa(int i);
 
 /**
  * \brief create a unique id for a message (used for pop, stored per message)
@@ -65,7 +65,7 @@ void create_unique_id(char *target, u64_t message_idnr);
  * \brief create a timestring with the current time.
  * \param timestring an allocated timestring object.
  */
-void create_current_timestring(timestring_t *timestring);
+void create_current_timestring(timestring_t * timestring);
 
 /**
  * \brief decorate a mailbox name with a namespace if needed
@@ -91,8 +91,10 @@ const char *mailbox_remove_namespace(const char *fq_name);
 
 char **base64_decode(char *str, size_t len);
 void base64_free(char **ret);
-int read_from_stream(FILE *instream, char **m_buf, size_t maxlen);
-int find_bounded(char *value, char left, char right, char **retchar, size_t *retsize, size_t *retlast);
-int base64_grow_ret(char ***inchar, size_t **inint, size_t newcount, size_t newchar);
+int read_from_stream(FILE * instream, char **m_buf, size_t maxlen);
+int find_bounded(char *value, char left, char right, char **retchar,
+		 size_t * retsize, size_t * retlast);
+int base64_grow_ret(char ***inchar, size_t ** inint, size_t newcount,
+		    size_t newchar);
 
 #endif

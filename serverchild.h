@@ -35,20 +35,19 @@
 #include <signal.h>
 #include "clientinfo.h"
 
-typedef struct 
-{
-  int maxConnect;
-  int listenSocket;
-  int resolveIP;
-  int timeout;
-  char *timeoutMsg;
-  int (*ClientHandler)(clientinfo_t *);
+typedef struct {
+	int maxConnect;
+	int listenSocket;
+	int resolveIP;
+	int timeout;
+	char *timeoutMsg;
+	int (*ClientHandler) (clientinfo_t *);
 } ChildInfo_t;
 
-void ChildSigHandler(int sig, siginfo_t *info, void *data);
+void ChildSigHandler(int sig, siginfo_t * info, void *data);
 int CheckChildAlive(pid_t pid);
 int SetChildSigHandler(void);
-pid_t CreateChild(ChildInfo_t *info);
+pid_t CreateChild(ChildInfo_t * info);
 
 
 #endif

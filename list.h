@@ -34,23 +34,21 @@
 /*
  * list data types
  */
-struct element
-{
-  void *data;	
-  size_t dsize;
-  struct element *nextnode;	
+struct element {
+	void *data;
+	size_t dsize;
+	struct element *nextnode;
 };
 
 
-struct list 
-{
-  struct element *start;
-  long total_nodes;
+struct list {
+	struct element *start;
+	long total_nodes;
 };
 
 
 struct element *list_nodeadd(struct list *tlist, const void *data,
-				    size_t dsize);
+			     size_t dsize);
 
 struct element *list_nodedel(struct list *tlist, void *data);
 struct element *list_nodepop(struct list *list);
@@ -64,6 +62,6 @@ void list_init(struct list *tlist);
  * export a function with the name list_reverse(). Nice of them,
  * but a pretty "strange" way to pollute the global namespace
  */
-struct element* dbmail_list_reverse(struct element *start);
+struct element *dbmail_list_reverse(struct element *start);
 
-#endif 
+#endif

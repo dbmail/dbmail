@@ -37,26 +37,20 @@
 #include "dbmail.h"
 #include "clientinfo.h"
 
-typedef struct
-{
-  int listenSocket;
-  int nChildren;
-  int childMaxConnect;
-  int timeout;
-  char ip[IPLEN];
-  int port;
-  int resolveIP;
-  char *timeoutMsg;
-  field_t serverUser, serverGroup;
-  int (*ClientHandler)(clientinfo_t *);
+typedef struct {
+	int listenSocket;
+	int nChildren;
+	int childMaxConnect;
+	int timeout;
+	char ip[IPLEN];
+	int port;
+	int resolveIP;
+	char *timeoutMsg;
+	field_t serverUser, serverGroup;
+	int (*ClientHandler) (clientinfo_t *);
 } serverConfig_t;
 
-int CreateSocket(serverConfig_t *conf);
-int StartServer(serverConfig_t *conf);  
+int CreateSocket(serverConfig_t * conf);
+int StartServer(serverConfig_t * conf);
 
 #endif
-
-
-
-
-

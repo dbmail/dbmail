@@ -28,7 +28,7 @@
 #endif
 
 #include "db.h"
-#include "libpq-fe.h" /* PostgreSQL header */
+#include "libpq-fe.h"		/* PostgreSQL header */
 #include "dbmail.h"
 #include "dbmailtypes.h"
 
@@ -60,287 +60,292 @@ static int db_check_connection(void);
 
 int db_connect()
 {
-     char connectionstring[255];                              
+	char connectionstring[255];
 
-     /* use the standard port for postgresql if none is given. This looks a bit
-	dirty.. can't we get this info from somewhere else? */
-     if (_db_params.port != 0)
-	     snprintf (connectionstring, 255,
-		       "host='%s' user='%s' password='%s' dbname='%s' "
-		       "port='%u'",
-		       _db_params.host, _db_params.user, _db_params.pass, 
-		       _db_params.db, _db_params.port);
-     else
-	     snprintf (connectionstring, 255,
-		      "host='%s' user='%s' password='%s' dbname='%s' ",
-		       _db_params.host, _db_params.user, _db_params.pass, 
-		       _db_params.db);
+	/* use the standard port for postgresql if none is given. This looks a bit
+	   dirty.. can't we get this info from somewhere else? */
+	if (_db_params.port != 0)
+		snprintf(connectionstring, 255,
+			 "host='%s' user='%s' password='%s' dbname='%s' "
+			 "port='%u'",
+			 _db_params.host, _db_params.user, _db_params.pass,
+			 _db_params.db, _db_params.port);
+	else
+		snprintf(connectionstring, 255,
+			 "host='%s' user='%s' password='%s' dbname='%s' ",
+			 _db_params.host, _db_params.user, _db_params.pass,
+			 _db_params.db);
 
-     conn = PQconnectdb(connectionstring);               
+	conn = PQconnectdb(connectionstring);
 
-     if (PQstatus(conn) == CONNECTION_BAD) {             
-	  trace(TRACE_ERROR,
-		"%si,%s: PQconnectdb failed: %s",
-		__FILE__, __FUNCTION__,
-		PQerrorMessage(conn));                        
-	  return -1;                                            
-     }                                                         
+	if (PQstatus(conn) == CONNECTION_BAD) {
+		trace(TRACE_ERROR,
+		      "%si,%s: PQconnectdb failed: %s",
+		      __FILE__, __FUNCTION__, PQerrorMessage(conn));
+		return -1;
+	}
 
-     return 0; 
+	return 0;
 }
 
 int db_disconnect()
 {
-     db_free_result();
-     PQfinish(conn);
-     conn = NULL;
+	db_free_result();
+	PQfinish(conn);
+	conn = NULL;
 
-     return 0;
+	return 0;
 }
 
 int db_check_connection()
 {
-     /* if there is no connection, try making one */
-     if (!conn) {
-	  trace(TRACE_DEBUG, "%s,%s: no database connection, trying "
-		"to establish one", __FILE__, __FUNCTION__);
-	  if (db_connect() < 0) {
-	       trace(TRACE_ERROR, "%s,%s: unable to connect to database",
-		     __FILE__, __FUNCTION__);
-	       return -1;
-	  }
-	  return 0;
-     }
-		
-     /* check status of current connection */	
-     if (PQstatus(conn) != CONNECTION_OK) {
-	  trace(TRACE_DEBUG, "%s,%s: connection lost, trying to reset",
-		__FILE__, __FUNCTION__);
-	  PQreset(conn);
-		
-	  if (PQstatus(conn) != CONNECTION_OK) {
-	       trace(TRACE_ERROR, "%s,%s: Connection failed: [%s]",
-		     __FILE__, __FUNCTION__, PQerrorMessage(conn));
-	       trace(TRACE_ERROR, "%s,%s: Could not establish dbase "
-		     "connection", __FILE__, __FUNCTION__);
-	       conn = NULL;
-	       return -1;
-	  }
-     }
-     return 0;
+	/* if there is no connection, try making one */
+	if (!conn) {
+		trace(TRACE_DEBUG, "%s,%s: no database connection, trying "
+		      "to establish one", __FILE__, __FUNCTION__);
+		if (db_connect() < 0) {
+			trace(TRACE_ERROR,
+			      "%s,%s: unable to connect to database",
+			      __FILE__, __FUNCTION__);
+			return -1;
+		}
+		return 0;
+	}
+
+	/* check status of current connection */
+	if (PQstatus(conn) != CONNECTION_OK) {
+		trace(TRACE_DEBUG,
+		      "%s,%s: connection lost, trying to reset", __FILE__,
+		      __FUNCTION__);
+		PQreset(conn);
+
+		if (PQstatus(conn) != CONNECTION_OK) {
+			trace(TRACE_ERROR,
+			      "%s,%s: Connection failed: [%s]", __FILE__,
+			      __FUNCTION__, PQerrorMessage(conn));
+			trace(TRACE_ERROR,
+			      "%s,%s: Could not establish dbase "
+			      "connection", __FILE__, __FUNCTION__);
+			conn = NULL;
+			return -1;
+		}
+	}
+	return 0;
 }
-			
+
 unsigned db_num_rows()
 {
-     int num_rows;
-     if (!res)
-	  return 0;
-     
-     num_rows = PQntuples(res);
-     if (num_rows < 0)
-	  return 0;
-     else
-	  return (unsigned) num_rows;
+	int num_rows;
+	if (!res)
+		return 0;
+
+	num_rows = PQntuples(res);
+	if (num_rows < 0)
+		return 0;
+	else
+		return (unsigned) num_rows;
 }
 
 unsigned db_num_fields()
 {
-     int num_fields;
+	int num_fields;
 
-     if (!res)
-	  return 0;
-     num_fields = PQnfields(res);
-     if (num_fields < 0)
-	  return 0;
-     else
-	  return (unsigned) num_fields;
+	if (!res)
+		return 0;
+	num_fields = PQnfields(res);
+	if (num_fields < 0)
+		return 0;
+	else
+		return (unsigned) num_fields;
 }
 
 void db_free_result()
 {
-     if (res != NULL)
-	  PQclear(res);
-     res = NULL;
+	if (res != NULL)
+		PQclear(res);
+	res = NULL;
 }
 
 char *db_get_result(unsigned row, unsigned field)
 {
-     if (!res) {
-	  trace(TRACE_WARNING, "%s,%s: result set is NULL",
-		__FILE__, __FUNCTION__);
-	  return NULL;
-     }
-	
-     if ((row >= db_num_rows()) ||
-	 (field >= db_num_fields())) {
-	  trace(TRACE_WARNING, "%s,%s: "
-		"(row = %u,field = %u) bigger then size of result set",
-		__FILE__, __FUNCTION__, row, field);
-	  return NULL;
-     }
-     return PQgetvalue(res, row, field);
+	if (!res) {
+		trace(TRACE_WARNING, "%s,%s: result set is NULL",
+		      __FILE__, __FUNCTION__);
+		return NULL;
+	}
+
+	if ((row >= db_num_rows()) || (field >= db_num_fields())) {
+		trace(TRACE_WARNING, "%s,%s: "
+		      "(row = %u,field = %u) bigger then size of result set",
+		      __FILE__, __FUNCTION__, row, field);
+		return NULL;
+	}
+	return PQgetvalue(res, row, field);
 }
 
 u64_t db_insert_result(const char *sequence_identifier)
 {
-     char query[DEF_QUERYSIZE];
-     u64_t insert_result;
+	char query[DEF_QUERYSIZE];
+	u64_t insert_result;
 
-     /* postgres uses the currval call on a sequence to determine
-      * the result value of an insert query */
-     snprintf(query, DEF_QUERYSIZE, 
-	      "SELECT currval('%s_seq')", sequence_identifier);
+	/* postgres uses the currval call on a sequence to determine
+	 * the result value of an insert query */
+	snprintf(query, DEF_QUERYSIZE,
+		 "SELECT currval('%s_seq')", sequence_identifier);
 
-     db_query(query);
-     if (db_num_rows() == 0) {
-	  db_free_result();
-	  return 0;
-     }
-     insert_result = strtoull(db_get_result(0, 0), NULL, 10);
-     db_free_result();
-     return insert_result;
+	db_query(query);
+	if (db_num_rows() == 0) {
+		db_free_result();
+		return 0;
+	}
+	insert_result = strtoull(db_get_result(0, 0), NULL, 10);
+	db_free_result();
+	return insert_result;
 }
 
 int db_query(const char *the_query)
 {
-     int PQresultStatusVar;
-     char *result_string;
-     PGresult *temp_res; /**< temp_res is used as a temporary result set. If
+	int PQresultStatusVar;
+	char *result_string;
+	PGresult *temp_res;
+			 /**< temp_res is used as a temporary result set. If
 			    the query succeeds, and needs to return a 
 			    result set (i.e. it is a SELECT query)
 			    the global res is 
 			    set to this temp_res result set */
 
-     if (db_check_connection() < 0) {
-	  trace(TRACE_ERROR, "%s,%s: No database connection",
-		__FILE__, __FUNCTION__);
-	  return -1;
-     }
-	
-     if (the_query != NULL) {
-	  trace(TRACE_DEBUG, "%s,%s: "
-		"executing query [%s]", __FILE__, __FUNCTION__, the_query);
-	  temp_res = PQexec (conn, the_query);
-	  if (!temp_res)
-	       return -1;
+	if (db_check_connection() < 0) {
+		trace(TRACE_ERROR, "%s,%s: No database connection",
+		      __FILE__, __FUNCTION__);
+		return -1;
+	}
 
-	  PQresultStatusVar = PQresultStatus(temp_res);
+	if (the_query != NULL) {
+		trace(TRACE_DEBUG, "%s,%s: "
+		      "executing query [%s]", __FILE__, __FUNCTION__,
+		      the_query);
+		temp_res = PQexec(conn, the_query);
+		if (!temp_res)
+			return -1;
 
-	  if (PQresultStatusVar != PGRES_COMMAND_OK &&
-	      PQresultStatusVar != PGRES_TUPLES_OK)
-	  {
-	       trace(TRACE_ERROR,"%s, %s: "
-		     "Error executing query [%s] : [%s]\n",
-		     __FILE__, __FUNCTION__,
-		     the_query, PQresultErrorMessage(temp_res));
-	       return -1;
-	  }
-		
-	  /* get the number of rows affected by the query */
-	  result_string = PQcmdTuples(temp_res);
-	  if (result_string)
-	       affected_rows = strtoull(result_string, NULL, 10);
-	  else
-	       affected_rows = 0;
-		
-	  /* only keep the result set if this was a SELECT
-	   * query */
-	  if (strncasecmp(the_query, "SELECT", 6) != 0) {
-	       if (temp_res != NULL) 
-		    PQclear(temp_res);
-	  }
-			  
-	  else {
-	       if (res)
-		    trace(TRACE_WARNING, "%s,%s: previous result set is possibly "
-			  "not freed.", __FILE__, __FUNCTION__);
-	       res = temp_res;
-	  }
-     } else {
-	  trace (TRACE_ERROR,"%s,%s: "
-		 "query buffer is NULL, this is not supposed to happen\n",
-		 __FILE__,__FUNCTION__);
-	  return -1;
-     }
-     return 0;
+		PQresultStatusVar = PQresultStatus(temp_res);
+
+		if (PQresultStatusVar != PGRES_COMMAND_OK &&
+		    PQresultStatusVar != PGRES_TUPLES_OK) {
+			trace(TRACE_ERROR, "%s, %s: "
+			      "Error executing query [%s] : [%s]\n",
+			      __FILE__, __FUNCTION__,
+			      the_query, PQresultErrorMessage(temp_res));
+			return -1;
+		}
+
+		/* get the number of rows affected by the query */
+		result_string = PQcmdTuples(temp_res);
+		if (result_string)
+			affected_rows = strtoull(result_string, NULL, 10);
+		else
+			affected_rows = 0;
+
+		/* only keep the result set if this was a SELECT
+		 * query */
+		if (strncasecmp(the_query, "SELECT", 6) != 0) {
+			if (temp_res != NULL)
+				PQclear(temp_res);
+		}
+
+		else {
+			if (res)
+				trace(TRACE_WARNING,
+				      "%s,%s: previous result set is possibly "
+				      "not freed.", __FILE__,
+				      __FUNCTION__);
+			res = temp_res;
+		}
+	} else {
+		trace(TRACE_ERROR, "%s,%s: "
+		      "query buffer is NULL, this is not supposed to happen\n",
+		      __FILE__, __FUNCTION__);
+		return -1;
+	}
+	return 0;
 }
 
 unsigned long db_escape_string(char *to,
 			       const char *from, unsigned long length)
 {
-     return PQescapeString(to, from, length);
+	return PQescapeString(to, from, length);
 }
 
 int db_do_cleanup(const char **tables, int num_tables)
 {
-     int result = 0;
-     int i;
-     char query[DEF_QUERYSIZE];
+	int result = 0;
+	int i;
+	char query[DEF_QUERYSIZE];
 
-     for (i = 0; i < num_tables; i++) {
-	  snprintf(query, DEF_QUERYSIZE, "VACUUM %s", tables[i]);
-	  if (db_query(query) == -1) {
-	       trace(TRACE_ERROR, "%s,%s: error vacuuming table [%s]",
-		     __FILE__, __FUNCTION__, tables[i]);
-	       result = -1;
-	  }
-     }
-     return result;
+	for (i = 0; i < num_tables; i++) {
+		snprintf(query, DEF_QUERYSIZE, "VACUUM %s", tables[i]);
+		if (db_query(query) == -1) {
+			trace(TRACE_ERROR,
+			      "%s,%s: error vacuuming table [%s]",
+			      __FILE__, __FUNCTION__, tables[i]);
+			result = -1;
+		}
+	}
+	return result;
 }
 
 u64_t db_get_length(unsigned row, unsigned field)
 {
-     if (!res) {
-	  trace(TRACE_WARNING, "%s,%s: result set is NULL",
-		__FILE__, __FUNCTION__);
-	  return -1;
-     }
-	
-     if ((row >= db_num_rows()) ||
-	 (field >= db_num_fields())) {
-	  trace(TRACE_ERROR, "%s,%s: "
-		"(row = %u,field = %u) bigger then size of result set",
-		__FILE__, __FUNCTION__, row, field);
-	  return -1;
-     }
-     return PQgetlength(res, row, field);
+	if (!res) {
+		trace(TRACE_WARNING, "%s,%s: result set is NULL",
+		      __FILE__, __FUNCTION__);
+		return -1;
+	}
+
+	if ((row >= db_num_rows()) || (field >= db_num_fields())) {
+		trace(TRACE_ERROR, "%s,%s: "
+		      "(row = %u,field = %u) bigger then size of result set",
+		      __FILE__, __FUNCTION__, row, field);
+		return -1;
+	}
+	return PQgetlength(res, row, field);
 }
 
 u64_t db_get_affected_rows()
 {
-     return affected_rows;
+	return affected_rows;
 }
-	
+
 void db_use_msgbuf_result()
 {
-     stored_res = res;
-     res = msgbuf_res;
+	stored_res = res;
+	res = msgbuf_res;
 }
 
 void db_store_msgbuf_result()
 {
-     msgbuf_res = res;
-     res = stored_res;
+	msgbuf_res = res;
+	res = stored_res;
 }
 
 void db_use_auth_result()
 {
-     stored_res = res;
-     res = auth_res;
+	stored_res = res;
+	res = auth_res;
 }
 
 void db_store_auth_result()
 {
-     auth_res = res;
-     res = stored_res;
+	auth_res = res;
+	res = stored_res;
 }
-void* db_get_result_set()
+
+void *db_get_result_set()
 {
-     return (void*) res;
+	return (void *) res;
 }
 
 void db_set_result_set(void *the_result_set)
 {
-     res = (PGresult*) the_result_set;
+	res = (PGresult *) the_result_set;
 }
-	

@@ -23,6 +23,7 @@
  *      - 1 on success
  *      - 0 on failure
 */
-int read_header(FILE *instream, u64_t *newlines, u64_t *headersize, char **header);
+int read_header(FILE * instream, u64_t * newlines, u64_t * headersize,
+		char **header);
 
 #endif

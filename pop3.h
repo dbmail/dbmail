@@ -54,7 +54,7 @@
 
 /* processes */
 #define MAXCHILDREN 5
-#define DEFAULT_CHILDREN 5 
+#define DEFAULT_CHILDREN 5
 #define POP3_DEF_MAXCONNECT 1500
 
 /* connection */
@@ -62,21 +62,21 @@
 /** 
  * all POP3 commands */
 typedef enum {
-     POP3_QUIT, 
-     POP3_USER,
-     POP3_PASS,
-     POP3_STAT,
-     POP3_LIST,
-     POP3_RETR,
-     POP3_DELE,
-     POP3_NOOP,
-     POP3_LAST,
-     POP3_RSET,
-     POP3_UIDL,
-     POP3_APOP,
-     POP3_AUTH,
-     POP3_TOP,
-     POP3_CAPA,
+	POP3_QUIT,
+	POP3_USER,
+	POP3_PASS,
+	POP3_STAT,
+	POP3_LIST,
+	POP3_RETR,
+	POP3_DELE,
+	POP3_NOOP,
+	POP3_LAST,
+	POP3_RSET,
+	POP3_UIDL,
+	POP3_APOP,
+	POP3_AUTH,
+	POP3_TOP,
+	POP3_CAPA,
 } Pop3Cmd_t;
 
 /**
@@ -90,7 +90,8 @@ typedef enum {
  *     0 on QUIT (client command)
  *     1 on success
  */
-int pop3 (void *stream, char *buffer, char *client_ip, PopSession_t *session);
+int pop3(void *stream, char *buffer, char *client_ip,
+	 PopSession_t * session);
 
 /**
  * \brief handles connection and calls pop command handler
@@ -98,6 +99,6 @@ int pop3 (void *stream, char *buffer, char *client_ip, PopSession_t *session);
  *        function
  * \return 0
  */
-int pop3_handle_connection (clientinfo_t *ci);
+int pop3_handle_connection(clientinfo_t * ci);
 
 #endif
