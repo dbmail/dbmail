@@ -697,3 +697,167 @@ int db_createmailbox(const char *name, unsigned long ownerid)
   return 0;
 }
   
+
+/*
+ * db_listmailboxchildren()
+ *
+ * produces a list containing the UID's of the specified mailbox' children
+ *
+ * returns -1 on error, 0 on succes
+ */
+int db_listmailboxchildren(unsigned long uid, unsigned long **children, int *nchildren)
+{
+  char query[DEF_QUERYSIZE];
+  char *name;
+  int i;
+
+  /* retrieve the name of this mailbox */
+  snprintf(query, DEF_QUERYSIZE, "SELECT name FROM mailbox WHERE"
+	   " mailboxidnr = %lu", uid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_listmailboxchildren(): could not retrieve mailbox name\n");
+      return -1;
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_listmailboxchildren(): mysql_store_result failed: %s\n",mysql_error(&conn));
+      return -1;
+    }
+
+  row = mysql_fetch_row(res);
+  if (!row)
+    {
+      /* empty set */
+      children = NULL;
+      nchildren = 0;
+      mysql_free_result(res);
+      return 0;
+    }
+
+  /* alloc mem */
+  name = (char*)malloc((strlen(row[0])+1) *sizeof(char));
+  if (!name)
+    {
+      /* out of mem */
+      trace(TRACE_ERROR,"db_listmailboxchildren(): out of memory\n");
+      mysql_free_result(res);
+      children = NULL;
+      nchildren = 0;
+      return -1;
+    }
+
+  /* copy name */
+  strcpy(name, row[0]);
+  mysql_free_result(res);
+  
+  /* now find the children */
+  snprintf(query, DEF_QUERYSIZE, "SELECT mailboxidnr FROM mailbox WHERE name LIKE '%s/%%'",name);
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_listmailboxchildren(): could not retrieve mailbox name\n");
+      free(name);
+      return -1;
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_listmailboxchildren(): mysql_store_result failed: %s\n",mysql_error(&conn));
+      free(name);
+      return -1;
+    }
+
+  row = mysql_fetch_row(res);
+  if (!row)
+    {
+      /* empty set */
+      *children = NULL;
+      nchildren = 0;
+      mysql_free_result(res);
+      free(name);
+      return 0;
+    }
+
+  *nchildren = mysql_num_rows(res);
+  if (*nchildren == 0)
+    {
+      *children = NULL;
+      return 0;
+    }
+  *children = (unsigned long*)malloc(sizeof(unsigned long) * (*nchildren));
+
+  if (!(*children))
+    {
+      /* out of mem */
+      trace(TRACE_ERROR,"db_listmailboxchildren(): out of memory\n");
+      mysql_free_result(res);
+      free(name);
+      return -1;
+    }
+
+  i = 0;
+  do
+    {
+      if (i == *nchildren)
+	{
+	  /*  big fatal */
+	  free(*children);
+	  *children = NULL;
+	  *nchildren = 0;
+	  free(name);
+	  mysql_free_result(res);
+	  trace(TRACE_ERROR, "db_listmailboxchildren: data when none expected.\n");
+	  return -1;
+	}
+
+      (*children)[i++] = strtoul(row[0], NULL, 10);
+    }
+  while ((row = mysql_fetch_row(res)));
+
+  mysql_free_result(res);
+  free(name);
+
+  return 0; /* success */
+}
+ 
+
+/*
+ * db_removemailbox()
+ *
+ * removes the mailbox indicated by UID/ownerid and all the messages associated with it
+ * the mailbox SHOULD NOT have any children but no checks are performed
+ *
+ * returns -1 on failure, 0 on succes
+ */
+int db_removemailbox(unsigned long uid, unsigned long ownerid)
+{
+  char query[DEF_QUERYSIZE];
+
+  /* first update messages belonging to this mailbox: mark as deleted (status 3) */
+  snprintf(query, DEF_QUERYSIZE, "UPDATE message SET status=3 WHERE"
+	   " mailboxidnr = %lu", uid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_removemailbox(): could not update messages in mailbox\n");
+      return -1;
+    }
+
+  /* now remove mailbox */
+  snprintf(query, DEF_QUERYSIZE, "DELETE FROM mailbox WHERE mailboxidnr = %lu", uid);
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_removemailbox(): could not remove mailbox\n");
+      return -1;
+    }
+  
+  /* done */
+  return 0;
+}
+
+  
+
+    
+

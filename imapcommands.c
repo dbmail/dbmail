@@ -9,6 +9,7 @@
 #include "imaputil.h"
 #include "dbmysql.h"
 #include <string.h>
+#include <stdlib.h>
 
 #ifndef MAX_LINESIZE
 #define MAX_LINESIZE 1024
@@ -506,9 +507,53 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
 int _ic_delete(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
+  int result,nchildren = 0;
+  unsigned long *children = NULL,mboxid;
 
   if (!check_state_and_args("DELETE", tag, args, 1, IMAPCS_AUTHENTICATED, ci))
     return 1; /* error, return */
+
+  /* remove trailing '/' if present */
+  if (args[0][strlen(args[0]) - 1] == '/')
+    args[0][strlen(args[0]) - 1] = '\0';
+
+  /* check if this mailbox exists */
+  result = db_findmailbox(args[0], ud->userid);
+  if (result == 0)
+    {
+      /* mailbox does not exist */
+      fprintf(ci->tx,"%s NO mailbox does not exist\n",tag);
+      return 1;
+    }
+
+  mboxid = result; /* the mailbox to be deleted */
+
+  /* check if there is an attempt to delete inbox */
+  if (strcasecmp(args[0],"inbox") == 0)
+    {
+      fprintf(ci->tx,"%s NO cannot delete special mailbox INBOX\n",tag);
+      return 1;
+    }
+
+  /* check for children of this mailbox */
+  result = db_listmailboxchildren(mboxid, &children, &nchildren);
+  if (result == -1)
+    {
+      /* error */
+      trace(TRACE_ERROR, "IMAPD: delete(): cannot retrieve list of mailbox children\n");
+      fprintf(ci->tx, "%s BYE dbase/memory error\n",tag);
+      return -1;
+    }
+
+  if (nchildren != 0)
+    {
+      fprintf(ci->tx,"%s NO mailbox has children\n",tag);
+      free(children);
+      return 1;
+    }
+      
+  /* ok remove mailbox */
+  db_removemailbox(mboxid, ud->userid);
 
   fprintf(ci->tx,"%s OK DELETE completed\n",tag);
   return 0;

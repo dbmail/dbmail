@@ -31,5 +31,7 @@ int db_update_pop (struct session *sessionptr);
 unsigned long db_findmailbox(const char *name, unsigned long useridnr);
 int db_getmailbox(mailbox_t *mb, unsigned long userid);
 int db_createmailbox(const char *name, unsigned long ownerid);
+int db_listmailboxchildren(unsigned long uid, unsigned long **children, int *nchildren);
+int db_removemailbox(unsigned long uid, unsigned long ownerid);
 
 #endif
