@@ -1,3 +1,20 @@
+2004-04-19  Ilja Booij  <ilja@ic-s.nl>
+
+	* auth.h: (auth_user_exists) added splint annotation to 'out' 
+	parameter.
+
+	* pipe.c (send_reply): initialise escaped_send_address to hold only '\0'
+	characters before sprintf-inf to it.
+	(execute_auto_ran): check if GetConfigValue() actually works.
+	(execute_auto_ran): changed some function calls to include checks for
+	return values indicating errors.
+	(discard_client_input): changed return type to int to be able to signal
+	error.
+	(discard_client_input): changed handling of fgets to be able to continue
+	in case of a failing fgets().
+	(store_message_temp): solved some possible memory leaks. Added some extra
+	checks for return values.
+
 2004-04-16  Ilja Booij  <ilja@ic-s.nl>
 
 	* pipe.c (send_notification): fixed some possible memory leaks

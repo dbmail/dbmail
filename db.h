@@ -606,7 +606,8 @@ int db_insert_message_block_physmessage(const char *block,
 *        - 1 otherwise
 */
 int db_insert_message_block(const char *block, u64_t block_size,
-			    u64_t message_idnr, u64_t * messageblock_idnr);
+			    u64_t message_idnr, 
+			    /*@out@*/ u64_t * messageblock_idnr);
 /**
  * \brief log IP-address for POP/IMAP_BEFORE_SMTP. If the IP-address
  *        is already logged, it's timestamp is renewed.

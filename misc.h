@@ -59,7 +59,7 @@ char *itoa(int i);
  * \param target target string. Length should be UID_SIZE 
  * \param message_idnr message_idnr of message
  */
-void create_unique_id(char *target, u64_t message_idnr);
+void create_unique_id(/*@out@*/ char *target, u64_t message_idnr);
 
 /**
  * \brief create a timestring with the current time.

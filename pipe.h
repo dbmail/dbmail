@@ -53,7 +53,10 @@ int insert_messages(FILE * instream,
 /**
  * \brief discards all input coming from instream
  * \param instream FILE stream holding input from a client
+ * \return 
+ *      - -1 on error
+ *      -  0 on success
  */
-void discard_client_input(FILE * instream);
+int discard_client_input(FILE * instream);
 
 #endif

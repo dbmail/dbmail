@@ -203,13 +203,14 @@ static int send_reply(struct list *headerfields, const char *body)
 	send_address = replyto ? replyto : from;
 	/* allocate a string twice the size of send_address */
 	escaped_send_address =
-	    (char *) my_malloc(strlen((send_address) + 1)
-			       * 2 * sizeof(char));
+		(char *) my_malloc((strlen(send_address) + 1)
+				   * 2 * sizeof(char));
 	if (!escaped_send_address) {
 		trace(TRACE_ERROR, "%s,%s: unable to allocate memory. Memory "
 		      "full?", __FILE__, __FUNCTION__);
 		return 0;
 	}
+	memset(escaped_send_address, '\0', (strlen(send_address) + 1) * 2 * sizeof(char));
 	i = 0;
 	j = 0;
 	/* get all characters from send_address, and escape every ' */
@@ -257,15 +258,21 @@ static int execute_auto_ran(u64_t useridnr, struct list *headerfields)
 	char *notify_address = NULL;
 
 	/* message has been succesfully inserted, perform auto-notification & auto-reply */
-	GetConfigValue("AUTO_NOTIFY", &smtpItems, val);
+	if (GetConfigValue("AUTO_NOTIFY", &smtpItems, val) < 0)
+		trace(TRACE_FATAL, "%s,%s error getting config",
+		      __FILE__, __FUNCTION__);
+
 	if (strcasecmp(val, "yes") == 0)
 		do_auto_notify = 1;
 
-	GetConfigValue("AUTO_REPLY", &smtpItems, val);
+	if (GetConfigValue("AUTO_REPLY", &smtpItems, val) < 0)
+		trace(TRACE_FATAL, "%s,%s error getting config",
+		      __FILE__, __FUNCTION__);
+
 	if (strcasecmp(val, "yes") == 0)
 		do_auto_reply = 1;
 
-	if (do_auto_notify) {
+	if (do_auto_notify != 0) {
 		trace(TRACE_DEBUG,
 		      "execute_auto_ran(): starting auto-notification procedure");
 
@@ -280,15 +287,20 @@ static int execute_auto_ran(u64_t useridnr, struct list *headerfields)
 				trace(TRACE_DEBUG,
 				      "execute_auto_ran(): sending notifcation to [%s]",
 				      notify_address);
-				send_notification(notify_address,
-						  AUTO_NOTIFY_SENDER,
-						  AUTO_NOTIFY_SUBJECT);
+				if (send_notification(notify_address,
+						      AUTO_NOTIFY_SENDER,
+						      AUTO_NOTIFY_SUBJECT) < 0) {
+					trace(TRACE_ERROR, "%s,%s: error in call to send_notification.",
+					      __FILE__, __FUNCTION__);
+					my_free(notify_address);
+					return -1;
+				}
 				my_free(notify_address);
 			}
 		}
 	}
 
-	if (do_auto_reply) {
+	if (do_auto_reply != 0) {
 		trace(TRACE_DEBUG,
 		      "execute_auto_ran(): starting auto-reply procedure");
 
@@ -300,8 +312,14 @@ static int execute_auto_ran(u64_t useridnr, struct list *headerfields)
 				trace(TRACE_DEBUG,
 				      "execute_auto_ran(): no reply body specified, skipping");
 			else {
-				send_reply(headerfields, reply_body);
+				if (send_reply(headerfields, reply_body) < 0) {
+					trace(TRACE_ERROR, "%s,%s: error in call to send_reply",
+					      __FILE__, __FUNCTION__);
+					my_free(reply_body);
+					return -1;
+				}
 				my_free(reply_body);
+				
 			}
 		}
 	}
@@ -311,15 +329,19 @@ static int execute_auto_ran(u64_t useridnr, struct list *headerfields)
 
 
 /* read from instream, but simply discard all input! */
-void discard_client_input(FILE * instream)
+int discard_client_input(FILE * instream)
 {
 	char *tmpline;
 
-	memtst((tmpline = (char *) my_malloc(MAX_LINE_SIZE + 1)) == NULL);
+	tmpline = (char *) my_malloc(MAX_LINE_SIZE + 1);
+	if (tmpline == NULL) {
+		trace(TRACE_ERROR, "%s,%s: unable to allocate memory.",
+		      __FILE__, __FUNCTION__);
+		return -1;
+	}
+	
 	while (!feof(instream)) {
-		fgets(tmpline, MAX_LINE_SIZE, instream);
-
-		if (!tmpline)
+		if (fgets(tmpline, MAX_LINE_SIZE, instream) == NULL)
 			break;
 
 		trace(TRACE_DEBUG, "%s,%s: tmpline = [%s]", __FILE__,
@@ -328,6 +350,7 @@ void discard_client_input(FILE * instream)
 			break;
 	}
 	my_free(tmpline);
+	return 0;
 }
 
 /* Read from insteam until eof, and store to the
@@ -340,8 +363,9 @@ void discard_client_input(FILE * instream)
  * */
 static int store_message_temp(FILE * instream,
 			      char *header, u64_t headersize,
-			      u64_t headerrfcsize, u64_t * msgsize,
-			      u64_t * rfcsize, u64_t * temp_message_idnr)
+			      u64_t headerrfcsize, /*@out@*/ u64_t * msgsize,
+			      /*@out@*/ u64_t * rfcsize, 
+			      /*@out@*/ u64_t * temp_message_idnr)
 {
 	int myeof = 0;
 	u64_t msgidnr = 0;
@@ -352,6 +376,11 @@ static int store_message_temp(FILE * instream,
 	u64_t messageblk_idnr;
 	u64_t user_idnr;
 	int result;
+
+	/* define all out-parameters */
+	*msgsize = 0;
+	*rfcsize = 0;
+	*temp_message_idnr = 0;
 
 	result = auth_user_exists(DBMAIL_DELIVERY_USERNAME, &user_idnr);
 	if (result < 0) {
@@ -392,10 +421,29 @@ static int store_message_temp(FILE * instream,
 	      "store_message_temp(): allocating [%ld] bytes of memory for readblock",
 	      READ_BLOCK_SIZE);
 
-	memtst((strblock =
-		(char *) my_malloc(READ_BLOCK_SIZE + 1)) == NULL);
+	strblock = (char *) my_malloc(READ_BLOCK_SIZE + 1);
+	if (strblock == NULL) {
+		trace(TRACE_ERROR, "%s,%s: error allocating memory. Trying to cleanup..",
+		      __FILE__, __FUNCTION__);
+		if (db_delete_message(msgidnr) < 0)
+			trace(TRACE_ERROR, "%s,%s: error deleting message. "
+			      "Database might be inconsistent, run "
+			      "dbmail-maintenance", __FILE__, __FUNCTION__);
+		return -1;
+	}
 	memset((void *) strblock, '\0', READ_BLOCK_SIZE + 1);
-	memtst((tmpline = (char *) my_malloc(MAX_LINE_SIZE + 1)) == NULL);
+	
+	tmpline = (char *) my_malloc(MAX_LINE_SIZE + 1);
+	if (tmpline == NULL) {
+		trace(TRACE_ERROR, "%s,%s, error allocating memory. Trying to cleanup.",
+		      __FILE__, __FUNCTION__);
+		if (db_delete_message(msgidnr) < 0)
+			trace(TRACE_ERROR, "%s,%s: error deleting message. "
+			      "Database might be inconsistent, run "
+			      "dbmail-maintenance", __FILE__, __FUNCTION__);
+		my_free(strblock);
+		return -1;
+	}
 	memset((void *) tmpline, '\0', MAX_LINE_SIZE + 1);
 
 	while ((!feof(instream) && (!myeof)) || (linemem != 0)) {
@@ -405,7 +453,7 @@ static int store_message_temp(FILE * instream,
 			usedmem += linemem;
 
 			/* Resetting strlen for tmpline */
-			tmpline[0] = '\0';
+			memset((void *) tmpline, '\0', MAX_LINE_SIZE + 1);
 			linemem = 0;
 		}
 
@@ -413,7 +461,9 @@ static int store_message_temp(FILE * instream,
 		 * unless of course we're at the end of the file */
 		while (!feof(instream)
 		       && (usedmem + linemem < READ_BLOCK_SIZE)) {
-			fgets(tmpline, MAX_LINE_SIZE, instream);
+			if (fgets(tmpline, MAX_LINE_SIZE, instream) == NULL) 
+				break;
+			
 			linemem = strlen(tmpline);
 			/* The RFC size assumes all lines end in \r\n,
 			 * so if we have a newline (\n) but don't have
@@ -428,7 +478,8 @@ static int store_message_temp(FILE * instream,
 				trace(TRACE_ERROR,
 				      "store_message_temp(): error on instream: [%s]",
 				      strerror(errno));
-				/* FIXME: Umm, don't we need to free a few things?! */
+				my_free(tmpline);
+				my_free(strblock);
 				return -1;
 			}
 
@@ -469,11 +520,13 @@ static int store_message_temp(FILE * instream,
 			totalmem += usedmem;
 
 			switch (db_insert_message_block
-				(strblock, usedmem, msgidnr,
+				(strblock, (u64_t) usedmem, msgidnr,
 				 &messageblk_idnr)) {
 			case -1:
 				trace(TRACE_STOP,
 				      "store_message_temp(): error inserting msgblock");
+				my_free(tmpline);
+				my_free(strblock);
 				return -1;
 			}
 		}
@@ -491,9 +544,18 @@ static int store_message_temp(FILE * instream,
 	my_free(strblock);
 	trace(TRACE_DEBUG, "store_message_temp(): strblock freed");
 
-	db_update_message(msgidnr, unique_id, (totalmem + headersize),
-			  (totalmem + rfclines + headerrfcsize));
-
+	if (db_update_message(msgidnr, unique_id, (totalmem + headersize),
+			      (totalmem + rfclines + headerrfcsize)) < 0) {
+		trace(TRACE_ERROR, "%s,%s: error updating message [%llu]. "
+		      "Trying to clean up", __FILE__, __FUNCTION__, msgidnr);
+		if (db_delete_message(msgidnr) < 0) 
+			trace(TRACE_ERROR, "%s,%s error deleting message "
+			      "[%llu]. Database might be inconsistent, run "
+			      "dbmail-maintenance", __FILE__, __FUNCTION__,
+			      msgidnr);
+		return -1;
+	}
+		
 	/* Pass the message id out to the caller. */
 	*temp_message_idnr = msgidnr;
 	*rfcsize = totalmem + rfclines + headerrfcsize;
@@ -607,7 +669,10 @@ int insert_messages(FILE * instream, char *header, u64_t headersize,
 			}
 
 			/* Automatic reply and notification */
-			execute_auto_ran(useridnr, headerfields);
+			if (execute_auto_ran(useridnr, headerfields) < 0)
+				trace(TRACE_ERROR, "%s,%s: error in "
+				      "execute_auto_ran(), continuing",
+				      __FILE__, __FUNCTION__);
 		}		/* from: the useridnr for loop */
 
 		switch (dsnuser_worstcase_int(has_2, has_4, has_5)) {
@@ -653,18 +718,24 @@ int insert_messages(FILE * instream, char *header, u64_t headersize,
 			ret_path = list_getstart(returnpath);
 
 			/* Forward using the temporary stored message. */
-			forward(tmpmsgidnr, delivery->forwards,
+			if (forward(tmpmsgidnr, delivery->forwards,
 				(ret_path ? ret_path->
 				 data : "DBMAIL-MAILER"), header,
-				headersize);
+				headersize) < 0)
+				/* FIXME: if forward fails, we should do something 
+				 * sensible. Currently, the message is just black-
+				 * holed! */
+				trace(TRACE_ERROR, "%s,%s: forward failed "
+				      "message lost", __FILE__, __FUNCTION__);
 		}
-
 	}			/* from: the delivery for loop */
 
 	/* Always delete the temporary message, even if the delivery failed.
 	 * It is the MTA's job to requeue or bounce the message,
 	 * and our job to keep a tidy database ;-) */
-	db_delete_message(tmpmsgidnr);
+	if (db_delete_message(tmpmsgidnr) < 0) 
+		trace(TRACE_ERROR, "%s,%s: failed to delete temporary message "
+		      "[%llu]", __FILE__, __FUNCTION__, tmpmsgidnr);
 	trace(TRACE_DEBUG,
 	      "insert_messages(): temporary message deleted from database");
 

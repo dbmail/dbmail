@@ -68,7 +68,7 @@ int auth_disconnect(void);
  *    -  0 if user not found
  *    -  1 otherwise
  */
-int auth_user_exists(const char *username, u64_t * user_idnr);
+int auth_user_exists(const char *username, /*@out@*/ u64_t * user_idnr);
 
 /**
  * \brief get a list of all known users
