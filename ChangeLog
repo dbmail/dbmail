@@ -1,3 +1,13 @@
+2004-07-22  Aaron Stone  <aaron@serendipity.cx>
+
+	* db.c: added acl, pbsp and subscription to the list of tables
+	and added the dbmail_ prefix to them in all queries.
+	* contrib/startup-scripts/gentoo/dbmail-lmtpd,imapd,pop3d:
+	pidfiles now go into /var/run rather than /var/run/dbmail
+	as most people won't have that directory already existing.
+	* pidfile.c: added an fflush call so that filesystems like XFS
+	which cache agressively will be forced to write out the pid.
+
 2004-07-21  Aaron Stone  <aaron@serendipity.cx>
 
 	* user.c: overhaul of argument handling ended up being a near

@@ -8,7 +8,7 @@
 PROGRAM=dbmail-pop3d
 BIN_DIR=/usr/local/sbin
 
-PID_DIR=/var/run/dbmail
+PID_DIR=/var/run
 PID=pid
 
 # Where is the dbmail.conf file located?
@@ -41,7 +41,7 @@ start() {
 		--pidfile $PID_DIR/$PROGRAM.$PID \
 		--exec $BIN_DIR/$PROGRAM \
 		--name $PROGRAM \
-		-- -f $CONFIG -p $PID_DIR/$PROGRAM 2>&1
+		-- -f $CONFIG -p $PID_DIR/$PROGRAM.$PID 2>&1
 	eend $?
 }	
 

@@ -56,9 +56,11 @@ extern const char *TO_CHAR;
 extern const char *TO_DATE;
 
 /** list of tables used in dbmail */
+#define DB_NTABLES 9
 const char *DB_TABLENAMES[DB_NTABLES] = {
 	"dbmail_users", "dbmail_aliases", "dbmail_mailboxes",
-	"dbmail_messages", "dbmail_physmessage", "dbmail_messageblks"
+	"dbmail_messages", "dbmail_physmessage", "dbmail_messageblks",
+	"dbmail_acl", "dbmail_subscription", "dbmail_pbsp"
 };
 
 /** can be used for making queries to db backend */
@@ -1011,7 +1013,7 @@ int db_log_ip(const char *ip)
 	u64_t id = 0;
 
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT idnr FROM pbsp WHERE ipnumber = '%s'", ip);
+		 "SELECT idnr FROM dbmail_pbsp WHERE ipnumber = '%s'", ip);
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not access ip-log table "
 		      "(pop/imap-before-smtp): %s", __FILE__, __func__,
@@ -1025,7 +1027,7 @@ int db_log_ip(const char *ip)
 
 	if (id) {
 		/* this IP is already in the table, update the 'since' field */
-		snprintf(query, DEF_QUERYSIZE, "UPDATE pbsp "
+		snprintf(query, DEF_QUERYSIZE, "UPDATE dbmail_pbsp "
 			 "SET since = CURRENT_TIMESTAMP WHERE idnr='%llu'",
 			 id);
 
@@ -1039,7 +1041,7 @@ int db_log_ip(const char *ip)
 	} else {
 		/* IP not in table, insert row */
 		snprintf(query, DEF_QUERYSIZE,
-			 "INSERT INTO pbsp (since, ipnumber) "
+			 "INSERT INTO dbmail_pbsp (since, ipnumber) "
 			 "VALUES (CURRENT_TIMESTAMP, '%s')", ip);
 		if (db_query(query) == -1) {
 			trace(TRACE_ERROR,
@@ -1059,7 +1061,7 @@ int db_log_ip(const char *ip)
 int db_cleanup_iplog(const char *lasttokeep)
 {
 	snprintf(query, DEF_QUERYSIZE,
-		 "DELETE FROM pbsp WHERE since < '%s'", lasttokeep);
+		 "DELETE FROM dbmail_pbsp WHERE since < '%s'", lasttokeep);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s:%s: error executing query",
@@ -2284,9 +2286,9 @@ int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
 		snprintf(query, DEF_QUERYSIZE,
 			 "SELECT mbx.name, mbx.mailbox_idnr, mbx.owner_idnr "
 			 "FROM dbmail_mailboxes mbx "
-			 "LEFT JOIN acl "
+			 "LEFT JOIN dbmail_acl acl "
 			 "ON acl.mailbox_id = mbx.mailbox_idnr "
-			 "JOIN subscription sub ON sub.user_id = '%llu' "
+			 "JOIN dbmail_subscription sub ON sub.user_id = '%llu' "
 			 "AND sub.mailbox_id = mbx.mailbox_idnr "
 			 "WHERE mbx.owner_idnr = '%llu' "
 			 "OR (acl.user_id = '%llu' AND acl.lookup_flag = '1') "
@@ -2296,7 +2298,7 @@ int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
 		snprintf(query, DEF_QUERYSIZE,
 			 "SELECT mbx.name, mbx.mailbox_idnr, mbx.owner_idnr "
 			 "FROM dbmail_mailboxes mbx "
-			 "LEFT JOIN acl "
+			 "LEFT JOIN dbmail_acl acl "
 			 "ON mbx.mailbox_idnr = acl.mailbox_id "
 			 "WHERE (acl.user_id = '%llu' AND acl.lookup_flag = '1') "
 			 "OR mbx.owner_idnr = '%llu'", user_idnr,
@@ -3149,7 +3151,7 @@ u64_t db_first_unseen(u64_t mailbox_idnr)
 int db_subscribe(u64_t mailbox_idnr, u64_t user_idnr)
 {
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT * FROM subscription "
+		 "SELECT * FROM dbmail_subscription "
 		 "WHERE mailbox_id = '%llu' "
 		 "AND user_id = '%llu'", mailbox_idnr, user_idnr);
 
@@ -3169,7 +3171,7 @@ int db_subscribe(u64_t mailbox_idnr, u64_t user_idnr)
 	db_free_result();
 
 	snprintf(query, DEF_QUERYSIZE,
-		 "INSERT INTO subscription (user_id, mailbox_id) "
+		 "INSERT INTO dbmail_subscription (user_id, mailbox_id) "
 		 "VALUES ('%llu', '%llu')", user_idnr, mailbox_idnr);
 
 	if (db_query(query) == -1) {
@@ -3184,7 +3186,7 @@ int db_subscribe(u64_t mailbox_idnr, u64_t user_idnr)
 int db_unsubscribe(u64_t mailbox_idnr, u64_t user_idnr)
 {
 	snprintf(query, DEF_QUERYSIZE,
-		 "DELETE FROM subscription "
+		 "DELETE FROM dbmail_subscription "
 		 "WHERE user_id = '%llu' AND mailbox_id = '%llu'",
 		 user_idnr, mailbox_idnr);
 
@@ -3687,7 +3689,7 @@ int db_acl_has_right(u64_t userid, u64_t mboxid, const char *right_flag)
 		return 1;
 
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT * FROM acl "
+		 "SELECT * FROM dbmail_acl "
 		 "WHERE user_id = '%llu' "
 		 "AND mailbox_id = '%llu' "
 		 "AND %s = '1'", userid, mboxid, right_flag);
@@ -3712,7 +3714,7 @@ static int db_acl_has_acl(u64_t userid, u64_t mboxid)
 	int result;
 
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT user_id, mailbox_id FROM acl "
+		 "SELECT user_id, mailbox_id FROM dbmail_acl "
 		 "WHERE user_id = '%llu' AND mailbox_id = '%llu'",
 		 userid, mboxid);
 
@@ -3734,7 +3736,7 @@ static int db_acl_has_acl(u64_t userid, u64_t mboxid)
 static int db_acl_create_acl(u64_t userid, u64_t mboxid)
 {
 	snprintf(query, DEF_QUERYSIZE,
-		 "INSERT INTO acl (user_id, mailbox_id) "
+		 "INSERT INTO dbmail_acl (user_id, mailbox_id) "
 		 "VALUES ('%llu', '%llu')", userid, mboxid);
 
 	if (db_query(query) < 0) {
@@ -3787,7 +3789,7 @@ int db_acl_set_right(u64_t userid, u64_t mboxid, const char *right_flag,
 	}
 
 	snprintf(query, DEF_QUERYSIZE,
-		 "UPDATE acl SET %s = '%i' "
+		 "UPDATE dbmail_acl SET %s = '%i' "
 		 "WHERE user_id = '%llu' AND mailbox_id = '%llu'",
 		 right_flag, set, userid, mboxid);
 
@@ -3808,7 +3810,7 @@ int db_acl_delete_acl(u64_t userid, u64_t mboxid)
 	      "mailbox [%llu].", __FILE__, __func__, userid, mboxid);
 
 	snprintf(query, DEF_QUERYSIZE,
-		 "DELETE FROM acl "
+		 "DELETE FROM dbmail_acl "
 		 "WHERE user_id = '%llu' AND mailbox_id = '%llu'",
 		 userid, mboxid);
 
@@ -3831,9 +3833,9 @@ int db_acl_get_identifier(u64_t mboxid, struct list *identifier_list)
 	list_init(identifier_list);
 
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT dbmail_users.userid FROM dbmail_users, acl "
-		 "WHERE acl.mailbox_id = '%llu' "
-		 "AND dbmail_users.user_idnr = acl.user_id", mboxid);
+		 "SELECT dbmail_users.userid FROM dbmail_users, dbmail_acl "
+		 "WHERE dbmail_acl.mailbox_id = '%llu' "
+		 "AND dbmail_users.user_idnr = dbmail_acl.user_id", mboxid);
 
 	if (db_query(query) < 0) {
 		trace(TRACE_ERROR, "%s,%s: error getting acl identifiers "

@@ -103,6 +103,8 @@ void pidfile_create(const char *pidFile, pid_t pid)
 
 	fwrite(buf, sizeof(char), strlen(buf), f);
 
+	fflush(f);
+
 	/* Leave pid file open & locked for the duration... */
 }
 
