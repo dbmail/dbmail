@@ -1,3 +1,11 @@
+2004-03-15  Ilja Booij  <ilja@ic-s.nl>
+
+	* mysql/dbmysql.c: added quotes around TO_DATE string
+
+	* db.c (db_insert_physmessage_with_internal_date): removed the
+	quotes that Aaron has just put in. They've moved to dbmysql.c to
+	make sure PostgreSQL handling does not break.
+
 2004-03-14  Aaron Stone <aaron@serendipity.cx>
 
 	* db.c: MySQL 4.0.14 or higher required for INSERT ... SELECT!

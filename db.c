@@ -631,7 +631,7 @@ int db_insert_physmessage_with_internal_date(timestring_t internal_date,
 	
 	snprintf(query, DEF_QUERYSIZE,
 		 "INSERT INTO physmessage (messagesize, internal_date) "
-		 "VALUES ('0', '%s')", to_date_str);
+		 "VALUES ('0', %s)", to_date_str);
 	my_free(to_date_str);
 	
 	if (db_query(query) == -1) {

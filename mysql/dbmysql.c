@@ -41,7 +41,7 @@ const char *TO_CHAR = "DATE_FORMAT(%s, '%%Y-%%m-%%d %%T')";
    only available from MYSQL version 4.1.1 and up, using the
    str_to_date function. For now, we'll just let MySQL deal with
    the datetime it gets. It should be able to cope with it .. */
-const char *TO_DATE = "%s";
+const char *TO_DATE = "'%s'";
 
 static MYSQL conn; /**< MySQL database connection */
 static MYSQL_RES *res = NULL; /**< MySQL result set */
