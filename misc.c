@@ -26,10 +26,11 @@
 #include "config.h"
 #endif
 
-#include <stdlib.h>
 #include "dbmail.h"
 #include "dbmd5.h"
 #include "misc.h"
+#include <stdlib.h>
+#include <time.h>
 
 int drop_privileges (char *newuser, char *newgroup)
 {
