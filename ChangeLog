@@ -1,3 +1,11 @@
+2004-11-24  Aaron Stone  <aaron@serendipity.cx>
+
+	* main.c: handle new DSN_STATUS_NONE.
+	* dsn.h, dsn.c: added new DSN_STATUS_NONE values.
+	* pipe.c: more intelligent handling of nonexistent users,
+	including the use of DSN_STATUS_NONE to avoid changing the
+	delivery status for users already not-found by dsnuser_resolve.
+
 2004-11-24  Ilja Booij  <ilja@ic-s.nl>
 
 	* pop3.c (pop3): changed AUTH response to return a '.' after

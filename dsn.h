@@ -23,6 +23,7 @@
 #include <dbmailtypes.h>
 
 typedef enum {
+	DSN_CLASS_NONE = 0,
 	DSN_CLASS_OK = 2,
 	DSN_CLASS_TEMP = 4,
 	DSN_CLASS_FAIL = 5

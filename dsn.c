@@ -427,7 +427,7 @@ dsn_class_t dsnuser_worstcase_int(int has_2, int has_4, int has_5)
 		exitcode = DSN_CLASS_TEMP;
 	/* All three or none, again prefer temporary. */
 	else			/* 2, 4, 5 */
-		exitcode = DSN_CLASS_TEMP;
+		exitcode = DSN_CLASS_NONE;
 
 	return exitcode;
 }
@@ -452,6 +452,9 @@ dsn_class_t dsnuser_worstcase_list(struct list * deliveries)
 		case DSN_CLASS_FAIL:
 			/* Permanent failure. */
 			has_5 = 1;
+			break;
+		case DSN_CLASS_NONE:
+			/* Nothing doing. */
 			break;
 		}
 	}

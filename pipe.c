@@ -602,24 +602,25 @@ int insert_messages(const char *header, const char* body, u64_t headersize,
 			delivery->dsn.detail = 5;	/* Valid. */
 			break;
 		case DSN_CLASS_TEMP:
-			/* this following statement seems a bit dirty.. If 
-			 * this is not used the MTA will always receive a 
-			 * TEMP_FAIL messages, even when the only action 
-			 * that is taken is to forward to an external address*/
-			if ((has_4 == 0) && 
-			    (list_totalnodes(delivery->forwards) > 0)) 
-				delivery->dsn.class = DSN_CLASS_OK;
-			else
-				/* Temporary transient failure. */
-				delivery->dsn.class = DSN_CLASS_TEMP;
+			/* sort_and_deliver returns TEMP is useridnr is 0, aka,
+			 * if nothing was delivered at all, or for any other failures. */	
 
-			delivery->dsn.subject = 1;	/* Address related. */
-			delivery->dsn.detail = 5;	/* Valid. */
-			break;
+			/* If there's a problem with the delivery address, but
+			 * there are proper forwarding addresses, we're OK. */
+			if (list_totalnodes(delivery->forwards) > 0) {
+				delivery->dsn.class = DSN_CLASS_OK;
+				delivery->dsn.subject = 1;	/* Address related. */
+				delivery->dsn.detail = 5;	/* Valid. */
+				break;
+			}
+			/* Fall through to FAIL. */
 		case DSN_CLASS_FAIL:
 			delivery->dsn.class = DSN_CLASS_FAIL;	/* Permanent failure. */
 			delivery->dsn.subject = 1;	/* Address related. */
 			delivery->dsn.detail = 1;	/* Does not exist. */
+			break;
+		case DSN_CLASS_NONE:
+			/* Leave the DSN status at whatever dsnuser_resolve set it at. */
 			break;
 		}
 

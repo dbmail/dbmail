@@ -369,7 +369,7 @@ int main(int argc, char *argv[])
 			trace(TRACE_STOP,
 			      "main(): scanner found no email addresses (scanned for %s)",
 			      deliver_to_header);
-			exitcode = EX_TEMPFAIL;
+			exitcode = EX_NOUSER;
 			goto freeall;
 		}
 
@@ -404,12 +404,6 @@ int main(int argc, char *argv[])
 		goto freeall;
 	}
 
-	if (dsnuser_worstcase_list(&dsnusers) == DSN_CLASS_FAIL) {
-		trace(TRACE_DEBUG, "main(): no delivery or forwarding addresses found");
-		exitcode = EX_NOUSER;
-		goto freeall;
-	}
-
 	/* inserting messages into the database */
 	if (insert_messages(header, body, headersize,
 			    body_size, rfcsize,
@@ -432,6 +426,7 @@ int main(int argc, char *argv[])
 		case DSN_CLASS_TEMP:
 			exitcode = EX_TEMPFAIL;
 			break;
+		case DSN_CLASS_NONE:
 		case DSN_CLASS_FAIL:
 			exitcode = EX_NOUSER;
 			break;
