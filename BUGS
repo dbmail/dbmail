@@ -10,3 +10,6 @@ getopt()
 2004-02-04 ():
 dbmail bounces have wrong envelope and needs to be more sane on where to send bounce
 to.
+
+2004-03-02 ():
+IMAP APPEND should handle optional INTERNAL DATE and FLAGS
