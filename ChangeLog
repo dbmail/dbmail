@@ -1,3 +1,16 @@
+2004-11-22  Ilja Booij  <ilja@Ilja-Booijs-Computer.local>
+
+	* pipe.c (send_reply): Reverted back from "Delivered-To" to 
+	"Deliver-To".
+
+	* main.c (do_showhelp): Reverted back from "Delivered-To" to 
+	"Deliver-To". 
+	(main): Reverted back from "Delivered-To" to 
+	"Deliver-To".
+
+	* header.c: Reverted back from "Delivered-To" to 
+	"Deliver-To".
+
 2004-11-15  Aaron Stone  <aaron@serendipity.cx>
 
 	* db.c, db.h: added count-only counterparts db_count_iplog
