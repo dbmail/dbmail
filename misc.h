@@ -27,6 +27,7 @@
 #include "config.h"
 #endif
 
+#include <time.h>
 #include <grp.h>
 #include <sys/types.h>
 #include <unistd.h>
