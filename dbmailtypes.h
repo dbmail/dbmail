@@ -255,7 +255,7 @@ typedef struct {
 /*
  * A struct to hold info about a Sieve script
  */
-typedef struct {
+typedef struct ssinfo {
 	char *name;
 	int active;
 } sievescript_info_t;

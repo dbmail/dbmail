@@ -33,6 +33,7 @@
 #include <string.h>
 #include "dbmail.h"
 #include "list.h"
+#include "server.h"
 #include "debug.h"
 #include "db.h"
 #include <time.h>
@@ -48,10 +49,11 @@ char *configFile = DEFAULT_CONFIG_FILE;
 
 /* set up database login data */
 extern db_param_t _db_params;
+static void SetConfigItems(serverConfig_t * config);
 
 int main(int argc, char *argv[])
 {
-	struct list sysItems;
+	serverConfig_t sysItems;
 	int res = 0, opt = 0, act = 0;
 	u64_t user_idnr = 0;
 	char *user_name = NULL;
@@ -63,9 +65,10 @@ int main(int argc, char *argv[])
 
 	setvbuf(stdout, 0, _IONBF, 0);
 
-	ReadConfig("DBMAIL", configFile, &sysItems);
-	SetTraceLevel(&sysItems);
-	GetDBParams(&_db_params, &sysItems);
+	ReadConfig("DBMAIL", configFile);
+  SetConfigItems(&sysItems);
+	SetTraceLevel("SIEVECMD");
+	GetDBParams(&_db_params);
 
 	configure_debug(TRACE_ERROR, 1, 0);
 
@@ -127,6 +130,7 @@ int main(int argc, char *argv[])
 		switch (auth_user_exists(user_name, &user_idnr)) {
 		case 0:
 			printf("User [%s] does not exist!\n", user_name);
+			goto mainend;
 			break;
 		case -1:
 			printf("Error retrieving User ID Number\n");
@@ -220,9 +224,10 @@ int do_insert(u64_t user_idnr, char *name, FILE * source)
 	}
 
 	/* Check if the script is valid */
-	res = my_sieve_script_validate(buf, &errmsg);
+	/*res = my_sieve_script_validate(buf, &errmsg);*/
+	res = sortsieve_script_validate(buf, &errmsg);
 	if (res != 0) {
-		printf("Script has errors: [%s].\n", name, errmsg);
+		printf("Script has errors: [%s] '%s'.\n", name, errmsg);
 		return -1;
 	}
 
@@ -272,11 +277,9 @@ int do_list(u64_t user_idnr)
 		return -1;
 	}
 
-	if (list_totalnodes(&scriptlist) > 0)
+	if (list_totalnodes(&scriptlist) > 0){
 		printf("Found %ld scripts:\n",
 		       list_totalnodes(&scriptlist));
-	else
-		printf("No scripts found!\n");
 
 	tmp = list_getstart(&scriptlist);
 	while (tmp) {
@@ -288,6 +291,9 @@ int do_list(u64_t user_idnr)
 		printf("%s\n", info->name);
 		tmp = tmp->nextnode;
 	}
+	} else
+		printf("No scripts found!\n");
+
 
 	if (scriptlist.start)
 		list_freelist(&scriptlist.start);
@@ -359,3 +365,10 @@ int read_script_file(FILE * f, char **m_buf)
 	*m_buf = f_buf;
 	return 0;
 }
+
+void SetConfigItems(serverConfig_t * config)
+{
+  field_t val;
+
+}
+

@@ -151,6 +151,17 @@ CREATE TABLE dbmail_pbsp (
    INDEX since_index (since)
 );
 
+DROP TABLE IF EXISTS dbmail_sievescripts;
+CREATE TABLE dbmail_sievescripts (
+  owner_idnr bigint(21) DEFAULT '0' NOT NULL,
+  name varchar(100) NOT NULL,
+  script text,
+  active tinyint(1) default '0' not null,
+  INDEX (name),
+  INDEX (owner_idnr),
+  INDEX (owner_idnr, name)
+);
+
 # create the user for the delivery chain
 INSERT INTO dbmail_users (userid, passwd, encryption_type) 
 	VALUES ('__@!internal_delivery_user!@__', '', 'md5');

@@ -39,6 +39,7 @@ Copyright (C) 2004 Aaron Stone aaron at serendipity dot cx
 #include "server.h"
 #include "debug.h"
 #include "misc.h"
+#include "pidfile.h"
 #include "dbmail.h"
 #include "clientinfo.h"
 #include "timsieve.h"
@@ -233,7 +234,7 @@ int main(int argc, char *argv[])
 }
 
 
-void MainSigHandler(int sig, siginfo_t * info, void *data)
+void MainSigHandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
 {
 	trace(TRACE_DEBUG, "MainSigHandler(): got signal [%d]", sig);
 
@@ -285,14 +286,14 @@ void SetConfigItems(serverConfig_t * config)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for NCHILDREN in config file");
 
-	if ((config->nChildren = atoi(val)) <= 0)
+	if ((config->startChildren = atoi(val)) <= 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): value for NCHILDREN is invalid: [%d]",
-		      config->nChildren);
+		      config->startChildren);
 
 	trace(TRACE_DEBUG,
 	      "SetConfigItems(): server will create  [%d] children",
-	      config->nChildren);
+	      config->startChildren);
 
 
 	/* read items: MAXCONNECTS */

@@ -1,5 +1,12 @@
 2004-10-31  Aaron Stone  <aaron@serendipity.cx>
 
+	* db.c, dbmail.conf, dbmailtypes.h, sievecmd.c, sievecmd.h,
+	sort/sortsieve.c, ql/mysql/create_tables.mysql,
+	sql/mysql/create_tables_innoDB.mysql, timsieved.c: fully
+	accepted libSieve patch by Leif Jackson, nice work!
+
+2004-10-31  Aaron Stone  <aaron@serendipity.cx>
+
         * user.c (do_delete): now deletes aliases belonging to a user
         before the user is deleted; the prototype to the function now
         includes useridnr.

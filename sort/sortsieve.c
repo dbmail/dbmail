@@ -111,9 +111,9 @@ int sortsieve_msgsort(u64_t useridnr, char *header, u64_t headersize,
 		goto action_free;
 	}
 
-	res = sieve2_support_register(p, SIEVE2_ACTION_FILEINTO);
-	res = sieve2_support_register(p, SIEVE2_ACTION_REDIRECT);
-	res = sieve2_support_register(p, SIEVE2_ACTION_REJECT);
+	res = sieve2_support_register(p, NULL, SIEVE2_ACTION_FILEINTO);
+	res = sieve2_support_register(p, NULL, SIEVE2_ACTION_REDIRECT);
+	res = sieve2_support_register(p, NULL, SIEVE2_ACTION_REJECT);
 //  res = sieve2_support_register(p, SIEVE2_ACTION_NOTIFY);
 
 	res = sieve2_script_alloc(&s);
@@ -343,7 +343,44 @@ int sortsieve_unroll_action(sieve2_action_t * a, struct list *actions)
 /* Return 0 on script OK, 1 on script error. */
 int sortsieve_script_validate(char *script, char **errmsg)
 {
-	if (sieve2_validate(t, s, p, e) == SIEVE2_OK) {
+	sieve2_support_t *p;
+	sieve2_script_t *s;
+	sieve2_interp_t *t;
+	char *freestr = NULL;
+	int res;
+
+	res = sieve2_interp_alloc(&t);
+	if (res != SIEVE2_OK) {
+		sprintf(*errmsg,"sieve2_interp_alloc() returns %d\n", res);
+		return 1;
+	}
+
+	res = sieve2_support_alloc(&p);
+	if (res != SIEVE2_OK) {
+		sprintf(*errmsg,"sieve2_support_alloc() returns %d\n", res);
+		return 1;
+	}
+
+	res = sieve2_support_register(p, NULL, SIEVE2_ACTION_FILEINTO);
+	res = sieve2_support_register(p, NULL, SIEVE2_ACTION_REDIRECT);
+	res = sieve2_support_register(p, NULL, SIEVE2_ACTION_REJECT);
+	res = sieve2_support_register(p, NULL, SIEVE2_ACTION_NOTIFY);
+
+	res = sieve2_script_alloc(&s);
+	if (res != SIEVE2_OK) {
+		sprintf(*errmsg,"sieve2_script_alloc() returns %d\n", res);
+		return 1;
+	}
+
+	res = sieve2_script_register(s, script, SIEVE2_SCRIPT_CHAR_ARRAY);
+	if (res != SIEVE2_OK) {
+		sprintf(*errmsg,"sieve2_script_register() returns %d: %s\n",
+				res, sieve2_errstr(res, &freestr));
+		my_free(freestr);
+		return 1;
+	}
+ 
+	if (sieve2_validate(t, s, p) == SIEVE2_OK) {
 		*errmsg = NULL;
 		return 0;
 	} else {

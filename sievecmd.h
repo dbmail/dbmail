@@ -25,6 +25,7 @@
 
 #include <stdio.h>
 #include "dbmailtypes.h"
+#include "sort/sortsieve.h"
 
 #define PNAME "dbmail/sievecmd"
 

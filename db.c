@@ -448,6 +448,200 @@ int db_calculate_quotum_used(u64_t user_idnr)
 	return 0;
 }
 
+int db_get_sievescript_byname(u64_t user_idnr, char *scriptname, char **script)
+{
+	const char *query_result = NULL;
+	snprintf(query, DEF_QUERYSIZE,
+				"SELECT script from %ssievescripts where "
+				"owner_idnr = %llu' and name = '%s'",
+				DBPFX,user_idnr, scriptname);
+
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: error getting sievescript by name",
+				__FILE__, __FUNCTION__);
+		return -1;
+	}
+
+	if (db_num_rows() < 1) {
+		db_free_result();
+		*script = NULL;
+		return 0;
+	}
+
+	query_result = db_get_result(0, 0);
+
+	if (!query_result) {
+		db_free_result();
+		*script = NULL;
+		return -1;
+	}
+
+	*script = strdup(query_result);
+	db_free_result();
+
+	return 0;
+}
+
+int db_get_sievescript_active(u64_t user_idnr, char **scriptname)
+{
+	int n;
+	snprintf(query, DEF_QUERYSIZE,
+		"SELECT name from %ssievescripts where "
+		"owner_idnr = %llu and name = '%s' and active = 1",
+		DBPFX, user_idnr, *scriptname);
+
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, 
+		"%s,%s: error getting active sievescript by name",
+		__FILE__, __FUNCTION__);
+		return -1;
+	}
+	n = db_num_rows();
+	db_free_result();
+	return n;
+}
+
+int db_get_sievescript_listall(u64_t user_idnr, struct list *scriptlist)
+{
+	int i,n;
+	struct ssinfo *info;
+	list_init(scriptlist);
+	snprintf(query, DEF_QUERYSIZE,
+		"SELECT name,active from %ssievescripts where "
+		"owner_idnr = %llu",
+		DBPFX,user_idnr);
+
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR,
+		"%s,%s: error getting all sievescripts",
+		__FILE__, __FUNCTION__);
+		return -1;
+	}
+
+	i = 0;
+	n = db_num_rows();
+
+	while(i < n) {
+		info = (struct ssinfo *)my_malloc(sizeof(struct ssinfo));
+		info->name = strdup(db_get_result(i, 0));   
+		info->active = (int)db_get_result(i, 1);
+		list_nodeadd(scriptlist,info,sizeof(struct ssinfo));	
+		i++;
+	}
+
+	db_free_result();
+	return 0;
+}
+
+int db_replace_sievescript(u64_t user_idnr, char *scriptname, char *script)
+{
+	snprintf(query, DEF_QUERYSIZE,
+		"UPDATE %ssievescripts set script = '%s' "
+		"where owner_idnr = %llu and name = '%s'",
+		DBPFX,script,user_idnr,scriptname);
+
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: error replacing sievescript '%s' "
+			"for user_idnr [%llu]", __FILE__, __FUNCTION__,
+			scriptname, user_idnr);
+		return -1;
+	}
+
+	return 0;
+}
+
+int db_add_sievescript(u64_t user_idnr, char *scriptname, char *script)
+{
+	snprintf(query, DEF_QUERYSIZE,
+		"INSERT into %ssievescripts values (%llu,'%s','%s',0)",
+		DBPFX,user_idnr,scriptname,script);
+
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: error adding sievescript '%s' "
+		"for user_idnr [%llu]", __FILE__, __FUNCTION__,
+		scriptname, user_idnr);
+		return -1;
+	}
+
+	return 0;
+}
+
+int db_deactivate_sievescript(u64_t user_idnr, char *scriptname)
+{
+	snprintf(query, DEF_QUERYSIZE,
+		"UPDATE %ssievescripts set active = 0 "
+		"where owner_idnr = %llu and name = '%s'",
+		DBPFX,user_idnr,scriptname);
+
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: error deactivating sievescript '%s' "
+		"for user_idnr [%llu]", __FILE__, __FUNCTION__,
+		scriptname, user_idnr);
+		return -1;
+	}
+
+	return 0;
+}
+
+int db_activate_sievescript(u64_t user_idnr, char *scriptname)
+{
+	snprintf(query, DEF_QUERYSIZE,
+		"UPDATE %ssievescripts set active = 1 "
+		"where owner_idnr = %llu and name = '%s'",
+		DBPFX,user_idnr,scriptname);
+
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: error activating sievescript '%s' "
+		"for user_idnr [%llu]", __FILE__, __FUNCTION__,
+		scriptname, user_idnr);
+		return -1;
+	}
+
+	return 0;
+}
+
+int db_delete_sievescript(u64_t user_idnr, char *scriptname)
+{
+	snprintf(query, DEF_QUERYSIZE,
+		"DELETE from %ssievescripts "
+		"where owner_idnr = %llu and name = '%s'",
+		DBPFX,user_idnr,scriptname);
+
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: error deleting sievescript '%s' "
+			"for user_idnr [%llu]", __FILE__, __FUNCTION__,
+			scriptname, user_idnr);
+		return -1;
+	}
+
+	return 0;
+}
+
+int db_check_sievescript_quota(u64_t user_idnr, u64_t scriptlen)
+{
+	/* TODO function db_check_sievescript_quota */
+	trace(TRACE_DEBUG, "%s,%s: updating %llu sievescript quota with %llu",
+		__FILE__, __FUNCTION__, user_idnr, scriptlen);
+	return 0;
+}
+
+int db_set_sievescript_quota(u64_t user_idnr, u64_t quotasize)
+{
+	/* TODO function db_set_sievescript_quota */
+	trace(TRACE_DEBUG, "%s,%s: setting %llu sievescript quota with %llu",
+		__FILE__, __FUNCTION__, user_idnr, quotasize);
+	return 0;
+}
+
+int db_get_sievescript_quota(u64_t user_idnr, u64_t * quotasize)
+{
+	/* TODO function db_get_sievescript_quota */
+	trace(TRACE_DEBUG, "%s,%s: getting sievescript quota for %llu",
+		__FILE__, __FUNCTION__, user_idnr);
+	*quotasize = 0;
+	return 0;
+}
+
 int db_get_notify_address(u64_t user_idnr, char **notify_address)
 {
 	const char *query_result = NULL;
@@ -529,7 +723,6 @@ u64_t db_get_mailbox_from_message(u64_t message_idnr)
 	db_free_result();
 	return mailbox_idnr;
 }
-
 
 u64_t db_get_useridnr(u64_t message_idnr)
 {
@@ -684,7 +877,6 @@ int db_message_set_unique_id(u64_t message_idnr, const char *unique_id)
 	}
 	return 0;
 }
-
 
 int db_physmessage_set_sizes(u64_t physmessage_id, u64_t message_size,
 			     u64_t rfc_size)
