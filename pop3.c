@@ -157,6 +157,10 @@ int pop3 (void *stream, char *buffer)
 	    {
 			trace (TRACE_ERROR,"pop3(): user [%s] tried to login with wrong password",
 					username); 
+			free (username);
+			username=NULL;
+			free (password);
+			password=NULL;
 	      return pop3_error (stream,"-ERR username/password incorrect\r\n");
 	    }
 	  default:
