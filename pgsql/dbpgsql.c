@@ -1,11 +1,11 @@
-/* $iD: Dbmysql.c,v 1.63 2001/09/23 12:36:41 eelco Exp $
- * (c) 2000-2001 IC&S, The Netherlands
+/* $Id 
+ * (c) 2000-2002 IC&S, The Netherlands
  *
- * mysql driver file
- * Functions for connecting and talking to the Mysql database */
+ * postgresql driver file
+ * Functions for connecting and talking to the PostgreSQL database */
 
 #include "../db.h"
-#include "/usr/include/mysql/mysql.h"
+#include "/usr/local/pgsql/include/libpq-fe.h"
 #include "../config.h"
 #include "../pop3.h"
 #include "../list.h"
@@ -20,10 +20,9 @@
 #include "../dbauth.h"
 
 
-MYSQL conn;  
-MYSQL_RES *res;
-MYSQL_RES *checkres;
-MYSQL_ROW row;
+PGconn conn;  
+PGresult *res;
+PGresult *checkres;
 char *query = 0;
 
 
@@ -31,36 +30,34 @@ char *query = 0;
  * queries to create/drop temporary tables
  */
 const char *create_tmp_tables_queries[] = 
-{ "CREATE TABLE tmpmessage ("
-  "messageidnr bigint(21) DEFAULT '0' NOT NULL auto_increment,"
-  "mailboxidnr int(21) DEFAULT '0' NOT NULL,"
-  "messagesize bigint(21) DEFAULT '0' NOT NULL,"
-  "seen_flag tinyint(1) default '0' not null,"
-  "answered_flag tinyint(1) default '0' not null,"
-  "deleted_flag tinyint(1) default '0' not null,"
-  "flagged_flag tinyint(1) default '0' not null,"
-  "recent_flag tinyint(1) default '0' not null,"
-  "draft_flag tinyint(1) default '0' not null,"
-  "unique_id varchar(70) NOT NULL,"
-  "internal_date datetime default '0' not null,"
-  "status tinyint(3) unsigned zerofill default '000' not null,"
-  "PRIMARY KEY (messageidnr),"
-  "KEY messageidnr (messageidnr),"
-  "UNIQUE messageidnr_2 (messageidnr))" ,
+{ "CREATE SEQUENCE tmp_message_idnr ON tmpmessage;"
+  "CREATE TABLE tmpmessage ("
+  "message_idnr INT8 DEFAULT nextval ('tmp_message_idnr'),"
+  "mailbox_idnr INT8 DEFAULT '0' NOT NULL,"
+  "messagesize INT8 DEFAULT '0' NOT NULL,"
+  "seen_flag INT2 DEFAULT '0' NOT NULL,"
+  "answered_flag INT2 DEFAULT '0' NOT NULL,"
+  "deleted_flag INT2 DEFAULT '0' NOT NULL,"
+  "flagged_flag INT2 DEFAULT '0' NOT NULL,"
+  "recent_flag INT2 DEFAULT '0' NOT NULL,"
+  "draft_flag INT2 DEFAULT '0' NOT NULL,"
+  "unique_id VARCHAR (70) NOT NULL,"
+  "internal_date datetime, "
+  "status INT2 DEFAULT '000' NOT NULL,"
+  "PRIMARY KEY (message_idnr)"
+  ");"
 
+  "CREATE SEQUENCE tmp_messageblk_idnr ON tmpmessageblk;"
   "CREATE TABLE tmpmessageblk ("
-  "messageblknr bigint(21) DEFAULT '0' NOT NULL auto_increment,"
-  "messageidnr bigint(21) DEFAULT '0' NOT NULL,"
-  "messageblk longtext NOT NULL,"
-  "blocksize bigint(21) DEFAULT '0' NOT NULL,"
-  "PRIMARY KEY (messageblknr),"
-  "KEY messageblknr (messageblknr),"
-  "KEY msg_index (messageidnr),"
-  "UNIQUE messageblknr_2 (messageblknr)"
-  ") TYPE=MyISAM "
+  "messageblk_idnr INT8 DEFAULT nextval ('tmp_messageblk_idnr'),"
+  "messageidnr INT8 DEFAULT '0' NOT NULL,"
+  "messageblk TEXT NOT NULL,"
+  "blocksize INT8 DEFAULT '0' NOT NULL,"
+  "PRIMARY KEY (messageblk_idnr),"
+  ");"
 };
 
-const char *drop_tmp_tables_queries[] = { "DROP TABLE tmpmessage", "DROP TABLE tmpmessageblk" };
+const char *drop_tmp_tables_queries[] = { "DROP TABLE tmpmessage","DROP SEQUENCE tmp_message_idnr", "DROP TABLE tmpmessageblk", "DROP SEQUENCE tmp_messageblk_idnr" };
 
 int db_connect ()
 {
@@ -72,23 +69,17 @@ int db_connect ()
     }
 
   /* connecting */
-  mysql_init(&conn);
-  mysql_real_connect (&conn,HOST,USER,PASS,MAILDATABASE,0,NULL,0); 
+  conn = PQconnectdb ("host=%s user=%s password=%s dbname=%s",
+                        HOST,USER,PASS,MAILDATABASE); 
 
-#ifdef mysql_errno
-  if (mysql_errno(&conn)) {
-    trace(TRACE_ERROR,"dbconnect(): mysql_real_connect failed: %s",mysql_error(&conn));
+  if (PQstatus(conn) == CONNECTION_BAD) 
+  {
+    trace(TRACE_ERROR,"dbconnect(): PQconnectdb failed: %s",PQerrorMessage(&conn));
     return -1;
   }
-#endif
 	
-  /* selecting the right database 
-	  don't know if this needs to stay */
-/*   if (mysql_select_db(&conn,MAILDATABASE)) {
-    trace(TRACE_ERROR,"dbconnect(): mysql_select_db failed: %s",mysql_error(&conn));
-    return -1;
-  }  */
-
+  /* database connection OK */  
+    
   return 0;
 }
 

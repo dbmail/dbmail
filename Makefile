@@ -81,4 +81,4 @@ distclean: clean
 	rm -rf dbmail-smtp dbmail-pop3d dbmail-maintenance dbmail-imapd dbmail-config dbmail-adduser
 
 clean:
-	rm -f *.o core
+	rm -f *.o core $(DBASETYPE)/*.o

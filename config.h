@@ -13,9 +13,9 @@
 #include <syslog.h>
 
 /* DATABASE SPECIFIC */
-#define HOST "localhost"
-#define USER "root"
-#define PASS ""
+#define HOST "/tmp"
+#define USER "dbmail"
+#define PASS "dbmail"
 
 /* #define USE_DEVELOPMENT  */
 #ifdef USE_DEVELOPMENT
