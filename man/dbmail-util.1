@@ -1,17 +1,12 @@
 .TH DBMAIL-UTIL 1 
-.ad
-.fi
 .SH NAME
 dbmail-util
 \-
 maintains the integrity and cleanliness of the \fBDBMail\fR datatables.
 .SH SYNOPSIS
-.na
-.nf
-\fBdbmail-util [-cirlphd] [-f configFile]\fR
+.BR "dbmail-util [-cturpd] [-l " "time" "] [-qnyvVh]"
+.BI "[-f " "configFile" "]"
 .SH DESCRIPTION
-.ad
-.fi
 The \fBdbmail-util\fR program does a global database cleanup and integrity
 check. All messages that are set for deletion will be marked for final deletion 
 (status 3). All message that are marked for final deletion will be cleared from 
@@ -22,7 +17,7 @@ unconnected messages and unconnected mailboxes.
 clean up unlinked message entries
 .IP \fB-t\fR
 test for message integrity
-.IP \fB-n\fR
+.IP \fB-u\fR
 null message check
 .IP \fB-r\fR
 repair any integrity problems

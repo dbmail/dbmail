@@ -1,5 +1,10 @@
 2004-07-24  Aaron Stone  <aaron@serendipity.cx>
 
+	* man/dbmail-users.1, man/dbmail-util.1, man/dbmail-smtp.1: updated
+	several options and polished out a few formatting problems.
+
+2004-07-24  Aaron Stone  <aaron@serendipity.cx>
+
 	* main.c, user.c, vut2dbmail.c, maintenance.c: improved handling
 	of several common command line options and added more comments.
 	* user.c: fixed missing options in the optstring argument to getopt.

@@ -6,15 +6,26 @@ dbmail-users
 \-
 manages the DBMail user database.
 .SH SYNOPSIS
-.na
-.nf
-\fBdbmail-users\fR [\fIquiet\fR] \fIa\fR \fIusername\fR \fIpassword\fR \fIclientid\fR \fImaxmail\fR [\fIaliases\fR]
-\fBdbmail-users\fR [\fIquiet\fR] \fIe\fR \fIusername\fR
-\fBdbmail-users\fR [\fIquiet\fR] \fId\fR \fIusername\fR
-\fBdbmail-users\fR [\fIquiet\fR] \fIf\fR \fIalias\fR \fIdeliver-to\fR
-\fBdbmail-users\fR [\fIquiet\fR] \fIx\fR \fIalias\fR \fIdeliver-to\fR
-\fBdbmail-users\fR [\fIquiet\fR] \fIc\fR \fIusername\fR [\fI-u username\fR] [[\fI-p|+p|xp|-5|+5|d5|D5 password\fR] | [\fI-P[:filename]\fR]] [\fI-c clientid\fR] [\fI-q maxmail\fR] [\fI+a alias\fR] [\fI-a alias\fR]
-\fBdbmail-users\fR [\fIquiet\fR] \fIs\fR [\fIusername\fR]
+.B dbmail-users
+.BR  "{ -a " "username"     " | -c " "username" " }"
+.BR  "[ -g " "clientid"       " ]"
+.BR  "[ -m " "maxmail"        " ]"
+.BR  "[ -p " "passwordtype"   " ]"
+.BI  "[ -P " "shadowfile"     " ]"
+.BR  "[ -w " "password"       " ]"
+.BI  "[ -W " "passwordfile"   " ]"
+.BR  "[ -u " "username"       " ]"
+
+.B dbmail-users
+.BR  "{ -d " "username" " | -e " "username" " }"
+
+.B dbmail-users
+.BR  "-l " "userspec"
+
+.B dbmail-users
+.BR  "-x " "alias"
+.BR  "[ -t " "forwards"       " ]"
+.BR  "[ -T " "forwards"       " ]"
 
 .SH DESCRIPTION
 .ad
@@ -24,7 +35,6 @@ It lets you add, delete and change users as well as show information about
 a specific user or display a list of existing users. It also has the capability
 of adding/removing separate aliases.
 
-.SH OPTIONS
 .SH MODE OPTIONS
 .IP "\fB -a \fR user"
 Add a user
@@ -38,8 +48,10 @@ Empty all mailboxes for a user
 List information for matching users
 .IP "\fB -x \fR alias"
 Create an external forwarding address
-.IP "\fB -i \fR"
-Enter an interactive user management console.
+
+.% This will be supported in a future release:
+.% .IP "\fB -i \fR"
+.% Enter an interactive user management console.
 
 .SH MINOR OPTIONS
 .IP "\fB -w \fR passwd"
@@ -95,12 +107,6 @@ operate at their normal verbosity.
 Show the version and copyright, then exit.
 .IP \fB-h\fR
 Show a brief summary of options, then exit.
-.SH EXAMPLES
-.TP
-.BI
-\fBdbmail-users\fR a foo secret 0 0 foo@bar.net foo@bar.org
-This will add a user foo with password secret. This user will not have any limit on the mail
-she/he will receive. E-mail to foo@bar.net and foo@bar.org are delivered to this user (user foo).
 .SH DIAGNOSTICS
 .ad
 .fi
