@@ -340,9 +340,16 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
 	      if (strblock[i] == '\0')
 		{
 		  if (cnt == 0)
-		    trace(TRACE_ERROR, "insert_messages(): first error on position [%d]", i);
+		    {
+		      trace(TRACE_ERROR, "insert_messages(): first error on position [%d]", i);
 
-		cnt++;
+		      if (header)
+			{
+			  trace(TRACE_ERROR, "insert_messages(): header [%s]", header);
+			}
+		    }
+
+		  cnt++;
 		}
 	    }
 
