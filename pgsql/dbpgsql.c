@@ -693,7 +693,7 @@ int db_createsession (u64_t useridnr, struct session *sessionptr)
   /* query is <2 because we don't want deleted messages 
    * the unique_id should not be empty, this could mean that the message is still being delivered */
   snprintf (query, DEF_QUERYSIZE, "SELECT * FROM messages WHERE mailbox_idnr=%llu AND status<002 AND "
-	   "unique_id!=\"\" order by status ASC",
+	   "unique_id!=\'\' order by status ASC",
 	   (db_get_inboxid(&useridnr)));
 
   if (db_query(query, &res)==-1)
