@@ -85,6 +85,7 @@ int auth_disconnect()
 int auth_user_exists(const char *username, u64_t * user_idnr)
 {
 	const char *query_result;
+	char *escaped_username;
 
 	assert(user_idnr != NULL);
 	*user_idnr = 0;
@@ -94,9 +95,18 @@ int auth_user_exists(const char *username, u64_t * user_idnr)
 		return 0;
 	}
 
+	if (!(escaped_username = (char *) malloc(strlen(username) * 2 + 1))) {
+		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
+		      "escaped username", __FILE__, __func__);
+		return -1;
+	}
+
+	db_escape_string(escaped_username, username, strlen(username));
+
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
 		 "SELECT user_idnr FROM users WHERE userid='%s'",
-		 username);
+		 escaped_username);
+	free(escaped_username);
 
 	if (__auth_query(__auth_query_data) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not execute query",
@@ -731,13 +741,23 @@ u64_t auth_md5_validate(char *username, unsigned char *md5_apop_he,
 	u64_t user_idnr;
 	const char *query_result;
 	timestring_t timestring;
+	char *escaped_username;
 
 	create_current_timestring(&timestring);
+
+	if (!(escaped_username = (char *) malloc (strlen(username) * 2 + 1))) {
+		trace(TRACE_ERROR, "%s,%s: error allocating escaped_username",
+		      __FILE__, __func__);
+		return -1;
+	}
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
 		 "SELECT passwd,user_idnr FROM users WHERE "
-		 "userid='%s'", username);
+		 "userid = '%s'", escaped_username);
+	free(escaped_username);
 
 	if (__auth_query(__auth_query_data) == -1) {
+		trace(TRACE_ERROR, "%s,%s: error calling __auth_query()",
+		      __FILE__, __func__);
 		return -1;
 	}
 

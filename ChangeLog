@@ -1,4 +1,10 @@
 2004-06-03  Ilja Booij  <ilja@ic-s.nl>
+
+	* auth/authsql.c (auth_user_exists): escape user name using
+	db_escape_string() before putting it in a query.
+	(auth_md5_validate): escape username using db_escape_string()
+	before putting it in a query.
+
 	* all_files: changed from __FUNCTION__ preprocessor macro to
 	__func__, which is used in C99.
 
