@@ -285,8 +285,8 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 		  tmp=tmp->nextnode;
 		}
 				
-			/* resetting strlen for strblock */
-			memset (strblock,'\0',READ_BLOCK_SIZE); 
+	      /* resetting strlen for strblock */
+	      memset (strblock,'\0',READ_BLOCK_SIZE); 
 	      usedmem = 0;
 				
 	    }
@@ -294,7 +294,7 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 	    trace (TRACE_DEBUG, "insert_messages(): end of instream stream");
 		
 	
-	}; 
+	}
 		
       trace (TRACE_DEBUG,"insert_messages(): updating size fields");
 	
@@ -316,22 +316,24 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 	    {
 	    case 1:
 	      trace (TRACE_DEBUG,"insert_messages(): message NOT inserted. Maxmail exceeded");
-			bounce_id = db_get_userid(&bounce_userid);
+	      bounce_id = db_get_userid(&bounce_userid);
 	      bounce (header, bounce_id, BOUNCE_STORAGE_LIMIT_REACHED);
-			free (bounce_id);
+	      free (bounce_id);
 	      break;
+
 	    case -1:
 	      trace (TRACE_ERROR,"insert_messages(): message NOT inserted. dbase error");
-			bounce_id = db_get_userid(&bounce_userid);
+	      bounce_id = db_get_userid(&bounce_userid);
 	      bounce (header, bounce_id, BOUNCE_STORAGE_LIMIT_REACHED);
-			free (bounce_id);
+	      free (bounce_id);
 	      break;
+
 	    case -2:
 	      trace (TRACE_ERROR,"insert_messages(): message NOT inserted. "
 		     "Maxmail exceeded AND dbase error");
-			bounce_id = db_get_userid(&bounce_userid);
+	      bounce_id = db_get_userid(&bounce_userid);
 	      bounce (header, bounce_id, BOUNCE_STORAGE_LIMIT_REACHED);
-			free (bounce_id);
+	      free (bounce_id);
 	      break;
 
 	    case 0:
@@ -380,22 +382,29 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
     }
 	
   trace (TRACE_DEBUG,"insert_messages(): Freeing memory blocks");
+
   /* memory cleanup */
   if (tmpbuffer!=NULL)
     {
       trace (TRACE_DEBUG,"insert_messages(): tmpbuffer freed");
       free(tmpbuffer);
+      tmpbuffer = NULL;
     }
   trace (TRACE_DEBUG,"insert_messages(): header freed");
   free(header);
+
   trace (TRACE_DEBUG,"insert_messages(): uniqueid freed");
   free(unique_id);
+
   trace (TRACE_DEBUG,"insert_messages(): strblock freed");
   free (strblock);
+
   trace (TRACE_DEBUG,"insert_messages(): insertquery freed");
   free(insertquery);
+
   trace (TRACE_DEBUG,"insert_messages(): updatequery freed");
   free(updatequery);
+
   trace (TRACE_DEBUG,"insert_messages(): End of function");
   
   list_freelist(&bounces.start);

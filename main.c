@@ -94,15 +94,15 @@ int main (int argc, char *argv[]) {
 	trace(TRACE_STOP,"main(): fatal error creating MIME-header list\n");
 
       /* parse for destination addresses */
-		if (argc>2) 
-		{
-			trace (TRACE_DEBUG, "main(): scanning for [%s]",argv[INDEX_DELIVERY_MODE+1]);
-			if (mail_adr_list (argv[INDEX_DELIVERY_MODE+1],&users,&mimelist,&users,header,headersize) != 0)
-				trace (TRACE_STOP,"main(): scanner found no email addresses (scanned for %s)", argv[INDEX_DELIVERY_MODE+1]);
-		}
-		else
-			if (!mail_adr_list ("deliver-to",&users,&mimelist,&users,header,headersize) != 0)	
-				trace(TRACE_STOP,"main(): scanner found no email addresses (scanned for Deliver-To:)");
+      if (argc>2) 
+	{
+	  trace (TRACE_DEBUG, "main(): scanning for [%s]",argv[INDEX_DELIVERY_MODE+1]);
+	  if (mail_adr_list (argv[INDEX_DELIVERY_MODE+1],&users,&mimelist,&users,header,headersize) != 0)
+	    trace (TRACE_STOP,"main(): scanner found no email addresses (scanned for %s)", argv[INDEX_DELIVERY_MODE+1]);
+	}
+      else
+	if (!mail_adr_list ("deliver-to",&users,&mimelist,&users,header,headersize) != 0)	
+	  trace(TRACE_STOP,"main(): scanner found no email addresses (scanned for Deliver-To:)");
     } 
 
   /* inserting messages into the database */

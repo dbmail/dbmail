@@ -45,7 +45,7 @@ void trace (int level, const char *formatstring, ...)
 	{
 	  if (level <= TRACE_WARNING) 
 	    {
-				/* set LOG_ALERT at warnings */
+	      /* set LOG_ALERT at warnings */
 	      vsyslog (LOG_ALERT, formatstring, argp);
 	    }
 	  else 
@@ -55,7 +55,10 @@ void trace (int level, const char *formatstring, ...)
     }
   else
     if (level == TRACE_MESSAGE)
-      vsyslog (LOG_NOTICE, formatstring, argp);
+      {
+	vsyslog (LOG_NOTICE, formatstring, argp);
+	va_end(argp);
+      }
 
   /* very big fatal error 
    * bailout */

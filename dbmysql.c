@@ -347,7 +347,7 @@ char *db_get_userid (unsigned long *useridnr)
 {
   /* returns the mailbox id (of mailbox inbox) for a user or a 0 if no mailboxes were found */
   
-  char *returnid;
+  char *returnid = NULL;
   
   snprintf (query, DEF_QUERYSIZE,"SELECT userid FROM user WHERE useridnr = %lu",
 	   *useridnr);
@@ -376,22 +376,24 @@ char *db_get_userid (unsigned long *useridnr)
   if ((row = mysql_fetch_row(res))==NULL)
     {
       trace (TRACE_DEBUG,"db_get_userid(): fetch_row call failed");
+      mysql_free_result(res);
+      return NULL;
     }
 
   if (row[0])
     {
-      returnid = (char *)malloc(strlen(row[0])+1);
-      if (!strcpy (returnid, row[0]))
+      if (!(returnid = (char *)malloc(strlen(row[0])+1)))
 	{
+	  trace(TRACE_ERROR,"db_get_userid(): out of memory");
+	  mysql_free_result(res);
 	  return NULL;
 	}
-    }
-  else
-    {
-      return NULL;
+	  
+      strcpy (returnid, row[0]);
     }
   
-	
+  mysql_free_result(res);
+  
   return returnid;
 }
 
@@ -3110,12 +3112,15 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 	    }
 
 	  /* end of buffer reached, invalid message encountered: there should be a stopbound! */
-/*	  db_give_msgpos(&msg->bodyend);
-	  msg->bodysize = db_give_range_size(&msg->bodystart, &msg->bodyend)
+	  /* but lets pretend there's nothing wrong... */
+	  db_give_msgpos(&msg->bodyend);
+	  msg->bodysize = db_give_range_size(&msg->bodystart, &msg->bodyend);
 	  totallines += msg->bodylines;
+	  
+	  trace(TRACE_WARNING, "db_start_msg(): no stopbound where expected...\n");
+
+/*	  return -1;
 */
-	  trace(TRACE_ERROR, "db_start_msg(): no stopbound where expected...");
-	  return -1;
 	}
       else
 	{
@@ -3274,11 +3279,12 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
     }
   while (msgbuf[msgidx]) ;
 
-/*  trace(TRACE_DEBUG,"db_add_mime_children(): exit\n");
+  trace(TRACE_WARNING,"db_add_mime_children(): sudden end of message\n");
   return totallines;
-*/
-  trace(TRACE_ERROR,"db_add_mime_children(): invalid message (no ending boundary found)\n");
+
+/*  trace(TRACE_ERROR,"db_add_mime_children(): invalid message (no ending boundary found)\n");
   return -1;
+*/
 }
 
 
