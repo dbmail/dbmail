@@ -555,7 +555,7 @@ int do_show(char *name)
       quotum = auth_getmaxmailsize(userid);
 
       quiet_printf("User ID         : %llu\n", userid);
-      quiet_printf("Username        : %s\n", auth_get_userid(userid));
+      quiet_printf("Username        : %s\n", auth_get_userid(&userid));
       quiet_printf("Client ID       : %llu\n",cid);
       quiet_printf("Max. mailboxsize: %llu bytes\n",quotum);
       quiet_printf("Quotum used     : %llu bytes\n", db_get_quotum_used(userid));
