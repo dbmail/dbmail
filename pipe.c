@@ -607,9 +607,12 @@ int send_reply(struct list *headerfields, const char *body)
   struct mime_record *record;
   char *from = NULL, *to = NULL, *replyto = NULL, *subject = NULL;
   FILE *mailpipe = NULL;
-  char comm[MAX_COMM_SIZE];
+  char *send_address;
+  char *escaped_send_address;
+  char comm[MAX_COMM_SIZE]; /**< command sent to sendmail (needs to escaped) */
   field_t sendmail;
   int result;
+  int i,j;
 
   GetConfigValue("SENDMAIL", &smtpItems, sendmail);
   if (sendmail[0] == '\0')
@@ -655,8 +658,21 @@ int send_reply(struct list *headerfields, const char *body)
       return 0;
     }
 
+  
   trace(TRACE_DEBUG, "send_reply(): header fields scanned; opening pipe to sendmail");
-  snprintf(comm, MAX_COMM_SIZE, "%s %s", sendmail, replyto ? replyto : from);
+  send_address = replyto ? replyto : from;
+  /* allocate a string twice the size of send_address */
+  escaped_send_address = (char*) my_malloc(strlen((send_address) + 1) 
+					   * 2 * sizeof(char));
+  i = 0;
+  j = 0;
+  /* get all characters from send_address, and escape every ' */
+  while (i < (strlen(send_address) + 1)) {
+       if (send_address[i] == '\'')
+	    escaped_send_address[j++] = '\\';
+       escaped_send_address[j++] = send_address[i++];
+  }
+  snprintf(comm, MAX_COMM_SIZE, "%s '%s'", sendmail, escaped_send_address);   
 
   if (! (mailpipe = popen(comm, "w")) )
     {
