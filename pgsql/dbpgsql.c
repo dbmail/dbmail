@@ -217,6 +217,38 @@ char *db_get_config_item (char *item, int type)
 }
 
 
+/*
+ * returns the number of bytes used by user userid or (u64_t)(-1) on dbase failure
+ */
+u64_t db_get_quotum_used(u64_t userid)
+{
+  u64_t q=0;
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT SUM(messagesize) FROM messages WHERE "
+	   "mailbox_idnr IN (SELECT mailbox_idnr FROM mailboxes WHERE owner_idnr = %llu)",
+	   userid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_get_quotum_used(): could not execute query");
+      return -1;
+    }
+
+  if (PQntuples(res) < 1)
+    {
+      trace(TRACE_ERROR, "db_get_quotum_used(): SUM did not give result (?)");
+      PQclear(res);
+      return -1;
+    }
+
+  q = strtoull(PQgetvalue(res, 0, 0), NULL, 10);
+  PQclear(res);
+  
+  trace(TRACE_DEBUG, "db_get_quotum_used(): found quotum usage of [%llu] bytes", q);
+  return q;
+}
+      
+
 /* 
  * adds an alias for a specific user 
  */
