@@ -1,5 +1,11 @@
 2004-03-22  Ilja Booij  <ilja@ic-s.nl>
 
+	* db.c (db_imap_append_msg): use db_insert_message_block_physmessage()
+	instead of db_insert_message_block()
+	(db_imap_append_msg): now uses db_message_set_unique_id instead
+	of db_update_message to set just the unique id of the messages.
+	This saves another query!
+
 	* imapcommands.c (_ic_list): change to how regex patterns are 
 	constructed to allow LIST to work on shared mailboxes
 

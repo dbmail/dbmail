@@ -1932,9 +1932,9 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
 		trace(TRACE_INFO, "%s,%s: msg only contains a header",
 		      __FILE__, __FUNCTION__);
 
-		if (db_insert_message_block(msgdata, datalen,
-					    message_idnr,
-					    &messageblk_idnr) == -1
+		if (db_insert_message_block_physmessage(msgdata, datalen,
+							physmessage_id,
+							&messageblk_idnr) == -1
 		    || db_insert_message_block(" \n", 2, message_idnr,
 					       &messageblk_idnr) == -1) {
 			trace(TRACE_ERROR,
@@ -1956,8 +1956,10 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
 		 */
 		count++;
 
-		if (db_insert_message_block(msgdata, count, message_idnr,
-					    &messageblk_idnr) == -1) {
+		if (db_insert_message_block_physmessage(
+			    msgdata, count, 
+			    physmessage_id,
+			    &messageblk_idnr) == -1) {
 			trace(TRACE_ERROR,
 			      "%s,%s: could not insert msg block\n",
 			      __FILE__, __FUNCTION__);
@@ -1973,11 +1975,11 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
 
 		/* output message */
 		while ((datalen - count) > READ_BLOCK_SIZE) {
-			if (db_insert_message_block(&msgdata[count],
-						    READ_BLOCK_SIZE,
-						    message_idnr,
-						    &messageblk_idnr) ==
-			    -1) {
+			if (db_insert_message_block_physmessage(
+				    &msgdata[count],
+				    READ_BLOCK_SIZE,
+				    physmessage_id,
+				    &messageblk_idnr) == -1) {
 				trace(TRACE_ERROR,
 				      "%s,%s: could not insert msg block",
 				      __FILE__, __FUNCTION__);
@@ -1994,9 +1996,10 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
 		}
 
 
-		if (db_insert_message_block(&msgdata[count],
-					    datalen - count, message_idnr,
-					    &messageblk_idnr) == -1) {
+		if (db_insert_message_block_physmessage(
+			    &msgdata[count],
+			    datalen - count, physmessage_id,
+			    &messageblk_idnr) == -1) {
 			trace(TRACE_ERROR,
 			      "%s,%s:  could not insert msg block\n",
 			      __FILE__, __FUNCTION__);
@@ -2017,7 +2020,7 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
 	//snprintf(unique_id, UID_SIZE, "%lluA%lu", message_idnr, td);
 
 	/* set info on message */
-	db_update_message(message_idnr, unique_id, datalen, 0);
+	db_message_set_unique_id(message_idnr, unique_id);
 
 	/* recalculate quotum used */
 	db_add_quotum_used(user_idnr, datalen);
