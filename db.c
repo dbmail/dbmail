@@ -859,7 +859,7 @@ int db_insert_message_block_physmessage(const char *block,
 		      __FUNCTION__);
 		return -1;
 	}
-
+	memset(escaped_query, '\0', maxesclen);
 	startlen =
 	    snprintf(escaped_query, maxesclen,
 		     "INSERT INTO messageblks"
@@ -876,7 +876,7 @@ int db_insert_message_block_physmessage(const char *block,
 	if (db_query(escaped_query) == -1) {
 		my_free(escaped_query);
 
-		trace(TRACE_ERROR, "%s,%s: dbquery failed\n", __FILE__,
+		trace(TRACE_ERROR, "%s,%s: dbquery failed", __FILE__,
 		      __FUNCTION__);
 		return -1;
 	}

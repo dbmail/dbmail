@@ -358,6 +358,8 @@ int db_search_range(db_pos_t start, db_pos_t end,
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT messageblk FROM messageblks "
+		 "LEFT JOIN messages ON "
+		 "messages.physmessage_id = messageblks.physmessage_id "
 		 "WHERE message_idnr = '%llu' "
 		 "ORDER BY messageblk_idnr", msg_idnr);
 

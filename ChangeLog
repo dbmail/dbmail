@@ -1,3 +1,12 @@
+2004-04-05  Ilja Booij  <ilja@ic-s.nl>
+
+	* db.c (db_insert_message_block_physmessage): added a memset() to
+	clear the escaped_query string before using it.
+
+	* dbsearch.c (db_search_range): corrected query to use physmessage
+	table. This error was found by Paul F. De La Cruz and a fix
+	was provided by Paul J Stevens.
+
 2004-04-02  Ilja Booij  <ilja@ic-s.nl>
 
 	* header.c (read_header): at one place, read_header returned -1,
