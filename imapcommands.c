@@ -36,6 +36,8 @@ int list_is_lsub = 0;
 
 cache_t cached_msg;
 
+extern const char AcceptedMailboxnameChars[];
+
 
 /*
  * RETURN VALUES _ic_ functions:
@@ -932,16 +934,16 @@ int _ic_unsubscribe(char *tag, char **args, ClientInfo *ci)
 int _ic_list(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
-  unsigned long *children=NULL,mboxid;
-  int nchildren=0,result,i,percpresent,starpresent;
+  unsigned long *children=NULL;
+  int result,i,j,slen,plen;
+  unsigned nchildren;
   char name[IMAP_MAX_MAILBOX_NAMELEN];
+  char *pattern;
   char *thisname = list_is_lsub ? "LSUB" : "LIST";
 
   if (!check_state_and_args(thisname, tag, args, 2, IMAPCS_AUTHENTICATED, ci))
     return 1; /* error, return */
 
-  /* check the reference name, should contain only accepted mailboxname chars */
-  for (i=0; i<
 
   /* check if args are both empty strings */
   if (strlen(args[0]) == 0 && strlen(args[1]) == 0)
@@ -952,7 +954,111 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
       return 0;
     }
 
+  /* check the reference name, should contain only accepted mailboxname chars */
+  for (i=0,slen=strlen(args[0]); args[0][i]; i++)
+    {
+      if (stridx(AcceptedMailboxnameChars, args[0][i]) == slen)
+	{
+	  /* wrong char found */
+	  fprintf(ci->tx,"%s BAD reference name contains invalid characters\r\n",tag);
+	  return 1;
+	}
+    }      
+  
+  plen = strlen(args[1]) * 4;
+  pattern = (char*)malloc(sizeof(char) * (plen + slen + 10)); /* +10 for some xtra space */
+  if (!pattern)
+    {
+      fprintf(ci->tx,"* BYE out of memory\r\n");
+      return -1;
+    }
 
+  memset(pattern, 0, sizeof(char) * (plen + slen + 3));
+  pattern[0] = '^';
+  strcpy(&pattern[1], args[0]);
+
+  i = slen+1;
+  for (j=0; args[1][j] && i<(plen + slen + 1); j++) 
+    {
+      if (args[1][j] == '*')
+	{
+	  pattern[i++] = '.';
+	  pattern[i++] = '*';
+	}
+      else if (args[1][j] == '%')
+	{
+	  pattern[i++] = '[';
+	  pattern[i++] = '^';
+	  pattern[i++] = '\\';
+	  pattern[i++] = '/';
+	  pattern[i++] = ']';
+	  pattern[i++] = '*';
+	}
+      else
+	pattern[i++] = args[1][j];
+    }
+  
+  pattern[i] = '$';
+
+  trace(TRACE_INFO,"ic_list(): build the pattern: [%s]\n",pattern);
+
+  result = db_findmailbox_by_regex(ud->userid, pattern, &children, &nchildren);
+  if (result == -1)
+    {
+      fprintf(ci->tx,"* BYE internal dbase error\r\n");
+      free(children);
+      return -1;
+    }
+
+  if (result == 1)
+    {
+      fprintf(ci->tx,"%s BAD invalid pattern specified\r\n",tag);
+      free(children);
+      return 1;
+    }
+    
+
+  for (i=0; i<nchildren; i++)
+    {
+       /* get name */
+      result = db_getmailboxname(children[i], name);
+      if (result == -1)
+	{
+	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
+	  free(children);
+	  return -1;
+	}
+
+      fprintf(ci->tx,"* %s (",thisname);
+
+      /* show flags */
+      result = db_isselectable(children[i]);
+      if (result == -1)
+	{
+	  fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
+	  free(children);
+	  return -1;
+	}
+
+      if (!result) fprintf(ci->tx,"\\noselect ");
+
+      result = db_noinferiors(children[i]);
+      if (result == -1)
+	{
+	  fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
+	  free(children);
+	  return -1;
+	}
+
+      if (result) fprintf(ci->tx,"\\noinferiors ");
+
+      /* show delimiter & name */
+      fprintf(ci->tx,") \"/\" %s\r\n",name);
+    }
+
+  if (children)
+    free(children);
+     
   fprintf(ci->tx,"%s OK %s completed\r\n",tag,thisname);
   return 0;
 }

@@ -13,6 +13,8 @@
 #include "pipe.h"
 #include <time.h>
 #include <ctype.h>
+#include <sys/types.h>
+#include <regex.h>
 
 #define DEF_QUERYSIZE 1024
 #define MSGBUF_WINDOWSIZE (128ul*1024ul)
@@ -1281,6 +1283,91 @@ unsigned long db_findmailbox(const char *name, unsigned long useridnr)
   return id;
 }
   
+
+/*
+ * db_findmailbox_by_regex()
+ *
+ * finds all the mailboxes owned by ownerid who match the regex pattern pattern.
+ */
+int db_findmailbox_by_regex(unsigned long ownerid, const char *pattern, 
+			    unsigned long **children, unsigned *nchildren)
+{
+  char query[DEF_QUERYSIZE];
+  int result,i;
+  regex_t preg;
+  *children = NULL;
+
+  if ((result = regcomp(&preg, pattern, REG_ICASE|REG_NOSUB)) != 0)
+    {
+      trace(TRACE_ERROR, "db_findmailbox_by_regex(): error compiling regex pattern: %d\n",
+	    result);
+      return 1;
+    }
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT name FROM mailbox WHERE "
+	   "owneridnr=%lu", ownerid);
+  
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR,"db_findmailbox_by_regex(): error during mailbox query\r\n");
+      return (-1);
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_findmailbox_by_regex(): mysql_store_result failed:  %s\n",
+	    mysql_error(&conn));
+      return (-1);
+    }
+  
+  /* first determine # of matches */
+  *nchildren = 0;
+  while ((row = mysql_fetch_row(res)))
+    {
+      if (regexec(&preg, row[0], 0, NULL, 0) == 0)
+	(*nchildren)++;
+    }
+
+  mysql_free_result(res);
+
+  /* alloc mem */
+  *children = (unsigned long *)malloc(sizeof(unsigned long) * *nchildren);
+  if (!(*children))
+    {
+      trace(TRACE_ERROR,"db_findmailbox_by_regex(): out of mem\n");
+      return (-1);
+    }
+     
+
+  /* store ids */
+  snprintf(query, DEF_QUERYSIZE, "SELECT name, mailboxidnr FROM mailbox WHERE "
+	   "owneridnr=%lu", ownerid);
+  
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR,"db_findmailbox_by_regex(): error selecting mailboxes\n");
+      return (-1);
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_findmailbox_by_regex(): mysql_store_result failed:  %s\n",
+	    mysql_error(&conn));
+      return (-1);
+    }
+  
+  /* store matches */
+  i=0;
+  while ((row = mysql_fetch_row(res)) && i < *nchildren)
+    {
+      if (regexec(&preg, row[0], 0, NULL, 0) == 0)
+	(*children)[i] = strtoul(row[1], NULL, 10);
+    }
+
+  mysql_free_result(res);
+  return 0;
+}
+
 
 /*
  * db_getmailbox()

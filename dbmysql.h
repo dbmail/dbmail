@@ -152,6 +152,8 @@ char *db_get_userid (unsigned long *useridnr);
 
 /* mailbox functionality */
 unsigned long db_findmailbox(const char *name, unsigned long useridnr);
+int db_findmailbox_by_regex(unsigned long ownerid, const char *pattern, 
+			    unsigned long **children, unsigned *nchildren);
 int db_getmailbox(mailbox_t *mb, unsigned long userid);
 int db_createmailbox(const char *name, unsigned long ownerid);
 int db_listmailboxchildren(unsigned long uid, unsigned long useridnr, 
