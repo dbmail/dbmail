@@ -819,8 +819,6 @@ static int _imap_session_fetch_parse_octet_range(struct ImapSession *self, int i
 		token[delimpos] = '.';
 		token[strlen(token) - 1] = '>';
 	} else {
-		dbmail_imap_session_bodyfetch_set_octetstart(self, -1);
-		dbmail_imap_session_bodyfetch_set_octetcnt(self, -1);
 		return idx;
 	}
 
