@@ -69,19 +69,25 @@ u64_t headersize, headerrfcsize;
 
 void print_usage(const char *progname)
 {
-	printf("\n*** DBMAIL: dbmail-smtp version $Revision$ %s\n",
+	printf("\n*** DBMAIL: dbmail-smtp version $Revision$ %s\n\n",
 	       COPYRIGHT);
 	printf
-	    ("\nUsage: %s -n [headerfield]   for normal deliveries (default: \"deliver-to\")\n",
+	    ("Usage: %s -n [headerfield]   for normal deliveries (default: \"deliver-to\")\n",
 	     progname);
 	printf
-	    ("       %s -m \"mailbox\" -u [username] for delivery to mailbox (name)\n",
+	    ("       %s -m \"mailbox\"     for delivery to a specific mailbox\n",
 	     progname);
 	printf
-	    ("       %s -d [addresses]  for delivery without using scanner\n",
+	    ("       %s -d [addresses]     for delivery without using scanner\n",
 	     progname);
 	printf
-	    ("       %s -u [usernames]  for direct delivery to users\n\n",
+	    ("       %s -u [usernames]     for direct delivery to users\n",
+	     progname);
+	printf
+	    ("       %s -r return path     for address of bounces and other error reports\n",
+	     progname);
+	printf
+	    ("       %s -f config file     for alternate configuration file\n\n",
 	     progname);
 }
 
@@ -94,11 +100,6 @@ int main(int argc, char *argv[])
 
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 
-	ReadConfig("DBMAIL", configFile, &sysItems);
-	ReadConfig("SMTP", configFile, &smtpItems);
-	SetTraceLevel(&smtpItems);
-	GetDBParams(&_db_params, &sysItems);
-
 	list_init(&users);
 	list_init(&dsnusers);
 	list_init(&mimelist);
@@ -109,7 +110,7 @@ int main(int argc, char *argv[])
 	 * with an immediately preceding option are return with option 
 	 * value '1'. We will use this to allow for multiple values to
 	 * follow after each of the supported options. */
-	while ((c = getopt(argc, argv, "-n::m:u:d:f:")) != EOF) {
+	while ((c = getopt(argc, argv, "-n::m:u:d:f:r:")) != EOF) {
 		/* Received an n-th value following the last option,
 		 * so recall the last known option to be used in the switch. */
 		if (c == '1')
@@ -144,6 +145,13 @@ int main(int argc, char *argv[])
 
 			break;
 		case 'f':
+			trace(TRACE_INFO,
+			      "main(): using alternate config file [%s]", optarg);
+
+			configFile = optarg;
+
+			break;
+		case 'r':
 			trace(TRACE_INFO,
 			      "main(): using RETURN_PATH for bounces");
 
@@ -222,6 +230,19 @@ int main(int argc, char *argv[])
 		goto freeall;
 	}
 
+	/* Read in the config file; do it after getopt
+	 * in case -f config.alt was specified. */
+	if (ReadConfig("DBMAIL", configFile, &sysItems) == -1
+	 || ReadConfig("SMTP", configFile, &smtpItems) == -1) {
+		trace(TRACE_ERROR,
+		      "main(): error reading alternate config file [%s]", configFile);
+		exitcode = EX_TEMPFAIL;
+		goto freeall;
+
+	}
+	SetTraceLevel(&smtpItems);
+	GetDBParams(&_db_params, &sysItems);
+
 	if (db_connect() != 0) {
 		trace(TRACE_ERROR, "main(): database connection failed");
 		exitcode = EX_TEMPFAIL;
@@ -292,6 +313,17 @@ int main(int argc, char *argv[])
 
 			list_nodeadd(&dsnusers, &dsnuser,
 				     sizeof(deliver_to_user_t));
+		}
+	}
+
+	/* If the MAILBOX delivery mode has been selected... */
+	if (deliver_to_mailbox != NULL) {
+		trace(TRACE_DEBUG, "main(): setting mailbox for all deliveries to [%s]",
+		      deliver_to_mailbox);
+		/* Loop through the dsnusers list, setting the destination mailbox. */
+		for (tmp = list_getstart(&dsnusers); tmp != NULL;
+		     tmp = tmp->nextnode) {
+			((deliver_to_user_t *)tmp->data)->mailbox = strdup(deliver_to_mailbox);
 		}
 	}
 

@@ -4,33 +4,55 @@
 .SH NAME
 dbmail-smtp
 \-
-Inserts messages into the \fBDbmail\fR mailsystem
+Inserts messages into the 
+.B DDmail
+mailsystem
+
 .SH SYNOPSIS
-.na
-.nf
-\fBdbmail-smtp\fR [\fB-n\fR] [\fIheaderfield\fR]
-\fBdbmail-smtp\fR [\fB-d\fR] [\fIaddresses\fR ...]
+.B dbmail-smtp
+[\fB-n\fR \fIheaderfield\fR] [\fB-d\fR \fIaddresses\fR] [\fB-u \fIusernames\fR] [\fB-m\fR \fImailboxname\fR] [\fB-r\fR \fIreturn path\fR] [\fB-f\fR \fIfile\fR]
 .SH DESCRIPTION
 .ad
 .fi
-The \fBdbmail-smtp\fR program inserts messages from the commandline
-or from any MTA into the \fBDbmail\fR mailsystem. The program reads from 
-standard input.
+The 
+.B dbmail-smtp 
+program inserts messages from the commandline or from any MTA into the 
+.B DBmail
+mailsystem. The program reads from standard input.
 
-Options:
-.TP
-.BI \fB-n\fR
-Deliver messages to the recipient MIME header specified in \fIheaderfield\fR.
-.TP
-.BI \fB-d\fR 
-Deliver messages to the recipients specified by \fIaddresses\fR. These
-\fIaddresses\fR are seperated by spaces. This option is mostly used for 
-delivery to \fBDbmail\fR from an MTA.
+.SH OPTIONS
+
+.IP "-n headerfield" 
+Deliver messages to the recipient MIME header specified in 
+.I headerfield. 
+The default header to use is the "Deliver-To:" header.
+.IP "-d addresses"
+Deliver messages to the recipients specified by 
+.I addresses.
+This option is mostly used for delivery to \fBDBmail\fR from an MTA. It is possible to set multiple recipient addresses by setting several
+.B -d 
+options.
+.IP "-u usernames"
+Deliver messages straight to a users with username 
+.I usernames.
+It is possible to set multiple recipients by setting several
+.B -u
+options.
+.IP "-m mailboxname"
+Deliver messages to mailbox \fImailboxname\fR of the recipient. If this mailbox does not exist yet, it is created.
+.IP "-r return path"
+Set return path for bounces and other error reports to 
+.I return path.
+.IP "-f file"
+Use config file 
+.I file
+instead of the default config file.
 .SH DIAGNOSTICS
 .ad
 .fi
 Errors and notifications are send to the trace output as set 
 in the \fBDbmail\fR configfile.
+
 .SH BUGS
 .PP
 There are no known bugs. Work is being done on effiency and speed improvement.
