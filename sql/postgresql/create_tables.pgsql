@@ -12,7 +12,8 @@ CREATE TABLE aliases (
     client_idnr INT8 DEFAULT '0' NOT NULL,
     PRIMARY KEY (alias_idnr)
 );
-CREATE INDEX aliases_alias_idx ON aliases(alias);
+CREATE UNIQUE INDEX aliases_alias_idx ON aliases(alias);
+CREATE UNIQUE INDEX aliases_alias_low_idx ON aliases(lower(alias));
 
 CREATE SEQUENCE user_idnr_seq;
 CREATE TABLE users (
@@ -25,14 +26,14 @@ CREATE TABLE users (
    last_login DATETIME DEFAULT '1979-11-03 22:05:58' NOT NULL,
    PRIMARY KEY (user_idnr)
 );
-CREATE UNIQUE INDEX users_id_idx ON users (userid);
+CREATE UNIQUE INDEX users_id_idx ON users (user_idnr);
 CREATE INDEX users_name_idx ON users(userid);
 
 
 CREATE SEQUENCE mailbox_idnr_seq;
 CREATE TABLE mailboxes (
    mailbox_idnr INT8 DEFAULT nextval('mailbox_idnr_seq'),
-   owner_idnr INTEGER NOT NULL,
+   owner_idnr INT8 NOT NULL,
    name VARCHAR(100) NOT NULL,
    seen_flag INT2 DEFAULT '0' NOT NULL,
    answered_flag INT2 DEFAULT '0' NOT NULL,
@@ -88,3 +89,4 @@ CREATE TABLE config (
 	item VARCHAR(255) NOT NULL,
 	value VARCHAR(255) NOT NULL
 );
+
