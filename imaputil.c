@@ -80,6 +80,7 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg, int show_extension_
   mime_message_t rfcmsg;
   char *subtype,*extension,*newline;
   int is_mime_multipart = 0, is_rfc_multipart = 0;
+  int rfc822 = 0;
 
   fprintf(outstream,"(");
 
@@ -91,7 +92,14 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg, int show_extension_
   is_rfc_multipart = (mr && strncasecmp(mr->value,"multipart", strlen("multipart")) == 0 &&
 		      !msg->message_has_errors);
 
-  if (!is_rfc_multipart && !is_mime_multipart)
+  /* eddy */
+  if (mr && strncasecmp(mr->value, "message/rfc822", strlen("message/rfc822")) == 0) 
+    {
+      rfc822 = 1;
+    }
+
+
+  if (rfc822 || (!is_rfc_multipart && !is_mime_multipart) )
     {
       /* show basic fields:
        * content-type, content-subtype, (parameter list), 
