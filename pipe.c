@@ -382,13 +382,13 @@ int insert_messages(char *header, unsigned long headersize, struct list *users, 
       if (list_totalnodes(&messageids)==0)
 	{
 	  /* deliver using stdin */
-	  pipe_forward (stdin, &external_forwards, tmp ? tmp->data : "dbmail", header, 0);
+	  pipe_forward (stdin, &external_forwards, tmp ? tmp->data : "DBMAIL-MAILER", header, 0);
 	}
       else
 	{
 	  /* deliver using database */
 	  tmp = list_getstart(&messageids);
-	  pipe_forward (stdin, &external_forwards, tmp ? tmp->data: "dbmail", header, *((unsigned long *)tmp->data));
+	  pipe_forward (stdin, &external_forwards, tmp ? tmp->data: "DBMAIL-MAILER", header, *((unsigned long *)tmp->data));
 	}
     }
 	
