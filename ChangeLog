@@ -1,3 +1,9 @@
+2004-08-16  Ilja Booij  <ilja@ic-s.nl>
+
+	* sql/postgresql/migrate_from_1.x_to_2.0.pgsql: now also renames
+	primary keys, which are not automatically renamed when renaming
+	a table.
+
 2004-08-06  Ilja Booij  <ilja@ic-s.nl>
 
 	* dbsearch.c (db_search_range): changed query that wasn't using 

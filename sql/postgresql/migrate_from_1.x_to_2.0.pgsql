@@ -52,6 +52,7 @@ DROP INDEX aliases_alias_idx;
 DROP INDEX aliases_alias_low_idx;
 ALTER TABLE alias_idnr_seq RENAME TO dbmail_alias_idnr_seq;
 ALTER TABLE aliases RENAME TO dbmail_aliases;
+ALTER TABLE aliases_pkey RENAME TO dbmail_aliases_pkey;
 ALTER TABLE dbmail_aliases ALTER COLUMN alias_idnr 
 	SET DEFAULT nextval('dbmail_alias_idnr_seq');
 CREATE INDEX dbmail_aliases_alias_idx ON dbmail_aliases(alias);
@@ -59,8 +60,10 @@ CREATE INDEX dbmail_aliases_alias_low_idx ON dbmail_aliases(lower(alias));
 
 -- alter the users table.
 DROP INDEX users_name_idx;
+DROP INDEX users_id_idx;
 ALTER TABLE user_idnr_seq RENAME TO dbmail_user_idnr_seq;
 ALTER TABLE users RENAME TO dbmail_users;
+ALTER TABLE users_pkey RENAME TO dbmail_users_pkey;
 ALTER TABLE dbmail_users ALTER COLUMN user_idnr
 	SET DEFAULT nextval('dbmail_user_idnr_seq');
 ALTER TABLE dbmail_users ADD COLUMN curmail_size INT8;
@@ -76,6 +79,7 @@ DROP INDEX mailboxes_name_idx;
 DROP INDEX mailboxes_is_subscribed_idx;
 ALTER TABLE mailbox_idnr_seq RENAME TO dbmail_mailbox_idnr_seq;
 ALTER TABLE mailboxes RENAME TO dbmail_mailboxes;
+ALTER TABLE mailboxes_pkey RENAME TO dbmail_mailboxes_pkey;
 ALTER TABLE dbmail_mailboxes ALTER COLUMN mailbox_idnr
 	SET DEFAULT nextval('dbmail_mailbox_idnr_seq');
 CREATE INDEX dbmail_mailboxes_owner_idx ON dbmail_mailboxes(owner_idnr);
@@ -141,6 +145,7 @@ DROP INDEX messages_unique_id_idx;
 DROP INDEX messages_status_idx;
 ALTER TABLE message_idnr_seq RENAME TO dbmail_message_idnr_seq;
 ALTER TABLE messages RENAME TO dbmail_messages;
+ALTER TABLE messages_pkey RENAME TO dbmail_messages_pkey;
 ALTER TABLE dbmail_messages ALTER COLUMN message_idnr 
 	SET DEFAULT nextval('dbmail_message_idnr_seq');
 ALTER TABLE dbmail_messages ALTER COLUMN status
@@ -170,6 +175,7 @@ DROP INDEX messageblks_id_idx;
 DROP INDEX messageblks_msg_idx;
 ALTER TABLE messageblk_idnr_seq RENAME TO dbmail_messageblk_idnr_seq;
 ALTER TABLE messageblks RENAME TO dbmail_messageblks;
+ALTER TABLE messageblks_pkey RENAME TO dbmail_messageblks_pkey;
 ALTER TABLE dbmail_messageblks ALTER COLUMN messageblk_idnr
 	SET DEFAULT nextval('dbmail_messageblk_idnr_seq');
 ALTER TABLE dbmail_messageblks ADD COLUMN is_header INT2;
