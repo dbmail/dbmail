@@ -616,6 +616,7 @@ int build_user_list(const char *userfile)
   for (i=0; i<listsize; i++)
     {
       printf("doing %lu\n", i);
+
       fgets(line, MAX_LINESIZE, infile);
       if (line[strlen(line)-1] == '\n')
 	line[strlen(line)-1] = '\0';
@@ -628,6 +629,8 @@ int build_user_list(const char *userfile)
 	}
 
       split = '\0'; /* terminate */
+
+      printf("%s\n %s\n", line, split);
 
       strncpy(line, userlist[i].uname, STR_SIZE);
       strncpy(split+1, userlist[i].passwd, STR_SIZE);
