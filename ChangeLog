@@ -1,3 +1,8 @@
+2004-10-05  Paul Stevens <paul@nfg.nl>
+
+	* imapcommands.c (_ic_fetch): check mailbox permissions before
+	updating the mailbox or message flags.
+
 2004-10-04  Paul Stevens <paul@nfg.nl>
 
 	* dbmail.h: add include glib.h

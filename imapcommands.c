@@ -3868,17 +3868,11 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 						return -1;
 					}
 					
-					if (result == 1) {
-						result =
-							db_set_msgflag(thisnum,
-								       ud->mailbox.uid,
-								       setSeenSet,
-								       IMAPFA_ADD);
+					if (result == 1 && ud->mailbox.permission == IMAPPERM_READWRITE) {
+						result = db_set_msgflag(thisnum, ud->mailbox.uid, setSeenSet, IMAPFA_ADD);
 						if (result == -1) {
-							ci_write(ci->tx,
-								"\r\n* BYE internal dbase error\r\n");
-							list_freelist(&fetch_list.
-								      start);
+							ci_write(ci->tx, "\r\n* BYE internal dbase error\r\n");
+							list_freelist(&fetch_list.  start);
 							db_free_msg(&headermsg);
 							return -1;
 						}
@@ -4165,33 +4159,22 @@ int _ic_store(char *tag, char **args, ClientInfo * ci)
 				     &fn) == -1)
 					continue;
 			}
-
-			result =
-			    db_set_msgflag(thisnum, ud->mailbox.uid,
-					   flaglist, action);
-
-			if (result == -1) {
-				ci_write(ci->tx,
-					"\r\n* BYE internal dbase error\r\n");
-				return -1;
-			}
-
-			if (!be_silent) {
-				result =
-				    db_get_msgflag_all(thisnum,
-						       ud->mailbox.uid,
-						       msgflags);
+			if (ud->mailbox.permission == IMAPPERM_READWRITE) {
+				result = db_set_msgflag(thisnum, ud->mailbox.uid, flaglist, action);
 				if (result == -1) {
-					ci_write(ci->tx,
-						"\r\n* BYE internal dbase error\r\n");
+					ci_write(ci->tx, "\r\n* BYE internal dbase error\r\n");
+					return -1;
+				}
+			}
+			if (!be_silent) {
+				result = db_get_msgflag_all(thisnum, ud->mailbox.uid, msgflags);
+				if (result == -1) {
+					ci_write(ci->tx, "\r\n* BYE internal dbase error\r\n");
 					return -1;
 				}
 
 				ci_write(ci->tx, "* %llu FETCH (FLAGS (",
-					imapcommands_use_uid ? (u64_t) (fn
-									+
-									1)
-					: store_start + 1);
+					imapcommands_use_uid ? (u64_t) (fn + 1) : store_start + 1);
 
 				for (j = 0, isfirstout = 1;
 				     j < IMAP_NFLAGS; j++) {
@@ -4219,16 +4202,13 @@ int _ic_store(char *tag, char **args, ClientInfo * ci)
 				hi = store_end;
 			}
 
-			result =
-			    db_set_msgflag_range(lo, hi, ud->mailbox.uid,
-						 flaglist, action);
-
-			if (result == -1) {
-				ci_write(ci->tx,
-					"\r\n* BYE internal dbase error\r\n");
-				return -1;
+			if (ud->mailbox.permission = IMAPPERM_READWRITE) {
+				result = db_set_msgflag_range(lo, hi, ud->mailbox.uid, flaglist, action);
+				if (result == -1) {
+					ci_write(ci->tx, "\r\n* BYE internal dbase error\r\n");
+					return -1;
+				}
 			}
-
 			if (!be_silent) {
 				for (i = store_start; i <= store_end; i++) {
 					thisnum =
