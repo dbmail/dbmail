@@ -2526,7 +2526,7 @@ int db_unsubscribe(u64_t mboxid)
  *   0  flag not set
  *   1  flag set
  */
-int db_get_msgflag(const char *name, u64_t mailboxuid, u64_t msguid)
+int db_get_msgflag(const char *name, u64_t msguid)
 {
   
   char flagname[DEF_QUERYSIZE/2]; /* should be sufficient ;) */
@@ -2548,8 +2548,8 @@ int db_get_msgflag(const char *name, u64_t mailboxuid, u64_t msguid)
   else
     return 0; /* non-existent flag is not set */
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT %s FROM messages WHERE mailbox_idnr = %llu "
-	   "AND status<2 AND message_idnr = %llu AND unique_id != \"\"", flagname, mailboxuid, msguid);
+  snprintf(query, DEF_QUERYSIZE, "SELECT %s FROM messages WHERE "
+	   "message_idnr = %llu AND status<2 AND unique_id != \"\"", flagname, msguid);
 
   if (db_query(query) == -1)
     {
@@ -2575,6 +2575,56 @@ int db_get_msgflag(const char *name, u64_t mailboxuid, u64_t msguid)
 
 
 /*
+ * db_get_msgflag_all()
+ *
+ * gets all flags for a specified message
+ *
+ * flags are placed in *flags, an array build up according to IMAP_FLAGS 
+ * (see top of imapcommands.c)
+ *
+ * returns:
+ *  -1  error
+ *   0  success
+ */
+int db_get_msgflag_all(u64_t msguid, int *flags)
+{
+  char *row;
+  int i;
+
+  memset(flags, 0, sizeof(int) * IMAP_NFLAGS);
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT seen_flag, answered_flag, deleted_flag, "
+	   "flagged_flag, draft_flag, recent_flag FROM messages WHERE "
+	   "message_idnr = %llu AND status<2 AND unique_id != ''", msguid);
+ 
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_get_msgflag_all(): could not select message\n");
+      return (-1);
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_get_msgflag_all(): mysql_store_result failed: %s\n",mysql_error(&conn));
+      return (-1);
+    }
+  
+   if (mysql_num_rows(res) > 0)
+    {
+      row = mysql_fetch_row(res);
+
+      for (i=0; i<IMAP_NFLAGS && row; i++)
+	{
+	  if (row[0] && row[0][0] != '0') flags[i] = 1;
+	}
+    }
+ 
+   mysql_free_result(res);
+   return 0;
+}
+
+
+/*
  * db_set_msgflag()
  *
  * sets a flag specified by 'name' to on/off
@@ -2583,7 +2633,7 @@ int db_get_msgflag(const char *name, u64_t mailboxuid, u64_t msguid)
  *  -1  error
  *   0  success
  */
-int db_set_msgflag(const char *name, u64_t mailboxuid, u64_t msguid, int val)
+int db_set_msgflag(const char *name, u64_t msguid, int val)
 {
   
   char flagname[DEF_QUERYSIZE/2]; /* should be sufficient ;) */
@@ -2604,8 +2654,8 @@ int db_set_msgflag(const char *name, u64_t mailboxuid, u64_t msguid, int val)
   else
     return 0; /* non-existent flag is cannot set */
 
-  snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET %s = %d WHERE mailbox_idnr = %llu "
-	   "AND status<2 AND message_idnr = %llu", flagname, val, mailboxuid, msguid);
+  snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET %s = %d WHERE "
+	   " message_idnr = %llu AND status<2 ", flagname, val, msguid);
 
   if (db_query(query) == -1)
     {

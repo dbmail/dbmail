@@ -161,8 +161,9 @@ int db_subscribe(u64_t mboxid);
 int db_unsubscribe(u64_t mboxid);
 
 /* message functionality */
-int db_get_msgflag(const char *name, u64_t mailboxuid, u64_t msguid);
-int db_set_msgflag(const char *name, u64_t mailboxuid, u64_t msguid, int val);
+int db_get_msgflag(const char *name, u64_t msguid);
+int db_get_msgflag_all(u64_t msguid, int *flags);
+int db_set_msgflag(const char *name, u64_t msguid, int val);
 int db_get_msgdate(u64_t mailboxuid, u64_t msguid, char *date);
 
 int db_get_main_header(u64_t msguid, struct list *hdrlist);

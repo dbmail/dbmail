@@ -323,6 +323,7 @@ long db_dump_range(MEM *outmem, db_pos_t start, db_pos_t end, u64_t msguid)
   u64_t outcnt;
   u64_t distance;
   char buf[DUMP_BUF_SIZE];
+  char *field;
 
   trace(TRACE_DEBUG,"Dumping range: (%llu,%llu) - (%llu,%llu)\n",
 	start.block, start.pos, end.block, end.pos);
@@ -363,6 +364,8 @@ long db_dump_range(MEM *outmem, db_pos_t start, db_pos_t end, u64_t msguid)
     {
       /* dump everything */
       bufcnt = 0;
+      field = PQgetvalue(res, start.block, 0);
+
       for (i=start.pos; i<=end.pos; i++)
 	{
 	  if (bufcnt >= DUMP_BUF_SIZE-1)
@@ -371,13 +374,13 @@ long db_dump_range(MEM *outmem, db_pos_t start, db_pos_t end, u64_t msguid)
 	      bufcnt = 0;
 	    }
 
-	  if (PQgetvalue(res, start.block, 0)[i] == '\n')
+	  if (field[i] == '\n')
 	    {
 	      buf[bufcnt++] = '\r';
 	      buf[bufcnt++] = '\n';
 	    }
 	  else
-	    buf[bufcnt++] = PQgetvalue(res, start.block, 0)[i];
+	    buf[bufcnt++] = field[i];
 	}
       
       outcnt += mwrite(buf, bufcnt, outmem);
@@ -408,6 +411,8 @@ long db_dump_range(MEM *outmem, db_pos_t start, db_pos_t end, u64_t msguid)
 
       /* output */
       bufcnt = 0;
+      field = PQgetvalue(res, i, 0);
+
       for (j=0; j<distance; j++)
 	{
 	  if (bufcnt >= DUMP_BUF_SIZE-1)
@@ -416,13 +421,13 @@ long db_dump_range(MEM *outmem, db_pos_t start, db_pos_t end, u64_t msguid)
 	      bufcnt = 0;
 	    }
 
-	  if (PQgetvalue(res, i, 0)[startpos+j] == '\n')
+	  if (field[startpos+j] == '\n')
 	    {
 	      buf[bufcnt++] = '\r';
 	      buf[bufcnt++] = '\n';
 	    }
-	  else if (PQgetvalue(res, i, 0)[startpos+j])
-	    buf[bufcnt++] = PQgetvalue(res, i, 0)[startpos+j];
+	  else if (field[startpos+j])
+	    buf[bufcnt++] = field[startpos+j];
 	}
       outcnt += mwrite(buf, bufcnt, outmem);
       bufcnt = 0;

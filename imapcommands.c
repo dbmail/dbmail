@@ -29,7 +29,6 @@
 #define MAX_RETRIES 12
 #endif
 
-#define IMAP_NFLAGS 6
 const char *imap_flag_desc[IMAP_NFLAGS] = 
 { 
   "Seen", "Answered", "Deleted", "Flagged", "Draft", "Recent"
@@ -1769,6 +1768,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
   u64_t thisnum;
   u64_t tmpdumpsize;
   long long cnt;
+  int msgflags[IMAP_NFLAGS];
   struct list fetch_list;
   mime_message_t headermsg; /* only the rfcheader-member of this message will  be used */
   struct element *curr;
@@ -2597,9 +2597,9 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	      /* set \Seen flag if necessary; note the absence of an error-check 
 	       * for db_get_msgflag()!
 	       */
-	      if (setseen && db_get_msgflag("seen", ud->mailbox.uid, thisnum) != 1)
+	      if (setseen && db_get_msgflag("seen", thisnum) != 1)
 		{
-		  result = db_set_msgflag("seen", ud->mailbox.uid, thisnum, 1);
+		  result = db_set_msgflag("seen", thisnum, 1);
 		  if (result == -1)
 		    {
 		      fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
@@ -2618,19 +2618,19 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		  fprintf(ci->tx,"FLAGS (");
 
 		  isfirstout = 1;
+
+		  result = db_get_msgflag_all(thisnum, msgflags);
+		  if (result == -1)
+		    {
+		      fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
+		      list_freelist(&fetch_list.start);
+		      db_free_msg(&headermsg);
+		      return -1;
+		    }
+
 		  for (j=0; j<IMAP_NFLAGS; j++)
 		    {
-		      result = db_get_msgflag(imap_flag_desc[j], ud->mailbox.uid, 
-					      thisnum);
-
-		      if (result == -1)
-			{
-			  fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
-			  list_freelist(&fetch_list.start);
-			  db_free_msg(&headermsg);
-			  return -1;
-			}
-		      else if (result == 1)
+		      if (msgflags[j])
 			{
 			  if (isfirstout)
 			    {
@@ -2831,8 +2831,7 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
 	    case IMAPFA_REPLACE:
 	      for (j=0; j<IMAP_NFLAGS; j++)
 		{
-		  result = db_set_msgflag(imap_flag_desc[j], ud->mailbox.uid, 
-					  thisnum,
+		  result = db_set_msgflag(imap_flag_desc[j], thisnum,
 					  flaglist[j]);
 
 		  if (result == -1)
@@ -2852,8 +2851,7 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
 		{
 		  if (flaglist[j])
 		    {
-		      result = db_set_msgflag(imap_flag_desc[j], ud->mailbox.uid, 
-					      thisnum,
+		      result = db_set_msgflag(imap_flag_desc[j], thisnum,
 					      (action==IMAPFA_ADD));
 
 		      if (result == -1)
@@ -2862,18 +2860,9 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
 			  return -1;
 			}
 		    }
-		  if (!be_silent)
+		  if (!be_silent && action == IMAPFA_ADD)
 		    {
-		      result = db_get_msgflag(imap_flag_desc[j], ud->mailbox.uid, 
-					      thisnum);
-
-		      if (result == -1)
-			{
-			  fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
-			  return -1;
-			}
-		      if (result == 1)
-			fprintf(ci->tx,"%s ",imap_flag_desc_escaped[j]);
+		      fprintf(ci->tx,"%s ",imap_flag_desc_escaped[j]);
 		    }
 		}
 	      break;
