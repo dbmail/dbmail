@@ -1072,8 +1072,37 @@ int db_log_ip(const char *ip)
 	return 0;
 }
 
-int db_cleanup_iplog(const char *lasttokeep)
+int db_count_iplog(const char *lasttokeep, u64_t *affected_rows)
 {
+	char *escaped_lasttokeep;
+
+	assert(affected_rows != NULL);
+	*affected_rows = 0;
+
+	if (db_escape_string(&escaped_lasttokeep, lasttokeep)) {
+		trace(TRACE_ERROR, "%s,%s: error escaping last to keep.",
+			__FILE__, __func__);
+		return -1;
+	}
+	snprintf(query, DEF_QUERYSIZE,
+		 "SELECT * FROM dbmail_pbsp WHERE since < '%s'", escaped_lasttokeep);
+	my_free(escaped_lasttokeep);
+
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s:%s: error executing query",
+		      __FILE__, __func__);
+		return -1;
+	}
+	*affected_rows = db_get_affected_rows();
+
+	return 0;
+}
+
+int db_cleanup_iplog(const char *lasttokeep, u64_t *affected_rows)
+{
+ 	assert(affected_rows != NULL);
+ 	*affected_rows = 0;
+
 	snprintf(query, DEF_QUERYSIZE,
 		 "DELETE FROM %spbsp WHERE since < '%s'", DBPFX, lasttokeep);
 
@@ -1082,6 +1111,7 @@ int db_cleanup_iplog(const char *lasttokeep)
 		      __FILE__, __func__);
 		return -1;
 	}
+	*affected_rows = db_get_affected_rows();
 
 	return 0;
 }
@@ -1983,6 +2013,31 @@ int db_deleted_purge(u64_t * affected_rows)
 		}
 	}
 	my_free(message_idnrs);
+	return 1;
+}
+
+int db_deleted_count(u64_t * affected_rows)
+{
+	assert(affected_rows != NULL);
+	*affected_rows = 0;
+
+	/* first we're deleting all the messageblks */
+	snprintf(query, DEF_QUERYSIZE,
+		 "SELECT message_idnr FROM dbmail_messages WHERE status='%d'",
+		 MESSAGE_STATUS_PURGE);
+	trace(TRACE_DEBUG, "%s,%s: executing query [%s]",
+	      __FILE__, __func__, query);
+
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR,
+		      "%s,%s: Cound not fetch message ID numbers",
+		      __FILE__, __func__);
+		return -1;
+	}
+
+	*affected_rows = db_num_rows();
+
+	db_free_result();
 	return 1;
 }
 

@@ -54,25 +54,39 @@ int reallyquiet = 0;
 #define qprintf(fmt, args...) \
 	(quiet ? 0 : printf(fmt, ##args) )
 
+#define qverbosef(fmt, args...) \
+	(!verbose ? 0 : printf(fmt, ##args) )
+
 #define qerrorf(fmt, args...) \
 	(reallyquiet ? 0 : fprintf(stderr, fmt, ##args) )
 
 char *configFile = DEFAULT_CONFIG_FILE;
+
+int has_errors = 0;
 
 /* set up database login data */
 extern db_param_t _db_params;
 
 static void find_time(char *timestr, const char *timespec);
 
+static int do_check_integrity(void);
+static int do_null_messages(void);
+static int do_purge_deleted(void);
+static int do_set_deleted(void);
+static int do_check_iplog(char *timestr, const char *timespec);
+static int do_vacuum_db(void);
+
 int do_showhelp(void) {
 	printf("*** dbmail-util ***\n");
 
 	printf("Use this program to maintain your DBMail database.\n");
 	printf("See the man page for more info. Summary:\n\n");
-	printf("     -c        clean up unlinked message entries\n");
+	printf("     -a        perform all checks (in this release: -ctupd)\n");
+	printf("     -c        clean up database (optimize/vacuum)\n");
 	printf("     -t        test for message integrity\n");
 	printf("     -u        null message check\n");
-	printf("     -r        repair any integrity problems\n");
+//	printf("     -r        repair any integrity problems\n");
+/* 'r' and 'y' are now synonymous. */
 	printf("     -p        purge messages have the DELETE status set\n");
 	printf("     -d        set DELETE status for deleted messages\n");
 	printf("     -l time   clear the IP log used for IMAP/POP-before-SMTP\n"
@@ -84,8 +98,8 @@ int do_showhelp(void) {
 	printf("     -f file   specify an alternative config file\n");
 	printf("     -q        quietly skip interactive prompts\n"
 	       "               use twice to suppress error messages\n");
-//	printf("     -n        show the intended action but do not perform it, no to all\n");
-//	printf("     -y        perform all proposed actions, as though yes to all\n");
+	printf("     -n        show the intended action but do not perform it, no to all\n");
+	printf("     -y        perform all proposed actions, as though yes to all\n");
 	printf("     -v        verbose details\n");
 	printf("     -V        show the version\n");
 	printf("     -h        show this help message\n");
@@ -95,29 +109,34 @@ int do_showhelp(void) {
 
 int main(int argc, char *argv[])
 {
-	int should_fix = 0, check_integrity = 0, check_iplog = 0;
-	int check_null_messages = 0;
-	int show_help = 0, purge_deleted = 0, set_deleted = 0;
-	int vacuum_db = 0;
+	int check_integrity = 0, check_iplog = 0;
+	int null_messages = 0;
+	int vacuum_db = 0, purge_deleted = 0, set_deleted = 0;
+	int show_help = 0;
 	int do_nothing = 1;
-	time_t start, stop;
-	char timespec[LEN], timestr[LEN];
 	int opt;
-	struct list lostlist;
-	struct element *el;
-	u64_t id;
-	u64_t deleted_messages;
-	u64_t messages_set_to_delete;
+	char timespec[LEN];
+	char timestr[LEN];
 
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 	setvbuf(stdout, 0, _IONBF, 0);
 
 	/* get options */
 	opterr = 0;		/* suppress error message from getopt() */
-	while ((opt = getopt(argc, argv, "-crtl:pud" "i" "f:qnyvVh")) != -1) {
+	while ((opt = getopt(argc, argv, "-acrtl:pud" "i" "f:qnyvVh")) != -1) {
 		/* The initial "-" of optstring allows unaccompanied
 		 * options and reports them as the optarg to opt 1 (not '1') */
 		switch (opt) {
+		case 'a':
+			/* This list should be kept up to date. */
+			vacuum_db = 1;
+			purge_deleted = 1;
+			set_deleted = 1;
+			check_integrity = 1;
+			null_messages = 1;
+			do_nothing = 0;
+			break;
+
 		case 'c':
 			vacuum_db = 1;
 			do_nothing = 0;
@@ -133,19 +152,13 @@ int main(int argc, char *argv[])
 			do_nothing = 0;
 			break;
 
-		case 'r':
-			check_integrity = 1;
-			should_fix = 1;
-			do_nothing = 0;
-			break;
-
 		case 't':
 			check_integrity = 1;
 			do_nothing = 0;
 			break;
 
 		case 'u':
-			check_null_messages = 1;
+			null_messages = 1;
 			do_nothing = 0;
 			break;
 
@@ -171,14 +184,13 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'n':
-			qerrorf("-n option is not supported in this "
-			       "release.\n");
-			return 1;
+			no_to_all = 1;
+			break;
 
+		case 'r':
 		case 'y':
-			qerrorf("-y option is not supported in this "
-			       "release.\n");
-			return 1;
+			yes_to_all = 1;
+			break;
 
 		case 'q':
                         /* If we get q twice, be really quiet! */
@@ -212,7 +224,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (do_nothing || show_help) {
+	if (do_nothing || show_help || (no_to_all && yes_to_all)) {
 		do_showhelp();
 		return 1;
 	}
@@ -233,202 +245,237 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	qprintf("Ok. Connected\n");
+	qprintf("Ok. Connected.\n");
 
-	if (purge_deleted) {
-		qprintf("Deleting messages with DELETE status... ");
+	if (check_integrity) do_check_integrity();
+	if (null_messages) do_null_messages();
+	if (purge_deleted) do_purge_deleted();
+	if (set_deleted) do_set_deleted();
+	if (check_iplog) do_check_iplog(timestr, timespec);
+	if (vacuum_db) do_vacuum_db();
+
+	qprintf("\nMaintenance done.\n");
+
+	db_disconnect();
+	auth_disconnect();
+	
+	config_free();
+
+	return 0;
+}
+
+int do_purge_deleted(void)
+{
+	u64_t deleted_messages;
+
+	if (no_to_all) {
+		qprintf("\nCounting messages with DELETE status...\n");
+		if (db_deleted_count(&deleted_messages) < 0) {
+			qerrorf
+			    ("Failed. An error occured. Please check log.\n");
+			return -1;
+		}
+		qprintf("Ok. [%llu] messages have DELETE status.\n",
+		    deleted_messages);
+	}
+	if (yes_to_all) {
+		qprintf("\nDeleting messages with DELETE status...\n");
 		if (db_deleted_purge(&deleted_messages) < 0) {
 			qerrorf
 			    ("Failed. An error occured. Please check log.\n");
-			db_disconnect();
-			auth_disconnect();
 			return -1;
 		}
 		qprintf("Ok. [%llu] messages deleted.\n", deleted_messages);
 	}
+	return 0;
+}
 
-	if (set_deleted) {
-		qprintf("Setting DELETE status for deleted messages... ");
+int do_set_deleted(void)
+{
+	u64_t messages_set_to_delete;
+
+	if (no_to_all) {
+		// TODO: Count messages to delete.
+		qprintf("\nCounting deleted messages that need the DELETE status set...\n");
+	}
+	if (yes_to_all) {
+		qprintf("\nSetting DELETE status for deleted messages...\n");
 		if (db_set_deleted(&messages_set_to_delete) == -1) {
 			qerrorf
 			    ("Failed. An error occured. Please check log.\n");
-			db_disconnect();
-			auth_disconnect();
 			return -1;
 		}
 		qprintf("Ok. [%llu] messages set for deletion.\n",
 		       messages_set_to_delete);
-		qprintf("Re-calculating used quota for all users... ");
+		qprintf("Re-calculating used quota for all users...\n");
 		if (db_calculate_quotum_all() < 0) {
 			qerrorf
 			    ("Failed. An error occured. Please check log.\n");
-			db_disconnect();
-			auth_disconnect();
 			return -1;
 		}
 		qprintf("Ok. Used quota updated for all users.\n");
 	}
+	return 0;
+}
 
-	if (check_null_messages) {
-		qprintf("Now checking DBMAIL for NULL messages.. ");
-		time(&start);
+int do_null_messages(void)
+{
+	time_t start, stop;
+	struct list lostlist;
+	struct element *el;
+	u64_t id;
 
-		if (db_icheck_null_messages(&lostlist) < 0) {
-			qerrorf
-			    ("Failed. An error occured. Please check log.\n");
-			db_disconnect();
-			auth_disconnect();
-			return -1;
-		}
+	if (no_to_all) {
+		qprintf("\nChecking DBMAIL for NULL messages...\n");
+	}
+	if (yes_to_all) {
+		qprintf("\nRepairing DBMAIL for NULL messages...\n");
+	}
+	time(&start);
 
+	if (db_icheck_null_messages(&lostlist) < 0) {
+		qerrorf("Failed. An error occured. Please check log.\n");
+		return -1;
+	}
+
+	qprintf("Ok. Found [%ld] NULL messages.\n",
+	       lostlist.total_nodes);
+
+	if (yes_to_all) {
 		if (lostlist.total_nodes > 0) {
-			qerrorf("Ok. Found [%ld] null messages:\n",
-			       lostlist.total_nodes);
-
 			el = lostlist.start;
 			while (el) {
 				id = *((u64_t *) el->data);
 				if (db_set_message_status(id, MESSAGE_STATUS_ERROR) < 0)
-					qerrorf
-					    ("Warning: could not set message status #%llu. Check log.\n",
-					     id);
+					qerrorf("Warning: could not set status on message [%llu]. Check log.\n", id);
 				else
-					qerrorf
-					    ("%llu (status update to MESSAGE_STATUS_ERROR)\n",
-					     id);
-
+					qverbosef("[%llu] set to MESSAGE_STATUS_ERROR)\n", id);
+        
 				el = el->nextnode;
 			}
-
+        
 			list_freelist(&lostlist.start);
-
-			qerrorf("\n");
-		} else
-			qprintf("Ok. Found 0 NULL messages.\n");
-
-		time(&stop);
-		qprintf("--- checking NULL messages took %g seconds\n",
-		       difftime(stop, start));
-		qprintf("Now checking DBMAIL for NULL physmessages..");
-		time(&start);
-		if (db_icheck_null_physmessages(&lostlist) < 0) {
-			qerrorf
-			    ("Failed, an error occured. Please check log.\n");
-			db_disconnect();
-			auth_disconnect();
-			return -1;
 		}
-
-		if (lostlist.total_nodes > 0) {
-			qerrorf
-			    ("found %ld physmessages without messageblocks\n",
-			     lostlist.total_nodes);
-			el = lostlist.start;
-			while (el) {
-				id = *((u64_t *) el->data);
-				if (db_delete_physmessage(id) < 0)
-					qerrorf
-					    ("Warning: couldn't delete physmessage");
-				else
-					qerrorf
-					    ("deleted physmessage [%llu]\n",
-					     id);
-				el = el->nextnode;
-			}
-			list_freelist(&lostlist.start);
-			qerrorf("\n");
-		} else
-			qprintf("found 0 physmessages without messageblks\n");
-
-		time(&stop);
-		qprintf("--- checking NULL physmessages took %g seconds\n",
-			difftime(stop, start));
 	}
 
-	if (check_integrity) {
-		qprintf("Now checking DBMAIL messageblocks integrity.. ");
-		time(&start);
+	time(&stop);
+	qverbosef("--- checking NULL messages took %g seconds\n",
+	       difftime(stop, start));
+	qprintf("\nChecking DBMAIL for NULL physmessages...\n");
+	time(&start);
+	if (db_icheck_null_physmessages(&lostlist) < 0) {
+		qerrorf("Failed, an error occured. Please check log.\n");
+		return -1;
+	}
 
-		/* this is what we do:
-		 * First we're checking for loose messageblocks
-		 * Secondly we're chekcing for loose messages
-		 * Third we're checking for loose mailboxes 
-		 */
+	qerrorf("Ok. Found [%ld] physmessages without messageblocks.\n",
+	     lostlist.total_nodes);
 
-		/* first part */
-		if (db_icheck_messageblks(&lostlist) < 0) {
-			qerrorf
-			    ("Failed. An error occured. Please check log.\n");
-			db_disconnect();
-			auth_disconnect();
-			return -1;
+	if (lostlist.total_nodes > 0) {
+		el = lostlist.start;
+		while (el) {
+			id = *((u64_t *) el->data);
+			if (db_delete_physmessage(id) < 0)
+				qerrorf("Warning: could not delete physmessage [%llu]. Check log.\n", id);
+			else
+				qverbosef("[%llu] deleted.\n", id);
+			el = el->nextnode;
+		}
+		list_freelist(&lostlist.start);
+	}
+
+	time(&stop);
+	qverbosef("--- checking NULL physmessages took %g seconds\n",
+		difftime(stop, start));
+	
+	return 0;
+}
+
+int do_check_integrity(void)
+{
+	time_t start, stop;
+	struct list lostlist;
+	struct element *el;
+	u64_t id;
+
+	if (no_to_all) {
+		qprintf("\nChecking DBMAIL messageblocks integrity...\n");
+	}
+	if (yes_to_all) {
+		qprintf("\nRepairing DBMAIL messageblocks integrity...\n");
+	}
+	time(&start);
+
+	/* this is what we do:
+	 * First we're checking for loose messageblocks
+	 * Secondly we're chekcing for loose messages
+	 * Third we're checking for loose mailboxes 
+	 */
+
+	/* first part */
+	if (db_icheck_messageblks(&lostlist) < 0) {
+		qerrorf
+		    ("Failed. An error occured. Please check log.\n");
+		return -1;
+	}
+
+	qprintf("Ok. Found [%ld] unconnected messageblks:\n",
+	     lostlist.total_nodes);
+	if (lostlist.total_nodes > 0) {
+
+		el = lostlist.start;
+		while (el) {
+			id = *((u64_t *) el->data);
+			if (no_to_all) {
+				qerrorf("%llu ", id);
+			} else if (yes_to_all) {
+				if (db_delete_messageblk(id) < 0)
+					qerrorf
+					    ("Warning: could not delete messageblock #%llu. Check log.\n",
+					     id);
+				else
+					qerrorf
+					    ("%llu (removed from dbase)\n",
+					     id);
+			}
+
+			el = el->nextnode;
 		}
 
-		if (lostlist.total_nodes > 0) {
-			qerrorf
-			    ("Ok. Found [%ld] unconnected messageblks:\n",
-			     lostlist.total_nodes);
+		list_freelist(&lostlist.start);
 
+		qerrorf("\n");
+		has_errors = 1;
+	}
+
+
+	time(&stop);
+	qverbosef("--- checking block integrity took %g seconds\n",
+	       difftime(stop, start));
+	qverbosef("--- checking block integrity took %g seconds\n",
+		difftime(stop, start));
+
+	/* second part */
+	start = stop;
+	qprintf("\nChecking DBMAIL message integrity...\n");
+
+	if (db_icheck_messages(&lostlist) < 0) {
+		qerrorf
+		    ("Failed. An error occured. Please check log.\n");
+		return -1;
+	}
+
+	qprintf("Ok. Found [%ld] unconnected messages:\n",
+	       lostlist.total_nodes);
+	if (yes_to_all) {
+		if (lostlist.total_nodes > 0) {
 			el = lostlist.start;
 			while (el) {
 				id = *((u64_t *) el->data);
-				if (should_fix == 0)
+        
+				if (no_to_all) {
 					qerrorf("%llu ", id);
-				else {
-					if (db_delete_messageblk(id) < 0)
-						qerrorf
-						    ("Warning: could not delete messageblock #%llu. Check log.\n",
-						     id);
-					else
-						qerrorf
-						    ("%llu (removed from dbase)\n",
-						     id);
-				}
-
-				el = el->nextnode;
-			}
-
-			list_freelist(&lostlist.start);
-
-			qerrorf("\n");
-			if (should_fix == 0) {
-				qerrorf
-				    ("Try running dbmail-util with the '-r' option "
-				     "in order to repair these problems\n\n");
-			}
-		} else
-			qprintf("Ok. Found 0 unconnected messageblks.\n");
-
-
-		time(&stop);
-		qprintf("--- checking block integrity took %g seconds\n",
-		       difftime(stop, start));
-		qprintf("--- checking block integrity took %g seconds\n",
-			difftime(stop, start));
-
-		/* second part */
-		start = stop;
-		qprintf("Now checking DBMAIL message integrity.. ");
-
-		if (db_icheck_messages(&lostlist) < 0) {
-			qerrorf
-			    ("Failed. An error occured. Please check log.\n");
-			db_disconnect();
-			auth_disconnect();
-			return -1;
-		}
-
-		if (lostlist.total_nodes > 0) {
-			qerrorf("Ok. Found [%ld] unconnected messages:\n",
-			       lostlist.total_nodes);
-
-			el = lostlist.start;
-			while (el) {
-				id = *((u64_t *) el->data);
-
-				if (should_fix == 0)
-					qerrorf("%llu ", id);
-				else {
+				} else if (yes_to_all) {
 					if (db_delete_message(id) < 0)
 						qerrorf
 						    ("Warning: could not delete message #%llu. Check log.\n",
@@ -438,50 +485,49 @@ int main(int argc, char *argv[])
 						    ("%llu (removed from dbase)\n",
 						     id);
 				}
-
+        
 				el = el->nextnode;
 			}
-
+        
 			qerrorf("\n");
-			if (should_fix == 0) {
+			if (no_to_all) {
 				qerrorf
 				    ("Try running dbmail-util with the '-r' option "
 				     "in order to repair these problems\n\n");
 			}
 			list_freelist(&lostlist.start);
-
-		} else
-			qprintf("Ok. Found 0 unconnected messages.\n");
-
-		time(&stop);
-		qprintf("--- checking message integrity took %g seconds\n",
-		       difftime(stop, start));
-		qprintf("--- checking message integrity took %g seconds\n",
-			difftime(stop, start));
-
-		/* third part */
-		qprintf("Now checking DBMAIL mailbox integrity.. ");
-		start = stop;
-
-		if (db_icheck_mailboxes(&lostlist) < 0) {
-			qerrorf
-			    ("Failed. An error occured. Please check log.\n");
-			db_disconnect();
-			auth_disconnect();
-			return -1;
+        
 		}
+	}
 
+	time(&stop);
+	qverbosef("--- checking message integrity took %g seconds\n",
+	       difftime(stop, start));
+	qverbosef("--- checking message integrity took %g seconds\n",
+		difftime(stop, start));
+
+	/* third part */
+	qprintf("\nChecking DBMAIL mailbox integrity...\n");
+	start = stop;
+
+	if (db_icheck_mailboxes(&lostlist) < 0) {
+		qerrorf
+		    ("Failed. An error occured. Please check log.\n");
+		return -1;
+	}
+
+	qprintf("Ok. Found [%ld] unconnected mailboxes:\n",
+	    lostlist.total_nodes);
+	if (yes_to_all) {
 		if (lostlist.total_nodes) {
-			qerrorf("Ok. Found [%ld] unconnected mailboxes:\n",
-			       lostlist.total_nodes);
-
+        
 			el = lostlist.start;
 			while (el) {
 				id = *((u64_t *) el->data);
-
-				if (should_fix == 0)
+        
+				if (no_to_all) {
 					qerrorf("%llu ", id);
-				else {
+				} else if (yes_to_all) {
 					if (db_delete_mailbox(id, 0, 0) <
 					    0)
 						qerrorf
@@ -492,71 +538,78 @@ int main(int argc, char *argv[])
 						    ("%llu (removed from dbase)\n",
 						     id);
 				}
-
+        
 				el = el->nextnode;
 			}
-
+        
 			qerrorf("\n");
-			if (should_fix == 0) {
+			if (no_to_all) {
 				qerrorf
 				    ("Try running dbmail-util with the '-r' option "
 				     "in order to repair these problems\n\n");
 			}
-
+        
 			list_freelist(&lostlist.start);
-		} else
-			qprintf("Ok. Found 0 unconnected mailboxes.\n");
-
-		time(&stop);
-		qprintf("--- checking mailbox integrity took %g seconds\n",
-		       difftime(stop, start));
-		qprintf("--- checking mailbox integrity took %g seconds\n",
-			difftime(stop, start));
+		}
 	}
 
-	if (check_iplog) {
-		find_time(timestr, timespec);
-		qprintf("Cleaning up IP log... ");
+	time(&stop);
+	qverbosef("--- checking mailbox integrity took %g seconds\n",
+	       difftime(stop, start));
+	qverbosef("--- checking mailbox integrity took %g seconds\n",
+		difftime(stop, start));
+	
+	return 0;
+}
 
-		if (timestr[0] == 0) {
-			qerrorf("Failed. Invalid argument [%s] specified\n",
-			       timespec);
-			db_disconnect();
-			auth_disconnect();
+int do_check_iplog(char *timestr, const char *timespec)
+{
+	u64_t log_count;
+
+	find_time(timestr, timespec);
+	if (timestr[0] == 0) {
+		qerrorf("\nFailed to find a timestring: [%s] is not <hours>h<minutes>m.\n",
+		       timespec);
+		return -1;
+	}
+
+	if (no_to_all) {
+		qprintf("\nCounting IP entries older than [%s]...\n", timestr);
+		if (db_count_iplog(timestr, &log_count) < 0) {
+			qerrorf("Failed. An error occured. Check the log.\n");
 			return -1;
 		}
-
-		if (db_cleanup_iplog(timestr) < 0) {
+		qprintf("Ok. [%llu] IP entries are older than [%s].\n",
+		    log_count, timestr);
+	}
+	if (yes_to_all) {
+		qprintf("\nRemoving IP entries older than [%s]...\n", timestr);
+		if (db_cleanup_iplog(timestr, &log_count) < 0) {
 			qerrorf("Failed. Please check the log.\n");
-			db_disconnect();
-			auth_disconnect();
 			return -1;
 		}
 
-		qprintf("Ok. All entries before [%s] have been removed.\n",
-		       timestr);
+		qprintf("Ok. [%llu] IP entries were older than [%s].\n",
+		       log_count, timestr);
 	}
+	return 0;
+}
 
-	if (vacuum_db) {
-		qprintf("Cleaning up database structure... ");
+int do_vacuum_db(void)
+{
+	if (no_to_all) {
+		qprintf("\nVacuum and optimize not performed.\n");
+	}
+	if (yes_to_all) {
+		qprintf("\nVacuuming and optimizing database...\n");
 		fflush(stdout);
 		if (db_cleanup() < 0) {
 			qerrorf("Failed. Please check the log.\n");
-			db_disconnect();
-			auth_disconnect();
 			return -1;
 		}
 
 		qprintf("Ok. Database cleaned up.\n");
 	}
-
-	qprintf("Maintenance done.\n\n");
-
-	db_disconnect();
-	auth_disconnect();
-	
-	config_free();
-
 	return 0;
 }
 
@@ -638,3 +691,4 @@ void find_time(char *timestr, const char *timespec)
 
 	return;
 }
+

@@ -571,7 +571,8 @@ int db_log_ip(const char *ip);
 *       - -1 on database failure
 *       - 0 on success
 */
-int db_cleanup_iplog(const char *lasttokeep);
+int db_cleanup_iplog(const char *lasttokeep, u64_t *affected_rows);
+int db_count_iplog(const char *lasttokeep, u64_t *affected_rows);
 
 /**
  * \brief cleanup database tables
@@ -779,6 +780,7 @@ int db_set_deleted(u64_t * affected_rows);
  *       of deleted messages.
  */
 int db_deleted_purge(u64_t * affected_rows);
+int db_deleted_count(u64_t * affected_rows);
 /**
  * \brief check if a block of a certain size can be inserted.
  * \param addblocksize size of added blocks (UNUSED)
