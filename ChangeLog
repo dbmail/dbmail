@@ -1,3 +1,9 @@
+2004-09-10  Paul Stevens <paul@nfg.nl>
+
+	* auth.h, db.h, db.c, user.c, auth/authldap.c, auth/authsql.c:
+	moved all functions that refer to the dbmail_aliases and dbmail_users
+	tables to the auth module as part of ldap effort.
+	
 2004-09-09  Paul Stevens <paul@nfg.nl>
 
 	* Makefile.ami, imap4.c, imapd.c, lmtpd.c, pool.c, pool.h, 

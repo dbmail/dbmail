@@ -239,5 +239,84 @@ u64_t auth_md5_validate(char *username, unsigned char *md5_apop_he,
  */
 char *auth_get_userid(u64_t user_idnr);
 
+/**
+ * \brief get user ids belonging to a client id
+ * \param client_id 
+ * \param user_ids
+ * \param num_users
+ * \return 
+ *      - -2 on memory error
+ *      - -1 on database error
+ *      -  1 on success
+ */
+int auth_get_users_from_clientid(u64_t client_id, 
+			       /*@out@*/ u64_t ** user_ids,
+			       /*@out@*/ unsigned *num_users);
+/**
+ * \brief get deliver_to from alias. Gets a list of deliver_to
+ * addresses
+ * \param alias the alias
+ * \return 
+ *         - NULL on failure
+ *         - "" if no such alias found
+ *         - deliver_to address otherwise
+ * \attention caller needs to free the return value
+ */
+char *auth_get_deliver_from_alias(const char *alias);
+/**
+ * \brief get a list of aliases associated with a user's user_idnr
+ * \param user_idnr idnr of user
+ * \param aliases list of aliases
+ * \return
+ * 		- -2 on memory failure
+ * 		- -1 on database failure
+ * 		- 0 on success
+ * \attention aliases list needs to be empty. Method calls list_init()
+ *            which sets list->start to NULL.
+ */
+int auth_get_user_aliases(u64_t user_idnr, struct list *aliases);
+/**
+ * \brief add an alias for a user
+ * \param user_idnr user's id
+ * \param alias new alias
+ * \param clientid client id
+ * \return 
+ *        - -1 on failure
+ *        -  0 on success
+ *        -  1 if alias already exists for given user
+ */
+int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid);
+/**
+ * \brief add an alias to deliver to an extern address
+ * \param alias the alias
+ * \param deliver_to extern address to deliver to
+ * \param clientid client idnr
+ * \return 
+ *        - -1 on failure
+ *        - 0 on success
+ *        - 1 if deliver_to already exists for given alias
+ */
+int auth_addalias_ext(const char *alias, const char *deliver_to,
+		    u64_t clientid);
+/**
+ * \brief remove alias for user
+ * \param user_idnr user id
+ * \param alias the alias
+ * \return
+ *         - -1 on failure
+ *         - 0 on success
+ */
+int auth_removealias(u64_t user_idnr, const char *alias);
+/**
+ * \brief remove external delivery address for an alias
+ * \param alias the alias
+ * \param deliver_to the deliver to address the alias is
+ *        pointing to now
+ * \return
+ *        - -1 on failure
+ *        - 0 on success
+ */
+int auth_removealias_ext(const char *alias, const char *deliver_to);
+
 
 #endif

@@ -779,7 +779,7 @@ int do_forwards(const char * const alias, const u64_t clientid,
 
 			qprintf("[%s]\n", forward);
 
-			if (db_removealias_ext(alias, forward) < 0) {
+			if (auth_removealias_ext(alias, forward) < 0) {
 				qerrorf("Error: could not remove forward [%s] \n",
 				     forward);
 				result = -1;
@@ -795,7 +795,7 @@ int do_forwards(const char * const alias, const u64_t clientid,
 			forward = (char *)tmp->data;
 			qprintf("[%s]\n", forward);
 
-			if (db_addalias_ext(alias, forward, clientid) < 0) {
+			if (auth_addalias_ext(alias, forward, clientid) < 0) {
 				qerrorf("Error: could not add forward [%s]\n",
 				     alias);
 				result = -1;
@@ -806,7 +806,7 @@ int do_forwards(const char * const alias, const u64_t clientid,
 
 	/*
 	qprintf("Adding alias [%s] --> [%s]...", alias, forward);
-	switch ((result = db_addalias_ext(alias, forward, 0))) {
+	switch ((result = auth_addalias_ext(alias, forward, 0))) {
 	case -1:
 		qerrorf("Error: cannot add forwarding address.\n");
 		break;
@@ -848,7 +848,7 @@ int do_aliases(const u64_t useridnr,
 
 			qprintf("[%s]\n", alias);
 
-			if (db_removealias(useridnr, alias) <
+			if (auth_removealias(useridnr, alias) <
 			    0) {
 				qerrorf("Error: could not remove alias [%s] \n",
 				     alias);
@@ -869,7 +869,7 @@ int do_aliases(const u64_t useridnr,
 			alias = (char *)tmp->data;
 			qprintf("[%s]\n", alias);
 
-			if (db_addalias
+			if (auth_addalias
 			    (useridnr, alias, clientid) < 0) {
 				qerrorf("Error: could not add alias [%s]\n",
 				     alias);
@@ -937,7 +937,7 @@ int do_show(const char * const name)
 			qprintf
 			    ("..is not a user, trying as an alias");
 
-			deliver_to = db_get_deliver_from_alias(name);
+			deliver_to = auth_get_deliver_from_alias(name);
 
 			if (!deliver_to) {
 				qerrorf("Error: cannot verify existence of alias [%s].\n",
@@ -981,7 +981,7 @@ int do_show(const char * const name)
 		qprintf("\n");
 
 		qprintf("Aliases:\n");
-		db_get_user_aliases(useridnr, &userlist);
+		auth_get_user_aliases(useridnr, &userlist);
 
 		tmp = list_getstart(&userlist);
 		while (tmp) {
