@@ -24,13 +24,13 @@ int main(int argc, char *argv[])
   char line[MAX_LINESIZE],cmdstr[MAX_LINESIZE];
   FILE *smtp = 0;
 
-  if (argc < 2)
+/*  if (argc < 2)
     {
       fprintf(stderr,"Usage: %s <username>\n", argv[0]);
       fprintf(stderr,"Input is read from stdin\n\n");
       return 0;
     }
-
+*/
   if ((result = regcomp(&preg, mbox_delimiter_pattern, REG_NOSUB)) != 0)
     {
       fprintf(stderr,"Regex compilation failed.\n");
