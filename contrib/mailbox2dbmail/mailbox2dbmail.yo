@@ -1,0 +1,23 @@
+manpage(mailbox2dbmail)(1)(2004-03-07)(MirrorLynx)(Debian Distribution)
+manpagename(mailbox2dbmail)(Tool to move your flat filesystem mailboxen to dbmail mailboxen)
+manpagesynopsis()
+mailbox2dbmail [OPTIONS]
+manpageoptions()
+startdit()
+dit(bf(-v,--version)) Version info
+dit(bf(-h,--help)) Help Display
+dit(bf(-b,--box)) IMAP folder to stick mail in under user (Default: Inbox)
+dit(bf(-m,--mail)) Location of Mailbox(required)
+dit(bf(-u,--user)) Username(required)
+dit(bf(-t,--type)) Type of Mailbox: mbox, maildir, mhdir (required)
+dit(bf(-p,--path)) Path to dbmail-smtp(default: /usr/sbin/dbmail-smtp)
+enddit()
+
+manpageseealso()
+bf(python(1)), and bf(pydoc mailbox)
+
+manpagebugs()
+Contact nemail(Dan Weber)(dan@mirrorlynx.com), for any bugs with this program.
+
+manpageauthor()
+This manpage was written by nemail(Dan Weber)(dan@mirrorlynx.com), 2004

@@ -1,0 +1,90 @@
+#!/usr/bin/python
+
+import os,sys,getopt,email,email.Errors,mailbox
+version = "%s 1.2" %(sys.argv[0],)
+
+def main():
+    try:
+        user=mbox=type=''
+        msgnumber=1
+        box = "Inbox"
+        path = "/usr/sbin/dbmail-smtp"
+        opts, args = getopt.getopt(sys.argv[1:], "u:m:b:t:p:hv", ["user=","mail=","box=","path=","type=","help","version"])
+        for o, a in opts:
+            if o in ("-v","--version"):
+                print version
+                sys.exit()
+            elif o in ("-h","--help"):
+                usage()
+                sys.exit()
+            elif o in ("-u","--user"):
+                user = a
+            elif o in ("-m","--mail"):
+                mbox = a
+            elif o in ("-b","--box"):
+                box = a
+            elif o in ("-p","--path"):
+                path = a
+            elif o in ("-t","--type"):
+                type = a
+        if not user:
+            print "No user specified"
+            sys.exit(1)
+        if not mbox:
+            print "No mailbox specified"
+            sys.exit(1)
+        if box=="Inbox":
+            print "Using default Inbox"
+        if type=="mbox":
+            mbox = mailbox.PortableUnixMailbox(open(mbox,'r'),email.message_from_file)
+        elif type=="maildir":
+            mbox = mailbox.Maildir(mbox,email.message_from_file)
+        elif type=="mhdir":
+            mbox = mailbox.MHMailbox(mbox,email.message_from_file)
+        elif not type:
+            print "No mailbox type specified"
+            sys.exit(1)
+        convert(user,mbox,box,path,msgnumber)
+    except getopt.GetoptError:
+        usage()
+        print "Error Parsing Options"
+        sys.exit(1)
+
+def usage():
+    print version
+    print "%s -u|--user <user> -t|--type <mbox, maildir, and mhdir> --mail|-m <location of mailbox> -b|--box <Inbox,Inbox.Sent etc> -p <path to dbmail-smtp>" %(sys.argv[0],)
+
+def convert(user,mbox,box,path,msgnumber):
+    def msgmeter(msgnumber):
+        msgnumber = msgnumber + 1
+        return convert(user,mbox,box,path,msgnumber)
+    try:
+        mailmsg = mbox.next()
+        command = "%s -m %s -u %s" %(path,box,user)
+        if not mailmsg:
+            print "All Done!"
+            sys.exit()
+        try:
+            dbmail = os.popen(command,'w')
+            dbmail.writelines(mailmsg.as_string())
+            dbmail.close()
+            del mailmsg
+            print "Processed Message %s" %(msgnumber,)
+        except IOError:
+            print "Either box or user is invalid"
+            sys.exit(1)
+        return msgmeter(msgnumber)
+                
+    except email.Errors.MessageParseError:
+        print "Error Parsing Mail"
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
+
+
+    
+
+        
+            
+        

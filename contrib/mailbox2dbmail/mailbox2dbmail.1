@@ -1,0 +1,29 @@
+.TH "mailbox2dbmail" "1" "2004-03-07" "MirrorLynx" "Debian Distribution" 
+.SH "NAME" 
+mailbox2dbmail \- Tool to move your flat filesystem mailboxen to dbmail mailboxen
+.SH "SYNOPSIS" 
+mailbox2dbmail [OPTIONS]
+.SH "OPTIONS" 
+.IP "\fB-v,--version\fP" 
+Version info
+.IP "\fB-h,--help\fP" 
+Help Display
+.IP "\fB-b,--box\fP" 
+IMAP folder to stick mail in under user (Default: Inbox)
+.IP "\fB-m,--mail\fP" 
+Location of Mailbox(required)
+.IP "\fB-u,--user\fP" 
+Username(required)
+.IP "\fB-t,--type\fP" 
+Type of Mailbox: mbox, maildir, mhdir (required)
+.IP "\fB-p,--path\fP" 
+Path to dbmail-smtp(default: /usr/sbin/dbmail-smtp)
+.PP 
+.SH "SEE ALSO" 
+\fBpython(1)\fP, and \fBpydoc mailbox\fP
+.PP 
+.SH "BUGS" 
+Contact Dan Weber <dan@mirrorlynx\&.com>, for any bugs with this program\&.
+.PP 
+.SH "AUTHOR" 
+This manpage was written by Dan Weber <dan@mirrorlynx\&.com>, 2004
