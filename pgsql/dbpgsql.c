@@ -2500,7 +2500,7 @@ int db_get_main_header(u64_t msguid, struct list *hdrlist)
 
     list_init(hdrlist);
 
-    snprintf(query, DEF_QUERYSIZE, "SELECT messageblks FROM messageblks WHERE "
+    snprintf(query, DEF_QUERYSIZE, "SELECT messageblk FROM messageblks WHERE "
             "message_idnr = %llu ORDER BY messageblk_idnr LIMIT 1", msguid);
 
     if (db_query(query) == -1)
@@ -2580,7 +2580,7 @@ int db_search_range(db_pos_t start, db_pos_t end, const char *key, u64_t msguid)
         return 0;
     }
 
-    snprintf(query, DEF_QUERYSIZE, "SELECT messageblks FROM messageblks WHERE message_idnr = %llu"
+    snprintf(query, DEF_QUERYSIZE, "SELECT messageblk FROM messageblks WHERE message_idnr = %llu"
             " ORDER BY messageblk_idnr", 
             msguid);
 
