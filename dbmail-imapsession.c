@@ -289,6 +289,7 @@ GList * _imap_get_structure(mime_message_t * msg, int show_extension_data)
 	}
 	g_list_foreach(tlist,(GFunc)g_free, NULL);
 	g_list_free(tlist);
+	tlist = NULL;
 	g_string_free(tmp,1);
 	return list;
 }
@@ -463,6 +464,7 @@ static GList * _imap_get_addresses(struct mime_record *mr)
 	
 	g_list_foreach(sublist, (GFunc)g_free, NULL);
 	g_list_free(sublist);
+	sublist = NULL;
 	g_string_free(tmp,1);
 	return list;
 }
@@ -595,9 +597,10 @@ static GList * _imap_get_mime_parameters(struct mime_record *mr, int force_subty
 
 		} while (mr->value[idx]);
 
-		list = g_list_append(list, g_strdup(dbmail_imap_plist_as_string(subl)));
+		list = g_list_append(list, dbmail_imap_plist_as_string(subl));
 		g_list_foreach(subl, (GFunc)g_free, NULL);
 		g_list_free(subl);
+		subl = NULL;
 		g_string_free(tmp,1);
 	} else {
 		list = g_list_append(list, "NIL");
@@ -987,13 +990,13 @@ int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self, u64_t fetch
 		}
 		dbmail_imap_session_printf(self, "* %u FETCH %s\r\n", (fn + 1), dbmail_imap_plist_as_string(list));
 	}
-	/*
 	g_list_foreach(list,(GFunc)g_free,NULL);
-	g_list_foreach(sublist,(GFunc)g_free,NULL);
+//	g_list_foreach(sublist,(GFunc)g_free,NULL);
 	g_list_free(list);
 	g_list_free(sublist);
+	list = NULL;
+	sublist = NULL;
 	g_string_free(tmp,TRUE);
-	*/
 	my_free(self->msginfo);
 	return 0;
 }
@@ -1666,6 +1669,7 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 	g_string_free(tmp,1);
 	g_list_foreach(tlist, (GFunc)g_free, NULL);
 	g_list_free(tlist);
+	tlist = NULL;
 
 	return 0;
 }
