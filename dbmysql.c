@@ -896,7 +896,6 @@ int db_getmailbox(mailbox_t *mb, unsigned long userid)
     mb->recent = 0;
 
   mysql_free_result(res);
-  
 
   /* now select messages: UNSEEN */
   snprintf(query, DEF_QUERYSIZE, "SELECT COUNT(*) FROM message WHERE seen_flag=0 AND "
@@ -2582,16 +2581,16 @@ int db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long m
   if (start.block == end.block)
     {
       if (offset<0 || cnt<0)
-	fprintf(outstream,"%.*s\n",end.pos - start.pos,&row[0][start.pos]);
+	fprintf(outstream,"%.*s\r\n",end.pos - start.pos,&row[0][start.pos]);
       else
 	{
 	  if (offset+start.pos >= end.pos)
 	    return 0;
 
 	  if (cnt >= end.pos - start.pos)
-	    fprintf(outstream,"%.*s\n",end.pos - start.pos,&row[0][start.pos + offset]);
+	    fprintf(outstream,"%.*s\r\n",end.pos - start.pos,&row[0][start.pos + offset]);
 	  else
-	    fprintf(outstream,"%.*s\n",cnt,&row[0][start.pos + offset]);
+	    fprintf(outstream,"%.*s\r\n",cnt,&row[0][start.pos + offset]);
 	}
 
       mysql_free_result(res);

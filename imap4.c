@@ -90,7 +90,7 @@ int imap_login(ClientInfo *ci)
   ((imap_userdata_t*)ci->userData)->state = IMAPCS_NON_AUTHENTICATED;
 
   /* greet user */
-  fprintf(ci->tx,"* OK dbmail imap (protocol version 4r1) server %s ready to run\n",
+  fprintf(ci->tx,"* OK dbmail imap (protocol version 4r1) server %s ready to run\r\n",
 	  IMAP_SERVER_VERSION);
   fflush(ci->tx);
 
@@ -115,8 +115,8 @@ int imap_process(ClientInfo *ci)
     {
       /* could not connect */
       trace(TRACE_MESSAGE, "IMAPD: Connection to dbase failed.\n");
-      fprintf(ci->tx, "* BAD could not connect to dbase\n");
-      fprintf(ci->tx, "BYE try again later\n");
+      fprintf(ci->tx, "* BAD could not connect to dbase\r\n");
+      fprintf(ci->tx, "BYE try again later\r\n");
 
       fflush(ci->tx);
       shutdown(fileno(ci->tx),SHUT_WR);

@@ -52,8 +52,8 @@ int _ic_capability(char *tag, char **args, ClientInfo *ci)
   if (!check_state_and_args("CAPABILITY", tag, args, 0, -1, ci))
     return 1; /* error, return */
   
-  fprintf(ci->tx,"* CAPABILITY %s\n",IMAP_CAPABILITY_STRING);
-  fprintf(ci->tx,"%s OK CAPABILITY completed\n",tag);
+  fprintf(ci->tx,"* CAPABILITY %s\r\n",IMAP_CAPABILITY_STRING);
+  fprintf(ci->tx,"%s OK CAPABILITY completed\r\n",tag);
 
   return 0;
 }
@@ -69,7 +69,7 @@ int _ic_noop(char *tag, char **args, ClientInfo *ci)
   if (!check_state_and_args("NOOP", tag, args, 0, -1, ci))
     return 1; /* error, return */
     
-  fprintf(ci->tx,"%s OK NOOP completed\n",tag);
+  fprintf(ci->tx,"%s OK NOOP completed\r\n",tag);
   return 0;
 }
 
@@ -89,7 +89,7 @@ int _ic_logout(char *tag, char **args, ClientInfo *ci)
   /* change status */
   ud->state = IMAPCS_LOGOUT;
 
-  fprintf(ci->tx,"* BYE dbmail imap server kisses you goodbye\n");
+  fprintf(ci->tx,"* BYE dbmail imap server kisses you goodbye\r\n");
 
   return 0;
 }
@@ -112,12 +112,12 @@ int _ic_login(char *tag, char **args, ClientInfo *ci)
     return 1; /* error, return */
 
   userid = db_validate(args[0], args[1]);
-  trace(TRACE_MESSAGE, "IMAPD: user (id:%d) %s tries login\n",userid,args[0]);
+  trace(TRACE_MESSAGE, "IMAPD: user (id:%d) %s tries login\r\n",userid,args[0]);
 
   if (userid == -1)
     {
       /* a db-error occurred */
-      fprintf(ci->tx,"* BYE internal db error validating user\n");
+      fprintf(ci->tx,"* BYE internal db error validating user\r\n");
       trace(TRACE_ERROR,"IMAPD: login(): db-validate error while validating user %s (pass %s).",
 	    args[0],args[1]);
       return -1;
@@ -126,7 +126,7 @@ int _ic_login(char *tag, char **args, ClientInfo *ci)
   if (userid == 0)
     {
       /* validation failed: invalid user/pass combination */
-      fprintf(ci->tx, "%s NO login rejected\n",tag);
+      fprintf(ci->tx, "%s NO login rejected\r\n",tag);
       return 1;
     }
 
@@ -135,7 +135,7 @@ int _ic_login(char *tag, char **args, ClientInfo *ci)
   ud->userid = userid;
   ud->state = IMAPCS_AUTHENTICATED;
 
-  fprintf(ci->tx,"%s OK LOGIN completed\n",tag);
+  fprintf(ci->tx,"%s OK LOGIN completed\r\n",tag);
   return 0;
 }
 
@@ -159,20 +159,20 @@ int _ic_authenticate(char *tag, char **args, ClientInfo *ci)
   /* check authentication method */
   if (strcasecmp(args[0], "login") != 0)
     {
-      fprintf(ci->tx,"%s NO Invalid authentication mechanism specified\n",tag);
+      fprintf(ci->tx,"%s NO Invalid authentication mechanism specified\r\n",tag);
       return 1;
     }
 
   /* ask for username (base64 encoded) */
-  base64encode("username\n\r",buf);
-  fprintf(ci->tx,"+ %s\n",buf);
+  base64encode("username\r\n\r",buf);
+  fprintf(ci->tx,"+ %s\r\n",buf);
   fflush(ci->tx);
   fgets(buf, MAX_LINESIZE, ci->rx);
   base64decode(buf, username);
 
   /* ask for password */
-  base64encode("password\n\r",buf);
-  fprintf(ci->tx,"+ %s\n",buf);
+  base64encode("password\r\n\r",buf);
+  fprintf(ci->tx,"+ %s\r\n",buf);
   fflush(ci->tx);
   fgets(buf, MAX_LINESIZE, ci->rx);
   base64decode(buf,pass);
@@ -180,12 +180,12 @@ int _ic_authenticate(char *tag, char **args, ClientInfo *ci)
 
   /* try to validate user */
   userid = db_validate(username, pass);
-  trace(TRACE_MESSAGE, "IMAPD: user (id:%d) %s logged in\n",userid,username);
+  trace(TRACE_MESSAGE, "IMAPD: user (id:%d) %s logged in\r\n",userid,username);
 
   if (userid == -1)
     {
       /* a db-error occurred */
-      fprintf(ci->tx,"* BYE internal db error validating user\n");
+      fprintf(ci->tx,"* BYE internal db error validating user\r\n");
       trace(TRACE_ERROR,"IMAPD: authenticate(): db-validate error while validating user %s (pass %s).",
 	    username,pass);
       return -1;
@@ -194,7 +194,7 @@ int _ic_authenticate(char *tag, char **args, ClientInfo *ci)
   if (userid == 0)
     {
       /* validation failed: invalid user/pass combination */
-      fprintf(ci->tx, "%s NO login rejected\n",tag);
+      fprintf(ci->tx, "%s NO login rejected\r\n",tag);
       return 1;
     }
 
@@ -203,7 +203,7 @@ int _ic_authenticate(char *tag, char **args, ClientInfo *ci)
   ud->userid = userid;
   ud->state = IMAPCS_AUTHENTICATED;
   
-  fprintf(ci->tx,"%s OK AUTHENTICATE completed\n",tag);
+  fprintf(ci->tx,"%s OK AUTHENTICATE completed\r\n",tag);
   return 0;
 }
 
@@ -232,12 +232,12 @@ int _ic_select(char *tag, char **args, ClientInfo *ci)
   mboxid = db_findmailbox(args[0],ud->userid);
   if (mboxid == 0)
     {
-      fprintf(ci->tx, "%s NO Could not find specified mailbox\n", tag);
+      fprintf(ci->tx, "%s NO Could not find specified mailbox\r\n", tag);
       return 1;
     }
   if (mboxid == (unsigned long)(-1))
     {
-      fprintf(ci->tx, "* BYE internal dbase error\n");
+      fprintf(ci->tx, "* BYE internal dbase error\r\n");
       return -1;
     }
 
@@ -246,12 +246,12 @@ int _ic_select(char *tag, char **args, ClientInfo *ci)
   if (result == 0)
     {
       /* error: cannot select mailbox */
-      fprintf(ci->tx, "%s NO specified mailbox is not selectable\n",tag);
+      fprintf(ci->tx, "%s NO specified mailbox is not selectable\r\n",tag);
       return 1;
     }
   if (result == -1)
     {
-      fprintf(ci->tx, "* BYE internal dbase error\n");
+      fprintf(ci->tx, "* BYE internal dbase error\r\n");
       return -1; /* fatal */
     }
 
@@ -266,23 +266,20 @@ int _ic_select(char *tag, char **args, ClientInfo *ci)
 
   if (result == 1)
     {
-      fprintf(ci->tx,"* BYE troubles synchronizing dbase\n");
+      fprintf(ci->tx,"* BYE troubles synchronizing dbase\r\n");
       return -1;
     }
 
   if (result == -1)
     {
-      fprintf(ci->tx,"* BYE internal dbase error\n");
+      fprintf(ci->tx,"* BYE internal dbase error\r\n");
       return -1; /* fatal  */
     }
 
   /* show mailbox info */
   /* msg counts */
-  fprintf(ci->tx, "* %d EXISTS\n",ud->mailbox.exists);
-  fprintf(ci->tx, "* %d RECENT\n",ud->mailbox.recent);
-
-  if (ud->mailbox.unseen > 0)
-    fprintf(ci->tx, "* %d UNSEEN\n",ud->mailbox.unseen);
+  fprintf(ci->tx, "* %d EXISTS\r\n",ud->mailbox.exists);
+  fprintf(ci->tx, "* %d RECENT\r\n",ud->mailbox.recent);
 
   /* flags */
   fprintf(ci->tx, "* FLAGS (");
@@ -294,7 +291,7 @@ int _ic_select(char *tag, char **args, ClientInfo *ci)
   if (ud->mailbox.flags & IMAPFLAG_DRAFT) fprintf(ci->tx, "\\Draft ");
   if (ud->mailbox.flags & IMAPFLAG_RECENT) fprintf(ci->tx, "\\Recent ");
 
-  fprintf(ci->tx,")\n");
+  fprintf(ci->tx,")\r\n");
 
   /* permanent flags */
   fprintf(ci->tx, "* OK [PERMANENTFLAGS (");
@@ -305,22 +302,22 @@ int _ic_select(char *tag, char **args, ClientInfo *ci)
   if (ud->mailbox.flags & IMAPFLAG_DRAFT) fprintf(ci->tx, "\\Draft ");
   if (ud->mailbox.flags & IMAPFLAG_RECENT) fprintf(ci->tx, "\\Recent ");
 
-  fprintf(ci->tx,")]\n");
+  fprintf(ci->tx,")]\r\n");
   
   /* UID */
-  fprintf(ci->tx,"* OK [UIDVALIDITY %lu] UID value\n",ud->mailbox.uid);
+  fprintf(ci->tx,"* OK [UIDVALIDITY %lu] UID value\r\n",ud->mailbox.uid);
 
   /* show idx of first unseen msg (if present) */
   key = db_first_unseen(ud->mailbox.uid);
   if (key == (unsigned long)(-1))
     {
-      fprintf(ci->tx, "* BYE internal dbase error\n");
+      fprintf(ci->tx, "* BYE internal dbase error\r\n");
       return -1;
     }
   idx = binary_search(ud->mailbox.seq_list, ud->mailbox.exists, key);
 
   if (idx >= 0)
-    fprintf(ci->tx,"* OK [UNSEEN %d] first unseen message\n",idx+1);
+    fprintf(ci->tx,"* OK [UNSEEN %d] first unseen message\r\n",idx+1);
 
   /* permission */
   switch (ud->mailbox.permission)
@@ -329,17 +326,17 @@ int _ic_select(char *tag, char **args, ClientInfo *ci)
     case IMAPPERM_READWRITE: sprintf(permstring, "READ-WRITE"); break;
     default: 
       /* invalid permission --> fatal */
-      trace(TRACE_ERROR,"IMAPD: select(): detected invalid permission mode for mailbox %lu ('%s')\n",
+      trace(TRACE_ERROR,"IMAPD: select(): detected invalid permission mode for mailbox %lu ('%s')\r\n",
 	    ud->mailbox.uid, args[0]);
 
-      fprintf(ci->tx, "* BYE fatal: detected invalid mailbox settings\n");
+      fprintf(ci->tx, "* BYE fatal: detected invalid mailbox settings\r\n");
       return -1;
     }
 
   /* ok, update state */
   ud->state = IMAPCS_SELECTED;
 
-  fprintf(ci->tx,"%s OK [%s] SELECT completed\n",tag,permstring);
+  fprintf(ci->tx,"%s OK [%s] SELECT completed\r\n",tag,permstring);
   return 0;
 }
 
@@ -362,12 +359,12 @@ int _ic_examine(char *tag, char **args, ClientInfo *ci)
   mboxid = db_findmailbox(args[0],ud->userid);
   if (mboxid == 0)
     {
-      fprintf(ci->tx, "%s NO Could not find specified mailbox\n", tag);
+      fprintf(ci->tx, "%s NO Could not find specified mailbox\r\n", tag);
       return 1;
     }
   if (mboxid == (unsigned long)(-1))
     {
-      fprintf(ci->tx, "* BYE internal dbase error\n");
+      fprintf(ci->tx, "* BYE internal dbase error\r\n");
       return -1;
     }
 
@@ -376,12 +373,12 @@ int _ic_examine(char *tag, char **args, ClientInfo *ci)
   if (result == 0)
     {
       /* error: cannot select mailbox */
-      fprintf(ci->tx, "%s NO specified mailbox is not selectable\n",tag);
+      fprintf(ci->tx, "%s NO specified mailbox is not selectable\r\n",tag);
       return 1; /* fatal */
     }
   if (result == -1)
     {
-      fprintf(ci->tx, "* BYE internal dbase error\n");
+      fprintf(ci->tx, "* BYE internal dbase error\r\n");
       return -1; /* fatal */
     }
 
@@ -396,23 +393,20 @@ int _ic_examine(char *tag, char **args, ClientInfo *ci)
 
   if (result == 1)
     {
-      fprintf(ci->tx,"* BYE troubles synchronizing dbase\n");
+      fprintf(ci->tx,"* BYE troubles synchronizing dbase\r\n");
       return -1;
     }
 
   if (result == -1)
     {
-      fprintf(ci->tx,"* BYE internal dbase error\n");
+      fprintf(ci->tx,"* BYE internal dbase error\r\n");
       return -1; /* fatal */
     }
 
   /* show mailbox info */
   /* msg counts */
-  fprintf(ci->tx, "* %d EXISTS\n",ud->mailbox.exists);
-  fprintf(ci->tx, "* %d RECENT\n",ud->mailbox.recent);
-
-  if (ud->mailbox.unseen > 0)
-    fprintf(ci->tx, "* %d UNSEEN\n",ud->mailbox.unseen);
+  fprintf(ci->tx, "* %d EXISTS\r\n",ud->mailbox.exists);
+  fprintf(ci->tx, "* %d RECENT\r\n",ud->mailbox.recent);
 
   /* flags */
   fprintf(ci->tx, "* FLAGS (");
@@ -424,7 +418,7 @@ int _ic_examine(char *tag, char **args, ClientInfo *ci)
   if (ud->mailbox.flags & IMAPFLAG_DRAFT) fprintf(ci->tx, "\\Draft ");
   if (ud->mailbox.flags & IMAPFLAG_RECENT) fprintf(ci->tx, "\\Recent ");
 
-  fprintf(ci->tx,")\n");
+  fprintf(ci->tx,")\r\n");
 
   /* permanent flags */
   fprintf(ci->tx, "* OK [PERMANENTFLAGS (");
@@ -435,10 +429,10 @@ int _ic_examine(char *tag, char **args, ClientInfo *ci)
   if (ud->mailbox.flags & IMAPFLAG_DRAFT) fprintf(ci->tx, "\\Draft ");
   if (ud->mailbox.flags & IMAPFLAG_RECENT) fprintf(ci->tx, "\\Recent ");
 
-  fprintf(ci->tx,")]\n");
+  fprintf(ci->tx,")]\r\n");
   
   /* UID */
-  fprintf(ci->tx,"* OK [UIDVALIDITY %lu] UID value\n",ud->mailbox.uid);
+  fprintf(ci->tx,"* OK [UIDVALIDITY %lu] UID value\r\n",ud->mailbox.uid);
 
   /* update permission: examine forces read-only */
   ud->mailbox.permission = IMAPPERM_READ;
@@ -446,7 +440,7 @@ int _ic_examine(char *tag, char **args, ClientInfo *ci)
   /* ok, update state */
   ud->state = IMAPCS_SELECTED;
 
-  fprintf(ci->tx,"%s OK [READ-ONLY] EXAMINE completed\n",tag);
+  fprintf(ci->tx,"%s OK [READ-ONLY] EXAMINE completed\r\n",tag);
   return 0;
 }
 
@@ -479,21 +473,21 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
   if (mboxid == (unsigned long)(-1))
     {
       /* dbase failure */
-      fprintf(ci->tx,"* BYE internal dbase error\n");
+      fprintf(ci->tx,"* BYE internal dbase error\r\n");
       return -1; /* fatal */
     }
 
   if (mboxid != 0)
     {
       /* mailbox already exists */
-      fprintf(ci->tx,"%s NO mailbox already exists\n",tag);
+      fprintf(ci->tx,"%s NO mailbox already exists\r\n",tag);
       return 1;
     }
 
   /* check if new name is valid */
   if (!checkmailboxname(args[0]))
     {
-      fprintf(ci->tx,"%s NO new mailbox name contains invalid characters\n",tag);
+      fprintf(ci->tx,"%s NO new mailbox name contains invalid characters\r\n",tag);
       return 1;
     }
 
@@ -502,8 +496,8 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
   if (!cpy)
     {
       /* out of mem */
-      trace(TRACE_ERROR, "IMAPD: create(): not enough memory\n");
-      fprintf(ci->tx, "%s BYE server ran out of memory\n",tag);
+      trace(TRACE_ERROR, "IMAPD: create(): not enough memory\r\n");
+      fprintf(ci->tx, "%s BYE server ran out of memory\r\n",tag);
       return -1;
     }
 
@@ -513,8 +507,8 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
   if (chunks == NULL)
     {
       /* serious error while making chunks */
-      trace(TRACE_ERROR, "IMAPD: create(): could not create chunks\n");
-      fprintf(ci->tx, "%s BYE server ran out of memory\n",tag);
+      trace(TRACE_ERROR, "IMAPD: create(): could not create chunks\r\n");
+      fprintf(ci->tx, "%s BYE server ran out of memory\r\n",tag);
       free(cpy);
       return -1;
     }
@@ -522,7 +516,7 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
   if (chunks[0] == NULL)
     {
       /* wrong argument */
-      fprintf(ci->tx,"%s NO invalid mailbox name specified\n",tag);
+      fprintf(ci->tx,"%s NO invalid mailbox name specified\r\n",tag);
       free_chunks(chunks);
       free(cpy);
       return 1;
@@ -536,7 +530,7 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
       if (strlen(chunks[i]) == 0)
 	{
 	  /* no can do */
-	  fprintf(ci->tx, "%s NO invalid mailbox name specified\n",tag);
+	  fprintf(ci->tx, "%s NO invalid mailbox name specified\r\n",tag);
 	  free_chunks(chunks);
 	  free(cpy);
 	  return 1;
@@ -550,7 +544,7 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
 	  strcat(cpy, chunks[i]);
 	}
 
-      trace(TRACE_MESSAGE,"checking for '%s'...\n",cpy);
+      trace(TRACE_MESSAGE,"checking for '%s'...\r\n",cpy);
 
       /* check if this mailbox already exists */
       mboxid = db_findmailbox(cpy, ud->userid);
@@ -558,7 +552,7 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
       if (mboxid == (unsigned long)(-1))
 	{
 	  /* dbase failure */
-	  fprintf(ci->tx,"* BYE internal dbase error\n");
+	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
 	  free_chunks(chunks);
 	  free(cpy);
 	  return -1; /* fatal */
@@ -571,7 +565,7 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
 
 	  if (result == -1)
 	    {
-	      fprintf(ci->tx,"* BYE internal dbase error\n");
+	      fprintf(ci->tx,"* BYE internal dbase error\r\n");
 	      return -1; /* fatal */
 	    }
 	}
@@ -581,7 +575,7 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
 	  result = db_noinferiors(mboxid);
 	  if (result == 1)
 	    {
-	      fprintf(ci->tx, "%s NO mailbox cannot have inferior names\n",tag);
+	      fprintf(ci->tx, "%s NO mailbox cannot have inferior names\r\n",tag);
 	      free_chunks(chunks);
 	      free(cpy);
 	      return 1;
@@ -590,7 +584,7 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
 	  if (result == -1)
 	    {
 	      /* dbase failure */
-	      fprintf(ci->tx,"* BYE internal dbase error\n");
+	      fprintf(ci->tx,"* BYE internal dbase error\r\n");
 	      free_chunks(chunks);
 	      free(cpy);
 	      return -1; /* fatal */
@@ -602,7 +596,7 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
   free_chunks(chunks);
   free(cpy);
 
-  fprintf(ci->tx,"%s OK CREATE completed\n",tag);
+  fprintf(ci->tx,"%s OK CREATE completed\r\n",tag);
   return 0;
 }
 
@@ -630,20 +624,20 @@ int _ic_delete(char *tag, char **args, ClientInfo *ci)
   if (mboxid == (unsigned long)(-1))
     {
       /* dbase failure */
-      fprintf(ci->tx,"* BYE internal dbase error\n");
+      fprintf(ci->tx,"* BYE internal dbase error\r\n");
       return -1; /* fatal */
     }
   if (mboxid == 0)
     {
       /* mailbox does not exist */
-      fprintf(ci->tx,"%s NO mailbox does not exist\n",tag);
+      fprintf(ci->tx,"%s NO mailbox does not exist\r\n",tag);
       return 1;
     }
 
   /* check if there is an attempt to delete inbox */
   if (strcasecmp(args[0],"inbox") == 0)
     {
-      fprintf(ci->tx,"%s NO cannot delete special mailbox INBOX\n",tag);
+      fprintf(ci->tx,"%s NO cannot delete special mailbox INBOX\r\n",tag);
       return 1;
     }
 
@@ -652,24 +646,24 @@ int _ic_delete(char *tag, char **args, ClientInfo *ci)
   if (result == -1)
     {
       /* error */
-      trace(TRACE_ERROR, "IMAPD: delete(): cannot retrieve list of mailbox children\n");
-      fprintf(ci->tx, "%s BYE dbase/memory error\n",tag);
+      trace(TRACE_ERROR, "IMAPD: delete(): cannot retrieve list of mailbox children\r\n");
+      fprintf(ci->tx, "%s BYE dbase/memory error\r\n",tag);
       return -1;
     }
 
   if (nchildren != 0)
     {
-      /* mailbox has inferior names; error if \Noselect specified */
+      /* mailbox has inferior names; error if \r\noselect specified */
       result = db_isselectable(mboxid);
       if (result == 0)
 	{
-	  fprintf(ci->tx,"%s NO mailbox is non-selectable\n",tag);
+	  fprintf(ci->tx,"%s NO mailbox is non-selectable\r\n",tag);
 	  free(children);
 	  return 1;
 	}
       if (result == -1)
 	{
-	  fprintf(ci->tx,"* BYE internal dbase error\n");
+	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
 	  free(children);
 	  return -1; /* fatal */
 	}
@@ -681,13 +675,13 @@ int _ic_delete(char *tag, char **args, ClientInfo *ci)
 
       if (result == -1)
 	{
-	  fprintf(ci->tx,"* BYE internal dbase error\n");
+	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
 	  free(children);
 	  return -1; /* fatal */
 	}
 
       /* ok done */
-      fprintf(ci->tx,"%s OK DELETE completed\n",tag);
+      fprintf(ci->tx,"%s OK DELETE completed\r\n",tag);
       free(children);
       return 0;
     }
@@ -695,7 +689,7 @@ int _ic_delete(char *tag, char **args, ClientInfo *ci)
   /* ok remove mailbox */
   db_removemailbox(mboxid, ud->userid);
 
-  fprintf(ci->tx,"%s OK DELETE completed\n",tag);
+  fprintf(ci->tx,"%s OK DELETE completed\r\n",tag);
   return 0;
 }
 
@@ -729,13 +723,13 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
   if (mboxid == (unsigned long)-1)
     {
       /* dbase failure */
-      fprintf(ci->tx,"* BYE internal dbase error\n");
+      fprintf(ci->tx,"* BYE internal dbase error\r\n");
       return -1; /* fatal */
     }
   if (mboxid != 0)
     {
       /* mailbox exists */
-      fprintf(ci->tx,"%s NO new mailbox already exists\n",tag);
+      fprintf(ci->tx,"%s NO new mailbox already exists\r\n",tag);
       return 1;
     }
 
@@ -744,20 +738,20 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
   if (mboxid == (unsigned long)-1)
     {
       /* dbase failure */
-      fprintf(ci->tx,"* BYE internal dbase error\n");
+      fprintf(ci->tx,"* BYE internal dbase error\r\n");
       return -1; /* fatal */
     }
   if (mboxid == 0)
     {
       /* mailbox does not exist */
-      fprintf(ci->tx,"%s NO mailbox does not exist\n",tag);
+      fprintf(ci->tx,"%s NO mailbox does not exist\r\n",tag);
       return 1;
     }
 
   /* check if new name is valid */
   if (!checkmailboxname(args[1]))
     {
-      fprintf(ci->tx,"%s NO new mailbox name contains invalid characters\n",tag);
+      fprintf(ci->tx,"%s NO new mailbox name contains invalid characters\r\n",tag);
       return 1;
     }
 
@@ -772,13 +766,13 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
       if (parentmboxid == (unsigned long)-1)
 	{
 	  /* dbase failure */
-	  fprintf(ci->tx,"* BYE internal dbase error\n");
+	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
 	  return -1; /* fatal */
 	}
       if (parentmboxid == 0)
 	{
 	  /* parent mailbox does not exist */
-	  fprintf(ci->tx,"%s NO new mailbox would invade mailbox structure\n",tag);
+	  fprintf(ci->tx,"%s NO new mailbox would invade mailbox structure\r\n",tag);
 	  return 1;
 	}
 
@@ -795,7 +789,7 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
       result = db_createmailbox(args[1], ud->userid);
       if (result == -1)
 	{
-	  fprintf(ci->tx,"* BYE internal dbase error\n");
+	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
 	  return -1;
 	}
       
@@ -803,19 +797,19 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
       newmboxid = db_findmailbox(args[1], ud->userid);
       if (newmboxid == (unsigned long)(-1))
 	{
-	  fprintf(ci->tx,"* BYE internal dbase error\n");
+	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
 	  return -1;
 	}
 
       result = db_movemsg(newmboxid, mboxid);
       if (result == -1)
 	{
-	  fprintf(ci->tx,"* BYE internal dbase error\n");
+	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
 	  return -1;
 	}
       
       /* ok done */
-      fprintf(ci->tx,"%s OK RENAME completed\n",tag);
+      fprintf(ci->tx,"%s OK RENAME completed\r\n",tag);
       return 0;
     }
 
@@ -823,7 +817,7 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
   result = db_listmailboxchildren(mboxid, &children, &nchildren, "%");
   if (result == -1)
     {
-      fprintf(ci->tx,"* BYE internal dbase error\n");
+      fprintf(ci->tx,"* BYE internal dbase error\r\n");
       return -1;
     }
 
@@ -834,7 +828,7 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
       result = db_getmailboxname(children[i], name);
       if (result == -1)
 	{
-	  fprintf(ci->tx,"* BYE internal dbase error\n");
+	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
 	  free(children);
 	  return -1;
 	}
@@ -842,8 +836,8 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
       if (oldnamelen >= strlen(name))
 	{
 	  /* strange error, let's say its fatal */
-	  trace(TRACE_ERROR,"IMAPD: rename(): mailbox names are fucked up\n");
-	  fprintf(ci->tx,"* BYE internal error regarding mailbox names\n");
+	  trace(TRACE_ERROR,"IMAPD: rename(): mailbox names are fucked up\r\n");
+	  fprintf(ci->tx,"* BYE internal error regarding mailbox names\r\n");
 	  free(children);
 	  return -1;
 	}
@@ -853,7 +847,7 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
       result = db_setmailboxname(children[i], newname);
       if (result == -1)
 	{
-	  fprintf(ci->tx,"* BYE internal dbase error\n");
+	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
 	  free(children);
 	  return -1;
 	}
@@ -865,11 +859,11 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
   result = db_setmailboxname(mboxid, args[1]);
   if (result == -1)
     {
-      fprintf(ci->tx,"* BYE internal dbase error\n");
+      fprintf(ci->tx,"* BYE internal dbase error\r\n");
       return -1;
     }
 
-  fprintf(ci->tx,"%s OK RENAME completed\n",tag);
+  fprintf(ci->tx,"%s OK RENAME completed\r\n",tag);
   return 0;
 }
 
@@ -886,7 +880,7 @@ int _ic_subscribe(char *tag, char **args, ClientInfo *ci)
   if (!check_state_and_args("SUBSCRIBE", tag, args, 1, IMAPCS_AUTHENTICATED, ci))
     return 1; /* error, return */
 
-  fprintf(ci->tx,"%s OK SUBSCRIBE completed\n",tag);
+  fprintf(ci->tx,"%s OK SUBSCRIBE completed\r\n",tag);
   return 0;
 }
 
@@ -903,7 +897,7 @@ int _ic_unsubscribe(char *tag, char **args, ClientInfo *ci)
   if (!check_state_and_args("UNSUBSCRIBE", tag, args, 1, IMAPCS_AUTHENTICATED, ci))
     return 1; /* error, return */
 
-  fprintf(ci->tx,"%s OK UNSUBSCRIBE completed\n",tag);
+  fprintf(ci->tx,"%s OK UNSUBSCRIBE completed\r\n",tag);
   return 0;
 }
 
@@ -931,8 +925,8 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
   if (strlen(args[0]) == 0 && strlen(args[1]) == 0)
     {
       /* this has special meaning, show root & delimiter */
-      fprintf(ci->tx,"* LIST (\\Noselect) \"/\" \"\"\n");
-      fprintf(ci->tx,"%s OK LIST completed\n",tag);
+      fprintf(ci->tx,"* LIST (\\r\noselect) \"/\" \"\"\r\n");
+      fprintf(ci->tx,"%s OK LIST completed\r\n",tag);
       return 0;
     }
 
@@ -940,7 +934,7 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
   mboxid = db_findmailbox(args[0], ud->userid);
   if (mboxid == (unsigned long)(-1))
     {
-      fprintf(ci->tx,"* BYE internal dbase error\n");
+      fprintf(ci->tx,"* BYE internal dbase error\r\n");
       return -1;
     }
   
@@ -953,30 +947,30 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
       result = db_isselectable(mboxid);
       if (result == -1)
 	{
-	  fprintf(ci->tx,"\n* BYE internal dbase error\n");
+	  fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
 	  return -1;
 	}
 
-      if (result) fprintf(ci->tx,"\\Noselect ");
+      if (result) fprintf(ci->tx,"\\r\noselect ");
 
       result = db_noinferiors(mboxid);
       if (result == -1)
 	{
-	  fprintf(ci->tx,"\n* BYE internal dbase error\n");
+	  fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
 	  return -1;
 	}
 
-      if (result) fprintf(ci->tx,"\\Noinferiors ");
+      if (result) fprintf(ci->tx,"\\r\noinferiors ");
 
       result = db_getmailboxname(mboxid, name);
       if (result == -1)
 	{
-	  fprintf(ci->tx,"\n* BYE internal dbase error\n");
+	  fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
 	  return -1;
 	}
 
       /* show delimiter & name */
-      fprintf(ci->tx,") \"/\" %s\n",name);
+      fprintf(ci->tx,") \"/\" %s\r\n",name);
     }
 
   /* now check the children */
@@ -999,7 +993,7 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
   result = db_listmailboxchildren(mboxid, &children, &nchildren, args[1]);
   if (result == -1)
     {
-      fprintf(ci->tx,"* BYE internal dbase error\n");
+      fprintf(ci->tx,"* BYE internal dbase error\r\n");
       return -1;
     }
 
@@ -1009,7 +1003,7 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
       result = db_getmailboxname(children[i], name);
       if (result == -1)
 	{
-	  fprintf(ci->tx,"* BYE internal dbase error\n");
+	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
 	  free(children);
 	  return -1;
 	}
@@ -1035,31 +1029,31 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
       result = db_isselectable(children[i]);
       if (result == -1)
 	{
-	  fprintf(ci->tx,"\n* BYE internal dbase error\n");
+	  fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
 	  free(children);
 	  return -1;
 	}
 
-      if (!result) fprintf(ci->tx,"\\Noselect ");
+      if (!result) fprintf(ci->tx,"\\r\noselect ");
 
       result = db_noinferiors(children[i]);
       if (result == -1)
 	{
-	  fprintf(ci->tx,"\n* BYE internal dbase error\n");
+	  fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
 	  free(children);
 	  return -1;
 	}
 
-      if (result) fprintf(ci->tx,"\\Noinferiors ");
+      if (result) fprintf(ci->tx,"\\r\noinferiors ");
 
 	  /* show delimiter & name */
-      fprintf(ci->tx,") \"/\" %s\n",name);
+      fprintf(ci->tx,") \"/\" %s\r\n",name);
     }
 
   if (children)
     free(children);
 
-  fprintf(ci->tx,"%s OK LIST completed\n",tag);
+  fprintf(ci->tx,"%s OK LIST completed\r\n",tag);
   return 0;
 }
 
@@ -1076,7 +1070,7 @@ int _ic_lsub(char *tag, char **args, ClientInfo *ci)
   if (!check_state_and_args("LSUB", tag, args, 2, IMAPCS_AUTHENTICATED, ci))
     return 1; /* error, return */
 
-  fprintf(ci->tx,"%s OK LSUB completed\n",tag);
+  fprintf(ci->tx,"%s OK LSUB completed\r\n",tag);
   return 0;
 }
 
@@ -1094,19 +1088,19 @@ int _ic_status(char *tag, char **args, ClientInfo *ci)
 
   if (ud->state != IMAPCS_AUTHENTICATED && ud->state != IMAPCS_SELECTED)
     {
-      fprintf(ci->tx,"%s BAD STATUS command received in invalid state\n", tag);
+      fprintf(ci->tx,"%s BAD STATUS command received in invalid state\r\n", tag);
       return 1;
     }
 
   if (!args[0] || !args[1] || !args[2])
     {
-      fprintf(ci->tx,"%s BAD missing argument(s) to STATUS\n", tag);
+      fprintf(ci->tx,"%s BAD missing argument(s) to STATUS\r\n", tag);
       return 1;
     }
 
   if (strcmp(args[1],"(") != 0)
     {
-      fprintf(ci->tx,"%s BAD argument list should be parenthesed\n", tag);
+      fprintf(ci->tx,"%s BAD argument list should be parenthesed\r\n", tag);
       return 1;
     }
 
@@ -1121,20 +1115,20 @@ int _ic_status(char *tag, char **args, ClientInfo *ci)
 
       if (strcmp(args[i], "(") == 0)
 	{
-	  fprintf(ci->tx,"%s BAD too many parentheses specified\n", tag);
+	  fprintf(ci->tx,"%s BAD too many parentheses specified\r\n", tag);
 	  return 1;
 	}
     }
 	
   if (endfound == 2)
     {
-      fprintf(ci->tx,"%s BAD argument list empty\n", tag);
+      fprintf(ci->tx,"%s BAD argument list empty\r\n", tag);
       return 1;
     }
 
   if (args[endfound+1])
     {
-      fprintf(ci->tx,"%s BAD argument list too long\n", tag);
+      fprintf(ci->tx,"%s BAD argument list too long\r\n", tag);
       return 1;
     }
     
@@ -1142,14 +1136,14 @@ int _ic_status(char *tag, char **args, ClientInfo *ci)
   mb.uid = db_findmailbox(args[0], ud->userid);
   if (mb.uid == (unsigned long)(-1))
     {
-      fprintf(ci->tx,"* BYE internal dbase error\n");
+      fprintf(ci->tx,"* BYE internal dbase error\r\n");
       return -1;
     }
 
   if (mb.uid == 0)
     {
       /* mailbox does not exist */
-      fprintf(ci->tx,"%s NO specified mailbox does not exist\n",tag);
+      fprintf(ci->tx,"%s NO specified mailbox does not exist\r\n",tag);
       return 1;
     }
 
@@ -1162,13 +1156,13 @@ int _ic_status(char *tag, char **args, ClientInfo *ci)
 
   if (result == 1)
     {
-      fprintf(ci->tx,"* BYE troubles synchronizing dbase\n");
+      fprintf(ci->tx,"* BYE troubles synchronizing dbase\r\n");
       return -1;
     }
   
   if (result == -1)
     {
-      fprintf(ci->tx,"* BYE internal dbase error\n");
+      fprintf(ci->tx,"* BYE internal dbase error\r\n");
       return -1; /* fatal  */
     }
 
@@ -1190,14 +1184,14 @@ int _ic_status(char *tag, char **args, ClientInfo *ci)
 	break; /* done */
       else
 	{
-	  fprintf(ci->tx,"\n%s BAD unrecognized option '%s' specified\n",tag,args[i]);
+	  fprintf(ci->tx,"\r\n%s BAD unrecognized option '%s' specified\r\n",tag,args[i]);
 	  return 1;
 	}
     }
 
-  fprintf(ci->tx,")\n");
+  fprintf(ci->tx,")\r\n");
 
-  fprintf(ci->tx,"%s OK STATUS completed\n",tag);
+  fprintf(ci->tx,"%s OK STATUS completed\r\n",tag);
   return 0;
 }
 
@@ -1216,7 +1210,7 @@ int _ic_append(char *tag, char **args, ClientInfo *ci)
       !check_state_and_args("APPEND", tag, args, 4, IMAPCS_AUTHENTICATED, ci))
     return 1; /* error, return */
 
-  fprintf(ci->tx,"%s OK APPEND completed\n",tag);
+  fprintf(ci->tx,"%s OK APPEND completed\r\n",tag);
   return 0;
 }
 
@@ -1238,7 +1232,7 @@ int _ic_check(char *tag, char **args, ClientInfo *ci)
   if (!check_state_and_args("CHECK", tag, args, 0, IMAPCS_SELECTED, ci))
     return 1; /* error, return */
 
-  fprintf(ci->tx,"%s OK CHECK completed\n",tag);
+  fprintf(ci->tx,"%s OK CHECK completed\r\n",tag);
   return 0;
 }
 
@@ -1262,7 +1256,7 @@ int _ic_close(char *tag, char **args, ClientInfo *ci)
   /* ok, update state */
   ud->state = IMAPCS_AUTHENTICATED;
 
-  fprintf(ci->tx,"%s OK CLOSE completed\n",tag);
+  fprintf(ci->tx,"%s OK CLOSE completed\r\n",tag);
   return 0;
 }
 
@@ -1284,7 +1278,7 @@ int _ic_expunge(char *tag, char **args, ClientInfo *ci)
 
   if (ud->mailbox.permission != IMAPPERM_READWRITE)
     {
-      fprintf(ci->tx,"%s NO you do not have write permission on this folder\n",tag);
+      fprintf(ci->tx,"%s NO you do not have write permission on this folder\r\n",tag);
       return 1;
     }
 
@@ -1292,7 +1286,7 @@ int _ic_expunge(char *tag, char **args, ClientInfo *ci)
   result = db_expunge(ud->mailbox.uid,&msgids,&nmsgs);
   if (result == -1)
     {
-      fprintf(ci->tx,"* BYE dbase/memory error\n");
+      fprintf(ci->tx,"* BYE dbase/memory error\r\n");
       return -1;
     }
   
@@ -1300,14 +1294,14 @@ int _ic_expunge(char *tag, char **args, ClientInfo *ci)
   for (i=0; i<nmsgs; i++)
     {
       /* dump debug info */
-      trace(TRACE_DEBUG,"trying to find %lu...\n",msgids[i]);
+      trace(TRACE_DEBUG,"trying to find %lu...\r\n",msgids[i]);
       for (j=0; j<ud->mailbox.exists; j++)
-	trace(TRACE_DEBUG,"member #%d: %lu\n",j,ud->mailbox.seq_list[j]);
+	trace(TRACE_DEBUG,"member #%d: %lu\r\n",j,ud->mailbox.seq_list[j]);
 	  
       /* find the message sequence number */
       idx = binary_search(ud->mailbox.seq_list, ud->mailbox.exists, msgids[i]);
 
-      fprintf(ci->tx,"* %d EXPUNGE\n",idx+1); /* add one: IMAP MSN starts at 1 not zero */
+      fprintf(ci->tx,"* %d EXPUNGE\r\n",idx+1); /* add one: IMAP MSN starts at 1 not zero */
     }
 
 
@@ -1320,18 +1314,18 @@ int _ic_expunge(char *tag, char **args, ClientInfo *ci)
 
   if (result == 1)
     {
-      fprintf(ci->tx,"* BYE troubles synchronizing dbase\n");
+      fprintf(ci->tx,"* BYE troubles synchronizing dbase\r\n");
       return -1;
     }
   
   if (result == -1)
     {
-      fprintf(ci->tx,"* BYE internal dbase error\n");
+      fprintf(ci->tx,"* BYE internal dbase error\r\n");
       return -1; /* fatal  */
     }
 
 
-  fprintf(ci->tx,"%s OK EXPUNGE completed\n",tag);
+  fprintf(ci->tx,"%s OK EXPUNGE completed\r\n",tag);
   return 0;
 }
 
@@ -1345,7 +1339,7 @@ int _ic_search(char *tag, char **args, ClientInfo *ci)
 {
 /*  imap_userdata_t *ud = (imap_userdata_t*)ci->userData;*/
 
-  fprintf(ci->tx,"%s OK SEARCH completed\n",tag);
+  fprintf(ci->tx,"%s OK SEARCH completed\r\n",tag);
   return 0;
 }
 
@@ -1367,13 +1361,13 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
   if (ud->state != IMAPCS_SELECTED)
     {
-      fprintf(ci->tx,"%s BAD FETCH command received in invalid state\n", tag);
+      fprintf(ci->tx,"%s BAD FETCH command received in invalid state\r\n", tag);
       return 1;
     }
 
   if (!args[0] || !args[1])
     {
-      fprintf(ci->tx,"%s BAD missing argument(s) to FETCH\n", tag);
+      fprintf(ci->tx,"%s BAD missing argument(s) to FETCH\r\n", tag);
       return 1;
     }
 
@@ -1386,13 +1380,13 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
   if (result == 1)
     {
-      fprintf(ci->tx,"* BYE troubles synchronizing dbase\n");
+      fprintf(ci->tx,"* BYE troubles synchronizing dbase\r\n");
       return -1;
     }
   
   if (result == -1)
     {
-      fprintf(ci->tx,"* BYE internal dbase error\n");
+      fprintf(ci->tx,"* BYE internal dbase error\r\n");
       return -1; /* fatal  */
     }
 
@@ -1405,7 +1399,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	delimpos = i;
       else if (!isdigit(args[0][i]))
 	{
-	  fprintf(ci->tx, "%s BAD invalid message range specified\n",tag);
+	  fprintf(ci->tx, "%s BAD invalid message range specified\r\n",tag);
 	  return 1;
 	}
     }
@@ -1413,7 +1407,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
   /* delimiter at start/end ? */
   if (delimpos == 0 || delimpos == strlen(args[0])-1)
     {
-      fprintf(ci->tx, "%s BAD invalid message range specified\n",tag);
+      fprintf(ci->tx, "%s BAD invalid message range specified\r\n",tag);
       return 1;
     }
 
@@ -1435,14 +1429,14 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
   if (fetch_start == 0 || fetch_end == 0)
     {
       /* MSN starts at 1 */
-      fprintf(ci->tx, "%s BAD invalid message range specified\n",tag);
+      fprintf(ci->tx, "%s BAD invalid message range specified\r\n",tag);
       return 1;
     }
 
   if (fetch_start > ud->mailbox.exists || fetch_end > ud->mailbox.exists)
     {
       /* range contains non-existing msgs */
-      fprintf(ci->tx, "%s BAD invalid message range specified\n",tag);
+      fprintf(ci->tx, "%s BAD invalid message range specified\r\n",tag);
       return 1;
     }
 
@@ -1465,12 +1459,12 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
   result = get_fetch_items(&args[1], &fetchitems);
   if (result == -1)
     {
-      fprintf(ci->tx,"* BYE server ran out of memory\n");
+      fprintf(ci->tx,"* BYE server ran out of memory\r\n");
       return -1; /* fatal  */
     }
   if (result == 1)
     {
-      fprintf(ci->tx,"%s BAD invalid argument list to FETCH\n",tag);
+      fprintf(ci->tx,"%s BAD invalid argument list to FETCH\r\n",tag);
       return 1;
     }
   
@@ -1481,11 +1475,11 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
       flagsjustonce = 0;
       fprintf(ci->tx,"* %d FETCH (",i+1);
 
-      trace(TRACE_DEBUG, "Fetching msgID %lu (fetch num %d)\n", ud->mailbox.seq_list[i],i+1);
+      trace(TRACE_DEBUG, "Fetching msgID %lu (fetch num %d)\r\n", ud->mailbox.seq_list[i],i+1);
 
       if (db_fetch_headers(ud->mailbox.seq_list[i], &msg) == -1)
 	{
-	  fprintf(ci->tx,"* BAD error fetching message %d\n",i+1);
+	  fprintf(ci->tx,"* BAD error fetching message %d\r\n",i+1);
 	  continue;
 	}
       
@@ -1497,7 +1491,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	  result = db_get_msgdate(ud->mailbox.uid, ud->mailbox.seq_list[i], date);
 	  if (result == -1)
 	    {
-	      fprintf(ci->tx,"* BYE internal dbase error\n");
+	      fprintf(ci->tx,"* BYE internal dbase error\r\n");
 	      if (fetchitems.bodyfetches) free(fetchitems.bodyfetches);
 	      db_free_msg(&msg);
 	      return -1;
@@ -1518,7 +1512,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	  fprintf(ci->tx," ");
 	  if (result == -1)
 	    {
-	      fprintf(ci->tx,"* BYE error fetching body structure\n");
+	      fprintf(ci->tx,"* BYE error fetching body structure\r\n");
 	      if (fetchitems.bodyfetches) free(fetchitems.bodyfetches);
 	      db_free_msg(&msg);
 	      return -1;
@@ -1532,7 +1526,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	  fprintf(ci->tx," ");
 	  if (result == -1)
 	    {
-	      fprintf(ci->tx,"* BYE error fetching body\n");
+	      fprintf(ci->tx,"* BYE error fetching body\r\n");
 	      if (fetchitems.bodyfetches) free(fetchitems.bodyfetches);
 	      db_free_msg(&msg);
 	      return -1;
@@ -1545,7 +1539,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	  result = retrieve_envelope(ci->tx, &msg.rfcheader);
 	  if (result == -1)
 	    {
-	      fprintf(ci->tx,"* BYE error fetching envelope structure\n");
+	      fprintf(ci->tx,"* BYE error fetching envelope structure\r\n");
 	      if (fetchitems.bodyfetches) free(fetchitems.bodyfetches);
 	      db_free_msg(&msg);
 	      return -1;
@@ -1565,7 +1559,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	  db_dump_range(ci->tx, msg.bodystart, msg.bodyend,
 			ud->mailbox.seq_list[i],0,-1);
 
-	  fprintf(ci->tx,"\n");
+	  fprintf(ci->tx,"\r\n");
 	  setseen = 1;
 	}
 
@@ -1577,7 +1571,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	  db_dump_range(ci->tx, msg.bodystart, msg.bodyend,
 			ud->mailbox.seq_list[i],0,-1);
 
-	  fprintf(ci->tx,"\n");
+	  fprintf(ci->tx,"\r\n");
 	}
 
       if (fetchitems.getRFC822)
@@ -1588,7 +1582,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	  db_dump_range(ci->tx, msg.bodystart, msg.bodyend,
 			ud->mailbox.seq_list[i],0,-1);
 
-	  fprintf(ci->tx,"\n");
+	  fprintf(ci->tx,"\r\n");
 	  setseen = 1;
 	}
 
@@ -1601,11 +1595,11 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
       if (fetchitems.getRFC822Text)
 	{
-	  fprintf(ci->tx, "RFC822.TEXT {%lu}\n",msg.bodysize);
+	  fprintf(ci->tx, "RFC822.TEXT {%lu}\r\n",msg.bodysize);
 	  db_dump_range(ci->tx, msg.bodystart, msg.bodyend,
 			ud->mailbox.seq_list[i],0,-1);
 
-	  fprintf(ci->tx,"\n");
+	  fprintf(ci->tx,"\r\n");
 	  setseen = 1;
 	}
 
@@ -1626,29 +1620,29 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	    case BFIT_TEXT:
 	      /* dump body text */
 	      if (!msgpart)
-		fprintf(ci->tx, "TEXT] NIL\n");
+		fprintf(ci->tx, "TEXT] NIL\r\n");
 	      else
 		{
 		  if (fetchitems.bodyfetches[j].octetstart >= 0)
-		    fprintf(ci->tx, "TEXT]<%lu> {%lu} \n",
+		    fprintf(ci->tx, "TEXT]<%lu> {%lu} \r\n",
 			    fetchitems.bodyfetches[j].octetstart,
 			    (msgpart->bodysize < fetchitems.bodyfetches[j].octetcnt) ? 
 			    msgpart->bodysize : fetchitems.bodyfetches[j].octetcnt);
 		  else
-		    fprintf(ci->tx, "TEXT] {%lu} \n", msgpart->bodysize);
+		    fprintf(ci->tx, "TEXT] {%lu} \r\n", msgpart->bodysize);
 
 		  db_dump_range(ci->tx, msgpart->bodystart, msgpart->bodyend,
 				ud->mailbox.seq_list[i],
 				fetchitems.bodyfetches[j].octetstart,
 				fetchitems.bodyfetches[j].octetcnt);
-		  fprintf(ci->tx,"\n");
+		  fprintf(ci->tx,"\r\n");
 		}
 	      break;
 
 	    case BFIT_HEADER:
 	      fprintf(ci->tx, "HEADER] ");
 	      if (!msgpart)
-		fprintf(ci->tx, "NIL\n");
+		fprintf(ci->tx, "NIL\r\n");
 	      else
 		{
 		  rfcheader_dump(ci->tx, &msgpart->rfcheader, 
@@ -1669,7 +1663,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	      fprintf(ci->tx,")] ");
 
 	      if (!msgpart)
-		fprintf(ci->tx, "NIL\n");
+		fprintf(ci->tx, "NIL\r\n");
 	      else
 		{
 		  rfcheader_dump(ci->tx, &msgpart->rfcheader, 
@@ -1689,7 +1683,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	      fprintf(ci->tx,")] ");
 
 	      if (!msgpart)
-		fprintf(ci->tx, "NIL\n");
+		fprintf(ci->tx, "NIL\r\n");
 	      else
 		{
 		  rfcheader_dump(ci->tx, &msgpart->rfcheader, 
@@ -1701,10 +1695,10 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		}
 	      break;
 	    case BFIT_MIME:
-	      fprintf(ci->tx, "MIME] \n");
+	      fprintf(ci->tx, "MIME] \r\n");
 
 	      if (!msgpart)
-		fprintf(ci->tx, "NIL\n");
+		fprintf(ci->tx, "NIL\r\n");
 	      else
 		{
 		  mimeheader_dump(ci->tx, &msgpart->mimeheader,
@@ -1714,7 +1708,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		  
 	      break;
 	    default:
-	      fprintf(ci->tx, "* BYE internal server error\n");
+	      fprintf(ci->tx, "* BYE internal server error\r\n");
 	      free(fetchitems.bodyfetches);
 	      db_free_msg(&msg);
 	      return -1;
@@ -1729,7 +1723,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	  result = db_set_msgflag("seen", ud->mailbox.uid, ud->mailbox.seq_list[i], 1);
 	  if (result == -1)
 	    {
-	      fprintf(ci->tx,"* BYE internal dbase error\n");
+	      fprintf(ci->tx,"* BYE internal dbase error\r\n");
 	      db_free_msg(&msg);
 	      if (fetchitems.bodyfetches)
 		free(fetchitems.bodyfetches);
@@ -1744,7 +1738,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
       /* FLAGS ? */
       if (fetchitems.getFlags) 
 	{
-	  fprintf(ci->tx,"\nFLAGS (");
+	  fprintf(ci->tx,"\r\nFLAGS (");
 	  
 	  for (j=0; j<IMAP_NFLAGS; j++)
 	    {
@@ -1752,7 +1746,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
 	      if (result == -1)
 		{
-		  fprintf(ci->tx,"* BYE internal dbase error\n");
+		  fprintf(ci->tx,"* BYE internal dbase error\r\n");
 		  if (fetchitems.bodyfetches) free(fetchitems.bodyfetches);
 		  db_free_msg(&msg);
 		  return -1;
@@ -1766,14 +1760,14 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	    fetchitems.getFlags = 0;
 	}
 
-      fprintf(ci->tx,")\n");
+      fprintf(ci->tx,")\r\n");
       db_free_msg(&msg);
     }
       
   if (fetchitems.bodyfetches)
     free(fetchitems.bodyfetches);
   
-  fprintf(ci->tx,"%s OK FETCH completed\n",tag);
+  fprintf(ci->tx,"%s OK FETCH completed\r\n",tag);
   return 0;
 }
 
@@ -1794,19 +1788,19 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
 
   if (ud->state != IMAPCS_SELECTED)
     {
-      fprintf(ci->tx,"%s BAD STORE command received in invalid state\n", tag);
+      fprintf(ci->tx,"%s BAD STORE command received in invalid state\r\n", tag);
       return 1;
     }
 
   if (!args[0] || !args[1] || !args[2])
     {
-      fprintf(ci->tx,"%s BAD missing argument(s) to STORE\n", tag);
+      fprintf(ci->tx,"%s BAD missing argument(s) to STORE\r\n", tag);
       return 1;
     }
 
   if (strcmp(args[2],"(") != 0)
     {
-      fprintf(ci->tx,"%s BAD invalid argument(s) to STORE\n", tag);
+      fprintf(ci->tx,"%s BAD invalid argument(s) to STORE\r\n", tag);
       return 1;
     }
 
@@ -1820,13 +1814,13 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
 
   if (result == 1)
     {
-      fprintf(ci->tx,"* BYE troubles synchronizing dbase\n");
+      fprintf(ci->tx,"* BYE troubles synchronizing dbase\r\n");
       return -1;
     }
   
   if (result == -1)
     {
-      fprintf(ci->tx,"* BYE internal dbase error\n");
+      fprintf(ci->tx,"* BYE internal dbase error\r\n");
       return -1; /* fatal  */
     }
 
@@ -1839,7 +1833,7 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
 	delimpos = i;
       else if (!isdigit(args[0][i]))
 	{
-	  fprintf(ci->tx, "%s BAD invalid message range specified\n",tag);
+	  fprintf(ci->tx, "%s BAD invalid message range specified\r\n",tag);
 	  return 1;
 	}
     }
@@ -1847,7 +1841,7 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
   /* delimiter at start/end ? */
   if (delimpos == 0 || delimpos == strlen(args[0])-1)
     {
-      fprintf(ci->tx, "%s BAD invalid message range specified\n",tag);
+      fprintf(ci->tx, "%s BAD invalid message range specified\r\n",tag);
       return 1;
     }
 
@@ -1869,14 +1863,14 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
   if (store_start == 0 || store_end == 0)
     {
       /* MSN starts at 1 */
-      fprintf(ci->tx, "%s BAD invalid message range specified\n",tag);
+      fprintf(ci->tx, "%s BAD invalid message range specified\r\n",tag);
       return 1;
     }
 
   if (store_start > ud->mailbox.exists || store_end > ud->mailbox.exists)
     {
       /* range contains non-existing msgs */
-      fprintf(ci->tx, "%s BAD invalid message range specified\n",tag);
+      fprintf(ci->tx, "%s BAD invalid message range specified\r\n",tag);
       return 1;
     }
 
@@ -1920,7 +1914,7 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
 
   if (action == IMAPFA_NONE)
     {
-      fprintf(ci->tx,"%s BAD invalid STORE action specified\n",tag);
+      fprintf(ci->tx,"%s BAD invalid STORE action specified\r\n",tag);
       return 1;
     }
 
@@ -1937,7 +1931,7 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
       
       if (j == IMAP_NFLAGS)
 	{
-	  fprintf(ci->tx,"%s BAD invalid flag list to STORE command\n",tag);
+	  fprintf(ci->tx,"%s BAD invalid flag list to STORE command\r\n",tag);
 	  return 1;
 	}
     }
@@ -1958,7 +1952,7 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
 
 	      if (result == -1)
 		{
-		  fprintf(ci->tx,"\n* BYE internal dbase error\n");
+		  fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
 		  return -1;
 		}
 
@@ -1978,7 +1972,7 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
 
 		  if (result == -1)
 		    {
-		      fprintf(ci->tx,"\n* BYE internal dbase error\n");
+		      fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
 		      return -1;
 		    }
 		}
@@ -1988,7 +1982,7 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
 
 		  if (result == -1)
 		    {
-		      fprintf(ci->tx,"\n* BYE internal dbase error\n");
+		      fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
 		      return -1;
 		    }
 		  if (result == 1)
@@ -1999,10 +1993,10 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
 	}
 
       if (!be_silent)
-	fprintf(ci->tx,")\n");
+	fprintf(ci->tx,")\r\n");
     }
 
-  fprintf(ci->tx,"%s OK STORE completed\n",tag);
+  fprintf(ci->tx,"%s OK STORE completed\r\n",tag);
   return 0;
 }
 
@@ -2030,13 +2024,13 @@ int _ic_copy(char *tag, char **args, ClientInfo *ci)
 
   if (result == 1)
     {
-      fprintf(ci->tx,"* BYE troubles synchronizing dbase\n");
+      fprintf(ci->tx,"* BYE troubles synchronizing dbase\r\n");
       return -1;
     }
   
   if (result == -1)
     {
-      fprintf(ci->tx,"* BYE internal dbase error\n");
+      fprintf(ci->tx,"* BYE internal dbase error\r\n");
       return -1; /* fatal  */
     }
 
@@ -2049,7 +2043,7 @@ int _ic_copy(char *tag, char **args, ClientInfo *ci)
 	delimpos = i;
       else if (!isdigit(args[0][i]))
 	{
-	  fprintf(ci->tx, "%s BAD invalid message range specified\n",tag);
+	  fprintf(ci->tx, "%s BAD invalid message range specified\r\n",tag);
 	  return 1;
 	}
     }
@@ -2057,7 +2051,7 @@ int _ic_copy(char *tag, char **args, ClientInfo *ci)
   /* delimiter at start/end ? */
   if (delimpos == 0 || delimpos == strlen(args[0])-1)
     {
-      fprintf(ci->tx, "%s BAD invalid message range specified\n",tag);
+      fprintf(ci->tx, "%s BAD invalid message range specified\r\n",tag);
       return 1;
     }
 
@@ -2079,14 +2073,14 @@ int _ic_copy(char *tag, char **args, ClientInfo *ci)
   if (copy_start == 0 || copy_end == 0)
     {
       /* MSN starts at 1 */
-      fprintf(ci->tx, "%s BAD invalid message range specified\n",tag);
+      fprintf(ci->tx, "%s BAD invalid message range specified\r\n",tag);
       return 1;
     }
 
   if (copy_start > ud->mailbox.exists || copy_end > ud->mailbox.exists)
     {
       /* range contains non-existing msgs */
-      fprintf(ci->tx, "%s BAD invalid message range specified\n",tag);
+      fprintf(ci->tx, "%s BAD invalid message range specified\r\n",tag);
       return 1;
     }
 
@@ -2108,12 +2102,12 @@ int _ic_copy(char *tag, char **args, ClientInfo *ci)
   if (destmboxid == 0)
     {
       /* error: cannot select mailbox */
-      fprintf(ci->tx, "%s NO [TRYCREATE] specified mailbox does not exist\n",tag);
+      fprintf(ci->tx, "%s NO [TRYCREATE] specified mailbox does not exist\r\n",tag);
       return 1;
     }
   if (destmboxid == (unsigned long)(-1))
     {
-      fprintf(ci->tx, "* BYE internal dbase error\n");
+      fprintf(ci->tx, "* BYE internal dbase error\r\n");
       return -1; /* fatal */
     }
 
@@ -2123,12 +2117,12 @@ int _ic_copy(char *tag, char **args, ClientInfo *ci)
       result = db_copymsg(ud->mailbox.seq_list[i], destmboxid);
       if (result == -1)
 	{
-	  fprintf(ci->tx,"* BYE internal dbase error\n");
+	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
 	  return -1;
 	}
     }
 
-  fprintf(ci->tx,"%s OK COPY completed\n",tag);
+  fprintf(ci->tx,"%s OK COPY completed\r\n",tag);
   return 0;
 }
 
@@ -2146,7 +2140,7 @@ int _ic_uid(char *tag, char **args, ClientInfo *ci)
       !check_state_and_args("UID", tag, args, 3, IMAPCS_SELECTED, ci))
     return 1; /* error, return */
 
-  fprintf(ci->tx,"%s OK UID completed\n",tag);
+  fprintf(ci->tx,"%s OK UID completed\r\n",tag);
   return 0;
 }
 

@@ -517,7 +517,7 @@ int rfcheader_dump(FILE *outstream, struct list *rfcheader, char **fieldnames, i
   curr = list_getstart(rfcheader);
   if (rfcheader == NULL || curr == NULL)
     {
-      fprintf(outstream, "NIL\n");
+      fprintf(outstream, "NIL\r\n");
       return 0;
     }
 
@@ -531,7 +531,7 @@ int rfcheader_dump(FILE *outstream, struct list *rfcheader, char **fieldnames, i
       mr = (struct mime_record*)curr->data;
 
       if (haystack_find(nfields, fieldnames, mr->field) == equal_type)
-	fprintf(tmpfile, "%s: %s\n", mr->field, mr->value);  /* ok output this field */
+	fprintf(tmpfile, "%s: %s\r\n", mr->field, mr->value);  /* ok output this field */
 
       curr = curr->nextnode;
     }
@@ -559,7 +559,7 @@ int rfcheader_dump(FILE *outstream, struct list *rfcheader, char **fieldnames, i
     }
 
   if (showsize)
-    fprintf(outstream, "<%d> {%d}\n", offset, cnt);
+    fprintf(outstream, "<%d> {%d}\r\n", offset, cnt);
 
   fseek(tmpfile, offset, SEEK_SET);
 
@@ -591,7 +591,7 @@ int mimeheader_dump(FILE *outstream, struct list *mimeheader, int offset, int cn
   curr = list_getstart(mimeheader);
   if (mimeheader == NULL || curr == NULL)
     {
-      fprintf(outstream, "NIL\n");
+      fprintf(outstream, "NIL\r\n");
       return 0;
     }
 
@@ -602,7 +602,7 @@ int mimeheader_dump(FILE *outstream, struct list *mimeheader, int offset, int cn
   while (curr)
     {
       mr = (struct mime_record*)curr->data;
-      fprintf(tmpfile, "%s: %s\n", mr->field, mr->value);
+      fprintf(tmpfile, "%s: %s\r\n", mr->field, mr->value);
       curr = curr->nextnode;
     }
   fprintf(tmpfile,"\n");
@@ -628,7 +628,7 @@ int mimeheader_dump(FILE *outstream, struct list *mimeheader, int offset, int cn
 	}
     }
 
-  fprintf(outstream, "<%d> {%d}\n", offset, cnt);
+  fprintf(outstream, "<%d> {%d}\r\n", offset, cnt);
   fseek(tmpfile, offset, SEEK_SET);
 
   /* output data */
