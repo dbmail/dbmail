@@ -25,10 +25,10 @@ int db_connect ()
 #endif
 	
   /* selecting the right database */
-  if (mysql_select_db(&conn,MAILDATABASE)) {
+/*   if (mysql_select_db(&conn,MAILDATABASE)) {
     trace(TRACE_ERROR,"dbconnect(): mysql_select_db failed: %s",mysql_error(&conn));
     return -1;
-  }  
+  }  */
   return 0;
 }
 
