@@ -1565,7 +1565,10 @@ int db_build_msn_list(mailbox_t *mb)
 
   /* free existing list */
   if (mb->seq_list)
-    free(mb->seq_list);
+    {
+      free(mb->seq_list);
+      mb->seq_list = NULL;
+    }
 
   snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message WHERE mailboxidnr = %lu "
 	   "AND status != 3 ORDER BY messageidnr ASC", mb->uid);
@@ -1826,6 +1829,7 @@ int db_init_msgfetch(unsigned long uid)
   _msgrow = mysql_fetch_row(_msg_result);
   if (!_msgrow)
     {
+      trace(TRACE_ERROR, "db_init_msgfetch(): message has no blocks\n");
       _msg_fetch_inited = 0;
       return -1;                     /* msg should have 1 block at least */
     }
@@ -1914,7 +1918,7 @@ int db_update_msgbuf(int minlen)
 
   if ((rowlength-rowpos) >= (MSGBUF_WINDOWSIZE - buflen))
     {
-      trace(TRACE_DEBUG,"update msgbuf 1\n");
+      trace(TRACE_DEBUG,"update msgbuf non-entire fit\n");
 
       /* rest of row does not fit entirely in buf */
       strncpy(&msgbuf[buflen], &_msgrow[0][rowpos], MSGBUF_WINDOWSIZE - buflen);
@@ -1926,7 +1930,7 @@ int db_update_msgbuf(int minlen)
       return 1;
     }
 
-  trace(TRACE_DEBUG,"update msgbuf 2 %s\n",_msgrow[0]);
+  trace(TRACE_DEBUG,"update msgbuf: entire fit\n");
 
   strncpy(&msgbuf[buflen], &_msgrow[0][rowpos], (rowlength-rowpos));
   buflen += (rowlength-rowpos);
@@ -1937,8 +1941,6 @@ int db_update_msgbuf(int minlen)
   _msgrow = mysql_fetch_row(_msg_result);
   if (!_msgrow)
     {
-      rowlength = rowpos = 0;
-
       trace(TRACE_DEBUG,"update msgbuf succes NOMORE\n");
       return 0;
     }
@@ -2009,6 +2011,8 @@ int db_fetch_headers(unsigned long msguid, mime_message_t *msg)
   result = db_start_msg(msg, NULL); /* fetch message */
   if (result == -1)
     {
+      trace(TRACE_ERROR, "db_fetch_headers(): error fetching message\n");
+      db_close_msgfetch();
       db_free_msg(msg);
       return -1;
     }
@@ -2045,6 +2049,7 @@ void db_free_msg(mime_message_t *msg)
   tmp = list_getstart(&msg->mimeheader);
   list_freelist(&tmp);
 
+  memset(msg, 0, sizeof(*msg));
 }
 
       
@@ -2075,10 +2080,13 @@ void db_reverse_msg(mime_message_t *msg)
 
 void db_give_msgpos(db_pos_t *pos)
 {
-  if (msgidx > ((buflen+1)-rowpos))
+  trace(TRACE_DEBUG, "db_give_msgpos(): msgidx %lu, buflen %lu, rowpos %lu\n",msgidx,buflen,rowpos);
+  trace(TRACE_DEBUG, "db_give_msgpos(): (buflen)-rowpos %lu\n",(buflen)-rowpos);
+  
+  if (msgidx >= ((buflen)-rowpos))
     {
       pos->block = zeropos.block+1;
-      pos->pos   = ((buflen+1)-rowpos) - msgidx;
+      pos->pos   = msgidx - ((buflen)-rowpos);
     }
   else
     {
@@ -2114,7 +2122,7 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
   msgidx++;
   db_give_msgpos(&msg->bodystart);
 
-  mime_findfield("content-type", &msg->mimeheader, mr);
+  mime_findfield("content-type", &msg->mimeheader, &mr);
   if (mr && strncasecmp(mr->value,"multipart", strlen("multipart")) == 0)
     {
       trace(TRACE_DEBUG,"db_start_msg(): found multipart msg\n");
@@ -2126,7 +2134,10 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 	    break;
 
       if (!bptr)
-	return -1; /* no new boundary ??? */
+	{
+	  trace(TRACE_ERROR, "db_start_msg(): could not find a new msg-boundary\n");
+	  return -1; /* no new boundary ??? */
+	}
 
       bptr += strlen("boundary=");
       if (*bptr == '\"')      
@@ -2137,28 +2148,37 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 
       len = newbound - bptr;
       if (!(newbound = (char*)malloc(len+1)))
-	return -1;
+	{
+	  trace(TRACE_ERROR, "db_start_msg(): out of memory\n");
+	  return -1;
+	}
 
       strncpy(newbound, bptr, len);
       newbound[len] = '\0';
 
+      trace(TRACE_DEBUG,"found new boundary: [%s], msgidx %lu\n",newbound,msgidx);
+
       /* advance to first boundary */
       if (db_update_msgbuf(MSGBUF_FORCE_UPDATE) == -1)
 	{
+	  trace(TRACE_ERROR, "db_startmsg(): error updating msgbuf\n");
 	  free(newbound);
 	  return -1;
 	}
 
       while (msgbuf[msgidx])
 	{
-	  if (msgbuf[msgidx] == '\n' && strncmp(&msgbuf[msgidx+1], newbound, strlen(newbound)) == 0)
+	  if (strncmp(&msgbuf[msgidx+1], newbound, strlen(newbound)) == 0)
 	    break;
+
+	  msgidx++;
 	}
 
       if (msgbuf[msgidx]) msgidx++; /* skip  newline */
 
       if (!msgbuf[msgidx])
 	{
+	  trace(TRACE_ERROR, "db_start_msg(): unexpected end-of-data\n");
 	  free(newbound);
 	  return -1;
 	}
@@ -2167,6 +2187,7 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
       /* find MIME-parts */
       if (db_add_mime_children(&msg->children, newbound) == -1)
 	{
+	  trace(TRACE_ERROR, "db_start_msg(): error adding MIME-children\n");
 	  free(newbound);
 	  return -1;
 	}
@@ -2245,7 +2266,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
       if (mime_readheader(&msgbuf[msgidx], &msgidx, &part.mimeheader) == -1)
 	return -1;   /* error reading header */
 
-      mime_findfield("content-type", &part.mimeheader, mr);
+      mime_findfield("content-type", &part.mimeheader, &mr);
 
       if (mr && strncasecmp(mr->value, "message/rfc822", strlen("message/rfc822")) == 0)
 	{
@@ -2301,7 +2322,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
  *
  * dumps a message to stderr
  */
-int db_msgdump(mime_message_t *msg)
+int db_msgdump(mime_message_t *msg, unsigned long msguid)
 {
   struct element *curr;
   struct mime_record *mr;
@@ -2327,11 +2348,11 @@ int db_msgdump(mime_message_t *msg)
     }
      
   trace(TRACE_DEBUG,"RFC822-header: \n");
-  db_dump_range(msg->headerstart, msg->headerend);
+  db_dump_range(msg->headerstart, msg->headerend, msguid);
   trace(TRACE_DEBUG,"*** header end\n");
 
   trace(TRACE_DEBUG,"body: \n");
-  db_dump_range(msg->bodystart, msg->bodyend);
+  db_dump_range(msg->bodystart, msg->bodyend, msguid);
   trace(TRACE_DEBUG,"*** body end\n");
 
   trace(TRACE_DEBUG,"Children of this msg:\n");
@@ -2339,7 +2360,7 @@ int db_msgdump(mime_message_t *msg)
   curr = list_getstart(&msg->children);
   while (curr)
     {
-      db_msgdump((mime_message_t*)curr->data);
+      db_msgdump((mime_message_t*)curr->data,msguid);
       curr = curr->nextnode;
     }
 
@@ -2347,8 +2368,85 @@ int db_msgdump(mime_message_t *msg)
 }
 
 
-void db_dump_range(db_pos_t start, db_pos_t end)
+int db_dump_range(db_pos_t start, db_pos_t end, unsigned long msguid)
 {
+  char query[DEF_QUERYSIZE];
+  int i;
+
+  trace(TRACE_DEBUG,"Dumping range: (%d,%d) - (%d,%d)\n",start.block, start.pos, end.block, end.pos);
+
+  if (start.block > end.block)
+    {
+      trace(TRACE_ERROR,"db_dump_range(): bad range specified\n");
+      return -1;
+    }
+
+  if (start.block == end.block && start.pos > end.pos)
+    {
+      trace(TRACE_ERROR,"db_dump_range(): bad range specified\n");
+      return -1;
+    }
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT messageblk FROM messageblk WHERE messageidnr = %lu", msguid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_dump_range(): could not get message\n");
+      return (-1);
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_dump_range(): mysql_store_result failed: %s\n",mysql_error(&conn));
+      return (-1);
+    }
+
+  for (row = mysql_fetch_row(res), i=0; row && i < start.block; i++, row = mysql_fetch_row(res)) ;
+      
+  if (!row)
+    {
+      trace(TRACE_ERROR,"db_dump_range(): bad range specified\n");
+      mysql_free_result(res);
+      return -1;
+    }
+
+  if (start.block == end.block)
+    {
+      trace(TRACE_DEBUG,"%*s\n",end.pos - start.pos,&row[0][start.pos]);
+      mysql_free_result(res);
+      return 0;
+    }
+
+  /* output startblock */
+  trace(TRACE_DEBUG,"%s",&row[start.pos]);
   
-  trace(TRACE_DEBUG,"Range: (%d,%d) - (%d,%d)\n",start.block, start.pos, end.block, end.pos);
+  /* output blocks inbetween */
+  for ( ; i<end.block; i++)
+    {
+      row = mysql_fetch_row(res);
+      if (!row)
+	{
+	  trace(TRACE_ERROR,"db_dump_range(): bad range specified\n");
+	  mysql_free_result(res);
+	  return -1;
+	}
+
+      trace(TRACE_DEBUG,"%s",row[0]);
+    }
+
+  /* output endblock */
+  row = mysql_fetch_row(res);
+  if (!row)
+    {
+      trace(TRACE_ERROR,"db_dump_range(): bad range specified\n");
+      mysql_free_result(res);
+      return -1;
+    }
+
+  trace(TRACE_DEBUG,"%*s",end.pos,row[0]);
+  trace(TRACE_DEBUG,"\n");
+
+  mysql_free_result(res);
+
+  return 0;
 }

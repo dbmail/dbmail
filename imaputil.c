@@ -622,7 +622,7 @@ char **build_args_array(const char *s)
       return args;
     }
 
-  scpy = (char*)malloc(sizeof(char)*strlen(s));
+  scpy = (char*)malloc(sizeof(char)* (strlen(s)+1));
   if (!scpy)
     {
       trace(TRACE_MESSAGE, "IMAPD: Not enough memory while building up argument array.");

@@ -158,7 +158,7 @@ int db_fetch_headers(unsigned long msguid, mime_message_t *msg);
 int db_add_mime_children(struct list *brothers, char *splitbound);
 int db_start_msg(mime_message_t *msg, char *stopbound);
 
-void db_dump_range(db_pos_t start, db_pos_t end);
-int db_msgdump(mime_message_t *msg);
+int db_dump_range(db_pos_t start, db_pos_t end, unsigned long msguid);
+int db_msgdump(mime_message_t *msg, unsigned long msguid);
 
 #endif

@@ -1363,6 +1363,8 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
   mime_message_t msg;
   char date[IMAP_INTERNALDATE_LEN];
 
+  memset(&msg, 0, sizeof(msg));
+
   if (ud->state != IMAPCS_SELECTED)
     {
       fprintf(ci->tx,"%s BAD FETCH command received in invalid state\n", tag);
@@ -1478,6 +1480,8 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
       setseen = 0;
       fprintf(ci->tx,"* %d FETCH (",i+1);
 
+      trace(TRACE_DEBUG, "Fetching msgID %lu\n", ud->mailbox.seq_list[i]);
+
       /* walk by the arguments */
       if (fetchitems.getFlags) 
 	{
@@ -1539,7 +1543,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	}
 
       db_fetch_headers(ud->mailbox.seq_list[i], &msg);
-      db_msgdump(&msg);
+      db_msgdump(&msg, ud->mailbox.seq_list[i]);
 
       for (j=0; j<fetchitems.nbodyfetches; j++)
 	{
@@ -1752,7 +1756,7 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
 
 	      if (result == -1)
 		{
-		  fprintf(ci->tx,"* BYE internal dbase error\n");
+		  fprintf(ci->tx,"\n* BYE internal dbase error\n");
 		  return -1;
 		}
 
@@ -1772,7 +1776,7 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
 
 		  if (result == -1)
 		    {
-		      fprintf(ci->tx,"* BYE internal dbase error\n");
+		      fprintf(ci->tx,"\n* BYE internal dbase error\n");
 		      return -1;
 		    }
 		}
@@ -1782,7 +1786,7 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
 
 		  if (result == -1)
 		    {
-		      fprintf(ci->tx,"* BYE internal dbase error\n");
+		      fprintf(ci->tx,"\n* BYE internal dbase error\n");
 		      return -1;
 		    }
 		  if (result == 1)

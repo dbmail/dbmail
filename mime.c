@@ -240,8 +240,8 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist)
 	  strcpy(mr->field, startptr);
 	  strcpy(mr->value, &delimiter[idx]);
 
-	  trace (TRACE_DEBUG,"mime_readheader(): mimepair found: [%s] [%s] \n",mr->field, mr->value); 
-
+/*	  trace (TRACE_DEBUG,"mime_readheader(): mimepair found: [%s] [%s] \n",mr->field, mr->value); 
+*/
 	  el = list_nodeadd(mimelist,mr,sizeof (*mr));
 	  if (!el)
 	    {
@@ -255,7 +255,7 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist)
 	  *endptr = '\n';
 
 	  *blkidx += (endptr-startptr);
-	  *blkidx++;
+	  (*blkidx)++;
 
 	  startptr = endptr+1; /* advance to next field */
 
@@ -271,7 +271,7 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist)
 	{
 	  /* no field/value delimiter found, non-valid MIME-header */
 	  free(mr);
-	  trace(TRACE_DEBUG,"Non valid mimeheader found, freeing list...\n");
+	  trace(TRACE_DEBUG,"Non valid mimeheader found, data [%s]\nfreeing list...\n",startptr);
 	  list_freelist(&mimelist->start);
 	  mimelist->total_nodes = 0;
 	  trace(TRACE_DEBUG,"freeing list done, start: %X\n ",mimelist->start);
@@ -302,22 +302,22 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist)
  * finds a MIME header field
  *
  */
-void mime_findfield(const char *fname, struct list *mimelist, struct mime_record *mr)
+void mime_findfield(const char *fname, struct list *mimelist, struct mime_record **mr)
 {
   struct element *current;
 
   current = list_getstart(mimelist);
   while (current)
     {
-      mr = current->data;   /* get field/value */
+      *mr = current->data;   /* get field/value */
       
-      if (strncasecmp(mr->field, fname, strlen(fname)) == 0)
+      if (strncasecmp((*mr)->field, fname, strlen(fname)) == 0)
 	return; /* found */
 
       current = current->nextnode;
     }
 
-  mr = NULL;
+  *mr = NULL;
 }
       
   
