@@ -1,5 +1,9 @@
 2004-04-19  Ilja Booij  <ilja@ic-s.nl>
 
+	* acl.c (acl_get_acl): added checks and annotations.
+	(acl_listrights): changed to return a string that has
+	to be freed by caller. added splint annotation.
+
 	* auth.h: (auth_user_exists) added splint annotation to 'out' 
 	parameter.
 

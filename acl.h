@@ -88,7 +88,7 @@ int acl_delete_acl(u64_t userid, u64_t mboxid);
  *     - acl string (list of identifier-rights pairs, might by empty)
  * \note string should be freed by caller
  */
-char *acl_get_acl(u64_t mboxid);
+/*@null@*/ char *acl_get_acl(u64_t mboxid);
 
 /**
  * \brief list rights that may be granted to a user on a mailbox
@@ -99,7 +99,7 @@ char *acl_get_acl(u64_t mboxid);
  *     - string of rights otherwise (SEE RFC for details)
  * \note string should be freed by caller
  */
-const char *acl_listrights(u64_t userid, u64_t mboxid);
+/*@null@*/ /*@only@*/ char *acl_listrights(u64_t userid, u64_t mboxid);
 
 /**
  * \brief list rights that a user has on a mailbox
@@ -110,6 +110,6 @@ const char *acl_listrights(u64_t userid, u64_t mboxid);
  *     - string of rights otherwise (SEE RFC)
  * \note string should be freed by caller
  */
-char *acl_myrights(u64_t userid, u64_t mboxid);
+/*@null@*/ char *acl_myrights(u64_t userid, u64_t mboxid);
 
 #endif

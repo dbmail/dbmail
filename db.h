@@ -922,7 +922,7 @@ int db_getmailbox(mailbox_t * mb);
  *    -  0 if owner not found
  *    -  1 if owner found
  */
-int db_get_mailbox_owner(u64_t mboxid, u64_t * owner_id);
+int db_get_mailbox_owner(u64_t mboxid, /*@out@*/ u64_t * owner_id);
 
 /**
  * \brief check if a user is owner of the specified mailbox 
@@ -1287,6 +1287,7 @@ int db_acl_delete_acl(u64_t userid, u64_t mboxid);
  *     -  1 on success
  * \note identifier_list needs to be empty on call.
  */
-int db_acl_get_identifier(u64_t mboxid, struct list *identifier_list);
+int db_acl_get_identifier(u64_t mboxid, 
+			  /*@out@*/ struct list *identifier_list);
 
 #endif

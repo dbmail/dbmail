@@ -4581,7 +4581,7 @@ int _ic_listrights(char *tag, char **args, ClientInfo * ci)
 	int result;
 	u64_t mboxid;
 	u64_t targetuserid;
-	const char *listrights_string;
+	char *listrights_string;
 
 
 	if (!check_state_and_args("LISTRIGHTS", tag, args, 2,
@@ -4615,6 +4615,7 @@ int _ic_listrights(char *tag, char **args, ClientInfo * ci)
 	ci_write(ci->tx, "* LISTRIGHTS \"%s\" %s %s\r\n",
 		args[0], args[1], listrights_string);
 	ci_write(ci->tx, "%s OK LISTRIGHTS completed\r\n", tag);
+	my_free(listrights_string);
 	return 0;
 }
 

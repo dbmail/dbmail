@@ -31,7 +31,7 @@
 
 #define NR_ACL_FLAGS 9
 
-const char *acl_right_strings[] = {
+static const char *acl_right_strings[] = {
 	"lookup_flag",
 	"read_flag",
 	"seen_flag",
@@ -43,7 +43,7 @@ const char *acl_right_strings[] = {
 	"administer_flag"
 };
 
-const char acl_right_chars[] = "lrswipcda";
+static const char acl_right_chars[] = "lrswipcda";
 //{'l','r','s','w','i','p','c','d','a'};
 
 /* local functions */
@@ -55,9 +55,9 @@ static int acl_replace_rights(u64_t userid, u64_t mboxid,
 static int acl_set_one_right(u64_t userid, u64_t mboxid,
 			     ACLRight_t right, int set);
 static int acl_get_rightsstring_identifier(char *identifier, u64_t mboxid,
-					   char *rightsstring);
+					   /*@out@*/ char *rightsstring);
 static int acl_get_rightsstring(u64_t userid, u64_t mboxid,
-				char *rightsstring);
+				/*@out@*/ char *rightsstring);
 
 int acl_has_right(u64_t userid, u64_t mboxid, ACLRight_t right)
 {
@@ -113,7 +113,7 @@ int
 acl_change_rights(u64_t userid, u64_t mboxid, const char *rightsstring,
 		  int set)
 {
-	unsigned i;
+	size_t i;
 	char rightchar;
 
 	for (i = 1; i < strlen(rightsstring); i++) {
@@ -205,7 +205,14 @@ char *acl_get_acl(u64_t mboxid)
 		list_freelist(&identifier_list.start);
 		return NULL;
 	}
-	list_nodeadd(&identifier_list, username, strlen(username) + 1);
+	if (list_nodeadd(&identifier_list, username, 
+			 strlen(username) + 1) == NULL) { 
+		trace(TRACE_ERROR, "%s,%s: error adding username to list",
+		      __FILE__, __FUNCTION__);
+		list_freelist(&identifier_list.start);
+		my_free(username);
+		return NULL;
+	}
 	my_free(username);
 
 
@@ -248,9 +255,9 @@ char *acl_get_acl(u64_t mboxid)
 		trace(TRACE_DEBUG, "%s,%s: %s", __FILE__, __FUNCTION__,
 		      rightsstring);
 		if (strlen(rightsstring) > 0)
-			snprintf(acl_string, acl_string_size + 1,
-				 "%s%s %s ", acl_string, identifier,
-				 rightsstring);
+			(void) snprintf(acl_string, acl_string_size + 1,
+					"%s%s %s ", acl_string, identifier,
+					rightsstring);
 		identifier_elm = identifier_elm->nextnode;
 
 	}
@@ -258,7 +265,7 @@ char *acl_get_acl(u64_t mboxid)
 	return acl_string;
 }
 
-const char *acl_listrights(u64_t userid, u64_t mboxid)
+char *acl_listrights(u64_t userid, u64_t mboxid)
 {
 	int result;
 	result = db_user_is_mailbox_owner(userid, mboxid);
@@ -274,11 +281,11 @@ const char *acl_listrights(u64_t userid, u64_t mboxid)
 		/* user is not owner. User will never be granted any right
 		   by default, but may be granted any right by setting the
 		   right ACL */
-		return "\"\" l r s w i p c d a";
+		return strdup("\"\" l r s w i p c d a");
 	}
 
 	/* user is owner, User will always be granted all rights */
-	return acl_right_chars;
+	return strdup(acl_right_chars);
 }
 
 char *acl_myrights(u64_t userid, u64_t mboxid)
@@ -308,6 +315,7 @@ acl_get_rightsstring_identifier(char *identifier,
 {
 	u64_t userid;
 
+	memset(rightsstring, '\0', NR_ACL_FLAGS + 1);
 	if (auth_user_exists(identifier, &userid) < 0) {
 		trace(TRACE_ERROR, "%s,%s: error finding user id for "
 		      "user with name [%s]", __FILE__, __FUNCTION__,
