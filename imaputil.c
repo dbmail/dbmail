@@ -134,6 +134,8 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg, int show_extension_
 	  if (retrieve_envelope(outstream, &msg->rfcheader) == -1)
 	    return -1;
 
+	  fprintf(outstream, " ");
+
 	  memmove(&rfcmsg, msg, sizeof(rfcmsg));
 	  rfcmsg.mimeheader.start = NULL; /* forget MIME-part */
 	  
@@ -260,6 +262,7 @@ int retrieve_envelope(FILE *outstream, struct list *rfcheader)
   mime_findfield("subject", rfcheader, &mr);
   if (mr && strlen(mr->value) > 0)
     fprintf(outstream, "{%d}\r\n%s ",strlen(mr->value),mr->value);
+/*    fprintf(outstream, "\"%s\" ",mr->value);*/
   else
     fprintf(outstream, "NIL ");
 

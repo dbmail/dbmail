@@ -1909,9 +1909,9 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	      if (fi->getSize)
 		{
 		  fprintf(ci->tx,"RFC822.SIZE %lu", 
-			  cached_msg.msg.rfcheadersize + 
+			  (cached_msg.msg.rfcheadersize + 
 			  cached_msg.msg.bodysize + 
-			  cached_msg.msg.bodylines);
+			  cached_msg.msg.bodylines));
 		}
 
 	      if (fi->getBodyTotal || fi->getBodyTotalPeek)
