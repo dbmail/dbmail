@@ -128,8 +128,8 @@ int db_log_ip(const char *ip);
 int db_cleanup_iplog(const char *lasttokeep);
 
 int db_icheck_messageblks(struct list *lostlist);
-int db_icheck_messages(int *nlost, u64_t **lostlist);
-int db_icheck_mailboxes(int *nlost, u64_t **lostlist);
+int db_icheck_messages(struct list *lostlist);
+int db_icheck_mailboxes(struct list *lostlist);
 
 int db_delete_messageblk(u64_t uid);
 int db_delete_message(u64_t uid);

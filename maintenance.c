@@ -34,12 +34,9 @@ int main(int argc, char *argv[])
   int new_level = 2, new_trace_syslog = 1, new_trace_verbose = 0;
 
   int opt;
-  int nlost,i;
   struct list lostlist;
   struct element *el;
   u64_t id;
-
-  u64_t *llost;
 
   u64_t deleted_messages;
   u64_t messages_set_to_delete;
@@ -238,29 +235,33 @@ int main(int argc, char *argv[])
       fprintf(stderr, "--- checking block integrity took %lu seconds\n", stop-start);
       
       /* second part */
+      start = stop;
       printf ("Now checking DBMAIL message integrity.. ");
 
-      if (db_icheck_messages(&nlost, &llost) < 0)
+      if (db_icheck_messages(&lostlist) < 0)
 	{
 	  printf ("Failed. An error occured. Please check log.\n");
 	  db_disconnect();
 	  return -1;
 	}
     
-      if (nlost > 0)
+      if (lostlist.total_nodes > 0)
 	{
-	  printf ("Ok. Found [%d] unconnected messages:\n", nlost);
+	  printf ("Ok. Found [%ld] unconnected messages:\n", lostlist.total_nodes);
       
-	  for (i=0; i<nlost; i++)
+	  el = lostlist.start;
+	  while (el)
 	    {
+	      id = *((u64_t*)el->data);
+
 	      if (should_fix == 0)
-		printf("%llu ", llost[i]);
+		printf("%llu ", id);
 	      else
 		{
-		  if (db_delete_message(llost[i]) < 0)
-		    printf("Warning: could not delete message #%llu. Check log.\n",llost[i]);
+		  if (db_delete_message(id) < 0)
+		    printf("Warning: could not delete message #%llu. Check log.\n", id);
 		  else
-		    printf("%llu (removed from dbase)\n",llost[i]);
+		    printf("%llu (removed from dbase)\n", id);
 		}
 	    }
         
@@ -270,37 +271,45 @@ int main(int argc, char *argv[])
 	      printf("Try running dbmail-maintenance with the '-f' option "
 		     "in order to fix these problems\n\n");
 	    }
+	  list_freelist(&lostlist.start);
+
 	}
       else 
 	printf ("Ok. Found 0 unconnected messages.\n");
         
-      my_free(llost);
+      time(&stop);
+      printf("--- checking message integrity took %lu seconds\n", stop-start);
+      fprintf(stderr, "--- checking message integrity took %lu seconds\n", stop-start);
 
 
       /* third part */
       printf ("Now checking DBMAIL mailbox integrity.. ");
+      start = stop;
 
-      if (db_icheck_mailboxes(&nlost, &llost) < 0)
+      if (db_icheck_mailboxes(&lostlist) < 0)
 	{
 	  printf ("Failed. An error occured. Please check log.\n");
 	  db_disconnect();
 	  return -1;
 	}
     
-      if (nlost > 0)
+      if (lostlist.total_nodes)
 	{
-	  printf ("Ok. Found [%d] unconnected mailboxes:\n", nlost);
+	  printf ("Ok. Found [%ld] unconnected mailboxes:\n", lostlist.total_nodes);
       
-	  for (i=0; i<nlost; i++)
+	  el = lostlist.start;
+	  while (el)
 	    {
+	      id = *((u64_t*)el->data);
+
 	      if (should_fix == 0)
-		printf("%llu ", llost[i]);
+		printf("%llu ", id);
 	      else
 		{
-		  if (db_delete_mailbox(llost[i]) < 0)
-		    printf("Warning: could not delete mailbox #%llu. Check log.\n",llost[i]);
+		  if (db_delete_mailbox(id) < 0)
+		    printf("Warning: could not delete mailbox #%llu. Check log.\n", id);
 		  else
-		    printf("%llu (removed from dbase)\n",llost[i]);
+		    printf("%llu (removed from dbase)\n",id);
 		}
 	    }
         
@@ -310,12 +319,16 @@ int main(int argc, char *argv[])
 	      printf("Try running dbmail-maintenance with the '-f' option "
 		     "in order to fix these problems\n\n");
 	    }
+
+	  list_freelist(&lostlist.start);
 	}
       else 
 	printf ("Ok. Found 0 unconnected mailboxes.\n");
         
-      my_free(llost);
-    }
+      time(&stop);
+      printf("--- checking mailbox integrity took %lu seconds\n", stop-start);
+      fprintf(stderr, "--- checking mailbox integrity took %lu seconds\n", stop-start);
+   }
 
   if (check_iplog)
     {
