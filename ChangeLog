@@ -1,3 +1,9 @@
+2004-05-03  Aaron Stone  <aaron@serendipity.cx>
+
+	* pipe.c (store_message_temp): added a small ring buffer to
+	keep track of when a message-terminating \r\n.\r\n sequence
+	arrives.
+
 2004-04-28  Ilja Booij  <ilja@ic-s.nl>
 
 	* auth/authsql.c (auth_adduser): no longer creates the mailbox

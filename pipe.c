@@ -52,6 +52,7 @@
 #define QUERY_SIZE 255
 #define MAX_U64_STRINGSIZE 40
 #define MAX_COMM_SIZE 512
+#define RING_SIZE 6
 
 #define AUTO_NOTIFY_SENDER "autonotify@dbmail"
 #define AUTO_NOTIFY_SUBJECT "NEW MAIL NOTIFICATION"
@@ -367,15 +368,17 @@ static int store_message_temp(FILE * instream,
 			      /*@out@*/ u64_t * rfcsize, 
 			      /*@out@*/ u64_t * temp_message_idnr)
 {
-	int myeof = 0, newline = 0, oneperiod = 0;
+	int myeof = 0;
 	int tmpchar;
 	u64_t msgidnr = 0;
 	size_t usedmem = 0;
 	u64_t totalmem = 0, rfclines = 0;
 	char *strblock = NULL;
+	char ringbuf[RING_SIZE];
 	char unique_id[UID_SIZE];
 	u64_t messageblk_idnr;
 	u64_t user_idnr;
+	int ringpos;
 	int result;
 
 	/* define all out-parameters */
@@ -436,7 +439,9 @@ static int store_message_temp(FILE * instream,
 
 		/* Reset strblock. */
 		usedmem = 0;
+		ringpos = 0;
 		memset((void *) strblock, '\0', READ_BLOCK_SIZE + 1);
+		memset((void *) ringbuf, '\0', RING_SIZE);
 	
 		/* Loop until strblock is full or feof or ferror. */
 		while (!myeof) {
@@ -447,35 +452,35 @@ static int store_message_temp(FILE * instream,
 			if (tmpchar == EOF)
 				break;
 
-			if (newline && tmpchar == '.')
-				oneperiod = 1;
-			else if (tmpchar != '\r' && tmpchar != '\n')
-				oneperiod = 0;
+			ringbuf[ringpos] = tmpchar;
+			ringpos = (ringpos + 1) % RING_SIZE;
 
-			if (tmpchar == '\n')
-				newline = 1;
-			else if (tmpchar != '\r')
-				newline = 0;
-
-			if (oneperiod && newline)
-				myeof = 1;
-
-			strblock[usedmem++] = tmpchar;
-
-			if (usedmem > 1
-			    && strblock[usedmem - 1] == '\n'
-			    && strblock[usedmem - 2] != '\r') {
-				rfclines++;
+			if (tmpchar == '\n' && ringbuf[(ringpos - 1) % RING_SIZE] != '\r') {
 				trace(TRACE_DEBUG, "store_message_temp(): counted an rfcline");
+				rfclines++;
 			}
-                        
-			if (ferror(instream)) {
-				trace(TRACE_ERROR,
-				      "store_message_temp(): error on instream: [%s]",
-				      strerror(errno));
-				my_free(strblock);
-				return -1;
+
+			if (ringbuf[(ringpos - 1) % RING_SIZE] == '\n'
+			 && ringbuf[(ringpos - 2) % RING_SIZE] == '\r'
+			 && ringbuf[(ringpos - 3) % RING_SIZE] == '.'
+			 && ringbuf[(ringpos - 4) % RING_SIZE] == '\n'
+			 && ringbuf[(ringpos - 5) % RING_SIZE] == '\r') {
+				/* Back off the trailing "\r\n.\r" (last \n not copied yet)
+				 * and set the myeof flag, stopping this loop. */
+				usedmem -= 4;
+				myeof = 1;
+			} else {
+				/* Copy the current character into the storage buffer. */
+				strblock[usedmem++] = tmpchar;
 			}
+		}
+
+		if (ferror(instream)) {
+			trace(TRACE_ERROR,
+			      "store_message_temp(): error on instream: [%s]",
+			      strerror(errno));
+			my_free(strblock);
+			return -1;
 		}
 
 		/* If the first call to fgetc was EOF, don't store anything. */
