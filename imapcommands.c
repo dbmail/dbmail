@@ -3210,7 +3210,7 @@ int _ic_copy(char *tag, char **args, ClientInfo *ci)
 	    }
 	  if (result == -2)
 	    {
-	      fprintf(ci->tx,"* BAD quotum would exceed\r\n");
+	      fprintf(ci->tx,"%s NO quotum would exceed\r\n", tag);
 	      return 1;
 	    }
 	}
