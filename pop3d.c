@@ -39,10 +39,10 @@ int error_count;
 FILE *tx = NULL;	/* write socket */
 FILE *rx = NULL;	/* read socket */
 
-int *default_children_used;
+int *children;
 
-key_t	shm_key = 0;
-int shm_id;
+key_t	shmkey = 0;
+int shmid;
 
 #define SHM_ALLOC_SIZE (sizeof(int))
 
@@ -235,7 +235,6 @@ int main (int argc, char *argv[])
   int s = -1;
   int c = -1;
   int z, i; /* counters */
-  int children=0, default_children=0;		/* child process counter */
   int defchld,maxchld; /* default children and maxchildren */
 
   /* open logs */
@@ -381,7 +380,18 @@ int main (int argc, char *argv[])
   }
   else
     trace(TRACE_FATAL,"main(): newuser and newgroup should not be NULL");
-	
+
+  /* getting shared memory children counter */
+  shmkey = time (NULL); /* get an unique key */
+  shmid = shmget (shmkey, sizeof (int), 0666 | IPC_CREAT);
+
+  if (shmid == -1)
+	  trace (TRACE_FATAL,"main(): could not allocate shared memory");
+
+  children = (int *)shmat(shmid, 0, 0);
+  if (children == (int *)-1)
+	  trace (TRACE_FATAL,"main(): could not attach to shared memory block");
+
   /* server loop */
   trace (TRACE_MESSAGE,"main(): DBmail pop3 server ready (bound to [%s:%s])",ipaddr,port);
 	
@@ -399,7 +409,7 @@ int main (int argc, char *argv[])
   server_pid = getpid();
 
 	/* we don't have any children yet */
-	children = 0;
+	*children = 0;
  
 	/* split up in the 'server' part and the client part */
 
@@ -408,30 +418,36 @@ int main (int argc, char *argv[])
 	 */
 	for (;;)
 	{
-		/* wait for a connection */
-		len_inet = sizeof (adr_clnt);
-		c = accept (s, (struct sockaddr *)&adr_clnt,
-		  &len_inet); /* incoming connection */
-
-		trace (TRACE_DEBUG,"Accepted connection");
-		
-		/* failure won't cause a quit forking is too expensive */	
-		if (c == -1)
+		while ((*children>=maxchld) && (server_pid==getpid()))
 		{
-			trace (TRACE_FATAL,"main(): call accept(2) failed");
+			/* wait for some children to die */
+			wait (NULL);
+			sleep (1); /* don't hog the processlist */
+			(*children)--;
 		}
-		
-		/* Fork a new server for this incoming client */
 	
-		if ((children < maxchld) && server_pid==getpid())
-		{
-			children++;
-			trace (TRACE_DEBUG,"Ok only got %d children, forking",children);
+		if (*children<maxchld) 
+		{		
+			/* wait for a connection */
+			len_inet = sizeof (adr_clnt);
+			c = accept (s, (struct sockaddr *)&adr_clnt,
+			  &len_inet); /* incoming connection */
+	
+			trace (TRACE_DEBUG,"Accepted connection");
+		
+			/* failure won't cause a quit forking is too expensive */	
+			if (c == -1)
+			{
+				trace (TRACE_FATAL,"main(): call accept(2) failed");
+			}
+		
+			/* Fork a new server for this incoming client */
+	
+			trace (TRACE_DEBUG,"Ok only got %d children, forking",*children);
 			if ((processid = fork()) == -1) 
 			{
 				trace (TRACE_ERROR,"main(): cannot fork()");
 				close (c);
-				children--;
 				continue; /* get back to loop */
 			}
 			else
@@ -440,41 +456,34 @@ int main (int argc, char *argv[])
 				{
 					/* this is the parent 
 					 * it won't accept connections itself */
-					trace (TRACE_ERROR,"main(): i'm the parent");
-					children--;
 					close (c);
 					continue;
 				}
 			}
+			trace (TRACE_DEBUG,"main(): we got forked");
+			(*children)++;
 		}
-
-		if (server_pid!=getpid())
+		else 
 		{
-			/* a new child */	
-			trace (TRACE_DEBUG,"main(): handeling client");
-			
-			handle_client(myhostname, c, adr_clnt);
-		
-			trace (TRACE_DEBUG,"main(): handle_client finished");
-			/* done with this child */
-
-			/* we only let processes die under the default process
-			 * limit */
-	 
-			if (children<=defchld) 
-				continue;
-			else
+			if (server_pid!=getpid())
 			{
-				children--;	
+				trace (TRACE_DEBUG,"main(): connection limit, closing sock");	
+				(*children)--;
+				close (c);
 				exit(0);
 			}
 		}
-		else
-		{
-			/* this is the server */
-			wait (0);
-			children--;
-		}
+
+		/* a new child */	
+		trace (TRACE_DEBUG,"main(): handeling client");
+			
+		handle_client(myhostname, c, adr_clnt);
+	
+		trace (TRACE_DEBUG,"main(): handle_client finished");
+		/* done with this child */
+
+		/* we only let processes die under the default process
+		 * limit */
 	}
 
 	/* nothing will ever get here */
