@@ -10,11 +10,11 @@
 #ifndef  _DEBUG_H
 #define  _DEBUG_H
 
-#define TRACE_TO_SYSLOG 1
-#define TRACE_VERBOSE 1
+extern int TRACE_TO_SYSLOG;
+extern int TRACE_VERBOSE;
 
-#define TRACE_LEVEL 5  /* 5 maximum debugging */
-/* #define TRACE_LEVEL 2 */ /* normal operations */
+extern int TRACE_LEVEL;     /* 5: maximum debugging */
+                            /* 2: normal operations */
 
 #define TRACE_FATAL -1
 #define TRACE_STOP 0
@@ -28,4 +28,6 @@
 
 void func_memtst (char filename[255],int line,int tst);
 void trace (int level, const char *formatstring, ...);
+void configure_debug(int level, int trace_syslog, int trace_verbose);
+
 #endif

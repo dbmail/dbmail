@@ -57,6 +57,9 @@ int main (int argc, char *argv[])
   
   char *ipaddr, *port;
 
+  char *debug_level,*trace_syslog,*trace_verbose;
+  int new_level = 2, new_trace_syslog = 1, new_trace_verbose = 0;
+
   time_t timestamp;
   time_t timeout;
 	
@@ -73,9 +76,36 @@ int main (int argc, char *argv[])
   FILE *rx = NULL;	/* read socket */
 
   /* open logs */
-
   openlog(PNAME, LOG_PID, LOG_MAIL);
 	
+  /* debug settings */
+  debug_level = db_get_config_item("DEBUG_LEVEL", CONFIG_EMPTY);
+  trace_syslog = db_get_config_item("TRACE_TO_SYSLOG", CONFIG_EMPTY);
+  trace_verbose = db_get_config_item("TRACE_VERBOSE", CONFIG_EMPTY);
+
+  if (debug_level)
+    {
+      new_level = atoi(debug_level);
+      free(debug_level);
+      debug_level = NULL;
+    }
+
+  if (trace_syslog)
+    {
+      new_trace_syslog = atoi(trace_syslog);
+      free(trace_syslog);
+      trace_syslog = NULL;
+    }
+
+  if (trace_verbose)
+    {
+      new_trace_verbose = atoi(trace_verbose);
+      free(trace_verbose);
+      trace_verbose = NULL;
+    }
+
+  configure_debug(new_level, new_trace_syslog, new_trace_verbose);
+
 
   /* daemonize */
   if (fork ())

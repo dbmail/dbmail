@@ -20,6 +20,8 @@ int main()
 {
   int sock,d;
   char *newuser,*newgroup,*port,*bindip,*defchld,*maxchld,*daem;
+  char *debug_level,*trace_syslog,*trace_verbose;
+  int new_level = 2, new_trace_syslog = 1, new_trace_verbose = 0;
 
   /* open logs */
   openlog(PNAME, LOG_PID, LOG_MAIL);
@@ -34,6 +36,10 @@ int main()
   defchld = db_get_config_item("IMAPD_DEFAULT_CHILD",CONFIG_MANDATORY);
   maxchld = db_get_config_item("IMAPD_MAX_CHILD",CONFIG_MANDATORY);
   daem = db_get_config_item("IMAPD_DAEMONIZES", CONFIG_EMPTY);
+
+  debug_level = db_get_config_item("DEBUG_LEVEL", CONFIG_EMPTY);
+  trace_syslog = db_get_config_item("TRACE_TO_SYSLOG", CONFIG_EMPTY);
+  trace_verbose = db_get_config_item("TRACE_VERBOSE", CONFIG_EMPTY);
 
   if (!port || !bindip)
     trace(TRACE_FATAL, "IMAPD: port and/or ip not specified in configuration file!\r\n");
@@ -51,6 +57,30 @@ int main()
   else
     d = 0;
 
+  if (debug_level)
+    {
+      new_level = atoi(debug_level);
+      free(debug_level);
+      debug_level = NULL;
+    }
+
+  if (trace_syslog)
+    {
+      new_trace_syslog = atoi(trace_syslog);
+      free(trace_syslog);
+      trace_syslog = NULL;
+    }
+
+  if (trace_verbose)
+    {
+      new_trace_verbose = atoi(trace_verbose);
+      free(trace_verbose);
+      trace_verbose = NULL;
+    }
+
+  configure_debug(new_level, new_trace_syslog, new_trace_verbose);
+
+  
   /* open socket */
   sock = SS_MakeServerSock(bindip, port);
 

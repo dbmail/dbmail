@@ -7,6 +7,23 @@
 
 #define err_out_stream stderr
 
+/* the debug variables */
+int TRACE_TO_SYSLOG = 1; /* default: yes */
+int TRACE_VERBOSE = 0;   /* default: no */
+
+int TRACE_LEVEL = 2;     /* default: normal operations */
+ 
+/*
+ * configure the debug settings
+ */
+void configure_debug(int level, int trace_syslog, int trace_verbose)
+{
+  TRACE_LEVEL = level;
+  TRACE_TO_SYSLOG = trace_syslog;
+  TRACE_VERBOSE = trace_verbose;
+}
+
+
 void func_memtst (char filename[255],int line,int tst)
 {
   if (tst) 
