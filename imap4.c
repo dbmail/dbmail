@@ -302,6 +302,7 @@ int IMAPClientHandler(ClientInfo * ci)
 				/* some error occurred during the read of extra command info */
 				trace(TRACE_ERROR, "IMAPClientHandler(): error reading extra command info");
 				ci_cleanup(session->ci);
+				dbmail_imap_session_delete(session);
 				return -1;
 			}
 		}
@@ -309,6 +310,7 @@ int IMAPClientHandler(ClientInfo * ci)
 		if (!args) {
 			if (ci_write(session->ci->tx, "%s BAD invalid argument specified\r\n",session->tag)) {
 				ci_cleanup(session->ci);
+				dbmail_imap_session_delete(session);
 				return EOF;
 			}
 				
@@ -323,16 +325,10 @@ int IMAPClientHandler(ClientInfo * ci)
 			/* unknown command */
 			if (ci_write(session->ci->tx, "%s BAD command not recognized\r\n",session->tag)) {
 				ci_cleanup(session->ci);
+				dbmail_imap_session_delete(session);
 				return EOF;
 			}
 			nfaultyresponses++;
-
-			/* free used memory */
-			for (i = 0; session->args[i]; i++) {
-				my_free(session->args[i]);
-				session->args[i] = NULL;
-			}
-
 			continue;
 		}
 
@@ -382,22 +378,17 @@ int IMAPClientHandler(ClientInfo * ci)
 
 				result = db_getmailbox(&newmailbox);
 				if (result == -1) {
-					if (ci_write(session->ci->tx, "* BYE internal dbase error\r\n")) {
-						ci_cleanup(session->ci);
-						return EOF;
-					}
 					trace(TRACE_ERROR, "IMAPClientHandler(): could not get mailbox info\n");
+					ci_write(session->ci->tx, "* BYE internal dbase error\r\n");
 					ci_cleanup(session->ci);
-					for (i = 0; session->args[i]; i++) {
-						my_free(session->args[i]);
-						session->args[i] = NULL;
-					}
+					dbmail_imap_session_delete(session);
 					return -1;
 				}
 
 				if (newmailbox.exists != ud->mailbox.exists) {
 					if(ci_write(session->ci->tx, "* %u EXISTS\r\n", newmailbox.exists)) {
 						ci_cleanup(session->ci);
+						dbmail_imap_session_delete(session);
 						return EOF;
 					}
 					trace(TRACE_INFO, "IMAPClientHandler(): ok update sent\r\n");
@@ -406,6 +397,7 @@ int IMAPClientHandler(ClientInfo * ci)
 				if (newmailbox.recent != ud->mailbox.recent)
 					if(ci_write(session->ci->tx, "* %u RECENT\r\n", newmailbox.recent)) {
 						ci_cleanup(session->ci);
+						dbmail_imap_session_delete(session);
 						return EOF;
 					}
 
@@ -416,23 +408,18 @@ int IMAPClientHandler(ClientInfo * ci)
 		if (this_was_noop) {
 			if(ci_write(session->ci->tx, "%s OK NOOP completed\r\n", session->tag)) {
 				ci_cleanup(session->ci);
+				dbmail_imap_session_delete(session);
 				return EOF; 
 			}
 			trace(TRACE_DEBUG, "%s,%s: tag = %s", __FILE__, __func__, session->tag);
-		}
-		for (i = 0; session->args[i]; i++) {
-			my_free(session->args[i]);
-			session->args[i] = NULL;
 		}
 
 	} while (!done);
 
 	/* cleanup */
-	if (ci_write(session->ci->tx, "%s OK completed\r\n", session->tag)) {
-		ci_cleanup(session->ci);
-		return EOF;
-	}
+	ci_write(session->ci->tx, "%s OK completed\r\n", session->tag);
 	ci_cleanup(session->ci);
+	dbmail_imap_session_delete(session);
 	trace(TRACE_MESSAGE, "IMAPClientHandler(): Closing connection for client from IP [%s]\n", session->ci->ip);
 
 	__debug_dumpallocs();

@@ -322,13 +322,13 @@ static GList * _imap_get_envelope(struct list *rfcheader)
 	if (mr && strlen(mr->value) > 0) 
 		list = g_list_append(list, dbmail_imap_astring_as_string(mr->value));
 	else
-		list = g_list_append(list, "NIL");
+		list = g_list_append(list, g_strdup("NIL"));
 
 	mime_findfield("subject", rfcheader, &mr);
 	if (mr && strlen(mr->value) > 0)
 		list = g_list_append(list, dbmail_imap_astring_as_string(mr->value));
 	else
-		list = g_list_append(list, "NIL");
+		list = g_list_append(list, g_strdup("NIL"));
 
 	/* now from, sender, reply-to, to, cc, bcc, in-reply-to fields;
 	 * note that multiple mailaddresses are separated by ','
@@ -343,28 +343,28 @@ static GList * _imap_get_envelope(struct list *rfcheader)
 			if (mr && strlen(mr->value) > 0) {
 				list = g_list_append(list, dbmail_imap_plist_as_string(_imap_get_addresses(mr)));
 			} else
-				list = g_list_append(list, "((NIL NIL \"nobody\" \"nowhere.nirgendwo\"))");
+				list = g_list_append(list, g_strdup("((NIL NIL \"nobody\" \"nowhere.nirgendwo\"))"));
 		} else if (strcasecmp(envelope_items[idx], "sender") == 0) {
 			mime_findfield("from", rfcheader, &mr);
 			if (mr && strlen(mr->value) > 0) {
 				list = g_list_append(list, dbmail_imap_plist_as_string(_imap_get_addresses(mr)));
 			} else
-				list = g_list_append(list, "((NIL NIL \"nobody\" \"nowhere.nirgendwo\"))");
+				list = g_list_append(list, g_strdup("((NIL NIL \"nobody\" \"nowhere.nirgendwo\"))"));
 		} else
-			list = g_list_append(list,"NIL");
+			list = g_list_append(list,g_strdup("NIL"));
 	}
 
 	mime_findfield("in-reply-to", rfcheader, &mr);
 	if (mr && strlen(mr->value) > 0) {
 		list = g_list_append(list, dbmail_imap_astring_as_string(mr->value));
 	} else
-		list = g_list_append(list, "NIL");
+		list = g_list_append(list, g_strdup("NIL"));
 
 	mime_findfield("message-id", rfcheader, &mr);
 	if (mr && strlen(mr->value) > 0)
 		list = g_list_append(list, dbmail_imap_astring_as_string(mr->value));
 	else
-		list = g_list_append(list, "NIL");
+		list = g_list_append(list, g_strdup("NIL"));
 	g_string_free(tmp,1);
 	return list;
 }
@@ -1190,6 +1190,8 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 			dbmail_imap_session_printf(self, "\r\n* BYE error fetching body structure\r\n");
 			return -1;
 		}
+		g_list_foreach(tlist,(GFunc)g_free,NULL);
+		g_list_free(tlist);
 	}
 
 	if (self->fi.getMIME_IMB_noextension) {
@@ -1204,6 +1206,8 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 			dbmail_imap_session_printf(self, "\r\n* BYE error fetching body\r\n");
 			return -1;
 		}
+		g_list_foreach(tlist,(GFunc)g_free,NULL);
+		g_list_free(tlist);
 	}
 
 	if (self->fi.getEnvelope) {
@@ -1219,6 +1223,8 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 			dbmail_imap_session_printf(self, "\r\n* BYE error fetching envelope structure\r\n");
 			return -1;
 		}
+		g_list_foreach(tlist,(GFunc)g_free,NULL);
+		g_list_free(tlist);
 	}
 
 	if (self->fi.getRFC822 || self->fi.getRFC822Peek) {
@@ -1725,12 +1731,7 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 		dbmail_imap_session_printf(self, ")");
 	}
 	dbmail_imap_session_printf(self, ")\r\n");
-
 	g_string_free(tmp,TRUE);
-	g_list_foreach(tlist, (GFunc)g_free, NULL);
-	g_list_free(tlist);
-	tlist = NULL;
-
 	return 0;
 }
 
@@ -1801,7 +1802,8 @@ struct ImapSession * dbmail_imap_session_new(void)
 	self->use_uid = 0;
 	self->msg_idnr = 0;
 
-	self->ci = (ClientInfo *)my_malloc(sizeof(ClientInfo));
+	// don't mess with globals
+	// self->ci = (ClientInfo *)my_malloc(sizeof(ClientInfo));
 	self->tag = (char *)my_malloc(sizeof(char));
 	self->command = (char *)my_malloc(sizeof(char));
 	self->args = (char **)my_malloc(sizeof(char **));
@@ -1812,9 +1814,8 @@ struct ImapSession * dbmail_imap_session_new(void)
 	memset(&fi,0,sizeof(fetch_items_t));
 	dbmail_imap_session_setFi(self,fi);
    
-	msginfo = (msginfo_t *)my_malloc(sizeof(msginfo_t));
-	memset(msginfo,0,sizeof(msginfo));
-	dbmail_imap_session_setMsginfo(self,msginfo);
+	self->msginfo = (msginfo_t *)my_malloc(sizeof(msginfo_t));
+	memset(self->msginfo,0,sizeof(self->msginfo));
 	
 	return self;
 }
@@ -1842,11 +1843,13 @@ struct ImapSession * dbmail_imap_session_resetFi(struct ImapSession * self)
      
 struct ImapSession * dbmail_imap_session_setClientInfo(struct ImapSession * self, ClientInfo *ci)
 {
+	//my_free(self->ci);
 	self->ci = ci;
 	return self;
 }
 struct ImapSession * dbmail_imap_session_setTag(struct ImapSession * self, char * tag)
 {
+	my_free(self->tag);
 	GString *s = g_string_new(tag);
 	self->tag = s->str;
 	g_string_free(s,FALSE);
@@ -1854,6 +1857,7 @@ struct ImapSession * dbmail_imap_session_setTag(struct ImapSession * self, char 
 }
 struct ImapSession * dbmail_imap_session_setCommand(struct ImapSession * self, char * command)
 {
+	my_free(self->command);
 	GString *s = g_string_new(command);
 	self->command = s->str;
 	g_string_free(s,FALSE);
@@ -1861,6 +1865,12 @@ struct ImapSession * dbmail_imap_session_setCommand(struct ImapSession * self, c
 }
 struct ImapSession * dbmail_imap_session_setArgs(struct ImapSession * self, char ** args)
 {
+	int i;
+	for (i = 0; self->args[i]; i++) {
+		my_free(self->args[i]);
+		self->args[i] = NULL;
+	}
+	my_free(self->args);
 	self->args = args;
 	return self;
 }
@@ -1871,6 +1881,7 @@ struct ImapSession * dbmail_imap_session_setFi(struct ImapSession * self, fetch_
 }
 struct ImapSession * dbmail_imap_session_setMsginfo(struct ImapSession * self, msginfo_t * msginfo)
 {
+	my_free(self->msginfo);
 	self->msginfo = msginfo;
 	return self;
 }
@@ -1879,6 +1890,16 @@ struct ImapSession * dbmail_imap_session_setMsginfo(struct ImapSession * self, m
 
 void dbmail_imap_session_delete(struct ImapSession * self)
 {
+	int i;
+	//my_free(self->ci);
+	my_free(self->tag);
+	my_free(self->command);
+	for (i = 0; self->args[i]; i++) {
+		my_free(self->args[i]);
+		self->args[i] = NULL;
+	}
+	my_free(self->args);
+	my_free(self->msginfo);
 	my_free(self);
 }
 
