@@ -1,6 +1,6 @@
-# Makefile.in generated automatically by automake 1.4-p5 from Makefile.am
+# Makefile.in generated automatically by automake 1.4-p4 from Makefile.am
 
-# Copyright (C) 1994, 1995-8, 1999, 2001 Free Software Foundation, Inc.
+# Copyright (C) 1994, 1995-8, 1999 Free Software Foundation, Inc.
 # This Makefile.in is free software; the Free Software Foundation
 # gives unlimited permission to copy and/or distribute it,
 # with or without modifications, as long as this notice is preserved.
@@ -68,9 +68,9 @@ SQLALIB = @SQLALIB@
 SQLLIB = @SQLLIB@
 VERSION = @VERSION@
 
-@PGSQL_TRUE@AM_CFLAGS = @PGSQL_TRUE@-I @PGSQLINC@
-@PGSQL_TRUE@lib_LIBRARIES = @PGSQL_TRUE@libpgsqldbmail.a
-@PGSQL_TRUE@libpgsqldbmail_a_SOURCES = @PGSQL_TRUE@dbauthpgsql.c dbpgsql.c dbmsgbufpgsql.c dbsearchpgsql.c
+@PGSQL_TRUE@AM_CFLAGS = -I @PGSQLINC@
+@PGSQL_TRUE@lib_LIBRARIES = libpgsqldbmail.a
+@PGSQL_TRUE@libpgsqldbmail_a_SOURCES = dbauthpgsql.c dbpgsql.c dbmsgbufpgsql.c dbsearchpgsql.c
 mkinstalldirs = $(SHELL) $(top_srcdir)/buildtools/mkinstalldirs
 CONFIG_CLEAN_FILES = 
 LIBRARIES =  $(lib_LIBRARIES)
@@ -93,7 +93,7 @@ DIST_COMMON =  Makefile.am Makefile.in
 
 DISTFILES = $(DIST_COMMON) $(SOURCES) $(HEADERS) $(TEXINFOS) $(EXTRA_DIST)
 
-TAR = gtar
+TAR = tar
 GZIP_ENV = --best
 DEP_FILES =  .deps/dbauthpgsql.P .deps/dbmsgbufpgsql.P .deps/dbpgsql.P \
 .deps/dbsearchpgsql.P
