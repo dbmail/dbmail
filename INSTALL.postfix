@@ -87,11 +87,45 @@ Date:   19-03-2004
 
 	And your mail will be delivered!
 
-4.	Notes
+4.	Postfix can also interface directly with MySQL or PostgreSQL to check for
+	aliases before sending mail to dbmail (pipe or LMTP). This can improve
+	performance, especially on a high-traffic server (SPAM!). In the case of the
+	use of dbmail-smtp, this is especially useful, because it saves a 
+	process starting up and connecting to the database on every message.
+
+	To use MySQL or PostgreSQL with Postfix, first install the postfix-mysql
+	or postfix-pgsql packages (they're in Debian, probably also in other
+	distros). 
+
+	Create a file in your Postfix config directory (/etc/postfix), with
+	the name sql-recipients.cf, and put the following in it:
+
+	user = <username>
+	password = <password>
+	host = <dbhost>
+	dbname = <dbname>
+	table = aliases
+	select_field = alias
+	where_field = alias
+
+	Where you replace <username>, <password>, <dbhost> and <dbname> by the
+	database username, password, host and name of the dbmail database.
+
+	Now we need to tell Postfix to use this file. Add the following line
+	in main.cf:
+
+	local_recipient_maps = mysql:/etc/postfix/sql-recipients.cf
+
+	This tells Postfix to use the database to check if a recipient is 
+	present in the database. Postfix will send a bounce if a recipient
+	is not present.
+
+5.	Notes
 	
 	It's possible to use dbmail-lmtp on same domains, and dbmail-smtp on
 	other domains. Just make both entries in /etc/postfix/master.cf and
 	add transport entries for both.
+
 
 
 	
