@@ -291,4 +291,29 @@ size_t dbmail_message_get_rfcsize(struct DbmailMessage *self)
 	return self->rfcsize;
 }
 
+int split_message(const char *whole_message, 
+		  u64_t whole_message_size,
+		  char **header, u64_t *header_size,
+		  const char **body, u64_t *body_size,
+		  u64_t *rfcsize)
+{
+	GString *tmp = g_string_new(whole_message);
+	struct DbmailMessage *_msg = dbmail_message_new();
+	_msg = dbmail_message_init(_msg, tmp);
+	
+	*header = dbmail_message_get_headers_as_string(_msg);
+	*body = dbmail_message_get_body_as_string(_msg);
+	*rfcsize = (u64_t)dbmail_message_get_rfcsize(_msg);
+	
+	tmp = g_string_new(*header);
+	*header_size = (u64_t)tmp->len;
+	
+	tmp = g_string_new(*body);
+	*body_size = (u64_t)tmp->len;
+	
+	g_string_free(tmp,1);
+	dbmail_message_destroy(_msg);
+
+	return 0;
+}
 

@@ -31,7 +31,6 @@
 #include "pipe.h"
 #include "list.h"
 #include "auth.h"
-#include "header.h"
 #include "dsn.h"
 #include <string.h>
 #include <stdlib.h>

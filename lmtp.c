@@ -28,7 +28,7 @@
 #include "dbmail.h"
 #include "lmtp.h"
 #include "pipe.h"
-#include "header.h"
+#include "dbmail-message.h"
 #include "db.h"
 #include "dsn.h"
 #include "debug.h"

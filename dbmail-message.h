@@ -60,4 +60,22 @@ char * dbmail_message_get_body_as_string(struct DbmailMessage *self);
 size_t dbmail_message_get_rfcsize(struct DbmailMessage *self);
 void dbmail_message_destroy(struct DbmailMessage *self);
 
+/**
+ * split the whole message into header and body
+ * \param[in] whole_message the whole message, including header
+ * \param[in] whole_message_size size of whole_message.
+ * \param[out] header will hold header 
+ * \param[out] header_size size of header
+ * \param[out] header_rfcsize rfc size of header
+ * \param[out] body will hold body
+ * \param[out] body_size size of body
+ * \param[out] body_rfcsize rfc size of body
+ */
+int split_message(const char *whole_message, 
+		  u64_t whole_message_size,
+		  char **header, u64_t *header_size,
+		  const char **body, u64_t *body_size,
+		  u64_t *body_rfcsize);
+
+
 #endif

@@ -229,8 +229,6 @@ int IMAPClientHandler(ClientInfo * ci)
 			cpy--;
 		}
 
-//      clarify_data(line);
-
 		trace(COMMAND_SHOW_LEVEL, "COMMAND: [%s]\n", line);
 
 		if (!(*line)) {
@@ -288,8 +286,6 @@ int IMAPClientHandler(ClientInfo * ci)
 		if (i < strlen(command))
 			command[i]='\0';
 		dbmail_imap_session_setCommand(session,command);
-		
-		trace(TRACE_DEBUG,"%s,%s: COMMAND [%s]", __FILE__, __func__, session->command);
 		
 		if (i == strlen(cpy)) {
 			/* no arguments present */
