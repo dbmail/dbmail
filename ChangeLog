@@ -1,3 +1,9 @@
+2004-02-24  Ilja Booij  <ilja@ic-s.nl>
+
+	* pipe.c (store_message_temp): change made by Chingson Chen 
+	<chingson@msquaretech.com> to also accept messages larger than 512 kB.
+	patch was altered slightly by Ilja to make it really work :)
+
 2004-02-02  Ilja Booij  <ilja@ic-s.nl>
 
 	* db.c (db_getmailboxname): fixed bugs with strncpy's, which resulted

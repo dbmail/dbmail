@@ -579,12 +579,13 @@ static int store_message_temp(FILE *instream, char *header, u64_t headersize, u6
   memtst ((strblock = (char *)my_malloc(READ_BLOCK_SIZE+1))==NULL);
   memtst ((tmpline= (char *)my_malloc(MAX_LINE_SIZE+1))==NULL);
   
-  while (!feof(instream) && !myeof)
+  while ((!feof(instream) && (!myeof)) || (linemem != 0))
     {
       /* Copy the line that didn't fit before */
       if (linemem > 0)
         {
           strncpy(strblock, tmpline, linemem);
+	  usedmem += linemem;
 
           /* Resetting strlen for tmpline */
           tmpline[0] = '\0';
@@ -593,7 +594,7 @@ static int store_message_temp(FILE *instream, char *header, u64_t headersize, u6
 
       /* We want to fill up each block if possible,
        * unless of course we're at the end of the file */
-      while (!feof(instream) && usedmem < READ_BLOCK_SIZE)
+      while (!feof(instream) && (usedmem + linemem < READ_BLOCK_SIZE))
         {
           fgets(tmpline, MAX_LINE_SIZE, instream);
           linemem = strlen(tmpline);
@@ -612,6 +613,9 @@ static int store_message_temp(FILE *instream, char *header, u64_t headersize, u6
             {
               /* This is the end of the message! */
               myeof = 1;
+	      /* make sure that the function stops by setting linemem to zero
+	       */
+	      linemem = 0;
               break;
             }
           else
@@ -626,6 +630,7 @@ static int store_message_temp(FILE *instream, char *header, u64_t headersize, u6
                   tmpline[0] = '\0';
                   linemem = 0;
                 }
+
               /* Don't need an else, see above this while loop for more */
             }
         }
