@@ -163,7 +163,7 @@ int insert_messages(char *firstblock, unsigned long headersize)
 	/* reading rest of the pipe and creating messageblocks 
 	 * we need to create a messageblk for each messageid */
 
-	trace (TRACE_DEBUG,"insert_messages(): allocating [%d] memory for readblock",READ_BLOCK_SIZE);
+	trace (TRACE_DEBUG,"insert_messages(): allocating [%d]bytes of memory for readblock",READ_BLOCK_SIZE);
 
 	memtst ((strblock = (char *)malloc(READ_BLOCK_SIZE))==NULL);
 	
