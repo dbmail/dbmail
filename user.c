@@ -1,6 +1,5 @@
 /* $Id$
  * (c) 2000-2002 IC&S, The Netherlands
- * eelco is cool
  * This is the dbmail-user program
  * It makes adding users easier */
 
