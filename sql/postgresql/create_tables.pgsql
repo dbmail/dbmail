@@ -47,7 +47,6 @@ CREATE TABLE messages (
    message_idnr INT8 DEFAULT nextval('message_idnr_seq'),
    mailbox_idnr INT8 DEFAULT '0' NOT NULL,
    messagesize INT8 DEFAULT '0' NOT NULL,
-   rfcsize INT8 DEFAULT '0' NOT NULL,
    seen_flag INT2 DEFAULT '0' NOT NULL,
    answered_flag INT2 DEFAULT '0' NOT NULL,
    deleted_flag INT2 DEFAULT '0' NOT NULL,
@@ -57,6 +56,7 @@ CREATE TABLE messages (
    unique_id varchar(70) NOT NULL,
    internal_date DATETIME,
    status INT2 DEFAULT '000' NOT NULL,
+   rfcsize INT8 DEFAULT '0' NOT NULL,
    PRIMARY KEY (message_idnr)
 );
 
