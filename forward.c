@@ -189,7 +189,7 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
 				{
 					if (!ferror(*((FILE **)(descriptor_temp->data))))
 					{
-						fprintf (*((FILE **)(descriptor_temp->data)),"\n.\n");
+						/* fprintf (*((FILE **)(descriptor_temp->data)),"\n.\n"); */
 						pclose (*((FILE **)(descriptor_temp->data)));
 						trace (TRACE_DEBUG, "pipe_forward(): descriptor_closed");
 					}
