@@ -124,6 +124,8 @@ CREATE INDEX dbmail_messages_unique_id_idx ON dbmail_messages(unique_id);
 CREATE INDEX dbmail_messages_status_idx ON dbmail_messages(status);
 CREATE INDEX dbmail_messages_status_notdeleted_idx 
 	ON dbmail_messages(status) WHERE status < '2';
+CREATE INDEX dbmail_messages_mailbox_status ON dbmail_messages(mailbox_idnr,status);
+ 
 
 CREATE SEQUENCE dbmail_messageblk_idnr_seq;
 CREATE TABLE dbmail_messageblks (

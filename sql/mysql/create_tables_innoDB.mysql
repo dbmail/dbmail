@@ -138,6 +138,7 @@ CREATE TABLE dbmail_messages (
 	INDEX seen_flag_index (seen_flag),
 	INDEX unique_id_index (unique_id),
 	INDEX status_index (status),
+	INDEX mailbox_status (mailbox_idnr, status),
 	FOREIGN KEY physmessage_id_fk (physmessage_id) 
 		REFERENCES dbmail_physmessage (id) ON DELETE CASCADE,
 	FOREIGN KEY mailbox_idnr_fk (mailbox_idnr) 

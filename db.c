@@ -2323,58 +2323,61 @@ int db_getmailbox(mailbox_t * mb)
 
 	db_free_result();
 
-	/* select messages */
+	/* count messages */
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT message_idnr, seen_flag, recent_flag "
+		 "SELECT COUNT(message_idnr), COUNT(message_idnr) - SUM(seen_flag), SUM(recent_flag) "
 		 "FROM %smessages WHERE mailbox_idnr = '%llu' "
-		 "AND status < '%d' "
-		 "ORDER BY message_idnr ASC",DBPFX, mb->uid, MESSAGE_STATUS_DELETE);
+		 "AND status < '%d' ",
+		 DBPFX, mb->uid, MESSAGE_STATUS_DELETE);
 
 	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: could not retrieve messages",
-		      __FILE__, __func__);
+		trace(TRACE_ERROR, "%s,%s: query error", __FILE__, __func__);
 		return -1;
 	}
 
-	mb->exists = db_num_rows();
-
-	/* alloc mem */
-	mb->seq_list = (u64_t *) my_malloc(sizeof(u64_t) * mb->exists);
-	if (!mb->seq_list) {
-		/* out of mem */
-		db_free_result();
-		return -1;
-	}
-
-	for (i = 0; i < db_num_rows(); i++) {
-		if (db_get_result(i, 1)[0] == '0')
-			mb->unseen++;
-		if (db_get_result(i, 2)[0] == '1')
-			mb->recent++;
-
-		mb->seq_list[i] = db_get_result_u64(i, 0);
-	}
-
+	mb->exists = (unsigned)db_get_result_int(0,0);
+	mb->unseen = (unsigned)db_get_result_int(0,1);
+	mb->recent = (unsigned)db_get_result_int(0,2);
 	db_free_result();
+	
+	if(mb->exists) {
+		/* get  messages */
+		snprintf(query, DEF_QUERYSIZE,
+			 "SELECT message_idnr FROM %smessages WHERE mailbox_idnr = '%llu' "
+			 "AND status < '%d' ORDER BY message_idnr ASC",
+			 DBPFX, mb->uid, MESSAGE_STATUS_DELETE);
+		
+		if (db_query(query) == -1) {
+			trace(TRACE_ERROR, "%s,%s: query error [%s]", __FILE__, __func__, query);
+			return -1;
+		}
+		
+		if (! (mb->seq_list = (u64_t *) my_malloc(sizeof(u64_t) * mb->exists))) {
+			db_free_result();
+			return -1;
+		}
+		
+		for (i = 0; i < db_num_rows(); i++) 
+			mb->seq_list[i] = db_get_result_u64(i, 0);
+
+		db_free_result();
+	}
 
 	/* now determine the next message UID 
 	 * NOTE expunged messages are selected as well in order to be 
 	 * able to restore them 
 	 */
-	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT MAX(message_idnr) FROM %smessages",DBPFX);
+	snprintf(query, DEF_QUERYSIZE, "SELECT MAX(message_idnr)+1 FROM %smessages",DBPFX);
 
 	if (db_query(query) == -1) {
-		trace(TRACE_ERROR,
-		      "%s,%s: could not determine highest message ID",
-		      __FILE__, __func__);
-		my_free(mb->seq_list);
-		mb->seq_list = NULL;
+		trace(TRACE_ERROR, "%s,%s: query error [%s]", __FILE__, __func__, query);
+		if(mb->seq_list) {
+			my_free(mb->seq_list);
+			mb->seq_list = NULL;
+		}
 		return -1;
 	}
-
-	highest_id = db_get_result_u64(0, 0);
-	mb->msguidnext = highest_id + 1;
+	mb->msguidnext = db_get_result_u64(0, 0);
 	db_free_result();
 
 	return 0;

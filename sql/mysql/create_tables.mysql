@@ -111,7 +111,8 @@ CREATE TABLE dbmail_messages (
    INDEX physmessage_id_index (physmessage_id),
    INDEX seen_flag_index (seen_flag),
    INDEX unique_id_index (unique_id),
-   INDEX status_index (status)
+   INDEX status_index (status),
+   INDEX mailbox_status (mailbox_idnr, status)
 );
 
 DROP TABLE IF EXISTS dbmail_messageblks;
