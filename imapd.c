@@ -19,7 +19,7 @@
 int main()
 {
   int sock;
-  char *newuser,*newgroup,*port,*bindip;
+  char *newuser,*newgroup,*port,*bindip,*defchld,*maxchld;
 
   /* open logs */
   openlog(PNAME, LOG_PID, LOG_MAIL);
@@ -29,11 +29,17 @@ int main()
     trace(TRACE_FATAL, "IMAPD: cannot connect to dbase\n");
 
   /* read options from config */
-  port = db_get_config_item("IMAPD_BIND_PORT",CONFIG_MANDATORY);
+  port   = db_get_config_item("IMAPD_BIND_PORT",CONFIG_MANDATORY);
   bindip = db_get_config_item("IMAPD_BIND_IP",CONFIG_MANDATORY);
+  defchld = db_get_config_item("IMAPD_DEFAULT_CHILD",CONFIG_MANDATORY);
+  maxchld = db_get_config_item("IMAPD_MAX_CHILD",CONFIG_MANDATORY);
 
   if (!port || !bindip)
-    trace(TRACE_FATAL, "IMAPD: port and ip not specified in configuration file!\r\n");
+    trace(TRACE_FATAL, "IMAPD: port and/or ip not specified in configuration file!\r\n");
+
+  if (!defchld || !maxchld)
+    trace(TRACE_FATAL, "IMAPD: default/maximum number of children not "
+	  "specified in configuration file!\r\n");
 
   /* open socket */
   sock = SS_MakeServerSock(bindip, port);
@@ -74,13 +80,18 @@ int main()
 
   /* get started */
   trace(TRACE_MESSAGE, "IMAPD: server ready to run\n");
-  if (SS_WaitAndProcess(sock, imap_process, imap_login) == -1)
+  if (SS_WaitAndProcess(sock, atoi(defchld), atoi(maxchld), imap_process, imap_login) == -1)
     {
       trace(TRACE_FATAL,"IMAPD: Fatal error while processing clients: %s\n",SS_GetErrorMsg());
       return 1;
     }
 
   SS_CloseServer(sock);
+
+  free(defchld);
+  free(maxchld);
+  defchld = NULL;
+  maxchld = NULL;
 
   return 0; 
 }

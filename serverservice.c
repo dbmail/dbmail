@@ -28,14 +28,17 @@
 #define LOG_USERS 0
 
 #define SS_ERROR_MSG_LEN 100
-char ss_error_msg[SS_ERROR_MSG_LEN];
+char  ss_error_msg[SS_ERROR_MSG_LEN];
+int   ss_nchildren=0;
+pid_t ss_server_pid=0;
 
 char *SS_GetErrorMsg()
 {
   return ss_error_msg;
 }
 
-void SS_sighandler(int sig);
+void SS_sighandler(int sig, siginfo_t *info, void *data);
+
 
 int SS_MakeServerSock(const char *ipaddr, const char *port)
 {
@@ -111,20 +114,20 @@ int SS_MakeServerSock(const char *ipaddr, const char *port)
  * process the requests.
  *
  */
-int SS_WaitAndProcess(int sock, int (*ClientHandler)(ClientInfo*), int (*Login)(ClientInfo*))
+int SS_WaitAndProcess(int sock, int default_children, int max_children,
+		      int (*ClientHandler)(ClientInfo*), int (*Login)(ClientInfo*))
 {
   struct sockaddr_in saClient;
-  int csock,len,nclients=0;
+  int csock,len,i;
   ClientInfo client;
   struct sigaction act;
-  /* pid_t PID; */
 
   /* init & install signal handlers */
   memset(&act, 0, sizeof(act));
 
-  act.sa_handler = SS_sighandler;
+  act.sa_sigaction = SS_sighandler;
   sigemptyset(&act.sa_mask);
-  act.sa_flags = 0;
+  act.sa_flags = SA_SIGINFO;
 
   sigaction(SIGCHLD, &act, 0);
   sigaction(SIGPIPE, &act, 0);
@@ -137,23 +140,141 @@ int SS_WaitAndProcess(int sock, int (*ClientHandler)(ClientInfo*), int (*Login)(
   sigaction(SIGTERM, &act, 0);
   sigaction(SIGSTOP, &act, 0);
 
-  /* start server loop */
-  for (;;)
+  /* daemonize */
+/*  if (fork())
+    exit(0);
+  setsid();
+
+  if (fork())
+    exit(0);
+*/
+  /* this process will be the server, remember pid */
+  ss_server_pid = getpid();
+
+  /* fork into default number of children */
+  for (i=0; i<default_children; i++)
     {
-      if (nclients < SS_MAX_CLIENTS)
+      if (!fork())
+	break;
+      else
+	ss_nchildren++;
+    }
+
+
+  /* now split program into client part and server part */
+  if (getpid() != ss_server_pid)
+    {
+      /* this is a client process */
+
+      for (;;)
 	{
+	  /* wait for connect */
+	  len = sizeof(saClient);
+	  csock = accept(sock, (struct sockaddr*)&saClient, &len);
+
+	  if (csock == -1)
+	    continue;    /* accept failed, refuse connection & continue */
+
+	  /* zero-init */
+	  memset(&client, 0, sizeof(client));
+
+	  /* make streams */
+	  client.fd = csock;
+	  client.rx = fdopen(csock, "r");
+
+	  if (!client.rx)
+	    {
+	      /* read-FILE opening failure */
+	      close(csock); 
+	      continue;
+	    }
+
+	  client.tx = fdopen(dup(csock), "w");
+	  if (!client.tx)
+	    {
+	      /* write-FILE opening failure */
+	      fclose(client.rx);
+	      close(csock); 
+	      continue;
+	    }
+
+	  setlinebuf(client.rx);
+	  setlinebuf(client.tx);
+
+#if LOG_USERS > 0
+	  trace(TRACE_MESSAGE,"** Server: client @ socket %d (IP: %s) accepted\n",
+		csock, inet_ntoa(saClient.sin_addr));
+#endif
+
+	  if ((*Login)(&client) == SS_LOGIN_OK)
+	    {
+	      client.loginStatus = SS_LOGIN_OK; /* xtra, should have been set by Login() */
+	    }
+	  else
+	    {
+	      /* login failure */
+	      fclose(client.rx);
+	      fclose(client.tx);
+	      close(csock);
+	  
+#if LOG_USERS > 0
+	      trace(TRACE_MESSAGE,"** Server: client @ socket %d (IP: %s) login refused, "
+		    "connection closed\n",
+		    csock, inet_ntoa(saClient.sin_addr));
+#endif
+	      continue;
+	    }
+
+	  /* remember client IP-address */
+	  strncpy(client.ip, inet_ntoa(saClient.sin_addr), SS_IPNUM_LEN);
+	  client.ip[SS_IPNUM_LEN - 1] = '\0';
+
+	  /* handle client */
+	  (*ClientHandler)(&client); 
+
+#if LOG_USERS > 0
+	  fprintf(stderr,"** Server: client @ socket %d (IP: %s) logged out, connection closed\n",
+		  csock, client.ip);
+#endif
+
+	  fflush(client.tx);
+	  fclose(client.tx);
+	  shutdown(fileno(client.rx),SHUT_RDWR);
+	  fclose(client.rx);
+
+	} /* main client loop */
+    }
+  else
+    {
+      /* this is the server process */
+
+      for (;;)
+	{
+	  /* wait for a connect then fork if the maximum number of children
+	   * hasn't already been reached
+	   */
+
+	  while (ss_nchildren >= max_children)
+	    {
+	      /* maximum number of children has already been reached, wait for an exit */
+	      wait(NULL);
+	      ss_nchildren--;
+	    }
+
+	  /* wait for connect */
+	  len = sizeof(saClient);
+	  csock = accept(sock, (struct sockaddr*)&saClient, &len);
+
+	  if (csock == -1)
+	    continue;    /* accept failed, refuse connection & continue */
+
 	  if (!fork())
 	    {
-	      /* wait for connect */
-	      len = sizeof(saClient);
-	      csock = accept(sock, (struct sockaddr*)&saClient, &len);
-
-	      if (csock == -1)
-		{
-		  /* accept failed, refuse connection & continue */
-		  exit(1);
-		}
-      
+	      ss_nchildren++;
+	      continue;
+	    }
+	  else
+	    {
 	      /* zero-init */
 	      memset(&client, 0, sizeof(client));
 
@@ -165,7 +286,7 @@ int SS_WaitAndProcess(int sock, int (*ClientHandler)(ClientInfo*), int (*Login)(
 		{
 		  /* read-FILE opening failure */
 		  close(csock); 
-		  continue;
+		  exit(0);
 		}
 
 	      client.tx = fdopen(dup(csock), "w");
@@ -174,7 +295,7 @@ int SS_WaitAndProcess(int sock, int (*ClientHandler)(ClientInfo*), int (*Login)(
 		  /* write-FILE opening failure */
 		  fclose(client.rx);
 		  close(csock); 
-		  continue;
+		  exit(0);
 		}
 
 	      setlinebuf(client.rx);
@@ -201,7 +322,7 @@ int SS_WaitAndProcess(int sock, int (*ClientHandler)(ClientInfo*), int (*Login)(
 			"connection closed\n",
 			csock, inet_ntoa(saClient.sin_addr));
 #endif
-		  continue;
+		  exit(0);
 		}
 
 	      /* remember client IP-address */
@@ -221,17 +342,8 @@ int SS_WaitAndProcess(int sock, int (*ClientHandler)(ClientInfo*), int (*Login)(
 	      shutdown(fileno(client.rx),SHUT_RDWR);
 	      fclose(client.rx);
 
-	      exit(0); /* child process must exit */
+	      return 0; /* child must exit */
 	    }
-	  else
-	    {
-	      nclients++;
-	    }
-	}
-      else
-	{
-	  wait(NULL);
-	  nclients--;
 	}
     }
 
@@ -255,28 +367,18 @@ void SS_CloseServer(int sock)
  *
  * Handels SIGPIPE, SIGCHLD
  */
-void SS_sighandler(int sig)
+void SS_sighandler(int sig, siginfo_t *info, void *data)
 {
   pid_t PID;
   int status;
-  struct sigaction act;
 
   switch (sig)
     {
     case SIGCHLD:
       do 
 	{
-	  PID = waitpid(-1, &status, WNOHANG);
+	  PID = waitpid(info->si_pid, &status, WNOHANG);
 	} while (PID != -1);
-
-      /* init & install signal handler for SIGCHLD */
-      memset(&act, 0, sizeof(act));
-
-      act.sa_handler = SS_sighandler;
-      sigemptyset(&act.sa_mask);
-      act.sa_flags = 0;
-
-      sigaction(SIGCHLD, &act, 0);
 
       break;
 
