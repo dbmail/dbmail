@@ -3135,7 +3135,7 @@ int db_set_msgflag_range(u64_t msg_idnr_low, u64_t msg_idnr_high,
 	size_t placed = 0;
 	size_t left;
 
-	snprintf(query, DEF_QUERYSIZE, "UPDATE %smessages SET recent_flag=0 ",DBPFX);
+	snprintf(query, DEF_QUERYSIZE, "UPDATE %smessages SET recent_flag=0,",DBPFX);
 
 	for (i = 0; i < IMAP_NFLAGS; i++) {
 		left = DEF_QUERYSIZE - strlen(query);
