@@ -30,6 +30,7 @@
 #include "dbmailtypes.h"
 #include "debug.h"
 #include <regex.h>
+#include "dbmail.h"
 
 #define MAX_LINESIZE 1024
 #define UID_SIZE 70
@@ -48,6 +49,8 @@
 #define STR_SIZE 64
 
 const char *mbox_delimiter_pattern = "^From .*";
+
+char *configFile = DEFAULT_CONFIG_FILE;
 
 typedef struct 
 {

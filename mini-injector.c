@@ -23,6 +23,7 @@
 #include <time.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include "dbmail.h"
 
 #define MAX_LINESIZE 1024
 #define UID_SIZE 70
@@ -33,6 +34,8 @@
 char blk[READ_BLOCK_SIZE];
 
 unsigned process_header(char *hdrdata, u64_t *newlines);
+
+char *configFile = DEFAULT_CONFIG_FILE;
 
 
 int main(int argc, char *argv[])

@@ -15,9 +15,12 @@
 #include <ctype.h>
 #include "db.h"
 #include "auth.h"
+#include "dbmail.h"
 
 #define MAXLINESIZE 1024
 #define DEF_MAXMAILSIZE 1024
+
+char *configFile = DEFAULT_CONFIG_FILE;
 
 char line[MAXLINESIZE];
 int process_piece(char *left, char *right);
