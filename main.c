@@ -26,7 +26,7 @@ int mode;			/* how should we process */
 char *header = NULL;
 char *deliver_to_mailbox = NULL;
 char *trace_level = NULL, *trace_syslog = NULL, *trace_verbose = NULL;
-int new_level = 5, new_trace_syslog = 1, new_trace_verbose = 0;
+int new_level = 2, new_trace_syslog = 1, new_trace_verbose = 0;
 u64_t headersize;
 
 int main (int argc, char *argv[]) 

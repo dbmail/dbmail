@@ -207,7 +207,7 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
     }
 		
   /* set stream to line buffered mode 
-	* this way when we send a newline the buffer is flushed */
+   * this way when we send a newline the buffer is flushed */
   setlinebuf(rx);
   setlinebuf(tx); 
 
@@ -258,13 +258,12 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
       memset(buffer, 0, INCOMING_BUFFER_SIZE);
       for (cnt=0; cnt < INCOMING_BUFFER_SIZE-1; cnt++)
 	{
-	  fread(&buffer[cnt], 1, 1, rx);
-	  if (ferror(rx) && errno == EINTR)
+	  do
 	    {
-	      clearerr(rx); 
-	      continue;
-	    }
-	  
+	      clearerr(ci->rx);
+	      fread(&buf[cnt], 1, 1, rx);
+	    } while (ferror(rx) && errno == EINTR);
+
 	  if (buffer[cnt] == '\n' || feof(rx) || ferror(rx))
 	    {
 	      buffer[cnt+1] = '\0';
