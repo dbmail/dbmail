@@ -107,6 +107,8 @@ typedef struct {
 			/**< port number of database server */
 	field_t sock;
 		   /**< path to local unix socket (local connection) */
+	field_t pfx;
+			/**< prefix for tables e.g. dbmail_ */
 } db_param_t;
 
 /** configuration items */

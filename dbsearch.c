@@ -48,6 +48,10 @@ const char *month_desc[] = {
 	"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 };
 
+extern db_param_t _db_params;
+#define DBPFX _db_params.pfx
+
+
 /* for issuing queries to the backend */
 char query[DEF_QUERYSIZE];
 
@@ -112,25 +116,25 @@ int db_search(int *rset, int setlen, const char *key, mailbox_t * mb,
        /** \todo this next solution (pms.%s) is really dirty. If anything,
 	   the IMAP search algorithm is dirty, and should be fixed */
 		snprintf(query, DEF_QUERYSIZE,
-			 "SELECT msg.message_idnr FROM dbmail_messages msg, dbmail_physmessage pms "
+			 "SELECT msg.message_idnr FROM %smessages msg, %sphysmessage pms "
 			 "WHERE msg.mailbox_idnr = '%llu' "
 			 "AND msg.physmessage_id = pms.id "
 			 "AND msg.status < '%d' "
 			 "AND msg.unique_id <> '' "
-			 "AND pms.%s", mb->uid, MESSAGE_STATUS_DELETE, key);
+			 "AND pms.%s", DBPFX, DBPFX, mb->uid, MESSAGE_STATUS_DELETE, key);
    	} else if ( type == IST_SORT) {
         	snprintf(query, DEF_QUERYSIZE,
-                 	"SELECT msg.message_idnr FROM dbmail_messages msg, dbmail_physmessage pms "
+                 	"SELECT msg.message_idnr FROM %smessages msg, %sphysmessage pms "
                  	"WHERE msg.mailbox_idnr = '%llu' "
                  	"AND msg.physmessage_id = pms.id "
                  	"AND msg.status < 2 "
                  	"AND msg.unique_id <> '' "
-                 	"%s", mb->uid, key);
+                 	"%s", DBPFX, DBPFX, mb->uid, key);
 	} else {
 		snprintf(query, DEF_QUERYSIZE,
-			 "SELECT message_idnr FROM dbmail_messages "
+			 "SELECT message_idnr FROM %smessages "
 			 "WHERE mailbox_idnr = '%llu' "
-			 "AND status < '%d'  AND unique_id!='' AND %s", mb->uid,
+			 "AND status < '%d'  AND unique_id!='' AND %s", DBPFX, mb->uid,
 			 MESSAGE_STATUS_DELETE, key);
 	}
 	if (db_query(query) == -1) {
@@ -427,10 +431,10 @@ int db_search_range(db_pos_t start, db_pos_t end,
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT block.messageblk "
-		 "FROM dbmail_messageblks block, dbmail_messages msg "
+		 "FROM %smessageblks block, %smessages msg "
 		 "WHERE block.physmessage_id = msg.physmessage_id "
 		 "AND msg.message_idnr = '%llu' "
-		 "ORDER BY block.messageblk_idnr", 
+		 "ORDER BY block.messageblk_idnr", DBPFX, DBPFX, 
 		 msg_idnr);
 
 	if (db_query(query) == -1) {

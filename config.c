@@ -349,6 +349,9 @@ void GetDBParams(db_param_t * db_params)
 	if (GetConfigValue("sqlsocket", "DBMAIL", sock_string) < 0)
 		trace(TRACE_FATAL, "%s,%s: error getting config!",
 		      __FILE__, __func__);
+	if (GetConfigValue("table_prefix", "DBMAIL", db_params->pfx) < 0)
+		trace(TRACE_FATAL, "%s,%s: error getting config!",
+		      __FILE__, __func__);
 
 	/* check if port_string holds a value */
 	if (strlen(port_string) != 0) {

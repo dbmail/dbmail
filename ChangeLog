@@ -1,3 +1,9 @@
+2004-09-15  Paul Stevens <paul@nfg.nl>
+
+	* config.c, db.c, dbmail.conf, dbmail.h, dbmsgbuf.c, dbsearch.c,
+	mysql/dbmysql.c, pgsql/dbpgsql.c: adding dynamic table prefixes by
+	Leif Jackson.
+	
 2004-09-15  Ilja Booij  <ilja@ic-s.nl>
 
 	* db.c (db_set_deleted): removed db_free_result() call that shouldn't

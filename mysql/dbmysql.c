@@ -255,13 +255,13 @@ int db_do_cleanup(const char **tables, int num)
 	int result = 0;
 
 	for (i = 0; i < num; i++) {
-		snprintf(the_query, DEF_QUERYSIZE, "OPTIMIZE TABLE %s",
-			 tables[i]);
+		snprintf(the_query, DEF_QUERYSIZE, "OPTIMIZE TABLE %s%s",
+			 _db_params.pfx,tables[i]);
 
 		if (db_query(the_query) == -1) {
 			trace(TRACE_ERROR,
-			      "%s,%s: error optimizing table [%s]",
-			      __FILE__, __func__, tables[i]);
+			      "%s,%s: error optimizing table [%s%s]",
+			      __FILE__, __func__, _db_params.pfx,tables[i]);
 			result = -1;
 		}
 		db_free_result();

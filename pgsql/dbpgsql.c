@@ -148,7 +148,7 @@ u64_t db_insert_result(const char *sequence_identifier)
 	/* postgres uses the currval call on a sequence to determine
 	 * the result value of an insert query */
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT currval('dbmail_%s_seq')", sequence_identifier);
+		 "SELECT currval('%s%s_seq')",_db_params.pfx, sequence_identifier);
 
 	db_query(query);
 	if (db_num_rows() == 0) {
@@ -241,11 +241,11 @@ int db_do_cleanup(const char **tables, int num_tables)
 	char the_query[DEF_QUERYSIZE];
 
 	for (i = 0; i < num_tables; i++) {
-		snprintf(the_query, DEF_QUERYSIZE, "VACUUM %s", tables[i]);
+		snprintf(the_query, DEF_QUERYSIZE, "VACUUM %s%s", _db_params.pfx,tables[i]);
 		if (db_query(the_query) == -1) {
 			trace(TRACE_ERROR,
-			      "%s,%s: error vacuuming table [%s]",
-			      __FILE__, __func__, tables[i]);
+			      "%s,%s: error vacuuming table [%s%s]",
+			      __FILE__, __func__, _db_params.pfx,tables[i]);
 			result = -1;
 		}
 	}

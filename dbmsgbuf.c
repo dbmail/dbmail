@@ -37,6 +37,9 @@
 
 #define MSGBUF_WINDOWSIZE (128ull*1024ull)
 
+extern db_param_t _db_params;
+#define DBPFX _db_params.pfx
+
 static unsigned _msgrow_idx = 0;
 static int _msg_fetch_inited = 0;
 
@@ -69,10 +72,10 @@ int db_init_msgfetch(u64_t msg_idnr)
 	
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT block.messageblk "
-		 "FROM dbmail_messageblks block, dbmail_messages msg "
+		 "FROM %smessageblks block, %smessages msg "
 		 "WHERE block.physmessage_id = msg.physmessage_id "
 		 "AND msg.message_idnr = '%llu' "
-		 "ORDER BY block.messageblk_idnr",
+		 "ORDER BY block.messageblk_idnr", DBPFX, DBPFX,
 		 msg_idnr);
 
 	if (db_query(query) == -1) {
@@ -356,10 +359,10 @@ long db_dump_range(MEM * outmem, db_pos_t start,
 	
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT block.messageblk "
-		 "FROM dbmail_messageblks block, dbmail_messages msg "
+		 "FROM %smessageblks block, %smessages msg "
 		 "WHERE block.physmessage_id = msg.physmessage_id "
 		 "AND msg.message_idnr = '%llu' "
-		 "ORDER BY block.messageblk_idnr",
+		 "ORDER BY block.messageblk_idnr", DBPFX, DBPFX,
 		 msg_idnr);
 
 	if (db_query(query) == -1) {
