@@ -377,6 +377,8 @@ int add_msg(u64_t size, u64_t rfcsize)
   tm = *localtime(&td);   /* get components */
   strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
 
+  snprintf(uniqueid, UID_SIZE, "%lluA%lu", useridnr, time(NULL));
+
   msgidnr++;
 
   /* layout: msgidnr mboxidnr msgsize 

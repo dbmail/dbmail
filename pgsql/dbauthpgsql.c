@@ -503,7 +503,7 @@ u64_t auth_adduser (char *username, char *password, char *enctype, char *clienti
   char *tst;
   u64_t size;
 
-#ifdef _DBAUTH_STRICT_USER_CHECK > 0
+#ifdef _DBAUTH_STRICT_USER_CHECK
   /* first check to see if this user already exists */
   snprintf(__auth_query_data, AUTH_QUERY_SIZE, "SELECT * FROM users WHERE userid = '%s'", username);
 
