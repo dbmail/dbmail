@@ -653,7 +653,6 @@ int auth_validate (char *username, char *password, u64_t* user_idnr)
 	assert(user_idnr != NULL);
 	*user_idnr = 0;
 	
-	
 	create_current_timestring(&timestring);
 
 	/* the shared mailbox user should not log in! */

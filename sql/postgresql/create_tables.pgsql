@@ -42,7 +42,7 @@ CREATE TABLE users (
    last_login TIMESTAMP DEFAULT '1979-11-03 22:05:58' NOT NULL,
    PRIMARY KEY (user_idnr)
 );
-CREATE INDEX users_name_idx ON users(userid);
+CREATE UNIQUE INDEX users_name_idx ON users(userid);
 
 CREATE SEQUENCE mailbox_idnr_seq;
 CREATE TABLE mailboxes (
