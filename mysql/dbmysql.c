@@ -198,8 +198,8 @@ int db_addalias (u64_t useridnr, char *alias, int clientid)
 {
   /* check if this alias already exists */
   snprintf (query, DEF_QUERYSIZE,
-            "SELECT alias FROM alias_idnr WHERE alias = '%s' AND deliver_to = '%llu' "
-	    "AND client_idnr = '%d'", alias, useridnr, clientid);
+            "SELECT alias_idnr FROM aliases WHERE alias = '%s' AND deliver_to = '%llu' "
+	    "AND client_idnr = %d", alias, useridnr, clientid);
 
   if (db_query(query) == -1)
     {
@@ -245,8 +245,8 @@ int db_addalias_ext(char *alias, char *deliver_to, int clientid)
 {
   /* check if this alias already exists */
   snprintf (query, DEF_QUERYSIZE,
-            "SELECT alias FROM alias_idnr WHERE alias = '%s' AND deliver_to = '%s' "
-	    "AND client_idnr = '%d'", alias, deliver_to, clientid);
+            "SELECT alias_idnr FROM aliases WHERE alias = '%s' AND deliver_to = '%s' "
+	    "AND client_idnr = %d", alias, deliver_to, clientid);
 
   if (db_query(query) == -1)
     {
