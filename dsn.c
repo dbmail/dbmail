@@ -138,7 +138,6 @@ int dsnuser_resolve_list(struct list *deliveries)
 					      __FILE__, __FUNCTION__,
 					      delivery->address);
 					return -1;
-					break;
 				}
 			case 1:
 				{

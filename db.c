@@ -2043,7 +2043,7 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
 int db_findmailbox(const char *fq_name, u64_t user_idnr,
 		   u64_t * mailbox_idnr)
 {
-	char *username = NULL;
+	const char *username = NULL;
 	char *mailbox_name;
 	char *name_str_copy;
 	char *tempstr;

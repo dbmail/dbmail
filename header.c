@@ -106,6 +106,7 @@ int read_header(FILE * instream, u64_t * headerrfcsize, u64_t * headersize,
 			      "read_header(): error on instream: [%s]",
 			      strerror(errno));
 			my_free(tmpline);
+			my_free(tmpheader);
 			/* NOTA BENE: Make sure that the caller knows to free
 			 * the header block even if there's been an error! */
 			return 0;
@@ -175,6 +176,8 @@ int read_header(FILE * instream, u64_t * headerrfcsize, u64_t * headersize,
 		/* FIXME: Why are we hard aborting? That's ridiculous. */
 		trace(TRACE_STOP,
 		      "read_header(): no valid mail header found\n");
+		if (tmpheader)
+			my_free(tmpheader);
 		return 0;
 	}
 

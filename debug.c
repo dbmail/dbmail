@@ -25,9 +25,10 @@
 #include "config.h"
 #endif
 
-#include <stdlib.h>
 #include "debug.h"
+#include <stdlib.h>
 #include <string.h>
+#include <sysexits.h>
 
 struct debug_mem {
 	long addr;
@@ -96,10 +97,10 @@ void trace(trace_t level, char *formatstring, ...)
 	 * bailout */
 
 	if (level == TRACE_FATAL)
-		exit(EXIT_CODE);
+		exit(EX_TEMPFAIL);
 
 	if (level == TRACE_STOP)
-		exit(EXIT_CODE);
+		exit(EX_TEMPFAIL);
 }
 
 void *__debug_malloc(unsigned long size, const char *fname, int linenr)

@@ -1,5 +1,23 @@
 2004-04-21  Ilja Booij  <ilja@ic-s.nl>
 
+	* imaputil.c (stridx): changed return type to size_t
+
+	* imapcommands.c (_ic_authenticate): no checks return value of
+	fgets.
+
+	* header.c (read_header): added some my_free statements for
+	freeing tmpheader on unexpected events (read errors etc).
+
+	* forward.c (forward): prevented some buffer overflows by
+	using snprintf instead if sprintf.
+
+	* dbsearch.c (db_exec_search): added a return statement
+	for case IST_DATA_TEXT. Otherwise, it could fall through
+	to IST_DATA_BODY.
+
+	* bounce.c (bounce): changed sprintf to snprintf and added
+	free statements for freeing sendmail_command.
+
 	* db.c (db_get_reply_body): fixed a FIXME by replacing complex
 	code with a strdup()
 	(db_isselectable): fixed a FIXME by adding extra check

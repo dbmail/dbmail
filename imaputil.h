@@ -60,7 +60,7 @@ int is_textplain(struct list *hdr);
 char *date_sql2imap(const char *sqldate);
 char *date_imap2sql(const char *imapdate);
 
-unsigned stridx(const char *s, char ch);
+size_t stridx(const char *s, char ch);
 int checkchars(const char *s);
 int checktag(const char *s);
 int checkmailboxname(const char *s);

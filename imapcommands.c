@@ -168,7 +168,7 @@ int _ic_logout(char *tag, char **args, ClientInfo * ci)
 int _ic_login(char *tag, char **args, ClientInfo * ci)
 {
 	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
-	u64_t userid;
+	u64_t userid = 0;
 	timestring_t timestring;
 	int validate_result;
 
@@ -261,7 +261,12 @@ int _ic_authenticate(char *tag, char **args, ClientInfo * ci)
 	fflush(ci->tx);
 
 	alarm(ci->timeout);
-	fgets(buf, MAX_LINESIZE, ci->rx);
+	if (fgets(buf, MAX_LINESIZE, ci->rx) == NULL) {
+		trace(TRACE_ERROR, "%s,%s: error reading from client",
+		      __FILE__, __FUNCTION__);
+		ci_write(ci->tx, "* BYE Error reading input\r\n");
+		return -1;
+	}
 	alarm(0);
 
 	base64decode(buf, username);
@@ -273,7 +278,12 @@ int _ic_authenticate(char *tag, char **args, ClientInfo * ci)
 	fflush(ci->tx);
 
 	alarm(ci->timeout);
-	fgets(buf, MAX_LINESIZE, ci->rx);
+	if (fgets(buf, MAX_LINESIZE, ci->rx) == NULL) {
+		trace(TRACE_ERROR, "%s,%s: error reading from client",
+		      __FILE__, __FUNCTION__);
+		ci_write(ci->tx, "* BYE Error reading input\r\n");
+		return -1;
+	}
 	alarm(0);
 
 	base64decode(buf, pass);
@@ -342,8 +352,9 @@ int _ic_select(char *tag, char **args, ClientInfo * ci)
 	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
 	u64_t mboxid, key;
 	int result;
-	unsigned idx;
-	char permstring[80];
+	unsigned idx = 0;
+#define PERMSTRING_SIZE 80
+	char permstring[PERMSTRING_SIZE];
 
 	if (!check_state_and_args
 	    ("SELECT", tag, args, 1, IMAPCS_AUTHENTICATED, ci))
@@ -465,10 +476,10 @@ int _ic_select(char *tag, char **args, ClientInfo * ci)
 	/* permission */
 	switch (ud->mailbox.permission) {
 	case IMAPPERM_READ:
-		sprintf(permstring, "READ-ONLY");
+		snprintf(permstring, PERMSTRING_SIZE, "READ-ONLY");
 		break;
 	case IMAPPERM_READWRITE:
-		sprintf(permstring, "READ-WRITE");
+		snprintf(permstring, PERMSTRING_SIZE, "READ-WRITE");
 		break;
 	default:
 		/* invalid permission --> fatal */
@@ -785,6 +796,8 @@ int _ic_create(char *tag, char **args, ClientInfo * ci)
 			if (result == -1) {
 				ci_write(ci->tx,
 					"* BYE internal dbase error\r\n");
+				free_chunks(chunks);
+				my_free(cpy);
 				return -1;	/* fatal */
 			}
 		} else {
@@ -952,7 +965,8 @@ int _ic_delete(char *tag, char **args, ClientInfo * ci)
 int _ic_rename(char *tag, char **args, ClientInfo * ci)
 {
 	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
-	u64_t mboxid, newmboxid, *children, oldnamelen, parentmboxid;
+	u64_t mboxid, newmboxid, *children, parentmboxid;
+	size_t oldnamelen;
 	int nchildren, i, result;
 	char newname[IMAP_MAX_MAILBOX_NAMELEN],
 	    name[IMAP_MAX_MAILBOX_NAMELEN];
@@ -1033,7 +1047,7 @@ int _ic_rename(char *tag, char **args, ClientInfo * ci)
 	 * rename test test/testing
 	 * would create test/testing but delete test
 	 */
-	if (strncasecmp(args[0], args[1], oldnamelen) == 0 &&
+	if (strncasecmp(args[0], args[1], (int) oldnamelen) == 0 &&
 	    strlen(args[1]) > oldnamelen && args[1][oldnamelen] == '/') {
 		ci_write(ci->tx,
 			"%s NO new mailbox would invade mailbox structure\r\n",
@@ -1257,7 +1271,7 @@ int _ic_list(char *tag, char **args, ClientInfo * ci)
 	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
 	u64_t *children = NULL;
 	int result;
-	unsigned slen, plen;
+	size_t slen, plen;
 	unsigned i, j;
 	unsigned nchildren;
 	char name[IMAP_MAX_MAILBOX_NAMELEN];

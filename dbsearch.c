@@ -305,6 +305,7 @@ int db_exec_search(mime_message_t * msg, search_key_t * sk, u64_t msg_idnr)
 
 			el = el->nextnode;
 		}
+		return 0;
 
 	case IST_DATA_BODY:
 		/* only check body if there are no children */

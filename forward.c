@@ -52,6 +52,7 @@ int forward(u64_t msgidnr, struct list *targets, const char *from,
 
 	struct element *target = NULL;
 	char *command = NULL;
+	size_t command_len = 0;
 	FILE *pipe = NULL;
 	int err;
 	field_t sendmail;
@@ -87,8 +88,8 @@ int forward(u64_t msgidnr, struct list *targets, const char *from,
 		    || (((char *) target->data)[0] == '!')) {
 
 			/* external pipe command */
-			command = (char *)
-			    my_malloc(strlen((char *) (target->data)));
+			command_len = strlen((char *) (target->data)) + 1;
+			command = my_malloc(command_len * sizeof(char));
 			if (!command) {
 				trace(TRACE_ERROR,
 				      "%s,%s: out of memory",
@@ -96,14 +97,12 @@ int forward(u64_t msgidnr, struct list *targets, const char *from,
 				return -1;
 			}
 			/* skip the pipe (|) sign */
-			strcpy(command, (char *) (target->data) + 1);
+			strncpy(command, (char *) (target->data) + 1, command_len);
 		} else {
 			/* pipe to sendmail */
-			command = (char *)
-			    my_malloc(strlen((char *)
-					     (target->data)) +
-				      strlen(sendmail) + 2);
-			/* +2 for extra space and \0 */
+			command_len = strlen((char *) (target->data)) +
+				strlen(sendmail) + 2;
+ 			command = my_malloc(command_len * sizeof(char));
 			if (!command) {
 				trace(TRACE_ERROR,
 				      "%s,%s: out of memory",
@@ -114,7 +113,7 @@ int forward(u64_t msgidnr, struct list *targets, const char *from,
 			trace(TRACE_DEBUG,
 			      "%s,%s: allocated memory for external "
 			      "command call", __FILE__, __FUNCTION__);
-			sprintf(command, "%s %s", sendmail,
+			snprintf(command, command_len, "%s %s", sendmail,
 				(char *) (target->data));
 		}
 

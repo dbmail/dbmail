@@ -49,6 +49,7 @@ int bounce(const char *header, const char *destination_address,
 	struct list from_addresses;
 	struct element *tmpelement;
 	field_t dbmail_from_address, sendmail, postmaster;
+	size_t sendmail_command_len = 0;
 
 
 	/* reading configuration from db */
@@ -106,7 +107,10 @@ int bounce(const char *header, const char *destination_address,
 			while (tmpelement != NULL) {
 				/* open a stream to sendmail 
 				   the sendmail macro is defined in bounce.h */
-				sendmail_command = (char *) my_malloc(strlen((char *) (tmpelement->data)) + strlen(sendmail) + 2);	/* +2 for extra space and \0 */
+				sendmail_command_len = strlen((char *) (tmpelement->data)) +
+					strlen(sendmail) + 2;
+				sendmail_command = my_malloc(sendmail_command_len * sizeof(char));
+
 				if (!sendmail_command) {
 					trace(TRACE_ERROR,
 					      "bounce(): out of memory");
@@ -118,8 +122,8 @@ int bounce(const char *header, const char *destination_address,
 				trace(TRACE_DEBUG,
 				      "bounce(): allocated memory for"
 				      " external command call");
-				sprintf(sendmail_command, "%s %s",
-					sendmail,
+				snprintf(sendmail_command, sendmail_command_len,
+					"%s %s", sendmail,
 					(char *) (tmpelement->data));
 
 				trace(TRACE_INFO,
@@ -134,6 +138,7 @@ int bounce(const char *header, const char *destination_address,
 					      "%s,%s: could not open a pipe "
 					      "to %s", __FILE__,
 					      __FUNCTION__, sendmail);
+					my_free(sendmail_command);
 					return -1;
 				}
 				fprintf(sendmail_stream, "From: %s\n",
@@ -202,7 +207,9 @@ int bounce(const char *header, const char *destination_address,
 			while (tmpelement != NULL) {
 				/* open a stream to sendmail 
 				   the sendmail macro is defined in bounce.h */
-				sendmail_command = (char *) my_malloc(strlen((char *) (tmpelement->data)) + strlen(sendmail) + 2);	/* +2 for extra space and \0 */
+				sendmail_command_len = strlen((char*) (tmpelement->data)) + 
+					strlen(sendmail) + 2;
+				sendmail_command = my_malloc(sendmail_command_len * sizeof(char));
 				if (!sendmail_command) {
 					trace(TRACE_ERROR,
 					      "bounce(): out of memory");
@@ -214,8 +221,8 @@ int bounce(const char *header, const char *destination_address,
 				trace(TRACE_DEBUG,
 				      "bounce(): allocated memory for"
 				      " external command call");
-				sprintf(sendmail_command, "%s %s",
-					sendmail,
+				snprintf(sendmail_command, sendmail_command_len,
+					 "%s %s", sendmail,
 					(char *) (tmpelement->data));
 
 				trace(TRACE_INFO,
@@ -230,6 +237,7 @@ int bounce(const char *header, const char *destination_address,
 					      "%s,%s: could not open a pipe to %s",
 					      __FILE__, __FUNCTION__,
 					      sendmail);
+					my_free(sendmail_command);
 					return -1;
 				}
 				fprintf(sendmail_stream, "From: %s\n",
@@ -272,6 +280,7 @@ int bounce(const char *header, const char *destination_address,
 			break;
 		}
 	}
-
+	if (sendmail_command)
+		my_free(sendmail_command);
 	return 0;
 }
