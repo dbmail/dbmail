@@ -33,10 +33,10 @@
 #define GIGABYTE (1024ul*1024ul*1024ul)
 #define MAX_BLKFILESIZE (1ul*GIGABYTE)
 
-#define USER_FILENAME "users.data"
-#define MBOX_FILENAME "mailboxes.data"
-#define MSGS_FILENAME "messages.data"
-#define MSGBLKS_FILENAME "messageblocks.data"
+#define USER_FILENAME "/data/rawdata/users.data"
+#define MBOX_FILENAME "/data/rawdata/mailboxes.data"
+#define MSGS_FILENAME "/data/rawdata/messages.data"
+#define MSGBLKS_FILENAME "/data/rawdata/messageblocks.data"
 
 #define DEFAULT_PASSWD "default"
 
@@ -120,7 +120,7 @@ int main (int argc, char* argv[])
   time (&start); /* mark the starting time */
 
   /* hard-coded POSTGRESQL queries to insert data */
-/*  printf("Copying users..."); fflush(stdout);
+  printf("Copying users..."); fflush(stdout);
   db_query("COPY users FROM '" USER_FILENAME "'");
   printf("done\n");
 
@@ -139,7 +139,7 @@ int main (int argc, char* argv[])
       
       printf("done\n");
     }
-*/
+
   time (&stop); /* mark the ending time */
 
   printf ("Table loading started @  %s", ctime(&start));
