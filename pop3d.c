@@ -29,12 +29,22 @@ char *timeout_setting;
 char *buffer;
 int done=1;
 
+int resolve_client = 1;
+
 int server_timeout;
+int server_pid;
 
 int error_count;
 
 FILE *tx = NULL;	/* write socket */
 FILE *rx = NULL;	/* read socket */
+
+int *default_children_used;
+
+key_t	shm_key = 0;
+int shm_id;
+
+#define SHM_ALLOC_SIZE (sizeof(int))
 
 /* signal handler */
 static void sigchld_handler (int signo)
@@ -168,12 +178,26 @@ int main (int argc, char *argv[])
   signal (SIGSTOP, sigchld_handler);
   signal (SIGALRM, sigchld_handler);
 
+	/* allocate a shared memory segment for interprocess communication */
+  shm_key = time (NULL);
+  /* FIXME: should this be 666? Can't another process tap in? */
+  shm_id = shmget (shm_key, SHM_ALLOC_SIZE, 0666 | IPC_CREAT);
+
+  if (shm_id == -1)
+  {
+	  free (myhostname);
+	  free (clientinfo);
+
+	  /* creation failed, we cannot continue */
+	  trace (TRACE_STOP,"main(): error getting shared memory segment [%s]\n",
+			  strerror(errno));
+  }
+
   adr_srvr.sin_family = AF_INET; 
   
   s = socket (PF_INET, SOCK_STREAM, 0); /* creating the socket */
   if (s == -1 ) 
     trace (TRACE_FATAL,"main(): call socket(2) failed");
-
 
   ipaddr = db_get_config_item("POP3D_BIND_IP",CONFIG_MANDATORY);
   port = db_get_config_item("POP3D_BIND_PORT",CONFIG_MANDATORY);
@@ -240,7 +264,20 @@ int main (int argc, char *argv[])
   defchld = atoi(db_get_config_item("POP3D_DEFAULT_CHILD",CONFIG_MANDATORY));
   maxchld = atoi(db_get_config_item("POP3D_MAX_CHILD",CONFIG_MANDATORY));
 
-	children = 0;
+
+  /* remember this pid, we're the father process */
+  server_pid = getpid();
+
+  /* attach to shared memory */
+  default_children_used = (int*)shmat(shm_id, 0, 0);
+
+  if (default_children_used == (int*) (-1))
+	  trace (TRACE_FATAL,"main(): Could not attach to shared memory [%s]",
+			  strerror(errno));
+
+  /* we don't have any children yet */
+  *default_children_used = 0;
+ children = 0;
   
 	for (i=0; i<defchld; i++)
 	{
@@ -250,46 +287,54 @@ int main (int argc, char *argv[])
 			children++;
 	}
 
-  
-	for (;;)
+	/* split up in the 'server' part and the client part */
+
+	if (getpid() != server_pid)
 	{
-		while (children >= maxchld)
+	
+		/* client part */
+		for (;;)
 		{
-			/* no more children, wait for processes to quit */
-			wait(0);
-			/* ok we've one child less */
-			children--;
-		}
-			
-		/* wait for a connection */
-		len_inet = sizeof (adr_clnt);
-		c = accept (s, (struct sockaddr *)&adr_clnt,
-		  &len_inet); /* incoming connection */
-		
-		if (c == -1)
-			trace (TRACE_FATAL,"main(): call accept(2) failed");
-		
-		/* more then default connection. Spawn new connections as needed */
-		if (!fork())
-		{
-			children++;
-			continue;
+			/* wait for a connection */
+			len_inet = sizeof (adr_clnt);
+			c = accept (s, (struct sockaddr *)&adr_clnt,
+			  &len_inet); /* incoming connection */
+	
+			/* failure won't cause a quit forking is too expensive */	
+			if (c == -1)
+			{
+				trace (TRACE_ERROR,"main(): call accept(2) failed");
+				continue;
 			}
-		else
-		{
-			/* register incoming connection */
+		
+			/* get connection information */
 			theiraddress=inet_ntoa(adr_clnt.sin_addr);
-			clientinfo=gethostbyaddr((char *)&adr_clnt.sin_addr, 
-					sizeof(adr_clnt.sin_addr),
-					adr_clnt.sin_family);
-				
-			if (theiraddress != NULL)
-			trace (TRACE_MESSAGE,"main(): incoming connection from [%s] [resolved to: %s]",
-				theiraddress,clientinfo->h_name);
-	      else
-				trace (TRACE_FATAL,"main(): fatal, could not get address of client"); 
-				
-			rx = fdopen (dup (c), "r"); /* duplicate descriptor and open it */
+
+			if (resolve_client==1)
+			{
+				clientinfo=gethostbyaddr((char *)&adr_clnt.sin_addr, 
+						sizeof(adr_clnt.sin_addr),
+						adr_clnt.sin_family);
+				if (theiraddress != NULL)
+					trace (TRACE_MESSAGE,"main(): incoming connection from [%s (%s)]",
+						theiraddress,clientinfo->h_name);
+				 else
+				 {
+					trace (TRACE_ERROR,"main(): error: could not get address of client"); 
+					continue;
+				 }
+			}
+			else
+			{
+				if (theiraddress != NULL)
+					trace (TRACE_MESSAGE,"main(): incoming connection from [%s]",
+							theiraddress);
+				else
+					trace (TRACE_ERROR,"main(): error: could not get address of client");
+			}
+
+			/* duplicate descriptor and open it */
+			rx = fdopen (dup (c), "r"); 
 			if (!rx)
 			{
 				/* opening of descriptor failed */
@@ -297,7 +342,7 @@ int main (int argc, char *argv[])
 				continue;
 			}
 	
-			tx = fdopen (dup (c), "w"); /* same thing for writing */
+			tx = fdopen (dup (c), "w"); 
 			if (!tx)
 			{
 				/* opening of descriptor failed */
@@ -310,9 +355,15 @@ int main (int argc, char *argv[])
 	      setlinebuf(rx);
 
 			/* connect to the database */
-			if (db_connect()< 0) 
-				trace(TRACE_FATAL,"main(): could not connect to database");
-
+			if (db_connect()< 0)
+			{	
+				trace(TRACE_ERROR,"main(): could not connect to database");
+				continue;
+			}
+			
+			/* another default child is in use */
+			(*default_children_used)++;
+			
 			/* first initiate AUTHORIZATION state */
 	      state = AUTHORIZATION;
 		
@@ -377,15 +428,168 @@ int main (int argc, char *argv[])
 				shutdown (fileno(rx), SHUT_RDWR);
 				fclose(rx);
 			}
-				
-	      free(myhostname);
-				
-			/* we don't need this anymore */
-	      free(apop_stamp);
-		
-			/* exit child child session */
-	      exit(0);
 		}
 	}
-  return 0;
-}	
+	else
+	{
+		/* this must be the server process */
+		for (;;)
+		{
+			/* wait for a connection. If the max number of children
+				hasn't already been reached; fork */
+
+			if (*default_children_used < defchld)
+				continue;
+
+			while (children >= maxchld)
+			{
+				/* we've reached a maximum number of children 
+					here we wait for an exit */
+				wait (NULL);
+				children--;
+			}
+
+			/* wait for a connection */
+			len_inet = sizeof (adr_clnt);
+			c = accept (s, (struct sockaddr *)&adr_clnt,
+			  &len_inet); /* incoming connection */
+	
+			/* failure won't cause a quit forking is too expensive */	
+			if (c == -1)
+			{
+				trace (TRACE_ERROR,"main(): call accept(2) failed");
+				continue;
+			}
+
+			if (fork())
+			{
+				children++;
+				continue;
+			}
+			else
+			{
+		
+				/* get connection information */
+				theiraddress=inet_ntoa(adr_clnt.sin_addr);
+	
+				if (resolve_client==1)
+				{
+					clientinfo=gethostbyaddr((char *)&adr_clnt.sin_addr, 
+							sizeof(adr_clnt.sin_addr),
+							adr_clnt.sin_family);
+					if (theiraddress != NULL)
+						trace (TRACE_MESSAGE,"main(): incoming connection from [%s (%s)]",
+							theiraddress,clientinfo->h_name);
+					 else
+					 {
+						trace (TRACE_ERROR,"main(): error: could not get address of client"); 
+						continue;
+					 }
+				}
+					else
+				{
+					if (theiraddress != NULL)
+						trace (TRACE_MESSAGE,"main(): incoming connection from [%s]",
+								theiraddress);
+					else
+						trace (TRACE_ERROR,"main(): error: could not get address of client");
+				}
+	
+				/* duplicate descriptor and open it */
+				rx = fdopen (dup (c), "r"); 
+				if (!rx)
+				{
+					/* opening of descriptor failed */
+					close(c);
+					continue;
+				}
+		
+				tx = fdopen (dup (c), "w"); 
+				if (!tx)
+				{
+					/* opening of descriptor failed */
+					close (c);
+					continue;
+				}
+			
+				/* set stream to line buffered mode 
+				 * this way when we send a newline the buffer is flushed */
+		      setlinebuf(rx);
+	
+				/* connect to the database */
+				if (db_connect()< 0)
+				{	
+					trace(TRACE_ERROR,"main(): could not connect to database");
+					continue;
+				}
+	
+				/* first initiate AUTHORIZATION state */
+		      state = AUTHORIZATION;
+			
+				memtst((buffer=(char *)malloc(INCOMING_BUFFER_SIZE))==NULL);
+	
+				/* create an unique timestamp + processid for APOP authentication */
+				memtst((apop_stamp=(char *)malloc(APOP_STAMP_SIZE))==NULL);
+					
+		      timestamp=time(NULL);
+					
+		      sprintf (apop_stamp,"<%d.%u@%s>",getpid(),timestamp,myhostname);
+	
+				/* sending greeting */
+				fprintf (tx,"+OK DBMAIL server ready %s\r\n",apop_stamp);
+				fflush (tx);
+				
+				/* no errors yet */
+				error_count = 0;
+				
+				trace (TRACE_DEBUG,"main(): setting timeout timer at %d seconds",server_timeout);	
+				/* setting time for timeout counter */
+		      alarm (server_timeout);
+	
+				/* scanning for commands */
+				while ((done>0) && (buffer=fgets(buffer,INCOMING_BUFFER_SIZE,rx)))
+				{
+					if (feof(rx)) 
+						done = -1; /* check of client eof */
+					else
+						{
+						done = pop3(tx,buffer); 
+						alarm (server_timeout);
+						}
+					fflush (tx);
+				}
+						
+				/* we've reached the update state */
+				state = UPDATE;
+	
+				/* memory cleanup */
+		      free(buffer);
+	
+				if (done < 0)
+				{
+					trace (TRACE_ERROR,"main(): timeout, connection terminated");
+					fclose(tx);
+					shutdown (fileno(rx), SHUT_RDWR);
+					fclose(rx);
+				}
+				else
+				{
+					trace(TRACE_MESSAGE,"main(): user %s logging out [message=%lu, octets=%lu]",
+						username, curr_session.virtual_totalmessages,
+						curr_session.virtual_totalsize);
+	
+					/* if everything went well, write down everything and do a cleanup */
+					db_update_pop(&curr_session);
+					
+					db_disconnect(); 
+		
+					fclose(tx);
+					shutdown (fileno(rx), SHUT_RDWR);
+					fclose(rx);
+				}
+				return 0;
+			}
+		}
+	}
+	return 0;
+}		
