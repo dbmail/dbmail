@@ -210,6 +210,40 @@ u64_t db_get_user_from_alias(const char *alias)
 }
 
 
+char* db_get_deliver_from_alias(const char *alias)
+{
+  char *deliver;
+
+  snprintf (query, DEF_QUERYSIZE,
+	    "SELECT deliver_to FROM aliases WHERE alias = '%s'", alias);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_get_deliver_from_alias(): could not execute query");
+      return -1;
+    }
+
+  if (PQntuples(res) == 0)
+    {
+      /* no such user */
+      PQclear(res);
+      return "";
+    }
+
+  if (! (deliver = (char*)my_malloc( strlen( PQgetvalue(res, 0, 0) ) + 1)) )
+    {
+      trace(TRACE_ERROR, "db_get_deliver_from_alias(): out of mem");
+      PQclear(res);
+      return 0;
+    }
+
+  strcpy(deliver, PQgetvalue(res, 0, 0));
+  PQclear(res);
+ 
+  return deliver;
+}
+
+
 /* 
  * adds an alias for a specific user 
  *

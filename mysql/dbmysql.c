@@ -232,7 +232,7 @@ char* db_get_deliver_from_alias(const char *alias)
       return 0;
     }
 
-  strcpy(deliver, row[0])
+  strcpy(deliver, row[0]);
   mysql_free_result(res);
 
   return deliver;
