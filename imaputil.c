@@ -22,6 +22,7 @@
 #endif
 
 #define BUFLEN 2048
+#define MAX_ARGS 128
 
 extern const char AcceptedChars[];
 extern const char AcceptedTagChars[];
@@ -1221,12 +1222,12 @@ int check_state_and_args(const char *command, const char *tag, char **args,
 #define SQUAREPAR 2
 #define NOPAR 0
 
+char *the_args[MAX_ARGS];
+
 char **build_args_array(const char *s)
 {
-  char **args;
-  char *scpy;
-  int nargs=0,inquote=0,i,quotestart,currarg;
-  int nnorm=0,nsquare=0,paridx=0;
+  int nargs=0,inquote=0,i,quotestart=0;
+  int nnorm=0,nsquare=0,paridx=0,slen=0,argstart=0;
   char parlist[MAX_LINESIZE];
 
   if (!s)
@@ -1235,272 +1236,179 @@ char **build_args_array(const char *s)
   /* check for empty string */
   if (!(*s))
     {
-      args = (char**)malloc(sizeof(char*));
-      if (!args)
-	{
-	  trace(TRACE_MESSAGE, "IMAPD: Not enough memory while building up argument array.");
-	  return NULL;
-	}
-
-      args[0] = NULL;
-      return args;
+      the_args[0] = NULL;
+      return the_args;
     }
 
-  scpy = (char*)malloc(sizeof(char)* (strlen(s)+1));
-  if (!scpy)
-    {
-      trace(TRACE_MESSAGE, "IMAPD: Not enough memory while building up argument array.");
-      return NULL;
-    }
-
-  /* copy original to scpy */
-  strcpy(scpy,s);
-
-  /* now replace all delimiters by \0 */
-  for (i=0,inquote=0; i<strlen(s); i++)
-    {
-      if (scpy[i] == '"')
-	{
-	  if ((i>0 && scpy[i-1]!='\\') || i==0)
-	    {
-	      /* toggle in-quote flag */
-	      inquote ^= 1;
-	    }
-	}
-
-      if ((scpy[i] == ' ' || scpy[i] == '(' || scpy[i] == ')' ||
-	   scpy[i] == '[' || scpy[i] == ']') && !inquote)
-	{
-	  scpy[i] = '\0';
-	}
-    }
-
-  
-  /* count the arguments */
+  /* find the arguments */
   paridx = 0;
   parlist[paridx] = NOPAR;
 
-  for (i=0,nargs=0; i<strlen(s); i++)
-    {
-      if (!scpy[i])
-	{
-	  /* check for ( or ) in original string */
-	  if (s[i] == '(' || s[i] == ')' || s[i] == '[' || s[i] == ']')
-	    nargs++;
+  inquote = 0;
+  slen = strlen(s);
 
+  for (i=0,nargs=0; i<slen && nargs < MAX_ARGS-1; i++)
+    {
+      /* check quotes */
+      if (s[i] == '"' && ((i > 0 && s[i-1] != '\\') || i == 0))
+	{
+	  if (inquote)
+	    {
+	      /* quotation end, treat quoted string as argument */
+	      if (!(the_args[nargs] = (char*)malloc(sizeof(char) * (i-quotestart)) ))
+		{
+		  /* out of mem */
+		  while (--nargs >= 0)
+		    {
+		      free(the_args[nargs]);
+		      the_args[nargs] = NULL;
+		    }
+		      
+		  trace(TRACE_DEBUG, 
+			"IMAPD: Not enough memory while building up argument array.");
+		  return NULL;
+		}
+		  
+	      memcpy(the_args[nargs], &s[quotestart+1], i-quotestart-1);
+	      the_args[nargs][i-quotestart -1] = '\0';
+
+	      nargs++;
+	      inquote = 0;
+	    }
+	  else
+	    {
+	      inquote = 1;
+	      quotestart = i;
+	    }
+
+	  continue;
+	}
+
+      if (inquote)
+	continue;
+	
+      /* check for (, ), [ or ] in string */
+      if (s[i] == '(' || s[i] == ')' || s[i] == '[' || s[i] == ']')
+	{
 	  /* check parenthese structure */
 	  if (s[i] == ')')
 	    {
 	      if (paridx < 0 || parlist[paridx] != NORMPAR)
-		{
-		  free(scpy);
-		  return NULL;
-		}
+		paridx = -1;
 	      else
 		{
 		  nnorm--;
 		  paridx--;
 		}
 	    }
-
-	  if (s[i] == ']')
+	  else if (s[i] == ']')
 	    {
 	      if (paridx < 0 || parlist[paridx] != SQUAREPAR)
-		{
-		  free(scpy);
-		  return NULL;
-		}
+		paridx = -1;
 	      else
 		{
 		  paridx--;
 		  nsquare--;
 		}
 	    }
-
-	  if (s[i] == '(')
+	  else if (s[i] == '(')
 	    {
 	      parlist[++paridx] = NORMPAR;
 	      nnorm++;
 	    }
-
-	  if (s[i] == '[')
+	  else /* s[i] == '[' */
 	    {
 	      parlist[++paridx] = SQUAREPAR;
 	      nsquare++;
 	    }
 
+	  if (paridx < 0)
+	    {
+	      /* error in parenthesis structure */
+	      while (--nargs >= 0)
+		{
+		  free(the_args[nargs]);
+		  the_args[nargs] = NULL;
+		}
+	      return NULL;
+	    }
+
+	  /* add this parenthesis to the arg list and continue */
+	  if (!(the_args[nargs] = (char*)malloc( sizeof(" ") )) )
+	    {
+	      /* out of mem */
+	      while (--nargs >= 0)
+		{
+		  free(the_args[nargs]);
+		  the_args[nargs] = NULL;
+		}
+		      
+	      trace(TRACE_DEBUG, 
+		    "IMAPD: Not enough memory while building up argument array.");
+	      return NULL;
+	    }
+	  the_args[nargs][0] = s[i];
+	  the_args[nargs][1] = '\0';
+
+	  nargs++;
 	  continue;
 	}
+      
+      if (s[i] == ' ')
+	continue;
 
-      if (scpy[i] == '"')
+      /* at an argument start now, walk on until next delimiter
+       * and save argument 
+       */
+      
+      for (argstart = i; i<slen && !strchr(" []()",s[i]); i++)
+	if (s[i] == '"')
+	  {
+	    if (s[i-1] == '\\') continue;
+	    else break;
+	  }
+      
+      if (!(the_args[nargs] = (char*)malloc(sizeof(char) * (i-argstart +1)) ))
 	{
-	  if ((i>0 && scpy[i-1]!='\\') || i==0)
+	  /* out of mem */
+	  while (--nargs >= 0)
 	    {
-	      /* toggle in-quote flag */
-	      inquote ^= 1;
-	      if (inquote)
-		nargs++;
+	      free(the_args[nargs]);
+	      the_args[nargs] = NULL;
 	    }
+		      
+	  trace(TRACE_DEBUG, 
+		"IMAPD: Not enough memory while building up argument array.");
+	  return NULL;
 	}
-      else
-	{
-	  if (!inquote)
-	    {
-	      /* at an argument now, proceed to end (before next NULL char) */
-	      while (scpy[i] && i<strlen(s)) i++;
-	      i--;
-	      nargs++;
-	    }
-	}
+		  
+      memcpy(the_args[nargs], &s[argstart], i-argstart);
+      the_args[nargs][i-argstart] = '\0';
+
+      nargs++;
+      i--; /* walked one too far */
     }
 
   if (paridx != 0)
     {
-      free(scpy);
+      /* error in parenthesis structure */
+      while (--nargs >= 0)
+	{
+	  free(the_args[nargs]);
+	  the_args[nargs] = NULL;
+	}
       return NULL;
     }
 
-  /* alloc memory */
-  args = (char**)malloc((nargs+1) * sizeof(char *));
-  if (!args)
-    {
-      /* out of mem */
-      trace(TRACE_MESSAGE, "IMAPD: Not enough memory while building up argument array.");
-      free(scpy);
-      return NULL;
-    }
-
-  /* single out the arguments */
-  currarg = 0;
-  for (i=0; i<strlen(s); i++)
-    {
-      if (!scpy[i])
-	{
-	  /* check for ( or ) in original string */
-	  if (s[i] == '(' || s[i] == ')' || s[i] == '[' || s[i] ==']')
-	    {
-	      /* add parenthesis */
-	      /* alloc mem */
-	      args[currarg] = (char*)malloc(sizeof(char) * 2);
-
-	      if (!args[currarg])
-		{
-		  /* out of mem */
-		  /* free currently allocated mem */
-		  trace(TRACE_MESSAGE, "IMAPD: Not enough memory while building up argument array.");
-
-		  for (i=0; i<currarg; i++)
-		    free(args[i]);
-	      
-		  free(args);
-		  free(scpy);
-		  return NULL;
-		}
-
-	      args[currarg][0] = s[i];
-	      args[currarg][1] = '\0';
-	      currarg++;
-	    }
-	  continue;
-	}
-
-      if (scpy[i] == '"')
-	{
-	  if ((i>0 && s[i-1]!='\\') || i==0)
-	    {
-	      /* toggle in-quote flag */
-	      inquote ^= 1;
-	      if (inquote)
-		{
-		  /* just started the quotation, remember idx */
-		  quotestart = i;
-		}
-	      else
-		{
-		  /* alloc mem */
-		  args[currarg] = (char*)malloc(sizeof(char) * (i-quotestart+1+1-2));
-		  if (!args[currarg])
-		    {
-		      /* out of mem */
-		      /* free currently allocated mem */
-		      trace(TRACE_MESSAGE, "IMAPD: Not enough memory while building up argument array.");
-
-		      for (i=0; i<currarg; i++)
-			free(args[i]);
-
-		      free(args);
-		      free(scpy);
-		      return NULL;
-		    }
-
-		  /* copy quoted string */
-		  memcpy(args[currarg], &s[quotestart+1], sizeof(char)*(i-quotestart-1));
-		  args[currarg][i-quotestart-1] = '\0'; 
-		  currarg++;
-		}
-	    }
-	}
-      else if (!inquote)
-	{
-	  /* at an argument now, save & proceed to end (before next NULL char) */
-	  /* alloc mem */
-	  args[currarg] = (char*)malloc(sizeof(char) * (strlen(&scpy[i])+1) );
-	  if (!args[currarg])
-	    {
-	      /* out of mem */
-	      /* free currently allocated mem */
-	      trace(TRACE_MESSAGE, "IMAPD: Not enough memory while building up argument array.");
-
-	      for (i=0; i<currarg; i++)
-		free(args[i]);
-	      
-	      free(args);
-	      free(scpy);
-	      return NULL;
-	    }
-
-	  /* copy arg */
-	  memcpy(args[currarg], &scpy[i], sizeof(char)*(strlen(&scpy[i])+1) );
-	  currarg++;
-
-	  while (scpy[i] && i<strlen(s)) i++;
-	  i--;
-	}
-    }
-  if (inquote)
-    {
-      /* single quotation mark, treat as single argument */
-      args[currarg] = (char*)malloc(sizeof(char) * (strlen(s)-quotestart));
-      if (!args[currarg])
-	{
-	  /* out of mem */
-	  /* free currently allocated mem */
-	  trace(TRACE_MESSAGE, "IMAPD: Not enough memory while building up argument array.");
-
-	  for (i=0; i<currarg; i++)
-	    free(args[i]);
-
-	  free(args);
-	  return NULL;
-	}
-
-      /* copy quoted string */
-      memcpy(args[currarg], &s[quotestart+1], sizeof(char)*(strlen(s)-quotestart-1));
-      args[currarg][strlen(s)-quotestart-1] = '\0'; 
-      currarg++;
-    }
-
-  args[currarg] = NULL; /* terminate array */
-
-  free(scpy);
+  the_args[nargs] = NULL; /* terminate */
 
   /* dump args (debug) */
-  for (i=0; args[i]; i++)
+  for (i=0; the_args[i]; i++)
     {
-      trace(TRACE_MESSAGE, "arg[%d]: '%s'\n",i,args[i]);
+      trace(TRACE_MESSAGE, "arg[%d]: '%s'\n",i,the_args[i]);
     }
 
-  return args;
+  return the_args;
 }
 #undef NOPAR
 #undef NORMPAR

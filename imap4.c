@@ -192,10 +192,10 @@ int imap_process(ClientInfo *ci)
 	  
 	  /* free used memory */
 	  for (i=0; args[i]; i++) 
-	    free(args[i]);
-	  free(args);
-	  args = NULL;
-
+	    {
+	      free(args[i]);
+	      args[i] = NULL;
+	    }
 	  continue;
 	}
 
@@ -208,10 +208,10 @@ int imap_process(ClientInfo *ci)
 
 	  /* free used memory */
 	  for (i=0; args[i]; i++) 
-	    free(args[i]);
-	  free(args);
-	  args = NULL;
-
+	    {
+	      free(args[i]);
+	      args[i] = NULL;
+	    }
 	  continue;
 	}
 
@@ -232,9 +232,10 @@ int imap_process(ClientInfo *ci)
       trace(TRACE_MESSAGE, "IMAPD: Finished command %s\n",IMAP_COMMANDS[i]);
 
       for (i=0; args[i]; i++) 
-	free(args[i]);
-      free(args);
-      args = NULL;
+	{
+	  free(args[i]);
+	  args[i] = NULL;
+	}
 
     } while (!done);
 
