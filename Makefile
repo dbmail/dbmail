@@ -3,10 +3,13 @@
 
 #! /bin/sh
 
-AUTHOBJECT = dbauthmysql.o
-MSGBUFOBJECT = dbmsgbufmysql.o
-SEARCHOBJECT = dbsearchmysql.o
-DBOBJECT = dbmysql.o
+DBASETYPE = mysql
+DBASE_AUTHTYPE = mysql
+
+AUTHOBJECT = dbauth$(DBASE_AUTHTYPE).o
+MSGBUFOBJECT = dbmsgbuf$(DBASETYPE).o
+SEARCHOBJECT = dbsearch$(DBASETYPE).o
+DBOBJECT = db$(DBASETYPE).o
 
 SMTP_OBJECTS = list.o debug.o pipe.o mime.o $(DBOBJECT) dbmd5.o md5.o bounce.o forward.o memblock.o \
 $(AUTHOBJECT)
