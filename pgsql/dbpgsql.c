@@ -467,38 +467,16 @@ u64_t db_get_message_mailboxid (u64_t messageidnr)
 }
 
 
+/* 
+ * returns the userid from a messageidnr 
+ */
 u64_t db_get_useridnr (u64_t messageidnr)
 {
-  /* returns the userid from a messageidnr */
-  u64_t mailboxidnr;
   u64_t userid;
 
-  snprintf (query, DEF_QUERYSIZE,"SELECT mailbox_idnr FROM messages WHERE message_idnr = %llu",
+  snprintf (query, DEF_QUERYSIZE, "SELECT owner_idnr FROM mailboxes WHERE mailbox_idnr = "
+	    "(SELECT mailbox_idnr FROM messages WHERE message_idnr = %llu)",
             messageidnr);
-
-  trace(TRACE_DEBUG,"db_get_useridnr(): executing query : [%s]",query);
-  if (db_query(query)==-1)
-    {
-      return 0;
-    }
-
-  if (PQntuples(res)<1) 
-    {
-      trace (TRACE_DEBUG,"db_get_useridnr(): this is not right!");
-      PQclear(res);
-
-      return 0; 
-    } 
-
-  value = PQgetvalue (res, 0, 0);
-  mailboxidnr = (value) ? strtoull(value, NULL, 10) : -1;
-  PQclear(res);
-
-  if (mailboxidnr == -1)
-    return 0;
-
-  snprintf (query, DEF_QUERYSIZE, "SELECT owner_idnr FROM mailboxes WHERE mailbox_idnr = %llu",
-            mailboxidnr);
 
   if (db_query(query)==-1)
     return 0;

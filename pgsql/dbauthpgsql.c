@@ -218,7 +218,7 @@ int db_check_user (char *username, struct list *userids, int checks)
   
   trace(TRACE_DEBUG,"db_check_user(): checking user [%s] in alias table",username);
   
-  snprintf (query, DEF_QUERYSIZE,  "SELECT * FROM aliases WHERE alias=\'%s\'",username);
+  snprintf (query, DEF_QUERYSIZE,  "SELECT deliver_to FROM aliases WHERE alias=\'%s\'",username);
   trace(TRACE_DEBUG,"db_check_user(): executing query : [%s] checks [%d]",query, checks);
 
   if (db_query(query)==-1)
@@ -257,13 +257,12 @@ int db_check_user (char *username, struct list *userids, int checks)
 
   if (PQntuples(res)>0)
     {
-  /* field nr. 2 of res is the deliver_to field */
-    for (PQcounter=0; PQcounter < PQntuples(res); PQcounter++)
+      for (PQcounter=0; PQcounter < PQntuples(res); PQcounter++)
         {
-        /* do a recursive search for res[2] */
-        value = PQgetvalue(res, PQcounter, 2);
-        trace (TRACE_DEBUG,"db_check_user(): checking user %s to %s",username, value);
-        occurences += db_check_user (value, userids, 1);
+	  /* do a recursive search for deliver_to */
+	  value = PQgetvalue(res, PQcounter, 0);
+	  trace (TRACE_DEBUG,"db_check_user(): checking user %s to %s",username, value);
+	  occurences += db_check_user (value, userids, 1);
         }
     }   
   

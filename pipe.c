@@ -383,7 +383,7 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
 	    case -1:
 	      trace (TRACE_ERROR,"insert_messages(): message NOT inserted. dbase error");
 	      bounce_id = db_get_userid(&bounce_userid);
-          bounce (header, headersize, bounce_id, BOUNCE_STORAGE_LIMIT_REACHED);
+	      bounce (header, headersize, bounce_id, BOUNCE_STORAGE_LIMIT_REACHED);
 	      my_free (bounce_id);
 	      break;
 
@@ -391,7 +391,7 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
 	      trace (TRACE_ERROR,"insert_messages(): message NOT inserted. "
 		     "Maxmail exceeded AND dbase error");
 	      bounce_id = db_get_userid(&bounce_userid);
-          bounce (header, headersize, bounce_id, BOUNCE_STORAGE_LIMIT_REACHED);
+	      bounce (header, headersize, bounce_id, BOUNCE_STORAGE_LIMIT_REACHED);
 	      my_free (bounce_id);
 	      break;
 

@@ -475,52 +475,16 @@ u64_t db_get_message_mailboxid (u64_t message_idnr)
 }
 
 
+/* 
+ * returns the userid from a message_idnr 
+ */
 u64_t db_get_useridnr (u64_t message_idnr)
 {
-  /* returns the userid from a message_idnr */
-  u64_t mailbox_idnr;
   u64_t userid;
-  
-  snprintf (query, DEF_QUERYSIZE,"SELECT mailbox_idnr FROM messages WHERE message_idnr = %llu",
-	   message_idnr);
 
-  trace(TRACE_DEBUG,"db_get_useridnr(): executing query : [%s]",query);
-  if (db_query(query)==-1)
-    {
-      return 0;
-    }
-
-  if ((res = mysql_store_result(&conn)) == NULL) 
-    {
-      trace(TRACE_ERROR,"db_get_useridnr(): mysql_store_result failed: %s",mysql_error(&conn));
-      
-      return 0;
-    }
-
-  if (mysql_num_rows(res)<1) 
-    {
-      trace (TRACE_DEBUG,"db_get_useridnr(): this is not right!");
-      mysql_free_result(res);
-      
-      return 0; 
-    } 
-
-  if ((row = mysql_fetch_row(res))==NULL)
-    {
-      trace (TRACE_DEBUG,"db_get_useridnr(): fetch_row call failed");
-    }
-
-  mailbox_idnr = (row && row[0]) ? strtoull(row[0], NULL, 10) : -1;
-  mysql_free_result(res);
-	
-  if (mailbox_idnr == -1)
-    {
-      
-      return 0;
-    }
-
-  snprintf (query, DEF_QUERYSIZE, "SELECT owner_idnr FROM mailboxes WHERE mailbox_idnr = %llu",
-	   mailbox_idnr);
+  snprintf (query, DEF_QUERYSIZE, "SELECT owner_idnr FROM mailboxes mb, messages m WHERE "
+	    "mb.mailbox_idnr = m.mailbox_idnr AND m.message_idnr = %llu",
+	    message_idnr);
 
   if (db_query(query)==-1)
     {
@@ -550,7 +514,6 @@ u64_t db_get_useridnr (u64_t message_idnr)
 	
   mysql_free_result (res);
   
-	
   return userid;
 }
 
