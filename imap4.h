@@ -9,7 +9,7 @@
 
 #include "serverservice.h"
 
-#define IMAP_SERVER_VERSION "0.2"
+#define IMAP_SERVER_VERSION "0.3"
 #define IMAP_CAPABILITY_STRING "IMAP4 IMAP4rev1 AUTH=LOGIN"
 
 /* maximum size of a mailbox name */
