@@ -1,3 +1,7 @@
+2004-07-14  Ilja Booij  <ilja@ic-s.nl>
+
+	* misc.c (mailbox_add_namespace): possible memleak fixed.
+
 2004-07-13  Ilja Booij  <ilja@ic-s.nl>
 
 	* lmtp.c (lmtp_handle_connection): possible memleak fixed

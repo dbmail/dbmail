@@ -150,6 +150,7 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
 				trace(TRACE_ERROR,
 				      "%s,%s: not enough memory", __FILE__,
 				      __func__);
+				my_free(owner_name);
 				return NULL;
 			}
 			snprintf(fq_name, fq_name_len, "%s%s%s",
@@ -166,6 +167,7 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
 				trace(TRACE_ERROR,
 				      "%s,%s: not enough memory", __FILE__,
 				      __func__);
+				my_free(owner_name);
 				return NULL;
 			}
 			snprintf(fq_name, fq_name_len, "%s%s%s%s%s",
