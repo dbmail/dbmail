@@ -39,10 +39,6 @@
 #include <string.h>
 #include <errno.h>
 
-extern struct list mimelist;
-extern struct list users;
-extern struct list smtpItems;
-
 #define HEADER_BLOCK_SIZE 1024
 
 /* Must be at least 998 or 1000 by RFC's */
@@ -154,7 +150,7 @@ int read_header(FILE * instream, u64_t * headerrfcsize, u64_t * headersize,
 			/* Update block counter */
 			allocated_blocks++;
 			trace(TRACE_DEBUG,
-			      "read_header(): mem current: [%d] reallocated to [%d]",
+			      "read_header(): mem current: [%zd] reallocated to [%lu]",
 			      usedmem,
 			      allocated_blocks * HEADER_BLOCK_SIZE);
 			memtst((tmpheader =
@@ -179,7 +175,7 @@ int read_header(FILE * instream, u64_t * headerrfcsize, u64_t * headersize,
 
 	trace(TRACE_DEBUG, "read_header(): readheader done");
 	trace(TRACE_DEBUG,
-	      "read_header(): found header [%s] of len [%d] using mem [%d]",
+	      "read_header(): found header [%s] of len [%lu] using mem [%zd]",
 	      tmpheader, strlen(tmpheader), usedmem);
 
 	my_free(tmpline);

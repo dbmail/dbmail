@@ -1,3 +1,12 @@
+2004-05-06  Ilja Booij  <ilja@ic-s.nl>
+
+	* header.c (read_header): changed some trace formats to have
+	the right format (e.g. %zd for size_t etc)
+
+	* imaputil.c (stridx): return type is now size_t. It used to
+	be unsigned. The prototype already had size_t as return type, 
+	but by mistake it wasn't changed in the definition.
+
 2004-05-04  Aaron Stone  <aaron@serendipity.cx>
 
 	* pipe.c (store_message_temp): the ring buffer now only looks
