@@ -3,8 +3,8 @@
 
 #! /bin/sh
 
-DBASETYPE = pgsql
-DBASE_AUTHTYPE = pgsql
+DBASETYPE = mysql
+DBASE_AUTHTYPE = mysql
 
 AUTHOBJECT = $(DBASETYPE)/dbauth$(DBASE_AUTHTYPE).o
 MSGBUFOBJECT = $(DBASETYPE)/dbmsgbuf$(DBASETYPE).o
@@ -21,10 +21,10 @@ CONFIG_OBJECTS = $(DBOBJECT) list.o md5.o debug.o dbmd5.o mime.o memblock.o $(AU
 USER_OBJECTS = debug.o list.o dbmd5.o md5.o $(DBOBJECT) mime.o memblock.o $(AUTHOBJECT)
 CC = cc
 
-PGSQLLIBDIR=/usr/local/pgsql/lib
+MYSQLLIBDIR=/usr/local/lib/mysql
 
-LIBS = -L$(PGSQLLIBDIR)
-LIB = -lpq
+LIBS = -L$(MYSQLLIBDIR)
+LIB = -lmysqlclient
 
 # Added the -D_BSD_SOURCE option to suppress warnings
 # from compiler about vsyslog function 
@@ -81,4 +81,4 @@ distclean: clean
 	rm -rf dbmail-smtp dbmail-pop3d dbmail-maintenance dbmail-imapd dbmail-config dbmail-adduser
 
 clean:
-	rm -f *.o core $(DBASETYPE)/*.o
+	rm -f *.o core
