@@ -61,8 +61,8 @@ int db_init_msgfetch(u64_t uid)
   if (_msg_fetch_inited)
     return 0;
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT messageblk FROM messageblk WHERE "
-	   "messageidnr = %llu ORDER BY messageblknr", uid);
+  snprintf(query, DEF_QUERYSIZE, "SELECT messageblk FROM messageblks WHERE "
+	   "message_idnr = %llu ORDER BY messageblk_idnr", uid);
 
   if (db_query(query) == -1)
     {
@@ -370,8 +370,8 @@ long db_dump_range(MEM *outmem, db_pos_t start, db_pos_t end, u64_t msguid)
       return -1;
     }
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT messageblk FROM messageblk WHERE messageidnr = %llu"
-	   " ORDER BY messageblknr", 
+  snprintf(query, DEF_QUERYSIZE, "SELECT messageblk FROM messageblks WHERE message_idnr = %llu"
+	   " ORDER BY messageblk_idnr", 
 	   msguid);
 
   if (db_query(query) == -1)

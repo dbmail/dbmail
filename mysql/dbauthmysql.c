@@ -29,7 +29,7 @@ u64_t db_user_exists(const char *username)
 {
   u64_t uid;
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT useridnr FROM user WHERE userid='%s'",username);
+  snprintf(query, DEF_QUERYSIZE, "SELECT user_idnr FROM users WHERE userid='%s'",username);
 
   if (db_query(query)==-1)
     {
@@ -65,7 +65,7 @@ int db_get_known_users(struct list *users)
   list_init(users);
 
   /* do a inverted (DESC) query because adding the names to the final list inverts again */
-  snprintf(query, DEF_QUERYSIZE, "SELECT userid FROM user ORDER BY userid DESC");
+  snprintf(query, DEF_QUERYSIZE, "SELECT userid FROM users ORDER BY userid DESC");
 
   if (db_query(query) == -1)
     {
@@ -96,7 +96,7 @@ u64_t db_getclientid(u64_t useridnr)
 {
   u64_t cid;
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT clientid FROM user WHERE useridnr = %llu",useridnr);
+  snprintf(query, DEF_QUERYSIZE, "SELECT client_id FROM users WHERE user_idnr = %llu",useridnr);
 
   if (db_query(query) == -1)
     {
@@ -122,7 +122,7 @@ u64_t db_getmaxmailsize(u64_t useridnr)
 {
   u64_t maxmailsize;
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT maxmail_size FROM user WHERE useridnr = %llu",useridnr);
+  snprintf(query, DEF_QUERYSIZE, "SELECT maxmail_size FROM users WHERE user_idnr = %llu",useridnr);
 
   if (db_query(query) == -1)
     {
@@ -214,7 +214,7 @@ u64_t db_adduser (char *username, char *password, char *clientid, char *maxmail)
   u64_t size;
 
   /* first check to see if this user already exists */
-  snprintf(query, DEF_QUERYSIZE, "SELECT * FROM user WHERE userid = '%s'", username);
+  snprintf(query, DEF_QUERYSIZE, "SELECT * FROM users WHERE userid = '%s'", username);
 
   if (db_query(query) == -1)
     {
@@ -248,7 +248,7 @@ u64_t db_adduser (char *username, char *password, char *clientid, char *maxmail)
 	size *= 1000;
     }
       
-  snprintf (query, DEF_QUERYSIZE,"INSERT INTO user (userid,passwd,clientid,maxmail_size) VALUES "
+  snprintf (query, DEF_QUERYSIZE,"INSERT INTO users (userid,passwd,clientid,maxmail_size) VALUES "
 	   "('%s','%s',%s,%llu)",
 	   username,password,clientid, size);
 	
@@ -262,7 +262,7 @@ u64_t db_adduser (char *username, char *password, char *clientid, char *maxmail)
   useridnr = db_insert_result ("");
 	
   /* creating query for adding mailbox */
-  snprintf (query, DEF_QUERYSIZE,"INSERT INTO mailbox (owneridnr, name) VALUES (%llu,'INBOX')",
+  snprintf (query, DEF_QUERYSIZE,"INSERT INTO mailboxes (owner_idnr, name) VALUES (%llu,'INBOX')",
 	   useridnr);
 	
   trace (TRACE_DEBUG,"db_adduser(): executing query for mailbox: [%s]", query);
@@ -281,7 +281,7 @@ u64_t db_adduser (char *username, char *password, char *clientid, char *maxmail)
 
 int db_delete_user(const char *username)
 {
-  snprintf (query, DEF_QUERYSIZE, "DELETE FROM user WHERE userid = '%s'",username);
+  snprintf (query, DEF_QUERYSIZE, "DELETE FROM users WHERE userid = '%s'",username);
 
   if (db_query(query) == -1)
     {
@@ -295,7 +295,7 @@ int db_delete_user(const char *username)
   
 int db_change_username(u64_t useridnr, const char *newname)
 {
-  snprintf(query, DEF_QUERYSIZE, "UPDATE users SET userid = '%s' WHERE useridnr=%llu", 
+  snprintf(query, DEF_QUERYSIZE, "UPDATE users SET userid = '%s' WHERE user_idnr=%llu", 
 	   newname, useridnr);
 
   if (db_query(query) == -1)
@@ -310,7 +310,7 @@ int db_change_username(u64_t useridnr, const char *newname)
 
 int db_change_password(u64_t useridnr, const char *newpass)
 {
-  snprintf(query, DEF_QUERYSIZE, "UPDATE users SET passwd = '%s' WHERE useridnr=%llu", 
+  snprintf(query, DEF_QUERYSIZE, "UPDATE users SET passwd = '%s' WHERE user_idnr=%llu", 
 	   newpass, useridnr);
 
   if (db_query(query) == -1)
@@ -325,7 +325,7 @@ int db_change_password(u64_t useridnr, const char *newpass)
 
 int db_change_clientid(u64_t useridnr, u64_t newcid)
 {
-  snprintf(query, DEF_QUERYSIZE, "UPDATE users SET clientid = %llu WHERE useridnr=%llu", 
+  snprintf(query, DEF_QUERYSIZE, "UPDATE users SET clientid = %llu WHERE user_idnr=%llu", 
 	   newcid, useridnr);
 
   if (db_query(query) == -1)
@@ -339,7 +339,7 @@ int db_change_clientid(u64_t useridnr, u64_t newcid)
 
 int db_change_mailboxsize(u64_t useridnr, u64_t newsize)
 {
-  snprintf(query, DEF_QUERYSIZE, "UPDATE users SET maxmail_size = %llu WHERE useridnr=%llu", 
+  snprintf(query, DEF_QUERYSIZE, "UPDATE users SET maxmail_size = %llu WHERE user_idnr=%llu", 
 	   newsize, useridnr);
 
   if (db_query(query) == -1)
@@ -359,7 +359,7 @@ u64_t db_validate (char *user, char *password)
   u64_t id;
 
   
-  snprintf (query, DEF_QUERYSIZE, "SELECT useridnr FROM user WHERE userid=\"%s\" AND passwd=\"%s\"",
+  snprintf (query, DEF_QUERYSIZE, "SELECT user_idnr FROM users WHERE userid=\"%s\" AND passwd=\"%s\"",
 	   user,password);
 
   trace (TRACE_DEBUG,"db_validate(): validating using query %s\n",query);
@@ -396,7 +396,7 @@ u64_t db_md5_validate (char *username,unsigned char *md5_apop_he, char *apop_sta
 
   
   
-  snprintf (query, DEF_QUERYSIZE, "SELECT passwd,useridnr FROM user WHERE userid=\"%s\"",username);
+  snprintf (query, DEF_QUERYSIZE, "SELECT passwd,user_idnr FROM users WHERE userid=\"%s\"",username);
 	
   if (db_query(query)==-1)
     {
@@ -466,7 +466,7 @@ char *db_get_userid (u64_t *useridnr)
   
   char *returnid = NULL;
   
-  snprintf (query, DEF_QUERYSIZE,"SELECT userid FROM user WHERE useridnr = %llu",
+  snprintf (query, DEF_QUERYSIZE,"SELECT userid FROM users WHERE user_idnr = %llu",
 	   *useridnr);
 
   trace(TRACE_DEBUG,"db_get_userid(): executing query : [%s]",query);
