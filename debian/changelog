@@ -1,3 +1,9 @@
+dbmail2 (2.1.0-0.20050330) experimental; urgency=low
+
+  * svn snapshot 
+
+ -- Paul J Stevens <paul@nfg.nl>  Wed, 30 Mar 2005 15:28:47 +0200
+
 dbmail2 (2.1.0-0.20050323) experimental; urgency=low
 
   * svn snapshot
