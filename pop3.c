@@ -5,10 +5,14 @@
 #include "pop3.h"
 #include "dbmysql.h"
 
+/* max_errors defines the maximum number of allowed failures */
+#define MAX_ERRORS 3
+
 extern int state; /* tells the current negotiation state of the server */
 extern char *username, *password; /* session username and password */
 extern struct session curr_session;
 
+extern int error_count;
 
 /* allowed pop3 commands */
 const char *commands [] = 
@@ -19,6 +23,24 @@ const char *commands [] =
 
 const char validchars[] = ".@ abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
+
+int pop3_error (void *stream, const char *formatstring, ...)
+	{
+   va_list argp;
+   va_start(argp, formatstring);
+	
+	if (error_count>=MAX_ERRORS)
+		{
+		trace (TRACE_MESSAGE,"pop3_error(): too many errors (MAX_ERRORS is %d)",MAX_ERRORS);
+		fprintf ((FILE *)stream, "-ERR loser, go play somewhere else\r\n");
+		return -1;
+		}
+	else
+		vfprintf ((FILE *)stream, formatstring, argp);
+	trace (TRACE_DEBUG,"pop3_error(): an invalid command was issued");
+	error_count++;
+	return 1;
+	}
 
 int pop3 (void *stream, char *buffer)
 	{
@@ -67,8 +89,7 @@ int pop3 (void *stream, char *buffer)
 			(cmdtype!=POP3_STAT) && (cmdtype!=POP3_RSET) && (cmdtype!=POP3_NOOP) &&
 			(cmdtype!=POP3_LAST) && (cmdtype!=POP3_UIDL)) 
 		{
-		fprintf ((FILE *)stream,"-ERR does not compute\r\n");
-		return 1;
+		return pop3_error(stream,"-ERR your command does not compute\r\n");
 		}
 	
 	switch (cmdtype)
@@ -81,10 +102,7 @@ int pop3 (void *stream, char *buffer)
 		case POP3_USER : 
 			{
 				if (state!=AUTHORIZATION)
-					{
-						fprintf ((FILE *)stream,"-ERR wrong command mode\r\n");
-						return 1;
-					}
+					return pop3_error(stream,"-ERR wrong command mode, sir\r\n");
 
 				if (username!=NULL)
 					{
@@ -106,10 +124,7 @@ int pop3 (void *stream, char *buffer)
 		case POP3_PASS :
 			{
           if (state!=AUTHORIZATION)
-					{
-					fprintf ((FILE *)stream,"-ERR wrong command mode\r\n");
-					return 1;
-					}
+				return pop3_error(stream,"-ERR wrong command mode, sir\r\n");
 
 				if (password!=NULL)
 					{
@@ -131,8 +146,7 @@ int pop3 (void *stream, char *buffer)
 						case -1: return -1;
 						case 0: 
 								{
-								fprintf ((FILE *)stream, "-ERR username/password combination is incorrect\r\n");
-								return 1;
+								return pop3_error (stream,"-ERR username/password incorrect\r\n");
 								}
 						default:
 								{
@@ -158,11 +172,9 @@ int pop3 (void *stream, char *buffer)
 		case POP3_LIST :
 			{
       if (state!=TRANSACTION)
-			{
-			 fprintf ((FILE *)stream,"-ERR wrong command mode\r\n");
-					return 1;
-			}
-			tmpelement=list_getstart(&curr_session.messagelst);
+			return pop3_error(stream,"-ERR wrong command mode, sir\r\n");
+			
+		tmpelement=list_getstart(&curr_session.messagelst);
 			if (value!=NULL) 
 				{
 					/* they're asking for a specific message */
@@ -178,8 +190,7 @@ int pop3 (void *stream, char *buffer)
 						tmpelement=tmpelement->nextnode;
 						}
 					if (!found)
-						fprintf ((FILE *)stream,"-ERR no such message\r\n");
-					return 1;
+						return pop3_error (stream,"-ERR no such message\r\n");
 				}
 
 				/* just drop the list */
@@ -203,11 +214,9 @@ int pop3 (void *stream, char *buffer)
 		case POP3_STAT :
 			{
       if (state!=TRANSACTION)
-				{
-				 fprintf ((FILE *)stream,"-ERR wrong command mode\r\n");
-	  			return 1;
-				}
-				fprintf ((FILE *)stream, "+OK %lu %lu\r\n",curr_session.virtual_totalmessages,
+			return pop3_error(stream,"-ERR wrong command mode, sir\r\n");
+		
+			fprintf ((FILE *)stream, "+OK %lu %lu\r\n",curr_session.virtual_totalmessages,
 					curr_session.virtual_totalsize);
 			return 1;
 			}
@@ -215,12 +224,11 @@ int pop3 (void *stream, char *buffer)
 		case POP3_RETR : 
 			{
 			trace(TRACE_DEBUG,"pop3():RETR command, retrieving message");
-      if (state!=TRANSACTION)
-				{
-				 fprintf ((FILE *)stream,"-ERR wrong command mode\r\n");
-	  			return 1;
-				}
-      tmpelement=list_getstart(&curr_session.messagelst);
+     
+		if (state!=TRANSACTION)
+			return pop3_error(stream,"-ERR wrong command mode, sir\r\n");
+      
+		tmpelement=list_getstart(&curr_session.messagelst);
 				/* selecting a message */
 			trace(TRACE_DEBUG,"pop3(): RETR command, selecting message");
 				while (tmpelement!=NULL)
@@ -234,18 +242,15 @@ int pop3 (void *stream, char *buffer)
 						}
 				tmpelement=tmpelement->nextnode;
 					}
-			 fprintf ((FILE *)stream,"-ERR no such message\r\n");
-			 return 1;
+				return pop3_error (stream,"-ERR no such message\r\n");
 			}
 		
 		case POP3_DELE :
 			{
       if (state!=TRANSACTION)
-				{
-				 fprintf ((FILE *)stream,"-ERR wrong command mode\r\n");
-	  			return 1;
-				}
-      tmpelement=list_getstart(&curr_session.messagelst);
+			return pop3_error(stream,"-ERR wrong command mode, sir\r\n");
+      
+		tmpelement=list_getstart(&curr_session.messagelst);
 			/* selecting a message */
 				while (tmpelement!=NULL)
 					{
@@ -262,18 +267,15 @@ int pop3 (void *stream, char *buffer)
 							}
 					tmpelement=tmpelement->nextnode;
 					}
-					fprintf ((FILE *)stream,"-ERR [%s] no such message\r\n",value);
-					return 1;
+					return pop3_error (stream,"-ERR [%s] no such message\r\n",value);
 			}
 
 		 case POP3_RSET :
 			{
       if (state!=TRANSACTION)
-				{
-				 fprintf ((FILE *)stream,"-ERR wrong command mode\r\n");
-	  			return 1;
-				}
-      	tmpelement=list_getstart(&curr_session.messagelst);
+			return pop3_error(stream,"-ERR wrong command mode, sir\r\n");
+      	
+		tmpelement=list_getstart(&curr_session.messagelst);
 
 				curr_session.virtual_totalsize=curr_session.totalsize;
 				curr_session.virtual_totalmessages=curr_session.totalmessages;
@@ -292,11 +294,9 @@ int pop3 (void *stream, char *buffer)
 		case POP3_LAST :
 			{
       if (state!=TRANSACTION)
-				{
-				 fprintf ((FILE *)stream,"-ERR wrong command mode\r\n");
-	  			return 1;
-				}
-				tmpelement=list_getstart(&curr_session.messagelst);
+			return pop3_error(stream,"-ERR wrong command mode, sir\r\n");
+			
+		tmpelement=list_getstart(&curr_session.messagelst);
 
 				while (tmpelement!=NULL)
 				{
@@ -316,20 +316,17 @@ int pop3 (void *stream, char *buffer)
 		case POP3_NOOP :
 			{
       if (state!=TRANSACTION)
-				{
-				 fprintf ((FILE *)stream,"-ERR wrong command mode\r\n");
-	  			return 1;
-				}
-				fprintf ((FILE *)stream, "+OK\r\n");
-				return 1;
+			return pop3_error(stream,"-ERR wrong command mode, sir\r\n");
+				
+			fprintf ((FILE *)stream, "+OK\r\n");
+			return 1;
 			}
+
 		case POP3_UIDL :
 			{
 			if (state!=TRANSACTION)
-				{
-				 fprintf ((FILE *)stream,"-ERR wrong command mode\r\n");
-					return 1;
-				}
+				return pop3_error(stream,"-ERR wrong command mode, sir\r\n");
+			
 			tmpelement=list_getstart(&curr_session.messagelst);
 			if (value!=NULL) 
 				{
@@ -345,8 +342,7 @@ int pop3 (void *stream, char *buffer)
 					tmpelement=tmpelement->nextnode;
 					}
 				if (!found)
-					fprintf ((FILE *)stream,"-ERR no such message\r\n");
-				return 1;
+					return pop3_error (stream,"-ERR no such message\r\n");
 			}
 			/* just drop the list */
 			fprintf ((FILE *)stream, "+OK Some very unique numbers for you\r\n");
@@ -366,8 +362,7 @@ int pop3 (void *stream, char *buffer)
 
 		default : 
 			{
-				fprintf ((FILE *)stream, "-ERR Huh? command not understood\r\n");
-				return 1;
+				return pop3_error(stream,"-ERR command not understood, sir\r\n");
 			}
 		}
 	return 1;

@@ -23,6 +23,9 @@ char *myhostname;
 char *buffer;
 int done=1;
 
+int error_count;
+
+
 /* signal handler */
 static void sigchld_handler (int signo)
 	{
@@ -172,6 +175,9 @@ int main (int argc, char *argv[])
 				/* sending greeting */
 				fprintf (tx,"+OK DBMAIL (currently running at %s) welcome you\r\n",myhostname);
 		
+				/* no errors yet */
+				error_count = 0;
+				
 				/* scanning for commands */
 	
 				while ((done>0) && (buffer=fgets(buffer,INCOMING_BUFFER_SIZE,rx)))

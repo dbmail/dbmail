@@ -5,7 +5,7 @@
 #define  _DBMYSQL_H
 #endif
 
-#include "/usr/include/mysql/mysql.h"
+#include "/usr/local/include/mysql/mysql.h"
 #include "debug.h"
 
 struct session;
