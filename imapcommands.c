@@ -1446,8 +1446,7 @@ int _ic_append(char *tag, char **args, ClientInfo *ci)
 	
     }
 
-/*  if (dataidx >= 1 && msgdata[dataidx-1] != 0)*/
-    msgdata[dataidx++] = 0;   /* terminate */
+  msgdata[dataidx] = 0;   /* terminate (safety, this byte will not be stored) */
 
   alarm(0); /* clear alarm */
 
