@@ -30,6 +30,7 @@ char *read_header(unsigned long *blksize)
   char *header, *strblock;
   int usedmem=0; 
   int end_of_header=0;
+  int allocated_blocks=1;
 	
   memtst ((strblock = (char *)my_malloc(READ_BLOCK_SIZE))==NULL);
   memtst ((header = (char *)my_malloc(HEADER_BLOCK_SIZE))==NULL);
@@ -53,8 +54,11 @@ char *read_header(unsigned long *blksize)
 	
       /* If this happends it's a very big header */	
       if (usedmem>HEADER_BLOCK_SIZE)
-	memtst(((char *)realloc(header,usedmem))==NULL);
-		
+      {
+          /* update block counter */
+          allocated_blocks++;
+          memtst(((char *)realloc(header,allocated_blocks*HEADER_BLOCK_SIZE))==NULL);
+      }
       /* now we concatenate all we have to the header */
 		if (strblock)
 			memtst((header=strcat(header,strblock))==NULL);
