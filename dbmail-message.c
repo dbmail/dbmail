@@ -81,10 +81,9 @@ static struct DbmailMessage * _retrieve(struct DbmailMessage *self, char *query_
 {
 	
 	int row = 0, rows = 0;
+	GString *message = g_string_new("");
 	
 	assert(self->id != 0);
-	
-	GString *message = g_string_new("");
 	
 	snprintf(query, DEF_QUERYSIZE, query_template, DBPFX, DBPFX, self->id);
 
@@ -143,8 +142,9 @@ static void _fetch_full(struct DbmailMessage *self)
 
 struct DbmailMessage * dbmail_message_new(void)
 {
-	g_mime_init(0);
 	struct DbmailMessage *self = (struct DbmailMessage *)my_malloc(sizeof(struct DbmailMessage));
+	
+	g_mime_init(0);
 	if (! self) {
 		trace(TRACE_ERROR, "%s,%s: memory error", __FILE__, __func__);
 		return NULL;
@@ -274,12 +274,13 @@ size_t dbmail_message_get_rfcsize(struct DbmailMessage *self)
 	 * the rfcsize
 	 */
 	
-	if (self->rfcsize)
-		return self->rfcsize;
 
 	GMimeStream *ostream, *fstream;
 	GMimeFilter *filter;
 
+	if (self->rfcsize)
+		return self->rfcsize;
+	
 	ostream = g_mime_stream_mem_new();
 	fstream = g_mime_stream_filter_new_with_stream(ostream);
 	filter = g_mime_filter_crlf_new(GMIME_FILTER_CRLF_ENCODE,GMIME_FILTER_CRLF_MODE_CRLF_ONLY);
