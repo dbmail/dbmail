@@ -28,7 +28,7 @@ dbmail_pop3d_SOURCES = config.c server.c serverchild.c pop3.c list.c debug.c dbm
 dbmail_pop3d_LDADD = @SQLALIB@ $(top-builddir)auth/libauthdbmail.a
 dbmail_pop3d_LDFLAGS = @SQLLIB@ @LDAPLIB@
 
-dbmail_imapd_SOURCES = quota.c config.c server.c serverchild.c imap4.c debug.c list.c dbmd5.c md5.c imaputil.c imapcommands.c mime.c misc.c memblock.c rfcmsg.c imapd.c db.c dbsearch.c dbmsgbuf.c shared_mailbox.c 1
+dbmail_imapd_SOURCES = acl.c quota.c config.c server.c serverchild.c imap4.c debug.c list.c dbmd5.c md5.c imaputil.c imapcommands.c mime.c misc.c memblock.c rfcmsg.c imapd.c db.c dbsearch.c dbmsgbuf.c shared_mailbox.c 1
 dbmail_imapd_LDADD = @SQLALIB@ $(top-builddir)auth/libauthdbmail.a
 dbmail_imapd_LDFLAGS = @SQLLIB@ @LDAPLIB@
 

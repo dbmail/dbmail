@@ -70,4 +70,27 @@ int _ic_uid(char *tag, char **args, ClientInfo *ci);
 int _ic_getquotaroot(char *tag, char **args, ClientInfo *ci);
 int _ic_getquota(char *tag, char **args, ClientInfo *ci);
 
+/* acl commands */
+
+/**
+ * \brief SETACL command 
+ */
+int _ic_setacl(char *tag, char **args, ClientInfo *ci);
+/**
+ * DELETEACL command
+ */
+int _ic_deleteacl(char *tag, char **args, ClientInfo *ci);
+/**
+ * GETACL command
+ */
+int _ic_getacl(char *tag, char **args, ClientInfo *ci);
+/**
+ * LISTRIGHTS command
+ */
+int _ic_listrights(char *tag, char **args, ClientInfo *ci);
+/**
+ * MYRIGHTS command
+ */
+int _ic_myrights(char *tag, char **args, ClientInfo *ci);
+
 #endif

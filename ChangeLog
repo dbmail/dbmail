@@ -1,3 +1,8 @@
+2004-01-20  Ilja Booij  <ilja@ic-s.nl>
+
+	* db.c (db_findmailbox): now functions correctly by returning 0 if
+	no mailbox found.
+
 2004-01-15  Ilja Booij  <ilja@ic-s.nl>
 
 	* auth/authsql.c (auth_validate): use create_current_timestring

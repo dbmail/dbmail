@@ -69,7 +69,8 @@ const char *IMAP_COMMANDS[] =
   "select", "examine", "create", "delete", "rename", "subscribe", "unsubscribe", 
   "list", "lsub", "status", "append", 
   "check", "close", "expunge", "search", "fetch", "store", "copy", "uid",
-  "getquotaroot", "getquota",
+  "getquotaroot", "getquota", 
+  "setacl", "deleteacl", "getacl", "listrights", "myrights",
   "***NOMORE***"
 };
 
@@ -85,6 +86,8 @@ enum IMAP_COMMAND_TYPES { IMAP_COMM_NONE,
 			  IMAP_COMM_SEARCH, IMAP_COMM_FETCH, IMAP_COMM_STORE,
 			  IMAP_COMM_COPY, IMAP_COMM_UID,
 			  IMAP_COMM_GETQUOTAROOT, IMAP_COMM_GETQUOTA,
+			  IMAP_COMM_SETACL, IMAP_COMM_DELETEACL, IMAP_COMM_GETACL,
+			  IMAP_COMM_LISTRIGHTS, IMAP_COMM_MYRIGHTS,
 			  IMAP_COMM_LAST };
 
 
@@ -97,6 +100,7 @@ const IMAP_COMMAND_HANDLER imap_handler_functions[] =
   _ic_subscribe, _ic_unsubscribe, _ic_list, _ic_lsub, _ic_status, _ic_append, 
   _ic_check, _ic_close, _ic_expunge, _ic_search, _ic_fetch, _ic_store, _ic_copy, _ic_uid,
   _ic_getquotaroot, _ic_getquota,
+  _ic_setacl, _ic_deleteacl, _ic_getacl, _ic_listrights, _ic_myrights,
   NULL
 };
 

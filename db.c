@@ -2059,6 +2059,9 @@ int db_findmailbox(const char *name, u64_t user_idnr, u64_t *mailbox_idnr)
 	 *mailbox_idnr = (query_result) ? strtoull(query_result, NULL, 10) : 0;
 	 db_free_result();
     }
+
+    if (*mailbox_idnr == 0) 
+	    return 0;
     return 1;
 }
 
@@ -3339,4 +3342,216 @@ int db_get_user_aliases(u64_t user_idnr, struct list *aliases)
 
     db_free_result();
     return 0;
+}
+
+int db_acl_has_right(u64_t userid, u64_t mboxid, const char *right_flag)
+{
+	int result;
+	int owner_result;
+	
+	owner_result = db_user_is_mailbox_owner(userid, mboxid);
+
+	if (owner_result < 0) {
+		trace(TRACE_ERROR, "%s,%s: error checking mailbox ownership.",
+		      __FILE__, __FUNCTION__);
+		return -1;
+	}
+	
+	if (owner_result == 1)
+		return 1;
+
+	snprintf(query, DEF_QUERYSIZE,
+		 "SELECT * FROM acl "
+		 "WHERE user_id = '%llu' "
+		 "AND mailbox_id = '%llu' "
+		 "AND %s = '1'", userid, mboxid, right_flag);
+	
+	if (db_query(query) < 0) {
+		trace(TRACE_ERROR, "%s,%s: error finding acl_right",
+		      __FILE__, __FUNCTION__);
+		return -1;
+	}
+	
+	if (db_num_rows() == 0)
+		result = 0;
+	else
+		result = 1;
+	
+	db_free_result();
+	return result;
+}
+
+static int db_acl_has_acl(u64_t userid, u64_t mboxid)
+{
+	int result;
+
+	snprintf(query, DEF_QUERYSIZE,
+		 "SELECT user_id, mailbox_id FROM acl "
+		 "WHERE user_id = '%llu' AND mailbox_id = '%llu'",
+		 userid, mboxid);
+	
+	if (db_query(query) < 0) {
+		trace(TRACE_ERROR, "%s,%s: Error finding ACL entry",
+		      __FILE__, __FUNCTION__);
+		return -1;
+	}
+
+	if (db_num_rows() == 0)
+		result = 0;
+	else
+		result = 1;
+
+	db_free_result();
+	return result;
+}
+
+static int db_acl_create_acl(u64_t userid, u64_t mboxid)
+{
+	snprintf(query, DEF_QUERYSIZE,
+		 "INSERT INTO acl (user_id, mailbox_id) "
+		 "VALUES ('%llu', '%llu')", userid, mboxid);
+
+	if (db_query(query) < 0) {
+		trace(TRACE_ERROR, "%s,%s: Error creating ACL entry for user "
+		      "[%llu], mailbox [%llu]."
+		      __FILE__, __FUNCTION__, userid, mboxid);
+		return -1;
+	}
+
+	return 1;
+}
+
+int db_acl_set_right(u64_t userid, u64_t mboxid, const char *right_flag,
+		     int set)
+{
+	int owner_result;
+	int result;
+
+	assert (set == 0 || set == 1);
+
+	trace(TRACE_DEBUG, "%s, %s: Setting ACL for user [%llu], mailbox "
+	      "[%llu].", __FILE__, __FUNCTION__, userid, mboxid);
+
+	owner_result = db_user_is_mailbox_owner(userid, mboxid);
+	if (owner_result < 0) {
+		trace(TRACE_ERROR, "%s,%s: error checking ownership of "
+		      "mailbox.", __FILE__, __FUNCTION__);
+		return -1;
+	}
+	if (owner_result == 1) 
+		return 0;
+
+	// if necessary, create ACL for user, mailbox
+	result = db_acl_has_acl(userid, mboxid);
+	if (result == -1) {
+		trace(TRACE_ERROR, "%s,%s: Error finding acl for user "
+		      "[%llu], mailbox [%llu]",
+		      __FILE__, __FUNCTION__, userid, mboxid);
+		return -1;
+	}
+	
+	if (result == 0) {
+		if (db_acl_create_acl(userid, mboxid) == -1) {
+			trace(TRACE_ERROR, "%s,%s: Error creating ACL for "
+			      "user [%llu], mailbox [%llu]",
+			      __FILE__, __FUNCTION__, userid, mboxid);
+			return -1;
+		}
+	}
+		
+	snprintf(query, DEF_QUERYSIZE,
+		 "UPDATE acl SET %s = '%i' "
+		 "WHERE user_id = '%llu' AND mailbox_id = '%llu'",
+		 right_flag, set, userid, mboxid);
+
+	if (db_query(query) < 0) {
+		trace(TRACE_ERROR, "%s,%s: Error updating ACL for user "
+		      "[%llu], mailbox [%llu].", __FILE__, __FUNCTION__,
+		      userid, mboxid);
+		return -1;
+	}
+	trace(TRACE_DEBUG, "%s,%s: Updated ACL for user [%llu], "
+	      "mailbox [%llu].", __FILE__, __FUNCTION__, userid, mboxid);
+	return 1;
+}
+		      
+int db_acl_delete_acl(u64_t userid, u64_t mboxid)
+{
+	trace(TRACE_DEBUG, "%s,%s: deleting ACL for user [%llu], "
+	      "mailbox [%llu].", __FILE__, __FUNCTION__, userid, mboxid);
+
+	snprintf(query, DEF_QUERYSIZE,
+		 "DELETE FROM acl "
+		 "WHERE user_id = '%llu' AND mailbox_id = '%llu'",
+		 userid, mboxid);
+	
+	if (db_query(query) < 0) {
+		trace(TRACE_ERROR, "%s,%s: error deleting ACL",
+		      __FILE__, __FUNCTION__);
+		return -1;
+	}
+
+	return 1;
+}
+
+int db_acl_get_identifier(u64_t mboxid, struct list *identifier_list)
+{
+	unsigned i, n;
+	char *result_string;
+
+	assert(identifier_list != NULL);
+
+	list_init(identifier_list);
+
+	snprintf(query, DEF_QUERYSIZE,
+		 "SELECT users.userid FROM users, acl "
+		 "WHERE acl.mailbox_id = '%llu' "
+		 "AND users.user_idnr = acl.user_id",
+		 mboxid);
+	
+	if (db_query(query) < 0) {
+		trace(TRACE_ERROR, "%s,%s: error getting acl identifiers "
+		      "for mailbox [%llu].", __FILE__, __FUNCTION__, mboxid);
+		return -1;
+	}
+
+	n = db_num_rows();
+	for (i = 0; i < n; i++) {
+		result_string = db_get_result(i, 0);
+		trace(TRACE_DEBUG, "%s,%s: adding %s to identifier list",
+		      __FILE__, __FUNCTION__, result_string);
+		if (!list_nodeadd(identifier_list,
+				  result_string, strlen(result_string) + 1)) {
+			db_free_result();
+			return -2;
+		}
+	}
+	db_free_result();
+	return 1;
+}
+
+int db_user_is_mailbox_owner(u64_t userid, u64_t mboxid) 
+{
+	int result;
+
+	snprintf(query, DEF_QUERYSIZE,
+		 "SELECT mailbox_idnr FROM mailboxes "
+		 "WHERE mailbox_idnr = '%llu' "
+		 "AND owner_idnr = '%llu'",
+		 mboxid, userid);
+	
+	if (db_query(query) < 0) {
+		trace(TRACE_ERROR, "%s,%s: error checking if user [%llu] is "
+		      "owner of mailbox [%llu]", __FILE__, __FUNCTION__,
+		      userid, mboxid);
+		return -1;
+	}
+
+	if (db_num_rows() == 0)
+		result = 0;
+	else 
+		result = 1;
+	
+	db_free_result();
+	return result;
 }

@@ -29,6 +29,7 @@
 #include "config.h"
 #endif
 
+#include "acl.h"
 #include "imapcommands.h"
 #include "imaputil.h"
 #include "db.h"
@@ -3388,3 +3389,216 @@ int _ic_getquota(char *tag, char **args, ClientInfo *ci) {
     fprintf(ci->tx, "%s OK GETQUOTA completed\r\n", tag);
     return 0;
 }
+
+/* returns -1 on error, 0 if user or mailbox not found and 1 otherwise */
+int imap_acl_pre_administer(const char *mailboxname,
+			    const char *username,
+			    u64_t executing_userid,
+			    u64_t *mboxid,
+			    u64_t *target_userid)
+{
+	int result;
+        result = db_findmailbox(mailboxname, executing_userid, mboxid);
+	if (result < 1)
+		return result;
+
+	result = auth_user_exists(username, target_userid);
+	if (result < 1)
+		return result;
+
+	return 1;
+}
+
+int _ic_setacl(char *tag, char **args, ClientInfo *ci)
+{
+	/* SETACL mailboxname identifier mod_rights */
+	imap_userdata_t *ud = (imap_userdata_t*) ci->userData;
+	int result;
+	u64_t mboxid;
+	u64_t targetuserid;
+	
+	if (!check_state_and_args("SETACL", tag, args, 3,
+				  IMAPCS_AUTHENTICATED, ci))
+		return 1;
+
+	result = imap_acl_pre_administer(args[0], args[1], ud->userid,
+					 &mboxid, &targetuserid);
+	if (result == -1) {
+		fprintf(ci->tx, "* BYE internal database error\r\n");
+		return -1;
+	} else if (result == 0) {
+		fprintf(ci->tx, "%s NO SETACL failure: can't set acl\r\n",
+			tag);
+		return 1;
+	}
+	
+	// has the rights to 'administer' this mailbox? 
+	if (acl_has_right(ud->userid, mboxid, ACL_RIGHT_ADMINISTER) != 1) {
+		fprintf(ci->tx, "%s NO SETACL failure: can't set acl, "
+			"you don't have the proper rights\r\n",
+			tag);
+		return 1;
+	}
+	// set the new acl
+	if (acl_set_rights(targetuserid, mboxid, args[2]) < 0) {
+		fprintf(ci->tx, "* BYE internal database error\r\n");
+		return -1;
+	}
+
+	fprintf(ci->tx, "%s OK SETACL completed\r\n", tag);
+	return 0;
+}
+
+
+int _ic_deleteacl(char *tag, char **args, ClientInfo *ci)
+{
+	// DELETEACL mailboxname identifier
+	imap_userdata_t *ud = (imap_userdata_t*) ci->userData;
+	u64_t mboxid;
+	u64_t targetuserid;
+	
+	if (!check_state_and_args("DELETEACL", tag, args, 2,
+				  IMAPCS_AUTHENTICATED, ci))
+		return 1;
+
+	if (imap_acl_pre_administer(args[0], args[1], ud->userid,
+				    &mboxid, &targetuserid) == -1) {
+		fprintf(ci->tx, "* BYE internal dbase error\r\n");
+		return -1;
+	}
+
+	// has the rights to 'administer' this mailbox? 
+	if (acl_has_right(ud->userid, mboxid, ACL_RIGHT_ADMINISTER) != 1) {
+		fprintf(ci->tx, "%s NO DELETEACL failure: can't delete "
+			"acl\r\n", tag);
+		return 1;
+	}
+	// set the new acl
+	if (acl_delete_acl(targetuserid,mboxid) < 0) {
+		fprintf(ci->tx, "* BYE internal database error\r\n");
+		return -1;
+	}
+
+	fprintf(ci->tx, "%s OK DELETEACL completed\r\n", tag);
+	return 0;
+}
+
+int _ic_getacl(char *tag, char **args, ClientInfo *ci)
+{
+	/* GETACL mailboxname */
+	imap_userdata_t *ud = (imap_userdata_t*) ci->userData;
+	int result;
+	u64_t mboxid;
+	char *acl_string;
+
+	if (!check_state_and_args("GETACL", tag, args, 1,
+				  IMAPCS_AUTHENTICATED, ci))
+		return 1;
+
+	result = db_findmailbox(args[0], ud->userid, &mboxid);
+	if (result == -1) {
+		fprintf(ci->tx, "* BYE internal database error\r\n");
+		return -1;
+	} else if (result == 0) {
+		fprintf(ci->tx, "%s NO GETACL failure: can't get acl\r\n",
+			tag);
+		return 1;
+	}
+
+	// has the rights to 'administer' this mailbox? 
+	if (acl_has_right(ud->userid, mboxid, ACL_RIGHT_ADMINISTER) != 1) {
+		fprintf(ci->tx, "%s NO GETACL failure: can't get acl\r\n",
+			tag);
+		return 1;
+	}
+	// get acl string (string of identifier-rights pairs)
+	if (!(acl_string = acl_get_acl(mboxid))) {
+		fprintf(ci->tx, "* BYE internal database error\r\n");
+		return -1;
+	}
+	
+	fprintf(ci->tx, "* ACL %s %s\r\n", args[0], acl_string);
+	my_free(acl_string);	
+	fprintf(ci->tx, "%s OK GETACL completed\r\n", tag);
+	return 0;
+}
+		
+int _ic_listrights(char *tag, char **args, ClientInfo *ci)
+{
+	/* LISTRIGHTS mailboxname identifier */
+	imap_userdata_t *ud = (imap_userdata_t*) ci->userData;
+	int result;
+	u64_t mboxid;
+	u64_t targetuserid;
+	const char *listrights_string;
+
+	
+	if (!check_state_and_args("LISTRIGHTS", tag, args, 2,
+				  IMAPCS_AUTHENTICATED, ci))
+		return 1;
+
+	result = imap_acl_pre_administer(args[0], args[1], ud->userid,
+					 &mboxid, &targetuserid);
+	if (result == -1) {
+		fprintf(ci->tx, "* BYE internal database error\r\n");
+		return -1;
+	} else if (result == 0) {
+		fprintf(ci->tx, "%s, NO LISTRIGHTS failure: can't set acl\r\n",
+			tag);
+		return 1;
+	}
+	
+	// has the rights to 'administer' this mailbox? 
+	if (acl_has_right(ud->userid, mboxid, ACL_RIGHT_ADMINISTER) != 1) {
+		fprintf(ci->tx, "%s NO LISTRIGHTS failure: can't set acl\r\n",
+			tag);
+		return 1;
+	}
+	// set the new acl
+	if (!(listrights_string = acl_listrights(targetuserid, mboxid))) {
+		fprintf(ci->tx, "* BYE internal database error\r\n");
+		return -1;
+	}
+
+	fprintf(ci->tx, "* LISTRIGHTS %s %s %s\r\n",
+		args[0], args[1], listrights_string);
+	fprintf(ci->tx, "%s OK LISTRIGHTS completed\r\n", tag);
+	return 0;
+}
+
+int _ic_myrights(char *tag, char **args, ClientInfo *ci)
+{
+	/* MYRIGHTS mailboxname */
+	imap_userdata_t *ud = (imap_userdata_t*) ci->userData;
+	int result;
+	u64_t mboxid;
+	char *myrights_string;
+
+	if (!check_state_and_args("LISTRIGHTS", tag, args, 1,
+				  IMAPCS_AUTHENTICATED, ci))
+		return 1;
+	
+	result = db_findmailbox(args[0], ud->userid, &mboxid);
+	if (result == -1) {
+		fprintf(ci->tx, "* BYE internal database error\r\n");
+		return -1;
+	} else if (result == 0) {
+		fprintf(ci->tx, "%s, NO MYRIGHTS failure: unknown mailbox\r\n",
+			tag);
+		return 1;
+	}
+	
+	if (!(myrights_string = acl_myrights(ud->userid, mboxid))) {
+		fprintf(ci->tx, "* BYE internal database error\r\n");
+		return -1;
+	}
+	
+	fprintf(ci->tx, "* MYRIGHTS %s %s\r\n", args[0], myrights_string);
+	my_free(myrights_string);
+	fprintf(ci->tx, "%s OK MYRIGHTS complete\r\n", tag);
+	return 0;
+}
+
+	
+		   
+	

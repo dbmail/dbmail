@@ -1,15 +1,14 @@
-# aclocal.m4 generated automatically by aclocal 1.6.3 -*- Autoconf -*-
+dnl aclocal.m4 generated automatically by aclocal 1.4-p6
 
-# Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002
-# Free Software Foundation, Inc.
-# This file is free software; the Free Software Foundation
-# gives unlimited permission to copy and/or distribute it,
-# with or without modifications, as long as this notice is preserved.
+dnl Copyright (C) 1994, 1995-8, 1999, 2001 Free Software Foundation, Inc.
+dnl This file is free software; the Free Software Foundation
+dnl gives unlimited permission to copy and/or distribute it,
+dnl with or without modifications, as long as this notice is preserved.
 
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY, to the extent permitted by law; without
-# even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-# PARTICULAR PURPOSE.
+dnl This program is distributed in the hope that it will be useful,
+dnl but WITHOUT ANY WARRANTY, to the extent permitted by law; without
+dnl even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+dnl PARTICULAR PURPOSE.
 
 # Do all the work for Automake.  This macro actually does too much --
 # some checks are only needed if your package does certain things.
@@ -342,81 +341,26 @@ unset ac_compile_warnings_opt
 
 							
 
-# Like AC_CONFIG_HEADER, but automatically create stamp file. -*- Autoconf -*-
+# Like AC_CONFIG_HEADER, but automatically create stamp file.
 
-# Copyright 1996, 1997, 2000, 2001 Free Software Foundation, Inc.
-
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2, or (at your option)
-# any later version.
-
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-# 02111-1307, USA.
-
-AC_PREREQ([2.52])
-
-# serial 6
-
-# When config.status generates a header, we must update the stamp-h file.
-# This file resides in the same directory as the config header
-# that is generated.  We must strip everything past the first ":",
-# and everything past the last "/".
-
-# _AM_DIRNAME(PATH)
-# -----------------
-# Like AS_DIRNAME, only do it during macro expansion
-AC_DEFUN([_AM_DIRNAME],
-       [m4_if(regexp([$1], [^.*[^/]//*[^/][^/]*/*$]), -1,
-	      m4_if(regexp([$1], [^//\([^/]\|$\)]), -1,
-		    m4_if(regexp([$1], [^/.*]), -1,
-			  [.],
-			  patsubst([$1], [^\(/\).*], [\1])),
-		    patsubst([$1], [^\(//\)\([^/].*\|$\)], [\1])),
-	      patsubst([$1], [^\(.*[^/]\)//*[^/][^/]*/*$], [\1]))[]dnl
-])# _AM_DIRNAME
-
-
-# The stamp files are numbered to have different names.
-# We could number them on a directory basis, but that's additional
-# complications, let's have a unique counter.
-m4_define([_AM_STAMP_Count], [0])
-
-
-# _AM_STAMP(HEADER)
-# -----------------
-# The name of the stamp file for HEADER.
-AC_DEFUN([_AM_STAMP],
-[m4_define([_AM_STAMP_Count], m4_incr(_AM_STAMP_Count))dnl
-AS_ESCAPE(_AM_DIRNAME(patsubst([$1],
-                               [:.*])))/stamp-h[]_AM_STAMP_Count])
-
-
-# _AM_CONFIG_HEADER(HEADER[:SOURCES], COMMANDS, INIT-COMMANDS)
-# ------------------------------------------------------------
-# We used to try to get a real timestamp in stamp-h.  But the fear is that
-# that will cause unnecessary cvs conflicts.
-AC_DEFUN([_AM_CONFIG_HEADER],
-[# Add the stamp file to the list of files AC keeps track of,
-# along with our hook.
-AC_CONFIG_HEADERS([$1],
-                  [# update the timestamp
-echo 'timestamp for $1' >"_AM_STAMP([$1])"
-$2],
-                  [$3])
-])# _AM_CONFIG_HEADER
-
-
-# AM_CONFIG_HEADER(HEADER[:SOURCES]..., COMMANDS, INIT-COMMANDS)
-# --------------------------------------------------------------
 AC_DEFUN([AM_CONFIG_HEADER],
-[AC_FOREACH([_AM_File], [$1], [_AM_CONFIG_HEADER(_AM_File, [$2], [$3])])
-])# AM_CONFIG_HEADER
+[AC_PREREQ([2.12])
+AC_CONFIG_HEADER([$1])
+dnl When config.status generates a header, we must update the stamp-h file.
+dnl This file resides in the same directory as the config header
+dnl that is generated.  We must strip everything past the first ":",
+dnl and everything past the last "/".
+AC_OUTPUT_COMMANDS(changequote(<<,>>)dnl
+ifelse(patsubst(<<$1>>, <<[^ ]>>, <<>>), <<>>,
+<<test -z "<<$>>CONFIG_HEADERS" || echo timestamp > patsubst(<<$1>>, <<^\([^:]*/\)?.*>>, <<\1>>)stamp-h<<>>dnl>>,
+<<am_indx=1
+for am_file in <<$1>>; do
+  case " <<$>>CONFIG_HEADERS " in
+  *" <<$>>am_file "*<<)>>
+    echo timestamp > `echo <<$>>am_file | sed -e 's%:.*%%' -e 's%[^/]*$%%'`stamp-h$am_indx
+    ;;
+  esac
+  am_indx=`expr "<<$>>am_indx" + 1`
+done<<>>dnl>>)
+changequote([,]))])
 

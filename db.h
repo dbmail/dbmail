@@ -53,7 +53,7 @@
 #define CONFIG_EMPTY 0
 
 
-struct list;
+//struct list;
 
 /* users, aliases, mailboxes, messages, messageblks */
 #define DB_NTABLES 6
@@ -785,6 +785,18 @@ int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern,
  *     - 0 on success
  */
 int db_getmailbox(mailbox_t *mb);
+
+/**
+ * \brief check if a user is owner of the specified mailbox 
+ * \param userid id of user
+ * \param mboxid id of mailbox
+ * \return
+ *     - -1 on db error
+ *     -  0 if not user
+ *     -  1 if user
+ */
+int db_user_is_mailbox_owner(u64_t userid, u64_t mboxid);
+
 /**
  * \brief create a new mailbox
  * \param name name of mailbox
@@ -794,6 +806,7 @@ int db_getmailbox(mailbox_t *mb);
  *    -  0 on success
  */
 int db_createmailbox(const char *name, u64_t owner_idnr, u64_t *mailbox_idnr);
+
 /**
  * \brief produce a list containing the UID's of the specified
  *        mailbox' children matching the search criterion
@@ -1088,5 +1101,55 @@ int db_get_main_header(u64_t msg_idnr, struct list *hdrlist);
  *    - 1 if message belongs to mailbox
  */
 int db_mailbox_msg_match(u64_t mailbox_idnr, u64_t message_idnr);
+
+/**
+ * \brief check if a user has a certain right to a mailbox
+ * \param user_idnr id of user
+ * \param mailbox_idnr id of mailbox
+ * \param right_flag string holding the flag to check for
+ * \return
+ *     - -1 on db error
+ *     -  0 if no right
+ *     -  1 if user has the right
+ */
+int db_acl_has_right(u64_t user_idnr, u64_t mailbox_idnr, 
+		     const char *right_flag);
+
+/**
+ * \brief set one right in an acl for a user
+ * \param userid id of user
+ * \param mboxid id of mailbox
+ * \param right_flag string holding the acl to set
+ * \param set 0 if flag will be set to 0, 1 otherwise
+ * \return 
+ *     - -1 on error
+ *     -  1 on success
+ * \note if the user has no acl for this mailbox, it
+ *       will be created.
+ */
+int db_acl_set_right(u64_t userid, u64_t mboxid,
+		     const char *right_flag, int set);
+
+/**
+ * \brief delete an ACL for a user, mailbox
+ * \param userid id of user
+ * \param mboxid id of mailbox
+ * \return
+ *      - -1 on db failure
+ *      -  1 on success
+ */
+int db_acl_delete_acl(u64_t userid, u64_t mboxid);
+
+/**
+ * \brief get a list of all identifiers which have rights on a mailbox.
+ * \param mboxid id of mailbox
+ * \param identifier_list list of identifiers
+ * \return 
+ *     - -2 on mem failure
+ *     - -1 on db failure
+ *     -  1 on success
+ * \note identifier_list needs to be empty on call.
+ */
+int db_acl_get_identifier(u64_t mboxid, struct list *identifier_list);
 
 #endif
