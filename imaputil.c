@@ -2702,7 +2702,8 @@ int perform_imap_search(int *rset, int setlen, search_key_t * sk,
 	if (!sk)
 		return 0;	/* no search */
 
-	newset = (int *) my_malloc(sizeof(int) * setlen);
+	newset = (int *)g_malloc0(sizeof(int) * setlen);
+	
 	if (!newset)
 		return -2;
 
@@ -2965,6 +2966,7 @@ void build_uid_set(int *set, unsigned int setlen, char *cset,
 			 * it is valid -> check *sep
 			 */
 			if (*sep == ':') {
+				result = 1;
 				for (msn = 0; mb->seq_list[msn] < num;
 				     msn++);
 				if (msn >= mb->exists)
@@ -3181,4 +3183,5 @@ int mime_unwrap(char *to, const char *from)
 	*to='\0';
 	return 0;
 }
+
 

@@ -42,6 +42,7 @@ void dbmail_imap_session_delete(struct ImapSession * self);
 int dbmail_imap_session_readln(struct ImapSession * self, char * buffer);
 int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...);
 
+int dbmail_imap_session_set_state(struct ImapSession *self, int state);
 int check_state_and_args(struct ImapSession * self, const char * command, int minargs, int maxargs, int state);
 int dbmail_imap_session_handle_auth(struct ImapSession * self, char * username, char * password);
 int dbmail_imap_session_prompt(struct ImapSession * self, char * prompt, char * value);
@@ -57,5 +58,6 @@ int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self, u64_t fetch
 int dbmail_imap_session_fetch_get_items(struct ImapSession *self);
 
 int dbmail_imap_session_get_msginfo_range(struct ImapSession *self, u64_t msg_idnr_low, u64_t msg_idnr_high);
+
 #endif
 

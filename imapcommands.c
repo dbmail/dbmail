@@ -171,50 +171,12 @@ int _ic_login(struct ImapSession *self)
 	if (!check_state_and_args(self, "LOGIN", 2, 2, IMAPCS_NON_AUTHENTICATED))
 		return 1;
 	
-	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
-	u64_t userid = 0;
 	timestring_t timestring;
-	int validate_result;
 
 	create_current_timestring(&timestring);
-
-
-	trace(TRACE_DEBUG, "_ic_login(): trying to validate user");
-	validate_result = auth_validate(self->args[0], self->args[1], &userid);
-	trace(TRACE_MESSAGE, "_ic_login(): user (id:%llu, name %s) tries login", userid, self->args[0]);
-
-	if (validate_result == -1) {
-		/* a db-error occurred */
-		dbmail_imap_session_printf(self, "* BYE db error\r\n");
-		trace(TRACE_ERROR,
-		      "_ic_login(): db-validate error while validating user %s (pass %s).",
-		      self->args[0], self->args[1]);
-		return -1;
-	}
-
-	if (validate_result == 0) {
-		sleep(2);	/* security */
-
-		/* validation failed: invalid user/pass combination */
-		trace(TRACE_MESSAGE, "IMAPD [PID %d]: user (name %s) login rejected @ %s",
-		      (int) getpid(), self->args[0], timestring);
-		dbmail_imap_session_printf(self, "%s NO login rejected\r\n",self->tag);
-
-		return 1;
-	}
-
-	/* login ok */
-	trace(TRACE_MESSAGE,
-	      "_ic_login(): user (id %llu, name %s) login accepted @ %s",
-	      userid, self->args[0], timestring);
-#ifdef PROC_TITLES
-	set_proc_title("USER %s [%s]", self->args[0], self->ci->ip);
-#endif
-
-	/* update client info */
-	ud->userid = userid;
-	ud->state = IMAPCS_AUTHENTICATED;
-
+	
+	dbmail_imap_session_handle_auth(self, self->args[0], self->args[1]);
+	
 	if (imap_before_smtp)
 		db_log_ip(self->ci->ip);
 
@@ -232,15 +194,13 @@ int _ic_login(struct ImapSession *self)
  */
 int _ic_authenticate(struct ImapSession *self)
 {
+	int result;
+	char *username = (char *)g_malloc0(sizeof(char)*MAX_LINESIZE);
+	char *password = (char *)g_malloc0(sizeof(char)*MAX_LINESIZE);
+	timestring_t timestring;
+	
 	if (!check_state_and_args(self, "AUTHENTICATE", 1, 1, IMAPCS_NON_AUTHENTICATED))
 		return 1;
-	
-	u64_t userid;
-	char username[MAX_LINESIZE], buf[MAX_LINESIZE], pass[MAX_LINESIZE];
-	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
-	int validate_result;
-	
-	timestring_t timestring;
 
 	create_current_timestring(&timestring);
 
@@ -253,81 +213,18 @@ int _ic_authenticate(struct ImapSession *self)
 	}
 
 	/* ask for username (base64 encoded) */
-	memset(buf, 0, MAX_LINESIZE);
-	base64encode("username\r\n", buf);
-	dbmail_imap_session_printf(self, "+ %s\r\n", buf);
-	fflush(self->ci->tx);
-
-	alarm(self->ci->timeout);
-	if (fgets(buf, MAX_LINESIZE, self->ci->rx) == NULL) {
-		trace(TRACE_ERROR, "%s,%s: error reading from client",
-		      __FILE__, __func__);
-		dbmail_imap_session_printf(self, "* BYE Error reading input\r\n");
+	if (dbmail_imap_session_prompt(self,"username", username))
 		return -1;
-	}
-	alarm(0);
-
-	base64decode(buf, username);
-
 	/* ask for password */
-	memset(buf, 0, MAX_LINESIZE);
-	base64encode("password\r\n", buf);
-	dbmail_imap_session_printf(self, "+ %s\r\n", buf);
-	fflush(self->ci->tx);
-
-	alarm(self->ci->timeout);
-	if (fgets(buf, MAX_LINESIZE, self->ci->rx) == NULL) {
-		trace(TRACE_ERROR, "%s,%s: error reading from client",
-		      __FILE__, __func__);
-		dbmail_imap_session_printf(self, "* BYE Error reading input\r\n");
+	if (dbmail_imap_session_prompt(self,"password", password))
 		return -1;
-	}
-	alarm(0);
-
-	base64decode(buf, pass);
-
 
 	/* try to validate user */
-	validate_result = auth_validate(username, pass, &userid);
-
-	if (validate_result == -1) {
-		/* a db-error occurred */
-		dbmail_imap_session_printf(self,
-			"* BYE internal db error validating user\r\n");
-		trace(TRACE_ERROR,
-		      "IMAPD: authenticate(): db-validate error while validating user %s "
-		      "(pass %s).", username, pass);
-		return -1;
-	}
-
-	if (validate_result == 0) {
-		sleep(2);	/* security */
-
-		/* validation failed: invalid user/pass combination */
-		dbmail_imap_session_printf(self, "%s NO login rejected\r\n", self->tag);
-
-		/* validation failed: invalid user/pass combination */
-		trace(TRACE_MESSAGE,
-		      "IMAPD [PID %d]: user (name %s) login rejected @ %s",
-		      (int) getpid(), username, timestring);
-
-		return 1;
-	}
-
-	/* login ok */
-	/* update client info */
-	ud->userid = userid;
-	ud->state = IMAPCS_AUTHENTICATED;
+	if ((result = dbmail_imap_session_handle_auth(self,username,password)))
+		return result;
 
 	if (imap_before_smtp)
 		db_log_ip(self->ci->ip);
-
-	trace(TRACE_MESSAGE,
-	      "IMAPD [PID %d]: user (id %llu, name %s) login accepted @ %s",
-	      (int) getpid(), userid, username, timestring);
-#ifdef PROC_TITLES
-	set_proc_title("USER %s [%s]", self->args[0], self->ci->ip);
-#endif
 
 	dbmail_imap_session_printf(self, "%s OK AUTHENTICATE completed\r\n", self->tag);
 	return 0;
@@ -348,114 +245,23 @@ int _ic_authenticate(struct ImapSession *self)
 int _ic_select(struct ImapSession *self)
 {
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
-	u64_t mboxid, key;
+	u64_t key;
 	int result;
 	unsigned idx = 0;
+	char *mailbox;
 #define PERMSTRING_SIZE 80
 	char permstring[PERMSTRING_SIZE];
 
 	if (!check_state_and_args(self, "SELECT", 1, 1, IMAPCS_AUTHENTICATED))
 		return 1;	/* error, return */
 
-	if (db_findmailbox(self->args[0], ud->userid, &mboxid) == -1) {
-		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-		return -1;
-	}
-	if (mboxid == 0) {
-		dbmail_imap_session_printf(self, "%s NO Could not find specified mailbox\r\n", self->tag);
+	mailbox = self->args[0];
 
-		ud->state = IMAPCS_AUTHENTICATED;
-		my_free(ud->mailbox.seq_list);
-		memset(&ud->mailbox, 0, sizeof(ud->mailbox));
+	if ((result = dbmail_imap_session_mailbox_open(self, mailbox)))
+		return result;
 
-		return 1;
-	}
-
-	/* check if user has right to select mailbox */
-	result = acl_has_right(ud->userid, mboxid, ACL_RIGHT_READ);
-	if (result < 0) {
-		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
-		return -1;
-	}
-	if (result == 0) {
-		dbmail_imap_session_printf(self,
-			"%s NO no permission to select mailbox\r\n", self->tag);
-		ud->state = IMAPCS_AUTHENTICATED;
-		my_free(ud->mailbox.seq_list);
-		memset(&ud->mailbox, 0, sizeof(ud->mailbox));
-		return 1;
-	}
-
-	/* check if mailbox is selectable */
-	result = db_isselectable(mboxid);
-	if (result == 0) {
-		/* error: cannot select mailbox */
-		dbmail_imap_session_printf(self,
-			"%s NO specified mailbox is not selectable\r\n",
-			self->tag);
-
-		ud->state = IMAPCS_AUTHENTICATED;
-		my_free(ud->mailbox.seq_list);
-		memset(&ud->mailbox, 0, sizeof(ud->mailbox));
-
-		return 1;
-	}
-	if (result == -1) {
-		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-		return -1;	/* fatal */
-	}
-
-	ud->mailbox.uid = mboxid;
-
-	/* read info from mailbox */ result = db_getmailbox(&ud->mailbox);
-	if (result == -1) {
-		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-		return -1;	/* fatal  */
-	}
-
-	/* show mailbox info */
-	/* msg counts */
-	dbmail_imap_session_printf(self, "* %u EXISTS\r\n", ud->mailbox.exists);
-	dbmail_imap_session_printf(self, "* %u RECENT\r\n", ud->mailbox.recent);
-
-	/* flags */
-	dbmail_imap_session_printf(self, "* FLAGS (");
-
-	if (ud->mailbox.flags & IMAPFLAG_SEEN)
-		dbmail_imap_session_printf(self, "\\Seen ");
-	if (ud->mailbox.flags & IMAPFLAG_ANSWERED)
-		dbmail_imap_session_printf(self, "\\Answered ");
-	if (ud->mailbox.flags & IMAPFLAG_DELETED)
-		dbmail_imap_session_printf(self, "\\Deleted ");
-	if (ud->mailbox.flags & IMAPFLAG_FLAGGED)
-		dbmail_imap_session_printf(self, "\\Flagged ");
-	if (ud->mailbox.flags & IMAPFLAG_DRAFT)
-		dbmail_imap_session_printf(self, "\\Draft ");
-	if (ud->mailbox.flags & IMAPFLAG_RECENT)
-		dbmail_imap_session_printf(self, "\\Recent ");
-
-	dbmail_imap_session_printf(self, ")\r\n");
-
-	/* permanent flags */
-	dbmail_imap_session_printf(self, "* OK [PERMANENTFLAGS (");
-	if (ud->mailbox.flags & IMAPFLAG_SEEN)
-		dbmail_imap_session_printf(self, "\\Seen ");
-	if (ud->mailbox.flags & IMAPFLAG_ANSWERED)
-		dbmail_imap_session_printf(self, "\\Answered ");
-	if (ud->mailbox.flags & IMAPFLAG_DELETED)
-		dbmail_imap_session_printf(self, "\\Deleted ");
-	if (ud->mailbox.flags & IMAPFLAG_FLAGGED)
-		dbmail_imap_session_printf(self, "\\Flagged ");
-	if (ud->mailbox.flags & IMAPFLAG_DRAFT)
-		dbmail_imap_session_printf(self, "\\Draft ");
-	if (ud->mailbox.flags & IMAPFLAG_RECENT)
-		dbmail_imap_session_printf(self, "\\Recent ");
-
-	dbmail_imap_session_printf(self, ")]\r\n");
-
-	/* UID */
-	dbmail_imap_session_printf(self, "* OK [UIDVALIDITY %llu] UID value\r\n",
-		ud->mailbox.uid);
+	if ((result = dbmail_imap_session_mailbox_show_info(self)))
+		return result;
 
 	/* show idx of first unseen msg (if present) */
 	key = db_first_unseen(ud->mailbox.uid);
@@ -505,105 +311,20 @@ int _ic_select(struct ImapSession *self)
 int _ic_examine(struct ImapSession *self)
 {
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
-	u64_t mboxid;
 	int result;
+	char *mailbox;
 
 	if (!check_state_and_args(self, "EXAMINE", 1, 1, IMAPCS_AUTHENTICATED))
 		return 1;
 
-	if (db_findmailbox(self->args[0], ud->userid, &mboxid) == -1) {
-		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-		return -1;
-	}
-	if (mboxid == 0) {
-		dbmail_imap_session_printf(self,
-			"%s NO Could not find specified mailbox\r\n", self->tag);
-		return 1;
-	}
+	mailbox = self->args[0];
 
-	/* check if user has right to examine mailbox */
-	result = acl_has_right(ud->userid, mboxid, ACL_RIGHT_READ);
-	if (result < 0) {
-		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
-		return -1;
-	}
-	if (result == 0) {
-		dbmail_imap_session_printf(self,
-			"%s NO no permission to examine mailbox\r\n", self->tag);
-		ud->state = IMAPCS_AUTHENTICATED;
-		my_free(ud->mailbox.seq_list);
-		memset(&ud->mailbox, 0, sizeof(ud->mailbox));
-		return 1;
-	}
+	if ((result = dbmail_imap_session_mailbox_open(self, mailbox)))
+		return result;
 
-	/* check if mailbox is selectable */
-	result = db_isselectable(mboxid);
-	if (result == 0) {
-		/* error: cannot select mailbox */
-		dbmail_imap_session_printf(self,
-			"%s NO specified mailbox is not selectable\r\n",
-			self->tag);
-		return 1;	/* fatal */
-	}
-	if (result == -1) {
-		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-		return -1;	/* fatal */
-	}
-
-	ud->mailbox.uid = mboxid;
-
-	/* read info from mailbox */
-	result = db_getmailbox(&ud->mailbox);
-
-	if (result == -1) {
-		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-		return -1;	/* fatal */
-	}
-
-	/* show mailbox info */
-	/* msg counts */
-	dbmail_imap_session_printf(self, "* %u EXISTS\r\n", ud->mailbox.exists);
-	dbmail_imap_session_printf(self, "* %u RECENT\r\n", ud->mailbox.recent);
-
-	/* flags */
-	dbmail_imap_session_printf(self, "* FLAGS (");
-
-	if (ud->mailbox.flags & IMAPFLAG_SEEN)
-		dbmail_imap_session_printf(self, "\\Seen ");
-	if (ud->mailbox.flags & IMAPFLAG_ANSWERED)
-		dbmail_imap_session_printf(self, "\\Answered ");
-	if (ud->mailbox.flags & IMAPFLAG_DELETED)
-		dbmail_imap_session_printf(self, "\\Deleted ");
-	if (ud->mailbox.flags & IMAPFLAG_FLAGGED)
-		dbmail_imap_session_printf(self, "\\Flagged ");
-	if (ud->mailbox.flags & IMAPFLAG_DRAFT)
-		dbmail_imap_session_printf(self, "\\Draft ");
-	if (ud->mailbox.flags & IMAPFLAG_RECENT)
-		dbmail_imap_session_printf(self, "\\Recent ");
-
-	dbmail_imap_session_printf(self, ")\r\n");
-
-	/* permanent flags */
-	dbmail_imap_session_printf(self, "* OK [PERMANENTFLAGS (");
-	if (ud->mailbox.flags & IMAPFLAG_SEEN)
-		dbmail_imap_session_printf(self, "\\Seen ");
-	if (ud->mailbox.flags & IMAPFLAG_ANSWERED)
-		dbmail_imap_session_printf(self, "\\Answered ");
-	if (ud->mailbox.flags & IMAPFLAG_DELETED)
-		dbmail_imap_session_printf(self, "\\Deleted ");
-	if (ud->mailbox.flags & IMAPFLAG_FLAGGED)
-		dbmail_imap_session_printf(self, "\\Flagged ");
-	if (ud->mailbox.flags & IMAPFLAG_DRAFT)
-		dbmail_imap_session_printf(self, "\\Draft ");
-	if (ud->mailbox.flags & IMAPFLAG_RECENT)
-		dbmail_imap_session_printf(self, "\\Recent ");
-
-	dbmail_imap_session_printf(self, ")]\r\n");
-
-	/* UID */
-	dbmail_imap_session_printf(self, "* OK [UIDVALIDITY %llu] UID value\r\n",
-		ud->mailbox.uid);
-
+	if ((result = dbmail_imap_session_mailbox_show_info(self)))
+		return result;
+	
 	/* update permission: examine forces read-only */
 	ud->mailbox.permission = IMAPPERM_READ;
 
@@ -628,36 +349,21 @@ int _ic_create(struct ImapSession *self)
 	u64_t parent_mboxid = 0;	/* id of parent mailbox (if applicable) */
 	char **chunks, *cpy;
 	int other_namespace = 0;
+	char *mailbox;
 
 	if (!check_state_and_args(self, "CREATE", 1, 1, IMAPCS_AUTHENTICATED))
 		return 1;
 
-	/* remove trailing '/' if present */
-	while (strlen(self->args[0]) > 0 && self->args[0][strlen(self->args[0]) - 1] == '/')
-		self->args[0][strlen(self->args[0]) - 1] = '\0';
-
-	/* remove leading '/' if present */
-	for (i = 0; self->args[0][i] && self->args[0][i] == '/'; i++);
-	memmove(&self->args[0][0], &self->args[0][i],
-		(strlen(self->args[0]) - i) * sizeof(char));
-
-	/* check if this mailbox already exists */
-	if (db_findmailbox(self->args[0], ud->userid, &mboxid) == -1) {
-		/* dbase failure */
-		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-		return -1;	/* fatal */
-	}
-
-	if (mboxid != 0) {
-		/* mailbox already exists */
+	mailbox = self->args[0];
+	
+	if ( (mboxid = dbmail_imap_session_mailbox_get_idnr(self, mailbox)) ) {
 		dbmail_imap_session_printf(self, "%s NO mailbox already exists\r\n", self->tag);
 		return 1;
 	}
 
 	/* check if new name is valid */
-	if (!checkmailboxname(self->args[0])) {
-		dbmail_imap_session_printf(self,
-			"%s BAD new mailbox name contains invalid characters\r\n",
+	if (!checkmailboxname(mailbox)) {
+		dbmail_imap_session_printf(self, "%s BAD new mailbox name contains invalid characters\r\n",
 			self->tag);
 		return 1;
 	}
@@ -698,8 +404,7 @@ int _ic_create(struct ImapSession *self)
 	for (i = 0; chunks[i]; i++) {
 		if (strlen(chunks[i]) == 0) {
 			/* no can do */
-			dbmail_imap_session_printf(self,
-				"%s NO invalid mailbox name specified\r\n",
+			dbmail_imap_session_printf(self, "%s NO invalid mailbox name specified\r\n",
 				self->tag);
 			free_chunks(chunks);
 			my_free(cpy);
@@ -839,23 +544,13 @@ int _ic_delete(struct ImapSession *self)
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	int result, nchildren = 0;
 	u64_t *children = NULL, mboxid;
+	char *mailbox = self->args[0];
 
 	if (!check_state_and_args(self, "DELETE", 1, 1, IMAPCS_AUTHENTICATED))
 		return 1;	/* error, return */
 
-	/* remove trailing '/' if present */
-	while (strlen(self->args[0]) > 0 && self->args[0][strlen(self->args[0]) - 1] == '/')
-		self->args[0][strlen(self->args[0]) - 1] = '\0';
-
-	/* check if this mailbox exists */
-	if (db_findmailbox(self->args[0], ud->userid, &mboxid) == -1) {
-		/* dbase failure */
-		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-		return -1;	/* fatal */
-	}
-	if (mboxid == 0) {
-		/* mailbox does not exist */
-		dbmail_imap_session_printf(self, "%s NO mailbox does not exist\r\n", self->tag);
+	if ( (mboxid = dbmail_imap_session_mailbox_get_idnr(self, mailbox)) ) {
+		dbmail_imap_session_printf(self, "%s NO mailbox already exists\r\n", self->tag);
 		return 1;
 	}
 
@@ -867,30 +562,22 @@ int _ic_delete(struct ImapSession *self)
 		return -1;
 	}
 	if (result == 0) {
-		dbmail_imap_session_printf(self,
-			"%s NO no permission to delete mailbox\r\n", self->tag);
-		ud->state = IMAPCS_AUTHENTICATED;
-		my_free(ud->mailbox.seq_list);
-		memset(&ud->mailbox, 0, sizeof(ud->mailbox));
+		dbmail_imap_session_printf(self, "%s NO no permission to delete mailbox\r\n", self->tag);
+		dbmail_imap_session_set_state(self,IMAPCS_AUTHENTICATED);
 		return 1;
 	}
 
 	/* check if there is an attempt to delete inbox */
 	if (strcasecmp(self->args[0], "inbox") == 0) {
-		dbmail_imap_session_printf(self,
-			"%s NO cannot delete special mailbox INBOX\r\n",
-			self->tag);
+		dbmail_imap_session_printf(self, "%s NO cannot delete special mailbox INBOX\r\n", self->tag);
 		return 1;
 	}
 
 	/* check for children of this mailbox */
-	result =
-	    db_listmailboxchildren(mboxid, ud->userid, &children,
-				   &nchildren, "%");
+	result = db_listmailboxchildren(mboxid, ud->userid, &children, &nchildren, "%");
 	if (result == -1) {
 		/* error */
-		trace(TRACE_ERROR,
-		      "IMAPD: delete(): cannot retrieve list of mailbox children");
+		trace(TRACE_ERROR, "IMAPD: delete(): cannot retrieve list of mailbox children");
 		dbmail_imap_session_printf(self, "* BYE dbase/memory error\r\n");
 		return -1;
 	}
@@ -899,9 +586,7 @@ int _ic_delete(struct ImapSession *self)
 		/* mailbox has inferior names; error if \noselect specified */
 		result = db_isselectable(mboxid);
 		if (result == 0) {
-			dbmail_imap_session_printf(self,
-				"%s NO mailbox is non-selectable\r\n",
-				self->tag);
+			dbmail_imap_session_printf(self, "%s NO mailbox is non-selectable\r\n", self->tag);
 			my_free(children);
 			return 1;
 		}
@@ -923,11 +608,8 @@ int _ic_delete(struct ImapSession *self)
 		}
 
 		/* check if this was the currently selected mailbox */
-		if (mboxid == ud->mailbox.uid) {
-			my_free(ud->mailbox.seq_list);
-			memset(&ud->mailbox, 0, sizeof(ud->mailbox));
-			ud->state = IMAPCS_AUTHENTICATED;
-		}
+		if (mboxid == ud->mailbox.uid) 
+			dbmail_imap_session_set_state(self,IMAPCS_AUTHENTICATED);
 
 		/* ok done */
 		dbmail_imap_session_printf(self, "%s OK DELETE completed\r\n", self->tag);
@@ -939,11 +621,8 @@ int _ic_delete(struct ImapSession *self)
 	db_delete_mailbox(mboxid, 0, 1);
 
 	/* check if this was the currently selected mailbox */
-	if (mboxid == ud->mailbox.uid) {
-		my_free(ud->mailbox.seq_list);
-		memset(&ud->mailbox, 0, sizeof(ud->mailbox));
-		ud->state = IMAPCS_AUTHENTICATED;
-	}
+	if (mboxid == ud->mailbox.uid) 
+		dbmail_imap_session_set_state(self, IMAPCS_AUTHENTICATED);
 
 	dbmail_imap_session_printf(self, "%s OK DELETE completed\r\n", self->tag);
 	return 0;
@@ -1018,9 +697,7 @@ int _ic_rename(struct ImapSession *self)
 	if (result == 0) {
 		dbmail_imap_session_printf(self,
 			"%s NO no permission to rename mailbox\r\n", self->tag);
-		ud->state = IMAPCS_AUTHENTICATED;
-		my_free(ud->mailbox.seq_list);
-		memset(&ud->mailbox, 0, sizeof(ud->mailbox));
+		dbmail_imap_session_set_state(self, IMAPCS_AUTHENTICATED);
 		return 1;
 	}
 
@@ -1235,9 +912,7 @@ int _ic_unsubscribe(struct ImapSession *self)
 		dbmail_imap_session_printf(self,
 			"%s NO no permission to unsubscribe from mailbox\r\n",
 			self->tag);
-		ud->state = IMAPCS_AUTHENTICATED;
-		my_free(ud->mailbox.seq_list);
-		memset(&ud->mailbox, 0, sizeof(ud->mailbox));
+		dbmail_imap_session_set_state(self, IMAPCS_AUTHENTICATED);
 		return 1;
 	}
 
@@ -1566,9 +1241,7 @@ int _ic_append(struct ImapSession *self)
 		dbmail_imap_session_printf(self,
 			"%s NO no permission to append to mailbox\r\n",
 			self->tag);
-		ud->state = IMAPCS_AUTHENTICATED;
-		my_free(ud->mailbox.seq_list);
-		memset(&ud->mailbox, 0, sizeof(ud->mailbox));
+		dbmail_imap_session_set_state(self, IMAPCS_AUTHENTICATED);
 		return 1;
 	}
 
@@ -1918,11 +1591,7 @@ int _ic_close(struct ImapSession *self)
 
 
 	/* ok, update state (always go to IMAPCS_AUTHENTICATED) */
-	ud->state = IMAPCS_AUTHENTICATED;
-
-	my_free(ud->mailbox.seq_list);
-	memset(&ud->mailbox, 0, sizeof(ud->mailbox));
-
+	dbmail_imap_session_set_state(self, IMAPCS_AUTHENTICATED);
 	dbmail_imap_session_printf(self, "%s OK CLOSE completed\r\n", self->tag);
 	return 0;
 }
@@ -2465,6 +2134,8 @@ int _ic_store(struct ImapSession *self)
 	/* end of ACL checking. If we get here without returning, the user has
 	   the right to store the flags */
 
+	db_getmailbox(&ud->mailbox); // resync mailbox
+
 	/* set flags & show if needed */
 	endptr = self->args[0];
 	while (*endptr) {
@@ -2707,6 +2378,8 @@ int _ic_copy(struct ImapSession *self)
 		return 1;
 	}
 
+	db_getmailbox(&ud->mailbox); // resync mailbox
+	
 	/* ok copy msgs */
 	endptr = self->args[0];
 	while (*endptr) {
