@@ -64,7 +64,7 @@ CREATE TABLE dbmail_mailboxes (
 );
 CREATE INDEX dbmail_mailboxes_owner_idx ON dbmail_mailboxes(owner_idnr);
 CREATE INDEX dbmail_mailboxes_name_idx ON dbmail_mailboxes(name);
-CREATE INDEX dbmail_mailboxes_owner_name_idx 
+CREATE UNIQUE INDEX dbmail_mailboxes_owner_name_idx 
 	ON dbmail_mailboxes(owner_idnr, name);
 
 CREATE TABLE dbmail_subscription (

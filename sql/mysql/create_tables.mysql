@@ -58,7 +58,7 @@ CREATE TABLE dbmail_mailboxes (
    PRIMARY KEY (mailbox_idnr),
    INDEX name_index (name),
    INDEX owner_idnr_index (owner_idnr),
-   INDEX owner_idnr_name_index (owner_idnr, name)
+   UNIQUE INDEX owner_idnr_name_index (owner_idnr, name)
  );
 
 DROP TABLE IF EXISTS dbmail_subscription;

@@ -68,7 +68,7 @@ CREATE TABLE dbmail_mailboxes (
 	PRIMARY KEY  (mailbox_idnr),
 	INDEX name_index (name),
 	INDEX owner_idnr_index (owner_idnr),
-	INDEX owner_idnr_name_index (owner_idnr, name),
+	UNIQUE INDEX owner_idnr_name_index (owner_idnr, name),
 	FOREIGN KEY owner_idnr_fk (owner_idnr) 
 		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE
 ) TYPE=InnoDB;
@@ -101,8 +101,8 @@ CREATE TABLE dbmail_acl (
 	delete_flag tinyint(1) default '0' not null,	
 	administer_flag tinyint(1) default '0' not null,	
 	PRIMARY KEY(user_id, mailbox_id),
-	index user_id_index (user_id),
-	index mailbox_id_index (mailbox_id),
+	INDEX user_id_index (user_id),
+	INDEX mailbox_id_index (mailbox_id),
 	FOREIGN KEY user_id_fk (user_id) 
 		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE,	
 	FOREIGN KEY mailbox_id_fk (mailbox_id) 

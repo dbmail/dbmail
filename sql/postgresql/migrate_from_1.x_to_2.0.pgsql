@@ -82,7 +82,7 @@ ALTER TABLE dbmail_mailboxes ALTER COLUMN mailbox_idnr
 	SET DEFAULT nextval('dbmail_mailbox_idnr_seq');
 CREATE INDEX dbmail_mailboxes_owner_idx ON dbmail_mailboxes(owner_idnr);
 CREATE INDEX dbmail_mailboxes_name_idx ON dbmail_mailboxes(name);
-CREATE INDEX dbmail_mailboxes_owner_name_idx 
+CREATE UNIQUE INDEX dbmail_mailboxes_owner_name_idx 
 	ON dbmail_mailboxes(owner_idnr, name);
 
 -- create the subscription table.

@@ -47,7 +47,7 @@ RENAME TABLE mailboxes TO dbmail_mailboxes;
 ALTER TABLE dbmail_mailboxes
 	ADD INDEX name_index (name),
 	ADD INDEX owner_idnr_index (owner_idnr),
-	ADD INDEX name_owner_idnr_index (owner_idnr, name);
+	ADD UNIQUE INDEX name_owner_idnr_index (owner_idnr, name);
 
 # Now the subscription table will be created, after which the next step
 # will be to fill it.

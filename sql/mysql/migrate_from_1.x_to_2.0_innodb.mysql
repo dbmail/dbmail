@@ -52,7 +52,7 @@ ALTER TABLE dbmail_mailboxes
 ##	DROP INDEX mailboxidnr_2,
 	ADD INDEX name_index (name),
 	ADD INDEX owner_idnr_index (owner_idnr),
-	ADD INDEX name_owner_idnr_index (owner_idnr, name),
+	ADD UNIQUE INDEX name_owner_idnr_index (owner_idnr, name),
 	ADD FOREIGN KEY owner_idnr_fk (owner_idnr) 
 		REFERENCES dbmail_users (user_idnr)
 		ON DELETE CASCADE;
