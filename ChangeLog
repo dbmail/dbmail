@@ -1,3 +1,10 @@
+2004-04-13  Ilja Booij  <ilja@ic-s.nl>
+
+	* db.c (db_findmailbox_by_regex): corrected a small error. There was a check to see
+	if nchildren == 0, which should of course be *nchildren == 0
+	(db_list_mailboxes_by_regex): now stores all info from database before constructing
+	full names of mailboxes. 
+
 2004-04-08  Ilja Booij  <ilja@ic-s.nl>
 
 	* pipe.c (insert_messages): now does an extra check. If a recipient is bound

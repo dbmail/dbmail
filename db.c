@@ -2147,16 +2147,18 @@ int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
 {
 	unsigned int i;
 	u64_t *tmp_mailboxes;
-	char *result_string;
-	u64_t owner_idnr;
-	u64_t mailbox_idnr;
-	char *mailbox_name;
+	u64_t *all_mailboxes;
+	char** all_mailbox_names;
+	u64_t *all_mailbox_owners;
+	unsigned n_rows;
 
 	assert(mailboxes != NULL);
 	assert(nr_mailboxes != NULL);
 
 	*mailboxes = NULL;
 	*nr_mailboxes = 0;
+	
+	trace(TRACE_DEBUG, "%s,%s: in func", __FILE__, __FUNCTION__);
 	if (only_subscribed)
 		snprintf(query, DEF_QUERYSIZE,
 			 "SELECT mbx.name, mbx.mailbox_idnr, mbx.owner_idnr "
@@ -2184,24 +2186,43 @@ int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
 		      __FILE__, __FUNCTION__);
 		return (-1);
 	}
-	if (db_num_rows() == 0) {
+	n_rows = db_num_rows();
+	if (n_rows == 0) {
 		/* none exist, none matched */
 		db_free_result();
 		return 0;
 	}
-	tmp_mailboxes = (u64_t *) my_malloc(db_num_rows() * sizeof(u64_t));
-	if (!tmp_mailboxes) {
+	all_mailboxes = (u64_t *) my_malloc(n_rows * sizeof(u64_t));
+	all_mailbox_names = (char **) my_malloc(n_rows * sizeof(char*));
+	all_mailbox_owners = (u64_t *) my_malloc(n_rows * sizeof(u64_t));
+	tmp_mailboxes = (u64_t *) my_malloc(n_rows * sizeof(u64_t));
+	if (!all_mailboxes || !all_mailbox_names || !all_mailbox_owners || 
+	    !tmp_mailboxes) {
 		trace(TRACE_ERROR, "%s,%s: not enough memory\n",
 		      __FILE__, __FUNCTION__);
 		return (-2);
 	}
+	
+	for (i = 0; i < n_rows; i++) {
+		all_mailbox_names[i] = strdup(db_get_result(i, 0));
+		all_mailboxes[i] = db_get_result_u64(i, 1);
+		all_mailbox_owners[i] = db_get_result_u64(i, 2);
+	} 
+	db_free_result();
 
-	for (i = 0; i < (unsigned) db_num_rows(); i++) {
-		result_string = db_get_result(i, 0);
-		owner_idnr = db_get_result_u64(i, 2);
+	for (i = 0; i < n_rows; i++) {
+		char *mailbox_name;
+		u64_t mailbox_idnr = all_mailboxes[i];
+		u64_t owner_idnr = all_mailbox_owners[i];
+		char *simple_mailbox_name = all_mailbox_names[i];
+
+		trace(TRACE_DEBUG, "%s,%s: checking mailbox: %s, nr %llu, owner = %llu",
+		      __FILE__, __FUNCTION__, simple_mailbox_name, mailbox_idnr, owner_idnr);
+
 		/* add possible namespace prefix to mailbox_name */
 		mailbox_name =
-		    mailbox_add_namespace(result_string, owner_idnr,
+		    mailbox_add_namespace(simple_mailbox_name, 
+					  owner_idnr,
 					  user_idnr);
 		if (mailbox_name) {
 			trace(TRACE_DEBUG,
@@ -2209,7 +2230,6 @@ int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
 			      "regular expression", __FILE__, __FUNCTION__,
 			      mailbox_name);
 			if (regexec(preg, mailbox_name, 0, NULL, 0) == 0) {
-				mailbox_idnr = db_get_result_u64(i, 1);
 				tmp_mailboxes[*nr_mailboxes] =
 					mailbox_idnr;
 				(*nr_mailboxes)++;
@@ -2219,9 +2239,15 @@ int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
 				      mailbox_name, mailbox_idnr);
 			}
 			my_free(mailbox_name);
+			my_free(all_mailbox_names[i]);
 		}
 	}
-	db_free_result();
+	my_free(all_mailbox_names);
+	my_free(all_mailboxes);
+	my_free(all_mailbox_owners);
+
+	trace(TRACE_DEBUG, "%s,%s: exit", __FILE__, __FUNCTION__);
+
 	if (*nr_mailboxes == 0) {
 		/* none exist, none matched */
 		my_free(tmp_mailboxes);
@@ -2258,7 +2284,7 @@ int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern,
 		return -1;
 	}
 
-	if (nchildren == 0) {
+	if (*nchildren == 0) {
 		trace(TRACE_INFO,
 		      "%s, %s: did not find any mailboxes that "
 		      "match pattern. returning 0, nchildren = 0",

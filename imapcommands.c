@@ -1379,6 +1379,8 @@ int _ic_list(char *tag, char **args, ClientInfo * ci)
 
 		result = db_noinferiors(children[i]);
 		if (result == -1) {
+			trace(TRACE_ERROR, "%s,%s: error in call to db_noinferiors",
+			      __FILE__, __FUNCTION__);
 			fprintf(ci->tx,
 				"\r\n* BYE internal dbase error\r\n");
 			my_free(children);
