@@ -36,7 +36,7 @@ Add a user. If \fIquiet\fR is specified, the user ID will be printed to stdout i
 The username of the user to be added. This username is used for access and authentication (through pop3 or imap4).
 
 .BI \fIpassword\fR 
-Cleartext password for user. If the password is preceeded by '{crypt:}' the (cleartext) password will be encrypted.
+Cleartext password for user. If the password is preceeded by '{crypt:}' the (cleartext) password will be encrypted. If the password is preceeded by '{crypt}' the password on the command line is assumed to be already encrypted.
 
 .BI \fIclientid\fR 
 This option enables users to be grouped. \fIclientid\fR specifies the owner of the user.

@@ -193,6 +193,11 @@ int do_add(int argc, char *argv[])
       strcat(pw,crypt(&argv[1][strlen("{crypt:}")], cget_salt()));
       useridnr = auth_adduser(argv[0], pw, "crypt",argv[2],argv[3]);
     }
+  else if (strncasecmp(argv[1], "{crypt}", strlen("{crypt}")) == 0)
+    {
+      /* assume passwd is encrypted on command line */
+      useridnr = auth_adduser(argv[0], &argv[1][strlen("{crypt}")], "crypt",argv[2],argv[3]);
+    }
   else
     {
       useridnr = auth_adduser(argv[0],argv[1],"",argv[2],argv[3]);
