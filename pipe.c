@@ -658,10 +658,10 @@ int send_reply(struct list *headerfields, const char *body)
   trace(TRACE_DEBUG, "send_reply(): sending data");
   
   fprintf(mailpipe, "To: %s\n", replyto ? replyto : from);
-  fprintf(mailpipe, "From: %s\n", to);
-  fprintf(mailpipe, "Subject: AW: %s\n", subject);
+  fprintf(mailpipe, "From: %s\n", to ? to : "(unknown)");
+  fprintf(mailpipe, "Subject: AW: %s\n", subject ? subject : "<no subject>");
   fprintf(mailpipe, "\n");
-  fprintf(mailpipe, "%s\n", body);
+  fprintf(mailpipe, "%s\n", body ? body : "--");
 
   result = pclose(mailpipe);
   trace(TRACE_DEBUG, "send_reply(): pipe closed");
