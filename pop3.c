@@ -32,7 +32,7 @@ const char *commands [] =
   "uidl","apop","auth","top"
 };
 
-const char validchars[] = "-.@!#$%^&*() abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+const char validchars[] = "_-.@!#$%^&*() abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
 
 int pop3_error (void *stream, const char *formatstring, ...)
