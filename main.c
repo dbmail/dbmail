@@ -66,6 +66,7 @@ deliver_to_user_t dsnuser;
 //char *header = NULL;
 char *deliver_to_header = NULL;
 char *deliver_to_mailbox = NULL;
+char *override_to_mailbox = NULL;
 u64_t headersize, headerrfcsize;
 
 /* loudness and assumptions */
@@ -147,11 +148,17 @@ int do_showhelp(void) {
 
 	printf("Use this program to deliver mail from your MTA or on the command line.\n");
 	printf("See the man page for more info. Summary:\n\n");
-	printf("     -t [headerfield]   for normal deliveries (default is \"deliver-to\")\n");
-	printf("     -d [addresses]     for delivery without using scanner\n");
-	printf("     -u [usernames]     for direct delivery to users\n");
-	printf("     -m \"mailbox\"       for delivery to a specific mailbox\n");
-	printf("     -r return path     for address of bounces and other error reports\n");
+        printf("     -t [headerfield]   deliver to the address in the specified header field\n"
+               "                        (default is \"Deliver-To\")\n");
+        printf("     -d [addr+detail]   deliver to a username or alias with mailbox detail\n"
+               "                        expansion in the format address+mailbox@hostname\n");
+        printf("     -u [deliveryaddr]  deliver to a username or alias without mailbox detail\n");
+        printf("     -m \"mailbox\"       deliver messages to a specific mailbox, unless\n"
+               "                        there is a mailbox detail overriding it\n");
+        printf("     -M \"mailbox\"       deliver messages to a specific mailbox, overriding \n"
+               "                        any mailbox details\n");
+        printf("     -r return path     for address of bounces and other error reports\n");
+
 
 	printf("\nCommon options for all DBMail utilities:\n");
 	printf("     -f file   specify an alternative config file\n");
@@ -190,7 +197,7 @@ int main(int argc, char *argv[])
 	 * with an immediately preceding option are return with option 
 	 * value '1'. We will use this to allow for multiple values to
 	 * follow after each of the supported options. */
-	while ((c = getopt(argc, argv, "-t::m:u:d:r: f:qnyvVh")) != EOF) {
+	while ((c = getopt(argc, argv, "-t::m:M:u:d:r: f:qnyvVh")) != EOF) {
 		/* Received an n-th value following the last option,
 		 * so recall the last known option to be used in the switch. */
 		if (c == 1)
@@ -225,6 +232,19 @@ int main(int argc, char *argv[])
 				deliver_to_mailbox = optarg;
 
 			break;
+
+                case 'M':
+                        trace(TRACE_INFO,
+                              "main(): using SPECIAL_DELIVERY to mailbox");
+
+                        if (override_to_mailbox) {
+                                printf
+                                    ("Only one mailbox may be specified.\n");
+                                usage_error = 1;
+                        } else
+                                override_to_mailbox = optarg;
+
+                        break;
 
 		case 'r':
 			trace(TRACE_INFO,
@@ -264,11 +284,32 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'd':
+			{
+                        char *address = NULL, *mailbox = NULL, *detail = NULL;
+                        size_t boxlen = 0, boxpos = 0;
+
 			trace(TRACE_INFO,
 			      "main(): using SPECIAL_DELIVERY to email addresses");
 
+                        find_bounded(optarg, '+', '@', &mailbox, &boxlen, &boxpos);
+
 			dsnuser_init(&dsnuser);
-			dsnuser.address = strdup(optarg);
+
+                        if (tmplen) {
+				address = strdup(optarg);
+				detail = strchr(address, '+');
+				if (detail)
+					*detail = '\0';
+				strcat(address, (optarg+boxpos));
+				/* No need to strdup because these are allocated here. */
+				dsnuser.address = address;
+				print_r( "Address is [%s]\n", dsnuser.address);
+				dsnuser.mailbox = mailbox;
+				print_r( "Mailbox is [%s]\n", dsnuser.mailbox);
+                        } else {
+				/* Use strdup because you can't free any argv elements. */
+				dsnuser.address = strdup(optarg);
+			}
 
 			/* Add argument onto the users list. */
 			if (list_nodeadd
@@ -280,7 +321,7 @@ int main(int argc, char *argv[])
 				exitcode = EX_TEMPFAIL;
 				goto freeall;
 			}
-
+			}
 			break;
 
 		/* Common command line options. */
@@ -432,10 +473,26 @@ int main(int argc, char *argv[])
 	if (deliver_to_mailbox != NULL) {
 		trace(TRACE_DEBUG, "main(): setting mailbox for all deliveries to [%s]",
 		      deliver_to_mailbox);
-		/* Loop through the dsnusers list, setting the destination mailbox. */
+		/* Loop through the dsnusers list, setting the destination mailbox
+		 * for those who don't already have a mailbox specified. */
 		for (tmp = list_getstart(&dsnusers); tmp != NULL;
 		     tmp = tmp->nextnode) {
-			((deliver_to_user_t *)tmp->data)->mailbox = strdup(deliver_to_mailbox);
+			if (!((deliver_to_user_t *)tmp->data)->mailbox)
+				((deliver_to_user_t *)tmp->data)->mailbox
+					= strdup(deliver_to_mailbox);
+		}
+	}
+
+	/* If the MAILBOX override mode has been selected... */
+	if (override_to_mailbox != NULL) {
+		trace(TRACE_DEBUG, "main(): setting mailbox for all deliveries to [%s]",
+		      override_to_mailbox);
+		/* Loop through the dsnusers list, setting the destination mailbox for
+		 * everyone, regardless of whether or not there was a mailbox specified. */
+		for (tmp = list_getstart(&dsnusers); tmp != NULL;
+		     tmp = tmp->nextnode) {
+			((deliver_to_user_t *)tmp->data)->mailbox
+				= strdup(override_to_mailbox);
 		}
 	}
 

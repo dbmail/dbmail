@@ -1,3 +1,9 @@
+2004-07-27  Aaron Stone  <aaron@serendipity.cx>
+
+	* main.c: added support for address+mailbox@host syntax, needed for 
+	integration with amavis-new and others, also adding the -M option to
+	be able to override the "address detail mailbox."
+
 2004-07-24  Aaron Stone  <aaron@serendipity.cx>
 
 	* man/dbmail-users.1, man/dbmail-util.1, man/dbmail-smtp.1: updated
