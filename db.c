@@ -2242,7 +2242,7 @@ int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 		 "SELECT mailbox_idnr FROM dbmail_mailboxes "
 		 "WHERE name='%s' AND owner_idnr='%llu'", local_name,
 		 owner_idnr);
-	free(local_name);
+	free(local_name); /* allocated with strdup(), so uses normal free() */
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR,
 		      "%s,%s: could not select mailbox '%s'\n", __FILE__,
@@ -2650,7 +2650,7 @@ int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
 			 "SELECT mailbox_idnr FROM dbmail_mailboxes WHERE name LIKE '%s/%s'"
 			 " AND owner_idnr = '%llu'",
 			 mailbox_name, filter, user_idnr);
-		free(mailbox_name);
+		free(mailbox_name); /* alloc'd with strdup so uses free() */
 	}
 	else
 		snprintf(query, DEF_QUERYSIZE,

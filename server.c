@@ -86,7 +86,7 @@ int SetParentSigHandler()
 int StartServer(serverConfig_t * conf)
 {
 	int i, stillSomeAlive, cnt;
-	pid_t *pid = (pid_t *) malloc(sizeof(pid_t) * conf->nChildren);
+	pid_t *pid = (pid_t *) my_malloc(sizeof(pid_t) * conf->nChildren);
 	ChildInfo_t childinfo;
 
 	if (!pid)
@@ -205,7 +205,7 @@ int StartServer(serverConfig_t * conf)
 
 //  DeleteSharedMemory();
 
-	free(pid);
+	my_free(pid);
 	return Restart;
 }
 

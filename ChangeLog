@@ -1,5 +1,15 @@
 2004-08-02  Ilja Booij  <ilja@ic-s.nl>
 
+	* server.c (StartServer): changed malloc() to my_malloc()
+	(StartServer):free() -> my_free()
+	
+	* quota.c (quota_alloc): changed malloc() to my_malloc()
+	(quota_set_root): free() -> my_free()
+	(quota_free): free() -> my_free()
+
+	* proctitleutils.c (init_set_proc_title): changed malloc() to 
+	my_malloc().
+
 	* config.c (ReadConfig): changed malloc and free to  my_malloc and 
 	my_free. Added code to prevent memory leakage in event of errors.
 	(config_free): changed free() to my_free()

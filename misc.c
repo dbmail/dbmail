@@ -73,7 +73,7 @@ int drop_privileges(char *newuser, char *newgroup)
 
 char *itoa(int i)
 {
-	char *s = (char *) malloc(42);	/* Enough for a 128 bit integer */
+	char *s = (char *) my_malloc(42); /* Enough for a 128 bit integer */
 	if (s)
 		sprintf(s, "%d", i);
 	return s;
@@ -330,7 +330,7 @@ char **base64_decode(char *str, size_t len)
 	/* Base64 encoding required about 40% more space.
 	 * So we'll allocate 50% more space. */
 	maxlen = 3 * len / 2;
-	str_decoded = (char *) malloc(sizeof(char) * maxlen);
+	str_decoded = (char *) my_malloc(sizeof(char) * maxlen);
 	if (str_decoded == NULL)
 		return NULL;
 
@@ -350,7 +350,7 @@ char **base64_decode(char *str, size_t len)
 
 	/* Allocate an array of arrays large enough
 	 * for the strings and a terminating NULL */
-	ret = (char **) malloc(sizeof(char *) * (numstrings + 1));
+	ret = (char **) my_malloc(sizeof(char *) * (numstrings + 1));
 	if (ret == NULL)
 		return NULL;
 
@@ -399,7 +399,7 @@ int read_from_stream(FILE * instream, char **m_buf, size_t maxlen)
 		return 0;
 	}
 
-	tmp_buf = malloc(sizeof(char) * (f_len += 512));
+	tmp_buf = my_malloc(sizeof(char) * (f_len += 512));
 	if (tmp_buf != NULL)
 		f_buf = tmp_buf;
 	else

@@ -36,7 +36,7 @@ quota_t *quota_alloc(int n_resources)
 	quota_t *quota;
 
 	quota =
-	    malloc(sizeof(quota_t) +
+	    my_malloc(sizeof(quota_t) +
 		   n_resources * sizeof(resource_limit_t));
 	if (quota != NULL) {
 		quota->root = NULL;
@@ -70,7 +70,7 @@ void quota_set_resource_limit(quota_t * quota, int resource_idx,
  */
 int quota_set_root(quota_t * quota, char *root)
 {
-	free(quota->root);
+	my_free(quota->root);
 	quota->root = strdup(root);
 	return (quota->root == NULL);
 }
@@ -78,8 +78,8 @@ int quota_set_root(quota_t * quota, char *root)
 /* Free a quota structure. */
 void quota_free(quota_t * quota)
 {
-	free(quota->root);
-	free(quota);
+	my_free(quota->root);
+	my_free(quota);
 }
 
 
