@@ -54,6 +54,30 @@ const char validchars[] =
 
 char myhostname[64];
 
+
+int lmtp_reset(PopSession_t *session)
+  {
+    /* Free the lists and reinitialize 
+     * but only if they were previously
+     * initialized by LMTP_LHLO... */
+    if( session->state == LHLO )
+      {
+        list_freelist( &rcpt.start );
+        list_init( &rcpt );
+      }
+ 
+    if( envelopefrom != NULL )
+      {
+        my_free( envelopefrom );
+      }
+    envelopefrom = NULL;
+ 
+    session->state = LHLO;
+
+    return 1;
+  }
+
+
 int lmtp_handle_connection(clientinfo_t *ci)
 {
   /*
@@ -107,6 +131,7 @@ int lmtp_handle_connection(clientinfo_t *ci)
       return 0;
     }
 
+  lmtp_reset(&session);
   while (done > 0)
     {
       /* set the timeout counter */
@@ -149,6 +174,7 @@ int lmtp_handle_connection(clientinfo_t *ci)
   }
 
   /* memory cleanup */
+  lmtp_reset(&session);
   my_free(buffer);
   buffer = NULL;
 
@@ -159,28 +185,6 @@ int lmtp_handle_connection(clientinfo_t *ci)
   return 0;
 }
 
-
-int lmtp_reset(PopSession_t *session)
-  {
-    /* Free the lists and reinitialize 
-     * but only if they were previously
-     * initialized by LMTP_LHLO... */
-    if( session->state == LHLO )
-      {
-        list_freelist( &rcpt.start );
-        list_init( &rcpt );
-      }
- 
-    if( envelopefrom != NULL )
-      {
-        my_free( envelopefrom );
-      }
-    envelopefrom = NULL;
- 
-    session->state = LHLO;
-
-    return 1;
-  }
 
 int lmtp_error(PopSession_t *session, void *stream, const char *formatstring, ...)
 	__attribute__((format(printf, 3, 4)));
@@ -398,7 +402,7 @@ int lmtp(void *stream, void *instream, char *buffer, char *client_ip UNUSED, Pop
               if (tmplen < 1)
                 {
                   fprintf((FILE *)stream,"500 No address found.\r\n" );
-                  goodtogo = 0;
+		  goodtogo = 0;
                 }
               else if (tmpbody != NULL)
                 {
