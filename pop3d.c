@@ -47,6 +47,7 @@ FILE *rx = NULL;	/* read socket */
 
 int *default_children;  /* # of default children in use */
 int defchld;            /* # of default children as specified in conf */
+int maxchld;            /* max. # of children */
 int total_children = 0;
 pid_t *xtrachild_pids;
 
@@ -105,17 +106,17 @@ static void signal_handler (int signo, siginfo_t *info, void *data)
   else
     if (signo == SIGCHLD)
       {
-	trace (TRACE_DEBUG,"signal_handler(): sigCHLD, cleaning up zombies for PID %u",info->si_pid);
+	trace (TRACE_DEBUG,"signal_handler(): sigCHLD, cleaning up zombies for PID %d",info->si_pid);
 
 	PID = waitpid (info->si_pid, &status, WNOHANG | WUNTRACED);
 
-	/* reset the entry of this process if it is a default child (so it can be restored) 
-	 * This is added because of SIGKILL's
+	/* a default child that as done a normal exit() or caught a fatal signal will have reset 
+	 * it's own entry in default_child_pids[]
+	 * an extra check is needed for uncaught signals 
 	 */
-	if (info->si_pid == 0)
+	if (WIFSIGNALED(status))
 	  {
-	    /* SIGKILL occured, 'ping' every child we have */
-	    trace(TRACE_ERROR,"signal_handler(): SIGKILL from [%u]", info->si_uid);
+	    /* child died because of an uncaught signal, check children */
 	    
 	    for (i=0; i<defchld; i++)
 	      {
@@ -133,9 +134,20 @@ static void signal_handler (int signo, siginfo_t *info, void *data)
 		    break;
 		  }
 	      }
-	    
-	    trace (TRACE_DEBUG,"signal_handler(): sigCHLD, cleaned");
 	  }
+
+	/* check if an extra child died. if so, reset its entry in xtra_child_pids[] */
+	for (i=0; i<maxchld; i++)
+	  {
+	    if (xtrachild_pids[i] == PID)
+	      {
+		xtrachild_pids[i] = 0;
+		total_children--;
+		break;
+	      }
+	  }	    
+	
+	trace (TRACE_DEBUG,"signal_handler(): sigCHLD, cleaned");
 	errno = saved_errno;
 	return;
       }
@@ -153,6 +165,7 @@ static void signal_handler (int signo, siginfo_t *info, void *data)
 	trace (TRACE_STOP,"signal_handler(): received fatal signal [%d]",signo);
       }
 }
+
 
 int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 {
@@ -402,12 +415,13 @@ int main (int argc, char *argv[])
   int new_level = 2, new_trace_syslog = 1, new_trace_verbose = 0;
   char *resolve_setting=NULL, *before_smtp=NULL, *max_connects=0;
   
+  pid_t childpid = 0;
+
   int len_inet;
   int reuseaddress;
   int s = -1;
   int c = -1;
   int z, i, j; /* counters */
-  int maxchld; /* maxchildren */
   pid_t deadchildpid;
   int n_connects = 0,n_max_connects=0;
 
@@ -435,25 +449,26 @@ int main (int argc, char *argv[])
 
   if (resolve_setting)
   {
-		if (strcasecmp(resolve_setting,"yes")==0)
-				resolve_client = 1;
-		else
-				resolve_client = 0;
-		my_free(resolve_setting);
-		resolve_setting = NULL;
+    if (strcasecmp(resolve_setting,"yes")==0)
+      resolve_client = 1;
+    else
+      resolve_client = 0;
+
+    my_free(resolve_setting);
+    resolve_setting = NULL;
   }	
   
   if (timeout_setting) 
   {
-	  server_timeout = atoi(timeout_setting);
-	  my_free (timeout_setting);
-	  if (server_timeout<10)
-		  trace (TRACE_STOP,"main(): POP3D_CHILD_TIMEOUT setting is insane [%d]",
-				  server_timeout);
-	  timeout_setting = NULL;
+    server_timeout = atoi(timeout_setting);
+    my_free (timeout_setting);
+    if (server_timeout<10)
+      trace (TRACE_STOP,"main(): POP3D_CHILD_TIMEOUT setting is insane [%d]",
+	     server_timeout);
+    timeout_setting = NULL;
   }
   else
-	  server_timeout = DEFAULT_SERVER_TIMEOUT;
+    server_timeout = DEFAULT_SERVER_TIMEOUT;
   
   if (trace_level)
     {
@@ -588,6 +603,10 @@ int main (int argc, char *argv[])
   if (n_max_connects <= 1)
     n_max_connects = POP3_DEF_MAXCONNECT;
 
+  
+  /* OK all config read, close dbase connection */
+  db_disconnect();
+
 
   /* getting shared memory children counter */
   shmkey_dcu = time (NULL); /* get an unique key */
@@ -635,21 +654,21 @@ int main (int argc, char *argv[])
   /* spawn the default children */
   for (i=0; i<defchld; i++)
     {
-      if (!fork())
+      switch ( (childpid = fork()) )
 	{
-	  default_child_pids[i] = getpid();
+	case 0:
 	  n_connects = 0;
 	  break;
-	}
-      else
-	{
-	  while (default_child_pids[i] == 0) 
-	    {
-	      trace(TRACE_DEBUG, "main(): waiting for child to catch up...\n");
-	      sleep(1); /* wait until child has catched up */
-	    }
+	case -1:
+	  perror("main(): fork failed");
+	  break;
+	default:
+	  default_child_pids[i] = childpid;
 	  total_children++;
 	}
+
+      if (childpid == 0)
+	break;
     }
 
   /* this infinite loop is needed for killed default-children:
@@ -707,7 +726,7 @@ int main (int argc, char *argv[])
 	     */
 	    for (i=0; i<defchld; i++)
 	      {
-		if (default_child_pids[i] == 0)
+		if (default_child_pids[i] == 0 || (kill(default_child_pids[i],0) ==  -1 && errno == ESRCH) ) 
 		  {
 		    /* def-child has died, re-create */
 		    if (!fork())
@@ -731,14 +750,25 @@ int main (int argc, char *argv[])
 
 	    while ((deadchildpid = waitpid (-1, NULL, WNOHANG | WUNTRACED)) > 0)
 	      {
-		trace(TRACE_DEBUG,"got %ld from waitpid\n",deadchildpid);
+		trace(TRACE_DEBUG,"main(): got %ld from waitpid",deadchildpid);
 		for (i=0; i<maxchld; i++)
-		  if (xtrachild_pids[i] == deadchildpid)
-		    {
-		      xtrachild_pids[i] = 0;
-		      total_children--;
-		      break;
-		    }
+		  {
+		    if (xtrachild_pids[i] == deadchildpid)
+		      {
+			xtrachild_pids[i] = 0;
+			total_children--;
+			break;
+		      }
+		  }
+
+		for (i=0; i<defchld; i++)
+		  {
+		    if (default_child_pids[i] == deadchildpid)
+		      {
+			trace(TRACE_DEBUG, "main(): got dead default child");
+			default_child_pids[i] = 0;
+		      }
+		  }
 	      }
 
 	    /* clean up list */
@@ -765,14 +795,10 @@ int main (int argc, char *argv[])
 	      }
 
 	    /* wait for a connection */
-	    trace(TRACE_DEBUG, "main(): pre-accept");
-
 	    len_inet = sizeof (adr_clnt);
 	    c = accept (s, (struct sockaddr *)&adr_clnt,
 			&len_inet); /* incoming connection */
 	
-	    trace(TRACE_DEBUG, "main(): accept finished");
-
 	    /* failure won't cause a quit forking is too expensive */	
 	    if (c == -1 && errno != EINTR) /* dont show failure for EINTR */
 	      {
@@ -780,24 +806,34 @@ int main (int argc, char *argv[])
 		continue;
 	      }
 
-	    trace(TRACE_DEBUG, "main(): accept accepted");
-	    
-	    if (fork())
+	    for (i=0; i<maxchld; i++)
+	      if (!xtrachild_pids[i])
+		break;
+
+	    if (i == maxchld)
 	      {
-		total_children++;
+		/* no free places ?? */
+		close(c);
+		continue;
+	      }
+
+	    if ( (childpid = fork()) )
+	      {
+		if (childpid != -1)
+		  {
+		    xtrachild_pids[i] = childpid; /* save pid */
+		    total_children++;
+		  }
+		else
+		  {
+		    trace(TRACE_ERROR, "main(): forked failed [%s]", strerror(errno));
+		  }
+
 		close(c);
 		continue;
 	      }
 	    else
 	      {
-		/* save pid */
-		for (i=0; i<maxchld; i++)
-		  if (!xtrachild_pids[i])
-		    {
-		      xtrachild_pids[i] = getpid();
-		      break;
-		    }
-
 		/* handle client connection */
 		handle_client(myhostname, c, adr_clnt);
 		exit(0);

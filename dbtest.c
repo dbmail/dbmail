@@ -23,6 +23,25 @@ int main()
   int i,j;
   time_t start,stop,cost;
 
+/*
+  NB this test showed that the dbase connection is closed after child termination 
+
+  while (1)
+    {
+      if (!fork())
+	{
+	  if (db_connect() != 0)
+	    printf("could not connect\n");
+	  exit(0);
+	}
+      else
+	{
+	  usleep(100);
+	  while (waitpid(-1, NULL, WNOHANG|WUNTRACED) > 0) ;
+	}
+    }
+*/
+
   openlog(PNAME, LOG_PID, LOG_MAIL);   /* open connection to syslog */
   configure_debug(TRACE_DEBUG, 1, 0);
 
