@@ -23,4 +23,17 @@
 #include "config.h"
 #endif
 
-#define PNAME "dbmail/adduser"
+#define PNAME "dbmail/users"
+
+/* These are the available password types. */
+typedef enum {
+	PLAINTEXT = 0, PLAINTEXT_RAW, CRYPT, CRYPT_RAW,
+	MD5_HASH, MD5_HASH_RAW, MD5_DIGEST, MD5_DIGEST_RAW,
+	SHADOW, PWTYPE_NULL
+} pwtype_t;
+
+int mkpassword(const char * const user, const char * const passwd,
+               const char * const passwdtype, const char * const passwdfile,
+               char ** password, char ** enctype);
+
+

@@ -127,9 +127,6 @@ int do_forwards(const char *alias, const u64_t clientid,
 /* Helper functions */
 int is_valid(const char * const str);
 u64_t strtomaxmail(const char * const str);
-int mkpassword(const char * const user, const char * const passwd,
-               const char * const passwdtype, const char * const passwdfile,
-               char ** password, char ** enctype);
 
 int do_showhelp(void) {
 	printf("*** dbmail-users ***\n");
@@ -635,29 +632,6 @@ int do_password(const u64_t useridnr,
 	return result;
 }
 
-/* These are the available password types. */
-typedef enum {
-	PLAINTEXT = 0, PLAINTEXT_RAW, CRYPT, CRYPT_RAW,
-	MD5_HASH, MD5_HASH_RAW, MD5_DIGEST, MD5_DIGEST_RAW,
-	SHADOW, PWTYPE_NULL
-} pwtype_t;
-
-/* These are the easy text names. */
-static const char * const pwtypes[] = {
-	"plaintext", "plaintext-raw", "crypt", "crypt-raw",
-	"md5", "md5-raw", "md5sum", "md5sum-raw",
-	"md5-hash", "md5-hash-raw", "md5-digest", "md5-digest-raw",
-	"shadow", "", NULL
-};
-
-/* These must correspond to the easy text names. */
-static const pwtype_t pwtypecodes[] = {
-	PLAINTEXT, PLAINTEXT_RAW, CRYPT, CRYPT_RAW,
-	MD5_HASH, MD5_HASH_RAW, MD5_DIGEST, MD5_DIGEST_RAW,
-	MD5_HASH, MD5_HASH_RAW, MD5_DIGEST, MD5_DIGEST_RAW,
-	SHADOW, PLAINTEXT, PWTYPE_NULL
-};
-
 int mkpassword(const char * const user, const char * const passwd,
                const char * const passwdtype, const char * const passwdfile,
 	       char ** password, char ** enctype)
@@ -668,6 +642,22 @@ int mkpassword(const char * const user, const char * const passwd,
 	int result = 0;
 	char *entry = NULL;
 	char pw[50];
+
+	/* These are the easy text names. */
+	const char * const pwtypes[] = {
+		"plaintext",	"plaintext-raw",	"crypt",	"crypt-raw",
+		"md5", 		"md5-raw",		"md5sum",	"md5sum-raw", 
+		"md5-hash",	"md5-hash-raw",		"md5-digest",	"md5-digest-raw",
+		"shadow", 	"", 			NULL
+	};
+
+	/* These must correspond to the easy text names. */
+	const pwtype_t pwtypecodes[] = {
+		PLAINTEXT, 	PLAINTEXT_RAW, 		CRYPT,		CRYPT_RAW,
+		MD5_HASH, 	MD5_HASH_RAW,		MD5_DIGEST,	MD5_DIGEST_RAW,
+		MD5_HASH,	MD5_HASH_RAW,		MD5_DIGEST,	MD5_DIGEST_RAW,
+		SHADOW,		PLAINTEXT,		PWTYPE_NULL
+	};
 
 	memset(pw, 0, 50);
 
@@ -749,6 +739,7 @@ int mkpassword(const char * const user, const char * const passwd,
 
 	return result;
 }
+
 
 /* Change of client id. */
 int do_clientid(u64_t useridnr, u64_t clientid)
