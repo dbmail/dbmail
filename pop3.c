@@ -18,7 +18,7 @@ extern int error_count;
 const char *commands [] = 
 	{
 	"quit", "user", "pass", "stat", "list", "retr", "dele", "noop", "last", "rset",
-	"uidl"
+	"uidl","top"
 	};
 
 const char validchars[] = ".@ abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -358,6 +358,13 @@ int pop3 (void *stream, char *buffer)
 						}
 					fprintf ((FILE *)stream,".\r\n");
 				return 1;
+
+			CASE POP3_TOP:
+				{
+
+				}
+
+				
 			}
 
 		default : 
