@@ -1,3 +1,7 @@
+2004-09-14  Ilja Booij  <ilja@ic-s.nl>
+
+	* INSTALL.postfix: trivial fix.
+
 2004-09-14  Paul Stevens <paul@nfg.nl>
 
 	* dbmailtypes.h, dbsearch.c, dbsearch.h, imap4.c, imap4.h, imapcommands.c,

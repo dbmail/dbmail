@@ -117,8 +117,8 @@ Date:   19-03-2004
 	local_recipient_maps = mysql:/etc/postfix/sql-recipients.cf
 
 	This tells Postfix to use the database to check if a recipient is 
-	present in the database. Postfix will send a bounce if a recipient
-	is not present.
+	present in the database. Postfix will reject the message if the
+	recipient is not present.
 
 5.	Notes
 	
