@@ -386,6 +386,7 @@ int retrieve_envelope(FILE *outstream, struct list *rfcheader)
 int show_address_list(FILE *outstream, struct mime_record *mr)
 {
   int delimiter,i,inquote,start,has_split;
+  char savechar;
 
   fprintf(outstream,"(");
       
@@ -426,12 +427,14 @@ int show_address_list(FILE *outstream, struct mime_record *mr)
 	  if (i > start+2)
 	    {
 	      /* name is contained in &mr->value[start] untill &mr->value[i-2] */
-	      /* name might be quoted */
-	      if (mr->value[start] == '\"')
-		fprintf(outstream, "\"%.*s\"", i-start-3,&mr->value[start+1]);
-	      else
-		fprintf(outstream, "\"%.*s\"", i-start-1,&mr->value[start]);
-	      
+	      /* name might contain quotes */
+	      savechar = mr->value[i-1];
+	      mr->value[i-1] = '\0'; /* terminate string */
+
+	      quoted_string_out(outstream, &mr->value[start]);
+
+	      mr->value[i-1] = savechar;
+
 	    }
 	  else
 	    fprintf(outstream, "NIL");
