@@ -374,24 +374,11 @@ int lmtp(void *stream, void *instream, char *buffer, char *client_ip UNUSED, Pop
                * just find something between angle brackets!
                * */
               int goodtogo=1;
-              size_t tmplen=0;
-              char *tmpleft=NULL, *tmpright=NULL, *tmpbody=NULL;
-           
-              tmpleft = value;
-              tmpright = value + strlen(value);
-           
-              /* eew pointer math... inspired by injector.c */
-           
-              while (tmpleft[0] != '<' && tmpleft < tmpright )
-                tmpleft++;
-              while (tmpright[0] != '>' && tmpright > tmpleft )
-                tmpright--;
-           
-              /* Step left up to skip '<' left angle bracket */
-              tmpleft++;
-           
-              tmplen = tmpright - tmpleft;
-           
+              size_t tmplen = 0, tmppos = 0;
+              char *tmpaddr = NULL, *tmpbody = NULL;
+
+	      find_bounded(value, '<', '>', &tmpaddr, &tmplen, &tmppos);
+
               /* Second look for a BODY keyword.
                * See if it has an argument, and if we
                * support that feature. Don't give an OK
@@ -402,7 +389,7 @@ int lmtp(void *stream, void *instream, char *buffer, char *client_ip UNUSED, Pop
                * then advance one character past it
                * (but only if there's more string!)
                * */
-              tmpbody = strstr(tmpright, "=");
+              tmpbody = strstr(value+tmppos, "=");
               if (tmpbody != NULL)
                   if (strlen(tmpbody))
                       tmpbody++;
@@ -411,6 +398,7 @@ int lmtp(void *stream, void *instream, char *buffer, char *client_ip UNUSED, Pop
               if (tmplen < 1)
                 {
                   fprintf((FILE *)stream,"500 No address found.\r\n" );
+                  goodtogo = 0;
                 }
               else if (tmpbody != NULL)
                 {
@@ -458,11 +446,13 @@ int lmtp(void *stream, void *instream, char *buffer, char *client_ip UNUSED, Pop
 	      if (goodtogo)
                 {
                   /* Sure fine go ahead. */
-                  memtst((envelopefrom=(char *)my_malloc(tmplen+1))==NULL);
-                  memset(envelopefrom,0,tmplen+1);
-                  strncpy(envelopefrom,tmpleft,tmplen);
-                  // envelopefrom[tmplen+1] = '\0';
+                  envelopefrom = tmpaddr;
                   fprintf((FILE *)stream,"250 Sender <%s> OK\r\n", envelopefrom );
+                }
+	      else
+                {
+                  if (tmpaddr != NULL)
+                      my_free(tmpaddr);
                 }
             }
           return 1;

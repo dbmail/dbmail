@@ -5,6 +5,9 @@
 	* lmtp.c: modified the delivery resolution loop to first call
 	dsnuser_resolve_list and then to directly check for DSN_STATUS_OK
 	rather than less reliable heuristics.
+	* lmtp.c: replaced clumsy pointer math with a call to find_bounded,
+	thereby also fixing a crash bug and a memory leak both relating to
+	malformatted "mail from" commands.
 	* main.c: added a call to dsnuser_resolve_list.
 
 2004-03-03  Ilja Booij  <ilja@ic-s.nl>
