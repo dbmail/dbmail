@@ -869,7 +869,6 @@ int _ic_delete(char *tag, char **args, ClientInfo * ci)
 		return 1;
 	}
 
-
 	/* check if there is an attempt to delete inbox */
 	if (strcasecmp(args[0], "inbox") == 0) {
 		fprintf(ci->tx,

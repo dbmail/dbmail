@@ -1,3 +1,15 @@
+2004-04-01  Ilja Booij  <ilja@ic-s.nl>
+
+	* mysql/dbmysql.c (db_get_length): uses mysql_data_seek() directly
+	again, without trying to do smart things which should be resolved
+	by the library
+	(db_get_result): uses mysql_data_seek() directly
+	again, without trying to do smart things which should be resolved
+	by the library. 
+	(db_query): now always calls mysql_store_result(). This will result
+	in res being NULL sometimes, but this should not be a problem, because
+	if mysql_store_result() is not called, it will also be NULL.
+
 2004-03-31  Ilja Booij  <ilja@ic-s.nl>
 
 	* db.c (db_findmailbox_by_regex): now calls regfree() to free the 

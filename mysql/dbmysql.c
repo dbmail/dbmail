@@ -48,9 +48,7 @@ static MYSQL_RES *res = NULL; /**< MySQL result set */
 static MYSQL_RES *msgbuf_res = NULL; /**< MySQL result set for msgbuf */
 static MYSQL_RES *auth_res = NULL; /**< MySQL result set for authentication */
 static MYSQL_RES *stored_res = NULL; /**< MySQL result set backup */
-
-static unsigned last_row_nr = -1; /**< number of last row that was used */
-static MYSQL_ROW last_row;   /**< last result set */
+static MYSQL_ROW last_row; /**< MySQL result row */
 
 /** database parameters */
 db_param_t _db_params;
@@ -153,19 +151,20 @@ char *db_get_result(unsigned row, unsigned field)
 		      __FILE__, __FUNCTION__, row, field);
 		return NULL;
 	}
-	/* get the right row */
-	if (last_row_nr == row) {
-	} else if ((last_row_nr + 1) == row) {
-		last_row = mysql_fetch_row(res);
-	} else {
-		mysql_data_seek(res, row);
-		last_row = mysql_fetch_row(res);
+	
+	mysql_data_seek(res, row);
+	last_row = mysql_fetch_row(res);
+	
+	if (last_row == NULL) {
+		trace(TRACE_WARNING, "%s,%s: row is NULL\n",
+		      __FILE__, __FUNCTION__);
+		return NULL;
 	}
+
 	result = last_row[field];
 	if (result == NULL)
 		trace(TRACE_WARNING, "%s,%s: result is null\n",
 		      __FILE__, __FUNCTION__);
-	last_row_nr = row;
 	return result;
 }
 
@@ -200,7 +199,6 @@ u64_t db_insert_result(const char *sequence_identifier UNUSED)
 int db_query(const char *the_query)
 {
 	unsigned int querysize = 0;
-	last_row_nr = -1;
 	if (db_check_connection() < 0) {
 		trace(TRACE_ERROR, "%s,%s: no database connection",
 		      __FILE__, __FUNCTION__);
@@ -236,18 +234,8 @@ int db_query(const char *the_query)
 		return -1;
 	}
 
-	/* mysql_store_result is only needed if a SELECT or
-	   an OPTIMIZE is done */
-	if (strncasecmp(the_query, "SELECT", 6) == 0 ||
-	    strncasecmp(the_query, "OPTIMIZE", 8) == 0) {
-		res = mysql_store_result(&conn);
-		if (res == NULL) {
-			trace(TRACE_ERROR,
-			      "%s,%s: could not store query result",
-			      __FILE__, __FUNCTION__);
-			return -1;
-		}
-	}
+	res = mysql_store_result(&conn);
+
 	return 0;
 }
 
@@ -293,17 +281,14 @@ u64_t db_get_length(unsigned row, unsigned field)
 		      __FILE__, __FUNCTION__, row, field);
 		return -1;
 	}
-	/* get the right row */
-	if (last_row_nr == row) {
-		// Don't do anything, we're already there
-	} else if (last_row_nr + 1 == row) {
-		// Get the next row
-		last_row = mysql_fetch_row(res);
-	} else {
-		mysql_data_seek(res, row);
-		last_row = mysql_fetch_row(res);
+	
+	mysql_data_seek(res, row);
+	last_row = mysql_fetch_row(res);
+	if (last_row == NULL) {
+		trace(TRACE_ERROR, "%s,%s: last_row = NULL",
+		      __FILE__, __FUNCTION__);
+		return (u64_t) 0;
 	}
-	last_row_nr = row;
 	return (u64_t) mysql_fetch_lengths(res)[field];
 }
 
