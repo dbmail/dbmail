@@ -66,8 +66,9 @@ int main (int argc, char *argv[])
   int reuseaddress;
   int s = -1;
   int c = -1;
-  int z;
+  int z, i; /* counters */
   int children=0;		/* child process counter */
+  int defchld,maxchld; /* default children and maxchildren */
   FILE *tx = NULL;	/* write socket */
   FILE *rx = NULL;	/* read socket */
 
@@ -175,127 +176,140 @@ int main (int argc, char *argv[])
 	free (ipaddr);
 	free (port);
   
+ 
+ /* get child config */
+
+  defchld = atoi(db_get_config_item("POP3D_DEFAULT_CHILD",CONFIG_MANDATORY));
+  maxchld = atoi(db_get_config_item("POP3D_MAX_CHILD",CONFIG_MANDATORY));
+
+	children = 0;
   
-  for (;;)
-    {
-      if (children < MAXCHILDREN) 
+	for (i=0; i<defchld; i++)
 	{
-	  if (!fork())
-	    {
-				
-			/* wait for a connection */
-	      len_inet = sizeof (adr_clnt);
-	      c = accept (s, (struct sockaddr *)&adr_clnt,
-			  &len_inet); /* incoming connection */
-				
-	      if (c == -1)
-		trace (TRACE_FATAL,"main(): call accept(2) failed");
+		if (!fork())
+			break;
+		else
+			children++;
+	}
 
-				/* register incoming connection */
-	      theiraddress=inet_ntoa(adr_clnt.sin_addr);
-	      clientinfo=gethostbyname(theiraddress);
+  
+	for (;;)
+	{
+		while (children >= maxchld)
+		{
+			/* no more children, wait for processes to quit */
+			wait(0);
+			/* ok we've one child less */
+			children--;
+		}
+			
+		/* wait for a connection */
+		len_inet = sizeof (adr_clnt);
+		c = accept (s, (struct sockaddr *)&adr_clnt,
+		  &len_inet); /* incoming connection */
+		
+		if (c == -1)
+			trace (TRACE_FATAL,"main(): call accept(2) failed");
+		
+		/* more then default connection. Spawn new connections as needed */
+		if (!fork())
+		{
+			children++;
+			continue;
+			}
+		else
+		{
+			/* register incoming connection */
+			theiraddress=inet_ntoa(adr_clnt.sin_addr);
+			clientinfo=gethostbyname(theiraddress);
 				
-	      if (theiraddress != NULL)
-		trace (TRACE_MESSAGE,"main(): incoming connection from [%s] [resolved to: %s]"
-		       ,theiraddress,clientinfo->h_name);
+			if (theiraddress != NULL)
+			trace (TRACE_MESSAGE,"main(): incoming connection from [%s] [resolved to: %s]",
+				theiraddress,clientinfo->h_name);
 	      else
-		trace (TRACE_FATAL,"main(): fatal, could not get address of client"); 
+				trace (TRACE_FATAL,"main(): fatal, could not get address of client"); 
 				
-	      rx = fdopen (dup (c), "r"); /* duplicate descriptor and open it */
-	      if (!rx)
-		{
-		  /* opening of descriptor failed */
-		  close(c);
-		  continue;
-		}
+			rx = fdopen (dup (c), "r"); /* duplicate descriptor and open it */
+			if (!rx)
+			{
+				/* opening of descriptor failed */
+				close(c);
+				continue;
+			}
 	
-	      tx = fdopen (dup (c), "w"); /* same thing for writing */
-	      if (!tx)
-		{
-		  /* opening of descriptor failed */
-		  close (c);
-		  continue;
-		}
+			tx = fdopen (dup (c), "w"); /* same thing for writing */
+			if (!tx)
+			{
+				/* opening of descriptor failed */
+				close (c);
+				continue;
+			}
 		
-				/* set stream to line buffered mode 
-				 * this way when we send a newline the buffer is flushed */
+			/* set stream to line buffered mode 
+			 * this way when we send a newline the buffer is flushed */
 	      setlinebuf(rx);
-	      /* setlinebuf(tx); */
-	
-				/* process client requests */
-		
-				/* connect to the database */
-	      if (db_connect()< 0) 
-		trace(TRACE_FATAL,"main(): could not connect to database");
 
-				/* first initiate AUTHORIZATION state */
+			/* connect to the database */
+			if (db_connect()< 0) 
+				trace(TRACE_FATAL,"main(): could not connect to database");
+
+			/* first initiate AUTHORIZATION state */
 	      state = AUTHORIZATION;
 		
-	      memtst((buffer=(char *)malloc(INCOMING_BUFFER_SIZE))==NULL);
+			memtst((buffer=(char *)malloc(INCOMING_BUFFER_SIZE))==NULL);
 
-				/* create an unique timestamp + processid for APOP authentication */
-	      memtst((apop_stamp=(char *)malloc(APOP_STAMP_SIZE))==NULL);
+			/* create an unique timestamp + processid for APOP authentication */
+			memtst((apop_stamp=(char *)malloc(APOP_STAMP_SIZE))==NULL);
 				
 	      timestamp=time(NULL);
 				
 	      sprintf (apop_stamp,"<%d.%u@%s>",getpid(),timestamp,myhostname);
 
-				/* sending greeting */
-	      fprintf (tx,"+OK DBMAIL server ready %s\r\n",apop_stamp);
+			/* sending greeting */
+			fprintf (tx,"+OK DBMAIL server ready %s\r\n",apop_stamp);
 			fflush (tx);
 			
-				/* no errors yet */
-	      error_count = 0;
+			/* no errors yet */
+			error_count = 0;
 				
-				/* setting time for timeout counter */
+			/* setting time for timeout counter */
 	      timeout=time(NULL);
 
-				/* scanning for commands */
-	      while ((done>0) && (buffer=fgets(buffer,INCOMING_BUFFER_SIZE,rx)))
+			/* scanning for commands */
+			while ((done>0) && (buffer=fgets(buffer,INCOMING_BUFFER_SIZE,rx)))
 			{
 				done=pop3(tx,buffer); 
 				fflush (tx);
 			}
 					
-				/* we've reached the update state */
-	      state = UPDATE;
+			/* we've reached the update state */
+			state = UPDATE;
 
-				/* memory cleanup */
+			/* memory cleanup */
 	      free(buffer);
 	
-	      trace(TRACE_MESSAGE,"main(): user %s logging out [message=%lu, octets=%lu]",
-		    username, curr_session.virtual_totalmessages,
-		    curr_session.virtual_totalsize);
+			trace(TRACE_MESSAGE,"main(): user %s logging out [message=%lu, octets=%lu]",
+				username, curr_session.virtual_totalmessages,
+				curr_session.virtual_totalsize);
 
-				/* if everything went well, write down everything and do a cleanup */
-	      if (done==0) 
-		db_update_pop(&curr_session);
+			/* if everything went well, write down everything and do a cleanup */
+			if (done==0) 
+				db_update_pop(&curr_session);
 				
-	      db_disconnect(); 
+			db_disconnect(); 
 	
-	      fclose(tx);
-	      shutdown (fileno(rx), SHUT_RDWR);
+			fclose(tx);
+			shutdown (fileno(rx), SHUT_RDWR);
 	      fclose(rx);
 		
-				/* we must send an exit as child */
-
 	      free(myhostname);
 				
-				/* we don't need this anymore */
+			/* we don't need this anymore */
 	      free(apop_stamp);
-				
+		
+			/* exit child child session */
 	      exit(0);
-	    }
-	  else
-	    {
-	      children++;
-	    }
+		}
 	}
-      else
-	{
-	  wait (NULL);
-	  children--;
-	}
-    }
   return 0;
 }	
