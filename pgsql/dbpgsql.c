@@ -744,6 +744,55 @@ int db_insert_message_block_multiple(const char *uniqueid, const char *block, u6
 }
   
 
+/*
+ * db_rollback_insert()
+ *
+ * Performs a rollback for a message that is being inserted.
+ */
+int db_rollback_insert(u64_t ownerid, const char *unique_id)
+{
+  u64_t msgid;
+  int result;
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr FROM messages m, mailboxes mb WHERE "
+	   "mb.owner_idnr = %llu AND m.mailbox_idnr = mb.mailbox_idnr AND m.unique_id = '%s'",
+	   ownerid, unique_id);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR,"db_rollback_insert(): could not select message-id");
+      return -1;
+    }
+
+  if (PQntuples(res) < 1)
+    {
+      trace(TRACE_ERROR,"db_rollback_insert(): non-existent message specified");
+      PQclear(res);
+      return 0;
+    }
+
+  msgid = strtoull(PQgetvalue(res, 0, 0), NULL, 10);
+  PQclear(res);
+
+  result = 0;
+
+  snprintf(query, DEF_QUERYSIZE, "DELETE FROM messageblks WHERE message_idnr = %llu", msgid);
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR,"db_rollback_insert(): could not delete message blocks, msg ID [%llu]", msgid);
+      result = -1;
+    }
+
+  snprintf(query, DEF_QUERYSIZE, "DELETE FROM messages WHERE message_idnr = %llu", msgid);
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR,"db_rollback_insert(): could not delete message, msg ID [%llu]", msgid);
+      result = -1;
+    }
+
+  return result;
+}
+
 
 /* get a list of aliases associated with user userid */
 /* return -1 on db error, -2 on mem error, 0 on succes */

@@ -15,12 +15,12 @@
 /* DATABASE SPECIFIC */
 #define MAIL_HOST "localhost"
 #define MAIL_USER "root"
-#define MAIL_PASS "W3R50c00l"
+#define MAIL_PASS ""
 #define MAILDATABASE "dbmail"
 
 #define AUTH_HOST "localhost"
 #define AUTH_USER "root"
-#define AUTH_PASS "W3R50c00l"
+#define AUTH_PASS ""
 #define USERDATABASE "dbmail"
 
 #define UID_SIZE 70

@@ -120,6 +120,8 @@ int db_update_message_multiple(const char *unique_id, u64_t messagesize, u64_t r
 u64_t db_insert_message_block(const char *block, u64_t len, u64_t messageidnr);
 int db_insert_message_block_multiple(const char *unique_id, const char *block, u64_t len);
 
+int db_rollback_insert(u64_t ownerid, const char *unique_id);
+
 int db_log_ip(const char *ip);
 int db_cleanup_iplog(const char *lasttokeep);
 

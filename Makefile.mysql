@@ -13,6 +13,7 @@ DBOBJECT = $(DBASETYPE)/db$(DBASETYPE).o
 
 SMTP_OBJECTS = list.o debug.o pipe.o mime.o $(DBOBJECT) dbmd5.o md5.o bounce.o forward.o memblock.o \
 $(AUTHOBJECT)
+INJECTOR_OBJECTS = list.o debug.o $(DBOBJECT) dbmd5.o md5.o $(AUTHOBJECT) mime.o
 POP_OBJECTS = pop3.o list.o debug.o $(DBOBJECT) dbmd5.o md5.o mime.o misc.o memblock.o $(AUTHOBJECT)
 IMAP_OBJECTS = imap4.o debug.o $(DBOBJECT) serverservice.o list.o dbmd5.o md5.o imaputil.o \
 imapcommands.o mime.o misc.o memblock.o rfcmsg.o $(MSGBUFOBJECT) $(SEARCHOBJECT) $(AUTHOBJECT)
@@ -37,7 +38,7 @@ CFLAGS = -Wall -ggdb -D_BSD_SOURCE -D_SVID_SOURCE
 
 .PHONY: clean install
 
-all: smtp pop3d maintenance config imapd user readvut mbox2dbmail realsmtp
+all: smtp pop3d maintenance config imapd user readvut mbox2dbmail injector
 
 smtp: config.h main.h $(SMTP_OBJECTS) main.c
 		$(CC)	$(CFLAGS) main.c -o dbmail-smtp $(SMTP_OBJECTS) $(LIBS) $(LIB)
@@ -62,6 +63,9 @@ readvut: db.h auth.h vut2dbmail.c $(VUTCONV_OBJECTS)
 
 realsmtp: db.h smtp.h $(REALSMTP_OBJECTS) smtpd.c
 	$(CC) $(CFLAGS) smtpd.c -o dbmail-realsmtp $(REALSMTP_OBJECTS) $(LIBS) $(LIB)
+
+injector: db.h auth.h $(INJECTOR_OBJECTS) injector.c
+	$(CC) $(CFLAGS) injector.c -o dbmail-smtp-injector $(INJECTOR_OBJECTS) $(LIBS) $(LIB)
 
 mbox2dbmail:	
 
@@ -92,7 +96,7 @@ $(SEARCHOBJECT): dbsearch.h db.h
 $(AUTHOBJECT): auth.h db.h
 
 distclean: clean
-	rm -rf dbmail-smtp dbmail-pop3d dbmail-maintenance dbmail-imapd dbmail-config dbmail-adduser dbmail-readvut mbox2dbmail
+	rm -rf dbmail-smtp dbmail-pop3d dbmail-maintenance dbmail-imapd dbmail-config dbmail-adduser dbmail-readvut mbox2dbmail dbmail-realsmtp
 
 clean:
 	rm -f *.o core $(DBASETYPE)/*.o
