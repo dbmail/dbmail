@@ -211,7 +211,6 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 
 		/* if everything went well, write down everything and do a cleanup */
 		db_update_pop(&curr_session);
-	}
 
 		db_disconnect(); 
 	
@@ -221,7 +220,7 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 	}
 
 	/* reset timers */
-	alarm (0);
+	 alarm (0); 
 	
 	return 0;
 }
