@@ -597,7 +597,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 					struct DbmailMessage *msg;
 
 					if (! (msg = dbmail_message_new_from_stream((FILE *)instream, DBMAIL_STREAM_LMTP))) {
-						trace(TRACE_ERROR, "%s,%s: read_whole_message_stream() failed",
+						trace(TRACE_ERROR, "%s,%s: dbmail_message_new_from_stream() failed",
 						      __FILE__, __func__);
 						discard_client_input((FILE *) instream);
 						ci_write((FILE *) stream, "500 Error reading message");

@@ -426,6 +426,10 @@ int insert_messages(struct DbmailMessage *message,
 	struct element *element, *ret_path;
 	u64_t msgsize;
 
+	/* Only the last step of the returnpath is used. */
+	if (ret_path = list_getstart(returnpath))
+		dbmail_message_set_header(message, "Return-Path", (char *)ret_path->data);
+
  	delivery_status_t final_dsn;
 
 	/* first start a new database transaction */
@@ -556,14 +560,10 @@ int insert_messages(struct DbmailMessage *message,
 
 			trace(TRACE_DEBUG, "insert_messages(): delivering to external addresses");
 
-			/* Only the last step of the returnpath is used. */
-			ret_path = list_getstart(returnpath);
-
 			/* Forward using the temporary stored message. */
-			if (forward(message->id, delivery->forwards,
-				(ret_path ? ret_path->
-				 data : "DBMAIL-MAILER"), header,
-				headersize) < 0)
+			if (forward(message->id, delivery->forwards, 
+						(ret_path ? ret_path->data : "DBMAIL-MAILER"), 
+						header, headersize) < 0)
 				/* FIXME: if forward fails, we should do something 
 				 * sensible. Currently, the message is just black-
 				 * holed! */

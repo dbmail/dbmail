@@ -30,6 +30,7 @@
 #include <string.h>
 #include "debug.h"
 #include "list.h"
+#include "misc.h"
 
 void list_init(struct list *tlist)
 {
