@@ -110,7 +110,6 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
   struct hostent *clientinfo;
   
   time_t timestamp;
-  time_t timeout;
 
   /* reset */
   done = 1;
@@ -119,27 +118,23 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 
   memtst((clientinfo=(struct hostent *)malloc(sizeof(struct hostent)))==NULL);
 
+  trace (TRACE_DEBUG, "Hier ok");
+
   if (resolve_client==1)
     {
       clientinfo=gethostbyaddr((char *)&adr_clnt.sin_addr, 
 			       sizeof(adr_clnt.sin_addr),
 			       adr_clnt.sin_family);
 
-      if (!clientinfo)
-	trace(TRACE_MESSAGE,"handle_client(): error from gethostbyaddr(): %s",
-	      hstrerror(h_errno));
-      else
-	{
+		
 	  if (theiraddress != NULL)
-	    trace (TRACE_MESSAGE,"handle_client(): incoming connection from [%s (%s)]",
-		   theiraddress,
-		   clientinfo->h_name ? clientinfo->h_name : "NULL");
+		trace (TRACE_MESSAGE,"handle_client(): incoming connection from [%s (%s)]",
+			theiraddress, clientinfo ? (clientinfo->h_name ? clientinfo->h_name: "NULL")  : "Lookup failed");
 	  else
 	    {
 	      trace (TRACE_ERROR,"handle_client(): error: could not get address of client"); 
 	      return -1;
 	    }
-	}
     }
   else
     {
@@ -188,7 +183,7 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 				
   timestamp=time(NULL);
 				
-  sprintf (apop_stamp,"<%d.%u@%s>",getpid(),timestamp,myhostname);
+  sprintf (apop_stamp,"<%d.%lu@%s>",getpid(),timestamp,myhostname);
 
   /* sending greeting */
   fprintf (tx,"+OK DBMAIL pop3 server ready %s\r\n",apop_stamp);
@@ -277,7 +272,10 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 		
   /* reset timers */
   alarm (0); 
-	
+
+  free (clientinfo);
+
+  
   return 0;
 }
 
@@ -296,8 +294,6 @@ int main (int argc, char *argv[])
   int new_level = 2, new_trace_syslog = 1, new_trace_verbose = 0;
   char *resolve_setting=NULL;
   
-  pid_t processid;
-	  
   int len_inet;
   int reuseaddress;
   int s = -1;

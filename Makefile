@@ -34,22 +34,22 @@ dump: dbmysql.h dumpmsg.c $(DUMP_OBJECTS)
 
 
 smtp: config.h main.h $(SMTP_OBJECTS) main.c
-		$(CC)	main.c -o dbmail-smtp $(SMTP_OBJECTS) $(LIBS) $(LIB)
+		$(CC)	$(CFLAGS) main.c -o dbmail-smtp $(SMTP_OBJECTS) $(LIBS) $(LIB)
 
 pop3d: pop3.h $(POP_OBJECTS) pop3d.c
-		$(CC) pop3d.c -o dbmail-pop3d $(POP_OBJECTS) $(LIBS) $(LIB)
+		$(CC) $(CFLAGS) pop3d.c -o dbmail-pop3d $(POP_OBJECTS) $(LIBS) $(LIB)
 
 imapd: imap4.h $(IMAP_OBJECTS) imapd.c
 	$(CC) $(CFLAGS) imapd.c -o dbmail-imapd $(IMAP_OBJECTS) $(LIBS) $(LIB)
 
 maintenance: maintenance.h $(MAINTENANCE_OBJECTS) maintenance.c
-	$(CC) maintenance.c -o dbmail-maintenance $(MAINTENANCE_OBJECTS) $(LIBS) $(LIB)
+	$(CC) $(CFLAGS) maintenance.c -o dbmail-maintenance $(MAINTENANCE_OBJECTS) $(LIBS) $(LIB)
 
 config: $(CONFIG_OBJECTS) settings.c
-	$(CC) settings.c -o dbmail-config $(CONFIG_OBJECTS) $(LIBS) $(LIB)
+	$(CC) $(CFLAGS) settings.c -o dbmail-config $(CONFIG_OBJECTS) $(LIBS) $(LIB)
 
 user: user.h $(MAINTENANCE_OBJECTS) user.c
-	$(CC) user.c -o dbmail-adduser $(MAINTENANCE_OBJECTS) $(LIBS) $(LIB)
+	$(CC) $(CFLAGS) user.c -o dbmail-adduser $(MAINTENANCE_OBJECTS) $(LIBS) $(LIB)
 
 dumpmsg.o: dbmysql.h
 list.o: list.h
