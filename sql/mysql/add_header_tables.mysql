@@ -18,8 +18,9 @@ DROP TABLE IF EXISTS dbmail_headername;
 CREATE TABLE dbmail_headername (
 	id		BIGINT NOT NULL AUTO_INCREMENT,
 	headername	VARCHAR(100) NOT NULL DEFAULT '',
-	PRIMARY KEY (id)
-);
+	PRIMARY KEY (id),
+	UNIQUE (headername)
+) type=InnoDB ;
 
 DROP TABLE IF EXISTS dbmail_headervalue;
 CREATE TABLE dbmail_headervalue (
@@ -31,8 +32,9 @@ CREATE TABLE dbmail_headervalue (
 		ON UPDATE CASCADE ON DELETE CASCADE,
 	id		BIGINT NOT NULL AUTO_INCREMENT,
 	headervalue	VARCHAR(255) NOT NULL DEFAULT '',
-	PRIMARY KEY (physmessage_id, id)
-);
+	PRIMARY KEY (id),
+	UNIQUE (physmessage_id, id)
+) type=InnoDB ;
 
 # provide separate storage of commonly used headers
 
@@ -50,8 +52,9 @@ CREATE TABLE dbmail_inreplytofield (
 			ON UPDATE CASCADE ON DELETE CASCADE,
 	id		BIGINT NOT NULL AUTO_INCREMENT,
 	inreplytofield	VARCHAR(100) NOT NULL DEFAULT '',
-	PRIMARY KEY (physmessage_id, id)
-);
+	PRIMARY KEY (id),
+	UNIQUE (physmessage_id, id)
+) type=InnoDB ;
 
 DROP TABLE IF EXISTS dbmail_referencesfield;
 CREATE TABLE dbmail_referencesfield (
@@ -60,8 +63,9 @@ CREATE TABLE dbmail_referencesfield (
 			ON UPDATE CASCADE ON DELETE CASCADE,
 	id		BIGINT NOT NULL AUTO_INCREMENT,
 	referencesfield	VARCHAR(100) NOT NULL DEFAULT '',
-	PRIMARY KEY (physmessage_id, id)
-);
+	PRIMARY KEY (id),
+	UNIQUE (physmessage_id, id)
+) type=InnoDB ;
 
 
 # Searching and Sorting
@@ -79,8 +83,9 @@ CREATE TABLE dbmail_fromfield (
 	id		BIGINT NOT NULL AUTO_INCREMENT,
 	fromname	VARCHAR(100) NOT NULL DEFAULT '',
 	fromaddr	VARCHAR(100) NOT NULL DEFAULT '',
-	PRIMARY KEY (physmessage_id, id)
-);
+	PRIMARY KEY (id),
+	UNIQUE (physmessage_id, id)
+) type=InnoDB ;
 DROP TABLE IF EXISTS dbmail_tofield;
 CREATE TABLE dbmail_tofield (
         physmessage_id  BIGINT NOT NULL
@@ -89,8 +94,9 @@ CREATE TABLE dbmail_tofield (
 	id		BIGINT NOT NULL AUTO_INCREMENT,
 	toname		VARCHAR(100) NOT NULL DEFAULT '',
 	toaddr		VARCHAR(100) NOT NULL DEFAULT '',
-	PRIMARY KEY (physmessage_id, id)
-);
+	PRIMARY KEY (id),
+	UNIQUE (physmessage_id, id)
+) type=InnoDB ;
 DROP TABLE IF EXISTS dbmail_replytofield;
 CREATE TABLE dbmail_replytofield (
         physmessage_id  BIGINT NOT NULL
@@ -99,8 +105,9 @@ CREATE TABLE dbmail_replytofield (
 	id		BIGINT NOT NULL AUTO_INCREMENT,
 	replytoname	VARCHAR(100) NOT NULL DEFAULT '',
 	replytoaddr	VARCHAR(100) NOT NULL DEFAULT '',
-	PRIMARY KEY (physmessage_id, id)
-);
+	PRIMARY KEY (id),
+	UNIQUE (physmessage_id, id)
+) type=InnoDB ;
 DROP TABLE IF EXISTS dbmail_ccfield;
 CREATE TABLE dbmail_ccfield (
         physmessage_id  BIGINT NOT NULL
@@ -109,8 +116,9 @@ CREATE TABLE dbmail_ccfield (
 	id		BIGINT NOT NULL AUTO_INCREMENT,
 	ccname		VARCHAR(100) NOT NULL DEFAULT '',
 	ccaddr		VARCHAR(100) NOT NULL DEFAULT '',
-	PRIMARY KEY (physmessage_id, id)
-);
+	PRIMARY KEY (id),
+	UNIQUE (physmessage_id, id)
+) type=InnoDB ;
 
 # Some other fields will also be commonly used for search/sort but do not warrant 
 # preparsing and/or separate tables. 
