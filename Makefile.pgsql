@@ -26,7 +26,7 @@ REALSMTP_OBJECTS = smtp.o debug.o dbmd5.o md5.o list.o mime.o serverservice.o mi
 smtpcommands.o memblock.o $(DBOBJECT) $(AUTHOBJECT)
 CC = cc
 
-PGSQLLIBDIR=/usr/lib/postgresql/lib
+PGSQLLIBDIR=/usr/local/pgsql/lib
 
 LIBS = -L$(PGSQLLIBDIR)
 LIB = -lpq -lcrypt
