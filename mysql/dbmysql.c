@@ -306,6 +306,8 @@ u64_t db_get_length(unsigned row, unsigned field)
 		return -1;
 	}
 
+	res_changed=1;
+
 	if ((row >= db_num_rows()) || (field >= db_num_fields())) {
 		trace(TRACE_ERROR, "%s, %s: "
 		      "row = %u, field = %u, bigger than size of result set",
