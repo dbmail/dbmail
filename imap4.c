@@ -87,8 +87,6 @@ int IMAPClientHandler(ClientInfo *ci)
   char line[MAX_LINESIZE];
   char *tag = NULL,*cpy,**args,*command;
   int i,done,result;
-  int stringLen, quoteSize;
-  char *leftBracePos, *lastchar;
   int nfaultyresponses;
   imap_userdata_t *ud = NULL;
   mailbox_t newmailbox;
@@ -166,44 +164,9 @@ int IMAPClientHandler(ClientInfo *ci)
 	    clearerr(ci->tx);
 	}
 
-      
-      stringLen = 0;
-      do
-	{
-	  alarm(ci->timeout);                                           /* install timeout handler */
-	  fgets(&line[stringLen], MAX_LINESIZE-stringLen, ci->rx);      /* read command line */
-	  alarm(0);                                                     /* remove timeout handler */
-
-	  stringLen = strlen(line);
-	  quoteSize = -1;
-
-	  /* check for strings prepended by '{num}\r\n' */
-	  /* need at least 7 chars: <tag><space><brace><digit><brace><CR><LF> */
-	  /* PLUS a command */
-	  
-	  if (stringLen >= 7 && line[stringLen-3] == '}')
-	    {
-	      leftBracePos = strrchr(line, '{');
-
-	      if (leftBracePos)
-		{
-		  quoteSize = strtoul(leftBracePos+1, &lastchar, 10);
-		  if (*lastchar == '}')
-		    {
-		      /* should be the case */
-		      
-		      *leftBracePos = '\0';                /* chop the last part */
-		      stringLen = strlen(line);            /* new line length */ 
-		      fflush(ci->rx);
-		      fprintf(ci->tx, "+ OK gimme that string\r\n");
-		      fflush(ci->tx);
-		      
-		    }
-		  else
-		    quoteSize = -1;
-		}
-	    }
-	} while ( quoteSize != -1 ); 
+      alarm(ci->timeout);                                           /* install timeout handler */
+      fgets(line, MAX_LINESIZE, ci->rx);                            /* read command line */
+      alarm(0);                                                     /* remove timeout handler */
 
       if (!ci->rx || !ci->tx)
 	{
