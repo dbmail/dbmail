@@ -30,7 +30,7 @@ int main (int argc, char *argv[]) {
   /* first check for commandline options */
   if (argc<2)
     {
-      printf ("\nUsage: %s -n              for normal deliveries (scanner scans Deliver-To: header)\n",argv[0]);
+      printf ("\nUsage: %s -n [headerfield]   for normal deliveries (default: \"Deliver-To:\" header)\n",argv[0]);
       printf ("       %s -d [addresses]  for delivery without using scanner\n\n",argv[0]);
       return 0;
     }
@@ -60,8 +60,14 @@ int main (int argc, char *argv[]) {
 	trace(TRACE_STOP,"main(): fatal error creating MIME-header list\n");
 
       /* parse for destination addresses */
-      if (!mail_adr_list ("deliver-to",&users,&mimelist,&users,header,headersize))	
-	trace(TRACE_STOP,"main(): scanner found no email addresses");
+		if (argc>2) 
+		{
+			if (!mail_adr_list (argv[INDEX_DELIVERY_MODE+1],&users,&mimelist,&users,header,headersize))
+				trace (TRACE_STOP,"main(): scanner found no email addresses (scanned for %s)", argv[INDEX_DELIVERY_MODE+1]);
+		}
+		else
+			if (!mail_adr_list ("deliver-to",&users,&mimelist,&users,header,headersize))	
+				trace(TRACE_STOP,"main(): scanner found no email addresses (scanned for Deliver-To:)");
     } 
 
   /* inserting messages into the database */
