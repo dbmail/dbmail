@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.2
 
 # Copyright (C) 2004 Paul J Stevens paul at nfg dot nl
 #
@@ -411,7 +411,7 @@ if __name__=='__main__':
         if o in ['--host']:
             HOST=a
         if o in ['--port']:
-            PORT=a
+            PORT=int(a)
         if o in ['--debug']:
             DEBUG=a
             
