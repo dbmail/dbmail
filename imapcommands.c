@@ -2362,6 +2362,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		    }
 
 		  fi->getFlags = 1;
+		  fprintf(ci->tx," "); 
 		}
 
 	      /* FLAGS ? */

@@ -2168,7 +2168,6 @@ int db_movemsg(unsigned long to, unsigned long from)
  */
 int db_copymsg(unsigned long msgid, unsigned long destmboxid)
 {
-  
   unsigned long newid,tmpid;
 
   /* create temporary tables */
@@ -2204,7 +2203,7 @@ int db_copymsg(unsigned long msgid, unsigned long destmboxid)
   /* copy message blocks */
   snprintf(query, DEF_QUERYSIZE, "INSERT INTO tmpmessageblk (messageidnr, messageblk, blocksize) "
 	   "SELECT %lu, messageblk, blocksize FROM messageblk "
-	   "WHERE messageblk.messageidnr = %lu", tmpid, msgid);
+	   "WHERE messageblk.messageidnr = %lu ORDER BY messageblk.messageblknr", tmpid, msgid);
   
   if (db_query(query) == -1)
     {
@@ -2243,7 +2242,7 @@ int db_copymsg(unsigned long msgid, unsigned long destmboxid)
   /* copy message blocks */
   snprintf(query, DEF_QUERYSIZE, "INSERT INTO messageblk (messageidnr, messageblk, blocksize) "
 	   "SELECT %lu, messageblk, blocksize FROM tmpmessageblk "
-	   "WHERE tmpmessageblk.messageidnr = %lu", newid, tmpid);
+	   "WHERE tmpmessageblk.messageidnr = %lu ORDER BY tmpmessageblk.messageblknr", newid, tmpid);
   
   if (db_query(query) == -1)
     {
