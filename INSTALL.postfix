@@ -1,0 +1,87 @@
+/* $Id$ */
+
+
+Using DBMail with Postfix
+=========================
+Author: Ilja Booij
+Date:   19-03-2004
+
+1. 	Prerequisites
+
+	* A DBMail installation
+	* A Postfix installation
+	
+	This document will assume that your Postfix configuration files are
+	located at /etc/postfix/
+
+	Make sure you've read and executed the steps from the INSTALL file 
+	before configuring your MTA. You'll want to be sure that DBMail is
+	ready to deliver mails before sending your messages to it!
+
+2.	Using LMTP
+
+	in /etc/postfix/master.cf add:
+
+	dbmail-lmtp     unix    -       -       n       -       -       lmtp
+	
+	If you want verbose output in the mail log, add -v to lmtp, like this:
+
+	dbmail-lmtp     unix    -       -       n       -       -       lmtp -v
+
+	Mind that you get a LOT of output in your logs when using this setting.
+
+	in /etc/postfix/tranport add:
+
+	<domain>        dbmail-lmtp:<host>:<port>
+
+	Where <domain> should replaced by the mail domain you receive mail for.
+	It is possible to have several domain entries here. For <host> and
+	<port> fill out the host and port on which the dbmail-lmtp daemon runs.
+	If unsure about which port they run on, check your dbmail.conf file. The
+	standard port for the lmtp service is port 24. An example of a transport
+	file is below:
+
+	example.com		dbmail-lmtp:localhost:24
+	anotherexample.com	dbmail-lmtp:localhost:24
+
+	now run:
+
+	# postmap /etc/postfix/tranport
+	# postfix reload
+
+	and you're on your way!
+
+3.	Using the Pipe interface (dbmail-smtp)
+
+	in /etc/postfix/master.cf add:
+	
+	dbmail-smtp    unix  -       n       n       -       -       pipe
+	    flags=  user=<dbmailuser>:<dbmailgroup> 
+		argv=/usr/local/sbin/dbmail-smtp -d ${recipient}	
+	
+	where <dbmailuser> and <dbmailgroup> should be the user and group the
+	dbmail-smtp program should run as.
+
+	in /etc/postfix/transport add:
+	
+	<domain>        dbmail-smtp:
+
+	See the section on running Postfix with LMTP if you don't understand
+	the transport file.
+
+	now run:
+	# postmap /etc/postfix/transport
+	# postfix reload
+
+	And your mail will be delivered!
+
+4.	Notes
+	
+	It's possible to use dbmail-lmtp on same domains, and dbmail-smtp on
+	other domains. Just make both entries in /etc/postfix/master.cf and
+	add transport entries for both.
+
+
+	
+
+	

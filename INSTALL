@@ -111,108 +111,36 @@ What do you need?
 	Become root and run install-dbmail.sh, it will install the dbmail executables.
 	This is not necessary if you have installed the binaries at step 4.
 
-
 6.	Configure your MTA 
+
+	There are two ways to connect your MTA to DBMail. The MTA can start a 
+	dbmail-smtp process and pipe SMTP commands and messages to it, or it can
+	use lmtp (Local Mail Transport Protocol) to deliver via dbmail-lmtp. The
+	preferred solution, especially for high traffic servers, it to use dbmail-lmtp,
+	because it is does not have to start a new process on every delivery, thereby
+	saving resources.
+
+	The specifics of delivering to DBMail from your MTA can be found in the
+	INSTALL.<MTA Name> files. Currently there is documentation for Postfix and
+	Exim.
 
 	You have a choice here between using dbmail-smtp or dbmail-lmtp here. If you are
 	using Postfix, the preferred solution is to use dbmail-lmtp, especially on high
 	traffic servers. The reason for this is that dbmail-smtp will start a new process
 	for every delivery, which takes more time than using dbmail-lmtp, which uses a 
 	daemon that your MTA connects to.
-
 	
-	-- MTA installation for postfix --
-	
-	*** dbmail-lmtp ***
+	Please note that if you use LMTP, the dbmail-lmtp daemon (dbmail-lmtpd) needs 
+	to be running in order to be able to deliver mail.
 
-	In the master.cf file for postfix add the following:
+	If you use a different kind of mta that we do not have documentation for: 
+	The dbmail injector program, dbmail-smtp, can receive information in two ways. 
+	Either through raw mail (for example, delivered by procmail) using the -n 
+	option or from a MTA with recipients in the commandline using the -d option.
+	Be carefull, the -n option is not fully tested and may behave unexected. 
+	If possible use the -d option.
 
-	dbmail-lmtp     unix    -       -       n       -       -       lmtp
-
-	into the transport file (/etc/postfix/transport) add:
-	<domain>        dbmail-lmtp:<host>:<port>
-
-	with <host> and <port> replaced by the host and port dbmail-lmtp runs
-	on. The port number for dbmail-lmtp can be set in dbmail.conf
-	
-	be sure to run postmap /etc/postfix/transport after having editted the
-	transport file.
-
-	add the following to main.cf (/etc/postfix/main.cf):
-	
-	lmtp_cache_connection = no
-	
-	Run postfix reload after this and start the dbmail-lmtpd executable to
-	start the lmtp daemon
-
-	*** dbmail-smtp ***
-	
-	In the master.cf file for postfix add the following:
-	
-	dbmail    unix  -       n       n       -       -       pipe
-	    flags=  user=dbmail:dbmail argv=/usr/local/sbin/dbmail-smtp -d ${recipient}
-
-	at the user= field you can add any user that is allowed to run dbmail-smtp. 
-	I suggest adding a user dbmail with a group dbmail and have all dbmail programs 
-	be run by that user. The dbmail daemons (pop and imap) will drop their root
-	privileges to the user which is defined in /etc/dbmail.conf.
-
-	and insert into the /etc/postfix/transport file 
-
-	<domain>		dbmail:
-
-	for all domains you want dbmail to be destination for.
-	
-	Next run postmap /etc/postfix/transport
-
-	Edit /etc/postfix/main.cf and add the line 
-	transport_maps = hash:/etc/postfix/transport
-
-	do a postfix reload and if everything goes well 
-	mail should be delivered to dbmail. If not, try running 
-	postfix with the -v option to see what's going on. If the 
-	problem seems to be in dbmail, try changing the tracelevel in dbmail.conf.
-	Tracelevel 5 will return a lot of debugging information.
-
-	--	MTA installation for qmail -(thanks to Edward Allen)-
-
-	Add your domain to /var/qmail/control/rcpthosts.  My
-	file looks like:
-
-	/var/qmail/control/rcpthosts:
-	squeakerbill.com
-
-	Next, add your domain:dbmail_user_name to /var/qmail/control/virtualdomains
-	My file looks like:
-
-	/var/qmail/control/virtualdomains:
-	squeakerbill.com:dbmail
-
-	Make sure the file /var/qmail/control/locals exists and is empty!
-
-	Now create a file in the dbmail home directory called .qmail:
-
-	 ~dbmail/.qmail:
-	|/usr/local/sbin/dbmail-smtp -d ${RECIPIENT:7}
-
-	The pipe tells qmail to pipe the email through a command.  The ${RECIPIEN
-	T:7} takes the Environement Variable $RECIPIENT and chops off the first
-	seven characters.  This is needed because the value of RECIPIENT is
-	dbmail-the_email_address.  If your dbmail user is not dbmail, you'll need
-	to change the 7 to the number of characters in your dbmail users's name plus
-	one.  The other approach, I guess, would just be to add a dbmail alias of
-	the form dbmail-allenej@squeakerbill.com for each user...
-
-	It's that simple.  If you have any questions about qmail and dbmail, I'll
-	try to answer them.  Keep in mind that I am new to dbmail.
-
-	------------------------------------------------------------
-
-	If you use a different kind of mta: The dbmail injector program, dbmail-smtp,
-	can receive information in two ways. Either through raw mail (for example, 
-	delivered by procmail) using the -n option or from a MTA with recipients 
-	in the commandline using the -d option. Be carefull, the -n option is not fully 
-	tested and may behave unexected. If possible use the -d option.
+	If your MTA supports LMTP for delivery, setup should be quite straightforward.
 
 7.	Setting up the maintenance run
 
@@ -229,10 +157,21 @@ What do you need?
 
 	0 3 * * * /usr/local/sbin/dbmail-maintenance -cfpd >> /dev/null 2>&1
 	
+8.	Starting the servers
 
+	If you want users to be able to retrieve email via IMAP or POP3, run
+	dbmail-imapd and/or dbmail-pop3d
+
+9.	Problems
+	--------
 	For problems you can subscribe to the dbmail mailinglist: 
 	http://mailman.fastxs.nl/mailman/listinfo/dbmail
 	
 	Please always check the archives first.
 
 	or check out the dbmailwebsite at http://www.dbmail.org.
+
+	Please note that DBMail logs a lot of relevant data to the maillog (mostly
+	located at /var/log/maillog or /var/log/mail.log). This can help you often
+	if something is not working, e.g. if there's no connection to the database.
+

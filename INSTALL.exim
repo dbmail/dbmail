@@ -1,0 +1,42 @@
+$Id$
+
+Using DBMail with Exim4
+=======================
+
+1.	Prerequisites
+	
+	* A Exim installation
+	* A DBMail installation
+
+2.	Generic
+
+	LOCAL_DELIVERY=transport_dbmail
+
+	Every router with local mail has to use 'transport = LOCAL_DELIVERY' then.
+
+3. 	dbmail-smtp
+
+	# transport using pipe
+	transport_dbmail:  
+		driver = pipe
+		command = "/usr/local/sbin/dbmail-smtp -d $local_part@$domain"
+		return_fail_output
+		user = dbmail
+
+3. 	dbmail-lmtp
+	
+	# transport using lmtp; exim and dbmail on the same host
+	transport_dbmail:
+		driver = smtp
+		protocol = lmtp
+		hosts = localhost
+		allow_localhost
+		return_path_add
+
+	LMTP requires lmtp entries in /etc/services (they are not there in Debian!).
+
+	lmtp 24/tcp
+	lmtp 24/udp
+
+	
+

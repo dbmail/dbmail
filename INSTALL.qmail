@@ -1,0 +1,49 @@
+/* $Id$ */
+
+Using DBMail with QMail
+=======================
+
+Thanks to Edward Allen for this information. Note that this information is 
+quite old. If you have more recent information on QMail please say so. You
+can contact me directly on ilja at ic dash s dot nl
+
+
+1.	Prerequisites
+
+	* A DBMail installation
+	* A QMail installation
+
+2.	add the domain you wish to receive mail for in 
+	/var/qmail/control/rcpthosts, for example, you can add
+	
+	example.com
+
+	(yes, only that :) ) to /var/qmail/control/rcpthosts
+
+	Add delivery information to /var/qmail/control/virtualdomains:
+	
+	example.com:dbmail
+
+	Make sure the file /var/qmail/control/locals exists and is empty!
+
+	Now create a file in the dbmail home directory called .qmail:
+
+	 ~dbmail/.qmail:	
+	|/usr/local/sbin/dbmail-smtp -d ${RECIPIENT:7}
+
+	The pipe tells qmail to pipe the email through a command.  The 
+	${RECIPIENT:7} takes the Environement Variable $RECIPIENT and chops off
+	the first seven characters.  This is needed because the value of 
+	RECIPIENT is dbmail-the_email_address.  If your dbmail user is not dbmail,
+	 you'll need to change the 7 to the number of characters in your dbmail 
+	users's name plus one.  The other approach, I guess, would just be to 
+	add a dbmail alias of the form dbmail-allenej@squeakerbill.com for each
+	user...
+
+	Currently we have no information on how to use QMail with dbmail-lmtp.
+	If you know more about QMail and wish to contribute this information,
+	please e-mail me at ilja at ic dash s dot nl.
+
+	
+
+	
