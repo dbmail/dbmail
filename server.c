@@ -85,13 +85,8 @@ int SetParentSigHandler()
 	return 0;
 }
 
-int StartCliServer(serverConfig_t * conf)
+static void server_setup(serverConfig_t *conf)
 {
-	if (!conf)
-		trace(TRACE_FATAL, "%s,%s: NULL configuration", __FILE__, __func__);
-
-	trace(TRACE_DEBUG, "%s,%s: init", __FILE__, __func__);
-
 	ParentPID = getpid();
 	Restart = 0;
 	GeneralStopRequested = 0;
@@ -103,9 +98,16 @@ int StartCliServer(serverConfig_t * conf)
 	childinfo.ClientHandler = conf->ClientHandler;
 	childinfo.timeoutMsg = conf->timeoutMsg;
 	childinfo.resolveIP = conf->resolveIP;
- 	
+}
+	
+int StartCliServer(serverConfig_t * conf)
+{
+	if (!conf)
+		trace(TRACE_FATAL, "%s,%s: NULL configuration", __FILE__, __func__);
+	
+	server_setup(conf);	
 	manage_start_cli_server(&childinfo);
- 
+	
 	return Restart;
 }
 
@@ -116,27 +118,16 @@ int StartServer(serverConfig_t * conf)
 	if (!conf)
 		trace(TRACE_FATAL, "%s,%s: NULL configuration", __FILE__, __func__);
 
-	trace(TRACE_DEBUG, "%s,%s: init", __FILE__, __func__);
-
-	ParentPID = getpid();
-	Restart = 0;
-	GeneralStopRequested = 0;
-	SetParentSigHandler();
-	
-	childinfo.maxConnect = conf->childMaxConnect;
-	childinfo.listenSocket = conf->listenSocket;
-	childinfo.timeout = conf->timeout;
-	childinfo.ClientHandler = conf->ClientHandler;
-	childinfo.timeoutMsg = conf->timeoutMsg;
-	childinfo.resolveIP = conf->resolveIP;
+	server_setup(conf);
  	
- 	trace(TRACE_DEBUG, "%s,%s: init ok. Creating children..", __FILE__, __func__);
  	scoreboard_new(conf);
+	
  	manage_start_children();
  	manage_spare_children();
- 	alarm(10);
+ 	
+	alarm(10);
   
- 	trace(TRACE_DEBUG, "%s,%s: children created, starting main service loop", __FILE__, __func__);
+ 	trace(TRACE_DEBUG, "%s,%s: starting main service loop", __FILE__, __func__);
  	while (!GeneralStopRequested) 
  		manage_restart_children();
    
@@ -150,17 +141,18 @@ int StartServer(serverConfig_t * conf)
 void ParentSigHandler(int sig, siginfo_t * info, void *data)
 {
 	if (ParentPID != getpid()) {
-		trace(TRACE_INFO,
-		      "%s,%s: i'm no longer father", __FILE__, __func__);
-		active_child_sig_handler(sig, info, data); /* this call is for a child but it's handler is not yet installed */
+		trace(TRACE_INFO, "%s,%s: no longer parent", __FILE__, __func__);
+		/* this call is for a child but it's handler is not yet installed */
+		active_child_sig_handler(sig, info, data); 
 	}
 	
 	if (sig != SIGALRM) {
 #ifdef _USE_STR_SIGNAL
-		trace(TRACE_INFO, "%s,%s: got signal [%s]", __FILE__, __func__,
-		      strsignal(sig));
+		trace(TRACE_INFO, "%s,%s: got signal [%s]", __FILE__, __func__, 
+				strsignal(sig));
 #else
-		trace(TRACE_INFO, "%s,%s: got signal [%d]", __FILE__, __func__, sig);
+		trace(TRACE_INFO, "%s,%s: got signal [%d]", __FILE__, __func__, 
+				sig);
 #endif
 	}
 	
@@ -170,13 +162,12 @@ void ParentSigHandler(int sig, siginfo_t * info, void *data)
 		alarm(10);
 		break;
  
-	case SIGCHLD:
-		break;		/* ignore, wait for child in main loop */
+	case SIGCHLD:	/* ignore, wait for child in main loop */
+		break;		
 
 	case SIGHUP:
-		trace(TRACE_DEBUG,
-		      "%s,%s: SIGHUP, setting Restart", __FILE__, __func__);
 		Restart = 1;
+		trace(TRACE_DEBUG, "%s,%s: SIGHUP, Restart set", __FILE__, __func__);
 		/* fall-through */
 	default:
 		GeneralStopRequested = 1;
@@ -186,66 +177,58 @@ void ParentSigHandler(int sig, siginfo_t * info, void *data)
 
 int CreateSocket(serverConfig_t * conf)
 {
-	int sock, r, len;
+	int sock, err;
 	struct sockaddr_in saServer;
+	/* set reuseaddr, so address will be reused */
 	int so_reuseaddress = 1;
-			   /**< reuseaddr to 1, so address will be reused */
 
 	/* make a tcp/ip socket */
-	sock = socket(PF_INET, SOCK_STREAM, 0);
-	if (sock == -1)
-		trace(TRACE_FATAL,
-		      "%s,%s: socket creation failed [%s]", __FILE__, __func__,
-		      strerror(errno));
+	if ((sock = socket(PF_INET, SOCK_STREAM, 0)) == -1) {
+		err = errno;
+		trace(TRACE_FATAL, "%s,%s: %s" __FILE__, __func__, strerror(err));
+	}
 
 	trace(TRACE_DEBUG, "%s,%s: socket created", __FILE__, __func__);
 
 	/* make an (socket)address */
 	memset(&saServer, 0, sizeof(saServer));
+	
+	saServer.sin_family	= AF_INET;
+	saServer.sin_port	= htons(conf->port);
 
-	saServer.sin_family = AF_INET;
-	saServer.sin_port = htons(conf->port);
-
-	if (conf->ip[0] == '*')
+	if (conf->ip[0] == '*') {
 		saServer.sin_addr.s_addr = htonl(INADDR_ANY);
-	else {
-		r = inet_aton(conf->ip, &saServer.sin_addr);
-		if (!r) {
+	} else {
+		if (! (inet_aton(conf->ip, &saServer.sin_addr))) {
 			close(sock);
-			trace(TRACE_FATAL,
-			      "%s,%s: invalid IP [%s]", __FILE__, __func__, conf->ip);
+			trace(TRACE_FATAL, "%s,%s: IP invalid [%s]", 
+					__FILE__, __func__, 
+					conf->ip);
 		}
 	}
-
-	trace(TRACE_DEBUG, "%s,%s: socket IP requested [%s] OK", __FILE__, __func__,
-	      conf->ip);
+	trace(TRACE_DEBUG, "%s,%s: IP ok [%s]", __FILE__, __func__, conf->ip);
 
 	/* set socket option: reuse address */
-	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &so_reuseaddress,
-		   sizeof(so_reuseaddress));
+	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, 
+			&so_reuseaddress, sizeof(so_reuseaddress));
 
 	/* bind the address */
-	len = sizeof(saServer);
-	r = bind(sock, (struct sockaddr *) &saServer, len);
-
-	if (r == -1) {
+	if ((bind(sock, (struct sockaddr *) &saServer, sizeof(saServer))) == -1) {
+		err = errno;
 		close(sock);
-		trace(TRACE_FATAL,
-		      "%s,%s: could not bind address to socket", __FILE__, __func__);
+		trace(TRACE_FATAL, "%s,%s: %s", __FILE__, __func__, strerror(err));
 	}
+	trace(TRACE_DEBUG, "%s,%s: bind ok", __FILE__, __func__);
 
-	trace(TRACE_DEBUG, "%s,%s: IP bound to socket", __FILE__, __func__);
-
-	r = listen(sock, BACKLOG);
-	if (r == -1) {
+	if ((listen(sock, BACKLOG)) == -1) {
+		err = errno;
 		close(sock);
-		trace(TRACE_FATAL,
-		      "%s,%s: error making socket listen [%s]", __FILE__, __func__,
-		      strerror(errno));
+		trace(TRACE_FATAL, "%s,%s: %s", __FILE__, __func__, strerror(err));
 	}
-
-	trace(TRACE_INFO, "%s,%s: socket creation complete", __FILE__, __func__);
+	
 	conf->listenSocket = sock;
+	
+	trace(TRACE_INFO, "%s,%s: socket complete", __FILE__, __func__);
 
 	return 0;
 }
