@@ -19,7 +19,7 @@
 #include "dbmysql.h"
 
 #define MAX_LINESIZE 1024
-#define COMMAND_SHOW_LEVEL TRACE_WARNING
+#define COMMAND_SHOW_LEVEL TRACE_INFO
 
 #define null_free(p) { my_free(p); p = NULL; }
 

@@ -3,6 +3,7 @@
  * 
  * pop3 daemon */
 
+#include <string.h>
 #include "pop3.h"
 #include "dbmysql.h"
 #include "debug.h"
@@ -31,6 +32,8 @@ char *timeout_setting;
 char *buffer;
 
 int resolve_client;
+int pop_before_smtp = 0;
+char *client_ip = NULL;
 
 int server_timeout;
 int server_pid;
@@ -119,7 +122,8 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
   /* reset */
   done = 1;
   
-  theiraddress=inet_ntoa(adr_clnt.sin_addr);
+  theiraddress = inet_ntoa(adr_clnt.sin_addr);
+  client_ip = theiraddress;
 
   if (resolve_client==1)
     {
@@ -295,7 +299,7 @@ int main (int argc, char *argv[])
 
   char *trace_level=NULL,*trace_syslog=NULL,*trace_verbose=NULL;
   int new_level = 2, new_trace_syslog = 1, new_trace_verbose = 0;
-  char *resolve_setting=NULL;
+  char *resolve_setting=NULL, *before_smtp=NULL;
   
   int len_inet;
   int reuseaddress;
@@ -317,7 +321,15 @@ int main (int argc, char *argv[])
   trace_verbose = db_get_config_item("TRACE_VERBOSE", CONFIG_EMPTY);
   timeout_setting = db_get_config_item("POP3D_CHILD_TIMEOUT", CONFIG_EMPTY);
   resolve_setting = db_get_config_item("POP3D_IP_RESOLVE",CONFIG_EMPTY);
-  
+
+  before_smtp = db_get_config_item("DBMAIL_POP_BEFORE_SMTP",CONFIG_EMPTY);
+  if (before_smtp && strcasecmp(before_smtp,"yes") == 0)
+    {
+      pop_before_smtp = 1;
+      my_free(before_smtp);
+      before_smtp = NULL;
+    }
+
   if (resolve_setting)
   {
 		if (strcasecmp(resolve_setting,"yes")==0)

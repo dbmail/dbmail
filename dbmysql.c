@@ -958,8 +958,6 @@ void db_session_cleanup (struct session *sessionptr)
 int db_createsession (unsigned long useridnr, struct session *sessionptr)
 {
   /* first we do a query on the messages of this user */
-
-  
   struct message tmpmessage;
   unsigned long messagecounter=0;
 	
@@ -972,7 +970,6 @@ int db_createsession (unsigned long useridnr, struct session *sessionptr)
 
   if (db_query(query)==-1)
     {
-      
       return -1;
     }
 
@@ -1335,6 +1332,73 @@ unsigned long db_set_deleted ()
   
   return mysql_affected_rows(&conn);
 }
+
+
+/*
+ * will add the ip number to a table
+ * needed for POP/IMAP_BEFORE_SMTP
+ */
+int db_log_ip(const char *ip)
+{
+  char timestr[30];
+  time_t td;
+  struct tm tm;
+  long id=0;
+
+  time(&td);              /* get time */
+  tm = *localtime(&td);   /* get components */
+  strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT idnr FROM pbsp WHERE ipnumber = '%s'", ip);
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR,"db_log_ip(): could not access ip-log table (pop/imap-before-smtp): %s",
+	    mysql_error(&conn));
+      return -1;
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_log_ip(): could not check ip-log (pop/imap-before-smtp): %s",
+	    mysql_error(&conn));
+      return -1;
+    }
+
+  row = mysql_fetch_row(res);
+  id = row ? strtol(row[0], NULL, 10) : 0;
+
+  mysql_free_result(res);
+
+  if (id)
+    {
+      /* this IP is already in the table, update the 'since' field */
+      snprintf(query, DEF_QUERYSIZE, "UPDATE pbsp SET since = '%s' WHERE idnr=%ld",timestr,id);
+
+      if (db_query(query) == -1)
+	{
+	  trace(TRACE_ERROR,"db_log_ip(): could not update ip-log (pop/imap-before-smtp): %s",
+		mysql_error(&conn));
+	  return -1;
+	}
+    }
+  else
+    {
+      /* IP not in table, insert row */
+      snprintf(query, DEF_QUERYSIZE, "INSERT INTO pbsp (since, ipnumber) VALUES ('%s','%s')", 
+	       timestr, ip);
+
+      if (db_query(query) == -1)
+	{
+	  trace(TRACE_ERROR,"db_log_ip(): could not log IP number to dbase (pop/imap-before-smtp): %s",
+		mysql_error(&conn));
+	  return -1;
+	}
+    }
+
+  trace(TRACE_DEBUG,"db_log_ip(): ip [%s] logged\n",ip);
+  return 0;
+}
+  
 
 
 /* 

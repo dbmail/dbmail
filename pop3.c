@@ -16,6 +16,8 @@
 
 extern int state; /* tells the current negotiation state of the server */
 extern char *username, *password; /* session username and password */
+extern char *client_ip;
+extern int pop_before_smtp;
 extern struct session curr_session;
 extern char *apop_stamp;			/* the APOP string */
 
@@ -181,6 +183,10 @@ int pop3 (void *stream, char *buffer)
 	      state = TRANSACTION;
 	      /* now we're going to build up a session for this user */
 	      trace(TRACE_DEBUG,"pop3(): validation ok, creating session");
+
+	      if (pop_before_smtp)
+		db_log_ip(client_ip);
+
 	      result=db_createsession (result, &curr_session);
 	      if (result==1)
 		{

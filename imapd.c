@@ -7,6 +7,7 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 #include "imap4.h"
 #include "serverservice.h"
 #include "debug.h"
@@ -15,12 +16,15 @@
 
 #define PNAME "dbmail/imap4"
 
+int imap_before_smtp=0;
+
 
 int main()
 {
   int sock,d;
   char *newuser,*newgroup,*port,*bindip,*defchld,*maxchld,*daem,*to;
   char *trace_level,*trace_syslog,*trace_verbose;
+  char *before_smtp;
   int new_level = 2, new_trace_syslog = 1, new_trace_verbose = 0, timeout = 0;
 
   /* open logs */
@@ -37,6 +41,14 @@ int main()
   maxchld = db_get_config_item("IMAPD_MAX_CHILD",CONFIG_MANDATORY);
   daem = db_get_config_item("IMAPD_DAEMONIZES", CONFIG_EMPTY);
   to =  db_get_config_item("IMAPD_CHILD_TIMEOUT", CONFIG_EMPTY);
+  
+  before_smtp = db_get_config_item("DBMAIL_IMAP_BEFORE_SMTP", CONFIG_EMPTY);
+  if (before_smtp && strcasecmp(before_smtp,"yes") == 0)
+    {
+      imap_before_smtp = 1;
+      my_free(before_smtp);
+      before_smtp = NULL;
+    }
 
   trace_level = db_get_config_item("TRACE_LEVEL", CONFIG_EMPTY);
   trace_syslog = db_get_config_item("TRACE_TO_SYSLOG", CONFIG_EMPTY);

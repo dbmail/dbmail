@@ -44,6 +44,7 @@ extern cache_t cached_msg;
 
 extern const char AcceptedMailboxnameChars[];
 
+extern int imap_before_smtp;
 
 /*
  * RETURN VALUES _ic_ functions:
@@ -177,6 +178,9 @@ int _ic_login(char *tag, char **args, ClientInfo *ci)
   ud->userid = userid;
   ud->state = IMAPCS_AUTHENTICATED;
 
+  if (imap_before_smtp)
+    db_log_ip(ci->ip);
+
   fprintf(ci->tx,"%s OK LOGIN completed\r\n",tag);
   return 0;
 }
@@ -266,6 +270,9 @@ int _ic_authenticate(char *tag, char **args, ClientInfo *ci)
   /* update client info */
   ud->userid = userid;
   ud->state = IMAPCS_AUTHENTICATED;
+
+  if (imap_before_smtp)
+    db_log_ip(ci->ip);
 
   trace(TRACE_MESSAGE, "IMAPD [PID %d]: user (id %d, name %s) login accepted @ %s\r\n",getpid(),
 	userid,username,timestr);

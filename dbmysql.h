@@ -144,6 +144,7 @@ typedef struct
  */
 
 int db_connect();
+int db_disconnect();
 int db_query (const char *query);
 int db_check_user (char *username, struct list *userids, int checks);
 char *db_get_config_item (char *item, int type);
@@ -160,6 +161,8 @@ unsigned long db_update_message (unsigned long *messageidnr, char *unique_id,
 unsigned long db_insert_message_block (char *block, int messageidnr);
 int db_check_id (char *id);
 
+int db_log_ip(const char *ip);
+
 int db_icheck_messageblks(int *nlost, unsigned long **lostlist);
 int db_icheck_messages(int *nlost, unsigned long **lostlist);
 int db_icheck_mailboxes(int *nlost, unsigned long **lostlist);
@@ -168,8 +171,6 @@ int db_delete_messageblk(unsigned long uid);
 int db_delete_message(unsigned long uid);
 int db_delete_mailbox(unsigned long uid);
 
-
-int db_disconnect();
 unsigned long db_insert_result ();
 int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines, int no_end_dot);
 unsigned long db_validate (char *user, char *password);
