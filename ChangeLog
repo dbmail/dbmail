@@ -1,3 +1,7 @@
+2004-09-16  Ilja Booij  <ilja@ic-s.nl>
+
+	* imaputil.c (date_sql2imap): add daylight savings time information.
+
 2004-09-15  Ilja Booij  <ilja@ic-s.nl>
 
 	* INSTALL.postfix: host -> hosts in postfix-mysql config.

@@ -1847,7 +1847,10 @@ char *date_sql2imap(const char *sqldate)
 		strcpy(_imapdate, IMAP_STANDARD_DATE);
 		return _imapdate;
 	}
+	/* copy timezone + daylight savings time info from localtime */
 	tm_sqldate.tm_gmtoff = tm_localtime.tm_gmtoff;
+	tm_sqldate.tm_isdst = tm_localtime.tm_isdst;
+
 	(void) strftime(_imapdate, IMAP_INTERNALDATE_LEN, 
 			"%d-%b-%Y %T %z", &tm_sqldate);
 
