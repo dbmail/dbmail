@@ -15,6 +15,7 @@
 #include "config.h"
 #include "pipe.h"
 #include "debug.h"
+#include <errno.h>
 
 /*extern struct list *returnpath;*/
 
@@ -327,6 +328,10 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
       while (!feof(instream))
 	{
 	  usedmem = fread (strblock, sizeof(char), READ_BLOCK_SIZE, instream);
+	  if (ferror(instream))
+	    {
+	      trace(TRACE_ERROR,"insert_messages(): error on instream: [%s]", strerror(errno));
+	    }
 	  cnt++;
 
 	  /* fread won't do this for us! */	
