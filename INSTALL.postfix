@@ -63,10 +63,11 @@ Date:   19-03-2004
 	
 	dbmail-smtp    unix  -       n       n       -       -       pipe
 	    flags=  user=<dbmailuser>:<dbmailgroup> 
-		argv=/usr/local/sbin/dbmail-smtp -d ${recipient}	
+		argv=/usr/local/sbin/dbmail-smtp -d ${recipient} -f ${sender}
 	
 	where <dbmailuser> and <dbmailgroup> should be the user and group the
-	dbmail-smtp program should run as.
+	dbmail-smtp program should run as. The ${recipient} and ${sender} 
+	fields are filled in by Postfix.
 
 	To send all email to DBMail, add this in /etc/postfix/main.cf
 

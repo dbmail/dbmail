@@ -26,15 +26,15 @@
 #endif
 
 #include <stdio.h>
+#include <stdlib.h
+#include <string.h>
 #include <time.h>
 
 #include "db.h"
-#include "debug.h"
-#include "list.h"
-#include "forward.h"
 #include "dbmail.h"
-#include <string.h>
-#include <stdlib.h>
+#include "debug.h"
+#include "forward.h"
+#include "list.h"
 
 /* For each of the addresses or programs in targets,
  * send out a copy of the message pointed to by msgidnr.
@@ -46,7 +46,6 @@
 int forward(u64_t msgidnr, struct list *targets, const char *from,
 	    const char *header, u64_t headersize UNUSED)
 {
-
 	struct element *target = NULL;
 	char *command = NULL;
 	size_t command_len = 0;
@@ -97,9 +96,10 @@ int forward(u64_t msgidnr, struct list *targets, const char *from,
 			strncpy(command, (char *) (target->data) + 1, command_len);
 		} else {
 			/* pipe to sendmail */
-			command_len = strlen((char *) (target->data)) +
-				strlen(sendmail) + 2;
- 			command = my_malloc(command_len * sizeof(char));
+			command_len = strlen(sendmail) + strlen(" -f ") +
+				strlen(from) + strlen (" ") +
+				strlen((char *) (target->data)) + 1;
+			command = my_malloc(command_len * sizeof(char));
 			if (!command) {
 				trace(TRACE_ERROR,
 				      "%s,%s: out of memory",
@@ -110,7 +110,7 @@ int forward(u64_t msgidnr, struct list *targets, const char *from,
 			trace(TRACE_DEBUG,
 			      "%s,%s: allocated memory for external "
 			      "command call", __FILE__, __func__);
-			snprintf(command, command_len, "%s %s", sendmail,
+			snprintf(command, command_len, "%s -f %s %s", sendmail, from, 
 				(char *) (target->data));
 		}
 

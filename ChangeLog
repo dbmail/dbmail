@@ -1,3 +1,10 @@
+2004-06-29  Ilja Booij  <ilja@ic-s.nl>
+
+	* INSTALL.postfix: updated wrt to return path setting.
+
+	* forward.c (forward): now calls the sendmail executable with the
+	-f switch to set the return path to the original return path.
+
 2004-06-28  Ilja Booij  <ilja@ic-s.nl>
 
 	* imaputil.c (build_args_array_ext): also accepts {681+} as mail size (not only
