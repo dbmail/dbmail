@@ -156,8 +156,8 @@ char *db_get_config_item (char *item, int type)
 	trace (TRACE_FATAL,"db_get_config_item(): query failed could not get value for %s. "
 	       "This is needed to continue\n",item);
       else
-	if (type == CONFIG_EMPTY)
-	  trace (TRACE_ERROR,"db_get_config_item(): query failed. Could not get value for %s\n",item);
+			if (type == CONFIG_EMPTY)
+				trace (TRACE_ERROR,"db_get_config_item(): query failed. Could not get value for %s\n",item);
 
       free (ckquery);
       return NULL;

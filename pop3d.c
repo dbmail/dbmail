@@ -7,10 +7,10 @@
 #include "dbmysql.h"
 
 #define INCOMING_BUFFER_SIZE 512
-/* connection timeout in seconds */
-#define MAX_CONNECTION_TIMEOUT 60
 #define IP_ADDR_MAXSIZE 16
 #define APOP_STAMP_SIZE 255
+/* default timeout for server daemon */
+#define DEFAULT_SERVER_TIMEOUT 100
 
 #ifndef SHUT_RDWR
 #define SHUR_RDWR 3
@@ -24,12 +24,17 @@ char *username=NULL, *password=NULL;
 struct session curr_session;
 char *myhostname;
 char *apop_stamp;
+char *timeout_setting;
 
 char *buffer;
 int done=1;
 
+int server_timeout;
+
 int error_count;
 
+FILE *tx = NULL;	/* write socket */
+FILE *rx = NULL;	/* read socket */
 
 /* signal handler */
 static void sigchld_handler (int signo)
@@ -37,13 +42,24 @@ static void sigchld_handler (int signo)
   pid_t PID;
   int status;
 
-  if (signo == SIGCHLD)
-    {
-      while (waitpid (-1, &status, WNOHANG));
-      return;
-    }
+  if ((signo == SIGALRM) && (tx!=NULL))
+  {
+		done=-1;
+		trace (TRACE_DEBUG,"sigchld_handler(): received ALRM signal. Timeout");
+		fprintf (tx,"-ERR i cannot wait forever\r\n");
+		fflush (tx);
+		shutdown(fileno(rx),SHUT_RDWR);
+		shutdown(fileno(tx),SHUT_RDWR);
+		return;
+  }
   else
-    trace (TRACE_STOP,"sigchld_handler(): received fatal signal [%d]",signo);
+	 if (signo == SIGCHLD)
+	  {
+	    while (waitpid (-1, &status, WNOHANG));
+	    return;
+	  }
+	  else
+		  trace (TRACE_STOP,"sigchld_handler(): received fatal signal [%d]",signo);
 }
 
 int main (int argc, char *argv[])
@@ -72,8 +88,6 @@ int main (int argc, char *argv[])
   int z, i; /* counters */
   int children=0;		/* child process counter */
   int defchld,maxchld; /* default children and maxchildren */
-  FILE *tx = NULL;	/* write socket */
-  FILE *rx = NULL;	/* read socket */
 
   /* open logs */
   openlog(PNAME, LOG_PID, LOG_MAIL);
@@ -86,7 +100,19 @@ int main (int argc, char *argv[])
   trace_level = db_get_config_item("TRACE_LEVEL", CONFIG_EMPTY);
   trace_syslog = db_get_config_item("TRACE_TO_SYSLOG", CONFIG_EMPTY);
   trace_verbose = db_get_config_item("TRACE_VERBOSE", CONFIG_EMPTY);
-
+  timeout_setting = db_get_config_item("POP3D_CHILD_TIMEOUT", CONFIG_EMPTY);
+  
+  if (timeout_setting) 
+  {
+	  server_timeout = atoi(timeout_setting);
+	  free (timeout_setting);
+	  if (server_timeout<10)
+		  trace (TRACE_STOP,"main(): POP3D_CHILD_TIMEOUT setting is insane [%d]",
+				  server_timeout);
+  }
+  else
+	  server_timeout = DEFAULT_SERVER_TIMEOUT;
+  
   if (trace_level)
     {
       new_level = atoi(trace_level);
@@ -140,8 +166,8 @@ int main (int argc, char *argv[])
   signal (SIGSEGV, sigchld_handler);
   signal (SIGTERM, sigchld_handler);
   signal (SIGSTOP, sigchld_handler);
+  signal (SIGALRM, sigchld_handler);
 
-	
   adr_srvr.sin_family = AF_INET; 
   
   s = socket (PF_INET, SOCK_STREAM, 0); /* creating the socket */
@@ -305,16 +331,22 @@ int main (int argc, char *argv[])
 			
 			/* no errors yet */
 			error_count = 0;
-				
+			
+			trace (TRACE_DEBUG,"main(): setting timeout timer at %d seconds",server_timeout);	
 			/* setting time for timeout counter */
-	      timeout=time(NULL);
+	      alarm (server_timeout);
 
 			/* scanning for commands */
 			while ((done>0) && (buffer=fgets(buffer,INCOMING_BUFFER_SIZE,rx)))
 			{
-				done = pop3(tx,buffer); 
+				if (feof(rx)) 
+					done = -1; /* check of client eof */
+				else
+					{
+					done = pop3(tx,buffer); 
+					alarm (server_timeout);
+					}
 				fflush (tx);
-				if (feof(rx)) done = -1; /* check of client eof */
 			}
 					
 			/* we've reached the update state */
@@ -322,21 +354,30 @@ int main (int argc, char *argv[])
 
 			/* memory cleanup */
 	      free(buffer);
-	
-			trace(TRACE_MESSAGE,"main(): user %s logging out [message=%lu, octets=%lu]",
-				username, curr_session.virtual_totalmessages,
-				curr_session.virtual_totalsize);
 
-			/* if everything went well, write down everything and do a cleanup */
-			if (done==0) 
+			if (done < 0)
+			{
+				trace (TRACE_ERROR,"main(): timeout, connection terminated");
+				fclose(tx);
+				shutdown (fileno(rx), SHUT_RDWR);
+				fclose(rx);
+			}
+			else
+			{
+				trace(TRACE_MESSAGE,"main(): user %s logging out [message=%lu, octets=%lu]",
+					username, curr_session.virtual_totalmessages,
+					curr_session.virtual_totalsize);
+
+				/* if everything went well, write down everything and do a cleanup */
 				db_update_pop(&curr_session);
 				
-			db_disconnect(); 
+				db_disconnect(); 
 	
-			fclose(tx);
-			shutdown (fileno(rx), SHUT_RDWR);
-	      fclose(rx);
-		
+				fclose(tx);
+				shutdown (fileno(rx), SHUT_RDWR);
+				fclose(rx);
+			}
+				
 	      free(myhostname);
 				
 			/* we don't need this anymore */
