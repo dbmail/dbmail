@@ -1,5 +1,7 @@
 /* $Id$
-	takes care of forwarding mail to an external address */
+ * (c) 2000-2001 IC&S, The Netherlands
+ *
+ * takes care of forwarding mail to an external address */
 
 #include "forward.h"
 

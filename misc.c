@@ -1,4 +1,6 @@
 /*	$Id$
+ *	(c) 2000-2001 IC&S, The Netherlands
+ *
  *	Miscelaneous functions */
 
 #include "config.h"

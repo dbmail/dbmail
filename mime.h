@@ -1,4 +1,5 @@
-/* $Id$ */
+/* $Id$ 
+ * (c) 2000-2001 IC&S, The Netherlands */
 
 #ifndef MIME_H_
 #define MIME_H_

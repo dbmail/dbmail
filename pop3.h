@@ -1,4 +1,6 @@
 /* $Id$
+ * (c) 2000-2001 IC&S, The Netherlands
+ * 
  * this defines some default messages for POP3 */
 
 #ifndef  _POP3_H

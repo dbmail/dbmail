@@ -1,3 +1,5 @@
+/* header for md5.h */
+
 #ifndef GdmMD5_H
 #define GdmMD5_H
 

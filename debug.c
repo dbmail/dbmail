@@ -1,4 +1,6 @@
 /* $Id$
+ * (c) 2000-2001 IC&S, The Netherlands
+ *
  * Debugging and memory checking functions */
 
 #include "debug.h"

@@ -1,4 +1,6 @@
 /* $Id$
+ * (c) 2000-2001 IC&S, The Netherlands
+ * 
  * This is the dbmail-user program
  * It makes adding users easier */
 

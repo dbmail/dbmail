@@ -1,9 +1,10 @@
 /* $Id$
+ * (c) 2000-2001 IC&S, The Netherlands
+ *
  * serverservice.c
  *
  * implements server functionality
  *
- * (c)2001 IC&S
  */
 
 

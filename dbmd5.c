@@ -1,4 +1,6 @@
 /* $Id$ 
+ * (c) 2000-2001 IC&S, The Netherlands
+ *
  * Functions to create md5 hash from buf */
 
 #include <stdio.h>

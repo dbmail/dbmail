@@ -1,4 +1,6 @@
 /*	$Id$
+ *	(c) 2000-2001 IC&S, The Netherlands
+ *
  *	debug.h : headers for debug.c */
 
 #include <stdio.h>

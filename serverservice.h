@@ -1,9 +1,8 @@
 /* $Id$
- * serverservice.h
+ * (c) 2000-2001 IC&S, The Netherlands
  *
  * setting up a server.
  *
- * (c)2001 IC&S
  */
 
 #ifndef SS_SERVERSERVICE_H

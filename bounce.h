@@ -1,5 +1,7 @@
 /* $Id$ 
-	Headers for bounce.c */
+ * (c) 2000-2001 IC&S, The Netherlands
+ *
+ * Headers for bounce.c */
 
 #ifndef BOUNCE_H_
 #define BOUNCE_H_

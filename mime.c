@@ -1,4 +1,6 @@
 /* $Id$
+ * (c) 2000-2001 IC&S, The Netherlands
+ *
  * Functions for parsing a mime mailheader (actually just for scanning for email messages
 	and parsing the messageID */
 

@@ -1,4 +1,6 @@
-/* 
+/* $Id$
+ * (c) 2000-2001 IC&S, The Netherlands
+ *
  * imapcommands.c
  * 
  * IMAP server command implementations

@@ -1,4 +1,6 @@
 /* $Id$
+ * (c) 2000-2001 IC&S, The Netherlands
+ * 
  * imap4.c
  *
  * implements an IMAP 4 rev 1 server.

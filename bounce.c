@@ -1,6 +1,10 @@
 /* $Id$
-	bounce.c takes care of bouncing undeliverably messages */
+ * (c) 2000-2001 IC&S, The Netherlands
+ *
+ * Bounce.c implements functions to bounce email back to a sender 
+ * with a message saying why the message was bounced */
 
+	
 #include "bounce.h"
 #include "list.h"
 #include "mime.h"

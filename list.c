@@ -1,6 +1,7 @@
 /* $Id$
- * functions to create lists and add/delete items
- * (c) 2001 eelco@eelco.com */
+ * (c) 2000-2001 IC&S, The Netherlands
+ *
+ * functions to create lists and add/delete items */
 
 #include <stdio.h>
 #include <stdlib.h>

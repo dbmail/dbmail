@@ -1,4 +1,6 @@
 /* $Id$
+ * (c) 2000-2001 IC&S, The Netherlands
+ * 
  * implementation for pop3 commands accoording to RFC 1081 */
 
 #include "config.h"

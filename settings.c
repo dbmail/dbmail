@@ -1,3 +1,6 @@
+/* $Id$
+ * (c) 2000-2001 IC&S, The Netherlands */
+
 #include "settings.h"
 
 #define LINE_BUFFER_SIZE 255

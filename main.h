@@ -1,4 +1,6 @@
-/* $Id$ */
+/* $Id$ 
+ * (c) 2000-2001 IC&S, The Netherlands */
+
 #ifndef  _MAIN_H
 #define  _MAIN_H
 

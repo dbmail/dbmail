@@ -1,4 +1,6 @@
-/*
+/* $Id$
+ * (c) 2000-2001 IC&S, The Netherlands
+ *
  * sstack.h
  *
  * implementation of a simple stack; memory allocation

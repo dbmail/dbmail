@@ -1,7 +1,9 @@
 /* $Id$
-	This is the dbmail housekeeping program. 
-	It checks the integrity of the database and does a cleanup of all
-	deleted messages. */
+ * (c) 2000-2001 IC&S, The Netherlands
+ *
+ * This is the dbmail housekeeping program. 
+ *	It checks the integrity of the database and does a cleanup of all
+ *	deleted messages. */
 
 #include "maintenance.h"
 

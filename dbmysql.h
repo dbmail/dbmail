@@ -1,4 +1,7 @@
 /* $Id$
+ * (c) 2000-2001 IC&S, The Netherlands
+ *
+ * driver header file
  * Functions for database communication */
 
 #ifndef  _DBMYSQL_H

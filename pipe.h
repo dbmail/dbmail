@@ -1,4 +1,5 @@
-/* $Id$ */
+/* $Id$ 
+ * (c) 2000-2001 IC&S, The Netherlands */
 
 #ifndef PIPE_H_
 #define PIPE_H_
