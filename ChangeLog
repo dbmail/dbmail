@@ -7,6 +7,11 @@
 	* check_dbmail_message.c, Makefile.am: added another test suite.
 	* lib/iniparser-2.14/Makefile.orig, lib/iniparser-2.14/test/Makefile:
 	removed redundant files.
+	* dbmail-imapsession.c: added UIDNEXT to select response.
+	* dbmail-imapsession.c: removed redundant parentheses around envelope
+	response.
+	* imaputil.c: reverted plist construction to old behaviour because OE
+	won't work otherwise.
 
 2005-01-22  Ilja Booij <ilja@ic-s.nl>
 

@@ -160,7 +160,6 @@ GList * g_list_append_printf(GList * list, char * format, ...)
 char *dbmail_imap_plist_as_string(GList * list)
 {
 	char *p;
-	char **sublists;
 	GString * tmp1 = g_string_new("");
 	GString * tmp2 = g_list_join(list, " ");
 	g_string_printf(tmp1,"(%s)", tmp2->str);
@@ -170,11 +169,12 @@ char *dbmail_imap_plist_as_string(GList * list)
 	g_string_free(tmp2,TRUE);
 
 	// collapse "(NIL) (NIL)" to "(NIL)(NIL)"
+	/* disabled: OE doesn't like this, uw-imapd doesn't do this...
+	char **sublists;
 	sublists = g_strsplit(p,") (",0);
 	g_free(p);
-
 	p = g_strjoinv(")(",sublists);
-	
+	*/
 	
 	return p;
 }

@@ -106,7 +106,7 @@ START_TEST(test_dbmail_imap_plist_as_string)
 	l = g_list_append(l, "(NIL NIL)");
 	l = g_list_append(l, "(NIL NIL)");
 	result = dbmail_imap_plist_as_string(l);
-	fail_unless(strcmp(result,"(NIL NIL (NIL NIL)(NIL NIL))")==0,"plist construction failed");
+	fail_unless(strcmp(result,"(NIL NIL (NIL NIL) (NIL NIL))")==0,"plist construction failed");
 }
 END_TEST
 

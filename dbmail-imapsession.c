@@ -1277,7 +1277,7 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 			dbmail_imap_session_printf(self, " ");
 
 		tlist = _imap_get_envelope(&cached_msg.msg.rfcheader);
-		if (dbmail_imap_session_printf(self, "ENVELOPE (%s)", dbmail_imap_plist_as_string(tlist)) == -1) {
+		if (dbmail_imap_session_printf(self, "ENVELOPE %s", dbmail_imap_plist_as_string(tlist)) == -1) {
 			dbmail_imap_session_printf(self, "\r\n* BYE error fetching envelope structure\r\n");
 			return -1;
 		}
@@ -2047,6 +2047,10 @@ int dbmail_imap_session_mailbox_show_info(struct ImapSession * self)
 	g_list_free(list);
 	dbmail_imap_session_printf(self, "* OK [PERMANENTFLAGS (%s)]\r\n", string->str);
 
+	/* UIDNEXT */
+	dbmail_imap_session_printf(self, "* OK [UIDNEXT %llu] Predicted next UID\r\n",
+		ud->mailbox.msguidnext);
+	
 	/* UID */
 	dbmail_imap_session_printf(self, "* OK [UIDVALIDITY %llu] UID value\r\n",
 		ud->mailbox.uid);
