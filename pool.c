@@ -70,13 +70,6 @@ int set_lock(int type)
 
 void scoreboard_new(serverConfig_t * conf)
 {
-	/* This next malloc() doesn't seem to do anything, except take
-	 * time and use memory. commented out (Ilja 2004-09-20) */
-        /*
-	if ((scoreboard = (Scoreboard_t *) malloc(P_SIZE)) == NULL)
-		trace(TRACE_FATAL,
-		      "%s,%s: malloc scoreboard failed",__FILE__,__FUNCTION__);
-	*/
 	if ((shmid = shmget(IPC_PRIVATE, P_SIZE, 0644 | IPC_CREAT)) == -1)
 		trace(TRACE_FATAL, "%s,%s: shmget failed",__FILE__,__FUNCTION__);
 	scoreboard = shmat(shmid, (void *) 0, 0);
