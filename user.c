@@ -558,8 +558,9 @@ int do_show(char *name)
       quiet_printf("User ID         : %llu\n", userid);
       quiet_printf("Username        : %s\n", auth_get_userid(&userid));
       quiet_printf("Client ID       : %llu\n",cid);
-      quiet_printf("Max. mailboxsize: %llu MB\n",quotum);
-      quiet_printf("Quotum used     : %llu MB (%2.1lf%%)\n", quotumused, (100.0 * quotumused)/quotum);
+      quiet_printf("Max. mailboxsize: %llu MB\n",quotum/(1024.0*1024.0));
+      quiet_printf("Quotum used     : %llu MB (%2.1lf%%)\n", quotumused/(1024.0*1024.0), 
+		   (100.0 * quotumused)/quotum);
       quiet_printf("\n");
 
       quiet_printf("Aliases:\n");
