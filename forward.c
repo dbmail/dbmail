@@ -18,13 +18,17 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
 	/* takes input from instream and forwards that directly to 
 		a number of pipes (depending on the targets. Sends headers
 		first */
+
+	totalmem = 0;
 	
-	trace (TRACE_INFO,"pipe_forward(): delivering to %d"
+	trace (TRACE_INFO,"pipe_forward(): delivering to %d "
 			"external addresses", list_totalnodes(targets));
 
 	memtst ((strblock = (char *)malloc(READ_BLOCK_SIZE))==NULL);
 	
 	target = list_getstart (targets);
+
+	list_init(&descriptors);
 
 	while (target != NULL)
 	{
@@ -50,7 +54,8 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
 			trace (TRACE_DEBUG,"pipe_forward(): wrote header to pipe");
 
 			/* add descriptor to pipe to a descriptors list */
-			list_nodeadd(&descriptors, &sendmail_pipe, sizeof(FILE *));
+			if (list_nodeadd(&descriptors, &sendmail_pipe, sizeof(FILE *))==NULL)
+				trace (TRACE_ERROR,"pipe_forward(): failed to add descriptor");
 
 		}
 		else 
@@ -73,7 +78,8 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
 				totalmem = totalmem + usedmem;
 
 				trace (TRACE_DEBUG,"pipe_forward(): Sending block"
-						"size=%d total=%d", usedmem, totalmem);
+						"size=%d total=%d (%d\%)", usedmem, totalmem,
+						((usedmem/totalmem)*100)); 
 				
 				descriptor_temp = list_getstart(&descriptors);
 				while (descriptor_temp != NULL)
