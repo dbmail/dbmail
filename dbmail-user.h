@@ -26,7 +26,11 @@
 #include "dbmail.h"
 #include "dbmailtypes.h"
 
-#define PNAME "dbmail/users"
+#define qprintf(fmt, args...) ((quiet||reallyquiet) ? 0 : printf(fmt, ##args) )
+#define qerrorf(fmt, args...) (reallyquiet ? 0 : fprintf(stderr, fmt, ##args) )
+#define null_strncpy(dst, src, len) (src ? strncpy(dst, src, len) : 0 )
+#define null_crypt(src, dst) (src ? crypt(src, dst) : "" )
+
 
 /* These are the available password types. */
 typedef enum {
@@ -38,7 +42,6 @@ typedef enum {
 int mkpassword(const char * const user, const char * const passwd,
                const char * const passwdtype, const char * const passwdfile,
                char ** password, char ** enctype);
-
 
 struct change_flags {
 	unsigned int newuser         : 1;
@@ -83,5 +86,3 @@ int do_forwards(const char *alias, const u64_t clientid,
 /* Helper functions */
 int is_valid(const char * const str);
 u64_t strtomaxmail(const char * const str);
-
-

@@ -37,20 +37,19 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "dbmail-imapsession.h"
-#include "dbmail-message.h"
-#include "mime.h"
-#include "rfcmsg.h"
-#include "dbmsgbuf.h"
-#include "imaputil.h"
-#include "config.h"
-#include "pipe.h"
+#include "dbmail.h"
+#include "dbmailtypes.h"
+#include "debug.h"
+#include "auth.h"
+#include "db.h"
+#include "dbmail-user.h"
 
 #include "check_dbmail.h"
 
 extern char *configFile;
 extern db_param_t _db_params;
-
+extern int quiet;
+extern int reallyquiet;
 
 /*
  *
@@ -59,10 +58,13 @@ extern db_param_t _db_params;
  */
 void setup(void)
 {
+	reallyquiet = 1;
 	configure_debug(4,0,1);
 	config_read(configFile);
 	GetDBParams(&_db_params);
 	db_connect();
+	auth_connect();
+	do_add("testfailuser","testpass","md5-hash",0,0,NULL,NULL);
 }
 
 void teardown(void)
@@ -79,13 +81,44 @@ void teardown(void)
 
 START_TEST(test_do_add)
 {
+	int result;
+	result = do_add("testfailuser","testpass","md5-hash",0,0,NULL,NULL);
+	fail_unless(result!=0,"do_add succeeded when it should have failed");
+	result = do_add("testadduser","testpass","md5-hash",0,0,NULL,NULL);
+	fail_unless(result==0,"do_add failed");
+}
+END_TEST
 
+
+//int do_show(const char * const user);
+START_TEST(test_do_show)
+{
+	fail_unless(do_show("testfailuser")==0,"test_do_show failed");
+	fail_unless(do_show("nosuchuser"),"do_show should have failed");
+}
+END_TEST
+
+//int do_empty(const u64_t useridnr);
+START_TEST(test_do_empty)
+{
+	u64_t user_idnr;
+	auth_user_exists("nosuchuser",&user_idnr);
+	//fail_unless(do_empty(user_idnr),"do_empty should have failed");
 }
 END_TEST
 
 //int do_delete(const u64_t useridnr, const char * const user);
-//int do_show(const char * const user);
-//int do_empty(const u64_t useridnr);
+START_TEST(test_do_delete)
+{
+	int result;
+	u64_t user_idnr;
+	auth_user_exists("testadduser",&user_idnr);
+	fail_unless(user_idnr > 0,"abort test_do_delete: can't find user_idnr");
+	result = do_delete(user_idnr, "testadduser");
+	fail_unless(result==0,"test_do_delete failed");
+}
+END_TEST
+
 /* Change operations */
 //int do_username(const u64_t useridnr, const char *newuser);
 //int do_maxmail(const u64_t useridnr, const u64_t maxmail);
@@ -102,8 +135,8 @@ END_TEST
 //                GList * fwds_del);
 
 /* Helper functions */
-int is_valid(const char * const str);
-u64_t strtomaxmail(const char * const str);
+//int is_valid(const char * const str);
+//u64_t strtomaxmail(const char * const str);
 
 
 Suite *dbmail_common_suite(void)
@@ -115,6 +148,9 @@ Suite *dbmail_common_suite(void)
 	
 	tcase_add_checked_fixture(tc_user, setup, teardown);
 	tcase_add_test(tc_user, test_do_add);
+	tcase_add_test(tc_user, test_do_show);
+	tcase_add_test(tc_user, test_do_empty);
+	tcase_add_test(tc_user, test_do_delete);
 	
 	return s;
 }
