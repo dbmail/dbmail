@@ -12,6 +12,7 @@ CREATE TABLE aliases (
     client_idnr INT8 DEFAULT '0' NOT NULL,
     PRIMARY KEY (alias_idnr)
 );
+CREATE INDEX aliases_alias_idx ON aliases(alias);
 
 CREATE SEQUENCE user_idnr_seq;
 CREATE TABLE users (
@@ -23,7 +24,9 @@ CREATE TABLE users (
    encryption_type VARCHAR(20) DEFAULT '' NOT NULL,
    PRIMARY KEY (user_idnr)
 );
-CREATE UNIQUE INDEX userid_idx ON users (userid);
+CREATE UNIQUE INDEX users_id_idx ON users (userid);
+CREATE INDEX users_name_idx ON users(userid);
+
 
 CREATE SEQUENCE mailbox_idnr_seq;
 CREATE TABLE mailboxes (
@@ -42,6 +45,9 @@ CREATE TABLE mailboxes (
    is_subscribed INT2 DEFAULT '0' NOT NULL,
    PRIMARY KEY (mailbox_idnr)
 );
+CREATE UNIQUE INDEX mailboxes_id_idx ON mailboxes(mailbox_idnr);
+CREATE INDEX mailboxes_owner_idx ON mailboxes(owner_idnr);
+
 
 CREATE SEQUENCE message_idnr_seq;
 CREATE TABLE messages (
@@ -60,6 +66,9 @@ CREATE TABLE messages (
    rfcsize INT8 DEFAULT '0' NOT NULL,
    PRIMARY KEY (message_idnr)
 );
+CREATE UNIQUE INDEX messages_id_idx ON messages(message_idnr);
+CREATE INDEX messages_mailbox_idx ON messages(mailbox_idnr);
+
 
 CREATE SEQUENCE messageblk_idnr_seq;
 CREATE TABLE messageblks (
@@ -69,6 +78,9 @@ CREATE TABLE messageblks (
    blocksize INT8 DEFAULT '0' NOT NULL,
    PRIMARY KEY (messageblk_idnr)
 );
+CREATE UNIQUE INDEX messageblks_id_idx ON messageblks(messageblk_idnr);
+CREATE INDEX messageblks_msg_idx ON messageblks(message_idnr);
+
 
 CREATE TABLE config (
 	config_idnr INTEGER DEFAULT '0' NOT NULL,

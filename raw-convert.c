@@ -40,7 +40,7 @@
 
 #define DEFAULT_PASSWD "default"
 
-const char *mbox_delimiter_pattern = "^From .*  ";
+const char *mbox_delimiter_pattern = "^From .*";
 char blk[READ_BLOCK_SIZE + MAX_LINESIZE + 1];
 
 /* FILE pointers */
@@ -426,13 +426,22 @@ int add_msg(u64_t size, u64_t rfcsize)
   char uniqueid[UID_SIZE];
   char timestr[30];
   time_t td;
+  static time_t prevt = 0;
+  static unsigned cnt = 1;
   struct tm tm;
 
   time(&td);              /* get time */
   tm = *localtime(&td);   /* get components */
   strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
 
-  snprintf(uniqueid, UID_SIZE, "%lluA%lu", useridnr, time(NULL));
+  if (td == prevt) /* make sure the ID has a unique time value */
+    cnt++;
+  else
+    {
+      cnt = 1; /* reset counter */
+      prevt = td; /* remember this time */
+    }
+  snprintf(uniqueid, UID_SIZE, "%lluA%lu%03u", useridnr, time(NULL), cnt);
 
   msgidnr++;
 
