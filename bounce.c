@@ -66,7 +66,7 @@ int bounce (char *header, unsigned long headersize,char *destination_address, in
 	} /* RR logix :) */
 
       /* loop target addresses */
-      if (list_totalnodes(&from_addresses) == 0)
+      if (list_totalnodes(&from_addresses) > 0)
 	{
 	  tmpelement=list_getstart (&from_addresses);
 	  while (tmpelement!=NULL)
