@@ -638,7 +638,8 @@ int db_update_message_multiple(const char *unique_id, u64_t messagesize, u64_t r
 u64_t db_insert_message_block(const char *block, u64_t len, u64_t msgid)
 {
   char *escaped_query = NULL;
-  unsigned maxesclen = READ_BLOCK_SIZE * 2 + DEF_QUERYSIZE, startlen = 0, esclen = 0;
+  unsigned maxesclen = (READ_BLOCK_SIZE+1) * 2 + DEF_QUERYSIZE, startlen = 0, esclen = 0;
+  unsigned tmp;
 
   if (block == NULL)
     {
@@ -654,6 +655,14 @@ u64_t db_insert_message_block(const char *block, u64_t len, u64_t msgid)
       return -1;
     }
 
+  if ((tmp = strlen(block)) != len)
+    {
+      trace (TRACE_ERROR,"db_insert_message_block(): got faulty block size length [%u] "
+	     "instead of [%u]", len, tmp);
+      
+      len = tmp;
+    }
+
   escaped_query = (char*)my_malloc(sizeof(char) * maxesclen);
   if (!escaped_query)
     {
@@ -661,12 +670,9 @@ u64_t db_insert_message_block(const char *block, u64_t len, u64_t msgid)
       return -1;
     }
 
-  snprintf(escaped_query, maxesclen, "INSERT INTO messageblks"
-	   "(messageblk,blocksize,message_idnr) VALUES ('");
+  startlen = snprintf(escaped_query, maxesclen, "INSERT INTO messageblks"
+		      "(messageblk,blocksize,message_idnr) VALUES ('");
       
-  startlen = sizeof("INSERT INTO messageblks"
-		    "(messageblk,blocksize,message_idnr) VALUES ('") - 1;
-
   /* escape & add data */
   esclen = PQescapeString(&escaped_query[startlen], block, len);
            
