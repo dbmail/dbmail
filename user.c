@@ -281,7 +281,7 @@ int do_change(int argc, char *argv[])
 
   for (i=1; argv[i]; i++)
     {
-      if (argv[i][0] != '-' && argv[i][0] != '+')
+      if (argv[i][0] != '-' && argv[i][0] != '+' && argv[i][0] != 'x')
 	{
 	  quiet_printf ("Failed: invalid option specified. Check the man page\n");
 	  return -1;
