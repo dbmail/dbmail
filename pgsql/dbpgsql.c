@@ -1247,6 +1247,8 @@ u64_t db_check_sizelimit (u64_t addblocksize, u64_t messageidnr,
 /* purges all the messages with a deleted status */
 u64_t db_deleted_purge()
 {
+  u64_t *msgids = NULL;
+  unsigned n,i;
   u64_t affected_rows=0;
 
   /* first we're deleting all the messageblks */
@@ -1259,28 +1261,44 @@ u64_t db_deleted_purge()
       return -1;
     }
 
-  if (PQntuples(res)<1)
+  if ( (n=PQntuples(res)) <1)
     {
-
       PQclear(res);
       return 0;
     }
 
-  for (PQcounter = 0; PQcounter < PQntuples (res); PQcounter ++)
+  /* save these numbers */
+  if (! (msgids = (u64_t*)my_malloc(sizeof(u64_t) * n)) )
     {
-      snprintf (query,DEF_QUERYSIZE,"DELETE FROM messageblks WHERE message_idnr=%s",
-                PQgetvalue (res, PQcounter, 0));
-      trace (TRACE_DEBUG,"db_deleted_purge(): executing query [%s]",query);
+      trace(TRACE_ERROR, "db_deleted_purge(): out of memory");
+      return -2;
+    }
+  
+  for (i=0; i<n; i++)
+    msgids[i] = strtoull(PQgetvalue(res, 0, 0), NULL, 10);
+
+  PQclear(res);
+
+  for (i=0; i<n; i++)
+    {
+      snprintf (query,DEF_QUERYSIZE,"DELETE FROM messageblks WHERE message_idnr=%llu::bigint", msgids[i]);
+                
+      trace (TRACE_DEBUG,"db_deleted_purge(): deleting message blocks for message [%llu]...", msgids[i]);
       if (db_query(query)==-1)
         {
-	  PQclear(res);
+	  trace(TRACE_ERROR, "db_deleted_purge(): delete query failed for message [%llu]", msgids[i]);
+	  my_free(msgids);
 	  return -1;
         }
     }
 
+
+  my_free(msgids);
+  msgids = 0;
+
   /* messageblks are deleted. Now delete the messages */
   snprintf (query,DEF_QUERYSIZE,"DELETE FROM messages WHERE status=003");
-  trace (TRACE_DEBUG,"db_deleted_purge(): executing query [%s]",query);
+  trace (TRACE_DEBUG,"db_deleted_purge(): deleting messages",query);
   if (db_query(query)==-1)
     {
       PQclear(res);

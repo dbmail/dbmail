@@ -23,8 +23,8 @@
 #define PNAME "dbmail/smtp-injector"
 
 char default_scan_field[] = "deliver-to";
-char blk[READ_BLOCK_SIZE + MAX_LINESIZE];
-char header[READ_BLOCK_SIZE + MAX_LINESIZE];
+char *blk;
+char *header;
 unsigned hdrlen;
 
 int add_address(const char *uname, 
@@ -56,11 +56,11 @@ int main(int argc, char *argv[])
   FILE **pipes = NULL;
   char *sendmail = NULL, *postmaster = NULL, *fromaddr = NULL;
   int using_dbase = 0;
-  char save, *sub = NULL;
+  char save, *sub = NULL, *tmp = NULL;
   struct element *el;
 
   openlog(PNAME, LOG_PID, LOG_MAIL);   /* open connection to syslog */
-  configure_debug(TRACE_DEBUG, 1, 0);  /* do not spill time on reading settings */
+  configure_debug(TRACE_ERROR, 1, 0);  /* do not spill time on reading settings */
 
   list_init(&userids);
   list_init(&bounces);
@@ -85,6 +85,30 @@ int main(int argc, char *argv[])
       return -1;
     }
 
+  /* alloc mem */
+  if (! (blk = (char*)my_malloc(READ_BLOCK_SIZE + MAX_LINESIZE)) )
+    {
+      db_disconnect();
+      auth_disconnect();
+      list_freelist(&userids.start);
+      list_freelist(&bounces.start);
+      list_freelist(&fwds.start);
+      trace(TRACE_FATAL, "main(): not enough memory");
+      return -1;
+    }
+      
+  if (! (header = (char*)my_malloc(READ_BLOCK_SIZE + MAX_LINESIZE)) )
+    {
+      db_disconnect();
+      auth_disconnect();
+      my_free(blk);
+      list_freelist(&userids.start);
+      list_freelist(&bounces.start);
+      list_freelist(&fwds.start);
+      trace(TRACE_FATAL, "main(): not enough memory");
+      return -1;
+    }
+
   /* get sending utility */
   sendmail = db_get_config_item ("SENDMAIL", CONFIG_MANDATORY);
   postmaster = db_get_config_item ("POSTMASTER", CONFIG_MANDATORY);
@@ -97,6 +121,8 @@ int main(int argc, char *argv[])
       list_freelist(&userids.start);
       list_freelist(&bounces.start);
       list_freelist(&fwds.start);
+      my_free(blk);
+      my_free(header);
       trace(TRACE_FATAL, "main(): no SENDMAIL util");
       return -1;
     }
@@ -108,6 +134,8 @@ int main(int argc, char *argv[])
       list_freelist(&userids.start);
       list_freelist(&bounces.start);
       list_freelist(&fwds.start);
+      my_free(blk);
+      my_free(header);
       trace(TRACE_FATAL, "main(): error processing command line options");
     }
 
@@ -119,6 +147,8 @@ int main(int argc, char *argv[])
       list_freelist(&bounces.start);
       list_freelist(&fwds.start);
       trace(TRACE_FATAL, "main(): error processing header");
+      my_free(blk);
+      my_free(header);
       return -1;
     }
 
@@ -139,6 +169,8 @@ int main(int argc, char *argv[])
       list_freelist(&userids.start);
       list_freelist(&bounces.start);
       list_freelist(&fwds.start);
+      my_free(blk);
+      my_free(header);
       trace(TRACE_FATAL, "main(): out of memory [line %d]", __LINE__);
       return -1;
     }
@@ -151,6 +183,8 @@ int main(int argc, char *argv[])
       list_freelist(&bounces.start);
       list_freelist(&fwds.start);
       my_free(qleft);
+      my_free(blk);
+      my_free(header);
       trace(TRACE_FATAL, "main(): out of memory [line %d]", __LINE__);
       return -1;
     }
@@ -164,6 +198,8 @@ int main(int argc, char *argv[])
       list_freelist(&fwds.start);
       my_free(qleft);
       my_free(uids);
+      my_free(blk);
+      my_free(header);
       trace(TRACE_FATAL, "main(): out of memory [line %d]", __LINE__);
       return -1;
     }
@@ -183,6 +219,8 @@ int main(int argc, char *argv[])
 	  list_freelist(&fwds.start);
 	  my_free(qleft);
 	  my_free(uids);
+	  my_free(blk);
+	  my_free(header);
 	  trace(TRACE_FATAL, "main() could not open pipe [%d]", i);
 	  return -1;
 	}
@@ -222,12 +260,21 @@ int main(int argc, char *argv[])
   /* process bounces */
   if (send_bounces(&bounces, len, bouncepath, sendmail, postmaster, fromaddr) != 0)
     {
+      db_disconnect();
+      auth_disconnect();
+      list_freelist(&userids.start);
+      list_freelist(&bounces.start);
+      list_freelist(&fwds.start);
+      my_free(qleft);
+      my_free(uids);
+      my_free(blk);
+      my_free(header);
       trace(TRACE_FATAL,"main(): error bouncing messages");
       return -1;
     }
 
   srand(time(NULL));
-  snprintf(uniqueid, UID_SIZE, "%lu%u%u", time(NULL), getpid(), rand()%1000);
+  snprintf(uniqueid, UID_SIZE, "%luA%u%u", time(NULL), getpid(), rand()%1000);
   
   if (using_dbase)
     {
@@ -247,14 +294,17 @@ int main(int argc, char *argv[])
     }
 
 
-  /* swap to saev header */
-  memmove(header, blk, len);
+  /* swap to save header */
+  tmp = blk;
+  blk = header;
+  header = tmp;
+
   hdrlen = len;
   header[hdrlen] = 0;
 
 
   /* read data & insert */
-  size = 0;
+  size = hdrlen; /* don't forget the header size! */
   while (!feof(stdin) && !ferror(stdin))
     {
       len = fread(blk, sizeof(char), READ_BLOCK_SIZE-1, stdin);
@@ -272,6 +322,8 @@ int main(int argc, char *argv[])
 	      my_free(qleft);
 	      my_free(pipes);
 	      my_free(uids);
+	      my_free(header);
+	      my_free(blk);
 	      trace(TRACE_FATAL, "main(): error inserting message block");
 	      return -1;
 	    }
@@ -302,15 +354,16 @@ int main(int argc, char *argv[])
 	}  
       
       size += len;
-      newlines++;
+      
+      /* count newlines in this block */
+      for (i=0; blk[i] && i<len; i++)
+	if (blk[i] == '\n') newlines++;
     }
 
   if (using_dbase)
     {
       /* update messages */
       db_update_message_multiple(uniqueid, size, size+newlines);
-
-      
     }
 
   /* cleanup */
@@ -322,6 +375,8 @@ int main(int argc, char *argv[])
   my_free(qleft);
   my_free(pipes);
   my_free(uids);
+  my_free(header);
+  my_free(blk);
 
   return 0;
 }
@@ -352,10 +407,11 @@ unsigned process_header(struct list *userids, struct list *bounces, struct list 
       line = &hdrdata[cnt]; /* write directly to hdrdata */
       fgets(line, READ_BLOCK_SIZE - cnt, stdin);
       (*newlines)++;
-      if (strcmp(line, "\n") == 0)
-	break;
 
       cnt += strlen(line);
+
+      if (strcmp(line, "\n") == 0)
+	break;
 
       if (field && strncasecmp(line, field, len) == 0 && line[len] == ':' && line[len+1] == ' ')
 	{
@@ -469,11 +525,13 @@ int process_args(int argc, char *argv[],
   else if (strcmp(argv[1], "-d") == 0)
     {
       /* direct delivery, addresses are specified */
-    
-      if (add_address(argv[2], userids, bounces, fwds) != 0)
+      for (i=2; argv[i]; i++)
 	{
-	  trace(TRACE_ERROR,"process_args(): error adding address [%s]", argv[i]);
-	  return -1;
+	  if (add_address(argv[i], userids, bounces, fwds) != 0)
+	    {
+	      trace(TRACE_ERROR,"process_args(): error adding address [%s]", argv[i]);
+	      return -1;
+	    }
 	}
     }
   else if (strcmp(argv[1], "-u") == 0)
@@ -493,6 +551,11 @@ int process_args(int argc, char *argv[],
     {
       /* direct delivery, usernames+mailboxes are specified */
       
+    }
+  else
+    {
+      trace(TRACE_ERROR,"process_args(): invalid command line option [%s]", argv[1]);
+      return -1;
     }
 
   return 0;
