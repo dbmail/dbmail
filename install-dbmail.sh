@@ -5,6 +5,8 @@
 
 # check if user root is running this script
 CHOWN=`which chown`
+CHMOD=`which chmod`
+CP=`which cp`
 amiroot=`id -u`
 
 if [ "$1" != "" ]; then
@@ -56,11 +58,11 @@ echo "Ok installing dbmail executables as $user_dbmail:$group_dbmail.."
 for file in dbmail-smtp dbmail-pop3d dbmail-imapd dbmail-maintenance dbmail-adduser dbmail-lmtpd
 do
 	$CHOWN $user_dbmail:$group_dbmail $file
-	/bin/chmod 770 $file
-	/bin/cp -fp $file $targetexec
+	$CHMOD 770 $file
+	$CP -fp $file $targetexec
 done
 
 echo "Ok installing manfiles in $targetman.."
-/bin/cp -f man/* $targetman
+$CP -f man/* $targetman
 
 echo "Done"
