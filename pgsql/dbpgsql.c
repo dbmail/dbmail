@@ -22,6 +22,7 @@
 
 PGconn conn;  
 PGresult *res;
+char *row; /* temporary for error supression */
 PGresult *checkres;
 char *query = 0;
 
@@ -61,6 +62,7 @@ const char *drop_tmp_tables_queries[] = { "DROP TABLE tmpmessage","DROP SEQUENCE
 
 int db_connect ()
 {
+    /* create storage space for queries */
   query = (char*)my_malloc(DEF_QUERYSIZE);
   if (!query)
     {
