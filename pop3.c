@@ -359,7 +359,7 @@ int pop3 (void *stream, char *buffer)
 					fprintf ((FILE *)stream,".\r\n");
 				return 1;
 
-			CASE POP3_TOP:
+			case POP3_TOP:
 				{
 
 				}

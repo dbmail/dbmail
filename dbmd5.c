@@ -6,13 +6,15 @@
 
 #include "md5.h"
 
-char makemd5[33](char *buf)
+unsigned char *makemd5(char *buf)
 {
 	struct GdmMD5Context mycontext;
 	unsigned char const mystring[]="aaaa\n";
 	unsigned char result[16];
-	unsigned char md5hash[33];
+	unsigned char *md5hash;
 	int i;
+	
+	md5hash=(unsigned char *)malloc(33);
 	
 	gdm_md5_init (&mycontext);
 	gdm_md5_update (&mycontext,mystring,strlen(buf));

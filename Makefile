@@ -4,7 +4,7 @@
 
 
 SMTP_OBJECTS = list.o debug.o pipe.o mime.o dbmysql.o misc.o
-POP_OBJECTS = pop3.o list.o debug.o dbmysql.o
+POP_OBJECTS = pop3.o list.o debug.o dbmysql.o dbmd5.o md5.o
 CC = cc
 
 MYSQLLIBDIR=/usr/local/lib/mysql
@@ -34,6 +34,7 @@ mime.o: mime.h
 dbmysql.o:dbmysql.h
 misc.o:misc.h
 pop3.o:pop3.h
+dbmd5.o:dbmd5.h md5.h
 
 distclean: clean
 	rm -rf dbmail-smtp dbmail-pop3d
