@@ -2771,6 +2771,7 @@ int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name)
 	char *tmp_name, *tmp_fq_name;
 	char *query_result;
 	int result;
+	size_t tmp_name_len, tmp_fq_name_len;
 	u64_t owner_idnr;
 
 	result = db_get_mailbox_owner(mailbox_idnr, &owner_idnr);
@@ -2797,21 +2798,22 @@ int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name)
 	}
 
 	query_result = db_get_result(0, 0);
-
 	if (!query_result) {
 		/* empty set, mailbox does not exist */
 		db_free_result();
 		*name = '\0';
 		return 0;
 	}
-	if (!(tmp_name = my_malloc((strlen(query_result) + 1) * 
-				   sizeof(char)))) {
+	tmp_name_len = strlen(query_result);
+
+	if (!(tmp_name = my_malloc((tmp_name_len + 1) * sizeof(char)))) {
 		trace(TRACE_ERROR,"%s,%s: error allocating memory",
 		      __FILE__, __FUNCTION__);
 		return -1;
 	}
 	
-	strncpy(tmp_name, query_result, IMAP_MAX_MAILBOX_NAMELEN);
+	strncpy(tmp_name, query_result, tmp_name_len);
+	tmp_name[tmp_name_len] = '\0';
 	db_free_result();
 	tmp_fq_name = mailbox_add_namespace(tmp_name, owner_idnr, user_idnr);
 	if (!tmp_fq_name) {
@@ -2819,7 +2821,11 @@ int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name)
 		      "mailbox name", __FILE__, __FUNCTION__);
 		return -1;
 	}
-	strncpy(name, tmp_fq_name, IMAP_MAX_MAILBOX_NAMELEN);
+	tmp_fq_name_len = strlen(tmp_fq_name);
+	if (tmp_fq_name_len >= IMAP_MAX_MAILBOX_NAMELEN) 
+		tmp_fq_name_len = IMAP_MAX_MAILBOX_NAMELEN -1;
+	strncpy(name, tmp_fq_name, tmp_fq_name_len);
+	name[tmp_fq_name_len] = '\0';
 	my_free(tmp_name);
 	my_free(tmp_fq_name);
 	return 0;
