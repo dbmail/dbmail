@@ -334,7 +334,9 @@ static int store_message_temp(FILE *instream,
 		  READ_BLOCK_SIZE);
 
   memtst ((strblock = (char *)my_malloc(READ_BLOCK_SIZE+1))==NULL);
+  memset((void*) strblock, '\0', READ_BLOCK_SIZE+1);
   memtst ((tmpline= (char *)my_malloc(MAX_LINE_SIZE+1))==NULL);
+  memset((void*) tmpline, '\0', MAX_LINE_SIZE+1);
   
   while ((!feof(instream) && (!myeof)) || (linemem != 0))
     {

@@ -1,3 +1,10 @@
+2004-03-18  Ilja Booij  <ilja@ic-s.nl>
+
+	* pipe.c (store_message_temp): the strblock and tmpline buffers
+	were not properly initialised, because they were not set to 
+	contain only '\0's, which was problematic for messages containing
+	an empty body.
+
 2004-03-16  Ilja Booij  <ilja@ic-s.nl>
 
 	* dbmsgbuf.c (db_dump_range): now only adds '\r' to every line
