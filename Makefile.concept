@@ -90,7 +90,7 @@ imaputil.o: imaputil.h db.h memblock.h debug.h dbmailtypes.h
 imapcommands.o: imapcommands.h imaputil.h imap4.h db.h memblock.h debug.h dbmailtypes.h
 maintenance.o: maintenance.h debug.h
 settings.o: settings.h debug.h
-proctitleutils.o: proctitleutils.h
+#proctitleutils.o: proctitleutils.h
 user.o: user.h debug.h
 memblock.o: memblock.h debug.h
 rfcmsg.o: rfcmsg.h dbmailtypes.h
