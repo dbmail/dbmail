@@ -76,28 +76,6 @@ int quiet = 0;
 /* Don't print errors. */
 int reallyquiet = 0;
 
-/**
- * read the whole message from the instream
- * \param[in] instream input stream (stdin)
- * \param[out] whole_message pointer to string which will hold the whole message
- * \param[out] whole_message_size will hold size of message
- * \return
- *      - -1 on error
- *      -  0 on success
- */
-static int read_whole_message_pipe(FILE *instream, char **whole_message,
-				   u64_t *whole_message_size)
-{
-	struct DbmailMessage *message = dbmail_message_new();
-	GMimeStream *stream = g_mime_stream_file_new(instream);
-	message = dbmail_message_init_with_stream(message, stream);
-	GString *msg = g_string_new(g_mime_object_to_string(GMIME_OBJECT(message->content)));
-	*whole_message = strdup(msg->str);
-	*whole_message_size = message->size;
-	g_string_free(msg,1);
-	return 0;	
-}
-
 int do_showhelp(void) {
 	printf("*** dbmail-smtp ***\n");
 
@@ -312,8 +290,7 @@ int main(int argc, char *argv[])
 	}
 	
 	/* read the whole message */
-	if (read_whole_message_pipe(stdin, &whole_message, 
-				    &whole_message_size) < 0) {
+	if (! (whole_message_size = read_whole_message_stream(stdin, &whole_message, DBMAIL_STREAM_PIPE))) { 
 		trace(TRACE_ERROR, "%s,%s: read_whole_message_pipe() failed",
 		      __FILE__, __func__);
 		exitcode = EX_TEMPFAIL;
@@ -321,15 +298,13 @@ int main(int argc, char *argv[])
 	}
 
 	/* get pointer to header and to body */
-	if (split_message(whole_message, 
-			  &header, &headersize,
-			  &body, &body_size, &rfcsize) < 0) {
+	if (split_message(whole_message, &header, &headersize, &body, &body_size, &rfcsize) < 0) {
 		trace(TRACE_ERROR, "%s,%s splitmessage failed",
 		      __FILE__, __func__);
-		my_free(whole_message);
 		exitcode = EX_TEMPFAIL;
 		goto freeall;
 	}
+	g_free(whole_message);
 	
 	if (headersize > READ_BLOCK_SIZE) {
 		trace(TRACE_ERROR,
@@ -343,7 +318,7 @@ int main(int argc, char *argv[])
 	/* parse the list and scan for field and content */
 	if (mime_fetch_headers(header, &mimelist) < 0) {
 		trace(TRACE_ERROR,
-		      "main(): mime_readheader failed to read a header list");
+		      "main(): mime_fetch_headers failed to read a header list");
 		exitcode = EX_TEMPFAIL;
 		goto freeall;
 	}
@@ -440,9 +415,7 @@ int main(int argc, char *argv[])
 
 	trace(TRACE_DEBUG, "main(): freeing memory blocks");
 	if (header != NULL)
-		my_free(header);
-	if (whole_message != NULL)
-		my_free(whole_message);
+		g_free(header);
 
 	trace(TRACE_DEBUG, "main(): they're all free. we're done.");
 

@@ -41,7 +41,6 @@
 #endif
 
 #define INCOMING_BUFFER_SIZE 512
-#define MESSAGE_MAX_LINE_SIZE 1024
 
 /* default timeout for server daemon */
 #define DEFAULT_SERVER_TIMEOUT 300
@@ -67,18 +66,6 @@ static const char validchars[] =
     "_.!@#$%^&*()-+=~[]{}<>:;\\/ ";
 
 static char myhostname[64];
-
-/**
- * read the whole message from a network connection
- * \param[in] instream input stream
- * \param[out] whole_message will hold the complete email-message
- * \param[out] whole_message_size will hold the size of the message
- * \return
- *     - -1 on error
- *     -  1 on success
- */
-static int read_whole_message_network(FILE *instream, char **whole_message,
-				      u64_t *whole_message_size);
 
 /**
  * \function lmtp_error
@@ -612,16 +599,12 @@ int lmtp(void *stream, void *instream, char *buffer,
 					struct list headerfields;
 					struct element *element;
 
-					if (read_whole_message_network(
-						    (FILE *) instream,
-						    &whole_message,
-						    &whole_message_size) < 0) {
-						trace(TRACE_ERROR,
-						      "%s,%s: read_whole_message_network() failed",
+					if (! (whole_message_size = read_whole_message_stream((FILE *)instream, 
+									&whole_message, DBMAIL_STREAM_LMTP))) {
+						trace(TRACE_ERROR, "%s,%s: read_whole_message_stream() failed",
 						      __FILE__, __func__);
 						discard_client_input((FILE *) instream);
-						ci_write((FILE *) stream,
-							"500 Error reading message");
+						ci_write((FILE *) stream, "500 Error reading message");
 						return 1;
 					}
 					
@@ -732,81 +715,6 @@ int lmtp(void *stream, void *instream, char *buffer,
 					  "500 What are you trying to say here?\r\n");
 		}
 	}
-	return 1;
-}
-
-int read_whole_message_network(FILE *instream, char **whole_message,
-				      u64_t *whole_message_size)
-{
-	char *tmpmessage = NULL;
-	char tmpline[MESSAGE_MAX_LINE_SIZE + 1];
-	
-	size_t line_size = 0;
-	size_t total_size = 0;
-	size_t current_pos = 0;
-	int error = 0;
-
-	memset(tmpline, '\0', MESSAGE_MAX_LINE_SIZE + 1);
-	while (fgets(tmpline, MESSAGE_MAX_LINE_SIZE, instream) != NULL) {
-		line_size = strlen(tmpline);
-		
-		/* It sometimes happens that we read a line of size 0,
-		   which is odd.. For now, we just step over it. */
-		if (line_size < 2)
-			continue;
-
-		/* check for '.\r\n' */
-		if (line_size == 3 && strncmp(tmpline, ".\r\n", 3) == 0) 
-			break;
-		
-		/* change the \r\n ending to \n */
-		
-		if (!(tmpmessage = my_realloc(tmpmessage, 
-					   total_size + line_size - 1))) {
-			error = 1;
-			break;
-		}
-		
-		if (!(memcpy((void *) &tmpmessage[current_pos], 
-			     (void *) tmpline, line_size -2))) {
-			error = 1;
-			break;
-		}
-		total_size += line_size - 1;
-		current_pos += line_size - 2;
-		tmpmessage[current_pos++] = '\n';
-				
-		memset(tmpline, '\0', MESSAGE_MAX_LINE_SIZE + 1);
-	}
-		
-	if (ferror(instream)) {
-		trace(TRACE_ERROR, "%s,%s: error reading instream",
-		      __FILE__, __func__);
-		error = 1;
-	}
-	if (feof(instream)) {
-		trace(TRACE_ERROR, "%s,%s: unexpected EOF in instream",
-		      __FILE__, __func__);
-		error = 1;
-	}
-
-	total_size += 1;
-	if (!(tmpmessage = my_realloc(tmpmessage, total_size))) {
-		trace(TRACE_ERROR, "%s.%s: realloc failed",
-		      __FILE__, __func__);
-		error = 1;
-	} else
-		tmpmessage[current_pos] = '\0';
-
-	if (error) {
-		trace(TRACE_ERROR, "%s,%s: error reading message from "
-		      "instream", __FILE__, __func__);
-		my_free(tmpmessage);
-		return -1;
-	}
-
-	*whole_message = tmpmessage;
-	*whole_message_size = total_size;
 	return 1;
 }
 

@@ -314,7 +314,7 @@ END_TEST
 
 Suite *dbmail_suite(void)
 {
-	Suite *s = suite_create("Dbmail");
+	Suite *s = suite_create("Dbmail Imap");
 	TCase *tc_session = tcase_create("ImapSession");
 	TCase *tc_message = tcase_create("DbmailMessage");
 	TCase *tc_rfcmsg = tcase_create("Rfcmsg");

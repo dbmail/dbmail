@@ -47,6 +47,7 @@
  *
  */
 
+
 enum DBMAIL_MESSAGE_CLASS {
 	DBMAIL_MESSAGE,
 	DBMAIL_MESSAGE_PART
@@ -57,6 +58,10 @@ enum DBMAIL_MESSAGE_FILTER_TYPES {
 	DBMAIL_MESSAGE_FILTER_HEAD
 };
 
+enum DBMAIL_STREAM_TYPE {
+	DBMAIL_STREAM_PIPE = 1,
+	DBMAIL_STREAM_LMTP
+};
 
 struct DbmailMessage {
 	gulong id;
@@ -72,11 +77,11 @@ void dbmail_message_set_class(struct DbmailMessage *self, int klass);
 int dbmail_message_get_class(struct DbmailMessage *self);
 struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t id, int filter);
 struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *self, const GString *content);
-struct DbmailMessage * dbmail_message_init_with_stream(struct DbmailMessage *self, GMimeStream *stream);
+struct DbmailMessage * dbmail_message_init_with_stream(struct DbmailMessage *self, GMimeStream *stream, int type);
 gchar * dbmail_message_get_headers_as_string(struct DbmailMessage *self);
 gchar * dbmail_message_get_body_as_string(struct DbmailMessage *self);
 size_t dbmail_message_get_rfcsize(struct DbmailMessage *self);
-void dbmail_message_destroy(struct DbmailMessage *self);
+void dbmail_message_delete(struct DbmailMessage *self);
 
 /*
  *
@@ -100,6 +105,16 @@ int split_message(const char *whole_message,
 		  char **header, u64_t *header_size,
 		  const char **body, u64_t *body_size,
 		  u64_t *body_rfcsize);
+
+/**
+ * read the whole message from the instream
+ * \param[in] instream input stream (stdin)
+ * \param[out] whole_message pointer to string which will hold the whole message
+ * \param[in] type of instream (pipe or lmtp)
+ * \return
+ *      - size of message
+ */
+u64_t read_whole_message_stream(FILE *instream, char **whole_message, int streamtype);
 
 
 #endif

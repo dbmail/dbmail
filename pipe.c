@@ -46,6 +46,7 @@
 #include "dbmd5.h"
 #include "misc.h"
 #include "dsn.h"
+#include "dbmail-message.h"
 
 #define HEADER_BLOCK_SIZE 1024
 #define QUERY_SIZE 255
@@ -380,61 +381,44 @@ static int store_message_temp(const char *header, const char *body,
 			      u64_t bodysize, u64_t rfcsize,
 			      /*@out@*/ u64_t * temp_message_idnr)
 {
-	int result;
 	u64_t user_idnr;
 	u64_t msgidnr;
 	u64_t messageblk_idnr;
 	char unique_id[UID_SIZE];
 	
-	result = auth_user_exists(DBMAIL_DELIVERY_USERNAME, &user_idnr);
-	if (result < 0) {
+	switch (auth_user_exists(DBMAIL_DELIVERY_USERNAME, &user_idnr)) {
+	case -1:
 		trace(TRACE_ERROR,
 		      "%s,%s: unable to find user_idnr for user " "[%s]\n",
 		      __FILE__, __func__, DBMAIL_DELIVERY_USERNAME);
 		return -1;
-	}
-	if (result == 0) {
+		break;
+	case 0:
 		trace(TRACE_ERROR,
 		      "%s,%s: unable to find user_idnr for user "
 		      "[%s]. Make sure this system user is in the database!\n",
 		      __FILE__, __func__, DBMAIL_DELIVERY_USERNAME);
 		return -1;
+		break;
 	}
+	
 	create_unique_id(unique_id, user_idnr);
 	/* create a message record */
-	switch (db_insert_message(user_idnr, DBMAIL_TEMPMBOX,
-				  CREATE_IF_MBOX_NOT_FOUND, unique_id,
-				  &msgidnr)) {
-	case -1:
-		trace(TRACE_ERROR,
-		      "store_message_temp(): returned -1, aborting");
+	if(db_insert_message(user_idnr, DBMAIL_TEMPMBOX, CREATE_IF_MBOX_NOT_FOUND, unique_id, &msgidnr) < 0)
 		return -1;
-	}
 
-	switch (db_insert_message_block
-		(header, headersize, msgidnr, &messageblk_idnr,1)) {
-	case -1:
-		trace(TRACE_ERROR,
-		      "store_message_temp(): error inserting msgblock [header]");
+	if(db_insert_message_block(header, headersize, msgidnr, &messageblk_idnr,1) < 0)
 		return -1;
-	}
-	trace(TRACE_DEBUG,
-	      "store_message_temp(): allocating [%ld] bytes of memory "
-	      "for readblock", READ_BLOCK_SIZE);
+	
+	trace(TRACE_DEBUG, "%s,%s: allocating [%ld] bytes of memory "
+	      "for readblock", __FILE__, __func__, READ_BLOCK_SIZE);
 	
 	/* store body in several blocks (if needed */
-	if (store_message_in_blocks(body, bodysize, msgidnr) < 0) {
-		trace(TRACE_STOP,
-		      "store_message_temp(): db_insert_message_block "
-		      "failed");
+	if (store_message_in_blocks(body, bodysize, msgidnr) < 0)
 		return -1;
-	}
 
-	if (db_update_message(msgidnr, unique_id, (headersize + bodysize), rfcsize) < 0) {
-		trace(TRACE_ERROR, "%s,%s: error updating message [%llu]",
-		      __FILE__, __func__, msgidnr);
+	if (db_update_message(msgidnr, unique_id, (headersize + bodysize), rfcsize) < 0) 
 		return -1;
-	}
 
 	*temp_message_idnr = msgidnr;
 	return 1;
@@ -560,7 +544,7 @@ int insert_messages(const char *header, const char* body, u64_t headersize,
 
 			switch (sort_and_deliver(tmpmsgidnr,
 						 header, headersize,
-						 msgsize, rfcsize,
+						 msgsize,
 						 useridnr,
 						 delivery->mailbox)) {
 			case DSN_CLASS_OK:

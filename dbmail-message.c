@@ -37,9 +37,11 @@
 #include "dbmail-message.h"
 #include "db.h"
 
+
 extern db_param_t _db_params;
 #define DBPFX _db_params.pfx
 
+#define MESSAGE_MAX_LINE_SIZE 1024
 /* for issuing queries to the backend */
 char query[DEF_QUERYSIZE];
 
@@ -61,7 +63,7 @@ static void _register_header(const char *header, const char *value, gpointer use
 static struct DbmailMessage * _retrieve(struct DbmailMessage *self, char *query_template);
 static void _map_headers(struct DbmailMessage *self);
 static void _set_content(struct DbmailMessage *self, const GString *content);
-static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *stream);
+static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *stream, int type);
 
 
 struct DbmailMessage * dbmail_message_new(void)
@@ -100,9 +102,9 @@ struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *sel
 	return self;
 }
 
-struct DbmailMessage * dbmail_message_init_with_stream(struct DbmailMessage *self, GMimeStream *stream)
+struct DbmailMessage * dbmail_message_init_with_stream(struct DbmailMessage *self, GMimeStream *stream, int type)
 {
-	_set_content_from_stream(self,stream);
+	_set_content_from_stream(self,stream,type);
 	_map_headers(self);
 	self->rfcsize = dbmail_message_get_rfcsize(self);
 	return self;
@@ -111,46 +113,66 @@ struct DbmailMessage * dbmail_message_init_with_stream(struct DbmailMessage *sel
 static void _set_content(struct DbmailMessage *self, const GString *content)
 {
 	GMimeStream *stream = g_mime_stream_mem_new_with_buffer(content->str, content->len);
-	_set_content_from_stream(self, stream);
+	_set_content_from_stream(self, stream, DBMAIL_STREAM_PIPE);
 	g_object_unref(stream);
 }
-
-static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *stream)
+static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *stream, int type)
 {
 	/* 
 	 * We convert all messages to crlf->lf for internal usage and
 	 * db-insertion
 	 */
 	
-	GMimeStream *ostream, *fstream;
+	GMimeStream *ostream, *fstream, *bstream, *mstream;
 	GMimeFilter *filter;
 	GMimeParser *parser;
+	char *buf = g_new0(char, MESSAGE_MAX_LINE_SIZE);
 
+	/*
+	 * buildup the memory stream buffer
+	 * we will read from stream until either EOF or <dot><crlf> is encountered
+	 * depending on the streamtype
+	 */
+        bstream = g_mime_stream_buffer_new(stream,GMIME_STREAM_BUFFER_CACHE_READ);
+	mstream = g_mime_stream_mem_new();
+        while (g_mime_stream_buffer_gets(bstream, buf, MESSAGE_MAX_LINE_SIZE)) {
+                if ((type==DBMAIL_STREAM_LMTP) && (strncmp(buf,".\r\n",3)==0))
+			break;
+		g_mime_stream_write_string(mstream, buf);
+	}
+	g_mime_stream_reset(mstream);
+	
+	/* 
+	 * filter mstream by decoding crlf and dot lines
+	 * ostream will hold the decoded data
+	 */
 	ostream = g_mime_stream_mem_new();
 	fstream = g_mime_stream_filter_new_with_stream(ostream);
-	filter = g_mime_filter_crlf_new(GMIME_FILTER_CRLF_DECODE,GMIME_FILTER_CRLF_MODE_CRLF_ONLY);
-	
+	filter = g_mime_filter_crlf_new(GMIME_FILTER_CRLF_DECODE,GMIME_FILTER_CRLF_MODE_CRLF_DOTS);
 	g_mime_stream_filter_add((GMimeStreamFilter *) fstream, filter);
-	g_mime_stream_write_to_stream(stream,fstream);
+	g_mime_stream_write_to_stream(mstream,fstream);
 	g_mime_stream_reset(ostream);
 	
+	/*
+	 * finally construct a message by parsing ostream
+	 */
 	parser = g_mime_parser_new_with_stream(ostream);
-	
 	switch (dbmail_message_get_class(self)) {
 		case DBMAIL_MESSAGE:
 			self->content = GMIME_OBJECT(g_mime_parser_construct_message(parser));
 			break;
 		case DBMAIL_MESSAGE_PART:
-			self->content = g_mime_parser_construct_part(parser);
+			self->content = GMIME_OBJECT(g_mime_parser_construct_part(parser));
 			break;
 	}
-	
 			
 	self->size = g_mime_stream_length(ostream);
 	
 	g_object_unref(filter);
 	g_object_unref(fstream);
 	g_object_unref(ostream);
+	g_object_unref(bstream);
+	g_object_unref(mstream);
 	g_object_unref(parser);
 }
 
@@ -175,7 +197,6 @@ size_t dbmail_message_get_rfcsize(struct DbmailMessage *self)
 	 * We convert all messages lf->crlf in-memory to determine
 	 * the rfcsize
 	 */
-	
 
 	GMimeStream *ostream, *fstream;
 	GMimeFilter *filter;
@@ -220,7 +241,7 @@ char * dbmail_message_get_body_as_string(struct DbmailMessage *self)
 	return result;
 }
 
-void dbmail_message_destroy(struct DbmailMessage *self)
+void dbmail_message_delete(struct DbmailMessage *self)
 {
 	g_relation_destroy(self->headers);
 	g_object_unref(self->content);
@@ -341,8 +362,24 @@ int split_message(const char *whole_message,
 	*body_size = (u64_t)tmp->len;
 	
 	g_string_free(tmp,1);
-	dbmail_message_destroy(_msg);
+	dbmail_message_delete(_msg);
 
 	return 0;
+}
+
+u64_t read_whole_message_stream(FILE *instream, char **whole_message, int streamtype) 
+{
+	u64_t size;
+
+	struct DbmailMessage *message = dbmail_message_new();
+	GMimeStream *stream = g_mime_stream_fs_new(dup(fileno(instream)));
+	message = dbmail_message_init_with_stream(message, stream, streamtype);
+	
+	GString *msg = g_string_new(g_mime_object_to_string(GMIME_OBJECT(message->content)));
+	*whole_message = g_strdup(msg->str);
+	size = message->size;
+	g_string_free(msg,1);
+	dbmail_message_delete(message);
+	return size;	
 }
 

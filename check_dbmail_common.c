@@ -44,6 +44,7 @@
 #include "dbmsgbuf.h"
 #include "imaputil.h"
 #include "config.h"
+#include "pipe.h"
 
 char *configFile = DEFAULT_CONFIG_FILE;
 extern db_param_t _db_params;
@@ -55,7 +56,7 @@ extern char *msgbuf_buf;
 extern u64_t msgbuf_idx;
 extern u64_t msgbuf_buflen;
 
-/* simple testmessage. */
+/* simple testmessages. */
 char *raw_message = "From: <vol@inter7.com>\n"
 	"To: <vol@inter7.com>\n"
 	"Subject: multipart/mixed\n"
@@ -94,6 +95,49 @@ char *raw_message = "From: <vol@inter7.com>\n"
 	"PT09fCINCmVjaG8gInwgU2ViYXN0aWFuIEtyYWhtZXIgPGtyYWhtZXJAc2Vj\n"
 	"dXJpdHkuaXM+ICAgICAgICAgICAgICAgICAgIHwiDQplY2hvICJ8IE1pY2hh\n"
 	"--boundary--\n";
+
+/* raw_lmtp_data is equal to raw_message, except for the line-endings
+ * and the termination dot.
+ */
+char *raw_lmtp_data = "From: <vol@inter7.com>\r\n"
+	"To: <vol@inter7.com>\r\n"
+	"Subject: multipart/mixed\r\n"
+	"Received: at mx.inter7.com from localhost\r\n"
+	"Received: at localhost from localhost\r\n"
+	"MIME-Version: 1.0\r\n"
+	"Content-type: multipart/mixed; boundary=\"boundary\"\r\n"
+	"X-Dbmail-ID: 12345\r\n"
+	"\r\n"
+	"MIME multipart messages specify that there are multiple\r\n"
+	"messages of possibly different types included in the\r\n"
+	"message.  All peices will be availble by the user-agent\r\n"
+	"if possible.\r\n"
+	"\r\n"
+	"The header 'Content-disposition: inline' states that\r\n"
+	"if possible, the user-agent should display the contents\r\n"
+	"of the attachment as part of the email, rather than as\r\n"
+	"a file, or message attachment.\r\n"
+	"\r\n"
+	"(This message will not be seen by the user)\r\n"
+	"\r\n"
+	"--boundary\r\n"
+	"Content-type: text/html\r\n"
+	"Content-disposition: inline\r\n"
+	"\r\n"
+	"Test message one\r\n"
+	"--boundary\r\n"
+	"Content-type: text/plain; charset=us-ascii; name=\"testfile\"\r\n"
+	"Content-transfer-encoding: base64\r\n"
+	"\r\n"
+	"IyEvYmluL2Jhc2gNCg0KY2xlYXINCmVjaG8gIi4tLS0tLS0tLS0tLS0tLS0t\r\n"
+	"LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS4i\r\n"
+	"DQplY2hvICJ8IE1hcmNoZXcuSHlwZXJyZWFsIHByZXNlbnRzOiB2aXhpZSBj\r\n"
+	"cm9udGFiIGV4cGxvaXQgIzcyODM3MSB8Ig0KZWNobyAifD09PT09PT09PT09\r\n"
+	"PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09\r\n"
+	"PT09fCINCmVjaG8gInwgU2ViYXN0aWFuIEtyYWhtZXIgPGtyYWhtZXJAc2Vj\r\n"
+	"dXJpdHkuaXM+ICAgICAgICAgICAgICAgICAgIHwiDQplY2hvICJ8IE1pY2hh\r\n"
+	"--boundary--\r\n"
+	".\r\n";
 
 char *raw_message_part = "Content-Type: text/plain;\n"
 	" name=\"mime_alternative\"\n"
@@ -174,18 +218,54 @@ START_TEST(test_auth_get_known_users)
 	fail_unless(g_list_length(users) >= 1, "Usercount too low");
 }
 END_TEST
-	
+
+START_TEST(test_read_whole_message_stream)
+{
+	FILE *fd;
+	char *whole_message = NULL;
+	u64_t whole_message_size = 0;
+	fd = tmpfile();
+	fprintf(fd, "%s", raw_message);
+	fseek(fd,0,0);
+	whole_message_size = read_whole_message_stream(fd, &whole_message, DBMAIL_STREAM_PIPE);
+	fail_unless(whole_message_size == strlen(raw_message), 
+			"read_whole_message_stream returned wrong message_size");
+}
+END_TEST
+
+START_TEST(test_read_whole_message_network)
+{	
+	FILE *fd;
+	char *whole_message = NULL;
+	u64_t whole_message_size;
+	fd = tmpfile();
+	fprintf(fd, "%s", raw_lmtp_data);
+	fseek(fd,0,0);
+	whole_message_size = read_whole_message_stream(fd, &whole_message, DBMAIL_STREAM_LMTP);
+	// note: we're comparing with raw_message not raw_lmtp_data because
+	// raw_message == raw_lmtp_data - crlf - end-dot
+	fail_unless(whole_message_size == strlen(raw_message), 
+			"read_whole_message_network returned wrong message_size");
+}
+END_TEST
+
 Suite *dbmail_common_suite(void)
 {
 	Suite *s = suite_create("Dbmail Common");
 	TCase *tc_config = tcase_create("Config");
+	TCase *tc_main = tcase_create("Main");
 	
 	suite_add_tcase(s, tc_config);
+	suite_add_tcase(s, tc_main);
 	
 	tcase_add_checked_fixture(tc_config, setup, teardown);
 	tcase_add_test(tc_config, test_read_config);
 	tcase_add_test(tc_config, test_db_connect);
 	tcase_add_test(tc_config, test_auth_get_known_users);
+	
+	tcase_add_checked_fixture(tc_main, setup, teardown);
+	tcase_add_test(tc_main, test_read_whole_message_stream);
+	tcase_add_test(tc_main, test_read_whole_message_network);
 	return s;
 }
 

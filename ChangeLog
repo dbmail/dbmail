@@ -1,3 +1,9 @@
+2005-01-06  Paul Stevens <paul@nfg.nl>
+
+	* imaputil.c, dbmail-imapsession.c: some changes in bodystructure
+	response construction.
+	* sort.h (sort_and_deliver): removed redundant rfcsize argument.
+	
 2005-01-04  Paul Stevens <paul@nfg.nl>
 
 	* Makefile.am, check_dbmail_common.c: added new test suite for testing
