@@ -45,7 +45,10 @@ extern struct list smtpItems, sysItems;
  *
  * Then do it!
  * */
-int sort_and_deliver(u64_t msgidnr, const char *header, u64_t headersize, u64_t msgsize, u64_t useridnr, const char *mailbox)
+int sort_and_deliver(u64_t msgidnr,
+                     const char *header, u64_t headersize,
+                     u64_t totalmsgsize, u64_t totalrfcsize,
+                     u64_t useridnr, const char *mailbox)
 {
   field_t val;
   int do_regex = 0, do_sieve = 0;
@@ -67,8 +70,7 @@ int sort_and_deliver(u64_t msgidnr, const char *header, u64_t headersize, u64_t 
      do_sieve = 1;
 
   list_init(&actions);
-  
-  trace(TRACE_DEBUG, "%s,%s: messagesize = %llu, headersize = %llu, total = %llu", __FILE__, __FUNCTION__, msgsize, headersize, msgsize+headersize);
+
   if (do_regex)
     {
       /* Call out to Jonas' regex sorting function!
@@ -83,7 +85,7 @@ int sort_and_deliver(u64_t msgidnr, const char *header, u64_t headersize, u64_t 
        * call out to a function that encapsulates it!
        * */
 #ifdef SIEVE
-      ret = sortsieve_msgsort(useridnr, header, headersize, msgsize, &actions);
+      ret = sortsieve_msgsort(useridnr, header, headersize, totalmsgsize, &actions);
 #else
       /* Give the postmaster a clue as to why Sieve isn't working... */
       trace(TRACE_ERROR, "%s, %s: Sieve enabled in dbmail.conf, but Sieve support has not been compiled");
@@ -213,13 +215,13 @@ int sort_and_deliver(u64_t msgidnr, const char *header, u64_t headersize, u64_t 
                             break;
                           default:
                             trace(TRACE_MESSAGE, "sort_and_deliver(): message id=%llu, size=%llu is inserted",
-                                newmsgidnr, msgsize+headersize);
+                                newmsgidnr, totalmsgsize);
                            
                             /* Create a unique ID for this message;
                              * Each message for each user must have a unique ID! 
                              * */
                             create_unique_id(unique_id, newmsgidnr); 
-                            db_update_message(newmsgidnr, unique_id, msgsize+headersize, 0);
+                            db_update_message(newmsgidnr, unique_id, totalmsgsize, totalrfcsize);
                          
                             actiontaken = 1;
                             break;
@@ -320,13 +322,13 @@ int sort_and_deliver(u64_t msgidnr, const char *header, u64_t headersize, u64_t 
                 break;
               default:
                 trace(TRACE_MESSAGE,"%s, %s: message id=%llu, size=%llu is inserted",
-                    __FILE__, __FUNCTION__, newmsgidnr, msgsize+headersize);
+                    __FILE__, __FUNCTION__, newmsgidnr, totalmsgsize);
                
                 /* Create a unique ID for this message;
                  * Each message for each user must have a unique ID! 
                  * */
                 create_unique_id(unique_id, newmsgidnr); 
-                db_update_message(newmsgidnr, unique_id, msgsize+headersize, 0);
+                db_update_message(newmsgidnr, unique_id, totalmsgsize, totalrfcsize);
 
                 actiontaken = 1;
                 break;

@@ -66,8 +66,7 @@ deliver_to_user_t dsnuser;
 char *header = NULL;
 char *deliver_to_header = NULL;
 char *deliver_to_mailbox = NULL;
-u64_t headersize;
-u64_t newlines;
+u64_t headersize, headerrfcsize;
 
 void print_usage(const char *progname)
 {
@@ -232,7 +231,7 @@ int main(int argc, char *argv[])
     }
 
   /* first we need to read the header */
-  if (!read_header(stdin, &newlines, &headersize, &header))
+  if (!read_header(stdin, &headerrfcsize, &headersize, &header))
     {
       trace(TRACE_ERROR, "main(): read_header failed to read a header");
       exitcode = EX_TEMPFAIL;
@@ -259,10 +258,11 @@ int main(int argc, char *argv[])
   if (deliver_to_header != NULL)
     {
       /* parse for destination addresses */
-      trace(TRACE_DEBUG, "main(): scanning mimelist for header [%s]", deliver_to_header);
+      trace(TRACE_DEBUG, "main(): scanning for [%s]",
+            deliver_to_header);
       if (mail_adr_list(deliver_to_header, &users, &mimelist) !=0)
         {
-          trace(TRACE_ERROR, "main(): scanner found no email addresses (scanned for %s)", 
+          trace(TRACE_STOP, "main(): scanner found no email addresses (scanned for %s)", 
                 deliver_to_header);
           exitcode = EX_TEMPFAIL;
           goto freeall;
@@ -275,36 +275,15 @@ int main(int argc, char *argv[])
   
           dsnuser_init(&dsnuser);
           dsnuser.address = strdup((char *)tmp->data);
-
-          if (list_nodeadd(&dsnusers, &dsnuser, sizeof(deliver_to_user_t)) == 0)
-            {
-              trace(TRACE_ERROR, "main(): list_nodeadd reports out of memory"
-                              " while adding to dsnusers");
-              exitcode = EX_TEMPFAIL;
-	      /* If the struct was not added to the list,
-	       * then it won't be released for us at freeall.*/
-	      dsnuser_free(&dsnuser);
-              goto freeall;
-            }
-        }
-    }
-
-  /* If the MAILBOX delivery mode has been selected... */
-  if (deliver_to_mailbox)
-    {
-      /* Loop through the dsnusers list, setting the target mailbox. */
-      for(tmp = list_getstart(&dsnusers); tmp != NULL; tmp = tmp->nextnode)
-        {
-          deliver_to_user_t *dsnuser;
-
-	  dsnuser = (deliver_to_user_t *)tmp->data;
-      
-          dsnuser->mailbox = strdup(deliver_to_mailbox);
+  
+          list_nodeadd(&dsnusers, &dsnuser, sizeof(deliver_to_user_t));
         }
     }
 
   /* inserting messages into the database */
-  if (insert_messages(stdin, header, headersize, &mimelist, &dsnusers, &returnpath) == -1)
+  if (insert_messages(stdin,
+                      header, headersize, headerrfcsize,
+                      &mimelist, &dsnusers, &returnpath) == -1)
     {
       trace(TRACE_ERROR, "main(): insert_messages failed");
       /* Most likely a random failure... */

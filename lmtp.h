@@ -141,44 +141,64 @@ int lmtp_handle_connection(clientinfo_t *ci);
 
 /* Help */
 static const char * const LMTP_HELP_TEXT[] = {
-/* LMTP_STRT */
+/* LMTP_LHLO 0 */
+  "214-The LHLO command begins a client/server\r\n"
+  "214-dialogue. The commands MAIL, RCPT and DATA\r\n"
+  "214-may only be issued after a successful LHLO.\r\n"
+  "214 Syntax: LHLO [your hostname]\r\n"
+/* LMTP_QUIT 1 */ ,
+  "214-The QUIT command begins a client/server\r\n"
+  "214-dialogue. The commands MAIL, RCPT and DATA\r\n"
+  "214-may only be issued after a successful LHLO.\r\n"
+  "214 Syntax: LHLO [your hostname]\r\n"
+/* LMTP_RSET 2 */ ,
+  "214-The RSET command begins a client/server\r\n"
+  "214-dialogue. The commands MAIL, RCPT and DATA\r\n"
+  "214-may only be issued after a successful LHLO.\r\n"
+  "214 Syntax: LHLO [your hostname]\r\n"
+/* LMTP_DATA 3 */ ,
+  "214-The DATA command begins a client/server\r\n"
+  "214-dialogue. The commands MAIL, RCPT and DATA\r\n"
+  "214-may only be issued after a successful LHLO.\r\n"
+  "214 Syntax: LHLO [your hostname]\r\n"
+/* LMTP_MAIL 4 */ ,
+  "214-The MAIL command begins a client/server\r\n"
+  "214-dialogue. The commands MAIL, RCPT and DATA\r\n"
+  "214-may only be issued after a successful LHLO.\r\n"
+  "214 Syntax: LHLO [your hostname]\r\n"
+/* LMTP_VRFY 5 */ ,
+  "214-The VRFY command begins a client/server\r\n"
+  "214-dialogue. The commands MAIL, RCPT and DATA\r\n"
+  "214-may only be issued after a successful LHLO.\r\n"
+  "214 Syntax: LHLO [your hostname]\r\n"
+/* LMTP_EXPN 6 */ ,
+  "214-The EXPN command begins a client/server\r\n"
+  "214-dialogue. The commands MAIL, RCPT and DATA\r\n"
+  "214-may only be issued after a successful LHLO.\r\n"
+  "214 Syntax: LHLO [your hostname]\r\n"
+/* LMTP_HELP 7 */ ,
+  "214-The HELP command begins a client/server\r\n"
+  "214-dialogue. The commands MAIL, RCPT and DATA\r\n"
+  "214-may only be issued after a successful LHLO.\r\n"
+  "214 Syntax: LHLO [your hostname]\r\n"
+/* LMTP_NOOP 8 */ ,
+  "214-The NOOP command begins a client/server\r\n"
+  "214-dialogue. The commands MAIL, RCPT and DATA\r\n"
+  "214-may only be issued after a successful LHLO.\r\n"
+  "214 Syntax: LHLO [your hostname]\r\n"
+/* LMTP_RCPT 9 */ ,
+  "214-The RCPT command begins a client/server\r\n"
+  "214-dialogue. The commands MAIL, RCPT and DATA\r\n"
+  "214-may only be issued after a successful LHLO.\r\n"
+  "214 Syntax: LHLO [your hostname]\r\n"
+/* LMTP_END 10 */ ,
   "214-This is DBMail-LMTP.\r\n"
   "214-The following commands are supported:\r\n"
   "214-LHLO, RSET, NOOP, QUIT, HELP.\r\n"
   "214-VRFY, EXPN, MAIL, RCPT, DATA.\r\n"
   "214-For more information about a command:\r\n"
   "214 Use HELP <command>.\r\n"
-/* LMTP_LHLO */ ,
-  "214-The LHLO command begins a client/server\r\n"
-  "214-dialogue. The commands MAIL, RCPT and DATA\r\n"
-  "214-may only be issued after a successful LHLO.\r\n"
-  "214 Syntax: LHLO [your hostname]\r\n"
-/* LMTP_DATA */ ,
-  "214-The LHLO command begins a client/server\r\n"
-  "214-dialogue. The commands MAIL, RCPT and DATA\r\n"
-  "214-may only be issued after a successful LHLO.\r\n"
-  "214 Syntax: LHLO [your hostname]\r\n"
-/* LMTP_RSET */ ,
-  "214-The LHLO command begins a client/server\r\n"
-  "214-dialogue. The commands MAIL, RCPT and DATA\r\n"
-  "214-may only be issued after a successful LHLO.\r\n"
-  "214 Syntax: LHLO [your hostname]\r\n"
-/* LMTP_QUIT */ ,
-  "214-The LHLO command begins a client/server\r\n"
-  "214-dialogue. The commands MAIL, RCPT and DATA\r\n"
-  "214-may only be issued after a successful LHLO.\r\n"
-  "214 Syntax: LHLO [your hostname]\r\n"
-/* LMTP_NOOP */ ,
-  "214-The LHLO command begins a client/server\r\n"
-  "214-dialogue. The commands MAIL, RCPT and DATA\r\n"
-  "214-may only be issued after a successful LHLO.\r\n"
-  "214 Syntax: LHLO [your hostname]\r\n"
-/* LMTP_HELP */ ,
-  "214-The LHLO command begins a client/server\r\n"
-  "214-dialogue. The commands MAIL, RCPT and DATA\r\n"
-  "214-may only be issued after a successful LHLO.\r\n"
-  "214 Syntax: LHLO [your hostname]\r\n"
-/* For good measure. */ ,
+/* For good measure... */ ,
   NULL
 };
 

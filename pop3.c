@@ -251,25 +251,27 @@ int pop3_handle_connection (clientinfo_t *ci)
 }
 
 
-int pop3_error (PopSession_t *session, void *stream, const char *formatstring, ...)
+int pop3_error(PopSession_t *session, void *stream, const char *formatstring, ...)
+	__attribute__((format(printf, 3, 4)));
+int pop3_error(PopSession_t *session, void *stream, const char *formatstring, ...)
 {
      va_list argp;
 
      if (session->error_count>=MAX_ERRORS)
      {
-	  trace (TRACE_MESSAGE,"pop3_error(): too many errors (MAX_ERRORS is %d)",MAX_ERRORS);
-	  fprintf ((FILE *)stream, "-ERR loser, go play somewhere else\r\n");
+	  trace(TRACE_MESSAGE, "pop3_error(): too many errors (MAX_ERRORS is %d)", MAX_ERRORS);
+	  fprintf((FILE *)stream, "-ERR loser, go play somewhere else\r\n");
 	  session->SessionResult = 2; /* possible flood */
 	  return -3;
      }
      else
      {
 	  va_start(argp, formatstring);
-	  vfprintf ((FILE *)stream, formatstring, argp);
+	  vfprintf((FILE *)stream, formatstring, argp);
 	  va_end(argp);
      }
 
-     trace (TRACE_DEBUG,"pop3_error(): an invalid command was issued");
+     trace(TRACE_DEBUG, "pop3_error(): an invalid command was issued");
      session->error_count++;
      return 1;
 }
@@ -340,7 +342,7 @@ int pop3 (void *stream, char *buffer, char *client_ip, PopSession_t *session)
 	 (cmdtype!=POP3_UIDL) && (cmdtype!=POP3_AUTH) &&
 	 (cmdtype!=POP3_CAPA))
      {
-	  return pop3_error(session, stream,"-ERR your command does not compute\r\n");
+	  return pop3_error(session, stream, "-ERR your command does not compute\r\n");
      }
 
      switch (cmdtype)

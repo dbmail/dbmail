@@ -42,7 +42,7 @@ struct list rcpt;
 char *envelopefrom = NULL;
 
 /* allowed lmtp commands */
-const char *commands [] =
+const char * const commands [] =
 {
   "LHLO", "QUIT", "RSET", "DATA", "MAIL",
   "VRFY", "EXPN", "HELP", "NOOP", "RCPT"
@@ -182,7 +182,8 @@ int lmtp_reset(PopSession_t *session)
     return 1;
   }
 
-
+int lmtp_error(PopSession_t *session, void *stream, const char *formatstring, ...)
+	__attribute__((format(printf, 3, 4)));
 int lmtp_error(PopSession_t *session, void *stream, const char *formatstring, ...)
 {
   va_list argp;
@@ -317,7 +318,7 @@ int lmtp(void *stream, void *instream, char *buffer, char *client_ip UNUSED, Pop
           int helpcmd;
  
           if (value == NULL)
-            return 1;
+            helpcmd = LMTP_END;
           else
             for (helpcmd = LMTP_STRT; helpcmd < LMTP_END; helpcmd++)
               if (strcasecmp(value, commands[helpcmd]) == 0) break;
@@ -328,11 +329,11 @@ int lmtp(void *stream, void *instream, char *buffer, char *client_ip UNUSED, Pop
               (helpcmd==LMTP_RSET) || (helpcmd==LMTP_QUIT) ||
               (helpcmd==LMTP_NOOP) || (helpcmd==LMTP_HELP) )
             {
-              fprintf((FILE *)stream, LMTP_HELP_TEXT[helpcmd]);
+              fprintf((FILE *)stream, "%s", LMTP_HELP_TEXT[helpcmd]);
             }
           else
             {
-              fprintf((FILE *)stream, LMTP_HELP_TEXT[LMTP_STRT]);
+              fprintf((FILE *)stream, "%s", LMTP_HELP_TEXT[LMTP_END]);
             }
  
           return 1;
@@ -576,7 +577,7 @@ int lmtp(void *stream, void *instream, char *buffer, char *client_ip UNUSED, Pop
 	    /* Anonymous Block */
 	      {
 	        char *header = NULL;
-                u64_t headersize=0, newlines=0;
+                u64_t headersize=0, headerrfcsize=0;
                 u64_t dummyidx=0,dummysize=0;
                 struct list fromlist, headerfields;
                 struct element *element;
@@ -589,18 +590,16 @@ int lmtp(void *stream, void *instream, char *buffer, char *client_ip UNUSED, Pop
                 /* We know this to be true from the 354 code, above. */
                 list_nodeadd(&fromlist, envelopefrom, strlen(envelopefrom));
 
-                if (!read_header((FILE *)instream, &newlines, &headersize, &header))
+                if (!read_header((FILE *)instream, &headerrfcsize, &headersize, &header))
 		  {
                     trace(TRACE_ERROR,"main(): fatal error from read_header()");
                     fprintf((FILE *)stream, "500 Error reading header.\r\n" );
 		    return 1;
 		  }
 
-                trace(TRACE_ERROR,"main(): lines of read_header() header is [%d]", newlines);
-       
                 if (header != NULL)
 		  {
-                    trace(TRACE_ERROR,"main(): size of read_header() header is [%d]", headersize);
+                    trace(TRACE_ERROR,"main(): size of read_header() header is [%llu]", headersize);
 		  }
                 else
                   {
@@ -611,14 +610,15 @@ int lmtp(void *stream, void *instream, char *buffer, char *client_ip UNUSED, Pop
 
                 /* Parse the list and scan for field and content */
                 if (mime_readheader(header, &dummyidx, &mimelist, &dummysize) < 0)
-		  {
+                  {
                     trace(TRACE_ERROR,"main(): fatal error from mime_readheader()");
                     fprintf((FILE *)stream, "500 Error reading header.\r\n" );
-		    return 1;
-		  }
+                    return 1;
+                  }
 
-	        if (insert_messages((FILE *)instream, header, headersize,
-				&headerfields, &rcpt, &fromlist) == -1)
+	        if (insert_messages((FILE *)instream,
+                                    header, headersize, headerrfcsize,
+                                    &headerfields, &rcpt, &fromlist) == -1)
                   {
                     fprintf((FILE *)stream, "503 Message not received\r\n");
                   }

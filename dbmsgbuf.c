@@ -35,7 +35,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define MSGBUF_WINDOWSIZE (128ul*1024ul)
+#define MSGBUF_WINDOWSIZE (128ull*1024ull)
 
 static unsigned _msgrow_idx = 0;
 static int _msg_fetch_inited = 0;

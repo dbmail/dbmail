@@ -142,7 +142,8 @@ int ReadConfig(const char *serviceName, const char *cfilename, struct list *cfg_
       /* skip otherwise */
     } while (!serviceFound) ;
 
-  trace(TRACE_DEBUG, "ReadConfig(): config for %s read, found [%d] cfg_items", service, cfg_items->total_nodes);
+  trace(TRACE_DEBUG, "ReadConfig(): config for %s read, found [%ld] cfg_items",
+		  service, cfg_items->total_nodes);
   fclose(cfile);
   return 0;
 }

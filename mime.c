@@ -57,7 +57,7 @@ int mime_list(char *blkdata, struct list *mimelist)
   struct mime_record *mr;
   struct element *el;   
 	
-  trace (TRACE_INFO, "mime_list(): entering mime loop\n");
+  trace(TRACE_INFO, "mime_list(): entering mime loop\n");
 
   list_init(mimelist);
   /* alloc mem */
@@ -128,7 +128,7 @@ int mime_list(char *blkdata, struct list *mimelist)
 	  strncpy(mr->field, startptr, MIME_FIELD_MAX);
 	  strncpy(mr->value, &delimiter[idx], MIME_VALUE_MAX);
 
-	  trace (TRACE_DEBUG,"mime_list(): mimepair found: [%s] [%s] \n",mr->field, mr->value); 
+	  trace(TRACE_DEBUG,"mime_list(): mimepair found: [%s] [%s] \n",mr->field, mr->value); 
 
 #ifdef USE_EXIT_ON_ERROR
 	  memtst((el=list_nodeadd(mimelist,mr,sizeof (*mr)))==NULL);
@@ -157,11 +157,9 @@ int mime_list(char *blkdata, struct list *mimelist)
 	{
 	  /* no field/value delimiter found, non-valid MIME-header */
 	  my_free(mr);
-	  trace(TRACE_ERROR,"Non valid mimeheader found, freeing list...\n");
+	  trace(TRACE_ERROR,"Non valid mimeheader found, freeing list...");
 	  list_freelist(&mimelist->start);
 	  mimelist->total_nodes = 0;
-	  trace(TRACE_ERROR,"freeing list done, start: %X\n ",mimelist->start);
-
 	  return -1;
 	}
     }
@@ -215,7 +213,7 @@ int mime_readheader(char *blkdata, u64_t *blkidx, struct list *mimelist, u64_t *
   struct mime_record *mr,*prev_mr=NULL;
   struct element *el = NULL;   
 	
-  trace (TRACE_DEBUG, "mime_readheader(): entering mime loop\n");
+  trace(TRACE_DEBUG, "mime_readheader(): entering mime loop\n");
 
   list_init(mimelist);
   *headersize = 0;
@@ -322,7 +320,7 @@ int mime_readheader(char *blkdata, u64_t *blkidx, struct list *mimelist, u64_t *
 /*	  strncpy(mr->field, startptr, MIME_FIELD_MAX);
 	  strncpy(mr->value, &delimiter[idx], MIME_VALUE_MAX);
 */
-/*	  trace (TRACE_DEBUG,"mime_readheader(): mimepair found: [%s] [%s] \n",mr->field, mr->value); 
+/*	  trace(TRACE_DEBUG,"mime_readheader(): mimepair found: [%s] [%s] \n",mr->field, mr->value); 
 */
 	  el = list_nodeadd(mimelist,mr,sizeof (*mr));
 	  if (!el)
@@ -475,18 +473,20 @@ int mail_adr_list(char *scan_for_field, struct list *targetlist, struct list *mi
       return -1;
     }
 
-  trace (TRACE_DEBUG,"mail_adr_list(): mimelist currently has [%d] nodes",mimelist->total_nodes);
+  trace(TRACE_DEBUG, "mail_adr_list(): mimelist currently has [%ld] nodes",
+		  mimelist->total_nodes);
 
   memtst((tmpvalue=(char *)calloc(MIME_VALUE_MAX,sizeof(char)))==NULL);
 
-  trace (TRACE_INFO,"mail_adr_list(): mail address parser starting");
+  trace(TRACE_INFO, "mail_adr_list(): mail address parser starting");
 
   raw=list_getstart(mimelist);
-  trace (TRACE_DEBUG,"mail_adr_list(): total fields in header %lu",mimelist->total_nodes);
+  trace(TRACE_DEBUG, "mail_adr_list(): total fields in header %ld",
+		  mimelist->total_nodes);
   while (raw!=NULL)
     {
       mr=(struct mime_record *)raw->data;
-      trace (TRACE_DEBUG,"mail_adr_list(): scanning for %s",scan_for_field);
+      trace(TRACE_DEBUG, "mail_adr_list(): scanning for %s", scan_for_field);
       if ((strcasecmp(mr->field, scan_for_field)==0))
 	{
 	  /* Scan for email addresses and add them to our list */
@@ -512,20 +512,20 @@ int mail_adr_list(char *scan_for_field, struct list *targetlist, struct list *mi
 		     (ptr[0]!=',') &&
 		     (ptr[0]!='\0'))  
 		ptr++;
-	      memtst((strncpy(tmpvalue,tmp,ptr-tmp))==NULL);
+	      memtst((strncpy(tmpvalue, tmp, ptr-tmp)) == NULL);
 				/* always set last value to \0 to end string */
 	      tmpvalue[ptr-tmp]='\0';
 
 				/* one extra for \0 in strlen */
-	      memtst((list_nodeadd(targetlist,tmpvalue,
+	      memtst((list_nodeadd(targetlist, tmpvalue,
 				   (strlen(tmpvalue)+1)))==NULL);
 
 				/* printf ("total nodes:\n");
 				   list_showlist(&targetlist);
 				   next address */
-	      ptr=strstr(ptr,"@");
-	      trace (TRACE_DEBUG,"mail_adr_list(): found %s, next in list is %s",
-		     tmpvalue,ptr ? ptr : "<null>");
+	      ptr = strstr(ptr, "@");
+	      trace(TRACE_DEBUG, "mail_adr_list(): found %s, next in list is %s",
+		     tmpvalue, ptr ? ptr : "<null>");
 	    }
 	}
       raw=raw->nextnode;
@@ -533,11 +533,12 @@ int mail_adr_list(char *scan_for_field, struct list *targetlist, struct list *mi
 
   my_free(tmpvalue);
 
-  trace (TRACE_DEBUG,"mail_adr_list(): found %d emailaddresses",list_totalnodes(targetlist));
+  trace(TRACE_DEBUG, "mail_adr_list(): found %ld emailaddresses",
+		  targetlist->total_nodes);
 	
-  trace (TRACE_INFO,"mail_adr_list(): mail address parser finished");
+  trace(TRACE_INFO, "mail_adr_list(): mail address parser finished");
 
-  if (list_totalnodes(targetlist)==0) /* no addresses found */
+  if (targetlist->total_nodes == 0) /* no addresses found */
     return -1;
 
   return 0;

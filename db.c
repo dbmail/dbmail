@@ -125,7 +125,8 @@ int db_set_quotum_used(u64_t user_idnr, u64_t curmail_size)
 	     "WHERE user_idnr = '%llu'", curmail_size, user_idnr);
     if (db_query(query) == -1) {
 	trace(TRACE_ERROR, "%s,%s: error setting used quotum of "
-	      "[%llu] for user [%llu]", curmail_size, user_idnr);
+	      "[%llu] for user [%llu]",
+	      __FILE__, __FUNCTION__, curmail_size, user_idnr);
 	return -1;
     }
     return 0;
@@ -750,8 +751,8 @@ int db_update_message_multiple(const char *unique_id, u64_t message_size,
 		    __FILE__, __FUNCTION__);
 	      return -1;
 	}
-	 trace(TRACE_INFO, "%s,%s: message [%llu] updated, "
-	       "[%llu] bytes", uids[i], message_size);
+	 trace(TRACE_INFO, "%s,%s: message [%llu] updated, [%llu] bytes",
+	       __FILE__, __FUNCTION__, uids[i], message_size);
 
     }
     my_free(uids);
@@ -778,7 +779,7 @@ int db_insert_message_block_physmessage(const char *block, u64_t block_size,
      }
 
      if (block_size > READ_BLOCK_SIZE) {
-	  trace(TRACE_ERROR, "%s,%s:blocksize [%llu], maximum is [%llu]",
+	  trace(TRACE_ERROR, "%s,%s: blocksize [%llu], maximum is [%ld]",
 		__FILE__, __FUNCTION__, block_size, READ_BLOCK_SIZE);
 	  return -1;
      }
@@ -890,7 +891,7 @@ int db_log_ip(const char *ip)
 	     "SELECT idnr FROM pbsp WHERE ipnumber = '%s'", ip);
     if (db_query(query) == -1) {
 	trace(TRACE_ERROR, "%s,%s: could not access ip-log table "
-	      "(pop/imap-before-smtp): %s", __FILE__, __FUNCTION__);
+	      "(pop/imap-before-smtp): %s", __FILE__, __FUNCTION__, ip);
 	return -1;
     }
 
@@ -1367,7 +1368,7 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty)
 	    
 	    if (db_query(query) == -1) {
 		    trace(TRACE_ERROR, "%s,%s: could not delete mailbox [%llu]",
-			  mailbox_idnr);
+			  __FILE__, __FUNCTION__, mailbox_idnr);
 		    return -1;
 	    }
     }
@@ -1381,7 +1382,7 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty)
     if (db_query(query) == -1) {
 	trace(TRACE_ERROR,
 	      "%s,%s: could not select message ID's for mailbox [%llu]",
-	      mailbox_idnr);
+	      __FILE__, __FUNCTION__, mailbox_idnr);
 	return -1;
     }
 
@@ -1427,7 +1428,7 @@ int db_send_message_lines(void *fstream, u64_t message_idnr,
     int n;
     char *query_result;
 
-    trace(TRACE_DEBUG, "%s,%s: request for [%d] lines",
+    trace(TRACE_DEBUG, "%s,%s: request for [%ld] lines",
 	  __FILE__, __FUNCTION__, lines);
 
     /* first find the physmessage_id */
@@ -1456,7 +1457,7 @@ int db_send_message_lines(void *fstream, u64_t message_idnr,
 	return 0;
     }
 
-    trace(TRACE_DEBUG, "%s,%s: sending [%d] lines from message [%llu]",
+    trace(TRACE_DEBUG, "%s,%s: sending [%ld] lines from message [%llu]",
 	  __FILE__, __FUNCTION__, lines, message_idnr);
 
     block_count = 0;
@@ -1779,7 +1780,7 @@ u64_t db_check_sizelimit(u64_t addblocksize UNUSED, u64_t message_idnr,
     if (((currmail_size) > maxmail_size) && (maxmail_size != 0)) {
 	 trace(TRACE_INFO, "%s,%s: mailboxsize of useridnr "
 	       "%llu exceed with %llu bytes\n",
-	       *user_idnr, (currmail_size) - maxmail_size);
+	       __FILE__, __FUNCTION__, *user_idnr, (currmail_size) - maxmail_size);
 	 
 	 /* user is exceeding, we're going to execute a rollback now */
 	 if (db_delete_message(message_idnr) < 0) {
@@ -1896,12 +1897,13 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
 
 	if (db_insert_message_block(msgdata, count, message_idnr,
 				    &messageblk_idnr) == -1) {
-	    trace(TRACE_ERROR, "%s,%s: could not insert msg block\n");
+	    trace(TRACE_ERROR, "%s,%s: could not insert msg block\n",
+			    __FILE__, __FUNCTION__);
 	    if (db_delete_message(message_idnr) == -1) {
 		trace(TRACE_ERROR,
 		      "%s,%s: could not delete invalid message"
-		      "%llu. Database could be  invalid now..", __FILE__,
-		      __FUNCTION__, message_idnr);
+		      "%llu. Database could be  invalid now..",
+		      __FILE__, __FUNCTION__, message_idnr);
 	    }
 	    return -1;
 	}
@@ -2653,10 +2655,10 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr,
 	      "answered_flag, deleted_flag, flagged_flag, recent_flag, "
 	     "draft_flag, unique_id, status) VALUES "
 	      "('%llu', '%s', '%s', '%s', '%s', "
-	      "'%s', '1', '%s', 'dummy', '%s')",
+	      "'%s', '%s', '%s', 'dummy', '%s')",
 	      mailbox_to, db_get_result(0, 0), db_get_result(0, 1), 
 	      db_get_result(0, 2), db_get_result(0, 3), db_get_result(0, 4), 
-	      db_get_result(0, 6), db_get_result(0,7));
+	      db_get_result(0, 5), db_get_result(0, 6), db_get_result(0,7));
      
      db_free_result();
      if (db_query(query) == -1) {
@@ -3263,7 +3265,7 @@ int db_get_main_header(u64_t msg_idnr, struct list *hdrlist)
     if (result == -1) {
 	/* parse error */
 	trace(TRACE_ERROR, "%s,%s: error parsing header of message [%llu]",
-	      msg_idnr);
+	      __FILE__, __FUNCTION__, msg_idnr);
 	if (hdrlist->start) {
 	    list_freelist(&hdrlist->start);
 	    list_init(hdrlist);
@@ -3417,7 +3419,7 @@ static int db_acl_create_acl(u64_t userid, u64_t mboxid)
 
 	if (db_query(query) < 0) {
 		trace(TRACE_ERROR, "%s,%s: Error creating ACL entry for user "
-		      "[%llu], mailbox [%llu]."
+		      "[%llu], mailbox [%llu].",
 		      __FILE__, __FUNCTION__, userid, mboxid);
 		return -1;
 	}

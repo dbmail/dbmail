@@ -39,14 +39,10 @@
 
 #define MSGBUF_FORCE_UPDATE -1
 
-/**
- * \todo change names of msgbuf, msgidx and buflen to msgbuf_buf, msgbuf_idx
- *       and msgbuf_buflen to "simulate namespace
- */
-
 char *msgbuf_buf;/**< the message buffer */
 u64_t msgbuf_idx;/**< index within msgbuf, 0 <= msgidx < buflen */
 u64_t msgbuf_buflen;/**< current buffer length: msgbuf[buflen] == '\\0' */
+
 /**
  * \brief initialises a message fetch
  * \param msg_idnr 

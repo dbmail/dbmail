@@ -68,11 +68,12 @@ int forward(u64_t msgidnr, struct list *targets, const char *from, const char *h
   if (sendmail[0] == '\0')
     trace(TRACE_FATAL, "forward(): SENDMAIL not configured (see config file). Stop.");
   
-  trace (TRACE_INFO,"forward(): delivering to %d external addresses", list_totalnodes(targets));
+  trace(TRACE_INFO, "forward(): delivering to [%ld] external addresses",
+		  list_totalnodes(targets));
 
   if (!msgidnr)
     {
-      trace(TRACE_ERROR,"forward(): got NULL as message id number");
+      trace(TRACE_ERROR, "forward(): got NULL as message id number");
       return -1;
     }
   
@@ -103,37 +104,38 @@ int forward(u64_t msgidnr, struct list *targets, const char *from, const char *h
 	      return -1;
 	    }
 
-	  trace (TRACE_DEBUG,"forward(): allocated memory for external command call");
-	  sprintf (command, "%s %s",sendmail, (char *)(target->data));
+	  trace(TRACE_DEBUG, "forward(): allocated memory for external command call");
+	  sprintf (command, "%s %s", sendmail, (char *)(target->data));
 	}
 
-      trace (TRACE_INFO,"forward(): opening pipe to command %s", command);
+      trace(TRACE_INFO, "forward(): opening pipe to command %s", command);
 	
-      pipe = popen(command,"w"); /* opening pipe */
+      pipe = popen(command, "w"); /* opening pipe */
       my_free (command);
       command = NULL;
 
       if (pipe != NULL)
 	{
-	  trace (TRACE_DEBUG,"forward(): call to popen() successfully opened pipe %d", fileno(pipe));
+	  trace(TRACE_DEBUG, "forward(): call to popen() successfully opened pipe [%d]",
+			  fileno(pipe));
 			
           if (((char *)target->data)[0]=='!')
             {
               /* ! tells us to prepend an mbox style header in this pipe */
-              trace (TRACE_DEBUG,"forward(): appending mbox style from header to pipe returnpath : %s", from);
+              trace(TRACE_DEBUG, "forward(): appending mbox style from header to pipe returnpath : %s", from);
               /* format: From<space>address<space><space>Date */
               fprintf (pipe, "From %s  %s\n", from, timestr);   
             }
 
           /* first send header if this is a direct pipe through */
           fprintf (pipe, "%s", header);
-          trace (TRACE_DEBUG,"forward(): wrote header to pipe");  
+          trace(TRACE_DEBUG, "forward(): wrote header to pipe");  
 
-	  trace (TRACE_INFO,"forward(): sending message id number [%llu] to forward pipe", msgidnr);
+	  trace(TRACE_INFO, "forward(): sending message id number [%llu] to forward pipe", msgidnr);
 			
           err = ferror(pipe);
 
-          trace (TRACE_DEBUG, "forward(): ferror reports"
+          trace(TRACE_DEBUG, "forward(): ferror reports"
               " %d, feof reports %d on pipe %d", err,
               feof (pipe),
               fileno (pipe));
@@ -142,27 +144,27 @@ int forward(u64_t msgidnr, struct list *targets, const char *from, const char *h
             {
               if (msgidnr != 0)
                 {
-                  trace (TRACE_DEBUG, "forward(): sending lines from"
+                  trace(TRACE_DEBUG, "forward(): sending lines from"
                       "message %llu on pipe %d", msgidnr, fileno(pipe));
                   db_send_message_lines (pipe, msgidnr, -2, 1);
                 }
             }
 
-	  trace (TRACE_DEBUG, "forward(): closing pipes");
+	  trace(TRACE_DEBUG, "forward(): closing pipes");
 
           if (!ferror(pipe))
             {
               pclose (pipe);
-              trace (TRACE_DEBUG, "forward(): pipe closed");
+              trace(TRACE_DEBUG, "forward(): pipe closed");
             }
           else
             {
-              trace (TRACE_ERROR,"forward(): error on pipe");
+              trace(TRACE_ERROR, "forward(): error on pipe");
             }
         }
       else 
         {
-          trace (TRACE_ERROR,"forward(): Could not open pipe to" " [%s]",sendmail);
+          trace(TRACE_ERROR, "forward(): Could not open pipe to [%s]", sendmail);
         }
       target = target->nextnode;
     }

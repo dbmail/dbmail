@@ -40,6 +40,8 @@
 #include "misc.h"
 #include <errno.h>
 #include <string.h>
+#include <strings.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -432,11 +434,14 @@ static int resolve_deliveries(struct list *deliveries)
  *
  * returns a message id number, or -1 on error.
  * */
-static int store_message_temp(FILE *instream, char *header, u64_t headersize, u64_t *temp_message_idnr)
+static int store_message_temp(FILE *instream,
+                char *header, u64_t headersize, u64_t headerrfcsize,
+                u64_t *msgsize, u64_t *rfcsize, u64_t *temp_message_idnr)
 {
   int myeof=0;
   u64_t msgidnr=0;
-  size_t i=0, usedmem=0, totalmem=0, linemem=0;
+  size_t i=0, usedmem=0, linemem=0;
+  u64_t totalmem = 0, rfclines=0;
   char *strblock=NULL, *tmpline=NULL;
   char unique_id[UID_SIZE];
   u64_t messageblk_idnr;
@@ -444,7 +449,12 @@ static int store_message_temp(FILE *instream, char *header, u64_t headersize, u6
   int result;
 
   result = auth_user_exists(DBMAIL_DELIVERY_USERNAME, &user_idnr);
-  if (result <= 0) {
+  if (result < 0) {
+	  trace(TRACE_ERROR, "%s,%s: unable to find user_idnr for user "
+		"[%s]\n", __FILE__, __FUNCTION__, DBMAIL_DELIVERY_USERNAME);
+	  return -1;
+  }
+  if (result == 0) {
 	  trace(TRACE_ERROR, "%s,%s: unable to find user_idnr for user "
 		"[%s]. Make sure this system user is in the database!\n",
 		__FILE__, __FUNCTION__, DBMAIL_DELIVERY_USERNAME);
@@ -469,7 +479,8 @@ static int store_message_temp(FILE *instream, char *header, u64_t headersize, u6
       return -1;
   }
 
-  trace(TRACE_DEBUG,"store_message_temp(): allocating [%d] bytes of memory for readblock", READ_BLOCK_SIZE);
+  trace(TRACE_DEBUG, "store_message_temp(): allocating [%ld] bytes of memory for readblock",
+		  READ_BLOCK_SIZE);
 
   memtst ((strblock = (char *)my_malloc(READ_BLOCK_SIZE+1))==NULL);
   memtst ((tmpline= (char *)my_malloc(MAX_LINE_SIZE+1))==NULL);
@@ -489,10 +500,16 @@ static int store_message_temp(FILE *instream, char *header, u64_t headersize, u6
 
       /* We want to fill up each block if possible,
        * unless of course we're at the end of the file */
-      while (!feof(instream) && (usedmem + linemem < READ_BLOCK_SIZE))
+      while (!feof(instream) && (usedmem +linemem < READ_BLOCK_SIZE))
         {
           fgets(tmpline, MAX_LINE_SIZE, instream);
           linemem = strlen(tmpline);
+          /* The RFC size assumes all lines end in \r\n,
+           * so if we have a newline (\n) but don't have
+           * a carriage return (\r), count it in rfcsize. */
+          if (linemem > 0 && tmpline[linemem-1] == '\n')
+              if (linemem == 1 || (linemem > 1 && tmpline[linemem-2] != '\r'))
+                  rfclines++;
 
           if (ferror(instream))
             {
@@ -508,8 +525,6 @@ static int store_message_temp(FILE *instream, char *header, u64_t headersize, u6
             {
               /* This is the end of the message! */
               myeof = 1;
-	      /* make sure that the function stops by setting linemem to zero
-	       */
 	      linemem = 0;
               break;
             }
@@ -525,7 +540,6 @@ static int store_message_temp(FILE *instream, char *header, u64_t headersize, u6
                   tmpline[0] = '\0';
                   linemem = 0;
                 }
-
               /* Don't need an else, see above this while loop for more */
             }
         }
@@ -567,10 +581,13 @@ static int store_message_temp(FILE *instream, char *header, u64_t headersize, u6
   my_free (strblock);
   trace(TRACE_DEBUG, "store_message_temp(): strblock freed");
 
-  db_update_message(msgidnr, unique_id, totalmem+headersize, 0);
+  db_update_message(msgidnr, unique_id, (totalmem+headersize),
+                    (totalmem+rfclines+headerrfcsize));
 
   /* Pass the message id out to the caller. */
   *temp_message_idnr = msgidnr;
+  *rfcsize = totalmem + rfclines + headerrfcsize;
+  *msgsize = totalmem + headersize;
 
   return 0;
 }
@@ -608,14 +625,15 @@ static int store_message_temp(FILE *instream, char *header, u64_t headersize, u6
  *   - 0 on success
  *   - -1 on full failure
  */
-int insert_messages(FILE *instream, char *header, u64_t headersize,
-     struct list *headerfields, struct list *users, struct list *returnpath)
+int insert_messages(FILE *instream, char *header, u64_t headersize, u64_t headerrfcsize,
+     struct list *headerfields, struct list *dsnusers, struct list *returnpath)
 {
   struct element *element, *ret_path;
-  u64_t tmpmsgidnr, msgsize = 0;
+  u64_t msgsize, rfcsize, tmpmsgidnr;
 
   /* Read in the rest of the stream and store it into a temporary message */
-  switch (store_message_temp(instream, header, headersize, &tmpmsgidnr))
+  switch (store_message_temp(instream, header, headersize, headerrfcsize,
+                             &msgsize, &rfcsize, &tmpmsgidnr))
   {
     case -1:
       /* Major trouble. Bail out immediately. */
@@ -629,13 +647,13 @@ int insert_messages(FILE *instream, char *header, u64_t headersize,
   }
   
   /* Get the user list resolved into fully deliverable form */
-  if (resolve_deliveries(users) != 0)
+  if (resolve_deliveries(dsnusers) != 0)
     {
       return -1;
     }
 
   /* Loop through the users list */
-  for (element = list_getstart(users); element != NULL; element = element->nextnode)
+  for (element = list_getstart(dsnusers); element != NULL; element = element->nextnode)
     {
       struct element *userid_elem;
       deliver_to_user_t *delivery = (deliver_to_user_t *)element->data;
@@ -647,7 +665,9 @@ int insert_messages(FILE *instream, char *header, u64_t headersize,
           trace(TRACE_DEBUG, "%s, %s: calling sort_and_deliver for useridnr [%llu]",
               __FILE__, __FUNCTION__, useridnr);
 
-          switch (sort_and_deliver(tmpmsgidnr, header, headersize, msgsize, useridnr, delivery->mailbox))
+          switch (sort_and_deliver(tmpmsgidnr,
+				  header, headersize, msgsize, rfcsize,
+				  useridnr, delivery->mailbox))
             {
               case 1:
                 /* Indicate success */

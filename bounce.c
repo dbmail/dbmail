@@ -33,6 +33,7 @@
 #include "mime.h"
 #include "db.h"
 #include "debug.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -42,7 +43,7 @@ extern struct list smtpItems;
 
 int bounce(const char *header, const char *destination_address, bounce_reason_t reason)
 {
-  void *sendmail_stream;
+  FILE *sendmail_stream;
   char *sendmail_command = NULL;
   struct list from_addresses;
   struct element *tmpelement;
@@ -65,7 +66,7 @@ int bounce(const char *header, const char *destination_address, bounce_reason_t 
     trace(TRACE_FATAL, "%s,%s: POSTMASTER not configured "
 	  "(see config file). Stop.", __FILE__, __FUNCTION__);
 	  
-  trace (TRACE_DEBUG,"%s,%s: creating bounce message for bounce reason [%d]",
+  trace(TRACE_DEBUG,"%s,%s: creating bounce message for bounce reason [%d]",
 	 __FILE__, __FUNCTION__, reason);
 		
   if (!destination_address)
@@ -119,7 +120,7 @@ int bounce(const char *header, const char *destination_address, bounce_reason_t 
 
               trace (TRACE_INFO,"bounce(): opening pipe to command "
 	             "%s",sendmail_command);
-	      (FILE *)sendmail_stream=popen (sendmail_command,"w");
+	      sendmail_stream = popen(sendmail_command,"w");
 
 	      if (sendmail_stream==NULL)
 		{
@@ -128,22 +129,22 @@ int bounce(const char *header, const char *destination_address, bounce_reason_t 
 			"to %s", __FILE__, __FUNCTION__,sendmail);
 		  return -1;
 		}
-	      fprintf ((FILE *)sendmail_stream,"From: %s\n",dbmail_from_address);
-	      fprintf ((FILE *)sendmail_stream,"To: %s\n",(char *)tmpelement->data);
-	      fprintf ((FILE *)sendmail_stream,"Subject: DBMAIL: delivery failure\n");
-	      fprintf ((FILE *)sendmail_stream,"\n");
-	      fprintf ((FILE *)sendmail_stream,"This is the DBMAIL-SMTP program.\n\n");
-	      fprintf ((FILE *)sendmail_stream,"I'm sorry to inform you that your message, addressed to %s,\n",
+	      fprintf (sendmail_stream,"From: %s\n",dbmail_from_address);
+	      fprintf (sendmail_stream,"To: %s\n",(char *)tmpelement->data);
+	      fprintf (sendmail_stream,"Subject: DBMAIL: delivery failure\n");
+	      fprintf (sendmail_stream,"\n");
+	      fprintf (sendmail_stream,"This is the DBMAIL-SMTP program.\n\n");
+	      fprintf (sendmail_stream,"I'm sorry to inform you that your message, addressed to %s,\n",
 		       destination_address);
-	      fprintf ((FILE *)sendmail_stream,"could not be delivered due to the following error.\n\n");
-	      fprintf ((FILE *)sendmail_stream,"*** E-mail address %s is not known here. ***\n\n",destination_address);
-	      fprintf ((FILE *)sendmail_stream,"If you think this message is incorrect please contact %s.\n\n",postmaster);
-	      fprintf ((FILE *)sendmail_stream,"Header of your message follows...\n\n\n");
-	      fprintf ((FILE *)sendmail_stream,"--- header of your message ---\n");
-	      fprintf ((FILE *)sendmail_stream,"%s",header);
-	      fprintf ((FILE *)sendmail_stream,"--- end of header ---\n\n\n");
-	      fprintf ((FILE *)sendmail_stream,"\n.\n");
-	      pclose ((FILE *)sendmail_stream);
+	      fprintf (sendmail_stream,"could not be delivered due to the following error.\n\n");
+	      fprintf (sendmail_stream,"*** E-mail address %s is not known here. ***\n\n",destination_address);
+	      fprintf (sendmail_stream,"If you think this message is incorrect please contact %s.\n\n",postmaster);
+	      fprintf (sendmail_stream,"Header of your message follows...\n\n\n");
+	      fprintf (sendmail_stream,"--- header of your message ---\n");
+	      fprintf (sendmail_stream,"%s",header);
+	      fprintf (sendmail_stream,"--- end of header ---\n\n\n");
+	      fprintf (sendmail_stream,"\n.\n");
+	      pclose (sendmail_stream);
 
 	      /* jump forward to next recipient */
 	      tmpelement=tmpelement->nextnode;
@@ -197,7 +198,7 @@ int bounce(const char *header, const char *destination_address, bounce_reason_t 
 
               trace (TRACE_INFO,"bounce(): opening pipe to command "
 	             "%s",sendmail_command);
-	      (FILE *)sendmail_stream=popen (sendmail_command,"w");
+	      sendmail_stream=popen (sendmail_command,"w");
 
 	      if (sendmail_stream==NULL)
 		{
@@ -206,22 +207,22 @@ int bounce(const char *header, const char *destination_address, bounce_reason_t 
 			__FILE__, __FUNCTION__, sendmail);
 		  return -1;
 		}
-	      fprintf ((FILE *)sendmail_stream,"From: %s\n",dbmail_from_address);
-	      fprintf ((FILE *)sendmail_stream,"To: %s\n",(char *)tmpelement->data);
-	      fprintf ((FILE *)sendmail_stream,"Subject: DBMAIL: delivery failure\n");
-	      fprintf ((FILE *)sendmail_stream,"\n");
-	      fprintf ((FILE *)sendmail_stream,"This is the DBMAIL-SMTP program.\n\n");
-	      fprintf ((FILE *)sendmail_stream,"I'm sorry to inform you that your message, addressed to %s,\n",
+	      fprintf (sendmail_stream,"From: %s\n",dbmail_from_address);
+	      fprintf (sendmail_stream,"To: %s\n",(char *)tmpelement->data);
+	      fprintf (sendmail_stream,"Subject: DBMAIL: delivery failure\n");
+	      fprintf (sendmail_stream,"\n");
+	      fprintf (sendmail_stream,"This is the DBMAIL-SMTP program.\n\n");
+	      fprintf (sendmail_stream,"I'm sorry to inform you that your message, addressed to %s,\n",
 		       destination_address);
-	      fprintf ((FILE *)sendmail_stream,"could not be delivered due to the following error.\n\n");
-	      fprintf ((FILE *)sendmail_stream,"*** Mailbox of user %s is FULL ***\n\n",destination_address);
-	      fprintf ((FILE *)sendmail_stream,"If you think this message is incorrect please contact %s.\n\n",postmaster);
-	      fprintf ((FILE *)sendmail_stream,"Header of your message follows...\n\n\n");
-	      fprintf ((FILE *)sendmail_stream,"--- header of your message ---\n");
-	      fprintf ((FILE *)sendmail_stream,"%s",header);
-	      fprintf ((FILE *)sendmail_stream,"--- end of header ---\n\n\n");
-	      fprintf ((FILE *)sendmail_stream,"\n.\n");
-	      pclose ((FILE *)sendmail_stream);
+	      fprintf (sendmail_stream,"could not be delivered due to the following error.\n\n");
+	      fprintf (sendmail_stream,"*** Mailbox of user %s is FULL ***\n\n",destination_address);
+	      fprintf (sendmail_stream,"If you think this message is incorrect please contact %s.\n\n",postmaster);
+	      fprintf (sendmail_stream,"Header of your message follows...\n\n\n");
+	      fprintf (sendmail_stream,"--- header of your message ---\n");
+	      fprintf (sendmail_stream,"%s",header);
+	      fprintf (sendmail_stream,"--- end of header ---\n\n\n");
+	      fprintf (sendmail_stream,"\n.\n");
+	      pclose (sendmail_stream);
 
 	      /* jump forward to next recipient */
 	      tmpelement=tmpelement->nextnode;

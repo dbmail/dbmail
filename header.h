@@ -10,13 +10,19 @@
 
 #include "list.h"
 
+/**
+ * \brief Read from the specified FILE pointer until either
+ * a long carriage-return line-feed or a lone period stand
+ * on a line by themselves.
+ * \param instream A FILE pointer to the stream where the header is.
+ * \param headerrfcsize The size of the header if all lines ended in \r\n.
+ * \param headersize The actual byte count of the header.
+ * \param header A pointer to an unallocated char array. On
+ * error, the pointer may not be valid and must not be used.
+ * \return
+ *      - 1 on success
+ *      - 0 on failure
+*/
 int read_header(FILE *instream, u64_t *newlines, u64_t *headersize, char **header);
-int read_header_process(FILE *instream, struct list *userids,
-		struct list *bounces, struct list *fwds,
-		const char *field, char *hdrdata,
-		u64_t *newlines, char **bounce_path);
-int add_address(const char *address, struct list *userids,
-		struct list *bounces, struct list *fwds);
-int add_username(const char *uname, struct list *userids);
 
 #endif

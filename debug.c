@@ -55,21 +55,21 @@ int TRACE_LEVEL = 2;     /* default: error operations */
 /*
  * configure the debug settings
  */
-void configure_debug(int level, int trace_syslog, int trace_verbose)
+void configure_debug(trace_t level, int trace_syslog, int trace_verbose)
 {
   TRACE_LEVEL = level;
   TRACE_TO_SYSLOG = trace_syslog;
   TRACE_VERBOSE = trace_verbose;
 }
 
-void func_memtst (const char *filename,int line,int tst)
+void func_memtst(const char *filename,int line,int tst)
 {
   if (tst != 0) 
     trace(TRACE_FATAL,"func_memtst(): fatal: %s:%d Memory error, result should not be NULL)",
 	  filename,line);
 }
 
-void trace (int level, char *formatstring, ...)
+void trace(trace_t level, char *formatstring, ...)
 {
   va_list argp;
   

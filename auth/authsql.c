@@ -276,7 +276,7 @@ int auth_check_user (const char *username, struct list *userids, int checks)
   int r;
   void *saveres;
   u64_t counter;
-  u64_t num_rows;
+  unsigned num_rows;
   char *query_result;
 
   db_use_auth_result();
@@ -305,7 +305,7 @@ int auth_check_user (const char *username, struct list *userids, int checks)
 	  db_store_auth_result();
       return 0;
   }
-  num_rows = (u64_t) db_num_rows();
+  num_rows = db_num_rows();
   if (num_rows < 1) {
       if (checks > 0) {
           /* found the last one, this is the deliver to
@@ -378,7 +378,7 @@ int auth_check_user_ext(const char *username, struct list *userids,
   char *query_result;
   char *endptr;
   u64_t id;
-  u64_t num_rows;
+  unsigned num_rows;
 
   db_use_auth_result();
   saveres = db_get_result_set();
@@ -396,7 +396,7 @@ int auth_check_user_ext(const char *username, struct list *userids,
       return 0;
   }
   
-  num_rows = (u64_t) db_num_rows();
+  num_rows = db_num_rows();
   if (num_rows == 0) {
     if (checks > 0) {
 		/* found the last one, this is the deliver to
@@ -613,7 +613,7 @@ int auth_change_clientid(u64_t user_idnr, u64_t new_cid)
 
   if (__auth_query(__auth_query_data) == -1) {
       trace(TRACE_ERROR,"%s,%s: could not change client id for user [%llu]",
-			  user_idnr);
+		  __FILE__, __FUNCTION__, user_idnr);
 	  db_store_auth_result();
       return -1;
   }

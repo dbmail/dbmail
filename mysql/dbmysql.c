@@ -224,7 +224,7 @@ int db_query(const char *the_query)
 	} else {                                                  
 		trace (TRACE_ERROR,"%s,%s: "                          
 				"query buffer is NULL, this is not supposed to happen\n",   
-				__FILE__, __FUNCTION__, querysize);           
+				__FILE__, __FUNCTION__);
 		return -1;                                            
 	}                                                         
 
