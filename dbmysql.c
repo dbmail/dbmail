@@ -3765,7 +3765,14 @@ int db_search(int *rset, int setlen, const char *key, mailbox_t *mb)
  * db_search_messages()
  *
  * searches the dbase for messages matching the search_keys
- * search_keys are supposed to be IMAP4r1 compliant;
+ * supported search_keys: 
+ * (un)answered
+ * (un)deleted
+ * (un)seen
+ * (un)flagged
+ * draft
+ * recent
+ *
  * results will be an ascending ordered array of message UIDS
  *
  *
