@@ -1,3 +1,10 @@
+2004-11-27  Paul Stevens <paul@nfg.nl>
+
+	* imapcommands.c (_ic_copy, _ic_store): add call to 
+	db_getmailbox to force resync.
+	* dbmail-imapsession.c, imaputil.c: various refactorings.
+	* list.c (list_nodeadd): fix possible race condition.
+
 2004-11-24  Aaron Stone  <aaron@serendipity.cx>
 
 	* main.c: handle new DSN_STATUS_NONE.
