@@ -335,6 +335,7 @@ int imap_process(ClientInfo *ci)
 void imap_error_cleanup(ClientInfo *ci)
 {
   close_cache();
+  db_disconnect();
 }
 
 
