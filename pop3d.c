@@ -150,6 +150,7 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 
   char *theiraddress;
   char *buffer;
+  int cnt;
   
   struct hostent *clientinfo;
   
@@ -252,8 +253,21 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
   alarm (server_timeout); 
 
 	/* scanning for commands */
-  while ((done>0) && (buffer=fgets(buffer,INCOMING_BUFFER_SIZE,rx)))
+  while (done>0)
     {
+      for (cnt=0; cnt < INCOMING_BUFFER_SIZE; cnt++)
+	{
+	  fread(&buffer[cnt], 1, 1, rx);
+	  if (ferror(rx) && errno == EINTR)
+	    {
+	      clearerr(rx); 
+	      continue;
+	    }
+	  
+	  if (buffer[cnt] == '\n' || feof(rx) || ferror(rx))
+	    break;
+	}
+      
       if (feof(rx)) 
 	done = -1;  /* check of client eof  */
       else 
@@ -739,7 +753,7 @@ int main (int argc, char *argv[])
 	    trace(TRACE_DEBUG, "main(): accept finished");
 
 	    /* failure won't cause a quit forking is too expensive */	
-	    if (c == -1)
+	    if (c == -1 && errno != EINTR) /* dont show failure for EINTR */
 	      {
 		trace (TRACE_ERROR,"main(): call accept(2) failed [%s]", strerror(errno));
 		continue;
