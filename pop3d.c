@@ -57,6 +57,9 @@ static void signal_handler (int signo)
 		done=-1;
 		trace (TRACE_DEBUG,"signal_handler(): received ALRM signal. Timeout");
 		fprintf (tx,"-ERR i cannot wait forever\r\n");
+		fclose (tx);
+		fclose (rx);
+		shutdown(fileno(tx),SHUT_RDWR);
 		shutdown(fileno(rx),SHUT_RDWR);
 		return;
   }
@@ -211,6 +214,10 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 		shutdown (fileno(rx), SHUT_RDWR);
 		fclose(rx);
 	}
+
+	/* reset timers */
+	alarm (0);
+	
 	return 0;
 }
 
