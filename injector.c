@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
   FILE **pipes = NULL;
 
   openlog(PNAME, LOG_PID, LOG_MAIL);   /* open connection to syslog */
-  configure_debug(TRACE_NORMAL, 1, 0);  /* do not spill time on reading settings */
+  configure_debug(TRACE_ERROR, 1, 0);  /* do not spill time on reading settings */
 
   list_init(&userids);
   list_init(&bounces);
