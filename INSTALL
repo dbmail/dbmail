@@ -18,7 +18,10 @@ What do you need?
 
 1.	Setup a database
 
-	Currently,  DBMail supports both MySQL and PostgreSQL for mailstorage. 
+	Currently,  DBMail supports both MySQL and PostgreSQL for mailstorage. MySQL
+	is supported from version 4.0.14 upwards. Earlier versions of MySQL lack some
+	SQL features that are needed for DBMail, like support for the INSERT...SELECT
+	statement.
 
 	Mysql setup
 	-----------
