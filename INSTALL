@@ -6,17 +6,22 @@ DBMAIL installation
 
 What do you need?
 
-- working MYSQL
-- working smtp server (preferrably Postfix)
+- a working MYSQL database
+- a working smtp server (preferrably Postfix)
 - a little knowledge about SQL
 
-1.	First you'll need to create the DBMAIL database in MYSQL.
+If you follow the steps below you'll have DBMAIL running in no-time.
+
+
+1.	First yu'll need to create the DBMAIL database in MYSQL.
 	This is easy. You'll need the mysql commandline program for this. 
 	Just do :
 	
 	mysql -u root -p <sql/create_tables.sql
 	
-	After this, the DBMAIL tables will be created.
+	in the dbmail source tree.
+	After this, the DBMAIL tables will have been created.
+
 
 2. Look at the config.h file in the dbmail source directory. You will see a few #define
 	statements. First the #define HOST should contain the hostname of the 
@@ -27,15 +32,19 @@ What do you need?
 	dbmysql.h in the #include "full path to mysql.h"
 
 	If you want verbose debugging you can set the TRACE_LEVEL to 4 or 5. 
-	For normal messages the TRACE_LEVEL should be 2.
+	For normal messages the TRACE_LEVEL should be 2. If you experience any problems
+	you can send an e-mail to the mailinglist. If you include a TRACE level 5 log
+	chances are that your problem is fixed quite fast :)
 
-	You might check the location for the mysqlclient file (usually it's 
-	in /usr/local/lib/mysql). If it is different you need to change this
-	in the Makefile in the dbmail source directory.
+	In the Makefile you might want to check the location for the mysqlclient file
+	(the MYSQLLIBDIR variable). 
+
 	
 3.	Run make 
 	Everything should go ok. If not, it usually means that the compiler 
-	can't find the mysqlclient library or the mysqlclient header file.
+	can't find the mysqlclient library or the mysqlclient header file. If that happends,
+	go back to number 2 and check if everything is ok.
+
 	After the make the following binaries should have been created:
 	dbmail-smtp				- the dbmail mailinjector
 	dbmail-pop3d			- the dbmail pop3 daemon
@@ -47,7 +56,7 @@ What do you need?
 4. Next you will need to create some users into the dbmail mailing sytem.
 	Currently this can be done in two ways. One way is using the dbmail-adduser
 	utility. The other way is doing it in the database itself. 
-	To do it using the utility do the following:
+	To do it using the dbmail-adduser utility and do the following:
 
 	dbmail-adduser <username> <password> <clientid> <maxmail> [aliases]
 	
@@ -61,41 +70,51 @@ What do you need?
 	This will create a user john, with a password secret. It will set john's maillimit
 	25 Mb and all mail for john@dude.org, john@dude.net and @net.com will be sent to john.
 
+	Be carefull, the adduser does not (yet) check if a user already exists!
+
+
 5.	
-	Become root and copy dbmail-pop3d and dbmail-smtp to
-	/usr/local/bin. 
-	Do a chmod 700 for dbmail-maintenance, dbmail-config and dbmail-adduser and 
-	chown these files to root:root. Then also cp them to /usr/local/bin
-	Or you can run ./install.sh which does all this.
+	Become root and run install-dbmail.sh which does all this.
 
 6. check your dbmail.conf file and set it to your likeings. After that you can 
-	best copy it to the /etc/ directory and set it also chmod 700 for user root.
+	best copy it to the /etc/ directory and set it to chmod 700 for user root.
+	Then run dbmail-config /etc/dbmail.conf.
 
 -- The next lines are MTA dependend, this is for postfix --
 	
 7.	In the master.cf file for postfix add the following:
+	
 	dbmail    unix  -       n       n       -       -       pipe
-	    flags=  user=eelco:eelco argv=/usr/local/bin/dbmail-smtp -d ${recipient}
+	    flags=  user=dbmail:dbmail argv=/usr/local/bin/dbmail-smtp -d ${recipient}
+
+	at the user= field you can add any user that is allowed to run dbmail-smtp. 
+	I suggest adding a user dbmail with a group dbmail and have all dbmail programs 
+	be run by that user. The daemons (pop3d and imapd) are fully capable of dropping their 
+	root priviledges after startup.
 
 	and insert into the /etc/postfix/transport file 
+
 	<domain>		dbmail:
+
 	for all domains you want dbmail to be destiation for.
+	
 	Next run postmap /etc/postfix/transport
+
 	Edit /etc/postfix/main.cf and add the line 
 	transport_maps = hash:/etc/postfix/transport
 
 	do a postfix reload and if everything goes well 
 	mail should be delivered to dbmail. If not, try running 
 	postfix with the -v option to see what's going on. If the 
-	problem seems to be in dbmail, try changing the tracelevel in debug.h
-	to 4 or 5. This should give enough info. You need to recompile and 
-	copy the dbmail- executables.
+	problem seems to be in dbmail, try changing the tracelevel in dbmail.conf
+	and don't forget to run dbmail-config ./dbmail.conf afterwards.
+	This should give enough info. 
 
 --  -----------------------------------------------------------
 
 If you do not use postfix. The dbmail injector program, dbmail-smtp,
 can receive information in two ways. Either through raw mail (for example, 
-delivered by procmail) using the -n option or from a MTA with receipients 
+delivered by procmail) using the -n option or from a MTA with recipients 
 in the commandline using the -d option.
 
 Steven Kroon <steven@stevenkroon.com> suggested using fetchmail:
@@ -110,6 +129,9 @@ defaults        proto   pop3
 								 
 mda "/usr/local/bin/dbmail-smtp -n to"
 ---
+
+
+
 
 
 If u get dbmail running on other MTA's please tell me at
