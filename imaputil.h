@@ -25,9 +25,9 @@ int show_mime_parameter_list(FILE *outstream, struct mime_record *mr,
 
 mime_message_t* get_part_by_num(mime_message_t *msg, const char *part);
 
-long rfcheader_dump(MEM *outmem, struct list *rfcheader, char **fieldnames, int nfields,
+u64_t rfcheader_dump(MEM *outmem, struct list *rfcheader, char **fieldnames, int nfields,
 		    int equal_type);
-long mimeheader_dump(MEM *outmem, struct list *mimeheader);
+u64_t mimeheader_dump(MEM *outmem, struct list *mimeheader);
 
 int haystack_find(int haystacklen, char **haystack, const char *needle);
 
@@ -50,7 +50,7 @@ char **build_args_array(const char *s);
 
 void base64encode(char *in,char *out);
 void base64decode(char *in,char *out);
-int binary_search(const u64_t *array, int arraysize, u64_t key);
+unsigned binary_search(const u64_t *array, unsigned arraysize, u64_t key);
 
 char **give_chunks(const char *str, char delimiter);
 void free_chunks(char **chunks);

@@ -653,12 +653,12 @@ mime_message_t* get_part_by_num(mime_message_t *msg, const char *part)
  *
  * returns number of bytes written to outmem
  */
-long rfcheader_dump(MEM *outmem, struct list *rfcheader, char **fieldnames, int nfields,
+u64_t rfcheader_dump(MEM *outmem, struct list *rfcheader, char **fieldnames, int nfields,
 		    int equal_type)
 {
   struct mime_record *mr;
   struct element *curr;
-  long size = 0;
+  u64_t size = 0;
 
   curr = list_getstart(rfcheader);
   if (rfcheader == NULL || curr == NULL)
@@ -695,11 +695,11 @@ long rfcheader_dump(MEM *outmem, struct list *rfcheader, char **fieldnames, int 
  * dumps mime-header fields belonging to mimeheader
  *
  */
-long mimeheader_dump(MEM *outmem, struct list *mimeheader)
+u64_t mimeheader_dump(MEM *outmem, struct list *mimeheader)
 {
   struct mime_record *mr;
   struct element *curr;
-  long size = 0;
+  u64_t size = 0;
 
   curr = list_getstart(mimeheader);
   if (mimeheader == NULL || curr == NULL)
@@ -1885,14 +1885,17 @@ void base64decode(char *in,char *out)
  *
  * returns index of key in array or -1 if not found
  */
-int binary_search(const u64_t *array, int arraysize, u64_t key)
+unsigned binary_search(const u64_t *array, unsigned arraysize, u64_t key)
 {
-  int low,high,mid;
+  unsigned low,high,mid;
+
+  if (arraysize == 0)
+    return (unsigned)(-1);
 
   low = 0;
   high = arraysize-1;
 
-  while (low <= high)
+  while (low <= high && high != (unsigned)(-1))
     {
       mid = (high+low)/2;
       if (array[mid] < key)

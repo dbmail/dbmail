@@ -37,7 +37,7 @@ int _msg_fetch_inited = 0;
  * zeropos           absolute position (block/offset) of msgbuf[0]
  */
 
-char msgbuf[MSGBUF_WINDOWSIZE];
+char *msgbuf;
 u64_t rowlength = 0,msgidx=0,buflen=0,rowpos=0;
 db_pos_t zeropos;
 unsigned nblocks = 0;
@@ -54,7 +54,10 @@ int db_init_msgfetch(u64_t uid)
 {
   int i;
   
-  
+  msgbuf = (char*)my_malloc(MSGBUF_WINDOWSIZE);
+  if (!msgbuf)
+    return -1;
+
   if (_msg_fetch_inited)
     return 0;
 
@@ -268,6 +271,9 @@ void db_close_msgfetch()
 {
   if (!_msg_fetch_inited)
     return; /* nothing to be done */
+
+  my_free(msgbuf);
+  msgbuf = NULL;
 
   my_free(blklengths);
   blklengths = NULL;

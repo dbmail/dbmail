@@ -28,7 +28,7 @@ typedef struct
   int itemtype;              /* the item to be fetched */
   int argstart;              /* start index in the arg array */
   int argcnt;                /* number of args belonging to this bodyfetch */
-  int octetstart,octetcnt;   /* number of octets to be retrieved */
+  long long octetstart,octetcnt;   /* number of octets to be retrieved */
 
   char partspec[IMAP_MAX_PARTSPEC_LEN]; /* part specifier (i.e. '2.1.3' */
 
@@ -57,7 +57,7 @@ typedef struct
 typedef struct 
 {
   int state;                /* IMAP state of client */
-  unsigned long userid;     /* userID of client in dbase */
+  u64_t userid;             /* userID of client in dbase */
   mailbox_t mailbox;        /* currently selected mailbox */
 } imap_userdata_t;
 

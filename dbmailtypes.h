@@ -121,8 +121,9 @@ typedef struct
 {
   mime_message_t msg;
   MEM *memdump,*tmpdump;
-  int num,file_dumped,msg_parsed;
-  long dumpsize;
+  u64_t num;
+  int file_dumped,msg_parsed;
+  u64_t dumpsize;
 } cache_t;
 
 

@@ -19,7 +19,7 @@
 #include "db.h"
 
 #define MAX_LINESIZE 1024
-#define COMMAND_SHOW_LEVEL TRACE_INFO
+#define COMMAND_SHOW_LEVEL TRACE_ERROR
 
 #define null_free(p) { my_free(p); p = NULL; }
 
@@ -316,12 +316,12 @@ int imap_process(ClientInfo *ci)
 
 	  if (newmailbox.exists != ud->mailbox.exists)
 	    {
-	      fprintf(ci->tx, "* %d EXISTS\r\n", newmailbox.exists);
+	      fprintf(ci->tx, "* %u EXISTS\r\n", newmailbox.exists);
 	      trace(TRACE_INFO, "IMAPD: ok update sent\r\n");
 	    }
 
 	  if (newmailbox.recent != ud->mailbox.recent)
-	    fprintf(ci->tx, "* %d RECENT\r\n", newmailbox.recent);
+	    fprintf(ci->tx, "* %u RECENT\r\n", newmailbox.recent);
 
 	  my_free(ud->mailbox.seq_list);
 	  memcpy(&ud->mailbox, &newmailbox, sizeof(newmailbox));

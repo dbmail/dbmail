@@ -169,7 +169,7 @@ int db_movemsg(u64_t to, u64_t from);
 int db_copymsg(u64_t msgid, u64_t destmboxid);
 int db_getmailboxname(u64_t uid, char *name);
 int db_setmailboxname(u64_t uid, const char *name);
-int db_expunge(u64_t uid,u64_t **msgids,int *nmsgs);
+int db_expunge(u64_t uid,u64_t **msgids,u64_t *nmsgs);
 u64_t db_first_unseen(u64_t uid);
 int db_subscribe(u64_t mboxid);
 int db_unsubscribe(u64_t mboxid);

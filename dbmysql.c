@@ -25,7 +25,7 @@ MYSQL conn;
 MYSQL_RES *res;
 MYSQL_RES *checkres;
 MYSQL_ROW row;
-char query[DEF_QUERYSIZE];
+char *query = 0;
 
 
 /*
@@ -65,6 +65,13 @@ const char *drop_tmp_tables_queries[] = { "DROP TABLE tmpmessage", "DROP TABLE t
 
 int db_connect ()
 {
+  query = (char*)my_malloc(DEF_QUERYSIZE);
+  if (!query)
+    {
+      trace(TRACE_WARNING,"db_connect(): not enough memory for query\n");
+      return -1;
+    }
+
   /* connecting */
   mysql_init(&conn);
   mysql_real_connect (&conn,HOST,USER,PASS,MAILDATABASE,0,NULL,0); 
@@ -1911,6 +1918,9 @@ int db_delete_mailbox(u64_t uid)
 
 int db_disconnect()
 {
+  my_free(query);
+  query = NULL;
+
   mysql_close(&conn);
   return 0;
 }
@@ -2703,9 +2713,9 @@ int db_removemsg(u64_t uid)
  *
  * returns -1 on failure, 0 on success
  */
-int db_expunge(u64_t uid,u64_t **msgids,int *nmsgs)
+int db_expunge(u64_t uid,u64_t **msgids,u64_t *nmsgs)
 {
-  int i;
+  u64_t i;
 
   if (nmsgs && msgids)
     {

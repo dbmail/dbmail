@@ -148,7 +148,7 @@ int _ic_login(char *tag, char **args, ClientInfo *ci)
     return 1; /* error, return */
 
   userid = db_validate(args[0], args[1]);
-  trace(TRACE_MESSAGE, "IMAPD [PID %d]: user (id:%d, name %s) tries login\r\n",getpid(),
+  trace(TRACE_MESSAGE, "IMAPD [PID %d]: user (id:%llu, name %s) tries login\r\n",(int)getpid(),
 	userid,args[0]);
 
   if (userid == -1)
@@ -164,7 +164,7 @@ int _ic_login(char *tag, char **args, ClientInfo *ci)
     {
       /* validation failed: invalid user/pass combination */
       trace(TRACE_MESSAGE, "IMAPD [PID %d]: user (name %s) login rejected @ %s\r\n",
-	    getpid(),args[0],timestr);
+	    (int)getpid(),args[0],timestr);
       fprintf(ci->tx, "%s NO login rejected\r\n",tag);
 
       sleep(1);  /* security */
@@ -173,7 +173,7 @@ int _ic_login(char *tag, char **args, ClientInfo *ci)
     }
 
   /* login ok */
-  trace(TRACE_MESSAGE, "IMAPD [PID %d]: user (id %d, name %s) login accepted @ %s\r\n",getpid(),
+  trace(TRACE_MESSAGE, "IMAPD [PID %d]: user (id %llu, name %s) login accepted @ %s\r\n",(int)getpid(),
 	userid,args[0],timestr);
 
   /* update client info */
@@ -261,7 +261,7 @@ int _ic_authenticate(char *tag, char **args, ClientInfo *ci)
 
       /* validation failed: invalid user/pass combination */
       trace(TRACE_MESSAGE, "IMAPD [PID %d]: user (name %s) login rejected @ %s\r\n",
-	    getpid(),username,timestr);
+	    (int)getpid(),username,timestr);
 
       sleep(1);  /* security */
       
@@ -276,7 +276,7 @@ int _ic_authenticate(char *tag, char **args, ClientInfo *ci)
   if (imap_before_smtp)
     db_log_ip(ci->ip);
 
-  trace(TRACE_MESSAGE, "IMAPD [PID %d]: user (id %d, name %s) login accepted @ %s\r\n",getpid(),
+  trace(TRACE_MESSAGE, "IMAPD [PID %d]: user (id %llu, name %s) login accepted @ %s\r\n",(int)getpid(),
 	userid,username,timestr);
   
   fprintf(ci->tx,"%s OK AUTHENTICATE completed\r\n",tag);
@@ -299,7 +299,8 @@ int _ic_select(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
   u64_t mboxid,key;
-  int result,idx;
+  int result;
+  unsigned idx;
   char permstring[80];
 
   if (!check_state_and_args("SELECT", tag, args, 1, IMAPCS_AUTHENTICATED, ci))
@@ -354,8 +355,8 @@ int _ic_select(char *tag, char **args, ClientInfo *ci)
 
   /* show mailbox info */
   /* msg counts */
-  fprintf(ci->tx, "* %d EXISTS\r\n",ud->mailbox.exists);
-  fprintf(ci->tx, "* %d RECENT\r\n",ud->mailbox.recent);
+  fprintf(ci->tx, "* %u EXISTS\r\n",ud->mailbox.exists);
+  fprintf(ci->tx, "* %u RECENT\r\n",ud->mailbox.recent);
 
   /* flags */
   fprintf(ci->tx, "* FLAGS (");
@@ -393,7 +394,7 @@ int _ic_select(char *tag, char **args, ClientInfo *ci)
   idx = binary_search(ud->mailbox.seq_list, ud->mailbox.exists, key);
 
   if (idx >= 0)
-    fprintf(ci->tx,"* OK [UNSEEN %d] first unseen message\r\n",idx+1);
+    fprintf(ci->tx,"* OK [UNSEEN %u] first unseen message\r\n",idx+1);
 
   /* permission */
   switch (ud->mailbox.permission)
@@ -471,8 +472,8 @@ int _ic_examine(char *tag, char **args, ClientInfo *ci)
 
   /* show mailbox info */
   /* msg counts */
-  fprintf(ci->tx, "* %d EXISTS\r\n",ud->mailbox.exists);
-  fprintf(ci->tx, "* %d RECENT\r\n",ud->mailbox.recent);
+  fprintf(ci->tx, "* %u EXISTS\r\n",ud->mailbox.exists);
+  fprintf(ci->tx, "* %u RECENT\r\n",ud->mailbox.recent);
 
   /* flags */
   fprintf(ci->tx, "* FLAGS (");
@@ -1297,11 +1298,11 @@ int _ic_status(char *tag, char **args, ClientInfo *ci)
   for (i=2; args[i]; i++)
     {
       if (strcasecmp(args[i], "messages") == 0)
-	fprintf(ci->tx, "MESSAGES %d ",mb.exists);
+	fprintf(ci->tx, "MESSAGES %u ",mb.exists);
       else if (strcasecmp(args[i], "recent") == 0)
-	fprintf(ci->tx, "RECENT %d ",mb.recent);
+	fprintf(ci->tx, "RECENT %u ",mb.recent);
       else if (strcasecmp(args[i], "unseen") == 0)
-	fprintf(ci->tx, "UNSEEN %d ",mb.unseen);
+	fprintf(ci->tx, "UNSEEN %u ",mb.unseen);
       else if (strcasecmp(args[i], "uidnext") == 0)
 	fprintf(ci->tx, "UIDNEXT %llu ",mb.msguidnext);
       else if (strcasecmp(args[i], "uidvalidity") == 0)
@@ -1540,7 +1541,8 @@ int _ic_expunge(char *tag, char **args, ClientInfo *ci)
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
   mailbox_t newmailbox;
   u64_t *msgids;
-  int nmsgs,i,idx,result;
+  u64_t nmsgs,i,idx;
+  int result;
 
   if (!check_state_and_args("EXPUNGE", tag, args, 0, IMAPCS_SELECTED, ci))
     return 1; /* error, return */
@@ -1565,7 +1567,7 @@ int _ic_expunge(char *tag, char **args, ClientInfo *ci)
       /* find the message sequence number */
       idx = binary_search(ud->mailbox.seq_list, ud->mailbox.exists, msgids[i]);
 
-      fprintf(ci->tx,"* %d EXPUNGE\r\n",idx+1); /* add one: IMAP MSN starts at 1 not zero */
+      fprintf(ci->tx,"* %llu EXPUNGE\r\n",idx+1); /* add one: IMAP MSN starts at 1 not zero */
     }
   my_free(msgids);
   msgids = NULL;
@@ -1585,10 +1587,10 @@ int _ic_expunge(char *tag, char **args, ClientInfo *ci)
     }
 
   if (newmailbox.exists != ud->mailbox.exists)
-    fprintf(ci->tx,"* %d EXISTS\r\n", newmailbox.exists);
+    fprintf(ci->tx,"* %u EXISTS\r\n", newmailbox.exists);
   
   if (newmailbox.recent != ud->mailbox.recent)
-    fprintf(ci->tx, "* %d RECENT\r\n", newmailbox.recent);
+    fprintf(ci->tx, "* %u RECENT\r\n", newmailbox.recent);
 
   my_free(ud->mailbox.seq_list);
   memcpy(&ud->mailbox, &newmailbox, sizeof(newmailbox));
@@ -1607,8 +1609,9 @@ int _ic_expunge(char *tag, char **args, ClientInfo *ci)
 int _ic_search(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
-  int *result_set;
-  int i,result=0,only_ascii=0,idx=0;
+  unsigned *result_set;
+  unsigned i;
+  int result=0,only_ascii=0,idx=0;
   search_key_t sk;
 
   if (ud->state != IMAPCS_SELECTED)
@@ -1680,7 +1683,7 @@ int _ic_search(char *tag, char **args, ClientInfo *ci)
 	}
 
       /* allocate memory for result set */
-      result_set = (int*)my_malloc(sizeof(int) * ud->mailbox.exists);
+      result_set = (unsigned*)my_malloc(sizeof(unsigned) * ud->mailbox.exists);
       if (!result_set)
 	{
 	  free_searchlist(&sk.sub_search);
@@ -1732,7 +1735,7 @@ int _ic_search(char *tag, char **args, ClientInfo *ci)
   for (i=0; i<ud->mailbox.exists; i++)
     {
       if (result_set[i])
-	fprintf(ci->tx, " %llu", imapcommands_use_uid ? ud->mailbox.seq_list[i] : i+1);
+	fprintf(ci->tx, " %llu", imapcommands_use_uid ? ud->mailbox.seq_list[i] : (u64_t)(i+1));
     }
 
   fprintf(ci->tx,"\r\n");
@@ -1751,16 +1754,20 @@ int _ic_search(char *tag, char **args, ClientInfo *ci)
 int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
-  int i,fetch_start,fetch_end,result,setseen,j,k;
+  u64_t i,fetch_start,fetch_end;
+  unsigned fn;
+  int result,setseen,idx,j,k;
   int only_main_header_parsing = 1;
-  int isfirstout,idx,uid_will_be_fetched,fn;
+  int isfirstout,uid_will_be_fetched;
   int partspeclen,only_text_from_msgpart = 0;
-  int bad_response_send = 0,actual_cnt;
+  int bad_response_send = 0;
+  u64_t actual_cnt;
   fetch_items_t *fi,fetchitem;
   mime_message_t *msgpart;
   char date[IMAP_INTERNALDATE_LEN],*endptr;
   u64_t thisnum;
-  long tmpdumpsize,cnt;
+  u64_t tmpdumpsize;
+  long long cnt;
   struct list fetch_list;
   mime_message_t headermsg; /* only the rfcheader-member of this message will  be used */
   struct element *curr;
@@ -1939,16 +1946,16 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
 	      /* check if the message with this UID belongs to this mailbox */
 	      fn = binary_search(ud->mailbox.seq_list, ud->mailbox.exists, i);
-	      if (fn == -1)
+	      if (fn == (unsigned)(-1))
 		continue; 
 
-	      fprintf(ci->tx,"* %d FETCH (", fn+1);
+	      fprintf(ci->tx,"* %u FETCH (", fn+1);
 		      
 	    }
 	  else
-	    fprintf(ci->tx,"* %d FETCH (",i+1);
+	    fprintf(ci->tx,"* %llu FETCH (",i+1);
 
-	  trace(TRACE_DEBUG, "Fetching msgID %llu (fetch num %d)\r\n", thisnum, i+1);
+	  trace(TRACE_DEBUG, "Fetching msgID %llu (fetch num %llu)\r\n", thisnum, i+1);
 
 	  curr = list_getstart(&fetch_list);
 	  setseen = 0;
@@ -2113,7 +2120,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		  
 		  mseek(cached_msg.memdump, 0, SEEK_SET);
 
-		  fprintf(ci->tx, "RFC822 {%ld}\r\n", cached_msg.dumpsize);
+		  fprintf(ci->tx, "RFC822 {%llu}\r\n", cached_msg.dumpsize);
 		  send_data(ci->tx, cached_msg.memdump, cached_msg.dumpsize);
 
 		  if (fi->getRFC822)
@@ -2159,7 +2166,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		    {
 		      mseek(cached_msg.memdump, 0, SEEK_SET);
 
-		      fprintf(ci->tx, "BODY[] {%ld}\r\n", cached_msg.dumpsize);
+		      fprintf(ci->tx, "BODY[] {%llu}\r\n", cached_msg.dumpsize);
 		      send_data(ci->tx, cached_msg.memdump, cached_msg.dumpsize);
 		    }
 		  else
@@ -2170,7 +2177,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 				    (cached_msg.dumpsize - fi->bodyfetch.octetstart)) ? 
 			(cached_msg.dumpsize - fi->bodyfetch.octetstart) : fi->bodyfetch.octetcnt;
 
-		      fprintf(ci->tx, "BODY[]<%d> {%d}\r\n", fi->bodyfetch.octetstart, 
+		      fprintf(ci->tx, "BODY[]<%llu> {%llu}\r\n", fi->bodyfetch.octetstart, 
 			      actual_cnt); 
 
 		      send_data(ci->tx, cached_msg.memdump, actual_cnt);
@@ -2197,7 +2204,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
 		      mseek(cached_msg.tmpdump, 0, SEEK_SET);
 		      
-		      fprintf(ci->tx, "RFC822.HEADER {%ld}\r\n",tmpdumpsize);
+		      fprintf(ci->tx, "RFC822.HEADER {%llu}\r\n",tmpdumpsize);
 		      send_data(ci->tx, cached_msg.tmpdump, tmpdumpsize);
 		    }
 		  else
@@ -2211,7 +2218,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
 		      mseek(cached_msg.tmpdump, 0, SEEK_SET);
 		      
-		      fprintf(ci->tx, "RFC822.HEADER {%ld}\r\n",tmpdumpsize);
+		      fprintf(ci->tx, "RFC822.HEADER {%llu}\r\n",tmpdumpsize);
 		      send_data(ci->tx, cached_msg.tmpdump, tmpdumpsize);
 		    }
 		}
@@ -2224,7 +2231,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
 		  mseek(cached_msg.tmpdump, 0, SEEK_SET);
 
-		  fprintf(ci->tx, "RFC822.TEXT {%ld}\r\n",tmpdumpsize);
+		  fprintf(ci->tx, "RFC822.TEXT {%llu}\r\n",tmpdumpsize);
 		  send_data(ci->tx, cached_msg.tmpdump, tmpdumpsize);
 
 		  setseen = 1;
@@ -2332,7 +2339,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			      if (cnt<0) cnt = 0;
 			      if (cnt > fi->bodyfetch.octetcnt) cnt = fi->bodyfetch.octetcnt;
  
-			      fprintf(ci->tx, "]<%u> {%ld}\r\n",
+			      fprintf(ci->tx, "]<%llu> {%llu}\r\n",
 				      fi->bodyfetch.octetstart, cnt);
 			      
 			      mseek(cached_msg.tmpdump, fi->bodyfetch.octetstart, SEEK_SET);
@@ -2340,7 +2347,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			  else
 			    {
 			      cnt = tmpdumpsize;
-			      fprintf(ci->tx, "] {%ld}\r\n", tmpdumpsize);
+			      fprintf(ci->tx, "] {%llu}\r\n", tmpdumpsize);
 			      mseek(cached_msg.tmpdump, 0, SEEK_SET);
 			    }
 
@@ -2368,7 +2375,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			      if (cnt<0) cnt = 0;
 			      if (cnt > fi->bodyfetch.octetcnt) cnt = fi->bodyfetch.octetcnt;
  
-			      fprintf(ci->tx, "]<%u> {%ld}\r\n",
+			      fprintf(ci->tx, "]<%llu> {%llu}\r\n",
 				      fi->bodyfetch.octetstart, cnt);
 			      
 			      mseek(cached_msg.tmpdump, fi->bodyfetch.octetstart, SEEK_SET);
@@ -2376,7 +2383,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			  else
 			    {
 			      cnt = tmpdumpsize;
-			      fprintf(ci->tx, "] {%ld}\r\n", tmpdumpsize);
+			      fprintf(ci->tx, "] {%llu}\r\n", tmpdumpsize);
 			      mseek(cached_msg.tmpdump, 0, SEEK_SET);
 			    }
 
@@ -2406,7 +2413,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 				  if (cnt<0) cnt = 0;
 				  if (cnt > fi->bodyfetch.octetcnt) cnt = fi->bodyfetch.octetcnt;
  
-				  fprintf(ci->tx, "]<%u> {%ld}\r\n",
+				  fprintf(ci->tx, "]<%llu> {%llu}\r\n",
 					  fi->bodyfetch.octetstart, cnt);
 			      
 				  mseek(cached_msg.tmpdump, fi->bodyfetch.octetstart, SEEK_SET);
@@ -2414,7 +2421,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			      else
 				{
 				  cnt = tmpdumpsize;
-				  fprintf(ci->tx, "] {%ld}\r\n", tmpdumpsize);
+				  fprintf(ci->tx, "] {%llu}\r\n", tmpdumpsize);
 				  mseek(cached_msg.tmpdump, 0, SEEK_SET);
 				}
 
@@ -2463,7 +2470,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 				  if (cnt<0) cnt = 0;
 				  if (cnt > fi->bodyfetch.octetcnt) cnt = fi->bodyfetch.octetcnt;
  
-				  fprintf(ci->tx, "<%u> {%ld}\r\n",
+				  fprintf(ci->tx, "<%llu> {%llu}\r\n",
 					  fi->bodyfetch.octetstart, cnt);
 			      
 				  mseek(cached_msg.tmpdump, fi->bodyfetch.octetstart, SEEK_SET);
@@ -2471,7 +2478,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			      else
 				{
 				  cnt = tmpdumpsize;
-				  fprintf(ci->tx, "{%ld}\r\n", tmpdumpsize);
+				  fprintf(ci->tx, "{%llu}\r\n", tmpdumpsize);
 				  mseek(cached_msg.tmpdump, 0, SEEK_SET);
 				}
 
@@ -2519,7 +2526,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 				  if (cnt<0) cnt = 0;
 				  if (cnt > fi->bodyfetch.octetcnt) cnt = fi->bodyfetch.octetcnt;
  
-				  fprintf(ci->tx, "<%u> {%ld}\r\n",
+				  fprintf(ci->tx, "<%llu> {%llu}\r\n",
 					  fi->bodyfetch.octetstart, cnt);
 			      
 				  mseek(cached_msg.tmpdump, fi->bodyfetch.octetstart, SEEK_SET);
@@ -2527,7 +2534,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			      else
 				{
 				  cnt = tmpdumpsize;
-				  fprintf(ci->tx, "{%ld}\r\n", tmpdumpsize);
+				  fprintf(ci->tx, "{%llu}\r\n", tmpdumpsize);
 				  mseek(cached_msg.tmpdump, 0, SEEK_SET);
 				}
 
@@ -2558,7 +2565,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 				  if (cnt<0) cnt = 0;
 				  if (cnt > fi->bodyfetch.octetcnt) cnt = fi->bodyfetch.octetcnt;
  
-				  fprintf(ci->tx, "<%u> {%ld}\r\n",
+				  fprintf(ci->tx, "<%llu> {%llu}\r\n",
 					  fi->bodyfetch.octetstart, cnt);
 			      
 				  mseek(cached_msg.tmpdump, fi->bodyfetch.octetstart, SEEK_SET);
@@ -2566,7 +2573,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			      else
 				{
 				  cnt = tmpdumpsize;
-				  fprintf(ci->tx, "{%ld}\r\n", tmpdumpsize);
+				  fprintf(ci->tx, "{%llu}\r\n", tmpdumpsize);
 				  mseek(cached_msg.tmpdump, 0, SEEK_SET);
 				}
 
@@ -2664,7 +2671,9 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
   char *endptr;
-  int i,store_start,store_end,result,j,fn;
+  u64_t i,store_start,store_end;
+  unsigned fn;
+  int result,j;
   int be_silent=0,action=IMAPFA_NONE;
   int flaglist[IMAP_NFLAGS];
   u64_t thisnum;
@@ -2807,14 +2816,14 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
 	    {
 	      /* check if the message with this UID belongs to this mailbox */
 	      fn = binary_search(ud->mailbox.seq_list, ud->mailbox.exists, i);
-	      if (fn == -1)
+	      if (fn == (unsigned)(-1))
 		continue; 
 
 	      if (!be_silent)
-		fprintf(ci->tx,"* %d FETCH (FLAGS (", fn+1);
+		fprintf(ci->tx,"* %u FETCH (FLAGS (", fn+1);
 	    }
 	  else if (!be_silent)
-	      fprintf(ci->tx,"* %d FETCH (FLAGS (",i+1);
+	      fprintf(ci->tx,"* %llu FETCH (FLAGS (",i+1);
 
 	  switch (action)
 	    {
@@ -2886,8 +2895,10 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
 int _ic_copy(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
-  int i,copy_start,copy_end,result,fn;
+  u64_t i,copy_start,copy_end;
+  unsigned fn;
   u64_t destmboxid,thisnum;
+  int result;
   char *endptr;
 
   if (!check_state_and_args("COPY", tag, args, 2, IMAPCS_SELECTED, ci))
@@ -2975,7 +2986,7 @@ int _ic_copy(char *tag, char **args, ClientInfo *ci)
 	    {
 	      /* check if the message with this UID belongs to this mailbox */
 	      fn = binary_search(ud->mailbox.seq_list, ud->mailbox.exists, i);
-	      if (fn == -1)
+	      if (fn == (unsigned)(-1))
 		continue; 
 	    }
 
