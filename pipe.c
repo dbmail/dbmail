@@ -88,12 +88,13 @@ int insert_messages(char *firstblock, unsigned long headersize)
   char *updatequery;
   char *unique_id;
   char *strblock;
-  char *domain;
+  char *domain, *ptr;
   size_t usedmem=0, totalmem=0;
   struct list userids;
   struct list messageids;
-  unsigned long temp;
-
+  unsigned long temp,userid;
+  int i;
+  
 	/* step 1.
 	 inserting first message
 	 first insert the header into the database
@@ -123,8 +124,8 @@ int insert_messages(char *firstblock, unsigned long headersize)
   while (tmp!=NULL)
     {
       /* loops all mailusers and adds them to the list */
-      /* db_check_user(): returns a list with longs containing 
-		 * userid's */
+      /* db_check_user(): returns a list with character array's containing 
+		 * either userid's or forward addresses */
       db_check_user((char *)tmp->data,&userids);
       trace (TRACE_DEBUG,"insert_messages(): user [%s] found total of [%d] aliases",(char *)tmp->data,
 	     userids.total_nodes);
@@ -151,21 +152,50 @@ int insert_messages(char *firstblock, unsigned long headersize)
       /* traversing list with userids and creating a message for each userid */
       trace (TRACE_DEBUG,"insert_messages(): -----> debug tmp is [%d],nextnode is [%d]",
 	     tmp,tmp->nextnode);
-      temp=db_insert_message ((unsigned long*)tmp->data);
+		
+		/* checking if tmp->data is numeric. If so, we should try to 
+		 * insert to that address in the database 
+		 * else we need to forward the message 
+		 * ---------------------------------------------------------
+		 * FIXME: The id needs to be checked!, it might be so that it is set in the 
+		 * virtual user table but that doesn't mean it's valid! */
 
-		/* message id is an array of returned message id's
-		 * all messageblks are inserted for each message id
-		 * we could change this in the future for efficiency
-		 * still we would need a way of checking which messageblks
-		 * belong to which messages */
+		ptr=(char *)tmp->data;
+		i = 0;
 		
-		/* adding this messageid to the message id list */
-      list_nodeadd(&messageids,&temp,sizeof(temp));
+		while (isdigit(ptr[0]))
+				{
+				i++;
+				ptr++;
+				}
 		
-      /* adding the first header block per user */
-      db_insert_message_block (firstblock,temp);
+		if (i<strlen((char *)tmp->data))
+			{
+				/* it's probably a forward to another address
+				 * to make sure it could be a mailaddress we're checking for a @*/
+			}
+
+		else
+		{
+			userid=atol((char *)tmp->data);
+
+	      temp=db_insert_message ((unsigned long*)tmp->data);
+
+			/* message id is an array of returned message id's
+			 * all messageblks are inserted for each message id
+			 * we could change this in the future for efficiency
+			 * still we would need a way of checking which messageblks
+			 * belong to which messages */
+		
+			/* adding this messageid to the message id list */
+			list_nodeadd(&messageids,&temp,sizeof(temp));
+		
+		   /* adding the first header block per user */
+			db_insert_message_block (firstblock,temp);
 			
-      tmp=tmp->nextnode;
+		   tmp=tmp->nextnode;
+		}
+
     }
 
   /* reading rest of the pipe and creating messageblocks 

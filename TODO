@@ -1,5 +1,6 @@
 $Id$
 
+- message arrival in datatime field 
 - dbmail-smtp should return failed inserts to sender
 - it should be possible to send to external addresses
 - fix the resolving (pop daemon is not resolving)

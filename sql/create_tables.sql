@@ -1,11 +1,11 @@
 # $Id$
 
-CREATE DATABASE dbmail_dev;
-USE dbmail_dev;
+CREATE DATABASE dbmail;
+USE dbmail;
 CREATE TABLE aliases (
    alias_idnr int(11) DEFAULT '0' NOT NULL auto_increment,
    alias varchar(100) NOT NULL,
-   useridnr int(11) NOT NULL,
+   deliver_to varchar(250) NOT NULL,
    PRIMARY KEY (alias_idnr),
    KEY alias_idnr (alias_idnr),
    UNIQUE alias_idnr_2 (alias_idnr)
@@ -50,7 +50,7 @@ CREATE TABLE message (
    recent_flag tinyint(1) default '0' not null,
    draft_flag tinyint(1) default '0' not null,
    unique_id varchar(70) NOT NULL,
-   internal_date date default '0' not null,
+   internal_date datetime default '0' not null,
    status tinyint(3) unsigned zerofill default '000' not null,
    PRIMARY KEY (messageidnr),
    KEY messageidnr (messageidnr),

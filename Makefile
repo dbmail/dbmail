@@ -19,7 +19,7 @@ LIB = -lmysqlclient
 # Added the -D_BSD_SOURCE option to suppress warnings
 # from compiler about vsyslog function 
 
-CFLAGS = -Wall -ggdb -D_BSD_SOURCE 
+CFLAGS = -Wall -ggdb -D_BSD_SOURCE -O2
 
 .PHONY: clean install
 
@@ -58,7 +58,7 @@ serverservice.o: serverservice.h debug.h
 maintenance.o: maintenance.h
 
 distclean: clean
-	rm -rf dbmail-smtp dbmail-pop3d dbmail-imap4d dbmail-maintenance
+	rm -rf dbmail-smtp dbmail-pop3d dbmail-maintenance dbmail-imapd
 
 clean:
 	rm -f *.o core

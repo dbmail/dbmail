@@ -13,6 +13,8 @@
 #define MSGBUF_WINDOWSIZE (128ul*1024ul)
 #define MSGBUF_FORCE_UPDATE -1
 
+#define MAX_EMAIL_SIZE 250
+
 MYSQL conn;  
 MYSQL_RES *res,*_msg_result;
 MYSQL_ROW row;
@@ -186,7 +188,6 @@ int db_check_user (char *username, struct list *userids)
 {
   char *ckquery;
   int occurences=0;
-  unsigned long messageid;
 	
   trace(TRACE_DEBUG,"db_check_user(): checking user [%s] in alias table",username);
   memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
@@ -211,12 +212,11 @@ int db_check_user (char *username, struct list *userids)
       return occurences; 
     } 
 	
-  /* row[2] is the idnumber */
+  /* row[2] is the deliver_to field */
   while ((row = mysql_fetch_row(res))!=NULL)
     {
       occurences++;
-      messageid=atol(row[2]);
-      list_nodeadd(userids, &messageid,sizeof(messageid));
+      list_nodeadd(userids, &row[2],sizeof(row[2]));
     }
 
   trace(TRACE_INFO,"db_check_user(): user [%s] has [%d] entries",username,occurences);
