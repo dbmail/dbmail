@@ -1347,7 +1347,7 @@ u64_t db_deleted_purge()
     }
   
   for (i=0; i<n; i++)
-    msgids[i] = strtoull(PQgetvalue(res, 0, 0), NULL, 10);
+    msgids[i] = strtoull(PQgetvalue(res, i, 0), NULL, 10);
 
   PQclear(res);
 
