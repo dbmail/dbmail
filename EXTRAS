@@ -8,3 +8,6 @@ DBmail extra's
 	"|/usr/bin/procmail" will pipe the message for the alias to procmail
 	"!/usr/bin/procmail" will do the same but add a mbox style header 
 
+-	Conversion programs
+	raw-convert.c -> reads mbox styled mailboxes and inserts them into DBmail
+	

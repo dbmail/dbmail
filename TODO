@@ -2,4 +2,7 @@
  * (c) 2000-2002 IC&S, The Netherlands */
 
 
+-	compilation through autoconf/automake
+-	LMTP server (this will speed up MTA -> dbmail communication)
+-	Sieve scripting language
 
