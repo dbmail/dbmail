@@ -6,19 +6,22 @@
 
 #include "../dbsearch.h"
 #include "../db.h"
-#include "/usr/include/mysql/mysql.h"
+#include "/usr/local/pgsql/include/libpq-fe.h"
 #include "../rfcmsg.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
 /* 
- * var's from dbmysql.c: 
+ * var's from dbpgsql.c: 
  */
-extern char *query; 
-extern MYSQL conn;
-extern MYSQL_RES *res;
-extern MYSQL_ROW row;
+
+extern PGconn *conn;  
+extern PGresult *res;
+extern PGresult *checkres;
+extern char *query;
+extern char *value; /* used for PQgetvalue */
+extern unsigned long PQcounter; /* used for PQgetvalue loops */
 
 const char *month_desc[]= 
 { 

@@ -23,9 +23,7 @@
 PGconn *conn;  
 PGresult *res;
 PGresult *checkres;
-
 char *query = 0;
-
 char *value = NULL; /* used for PQgetvalue */
 unsigned long PQcounter = 0; /* used for PQgetvalue loops */
 
@@ -113,7 +111,7 @@ u64_t db_insert_result (char *sequence_identifier)
 }
 
 
-int db_query (const char *thequery, PGresult *target_result)
+int db_query (const char *thequery, void *target_result)
 {
     unsigned int querysize = 0;
     int PQresultStatusVar;
@@ -124,27 +122,27 @@ int db_query (const char *thequery, PGresult *target_result)
 
         if (querysize > 0 )
         {
-        target_result = PQexec (conn, thequery);
-        PQresultStatusVar = PQresultStatus (target_result);
+        (PGresult *)target_result = PQexec (conn, thequery);
+        PQresultStatusVar = PQresultStatus ((PGresult *)target_result);
 
         switch (PQresultStatusVar)
             {
                 case PGRES_BAD_RESPONSE:
                 {
                     trace (TRACE_ERROR,"db_query(): postgresql error: BAD_RESPONSE");
-                    PQclear (target_result);
+                    PQclear ((PGresult *)target_result);
                     return -1;
                 }
                 case PGRES_NONFATAL_ERROR:
                 {
                     trace (TRACE_ERROR,"db_query(): postgresql error: NONFATAL_ERROR");
-                    PQclear (target_result);
+                    PQclear ((PGresult *)target_result);
                     return -1;
                 }
                 case PGRES_FATAL_ERROR:
                 {
                     trace (TRACE_ERROR,"db_query(): postgresql error: FATAL_ERROR");
-                    PQclear (target_result);
+                    PQclear ((PGresult *)target_result);
                     return -1;
                 }
             }
@@ -229,8 +227,9 @@ char *db_get_config_item (char *item, int type)
     }
 	
     value = PQgetvalue (res, 0, 0);
-    result=(char *)my_malloc(strlen(value+1);
+    result=(char *)my_malloc(strlen(value+1));
     if (result!=NULL)
+    {
         strcpy (result, value);
       trace (TRACE_DEBUG,"Ok result [%s]\n",result);
     }
@@ -551,7 +550,6 @@ int db_send_message_lines (void *fstream, u64_t messageidnr, long lines, int no_
   char *buffer = NULL;
   char *nextpos, *tmppos = NULL;
   int block_count;
-  unsigned long *lengths;
   u64_t rowlength;
   
   trace (TRACE_DEBUG,"db_send_message_lines(): request for [%d] lines",lines);
@@ -577,7 +575,7 @@ int db_send_message_lines (void *fstream, u64_t messageidnr, long lines, int no_
 
   PQcounter = 0;
 
-  while (PQcounter<PQntuples(res)) && ((lines>0) || (lines==-2) || (block_count==0)))
+  while ((PQcounter<PQntuples(res)) && ((lines>0) || (lines==-2) || (block_count==0)))
   {
       value = PQgetvalue (res, PQcounter, 2);
       nextpos = value;
@@ -787,6 +785,7 @@ int db_update_pop (struct session *sessionptr)
 u64_t db_check_mailboxsize (u64_t mailboxid)
 {
   PGresult *localres;
+  char *localrow;
   
   /* checks the size of a mailbox */
   u64_t size;
@@ -975,9 +974,11 @@ u64_t db_deleted_purge()
  */
 u64_t db_set_deleted ()
 
-u64_t affected_rows;
 
 {
+
+    u64_t affected_rows;
+  
   /* first we're deleting all the messageblks */
   snprintf (query,DEF_QUERYSIZE,"UPDATE messages SET status=003 WHERE status=002");
   trace (TRACE_DEBUG,"db_set_deleted(): executing query [%s]",query);
@@ -1088,13 +1089,14 @@ int db_cleanup_iplog(const char *lasttokeep)
 int db_icheck_messageblks(int *nlost, u64_t **lostlist)
 {
   int i;
+  char *row;
   *nlost = 0;
   *lostlist = NULL;
 
   /* this query can take quite some time! */
-  snprintf (query,DEF_QUERYSIZE,"SELECT messageblk.messageblknr FROM messageblk "
-	    "LEFT JOIN message ON messageblk.messageidnr = message.messageidnr "
-	    "WHERE message.messageidnr IS NULL");
+  snprintf (query,DEF_QUERYSIZE,"SELECT messageblk.message_blknr FROM messageblks "
+	    "LEFT JOIN message ON messageblks.message_idnr = message.message_idnr "
+	    "WHERE messages.message_idnr IS NULL");
 
   trace (TRACE_DEBUG,"db_icheck_messageblks(): executing query [%s]",query);
 
@@ -1104,12 +1106,6 @@ int db_icheck_messageblks(int *nlost, u64_t **lostlist)
       return -1;
     }
   
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace (TRACE_ERROR,"db_icheck_messageblks(): mysql_store_result failed:  %s",mysql_error(&conn));
-      return -1;
-    }
-    
   *nlost = PQntuples(res);
   trace(TRACE_DEBUG,"db_icheck_messageblks(): found %d lost message blocks\n", *nlost);
 
@@ -1126,9 +1122,15 @@ int db_icheck_messageblks(int *nlost, u64_t **lostlist)
     }
 
   i = 0;
-  while ((row = mysql_fetch_row(res)) && i<*nlost)
-    (*lostlist)[i++] = strtoul(row[0], NULL, 10);
+  PQcounter = 0;
 
+  
+  while ((PQcounter<PQntuples(res)) && i<*nlost)
+    {
+        row = PQgetvalue (res, PQcounter, 0);    
+        (*lostlist)[i++] = strtoul(row, NULL, 10);
+        PQcounter++;
+    }
   return 0;
 }
 
@@ -1146,12 +1148,13 @@ int db_icheck_messageblks(int *nlost, u64_t **lostlist)
 int db_icheck_messages(int *nlost, u64_t **lostlist)
 {
   int i;
+  char *row;
   *nlost = 0;
   *lostlist = NULL;
 
-  snprintf (query,DEF_QUERYSIZE,"SELECT message.messageidnr FROM message "
-	    "LEFT JOIN mailbox ON message.mailboxidnr = mailbox.mailboxidnr "
-	    "WHERE mailbox.mailboxidnr IS NULL");
+  snprintf (query,DEF_QUERYSIZE,"SELECT messages.message_idnr FROM message "
+	    "LEFT JOIN mailboxes ON message.mailbox_idnr = mailboxes.mailbox_idnr "
+	    "WHERE mailboxes.mailbox_idnr IS NULL");
 
   trace (TRACE_DEBUG,"db_icheck_messages(): executing query [%s]",query);
 
@@ -1161,12 +1164,6 @@ int db_icheck_messages(int *nlost, u64_t **lostlist)
       return -1;
     }
   
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace (TRACE_ERROR,"db_icheck_messages(): mysql_store_result failed:  %s",mysql_error(&conn));
-      return -1;
-    }
-    
   *nlost = PQntuples(res);
   trace(TRACE_DEBUG,"db_icheck_messages(): found %d lost messages\n", *nlost);
 
@@ -1183,8 +1180,14 @@ int db_icheck_messages(int *nlost, u64_t **lostlist)
     }
 
   i = 0;
-  while ((row = mysql_fetch_row(res)) && i<*nlost)
-    (*lostlist)[i++] = strtoul(row[0], NULL, 10);
+  PQcounter = 0;
+
+  while ((PQcounter<PQntuples(res)) && i<*nlost)
+  {
+      row = PQgetvalue (res, PQcounter, 0);
+    (*lostlist)[i++] = strtoul(row, NULL, 10);
+    PQcounter++;
+  }
 
   return 0;
 }
@@ -1238,8 +1241,10 @@ int db_icheck_mailboxes(int *nlost, u64_t **lostlist)
   PQcounter = 0;  
       
   while ((PQcounter < PQntuples(res)) && i<*nlost)
+  {
     (*lostlist)[i++] = strtoul(PQgetvalue (res, PQcounter, 0), NULL, 10);
-
+    PQcounter++;
+  }
   return 0;
 }
 
@@ -1300,7 +1305,7 @@ int db_disconnect()
   my_free(query);
   query = NULL;
 
-  PQfinish(&conn);
+  PQfinish(conn);
   return 0;
 }
 
@@ -1617,6 +1622,7 @@ int db_findmailbox_by_regex(u64_t ownerid, const char *pattern,
 int db_getmailbox(mailbox_t *mb, u64_t userid)
 {
   u64_t i;
+  char *row;
 
   /* free existing MSN list */
   if (mb->seq_list)
@@ -2121,7 +2127,7 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
   time(&td);              /* get time */
 
   /* create temporary tables */
-  if (db_query(create_tmp_tables_queries[0]) == -1 || db_query(create_tmp_tables_queries[1]) == -1)
+  if (db_query(create_tmp_tables_queries[0],res) == -1 || db_query(create_tmp_tables_queries[1],res) == -1)
     {
       trace(TRACE_ERROR, "db_copymsg(): could not create temporary tables\n");
       return -1;
@@ -2162,7 +2168,7 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
       trace(TRACE_ERROR, "db_copymsg(): could not insert temporary message blocks\n");
 
       /* drop temporary tables */
-      if (db_query(drop_tmp_tables_queries[0]) == -1 || db_query(drop_tmp_tables_queries[1]) == -1)
+      if (db_query(drop_tmp_tables_queries[0],res) == -1 || db_query(drop_tmp_tables_queries[1],res) == -1)
 	trace(TRACE_ERROR, "db_copymsg(): could not drop temporary tables\n");
 
       return -1;
@@ -2674,8 +2680,8 @@ int db_search_range(db_pos_t start, db_pos_t end, const char *key, u64_t msguid)
       /* ROELFIX:
          PQgetlength haalt de lengte op via resultset res, tupel, field
          Geen idee hoe je dat hier oplost :) 
-         */
       endpos   = (i == end.block) ? end.pos+1 : (PQgetlength(res,i,0))[0];
+         */
 
       distance = endpos - startpos;
 
@@ -2688,7 +2694,7 @@ int db_search_range(db_pos_t start, db_pos_t end, const char *key, u64_t msguid)
 	    }
 	}
 	
-      row = PGgetvalue (res, i, 0); /* fetch next row */
+      row = PQgetvalue (res, i, 0); /* fetch next row */
     }
 
   PQclear(res);

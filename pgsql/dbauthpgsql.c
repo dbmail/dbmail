@@ -6,7 +6,7 @@
  */
 
 #include "../dbauth.h"
-#include "/usr/include/mysql/mysql.h"
+#include "/usr/local/pgsql/include/libpq-fe.h"
 #include "../list.h"
 #include "../debug.h"
 #include <stdlib.h>
@@ -17,37 +17,35 @@
 
 
 /* 
- * var's from dbmysql.c: 
- */
-extern char *query; 
-extern MYSQL conn;
-extern MYSQL_RES *res;
-extern MYSQL_ROW row;
+* var's from dbpgsql.c: 
+*/
+
+extern PGconn *conn;  
+extern PGresult *res;
+extern PGresult *checkres;
+extern char *query;
+extern char *value; /* used for PQgetvalue */
+extern unsigned long PQcounter; /* used for PQgetvalue loops */
 
 
 u64_t db_user_exists(const char *username)
 {
   u64_t uid;
+  char *row;
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT useridnr FROM user WHERE userid='%s'",username);
+  snprintf(query, DEF_QUERYSIZE, "SELECT userid FROM user WHERE userid='%s'",username);
 
-  if (db_query(query)==-1)
+  if (db_query(query,res)==-1)
     {
       trace(TRACE_ERROR, "db_user_exists(): could not execute query\n");
       return -1;
     }
 
-  if ((res = mysql_store_result(&conn)) == NULL) 
-    {
-      trace(TRACE_ERROR,"db_user_exists: mysql_store_result failed: %s",mysql_error(&conn));
-      return -1;
-    }
+  row = PQgetvalue(res, 0, 0);
   
-  row = mysql_fetch_row(res);
-  
-  uid = (row && row[0]) ? strtoul(row[0], 0, 0) : 0;
+  uid = (row) ? strtoul(row, 0, 0) : 0;
 
-  mysql_free_result(res);
+  PQclear(res);
 
   return uid;
 }
@@ -67,53 +65,43 @@ int db_get_known_users(struct list *users)
   /* do a inverted (DESC) query because adding the names to the final list inverts again */
   snprintf(query, DEF_QUERYSIZE, "SELECT userid FROM user ORDER BY userid DESC");
 
-  if (db_query(query) == -1)
+  if (db_query(query, res) == -1)
     {
       trace(TRACE_ERROR,"db_get_known_users(): could not retrieve user list\n");
       return -1;
     }
 
-  if ((res = mysql_store_result(&conn)) == NULL) 
+  for (PQcounter = 0; PQcounter < PQntuples(res); PQcounter++)
     {
-      trace(TRACE_ERROR,"db_get_known_users(): mysql_store_result failed: %s",mysql_error(&conn));
-      return -1;
-    }
-  
-  while ((row = mysql_fetch_row(res)))
-    {
-      if (!list_nodeadd(users, row[0], strlen(row[0])+1))
-	{
-	  list_freelist(&users->start);
-	  return -2;
-	}
+        value = PQgetvalue(res, PQcounter, 0);
+      if (!list_nodeadd(users, value, strlen(value)+1))
+	    {
+	     list_freelist(&users->start);
+	    return -2;
+	    }
     }
       
-  mysql_free_result(res);
+  PQclear(res);
   return 0;
 }
 
 u64_t db_getclientid(u64_t useridnr)
 {
   u64_t cid;
+  char *row;
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT clientid FROM user WHERE useridnr = %llu",useridnr);
+  snprintf(query, DEF_QUERYSIZE, "SELECT client_idnr FROM user WHERE user_idnr = %llu",useridnr);
 
-  if (db_query(query) == -1)
+  if (db_query(query, res) == -1)
     {
       trace(TRACE_ERROR,"db_getclientid(): could not retrieve client id for user [%llu]\n",useridnr);
       return -1;
     }
 
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace(TRACE_ERROR,"db_getclientid(): could not store query result: [%s]\n",mysql_error(&conn));
-      return -1;
-    }
+  row = PQgetvalue (res, 0, 0);
+  cid = (row) ? strtoul(row, 0, 10) : -1;
 
-  row = mysql_fetch_row(res);
-  cid = (row && row[0]) ? strtoul(row[0], 0, 10) : -1;
-
-  mysql_free_result(res);
+  PQclear(res);
   return cid;
 }
 
@@ -121,26 +109,20 @@ u64_t db_getclientid(u64_t useridnr)
 u64_t db_getmaxmailsize(u64_t useridnr)
 {
   u64_t maxmailsize;
+  char *row;
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT maxmail_size FROM user WHERE useridnr = %llu",useridnr);
+  snprintf(query, DEF_QUERYSIZE, "SELECT maxmail_size FROM user WHERE user_idnr = %llu",useridnr);
 
-  if (db_query(query) == -1)
+  if (db_query(query,res) == -1)
     {
       trace(TRACE_ERROR,"db_getmaxmailsize(): could not retrieve client id for user [%llu]\n",useridnr);
       return -1;
     }
 
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace(TRACE_ERROR,"db_getmaxmailsize(): could not store query result: [%s]\n",
-	    mysql_error(&conn));
-      return -1;
-    }
+  row = PQgetvalue(res, 0, 0);
+  maxmailsize = (row) ? strtoul(row, 0, 10) : -1;
 
-  row = mysql_fetch_row(res);
-  maxmailsize = (row && row[0]) ? strtoul(row[0], 0, 10) : -1;
-
-  mysql_free_result(res);
+  PQclear(res);
   return maxmailsize;
 }
 
@@ -150,23 +132,16 @@ int db_check_user (char *username, struct list *userids, int checks)
 {
   
   int occurences=0;
-  MYSQL_RES *myres;
-  MYSQL_ROW myrow;
+  PGresult *myres;
   
   trace(TRACE_DEBUG,"db_check_user(): checking user [%s] in alias table",username);
   
   snprintf (query, DEF_QUERYSIZE,  "SELECT * FROM aliases WHERE alias=\"%s\"",username);
   trace(TRACE_DEBUG,"db_check_user(): executing query : [%s] checks [%d]",query, checks);
-  if (db_query(query)==-1)
+  if (db_query(query, myres)==-1)
       return 0;
   
-  if ((myres = mysql_store_result(&conn)) == NULL) 
-    {
-      trace(TRACE_ERROR,"db_check_user: mysql_store_result failed: %s",mysql_error(&conn));
-      return 0;
-    }
-
-  if (mysql_num_rows(myres)<1) 
+  if (PQntuples(myres)<1) 
   {
       if (checks>0)
       {
@@ -176,28 +151,29 @@ int db_check_user (char *username, struct list *userids, int checks)
 
           list_nodeadd(userids, username, strlen(username)+1);
           trace (TRACE_DEBUG,"db_check_user(): adding [%s] to deliver_to address",username);
-          mysql_free_result(myres);
+          PQclear(myres);
           return 1;
       }
       else
       {
       trace (TRACE_DEBUG,"db_check_user(): user %s not in aliases table", username);
-      mysql_free_result(myres);
+      PQclear(myres);
       return 0; 
       }
   }
       
   trace (TRACE_DEBUG,"db_check_user(): into checking loop");
   /* myrow[2] is the deliver_to field */
-  while ((myrow = mysql_fetch_row(myres))!=NULL)
+  for (PQcounter=0; PQcounter < PQntuples(res); PQcounter++)
   {
       /* do a recursive search for myrow[2] */
-      trace (TRACE_DEBUG,"db_check_user(): checking user %s to %s",username, myrow[2]);
-      occurences += db_check_user (myrow[2], userids, 1);
+      value = PQgetvalue(res,PQcounter, 2);
+      trace (TRACE_DEBUG,"db_check_user(): checking user %s to %s",username, value);
+      occurences += db_check_user (value, userids, 1);
   }
   
   /* trace(TRACE_INFO,"db_check_user(): user [%s] has [%d] entries",username,occurences); */
-  mysql_free_result(myres);
+  PQclear(myres);
 
   return occurences;
 }
@@ -216,27 +192,21 @@ u64_t db_adduser (char *username, char *password, char *clientid, char *maxmail)
   /* first check to see if this user already exists */
   snprintf(query, DEF_QUERYSIZE, "SELECT * FROM user WHERE userid = '%s'", username);
 
-  if (db_query(query) == -1)
+  if (db_query(query, res) == -1)
     {
       /* query failed */
       trace (TRACE_ERROR, "db_adduser(): query [%s] failed\n", query);
       return -1;
     }
 
-  if ((res = mysql_store_result(&conn)) == NULL) 
-    {
-      trace(TRACE_ERROR,"db_adduser(): mysql_store_result failed: %s",mysql_error(&conn));
-      return 0;
-    }
-
-  if (mysql_num_rows(res) > 0)
+  if (PQntuples(res) > 0)
     {
       /* this username already exists */
       trace(TRACE_ERROR,"db_adduser(): user already exists\n");
       return -1;
     }
 
-  mysql_free_result(res);
+  PQclear(res);
 
   size = strtoul(maxmail,&tst,10);
   if (tst)
@@ -248,27 +218,27 @@ u64_t db_adduser (char *username, char *password, char *clientid, char *maxmail)
 	size *= 1000;
     }
       
-  snprintf (query, DEF_QUERYSIZE,"INSERT INTO user (userid,passwd,clientid,maxmail_size) VALUES "
+  snprintf (query, DEF_QUERYSIZE,"INSERT INTO user (userid,passwd,client_idnr,maxmail_size) VALUES "
 	   "('%s','%s',%s,%llu)",
 	   username,password,clientid, size);
 	
-  if (db_query(query) == -1)
+  if (db_query(query, res) == -1)
     {
       /* query failed */
       trace (TRACE_ERROR, "db_adduser(): query for adding user failed : [%s]", query);
       return -1;
     }
 
-  useridnr = db_insert_result ();
+  useridnr = db_insert_result ("user_idnr");
 	
   /* creating query for adding mailbox */
-  snprintf (query, DEF_QUERYSIZE,"INSERT INTO mailbox (owneridnr, name) VALUES (%llu,'INBOX')",
+  snprintf (query, DEF_QUERYSIZE,"INSERT INTO mailboxes (owner_idnr, name) VALUES (%llu,'INBOX')",
 	   useridnr);
 	
   trace (TRACE_DEBUG,"db_adduser(): executing query for mailbox: [%s]", query);
 
 	
-  if (db_query(query))
+  if (db_query(query, res))
     {
       trace (TRACE_ERROR,"db_adduser(): query failed for adding mailbox: [%s]",query);
       return -1;
@@ -283,7 +253,7 @@ int db_delete_user(const char *username)
 {
   snprintf (query, DEF_QUERYSIZE, "DELETE FROM user WHERE userid = '%s'",username);
 
-  if (db_query(query) == -1)
+  if (db_query(query, res) == -1)
     {
       /* query failed */
       trace (TRACE_ERROR, "db_delete_user(): query for removing user failed : [%s]", query);
@@ -295,10 +265,10 @@ int db_delete_user(const char *username)
   
 int db_change_username(u64_t useridnr, const char *newname)
 {
-  snprintf(query, DEF_QUERYSIZE, "UPDATE user SET userid = '%s' WHERE useridnr=%llu", 
+  snprintf(query, DEF_QUERYSIZE, "UPDATE user SET userid = '%s' WHERE user_idnr=%llu", 
 	   newname, useridnr);
 
-  if (db_query(query) == -1)
+  if (db_query(query, res) == -1)
     {
       trace(TRACE_ERROR,"db_change_username(): could not change name for user [%llu]\n",useridnr);
       return -1;
@@ -310,10 +280,10 @@ int db_change_username(u64_t useridnr, const char *newname)
 
 int db_change_password(u64_t useridnr, const char *newpass)
 {
-  snprintf(query, DEF_QUERYSIZE, "UPDATE user SET passwd = '%s' WHERE useridnr=%llu", 
+  snprintf(query, DEF_QUERYSIZE, "UPDATE user SET passwd = '%s' WHERE user_idnr=%llu", 
 	   newpass, useridnr);
 
-  if (db_query(query) == -1)
+  if (db_query(query, res) == -1)
     {
       trace(TRACE_ERROR,"db_change_password(): could not change passwd for user [%llu]\n",useridnr);
       return -1;
@@ -325,10 +295,10 @@ int db_change_password(u64_t useridnr, const char *newpass)
 
 int db_change_clientid(u64_t useridnr, u64_t newcid)
 {
-  snprintf(query, DEF_QUERYSIZE, "UPDATE user SET clientid = %llu WHERE useridnr=%llu", 
+  snprintf(query, DEF_QUERYSIZE, "UPDATE user SET clientid = %llu WHERE user_idnr=%llu", 
 	   newcid, useridnr);
 
-  if (db_query(query) == -1)
+  if (db_query(query, res) == -1)
     {
       trace(TRACE_ERROR,"db_change_password(): could not change client id for user [%llu]\n",useridnr);
       return -1;
@@ -339,10 +309,10 @@ int db_change_clientid(u64_t useridnr, u64_t newcid)
 
 int db_change_mailboxsize(u64_t useridnr, u64_t newsize)
 {
-  snprintf(query, DEF_QUERYSIZE, "UPDATE user SET maxmail_size = %llu WHERE useridnr=%llu", 
+  snprintf(query, DEF_QUERYSIZE, "UPDATE user SET maxmail_size = %llu WHERE user_idnr=%llu", 
 	   newsize, useridnr);
 
-  if (db_query(query) == -1)
+  if (db_query(query, res) == -1)
     {
       trace(TRACE_ERROR,"db_change_password(): could not change maxmailsize for user [%llu]\n",
 	    useridnr);
@@ -357,32 +327,21 @@ u64_t db_validate (char *user, char *password)
   /* returns useridnr on OK, 0 on validation failed, -1 on error */
   
   u64_t id;
-
+  char *row;
   
-  snprintf (query, DEF_QUERYSIZE, "SELECT useridnr FROM user WHERE userid=\"%s\" AND passwd=\"%s\"",
+  snprintf (query, DEF_QUERYSIZE, "SELECT user_idnr FROM user WHERE userid=\"%s\" AND passwd=\"%s\"",
 	   user,password);
 
   trace (TRACE_DEBUG,"db_validate(): validating using query %s\n",query);
 	
-  if (db_query(query)==-1)
-    {
-      
+  if (db_query(query,res)==-1)
       return -1;
-    }
 	
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace (TRACE_ERROR,"db_validate(): mysql_store_result failed: %s\n",mysql_error(&conn));
-      
-      return -1;
-    }
+  row = PQgetvalue (res, 0, 0);
 
-  row = mysql_fetch_row(res);
-
-  id = (row && row[0]) ? strtoul(row[0], NULL, 10) : 0;
+  id = (row) ? strtoul(row, NULL, 10) : 0;
   
-  
-  mysql_free_result(res);
+  PQclear(res);
   return id;
 }
 
@@ -393,40 +352,30 @@ u64_t db_md5_validate (char *username,unsigned char *md5_apop_he, char *apop_sta
   char *checkstring;
   unsigned char *md5_apop_we;
   u64_t useridnr;	
-
   
   
-  snprintf (query, DEF_QUERYSIZE, "SELECT passwd,useridnr FROM user WHERE userid=\"%s\"",username);
+  snprintf (query, DEF_QUERYSIZE, "SELECT passwd,user_idnr FROM user WHERE userid=\"%s\"",username);
 	
-  if (db_query(query)==-1)
-    {
-      
+  if (db_query(query, res)==-1)
       return -1;
-    }
-	
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace (TRACE_ERROR,"db_md5_validate(): mysql_store_result failed:  %s",mysql_error(&conn));
-      
-      return -1;
-    }
 
-  if (mysql_num_rows(res)<1)
+  if (PQntuples(res)<1)
     {
       /* no such user found */
       
       return 0;
     }
 	
-  row = mysql_fetch_row(res);
-	
-	/* now authenticate using MD5 hash comparisation 
-	 * row[0] contains the password */
+	/* now authenticate using MD5 hash comparisation  */
+  value = PQgetvalue (res, 0, 0);
 
-  trace (TRACE_DEBUG,"db_md5_validate(): apop_stamp=[%s], userpw=[%s]",apop_stamp,row[0]);
+  /* value holds the password */
+
+  trace (TRACE_DEBUG,"db_md5_validate(): apop_stamp=[%s], userpw=[%s]",apop_stamp,
+                    value);
 	
-  memtst((checkstring=(char *)my_malloc(strlen(apop_stamp)+strlen(row[0])+2))==NULL);
-  snprintf(checkstring, strlen(apop_stamp)+strlen(row[0])+2, "%s%s",apop_stamp,row[0]);
+  memtst((checkstring=(char *)my_malloc(strlen(apop_stamp)+strlen(value)+2))==NULL);
+  snprintf(checkstring, strlen(apop_stamp)+strlen(value)+2, "%s%s",apop_stamp,value);
 
   md5_apop_we=makemd5(checkstring);
 	
@@ -439,9 +388,12 @@ u64_t db_md5_validate (char *username,unsigned char *md5_apop_he, char *apop_sta
     {
       trace(TRACE_MESSAGE,"db_md5_validate(): user [%s] is validated using APOP",username);
 		
-      useridnr = (row && row[1]) ? atol(row[1]) : 0;
+      value = PQgetvalue (res, 0, 1); 
+      /* value contains useridnr */
+
+      useridnr = (value) ? atol(value) : 0;
 	
-      mysql_free_result(res);
+      PQclear(res);
       
       my_free(checkstring);
 
@@ -450,8 +402,8 @@ u64_t db_md5_validate (char *username,unsigned char *md5_apop_he, char *apop_sta
 	
   trace(TRACE_MESSAGE,"db_md5_validate(): user [%s] could not be validated",username);
 
-  if (res!=NULL)
-    mysql_free_result(res);
+  if (res)
+    PQclear(res);
   
   
   my_free(checkstring);
@@ -466,50 +418,37 @@ char *db_get_userid (u64_t *useridnr)
   
   char *returnid = NULL;
   
-  snprintf (query, DEF_QUERYSIZE,"SELECT userid FROM user WHERE useridnr = %llu",
+  snprintf (query, DEF_QUERYSIZE,"SELECT userid FROM user WHERE user_idnr = %llu",
 	   *useridnr);
 
   trace(TRACE_DEBUG,"db_get_userid(): executing query : [%s]",query);
-  if (db_query(query)==-1)
+  if (db_query(query,res)==-1)
     {
       return 0;
     }
 
-  if ((res = mysql_store_result(&conn)) == NULL) 
-    {
-      trace(TRACE_ERROR,"db_get_userid(): mysql_store_result failed: %s",mysql_error(&conn));
-      
-      return 0;
-    }
-
-  if (mysql_num_rows(res)<1) 
+  if (PQntuples(res)<1) 
     {
       trace (TRACE_DEBUG,"db_get_userid(): user has no username?");
-      mysql_free_result(res);
+      PQclear(res);
       
       return 0; 
     } 
 
-  if ((row = mysql_fetch_row(res))==NULL)
+    value = PQgetvalue (res, 0, 0);
+  if (value)
     {
-      trace (TRACE_DEBUG,"db_get_userid(): fetch_row call failed");
-      mysql_free_result(res);
-      return NULL;
-    }
-
-  if (row[0])
-    {
-      if (!(returnid = (char *)my_malloc(strlen(row[0])+1)))
+      if (!(returnid = (char *)my_malloc(strlen(value)+1)))
 	{
 	  trace(TRACE_ERROR,"db_get_userid(): out of memory");
-	  mysql_free_result(res);
+	  PQclear(res);
 	  return NULL;
 	}
 	  
-      strcpy (returnid, row[0]);
+      strcpy (returnid, value);
     }
   
-  mysql_free_result(res);
+  PQclear(res);
   
   return returnid;
 }

@@ -17,13 +17,16 @@
 /* 
  * var's from dbmysql.c: 
  */
-extern char *query; 
-extern MYSQL conn;
-extern MYSQL_RES *res;
-extern MYSQL_ROW row;
+
+extern PGconn *conn;  
+extern PGresult *res;
+extern PGresult *checkres;
+extern char *query;
+extern char *value; /* used for PQgetvalue */
+extern unsigned long PQcounter; /* used for PQgetvalue loops */
 
 /* own var's */
-MYSQL_RES *_msg_result;
+PGresult *_msg_result;
 MYSQL_ROW _msgrow;
 int _msg_fetch_inited = 0;
 
