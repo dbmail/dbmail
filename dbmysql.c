@@ -54,14 +54,55 @@ int db_query (char *query)
   return 0;
 }
 
+unsigned long db_get_inboxid (unsigned long *useridnr)
+{
+	/* returns the mailbox id (of mailbox inbox) for a user or a 0 if no mailboxes were found */
+  char *ckquery;
+  
+  /* allocating memory for query */
+  memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
+
+	sprintf (ckquery,"SELECT mailboxidnr FROM mailbox WHERE name='INBOX' AND owneridnr=%lu",
+			*useridnr);
+
+  trace(TRACE_DEBUG,"db_get_mailboxid(): executing query : [%s]",ckquery);
+  if (db_query(ckquery)==-1)
+    {
+      free(ckquery);
+      return 0;
+    }
+  if ((res = mysql_store_result(&conn)) == NULL) 
+    {
+      trace(TRACE_ERROR,"db_get_mailboxid(): mysql_store_result failed: %s",mysql_error(&conn));
+      free(ckquery);
+      return 0;
+    }
+  if (mysql_num_rows(res)<1) 
+    {
+      trace (TRACE_DEBUG,"db_get_mailboxid(): user has no INBOX");
+      mysql_free_result(res);
+      free(ckquery);
+      return 0; 
+    } 
+
+	if ((row = mysql_fetch_row(res))==NULL)
+	{
+		trace (TRACE_DEBUG,"db_insert_message(): fetch_row call failed");
+	}
+	/* return the inbox id */
+	return atoi(row[0]);
+}
+
+
+
 unsigned long db_insert_message (unsigned long *useridnr)
 {
   char *ckquery;
   /* allocating memory for query */
   memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
 
-  sprintf (ckquery,"INSERT INTO message(useridnr,messagesize,status,unique_id) VALUES (%lu,0,0,\" \")",
-	   *useridnr);
+  sprintf (ckquery,"INSERT INTO message(mailboxidnr,messagesize,unique_id) VALUES (%lu,0,\" \")",
+	   db_get_inboxid(useridnr));
 
   trace (TRACE_DEBUG,"db_insert_message(): inserting message query [%s]",ckquery);
   if (db_query (ckquery)==-1)
@@ -330,7 +371,7 @@ unsigned long db_md5_validate (char *username,unsigned char *md5_apop_he, char *
   unsigned char *md5_apop_we;
 	
   memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
-  sprintf (ckquery, "SELECT passwd,useridnr FROM mailbox WHERE userid=\"%s\"",username);
+  sprintf (ckquery, "SELECT passwd,useridnr FROM user WHERE userid=\"%s\"",username);
 	
   if (db_query(ckquery)==-1)
     {
@@ -395,8 +436,8 @@ int db_createsession (unsigned long useridnr, struct session *sessionptr)
   memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
   /* query is <2 because we don't want deleted messages 
    * the unique_id should not be empty, this could mean that the message is still being delivered */
-  sprintf (ckquery, "SELECT * FROM message WHERE useridnr=%li AND status<002 AND unique_id!=\"\" order by status ASC",
-	   useridnr);
+  sprintf (ckquery, "SELECT * FROM message WHERE mailboxidnr=%lu AND status<002 AND unique_id!=\"\" order by status ASC",
+	   (db_get_inboxid(&useridnr)));
 
   if (db_query(ckquery)==-1)
     {
@@ -429,12 +470,12 @@ int db_createsession (unsigned long useridnr, struct session *sessionptr)
   trace (TRACE_DEBUG,"db_create_session(): adding items to list");
   while ((row = mysql_fetch_row(res))!=NULL)
     {
-      tmpmessage.msize=atol(row[2]);
-      tmpmessage.realmessageid=atol(row[0]);
-      tmpmessage.messagestatus=atoi(row[3]);
-      strncpy(tmpmessage.uidl,row[4],UID_SIZE);
+      tmpmessage.msize=atol(row[MESSAGE_MESSAGESIZE]);
+      tmpmessage.realmessageid=atol(row[MESSAGE_MESSAGEIDNR]);
+      tmpmessage.messagestatus=atoi(row[MESSAGE_STATUS]);
+      strncpy(tmpmessage.uidl,row[MESSAGE_UNIQUE_ID],UID_SIZE);
 		
-      tmpmessage.virtual_messagestatus=atoi(row[3]);
+      tmpmessage.virtual_messagestatus=atoi(row[MESSAGE_STATUS]);
 		
       sessionptr->totalmessages+=1;
       sessionptr->totalsize+=tmpmessage.msize;

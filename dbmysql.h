@@ -45,15 +45,17 @@ enum table_mailbox /* prototype for mailbox table */
 	
 enum table_message /* prototype for message table */
 {
-	MESSAGE_MESSAGEBLKNR,
+	MESSAGE_MESSAGEIDNR,
 	MESSAGE_MAILBOXIDNR,
 	MESSAGE_MESSAGESIZE,
 	MESSAGE_SEEN_FLAG,
 	MESSAGE_ANSWERED_FLAG,
 	MESSAGE_DELETED_FLAG,
+	MESSAGE_FLAGGED_FLAG,
 	MESSAGE_RECENT_FLAG,
 	MESSAGE_DRAFT_FLAG,
-	MESSAGE_UNIQUE_ID
+	MESSAGE_UNIQUE_ID,
+	MESSAGE_STATUS
 };
 
 enum table_messageblk /* prototype for messageblk table */
@@ -68,9 +70,10 @@ enum table_messageblk /* prototype for messageblk table */
 int db_connect();
 int db_query (char *query);
 int db_check_user (char *username, struct list *userids);
+unsigned long db_get_inboxid (unsigned long *useridnr);
 unsigned long db_insert_message (unsigned long *useridnr);
 unsigned long db_update_message (unsigned long *messageidnr, char *unique_id,
-		unsigned long messagesize);
+	unsigned long messagesize);
 unsigned long db_insert_message_block (char *block, int nextblock);
 int db_check_id (char *id);
 int db_disconnect();
