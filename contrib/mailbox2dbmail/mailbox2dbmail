@@ -19,7 +19,7 @@
 # $Id$
 
 import os,sys,getopt,email,email.Errors,mailbox
-version = "%s 1.2" %(sys.argv[0],)
+version = "%s 2.0" %(sys.argv[0],)
 
 def main():
     try:
@@ -71,28 +71,26 @@ def main():
 def usage():
     print version
     print "%s -u|--user <user> -t|--type <mbox, maildir, and mhdir> --mail|-m <location of mailbox> -b|--box <Inbox,Inbox.Sent etc> -p <path to dbmail-smtp>" %(sys.argv[0],)
-
+    
 def convert(user,mbox,box,path,msgnumber):
-    def msgmeter(msgnumber):
-        msgnumber = msgnumber + 1
-        return convert(user,mbox,box,path,msgnumber)
     try:
-        mailmsg = mbox.next()
-        command = "%s -m %s -u %s" %(path,box,user)
-        if not mailmsg:
-            print "All Done!"
-            sys.exit()
-        try:
-            dbmail = os.popen(command,'w')
-            dbmail.writelines(mailmsg.as_string())
-            dbmail.close()
-            del mailmsg
-            print "Processed Message %s" %(msgnumber,)
-        except IOError:
-            print "Either box or user is invalid"
-            sys.exit(1)
-        return msgmeter(msgnumber)
-                
+     	while 1:
+            mailmsg = mbox.next()
+            command = "%s -m %s -u %s" %(path,box,user)
+            if not mailmsg:
+                print "All Done!"
+            	sys.exit()
+            try:
+                dbmail = os.popen(command,'w')
+                dbmail.writelines(mailmsg.as_string())
+                dbmail.close()
+                del mailmsg
+                print "Processed Message %s" %(msgnumber,)
+                msgnumber = msgnumber + 1
+            except IOError:
+                print "Either box or user is invalid"
+                sys.exit(1)
+        return 0    
     except email.Errors.MessageParseError:
         print "Error Parsing Mail"
         sys.exit(1)
