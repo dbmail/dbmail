@@ -2516,7 +2516,7 @@ int db_get_msgflag_all_range(u64_t msguidlow, u64_t msguidhigh, u64_t mailboxuid
       for (j=0; j<IMAP_NFLAGS; j++)
 	{
 	  row = PQgetvalue(res, i, j);
-	  (*flags)[i * IMAP_NFLAGS +j] = (row && row[0] != '0') 1 : 0;
+	  (*flags)[i * IMAP_NFLAGS +j] = (row && row[0] != '0') ? 1 : 0;
 	}
     }
 

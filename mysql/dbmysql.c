@@ -2920,7 +2920,7 @@ int db_get_msginfo_range(u64_t msguidlow, u64_t msguidhigh, u64_t mailboxuid,
   snprintf(query, DEF_QUERYSIZE, "SELECT seen_flag, answered_flag, deleted_flag, "
 	   "flagged_flag, draft_flag, recent_flag, internal_date, rfcsize, message_idnr "
 	   "FROM messages WHERE "
-	   "message_idnr >= %llu AND message_idnr <= %llu AND mailbox_idnr = %llu"
+	   "message_idnr >= %llu AND message_idnr <= %llu AND mailbox_idnr = %llu "
 	   "AND status<2 AND unique_id != '' "
 	   "ORDER BY message_idnr ASC", msguidlow, msguidhigh, mailboxuid);
  
