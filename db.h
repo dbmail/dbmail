@@ -567,6 +567,16 @@ int db_insert_message_with_physmessage(u64_t physmessage_id,
  */
 int db_update_message(u64_t message_idnr, const char *unique_id,
 			u64_t message_size, u64_t rfc_size);
+/**
+ * \brief set unique id of a message 
+ * \param message_idnr
+ * \param unique_id unique id of message
+ * \return 
+ *     - -1 on database error
+ *     -  0 on success
+ */
+int db_message_set_unique_id(u64_t message_idnr, const char *unique_id);
+
 /** 
 * \brief update multiple messages with unique id  unique_id
 * \param unique_id

@@ -8,4 +8,3 @@ For DBMail 2.1
 -   put (part of) configuration into the database
 -   Increase speed by doing database optimizations (indexes) and removing
     unneeded database usage.
-

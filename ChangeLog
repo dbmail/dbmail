@@ -1,5 +1,21 @@
 2004-03-09  Ilja Booij  <ilja@ic-s.nl>
 
+	* sort/sort.c (sort_and_deliver): uses db_message_set_unique_id()
+	to set the unique id of a message.
+
+	* db.c (db_copymsg): does not compute the new quotum on a copy, but
+	only adds the messagesize to the used quotum, which saves looking
+	at all messagesize on every copy.
+	(db_add_quotum_used): new functions: add a value to the current
+	curmail_size of a user.
+	(db_imap_append_msg): uses db_add_quotum_used instead of doing
+	a complete recalculation of the used quotum.
+	(db_update_message):  uses db_add_quotum_used instead of doing
+	a complete recalculation of the used quotum.
+	(db_message_set_unique_id): new function that only updates the
+	unique id of a message.
+	(db_update_message): uses db_message_set_unique_id()
+
 	* forward.c (forward): only send header through pipe if there's no
 	message to send. Otherwise get the whole message from the database.
 	(forward): added __FILE__ and __FUNCTION__ to all trace() calls.

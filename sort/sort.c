@@ -221,7 +221,7 @@ int sort_and_deliver(u64_t msgidnr,
                              * Each message for each user must have a unique ID! 
                              * */
                             create_unique_id(unique_id, newmsgidnr); 
-                            db_update_message(newmsgidnr, unique_id, totalmsgsize, totalrfcsize);
+			    db_message_set_unique_id(newmsgidnr, unique_id);
                          
                             actiontaken = 1;
                             break;
@@ -328,7 +328,7 @@ int sort_and_deliver(u64_t msgidnr,
                  * Each message for each user must have a unique ID! 
                  * */
                 create_unique_id(unique_id, newmsgidnr); 
-                db_update_message(newmsgidnr, unique_id, totalmsgsize, totalrfcsize);
+		db_message_set_unique_id(newmsgidnr, unique_id);
 
                 actiontaken = 1;
                 break;

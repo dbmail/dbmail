@@ -67,6 +67,9 @@ const char *DB_TABLENAMES[DB_NTABLES] = {
 /** static functions */
 /** set quotum used for user user_idnr to curmail_size */
 static int db_set_quotum_used(u64_t user_idnr, u64_t curmail_size);
+/** add to quotum used */
+static int db_add_quotum_used(u64_t user_idnr, u64_t add_size);
+
 /** list all mailboxes owned by user owner_idnr */
 static int db_list_mailboxes_by_regex(u64_t owner_idnr, int only_subscribed,
 			     regex_t *preg,
@@ -153,6 +156,22 @@ int db_set_quotum_used(u64_t user_idnr, u64_t curmail_size)
 	return -1;
     }
     return 0;
+}
+
+int db_add_quotum_used(u64_t user_idnr, u64_t add_size)
+{
+	trace(TRACE_DEBUG, "%s,%s: adding %llu to mailsize",
+	      __FILE__, __FUNCTION__, add_size);
+	snprintf(query, DEF_QUERYSIZE,
+		 "UPDATE users SET curmail_size = curmail_size + '%llu' "
+		 "WHERE user_idnr = '%llu'", add_size, user_idnr);
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: error adding [%llu] to quotum "
+		      "of user [%llu]", __FILE__, __FUNCTION__,
+		      add_size, user_idnr);
+		return -1;
+	}
+	return 0;
 }
 
 int db_calculate_quotum_all()
@@ -689,17 +708,28 @@ int db_insert_message(u64_t user_idnr,
     return 1;
 }
 
+int db_message_set_unique_id(u64_t message_idnr, const char *unique_id)
+{
+	snprintf(query, DEF_QUERYSIZE,
+		 "UPDATE messages SET unique_id = '%s', status = '000' "
+		 "WHERE message_idnr = '%llu'", unique_id, message_idnr);
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: setting unique id for message "
+		      "[%llu] failed", __FILE__, __FUNCTION__, message_idnr);
+		return -1;
+	}
+	return 0;
+}
+
 int db_update_message(u64_t message_idnr, const char *unique_id,
 		      u64_t message_size, u64_t rfc_size)
 {
     u64_t physmessage_id = 0;
 
-    /* update the fields in the messages table */
-    snprintf(query, DEF_QUERYSIZE,
-	     "UPDATE messages SET unique_id='%s', status = '000' "
-	     "WHERE message_idnr='%llu'", unique_id, message_idnr);
-    if (db_query(query) == -1) {
-	trace(TRACE_STOP, "%s,%s: dbquery failed", __FILE__, __FUNCTION__);
+    if (db_message_set_unique_id(message_idnr, unique_id) < 0) {
+	    trace(TRACE_STOP, "%s,%s: setting unique id failed of message "
+		  "[%llu] failed",
+		  __FILE__, __FUNCTION__, message_idnr);
     }
 
     /* update the fields in the physmessage table */
@@ -716,7 +746,7 @@ int db_update_message(u64_t message_idnr, const char *unique_id,
 	       __FILE__, __FUNCTION__, physmessage_id);
     } 
         
-    if (db_calculate_quotum_used(db_get_useridnr(message_idnr)) == -1) {	 
+    if (db_add_quotum_used(db_get_useridnr(message_idnr), message_size) == -1) {
 	    trace (TRACE_ERROR, "%s,%s: error calculating quotum "
 		   "used for user [%llu]. Database might be " 
 		   "inconsistent. run dbmail-maintenance",
@@ -1960,7 +1990,7 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
     db_update_message(message_idnr, unique_id, datalen, 0);
 
     /* recalculate quotum used */
-    db_calculate_quotum_used(user_idnr);
+    db_add_quotum_used(user_idnr, datalen);
 
     return 0;
 }
@@ -2622,6 +2652,13 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr,
 		   __FILE__, __FUNCTION__, user_idnr);
 	     return -1;
      }
+
+     if (db_get_message_size(msg_idnr, &msgsize) == -1) {
+	     trace(TRACE_ERROR,"%s,%s: error getting message size for "
+		   "message [%llu]", __FILE__, __FUNCTION__, msg_idnr);
+	     return -1;
+     }
+
      
      if (maxmail > 0) {
 	  if (curr_quotum >= maxmail) {
@@ -2630,11 +2667,7 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr,
 		     __FILE__, __FUNCTION__, user_idnr);
 	       return -2;
 	  }
-	  if (db_get_message_size(msg_idnr, &msgsize) == -1) {
-	       trace(TRACE_ERROR,"%s,%s: error getting message size for "
-		     "message [%llu]", __FILE__, __FUNCTION__, msg_idnr);
-	       return -1;
-	  }
+ 
 	  if (msgsize > maxmail - curr_quotum) {
 	       trace(TRACE_INFO, "%s,%s: quotum would exceed for user [%llu]",
 		     __FILE__, __FUNCTION__, user_idnr);
@@ -2692,9 +2725,9 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr,
      }
      
      /* update quotum */
-     if (db_calculate_quotum_used(user_idnr) == -1) {
-	     trace(TRACE_ERROR, "%s,%s: error calculating quotum for "
-		   "shared user with user_idnr [%llu]", 
+     if (db_add_quotum_used(user_idnr, msgsize) == -1) {
+	     trace(TRACE_ERROR, "%s,%s: error setting the new quotum "
+		   "used value for user [%llu]",
 		   __FILE__, __FUNCTION__, user_idnr);
 	     return -1;
      }    
@@ -2841,7 +2874,7 @@ int db_expunge(u64_t mailbox_idnr, u64_t ** msg_idnrs, u64_t * nmsgs)
 
     /* calculate new quotum (use the msg_idnrs to get the user_idnr */
     if (nmsgs && *nmsgs > 0)
-	 db_calculate_quotum_used(db_get_useridnr((*msg_idnrs)[0]));
+	    db_calculate_quotum_used(db_get_useridnr((*msg_idnrs)[0]));
     return 0;			/* success */
 }
 
