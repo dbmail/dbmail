@@ -542,12 +542,12 @@ int do_change(char *argv[])
 	    {
 	    case 'm':
 	    case 'M':
-	      newsize *= 1000000;
+	      newsize *= (1024 * 1024);
 	      break;
 
 	    case 'k':
 	    case 'K':
-	      newsize *= 1000;
+	      newsize *= 1024;
 	      break;
 	    }
 
