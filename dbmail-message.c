@@ -58,23 +58,18 @@ char query[DEF_QUERYSIZE];
  */
 static void _register_header(const char *header, const char *value, gpointer user_data);
 
-/*
- * _retrieve
- *
- * retrieve message for id
- *
- */
-
 static struct DbmailMessage * _retrieve(struct DbmailMessage *self, char *query_template);
 static void _map_headers(struct DbmailMessage *self);
 static void _set_content(struct DbmailMessage *self, const GString *content);
 static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *stream, int type);
-
 static int _message_insert(struct DbmailMessage *self, 
 		u64_t user_idnr, 
 		const char *mailbox, 
 		const char *unique_id); 
 
+/*  \brief create a new empty DbmailMessage struct
+ *  \return the DbmailMessage
+ */
 struct DbmailMessage * dbmail_message_new(void)
 {
 	struct DbmailMessage *self = g_new0(struct DbmailMessage,1);
@@ -87,8 +82,14 @@ struct DbmailMessage * dbmail_message_new(void)
 	return self;
 }
 
+/* \brief create and initialize a new DbmailMessage
+ * \param FILE *instream from which to read
+ * \param int streamtype is DBMAIL_STREAM_PIPE or DBMAIL_STREAM_LMTP
+ * \return the new DbmailMessage
+ */
 struct DbmailMessage * dbmail_message_new_from_stream(FILE *instream, int streamtype) 
 {
+	
 	GMimeStream *stream;
 	struct DbmailMessage *message;
 	
@@ -99,6 +100,11 @@ struct DbmailMessage * dbmail_message_new_from_stream(FILE *instream, int stream
 	return message;
 }
 
+/* \brief set the type flag for this DbmailMessage
+ * \param the DbmailMessage on which to set the flag
+ * \param type flag is either DBMAIL_MESSAGE or DBMAIL_MESSAGE_PART
+ * \return non-zero in case of error
+ */
 int dbmail_message_set_class(struct DbmailMessage *self, int klass)
 {
 	switch (klass) {
@@ -113,11 +119,20 @@ int dbmail_message_set_class(struct DbmailMessage *self, int klass)
 	return 0;
 			
 }
+
+/* \brief accessor for the type flag
+ * \return the flag
+ */
 int dbmail_message_get_class(struct DbmailMessage *self)
 {
 	return self->klass;
 }
 
+/* \brief initialize a previously created DbmailMessage using a GString
+ * \param the empty DbmailMessage
+ * \param GString *content contains the raw message
+ * \return the filled DbmailMessage
+ */
 struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *self, const GString *content)
 {
 	_set_content(self,content);
@@ -133,6 +148,12 @@ struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *sel
 	return self;
 }
 
+/* \brief initialize a previously created DbmailMessage using a GMimeStream
+ * \param empty DbmailMessage
+ * \param stream from which to read
+ * \param type which indicates either pipe/network style streaming
+ * \return the filled DbmailMessage
+ */
 struct DbmailMessage * dbmail_message_init_with_stream(struct DbmailMessage *self, GMimeStream *stream, int type)
 {
 	_set_content_from_stream(self,stream,type);
@@ -246,6 +267,12 @@ size_t dbmail_message_get_rfcsize(struct DbmailMessage *self)
 
 	return rfcsize;
 }
+
+void dbmail_message_set_header(struct DbmailMessage *self, const char *header, const char *value)
+{
+	g_mime_message_set_header(GMIME_MESSAGE(self->content), header, value);
+}
+
 /* dump message(parts) to char ptrs */
 gchar * dbmail_message_to_string(struct DbmailMessage *self) 
 {
@@ -285,14 +312,14 @@ gchar * dbmail_message_body_to_string(struct DbmailMessage *self)
 	return s;
 }
 
-void dbmail_message_set_header(struct DbmailMessage *self, const char *header, const char *value)
-{
-	g_mime_message_set_header(GMIME_MESSAGE(self->content), header, value);
-}
-
 /* 
- * we don't cache these values 
- * to allow changes in message content
+ * Some dynamic accessors.
+ * 
+ * 'Premature optimization is the root of all evil.' 
+ * 	Donald Knuth/The Art of Computer Programming.
+ * 
+ * Don't cache these values to allow changes in message content!!
+ * 
  */
 size_t dbmail_message_get_size(struct DbmailMessage *self)
 {
@@ -383,8 +410,13 @@ static void _fetch_full(struct DbmailMessage *self)
 	_retrieve(self, query_template);
 }
 
-
-struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t id,int filter)
+/* \brief retrieve message
+ * \param empty DbmailMessage
+ * \param message_idnr
+ * \param filter (header-only or full message)
+ * \return filled DbmailMessage
+ */
+struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t id, int filter)
 {
 	self->id = id;
 	
@@ -409,10 +441,8 @@ struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t
 }
 
 
-/**
- * store a temporary copy of a message.
- * \param 	self 
- * \param[out]	temp_message_idnr	message idnr of temporary message
+/* \brief store a temporary copy of a message.
+ * \param 	filled DbmailMessage
  * \return 
  *     - -1 on error
  *     -  1 on success

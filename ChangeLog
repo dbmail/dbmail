@@ -1,3 +1,12 @@
+2005-03-08  Paul Stevens <paul@nfg.nl>
+	
+	* db.c: added new calls db_user_create_shadow and db_user_find_create
+	to better accomodate automatic shadow accounts for ldap users.
+	* serverchild.c: code layout
+	* dbmail-message.c: added inline documentation
+	* server.c, serverchild.c: removed #ifdef _USE_STR_SIGNAL and use
+	strsignal by default.
+
 2005-03-07  Paul Stevens <paul@nfg.nl>
 
 	* clientinfo.h: removed file and moved struct to dbmailtypes.h

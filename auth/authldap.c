@@ -1044,8 +1044,8 @@ int auth_adduser(const char *username, const char *password,
 	}
 
 	*user_idnr = newidnr;
+	result = db_user_create_shadow(username, user_idnr);
 	
-	result = db_user_create(username, "UNUSED", "UNUSED", 0xffff, 0xffff, user_idnr);
 	if (result != 1) {
 		trace(TRACE_ERROR, "%s,%s: sql shadow account creation failed",
 				__FILE__, __func__);

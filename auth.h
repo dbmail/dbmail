@@ -71,6 +71,17 @@ int auth_disconnect(void);
 int auth_user_exists(const char *username, /*@out@*/ u64_t * user_idnr);
 
 /**
+ * \brief get username for a user_idnr
+ * \param user_idnr
+ * \return
+ *    - NULL on error
+ *    - username otherwise
+ * \attention caller should free username string
+ */
+char *auth_get_userid(u64_t user_idnr);
+
+
+/**
  * \brief get a list of all known users
  * \return
  *    - list off all usernames on success
@@ -229,16 +240,6 @@ int auth_validate(char *username, char *password, u64_t * user_idnr);
  */
 u64_t auth_md5_validate(char *username, unsigned char *md5_apop_he,
 			char *apop_stamp);
-
-/**
- * \brief get username for a user_idnr
- * \param user_idnr
- * \return
- *    - NULL on error
- *    - username otherwise
- * \attention caller should free username string
- */
-char *auth_get_userid(u64_t user_idnr);
 
 /**
  * \brief get user ids belonging to a client id
