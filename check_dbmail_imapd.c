@@ -199,27 +199,6 @@ START_TEST(test_mime_fetch_headers)
 }
 END_TEST
 
-START_TEST(test_dbmail_message)
-{
-	struct DbmailMessage *m;
-	GTuples *t;
-	m = dbmail_message_new();
-	m = dbmail_message_init_with_string(m, g_string_new(raw_message));
-	
-	t = g_relation_select(m->headers, (gpointer)"Received", 0);
-	fail_unless(t->len==2,"Too few headers in tuple");
-}
-END_TEST
-
-START_TEST(test_dbmail_message_part)
-{
-	struct DbmailMessage *m;
-	m = dbmail_message_new();
-	dbmail_message_set_class(m,DBMAIL_MESSAGE_PART);
-	m = dbmail_message_init_with_string(m, g_string_new(raw_message_part));
-}
-END_TEST
-
 START_TEST(test_db_set_msg)
 {
 	mime_message_t *msg = g_new0(mime_message_t,1);
@@ -316,38 +295,37 @@ START_TEST(test_build_set)
 }
 END_TEST
 
+/*
 START_TEST(test_build_uid_set)
 {
 	
 }
 END_TEST
+*/
 
+/*
 START_TEST(test_build_args_array_ext) 
 {
 
 }
 END_TEST
+*/
 
 Suite *dbmail_suite(void)
 {
 	Suite *s = suite_create("Dbmail Imap");
 	TCase *tc_session = tcase_create("ImapSession");
-	TCase *tc_message = tcase_create("DbmailMessage");
 	TCase *tc_rfcmsg = tcase_create("Rfcmsg");
 	TCase *tc_mime = tcase_create("Mime");
 	TCase *tc_util = tcase_create("Utils");
 	
 	suite_add_tcase(s, tc_session);
-	suite_add_tcase(s, tc_message);
 	suite_add_tcase(s, tc_rfcmsg);
 	suite_add_tcase(s, tc_mime);
 	suite_add_tcase(s, tc_util);
 	
 	tcase_add_test(tc_session, test_imap_session_new);
 	tcase_add_test(tc_session, test_imap_bodyfetch);
-	
-	tcase_add_test(tc_message, test_dbmail_message);
-	tcase_add_test(tc_message, test_dbmail_message_part);
 	
 	tcase_add_test(tc_rfcmsg, test_db_set_msg);
 

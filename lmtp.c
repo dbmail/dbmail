@@ -596,18 +596,11 @@ int lmtp(void *stream, void *instream, char *buffer,
 
 				/* Anonymous Block */
 				{
-					char *whole_message = NULL;
-					char *header = NULL;
-					const char *body;
-					u64_t whole_message_size;
-					u64_t headersize = 0;
-					u64_t body_size = 0;
-					u64_t rfcsize = 0;
 					struct list headerfields;
 					struct element *element;
+					struct DbmailMessage *msg;
 
-					if (! (whole_message_size = read_whole_message_stream((FILE *)instream, 
-									&whole_message, DBMAIL_STREAM_LMTP))) {
+					if (! (msg = dbmail_message_new_from_stream((FILE *)instream, DBMAIL_STREAM_LMTP))) {
 						trace(TRACE_ERROR, "%s,%s: read_whole_message_stream() failed",
 						      __FILE__, __func__);
 						discard_client_input((FILE *) instream);
@@ -615,63 +608,26 @@ int lmtp(void *stream, void *instream, char *buffer,
 						return 1;
 					}
 					
-					trace(TRACE_DEBUG, "%s,%s: whole message = %s",
-					    __FILE__, __func__, whole_message);
-					if (whole_message == NULL) {
-						trace(TRACE_ERROR, "%s,%s message is NULL!",
-						    __FILE__, __func__);
-						discard_client_input(
-							(FILE *) instream);
-						ci_write((FILE *) stream,
-							"500 Error reading header\r\n");
-						return 1;
-					}
+					trace(TRACE_DEBUG, "%s,%s: whole message = %s", __FILE__, __func__,
+							dbmail_message_to_string(msg));
 
-					if (split_message(whole_message, 
-							  &header,
-							  &headersize,
-							  &body,
-							  &body_size,
-							  &rfcsize) < 0) {
-						trace(TRACE_ERROR, "%s,%s: split_message() failed",
-						      __FILE__, __func__);
-						dm_free(whole_message);
+					if (dbmail_message_get_hdrs_size(msg) > READ_BLOCK_SIZE) {
+						trace(TRACE_ERROR, "main(): header is too big");
 						discard_client_input((FILE *) instream);
-						ci_write((FILE *) stream,
-							"500 Error in message");
-						return 1;
-					}
-					if (headersize > READ_BLOCK_SIZE) {
-						trace(TRACE_ERROR,
-						      "main(): header is too "
-						      "big");
-						discard_client_input
-							((FILE *)
-							     instream);
-						ci_write((FILE *)
-							stream,
-							"500 Error reading header, "
+						ci_write((FILE *)stream, "500 Error reading header, "
 							"header too big.\r\n");
-						dm_free(whole_message);
 						return 1;
 					}
 					/* Parse the list and scan for field and content */
-					if (mime_fetch_headers(header, &headerfields) < 0) {
+					if (mime_fetch_headers(dbmail_message_hdrs_to_string(msg), &headerfields) < 0) {
 						trace(TRACE_ERROR, "main(): fatal error from mime_fetch_headers()");
 						discard_client_input((FILE *) instream);
 						ci_write((FILE *) stream, "500 Error reading header.\r\n");
-						dm_free(whole_message);
 						return 1;
 					}
 
-					if (insert_messages(
-						    header, body,
-						    headersize, 
-						    body_size, rfcsize,
-						    &headerfields, &rcpt,
-						    &from) == -1) {
-						ci_write((FILE *) stream,
-							"503 Message not received\r\n");
+					if (insert_messages(msg, &headerfields, &rcpt, &from) == -1) {
+						ci_write((FILE *) stream, "503 Message not received\r\n");
 					} else {
 						/* The DATA command itself it not given a reply except
 						 * that of the status of each of the remaining recipients. */
@@ -703,10 +659,6 @@ int lmtp(void *stream, void *instream, char *buffer,
 						}
 					}
 
-					if (header != NULL)
-						dm_free(header);
-					if (whole_message != NULL)
-						dm_free(whole_message);
 					list_freelist(&headerfields.start);
 				}
 				/* Reset the session after a successful delivery;

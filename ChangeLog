@@ -1,3 +1,13 @@
+2005-01-26  Paul Stevens <paul@nfg.nl>
+
+	* imaputil.c, imapcommands.c (_ic_search): introduce sort_search which
+	optimizes the search keys.
+	* dbmail-message.c, pipe.c, main.c, lmtp.c: move chunks of the insertion 
+	logic to dbmail-message.c.
+	* check_dbmail_message.c, Makefile.am: added another test suite.
+	* lib/iniparser-2.14/Makefile.orig, lib/iniparser-2.14/test/Makefile:
+	removed redundant files.
+
 2005-01-22  Ilja Booij <ilja@ic-s.nl>
 
 	* sql/mysql/migrate_from_1.x_to_2.0.mysql: applied patch by

@@ -99,6 +99,9 @@ const char *envelope_items[] = {
 	"from", "sender", "reply-to", "to", "cc", "bcc", NULL
 };
 
+static const char *search_cost[] = { "b","b","c","c","c","d","d","d","d","c","e","e","b","b","j","j","j" };
+
+
 /*
  *
  *
@@ -230,6 +233,53 @@ GList *dbmail_imap_list_slices(GList *list, unsigned limit)
 	g_string_free(slice,TRUE);
 	return new;
 }
+
+/* 
+ * sort_search()
+ * 
+ * reorder searchlist by using search cost as the sort key
+ * 
+ */ 
+
+int sort_search(struct list *searchlist) 
+{
+	struct element *el;
+	search_key_t *left = NULL, *right = NULL, *tmp=NULL;
+	
+	if (!searchlist) 
+		return 0;
+
+	el = list_getstart(searchlist);
+	while (el != NULL) {
+		if (! el->nextnode)
+			break;
+		left = el->data;
+		right = (el->nextnode)->data;
+
+		/* recurse into sub_search if necessary */
+		switch(left->type) {
+			case IST_SUBSEARCH_AND:
+			case IST_SUBSEARCH_NOT:
+			case IST_SUBSEARCH_OR:
+				sort_search(&left->sub_search);
+				break;
+				;;
+		}
+		/* switch elements to sorted order */
+		if (strcmp((char *)search_cost[left->type],(char *)search_cost[right->type]) > 0) {
+			tmp = el->data;
+			el->data = el->nextnode->data;
+			el->nextnode->data = tmp;
+			/* when in doubt, use brute force: starting over */
+			el = list_getstart(searchlist);
+			continue;
+		}
+		
+		el = el->nextnode;
+	}
+	return 0;
+}
+
 
 /* 
  * get_part_by_num()
@@ -1182,24 +1232,29 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx, int sorted)
 		key.type = IST_SORTHDR;
 		strncpy(key.hdrfld, "to", MIME_FIELD_MAX);
 		(*idx)++;
-	} else if(sorted && (strcasecmp(search_keys[*idx], "reverse") == 0)) {
-		/* TODO */ 
-		(*idx)++;
-	} else if(sorted && (strcasecmp(search_keys[*idx], "size") == 0)) {
-		/* TODO */ 
-		(*idx)++;
-	} else if(sorted && (strcasecmp(search_keys[*idx], "us-ascii") == 0)) {
-		/* TODO */ 
-		(*idx)++;
-	} else if(sorted && (strcasecmp(search_keys[*idx], "iso-8859-1") == 0)) {
-		/* TODO */ 
-		(*idx)++;
-	} else if(sorted && (strcasecmp(search_keys[*idx], "date") == 0)) {
-		/* TODO */ 
-		(*idx)++;
-	} else if(sorted && (strcasecmp(search_keys[*idx], "all") == 0)) {
-		/* TODO */ 
-		(*idx)++;
+		
+/* no silent failures for now */
+		
+//	} else if(sorted && (strcasecmp(search_keys[*idx], "reverse") == 0)) {
+//		/* TODO */ 
+//		(*idx)++;
+//	} else if(sorted && (strcasecmp(search_keys[*idx], "size") == 0)) {
+//		/* TODO */ 
+//		(*idx)++;
+//	} else if(sorted && (strcasecmp(search_keys[*idx], "us-ascii") == 0)) {
+//		/* TODO */ 
+//		(*idx)++;
+//	} else if(sorted && (strcasecmp(search_keys[*idx], "iso-8859-1") == 0)) {
+//		/* TODO */ 
+//		(*idx)++;
+//	} else if(sorted && (strcasecmp(search_keys[*idx], "date") == 0)) {
+//		/* TODO */ 
+//		(*idx)++;
+//	} else if(sorted && (strcasecmp(search_keys[*idx], "all") == 0)) {
+//		/* TODO */ 
+//		(*idx)++;
+
+
 	} else if (strcasecmp(search_keys[*idx], "all") == 0) {
 		key.type = IST_SET;
 		strcpy(key.search, "1:*");

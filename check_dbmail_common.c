@@ -100,36 +100,6 @@ START_TEST(test_db_connect)
 }
 END_TEST
 
-START_TEST(test_read_whole_message_stream)
-{
-	FILE *fd;
-	char *whole_message = NULL;
-	u64_t whole_message_size = 0;
-	fd = tmpfile();
-	fprintf(fd, "%s", raw_message);
-	fseek(fd,0,0);
-	whole_message_size = read_whole_message_stream(fd, &whole_message, DBMAIL_STREAM_PIPE);
-	fail_unless(whole_message_size == strlen(raw_message), 
-			"read_whole_message_stream returned wrong message_size");
-}
-END_TEST
-
-START_TEST(test_read_whole_message_network)
-{	
-	FILE *fd;
-	char *whole_message = NULL;
-	u64_t whole_message_size;
-	fd = tmpfile();
-	fprintf(fd, "%s", raw_lmtp_data);
-	fseek(fd,0,0);
-	whole_message_size = read_whole_message_stream(fd, &whole_message, DBMAIL_STREAM_LMTP);
-	// note: we're comparing with raw_message not raw_lmtp_data because
-	// raw_message == raw_lmtp_data - crlf - end-dot
-	fail_unless(whole_message_size == strlen(raw_message), 
-			"read_whole_message_network returned wrong message_size");
-}
-END_TEST
-
 Suite *dbmail_common_suite(void)
 {
 	Suite *s = suite_create("Dbmail Common");
@@ -144,8 +114,6 @@ Suite *dbmail_common_suite(void)
 	tcase_add_test(tc_config, test_db_connect);
 	
 	tcase_add_checked_fixture(tc_main, setup, teardown);
-	tcase_add_test(tc_main, test_read_whole_message_stream);
-	tcase_add_test(tc_main, test_read_whole_message_network);
 	return s;
 }
 

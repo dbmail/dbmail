@@ -60,20 +60,6 @@
 /* Must be at least 998 or 1000 by RFC's */
 #define MAX_LINE_SIZE 1024
 
-#define DBMAIL_TEMPMBOX "INBOX"
-
-/**
- * store a messagebody (without headers in one or more blocks in the database
- * \param message the message
- * \param message_size size of message
- * \param msgidnr idnr of message
- * \return 
- *     - -1 on error
- *     -  1 on success
- */
-static int store_message_in_blocks(const char* message,
-				   u64_t message_size,
-				   u64_t msgidnr);
 
 /* 
  * Send an automatic notification using sendmail
@@ -364,66 +350,6 @@ int discard_client_input(FILE * instream)
 	return 0;
 }
 
-/**
- * store a temporary copy of a message.
- * \param header the header to the message
- * \param body body of the message
- * \param headersize size of header
- * \param bodysize size of body
- * \param rfcsize rfc size of message
- * \param[out] temp_message_idnr message idnr of temporary message
- * \return 
- *     - -1 on error
- *     -  1 on success
- */
-static int store_message_temp(const char *header, const char *body, 
-			      u64_t headersize,
-			      u64_t bodysize, u64_t rfcsize,
-			      /*@out@*/ u64_t * temp_message_idnr)
-{
-	u64_t user_idnr;
-	u64_t msgidnr;
-	u64_t messageblk_idnr;
-	char unique_id[UID_SIZE];
-	
-	switch (auth_user_exists(DBMAIL_DELIVERY_USERNAME, &user_idnr)) {
-	case -1:
-		trace(TRACE_ERROR,
-		      "%s,%s: unable to find user_idnr for user " "[%s]\n",
-		      __FILE__, __func__, DBMAIL_DELIVERY_USERNAME);
-		return -1;
-		break;
-	case 0:
-		trace(TRACE_ERROR,
-		      "%s,%s: unable to find user_idnr for user "
-		      "[%s]. Make sure this system user is in the database!\n",
-		      __FILE__, __func__, DBMAIL_DELIVERY_USERNAME);
-		return -1;
-		break;
-	}
-	
-	create_unique_id(unique_id, user_idnr);
-	/* create a message record */
-	if(db_insert_message(user_idnr, DBMAIL_TEMPMBOX, CREATE_IF_MBOX_NOT_FOUND, unique_id, &msgidnr) < 0)
-		return -1;
-
-	if(db_insert_message_block(header, headersize, msgidnr, &messageblk_idnr,1) < 0)
-		return -1;
-	
-	trace(TRACE_DEBUG, "%s,%s: allocating [%ld] bytes of memory "
-	      "for readblock", __FILE__, __func__, READ_BLOCK_SIZE);
-	
-	/* store body in several blocks (if needed */
-	if (store_message_in_blocks(body, bodysize, msgidnr) < 0)
-		return -1;
-
-	if (db_update_message(msgidnr, unique_id, (headersize + bodysize), rfcsize) < 0) 
-		return -1;
-
-	*temp_message_idnr = msgidnr;
-	return 1;
-}
-
 int store_message_in_blocks(const char *message, u64_t message_size,
 			    u64_t msgidnr) 
 {
@@ -490,15 +416,15 @@ int store_message_in_blocks(const char *message, u64_t message_size,
  *   - 0 on success
  *   - -1 on full failure
  */
-int insert_messages(const char *header, const char* body, u64_t headersize,
-		    u64_t bodysize, u64_t rfcsize,
-		    struct list *headerfields,
-		    struct list *dsnusers, struct list *returnpath)
+int insert_messages(struct DbmailMessage *message, 
+		struct list *headerfields, 
+		struct list *dsnusers, 
+		struct list *returnpath)
 {
+	char *header, *body;
+	u64_t headersize, bodysize, rfcsize;
 	struct element *element, *ret_path;
 	u64_t msgsize, tmpmsgidnr;
-
-	msgsize = headersize + bodysize;
 
 	/* first start a new database transaction */
 	if (db_begin_transaction() < 0) {
@@ -508,9 +434,7 @@ int insert_messages(const char *header, const char* body, u64_t headersize,
 		return -1;
 	}
 
-	switch (store_message_temp
-		(header, body, headersize, 
-		 bodysize, rfcsize, &tmpmsgidnr)) {
+	switch (dbmail_message_store_temp(message, &tmpmsgidnr)) {
 	case -1:
 		/* Major trouble. Bail out immediately. */
 		trace(TRACE_ERROR,
@@ -523,6 +447,14 @@ int insert_messages(const char *header, const char* body, u64_t headersize,
 		      __FILE__, __func__, tmpmsgidnr);
 		break;
 	}
+
+	header = dbmail_message_hdrs_to_string(message);
+	body = dbmail_message_body_to_string(message);
+	headersize = (u64_t)dbmail_message_get_hdrs_size(message);
+	bodysize = (u64_t)dbmail_message_get_body_size(message);
+	rfcsize = (u64_t)dbmail_message_get_rfcsize(message);
+	msgsize = (u64_t)dbmail_message_get_size(message);
+
 
 	/* Loop through the users list. */
 	for (element = list_getstart(dsnusers); element != NULL;
@@ -542,11 +474,7 @@ int insert_messages(const char *header, const char* body, u64_t headersize,
 			      "%s, %s: calling sort_and_deliver for useridnr [%llu]",
 			      __FILE__, __func__, useridnr);
 
-			switch (sort_and_deliver(tmpmsgidnr,
-						 header, headersize,
-						 msgsize,
-						 useridnr,
-						 delivery->mailbox)) {
+			switch (sort_and_deliver(tmpmsgidnr, header, headersize, msgsize, useridnr, delivery->mailbox)) {
 			case DSN_CLASS_OK:
 				/* Indicate success. */
 				trace(TRACE_DEBUG,
@@ -608,16 +536,13 @@ int insert_messages(const char *header, const char* body, u64_t headersize,
 			break;
 		}
 
-		trace(TRACE_DEBUG,
-		      "insert_messages(): we need to deliver [%ld] "
-		      "messages to external addresses",
-		      list_totalnodes(delivery->forwards));
+		trace(TRACE_DEBUG, "insert_messages(): we need to deliver [%ld] "
+		      "messages to external addresses", list_totalnodes(delivery->forwards));
 
 		/* Each user may also have a list of external forwarding addresses. */
 		if (list_totalnodes(delivery->forwards) > 0) {
 
-			trace(TRACE_DEBUG,
-			      "insert_messages(): delivering to external addresses");
+			trace(TRACE_DEBUG, "insert_messages(): delivering to external addresses");
 
 			/* Only the last step of the returnpath is used. */
 			ret_path = list_getstart(returnpath);

@@ -104,13 +104,7 @@ int main(int argc, char *argv[])
 {
 	int exitcode = 0;
 	int c, c_prev = 0, usage_error = 0;
-	char *whole_message = NULL;
-	u64_t whole_message_size;
-	const char *body;
-	u64_t body_size;
-	u64_t rfcsize;
-	char *header = NULL;
-	u64_t headersize;
+	struct DbmailMessage *msg = NULL;
 	
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 
@@ -290,23 +284,14 @@ int main(int argc, char *argv[])
 	}
 	
 	/* read the whole message */
-	if (! (whole_message_size = read_whole_message_stream(stdin, &whole_message, DBMAIL_STREAM_PIPE))) { 
+	if (! (msg = dbmail_message_new_from_stream(stdin, DBMAIL_STREAM_PIPE))) {
 		trace(TRACE_ERROR, "%s,%s: read_whole_message_pipe() failed",
 		      __FILE__, __func__);
 		exitcode = EX_TEMPFAIL;
 		goto freeall;
 	}
-
-	/* get pointer to header and to body */
-	if (split_message(whole_message, &header, &headersize, &body, &body_size, &rfcsize) < 0) {
-		trace(TRACE_ERROR, "%s,%s splitmessage failed",
-		      __FILE__, __func__);
-		exitcode = EX_TEMPFAIL;
-		goto freeall;
-	}
-	g_free(whole_message);
 	
-	if (headersize > READ_BLOCK_SIZE) {
+	if (dbmail_message_get_hdrs_size(msg) > READ_BLOCK_SIZE) {
 		trace(TRACE_ERROR,
 		      "%s,%s: failed to read header because header is "
 		      "too big (bigger than READ_BLOCK_SIZE (%llu))",
@@ -316,7 +301,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* parse the list and scan for field and content */
-	if (mime_fetch_headers(header, &mimelist) < 0) {
+	if (mime_fetch_headers(dbmail_message_hdrs_to_string(msg), &mimelist) < 0) {
 		trace(TRACE_ERROR,
 		      "main(): mime_fetch_headers failed to read a header list");
 		exitcode = EX_TEMPFAIL;
@@ -334,12 +319,9 @@ int main(int argc, char *argv[])
 	/* If the NORMAL delivery mode has been selected... */
 	if (deliver_to_header != NULL) {
 		/* parse for destination addresses */
-		trace(TRACE_DEBUG, "main(): scanning for [%s]",
-		      deliver_to_header);
-		if (mail_adr_list(deliver_to_header, &users, &mimelist) !=
-		    0) {
-			trace(TRACE_STOP,
-			      "main(): scanner found no email addresses (scanned for %s)",
+		trace(TRACE_DEBUG, "main(): scanning for [%s]", deliver_to_header);
+		if (mail_adr_list(deliver_to_header, &users, &mimelist) != 0) {
+			trace(TRACE_STOP, "main(): scanner found no email addresses (scanned for %s)",
 			      deliver_to_header);
 			exitcode = EX_NOUSER;
 			goto freeall;
@@ -353,8 +335,7 @@ int main(int argc, char *argv[])
 			dsnuser_init(&dsnuser);
 			dsnuser.address = dm_strdup((char *) tmp->data);
 
-			list_nodeadd(&dsnusers, &dsnuser,
-				     sizeof(deliver_to_user_t));
+			list_nodeadd(&dsnusers, &dsnuser, sizeof(deliver_to_user_t));
 		}
 	}
 
@@ -377,9 +358,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* inserting messages into the database */
-	if (insert_messages(header, body, headersize,
-			    body_size, rfcsize,
-			    &mimelist, &dsnusers, &returnpath) == -1) {
+	if (insert_messages(msg, &mimelist, &dsnusers, &returnpath) == -1) {
 		trace(TRACE_ERROR, "main(): insert_messages failed");
 		/* Most likely a random failure... */
 		exitcode = EX_TEMPFAIL;
@@ -413,9 +392,7 @@ int main(int argc, char *argv[])
 	list_freelist(&returnpath.start);
 	list_freelist(&users.start);
 
-	trace(TRACE_DEBUG, "main(): freeing memory blocks");
-	if (header != NULL)
-		g_free(header);
+	dbmail_message_delete(msg);
 
 	trace(TRACE_DEBUG, "main(): they're all free. we're done.");
 

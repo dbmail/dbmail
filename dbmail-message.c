@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -36,6 +37,9 @@
 #include "dbmail.h"
 #include "dbmail-message.h"
 #include "db.h"
+#include "auth.h"
+#include "misc.h"
+#include "pipe.h"
 
 
 extern db_param_t _db_params;
@@ -45,6 +49,7 @@ extern db_param_t _db_params;
 /* for issuing queries to the backend */
 char query[DEF_QUERYSIZE];
 
+#define DBMAIL_TEMPMBOX "INBOX"
 /*
  * _register_header
  *
@@ -77,9 +82,32 @@ struct DbmailMessage * dbmail_message_new(void)
 	dbmail_message_set_class(self, DBMAIL_MESSAGE);
 	return self;
 }
-void dbmail_message_set_class(struct DbmailMessage *self, int klass)
+
+struct DbmailMessage * dbmail_message_new_from_stream(FILE *instream, int streamtype) 
 {
-	self->klass = klass;
+	GMimeStream *stream;
+	struct DbmailMessage *message;
+	
+	assert(instream);
+	message = dbmail_message_new();
+	stream = g_mime_stream_fs_new(dup(fileno(instream)));
+	message = dbmail_message_init_with_stream(message, stream, streamtype);
+	return message;
+}
+
+int dbmail_message_set_class(struct DbmailMessage *self, int klass)
+{
+	switch (klass) {
+		case DBMAIL_MESSAGE:
+		case DBMAIL_MESSAGE_PART:
+			self->klass = klass;
+			break;
+		default:
+			return 1;
+			break;
+	}		
+	return 0;
+			
 }
 int dbmail_message_get_class(struct DbmailMessage *self)
 {
@@ -219,26 +247,46 @@ size_t dbmail_message_get_rfcsize(struct DbmailMessage *self)
 
 	return self->rfcsize;
 }
-
-char * dbmail_message_get_headers_as_string(struct DbmailMessage *self)
+gchar * dbmail_message_to_string(struct DbmailMessage *self) 
 {
-	char *result;
-	GString *headers = g_string_new(g_mime_object_get_headers((GMimeObject *)(self->content)));
-	result = headers->str;
-	g_string_free(headers,FALSE);
-	return result;
+	gchar *s;	
+	GString *msg = g_string_new(g_mime_object_to_string(GMIME_OBJECT(self->content)));
+	s=msg->str;
+	g_string_free(msg,FALSE);
+	return s;
 }
 
-char * dbmail_message_get_body_as_string(struct DbmailMessage *self)
+gchar * dbmail_message_hdrs_to_string(struct DbmailMessage *self)
 {
-	char *result;
-	GString *header = g_string_new(g_mime_object_get_headers((GMimeObject *)(self->content)));
-	GString *body = g_string_new(g_mime_object_to_string((GMimeObject *)(self->content)));
-	body = g_string_erase(body,0,header->len);
-	result = body->str;
+	char *s;
+	GString *headers = g_string_new(g_mime_object_get_headers((GMimeObject *)(self->content)));
+	s = headers->str;
+	g_string_free(headers,FALSE);
+	return s;
+}
+
+gchar * dbmail_message_body_to_string(struct DbmailMessage *self)
+{
+	char *s;
+	GString *body;
+	body = g_string_new(g_mime_object_to_string((GMimeObject *)(self->content)));
+	body = g_string_erase(body,0,dbmail_message_get_hdrs_size(self));
+	s = body->str;
 	g_string_free(body,FALSE);
-	g_string_free(header,TRUE);
-	return result;
+	return s;
+}
+size_t dbmail_message_get_hdrs_size(struct DbmailMessage *self)
+{
+	return strlen(dbmail_message_hdrs_to_string(self));
+}
+size_t dbmail_message_get_body_size(struct DbmailMessage *self)
+{
+	return strlen(dbmail_message_body_to_string(self));
+}
+
+size_t dbmail_message_get_size(struct DbmailMessage *self)
+{
+	return self->size;
 }
 
 void dbmail_message_delete(struct DbmailMessage *self)
@@ -342,44 +390,75 @@ struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t
 	return self;
 }
 
-int split_message(const char *whole_message, 
-		  char **header, u64_t *header_size,
-		  const char **body, u64_t *body_size,
-		  u64_t *rfcsize)
-{
-	GString *tmp = g_string_new(whole_message);
-	struct DbmailMessage *_msg = dbmail_message_new();
-	_msg = dbmail_message_init_with_string(_msg, tmp);
-	
-	*header = dbmail_message_get_headers_as_string(_msg);
-	*body = dbmail_message_get_body_as_string(_msg);
-	*rfcsize = (u64_t)dbmail_message_get_rfcsize(_msg);
-	
-	tmp = g_string_new(*header);
-	*header_size = (u64_t)tmp->len;
-	
-	tmp = g_string_new(*body);
-	*body_size = (u64_t)tmp->len;
-	
-	g_string_free(tmp,1);
-	dbmail_message_delete(_msg);
 
-	return 0;
+/**
+ * store a temporary copy of a message.
+ * \param header the header to the message
+ * \param body body of the message
+ * \param headersize size of header
+ * \param bodysize size of body
+ * \param rfcsize rfc size of message
+ * \param[out] temp_message_idnr message idnr of temporary message
+ * \return 
+ *     - -1 on error
+ *     -  1 on success
+ */
+int dbmail_message_store_temp(struct DbmailMessage *self, /*@out@*/ u64_t * temp_message_idnr)
+{
+	u64_t user_idnr;
+	u64_t msgidnr;
+	u64_t messageblk_idnr;
+	char unique_id[UID_SIZE];
+	char *hdrs, *body;
+	u64_t hdrs_size, body_size, rfcsize;
+	
+	switch (auth_user_exists(DBMAIL_DELIVERY_USERNAME, &user_idnr)) {
+	case -1:
+		trace(TRACE_ERROR,
+		      "%s,%s: unable to find user_idnr for user " "[%s]\n",
+		      __FILE__, __func__, DBMAIL_DELIVERY_USERNAME);
+		return -1;
+		break;
+	case 0:
+		trace(TRACE_ERROR,
+		      "%s,%s: unable to find user_idnr for user "
+		      "[%s]. Make sure this system user is in the database!\n",
+		      __FILE__, __func__, DBMAIL_DELIVERY_USERNAME);
+		return -1;
+		break;
+	}
+	
+	create_unique_id(unique_id, user_idnr);
+	/* create a message record */
+	if(db_insert_message(user_idnr, DBMAIL_TEMPMBOX, CREATE_IF_MBOX_NOT_FOUND, unique_id, &msgidnr) < 0)
+		return -1;
+
+	hdrs = dbmail_message_hdrs_to_string(self);
+	body = dbmail_message_body_to_string(self);
+	hdrs_size = (u64_t)dbmail_message_get_hdrs_size(self);
+	body_size = (u64_t)dbmail_message_get_body_size(self);
+	rfcsize = (u64_t)dbmail_message_get_rfcsize(self);
+	
+	
+	if(db_insert_message_block(hdrs, hdrs_size, msgidnr, &messageblk_idnr,1) < 0)
+		return -1;
+	
+	trace(TRACE_DEBUG, "%s,%s: allocating [%ld] bytes of memory "
+	      "for readblock", __FILE__, __func__, READ_BLOCK_SIZE);
+	
+	/* store body in several blocks (if needed */
+	if (store_message_in_blocks(body, body_size, msgidnr) < 0)
+		return -1;
+
+	if (db_update_message(msgidnr, unique_id, (hdrs_size + body_size), rfcsize) < 0) 
+		return -1;
+
+	*temp_message_idnr = msgidnr;
+
+	g_free(hdrs);
+	g_free(body);
+
+	return 1;
 }
 
-u64_t read_whole_message_stream(FILE *instream, char **whole_message, int streamtype) 
-{
-	u64_t size;
-
-	struct DbmailMessage *message = dbmail_message_new();
-	GMimeStream *stream = g_mime_stream_fs_new(dup(fileno(instream)));
-	message = dbmail_message_init_with_stream(message, stream, streamtype);
-	
-	GString *msg = g_string_new(g_mime_object_to_string(GMIME_OBJECT(message->content)));
-	*whole_message = g_strdup(msg->str);
-	size = message->size;
-	g_string_free(msg,1);
-	dbmail_message_delete(message);
-	return size;	
-}
 

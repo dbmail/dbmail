@@ -1321,7 +1321,6 @@ int _ic_sort(struct ImapSession *self)
 	unsigned i;
 	int result=0,only_ascii=0,idx=0;
 	search_key_t sk;
-	struct list *sub_search;
 
 	if (ud->state != IMAPCS_SELECTED) {
 		dbmail_imap_session_printf(self,"%s BAD SORT command received in invalid state\r\n", self->tag);
@@ -1354,9 +1353,6 @@ int _ic_sort(struct ImapSession *self)
 
 	/* parse the search keys */
 	while ( self->args[idx] && (result = build_imap_search(self->args, &sk.sub_search, &idx,1)) >= 0);
-	/* reverse the search keys back to their original order */
-	sub_search = &sk.sub_search;
-	sk.sub_search.start = dbmail_list_reverse(sub_search->start);
 
 	if (result == -2) {
 		free_searchlist(&sk.sub_search);
@@ -1597,7 +1593,6 @@ int _ic_search(struct ImapSession *self)
 	unsigned retry, i;
 	int result = 0, only_ascii = 0, idx = 0;
 	search_key_t sk;
-	struct list *sub_search;
 
 	if (ud->state != IMAPCS_SELECTED) {
 		dbmail_imap_session_printf(self,
@@ -1637,10 +1632,9 @@ int _ic_search(struct ImapSession *self)
 	/* parse the search keys */
 	while (self->args[idx] && (result = build_imap_search(self->args, &sk.sub_search, &idx, 0)) >= 0);
 
-	/* reverse the search list back to it's original order */
-	sub_search = &sk.sub_search;
-	sk.sub_search.start = dbmail_list_reverse(sub_search->start);
-	
+	/* optimize the search keys */
+  	sort_search(&sk.sub_search);
+
 	if (result == -2) {
 		free_searchlist(&sk.sub_search);
 		dbmail_imap_session_printf(self, "* BYE server ran out of memory\r\n");

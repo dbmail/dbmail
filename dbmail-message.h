@@ -73,14 +73,34 @@ struct DbmailMessage {
 };
 
 struct DbmailMessage * dbmail_message_new(void);
-void dbmail_message_set_class(struct DbmailMessage *self, int klass);
+
+/**
+ * read the whole message from the instream
+ * \param[in] instream input stream (stdin)
+ * \param[in] type of instream (pipe or lmtp)
+ * \return
+ *      - message struct
+ */
+
+struct DbmailMessage * dbmail_message_new_from_stream(FILE *instream, int streamtype);
+
+int dbmail_message_set_class(struct DbmailMessage *self, int klass);
 int dbmail_message_get_class(struct DbmailMessage *self);
+
 struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t id, int filter);
 struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *self, const GString *content);
 struct DbmailMessage * dbmail_message_init_with_stream(struct DbmailMessage *self, GMimeStream *stream, int type);
-gchar * dbmail_message_get_headers_as_string(struct DbmailMessage *self);
-gchar * dbmail_message_get_body_as_string(struct DbmailMessage *self);
+
+gchar * dbmail_message_to_string(struct DbmailMessage *self);
+gchar * dbmail_message_hdrs_to_string(struct DbmailMessage *self);
+gchar * dbmail_message_body_to_string(struct DbmailMessage *self);
+
+size_t dbmail_message_get_hdrs_size(struct DbmailMessage *self);
+size_t dbmail_message_get_body_size(struct DbmailMessage *self);
+
+size_t dbmail_message_get_size(struct DbmailMessage *self);
 size_t dbmail_message_get_rfcsize(struct DbmailMessage *self);
+
 void dbmail_message_delete(struct DbmailMessage *self);
 
 /*
@@ -91,30 +111,14 @@ void dbmail_message_delete(struct DbmailMessage *self);
 
 
 /**
- * split the whole message into header and body
- * \param[in] whole_message the whole message, including header
- * \param[in] whole_message_size size of whole_message.
- * \param[out] header will hold header 
- * \param[out] header_size size of header
- * \param[out] header_rfcsize rfc size of header
- * \param[out] body will hold body
- * \param[out] body_size size of body
- * \param[out] body_rfcsize rfc size of body
+ * store a temporary copy of a message.
+ * \param message pointer to dbmailmessage struct
+ * \param[out] temp_message_idnr message idnr of temporary message
+ * \return 
+ *     - -1 on error
+ *     -  1 on success
  */
-int split_message(const char *whole_message, 
-		  char **header, u64_t *header_size,
-		  const char **body, u64_t *body_size,
-		  u64_t *body_rfcsize);
-
-/**
- * read the whole message from the instream
- * \param[in] instream input stream (stdin)
- * \param[out] whole_message pointer to string which will hold the whole message
- * \param[in] type of instream (pipe or lmtp)
- * \return
- *      - size of message
- */
-u64_t read_whole_message_stream(FILE *instream, char **whole_message, int streamtype);
+int dbmail_message_store_temp(struct DbmailMessage *message, /*@out@*/ u64_t * temp_message_idnr);
 
 
 #endif

@@ -27,27 +27,18 @@
 #include "config.h"
 #endif
 
+#include "dbmail-message.h"
 #include "list.h"
 
 /**
  * \brief inserts a message in the database. The header of the message is 
  * supposed to be given. The rest of the message will be read from instream
- * \param instream is a FILE stream where the rest of the message is
- * \param header header of the message
- * \param headersize size of the header
- * \param users list of users to sent the message to
- * \param errusers list of users who didn't work for some reason
- * \param returnpath From: addresses. Used for bouncing messages.
- * \param users_are_usernames if 0, the users list holds user_idnr, if 1 it
- * holds usernames
- * \param deliver_to_mailbox mailbox to deliver to
- * \param headerfields list of header fields
  * \return 0
  */
-int insert_messages(const char *header, const char *body, u64_t headersize, 
-		    u64_t bodysize, u64_t rfcsize,
-		    struct list *headerfields, struct list *dsnusers,
-		    struct list *returnpath);
+int insert_messages(struct DbmailMessage *message,
+		struct list *headerfields, 
+		struct list *dsnusers,
+		struct list *returnpath);
 
 /**
  * \brief discards all input coming from instream
@@ -57,5 +48,19 @@ int insert_messages(const char *header, const char *body, u64_t headersize,
  *      -  0 on success
  */
 int discard_client_input(FILE * instream);
+
+/**
+ * store a messagebody (without headers in one or more blocks in the database
+ * \param message the message
+ * \param message_size size of message
+ * \param msgidnr idnr of message
+ * \return 
+ *     - -1 on error
+ *     -  1 on success
+ */
+int store_message_in_blocks(const char* message,
+				   u64_t message_size,
+				   u64_t msgidnr);
+
 
 #endif
