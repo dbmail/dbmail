@@ -86,23 +86,20 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
   /* 	this loop gets all the users from the list 
 	and check if they're in the database */
 
-  struct element *tmp, *tmp_pipe, *descriptor_temp;
+  struct element *tmp;
   char *insertquery;
   char *updatequery;
   char *unique_id;
   char *strblock;
   char *domain, *ptr;
   char *tmpbuffer=NULL;
-  char *sendmail_command;
   size_t usedmem=0, totalmem=0;
   struct list userids;
   struct list messageids;
-  FILE *sendmail_pipe;
   struct list external_forwards;
   struct list bounces;
-  struct list descriptors;
   unsigned long temp_message_record_id,userid;
-  int i,err;
+  int i;
   
   /* step 1.
      inserting first message
@@ -309,163 +306,23 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
     }
 
   /* do we have forward addresses ? */
-  if (list_totalnodes(&external_forwards)>0)
-    {
-      /* sending the message to forwards */
+	if (list_totalnodes(&external_forwards)>0)
+	{
+		/* sending the message to forwards */
   
-      trace (TRACE_DEBUG,"insert_messages(): delivering to external addresses");
+		trace (TRACE_DEBUG,"insert_messages(): delivering to external addresses");
   
-	      if (list_totalnodes(&messageids)==0)
+		if (list_totalnodes(&messageids)==0)
 		{
-		  trace (TRACE_DEBUG,
-			 "insert_messages(): Forwarding message directly through pipes");
-					
-		  /* this is tricky. Since there are no messages inserted 
-		     in the database we need to redirect the pipe into all forwards */
-
-		tmp_pipe = list_getstart(&external_forwards);
-		  
-		  /* first open the pipes and send the header */
-		  while (tmp_pipe!=NULL)
-		    {
-		      sendmail_command = (char *)malloc(strlen((char *)tmp_pipe->data)+strlen(SENDMAIL)+1); /* add 1 for the space */
-				trace (TRACE_DEBUG,"allocated memory");
-				sprintf (sendmail_command,"%s %s",SENDMAIL,(char *)tmp_pipe->data);
-				trace (TRACE_DEBUG,"insert_messages(): opening pipe using command [%s]",sendmail_command);
-		      sendmail_pipe = popen(sendmail_command,"w");
-		      trace (TRACE_DEBUG,"insert_messages(): popen() executed");
-				free (sendmail_command);
-
-		      if (sendmail_pipe!=NULL)
-			{
-			  /* build a list of descriptors */
-			  trace (TRACE_DEBUG,"insert_messages(): popen() successfull "
-				 "[descriptor=%d]",fileno(sendmail_pipe));
-
-			  /* -2 will send the complete message to sendmail_pipe */
-			  fprintf (sendmail_pipe,"%s",header);
-			  trace (TRACE_DEBUG,"insert_messages(): wrote header to pipe");
-
-			  /* add the external pipe descriptor to a list */
-			  list_nodeadd(&descriptors,&sendmail_pipe,sizeof(FILE*));
-			}
-		      else 
-			{
-			  trace (TRACE_ERROR,"insert_messages(): Could not open pipe to [%s]",
-				 SENDMAIL);
-			}
-		      /* get next receipient */
-		      tmp_pipe=tmp_pipe->nextnode;
-		    }
-			
-		  if (descriptors.total_nodes>0)
-		    {
-		      trace (TRACE_DEBUG,"insert_messages(): forwarding to %d addresses",
-			     descriptors.total_nodes);
-
-		      while (!feof(stdin))
-			{
-			  usedmem = fread (strblock, sizeof(char), READ_BLOCK_SIZE, stdin);
-									
-			  if (usedmem>0) /* this happends when a eof occurs */
-			    {
-			      totalmem=totalmem+usedmem;
-
-			      trace(TRACE_DEBUG,"insert_messages(): "
-				    "Sending block size=[%d] total=[%d]",usedmem, totalmem);
-
-			      descriptor_temp = list_getstart(&descriptors);
-			      while (descriptor_temp!=NULL)
-				{
-				  trace (TRACE_DEBUG,"insert_messages(): fprintf now");
-				  err = ferror(*((FILE **)(descriptor_temp->data)));
-				  trace (TRACE_DEBUG,"insert_messages(): "
-					 "ferror reports %d, feof reports %d on descriptor %d",err, 
-					 feof(*((FILE **)(descriptor_temp->data))),
-				    fileno(*((FILE **)(descriptor_temp->data))));
-
-				   /* if (!err)
-				    fwrite (strblock, sizeof(char), usedmem,
-					    (FILE *)(descriptor_temp->data));  */
-				  fprintf (*((FILE **)(descriptor_temp->data)),"%s",strblock);
-
-				  trace (TRACE_DEBUG,"insert_messages(): wrote data");
-				  descriptor_temp=descriptor_temp->nextnode;
-				  trace (TRACE_DEBUG,"insert_messages(): fprintf done");
-				}
-			      /* resetting strlen for strblock */
-			      strblock[0]='\0';
-			      usedmem = 0;
-			    }
-			  else 
-			    trace (TRACE_DEBUG,
-				   "insert_messages(): End of STDIN reached. we're done here");
-			}
-
-		      /* done forwarding */
-		      trace(TRACE_DEBUG, "insert_messages(): Closing pipes");
-		      descriptor_temp = list_getstart(&descriptors);
-		      while (descriptor_temp!=NULL)
-			{
-			  if (descriptor_temp->data!=NULL) 
-			    {
-					 if (!ferror(*((FILE **)(descriptor_temp->data))))
-							{
-							fprintf (*((FILE **)(descriptor_temp->data)),"\n.\n"); 
-							trace(TRACE_DEBUG,"insert_messages: descriptor %d closed",
-									fileno(*((FILE **)(descriptor_temp->data))));
-							pclose (*((FILE **)(descriptor_temp->data)));
-							}
-					 else 
-							trace(TRACE_DEBUG,"insert_messages: descriptor already closed",
-									fileno(*((FILE **)(descriptor_temp->data))));
-			    }
-			  else 
-			    trace (TRACE_ERROR,"insert_messages(): Huh? "
-				   "The descriptor died on me. That's not supposed to happen");
-			  descriptor_temp=descriptor_temp->nextnode;
-			}
-		    }
-		  else
-		    {	
-		      trace (TRACE_ERROR,"insert_message(): "
-			     "Something went wrong when building a list "
-			     "structure for pipe descriptors");
-		    }
-		 list_freelist(&descriptors.start); 
+			/* deliver using stdin */
+			pipe_forward (stdin, &external_forwards, header, 0);
 		}
-	      else	
-		{		
-		  trace (TRACE_DEBUG,"insert_messages(): Forwarding message via database");
-		  tmp_pipe = list_getstart(&external_forwards);
-		  while (tmp_pipe!=NULL)
-		    {
-		      sendmail_command = (char *)malloc(strlen((char *)tmp_pipe->data)+strlen(SENDMAIL)+1); /* add 1 for the space */
-				sprintf (sendmail_command,"%s %s",SENDMAIL,(char *)tmp_pipe->data);
-				trace (TRACE_DEBUG,"insert_messages(): opening pipe using command [%s]",sendmail_command);
-		      sendmail_pipe = popen(sendmail_command,"w");
-		      trace (TRACE_DEBUG,"insert_messages(): popen() executed");
-				free (sendmail_command);
-				
-		      if (sendmail_pipe!=NULL)
-			{
-			  trace (TRACE_DEBUG,"insert_messages(): popen() successfull");
-
-			  /* -2 will send the complete message to sendmail_pipe */
-			  fprintf (sendmail_pipe,"%s",tmpbuffer);
-			  trace (TRACE_DEBUG,"insert_messages(): sending message from database");
-			  db_send_message_special (sendmail_pipe, 
-						   *(unsigned long*)tmp->data, -2, tmpbuffer); 
-			}
-		      else 
-			{
-			  trace (TRACE_ERROR,"insert_messages(): Could not open pipe to [%s]",
-				 SENDMAIL);
-			}
-		      tmp_pipe=tmp_pipe->nextnode;
-		    }
-	    }
-	 }
+		else
+		{
+			/* deliver using database */
+			pipe_forward (stdin, &external_forwards, header, *((unsigned long *)tmp->data));
+		}
+	}
 	
   trace (TRACE_DEBUG,"insert_messages(): Freeing memory blocks");
   /* memory cleanup */

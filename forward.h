@@ -6,7 +6,10 @@
 #include "dbmysql.h"
 #include "debug.h"
 #include "list.h"
+#include "bounce.h"
 
-int pipe_forward(FILE *instream, list *targets, char *header, databasemessageid)
+#define FW_SENDMAIL SENDMAIL
+
+int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned long databasemessageid);
 
 #endif
