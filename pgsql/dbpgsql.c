@@ -220,7 +220,7 @@ char* db_get_deliver_from_alias(const char *alias)
   if (db_query(query) == -1)
     {
       trace(TRACE_ERROR, "db_get_deliver_from_alias(): could not execute query");
-      return -1;
+      return NULL;
     }
 
   if (PQntuples(res) == 0)
@@ -234,7 +234,7 @@ char* db_get_deliver_from_alias(const char *alias)
     {
       trace(TRACE_ERROR, "db_get_deliver_from_alias(): out of mem");
       PQclear(res);
-      return 0;
+      return NULL;
     }
 
   strcpy(deliver, PQgetvalue(res, 0, 0));

@@ -207,13 +207,13 @@ char* db_get_deliver_from_alias(const char *alias)
   if (db_query(query) == -1)
     {
       trace(TRACE_ERROR, "db_get_deliver_from_alias(): could not execute query");
-      return -1;
+      return NULL;
     }
 
   if ((res = mysql_store_result(&conn)) == NULL) 
     {
       trace(TRACE_ERROR, "db_get_deliver_from_alias(): could not store query result");
-      return -1;
+      return NULL;
     }
 
   if (mysql_num_rows(res) == 0)
@@ -229,7 +229,7 @@ char* db_get_deliver_from_alias(const char *alias)
     {
       trace(TRACE_ERROR, "db_get_deliver_from_alias(): out of mem");
       mysql_free_result(res);
-      return 0;
+      return NULL;
     }
 
   strcpy(deliver, row[0]);
