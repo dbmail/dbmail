@@ -1539,7 +1539,7 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
 		return -1;
 	}
 	for (i = 0; i < n; i++)
-		message_idnrs[i] = db_get_result_u64(0, 0);
+		message_idnrs[i] = db_get_result_u64(i, 0);
 	db_free_result();
 	/* delete every message in the mailbox */
 	for (i = 0; i < n; i++) {
