@@ -1524,6 +1524,9 @@ int _ic_append(char *tag, char **args, ClientInfo *ci)
   i=1;
   
   /* check if a flag list has been specified */
+  /* FIXME: We need to take of care of the Flags that are set here. They
+     should be set to the new message!
+  */
   if (args[i][0] == '(')
     {
       /* ok fetch the flags specified */
@@ -1548,7 +1551,10 @@ int _ic_append(char *tag, char **args, ClientInfo *ci)
 
 
   /* there could be a literal date here, check if the next argument exists
-   * if so, assume this is the literal date
+   * if so, assume this is the literal date.
+   * FIXME: this internal date has to be used in the append command to set
+   * the internal date of the message (if it should be something else than
+   * CURRENT_TIMESTAMP.
    */
   if (args[i+1])
     {
