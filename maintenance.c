@@ -393,8 +393,8 @@ int main(int argc, char *argv[])
 			qerrorf("\n");
 			if (should_fix == 0) {
 				qerrorf
-				    ("Try running dbmail-util with the '-f' option "
-				     "in order to fix these problems\n\n");
+				    ("Try running dbmail-util with the '-r' option "
+				     "in order to repair these problems\n\n");
 			}
 		} else
 			qprintf("Ok. Found 0 unconnected messageblks.\n");
@@ -445,8 +445,8 @@ int main(int argc, char *argv[])
 			qerrorf("\n");
 			if (should_fix == 0) {
 				qerrorf
-				    ("Try running dbmail-util with the '-f' option "
-				     "in order to fix these problems\n\n");
+				    ("Try running dbmail-util with the '-r' option "
+				     "in order to repair these problems\n\n");
 			}
 			list_freelist(&lostlist.start);
 
@@ -499,8 +499,8 @@ int main(int argc, char *argv[])
 			qerrorf("\n");
 			if (should_fix == 0) {
 				qerrorf
-				    ("Try running dbmail-util with the '-f' option "
-				     "in order to fix these problems\n\n");
+				    ("Try running dbmail-util with the '-r' option "
+				     "in order to repair these problems\n\n");
 			}
 
 			list_freelist(&lostlist.start);

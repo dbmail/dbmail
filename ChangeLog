@@ -1,6 +1,7 @@
 2004-11-01  Aaron Stone  <aaron@serendipity.cx>
 
 	* INSTALL: couple of minor edits, per Sean Kelly.
+	* maintenance.c: changed references to "-f... fix" to "-r... repair"
 
 2004-10-31  Aaron Stone  <aaron@serendipity.cx>
 
