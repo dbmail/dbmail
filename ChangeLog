@@ -1,5 +1,14 @@
 2004-06-01  Ilja Booij  <ilja@ic-s.nl>
 
+	* db.c (db_findmailbox_owner): now searches for a literal
+	'INBOX' if we're searching for the INBOX. No longer uses 
+	lower() to get the lowercase version.
+	(convert_inbox_to_uppercase): function to change the first
+	5 characters of the mailbox name to INBOX
+	(db_begin_transaction): function used to begin a transaction
+	(db_commit_transaction): function used to commit a transaction
+	(db_rollback_transaction): function used to roll back a transaction
+
 	* pop3.c (pop3): AUTH command changed slightly to give
 	X-NONE-SO-USE-APOP as authentication list and return an
 	error when another AUTH mechanism is asked.

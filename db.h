@@ -215,6 +215,30 @@ void *db_get_result_set(void);
  */
 void db_set_result_set(void *res);
 
+/**
+ * begin transaction
+ * \return 
+ *     - -1 on error
+ *     -  0 otherwise
+ */
+int db_begin_transaction(void);
+
+/**
+ * commit transaction
+ * \return
+ *      - -1 on error
+ *      -  0 otherwise
+ */
+int db_commit_transaction(void);
+
+/**
+ * rollback transaction
+ * \return 
+ *     - -1 on error
+ *     -  0 otherwise
+ */
+int db_rollback_transaction(void);
+
 /* shared implementattion from hereon */
 /**
  * \brief get the physmessage_id from a message_idnr

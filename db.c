@@ -118,6 +118,51 @@ static char *char2date_str(const char *date);
  */
 static int user_idnr_is_delivery_user_idnr(u64_t user_idnr);
 
+/**
+ * set the first 5 characters of a mailbox name to "INBOX". This is used
+ * when a mailbox with a name like "inbox" or "inbox/someMailbox" is used
+ * to make sure the "inbox" part is always uppercase.
+ * \param name name of the mailbox. strlen(name) must be bigger or equal
+ *             strlen("INBOX")
+ */
+void convert_inbox_to_uppercase(char *name);
+
+int db_begin_transaction()
+{
+	snprintf(query, DEF_QUERYSIZE,
+		 "BEGIN");
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: error beginning transaction",
+		      __FILE__, __FUNCTION__);
+		return -1;
+	}
+	return 0;
+}
+
+int db_commit_transaction()
+{
+	snprintf(query, DEF_QUERYSIZE,
+		 "COMMIT");
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: error committing transaction",
+		      __FILE__, __FUNCTION__);
+		return -1;
+	}
+	return 0;
+}
+
+int db_rollback_transaction()
+{
+	snprintf(query, DEF_QUERYSIZE,
+		 "ROLLBACK");
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: error rolling back transaction",
+		      __FILE__, __FUNCTION__);
+		return -1;
+	}
+	return 0;
+}
+
 int db_get_physmessage_id(u64_t message_idnr, u64_t * physmessage_id)
 {
 	assert(physmessage_id != NULL);
@@ -2169,25 +2214,30 @@ int db_findmailbox(const char *fq_name, u64_t user_idnr,
 	return result;
 }
 
-
 int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 			 u64_t * mailbox_idnr)
 {
 	assert(mailbox_idnr != NULL);
 	*mailbox_idnr = 0;
+	char *local_name;
 
-	/* if we check the INBOX, we need to be case insensitive */
-	if (strncasecmp(name, "INBOX", 5) == 0) {
-		snprintf(query, DEF_QUERYSIZE,
-			 "SELECT mailbox_idnr FROM mailboxes "
-			 "WHERE LOWER(name) = LOWER('%s') "
-			 "AND owner_idnr='%llu'", name, owner_idnr);
-	} else {
-		snprintf(query, DEF_QUERYSIZE,
-			 "SELECT mailbox_idnr FROM mailboxes "
-			 "WHERE name='%s' AND owner_idnr='%llu'", name,
-			 owner_idnr);
+	local_name = strdup(name);
+	if (local_name == NULL) {
+		trace(TRACE_ERROR, "%s,%s: error strdup(name). Out of memory?",
+		      __FILE__, __FUNCTION__);
+		return -1;
 	}
+
+	/* if we check the INBOX or a folder beneath INBOX, we need 
+	 * that part of the name to be case insensitive */
+	if (strncasecmp(name, "INBOX", 5) == 0) 
+		convert_inbox_to_uppercase(local_name);
+	
+	snprintf(query, DEF_QUERYSIZE,
+		 "SELECT mailbox_idnr FROM mailboxes "
+		 "WHERE name='%s' AND owner_idnr='%llu'", local_name,
+		 owner_idnr);
+	free(local_name);
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR,
 		      "%s,%s: could not select mailbox '%s'\n", __FILE__,
@@ -3925,4 +3975,12 @@ int user_idnr_is_delivery_user_idnr(u64_t user_idnr)
 		return 1;
 	else
 		return 0;
+}
+
+void convert_inbox_to_uppercase(char *name)
+{
+	const char *inbox = "INBOX";
+	assert(strlen(name) >= strlen("INBOX"));
+	
+	memcpy(name, inbox, strlen(inbox));
 }
