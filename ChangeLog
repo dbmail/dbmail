@@ -1,5 +1,8 @@
 2004-06-11  Ilja Booij  <ilja@ic-s.nl>
 
+	* config.c (config_free): fixed memory leaks by really freeing all
+	memory in the list.
+
 	* All database files: added is_header flag in messageblks
 	table, and index to this flag. The flag is not used in any
 	code yet, but is present because we'll need it later on.

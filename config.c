@@ -202,24 +202,30 @@ int ReadConfig(const char *serviceName, const char *cfilename)
 		      __FILE__, __func__);
 		return -1;
 	}
+	/* list_nodeadd makes a shallow copy of the service_config_list 
+	   struct. So, we need to clean that up.*/
+	free(service_config);
+	
 	return 0;
 }
 
 void config_free()
 {
 	struct element *el;
+	struct element *next_el;
 	struct service_config_list *scl;
 	
 	/* first free all "sublists" */
 	el = list_getstart(&config_list);
 	while(el) {
 		scl = (struct service_config_list *) el->data;
+		next_el = el->nextnode;
 		list_freelist(&(scl->config_items->start));
-		el = el->nextnode;
+		free(scl->config_items);
+		free(scl->service_name);
+		list_nodedel(&config_list, el->data);
+		el = next_el;
 	}
-	
-	/* free the complete list */
-	list_freelist(&config_list.start);
 }
 
 int GetConfigValue(const field_t field_name, const char *service_name, 
