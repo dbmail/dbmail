@@ -406,7 +406,7 @@ int pop3 (void *stream, char *buffer, char *client_ip, PopSession_t *session)
 				if (session->state != TRANSACTION)
 					return pop3_error(session, stream, "-ERR wrong command mode, sir\r\n");
 
-				tmpelement = list_getstart (&session->messagelst);
+				tmpelement = list_getstart (&(session->messagelst));
 				if (value != NULL)
 				{
 					/* they're asking for a specific message */
@@ -489,7 +489,7 @@ int pop3 (void *stream, char *buffer, char *client_ip, PopSession_t *session)
 				if (session->state != TRANSACTION)
 					return pop3_error(session, stream,"-ERR wrong command mode, sir\r\n");
 
-				tmpelement=list_getstart(&session->messagelst);
+				tmpelement=list_getstart(&(session->messagelst));
 				
 				/* selecting a message */
 				while (tmpelement!=NULL)
@@ -516,7 +516,7 @@ int pop3 (void *stream, char *buffer, char *client_ip, PopSession_t *session)
 				if (session->state != TRANSACTION)
 					return pop3_error(session, stream,"-ERR wrong command mode, sir\r\n");
 
-				tmpelement=list_getstart(&session->messagelst);
+				tmpelement=list_getstart(&(session->messagelst));
 
 				session->virtual_totalsize = session->totalsize;
 				session->virtual_totalmessages = session->totalmessages;
@@ -539,7 +539,7 @@ int pop3 (void *stream, char *buffer, char *client_ip, PopSession_t *session)
 				if (session->state != TRANSACTION)
 					return pop3_error(session, stream,"-ERR wrong command mode, sir\r\n");
 
-				tmpelement = list_getstart(&session->messagelst);
+				tmpelement = list_getstart(&(session->messagelst));
 
 				while (tmpelement!=NULL)
 				{
@@ -573,7 +573,7 @@ int pop3 (void *stream, char *buffer, char *client_ip, PopSession_t *session)
 				if (session->state != TRANSACTION)
 					return pop3_error(session, stream,"-ERR wrong command mode, sir\r\n");
 
-				tmpelement = list_getstart(&session->messagelst);
+				tmpelement = list_getstart(&(session->messagelst));
 				
 				if (value!=NULL)
 				{
@@ -750,7 +750,7 @@ int pop3 (void *stream, char *buffer, char *client_ip, PopSession_t *session)
 
 				trace(TRACE_DEBUG,"pop3():TOP command (partially) retrieving message");
 
-				tmpelement=list_getstart(&session->messagelst);
+				tmpelement=list_getstart(&(session->messagelst));
 				
 				/* selecting a message */
 				trace(TRACE_DEBUG,"pop3(): TOP command, selecting message");
