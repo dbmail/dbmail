@@ -1358,7 +1358,7 @@ int _ic_search(char *tag, char **args, ClientInfo *ci)
 int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
-  int i,fetch_start,fetch_end,delimpos,result,setseen,j,k;
+  int i,fetch_start,fetch_end,delimpos,result,setseen,j,k,flagsjustonce;
   fetch_items_t fetchitems;
   mime_message_t msg,*msgpart;
   char date[IMAP_INTERNALDATE_LEN];
@@ -1473,11 +1473,12 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
       fprintf(ci->tx,"%s BAD invalid argument list to FETCH\n",tag);
       return 1;
     }
-
+  
   /* now fetch results for each msg */
   for (i=fetch_start; i<=fetch_end; i++)
     {
       setseen = 0;
+      flagsjustonce = 0;
       fprintf(ci->tx,"* %d FETCH (",i+1);
 
       trace(TRACE_DEBUG, "Fetching msgID %lu (fetch num %d)\n", ud->mailbox.seq_list[i],i+1);
@@ -1490,27 +1491,6 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
       
       db_msgdump(&msg, ud->mailbox.seq_list[i]);
 
-      /* walk by the arguments */
-      if (fetchitems.getFlags) 
-	{
-	  fprintf(ci->tx,"FLAGS (");
-	  
-	  for (j=0; j<IMAP_NFLAGS; j++)
-	    {
-	      result = db_get_msgflag(imap_flag_desc[j], ud->mailbox.uid, ud->mailbox.seq_list[i]);
-
-	      if (result == -1)
-		{
-		  fprintf(ci->tx,"* BYE internal dbase error\n");
-		  if (fetchitems.bodyfetches) free(fetchitems.bodyfetches);
-		  db_free_msg(&msg);
-		  return -1;
-		}
-	      else if (result == 1)
-		fprintf(ci->tx,"\\%s ",imap_flag_desc[j]);
-	    }
-	  fprintf(ci->tx,") ");
-	}
 
       if (fetchitems.getInternalDate)
 	{
@@ -1534,11 +1514,25 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
       if (fetchitems.getMIME_IMB)
 	{
 	  fprintf(ci->tx,"BODYSTRUCTURE ");
-	  result = retrieve_structure(ci->tx, &msg);
+	  result = retrieve_structure(ci->tx, &msg, 1);
 	  fprintf(ci->tx," ");
 	  if (result == -1)
 	    {
 	      fprintf(ci->tx,"* BYE error fetching body structure\n");
+	      if (fetchitems.bodyfetches) free(fetchitems.bodyfetches);
+	      db_free_msg(&msg);
+	      return -1;
+	    }
+	}
+
+      if (fetchitems.getMIME_IMB_noextension)
+	{
+	  fprintf(ci->tx,"BODY ");
+	  result = retrieve_structure(ci->tx, &msg, 0);
+	  fprintf(ci->tx," ");
+	  if (result == -1)
+	    {
+	      fprintf(ci->tx,"* BYE error fetching body\n");
 	      if (fetchitems.bodyfetches) free(fetchitems.bodyfetches);
 	      db_free_msg(&msg);
 	      return -1;
@@ -1560,86 +1554,164 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
       if (fetchitems.getSize)
 	{
+	  
+	}
 
+      if (fetchitems.getBodyTotal)
+	{
+	  fprintf(ci->tx, "BODY[] ");
+	  rfcheader_dump(ci->tx, &msg.rfcheader, args,  /* used as dummy since numfields == 0 */
+			 0,0,-1,0,0);
+	  db_dump_range(ci->tx, msg.bodystart, msg.bodyend,
+			ud->mailbox.seq_list[i],0,-1);
+
+	  fprintf(ci->tx,"\n");
+	  setseen = 1;
+	}
+
+      if (fetchitems.getBodyTotalPeek)
+	{
+	  fprintf(ci->tx, "BODY.PEEK[] ");
+	  rfcheader_dump(ci->tx, &msg.rfcheader, args,  /* used as dummy since numfields == 0 */
+			 0,0,-1,0,0);
+	  db_dump_range(ci->tx, msg.bodystart, msg.bodyend,
+			ud->mailbox.seq_list[i],0,-1);
+
+	  fprintf(ci->tx,"\n");
+	}
+
+      if (fetchitems.getRFC822)
+	{
+	  fprintf(ci->tx, "RFC822 ");
+	  rfcheader_dump(ci->tx, &msg.rfcheader, args,  /* used as dummy since numfields == 0 */
+			 0,0,-1,0,0);
+	  db_dump_range(ci->tx, msg.bodystart, msg.bodyend,
+			ud->mailbox.seq_list[i],0,-1);
+
+	  fprintf(ci->tx,"\n");
+	  setseen = 1;
 	}
 
       if (fetchitems.getRFC822Header)
 	{
+	  fprintf(ci->tx, "RFC822.HEADER ");
+	  rfcheader_dump(ci->tx, &msg.rfcheader, args,  /* used as dummy since numfields == 0 */
+			 0,0,-1,0,0);
 	}
 
       if (fetchitems.getRFC822Text)
 	{
+	  fprintf(ci->tx, "RFC822.TEXT {%lu}\n",msg.bodysize);
+	  db_dump_range(ci->tx, msg.bodystart, msg.bodyend,
+			ud->mailbox.seq_list[i],0,-1);
+
+	  fprintf(ci->tx,"\n");
+	  setseen = 1;
 	}
 
       for (j=0; j<fetchitems.nbodyfetches; j++)
 	{
 	  msgpart = get_part_by_num(&msg, fetchitems.bodyfetches[j].partspec);
 
-	  if (fetchitems.bodyfetches[j].partspec[0])
-	    fprintf(ci->tx, "BODY[%s.", fetchitems.bodyfetches[j].partspec);
+	  if (fetchitems.bodyfetches[j].noseen)
+	    fprintf(ci->tx, "BODY.PEEK[%s", fetchitems.bodyfetches[j].partspec);
 	  else
-	    fprintf(ci->tx, "BODY[");
+	    {
+	      fprintf(ci->tx, "BODY[%s", fetchitems.bodyfetches[j].partspec);
+	      setseen = 1;
+	    }
 			  
 	  switch (fetchitems.bodyfetches[j].itemtype)
 	    {
 	    case BFIT_TEXT:
 	      /* dump body text */
-	      if (fetchitems.bodyfetches[j].octetstart >= 0)
-		  fprintf(ci->tx, "TEXT]<%lu> {%lu} \n",
-			  fetchitems.bodyfetches[j].octetstart,
-			  (msgpart->bodysize < fetchitems.bodyfetches[j].octetcnt) ? 
-			  msgpart->bodysize : fetchitems.bodyfetches[j].octetcnt);
+	      if (!msgpart)
+		fprintf(ci->tx, "TEXT] NIL\n");
 	      else
-		fprintf(ci->tx, "TEXT] {%lu} \n", msgpart->bodysize);
-
-	      db_dump_range(ci->tx, msgpart->bodystart, msgpart->bodyend,
-			    ud->mailbox.seq_list[i],
+		{
+		  if (fetchitems.bodyfetches[j].octetstart >= 0)
+		    fprintf(ci->tx, "TEXT]<%lu> {%lu} \n",
 			    fetchitems.bodyfetches[j].octetstart,
-			    fetchitems.bodyfetches[j].octetcnt);
-	      fprintf(ci->tx,"\n");
+			    (msgpart->bodysize < fetchitems.bodyfetches[j].octetcnt) ? 
+			    msgpart->bodysize : fetchitems.bodyfetches[j].octetcnt);
+		  else
+		    fprintf(ci->tx, "TEXT] {%lu} \n", msgpart->bodysize);
+
+		  db_dump_range(ci->tx, msgpart->bodystart, msgpart->bodyend,
+				ud->mailbox.seq_list[i],
+				fetchitems.bodyfetches[j].octetstart,
+				fetchitems.bodyfetches[j].octetcnt);
+		  fprintf(ci->tx,"\n");
+		}
 	      break;
 
 	    case BFIT_HEADER:
 	      fprintf(ci->tx, "HEADER] ");
-	      rfcheader_dump(ci->tx, &msgpart->rfcheader, 
-			     args,  /* used as dummy since numfields == 0 */
-			     0,
-			     fetchitems.bodyfetches[j].octetstart,
-			     fetchitems.bodyfetches[j].octetcnt,
-			     0);
+	      if (!msgpart)
+		fprintf(ci->tx, "NIL\n");
+	      else
+		{
+		  rfcheader_dump(ci->tx, &msgpart->rfcheader, 
+				 args,  /* used as dummy since numfields == 0 */
+				 0,
+				 fetchitems.bodyfetches[j].octetstart,
+				 fetchitems.bodyfetches[j].octetcnt,
+				 0,1);
+		}
 	      break;
 
 	    case BFIT_HEADER_FIELDS:
 	      fprintf(ci->tx, "HEADER.FIELDS (");
 
 	      for (k=0; k<fetchitems.bodyfetches[j].argcnt; k++)
-		fprintf(ci->tx, "%s ",args[k+fetchitems.bodyfetches[j].argstart]);
+		fprintf(ci->tx, "%s ",args[k + fetchitems.bodyfetches[j].argstart +1]);
 
 	      fprintf(ci->tx,")] ");
 
-	      rfcheader_dump(ci->tx, &msgpart->rfcheader, 
-			     &args[fetchitems.bodyfetches[j].argstart],
-			     fetchitems.bodyfetches[j].argcnt,
-			     fetchitems.bodyfetches[j].octetstart,
-			     fetchitems.bodyfetches[j].octetcnt,
-			     1);
+	      if (!msgpart)
+		fprintf(ci->tx, "NIL\n");
+	      else
+		{
+		  rfcheader_dump(ci->tx, &msgpart->rfcheader, 
+				 &args[fetchitems.bodyfetches[j].argstart + 1],
+				 fetchitems.bodyfetches[j].argcnt,
+				 fetchitems.bodyfetches[j].octetstart,
+				 fetchitems.bodyfetches[j].octetcnt,
+				 1,1);
+		}
 	      break;
 	    case BFIT_HEADER_FIELDS_NOT:
 	      fprintf(ci->tx, "HEADER.FIELDS.NOT (");
 
 	      for (k=0; k<fetchitems.bodyfetches[j].argcnt; k++)
-		fprintf(ci->tx, "%s ",args[k+fetchitems.bodyfetches[j].argstart]);
+		fprintf(ci->tx, "%s ",args[k + fetchitems.bodyfetches[j].argstart +1]);
 
 	      fprintf(ci->tx,")] ");
 
-	      rfcheader_dump(ci->tx, &msgpart->rfcheader, 
-			     &args[fetchitems.bodyfetches[j].argstart],
-			     fetchitems.bodyfetches[j].argcnt,
-			     fetchitems.bodyfetches[j].octetstart,
-			     fetchitems.bodyfetches[j].octetcnt,
-			     0);
+	      if (!msgpart)
+		fprintf(ci->tx, "NIL\n");
+	      else
+		{
+		  rfcheader_dump(ci->tx, &msgpart->rfcheader, 
+				 &args[fetchitems.bodyfetches[j].argstart + 1],
+				 fetchitems.bodyfetches[j].argcnt,
+				 fetchitems.bodyfetches[j].octetstart,
+				 fetchitems.bodyfetches[j].octetcnt,
+				 0,1);
+		}
 	      break;
 	    case BFIT_MIME:
+	      fprintf(ci->tx, "MIME] \n");
+
+	      if (!msgpart)
+		fprintf(ci->tx, "NIL\n");
+	      else
+		{
+		  mimeheader_dump(ci->tx, &msgpart->mimeheader,
+				  fetchitems.bodyfetches[j].octetstart,
+				  fetchitems.bodyfetches[j].octetcnt);
+		}
+		  
 	      break;
 	    default:
 	      fprintf(ci->tx, "* BYE internal server error\n");
@@ -1649,8 +1721,53 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	    }
 	}
 
-      db_free_msg(&msg);
+      /* set \Seen flag if necessary; note the absence of an error-check 
+       * for db_get_msgflag()!
+       */
+      if (setseen && db_get_msgflag("seen", ud->mailbox.uid, ud->mailbox.seq_list[i]) != 1)
+	{
+	  result = db_set_msgflag("seen", ud->mailbox.uid, ud->mailbox.seq_list[i], 1);
+	  if (result == -1)
+	    {
+	      fprintf(ci->tx,"* BYE internal dbase error\n");
+	      db_free_msg(&msg);
+	      if (fetchitems.bodyfetches)
+		free(fetchitems.bodyfetches);
+	    }
+
+	  if (!fetchitems.getFlags)
+	    flagsjustonce = 1;
+
+	  fetchitems.getFlags = 1;
+	}
+
+      /* FLAGS ? */
+      if (fetchitems.getFlags) 
+	{
+	  fprintf(ci->tx,"\nFLAGS (");
+	  
+	  for (j=0; j<IMAP_NFLAGS; j++)
+	    {
+	      result = db_get_msgflag(imap_flag_desc[j], ud->mailbox.uid, ud->mailbox.seq_list[i]);
+
+	      if (result == -1)
+		{
+		  fprintf(ci->tx,"* BYE internal dbase error\n");
+		  if (fetchitems.bodyfetches) free(fetchitems.bodyfetches);
+		  db_free_msg(&msg);
+		  return -1;
+		}
+	      else if (result == 1)
+		fprintf(ci->tx,"\\%s ",imap_flag_desc[j]);
+	    }
+	  fprintf(ci->tx,") ");
+
+	  if (flagsjustonce)
+	    fetchitems.getFlags = 0;
+	}
+
       fprintf(ci->tx,")\n");
+      db_free_msg(&msg);
     }
       
   if (fetchitems.bodyfetches)
@@ -1898,7 +2015,7 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
 int _ic_copy(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
-  int i,copy_start,copy_end,delimpos,result,j;
+  int i,copy_start,copy_end,delimpos,result;
   unsigned long destmboxid;
 
   if (!check_state_and_args("COPY", tag, args, 2, IMAPCS_SELECTED, ci))
@@ -2023,7 +2140,7 @@ int _ic_copy(char *tag, char **args, ClientInfo *ci)
  */
 int _ic_uid(char *tag, char **args, ClientInfo *ci)
 {
-  imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
+/*  imap_userdata_t *ud = (imap_userdata_t*)ci->userData;*/
 
   if (!check_state_and_args("UID", tag, args, 2, IMAPCS_SELECTED, ci) &&
       !check_state_and_args("UID", tag, args, 3, IMAPCS_SELECTED, ci))

@@ -2174,14 +2174,17 @@ unsigned long db_give_range_size(db_pos_t *start, db_pos_t *end)
   return size;
 }
 
+
 /*
  * db_start_msg()
  *
- * reads in a msg
+ * parses a msg; uses msgbuf[] as data
+ *
+ * returns the number of lines parsed or -1 on error
  */
 int db_start_msg(mime_message_t *msg, char *stopbound)
 {
-  int len,sblen,result;
+  int len,sblen,result,totallines=0,nlines;
   struct mime_record *mr;
   char *newbound,*bptr;
 
@@ -2193,9 +2196,10 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
   if (db_update_msgbuf(MSGBUF_FORCE_UPDATE) == -1)
     return -1;
 
-  if (mime_readheader(&msgbuf[msgidx], &msgidx, &msg->rfcheader) == -1)
+  if ((nlines = mime_readheader(&msgbuf[msgidx], &msgidx, &msg->rfcheader)) == -1)
     return -1;   /* error reading header */
 
+  totallines += nlines;
   db_give_msgpos(&msg->bodystart);
   msgidx++;
 
@@ -2262,18 +2266,19 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
       msgidx++;                     /* skip \n */
 
       /* find MIME-parts */
-      if (db_add_mime_children(&msg->children, newbound) == -1)
+      if ((nlines = db_add_mime_children(&msg->children, newbound)) == -1)
 	{
 	  trace(TRACE_ERROR, "db_start_msg(): error adding MIME-children\n");
 	  free(newbound);
 	  return -1;
 	}
+      totallines += nlines;
 
       free(newbound);
       db_give_msgpos(&msg->bodyend);
       msg->bodysize = db_give_range_size(&msg->bodystart, &msg->bodyend);
 
-      return 0;                        /* done */
+      return totallines;                        /* done */
     }
   else
     {
@@ -2296,7 +2301,17 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 		{
 		  db_give_msgpos(&msg->bodyend);
 		  msg->bodysize = db_give_range_size(&msg->bodystart, &msg->bodyend);
-		  return 0;
+		  
+		  /* advance to after stopbound */
+		  msgidx += strlen(stopbound);
+		  while (isspace(msgbuf[msgidx]))
+		    {
+		      if (msgbuf[msgidx] == '\n') totallines++;
+		      msgidx++;
+		    }
+
+		  trace(TRACE_DEBUG,"db_start_msg(): stopbound reached\n");
+		  return (totallines+msg->bodylines);
 		}
 
 	      msgidx++;
@@ -2305,6 +2320,7 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 	  /* end of buffer reached, bodyend is prev pos */
 	  db_give_msgpos(&msg->bodyend);
 	  msg->bodysize = db_give_range_size(&msg->bodystart, &msg->bodyend);
+	  totallines += msg->bodylines;
 	}
       else
 	{
@@ -2322,12 +2338,13 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 
 	  db_give_msgpos(&msg->bodyend);
 	  msg->bodysize = db_give_range_size(&msg->bodystart, &msg->bodyend);
+	  totallines += msg->bodylines;
 	}
     }
 
   trace(TRACE_DEBUG,"db_start_msg(): exit\n");
 
-  return 0;
+  return totallines;
 }
 
 
@@ -2339,7 +2356,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
 {
   mime_message_t part;
   struct mime_record *mr;
-  int sblen;
+  int sblen,nlines,totallines = 0;
 
   trace(TRACE_DEBUG,"db_add_mime_children(): starting, splitbound: '%s'\n",splitbound);
 
@@ -2349,11 +2366,12 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
       memset(&part, 0, sizeof(part));
 
       /* should have a MIME header right here */
-      if (mime_readheader(&msgbuf[msgidx], &msgidx, &part.mimeheader) == -1)
+      if ((nlines = mime_readheader(&msgbuf[msgidx], &msgidx, &part.mimeheader)) == -1)
 	{
 	  trace(TRACE_ERROR,"db_add_mime_children(): error reading MIME-header\n");
 	  return -1;   /* error reading header */
 	}
+      totallines += nlines;
 
       mime_findfield("content-type", &part.mimeheader, &mr);
 
@@ -2362,11 +2380,13 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
 	  trace(TRACE_DEBUG,"db_add_mime_children(): found an RFC822 message\n");
 
 	  /* a message will follow */
-	  if (db_start_msg(&part, splitbound) == -1)
+	  if ((nlines = db_start_msg(&part, splitbound)) == -1)
 	    {
 	      trace(TRACE_ERROR,"db_add_mime_children(): error retrieving message\n");
 	      return -1;
 	    }
+	  totallines += nlines;
+	  part.bodylines = nlines;
 
 	  /* skip boundary */
 	  msgidx += 2; /* double hyphen preceeds */
@@ -2394,6 +2414,8 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
 
 	      msgidx++;
 	    }
+
+	  totallines += part.bodylines;
 
 	  if (!msgbuf[msgidx])
 	    {
@@ -2427,14 +2449,15 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
 	  while (msgbuf[msgidx] == '\n') 
 	    msgidx++;
 
-	  return 0;
+	  return totallines;
 	}
 
       if (msgbuf[msgidx] == '\n') msgidx++; /* skip newline */
     }
   while (msgbuf[msgidx]) ;
 
-  return 0;
+  trace(TRACE_DEBUG,"db_add_mime_children(): exit\n");
+  return totallines;
 }
 
 

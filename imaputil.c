@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <ctype.h>
+#include <unistd.h>
 #include "imaputil.h"
 #include "imap4.h"
 #include "debug.h"
@@ -44,14 +45,17 @@ const char *envelope_items[] =
  * retrieves the MIME-IMB structure of a message. The msg should be in the format
  * as build by db_fetch_headers().
  *
+ * shows extension data if show_extension_data != 0
+ *
  * returns -1 on error, 0 on success
  */
-int retrieve_structure(FILE *outstream, mime_message_t *msg)
+int retrieve_structure(FILE *outstream, mime_message_t *msg, int show_extension_data)
 {
   struct mime_record *mr;
   struct element *curr;
   struct list *header_to_use;
   mime_message_t rfcmsg;
+  char *subtype,*extension,*newline;
 
   fprintf(outstream,"(");
 
@@ -73,9 +77,9 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg)
 
       mime_findfield("content-type", header_to_use, &mr);
       if (mr && strlen(mr->value) > 0)
-	show_mime_parameter_list(outstream, mr, 1);
+	show_mime_parameter_list(outstream, mr, 1, 0);
       else
-	fprintf(outstream,"NIL NIL NIL");
+	fprintf(outstream,"\"TEXT\" \"PLAIN\" NIL"); /* default */
 
       mime_findfield("content-id", header_to_use, &mr);
       if (mr && strlen(mr->value) > 0)
@@ -116,39 +120,43 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg)
 	  memmove(&rfcmsg, msg, sizeof(rfcmsg));
 	  rfcmsg.mimeheader.start = NULL; /* forget MIME-part */
 	  
-	  if (retrieve_structure(outstream, &rfcmsg) == -1)
+	  if (retrieve_structure(outstream, &rfcmsg, show_extension_data) == -1)
 	    return -1;
 	  
 	  /* output # of lines */
 	  fprintf(outstream, " %lu", msg->bodylines);
 	}
 
-      /* second case: text */
-      mime_findfield("content-type", header_to_use, &mr);
-      if (mr && strncasecmp(mr->value, "text", strlen("text")) == 0)
+      /* second case: text 
+       * NOTE: if 'content-type' is absent, TEXT is assumed 
+       */
+      if ((mr && strncasecmp(mr->value, "text", strlen("text")) == 0) || !mr)
 	fprintf(outstream, "%lu", msg->bodylines);      /* output # of lines */
 
-      mime_findfield("content-md5", header_to_use, &mr);
-      if (mr && strlen(mr->value) > 0)
-	fprintf(outstream, " \"%s\"",mr->value);
-      else
-	fprintf(outstream, " NIL");
-
-      mime_findfield("content-disposition", header_to_use, &mr);
-      if (mr && strlen(mr->value) > 0)
+      if (show_extension_data)
 	{
-	  fprintf(outstream, " (");
-	  show_mime_parameter_list(outstream, mr, 0);
-	  fprintf(outstream, ")");
-	}
-      else
-	fprintf(outstream, " NIL");
+	  mime_findfield("content-md5", header_to_use, &mr);
+	  if (mr && strlen(mr->value) > 0)
+	    fprintf(outstream, " \"%s\"",mr->value);
+	  else
+	    fprintf(outstream, " NIL");
 
-      mime_findfield("content-language", header_to_use, &mr);
-      if (mr && strlen(mr->value) > 0)
-	fprintf(outstream, " \"%s\"",mr->value);
-      else
-	fprintf(outstream, " NIL");
+	  mime_findfield("content-disposition", header_to_use, &mr);
+	  if (mr && strlen(mr->value) > 0)
+	    {
+	      fprintf(outstream, " (");
+	      show_mime_parameter_list(outstream, mr, 0, 0);
+	      fprintf(outstream, ")");
+	    }
+	  else
+	    fprintf(outstream, " NIL");
+
+	  mime_findfield("content-language", header_to_use, &mr);
+	  if (mr && strlen(mr->value) > 0)
+	    fprintf(outstream, " \"%s\"",mr->value);
+	  else
+	    fprintf(outstream, " NIL");
+	}
     }
   else
     {
@@ -159,11 +167,51 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg)
 	  curr = list_getstart(&msg->children);
 	  while (curr)
 	    {
-	      if (retrieve_structure(outstream, (mime_message_t*)curr->data) == -1)
+	      if (retrieve_structure(outstream, (mime_message_t*)curr->data, 
+				     show_extension_data) == -1)
 		return -1;
 
 	      curr = curr->nextnode;
 	    }
+
+	  /* show mulipart subtype */
+	  subtype = strchr(mr->value, '/');
+	  extension = strchr(subtype, ';');
+	  
+	  if (!subtype)
+	    fprintf(outstream, " NIL");
+	  else
+	    {
+	      if (!extension)
+		{
+		  newline = strchr(subtype, '\n');
+		  if (!newline)
+		    return -1;
+
+		  *newline = 0;
+		  fprintf(outstream, " \"%s\"", subtype+1);
+		  *newline = '\n';
+		}
+	      else
+		{
+		  *extension = 0;
+		  fprintf(outstream, " \"%s\"", subtype+1);
+		  *extension = ';';
+		}
+	    }
+
+	  /* show extension data (after subtype) */
+	  if (extension && show_extension_data)
+	    {
+	      show_mime_parameter_list(outstream, mr, 0, 1);
+
+	      /* FIXME: should give body-disposition & body-language here */
+	      fprintf(outstream, " NIL NIL");
+	    }
+	}
+      else
+	{
+	  /* ??? */
 	}
     }
   fprintf(outstream,")");
@@ -287,7 +335,16 @@ int retrieve_envelope(FILE *outstream, struct list *rfcheader)
 }
 
 
-int show_mime_parameter_list(FILE *outstream, struct mime_record *mr, int nil_for_firstval_missing)
+/*
+ * show_mime_parameter_list()
+ *
+ * shows mime name/value pairs, output to outstream
+ * 
+ * if force_subtype != 0 'NIL' will be outputted if no subtype is specified
+ * if only_extension != 0 only extension data (after first ';') will be shown
+ */
+int show_mime_parameter_list(FILE *outstream, struct mime_record *mr, 
+			     int force_subtype, int only_extension)
 {
   int idx,delimiter,start,end;
 
@@ -299,18 +356,21 @@ int show_mime_parameter_list(FILE *outstream, struct mime_record *mr, int nil_fo
   else
     delimiter = -1;
 
-  /* find main type in value */
-  for (idx = 0; mr->value[idx] && mr->value[idx] != '/'; idx++) ;
-	  
-  if (mr->value[idx] && (idx<delimiter || delimiter == -1))
+  if (!only_extension)
     {
-      mr->value[idx] = 0;
-      fprintf(outstream,"\"%s\" \"%s\"", mr->value, &mr->value[idx+1]);
-      mr->value[idx] = '/';
-    }
-  else
-    fprintf(outstream,"\"%s\" %s", mr->value, nil_for_firstval_missing ? "NIL" : "");
+      /* find main type in value */
+      for (idx = 0; mr->value[idx] && mr->value[idx] != '/'; idx++) ;
 	  
+      if (mr->value[idx] && (idx<delimiter || delimiter == -1))
+	{
+	  mr->value[idx] = 0;
+	  fprintf(outstream,"\"%s\" \"%s\"", mr->value, &mr->value[idx+1]);
+	  mr->value[idx] = '/';
+	}
+      else
+	fprintf(outstream,"\"%s\" %s", mr->value, force_subtype ? "NIL" : "");
+    }
+
   if (delimiter >= 0)
     {
       /* extra parameters specified */
@@ -446,14 +506,20 @@ mime_message_t* get_part_by_num(mime_message_t *msg, const char *part)
  * will be selected
  */
 int rfcheader_dump(FILE *outstream, struct list *rfcheader, char **fieldnames, int nfields,
-		   int offset, int cnt, int equal_type)
+		   int offset, int cnt, int equal_type, int showsize)
 {
   struct mime_record *mr;
   struct element *curr;
   FILE *tmpfile;
   char tmpname[] = "rfcheader_out.tmp.XXXXXX";
   unsigned long size;
-  int c;
+
+  curr = list_getstart(rfcheader);
+  if (rfcheader == NULL || curr == NULL)
+    {
+      fprintf(outstream, "NIL\n");
+      return 0;
+    }
 
   tmpfile = fdopen(mkstemp(tmpname),"r+w");
   if (tmpfile == NULL)
@@ -465,7 +531,7 @@ int rfcheader_dump(FILE *outstream, struct list *rfcheader, char **fieldnames, i
       mr = (struct mime_record*)curr->data;
 
       if (haystack_find(nfields, fieldnames, mr->field) == equal_type)
-	fprintf(tmpfile, "%s : %s\n", mr->field, mr->value);  /* ok output this field */
+	fprintf(tmpfile, "%s: %s\n", mr->field, mr->value);  /* ok output this field */
 
       curr = curr->nextnode;
     }
@@ -492,7 +558,9 @@ int rfcheader_dump(FILE *outstream, struct list *rfcheader, char **fieldnames, i
 	}
     }
 
-  fprintf(outstream, "<%lu> {%lu}\n", offset, cnt);
+  if (showsize)
+    fprintf(outstream, "<%d> {%d}\n", offset, cnt);
+
   fseek(tmpfile, offset, SEEK_SET);
 
   /* output data */
@@ -504,6 +572,74 @@ int rfcheader_dump(FILE *outstream, struct list *rfcheader, char **fieldnames, i
   return 0;
 }      
   
+
+/*
+ * mimeheader_dump()
+ * 
+ * dumps mime-header fields belonging to mimeheader
+ *
+ * the output will start after offset bytes and will have a maximum length of cnt bytes.
+ */
+int mimeheader_dump(FILE *outstream, struct list *mimeheader, int offset, int cnt)
+{
+  struct mime_record *mr;
+  struct element *curr;
+  FILE *tmpfile;
+  char tmpname[] = "mimeheader_out.tmp.XXXXXX";
+  unsigned long size;
+
+  curr = list_getstart(mimeheader);
+  if (mimeheader == NULL || curr == NULL)
+    {
+      fprintf(outstream, "NIL\n");
+      return 0;
+    }
+
+  tmpfile = fdopen(mkstemp(tmpname),"r+w");
+  if (tmpfile == NULL)
+    return -1; /* failed opening temporary file */
+      
+  while (curr)
+    {
+      mr = (struct mime_record*)curr->data;
+      fprintf(tmpfile, "%s: %s\n", mr->field, mr->value);
+      curr = curr->nextnode;
+    }
+  fprintf(tmpfile,"\n");
+  size = ftell(tmpfile);
+  
+  /* change var's if necessary */
+  if (offset >= size)
+    {
+      offset = size;
+      cnt = 0;
+    }
+  else
+    {
+      if (offset>=0 && cnt>=0)
+	{
+	  if (offset+cnt > size)
+	    cnt = size-offset;
+	}
+      else
+	{
+	  offset = 0;
+	  cnt = size;
+	}
+    }
+
+  fprintf(outstream, "<%d> {%d}\n", offset, cnt);
+  fseek(tmpfile, offset, SEEK_SET);
+
+  /* output data */
+  while (cnt-- > 0)
+    fputc(fgetc(tmpfile),outstream);
+	  
+  fclose(tmpfile);
+  unlink(tmpname);
+  return 0;
+}      
+
 
 /* 
  * find a string in an array of strings
@@ -531,7 +667,7 @@ int haystack_find(int haystacklen, char **haystack, const char *needle)
  */
 int get_fetch_items(char **args, fetch_items_t *fi)
 {
-  int i,j,inbody,bodyidx,invalidargs,shouldclose,delimpos,indigit;
+  int i,j,inbody,bodyidx,invalidargs,shouldclose,delimpos,indigit,ispeek=0;
 
   /* init fetch item list */
   memset(fi, 0, sizeof(fetch_items_t));
@@ -559,7 +695,8 @@ int get_fetch_items(char **args, fetch_items_t *fi)
   fi->nbodyfetches = 0;
   for (i=0; args[i]; i++)
     {
-      if (strcasecmp(args[i], "body") == 0 && args[i+1] && strcmp(args[i+1],"[") == 0)
+      if ((strcasecmp(args[i], "body") == 0 || strcasecmp(args[i], "body.peek") == 0) &&
+	  args[i+1] && strcmp(args[i+1],"[") == 0)
 	{
 	  if (!args[i+2])
 	    return 1; 
@@ -609,6 +746,10 @@ int get_fetch_items(char **args, fetch_items_t *fi)
 	{
 	  fi->getUID = 1;
 	}
+      else if (strcasecmp(args[i], "rfc822") == 0)
+	{
+	  fi->getRFC822 = 1;
+	}
       else if (strcasecmp(args[i], "rfc822.header") == 0)
 	{
 	  fi->getRFC822Header = 1;
@@ -632,14 +773,13 @@ int get_fetch_items(char **args, fetch_items_t *fi)
 		}
 	      else
 		{
-		  fi->getMIME_IMB = 1; /* just BODY specified */
+		  fi->getMIME_IMB_noextension = 1; /* just BODY specified */
 		}
 	    }
 	  else
 	    {
 	      /* determine wheter or not to set the seen flag */
-	      if (strcasecmp(args[i],"body.peek") == 0)
-		fi->bodyfetches[bodyidx].noseen = 1;
+	      ispeek = (strcasecmp(args[i],"body.peek") == 0);
 	      
 	      /* now read the argument list to body */
 	      i++; /* now pointing at '[' (not the last arg, parentheses are matched) */
@@ -648,10 +788,17 @@ int get_fetch_items(char **args, fetch_items_t *fi)
 	      if (strcmp(args[i], "]") == 0)
 		{
 		  /* specified body[] or body.peek[] */
-		  fi->getTotal = 1;
-		  i++;
+		  if (ispeek)
+		    fi->getBodyTotalPeek = 1;
+		  else
+		    fi->getBodyTotal = 1;
+
+		  /* do not increment i, it is done by the for-loop */
 		  continue;
 		}
+	      
+	      if (ispeek)
+		fi->bodyfetches[bodyidx].noseen = 1;
 
 	      /* first check if there is a partspecifier (numbers & dots) */
 	      indigit = 0;

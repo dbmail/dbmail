@@ -4,6 +4,7 @@
 
 #include "config.h"
 #include "mime.h"
+#include <ctype.h>
 
 /* extern char *header; */
 /* extern unsigned long headersize; */
@@ -162,12 +163,13 @@ int mime_list(char *blkdata, struct list *mimelist)
  * mime_readheader()
  *
  * same as mime_list() but adds the number of bytes read to blkidx
+ * and returns the number of newlines passed
  *
- * returns -1 on failure, 0 on success
+ * returns -1 on failure, # '\n' on succes
  */
 int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist)
 {
-  int valid_mime_lines=0,idx;
+  int valid_mime_lines=0,idx,totallines=0;
 	
   char *endptr, *startptr, *delimiter;
   struct mime_record *mr;
@@ -193,29 +195,21 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist)
       while (*endptr)
 	{
 	  /* field-ending: \n + (non-white space) */
-	  if (*endptr == '\n' && (!isspace(endptr[1]) || endptr[1] == '\n'))
-	    break;
-	  
-/*	  if (endptr[0]=='\n' && endptr[1]!='\t')
+	  if (*endptr == '\n') 
 	    {
-	      if (endptr != blkdata && *(endptr-1) == ';')
-		{
-		  endptr++;
-		  continue;
-		}
-	      else
-		{
-		  break;
-		}
+	      totallines++;
+	      if (!isspace(endptr[1]) || endptr[1] == '\n')
+		break;
 	    }
-*/	  endptr++;
+	  
+	  endptr++;
 	}
 
       if (!(*endptr))
 	{
 	  /* end of data block reached */
 	  free(mr);
-	  return 0;
+	  return totallines;
 	}
 
       /* endptr points to linebreak now */
@@ -266,10 +260,12 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist)
 	  if (*startptr == '\n')
 	    {
 	      /* end of header: double newline */
+	      totallines++;
 	      (*blkidx)++;
-	      trace(TRACE_DEBUG,"mime_readheader(): found double newline\n");
+	      trace(TRACE_DEBUG,"mime_readheader(): found double newline; header size: %d lines\n",
+		    totallines);
 	      free(mr);
-	      return 0;
+	      return totallines;
 	    }
 	}
       else 
