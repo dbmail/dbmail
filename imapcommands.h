@@ -56,6 +56,7 @@ int _ic_status(char *tag, char **args, ClientInfo * ci);
 int _ic_append(char *tag, char **args, ClientInfo * ci);
 
 /* selected-state commands */
+int _ic_sort(char *tag, char **args, ClientInfo *ci);
 int _ic_check(char *tag, char **args, ClientInfo * ci);
 int _ic_close(char *tag, char **args, ClientInfo * ci);
 int _ic_expunge(char *tag, char **args, ClientInfo * ci);

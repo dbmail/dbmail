@@ -80,9 +80,9 @@ void free_chunks(char **chunks);
 int quoted_string_out(FILE * outstream, const char *s);
 void send_data(FILE * to, MEM * from, int cnt);
 
-int build_imap_search(char **search_keys, struct list *sl, int *idx);
+int build_imap_search(char **search_keys, struct list *sl, int *idx, int sorted);
 int perform_imap_search(int *rset, int setlen, search_key_t * sk,
-			mailbox_t * mb);
+			mailbox_t * mb, int sorted);
 void free_searchlist(struct list *sl);
 
 void invert_set(int *set, int setlen);

@@ -228,3 +228,49 @@ void list_showlist(struct list *tlist)
 		temp = temp->nextnode;
 	}
 }
+
+/* basic binary tree */
+void list_btree_insert(sortitems_t ** tree, sortitems_t * item) {
+	int val;
+	if(!(*tree)) {
+		*tree = item;
+		return;
+	}
+	val = strcmp(item->ustr,(*tree)->ustr);
+	if(val < 0)
+		list_btree_insert(&(*tree)->left, item);
+	else if(val > 0)
+		list_btree_insert(&(*tree)->right, item);
+}
+
+void list_btree_printout(sortitems_t * tree, int * i) {
+	if(tree->left) 
+		list_btree_printout(tree->left, i);
+	trace(TRACE_INFO, "list_btree_printout: i '%d' '%d', '%s'\n", 
+			*i, tree->mid, tree->ustr);
+	(*i)++;
+	if(tree->right) 
+		list_btree_printout(tree->right, i);
+}
+
+void list_btree_traverse(sortitems_t * tree, int * i, int *rset) {
+	if(tree->left) 
+		list_btree_traverse(tree->left, i, rset);
+	trace(TRACE_DEBUG, "list_btree_traverse: i '%d' '%d', '%s'\n", 
+			*i, tree->mid, tree->ustr); 
+	rset[*i] = tree->mid;
+	(*i)++;
+	if(tree->right) 
+		list_btree_traverse(tree->right, i, rset);
+}
+
+void list_btree_free(sortitems_t * tree) {
+	if(tree->left) 
+		list_btree_free(tree->left);
+	my_free(tree->ustr);
+	if(tree->right) 
+		list_btree_free(tree->right);
+	else 
+		my_free(tree);
+}
+

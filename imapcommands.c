@@ -1782,8 +1782,131 @@ int _ic_append(char *tag, char **args, ClientInfo * ci)
 
 /* 
  * SELECTED-STATE COMMANDS 
- * check, close, expunge, search, fetch, store, copy, uid
+ * sort, check, close, expunge, search, fetch, store, copy, uid
  */
+
+
+/*
+ * _ic_sort()
+ * 
+ * sort and return sorted IDS for the selected mailbox
+ */
+int _ic_sort(char *tag, char **args, ClientInfo *ci)
+{
+	imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
+	unsigned *result_set;
+	unsigned i;
+	int result=0,only_ascii=0,idx=0;
+	search_key_t sk;
+
+	if (ud->state != IMAPCS_SELECTED) {
+		ci_write(ci->tx,"%s BAD SORT command received in invalid state\r\n", tag);
+		return 1;
+	}
+  
+	memset(&sk, 0, sizeof(sk));
+	list_init(&sk.sub_search);
+
+	if (!args[0]) {
+		ci_write(ci->tx,"%s BAD invalid arguments to SORT\r\n",tag);
+		return 1;
+	}
+
+	if (strcasecmp(args[0], "charset") == 0) {
+	/* charset specified */
+	if (!args[1]) {
+		ci_write(ci->tx,"%s BAD invalid argument list\r\n",tag);
+		return 1;
+	}
+
+	if (strcasecmp(args[1], "us-ascii") != 0) {
+		ci_write(ci->tx,"%s NO specified charset is not supported\r\n",tag);
+		return 0;
+	}
+
+	only_ascii = 1;
+	idx = 2;
+}
+
+	/* parse the search keys */
+	while ( args[idx] && (result = build_imap_search(args, &sk.sub_search, &idx,1)) >= 0);
+
+	if (result == -2) {
+		free_searchlist(&sk.sub_search);
+		ci_write(ci->tx, "* BYE server ran out of memory\r\n");
+		return -1;
+	}
+
+	if (result == -1) {
+		free_searchlist(&sk.sub_search);
+		ci_write(ci->tx, "%s BAD syntax error in sort keys\r\n",tag);
+		return 1;
+	}
+
+	/* check if user has the right to search in this mailbox */
+	result = acl_has_right(ud->userid, ud->mailbox.uid, ACL_RIGHT_READ);
+	if (result < 0) {
+		ci_write(ci->tx,"* BYE internal database error\r\n");
+		free_searchlist(&sk.sub_search);
+		return -1;
+	}
+	if (result == 0) {
+		ci_write(ci->tx,"%s NO no permission to sort mailbox\r\n", tag);
+		free_searchlist(&sk.sub_search);
+		return 1;
+	}
+  
+	/* make it a top-level search key */
+	sk.type = IST_SUBSEARCH_AND;
+
+	/* allocate memory for result set */
+	result_set = (unsigned*)my_malloc(sizeof(unsigned) * ud->mailbox.exists);
+	if (!result_set) {
+		free_searchlist(&sk.sub_search);
+		ci_write(ci->tx,"* NO server ran out of memory\r\n");
+		return -1;
+	}
+   
+	/* do i need this? */ 
+	for (i=0; i<ud->mailbox.exists; i++)
+		result_set[i] = (i+1);
+
+	/* now perform the search operations */
+	result = perform_imap_search(result_set, ud->mailbox.exists, &sk, &ud->mailbox,1);
+    
+	if (result < 0) {
+		free_searchlist(&sk.sub_search);
+		my_free(result_set);
+		ci_write(ci->tx,"%s", (result == -1) ? 
+			"* NO internal dbase error\r\n" :
+			"* NO server ran out of memory\r\n");
+
+		trace(TRACE_ERROR, "ic_sort(): fatal error [%d] from perform_imap_search()\n",result);
+		return -1;
+	}
+
+	free_searchlist(&sk.sub_search);
+
+	if (result == 1) {
+		ci_write(ci->tx,"* NO error synchronizing dbase\r\n");
+		return -1;
+	}
+      
+	/* ok, display results */
+	ci_write(ci->tx, "* SORT");
+
+	for (i=0; i<ud->mailbox.exists; i++) {
+		/*trace(TRACE_INFO, "ic_sort(): i: %d, rs[i]: %d, mbuid[i]: %llu ", i, result_set[i], ud->mailbox.seq_list[i]); */
+		if (result_set[i])
+			ci_write(ci->tx, " %llu", imapcommands_use_uid ? ud->mailbox.seq_list[i] : (u64_t)result_set[i]);
+	}
+
+	ci_write(ci->tx,"\r\n");
+	my_free(result_set);
+      
+	ci_write(ci->tx,"%s OK SORT completed\r\n",tag);
+	return 0;
+}
 
 /*
  * _ic_check()
@@ -1996,7 +2119,7 @@ int _ic_search(char *tag, char **args, ClientInfo * ci)
 	/* parse the search keys */
 	while (args[idx]
 	       && (result =
-		   build_imap_search(args, &sk.sub_search, &idx)) >= 0);
+		   build_imap_search(args, &sk.sub_search, &idx, 0)) >= 0);
 
 	if (result == -2) {
 		free_searchlist(&sk.sub_search);
@@ -2065,7 +2188,7 @@ ci_write(ci->tx,"* BYE internal dbase error\r\n");
 		/* now perform the search operations */
 		result =
 		    perform_imap_search(result_set, ud->mailbox.exists,
-					&sk, &ud->mailbox);
+					&sk, &ud->mailbox,0);
 
 		if (result < 0) {
 			free_searchlist(&sk.sub_search);
@@ -4361,6 +4484,8 @@ int _ic_uid(char *tag, char **args, ClientInfo * ci)
 		result = _ic_store(tag, &args[1], ci);
 	else if (strcasecmp(args[0], "search") == 0)
 		result = _ic_search(tag, &args[1], ci);
+	else if (strcasecmp(args[0], "sort") == 0)
+		result = _ic_sort(tag, &args[1], ci);
 	else {
 		ci_write(ci->tx, "%s BAD invalid UID command\r\n", tag);
 		result = 1;

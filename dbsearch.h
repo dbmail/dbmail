@@ -69,4 +69,8 @@ int db_search(int *rset, int setlen, const char *key, mailbox_t * mb,
 int db_search_parsed(int *rset, unsigned setlen,
 		     search_key_t * sk, mailbox_t * mb);
 
+
+int db_sort_parsed(int *rset, unsigned setlen, 
+		     search_key_t *sk, mailbox_t *mb);
+ 
 #endif

@@ -118,6 +118,14 @@ int db_search(int *rset, int setlen, const char *key, mailbox_t * mb,
 			 "AND msg.status < '%d' "
 			 "AND msg.unique_id <> '' "
 			 "AND pms.%s", mb->uid, MESSAGE_STATUS_DELETE, key);
+   	} else if ( type == IST_SORT) {
+        	snprintf(query, DEF_QUERYSIZE,
+                 	"SELECT msg.message_idnr FROM dbmail_messages msg, dbmail_physmessage pms "
+                 	"WHERE msg.mailbox_idnr = '%llu' "
+                 	"AND msg.physmessage_id = pms.id "
+                 	"AND msg.status < 2 "
+                 	"AND msg.unique_id <> '' "
+                 	"%s", mb->uid, key);
 	} else {
 		snprintf(query, DEF_QUERYSIZE,
 			 "SELECT message_idnr FROM dbmail_messages "
@@ -133,18 +141,76 @@ int db_search(int *rset, int setlen, const char *key, mailbox_t * mb,
 
 	for (i = 0; i < db_num_rows(); i++) {
 		uid = db_get_result_u64(i, 0);
-		msn = db_binary_search(mb->seq_list, mb->exists, uid);
+		if (type != IST_SORT) {
+			msn = db_binary_search(mb->seq_list, mb->exists, uid);
 
-		if (msn == -1 || msn >= setlen) {
-			db_free_result();
-			return 1;
+			if (msn == -1 || msn >= setlen) {
+				db_free_result();
+				return 1;
+			}
+			rset[msn] = 1;
+		} else {
+			rset[i] = (i+1);
 		}
-
-		rset[msn] = 1;
 	}
 
 	db_free_result();
 	return 0;
+}
+
+void addto_btree_curr(sortitems_t ** root, char *str, int mid)
+{
+   sortitems_t *curr = (sortitems_t *)my_malloc(sizeof(sortitems_t));
+   curr->left = curr->right = NULL;
+   curr->mid = mid;
+   curr->ustr = (char *)my_malloc(sizeof(char)*(strlen(str)+8)); 
+   memset(curr->ustr, '\0', sizeof(char)*(strlen(str)+8));
+   sprintf(curr->ustr, "%s%06d", str,mid);
+   list_btree_insert(root, curr);
+}
+
+int db_sort_parsed(int *rset, unsigned int setlen,
+                     search_key_t *sk, mailbox_t *mb)
+{
+
+     unsigned int i;
+     int result, idx = 0;
+     mime_message_t msg;
+     struct mime_record *mr;
+     sortitems_t *root = NULL;
+
+     if (!sk->search)
+          return 0;
+
+     if (mb->exists != setlen)
+          return 1;
+
+     memset(rset, 0, sizeof(int)*setlen);
+     /*create a btree for all messages hdrfld */
+     for (i=0; i<setlen; i++) {
+          memset(&msg, 0, sizeof(msg));
+
+          result = db_fetch_headers(mb->seq_list[i], &msg);
+          if (result != 0)
+               continue; /* ignore parse errors */
+
+          if (list_getstart(&msg.mimeheader)) {
+             mime_findfield(sk->hdrfld, &msg.mimeheader, &mr);
+             if (mr)
+              addto_btree_curr(&root, (char *)mr->value,(i+1));
+          }
+          if (list_getstart(&msg.rfcheader)) {
+             mime_findfield(sk->hdrfld, &msg.rfcheader, &mr);
+             if (mr)
+              addto_btree_curr(&root, (char *)mr->value,(i+1));
+          }
+          db_free_msg(&msg);
+    }
+
+    list_btree_traverse(root, &idx, rset); /* fill in the rset array with mid's */
+    list_btree_free(root); 
+
+    return 0;
 }
 
 int db_search_parsed(int *rset, unsigned int setlen,

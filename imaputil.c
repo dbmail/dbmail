@@ -2224,7 +2224,7 @@ void send_data(FILE * to, MEM * from, int cnt)
  *
  * returns -1 on syntax error, -2 on memory error; 0 on success, 1 if ')' has been encountered
  */
-int build_imap_search(char **search_keys, struct list *sl, int *idx)
+int build_imap_search(char **search_keys, struct list *sl, int *idx, int sorted)
 {
 	search_key_t key;
 	int result;
@@ -2233,8 +2233,43 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx)
 		return 0;
 
 	memset(&key, 0, sizeof(key));
-
-	if (strcasecmp(search_keys[*idx], "all") == 0) {
+	/* coming from _ic_sort */
+	if(sorted && (strcasecmp(search_keys[*idx], "arrival") == 0)) {
+		key.type = IST_SORT;
+		strncpy(key.search, "order by pms.internal_date", MAX_SEARCH_LEN);
+		(*idx)++;
+	} else if(sorted && (strcasecmp(search_keys[*idx], "from") == 0)) {
+		key.type = IST_SORTHDR;
+		strncpy(key.hdrfld, "from", MIME_FIELD_MAX);
+		(*idx)++;
+	} else if(sorted && (strcasecmp(search_keys[*idx], "subject") == 0)) {
+		key.type = IST_SORTHDR;
+		strncpy(key.hdrfld, "subject", MIME_FIELD_MAX);
+		(*idx)++;
+	} else if(sorted && (strcasecmp(search_keys[*idx], "cc") == 0)) {
+		key.type = IST_SORTHDR;
+		strncpy(key.hdrfld, "cc", MIME_FIELD_MAX);
+		(*idx)++;
+	} else if(sorted && (strcasecmp(search_keys[*idx], "to") == 0)) {
+		key.type = IST_SORTHDR;
+		strncpy(key.hdrfld, "to", MIME_FIELD_MAX);
+		(*idx)++;
+	} else if(sorted && (strcasecmp(search_keys[*idx], "reverse") == 0)) {
+		/* TODO */ 
+		(*idx)++;
+	} else if(sorted && (strcasecmp(search_keys[*idx], "size") == 0)) {
+		/* TODO */ 
+		(*idx)++;
+	} else if(sorted && (strcasecmp(search_keys[*idx], "iso-8859-1") == 0)) {
+		/* TODO */ 
+		(*idx)++;
+	} else if(sorted && (strcasecmp(search_keys[*idx], "date") == 0)) {
+		/* TODO */ 
+		(*idx)++;
+	} else if(sorted && (strcasecmp(search_keys[*idx], "all") == 0)) {
+		/* TODO */ 
+		(*idx)++;
+	} else if (strcasecmp(search_keys[*idx], "all") == 0) {
 		key.type = IST_SET;
 		strcpy(key.search, "1:*");
 		(*idx)++;
@@ -2525,7 +2560,7 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx)
 		(*idx)++;
 		if ((result =
 		     build_imap_search(search_keys, &key.sub_search,
-				       idx)) < 0) {
+				       idx, sorted )) < 0) {
 			list_freelist(&key.sub_search.start);
 			return result;
 		}
@@ -2541,14 +2576,14 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx)
 		(*idx)++;
 		if ((result =
 		     build_imap_search(search_keys, &key.sub_search,
-				       idx)) < 0) {
+				       idx, sorted)) < 0) {
 			list_freelist(&key.sub_search.start);
 			return result;
 		}
 
 		if ((result =
 		     build_imap_search(search_keys, &key.sub_search,
-				       idx)) < 0) {
+				       idx, sorted )) < 0) {
 			list_freelist(&key.sub_search.start);
 			return result;
 		}
@@ -2565,7 +2600,7 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx)
 		(*idx)++;
 		while ((result =
 			build_imap_search(search_keys, &key.sub_search,
-					  idx)) == 0 && search_keys[*idx]);
+					  idx, sorted)) == 0 && search_keys[*idx]);
 
 		if (result < 0) {
 			/* error */
@@ -2604,7 +2639,7 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx)
  * (new mail has been added to mailbox while searching, mailbox data out of sync)
  */
 int perform_imap_search(int *rset, int setlen, search_key_t * sk,
-			mailbox_t * mb)
+			mailbox_t * mb, int sorted)
 {
 	search_key_t *subsk;
 	struct element *el;
@@ -2630,6 +2665,19 @@ int perform_imap_search(int *rset, int setlen, search_key_t * sk,
 		build_uid_set(rset, setlen, sk->search, mb);
 		break;
 
+	case IST_SORT:
+		result = db_search(rset, setlen, sk->search, mb, sk->type);
+		my_free(newset);
+		return 0;
+		break;
+
+	case IST_SORTHDR:
+		result = db_sort_parsed(rset, setlen, sk, mb);
+		my_free(newset);
+		return 0;
+		break;
+
+ 
 	case IST_FLAG:
 		result = db_search(rset, setlen, sk->search, mb, sk->type);
 		if (result != 0) {
@@ -2677,14 +2725,18 @@ int perform_imap_search(int *rset, int setlen, search_key_t * sk,
 					newset[i] = 1;
 
 			result =
-			    perform_imap_search(newset, setlen, subsk, mb);
+			    perform_imap_search(newset, setlen, subsk, mb, sorted);
 			if (result < 0 || result == 1) {
 				my_free(newset);
 				return result;
 			}
-
-			combine_sets(rset, newset, setlen, subtype);
-
+			if (! sorted)
+				combine_sets(rset, newset, setlen, subtype);
+			else {
+				for (i=0; i<setlen; i++)
+					rset[i] = newset[i];
+			}
+ 
 			el = el->nextnode;
 		}
 

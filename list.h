@@ -62,5 +62,18 @@ void list_init(struct list *tlist);
  * but a pretty "strange" way to pollute the global namespace
  */
 struct element *dbmail_list_reverse(struct element *start);
+/* sort stuff */
+
+typedef struct _sortitems
+{
+	char *ustr;
+	unsigned int mid;
+	struct _sortitems * right, * left;
+} sortitems_t;
+
+void list_btree_insert(sortitems_t ** tree, sortitems_t * item);
+void list_btree_printout(sortitems_t * tree, int *i);
+void list_btree_traverse(sortitems_t * tree, int * i, int *rset);
+void list_btree_free(sortitems_t * tree);
 
 #endif

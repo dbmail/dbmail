@@ -1,3 +1,9 @@
+2004-09-14  Paul Stevens <paul@nfg.nl>
+
+	* dbmailtypes.h, dbsearch.c, dbsearch.h, imap4.c, imap4.h, imapcommands.c,
+	imapcommands.h, imaputil.c, imaputil.h, list.c, list.h: applied Leif
+	Jackson's sort patch wich adds server-side sorting.
+
 2004-09-10  Paul Stevens <paul@nfg.nl>
 
 	* auth.h, db.h, db.c, user.c, auth/authldap.c, auth/authsql.c:
