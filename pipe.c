@@ -85,7 +85,7 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 	and check if they're in the database
 	firstblock is the header which was already read */
 
-  struct element *tmp, *tmp_pipe;
+  struct element *tmp, *tmp_pipe, *descriptor_temp;
   char *insertquery;
   char *updatequery;
   char *unique_id;
@@ -99,6 +99,7 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
   void *sendmail_pipe;
   struct list external_forwards;
   struct list bounces;
+  struct list descriptors;
   
   unsigned long temp,userid;
   int i;
@@ -332,9 +333,11 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 					we're using the db_send_message_lines() call for this */
 				tmp_pipe=list_getstart(&external_forwards); 
 
+				/* initiate a list for descriptors */
+				list_init(&descriptors);
+
 				if (list_totalnodes(&messageids)==0)
 				{
-
 					trace (TRACE_DEBUG,"insert_messages(): Forwarding message directly through pipes");
 					
 					/* this is tricky. Since there are no messages inserted 
@@ -355,73 +358,91 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 							trace (TRACE_DEBUG,"insert_messages(): popen() successfull");
 							/* -2 will send the complete message to sendmail_pipe */
 							fprintf ((FILE *)sendmail_pipe,"%s",tmpbuffer);
-							while (!feof(stdin))
-							{
-								strblock = fgets (strblock, READ_BLOCK_SIZE, stdin);
-								
-								if (strblock!=NULL) /* this happends when a eof occurs */
-								{
-									usedmem = strlen (strblock);
-									totalmem=totalmem+usedmem;
-		
-									trace(TRACE_DEBUG,"insert_messages(): Sending block size=[%d] total=[%d]",
-										usedmem, totalmem);
-									fprintf ((FILE *)sendmail_pipe,"%s",strblock);
-									/* resetting strlen for strblock */
-									strblock[0]='\0';
-									usedmem = 0;
-								}
-								else 
-									trace (TRACE_DEBUG,"insert_messages(): End of STDIN reached. we're done here");
-							}
-							/* done forwarding */
-							trace(TRACE_DEBUG, "insert_messages(): Closing pipe");
-							{	
-								if (sendmail_pipe!=NULL)
-									fprintf ((FILE *)sendmail_pipe,"\n.\n");
-								else 
-									trace(TRACE_DEBUG, "insert_messages(): The pipe just died on me?!?");
-							}
+							/* add the external pipe descriptor to a list */
+							list_nodeadd(&descriptors,sendmail_pipe,sizeof(sendmail_pipe));
 						}
 						else 
-						{
+							{
 							trace (TRACE_ERROR,"insert_messages(): Could not open pipe to [%s]",SENDMAIL);
-						}
+							}
+						/* get next receipient */
 						tmp_pipe=tmp_pipe->nextnode;
 					}
-				}
-				else	
-				{		
-					trace (TRACE_DEBUG,"insert_messages(): Forwarding message via database");
-					while (tmp_pipe!=NULL)
+			
+					if (descriptors.total_nodes>0)
 					{
-						sprintf (tmpbuffer,"%s\nTo: %s\n%s",firstblock,
-								(char *)tmp_pipe->data,nextscan);
-						trace (TRACE_DEBUG,"insert_messages(): new header [%s]",tmpbuffer);
-						(FILE *)sendmail_pipe=popen(SENDMAIL,"w");
-						trace (TRACE_DEBUG,"insert_messages(): popen() executed");
-						if (sendmail_pipe!=NULL)
+						while (!feof(stdin))
 						{
-							trace (TRACE_DEBUG,"insert_messages(): popen() successfull");
-							/* -2 will send the complete message to sendmail_pipe */
-							fprintf ((FILE *)sendmail_pipe,"%s",tmpbuffer);
-							trace (TRACE_DEBUG,"insert_messages(): sending message from database");
-							db_send_message_special (sendmail_pipe, *(unsigned long*)tmp->data, -2, tmpbuffer); 
-						}
-						else 
-						{
-							trace (TRACE_ERROR,"insert_messages(): Could not open pipe to [%s]",SENDMAIL);
+							strblock = fgets (strblock, READ_BLOCK_SIZE, stdin);
+									
+							if (strblock!=NULL) /* this happends when a eof occurs */
+							{
+								usedmem = strlen (strblock);
+								totalmem=totalmem+usedmem;
+
+								trace(TRACE_DEBUG,"insert_messages(): Sending block size=[%d] total=[%d]",
+									usedmem, totalmem);
+								descriptor_temp = list_getstart(&descriptors);
+								while (descriptor_temp!=NULL)
+								{
+									fprintf ((FILE *)(descriptor_temp->data),"%s",strblock);
+									descriptor_temp=descriptor_temp->nextnode;
+								}
+								/* resetting strlen for strblock */
+								strblock[0]='\0';
+								usedmem = 0;
+							}
+							else 
+								trace (TRACE_DEBUG,"insert_messages(): End of STDIN reached. we're done here");
 						}
 
-					tmp_pipe=tmp_pipe->nextnode;
+						/* done forwarding */
+						trace(TRACE_DEBUG, "insert_messages(): Closing pipe");
+						descriptor_temp = list_getstart(&descriptors);
+						while (descriptor_temp!=NULL)
+						{
+							if (descriptor_temp->data!=NULL)
+								fprintf ((FILE *)sendmail_pipe,"\n.\n");
+							else 
+								trace (TRACE_ERROR,"insert_messages(): Huh? The descriptor died on me. That's not supposed to happen");
+						}
 					}
+					else
+					{	
+						trace (TRACE_ERROR,"insert_message(): Something went wrong when building a list structure for pipe descriptors");
+					}
+			else	
+			{		
+				trace (TRACE_DEBUG,"insert_messages(): Forwarding message via database");
+				while (tmp_pipe!=NULL)
+				{
+					sprintf (tmpbuffer,"%s\nTo: %s\n%s",firstblock,
+							(char *)tmp_pipe->data,nextscan);
+					trace (TRACE_DEBUG,"insert_messages(): new header [%s]",tmpbuffer);
+					(FILE *)sendmail_pipe=popen(SENDMAIL,"w");
+					trace (TRACE_DEBUG,"insert_messages(): popen() executed");
+					if (sendmail_pipe!=NULL)
+					{
+						trace (TRACE_DEBUG,"insert_messages(): popen() successfull");
+						/* -2 will send the complete message to sendmail_pipe */
+						fprintf ((FILE *)sendmail_pipe,"%s",tmpbuffer);
+						trace (TRACE_DEBUG,"insert_messages(): sending message from database");
+						db_send_message_special (sendmail_pipe, *(unsigned long*)tmp->data, -2, tmpbuffer); 
+					}
+					else 
+					{
+						trace (TRACE_ERROR,"insert_messages(): Could not open pipe to [%s]",SENDMAIL);
+					}
+
+				tmp_pipe=tmp_pipe->nextnode;
 				}
 			}
-			else 
-			{
-				trace (TRACE_ERROR,"insert_messages(): Could not forward message. Header is invalid");
-			}
 		}
+	else 
+	{
+		trace (TRACE_ERROR,"insert_messages(): Could not forward message. Header is invalid");
+	}
+	}
 		else
 			{
 				trace (TRACE_ERROR,"insert_messages(): Could not forward message. Header is invalid");
