@@ -1,5 +1,7 @@
 /*
-  Copyright (C) 1999-2003 IC & S  dbmail@ic-s.nl
+  $Id$
+
+  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 
   This program is free software; you can redistribute it and/or 
   modify it under the terms of the GNU General Public License 
@@ -19,8 +21,6 @@
 
 /**
  * \file dbmsgbuf.c
- *
- * \author copyright 2000-2003 IC&S (http://www.ic-s.nl)
  *
  * implement msgbuf functions prototyped in dbmsgbuf.h
  */

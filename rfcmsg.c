@@ -1,5 +1,5 @@
 /*
- Copyright (C) 1999-2003 IC & S  dbmail@ic-s.nl
+ Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -19,7 +19,6 @@
 
 /*
  * $Id$
- * (c) 2000-2002 IC&S, The Netherlands (http://www.ic-s.nl)
  * function implementations for parsing an RFC822/MIME 
  * compliant mail message
  */

@@ -1,5 +1,6 @@
 /*
- Copyright (C) 1999-2003 IC & S  dbmail@ic-s.nl
+  $Id$
+ Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -19,8 +20,6 @@
 
 /**
  * \file dbsearch.c
- * \author copyright 2003 IC&S, The Netherlands (http://www.ic-s.nl)
- * \date August 19th, 2003
  * \brief functions implementing searching for messages
  *        the functions in this file used to be located in the 
  *        dbpgsql.c (PostgreSQL) and dbmysql (MySQL), but have

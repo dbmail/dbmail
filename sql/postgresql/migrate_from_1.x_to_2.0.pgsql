@@ -1,6 +1,6 @@
 -- SQL for upgrading from dbmail-1.2 to dbmail-2.0
 /*
- Copyright (C) 1999-2003 Paul J Stevens paul@nfg.nl
+ Copyright (C) 2003-2004 Paul J Stevens paul@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 

@@ -1,5 +1,5 @@
 /*
- Copyright (C) 1999-2003 IC & S  dbmail@ic-s.nl
+ Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -21,7 +21,6 @@
  * \file authsql.c
  * \brief implements SQL authentication. Prototypes of these functions
  * can be found in auth.h . 
- * \date August 20th 2003
  * \author IC&S (http://www.ic-s.nl)
  */
 
