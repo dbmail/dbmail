@@ -1,3 +1,8 @@
+2004-11-24  Ilja Booij  <ilja@ic-s.nl>
+
+	* pop3.c (pop3): changed AUTH response to return a '.' after
+	the list of authentication mechanisms. fixed bug #111
+
 2004-11-23  Aaron Stone  <aaron@serendipity.cx>
 
 	* main.c: added a check to see if there are any deliveries

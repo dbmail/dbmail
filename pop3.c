@@ -948,7 +948,7 @@ int pop3(void *stream, char *buffer, char *client_ip,
 			
 			fprintf((FILE *) stream,
 				"+OK List of supported mechanisms\r\n"
-				"X-NONE-SO-USE-APOP\r\n");
+				"X-NONE-SO-USE-APOP\r\n.\r\n");
 			return 1;
 		}
 
