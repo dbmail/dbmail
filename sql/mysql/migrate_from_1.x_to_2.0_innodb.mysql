@@ -65,9 +65,9 @@ CREATE TABLE dbmail_subscription (
 	index (user_id),
 	index (mailbox_id),
 	FOREIGN KEY user_id_fk (user_id) 
-		REFERENCES users (user_idnr) ON DELETE CASCADE,
+		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE,
 	FOREIGN KEY mailbox_id_fk (mailbox_id) 
-		REFERENCES mailboxes (mailbox_idnr) ON DELETE CASCADE
+		REFERENCES dbmail_mailboxes (mailbox_idnr) ON DELETE CASCADE
 ) TYPE=InnoDB;
 
 # fill the subscription table
@@ -96,9 +96,9 @@ CREATE TABLE dbmail_acl (
 	INDEX (user_id),
 	INDEX (mailbox_id),
 	FOREIGN KEY user_id_fk (user_id) 
-		REFERENCES users (user_idnr) ON DELETE CASCADE,	
+		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE,	
 	FOREIGN KEY mailbox_id_fk (mailbox_id) 
-		REFERENCES mailboxes (mailbox_idnr) ON DELETE CASCADE
+		REFERENCES dbmail_mailboxes (mailbox_idnr) ON DELETE CASCADE
 ) TYPE=InnoDB;
 
 # physmessage table 
@@ -165,7 +165,7 @@ CREATE TABLE IF NOT EXISTS auto_notifications (
    notify_address VARCHAR(100),
    PRIMARY KEY (auto_notify_idnr),
    FOREIGN KEY (`user_idnr`) 
-		REFERENCES `users`(`user_idnr`) ON DELETE CASCADE
+		REFERENCES `dbmail_users`(`user_idnr`) ON DELETE CASCADE
 ) TYPE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS auto_replies (
@@ -174,7 +174,7 @@ CREATE TABLE IF NOT EXISTS auto_replies (
    reply_body mediumtext,
    PRIMARY KEY (auto_reply_idnr),
    FOREIGN KEY (`user_idnr`) 
-		REFERENCES `users`(`user_idnr`) ON DELETE CASCADE
+		REFERENCES `dbmail_users`(`user_idnr`) ON DELETE CASCADE
 ) TYPE=InnoDB;
 
 # Now we know that auto_notifications and auto_replies exist.
@@ -238,7 +238,9 @@ SET FOREIGN_KEY_CHECKS=1;
 INSERT INTO dbmail_users (userid, passwd, encryption_type) 
 	VALUES ('__@!internal_delivery_user!@__', '', 'md5');
 # insert the 'anyone' user which is used for ACLs.
-INSERT INTO dbmail_users (userid, passwd, encryption_type) 
+INSERT INTO dbmail_users (userid, passwd, encryption_type)
 	VALUES ('anyone', '', 'md5');
+
 # end
 COMMIT;
+
