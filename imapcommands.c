@@ -1248,7 +1248,7 @@ int _ic_status(char *tag, char **args, ClientInfo *ci)
       return -1; /* fatal  */
     }
 
-  fprintf(ci->tx, "* STATUS %s (", args[0]);
+  fprintf(ci->tx, "* STATUS \"%s\" (", args[0]);
 
   for (i=2; args[i]; i++)
     {

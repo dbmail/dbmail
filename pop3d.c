@@ -58,7 +58,7 @@ int n_default_children;
 
 
 /* signal handler */
-static void signal_handler (int signo)
+static void signal_handler (int signo, siginfo_t *info, void *data)
 {
   pid_t PID;
   int status,i;
@@ -78,12 +78,11 @@ static void signal_handler (int signo)
       {
 	trace (TRACE_DEBUG,"signal_handler(): sigCHLD, cleaning up zombies");
 	do {
-	  PID = waitpid (-1,&status,WNOHANG);
+	  PID = waitpid (info->si_pid,&status,WNOHANG);
 	  sleep (1);
 	} while ( PID != -1);
 
 	trace (TRACE_DEBUG,"signal_handler(): sigCHLD, cleaned");
-	signal (SIGCHLD, signal_handler);
 	return;
       }
     else
@@ -94,6 +93,7 @@ static void signal_handler (int signo)
 	    {
 	      default_child_pids[i] = 0;
 	      (*default_children)--;
+	      break;
 	    }
 
 	trace (TRACE_STOP,"signal_handler(): received fatal signal [%d]",signo);
@@ -281,6 +281,7 @@ int main (int argc, char *argv[])
 {
   struct sockaddr_in adr_srvr;
   struct sockaddr_in adr_clnt;
+  struct sigaction act;
   char *myhostname;
 
   char *newuser, *newgroup;
@@ -375,20 +376,26 @@ int main (int argc, char *argv[])
   /* getting hostname */
   gethostname (myhostname,64);
 	
-  /* set signal handler for SIGCHLD */
-  signal (SIGCHLD, signal_handler);
-  signal (SIGINT, signal_handler);
-  signal (SIGQUIT, signal_handler);
-  signal (SIGILL, signal_handler);
-  signal (SIGKILL, signal_handler);
-  signal (SIGBUS, signal_handler);
-  signal (SIGFPE, signal_handler);
-  signal (SIGSEGV, signal_handler);
-  signal (SIGTERM, signal_handler);
-  signal (SIGSTOP, signal_handler);
-  signal (SIGALRM, signal_handler);
+  /* init & install signal handlers */
+  memset(&act, 0, sizeof(act));
 
-  adr_srvr.sin_family = AF_INET; 
+  act.sa_sigaction = signal_handler;
+  sigemptyset(&act.sa_mask);
+  act.sa_flags = SA_SIGINFO;
+
+  sigaction(SIGCHLD, &act, 0);
+/*  sigaction(SIGPIPE, &act, 0);*/
+  sigaction(SIGINT, &act, 0);
+  sigaction(SIGQUIT, &act, 0);
+  sigaction(SIGILL, &act, 0);
+  sigaction(SIGBUS, &act, 0);
+  sigaction(SIGFPE, &act, 0);
+  sigaction(SIGSEGV, &act, 0);
+  sigaction(SIGTERM, &act, 0);
+  sigaction(SIGSTOP, &act, 0);
+
+
+  adr_srvr.sin_family = PF_INET; 
   
   s = socket (PF_INET, SOCK_STREAM, 0); /* creating the socket */
   if (s == -1 ) 

@@ -3483,11 +3483,10 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
 	  return totallines;
 	}
 
-      /* ok we're not done yet, skip the newline that follows the boundary */
-      if (msgbuf[msgidx] == '\n') 
+      if (msgbuf[msgidx] == '\n')
 	{
 	  totallines++;
-	  msgidx++;    /* skip newline */
+	  msgidx++;    /* skip the newline itself */
 	}
     }
   while (msgbuf[msgidx]) ;

@@ -131,10 +131,10 @@ int mime_list(char *blkdata, struct list *mimelist)
 	{
 	  /* no field/value delimiter found, non-valid MIME-header */
 	  free(mr);
-	  trace(TRACE_DEBUG,"Non valid mimeheader found, freeing list...\n");
+	  trace(TRACE_ERROR,"Non valid mimeheader found, freeing list...\n");
 	  list_freelist(&mimelist->start);
 	  mimelist->total_nodes = 0;
-	  trace(TRACE_DEBUG,"freeing list done, start: %X\n ",mimelist->start);
+	  trace(TRACE_ERROR,"freeing list done, start: %X\n ",mimelist->start);
 
 	  return -1;
 	}
@@ -171,7 +171,10 @@ int mime_list(char *blkdata, struct list *mimelist)
  * field/value strlen()'s plus 4 bytes for each headeritem: ': ' (field/value
  * separator) and '\r\n' to end the line.
  *
- * newlines within value will be expeanded to '\r\n'
+ * newlines within value will be expanded to '\r\n'
+ *
+ * if blkdata[0] == \n no header is expected and the function will return immediately
+ * (headersize 0)
  *
  * returns -1 on failure, number of newlines on succes
  */
@@ -179,6 +182,7 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist,
 {
   int valid_mime_lines=0,idx,totallines=0,j;
   unsigned fieldlen,vallen;
+  unsigned long saved_idx = *blkidx;
 	
   char *endptr, *startptr, *delimiter;
   struct mime_record *mr;
@@ -188,6 +192,13 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist,
 
   list_init(mimelist);
   *headersize = 0;
+
+  if (blkdata[0] == '\n')
+    {
+      trace(TRACE_DEBUG,"mime_readheader(): found an empty header\n");
+      (*blkidx)++; /* skip \n */
+      return 1; /* found 1 newline */
+    }
 
   /* alloc mem */
   mr=(struct mime_record *)malloc(sizeof(struct mime_record));
@@ -322,6 +333,9 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist,
 	  list_freelist(&mimelist->start);
 	  mimelist->total_nodes = 0;
 
+	  /* restore state */
+	  *blkidx = saved_idx;
+	  *headersize = 0;
 	  return -1;
 	}
     }

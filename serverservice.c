@@ -246,7 +246,7 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 	{
 	  while (default_child_pids[i] == 0) 
 	    {
-	      trace(TRACE_DEBUG, "SS_WaitAndProcess(): waiting for child to catch up...\n");
+	      trace(TRACE_INFO, "SS_WaitAndProcess(): waiting for child to catch up...\n");
 	      sleep(1); /* wait until child has catched up */
 	    }
 	  ss_nchildren++;
@@ -255,9 +255,9 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 
   if (getpid() == ss_server_pid)
     {
-      trace(TRACE_DEBUG,"SS_WaitAndProcess(): default children PID's:\n");
+      trace(TRACE_INFO,"SS_WaitAndProcess(): default children PID's:\n");
       for (i=0; i<default_children; i++)
-	trace(TRACE_DEBUG,"   %d\n", default_child_pids[i]);
+	trace(TRACE_INFO,"   %d\n", default_child_pids[i]);
     }
 
   for ( ;; )
@@ -310,8 +310,8 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 	      setlinebuf(client.tx);
 	      /*	  setlinebuf(client.rx);
 	       */
-/*	      setvbuf(client.tx, txbuf, _IOFBF, TXBUFSIZE);
-*/
+	      setvbuf(client.tx, txbuf, _IONBF, 1);
+
 	  
 #if LOG_USERS > 0
 	      trace(TRACE_MESSAGE,"IMAPD [PID %d]: client @ socket %d (IP: %s) accepted\n",
@@ -452,7 +452,8 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 		  /*	      setlinebuf(client.rx);
 		   */
 
-		  setvbuf(client.tx, txbuf, _IOFBF, TXBUFSIZE);
+		  setvbuf(client.tx, txbuf, _IONBF, 1);
+
 
 #if LOG_USERS > 0
 		  trace(TRACE_MESSAGE,"IMAPD [PID %d]: client @ socket %d (IP: %s) accepted\n",
@@ -534,16 +535,17 @@ void SS_sighandler(int sig, siginfo_t *info, void *data)
   int status;
   int i;
 
-  /* reset the entry of this process if it is a default child (so it can be restored) */
-  for (i=0; i<n_default_children && default_child_pids; i++)
-    if (info->si_pid == default_child_pids[i])
-      {
-	default_child_pids[i] = 0;
-	(*ss_n_default_children_used)--;
-      }
-
   if (sig != SIGCHLD)
     {
+      /* reset the entry of this process if it is a default child (so it can be restored) */
+      for (i=0; i<n_default_children && default_child_pids; i++)
+	if (getpid() == default_child_pids[i])
+	  {
+	    default_child_pids[i] = 0;
+	    (*ss_n_default_children_used)--;
+	    break;
+	  }
+
       /* close streams */
       if (client.tx && client.rx)
 	{
