@@ -503,7 +503,7 @@ int add_msg(u64_t size, u64_t rfcsize)
 
   time(&td);              /* get time */
   tm = *localtime(&td);   /* get components */
-  strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
+  strftime(timestr, sizeof(timestr), "%Y-%m-%d %H:%M:%S", &tm);
 
   if (td == prevt) /* make sure the ID has a unique time value */
     cnt++;

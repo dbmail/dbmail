@@ -116,7 +116,7 @@ int _ic_logout(char *tag, char **args, ClientInfo *ci)
 
   time(&td);              /* get time */
   tm = *localtime(&td);   /* get components */
-  strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
+  strftime(timestr, sizeof(timestr), "%Y-%m-%d %H:%M:%S", &tm);
 
   if (!check_state_and_args("LOGOUT", tag, args, 0, -1, ci))
     return 1; /* error, return */
@@ -151,7 +151,7 @@ int _ic_login(char *tag, char **args, ClientInfo *ci)
 
   time(&td);              /* get time */
   tm = *localtime(&td);   /* get components */
-  strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
+  strftime(timestr, sizeof(timestr), "%Y-%m-%d %H:%M:%S", &tm);
 
   if (!check_state_and_args("LOGIN", tag, args, 2, IMAPCS_NON_AUTHENTICATED, ci))
     return 1; /* error, return */
@@ -219,7 +219,7 @@ int _ic_authenticate(char *tag, char **args, ClientInfo *ci)
 
   time(&td);              /* get time */
   tm = *localtime(&td);   /* get components */
-  strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
+  strftime(timestr, sizeof(timestr), "%Y-%m-%d %H:%M:%S", &tm);
 
   if (!check_state_and_args("AUTHENTICATE", tag, args, 1, IMAPCS_NON_AUTHENTICATED, ci))
     return 1; /* error, return */

@@ -516,7 +516,7 @@ void find_time(char *timestr, const char *timespec)
   td -= (hour * 3600L + min * 60L);
   
   tm = *localtime(&td);   /* get components */
-  strftime(timestr, LEN, "%G-%m-%d %H:%M:%S", &tm);
+  strftime(timestr, LEN, "%Y-%m-%d %H:%M:%S", &tm);
 
   return;
 }
