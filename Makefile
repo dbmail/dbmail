@@ -6,6 +6,7 @@
 SMTP_OBJECTS = list.o debug.o pipe.o mime.o dbmysql.o misc.o dbmd5.o md5.o bounce.o
 POP_OBJECTS = pop3.o list.o debug.o dbmysql.o dbmd5.o md5.o
 IMAP_OBJECTS = imap4.o debug.o dbmysql.o serverservice.o list.o dbmd5.o md5.o imaputil.o imapcommands.o
+DUMP_OBJECTS = debug.o dbmysql.o list.o dbmd5.o md5.o 
 CC = cc
 
 MYSQLLIBDIR=/usr/local/lib/mysql
@@ -22,6 +23,10 @@ CFLAGS = -Wall -ggdb -D_BSD_SOURCE
 
 all: smtp pop3d imapd
 
+dump: dbmysql.h dumpmsg.c $(DUMP_OBJECTS)
+	$(CC) $(CFLAGS) dumpmsg.c -o dumpmsg $(DUMP_OBJECTS) $(LIBS) $(LIB)
+
+
 smtp: config.h main.h $(SMTP_OBJECTS) main.c
 		$(CC)	main.c -o dbmail-smtp $(SMTP_OBJECTS) $(LIBS) $(LIB)
 
@@ -31,6 +36,8 @@ pop3d: pop3.h $(POP_OBJECTS) pop3d.c
 imapd: imap4.h $(IMAP_OBJECTS) imapd.c
 	$(CC) imapd.c -o dbmail-imapd $(IMAP_OBJECTS) $(LIBS) $(LIB)
 
+
+dumpmsg.o: dbmysql.h
 list.o: list.h
 debug.o: debug.h
 pipe.o: pipe.h config.h

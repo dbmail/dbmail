@@ -17,6 +17,12 @@
 #endif
 
 #define MAX_RETRIES 20
+#define IMAP_NFLAGS 6
+const char *imap_flag_desc[IMAP_NFLAGS] = 
+{ 
+  "Seen", "Answered", "Deleted", "Flagged", "Draft", "Recent"
+};
+
 
 /*
  * RETURN VALUES _ic_ functions:
@@ -1352,6 +1358,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
   int i,fetch_start,fetch_end,delimpos,result,setseen;
   fetch_items_t fetchitems;
+  char date[IMAP_INTERNALDATE_LEN];
 
   if (ud->state != IMAPCS_SELECTED)
     {
@@ -1466,13 +1473,86 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
   for (i=fetch_start; i<=fetch_end; i++)
     {
       setseen = 0;
+      fprintf(ci->tx,"* %d FETCH (",i+1);
 
       /* walk by the arguments */
       if (fetchitems.getFlags) 
 	{
-	  db_get_flags();
+	  fprintf(ci->tx,"FLAGS (");
+	  
+	  for (j=0; j<IMAP_NFLAGS, j++)
+	    {
+	      result = db_get_msgflag(imap_flag_desc[j], ud->mailbox.uid, ud->mailbox.seq_list[i]);
+
+	      if (result == -1)
+		{
+		  fprintf(ci->tx,"* BYE internal dbase error\n");
+		  if (fetchitems.bodyfetches) free(fetchitems.bodyfetches);
+		  return -1;
+		}
+	      else if (result == 1)
+		fprintf(ci->tx,"\\%s ",imap_flag_desc[j]);
+	    }
+	  fprintf(ci->tx,") ");
 	}
-	
+
+      if (fetchitems.getInternalDate)
+	{
+	  result = db_get_msgdate(ud->mailbox.uid, ud->mailbox.seq_list[i], date);
+	  if (result == -1)
+	    {
+	      fprintf(ci->tx,"* BYE internal dbase error\n");
+	      if (fetchitems.bodyfetches) free(fetchitems.bodyfetches);
+	      return -1;
+	    }
+
+	  fprintf(ci->tx,"INTERNALDATE \"%s\" ",date);
+	}
+
+      if (fetchitems.getUID)
+	{
+	  fprintf(ci->tx,"UID %lu ",ud->mailbox.seq_list[i]);
+	}
+      
+      if (fetchitems.getMIME_IMB)
+	{
+	  
+	}
+
+      if (fetchitems.getEnvelope)
+	{
+	}
+
+      if (fetchitems.getSize)
+	{
+	}
+
+      if (fetchitems.getRFC822Header)
+	{
+	}
+
+      if (fetchitems.getRFC822Text)
+	{
+	}
+
+      for (j=0; j<fetchitems.nbodyfetches; j++)
+	{
+	  switch (fetchitems.bodyfetches[j])
+	    {
+	    case BFIT_TEXT:
+	      break;
+	    case BFIT_HEADER:
+	      break;
+	    case BFIT_HEADERFIELDS:
+	      break;
+	    case BFIT_HEADERFIELDS_NOT:
+	      break;
+	    default:
+	      fprintf(ci->tx, "* BYE internal server error\n");
+	      free(fetchitems.bodyfetches);
+	      return -1;
+	    }
+	}
     }
       
   if (fetchitems.bodyfetches)

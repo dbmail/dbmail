@@ -1296,4 +1296,179 @@ unsigned long db_first_unseen(unsigned long uid)
 }
   
   
+/*
+ * db_get_msgflag()
+ *
+ * gets a flag value specified by 'name' (i.e. 'seen' would check the Seen flag)
+ *
+ * returns:
+ *  -1  error
+ *   0  flag not set
+ *   1  flag set
+ */
+int db_get_msgflag(const char *name, unsigned long mailboxuid, unsigned long msguid)
+{
+  char query[DEF_QUERYSIZE];
+  char flagname[DEF_QUERYSIZE/2]; /* should be sufficient ;) */
+  int val;
+
+  /* determine flag */
+  if (strcasecmp(name,"seen") == 0)
+    snprintf(flagname, DEF_QUERYSIZE/2, "seen_flag");
+  else if (strcasecmp(name,"deleted") == 0)
+    snprintf(flagname, DEF_QUERYSIZE/2, "deleted_flag");
+  else if (strcasecmp(name,"answered") == 0)
+    snprintf(flagname, DEF_QUERYSIZE/2, "answered_flag");
+  else if (strcasecmp(name,"flagged") == 0)
+    snprintf(flagname, DEF_QUERYSIZE/2, "flagged_flag");
+  else if (strcasecmp(name,"recent") == 0)
+    snprintf(flagname, DEF_QUERYSIZE/2, "recent_flag");
+  else if (strcasecmp(name,"draft") == 0)
+    snprintf(flagname, DEF_QUERYSIZE/2, "draft_flag");
+  else
+    return 0; /* non-existent flag is not set */
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT %s FROM message WHERE mailboxidnr = %lu "
+	   "AND status != 3 AND msguid = %lu", flagname, mailboxuid, msguid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_get_msgflag(): could not select message\n");
+      return (-1);
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_get_msgflag(): mysql_store_result failed: %s\n",mysql_error(&conn));
+      return (-1);
+    }
+  
+  row = mysql_fetch_row(res);
+  if (row)
+    val = atoi(row[0]);
+  else
+    val = 0; /* none found */
+      
+  mysql_free_result(res);
+  return val;
+}
+
+
+/*
+ * db_set_msgflag()
+ *
+ * sets a flag specified by 'name' to on/off
+ *
+ * returns:
+ *  -1  error
+ *   0  success
+ */
+int db_set_msgflag(const char *name, unsigned long mailboxuid, unsigned long msguid, int val)
+{
+  char query[DEF_QUERYSIZE];
+  char flagname[DEF_QUERYSIZE/2]; /* should be sufficient ;) */
+
+  /* determine flag */
+  if (strcasecmp(name,"seen") == 0)
+    snprintf(flagname, DEF_QUERYSIZE/2, "seen_flag");
+  else if (strcasecmp(name,"deleted") == 0)
+    snprintf(flagname, DEF_QUERYSIZE/2, "deleted_flag");
+  else if (strcasecmp(name,"answered") == 0)
+    snprintf(flagname, DEF_QUERYSIZE/2, "answered_flag");
+  else if (strcasecmp(name,"flagged") == 0)
+    snprintf(flagname, DEF_QUERYSIZE/2, "flagged_flag");
+  else if (strcasecmp(name,"recent") == 0)
+    snprintf(flagname, DEF_QUERYSIZE/2, "recent_flag");
+  else if (strcasecmp(name,"draft") == 0)
+    snprintf(flagname, DEF_QUERYSIZE/2, "draft_flag");
+  else
+    return 0; /* non-existent flag is cannot set */
+
+  snprintf(query, DEF_QUERYSIZE, "UPDATE message SET %s = %d WHERE mailboxidnr = %lu "
+	   "AND status != 3 AND msguid = %lu", flagname, val, mailboxuid, msguid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_set_msgflag(): could not set flag\n");
+      return (-1);
+    }
+
+  return 0;
+}
+
+
+/*
+ * db_get_msgdate()
+ *
+ * retrieves msg internal date; 'date' should be large enough (IMAP_INTERNALDATE_LEN)
+ * returns -1 on error, 0 on success
+ */
+int db_get_msgdate(unsigned long mailboxuid, unsigned long msguid, char *date)
+{
+  char query[DEF_QUERYSIZE];
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT internaldate FROM message WHERE mailboxidnr = %lu "
+	   "AND messageidnr = %lu", mailboxuid, msguid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_get_msgdate(): could not get message\n");
+      return (-1);
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_get_msgdate(): mysql_store_result failed: %s\n",mysql_error(&conn));
+      return (-1);
+    }
+
+  row = mysql_fetch_row(res);
+  if (row)
+    {
+      strncpy(date, row[0], IMAP_INTERNALDATE_LEN);
+      date[IMAP_INTERNALDATE_LEN - 1] = '\0';
+    }
+  else
+    {
+      /* ??? no date */
+      date[0] = '\0';
+    }
+
+  mysql_free_result(res);
+  return 0;
+}
+  
+
+/*
+ * db_msgdump()
+ *
+ * dumps a message to stderr
+ */
+int db_msgdump(unsigned long uid)
+{
+  char query[DEF_QUERYSIZE];
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT messageblk FROM messageblk WHERE "
+	   "messageidnr = %lu", uid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_msgdump(): could not get message\n");
+      return (-1);
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_msgdump(): mysql_store_result failed: %s\n",mysql_error(&conn));
+      return (-1);
+    }
+
+  trace(TRACE_DEBUG,"message %lu:\n",uid);
+  while ((row = mysql_fetch_row(res)))
+    {
+      trace(TRACE_DEBUG, "%s",row[0]);
+    }
+  mysql_free_result(res);
+  return 0;
+}
 

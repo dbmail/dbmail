@@ -12,6 +12,7 @@
 
 /* maximum size of a mailbox name */
 #define IMAP_MAX_MAILBOX_NAMELEN 100
+#define IMAP_INTERNALDATE_LEN 30
 
 int imap_process(ClientInfo *ci);
 int imap_login(ClientInfo *ci);
