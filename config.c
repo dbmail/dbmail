@@ -44,13 +44,13 @@ int ReadConfig(const char *serviceName, const char *cfilename, struct list *item
 
   snprintf(service, LINESIZE, "[%s]", serviceName);
 
+  list_init(items);
+
   if ( !(cfile = fopen(cfilename, "r")) )
     {
       trace(CONFIG_ERROR_LEVEL, "ReadConfig(): could not open config file [%s]", cfilename);
       return -1;
     }
-
-  list_init(items);
 
   do
     {
