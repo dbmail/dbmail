@@ -1,11 +1,8 @@
 $Id$
 
-- support for @domain in aliases table
 - dbmail-smtp should return failed inserts to sender
 - fix the resolving (pop daemon is not resolving)
-
 - commandline program should be created for adding email addresses
 - cronjob should be created for deleting messsages
 - it would be interesting to know who is receiving a message (in log)
-
 - need to add IMAP server

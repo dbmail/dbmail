@@ -88,6 +88,7 @@ int insert_messages(char *firstblock, unsigned long headersize)
 	char *updatequery;
 	char *unique_id;
 	char *strblock;
+	char *domain;
 	size_t usedmem=0, totalmem=0;
 	struct list userids;
 	struct list messageids;
@@ -127,6 +128,15 @@ int insert_messages(char *firstblock, unsigned long headersize)
 		db_check_user((char *)tmp->data,&userids);
 		trace (TRACE_DEBUG,"insert_messages(): user [%s] found total of [%d] aliases",(char *)tmp->data,
 			userids.total_nodes);
+		domain=strchr((char *)tmp->data,'@');
+		if (domain!=NULL)	/* this should always be the case! */
+			{
+			trace (TRACE_DEBUG,"insert_messages(): checking for domain aliases. Domain = [%s]",domain);
+			/* checking for domain aliases */
+			db_check_user(domain,&userids);
+			trace (TRACE_DEBUG,"insert_messages(): domain [%s] found total of [%d] aliases",domain,
+					userids.total_nodes);
+			}
 		tmp=tmp->nextnode;
 		}
 		
@@ -163,7 +173,7 @@ int insert_messages(char *firstblock, unsigned long headersize)
 	/* reading rest of the pipe and creating messageblocks 
 	 * we need to create a messageblk for each messageid */
 
-	trace (TRACE_DEBUG,"insert_messages(): allocating [%d]bytes of memory for readblock",READ_BLOCK_SIZE);
+	trace (TRACE_DEBUG,"insert_messages(): allocating [%d] bytes of memory for readblock",READ_BLOCK_SIZE);
 
 	memtst ((strblock = (char *)malloc(READ_BLOCK_SIZE))==NULL);
 	

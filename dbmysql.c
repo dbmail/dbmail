@@ -24,7 +24,8 @@ int db_connect ()
   }
 #endif
 	
-  /* selecting the right database */
+  /* selecting the right database 
+	  don't know if this needs to stay */
 /*   if (mysql_select_db(&conn,MAILDATABASE)) {
     trace(TRACE_ERROR,"dbconnect(): mysql_select_db failed: %s",mysql_error(&conn));
     return -1;

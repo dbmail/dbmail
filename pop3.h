@@ -31,7 +31,7 @@
 
 /* connection */
 
-#define PORT 10115  
+#define PORT 110  
 #define BACKLOG 10
 
 #define AUTHORIZATION 1
