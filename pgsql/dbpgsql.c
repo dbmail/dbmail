@@ -169,9 +169,9 @@ u64_t db_get_quotum_used(u64_t userid)
 
   if (PQntuples(res) < 1)
     {
-      trace(TRACE_ERROR, "db_get_quotum_used(): SUM did not give result (?)");
+      trace(TRACE_WARNING, "db_get_quotum_used(): SUM did not give result, assuming emtpy mailbox");
       PQclear(res);
-      return -1;
+      return 0;
     }
 
   q = strtoull(PQgetvalue(res, 0, 0), NULL, 10);

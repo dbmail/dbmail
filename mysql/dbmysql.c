@@ -148,9 +148,9 @@ u64_t db_get_quotum_used(u64_t userid)
     }
   else
     {
-      trace(TRACE_ERROR, "db_get_quotum_used(): messagesize requested but not found in result");
+      trace(TRACE_ERROR, "db_get_quotum_used(): messagesize requested but not found in result; assuming empty mailbox");
       mysql_free_result(res);
-      return -1;
+      return 0;
     }
       
   mysql_free_result(res);
