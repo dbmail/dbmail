@@ -313,29 +313,54 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 			
 				/* sending block to external deliverers 
 					we're using the db_send_message_lines() call for this */
-				tmp_pipe=list_getstart(&external_forwards);
+				tmp_pipe=list_getstart(&external_forwards); 
 
 				if (list_totalnodes(&messageids)==0)
 				{
+
+					trace (TRACE_DEBUG,"insert_messages(): Forwarding message directly through pipes");
+					
 					/* this is tricky. Since there are no messages inserted 
 						in the database we need to redirect the pipe into all forwards */
-					list_init (&descriptors);
+					/* list_init (&descriptors); */
+
 					/* first open the pipes and send the header */
 					while (tmp_pipe!=NULL)
 					{
 						sprintf (tmpbuffer,"%s\nTo: %s\n%s",firstblock,
 								(char *)tmp_pipe->data,nextscan);
 						trace (TRACE_DEBUG,"insert_messages(): new header [%s]",tmpbuffer);
-						/* popen() manpages suggest doing this */
 						(FILE *)sendmail_pipe=popen(SENDMAIL,"w");
-						trace (TRACE_DEBUG,"insert_messages(): popen() executed");
+						trace (TRACE_DEBUG,"insert_messages(): popen() executed (forked)");
 						if (sendmail_pipe!=NULL)
 						{
 							/* build a list of descriptors */
-							list_nodeadd(&descriptors,sendmail_pipe, sizeof(sendmail_pipe));
 							trace (TRACE_DEBUG,"insert_messages(): popen() successfull");
 							/* -2 will send the complete message to sendmail_pipe */
-							fprintf ((FILE *)sendmail_pipe,"%s\n\n",tmpbuffer);
+							fprintf ((FILE *)sendmail_pipe,"%s",tmpbuffer);
+							while (!feof(stdin))
+							{
+								usedmem = fread (strblock, sizeof (char), READ_BLOCK_SIZE, stdin);
+	
+								if (strblock!=NULL) /* this happends when a eof occurs */
+								{
+								totalmem=totalmem+usedmem;
+		
+								trace(TRACE_DEBUG,"insert_messages(): Opening descriptor list");
+								tmp=list_getstart(&descriptors);
+								fprintf ((FILE *)sendmail_pipe,"%s",strblock);
+								}
+								/* resetting strlen for strblock */
+								strblock[0]='\0';
+								usedmem = 0;
+							}
+							trace(TRACE_DEBUG, "insert_messages(): Closing pipe");
+							{	
+								if (sendmail_pipe!=NULL)
+									fprintf ((FILE *)sendmail_pipe,"\n.\n");
+								else 
+									trace(TRACE_DEBUG, "insert_messages(): The pipe just died on me?!?");
+							}
 						}
 						else 
 						{
@@ -343,43 +368,10 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 						}
 						tmp_pipe=tmp_pipe->nextnode;
 					}
-
-					/* ok every pipe has it's header 
-						now we need to loop to read the stdin and forward everyting to the other 
-						pipes */
-					while (!feof(stdin))
-					{
-						usedmem = fread (strblock, sizeof (char), READ_BLOCK_SIZE, stdin);
-	
-						if (strblock!=NULL) /* this happends when a eof occurs */
-						{
-							totalmem=totalmem+usedmem;
-		
-							trace(TRACE_DEBUG,"insert_messages(): Opening descriptor list");
-							tmp=list_getstart(&descriptors);
-
-							while (tmp!=NULL)
-							{
-								fprintf ((FILE *)(tmp->data),"%s",strblock);
-								tmp=tmp->nextnode;
-							}
-						}
-						/* resetting strlen for strblock */
-						strblock[0]='\0';
-						usedmem = 0;
-					}
-					tmp=list_getstart(&descriptors);
-					/* closing descriptors */
-					trace(TRACE_DEBUG, "insert_messages(): Done. now closing pipes");
-					while (tmp!=NULL)
-					{
-						fprintf ((FILE *)(tmp->data),"\n.\n");
-						pclose(tmp->data);
-					}
-					
 				}
 				else	
 				{		
+					trace (TRACE_DEBUG,"insert_messages(): Forwarding message via database");
 					while (tmp_pipe!=NULL)
 					{
 						sprintf (tmpbuffer,"%s\nTo: %s\n%s",firstblock,
@@ -426,4 +418,3 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 	free(updatequery);
   return 0;
 }
-

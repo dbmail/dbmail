@@ -1,8 +1,8 @@
 $Id$
 
+
+- @addresses need to be checked as last resort
 - message arrival in datatime field 
-- dbmail-smtp should return failed inserts to sender
-- it should be possible to send to external addresses
 - fix the resolving (pop daemon is not resolving)
 - commandline program should be created for adding email addresses
 - it would be interesting to know who is receiving a message (in log)
