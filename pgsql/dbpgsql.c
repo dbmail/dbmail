@@ -897,11 +897,13 @@ int db_send_message_lines (void *fstream, u64_t messageidnr, long lines, int no_
   char *nextpos, *tmppos = NULL;
   int block_count;
   u64_t rowlength;
+#define WRITE_BUFFER_SIZE 2048
 
   trace (TRACE_DEBUG,"db_send_message_lines(): request for [%d] lines",lines);
+  trace (TRACE_DEBUG,"db_send_message_lines(): Using %d size buffer",WRITE_BUFFER_SIZE);
 
 
-  memtst ((buffer=(char *)my_malloc(READ_BLOCK_SIZE*2))==NULL);
+  memtst ((buffer=(char *)my_malloc(WRITE_BUFFER_SIZE*2))==NULL);
 
   snprintf (query, DEF_QUERYSIZE, 
             "SELECT * FROM messageblks WHERE message_idnr=%llu::bigint ORDER BY messageblk_idnr ASC",
@@ -930,7 +932,7 @@ int db_send_message_lines (void *fstream, u64_t messageidnr, long lines, int no_
 	  rowlength = PQgetlength(res, PQcounter, 2);
 
 	  /* reset our buffer */
-	  memset (buffer, '\0', (READ_BLOCK_SIZE)*2);
+	  memset (buffer, '\0', (WRITE_BUFFER_SIZE)*2);
 
 	  while ((*nextpos!='\0') && (rowlength>0) && ((lines>0) || (lines==-2) || (block_count==0)))
             {
@@ -977,7 +979,7 @@ int db_send_message_lines (void *fstream, u64_t messageidnr, long lines, int no_
 	      nextpos++;
 	      rowlength--;
 
-	      if (rowlength%3000==0)  /* purge buffer at every 3000 bytes  */
+	      if (rowlength%WRITE_BUFFER_SIZE==0)  /* purge buffer at every WRITE_BUFFER_SIZE bytes  */
                 {
 		  /* fprintf ((FILE *)fstream,"%s",buffer); */
 		  /* fflush ((FILE *)fstream); */
@@ -985,7 +987,7 @@ int db_send_message_lines (void *fstream, u64_t messageidnr, long lines, int no_
 		  fwrite (buffer, sizeof(char), strlen(buffer), (FILE *)fstream);
 
 		  /*  cleanup the buffer  */
-		  memset (buffer, '\0', (READ_BLOCK_SIZE*2));
+		  memset (buffer, '\0', (WRITE_BUFFER_SIZE*2));
                 }
             }
 
