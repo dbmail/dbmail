@@ -69,7 +69,7 @@ extern char *raw_lmtp_data;
 	
 void setup(void)
 {
-	configure_debug(4,0,1);
+	configure_debug(5,1,0);
 	config_read(configFile);
 	GetDBParams(&_db_params);
 	db_connect();

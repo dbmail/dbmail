@@ -80,7 +80,7 @@ void print_mimelist(struct list *mimelist)
 
 void setup(void)
 {
-	configure_debug(5,0,1);
+	configure_debug(5,1,0);
 }
 
 START_TEST(test_g_list_join)
