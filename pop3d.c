@@ -165,7 +165,7 @@ int main (int argc, char *argv[])
 				/* set stream to line buffered mode 
 				 * this way when we send a newline the buffer is flushed */
 	      setlinebuf(rx);
-	      setlinebuf(tx);
+	      /* setlinebuf(tx); */
 	
 				/* process client requests */
 		
@@ -187,7 +187,8 @@ int main (int argc, char *argv[])
 
 				/* sending greeting */
 	      fprintf (tx,"+OK DBMAIL server ready %s\r\n",apop_stamp);
-		
+			fflush (tx);
+			
 				/* no errors yet */
 	      error_count = 0;
 				
@@ -196,7 +197,10 @@ int main (int argc, char *argv[])
 
 				/* scanning for commands */
 	      while ((done>0) && (buffer=fgets(buffer,INCOMING_BUFFER_SIZE,rx)))
-		done=pop3(tx,buffer); 
+			{
+				done=pop3(tx,buffer); 
+				fflush (tx);
+			}
 					
 				/* we've reached the update state */
 	      state = UPDATE;

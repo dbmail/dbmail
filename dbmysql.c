@@ -241,6 +241,7 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines)
   char *buffer;
   char *nextpos, *tmppos;
   int block_count;
+  unsigned long *lengths;
   
   trace (TRACE_DEBUG,"db_send_message_lines(): request for [%d] lines",lines);
 
@@ -275,14 +276,15 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines)
   while (((row = mysql_fetch_row(res))!=NULL) && ((lines>0) || (lines==-2)))
 	{
 		nextpos=row[2];
-	
-		trace(TRACE_MESSAGE,"db_send_message_lines(): retrieving next buffer");
+		lengths = mysql_fetch_lengths(res);
+		rowlength = lengths[2];
+		
+		trace(TRACE_MESSAGE,"db_send_message_lines(): retrieving next buffer size [%lu]",rowlength);
 		
 		/* reset our buffer */
-		buffer[0]='\0';
-
+		*buffer='\0';
 		
-		while ((*nextpos!='\0') && ((lines>0) || (lines==-2)))
+		while ((*nextpos!='\0') && (rowlength>0) && ((lines>0) || (lines==-2)))
 		{
 			if (*nextpos=='\n')
 			{
@@ -326,9 +328,14 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines)
 				
 			/* get the next character */
 			nextpos++;
+			rowlength--;
+			if (rowlength%1000==0)
+				trace (TRACE_MESSAGE,"rowlength is [%lu]",rowlength);
 		}
 		/* flush our buffer */
-		fprintf (fstream,"%s",buffer);
+		trace (TRACE_MESSAGE,"flushing buffer");
+		fprintf ((FILE *)fstream,"%s",buffer);
+		fflush ((FILE *)fstream);
 	}
 
    /* delimiter */
