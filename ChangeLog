@@ -3,6 +3,9 @@
 	* dbmail-imapsession.c, dbmail-imapsession.h, imap4.h, imapcommands.c:
 	converted bodyfetch item to GList to allow fetching of multiple body
 	parts in one fetch command.
+	* dbmail-imapsession.c, imapcommands.c, imaputil.c, imaputil.h: replaced 
+	give_chunks and free_chunks by their glib counterparts g_strsplit and 
+	g_strfreev.
 
 2004-12-08  Paul Stevens <paul@nfg.nl>
 

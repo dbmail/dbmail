@@ -75,8 +75,7 @@ void base64decode(char *in, char *out);
 int binary_search(const u64_t * array, unsigned arraysize, u64_t key,
 		  unsigned int *key_idx);
 
-char **give_chunks(const char *str, char delimiter);
-void free_chunks(char **chunks);
+
 int quoted_string_out(FILE * outstream, const char *s);
 void send_data(FILE * to, MEM * from, int cnt);
 

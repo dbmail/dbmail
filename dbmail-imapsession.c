@@ -2101,9 +2101,13 @@ int dbmail_imap_session_set_state(struct ImapSession *self, int state)
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	switch (state) {
 		case IMAPCS_AUTHENTICATED:
-			ud->state = IMAPCS_AUTHENTICATED;
+			ud->state = state;
 			my_free(ud->mailbox.seq_list);
 			memset(&ud->mailbox, 0, sizeof(ud->mailbox));
+			break;
+			
+		default:
+			ud->state = state;
 			break;
 	}
 	return 0;

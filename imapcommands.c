@@ -137,17 +137,15 @@ int _ic_noop(struct ImapSession *self)
  */
 int _ic_logout(struct ImapSession *self)
 {
+	timestring_t timestring;
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
+	
 	if (!check_state_and_args(self, "LOGOUT", 0, 0, -1))
 		return 1;	/* error, return */
 
 
-	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
-	timestring_t timestring;
 	create_current_timestring(&timestring);
-	
-	/* change status */
-	ud->state = IMAPCS_LOGOUT;
-
+	dbmail_imap_session_set_state(self,IMAPCS_LOGOUT);
 	trace(TRACE_MESSAGE,
 	      "_ic_logout(): user (id:%llu) logging out @ [%s]",
 	      ud->userid, timestring);
@@ -168,15 +166,13 @@ int _ic_logout(struct ImapSession *self)
  */
 int _ic_login(struct ImapSession *self)
 {
+	timestring_t timestring;
+	
 	if (!check_state_and_args(self, "LOGIN", 2, 2, IMAPCS_NON_AUTHENTICATED))
 		return 1;
 	
-	timestring_t timestring;
-
 	create_current_timestring(&timestring);
-	
 	dbmail_imap_session_handle_auth(self, self->args[0], self->args[1]);
-	
 	if (imap_before_smtp)
 		db_log_ip(self->ci->ip);
 
@@ -269,8 +265,7 @@ int _ic_select(struct ImapSession *self)
 		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 		return -1;
 	}
-	if (binary_search(ud->mailbox.seq_list, ud->mailbox.exists,
-			  key, &idx) != -1)
+	if (binary_search(ud->mailbox.seq_list, ud->mailbox.exists, key, &idx) != -1)
 		dbmail_imap_session_printf(self,
 			"* OK [UNSEEN %u] first unseen message\r\n",
 			idx + 1);
@@ -278,13 +273,12 @@ int _ic_select(struct ImapSession *self)
 	/* permission */
 	switch (ud->mailbox.permission) {
 	case IMAPPERM_READ:
-		snprintf(permstring, PERMSTRING_SIZE, "READ-ONLY");
+		g_snprintf(permstring, PERMSTRING_SIZE, "READ-ONLY");
 		break;
 	case IMAPPERM_READWRITE:
-		snprintf(permstring, PERMSTRING_SIZE, "READ-WRITE");
+		g_snprintf(permstring, PERMSTRING_SIZE, "READ-WRITE");
 		break;
 	default:
-		/* invalid permission --> fatal */
 		trace(TRACE_ERROR,
 		      "IMAPD: select(): detected invalid permission mode for mailbox %llu ('%s')",
 		      ud->mailbox.uid, self->args[0]);
@@ -294,9 +288,7 @@ int _ic_select(struct ImapSession *self)
 		return -1;
 	}
 
-	/* ok, update state */
-	ud->state = IMAPCS_SELECTED;
-
+	dbmail_imap_session_set_state(self,IMAPCS_SELECTED);
 	dbmail_imap_session_printf(self, "%s OK [%s] SELECT completed\r\n", self->tag,
 		permstring);
 	return 0;
@@ -327,9 +319,8 @@ int _ic_examine(struct ImapSession *self)
 	
 	/* update permission: examine forces read-only */
 	ud->mailbox.permission = IMAPPERM_READ;
-
-	/* ok, update state */
-	ud->state = IMAPCS_SELECTED;
+	
+	dbmail_imap_session_set_state(self,IMAPCS_SELECTED);
 
 	dbmail_imap_session_printf(self, "%s OK [READ-ONLY] EXAMINE completed\r\n", self->tag);
 	return 0;
@@ -378,7 +369,7 @@ int _ic_create(struct ImapSession *self)
 	}
 
 	/* split up the name & create parent folders as necessary */
-	chunks = give_chunks(self->args[0], '/');
+	chunks = g_strsplit(self->args[0], "/", 0);
 
 	if (chunks == NULL) {
 		/* serious error while making chunks */
@@ -393,7 +384,7 @@ int _ic_create(struct ImapSession *self)
 		/* wrong argument */
 		dbmail_imap_session_printf(self, "%s NO invalid mailbox name specified\r\n",
 			self->tag);
-		free_chunks(chunks);
+		g_strfreev(chunks);
 		my_free(cpy);
 		return 1;
 	}
@@ -406,7 +397,7 @@ int _ic_create(struct ImapSession *self)
 			/* no can do */
 			dbmail_imap_session_printf(self, "%s NO invalid mailbox name specified\r\n",
 				self->tag);
-			free_chunks(chunks);
+			g_strfreev(chunks);
 			my_free(cpy);
 			return 1;
 		}
@@ -440,7 +431,7 @@ int _ic_create(struct ImapSession *self)
 		if (db_findmailbox(cpy, ud->userid, &mboxid) == -1) {
 			/* dbase failure */
 			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-			free_chunks(chunks);
+			g_strfreev(chunks);
 			my_free(cpy);
 			return -1;	/* fatal */
 		}
@@ -462,7 +453,7 @@ int _ic_create(struct ImapSession *self)
 					dbmail_imap_session_printf(self,
 						"* BYE internal database "
 						"error\r\n");
-					free_chunks(chunks);
+					g_strfreev(chunks);
 					my_free(cpy);
 					return -1;	/* fatal */
 				}
@@ -470,7 +461,7 @@ int _ic_create(struct ImapSession *self)
 					dbmail_imap_session_printf(self,
 						"%s NO no permission to create "
 						"mailbox here\r\n", self->tag);
-					free_chunks(chunks);
+					g_strfreev(chunks);
 					my_free(cpy);
 					return 1;
 				}
@@ -483,7 +474,7 @@ int _ic_create(struct ImapSession *self)
 					dbmail_imap_session_printf(self,
 						"%s NO no permission to create "
 						"mailbox here\r\n", self->tag);
-					free_chunks(chunks);
+					g_strfreev(chunks);
 					my_free(cpy);
 					return 1;
 				}
@@ -495,7 +486,7 @@ int _ic_create(struct ImapSession *self)
 			if (result == -1) {
 				dbmail_imap_session_printf(self,
 					"* BYE internal dbase error\r\n");
-				free_chunks(chunks);
+				g_strfreev(chunks);
 				my_free(cpy);
 				return -1;	/* fatal */
 			}
@@ -508,7 +499,7 @@ int _ic_create(struct ImapSession *self)
 				dbmail_imap_session_printf(self,
 					"%s NO mailbox cannot have inferior names\r\n",
 					self->tag);
-				free_chunks(chunks);
+				g_strfreev(chunks);
 				my_free(cpy);
 				return 1;
 			}
@@ -518,7 +509,7 @@ int _ic_create(struct ImapSession *self)
 				/* dbase failure */
 				dbmail_imap_session_printf(self,
 					"* BYE internal dbase error\r\n");
-				free_chunks(chunks);
+				g_strfreev(chunks);
 				my_free(cpy);
 				return -1;	/* fatal */
 			}
@@ -526,7 +517,7 @@ int _ic_create(struct ImapSession *self)
 	}
 
 	/* creation complete */
-	free_chunks(chunks);
+	g_strfreev(chunks);
 	my_free(cpy);
 
 	dbmail_imap_session_printf(self, "%s OK CREATE completed\r\n", self->tag);
@@ -799,7 +790,7 @@ int _ic_rename(struct ImapSession *self)
 			return -1;
 		}
 
-		snprintf(newname, IMAP_MAX_MAILBOX_NAMELEN, "%s%s",
+		g_snprintf(newname, IMAP_MAX_MAILBOX_NAMELEN, "%s%s",
 			 self->args[1], &name[oldnamelen]);
 
 		result = db_setmailboxname(children[i], newname);
