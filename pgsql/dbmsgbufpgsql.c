@@ -65,7 +65,7 @@ int db_init_msgfetch(u64_t uid)
     return 0;
 
   snprintf(query, DEF_QUERYSIZE, "SELECT messageblk FROM messageblks WHERE "
-	   "message_idnr = %llu ORDER BY messageblk_idnr", uid);
+	   "message_idnr = %llu::bigint ORDER BY messageblk_idnr", uid);
 
   if (db_query(query) == -1)
     {
@@ -158,7 +158,7 @@ int db_update_msgbuf(int minlen)
   if (msgidx == 0)
     return 1;             /* update no use, buffer would not change */
 
-  trace(TRACE_DEBUG,"update msgbuf updating %llu %llu %llu %llu\n",MSGBUF_WINDOWSIZE,
+  trace(TRACE_DEBUG,"update msgbuf updating %llu::bigint %llu::bigint %llu::bigint %llu::bigint\n",MSGBUF_WINDOWSIZE,
 	buflen,rowlength,rowpos);
 
   /* move buf to make msgidx 0 */
@@ -255,9 +255,9 @@ void db_close_msgfetch()
 
 void db_give_msgpos(db_pos_t *pos)
 {
-/*  trace(TRACE_DEBUG, "db_give_msgpos(): msgidx %llu, buflen %llu, rowpos %llu\n",
+/*  trace(TRACE_DEBUG, "db_give_msgpos(): msgidx %llu::bigint, buflen %llu::bigint, rowpos %llu::bigint\n",
 	msgidx,buflen,rowpos);
-  trace(TRACE_DEBUG, "db_give_msgpos(): (buflen)-rowpos %llu\n",(buflen)-rowpos);
+  trace(TRACE_DEBUG, "db_give_msgpos(): (buflen)-rowpos %llu::bigint\n",(buflen)-rowpos);
   */
 
   if (msgidx >= ((buflen)-rowpos))
@@ -326,7 +326,7 @@ long db_dump_range(MEM *outmem, db_pos_t start, db_pos_t end, u64_t msguid)
   char buf[DUMP_BUF_SIZE];
   char *field;
 
-  trace(TRACE_DEBUG,"Dumping range: (%llu,%llu) - (%llu,%llu)\n",
+  trace(TRACE_DEBUG,"Dumping range: (%llu::bigint,%llu::bigint) - (%llu::bigint,%llu::bigint)\n",
 	start.block, start.pos, end.block, end.pos);
 
   if (start.block > end.block)
@@ -341,7 +341,7 @@ long db_dump_range(MEM *outmem, db_pos_t start, db_pos_t end, u64_t msguid)
       return -1;
     }
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT messageblk FROM messageblks WHERE message_idnr = %llu"
+  snprintf(query, DEF_QUERYSIZE, "SELECT messageblk FROM messageblks WHERE message_idnr = %llu::bigint"
 	   " ORDER BY messageblk_idnr", 
 	   msguid);
 

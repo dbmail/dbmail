@@ -246,11 +246,11 @@ u64_t auth_getclientid(u64_t useridnr)
   u64_t cid;
   char *row;
 
-  snprintf(__auth_query_data, AUTH_QUERY_SIZE, "SELECT client_idnr FROM users WHERE user_idnr = %llu",useridnr);
+  snprintf(__auth_query_data, AUTH_QUERY_SIZE, "SELECT client_idnr FROM users WHERE user_idnr = %llu::bigint",useridnr);
 
   if (__auth_query(__auth_query_data) == -1)
     {
-      trace(TRACE_ERROR,"auth_getclientid(): could not retrieve client id for user [%llu]\n",useridnr);
+      trace(TRACE_ERROR,"auth_getclientid(): could not retrieve client id for user [%llu::bigint]\n",useridnr);
       return -1;
     }
 
@@ -273,11 +273,11 @@ u64_t auth_getmaxmailsize(u64_t useridnr)
   u64_t maxmailsize;
   char *row;
 
-  snprintf(__auth_query_data, AUTH_QUERY_SIZE, "SELECT maxmail_size FROM users WHERE user_idnr = %llu",useridnr);
+  snprintf(__auth_query_data, AUTH_QUERY_SIZE, "SELECT maxmail_size FROM users WHERE user_idnr = %llu::bigint",useridnr);
 
   if (__auth_query(__auth_query_data) == -1)
     {
-      trace(TRACE_ERROR,"auth_getmaxmailsize(): could not retrieve client id for user [%llu]\n",useridnr);
+      trace(TRACE_ERROR,"auth_getmaxmailsize(): could not retrieve client id for user [%llu::bigint]\n",useridnr);
       return -1;
     }
 
@@ -320,12 +320,12 @@ char* auth_getencryption(u64_t useridnr)
       return __auth_encryption_desc_string; /* return empty */
     }
       
-  snprintf(__auth_query_data, AUTH_QUERY_SIZE, "SELECT encryption_type FROM users WHERE user_idnr = %llu",
+  snprintf(__auth_query_data, AUTH_QUERY_SIZE, "SELECT encryption_type FROM users WHERE user_idnr = %llu::bigint",
 	   useridnr);
 
   if (__auth_query(__auth_query_data) == -1)
     {
-      trace(TRACE_ERROR,"auth_getencryption(): could not retrieve encryption type for user [%llu]\n",
+      trace(TRACE_ERROR,"auth_getencryption(): could not retrieve encryption type for user [%llu::bigint]\n",
 	    useridnr);
       return __auth_encryption_desc_string; /* return empty */
     }
@@ -536,7 +536,7 @@ u64_t auth_adduser (char *username, char *password, char *enctype, char *clienti
       
   snprintf (__auth_query_data, AUTH_QUERY_SIZE,"INSERT INTO users "
 	    "(userid,passwd,client_idnr,maxmail_size,encryption_type) VALUES "
-	    "('%s','%s',%s,%llu,'%s')",
+	    "('%s','%s',%s,%llu::bigint,'%s')",
 	    username,password,clientid, size, enctype ? enctype : "");
 	
   if (__auth_query(__auth_query_data) == -1)
@@ -550,7 +550,7 @@ u64_t auth_adduser (char *username, char *password, char *enctype, char *clienti
 	
   /* creating query for adding mailbox */
   snprintf (__auth_query_data, AUTH_QUERY_SIZE,"INSERT INTO mailboxes (owner_idnr, name) "
-	    "VALUES (%llu,'INBOX')",
+	    "VALUES (%llu::bigint,'INBOX')",
 	    useridnr);
 	
   trace (TRACE_DEBUG,"auth_adduser(): executing query for mailbox");
@@ -583,12 +583,12 @@ int auth_delete_user(const char *username)
   
 int auth_change_username(u64_t useridnr, const char *newname)
 {
-  snprintf(__auth_query_data, AUTH_QUERY_SIZE, "UPDATE users SET userid = '%s' WHERE user_idnr=%llu", 
+  snprintf(__auth_query_data, AUTH_QUERY_SIZE, "UPDATE users SET userid = '%s' WHERE user_idnr=%llu::bigint", 
 	   newname, useridnr);
 
   if (__auth_query(__auth_query_data) == -1)
     {
-      trace(TRACE_ERROR,"auth_change_username(): could not change name for user [%llu]\n",useridnr);
+      trace(TRACE_ERROR,"auth_change_username(): could not change name for user [%llu::bigint]\n",useridnr);
       return -1;
     }
 
@@ -599,12 +599,12 @@ int auth_change_username(u64_t useridnr, const char *newname)
 int auth_change_password(u64_t useridnr, const char *newpass, const char *enctype)
 {
   snprintf(__auth_query_data, AUTH_QUERY_SIZE, "UPDATE users SET passwd = '%s', encryption_type = '%s' "
-	   " WHERE user_idnr=%llu", 
+	   " WHERE user_idnr=%llu::bigint", 
 	   newpass, enctype ? enctype : "", useridnr);
 
   if (__auth_query(__auth_query_data) == -1)
     {
-      trace(TRACE_ERROR,"auth_change_password(): could not change passwd for user [%llu]\n",useridnr);
+      trace(TRACE_ERROR,"auth_change_password(): could not change passwd for user [%llu::bigint]\n",useridnr);
       return -1;
     }
 
@@ -614,12 +614,12 @@ int auth_change_password(u64_t useridnr, const char *newpass, const char *enctyp
 
 int auth_change_clientid(u64_t useridnr, u64_t newcid)
 {
-  snprintf(__auth_query_data, AUTH_QUERY_SIZE, "UPDATE users SET client_idnr = %llu WHERE user_idnr=%llu", 
+  snprintf(__auth_query_data, AUTH_QUERY_SIZE, "UPDATE users SET client_idnr = %llu::bigint WHERE user_idnr=%llu::bigint", 
 	   newcid, useridnr);
 
   if (__auth_query(__auth_query_data) == -1)
     {
-      trace(TRACE_ERROR,"auth_change_password(): could not change client id for user [%llu]\n",useridnr);
+      trace(TRACE_ERROR,"auth_change_password(): could not change client id for user [%llu::bigint]\n",useridnr);
       return -1;
     }
 
@@ -628,12 +628,12 @@ int auth_change_clientid(u64_t useridnr, u64_t newcid)
 
 int auth_change_mailboxsize(u64_t useridnr, u64_t newsize)
 {
-  snprintf(__auth_query_data, AUTH_QUERY_SIZE, "UPDATE users SET maxmail_size = %llu WHERE user_idnr=%llu", 
+  snprintf(__auth_query_data, AUTH_QUERY_SIZE, "UPDATE users SET maxmail_size = %llu::bigint WHERE user_idnr=%llu::bigint", 
 	   newsize, useridnr);
 
   if (__auth_query(__auth_query_data) == -1)
     {
-      trace(TRACE_ERROR,"auth_change_password(): could not change maxmailsize for user [%llu]\n",
+      trace(TRACE_ERROR,"auth_change_password(): could not change maxmailsize for user [%llu::bigint]\n",
 	    useridnr);
       return -1;
     }
@@ -774,7 +774,7 @@ char *auth_get_userid (u64_t *useridnr)
   char *value;
   char *returnid = NULL;
   
-  snprintf (__auth_query_data, AUTH_QUERY_SIZE,"SELECT userid FROM users WHERE user_idnr = %llu",
+  snprintf (__auth_query_data, AUTH_QUERY_SIZE,"SELECT userid FROM users WHERE user_idnr = %llu::bigint",
 	   *useridnr);
 
   if (__auth_query(__auth_query_data)==-1)
