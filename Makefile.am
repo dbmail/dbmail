@@ -29,39 +29,32 @@ SERVER = server.c serverchild.c
 DELIVER = header.c pipe.c bounce.c forward.c 
 
 dbmail_smtp_SOURCES = $(COMMON) $(DELIVER) main.c
-dbmail_smtp_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@
-dbmail_smtp_LDFLAGS = @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_smtp_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+
 
 dbmail_pop3d_SOURCES = $(COMMON) $(SERVER) pop3.c pop3d.c
-dbmail_pop3d_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@
-dbmail_pop3d_LDFLAGS = @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_pop3d_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
 dbmail_imapd_SOURCES = $(COMMON) $(SERVER) quota.c imap4.c imaputil.c imapcommands.c memblock.c rfcmsg.c imapd.c dbsearch.c dbmsgbuf.c acl.c
 dbmail_imapd_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@
 dbmail_imapd_LDFLAGS = @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
 dbmail_maintenance_SOURCES = $(COMMON) maintenance.c
-dbmail_maintenance_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@
-dbmail_maintenance_LDFLAGS = @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_maintenance_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
 dbmail_adduser_SOURCES = $(COMMON) user.c
-dbmail_adduser_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@
-dbmail_adduser_LDFLAGS = @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_adduser_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
 dbmail_readvut_SOURCES = $(COMMON) vut2dbmail.c
-dbmail_readvut_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@
-dbmail_readvut_LDFLAGS = @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_readvut_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
 dbmail_lmtpd_SOURCES = $(COMMON) $(SERVER) $(DELIVER) lmtp.c lmtpd.c
-dbmail_lmtpd_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@
-dbmail_lmtpd_LDFLAGS = @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_lmtpd_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
   
 if SIEVE
 dbmail_sievecmd_SOURCES = $(COMMON) sievecmd.c 
-dbmail_sievecmd_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@
-dbmail_sievecmd_LDFLAGS = @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_sievecmd_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
 dbmail_timsieved_SOURCES = $(COMMON) $(SERVER) timsieve.c timsieved.c
-dbmail_timsieved_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@
-dbmail_timsieved_LDFLAGS = @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_timsieved_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 endif

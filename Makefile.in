@@ -1,6 +1,6 @@
-# Makefile.in generated automatically by automake 1.4-p6 from Makefile.am
+# Makefile.in generated automatically by automake 1.4-p4 from Makefile.am
 
-# Copyright (C) 1994, 1995-8, 1999, 2001 Free Software Foundation, Inc.
+# Copyright (C) 1994, 1995-8, 1999 Free Software Foundation, Inc.
 # This Makefile.in is free software; the Free Software Foundation
 # gives unlimited permission to copy and/or distribute it,
 # with or without modifications, as long as this notice is preserved.
@@ -105,40 +105,32 @@ SERVER = server.c serverchild.c
 DELIVER = header.c pipe.c bounce.c forward.c 
 
 dbmail_smtp_SOURCES = $(COMMON) $(DELIVER) main.c
-dbmail_smtp_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@
-dbmail_smtp_LDFLAGS = @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_smtp_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
 dbmail_pop3d_SOURCES = $(COMMON) $(SERVER) pop3.c pop3d.c
-dbmail_pop3d_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@
-dbmail_pop3d_LDFLAGS = @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_pop3d_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
 dbmail_imapd_SOURCES = $(COMMON) $(SERVER) quota.c imap4.c imaputil.c imapcommands.c memblock.c rfcmsg.c imapd.c dbsearch.c dbmsgbuf.c acl.c
 dbmail_imapd_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@
 dbmail_imapd_LDFLAGS = @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
 dbmail_maintenance_SOURCES = $(COMMON) maintenance.c
-dbmail_maintenance_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@
-dbmail_maintenance_LDFLAGS = @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_maintenance_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
 dbmail_adduser_SOURCES = $(COMMON) user.c
-dbmail_adduser_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@
-dbmail_adduser_LDFLAGS = @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_adduser_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
 dbmail_readvut_SOURCES = $(COMMON) vut2dbmail.c
-dbmail_readvut_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@
-dbmail_readvut_LDFLAGS = @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_readvut_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
 dbmail_lmtpd_SOURCES = $(COMMON) $(SERVER) $(DELIVER) lmtp.c lmtpd.c
-dbmail_lmtpd_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@
-dbmail_lmtpd_LDFLAGS = @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_lmtpd_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
 @SIEVE_TRUE@dbmail_sievecmd_SOURCES = $(COMMON) sievecmd.c 
-@SIEVE_TRUE@dbmail_sievecmd_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@
-@SIEVE_TRUE@dbmail_sievecmd_LDFLAGS = @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+@SIEVE_TRUE@dbmail_sievecmd_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
 @SIEVE_TRUE@dbmail_timsieved_SOURCES = $(COMMON) $(SERVER) timsieve.c timsieved.c
-@SIEVE_TRUE@dbmail_timsieved_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@
-@SIEVE_TRUE@dbmail_timsieved_LDFLAGS = @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+@SIEVE_TRUE@dbmail_timsieved_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 mkinstalldirs = $(SHELL) $(top_srcdir)/buildtools/mkinstalldirs
 CONFIG_HEADER = config.h
@@ -153,9 +145,11 @@ LIBS = @LIBS@
 dbmail_smtp_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o db.o misc.o \
 mime.o header.o pipe.o bounce.o forward.o main.o
 dbmail_smtp_DEPENDENCIES = 
+dbmail_smtp_LDFLAGS = 
 dbmail_pop3d_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o db.o \
 misc.o mime.o server.o serverchild.o pop3.o pop3d.o
 dbmail_pop3d_DEPENDENCIES = 
+dbmail_pop3d_LDFLAGS = 
 dbmail_imapd_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o db.o \
 misc.o mime.o server.o serverchild.o quota.o imap4.o imaputil.o \
 imapcommands.o memblock.o rfcmsg.o imapd.o dbsearch.o dbmsgbuf.o acl.o
@@ -163,23 +157,29 @@ dbmail_imapd_DEPENDENCIES =
 dbmail_maintenance_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o db.o \
 misc.o mime.o maintenance.o
 dbmail_maintenance_DEPENDENCIES = 
+dbmail_maintenance_LDFLAGS = 
 dbmail_adduser_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o db.o \
 misc.o mime.o user.o
 dbmail_adduser_DEPENDENCIES = 
+dbmail_adduser_LDFLAGS = 
 dbmail_readvut_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o db.o \
 misc.o mime.o vut2dbmail.o
 dbmail_readvut_DEPENDENCIES = 
+dbmail_readvut_LDFLAGS = 
 dbmail_lmtpd_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o db.o \
 misc.o mime.o server.o serverchild.o header.o pipe.o bounce.o forward.o \
 lmtp.o lmtpd.o
 dbmail_lmtpd_DEPENDENCIES = 
+dbmail_lmtpd_LDFLAGS = 
 @SIEVE_TRUE@dbmail_sievecmd_OBJECTS =  config.o debug.o list.o dbmd5.o \
 @SIEVE_TRUE@md5.o db.o misc.o mime.o sievecmd.o
 @SIEVE_TRUE@dbmail_sievecmd_DEPENDENCIES = 
+dbmail_sievecmd_LDFLAGS = 
 @SIEVE_TRUE@dbmail_timsieved_OBJECTS =  config.o debug.o list.o dbmd5.o \
 @SIEVE_TRUE@md5.o db.o misc.o mime.o server.o serverchild.o timsieve.o \
 @SIEVE_TRUE@timsieved.o
 @SIEVE_TRUE@dbmail_timsieved_DEPENDENCIES = 
+dbmail_timsieved_LDFLAGS = 
 SCRIPTS =  $(bin_SCRIPTS)
 
 CFLAGS = @CFLAGS@
@@ -193,7 +193,7 @@ aclocal.m4 config.in configure configure.in
 
 DISTFILES = $(DIST_COMMON) $(SOURCES) $(HEADERS) $(TEXINFOS) $(EXTRA_DIST)
 
-TAR = gtar
+TAR = tar
 GZIP_ENV = --best
 DEP_FILES =  .deps/acl.P .deps/bounce.P .deps/config.P .deps/db.P \
 .deps/dbmd5.P .deps/dbmsgbuf.P .deps/dbsearch.P .deps/debug.P \
@@ -220,7 +220,7 @@ Makefile: $(srcdir)/Makefile.in  $(top_builddir)/config.status $(BUILT_SOURCES)
 $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ configure.in  acinclude.m4
 	cd $(srcdir) && $(ACLOCAL)
 
-config.status: $(srcdir)/configure $(CONFIG_STATUS_DEPENDENCIES)
+config.status: $(srcdir)/configure.in $(CONFIG_STATUS_DEPENDENCIES)
 	$(SHELL) ./config.status --recheck
 $(srcdir)/configure: @MAINTAINER_MODE_TRUE@$(srcdir)/configure.in $(ACLOCAL_M4) $(CONFIGURE_DEPENDENCIES)
 	cd $(srcdir) && $(AUTOCONF)
@@ -385,8 +385,7 @@ maintainer-clean-recursive:
 	dot_seen=no; \
 	rev=''; list='$(SUBDIRS)'; for subdir in $$list; do \
 	  rev="$$subdir $$rev"; \
-	  test "$$subdir" != "." || dot_seen=yes; \
-	  true; \
+	  test "$$subdir" = "." && dot_seen=yes; \
 	done; \
 	test "$$dot_seen" = "no" && rev=". $$rev"; \
 	target=`echo $@ | sed s/-recursive//`; \
