@@ -164,7 +164,7 @@ int main(int argc, char *argv[], char **envp)
 }
 
 
-void MainSigHandler(int sig, siginfo_t *info, void *data)
+void MainSigHandler(int sig, siginfo_t *info UNUSED, void *data UNUSED)
 {
   trace(TRACE_DEBUG, "MainSigHandler(): got signal [%d]", sig);
 

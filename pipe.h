@@ -45,9 +45,8 @@
  * \return 0
  */
 int insert_messages(FILE *instream, char *header, u64_t headersize,
-        struct list *users, struct list *errusers, 
-        struct list *returnpath, int users_are_usernames, 
-        char *deliver_to_mailbox, struct list *headerfields);
+	struct list *headerfields, struct list *users, struct list *returnpath);
+
 
 
 #endif

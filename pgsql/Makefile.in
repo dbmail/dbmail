@@ -93,7 +93,7 @@ VERSION = @VERSION@
 mysqlconfig = @mysqlconfig@
 pgsqlconfig = @pgsqlconfig@
 
-@PGSQL_TRUE@AM_CFLAGS = @PGSQLINC@
+@PGSQL_TRUE@AM_CFLAGS = @PGSQLINC@ -fomit-frame-pointer
 
 @PGSQL_TRUE@lib_LIBRARIES = libpgsqldbmail.a
 

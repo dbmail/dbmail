@@ -16,7 +16,7 @@
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 if PGSQL
 
-AM_CFLAGS = @PGSQLINC@
+AM_CFLAGS = @PGSQLINC@ -fomit-frame-pointer
 
 lib_LIBRARIES = libpgsqldbmail.a
 

@@ -12,6 +12,7 @@
 #include "pipe.h"
 #include "header.h"
 #include "db.h"
+#include "dsn.h"
 #include "debug.h"
 #include "dbmailtypes.h"
 #include "auth.h"
@@ -37,7 +38,7 @@
 struct list mimelist;
 
 /* These are needed across multiple calls to lmtp() */
-struct list rcpt, userids, fwds;
+struct list rcpt;
 char *envelopefrom = NULL;
 
 /* allowed lmtp commands */
@@ -168,10 +169,6 @@ int lmtp_reset(PopSession_t *session)
       {
         list_freelist( &rcpt.start );
         list_init( &rcpt );
-        list_freelist( &userids.start );
-        list_init( &userids );
-        list_freelist( &fwds.start );
-        list_init( &fwds );
       }
  
     if( envelopefrom != NULL )
@@ -211,7 +208,7 @@ int lmtp_error(PopSession_t *session, void *stream, const char *formatstring, ..
 }
 
 
-int lmtp(void *stream, void *instream, char *buffer, char *client_ip, PopSession_t *session)
+int lmtp(void *stream, void *instream, char *buffer, char *client_ip UNUSED, PopSession_t *session)
 {
   /* returns values:
    *  0 to quit
@@ -311,10 +308,6 @@ int lmtp(void *stream, void *instream, char *buffer, char *client_ip, PopSession
           /* Free the recipients list and reinitialize it */
           // list_freelist( &rcpt.start );
           list_init( &rcpt );
-          // list_freelist( &userids.start );
-          list_init( &userids );
-          // list_freelist( &fwds.start );
-          list_init( &fwds );
  
           session->state = LHLO;
           return 1;
@@ -323,7 +316,9 @@ int lmtp(void *stream, void *instream, char *buffer, char *client_ip, PopSession
         {
           int helpcmd;
  
-          if (value != NULL)
+          if (value == NULL)
+            return 1;
+          else
             for (helpcmd = LMTP_STRT; helpcmd < LMTP_END; helpcmd++)
               if (strcasecmp(value, commands[helpcmd]) == 0) break;
  
@@ -491,23 +486,10 @@ int lmtp(void *stream, void *instream, char *buffer, char *client_ip, PopSession
             }
           else
             {
-              size_t tmplen;
-              char *tmpleft, *tmpright, *tmprcpt;
-           
-              tmpleft = value;
-              tmpright = value + strlen(value);
-           
-              /* eew pointer math... inspired by injector.c */
-           
-              while (tmpleft[0] != '<' && tmpleft < tmpright )
-                tmpleft++;
-              while (tmpright[0] != '>' && tmpright > tmpleft )
-                tmpright--;
-           
-              /* Step left up to skip '<' left angle bracket */
-              tmpleft++;
-           
-              tmplen = tmpright - tmpleft;
+              size_t tmplen = 0, tmppos = 0;
+              char *tmpaddr = NULL;
+
+	      find_bounded(value, '<', '>', &tmpaddr, &tmplen, &tmppos);
            
               if (tmplen < 1)
                 {
@@ -515,25 +497,18 @@ int lmtp(void *stream, void *instream, char *buffer, char *client_ip, PopSession
                 }
               else
                 {
-                  /* Note that list_nodeadd cannot NULL terminate
-                   * because it does not know what kind of data it gets! */
-                  memtst((tmprcpt=(char *)my_malloc(tmplen+1))==NULL);
-                  memset(tmprcpt,0,tmplen+1);
-                  strncpy(tmprcpt,tmpleft,tmplen);
-                  // tmprcpt[tmplen+1] = 0;
-            
-                  /* Just add it to the list, and process at DATA time */
-                  /* Make sure to pass the terminator at +1 */
-                  list_nodeadd(&rcpt, tmprcpt, tmplen+1);
-            
-                  /* Is there a way to know if the client wants
-                   * to pipeline or not? The RFC for LMTP implies that
-                   * they will pipeline, because pipelining is mandatory
-                   * for LMTP servers... but... I dunno? What if they're waiting?
-                   */
-                  // fprintf((FILE *)stream,"250 Recipient <%s> OK\r\n", tmprcpt );
+                  deliver_to_user_t dsnuser;
 
-                  my_free(tmprcpt);
+                  dsnuser_init(&dsnuser);
+                  dsnuser.address = tmpaddr;
+
+                  list_nodeadd(&rcpt, &dsnuser, sizeof(deliver_to_user_t));
+            
+		  /* FIXME: At the moment, we queue up recipients until DATA or BDAT
+		   * and then reply with their statuses. This may be in violation of
+		   * the pipelining requirement of LMTP... */
+                  /* fprintf((FILE *)stream,"250 Recipient <%s> OK\r\n", tmprcpt );
+		   * */
                 }
             }
           return 1;
@@ -552,63 +527,67 @@ int lmtp(void *stream, void *instream, char *buffer, char *client_ip, PopSession
             }
           else
             {
-              struct element *tmpnode;
+              int has_recipients = 0;
+              struct element *element;
            
               /* The replies MUST be in the order received */
               rcpt.start = list_reverse(rcpt.start);
            
-              tmpnode = list_getstart(&rcpt);
-              while( tmpnode != NULL )
+              for(element = list_getstart(&rcpt);
+                  element != NULL; element = element->nextnode)
                 {
-                  if (auth_check_user_ext(tmpnode->data, &userids, &fwds, -1) > 0 )
+                  deliver_to_user_t *dsnuser = (deliver_to_user_t *)element->data;
+
+                  if (auth_check_user_ext(dsnuser->address,
+                                          dsnuser->userids, dsnuser->forwards, -1) > 0 )
                     {
-                      fprintf((FILE *)stream, "250 Recipient <%s> OK\r\n", (char *)tmpnode->data );
+                      fprintf((FILE *)stream, "250 Recipient <%s> OK\r\n", dsnuser->address);
+                      has_recipients = 1;
                     }
                   else
                     {
-                      fprintf((FILE *)stream, "550 Recipient <%s> FAIL\r\n", (char *)tmpnode->data );
+                      fprintf((FILE *)stream, "550 Recipient <%s> FAIL\r\n", dsnuser->address);
                     }
-                  tmpnode = tmpnode->nextnode;
                 }
            
               /* Now we have a list of recipients! */
               /* Let the client know if they should continue... */
            
-              if (list_totalnodes(&userids) > 0 || list_totalnodes(&fwds) > 0)
+              if (has_recipients && envelopefrom != NULL)
                 {
+                  trace(TRACE_DEBUG,"main(): requesting sender to begin message.");
                   fprintf((FILE *)stream, "354 Start mail input; end with <CRLF>.<CRLF>\r\n" );
                 }
               else
                 {
-                  fprintf((FILE *)stream, "554 No valid recipients.\r\n" );
+                  if (!has_recipients)
+                    {
+                      trace(TRACE_DEBUG,"main(): no valid recipients found, cancel message.");
+                      fprintf((FILE *)stream, "554 No valid recipients.\r\n" );
+                    }
+                  if (!envelopefrom)
+                    {
+                      trace(TRACE_DEBUG,"main(): envelopefrom is empty, cancel message.");
+                      fprintf((FILE *)stream, "554 No valid sender.\r\n" );
+                    }
 		  return 1;
                 }
 
-              /* If we returned due to no recipients, and the remote
-	       * system starts sending a message... well... they'll
-	       * get disconnected pretty quickly from max_errors.
-               * */
+	    /* Anonymous Block */
 	      {
 	        char *header = NULL;
                 u64_t headersize=0, newlines=0;
                 u64_t dummyidx=0,dummysize=0;
-                struct list fromlist, headerfields, errusers;
-                struct element *tmpnode_rcpt;
-                struct element *tmpnode_errs;
+                struct list fromlist, headerfields;
+                struct element *element;
 
-		list_init(&errusers);
 		list_init(&mimelist);
 		list_init(&fromlist);
 		list_init(&headerfields);
 
-                if (envelopefrom != NULL)
-                    list_nodeadd(&fromlist, envelopefrom, strlen(envelopefrom));
-                else
-                  {
-                    trace(TRACE_DEBUG,"main(): envelopefrom is empty so no go");
-                    fprintf((FILE *)stream, "554 No valid sender.\r\n" );
-		    return 1;
-                  }
+                /* if (envelopefrom != NULL) */
+                /* We know this to be true from the 354 code, above. */
+                list_nodeadd(&fromlist, envelopefrom, strlen(envelopefrom));
 
                 if (!read_header((FILE *)instream, &newlines, &headersize, &header))
 		  {
@@ -634,75 +613,44 @@ int lmtp(void *stream, void *instream, char *buffer, char *client_ip, PopSession
                 if (mime_readheader(header, &dummyidx, &mimelist, &dummysize) < 0)
 		  {
                     trace(TRACE_ERROR,"main(): fatal error from mime_readheader()");
+                    fprintf((FILE *)stream, "500 Error reading header.\r\n" );
 		    return 1;
 		  }
 
-		/* FIXME: A negative return code from insert_messages() means
-		 * that delivery died halfway through. There may be much more
-		 * data coming from the client that we need to discard after
-		 * giving back an unsuccessful return code. */
-	        insert_messages((FILE *)instream, header, headersize,
-				&rcpt, &errusers,
-				&fromlist, 0,
-				NULL, &headerfields);
-                if (header != NULL)
-                    my_free(header);
-
-                /* Use the 250 code if 1 or more deliveries were successful,
-                 * and report the errors individually later
-                 * Use the 503 code is 0 deliveries went through.
-                 *
-                 * This is a weird little assumption... that if there
-                 * was some problem assembling the list of errors,
-                 * assume everyone failed. Basically it's all we
-                 * can do since otherwise we can't know who did or
-                 * did not fail anyways!
-                 * */
-                if (rcpt.total_nodes != errusers.total_nodes)
+	        if (insert_messages((FILE *)instream, header, headersize,
+				&headerfields, &rcpt, &fromlist) == -1)
                   {
-                    fprintf((FILE *)stream, "503 Message not received %ld FAIL\r\n", errusers.total_nodes );
-
-                    tmpnode_rcpt = list_getstart(&rcpt);
-                    while (tmpnode_rcpt != NULL )
-                      {
-                        fprintf((FILE *)stream, "450 Recipient <%s> FAIL\r\n", (char *)tmpnode_rcpt->data );
-			tmpnode_rcpt = tmpnode_rcpt->nextnode;
-                      }
+                    fprintf((FILE *)stream, "503 Message not received\r\n");
                   }
                 else
                   {
                     fprintf((FILE *)stream, "250 Message received OK\r\n" );
            
-                    /* The replies MUST be in the order received */
-                    rcpt.start = list_reverse(rcpt.start);
-                   
-                    /* The errors MUST be in the same order as rcpt */
-                    errusers.start = list_reverse(errusers.start);
-                   
-                    tmpnode_rcpt = list_getstart(&rcpt);
-                    tmpnode_errs = list_getstart(&errusers);
-                    while (tmpnode_rcpt != NULL && tmpnode_errs != NULL)
+                    for (element = list_getstart(&rcpt);
+                            element != NULL; element = element->nextnode)
                       {
-                        /* These are evil magic numbers
-                         * which must match pipe.c
-                         * FIXME: define these!
-                         * */
-                        switch ((int)tmpnode_errs->data)
+                        deliver_to_user_t *delivery = (deliver_to_user_t *)element->data;
+
+                        switch (delivery->dsn.class)
                           {
-                            case 1:
-                              fprintf((FILE *)stream, "250 Recipient <%s> OK\r\n", (char *)tmpnode_rcpt->data );
+                            case 2:
+                              fprintf((FILE *)stream, "250 Recipient <%s> OK\r\n",
+                                      delivery->address);
                               break;
-                            case 0:
-                              fprintf((FILE *)stream, "450 Recipient <%s> FAIL\r\n", (char *)tmpnode_rcpt->data );
+                            case 4:
+                              fprintf((FILE *)stream, "450 Recipient <%s> TEMP FAIL\r\n",
+                                      delivery->address);
                               break;
+                            case 5:
                             default:
-                              fprintf((FILE *)stream, "450 Recipient <%s> FAIL\r\n", (char *)tmpnode_rcpt->data );
+                              fprintf((FILE *)stream, "550 Recipient <%s> PERM FAIL\r\n",
+                                      delivery->address);
                               break;
                           }
-                        tmpnode_rcpt = tmpnode_rcpt->nextnode;
-                        tmpnode_errs = tmpnode_errs->nextnode;
                       }
                   }
+                if (header != NULL)
+                    my_free(header);
                }
             }
           return 1;

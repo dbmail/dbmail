@@ -45,7 +45,7 @@ extern struct list smtpItems, sysItems;
  *
  * Then do it!
  * */
-int sort_and_deliver(u64_t msgidnr, char *header, u64_t headersize, u64_t msgsize, u64_t useridnr, char *mailbox)
+int sort_and_deliver(u64_t msgidnr, const char *header, u64_t headersize, u64_t msgsize, u64_t useridnr, const char *mailbox)
 {
   field_t val;
   int do_regex = 0, do_sieve = 0;
@@ -67,7 +67,8 @@ int sort_and_deliver(u64_t msgidnr, char *header, u64_t headersize, u64_t msgsiz
      do_sieve = 1;
 
   list_init(&actions);
-
+  
+  trace(TRACE_DEBUG, "%s,%s: messagesize = %llu, headersize = %llu, total = %llu", __FILE__, __FUNCTION__, msgsize, headersize, msgsize+headersize);
   if (do_regex)
     {
       /* Call out to Jonas' regex sorting function!
@@ -172,14 +173,15 @@ int sort_and_deliver(u64_t msgidnr, char *header, u64_t headersize, u64_t msgsiz
 
                   if (fileinto_mailbox == NULL)
                     {
-                      fileinto_mailbox = mailbox;
+                      /* Cast the const away because fileinto_mailbox may need to be freed. */
+                      fileinto_mailbox = (char *)mailbox;
                       trace(TRACE_MESSAGE, "sort_and_deliver(): mailbox not specified, using [%s]",
 				      fileinto_mailbox);
                     }
 
 
                   /* Did we fail to create the mailbox? */
-                  if (db_find_create_mailbox(mailbox, useridnr, &mboxidnr) != 0)
+                  if (db_find_create_mailbox(fileinto_mailbox, useridnr, &mboxidnr) != 0)
                     {
                       /* FIXME: Serious failure situation! This needs to be
 		       * passed up the chain to notify the user, sender, etc.

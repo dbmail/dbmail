@@ -69,8 +69,8 @@ int read_header(FILE *instream, u64_t *newlines, u64_t *headersize, char **heade
   while (!feof(instream) && !myeof)
     {
       /* fgets will read until \n occurs, and \n is *included* in tmpline */
-	    if (!fgets(tmpline, MAX_LINE_SIZE, instream))
-		    break;
+      if (!fgets(tmpline, MAX_LINE_SIZE, instream))
+	  break;
       linemem = strlen(tmpline);
       (*headersize) += linemem;
       (*newlines)++;
@@ -78,9 +78,8 @@ int read_header(FILE *instream, u64_t *newlines, u64_t *headersize, char **heade
       if (ferror(instream))
         {
           trace(TRACE_ERROR,"read_header(): error on instream: [%s]", strerror(errno));
-          if (tmpline != NULL)
-	      my_free(tmpline);
-          /* FIXME: Make sure that the caller knows to free
+	  my_free(tmpline);
+          /* NOTA BENE: Make sure that the caller knows to free
            * the header block even if there's been an error! */
           return -1;
         }
@@ -135,12 +134,12 @@ int read_header(FILE *instream, u64_t *newlines, u64_t *headersize, char **heade
   trace (TRACE_DEBUG, "read_header(): found header [%s] of len [%d] using mem [%d]",
          tmpheader, strlen(tmpheader), usedmem);
 
-  if (tmpline != NULL)
-      my_free(tmpline);
+  my_free(tmpline);
 
   if (usedmem==0)
     {
-      trace (TRACE_STOP, "read_header(): no valid mail header found\n");
+      /* FIXME: Why are we hard aborting? That's ridiculous. */
+      trace(TRACE_STOP, "read_header(): no valid mail header found\n");
       return 0;
     }
 

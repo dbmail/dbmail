@@ -130,7 +130,7 @@ int db_search(int *rset, int setlen, const char *key, mailbox_t *mb, int type)
   }
 
   for (i = 0; i < db_num_rows(); i++) {
-	  uid = strtoull(db_get_result(i, 0), NULL, 10);
+	  uid = db_get_result_u64(i, 0);
       msn = db_binary_search(mb->seq_list, mb->exists, uid);
 
       if (msn == -1 || msn >= setlen) {

@@ -45,6 +45,7 @@
 #include <unistd.h>
 #include "dbmd5.h"
 #include "misc.h"
+#include "dsn.h"
 
 #define HEADER_BLOCK_SIZE 1024
 #define QUERY_SIZE 255
@@ -61,9 +62,6 @@
 #define DBMAIL_TEMPMBOX "INBOX"
 
 extern struct list smtpItems, sysItems;
-
-static int resolve_address(char *address, struct list *userids, struct list *forwards, struct list *bounces);
-static int store_message_temp(FILE *instream, char *header, u64_t headersize, u64_t *temp_message_idnr);
 
 /* 
  * Send an automatic notification using sendmail
@@ -277,249 +275,151 @@ static int execute_auto_ran(u64_t useridnr, struct list *headerfields)
 }
             
         
-/* Here's the real *meat* of this source file!
- *
- * Function: insert_messages()
- * What we get:
- *   - A pointer to the incoming message stream
- *   - The header of the message 
- *   - A list of destination addresses / useridnr's
- *   - The default mailbox to delivery to
- *
- * What we do:
- *   - Read in the rest of the message
- *   - Store the message to the DBMAIL user
- *   - Process the destination addresses into lists:
- *     - Local useridnr's
- *     - External forwards
- *     - No such user bounces
- *   - Store the local useridnr's
- *     - Run the message through each user's sorting rules
- *     - Potentially alter the delivery:
- *       - Different mailbox
- *       - Bounce
- *       - Reply with vacation message
- *       - Forward to another address
- *     - Check the user's quota before delivering
- *       - Do this *after* their sorting rules, since the
- *         sorting rules might not store the message anyways
- *   - Send out the no such user bounces
- *   - Send out the external forwards
- *   - Delete the temporary message from the database
- */
-int insert_messages(FILE *instream, char *header, u64_t headersize,
-    struct list *users, struct list *errusers, struct list *returnpath,
-    int users_are_usernames UNUSED, char *deliver_to_mailbox, struct list *headerfields)
-{
-  struct element *tmp, *ret_path;
-  struct list userids;
-  struct list forwards;
-  struct list bounces;
-  u64_t tmpmsgidnr, msgsize = 0;
-  u64_t useridnr;
-  int err;
-
-  /* Initialize several lists */
-  list_init(&userids);
-  list_init(&forwards);
-  list_init(&bounces);
-
-  /* Get the first target address */
-  tmp = list_getstart(users);
-  while (tmp!=NULL)
-  {
-      trace(TRACE_ERROR, "insert_messages(): resolving address [%s]", (char *)tmp->data );
-      /* Search for where this thing is gonna go */
-      resolve_address((char *)tmp->data, &userids, &forwards, &bounces);
-      /* Get the next taget in list */
-      tmp=tmp->nextnode;
-  }
-
-  /* Read in the rest of the stream and store it into a temporary message */
-  switch (store_message_temp(instream, header, headersize, &tmpmsgidnr))
-  {
-    case -1:
-      /* ABORT! BAIL OUT! WE'RE IN BIG TROUBLE HERE! */
-      trace(TRACE_ERROR, "insert_messages(): failed to store temporary message." );
-      return -1;
-    default:
-      trace(TRACE_DEBUG, "insert_messages(): temporary msgidnr is [%llu]", tmpmsgidnr );
-      break;
-  }
-  
-  /* Reverse any existing nodes to prevent "12348765" */
-  errusers->start = list_reverse(errusers->start);
-
-  /* Get first target userid */
-  tmp = list_getstart(&userids);
-  while (tmp != NULL)
-    { 
-      /* Cast the ID from the list */
-      useridnr = *(u64_t *)tmp->data;
-
-      trace(TRACE_ERROR, "%s, %s: calling sort_and_deliver for useridnr [%llu]",
-          __FILE__, __FUNCTION__, useridnr);
-
-      /* The error reporting really needs to be more verbose
-       * and for goodness sake, no magic numbers! Define these!
-       * */
-      err = sort_and_deliver(tmpmsgidnr, header, headersize, msgsize, useridnr, deliver_to_mailbox);
-      trace(TRACE_ERROR, "insert_messages(): sort_and_deliver returned with code [%d]", err);
-      switch (err)
-        {
-          case 1:
-            /* Indicate success */
-            list_nodeadd(errusers, &err, sizeof(int));
-            break;
-          case 0:
-            /* Indicate failure */
-            list_nodeadd(errusers, &err, sizeof(int));
-            break;
-          default:
-            /* Assume a failure */
-            list_nodeadd(errusers, &err, sizeof(int));
-            break;
-        }
-            
-      /* Automatic reply and notification */
-      execute_auto_ran(useridnr, headerfields);
-
-      /* Get next item */ 
-      tmp=tmp->nextnode;
-    }
-
-  trace(TRACE_DEBUG,"insert_messages(): we need to bounce [%ld] "
-      "messages for non existent users", list_totalnodes(&bounces));
-  
-  /* handle all bounced messages */
-  if (list_totalnodes(&bounces)>0)
-    {
-      /* bouncing invalid messages */
-      tmp=list_getstart(&bounces);
-      while (tmp!=NULL)
-        { 
-          bounce(header, (char *)tmp->data, BOUNCE_NO_SUCH_USER);
-          tmp=tmp->nextnode;  
-        }
-    }
-
-  trace(TRACE_DEBUG,"insert_messages(): we need to deliver [%ld] "
-      "messages to external addresses", list_totalnodes(&forwards));
-  
-  /* do we have forward addresses ? */
-  if (list_totalnodes(&forwards)>0)
-    {
-      /* sending the message to forwards */
-  
-      trace (TRACE_DEBUG,"insert_messages(): delivering to external addresses");
-  
-      ret_path = list_getstart(returnpath);
-      
-      /* deliver using database */
-      forward (tmpmsgidnr, &forwards, (ret_path ? ret_path->data : "DBMAIL-MAILER"), header, headersize);
-    }
-
-  trace (TRACE_DEBUG,"insert_messages(): deleting temporary message from database");
-  /* Contrived use of this function.
-   * It was written for imapcommands.c, not general use :-\
-   * */
-  /* db_set_msgflag(tmpmsgidnr, tmpmailbox, blah[2]=1, IMAPFA_ADD); */
-
-  /* There, just get rid of it already! */
-  db_delete_message(tmpmsgidnr);
-  
-  trace (TRACE_DEBUG,"insert_messages(): Freeing memory blocks");
-
-  /* Don't free what we did not allocate!
-  trace (TRACE_DEBUG,"insert_messages(): header freed");
-  my_free(header);
-  */
-
-  trace (TRACE_DEBUG,"insert_messages(): End of function");
-  
-  list_freelist(&bounces.start);
-  list_freelist(&userids.start);
-  list_freelist(&forwards.start);
-  
-  return 0;
-}
-
-/* Automate the grunt work of figuring
- * out where this 'address' really leads!
+/* Loop through the list of delivery addresses and
+ * resolve them, making lists of final delivery useridnr's,
+ * forwards, and flagging appropriate DSN's so that success
+ * and/or failures can be properly indicated at the top of the
+ * delivery call chain (e.g. dbmail-smtp and dbmail-lmtpd).
  * */
-static int resolve_address(char *address, struct list *userids, struct list *forwards, struct list *bounces)
+static int resolve_deliveries(struct list *deliveries)
 {
   u64_t userid;
-  int this_user = 0, this_domain = 0;
+  int alias_count = 0, domain_count = 0;
   char *domain = NULL;
+  char *username = NULL;
+  struct element *element;
 
-  /* FIXME: This is all wrong, and needs to be updated! */
-
-  /* See if the given is a numeric string from the database */
-  switch (auth_user_exists(address, &userid))
+  /* Loop through the users list */
+  for (element = list_getstart(deliveries); element != NULL; element = element->nextnode)
     {
-      case -1:
-      {
-        /* An error occurred */
-        trace(TRACE_ERROR,"%s, %s: error checking user [%s]",
-            __FILE__, __FUNCTION__, address);
-        break;
-      }
-      case 1:
-      {
-        if (list_nodeadd(userids, &userid, sizeof(u64_t)) == 0)
-            trace(TRACE_FATAL, "%s, %s: out of memory",
-                __FILE__, __FUNCTION__);
-     
-        trace(TRACE_DEBUG, "%s, %s: added user [%s] id [%llu] to delivery list",
-            __FILE__, __FUNCTION__, address, userid);
-        break;
-      }
-      /* The address needs to be looked up */
-      default:
-      {
-        this_user = auth_check_user_ext(address, userids, forwards, -1);
-        trace(TRACE_DEBUG, "%s, %s: user [%s] found total of [%d] aliases",
-            __FILE__, __FUNCTION__, address, this_user);
-     
-        /* No aliases found for this user */
-        if (this_user == 0)
-          {
-            /* I needed to change this because my girlfriend said so
-               and she was actually right. Domain forwards are last resorts
-               if a delivery cannot be found with an existing address then
-               and only then we need to check if there are domain delivery's */
-   
-            trace(TRACE_INFO,"%s, %s: no users found to deliver to. "
-                "Checking for domain forwards",
-                __FILE__, __FUNCTION__);  
-   
-            domain = strchr(address, '@');
-     
-            /* This should always be the case! */
-            if (domain != NULL)
-              {
-                trace(TRACE_DEBUG, "%s, %s: "
-                    "checking for domain aliases. Domain = [%s]",
-                    __FILE__, __FUNCTION__, domain);
-   
-                /* Checking for domain aliases */
-                this_domain = auth_check_user_ext(domain, userids, forwards, -1);
-                trace(TRACE_DEBUG,"%s, %s: "
-                    "domain [%s] found total of [%d] aliases",
-                    __FILE__, __FUNCTION__, domain, this_domain);
-              }
-          }
-   
-        /* user does not exists in aliases tables
-           so bounce this message back with an error message */
-        if (this_user == 0 && this_domain == 0)
-          {
-            /* still no effective deliveries found, create bouncelist */
-            list_nodeadd(bounces, address, strlen(address)+1);
-          }
-      }
-    }
+      deliver_to_user_t *delivery = (deliver_to_user_t *)element->data;
+
+      /* If the userid is already set, then we're doing direct-to-userid. */
+      if (delivery->useridnr != 0)
+        {
+          /* This seems to be the only way to see if a useridnr is valid. */
+          username = auth_get_userid(&delivery->useridnr);
+          if (username != NULL)
+            {
+              /* Free the username, we don't actually need it. */
+              my_free(username);
+
+              /* Copy the delivery useridnr into the userids list. */
+              if (list_nodeadd(delivery->userids, &delivery->useridnr, sizeof(delivery->useridnr)) == 0)
+                {
+                  trace(TRACE_ERROR, "%s, %s: out of memory",
+                      __FILE__, __FUNCTION__);
+                  return -1;
+                }
+
+              /* The userid was valid... */
+              delivery->dsn.class = 2; /* Success. */
+              delivery->dsn.subject = 1; /* Address related. */
+              delivery->dsn.detail = 5; /* Valid. */
+            }
+          else /* from: 'if (username != NULL)' */
+            {
+              /* The userid was invalid... */
+              delivery->dsn.class = 5; /* Permanent failure. */
+              delivery->dsn.subject = 1; /* Address related. */
+              delivery->dsn.detail = 1; /* Does not exist. */
+            }
+        }
+      /* We don't have a useridnr, so we have either a username or an alias. */
+      else /* from: 'if (delivery->useridnr != 0)' */
+        {
+          /* See if the address is a username. */
+          switch (auth_user_exists(delivery->address, &userid))
+            {
+              case -1:
+                {
+                  /* An error occurred */
+                  trace(TRACE_ERROR,"%s, %s: error checking user [%s]",
+                      __FILE__, __FUNCTION__, delivery->address);
+                  return -1;
+                  break;
+                }
+              case 1:
+                {
+                  if (list_nodeadd(delivery->userids, &userid, sizeof(u64_t)) == 0)
+	            {
+                      trace(TRACE_ERROR, "%s, %s: out of memory",
+                          __FILE__, __FUNCTION__);
+                      return -1;
+	            }
+	          else
+	            {
+              
+                      trace(TRACE_DEBUG, "%s, %s: added user [%s] id [%llu] to delivery list",
+                          __FILE__, __FUNCTION__, delivery->address, userid);
+                      /* The userid was valid... */
+                      delivery->dsn.class = 2; /* Success. */
+                      delivery->dsn.subject = 1; /* Address related. */
+                      delivery->dsn.detail = 5; /* Valid. */
+	            }
+                  break;
+                }
+                /* The address needs to be looked up */
+              default:
+                {
+                  alias_count = auth_check_user_ext(delivery->address, delivery->userids, delivery->forwards, -1);
+                  trace(TRACE_DEBUG, "%s, %s: user [%s] found total of [%d] aliases",
+                      __FILE__, __FUNCTION__, delivery->address, alias_count);
+              
+                  /* No aliases found for this user */
+                  if (alias_count == 0)
+                    {
+                      trace(TRACE_INFO,"%s, %s: user [%s] checking for domain forwards.",
+                          __FILE__, __FUNCTION__, delivery->address);  
+               
+                      domain = strchr(delivery->address, '@');
+               
+                      if (domain == NULL)
+                        {
+                          /* That's it, we're done here. */
+                          /* Permanent failure... */
+                          delivery->dsn.class = 5; /* Permanent failure. */
+                          delivery->dsn.subject = 1; /* Address related. */
+                          delivery->dsn.detail = 1; /* Does not exist. */
+                        }
+                      else
+                        {
+                          trace(TRACE_DEBUG, "%s, %s: domain [%s] checking for domain forwards",
+                              __FILE__, __FUNCTION__, domain);
+               
+                          /* Checking for domain aliases */
+                          domain_count = auth_check_user_ext(domain, delivery->userids, delivery->forwards, -1);
+                          trace(TRACE_DEBUG,"%s, %s: domain [%s] found total of [%d] aliases",
+                              __FILE__, __FUNCTION__, domain, domain_count);
+               
+                          if (domain_count == 0)
+                            {
+                              /* Permanent failure... */
+                              delivery->dsn.class = 5; /* Permanent failure. */
+                              delivery->dsn.subject = 1; /* Address related. */
+                              delivery->dsn.detail = 1; /* Does not exist. */
+                            }
+                          else /* from: 'if (domain_count == 0)' */
+                            {
+                              /* The userid was valid... */
+                              delivery->dsn.class = 2; /* Success. */
+                              delivery->dsn.subject = 1; /* Address related. */
+                              delivery->dsn.detail = 5; /* Valid. */
+                            } /* from: 'if (domain_count == 0)' */
+                        } /* from: 'if (domain == NULL)' */
+                    }
+                  else /* from: 'if (alias_count == 0)' */
+                    {
+                      /* The userid was valid... */
+                      delivery->dsn.class = 2; /* Success. */
+                      delivery->dsn.subject = 1; /* Address related. */
+                      delivery->dsn.detail = 5; /* Valid. */
+                    } /* from: 'if (alias_count == 0)' */
+                } /* from: 'default:' */
+            } /* from: 'switch (auth_user_exists(delivery->address, &userid))' */
+        } /* from: 'if (delivery->useridnr != 0)' */
+    } /* from: the main for loop */
+
   return 0;
 }
 
@@ -544,12 +444,7 @@ static int store_message_temp(FILE *instream, char *header, u64_t headersize, u6
   int result;
 
   result = auth_user_exists(DBMAIL_DELIVERY_USERNAME, &user_idnr);
-  if (result < 0) {
-	  trace(TRACE_ERROR, "%s,%s: unable to find user_idnr for user "
-		"[%s]\n", __FILE__, __FUNCTION__, DBMAIL_DELIVERY_USERNAME);
-	  return -1;
-  }
-  if (result == 0) {
+  if (result <= 0) {
 	  trace(TRACE_ERROR, "%s,%s: unable to find user_idnr for user "
 		"[%s]. Make sure this system user is in the database!\n",
 		__FILE__, __FUNCTION__, DBMAIL_DELIVERY_USERNAME);
@@ -574,7 +469,7 @@ static int store_message_temp(FILE *instream, char *header, u64_t headersize, u6
       return -1;
   }
 
-  trace (TRACE_DEBUG,"store_message_temp(): allocating [%d] bytes of memory for readblock", READ_BLOCK_SIZE);
+  trace(TRACE_DEBUG,"store_message_temp(): allocating [%d] bytes of memory for readblock", READ_BLOCK_SIZE);
 
   memtst ((strblock = (char *)my_malloc(READ_BLOCK_SIZE+1))==NULL);
   memtst ((tmpline= (char *)my_malloc(MAX_LINE_SIZE+1))==NULL);
@@ -664,23 +559,140 @@ static int store_message_temp(FILE *instream, char *header, u64_t headersize, u6
       usedmem = 0;
     }
 
-  trace (TRACE_DEBUG, "store_message_temp(): end of instream");
-/* This shouldn't be freed because it is a local array, not a pointer...
-  trace (TRACE_DEBUG, "store_message_temp(): uniqueid freed");
-  my_free(unique_id);
-  */
+  trace(TRACE_DEBUG, "store_message_temp(): end of instream");
 
-  trace (TRACE_DEBUG, "store_message_temp(): tmpline freed");
   my_free (tmpline);
+  trace(TRACE_DEBUG, "store_message_temp(): tmpline freed");
 
-  trace (TRACE_DEBUG, "store_message_temp(): strblock freed");
   my_free (strblock);
+  trace(TRACE_DEBUG, "store_message_temp(): strblock freed");
 
   db_update_message(msgidnr, unique_id, totalmem+headersize, 0);
 
   /* Pass the message id out to the caller. */
   *temp_message_idnr = msgidnr;
 
+  return 0;
+}
+
+/* Here's the real *meat* of this source file!
+ *
+ * Function: insert_messages()
+ * What we get:
+ *   - A pointer to the incoming message stream
+ *   - The header of the message 
+ *   - A list of destination addresses / useridnr's
+ *   - The default mailbox to delivery to
+ *
+ * What we do:
+ *   - Read in the rest of the message
+ *   - Store the message to the DBMAIL user
+ *   - Process the destination addresses into lists:
+ *     - Local useridnr's
+ *     - External forwards
+ *     - No such user bounces
+ *   - Store the local useridnr's
+ *     - Run the message through each user's sorting rules
+ *     - Potentially alter the delivery:
+ *       - Different mailbox
+ *       - Bounce
+ *       - Reply with vacation message
+ *       - Forward to another address
+ *     - Check the user's quota before delivering
+ *       - Do this *after* their sorting rules, since the
+ *         sorting rules might not store the message anyways
+ *   - Send out the no such user bounces
+ *   - Send out the external forwards
+ *   - Delete the temporary message from the database
+ * What we return:
+ *   - 0 on success
+ *   - -1 on full failure
+ */
+int insert_messages(FILE *instream, char *header, u64_t headersize,
+     struct list *headerfields, struct list *users, struct list *returnpath)
+{
+  struct element *element, *ret_path;
+  u64_t tmpmsgidnr, msgsize = 0;
+
+  /* Read in the rest of the stream and store it into a temporary message */
+  switch (store_message_temp(instream, header, headersize, &tmpmsgidnr))
+  {
+    case -1:
+      /* Major trouble. Bail out immediately. */
+      trace(TRACE_ERROR, "%s, %s: failed to store temporary message.",
+          __FILE__, __FUNCTION__ );
+      return -1;
+    default:
+      trace(TRACE_DEBUG, "%s, %s: temporary msgidnr is [%llu]",
+          __FILE__, __FUNCTION__, tmpmsgidnr );
+      break;
+  }
+  
+  /* Get the user list resolved into fully deliverable form */
+  if (resolve_deliveries(users) != 0)
+    {
+      return -1;
+    }
+
+  /* Loop through the users list */
+  for (element = list_getstart(users); element != NULL; element = element->nextnode)
+    {
+      struct element *userid_elem;
+      deliver_to_user_t *delivery = (deliver_to_user_t *)element->data;
+
+      for (userid_elem = list_getstart(delivery->userids);
+                      userid_elem != NULL; userid_elem = userid_elem->nextnode)
+        {
+          u64_t useridnr = *(u64_t *)userid_elem->data;
+          trace(TRACE_DEBUG, "%s, %s: calling sort_and_deliver for useridnr [%llu]",
+              __FILE__, __FUNCTION__, useridnr);
+
+          switch (sort_and_deliver(tmpmsgidnr, header, headersize, msgsize, useridnr, delivery->mailbox))
+            {
+              case 1:
+                /* Indicate success */
+                trace(TRACE_DEBUG, "%s, %s: sort_and_delivery was successful for useridnr [%llu]",
+                            __FILE__, __FUNCTION__, useridnr);
+                break;
+              case 0:
+                /* Indicate failure */
+                trace(TRACE_ERROR, "%s, %s: out of memory",
+                            __FILE__, __FUNCTION__);
+                break;
+              default:
+                /* Assume a failure */
+                trace(TRACE_ERROR, "%s, %s: out of memory",
+                            __FILE__, __FUNCTION__);
+                break;
+            }
+                
+          /* Automatic reply and notification */
+          execute_auto_ran(useridnr, headerfields);
+        } /* from: the useridnr for loop */
+
+      trace(TRACE_DEBUG,"insert_messages(): we need to deliver [%ld] "
+          "messages to external addresses", list_totalnodes(delivery->forwards));
+      
+      /* Do we have any forwarding addresses? */
+      if (list_totalnodes(delivery->forwards) > 0)
+        {
+
+          trace(TRACE_DEBUG, "insert_messages(): delivering to external addresses");
+      
+          /* Only the last step of the returnpath is used. */
+          ret_path = list_getstart(returnpath);
+          
+          /* Forward using the temporary stored message. */
+          forward(tmpmsgidnr, delivery->forwards, (ret_path ? ret_path->data : "DBMAIL-MAILER"), header, headersize);
+        }
+
+    } /* from: the delivery for loop */
+
+  db_delete_message(tmpmsgidnr);
+  trace(TRACE_DEBUG, "insert_messages(): temporary message deleted from database");
+
+  trace(TRACE_DEBUG, "insert_messages(): End of function");
+  
   return 0;
 }
 

@@ -32,8 +32,13 @@
 #include "list.h"
 #include "auth.h"
 #include "header.h"
+#include "dsn.h"
 #include <string.h>
 #include <stdlib.h>
+/* For getopt() */
+#include <unistd.h>
+/* For exit codes */
+#include <sysexits.h>
 
 #define MESSAGEIDSIZE 100
 #define NORMAL_DELIVERY 1
@@ -44,166 +49,331 @@
 /* syslog */
 #define PNAME "dbmail/smtp"
 
+struct list returnpath;         /* returnpath (should aways be just 1 hop) */
 struct list mimelist; 	        /* raw unformatted mimefields and values */
-struct list errusers; 	  	/* list of error codes corresponding to users */
-struct list users; 	  	/* list of email addresses in message */
+struct list dsnusers;           /* list of deliver_to_user_t structs */
+struct list users;              /* list of email addresses in message */
+struct element *tmp;
 
 struct list sysItems, smtpItems; /* config item lists */
 
 char *configFile = DEFAULT_CONFIG_FILE;
 
-/* set up database login data */
-extern db_param_t _db_params;
+extern db_param_t _db_params;   /* set up database login data */
 
-int mode;			/* how should we process */
-  
+deliver_to_user_t dsnuser;
+
 char *header = NULL;
+char *deliver_to_header = NULL;
 char *deliver_to_mailbox = NULL;
 u64_t headersize;
 u64_t newlines;
 
-int main (int argc, char *argv[]) 
+void print_usage(const char *progname)
 {
-  struct list returnpath; /* returnpath (should aways be just 1 hop */
-  int users_are_usernames = 0,i;
-  u64_t dummyidx=0,dummysize=0;
+  printf("\n*** DBMAIL: dbmail-smtp version $Revision$ %s\n",
+             COPYRIGHT);
+  printf("\nUsage: %s -n [headerfield]   for normal deliveries (default: \"deliver-to\")\n",
+             progname);
+  printf("       %s -m \"mailbox\" -u [username] for delivery to mailbox (name)\n",
+             progname);
+  printf("       %s -d [addresses]  for delivery without using scanner\n",
+             progname);
+  printf("       %s -u [usernames]  for direct delivery to users\n\n",
+             progname);
+}
+
+int main(int argc, char *argv[]) 
+{
+  int exitcode = 0;
+  int c, c_prev = 0, usage_error = 0;
+  u64_t dummyidx = 0, dummysize = 0;
+  int has_2 = 0, has_4 = 0, has_5 = 0;
+
 
   openlog(PNAME, LOG_PID, LOG_MAIL);
-
-  /* first check for commandline options */
-  if (argc<2)
-    {
-	  printf ("\n*** DBMAIL: dbmail-smtp version $Revision$ %s\n",COPYRIGHT);
-      printf ("\nUsage: %s -n [headerfield]   for normal deliveries "
-	      "(default: \"deliver-to\" header)\n",argv[0]);
-      printf ("       %s -m \"mailbox\" -u [username] for delivery to mailbox (name)\n"
-              ,argv[0]);
-      printf ("       %s -d [addresses]  for delivery without using scanner\n",argv[0]);
-      printf ("       %s -u [usernames]  for direct delivery to users\n\n",argv[0]);
-      return 0;
-    }
 
   ReadConfig("DBMAIL", configFile, &sysItems);
   ReadConfig("SMTP", configFile, &smtpItems);
   SetTraceLevel(&smtpItems);
   GetDBParams(&_db_params, &sysItems);
 
+  list_init(&users);
+  list_init(&dsnusers);
+  list_init(&mimelist);
+  list_init(&returnpath);
+
+  /* Check for commandline options.
+   * The initial '-' means that arguments which are not associated
+   * with an immediately preceding option are return with option 
+   * value '1'. We will use this to allow for multiple values to
+   * follow after each of the supported options. */
+  while ((c = getopt(argc, argv, "-n::m:u:d:f:")) != EOF)
+    {
+      /* Received an n-th value following the last option,
+       * so recall the last known option to be used in the switch. */
+      if (c == '1')
+          c = c_prev;
+      c_prev = c;
+      /* Do something with this option. */
+      switch (c)
+        {
+          case 'n':
+              trace(TRACE_INFO, "main(): using NORMAL_DELIVERY");
+             
+              if (optarg)
+                {
+                  if (deliver_to_header)
+                    {
+                      printf("Only one header field may be specified.\n");
+                      usage_error = 1;
+                    }
+                  else
+                      deliver_to_header = optarg;
+                }
+              else
+                  deliver_to_header = "deliver-to";
+
+              break;
+          case 'm':
+              trace(TRACE_INFO, "main(): using SPECIAL_DELIVERY to mailbox");
+
+              if (deliver_to_mailbox)
+                {
+                  printf("Only one header field may be specified.\n");
+                  usage_error = 1;
+                }
+              else
+                  deliver_to_mailbox = optarg;
+
+              break;
+          case 'f':
+              trace(TRACE_INFO, "main(): using RETURN_PATH for bounces");
+
+              /* Add argument onto the returnpath list. */
+              if (list_nodeadd(&returnpath, optarg, strlen(optarg) + 1) == 0)
+                {
+                  trace(TRACE_ERROR, "main(): list_nodeadd reports out of memory"
+                                  " while adding to returnpath");
+                  exitcode = EX_TEMPFAIL;
+                  goto freeall;
+                }
+
+              break;
+          case 'u':
+              trace(TRACE_INFO, "main(): using SPECIAL_DELIVERY to usernames");
+
+              dsnuser_init(&dsnuser);
+              dsnuser.address = strdup(optarg);
+
+              /* Add argument onto the users list. */
+              if (list_nodeadd(&dsnusers, &dsnuser, sizeof(deliver_to_user_t)) == 0)
+                {
+                  trace(TRACE_ERROR, "main(): list_nodeadd reports out of memory"
+                                  " while adding usernames");
+                  exitcode = EX_TEMPFAIL;
+                  goto freeall;
+                }
+
+              break;
+          case 'd':
+              trace(TRACE_INFO, "main(): using SPECIAL_DELIVERY to email addresses");
+
+              dsnuser_init(&dsnuser);
+              dsnuser.address = strdup(optarg);
+
+              /* Add argument onto the users list. */
+              if (list_nodeadd(&dsnusers, &dsnuser, sizeof(deliver_to_user_t)) == 0)
+                {
+                  trace(TRACE_ERROR, "main(): list_nodeadd reports out of memory"
+                                  " while adding email addresses");
+                  exitcode = EX_TEMPFAIL;
+                  goto freeall;
+                }
+
+              break;
+          default:
+              usage_error = 1;
+              break;
+        }
+
+    /* At the end of each round of options, check
+     * to see if there were any errors worth stopping for. */
+    if (usage_error)
+      {
+        print_usage(argv[0]);
+        trace(TRACE_DEBUG, "main(): usage error; setting EX_USAGE and aborting");
+        exitcode = EX_USAGE;
+        goto freeall;
+      }
+    }
+
+  /* ...or if there weren't any command line arguments at all. */
+  if (argc < 2)
+    {
+      print_usage(argv[0]);
+      trace(TRACE_DEBUG, "main(): no arguments; setting EX_USAGE and aborting");
+      exitcode = EX_USAGE;
+      goto freeall;
+    }
+
   if (db_connect() != 0) 
-    trace(TRACE_FATAL,"main(): database connection failed");
+    {
+      trace(TRACE_ERROR, "main(): database connection failed");
+      exitcode = EX_TEMPFAIL;
+      goto freeall;
+    }
 
   if (auth_connect() != 0) 
-    trace(TRACE_FATAL,"main(): authentication connection failed");
-
-  list_init(&users);
-  list_init(&errusers);
-  list_init(&mimelist);
+    {
+      trace(TRACE_ERROR, "main(): authentication connection failed");
+      exitcode = EX_TEMPFAIL;
+      goto freeall;
+    }
 
   /* first we need to read the header */
   if (!read_header(stdin, &newlines, &headersize, &header))
-    trace (TRACE_STOP,"main(): read_header() returned an invalid header");
+    {
+      trace(TRACE_ERROR, "main(): read_header failed to read a header");
+      exitcode = EX_TEMPFAIL;
+      goto freeall;
+    }
 
   /* parse the list and scan for field and content */
   if (mime_readheader(header, &dummyidx, &mimelist, &dummysize) < 0)
-    trace(TRACE_STOP,"main(): fatal error creating MIME-header list\n");
-
-  list_init(&returnpath);
+    {
+      trace(TRACE_ERROR, "main(): mime_readheader failed to read a header list");
+      exitcode = EX_TEMPFAIL;
+      goto freeall;
+    }
 
   /* parse returnpath from header */
-  mail_adr_list ("Return-Path",&returnpath,&mimelist);
   if (returnpath.total_nodes == 0)
-    mail_adr_list("From",&returnpath,&mimelist);
+      mail_adr_list("Return-Path", &returnpath, &mimelist);
+      if (returnpath.total_nodes == 0)
+          mail_adr_list("From", &returnpath, &mimelist);
+          if (returnpath.total_nodes == 0)
+              trace(TRACE_DEBUG, "main(): no return path found.");
 
-  
-  /* we need to decide what delivery mode we're in */
-  if (strcmp ("-d", argv[INDEX_DELIVERY_MODE])==0)
+  /* If the NORMAL delivery mode has been selected... */
+  if (deliver_to_header != NULL)
     {
-      trace (TRACE_INFO,"main(): using SPECIAL_DELIVERY to email addresses");
-
-      /* mail_adr_list_special will take the command line 
-       * email addresses and use those addresses for this message 
-       * delivery */
-      
-      if (mail_adr_list_special(INDEX_DELIVERY_MODE+1,argc, argv,&users)==0)
-	trace(TRACE_STOP,"main(): could not find any addresses");
-    }
-  else if ( (strcmp (argv[INDEX_DELIVERY_MODE],"-m")==0) )
-  {
-    if (argc>4)
-      {
-	if (strcmp (argv[3],"-u")!=0)
-	  {
-	    printf ("\nError: When using the mailbox delivery option,"
-		    " you should specify a username\n\n");
-	    return 0;
-          }
-      }
-    else
-      {
-	printf ("\nError: Mailbox delivery needs a -u clause to specify"
-		" a user that should be used for delivery\n\n");
-	return 0;
-      }
-
-    trace (TRACE_INFO,"main(): using SPECIAL_DELIVERY to mailbox");
-    
-    if (list_nodeadd(&users, argv[4], strlen(argv[4])+1) == 0)
-      {
-	trace (TRACE_STOP, "main(): out of memory");
-	return 1;
-      }
-
-    users_are_usernames = 1;
-    deliver_to_mailbox = argv[2];
-    
-  }
-  else if (strcmp("-u", argv[INDEX_DELIVERY_MODE])==0)
-    {
-      trace (TRACE_INFO,"main(): using SPECIAL_DELIVERY to usernames");
-
-      /* build a list of usernames as supplied on the command line */
-      for (i=INDEX_DELIVERY_MODE+1; argv[i]; i++)
-	{
-          if (list_nodeadd(&users, argv[i], strlen(argv[i]) + 1) == 0)
-	    {
-              trace(TRACE_STOP, "main(): out of memory");
-              return 1;
-	    }
-	}
-
-      users_are_usernames = 1;
-    }
-  else
-    {
-      trace (TRACE_INFO,"main(): using NORMAL_DELIVERY");
-
       /* parse for destination addresses */
-      if (argc>2) 
-	{
-	  trace (TRACE_DEBUG, "main(): scanning for [%s]",argv[INDEX_DELIVERY_MODE+1]);
-	  if (mail_adr_list(argv[INDEX_DELIVERY_MODE+1],&users,&mimelist) !=0)
-	    trace (TRACE_STOP,"main(): scanner found no email addresses (scanned for %s)", 
-		   argv[INDEX_DELIVERY_MODE+1]);
-	}
-      else
-	if (mail_adr_list ("deliver-to",&users,&mimelist) != 0)
-	  trace(TRACE_STOP,"main(): scanner found no email addresses (scanned for Deliver-To:)");
-    } 
+      trace(TRACE_DEBUG, "main(): scanning mimelist for header [%s]", deliver_to_header);
+      if (mail_adr_list(deliver_to_header, &users, &mimelist) !=0)
+        {
+          trace(TRACE_ERROR, "main(): scanner found no email addresses (scanned for %s)", 
+                deliver_to_header);
+          exitcode = EX_TEMPFAIL;
+          goto freeall;
+        }
   
+      /* Loop through the users list, moving the entries into the dsnusers list. */
+      for(tmp = list_getstart(&users); tmp != NULL; tmp = tmp->nextnode)
+        {
+          deliver_to_user_t dsnuser;
+  
+          dsnuser_init(&dsnuser);
+          dsnuser.address = strdup((char *)tmp->data);
+
+          if (list_nodeadd(&dsnusers, &dsnuser, sizeof(deliver_to_user_t)) == 0)
+            {
+              trace(TRACE_ERROR, "main(): list_nodeadd reports out of memory"
+                              " while adding to dsnusers");
+              exitcode = EX_TEMPFAIL;
+	      /* If the struct was not added to the list,
+	       * then it won't be released for us at freeall.*/
+	      dsnuser_free(&dsnuser);
+              goto freeall;
+            }
+        }
+    }
+
+  /* If the MAILBOX delivery mode has been selected... */
+  if (deliver_to_mailbox)
+    {
+      /* Loop through the dsnusers list, setting the target mailbox. */
+      for(tmp = list_getstart(&dsnusers); tmp != NULL; tmp = tmp->nextnode)
+        {
+          deliver_to_user_t *dsnuser;
+
+	  dsnuser = (deliver_to_user_t *)tmp->data;
+      
+          dsnuser->mailbox = strdup(deliver_to_mailbox);
+        }
+    }
+
   /* inserting messages into the database */
-  insert_messages(stdin, header, headersize, &users, &errusers, &returnpath,
-		  users_are_usernames, deliver_to_mailbox, &mimelist);
-  trace(TRACE_DEBUG,"main(): freeing memory blocks");
-  my_free(header);
+  if (insert_messages(stdin, header, headersize, &mimelist, &dsnusers, &returnpath) == -1)
+    {
+      trace(TRACE_ERROR, "main(): insert_messages failed");
+      /* Most likely a random failure... */
+      exitcode = EX_TEMPFAIL;
+    }
+
+freeall: /* Goto's here! */
+
+  /* Get one reasonable error code for everyone. */
+  for(tmp = list_getstart(&dsnusers); tmp != NULL; tmp = tmp->nextnode)
+    {
+      deliver_to_user_t *dsnuser= (deliver_to_user_t *)tmp->data;
+
+      switch (dsnuser->dsn.class)
+      {
+        case 2:
+          /* Success. */
+          has_2 = 1;
+          break;
+        case 4:
+          /* Temporary transient failure. */
+          has_4 = 1;
+          break;
+        case 5:
+          /* Permanent failure. */
+          has_5 = 1;
+          break;
+      }
+      
+      dsnuser_free(dsnuser);
+    }
+
+  /* If there wasn't already an EX_TEMPFAIL from insert_messages(),
+   * then see if one of the status flags was marked with an error. */
+  if (!exitcode)
+    {
+      /* If only one code, use it. */
+      if (has_2 && !has_4 && !has_5) /* Only 2 */
+          exitcode = EX_OK;
+      else if (!has_2 && has_4 && !has_5) /* Only 4 */
+          exitcode = EX_TEMPFAIL;
+      else if (!has_2 && !has_4 && has_5) /* Only 5 */
+          exitcode = EX_NOUSER;
+      /* If two codes, prefer temporary. */
+      else if (has_2 && has_4 && !has_5) /* 2 and 4 */
+          exitcode = EX_TEMPFAIL;
+      else if (has_2 && !has_4 && has_5) /* 2 and 5 */
+          exitcode = EX_NOUSER;
+      else if (!has_2 && has_4 && has_5) /* 4 and 5 */
+          exitcode = EX_TEMPFAIL;
+      else /* All 3 */
+          exitcode = EX_UNAVAILABLE;
+    }
+
+  trace(TRACE_DEBUG, "main(): freeing memory blocks");
+  if (header != NULL)
+      my_free(header);
   list_freelist(&sysItems.start);
   list_freelist(&smtpItems.start);
-  list_freelist(&returnpath.start);
   list_freelist(&mimelist.start);
-  list_freelist(&errusers.start);
+  list_freelist(&returnpath.start);
+  list_freelist(&dsnusers.start);
   list_freelist(&users.start);
-  trace (TRACE_DEBUG,"main(): they're all free. we're done.");
+  trace(TRACE_DEBUG, "main(): they're all free. we're done.");
   
   db_disconnect();
   auth_disconnect();
 
-  return 0;
+  trace(TRACE_DEBUG, "main(): exit code is [%d].", exitcode);
+  return exitcode;
 }
+

@@ -1,6 +1,6 @@
-dnl aclocal.m4 generated automatically by aclocal 1.4-p6
+dnl aclocal.m4 generated automatically by aclocal 1.4-p4
 
-dnl Copyright (C) 1994, 1995-8, 1999, 2001 Free Software Foundation, Inc.
+dnl Copyright (C) 1994, 1995-8, 1999 Free Software Foundation, Inc.
 dnl This file is free software; the Free Software Foundation
 dnl gives unlimited permission to copy and/or distribute it,
 dnl with or without modifications, as long as this notice is preserved.
@@ -405,7 +405,7 @@ if test -n "$CC"
 then
   if test "$GCC" = "yes"
   then
-    ac_compile_warnings_opt='-W -Wall -Wpointer-arith -Wstrict-prototypes -O2'
+    ac_compile_warnings_opt='-W -Wall -Wpointer-arith -Wstrict-prototypes'
   fi
   CFLAGS="$CFLAGS $ac_compile_warnings_opt"
   ac_compile_warnings_msg="$ac_compile_warnings_msg $ac_compile_warnings_opt for C"
@@ -419,7 +419,7 @@ unset ac_compile_warnings_opt
 
 # Like AC_CONFIG_HEADER, but automatically create stamp file.
 
-AC_DEFUN([AM_CONFIG_HEADER],
+AC_DEFUN(AM_CONFIG_HEADER,
 [AC_PREREQ([2.12])
 AC_CONFIG_HEADER([$1])
 dnl When config.status generates a header, we must update the stamp-h file.

@@ -228,11 +228,10 @@ typedef struct
 /*
  * A struct to hold info about a Sieve script
  */
-struct ssinfo
+typedef struct
 {
   char *name;
   int active;
-};
+} sievescript_info_t;
 
 #endif
-

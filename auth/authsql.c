@@ -207,7 +207,7 @@ int auth_getmaxmailsize(u64_t user_idnr, u64_t *maxmail_size)
 
   if (__auth_query(__auth_query_data) == -1) {
       trace(TRACE_ERROR, "%s,%s: could not retrieve client id for user [%llu]",
-	    user_idnr);
+	    __FILE__, __FUNCTION__, user_idnr);
       db_store_auth_result();
       return -1;
   }

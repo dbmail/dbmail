@@ -94,6 +94,7 @@ int db_init_msgfetch(u64_t msg_idnr)
      /* start at row (tuple) 0 */
      _msgrow_idx = 0;
 
+     /* FIXME: this will explode is db_get_result returns NULL. */
      rowlength = db_get_length(_msgrow_idx, 0);
      strncpy(msgbuf_buf, db_get_result(_msgrow_idx, 0), MSGBUF_WINDOWSIZE - 1);
 
@@ -116,6 +117,7 @@ int db_init_msgfetch(u64_t msg_idnr)
 	  return 1;
      }
 
+     /* FIXME: this will explode is db_get_result returns NULL. */
      rowlength = db_get_length(_msgrow_idx, 0);
      rowpos = 0;
      strncpy(&msgbuf_buf[msgbuf_buflen], db_get_result(_msgrow_idx, 0), 
@@ -186,6 +188,7 @@ int db_update_msgbuf(int minlen)
 		__FILE__, __FUNCTION__);
 
 	  /* rest of row does not fit entirely in buf */
+     /* FIXME: this will explode is db_get_result returns NULL. */
 	  strncpy(&msgbuf_buf[msgbuf_buflen], &( (db_get_result(_msgrow_idx, 0))[rowpos] ),
 		  MSGBUF_WINDOWSIZE - msgbuf_buflen);
 	  rowpos += (MSGBUF_WINDOWSIZE - msgbuf_buflen - 1);
@@ -200,6 +203,7 @@ int db_update_msgbuf(int minlen)
      trace(TRACE_DEBUG,"%s,%s: update msgbuf: entire fit", 
 	   __FILE__, __FUNCTION__);
 
+     /* FIXME: this will explode is db_get_result returns NULL. */
      strncpy(&msgbuf_buf[msgbuf_buflen], &( (db_get_result(_msgrow_idx, 0))[rowpos] ), 
 	     (rowlength-rowpos));
      msgbuf_buflen += (rowlength - rowpos);
@@ -222,6 +226,7 @@ int db_update_msgbuf(int minlen)
      trace(TRACE_DEBUG,"%s,%s: update msgbuf, got new block, "
 	   "trying to place data", __FILE__, __FUNCTION__);
 
+     /* FIXME: this will explode is db_get_result returns NULL. */
      strncpy(&msgbuf_buf[msgbuf_buflen], db_get_result(_msgrow_idx, 0), 
 	     MSGBUF_WINDOWSIZE - msgbuf_buflen - 1);
 
@@ -380,6 +385,7 @@ long db_dump_range(MEM *outmem, db_pos_t start,
 		    bufcnt = 0;
 	       }
 
+	       /* FIXME: field may be NULL from db_get_result! */
 	       if (field[i] == '\n')
 	       {
 		    buf[bufcnt++] = '\r';
@@ -427,6 +433,7 @@ long db_dump_range(MEM *outmem, db_pos_t start,
 		    bufcnt = 0;
 	       }
 
+	       /* FIXME: field may be NULL from db_get_result! */
 	       if (field[startpos+j] == '\n')
 	       {
 		    buf[bufcnt++] = '\r';

@@ -40,8 +40,7 @@ extern struct list mimelist;
 extern struct list users;  
 extern struct list smtpItems;  
 
-int bounce (char *header, char *destination_address, 
-	    bounce_reason_t reason)
+int bounce(const char *header, const char *destination_address, bounce_reason_t reason)
 {
   void *sendmail_stream;
   char *sendmail_command = NULL;
@@ -66,7 +65,7 @@ int bounce (char *header, char *destination_address,
     trace(TRACE_FATAL, "%s,%s: POSTMASTER not configured "
 	  "(see config file). Stop.", __FILE__, __FUNCTION__);
 	  
-  trace (TRACE_DEBUG,"%s,%s: creating bounce message for bounce reason [%d]"
+  trace (TRACE_DEBUG,"%s,%s: creating bounce message for bounce reason [%d]",
 	 __FILE__, __FUNCTION__, reason);
 		
   if (!destination_address)

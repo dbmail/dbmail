@@ -93,6 +93,8 @@ VERSION = @VERSION@
 mysqlconfig = @mysqlconfig@
 pgsqlconfig = @pgsqlconfig@
 
+AM_CFLAGS = -fomit-frame-pointer
+
 lib_LIBRARIES = libauthdbmail.a
 @LDAP_TRUE@libauthdbmail_a_SOURCES = authldap.c
 @LDAP_FALSE@libauthdbmail_a_SOURCES = authsql.c

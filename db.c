@@ -73,8 +73,6 @@ static int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 
 int db_get_physmessage_id(u64_t message_idnr, u64_t *physmessage_id)
 {
-    char *query_result = (char *) NULL;
-    
     assert(physmessage_id != NULL);
     *physmessage_id = 0;
 
@@ -93,10 +91,8 @@ int db_get_physmessage_id(u64_t message_idnr, u64_t *physmessage_id)
 	return 0;
     }
 
-    query_result = db_get_result(0, 0);
-    if (query_result)
-	*physmessage_id = strtoull(query_result, NULL, 10);
-   
+    *physmessage_id = db_get_result_u64(0, 0);
+
     db_free_result();
 
     return 1;
@@ -116,7 +112,7 @@ int db_get_quotum_used(u64_t user_idnr, u64_t *curmail_size)
 	  return -1;
      }
      
-    *curmail_size = strtoull(db_get_result(0, 0), NULL, 10);
+    *curmail_size = db_get_result_u64(0, 0);
     db_free_result();
     return 1;
 }
@@ -177,8 +173,8 @@ int db_calculate_quotum_all()
 	return -2;
     }
     for (i = 0; i < n; i++) {
-	user_idnrs[i] = strtoull(db_get_result(i, 0), NULL, 10);
-	curmail_sizes[i] = strtoull(db_get_result(i, 1), NULL, 10);
+	user_idnrs[i] = db_get_result_u64(i, 0);
+	curmail_sizes[i] = db_get_result_u64(i, 1);
     }
     db_free_result();
 
@@ -201,7 +197,6 @@ int db_calculate_quotum_all()
 int db_calculate_quotum_used(u64_t user_idnr)
 {
     u64_t quotum = 0;
-    char *query_result = (char *) NULL;
 
     snprintf(query, DEF_QUERYSIZE, "SELECT SUM(pm.messagesize) "
 	     "FROM physmessage pm, messages m, mailboxes mb "
@@ -218,9 +213,7 @@ int db_calculate_quotum_used(u64_t user_idnr)
 	trace(TRACE_WARNING, "%s,%s: SUM did not give result, "
 	      "assuming empty mailbox", __FILE__, __FUNCTION__);
     else {
-	query_result = db_get_result(0, 0);
-	if (query_result)
-	    quotum = strtoull(query_result, NULL, 10);
+	quotum = db_get_result_u64(0, 0);
     }
     db_free_result();
     trace(TRACE_DEBUG, "%s, found quotum usage of [%llu] bytes",
@@ -241,7 +234,6 @@ int db_get_users_from_clientid(u64_t client_id, u64_t **user_ids,
 			       unsigned *num_users)
 {
 	unsigned i;
-	char *result_string;
 	
 	assert (user_ids != NULL);
 	assert (num_users != NULL);
@@ -263,9 +255,7 @@ int db_get_users_from_clientid(u64_t client_id, u64_t **user_ids,
 		return -2;
 	}
 	for (i = 0; i < *num_users; i++) {
-		result_string = db_get_result(i, 0);
-		(*user_ids)[i] = result_string ? 
-			strtoull(result_string, NULL, 10) : 0;
+		(*user_ids)[i] = db_get_result_u64(i, 0);
 	}
 	db_free_result();
 	return 1;
@@ -297,6 +287,7 @@ char *db_get_deliver_from_alias(const char *alias)
 	return NULL;
     }
 
+    /* FIXME: Why not just use a strdup() here? */
     if (!(deliver = (char *) my_malloc(strlen(query_result) + 1))) {
 	trace(TRACE_ERROR, "%s,%s: out of mem", __FILE__, __FUNCTION__);
 	db_free_result();
@@ -433,6 +424,7 @@ int db_get_notify_address(u64_t user_idnr, char **notify_address)
     if (db_num_rows() > 0) {
 	query_result = db_get_result(0, 0);
 	if (query_result && strlen(query_result) > 0) {
+            /* FIXME: Why not just use a strdup() here? */
 	    if (!
 		(*notify_address =
 		 (char *) my_malloc(strlen(query_result) + 1))) {
@@ -467,6 +459,7 @@ int db_get_reply_body(u64_t user_idnr, char **reply_body)
     if (db_num_rows() > 0) {
 	query_result = db_get_result(0, 0);
 	if (query_result && strlen(query_result) > 0) {
+            /* FIXME: Why not just use a strdup() here? */
 	    if (!
 		(*reply_body =
 		 (char *) my_malloc(strlen(query_result) + 1))) {
@@ -487,7 +480,6 @@ int db_get_reply_body(u64_t user_idnr, char **reply_body)
 
 u64_t db_get_mailbox_from_message(u64_t message_idnr)
 {
-     char *result_string;
      u64_t mailbox_idnr;
 
      snprintf(query, DEF_QUERYSIZE,
@@ -506,8 +498,7 @@ u64_t db_get_mailbox_from_message(u64_t message_idnr)
 	  db_free_result();
 	  return 0;
      }
-     result_string = db_get_result(0, 0);
-     mailbox_idnr = (result_string) ? strtoull(result_string, NULL, 10) : 0;
+     mailbox_idnr = db_get_result_u64(0, 0);
      db_free_result();
      return mailbox_idnr;
 }
@@ -535,7 +526,7 @@ u64_t db_get_useridnr(u64_t message_idnr)
 	return 0;
     }
     query_result = db_get_result(0, 0);
-    user_idnr = (query_result) ? strtoull(query_result, NULL, 10) : 0;
+    user_idnr = db_get_result_u64(0, 0);
     db_free_result();
     return user_idnr;
 }
@@ -721,7 +712,6 @@ int db_update_message_multiple(const char *unique_id, u64_t message_size,
     u64_t *uids;
     int n, i;
     char new_unique[UID_SIZE];
-    char *query_result;
 
     snprintf(query, DEF_QUERYSIZE,
 	     "SELECT message_idnr FROM messages WHERE "
@@ -747,9 +737,7 @@ int db_update_message_multiple(const char *unique_id, u64_t message_size,
     }
 
     for (i = 0; i < n; i++) {
-	query_result = db_get_result(i, 0);
-	uids[i] = (query_result && strlen(query_result)) ?
-	    strtoull(query_result, NULL, 10) : 0;
+	uids[i] = db_get_result_u64(i, 0);
     }
     db_free_result();
 
@@ -929,7 +917,7 @@ int db_rollback_insert(u64_t owner_idnr, const char *unique_id)
 	return 0;
     }
 
-    msgid = strtoull(db_get_result(0, 0), NULL, 10);
+    msgid = db_get_result_u64(0, 0);
     db_free_result();
 
     /* now just call db_delete_message to delete this message */
@@ -948,7 +936,6 @@ int db_rollback_insert(u64_t owner_idnr, const char *unique_id)
 int db_log_ip(const char *ip)
 {
     u64_t id = 0;
-    char *query_result;
 
     snprintf(query, DEF_QUERYSIZE,
 	     "SELECT idnr FROM pbsp WHERE ipnumber = '%s'", ip);
@@ -958,8 +945,7 @@ int db_log_ip(const char *ip)
 	return -1;
     }
 
-    query_result = db_get_result(0, 0);
-    id = query_result ? strtoull(query_result, NULL, 10) : 0;
+    id = db_get_result_u64(0, 0);
 
     db_free_result();
 
@@ -1015,7 +1001,6 @@ int db_empty_mailbox(u64_t user_idnr)
     u64_t *mboxids = NULL;
     unsigned n, i;
     int result = 0;
-    char *query_result;
 
     snprintf(query, DEF_QUERYSIZE,
 	     "SELECT mailbox_idnr FROM mailboxes WHERE owner_idnr='%llu'",
@@ -1044,8 +1029,7 @@ int db_empty_mailbox(u64_t user_idnr)
     }
 
     for (i = 0; i < n; i++) {
-	query_result = db_get_result(i, 0);
-	mboxids[i] = (query_result) ? strtoull(query_result, NULL, 10) : 0;
+	mboxids[i] = db_get_result_u64(i, 0);
     }
     db_free_result();
 
@@ -1094,6 +1078,7 @@ int db_icheck_messageblks(struct list *lost_list)
 	return 0;
     }
 
+    /* FIXME: this is actually properly designed... */
     for (i = 0; i < n; i++) {
 	query_result = db_get_result(i, 0);
 	if (query_result)
@@ -1143,6 +1128,7 @@ int db_icheck_messages(struct list *lost_list)
 	return 0;
     }
 
+    /* FIXME: this is actually properly designed... */
     for (i = 0; i < n; i++) {
 	query_result = db_get_result(i, 0);
 	if (query_result)
@@ -1192,6 +1178,7 @@ int db_icheck_mailboxes(struct list *lost_list)
 	return 0;
     }
 
+    /* FIXME: this is actually properly designed... */
     for (i = 0; i < n; i++) {
 	query_result = db_get_result(i, 0);
 	if (query_result)
@@ -1240,6 +1227,7 @@ int db_icheck_null_physmessages(struct list *lost_list)
 		return 0;
 	}
 
+        /* FIXME: this is actually properly designed... */
 	for (i = 0; i < n; i++) {
 		result_string = db_get_result(i, 0);
 		if (result_string)
@@ -1289,6 +1277,7 @@ int db_icheck_null_messages(struct list *lost_list)
 	return 0;
     }
 
+    /* FIXME: this is actually properly designed... */
     for (i = 0; i < n; i++) {
 	query_result = db_get_result(i, 0);
 	if (query_result)
@@ -1459,7 +1448,7 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty)
 	return -1;
     }
     for (i = 0; i < n; i++)
-	message_idnrs[i] = strtoull(db_get_result(0, 0), NULL, 10);
+	message_idnrs[i] = db_get_result_u64(0, 0);
     db_free_result();
     /* delete every message in the mailbox */
     for (i = 0; i < n; i++) {
@@ -1501,7 +1490,7 @@ int db_send_message_lines(void *fstream, u64_t message_idnr,
 	      __FILE__, __FUNCTION__);
 	return 0;
     }
-    physmessage_id = strtoull(db_get_result(0, 0), NULL, 10);
+    physmessage_id = db_get_result_u64(0, 0);
     db_free_result();
 
     memtst((buffer = (char *) my_malloc(WRITE_BUFFER_SIZE * 2)) == NULL);
@@ -1656,22 +1645,17 @@ int db_createsession(u64_t user_idnr, PopSession_t * session_ptr)
 	  __FUNCTION__);
     for (i = 0; i < db_num_rows(); i++) {
 	/* message size */
-	query_result = db_get_result(i, 0);
-	tmpmessage.msize =
-	    query_result ? strtoull(query_result, NULL, 10) : 0;
+	tmpmessage.msize = db_get_result_u64(i, 0);
 	/* real message id */
-	query_result = db_get_result(i, 1);
-	tmpmessage.realmessageid =
-	    query_result ? strtoull(query_result, NULL, 10) : 0;
+	tmpmessage.realmessageid = db_get_result_u64(i, 1);
 	/* message status */
-	query_result = db_get_result(i, 2);
-	tmpmessage.messagestatus =
-	    query_result ? strtoull(query_result, NULL, 10) : 0;
+	tmpmessage.messagestatus = db_get_result_u64(i, 2);
 	/* virtual message status */
 	tmpmessage.virtual_messagestatus = tmpmessage.messagestatus;
 	/* unique id */
 	query_result = db_get_result(i, 3);
-	strncpy(tmpmessage.uidl, query_result, UID_SIZE);
+	if (query_result)
+            strncpy(tmpmessage.uidl, query_result, UID_SIZE);
 
 	session_ptr->totalmessages++;
 	session_ptr->totalsize += tmpmessage.msize;
@@ -1807,7 +1791,7 @@ int db_deleted_purge(u64_t *affected_rows)
 
     /* delete each message */
     for (i = 0; i < *affected_rows; i++)
-	message_idnrs[i] = strtoull(db_get_result(i, 0), NULL, 10);
+	message_idnrs[i] = db_get_result_u64(i, 0);
     db_free_result();
     for (i = 0; i < *affected_rows; i++) {
 	if (db_delete_message(message_idnrs[i]) == -1) {
@@ -2085,8 +2069,6 @@ int db_findmailbox(const char *fq_name, u64_t user_idnr, u64_t *mailbox_idnr)
 int db_findmailbox_owner(const char *name, u64_t owner_idnr, 
 			 u64_t *mailbox_idnr)
 {
-    char *query_result;
-    
     assert(mailbox_idnr != NULL);
     *mailbox_idnr = 0;
 
@@ -2112,9 +2094,7 @@ int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 	    db_free_result();
 	    return 0;
     } else {
-	    query_result = db_get_result(0, 0);
-	    *mailbox_idnr = (query_result) ? 
-		    strtoull(query_result, NULL, 10) : 0;
+	    *mailbox_idnr = db_get_result_u64(0, 0);
 	    db_free_result();
     }
 
@@ -2128,9 +2108,8 @@ int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
 			       u64_t **mailboxes, unsigned int *nr_mailboxes)
 {
      unsigned int i;
-     u64_t *tmp;
+     u64_t *tmp_mailboxes;
      char *result_string;
-     char *owner_idnr_str;
      u64_t owner_idnr;
      char *mailbox_name;
 
@@ -2170,8 +2149,8 @@ int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
 	  db_free_result();
 	  return 0;
      }
-     tmp = (u64_t*) my_malloc (db_num_rows() * sizeof(u64_t));
-     if (!tmp) {
+     tmp_mailboxes = (u64_t*)my_malloc(db_num_rows() * sizeof(u64_t));
+     if (!tmp_mailboxes) {
 	  trace(TRACE_ERROR, "%s,%s: not enough memory\n",
 		__FILE__, __FUNCTION__);
 	  return (-2);
@@ -2179,8 +2158,7 @@ int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
      
      for (i = 0; i < (unsigned) db_num_rows(); i++) {
 	  result_string = db_get_result(i, 0);
-	  owner_idnr_str = db_get_result(i, 2);
-	  owner_idnr = owner_idnr_str ? strtoull(owner_idnr_str, NULL, 10): 0;
+	  owner_idnr = db_get_result_u64(i, 2);
 	  /* add possible namespace prefix to mailbox_name */
 	  mailbox_name = mailbox_add_namespace(result_string, owner_idnr,
 					       user_idnr);
@@ -2188,8 +2166,7 @@ int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
 		  trace(TRACE_DEBUG, "%s,%s: comparing mailbox [%s] to "
 			"regular expression", __FILE__, __FUNCTION__, mailbox_name);
 		  if (regexec(preg, mailbox_name, 0, NULL, 0) == 0) {
-			  tmp[*nr_mailboxes] = 
-				  strtoull(db_get_result(i, 1), NULL, 10);
+			  tmp_mailboxes[*nr_mailboxes] = db_get_result_u64(i, 1);
 			  (*nr_mailboxes)++;
 			  trace(TRACE_DEBUG, "%s,%s: regex match %s",
 				__FILE__, __FUNCTION__, mailbox_name);
@@ -2200,17 +2177,11 @@ int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
      db_free_result();
      if (*nr_mailboxes == 0) {
 	  /* none exist, none matched */
-	  my_free(tmp);
+	  my_free(tmp_mailboxes);
 	  return 0;
      }
 
-     *mailboxes = (u64_t*) realloc (tmp, *nr_mailboxes * sizeof(u64_t));
-     if (!*mailboxes) {
-	  trace(TRACE_ERROR, "%s,%s: realloc failed",
-		__FILE__, __FUNCTION__);
-	  my_free(tmp);
-	  return -2;
-     }
+     *mailboxes = tmp_mailboxes;
      
      return 1;
 }
@@ -2254,7 +2225,6 @@ int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern,
 
 int db_getmailbox(mailbox_t * mb)
 {
-    char *query_result;
     u64_t highest_id;
     unsigned i;
 
@@ -2296,7 +2266,7 @@ int db_getmailbox(mailbox_t * mb)
 	return -1;
     }
 
-    mb->permission = atoi(db_get_result(0, 0));
+    mb->permission = db_get_result_int(0, 0);
 
     if (db_get_result(0, 1))
 	mb->flags |= IMAPFLAG_SEEN;
@@ -2342,7 +2312,7 @@ int db_getmailbox(mailbox_t * mb)
 	if (db_get_result(i, 2)[0] == '1')
 	    mb->recent++;
 
-	mb->seq_list[i] = strtoull(db_get_result(i, 0), NULL, 10);
+	mb->seq_list[i] = db_get_result_u64(i, 0);
     }
 
     db_free_result();
@@ -2363,8 +2333,7 @@ int db_getmailbox(mailbox_t * mb)
 	return -1;
     }
 
-    query_result = db_get_result(0, 0);
-    highest_id = (query_result) ? strtoull(query_result, NULL, 10) : 0;
+    highest_id = db_get_result_u64(0, 0);
     mb->msguidnext = highest_id + 1;
     db_free_result();
 
@@ -2499,7 +2468,7 @@ int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
     }
 
     for (i = 0; i < *nchildren; i++) {
-	(*children)[i] = strtoull(db_get_result(i, 0), NULL, 10);
+	(*children)[i] = db_get_result_u64(i, 0);
     }
 
     db_free_result();
@@ -2535,6 +2504,7 @@ int db_isselectable(u64_t mailbox_idnr)
 	return -1;
     }
 
+    /* FIXME: figure this one out... */
     query_result = db_get_result(0, 0);
 
     if (!query_result) {
@@ -2566,6 +2536,7 @@ int db_noinferiors(u64_t mailbox_idnr)
 	return -1;
     }
 
+    /* FIXME: figure this one out... */
     query_result = db_get_result(0, 0);
 
     if (!query_result) {
@@ -2650,6 +2621,7 @@ int db_get_message_size(u64_t message_idnr, u64_t *message_size)
 	  return -1;
      }
      
+     /* FIXME: figure this one out... */
      result_string = db_get_result(0, 0);
      if (result_string)
 	  *message_size = strtoull(result_string, NULL, 10);
@@ -2730,10 +2702,10 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr,
 	      "answered_flag, deleted_flag, flagged_flag, recent_flag, "
 	     "draft_flag, unique_id, status) VALUES "
 	      "('%llu', '%s', '%s', '%s', '%s', "
-	      "'%s', '%s', '%s', 'dummy', '%s')",
+	      "'%s', '1', '%s', 'dummy', '%s')",
 	      mailbox_to, db_get_result(0, 0), db_get_result(0, 1), 
 	      db_get_result(0, 2), db_get_result(0, 3), db_get_result(0, 4), 
-	      db_get_result(0, 5), db_get_result(0, 6), db_get_result(0,7));
+	      db_get_result(0, 6), db_get_result(0,7));
      
      db_free_result();
      if (db_query(query) == -1) {
@@ -2797,6 +2769,7 @@ int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name)
 		return 0;
 	}
 
+        /* FIXME: isn't this just a stdup()??? */
 	query_result = db_get_result(0, 0);
 	if (!query_result) {
 		/* empty set, mailbox does not exist */
@@ -2850,7 +2823,6 @@ int db_setmailboxname(u64_t mailbox_idnr, const char *name)
 int db_expunge(u64_t mailbox_idnr, u64_t ** msg_idnrs, u64_t * nmsgs)
 {
     u64_t i;
-    char *query_result;
 
     if (nmsgs && msg_idnrs) {
 	/* first select msg UIDs */
@@ -2880,9 +2852,7 @@ int db_expunge(u64_t mailbox_idnr, u64_t ** msg_idnrs, u64_t * nmsgs)
 
 	/* save ID's in array */
 	for (i = 0; i < *nmsgs; i++) {
-	    query_result = db_get_result(i, 0);
-	    (*msg_idnrs)[i] =
-		query_result ? strtoull(query_result, NULL, 10) : 0;
+	    (*msg_idnrs)[i] = db_get_result_u64(i, 0);
 	}
 	db_free_result();
     }
@@ -2915,7 +2885,6 @@ int db_expunge(u64_t mailbox_idnr, u64_t ** msg_idnrs, u64_t * nmsgs)
 u64_t db_first_unseen(u64_t mailbox_idnr)
 {
     u64_t id;
-    char *query_result;
 
     snprintf(query, DEF_QUERYSIZE,
 	     "SELECT MIN(message_idnr) FROM messages "
@@ -2929,12 +2898,8 @@ u64_t db_first_unseen(u64_t mailbox_idnr)
 	return (u64_t) (-1);
     }
 
-    if (db_num_rows() < 1) {
-	 id = 0;
-    } else {
-	 query_result = db_get_result(0, 0);
-	 id = (query_result) ? strtoull(query_result, NULL, 10): 0;
-    }
+    id = db_get_result_u64(0, 0);
+
     db_free_result();
     return id;
 }
@@ -2993,8 +2958,7 @@ int db_get_msgflag(const char *flag_name, u64_t msg_idnr,
 		   u64_t mailbox_idnr)
 {
     char the_flag_name[DEF_QUERYSIZE / 2];	/* should be sufficient ;) */
-    long val = 0;
-    char *query_result;
+    int val;
 
     /* determine flag */
     if (strcasecmp(flag_name, "seen") == 0)
@@ -3025,24 +2989,15 @@ int db_get_msgflag(const char *flag_name, u64_t msg_idnr,
 	return (-1);
     }
 
-    if (db_num_rows() < 1)
-	val = 0;
-    else {
-	query_result = db_get_result(0, 0);
-	if (query_result)
-	    val = strtol(query_result, NULL, 10);
-	else
-	    val = 0;
-    }
+    val = db_get_result_int(0, 0);
 
     db_free_result();
-    return (int) val;
+    return val;
 }
 
 int db_get_msgflag_all(u64_t msg_idnr, u64_t mailbox_idnr, int *flags)
 {
     int i;
-    char *query_result;
 
     memset(flags, 0, sizeof(int) * IMAP_NFLAGS);
 
@@ -3060,9 +3015,7 @@ int db_get_msgflag_all(u64_t msg_idnr, u64_t mailbox_idnr, int *flags)
 
     if (db_num_rows() > 0) {
 	for (i = 0; i < IMAP_NFLAGS; i++) {
-	    query_result = db_get_result(0, i);
-	    if (query_result && query_result[0] != '0')
-		flags[i] = 1;
+            flags[i] = db_get_result_bool(0, i);
 	}
     }
     db_free_result();
@@ -3194,7 +3147,7 @@ int db_set_rfcsize(u64_t rfcsize, u64_t msg_idnr, u64_t mailbox_idnr)
 	return 0;
     }
 
-    physmessage_id = strtoull(db_get_result(0, 0), NULL, 10);
+    physmessage_id = db_get_result_u64(0, 0);
 
     snprintf(query, DEF_QUERYSIZE,
 	     "UPDATE physmessage SET rfcsize = '%llu' "
@@ -3210,8 +3163,6 @@ int db_set_rfcsize(u64_t rfcsize, u64_t msg_idnr, u64_t mailbox_idnr)
 
 int db_get_rfcsize(u64_t msg_idnr, u64_t mailbox_idnr, u64_t *rfc_size)
 {
-    char *query_result;
-
     assert(rfc_size != NULL);
     *rfc_size = 0;
 
@@ -3236,11 +3187,7 @@ int db_get_rfcsize(u64_t msg_idnr, u64_t mailbox_idnr, u64_t *rfc_size)
 	return -1;
     }
 
-    query_result = db_get_result(0, 0);
-    if (query_result)
-	 *rfc_size = strtoull(query_result, NULL, 10);
-    else
-	 *rfc_size = 0;
+    *rfc_size = db_get_result_u64(0, 0);
     
     db_free_result();
     return 1;
@@ -3290,9 +3237,7 @@ int db_get_msginfo_range(u64_t msg_idnr_low, u64_t msg_idnr_high,
     for (i = 0; i < nrows; i++) {
 	if (get_flags) {
 	    for (j = 0; j < IMAP_NFLAGS; j++) {
-		query_result = db_get_result(i, j);
-		(*result)[i].flags[j] =
-		     (query_result && query_result[0] != '0') ? 1 : 0;
+		(*result)[i].flags[j] = db_get_result_bool(i, j);
 	    }
 	}
 
@@ -3303,14 +3248,10 @@ int db_get_msginfo_range(u64_t msg_idnr_low, u64_t msg_idnr_high,
 		    IMAP_INTERNALDATE_LEN);
 	}
 	if (get_rfcsize) {
-	    query_result = db_get_result(i, IMAP_NFLAGS + 1);
-	    (*result)[i].rfcsize =
-		(query_result) ? strtoull(query_result, NULL, 10) : 0;
+	    (*result)[i].rfcsize = db_get_result_u64(i, IMAP_NFLAGS + 1);
 	}
 	if (get_msg_idnr) {
-	    query_result = db_get_result(i, IMAP_NFLAGS + 2);
-	    (*result)[i].uid =
-		(query_result) ? strtoull(query_result, NULL, 10) : 0;
+	    (*result)[i].uid = db_get_result_u64(i, IMAP_NFLAGS + 2);
 	}
     }
     db_free_result();
@@ -3439,9 +3380,8 @@ int db_get_user_aliases(u64_t user_idnr, struct list *aliases)
     n = db_num_rows();
     for (i = 0; i < n; i++) {
 	query_result = db_get_result(i, 0);
-	if (!
-	    (list_nodeadd
-	     (aliases, query_result, strlen(query_result) + 1))) {
+	if (!query_result || !list_nodeadd(aliases,
+                                query_result, strlen(query_result) + 1) ) {
 	    list_freelist(&aliases->start);
 	    db_free_result();
 	    return -2;
@@ -3630,8 +3570,8 @@ int db_acl_get_identifier(u64_t mboxid, struct list *identifier_list)
 		result_string = db_get_result(i, 0);
 		trace(TRACE_DEBUG, "%s,%s: adding %s to identifier list",
 		      __FILE__, __FUNCTION__, result_string);
-		if (!list_nodeadd(identifier_list,
-				  result_string, strlen(result_string) + 1)) {
+		if (!result_string || !list_nodeadd(identifier_list,
+                                        result_string, strlen(result_string) + 1)) {
 			db_free_result();
 			return -2;
 		}
@@ -3642,8 +3582,6 @@ int db_acl_get_identifier(u64_t mboxid, struct list *identifier_list)
 
 int db_get_mailbox_owner(u64_t mboxid, u64_t *owner_id)
 {
-	char *result_string;
-       
 	assert(owner_id != NULL);
 
 	snprintf(query, DEF_QUERYSIZE,
@@ -3656,19 +3594,12 @@ int db_get_mailbox_owner(u64_t mboxid, u64_t *owner_id)
 		return -1;
 	}
 	
-	if (db_num_rows() == 0) {
-		db_free_result();
+	*owner_id = db_get_result_u64(0, 0);
+	db_free_result();
+	if (*owner_id == 0)
 		return 0;
-	} else {
-		result_string = db_get_result(0, 0);
-		*owner_id = result_string ? strtoull(result_string, NULL, 10):
-			0;
-		db_free_result();
-		if (*owner_id == 0)
-			return 0;
-		else
-			return 1;
-	}
+	else
+		return 1;
 }
 
 int db_user_is_mailbox_owner(u64_t userid, u64_t mboxid) 
@@ -3696,3 +3627,30 @@ int db_user_is_mailbox_owner(u64_t userid, u64_t mboxid)
 	db_free_result();
 	return result;
 }
+
+/* db_get_result_* Utility Function Annex.
+ * These are variants of the db_get_result function that
+ * appears in the low level database driver. Each of these
+ * encapsulates some value checking and type conversion. */
+
+int db_get_result_int(unsigned row, unsigned field)
+{
+	char *tmp;
+	tmp = db_get_result(row, field);
+	return ( tmp ? atoi(tmp) : 0 );
+}
+
+int db_get_result_bool(unsigned row, unsigned field)
+{
+	char *tmp;
+	tmp = db_get_result(row, field);
+	return ( tmp ? ( atoi(tmp) ? 1 : 0 ) : 0 );
+}
+
+u64_t db_get_result_u64(unsigned row, unsigned field)
+{
+	char *tmp;
+	tmp = db_get_result(row, field);
+	return ( tmp ? strtoull(tmp, NULL, 10) : 0 );
+}
+

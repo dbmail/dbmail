@@ -393,7 +393,7 @@ if test -n "$CC"
 then
   if test "$GCC" = "yes"
   then
-    ac_compile_warnings_opt='-W -Wall -Wpointer-arith -Wstrict-prototypes -O2'
+    ac_compile_warnings_opt='-W -Wall -Wpointer-arith -Wstrict-prototypes'
   fi
   CFLAGS="$CFLAGS $ac_compile_warnings_opt"
   ac_compile_warnings_msg="$ac_compile_warnings_msg $ac_compile_warnings_opt for C"

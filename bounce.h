@@ -61,7 +61,6 @@ typedef enum {
  * not checked, which should be done to make sure only valid data is sent
  * to the shell.
  */
-int bounce (char *header, char *destination_address,
-	    bounce_reason_t reason);
+int bounce(const char *header, const char *destination_address, bounce_reason_t reason);
 
 #endif

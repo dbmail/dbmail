@@ -207,7 +207,7 @@ int mime_list(char *blkdata, struct list *mimelist)
 int mime_readheader(char *blkdata, u64_t *blkidx, struct list *mimelist, u64_t *headersize)
 {
   int valid_mime_lines=0,idx,totallines=0,j;
-  size_t fieldlen, vallen;
+  int fieldlen, vallen;
   size_t prevlen=0,new_add=1;
 /*  u64_t saved_idx = *blkidx; only needed if we bail out on invalid data */
 	
@@ -461,36 +461,21 @@ void mime_findfield(const char *fname, struct list *mimelist, struct mime_record
 
   *mr = NULL;
 }
-      
-  
 
-int mail_adr_list_special(int offset, int max, char *address_array[], struct list *users) 
-{
-  int mycount;
 
-  trace (TRACE_INFO,"mail_adr_list_special(): gathering info from command line");
-  for (mycount=offset;mycount!=max; mycount++)
-    {
-      trace(TRACE_DEBUG,"mail_adr_list_special(): adding [%s] to userlist",address_array[mycount]);
-      memtst((list_nodeadd(users,address_array[mycount],(strlen(address_array[mycount])+1)))==NULL);
-    }
-  return mycount;
-}
-
-  
 int mail_adr_list(char *scan_for_field, struct list *targetlist, struct list *mimelist)
 {
   struct element *raw;
   struct mime_record *mr;
   char *tmpvalue, *ptr,*tmp;
 
-  trace (TRACE_DEBUG,"mail_adr_list(): mimelist currently has [%d] nodes",mimelist->total_nodes);
-
-  if (!mimelist)
+  if (!scan_for_field || !targetlist || !mimelist)
     {
-      trace(TRACE_ERROR, "mail_adr_list(): got NULL for mimelist\n");
+      trace(TRACE_ERROR, "mail_adr_list(): received a NULL argument\n");
       return -1;
     }
+
+  trace (TRACE_DEBUG,"mail_adr_list(): mimelist currently has [%d] nodes",mimelist->total_nodes);
 
   memtst((tmpvalue=(char *)calloc(MIME_VALUE_MAX,sizeof(char)))==NULL);
 

@@ -26,7 +26,7 @@ bin_SCRIPTS = install-dbmail.sh
 
 COMMON = config.c debug.c list.c dbmd5.c md5.c db.c misc.c mime.c
 SERVER = server.c serverchild.c
-DELIVER = header.c pipe.c bounce.c forward.c 
+DELIVER = header.c pipe.c bounce.c forward.c dsn.c
 
 # CFLAGS
 AM_CFLAGS = -fomit-frame-pointer
@@ -39,8 +39,7 @@ dbmail_pop3d_SOURCES = $(COMMON) $(SERVER) pop3.c pop3d.c
 dbmail_pop3d_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
 dbmail_imapd_SOURCES = $(COMMON) $(SERVER) quota.c imap4.c imaputil.c imapcommands.c memblock.c rfcmsg.c imapd.c dbsearch.c dbmsgbuf.c acl.c
-dbmail_imapd_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@
-dbmail_imapd_LDFLAGS = @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_imapd_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
 dbmail_maintenance_SOURCES = $(COMMON) maintenance.c
 dbmail_maintenance_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@

@@ -16,7 +16,7 @@
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 if MYSQL
-AM_CFLAGS = @MYSQLINC@
+AM_CFLAGS = @MYSQLINC@ -fomit-frame-pointer
 
 lib_LIBRARIES = libmysqldbmail.a
 

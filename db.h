@@ -112,15 +112,30 @@ unsigned db_num_fields(void);
  */
 void db_free_result(void);
 
-/**
+/** \defgroup db_get_result_group Variations of db_get_result()
  * \brief get a single result field row from the result set
  * \param row result row to get it from
  * \param field field (=column) to get result from
  * \return
- *     - string holding result. 
+ *     - pointer to string holding result. 
  *     - NULL if no such result
  */
 char *db_get_result(unsigned row, unsigned field);
+
+/** \ingroup db_get_result_group
+ * \brief Returns the result as an Integer
+ */
+int db_get_result_int(unsigned row, unsigned field);
+
+/** \ingroup db_get_result_group
+ * \brief Returns the result as an Integer from 0 to 1
+ */
+int db_get_result_bool(unsigned row, unsigned field);
+
+/** \ingroup db_get_result_group
+ * \brief Returns the result as an Unsigned 64 bit Integer
+ */
+u64_t db_get_result_u64(unsigned row, unsigned field);
 
 /**
  * \brief return the ID generated for an AUTO_INCREMENT column

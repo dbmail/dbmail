@@ -1,3 +1,16 @@
+2004-03-01  Ilja Booij  <ilja@ic-s.nl>
+
+	* db.c (db_copymsg): always set Recent flag of new message to '1'. The
+	RFC states that this should always be the case.
+
+2004-02-26  Ilja Booij  <ilja@ic-s.nl>
+
+	* sql/mysql/create_tables_innoDB.mysql: removed a comma after the
+	last directive in a table.
+
+	* bounce.c (bounce): fixed a type which caused crashes when doing a
+	trace.
+
 2004-02-24  Ilja Booij  <ilja@ic-s.nl>
 
 	* pipe.c (store_message_temp): change made by Chingson Chen 

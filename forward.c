@@ -47,7 +47,7 @@ extern struct list smtpItems;
  * FIXME: there is no detail in the error reporting,
  * so there's no way to tell *which* targets failed...
  * */
-int forward(u64_t msgidnr, struct list *targets, char *from, char *header, u64_t headersize)
+int forward(u64_t msgidnr, struct list *targets, const char *from, const char *header, u64_t headersize UNUSED)
 {
 
   struct element *target=NULL;
