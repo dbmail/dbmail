@@ -1,3 +1,8 @@
+2004-09-03  Ilja Booij  <ilja@ic-s.nl>
+
+	* sql/, all database creation and migration scripts: added 'anyone'
+	in dbmail_users table for ACL handling.
+
 2004-09-01  Aaron Stone  <aaron@serendipity.cx>
 
 	* user.c: changed cleartext -> plaintext in the syntax help.

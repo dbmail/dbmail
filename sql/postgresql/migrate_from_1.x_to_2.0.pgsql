@@ -222,6 +222,9 @@ CREATE INDEX dbmail_idx_since ON dbmail_pbsp(since);
 --- Create the user for the delivery chain:
 INSERT INTO dbmail_users (userid, passwd, encryption_type)
 	VALUES ('__@!internal_delivery_user!@__', '', 'md5');
+# insert the 'anyone' user which is used for ACLs.
+INSERT INTO dbmail_users (userid, passwd, encryption_type)
+	VALUES ('anyone', '', 'md5');
 
 -- All users must have the right value for the curmail_size:
 UPDATE dbmail_users SET curmail_size = (
