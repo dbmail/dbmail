@@ -15,7 +15,10 @@
 default_location_mysql_h="/usr/include/mysql/"
 default_location_libmysqlclient_so="/usr/lib/"
 
-echo "*** MYSQL SETTINGS ***"
+echo
+echo "Dbmail compile configurator" 
+echo
+echo "MySQL settings.."
 echo -n "Where can we find mysql.h? [default: $default_location_mysql_h] "
 read location_mysql_h
 
