@@ -3189,6 +3189,7 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
     return -1;   /* error reading header */
 
   db_give_msgpos(&msg->bodystart);
+  msg->rfcheaderlines = hdrlines;
 
   mime_findfield("content-type", &msg->rfcheader, &mr);
   if (mr && strncasecmp(mr->value,"multipart", strlen("multipart")) == 0)
@@ -3268,18 +3269,20 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
       if (stopbound)
 	{
 	  sblen = strlen(stopbound);
-	  msgidx += (2+sblen); /* double hypen preceeds */
+	  msgidx += (2+sblen); /* double hyphen preceeds */
 	}
 
       free(newbound);
-      if (msgidx == buflen)
+      if (msgidx > 0)
 	{
+	  /* walk back because bodyend is inclusive */
 	  msgidx--;
 	  db_give_msgpos(&msg->bodyend);
 	  msgidx++;
 	}
       else
-	db_give_msgpos(&msg->bodyend);
+	db_give_msgpos(&msg->bodyend); /* this case should never happen... */
+
 
       msg->bodysize = db_give_range_size(&msg->bodystart, &msg->bodyend);
       msg->bodylines = totallines;

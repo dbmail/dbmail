@@ -116,7 +116,8 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg, int show_extension_
 
       /* now output size */
       /* add msg->bodylines because \n is dumped as \r\n */
-      fprintf(outstream, " %lu ", msg->bodysize + msg->bodylines ); 
+      fprintf(outstream, " %lu ", msg->bodysize + msg->bodylines + msg->rfcheadersize 
+	      - msg->rfcheaderlines); 
 
 
       /* now check special cases, first case: message/rfc822 */
@@ -782,7 +783,8 @@ int next_fetch_item(char **args, int idx, fetch_items_t *fi)
 			}
 		    }
 	      
-		  if (invalidargs || delimpos == -1 || delimpos == 1 || delimpos == (strlen(args[idx])-2) )
+		  if (invalidargs || delimpos == -1 || delimpos == 1 || 
+		      delimpos == (strlen(args[idx])-2) )
 		    return -2;  /* no delimiter found or at first/last pos OR invalid args DONE */
 
 		  /* read the numbers */

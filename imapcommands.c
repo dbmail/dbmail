@@ -1615,7 +1615,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
   int i,fetch_start,fetch_end,result,setseen,j,k;
-  int isfirstout,idx,uid_will_be_fetched;
+  int isfirstout,idx,uid_will_be_fetched,fn;
   int partspeclen,only_text_from_msgpart = 0;
   int bad_response_send = 0,actual_cnt;
   fetch_items_t *fi,fetchitem;
@@ -1769,11 +1769,12 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		}
 
 	      /* check if the message with this UID belongs to this mailbox */
-	      if (!db_mailbox_msg_match(ud->mailbox.uid, thisnum))
-		continue;
+	      fn = binary_search(ud->mailbox.seq_list, ud->mailbox.exists, i);
+	      if (fn == -1)
+		continue; 
 
-	      fprintf(ci->tx,"* %d FETCH (", 
-		      binary_search(ud->mailbox.seq_list, ud->mailbox.exists, i)+1);
+	      fprintf(ci->tx,"* %d FETCH (", fn+1);
+		      
 	    }
 	  else
 	    fprintf(ci->tx,"* %d FETCH (",i+1);
@@ -2072,11 +2073,47 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			  
 		  switch (fi->bodyfetch.itemtype)
 		    {
-		    case BFIT_TEXT:
-		      fprintf(ci->tx, "TEXT");
-
 		    case BFIT_TEXT_SILENT:
+		      if (!msgpart)
+			fprintf(ci->tx, "] NIL ");
+		      else
+			{
+			  tmpdumpsize = rfcheader_dump(cached_msg.tmpdump, &msgpart->rfcheader, 
+					 args, 0, 0);
+
+			  tmpdumpsize += 
+			    db_dump_range(cached_msg.tmpdump, msgpart->bodystart, msgpart->bodyend,
+			    thisnum);
+
+			  if (fi->bodyfetch.octetstart >= 0)
+			    {
+			      cnt = tmpdumpsize - fi->bodyfetch.octetstart;
+			      if (cnt<0) cnt = 0;
+			      if (cnt > fi->bodyfetch.octetcnt) cnt = fi->bodyfetch.octetcnt;
+ 
+			      fprintf(ci->tx, "]<%u> {%ld}\r\n",
+				      fi->bodyfetch.octetstart, cnt);
+			      
+			      fseek(cached_msg.tmpdump, fi->bodyfetch.octetstart, SEEK_SET);
+			    }
+			  else
+			    {
+			      cnt = tmpdumpsize;
+			      fprintf(ci->tx, "] {%ld}\r\n", tmpdumpsize);
+			      fseek(cached_msg.tmpdump, 0, SEEK_SET);
+			    }
+
+			  /* output data */
+			  while (cnt--)
+			    fputc(fgetc(cached_msg.tmpdump), ci->tx);
+
+			}
+		      break;
+
+
+		    case BFIT_TEXT:
 		      /* dump body text */
+		      fprintf(ci->tx, "TEXT");
 		      if (!msgpart)
 			fprintf(ci->tx, "] NIL ");
 		      else

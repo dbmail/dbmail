@@ -105,6 +105,7 @@ typedef struct
   unsigned long bodylines;
   unsigned long rfcheadersize;         
   struct list children;             /* the children (multipart msg) */
+  unsigned long rfcheaderlines;
 } mime_message_t;
 
  
