@@ -42,7 +42,7 @@ db_param_t _db_params;
 
 /* native format is the character string */
 const char *TO_CHAR = "%s";
-const char *TO_DATE = "%s";
+const char *TO_DATE = "'%s'";
 
 const char *SQL_CURRENT_TIMESTAMP = "CURRENT_TIMESTAMP()";
 
