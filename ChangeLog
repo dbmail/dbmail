@@ -1,3 +1,8 @@
+2005-01-19  Ilja Booij  <ilja@ic-s.nl>
+
+	* INSTALL.postfix: updated information, mainly for Postfix 2.0
+	users.
+
 2005-01-18  Aaron Stone  <aaron@serendipity.cx>
 
 	* user.c (do_show): return -1 if userspec is neither a user nor an
