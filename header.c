@@ -69,7 +69,8 @@ int read_header(FILE *instream, u64_t *newlines, u64_t *headersize, char **heade
   while (!feof(instream) && !myeof)
     {
       /* fgets will read until \n occurs, and \n is *included* in tmpline */
-      tmpline = fgets (tmpline, MAX_LINE_SIZE, instream);
+	    if (!fgets(tmpline, MAX_LINE_SIZE, instream))
+		    break;
       linemem = strlen(tmpline);
       (*headersize) += linemem;
       (*newlines)++;
