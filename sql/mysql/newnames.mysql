@@ -1,5 +1,8 @@
 USE dbmail;
 
+# alter wrong def in alias table
+ALTER TABLE aliases CHANGE client_id client_id BIGINT(21) NOT NULL DEFAULT '0';
+
 # alter user table
 
 ALTER TABLE user CHANGE useridnr user_idnr BIGINT(21) NOT NULL AUTO_INCREMENT;
