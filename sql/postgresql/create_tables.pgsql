@@ -23,7 +23,7 @@ CREATE TABLE users (
    client_idnr INT8 DEFAULT '0' NOT NULL,
    maxmail_size INT8 DEFAULT '0' NOT NULL,
    encryption_type VARCHAR(20) DEFAULT '' NOT NULL,
-   last_login DATETIME DEFAULT '1979-11-03 22:05:58' NOT NULL,
+   last_login TIMESTAMP DEFAULT '1979-11-03 22:05:58' NOT NULL,
    PRIMARY KEY (user_idnr)
 );
 CREATE UNIQUE INDEX users_id_idx ON users (user_idnr);
@@ -63,7 +63,7 @@ CREATE TABLE messages (
    recent_flag INT2 DEFAULT '0' NOT NULL,
    draft_flag INT2 DEFAULT '0' NOT NULL,
    unique_id varchar(70) NOT NULL,
-   internal_date DATETIME,
+   internal_date TIMESTAMP,
    status INT2 DEFAULT '000' NOT NULL,
    rfcsize INT8 DEFAULT '0' NOT NULL,
    PRIMARY KEY (message_idnr)

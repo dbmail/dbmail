@@ -11,7 +11,8 @@
 #include "clientinfo.h"
 
 #define IMAP_SERVER_VERSION "0.9"
-#define IMAP_CAPABILITY_STRING "IMAP4 IMAP4rev1 AUTH=LOGIN QUOTA"
+//#define IMAP_CAPABILITY_STRING "IMAP4 IMAP4rev1 AUTH=LOGIN QUOTA"
+#define IMAP_CAPABILITY_STRING "IMAP4 IMAP4rev1 AUTH=LOGIN"
 #define IMAP_TIMEOUT_MSG "* BYE dbmail IMAP4 server signing off due to timeout\r\n"
 
 /* max number of BAD/NO responses */
