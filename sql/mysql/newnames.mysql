@@ -1,0 +1,21 @@
+# alter user table
+
+ALTER TABLE user CHANGE useridnr user_idnr BIGINT(21) NOT NULL AUTO_INCREMENT;
+ALTER TABLE user CHANGE clientid client_id BIGINT(21) NOT NULL DEFAULT '0';
+ALTER TABLE user RENAME users;
+
+
+# alter mailbox table
+ALTER TABLE mailbox CHANGE mailboxidnr mailbox_idnr BIGINT(21) DEFAULT '0' NOT NULL AUTO_INCREMENT;
+ALTER TABLE mailbox CHANGE owneridnr owner_idnr BIGINT(21) DEFAULT '0' NOT NULL;
+ALTER TABLE mailbox RENAME mailboxes;
+
+# alter message table
+ALTER TABLE message CHANGE messageidnr message_idnr BIGINT(21) DEFAULT '0' NOT NULL AUTO_INCREMENT;
+ALTER TABLE message CHANGE mailboxidnr mailbox_idnr BIGINT(21) DEFAULT '0' NOT NULL;
+ALTER TABLE message RENAME messages;
+
+# alter messageblk table
+ALTER TABLE messageblk CHANGE messageblknr messageblk_idnr BIGINT(21) DEFAULT '0' NOT NULL AUTO_INCREMENT;
+ALTER TABLE messageblk CHANGE messageidnr message_idnr BIGINT(21) DEFAULT '0' NOT NULL;
+ALTER TABLE messageblk RENAME messageblks;
