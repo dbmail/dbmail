@@ -11,6 +11,8 @@
         before the user is deleted; the prototype to the function now
         includes useridnr.
 	* maintenance.c: -q quiet flag is respected.
+	* auth/authsql.c: added escaping code for all SQL strings, and
+	suggest building a better framework for this in the future.
 
 2004-10-25  Paul Stevens <paul@nfg.nl>
 
