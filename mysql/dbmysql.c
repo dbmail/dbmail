@@ -234,6 +234,45 @@ u64_t db_get_quotum_used(u64_t userid)
 }
 
 
+/*
+ * db_get_user_from_alias()
+ * 
+ * looks up a user ID in the alias table
+ */
+u64_t db_get_user_from_alias(const char *alias)
+{
+  u64_t uid;
+
+  snprintf (query, DEF_QUERYSIZE,
+	    "SELECT deliver_to FROM aliases WHERE alias = '%s'", alias);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_get_user_from_alias(): could not execute query");
+      return -1;
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL) 
+    {
+      trace(TRACE_ERROR, "db_get_user_from_alias(): could not store query result");
+      return -1;
+    }
+
+  if (mysql_num_rows(res) == 0)
+    {
+      /* no such user */
+      mysql_free_result(res);
+      return 0;
+    }
+  
+  row = mysql_fetch_row(res);
+  uid = (row && row[0]) ? strtoull(row[0], NULL, 10) : 0;
+  mysql_free_result(res);
+
+  return uid;
+}
+
+
 /* 
  * adds an alias for a specific user 
  */
@@ -1692,6 +1731,22 @@ int db_imap_append_msg(char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid)
 }
 
 
+/*
+ * db_insert_message_complete()
+ *
+ * Inserts a complete message into the messages/messageblks tables.
+ *
+ * This function 'hacks' into the internal MEM structure for maximum speed.
+ * The MEM data is supposed to contain ESCAPED data so inserts can be done directly.
+ *
+ * returns -1 on failure, 0 on success
+ */
+int db_insert_message_complete(u64_t useridnr, MEM *hdr, MEM *body, 
+			       u64_t hdrsize, u64_t bodysize, u64_t rfcsize)
+
+{
+  return 0;
+}
 
 /*
  * db_findmailbox()

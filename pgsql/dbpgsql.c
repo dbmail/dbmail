@@ -129,7 +129,7 @@ int db_query (const char *thequery)
             }
 
 	  /* only save the result set for SELECT queries */
-	  if (strncasecmp(query, "SELECT", 6) != 0)
+	  if (strncasecmp(thequery, "SELECT", 6) != 0)
 	    {
 	      PQclear(res);
 	      res = NULL;
@@ -261,6 +261,38 @@ u64_t db_get_quotum_used(u64_t userid)
   return q;
 }
       
+
+/*
+ * db_get_user_from_alias()
+ *
+ * looks up a user ID in the alias table
+ */
+u64_t db_get_user_from_alias(const char *alias)
+{
+  u64_t uid;
+
+  snprintf (query, DEF_QUERYSIZE,
+	    "SELECT deliver_to FROM aliases WHERE alias = '%s'", alias);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_get_user_from_alias(): could not execute query");
+      return -1;
+    }
+
+  if (PQntuples(res) == 0)
+    {
+      /* no such user */
+      PQclear(res);
+      return 0;
+    }
+
+  uid = strtoull(PQgetvalue(res, 0, 0), NULL, 10);
+  PQclear(res);
+ 
+  return uid;
+}
+
 
 /* 
  * adds an alias for a specific user 
@@ -1613,6 +1645,52 @@ int db_imap_append_msg(char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid)
   /* set info on message */
   db_update_message (&msgid, unique_id, datalen);
 
+  return 0;
+}
+
+
+/*
+ * db_insert_message_complete()
+ *
+ * Inserts a complete message into the messages/messageblks tables.
+ *
+ * This function 'hacks' into the internal MEM structure for maximum speed.
+ * The MEM data is supposed to contain ESCAPED data so inserts can be done directly.
+ *
+ * returns -1 on failure, 0 on success
+ */
+int db_insert_message_complete(u64_t useridnr, MEM *hdr, MEM *body, 
+			       u64_t hdrsize, u64_t bodysize, u64_t rfcsize)
+{
+/*  u64_t msgid,mboxid;
+  u64_t total, passed;
+
+  mboxid = db_get_inboxid(&useridnr);
+  if (mboxid == 0 || mboxid == -1)
+    {
+      trace(TRACE_ERROR,"db_insert_message_complete(): could not find INBOX for user [%llu]", 
+	    useridnr);
+      return -1;
+    }
+
+  db_query("BEGIN WORK");
+
+  snprintf(query, DEF_QUERYSIZE, "INSERT INTO messages(mailbox_idnr,messagesize,unique_id,"
+	   "internal_date,recent_flag,rfcsize) VALUES (%llu,%llu,' ','%s',1,%llu)",
+	   mboxid, hdrsize+bodysize, rfcsize);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR,"db_insert_message_complete(): could not insert into messages");
+      db_query("ROLLBACK WORK");
+      return (-1);
+    }
+
+  msgid = db_insert_result("message_idnr");
+
+  snprintf(query, DEF_QUERYSIZE, "INSERT INTO messageblks(messageblk,blocksize,message_idnr)"
+	   "VALUES ('%s',%d,%llu)", 
+*/
   return 0;
 }
 

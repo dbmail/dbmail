@@ -9,7 +9,7 @@
 #ifndef _MEMBLOCK_H
 #define _MEMBLOCK_H
 
-#define _MEMBLOCK_SIZE (128ul*1024ul)
+#define _MEMBLOCK_SIZE (512ul*1024ul)
 
 struct memblock
 {

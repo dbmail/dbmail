@@ -102,6 +102,8 @@ int db_insert_config_item (char *item, char *val);
 
 u64_t db_get_quotum_used(u64_t userid);
 
+u64_t db_get_user_from_alias(const char *alias);
+
 int db_get_user_aliases(u64_t userid, struct list *aliases);
 int db_addalias(u64_t useridnr, char *alias, u64_t clientid);
 int db_addalias_ext(char *alias, char *deliver_to, u64_t clientid);
@@ -136,6 +138,9 @@ u64_t db_deleted_purge();
 u64_t db_check_sizelimit (u64_t addblocksize, u64_t messageidnr, 
 				  u64_t *useridnr);
 int db_imap_append_msg(char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid);
+
+int db_insert_message_complete(u64_t useridnr, MEM *hdr, MEM *body, 
+			       u64_t hdrsize, u64_t bodysize, u64_t rfcsize);
 
 
 /* mailbox functionality */

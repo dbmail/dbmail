@@ -90,7 +90,7 @@ int imap_login(ClientInfo *ci)
   if (!ci->userData)
     {
       /* out of mem */
-      trace(TRACE_ERROR,"IMAPD: not enough memory.");
+      trace(TRACE_ERROR,"imap_login(): not enough memory.");
       ci->loginStatus = SS_LOGIN_FAIL;
       return SS_LOGIN_FAIL;
     }
@@ -128,7 +128,7 @@ int imap_process(ClientInfo *ci)
   if (db_connect() != 0)
     {
       /* could not connect */
-      trace(TRACE_ERROR, "IMAPD: Connection to dbase failed.\n");
+      trace(TRACE_ERROR, "imap_process(): Connection to dbase failed.\n");
       fprintf(ci->tx, "* BAD could not connect to dbase\r\n");
       fprintf(ci->tx, "* BYE try again later\r\n");
 
@@ -138,7 +138,7 @@ int imap_process(ClientInfo *ci)
 
   if (init_cache() != 0)
     {
-      trace(TRACE_ERROR, "IMAPD: cannot open temporary file\n");
+      trace(TRACE_ERROR, "imap_process(): cannot open temporary file\n");
       fprintf(ci->tx, "* BYE internal system failure\r\n");
 
       null_free(ci->userData);
@@ -151,9 +151,18 @@ int imap_process(ClientInfo *ci)
 
   do
     {
+      if (nfaultyresponses >= MAX_FAULTY_RESPONSES)
+	{
+	  /* we have had just about it with this user */
+	  sleep(2); /* avoid DOS attacks */
+	  fprintf(ci->tx,"* BYE [TRY RFC]\r\n");
+	  done = 1;
+	  break;
+	}
+
       if (ferror(ci->rx))
 	{
-	  trace(TRACE_ERROR, "IMAPD: error [%s] on read-stream\n",strerror(errno));
+	  trace(TRACE_ERROR, "imap_process(): error [%s] on read-stream\n",strerror(errno));
 	  if (errno == EPIPE)
 	    {
 	      close_cache();
@@ -169,7 +178,7 @@ int imap_process(ClientInfo *ci)
 
       if (ferror(ci->tx))
 	{
-	  trace(TRACE_ERROR, "IMAPD: error [%s] on write-stream\n",strerror(errno));
+	  trace(TRACE_ERROR, "imap_process(): error [%s] on write-stream\n",strerror(errno));
 	  if (errno == EPIPE)
 	    {
 	      close_cache();
@@ -193,7 +202,7 @@ int imap_process(ClientInfo *ci)
       /* remove timeout handler */
       alarm(0); 
 
-      trace(TRACE_INFO,"IMAPD: line read for PID %d\n",getpid());
+      trace(TRACE_DEBUG,"imap_process(): line read for PID %d\n",getpid());
 
       if (!checkchars(line))
 	{
@@ -293,7 +302,7 @@ int imap_process(ClientInfo *ci)
 	  continue;
 	}
 
-      trace(TRACE_INFO, "IMAPD: Executing command %s...\n",IMAP_COMMANDS[i]);
+      trace(TRACE_INFO, "imap_process(): Executing command %s...\n",IMAP_COMMANDS[i]);
 
       /* check if mailbox status has changed (notify client) */
       if (ud->state == IMAPCS_SELECTED)
@@ -306,7 +315,7 @@ int imap_process(ClientInfo *ci)
 	  if (result == -1)
 	    {
 	      fprintf(ci->tx,"* BYE internal dbase error\r\n");
-	      trace(TRACE_ERROR, "IMAPD: could not get mailbox info\n");
+	      trace(TRACE_ERROR, "imap_process(): could not get mailbox info\n");
 	      
 	      close_cache();
 	      db_disconnect();
@@ -325,7 +334,7 @@ int imap_process(ClientInfo *ci)
 	  if (newmailbox.exists != ud->mailbox.exists)
 	    {
 	      fprintf(ci->tx, "* %u EXISTS\r\n", newmailbox.exists);
-	      trace(TRACE_INFO, "IMAPD: ok update sent\r\n");
+	      trace(TRACE_INFO, "imap_process(): ok update sent\r\n");
 	    }
 
 	  if (newmailbox.recent != ud->mailbox.recent)
@@ -346,13 +355,6 @@ int imap_process(ClientInfo *ci)
 	{
 	  /* server returned BAD or NO response */
 	  nfaultyresponses++;
-	  if (nfaultyresponses >= MAX_FAULTY_RESPONSES)
-	    {
-	      /* we have had just about it with this user */
-	      sleep(2); /* avoid DOS attacks */
-	      fprintf(ci->tx,"* BYE [TRY RFC]\r\n");
-	      done = 1;
-	    }
 	}
 
       if (result == 0 && i == IMAP_COMM_LOGOUT)
@@ -361,7 +363,7 @@ int imap_process(ClientInfo *ci)
 
       fflush(ci->tx); /* write! */
 
-      trace(TRACE_INFO, "IMAPD: Finished command %s\n",IMAP_COMMANDS[i]);
+      trace(TRACE_INFO, "imap_process(): Finished command %s\n",IMAP_COMMANDS[i]);
 
       for (i=0; args[i]; i++) 
 	{
@@ -379,7 +381,7 @@ int imap_process(ClientInfo *ci)
   null_free(ci->userData);
 
   fprintf(ci->tx,"%s OK completed\r\n",tag);
-  trace(TRACE_MESSAGE,"IMAPD: Closing connection for client from IP [%s]\n",ci->ip);
+  trace(TRACE_MESSAGE,"imap_process(): Closing connection for client from IP [%s]\n",ci->ip);
 
   __debug_dumpallocs(); 
 

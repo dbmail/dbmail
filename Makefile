@@ -21,6 +21,8 @@ CONFIG_OBJECTS = $(DBOBJECT) list.o md5.o debug.o dbmd5.o mime.o memblock.o $(AU
 USER_OBJECTS = debug.o list.o dbmd5.o md5.o $(DBOBJECT) mime.o memblock.o $(AUTHOBJECT)
 VUTCONV_OBJECTS = debug.o list.o dbmd5.o md5.o mime.o $(DBOBJECT) $(AUTHOBJECT)
 DBTEST_OBJECTS = debug.o list.o dbmd5.o md5.o mime.o $(DBOBJECT) $(AUTHOBJECT)
+REALSMTP_OBJECTS = smtp.o debug.o dbmd5.o md5.o list.o mime.o serverservice.o misc.o \
+smtpcommands.o memblock.o $(DBOBJECT) $(AUTHOBJECT)
 CC = cc
 
 PGSQLLIBDIR=/usr/local/pgsql/lib
@@ -36,7 +38,7 @@ CFLAGS = -Wall -ggdb -D_BSD_SOURCE -D_SVID_SOURCE
 
 .PHONY: clean install
 
-all: smtp pop3d maintenance config imapd user readvut mbox2dbmail
+all: smtp pop3d maintenance config imapd user readvut mbox2dbmail realsmtp
 
 smtp: config.h main.h $(SMTP_OBJECTS) main.c
 		$(CC)	$(CFLAGS) main.c -o dbmail-smtp $(SMTP_OBJECTS) $(LIBS) $(LIB)
@@ -59,6 +61,9 @@ user: user.h $(USER_OBJECTS) user.c
 readvut: db.h auth.h vut2dbmail.c $(VUTCONV_OBJECTS)
 	$(CC) $(CFLAGS) vut2dbmail.c -o dbmail-readvut $(VUTCONV_OBJECTS) $(LIBS) $(LIB)
 
+realsmtp: db.h smtp.h $(REALSMTP_OBJECTS) smtpd.c
+	$(CC) $(CFLAGS) smtpd.c -o dbmail-realsmtp $(REALSMTP_OBJECTS) $(LIBS) $(LIB)
+
 mbox2dbmail:	
 
 dbtest: $(DBTEST_OBJECTS) dbtest.c db.h
@@ -77,6 +82,8 @@ imap4.o: imap4.h db.h debug.h serverservice.h imaputil.h imapcommands.h
 imaputil.o: imaputil.h db.h memblock.h debug.h dbmailtypes.h
 imapcommands.o: imapcommands.h imaputil.h imap4.h db.h memblock.h debug.h dbmailtypes.h
 serverservice.o: serverservice.h debug.h
+smtp.o: smtp.h db.h debug.h serverservice.h smtpcommands.h memblock.h
+smtpcommands.o: smtpcommands.h db.h debug.h dbmailtypes.h memblock.h
 maintenance.o: maintenance.h debug.h
 settings.o: settings.h debug.h
 user.o: user.h debug.h

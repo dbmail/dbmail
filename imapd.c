@@ -117,7 +117,8 @@ int main()
 
   
   /* open socket */
-  sock = SS_MakeServerSock(bindip, port, atoi(defchld), atoi(maxchld), timeout);
+  sock = SS_MakeServerSock(bindip, port, atoi(defchld), atoi(maxchld), timeout,
+			   IMAP_TIMEOUT_MSG);
 
   my_free(port);
   my_free(bindip);

@@ -64,6 +64,8 @@ int *ss_n_default_children_used;
 void (*the_client_cleanup)(ClientInfo *ci);
 int server_timeout;
 
+/* the message displayed when closing a connection due to timeout */
+const char *ss_timeout_msg;
 
 /* transmit buffer */
 #define TXBUFSIZE 1024
@@ -79,7 +81,7 @@ void SS_sighandler(int sig, siginfo_t *info, void *data);
 
 
 int SS_MakeServerSock(const char *ipaddr, const char *port, int default_children, int max_children,
-		      int timeout)
+		      int timeout, const char *timeout_msg)
 {
   int sock,r,len;
   struct sockaddr_in saServer;
@@ -180,6 +182,7 @@ int SS_MakeServerSock(const char *ipaddr, const char *port, int default_children
 
   /* save timeout value */
   server_timeout = (timeout < SS_MINIMAL_TIMEOUT) ? SS_DEFAULT_TIMEOUT : timeout;
+  ss_timeout_msg = timeout_msg;
 
   snprintf(ss_error_msg,SS_ERROR_MSG_LEN,"Server socket has been created.\n");
   return sock;
@@ -348,8 +351,8 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 	      client.timeout = server_timeout; /* remember timeout */
 
 #if LOG_USERS > 0
-	      trace(TRACE_MESSAGE,"IMAPD [PID %d]: client @ socket %d (IP: %s) accepted\n",
-		    getpid(), csock, inet_ntoa(saClient.sin_addr));
+	      trace(TRACE_MESSAGE,"SS_WaitAndProcess(): client @ socket %d (IP: %s) accepted\n",
+		    csock, inet_ntoa(saClient.sin_addr));
 #endif
 
 	      if ((*Login)(&client) == SS_LOGIN_OK)
@@ -367,8 +370,8 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 		  close(csock);
 	  
 #if LOG_USERS > 0
-		  trace(TRACE_MESSAGE,"IMAPD [PID %d]: client @ socket %d (IP: %s) login refused, "
-			"connection closed\n",getpid(),
+		  trace(TRACE_MESSAGE,"SS_WaitAndProcess(): client @ socket %d (IP: %s) "
+			"login refused, connection closed\n",
 			csock, inet_ntoa(saClient.sin_addr));
 #endif
 		  continue;
@@ -378,16 +381,16 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 	      strncpy(client.ip, inet_ntoa(saClient.sin_addr), SS_IPNUM_LEN);
 	      client.ip[SS_IPNUM_LEN - 1] = '\0';
 
-	      trace(TRACE_INFO, "[%ld] child accept, dcu: %d\n",
-		    getpid(),*ss_n_default_children_used);
+	      trace(TRACE_INFO, "SS_WaitAndProcess(): child accept, dcu: %d\n",
+		    *ss_n_default_children_used);
 
 	      /* handle client */
 	      (*ClientHandler)(&client); 
 	      alarm(0);           /* remove any installed timeout-alarms */
 
 #if LOG_USERS > 0
-	      trace(TRACE_MESSAGE,"IMAPD [PID %d]: client @ socket %d (IP: %s) logged out, "
-		    "connection closed\n",getpid(),
+	      trace(TRACE_MESSAGE,"SS_WaitAndProcess(): client @ socket %d (IP: %s) logged out, "
+		    "connection closed\n",
 		    csock, client.ip);
 #endif
 
@@ -403,8 +406,8 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 
 	      (*ss_n_default_children_used)--;
 
-	      trace(TRACE_INFO, "[%ld] child close, dcu: %d\n",
-		    getpid(),*ss_n_default_children_used);
+	      trace(TRACE_INFO, "SS_WaitAndProcess(): child close, dcu: %d\n",
+		    *ss_n_default_children_used);
 
 	      if (n_connects >= max_connects)
 		{
@@ -548,8 +551,7 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 		  client.timeout = server_timeout; /* remember timeout */
 
 #if LOG_USERS > 0
-		  trace(TRACE_MESSAGE,"IMAPD [PID %d]: client @ socket %d (IP: %s) accepted\n",
-			getpid(),
+		  trace(TRACE_MESSAGE,"SS_WaitAndProcess(): client @ socket %d (IP: %s) accepted\n",
 			csock, inet_ntoa(saClient.sin_addr));
 #endif
 
@@ -565,8 +567,8 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 		      close(csock);
 	  
 #if LOG_USERS > 0
-		      trace(TRACE_MESSAGE,"IMAPD [PID %d]: client @ socket %d (IP: %s) login refused, "
-			    "connection closed\n",getpid(),
+		      trace(TRACE_MESSAGE,"SS_WaitAndProcess(): client @ socket %d (IP: %s) "
+			    "login refused, connection closed\n",
 			    csock, inet_ntoa(saClient.sin_addr));
 #endif
 		      exit(0);
@@ -581,8 +583,8 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 		  alarm(0);                   /* remove any installed timeout-alarms */
 
 #if LOG_USERS > 0
-		  trace(TRACE_MESSAGE,"IMAPD [PID %d]: client @ socket %d (IP: %s) logged out, "
-			"connection closed\n",getpid(),
+		  trace(TRACE_MESSAGE,"SS_WaitAndProcess(): client @ socket %d (IP: %s) logged out, "
+			"connection closed\n",
 			csock, client.ip);
 #endif
 
@@ -631,12 +633,12 @@ void SS_sighandler(int sig, siginfo_t *info, void *data)
   if (sig == SIGALRM)
     {
       /* timeout occurred, close client, terminate process */
-      trace(TRACE_INFO, "IMAPD: PID %d received alarm (time-out)\n", getpid());
+      trace(TRACE_INFO, "SS_sighandler(): PID %d received alarm (time-out)\n", getpid());
 
       /* close streams */
       if (client.tx)
 	{
-	  fprintf(client.tx, "* BYE dbmail IMAP4 server signing off due to timeout\r\n");
+	  fprintf(client.tx, ss_timeout_msg);
 	  fflush(client.tx);
 	  fclose(client.tx);
 	}

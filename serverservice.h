@@ -34,7 +34,7 @@ typedef struct
 
 
 int   SS_MakeServerSock(const char *ipaddr, const char *port, int default_children, int max_children,
-			int timeout);
+			int timeout, const char *timeout_msg);
 int   SS_WaitAndProcess(int sock, int default_children, int max_children, int daemonize,
 			int max_connects,
 			int (*ClientHandler)(ClientInfo*), int (*Login)(ClientInfo*),
