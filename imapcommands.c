@@ -1350,13 +1350,8 @@ int _ic_search(char *tag, char **args, ClientInfo *ci)
 int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
-  int i,fetch_start,fetch_end,delimpos,result,j;
-  unsigned long mboxid;
-  int inbody,invalidargs;
-  int getInternaldate,getFlags,getUID,getBodyHeader,getBodyText,getBodyMIME;
-  int getMIME_IMB,getEnvelope,getSize;
-  int getRFC822Header,getRFC822Text;
-  int octetstart,octetcnt;
+  int i,fetch_start,fetch_end,delimpos,result,setseen;
+  fetch_items_t fetchitems;
 
   if (ud->state != IMAPCS_SELECTED)
     {
@@ -1453,291 +1448,32 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
 
   /* OK msg MSN boundaries established */
+  /* now fetch fetch items */
 
-  /* check multiple args: should be parenthesed */
-  if (args[2] && strcmp(args[1],"(") != 0)
+  result = get_fetch_items(&args[1], &fetchitems);
+  if (result == -1)
     {
-      fprintf(ci->tx,"%s BAD multiple arguments should be parenthesed\n",tag);
-      return 1;
+      fprintf(ci->tx,"* BYE server ran out of memory\n");
+      return -1; /* fatal  */
     }
-
-  invalidargs = 0;
-  getFlags = getUID = getInternaldate = 0;
-  getBodyHeader = getBodyText = getBodyMIME = 0;
-  getMIME_IMB = getEnvelope = getSize = 0;
-  getRFC822Header = getRFC822Text = 0;
-  octetstart = 0;
-  octetcnt = -1;
-  inbody = 0;
-
-  for (i=1; args[i]; i++)
+  if (result == 1)
     {
-      if (strcasecmp(args[i], "flags") == 0)
-	{
-	  if (inbody) /* cannot specify FLAGS within BODY[] */
-	    {
-	      invalidargs = 1;
-	      break;
-	    }
-	  getFlags = 1;
-	}
-      else if (strcasecmp(args[i], "internaldate") == 0)
-	{
-	  if (inbody) /* cannot specify INTERNALDATE within BODY[] */
-	    {
-	      invalidargs = 1;
-	      break;
-	    }
-	  getInternaldate = 1;
-	}
-      else if (strcasecmp(args[i], "uid") == 0)
-	{
-	  if (inbody) /* cannot specify UID within BODY[] */
-	    {
-	      invalidargs = 1;
-	      break;
-	    }
-	  getUID = 1;
-	}
-      else if (strcasecmp(args[i], "rfc822.header") == 0)
-	{
-	  if (inbody) /* cannot specify rfc822.* within BODY[] */
-	    {
-	      invalidargs = 1;
-	      break;
-	    }
-	  getRFC822Header = 1;
-	}
-      else if (strcasecmp(args[i], "rfc822.size") == 0)
-	{
-	  if (inbody) /* cannot specify rfc822.* within BODY[] */
-	    {
-	      invalidargs = 1;
-	      break;
-	    }
-	  getSize = 1;
-	}
-      else if (strcasecmp(args[i], "rfc822.text") == 0)
-	{
-	  if (inbody) /* cannot specify rfc822.* within BODY[] */
-	    {
-	      invalidargs = 1;
-	      break;
-	    }
-	  getRFC822Text = 1;
-	}
-      else if (strcasecmp(args[i], "body") == 0)
-	{
-	  if (strcmp(args[i+1],"[") != 0)
-	    {
-	      /* just BODY specified */
-	      if (inbody)
-		{
-		  invalidargs = 1;
-		  break;
-		}
-	      else
-		{
-		  getMIME_IMB = 1;
-		}
-	    }
-
-	}
-      else if (strcasecmp(args[i], "text") == 0)
-	{
-	  if (inbody)
-	    {
-	      getBodyText = 1;
-	    }
-	  else
-	    {
-	      invalidargs = 1;
-	      break;
-	    }
-	}
-      else if (strcasecmp(args[i], "header") == 0)
-	{
-	  if (inbody)
-	    {
-	      getBodyHeader = 1;
-	    }
-	  else
-	    {
-	      invalidargs = 1;
-	      break;
-	    }
-	}
-      else if (strcasecmp(args[i], "mime") == 0)
-	{
-	  if (inbody)
-	    {
-	      getBodyMIME = 1;
-	    }
-	  else
-	    {
-	      invalidargs = 1;
-	      break;
-	    }
-	}
-      else if (strcasecmp(args[i], "all") == 0)
-	{
-	  if (inbody)
-	    {
-	      invalidargs = 1;
-	      break;
-	    }
-	  getFlags = 1;
-	  getInternaldate = 1;
-	  getSize = 1;
-	  getEnvelope = 1;
-	}
-      else if (strcasecmp(args[i], "fast") == 0)
-	{
-	  if (inbody)
-	    {
-	      invalidargs = 1;
-	      break;
-	    }
-	  getFlags = 1;
-	  getInternaldate = 1;
-	  getSize = 1;
-	}
-      else if (strcasecmp(args[i], "full") == 0)
-	{
-	  if (inbody)
-	    {
-	      invalidargs = 1;
-	      break;
-	    }
-	  getFlags = 1;
-	  getInternaldate = 1;
-	  getSize = 1;
-	  getEnvelope = 1;
-	  getMIME_IMB = 1;
-	}
-      else if (strcasecmp(args[i], "bodystructure") == 0)
-	{
-	  if (inbody) /* cannot specify BODYSTRUCTURE within BODY[] */
-	    {
-	      invalidargs = 1;
-	      break;
-	    }
-	  getMIME_IMB = 1;
-	}
-      else if (strcasecmp(args[i], "envelope") == 0)
-	{
-	  if (inbody) /* cannot specify ENVELOPE within BODY[] */
-	    {
-	      invalidargs = 1;
-	      break;
-	    }
-	  getEnvelope = 1;
-	}
-      else if (strcmp(args[i], "(") == 0 || strcmp(args[i], ")") == 0)
-	{
-	  continue;
-	}
-      else if (strcmp(args[i], "[") == 0)
-	{
-	  if (strcasecmp(args[i-1],"body") != 0 && strcasecmp(args[i-1],"body.peek") != 0)
-	    {
-	      invalidargs = 1;
-	      break;
-	    }
-	  inbody = 1;
-	}
-      else if (strcmp(args[i], "]") == 0)
-	{
-	  if (inbody) 
-	    {
-	      if (strcmp(args[i-1], "[") == 0)
-		{
-		  getBodyText = 1;
-		  getBodyHeader = 1;
-		}
-	      inbody = 0;
-	    }
-	  else 
-	    {
-	      invalidargs = 1;
-	      break;
-	    }
-	}
-      else if (strcmp(args[i],"<") == 0)
-	{
-	  if (inbody || !args[i+2] || strcmp(args[i+2],">") != 0)
-	    {
-	      invalidargs = 1;
-	      break;
-	    }
-
-	  i++; /* step to size */
-
-	  /* search size specification */
-	  for (j=0; args[i][j]; j++)
-	    {
-	      if (args[i][j] == '.')
-		break;
-	      else if (!isdigit(args[i][j]))
-		{
-		  invalidargs = 1;
-		  break;
-		}
-	    }
-
-	  if (invalidargs) break;
-	  
-	  if (j == 0 || j == strlen(args[i])-1)
-	    {
-	      invalidargs = 1;
-	      break;
-	    }
-
-	  args[i][j] = '\0'; /* split string in 2 */
-	  octetstart = atoi(args[i]);
-	  octetcnt   = atoi(&args[i][j+1]);
-	  
-	  i++; /* step to '>' */
-	}
-      else if (inbody)
-	{
-	  /* unrecognized item, could be a header-item so pass */
-	  continue;
-	}
-      else
-	{
-	  invalidargs = 1;
-	  break;
-	}
-    }
-
-  if (invalidargs)
-    {
-      fprintf(ci->tx,"%s BAD invalid item list for FETCH\n",tag);
+      fprintf(ci->tx,"%s BAD invalid argument list to FETCH\n",tag);
       return 1;
     }
 
   /* now fetch results for each msg */
   for (i=fetch_start; i<=fetch_end; i++)
     {
+      setseen = 0;
+
       /* walk by the arguments */
-      if (getFlags) {}
-      if (getInternaldate) {}
-      if (getUID) {}
-      if (getBodyText) {}
-      if (getBodyHeader) {}
-      if (getSize) {}
-      if (getEnvelope) {}
-      if (getMIME_IMB) {}
-      if (getRFC822Header) {}
-      if (getRFC822Text) {}
-      if (getBodyMIME) {}
-    }
+      if (fetchitems.getFlags) {}
 	
-
+    }
       
-      
-
+  if (fetchitems.bodyfetches)
+    free(fetchitems.bodyfetches);
   
   fprintf(ci->tx,"%s OK FETCH completed\n",tag);
   return 0;

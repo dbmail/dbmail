@@ -9,15 +9,339 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <ctype.h>
 #include "imaputil.h"
 #include "imap4.h"
 #include "debug.h"
+#include "sstack.h"
+
+#ifndef MAX_LINESIZE
+#define MAX_LINESIZE 1024
+#endif
 
 extern const char AcceptedChars[];
 extern const char AcceptedTagChars[];
 extern const char AcceptedMailboxnameChars[];
 
 char base64encodestring[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+const char *item_desc[] = 
+{
+  "TEXT", "HEADER", "HEADER.FIELDS", "HEADER.FIELDS.NOT"
+};
+
+
+/*
+ * get_fetch_items()
+ *
+ * retrieves the fetch item list (imap FETCH command) from an argument list.
+ * the argument list is supposed to be in formatted according to 
+ * build_args_array()
+ *
+ * returns -1 on error, 0 on succes, 1 on fault (wrong arg list)
+ */
+int get_fetch_items(char **args, fetch_items_t *fi)
+{
+  int i,j,inbody,bodyidx,invalidargs,shouldclose,delimpos;
+
+  /* init fetch item list */
+  memset(fi, 0, sizeof(fetch_items_t));
+  
+  /* check multiple args: should be parenthesed */
+  if (args[1])
+    {
+      /* now args[0] should be 'body' 'body.peek' or '(' */
+      if (strcasecmp(args[0],"body") != 0 && strcasecmp(args[0],"body.peek") != 0 &&
+	  strcmp(args[0],"(") != 0)
+	return 1;
+    }
+
+  /* determine how many body-fields are needed */
+  fi->nbodyfetches = 0;
+  for (i=0; args[i]; i++)
+    {
+      if (strcasecmp(args[i], "body") == 0 && args[i+1] && strcmp(args[i+1],"[") == 0)
+	{
+	  if (!args[i+2])
+	    return 1; 
+
+	  if (strcmp(args[i+2],"]") != 0)
+	    fi->nbodyfetches++;
+
+	  /* now walk on 'till this body[] finishes */
+	  i+=2;
+	  while (args[i] && strcmp(args[i],"]") != 0) i++;
+	}
+    }	
+
+  trace(TRACE_DEBUG,"Found %d body items\n",fi->nbodyfetches);
+
+  /* alloc mem */
+  fi->bodyfetches = (body_fetch_t*)malloc(sizeof(body_fetch_t) * fi->nbodyfetches);
+  if (!fi->bodyfetches)
+    {
+      /* out of mem */
+      return -1;
+    }
+  memset(fi->bodyfetches, 0, sizeof(body_fetch_t) * fi->nbodyfetches);
+
+  invalidargs = 0;
+  inbody = 0;
+  bodyidx = 0;
+
+  i = 0;
+  if (strcmp(args[i],"(") == 0) i++; /* skip parentheses */
+
+  for ( ; args[i]; i++)
+    {
+      if (strcasecmp(args[i], "flags") == 0)
+	{
+	  fi->getFlags = 1;
+	}
+      else if (strcasecmp(args[i], "internaldate") == 0)
+	{
+	  fi->getInternalDate = 1;
+	}
+      else if (strcasecmp(args[i], "uid") == 0)
+	{
+	  fi->getUID = 1;
+	}
+      else if (strcasecmp(args[i], "rfc822.header") == 0)
+	{
+	  fi->getRFC822Header = 1;
+	}
+      else if (strcasecmp(args[i], "rfc822.size") == 0)
+	{
+	  fi->getSize = 1;
+	}
+      else if (strcasecmp(args[i], "rfc822.text") == 0)
+	{
+	  fi->getRFC822Text = 1;
+	}
+      else if (strcasecmp(args[i], "body") == 0 || strcasecmp(args[i],"body.peek") == 0)
+	{
+	  if (strcmp(args[i+1],"[") != 0)
+	    {
+	      if (strcasecmp(args[i],"body.peek") == 0)
+		{
+		  invalidargs = 1;
+		  break;
+		}
+	      else
+		{
+		  fi->getMIME_IMB = 1; /* just BODY specified */
+		}
+	    }
+	  else
+	    {
+	      /* determine wheter or not to set the seen flag */
+	      if (strcasecmp(args[i],"body.peek") == 0)
+		fi->bodyfetches[bodyidx].noseen = 1;
+	      
+	      /* now read the argument list to body */
+	      i++; /* now pointing at '[' (not the last arg, parentheses are matched) */
+	      i++; /* now pointing at what should be the item type */
+
+	      shouldclose = 0;
+	      if (strcasecmp(args[i], "text") == 0)
+		{
+		  fi->bodyfetches[bodyidx].itemtype = BFIT_TEXT;
+		  shouldclose = 1;
+		}
+	      else if (strcasecmp(args[i], "header") == 0)
+		{
+		  fi->bodyfetches[bodyidx].itemtype = BFIT_HEADER;
+		  shouldclose = 1;
+		}
+	      else if (strcasecmp(args[i], "header.fields") == 0)
+		fi->bodyfetches[bodyidx].itemtype = BFIT_HEADER_FIELDS;
+	      else if (strcasecmp(args[i], "header.fields.not") == 0)
+		fi->bodyfetches[bodyidx].itemtype = BFIT_HEADER_FIELDS_NOT;
+	      else
+		{
+		  invalidargs = 1;
+		  break;
+		}
+
+	      if (shouldclose)
+		{
+		  if (strcmp(args[i+1],"]") != 0)
+		    {
+		      invalidargs = 1;
+		      break;
+		    }
+		}
+	      else
+		{
+		  i++; /* should be at '(' now */
+		  if (strcmp(args[i],"(") != 0)
+		    {
+		      invalidargs = 1;
+		      break;
+		    }
+		  
+		  i++; /* at first item of field list now, remember idx */
+		  fi->bodyfetches[bodyidx].argstart = i;
+
+		  /* walk on untill list terminates (and it does 'cause parentheses are matched) */
+		  while (strcmp(args[i],")") != 0)
+		    i++;
+
+		  fi->bodyfetches[bodyidx].argcnt = i - fi->bodyfetches[bodyidx].argstart;
+		  
+		  if (fi->bodyfetches[bodyidx].argcnt == 0)
+		    {
+		      invalidargs = 1;
+		      break;
+		    }
+
+		  /* next argument should be ']' */
+		  if (strcmp(args[i+1],"]") != 0)
+		    {
+		      invalidargs = 1;
+		      break;
+		    }
+		}
+	      
+	      i++; /* points to ']' now */
+
+	      /* check if octet start/cnt is specified */
+	      if (args[i+1] && args[i+1][0] == '<')
+		{
+		  i++; /* advance */
+
+		  /* check argument */
+		  if (args[i][strlen(args[i]) - 1 ] != '>')
+		    {
+		      invalidargs = 1;
+		      break;
+		    }
+
+		  delimpos = -1;
+		  for (j=1; j < strlen(args[i])-1; j++)
+		    {
+		      if (args[i][j] == '.')
+			{
+			  if (delimpos != -1)
+			    {
+			      invalidargs = 1;
+			      break;
+			    }
+			  delimpos = j;
+			}
+		      else if (!isdigit(args[i][j]))
+			{
+			  invalidargs = 1;
+			  break;
+			}
+		    }
+
+		  if (invalidargs)
+		    break;
+
+		  if (delimpos == -1 || delimpos == 1 || delimpos == (strlen(args[i])-2) )
+		    {
+		      /* no delimiter found or at first/last pos */
+		      invalidargs = 1;
+		      break;
+		    }
+
+		  /* read the numbers */
+		  args[i][strlen(args[i]) - 1] = '\0';
+		  args[i][delimpos] = '\0';
+		  fi->bodyfetches[bodyidx].octetstart = atoi(&args[i][1]);
+		  fi->bodyfetches[bodyidx].octetcnt   = atoi(&args[i][delimpos+1]);
+			
+		  /* restore argument */
+		  args[i][delimpos] = '.';
+		  args[i][strlen(args[i]) - 1] = '>';
+		}
+	      else
+		{
+		  fi->bodyfetches[bodyidx].octetstart = -1;
+		  fi->bodyfetches[bodyidx].octetcnt   = -1;
+		}
+	      /* ok all done for body item */
+	      bodyidx++;
+	    }
+	}
+      else if (strcasecmp(args[i], "all") == 0)
+	{
+	  fi->getFlags = 1;
+	  fi->getInternalDate = 1;
+	  fi->getSize = 1;
+	  fi->getEnvelope = 1;
+	}
+      else if (strcasecmp(args[i], "fast") == 0)
+	{
+	  fi->getFlags = 1;
+	  fi->getInternalDate = 1;
+	  fi->getSize = 1;
+	}
+      else if (strcasecmp(args[i], "full") == 0)
+	{
+	  fi->getFlags = 1;
+	  fi->getInternalDate = 1;
+	  fi->getSize = 1;
+	  fi->getEnvelope = 1;
+	  fi->getMIME_IMB = 1;
+	}
+      else if (strcasecmp(args[i], "bodystructure") == 0)
+	{
+	  fi->getMIME_IMB = 1;
+	}
+      else if (strcasecmp(args[i], "envelope") == 0)
+	{
+	  fi->getEnvelope = 1;
+	}
+      else if (strcmp(args[i], ")") == 0)
+	{
+	  /* only allowed if last arg here */
+	  if (args[i+1])
+	    {
+	      invalidargs = 1;
+	      break;
+	    }
+	}
+      else
+	{
+	  invalidargs = 1;
+	  break;
+	}
+    }
+
+  if (invalidargs)
+    {
+      trace(TRACE_DEBUG,"invalid argument detected at %d: '%s'\n",i,args[i]);
+
+      free(fi->bodyfetches);
+      fi->bodyfetches = NULL;
+      return 1;
+    }
+
+  /* DEBUG dump read item list */
+  trace(TRACE_DEBUG,"get_item_list():\n");
+  trace(TRACE_DEBUG,"Got %d BODY / BODY.PEEK items\n",fi->nbodyfetches);
+  trace(TRACE_DEBUG,"Comparing with bodyidx now: %d\n",bodyidx);
+  
+  for (i=0; i<fi->nbodyfetches; i++)
+    {
+      trace(TRACE_DEBUG,"bodyfetch, type %d ('%s')\n",fi->bodyfetches[i].itemtype,
+	    item_desc[fi->bodyfetches[i].itemtype]);
+      trace(TRACE_DEBUG,"noseen: %d\n",fi->bodyfetches[i].noseen);
+      trace(TRACE_DEBUG,"size delimited: %d %d\n", fi->bodyfetches[i].octetstart,
+	    fi->bodyfetches[i].octetcnt);
+
+      trace(TRACE_DEBUG,"arguments: \n");
+
+      for (j = fi->bodyfetches[i].argstart; j < fi->bodyfetches[i].argstart+fi->bodyfetches[i].argcnt;
+	   j++)
+	trace(TRACE_DEBUG,"  arg[%d]: '%s'\n",j-fi->bodyfetches[i].argstart,args[j]);
+    }
+
+  return 0;
+
+}
 
 /*
  * give_chunks()
@@ -185,9 +509,9 @@ char **build_args_array(const char *s)
   char **args;
   char *scpy;
   int nargs=0,inquote=0,i,quotestart,currarg;
-  int nnorm=0,nsquare=0;
-  int lastlefttype=NOPAR;
-  
+  int nnorm=0,nsquare=0,paridx=0;
+  char parlist[MAX_LINESIZE];
+
   if (!s)
     return NULL;
 
@@ -234,7 +558,11 @@ char **build_args_array(const char *s)
 	}
     }
 
+  
   /* count the arguments */
+  paridx = 0;
+  parlist[paridx] = NOPAR;
+
   for (i=0,nargs=0; i<strlen(s); i++)
     {
       if (!scpy[i])
@@ -246,35 +574,41 @@ char **build_args_array(const char *s)
 	  /* check parenthese structure */
 	  if (s[i] == ')')
 	    {
-	      if (lastlefttype != NORMPAR)
+	      if (paridx < 0 || parlist[paridx] != NORMPAR)
 		{
 		  free(scpy);
 		  return NULL;
 		}
 	      else
-		nnorm--;
+		{
+		  nnorm--;
+		  paridx--;
+		}
 	    }
 
 	  if (s[i] == ']')
 	    {
-	      if (lastlefttype != SQUAREPAR)
+	      if (paridx < 0 || parlist[paridx] != SQUAREPAR)
 		{
 		  free(scpy);
 		  return NULL;
 		}
 	      else
-		nsquare--;
+		{
+		  paridx--;
+		  nsquare--;
+		}
 	    }
 
 	  if (s[i] == '(')
 	    {
-	      lastlefttype = NORMPAR;
+	      parlist[++paridx] = NORMPAR;
 	      nnorm++;
 	    }
 
 	  if (s[i] == '[')
 	    {
-	      lastlefttype = SQUAREPAR;
+	      parlist[++paridx] = SQUAREPAR;
 	      nsquare++;
 	    }
 
@@ -301,6 +635,12 @@ char **build_args_array(const char *s)
 	      nargs++;
 	    }
 	}
+    }
+
+  if (paridx != 0)
+    {
+      free(scpy);
+      return NULL;
     }
 
   /* alloc memory */

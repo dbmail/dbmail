@@ -64,7 +64,7 @@ void mime_list(char *blkdata, unsigned long blksize)
 	      /* parsing tmpstring for field and data */
 	      /* field is xxxx: */
 
-	      ptr=strstr(tmpstr,":");
+	      ptr=strchr(tmpstr,':');
 	      if (ptr!=NULL)
 		{
 		  valid_mime_lines++;

@@ -180,13 +180,6 @@ int imap_process(ClientInfo *ci)
       if (!args)
 	{
 	  fprintf(ci->tx,"* BAD Not enough memory OR invalid argument specified\n");
-
-	  /* free used memory */
-	  for (i=0; args[i]; i++) 
-	    free(args[i]);
-	  free(args);
-	  args = NULL;
-
 	  continue;
 	}
 

@@ -30,6 +30,29 @@ enum IMAP4_PERMISSION { IMAPPERM_READ = 0x01, IMAPPERM_READWRITE = 0x02 };
 
 typedef int (*IMAP_COMMAND_HANDLER)(char*, char**, ClientInfo*);
 
+enum BODY_FETCH_ITEM_TYPES { BFIT_TEXT, BFIT_HEADER,
+			     BFIT_HEADER_FIELDS,
+			     BFIT_HEADER_FIELDS_NOT };
+
+typedef struct 
+{
+  int noseen;                /* set the seen flag ? */
+  int itemtype;              /* the item to be fetched */
+  int argstart;              /* start index in the arg array */
+  int argcnt;                /* number of args belonging to this bodyfetch */
+  int octetstart,octetcnt;   /* number of octets to be retrieved */
+} body_fetch_t;
+
+typedef struct 
+{
+  int nbodyfetches;
+  body_fetch_t *bodyfetches;
+
+  int getInternalDate,getFlags,getUID;
+  int getMIME_IMB,getEnvelope,getSize;
+  int getRFC822Header,getRFC822Text;
+} fetch_items_t;
+
 typedef struct 
 {
   unsigned long uid,msguidnext;
