@@ -1,4 +1,4 @@
-#!/usr/bin/python2.2
+#!/usr/bin/python
 
 # Copyright (C) 2004 Paul J Stevens paul at nfg dot nl
 #
