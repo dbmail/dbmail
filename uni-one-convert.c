@@ -213,7 +213,7 @@ int process_mboxfile(char *file, u64_t userid)
 	      len = strlen(&blk[cnt]);
 	      cnt += len;
 	      
-	      if (cnt >= READ_BLOCK_SIZE-1)
+	      if (cnt >= READ_BLOCK_SIZE)
 		{
 		  /* write block */
 		  saved = blk[READ_BLOCK_SIZE];
