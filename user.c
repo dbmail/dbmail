@@ -265,6 +265,11 @@ int main(int argc, char *argv[])
 			}
 			break;
 
+		case 'u':
+			change_flags.newuser = 1;
+			newuser = optarg;
+			break;
+
 		case 'p':
 			if (!passwdtype)
 				passwdtype = optarg;
