@@ -1,3 +1,8 @@
+2004-12-06  Aaron Stone  <aaron@serendipity.cx>
+
+	* lmtp.c: changed around a bunch of list handling to alleviate
+	memory leaks. Fixes bug #119.
+
 2004-12-03  Ilja Booij <ilja@ic-s.nl>
 
 	* lib/iniparser-2.14: directory added. Added Makefile.am in 

@@ -54,8 +54,7 @@
 #define MAX_IN_BUFFER 255
 
 /* These are needed across multiple calls to lmtp() */
-static struct list rcpt;
-static char *envelopefrom = NULL;
+static struct list from, rcpt;
 
 /* allowed lmtp commands */
 static const char *const commands[] = {
@@ -97,23 +96,39 @@ int lmtp_error(PopSession_t * session, void *stream,
  * initialize a new session. Sets all relevant variables in session
  * \param[in,out] session to initialize
  */
-static void init_session(PopSession_t *session);
+void lmtp_init(PopSession_t *session) 
+{
+	/* setting Session variables */
+	session->state = STRT;
+	session->error_count = 0;
+
+	session->username = NULL;
+	session->password = NULL;
+
+	session->SessionResult = 0;
+
+	/* reset counters */
+	session->totalsize = 0;
+	session->virtual_totalsize = 0;
+	session->totalmessages = 0;
+	session->virtual_totalmessages = 0;
+
+	/* set the lists to zero length */
+	list_init(&rcpt);
+	list_init(&from);
+}
 
 int lmtp_reset(PopSession_t * session)
 {
-	/* Free the lists and reinitialize 
-	 * but only if they were previously
-	 * initialized by LMTP_LHLO... */
-	if (session->state == LHLO) {
-		// list_freelist(&rcpt.start);
+	if (list_totalnodes(&rcpt) > 0) {
 		dsnuser_free_list(&rcpt);
-		list_init(&rcpt);
 	}
+	list_init(&rcpt);
 
-	if (envelopefrom != NULL) {
-		my_free(envelopefrom);
+	if (list_totalnodes(&from) > 0) {
+		list_freelist(&from.start);
 	}
-	envelopefrom = NULL;
+	list_init(&from);
 
 	session->state = LHLO;
 
@@ -134,7 +149,7 @@ int lmtp_handle_connection(clientinfo_t * ci)
 
 	PopSession_t session;	/* current connection session */
 	
-	init_session(&session);
+	lmtp_init(&session);
 
 	/* getting hostname */
 	gethostname(myhostname, 64);
@@ -298,8 +313,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 	if ((value == NULL) &&
 	    !((cmdtype == LMTP_LHLO) || (cmdtype == LMTP_DATA) ||
 	      (cmdtype == LMTP_RSET) || (cmdtype == LMTP_QUIT) ||
-	      (cmdtype == LMTP_NOOP) || (cmdtype == LMTP_HELP)
-	    )) {
+	      (cmdtype == LMTP_NOOP) || (cmdtype == LMTP_HELP) )) {
 		trace(TRACE_ERROR, "ARGUMENT %d", cmdtype);
 		return lmtp_error(session, stream,
 				  "500 This command requires an argument.\r\n");
@@ -341,11 +355,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 				  * "250-BINARYMIME\r\n"
 				  * */
 				 "250 SIZE\r\n", myhostname);
-			/* Free the recipients list and reinitialize it */
-			// list_freelist( &rcpt.start );
-			list_init(&rcpt);
-			
-			session->state = LHLO;
+			lmtp_reset(session);
 			return 1;
 		}
 	case LMTP_HELP:
@@ -407,12 +417,11 @@ int lmtp(void *stream, void *instream, char *buffer,
 			if (session->state != LHLO) {
 				ci_write((FILE *) stream,
 					"550 Command out of sequence.\r\n");
-			} else if (envelopefrom != NULL) {
+			} else if (list_totalnodes(&from) > 0) {
 				ci_write((FILE *) stream,
 					"500 Sender already received. Use RSET to clear.\r\n");
-				trace(TRACE_ERROR, "%s,%s: Sender already "
-				      "received: last envfrom: %s",
-				      __FILE__, __func__, envelopefrom);
+				trace(TRACE_ERROR, "%s,%s: Sender already received: %s",
+				      __FILE__, __func__, (char *)(list_getstart(&from)->data));
 			} else {
 				/* First look for an email address.
 				 * Don't bother verifying or whatever,
@@ -489,10 +498,10 @@ int lmtp(void *stream, void *instream, char *buffer,
 
 				if (goodtogo) {
 					/* Sure fine go ahead. */
-					envelopefrom = tmpaddr;
+					list_nodeadd(&from, tmpaddr, strlen(tmpaddr)+1);
 					ci_write((FILE *) stream,
 						"250 Sender <%s> OK\r\n",
-						envelopefrom);
+						(char *)(list_getstart(&from)->data));
 				} else {
 					if (tmpaddr != NULL)
 						my_free(tmpaddr);
@@ -570,7 +579,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 				ci_write((FILE *) stream,
 					"503 No valid recipients\r\n");
 			} else {
-				if (list_totalnodes(&rcpt) > 0 && envelopefrom != NULL) {
+				if (list_totalnodes(&rcpt) > 0 && list_totalnodes(&from) > 0) {
 					trace(TRACE_DEBUG,
 					      "main(): requesting sender to begin message.");
 					ci_write((FILE *) stream,
@@ -582,9 +591,9 @@ int lmtp(void *stream, void *instream, char *buffer,
 						ci_write((FILE *) stream,
 							"503 No valid recipients\r\n");
 					}
-					if (!envelopefrom) {
+					if (list_totalnodes(&from) < 1) {
 						trace(TRACE_DEBUG,
-						      "main(): envelopefrom is empty, cancel message.");
+						      "main(): no sender provided, session cancelled.");
 						ci_write((FILE *) stream,
 							"554 No valid sender.\r\n");
 					}
@@ -601,20 +610,9 @@ int lmtp(void *stream, void *instream, char *buffer,
 					u64_t body_size = 0;
 					u64_t rfcsize = 0;
 					u64_t dummyidx = 0, dummysize = 0;
-					struct list fromlist, headerfields;
+					struct list headerfields;
 					struct element *element;
-					struct list mimelist;
 
-					list_init(&mimelist);
-					list_init(&fromlist);
-					list_init(&headerfields);
-
-					/* if (envelopefrom != NULL) */
-					/* We know this to be true from the 354 code, above. */
-					list_nodeadd(&fromlist,
-						     envelopefrom,
-						     strlen(envelopefrom) + 1);
-					
 					if (read_whole_message_network(
 						    (FILE *) instream,
 						    &whole_message,
@@ -628,9 +626,11 @@ int lmtp(void *stream, void *instream, char *buffer,
 						return 1;
 					}
 					
-					trace(TRACE_DEBUG, "%s,%s: whole message = %s", __FILE__, __func__, whole_message);
+					trace(TRACE_DEBUG, "%s,%s: whole message = %s",
+					    __FILE__, __func__, whole_message);
 					if (whole_message == NULL) {
-						trace(TRACE_ERROR, "%s,%s message is NULL!", __FILE__, __func__);
+						trace(TRACE_ERROR, "%s,%s message is NULL!",
+						    __FILE__, __func__);
 						discard_client_input(
 							(FILE *) instream);
 						ci_write((FILE *) stream,
@@ -653,7 +653,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 							"500 Error in message");
 						return 1;
 					}
-					if ( headersize > READ_BLOCK_SIZE) {
+					if (headersize > READ_BLOCK_SIZE) {
 						trace(TRACE_ERROR,
 						      "main(): header is too "
 						      "big");
@@ -668,9 +668,9 @@ int lmtp(void *stream, void *instream, char *buffer,
 						return 1;
 					}
 					/* Parse the list and scan for field and content */
-					if (mime_readheader
-					    (header, &dummyidx, &mimelist,
-					     &dummysize) < 0) {
+					if (mime_readheader(header, &dummyidx,
+					                    &headerfields,
+					                    &dummysize) < 0) {
 						trace(TRACE_ERROR,
 						      "main(): fatal error from mime_readheader()");
 						discard_client_input((FILE
@@ -687,7 +687,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 						    headersize, 
 						    body_size, rfcsize,
 						    &headerfields, &rcpt,
-						    &fromlist) == -1) {
+						    &from) == -1) {
 						ci_write((FILE *) stream,
 							"503 Message not received\r\n");
 					} else {
@@ -720,10 +720,12 @@ int lmtp(void *stream, void *instream, char *buffer,
 							}
 						}
 					}
+
 					if (header != NULL)
 						my_free(header);
 					if (whole_message != NULL)
 						my_free(whole_message);
+					list_freelist(&headerfields.start);
 				}
 				/* Reset the session after a successful delivery;
 				 * MTA's like Exim prefer to immediately begin the
@@ -816,20 +818,3 @@ int read_whole_message_network(FILE *instream, char **whole_message,
 	return 1;
 }
 
-void init_session(PopSession_t *session) 
-{
-	/* setting Session variables */
-	session->state = STRT;
-	session->error_count = 0;
-
-	session->username = NULL;
-	session->password = NULL;
-
-	session->SessionResult = 0;
-
-	/* reset counters */
-	session->totalsize = 0;
-	session->virtual_totalsize = 0;
-	session->totalmessages = 0;
-	session->virtual_totalmessages = 0;
-}
