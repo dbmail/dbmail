@@ -40,7 +40,7 @@ typedef enum {
 	ACL_RIGHT_CREATE,
 	ACL_RIGHT_DELETE,
 	ACL_RIGHT_ADMINISTER,
-    ACL_RIGHT_NONE
+	ACL_RIGHT_NONE
 } ACLRight_t;
 
 
@@ -87,7 +87,7 @@ int acl_delete_acl(u64_t userid, u64_t mboxid);
  *     - NULL on error
  *     - acl string (list of identifier-rights pairs, might by empty)
  * \note string should be freed by caller
- */ 
+ */
 char *acl_get_acl(u64_t mboxid);
 
 /**
