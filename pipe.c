@@ -135,7 +135,7 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
   struct list external_forwards;
   struct list bounces;
   u64_t temp_message_record_id,userid, bounce_userid;
-  int i, this_user;
+  int i, this_user, cnt;
   FILE *instream = stdin;
   
   /* step 1.
@@ -296,7 +296,7 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
            * belong to which messages */
 
           if (db_insert_message_block(header, headersize, temp_message_record_id) == -1)
-              trace(TRACE_STOP, "insert_messages(): error inserting msgblock\n");
+              trace(TRACE_STOP, "insert_messages(): error inserting msgblock [header]\n");
 
           /* adding this messageid to the message id list */
           list_nodeadd(&messageids,&temp_message_record_id,sizeof(temp_message_record_id));
@@ -322,11 +322,13 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
   if (list_totalnodes(&messageids)>0)
     {
       totalmem = 0; /* reset totalmem counter */
+      cnt = 0;
       /* we have local deliveries */ 
       while (!feof(instream))
 	{
 	  usedmem = fread (strblock, sizeof(char), READ_BLOCK_SIZE, instream);
-		
+	  cnt++;
+
 	  /* fread won't do this for us! */	
 	  strblock[usedmem]='\0';
 			
@@ -339,7 +341,7 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
 		{
 		  if (db_insert_message_block (strblock, usedmem, *(u64_t *)tmp->data) 
 		      == -1)
-		    trace(TRACE_STOP, "insert_messages(): error inserting msgblock\n");
+		    trace(TRACE_STOP, "insert_messages(): error inserting msgblock [blk %d]\n", cnt);
 
 		  tmp=tmp->nextnode;
 		}
