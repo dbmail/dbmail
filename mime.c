@@ -182,7 +182,7 @@ int mime_list(char *blkdata, struct list *mimelist)
 int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist, unsigned long *headersize)
 {
   int valid_mime_lines=0,idx,totallines=0,j;
-  unsigned fieldlen,vallen,prevlen,new_add=1;
+  unsigned fieldlen,vallen,prevlen=0,new_add=1;
 /*  unsigned long saved_idx = *blkidx; only needed if we bail out on invalid data */
 	
   char *endptr, *startptr, *delimiter;

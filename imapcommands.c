@@ -1541,7 +1541,7 @@ int _ic_search(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
   int *result_set;
-  int i,result,only_ascii=0,idx=0;
+  int i,result=0,only_ascii=0,idx=0;
   search_key_t sk;
 
   if (ud->state != IMAPCS_SELECTED)

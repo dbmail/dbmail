@@ -1420,9 +1420,12 @@ int db_imap_append_msg(char *msgdata, unsigned long datalen, unsigned long mboxi
   tm = *localtime(&td);   /* get components */
   strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
 
-  /* create a msg */
+  /* create a msg 
+   * status and seen_flag are set to 001, which means the message has been read 
+   */
   snprintf(query, DEF_QUERYSIZE, "INSERT INTO message "
-	   "(mailboxidnr,messagesize,unique_id,internal_date) VALUES (%lu, 0, \"\", \"%s\")",
+	   "(mailboxidnr,messagesize,unique_id,internal_date,status,"
+       " seen_flag) VALUES (%lu, 0, \"\", \"%s\",001,1)",
 	   mboxid, timestr);
 
   if (db_query(query) == -1)
