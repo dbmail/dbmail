@@ -25,6 +25,8 @@
 #include "config.h"
 #endif
 
+#include "sort.h"
+#include "sort/sortsieve.h"
 #include "sievecmd.h"
 
 #include "auth.h"
@@ -66,7 +68,7 @@ int main(int argc, char *argv[])
 	setvbuf(stdout, 0, _IONBF, 0);
 
 	ReadConfig("DBMAIL", configFile);
-  SetConfigItems(&sysItems);
+	SetConfigItems(&sysItems);
 	SetTraceLevel("SIEVECMD");
 	GetDBParams(&_db_params);
 
@@ -227,7 +229,7 @@ int do_insert(u64_t user_idnr, char *name, FILE * source)
 	/*res = my_sieve_script_validate(buf, &errmsg);*/
 	res = sortsieve_script_validate(buf, &errmsg);
 	if (res != 0) {
-		printf("Script has errors: [%s] '%s'.\n", name, errmsg);
+		printf("Script [%s] has errors: %s.\n", name, errmsg);
 		return -1;
 	}
 
@@ -277,13 +279,15 @@ int do_list(u64_t user_idnr)
 		return -1;
 	}
 
-	if (list_totalnodes(&scriptlist) > 0){
+	if (list_totalnodes(&scriptlist) > 0) {
 		printf("Found %ld scripts:\n",
 		       list_totalnodes(&scriptlist));
+	} else
+		printf("No scripts found!\n");
 
 	tmp = list_getstart(&scriptlist);
 	while (tmp) {
-		struct ssinfo *info = (struct ssinfo *) tmp->data;
+		sievescript_info_t *info = (sievescript_info_t *) tmp->data;
 		if (info->active == 1)
 			printf("  + ");
 		else
@@ -309,25 +313,19 @@ int do_showhelp()
 	printf("Use this program to manage your users' Sieve scripts.\n");
 	printf("See the man page for more info. Summary:\n\n");
 	printf("     -u username            Username of script user \n");
-	printf
-	    ("     -l                     List scripts belonging to user \n");
+	printf("     -l                     List scripts belonging to user \n");
 	printf("     -a scriptname          Activate the named script \n");
-	printf
-	    ("                            (only one script can be active; \n"
-	     "                             deactivates any others) \n");
-	printf
-	    ("     -d scriptname          Deactivate the named script \n");
-	printf
-	    ("                            (no scripts will be active after this) \n");
-	printf
-	    ("     -i scriptname file     Insert the named script from file \n");
-	printf
-	    ("                            (a single dash, -, indicates input \n"
-	     "                             from STDIN) \n");
+	printf("                            (only one script can be active; \n"
+	       "                             deactivates any others) \n");
+	printf("     -d scriptname          Deactivate the named script \n");
+	printf("                            (no scripts will be active after this) \n");
+	printf("     -i scriptname file     Insert the named script from file \n");
+	printf("                            (a single dash, -, indicates input \n"
+	       "                             from STDIN) \n");
 	printf("     -r scriptname          Remove the named script \n");
-	printf
-	    ("                            (if script was active, no script is \n"
-	     "                             active after deletion) \n");
+	printf("                            (if script was active, no script is \n"
+	       "                             active after deletion) \n");
+	printf("\n*** THESE COMMAND LINE OPTIONS WILL CHANGE! ***\n");
 
 	return 0;
 }

@@ -76,40 +76,46 @@ int sortsieve_msgsort(u64_t useridnr, char *header, u64_t headersize,
 	sieve2_support_t *p;
 	sieve2_script_t *s;
 	sieve2_action_t *a;
-	sieve2_loader_t scriptloader, msgloader;
+	sieve2_interp_t *t;
+	sieve2_error_t *e;
+	sievefree_t sievefree;
 	char *scriptname = NULL, *script = NULL, *freestr = NULL;
 	int res = 0, ret = 0;
+
+	memset(&sievefree, 0, sizeof(sievefree_t));
 
 	/* Pass the address of the char *script, and it will come
 	 * back magically allocated. Don't forget to free it later! */
 	res = db_get_sievescript_active(useridnr, &scriptname);
 	if (res < 0) {
-		printf("db_get_sievescript_active() returns %d\n", res);
+		trace(TRACE_ERROR, "db_get_sievescript_active() returns %d\n", res);
 		ret = -1;
-		goto no_free;
+		goto skip_free;
 	}
 
-	printf("Looking up script [%s]\n", scriptname);
+	trace(TRACE_DEBUG, "Looking up script [%s]\n", scriptname);
 	res = db_get_sievescript_byname(useridnr, scriptname, &script);
 	if (res < 0) {
-		printf("db_get_sievescript_byname() returns %d\n", res);
+		trace(TRACE_ERROR, "db_get_sievescript_byname() returns %d\n", res);
 		ret = -1;
-		goto char_scriptname_free;
+		goto need_free;
 	}
 
 	res = sieve2_action_alloc(&a);
 	if (res != SIEVE2_OK) {
-		printf("sieve2_action_alloc() returns %d\n", res);
+		trace(TRACE_ERROR, "sieve2_action_alloc() returns %d\n", res);
 		ret = -1;
-		goto char_script_free;
+		goto need_free;
 	}
+	sievefree.free_action = 1;
 
 	res = sieve2_support_alloc(&p);
 	if (res != SIEVE2_OK) {
-		printf("sieve2_support_alloc() returns %d\n", res);
+		trace(TRACE_ERROR, "sieve2_support_alloc() returns %d\n", res);
 		ret = -1;
-		goto action_free;
+		goto need_free;
 	}
+	sievefree.free_support = 1;
 
 	res = sieve2_support_register(p, NULL, SIEVE2_ACTION_FILEINTO);
 	res = sieve2_support_register(p, NULL, SIEVE2_ACTION_REDIRECT);
@@ -118,99 +124,83 @@ int sortsieve_msgsort(u64_t useridnr, char *header, u64_t headersize,
 
 	res = sieve2_script_alloc(&s);
 	if (res != SIEVE2_OK) {
-		printf("sieve2_script_alloc() returns %d\n", res);
+		trace(TRACE_ERROR, "sieve2_script_alloc() returns %d\n", res);
 		ret = -1;
-		goto support_free;
+		goto need_free;
 	}
-
-	res = sieve2_support_bind(p, s);
-	if (res != SIEVE2_OK) {
-		printf("sieve2_support_bind() returns %d\n", res);
-		ret = -1;
-		goto script_free;
-	}
-
-	res = sieve2_script_parse(s, script);
-	if (res != SIEVE2_OK) {
-		printf("sieve2_script_parse() returns %d: %s\n", res,
-		       sieve2_errstr(res, &freestr));
-		my_free(freestr);
-		ret = -1;
-		goto script_free;
-	}
+	sievefree.free_script = 1;
 
 	res = sieve2_message_alloc(&m);
 	if (res != SIEVE2_OK) {
-		printf("sieve2_message_alloc() returns %d\n", res);
+		trace(TRACE_ERROR, "sieve2_message_alloc() returns %d\n", res);
 		ret = -1;
-		goto script_free;
+		goto need_free;
+	}
+	sievefree.free_message = 1;
+
+	res = sieve2_script_register(s, script, SIEVE2_SCRIPT_CHAR_ARRAY);
+	if (res != SIEVE2_OK) {
+		trace(TRACE_ERROR, "sieve2_script_parse() returns %d: %s\n", res,
+		       sieve2_errstr(res, &freestr));
+		my_free(freestr);
+		ret = -1;
+		goto need_free;
 	}
 
-	res =
-	    sieve2_message_register(m, &messagesize, SIEVE2_MESSAGE_SIZE);
+	res = sieve2_message_register(m, &messagesize, SIEVE2_MESSAGE_SIZE);
 	if (res != SIEVE2_OK) {
-		printf("sieve2_message_register() returns %d\n", res);
+		trace(TRACE_ERROR, "sieve2_message_register() returns %d\n", res);
 		ret = -1;
-		goto message_free;
+		goto need_free;
 	}
 	res = sieve2_message_register(m, header, SIEVE2_MESSAGE_HEADER);
 	if (res != SIEVE2_OK) {
-		printf("sieve2_message_register() returns %d\n", res);
+		trace(TRACE_ERROR, "sieve2_message_register() returns %d\n", res);
 		ret = -1;
-		goto message_free;
+		goto need_free;
 	}
 
-	res = sieve2_script_exec(s, m, a);
+	res = sieve2_script_exec(t, s, p, e, m, a);
 	if (res != SIEVE2_OK) {
-		printf("sieve2_execute_script() returns %d\n", res);
+		trace(TRACE_ERROR, "sieve2_execute_script() returns %d\n", res);
 		ret = -1;
-		goto message_free;
+		goto need_free;
 	}
 
 	res = sortsieve_unroll_action(a, actions);
 	if (res != SIEVE2_OK && res != SIEVE2_DONE) {
-		printf("unroll_action() returns %d\n", res);
+		trace(TRACE_ERROR, "unroll_action() returns %d\n", res);
 		ret = -1;
-		goto action_free;
+		goto need_free;
 	}
 
-      message_free:
-	res = sieve2_message_free(m);
-	if (res != SIEVE2_OK) {
-		printf("sieve2_message_free() returns %d\n", res);
-		ret = 1;
-	}
+	/* Fixme: If one of these fails, we should assume a memory leak
+	 * and go suicidal so that a new child process will start. */
+      need_free:
+	if (sievefree.free_interp)
+		sieve2_interp_free(t);
+	if (sievefree.free_support)
+		sieve2_support_free(p);
+	if (sievefree.free_script)
+		sieve2_script_free(s);
+	if (sievefree.free_error)
+		sieve2_error_free(e);
+	if (sievefree.free_message)
+		sieve2_message_free(m);
+	if (sievefree.free_action)
+		sieve2_action_free(a);
 
-      script_free:
-	res = sieve2_script_free(s);
-	if (res != SIEVE2_OK) {
-		printf("sieve2_script_free() returns %d\n", res);
-		ret = 1;
-	}
-
-      support_free:
-	res = sieve2_support_free(p);
-	if (res != SIEVE2_OK) {
-		printf("sieve2_support_free() returns %d\n", res);
-		ret = 1;
-	}
-
-      action_free:
-	res = sieve2_action_free(a);
-	if (res != SIEVE2_OK) {
-		printf("sieve2_action_free() returns %d\n", res);
-		ret = 1;
-	}
-
-	/* Good thing we're not forgetting ;-) */
-      char_script_free:
 	if (script != NULL)
 		my_free(script);
-      char_scriptname_free:
+	if (scriptname != NULL)
+		my_free(scriptname);
+  
+	if (script != NULL)
+		my_free(script);
 	if (scriptname != NULL)
 		my_free(scriptname);
 
-      no_free:
+      skip_free:
 	return ret;
 }
 
@@ -232,13 +222,13 @@ int sortsieve_unroll_action(sieve2_action_t * a, struct list *actions)
 			break;
 		res = sieve2_action_next(&a, &code, &action_context);
 		if (res == SIEVE2_DONE) {
-			printf("We've reached the end.\n");
+			trace(TRACE_DEBUG, "We've reached the end.\n");
 			break;
 		} else if (res != SIEVE2_OK) {
-			printf("Error in action list.\n");
+			trace(TRACE_ERROR, "Error in action list.\n");
 			break;
 		}
-		printf("Action code is: %d\n", code);
+		trace(TRACE_DEBUG, "Action code is: %d\n", code);
 
 		switch (code) {
 		case SIEVE2_ACTION_REDIRECT:
@@ -246,8 +236,8 @@ int sortsieve_unroll_action(sieve2_action_t * a, struct list *actions)
 				sieve2_redirect_context_t *context =
 				    (sieve2_redirect_context_t *)
 				    action_context;
-				printf("Action is REDIRECT: ");
-				printf("Destination is %s\n",
+				trace(TRACE_DEBUG, "Action is REDIRECT: ");
+				trace(TRACE_DEBUG, "Destination is %s\n",
 				       context->addr);
 				tmpmeth = SA_REDIRECT;
 				tmpdest = strdup(context->addr);
@@ -258,14 +248,14 @@ int sortsieve_unroll_action(sieve2_action_t * a, struct list *actions)
 				sieve2_reject_context_t *context =
 				    (sieve2_reject_context_t *)
 				    action_context;
-				printf("Action is REJECT: ");
-				printf("Message is %s\n", context->msg);
+				trace(TRACE_DEBUG, "Action is REJECT: ");
+				trace(TRACE_DEBUG, "Message is %s\n", context->msg);
 				tmpmeth = SA_REJECT;
 				tmpmsg = strdup(context->msg);
 				break;
 			}
 		case SIEVE2_ACTION_DISCARD:
-			printf("Action is DISCARD\n");
+			trace(TRACE_DEBUG, "Action is DISCARD\n");
 			tmpmeth = SA_DISCARD;
 			break;
 		case SIEVE2_ACTION_FILEINTO:
@@ -273,8 +263,8 @@ int sortsieve_unroll_action(sieve2_action_t * a, struct list *actions)
 				sieve2_fileinto_context_t *context =
 				    (sieve2_fileinto_context_t *)
 				    action_context;
-				printf("Action is FILEINTO: ");
-				printf("Destination is %s\n",
+				trace(TRACE_DEBUG, "Action is FILEINTO: ");
+				trace(TRACE_DEBUG, "Destination is %s\n",
 				       context->mailbox);
 				tmpmeth = SA_FILEINTO;
 				tmpdest = strdup(context->mailbox);
@@ -285,29 +275,27 @@ int sortsieve_unroll_action(sieve2_action_t * a, struct list *actions)
 				sieve2_notify_context_t *context =
 				    (sieve2_notify_context_t *)
 				    action_context;
-				printf("Action is NOTIFY: \n");
+				trace(TRACE_DEBUG, "Action is NOTIFY: \n");
 				// FIXME: Prefer to have a function for this?
 				while (context != NULL) {
-					printf("  ID \"%s\" is %s\n",
+					trace(TRACE_DEBUG, "  ID \"%s\" is %s\n",
 					       context->id,
 					       (context->
 						isactive ? "ACTIVE" :
 						"INACTIVE"));
-					printf("    Method is %s\n",
+					trace(TRACE_DEBUG, "    Method is %s\n",
 					       context->method);
-					printf("    Priority is %s\n",
+					trace(TRACE_DEBUG, "    Priority is %s\n",
 					       context->priority);
-					printf("    Message is %s\n",
+					trace(TRACE_DEBUG, "    Message is %s\n",
 					       context->message);
 					if (context->options != NULL) {
 						size_t opt = 0;
 						while (context->
 						       options[opt] !=
 						       NULL) {
-							printf
-							    ("    Options are %s\n",
-							     context->
-							     options[opt]);
+							trace(TRACE_DEBUG, "    Options are %s\n",
+							     context->options[opt]);
 							opt++;
 						}
 					}
@@ -316,10 +304,10 @@ int sortsieve_unroll_action(sieve2_action_t * a, struct list *actions)
 				break;
 			}
 		case SIEVE2_ACTION_KEEP:
-			printf("Action is KEEP\n");
+			trace(TRACE_DEBUG, "Action is KEEP\n");
 			break;
 		default:
-			printf("Unrecognized action code: %d\n", code);
+			trace(TRACE_DEBUG, "Unrecognized action code: %d\n", code);
 			break;
 		}		/* case */
 
@@ -343,48 +331,77 @@ int sortsieve_unroll_action(sieve2_action_t * a, struct list *actions)
 /* Return 0 on script OK, 1 on script error. */
 int sortsieve_script_validate(char *script, char **errmsg)
 {
-	sieve2_support_t *p;
-	sieve2_script_t *s;
+	int ret, res;
 	sieve2_interp_t *t;
-	char *freestr = NULL;
-	int res;
+	sieve2_script_t *s;
+	sieve2_support_t *p;
+	sieve2_error_t *e;
+	sievefree_t sievefree;
+
+	memset(&sievefree, 0, sizeof(sievefree_t));
 
 	res = sieve2_interp_alloc(&t);
 	if (res != SIEVE2_OK) {
-		sprintf(*errmsg,"sieve2_interp_alloc() returns %d\n", res);
-		return 1;
+		trace(TRACE_ERROR, "%s, %s: sieve2_interp_alloc() returns %d",
+			__FILE__, __func__, res);
+		ret = 1;
 	}
-
+	sievefree.free_interp = 1;
+ 
 	res = sieve2_support_alloc(&p);
 	if (res != SIEVE2_OK) {
-		sprintf(*errmsg,"sieve2_support_alloc() returns %d\n", res);
-		return 1;
+		trace(TRACE_ERROR, "%s, %s: sieve2_support_alloc() returns %d",
+			__FILE__, __func__, res);
+		ret = 1;
 	}
-
-	res = sieve2_support_register(p, NULL, SIEVE2_ACTION_FILEINTO);
-	res = sieve2_support_register(p, NULL, SIEVE2_ACTION_REDIRECT);
-	res = sieve2_support_register(p, NULL, SIEVE2_ACTION_REJECT);
-	res = sieve2_support_register(p, NULL, SIEVE2_ACTION_NOTIFY);
-
+	sievefree.free_support = 1;
+ 
+	res = 0;
+	SIEVE2_SUPPORT_REGISTER(res);
+	if (res != SIEVE2_OK) {
+		trace(TRACE_ERROR, "%s, %s: sieve2_support_register had errors.",
+			__FILE__, __func__);
+	}
+ 
 	res = sieve2_script_alloc(&s);
 	if (res != SIEVE2_OK) {
-		sprintf(*errmsg,"sieve2_script_alloc() returns %d\n", res);
-		return 1;
+		trace(TRACE_ERROR, "%s, %s: sieve2_script_alloc returns %d",
+			__FILE__, __func__, res);
+ 
+		ret = 1;
 	}
+	sievefree.free_script = 1;
 
 	res = sieve2_script_register(s, script, SIEVE2_SCRIPT_CHAR_ARRAY);
 	if (res != SIEVE2_OK) {
-		sprintf(*errmsg,"sieve2_script_register() returns %d: %s\n",
-				res, sieve2_errstr(res, &freestr));
-		my_free(freestr);
-		return 1;
+		trace(TRACE_ERROR, "%s, %s: sieve2_script_register() returns %d",
+			__FILE__, __func__, res);
+		ret = 1;
+	}
+
+	res = sieve2_error_alloc(&e);
+	if (res != SIEVE2_OK) {
+		trace(TRACE_ERROR, "%s, %s: sieve2_error_alloc returns %s",
+			__FILE__, __func__, res);
+		ret = 1;
 	}
  
-	if (sieve2_validate(t, s, p) == SIEVE2_OK) {
+	if (sieve2_validate(t, s, p, e) == SIEVE2_OK) {
 		*errmsg = NULL;
-		return 0;
+		ret = 0;
 	} else {
 		*errmsg = "Script error...";
-		return 1;
+		ret = 1;
 	}
+
+	if (sievefree.free_interp)
+		sieve2_interp_free(t);
+	if (sievefree.free_support)
+		sieve2_support_free(p);
+	if (sievefree.free_script)
+		sieve2_script_free(s);
+	if (sievefree.free_error)
+		sieve2_error_free(e);
+
+	return ret;
 }

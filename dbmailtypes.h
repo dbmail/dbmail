@@ -260,4 +260,17 @@ typedef struct ssinfo {
 	int active;
 } sievescript_info_t;
 
+/*
+ * A struct to say which Sieve allocations
+ * will need an associated free.
+ */
+typedef struct {
+	int free_interp  : 1; // t
+	int free_script  : 1; // s
+	int free_support : 1; // p
+	int free_error   : 1; // e
+	int free_message : 1; // m
+	int free_action  : 1; // a
+} sievefree_t;
+
 #endif

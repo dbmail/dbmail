@@ -43,6 +43,7 @@ Copyright (C) 2004 Aaron Stone aaron at serendipity dot cx
 #include "dbmail.h"
 #include "clientinfo.h"
 #include "timsieve.h"
+#include "sort/sortsieve.h"
 #ifdef PROC_TITLES
 #include "proctitleutils.h"
 #endif
@@ -55,6 +56,9 @@ Copyright (C) 2004 Aaron Stone aaron at serendipity dot cx
 
 char *pidFile = DEFAULT_PID_DIR "dbmail-timsieved" DEFAULT_PID_EXT;
 char *configFile = DEFAULT_CONFIG_FILE;
+
+/* this is write-once read-many, so we'll do it once for all children. */
+char *sieve_extensions = NULL;
 
 /* set up database login data */
 extern db_param_t _db_params;
@@ -142,6 +146,33 @@ int main(int argc, char *argv[])
 			break;
 		}
 	}
+
+	/* Anonymous block */ {
+		int res = 0;
+		sieve2_support_t *p;
+
+		res = sieve2_support_alloc(&p);
+		if (res != SIEVE2_OK) {
+			/* FIXME: Complain. */
+		}
+
+		/* Macro to register all of the currently-supported extensions. */
+		SIEVE2_SUPPORT_REGISTER(res);
+		if (res != SIEVE2_OK) {
+			/* FIXME: Complain. */
+		}
+
+		/* load up on the extensions we support. */
+		res = sieve2_extensions_listsupport(p, &sieve_extensions);
+		if (res != SIEVE2_OK) {
+			/* FIXME: Complain. */
+		}
+
+		res = sieve2_support_free(p);
+		if (res != SIEVE2_OK) {
+			/* FIXME: Complain. */
+		}
+	} /* End of anonymous block. */
 
 	SetMainSigHandler();
 

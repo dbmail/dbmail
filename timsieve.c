@@ -54,11 +54,11 @@
 #define GREETING(stream) \
           fprintf(stream, "\"IMPLEMENTATION\" \"DBMail timsieved v%s\"\r\n", VERSION); \
           fprintf(stream, "\"SASL\" \"PLAIN\"\r\n"); \
-          fprintf(stream, "\"SIEVE\" \"%s\"\r\n", sieve2_listextensions()); \
+          fprintf(stream, "\"SIEVE\" \"%s\"\r\n", sieve_extensions); \
           fprintf(stream, "OK\r\n")
 	  /* Remember, no trailing semicolon! */
-	  /* Sadly, some client seem to be hardwired to look to 'timsieved'
-	   * and so that part of the Implementation line is absolutely required. */
+	  /* Sadly, some clients seem to be hardwired to look for 'timsieved',
+	   * so that part of the Implementation line is absolutely required. */
 
 /* allowed timsieve commands */
 static const char *commands[] = {
@@ -74,6 +74,9 @@ static const char validchars[] =
 
 static char myhostname[64];
 
+/* Defined in timsieved.c */
+extern char *sieve_extensions;
+
 int tims_handle_connection(clientinfo_t * ci)
 {
 	/*
@@ -84,7 +87,6 @@ int tims_handle_connection(clientinfo_t * ci)
 	int done = 1;		/* loop state */
 	char *buffer = NULL;	/* connection buffer */
 	int cnt;		/* counter */
-	time_t timestamp;
 
 	PopSession_t session;	/* current connection session */
 
@@ -223,7 +225,7 @@ int tims_error(PopSession_t * session, void *stream,
 }
 
 
-int tims(void *stream, void *instream, char *buffer, char *client_ip,
+int tims(void *stream, void *instream, char *buffer, char *client_ip UNUSED,
 	 PopSession_t * session)
 {
 	/* returns values:
@@ -824,9 +826,9 @@ int tims(void *stream, void *instream, char *buffer, char *client_ip,
 						    list_getstart
 						    (&scriptlist);
 						while (tmp != NULL) {
-							struct ssinfo *info
+							sievescript_info_t *info
 							    =
-							    (struct ssinfo
+							    (sievescript_info_t
 							     *) tmp->data;
 							fprintf((FILE *)
 								stream,
