@@ -45,7 +45,7 @@
 
 #include "check_dbmail.h"
 
-char *configFile = DEFAULT_CONFIG_FILE;
+extern char * configFile;
 extern db_param_t _db_params;
 
 
@@ -70,15 +70,22 @@ u64_t get_first_user_idnr(void)
  * the test fixtures
  *
  */
-
+void init_testuser1(void) 
+{
+        u64_t user_idnr;
+	if (! (auth_user_exists("testuser1",&user_idnr)))
+		auth_adduser("testuser1","test", "md5", 101, 1024000, &user_idnr);
+}
+				
 	
 void setup(void)
 {
-	configure_debug(5,0,1);
+	configure_debug(4,0,1);
 	config_read(configFile);
 	GetDBParams(&_db_params);
 	db_connect();
 	auth_connect();
+	init_testuser1();
 }
 
 void teardown(void)

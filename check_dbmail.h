@@ -1,4 +1,8 @@
 
+#include "dbmail.h"
+
+char *configFile = "/etc/dbmail/dbmail-test.conf";
+
 /* simple testmessages. */
 char *raw_message = "From: <vol@inter7.com>\n"
 	"To: <vol@inter7.com>\n"

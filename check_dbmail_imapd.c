@@ -46,7 +46,7 @@
 
 #include "check_dbmail.h"
 
-char *configFile = DEFAULT_CONFIG_FILE;
+extern char *configFile;
 extern db_param_t _db_params;
 
 

@@ -42,7 +42,7 @@
 #include "db.h"
 #include "dbmail-message.h"
 
-char *configFile = DEFAULT_CONFIG_FILE;
+extern char *configFile;
 extern db_param_t _db_params;
 
 extern char *raw_message;
