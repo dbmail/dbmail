@@ -7,19 +7,24 @@ AM_MAINTAINER_MODE
 AC_PROG_RANLIB
 
 mysqllibpaths="/usr/lib /usr/local/lib /lib /usr/freeware/lib \
-               /usr/freeware/lib32 $HOME/lib $HOME/tcl/lib $HOME"
+               /usr/freeware/lib32 $HOME/lib $HOME/mysql/lib \ 
+               /usr/lib/mysql /usr/local/lib/mysql $HOME/lib/mysql $HOME"
+
 mysqlheaderpaths="/usr/include/mysql /usr/include /usr/local/include/mysql \
                   /usr/local/include /usr/freeware/include/mysql \
                   /usr/freeware/include $HOME/include $HOME/mysql/include \
                   $HOME"
 
 pgsqllibpaths="/usr/lib /usr/local/lib /lib /usr/freeware/lib \
-               /usr/freeware/lib32 $HOME/lib $HOME/tcl/lib $HOME"
+               /usr/freeware/lib32 $HOME/lib $HOME/pgsql/lib \
+               /usr/lib/pgsql /usr/local/lib/pgsql /usr/lib/postgresql \
+               /usr/local/lib/postgresql $HOME/lib/pgsql $HOME/lib/postgresql \
+               $HOME/postgresql/lib $HOME"
 
 pgsqlheaderpaths="/usr/include/pgsql /usr/include /usr/local/include/pgsql \
                   /usr/local/include /usr/freeware/include/pgsql \
                   /usr/freeware/include $HOME/include $HOME/pgsql/include \
-		  /usr/local/pgsql/include $HOME"
+		  /usr/local/pgsql/include /usr/include/postgresql $HOME"
 
 DBMAIL_BOTH_SQL_CHECK
 DBMAIL_CHECK_SQL_LIBS
