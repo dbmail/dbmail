@@ -248,7 +248,7 @@ unsigned long db_adduser (char *username, char *password, char *clientid, char *
 	return useridnr;
 }
 
-int db_addalias (unsigned long useridnr, char *alias)
+int db_addalias (unsigned long useridnr, char *alias, int clientid)
 {
 	/* adds an alias for a specific user */
 	
@@ -256,8 +256,8 @@ int db_addalias (unsigned long useridnr, char *alias)
 	
 	memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
 
-	sprintf (ckquery,"INSERT INTO aliases (alias,deliver_to,owner_id) VALUES ('%s','%lu',%lu)",
-			alias, useridnr,useridnr);
+	sprintf (ckquery,"INSERT INTO aliases (alias,deliver_to,owner_id) VALUES ('%s','%lu',%d)",
+			alias, useridnr, clientid);
 	
 	trace (TRACE_DEBUG,"db_addalias(): executing query for user: [%s]", ckquery);
 

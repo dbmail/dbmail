@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
 	printf ("Ok. Connected\n");
 	
 	printf ("Adding user %s with password %s, %s bytes mailbox limit and clientid %s...",
-			argv[1], argv[2], argv[3], argv[4]);
+			argv[1], argv[2], argv[4], argv[3]);
 
 	useridnr = db_adduser (argv[1],argv[2],argv[3],argv[4]);
 	
@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
 	for (i = 5; i<argc; i++)
 	{
 		printf ("Adding alias %s...",argv[i]);
-		if (db_addalias(useridnr,argv[i])==-1)
+		if (db_addalias(useridnr,argv[i],atoi(argv[3])==-1)
 			printf ("Failed\n");
 		else
 			printf ("Ok, added\n");
