@@ -957,7 +957,7 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
 	  return -1;
 	}
 
-      if (result) fprintf(ci->tx,"\\r\noselect ");
+      if (result) fprintf(ci->tx,"\\noselect ");
 
       result = db_noinferiors(mboxid);
       if (result == -1)
@@ -1012,21 +1012,6 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
 	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
 	  free(children);
 	  return -1;
-	}
-
-      if (percpresent && !starpresent)
-	{
-	  /* number of '/' should be one more in match than in base */
-	  for (j=0,cnt=0; j<strlen(name); j++)
-	    if (name[j] == '/') cnt++;
-
-	  for (j=0; j<strlen(args[0]); j++)
-	    if (args[0][j] == '/') cnt--;
-
-	  if (cnt != 1)
-	    {
-	      continue;
-	    }
 	}
 
       fprintf(ci->tx,"* %s (",thisname);
