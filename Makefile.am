@@ -29,7 +29,7 @@ SERVER = server.c serverchild.c pool.c
 DELIVER = pipe.c forward.c dsn.c
 
 # CFLAGS
-AM_CFLAGS = -fomit-frame-pointer
+#AM_CFLAGS = -fomit-frame-pointer
 
 INCLUDES = -I$(top_srcdir)
 
@@ -104,4 +104,3 @@ check_dbmail_imapd_LDADD=@CHECK_LIBS@ libdbmail.la
 check_dbmail_imapd_INCLUDES=@CHECK_CFLAGS@
 
 endif
-
