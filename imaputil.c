@@ -1673,6 +1673,7 @@ char **build_args_array_ext(const char *originalString, clientinfo_t *ci)
 	      trace(TRACE_DEBUG, "build_args_array_ext(): got extra line [%s]", s);
 
 	      /* start over! */
+	      i = 0;
 	      continue;
 	    }
 	}
