@@ -1,3 +1,7 @@
+2005-04-06  Paul Stevens <paul@nfg.nl>
+
+	* imap4.c: set COMMAND_SHOW_LEVEL to TRACE_INFO.
+
 2005-04-05  Paul Stevens <paul@nfg.nl>
 
 	* auth/authsql.c: prevent loop in auth_check_user_ext where

@@ -42,7 +42,7 @@
 #include "auth.h"
 
 #define MAX_LINESIZE (10*1024)
-#define COMMAND_SHOW_LEVEL TRACE_ERROR
+#define COMMAND_SHOW_LEVEL TRACE_INFO
 
 
 
