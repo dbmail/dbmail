@@ -76,7 +76,7 @@ int dsnuser_resolve_list(struct list *deliveries)
       if (delivery->useridnr != 0)
         {
           /* This seems to be the only way to see if a useridnr is valid. */
-          username = auth_get_userid(&delivery->useridnr);
+          username = auth_get_userid(delivery->useridnr);
           if (username != NULL)
             {
               /* Free the username, we don't actually need it. */

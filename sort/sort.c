@@ -198,7 +198,7 @@ int sort_and_deliver(u64_t msgidnr,
                         {
                           case -2:
                             /* Couldn't deliver because the quota has been reached */
-                            bounce_id = auth_get_userid(&useridnr);
+                            bounce_id = auth_get_userid(useridnr);
                             bounce(header, bounce_id, BOUNCE_STORAGE_LIMIT_REACHED);
                             my_free (bounce_id);
                             break;
@@ -244,7 +244,7 @@ int sort_and_deliver(u64_t msgidnr,
                 {
 		  // FIXME: I'm happy with this code, but it's not quite right...
 		  // Plus we want to specify a message to go along with it!
-                  bounce_id = auth_get_userid(&useridnr);
+                  bounce_id = auth_get_userid(useridnr);
                   bounce(header, bounce_id, BOUNCE_NO_SUCH_USER);
 
                   my_free(bounce_id);
@@ -262,7 +262,7 @@ int sort_and_deliver(u64_t msgidnr,
 
                   /* Put the destination into the targets list */
                   /* The From header will contain... */
-                  forward_id = auth_get_userid(&useridnr);
+                  forward_id = auth_get_userid(useridnr);
                   forward(msgidnr, &targets, forward_id, header, headersize);
 
                   list_freelist(&targets.start);
@@ -306,7 +306,7 @@ int sort_and_deliver(u64_t msgidnr,
             {
               case -2:
                 /* Couldn't deliver because the quota has been reached */
-                bounce_id = auth_get_userid(&useridnr);
+                bounce_id = auth_get_userid(useridnr);
                 bounce(header, bounce_id, BOUNCE_STORAGE_LIMIT_REACHED);
                 my_free(bounce_id);
                 trace(TRACE_DEBUG, "%s, %s: error copying message to user [%llu], maxmail exceeded",

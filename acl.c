@@ -155,6 +155,8 @@ int acl_delete_acl(u64_t userid, u64_t mboxid) {
 
 char *acl_get_acl(u64_t mboxid) 
 {
+	u64_t userid;
+	char *username;
 	size_t acl_string_size = 0;
 	char *acl_string; /* return string */
 	char *identifier; /* one identifier */
@@ -174,6 +176,26 @@ char *acl_get_acl(u64_t mboxid)
 		return NULL;
 	}
 
+	/* add the current user to the list if this user is the owner
+	 * of the mailbox
+	 */
+	if(db_get_mailbox_owner(mboxid, &userid) < 0) {
+		trace(TRACE_ERROR, "%s,%s: error querying ownership of "
+		      "mailbox", __FILE__, __FUNCTION__);
+		list_freelist(&identifier_list.start);
+		return NULL;
+	}
+	
+	if ((username = auth_get_userid(userid)) == NULL) {
+		trace(TRACE_ERROR,"%s,%s: error getting username for "
+		      "user [%llu]", __FILE__, __FUNCTION__, userid);
+		list_freelist(&identifier_list.start);
+		return NULL;
+	}
+	list_nodeadd(&identifier_list, username, strlen(username) + 1);
+	my_free(username);
+
+			     
 	identifier_elm = list_getstart(&identifier_list);
 	trace(TRACE_DEBUG, "%s,%s: before looping identifiers!",
 	      __FILE__, __FUNCTION__);
@@ -197,6 +219,7 @@ char *acl_get_acl(u64_t mboxid)
 	
 	// initialise list to length 0
 	acl_string[0] = '\0';
+	memset((void*) acl_string, '\0', acl_string_size + 1);
 	identifier_elm = list_getstart(&identifier_list);
 	while(identifier_elm) {
 		identifier = (char*) identifier_elm->data;
@@ -210,9 +233,10 @@ char *acl_get_acl(u64_t mboxid)
 			return NULL;
 		}
 		trace(TRACE_DEBUG, "%s,%s: %s", __FILE__, __FUNCTION__, rightsstring);
-		snprintf(acl_string, acl_string_size + 1,
-			 "%s%s %s ", acl_string, identifier,
-			 rightsstring);
+		if (strlen(rightsstring) > 0) 
+			snprintf(acl_string, acl_string_size + 1,
+				 "%s%s %s ", acl_string, identifier,
+				 rightsstring);
 		identifier_elm = identifier_elm->nextnode;
 		
 	}
@@ -283,10 +307,11 @@ int acl_get_rightsstring_identifier(char *identifier,
 int acl_get_rightsstring(u64_t userid, u64_t mboxid, char *rightsstring)
 {
 	unsigned i;
+	unsigned rightsstring_idx = 0;
 	int result;
 
 	assert (rightsstring != NULL);
-	rightsstring[0] = '\0';
+	memset(rightsstring, '\0', NR_ACL_FLAGS + 1);
 
 	for (i = ACL_RIGHT_LOOKUP; i <= ACL_RIGHT_ADMINISTER; i++) {
 		result = acl_has_right(userid, mboxid, i);
@@ -296,14 +321,18 @@ int acl_get_rightsstring(u64_t userid, u64_t mboxid, char *rightsstring)
 			      __FILE__, __FUNCTION__, userid, mboxid);
 			return -1;
 		}
-
-		if (result == 1) {
-			snprintf(rightsstring, NR_ACL_FLAGS + 1,
-				 "%s%c", rightsstring, acl_right_chars[i]);
-			trace(TRACE_DEBUG, "%s,%s: i = %u. char is %c, str = %s",
-			      __FILE__, __FUNCTION__, i, acl_right_chars[i], rightsstring);
 		
+		if (result == 1) {
+			rightsstring[rightsstring_idx] = acl_right_chars[i];
+			rightsstring_idx++;
+			trace(TRACE_DEBUG, "%s,%s: i = %u. char is %c, "
+			      "str = %s",
+			      __FILE__, __FUNCTION__, i, acl_right_chars[i], 
+			      rightsstring);
 		}
+		trace(TRACE_DEBUG,"%s,%s rightsstring currently is %s",
+		      __FILE__, __FUNCTION__, rightsstring);
+		
 	}
 	return 1;
 }

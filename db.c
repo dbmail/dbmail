@@ -1797,8 +1797,8 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
     }
 
     /* create a msg 
-     * status and seen_flag are set to 001, which means the message 
-     * has been read 
+     * according to the rfc, the recent flag has to be set to '1'.
+     * this also means that the status will be set to '001'
      */
     snprintf(query, DEF_QUERYSIZE,
 	     "INSERT INTO messages "

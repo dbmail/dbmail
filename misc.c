@@ -131,7 +131,7 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
 		/* mailbox owned by current user */
 		return strdup(mailbox_name);
 	} else {
-		owner_name = auth_get_userid(&owner_idnr);
+		owner_name = auth_get_userid(owner_idnr);
 		if (owner_name == NULL) {
 			trace(TRACE_ERROR, "%s,%s: error owner_name is NULL",
 			      __FILE__, __FUNCTION__);

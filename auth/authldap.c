@@ -646,19 +646,19 @@ int auth_user_exists(const char *username, u64_t *user_idnr)
 /* Given a useridnr, find the account/login name
  * return 0 if not found, NULL on error
  */
-char *auth_get_userid (u64_t *user_idnr)
+char *auth_get_userid (u64_t user_idnr)
 {
   char *returnid = NULL;
   char query[AUTH_QUERY_SIZE];
   char *fields[] = { _ldap_cfg.field_uid, NULL };
-
+  /*
   if (!user_idnr)
     {
       trace(TRACE_ERROR,"auth_get_userid(): got NULL as useridnr");
       return 0;
     }
-
-  snprintf( query, AUTH_QUERY_SIZE, "(%s=%llu)", _ldap_cfg.field_nid, *user_idnr );
+  */
+  snprintf(query, AUTH_QUERY_SIZE, "(%s=%llu)", _ldap_cfg.field_nid, user_idnr );
   returnid = __auth_get_first_match( query, fields );
 
   trace(TRACE_DEBUG, "auth_getuserid(): returned value is [%s]", returnid );

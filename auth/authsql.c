@@ -846,7 +846,7 @@ u64_t auth_md5_validate (char *username,unsigned char *md5_apop_he,
   return 0;
 }
 
-char *auth_get_userid (u64_t *user_idnr)
+char *auth_get_userid (u64_t user_idnr)
 {
   char *query_result;
   char *returnid = NULL;
@@ -854,7 +854,7 @@ char *auth_get_userid (u64_t *user_idnr)
   db_use_auth_result();
   snprintf (__auth_query_data, AUTH_QUERY_SIZE,
 		  "SELECT userid FROM users WHERE user_idnr = '%llu'",
-		  *user_idnr);
+		  user_idnr);
 
   if (__auth_query(__auth_query_data)==-1) {
       trace(TRACE_ERROR,"%s,%s: query failed",

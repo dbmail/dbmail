@@ -1,3 +1,24 @@
+2004-03-12  Ilja Booij  <ilja@ic-s.nl>
+
+	* acl.c (acl_get_acl): now correctly returns an ACL string with
+	the ACL of the owner of the mailbox displayed.
+
+	* imapcommands.c (_ic_getacl): now embeds the mailbox name in
+	quotes to correctly deal with mailbox names that have spaces
+	(_ic_listrights): now embeds the mailbox name in
+	quotes to correctly deal with mailbox names that have spaces
+	(_ic_myrights):  now embeds the mailbox name in
+	quotes to correctly deal with mailbox names that have spaces
+	
+	* auth.h (auth_get_userid):  param user_idnr is now a normal
+	parameter (call by value)
+
+	* auth/authsql.c (auth_get_userid): param user_idnr is now a normal
+	parameter (call by value)
+
+	* auth/authldap.c (auth_get_userid): param user_idnr is now a normal
+	parameter (call by value)
+
 2004-03-11  Ilja Booij  <ilja@ic-s.nl>
 
 	* imapcommands.c (_ic_append): passes the internal date through

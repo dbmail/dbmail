@@ -1562,7 +1562,7 @@ int _ic_append(char *tag, char **args, ClientInfo *ci)
 	}
       
       i++;
-      trace(TRACE_DEBUG, "\n");
+      trace(TRACE_DEBUG, ")\n");
     }
   
   if (!args[i])
@@ -3899,7 +3899,7 @@ int _ic_getacl(char *tag, char **args, ClientInfo *ci)
 		return -1;
 	}
 	
-	fprintf(ci->tx, "* ACL %s %s\r\n", args[0], acl_string);
+	fprintf(ci->tx, "* ACL \"%s\" %s\r\n", args[0], acl_string);
 	my_free(acl_string);	
 	fprintf(ci->tx, "%s OK GETACL completed\r\n", tag);
 	return 0;
@@ -3942,7 +3942,7 @@ int _ic_listrights(char *tag, char **args, ClientInfo *ci)
 		return -1;
 	}
 
-	fprintf(ci->tx, "* LISTRIGHTS %s %s %s\r\n",
+	fprintf(ci->tx, "* LISTRIGHTS \"%s\" %s %s\r\n",
 		args[0], args[1], listrights_string);
 	fprintf(ci->tx, "%s OK LISTRIGHTS completed\r\n", tag);
 	return 0;
@@ -3975,7 +3975,7 @@ int _ic_myrights(char *tag, char **args, ClientInfo *ci)
 		return -1;
 	}
 	
-	fprintf(ci->tx, "* MYRIGHTS %s %s\r\n", args[0], myrights_string);
+	fprintf(ci->tx, "* MYRIGHTS \"%s\" %s\r\n", args[0], myrights_string);
 	my_free(myrights_string);
 	fprintf(ci->tx, "%s OK MYRIGHTS complete\r\n", tag);
 	return 0;

@@ -238,7 +238,7 @@ u64_t auth_md5_validate (char *username, unsigned char *md5_apop_he,
  *    - username otherwise
  * \attention caller should free username string
  */
-char *auth_get_userid (u64_t *user_idnr);
+char *auth_get_userid (u64_t user_idnr);
 
 
 #endif
