@@ -1751,6 +1751,7 @@ int db_set_deleted(u64_t *affected_rows)
 	  return -1;
      }
      *affected_rows = db_get_affected_rows();
+     db_free_result();
      return 1;
 }
 
@@ -1914,6 +1915,7 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
 		  "%llu. Database could be invalid now..",
 		  __FILE__, __FUNCTION__, message_idnr);
 	}
+       db_free_result();
 	return 1;
     }
 
@@ -3078,6 +3080,7 @@ int db_set_msgflag_range(u64_t msg_idnr_low, u64_t msg_idnr_high,
 	    placed = 1;
 	    break;
 	}
+       db_free_result();
     }
 
     if (!placed)
@@ -3203,6 +3206,8 @@ int db_get_msginfo_range(u64_t msg_idnr_low, u64_t msg_idnr_high,
     char *query_result;
     *result = 0;
     *resultsetlen = 0;
+
+    db_free_result();
 
     snprintf(query, DEF_QUERYSIZE,
 	     "SELECT seen_flag, answered_flag, deleted_flag, flagged_flag, "
