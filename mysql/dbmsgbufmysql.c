@@ -1,6 +1,6 @@
 /* 
- * dbmsgbufmysql.c
- *
+ * $Id$
+ * (c) 2000-2002 IC&S, The Netherlands (http://www.ic-s.nl)
  * function implementations for the msgbuf system
  * using a mysql database
  */

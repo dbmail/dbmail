@@ -1,8 +1,9 @@
 /*
- * dbauthpgsql.c
+ * $Id$
  *
  * implementation of authentication functions &
  * user management for PostgreSQL dbases
+ * (c) 2000-2002 IC&S, The Netherlands (http://www.ic-s.nl)
  */
 
 #include "../dbauth.h"

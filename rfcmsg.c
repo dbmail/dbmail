@@ -1,6 +1,6 @@
 /*
- * rfcmsg.c
- *
+ * $Id$
+ * (c) 2000-2002 IC&S, The Netherlands (http://www.ic-s.nl)
  * function implementations for parsing an RFC822/MIME 
  * compliant mail message
  */

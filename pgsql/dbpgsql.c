@@ -1,5 +1,5 @@
 /* $Id$
- * (c) 2000-2002 IC&S, The Netherlands
+ * (c) 2000-2002 IC&S, The Netherlands (http://www.ic-s.nl)
  *
  * postgresql driver file
  * Functions for connecting and talking to the PostgreSQL database */
@@ -16,7 +16,7 @@
 #include <ctype.h>
 #include <sys/types.h>
 #include "../rfcmsg.h"
-#include "../dbauth.h"
+#include "../auth.h"
 
 
 PGconn *conn;  

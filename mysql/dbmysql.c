@@ -1,5 +1,5 @@
-/* $iD: Dbmysql.c,v 1.63 2001/09/23 12:36:41 eelco Exp $
- * (c) 2000-2001 IC&S, The Netherlands
+/* $Id$
+ *  (c) 2000-2002 IC&S, The Netherlands (http://www.ic-s.nl)
  *
  * mysql driver file
  * Functions for connecting and talking to the Mysql database */
@@ -17,7 +17,7 @@
 #include <sys/types.h>
 #include <regex.h>
 #include "../rfcmsg.h"
-#include "../dbauth.h"
+#include "../auth.h"
 
 
 MYSQL conn;  

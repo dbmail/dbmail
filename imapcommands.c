@@ -9,7 +9,7 @@
 #include "imapcommands.h"
 #include "imaputil.h"
 #include "db.h"
-#include "dbauth.h"
+#include "auth.h"
 #include "memblock.h"
 #include "rfcmsg.h"
 #include "dbmsgbuf.h"

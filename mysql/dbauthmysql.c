@@ -1,11 +1,11 @@
 /*
- * dbauthmysql.c
- *
+ * $Id$
+ * (c) 2000-2002 IC&S, The Netherlands (http://www.ic-s.nl)
  * implementation of authentication functions &
  * user management for mySQL dbases
  */
 
-#include "../dbauth.h"
+#include "../auth.h"
 #include "/usr/include/mysql/mysql.h"
 #include "../list.h"
 #include "../debug.h"

@@ -1,7 +1,10 @@
 /*
- * dbauth.h
+ * auth.h
  *
  * generic header file for db authentication/user management functions
+ * this can be implemented in any possible way 
+ *
+ * (c) 2000-2002 IC&S
  */
 
 #ifndef _DBAUTH_H

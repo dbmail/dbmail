@@ -1,8 +1,10 @@
 /* 
- * dbmsgbufpgsql.c
+ * $Id$
  *
  * function implementations for the msgbuf system
  * using a pgsql database
+ *
+ * (c) 2000-2002 IC&S (http://www.ic-s.nl)
  */
 
 #include "../dbmsgbuf.h"

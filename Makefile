@@ -72,10 +72,10 @@ settings.o: settings.h debug.h
 user.o: user.h debug.h
 memblock.o: memblock.h debug.h
 rfcmsg.o: rfcmsg.h dbmailtypes.h
-$(DBOBJECT):db.h dbmd5.h config.h mime.h list.h memblock.h debug.h dbmailtypes.h dbauth.h
+$(DBOBJECT):db.h dbmd5.h config.h mime.h list.h memblock.h debug.h dbmailtypes.h auth.h
 $(MSGBUFOBJECT): dbmsgbuf.h db.h
 $(SEARCHOBJECT): dbsearch.h db.h
-$(AUTHOBJECT): dbauth.h db.h
+$(AUTHOBJECT): auth.h db.h
 
 distclean: clean
 	rm -rf dbmail-smtp dbmail-pop3d dbmail-maintenance dbmail-imapd dbmail-config dbmail-adduser

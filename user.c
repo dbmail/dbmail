@@ -5,7 +5,7 @@
  * It makes adding users easier */
 
 #include "user.h"
-#include "dbauth.h"
+#include "auth.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
