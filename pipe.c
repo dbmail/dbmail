@@ -461,19 +461,24 @@ static int store_message_temp(FILE * instream,
 		 * unless of course we're at the end of the file */
 		while (!feof(instream)
 		       && (usedmem + linemem < READ_BLOCK_SIZE)) {
-			if (fgets(tmpline, MAX_LINE_SIZE, instream) == NULL) 
-				break;
-			
-			linemem = strlen(tmpline);
-			/* The RFC size assumes all lines end in \r\n,
-			 * so if we have a newline (\n) but don't have
-			 * a carriage return (\r), count it in rfcsize. */
-			if (linemem > 0 && tmpline[linemem - 1] == '\n')
-				if (linemem == 1
-				    || (linemem > 1
-					&& tmpline[linemem - 2] != '\r'))
-					rfclines++;
 
+			linemem = fread(tmpline, sizeof(char), MAX_LINE_SIZE, instream);
+			totalmem += linemem;
+                        
+			/* Check to see if we're starting on a CR/NL boundary. */
+			if (tmpline[0] == '\n' && strblock[usedmem] != '\r')
+				rfclines++;
+                        
+			/* Check to see if we read in any newlines. If so, look to
+			 * see if they are preceded by carriage returns.
+			 * If not, increment the rfcsize because rfc output 
+			 * automatically inserts carriage returns. */
+			for (i = 1; i < linemem; i++) {
+				if (tmpline[i] == '\n'
+				    && tmpline[i - 1] != '\r')
+					rfclines++;
+			}
+			
 			if (ferror(instream)) {
 				trace(TRACE_ERROR,
 				      "store_message_temp(): error on instream: [%s]",

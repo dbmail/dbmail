@@ -68,7 +68,7 @@ int read_header(FILE * instream, u64_t * headerrfcsize, u64_t * headersize,
 	char *tmpheader;
 	u64_t tmpheadersize = 0, tmpheaderrfcsize = 0;
 	size_t usedmem = 0, linemem = 0;
-	size_t allocated_blocks = 1;
+	size_t allocated_blocks = 1, i;
 	int myeof = 0;
 
 	memtst((tmpheader =
@@ -86,20 +86,24 @@ int read_header(FILE * instream, u64_t * headerrfcsize, u64_t * headersize,
 	trace(TRACE_INFO, "read_header(): readheader start\n");
 
 	while (!feof(instream) && !myeof) {
-		/* fgets will read until \n occurs, and \n is *included* in tmpline */
-		if (!fgets(tmpline, MAX_LINE_SIZE, instream))
-			break;
-		linemem = strlen(tmpline);
+		/* fread may stop before finding a \n, or may continue reading past one. */
+		linemem = fread(tmpline, sizeof(char), MAX_LINE_SIZE, instream);
 		tmpheadersize += linemem;
 		tmpheaderrfcsize += linemem;
-		/* The RFC size assumes all lines end in \r\n,
-		 * so if we have a newline (\n) but don't have
-		 * a carriage return (\r), count it in rfcsize. */
-		if (linemem > 0 && tmpline[linemem - 1] == '\n')
-			if (linemem == 1
-			    || (linemem > 1
-				&& tmpline[linemem - 2] != '\r'))
+
+		/* Check to see if we're starting on a CR/NL boundary. */
+		if (tmpline[0] == '\n' && tmpheader[usedmem] != '\r')
+			tmpheaderrfcsize++;
+
+		/* Check to see if we read in any newlines. If so, look to
+		 * see if they are preceded by carriage returns.
+		 * If not, increment the rfcsize because rfc output 
+		 * automatically inserts carriage returns. */
+		for (i = 1; i < linemem; i++) {
+			if (tmpline[i] == '\n'
+			    && tmpline[i - 1] != '\r')
 				tmpheaderrfcsize++;
+		}
 
 		if (ferror(instream)) {
 			trace(TRACE_ERROR,

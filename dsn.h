@@ -22,15 +22,6 @@
 
 #include <dbmailtypes.h>
 
-/*
- * Struct to hold codes that correspond
- * to RFC 1893, and its successor, RFC 3463.
- * TODO: 
- * Plain text "translations" of these codes
- * are defined in the header dsn.h and
- * accessed by functions in dsn.c
- */
-
 typedef enum {
 	DSN_CLASS_OK = 2,
 	DSN_CLASS_TEMP = 4,
@@ -51,6 +42,20 @@ typedef struct {
 	struct list *forwards;	/* List of char* -- external addresses to forward to (internal). */
 	delivery_status_t dsn;	/* Return status of this "delivery basket" (to outside). */
 } deliver_to_user_t;
+
+/**
+ * \brief Turn a numerical delivery status
+ *        structure into a series of English explanations.
+ * \param dsn delivery_status_t containing status codes.
+ * \param class filled with a pointer to a Class explanation
+ * \param subject filled with a pointer to a Subject explanation
+ * \param detail filled with a pointer to a Detail explanation
+ * \return
+ *   - 0 on success
+ *   - -1 on failure
+ */
+int dsn_tostring(delivery_status_t dsn, const char ** const class,
+                 const char ** const subject, const char ** const detail);
 
 /**
  * \brief Initialize a dsnuser structure and its lists.

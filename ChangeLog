@@ -1,3 +1,11 @@
+2004-04-23  Aaron Stone  <aaron@serendipity.cx>
+
+	* dsn.c/dsn.h (dsn_tostring): added new function dsn_tostring,
+	which take a delivery_status_t argument and returns corresponding
+	text for the class, subject and detail codes.
+	* header.c (read_header): switched from fgets to fread.
+	* pipe.c (store_message_temp): switched from fgets to fread.
+
 2004-04-22  Ilja Booij  <ilja@ic-s.nl>
 
 	* auth/authsql.c (auth_adduser): now adds the current timestamp
