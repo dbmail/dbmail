@@ -381,7 +381,8 @@ int pop3 (void *stream, char *buffer, char *client_ip, PopSession_t *session)
 								 session->state = TRANSACTION;
 
 								 /* now we're going to build up a session for this user */
-								 trace(TRACE_DEBUG,"pop3(): validation ok, creating session");
+								 trace(TRACE_DEBUG,"pop3(): validation OK, building a session for user [%s]",
+					session->username);
 
 								 /* if pop_before_smtp is active, log this ip */
 								 if (pop_before_smtp)
@@ -695,14 +696,18 @@ int pop3 (void *stream, char *buffer, char *client_ip, PopSession_t *session)
 
 					default:
 							 {
+								 /* user logged in OK */
 								 session->state = TRANSACTION;
 								 
 								 /* user seems to be valid, let's build a session */
 								 trace(TRACE_DEBUG,"pop3(): validation OK, building a session for user [%s]",
 					session->username);
 								 
+								 /* if pop_before_smtp is active, log this ip */
+								 if (pop_before_smtp)
+									 db_log_ip(client_ip);
+
 								 result=db_createsession(result, session);
-								 
 								 if (result == 1)
 								 {
 									 fprintf((FILE *)stream, "+OK %s has %llu messages (%llu octets)\r\n",

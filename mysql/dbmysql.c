@@ -1511,7 +1511,7 @@ int db_log_ip(const char *ip)
   if (id)
     {
       /* this IP is already in the table, update the 'since' field */
-      snprintf(query, DEF_QUERYSIZE, "UPDATE pbsp SET since = unix_timestamp() WHERE idnr=%llu",id);
+      snprintf(query, DEF_QUERYSIZE, "UPDATE pbsp SET since = from_unixtime(unix_timestamp()) WHERE idnr=%llu",id);
 
       if (db_query(query) == -1)
 	{
@@ -1523,7 +1523,7 @@ int db_log_ip(const char *ip)
   else
     {
       /* IP not in table, insert row */
-      snprintf(query, DEF_QUERYSIZE, "INSERT INTO pbsp (since, ipnumber) VALUES (unix_timestamp(),'%s')", ip);
+      snprintf(query, DEF_QUERYSIZE, "INSERT INTO pbsp (since, ipnumber) VALUES (from_unixtime(unix_timestamp()),'%s')", ip);
 
       if (db_query(query) == -1)
 	{
