@@ -1639,7 +1639,8 @@ int _ic_search(char *tag, char **args, ClientInfo *ci)
   do
     {
       /* update mailbox info */
-      result = db_getmailbox(&ud->mailbox, ud->userid);
+      /* commented out: the search should be on the mailbox as the client thinks it is (!) */
+/*      result = db_getmailbox(&ud->mailbox, ud->userid);
 
       if (result == -1)
 	{
@@ -1647,6 +1648,7 @@ int _ic_search(char *tag, char **args, ClientInfo *ci)
 	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
 	  return -1;
 	}
+*/
 
       /* allocate memory for result set */
       result_set = (unsigned*)my_malloc(sizeof(unsigned) * ud->mailbox.exists);

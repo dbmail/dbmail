@@ -306,6 +306,21 @@ int IMAPClientHandler(ClientInfo *ci)
 
       trace(TRACE_INFO, "IMAPClientHandler(): Executing command %s...\n",IMAP_COMMANDS[i]);
 
+      result = (*imap_handler_functions[i])(tag, args, ci);
+      if (result == -1)
+	done = 1; /* fatal error occurred, kick this user */
+
+      if (result == 1)
+	nfaultyresponses++; /* server returned BAD or NO response */
+
+      if (result == 0 && i == IMAP_COMM_LOGOUT)
+	done = 1;
+
+
+      fflush(ci->tx); /* write! */
+
+      trace(TRACE_INFO, "IMAPClientHandler(): Finished command %s\n",IMAP_COMMANDS[i]);
+
       /* check if mailbox status has changed (notify client) */
       if (ud->state == IMAPCS_SELECTED)
 	{
@@ -344,21 +359,6 @@ int IMAPClientHandler(ClientInfo *ci)
 	  my_free(ud->mailbox.seq_list);
 	  memcpy(&ud->mailbox, &newmailbox, sizeof(newmailbox));
 	}
-
-      result = (*imap_handler_functions[i])(tag, args, ci);
-      if (result == -1)
-	done = 1; /* fatal error occurred, kick this user */
-
-      if (result == 1)
-	nfaultyresponses++; /* server returned BAD or NO response */
-
-      if (result == 0 && i == IMAP_COMM_LOGOUT)
-	done = 1;
-
-
-      fflush(ci->tx); /* write! */
-
-      trace(TRACE_INFO, "IMAPClientHandler(): Finished command %s\n",IMAP_COMMANDS[i]);
 
       for (i=0; args[i]; i++) 
 	{
