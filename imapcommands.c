@@ -606,14 +606,19 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
 	}
 
       if (i == 0)
-	strcat(cpy, chunks[i]);
+	{
+	  if (strcasecmp(chunks[0], "inbox") == 0)
+	    strcpy(chunks[0], "INBOX");  /* make inbox uppercase */
+
+	  strcat(cpy, chunks[i]);
+	}
       else
 	{
 	  strcat(cpy, "/");
 	  strcat(cpy, chunks[i]);
 	}
 
-      trace(TRACE_INFO,"checking for '%s'...\r\n",cpy);
+      trace(TRACE_DEBUG,"checking for '%s'...\r\n",cpy);
 
       /* check if this mailbox already exists */
       mboxid = db_findmailbox(cpy, ud->userid);
