@@ -6,6 +6,8 @@ DBMAIL installation
 
 This file describes the installation of DBMail. To read about extra 
 features in dbmail you should consult the EXTRAS file.
+Remember, DBmail is easy to install, as long as you exactly follow
+these instructions.
 
 What do you need?
 
@@ -72,44 +74,9 @@ What do you need?
 	Edit the dbmai.conf file and set everything in there
 	to your likeings.
 
-3.	Adjust headerfile locations and linkpaths
+3.	Run build.sh
 
-	Before compiling check where your postgresql/mysql libs and header files are. 
-	
-	For postgresql:
-	
-	-change PGSQLLIBDIR in Makefile.pgsql to your postgresqllibdir
-	-When getting errors with make, check the include statements in the sourcefiles
-	 in pgsql/ . Default it is /usr/local/pgsql/include/libpq-fe.h, change this
-	 to the real location of the postgresql headerfile, or create a symlink.
-	
-	For mysql:
-
-	-adjust MYSQLLIBDIR in Makefile.mysql to your mysqllibdir
-	-When getting errors with make, check the include statements in the sourcefiles
-         in pgsql/ . Default it is /usr/include/mysql/mysql.h, change this
-         to the real location of the mysql headerfile, or create a symlink.
-			  
-4.	Run make 
-
-	The type of database you want to use determines the makefile you have to use. For
-	Mysql user Makefile.mysql, for postgresql use Makefile.pgsql. Run make like this:
-
-	make -f Makefile.mysql
-
-	Everything should go ok. If not, it usually means that the compiler can't find 
-	the postgresql/mysql header files or that the linker can't find the postgresql/mysql 
-	files to link to. If that happends, go back to number 3 and check if everything is ok.
-
-	After the make the following binaries should have been created:
-	dbmail-smtp				- the dbmail mailinjector
-	dbmail-pop3d			- the dbmail pop3 daemon
-	dbmail-imapd			- the dbmail imap4r1 daemon
-	dbamil-maintenance		- the dbmail maintenance tool
-	dbmail-config			- the dbmail configuration program
-	dbmail-adduser			- the dbmail user add program
-
-5.	Create users in the dbmail system
+4.	Create users in the dbmail system
 
 	Next you will need to create some users into the dbmail mailing sytem.
 	Currently this can be done in two ways. One way is using the dbmail-adduser
@@ -132,11 +99,11 @@ What do you need?
 	The @net.com is a fallback alias. This means that all mail that cannot be delivered to
 	an existing alias for a @net.com address will sent to john.
 
-7.	
+5.	
 	Become root and run install-dbmail.sh, it will install the dbmail executables.
 
 
-8.	Configure your MTA 
+6.	Configure your MTA 
 
 	-- MTA installation for postfix --
 	
@@ -207,7 +174,7 @@ What do you need?
 	in the commandline using the -d option. Be carefull, the -n option is not fully 
 	tested and may behave unexected. If possible use the -d option.
 
-9.	Setting up the maintenance run
+7.	Setting up the maintenance run
 
 	The dbmail daemons and the smtp injector itself will never actually delete 
 	mail from the database. The only program that will do this is the
