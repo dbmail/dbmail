@@ -1737,7 +1737,6 @@ int db_set_deleted(u64_t * affected_rows)
 		return -1;
 	}
 	*affected_rows = db_get_affected_rows();
-	db_free_result();
 	return 1;
 }
 
@@ -1868,7 +1867,6 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
 			      "%llu. Database could be invalid now..",
 			      __FILE__, __func__, message_idnr);
 		}
-		db_free_result();
 		return 1;
 	}
 
@@ -3230,10 +3228,12 @@ int db_set_rfcsize(u64_t rfcsize, u64_t msg_idnr, u64_t mailbox_idnr)
 	if (db_num_rows() == 0) {
 		trace(TRACE_DEBUG, "%s,%s: no such message [%llu]",
 		      __FILE__, __func__, msg_idnr);
+		db_free_result();
 		return 0;
 	}
 
 	physmessage_id = db_get_result_u64(0, 0);
+	db_free_result();
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "UPDATE dbmail_physmessage SET rfcsize = '%llu' "

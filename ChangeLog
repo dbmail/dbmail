@@ -1,5 +1,11 @@
 2004-09-15  Ilja Booij  <ilja@ic-s.nl>
 
+	* db.c (db_set_deleted): removed db_free_result() call that shouldn't
+	have been there.
+	(db_imap_append_msg): removed db_free_result() call that shouldn't
+	have been there.
+	(db_set_rfcsize): added two db_free_result() calls.
+
 	* auth/authsql.c (auth_validate): added a db_free_result() statement
 	where one was missing. 
 
