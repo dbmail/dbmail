@@ -55,12 +55,13 @@ int db_query (char *query)
 
 unsigned long db_insert_message (unsigned long *useridnr)
 {
-	char *ckquery;
-	/* allocating memory for query */
+  char *ckquery;
+  /* allocating memory for query */
   memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
 
   sprintf (ckquery,"INSERT INTO message(useridnr,messagesize,status,unique_id) VALUES (%lu,0,0,\" \")",
-		 *useridnr);
+	   *useridnr);
+
   trace (TRACE_DEBUG,"db_insert_message(): inserting message query [%s]",ckquery);
   if (db_query (ckquery)==-1)
 	{
@@ -292,7 +293,7 @@ unsigned long db_validate (char *user, char *password)
   char *ckquery;
 
   memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
-  sprintf (ckquery, "SELECT useridnr FROM mailbox WHERE userid=\"%s\" AND passwd=\"%s\"",
+  sprintf (ckquery, "SELECT useridnr FROM user WHERE userid=\"%s\" AND passwd=\"%s\"",
 	   user,password);
 	
   if (db_query(ckquery)==-1)
@@ -481,7 +482,7 @@ int db_update_pop (struct session *sessionptr)
 	
 	  if (db_query(ckquery)==-1)
 	    {
-	      trace(TRACE_ERROR,"db_update_pop(): could not execute query: [%s]");
+	      trace(TRACE_ERROR,"db_update_pop(): could not execute query: []");
 	      free(ckquery);
 	      return -1;
 	    }
@@ -495,3 +496,204 @@ int db_disconnect()
 {
   return 0;
 }
+
+
+/*
+ * db_findmailbox()
+ *
+ * checks wheter the mailbox designated by 'name' exists for user 'useridnr'
+ *
+ * returns 0 if the mailbox is not found, 
+ * (unsigned)(-1) on error,
+ * or the UID of the mailbox otherwise.
+ */
+unsigned long db_findmailbox(const char *name, unsigned long useridnr)
+{
+  char query[DEF_QUERYSIZE];
+  unsigned long id;
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT mailboxidnr FROM mailbox WHERE name='%s' AND owneridnr=%lu",
+	   name, useridnr);
+  
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR,"db_findmailbox(): could not select mailbox '%s'\n",name);
+      return (unsigned long)(-1);
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_findmailbox(): mysql_store_result failed:  %s\n",mysql_error(&conn));
+      return (unsigned long)(-1);
+    }
+  
+  
+  row = mysql_fetch_row(res);
+  if (row)
+    id = atoi(row[0]);
+  else
+    id = 0;
+
+  mysql_free_result(res);
+
+  return id;
+}
+  
+
+/*
+ * db_getmailbox()
+ * 
+ * gets mailbox info from dbase
+ *
+ * returns -1 on error, 0 on success
+ */
+int db_getmailbox(mailbox_t *mb, unsigned long userid)
+{
+  char query[DEF_QUERYSIZE];
+
+  snprintf(query, DEF_QUERYSIZE, 
+	   "SELECT permission,"
+	   "seen_flag,"
+	   "answered_flag,"
+	   "deleted_flag,"
+	   "flagged_flag,"
+	   "recent_flag,"
+	   "draft_flag "
+	   " FROM mailbox WHERE mailboxidnr = %lu", mb->uid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_getmailbox(): could not select mailbox\n");
+      return -1;
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_getmailbox(): mysql_store_result failed:  %s\n",mysql_error(&conn));
+      return -1;
+    }
+
+  row = mysql_fetch_row(res);
+  if (!row)
+    {
+      trace(TRACE_ERROR,"db_getmailbox(): invalid mailbox id specified\n");
+      return -1;
+    }
+
+  mb->permission = atoi(row[0]);
+  mb->flags = 0;
+
+  if (row[1]) mb->flags |= IMAPFLAG_SEEN;
+  if (row[2]) mb->flags |= IMAPFLAG_ANSWERED;
+  if (row[3]) mb->flags |= IMAPFLAG_DELETED;
+  if (row[4]) mb->flags |= IMAPFLAG_FLAGGED;
+  if (row[5]) mb->flags |= IMAPFLAG_RECENT;
+  if (row[6]) mb->flags |= IMAPFLAG_DRAFT;
+
+  mysql_free_result(res);
+
+
+  /* now select messages: ALL */
+  snprintf(query, DEF_QUERYSIZE, "SELECT COUNT(*) FROM message WHERE mailboxidnr = %lu", mb->uid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_getmailbox(): could not select messages\n");
+      return -1;
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_getmailbox(): mysql_store_result failed: %s\n",mysql_error(&conn));
+      return -1;
+    }
+
+  row = mysql_fetch_row(res);
+  if (row)
+    mb->exists = atoi(row[0]);
+  else
+    mb->exists = 0;
+
+  mysql_free_result(res);
+
+
+  /* now select messages:  RECENT */
+  snprintf(query, DEF_QUERYSIZE, "SELECT COUNT(*) FROM message WHERE recent_flag=1 AND "
+	   "mailboxidnr = %lu", mb->uid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_getmailbox(): could not select recent messages\n");
+      return -1;
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_getmailbox(): mysql_store_result failed: %s\n",mysql_error(&conn));
+      return -1;
+    }
+
+  row = mysql_fetch_row(res);
+  if (row)
+    mb->recent = atoi(row[0]);
+  else
+    mb->recent = 0;
+
+  mysql_free_result(res);
+  
+
+  /* now select messages:  UNSEEN */
+  snprintf(query, DEF_QUERYSIZE, "SELECT COUNT(*) FROM message WHERE seen_flag=0 AND "
+	   "mailboxidnr = %lu", mb->uid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_getmailbox(): could not select unseen messages\n");
+      return -1;
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_getmailbox(): mysql_store_result failed: %s\n",mysql_error(&conn));
+      return -1;
+    }
+
+  row = mysql_fetch_row(res);
+  if (row)
+    mb->unseen = atoi(row[0]);
+  else
+    mb->unseen = 0;
+
+  mysql_free_result(res);
+
+
+  /* done */
+  return 0;
+}
+
+
+/*
+ * db_createmailbox()
+ *
+ * creates a mailbox for the specified user
+ * does not perform hierarchy checks
+ *
+ * returns -1 on error, 0 on succes
+ */
+int db_createmailbox(const char *name, unsigned long ownerid)
+{
+  char query[DEF_QUERYSIZE];
+
+  snprintf(query, DEF_QUERYSIZE, "INSERT INTO mailbox (name, owneridnr,"
+	   "seen_flag, answered_flag, deleted_flag, flagged_flag, recent_flag, draft_flag, permission)"
+	   " VALUES ('%s', %lu, 1, 1, 1, 1, 1, 1, 2)", name,ownerid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_createmailbox(): could not create mailbox\n");
+      return -1;
+    }
+
+  return 0;
+}
+  

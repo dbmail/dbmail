@@ -244,7 +244,7 @@ int imap_process(ClientInfo *ci)
   db_disconnect();
 
   /* say bye! */
-  fprintf(ci->tx,"%s OK LOGOUT completed\n",tag);
+  fprintf(ci->tx,"%s OK completed\n",tag);
   trace(TRACE_MESSAGE,"IMAP: Closing connection for client from IP %s\n",ci->ip);
 
   fflush(ci->tx);

@@ -97,13 +97,14 @@ int _ic_login(char *tag, char **args, ClientInfo *ci)
     return 1; /* error, return */
 
   userid = db_validate(args[0], args[1]);
-  trace(TRACE_MESSAGE, "IMAPD: user (id:%d) %s logged in\n",userid,args[0]);
+  trace(TRACE_MESSAGE, "IMAPD: user (id:%d) %s tries login\n",userid,args[0]);
 
   if (userid == -1)
     {
       /* a db-error occurred */
-      fprintf(ci->tx,"* BAD internal db error validating user\n");
-      trace(TRACE_MESSAGE,"IMAPD: db-validate error while validating user %s (pass %s).",args[0],args[1]);
+      fprintf(ci->tx,"* BYE internal db error validating user\n");
+      trace(TRACE_ERROR,"IMAPD: login(): db-validate error while validating user %s (pass %s).",
+	    args[0],args[1]);
       return -1;
     }
 
@@ -169,8 +170,9 @@ int _ic_authenticate(char *tag, char **args, ClientInfo *ci)
   if (userid == -1)
     {
       /* a db-error occurred */
-      fprintf(ci->tx,"* BAD internal db error validating user\n");
-      trace(TRACE_MESSAGE,"IMAPD: db-validate error while validating user %s (pass %s).",username,pass);
+      fprintf(ci->tx,"* BYE internal db error validating user\n");
+      trace(TRACE_ERROR,"IMAPD: authenticate(): db-validate error while validating user %s (pass %s).",
+	    username,pass);
       return -1;
     }
 
@@ -205,14 +207,86 @@ int _ic_authenticate(char *tag, char **args, ClientInfo *ci)
 int _ic_select(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
+  unsigned long mboxid;
+  char permstring[80];
 
   if (!check_state_and_args("SELECT", tag, args, 1, IMAPCS_AUTHENTICATED, ci))
     return 1; /* error, return */
 
+  mboxid = db_findmailbox(args[0],ud->userid);
+  if (mboxid == 0)
+    {
+      fprintf(ci->tx, "%s NO Could not find specified mailbox\n", tag);
+      return 1;
+    }
+  if (mboxid == (unsigned long)(-1))
+    {
+      fprintf(ci->tx, "* BYE internal dbase error\n");
+      return -1;
+    }
+
+  ud->mailbox.uid = mboxid;
+
+  /* read info from mailbox */
+  if (db_getmailbox(&ud->mailbox, ud->userid) == -1)
+    {
+      fprintf(ci->tx,"* BYE internal dbase error\n");
+      return -1; /* fatal  */
+    }
+
+  /* show mailbox info */
+  /* msg counts */
+  fprintf(ci->tx, "* %d EXISTS\n",ud->mailbox.exists);
+  fprintf(ci->tx, "* %d RECENT\n",ud->mailbox.recent);
+
+  if (ud->mailbox.unseen > 0)
+    fprintf(ci->tx, "* %d UNSEEN\n",ud->mailbox.unseen);
+
+  /* flags */
+  fprintf(ci->tx, "* FLAGS (");
+  
+  if (ud->mailbox.flags & IMAPFLAG_SEEN) fprintf(ci->tx, "\\Seen ");
+  if (ud->mailbox.flags & IMAPFLAG_ANSWERED) fprintf(ci->tx, "\\Answered ");
+  if (ud->mailbox.flags & IMAPFLAG_DELETED) fprintf(ci->tx, "\\Deleted ");
+  if (ud->mailbox.flags & IMAPFLAG_FLAGGED) fprintf(ci->tx, "\\Flagged ");
+  if (ud->mailbox.flags & IMAPFLAG_DRAFT) fprintf(ci->tx, "\\Draft ");
+  if (ud->mailbox.flags & IMAPFLAG_RECENT) fprintf(ci->tx, "\\Recent ");
+
+  fprintf(ci->tx,")\n");
+
+  /* permanent flags */
+  fprintf(ci->tx, "* OK [PERMANENTFLAGS (");
+  if (ud->mailbox.flags & IMAPFLAG_SEEN) fprintf(ci->tx, "\\Seen ");
+  if (ud->mailbox.flags & IMAPFLAG_ANSWERED) fprintf(ci->tx, "\\Answered ");
+  if (ud->mailbox.flags & IMAPFLAG_DELETED) fprintf(ci->tx, "\\Deleted ");
+  if (ud->mailbox.flags & IMAPFLAG_FLAGGED) fprintf(ci->tx, "\\Flagged ");
+  if (ud->mailbox.flags & IMAPFLAG_DRAFT) fprintf(ci->tx, "\\Draft ");
+  if (ud->mailbox.flags & IMAPFLAG_RECENT) fprintf(ci->tx, "\\Recent ");
+
+  fprintf(ci->tx,")]\n");
+  
+  /* UID */
+  fprintf(ci->tx,"* OK [UIDVALIDITY %lu] UID value\n",ud->mailbox.uid);
+
+  /* permission */
+  switch (ud->mailbox.permission)
+    {
+    case IMAPPERM_READ: sprintf(permstring, "READ-ONLY"); break;
+    case IMAPPERM_READWRITE: sprintf(permstring, "READ-WRITE"); break;
+    default: 
+      /* invalid permission --> fatal */
+      trace(TRACE_ERROR,"IMAPD: select(): detected invalid permission mode for mailbox %lu ('%s')\n",
+	    ud->mailbox.uid, args[0]);
+
+      fprintf(ci->tx, "* BYE fatal: detected invalid mailbox settings\n");
+      return -1;
+    }
+
+
   /* ok, update state */
   ud->state = IMAPCS_SELECTED;
 
-  fprintf(ci->tx,"%s OK SELECT completed\n",tag);
+  fprintf(ci->tx,"%s OK [%s] SELECT completed\n",tag,permstring);
   return 0;
 }
 
@@ -225,11 +299,74 @@ int _ic_select(char *tag, char **args, ClientInfo *ci)
 int _ic_examine(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
+  unsigned long mboxid;
 
   if (!check_state_and_args("EXAMINE", tag, args, 1, IMAPCS_AUTHENTICATED, ci))
     return 1; /* error, return */
 
-  fprintf(ci->tx,"%s OK EXAMINE completed\n",tag);
+
+  mboxid = db_findmailbox(args[0],ud->userid);
+  if (mboxid == 0)
+    {
+      fprintf(ci->tx, "%s NO Could not find specified mailbox\n", tag);
+      return 1;
+    }
+  if (mboxid == (unsigned long)(-1))
+    {
+      fprintf(ci->tx, "* BYE internal dbase error\n");
+      return -1;
+    }
+
+  ud->mailbox.uid = mboxid;
+
+  /* read info from mailbox */
+  if (db_getmailbox(&ud->mailbox, ud->userid) == -1)
+    {
+      fprintf(ci->tx,"* BYE internal dbase error\n");
+      return -1; /* fatal */
+    }
+
+  /* show mailbox info */
+  /* msg counts */
+  fprintf(ci->tx, "* %d EXISTS\n",ud->mailbox.exists);
+  fprintf(ci->tx, "* %d RECENT\n",ud->mailbox.recent);
+
+  if (ud->mailbox.unseen > 0)
+    fprintf(ci->tx, "* %d UNSEEN\n",ud->mailbox.unseen);
+
+  /* flags */
+  fprintf(ci->tx, "* FLAGS (");
+  
+  if (ud->mailbox.flags & IMAPFLAG_SEEN) fprintf(ci->tx, "\\Seen ");
+  if (ud->mailbox.flags & IMAPFLAG_ANSWERED) fprintf(ci->tx, "\\Answered ");
+  if (ud->mailbox.flags & IMAPFLAG_DELETED) fprintf(ci->tx, "\\Deleted ");
+  if (ud->mailbox.flags & IMAPFLAG_FLAGGED) fprintf(ci->tx, "\\Flagged ");
+  if (ud->mailbox.flags & IMAPFLAG_DRAFT) fprintf(ci->tx, "\\Draft ");
+  if (ud->mailbox.flags & IMAPFLAG_RECENT) fprintf(ci->tx, "\\Recent ");
+
+  fprintf(ci->tx,")\n");
+
+  /* permanent flags */
+  fprintf(ci->tx, "* OK [PERMANENTFLAGS (");
+  if (ud->mailbox.flags & IMAPFLAG_SEEN) fprintf(ci->tx, "\\Seen ");
+  if (ud->mailbox.flags & IMAPFLAG_ANSWERED) fprintf(ci->tx, "\\Answered ");
+  if (ud->mailbox.flags & IMAPFLAG_DELETED) fprintf(ci->tx, "\\Deleted ");
+  if (ud->mailbox.flags & IMAPFLAG_FLAGGED) fprintf(ci->tx, "\\Flagged ");
+  if (ud->mailbox.flags & IMAPFLAG_DRAFT) fprintf(ci->tx, "\\Draft ");
+  if (ud->mailbox.flags & IMAPFLAG_RECENT) fprintf(ci->tx, "\\Recent ");
+
+  fprintf(ci->tx,")]\n");
+  
+  /* UID */
+  fprintf(ci->tx,"* OK [UIDVALIDITY %lu] UID value\n",ud->mailbox.uid);
+
+  /* update permission: examine forces read-only */
+  ud->mailbox.permission = IMAPPERM_READ;
+
+  /* ok, update state */
+  ud->state = IMAPCS_SELECTED;
+
+  fprintf(ci->tx,"%s OK [READ-ONLY] EXAMINE completed\n",tag);
   return 0;
 }
 
@@ -242,9 +379,119 @@ int _ic_examine(char *tag, char **args, ClientInfo *ci)
 int _ic_create(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
+  int result,i;
+  char **chunks,*cpy;
 
   if (!check_state_and_args("CREATE", tag, args, 1, IMAPCS_AUTHENTICATED, ci))
     return 1; /* error, return */
+  
+
+  /* remove trailing '/' if present */
+  if (args[0][strlen(args[0]) - 1] == '/')
+    args[0][strlen(args[0]) - 1] = '\0';
+
+  /* check if this mailbox already exists */
+  result = db_findmailbox(args[0], ud->userid);
+
+  if (result == -1)
+    {
+      /* dbase failure */
+      fprintf(ci->tx,"* BYE internal dbase error\n");
+      return -1; /* fatal */
+    }
+
+  if (result != 0)
+    {
+      /* mailbox already exists */
+      fprintf(ci->tx,"%s NO mailbox already exists\n",tag);
+      return 1;
+    }
+
+  /* alloc a ptr which can contain up to the full name */
+  cpy = (char*)malloc(sizeof(char) * (strlen(args[0]) + 1));
+  if (!cpy)
+    {
+      /* out of mem */
+      trace(TRACE_ERROR, "IMAPD: create(): not enough memory\n");
+      fprintf(ci->tx, "%s BYE server ran out of memory\n",tag);
+      return -1;
+    }
+
+  /* split up the name & create parent folders as necessary */
+  chunks = give_chunks(args[0], '/');
+
+  if (chunks == NULL)
+    {
+      /* serious error while making chunks */
+      trace(TRACE_ERROR, "IMAPD: create(): could not create chunks\n");
+      fprintf(ci->tx, "%s BYE server ran out of memory\n",tag);
+      free(cpy);
+      return -1;
+    }
+  
+  if (chunks[0] == NULL)
+    {
+      /* wrong argument */
+      fprintf(ci->tx,"%s NO invalid mailbox name specified\n",tag);
+      free_chunks(chunks);
+      free(cpy);
+      return 1;
+    }
+
+  /* now go create */
+  strcpy(cpy,"");
+
+  for (i=0; chunks[i]; i++)
+    {
+      if (strlen(chunks[i]) == 0)
+	{
+	  /* no can do */
+	  fprintf(ci->tx, "%s NO invalid mailbox name specified\n",tag);
+	  free_chunks(chunks);
+	  free(cpy);
+	  return 1;
+	}
+
+      if (i == 0)
+	strcat(cpy, chunks[i]);
+      else
+	{
+	  strcat(cpy, "/");
+	  strcat(cpy, chunks[i]);
+	}
+
+      trace(TRACE_MESSAGE,"checking for '%s'...\n",cpy);
+
+      /* check if this mailbox already exists */
+      result = db_findmailbox(cpy, ud->userid);
+      
+      if (result == -1)
+	{
+	  /* dbase failure */
+	  fprintf(ci->tx,"* BYE internal dbase error\n");
+	  free_chunks(chunks);
+	  free(cpy);
+	  return -1; /* fatal */
+	}
+
+      if (result == 0)
+	{
+	  /* mailbox does not exist */
+	  result = db_createmailbox(cpy, ud->userid);
+
+	  if (result == -1)
+	    {
+	      fprintf(ci->tx,"%s NO CREATE failed\n",tag);
+	      free_chunks(chunks);
+	      free(cpy);
+	      return 1;
+	    }
+	}
+    }
+
+  /* creation complete */
+  free_chunks(chunks);
+  free(cpy);
 
   fprintf(ci->tx,"%s OK CREATE completed\n",tag);
   return 0;
@@ -462,9 +709,6 @@ int _ic_search(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
 
-  if (!check_state_and_args("SEARCH", tag, args, 1, IMAPCS_SELECTED, ci) &&
-      !check_state_and_args("SEARCH", tag, args, 2, IMAPCS_SELECTED, ci))
-    return 1; /* error, return */
 
   fprintf(ci->tx,"%s OK SEARCH completed\n",tag);
   return 0;

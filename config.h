@@ -10,11 +10,18 @@
 #include <unistd.h>
 #include <syslog.h>
 
+#define USE_DEVELOPMENT
+
 /* DATABASE SPECIFIC */
 #define HOST "localhost"
 #define USER "root"
 #define PASS ""
+
+#ifdef USE_DEVELOPMENT
+#define MAILDATABASE "dbmail_dev"
+#else
 #define MAILDATABASE "dbmail"
+#endif
 
 #define UID_SIZE 70
 

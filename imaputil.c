@@ -19,6 +19,82 @@ extern const char AcceptedTagChars[];
 char base64encodestring[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 /*
+ * give_chunks()
+ *
+ * splits up a string delimited by a given character into a NULL-terminated array of strings
+ * does not perform any quotation-mark checks
+ */
+char **give_chunks(const char *str, char delimiter)
+{
+  int cnt,i;
+  char **array,*cpy,*tmp;
+  
+  cpy = (char*)malloc(sizeof(char) * (strlen(str) + 1));
+  if (!cpy  )
+    {
+      trace(TRACE_ERROR, "give_chunks(): out of memory\n");
+      return NULL;
+    }
+
+  strcpy(cpy,str);
+  tmp = cpy;      /* save start of cpy */
+
+  for (i=0,cnt=0; str[i]; i++)
+    if (str[i] == delimiter) 
+      {
+	cnt++;
+	cpy[i] = '\0';
+      }
+
+  cnt++; /* add last part */
+
+  /* alloc mem */
+  cnt++; /* for NULL termination */
+  array = (char**)malloc(sizeof(char*) * cnt);
+
+  if (!array)
+    {
+      trace(TRACE_ERROR, "give_chunks(): out of memory\n");
+      free(cpy);
+      return NULL;
+    }
+
+  for (i=0,cnt=0; str[i]; i++)
+    {
+      if (str[i] == delimiter)
+	{
+	  array[cnt++] = cpy;   /* save this address */
+	  cpy = &tmp[i+1];      /* let cpy point to next string */
+	}
+    }
+
+  /* copy last part */
+  array[cnt++] = cpy;
+
+  array[cnt] = NULL;
+  return array;
+}
+
+
+/* 
+ * free_chunks()
+ *
+ * frees memory allocated using give_chunks()
+ */
+void free_chunks(char **chunks)
+{
+  if (!chunks)
+    return;
+
+  if (chunks[0])
+    free(chunks[0]); /* the entire array will be freed now */
+
+  free(chunks); /* free ptrs to strings */
+}
+
+
+
+/*
  * check_state_and_args()
  *
  * checks if the user is in the right state & the numbers of arguments;
@@ -27,7 +103,7 @@ char base64encodestring[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxy
  *
  * returns 1 on succes, 0 on failure
  */
-int check_state_and_args(const char *command, const char *tag, const char **args, 
+int check_state_and_args(const char *command, const char *tag, char **args, 
 			 int nargs, int state, ClientInfo *ci)
 {
   int i;
@@ -38,8 +114,11 @@ int check_state_and_args(const char *command, const char *tag, const char **args
     {
       if (ud->state != state)
 	{
-	  fprintf(ci->tx,"%s BAD %s command received in invalid state\n", tag, command);
-	  return 0;
+	  if (!(state == IMAPCS_AUTHENTICATED && ud->state == IMAPCS_SELECTED))
+	    {
+	      fprintf(ci->tx,"%s BAD %s command received in invalid state\n", tag, command);
+	      return 0;
+	    }
 	}
     }
 
