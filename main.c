@@ -113,7 +113,7 @@ int main(int argc, char *argv[])
 	while ((c = getopt(argc, argv, "-n::m:u:d:f:r:")) != EOF) {
 		/* Received an n-th value following the last option,
 		 * so recall the last known option to be used in the switch. */
-		if (c == '1')
+		if (c == 1)
 			c = c_prev;
 		c_prev = c;
 		/* Do something with this option. */

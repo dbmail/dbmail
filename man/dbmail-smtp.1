@@ -29,15 +29,11 @@ The default header to use is the "Deliver-To:" header.
 .IP "-d addresses"
 Deliver messages to the recipients specified by 
 .I addresses.
-This option is mostly used for delivery to \fBDBmail\fR from an MTA. It is possible to set multiple recipient addresses by setting several
-.B -d 
-options.
+This option is mostly used for delivery to \fBDBmail\fR from an MTA. Seperate multiple addresses by spaces.
 .IP "-u usernames"
 Deliver messages straight to a users with username 
-.I usernames.
-It is possible to set multiple recipients by setting several
-.B -u
-options.
+.I usernames. 
+Seperate multiple usernames with spaces.
 .IP "-m mailboxname"
 Deliver messages to mailbox \fImailboxname\fR of the recipient. If this mailbox does not exist yet, it is created.
 .IP "-r return path"
