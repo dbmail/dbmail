@@ -30,7 +30,7 @@ int main (int argc, char *argv[]) {
   /* first check for commandline options */
   if (argc<2)
     {
-      printf ("\nUsage: %s -n [headerfield]   for normal deliveries (default: \"Deliver-To:\" header)\n",argv[0]);
+      printf ("\nUsage: %s -n [headerfield]   for normal deliveries (default: \"deliver-to\" header)\n",argv[0]);
       printf ("       %s -d [addresses]  for delivery without using scanner\n\n",argv[0]);
       return 0;
     }
@@ -63,11 +63,11 @@ int main (int argc, char *argv[]) {
 		if (argc>2) 
 		{
 			trace (TRACE_DEBUG, "main(): scanning for [%s]",argv[INDEX_DELIVERY_MODE+1]);
-			if (!mail_adr_list (argv[INDEX_DELIVERY_MODE+1],&users,&mimelist,&users,header,headersize))
+			if (mail_adr_list (argv[INDEX_DELIVERY_MODE+1],&users,&mimelist,&users,header,headersize) != 0)
 				trace (TRACE_STOP,"main(): scanner found no email addresses (scanned for %s)", argv[INDEX_DELIVERY_MODE+1]);
 		}
 		else
-			if (!mail_adr_list ("deliver-to",&users,&mimelist,&users,header,headersize))	
+			if (!mail_adr_list ("deliver-to",&users,&mimelist,&users,header,headersize) != 0)	
 				trace(TRACE_STOP,"main(): scanner found no email addresses (scanned for Deliver-To:)");
     } 
 
