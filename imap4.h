@@ -44,6 +44,7 @@ typedef struct
   int octetstart,octetcnt;   /* number of octets to be retrieved */
 } body_fetch_t;
 
+
 typedef struct 
 {
   int nbodyfetches;
@@ -53,6 +54,85 @@ typedef struct
   int getMIME_IMB,getEnvelope,getSize;
   int getRFC822Header,getRFC822Text;
 } fetch_items_t;
+
+
+typedef struct
+{
+  char *name;
+  char *val;
+} parameter_t;
+
+
+typedef struct
+{
+  char *name;
+  char *source_route;
+  char *mailboxname;
+  char *hostname;
+} address_t;
+
+typedef struct
+{
+  char *date,*subject;
+  
+  int nfrom,nsender,nreplyto,nto,ncc,nbcc;
+  address_t *from,*sender,*replyto,*to,*cc,*bcc;
+
+  char *inreplyto,*messageID;
+} envelope_t;
+
+union bodystruc_t; /* fwd declaration */
+
+typedef struct 
+{
+  char *content_type,*content_subtype;
+
+  parameter_t *param_list;
+  int nparams;
+
+  char *content_id,*content_desc,*content_encoding;
+  int size;
+
+  union
+  {
+    struct
+    {
+      envelope_t *envelope;
+      union bodystruc_t *bodystruc;
+      int nlines;
+    } message_rfc822;
+
+    struct
+    {
+      int nlines;
+    } text;
+  } xtra;
+
+  char *content_md5,*content_dispostion,*content_language;
+} singlepart_t;
+
+
+typedef struct
+{
+  int nparts;
+  union bodystruc_t *parts;
+
+  char *subtype;
+  int nparams;
+  parameter_t *param_list;
+  
+  char *content_disposition,*content_language;
+} multipart_t;
+  
+
+union bodystruc_t
+{
+  singlepart_t single;
+  multipart_t multi;
+};
+    
+typedef union bodystruc_t bodystruc_t;
+
 
 typedef struct 
 {

@@ -107,6 +107,7 @@ unsigned long db_first_unseen(unsigned long uid);
 int db_get_msgflag(const char *name, unsigned long mailboxuid, unsigned long msguid);
 int db_set_msgflag(const char *name, unsigned long mailboxuid, unsigned long msguid, int val);
 int db_get_msgdate(unsigned long mailboxuid, unsigned long msguid, char *date);
+int db_build_bodystructure(bodystruct_t *bs);
 
 int db_msgdump(unsigned long uid);
 

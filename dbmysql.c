@@ -1437,7 +1437,21 @@ int db_get_msgdate(unsigned long mailboxuid, unsigned long msguid, char *date)
   mysql_free_result(res);
   return 0;
 }
-  
+
+
+/*
+ * db_build_bodystructure()
+ *  
+ * builds the body structure of a message
+ *
+ * returns -1 on error, 0 on success
+ */
+int db_build_bodystructure(bodystruct_t *bs)
+{
+  char query[DEF_QUERYSIZE];
+
+}
+
 
 /*
  * db_msgdump()
