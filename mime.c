@@ -66,15 +66,15 @@ int mime_fetch_headers(const char *datablock, struct list *mimelist)
 {
 	GString *raw = g_string_new(datablock);
 	struct DbmailMessage *m = dbmail_message_new();
-    GMimeMessage *message;
+	GMimeMessage *message;
 	m = dbmail_message_init_with_string(m, raw);
 	g_mime_header_foreach(m->content->headers, _register_header, (gpointer)mimelist);
 	g_string_free(raw,1);
 
-    if (dbmail_message_get_class(m) == DBMAIL_MESSAGE && GMIME_MESSAGE(m->content)->mime_part) {
-        message = (GMimeMessage *)(m->content);
-        g_mime_header_foreach(GMIME_OBJECT(message->mime_part)->headers, _register_header, (gpointer)mimelist);
-    }
+	if (dbmail_message_get_class(m) == DBMAIL_MESSAGE && GMIME_MESSAGE(m->content)->mime_part) {
+		message = (GMimeMessage *)(m->content);
+		g_mime_header_foreach(GMIME_OBJECT(message->mime_part)->headers, _register_header, (gpointer)mimelist);
+	}
 
 	return 0;	
 }
@@ -110,13 +110,10 @@ int mime_readheader(const char *datablock, u64_t * blkidx, struct list *mimelist
 	int cr_nl_present;	/* 1 if a '\r\n' is found */
 
 	char field[MIME_FIELD_MAX];
-	char value[MIME_VALUE_MAX];
 	
 	/* moved header-parsing to separate function */
 	mime_fetch_headers(datablock, mimelist);
 	
-	trace(TRACE_DEBUG, "%s,%s: entering mime loop", __FILE__, __func__);
-
 	blkdata = g_strdup(datablock);
 
 	*headersize = 0;
@@ -180,40 +177,17 @@ int mime_readheader(const char *datablock, u64_t * blkidx, struct list *mimelist
 
 			/* &delimiter[idx] is field value, startptr is field name */
 			fieldlen = snprintf(field, MIME_FIELD_MAX, "%s", startptr);
-			for (vallen = 0, j = 0;
-			     delimiter[idx + j] && vallen < MIME_VALUE_MAX; j++, vallen++) {
+			for (vallen = 0, j = 0; delimiter[idx + j] && vallen < MIME_VALUE_MAX; j++, vallen++) {
 				if (delimiter[idx + j] == '\n') 
-					value[vallen++] = '\r';
-
-				value[vallen] = delimiter[idx + j];
+					vallen++;
 			}
-
-			if (vallen < MIME_VALUE_MAX)
-				value[vallen] = 0;
-			else
-				value[MIME_VALUE_MAX - 1] = 0;
-
-			/* snprintf returns -1 if max is readched (libc <= 2.0.6) or the strlen (libc >= 2.1)
-			 * check the value. it does not count the \0.
-			 */
-
-			if (fieldlen == -1 || fieldlen >= MIME_FIELD_MAX)
-				*headersize += MIME_FIELD_MAX;
-			else
-				*headersize += fieldlen;
-
-			if (vallen == -1 || vallen >= MIME_VALUE_MAX)
-				*headersize += MIME_VALUE_MAX;
-			else
-				*headersize += vallen;
-
-			*headersize += 4;	/* <field>: <value>\r\n --> four more */
+			*headersize += strlen(field) + vallen + 4;	/* <field>: <value>\r\n --> four more */
 
 			/* restore blkdata */
 			*delimiter = ':';
 
 		}
-
+		
 		if (cr_nl_present)
 			*(endptr - 1) = '\r';
 		*endptr = '\n';	/* restore blkdata */
@@ -228,8 +202,6 @@ int mime_readheader(const char *datablock, u64_t * blkidx, struct list *mimelist
 			totallines++;
 			(*blkidx)++;
 			(*headersize) += 2;
-			trace(TRACE_DEBUG, "%s,%s: found double newline; header size: %d lines", 
-					__FILE__, __func__, totallines);
 			g_free(blkdata);
 			return totallines;
 		}
@@ -246,8 +218,6 @@ int mime_readheader(const char *datablock, u64_t * blkidx, struct list *mimelist
 	}
 
 	g_free(blkdata);
-	/* success ? */
-	trace(TRACE_DEBUG, "%s,%s: *** done ***", __FILE__, __func__);
 	return totallines;
 }
 

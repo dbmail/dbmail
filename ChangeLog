@@ -3,6 +3,7 @@
 	* check_dbmail_imapd.c, mime.c, rfcmsg.c, dbmail-message.c,
 	dbmail-message.h: correctly handle both messages and messageparts as 
 	parsed by mime_readheader.
+	* mime.c (mime_readheader): removed redundant cruft after cleanup.
 	
 2004-12-21  Aaron Stone  <aaron@serendipity.cx>
 
