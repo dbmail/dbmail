@@ -136,7 +136,7 @@ int SS_MakeServerSock(const char *ipaddr, const char *port, int default_children
 
   /* now allocate shared memory segments */
   shm_key_dcu = time(NULL);
-  shm_id_dcu = shmget(shm_key_dcu, SHM_DCU_ALLOC_SIZE, 0666 | IPC_CREAT);
+  shm_id_dcu = shmget(shm_key_dcu, SHM_DCU_ALLOC_SIZE, 0660 | IPC_CREAT);
 
   if (shm_id_dcu == -1)
     {
@@ -147,7 +147,7 @@ int SS_MakeServerSock(const char *ipaddr, const char *port, int default_children
     }
 
   shm_key_dcp = time(NULL)+1;
-  shm_id_dcp = shmget(shm_key_dcp, SHM_ONE_DCP_ALLOC_SIZE * default_children, 0666 | IPC_CREAT);
+  shm_id_dcp = shmget(shm_key_dcp, SHM_ONE_DCP_ALLOC_SIZE * default_children, 0660 | IPC_CREAT);
 
   if (shm_id_dcp == -1)
     {
@@ -212,8 +212,9 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 	exit(0);
     }
 
-  /* this process will be the server, remember pid */
+  /* this process will be the main server, remember pid */
   ss_server_pid = getpid();
+
 
   /* attach to shm */
   ss_n_default_children_used = (int*)shmat(shm_id_dcu, 0, 0);
@@ -230,7 +231,7 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 
 
   /* fork into default number of children */
-  for (i=0; i<default_children; i++)
+  for (i=0, ss_nchildren=0; i<default_children; i++)
     {
       if (!fork())
 	{
@@ -238,7 +239,14 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 	  break;
 	}
       else
-	ss_nchildren++;
+	{
+	  while (default_child_pids[i] == 0) 
+	    {
+	      trace(TRACE_DEBUG, "SS_WaitAndProcess(): waiting for child to catch up...\n");
+	      sleep(1); /* wait until child has catched up */
+	    }
+	  ss_nchildren++;
+	}
     }
 
   if (getpid() == ss_server_pid)
@@ -354,7 +362,8 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 		  (*ss_n_default_children_used)--;
 		}
 
-	      trace(TRACE_DEBUG, "[%ld] child close, dcu: %d\n",getpid(),*ss_n_default_children_used);
+	      trace(TRACE_DEBUG, "[%ld] child close, dcu: %d\n",
+		    getpid(),*ss_n_default_children_used);
 
 	    } /* main client loop */
 	}
@@ -525,6 +534,20 @@ void SS_sighandler(int sig, siginfo_t *info, void *data)
 	default_child_pids[i] = 0;
 	(*ss_n_default_children_used)--;
       }
+
+  if (sig != SIGCHLD)
+    {
+      /* close streams */
+      if (client.tx && client.rx)
+	{
+	  fflush(client.tx);
+	  fclose(client.tx);
+	  shutdown(fileno(client.rx),SHUT_RDWR);
+	  fclose(client.rx);
+
+	  memset(&client, 0, sizeof(client));
+	}
+    }
 
   switch (sig)
     {
