@@ -96,21 +96,6 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 
   /* reset */
   done = 1;
-  if (username != NULL)
-  {
-	  free(username);
-	  username = NULL;
-  }
-  if (password != NULL)
-  {
-	  free(password);
-	  password = NULL;
-  }
-
-  curr_session.validated=0;
-  /* done resetting */
-
-
   
   theiraddress=inet_ntoa(adr_clnt.sin_addr);
 
@@ -220,20 +205,13 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 	}
 	else
 	{
-		if (curr_session.validated == 0)
-		{
-			trace (TRACE_MESSAGE,"handle_client(): !alert somebody from [%s] tried to login as [%s]!",
-			theiraddress, username);
-		}
-		else
-			{		
-			trace(TRACE_MESSAGE,"handle_client(): user %s logging out [message=%lu, octets=%lu]",
-				username, curr_session.virtual_totalmessages,
-				curr_session.virtual_totalsize);
+		trace(TRACE_MESSAGE,"handle_client(): user %s logging out [message=%lu, octets=%lu]",
+			username, curr_session.virtual_totalmessages,
+			curr_session.virtual_totalsize);
 
-			/* if everything went well, write down everything and do a cleanup */
-			db_update_pop(&curr_session);
-			}
+		/* if everything went well, write down everything and do a cleanup */
+		db_update_pop(&curr_session);
+	}
 
 		db_disconnect(); 
 	

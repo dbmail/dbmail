@@ -160,7 +160,6 @@ int pop3 (void *stream, char *buffer)
 	  default:
 	    {
 	      state = TRANSACTION;
-			curr_session.validated=1;
 	      /* now we're going to build up a session for this user */
 	      trace(TRACE_DEBUG,"pop3(): validation ok, creating session");
 	      result=db_createsession (result, &curr_session);
@@ -413,7 +412,6 @@ int pop3 (void *stream, char *buffer)
 	  default:
 	    {
 	      state = TRANSACTION;
-			curr_session.validated=1;
 	      /* user seems to be valid, let's build a session */
 	      trace(TRACE_DEBUG,"pop3(): validation OK, building a session for user [%s]",username);
 	      result=db_createsession(result,&curr_session);
