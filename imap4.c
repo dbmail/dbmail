@@ -26,6 +26,9 @@ const char AcceptedTagChars[] =
 "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 "!@#$%^&+()-=_`~[]{}\\|'\" ;:,.<>/? ";
 
+const char AcceptedMailboxnameChars[] = 
+"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-=/ ";
+
 const char *IMAP_COMMANDS[] = 
 {
   "", "capability", "noop", "logout", 
@@ -83,6 +86,7 @@ int imap_login(ClientInfo *ci)
       return SS_LOGIN_FAIL;
     }
 
+  memset(ci->userData, 0, sizeof(imap_userdata_t));
   ((imap_userdata_t*)ci->userData)->state = IMAPCS_NON_AUTHENTICATED;
 
   /* greet user */

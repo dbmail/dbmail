@@ -32,7 +32,9 @@ CREATE TABLE mailbox (
    flagged_flag tinyint(1) default '0' not null,
    recent_flag tinyint(1) default '0' not null,
    draft_flag tinyint(1) default '0' not null,
-   permission tinyint(1) default '3',
+   no_inferiors tinyint(1) default '0' not null,
+   no_select tinyint(1) default '0' not null,
+   permission tinyint(1) default '2',
    PRIMARY KEY (mailboxidnr),
    UNIQUE mailboxidnr_2 (mailboxidnr)
 );

@@ -10,6 +10,9 @@
 #define IMAP_SERVER_VERSION "0.1"
 #define IMAP_CAPABILITY_STRING "IMAP4 IMAP4rev1 AUTH=LOGIN"
 
+/* maximum size of a mailbox name */
+#define IMAP_MAX_MAILBOX_NAMELEN 100
+
 int imap_process(ClientInfo *ci);
 int imap_login(ClientInfo *ci);
 
@@ -29,10 +32,11 @@ typedef int (*IMAP_COMMAND_HANDLER)(char*, char**, ClientInfo*);
 
 typedef struct 
 {
-  unsigned long uid;
+  unsigned long uid,msguidnext;
   unsigned exists,recent,unseen;
   unsigned flags;
   int permission;
+  unsigned long *seq_list;
 } mailbox_t;
 
 

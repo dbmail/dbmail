@@ -544,8 +544,13 @@ unsigned long db_findmailbox(const char *name, unsigned long useridnr)
  * db_getmailbox()
  * 
  * gets mailbox info from dbase
+ * calls db_build_msn_list() to build message sequence number list
  *
- * returns -1 on error, 0 on success
+ * returns 
+ *  -1  error
+ *   0  success
+ *   1  warning: operation not completed: msn list not build
+ *               getmailbox() should be called again
  */
 int db_getmailbox(mailbox_t *mb, unsigned long userid)
 {
@@ -594,7 +599,8 @@ int db_getmailbox(mailbox_t *mb, unsigned long userid)
 
 
   /* now select messages: ALL */
-  snprintf(query, DEF_QUERYSIZE, "SELECT COUNT(*) FROM message WHERE mailboxidnr = %lu", mb->uid);
+  snprintf(query, DEF_QUERYSIZE, "SELECT COUNT(*) FROM message WHERE mailboxidnr = %lu AND status!=3", 
+	   mb->uid);
 
   if (db_query(query) == -1)
     {
@@ -619,7 +625,7 @@ int db_getmailbox(mailbox_t *mb, unsigned long userid)
 
   /* now select messages:  RECENT */
   snprintf(query, DEF_QUERYSIZE, "SELECT COUNT(*) FROM message WHERE recent_flag=1 AND "
-	   "mailboxidnr = %lu", mb->uid);
+	   "mailboxidnr = %lu AND status!=3", mb->uid);
 
   if (db_query(query) == -1)
     {
@@ -644,7 +650,7 @@ int db_getmailbox(mailbox_t *mb, unsigned long userid)
 
   /* now select messages:  UNSEEN */
   snprintf(query, DEF_QUERYSIZE, "SELECT COUNT(*) FROM message WHERE seen_flag=0 AND "
-	   "mailboxidnr = %lu", mb->uid);
+	   "mailboxidnr = %lu AND status!=3", mb->uid);
 
   if (db_query(query) == -1)
     {
@@ -666,9 +672,37 @@ int db_getmailbox(mailbox_t *mb, unsigned long userid)
 
   mysql_free_result(res);
 
+  
+  /* now determine the next message UID */
+  /*
+   * NOTE EXPUNGED MESSAGES ARE SELECTED AS WELL IN ORDER TO BE ABLE TO RESTORE THEM 
+   */
 
-  /* done */
-  return 0;
+  snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message ORDER BY messageidnr DESC LIMIT 0,1");
+  
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_getmailbox(): could not determine highest message ID\n");
+      return -1;
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_getmailbox(): mysql_store_result failed: %s\n",mysql_error(&conn));
+      return -1;
+    }
+
+  row = mysql_fetch_row(res);
+  if (row)
+    mb->msguidnext = atoi(row[0])+1;
+  else
+    mb->msguidnext = 1; /* empty set: no messages yet in dbase */
+
+  mysql_free_result(res);
+
+
+  /* build msn list & done */
+  return db_build_msn_list(mb);
 }
 
 
@@ -677,7 +711,7 @@ int db_getmailbox(mailbox_t *mb, unsigned long userid)
  *
  * creates a mailbox for the specified user
  * does not perform hierarchy checks
- *
+ * 
  * returns -1 on error, 0 on succes
  */
 int db_createmailbox(const char *name, unsigned long ownerid)
@@ -701,14 +735,15 @@ int db_createmailbox(const char *name, unsigned long ownerid)
 /*
  * db_listmailboxchildren()
  *
- * produces a list containing the UID's of the specified mailbox' children
+ * produces a list containing the UID's of the specified mailbox' children 
+ * matching the search criterion
  *
  * returns -1 on error, 0 on succes
  */
-int db_listmailboxchildren(unsigned long uid, unsigned long **children, int *nchildren)
+int db_listmailboxchildren(unsigned long uid, unsigned long **children, int *nchildren, 
+			   const char *filter)
 {
   char query[DEF_QUERYSIZE];
-  char *name;
   int i;
 
   /* retrieve the name of this mailbox */
@@ -728,44 +763,24 @@ int db_listmailboxchildren(unsigned long uid, unsigned long **children, int *nch
     }
 
   row = mysql_fetch_row(res);
-  if (!row)
-    {
-      /* empty set */
-      children = NULL;
-      nchildren = 0;
-      mysql_free_result(res);
-      return 0;
-    }
+  if (row)
+    snprintf(query, DEF_QUERYSIZE, "SELECT mailboxidnr FROM mailbox WHERE name LIKE '%s/%s'",
+	     row[0],filter);
+  else
+    snprintf(query, DEF_QUERYSIZE, "SELECT mailboxidnr FROM mailbox WHERE name LIKE '%s'",filter);
 
-  /* alloc mem */
-  name = (char*)malloc((strlen(row[0])+1) *sizeof(char));
-  if (!name)
-    {
-      /* out of mem */
-      trace(TRACE_ERROR,"db_listmailboxchildren(): out of memory\n");
-      mysql_free_result(res);
-      children = NULL;
-      nchildren = 0;
-      return -1;
-    }
-
-  /* copy name */
-  strcpy(name, row[0]);
   mysql_free_result(res);
   
   /* now find the children */
-  snprintf(query, DEF_QUERYSIZE, "SELECT mailboxidnr FROM mailbox WHERE name LIKE '%s/%%'",name);
   if (db_query(query) == -1)
     {
       trace(TRACE_ERROR, "db_listmailboxchildren(): could not retrieve mailbox name\n");
-      free(name);
       return -1;
     }
 
   if ((res = mysql_store_result(&conn)) == NULL)
     {
       trace(TRACE_ERROR,"db_listmailboxchildren(): mysql_store_result failed: %s\n",mysql_error(&conn));
-      free(name);
       return -1;
     }
 
@@ -774,9 +789,8 @@ int db_listmailboxchildren(unsigned long uid, unsigned long **children, int *nch
     {
       /* empty set */
       *children = NULL;
-      nchildren = 0;
+      *nchildren = 0;
       mysql_free_result(res);
-      free(name);
       return 0;
     }
 
@@ -793,7 +807,6 @@ int db_listmailboxchildren(unsigned long uid, unsigned long **children, int *nch
       /* out of mem */
       trace(TRACE_ERROR,"db_listmailboxchildren(): out of memory\n");
       mysql_free_result(res);
-      free(name);
       return -1;
     }
 
@@ -806,7 +819,6 @@ int db_listmailboxchildren(unsigned long uid, unsigned long **children, int *nch
 	  free(*children);
 	  *children = NULL;
 	  *nchildren = 0;
-	  free(name);
 	  mysql_free_result(res);
 	  trace(TRACE_ERROR, "db_listmailboxchildren: data when none expected.\n");
 	  return -1;
@@ -817,7 +829,6 @@ int db_listmailboxchildren(unsigned long uid, unsigned long **children, int *nch
   while ((row = mysql_fetch_row(res)));
 
   mysql_free_result(res);
-  free(name);
 
   return 0; /* success */
 }
@@ -835,15 +846,8 @@ int db_removemailbox(unsigned long uid, unsigned long ownerid)
 {
   char query[DEF_QUERYSIZE];
 
-  /* first update messages belonging to this mailbox: mark as deleted (status 3) */
-  snprintf(query, DEF_QUERYSIZE, "UPDATE message SET status=3 WHERE"
-	   " mailboxidnr = %lu", uid);
-
-  if (db_query(query) == -1)
-    {
-      trace(TRACE_ERROR, "db_removemailbox(): could not update messages in mailbox\n");
-      return -1;
-    }
+  if (db_removemsg(uid) == -1) /* remove all msg */
+    return -1;
 
   /* now remove mailbox */
   snprintf(query, DEF_QUERYSIZE, "DELETE FROM mailbox WHERE mailboxidnr = %lu", uid);
@@ -857,7 +861,395 @@ int db_removemailbox(unsigned long uid, unsigned long ownerid)
   return 0;
 }
 
+
+/*
+ * db_isselectable()
+ *
+ * returns 1 if the specified mailbox is selectable, 0 if not and -1 on failure
+ */  
+int db_isselectable(unsigned long uid)
+{
+  char query[DEF_QUERYSIZE];
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT no_select FROM mailbox WHERE mailboxidnr = %lu",uid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_isselectable(): could not retrieve select-flag\n");
+      return -1;
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_isselectable(): mysql_store_result failed: %s\n",mysql_error(&conn));
+      return -1;
+    }
+
+  row = mysql_fetch_row(res);
+
+  if (!row)
+    {
+      /* empty set, mailbox does not exist */
+      mysql_free_result(res);
+      return 0;
+    }
+
+  if (atoi(row[0]) == 0)
+    {    
+      mysql_free_result(res);
+      return 1;
+    }
+
+  mysql_free_result(res);
+  return 0;
+}
   
 
+/*
+ * db_noinferiors()
+ *
+ * checks if mailbox has no_inferiors flag set
+ *
+ * returns
+ *   1  flag is set
+ *   0  flag is not set
+ *  -1  error
+ */
+int db_noinferiors(unsigned long uid)
+{
+  char query[DEF_QUERYSIZE];
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT no_inferiors FROM mailbox WHERE mailboxidnr = %lu",uid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_noinferiors(): could not retrieve noinferiors-flag\n");
+      return -1;
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_noinferiors(): mysql_store_result failed: %s\n",mysql_error(&conn));
+      return -1;
+    }
+
+  row = mysql_fetch_row(res);
+
+  if (!row)
+    {
+      /* empty set, mailbox does not exist */
+      mysql_free_result(res);
+      return 0;
+    }
+
+  if (atoi(row[0]) == 1)
+    {    
+      mysql_free_result(res);
+      return 1;
+    }
+
+  mysql_free_result(res);
+  return 0;
+}
+
+
+/*
+ * db_setselectable()
+ *
+ * set the noselect flag of a mailbox on/off
+ * returns 0 on success, -1 on failure
+ */
+int db_setselectable(unsigned long uid, int value)
+{
+  char query[DEF_QUERYSIZE];
+
+  snprintf(query, DEF_QUERYSIZE, "UPDATE mailbox SET no_select = %d WHERE mailboxidnr = %lu",
+	   (!value), uid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_setselectable(): could not set noselect-flag\n");
+      return -1;
+    }
+
+  return 0;
+}
+
+
+/*
+ * db_removemsg()
+ *
+ * removes ALL messages from a mailbox
+ * removes by means of setting status to 3
+ *
+ * returns -1 on failure, 0 on success
+ */
+int db_removemsg(unsigned long uid)
+{
+  char query[DEF_QUERYSIZE];
+
+  /* update messages belonging to this mailbox: mark as deleted (status 3) */
+  snprintf(query, DEF_QUERYSIZE, "UPDATE message SET status=3 WHERE"
+	   " mailboxidnr = %lu", uid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_removemsg(): could not update messages in mailbox\n");
+      return -1;
+    }
+
+  return 0; /* success */
+}
+
+
+/*
+ * db_expunge()
+ *
+ * removes all messages from a mailbox with delete-flag
+ * removes by means of setting status to 3
+ * makes a list of delete msg UID's 
+ *
+ * returns -1 on failure, 0 on success
+ */
+int db_expunge(unsigned long uid,unsigned long **msgids,int *nmsgs)
+{
+  char query[DEF_QUERYSIZE];
+  int i;
+
+  /* first select msg UIDs */
+  snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message WHERE"
+	   " mailboxidnr = %lu AND deleted_flag=1 ORDER BY messageidnr DESC", uid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_expunge(): could not select messages in mailbox\n");
+      return -1;
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_expunge(): mysql_store_result failed: %s\n",mysql_error(&conn));
+      return -1;
+    }
+
+  /* now alloc mem */
+  *nmsgs = mysql_num_rows(res);
+  *msgids = (unsigned long *)malloc(sizeof(unsigned long) * (*nmsgs));
+  if (!(*msgids))
+    {
+      /* out of mem */
+      *nmsgs = 0;
+      mysql_free_result(res);
+      return -1;
+    }
+
+  /* save ID's in array */
+  i = 0;
+  while ((row = mysql_fetch_row(res)))
+    {
+      (*msgids)[i++] = strtoul(row[i], NULL, 10);
+    }
+  mysql_free_result(res);
+  
+  /* update messages belonging to this mailbox: mark as expunged (status 3) */
+  snprintf(query, DEF_QUERYSIZE, "UPDATE message SET status=3 WHERE"
+	   " mailboxidnr = %lu AND deleted_flag=1", uid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_expunge(): could not update messages in mailbox\n");
+      free(*msgids);
+      *nmsgs = 0;
+      return -1;
+    }
+
+  return 0; /* success */
+}
     
+
+/*
+ * db_movemsg()
+ *
+ * moves all msgs from one mailbox to another
+ * returns -1 on error, 0 on success
+ */
+int db_movemsg(unsigned long to, unsigned long from)
+{
+  char query[DEF_QUERYSIZE];
+
+  /* update messages belonging to this mailbox: mark as deleted (status 3) */
+  snprintf(query, DEF_QUERYSIZE, "UPDATE message SET mailboxidnr=%ld WHERE"
+	   " mailboxidnr = %lu", to, from);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_movemsg(): could not update messages in mailbox\n");
+      return -1;
+    }
+
+  return 0; /* success */
+}
+
+
+/*
+ * db_getmailboxname()
+ *
+ * retrieves the name of a specified mailbox
+ * *name should be large enough to contain the name (IMAP_MAX_MAILBOX_NAMELEN)
+ * returns -1 on error, 0 on success
+ */
+int db_getmailboxname(unsigned long uid, char *name)
+{
+  char query[DEF_QUERYSIZE];
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT name FROM mailbox WHERE mailboxidnr = %lu",uid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_getmailboxname(): could not retrieve name\n");
+      return -1;
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_getmailboxname(): mysql_store_result failed: %s\n",mysql_error(&conn));
+      return -1;
+    }
+
+  row = mysql_fetch_row(res);
+
+  if (!row)
+    {
+      /* empty set, mailbox does not exist */
+      mysql_free_result(res);
+      *name = '\0';
+      return 0;
+    }
+
+  strncpy(name, row[0], IMAP_MAX_MAILBOX_NAMELEN);
+  mysql_free_result(res);
+  return 0;
+}
+  
+
+/*
+ * db_setmailboxname()
+ *
+ * sets the name of a specified mailbox
+ * returns -1 on error, 0 on success
+ */
+int db_setmailboxname(unsigned long uid, const char *name)
+{
+  char query[DEF_QUERYSIZE];
+
+  snprintf(query, DEF_QUERYSIZE, "UPDATE mailbox SET name = '%s' WHERE mailboxidnr = %lu",
+	   name, uid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_setmailboxname(): could not set name\n");
+      return -1;
+    }
+
+  return 0;
+}
+
+
+/*
+ * db_build_msn_list()
+ *
+ * builds a MSN (message sequence number) list containing msg UID's
+ *
+ * returns 
+ *  -1 error
+ *   0 success
+ *   1 warning: mailbox data is not up-to-date, list not generated
+ */
+int db_build_msn_list(mailbox_t *mb)
+{
+  char query[DEF_QUERYSIZE];
+  unsigned long cnt,i;
+
+  /* free existing list */
+  if (mb->seq_list)
+    free(mb->seq_list);
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message WHERE mailboxidnr = %lu "
+	   "AND status != 3 ORDER BY messageidnr DESC", mb->uid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_build_msn_list(): could not retrieve messages\n");
+      return -1;
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_build_msn_list(): mysql_store_result failed: %s\n",mysql_error(&conn));
+      return -1;
+    }
+
+  cnt = mysql_num_rows(res);
+  if (cnt != mb->exists)
+    {
+      /* mailbox data type is not uptodate */
+      mb->seq_list = NULL;
+      return 1;
+    }
+
+  /* alloc mem */
+  mb->seq_list = (unsigned long*)malloc(sizeof(unsigned long) * cnt);
+  if (!mb->seq_list)
+    {
+      /* out of mem */
+      mysql_free_result(res);
+      return -1;
+    }
+
+  i=0;
+  while ((row = mysql_fetch_row(res)))
+    mb->seq_list[i++] = strtoul(row[0],NULL,10);
+
+
+  mysql_free_result(res);
+  return 0;
+}
+
+
+/*
+ * db_first_unseen()
+ *
+ * return the message UID of the first unseen msg or -1 on error
+ */
+unsigned long db_first_unseen(unsigned long uid)
+{
+  char query[DEF_QUERYSIZE];
+  unsigned long id;
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message WHERE mailboxidnr = %lu "
+	   "AND status != 3 AND seen_flag = 0 ORDER BY messageidnr ASC LIMIT 0,1", uid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_first_unseen(): could not select messages\n");
+      return (unsigned long)(-1);
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_first_unseen(): mysql_store_result failed: %s\n",mysql_error(&conn));
+      return (unsigned long)(-1);
+    }
+  
+  row = mysql_fetch_row(res);
+  if (row)
+    id = strtoul(row[0],NULL,10);
+  else
+    id = 0; /* none found */
+      
+  mysql_free_result(res);
+  return id;
+}
+  
+  
 

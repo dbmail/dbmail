@@ -15,6 +15,7 @@
 
 extern const char AcceptedChars[];
 extern const char AcceptedTagChars[];
+extern const char AcceptedMailboxnameChars[];
 
 char base64encodestring[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
@@ -164,6 +165,9 @@ int check_state_and_args(const char *command, const char *tag, char **args,
  * [5] = ')'
  * [6] = ')'
  *
+ * quoted strings are those enclosed by double quotation marks and returned as a single argument
+ * WITHOUT the enclosing quotation marks
+ *
  * parentheses loose their special meaning if inside (double)quotation marks;
  * data should be 'clarified' (see clarify_data() function below)
  *
@@ -305,7 +309,7 @@ char **build_args_array(const char *s)
 	      else
 		{
 		  /* alloc mem */
-		  args[currarg] = (char*)malloc(sizeof(char) * (i-quotestart+1+1));
+		  args[currarg] = (char*)malloc(sizeof(char) * (i-quotestart+1+1-2));
 		  if (!args[currarg])
 		    {
 		      /* out of mem */
@@ -319,8 +323,8 @@ char **build_args_array(const char *s)
 		    }
 
 		  /* copy quoted string */
-		  memcpy(args[currarg], &s[quotestart], sizeof(char)*(i-quotestart+1));
-		  args[currarg][i-quotestart+1] = '\0'; 
+		  memcpy(args[currarg], &s[quotestart+1], sizeof(char)*(i-quotestart-1));
+		  args[currarg][i-quotestart-1] = '\0'; 
 		  currarg++;
 		}
 	    }
@@ -350,10 +354,30 @@ char **build_args_array(const char *s)
 	  i--;
 	}
     }
+  if (inquote)
+    {
+      /* single quotation mark, treat as single argument */
+      args[currarg] = (char*)malloc(sizeof(char) * (strlen(s)-quotestart));
+      if (!args[currarg])
+	{
+	  /* out of mem */
+	  /* free currently allocated mem */
+	  for (i=0; i<currarg; i++)
+	    free(args[i]);
 
-  free(scpy);
+	  free(args);
+	  return NULL;
+	}
+
+      /* copy quoted string */
+      memcpy(args[currarg], &s[quotestart+1], sizeof(char)*(strlen(s)-quotestart-1));
+      args[currarg][strlen(s)-quotestart-1] = '\0'; 
+      currarg++;
+    }
 
   args[currarg] = NULL; /* terminate array */
+
+  free(scpy);
 
   /* dump args (debug) */
   for (i=0; args[i]; i++)
@@ -495,6 +519,48 @@ int checktag(const char *s)
 
 
 /*
+ * checkmailboxname()
+ *
+ * performs a check to see if the mailboxname is valid
+ * returns 0 if invalid, 1 otherwise
+ */
+int checkmailboxname(const char *s)
+{
+  int i;
+
+  if (strlen(s) == 0)
+    return 0; /* empty name is not valid */
+
+  if (strlen(s) >= IMAP_MAX_MAILBOX_NAMELEN)
+    return 0; /* a too large string is not valid */
+
+  /* check for invalid characters */
+  for (i=0; s[i]; i++)
+    {
+      if (stridx(AcceptedMailboxnameChars, s[i]) == strlen(AcceptedMailboxnameChars))
+	{
+	  /* wrong char found */
+	  return 0;
+	}
+    }
+
+  /* check for double '/' */
+  for (i=1; s[i]; i++)
+    {
+      if (s[i] == '/' && s[i-1] == '/')
+	return 0;
+    }
+
+  /* check if the name consists of a single '/' */
+  if (strlen(s) == 1 && s[0] == '/')
+    return 0;
+
+  return 1;
+}
+
+  
+
+/*
  * base64encode()
  *
  * encodes a string using base64 encoding
@@ -554,3 +620,34 @@ void base64decode(char *in,char *out)
 
   *out = 0;
 }      
+
+
+/*
+ * binary_search()
+ *
+ * performs a binary search on array to find key
+ * array should be descending in values
+ *
+ * returns index of key in array or -1 if not found
+ */
+int binary_search(const unsigned long *array, int arraysize, unsigned long key)
+{
+  int low,high,mid;
+
+  low = 0;
+  high = arraysize-1;
+
+  while (low <= high)
+    {
+      mid = (high+low)/2;
+      if (array[mid] > key)
+	low = mid+1;
+      else if (array[mid] < key)
+	high = mid-1;
+      else
+	return mid;
+    }
+
+  return -1; /* not found */
+}
+
