@@ -16,19 +16,19 @@
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 # $Id$
 
-DROP TABLE IF EXISTS aliases;
-CREATE TABLE aliases (
+DROP TABLE IF EXISTS dbmail_aliases;
+CREATE TABLE dbmail_aliases (
    alias_idnr bigint(21) NOT NULL auto_increment,
    alias varchar(100) NOT NULL,
    deliver_to varchar(250) NOT NULL,
    client_idnr bigint(21) DEFAULT '0' NOT NULL,
    PRIMARY KEY (alias_idnr),
-   INDEX (alias),
-   INDEX (client_idnr)
+   INDEX alias_index (alias),
+   INDEX client_idnr_index (client_idnr)
 );
 
-DROP TABLE IF EXISTS users;
-CREATE TABLE users (
+DROP TABLE IF EXISTS dbmail_users;
+CREATE TABLE dbmail_users (
    user_idnr bigint(21) NOT NULL auto_increment,
    userid varchar(100) NOT NULL,
    passwd varchar(34) NOT NULL,
@@ -38,11 +38,11 @@ CREATE TABLE users (
    encryption_type varchar(20) DEFAULT '' NOT NULL,
    last_login DATETIME DEFAULT '1979-11-03 22:05:58' NOT NULL,
    PRIMARY KEY (user_idnr),
-   UNIQUE INDEX (userid)
+   UNIQUE INDEX userid_index (userid)
 );
 
-DROP TABLE IF EXISTS mailboxes;
-CREATE TABLE mailboxes (
+DROP TABLE IF EXISTS dbmail_mailboxes;
+CREATE TABLE dbmail_mailboxes (
    mailbox_idnr bigint(21) NOT NULL auto_increment,
    owner_idnr bigint(21) DEFAULT '0' NOT NULL,
    name varchar(100) BINARY NOT NULL,
@@ -56,20 +56,20 @@ CREATE TABLE mailboxes (
    no_select tinyint(1) default '0' not null,
    permission tinyint(1) default '2',
    PRIMARY KEY (mailbox_idnr),
-   INDEX (name),
-   INDEX (owner_idnr),
-   INDEX (owner_idnr, name)
+   INDEX name_index (name),
+   INDEX owner_idnr_index (owner_idnr),
+   INDEX owner_idnr_name_index (owner_idnr, name)
  );
 
-DROP TABLE IF EXISTS subscription;
-CREATE TABLE subscription (
+DROP TABLE IF EXISTS dbmail_subscription;
+CREATE TABLE dbmail_subscription (
 	user_id bigint(21) NOT NULL,
 	mailbox_id bigint(21) NOT NULL,
 	PRIMARY KEY (user_id, mailbox_id)
 );
 
-DROP TABLE IF EXISTS acl;
-CREATE TABLE acl (
+DROP TABLE IF EXISTS dbmail_acl;
+CREATE TABLE dbmail_acl (
 	user_id bigint(21) NOT NULL,
 	mailbox_id bigint(21) NOT NULL,
 	lookup_flag tinyint(1) default '0' not null,
@@ -81,11 +81,11 @@ CREATE TABLE acl (
 	create_flag tinyint(1) default '0' not null,	
 	delete_flag tinyint(1) default '0' not null,	
 	administer_flag tinyint(1) default '0' not null,	
-	PRIMARY KEY(user_id, mailbox_id)
+	PRIMARY KEY (user_id, mailbox_id)
 );
 	
-DROP TABLE IF EXISTS physmessage;
-CREATE TABLE physmessage (
+DROP TABLE IF EXISTS dbmail_physmessage;
+CREATE TABLE dbmail_physmessage (
    id bigint(21) NOT NULL auto_increment,
    messagesize bigint(21) DEFAULT '0' NOT NULL,
    rfcsize bigint(21) DEFAULT '0' NOT NULL,
@@ -93,8 +93,8 @@ CREATE TABLE physmessage (
    PRIMARY KEY(id)
 );
  
-DROP TABLE IF EXISTS messages;
-CREATE TABLE messages (
+DROP TABLE IF EXISTS dbmail_messages;
+CREATE TABLE dbmail_messages (
    message_idnr bigint(21) NOT NULL auto_increment,
    mailbox_idnr bigint(21) DEFAULT '0' NOT NULL,
    physmessage_id bigint(21) DEFAULT '0' NOT NULL,
@@ -107,51 +107,49 @@ CREATE TABLE messages (
    unique_id varchar(70) NOT NULL,
    status tinyint(3) unsigned default '0' not null,
    PRIMARY KEY (message_idnr),
-   INDEX (mailbox_idnr),
-   INDEX (physmessage_id),
-   INDEX (seen_flag),
-   INDEX (unique_id),
-   INDEX (status)
+   INDEX mailbox_idnr_index (mailbox_idnr),
+   INDEX physmessage_id_index (physmessage_id),
+   INDEX seen_flag_index (seen_flag),
+   INDEX unique_id_index (unique_id),
+   INDEX status_index (status)
 );
 
-DROP TABLE IF EXISTS messageblks;
-CREATE TABLE messageblks (
+DROP TABLE IF EXISTS dbmail_messageblks;
+CREATE TABLE dbmail_messageblks (
    messageblk_idnr bigint(21) NOT NULL auto_increment,
    physmessage_id bigint(21) DEFAULT '0' NOT NULL,
    messageblk longtext NOT NULL,
    blocksize bigint(21) DEFAULT '0' NOT NULL,
    is_header tinyint(1) DEFAULT '0' NOT NULL,
    PRIMARY KEY (messageblk_idnr),
-   INDEX (physmessage_id),
-   INDEX (physmessage_id, is_header)
+   INDEX physmessage_id_index (physmessage_id),
+   INDEX physmessage_id_is_header_index (physmessage_id, is_header)
 );
 
-DROP TABLE IF EXISTS auto_notifications;
-CREATE TABLE auto_notifications (
-   auto_notify_idnr bigint(21) NOT NULL auto_increment,
+DROP TABLE IF EXISTS dbmail_auto_notifications;
+CREATE TABLE dbmail_auto_notifications (
    user_idnr bigint(21) DEFAULT '0' NOT NULL,
    notify_address VARCHAR(100),
-   PRIMARY KEY (auto_notify_idnr)
+   PRIMARY KEY(user_idnr)
 );
 
-DROP TABLE IF EXISTS auto_replies;
-CREATE TABLE auto_replies (
-   auto_reply_idnr bigint(21) NOT NULL auto_increment,
+DROP TABLE IF EXISTS dbmail_auto_replies;
+CREATE TABLE dbmail_auto_replies (
    user_idnr bigint(21) DEFAULT '0' NOT NULL,
    reply_body mediumtext,
-   PRIMARY KEY (auto_reply_idnr)
+   PRIMARY KEY(user_idnr)
 );
 
-DROP TABLE IF EXISTS pbsp;
-CREATE TABLE pbsp (
+DROP TABLE IF EXISTS dbmail_pbsp;
+CREATE TABLE dbmail_pbsp (
    idnr bigint(21) NOT NULL auto_increment,
    since datetime default '0' not null,
    ipnumber varchar(40) NOT NULL,
    PRIMARY KEY (idnr),
-   UNIQUE INDEX ipnumber_idx (ipnumber),
-   INDEX since_idx (since)
+   UNIQUE INDEX ipnumber_index (ipnumber),
+   INDEX since_index (since)
 );
 
 # create the user for the delivery chain
-INSERT INTO users (userid, passwd, encryption_type) 
+INSERT INTO dbmail_users (userid, passwd, encryption_type) 
 	VALUES ('__@!internal_delivery_user!@__', '', 'md5');

@@ -30,72 +30,62 @@ SET SQL_LOG_UPDATE=0;
 BEGIN WORK;
 
 # required tables:
-RENAME table aliases to aliases_1, users to users_1, mailboxes to mailboxes_1, messages to messages_1, messageblks to messageblks_1;
 
-# Now create the new tables:
-DROP TABLE IF EXISTS aliases;
-CREATE TABLE aliases (
-	alias_idnr bigint(21) NOT NULL auto_increment,
-	alias varchar(100) NOT NULL default '',
-	deliver_to varchar(250) NOT NULL default '',
-	client_idnr bigint(21) NOT NULL default '0',
-	PRIMARY KEY  (alias_idnr),
-	INDEX (alias),
-	INDEX (client_idnr)	
-) TYPE=InnoDB;
+# alter aliases
+RENAME TABLE aliases TO dbmail_aliases;
+ALTER TABLE dbmail_aliases
+	DROP INDEX alias_idnr_2,
+	DROP KEY alias;
+ALTER TABLE dbmail_aliases 
+	ADD INDEX client_idnr_index (client_idnr),
+	ADD INDEX alias_index (alias);
 
-DROP TABLE IF EXISTS users;
-CREATE TABLE users (
-	user_idnr bigint(21) NOT NULL auto_increment,
-	userid varchar(100) NOT NULL default '',
-	passwd varchar(34) NOT NULL default '',
-	client_idnr bigint(21) NOT NULL default '0',
-	maxmail_size bigint(21) NOT NULL default '0',
-	curmail_size bigint(21) NOT NULL default '0',
-	encryption_type varchar(20) NOT NULL default '',
-	last_login datetime NOT NULL default '1979-11-03 22:05:58',
-	PRIMARY KEY  (user_idnr),
-	UNIQUE INDEX (userid)
-) TYPE=InnoDB;
+# alter users
+RENAME TABLE users TO dbmail_users;
+ALTER TABLE dbmail_users 
+	ADD COLUMN curmail_size bigint(21) NOT NULL DEFAULT '0';
+ALTER TABLE dbmail_users 
+	DROP KEY user_idnr,
+	DROP INDEX useridnr_2,
+	DROP INDEX userid_2,
+	ADD INDEX userid_index (userid);
 
-DROP TABLE IF EXISTS mailboxes;
-CREATE TABLE mailboxes (
-	mailbox_idnr bigint(21) NOT NULL auto_increment,
-	owner_idnr bigint(21) NOT NULL default '0',
-	name varchar(100) BINARY NOT NULL default '',
-	seen_flag tinyint(1) NOT NULL default '0',
-	answered_flag tinyint(1) NOT NULL default '0',
-	deleted_flag tinyint(1) NOT NULL default '0',
-	flagged_flag tinyint(1) NOT NULL default '0',
-	recent_flag tinyint(1) NOT NULL default '0',
-	draft_flag tinyint(1) NOT NULL default '0',
-	no_inferiors tinyint(1) NOT NULL default '0',
-	no_select tinyint(1) NOT NULL default '0',
-	permission tinyint(1) default '2',
-	PRIMARY KEY  (mailbox_idnr),
-	INDEX (name),
-	INDEX (owner_idnr),
-	INDEX (owner_idnr, name),
-	FOREIGN KEY (`owner_idnr`) 
-		REFERENCES `users` (`user_idnr`) ON DELETE CASCADE
-) TYPE=InnoDB;
+# alter mailboxes
+RENAME TABLE mailboxes TO dbmail_mailboxes;
+ALTER TABLE dbmail_mailboxes
+	DROP INDEX mailboxidnr_2,
+	ADD INDEX name_index (name),
+	ADD INDEX owner_idnr_index (owner_idnr),
+	ADD INDEX name_owner_idnr_index (owner_idnr, name);
+ALTER TABLE dbmail_mailboxes
+	ADD FOREIGN KEY owner_idnr_fk (owner_idnr) 
+		REFERENCES dbmail_users (user_idnr)
+		ON DELETE CASCADE;
 
-DROP TABLE IF EXISTS subscription;
-CREATE TABLE subscription (
+DROP TABLE IF EXISTS dbmail_subscription;
+CREATE TABLE dbmail_subscription (
 	user_id bigint(21) not null default '0',
 	mailbox_id bigint(21) not null,
 	primary key (user_id, mailbox_id),
 	index (user_id),
 	index (mailbox_id),
-	FOREIGN KEY (`user_id`) 
-		REFERENCES `users` (`user_idnr`) ON DELETE CASCADE,
-	FOREIGN KEY (`mailbox_id`) 
-		REFERENCES `mailboxes` (`mailbox_idnr`) ON DELETE CASCADE
+	FOREIGN KEY user_id_fk (user_id) 
+		REFERENCES users (user_idnr) ON DELETE CASCADE,
+	FOREIGN KEY mailbox_id_fk (mailbox_id) 
+		REFERENCES mailboxes (mailbox_idnr) ON DELETE CASCADE
 ) TYPE=InnoDB;
 
+# fill the subscription table
+INSERT INTO dbmail_subscription (user_id, mailbox_id) 
+	SELECT owner_idnr, mailbox_idnr FROM dbmail_mailboxes
+	WHERE is_subscribed = '1';
 
-DROP TABLE IF EXISTS acl;
-CREATE TABLE acl (
+# is_subscribed column in dbmail_mailboxes is no longer needed.
+ALTER TABLE dbmail_mailboxes DROP COLUMN is_subscribed;
+
+# acl table
+DROP TABLE IF EXISTS dbmail_acl;
+CREATE TABLE dbmail_acl (
 	user_id bigint(21) NOT NULL,
 	mailbox_id bigint(21) NOT NULL,
 	lookup_flag tinyint(1) default '0' not null,
@@ -110,60 +100,72 @@ CREATE TABLE acl (
 	PRIMARY KEY(user_id, mailbox_id),
 	INDEX (user_id),
 	INDEX (mailbox_id),
-	FOREIGN KEY (`user_id`) 
-		REFERENCES `users` (`user_idnr`) ON DELETE CASCADE,	
-	FOREIGN KEY (`mailbox_id`) 
-		REFERENCES `mailboxes` (`mailbox_idnr`) ON DELETE CASCADE
+	FOREIGN KEY user_id_fk (user_id) 
+		REFERENCES users (user_idnr) ON DELETE CASCADE,	
+	FOREIGN KEY mailbox_id_fk (mailbox_id) 
+		REFERENCES mailboxes (mailbox_idnr) ON DELETE CASCADE
 ) TYPE=InnoDB;
 
-	
-DROP TABLE IF EXISTS physmessage;
-CREATE TABLE physmessage (
+# physmessage table 
+DROP TABLE IF EXISTS dbmail_physmessage;
+CREATE TABLE dbmail_physmessage (
 	id bigint(21) NOT NULL auto_increment,
 	messagesize bigint(21) NOT NULL default '0',
 	rfcsize bigint(21) NOT NULL default '0',
 	internal_date datetime NOT NULL default '0000-00-00 00:00:00',
 	PRIMARY KEY (id)
 ) TYPE=InnoDB;
+# fill the dbmail_physmessage table
+INSERT INTO dbmail_physmessage (id, messagesize, rfcsize, internal_date)
+	SELECT message_idnr, messagesize, rfcsize, internal_date
+	FROM messages;
 
-DROP TABLE IF EXISTS messages;
-CREATE TABLE messages (
-	message_idnr bigint(21) NOT NULL auto_increment,
-	mailbox_idnr bigint(21) NOT NULL default '0',
-	physmessage_id bigint(21) NOT NULL default '0',
-	seen_flag tinyint(1) NOT NULL default '0',
-	answered_flag tinyint(1) NOT NULL default '0',
-	deleted_flag tinyint(1) NOT NULL default '0',
-	flagged_flag tinyint(1) NOT NULL default '0',
-	recent_flag tinyint(1) NOT NULL default '0',
-	draft_flag tinyint(1) NOT NULL default '0',
-	unique_id varchar(70) NOT NULL default '',
-	status tinyint(3) unsigned NOT NULL default '0',
-	PRIMARY KEY  (message_idnr),
-	INDEX physmessage_id (physmessage_id),		
-	INDEX mailbox_idnr (mailbox_idnr),
-	INDEX seen_flag (seen_flag),
-	INDEX unique_id (unique_id),
-	INDEX status (status),
-	FOREIGN KEY (`physmessage_id`) 
-		REFERENCES `physmessage` (`id`) ON DELETE CASCADE,
-	FOREIGN KEY (`mailbox_idnr`) 
-		REFERENCES `mailboxes` (`mailbox_idnr`) ON DELETE CASCADE
-) TYPE=InnoDB;
+# alter messages table.
+RENAME TABLE messages TO dbmail_messages;
+ALTER TABLE dbmail_messages 
+	DROP KEY message_idnr,
+	DROP INDEX message_idnr_2,
+	DROP COLUMN messagesize,
+	DROP COLUMN rfcsize,
+	DROP COLUMN internal_date,
+	ADD COLUMN physmessage_id bigint(21) NOT NULL DEFAULT '0';
+UPDATE dbmail_messages SET physmessage_id = message_idnr;
 
-DROP TABLE IF EXISTS messageblks;
-CREATE TABLE messageblks (
-	messageblk_idnr bigint(21) NOT NULL auto_increment,
-	physmessage_id bigint(21) NOT NULL default '0',
-	messageblk longtext NOT NULL,
-	blocksize bigint(21) NOT NULL default '0',
-	is_header tinyint(1) NOT NULL default '0',
-	PRIMARY KEY  (messageblk_idnr),
-	INDEX physmsg_index (physmessage_id),
-	INDEX physmsg_is_header_index (physmessage_id, is_header),
-	FOREIGN KEY (`physmessage_id`) 
-		REFERENCES `physmessage` (`id`) ON DELETE CASCADE
-) TYPE=InnoDB;
+ALTER TABLE dbmail_messages ALTER COLUMN status SET DEFAULT '0';
+ALTER TABLE dbmail_messages 
+	ADD INDEX physmessage_id_index (physmessage_id),
+	ADD INDEX mailbox_idnr_index (mailbox_idnr),
+	ADD INDEX seen_flag_index (seen_flag),
+	ADD INDEX unique_id_index (unique_id),
+	ADD INDEX status_index (status);
+
+ALTER TABLE dbmail_messages
+	ADD FOREIGN KEY mailbox_idnr_fk (mailbox_idnr)
+		REFERENCES dbmail_mailboxes (mailbox_idnr)
+		ON DELETE CASCADE;
+ALTER TABLE dbmail_messages
+	ADD FOREIGN KEY physmessage_id_fk (physmessage_id)
+		REFERENCES dbmail_physmessage (id)
+		ON DELETE CASCADE;
+
+# alter messageblks table
+RENAME TABLE messageblks TO dbmail_messageblks;
+ALTER TABLE dbmail_messageblks
+	DROP INDEX messageblk_idnr,
+	DROP INDEX messageblk_idnr_2,
+	DROP INDEX msg_index;
+ALTER TABLE dbmail_messageblks
+	CHANGE message_idnr physmessage_id bigint(21) NOT NULL DEFAULT '0';
+ALTER TABLE dbmail_messageblks
+	ADD COLUMN is_header tinyint(1) DEFAULT '0' NOT NULL;
+UPDATE dbmail_messageblks SET is_header = '0';
+ALTER TABLE dbmail_messageblks
+	ADD INDEX physmessage_id_index (physmessage_id),
+	ADD INDEX physmessage_id_is_header_index (physmessage_id, is_header);
+ALTER TABLE dbmail_messageblks
+	ADD FOREIGN KEY physmessage_id_fk (physmessage_id)
+		REFERENCES physmessage_id (id)
+		ON DELETE CASCADE;
 
 # in DBMail 1.x, the auto_replies and auto_notifications tables where not
 # always present. If they are not present, they are created here. These 
@@ -179,6 +181,7 @@ CREATE TABLE IF NOT EXISTS auto_notifications (
 ) TYPE=InnoDB;
 ALTER TABLE auto_notifications ADD INDEX user_idnr_index (user_idnr);
 
+
 CREATE TABLE IF NOT EXISTS auto_replies (
    auto_reply_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
    user_idnr bigint(21) DEFAULT '0' NOT NULL,
@@ -189,50 +192,63 @@ CREATE TABLE IF NOT EXISTS auto_replies (
 ) TYPE=InnoDB;
 ALTER TABLE auto_replies ADD INDEX user_idnr_index (user_idnr);
 
+# Now we know that auto_notifications and auto_replies exist.
+RENAME TABLE auto_notifications TO dbmail_auto_notifications;
+ALTER TABLE dbmail_auto_notifications DROP COLUMN auto_notify_idnr;
+ALTER TABLE dbmail_auto_notifications DROP PRIMARY KEY;
+ALTER TABLE dbmail_auto_notifications ADD PRIMARY KEY (user_idnr);
+
+RENAME TABLE auto_replies TO dbmail_auto_replies;
+ALTER TABLE dbmail_auto_replies DROP COLUMN auto_reply_idnr;
+ALTER TABLE dbmail_auto_replies DROP PRIMARY KEY;
+ALTER TABLE dbmail_auto_replies ADD PRIMARY KEY (user_idnr);
+
+
 DROP TABLE IF EXISTS pbsp;
-CREATE TABLE pbsp (
+DROP TABLE IF EXISTS dbmail_pbsp;
+CREATE TABLE dbmail_pbsp (
    idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
    since datetime default '0' not null,
    ipnumber varchar(40) NOT NULL,
    PRIMARY KEY (idnr),
    UNIQUE INDEX ipnumber_idx (ipnumber),
    INDEX since_idx (since)
-) TYPE=InnoDB;
+);
 
-SET FOREIGN_KEY_CHECKS=0;
+# Drop some unused tables
+DROP TABLE IF EXISTS config;
+DROP TABLE IF EXISTS tmpmessage;
+DROP TABLE IF EXISTS tmpmessageblk;
 
-# Fill the new tables
+# All tables are now ready. We only need to update curmail_size in 
+# dbmail_users
+# Update curmail size in dbmail_users. I don't know how to do this other
+# than by using a temporary table (in PostgreSQL, this can be done using
+# a subselect.
+CREATE TEMPORARY TABLE temp_user_curmail_size (
+	user_idnr bigint(21) not null default '0',
+	curmail_size bigint(21) not null default '0',
+	PRIMARY KEY(user_idnr)
+);
 
-INSERT INTO aliases SELECT * from aliases_1;
+INSERT INTO temp_user_curmail_size (user_idnr, curmail_size)
+	SELECT u.user_idnr, COALESCE(SUM(p.messagesize), 0)
+	FROM dbmail_users u, dbmail_mailboxes b,
+	     dbmail_messages m, dbmail_physmessage p
+	WHERE u.user_idnr = b.owner_idnr
+	AND b.mailbox_idnr = m.mailbox_idnr
+	AND m.physmessage_id = p.id
+	GROUP BY (u.user_idnr);
 
-INSERT INTO subscription ( user_id, mailbox_id ) SELECT owner_idnr, mailbox_idnr FROM mailboxes_1 where is_subscribed > 0;
+UPDATE dbmail_users u , temp_user_curmail_size t 
+	SET u.curmail_size = t.curmail_size
+	WHERE u.user_idnr = t.user_idnr;
 
-INSERT INTO mailboxes ( mailbox_idnr, owner_idnr, name, seen_flag, answered_flag, deleted_flag, flagged_flag, recent_flag, draft_flag, no_inferiors, no_select, permission )
-SELECT mailbox_idnr, owner_idnr, name, seen_flag, answered_flag, deleted_flag, flagged_flag, recent_flag, draft_flag, no_inferiors, no_select, permission FROM mailboxes_1;
-
-INSERT INTO messages ( message_idnr, mailbox_idnr, seen_flag, answered_flag, deleted_flag, flagged_flag, recent_flag, draft_flag, unique_id )
-SELECT message_idnr, mailbox_idnr, seen_flag, answered_flag, deleted_flag, flagged_flag, recent_flag, draft_flag, unique_id FROM messages_1;
-
-INSERT INTO physmessage ( id, messagesize, rfcsize, internal_date) 
-SELECT message_idnr, messagesize, rfcsize, internal_date FROM messages_1; 
-
-UPDATE messages SET physmessage_id = message_idnr;
-
-INSERT INTO messageblks ( messageblk_idnr, physmessage_id, messageblk, blocksize )
-SELECT messageblk_idnr, message_idnr, messageblk, blocksize FROM messageblks_1;
-
-
-INSERT INTO users ( user_idnr, userid, passwd, client_idnr, maxmail_size, encryption_type, last_login, curmail_size )
-SELECT u.*, sum(p.messagesize) AS curmail_size
-FROM users_1 u LEFT JOIN mailboxes b ON b.owner_idnr = u.user_idnr LEFT JOIN messages m ON m.mailbox_idnr = b.mailbox_idnr LEFT JOIN physmessage p ON m.physmessage_id = p.id
-GROUP BY u.user_idnr;
-
-DROP TABLE aliases_1, users_1, mailboxes_1, messages_1, messageblks_1;
 
 SET FOREIGN_KEY_CHECKS=1;
 
 # create the user for the delivery chain
-INSERT INTO users (userid, passwd, encryption_type) 
+INSERT INTO dbmail_users (userid, passwd, encryption_type) 
 	VALUES ('__@!internal_delivery_user!@__', '', 'md5');
 
 # end

@@ -28,34 +28,19 @@ BEGIN TRANSACTION;
 CREATE SEQUENCE auto_notification_seq;
 CREATE TABLE auto_notifications (
    auto_notify_idnr INT8 DEFAULT nextval('auto_notification_seq'),
-   user_idnr INT8 DEFAULT '0' NOT NULL,
+   user_idnr INT8 REFERENCES users (user_idnr) ON DELETE CASCADE,
    notify_address VARCHAR(100),
-   PRIMARY KEY (auto_notify_idnr),
-   FOREIGN KEY (user_idnr)
-	REFERENCES users (user_idnr) ON DELETE CASCADE
+   PRIMARY KEY (auto_notify_idnr)
 );
 
 CREATE SEQUENCE auto_reply_seq;
 CREATE TABLE auto_replies (
    auto_reply_idnr INT8 DEFAULT nextval('auto_reply_seq'),
-   user_idnr INT8 DEFAULT '0' NOT NULL,
+   user_idnr INT8 REFERENCES users (user_idnr) ON DELETE CASCADE,
    reply_body TEXT,
-   PRIMARY KEY(auto_reply_idnr),
-   FOREIGN KEY (user_idnr)
-	REFERENCES users (user_idnr) ON DELETE CASCADE
+   PRIMARY KEY(auto_reply_idnr)
 );
 
-COMMIT;
-
-/* the next transaction will add an index to the auto_replies 
-   and auto_notifications tables that was not present in
-   DBMail 1.2.x
-*/
-BEGIN TRANSACTION;
-CREATE INDEX auto_notifications_user_idnr_idx ON 
-	auto_notifications(user_idnr);
-CREATE INDEX auto_replies_user_idnr_idx ON 
-	auto_replies(user_idnr);
 COMMIT;
 
 /* Now begin the real work. This might take awhile.. */
@@ -100,8 +85,8 @@ CREATE INDEX dbmail_mailboxes_owner_name_idx
 
 -- create the subscription table.
 CREATE TABLE dbmail_subscription (
-   user_id INT8 NOT NULL,
-   mailbox_id INT8 NOT NULL,
+   user_id INT8 REFERENCES dbmail_users(user_idnr) ON DELETE CASCADE,
+   mailbox_id INT8 REFERENCES dbmail_mailboxes(mailbox_idnr) ON DELETE CASCADE,
    PRIMARY KEY (user_id, mailbox_id)
 );
 
@@ -111,20 +96,15 @@ INSERT INTO dbmail_subscription (user_id, mailbox_id)
 SELECT owner_idnr, mailbox_idnr FROM dbmail_mailboxes
 WHERE is_subscribed = '1';
 
--- no add the foreign key relations to the dbmail_subscription table
-ALTER TABLE dbmail_subscription ADD FOREIGN KEY (user_id) 
-	REFERENCES dbmail_users(user_idnr) ON DELETE CASCADE;
-ALTER TABLE dbmail_subscription ADD FOREIGN KEY (mailbox_id) 
-	REFERENCES dbmail_mailboxes(mailbox_idnr) ON DELETE CASCADE;
-
 -- The is_subscribed column can now be dropped from the dbmail_mailboxes
 -- table.
 ALTER TABLE dbmail_mailboxes DROP COLUMN is_subscribed;
 
 -- the dbmail_acl table is completely new in 2.0
 CREATE TABLE dbmail_acl (
-    user_id INT8 NOT NULL,
-    mailbox_id INT8 NOT NULL,
+    user_id INT8 REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE,
+    mailbox_id INT8 REFERENCES dbmail_mailboxes (mailbox_idnr) 
+	ON DELETE CASCADE,
     lookup_flag INT2 DEFAULT '0' NOT NULL,
     read_flag INT2 DEFAULT '0' NOT NULL,
     seen_flag INT2 DEFAULT '0' NOT NULL,
@@ -134,11 +114,7 @@ CREATE TABLE dbmail_acl (
     create_flag INT2 DEFAULT '0' NOT NULL,
     delete_flag INT2 DEFAULT '0' NOT NULL,
     administer_flag INT2 DEFAULT '0' NOT NULL,
-    PRIMARY KEY (user_id, mailbox_id),
-    FOREIGN KEY (user_id) 
-	REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE,
-    FOREIGN KEY (mailbox_id) 
-	REFERENCES dbmail_mailboxes (mailbox_idnr) ON DELETE CASCADE
+    PRIMARY KEY (user_id, mailbox_id)
 );
 
 -- create the physmessage table
@@ -214,19 +190,17 @@ ALTER TABLE dbmail_messageblks ADD FOREIGN KEY (physmessage_id)
 DROP SEQUENCE auto_notification_seq;
 ALTER TABLE auto_notifications RENAME TO dbmail_auto_notifications;
 ALTER TABLE dbmail_auto_notifications DROP COLUMN auto_notify_idnr;
+ALTER TABLE dbmail_auto_notifications ADD PRIMARY KEY (user_idnr);
 ALTER TABLE dbmail_auto_notifications ADD FOREIGN KEY (user_idnr)
 	REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE;
-CREATE INDEX dbmail_auto_notifications_user_index ON
-	dbmail_auto_notifications(user_idnr);
 
 -- alter the auto_replies table
 DROP SEQUENCE auto_reply_seq;
 ALTER TABLE auto_replies RENAME TO dbmail_auto_replies;
 ALTER TABLE dbmail_auto_replies DROP COLUMN auto_reply_idnr;
+ALTER TABLE dbmail_auto_replies ADD PRIMARY KEY (user_idnr);
 ALTER TABLE dbmail_auto_replies ADD FOREIGN KEY (user_idnr)
 	REFERENCES dbmail_users(user_idnr) ON DELETE CASCADE;
-CREATE INDEX dbmail_auto_replies_user_index ON
-	dbmail_auto_replies(user_idnr);
 
 -- alter the pbsp (pop-before-smtp) table
 CREATE SEQUENCE dbmail_pbsp_idnr_seq;

@@ -1,4 +1,29 @@
+2004-08-04  Ilja Booij  <ilja@ic-s.nl>
+
+	* sql/postgresql/create_tables.pgsql: changed foreign key definitions
+	and removed some unecessary indexes.
+
+	* sql/mysql/create_tables.mysql: all indexes now have the right names.
+
+	* sql/mysql/create_tables_innoDB.mysql: all indexes and foreign keys now have the
+	right names.
+
+	* sql/mysql/migrate_from_1.x_to_2.0_innodb.mysql: added 'dbmail_'
+	prefix to all tables. Changed script to do less copying of data.
+	all indexes now have the right names.
+
+	* sql/mysql/migrate_from_1.x_to_2.0.mysql: added 'dbmail_' 
+	prefix to all tables. Changed script to do less copying of
+	data. all indexes now have the right names.
+	
+
 2004-08-03  Ilja Booij  <ilja@ic-s.nl>
+
+	* sql/mysql/create_tables_innoDB.mysql: add 'dbmail_' prefix
+	to all tables.
+
+	* sql/mysql/create_tables.mysql: added 'dbmail_' prefix to all
+	tables.
 
 	* sql/postgresql/create_tables.pgsql: added 'dbmail_' prefix
 	to all tables, sequences and indexes
@@ -21,7 +46,7 @@
 	have the 'dbmail_' prefix. 
 	Finally, a lot of data copying has been avoided by doing all
 	changes in place. This should save a lot of time.
-
+	
 2004-08-02  Ilja Booij  <ilja@ic-s.nl>
 
 	* lmtp.c (lmtp): my_free(whole_message) added 
