@@ -236,7 +236,24 @@ int db_calculate_quotum_all()
 	    /**< number of records returned */
 	int result;
 
+	/* the following query looks really weird, with its 
+	 * NOT (... IS NOT NULL), but it must be like this, because
+	 * the normal query with IS NULL does not work on MySQL
+	 * for some reason.
+	 */
 	snprintf(query, DEF_QUERYSIZE,
+		 "SELECT usr.user_idnr, sum(pm.messagesize), usr.curmail_size "
+		 "FROM users usr LEFT JOIN mailboxes mbx "
+		 "ON mbx.owner_idnr = usr.user_idnr "
+		 "LEFT JOIN messages msg "
+		 "ON msg.mailbox_idnr = mbx.mailbox_idnr "
+		 "LEFT JOIN physmessage pm "
+		 "ON pm.id = msg.physmessage_id "
+		 "GROUP BY usr.user_idnr, usr.curmail_size "
+		 "HAVING ((SUM(pm.messagesize) <> usr.curmail_size) OR "
+		 "(NOT (SUM(pm.messagesize) IS NOT NULL) "
+		 "AND usr.curmail_size <> 0))");
+/*	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT usr.user_idnr, sum(pm.messagesize), usr.curmail_size "
 		 "FROM users usr, mailboxes mbx, messages msg, physmessage pm "
 		 "WHERE pm.id = msg.physmessage_id "
@@ -245,7 +262,7 @@ int db_calculate_quotum_all()
 		 "AND msg.status < '2' "
 		 "GROUP BY usr.user_idnr, usr.curmail_size "
 		 "HAVING sum(pm.messagesize) <> usr.curmail_size");
-
+*/
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error findng quotum used",
 		      __FILE__, __FUNCTION__);
@@ -1285,6 +1302,8 @@ int db_icheck_null_messages(struct list *lost_list)
 
 int db_set_message_status(u64_t message_idnr, int status)
 {
+	/** FIXME: We should check that, if a message is set from
+	 * a status < 2 to >= 2, the curmail_size is also changed */
 	snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET status = %d "
 		 "WHERE message_idnr = '%llu'", status, message_idnr);
 	return db_query(query);

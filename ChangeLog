@@ -1,3 +1,8 @@
+2004-05-25  Ilja Booij  <ilja@ic-s.nl>
+
+	* db.c (db_calculate_quotum_all): changed query. It should now
+	work when there are no messages in a user's mailbox. 
+
 2004-05-19  Ilja Booij  <ilja@ic-s.nl>
 
 	* lmtp.c (lmtp): fixed use of list in loop. An element was sometimes
