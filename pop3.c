@@ -11,6 +11,7 @@
 extern int state; /* tells the current negotiation state of the server */
 extern char *username, *password; /* session username and password */
 extern struct session curr_session;
+extern char *apop_stamp;			/* the APOP string */
 
 extern int error_count;
 
@@ -18,7 +19,7 @@ extern int error_count;
 const char *commands [] = 
 	{
 	"quit", "user", "pass", "stat", "list", "retr", "dele", "noop", "last", "rset",
-	"uidl","top"
+	"uidl","top","apop"
 	};
 
 const char validchars[] = ".@ abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -52,6 +53,8 @@ int pop3 (void *stream, char *buffer)
 	int indx=0;
 	unsigned long result;
 	struct element *tmpelement;
+	char *md5_apop_he;
+	char *searchptr;
 	
 	while (strchr(validchars, buffer[indx]))
 		indx++;
@@ -364,7 +367,64 @@ int pop3 (void *stream, char *buffer)
 
 				}
 
+			case POP3_APOP:
+				{
+				if (state!=AUTHORIZATION)
+					return pop3_error(stream,"-ERR wrong command mode, sir\r\n");
+
+				/* find out where the md5 hash starts */
+				searchptr=strstr(value," ");
 				
+				if (searchptr==NULL)
+					return pop3_error (stream,"-ERR your command does not compute\r\n");
+			
+				/* skip the space */
+				searchptr=searchptr+1;
+				
+				/* value should now be the username */
+				value[searchptr-value-1]='\0';
+				
+				if (strlen(searchptr)>32)
+					return pop3_error(stream,"-ERR the thingy you issued is not a valid md5 hash\r\n");
+
+				/* create memspace for md5 hash */
+				memtst((md5_apop_he=(char *)malloc(strlen(searchptr)+1))==NULL);
+				strncpy (md5_apop_he,searchptr,strlen(searchptr)+1);
+				
+				/* create memspace for username */
+				memtst((username=(char *)malloc(strlen(value)+1))==NULL);
+				strncpy (username,value,strlen(value)+1);
+				
+				trace (TRACE_DEBUG,"pop3(): APOP auth, username [%s], md5_hash [%s]",username,
+						md5_apop_he);
+				
+				result=db_md5_validate (username,md5_apop_he,apop_stamp);
+				
+				switch (result)
+					{
+						case -1: return -1;
+						case 0: return pop3_error(stream,"-ERR authentication attempt is invalid\r\n");
+						default:
+								{
+									state = TRANSACTION;
+									/* user seems to be valid, let's build a session */
+									trace(TRACE_DEBUG,"pop3(): validation OK, building a session for user [%s]");
+									result=db_create_session(result,&curr_session);
+									if (result==1)
+										{
+										fprintf((FILE *)stream, "+OK %s has %lu messages (%lu octets).\r\n",
+												username, curr_session.virtual_totalmessages,
+												curr_session.virtual_totalsize);
+										trace(TRACE_MESSAGE,"pop3(): user %s logged in [messages=%lu, octets=%lu]",
+												username, curr_session.virtual_totalmessages,
+												curr_session.virtual_totalsize);
+										}
+									return result;
+								}
+							}
+				break;
+
+				}
 			}
 
 		default : 

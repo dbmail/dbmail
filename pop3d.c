@@ -7,6 +7,7 @@
 #define INCOMING_BUFFER_SIZE 512
 #define MAXTIMEOUT 300
 #define IP_ADDR_MAXSIZE 16
+#define APOP_STAMP_SIZE 255
 
 #ifndef SHUT_RDWR
 #define SHUR_RDWR 3
@@ -19,6 +20,7 @@ int state;
 char *username=NULL, *password=NULL;
 struct session curr_session;
 char *myhostname;
+char *apop_stamp;
 
 char *buffer;
 int done=1;
@@ -48,6 +50,8 @@ int main (int argc, char *argv[])
 	char *myhostname;
 	char *theiraddress;
 
+	time_t timestamp;
+	
 	struct hostent *clientinfo;
 
 	int len_inet;
@@ -171,10 +175,20 @@ int main (int argc, char *argv[])
 				state = AUTHORIZATION;
 		
 				memtst((buffer=(char *)malloc(INCOMING_BUFFER_SIZE))==NULL);
-	
+
+				/* create an unique timestamp + processid for APOP authentication */
+				memtst((apop_stamp=(char *)malloc(APOP_STAMP_SIZE))==NULL);
+				
+				timestamp=time(NULL);
+				
+				sprintf (apop_stamp,"<%d.%u@%s>",getpid(),timestamp,myhostname);
+
 				/* sending greeting */
-				fprintf (tx,"+OK DBMAIL (currently running at %s) welcome you\r\n",myhostname);
+				fprintf (tx,"+OK DBMAIL server ready %s\r\n",apop_stamp);
 		
+				/* we don't need this anymore */
+				free(apop_stamp);
+				
 				/* no errors yet */
 				error_count = 0;
 				

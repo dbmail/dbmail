@@ -18,6 +18,7 @@
 #include <netdb.h>
 #include <sys/wait.h>
 #include <signal.h>
+#include <time.h>
 
 #include "list.h"
 #include "debug.h"
@@ -30,7 +31,7 @@
 
 /* connection */
 
-#define PORT 10115  
+#define PORT 12345  
 #define BACKLOG 10
 
 #define AUTHORIZATION 1
@@ -50,7 +51,8 @@
 #define POP3_RSET 9
 #define POP3_UIDL 10
 #define POP3_TOP 11
-#define POP3_END 12
+#define POP3_APOP 12
+#define POP3_END 13
 
 /* all virtual_ definitions are session specific
  * when a RSET occurs all will be set to the real values */
