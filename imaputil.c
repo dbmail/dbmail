@@ -719,33 +719,31 @@ int is_textplain(struct list *hdr)
  */
 char *date_sql2imap(const char *sqldate)
 {
-	char *last_char;
-	struct tm tm_localtime, tm_sqldate;
-	time_t td;
-
-	/* we need to get the localtime to get the current timezone */
-	if (time(&td) == -1) {
-		trace(TRACE_ERROR, "%s,%s: error getting time()",
-		      __FILE__, __func__);
-		return IMAP_STANDARD_DATE;
-	}
-	tm_localtime = *localtime(&td);
-
-	/* parse sqldate */
-	last_char = strptime(sqldate, "%Y-%m-%d %T", &tm_sqldate);
-	if (last_char == NULL || *last_char != '\0') {
+	long gmt_offset=0;
+	struct tm tm_sql_date;
+	char *last;
+	
+	/* defined by tzset */
+	extern long timezone;
+	timezone=0;
+	tzset();
+	
+	last = strptime(sqldate,"%Y-%m-%d %T", &tm_sql_date);
+	if ( (last == NULL) || (*last != '\0') ) {
 		trace(TRACE_DEBUG, "%s,%s, error parsing date [%s]",
 		      __FILE__, __func__, sqldate);
 		strcpy(_imapdate, IMAP_STANDARD_DATE);
 		return _imapdate;
 	}
-	/* copy timezone + daylight savings time info from localtime */
-	tm_sqldate.tm_gmtoff = tm_localtime.tm_gmtoff;
-	tm_sqldate.tm_isdst = tm_localtime.tm_isdst;
 
-	(void) strftime(_imapdate, IMAP_INTERNALDATE_LEN, 
-			"%d-%b-%Y %T %z", &tm_sqldate);
+	gmt_offset = (-timezone)/3600;
+	if (tm_sql_date.tm_isdst)
+		gmt_offset++;
 
+	snprintf(_imapdate,IMAP_INTERNALDATE_LEN,"%s %c%02ld00", 
+			sqldate, 
+			(gmt_offset >= 0 ? '+': '-'), 
+			gmt_offset);
 	return _imapdate;
 }
 
