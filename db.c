@@ -844,57 +844,6 @@ int db_insert_message_block(const char *block, u64_t block_size,
     return 1;
 }
 
-int db_insert_message_block_multiple(const char *unique_id,
-				     const char *block, u64_t block_size)
-{
-    char *escaped_query = NULL;
-    unsigned maxesclen = READ_BLOCK_SIZE * 2 + DEF_QUERYSIZE;
-    unsigned startlen = 0;
-    unsigned esclen = 0;
-
-    if (block == NULL) {
-	trace(TRACE_ERROR,
-	      "%s,%s(): got NULL as block, insertion not possible\n",
-	      __FILE__, __FUNCTION__);
-	return -1;
-    }
-
-    if (block_size > READ_BLOCK_SIZE) {
-	trace(TRACE_ERROR,
-	      "%s,%s: blocksize [%llu], maximum is [%llu]",
-	      __FILE__, __FUNCTION__, block_size, READ_BLOCK_SIZE);
-	return -1;
-    }
-
-    escaped_query = (char *) my_malloc(sizeof(char) * maxesclen);
-    if (!escaped_query) {
-	trace(TRACE_ERROR, "%s,%s: not enough memory",
-	      __FILE__, __FUNCTION__);
-	return -1;
-    }
-
-    startlen = snprintf(escaped_query, maxesclen, "INSERT INTO messageblks"
-			"(messageblk,blocksize,physmessage_id) SELECT '");
-    /* escape & add data */
-    esclen = db_escape_string(&escaped_query[startlen], block, block_size);
-
-    snprintf(&escaped_query[esclen + startlen],
-	     maxesclen - esclen - startlen,
-	     "', %llu, physmessage_id FROM messages "
-	     "WHERE unique_id = '%s'", block_size, unique_id);
-
-    if (db_query(escaped_query) == -1) {
-	my_free(escaped_query);
-	trace(TRACE_ERROR, "%s,%s: dbquery failed\n",
-	      __FILE__, __FUNCTION__);
-	return -1;
-    }
-
-    /* all done, clean up & exit */
-    my_free(escaped_query);
-    return 0;
-}
-
 int db_rollback_insert(u64_t owner_idnr, const char *unique_id)
 {
     u64_t msgid;

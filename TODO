@@ -6,6 +6,7 @@ For DBMail 2.1
 -   Sieve scripting language
 -   header caching (cache headers like To: From: etc.)
 -   Fix wrong order of headers when doing a FETCH MSGNUM (RFC822.HEADER)
--   use getopt() for handling of command line arguments
 -   put (part of) configuration into the database
+-   Increase speed by doing database optimizations (indexes) and removing
+    unneeded database usage.
 

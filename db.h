@@ -607,18 +607,6 @@ int db_insert_message_block_physmessage(const char *block, u64_t block_size,
 int db_insert_message_block(const char *block, u64_t block_size,
 			    u64_t message_idnr, u64_t *messageblock_idnr);
 /**
-* \brief as insert_message_block but inserts multiple rows
-*        at a time.
-* \param unique_id unique id of message
-* \param block the message block
-* \param block_size length of block
-* \return 
-*          - -1 on failure
-*          - 0 on success
-*/
-int db_insert_message_block_multiple(const char *unique_id,
-		const char *block, u64_t block_size);
-/**
 * \brief perform a rollback for a message that has just been 
 * 		inserted
 * \param owner_idnr idrn of owner of message
