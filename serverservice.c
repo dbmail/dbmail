@@ -544,6 +544,7 @@ void SS_sighandler(int sig, siginfo_t *info, void *data)
     {
       /* timeout occurred, close client, terminate process */
       fprintf(client.tx, "* BYE dbmail IMAP4 server signing off due to timeout\r\n");
+      trace(TRACE_INFO, "IMAPD: PID %d received alarm (time-out)\n", getpid());
 
       /* close streams */
       if (client.tx && client.rx)
