@@ -2187,27 +2187,16 @@ int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
 		u64_t owner_idnr = all_mailbox_owners[i];
 		char *simple_mailbox_name = all_mailbox_names[i];
 
-		trace(TRACE_DEBUG, "%s,%s: checking mailbox: %s, nr %llu, owner = %llu",
-		      __FILE__, __func__, simple_mailbox_name, mailbox_idnr, owner_idnr);
-
 		/* add possible namespace prefix to mailbox_name */
 		mailbox_name =
 		    mailbox_add_namespace(simple_mailbox_name, 
 					  owner_idnr,
 					  user_idnr);
 		if (mailbox_name) {
-			trace(TRACE_DEBUG,
-			      "%s,%s: comparing mailbox [%s] to "
-			      "regular expression", __FILE__, __func__,
-			      mailbox_name);
 			if (regexec(preg, mailbox_name, 0, NULL, 0) == 0) {
 				tmp_mailboxes[*nr_mailboxes] =
 					mailbox_idnr;
 				(*nr_mailboxes)++;
-				trace(TRACE_DEBUG, "%s,%s: regex match %s, "
-				      "mailbox_idnr = %llu", 
-				      __FILE__, __func__,
-				      mailbox_name, mailbox_idnr);
 			}
 			my_free(mailbox_name);
 			my_free(all_mailbox_names[i]);
