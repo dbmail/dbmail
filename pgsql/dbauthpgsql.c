@@ -41,7 +41,7 @@ u64_t db_user_exists(const char *username)
       return -1;
     }
 
-  if (PGntuples(res) == 0)
+  if (PQntuples(res) == 0)
     {
       PQclear (res);
       return 0;
