@@ -205,9 +205,12 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 	}
 	else
 	{
-		trace(TRACE_MESSAGE,"handle_client(): user %s logging out [message=%lu, octets=%lu]",
-			username, curr_session.virtual_totalmessages,
-			curr_session.virtual_totalsize);
+		if (username == NULL)
+			trace (TRACE_ERROR,"handle_client(): error, uncomplete session");
+		else
+			trace(TRACE_MESSAGE,"handle_client(): user %s logging out [message=%lu, octets=%lu]",
+				username, curr_session.virtual_totalmessages,
+				curr_session.virtual_totalsize);
 
 		/* if everything went well, write down everything and do a cleanup */
 		db_update_pop(&curr_session);
