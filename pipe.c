@@ -275,7 +275,7 @@ int insert_messages(char *header, unsigned long headersize, struct list *users, 
 
   trace (TRACE_DEBUG,"insert_messages(): allocating [%d] bytes of memory for readblock",READ_BLOCK_SIZE);
 
-  memtst ((strblock = (char *)my_malloc(READ_BLOCK_SIZE))==NULL);
+  memtst ((strblock = (char *)my_malloc(READ_BLOCK_SIZE+1))==NULL);
 	
 	/* first we need to check if we need to deliver into the database */
   if (list_totalnodes(&messageids)>0)
@@ -304,7 +304,7 @@ int insert_messages(char *header, unsigned long headersize, struct list *users, 
 		}
 				
 	      /* resetting strlen for strblock */
-	      memset (strblock,'\0',READ_BLOCK_SIZE); 
+	      strblock[0] = '\0';
 	      usedmem = 0;
 				
 	    }
