@@ -280,6 +280,9 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 	      if (csock == -1)
 		continue;    /* accept failed, refuse connection & continue */
 
+	      /* let other processes know */
+	      (*ss_n_default_children_used)++;
+
 	      /* zero-init */
 	      memset(&client, 0, sizeof(client));
 
@@ -342,11 +345,9 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 	      strncpy(client.ip, inet_ntoa(saClient.sin_addr), SS_IPNUM_LEN);
 	      client.ip[SS_IPNUM_LEN - 1] = '\0';
 
-	  /* remember */
-	      (*ss_n_default_children_used)++;
-	      trace(TRACE_DEBUG, "[%ld] child accept, dcu: %d\n",getpid(),*ss_n_default_children_used);
+	      trace(TRACE_INFO, "[%ld] child accept, dcu: %d\n",getpid(),*ss_n_default_children_used);
 
-	  /* handle client */
+	      /* handle client */
 	      (*ClientHandler)(&client); 
 
 #if LOG_USERS > 0
@@ -363,11 +364,11 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 		  fclose(client.rx);
 	      
 		  memset(&client, 0, sizeof(client));
-
-		  (*ss_n_default_children_used)--;
 		}
 
-	      trace(TRACE_DEBUG, "[%ld] child close, dcu: %d\n",
+	      (*ss_n_default_children_used)--;
+
+	      trace(TRACE_INFO, "[%ld] child close, dcu: %d\n",
 		    getpid(),*ss_n_default_children_used);
 
 	    } /* main client loop */
