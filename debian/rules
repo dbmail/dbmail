@@ -127,14 +127,14 @@ clean1:
 		done; \
 	done	
 	for file in config.in aclocal.m4 acconfig.h configure `find . -name Makefile.in`; do \
-		test -e $$file.orig && mv -v $$file.orig $$file || true; \
+		rm -rf $$file || true; \
 	done
 	rm -rf autom4te.cache
 	for file in Makefile config.h config.status libtool stamp-h .deps; do \
 		rm -rf `find . -name $$file`; \
 	done
 	rm -f stamp-h.in config.log aclocal.m4 configure
-	rm -f buildtools/* || true
+	rm -rf buildtools || true
 	dh_clean
 
 
