@@ -520,17 +520,6 @@ int db_insert_physmessage(u64_t * physmessage_id);
  */
 int db_insert_physmessage_with_internal_date(timestring_t internal_date,
 					     u64_t * physmessage_id);
-/**
- * \Brief update a physmessage by setting messagesize and rfcsize
- * \param physmessage_id the id of the physmessage
- * \param message_size
- * \param rfc_size
- * \return
- *      - -1 on failure
- *      -  1 on success
- */
-int db_update_physmessage(u64_t physmessage_id, u64_t message_size,
-			  u64_t rfc_size);
 
 /**
  * \brief insert a message into inbox. This function creates an entry
@@ -577,6 +566,18 @@ int db_update_message(u64_t message_idnr, const char *unique_id,
  *     -  0 on success
  */
 int db_message_set_unique_id(u64_t message_idnr, const char *unique_id);
+
+/**
+ * \brief set messagesize and rfcsize of a message
+ * \param physmessage_id 
+ * \param message_size
+ * \param rfc_size
+ * \return
+ *    - -1 on failure
+ *    -  0 on succes
+ */
+int db_physmessage_set_sizes(u64_t physmessage_id, u64_t message_size,
+			     u64_t rfc_size);
 
 /**
  * \brief insert a messageblock for a specific physmessage

@@ -696,21 +696,6 @@ int db_insert_physmessage(u64_t * physmessage_id)
 	return 1;
 }
 
-int db_update_physmessage(u64_t physmessage_id, u64_t message_size,
-			  u64_t rfc_size)
-{
-	snprintf(query, DEF_QUERYSIZE,
-		 "UPDATE physmessage SET messagesize = '%llu', "
-		 "rfcsize = '%llu' WHERE id = '%llu'",
-		 message_size, rfc_size, physmessage_id);
-	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: error executing query",
-		      __FILE__, __FUNCTION__);
-		return -1;
-	}
-	return 1;
-}
-
 int db_insert_message(u64_t user_idnr,
 		      const char *mailbox,
 		      int create_or_error_mailbox,
@@ -783,6 +768,24 @@ int db_message_set_unique_id(u64_t message_idnr, const char *unique_id)
 	return 0;
 }
 
+
+int db_physmessage_set_sizes(u64_t physmessage_id, u64_t message_size,
+			     u64_t rfc_size)
+{
+	snprintf(query, DEF_QUERYSIZE,
+		 "UPDATE physmessage SET "
+		 "messagesize = '%llu', rfcsize = '%llu' "
+		 "WHERE id = '%llu'", message_size, rfc_size, physmessage_id);
+
+	if (db_query(query) < 0) {
+		trace(TRACE_ERROR, "%s,%s: error setting messagesize and "
+		      "rfcsize for physmessage [%llu]",
+		      __FILE__, __FUNCTION__, physmessage_id);
+		return -1;
+	}
+	return 0;
+}
+
 int db_update_message(u64_t message_idnr, const char *unique_id,
 		      u64_t message_size, u64_t rfc_size)
 {
@@ -803,7 +806,7 @@ int db_update_message(u64_t message_idnr, const char *unique_id,
 		return -1;
 	}
 
-	if (db_update_physmessage(physmessage_id, message_size, rfc_size)
+	if (db_physmessage_set_sizes(physmessage_id, message_size, rfc_size)
 	    == -1) {
 		trace(TRACE_ERROR,
 		      "%s,%s: error updating physmessage [%llu]. "
@@ -2014,12 +2017,14 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
 		}
 
 	}
-
+	/* set message size */
+	if (db_physmessage_set_sizes(physmessage_id, datalen, 0) < 0) {
+		trace(TRACE_ERROR, "%s,%s: Error setting physmessages sizes",
+		      __FILE__, __FUNCTION__);
+		return -1;
+	}
 	/* create a unique id */
 	create_unique_id(unique_id, message_idnr);
-	//snprintf(unique_id, UID_SIZE, "%lluA%lu", message_idnr, td);
-
-	/* set info on message */
 	db_message_set_unique_id(message_idnr, unique_id);
 
 	/* recalculate quotum used */
