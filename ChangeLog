@@ -3,6 +3,7 @@
         * user.c (do_delete): now deletes aliases belonging to a user
         before the user is deleted; the prototype to the function now
         includes useridnr.
+	* maintenance.c: -q quiet flag is respected.
 
 2004-10-25  Paul Stevens <paul@nfg.nl>
 
