@@ -184,9 +184,11 @@ int main(int argc, char *argv[])
 	char *password = NULL, *enctype = NULL;
 	u64_t useridnr = 0, clientid = 0, maxmail = 0;
 	GList *alias_add = NULL, *alias_del = NULL, *fwds_add = NULL, *fwds_del = NULL;
+	GString *tmp;
 	struct change_flags change_flags;
 	size_t len = 0;
 
+	tmp = g_string_new("");
 
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 	setvbuf(stdout, 0, _IONBF, 0);
@@ -292,26 +294,34 @@ int main(int argc, char *argv[])
 
 		case 's':
 			// Add this item to the user's aliases.
-			if (optarg && (len = strlen(optarg)))
-				alias_add = g_list_append(alias_add, g_strdup(optarg));
+			if (optarg && (len = strlen(optarg))) {
+				tmp = g_string_new(optarg);
+				alias_add = g_string_split(tmp,",");
+			}
 			break;
 
 		case 'S':
 			// Delete this item from the user's aliases.
-			if (optarg && (len = strlen(optarg)))
-				alias_del = g_list_append(alias_del, g_strdup(optarg));
+			if (optarg && (len = strlen(optarg))) {
+				tmp = g_string_new(optarg);
+				alias_del = g_string_split(tmp,",");
+			}
 			break;
 
 		case 't':
 			// Add this item to the alias's forwards.
-			if (optarg && (len = strlen(optarg)))
-				fwds_add = g_list_append(fwds_add, g_strdup(optarg));
+			if (optarg && (len = strlen(optarg))) {
+				tmp = g_string_new(optarg);
+				fwds_add = g_string_split(tmp,",");
+			}
 			break;
 
 		case 'T':
 			// Delete this item from the alias's forwards.
-			if (optarg && (len = strlen(optarg)))
-				fwds_del = g_list_append(fwds_del, g_strdup(optarg));
+			if (optarg && (len = strlen(optarg))) {
+				tmp = g_string_new(optarg);
+				fwds_del = g_string_split(tmp,",");
+			}
 			break;
 
 		/* Common options */
@@ -528,6 +538,8 @@ freeall:
 		g_list_foreach(fwds_add, (GFunc)g_free, NULL);
 		g_list_free(fwds_add);
 	}
+	if (tmp)
+		g_string_free(tmp,TRUE);
 
 	db_disconnect();
 	auth_disconnect();
