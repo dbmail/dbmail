@@ -28,6 +28,7 @@
 #include "config.h"
 #endif
 
+#include "db.h"
 #include "debug.h"
 #include "server.h"
 #include "pool.h"

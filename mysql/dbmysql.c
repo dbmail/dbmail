@@ -61,13 +61,7 @@ db_param_t _db_params;
 
 
 /* static functions, only used locally */
-/**
- * \brief check database connection. If it is dead, reconnect
- * \return
- *    - -1 on failure (no connection to db possible)
- *    -  0 on success
- */
-static int db_check_connection(void);
+
 
 int db_connect()
 {
@@ -207,7 +201,7 @@ int db_disconnect()
 
 int db_check_connection()
 {
-	if (mysql_ping(&conn) != 0) {
+	if (mysql_ping(&conn)) {
 		trace(TRACE_DEBUG, "%s,%s: no database connection, trying "
 		      "to establish on.", __FILE__, __func__);
 		if (db_connect() < 0) {

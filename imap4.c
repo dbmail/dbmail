@@ -154,6 +154,12 @@ int IMAPClientHandler(ClientInfo * ci)
 	nfaultyresponses = 0;
 
 	do {
+		if (db_check_connection()) {
+			trace(TRACE_DEBUG,"%s,%s: database has gone away", __FILE__, __func__);
+			done=1;
+			break;
+		}
+		
 		if (nfaultyresponses >= MAX_FAULTY_RESPONSES) {
 			/* we have had just about it with this user */
 			sleep(2);	/* avoid DOS attacks */
@@ -274,7 +280,7 @@ int IMAPClientHandler(ClientInfo * ci)
 		
 		if (i == strlen(cpy)) {
 			/* no arguments present */
-			args = build_args_array("");
+			args = NULL;
 		} else {
 			cpy[i] = '\0';	/* terminated command */
 			cpy = cpy + i + 1;	/* cpy points to args now */

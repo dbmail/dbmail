@@ -156,7 +156,7 @@ void active_child_sig_handler(int sig, siginfo_t * info UNUSED, void *data UNUSE
 		 * all CPU time when trying to disconnect.
 		 * For now: just bail out :-)
 		 */
-		sleep(60);
+		sleep(360);
 		child_unregister();
 		_exit(1);
 
@@ -194,7 +194,7 @@ int SetChildSigHandler()
 	sigaction(SIGQUIT, &act, 0);
 	sigaction(SIGILL, &act, 0);
 	sigaction(SIGBUS, &act, 0);
-	sigaction(SIGPIPE, &act, 0);
+	//sigaction(SIGPIPE, &act, 0);
 	sigaction(SIGFPE, &act, 0);
 	sigaction(SIGSEGV, &act, 0);
 	sigaction(SIGTERM, &act, 0);
@@ -218,7 +218,7 @@ int DelChildSigHandler()
 	sigaction(SIGQUIT, &act, 0);
 	sigaction(SIGILL, &act, 0);
 	sigaction(SIGBUS, &act, 0);
-	sigaction(SIGPIPE, &act, 0);
+	//sigaction(SIGPIPE, &act, 0);
 	sigaction(SIGFPE, &act, 0);
 	sigaction(SIGSEGV, &act, 0);
 	sigaction(SIGTERM, &act, 0);
@@ -300,6 +300,12 @@ int PerformChildTask(ChildInfo_t * info)
 	connected = 1;
 
 	for (i = 0; i < info->maxConnect && !ChildStopRequested; i++) {
+		if (db_check_connection()) {
+			trace(TRACE_ERROR, "%s,%s: database has gone away", __FILE__, __func__);
+			ChildStopRequested=1;
+			continue;
+		}
+
 		trace(TRACE_INFO,
 		      "%s,%s: waiting for connection", __FILE__, __func__);
 

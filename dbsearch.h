@@ -67,10 +67,10 @@ int db_search(unsigned int *rset, int setlen, const char *key, mailbox_t * mb,
  *    - 1 if mb->exists != setlen
  */
 int db_search_parsed(unsigned int *rset, unsigned setlen,
-		     search_key_t * sk, mailbox_t * mb);
+		     search_key_t * sk, mailbox_t * mb, int condition);
 
 
 int db_sort_parsed(unsigned int *rset, unsigned setlen, 
-		     search_key_t *sk, mailbox_t *mb);
+		     search_key_t *sk, mailbox_t *mb, int condition);
  
 #endif

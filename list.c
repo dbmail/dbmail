@@ -233,6 +233,9 @@ void list_btree_insert(sortitems_t ** tree, sortitems_t * item) {
 }
 
 void list_btree_printout(sortitems_t * tree, int * i) {
+    if (! tree)
+        return;
+            
 	if(tree->left) 
 		list_btree_printout(tree->left, i);
 	trace(TRACE_INFO, "list_btree_printout: i '%d' '%d', '%s'\n", 
@@ -243,7 +246,10 @@ void list_btree_printout(sortitems_t * tree, int * i) {
 }
 
 void list_btree_traverse(sortitems_t * tree, int * i, unsigned int *rset) {
-	if(tree->left) 
+    if (! tree)
+        return;
+	
+    if(tree->left) 
 		list_btree_traverse(tree->left, i, rset);
 	trace(TRACE_DEBUG, "list_btree_traverse: i '%d' '%d', '%s'\n", 
 			*i, tree->mid, tree->ustr); 
@@ -254,6 +260,9 @@ void list_btree_traverse(sortitems_t * tree, int * i, unsigned int *rset) {
 }
 
 void list_btree_free(sortitems_t * tree) {
+    if (! tree)
+        return;
+    
 	if(tree->left) 
 		list_btree_free(tree->left);
 	g_free(tree->ustr);

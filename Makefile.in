@@ -81,6 +81,8 @@ AS = @AS@
 AUTHALIB = @AUTHALIB@
 AUTHLTLIB = @AUTHLTLIB@
 CC = @CC@
+CHECK_CFLAGS = @CHECK_CFLAGS@
+CHECK_LIBS = @CHECK_LIBS@
 CXX = @CXX@
 CXXCPP = @CXXCPP@
 DLLTOOL = @DLLTOOL@
@@ -164,6 +166,17 @@ dbmail_lmtpd_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @INIPARSERL
 lib_LTLIBRARIES = libdbmail.la
 libdbmail_la_SOURCES = $(COMMON) $(SERVER) $(DELIVER)
 libdbmail_la_LIBADD = @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @INIPARSERLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+
+@WITHCHECK_TRUE@TESTS = check_dbmail_common check_dbmail_imapd
+@WITHCHECK_TRUE@noinst_PROGRAMS = check_dbmail_common check_dbmail_imapd
+
+@WITHCHECK_TRUE@check_dbmail_common_SOURCES = $(COMMON) check_dbmail_common.c
+@WITHCHECK_TRUE@check_dbmail_common_LDADD = $(dbmail_users_LDADD) @CHECK_LIBS@
+@WITHCHECK_TRUE@check_dbmail_common_INCLUDES = @CHECK_CFLAGS@
+
+@WITHCHECK_TRUE@check_dbmail_imapd_SOURCES = $(COMMON) $(SERVER) quota.c imap4.c imaputil.c imapcommands.c memblock.c rfcmsg.c dbsearch.c dbmsgbuf.c acl.c dbmail-imapsession.c check_dbmail_imapd.c
+@WITHCHECK_TRUE@check_dbmail_imapd_LDADD = $(dbmail_imapd_LDADD) @CHECK_LIBS@
+@WITHCHECK_TRUE@check_dbmail_imapd_INCLUDES = @CHECK_CFLAGS@
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 mkinstalldirs = $(SHELL) $(top_srcdir)/buildtools/mkinstalldirs
 CONFIG_HEADER = config.h
@@ -183,10 +196,12 @@ pool.lo pipe.lo forward.lo dsn.lo
 @SIEVE_FALSE@bin_PROGRAMS = 
 @SIEVE_TRUE@bin_PROGRAMS =  dbmail-sievecmd$(EXEEXT) \
 @SIEVE_TRUE@dbmail-timsieved$(EXEEXT)
+@WITHCHECK_TRUE@noinst_PROGRAMS =  check_dbmail_common$(EXEEXT) \
+@WITHCHECK_TRUE@check_dbmail_imapd$(EXEEXT)
 sbin_PROGRAMS =  dbmail-smtp$(EXEEXT) dbmail-pop3d$(EXEEXT) \
 dbmail-imapd$(EXEEXT) dbmail-util$(EXEEXT) dbmail-users$(EXEEXT) \
 dbmail-lmtpd$(EXEEXT)
-PROGRAMS =  $(bin_PROGRAMS) $(sbin_PROGRAMS)
+PROGRAMS =  $(bin_PROGRAMS) $(noinst_PROGRAMS) $(sbin_PROGRAMS)
 
 @SIEVE_TRUE@dbmail_sievecmd_OBJECTS =  sievecmd.$(OBJEXT)
 @SIEVE_TRUE@dbmail_sievecmd_DEPENDENCIES =  libdbmail.la
@@ -195,6 +210,26 @@ dbmail_sievecmd_LDFLAGS =
 @SIEVE_TRUE@timsieved.$(OBJEXT)
 @SIEVE_TRUE@dbmail_timsieved_DEPENDENCIES =  libdbmail.la
 dbmail_timsieved_LDFLAGS = 
+@WITHCHECK_TRUE@check_dbmail_common_OBJECTS =  config.$(OBJEXT) \
+@WITHCHECK_TRUE@debug.$(OBJEXT) list.$(OBJEXT) dbmd5.$(OBJEXT) \
+@WITHCHECK_TRUE@md5.$(OBJEXT) db.$(OBJEXT) misc.$(OBJEXT) \
+@WITHCHECK_TRUE@mime.$(OBJEXT) pidfile.$(OBJEXT) \
+@WITHCHECK_TRUE@dbmail-message.$(OBJEXT) check_dbmail_common.$(OBJEXT)
+@WITHCHECK_TRUE@check_dbmail_common_DEPENDENCIES =  libdbmail.la
+check_dbmail_common_LDFLAGS = 
+@WITHCHECK_TRUE@check_dbmail_imapd_OBJECTS =  config.$(OBJEXT) \
+@WITHCHECK_TRUE@debug.$(OBJEXT) list.$(OBJEXT) dbmd5.$(OBJEXT) \
+@WITHCHECK_TRUE@md5.$(OBJEXT) db.$(OBJEXT) misc.$(OBJEXT) \
+@WITHCHECK_TRUE@mime.$(OBJEXT) pidfile.$(OBJEXT) \
+@WITHCHECK_TRUE@dbmail-message.$(OBJEXT) server.$(OBJEXT) \
+@WITHCHECK_TRUE@serverchild.$(OBJEXT) pool.$(OBJEXT) quota.$(OBJEXT) \
+@WITHCHECK_TRUE@imap4.$(OBJEXT) imaputil.$(OBJEXT) \
+@WITHCHECK_TRUE@imapcommands.$(OBJEXT) memblock.$(OBJEXT) \
+@WITHCHECK_TRUE@rfcmsg.$(OBJEXT) dbsearch.$(OBJEXT) dbmsgbuf.$(OBJEXT) \
+@WITHCHECK_TRUE@acl.$(OBJEXT) dbmail-imapsession.$(OBJEXT) \
+@WITHCHECK_TRUE@check_dbmail_imapd.$(OBJEXT)
+@WITHCHECK_TRUE@check_dbmail_imapd_DEPENDENCIES =  libdbmail.la
+check_dbmail_imapd_LDFLAGS = 
 dbmail_smtp_OBJECTS =  main.$(OBJEXT)
 dbmail_smtp_DEPENDENCIES =  libdbmail.la
 dbmail_smtp_LDFLAGS = 
@@ -230,7 +265,8 @@ DISTFILES = $(DIST_COMMON) $(SOURCES) $(HEADERS) $(TEXINFOS) $(EXTRA_DIST)
 
 TAR = tar
 GZIP_ENV = --best
-DEP_FILES =  .deps/acl.P .deps/config.P .deps/db.P \
+DEP_FILES =  .deps/acl.P .deps/check_dbmail_common.P \
+.deps/check_dbmail_imapd.P .deps/config.P .deps/db.P \
 .deps/dbmail-imapsession.P .deps/dbmail-message.P .deps/dbmd5.P \
 .deps/dbmsgbuf.P .deps/dbsearch.P .deps/debug.P .deps/dsn.P \
 .deps/forward.P .deps/imap4.P .deps/imapcommands.P .deps/imapd.P \
@@ -240,8 +276,8 @@ DEP_FILES =  .deps/acl.P .deps/config.P .deps/db.P \
 .deps/pop3d.P .deps/quota.P .deps/rfcmsg.P .deps/server.P \
 .deps/serverchild.P .deps/sievecmd.P .deps/timsieve.P .deps/timsieved.P \
 .deps/user.P
-SOURCES = $(libdbmail_la_SOURCES) $(dbmail_sievecmd_SOURCES) $(dbmail_timsieved_SOURCES) $(dbmail_smtp_SOURCES) $(dbmail_pop3d_SOURCES) $(dbmail_imapd_SOURCES) $(dbmail_util_SOURCES) $(dbmail_users_SOURCES) $(dbmail_lmtpd_SOURCES)
-OBJECTS = $(libdbmail_la_OBJECTS) $(dbmail_sievecmd_OBJECTS) $(dbmail_timsieved_OBJECTS) $(dbmail_smtp_OBJECTS) $(dbmail_pop3d_OBJECTS) $(dbmail_imapd_OBJECTS) $(dbmail_util_OBJECTS) $(dbmail_users_OBJECTS) $(dbmail_lmtpd_OBJECTS)
+SOURCES = $(libdbmail_la_SOURCES) $(dbmail_sievecmd_SOURCES) $(dbmail_timsieved_SOURCES) $(check_dbmail_common_SOURCES) $(check_dbmail_imapd_SOURCES) $(dbmail_smtp_SOURCES) $(dbmail_pop3d_SOURCES) $(dbmail_imapd_SOURCES) $(dbmail_util_SOURCES) $(dbmail_users_SOURCES) $(dbmail_lmtpd_SOURCES)
+OBJECTS = $(libdbmail_la_OBJECTS) $(dbmail_sievecmd_OBJECTS) $(dbmail_timsieved_OBJECTS) $(check_dbmail_common_OBJECTS) $(check_dbmail_imapd_OBJECTS) $(dbmail_smtp_OBJECTS) $(dbmail_pop3d_OBJECTS) $(dbmail_imapd_OBJECTS) $(dbmail_util_OBJECTS) $(dbmail_users_OBJECTS) $(dbmail_lmtpd_OBJECTS)
 
 all: all-redirect
 .SUFFIXES:
@@ -380,6 +416,15 @@ uninstall-binPROGRAMS:
 	  rm -f $(DESTDIR)$(bindir)/`echo $$p|sed 's/$(EXEEXT)$$//'|sed '$(transform)'|sed 's/$$/$(EXEEXT)/'`; \
 	done
 
+mostlyclean-noinstPROGRAMS:
+
+clean-noinstPROGRAMS:
+	-test -z "$(noinst_PROGRAMS)" || rm -f $(noinst_PROGRAMS)
+
+distclean-noinstPROGRAMS:
+
+maintainer-clean-noinstPROGRAMS:
+
 mostlyclean-sbinPROGRAMS:
 
 clean-sbinPROGRAMS:
@@ -412,6 +457,14 @@ dbmail-sievecmd$(EXEEXT): $(dbmail_sievecmd_OBJECTS) $(dbmail_sievecmd_DEPENDENC
 dbmail-timsieved$(EXEEXT): $(dbmail_timsieved_OBJECTS) $(dbmail_timsieved_DEPENDENCIES)
 	@rm -f dbmail-timsieved$(EXEEXT)
 	$(LINK) $(dbmail_timsieved_LDFLAGS) $(dbmail_timsieved_OBJECTS) $(dbmail_timsieved_LDADD) $(LIBS)
+
+check_dbmail_common$(EXEEXT): $(check_dbmail_common_OBJECTS) $(check_dbmail_common_DEPENDENCIES)
+	@rm -f check_dbmail_common$(EXEEXT)
+	$(LINK) $(check_dbmail_common_LDFLAGS) $(check_dbmail_common_OBJECTS) $(check_dbmail_common_LDADD) $(LIBS)
+
+check_dbmail_imapd$(EXEEXT): $(check_dbmail_imapd_OBJECTS) $(check_dbmail_imapd_DEPENDENCIES)
+	@rm -f check_dbmail_imapd$(EXEEXT)
+	$(LINK) $(check_dbmail_imapd_LDFLAGS) $(check_dbmail_imapd_OBJECTS) $(check_dbmail_imapd_LDADD) $(LIBS)
 
 dbmail-smtp$(EXEEXT): $(dbmail_smtp_OBJECTS) $(dbmail_smtp_DEPENDENCIES)
 	@rm -f dbmail-smtp$(EXEEXT)
@@ -621,11 +674,37 @@ maintainer-clean-depend:
 	  | sed -e 's/^\\$$//' -e '/^$$/ d' -e '/:$$/ d' -e 's/$$/ :/' \
 	    >> .deps/$(*F).P; \
 	rm -f .deps/$(*F).pp
+check-TESTS: $(TESTS)
+	@failed=0; all=0; \
+	srcdir=$(srcdir); export srcdir; \
+	for tst in $(TESTS); do \
+	  if test -f $$tst; then dir=.; \
+	  else dir="$(srcdir)"; fi; \
+	  if $(TESTS_ENVIRONMENT) $$dir/$$tst; then \
+	    all=`expr $$all + 1`; \
+	    echo "PASS: $$tst"; \
+	  elif test $$? -ne 77; then \
+	    all=`expr $$all + 1`; \
+	    failed=`expr $$failed + 1`; \
+	    echo "FAIL: $$tst"; \
+	  fi; \
+	done; \
+	if test "$$failed" -eq 0; then \
+	  banner="All $$all tests passed"; \
+	else \
+	  banner="$$failed of $$all tests failed"; \
+	fi; \
+	dashes=`echo "$$banner" | sed s/./=/g`; \
+	echo "$$dashes"; \
+	echo "$$banner"; \
+	echo "$$dashes"; \
+	test "$$failed" -eq 0
 info-am:
 info: info-recursive
 dvi-am:
 dvi: dvi-recursive
 check-am: all-am
+	$(MAKE) $(AM_MAKEFLAGS) check-TESTS
 check: check-recursive
 installcheck-am:
 installcheck: installcheck-recursive
@@ -666,21 +745,24 @@ distclean-generic:
 maintainer-clean-generic:
 mostlyclean-am:  mostlyclean-hdr mostlyclean-libLTLIBRARIES \
 		mostlyclean-compile mostlyclean-libtool \
-		mostlyclean-binPROGRAMS mostlyclean-sbinPROGRAMS \
-		mostlyclean-tags mostlyclean-depend mostlyclean-generic
+		mostlyclean-binPROGRAMS mostlyclean-noinstPROGRAMS \
+		mostlyclean-sbinPROGRAMS mostlyclean-tags \
+		mostlyclean-depend mostlyclean-generic
 
 mostlyclean: mostlyclean-recursive
 
 clean-am:  clean-hdr clean-libLTLIBRARIES clean-compile clean-libtool \
-		clean-binPROGRAMS clean-sbinPROGRAMS clean-tags \
-		clean-depend clean-generic mostlyclean-am
+		clean-binPROGRAMS clean-noinstPROGRAMS \
+		clean-sbinPROGRAMS clean-tags clean-depend \
+		clean-generic mostlyclean-am
 
 clean: clean-recursive
 
 distclean-am:  distclean-hdr distclean-libLTLIBRARIES distclean-compile \
 		distclean-libtool distclean-binPROGRAMS \
-		distclean-sbinPROGRAMS distclean-tags distclean-depend \
-		distclean-generic clean-am
+		distclean-noinstPROGRAMS distclean-sbinPROGRAMS \
+		distclean-tags distclean-depend distclean-generic \
+		clean-am
 	-rm -f libtool
 
 distclean: distclean-recursive
@@ -690,6 +772,7 @@ maintainer-clean-am:  maintainer-clean-hdr \
 		maintainer-clean-libLTLIBRARIES \
 		maintainer-clean-compile maintainer-clean-libtool \
 		maintainer-clean-binPROGRAMS \
+		maintainer-clean-noinstPROGRAMS \
 		maintainer-clean-sbinPROGRAMS maintainer-clean-tags \
 		maintainer-clean-depend maintainer-clean-generic \
 		distclean-am
@@ -707,8 +790,10 @@ distclean-compile clean-compile maintainer-clean-compile \
 mostlyclean-libtool distclean-libtool clean-libtool \
 maintainer-clean-libtool mostlyclean-binPROGRAMS distclean-binPROGRAMS \
 clean-binPROGRAMS maintainer-clean-binPROGRAMS uninstall-binPROGRAMS \
-install-binPROGRAMS mostlyclean-sbinPROGRAMS distclean-sbinPROGRAMS \
-clean-sbinPROGRAMS maintainer-clean-sbinPROGRAMS uninstall-sbinPROGRAMS \
+install-binPROGRAMS mostlyclean-noinstPROGRAMS distclean-noinstPROGRAMS \
+clean-noinstPROGRAMS maintainer-clean-noinstPROGRAMS \
+mostlyclean-sbinPROGRAMS distclean-sbinPROGRAMS clean-sbinPROGRAMS \
+maintainer-clean-sbinPROGRAMS uninstall-sbinPROGRAMS \
 install-sbinPROGRAMS install-data-recursive uninstall-data-recursive \
 install-exec-recursive uninstall-exec-recursive installdirs-recursive \
 uninstalldirs-recursive all-recursive check-recursive \
@@ -717,8 +802,8 @@ mostlyclean-recursive distclean-recursive clean-recursive \
 maintainer-clean-recursive tags tags-recursive mostlyclean-tags \
 distclean-tags clean-tags maintainer-clean-tags distdir \
 mostlyclean-depend distclean-depend clean-depend \
-maintainer-clean-depend info-am info dvi-am dvi check check-am \
-installcheck-am installcheck all-recursive-am install-exec-am \
+maintainer-clean-depend check-TESTS info-am info dvi-am dvi check \
+check-am installcheck-am installcheck all-recursive-am install-exec-am \
 install-exec install-data-am install-data install-am install \
 uninstall-am uninstall all-redirect all-am all installdirs-am \
 installdirs mostlyclean-generic distclean-generic clean-generic \

@@ -1,3 +1,22 @@
+2005-01-14  Paul Stevens <paul@nfg.nl>
+
+	* db.h, mysql/dbmysql.c, pgsql/dbpgsql.c (db_check_connection): moved
+	static function to db.h so we can call db_check_connection from
+	serverchild.c.
+	* serverchild.c: call db_check_connection before each incoming
+	connection (closes #156).
+	* imap4.c, pop3.c, lmtp.c: call db_check_connection before handling
+	commands.
+	* serverchild.c: remove non-functional SIGPIPE handler so we can allow
+	libmysql to use it's own handler in mysql_ping.
+	* imapcommands.c (_ic_search): only resync mailbox if
+	out-of-sync detected.
+	* imaputil.c: removed unused functions retrieve_structure and
+	show_address_list.
+	* imapcommands.c (_ic_search), imaputil.c (perform_imap_search),
+	dbsearch.c (db_search_parsed, db_sort_parsed): try to be smarter about
+	retrieving messages when searching/sorting.
+
 2005-01-08  Paul Stevens <paul@nfg.nl>
 
 	* imapcommands.c (_ic_search): resync mailbox after detecting
@@ -2189,5 +2208,6 @@
 	(db_use_auth_result, db_store_auth_result): added.. were missing
 
 * THANKS: addition of the GNU THANKS file
+
 
 

@@ -165,6 +165,13 @@ int lmtp_handle_connection(clientinfo_t * ci)
 
 	lmtp_reset(&session);
 	while (done > 0) {
+
+		if (db_check_connection()) {
+			trace(TRACE_DEBUG,"%s,%s: database has gone away", __FILE__, __func__);
+			done=-1;
+			break;
+		}
+
 		/* set the timeout counter */
 		alarm(ci->timeout);
 

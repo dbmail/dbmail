@@ -290,7 +290,7 @@ class testImapServer(unittest.TestCase):
         #result=self.o.search(None, "UNDELETED", "BODY", "test")
         #self.assertEquals(result[0],'OK')
         #self.failIf(result[1]==[''])
-        result=self.o.search(None, "1:10", "HEADER", "X-OfflineIMAP-901701146-4c6f63616c4d69726a616d-494e424f58", "1086726519-0790956581151")
+        result=self.o.search(None, "RECENT", "HEADER", "X-OfflineIMAP-901701146-4c6f63616c4d69726a616d-494e424f58", "1086726519-0790956581151")
         self.assertEquals(result[0],'OK')
         #result=self.o.search(None, "UNDELETED", "HEADER", "TO", "testuser")
         #self.assertEquals(result[0],'OK')
@@ -352,7 +352,11 @@ class testImapServer(unittest.TestCase):
             interpretation of strings in the searching criteria.  It then
             returns the numbers of matching messages.
         """
-        #self.fail(unimplementedError)
+        self.o.select('INBOX')
+        #result=self.o.sort('(FROM)','US-ASCII','RECENT')
+        #self.assertEquals(result[0],'OK')
+        result=self.o.sort('(FROM)','US-ASCII','RECENT','HEADER','MESSAGE-ID','<asdfasdf@nfg.nl>')
+        self.assertEquals(result[0],'OK')
 
     def testStatus(self):
         """ 

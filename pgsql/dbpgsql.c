@@ -77,6 +77,17 @@ int db_connect()
 	return 0;
 }
 
+int db_check_connection() {
+	if (PQstatus(conn) == CONNECTION_BAD) {
+		PQreset(conn);
+		if (PQstatus(conn) == CONNECTION_BAD) {
+			trace(TRACE_ERROR, "%s,%s: connection with database gone bad", __FILE__, __func__);
+			return -1;
+		}
+	}	
+	return 0;
+}
+
 int db_disconnect()
 {
 	if (res)

@@ -76,6 +76,15 @@
 int db_connect(void);
 
 /**
+ * \brief check database connection. If it is dead, reconnect
+ * \return
+ *    - -1 on failure (no connection to db possible)
+ *    -  0 on success
+ */
+int db_check_connection(void);
+
+
+/**
  * \brief disconnect from database server
  * \return 0
  */

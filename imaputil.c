@@ -45,6 +45,7 @@
 #include "memblock.h"
 #include "dbsearch.h"
 #include "rfcmsg.h"
+#include "misc.h"
 
 #ifndef MAX_LINESIZE
 #define MAX_LINESIZE (10*1024)
@@ -219,580 +220,6 @@ GList *dbmail_imap_list_slices(GList *list, unsigned limit)
 	g_string_free(slice,TRUE);
 	return new;
 }
-/* 
- * retrieve_structure()
- *
- * retrieves the MIME-IMB structure of a message. The msg should be in the format
- * as build by db_fetch_headers().
- *
- * shows extension data if show_extension_data != 0
- *
- * returns -1 on error, 0 on success
- */
-int retrieve_structure(FILE * outstream, mime_message_t * msg,
-		       int show_extension_data)
-{
-	struct mime_record *mr;
-	struct element *curr;
-	struct list *header_to_use;
-	mime_message_t rfcmsg;
-	char *subtype, *extension, *newline;
-	int is_mime_multipart = 0, is_rfc_multipart = 0;
-	int rfc822 = 0;
-
-	fprintf(outstream, "(");
-
-	mime_findfield("content-type", &msg->mimeheader, &mr);
-	is_mime_multipart = (mr
-			     && strncasecmp(mr->value, "multipart",
-					    strlen("multipart")) == 0
-			     && !msg->message_has_errors);
-
-	mime_findfield("content-type", &msg->rfcheader, &mr);
-	is_rfc_multipart = (mr
-			    && strncasecmp(mr->value, "multipart",
-					   strlen("multipart")) == 0
-			    && !msg->message_has_errors);
-
-	/* eddy */
-	if (mr
-	    && strncasecmp(mr->value, "message/rfc822",
-			   strlen("message/rfc822")) == 0) {
-		rfc822 = 1;
-	}
-
-
-	if (rfc822 || (!is_rfc_multipart && !is_mime_multipart)) {
-		/* show basic fields:
-		 * content-type, content-subtype, (parameter list), 
-		 * content-id, content-description, content-transfer-encoding,
-		 * size
-		 */
-
-		if (msg->mimeheader.start == NULL)
-			header_to_use = &msg->rfcheader;	/* we're dealing with a single-part RFC msg here */
-		else
-			header_to_use = &msg->mimeheader;	/* we're dealing with a pure-MIME header here */
-
-		mime_findfield("content-type", header_to_use, &mr);
-		if (mr && strlen(mr->value) > 0)
-			show_mime_parameter_list(outstream, mr, 1, 0);
-		else
-			fprintf(outstream, "\"TEXT\" \"PLAIN\" (\"CHARSET\" \"US-ASCII\")");	/* default */
-
-		mime_findfield("content-id", header_to_use, &mr);
-		if (mr && strlen(mr->value) > 0) {
-			fprintf(outstream, " ");
-			quoted_string_out(outstream, mr->value);
-		} else
-			fprintf(outstream, " NIL");
-
-		mime_findfield("content-description", header_to_use, &mr);
-		if (mr && strlen(mr->value) > 0) {
-			fprintf(outstream, " ");
-			quoted_string_out(outstream, mr->value);
-		} else
-			fprintf(outstream, " NIL");
-
-		mime_findfield("content-transfer-encoding", header_to_use,
-			       &mr);
-		if (mr && strlen(mr->value) > 0) {
-			fprintf(outstream, " ");
-			quoted_string_out(outstream, mr->value);
-		} else
-			fprintf(outstream, " \"7BIT\"");
-
-		/* now output size */
-		/* add msg->bodylines because \n is dumped as \r\n */
-		if (msg->mimeheader.start && msg->rfcheader.start)
-			fprintf(outstream, " %llu",
-				msg->bodysize + msg->mimerfclines +
-				msg->rfcheadersize - msg->rfcheaderlines);
-		else
-			fprintf(outstream, " %llu",
-				msg->bodysize + msg->bodylines);
-
-
-		/* now check special cases, first case: message/rfc822 */
-		mime_findfield("content-type", header_to_use, &mr);
-		if (mr
-		    && strncasecmp(mr->value, "message/rfc822",
-				   strlen("message/rfc822")) == 0
-		    && header_to_use != &msg->rfcheader) {
-			/* msg/rfc822 found; extra items to be displayed:
-			 * (a) body envelope of rfc822 msg
-			 * (b) body structure of rfc822 msg
-			 * (c) msg size (lines)
-			 */
-
-			if (retrieve_envelope(outstream, &msg->rfcheader)
-			    == -1)
-				return -1;
-
-			fprintf(outstream, " ");
-
-			memmove(&rfcmsg, msg, sizeof(rfcmsg));
-			rfcmsg.mimeheader.start = NULL;	/* forget MIME-part */
-			
-			if (retrieve_structure
-			    (outstream, &rfcmsg,
-			     show_extension_data) == -1)
-				return -1;
-
-			/* output # of lines */
-			fprintf(outstream, " %llu", msg->bodylines);
-		}
-		/* now check second special case: text 
-		 * NOTE: if 'content-type' is absent, TEXT is assumed 
-		 */
-		if ((mr
-		     && strncasecmp(mr->value, "text",
-				    strlen("text")) == 0) || !mr) {
-			/* output # of lines */
-			if (msg->mimeheader.start && msg->rfcheader.start)
-				fprintf(outstream, " %llu",
-					msg->mimerfclines);
-			else
-				fprintf(outstream, " %llu", msg->bodylines);
-		}
-
-		if (show_extension_data) {
-			mime_findfield("content-md5", header_to_use, &mr);
-			if (mr && strlen(mr->value) > 0) {
-				fprintf(outstream, " ");
-				quoted_string_out(outstream, mr->value);
-			} else
-				fprintf(outstream, " NIL");
-
-			mime_findfield("content-disposition",
-				       header_to_use, &mr);
-			if (mr && strlen(mr->value) > 0) {
-				fprintf(outstream, " (");
-				show_mime_parameter_list(outstream, mr, 0,
-							 0);
-				fprintf(outstream, ")");
-			} else
-				fprintf(outstream, " NIL");
-
-			mime_findfield("content-language", header_to_use,
-				       &mr);
-			if (mr && strlen(mr->value) > 0) {
-				fprintf(outstream, " ");
-				quoted_string_out(outstream, mr->value);
-			} else
-				fprintf(outstream, " NIL");
-		}
-	} else {
-		/* check for a multipart message */
-		if (is_rfc_multipart || is_mime_multipart) {
-			curr = list_getstart(&msg->children);
-			while (curr) {
-				if (retrieve_structure
-				    (outstream,
-				     (mime_message_t *) curr->data,
-				     show_extension_data) == -1)
-					return -1;
-
-				curr = curr->nextnode;
-			}
-
-			/* show multipart subtype */
-			if (is_mime_multipart)
-				mime_findfield("content-type",
-					       &msg->mimeheader, &mr);
-			else
-				mime_findfield("content-type",
-					       &msg->rfcheader, &mr);
-
-			subtype = strchr(mr->value, '/');
-			extension = strchr(subtype, ';');
-
-			if (!subtype)
-				fprintf(outstream, " NIL");
-			else {
-				if (!extension) {
-					newline = strchr(subtype, '\n');
-					if (!newline)
-						return -1;
-
-					*newline = 0;
-					fprintf(outstream, " ");
-					quoted_string_out(outstream,
-							  subtype + 1);
-					*newline = '\n';
-				} else {
-					*extension = 0;
-					fprintf(outstream, " ");
-					quoted_string_out(outstream,
-							  subtype + 1);
-					*extension = ';';
-				}
-			}
-
-			/* show extension data (after subtype) */
-			if (extension && show_extension_data) {
-				show_mime_parameter_list(outstream, mr, 0,
-							 1);
-
-				/* FIXME: should give body-disposition & body-language here */
-				fprintf(outstream, " NIL NIL");
-			}
-		} else {
-			/* ??? */
-		}
-	}
-	fprintf(outstream, ")");
-
-	return 0;
-}
-
-
-/*
- * retrieve_envelope()
- *
- * retrieves the body envelope of an RFC-822 msg
- *
- * returns -1 on error, 0 on success
- */
-int retrieve_envelope(FILE * outstream, struct list *rfcheader)
-{
-	struct mime_record *mr;
-	int idx;
-
-	fprintf(outstream, "(");
-
-	mime_findfield("date", rfcheader, &mr);
-	if (mr && strlen(mr->value) > 0) {
-		quoted_string_out(outstream, mr->value);
-		fprintf(outstream, " ");
-	} else
-		fprintf(outstream, "NIL ");
-
-	mime_findfield("subject", rfcheader, &mr);
-	if (mr && strlen(mr->value) > 0) {
-		quoted_string_out(outstream, mr->value);
-		fprintf(outstream, " ");
-	} else
-		fprintf(outstream, "NIL ");
-
-	/* now from, sender, reply-to, to, cc, bcc, in-reply-to fields;
-	 * note that multiple mailaddresses are separated by ','
-	 */
-
-	for (idx = 0; envelope_items[idx]; idx++) {
-		mime_findfield(envelope_items[idx], rfcheader, &mr);
-		if (mr && strlen(mr->value) > 0) {
-			show_address_list(outstream, mr);
-		} else if (strcasecmp(envelope_items[idx], "reply-to") ==
-			   0) {
-			/* default this field */
-			mime_findfield("from", rfcheader, &mr);
-			if (mr && strlen(mr->value) > 0)
-				show_address_list(outstream, mr);
-			else	/* no from field ??? */
-				fprintf(outstream,
-					"((NIL NIL \"nobody\" \"nowhere.nirgendwo\"))");
-		} else if (strcasecmp(envelope_items[idx], "sender") == 0) {
-			/* default this field */
-			mime_findfield("from", rfcheader, &mr);
-			if (mr && strlen(mr->value) > 0)
-				show_address_list(outstream, mr);
-			else	/* no from field ??? */
-				fprintf(outstream,
-					"((NIL NIL \"nobody\" \"nowhere.nirgendwo\"))");
-		} else
-			fprintf(outstream, "NIL");
-
-		fprintf(outstream, " ");
-	}
-
-	mime_findfield("in-reply-to", rfcheader, &mr);
-	if (mr && strlen(mr->value) > 0) {
-		quoted_string_out(outstream, mr->value);
-		fprintf(outstream, " ");
-	} else
-		fprintf(outstream, "NIL ");
-
-	mime_findfield("message-id", rfcheader, &mr);
-	if (mr && strlen(mr->value) > 0)
-		quoted_string_out(outstream, mr->value);
-	else
-		fprintf(outstream, "NIL");
-
-	fprintf(outstream, ")");
-
-	return 0;
-}
-
-
-/*
- * show_address_list()
- *
- * gives an address list, output to outstream
- */
-int show_address_list(FILE * outstream, struct mime_record *mr)
-{
-	int delimiter, i, inquote, start, has_split;
-	char savechar;
-
-	fprintf(outstream, "(");
-
-	/* find ',' to split up multiple addresses */
-	delimiter = 0;
-
-	do {
-		fprintf(outstream, "(");
-
-		start = delimiter;
-
-		for (inquote = 0;
-		     mr->value[delimiter] && !(mr->value[delimiter] == ','
-					       && !inquote); delimiter++)
-			if (mr->value[delimiter] == '\"')
-				inquote ^= 1;
-
-		if (mr->value[delimiter])
-			mr->value[delimiter] = 0;	/* replace ',' by NULL-termination */
-		else
-			delimiter = -1;	/* this will be the last one */
-
-		/* the address currently being processed is now contained within
-		 * &mr->value[start] 'till first '\0'
-		 */
-
-		/* possibilities for the mail address:
-		 * (1) name <user@domain>
-		 * (2) <user@domain>
-		 * (3) user@domain
-		 * scan for '<' to determine which case we should be dealing with;
-		 */
-
-		for (i = start, inquote = 0;
-		     mr->value[i] && !(mr->value[i] == '<' && !inquote);
-		     i++)
-			if (mr->value[i] == '\"')
-				inquote ^= 1;
-
-		if (mr->value[i]) {
-			if (i > start + 2) {
-				/* name is contained in &mr->value[start] untill &mr->value[i-2] */
-				/* name might contain quotes */
-				savechar = mr->value[i - 1];
-				mr->value[i - 1] = '\0';	/* terminate string */
-
-				quoted_string_out(outstream,
-						  &mr->value[start]);
-
-				mr->value[i - 1] = savechar;
-
-			} else
-				fprintf(outstream, "NIL");
-
-			start = i + 1;	/* skip to after '<' */
-		} else
-			fprintf(outstream, "NIL");
-
-		fprintf(outstream, " NIL ");	/* source route ?? smtp at-domain-list ?? */
-
-		/* now display user domainname; &mr->value[start] is starting point */
-		fprintf(outstream, "\"");
-
-		/*
-		 * added a check for whitespace within the address (not good)
-		 */
-		for (i = start, has_split = 0;
-		     mr->value[i] && mr->value[i] != '>'
-		     && !isspace(mr->value[i]); i++) {
-			if (mr->value[i] == '@') {
-				fprintf(outstream, "\" \"");
-				has_split = 1;
-			} else {
-				if (mr->value[i] == '"')
-					fprintf(outstream, "\\");
-				fprintf(outstream, "%c", mr->value[i]);
-			}
-		}
-
-		if (!has_split)
-			fprintf(outstream, "\" \"\"");	/* '@' did not occur */
-		else
-			fprintf(outstream, "\"");
-
-		if (delimiter > 0) {
-			mr->value[delimiter++] = ',';	/* restore & prepare for next iteration */
-			while (isspace(mr->value[delimiter]))
-				delimiter++;
-		}
-
-		fprintf(outstream, ")");
-
-	} while (delimiter > 0);
-
-	fprintf(outstream, ")");
-
-	return 0;
-}
-
-
-
-/*
- * show_mime_parameter_list()
- *
- * shows mime name/value pairs, output to outstream
- * 
- * if force_subtype != 0 'NIL' will be outputted if no subtype is specified
- * if only_extension != 0 only extension data (after first ';') will be shown
- */
-int show_mime_parameter_list(FILE * outstream, struct mime_record *mr,
-			     int force_subtype, int only_extension)
-{
-	int idx, delimiter, start, end;
-	char *fieldvalue = (char *)dm_malloc(sizeof(char *)*255);
-	char *tmpstring = (char *)dm_malloc(sizeof(char *)*255);
-	
-	/* find first delimiter */
-	for (delimiter = 0;
-	     mr->value[delimiter] && mr->value[delimiter] != ';';
-	     delimiter++);
-
-	/* are there non-whitespace chars after the delimiter?                    */
-	/* looking for the case where the mime type ends with a ";"               */
-	/* if it is of type "text" it must have a default character set generated */
-	end = strlen(mr->value);
-	for (start = delimiter + 1;
-	     (isspace(mr->value[start]) == 0 && start <= end); start++);
-	end = start - delimiter - 1;
-	start = 0;
-	if (end && strstr(mr->value, "text"))
-		start++;
-
-	if (mr->value[delimiter])
-		mr->value[delimiter] = 0;
-	else
-		delimiter = -1;
-
-	if (!only_extension) {
-		/* find main type in value */
-		for (idx = 0; mr->value[idx] && mr->value[idx] != '/';
-		     idx++);
-
-		if (mr->value[idx] && (idx < delimiter || delimiter == -1)) {
-			mr->value[idx] = 0;
-
-			quoted_string_out(outstream, mr->value);
-			fprintf(outstream, " ");
-			quoted_string_out(outstream, &mr->value[idx + 1]);
-
-			mr->value[idx] = '/';
-		} else {
-			quoted_string_out(outstream, mr->value);
-			fprintf(outstream, " %s",
-				force_subtype ? "NIL" : "");
-		}
-	}
-
-	if (delimiter >= 0) {
-		/* extra parameters specified */
-		mr->value[delimiter] = ';';
-		idx = delimiter;
-
-		fprintf(outstream, " (");
-
-		if (start)
-			fprintf(outstream, "\"CHARSET\" \"US-ASCII\"");
-		/* extra params: <name>=<val> [; <name>=<val> [; ...etc...]]
-		 * note that both name and val may or may not be enclosed by 
-		 * either single or double quotation marks
-		 */
-
-		do {
-			/* skip whitespace */
-			for (idx++; isspace(mr->value[idx]); idx++);
-
-			if (!mr->value[idx])
-				break;	/* ?? */
-
-			/* check if quotation marks are specified */
-			if (mr->value[idx] == '\"' || mr->value[idx] == '\'') {
-				start = ++idx;
-				while (mr->value[idx] && mr->value[idx] != mr->value[start - 1])
-					idx++;
-
-				if (!mr->value[idx] || mr->value[idx + 1] != '=')	/* ?? no end quote */
-					break;
-
-				end = idx;
-				idx += 2;	/* skip to after '=' */
-			} else {
-				start = idx;
-				while (mr->value[idx] && mr->value[idx] != '=')
-					idx++;
-
-				if (!mr->value[idx])	/* ?? no value specified */
-					break;
-
-				end = idx;
-				idx++;	/* skip to after '=' */
-			}
-			
-			fprintf(outstream, "\"%.*s\" ", (end - start), &mr->value[start]);
-
-			/* now process the value; practically same procedure */
-
-			if (mr->value[idx] == '\"' || mr->value[idx] == '\'') {
-				start = ++idx;
-				while (mr->value[idx] && mr->value[idx] != mr->value[start - 1])
-					idx++;
-
-				if (!mr->value[idx])	/* ?? no end quote */
-					break;
-
-				end = idx;
-				idx++;
-			} else {
-				start = idx;
-
-				while (mr->value[idx] && !isspace(mr->value[idx]) && mr->value[idx] != ';')
-					idx++;
-
-				end = idx;
-			}
-
-			
-			/* Thunderbird doesn't like mime-values that are wrapped, so
-			 * we unwrap mime-values 
-			 *
-			 * this code assumes mime values are no longer than 255 chars.
-			 *
-			 * PJS
-			 */
-			
-			
-			snprintf(tmpstring,255,"\"%.*s\"", (end - start), &mr->value[start]);
-			mime_unwrap(fieldvalue,tmpstring);
-			fprintf(outstream,fieldvalue);
-			//fprintf(outstream, "\"%.*s\"", (end - start), &mr->value[start]);
-			
-			/* check for more name/val pairs */
-			while (mr->value[idx] && mr->value[idx] != ';')
-				idx++;
-
-			if (mr->value[idx])
-				fprintf(outstream, " ");
-
-		} while (mr->value[idx]);
-
-		fprintf(outstream, ")");
-
-	} else {
-		fprintf(outstream, " NIL");
-	}
-	dm_free(fieldvalue);
-	dm_free(tmpstring);
-			
-	return 0;
-}
-
 
 /* 
  * get_part_by_num()
@@ -919,10 +346,17 @@ int haystack_find(int haystacklen, char **haystack, const char *needle)
 }
 
 
+/* local defines */
+#define NORMPAR 1
+#define SQUAREPAR 2
+#define NOPAR 0
 
+char *the_args[MAX_ARGS];
 
 /*
  * build_args_array()
+ *
+ * !! REMOVED  because unused !!
  *
  * builds an dimensional array of strings containing arguments based upon 
  * a series of arguments passed as a single string.
@@ -945,190 +379,6 @@ int haystack_find(int haystacklen, char **haystack, const char *needle)
  * The returned array will be NULL-terminated.
  * Will return NULL upon errors.
  */
-
-/* local defines */
-#define NORMPAR 1
-#define SQUAREPAR 2
-#define NOPAR 0
-
-char *the_args[MAX_ARGS];
-
-char **build_args_array(const char *s)
-{
-	int nargs = 0, inquote = 0, i, quotestart = 0;
-	int nnorm = 0, nsquare = 0, paridx = 0, slen = 0, argstart = 0;
-	char parlist[MAX_LINESIZE];
-
-	if (!s)
-		return NULL;
-
-	/* check for empty string */
-	if (!(*s)) {
-		the_args[0] = NULL;
-		return the_args;
-	}
-
-	/* find the arguments */
-	paridx = 0;
-	parlist[paridx] = NOPAR;
-
-	inquote = 0;
-	slen = strlen(s);
-
-	for (i = 0, nargs = 0; i < slen && nargs < MAX_ARGS - 1; i++) {
-		/* check quotes */
-		if (s[i] == '"' && ((i > 0 && s[i - 1] != '\\') || i == 0)) {
-			if (inquote) {
-				/* quotation end, treat quoted string as argument */
-				if (!
-				    (the_args[nargs] =
-				     (char *) dm_malloc(sizeof(char) *
-							(i -
-							 quotestart)))) {
-					/* out of mem */
-					while (--nargs >= 0) {
-						dm_free(the_args[nargs]);
-						the_args[nargs] = NULL;
-					}
-
-					trace(TRACE_ERROR,
-					      "IMAPD: Not enough memory while building up argument array.");
-					return NULL;
-				}
-
-				memcpy((void *) the_args[nargs], 
-				       (void *) &s[quotestart + 1],
-				       i - quotestart - 1);
-				the_args[nargs][i - quotestart - 1] = '\0';
-
-				nargs++;
-				inquote = 0;
-			} else {
-				inquote = 1;
-				quotestart = i;
-			}
-
-			continue;
-		}
-
-		if (inquote)
-			continue;
-
-		/* check for (, ), [ or ] in string */
-		if (s[i] == '(' || s[i] == ')' || s[i] == '['
-		    || s[i] == ']') {
-			/* check parenthese structure */
-			if (s[i] == ')') {
-				if (paridx < 0
-				    || parlist[paridx] != NORMPAR)
-					paridx = -1;
-				else {
-					nnorm--;
-					paridx--;
-				}
-			} else if (s[i] == ']') {
-				if (paridx < 0
-				    || parlist[paridx] != SQUAREPAR)
-					paridx = -1;
-				else {
-					paridx--;
-					nsquare--;
-				}
-			} else if (s[i] == '(') {
-				parlist[++paridx] = NORMPAR;
-				nnorm++;
-			} else {	/* s[i] == '[' */
-
-				parlist[++paridx] = SQUAREPAR;
-				nsquare++;
-			}
-
-			if (paridx < 0) {
-				/* error in parenthesis structure */
-				while (--nargs >= 0) {
-					dm_free(the_args[nargs]);
-					the_args[nargs] = NULL;
-				}
-				return NULL;
-			}
-
-			/* add this parenthesis to the arg list and continue */
-			if (!
-			    (the_args[nargs] =
-			     (char *) dm_malloc(sizeof(" ")))) {
-				/* out of mem */
-				while (--nargs >= 0) {
-					dm_free(the_args[nargs]);
-					the_args[nargs] = NULL;
-				}
-
-				trace(TRACE_ERROR,
-				      "IMAPD: Not enough memory while building up argument array.");
-				return NULL;
-			}
-			the_args[nargs][0] = s[i];
-			the_args[nargs][1] = '\0';
-
-			nargs++;
-			continue;
-		}
-
-		if (s[i] == ' ')
-			continue;
-
-		/* at an argument start now, walk on until next delimiter
-		 * and save argument 
-		 */
-
-		for (argstart = i; i < slen && !strchr(" []()", s[i]); i++)
-			if (s[i] == '"') {
-				if (s[i - 1] == '\\')
-					continue;
-				else
-					break;
-			}
-
-		if (!
-		    (the_args[nargs] =
-		     (char *) dm_malloc(sizeof(char) *
-					(i - argstart + 1)))) {
-			/* out of mem */
-			while (--nargs >= 0) {
-				dm_free(the_args[nargs]);
-				the_args[nargs] = NULL;
-			}
-
-			trace(TRACE_ERROR,
-			      "IMAPD: Not enough memory while building up argument array.");
-			return NULL;
-		}
-
-		memcpy((void *) the_args[nargs], (void *) &s[argstart], 
-		       i - argstart);
-		the_args[nargs][i - argstart] = '\0';
-
-		nargs++;
-		i--;		/* walked one too far */
-	}
-
-	if (paridx != 0) {
-		/* error in parenthesis structure */
-		while (--nargs >= 0) {
-			dm_free(the_args[nargs]);
-			the_args[nargs] = NULL;
-		}
-		return NULL;
-	}
-
-	the_args[nargs] = NULL;	/* terminate */
-
-	/* dump args (debug) */
-	for (i = 0; the_args[i]; i++) {
-		trace(TRACE_DEBUG, "arg[%d]: '%s'\n", i, the_args[i]);
-	}
-
-	return the_args;
-}
 
 /*
  * as build_args_array(), but reads strings on cmd line specified by {##}\0
@@ -1170,25 +420,17 @@ char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 		if (s[i] == '"' && ((i > 0 && s[i - 1] != '\\') || i == 0)) {
 			if (inquote) {
 				/* quotation end, treat quoted string as argument */
-				if (!
-				    (the_args[nargs] =
-				     (char *) dm_malloc(sizeof(char) *
-							(i -
-							 quotestart)))) {
+				if (! (the_args[nargs] = (char *)dm_malloc(sizeof(char) * (i - quotestart)))) {
 					/* out of mem */
 					while (--nargs >= 0) {
 						dm_free(the_args[nargs]);
 						the_args[nargs] = NULL;
 					}
-
-					trace(TRACE_ERROR,
-					      "IMAPD: Not enough memory while building up argument array.");
+					trace(TRACE_ERROR, "%s,%s: out-of-memory error.", __FILE__, __func__);
 					return NULL;
 				}
 
-				memcpy((void *) the_args[nargs], 
-				       (void *) &s[quotestart + 1],
-				       i - quotestart - 1);
+				memcpy((void *) the_args[nargs], (void *) &s[quotestart + 1], i - quotestart - 1);
 				the_args[nargs][i - quotestart - 1] = '\0';
 
 				nargs++;
@@ -1205,20 +447,17 @@ char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 			continue;
 
 		/* check for (, ), [ or ] in string */
-		if (s[i] == '(' || s[i] == ')' || s[i] == '['
-		    || s[i] == ']') {
+		if (s[i] == '(' || s[i] == ')' || s[i] == '[' || s[i] == ']') {
 			/* check parenthese structure */
 			if (s[i] == ')') {
-				if (paridx < 0
-				    || parlist[paridx] != NORMPAR)
+				if (paridx < 0 || parlist[paridx] != NORMPAR)
 					paridx = -1;
 				else {
 					nnorm--;
 					paridx--;
 				}
 			} else if (s[i] == ']') {
-				if (paridx < 0
-				    || parlist[paridx] != SQUAREPAR)
+				if (paridx < 0 || parlist[paridx] != SQUAREPAR)
 					paridx = -1;
 				else {
 					paridx--;
@@ -1243,17 +482,13 @@ char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 			}
 
 			/* add this parenthesis to the arg list and continue */
-			if (!
-			    (the_args[nargs] =
-			     (char *) dm_malloc(sizeof(" ")))) {
+			if (!  (the_args[nargs] = (char *) dm_malloc(sizeof(" ")))) {
 				/* out of mem */
 				while (--nargs >= 0) {
 					dm_free(the_args[nargs]);
 					the_args[nargs] = NULL;
 				}
-
-				trace(TRACE_ERROR,
-				      "IMAPD: Not enough memory while building up argument array.");
+				trace(TRACE_ERROR, "%s,%s: out-of-memory error.", __FILE__, __func__);
 				return NULL;
 			}
 			the_args[nargs][0] = s[i];
@@ -1276,33 +511,24 @@ char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 			     *(lastchar + 2) == '\0') || 
 			    (*lastchar == '}' && *(lastchar + 1) == '\0')) {
 				/* allocate space for this argument (could be a message when used with APPEND) */
-				if (!
-				    (the_args[nargs] =
-				     (char *) dm_malloc(sizeof(char) *
-							(quotedSize +
-							 1)))) {
+				if (! (the_args[nargs] = (char *) dm_malloc(sizeof(char) * (quotedSize + 1)))) {
 					/* out of mem */
 					while (--nargs >= 0) {
 						dm_free(the_args[nargs]);
 						the_args[nargs] = NULL;
 					}
-
-					trace(TRACE_ERROR,
-					      "build_args_array_ext(): out of memory allocating [%u] bytes for extra string",
-					      quotedSize + 1);
+					trace(TRACE_ERROR, "%s,%s: out-of-memory allocating [%u] bytes for extra string",
+							__FILE__, __func__, quotedSize + 1);
 					return NULL;
 				}
 
-				fprintf(ci->tx,
-					"+ OK gimme that string\r\n");
+				ci_write(ci->tx, "+ OK gimme that string\r\n");
+				
 				alarm(ci->timeout);	/* dont wait forever */
-				for (cnt = 0, dataidx = 0;
-				     cnt < quotedSize; cnt++) {
-					the_args[nargs][dataidx] =
-					    fgetc(ci->rx);
+				for (cnt = 0, dataidx = 0; cnt < quotedSize; cnt++) {
+					the_args[nargs][dataidx] = fgetc(ci->rx);
 
-					if (the_args[nargs][dataidx] !=
-					    '\r')
+					if (the_args[nargs][dataidx] != '\r')
 						dataidx++;	/* only store if it is not \r */
 				}
 
@@ -1310,16 +536,14 @@ char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 				the_args[nargs][dataidx] = '\0';	/* terminate string */
 				nargs++;
 
-				if (!ci->rx || !ci->tx || ferror(ci->rx)
-				    || ferror(ci->tx)) {
+				if (!ci->rx || !ci->tx || ferror(ci->rx) || ferror(ci->tx)) {
 					/* timeout occurred or connection has gone away */
 					while (--nargs >= 0) {
 						dm_free(the_args[nargs]);
 						the_args[nargs] = NULL;
 					}
 
-					trace(TRACE_ERROR,
-					      "build_args_array_ext(): timeout occurred");
+					trace(TRACE_ERROR, "%s,%s: timeout occurred", __FILE__, __func__);
 					return NULL;
 				}
 
@@ -1328,8 +552,7 @@ char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 				fgets(s, MAX_LINESIZE, ci->rx);
 				alarm(0);
 
-				if (!ci->rx || !ci->tx || ferror(ci->rx)
-				    || ferror(ci->tx)) {
+				if (!ci->rx || !ci->tx || ferror(ci->rx) || ferror(ci->tx)) {
 					/* timeout occurred */
 					while (--nargs >= 0) {
 						dm_free(the_args[nargs]);
@@ -1364,8 +587,7 @@ char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 		 * and save argument 
 		 */
 
-		for (argstart = i; i < strlen(s) && !strchr(" []()", s[i]);
-		     i++)
+		for (argstart = i; i < strlen(s) && !strchr(" []()", s[i]); i++)
 			if (s[i] == '"') {
 				if (s[i - 1] == '\\')
 					continue;
@@ -1373,10 +595,7 @@ char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 					break;
 			}
 
-		if (!
-		    (the_args[nargs] =
-		     (char *) dm_malloc(sizeof(char) *
-					(i - argstart + 1)))) {
+		if (!  (the_args[nargs] = (char *) dm_malloc(sizeof(char) * (i - argstart + 1)))) {
 			/* out of mem */
 			while (--nargs >= 0) {
 				dm_free(the_args[nargs]);
@@ -1388,8 +607,7 @@ char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 			return NULL;
 		}
 
-		memcpy((void *) the_args[nargs], (void *) &s[argstart], 
-		       i - argstart);
+		memcpy((void *) the_args[nargs], (void *) &s[argstart], i - argstart);
 		the_args[nargs][i - argstart] = '\0';
 
 		nargs++;
@@ -1875,19 +1093,17 @@ int quoted_string_out(FILE * outstream, const char *s)
 	for (i = 0; s[i]; i++) {
 		if (!(s[i] & 0xe0) || (s[i] & 0x80) || (s[i] == '"')
 		    || (s[i] == '\\')) {
-			cnt = fprintf(outstream, "{");
-			cnt +=
-			    fprintf(outstream, "%lu",
-				    (unsigned long) strlen(s));
-			cnt += fprintf(outstream, "}\r\n");
-			cnt += fprintf(outstream, "%s", s);
+			cnt = ci_write(outstream, "{");
+			cnt += ci_write(outstream, "%lu", (unsigned long) strlen(s));
+			cnt += ci_write(outstream, "}\r\n");
+			cnt += ci_write(outstream, "%s", s);
 			return cnt;
 		}
 	}
 
-	cnt = fprintf(outstream, "\"");
-	cnt += fprintf(outstream, "%s", s);
-	cnt += fprintf(outstream, "\"");
+	cnt = ci_write(outstream, "\"");
+	cnt += ci_write(outstream, "%s", s);
+	cnt += ci_write(outstream, "\"");
 
 	return cnt;
 }
@@ -1960,6 +1176,9 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx, int sorted)
 		/* TODO */ 
 		(*idx)++;
 	} else if(sorted && (strcasecmp(search_keys[*idx], "size") == 0)) {
+		/* TODO */ 
+		(*idx)++;
+	} else if(sorted && (strcasecmp(search_keys[*idx], "us-ascii") == 0)) {
 		/* TODO */ 
 		(*idx)++;
 	} else if(sorted && (strcasecmp(search_keys[*idx], "iso-8859-1") == 0)) {
@@ -2341,7 +1560,7 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx, int sorted)
  * (new mail has been added to mailbox while searching, mailbox data out of sync)
  */
 int perform_imap_search(unsigned int *rset, int setlen, search_key_t * sk,
-			mailbox_t * mb, int sorted)
+			mailbox_t * mb, int sorted, int condition)
 {
 	search_key_t *subsk;
 	struct element *el;
@@ -2359,12 +1578,8 @@ int perform_imap_search(unsigned int *rset, int setlen, search_key_t * sk,
 		return -2;	/* no search */
 	}
 
-	newset = (int *)g_malloc0(sizeof(int) * setlen);
-	
-	if (!newset)
-		return -2;
 
-	trace(TRACE_DEBUG,"%s,%s: search_key [%d] setlen [%d]", __FILE__, __func__, sk->type, setlen);
+	trace(TRACE_DEBUG,"%s,%s: search_key [%d] condition [%d]", __FILE__, __func__, sk->type, condition);
 	
 	switch (sk->type) {
 	case IST_SET:
@@ -2377,25 +1592,17 @@ int perform_imap_search(unsigned int *rset, int setlen, search_key_t * sk,
 
 	case IST_SORT:
 		result = db_search(rset, setlen, sk->search, mb, sk->type);
-		dm_free(newset);
 		return 0;
 		break;
 
 	case IST_SORTHDR:
-		result = db_sort_parsed(rset, setlen, sk, mb);
-		dm_free(newset);
+		result = db_sort_parsed(rset, setlen, sk, mb, condition);
 		return 0;
 		break;
 
- 
 	case IST_FLAG:
-		result = db_search(rset, setlen, sk->search, mb, sk->type);
-		if (result != 0) {
-			trace(TRACE_DEBUG,"%s,%s: db_search return error [%d]", 
-					__FILE__, __func__, result);
-			dm_free(newset);
+		if ((result = db_search(rset, setlen, sk->search, mb, sk->type)))
 			return result;
-		}
 		break;
 
 	case IST_HDR:
@@ -2409,15 +1616,12 @@ int perform_imap_search(unsigned int *rset, int setlen, search_key_t * sk,
 		/* these all have in common that a message should be parsed before 
 		   matching is possible
 		 */
-		result = db_search_parsed(rset, setlen, sk, mb);
+		result = db_search_parsed(rset, setlen, sk, mb, condition);
 		break;
 
 	case IST_IDATE:
-		result = db_search(rset, setlen, sk->search, mb, sk->type);
-		if (result != 0) {
-			dm_free(newset);
+		if ((result = db_search(rset, setlen, sk->search, mb, sk->type)))
 			return result;
-		}
 		break;
 
 	case IST_SUBSEARCH_NOT:
@@ -2425,6 +1629,10 @@ int perform_imap_search(unsigned int *rset, int setlen, search_key_t * sk,
 		subtype = IST_SUBSEARCH_AND;
 
 	case IST_SUBSEARCH_OR:
+
+		if (! (newset = (int *)g_malloc0(sizeof(int) * setlen)))
+			return -2;
+		
 		el = list_getstart(&sk->sub_search);
 		while (el) {
 			subsk = (search_key_t *) el->data;
@@ -2433,17 +1641,17 @@ int perform_imap_search(unsigned int *rset, int setlen, search_key_t * sk,
 				memset(newset, 0, sizeof(int) * setlen);
 			else
 				for (i = 0; i < setlen; i++)
-					newset[i] = 1;
+					newset[i] = rset[i];
 
-			result = perform_imap_search(newset, setlen, subsk, mb, sorted);
-			if (result < 0 || result == 1) {
+			if ((result = perform_imap_search(newset, setlen, subsk, mb, sorted, sk->type))) {
 				dm_free(newset);
 				return result;
 			}
+
 			if (! sorted)
 				combine_sets(rset, newset, setlen, subtype);
 			else {
-				for (i=0; i<setlen; i++)
+				for (i = 0; i < setlen; i++)
 					rset[i] = newset[i];
 			}
  
@@ -2534,17 +1742,13 @@ void build_set(unsigned int *set, unsigned int setlen, char *cset)
 	u64_t num, num2;
 	char *sep = NULL;
 
-	if (!set)
+	if ((! set) || (! cset))
 		return;
 
 	memset(set, 0, setlen * sizeof(int));
 
-	if (!cset)
-		return;
-
 	do {
 		num = strtoull(cset, &sep, 10);
-
 		if (num <= setlen && num > 0) {
 			if (!*sep)
 				set[num - 1] = 1;
@@ -2557,7 +1761,6 @@ void build_set(unsigned int *set, unsigned int setlen, char *cset)
 				if (*sep == '*') {
 					for (i = num - 1; i < setlen; i++)
 						set[i] = 1;
-
 					cset = sep + 1;
 				} else {
 					cset = sep;
@@ -2574,20 +1777,17 @@ void build_set(unsigned int *set, unsigned int setlen, char *cset)
 							num2 = i;
 						}
 
-						for (i = num - 1; i < num2;
-						     i++)
+						for (i = num - 1; i < num2; i++)
 							set[i] = 1;
 					}
 					if (*sep)
 						cset = sep + 1;
 				}
 			}
-		} else {
-			/* invalid num, skip it */
-			if (*sep) {
-				cset = sep + 1;
-				sep++;
-			}
+		} else if (*sep) {
+			/* invalid char, skip it */
+			cset = sep + 1;
+			sep++;
 		}
 	} while (sep && *sep && cset && *cset);
 }

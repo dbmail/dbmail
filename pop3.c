@@ -174,6 +174,13 @@ int pop3_handle_connection(clientinfo_t * ci)
 	session.state = POP3_AUTHORIZATION_STATE;
 
 	while (done > 0) {
+
+		if (db_check_connection()) {
+			trace(TRACE_DEBUG,"%s,%s: database has gone away", __FILE__, __func__);
+			done=-1;
+			break;
+		}
+
 		/* set the timeout counter */
 		alarm(ci->timeout);
 

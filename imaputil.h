@@ -67,7 +67,6 @@ int checkmailboxname(const char *s);
 int check_msg_set(const char *s);
 int check_date(const char *date);
 void clarify_data(char *str);
-char **build_args_array(const char *s);
 char **build_args_array_ext(const char *originalString, clientinfo_t * ci);
 
 void base64encode(char *in, char *out);
@@ -81,7 +80,7 @@ void send_data(FILE * to, MEM * from, int cnt);
 
 int build_imap_search(char **search_keys, struct list *sl, int *idx, int sorted);
 int perform_imap_search(unsigned int *rset, int setlen, search_key_t * sk,
-			mailbox_t * mb, int sorted);
+			mailbox_t * mb, int sorted, int condition);
 void free_searchlist(struct list *sl);
 
 void invert_set(unsigned int *set, int setlen);

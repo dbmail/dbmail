@@ -1321,6 +1321,7 @@ int _ic_sort(struct ImapSession *self)
 	unsigned i;
 	int result=0,only_ascii=0,idx=0;
 	search_key_t sk;
+	struct list *sub_search;
 
 	if (ud->state != IMAPCS_SELECTED) {
 		dbmail_imap_session_printf(self,"%s BAD SORT command received in invalid state\r\n", self->tag);
@@ -1336,23 +1337,26 @@ int _ic_sort(struct ImapSession *self)
 	}
 
 	if (strcasecmp(self->args[0], "charset") == 0) {
-	/* charset specified */
-	if (!self->args[1]) {
-		dbmail_imap_session_printf(self,"%s BAD invalid argument list\r\n",self->tag);
-		return 1;
-	}
+		/* charset specified */
+		if (!self->args[1]) {
+			dbmail_imap_session_printf(self,"%s BAD invalid argument list\r\n",self->tag);
+			return 1;
+		}
 
-	if (strcasecmp(self->args[1], "us-ascii") != 0) {
-		dbmail_imap_session_printf(self,"%s NO specified charset is not supported\r\n",self->tag);
-		return 0;
-	}
+		if (strcasecmp(self->args[1], "us-ascii") != 0) {
+			dbmail_imap_session_printf(self,"%s NO specified charset is not supported\r\n",self->tag);
+			return 0;
+		}
 
-	only_ascii = 1;
-	idx = 2;
-}
+		only_ascii = 1;
+		idx = 2;
+	}
 
 	/* parse the search keys */
 	while ( self->args[idx] && (result = build_imap_search(self->args, &sk.sub_search, &idx,1)) >= 0);
+	/* reverse the search keys back to their original order */
+	sub_search = &sk.sub_search;
+	sk.sub_search.start = dbmail_list_reverse(sub_search->start);
 
 	if (result == -2) {
 		free_searchlist(&sk.sub_search);
@@ -1395,7 +1399,7 @@ int _ic_sort(struct ImapSession *self)
 		result_set[i] = (i+1);
 
 	/* now perform the search operations */
-	result = perform_imap_search((int *)result_set, ud->mailbox.exists, &sk, &ud->mailbox,1);
+	result = perform_imap_search((int *)result_set, ud->mailbox.exists, &sk, &ud->mailbox,1, sk.type);
     
 	if (result < 0) {
 		free_searchlist(&sk.sub_search);
@@ -1419,7 +1423,6 @@ int _ic_sort(struct ImapSession *self)
 	dbmail_imap_session_printf(self, "* SORT");
 
 	for (i=0; i<ud->mailbox.exists; i++) {
-		/*trace(TRACE_INFO, "ic_sort(): i: %d, rs[i]: %d, mbuid[i]: %llu ", i, result_set[i], ud->mailbox.seq_list[i]); */
 		if (result_set[i])
 			dbmail_imap_session_printf(self, " %llu", self->use_uid ? ud->mailbox.seq_list[i] : (u64_t)result_set[i]);
 	}
@@ -1687,7 +1690,7 @@ int _ic_search(struct ImapSession *self)
 			result_set[i] = 1;
 
 		/* now perform the search operations */
-		result = perform_imap_search((int *)result_set, ud->mailbox.exists, &sk, &ud->mailbox,0);
+		result = perform_imap_search((int *)result_set, ud->mailbox.exists, &sk, &ud->mailbox,0,sk.type);
 
 		if (result < 0) {
 			free_searchlist(&sk.sub_search);

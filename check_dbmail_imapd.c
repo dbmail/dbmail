@@ -312,6 +312,61 @@ START_TEST(test_dbmail_imap_list_slices)
 }
 END_TEST
 
+unsigned int get_bound_lo(unsigned int * set, unsigned int setlen) {
+	unsigned int index = 0;
+	while (set[index]==0 && index < setlen) 
+		index++;
+	return index;
+}
+unsigned int get_bound_hi(unsigned int * set, unsigned int setlen) {
+	int index = setlen;
+	while (set[index]==0 && index >= 0) 
+		index--;
+	return (unsigned)index;
+}
+unsigned int get_count_on(unsigned int * set, unsigned int setlen) {
+	unsigned int i, count = 0;
+	for (i=0; i<setlen; i++)
+		if (set[i])
+			count++;
+	return count;
+}
+
+	
+	
+START_TEST(test_build_set)
+{
+	//void build_set(unsigned int *set, unsigned int setlen, char *cset)
+	unsigned int i;
+	unsigned int setlen=50;
+	unsigned *set = g_new0(unsigned, setlen);
+	for (i=0; i<setlen; i++) {
+		set[i]=1;
+	}
+	build_set(set, setlen, "1:*");
+	fail_unless(0==get_bound_lo(set, setlen), "lower index incorrect");
+	fail_unless((setlen-1)==get_bound_hi(set, setlen), "upper index incorrect");
+	fail_unless(get_count_on(set,setlen)==setlen, "count incorrect");
+	
+	build_set(set, setlen, "1,5:*");
+	fail_unless(0==get_bound_lo(set, setlen), "lower index incorrect");
+	fail_unless((setlen-1)==get_bound_hi(set, setlen), "upper index incorrect");
+	fail_unless(get_count_on(set,setlen)==setlen-3, "count incorrect");
+}
+END_TEST
+
+START_TEST(test_build_uid_set)
+{
+	
+}
+END_TEST
+
+START_TEST(test_build_args_array_ext) 
+{
+
+}
+END_TEST
+
 Suite *dbmail_suite(void)
 {
 	Suite *s = suite_create("Dbmail Imap");
@@ -338,7 +393,9 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_mime, test_mime_readheader);
 	tcase_add_test(tc_mime, test_mime_fetch_headers);
 
+	tcase_add_checked_fixture(tc_util, setup, NULL);
 	tcase_add_test(tc_util, test_dbmail_imap_list_slices);
+	tcase_add_test(tc_util, test_build_set);
 	return s;
 }
 
