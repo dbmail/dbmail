@@ -1,0 +1,51 @@
+#!/sbin/runscript
+#
+# chkconfig: - 91 35
+# description: Starts and stops the dbmail-imapd daemon
+#
+
+# Configuration *change*
+
+# Where are the binarys located?
+BIN_DIR=/usr/local/bin
+
+# Where is the dbmail.conf file located?
+CONFIG=/etc/dbmail.conf
+
+
+opts="${opts} reload"
+
+depend() {
+	need net
+	
+	#Change this to either mysql or postgresql
+	need mysql
+	after mta
+}
+
+initService() {
+    # Avoid using root's TMPDIR
+    unset TMPDIR
+
+    # Check that config file exists.
+    [ -f $CONFIG ] || exit 0
+
+    RETVAL=0
+}
+
+start() {
+	initService
+	ebegin "Starting dbmail-imapd"
+	    $BIN_DIR/dbmail-imapd -f $CONFIG >/dev/null 2>&1
+	eend $?
+}	
+
+stop() {
+	initService
+	ebegin "Stopping dbmail-imapd"
+	    for pid in `pidof dbmail-imapd`; do
+		kill $pid
+	    done
+	eend $?
+}	
+
