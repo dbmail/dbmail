@@ -1432,6 +1432,8 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	      fetch_start = fetch_end;
 	      fetch_end = i;
 	    }
+	  if (*endptr) endptr++;
+
 	  break;
 
 	case ',':
