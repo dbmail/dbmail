@@ -45,7 +45,7 @@ DROP TABLE IF EXISTS mailboxes;
 CREATE TABLE mailboxes (
    mailbox_idnr bigint(21) NOT NULL auto_increment,
    owner_idnr bigint(21) DEFAULT '0' NOT NULL,
-   name varchar(100) NOT NULL,
+   name varchar(100) BINARY NOT NULL,
    seen_flag tinyint(1) default '0' not null,
    answered_flag tinyint(1) default '0' not null,
    deleted_flag tinyint(1) default '0' not null,
