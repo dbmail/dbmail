@@ -1,5 +1,8 @@
 2004-04-14  Ilja Booij  <ilja@ic-s.nl>
 
+	* header.c (read_header): use strncat instead of strncpy to add new
+	line to message
+
 	* mysql/dbmysql.c: auth_res removed
 
 	* mime.c (mime_readheader): now makes a copy of the block data before

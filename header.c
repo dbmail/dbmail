@@ -155,7 +155,7 @@ int read_header(FILE * instream, u64_t * headerrfcsize, u64_t * headersize,
 		if (usedmem + linemem <
 		    (allocated_blocks * HEADER_BLOCK_SIZE)) {
 			/* Copy starting at the current usage offset */
-			strncpy((tmpheader + usedmem), tmpline, linemem);
+			strncat(tmpheader, tmpline, linemem);
 			usedmem += linemem;
 
 			/* Resetting strlen for tmpline */
