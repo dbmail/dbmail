@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <regex.h>
+#include <stdlib.h>
 
 #define MAX_LINESIZE 1024
 #define SMTP_INJECTOR "./dbmail-mini-injector"
