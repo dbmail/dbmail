@@ -772,6 +772,7 @@ mime_message_t *get_part_by_num(mime_message_t * msg, const char *part)
 
 	if (part == NULL || strlen(part) == 0 || msg == NULL)
 		return msg;
+	trace(TRACE_DEBUG,"%s,%s: partspec [%s]", __FILE__, __func__, part);
 
 	nextpart = strtoul(part, &endptr, 10);	/* strtoul() stops at '.' */
 
