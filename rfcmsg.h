@@ -7,6 +7,10 @@
 #ifndef _RFCMSG_H
 #define _RFCMSG_H
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "dbmailtypes.h"
 
 void db_free_msg(mime_message_t *msg);

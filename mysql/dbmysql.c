@@ -4,21 +4,24 @@
  * mysql driver file
  * Functions for connecting and talking to the Mysql database */
 
-#include "../db.h"
-//#include "/usr/include/mysql/mysql.h"
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "db.h"
 #include "mysql.h"
-#include "../config.h"
-#include "../pop3.h"
-#include "../list.h"
-#include "../mime.h"
-#include "../pipe.h"
-#include "../memblock.h"
+#include "dbmail.h"
+#include "pop3.h"
+#include "list.h"
+#include "mime.h"
+#include "pipe.h"
+#include "memblock.h"
 #include <time.h>
 #include <ctype.h>
 #include <sys/types.h>
 #include <regex.h>
-#include "../rfcmsg.h"
-#include "../auth.h"
+#include "rfcmsg.h"
+#include "auth.h"
 
 
 MYSQL conn;  
@@ -1508,7 +1511,7 @@ int db_log_ip(const char *ip)
   if (id)
     {
       /* this IP is already in the table, update the 'since' field */
-      snprintf(query, DEF_QUERYSIZE, "UPDATE pbsp SET since = '%s' WHERE idnr=%llu",timestr,id);
+      snprintf(query, DEF_QUERYSIZE, "UPDATE pbsp SET since = unix_timestamp() WHERE idnr=%llu",id);
 
       if (db_query(query) == -1)
 	{
@@ -1520,8 +1523,7 @@ int db_log_ip(const char *ip)
   else
     {
       /* IP not in table, insert row */
-      snprintf(query, DEF_QUERYSIZE, "INSERT INTO pbsp (since, ipnumber) VALUES ('%s','%s')", 
-	       timestr, ip);
+      snprintf(query, DEF_QUERYSIZE, "INSERT INTO pbsp (since, ipnumber) VALUES (unix_timestamp(),'%s')", ip);
 
       if (db_query(query) == -1)
 	{

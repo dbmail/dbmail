@@ -1,10 +1,13 @@
 /* $Id$
  * (c) 2000-2002 IC&S, The Netherlands */
 
-#include "settings.h"
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
-#include "config.h"
+#include "dbmail.h"
 #include "list.h"
 #include "debug.h"
 #include "db.h"

@@ -3,8 +3,12 @@
  *
  * MD5 creation */
 
-#ifndef DBMD5_H_
-#define DBMD5_H_
+#ifndef _DBMD5_H
+#define _DBMD5_H
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 unsigned char *makemd5(char *buf);
 

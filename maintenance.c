@@ -6,12 +6,17 @@
  *	deleted messages. 
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "maintenance.h"
 #include "db.h"
 #include "debug.h"
-#include "config.h"
+#include "dbmail.h"
 #include "list.h"
 #include "debug.h"
+#include "auth.h"
 #include <unistd.h>
 #include <time.h>
 #include <stdio.h>
@@ -19,7 +24,7 @@
 #include <time.h>
 #include <string.h>
 
-char *configFile = "/etc/dbmail.conf";
+char *configFile = DEFAULT_CONFIG_FILE;
 
 /* set up database login data */
 extern field_t _db_host;

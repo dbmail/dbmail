@@ -1,8 +1,12 @@
 /* $Id$ 
  * (c) 2000-2002 IC&S, The Netherlands */
 
-#ifndef PIPE_H_
-#define PIPE_H_
+#ifndef _PIPE_H
+#define _PIPE_H
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include "list.h"
 

@@ -69,14 +69,17 @@ SQLLIB = @SQLLIB@
 VERSION = @VERSION@
 
 @PGSQL_TRUE@AM_CFLAGS = -I @PGSQLINC@
+
 @PGSQL_TRUE@lib_LIBRARIES = libpgsqldbmail.a
-@PGSQL_TRUE@libpgsqldbmail_a_SOURCES = dbauthpgsql.c dbpgsql.c dbmsgbufpgsql.c dbsearchpgsql.c
+
+@PGSQL_TRUE@libpgsqldbmail_a_SOURCES = dbauthpgsql.c dbpgsql.c dbmsgbufpgsql.c 			   dbsearchpgsql.c
 mkinstalldirs = $(SHELL) $(top_srcdir)/buildtools/mkinstalldirs
+CONFIG_HEADER = ../config.h
 CONFIG_CLEAN_FILES = 
 LIBRARIES =  $(lib_LIBRARIES)
 
 
-DEFS = @DEFS@ -I. -I$(srcdir) 
+DEFS = @DEFS@ -I. -I$(srcdir) -I..
 CPPFLAGS = @CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@

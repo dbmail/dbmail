@@ -6,6 +6,10 @@
 * main prg for pop3 daemon
 */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -17,7 +21,7 @@
 #include "server.h"
 #include "debug.h"
 #include "misc.h"
-#include "config.h"
+#include "dbmail.h"
 #include "clientinfo.h"
 #include "pop3.h"
 #ifdef PROC_TITLES
@@ -30,7 +34,7 @@
 /* server timeout error */
 #define POP_TIMEOUT_MSG "-ERR I'm leaving, you're tooo slow"
 
-char *configFile = "/etc/dbmail.conf";
+char *configFile = DEFAULT_CONFIG_FILE;
 
 /* set up database login data */
 extern field_t _db_host;

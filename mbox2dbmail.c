@@ -7,6 +7,10 @@
  * The file is read from stdin, the user is specified on the command line.
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <stdio.h>
 #include <sys/types.h>
 #include <regex.h>

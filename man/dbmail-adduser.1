@@ -13,7 +13,7 @@ Adds mailusers to the \fBDbmail\fR mailsystem
 \fBdbmail-adduser\fR [\fIquiet\fR] \fId\fR \fIusername\fR
 \fBdbmail-adduser\fR [\fIquiet\fR] \fIf\fR \fIalias\fR \fIdeliver-to\fR
 \fBdbmail-adduser\fR [\fIquiet\fR] \fIx\fR \fIalias\fR \fIdeliver-to\fR
-\fBdbmail-adduser\fR [\fIquiet\fR] \fIc\fR \fIusername\fR [\fI-u username\fR] [\fI-p password\fR] [\fI+p password\fR] [\fIxp password\fR] [\fI-P[:filename]\fR] [\fI-c clientid\fR] [\fI-q maxmail\fR] [\fI+a alias\fR] [\fI-a alias\fR]
+\fBdbmail-adduser\fR [\fIquiet\fR] \fIc\fR \fIusername\fR [\fI-u username\fR] [[\fI-p|+p|xp|-5|+5|d5|D5 password\fR] | [\fI-P[:filename]\fR]] [\fI-c clientid\fR] [\fI-q maxmail\fR] [\fI+a alias\fR] [\fI-a alias\fR]
 \fBdbmail-adduser\fR [\fIquiet\fR] \fIs\fR [\fIusername\fR]
 
 .SH DESCRIPTION
@@ -37,7 +37,7 @@ Add a user. Arguments:
 The username of the user to be added. This username is used for access and authentication (through pop3 or imap4).
 
 .BI \fIpassword\fR 
-Cleartext password for user. If the password is preceeded by '{crypt:}' the (cleartext) password will be encrypted. If the password is preceeded by '{crypt}' the password on the command line is assumed to be already encrypted.
+Cleartext password for user.  If the password is preceeded by '{crypt:}' the (cleartext) password will be encrypted. If the password is preceeded by '{crypt}' the password on the command line is assumed to be already encrypted.  If the password is preceeded by '{md5:}' the (cleartext) password will be saved as an md5 hash. If the password is preceeded by '{md5}' the password on the command line is assumed to be an md5 hash.  If the password is preceeded by '{md5sum:}' the (cleartext) password will be saved as an md5 digest. If the password is preceeded by '{md5sum}' the password on the command line is assumed to be the md5 digest.
 
 .BI \fIclientid\fR 
 This option enables users to be grouped. \fIclientid\fR specifies the owner of the user.
@@ -84,6 +84,18 @@ The new (cleartext) password for this user which will be stored encrypted.
 
 .BI [\fIxp\ password\fR]
 The new crypt encryped password for this user.
+
+.BI [\fI-5\ password\fR]
+The md5 hash of the new password for this user.
+
+.BI [\fI+5\ password\fR]
+The new (cleartext) password for this user which will be stored as an md5 hash.
+
+.BI [\fId5\ password\fR]
+The md5 digest of the new password for this user.
+
+.BI [\fID5\ password\fR]
+The new (cleartext) password for this user which will be stored as an md5 digest.
 
 .BI [\fI-P[:filename]\fR]
 The new password for this user will be copied from '/etc/shadow' (default) or from \fIfilename\fR (if specified). These files are supposed to contain encrypted passwords, the passwords will be copied encrypted from the file.

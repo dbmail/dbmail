@@ -7,11 +7,15 @@
 #ifndef _SERVER_H
 #define _SERVER_H
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #define IPLEN 32
 #define BACKLOG 16
 
 #include <signal.h>
-#include "config.h"
+#include "dbmail.h"
 #include "clientinfo.h"
 
 typedef struct

@@ -76,6 +76,10 @@ What do you need?
 
 3.	Run build.sh
 
+	If you want to use md5 hash passwords, you need to make sure the crypt() you link
+	in supports them.  For most people this amounts to linking in GNU libc's libcrypt
+	via entering -lcrypt instead of -lcrypto.
+
 4.	Create users in the dbmail system
 
 	Next you will need to create some users into the dbmail mailing sytem.

@@ -5,23 +5,25 @@
  * user management for mySQL dbases
  */
 
-#include "../auth.h"
-//#include "/usr/include/mysql/mysql.h"
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "auth.h"
 #include "mysql.h"
-#include "../list.h"
-#include "../debug.h"
+#include "list.h"
+#include "debug.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "../db.h"
-#include "../dbmd5.h"
-#if defined(__FreeBSD__)
+#include "db.h"
+#include "dbmd5.h"
+#include "dbmail.h"
+#include <time.h>
 #include <unistd.h>
-#else
+#ifdef HAVE_CRYPT_H
 #include <crypt.h>
 #endif
-#include "../config.h"
-#include <time.h>
 
 #define AUTH_QUERY_SIZE 1024
 
@@ -635,13 +637,14 @@ u64_t auth_validate (char *user, char *password)
   char timestr[30];
   time_t td;
   struct tm tm;
+  char salt[13];
+  char cryptres[35];
 
   time(&td);              /* get time */
   tm = *localtime(&td);   /* get components */
   strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
 
-  snprintf(__auth_query_data, AUTH_QUERY_SIZE, "SELECT user_idnr, passwd, encryption_type FROM users "
-	   "WHERE userid = '%s'", user);
+  snprintf(__auth_query_data, AUTH_QUERY_SIZE, "SELECT user_idnr, passwd, encryption_type FROM users WHERE userid = '%s'", user);
 
   if (__auth_query(__auth_query_data)==-1)
     {
@@ -659,7 +662,7 @@ u64_t auth_validate (char *user, char *password)
   
   if (!__auth_row)
     {
-      /* user does not exist */
+      trace (TRACE_DEBUG,"auth_validate(): userid '%s' not found", user);
       mysql_free_result(__auth_res);
       return 0;
     }
@@ -672,8 +675,35 @@ u64_t auth_validate (char *user, char *password)
   else if ( strcasecmp(__auth_row[2], "crypt") == 0)
     {
       trace (TRACE_DEBUG,"auth_validate(): validating using crypt() encryption");
-      is_validated = (strcmp( crypt(password, __auth_row[1]), __auth_row[1]) == 0) ? 1 : 0;
+      is_validated = (strcmp( (const char *) crypt(password, __auth_row[1]), __auth_row[1]) == 0) ? 1 : 0;
     }
+  else if ( strcasecmp(__auth_row[2], "md5") == 0)
+    {
+      if ( strncmp(__auth_row[1], "$1$", 3) ) 
+	{
+	  trace (TRACE_DEBUG,"auth_validate(): validating using MD5 digest comparison");
+	  is_validated = (strncmp( makemd5(password), __auth_row[1], 32) == 0) ? 1 : 0;
+	}
+      else
+	{
+	  trace (TRACE_DEBUG,"auth_validate(): validating using MD5 hash comparison");
+      
+	  strncpy (salt, __auth_row[1], 12);
+	  strncpy(cryptres, (char *) crypt(password, salt), 34);
+      
+	  trace (TRACE_DEBUG,"auth_validate(): salt   : %s", salt);      
+	  trace (TRACE_DEBUG,"auth_validate(): hash   : %s", __auth_row[1]);
+	  trace (TRACE_DEBUG,"auth_validate(): crypt(): %s", cryptres);
+      
+	  is_validated = (strncmp( __auth_row[1], cryptres, 34) == 0) ? 1 : 0;
+	}
+    }
+  else if ( strcasecmp(__auth_row[2], "md5sum") == 0)
+    {
+      trace (TRACE_DEBUG,"auth_validate(): validating using MD5 digest comparison");
+      is_validated = (strncmp( makemd5(password), __auth_row[1], 32) == 0) ? 1 : 0;
+    }
+                       
   
   if (is_validated)
     {
@@ -733,7 +763,7 @@ u64_t auth_md5_validate (char *username,unsigned char *md5_apop_he, char *apop_s
 	
   __auth_row = mysql_fetch_row(__auth_res);
 	
-	/* now authenticate using MD5 hash comparisation 
+	/* now authenticate using MD5 hash comparison 
 	 * __auth_row[0] contains the password */
 
   trace (TRACE_DEBUG,"auth_md5_validate(): apop_stamp=[%s], userpw=[%s]",apop_stamp,__auth_row[0]);

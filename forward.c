@@ -3,6 +3,10 @@
  *
  * takes care of forwarding mail to an external address */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <stdio.h>
 #include <time.h>
 #include "db.h"
@@ -10,7 +14,7 @@
 #include "list.h"
 #include "bounce.h"
 #include "forward.h"
-#include "config.h"
+#include "dbmail.h"
 #include <string.h>
 #include <stdlib.h>
 

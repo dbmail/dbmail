@@ -1,6 +1,10 @@
 #ifndef _DBMAIL_QUOTA_H
 #define _DBMAIL_QUOTA_H
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "dbmailtypes.h"
 
 

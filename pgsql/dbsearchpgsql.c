@@ -5,11 +5,14 @@
  * function implementations for searching messages
  */
 
-#include "../dbsearch.h"
-#include "../db.h"
-//#include "/usr/local/pgsql/include/libpq-fe.h"
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "dbsearch.h"
+#include "db.h"
 #include "libpq-fe.h"
-#include "../rfcmsg.h"
+#include "rfcmsg.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

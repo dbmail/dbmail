@@ -6,6 +6,10 @@
 #ifndef  _POP3_H
 #define  _POP3_H
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -26,7 +30,7 @@
 #include "misc.h"
 #include "list.h"
 #include "debug.h"
-#include "config.h"
+#include "dbmail.h"
 #include "dbmailtypes.h"
 #include "clientinfo.h"
 

@@ -12,7 +12,7 @@ SEARCHOBJECT = $(DBASETYPE)/dbsearch$(DBASETYPE).o
 DBOBJECT = $(DBASETYPE)/db$(DBASETYPE).o
 
 SMTP_OBJECTS = list.o debug.o pipe.o mime.o $(DBOBJECT) dbmd5.o md5.o bounce.o forward.o memblock.o \
-$(AUTHOBJECT) config.o
+$(AUTHOBJECT) config.o misc.o
 INJECTOR_OBJECTS = list.o debug.o $(DBOBJECT) dbmd5.o md5.o $(AUTHOBJECT) mime.o config.o
 UNIONE_OBJECTS = list.o debug.o $(DBOBJECT) dbmd5.o md5.o $(AUTHOBJECT) mime.o config.o
 MINI_OBJECTS = debug.o $(DBOBJECT) list.o dbmd5.o md5.o $(AUTHOBJECT) mime.o config.o
@@ -40,7 +40,7 @@ CFLAGS = -Wall -O2 -D_BSD_SOURCE -D_SVID_SOURCE
 
 all: smtp pop3d maintenance imapd user 
 
-smtp: config.h main.h $(SMTP_OBJECTS) main.c
+smtp: dbmail.h main.h $(SMTP_OBJECTS) main.c
 		$(CC)	$(CFLAGS) main.c -o dbmail-smtp $(SMTP_OBJECTS) $(LIBS) $(LIB)
 
 pop3d: pop3.h $(POP_OBJECTS) pop3d.c
@@ -78,25 +78,25 @@ mbox2dbmail:
 list.o: list.h debug.h
 debug.o: debug.h
 config.o: debug.h list.h
-server.o: server.h debug.h list.h serverchild.h config.h
-serverchild.o: serverchild.h debug.h config.h list.h
-pipe.o: pipe.h config.h debug.h
-forward.o: forward.h config.h debug.h
-mime.o: mime.h config.h debug.h
-misc.o:misc.h config.h debug.h
-pop3.o:pop3.h config.h debug.h dbmailtypes.h
+server.o: server.h debug.h list.h serverchild.h dbmail.h
+serverchild.o: serverchild.h debug.h dbmail.h list.h
+pipe.o: pipe.h dbmail.h debug.h misc.h dbmd5.h
+forward.o: forward.h dbmail.h debug.h
+mime.o: mime.h dbmail.h debug.h
+misc.o:misc.h dbmail.h debug.h
+pop3.o:pop3.h dbmail.h debug.h dbmailtypes.h
 dbmd5.o:dbmd5.h md5.h debug.h
 bounce.o:bounce.h list.h debug.h
 imap4.o: imap4.h db.h debug.h imaputil.h imapcommands.h
 imaputil.o: imaputil.h db.h memblock.h debug.h dbmailtypes.h
 imapcommands.o: imapcommands.h imaputil.h imap4.h db.h memblock.h debug.h dbmailtypes.h
 maintenance.o: maintenance.h debug.h
-settings.o: settings.h debug.h
+settings.o: dbmail.h debug.h
 user.o: user.h debug.h
 memblock.o: memblock.h debug.h
 rfcmsg.o: rfcmsg.h dbmailtypes.h
 vut2dbmail.o: db.h auth.h
-$(DBOBJECT):db.h dbmd5.h config.h mime.h list.h memblock.h debug.h dbmailtypes.h auth.h
+$(DBOBJECT):db.h dbmd5.h dbmail.h mime.h list.h memblock.h debug.h dbmailtypes.h auth.h
 $(MSGBUFOBJECT): dbmsgbuf.h db.h
 $(SEARCHOBJECT): dbsearch.h db.h
 $(AUTHOBJECT): auth.h db.h

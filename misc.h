@@ -1,8 +1,13 @@
 /* $Id$ 
  * (c) 2000-2002 IC&S, The Netherlands */
 
-#ifndef MISC_H_
-#define MISC_H_
+#ifndef _MISC_H
+#define _MISC_H
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <grp.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -12,5 +17,6 @@
 #include "list.h"
 
 int drop_priviledges (char *newuser, char *newgroup);
+char * itoa (int i);
 
 #endif

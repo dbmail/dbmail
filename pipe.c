@@ -4,6 +4,10 @@
  * Functions for reading the pipe from the MTA */
 
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <time.h>
 #include <ctype.h>
 #include "db.h"
@@ -12,12 +16,16 @@
 #include "list.h"
 #include "bounce.h"
 #include "forward.h"
-#include "config.h"
+#include "dbmail.h"
 #include "pipe.h"
 #include "debug.h"
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include "dbmd5.h"
+#include "misc.h"
 
 
 #define HEADER_BLOCK_SIZE 1024
@@ -36,10 +44,9 @@ int send_reply(struct list *headerfields, const char *body);
 
 void create_unique_id(char *target, u64_t messageid)
 {
-  time_t now;
-  time(&now);
-  trace (TRACE_DEBUG,"create_unique_id(): createding id");
-  snprintf (target,UID_SIZE,"%lluA%lu",messageid,now);
+  trace (TRACE_DEBUG,"create_unique_id(): creating id");
+  srand((int) ((int) time(NULL) + (int) getpid()) );
+  snprintf (target,UID_SIZE,"%s",makemd5( itoa((int) rand() * (int) messageid) ));
   trace (TRACE_DEBUG,"create_unique_id(): created: %s",target);
 }
 	
@@ -300,9 +307,11 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
           /* make the id numeric */
           userid = strtoull((char *)tmp->data, NULL, 10);
 
+	  create_unique_id(unique_id,0); 
+
           /* create a message record */
           temp_message_record_id = db_insert_message ((u64_t)userid,
-						    deliver_to_mailbox, "");
+						    deliver_to_mailbox, unique_id);
 
           /* message id is an array of returned message id's
            * all messageblks are inserted for each message id

@@ -6,22 +6,24 @@
  * (c) 2000-2002 IC&S, The Netherlands (http://www.ic-s.nl)
  */
 
-#include "../auth.h"
-//#include "/usr/local/pgsql/include/libpq-fe.h"
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "auth.h"
 #include "libpq-fe.h"
-#include "../list.h"
-#include "../debug.h"
+#include "list.h"
+#include "debug.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "../dbmd5.h"
-#if defined(__FreeBSD__)
+#include "dbmd5.h"
+#include "dbmail.h"
+#include <time.h>
 #include <unistd.h>
-#else
+#ifdef HAVE_CRYPT_H
 #include <crypt.h>
 #endif
-#include "../config.h"
-#include <time.h>
 
 #define AUTH_QUERY_SIZE 1024
 
@@ -709,13 +711,14 @@ u64_t auth_validate (char *user, char *password)
   char timestr[30];
   time_t td;
   struct tm tm;
+  char salt[13];
+  char cryptres[35];
 
   time(&td);              /* get time */
   tm = *localtime(&td);   /* get components */
   strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
 
-  snprintf(__auth_query_data, AUTH_QUERY_SIZE, "SELECT user_idnr, passwd, encryption_type FROM users "
-	   "WHERE userid = '%s'", user);
+  snprintf(__auth_query_data, AUTH_QUERY_SIZE, "SELECT user_idnr, passwd, encryption_type FROM users WHERE userid = '%s'", user);
 
   if (__auth_query(__auth_query_data)==-1)
     {
@@ -741,7 +744,36 @@ u64_t auth_validate (char *user, char *password)
     {
       trace (TRACE_DEBUG,"auth_validate(): validating using crypt() encryption");
       row = PQgetvalue(__auth_res, 0, 1);
-      is_validated = (strcmp( crypt(password, row), row) == 0) ? 1 : 0;
+      is_validated = (strcmp( (const char *) crypt(password, row), row) == 0) ? 1 : 0;
+    }
+  else if ( strcasecmp(row, "md5") == 0)
+    {
+      row = PQgetvalue(__auth_res, 0, 1);
+      if ( strncmp(row, "$1$", 3) )
+       {
+         trace (TRACE_DEBUG,"auth_validate(): validating using MD5 digest comparison");
+	 row = PQgetvalue(__auth_res, 0, 1);
+	 is_validated = (strncmp( makemd5(password), row, 32) == 0) ? 1 : 0;
+       }
+      else
+       {
+         trace (TRACE_DEBUG,"auth_validate(): validating using MD5 hash comparison");
+
+         strncpy (salt, row, 12);
+         strncpy(cryptres, (char *) crypt(password, salt), 34);
+
+         trace (TRACE_DEBUG,"auth_validate(): salt   : %s", salt);
+         trace (TRACE_DEBUG,"auth_validate(): hash   : %s", row);
+         trace (TRACE_DEBUG,"auth_validate(): crypt(): %s", cryptres);
+
+         is_validated = (strncmp( row, cryptres, 34) == 0) ? 1 : 0;
+       }
+    }
+  else if ( strcasecmp(row, "md5sum") == 0)
+    {
+      trace (TRACE_DEBUG,"auth_validate(): validating using MD5 digest comparison");
+      row = PQgetvalue(__auth_res, 0, 1);
+      is_validated = (strncmp( makemd5(password), row, 32) == 0) ? 1 : 0;
     }
 
   if (is_validated)

@@ -9,6 +9,10 @@
 #ifndef _DBSEARCH_H
 #define _DBSEARCH_H
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "dbmailtypes.h"
 
 int db_search(int *rset, int setlen, const char *key, mailbox_t *mb);

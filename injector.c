@@ -4,6 +4,10 @@
  * Code for the SMTP injector program.
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "auth.h"
 #include "db.h"
 #include "debug.h"

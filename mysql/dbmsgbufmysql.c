@@ -5,9 +5,12 @@
  * using a mysql database
  */
 
-#include "../dbmsgbuf.h"
-#include "../db.h"
-//#include "/usr/include/mysql/mysql.h"
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "dbmsgbuf.h"
+#include "db.h"
 #include "mysql.h"
 #include <stdlib.h>
 #include <string.h>

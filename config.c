@@ -4,7 +4,11 @@
  * read a config file
  */
 
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
+
+#include "dbmail.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>

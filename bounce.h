@@ -3,8 +3,12 @@
  *
  * Headers for bounce.c */
 
-#ifndef BOUNCE_H_
-#define BOUNCE_H_
+#ifndef _BOUNCE_H
+#define _BOUNCE_H
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>

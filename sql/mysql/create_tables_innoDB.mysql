@@ -17,7 +17,7 @@ CREATE TABLE aliases (
 CREATE TABLE users (
    user_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
    userid varchar(100) NOT NULL,
-   passwd varchar(32) NOT NULL,
+   passwd varchar(34) NOT NULL,
    client_idnr bigint(21) DEFAULT '0' NOT NULL,
    maxmail_size bigint(21) DEFAULT '0' NOT NULL,
    encryption_type varchar(20) DEFAULT '' NOT NULL,

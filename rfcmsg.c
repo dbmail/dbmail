@@ -5,6 +5,10 @@
  * compliant mail message
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "rfcmsg.h"
 #include "list.h"
 #include "debug.h"

@@ -10,6 +10,10 @@
  * - user ID is not checked
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "db.h"
 #include "debug.h"
 #include "list.h"

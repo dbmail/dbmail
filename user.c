@@ -3,26 +3,29 @@
  * This is the dbmail-user program
  * It makes adding users easier */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "user.h"
 #include "auth.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "config.h"
+#include "dbmail.h"
 #include "list.h"
 #include "debug.h"
 #include "db.h"
-#if defined(__FreeBSD__)
-#include <unistd.h>
-#else
-#include <crypt.h>
-#endif
 #include <time.h>
 #include <stdarg.h>
 #include <sys/types.h>
 #include <unistd.h>
+#ifdef HAVE_CRYPT_H
+#include <crypt.h>
+#endif
+#include "dbmd5.h"
 
-char *configFile = "/etc/dbmail.conf";
+char *configFile = DEFAULT_CONFIG_FILE;
 
 #define SHADOWFILE "/etc/shadow"
 
@@ -212,7 +215,7 @@ int do_add(int argc, char *argv[])
   /* check if we need to encrypt this pwd */
   if (strncasecmp(argv[1], "{crypt:}", strlen("{crypt:}")) == 0)
     {
-      /* encrypt  using crypt() */
+      /* encrypt using crypt() */
       strcat(pw,crypt(&argv[1][strlen("{crypt:}")], cget_salt()));
       useridnr = auth_adduser(argv[0], pw, "crypt",argv[2],argv[3]);
     }
@@ -220,6 +223,29 @@ int do_add(int argc, char *argv[])
     {
       /* assume passwd is encrypted on command line */
       useridnr = auth_adduser(argv[0], &argv[1][strlen("{crypt}")], "crypt",argv[2],argv[3]);
+    }
+  else if (strncasecmp(argv[1], "{md5:}", strlen("{md5:}")) == 0)
+    {
+      /* encrypt using md5 crypt() */
+      sprintf(pw,"%s%s%s","$1$",cget_salt(),"$");
+      strncpy(pw,crypt(&argv[1][strlen("{md5:}")], pw),49);
+      useridnr = auth_adduser(argv[0], pw, "md5",argv[2],argv[3]);
+    }
+  else if (strncasecmp(argv[1], "{md5}", strlen("{md5}")) == 0)
+    {
+      /* assume passwd is encrypted on command line */
+      useridnr = auth_adduser(argv[0], &argv[1][strlen("{md5}")], "md5",argv[2],argv[3]);
+    }
+  else if (strncasecmp(argv[1], "{md5sum:}", strlen("{md5sum:}")) == 0)
+    {
+      /* encrypt using md5 digest */
+      strcat(pw,makemd5(&argv[1][strlen("{md5sum:}")]));
+      useridnr = auth_adduser(argv[0], pw, "md5sum",argv[2],argv[3]);
+    }
+  else if (strncasecmp(argv[1], "{md5sum}", strlen("{md5sum}")) == 0)
+    {
+      /* assume passwd is encrypted on command line */
+      useridnr = auth_adduser(argv[0], &argv[1][strlen("{md5sum}")], "md5sum",argv[2],argv[3]);
     }
   else
     {
@@ -304,7 +330,8 @@ int do_change(int argc, char *argv[])
 
   for (i=1; argv[i]; i++)
     {
-      if (argv[i][0] != '-' && argv[i][0] != '+' && argv[i][0] != 'x')
+      if (argv[i][0] != '-' && argv[i][0] != '+' && argv[i][0] != 'x'
+          && argv[i][0] != 'd' && argv[i][0] != 'D')
 	{
 	  quiet_printf ("Failed: invalid option specified. Check the man page\n");
 	  return -1;
@@ -314,6 +341,11 @@ int do_change(int argc, char *argv[])
 	{
 	case 'u':
 	  /* change the name */
+	  if (argv[i][0] != '-')
+	    {
+	      quiet_printf ("Failed: invalid option specified. Check the man page\n");
+	      return -1;
+	    }
 	  if (!is_valid(argv[i+1]))
 	    {
 	      quiet_printf("\nWarning: username contains invalid characters. Username not updated. ");
@@ -340,21 +372,69 @@ int do_change(int argc, char *argv[])
           switch (argv[i][0])
 	    {
 	    case '+':
-	      /* +p will converse clear text into crypt hash value */
+	      /* +p will convert clear text into crypt hash value */
 	      strcat(pw,crypt(argv[i+1], cget_salt()));
 	      result = auth_change_password(userid,pw,"crypt");
 	      break;
 	    case '-':
-	      strcpy(pw,argv[i+1]);
+	      strncpy(pw,argv[i+1],49);
 	      result = auth_change_password(userid,pw,"");
 	      break;
 	    case 'x':
 	      /* 'xp' will copy passwd from command line 
 	        assuming that the supplied passwd is crypt encrypted 
 	      */
-	      strcpy(pw,argv[i+1]);
+	      strncpy(pw,argv[i+1],49);
 	      result = auth_change_password(userid,pw,"crypt");
 	      break;
+	    default:
+	      quiet_printf ("Failed: invalid option specified. Check the man page\n");
+	      return -1;
+	    }
+
+	  if (result != 0)
+	    {
+	      quiet_printf("\nWarning: could not change password ");
+	      retval = -1;
+	    }
+
+	  i++;
+	  break;
+
+	case '5':
+	  /* md5 passwords */
+	  if (!is_valid(argv[i+1]))
+	    {
+	      quiet_printf("\nWarning: password contains invalid characters. Password not updated. ");
+	      retval = -1;
+	    }
+          switch (argv[i][0])
+	    {
+	    case '-':
+	      /* -5 takes a md5 hash and saves it */
+	      strncpy(pw,argv[i+1],49);
+	      result = auth_change_password(userid,pw,"md5");
+	      break;
+	    case '+':
+	      /* +5 takes a plaintext password and saves as a md5 hash */
+	      sprintf(pw,"%s%s%s","$1$",cget_salt(),"$");
+	      strncpy(pw,crypt(argv[i+1], pw),49);
+	      result = auth_change_password(userid,pw,"md5");
+	      break;
+	    case 'd':
+	      /* d5 takes a md5 digest and saves it */
+	      strncpy(pw,argv[i+1],49);
+	      result = auth_change_password(userid,pw,"md5sum");
+	      break;
+	    case 'D':
+	      /* D5 takes a plaintext password and saves as a md5 digest */
+	      strncat(pw,makemd5(argv[i+1]),49);
+	      result = auth_change_password(userid,pw,"md5sum");
+	      break;
+
+	    default:
+	      quiet_printf ("Failed: invalid option specified. Check the man page\n");
+	      return -1;
 	    }
 
 	  if (result != 0)
@@ -369,6 +449,11 @@ int do_change(int argc, char *argv[])
         case 'P':
           /* -P will copy password from SHADOWFILE */
 	  /* -P:filename will copy password from filename */
+	  if (argv[i][0] != '-')
+	    {
+	      quiet_printf ("Failed: invalid option specified. Check the man page\n");
+	      return -1;
+	    }
 	  if (argv[i][2] == ':')
 	    passwdfile = &argv[i][3];
 	  else
@@ -392,15 +477,32 @@ int do_change(int argc, char *argv[])
 	    } 
 	  else 
 	    {
-	      if (auth_change_password(userid,pw,"crypt") != 0)
+	      if ( strncmp(pw, "$1$", 3) )
 		{
-		  quiet_printf("\nWarning: could not change password");
-		  retval = -1;
+	          if (auth_change_password(userid,pw,"crypt") != 0)
+		    {
+		      quiet_printf("\nWarning: could not change password");
+		      retval = -1;
+		    }
+		}
+              else
+		{
+	          if (auth_change_password(userid,pw,"md5") != 0)
+		    {
+		      quiet_printf("\nWarning: could not change password");
+		      retval = -1;
+		    }
 		}
 	    }
           break;
 
 	case 'c':
+	  if (argv[i][0] != '-')
+	    {
+	      quiet_printf ("Failed: invalid option specified. Check the man page\n");
+	      return -1;
+	    }
+
 	  newcid = strtoull(argv[i+1], 0, 10);
 
 	  if (auth_change_clientid(userid, newcid) != 0)
@@ -413,6 +515,12 @@ int do_change(int argc, char *argv[])
 	  break;
 	  
 	case 'q':
+	  if (argv[i][0] != '-')
+	    {
+	      quiet_printf ("Failed: invalid option specified. Check the man page\n");
+	      return -1;
+	    }
+
 	  newsize = strtoull(argv[i+1], &endptr, 10);
 	  switch (*endptr)
 	    {
@@ -437,23 +545,27 @@ int do_change(int argc, char *argv[])
 	  break;
 	      
 	case 'a':
-	  if (argv[i][0] == '-')
+          switch (argv[i][0])
 	    {
+	    case '-':
 	      /* remove alias */
 	      if (db_removealias(userid, argv[i+1]) < 0)
 		{
 		  quiet_printf("\nWarning: could not remove alias [%s] ",argv[i+1]);
 		  retval = -1;
 		}
-	    }
-	  else
-	    {
+	      break;
+	    case '+':
 	      /* add alias */
 	      if (db_addalias(userid, argv[i+1], auth_getclientid(userid)) < 0)
 		{
 		  quiet_printf("\nWarning: could not add alias [%s]",argv[i+1]);
 		  retval = -1;
 		}
+	      break;
+	    default:
+	      quiet_printf ("Failed: invalid option specified. Check the man page\n");
+	      return -1;
 	    }
 	  i++;
 	  break;

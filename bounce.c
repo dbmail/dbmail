@@ -4,13 +4,16 @@
  * Bounce.c implements functions to bounce email back to a sender 
  * with a message saying why the message was bounced */
 
-	
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "dbmail.h"
 #include "bounce.h"
 #include "list.h"
 #include "mime.h"
 #include "db.h"
 #include "debug.h"
-#include "config.h"
 #include <stdlib.h>
 #include <string.h>
 

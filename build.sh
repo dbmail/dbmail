@@ -22,7 +22,7 @@ else
     read database
 fi
 
-if [ $database = p ]; then
+if [ "$database" = p ]; then
     echo You have selected PostgreSQL as database
     libdir=$pglibdir
     incdir=$pgincdir
@@ -60,6 +60,15 @@ if [ "$line" != "" ]; then
     libs=$line
 fi
 
+# This is poor, but there's no easy way to check for a header file
+# (that's what the autoconf system is for)
+if [ -f /usr/include/endian.h ] || [-f "${incdir}/endian.h" ]; then
+    cflags="$cflags -DHAVE_ENDIAN_H"
+fi
+if [ -f /usr/include/crypt.h ] || [-f "${incdir}/crypt.h" ]; then
+    cflags="$cflags -DHAVE_CRYPT_H"
+fi
+
 echo ""
 echo Creating makefile..
 
@@ -73,7 +82,8 @@ cat >Makefile <<EOF
 __DBTYPE__=$db
 __LIBS__=$libs
 __LIBDIR__=$libdir
-__INCDIR__=$incdir
+__INCDIR__=$incdir -I.
+__CFLAGS__=$cflags
 
 EOF
 
@@ -84,7 +94,7 @@ echo Done. You can now make dbmail by running \'make clean all\'.
 echo Do you want this to be executed right now?
 read line
 
-if [ $line = y ]; then
+if [ "$line" = y ]; then
     make clean all
 
     if [ $? -eq 0 ]; then
@@ -92,7 +102,7 @@ if [ $line = y ]; then
 	echo Make succesfull. Do you want to install the binaries and man pages?
 	read line
 
-	if [ $line = y ]; then
+	if [ "$line" = y ]; then
 	    echo Target binary directory is now $bindir. 
 	    echo Enter new directory or press RETURN to keep this setting:
 	    read line

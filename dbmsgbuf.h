@@ -10,6 +10,10 @@
 #ifndef _DBMSGBUF_H
 #define _DBMSGBUF_H
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "dbmailtypes.h"
 #include "memblock.h"
 

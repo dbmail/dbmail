@@ -3,6 +3,10 @@
  *
  * Functions to create md5 hash from buf */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,7 +32,5 @@ unsigned char *makemd5(char *buf)
 	    sprintf (&md5hash[i*2],"%02x", result[i]);
 	}
 
-	printf ("hash found [%s]\n",md5hash);
-	
 	return md5hash;
 }

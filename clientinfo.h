@@ -7,8 +7,12 @@
 #ifndef CLIENT_INFO_H
 #define CLIENT_INFO_H
 
-#include <stdio.h>
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
+
+#include <stdio.h>
+#include "dbmail.h"
 
 #define IPNUM_LEN 32
 

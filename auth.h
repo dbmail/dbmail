@@ -10,6 +10,10 @@
 #ifndef _DBMAIL_AUTH_H
 #define _DBMAIL_AUTH_H
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "dbmailtypes.h"
 
 #define MAX_CHECKS_DEPTH 1000

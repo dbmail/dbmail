@@ -9,6 +9,10 @@
 #ifndef _IMAPUTIL_H
 #define _IMAPUTIL_H
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "imap4.h"
 #include "db.h"
 #include "memblock.h"

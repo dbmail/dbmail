@@ -3,7 +3,11 @@
  *
  *	Miscelaneous functions */
 
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
+
+#include "dbmail.h"
 #include "misc.h"
 
 int drop_priviledges (char *newuser, char *newgroup)
@@ -39,4 +43,11 @@ int drop_priviledges (char *newuser, char *newgroup)
 		return -1;
 	}
 	return 0;
+}
+
+char *itoa(int i)
+{
+       char *s=(char *) malloc(42); /* Enough for a 128 bit integer */
+       if (s) sprintf(s,"%d",i);
+       return s;
 }

@@ -16,7 +16,7 @@ CREATE SEQUENCE user_idnr_seq;
 CREATE TABLE users (
    user_idnr INT8 DEFAULT nextval('user_idnr_seq') NOT NULL,
    userid VARCHAR(100) NOT NULL,
-   passwd VARCHAR(32) NOT NULL,
+   passwd VARCHAR(34) NOT NULL,
    client_idnr INT8 DEFAULT '0' NOT NULL,
    maxmail_size INT8 DEFAULT '0' NOT NULL,
    encryption_type VARCHAR(20) DEFAULT '' NOT NULL,

@@ -4,6 +4,10 @@
  * function implementations of server children code (connection handling)
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "debug.h"
 #include "serverchild.h"
 #include "db.h"

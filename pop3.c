@@ -3,7 +3,11 @@
  *
  * implementation for pop3 commands according to RFC 1081 */
 
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
+
+#include "dbmail.h"
 #include "pop3.h"
 #include "db.h"
 #include "debug.h"

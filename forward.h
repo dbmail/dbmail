@@ -1,8 +1,12 @@
 /* $Id$ 
  * (c) 2000-2002 IC&S, The Netherlands */
 
-#ifndef FORWARD_H_
-#define FORWARD_H_
+#ifndef _FORWARD_H
+#define _FORWARD_H
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #define FW_SENDMAIL SENDMAIL
 

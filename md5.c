@@ -19,12 +19,15 @@
  *
  */
 
-#include <string.h>		/* for memcpy() */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
-#ifdef __LINUX__
+#ifdef HAVE_ENDIAN_H
 #include <endian.h>
 #endif
 
+#include <string.h>		/* for memcpy() */
 #include "md5.h"
 
 #if BYTE_ORDER == LITTLE_ENDIAN

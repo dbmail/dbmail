@@ -6,6 +6,10 @@
 #ifndef  _LIST_H
 #define  _LIST_H
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <sys/types.h>
 
 /*

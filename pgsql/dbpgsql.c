@@ -4,16 +4,19 @@
  * postgresql driver file
  * Functions for connecting and talking to the PostgreSQL database */
 
-#include "../db.h"
-//#include "/usr/local/pgsql/include/libpq-fe.h"
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "db.h"
 #include "libpq-fe.h"
-#include "../config.h"
-#include "../list.h"
-#include "../mime.h"
-#include "../pipe.h"
-#include "../memblock.h"
-#include "../rfcmsg.h"
-#include "../auth.h"
+#include "dbmail.h"
+#include "list.h"
+#include "mime.h"
+#include "pipe.h"
+#include "memblock.h"
+#include "rfcmsg.h"
+#include "auth.h"
 #include <time.h>
 #include <ctype.h>
 #include <sys/types.h>
@@ -1406,7 +1409,7 @@ int db_log_ip(const char *ip)
       return -1;
     }
 
-  if (PQntuples>0)
+  if (PQntuples(res) > 0)
     {
       row = PQgetvalue (res, 0, 0);
       id = row ? strtoull(row, NULL, 10) : 0;
@@ -1419,7 +1422,7 @@ int db_log_ip(const char *ip)
   if (id)
     {
       /* this IP is already in the table, update the 'since' field */
-      snprintf(query, DEF_QUERYSIZE, "UPDATE pbsp SET since = '%s' WHERE idnr=%llu::bigint",timestr,id);
+      snprintf(query, DEF_QUERYSIZE, "UPDATE pbsp SET since = current_timestamp WHERE idnr=%llu::bigint",id);
 
       if (db_query(query) == -1)
         {
@@ -1431,8 +1434,7 @@ int db_log_ip(const char *ip)
   else
     {
       /* IP not in table, insert row */
-      snprintf(query, DEF_QUERYSIZE, "INSERT INTO pbsp (since, ipnumber) VALUES ('%s','%s')", 
-	       timestr, ip);
+      snprintf(query, DEF_QUERYSIZE, "INSERT INTO pbsp (since, ipnumber) VALUES (current_timestamp,'%s')", ip);
 
       if (db_query(query) == -1)
         {

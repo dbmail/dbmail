@@ -7,9 +7,12 @@
  * (c) 2000-2002 IC&S (http://www.ic-s.nl)
  */
 
-#include "../dbmsgbuf.h"
-#include "../db.h"
-//#include "/usr/local/pgsql/include/libpq-fe.h"
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "dbmsgbuf.h"
+#include "db.h"
 #include "libpq-fe.h"
 #include <stdlib.h>
 #include <string.h>

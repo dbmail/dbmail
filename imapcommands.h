@@ -9,6 +9,10 @@
 #ifndef _IMAP_COMMANDS_H
 #define _IMAP_COMMANDS_H
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "imap4.h"
 
 /* any-state commands */

@@ -8,6 +8,10 @@
 #ifndef _DBMAILTYPES_H
 #define _DBMAILTYPES_H
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "memblock.h"
 #include "list.h"
 

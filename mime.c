@@ -4,6 +4,10 @@
  * Functions for parsing a mime mailheader (actually just for scanning for email messages
 	and parsing the messageID */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "mime.h"
 #include "debug.h"
 #include <ctype.h>

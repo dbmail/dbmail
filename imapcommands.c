@@ -6,6 +6,10 @@
  * IMAP server command implementations
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "imapcommands.h"
 #include "imaputil.h"
 #include "db.h"
@@ -21,7 +25,7 @@
 #include <sys/types.h>
 #include <time.h>
 #include "debug.h"
-#include "config.h"
+#include "dbmail.h"
 #ifdef PROC_TITLES
 #include "proctitleutils.h"
 #endif

@@ -3,7 +3,11 @@
  * 
  * main file for dbmail-smtp  */
 
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
+
+#include "dbmail.h"
 #include "main.h"
 #include "pipe.h"
 #include "list.h"
@@ -25,7 +29,7 @@ struct list users; 	  	/* list of email addresses in message */
 
 struct list sysItems, smtpItems; /* config item lists */
 
-char *configFile = "/etc/dbmail.conf";
+char *configFile = DEFAULT_CONFIG_FILE;
 
 /* set up database login data */
 extern field_t _db_host;

@@ -6,6 +6,10 @@
  * main prg for imap daemon
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -17,14 +21,14 @@
 #include "server.h"
 #include "debug.h"
 #include "misc.h"
-#include "config.h"
+#include "dbmail.h"
 #ifdef PROC_TITLES
 #include "proctitleutils.h"
 #endif
 
 #define PNAME "dbmail/imap4d"
 
-char *configFile = "/etc/dbmail.conf";
+char *configFile = DEFAULT_CONFIG_FILE;
 
 /* set up database login data */
 extern field_t _db_host;
