@@ -1358,9 +1358,9 @@ int _ic_search(char *tag, char **args, ClientInfo *ci)
 int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
-  int i,fetch_start,fetch_end,delimpos,result,setseen,j;
+  int i,fetch_start,fetch_end,delimpos,result,setseen,j,k;
   fetch_items_t fetchitems;
-  mime_message_t msg;
+  mime_message_t msg,*msgpart;
   char date[IMAP_INTERNALDATE_LEN];
 
   memset(&msg, 0, sizeof(msg));
@@ -1480,7 +1480,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
       setseen = 0;
       fprintf(ci->tx,"* %d FETCH (",i+1);
 
-      trace(TRACE_DEBUG, "Fetching msgID %lu\n", ud->mailbox.seq_list[i]);
+      trace(TRACE_DEBUG, "Fetching msgID %lu (fetch num %d)\n", ud->mailbox.seq_list[i],i+1);
 
       if (db_fetch_headers(ud->mailbox.seq_list[i], &msg) == -1)
 	{
@@ -1573,19 +1573,71 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
       for (j=0; j<fetchitems.nbodyfetches; j++)
 	{
+	  msgpart = get_part_by_num(&msg, fetchitems.bodyfetches[j].partspec);
+
+	  if (fetchitems.bodyfetches[j].partspec[0])
+	    fprintf(ci->tx, "BODY[%s.", fetchitems.bodyfetches[j].partspec);
+	  else
+	    fprintf(ci->tx, "BODY[");
+			  
 	  switch (fetchitems.bodyfetches[j].itemtype)
 	    {
 	    case BFIT_TEXT:
 	      /* dump body text */
-	      fprintf(ci->tx, "BODY[TEXT] {%lu} \n",msg.bodysize);
-	      db_dump_range(ci->tx, msg.bodystart, msg.bodyend,ud->mailbox.seq_list[i]);
+	      if (fetchitems.bodyfetches[j].octetstart >= 0)
+		  fprintf(ci->tx, "TEXT]<%lu> {%lu} \n",
+			  fetchitems.bodyfetches[j].octetstart,
+			  (msgpart->bodysize < fetchitems.bodyfetches[j].octetcnt) ? 
+			  msgpart->bodysize : fetchitems.bodyfetches[j].octetcnt);
+	      else
+		fprintf(ci->tx, "TEXT] {%lu} \n", msgpart->bodysize);
+
+	      db_dump_range(ci->tx, msgpart->bodystart, msgpart->bodyend,
+			    ud->mailbox.seq_list[i],
+			    fetchitems.bodyfetches[j].octetstart,
+			    fetchitems.bodyfetches[j].octetcnt);
 	      fprintf(ci->tx,"\n");
 	      break;
+
 	    case BFIT_HEADER:
+	      fprintf(ci->tx, "HEADER] ");
+	      rfcheader_dump(ci->tx, &msgpart->rfcheader, 
+			     args,  /* used as dummy since numfields == 0 */
+			     0,
+			     fetchitems.bodyfetches[j].octetstart,
+			     fetchitems.bodyfetches[j].octetcnt,
+			     0);
 	      break;
+
 	    case BFIT_HEADER_FIELDS:
+	      fprintf(ci->tx, "HEADER.FIELDS (");
+
+	      for (k=0; k<fetchitems.bodyfetches[j].argcnt; k++)
+		fprintf(ci->tx, "%s ",args[k+fetchitems.bodyfetches[j].argstart]);
+
+	      fprintf(ci->tx,")] ");
+
+	      rfcheader_dump(ci->tx, &msgpart->rfcheader, 
+			     &args[fetchitems.bodyfetches[j].argstart],
+			     fetchitems.bodyfetches[j].argcnt,
+			     fetchitems.bodyfetches[j].octetstart,
+			     fetchitems.bodyfetches[j].octetcnt,
+			     1);
 	      break;
 	    case BFIT_HEADER_FIELDS_NOT:
+	      fprintf(ci->tx, "HEADER.FIELDS.NOT (");
+
+	      for (k=0; k<fetchitems.bodyfetches[j].argcnt; k++)
+		fprintf(ci->tx, "%s ",args[k+fetchitems.bodyfetches[j].argstart]);
+
+	      fprintf(ci->tx,")] ");
+
+	      rfcheader_dump(ci->tx, &msgpart->rfcheader, 
+			     &args[fetchitems.bodyfetches[j].argstart],
+			     fetchitems.bodyfetches[j].argcnt,
+			     fetchitems.bodyfetches[j].octetstart,
+			     fetchitems.bodyfetches[j].octetcnt,
+			     0);
 	      break;
 	    case BFIT_MIME:
 	      break;

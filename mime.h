@@ -7,7 +7,7 @@
 #include "list.h"
 
 #define MIME_FIELD_MAX 128
-#define MIME_VALUE_MAX 1024
+#define MIME_VALUE_MAX 4096
 #define MEM_BLOCK 1024
 
 struct mime_record

@@ -96,8 +96,8 @@ int mime_list(char *blkdata, struct list *mimelist)
 	  while ((delimiter[idx]==':') || (delimiter[idx]==' ')) idx++;
 
 	  /* &delimiter[idx] is field value, startptr is field name */
-	  strcpy(mr->field, startptr);
-	  strcpy(mr->value, &delimiter[idx]);
+	  strncpy(mr->field, startptr, MIME_FIELD_MAX);
+	  strncpy(mr->value, &delimiter[idx], MIME_VALUE_MAX);
 
 	  trace (TRACE_DEBUG,"mime_list(): mimepair found: [%s] [%s] \n",mr->field, mr->value); 
 
@@ -192,7 +192,11 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist)
       endptr = startptr;
       while (*endptr)
 	{
-	  if (endptr[0]=='\n' && endptr[1]!='\t')
+	  /* field-ending: \n + (non-white space) */
+	  if (*endptr == '\n' && (!isspace(endptr[1]) || endptr[1] == '\n'))
+	    break;
+	  
+/*	  if (endptr[0]=='\n' && endptr[1]!='\t')
 	    {
 	      if (endptr != blkdata && *(endptr-1) == ';')
 		{
@@ -204,7 +208,7 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist)
 		  break;
 		}
 	    }
-	  endptr++;
+*/	  endptr++;
 	}
 
       if (!(*endptr))
@@ -237,8 +241,8 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist)
 	  while ((delimiter[idx]==':') || (delimiter[idx]==' ')) idx++;
 
 	  /* &delimiter[idx] is field value, startptr is field name */
-	  strcpy(mr->field, startptr);
-	  strcpy(mr->value, &delimiter[idx]);
+	  strncpy(mr->field, startptr, MIME_FIELD_MAX);
+	  strncpy(mr->value, &delimiter[idx], MIME_VALUE_MAX);
 
 /*	  trace (TRACE_DEBUG,"mime_readheader(): mimepair found: [%s] [%s] \n",mr->field, mr->value); 
 */

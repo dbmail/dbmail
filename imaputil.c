@@ -20,6 +20,8 @@
 #define MAX_LINESIZE 1024
 #endif
 
+#define BUFLEN 2048
+
 extern const char AcceptedChars[];
 extern const char AcceptedTagChars[];
 extern const char AcceptedMailboxnameChars[];
@@ -28,7 +30,7 @@ char base64encodestring[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxy
 
 const char *item_desc[] = 
 {
-  "TEXT", "HEADER", "HEADER.FIELDS", "HEADER.FIELDS.NOT"
+  "TEXT", "HEADER", "MIME", "HEADER.FIELDS", "HEADER.FIELDS.NOT"
 };
 
 const char *envelope_items[] = 
@@ -400,6 +402,124 @@ int show_mime_parameter_list(FILE *outstream, struct mime_record *mr, int nil_fo
   return 0;
 }
 
+
+/* 
+ * get_part_by_num()
+ *
+ * retrieves a msg part by it's numeric specifier
+ * 'part' is assumed to be valid! (i.e '1.2.3.44')
+ * returns NULL if there is no such part 
+ */
+mime_message_t* get_part_by_num(mime_message_t *msg, const char *part)
+{
+  int nextpart,j;
+  char *endptr;
+  struct element *curr;
+
+  if (part == NULL || strlen(part) == 0 || msg == NULL)
+    return msg;
+
+
+  nextpart = strtoul(part, &endptr, 10); /* strtoul() stops at '.' */
+
+  for (j=1, curr=list_getstart(&msg->children); j<nextpart && curr; j++, curr = curr->nextnode);
+
+  if (!curr)
+    return NULL;
+
+  if (*endptr)
+    return get_part_by_num((mime_message_t*)curr->data, &endptr[1]); /* skip dot in part */
+
+  return (mime_message_t*)curr->data;
+}  
+
+
+/*
+ * rfcheader_dump()
+ * 
+ * dumps rfc-header fields belonging to rfcheader
+ * the fields to be dumped are specified in fieldnames, an array containing nfields items
+ *
+ * the output will start after offset bytes and will have a maximum length of cnt bytes.
+ *
+ * if equal_type == 0 the field match criterium is inverted and non-matching fieldnames
+ * will be selected
+ */
+int rfcheader_dump(FILE *outstream, struct list *rfcheader, char **fieldnames, int nfields,
+		   int offset, int cnt, int equal_type)
+{
+  struct mime_record *mr;
+  struct element *curr;
+  FILE *tmpfile;
+  char tmpname[] = "rfcheader_out.tmp.XXXXXX";
+  unsigned long size;
+  int c;
+
+  tmpfile = fdopen(mkstemp(tmpname),"r+w");
+  if (tmpfile == NULL)
+    return -1; /* failed opening temporary file */
+      
+  curr = list_getstart(rfcheader);
+  while (curr)
+    {
+      mr = (struct mime_record*)curr->data;
+
+      if (haystack_find(nfields, fieldnames, mr->field) == equal_type)
+	fprintf(tmpfile, "%s : %s\n", mr->field, mr->value);  /* ok output this field */
+
+      curr = curr->nextnode;
+    }
+  fprintf(tmpfile,"\n");
+  size = ftell(tmpfile);
+  
+  /* change var's if necessary */
+  if (offset >= size)
+    {
+      offset = size;
+      cnt = 0;
+    }
+  else
+    {
+      if (offset>=0 && cnt>=0)
+	{
+	  if (offset+cnt > size)
+	    cnt = size-offset;
+	}
+      else
+	{
+	  offset = 0;
+	  cnt = size;
+	}
+    }
+
+  fprintf(outstream, "<%lu> {%lu}\n", offset, cnt);
+  fseek(tmpfile, offset, SEEK_SET);
+
+  /* output data */
+  while (cnt-- > 0)
+    fputc(fgetc(tmpfile),outstream);
+	  
+  fclose(tmpfile);
+  unlink(tmpname);
+  return 0;
+}      
+  
+
+/* 
+ * find a string in an array of strings
+ */
+int haystack_find(int haystacklen, char **haystack, const char *needle)
+{
+  int i;
+
+  for (i=0; i<haystacklen; i++)
+    if (strcasecmp(haystack[i], needle) == 0)
+      return 1;
+
+  return 0;
+}
+
+
 /*
  * get_fetch_items()
  *
@@ -707,7 +827,7 @@ int get_fetch_items(char **args, fetch_items_t *fi)
 		}
 	      else
 		{
-		  fi->bodyfetches[bodyidx].octetstart = -1;
+		  fi->bodyfetches[bodyidx].octetstart = 0;
 		  fi->bodyfetches[bodyidx].octetcnt   = -1;
 		}
 	      /* ok all done for body item */

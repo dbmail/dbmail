@@ -94,6 +94,8 @@ typedef struct
   db_pos_t bodystart,bodyend;       /* the body of this part */
   unsigned long bodysize;
   unsigned long bodylines;
+  db_pos_t headerstart,headerend;   /* the header of this part */
+  unsigned long headersize;
   struct list children;             /* the children (multipart msg) */
 } mime_message_t;
 
@@ -160,7 +162,8 @@ int db_fetch_headers(unsigned long msguid, mime_message_t *msg);
 int db_add_mime_children(struct list *brothers, char *splitbound);
 int db_start_msg(mime_message_t *msg, char *stopbound);
 
-int db_dump_range(FILE *outstream,db_pos_t start, db_pos_t end, unsigned long msguid);
+int db_dump_range(FILE *outstream,db_pos_t start, db_pos_t end, unsigned long msguid,
+		  int offset, int cnt);
 int db_msgdump(mime_message_t *msg, unsigned long msguid);
 
 #endif

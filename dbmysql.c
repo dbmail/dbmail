@@ -2502,12 +2502,23 @@ int db_msgdump(mime_message_t *msg, unsigned long msguid)
 }
 
 
-int db_dump_range(FILE *outstream,db_pos_t start, db_pos_t end, unsigned long msguid)
+/*
+ * db_dump_range()
+ *
+ * dumps a range specified by start,end for the msg with ID msguid
+ * starts dumping at offset from start up to a max of cnt bytes
+ * if either cnt equals -1 the entire range will be dumped (starting @ offset)
+ */
+int db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long msguid,
+		  int offset, int cnt)
 {
   char query[DEF_QUERYSIZE];
-  int i;
+  int i,startpos,endpos;
+  unsigned long nbytespassed,outcnt;
+  int distance;
 
-  trace(TRACE_DEBUG,"Dumping range: (%d,%d) - (%d,%d)\n",start.block, start.pos, end.block, end.pos);
+  trace(TRACE_DEBUG,"Dumping range: (%lu,%lu) - (%lu,%lu)\n",
+	start.block, start.pos, end.block, end.pos);
 
   if (start.block > end.block)
     {
@@ -2521,7 +2532,8 @@ int db_dump_range(FILE *outstream,db_pos_t start, db_pos_t end, unsigned long ms
       return -1;
     }
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT messageblk FROM messageblk WHERE messageidnr = %lu", msguid);
+  snprintf(query, DEF_QUERYSIZE, "SELECT messageblk FROM messageblk WHERE messageidnr = %lu", 
+	   msguid);
 
   if (db_query(query) == -1)
     {
@@ -2546,16 +2558,30 @@ int db_dump_range(FILE *outstream,db_pos_t start, db_pos_t end, unsigned long ms
 
   if (start.block == end.block)
     {
-      fprintf(outstream,"%.*s\n",end.pos - start.pos,&row[0][start.pos]);
+      if (offset<0 || cnt<0)
+	fprintf(outstream,"%.*s\n",end.pos - start.pos,&row[0][start.pos]);
+      else
+	{
+	  if (offset+start.pos >= end.pos)
+	    return 0;
+
+	  if (cnt >= end.pos - start.pos)
+	    fprintf(outstream,"%.*s\n",end.pos - start.pos,&row[0][start.pos + offset]);
+	  else
+	    fprintf(outstream,"%.*s\n",cnt,&row[0][start.pos + offset]);
+	}
+
       mysql_free_result(res);
       return 0;
     }
 
-  /* output startblock */
-  fprintf(outstream,"%s",&row[0][start.pos]);
+
+  /* 
+   * multiple block range specified
+   */
   
-  /* output blocks inbetween */
-  for (i=start.block+1; i<end.block; i++)
+  for (i=start.block, nbytespassed=0, outcnt=0; 
+       i<=end.block && (cnt-outcnt>0 || cnt<0); i++)
     {
       row = mysql_fetch_row(res);
       if (!row)
@@ -2565,16 +2591,40 @@ int db_dump_range(FILE *outstream,db_pos_t start, db_pos_t end, unsigned long ms
 	  return -1;
 	}
 
-      fprintf(outstream,"%s",row[0]);
-    }
+      startpos = (i == start.block) ? start.pos : 0;
+      endpos   = (i == end.block) ? end.pos : (mysql_fetch_lengths(res))[0];
 
-  /* output endblock */
-  row = mysql_fetch_row(res);
-  if (!row)
-    {
-      trace(TRACE_ERROR,"db_dump_range(): bad range specified\n");
-      mysql_free_result(res);
-      return -1;
+      distance = endpos - startpos;
+
+      if (nbytespassed+distance < offset)
+	{
+	  /* no output from this block */
+	  nbytespassed += distance;
+	  continue;
+	}
+
+      if (nbytespassed >= offset)
+	{
+	  /* output */
+	  if (distance < cnt-outcnt || cnt<0)
+	    outcnt += fprintf(outstream,"%.*s", distance, &row[0][startpos]);
+	  else
+	    outcnt += fprintf(outstream,"%.*s",(cnt-outcnt),&row[0][startpos]);
+	}
+      else
+	{
+	  /* output will occur in this block */
+	  
+	  if (distance < cnt-outcnt)
+	    outcnt += fprintf(outstream,"%.*s", distance, 
+			      &row[0][startpos + (offset - nbytespassed)]);
+	  else
+	    outcnt += fprintf(outstream,"%.*s",(cnt-outcnt),
+			      &row[0][startpos + (offset - nbytespassed)]);
+
+	  nbytespassed = offset; 
+	}
+	  
     }
 
   fprintf(outstream,"%.*s",end.pos,row[0]);
