@@ -15,7 +15,7 @@
 #define USER "root"
 #define PASS ""
 
-/* #define USE_DEVELOPMENT */
+/* #define USE_DEVELOPMENT  */
 #ifdef USE_DEVELOPMENT
 #define MAILDATABASE "dbmail_dev"
 #else

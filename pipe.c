@@ -102,7 +102,7 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
   struct list bounces;
   struct list descriptors;
   unsigned long temp_message_record_id,userid;
-  int i;
+  int i,err;
   
   /* step 1.
      inserting first message
@@ -347,7 +347,6 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 					
 		  /* this is tricky. Since there are no messages inserted 
 		     in the database we need to redirect the pipe into all forwards */
-		  /* list_init (&descriptors); */
 
 		  /* first open the pipes and send the header */
 		  while (tmp_pipe!=NULL)
@@ -356,11 +355,11 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 			       (char *)tmp_pipe->data,nextscan);
 		      trace (TRACE_DEBUG,"insert_messages(): new header [%s]",tmpbuffer);
 		      (FILE *)sendmail_pipe = popen(SENDMAIL,"w");
-		      trace (TRACE_DEBUG,"insert_messages(): popen() executed (forked)");
+		      trace (TRACE_DEBUG,"insert_messages(): popen() executed");
 		      if (sendmail_pipe!=NULL)
 			{
 			  /* build a list of descriptors */
-			  trace (TRACE_DEBUG,"insert_messages(): popen() successfull");
+			  trace (TRACE_DEBUG,"insert_messages(): popen() successfull [descriptor=%d]",(int)*sendmail_pipe);
 			  /* -2 will send the complete message to sendmail_pipe */
 			  fprintf ((FILE *)sendmail_pipe,"%s",tmpbuffer);
 			  /* add the external pipe descriptor to a list */
@@ -376,6 +375,7 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 			
 		  if (descriptors.total_nodes>0)
 		    {
+				trace (TRACE_DEBUG,"insert_messages(): forwarding to %d addresses",descriptors.total_nodes);
 		      while (!feof(stdin))
 			{
 			  usedmem = fread (strblock, sizeof(char), READ_BLOCK_SIZE, stdin);
@@ -389,8 +389,13 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 			      descriptor_temp = list_getstart(&descriptors);
 			      while (descriptor_temp!=NULL)
 				{
-				  fprintf ((FILE *)(descriptor_temp->data),"%s",strblock);
+					trace (TRACE_DEBUG,"insert_messages(): fprintf now");
+					err = ferror((FILE *)descriptor_temp->data);
+					trace (TRACE_DEBUG,"insert_messages(): ferror reports %d on descriptor %d",err, descriptor_temp->data);
+					if (!err)
+						fprintf ((FILE *)(descriptor_temp->data),"%s",strblock);
 				  descriptor_temp=descriptor_temp->nextnode;
+					trace (TRACE_DEBUG,"insert_messages(): fprintf done");
 				}
 			      /* resetting strlen for strblock */
 			      strblock[0]='\0';
