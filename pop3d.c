@@ -287,7 +287,7 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
       if (username == NULL)
 	trace (TRACE_ERROR,"handle_client(): error, uncomplete session");
       else
-	trace(TRACE_MESSAGE,"handle_client(): user %s logging out [message=%lu, octets=%lu]",
+	trace(TRACE_MESSAGE,"handle_client(): user %s logging out [message=%llu, octets=%llu]",
 	      username, curr_session.virtual_totalmessages,
 	      curr_session.virtual_totalsize);
 
