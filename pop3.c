@@ -41,7 +41,7 @@ int pop3 (void *stream, char *buffer, char *client_ip, PopSession_t *session);
 const char *commands [] =
 {
 	"quit", "user", "pass", "stat", "list", "retr", "dele", "noop", "last", "rset",
-	"uidl","apop","auth","top"
+	"uidl","apop","auth","top", "capa"
 };
 
 const char validchars[] =
@@ -302,7 +302,8 @@ int pop3 (void *stream, char *buffer, char *client_ip, PopSession_t *session)
 	/* commands that are allowed to have no arguments */
 	if ((value==NULL) && (cmdtype!=POP3_QUIT) && (cmdtype!=POP3_LIST) &&
 			(cmdtype!=POP3_STAT) && (cmdtype!=POP3_RSET) && (cmdtype!=POP3_NOOP) &&
-			(cmdtype!=POP3_LAST) && (cmdtype!=POP3_UIDL) && (cmdtype!=POP3_AUTH))
+			(cmdtype!=POP3_LAST) && (cmdtype!=POP3_UIDL) && (cmdtype!=POP3_AUTH) &&
+                        (cmdtype!=POP3_CAPA))
 	{
 		return pop3_error(session, stream,"-ERR your command does not compute\r\n");
 	}
@@ -796,6 +797,11 @@ int pop3 (void *stream, char *buffer, char *client_ip, PopSession_t *session)
 				return 1;
 			}
 
+		case POP3_CAPA:
+			{
+				fprintf ((FILE *)stream, "+OK Capability list follows\r\nTOP\r\nUSER\r\nUIDL\r\n.\r\n");
+				return 1;
+			}
 		default :
 			{
 				return pop3_error(session, stream,"-ERR command not understood, sir\r\n");

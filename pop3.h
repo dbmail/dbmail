@@ -62,7 +62,8 @@
 #define POP3_APOP 11
 #define POP3_AUTH 12
 #define POP3_TOP 13
-#define POP3_END 14
+#define POP3_CAPA 14
+#define POP3_END 15
 
 int pop3 (void *stream, char *buffer, char *client_ip, PopSession_t *session);
 int pop3_handle_connection (clientinfo_t *ci);
