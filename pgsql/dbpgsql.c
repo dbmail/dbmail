@@ -5,8 +5,9 @@
  * Functions for connecting and talking to the PostgreSQL database */
 
 #include "../db.h"
-#include "/usr/local/pgsql/include/libpq-fe.h"
+/*#include "/usr/local/pgsql/include/libpq-fe.h"*/
 /*#include "/usr/include/postgresql/libpq-fe.h"*/
+#include "/Library/PostgreSQL/include/libpq-fe.h"
 #include "../config.h"
 #include "../pop3.h"
 #include "../list.h"
@@ -407,13 +408,88 @@ int db_removealias_ext(const char *alias, const char *deliver_to)
   if (db_query(query) == -1)
     {
       /* query failed */
-      trace (TRACE_ERROR, "db_removealias(): query for removing alias failed : [%s]", query);
+      trace (TRACE_ERROR, "db_removealias_ext(): query for removing alias failed : [%s]", query);
       return -1;
     }
   
   return 0;
 }
   
+
+/*
+ * db_get_nofity_address()
+ *
+ * gets the auto-notification address for a user
+ * caller should free notify_address when done
+ */
+int db_get_nofity_address(u64_t userid, char **notify_address)
+{
+  *notify_address = NULL;
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT notify_address FROM auto_notifications WHERE user_idnr = %llu", userid);
+
+  if (db_query(query) == -1)
+    {
+      /* query failed */
+      trace (TRACE_ERROR, "db_get_nofity_address(): could not select notification address");
+      return -1;
+    }
+
+  if (PQntuples(res) > 0)
+    {
+      if (PQgetvalue(res, 0, 0) && strlen(PQgetvalue(res, 0, 0)) > 0)
+	{
+	  if ( !(*notify_address = (char*)malloc(strlen(PQgetvalue(res,0,0)) + 1)) )
+	    {
+	      trace(TRACE_ERROR, "db_get_nofity_address(): could not allocate memory for address");
+	      PQclear(res);
+	      return -2;
+	    }
+
+	  sprintf(*notify_address, "%s", PQgetvalue(res, 0, 0));
+	  trace(TRACE_DEBUG, "db_get_nofity_address(): found address [%s]", *notify_address);
+	}
+    }
+
+  PQclear(res);
+  return 0;
+}
+  
+
+int db_get_reply_body(u64_t userid, char **body)
+{
+  *body = NULL;
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT reply_body FROM auto_replies WHERE user_idnr = %llu", userid);
+
+  if (db_query(query) == -1)
+    {
+      /* query failed */
+      trace (TRACE_ERROR, "db_get_reply_body(): could not select reply body");
+      return -1;
+    }
+
+  if (PQntuples(res) > 0)
+    {
+      if (PQgetvalue(res, 0, 0) && strlen(PQgetvalue(res, 0, 0)) > 0)
+	{
+	  if ( !(*body = (char*)malloc(strlen(PQgetvalue(res,0,0)) + 1)) )
+	    {
+	      trace(TRACE_ERROR, "db_get_reply_body(): could not allocate memory for body");
+	      PQclear(res);
+	      return -2;
+	    }
+
+	  sprintf(*body, "%s", PQgetvalue(res, 0, 0));
+	  trace(TRACE_DEBUG, "db_get_reply_body(): found body [%s]", *body);
+	}
+    }
+
+  PQclear(res);
+  return 0;
+}
+
+
 
 /* 
  * 

@@ -35,7 +35,7 @@ extern int TRACE_LEVEL;     /* 5: maximum debugging */
 #define my_malloc(s) malloc(s)
 #define my_free(p) free(p)
 #ifdef __DEBUG_TRACE_MEMALLOC
-#undefine __DEBUG_TRACE_MEMALLOC
+#undef __DEBUG_TRACE_MEMALLOC
 #endif
 
 

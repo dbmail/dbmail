@@ -1779,6 +1779,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
   u64_t lo,hi;
   unsigned nmatching;
   int no_parsing_at_all = 1, getrfcsize = 0, getinternaldate = 0, getflags = 0;
+  char space_string[] = " ";
 
   memset(&fetch_list, 0, sizeof(fetch_list));
   memset(&headermsg, 0, sizeof(headermsg));
@@ -2038,6 +2039,8 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
 	      while (curr)
 		{
+		  trace(TRACE_DEBUG, "_ic_fetch(): no parsing, into fetch loop");
+
 		  fi = (fetch_items_t*)curr->data;
 
 		  if (fi->getInternalDate)

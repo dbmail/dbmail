@@ -23,6 +23,12 @@
 #define QUERY_SIZE 255
 #define MAX_U64_STRINGSIZE 40
 
+#define AUTO_NOTIFY_SENDER "autonotify@dbmail"
+#define AUTO_NOTIFY_SUBJECT "NEW MAIL NOTIFICATION"
+
+int send_notification(const char *to, const char *from, const char *subject);
+int send_reply(struct list *headerfields, const char *body);
+
 void create_unique_id(char *target, u64_t messageid)
 {
   time_t now;
@@ -116,7 +122,7 @@ char *read_header(u64_t *blksize)
  * contain actual usernames from the dbmail system (local delivery)
  */
 int insert_messages(char *header, u64_t headersize, struct list *users, 
-		    struct list *returnpath, int users_are_usernames, char *deliver_to_mailbox)
+		    struct list *returnpath, int users_are_usernames, char *deliver_to_mailbox, struct list *headerfields)
 {
   /* 	this loop gets all the users from the list 
 	and check if they're in the database */
@@ -126,7 +132,7 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
   char *updatequery;
   char *unique_id;
   char *strblock;
-  char *domain, *ptr;
+  char *domain, *ptr, *tmpitem;
   char *tmpbuffer=NULL;
   char *bounce_id;
   size_t usedmem=0, totalmem=0;
@@ -137,6 +143,8 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
   struct list bounces;
   u64_t temp_message_record_id,userid, bounce_userid;
   int i, this_user;
+  int do_auto_notify = 0, do_auto_reply = 0;
+  char *reply_body, *notify_address;
   FILE *instream = stdin;
   
   /* step 1.
@@ -413,6 +421,57 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
 	    case 0:
 	      trace (TRACE_MESSAGE,"insert_messages(): message id=%llu, size=%llu is inserted",
 		     *(u64_t*)tmp->data, totalmem+headersize);
+
+	      /* message has been succesfully inserted, perform auto-notification & auto-reply */
+	      tmpitem = db_get_config_item("AUTO-NOTIFY", CONFIG_EMPTY);
+	      if (tmpitem && strcasecmp(tmpitem, "yes") == 0)
+		  do_auto_notify = 1;
+	      my_free(tmpitem);
+
+	      tmpitem = db_get_config_item("AUTO-REPLY", CONFIG_EMPTY);
+	      if (tmpitem && strcasecmp(tmpitem, "yes") == 0)
+		  do_auto_reply = 1;
+	      my_free(tmpitem);
+
+
+	      if (do_auto_notify)
+		{
+		  trace(TRACE_DEBUG, "insert_messages(): starting auto-notification procedure");
+
+		  if (db_get_nofity_address(bounce_userid, &notify_address) != 0)
+		    trace(TRACE_ERROR, "insert_messages(): error fetching notification address");
+		  else
+		    {
+		      if (notify_address == NULL)
+			trace(TRACE_DEBUG, "insert_messages(): no notification address specified, skipping auto-notify");
+		      else
+			{
+			  trace(TRACE_DEBUG, "insert_messages(): sending notifcation to [%s]", notify_address);
+			  send_notification(notify_address, AUTO_NOTIFY_SENDER, AUTO_NOTIFY_SUBJECT);
+			  my_free(notify_address);
+			}
+		    }
+		}
+	      
+	      if (do_auto_reply)
+		{
+		  trace(TRACE_DEBUG, "insert_messages(): starting auto-reply procedure");
+
+		  if (db_get_reply_body(bounce_userid, &reply_body) != 0)
+		    trace(TRACE_ERROR, "insert_messages(): error fetching reply body");
+		  else
+		    {
+		      if (reply_body == NULL || reply_body[0] == '\0')
+			trace(TRACE_DEBUG, "insert_messages(): no reply body specified, skipping auto-reply");
+		      else
+			{
+			  send_reply(headerfields, reply_body);
+			  my_free(reply_body);
+			}
+		    }
+		}
+		  
+	      
 	      break;
 	    }
 
@@ -492,6 +551,112 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
   return 0;
 }
 
+/*
+ * send an automatic notification using sendmai
+ */
+int send_notification(const char *to, const char *from, const char *subject)
+{
+  FILE *mailpipe = NULL;
+  char *sendmail;
+  int result;
 
+  sendmail = db_get_config_item ("SENDMAIL", CONFIG_MANDATORY);
+  trace(TRACE_DEBUG, "send_notification(): found sendmail command to be [%s]", sendmail);
 
+  if (! (mailpipe = popen(sendmail, "w")) )
+    {
+      trace(TRACE_ERROR, "send_notification(): could not open pipe to sendmail using cmd [%s]", sendmail);
+      return 1;
+    }
 
+  trace(TRACE_DEBUG, "send_notification(): pipe opened, sending data");
+
+  fprintf(mailpipe, "To: %s\n", to);
+  fprintf(mailpipe, "From: %s\n", from);
+  fprintf(mailpipe, "Subject: %s\n", subject);
+  fprintf(mailpipe, "\n");
+
+  result = pclose(mailpipe);
+  trace(TRACE_DEBUG, "send_notification(): pipe closed");
+
+  if (result != 0)
+    trace(TRACE_ERROR,"send_notification(): reply could not be sent: sendmail error");
+
+  return 0;
+}
+  
+
+int send_reply(struct list *headerfields, const char *body)
+{
+  struct element *el;
+  struct mime_record *record;
+  char *from = NULL, *to = NULL, *replyto = NULL, *subject = NULL;
+  FILE *mailpipe = NULL;
+  char *sendmail;
+  int result;
+
+  sendmail = db_get_config_item ("SENDMAIL", CONFIG_MANDATORY);
+  trace(TRACE_DEBUG, "send_reply(): found sendmail command to be [%s]", sendmail);
+  
+  /* find To: and Reply-To:/From: field */
+  el = list_getstart(headerfields);
+  
+  while (el)
+    {
+      record = (struct mime_record*)el->data;
+      
+      if (strcasecmp(record->value, "from") == 0)
+	{
+	  from = record->value;
+	  trace(TRACE_DEBUG, "send_reply(): found FROM [%s]", from);
+	}
+      else if  (strcasecmp(record->value, "reply-to") == 0)
+	{
+	  replyto = record->value;
+	  trace(TRACE_DEBUG, "send_reply(): found REPLY-TO [%s]", replyto);
+	}
+      else if  (strcasecmp(record->value, "subject") == 0)
+	{
+	  subject = record->value;
+	  trace(TRACE_DEBUG, "send_reply(): found SUBJECT [%s]", subject);
+	}
+      else if  (strcasecmp(record->value, "deliver-to") == 0)
+	{
+	  to = record->value;
+	  trace(TRACE_DEBUG, "send_reply(): found TO [%s]", to);
+	}
+
+      el = el->nextnode;
+    }
+
+  if (!from && !replyto)
+    {
+      trace(TRACE_ERROR, "send_reply(): no address to send to");
+      return 0;
+    }
+
+  trace(TRACE_DEBUG, "send_reply(): header fields scanned; opening pipe to sendmail");
+
+  if (! (mailpipe = popen(sendmail, "w")) )
+    {
+      trace(TRACE_ERROR, "send_reply(): could not open pipe to sendmail using cmd [%s]", sendmail);
+      return 1;
+    }
+
+  trace(TRACE_DEBUG, "send_reply(): sending data");
+  
+  fprintf(mailpipe, "To: %s\n", replyto ? replyto : from);
+  fprintf(mailpipe, "From: %s\n", to);
+  fprintf(mailpipe, "Subject: AW: %s\n", subject);
+  fprintf(mailpipe, "\n");
+  fprintf(mailpipe, "%s\n", body);
+
+  result = pclose(mailpipe);
+  trace(TRACE_DEBUG, "send_reply(): pipe closed");
+  if (result != 0)
+    trace(TRACE_ERROR,"send_reply(): reply could not be sent: sendmail error");
+
+  return 0;
+}
+
+  

@@ -10,6 +10,7 @@
 #include "list.h"
 #include "bounce.h"
 #include "forward.h"
+#include <string.h>
 
 int pipe_forward(FILE *instream, struct list *targets, char *from, char *header, unsigned long databasemessageid)
 {

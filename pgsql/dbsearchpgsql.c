@@ -7,8 +7,10 @@
 
 #include "../dbsearch.h"
 #include "../db.h"
-#include "/usr/local/pgsql/include/libpq-fe.h"
+/*#include "/usr/local/pgsql/include/libpq-fe.h"*/
 /*#include "/usr/include/postgresql/libpq-fe.h"*/
+#include "/Library/PostgreSQL/include/libpq-fe.h"
+
 #include "../rfcmsg.h"
 #include <stdlib.h>
 #include <stdio.h>

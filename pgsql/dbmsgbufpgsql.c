@@ -9,8 +9,10 @@
 
 #include "../dbmsgbuf.h"
 #include "../db.h"
-#include "/usr/local/pgsql/include/libpq-fe.h"
+/*#include "/usr/local/pgsql/include/libpq-fe.h"*/
 /*#include "/usr/include/postgresql/libpq-fe.h"*/
+#include "/Library/PostgreSQL/include/libpq-fe.h"
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>

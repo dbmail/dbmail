@@ -146,7 +146,7 @@ int SS_MakeServerSock(const char *ipaddr, const char *port, int default_children
 
   /* now allocate shared memory segments */
   shm_key_dcu = time(NULL);
-  shm_id_dcu = shmget(shm_key_dcu, SHM_DCU_ALLOC_SIZE, 0660 | IPC_CREAT);
+  shm_id_dcu = shmget(shm_key_dcu, SHM_DCU_ALLOC_SIZE, 0666 | IPC_CREAT);
 
   if (shm_id_dcu == -1)
     {
@@ -157,7 +157,7 @@ int SS_MakeServerSock(const char *ipaddr, const char *port, int default_children
     }
 
   shm_key_dcp = time(NULL)+1;
-  shm_id_dcp = shmget(shm_key_dcp, SHM_ONE_DCP_ALLOC_SIZE * default_children, 0660 | IPC_CREAT);
+  shm_id_dcp = shmget(shm_key_dcp, SHM_ONE_DCP_ALLOC_SIZE * default_children, 0666 | IPC_CREAT);
 
   if (shm_id_dcp == -1)
     {
@@ -168,7 +168,7 @@ int SS_MakeServerSock(const char *ipaddr, const char *port, int default_children
     }
 
   shm_key_xc = time(NULL)+2;
-  shm_id_xc = shmget(shm_key_xc, SHM_ONE_XC_ALLOC_SIZE * max_children, 0660 | IPC_CREAT);
+  shm_id_xc = shmget(shm_key_xc, SHM_ONE_XC_ALLOC_SIZE * max_children, 0666 | IPC_CREAT);
 
   if (shm_id_xc == -1)
     {
@@ -253,19 +253,19 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
   /* attach to shm */
   ss_n_default_children_used = (int*)shmat(shm_id_dcu, 0, 0);
   if (ss_n_default_children_used == (int*)(-1))
-    trace(TRACE_FATAL, "SS_WaitAndProcess(): Could not attach to shm [%s]\n",strerror(errno));
+    trace(TRACE_FATAL, "SS_WaitAndProcess(): Could not attach to shm [%s] (dcu)\n",strerror(errno));
 
   *ss_n_default_children_used = 0;
 
   default_child_pids = (pid_t*)shmat(shm_id_dcp, 0, 0);
   if (default_child_pids == (pid_t*)(-1))
-    trace(TRACE_FATAL, "SS_WaitAndProcess(): Could not attach to shm [%s]\n",strerror(errno));
+    trace(TRACE_FATAL, "SS_WaitAndProcess(): Could not attach to shm [%s] (dcp)\n",strerror(errno));
 
   memset(default_child_pids, 0, default_children * SHM_ONE_DCP_ALLOC_SIZE);
 
   xtrachild_pids = (pid_t*)shmat(shm_id_xc, 0, 0);
   if (xtrachild_pids == (pid_t*)(-1))
-    trace(TRACE_FATAL, "SS_WaitAndProcess(): Could not attach to shm [%s]\n",strerror(errno));
+    trace(TRACE_FATAL, "SS_WaitAndProcess(): Could not attach to shm [%s] (xcp)\n",strerror(errno));
 
   memset(xtrachild_pids, 0, max_children * SHM_ONE_XC_ALLOC_SIZE);
 

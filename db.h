@@ -116,6 +116,9 @@ int db_addalias_ext(char *alias, char *deliver_to, u64_t clientid);
 int db_removealias(u64_t useridnr, const char *alias);
 int db_removealias_ext(const char *alias, const char *deliver_to);
 
+int db_get_nofity_address(u64_t userid, char **notify_address);
+int db_get_reply_body(u64_t userid, char **body);
+
 u64_t db_get_mailboxid(u64_t useridnr, const char *mailbox);
 u64_t db_get_useridnr(u64_t messageidnr);
 u64_t db_get_message_mailboxid(u64_t messageidnr);

@@ -184,7 +184,7 @@ int main (int argc, char *argv[])
   
   /* inserting messages into the database */
   insert_messages(header, headersize, &users, &returnpath, users_are_usernames,
-		  deliver_to_mailbox);
+		  deliver_to_mailbox, &mimelist);
   trace(TRACE_DEBUG,"main(): freeing memory blocks");
   
   trace (TRACE_DEBUG,"main(): they're all free. we're done.");

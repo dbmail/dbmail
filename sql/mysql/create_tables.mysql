@@ -76,6 +76,19 @@ CREATE TABLE messageblks (
    UNIQUE messageblk_idnr_2 (messageblk_idnr)
 ) TYPE=MyISAM;
 
+CREATE TABLE auto_notifications (
+   auto_notify_idnr bigint(21) default '0' not null auto_increment,
+   user_idnr bigint(21) DEFAULT '0' NOT NULL,
+   notify_address VARCHAR(100)
+);
+
+CREATE TABLE auto_replies (
+   auto_reply_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
+   user_idnr bigint(21) DEFAULT '0' NOT NULL,
+   reply_body mediumtext
+);
+
+
 CREATE TABLE config (
 	configid int(11) DEFAULT '0' NOT NULL,
 	item varchar(128) NOT NULL,

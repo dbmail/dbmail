@@ -84,6 +84,22 @@ CREATE UNIQUE INDEX messageblks_id_idx ON messageblks(messageblk_idnr);
 CREATE INDEX messageblks_msg_idx ON messageblks(message_idnr);
 
 
+CREATE SEQUENCE auto_notification_seq;
+CREATE TABLE auto_notifications (
+   auto_notify_idnr INT8 DEFAULT nextval('auto_notification_seq'),
+   user_idnr INT8 DEFAULT '0' NOT NULL,
+   notify_address VARCHAR(100)
+);
+
+
+CREATE SEQUENCE auto_reply_seq;
+CREATE TABLE auto_replies (
+   auto_reply_idnr INT8 DEFAULT nextval('auto_reply_seq'),
+   user_idnr INT8 DEFAULT '0' NOT NULL,
+   reply_body TEXT
+);
+
+
 CREATE TABLE config (
 	config_idnr INTEGER DEFAULT '0' NOT NULL,
 	item VARCHAR(255) NOT NULL,
