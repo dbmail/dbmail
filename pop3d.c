@@ -309,6 +309,9 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 	  fclose(rx);
 	  rx = NULL;
 	}
+
+      db_disconnect(); 
+      auth_disconnect();
     }
   else if (done < 0)
     {
@@ -324,6 +327,9 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 	  fclose(rx);
 	  rx = NULL;
 	}
+
+      db_disconnect(); 
+      auth_disconnect();
     }
   else
     {
