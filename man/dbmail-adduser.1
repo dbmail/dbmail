@@ -9,6 +9,7 @@ Adds mailusers to the \fBDbmail\fR mailsystem
 .na
 .nf
 \fBdbmail-adduser\fR [\fIquiet\fR] \fIa\fR \fIusername\fR \fIpassword\fR \fIclientid\fR \fImaxmail\fR [\fIaliases\fR]
+\fBdbmail-adduser\fR [\fIquiet\fR] \fIe\fR \fIusername\fR
 \fBdbmail-adduser\fR [\fIquiet\fR] \fId\fR \fIusername\fR
 \fBdbmail-adduser\fR [\fIquiet\fR] \fIf\fR \fIalias\fR \fIdeliver-to\fR
 \fBdbmail-adduser\fR [\fIquiet\fR] \fIx\fR \fIalias\fR \fIdeliver-to\fR
@@ -50,8 +51,12 @@ Aliases for this user (user@domain.com). An alias is an e-mail address that is b
 delivered to the \fBDbmail\fR mailsystem and needs to be delivered to this user.
 
 .TP
+.BI \fIe\fR
+Empties all mailboxes associated with the user specified by \fIusername\fR.
+
+.TP
 .BI \fId\fR
-Delete a user specified by \fIusername\fR
+Delete a user specified by \fIusername\fR.
 
 .TP
 .BI \fIf\fR
@@ -113,7 +118,7 @@ Errors and notifications are send to the trace output as set
 in the \fBDbmail\fR configfile.
 .SH BUGS
 .PP
-No checking is done by the \fBdbmail-adduser\fR program. It will overwrite existing users.
+No known bugs.
 .SH LICENSE
 .na
 .nf
@@ -124,6 +129,7 @@ Dbmail and it's components are (c) IC&S and distributed under the GPL.
 .na
 .nf
 Eelco van Beek
+Roel Rozendaal
 IC&S 
 Koningsweg 4
 3582 GE Utrecht
