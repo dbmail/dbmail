@@ -20,6 +20,7 @@
 #define DEF_QUERYSIZE 1024
 #define MSGBUF_WINDOWSIZE (128ul*1024ul)
 #define MSGBUF_FORCE_UPDATE -1
+#define DUMP_BUF_SIZE 256
 
 #define MAX_EMAIL_SIZE 250
 
@@ -2977,7 +2978,7 @@ int db_fetch_headers(unsigned long msguid, mime_message_t *msg)
 
       if (result >= 0)
 	{
-	  trace(TRACE_ERROR,"db_fetch_headers(): succesfully recovered erroneous message %lu\n",
+	  trace(TRACE_WARNING,"db_fetch_headers(): succesfully recovered erroneous message %lu\n",
 		msguid);
 	  db_reverse_msg(msg);
 	  return 0;
@@ -3175,7 +3176,7 @@ int db_start_msg(mime_message_t *msg, char *stopbound, int *level, int maxlevel)
 
       if (!bptr)
 	{
-	  trace(TRACE_ERROR, "db_start_msg(): could not find a new msg-boundary\n");
+	  trace(TRACE_WARNING, "db_start_msg(): could not find a new msg-boundary\n");
 	  return -1; /* no new boundary ??? */
 	}
 
@@ -3225,7 +3226,7 @@ int db_start_msg(mime_message_t *msg, char *stopbound, int *level, int maxlevel)
 
       if (!msgbuf[msgidx])
 	{
-	  trace(TRACE_ERROR, "db_start_msg(): unexpected end-of-data\n");
+	  trace(TRACE_WARNING, "db_start_msg(): unexpected end-of-data\n");
 	  my_free(newbound);
 	  return -1;
 	}
@@ -3238,7 +3239,7 @@ int db_start_msg(mime_message_t *msg, char *stopbound, int *level, int maxlevel)
       (*level)++;
       if ((nlines = db_add_mime_children(&msg->children, newbound, level, maxlevel)) < 0)
 	{
-	  trace(TRACE_ERROR, "db_start_msg(): error adding MIME-children\n");
+	  trace(TRACE_WARNING, "db_start_msg(): error adding MIME-children\n");
 	  my_free(newbound);
 	  return nlines;
 	}
@@ -3384,7 +3385,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound, int *level, in
       /* should have a MIME header right here */
       if ((nlines = mime_readheader(&msgbuf[msgidx], &msgidx, &part.mimeheader, &dummy)) < 0)
 	{
-	  trace(TRACE_ERROR,"db_add_mime_children(): error reading MIME-header\n");
+	  trace(TRACE_WARNING,"db_add_mime_children(): error reading MIME-header\n");
 	  db_free_msg(&part);
 	  return nlines;   /* error reading header */
 	}
@@ -3400,7 +3401,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound, int *level, in
 	  /* a message will follow */
 	  if ((nlines = db_start_msg(&part, splitbound, level, maxlevel)) < 0)
 	    {
-	      trace(TRACE_ERROR,"db_add_mime_children(): error retrieving message\n");
+	      trace(TRACE_WARNING,"db_add_mime_children(): error retrieving message\n");
 	      db_free_msg(&part);
 	      return nlines;
 	    }
@@ -3420,7 +3421,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound, int *level, in
 
 	  if (!bptr)
 	    {
-	      trace(TRACE_ERROR, "db_add_mime_children(): could not find a new msg-boundary\n");
+	      trace(TRACE_WARNING, "db_add_mime_children(): could not find a new msg-boundary\n");
 	      db_free_msg(&part);
 	      return -1; /* no new boundary ??? */
 	    }
@@ -3478,7 +3479,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound, int *level, in
 
 	  if (!msgbuf[msgidx])
 	    {
-	      trace(TRACE_ERROR, "db_add_mime_children(): unexpected end-of-data\n");
+	      trace(TRACE_WARNING, "db_add_mime_children(): unexpected end-of-data\n");
 	      my_free(newbound);
 	      db_free_msg(&part);
 	      return -1;
@@ -3493,7 +3494,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound, int *level, in
 	  (*level)++;
 	  if ((nlines = db_add_mime_children(&part.children, newbound, level, maxlevel)) < 0)
 	    {
-	      trace(TRACE_ERROR, "db_add_mime_children(): error adding mime children\n");
+	      trace(TRACE_WARNING, "db_add_mime_children(): error adding mime children\n");
 	      my_free(newbound);
 	      db_free_msg(&part);
 	      return nlines;
@@ -3553,7 +3554,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound, int *level, in
 
 	  if (!msgbuf[msgidx])
 	    {
-	      trace(TRACE_ERROR,"db_add_mime_children(): unexpected end of data\n");
+	      trace(TRACE_WARNING,"db_add_mime_children(): unexpected end of data\n");
 	      db_free_msg(&part);
 	      return -1; /* ?? splitbound should follow */
 	    }
@@ -3569,7 +3570,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound, int *level, in
       /* add this part to brother list */
       if (list_nodeadd(brothers, &part, sizeof(part)) == NULL)
 	{
-	  trace(TRACE_ERROR,"db_add_mime_children(): could not add node\n");
+	  trace(TRACE_WARNING,"db_add_mime_children(): could not add node\n");
 	  db_free_msg(&part);
 	  return -3;
 	}
@@ -3774,9 +3775,10 @@ int db_msgdump(mime_message_t *msg, unsigned long msguid, int level)
 long db_dump_range(MEM *outmem, db_pos_t start, db_pos_t end, unsigned long msguid)
 {
   
-  int i,startpos,endpos,j;
+  int i,startpos,endpos,j,bufcnt;
   long outcnt;
   int distance;
+  char buf[DUMP_BUF_SIZE];
 
   trace(TRACE_DEBUG,"Dumping range: (%lu,%lu) - (%lu,%lu)\n",
 	start.block, start.pos, end.block, end.pos);
@@ -3824,13 +3826,26 @@ long db_dump_range(MEM *outmem, db_pos_t start, db_pos_t end, unsigned long msgu
   if (start.block == end.block)
     {
       /* dump everything */
+      bufcnt = 0;
       for (i=start.pos; i<=end.pos; i++)
 	{
+	  if (bufcnt >= DUMP_BUF_SIZE-1)
+	    {
+	      outcnt += mwrite(buf, bufcnt, outmem);
+	      bufcnt = 0;
+	    }
+
 	  if (row[0][i] == '\n')
-	    outcnt += mwrite("\r\n", 2, outmem);
+	    {
+	      buf[bufcnt++] = '\r';
+	      buf[bufcnt++] = '\n';
+	    }
 	  else
-	    outcnt += mwrite(&row[0][i], 1, outmem);
+	    buf[bufcnt++] = row[0][i];
 	}
+      
+      mwrite(buf, bufcnt, outmem);
+      bufcnt = 0;
 
       mysql_free_result(res);
       return outcnt;
@@ -3856,14 +3871,26 @@ long db_dump_range(MEM *outmem, db_pos_t start, db_pos_t end, unsigned long msgu
       distance = endpos - startpos;
 
       /* output */
+      bufcnt = 0;
       for (j=0; j<distance; j++)
 	{
+	  if (bufcnt >= DUMP_BUF_SIZE-1)
+	    {
+	      outcnt += mwrite(buf, bufcnt, outmem);
+	      bufcnt = 0;
+	    }
+
 	  if (row[0][startpos+j] == '\n')
-	    outcnt += mwrite("\r\n", 2, outmem);
+	    {
+	      buf[bufcnt++] = '\r';
+	      buf[bufcnt++] = '\n';
+	    }
 	  else if (row[0][startpos+j])
-	    outcnt += mwrite(&row[0][startpos+j], 1, outmem);
+	    buf[bufcnt++] = row[0][startpos+j];
 	}
-	
+      mwrite(buf, bufcnt, outmem);
+      bufcnt = 0;
+
       row = mysql_fetch_row(res); /* fetch next row */
     }
 

@@ -19,6 +19,7 @@
 #include "dbmysql.h"
 
 #define MAX_LINESIZE 1024
+#define COMMAND_SHOW_LEVEL TRACE_INFO
 
 #define null_free(p) { my_free(p); p = NULL; }
 
@@ -208,7 +209,7 @@ int imap_process(ClientInfo *ci)
       /* clarify data a little */
       clarify_data(line);
 
-      trace(TRACE_INFO,"COMMAND: [%s]\n",line);
+      trace(COMMAND_SHOW_LEVEL,"COMMAND: [%s]\n",line);
       
       if (!(*line))
 	{

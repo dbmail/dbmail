@@ -54,6 +54,7 @@ int binary_search(const unsigned long *array, int arraysize, unsigned long key);
 char **give_chunks(const char *str, char delimiter);
 void free_chunks(char **chunks);
 int quoted_string_out(FILE *outstream, const char *s);
+void send_data(FILE *to, MEM *from, int cnt);
 
 int build_imap_search(char **search_keys, struct list *sl, int *idx);
 int perform_imap_search(int *rset, int setlen, search_key_t *sk, mailbox_t *mb);

@@ -25,6 +25,7 @@
 #endif
 
 #define BUFLEN 2048
+#define SEND_BUF_SIZE 1024
 #define MAX_ARGS 128
 
 /* cache */
@@ -1931,6 +1932,33 @@ int quoted_string_out(FILE *outstream, const char *s)
   cnt += fprintf(outstream, "\"");
   return cnt;
 }
+
+
+/*
+ * send_data()
+ *
+ * sends cnt bytes from a MEM structure to a FILE stream
+ * uses a simple buffering system
+ */
+void send_data(FILE *to, MEM *from, int cnt)
+{
+  char buf[SEND_BUF_SIZE];
+
+  for (cnt -= SEND_BUF_SIZE; cnt >= 0; cnt -= SEND_BUF_SIZE)
+    {
+      mread(buf, SEND_BUF_SIZE, from);
+      fwrite(buf, SEND_BUF_SIZE, 1, to);
+    }
+
+  if (cnt < 0)
+    {
+      mread(buf, cnt+SEND_BUF_SIZE, from);
+      fwrite(buf, cnt+SEND_BUF_SIZE, 1, to);
+    }
+
+  fflush(to);
+}
+  
 
 
 /*

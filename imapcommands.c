@@ -1704,7 +1704,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
   int bad_response_send = 0,actual_cnt;
   fetch_items_t *fi,fetchitem;
   mime_message_t *msgpart;
-  char date[IMAP_INTERNALDATE_LEN],*endptr,ch;
+  char date[IMAP_INTERNALDATE_LEN],*endptr;
   unsigned long thisnum;
   long tmpdumpsize,cnt;
   struct list fetch_list;
@@ -1905,8 +1905,10 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
 		  cached_msg.msg_parsed = 1;
 		  cached_msg.num = thisnum;
-		  trace(TRACE_DEBUG, "ic_fetch(): size of parsed msg: %d\n",
+
+/*		  trace(TRACE_DEBUG, "ic_fetch(): size of parsed msg: %d\n",
 			db_msgdump(&cached_msg.msg, thisnum, 0));
+*/
 		}
 
 	      if (fi->getInternalDate)
@@ -1992,13 +1994,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		  mseek(cached_msg.memdump, 0, SEEK_SET);
 
 		  fprintf(ci->tx, "RFC822 {%ld}\r\n", cached_msg.dumpsize);
-
-		  tmpdumpsize = cached_msg.dumpsize;
-		  while (tmpdumpsize--)
-		    {
-		      mread(&ch, 1, cached_msg.memdump);
-		      fputc(ch, ci->tx);
-		    }
+		  send_data(ci->tx, cached_msg.memdump, cached_msg.dumpsize);
 
 		  if (fi->getRFC822)
 		    setseen = 1;
@@ -2044,14 +2040,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		      mseek(cached_msg.memdump, 0, SEEK_SET);
 
 		      fprintf(ci->tx, "BODY[] {%ld}\r\n", cached_msg.dumpsize);
-
-		      sleep(1);
-		      tmpdumpsize = cached_msg.dumpsize;
-		      while (tmpdumpsize--)
-			{
-			  mread(&ch, 1, cached_msg.memdump);
-			  fputc(ch, ci->tx);
-			}
+		      send_data(ci->tx, cached_msg.memdump, cached_msg.dumpsize);
 		    }
 		  else
 		    {
@@ -2064,11 +2053,8 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		      fprintf(ci->tx, "BODY[]<%d> {%d}\r\n", fi->bodyfetch.octetstart, 
 			      actual_cnt); 
 
-		      while (actual_cnt--)
-			{
-			  mread(&ch, 1, cached_msg.memdump);
-			  fputc(ch, ci->tx);
-			}
+		      send_data(ci->tx, cached_msg.memdump, actual_cnt);
+
 		    }		      
 
 		  if (fi->getBodyTotal)
@@ -2085,11 +2071,8 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		  mseek(cached_msg.tmpdump, 0, SEEK_SET);
 
 		  fprintf(ci->tx, "RFC822.HEADER {%ld}\r\n",tmpdumpsize);
-		  while (tmpdumpsize--)
-		    {
-		      mread(&ch, 1, cached_msg.tmpdump);
-		      fputc(ch, ci->tx);
-		    }
+		  send_data(ci->tx, cached_msg.tmpdump, tmpdumpsize);
+
 		}
 	      
 	      if (fi->getRFC822Text)
@@ -2101,11 +2084,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		  mseek(cached_msg.tmpdump, 0, SEEK_SET);
 
 		  fprintf(ci->tx, "RFC822.TEXT {%ld}\r\n",tmpdumpsize);
-		  while (tmpdumpsize--)
-		    {
-		      mread(&ch, 1, cached_msg.tmpdump);
-		      fputc(ch, ci->tx);
-		    }
+		  send_data(ci->tx, cached_msg.tmpdump, tmpdumpsize);
 
 		  setseen = 1;
 		}
@@ -2216,11 +2195,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			    }
 
 			  /* output data */
-			  while (cnt--)
-			    {
-			      mread(&ch, 1, cached_msg.tmpdump);
-			      fputc(ch, ci->tx);
-			    }
+			  send_data(ci->tx, cached_msg.tmpdump, cnt);
 
 			}
 		      break;
@@ -2256,11 +2231,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			    }
 
 			  /* output data */
-			  while (cnt--)
-			    {
-			      mread(&ch, 1, cached_msg.tmpdump);
-			      fputc(ch, ci->tx);
-			    }
+			  send_data(ci->tx, cached_msg.tmpdump, cnt);
 			}
 		      break;
 
@@ -2298,11 +2269,8 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 				}
 
 			      /* output data */
-			      while (cnt--)
-				{
-				  mread(&ch, 1, cached_msg.tmpdump);
-				  fputc(ch, ci->tx);
-				}
+			      send_data(ci->tx, cached_msg.tmpdump, cnt);
+
 			    }
 			}
 		      break;
@@ -2358,11 +2326,8 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 				}
 
 			      /* output data */
-			      while (cnt--)
-				{
-				  mread(&ch, 1, cached_msg.tmpdump);
-				  fputc(ch, ci->tx);
-				}
+			      send_data(ci->tx, cached_msg.tmpdump, cnt);
+
 			    }
 			}
 		      break;
@@ -2417,11 +2382,8 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 				}
 
 			      /* output data */
-			      while (cnt--)
-				{
-				  mread(&ch, 1, cached_msg.tmpdump);
-				  fputc(ch, ci->tx);
-				}
+			      send_data(ci->tx, cached_msg.tmpdump, cnt);
+
 			    }
 			}
 		      break;
@@ -2459,11 +2421,8 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 				}
 
 			      /* output data */
-			      while (cnt--)
-				{
-				  mread(&ch, 1, cached_msg.tmpdump);
-				  fputc(ch, ci->tx);
-				}
+			      send_data(ci->tx, cached_msg.tmpdump, cnt);
+
 			    }
 			}
 		  
