@@ -1,29 +1,32 @@
 $Id$
 
-Dbmail-2 supports ldap for authentication and delivery information.
+Dbmail-2 as of 2.1.0 supports ldap for authentication and delivery information.
 For now, I'm just providing some more information on the new ldap related 
 configuration items. I'm also including an example dbmail.schema file.
-
 
 ---
 
 "BIND_DN"
 
-This is the Distinguished Name of the user who has read access to the LDAP
-server. It is not recommended to use an Administrator or Manager account, as a
-precaution in case the mail server is compromised.
+This is the Distinguished Name of the user who has read and write access to the LDAP
+server.
+
+	example: BIND_DN=cn=admin,dc=mydomain,dc=com
 
 
 "BIND_PW"
 
-The plain text password of the account above. Again, preferably not an
-Administrator or Manager account.
+The plain text password of the account above.
+
+	example: BIND_PW=password
 
 
 "BASE_DN"
 
 The root or starting point from which searches will be conducted. All searches
-use the LDAP_SCOPE_SUBTREE option to search everything in this base and below.
+use the SCOPE option to search everything in this base and below.
+
+	example: BASE_DN=ou=People,dc=mydomain,dc=com
 
 
 "PORT"
@@ -31,84 +34,91 @@ use the LDAP_SCOPE_SUBTREE option to search everything in this base and below.
 The port number that the LDAP server is listerning on. By default, 389 for
 insecure and 636 for secure, however secure LDAP is currently unsupported.
 
+	example: PORT=389
+
 
 "HOSTNAME"
 
 The hostname of the LDAP server. May be an IP address.
 
+	example: HOSTNAME=ldap
 
-"OBJECTCLASS"
 
-The object class to use as a search filter, typically 'user', 'inetOrgPerson'
-or possibly something else in more complex LDAP environments.
+"SCOPE"
+
+The search scope for ldap searches.
+
+	example: SCOPE=SubTree
+
+
+"USER_OBJECTCLASS"
+
+The object class to use as a search filter for users.
+
+	example: USER_OBJECTCLASS=top,account,dbmailUser
 
 
 "FIELD_UID"
 
 The field which contains the user login name of the user. Required.
 
+	example: FIELD_UID=uid
 
-"FIELD_CID"
 
-The field which contains the group id number of the user. Not required.
-
+	example: CN_STRING=uid
+	
 
 "FIELD_QUOTA"
 
 The field which contains the quota, in bytes, of the user. Not required.
+
+	example: FIELD_QUOTA=mailQuota
 
 
 "FIELD_PASSWD"
 
 The field which contains the password of the user. Not implemented.
 
+	example: FIELD_PASSWD=userPassword
+
 
 "FIELD_MAIL"
 
 The field which contains the primary email address of the user. Required.
 
-
-"FIELD_MAILALT"
-
-The field which contains an alternate email address of the user. Not required.
+	example: FIELD_MAIL=mail
 
 
 "FIELD_NID"
 
 The field which contains the user id number of the user. Required.
 
+	example: FIELD_NID=uidNumber
 
-"MAILALTPREFIX"
-
-A prefix which may appear on the MAILALT entry and should be ignored. MS
-Exchange 2000 uses the prefix 'smtp:'. Not required.
-
-
-"FIELD_FORWARD"
-
-The boolean field which indicates if email should be forwarded or not.
+	example: MIN_NID=10000
+	example: MAX_NID=15000
 
 
-"FIELD_FWDSAVE"
+"FIELD_CID"
 
-The boolean field which indicates if email should also be delivered locally if
-it is forwarded.
+The field which contains the group id number of the user. Not required.
 
+	example: FIELD_CID=gidNumber
+
+
+	example: MIN_CID=10000
+	example: MAX_CID=15000
+
+
+"FORW_OBJECTCLASS"
+
+	example: FORW_OBJECTCLASS=top,account,dbmailForwardingAddress
+	
 
 "FIELD_FWDTARGET"
 
 The field which contains a destination email address for forwarding mail.
 
-
-"FWDTARGETPREFIX"
-
-A prefix which may appear on the FWDTARGET entry.
-
-
-"FIELD_MEMBERS"
-
-The field containing a list of DN's to users in the email distribution group.
-
-
+	example: FIELD_FWDTARGET=mailForwardingAddress
 
 
