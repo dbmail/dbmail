@@ -200,14 +200,14 @@ u64_t db_insert_result(const char *sequence_identifier UNUSED)
 
 int db_query(const char *the_query)
 {
-	unsigned int querysize = 0;
+	unsigned querysize = 0;
 	if (db_check_connection() < 0) {
 		trace(TRACE_ERROR, "%s,%s: no database connection",
 		      __FILE__, __FUNCTION__);
 		return -1;
 	}
 	if (the_query != NULL) {
-		querysize = strlen(the_query);
+		querysize = (unsigned) strlen(the_query);
 		if (querysize > 0) {
 			trace(TRACE_DEBUG, "%s,%s: "
 			      "executing query [%s]",
@@ -249,15 +249,15 @@ unsigned long db_escape_string(char *to,
 
 int db_do_cleanup(const char **tables, int num)
 {
-	char query[DEF_QUERYSIZE];
+	char the_query[DEF_QUERYSIZE];
 	int i;
 	int result = 0;
 
 	for (i = 0; i < num; i++) {
-		snprintf(query, DEF_QUERYSIZE, "OPTIMIZE TABLE %s",
+		snprintf(the_query, DEF_QUERYSIZE, "OPTIMIZE TABLE %s",
 			 tables[i]);
 
-		if (db_query(query) == -1) {
+		if (db_query(the_query) == -1) {
 			trace(TRACE_ERROR,
 			      "%s,%s: error optimizing table [%s]",
 			      __FILE__, __FUNCTION__, tables[i]);

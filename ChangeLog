@@ -10,6 +10,8 @@
 	if the user_idnr is set earlier in the function.
 	(db_send_message_lines): added check to fwrite. This is needed
 	for when fwrite fails.
+	(db_list_mailboxes_by_regex): free temporay arrays if malloc
+	fails.
 
 2004-04-19  Ilja Booij  <ilja@ic-s.nl>
 

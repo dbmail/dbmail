@@ -239,6 +239,7 @@ int db_query(const char *the_query)
 			      "Error executing query [%s] : [%s]\n",
 			      __FILE__, __FUNCTION__,
 			      the_query, PQresultErrorMessage(temp_res));
+			PQclear(temp_res);
 			return -1;
 		}
 
@@ -283,11 +284,11 @@ int db_do_cleanup(const char **tables, int num_tables)
 {
 	int result = 0;
 	int i;
-	char query[DEF_QUERYSIZE];
+	char the_query[DEF_QUERYSIZE];
 
 	for (i = 0; i < num_tables; i++) {
-		snprintf(query, DEF_QUERYSIZE, "VACUUM %s", tables[i]);
-		if (db_query(query) == -1) {
+		snprintf(the_query, DEF_QUERYSIZE, "VACUUM %s", tables[i]);
+		if (db_query(the_query) == -1) {
 			trace(TRACE_ERROR,
 			      "%s,%s: error vacuuming table [%s]",
 			      __FILE__, __FUNCTION__, tables[i]);
