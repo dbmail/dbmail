@@ -1597,7 +1597,7 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data) {
 			tmpdumpsize += db_dump_range(cached_msg.tmpdump,
 			     msgpart->bodystart, msgpart->bodyend, self->msg_idnr);
 
-			if (bodyfetch->octetstart >= 0) {
+			if (bodyfetch->octetcnt > 0) {
 				cnt = get_dumpsize(bodyfetch, tmpdumpsize);
 				dbmail_imap_session_printf(self, "]<%llu> {%llu}\r\n", bodyfetch->octetstart, cnt);
 				mseek(cached_msg.tmpdump, bodyfetch->octetstart, SEEK_SET);
@@ -1622,7 +1622,7 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data) {
 			tmpdumpsize = db_dump_range(cached_msg.tmpdump,
 					msgpart->bodystart, msgpart->bodyend, self->msg_idnr);
 
-			if (bodyfetch->octetstart >= 0) {
+			if (bodyfetch->octetcnt > 0) {
 				cnt = get_dumpsize(bodyfetch,tmpdumpsize);
 				dbmail_imap_session_printf(self, "]<%llu> {%llu}\r\n", bodyfetch->octetstart,cnt);
 				mseek(cached_msg.tmpdump, bodyfetch->octetstart, SEEK_SET);
@@ -1647,7 +1647,7 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data) {
 			if (!tmpdumpsize) {
 				dbmail_imap_session_printf(self, "] NIL\r\n");
 			} else {
-				if (bodyfetch->octetstart >= 0) {
+				if (bodyfetch->octetcnt > 0) {
 					cnt = get_dumpsize(bodyfetch, tmpdumpsize);
 					dbmail_imap_session_printf(self, "]<%llu> {%llu}\r\n", bodyfetch->octetstart,cnt);
 					mseek(cached_msg.tmpdump, bodyfetch->octetstart, SEEK_SET);
@@ -1689,7 +1689,7 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data) {
 			if (!tmpdumpsize) {
 				dbmail_imap_session_printf(self, "NIL\r\n");
 			} else {
-				if (bodyfetch->octetstart >= 0) {
+				if (bodyfetch->octetcnt > 0) {
 					cnt = get_dumpsize(bodyfetch, tmpdumpsize);
 					dbmail_imap_session_printf(self, "<%llu> {%llu}\r\n", bodyfetch->octetstart, cnt);
 					mseek(cached_msg.tmpdump, bodyfetch->octetstart, SEEK_SET);
@@ -1730,7 +1730,7 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data) {
 			if (!tmpdumpsize) {
 				dbmail_imap_session_printf(self, "NIL\r\n");
 			} else {
-				if (bodyfetch->octetstart >= 0) {
+				if (bodyfetch->octetcnt > 0) {
 					cnt = get_dumpsize(bodyfetch, tmpdumpsize);
 					dbmail_imap_session_printf(self, "<%llu> {%llu}\r\n", bodyfetch->octetstart, cnt);
 					mseek(cached_msg.tmpdump, bodyfetch->octetstart, SEEK_SET);
@@ -1755,7 +1755,7 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data) {
 			if (!tmpdumpsize) {
 				dbmail_imap_session_printf(self, "NIL\r\n");
 			} else {
-				if (bodyfetch->octetstart >= 0) {
+				if (bodyfetch->octetcnt > 0) {
 					cnt = get_dumpsize(bodyfetch, tmpdumpsize);
 					dbmail_imap_session_printf(self, "<%llu> {%llu}\r\n", bodyfetch->octetstart, cnt);
 					mseek(cached_msg.tmpdump, bodyfetch->octetstart, SEEK_SET);
@@ -2225,7 +2225,7 @@ u64_t get_dumpsize(body_fetch_t *bodyfetch, u64_t dumpsize)
 	long long cnt = dumpsize - bodyfetch->octetstart;
 	if (cnt < 0)
 		cnt = 0;
-	if (cnt > bodyfetch->octetcnt)
+	if ((guint64)cnt > bodyfetch->octetcnt)
 		cnt = bodyfetch->octetcnt;
 	return (u64_t)cnt;
 }
