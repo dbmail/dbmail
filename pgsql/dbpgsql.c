@@ -53,7 +53,7 @@ int db_connect ()
 
   /* connecting */
 
-  snprintf (connectionstring, 255, "host=%s user=%s password=%s dbname=%s",
+  snprintf (connectionstring, 255, "host='%s' user='%s' password='%s' dbname='%s'",
 	   MAIL_HOST, MAIL_USER, MAIL_PASS, MAILDATABASE);
 
   conn = PQconnectdb(connectionstring);

@@ -42,7 +42,7 @@ int auth_connect ()
   char connectionstring[255];
 
   /* connecting */
-  snprintf (connectionstring, 255, "host=%s user=%s password=%s dbname=%s",
+  snprintf (connectionstring, 255, "host='%s' user='%s' password='%s' dbname='%s'",
 	   AUTH_HOST, AUTH_USER, AUTH_PASS, USERDATABASE);
 
   __auth_conn = PQconnectdb(connectionstring);
