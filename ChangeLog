@@ -1,3 +1,8 @@
+2004-09-08  Ilja Booij  <ilja@ic-s.nl>
+
+	* imaputil.c (date_sql2imap): now also gets the localtime with
+	time(). Didn't do this before (was a bug).
+
 2004-09-07  Ilja Booij  <ilja@ic-s.nl>
 
 	* db.c (db_commit_transaction): if committing a transaction fails, we

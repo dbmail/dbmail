@@ -1832,6 +1832,11 @@ char *date_sql2imap(const char *sqldate)
 	time_t td;
 
 	/* we need to get the localtime to get the current timezone */
+	if (time(&td) == -1) {
+		trace(TRACE_ERROR, "%s,%s: error getting time()",
+		      __FILE__, __func__);
+		return IMAP_STANDARD_DATE;
+	}
 	tm_localtime = *localtime(&td);
 
 	/* parse sqldate */
