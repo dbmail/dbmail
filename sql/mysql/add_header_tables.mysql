@@ -1,0 +1,79 @@
+
+#
+# modify dbmail schema to support header caching.
+#
+# $Id$
+#
+
+ALTER TABLE dbmail_physmessage ADD sendername VARCHAR(100) NOT NULL DEFAULT '';
+ALTER TABLE dbmail_physmessage ADD senderaddr VARCHAR(100) NOT NULL DEFAULT '';
+ALTER TABLE dbmail_physmessage ADD subject VARCHAR(255) NOT NULL DEFAULT '';
+ALTER TABLE dbmail_physmessage ADD messageid VARCHAR(100) NOT NULL DEFAULT '';
+
+CREATE TABLE dbmail_headerfield (
+        physmessage_id	BIGINT NOT NULL
+		REFERENCES dbmail_physmessage(id)
+		ON UPDATE CASCADE ON DELETE CASCADE,
+	fieldid		BIGINT NOT NULL AUTO_INCREMENT,
+	fieldname	VARCHAR(100) NOT NULL DEFAULT '',
+	fieldbody	VARCHAR(255) NOT NULL DEFAULT '',
+	PRIMARY KEY (physmessage_id, fieldid)
+);
+CREATE TABLE inreplytofield (
+        physmessage_id  BIGINT NOT NULL
+		REFERENCES dbmail_physmessage(id)
+		ON UPDATE CASCADE ON DELETE CASCADE,
+	inreplytoid	BIGINT NOT NULL AUTO_INCREMENT,
+	inreplytobody	VARCHAR(100) NOT NULL DEFAULT '',
+	PRIMARY KEY (physmessage_id, inreplytoid)
+);
+
+CREATE TABLE referencesfield (
+        physmessage_id  BIGINT NOT NULL
+		REFERENCES dbmail_physmessage(id)
+		ON UPDATE CASCADE ON DELETE CASCADE,
+	referencesid	BIGINT NOT NULL AUTO_INCREMENT,
+	referencesbody	VARCHAR(100) NOT NULL DEFAULT '',
+	PRIMARY KEY (physmessage_id, referencesid)
+);
+
+CREATE TABLE fromfield (
+        physmessage_id  BIGINT NOT NULL
+		REFERENCES dbmail_physmessage(id)
+		ON UPDATE CASCADE ON DELETE CASCADE,
+	fromid		BIGINT NOT NULL AUTO_INCREMENT,
+	fromname	VARCHAR(100) NOT NULL DEFAULT '',
+	fromaddr	VARCHAR(100) NOT NULL DEFAULT '',
+	PRIMARY KEY (physmessage_id, fromid)
+);
+
+CREATE TABLE replytofield (
+        physmessage_id  BIGINT NOT NULL
+		REFERENCES dbmail_physmessage(id)
+		ON UPDATE CASCADE ON DELETE CASCADE,
+	replytoid	BIGINT NOT NULL AUTO_INCREMENT,
+	replytoname	VARCHAR(100) NOT NULL DEFAULT '',
+	replytoaddr	VARCHAR(100) NOT NULL DEFAULT '',
+	PRIMARY KEY (physmessage_id, replytoid)
+);
+
+CREATE TABLE tofield (
+        physmessage_id  BIGINT NOT NULL
+		REFERENCES dbmail_physmessage(id)
+		ON UPDATE CASCADE ON DELETE CASCADE,
+	toid		BIGINT NOT NULL AUTO_INCREMENT,
+	toname		VARCHAR(100) NOT NULL DEFAULT '',
+	toaddr		VARCHAR(100) NOT NULL DEFAULT '',
+	PRIMARY KEY (physmessage_id, toid)
+);
+
+CREATE TABLE ccfield (
+        physmessage_id  BIGINT NOT NULL
+		REFERENCES dbmail_physmessage(id)
+		ON UPDATE CASCADE ON DELETE CASCADE,
+	ccid		BIGINT NOT NULL AUTO_INCREMENT,
+	ccname		VARCHAR(100) NOT NULL DEFAULT '',
+	ccaddr		VARCHAR(100) NOT NULL DEFAULT '',
+	PRIMARY KEY (physmessage_id, ccid)
+);
+
