@@ -33,7 +33,7 @@ u64_t db_user_exists(const char *username)
   u64_t uid;
   char *row;
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT userid FROM users WHERE userid='%s'",username);
+  snprintf(query, DEF_QUERYSIZE, "SELECT user_idnr FROM users WHERE userid='%s'",username);
 
   if (db_query(query,&res)==-1)
     {
@@ -90,7 +90,7 @@ u64_t db_getclientid(u64_t useridnr)
   u64_t cid;
   char *row;
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT client_idnr FROM users WHERE user_idnr = %llu",useridnr);
+  snprintf(query, DEF_QUERYSIZE, "SELECT client_id FROM users WHERE user_idnr = %llu",useridnr);
 
   if (db_query(query, &res) == -1)
     {
@@ -136,10 +136,11 @@ int db_check_user (char *username, struct list *userids, int checks)
   
   trace(TRACE_DEBUG,"db_check_user(): checking user [%s] in alias table",username);
   
-  snprintf (query, DEF_QUERYSIZE,  "SELECT * FROM aliases WHERE alias=\"%s\"",username);
+  snprintf (query, DEF_QUERYSIZE,  "SELECT * FROM aliases WHERE alias=\'%s\'",username);
   trace(TRACE_DEBUG,"db_check_user(): executing query : [%s] checks [%d]",query, checks);
+
   if (db_query(query, &myres)==-1)
-      return 0;
+    return 0;
   
   if (PQntuples(myres)<1) 
   {
@@ -156,18 +157,19 @@ int db_check_user (char *username, struct list *userids, int checks)
       }
       else
       {
-      trace (TRACE_DEBUG,"db_check_user(): user %s not in aliases table", username);
-      PQclear(myres);
-      return 0; 
+	trace (TRACE_DEBUG,"db_check_user(): user %s not in aliases table", username);
+	PQclear(myres);
+	return 0; 
       }
   }
       
   trace (TRACE_DEBUG,"db_check_user(): into checking loop");
-  /* myrow[2] is the deliver_to field */
-  for (PQcounter=0; PQcounter < PQntuples(res); PQcounter++)
+
+  /* field nr. 2 of myres is the deliver_to field */
+  for (PQcounter=0; PQcounter < PQntuples(myres); PQcounter++)
   {
-      /* do a recursive search for myrow[2] */
-      value = PQgetvalue(res,PQcounter, 2);
+      /* do a recursive search for myres[2] */
+      value = PQgetvalue(myres, PQcounter, 2);
       trace (TRACE_DEBUG,"db_check_user(): checking user %s to %s",username, value);
       occurences += db_check_user (value, userids, 1);
   }
@@ -218,7 +220,7 @@ u64_t db_adduser (char *username, char *password, char *clientid, char *maxmail)
 	size *= 1000;
     }
       
-  snprintf (query, DEF_QUERYSIZE,"INSERT INTO users (userid,passwd,client_idnr,maxmail_size) VALUES "
+  snprintf (query, DEF_QUERYSIZE,"INSERT INTO users (userid,passwd,client_id,maxmail_size) VALUES "
 	   "('%s','%s',%s,%llu)",
 	   username,password,clientid, size);
 	
@@ -265,7 +267,7 @@ int db_delete_user(const char *username)
   
 int db_change_username(u64_t useridnr, const char *newname)
 {
-  snprintf(query, DEF_QUERYSIZE, "UPDATE user SET userid = '%s' WHERE user_idnr=%llu", 
+  snprintf(query, DEF_QUERYSIZE, "UPDATE users SET userid = '%s' WHERE user_idnr=%llu", 
 	   newname, useridnr);
 
   if (db_query(query, &res) == -1)
@@ -280,7 +282,7 @@ int db_change_username(u64_t useridnr, const char *newname)
 
 int db_change_password(u64_t useridnr, const char *newpass)
 {
-  snprintf(query, DEF_QUERYSIZE, "UPDATE user SET passwd = '%s' WHERE user_idnr=%llu", 
+  snprintf(query, DEF_QUERYSIZE, "UPDATE users SET passwd = '%s' WHERE user_idnr=%llu", 
 	   newpass, useridnr);
 
   if (db_query(query, &res) == -1)
@@ -295,7 +297,7 @@ int db_change_password(u64_t useridnr, const char *newpass)
 
 int db_change_clientid(u64_t useridnr, u64_t newcid)
 {
-  snprintf(query, DEF_QUERYSIZE, "UPDATE user SET clientid = %llu WHERE user_idnr=%llu", 
+  snprintf(query, DEF_QUERYSIZE, "UPDATE users SET clientid = %llu WHERE user_idnr=%llu", 
 	   newcid, useridnr);
 
   if (db_query(query, &res) == -1)
@@ -309,7 +311,7 @@ int db_change_clientid(u64_t useridnr, u64_t newcid)
 
 int db_change_mailboxsize(u64_t useridnr, u64_t newsize)
 {
-  snprintf(query, DEF_QUERYSIZE, "UPDATE user SET maxmail_size = %llu WHERE user_idnr=%llu", 
+  snprintf(query, DEF_QUERYSIZE, "UPDATE users SET maxmail_size = %llu WHERE user_idnr=%llu", 
 	   newsize, useridnr);
 
   if (db_query(query, &res) == -1)
@@ -329,7 +331,7 @@ u64_t db_validate (char *user, char *password)
   u64_t id;
   char *row;
   
-  snprintf (query, DEF_QUERYSIZE, "SELECT user_idnr FROM users WHERE userid=\"%s\" AND passwd=\"%s\"",
+  snprintf (query, DEF_QUERYSIZE, "SELECT user_idnr FROM users WHERE userid=\'%s\' AND passwd=\'%s\'",
 	   user,password);
 
   trace (TRACE_DEBUG,"db_validate(): validating using query %s\n",query);
@@ -354,7 +356,7 @@ u64_t db_md5_validate (char *username,unsigned char *md5_apop_he, char *apop_sta
   u64_t useridnr;	
   
   
-  snprintf (query, DEF_QUERYSIZE, "SELECT passwd,user_idnr FROM users WHERE userid=\"%s\"",username);
+  snprintf (query, DEF_QUERYSIZE, "SELECT passwd,user_idnr FROM users WHERE userid=\'%s\'",username);
 	
   if (db_query(query, &res)==-1)
       return -1;

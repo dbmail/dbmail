@@ -395,10 +395,9 @@ int main (int argc, char *argv[])
     exit (0);
 		
   
-  close (0);
-  close (1);
-  close (2); 
-  close (3);
+  close (fileno(stdin));
+  close (fileno(stdout));
+  close (fileno(stderr)); 
 
 
   /* getting hostname */
@@ -432,6 +431,7 @@ int main (int argc, char *argv[])
 
   ipaddr = db_get_config_item("POP3D_BIND_IP",CONFIG_MANDATORY); 
   port = db_get_config_item("POP3D_BIND_PORT",CONFIG_MANDATORY);
+
 
   if (ipaddr != NULL)
   {

@@ -295,7 +295,7 @@ int db_delete_user(const char *username)
   
 int db_change_username(u64_t useridnr, const char *newname)
 {
-  snprintf(query, DEF_QUERYSIZE, "UPDATE user SET userid = '%s' WHERE useridnr=%llu", 
+  snprintf(query, DEF_QUERYSIZE, "UPDATE users SET userid = '%s' WHERE useridnr=%llu", 
 	   newname, useridnr);
 
   if (db_query(query) == -1)
@@ -310,7 +310,7 @@ int db_change_username(u64_t useridnr, const char *newname)
 
 int db_change_password(u64_t useridnr, const char *newpass)
 {
-  snprintf(query, DEF_QUERYSIZE, "UPDATE user SET passwd = '%s' WHERE useridnr=%llu", 
+  snprintf(query, DEF_QUERYSIZE, "UPDATE users SET passwd = '%s' WHERE useridnr=%llu", 
 	   newpass, useridnr);
 
   if (db_query(query) == -1)
@@ -325,7 +325,7 @@ int db_change_password(u64_t useridnr, const char *newpass)
 
 int db_change_clientid(u64_t useridnr, u64_t newcid)
 {
-  snprintf(query, DEF_QUERYSIZE, "UPDATE user SET clientid = %llu WHERE useridnr=%llu", 
+  snprintf(query, DEF_QUERYSIZE, "UPDATE users SET clientid = %llu WHERE useridnr=%llu", 
 	   newcid, useridnr);
 
   if (db_query(query) == -1)
@@ -339,7 +339,7 @@ int db_change_clientid(u64_t useridnr, u64_t newcid)
 
 int db_change_mailboxsize(u64_t useridnr, u64_t newsize)
 {
-  snprintf(query, DEF_QUERYSIZE, "UPDATE user SET maxmail_size = %llu WHERE useridnr=%llu", 
+  snprintf(query, DEF_QUERYSIZE, "UPDATE users SET maxmail_size = %llu WHERE useridnr=%llu", 
 	   newsize, useridnr);
 
   if (db_query(query) == -1)

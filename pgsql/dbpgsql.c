@@ -106,7 +106,10 @@ u64_t db_insert_result (char *sequence_identifier)
             return 0;
         }
 
-    insert_result=strtol(PQgetvalue(res, 0, 0), NULL, 10); /* should only be one result value */
+    insert_result=strtoul(PQgetvalue(res, 0, 0), NULL, 10); /* should only be one result value */
+
+    PQclear(res);
+
     return insert_result;
 }
 
@@ -122,30 +125,24 @@ int db_query (const char *thequery, void *target_result)
 
         if (querysize > 0 )
         {
-        *(PGresult **)target_result = PQexec (conn, thequery);
-        PQresultStatusVar = PQresultStatus (*(PGresult **)target_result);
+	  *(PGresult **)target_result = PQexec (conn, thequery);
 
-        switch (PQresultStatusVar)
-            {
-                case PGRES_BAD_RESPONSE:
-                {
-                    trace (TRACE_ERROR,"db_query(): postgresql error: PGRES_BAD_RESPONSE");
-                    PQclear (*(PGresult **)target_result);
-                    return -1;
-                }
-                case PGRES_NONFATAL_ERROR:
-                {
-                    trace (TRACE_ERROR,"db_query(): postgresql error: PGRES_NONFATAL_ERROR");
-                    PQclear (*(PGresult **)target_result);
-                    return -1;
-                }
-                case PGRES_FATAL_ERROR:
-                {
-                    trace (TRACE_ERROR,"db_query(): postgresql error: PGRES_FATAL_ERROR");
-                    PQclear (*(PGresult **)target_result);
-                    return -1;
-                }
-            }
+	  if (!(*(PGresult **)target_result))
+	    {
+	      
+	    }
+
+	  PQresultStatusVar = PQresultStatus (*(PGresult **)target_result);
+	  
+	  if (PQresultStatusVar != PGRES_COMMAND_OK && PQresultStatusVar != PGRES_TUPLES_OK)
+	    {
+	      trace(TRACE_ERROR,"db_query(): Error executing query [%s] : [%s]\n", 
+		    thequery, 
+		    PQresultErrorMessage(*(PGresult **)target_result));
+
+	      PQclear(*(PGresult **)target_result);
+	      return -1;
+	    }
         }
         else
             {
@@ -246,7 +243,7 @@ int db_addalias (u64_t useridnr, char *alias, int clientid)
 {
   /* adds an alias for a specific user */
   snprintf (query, DEF_QUERYSIZE,
-	    "INSERT INTO aliases (alias,deliver_to,client_idnr) VALUES ('%s','%llu',%d)",
+	    "INSERT INTO aliases (alias,deliver_to,client_id) VALUES ('%s','%llu',%d)",
 	   alias, useridnr, clientid);
 	
   trace (TRACE_DEBUG,"db_addalias(): executing query for user: [%s]", query);
@@ -418,7 +415,7 @@ u64_t db_insert_message (u64_t *useridnr)
       trace(TRACE_STOP,"db_insert_message(): dbquery failed");
     }	
   
-  return db_insert_result("mailbox_idnr");
+  return db_insert_result("message_idnr");
 }
 
 
@@ -426,7 +423,7 @@ u64_t db_update_message (u64_t *messageidnr, char *unique_id,
 		u64_t messagesize)
 {
   snprintf (query, DEF_QUERYSIZE,
-	   "UPDATE messages SET messagesize=%llu, unique_id=\"%s\" where message_idnr=%llu",
+	   "UPDATE messages SET messagesize=%llu, unique_id=\'%s\' where message_idnr=%llu",
 	   messagesize, unique_id, *messageidnr);
   
   trace (TRACE_DEBUG,"db_update_message(): updating message query [%s]",query);
@@ -441,7 +438,7 @@ u64_t db_update_message (u64_t *messageidnr, char *unique_id,
  * insert a msg block
  * returns msgblkid on succes, -1 on failure
  */
-u64_t db_insert_message_block (char *block, int messageidnr)
+u64_t db_insert_message_block (char *block, u64_t messageidnr)
 {
   char *escblk=NULL, *tmpquery=NULL;
   int len,esclen=0;
@@ -466,7 +463,7 @@ u64_t db_insert_message_block (char *block, int messageidnr)
 	
 	  snprintf (tmpquery, esclen+500,
 		   "INSERT INTO messageblks(messageblk,blocksize,message_idnr) "
-		   "VALUES ('%s',%d,%d)",
+		   "VALUES ('%s',%d,%llu)",
 		   escblk,len,messageidnr);
 
 	  if (db_query (tmpquery, &res)==-1)
@@ -477,9 +474,11 @@ u64_t db_insert_message_block (char *block, int messageidnr)
 	      return -1;
 	    }
 
+	  PQclear(res);
 	  /* freeing buffers */
 	  my_free(tmpquery);
 	  my_free(escblk);
+
 	  return db_insert_result("messageblk_idnr");
 	}
       else
@@ -785,12 +784,18 @@ int db_update_pop (struct session *sessionptr)
   return 0;
 }
 
+
+/* 
+ * checks the size of a mailbox 
+ * 
+ * returns (u64_t)(-1) on error
+ * preserves current PGresult (== global var res, see top of file)
+ */
 u64_t db_check_mailboxsize (u64_t mailboxid)
 {
-  PGresult *localres;
+  PGresult *saveres = res;
   char *localrow;
   
-  /* checks the size of a mailbox */
   u64_t size;
 
   /* checking current size */
@@ -801,25 +806,29 @@ u64_t db_check_mailboxsize (u64_t mailboxid)
   trace (TRACE_DEBUG,"db_check_mailboxsize(): executing query [%s]\n",
 	 query);
 
-  if (db_query(query, &localres) != 0)
+  if (db_query(query, &res) != 0)
     {
       trace (TRACE_ERROR,"db_check_mailboxsize(): could not execute query [%s]\n",
 	     query);
+
+      res = saveres;
       return -1;
     }
   
-  if (PQntuples(localres)<1)
+  if (PQntuples(res)<1)
     {
       trace (TRACE_ERROR,"db_check_mailboxsize(): weird, cannot execute SUM query\n");
-      PQclear(localres);
+      PQclear(res);
+      res = saveres;
       return 0;
     }
 
-  localrow = PQgetvalue (localres, 0, 1);
+  localrow = PQgetvalue (res, 0, 0);
 
   size = (localrow) ? strtoul(localrow, NULL, 10) : 0;
-  PQclear(localres);
+  PQclear(res);
   
+  res = saveres;
   return size;
 }
 
@@ -2232,7 +2241,7 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
     }
 
   /* all done, validate new msg by creating a new unique id for the copied msg */
-  snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET unique_id=\"%lluA%lu\" "
+  snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET unique_id=\'%lluA%lu\' "
 	   "WHERE message_idnr=%llu", newid, td, newid);
 
   if (db_query(query,&res) == -1)

@@ -1,13 +1,13 @@
 /* 
- * dbmsgbufmysql.c
+ * dbmsgbufpgsql.c
  *
  * function implementations for the msgbuf system
- * using a mysql database
+ * using a pgsql database
  */
 
 #include "../dbmsgbuf.h"
 #include "../db.h"
-#include "/usr/include/mysql/mysql.h"
+#include "/usr/local/pgsql/include/libpq-fe.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -15,7 +15,7 @@
 #define MSGBUF_WINDOWSIZE (128ul*1024ul)
 
 /* 
- * var's from dbmysql.c: 
+ * var's from dbpgsql.c
  */
 
 extern PGconn *conn;  

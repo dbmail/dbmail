@@ -111,7 +111,7 @@ u64_t db_get_message_mailboxid (u64_t *messageidnr);
 u64_t db_insert_message (u64_t *useridnr);
 u64_t db_update_message (u64_t *messageidnr, char *unique_id,
 				 u64_t messagesize);
-u64_t db_insert_message_block (char *block, int messageidnr);
+u64_t db_insert_message_block (char *block, u64_t messageidnr);
 
 int db_log_ip(const char *ip);
 int db_cleanup_iplog(const char *lasttokeep);

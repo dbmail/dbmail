@@ -151,10 +151,10 @@ int do_change(int argc, char *argv[])
 	case 'u':
 	  /* change the name */
 	  if (!is_valid(argv[i+1]))
-	    printf("\nWarning: username contains invalid characters. Username not updated.");
+	    printf("\nWarning: username contains invalid characters. Username not updated. ");
 
 	  if (db_change_username(userid,argv[i+1]) != 0)
-	    printf("\nWarning: could not change username");
+	    printf("\nWarning: could not change username ");
 
 	  i++;
 	  break;
@@ -162,10 +162,10 @@ int do_change(int argc, char *argv[])
 	case 'p':
 	  /* change the password */
 	  if (!is_valid(argv[i+1]))
-	    printf("\nWarning: password contains invalid characters. Password not updated.");
+	    printf("\nWarning: password contains invalid characters. Password not updated. ");
 
 	  if (db_change_password(userid,argv[i+1]) != 0)
-	    printf("\nWarning: could not change password");
+	    printf("\nWarning: could not change password ");
 
 	  i++;
 	  break;
@@ -174,7 +174,7 @@ int do_change(int argc, char *argv[])
 	  newcid = strtoul(argv[i+1], 0, 10);
 
 	  if (db_change_clientid(userid, newcid) != 0)
-	    printf("\nWarning: could not change client id");
+	    printf("\nWarning: could not change client id ");
 
 	  i++;
 	  break;
@@ -195,7 +195,7 @@ int do_change(int argc, char *argv[])
 	    }
 
 	  if (db_change_mailboxsize(userid, newsize) != 0)
-	    printf("\nWarning: could not change max mailboxsize");
+	    printf("\nWarning: could not change max mailboxsize ");
 
 	  i++;
 	  break;
@@ -205,7 +205,7 @@ int do_change(int argc, char *argv[])
 	    {
 	      /* remove alias */
 	      if (db_removealias(userid, argv[i+1]) < 0)
-		printf("\nWarning: could not remove alias [%s]",argv[i+1]);
+		printf("\nWarning: could not remove alias [%s] ",argv[i+1]);
 	    }
 	  else
 	    {

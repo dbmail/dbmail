@@ -245,7 +245,7 @@ int insert_messages(char *header, u64_t headersize, struct list *users, struct l
       else
 	{
 	  /* make the id numeric */
-	  userid=atol((char *)tmp->data);
+	  userid=strtoul((char *)tmp->data, NULL, 10);
 
 	  /* create a message record */
 	  temp_message_record_id=db_insert_message ((u64_t *)&userid);
@@ -266,7 +266,7 @@ int insert_messages(char *header, u64_t headersize, struct list *users, struct l
       tmp=tmp->nextnode;
     }
 
-  trace(TRACE_DEBUG,"insert_messages(): we need to deliver [%llu] "
+  trace(TRACE_DEBUG,"insert_messages(): we need to deliver [%ld] "
 	"messages to external addresses",
 	list_totalnodes(&external_forwards));
 	
