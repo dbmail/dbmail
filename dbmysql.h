@@ -137,7 +137,7 @@ unsigned long db_get_message_mailboxid (unsigned long *messageidnr);
 unsigned long db_insert_message (unsigned long *useridnr);
 unsigned long db_update_message (unsigned long *messageidnr, char *unique_id,
 				 unsigned long messagesize);
-unsigned long db_insert_message_block (char *block, int nextblock);
+unsigned long db_insert_message_block (char *block, int messageidnr);
 int db_check_id (char *id);
 int db_disconnect();
 unsigned long db_insert_result ();
@@ -150,8 +150,10 @@ int db_update_pop (struct session *sessionptr);
 unsigned long db_set_deleted ();
 unsigned long db_deleted_purge();
 int db_update_user_size (unsigned long useridnr, unsigned long addbytes);
-unsigned long db_check_sizelimit (unsigned long addblocksize, unsigned long messageidnr, unsigned long *useridnr);
+unsigned long db_check_sizelimit (unsigned long addblocksize, unsigned long messageidnr, 
+				  unsigned long *useridnr);
 char *db_get_userid (unsigned long *useridnr);
+int db_imap_append_msg(char *msgdata, unsigned long datalen, unsigned long mboxid, unsigned long uid);
 
 
 /* mailbox functionality */

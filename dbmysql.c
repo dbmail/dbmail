@@ -345,7 +345,7 @@ unsigned long db_get_inboxid (unsigned long *useridnr)
 
 	if ((row = mysql_fetch_row(res))==NULL)
 	{
-		trace (TRACE_DEBUG,"db_insert_message(): fetch_row call failed");
+	  trace (TRACE_DEBUG,"db_get_mailboxid(): fetch_row call failed");
 	}
 	/* return the inbox id */
 	return atoi(row[0]);
@@ -501,7 +501,9 @@ unsigned long db_get_useridnr (unsigned long messageidnr)
 }
 
 
-
+/* 
+ * inserts into inbox ! 
+ */
 unsigned long db_insert_message (unsigned long *useridnr)
 {
   char *ckquery, timestr[30];
@@ -521,10 +523,11 @@ unsigned long db_insert_message (unsigned long *useridnr)
 
   trace (TRACE_DEBUG,"db_insert_message(): inserting message query [%s]",ckquery);
   if (db_query (ckquery)==-1)
-	{
-	free(ckquery);
-	trace(TRACE_STOP,"db_insert_message(): dbquery failed");
-	}	
+    {
+      free(ckquery);
+      trace(TRACE_STOP,"db_insert_message(): dbquery failed");
+    }	
+
   free (ckquery);
   return db_insert_result();
 }
@@ -552,6 +555,10 @@ unsigned long db_update_message (unsigned long *messageidnr, char *unique_id,
 }
 
 
+/*
+ * insert a msg block
+ * returns msgblkid on succes, -1 on failure
+ */
 unsigned long db_insert_message_block (char *block, int messageidnr)
 {
   char *escblk, *tmpquery;
@@ -561,7 +568,7 @@ unsigned long db_insert_message_block (char *block, int messageidnr)
     {
       len = strlen(block);
 
-      trace (TRACE_DEBUG,"db_insert_message_block(): inserting a %d bytes block",
+      trace (TRACE_DEBUG,"db_insert_message_block(): inserting a %d bytes block\n",
 	     len);
 
       /* allocate memory twice as much, for eacht character might be escaped 
@@ -575,13 +582,15 @@ unsigned long db_insert_message_block (char *block, int messageidnr)
 	  /* add an extra 500 characters for the query */
 	  memtst((tmpquery=(char *)malloc(strlen(escblk)+500))==NULL);
 	
-	  sprintf (tmpquery,"INSERT INTO messageblk(messageblk,blocksize,messageidnr) VALUES (\"%s\",%d,%d)",
+	  sprintf (tmpquery,"INSERT INTO messageblk(messageblk,blocksize,messageidnr) "
+		   "VALUES (\"%s\",%d,%d)",
 		   escblk,len,messageidnr);
 
 	  if (db_query (tmpquery)==-1)
 	    {
 	      free(tmpquery);
-	      trace(TRACE_STOP,"db_insert_message_block(): dbquery failed");
+	      trace(TRACE_ERROR,"db_insert_message_block(): dbquery failed\n");
+	      return -1;
 	    }
 
 	  /* freeing buffers */
@@ -590,10 +599,18 @@ unsigned long db_insert_message_block (char *block, int messageidnr)
 	  return db_insert_result(&conn);
 	}
       else
-	trace (TRACE_STOP,"db_insert_message_block(): mysql_real_escape_string() returned empty value");
+	{
+	  trace (TRACE_ERROR,"db_insert_message_block(): mysql_real_escape_string() "
+		 "returned empty value\n");
+	  return -1;
+	}
     }
   else
-    trace (TRACE_STOP,"db_insert_message_block(): value of block cannot be NULL, insertion not possible");
+    {
+      trace (TRACE_ERROR,"db_insert_message_block(): value of block cannot be NULL, "
+	     "insertion not possible\n");
+      return -1;
+    }
 
   return -1;
 }
@@ -762,12 +779,13 @@ unsigned long db_validate (char *user, char *password)
 {
   /* returns useridnr on OK, 0 on validation failed, -1 on error */
   char *ckquery;
+  unsigned long id;
 
   memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
   sprintf (ckquery, "SELECT useridnr FROM user WHERE userid=\"%s\" AND passwd=\"%s\"",
 	   user,password);
 
-  trace (TRACE_DEBUG,"db_validate(): validating using query %s",ckquery);
+  trace (TRACE_DEBUG,"db_validate(): validating using query %s\n",ckquery);
 	
   if (db_query(ckquery)==-1)
     {
@@ -777,21 +795,17 @@ unsigned long db_validate (char *user, char *password)
 	
   if ((res = mysql_store_result(&conn)) == NULL)
     {
-      trace (TRACE_ERROR,"db_validate(): mysql_store_result failed:  %s",mysql_error(&conn));
+      trace (TRACE_ERROR,"db_validate(): mysql_store_result failed: %s\n",mysql_error(&conn));
       free(ckquery);
       return -1;
     }
 
-  if (mysql_num_rows(res)<1)
-    {
-      /* no such user found */
-      free(ckquery);
-      return 0;
-    }
-	
   row = mysql_fetch_row(res);
-	
-  return atoi(row[0]);
+  id = row[0] ? strtoul(row[0], NULL, 10) : 0;
+  
+  free(ckquery);
+  mysql_free_result(res);
+  return id;
 }
 
 unsigned long db_md5_validate (char *username,unsigned char *md5_apop_he, char *apop_stamp)
@@ -1043,18 +1057,19 @@ unsigned long db_check_mailboxsize (unsigned long mailboxid)
 {
   /* checks the size of a mailbox */
   char *ckquery;
+  unsigned long size;
 
   /* checking current size */
   memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
   sprintf (ckquery, "SELECT SUM(messagesize) FROM message WHERE mailboxidnr = %lu AND status<002",
 	   mailboxid);
 
-  trace (TRACE_DEBUG,"db_check_mailboxsize(): executing query [%s]",
+  trace (TRACE_DEBUG,"db_check_mailboxsize(): executing query [%s]\n",
 	 ckquery);
 
   if (db_query(ckquery) != 0)
     {
-      trace (TRACE_ERROR,"db_check_mailboxsize(): could not execute query [%s]",
+      trace (TRACE_ERROR,"db_check_mailboxsize(): could not execute query [%s]\n",
 	     ckquery);
       free(ckquery);
       return -1;
@@ -1062,143 +1077,156 @@ unsigned long db_check_mailboxsize (unsigned long mailboxid)
   
   if ((res = mysql_store_result(&conn)) == NULL)
     {
-      trace (TRACE_ERROR,"db_check_mailboxsize(): mysql_store_result failed:  %s",mysql_error(&conn));
+      trace (TRACE_ERROR,"db_check_mailboxsize(): mysql_store_result failed: %s\n",
+	     mysql_error(&conn));
       free(ckquery);
       return -1;
     }
 
   if (mysql_num_rows(res)<1)
     {
-      trace (TRACE_ERROR,"db_check_mailboxsize(): weird, cannot execute SUM query");
+      trace (TRACE_ERROR,"db_check_mailboxsize(): weird, cannot execute SUM query\n");
       free(ckquery);
       return 0;
     }
 
   row = mysql_fetch_row(res);
 
-  if (row[0]!=NULL)
-    return atol (row[0]);
-  else 
-    return 0;
+  size = row[0] ? strtoul(row[0], NULL, 10) : 0;
+  mysql_free_result(res);
+
+  return size;
 }
 
 
-unsigned long db_check_sizelimit (unsigned long addblocksize, unsigned long messageidnr, unsigned long *useridnr)
+unsigned long db_check_sizelimit (unsigned long addblocksize, unsigned long messageidnr, 
+				  unsigned long *useridnr)
 {
-	/* returns -1 when a block cannot be inserted 
-		also does a complete rollback when this occurs 
-		returns 0 when situaties is ok */
+  /* returns -1 when a block cannot be inserted due to dbase failure
+   *          1 when a block cannot be inserted due to quotum exceed
+   *         -2 when a block cannot be inserted due to quotum exceed and a dbase failure occured
+   * also does a complete rollback when this occurs 
+   * returns 0 when situation is ok 
+   */
 
-	char *ckquery;
-	unsigned long mailboxidnr;
-	unsigned long currmail_size = 0, maxmail_size = 0;
+  char *ckquery;
+  unsigned long mailboxidnr;
+  unsigned long currmail_size = 0, maxmail_size = 0;
 
-	*useridnr = db_get_useridnr (messageidnr);
+  *useridnr = db_get_useridnr (messageidnr);
 	
-	/* looking up messageidnr */
-	mailboxidnr = db_get_message_mailboxid (&messageidnr);
+  /* looking up messageidnr */
+  mailboxidnr = db_get_message_mailboxid (&messageidnr);
 	
-	/* checking current size */
-	memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
-	sprintf (ckquery, "SELECT mailboxidnr FROM mailbox WHERE owneridnr = %lu",
-			*useridnr);
+  /* checking current size */
+  memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
+  sprintf (ckquery, "SELECT mailboxidnr FROM mailbox WHERE owneridnr = %lu",
+	   *useridnr);
 
-	trace (TRACE_DEBUG,"db_check_sizelimit(): executing query [%s]",
-			ckquery);
 
-	if (db_query(ckquery) != 0)
-	{
-		trace (TRACE_ERROR,"db_check_sizelimit(): could not execute query [%s]",
-				ckquery);
-		free(ckquery);
-		return -1;
-	}
+  if (db_query(ckquery) != 0)
+    {
+      trace (TRACE_ERROR,"db_check_sizelimit(): could not execute query [%s]\n",
+	     ckquery);
+      free(ckquery);
+      return -1;
+    }
   
   if ((res = mysql_store_result(&conn)) == NULL)
     {
-      trace (TRACE_ERROR,"db_check_sizelimit(): mysql_store_result failed:  %s",mysql_error(&conn));
+      trace (TRACE_ERROR,"db_check_sizelimit(): mysql_store_result failed: %s\n",mysql_error(&conn));
       free(ckquery);
+      return -1;
+    }
+
+
+  if (mysql_num_rows(res)<1)
+    {
+      trace (TRACE_ERROR,"db_check_sizelimit(): user has NO mailboxes\n");
+      free(ckquery);
+      mysql_free_result(res);
+      return 0;
+    }
+
+  while ((row = mysql_fetch_row(res))!=NULL)
+    {
+      trace (TRACE_DEBUG,"db_check_sizelimit(): checking mailbox [%s]\n",row[0]);
+      currmail_size += db_check_mailboxsize(atol(row[0]));
+    }
+
+  /* current mailsize from INBOX is now known, now check the maxsize for this user */
+  sprintf (ckquery, "SELECT maxmail_size FROM user WHERE useridnr = %lu", *useridnr);
+  trace (TRACE_DEBUG,"db_check_sizelimit(): executing query: %s\n", ckquery);
+
+  if (db_query(ckquery) != 0)
+    {
+      trace (TRACE_ERROR,"db_check_sizelimit(): could not execute query [%s]\n",
+	     ckquery);
+      free(ckquery);
+      mysql_free_result(res);
+      return -1;
+    }
+  
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace (TRACE_ERROR,"db_check_sizelimit(): mysql_store_result failed: %s\n",mysql_error(&conn));
+      free(ckquery);
+      mysql_free_result(res);
       return -1;
     }
 
   if (mysql_num_rows(res)<1)
     {
-		trace (TRACE_ERROR,"db_check_sizelimit(): user has NO mailboxes");
+      trace (TRACE_ERROR,"db_check_sizelimit(): weird, this user does not seem to exist!\n");
       free(ckquery);
-      return 0;
-    }
-
-	while ((row = mysql_fetch_row(res))!=NULL)
-		{
-		trace (TRACE_DEBUG,"db_check_sizelimit(): checking mailbox [%s]",row[0]);
-		currmail_size += db_check_mailboxsize(atol(row[0]));
-		}
-
-	/* current mailsize from INBOX is now known, now check the maxsize for this user */
-	
-	sprintf (ckquery, "SELECT maxmail_size FROM user WHERE useridnr = %lu",
-			*useridnr);
-	trace (TRACE_DEBUG,"db_check_sizelimit(): executing query: %s",
-			ckquery);
-
-	if (db_query(ckquery) != 0)
-	{
-		trace (TRACE_ERROR,"db_check_sizelimit(): could not execute query [%s]",
-				ckquery);
-		free(ckquery);
-		return -1;
-	}
-  
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace (TRACE_ERROR,"db_check_sizelimit(): mysql_store_result failed:  %s",mysql_error(&conn));
-      free(ckquery);
-      return -1;
-    }
-
-  if (mysql_num_rows(res)<1)
-    {
-		trace (TRACE_ERROR,"db_check_sizelimit(): weird, this user does not seem to exist!");
-      free(ckquery);
+      mysql_free_result(res);
       return 0;
     }
 	
-	row = mysql_fetch_row(res);
-	maxmail_size = atol(row[0]);
+  row = mysql_fetch_row(res);
+  maxmail_size = row[0] ? atol(row[0]) : 0;
 
-	trace (TRACE_DEBUG, "db_check_sizelimit(): comparing currsize + blocksize  [%d], maxsize [%d]",
-			currmail_size, maxmail_size);
+  trace (TRACE_DEBUG, "db_check_sizelimit(): comparing currsize + blocksize  [%d], maxsize [%d]\n",
+	 currmail_size, maxmail_size);
 	
-	/* currmail already represents the current size of messages from this user */
+
+  /* currmail already represents the current size of messages from this user */
 	
-	if (((currmail_size) > maxmail_size) && (maxmail_size != 0))
+  if (((currmail_size) > maxmail_size) && (maxmail_size != 0))
+    {
+      trace (TRACE_INFO,"db_check_sizelimit(): mailboxsize of useridnr %lu exceed with %lu bytes\n", 
+	     useridnr, (currmail_size)-maxmail_size);
+
+
+      /* user is exceeding, we're going to execute a rollback now */
+      sprintf (ckquery,"DELETE FROM messageblk WHERE messageidnr = %lu", 
+	       messageidnr);
+      if (db_query(ckquery) != 0)
 	{
-		trace (TRACE_INFO,"db_check_sizelimit(): mailboxsize of useridnr %lu exceed with %lu bytes", 
-				useridnr, (currmail_size)-maxmail_size);
+	  trace (TRACE_ERROR,"db_update_user_size(): rollback of mailbox add failed\n");
+	  free (ckquery);
+	  mysql_free_result(res);
+	  return -2;
+	}
+      sprintf (ckquery,"DELETE FROM message WHERE messageidnr = %lu",
+	       messageidnr);
 
-		/* user is exceeding, we're going to execute a rollback now */
-		sprintf (ckquery,"DELETE FROM messageblk WHERE messageidnr = %lu", 
-				messageidnr);
-		if (db_query(ckquery) != 0)
-		{
-			trace (TRACE_ERROR,"db_update_user_size(): rollback of mailbox add failed");
-			free (ckquery);
-			return -1;
-		}
-		sprintf (ckquery,"DELETE FROM message WHERE messageidnr = %lu",
-				messageidnr);
-
-		if (db_query(ckquery) != 0)
-		{
-			trace (TRACE_ERROR,"db_update_user_size(): rollblock of mailbox add failed. DB might be incosistent."
-					" run dbmail-maintenance");
-			free (ckquery);
-			return -1;
-		}
-		return -1;
+      if (db_query(ckquery) != 0)
+	{
+	  trace (TRACE_ERROR,"db_update_user_size(): rollblock of mailbox add failed."
+		 " DB might be incosistent."
+		 " run dbmail-maintenance\n");
+	  free (ckquery);
+	  mysql_free_result(res);
+	  return -2;
 	}
 
-	return 0;
+      mysql_free_result(res);
+      return 1;
+    }
+
+  mysql_free_result(res);
+  return 0;
 }
 
 
@@ -1279,6 +1307,178 @@ int db_disconnect()
 	mysql_close(&conn);
   return 0;
 }
+
+
+/*
+ * db_imap_append_msg()
+ *
+ * inserts a message
+ *
+ * returns: 
+ * -1 serious dbase/memory error
+ *  0 ok
+ *  1 invalid msg
+ *  2 mail quotum exceeded
+ *
+ */
+int db_imap_append_msg(char *msgdata, unsigned long datalen, unsigned long mboxid, unsigned long uid)
+{
+  char query[DEF_QUERYSIZE];
+  char timestr[30];
+  time_t td;
+  struct tm tm;
+  unsigned long msgid,cnt;
+  int result;
+  char savechar;
+
+  time(&td);              /* get time */
+  tm = *localtime(&td);   /* get components */
+  strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
+
+  /* create a msg */
+  snprintf(query, DEF_QUERYSIZE, "INSERT INTO message "
+	   "(mailboxidnr,messagesize,unique_id,internal_date) VALUES (%lu, 0, \"\", \"%s\")",
+	   mboxid, timestr);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_imap_append_msg(): could not create message\n");
+      return -1;
+    }
+
+  /* fetch the id of the new message */
+  msgid = mysql_insert_id(&conn);
+  
+  result = db_check_sizelimit(datalen, msgid, &uid);
+  if (result == -1 || result == -2)
+    {     
+      trace(TRACE_ERROR, "db_imap_append_msg(): dbase error checking size limit\n");
+      return -1;
+    }
+
+  if (result)
+    {     
+      trace(TRACE_INFO, "db_imap_append_msg(): user %lu would exceed quotum\n",uid);
+      return 2;
+    }
+
+
+  /* ok insert blocks */
+  /* first the header: scan until double newline */
+  for (cnt=1; cnt<datalen; cnt++)
+    if (msgdata[cnt-1] == '\n' && msgdata[cnt] == '\n')
+      break;
+
+  if (cnt == datalen)
+    {
+      trace(TRACE_INFO, "db_imap_append_msg(): no double newline found [invalid msg]\n");
+      snprintf(query, DEF_QUERYSIZE, "DELETE FROM message WHERE messageidnr = %lu", msgid);
+      if (db_query(query) == -1)
+	trace(TRACE_ERROR, "db_imap_append_msg(): could not delete message id [%lu], "
+	      "dbase invalid now..\n", msgid);
+
+      return 1;
+    }
+
+  if (cnt == datalen-1)
+    {
+      /* msg consists of a single header */
+      trace(TRACE_INFO, "db_imap_append_msg(): msg only contains a header\n");
+
+      if (db_insert_message_block(msgdata, msgid) == -1 || 
+	  db_insert_message_block(" \n", msgid)   == -1)
+	{
+	  trace(TRACE_ERROR, "db_imap_append_msg(): could not insert msg block\n");
+
+	  snprintf(query, DEF_QUERYSIZE, "DELETE FROM message WHERE messageidnr = %lu", msgid);
+	  if (db_query(query) == -1)
+	    trace(TRACE_ERROR, "db_imap_append_msg(): could not delete message id [%lu], "
+		  "dbase could be invalid now..\n", msgid);
+
+	  snprintf(query, DEF_QUERYSIZE, "DELETE FROM messageblk WHERE messageidnr = %lu", msgid);
+	  if (db_query(query) == -1)
+	    trace(TRACE_ERROR, "db_imap_append_msg(): could not delete messageblks for msg id [%lu], "
+		  "dbase could be invalid now..\n", msgid);
+
+	  return -1;
+	}
+
+    }
+  else
+    {
+      /* output header */
+      cnt++;
+      savechar = msgdata[cnt];                        /* remember char */
+      msgdata[cnt] = 0;                               /* terminate string */
+      if (db_insert_message_block(msgdata, msgid) == -1)
+	{
+	  trace(TRACE_ERROR, "db_imap_append_msg(): could not insert msg block\n");
+
+	  snprintf(query, DEF_QUERYSIZE, "DELETE FROM message WHERE messageidnr = %lu", msgid);
+	  if (db_query(query) == -1)
+	    trace(TRACE_ERROR, "db_imap_append_msg(): could not delete message id [%lu], "
+		  "dbase invalid now..\n", msgid);
+
+	  snprintf(query, DEF_QUERYSIZE, "DELETE FROM messageblk WHERE messageidnr = %lu", msgid);
+	  if (db_query(query) == -1)
+	    trace(TRACE_ERROR, "db_imap_append_msg(): could not delete messageblks for msg id [%lu], "
+		  "dbase could be invalid now..\n", msgid);
+
+	  return -1;
+	}
+
+      msgdata[cnt] = savechar;                        /* restore */
+
+      /* output message */
+      while ((datalen - cnt) > READ_BLOCK_SIZE)
+	{
+	  savechar = msgdata[cnt + READ_BLOCK_SIZE];        /* remember char */
+	  msgdata[cnt + READ_BLOCK_SIZE] = 0;               /* terminate string */
+
+	  if (db_insert_message_block(&msgdata[cnt], msgid) == -1)
+	    {
+	      trace(TRACE_ERROR, "db_imap_append_msg(): could not insert msg block\n");
+
+	      snprintf(query, DEF_QUERYSIZE, "DELETE FROM message WHERE messageidnr = %lu", msgid);
+	      if (db_query(query) == -1)
+		trace(TRACE_ERROR, "db_imap_append_msg(): could not delete message id [%lu], "
+		      "dbase invalid now..\n", msgid);
+
+	      snprintf(query, DEF_QUERYSIZE, "DELETE FROM messageblk WHERE messageidnr = %lu", msgid);
+	      if (db_query(query) == -1)
+		trace(TRACE_ERROR, "db_imap_append_msg(): could not delete messageblks "
+		      "for msg id [%lu], dbase could be invalid now..\n", msgid);
+
+	      return -1;
+	    }
+
+	  msgdata[cnt + READ_BLOCK_SIZE] = savechar;        /* restore */
+
+	  cnt += READ_BLOCK_SIZE;
+	}
+
+      if (db_insert_message_block(&msgdata[cnt], msgid) == -1)
+	{
+	  trace(TRACE_ERROR, "db_imap_append_msg(): could not insert msg block\n");
+
+	  snprintf(query, DEF_QUERYSIZE, "DELETE FROM message WHERE messageidnr = %lu", msgid);
+	  if (db_query(query) == -1)
+	    trace(TRACE_ERROR, "db_imap_append_msg(): could not delete message id [%lu], "
+		  "dbase invalid now..\n", msgid);
+
+	  snprintf(query, DEF_QUERYSIZE, "DELETE FROM messageblk WHERE messageidnr = %lu", msgid);
+	  if (db_query(query) == -1)
+	    trace(TRACE_ERROR, "db_imap_append_msg(): could not delete messageblks "
+		  "for msg id [%lu], dbase could be invalid now..\n", msgid);
+
+	  return -1;
+	}
+
+    }  
+      
+  return 0;
+}
+
 
 
 /*

@@ -216,9 +216,10 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 	{
 	  /* FIXME: it's probably a forward to another address
 	   * we need to do an email address validity test if the first char !| */
-	  trace (TRACE_DEBUG,"insert_messages(): no numeric value in deliver_to, calling external_forward");
+	  trace (TRACE_DEBUG,"insert_messages(): no numeric value in deliver_to, "
+		 "calling external_forward");
 
-			/* creating a list of external forward addresses */
+	  /* creating a list of external forward addresses */
 	  list_nodeadd(&external_forwards,(char *)tmp->data,strlen(tmp->data)+1);
 	}
       else
@@ -234,17 +235,19 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 	   * we could change this in the future for efficiency
 	   * still we would need a way of checking which messageblks
 	   * belong to which messages */
-		
-		db_insert_message_block (header,temp_message_record_id);
-	
-		/* adding this messageid to the message id list */
-		list_nodeadd(&messageids,&temp_message_record_id,sizeof(temp_message_record_id));
+	  
+	  if (db_insert_message_block (header,temp_message_record_id) == -1)
+	    trace(TRACE_STOP, "insert_messages(): error inserting msgblock\n");
+
+	  /* adding this messageid to the message id list */
+	  list_nodeadd(&messageids,&temp_message_record_id,sizeof(temp_message_record_id));
 	}
       /* get next item */	
       tmp=tmp->nextnode;
     }
 
-  trace(TRACE_DEBUG,"insert_messages(): we need to deliver [%lu] messages to external addresses",
+  trace(TRACE_DEBUG,"insert_messages(): we need to deliver [%lu] "
+	"messages to external addresses",
 	list_totalnodes(&external_forwards));
 	
   
@@ -256,69 +259,85 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
   memtst ((strblock = (char *)malloc(READ_BLOCK_SIZE))==NULL);
 	
 	/* first we need to check if we need to deliver into the database */
-	if (list_totalnodes(&messageids)>0)
+  if (list_totalnodes(&messageids)>0)
+    {
+      totalmem = 0; /* reset totalmem counter */
+      /* we have local deliveries */ 
+      while (!feof(instream))
 	{
-		totalmem = 0; /* reset totalmem counter */
-		/* we have local deliveries */ 
-		while (!feof(instream))
-		{
-			usedmem = fread (strblock, sizeof(char), READ_BLOCK_SIZE, instream);
+	  usedmem = fread (strblock, sizeof(char), READ_BLOCK_SIZE, instream);
 		
-			/* fread won't do this for us! */	
-			if (strblock)
-				strblock[usedmem]='\0';
+	  /* fread won't do this for us! */	
+	  if (strblock)
+	    strblock[usedmem]='\0';
 			
-			if (usedmem>0) /* usedmem is 0 with an EOF */
-			{
-				totalmem = totalmem + usedmem;
+	  if (usedmem>0) /* usedmem is 0 with an EOF */
+	    {
+	      totalmem = totalmem + usedmem;
 			
-				tmp=list_getstart(&messageids);
-				while (tmp!=NULL)
-				{
-					db_insert_message_block (strblock,*(unsigned long *)tmp->data);
-					tmp=tmp->nextnode;
-				}
+	      tmp=list_getstart(&messageids);
+	      while (tmp!=NULL)
+		{
+		  if (db_insert_message_block (strblock,*(unsigned long *)tmp->data) == -1)
+		    trace(TRACE_STOP, "insert_messages(): error inserting msgblock\n");
+
+		  tmp=tmp->nextnode;
+		}
 				
 				/* resetting strlen for strblock */
-				strblock[0]='\0';
-				usedmem = 0;
+	      strblock[0]='\0';
+	      usedmem = 0;
 				
-			}
-			else 
-				trace (TRACE_DEBUG, "insert_messages(): end of instream stream");
+	    }
+	  else 
+	    trace (TRACE_DEBUG, "insert_messages(): end of instream stream");
 		
 	
-		}; 
+	}; 
 		
       trace (TRACE_DEBUG,"insert_messages(): updating size fields");
 	
 
-		/* we need to update messagesize in all messages */
+      /* we need to update messagesize in all messages */
       tmp=list_getstart(&messageids);
       while (tmp!=NULL)
-		{
-			/* we need to create a unique id per message 
-			* we're using the messageidnr for this, it's unique 
-			* a special field is created in the database for other possible 
-			* even more unique strings */
-			create_unique_id(unique_id,*(unsigned long*)tmp->data); 
-			db_update_message ((unsigned long*)tmp->data,unique_id,totalmem+headersize);
+	{
+	  /* we need to create a unique id per message 
+	   * we're using the messageidnr for this, it's unique 
+	   * a special field is created in the database for other possible 
+	   * even more unique strings */
+	  create_unique_id(unique_id,*(unsigned long*)tmp->data); 
+	  db_update_message ((unsigned long*)tmp->data,unique_id,totalmem+headersize);
 
-			/* checking size */
-			if (db_check_sizelimit (totalmem+headersize, *(unsigned long*)tmp->data,&bounce_userid) == -1)
-			{
-				trace (TRACE_DEBUG,"insert_messages(): message NOT inserted. Maxmail exceeded");
-				bounce (header, db_get_userid(&bounce_userid), BOUNCE_STORAGE_LIMIT_REACHED);
-			}
-			else 
-				trace (TRACE_MESSAGE,"insert_messages(): message id=%lu, size=%lu is inserted",
-					*(unsigned long*)tmp->data, totalmem+headersize);
+	  /* checking size */
+	  switch (db_check_sizelimit (totalmem+headersize, *(unsigned long*)tmp->data,
+				      &bounce_userid))
+	    {
+	    case 1:
+	      trace (TRACE_DEBUG,"insert_messages(): message NOT inserted. Maxmail exceeded");
+	      bounce (header, db_get_userid(&bounce_userid), BOUNCE_STORAGE_LIMIT_REACHED);
+	      break;
+	    case -1:
+	      trace (TRACE_ERROR,"insert_messages(): message NOT inserted. dbase error");
+	      bounce (header, db_get_userid(&bounce_userid), BOUNCE_STORAGE_LIMIT_REACHED);
+	      break;
+	    case -2:
+	      trace (TRACE_ERROR,"insert_messages(): message NOT inserted. "
+		     "Maxmail exceeded AND dbase error");
+	      bounce (header, db_get_userid(&bounce_userid), BOUNCE_STORAGE_LIMIT_REACHED);
+	      break;
+
+	    case 0:
+	      trace (TRACE_MESSAGE,"insert_messages(): message id=%lu, size=%lu is inserted",
+		     *(unsigned long*)tmp->data, totalmem+headersize);
+	      break;
+	    }
 
 
-			temp_message_record_id=*(unsigned long*)tmp->data;
-			tmp=tmp->nextnode;
-		}
+	  temp_message_record_id=*(unsigned long*)tmp->data;
+	  tmp=tmp->nextnode;
 	}
+    }
 
   /* handle all bounced messages */
   if (list_totalnodes(&bounces)>0)
@@ -334,24 +353,24 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
     }
 
   /* do we have forward addresses ? */
-	if (list_totalnodes(&external_forwards)>0)
+  if (list_totalnodes(&external_forwards)>0)
+    {
+      /* sending the message to forwards */
+  
+      trace (TRACE_DEBUG,"insert_messages(): delivering to external addresses");
+  
+      if (list_totalnodes(&messageids)==0)
 	{
-		/* sending the message to forwards */
-  
-		trace (TRACE_DEBUG,"insert_messages(): delivering to external addresses");
-  
-		if (list_totalnodes(&messageids)==0)
-		{
-			/* deliver using stdin */
-			pipe_forward (stdin, &external_forwards, header, 0);
-		}
-		else
-		{
-			/* deliver using database */
-			tmp = list_getstart(&messageids);
-			pipe_forward (stdin, &external_forwards, header, *((unsigned long *)tmp->data));
-		}
+	  /* deliver using stdin */
+	  pipe_forward (stdin, &external_forwards, header, 0);
 	}
+      else
+	{
+	  /* deliver using database */
+	  tmp = list_getstart(&messageids);
+	  pipe_forward (stdin, &external_forwards, header, *((unsigned long *)tmp->data));
+	}
+    }
 	
   trace (TRACE_DEBUG,"insert_messages(): Freeing memory blocks");
   /* memory cleanup */
