@@ -1360,6 +1360,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
   int i,fetch_start,fetch_end,delimpos,result,setseen,j;
   fetch_items_t fetchitems;
+  mime_message_t msg;
   char date[IMAP_INTERNALDATE_LEN];
 
   if (ud->state != IMAPCS_SELECTED)
@@ -1536,6 +1537,9 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
       if (fetchitems.getRFC822Text)
 	{
 	}
+
+      db_fetch_headers(ud->mailbox.seq_list[i], &msg);
+      db_msgdump(&msg);
 
       for (j=0; j<fetchitems.nbodyfetches; j++)
 	{

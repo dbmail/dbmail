@@ -3,6 +3,7 @@
 
 #include "config.h"
 #include "main.h"
+#include "pipe.h"
 
 #define MESSAGEIDSIZE 100
 #define NORMAL_DELIVERY 1
@@ -59,7 +60,7 @@ int main (int argc, char *argv[]) {
 	trace(TRACE_STOP,"main(): fatal error creating MIME-header list\n");
 
       /* parse for destination addresses */
-	if (!mail_adr_list("deliver-to",&users,&mimelist))	
+	if (!mail_adr_list ("deliver-to",&users,&mimelist,&users,header,headersize))	
 		trace(TRACE_STOP,"main(): scanner found no email addresses");
     } 
 

@@ -8,6 +8,7 @@
 #include "debug.h"
 #include "imap4.h"
 #include "mime.h"
+#include "list.h"
 
 struct session;
 struct list;
@@ -85,10 +86,10 @@ typedef struct
 
 typedef struct 
 {
-  struct list mimeheaders;
-  db_pos_t headerstart,headerend;
-  db_pos_t bodystart,bodyend;
-  struct list *children;
+  struct list mimeheader;           /* the MIME header of this part (if present) */
+  db_pos_t headerstart,headerend;   /* RFC822 header of this part (if present) */
+  db_pos_t bodystart,bodyend;       /* the body of this part */
+  struct list children;             /* the children (multipart msg) */
 
 } mime_message_t;
 
@@ -141,15 +142,20 @@ unsigned long db_first_unseen(unsigned long uid);
 int db_get_msgflag(const char *name, unsigned long mailboxuid, unsigned long msguid);
 int db_set_msgflag(const char *name, unsigned long mailboxuid, unsigned long msguid, int val);
 int db_get_msgdate(unsigned long mailboxuid, unsigned long msguid, char *date);
+
 int db_init_msgfetch(unsigned long uid);
-int db_msgfetch_next(char **data);
+int db_update_msgbuf(int minlen);
 void db_close_msgfetch();
+void db_give_msgpos(db_pos_t *pos);
 
-int db_fetch_headers(unsigned long msguid, db_header_t **headers, unsigned maxheaders, 
-		     unsigned *nheaders);
+void db_free_msg(mime_message_t *msg);
+void db_reverse_msg(mime_message_t *msg);
 
-int db_update_msgbuf(int *idx, int minlen);
+int db_fetch_headers(unsigned long msguid, mime_message_t *msg);
+int db_add_mime_children(struct list *brothers, char *splitbound);
+int db_start_msg(mime_message_t *msg, char *stopbound);
 
-int db_msgdump(unsigned long uid);
+void db_dump_range(db_pos_t start, db_pos_t end);
+int db_msgdump(mime_message_t *msg);
 
 #endif

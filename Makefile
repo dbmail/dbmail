@@ -4,11 +4,11 @@
 
 
 SMTP_OBJECTS = list.o debug.o pipe.o mime.o dbmysql.o misc.o dbmd5.o md5.o bounce.o
-POP_OBJECTS = pop3.o list.o debug.o dbmysql.o dbmd5.o md5.o
+POP_OBJECTS = pop3.o list.o debug.o dbmysql.o dbmd5.o md5.o mime.o 
 IMAP_OBJECTS = imap4.o debug.o dbmysql.o serverservice.o list.o dbmd5.o md5.o imaputil.o \
 imapcommands.o mime.o
 DUMP_OBJECTS = debug.o dbmysql.o list.o dbmd5.o md5.o mime.o sstack.o
-MAINTENANCE_OBJECTS = debug.o list.o dbmd5.o md5.o dbmysql.o
+MAINTENANCE_OBJECTS = debug.o list.o dbmd5.o md5.o dbmysql.o mime.o  
 CC = cc
 
 MYSQLLIBDIR=/usr/local/lib/mysql
@@ -36,7 +36,7 @@ pop3d: pop3.h $(POP_OBJECTS) pop3d.c
 		$(CC) pop3d.c -o dbmail-pop3d $(POP_OBJECTS) $(LIBS) $(LIB)
 
 imapd: imap4.h $(IMAP_OBJECTS) imapd.c
-	$(CC) imapd.c -o dbmail-imapd $(IMAP_OBJECTS) $(LIBS) $(LIB)
+	$(CC) $(CFLAGS) imapd.c -o dbmail-imapd $(IMAP_OBJECTS) $(LIBS) $(LIB)
 
 maintenance: maintenance.h $(MAINTENANCE_OBJECTS) maintenance.c
 	$(CC) maintenance.c -o dbmail-maintenance $(MAINTENANCE_OBJECTS) $(LIBS) $(LIB)
@@ -46,7 +46,7 @@ list.o: list.h
 debug.o: debug.h
 pipe.o: pipe.h config.h
 mime.o: mime.h config.h
-dbmysql.o:dbmysql.h dbmd5.h config.h mime.h
+dbmysql.o:dbmysql.h dbmd5.h config.h mime.h list.h
 misc.o:misc.h config.h
 pop3.o:pop3.h config.h
 dbmd5.o:dbmd5.h md5.h

@@ -7,16 +7,31 @@
 #include "dbmd5.h"
 #include "list.h"
 #include "mime.h"
+#include <ctype.h>
 
 #define DEF_QUERYSIZE 1024
-#define MSGBUF_WINDOWSIZE 65536ul
+#define MSGBUF_WINDOWSIZE (128ul*1024ul)
+#define MSGBUF_FORCE_UPDATE -1
 
 MYSQL conn;  
 MYSQL_RES *res,*_msg_result;
 MYSQL_ROW row;
+MYSQL_ROW _msgrow;
 int _msg_fetch_inited = 0;
+
+/*
+ * CONDITIONS FOR MSGBUF
+ *
+ * rowlength         length of current row
+ * rowpos            current pos in row (_msgrow[0][rowpos-1] is last read char)
+ * msgidx            index within msgbuf, 0 <= msgidx < buflen
+ * buflen            current buffer length: msgbuf[buflen] == '\0'
+ * zeropos           absolute position (block/offset) of msgbuf[0]
+ */
+
 char msgbuf[MSGBUF_WINDOWSIZE];
-unsigned lengths[2];
+unsigned long rowlength,msgidx,buflen,rowpos;
+db_pos_t zeropos;
 
 
 int db_connect ()
@@ -769,7 +784,7 @@ int db_getmailbox(mailbox_t *mb, unsigned long userid)
   mysql_free_result(res);
   
 
-  /* now select messages:  UNSEEN */
+  /* now select messages: UNSEEN */
   snprintf(query, DEF_QUERYSIZE, "SELECT COUNT(*) FROM message WHERE seen_flag=0 AND "
 	   "mailboxidnr = %lu AND status!=3", mb->uid);
 
@@ -1222,7 +1237,7 @@ int db_copymsg(unsigned long msgid, unsigned long destmboxid)
 {
   char query[DEF_QUERYSIZE];
   char *insert;
-  unsigned long newid,*lengths,len;
+  unsigned long newid,*lengths,len,allocsize;
 
   /* retrieve message */
   snprintf(query, DEF_QUERYSIZE, "SELECT * FROM message WHERE messageidnr = %lu", msgid);
@@ -1312,9 +1327,9 @@ int db_copymsg(unsigned long msgid, unsigned long destmboxid)
       return -1;
     }
 
-  while (row = mysql_fetch_row(res))
+  while ((row = mysql_fetch_row(res)))
     {
-      lengths = mysql_fetch_lengths(row);
+      lengths = mysql_fetch_lengths(res);
       allocsize = DEF_QUERYSIZE + lengths[MESSAGEBLK_MESSAGEBLK];
       
       insert = (char*)malloc(allocsize);
@@ -1338,7 +1353,7 @@ int db_copymsg(unsigned long msgid, unsigned long destmboxid)
 	       allocsize-len-lengths[MESSAGEBLK_MESSAGEBLK], "', %lu, %lu)",
 	       strtoul(row[MESSAGEBLK_BLOCKSIZE], NULL, 10), newid);
 
-      len += strlen(&insert[len + lengts[MESSAGEBLK_MESSAGEBLK]]) ;
+      len += strlen(&insert[len + lengths[MESSAGEBLK_MESSAGEBLK]]) ;
 
       if (mysql_real_query(&conn, query, len))
 	{
@@ -1667,14 +1682,14 @@ int db_get_msgdate(unsigned long mailboxuid, unsigned long msguid, char *date)
  * db_init_msgfetch()
  *  
  * initializes a msg fetch
- * returns -1 on error, 0 on success, 1 if already inited (call db_close_msgfetch() first)
+ * returns -1 on error, 1 on success, 0 if already inited (call db_close_msgfetch() first)
  */
 int db_init_msgfetch(unsigned long uid)
 {
   char query[DEF_QUERYSIZE];
-
+  
   if (_msg_fetch_inited)
-    return 1;
+    return 0;
 
   snprintf(query, DEF_QUERYSIZE, "SELECT messageblk FROM messageblk WHERE "
 	   "messageidnr = %lu", uid);
@@ -1693,65 +1708,152 @@ int db_init_msgfetch(unsigned long uid)
     }
 
   _msg_fetch_inited = 1;
+  msgidx = 0;
 
-  /* save rows (max 2) */
+  /* save rows */
   _msgrow = mysql_fetch_row(_msg_result);
   if (!_msgrow)
-    return -1; /* msg should have 1 block at least */
-
-  lengths[0] = (mysql_fetch_lengths(_msgrow))[0];
-  strncpy(msgbuf, _msgrow[0], MSGBUF_WINDOWSIZE-1);
-
-  if (lengths[0] >= MSGBUF_WINDOWSIZE-1)
     {
-      msgbuf[MSGBUF_WINDOWSIZE-1] = '\0';
-      return 0; /* msgbuf full */
+      _msg_fetch_inited = 0;
+      return -1;                     /* msg should have 1 block at least */
     }
-  
+
+  rowlength = (mysql_fetch_lengths(_msg_result))[0];
+  strncpy(msgbuf, _msgrow[0], MSGBUF_WINDOWSIZE-1);
+  zeropos.block = 0;
+  zeropos.pos = 0;
+
+  if (rowlength >= MSGBUF_WINDOWSIZE-1)
+    {
+      buflen = MSGBUF_WINDOWSIZE-1;
+      rowpos = MSGBUF_WINDOWSIZE;            /* remember store pos */
+      msgbuf[buflen] = '\0';                 /* terminate buff */
+      return 1;                              /* msgbuf full */
+    }
+
+  buflen = rowlength;   /* NOTE \0 has been copied from _msgrow) */
+  rowpos = rowlength;   /* no more to read from this row */
   _msgrow = mysql_fetch_row(_msg_result);
   if (!_msgrow)
     {
-      lengths[1] = 0;
+      rowlength = rowpos = 0;
+      return 1;
+    }
+
+  rowlength = (mysql_fetch_lengths(_msg_result))[0];
+  rowpos = 0;
+  strncpy(&msgbuf[buflen], _msgrow[0], MSGBUF_WINDOWSIZE - buflen - 1);
+
+  if (rowlength <= MSGBUF_WINDOWSIZE - buflen - 1)
+    {
+      /* 2nd block fits entirely */
+      rowpos = rowlength;
+      buflen += rowlength;
     }
   else
     {
-      lengths[1] = (mysql_fetch_lengths(_msgrow))[0];
-      strncpy(&msgbuf[lengths[0]], _msgrow[0], MSGBUF_WINDOWSIZE - lengths[0] -1);
+      rowpos = MSGBUF_WINDOWSIZE - (buflen+1);
+      buflen = MSGBUF_WINDOWSIZE-1;
     }
 
-  strcat(msgbuf,""); /* add NULL */
-  return 0;
+  msgbuf[buflen] = '\0';           /* add NULL */
+  return 1;
 }
 
 
 /*
  * db_update_msgbuf()
  *
- * updates msgbuf[]; if minlen == -1 the buffer is displaced to maximum new chars,
- * else we make sure there is at least minlen room to the left of the buffer window
- * (or end of msgblocks reached)
+ * update msgbuf:
+ * if minlen < 0, update is forced else update only if there are less than 
+ * minlen chars left in buf
  *
- * returns 1 on succes, -1 on error, 0 if could not displace that much
+ * returns 1 on succes, -1 on error, 0 if no more chars in rows
  */
-int db_update_msgbuf(int *idx, int minlen)
+int db_update_msgbuf(int minlen)
 {
-  if (lengths[1] == 0)
-    return 1; /* no more */
+  trace(TRACE_DEBUG,"update msgbuf start %lu %lu %lu %lu\n",MSGBUF_WINDOWSIZE,
+	buflen,rowlength,rowpos);
 
-  /* check for maximum displacement */
-  if (minlen == -1)
-    {
-      /* try to make idx as low as possible (max displacement) */
+  if (!_msgrow)
+    return 0; /* no more */
+
+  if (msgidx > buflen)
+    return -1;             /* error, msgidx should be within buf */
+
+  if (minlen > 0 && (buflen-msgidx) > minlen)
+    return 1;                                 /* ok, need no update */
       
 
+  trace(TRACE_DEBUG,"update msgbuf updating\n");
 
-  /* check if we need a new row */
-  if ((lengths[1]-msgbufend) < minlen)
+  /* move buf to make msgidx 0 */
+  memmove(msgbuf, &msgbuf[msgidx], msgidx);
+  if (msgidx > ((buflen+1) - rowpos))
+    {
+      zeropos.block++;
+      zeropos.pos = (msgidx - ((buflen+1) - rowpos));
+    }
+  else
+    zeropos.pos += msgidx;
 
-  row = mysql_fetch_row(_msg_result);
-  if (!row)
-    
+  buflen -= msgidx;
+  msgidx = 0;
 
+  if ((rowlength-rowpos) >= (MSGBUF_WINDOWSIZE - buflen))
+    {
+      trace(TRACE_DEBUG,"update msgbuf 1\n");
+
+      /* rest of row does not fit entirely in buf */
+      strncpy(&msgbuf[buflen], &_msgrow[0][rowpos], MSGBUF_WINDOWSIZE - buflen);
+      rowpos += (MSGBUF_WINDOWSIZE - buflen);
+
+      buflen = MSGBUF_WINDOWSIZE-1;
+      msgbuf[buflen] = '\0';
+
+      return 1;
+    }
+
+  trace(TRACE_DEBUG,"update msgbuf 2 %s\n",_msgrow[0]);
+
+  strncpy(&msgbuf[buflen], &_msgrow[0][rowpos], (rowlength-rowpos));
+  buflen += (rowlength-rowpos);
+  msgbuf[buflen] = '\0';
+  rowpos = rowlength;
+  
+  /* try to fetch a new row */
+  _msgrow = mysql_fetch_row(_msg_result);
+  if (!_msgrow)
+    {
+      rowlength = rowpos = 0;
+
+      trace(TRACE_DEBUG,"update msgbuf succes NOMORE\n");
+      return 0;
+    }
+
+  rowlength = (mysql_fetch_lengths(_msg_result))[0];
+  rowpos = 0;
+
+  trace(TRACE_DEBUG,"update msgbuf 3\n");
+
+  strncpy(&msgbuf[buflen], _msgrow[0], MSGBUF_WINDOWSIZE - buflen - 1);
+  if (rowlength <= MSGBUF_WINDOWSIZE - buflen - 1)
+    {
+      /* 2nd block fits entirely */
+      rowpos = rowlength;
+      buflen += rowlength;
+    }
+  else
+    {
+      rowpos = MSGBUF_WINDOWSIZE - (buflen+1);
+      buflen = MSGBUF_WINDOWSIZE-1;
+    }
+
+  msgbuf[buflen] = '\0' ;          /* add NULL */
+
+  trace(TRACE_DEBUG,"update msgbuf succes\n");
+  return 1;
+}
 
 
 /*
@@ -1784,212 +1886,301 @@ void db_close_msgfetch()
  */
 int db_fetch_headers(unsigned long msguid, mime_message_t *msg)
 {
-  char query[DEF_QUERYSIZE],*boundary;
-  int i,end;
-  char *boundary;
-  
-  /* first fetch msgblocks */
-  snprintf(query, DEF_QUERYSIZE, "SELECT messageblk FROM messageblk WHERE messageidnr = %lu",
-	   msguid);
+  int result;
 
-  if (db_query(query) == -1)
+  if (db_init_msgfetch(msguid) != 1)
     {
-      trace(TRACE_ERROR, "db_fetch_headers(): could not select messageblocks\n");
-      return (-1);
-    }
-
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace(TRACE_ERROR,"db_fetch_headers(): mysql_store_result failed: %s\n",
-	    mysql_error(&conn));
-      return (-1);
-    }
-  
-  /* body of first part is total msg */
-  msg->children = NULL;
-  msg->headerstart.block = 0;
-  msg->headerstart.pos   = 0;
-  msg->bodystart.block = 1;
-  msg->bodystart.pos   = 0;
-
-  msg->bodyend.block = mysql_num_rows(res);
-  msg->headerend.block = 0;
-
-  row = mysql_fetch_row(res);
-  msg->headerend.pos = strlen(row[0]);
-
-  /* first block is first header, find MIME-fields */
-  if (mime_list(row[0], &msg->mimeheader) == -1)
-    {
-      mysql_free_result(res);
+      trace(TRACE_ERROR,"db_fetch_headers(): could not init msgfetch\n");
       return -1;
     }
 
-  /* retrieve boundary */
-  boundary = mime_findfield("boundary", &msg->mimeheader, &record);
-  if (boundary)
+  result = db_start_msg(msg, NULL); /* fetch message */
+  if (result == -1)
     {
-      /* found a boundary item, multipart message */
-      /* read value */
-      boundary += strlen("boundary=");
-      if (*boundary == '\"') boundary++;
-      if (boundary[strlen(boundary)-1] == '\"')
-	boundary[strlen(boundary)-1] = '\0';
+      db_free_msg(msg);
+      return -1;
+    }
 
+  db_reverse_msg(msg);
+
+  db_close_msgfetch();
+  return 0;
+}
+
+      
+/* 
+ * frees all the memory associated with a msg
+ */
+void db_free_msg(mime_message_t *msg)
+{
+  struct element *tmp;
+
+  if (!msg)
+    return;
+
+  /* free the children msg's */
+  tmp = list_getstart(&msg->children);
+
+  while (tmp)
+    {
+      db_free_msg((mime_message_t*)tmp->data);
+      tmp = tmp->nextnode;
+    }
+
+  tmp = list_getstart(&msg->children);
+  list_freelist(&tmp);
+  
+  tmp = list_getstart(&msg->mimeheader);
+  list_freelist(&tmp);
+
+}
+
+      
+/* 
+ * reverses the children lists of a msg
+ */
+void db_reverse_msg(mime_message_t *msg)
+{
+  struct element *tmp;
+
+  if (!msg)
+    return;
+
+  /* reverse the children msg's */
+  tmp = list_getstart(&msg->children);
+
+  while (tmp)
+    {
+      db_reverse_msg((mime_message_t*)tmp->data);
+      tmp = tmp->nextnode;
+    }
+
+  /* reverse this list */
+  tmp = list_getstart(&msg->children);
+  list_reverse(tmp);
+}
+
+
+void db_give_msgpos(db_pos_t *pos)
+{
+  if (msgidx > ((buflen+1)-rowpos))
+    {
+      pos->block = zeropos.block+1;
+      pos->pos   = ((buflen+1)-rowpos) - msgidx;
     }
   else
     {
-      while (row = mysql_fetch_row(res))
-	msg->bodyend.pos = strlen(row[0]);
-
-      mysql_free_result(res);
-      return 0; /* this is a single-part message; done */
+      pos->block = zeropos.block;
+      pos->pos = zeropos.pos + msgidx;
     }
+}
 
-  /* this is a multipart msg
-   * find the next boundary, then read the header that follows it (if present) and
-   */
-			  
 
-  msg->children = (struct list*)malloc(sizeof(struct list));
-  if (!msg->children)
+/*
+ * db_start_msg()
+ *
+ * reads in a msg
+ */
+int db_start_msg(mime_message_t *msg, char *stopbound)
+{
+  int len,sblen,result;
+  struct mime_record *mr;
+  char *newbound,*bptr;
+
+  list_init(&msg->children);
+  db_give_msgpos(&msg->headerstart);
+
+  /* read header */
+  if (db_update_msgbuf(MSGBUF_FORCE_UPDATE) == -1)
+    return -1;
+
+  mime_readheader(&msgbuf[msgidx], &msgidx, &msg->mimeheader);
+  db_give_msgpos(&msg->headerend);
+
+  msgidx++;
+  db_give_msgpos(&msg->bodystart);
+
+  mime_findfield("content-type", &msg->mimeheader, mr);
+  if (mr && strncasecmp(mr->value,"multipart", strlen("multipart")) == 0)
     {
-      mysql_free_result(res);
-      return -1;
-    }
+      trace(TRACE_DEBUG,"db_start_msg(): found multipart msg\n");
 
-  list_init(msg->children);
-  row = mysql_fetch_result(res);
-  if (!row)
+      /* multipart msg, find new boundary */
+      for (bptr = mr->value; *bptr; bptr++) 
+	if ((*bptr == 'b' || *bptr == 'B') && 
+	    strncasecmp(bptr, "boundary=", strlen("boundary=")) == 0)
+	    break;
+
+      if (!bptr)
+	return -1; /* no new boundary ??? */
+
+      bptr += strlen("boundary=");
+      if (*bptr == '\"')      
+	bptr++;
+
+      newbound = bptr;
+      while (*newbound && *newbound != '\"' && !isspace(*newbound)) newbound++;
+
+      len = newbound - bptr;
+      if (!(newbound = (char*)malloc(len+1)))
+	return -1;
+
+      strncpy(newbound, bptr, len);
+      newbound[len] = '\0';
+
+      /* advance to first boundary */
+      if (db_update_msgbuf(MSGBUF_FORCE_UPDATE) == -1)
+	{
+	  free(newbound);
+	  return -1;
+	}
+
+      while (msgbuf[msgidx])
+	{
+	  if (msgbuf[msgidx] == '\n' && strncmp(&msgbuf[msgidx+1], newbound, strlen(newbound)) == 0)
+	    break;
+	}
+
+      if (msgbuf[msgidx]) msgidx++; /* skip  newline */
+
+      if (!msgbuf[msgidx])
+	{
+	  free(newbound);
+	  return -1;
+	}
+      
+
+      /* find MIME-parts */
+      if (db_add_mime_children(&msg->children, newbound) == -1)
+	{
+	  free(newbound);
+	  return -1;
+	}
+
+      free(newbound);
+      db_give_msgpos(&msg->bodyend);
+      return 0;                        /* done */
+    }
+  else
     {
-      mysql_free_result(res);
-      free(msg->children);
-      return -1;
+      /* single part msg, read untill stopbound OR end of buffer */
+      trace(TRACE_DEBUG,"db_start_msg(): found singlepart msg\n");
+
+      if (stopbound)
+	{
+	  sblen = strlen(stopbound)+2;
+
+	  while (msgbuf[msgidx])
+	    {
+	      if (db_update_msgbuf(sblen) == -1)
+		return -1;
+
+	      if (msgbuf[msgidx] == '\n' && 
+		  strncmp(&msgbuf[msgidx+1], stopbound, strlen(stopbound)) == 0)
+		{
+		  db_give_msgpos(&msg->bodyend);
+		  return 0;
+		}
+	    }
+
+	  /* end of buffer reached, bodyend is prev pos */
+	  msgidx--;
+	  db_give_msgpos(&msg->bodyend);
+	  msgidx++;
+	}
+      else
+	{
+	  /* walk on till end of buffer */
+	  do
+	    {
+	      msgidx = buflen - 1;
+	      result = db_update_msgbuf(MSGBUF_FORCE_UPDATE);
+	      if (result == -1)
+		return -1;
+	    } while (result == 1);
+
+	  db_give_msgpos(&msg->bodyend);
+	}
     }
 
-  cnt = 0;
-  blk = 1;
-  if (db_add_mime_children(boundary, 0, &cnt, msg->children) == -1)
-    {
-      mysql_free_result(res);
-      free(msg->children);
-      return -1;
-    }
-
-  msg->bodyend.pos = cnt;
+  trace(TRACE_DEBUG,"db_start_msg(): exit\n");
 
   return 0;
 }
 
 
 
-int db_add_mime_children(char *boundary, unsigned start, unsigned *end, struct list *children)
+/*
+ * assume to enter just after a splitbound 
+ */
+int db_add_mime_children(struct list *brothers, char *splitbound)
 {
-  mime_message_t msg;
-  struct mime_record record;
-  char *nextboundary;
-  unsigned nextend;
-  unsigned long length;
-
-  msg.children = NULL;
-  msg.headerstart.block = -1; /* presume no header */
-  msg.headerstart.pos   = -1;
-  msg.bodystart.block = blk;
-  msg.bodystart.pos   = 0;
-  list_init(&msg.mimeheader);
+  mime_message_t part;
+  struct mime_record *mr;
+  char *boundary;
+  int sblen;
 
   trace(TRACE_DEBUG,"boundary: '%s'\n",boundary);
 
   do
     {
-      length = (mysql_fetch_lengths(res))[0];
-      for (*end = start; msgbuf[*end]; *end++)
+      db_update_msgbuf(MSGBUF_FORCE_UPDATE);
+      memset(&part, 0, sizeof(part));
+
+      /* should have a MIME header right here */
+      mime_readheader(&msgbuf[msgidx], &msgidx, &part.mimeheader);
+      mime_findfield("content-type", &part.mimeheader, mr);
+
+      if (mr && strncasecmp(mr->value, "message/rfc822", strlen("message/rfc822")) == 0)
 	{
-	  db_update_msgbuf(end, strlen(boundary)+1+1);
+	  /* a message will follow */
 
-	  /* start looking for a new line & boundary */
-	  if (msgbuf[*end] == '\n' && strcmp(&msgbuf[*end+1], boundary) == 0)
+	  db_start_msg(&part, splitbound);
+
+	  /* advance to after splitbound */
+	  msgidx++;
+	  msgidx += strlen(splitbound);
+
+	}
+      else
+	{
+	  /* just body data follows, advance to splitbound */
+	  db_give_msgpos(&part.bodystart);
+	  sblen = strlen(splitbound)+2;
+
+	  while (msgbuf[msgidx])
 	    {
-	      /* found boundary, maximum msgbuf update */
-	      db_update_msgbuf(end, -1);
-
-	      msg.bodyend.block = blk;
-	      msg.bodyend.pos = *end;
-
-	      *end++;
-	      *end += strlen(boundary); /* skip */
-	      *end++;
-
-	      if (*end == '\n')
-		{
-		  /* end of this msg-part, add this part & exit */
-		  if (!list_nodeadd(children, &msg, sizeof(msg)))
-		    return -1;
-		  
-		  return 0;
-		}
-
-	      /* ok find MIME-header fields */
-	      if (mime_list(&msgbuf[*end], &msg.mimeheader) == -1)
+	      if (db_update_msgbuf(sblen) == -1)
 		return -1;
 
-	      /* skip to end of MIME-header fields (\n\n) */
-	      while (msgbuf[*end])
-		{
-		  if (msgbuf[*end] == '\n' && msgbuf[*end+1] == '\n')
-		    break;
-
-		  *end++;
-		}
-	      
-	      /* check if there will be more kiddos */
-	      nextboundary = mime_findfield("boundary", &msg.mimeheader, &record);
-	      if (nextboundary)
-		{
-		  /* found a boundary item, multipart message */
-		  /* read value */
-		  nextboundary += strlen("boundary=");
-		  if (*nextboundary == '\"') nextboundary++;
-		  if (nextboundary[strlen(nextboundary)-1] == '\"')
-		    nextboundary[strlen(nextboundary)-1] = '\0';
-
-		  msg.children = (struct list*)malloc(sizeof(struct list));
-		  if (!msg.children)
-		    return -1;
-
-		  list_init(msg.children);
-		  
-		  nextend = *end;
-		  if (db_add_mime_children(nextboundary, *end, &nextend, msg.children) == -1)
-		    return -1;
-		  
-		  *end = nextend;
-		}
-	      else
-		{
-		  /* single part message, this is the body */
-		  
-		}
-	      
-  
-  
-		  
+	      if (msgbuf[msgidx] == '\n' && 
+		  strncmp(&msgbuf[msgidx+1], splitbound, strlen(splitbound)) == 0)
+		break;
 	    }
+
+	  if (!msgbuf[msgidx])
+	    {
+	      /* ?? splitbound should follow */
+	      return -1;
+	    }
+	  db_give_msgpos(&part.bodyend);
+	}
+
+      /* add this part to brother list */
+      if (list_nodeadd(brothers, &part, sizeof(part)) == NULL)
+	return -1;
+
+      /* if double newline follows we're done */
+      if (msgbuf[msgidx] && msgbuf[msgidx] == '\n' && msgbuf[msgidx+1] == '\n')
+	{
+	  msgidx += 2; /* skip \n */
+	  return 0;
 	}
     }
-}    
-		      
-		      
-			  
+  while (msgbuf[msgidx]) ;
 
-			  
-			  
-
-      
-
-  
-
-
+  return 0;
+}
 
 
 /*
@@ -1997,47 +2188,54 @@ int db_add_mime_children(char *boundary, unsigned start, unsigned *end, struct l
  *
  * dumps a message to stderr
  */
-int db_msgdump(unsigned long uid)
+int db_msgdump(mime_message_t *msg)
 {
-  char query[DEF_QUERYSIZE];
-  int i;
-  struct list mimelist;
   struct element *curr;
   struct mime_record *mr;
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT messageblk FROM messageblk WHERE "
-	   "messageidnr = %lu", uid);
-
-  if (db_query(query) == -1)
+  if (!msg)
     {
-      trace(TRACE_ERROR, "db_msgdump(): could not get message\n");
-      return (-1);
+      trace(TRACE_DEBUG,"db_msgdump: got null\n");
+      return 0;
     }
 
-  if ((res = mysql_store_result(&conn)) == NULL)
+  trace(TRACE_DEBUG,"MIME-header: \n");
+  curr = list_getstart(&msg->mimeheader);
+  if (!curr)
+    trace(TRACE_DEBUG,"null\n");
+  else
     {
-      trace(TRACE_ERROR,"db_msgdump(): mysql_store_result failed: %s\n",mysql_error(&conn));
-      return (-1);
+      while (curr)
+	{
+	  mr = (struct mime_record *)curr->data;
+	  trace(TRACE_DEBUG,"[%s] : [%s]\n",mr->field, mr->value);
+	  curr = curr->nextnode;
+	}
     }
+     
+  trace(TRACE_DEBUG,"RFC822-header: \n");
+  db_dump_range(msg->headerstart, msg->headerend);
+  trace(TRACE_DEBUG,"*** header end\n");
 
-  trace(TRACE_DEBUG,"message %lu:\n",uid);
-  row = mysql_fetch_row(res);
-  mime_list(row[0],&mimelist);
-  trace(TRACE_DEBUG,"**** mimelist build\n");
+  trace(TRACE_DEBUG,"body: \n");
+  db_dump_range(msg->bodystart, msg->bodyend);
+  trace(TRACE_DEBUG,"*** body end\n");
+
+  trace(TRACE_DEBUG,"Children of this msg:\n");
   
-  /* dump MIME list */
-  curr = list_getstart(&mimelist);
-  
+  curr = list_getstart(&msg->children);
   while (curr)
     {
-      mr = (struct mime_record*)curr->data;
-      trace(TRACE_DEBUG,"'%s':'%s'\n",mr->field,mr->value);
+      db_msgdump((mime_message_t*)curr->data);
       curr = curr->nextnode;
     }
 
-
-  mysql_free_result(res);
-  return 0;
+  return 1;
 }
 
 
+void db_dump_range(db_pos_t start, db_pos_t end)
+{
+  
+  trace(TRACE_DEBUG,"Range: (%d,%d) - (%d,%d)\n",start.block, start.pos, end.block, end.pos);
+}

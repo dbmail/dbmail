@@ -27,7 +27,7 @@ int mime_list(char *blkdata, struct list *mimelist)
   struct mime_record *mr;
   struct element *el;   
 	
-  trace (TRACE_INFO, "mime_list(): entering mime loop");
+  trace (TRACE_INFO, "mime_list(): entering mime loop\n");
 
   list_init(mimelist);
   /* alloc mem */
@@ -151,6 +151,145 @@ int mime_list(char *blkdata, struct list *mimelist)
     }
 
   /* success */
+  trace(TRACE_DEBUG," *** mime_list() done ***\n");
+  return 0;
+}
+
+
+
+/* 
+ * mime_readheader()
+ *
+ * same as mime_list() but keeps track of idx in blkdata
+ *
+ * returns -1 on failure, 0 on success
+ */
+int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist)
+{
+  int valid_mime_lines=0,idx;
+	
+  char *endptr, *startptr, *delimiter;
+  struct mime_record *mr;
+  struct element *el;   
+	
+  trace (TRACE_INFO, "mime_readheader(): entering mime loop\n");
+
+  list_init(mimelist);
+  /* alloc mem */
+  mr=(struct mime_record *)malloc(sizeof(struct mime_record));
+
+  if (!mr)
+    {
+      trace(TRACE_ERROR, "mime_readheader(): out of memory\n");
+      return -1;
+    }
+
+  startptr = blkdata;
+  while (*startptr)
+    {
+      /* quick hack to jump over those naughty \n\t fields */
+      endptr = startptr;
+      while (*endptr)
+	{
+	  if (endptr[0]=='\n' && endptr[1]!='\t')
+	    {
+	      if (endptr != blkdata && *(endptr-1) == ';')
+		{
+		  endptr++;
+		  continue;
+		}
+	      else
+		{
+		  break;
+		}
+	    }
+	  endptr++;
+	}
+
+      if (!(*endptr))
+	{
+	  /* end of data block reached */
+	  free(mr);
+	  return 0;
+	}
+
+      /* endptr points to linebreak now */
+      /* MIME field+value is string from startptr till endptr */
+
+      *endptr = '\0'; /* replace newline to terminated string */
+
+/*      trace(TRACE_DEBUG,"mime_readheader(): captured array [%s]\n",startptr); 
+*/
+      /* parsing tmpstring for field and data */
+      /* field is name:value */
+
+      delimiter = strchr(startptr,':');
+
+      if (delimiter)
+	{
+	  /* found ':' */
+	  valid_mime_lines++;
+	  *delimiter = '\0'; /* split up strings */
+
+	  /* skip all spaces and colons after the fieldname */
+	  idx = 1;
+	  while ((delimiter[idx]==':') || (delimiter[idx]==' ')) idx++;
+
+	  /* &delimiter[idx] is field value, startptr is field name */
+	  strcpy(mr->field, startptr);
+	  strcpy(mr->value, &delimiter[idx]);
+
+	  trace (TRACE_DEBUG,"mime_readheader(): mimepair found: [%s] [%s] \n",mr->field, mr->value); 
+
+	  el = list_nodeadd(mimelist,mr,sizeof (*mr));
+	  if (!el)
+	    {
+	      trace(TRACE_ERROR, "mime_readheader(): cannot add element to list\n");
+	      free(mr);
+	      return -1;
+	    }
+
+	  /* restore blkdata */
+	  *delimiter = ':';
+	  *endptr = '\n';
+
+	  *blkidx += (endptr-startptr);
+	  *blkidx++;
+
+	  startptr = endptr+1; /* advance to next field */
+
+	  if (*startptr == '\n')
+	    {
+	      /* end of header: double newline */
+	      trace(TRACE_DEBUG,"mime_readheader(): found double newline\n");
+	      free(mr);
+	      return 0;
+	    }
+	}
+      else 
+	{
+	  /* no field/value delimiter found, non-valid MIME-header */
+	  free(mr);
+	  trace(TRACE_DEBUG,"Non valid mimeheader found, freeing list...\n");
+	  list_freelist(&mimelist->start);
+	  mimelist->total_nodes = 0;
+	  trace(TRACE_DEBUG,"freeing list done, start: %X\n ",mimelist->start);
+
+	  return -1;
+	}
+    }
+
+  free(mr); /* no longer need this */
+
+  trace(TRACE_DEBUG,"mime_readheader(): mimeloop finished\n");
+  if (valid_mime_lines < 2)
+    {
+      trace(TRACE_ERROR,"mime_readheader(): no valid mime headers found\n");
+      return -1;
+    }
+
+  /* success */
+  trace(TRACE_DEBUG," *** mime_readheader() done ***\n");
   return 0;
 }
 
@@ -171,7 +310,7 @@ void mime_findfield(const char *fname, struct list *mimelist, struct mime_record
     {
       mr = current->data;   /* get field/value */
       
-      if (strcasecmp(mr->field, fname) == 0)
+      if (strncasecmp(mr->field, fname, strlen(fname)) == 0)
 	return; /* found */
 
       current = current->nextnode;

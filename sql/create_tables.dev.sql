@@ -50,6 +50,7 @@ CREATE TABLE message (
    recent_flag tinyint(1) default '0' not null,
    draft_flag tinyint(1) default '0' not null,
    unique_id varchar(70) NOT NULL,
+   internal_date date default '0' not null,
    status tinyint(3) unsigned zerofill default '000' not null,
    PRIMARY KEY (messageidnr),
    KEY messageidnr (messageidnr),

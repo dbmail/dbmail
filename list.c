@@ -44,13 +44,13 @@ void list_freelist(struct element **start)
  */
 void list_reverse(struct element *start)
 {
-  if (!start || !start->next)
+  if (!start || !start->nextnode)
     return; /* nothing to reverse */
 
-  list_reverse(start->next); /* reverse rest of list */
-  start->next->next = start;
+  list_reverse(start->nextnode); /* reverse rest of list */
+  start->nextnode->nextnode = start;
 
-  start->next = NULL; /* terminate list */
+  start->nextnode = NULL; /* terminate list */
 }
 
 
@@ -115,7 +115,7 @@ struct element *list_nodepop(struct list *list)
 
   ret = list->start;
 
-  list->start = list->start->next;
+  list->start = list->start->nextnode;
   
   return ret;
 }

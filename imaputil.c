@@ -120,6 +120,7 @@ int get_fetch_items(char **args, fetch_items_t *fi)
 
   for ( ; args[i]; i++)
     {
+      trace(TRACE_DEBUG,"a[i]: %s\n",args[i]);
       if (strcasecmp(args[i], "flags") == 0)
 	{
 	  fi->getFlags = 1;
@@ -146,7 +147,7 @@ int get_fetch_items(char **args, fetch_items_t *fi)
 	}
       else if (strcasecmp(args[i], "body") == 0 || strcasecmp(args[i],"body.peek") == 0)
 	{
-	  if (strcmp(args[i+1],"[") != 0)
+	  if (!args[i+1] || strcmp(args[i+1],"[") != 0)
 	    {
 	      if (strcasecmp(args[i],"body.peek") == 0)
 		{
