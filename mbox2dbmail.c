@@ -23,22 +23,31 @@ int main(int argc, char *argv[])
   int in_msg;
   char line[MAX_LINESIZE],cmdstr[MAX_LINESIZE];
   FILE *smtp = 0;
+  unsigned long long uid;
 
-/*  if (argc < 2)
-    {
-      fprintf(stderr,"Usage: %s <username>\n", argv[0]);
-      fprintf(stderr,"Input is read from stdin\n\n");
-      return 0;
-    }
-*/
   if ((result = regcomp(&preg, mbox_delimiter_pattern, REG_NOSUB)) != 0)
     {
       fprintf(stderr,"Regex compilation failed.\n");
       return 1;
     }
 
-//  snprintf(cmdstr, MAX_LINESIZE, "%s %s", SMTP_INJECTOR, argv[1]);
-  snprintf(cmdstr, MAX_LINESIZE, "%s", SMTP_INJECTOR);
+  if (argc >= 2)
+    {
+      /* user ID specified as an argument */
+      snprintf(cmdstr, MAX_LINESIZE, "%s %s", SMTP_INJECTOR, argv[1]);
+    }
+  else
+    {
+      /* first line should be user ID */
+      if (fgets(line, MAX_LINESIZE, stdin) == 0)
+	{
+	  fprintf(stderr, "Error reading from stdin\n");
+	  return -1;
+	}
+      
+      uid = strtoull(line, NULL, 10);
+      snprintf(cmdstr, MAX_LINESIZE, "%s %llu", SMTP_INJECTOR, uid);
+    }
   in_msg = 0;
 
   while (!feof(stdin) && !ferror(stdin))
