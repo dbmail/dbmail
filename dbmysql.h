@@ -109,6 +109,7 @@ int db_connect();
 int db_query (char *query);
 int db_check_user (char *username, struct list *userids);
 unsigned long db_get_inboxid (unsigned long *useridnr);
+unsigned long db_get_useridnr (unsigned long messageidnr);
 unsigned long db_insert_message (unsigned long *useridnr);
 unsigned long db_update_message (unsigned long *messageidnr, char *unique_id,
 				 unsigned long messagesize);
@@ -125,6 +126,9 @@ int db_createsession (unsigned long useridnr, struct session *sessionptr);
 int db_update_pop (struct session *sessionptr);
 unsigned long db_set_deleted ();
 unsigned long db_deleted_purge();
+int db_update_user_size (unsigned long useridnr, unsigned long addbytes);
+unsigned long db_check_sizelimit (unsigned long addblocksize, unsigned long useridnr);
+
 
 /* mailbox functionality */
 unsigned long db_findmailbox(const char *name, unsigned long useridnr);

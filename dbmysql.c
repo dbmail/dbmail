@@ -140,6 +140,77 @@ unsigned long db_get_inboxid (unsigned long *useridnr)
 }
 
 
+unsigned long db_get_useridnr (unsigned long messageidnr)
+{
+	/* returns the userid from a messageidnr */
+  char *ckquery;
+  unsigned long mailboxidnr;
+  
+  /* allocating memory for query */
+  memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
+
+	sprintf (ckquery,"SELECT mailboxidnr FROM message WHERE messageidnr = %lu",
+		messageidnr);
+
+  trace(TRACE_DEBUG,"db_get_useridnr(): executing query : [%s]",ckquery);
+  if (db_query(ckquery)==-1)
+    {
+      free(ckquery);
+      return 0;
+    }
+  if ((res = mysql_store_result(&conn)) == NULL) 
+    {
+      trace(TRACE_ERROR,"db_get_useridnr(): mysql_store_result failed: %s",mysql_error(&conn));
+      free(ckquery);
+      return 0;
+    }
+  if (mysql_num_rows(res)<1) 
+    {
+      trace (TRACE_DEBUG,"db_get_useridnr(): this is not right!");
+      mysql_free_result(res);
+      free(ckquery);
+      return 0; 
+    } 
+
+	if ((row = mysql_fetch_row(res))==NULL)
+	{
+		trace (TRACE_DEBUG,"db_get_useridnr(): fetch_row call failed");
+	}
+
+	mailboxidnr = atol(row[0]);
+
+	sprintf (ckquery, "SELECT owneridnr FROM mailbox WHERE mailboxidnr = %lu",
+			mailboxidnr);
+
+  if (db_query(ckquery)==-1)
+    {
+      free(ckquery);
+      return 0;
+    }
+  if ((res = mysql_store_result(&conn)) == NULL) 
+    {
+      trace(TRACE_ERROR,"db_get_useridnr(): mysql_store_result failed: %s",mysql_error(&conn));
+      free(ckquery);
+      return 0;
+    }
+  if (mysql_num_rows(res)<1) 
+    {
+      trace (TRACE_DEBUG,"db_get_useridnr(): this is not right!");
+      mysql_free_result(res);
+      free(ckquery);
+      return 0; 
+    } 
+
+	if ((row = mysql_fetch_row(res))==NULL)
+	{
+		trace (TRACE_DEBUG,"db_get_useridnr(): fetch_row call failed");
+	}
+	
+	/* return the useridnr */
+	return atol(row[0]);
+}
+
+
 
 unsigned long db_insert_message (unsigned long *useridnr)
 {
@@ -190,6 +261,8 @@ unsigned long db_insert_message_block (char *block, int messageidnr)
   
   if (block != NULL)
   {
+	  trace (TRACE_DEBUG,"db_insert_message_block(): inserting a %d bytes block",
+			  strlen(block));
 		/* allocate memory twice as much, for eacht character might be escaped 
 			added aditional 250 bytes for possible function err */
 		memtst((escblk=(char *)malloc(((strlen(block)*2)+250)))==NULL); 
@@ -709,6 +782,145 @@ int db_update_pop (struct session *sessionptr)
     }
   return 0;
 }
+
+int db_update_user_size (unsigned long useridnr, unsigned long addbytes)
+{
+	/* adds addbytes to the currmail_size in the user table */
+	char *ckquery;
+	unsigned long currbytes;	
+	
+	memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
+	sprintf (ckquery, "SELECT currmail_size FROM user WHERE useridnr = %lu",
+			useridnr);
+
+	if (db_query(ckquery) != 0)
+	{
+		trace (TRACE_ERROR,"db_update_user_size(): could not execute query [%s]",
+				ckquery);
+		free(ckquery);
+		return -1;
+	}
+  
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace (TRACE_ERROR,"db_update_user_size(): mysql_store_result failed:  %s",mysql_error(&conn));
+      free(ckquery);
+      return -1;
+    }
+
+  if (mysql_num_rows(res)<1)
+    {
+		trace (TRACE_ERROR,"db_update_user_size(): weird, this user does not seem to exist!");
+      free(ckquery);
+      return 0;
+    }
+	
+  row = mysql_fetch_row(res);
+  currbytes = atol (row[0]);
+	
+  trace (TRACE_DEBUG, "db_update_user_size(): the current bytecount for user %lu is %lu",
+		  useridnr, currbytes);
+
+  currbytes += addbytes;
+
+  trace (TRACE_DEBUG, "db_update_user_size(): new bytecount for user %lu is %lu",
+		  useridnr, currbytes);
+
+  sprintf (ckquery, "UPDATE user SET currmail_size = %lu WHERE useridnr = %lu",
+		  currbytes, useridnr);
+
+  trace (TRACE_DEBUG, "db_update_user_size(): updating using query [%s]",
+		  ckquery);
+
+  if (db_query(ckquery) != 0)
+  {
+		trace (TRACE_ERROR,"db_update_user_size(): could not execute query [%s]",
+				ckquery);
+		free(ckquery);
+		return -1;
+  }
+
+  free (ckquery);
+
+  return 0;
+}
+
+
+unsigned long db_check_sizelimit (unsigned long addblocksize, unsigned long messageidnr)
+{
+	/* returns -1 when a block cannot be inserted 
+		also does a complete rollback when this occurs 
+		returns 0 when situaties is ok */
+
+	char *ckquery;
+	unsigned long useridnr;
+	unsigned long currmail_size, maxmail_size;
+
+	useridnr = db_get_useridnr (messageidnr);
+	
+	memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
+	sprintf (ckquery, "SELECT currmail_size, maxmail_size FROM user WHERE useridnr = %lu",
+			useridnr);
+
+	if (db_query(ckquery) != 0)
+	{
+		trace (TRACE_ERROR,"db_check_sizelimit(): could not execute query [%s]",
+				ckquery);
+		free(ckquery);
+		return -1;
+	}
+  
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace (TRACE_ERROR,"db_check_sizelimit(): mysql_store_result failed:  %s",mysql_error(&conn));
+      free(ckquery);
+      return -1;
+    }
+
+  if (mysql_num_rows(res)<1)
+    {
+		trace (TRACE_ERROR,"db_check_sizelimit(): weird, this user does not seem to exist!");
+      free(ckquery);
+      return 0;
+    }
+	
+	row = mysql_fetch_row(res);
+	currmail_size = atol (row[0]);
+	maxmail_size = atol (row[1]);
+	
+	trace (TRACE_DEBUG, "db_check_sizelimit(): comparing currsize + blocksize  [%d], maxsize [%d]",
+			currmail_size+addblocksize, maxmail_size);
+	
+	if (((currmail_size + addblocksize) > maxmail_size) && (maxmail_size != 0))
+	{
+		trace (TRACE_INFO,"db_check_sizelimit(): mailboxsize of useridnr %lu exceed with %lu bytes", 
+				useridnr, (currmail_size+addblocksize)-maxmail_size);
+
+		/* user is exceeding, we're going to execute a rollback now */
+		sprintf (ckquery,"DELETE FROM messageblk WHERE messageidnr = %lu", 
+				messageidnr);
+		if (db_query(ckquery) != 0)
+		{
+			trace (TRACE_ERROR,"db_update_user_size(): rollback of mailbox add failed");
+			free (ckquery);
+			return -1;
+		}
+		sprintf (ckquery,"DELETE FROM message WHERE messageidnr = %lu",
+				messageidnr);
+
+		if (db_query(ckquery) != 0)
+		{
+			trace (TRACE_ERROR,"db_update_user_size(): rollblock of mailbox add failed. DB might be incosistent."
+					" run dbmail-maintenance");
+			free (ckquery);
+			return -1;
+		}
+		return -1;
+	}
+
+	return 0;
+}
+
 
 unsigned long db_deleted_purge()
 {

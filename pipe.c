@@ -89,7 +89,7 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
   /* 	this loop gets all the users from the list 
 	and check if they're in the database */
 
-  struct element *tmp;
+  struct element *tmp,*nodecpy;
   char *insertquery;
   char *updatequery;
   char *unique_id;
@@ -229,11 +229,20 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 	   * still we would need a way of checking which messageblks
 	   * belong to which messages */
 		
-	  /* adding this messageid to the message id list */
-	  list_nodeadd(&messageids,&temp_message_record_id,sizeof(temp_message_record_id));
 		
-	  /* adding the first header block per user */
-	  db_insert_message_block (header,temp_message_record_id);
+	  if (db_check_sizelimit (strlen(header), temp_message_record_id) == -1 )
+	  {
+			/* add a bounce here */
+	  }
+	  else  
+	  {
+			db_insert_message_block (header,temp_message_record_id);
+			db_update_user_size (db_get_useridnr(temp_message_record_id),strlen(header));
+	
+			/* adding this messageid to the message id list */
+			list_nodeadd(&messageids,&temp_message_record_id,sizeof(temp_message_record_id));
+	  }
+	  
 	}
       /* get next item */	
       tmp=tmp->nextnode;
@@ -257,7 +266,6 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 		/* we have local deliveries */ 
 		while (!feof(instream))
 		{
-			trace (TRACE_DEBUG,"errorstatus : [%d]",ferror(instream));
 			usedmem = fread (strblock, sizeof(char), READ_BLOCK_SIZE, instream);
 		
 			/* fread won't do this for us! */	
@@ -271,8 +279,20 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 				tmp=list_getstart(&messageids);
 				while (tmp!=NULL)
 				{
+					/* size checking */
+					if (db_check_sizelimit (strlen(strblock), *(unsigned long *)tmp->data) == -1)
+					{
+						/* to big, can't be added to this list anymore */
+						nodecpy = tmp;
+						tmp = tmp->nextnode;
+						list_nodedel (&messageids, nodecpy);
+					}
+					else
+					{
 					db_insert_message_block (strblock,*(unsigned long *)tmp->data);
+					db_update_user_size (db_get_useridnr(*(unsigned long *)tmp->data),strlen(strblock));
 					tmp=tmp->nextnode;
+					}
 				}
 				
 				/* resetting strlen for strblock */

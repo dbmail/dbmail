@@ -1,6 +1,8 @@
 $Id$
 
 
+- rollback problem, deduct sizes from currmail_size
+- deduct sizes when removing mail (IMAP server also!)
 - message arrival in datatime field 
 - fix the resolving (pop daemon is not resolving)
 - commandline program should be created for adding email addresses
