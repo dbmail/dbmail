@@ -327,6 +327,8 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
       /* we have local deliveries */ 
       while (!feof(instream))
 	{
+	  memset(strblock, 0, READ_BLOCK_SIZE+1);
+
 	  usedmem = fread (strblock, sizeof(char), READ_BLOCK_SIZE, instream);
 	  if (ferror(instream))
 	    {
