@@ -1,3 +1,9 @@
+2004-11-22  Paul Stevens <paul@nfg.nl>
+
+	* imaputils.h: added mime_unwrap
+	* imaputils.c: use mime_unwrap in show_body_structure_list to unwrap
+	mime fieldvalues containing newlines.
+
 2004-11-22  Ilja Booij  <ilja@Ilja-Booijs-Computer.local>
 
 	* pipe.c (send_reply): Reverted back from "Delivered-To" to 

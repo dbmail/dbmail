@@ -610,7 +610,9 @@ int show_mime_parameter_list(FILE * outstream, struct mime_record *mr,
 			     int force_subtype, int only_extension)
 {
 	int idx, delimiter, start, end;
-
+	char *fieldvalue = (char *)my_malloc(sizeof(char *)*255);
+	char *tmpstring = (char *)my_malloc(sizeof(char *)*255);
+	
 	/* find first delimiter */
 	for (delimiter = 0;
 	     mr->value[delimiter] && mr->value[delimiter] != ';';
@@ -674,12 +676,9 @@ int show_mime_parameter_list(FILE * outstream, struct mime_record *mr,
 				break;	/* ?? */
 
 			/* check if quotation marks are specified */
-			if (mr->value[idx] == '\"'
-			    || mr->value[idx] == '\'') {
+			if (mr->value[idx] == '\"' || mr->value[idx] == '\'') {
 				start = ++idx;
-				while (mr->value[idx]
-				       && mr->value[idx] !=
-				       mr->value[start - 1])
+				while (mr->value[idx] && mr->value[idx] != mr->value[start - 1])
 					idx++;
 
 				if (!mr->value[idx] || mr->value[idx + 1] != '=')	/* ?? no end quote */
@@ -689,8 +688,7 @@ int show_mime_parameter_list(FILE * outstream, struct mime_record *mr,
 				idx += 2;	/* skip to after '=' */
 			} else {
 				start = idx;
-				while (mr->value[idx]
-				       && mr->value[idx] != '=')
+				while (mr->value[idx] && mr->value[idx] != '=')
 					idx++;
 
 				if (!mr->value[idx])	/* ?? no value specified */
@@ -699,19 +697,14 @@ int show_mime_parameter_list(FILE * outstream, struct mime_record *mr,
 				end = idx;
 				idx++;	/* skip to after '=' */
 			}
-
-			fprintf(outstream, "\"%.*s\" ", (end - start),
-				&mr->value[start]);
-
+			
+			fprintf(outstream, "\"%.*s\" ", (end - start), &mr->value[start]);
 
 			/* now process the value; practically same procedure */
 
-			if (mr->value[idx] == '\"'
-			    || mr->value[idx] == '\'') {
+			if (mr->value[idx] == '\"' || mr->value[idx] == '\'') {
 				start = ++idx;
-				while (mr->value[idx]
-				       && mr->value[idx] !=
-				       mr->value[start - 1])
+				while (mr->value[idx] && mr->value[idx] != mr->value[start - 1])
 					idx++;
 
 				if (!mr->value[idx])	/* ?? no end quote */
@@ -722,17 +715,27 @@ int show_mime_parameter_list(FILE * outstream, struct mime_record *mr,
 			} else {
 				start = idx;
 
-				while (mr->value[idx]
-				       && !isspace(mr->value[idx])
-				       && mr->value[idx] != ';')
+				while (mr->value[idx] && !isspace(mr->value[idx]) && mr->value[idx] != ';')
 					idx++;
 
 				end = idx;
 			}
 
-			fprintf(outstream, "\"%.*s\"", (end - start),
-				&mr->value[start]);
-
+			
+			/* Thunderbird doesn't like mime-values that are wrapped, so
+			 * we unwrap mime-values 
+			 *
+			 * this code assumes mime values are no longer than 255 chars.
+			 *
+			 * PJS
+			 */
+			
+			
+			snprintf(tmpstring,255,"\"%.*s\"", (end - start), &mr->value[start]);
+			mime_unwrap(fieldvalue,tmpstring);
+			fprintf(outstream,fieldvalue);
+			//fprintf(outstream, "\"%.*s\"", (end - start), &mr->value[start]);
+			
 			/* check for more name/val pairs */
 			while (mr->value[idx] && mr->value[idx] != ';')
 				idx++;
@@ -747,7 +750,9 @@ int show_mime_parameter_list(FILE * outstream, struct mime_record *mr,
 	} else {
 		fprintf(outstream, " NIL");
 	}
-
+	my_free(fieldvalue);
+	my_free(tmpstring);
+			
 	return 0;
 }
 
@@ -3160,6 +3165,20 @@ int init_cache()
 
 	cached_msg.file_dumped = 0;
 	cached_msg.dumpsize = 0;
+	return 0;
+}
+
+/* unwrap strings */
+int mime_unwrap(char *to, const char *from) 
+{
+	while (*from) {
+		if (((*from == '\n') || (*from == '\r')) && isspace(*(from+1))) {
+			from+=2;
+			continue;
+		}
+		*to++=*from++;
+	}
+	*to='\0';
 	return 0;
 }
 
