@@ -112,7 +112,7 @@ SUBDIRS = mysql pgsql auth sort man
 @SIEVE_TRUE@SIEVEPROGS = dbmail-sievecmd dbmail-timsieved
 
 bin_PROGRAMS = dbmail-readvut $(SIEVEPROGS)
-sbin_PROGRAMS = dbmail-smtp dbmail-pop3d dbmail-imapd dbmail-maintenance dbmail-adduser dbmail-lmtpd 
+sbin_PROGRAMS = dbmail-smtp dbmail-pop3d dbmail-imapd dbmail-util dbmail-users dbmail-lmtpd 
 
 COMMON = config.c debug.c list.c dbmd5.c md5.c db.c misc.c mime.c pidfile.c
 SERVER = server.c serverchild.c
@@ -130,11 +130,11 @@ dbmail_pop3d_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @L
 dbmail_imapd_SOURCES = quota.c imap4.c imaputil.c imapcommands.c memblock.c rfcmsg.c imapd.c dbsearch.c dbmsgbuf.c acl.c
 dbmail_imapd_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ 
 
-dbmail_maintenance_SOURCES = maintenance.c
-dbmail_maintenance_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_util_SOURCES = util.c
+dbmail_util_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
-dbmail_adduser_SOURCES = user.c
-dbmail_adduser_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_users_SOURCES = user.c
+dbmail_users_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
 dbmail_readvut_SOURCES = vut2dbmail.c
 dbmail_readvut_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
@@ -171,8 +171,8 @@ dsn.lo
 @SIEVE_TRUE@bin_PROGRAMS =  dbmail-readvut$(EXEEXT) \
 @SIEVE_TRUE@dbmail-sievecmd$(EXEEXT) dbmail-timsieved$(EXEEXT)
 sbin_PROGRAMS =  dbmail-smtp$(EXEEXT) dbmail-pop3d$(EXEEXT) \
-dbmail-imapd$(EXEEXT) dbmail-maintenance$(EXEEXT) \
-dbmail-adduser$(EXEEXT) dbmail-lmtpd$(EXEEXT)
+dbmail-imapd$(EXEEXT) dbmail-util$(EXEEXT) \
+dbmail-users$(EXEEXT) dbmail-lmtpd$(EXEEXT)
 PROGRAMS =  $(bin_PROGRAMS) $(sbin_PROGRAMS)
 
 dbmail_readvut_OBJECTS =  vut2dbmail.$(OBJEXT)
@@ -197,12 +197,12 @@ rfcmsg.$(OBJEXT) imapd.$(OBJEXT) dbsearch.$(OBJEXT) dbmsgbuf.$(OBJEXT) \
 acl.$(OBJEXT)
 dbmail_imapd_DEPENDENCIES =  libdbmail.la
 dbmail_imapd_LDFLAGS = 
-dbmail_maintenance_OBJECTS =  maintenance.$(OBJEXT)
-dbmail_maintenance_DEPENDENCIES =  libdbmail.la
-dbmail_maintenance_LDFLAGS = 
-dbmail_adduser_OBJECTS =  user.$(OBJEXT)
-dbmail_adduser_DEPENDENCIES =  libdbmail.la
-dbmail_adduser_LDFLAGS = 
+dbmail_util_OBJECTS =  util.$(OBJEXT)
+dbmail_util_DEPENDENCIES =  libdbmail.la
+dbmail_util_LDFLAGS = 
+dbmail_users_OBJECTS =  user.$(OBJEXT)
+dbmail_users_DEPENDENCIES =  libdbmail.la
+dbmail_users_LDFLAGS = 
 dbmail_lmtpd_OBJECTS =  lmtp.$(OBJEXT) lmtpd.$(OBJEXT)
 dbmail_lmtpd_DEPENDENCIES =  libdbmail.la
 dbmail_lmtpd_LDFLAGS = 
@@ -224,13 +224,13 @@ DEP_FILES =  .deps/acl.P .deps/config.P .deps/db.P .deps/dbmd5.P \
 .deps/dbmsgbuf.P .deps/dbsearch.P .deps/debug.P .deps/dsn.P \
 .deps/forward.P .deps/header.P .deps/imap4.P .deps/imapcommands.P \
 .deps/imapd.P .deps/imaputil.P .deps/list.P .deps/lmtp.P .deps/lmtpd.P \
-.deps/main.P .deps/maintenance.P .deps/md5.P .deps/memblock.P \
+.deps/main.P .deps/util.P .deps/md5.P .deps/memblock.P \
 .deps/mime.P .deps/misc.P .deps/pidfile.P .deps/pipe.P .deps/pop3.P .deps/pop3d.P \
 .deps/quota.P .deps/rfcmsg.P .deps/server.P .deps/serverchild.P \
 .deps/sievecmd.P .deps/timsieve.P .deps/timsieved.P .deps/user.P \
 .deps/vut2dbmail.P
-SOURCES = $(libdbmail_la_SOURCES) $(dbmail_readvut_SOURCES) $(dbmail_sievecmd_SOURCES) $(dbmail_timsieved_SOURCES) $(dbmail_smtp_SOURCES) $(dbmail_pop3d_SOURCES) $(dbmail_imapd_SOURCES) $(dbmail_maintenance_SOURCES) $(dbmail_adduser_SOURCES) $(dbmail_lmtpd_SOURCES)
-OBJECTS = $(libdbmail_la_OBJECTS) $(dbmail_readvut_OBJECTS) $(dbmail_sievecmd_OBJECTS) $(dbmail_timsieved_OBJECTS) $(dbmail_smtp_OBJECTS) $(dbmail_pop3d_OBJECTS) $(dbmail_imapd_OBJECTS) $(dbmail_maintenance_OBJECTS) $(dbmail_adduser_OBJECTS) $(dbmail_lmtpd_OBJECTS)
+SOURCES = $(libdbmail_la_SOURCES) $(dbmail_readvut_SOURCES) $(dbmail_sievecmd_SOURCES) $(dbmail_timsieved_SOURCES) $(dbmail_smtp_SOURCES) $(dbmail_pop3d_SOURCES) $(dbmail_imapd_SOURCES) $(dbmail_util_SOURCES) $(dbmail_users_SOURCES) $(dbmail_lmtpd_SOURCES)
+OBJECTS = $(libdbmail_la_OBJECTS) $(dbmail_readvut_OBJECTS) $(dbmail_sievecmd_OBJECTS) $(dbmail_timsieved_OBJECTS) $(dbmail_smtp_OBJECTS) $(dbmail_pop3d_OBJECTS) $(dbmail_imapd_OBJECTS) $(dbmail_util_OBJECTS) $(dbmail_users_OBJECTS) $(dbmail_lmtpd_OBJECTS)
 
 all: all-redirect
 .SUFFIXES:
@@ -418,13 +418,13 @@ dbmail-imapd$(EXEEXT): $(dbmail_imapd_OBJECTS) $(dbmail_imapd_DEPENDENCIES)
 	@rm -f dbmail-imapd$(EXEEXT)
 	$(LINK) $(dbmail_imapd_LDFLAGS) $(dbmail_imapd_OBJECTS) $(dbmail_imapd_LDADD) $(LIBS)
 
-dbmail-maintenance$(EXEEXT): $(dbmail_maintenance_OBJECTS) $(dbmail_maintenance_DEPENDENCIES)
-	@rm -f dbmail-maintenance$(EXEEXT)
-	$(LINK) $(dbmail_maintenance_LDFLAGS) $(dbmail_maintenance_OBJECTS) $(dbmail_maintenance_LDADD) $(LIBS)
+dbmail-util$(EXEEXT): $(dbmail_util_OBJECTS) $(dbmail_util_DEPENDENCIES)
+	@rm -f dbmail-util$(EXEEXT)
+	$(LINK) $(dbmail_util_LDFLAGS) $(dbmail_util_OBJECTS) $(dbmail_util_LDADD) $(LIBS)
 
-dbmail-adduser$(EXEEXT): $(dbmail_adduser_OBJECTS) $(dbmail_adduser_DEPENDENCIES)
-	@rm -f dbmail-adduser$(EXEEXT)
-	$(LINK) $(dbmail_adduser_LDFLAGS) $(dbmail_adduser_OBJECTS) $(dbmail_adduser_LDADD) $(LIBS)
+dbmail-users$(EXEEXT): $(dbmail_users_OBJECTS) $(dbmail_users_DEPENDENCIES)
+	@rm -f dbmail-users$(EXEEXT)
+	$(LINK) $(dbmail_users_LDFLAGS) $(dbmail_users_OBJECTS) $(dbmail_users_LDADD) $(LIBS)
 
 dbmail-lmtpd$(EXEEXT): $(dbmail_lmtpd_OBJECTS) $(dbmail_lmtpd_DEPENDENCIES)
 	@rm -f dbmail-lmtpd$(EXEEXT)
