@@ -97,6 +97,7 @@ int IMAPClientHandler(ClientInfo *ci)
   int nfaultyresponses;
   imap_userdata_t *ud = NULL;
   mailbox_t newmailbox;
+  int this_was_noop = 0;
 
   /* init: add userdata */
   ci->userData = my_malloc(sizeof(imap_userdata_t));
@@ -306,7 +307,19 @@ int IMAPClientHandler(ClientInfo *ci)
 
       trace(TRACE_INFO, "IMAPClientHandler(): Executing command %s...\n",IMAP_COMMANDS[i]);
 
-      result = (*imap_handler_functions[i])(tag, args, ci);
+      /* dirty hack to bypass a NOOP problem: 
+	 unilateral server responses are not recognised by some clients 
+	 if they are after the OK response
+      */
+      this_was_noop = 0;
+
+      if (i != IMAP_COMM_NOOP) 
+	      result = (*imap_handler_functions[i])(tag, args, ci);
+      else {
+	      this_was_noop = 1;
+	      result = 0;
+      }
+      
       if (result == -1)
 	done = 1; /* fatal error occurred, kick this user */
 
@@ -359,6 +372,9 @@ int IMAPClientHandler(ClientInfo *ci)
 	  my_free(ud->mailbox.seq_list);
 	  memcpy(&ud->mailbox, &newmailbox, sizeof(newmailbox));
 	}
+      
+      if (this_was_noop) 
+	      fprintf(ci->tx, "%s OK NOOP completed\r\n", tag);
 
       for (i=0; args[i]; i++) 
 	{
