@@ -94,7 +94,7 @@ enum table_messageblk /* prototype for messageblk table */
 
 int db_connect();
 int db_disconnect();
-int db_query (const char *thequery, void *target_result);
+int db_query (const char *thequery, void **target_result);
 
 
 char *db_get_config_item (char *item, int type);
