@@ -345,16 +345,23 @@ char* auth_getencryption(u64_t useridnr)
 }
 
 
-
+/* recursive function, should be called with checks == -1 from main routine */
 int auth_check_user (const char *username, struct list *userids, int checks) 
 {
-  int occurences=0;
+  int occurences=0, r;
   PGresult *saveres = __auth_res;
   u64_t PQcounter;
   char *value;
 
   trace(TRACE_DEBUG,"auth_check_user(): checking user [%s] in alias table",username);
   
+  if (checks > MAX_CHECKS_DEPTH)
+    {
+      trace(TRACE_ERROR, "auth_check_user(): maximum checking depth reached, there probably is a loop in "
+	    "your alias table");
+      return -1;
+    }
+
   snprintf (__auth_query_data, AUTH_QUERY_SIZE,  "SELECT deliver_to FROM aliases WHERE "
 	    "alias ~* '^%s$'",username);
   trace(TRACE_DEBUG,"auth_check_user(): checks [%d]", checks);
@@ -400,7 +407,27 @@ int auth_check_user (const char *username, struct list *userids, int checks)
 	  /* do a recursive search for deliver_to */
 	  value = PQgetvalue(__auth_res, PQcounter, 0);
 	  trace (TRACE_DEBUG,"auth_check_user(): checking user %s to %s",username, value);
-	  occurences += auth_check_user (value, userids, 1);
+
+	  r = auth_check_user (value, userids, (checks < 0) ? 1 : checks+1);
+	  if (r < 0)
+	    {
+	      /* loop detected */
+	      PQclear(__auth_res);
+	      __auth_res = saveres;
+
+	      if (checks > 0)
+		return -1; /* still in recursive call */
+
+	      if (userids->start)
+		{
+		  list_freelist(&userids->start);
+		  userids->total_nodes = 0;
+		}
+
+	      return 0; /* report to calling routine: no results */
+	    }
+
+	  occurences += r;
         }
     }   
   

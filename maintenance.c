@@ -32,7 +32,11 @@ int main(int argc, char *argv[])
 
   int opt;
   int nlost,i;
-  u64_t *lostlist;
+  struct list lostlist;
+  struct element *el;
+  u64_t id;
+
+  u64_t *llost;
 
   u64_t deleted_messages;
   u64_t messages_set_to_delete;
@@ -184,30 +188,36 @@ int main(int argc, char *argv[])
        */
 
       /* first part */
-      if (db_icheck_messageblks(&nlost, &lostlist) < 0)
+      if (db_icheck_messageblks(&lostlist) < 0)
 	{
 	  printf ("Failed. An error occured. Please check log.\n");
 	  db_disconnect();
 	  return -1;
 	}
     
-      if (nlost > 0)
+      if (lostlist.total_nodes > 0)
 	{
-	  printf ("Ok. Found [%d] unconnected messageblks:\n", nlost);
+	  printf ("Ok. Found [%ld] unconnected messageblks:\n", lostlist.total_nodes);
       
-	  for (i=0; i<nlost; i++)
+	  el = lostlist.start;
+	  while (el)
 	    {
+	      id = *((u64_t*)el->data);
 	      if (should_fix == 0)
-		printf("%llu ", lostlist[i]);
+		printf("%llu ", id);
 	      else
 		{
-		  if (db_delete_messageblk(lostlist[i]) < 0)
-		    printf("Warning: could not delete messageblock #%llu. Check log.\n",lostlist[i]);
+		  if (db_delete_messageblk(id) < 0)
+		    printf("Warning: could not delete messageblock #%llu. Check log.\n", id);
 		  else
-		    printf("%llu (removed from dbase)\n",lostlist[i]);
+		    printf("%llu (removed from dbase)\n",id);
 		}
+
+	      el = el->nextnode;
 	    }
         
+	  list_freelist(&lostlist.start);
+
 	  printf ("\n");
 	  if (should_fix == 0)
 	    {
@@ -218,13 +228,11 @@ int main(int argc, char *argv[])
       else 
 	printf ("Ok. Found 0 unconnected messageblks.\n");
 
-      my_free(lostlist);
-
 
       /* second part */
       printf ("Now checking DBMAIL message integrity.. ");
 
-      if (db_icheck_messages(&nlost, &lostlist) < 0)
+      if (db_icheck_messages(&nlost, &llost) < 0)
 	{
 	  printf ("Failed. An error occured. Please check log.\n");
 	  db_disconnect();
@@ -238,13 +246,13 @@ int main(int argc, char *argv[])
 	  for (i=0; i<nlost; i++)
 	    {
 	      if (should_fix == 0)
-		printf("%llu ", lostlist[i]);
+		printf("%llu ", llost[i]);
 	      else
 		{
-		  if (db_delete_message(lostlist[i]) < 0)
-		    printf("Warning: could not delete message #%llu. Check log.\n",lostlist[i]);
+		  if (db_delete_message(llost[i]) < 0)
+		    printf("Warning: could not delete message #%llu. Check log.\n",llost[i]);
 		  else
-		    printf("%llu (removed from dbase)\n",lostlist[i]);
+		    printf("%llu (removed from dbase)\n",llost[i]);
 		}
 	    }
         
@@ -258,13 +266,13 @@ int main(int argc, char *argv[])
       else 
 	printf ("Ok. Found 0 unconnected messages.\n");
         
-      my_free(lostlist);
+      my_free(llost);
 
 
       /* third part */
       printf ("Now checking DBMAIL mailbox integrity.. ");
 
-      if (db_icheck_mailboxes(&nlost, &lostlist) < 0)
+      if (db_icheck_mailboxes(&nlost, &llost) < 0)
 	{
 	  printf ("Failed. An error occured. Please check log.\n");
 	  db_disconnect();
@@ -278,13 +286,13 @@ int main(int argc, char *argv[])
 	  for (i=0; i<nlost; i++)
 	    {
 	      if (should_fix == 0)
-		printf("%llu ", lostlist[i]);
+		printf("%llu ", llost[i]);
 	      else
 		{
-		  if (db_delete_mailbox(lostlist[i]) < 0)
-		    printf("Warning: could not delete mailbox #%llu. Check log.\n",lostlist[i]);
+		  if (db_delete_mailbox(llost[i]) < 0)
+		    printf("Warning: could not delete mailbox #%llu. Check log.\n",llost[i]);
 		  else
-		    printf("%llu (removed from dbase)\n",lostlist[i]);
+		    printf("%llu (removed from dbase)\n",llost[i]);
 		}
 	    }
         
@@ -298,7 +306,7 @@ int main(int argc, char *argv[])
       else 
 	printf ("Ok. Found 0 unconnected mailboxes.\n");
         
-      my_free(lostlist);
+      my_free(llost);
     }
 
   if (check_iplog)

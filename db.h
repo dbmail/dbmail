@@ -17,6 +17,8 @@
 #define DEF_QUERYSIZE 1024
 #define DUMP_BUF_SIZE 1024
 
+#define ICHECK_RESULTSETSIZE 1000000
+
 #define MAX_EMAIL_SIZE 250
 
 /* size of the messageblk's */
@@ -125,7 +127,7 @@ int db_rollback_insert(u64_t ownerid, const char *unique_id);
 int db_log_ip(const char *ip);
 int db_cleanup_iplog(const char *lasttokeep);
 
-int db_icheck_messageblks(int *nlost, u64_t **lostlist);
+int db_icheck_messageblks(struct list *lostlist);
 int db_icheck_messages(int *nlost, u64_t **lostlist);
 int db_icheck_mailboxes(int *nlost, u64_t **lostlist);
 

@@ -12,6 +12,8 @@
 
 #include "dbmailtypes.h"
 
+#define MAX_CHECKS_DEPTH 1000
+
 /* #define _DBAUTH_STRICT_USER_CHECK */
 
 int auth_connect();

@@ -1410,7 +1410,7 @@ int db_cleanup_iplog(const char *lasttokeep)
  *
  * the caller should free this memory!
  */
-int db_icheck_messageblks(int *nlost, u64_t **lostlist)
+int db_icheck_messageblks_old(int *nlost, u64_t **lostlist)
 {
   int i;
   char *row;
@@ -1453,6 +1453,116 @@ int db_icheck_messageblks(int *nlost, u64_t **lostlist)
       (*lostlist)[i++] = strtoull(row, NULL, 10);
       PQcounter++;
     }
+  return 0;
+}
+
+
+
+/* 
+ * will check for messageblks that are not
+ * connected to messages 
+ *
+ * returns -1 on dbase error, -2 on memory error, 0 on succes
+ * on succes lostlist will be a list containing nlost items being the messageblknr's of the
+ * lost messageblks
+ *
+ * the caller should free this memory!
+ */
+int db_icheck_messageblks(struct list *lostlist)
+{
+  u64_t nblks, start, j;
+  u64_t ncurr = 0;
+  struct doubleID_t { u64_t msgblkid, msgid; } *currids = NULL;
+  list_init(lostlist);
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT messageblk_idnr FROM messageblks ORDER BY messageblk_idnr DESC LIMIT 1");
+  if (db_query(query)==-1)
+    {
+      trace (TRACE_ERROR,"db_icheck_messageblks(): Could not execute query [%s]",query);
+      return -1;
+    }
+  
+  if (PQntuples(res) != 1)
+    {
+      trace(TRACE_WARNING, "db_icheck_messageblks(): empty messageblk table");
+      return 0; /* nothing in table ? */
+    }
+
+  nblks = strtoull(PQgetvalue(res, 0, 0), NULL, 10);
+  PQclear(res);
+
+  for (start=0; start < nblks; start += ICHECK_RESULTSETSIZE)
+    {
+      snprintf(query, DEF_QUERYSIZE, "SELECT messageblk_idnr, message_idnr FROM messageblks OFFSET %llu LIMIT %llu", 
+	       start, (u64_t)ICHECK_RESULTSETSIZE);
+
+      if (db_query(query)==-1)
+	{
+	  trace (TRACE_ERROR,"db_icheck_messageblks(): Could not execute query [%s]",query);
+	  return -1;
+	}
+      
+      trace(TRACE_DEBUG, "db_icheck_messageblks(): fetching another set of %llu messageblk id's..",
+	    (u64_t)ICHECK_RESULTSETSIZE);
+
+      
+      ncurr = PQntuples(res);
+      currids = (struct doubleID_t*)my_malloc(sizeof(struct doubleID_t) * ncurr);
+      if (!currids)
+	{
+	  trace(TRACE_ERROR,"db_icheck_messageblks(): out of memory when allocatin %d items\n",ncurr);
+	  return -2;
+	}
+
+      /*  copy current data set */
+      for (j=0; j<ncurr; j++)
+	{
+	  currids[j].msgblkid = strtoull(PQgetvalue(res, j, 0), NULL, 10);
+	  currids[j].msgid = strtoull(PQgetvalue(res, j, 1), NULL, 10);
+	}
+
+      PQclear(res); /* free result set */
+
+      /* now check for each msgblkID if the associated msgID exists */
+      /* if not, the msgblkID is added to 'lostlist' */
+      
+      for (j=0; j<ncurr; j++)
+	{
+	  snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr FROM messages WHERE message_idnr = %llu::bigint",
+		   currids[j].msgid);
+ 
+	  if (db_query(query)==-1)
+	    {
+	      list_freelist(&lostlist->start);
+	      my_free(currids);
+	      currids = NULL;
+	      trace (TRACE_ERROR,"db_icheck_messageblks(): Could not execute query [%s]",query);
+	      return -1;
+	    }
+	  
+	  if (PQntuples(res) == 0)
+	    {
+	      /* this is a lost block */
+	      trace(TRACE_INFO,"db_icheck_messageblks(): found lost block, ID [%llu]", currids[j].msgblkid);
+
+	      if (! list_nodeadd(lostlist, &currids[j].msgblkid, sizeof(currids[j].msgblkid)) )
+		{
+		  trace(TRACE_ERROR,"db_icheck_messageblks(): could not add block to list");
+		  list_freelist(&lostlist->start);
+		  my_free(currids);
+		  currids = NULL;
+		  return -2;
+		}
+	    }
+
+	  PQclear(res);
+	}
+
+      /* free set of ID's */
+      my_free(currids);
+      currids = NULL;
+    }
+
   return 0;
 }
 
