@@ -11,6 +11,60 @@
 struct session;
 struct list;
 
+enum table_aliases /* prototype for aliases table */
+{
+	ALIASES_ALIAS_IDNR,
+	ALIASES_ALIAS,
+	ALIASES_USERIDNR
+};
+
+enum table_user /* prototype for user table */
+{
+	USER_USERIDNR,
+	USER_USERID,
+	USER_PASSWD,
+	USER_CLIENTID,
+	USER_MAXMAIL
+};
+
+enum table_mailbox /* prototype for mailbox table */
+{
+	MAILBOX_MAILBOXIDNR,
+	MAILBOX_OWNERIDNR,
+	MAILBOX_NAME,
+	MAILBOX_SEEN_FLAG,
+	MAILBOX_ANSWERED_FLAG,
+	MAILBOX_DELETED_FLAG,
+	MAILBOX_FLAGGED_FLAG,
+	MAILBOX_RECENT_FLAG,
+	MAILBOX_DRAFT_FLAG,
+	MAILBOX_NO_INFERIORS,
+	MAILBOX_NO_SELECT,
+	MAILBOX_PERMISSIONS
+};
+	
+enum table_message /* prototype for message table */
+{
+	MESSAGE_MESSAGEBLKNR,
+	MESSAGE_MAILBOXIDNR,
+	MESSAGE_MESSAGESIZE,
+	MESSAGE_SEEN_FLAG,
+	MESSAGE_ANSWERED_FLAG,
+	MESSAGE_DELETED_FLAG,
+	MESSAGE_RECENT_FLAG,
+	MESSAGE_DRAFT_FLAG,
+	MESSAGE_UNIQUE_ID
+};
+
+enum table_messageblk /* prototype for messageblk table */
+{
+	MESSAGEBLK_MESSAGEBLKNR,
+	MESSAGEBLK_MESSAGEIDNR,
+	MESSAGEBLK_MESSAGEBLK,
+	MESSAGEBLK_BLOCKSIZE
+};
+
+
 int db_connect();
 int db_query (char *query);
 int db_check_user (char *username, struct list *userids);
