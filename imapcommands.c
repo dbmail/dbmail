@@ -9,6 +9,7 @@
 #include "imapcommands.h"
 #include "imaputil.h"
 #include "dbmysql.h"
+#include "memblock.h"
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
@@ -1703,7 +1704,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
   int bad_response_send = 0,actual_cnt;
   fetch_items_t *fi,fetchitem;
   mime_message_t *msgpart;
-  char date[IMAP_INTERNALDATE_LEN],*endptr;
+  char date[IMAP_INTERNALDATE_LEN],*endptr,ch;
   unsigned long thisnum;
   long tmpdumpsize,cnt;
   struct list fetch_list;
@@ -1886,7 +1887,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		  cached_msg.msg_parsed = 0;
 		  cached_msg.num = -1;
 		  cached_msg.file_dumped = 0;
-		  rewind(cached_msg.filedump);
+		  mreset(cached_msg.memdump);
 
 		  result = db_fetch_headers(thisnum, &cached_msg.msg);
 		  if (result == -2)
@@ -1963,14 +1964,15 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
 	      if (fi->getRFC822 || fi->getRFC822Peek)
 		{
-		  rewind(cached_msg.filedump);
 		  if (cached_msg.file_dumped == 0 || cached_msg.num != thisnum)
 		    {
+		      mreset(cached_msg.memdump);
+
 		      cached_msg.dumpsize  = 
-			rfcheader_dump(cached_msg.filedump, &cached_msg.msg.rfcheader, args, 0, 0);
+			rfcheader_dump(cached_msg.memdump, &cached_msg.msg.rfcheader, args, 0, 0);
 
 		      cached_msg.dumpsize += 
-			db_dump_range(cached_msg.filedump, cached_msg.msg.bodystart, 
+			db_dump_range(cached_msg.memdump, cached_msg.msg.bodystart, 
 				      cached_msg.msg.bodyend, thisnum);
 
 		      cached_msg.file_dumped = 1;
@@ -1987,13 +1989,16 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			}
 		    }
 		  
-		  fseek(cached_msg.filedump, 0, SEEK_SET);
+		  mseek(cached_msg.memdump, 0, SEEK_SET);
 
 		  fprintf(ci->tx, "RFC822 {%ld}\r\n", cached_msg.dumpsize);
 
 		  tmpdumpsize = cached_msg.dumpsize;
 		  while (tmpdumpsize--)
-		    fputc(fgetc(cached_msg.filedump), ci->tx);
+		    {
+		      mread(&ch, 1, cached_msg.memdump);
+		      fputc(ch, ci->tx);
+		    }
 
 		  if (fi->getRFC822)
 		    setseen = 1;
@@ -2010,14 +2015,13 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
 	      if (fi->getBodyTotal || fi->getBodyTotalPeek)
 		{
-		  rewind(cached_msg.filedump);
 		  if (cached_msg.file_dumped == 0 || cached_msg.num != thisnum)
 		    {
 		      cached_msg.dumpsize  = 
-			rfcheader_dump(cached_msg.filedump, &cached_msg.msg.rfcheader, args, 0, 0);
+			rfcheader_dump(cached_msg.memdump, &cached_msg.msg.rfcheader, args, 0, 0);
 
 		      cached_msg.dumpsize += 
-			db_dump_range(cached_msg.filedump, cached_msg.msg.bodystart, 
+			db_dump_range(cached_msg.memdump, cached_msg.msg.bodystart, 
 				      cached_msg.msg.bodyend, thisnum);
 
 
@@ -2037,18 +2041,21 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		  
 		  if (fi->bodyfetch.octetstart == -1)
 		    {
-		      fseek(cached_msg.filedump, 0, SEEK_SET);
+		      mseek(cached_msg.memdump, 0, SEEK_SET);
 
 		      fprintf(ci->tx, "BODY[] {%ld}\r\n", cached_msg.dumpsize);
 
 		      sleep(1);
 		      tmpdumpsize = cached_msg.dumpsize;
 		      while (tmpdumpsize--)
-			fputc(fgetc(cached_msg.filedump), ci->tx);
+			{
+			  mread(&ch, 1, cached_msg.memdump);
+			  fputc(ch, ci->tx);
+			}
 		    }
 		  else
 		    {
-		      fseek(cached_msg.filedump, fi->bodyfetch.octetstart, SEEK_SET);
+		      mseek(cached_msg.memdump, fi->bodyfetch.octetstart, SEEK_SET);
 
 		      actual_cnt = (fi->bodyfetch.octetcnt > 
 				    (cached_msg.dumpsize - fi->bodyfetch.octetstart)) ? 
@@ -2058,7 +2065,10 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			      actual_cnt); 
 
 		      while (actual_cnt--)
-			fputc(fgetc(cached_msg.filedump), ci->tx);
+			{
+			  mread(&ch, 1, cached_msg.memdump);
+			  fputc(ch, ci->tx);
+			}
 		    }		      
 
 		  if (fi->getBodyTotal)
@@ -2068,36 +2078,41 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
 	      if (fi->getRFC822Header)
 		{
-		  rewind(cached_msg.tmpdump);
+		  mrewind(cached_msg.tmpdump);
 		  tmpdumpsize = 
 		    rfcheader_dump(cached_msg.tmpdump, &cached_msg.msg.rfcheader, args, 0, 0);
 
-		  fseek(cached_msg.tmpdump, 0, SEEK_SET);
+		  mseek(cached_msg.tmpdump, 0, SEEK_SET);
 
 		  fprintf(ci->tx, "RFC822.HEADER {%ld}\r\n",tmpdumpsize);
 		  while (tmpdumpsize--)
-		    fputc(fgetc(cached_msg.tmpdump), ci->tx);
-
+		    {
+		      mread(&ch, 1, cached_msg.tmpdump);
+		      fputc(ch, ci->tx);
+		    }
 		}
 	      
 	      if (fi->getRFC822Text)
 		{
-		  rewind(cached_msg.tmpdump);
+		  mrewind(cached_msg.tmpdump);
 		  tmpdumpsize = db_dump_range(cached_msg.tmpdump, cached_msg.msg.bodystart, 
 					      cached_msg.msg.bodyend, thisnum);
 
-		  fseek(cached_msg.tmpdump, 0, SEEK_SET);
+		  mseek(cached_msg.tmpdump, 0, SEEK_SET);
 
 		  fprintf(ci->tx, "RFC822.TEXT {%ld}\r\n",tmpdumpsize);
 		  while (tmpdumpsize--)
-		    fputc(fgetc(cached_msg.tmpdump), ci->tx);
+		    {
+		      mread(&ch, 1, cached_msg.tmpdump);
+		      fputc(ch, ci->tx);
+		    }
 
 		  setseen = 1;
 		}
 
 	      if (fi->bodyfetch.itemtype >= 0)
 		{
-		  rewind(cached_msg.tmpdump);
+		  mrewind(cached_msg.tmpdump);
 
 		  if (fi->bodyfetch.partspec[0])
 		    {
@@ -2191,18 +2206,21 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			      fprintf(ci->tx, "]<%u> {%ld}\r\n",
 				      fi->bodyfetch.octetstart, cnt);
 			      
-			      fseek(cached_msg.tmpdump, fi->bodyfetch.octetstart, SEEK_SET);
+			      mseek(cached_msg.tmpdump, fi->bodyfetch.octetstart, SEEK_SET);
 			    }
 			  else
 			    {
 			      cnt = tmpdumpsize;
 			      fprintf(ci->tx, "] {%ld}\r\n", tmpdumpsize);
-			      fseek(cached_msg.tmpdump, 0, SEEK_SET);
+			      mseek(cached_msg.tmpdump, 0, SEEK_SET);
 			    }
 
 			  /* output data */
 			  while (cnt--)
-			    fputc(fgetc(cached_msg.tmpdump), ci->tx);
+			    {
+			      mread(&ch, 1, cached_msg.tmpdump);
+			      fputc(ch, ci->tx);
+			    }
 
 			}
 		      break;
@@ -2228,19 +2246,21 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			      fprintf(ci->tx, "]<%u> {%ld}\r\n",
 				      fi->bodyfetch.octetstart, cnt);
 			      
-			      fseek(cached_msg.tmpdump, fi->bodyfetch.octetstart, SEEK_SET);
+			      mseek(cached_msg.tmpdump, fi->bodyfetch.octetstart, SEEK_SET);
 			    }
 			  else
 			    {
 			      cnt = tmpdumpsize;
 			      fprintf(ci->tx, "] {%ld}\r\n", tmpdumpsize);
-			      fseek(cached_msg.tmpdump, 0, SEEK_SET);
+			      mseek(cached_msg.tmpdump, 0, SEEK_SET);
 			    }
 
 			  /* output data */
 			  while (cnt--)
-			    fputc(fgetc(cached_msg.tmpdump), ci->tx);
-
+			    {
+			      mread(&ch, 1, cached_msg.tmpdump);
+			      fputc(ch, ci->tx);
+			    }
 			}
 		      break;
 
@@ -2268,19 +2288,21 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 				  fprintf(ci->tx, "]<%u> {%ld}\r\n",
 					  fi->bodyfetch.octetstart, cnt);
 			      
-				  fseek(cached_msg.tmpdump, fi->bodyfetch.octetstart, SEEK_SET);
+				  mseek(cached_msg.tmpdump, fi->bodyfetch.octetstart, SEEK_SET);
 				}
 			      else
 				{
 				  cnt = tmpdumpsize;
 				  fprintf(ci->tx, "] {%ld}\r\n", tmpdumpsize);
-				  fseek(cached_msg.tmpdump, 0, SEEK_SET);
+				  mseek(cached_msg.tmpdump, 0, SEEK_SET);
 				}
 
 			      /* output data */
 			      while (cnt--)
-				fputc(fgetc(cached_msg.tmpdump), ci->tx);
-
+				{
+				  mread(&ch, 1, cached_msg.tmpdump);
+				  fputc(ch, ci->tx);
+				}
 			    }
 			}
 		      break;
@@ -2326,19 +2348,21 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 				  fprintf(ci->tx, "<%u> {%ld}\r\n",
 					  fi->bodyfetch.octetstart, cnt);
 			      
-				  fseek(cached_msg.tmpdump, fi->bodyfetch.octetstart, SEEK_SET);
+				  mseek(cached_msg.tmpdump, fi->bodyfetch.octetstart, SEEK_SET);
 				}
 			      else
 				{
 				  cnt = tmpdumpsize;
 				  fprintf(ci->tx, "{%ld}\r\n", tmpdumpsize);
-				  fseek(cached_msg.tmpdump, 0, SEEK_SET);
+				  mseek(cached_msg.tmpdump, 0, SEEK_SET);
 				}
 
 			      /* output data */
 			      while (cnt--)
-				fputc(fgetc(cached_msg.tmpdump), ci->tx);
-
+				{
+				  mread(&ch, 1, cached_msg.tmpdump);
+				  fputc(ch, ci->tx);
+				}
 			    }
 			}
 		      break;
@@ -2383,19 +2407,21 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 				  fprintf(ci->tx, "<%u> {%ld}\r\n",
 					  fi->bodyfetch.octetstart, cnt);
 			      
-				  fseek(cached_msg.tmpdump, fi->bodyfetch.octetstart, SEEK_SET);
+				  mseek(cached_msg.tmpdump, fi->bodyfetch.octetstart, SEEK_SET);
 				}
 			      else
 				{
 				  cnt = tmpdumpsize;
 				  fprintf(ci->tx, "{%ld}\r\n", tmpdumpsize);
-				  fseek(cached_msg.tmpdump, 0, SEEK_SET);
+				  mseek(cached_msg.tmpdump, 0, SEEK_SET);
 				}
 
 			      /* output data */
 			      while (cnt--)
-				fputc(fgetc(cached_msg.tmpdump), ci->tx);
-
+				{
+				  mread(&ch, 1, cached_msg.tmpdump);
+				  fputc(ch, ci->tx);
+				}
 			    }
 			}
 		      break;
@@ -2423,19 +2449,21 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 				  fprintf(ci->tx, "<%u> {%ld}\r\n",
 					  fi->bodyfetch.octetstart, cnt);
 			      
-				  fseek(cached_msg.tmpdump, fi->bodyfetch.octetstart, SEEK_SET);
+				  mseek(cached_msg.tmpdump, fi->bodyfetch.octetstart, SEEK_SET);
 				}
 			      else
 				{
 				  cnt = tmpdumpsize;
 				  fprintf(ci->tx, "{%ld}\r\n", tmpdumpsize);
-				  fseek(cached_msg.tmpdump, 0, SEEK_SET);
+				  mseek(cached_msg.tmpdump, 0, SEEK_SET);
 				}
 
 			      /* output data */
 			      while (cnt--)
-				fputc(fgetc(cached_msg.tmpdump), ci->tx);
-
+				{
+				  mread(&ch, 1, cached_msg.tmpdump);
+				  fputc(ch, ci->tx);
+				}
 			    }
 			}
 		  

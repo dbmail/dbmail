@@ -12,6 +12,7 @@
 #include "imap4.h"
 #include "mime.h"
 #include "list.h"
+#include "memblock.h"
 
 #define MAX_SEARCH_LEN 1024
 
@@ -132,9 +133,7 @@ typedef struct
 typedef struct
 {
   mime_message_t msg;
-  FILE *filedump,*tmpdump;
-  char filename[30];
-  char tmpname[30];
+  MEM *memdump,*tmpdump;
   int num,file_dumped,msg_parsed;
   long dumpsize;
 } cache_t;
@@ -220,7 +219,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound, int *level, in
 int db_start_msg(mime_message_t *msg, char *stopbound, int *level, int maxlevel);
 int db_parse_as_text(mime_message_t *msg);
 
-long db_dump_range(FILE *outstream,db_pos_t start, db_pos_t end, unsigned long msguid);
+long db_dump_range(MEM *outmem,db_pos_t start, db_pos_t end, unsigned long msguid);
 int db_msgdump(mime_message_t *msg, unsigned long msguid, int level);
 
 int db_mailbox_msg_match(unsigned long mailboxuid, unsigned long msguid);

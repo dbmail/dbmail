@@ -359,7 +359,7 @@ int imap_process(ClientInfo *ci)
   fprintf(ci->tx,"%s OK completed\r\n",tag);
   trace(TRACE_MESSAGE,"IMAPD: Closing connection for client from IP [%s]\n",ci->ip);
 
-  __debug_dumpallocs();
+/*  __debug_dumpallocs(); */
 
   return EOF;
 

@@ -11,6 +11,7 @@
 #include "list.h"
 #include "mime.h"
 #include "pipe.h"
+#include "memblock.h"
 #include <time.h>
 #include <ctype.h>
 #include <sys/types.h>
@@ -3770,7 +3771,7 @@ int db_msgdump(mime_message_t *msg, unsigned long msguid, int level)
  *
  * returns -1 on error or the number of output bytes otherwise
  */
-long db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long msguid)
+long db_dump_range(MEM *outmem, db_pos_t start, db_pos_t end, unsigned long msguid)
 {
   
   int i,startpos,endpos,j;
@@ -3826,12 +3827,11 @@ long db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long 
       for (i=start.pos; i<=end.pos; i++)
 	{
 	  if (row[0][i] == '\n')
-	    outcnt += fprintf(outstream,"\r\n");
+	    outcnt += mwrite("\r\n", 2, outmem);
 	  else
-	    outcnt += fprintf(outstream,"%c",row[0][i]);
+	    outcnt += mwrite(&row[0][i], 1, outmem);
 	}
 
-      fflush(outstream);
       mysql_free_result(res);
       return outcnt;
     }
@@ -3859,9 +3859,9 @@ long db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long 
       for (j=0; j<distance; j++)
 	{
 	  if (row[0][startpos+j] == '\n')
-	    outcnt += fprintf(outstream,"\r\n");
+	    outcnt += mwrite("\r\n", 2, outmem);
 	  else if (row[0][startpos+j])
-	    outcnt += fprintf(outstream,"%c", row[0][startpos+j]);
+	    outcnt += mwrite(&row[0][startpos+j], 1, outmem);
 	}
 	
       row = mysql_fetch_row(res); /* fetch next row */
@@ -3869,7 +3869,6 @@ long db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long 
 
   mysql_free_result(res);
 
-  fflush(outstream);
   return outcnt;
 }
 

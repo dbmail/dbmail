@@ -18,6 +18,7 @@
 #include "imap4.h"
 #include "debug.h"
 #include "dbmysql.h"
+#include "memblock.h"
 
 #ifndef MAX_LINESIZE
 #define MAX_LINESIZE 1024
@@ -104,7 +105,7 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg, int show_extension_
       if (mr && strlen(mr->value) > 0)
 	show_mime_parameter_list(outstream, mr, 1, 0);
       else
-	fprintf(outstream,"\"TEXT\" \"PLAIN\" (\"CHARSET\" \"US-ASCII\")"); /* default */
+	fprintf(outstream, "\"TEXT\" \"PLAIN\" (\"CHARSET\" \"US-ASCII\")"); /* default */
 
       mime_findfield("content-id", header_to_use, &mr);
       if (mr && strlen(mr->value) > 0)
@@ -647,9 +648,9 @@ mime_message_t* get_part_by_num(mime_message_t *msg, const char *part)
  *
  * to select every headerfield it suffices to set nfields and equal_type to 0
  *
- * returns number of bytes written to outstream
+ * returns number of bytes written to outmem
  */
-long rfcheader_dump(FILE *outstream, struct list *rfcheader, char **fieldnames, int nfields,
+long rfcheader_dump(MEM *outmem, struct list *rfcheader, char **fieldnames, int nfields,
 		    int equal_type)
 {
   struct mime_record *mr;
@@ -669,13 +670,18 @@ long rfcheader_dump(FILE *outstream, struct list *rfcheader, char **fieldnames, 
       mr = (struct mime_record*)curr->data;
 
       if (haystack_find(nfields, fieldnames, mr->field) == equal_type)
-	size += fprintf(outstream, "%s: %s\r\n", mr->field, mr->value);  /* ok output this field */
+	{
+	  /* ok output this field */
+	  size += mwrite(mr->field, strlen(mr->field), outmem);
+	  size += mwrite(": ", 2, outmem);
+	  size += mwrite(mr->value, strlen(mr->value), outmem);
+	  size += mwrite("\r\n", 2, outmem);
+	}
 
       curr = curr->nextnode;
     }
-  size += fprintf(outstream,"\r\n");
+  size += mwrite("\r\n", 2, outmem);
   
-  fflush(outstream);
   return size;
 }      
   
@@ -686,7 +692,7 @@ long rfcheader_dump(FILE *outstream, struct list *rfcheader, char **fieldnames, 
  * dumps mime-header fields belonging to mimeheader
  *
  */
-long mimeheader_dump(FILE *outstream, struct list *mimeheader)
+long mimeheader_dump(MEM *outmem, struct list *mimeheader)
 {
   struct mime_record *mr;
   struct element *curr;
@@ -702,12 +708,13 @@ long mimeheader_dump(FILE *outstream, struct list *mimeheader)
   while (curr)
     {
       mr = (struct mime_record*)curr->data;
-      size += fprintf(outstream, "%s: %s\r\n", mr->field, mr->value);
+      size += mwrite(mr->field, strlen(mr->field), outmem);
+      size += mwrite(": ", 2, outmem);
+      size += mwrite(mr->value, strlen(mr->value), outmem);
+      size += mwrite("\r\n", 2, outmem);
       curr = curr->nextnode;
     }
-  size += fprintf(outstream,"\r\n");
-
-  fflush(outstream);
+  size += mwrite("\r\n", 2, outmem);
 
   return size;
 }      
@@ -2810,27 +2817,9 @@ void close_cache()
   cached_msg.num = -1;
   cached_msg.msg_parsed = 0;
   memset(&cached_msg.msg, 0, sizeof(cached_msg.msg));
-  if (cached_msg.filedump)
-    {
-      fclose(cached_msg.filedump);
-      cached_msg.filedump = NULL;
-    }
-  if (cached_msg.tmpdump)
-    {
-      fclose(cached_msg.tmpdump);
-      cached_msg.tmpdump = NULL;
-    }
 
-  if (cached_msg.filename[0] && unlink(cached_msg.filename) != 0)
-    trace(TRACE_ERROR, "close_cache(): could not unlink temporary file %s [%s]\n", 
-	  cached_msg.filename, strerror(errno));
-
-  if (cached_msg.tmpname[0] && unlink(cached_msg.tmpname) != 0)
-    trace(TRACE_ERROR, "close_cache(): could not unlink temporary file %s [%s]\n", 
-	  cached_msg.tmpname, strerror(errno));
-
-  cached_msg.filename[0] = 0;
-  cached_msg.tmpname[0] = 0;
+  mclose(&cached_msg.memdump);
+  mclose(&cached_msg.tmpdump);
 }
 
 /* 
@@ -2842,16 +2831,16 @@ int init_cache()
   cached_msg.msg_parsed = 0;
   memset(&cached_msg.msg, 0, sizeof(cached_msg.msg));
 
-  strcpy(cached_msg.filename, "/tmp/imapdump.tmp.XXXXXX");
-  strcpy(cached_msg.tmpname, "/tmp/imaptmp.tmp.XXXXXX");
-
-  mkstemp(cached_msg.filename);
-  mkstemp(cached_msg.tmpname);
-  if (! (cached_msg.filedump = fopen(cached_msg.filename, "rw+")))
+  cached_msg.memdump = mopen();
+  if (!cached_msg.memdump)
     return -1;
 
-  if (! (cached_msg.tmpdump = fopen(cached_msg.tmpname, "rw+")))
-    return -1;
+  cached_msg.tmpdump = mopen();
+  if (!cached_msg.tmpdump)
+    {
+      mclose(&cached_msg.memdump);
+      return -1;
+    }
 
   cached_msg.file_dumped = 0;
   cached_msg.dumpsize = 0;

@@ -12,6 +12,7 @@
 #include "serverservice.h"
 #include "imap4.h"
 #include "dbmysql.h"
+#include "memblock.h"
 #include <stdio.h>
 
 int retrieve_structure(FILE *outstream, mime_message_t *msg, int show_extension_data);
@@ -23,9 +24,9 @@ int show_mime_parameter_list(FILE *outstream, struct mime_record *mr,
 
 mime_message_t* get_part_by_num(mime_message_t *msg, const char *part);
 
-long rfcheader_dump(FILE *outstream, struct list *rfcheader, char **fieldnames, int nfields,
+long rfcheader_dump(MEM *outmem, struct list *rfcheader, char **fieldnames, int nfields,
 		    int equal_type);
-long mimeheader_dump(FILE *outstream, struct list *mimeheader);
+long mimeheader_dump(MEM *outmem, struct list *mimeheader);
 
 int haystack_find(int haystacklen, char **haystack, const char *needle);
 
