@@ -17,8 +17,10 @@
 #include "imaputil.h"
 #include "imap4.h"
 #include "debug.h"
-#include "dbmysql.h"
+#include "db.h"
 #include "memblock.h"
+#include "dbsearch.h"
+#include "rfcmsg.h"
 
 #ifndef MAX_LINESIZE
 #define MAX_LINESIZE 1024
@@ -138,10 +140,10 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg, int show_extension_
       /* now output size */
       /* add msg->bodylines because \n is dumped as \r\n */
       if (msg->mimeheader.start && msg->rfcheader.start)
-	fprintf(outstream, " %lu ", msg->bodysize + msg->mimerfclines + msg->rfcheadersize 
+	fprintf(outstream, " %llu ", msg->bodysize + msg->mimerfclines + msg->rfcheadersize 
 		- msg->rfcheaderlines); 
       else
-	fprintf(outstream, " %lu ", msg->bodysize + msg->bodylines);
+	fprintf(outstream, " %llu ", msg->bodysize + msg->bodylines);
 
 
       /* now check special cases, first case: message/rfc822 */
@@ -167,7 +169,7 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg, int show_extension_
 	    return -1;
 	  
 	  /* output # of lines */
-	  fprintf(outstream, " %lu", msg->bodylines);
+	  fprintf(outstream, " %llu", msg->bodylines);
 	}
       /* now check second special case: text 
        * NOTE: if 'content-type' is absent, TEXT is assumed 
@@ -176,9 +178,9 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg, int show_extension_
 	{
 	  /* output # of lines */
 	  if (msg->mimeheader.start && msg->rfcheader.start)
-	    fprintf(outstream, "%lu", msg->mimerfclines);
+	    fprintf(outstream, "%llu", msg->mimerfclines);
 	  else
-	    fprintf(outstream, "%lu", msg->bodylines);
+	    fprintf(outstream, "%llu", msg->bodylines);
 	}
 
       if (show_extension_data)
@@ -1883,7 +1885,7 @@ void base64decode(char *in,char *out)
  *
  * returns index of key in array or -1 if not found
  */
-int binary_search(const unsigned long *array, int arraysize, unsigned long key)
+int binary_search(const u64_t *array, int arraysize, u64_t key)
 {
   int low,high,mid;
 
@@ -2587,7 +2589,7 @@ void combine_sets(int *dest, int *sec, int setlen, int type)
 void build_set(int *set, int setlen, char *cset)
 {
   int i;
-  unsigned long num,num2;
+  u64_t num,num2;
   char *sep=NULL;
 
   if (!set)
@@ -2668,7 +2670,7 @@ void build_set(int *set, int setlen, char *cset)
 void build_uid_set(int *set, int setlen, char *cset, mailbox_t *mb)
 {
   int i,msn,msn2;
-  unsigned long num,num2;
+  u64_t num,num2;
   char *sep=NULL;
 
   if (!set)

@@ -11,8 +11,9 @@
 
 #include "serverservice.h"
 #include "imap4.h"
-#include "dbmysql.h"
+#include "db.h"
 #include "memblock.h"
+#include "dbmailtypes.h"
 #include <stdio.h>
 
 int retrieve_structure(FILE *outstream, mime_message_t *msg, int show_extension_data);
@@ -49,7 +50,7 @@ char **build_args_array(const char *s);
 
 void base64encode(char *in,char *out);
 void base64decode(char *in,char *out);
-int binary_search(const unsigned long *array, int arraysize, unsigned long key);
+int binary_search(const u64_t *array, int arraysize, u64_t key);
 
 char **give_chunks(const char *str, char delimiter);
 void free_chunks(char **chunks);

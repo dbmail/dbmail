@@ -5,7 +5,7 @@
 
 #include <stdio.h>
 #include <time.h>
-#include "dbmysql.h"
+#include "db.h"
 #include "debug.h"
 #include "list.h"
 #include "bounce.h"

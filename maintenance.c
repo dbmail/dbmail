@@ -7,12 +7,15 @@
  */
 
 #include "maintenance.h"
-#include "dbmysql.h"
+#include "db.h"
 #include "debug.h"
 #include <unistd.h>
 #include <time.h>
-
-#define LEN 30
+#include <stdio.h>
+#include <stdlib.h>
+#include "config.h"
+#include "list.h"
+#include "debug.h"
 
 void find_time(char *timestr, const char *timespec);
 
@@ -29,10 +32,10 @@ int main(int argc, char *argv[])
 
   int opt;
   int nlost,i;
-  unsigned long *lostlist;
+  u64_t *lostlist;
 
-  unsigned long deleted_messages;
-  unsigned long messages_set_to_delete;
+  u64_t deleted_messages;
+  u64_t messages_set_to_delete;
     
   openlog(PNAME, LOG_PID, LOG_MAIL);
 	
@@ -152,7 +155,7 @@ int main(int argc, char *argv[])
 	  db_disconnect();
 	  return -1;
 	}
-      printf ("Ok. [%lu] messages deleted.\n",deleted_messages);
+      printf ("Ok. [%llu] messages deleted.\n",deleted_messages);
     }
 	
 
@@ -166,7 +169,7 @@ int main(int argc, char *argv[])
 	  db_disconnect();
 	  return -1;
 	}
-      printf ("Ok. [%lu] messages set for deletion.\n",messages_set_to_delete);
+      printf ("Ok. [%llu] messages set for deletion.\n",messages_set_to_delete);
     }
 
 
@@ -195,13 +198,13 @@ int main(int argc, char *argv[])
 	  for (i=0; i<nlost; i++)
 	    {
 	      if (should_fix == 0)
-		printf("%lu ", lostlist[i]);
+		printf("%llu ", lostlist[i]);
 	      else
 		{
 		  if (db_delete_messageblk(lostlist[i]) < 0)
-		    printf("Warning: could not delete messageblock #%lu. Check log.\n",lostlist[i]);
+		    printf("Warning: could not delete messageblock #%llu. Check log.\n",lostlist[i]);
 		  else
-		    printf("%lu (removed from dbase)\n",lostlist[i]);
+		    printf("%llu (removed from dbase)\n",lostlist[i]);
 		}
 	    }
         
@@ -235,13 +238,13 @@ int main(int argc, char *argv[])
 	  for (i=0; i<nlost; i++)
 	    {
 	      if (should_fix == 0)
-		printf("%lu ", lostlist[i]);
+		printf("%llu ", lostlist[i]);
 	      else
 		{
 		  if (db_delete_message(lostlist[i]) < 0)
-		    printf("Warning: could not delete message #%lu. Check log.\n",lostlist[i]);
+		    printf("Warning: could not delete message #%llu. Check log.\n",lostlist[i]);
 		  else
-		    printf("%lu (removed from dbase)\n",lostlist[i]);
+		    printf("%llu (removed from dbase)\n",lostlist[i]);
 		}
 	    }
         
@@ -275,13 +278,13 @@ int main(int argc, char *argv[])
 	  for (i=0; i<nlost; i++)
 	    {
 	      if (should_fix == 0)
-		printf("%lu ", lostlist[i]);
+		printf("%llu ", lostlist[i]);
 	      else
 		{
 		  if (db_delete_mailbox(lostlist[i]) < 0)
-		    printf("Warning: could not delete mailbox #%lu. Check log.\n",lostlist[i]);
+		    printf("Warning: could not delete mailbox #%llu. Check log.\n",lostlist[i]);
 		  else
-		    printf("%lu (removed from dbase)\n",lostlist[i]);
+		    printf("%llu (removed from dbase)\n",lostlist[i]);
 		}
 	    }
         

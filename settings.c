@@ -2,6 +2,12 @@
  * (c) 2000-2001 IC&S, The Netherlands */
 
 #include "settings.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include "config.h"
+#include "list.h"
+#include "debug.h"
+#include "db.h"
 
 #define LINE_BUFFER_SIZE 255
 

@@ -16,7 +16,7 @@
 #include "imapcommands.h"
 #include "serverservice.h"
 #include "debug.h"
-#include "dbmysql.h"
+#include "db.h"
 
 #define MAX_LINESIZE 1024
 #define COMMAND_SHOW_LEVEL TRACE_INFO

@@ -9,4 +9,4 @@
 #include "config.h"
 #include "list.h"
 #include "debug.h"
-#include "dbmysql.h"
+#include "db.h"

@@ -7,8 +7,7 @@
 SMTP_OBJECTS = list.o debug.o pipe.o mime.o dbmysql.o dbmd5.o md5.o bounce.o forward.o memblock.o
 POP_OBJECTS = pop3.o list.o debug.o dbmysql.o dbmd5.o md5.o mime.o misc.o memblock.o
 IMAP_OBJECTS = imap4.o debug.o dbmysql.o serverservice.o list.o dbmd5.o md5.o imaputil.o \
-imapcommands.o mime.o misc.o memblock.o
-DUMP_OBJECTS = debug.o dbmysql.o list.o dbmd5.o md5.o mime.o sstack.o memblock.o
+imapcommands.o mime.o misc.o memblock.o rfcmsg.o dbmsgbufmysql.o dbsearchmysql.o
 MAINTENANCE_OBJECTS = debug.o list.o dbmd5.o md5.o dbmysql.o mime.o memblock.o
 CONFIG_OBJECTS = dbmysql.o list.o md5.o debug.o dbmd5.o mime.o memblock.o
 USER_OBJECTS = debug.o list.o dbmd5.o md5.o dbmysql.o mime.o memblock.o
@@ -29,10 +28,6 @@ CFLAGS = -Wall -ggdb -D_BSD_SOURCE -D_SVID_SOURCE
 
 all: smtp pop3d maintenance config imapd user
 
-dump: dbmysql.h dumpmsg.c $(DUMP_OBJECTS)
-	$(CC) $(CFLAGS) dumpmsg.c -o dumpmsg $(DUMP_OBJECTS) $(LIBS) $(LIB)
-
-
 smtp: config.h main.h $(SMTP_OBJECTS) main.c
 		$(CC)	$(CFLAGS) main.c -o dbmail-smtp $(SMTP_OBJECTS) $(LIBS) $(LIB)
 
@@ -51,25 +46,27 @@ config: $(CONFIG_OBJECTS) settings.c
 user: user.h $(MAINTENANCE_OBJECTS) user.c
 	$(CC) $(CFLAGS) user.c -o dbmail-adduser $(MAINTENANCE_OBJECTS) $(LIBS) $(LIB)
 
-dumpmsg.o: dbmysql.h
 list.o: list.h debug.h
 debug.o: debug.h
 pipe.o: pipe.h config.h debug.h
 forward.o: forward.h config.h debug.h
 mime.o: mime.h config.h debug.h
-dbmysql.o:dbmysql.h dbmd5.h config.h mime.h list.h memblock.h debug.h
+dbmysql.o:db.h dbmd5.h config.h mime.h list.h memblock.h debug.h dbmailtypes.h
 misc.o:misc.h config.h debug.h
-pop3.o:pop3.h config.h debug.h
+pop3.o:pop3.h config.h debug.h dbmailtypes.h
 dbmd5.o:dbmd5.h md5.h debug.h
 bounce.o:bounce.h list.h debug.h
-imap4.o: imap4.h dbmysql.h debug.h serverservice.h imaputil.h imapcommands.h
-imaputil.o: imaputil.h dbmysql.h memblock.h debug.h
-imapcommands.o: imapcommands.h imaputil.h imap4.h dbmysql.h memblock.h debug.h
+imap4.o: imap4.h db.h debug.h serverservice.h imaputil.h imapcommands.h
+imaputil.o: imaputil.h db.h memblock.h debug.h dbmailtypes.h
+imapcommands.o: imapcommands.h imaputil.h imap4.h db.h memblock.h debug.h dbmailtypes.h
 serverservice.o: serverservice.h debug.h
 maintenance.o: maintenance.h debug.h
 settings.o: settings.h debug.h
 user.o: user.h debug.h
 memblock.o: memblock.h debug.h
+rfcmsg.o: rfcmsg.h dbmailtypes.h
+dbmsgbufmysql.o: dbmsgbuf.h db.h
+dbsearchmysql.o: dbsearch.h db.h
 
 distclean: clean
 	rm -rf dbmail-smtp dbmail-pop3d dbmail-maintenance dbmail-imapd dbmail-config dbmail-adduser

@@ -8,7 +8,7 @@
 #include "bounce.h"
 #include "list.h"
 #include "mime.h"
-#include "dbmysql.h"
+#include "db.h"
 #include "debug.h"
 
 extern struct list mimelist;  

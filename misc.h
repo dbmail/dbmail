@@ -7,7 +7,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <pwd.h>
-#include "dbmysql.h"
+#include "db.h"
 #include "debug.h"
 #include "list.h"
 

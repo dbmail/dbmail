@@ -6,8 +6,11 @@
 #ifndef  _LIST_H
 #define  _LIST_H
 
-#include <stdlib.h>
+#include <sys/types.h>
 
+/*
+ * list data types
+ */
 struct element
 {
   void *data;	
@@ -21,6 +24,7 @@ struct list
   struct element *start;
   long total_nodes;
 };
+
 
 struct element *list_nodeadd(struct list *tlist, void *data,
 				    size_t dsize);

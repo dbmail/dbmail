@@ -5,7 +5,7 @@
 
 #include <string.h>
 #include "pop3.h"
-#include "dbmysql.h"
+#include "db.h"
 #include "debug.h"
 
 #define INCOMING_BUFFER_SIZE 512

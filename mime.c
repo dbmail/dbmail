@@ -10,7 +10,7 @@
 #include <ctype.h>
 
 /* extern char *header; */
-/* extern unsigned long headersize; */
+/* extern u64_t headersize; */
 
 /* extern struct list mimelist;  */
 /* extern struct list users; */
@@ -179,11 +179,11 @@ int mime_list(char *blkdata, struct list *mimelist)
  *
  * returns -1 on parse failure, -2 on memory error; number of newlines on succes
  */
-int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist, unsigned long *headersize)
+int mime_readheader(char *blkdata, u64_t *blkidx, struct list *mimelist, u64_t *headersize)
 {
   int valid_mime_lines=0,idx,totallines=0,j;
   unsigned fieldlen,vallen,prevlen=0,new_add=1;
-/*  unsigned long saved_idx = *blkidx; only needed if we bail out on invalid data */
+/*  u64_t saved_idx = *blkidx; only needed if we bail out on invalid data */
 	
   char *endptr, *startptr, *delimiter;
   struct mime_record *mr,*prev_mr=NULL;

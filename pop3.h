@@ -27,7 +27,7 @@
 #include "list.h"
 #include "debug.h"
 #include "config.h"
-
+#include "dbmailtypes.h"
 
 /* processes */
 
@@ -66,32 +66,33 @@
  * when a RSET occurs all will be set to the real values */
 
 struct message
-	{
-		unsigned long msize;
-		unsigned long messageid;
-		unsigned long realmessageid;
-		char uidl[UID_SIZE];
-		/* message status :
-		 * 000 message is new, never touched 
-		 * 001 message is read
-		 * 002 message is deleted by user 
-		 * ----------------------------------
-		 * The server additionally uses:
-		 * 003 message is deleted by sysop
-		 * 004 message is ready for final deletion */
+{
+  u64_t msize;
+  u64_t messageid;
+  u64_t realmessageid;
+  char uidl[UID_SIZE];
+  /* message status :
+   * 000 message is new, never touched 
+   * 001 message is read
+   * 002 message is deleted by user 
+   * ----------------------------------
+   * The server additionally uses:
+   * 003 message is deleted by sysop
+   * 004 message is ready for final deletion */
 		
-		unsigned long messagestatus;
-		unsigned long virtual_messagestatus;
-	};
+  u64_t messagestatus;
+  u64_t virtual_messagestatus;
+};
 
 struct session
-	{
-		unsigned long totalsize;
-		unsigned long virtual_totalsize; 
-		unsigned long totalmessages;
-		unsigned long virtual_totalmessages;
-		struct list messagelst;
-	};
+{
+  u64_t totalsize;
+  u64_t virtual_totalsize; 
+  u64_t totalmessages;
+  u64_t virtual_totalmessages;
+  struct list messagelst;
+};
 
 int pop3 (void *stream, char *buffer);
+
 #endif

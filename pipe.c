@@ -6,7 +6,7 @@
 
 #include <time.h>
 #include <ctype.h>
-#include "dbmysql.h"
+#include "db.h"
 #include "debug.h"
 #include "list.h"
 #include "bounce.h"
@@ -20,17 +20,17 @@
 #define HEADER_BLOCK_SIZE 1024
 #define QUERY_SIZE 255
 
-void create_unique_id(char *target, unsigned long messageid)
+void create_unique_id(char *target, u64_t messageid)
 {
   time_t now;
   time(&now);
   trace (TRACE_DEBUG,"create_unique_id(): createding id");
-  snprintf (target,UID_SIZE,"%luA%lu",messageid,now);
+  snprintf (target,UID_SIZE,"%lluA%lu",messageid,now);
   trace (TRACE_DEBUG,"create_unique_id(): created: %s",target);
 }
 	
 
-char *read_header(unsigned long *blksize)
+char *read_header(u64_t *blksize)
      /* returns <0 on failure */
 {
   /* reads incoming pipe until header is found */
@@ -107,7 +107,7 @@ char *read_header(unsigned long *blksize)
   return header;
 }
 
-int insert_messages(char *header, unsigned long headersize, struct list *users, struct list *returnpath)
+int insert_messages(char *header, u64_t headersize, struct list *users, struct list *returnpath)
 {
   /* 	this loop gets all the users from the list 
 	and check if they're in the database */
@@ -125,7 +125,7 @@ int insert_messages(char *header, unsigned long headersize, struct list *users, 
   struct list messageids;
   struct list external_forwards;
   struct list bounces;
-  unsigned long temp_message_record_id,userid, bounce_userid;
+  u64_t temp_message_record_id,userid, bounce_userid;
   int i, this_user;
   FILE *instream = stdin;
   
@@ -247,7 +247,7 @@ int insert_messages(char *header, unsigned long headersize, struct list *users, 
 	  userid=atol((char *)tmp->data);
 
 	  /* create a message record */
-	  temp_message_record_id=db_insert_message ((unsigned long *)&userid);
+	  temp_message_record_id=db_insert_message ((u64_t *)&userid);
 
 	  /* message id is an array of returned message id's
 	   * all messageblks are inserted for each message id
@@ -265,7 +265,7 @@ int insert_messages(char *header, unsigned long headersize, struct list *users, 
       tmp=tmp->nextnode;
     }
 
-  trace(TRACE_DEBUG,"insert_messages(): we need to deliver [%lu] "
+  trace(TRACE_DEBUG,"insert_messages(): we need to deliver [%llu] "
 	"messages to external addresses",
 	list_totalnodes(&external_forwards));
 	
@@ -296,7 +296,7 @@ int insert_messages(char *header, unsigned long headersize, struct list *users, 
 	      tmp=list_getstart(&messageids);
 	      while (tmp!=NULL)
 		{
-		  if (db_insert_message_block (strblock,*(unsigned long *)tmp->data) == -1)
+		  if (db_insert_message_block (strblock,*(u64_t *)tmp->data) == -1)
 		    trace(TRACE_STOP, "insert_messages(): error inserting msgblock\n");
 
 		  tmp=tmp->nextnode;
@@ -324,11 +324,11 @@ int insert_messages(char *header, unsigned long headersize, struct list *users, 
 	   * we're using the messageidnr for this, it's unique 
 	   * a special field is created in the database for other possible 
 	   * even more unique strings */
-	  create_unique_id(unique_id,*(unsigned long*)tmp->data); 
-	  db_update_message ((unsigned long*)tmp->data,unique_id,totalmem+headersize);
+	  create_unique_id(unique_id,*(u64_t*)tmp->data); 
+	  db_update_message ((u64_t*)tmp->data,unique_id,totalmem+headersize);
 
 	  /* checking size */
-	  switch (db_check_sizelimit (totalmem+headersize, *(unsigned long*)tmp->data,
+	  switch (db_check_sizelimit (totalmem+headersize, *(u64_t*)tmp->data,
 				      &bounce_userid))
 	    {
 	    case 1:
@@ -354,13 +354,13 @@ int insert_messages(char *header, unsigned long headersize, struct list *users, 
 	      break;
 
 	    case 0:
-	      trace (TRACE_MESSAGE,"insert_messages(): message id=%lu, size=%lu is inserted",
-		     *(unsigned long*)tmp->data, totalmem+headersize);
+	      trace (TRACE_MESSAGE,"insert_messages(): message id=%llu, size=%llu is inserted",
+		     *(u64_t*)tmp->data, totalmem+headersize);
 	      break;
 	    }
 
 
-	  temp_message_record_id=*(unsigned long*)tmp->data;
+	  temp_message_record_id=*(u64_t*)tmp->data;
 	  tmp=tmp->nextnode;
 	}
     }
@@ -397,7 +397,7 @@ int insert_messages(char *header, unsigned long headersize, struct list *users, 
 	  /* deliver using database */
 	  tmp = list_getstart(&messageids);
 	  pipe_forward (stdin, &external_forwards, ret_path ? ret_path->data: "DBMAIL-MAILER", header, 
-			*((unsigned long *)tmp->data));
+			*((u64_t *)tmp->data));
 	}
     }
 	

@@ -8,11 +8,12 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include "imap4.h"
 #include "serverservice.h"
 #include "debug.h"
 #include "misc.h"
-#include "dbmysql.h"
+#include "db.h"
 
 #define PNAME "dbmail/imap4"
 

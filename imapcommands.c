@@ -8,8 +8,10 @@
 
 #include "imapcommands.h"
 #include "imaputil.h"
-#include "dbmysql.h"
+#include "db.h"
 #include "memblock.h"
+#include "rfcmsg.h"
+#include "dbmsgbuf.h"
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
@@ -133,7 +135,7 @@ int _ic_logout(char *tag, char **args, ClientInfo *ci)
 int _ic_login(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
-  unsigned long userid;
+  u64_t userid;
   char timestr[30];
   time_t td;
   struct tm tm;
@@ -195,7 +197,7 @@ int _ic_login(char *tag, char **args, ClientInfo *ci)
  */
 int _ic_authenticate(char *tag, char **args, ClientInfo *ci)
 {
-  unsigned long userid;
+  u64_t userid;
   char username[MAX_LINESIZE],buf[MAX_LINESIZE],pass[MAX_LINESIZE];
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
   char timestr[30];
@@ -296,7 +298,7 @@ int _ic_authenticate(char *tag, char **args, ClientInfo *ci)
 int _ic_select(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
-  unsigned long mboxid,key;
+  u64_t mboxid,key;
   int result,idx;
   char permstring[80];
 
@@ -314,7 +316,7 @@ int _ic_select(char *tag, char **args, ClientInfo *ci)
 
       return 1;
     }
-  if (mboxid == (unsigned long)(-1))
+  if (mboxid == (u64_t)(-1))
     {
       fprintf(ci->tx, "* BYE internal dbase error\r\n");
       return -1;
@@ -379,11 +381,11 @@ int _ic_select(char *tag, char **args, ClientInfo *ci)
   fprintf(ci->tx,")]\r\n");
   
   /* UID */
-  fprintf(ci->tx,"* OK [UIDVALIDITY %lu] UID value\r\n",ud->mailbox.uid);
+  fprintf(ci->tx,"* OK [UIDVALIDITY %llu] UID value\r\n",ud->mailbox.uid);
 
   /* show idx of first unseen msg (if present) */
   key = db_first_unseen(ud->mailbox.uid);
-  if (key == (unsigned long)(-1))
+  if (key == (u64_t)(-1))
     {
       fprintf(ci->tx, "* BYE internal dbase error\r\n");
       return -1;
@@ -400,7 +402,7 @@ int _ic_select(char *tag, char **args, ClientInfo *ci)
     case IMAPPERM_READWRITE: sprintf(permstring, "READ-WRITE"); break;
     default: 
       /* invalid permission --> fatal */
-      trace(TRACE_ERROR,"IMAPD: select(): detected invalid permission mode for mailbox %lu ('%s')\r\n",
+      trace(TRACE_ERROR,"IMAPD: select(): detected invalid permission mode for mailbox %llu ('%s')\r\n",
 	    ud->mailbox.uid, args[0]);
 
       fprintf(ci->tx, "* BYE fatal: detected invalid mailbox settings\r\n");
@@ -423,7 +425,7 @@ int _ic_select(char *tag, char **args, ClientInfo *ci)
 int _ic_examine(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
-  unsigned long mboxid;
+  u64_t mboxid;
   int result;
 
   if (!check_state_and_args("EXAMINE", tag, args, 1, IMAPCS_AUTHENTICATED, ci))
@@ -436,7 +438,7 @@ int _ic_examine(char *tag, char **args, ClientInfo *ci)
       fprintf(ci->tx, "%s NO Could not find specified mailbox\r\n", tag);
       return 1;
     }
-  if (mboxid == (unsigned long)(-1))
+  if (mboxid == (u64_t)(-1))
     {
       fprintf(ci->tx, "* BYE internal dbase error\r\n");
       return -1;
@@ -496,7 +498,7 @@ int _ic_examine(char *tag, char **args, ClientInfo *ci)
   fprintf(ci->tx,")]\r\n");
   
   /* UID */
-  fprintf(ci->tx,"* OK [UIDVALIDITY %lu] UID value\r\n",ud->mailbox.uid);
+  fprintf(ci->tx,"* OK [UIDVALIDITY %llu] UID value\r\n",ud->mailbox.uid);
 
   /* update permission: examine forces read-only */
   ud->mailbox.permission = IMAPPERM_READ;
@@ -518,7 +520,7 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
   int result,i;
-  unsigned long mboxid;
+  u64_t mboxid;
   char **chunks,*cpy;
 
   if (!check_state_and_args("CREATE", tag, args, 1, IMAPCS_AUTHENTICATED, ci))
@@ -534,7 +536,7 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
 
   /* check if this mailbox already exists */
   mboxid = db_findmailbox(args[0], ud->userid);
-  if (mboxid == (unsigned long)(-1))
+  if (mboxid == (u64_t)(-1))
     {
       /* dbase failure */
       fprintf(ci->tx,"* BYE internal dbase error\r\n");
@@ -618,7 +620,7 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
       /* check if this mailbox already exists */
       mboxid = db_findmailbox(cpy, ud->userid);
       
-      if (mboxid == (unsigned long)(-1))
+      if (mboxid == (u64_t)(-1))
 	{
 	  /* dbase failure */
 	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
@@ -679,7 +681,7 @@ int _ic_delete(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
   int result,nchildren = 0;
-  unsigned long *children = NULL,mboxid;
+  u64_t *children = NULL,mboxid;
 
   if (!check_state_and_args("DELETE", tag, args, 1, IMAPCS_AUTHENTICATED, ci))
     return 1; /* error, return */
@@ -690,7 +692,7 @@ int _ic_delete(char *tag, char **args, ClientInfo *ci)
 
   /* check if this mailbox exists */
   mboxid = db_findmailbox(args[0], ud->userid);
-  if (mboxid == (unsigned long)(-1))
+  if (mboxid == (u64_t)(-1))
     {
       /* dbase failure */
       fprintf(ci->tx,"* BYE internal dbase error\r\n");
@@ -787,7 +789,7 @@ int _ic_delete(char *tag, char **args, ClientInfo *ci)
 int _ic_rename(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
-  unsigned long mboxid,newmboxid,*children,oldnamelen,parentmboxid;
+  u64_t mboxid,newmboxid,*children,oldnamelen,parentmboxid;
   int nchildren,i,result;
   char newname[IMAP_MAX_MAILBOX_NAMELEN],name[IMAP_MAX_MAILBOX_NAMELEN];
 
@@ -808,7 +810,7 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
 
   /* check if new mailbox exists */
   mboxid = db_findmailbox(args[1], ud->userid);
-  if (mboxid == (unsigned long)-1)
+  if (mboxid == (u64_t)-1)
     {
       /* dbase failure */
       fprintf(ci->tx,"* BYE internal dbase error\r\n");
@@ -823,7 +825,7 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
 
   /* check if original mailbox exists */
   mboxid = db_findmailbox(args[0], ud->userid);
-  if (mboxid == (unsigned long)-1)
+  if (mboxid == (u64_t)-1)
     {
       /* dbase failure */
       fprintf(ci->tx,"* BYE internal dbase error\r\n");
@@ -863,7 +865,7 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
       args[1][i] = '\0'; /* note: original char was '/' */
 
       parentmboxid = db_findmailbox(args[1], ud->userid);
-      if (parentmboxid == (unsigned long)-1)
+      if (parentmboxid == (u64_t)-1)
 	{
 	  /* dbase failure */
 	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
@@ -895,7 +897,7 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
       
       /* retrieve uid of newly created mailbox */
       newmboxid = db_findmailbox(args[1], ud->userid);
-      if (newmboxid == (unsigned long)(-1))
+      if (newmboxid == (u64_t)(-1))
 	{
 	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
 	  return -1;
@@ -976,13 +978,13 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
 int _ic_subscribe(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData; 
-  unsigned long mboxid;
+  u64_t mboxid;
 
   if (!check_state_and_args("SUBSCRIBE", tag, args, 1, IMAPCS_AUTHENTICATED, ci))
     return 1; /* error, return */
 
   mboxid = db_findmailbox(args[0], ud->userid);
-  if (mboxid == (unsigned long)(-1))
+  if (mboxid == (u64_t)(-1))
     {
       fprintf(ci->tx,"* BYE internal dbase error\r\n");
       return -1;
@@ -1014,13 +1016,13 @@ int _ic_subscribe(char *tag, char **args, ClientInfo *ci)
 int _ic_unsubscribe(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
-  unsigned long mboxid;
+  u64_t mboxid;
 
   if (!check_state_and_args("UNSUBSCRIBE", tag, args, 1, IMAPCS_AUTHENTICATED, ci))
     return 1; /* error, return */
 
   mboxid = db_findmailbox(args[0], ud->userid);
-  if (mboxid == (unsigned long)(-1))
+  if (mboxid == (u64_t)(-1))
     {
       fprintf(ci->tx,"* BYE internal dbase error\r\n");
       return -1;
@@ -1052,7 +1054,7 @@ int _ic_unsubscribe(char *tag, char **args, ClientInfo *ci)
 int _ic_list(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
-  unsigned long *children=NULL;
+  u64_t *children=NULL;
   int result,i,j,slen,plen;
   unsigned nchildren;
   char name[IMAP_MAX_MAILBOX_NAMELEN];
@@ -1268,7 +1270,7 @@ int _ic_status(char *tag, char **args, ClientInfo *ci)
 
   /* check if mailbox exists */
   mb.uid = db_findmailbox(args[0], ud->userid);
-  if (mb.uid == (unsigned long)(-1))
+  if (mb.uid == (u64_t)(-1))
     {
       fprintf(ci->tx,"* BYE internal dbase error\r\n");
       return -1;
@@ -1301,9 +1303,9 @@ int _ic_status(char *tag, char **args, ClientInfo *ci)
       else if (strcasecmp(args[i], "unseen") == 0)
 	fprintf(ci->tx, "UNSEEN %d ",mb.unseen);
       else if (strcasecmp(args[i], "uidnext") == 0)
-	fprintf(ci->tx, "UIDNEXT %lu ",mb.msguidnext);
+	fprintf(ci->tx, "UIDNEXT %llu ",mb.msguidnext);
       else if (strcasecmp(args[i], "uidvalidity") == 0)
-	fprintf(ci->tx, "UIDVALIDITY %lu ",mb.uid);
+	fprintf(ci->tx, "UIDVALIDITY %llu ",mb.uid);
       else if (strcasecmp(args[i], ")") == 0)
 	break; /* done */
       else
@@ -1331,7 +1333,7 @@ int _ic_status(char *tag, char **args, ClientInfo *ci)
 int _ic_append(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
-  unsigned long mboxid,literal_size=0,cnt;
+  u64_t mboxid,literal_size=0,cnt;
   int i,internal_date_idx=-1,dataidx,result;
   char *msgdata;
 
@@ -1343,7 +1345,7 @@ int _ic_append(char *tag, char **args, ClientInfo *ci)
 
   /* find the mailbox to place the message */
   mboxid = db_findmailbox(args[0], ud->userid);
-  if (mboxid == (unsigned long)(-1))
+  if (mboxid == (u64_t)(-1))
     {
       fprintf(ci->tx,"* BYE internal dbase error");
       return -1;
@@ -1356,7 +1358,7 @@ int _ic_append(char *tag, char **args, ClientInfo *ci)
     }
 
 
-  trace(TRACE_DEBUG, "ic_append(): mailbox [%s] found, id: %lu\n",args[0],mboxid);
+  trace(TRACE_DEBUG, "ic_append(): mailbox [%s] found, id: %llu\n",args[0],mboxid);
 
   i=1;
   
@@ -1425,7 +1427,7 @@ int _ic_append(char *tag, char **args, ClientInfo *ci)
     }
   memset(msgdata, 0, (literal_size+1));
 
-  trace(TRACE_DEBUG,"ok fetching message, %lu bytes:\n",literal_size);
+  trace(TRACE_DEBUG,"ok fetching message, %llu bytes:\n",literal_size);
 
   fprintf(ci->tx,"+ OK gimme that message boy\r\n");
   fflush(ci->tx);
@@ -1537,7 +1539,7 @@ int _ic_expunge(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
   mailbox_t newmailbox;
-  unsigned long *msgids;
+  u64_t *msgids;
   int nmsgs,i,idx,result;
 
   if (!check_state_and_args("EXPUNGE", tag, args, 0, IMAPCS_SELECTED, ci))
@@ -1730,7 +1732,7 @@ int _ic_search(char *tag, char **args, ClientInfo *ci)
   for (i=0; i<ud->mailbox.exists; i++)
     {
       if (result_set[i])
-	fprintf(ci->tx, " %lu", imapcommands_use_uid ? ud->mailbox.seq_list[i] : i+1);
+	fprintf(ci->tx, " %llu", imapcommands_use_uid ? ud->mailbox.seq_list[i] : i+1);
     }
 
   fprintf(ci->tx,"\r\n");
@@ -1757,7 +1759,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
   fetch_items_t *fi,fetchitem;
   mime_message_t *msgpart;
   char date[IMAP_INTERNALDATE_LEN],*endptr;
-  unsigned long thisnum;
+  u64_t thisnum;
   long tmpdumpsize,cnt;
   struct list fetch_list;
   mime_message_t headermsg; /* only the rfcheader-member of this message will  be used */
@@ -1946,7 +1948,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	  else
 	    fprintf(ci->tx,"* %d FETCH (",i+1);
 
-	  trace(TRACE_DEBUG, "Fetching msgID %lu (fetch num %d)\r\n", thisnum, i+1);
+	  trace(TRACE_DEBUG, "Fetching msgID %llu (fetch num %d)\r\n", thisnum, i+1);
 
 	  curr = list_getstart(&fetch_list);
 	  setseen = 0;
@@ -2040,7 +2042,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		}
 
 	      if (fi->getUID)
-		fprintf(ci->tx,"UID %lu",thisnum);
+		fprintf(ci->tx,"UID %llu",thisnum);
 	      
 	      if (fi->getMIME_IMB)
 		{
@@ -2121,7 +2123,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		  
 	      if (fi->getSize)
 		{
-		  fprintf(ci->tx,"RFC822.SIZE %lu", 
+		  fprintf(ci->tx,"RFC822.SIZE %llu", 
 			  (cached_msg.msg.rfcheadersize + 
 			  cached_msg.msg.bodysize + 
 			  cached_msg.msg.bodylines));
@@ -2665,7 +2667,7 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
   int i,store_start,store_end,result,j,fn;
   int be_silent=0,action=IMAPFA_NONE;
   int flaglist[IMAP_NFLAGS];
-  unsigned long thisnum;
+  u64_t thisnum;
 
   memset(flaglist, 0, sizeof(int) * IMAP_NFLAGS);
 
@@ -2885,7 +2887,7 @@ int _ic_copy(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
   int i,copy_start,copy_end,result,fn;
-  unsigned long destmboxid,thisnum;
+  u64_t destmboxid,thisnum;
   char *endptr;
 
   if (!check_state_and_args("COPY", tag, args, 2, IMAPCS_SELECTED, ci))
@@ -2899,7 +2901,7 @@ int _ic_copy(char *tag, char **args, ClientInfo *ci)
       fprintf(ci->tx, "%s NO [TRYCREATE] specified mailbox does not exist\r\n",tag);
       return 1;
     }
-  if (destmboxid == (unsigned long)(-1))
+  if (destmboxid == (u64_t)(-1))
     {
       fprintf(ci->tx, "* BYE internal dbase error\r\n");
       return -1; /* fatal */

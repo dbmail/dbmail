@@ -5,8 +5,9 @@
 
 #include "config.h"
 #include "pop3.h"
-#include "dbmysql.h"
+#include "db.h"
 #include "debug.h"
+#include "dbmailtypes.h"
 
 /* max_errors defines the maximum number of allowed failures */
 #define MAX_ERRORS 3
@@ -59,8 +60,8 @@ int pop3 (void *stream, char *buffer)
   char *command, *value;
   int cmdtype, found=0;
   int indx=0;
-  unsigned long result;
-  unsigned long top_lines, top_messageid;
+  u64_t result;
+  u64_t top_lines, top_messageid;
   struct element *tmpelement;
   char *md5_apop_he;
   char *searchptr;
@@ -190,10 +191,10 @@ int pop3 (void *stream, char *buffer)
 	      result=db_createsession (result, &curr_session);
 	      if (result==1)
 		{
-		  fprintf ((FILE *)stream, "+OK %s has %lu messages (%lu octets)\r\n",
+		  fprintf ((FILE *)stream, "+OK %s has %llu messages (%llu octets)\r\n",
 			   username, curr_session.virtual_totalmessages,
 			   curr_session.virtual_totalsize);
-		  trace(TRACE_MESSAGE,"pop3(): user %s logged in [messages=%lu, octets=%lu]",
+		  trace(TRACE_MESSAGE,"pop3(): user %s logged in [messages=%llu, octets=%llu]",
 			username, curr_session.virtual_totalmessages,
 			curr_session.virtual_totalsize);
 		}
@@ -217,7 +218,7 @@ int pop3 (void *stream, char *buffer)
 		if (((struct message *)tmpelement->data)->messageid==atol(value) &&
 		    ((struct message *)tmpelement->data)->virtual_messagestatus<2)
 		  {
-		    fprintf ((FILE *)stream,"+OK %lu %lu\r\n",((struct message *)tmpelement->data)->messageid,
+		    fprintf ((FILE *)stream,"+OK %llu %llu\r\n",((struct message *)tmpelement->data)->messageid,
 			     ((struct message *)tmpelement->data)->msize);
 		    found=1;
 		  }
@@ -229,7 +230,7 @@ int pop3 (void *stream, char *buffer)
 	  }
 
 				/* just drop the list */
-	fprintf ((FILE *)stream, "+OK %lu messages (%lu octets)\r\n",curr_session.virtual_totalmessages,
+	fprintf ((FILE *)stream, "+OK %llu messages (%llu octets)\r\n",curr_session.virtual_totalmessages,
 		 curr_session.virtual_totalsize);
 	if (curr_session.virtual_totalmessages>0)
 	  {
@@ -237,7 +238,7 @@ int pop3 (void *stream, char *buffer)
 	    while (tmpelement!=NULL)
 	      {
 		if (((struct message *)tmpelement->data)->virtual_messagestatus<2)
-		  fprintf ((FILE *)stream,"%lu %lu\r\n",((struct message *)tmpelement->data)->messageid,
+		  fprintf ((FILE *)stream,"%llu %llu\r\n",((struct message *)tmpelement->data)->messageid,
 			   ((struct message *)tmpelement->data)->msize);
 		tmpelement=tmpelement->nextnode;
 	      }
@@ -251,7 +252,7 @@ int pop3 (void *stream, char *buffer)
 	if (state!=TRANSACTION)
 	  return pop3_error(stream,"-ERR wrong command mode, sir\r\n");
 		
-	fprintf ((FILE *)stream, "+OK %lu %lu\r\n",curr_session.virtual_totalmessages,
+	fprintf ((FILE *)stream, "+OK %llu %llu\r\n",curr_session.virtual_totalmessages,
 		 curr_session.virtual_totalsize);
 	return 1;
       }
@@ -272,7 +273,7 @@ int pop3 (void *stream, char *buffer)
 		((struct message *)tmpelement->data)->virtual_messagestatus<2) /* message is not deleted */
 	      {
 		((struct message *)tmpelement->data)->virtual_messagestatus=1;
-		fprintf ((FILE *)stream,"+OK %lu octets\r\n",((struct message *)tmpelement->data)->msize); 
+		fprintf ((FILE *)stream,"+OK %llu octets\r\n",((struct message *)tmpelement->data)->msize); 
 		return db_send_message_lines ((void *)stream, ((struct message *)tmpelement->data)->realmessageid,-2, 0);
 	      }
 	    tmpelement=tmpelement->nextnode;
@@ -296,7 +297,7 @@ int pop3 (void *stream, char *buffer)
 		/* decrease our virtual list fields */
 		curr_session.virtual_totalsize-=((struct message *)tmpelement->data)->msize; 
 		curr_session.virtual_totalmessages-=1;
-		fprintf((FILE *)stream,"+OK message %lu deleted\r\n",
+		fprintf((FILE *)stream,"+OK message %llu deleted\r\n",
 			((struct message *)tmpelement->data)->messageid);
 		return 1;
 	      }
@@ -320,7 +321,7 @@ int pop3 (void *stream, char *buffer)
 	    tmpelement=tmpelement->nextnode;
 	  }
 			
-	fprintf ((FILE *)stream, "+OK %lu messages (%lu octets)\r\n",curr_session.virtual_totalmessages,
+	fprintf ((FILE *)stream, "+OK %llu messages (%llu octets)\r\n",curr_session.virtual_totalmessages,
 		 curr_session.virtual_totalsize);
 			
 	return 1;
@@ -338,13 +339,13 @@ int pop3 (void *stream, char *buffer)
 	    if (((struct message *)tmpelement->data)->virtual_messagestatus==0)
 	      {
 		/* we need the last message that has been accessed */
-		fprintf ((FILE *)stream, "+OK %lu\r\n",((struct message *)tmpelement->data)->messageid-1);
+		fprintf ((FILE *)stream, "+OK %llu\r\n",((struct message *)tmpelement->data)->messageid-1);
 		return 1;
 	      }
 	    tmpelement=tmpelement->nextnode;
 	  }
 				/* all old messages */
-	fprintf ((FILE *)stream, "+OK %lu\r\n",curr_session.virtual_totalmessages);
+	fprintf ((FILE *)stream, "+OK %llu\r\n",curr_session.virtual_totalmessages);
 	return 1;
       }
 					
@@ -370,7 +371,7 @@ int pop3 (void *stream, char *buffer)
 			{
 				if (((struct message *)tmpelement->data)->messageid==atol(value)) 
 				{
-					fprintf ((FILE *)stream,"+OK %lu %s\r\n",((struct message *)tmpelement->data)->messageid,
+					fprintf ((FILE *)stream,"+OK %llu %s\r\n",((struct message *)tmpelement->data)->messageid,
 						((struct message *)tmpelement->data)->uidl);
 					found=1;
 				}
@@ -388,7 +389,7 @@ int pop3 (void *stream, char *buffer)
 	    /* traversing list */
 	    while (tmpelement!=NULL)
 	      {
-		fprintf ((FILE *)stream,"%lu %s\r\n",((struct message *)tmpelement->data)->messageid,
+		fprintf ((FILE *)stream,"%llu %s\r\n",((struct message *)tmpelement->data)->messageid,
 			 ((struct message *)tmpelement->data)->uidl);
 		tmpelement=tmpelement->nextnode;
 	      }
@@ -454,10 +455,10 @@ int pop3 (void *stream, char *buffer)
 	      result=db_createsession(result,&curr_session);
 	      if (result==1)
 		{
-		  fprintf((FILE *)stream, "+OK %s has %lu messages (%lu octets)\r\n",
+		  fprintf((FILE *)stream, "+OK %s has %llu messages (%llu octets)\r\n",
 			  username, curr_session.virtual_totalmessages,
 			  curr_session.virtual_totalsize);
-		  trace(TRACE_MESSAGE,"pop3(): user %s logged in [messages=%lu, octets=%lu]",
+		  trace(TRACE_MESSAGE,"pop3(): user %s logged in [messages=%llu, octets=%llu]",
 			username, curr_session.virtual_totalmessages,
 			curr_session.virtual_totalsize);
 		}
@@ -509,7 +510,7 @@ int pop3 (void *stream, char *buffer)
 	    if (((struct message *)tmpelement->data)->messageid==top_messageid &&
 		((struct message *)tmpelement->data)->virtual_messagestatus<2) /* message is not deleted */
 	      {
-		fprintf ((FILE *)stream,"+OK %lu lines of message %lu\r\n",top_lines, top_messageid);
+		fprintf ((FILE *)stream,"+OK %llu lines of message %llu\r\n",top_lines, top_messageid);
 		return db_send_message_lines (stream, ((struct message *)tmpelement->data)->realmessageid, top_lines, 0);
 			}
 	    tmpelement=tmpelement->nextnode;

@@ -4,8 +4,10 @@
 #ifndef PIPE_H_
 #define PIPE_H_
 
-void create_unique_id(char *target, unsigned long messageid);
-char *read_header(unsigned long *blksize);
-int insert_messages(char *header, unsigned long headersize,struct list *users, struct list *returnpath);
+#include "list.h"
+
+void create_unique_id(char *target, u64_t messageid);
+char *read_header(u64_t *blksize);
+int insert_messages(char *header, u64_t headersize,struct list *users, struct list *returnpath);
 
 #endif

@@ -8,18 +8,10 @@
 #define _IMAP4_H
 
 #include "serverservice.h"
+#include "dbmailtypes.h"
 
 #define IMAP_SERVER_VERSION "0.3"
 #define IMAP_CAPABILITY_STRING "IMAP4 IMAP4rev1 AUTH=LOGIN"
-
-/* maximum size of a mailbox name */
-#define IMAP_MAX_MAILBOX_NAMELEN 100
-
-/* length of internaldate string */
-#define IMAP_INTERNALDATE_LEN 30
-
-/* max length of number/dots part specifier */
-#define IMAP_MAX_PARTSPEC_LEN 100
 
 /* max number of retries when synchronizing mailbox with dbase */
 #define MAX_RETRIES 20
@@ -28,23 +20,7 @@ int imap_process(ClientInfo *ci);
 int imap_login(ClientInfo *ci);
 void imap_error_cleanup(ClientInfo *ci);
 
-
-enum IMAP4_CLIENT_STATES { IMAPCS_INITIAL_CONNECT, IMAPCS_NON_AUTHENTICATED, 
-			   IMAPCS_AUTHENTICATED, IMAPCS_SELECTED, IMAPCS_LOGOUT };
-
-enum IMAP4_FLAGS { IMAPFLAG_SEEN = 0x01, IMAPFLAG_ANSWERED = 0x02, 
-		   IMAPFLAG_DELETED = 0x04, IMAPFLAG_FLAGGED = 0x08,
-		   IMAPFLAG_DRAFT = 0x10, IMAPFLAG_RECENT = 0x20 };
-
-enum IMAP4_PERMISSION { IMAPPERM_READ = 0x01, IMAPPERM_READWRITE = 0x02 };
-
-enum IMAP4_FLAG_ACTIONS { IMAPFA_NONE, IMAPFA_REPLACE, IMAPFA_ADD, IMAPFA_REMOVE };
-
 typedef int (*IMAP_COMMAND_HANDLER)(char*, char**, ClientInfo*);
-
-enum BODY_FETCH_ITEM_TYPES { BFIT_TEXT, BFIT_HEADER, BFIT_MIME,
-			     BFIT_HEADER_FIELDS,
-			     BFIT_HEADER_FIELDS_NOT, BFIT_TEXT_SILENT };
 
 typedef struct 
 {
@@ -76,15 +52,6 @@ typedef struct
   int getRFC822,getRFC822Peek;
 } fetch_items_t;
 
-
-typedef struct 
-{
-  unsigned long uid,msguidnext;
-  unsigned exists,recent,unseen;
-  unsigned flags;
-  int permission;
-  unsigned long *seq_list;
-} mailbox_t;
 
 
 typedef struct 
