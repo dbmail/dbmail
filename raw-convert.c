@@ -40,9 +40,20 @@
 
 #define DEFAULT_PASSWD "default"
 #define DEFAULT_LOGINTIME "1979-11-03 22:05:58"
+#define DEFAULT_QUOTUM "12582912"
+#define STR_SIZE 64
 
 const char *mbox_delimiter_pattern = "^From .*";
-char blk[READ_BLOCK_SIZE + MAX_LINESIZE + 1];
+
+typedef struct 
+{
+  char uname[STR_SIZE];
+  char passwd[STR_SIZE];
+} userlist_t;
+
+userlist_t *userlist;
+unsigned long listsize;
+
 
 /* FILE pointers */
 FILE *userfile, *mailboxfile;
@@ -71,6 +82,9 @@ int add_msg(u64_t size, u64_t rfcsize);
 int start_blk();
 int close_blk(u64_t blksize);
 int add_line(const char *line);
+int build_user_list(const char *userfile);
+unsigned long find_user(const char *uname);
+int create_remaining_users();
 
 
 
@@ -81,9 +95,9 @@ int main (int argc, char* argv[])
   int result,i;
   char q[1024];
 
-  if (argc < 2)
+  if (argc < 4)
     {
-      printf ("Error, traverse need a directory as argument\n");
+      printf ("Usage: %s <starting directory> <pwd file> <# lines in pwd file>\n", argv[0]);
       return -1;
     }
 
@@ -95,6 +109,22 @@ int main (int argc, char* argv[])
       printf("Error initializing files\n");
       return 1;
     }
+
+  /* read pwd file */
+  printf("Building username/passwd list..."); fflush(stdout);
+  listsize = strtoul(argv[3], NULL, 10);
+  if (listsize == 0)
+    {
+      printf("Error: listsize 0\n");
+      return 1;
+    }
+
+  if (build_user_list(argv[2]) != 0)
+    {
+      printf("Error building user list\n");
+      return 1;
+    }
+  printf("done :)\n");
 
   time (&start); /* mark the starting time */
   result = traverse (argv[1]);
@@ -111,6 +141,10 @@ int main (int argc, char* argv[])
       return result;
     }
 
+  printf("Creating users with empty mailboxes..."); fflush(stdout);
+  create_remaining_users();
+  printf("done :)\n");
+  
   printf("Inserting into dbase...");
   fflush(stdout);
 
@@ -179,7 +213,7 @@ int traverse (char *path)
   char newpath [1024];
   char *username;
   struct dirent **namelist;
-  int n;
+  int n,r;
 
   n = scandir (path, &namelist, 0, alphasort);
 
@@ -190,16 +224,24 @@ int traverse (char *path)
       printf ("username %s\n", username);
 	   
       printf("creating user...");
-      add_user(username);
-      printf("Ok id [%llu]\n", useridnr);
-
-      printf("converting mailbox...");
-      fflush(stdout);
-      n = process_mboxfile(path);
-      if (n != 0)
-	printf("Warning: error converting mailbox\n");
+      r = add_user(username);
+      if (r != 0)
+	{
+	  if (r == -1)
+	    fprintf(stderr, "User [%s] doesn't exist in passwd list, skipping...\n", username);
+	}
       else
-	printf ("done :)\n");
+	{
+	  printf("Ok id [%llu]\n", useridnr);
+
+	  printf("converting mailbox...");
+	  fflush(stdout);
+	  r = process_mboxfile(path);
+	  if (r != 0)
+	    printf("Warning: error converting mailbox\n");
+	  else
+	    printf ("done :)\n");
+	}
     }
   else
     {
@@ -400,11 +442,19 @@ int close_files()
 /* adds a user and a INBOX */
 int add_user(const char *uname)
 {
+  unsigned long entry = 0;
+
+  /*  check if this user exists */
+  entry = find_user(uname);
+  if (entry == -1)
+    return -1; /* user doesnt exist */
+
   useridnr++;
   mboxidnr++;
 
   /* layout: useridnr userid passwd clientidnr maxmailsize enctype last-login*/
-  fprintf(userfile, "%llu\t%s\t%s\t0\t10000000\t\t%s\n", useridnr, uname, DEFAULT_PASSWD, DEFAULT_LOGINTIME);
+  fprintf(userfile, "%llu\t%s\t%s\t0\t%s\tcrypt\t%s\n", useridnr, uname, userlist[entry].passwd, 
+	  DEFAULT_QUOTUM, DEFAULT_LOGINTIME);
 
   /* layout: mboxidnr owneridnr name
      seen/answered/deleted/flagged/recent/draft -flag 
@@ -414,8 +464,11 @@ int add_user(const char *uname)
 	  "0\t0\t0\t0\t0\t0\t"
 	  "0\t0\t2\t1\n", mboxidnr, useridnr, "INBOX");
 
+  /* clear this user from the list */
+  userlist[entry].uname[0] = '\0';
+
   if (ferror(userfile) || ferror(mailboxfile))
-    return -1;
+    return -2;
 
   return 0;
 }
@@ -533,3 +586,112 @@ int add_line(const char *line)
   return (ferror(msgblksfile[currblkfile])) ? -1 : 0;
 }
 
+
+/*
+ * builds a list of usernames/passwds. global var listsize should be initialized 
+ */
+int build_user_list(const char *userfile)
+{
+  FILE *infile;
+  unsigned long i;
+  char line[MAX_LINESIZE];
+  char *split;
+
+  if ( !(userlist = (userlist_t*)malloc(sizeof(userlist_t) * listsize)) )
+    {
+      printf("out of mem\n");
+      return -1;
+    }
+
+  if ( (infile = fopen(userfile, "r")) == 0)
+    {
+      free(userlist);
+      userlist = NULL;
+      perror("could not open file");
+      return -1;
+    }
+  
+  memset(userlist, 0, sizeof(userlist_t) * listsize);
+
+  for (i=0; i<listsize; i++)
+    {
+      fgets(line, MAX_LINESIZE, infile);
+      if (line[strlen(line)-1] == '\n')
+	line[strlen(line)-1] = '\0';
+
+      split = strchr(line, ':');
+      if (!split)
+	{
+	  printf("Warning: invalid line [%lu] : [%s] found...\n", i, line);
+	  continue;
+	}
+
+      split = '\0'; /* terminate */
+
+      strncpy(line, userlist[i].uname, STR_SIZE);
+      strncpy(split+1, userlist[i].passwd, STR_SIZE);
+
+      if (ferror(infile) || feof(infile))
+	{
+	  perror("EOF/error detected");
+	  break;
+	}
+    }
+
+  return 0;
+}
+
+
+/*
+ * finds a user in the userlist. returns (unsigned long)(-1) if not found, entry # otherwise
+ */
+unsigned long find_user(const char *uname)
+{
+  unsigned long i;
+
+  for (i=0; i<listsize; i++)
+    {
+      if (userlist[i].uname && userlist[i].uname[0] != '\0')
+	{
+	  if (strcmp(uname, userlist[i].uname) == 0)
+	    return i;
+	}
+    }
+
+  return (unsigned long)(-1);
+}
+
+
+int create_remaining_users()
+{
+  unsigned long i;
+
+  for (i=0; i<listsize; i++)
+    {
+      if (userlist[i].uname && userlist[i].uname[0] != '\0')
+	{
+	  useridnr++;
+	  mboxidnr++;
+
+	  /* layout: useridnr userid passwd clientidnr maxmailsize enctype last-login*/
+	  fprintf(userfile, "%llu\t%s\t%s\t0\t%s\tcrypt\t%s\n", useridnr, userlist[i].uname, userlist[i].passwd, 
+		  DEFAULT_QUOTUM, DEFAULT_LOGINTIME);
+
+	  /* layout: mboxidnr owneridnr name
+	     seen/answered/deleted/flagged/recent/draft -flag 
+	     no-inferiors no-select permission is_subscribed */
+
+	  fprintf(mailboxfile, "%llu\t%llu\t%s\t"
+		  "0\t0\t0\t0\t0\t0\t"
+		  "0\t0\t2\t1\n", mboxidnr, useridnr, "INBOX");
+
+	  /* clear this user from the list */
+	  userlist[i].uname[0] = '\0';
+
+	  if (ferror(userfile) || ferror(mailboxfile))
+	    return -1;
+	}
+    }
+  
+  return 0;
+}
