@@ -23,7 +23,7 @@ int main()
   int i,result;
   char *left, *right, *tmp;
 
-  if (!db_connect()) 
+  if (db_connect() == -1) 
     {
       fprintf(stderr, "Could not connect to dbase server\n");
       return 1;

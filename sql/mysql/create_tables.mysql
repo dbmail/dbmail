@@ -48,7 +48,6 @@ CREATE TABLE messages (
    message_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
    mailbox_idnr bigint(21) DEFAULT '0' NOT NULL,
    messagesize bigint(21) DEFAULT '0' NOT NULL,
-   rfcsize bigint(21) DEFAULT '0' NOT NULL,
    seen_flag tinyint(1) default '0' not null,
    answered_flag tinyint(1) default '0' not null,
    deleted_flag tinyint(1) default '0' not null,
@@ -58,6 +57,7 @@ CREATE TABLE messages (
    unique_id varchar(70) NOT NULL,
    internal_date datetime default '0' not null,
    status tinyint(3) unsigned zerofill default '000' not null,
+   rfcsize bigint(21) DEFAULT '0' NOT NULL,
    PRIMARY KEY (message_idnr),
    KEY message_idnr (message_idnr),
    UNIQUE message_idnr_2 (message_idnr)

@@ -35,7 +35,7 @@ CFLAGS = -Wall -ggdb -D_BSD_SOURCE -D_SVID_SOURCE
 
 .PHONY: clean install
 
-all: smtp pop3d maintenance config imapd user
+all: smtp pop3d maintenance config imapd user readvut
 
 smtp: config.h main.h $(SMTP_OBJECTS) main.c
 		$(CC)	$(CFLAGS) main.c -o dbmail-smtp $(SMTP_OBJECTS) $(LIBS) $(LIB)
