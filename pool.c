@@ -175,7 +175,6 @@ int count_spare_children()
 			count++;
 	}
 	scoreboard_unlck();
-	
 	return count;
 }
 
@@ -407,6 +406,7 @@ void manage_stop_children()
 				      "%s,%s: child [%d] has exited, zombie cleaned up",
 				      __FILE__,__func__,(unsigned) chpid);
 				chpid = 0;
+				scoreboard_release(chpid);			
 			} else {
 				stillSomeAlive = 1;
 				trace(TRACE_INFO,
@@ -428,6 +428,7 @@ void manage_stop_children()
 			chpid = scoreboard->child[i].pid;
 			if (chpid != 0)
 				kill(chpid, SIGKILL);;
+			scoreboard_release(chpid);			
 		}
 	}
 }
@@ -476,6 +477,7 @@ void manage_spare_children()
 				      "%s,%s: spare child [%u] has exited",
 				      __FILE__,__func__,chpid);
 			}
+			scoreboard_release(chpid);			
 		} else {
 			trace(TRACE_WARNING,
 			      "%s,%s: unable to get pid for idle spare",
@@ -493,6 +495,7 @@ void manage_spare_children()
 		      scoreboard->conf->minSpareChildren,
 		      scoreboard->conf->maxSpareChildren);
 	}
+	
 	if (!count_children()) {
 		trace(TRACE_WARNING,
 		      "%s,%s: no children left ?. Aborting.",
