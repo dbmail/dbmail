@@ -1,0 +1,31 @@
+CREATE TABLE tmpmessage (
+       messageidnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
+       mailboxidnr int(21) DEFAULT '0' NOT NULL,
+       messagesize bigint(21) DEFAULT '0' NOT NULL,
+       seen_flag tinyint(1) default '0' not null,
+       answered_flag tinyint(1) default '0' not null,
+       deleted_flag tinyint(1) default '0' not null,
+       flagged_flag tinyint(1) default '0' not null,
+       recent_flag tinyint(1) default '0' not null,
+       draft_flag tinyint(1) default '0' not null,
+       unique_id varchar(70) NOT NULL,
+       internal_date datetime default '0' not null,
+       status tinyint(3) unsigned zerofill default '000' not null,
+
+       PRIMARY KEY (messageidnr),
+       KEY messageidnr (messageidnr),
+       UNIQUE messageidnr_2 (messageidnr)
+);
+
+CREATE TABLE tmpmessageblk (
+       messageblknr bigint(21) DEFAULT '0' NOT NULL auto_increment,
+       messageidnr bigint(21) DEFAULT '0' NOT NULL,
+       messageblk longtext NOT NULL,
+       blocksize bigint(21) DEFAULT '0' NOT NULL,
+
+       PRIMARY KEY (messageblknr),
+       KEY messageblknr (messageblknr),
+       KEY msg_index (messageidnr),
+       UNIQUE messageblknr_2 (messageblknr)
+) TYPE=MyISAM;
+
