@@ -17,7 +17,6 @@
 #include "imaputil.h"
 #include "imap4.h"
 #include "debug.h"
-#include "sstack.h"
 #include "dbmysql.h"
 
 #ifndef MAX_LINESIZE
