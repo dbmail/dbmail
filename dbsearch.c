@@ -360,11 +360,11 @@ int db_search_range(db_pos_t start, db_pos_t end,
 	}
 
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT messageblk FROM dbmail_messageblks "
-		 "LEFT JOIN dbmail_messages ON "
-		 "dbmail_messages.physmessage_id = dbmail_messageblks.physmessage_id "
-		 "WHERE message_idnr = '%llu' "
-		 "ORDER BY messageblk_idnr", msg_idnr);
+		 "SELECT block.messageblk "
+		 "FROM dbmail_messageblks block, dbmail_messages msg "
+		 "WHERE block.physmessage_id = msg.physmessage_id "
+		 "AND msg.message_idnr = '%llu'",
+		 msg_idnr);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not get message",

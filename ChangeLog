@@ -1,3 +1,13 @@
+2004-08-06  Ilja Booij  <ilja@ic-s.nl>
+
+	* dbsearch.c (db_search_range): changed query that wasn't using 
+	indexes properly in PostgreSQL to one that does.
+
+	* dbmsgbuf.c (db_dump_range): changed query that wasn't using 
+	indexes properly in PostgreSQL to one that does.
+	(db_init_msgfetch): changed query that wasn't using 
+	indexes properly in PostgreSQL to one that does.
+
 2004-08-05  Ilja Booij  <ilja@ic-s.nl>
 
 	* sql/mysql/migrate_from_1.x_to_2.0.mysql:  removed removal

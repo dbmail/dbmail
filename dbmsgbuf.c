@@ -68,11 +68,12 @@ int db_init_msgfetch(u64_t msg_idnr)
 	memset(msgbuf_buf, '\0', (size_t) MSGBUF_WINDOWSIZE);
 	
 	snprintf(query, DEF_QUERYSIZE,
-		"SELECT messageblk FROM dbmail_messageblks LEFT JOIN dbmail_messages "
-		"USING (physmessage_id) "
-		"WHERE dbmail_messages.message_idnr = '%llu' "
-		"ORDER BY messageblk_idnr",
-		msg_idnr);
+		 "SELECT block.messageblk "
+		 "FROM dbmail_messageblks block, dbmail_messages msg "
+		 "WHERE block.physmessage_id = msg.physmessage_id "
+		 "AND msg.message_idnr = '%llu' "
+		 "ORDER BY block.messageblk_idnr",
+		 msg_idnr);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not get message",
@@ -354,11 +355,12 @@ long db_dump_range(MEM * outmem, db_pos_t start,
 	}
 	
 	snprintf(query, DEF_QUERYSIZE,
-		"SELECT messageblk FROM dbmail_messageblks LEFT JOIN dbmail_messages "
-		"USING (physmessage_id) "
-		"WHERE dbmail_messages.message_idnr = '%llu' "
-		"ORDER BY messageblk_idnr",
-		msg_idnr);
+		 "SELECT block.messageblk "
+		 "FROM dbmail_messageblks block, dbmail_messages msg "
+		 "WHERE block.physmessage_id = msg.physmessage_id "
+		 "AND msg.message_idnr = '%llu' "
+		 "ORDER BY block.messageblk_idnr",
+		 msg_idnr);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not get message",
