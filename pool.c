@@ -39,6 +39,8 @@ extern int GeneralStopRequested;
 extern ChildInfo_t childinfo;
 
 
+static State_t state_new(void); 
+static int set_lock(int type);
 /*
  *
  *
@@ -47,7 +49,6 @@ extern ChildInfo_t childinfo;
  *
  */
 
-State_t state_new(void); 
 State_t state_new(void)
 {
 	State_t s;
@@ -59,7 +60,6 @@ State_t state_new(void)
 	return s;
 }
 
-int set_lock(int type);
 int set_lock(int type)
 {
 	struct flock lock;
@@ -87,12 +87,22 @@ void scoreboard_new(serverConfig_t * conf)
 	scoreboard_conf_check();
 }
 
+char * scoreboard_lock_getfilename(void)
+{
+	char *filename;
+	GString *s = g_string_new("");
+	g_string_printf(s,"%s_%d.LCK", SCOREBOARD_LOCK_FILE, getpid());
+	filename = s->str;
+	g_string_free(s,FALSE);
+	return filename;
+}
+
 void scoreboard_lock_new(void)
 {
-	if ( (sb_lockfd = open(SCOREBOARD_LOCK_FILE,O_RDWR|O_CREAT|O_TRUNC,0600)) < 0) {
+	if ( (sb_lockfd = open(scoreboard_lock_getfilename(),O_EXCL|O_RDWR|O_CREAT|O_TRUNC,0600)) < 0) {
 		trace(TRACE_FATAL,
-			"%s,%s, opening lockfile [%s] failed", __FILE__, __FUNCTION__,
-			SCOREBOARD_LOCK_FILE);
+			"%s,%s, opening lockfile [%s] failed", 
+			__FILE__, __func__,scoreboard_lock_getfilename());
 	}
 }
 
@@ -114,8 +124,7 @@ void scoreboard_conf_check(void)
 		      "%s,%s: MAXCHILDREN too large. Decreasing to [%d]",
 		      __FILE__,__func__,HARD_MAX_CHILDREN);
 		scoreboard->conf->maxChildren = HARD_MAX_CHILDREN;
-	}
-	if (scoreboard->conf->maxChildren < scoreboard->conf->startChildren) {
+	} else if (scoreboard->conf->maxChildren < scoreboard->conf->startChildren) {
 		trace(TRACE_WARNING,
 		      "%s,%s: MAXCHILDREN too small. Increasing to NCHILDREN [%d]",
 		      __FILE__,__func__,scoreboard->conf->startChildren);
@@ -127,9 +136,7 @@ void scoreboard_conf_check(void)
 		      "%s,%s: MAXSPARECHILDREN too large. Decreasing to MAXCHILDREN [%d]",
 		      __FILE__,__func__,scoreboard->conf->maxChildren);
 		scoreboard->conf->maxSpareChildren = scoreboard->conf->maxChildren;
-	}
-
-	if (scoreboard->conf->maxSpareChildren < scoreboard->conf->minSpareChildren) {
+	} else if (scoreboard->conf->maxSpareChildren < scoreboard->conf->minSpareChildren) {
 		trace(TRACE_WARNING,
 		      "%s,%s: MAXSPARECHILDREN too small. Increasing to MINSPARECHILDREN [%d]",
 		      __FILE__,__func__,scoreboard->conf->minSpareChildren);
@@ -156,10 +163,10 @@ void scoreboard_delete()
 		trace(TRACE_FATAL,
 		      "scoreboard_delete(): delete shared mem segment failed");
 	
-	if (unlink(SCOREBOARD_LOCK_FILE) == -1) 
+	if (unlink(scoreboard_lock_getfilename()) == -1) 
 		trace(TRACE_ERROR,
 		      "scoreboard_delete(): error deleting scoreboard lock "
-		      "file %s", SCOREBOARD_LOCK_FILE);
+		      "file %s", scoreboard_lock_getfilename());
 	
 	return;
 }
@@ -392,34 +399,17 @@ void manage_stop_children()
 			if (chpid <= 0)
 				continue;
 
-			if (CheckChildAlive(chpid)) {
-				trace(TRACE_INFO,
-				      "%s,%s: child [%d] is still alive, sending SIGTERM",
-				      __FILE__,__func__,(unsigned) chpid);
-				kill(chpid, SIGTERM);
-				usleep(1000);
-			} else
-				trace(TRACE_INFO,
-				      "%s,%s: child [%d] is dead, zombie not yet cleaned",
-				      __FILE__,__func__,(unsigned) chpid);
-
-
 			if (waitpid(chpid, NULL, WNOHANG | WUNTRACED) == chpid) {
-				trace(TRACE_INFO,
-				      "%s,%s: child [%d] has exited, zombie cleaned up",
-				      __FILE__,__func__,(unsigned) chpid);
 				scoreboard_release(chpid);			
-				chpid = 0;
 			} else {
 				stillSomeAlive = 1;
-				trace(TRACE_INFO,
-				      "%s,%s: child [%d] hasn't provided exit status yet",
-				      __FILE__,__func__,chpid);
+				if (cnt==1) /* no use killing the dead */
+					kill(chpid, SIGTERM);
+
+				usleep(1000);
 			}
 		}
-
-		if (stillSomeAlive)
-			usleep(500);
+		sleep(cnt);
 	}
 
 	if (stillSomeAlive) {
@@ -435,8 +425,6 @@ void manage_stop_children()
 		}
 	}
 }
-
-
 void manage_spare_children()
 {
 	/* 
@@ -446,6 +434,9 @@ void manage_spare_children()
 	 */
 	int somethingchanged;
 	pid_t chpid;
+	
+	if (GeneralStopRequested)
+		return;
 	
 	chpid = getpid();
 	somethingchanged = 0;

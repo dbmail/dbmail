@@ -1,3 +1,10 @@
+2005-01-18  Paul Stevens <paul@nfg.nl>
+	
+	* imapcommands.c (_ic_store): treat seqnum of 0xffffffff as '*' to
+	accomodate outlook express.
+	* pool.c: use different shm lockfiles per daemon.
+	* imaputil.c: fix plist construction.
+
 2005-01-14  Paul Stevens <paul@nfg.nl>
 
 	* db.h, mysql/dbmysql.c, pgsql/dbpgsql.c (db_check_connection): moved

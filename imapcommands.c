@@ -1852,8 +1852,7 @@ int _ic_fetch(struct ImapSession *self)
 				return -1;
 			
 		} else {
-
-			/* if there is no parsing at all, this loop is not needed */
+			/* parsing required */
 			for (i = fetch_start; i <= fetch_end; i++) {
 				self->msg_idnr = (self->use_uid ? i : ud->mailbox.seq_list[i]);
 				insert_rfcsize = 0;
@@ -1900,7 +1899,7 @@ int _ic_store(struct ImapSession *self)
 {
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	char *endptr, *lastchar = NULL;
-	u64_t i, store_start, store_end;
+	u64_t i, store_start, store_end, seq_max;
 	unsigned fn = 0;
 	int result, j, isfirstout = 0;
 	int be_silent = 0, action = IMAPFA_NONE;
@@ -2025,7 +2024,8 @@ int _ic_store(struct ImapSession *self)
 	   the right to store the flags */
 
 	db_getmailbox(&ud->mailbox); // resync mailbox
-
+	seq_max = (self->use_uid ? (ud->mailbox.msguidnext - 1) : ud->mailbox.exists);
+	
 	/* set flags & show if needed */
 	endptr = self->args[0];
 	while (*endptr) {
@@ -2033,10 +2033,11 @@ int _ic_store(struct ImapSession *self)
 			endptr++;	/* skip delimiter */
 
 		store_start = strtoull(endptr, &endptr, 10);
+		
+		if (store_start == 0xffffffff) // outlook's idea of '*'
+			store_start = seq_max;
 
-		if (store_start == 0 || store_start >
-		    (self->use_uid ? (ud->mailbox.msguidnext - 1) :
-		     ud->mailbox.exists)) {
+		if (store_start == 0 || store_start > seq_max) {
 			dbmail_imap_session_printf(self,
 				"%s BAD invalid message range specified\r\n",
 				self->tag);
@@ -2046,6 +2047,10 @@ int _ic_store(struct ImapSession *self)
 		switch (*endptr) {
 		case ':':
 			store_end = strtoull(++endptr, &lastchar, 10);
+
+			if (store_end == 0xffffffff) // outlook's idea of '*'
+				store_end = seq_max;
+			
 			endptr = lastchar;
 
 			if (*endptr == '*') {
@@ -2056,12 +2061,8 @@ int _ic_store(struct ImapSession *self)
 				break;
 			}
 
-			if (store_end == 0 || store_end >
-			    (self->use_uid
-			     ? (ud->mailbox.msguidnext -
-				1) : ud->mailbox.exists)) {
-				dbmail_imap_session_printf(self,
-					"%s BAD invalid message range specified\r\n",
+			if (store_end == 0 || store_end > seq_max) {
+				dbmail_imap_session_printf(self, "%s BAD invalid message range specified\r\n",
 					self->tag);
 				return 1;
 			}

@@ -144,6 +144,7 @@ class testImapServer(unittest.TestCase):
         self.assertEquals(result[0],'OK')
         result=self.o.fetch("1","(BODY.PEEK[HEADER.FIELDS (References X-Ref X-Priority X-MSMail-Priority X-MSOESRec Newsgroups)] ENVELOPE RFC822.SIZE UID FLAGS INTERNALDATE)")
         self.assertEquals(result[0],'OK')
+        print result
 	
 
     def testGetacl(self):

@@ -44,6 +44,8 @@
 #include "dbmsgbuf.h"
 #include "imaputil.h"
 
+#include "check_dbmail.h"
+
 char *configFile = DEFAULT_CONFIG_FILE;
 extern db_param_t _db_params;
 
@@ -54,78 +56,9 @@ extern char *msgbuf_buf;
 extern u64_t msgbuf_idx;
 extern u64_t msgbuf_buflen;
 
-/* simple testmessage. */
-char *raw_message = "From: <vol@inter7.com>\n"
-	"To: <vol@inter7.com>\n"
-	"Subject: multipart/mixed\n"
-	"Received: at mx.inter7.com from localhost\n"
-	"Received: at localhost from localhost\n"
-	"MIME-Version: 1.0\n"
-	"Content-type: multipart/mixed; boundary=\"boundary\"\n"
-	"X-Dbmail-ID: 12345\n"
-	"\n"
-	"MIME multipart messages specify that there are multiple\n"
-	"messages of possibly different types included in the\n"
-	"message.  All peices will be availble by the user-agent\n"
-	"if possible.\n"
-	"\n"
-	"The header 'Content-disposition: inline' states that\n"
-	"if possible, the user-agent should display the contents\n"
-	"of the attachment as part of the email, rather than as\n"
-	"a file, or message attachment.\n"
-	"\n"
-	"(This message will not be seen by the user)\n"
-	"\n"
-	"--boundary\n"
-	"Content-type: text/html\n"
-	"Content-disposition: inline\n"
-	"\n"
-	"Test message one\n"
-	"--boundary\n"
-	"Content-type: text/plain; charset=us-ascii; name=\"testfile\"\n"
-	"Content-transfer-encoding: base64\n"
-	"\n"
-	"IyEvYmluL2Jhc2gNCg0KY2xlYXINCmVjaG8gIi4tLS0tLS0tLS0tLS0tLS0t\n"
-	"LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS4i\n"
-	"DQplY2hvICJ8IE1hcmNoZXcuSHlwZXJyZWFsIHByZXNlbnRzOiB2aXhpZSBj\n"
-	"cm9udGFiIGV4cGxvaXQgIzcyODM3MSB8Ig0KZWNobyAifD09PT09PT09PT09\n"
-	"PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09\n"
-	"PT09fCINCmVjaG8gInwgU2ViYXN0aWFuIEtyYWhtZXIgPGtyYWhtZXJAc2Vj\n"
-	"dXJpdHkuaXM+ICAgICAgICAgICAgICAgICAgIHwiDQplY2hvICJ8IE1pY2hh\n"
-	"--boundary--\n";
-
-char *raw_message_part = "Content-Type: text/plain;\n"
-	" name=\"mime_alternative\"\n"
-	"Content-Transfer-Encoding: 7bit\n"
-	"Content-Disposition: inline;\n"
-	" filename=\"mime_alternative\"\n"
-	"\n"
-	"From: <vol@inter7.com>\n"
-	"To: <vol@inter7.com>\n"
-	"Subject: multipart/alternative\n"
-	"MIME-Version: 1.0\n"
-	"Content-type: multipart/alternative; boundary=\"boundary\"\n"
-	"\n"
-	"MIME alternative sample body\n"
-	"(user never sees this portion of the message)\n"
-	"\n"
-	"These messages are used to send multiple versions of the same\n"
-	"message in different formats.  User-agent will decide which\n"
-	"to display.\n"
-	"\n"
-	"--boundary\n"
-	"Content-type: text/html\n"
-	"\n"
-	"<HTML><HEAD><TITLE>HTML version</TITLE></HEAD><BODY>\n"
-	"<CENTER>HTML version</CENTER>\n"
-	"</BODY></HTML>\n"
-	"--test\n"
-	"Content-type: text/plain\n"
-	"\n"
-	"Text version\n"
-	"--boundary--\n"
-	"\n";
-	
+extern char *raw_message;
+extern char *raw_message_part;
+extern char *raw_lmtp_data;
 
 void print_mimelist(struct list *mimelist)
 {
@@ -148,6 +81,34 @@ void setup(void)
 {
 	configure_debug(5,0,1);
 }
+
+START_TEST(test_g_list_join)
+{
+	GString *result;
+	GList *l = NULL;
+	l = g_list_append(l, "NIL");
+	l = g_list_append(l, "NIL");
+	l = g_list_append(l, "(NIL NIL)");
+	l = g_list_append(l, "(NIL NIL)");
+	result = g_list_join(l," ");
+	fail_unless(strcmp(result->str,"NIL NIL (NIL NIL) (NIL NIL)")==0,"g_list_join failed");
+	g_string_free(result,TRUE);
+
+}
+END_TEST
+
+START_TEST(test_dbmail_imap_plist_as_string)
+{
+	char *result;
+	GList *l = NULL;
+	l = g_list_append(l, "NIL");
+	l = g_list_append(l, "NIL");
+	l = g_list_append(l, "(NIL NIL)");
+	l = g_list_append(l, "(NIL NIL)");
+	result = dbmail_imap_plist_as_string(l);
+	fail_unless(strcmp(result,"(NIL NIL (NIL NIL)(NIL NIL))")==0,"plist construction failed");
+}
+END_TEST
 
 START_TEST(test_imap_session_new)
 {
@@ -394,6 +355,8 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_mime, test_mime_fetch_headers);
 
 	tcase_add_checked_fixture(tc_util, setup, NULL);
+	tcase_add_test(tc_util, test_g_list_join);
+	tcase_add_test(tc_util, test_dbmail_imap_plist_as_string);
 	tcase_add_test(tc_util, test_dbmail_imap_list_slices);
 	tcase_add_test(tc_util, test_build_set);
 	return s;

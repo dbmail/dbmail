@@ -167,12 +167,20 @@ lib_LTLIBRARIES = libdbmail.la
 libdbmail_la_SOURCES = $(COMMON) $(SERVER) $(DELIVER)
 libdbmail_la_LIBADD = @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @INIPARSERLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
-@WITHCHECK_TRUE@TESTS = check_dbmail_common check_dbmail_imapd
-@WITHCHECK_TRUE@noinst_PROGRAMS = check_dbmail_common check_dbmail_imapd
+@WITHCHECK_TRUE@TESTS = check_dbmail_common check_dbmail_server check_dbmail_deliver check_dbmail_imapd 
+@WITHCHECK_TRUE@noinst_PROGRAMS = check_dbmail_common check_dbmail_server check_dbmail_deliver check_dbmail_imapd
 
 @WITHCHECK_TRUE@check_dbmail_common_SOURCES = $(COMMON) check_dbmail_common.c
 @WITHCHECK_TRUE@check_dbmail_common_LDADD = $(dbmail_users_LDADD) @CHECK_LIBS@
 @WITHCHECK_TRUE@check_dbmail_common_INCLUDES = @CHECK_CFLAGS@
+
+@WITHCHECK_TRUE@check_dbmail_server_SOURCES = $(SERVER) check_dbmail_server.c
+@WITHCHECK_TRUE@check_dbmail_server_LDADD = $(dbmail_imapd_LDADD) @CHECK_LIBS@
+@WITHCHECK_TRUE@check_dbmail_server_INCLUDES = @CHECK_CFLAGS@
+
+@WITHCHECK_TRUE@check_dbmail_deliver_SOURCES = $(DELIVER) check_dbmail_deliver.c
+@WITHCHECK_TRUE@check_dbmail_deliver_LDADD = $(dbmail_smtp_LDADD) @CHECK_LIBS@
+@WITHCHECK_TRUE@check_dbmail_deliver_INCLUDES = @CHECK_CFLAGS@
 
 @WITHCHECK_TRUE@check_dbmail_imapd_SOURCES = $(COMMON) $(SERVER) quota.c imap4.c imaputil.c imapcommands.c memblock.c rfcmsg.c dbsearch.c dbmsgbuf.c acl.c dbmail-imapsession.c check_dbmail_imapd.c
 @WITHCHECK_TRUE@check_dbmail_imapd_LDADD = $(dbmail_imapd_LDADD) @CHECK_LIBS@
@@ -197,6 +205,8 @@ pool.lo pipe.lo forward.lo dsn.lo
 @SIEVE_TRUE@bin_PROGRAMS =  dbmail-sievecmd$(EXEEXT) \
 @SIEVE_TRUE@dbmail-timsieved$(EXEEXT)
 @WITHCHECK_TRUE@noinst_PROGRAMS =  check_dbmail_common$(EXEEXT) \
+@WITHCHECK_TRUE@check_dbmail_server$(EXEEXT) \
+@WITHCHECK_TRUE@check_dbmail_deliver$(EXEEXT) \
 @WITHCHECK_TRUE@check_dbmail_imapd$(EXEEXT)
 sbin_PROGRAMS =  dbmail-smtp$(EXEEXT) dbmail-pop3d$(EXEEXT) \
 dbmail-imapd$(EXEEXT) dbmail-util$(EXEEXT) dbmail-users$(EXEEXT) \
@@ -217,6 +227,16 @@ dbmail_timsieved_LDFLAGS =
 @WITHCHECK_TRUE@dbmail-message.$(OBJEXT) check_dbmail_common.$(OBJEXT)
 @WITHCHECK_TRUE@check_dbmail_common_DEPENDENCIES =  libdbmail.la
 check_dbmail_common_LDFLAGS = 
+@WITHCHECK_TRUE@check_dbmail_server_OBJECTS =  server.$(OBJEXT) \
+@WITHCHECK_TRUE@serverchild.$(OBJEXT) pool.$(OBJEXT) \
+@WITHCHECK_TRUE@check_dbmail_server.$(OBJEXT)
+@WITHCHECK_TRUE@check_dbmail_server_DEPENDENCIES =  libdbmail.la
+check_dbmail_server_LDFLAGS = 
+@WITHCHECK_TRUE@check_dbmail_deliver_OBJECTS =  pipe.$(OBJEXT) \
+@WITHCHECK_TRUE@forward.$(OBJEXT) dsn.$(OBJEXT) \
+@WITHCHECK_TRUE@check_dbmail_deliver.$(OBJEXT)
+@WITHCHECK_TRUE@check_dbmail_deliver_DEPENDENCIES =  libdbmail.la
+check_dbmail_deliver_LDFLAGS = 
 @WITHCHECK_TRUE@check_dbmail_imapd_OBJECTS =  config.$(OBJEXT) \
 @WITHCHECK_TRUE@debug.$(OBJEXT) list.$(OBJEXT) dbmd5.$(OBJEXT) \
 @WITHCHECK_TRUE@md5.$(OBJEXT) db.$(OBJEXT) misc.$(OBJEXT) \
@@ -266,7 +286,8 @@ DISTFILES = $(DIST_COMMON) $(SOURCES) $(HEADERS) $(TEXINFOS) $(EXTRA_DIST)
 TAR = tar
 GZIP_ENV = --best
 DEP_FILES =  .deps/acl.P .deps/check_dbmail_common.P \
-.deps/check_dbmail_imapd.P .deps/config.P .deps/db.P \
+.deps/check_dbmail_deliver.P .deps/check_dbmail_imapd.P \
+.deps/check_dbmail_server.P .deps/config.P .deps/db.P \
 .deps/dbmail-imapsession.P .deps/dbmail-message.P .deps/dbmd5.P \
 .deps/dbmsgbuf.P .deps/dbsearch.P .deps/debug.P .deps/dsn.P \
 .deps/forward.P .deps/imap4.P .deps/imapcommands.P .deps/imapd.P \
@@ -276,8 +297,8 @@ DEP_FILES =  .deps/acl.P .deps/check_dbmail_common.P \
 .deps/pop3d.P .deps/quota.P .deps/rfcmsg.P .deps/server.P \
 .deps/serverchild.P .deps/sievecmd.P .deps/timsieve.P .deps/timsieved.P \
 .deps/user.P
-SOURCES = $(libdbmail_la_SOURCES) $(dbmail_sievecmd_SOURCES) $(dbmail_timsieved_SOURCES) $(check_dbmail_common_SOURCES) $(check_dbmail_imapd_SOURCES) $(dbmail_smtp_SOURCES) $(dbmail_pop3d_SOURCES) $(dbmail_imapd_SOURCES) $(dbmail_util_SOURCES) $(dbmail_users_SOURCES) $(dbmail_lmtpd_SOURCES)
-OBJECTS = $(libdbmail_la_OBJECTS) $(dbmail_sievecmd_OBJECTS) $(dbmail_timsieved_OBJECTS) $(check_dbmail_common_OBJECTS) $(check_dbmail_imapd_OBJECTS) $(dbmail_smtp_OBJECTS) $(dbmail_pop3d_OBJECTS) $(dbmail_imapd_OBJECTS) $(dbmail_util_OBJECTS) $(dbmail_users_OBJECTS) $(dbmail_lmtpd_OBJECTS)
+SOURCES = $(libdbmail_la_SOURCES) $(dbmail_sievecmd_SOURCES) $(dbmail_timsieved_SOURCES) $(check_dbmail_common_SOURCES) $(check_dbmail_server_SOURCES) $(check_dbmail_deliver_SOURCES) $(check_dbmail_imapd_SOURCES) $(dbmail_smtp_SOURCES) $(dbmail_pop3d_SOURCES) $(dbmail_imapd_SOURCES) $(dbmail_util_SOURCES) $(dbmail_users_SOURCES) $(dbmail_lmtpd_SOURCES)
+OBJECTS = $(libdbmail_la_OBJECTS) $(dbmail_sievecmd_OBJECTS) $(dbmail_timsieved_OBJECTS) $(check_dbmail_common_OBJECTS) $(check_dbmail_server_OBJECTS) $(check_dbmail_deliver_OBJECTS) $(check_dbmail_imapd_OBJECTS) $(dbmail_smtp_OBJECTS) $(dbmail_pop3d_OBJECTS) $(dbmail_imapd_OBJECTS) $(dbmail_util_OBJECTS) $(dbmail_users_OBJECTS) $(dbmail_lmtpd_OBJECTS)
 
 all: all-redirect
 .SUFFIXES:
@@ -461,6 +482,14 @@ dbmail-timsieved$(EXEEXT): $(dbmail_timsieved_OBJECTS) $(dbmail_timsieved_DEPEND
 check_dbmail_common$(EXEEXT): $(check_dbmail_common_OBJECTS) $(check_dbmail_common_DEPENDENCIES)
 	@rm -f check_dbmail_common$(EXEEXT)
 	$(LINK) $(check_dbmail_common_LDFLAGS) $(check_dbmail_common_OBJECTS) $(check_dbmail_common_LDADD) $(LIBS)
+
+check_dbmail_server$(EXEEXT): $(check_dbmail_server_OBJECTS) $(check_dbmail_server_DEPENDENCIES)
+	@rm -f check_dbmail_server$(EXEEXT)
+	$(LINK) $(check_dbmail_server_LDFLAGS) $(check_dbmail_server_OBJECTS) $(check_dbmail_server_LDADD) $(LIBS)
+
+check_dbmail_deliver$(EXEEXT): $(check_dbmail_deliver_OBJECTS) $(check_dbmail_deliver_DEPENDENCIES)
+	@rm -f check_dbmail_deliver$(EXEEXT)
+	$(LINK) $(check_dbmail_deliver_LDFLAGS) $(check_dbmail_deliver_OBJECTS) $(check_dbmail_deliver_LDADD) $(LIBS)
 
 check_dbmail_imapd$(EXEEXT): $(check_dbmail_imapd_OBJECTS) $(check_dbmail_imapd_DEPENDENCIES)
 	@rm -f check_dbmail_imapd$(EXEEXT)

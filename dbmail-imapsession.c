@@ -1277,8 +1277,7 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 			dbmail_imap_session_printf(self, " ");
 
 		tlist = _imap_get_envelope(&cached_msg.msg.rfcheader);
-		tmp = g_list_join(tlist,NULL);
-		if (dbmail_imap_session_printf(self, "ENVELOPE (%s)", g_strdup(tmp->str)) == -1) {
+		if (dbmail_imap_session_printf(self, "ENVELOPE (%s)", dbmail_imap_plist_as_string(tlist)) == -1) {
 			dbmail_imap_session_printf(self, "\r\n* BYE error fetching envelope structure\r\n");
 			return -1;
 		}

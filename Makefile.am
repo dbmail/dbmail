@@ -65,12 +65,20 @@ libdbmail_la_LIBADD = @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @INIPARSERLTLIB@ @SQLLI
 
 if WITHCHECK
 
-TESTS=check_dbmail_common check_dbmail_imapd
-noinst_PROGRAMS=check_dbmail_common check_dbmail_imapd
+TESTS=check_dbmail_common check_dbmail_server check_dbmail_deliver check_dbmail_imapd
+noinst_PROGRAMS=check_dbmail_common check_dbmail_server check_dbmail_deliver check_dbmail_imapd
 
 check_dbmail_common_SOURCES=$(COMMON) check_dbmail_common.c
 check_dbmail_common_LDADD=$(dbmail_users_LDADD) @CHECK_LIBS@
 check_dbmail_common_INCLUDES=@CHECK_CFLAGS@
+
+check_dbmail_server_SOURCES=$(SERVER) check_dbmail_server.c
+check_dbmail_server_LDADD=$(dbmail_users_LDADD) @CHECK_LIBS@
+check_dbmail_server_INCLUDES=@CHECK_CFLAGS@
+
+check_dbmail_deliver_SOURCES=$(DELIVER) check_dbmail_deliver.c
+check_dbmail_deliver_LDADD=$(dbmail_users_LDADD) @CHECK_LIBS@
+check_dbmail_deliver_INCLUDES=@CHECK_CFLAGS@
 
 check_dbmail_imapd_SOURCES=$(COMMON) $(SERVER) quota.c imap4.c imaputil.c imapcommands.c memblock.c rfcmsg.c dbsearch.c dbmsgbuf.c acl.c dbmail-imapsession.c check_dbmail_imapd.c
 check_dbmail_imapd_LDADD=$(dbmail_imapd_LDADD) @CHECK_LIBS@
