@@ -1,7 +1,7 @@
 $Id$
 
 
-- @addresses need to be checked as last resort
+- UIDL command returns 2 OK's when asking for a specific UIDL
 - message arrival in datatime field 
 - fix the resolving (pop daemon is not resolving)
 - commandline program should be created for adding email addresses

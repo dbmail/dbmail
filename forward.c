@@ -117,6 +117,11 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
 				/* read in a datablock */
 				usedmem = fread (strblock, sizeof(char), READ_BLOCK_SIZE, instream);
 				
+				/* fread won't do this for us */
+				if (strblock)
+					strblock[usedmem]='\0';
+				
+				
 				if (databasemessageid != 0)
 				trace(TRACE_INFO,"pipe_forward(): forwarding from database using id %lu",
 						databasemessageid);
@@ -124,6 +129,9 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
 			
 				if (usedmem>0)
 				{
+					if (usedmem<READ_BLOCK_SIZE)
+						trace (TRACE_DEBUG, "block [%s]",strblock);
+					
 					totalmem = totalmem + usedmem;
 	
 					trace (TRACE_DEBUG,"pipe_forward(): Sending block"

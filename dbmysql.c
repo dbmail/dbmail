@@ -72,11 +72,31 @@ unsigned long db_insert_result ()
 
 int db_query (char *query)
 {
-  if (mysql_real_query(&conn, query,strlen(query)) <0) 
-    {
-      trace(TRACE_ERROR,"db_query(): mysql_real_query failed: %s",mysql_error(&conn)); 
-      return -1;
-    }
+	unsigned int querysize;
+
+	if (query != NULL)
+	{
+		querysize = strlen(query);
+
+		if (querysize > 0 )
+		{
+			if (mysql_real_query(&conn, query,strlen(query)) <0) 
+			{
+				trace(TRACE_ERROR,"db_query(): mysql_real_query failed: %s",mysql_error(&conn)); 
+				return -1;
+			}
+		}
+		else
+		{
+			trace (TRACE_ERROR,"db_query(): querysize is wrong: [%d]",querysize);
+			return -1;
+		}
+	}
+	else
+	{
+		trace (TRACE_ERROR,"db_query(): query buffer is NULL, this is not supposed to happen",querysize);
+		return -1;
+	}
   return 0;
 }
 
@@ -165,25 +185,42 @@ unsigned long db_update_message (unsigned long *messageidnr, char *unique_id,
 
 unsigned long db_insert_message_block (char *block, int messageidnr)
 {
+
   char *escblk, *tmpquery;
-  /* allocate memory twice as much, for eacht character might be escaped */
-  memtst((escblk=(char *)malloc((strlen(block)*2)))==NULL);
-  mysql_escape_string (escblk,block,strlen(block));
-
-  /* add an extra 500 characters for the query */
-  memtst((tmpquery=(char *)malloc(strlen(escblk)+500))==NULL);
+  
+  if (block != NULL)
+  {
+		/* allocate memory twice as much, for eacht character might be escaped 
+			added aditional 250 bytes for possible function err */
+		memtst((escblk=(char *)malloc(((strlen(block)*2)+250)))==NULL); 
+		/* mysql description is not really clear about this function, so i'm not 
+			sure if the +1 needs to be added to the length of block */
+		if (mysql_real_escape_string (&conn,escblk,block,strlen(block)+1) > 0)
+		{
+			/* add an extra 500 characters for the query */
+			memtst((tmpquery=(char *)malloc(strlen(escblk)+500))==NULL);
 	
-  sprintf (tmpquery,"INSERT INTO messageblk(messageblk,blocksize,messageidnr) VALUES (\"%s\",%d,%d)",escblk,strlen(block),messageidnr);
+			sprintf (tmpquery,"INSERT INTO messageblk(messageblk,blocksize,messageidnr) VALUES (\"%s\",%d,%d)",
+				escblk,strlen(block),messageidnr);
 
-  if (db_query (tmpquery)==-1)
-    {
-      free(tmpquery);
-      trace(TRACE_STOP,"db_insert_message_block(): dbquery failed");
-    }
-  /* freeing buffers */
-  free (tmpquery);
-  free (escblk);
-  return db_insert_result(&conn);
+			if (db_query (tmpquery)==-1)
+			{
+				free(tmpquery);
+				trace(TRACE_STOP,"db_insert_message_block(): dbquery failed");
+			}
+
+			/* freeing buffers */
+			free (tmpquery);
+			free (escblk);
+			return db_insert_result(&conn);
+		}
+		else
+			trace (TRACE_STOP,"db_insert_message_block(): mysql_real_escape_string() returned empty value");
+  }
+  else
+	  trace (TRACE_STOP,"db_insert_message_block(): value of block cannot be NULL, insertion not possible");
+
+	return -1;
 }
 
 

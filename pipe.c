@@ -65,9 +65,9 @@ char *read_header(unsigned long *blksize)
 			strblock[0]='\0';
     }
 	
-  trace (TRACE_INFO, "read_header(): readheader done\n");
-  trace (TRACE_DEBUG, "read_header(): found header [%s]\n",header);
-	
+  trace (TRACE_INFO, "read_header(): readheader done");
+  trace (TRACE_DEBUG, "read_header(): found header [%s]",header);
+  trace (TRACE_DEBUG, "read_header(): header size [%d]",strlen(header));	
   free(strblock);
 	
   if (usedmem==0)
@@ -103,6 +103,7 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
   struct list bounces;
   unsigned long temp_message_record_id,userid;
   int i;
+  FILE *instream = stdin;
   
   /* step 1.
      inserting first message
@@ -208,7 +209,7 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
       if (i<strlen((char *)tmp->data))
 	{
 	  /* FIXME: it's probably a forward to another address
-	   * to make sure it could be a mailaddress we're checking for a @*/
+	   * we need to do an email address validity test if the first char !| */
 	  trace (TRACE_DEBUG,"insert_messages(): no numeric value in deliver_to, calling external_forward");
 
 			/* creating a list of external forward addresses */
@@ -249,51 +250,67 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 
   memtst ((strblock = (char *)malloc(READ_BLOCK_SIZE))==NULL);
 	
-	/* here we'll loop until we've read all what's left in the buffer  */
-
-  if (list_totalnodes(&messageids)>0)
-    {
-      /* we have local deliveries */ 
-      while (!feof(stdin))
+	/* first we need to check if we need to deliver into the database */
+	if (list_totalnodes(&messageids)>0)
 	{
-	  usedmem = fread (strblock, sizeof(char), READ_BLOCK_SIZE, stdin);
-			
-	  if (usedmem>0) /* this happends when a eof occurs */
-	    {
-	      totalmem=totalmem+usedmem;
-			
-	      tmp=list_getstart(&messageids);
-
-	      while (tmp!=NULL)
+		totalmem = 0; /* reset totalmem counter */
+		/* we have local deliveries */ 
+		while (!feof(instream))
 		{
-		  db_insert_message_block (strblock,*(unsigned long *)tmp->data);
-		  tmp=tmp->nextnode;
-		}
-	    }
-	  /* resetting strlen for strblock */
-	  *strblock='\0';
-	  usedmem = 0;
-	}
+			trace (TRACE_DEBUG,"errorstatus : [%d]",ferror(instream));
+			usedmem = fread (strblock, sizeof(char), READ_BLOCK_SIZE, instream);
+		
+			/* fread won't do this for us! */	
+			if (strblock)
+				strblock[usedmem]='\0';
+			
+			if (usedmem>0) /* usedmem is 0 with an EOF */
+			{
+				trace (TRACE_DEBUG, "comparing %d with %d",usedmem, READ_BLOCK_SIZE);
+				if (strstr(strblock,"thend")) 
+				{
+					trace (TRACE_DEBUG,"insert_messages(): last block [%s] blocksize [%d]",strblock,strlen(strblock)); 
+				}
+				trace (TRACE_DEBUG,"insert_messages(): read [%d] from instream",usedmem);
+				totalmem = totalmem + usedmem;
+			
+				tmp=list_getstart(&messageids);
+				while (tmp!=NULL)
+				{
+					db_insert_message_block (strblock,*(unsigned long *)tmp->data);
+					tmp=tmp->nextnode;
+				}
+				
+				/* resetting strlen for strblock */
+				strblock[0]='\0';
+				usedmem = 0;
+				
+			}
+			else 
+				trace (TRACE_DEBUG, "insert_messages(): end of instream stream");
+		
+	
+		}; 
 		
       trace (TRACE_DEBUG,"insert_messages(): updating size fields");
 	
+
 		/* we need to update messagesize in all messages */
       tmp=list_getstart(&messageids);
-
       while (tmp!=NULL)
-	{
-	  /* we need to create a unique id per message 
-	   * we're using the messageidnr for this, it's unique 
-	   * a special field is created in the database for other possible 
-	   * even more unique strings */
-	  create_unique_id(unique_id,*(unsigned long*)tmp->data); 
-	  db_update_message ((unsigned long*)tmp->data,unique_id,totalmem+headersize);
-	  trace (TRACE_MESSAGE,"insert_messages(): message id=%lu, size=%lu is inserted",
-		 *(unsigned long*)tmp->data, totalmem+headersize);
-	  temp_message_record_id=*(unsigned long*)tmp->data;
-	  tmp=tmp->nextnode;
+		{
+			/* we need to create a unique id per message 
+			* we're using the messageidnr for this, it's unique 
+			* a special field is created in the database for other possible 
+			* even more unique strings */
+			create_unique_id(unique_id,*(unsigned long*)tmp->data); 
+			db_update_message ((unsigned long*)tmp->data,unique_id,totalmem+headersize);
+			trace (TRACE_MESSAGE,"insert_messages(): message id=%lu, size=%lu is inserted",
+			*(unsigned long*)tmp->data, totalmem+headersize);
+			temp_message_record_id=*(unsigned long*)tmp->data;
+			tmp=tmp->nextnode;
+		}
 	}
-    }
 
   /* handle all bounced messages */
   if (list_totalnodes(&bounces)>0)
