@@ -36,6 +36,7 @@ CREATE TABLE mailbox (
    no_inferiors tinyint(1) default '0' not null,
    no_select tinyint(1) default '0' not null,
    permission tinyint(1) default '2',
+   is_subscribed tinyint(1) default 0 not null,
    PRIMARY KEY (mailboxidnr),
    UNIQUE mailboxidnr_2 (mailboxidnr)
 );
