@@ -39,6 +39,7 @@
 #define MSGBLKS_FILENAME "/data/rawdata/messageblocks.data"
 
 #define DEFAULT_PASSWD "default"
+#define DEFAULT_LOGINTIME "1979-11-03 22:05:58"
 
 const char *mbox_delimiter_pattern = "^From .*";
 char blk[READ_BLOCK_SIZE + MAX_LINESIZE + 1];
@@ -401,8 +402,8 @@ int add_user(const char *uname)
   useridnr++;
   mboxidnr++;
 
-  /* layout: useridnr userid passwd clientidnr maxmailsize enctype */
-  fprintf(userfile, "%llu\t%s\t%s\t0\t10000000\t\n", useridnr, uname, DEFAULT_PASSWD);
+  /* layout: useridnr userid passwd clientidnr maxmailsize enctype last-login*/
+  fprintf(userfile, "%llu\t%s\t%s\t0\t10000000\t\t%s\n", useridnr, uname, DEFAULT_PASSWD, DEFAULT_LOGINTIME);
 
   /* layout: mboxidnr owneridnr name
      seen/answered/deleted/flagged/recent/draft -flag 

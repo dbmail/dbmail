@@ -21,6 +21,7 @@ CREATE TABLE users (
    client_idnr bigint(21) DEFAULT '0' NOT NULL,
    maxmail_size bigint(21) DEFAULT '0' NOT NULL,
    encryption_type varchar(20) DEFAULT '' NOT NULL,
+   last_login DATETIME,
    PRIMARY KEY (user_idnr),
    KEY user_idnr (user_idnr, userid),
    UNIQUE useridnr_2 (user_idnr, userid),

@@ -22,6 +22,7 @@ CREATE TABLE users (
    client_idnr INT8 DEFAULT '0' NOT NULL,
    maxmail_size INT8 DEFAULT '0' NOT NULL,
    encryption_type VARCHAR(20) DEFAULT '' NOT NULL,
+   last_login DATETIME DEFAULT '1979-11-03 22:05:58' NOT NULL,
    PRIMARY KEY (user_idnr)
 );
 CREATE UNIQUE INDEX users_id_idx ON users (userid);
