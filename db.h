@@ -665,6 +665,13 @@ int db_icheck_null_physmessages(struct list *lost_list);
 int db_icheck_isheader(GList  **lost);
 int db_set_isheader(GList *lost);
 
+/** 
+ * \brief check for cached header values
+ *
+ */
+int db_icheck_headercache(GList **lost);
+int db_set_headercache(GList *lost);
+
 /**
  * \brief set status of a message
  * \param message_idnr

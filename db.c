@@ -27,10 +27,6 @@
  * place in the mysql/ and pgsql/ directories
  */
 
-#include "db.h"
-#include "dbmail.h"
-#include "auth.h"
-#include "misc.h"
 #include <stdio.h>
 #include <time.h>
 #include <stdlib.h>
@@ -39,6 +35,11 @@
 #include <sys/types.h>
 #include <regex.h>
 #include <assert.h>
+#include "db.h"
+#include "dbmail.h"
+#include "dbmail-message.h"
+#include "auth.h"
+#include "misc.h"
 
 static const char *db_flag_desc[] = {
 	"seen_flag",
@@ -1401,8 +1402,9 @@ int db_icheck_isheader(GList  **lost)
 	unsigned i;
 	snprintf(query, DEF_QUERYSIZE,
 			"SELECT MIN(messageblk_idnr),MAX(is_header) "
-			"FROM dbmail_messageblks "
-			"GROUP BY physmessage_id HAVING MAX(is_header)=0");
+			"FROM %smessageblks "
+			"GROUP BY physmessage_id HAVING MAX(is_header)=0",
+			DBPFX);
 	
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not access messageblks table",
@@ -1412,6 +1414,60 @@ int db_icheck_isheader(GList  **lost)
 
 	for (i = 0; i < db_num_rows(); i++) 
 		*(GList **)lost = g_list_append(*(GList **)lost, g_strdup(db_get_result(i, 0)));
+
+	db_free_result();
+
+	return 0;
+}
+
+
+int db_set_headercache(GList *lost)
+{
+	if (! lost)
+		return 0;
+
+	struct DbmailMessage *msg = dbmail_message_new();
+	
+	lost = g_list_first(lost);
+	db_begin_transaction();
+	while (lost) {
+		msg = dbmail_message_retrieve(msg, (u64_t)(GPOINTER_TO_UINT(lost->data)), DBMAIL_MESSAGE_FILTER_HEAD);
+		if (! msg) {
+			g_list_free(lost);
+			dbmail_message_free(msg);
+			db_rollback_transaction();
+			return -1;
+		}
+		if (dbmail_message_headers_cache(msg) != 1) {
+			g_list_free(lost);
+			dbmail_message_free(msg);
+			db_rollback_transaction();
+			return -1;
+		}
+		lost = g_list_next(lost);
+	}
+	db_commit_transaction();
+	return 0;
+}
+
+		
+int db_icheck_headercache(GList **lost)
+{
+	unsigned i;
+	snprintf(query, DEF_QUERYSIZE,
+			"SELECT p.id FROM %sphysmessage p "
+			"LEFT JOIN %sheadervalue h "
+			"ON p.id = h.physmessage_id "
+			"WHERE h.physmessage_id IS NULL",
+			DBPFX, DBPFX);
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: query failed",
+				__FILE__, __func__);
+		return -1;
+	}
+	
+	for (i = 0; i < db_num_rows(); i++) 
+		*(GList **)lost = g_list_append(*(GList **)lost, GUINT_TO_POINTER((unsigned)db_get_result_u64(i, 0)));
 
 	db_free_result();
 

@@ -73,7 +73,7 @@ static int do_check_integrity(void);
 static int do_null_messages(void);
 static int do_purge_deleted(void);
 static int do_set_deleted(void);
-static int do_is_header(void);
+static int do_header_cache(void);
 static int do_check_iplog(char *timestr, const char *timespec);
 static int do_vacuum_db(void);
 
@@ -87,15 +87,11 @@ int do_showhelp(void) {
 	printf("     -t        test for message integrity\n");
 	printf("     -u        null message check\n");
 	printf("     -b        body/header check\n");
-//	printf("     -r        repair any integrity problems\n");
-/* 'r' and 'y' are now synonymous. */
 	printf("     -p        purge messages have the DELETE status set\n");
 	printf("     -d        set DELETE status for deleted messages\n");
 	printf("     -l time   clear the IP log used for IMAP/POP-before-SMTP\n"
 	       "               the time is specified as <hours>h<minutes>m\n"
 	       "               (don't include the angle brackets, though)\n");
-//	printf("     -i        enter an interactive message management console\n");
-
 	printf("\nCommon options for all DBMail utilities:\n");
 	printf("     -f file   specify an alternative config file\n");
 	printf("     -q        quietly skip interactive prompts\n"
@@ -263,7 +259,7 @@ int main(int argc, char *argv[])
 	if (check_integrity) do_check_integrity();
 	if (null_messages) do_null_messages();
 	if (purge_deleted) do_purge_deleted();
-	if (is_header) do_is_header();
+	if (is_header) do_header_cache();
 	if (set_deleted) do_set_deleted();
 	if (check_iplog) do_check_iplog(timestr, timespec);
 	if (vacuum_db) do_vacuum_db();
@@ -603,11 +599,10 @@ int do_check_integrity(void)
 	return 0;
 }
 
-int do_is_header(void)
+static int do_is_header(void)
 {
 	time_t start, stop;
 	GList *lost = NULL;
-	u64_t id;
 
 	if (no_to_all) {
 		qprintf("\nChecking DBMAIL for incorrect is_header flags...\n");
@@ -642,6 +637,49 @@ int do_is_header(void)
 	qverbosef("--- checking is_header flags took %g seconds\n",
 	       difftime(stop, start));
 	
+	return 0;
+}
+
+int do_header_cache(void)
+{
+	time_t start, stop;
+	GList *lost = NULL;
+	
+	if (do_is_header())
+		return -1;
+	
+	if (no_to_all) 
+		qprintf("\nChecking DBMAIL for cached header values...\n");
+	if (yes_to_all) 
+		qprintf("\nRepairing DBMAIL for cached header values...\n");
+	
+	time(&start);
+
+	if (db_icheck_headercache(&lost) < 0) {
+		qerrorf("Failed. An error occured. Please check log.\n");
+		return -1;
+	}
+
+	if (g_list_length(lost) > 0) {
+		qerrorf("Ok. Found [%d] un-cached physmessages.\n", g_list_length(lost));
+		has_errors = 1;
+	} else {
+		qprintf("Ok. Found [%d] un-cached physmessages.\n", g_list_length(lost));
+	}
+
+	if (yes_to_all) {
+		if (db_set_headercache(lost) < 0) {
+			qerrorf("Error caching the header values ");
+			has_errors = 1;
+		}
+	}
+
+	g_list_free(lost);
+
+	time(&stop);
+	qverbosef("--- checking cached headervalues took %g seconds\n",
+	       difftime(stop, start));
+
 	return 0;
 }
 
