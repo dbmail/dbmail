@@ -373,6 +373,7 @@ char *db_get_userid (unsigned long *useridnr)
 {
   /* returns the mailbox id (of mailbox inbox) for a user or a 0 if no mailboxes were found */
   char *ckquery;
+  char *returnid;
   
   /* allocating memory for query */
   memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
@@ -407,8 +408,16 @@ char *db_get_userid (unsigned long *useridnr)
       trace (TRACE_DEBUG,"db_get_userid(): fetch_row call failed");
     }
 
-  free (ckquery);
-  return row[0];
+	if (row[0])
+		returnid = (char *)malloc(strlen(row[0])+1);
+	else
+		{
+		free (ckquery);
+		return NULL;
+		}
+  
+	free (ckquery);
+  return returnid;
 }
 
 unsigned long db_get_message_mailboxid (unsigned long *messageidnr)
