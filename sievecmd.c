@@ -295,9 +295,6 @@ int do_list(u64_t user_idnr)
 		printf("%s\n", info->name);
 		tmp = tmp->nextnode;
 	}
-	} else
-		printf("No scripts found!\n");
-
 
 	if (scriptlist.start)
 		list_freelist(&scriptlist.start);

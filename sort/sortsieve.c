@@ -160,7 +160,7 @@ int sortsieve_msgsort(u64_t useridnr, char *header, u64_t headersize,
 		goto need_free;
 	}
 
-	res = sieve2_script_exec(t, s, p, e, m, a);
+	res = sieve2_execute(t, s, p, e, m, a);
 	if (res != SIEVE2_OK) {
 		trace(TRACE_ERROR, "sieve2_execute_script() returns %d\n", res);
 		ret = -1;
