@@ -1777,7 +1777,7 @@ int db_getmailbox(mailbox_t *mb, unsigned long userid)
   /* select messages */
   snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr, seen_flag, recent_flag "
 	   "FROM message WHERE mailboxidnr = %lu "
-	   "AND status<2 ORDER BY messageidnr ASC", mb->uid);
+	   "AND status<2 AND unique_id!=\"\" ORDER BY messageidnr ASC", mb->uid);
 
   if (db_query(query) == -1)
     {
@@ -1816,10 +1816,10 @@ int db_getmailbox(mailbox_t *mb, unsigned long userid)
   
   /* now determine the next message UID */
   /*
-   * NOTE EXPUNGED MESSAGES ARE SELECTED AS WELL IN ORDER TO BE ABLE TO RESTORE THEM 
+   * NOTE expunged messages are selected as well in order to be able to restore them 
    */
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message "
+  snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message WHERE unique_id!=\"\""
 	   "ORDER BY messageidnr DESC LIMIT 0,1");
   
   if (db_query(query) == -1)
@@ -2253,6 +2253,9 @@ int db_movemsg(unsigned long to, unsigned long from)
 int db_copymsg(unsigned long msgid, unsigned long destmboxid)
 {
   unsigned long newid,tmpid;
+  time_t td;
+
+  time(&td);              /* get time */
 
   /* create temporary tables */
   if (db_query(create_tmp_tables_queries[0]) == -1 || db_query(create_tmp_tables_queries[1]) == -1)
@@ -2269,7 +2272,7 @@ int db_copymsg(unsigned long msgid, unsigned long destmboxid)
 	   "deleted_flag, seen_flag, answered_flag, draft_flag, flagged_flag, recent_flag,"
        " unique_id, internal_date) "
 	   "SELECT mailboxidnr, messagesize, status, deleted_flag, seen_flag, answered_flag, "
-	   "draft_flag, flagged_flag, recent_flag, unique_id, internal_date "
+	   "draft_flag, flagged_flag, recent_flag, \"\", internal_date "
        "FROM message WHERE message.messageidnr = %lu",
 	   msgid);
 
@@ -2309,7 +2312,7 @@ int db_copymsg(unsigned long msgid, unsigned long destmboxid)
 	   "deleted_flag, seen_flag, answered_flag, draft_flag, flagged_flag, recent_flag,"
        " unique_id, internal_date) "
 	   "SELECT %lu, messagesize, status, deleted_flag, seen_flag, answered_flag, "
-	   "draft_flag, flagged_flag, recent_flag, unique_id, internal_date "
+	   "draft_flag, flagged_flag, recent_flag, \"\", internal_date "
        "FROM tmpmessage WHERE tmpmessage.messageidnr = %lu",
 	   destmboxid, tmpid);
 
@@ -2349,11 +2352,20 @@ int db_copymsg(unsigned long msgid, unsigned long destmboxid)
       return -1;
     }
 
-
   /* drop temporary tables */
   if (db_query(drop_tmp_tables_queries[0]) == -1 || db_query(drop_tmp_tables_queries[1]) == -1)
     {
       trace(TRACE_ERROR, "db_copymsg(): could not drop temporary tables\n");
+      return -1;
+    }
+
+  /* all done, validate new msg by creating a new unique id for the copied msg */
+  snprintf(query, DEF_QUERYSIZE, "UPDATE message SET unique_id=\"%luA%lu\" "
+	   "WHERE messageidnr=%lu", newid, td, newid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_copymsg(): could not set unique ID for copied msg\n");
       return -1;
     }
 
@@ -2436,7 +2448,8 @@ unsigned long db_first_unseen(unsigned long uid)
   unsigned long id;
 
   snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message WHERE mailboxidnr = %lu "
-	   "AND status<2 AND seen_flag = 0 ORDER BY messageidnr ASC LIMIT 0,1", uid);
+	   "AND status<2 AND seen_flag = 0 AND unique_id != \"\" "
+	   "ORDER BY messageidnr ASC LIMIT 0,1", uid);
 
   if (db_query(query) == -1)
     {
@@ -2538,7 +2551,7 @@ int db_get_msgflag(const char *name, unsigned long mailboxuid, unsigned long msg
     return 0; /* non-existent flag is not set */
 
   snprintf(query, DEF_QUERYSIZE, "SELECT %s FROM message WHERE mailboxidnr = %lu "
-	   "AND status<2 AND messageidnr = %lu", flagname, mailboxuid, msguid);
+	   "AND status<2 AND messageidnr = %lu AND unique_id != \"\"", flagname, mailboxuid, msguid);
 
   if (db_query(query) == -1)
     {
@@ -2615,7 +2628,7 @@ int db_set_msgflag(const char *name, unsigned long mailboxuid, unsigned long msg
 int db_get_msgdate(unsigned long mailboxuid, unsigned long msguid, char *date)
 {
   snprintf(query, DEF_QUERYSIZE, "SELECT internal_date FROM message WHERE mailboxidnr = %lu "
-	   "AND messageidnr = %lu", mailboxuid, msguid);
+	   "AND messageidnr = %lu AND unique_id!=\"\"", mailboxuid, msguid);
 
   if (db_query(query) == -1)
     {
@@ -2889,6 +2902,11 @@ void db_close_msgfetch()
  * associated body part(s)
  *
  * creates a linked-list of headers found
+ *
+ * NOTE: there are no checks performed to verify that the indicated msg isn't expunged 
+ *       (status 002) or has been inserted completely. This should be done before calling
+ *       this function (unless, of course, it is your intention to specificly parse an 
+ *       incomplete message or an expunged one).
  *
  * returns:
  * -3 memory error
@@ -3874,7 +3892,7 @@ int db_mailbox_msg_match(unsigned long mailboxuid, unsigned long msguid)
   int val;
 
   snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message WHERE messageidnr = %lu AND "
-	   "mailboxidnr = %lu AND status<002", msguid, mailboxuid); 
+	   "mailboxidnr = %lu AND status<002 AND unique_id!=\"\"", msguid, mailboxuid); 
 
   if (db_query(query) == -1)
     {
@@ -3916,7 +3934,7 @@ int db_search(int *rset, int setlen, const char *key, mailbox_t *mb)
   memset(rset, 0, setlen * sizeof(int));
 
   snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message WHERE mailboxidnr = %lu "
-	   "AND status<2 AND %s", mb->uid, key);
+	   "AND status<2 AND unique_id!=\"\" AND %s", mb->uid, key);
 
   if (db_query(query) == -1)
     {
@@ -4153,7 +4171,8 @@ int db_search_messages(char **search_keys, unsigned long **search_results, int *
   trace(TRACE_WARNING,"\n");
 
   qidx = snprintf(query, DEF_QUERYSIZE,
-		  "SELECT messageidnr FROM message WHERE mailboxidnr = %lu AND status<2",
+		  "SELECT messageidnr FROM message WHERE mailboxidnr = %lu AND status<2 "
+		  "AND unique_id!=\"\"",
 		  mboxid);
 
   i = 0;
