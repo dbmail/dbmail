@@ -278,12 +278,14 @@ u64_t db_get_user_from_alias(const char *alias)
 
 /* 
  * adds an alias for a specific user 
+ *
+ * returns -1 on error, 0 on success, 1 if alias already exists
  */
 int db_addalias (u64_t useridnr, char *alias, u64_t clientid)
 {
   /* check if this alias already exists */
   snprintf (query, DEF_QUERYSIZE,
-            "SELECT alias_idnr FROM aliases WHERE alias = '%s' AND deliver_to = '%llu' "
+            "SELECT alias_idnr FROM aliases WHERE alias ~* '%s' AND deliver_to ~* '%llu' "
 	    "AND client_idnr = %llu", alias, useridnr, clientid);
 
   if (db_query(query) == -1)
@@ -299,7 +301,7 @@ int db_addalias (u64_t useridnr, char *alias, u64_t clientid)
 	    alias, useridnr);
 
       PQclear(res);
-      return 0;
+      return 1;
     }
   
   PQclear(res);
@@ -316,17 +318,22 @@ int db_addalias (u64_t useridnr, char *alias, u64_t clientid)
       return -1;
     }
 
-  return 0;
+  return 1;
 }
 
 
+/*
+ * db_addalias_ext()
+ *
+ * returns -1 on error, 0 on success, 1 if alias already exists
+ */
 int db_addalias_ext(char *alias, char *deliver_to, u64_t clientid)
 {
   /* check if this alias already exists */
   if (clientid != 0)
     {
       snprintf (query, DEF_QUERYSIZE,
-		"SELECT alias_idnr FROM aliases WHERE alias = '%s' AND deliver_to = '%s' "
+		"SELECT alias_idnr FROM aliases WHERE alias ~* '%s' AND deliver_to ~* '%s' "
 		"AND client_idnr = %llu", alias, deliver_to, clientid);
     }
   else
@@ -349,7 +356,7 @@ int db_addalias_ext(char *alias, char *deliver_to, u64_t clientid)
 	    alias, deliver_to);
 
       PQclear(res);
-      return 0;
+      return 1;
     }
   
   PQclear(res);
@@ -366,7 +373,7 @@ int db_addalias_ext(char *alias, char *deliver_to, u64_t clientid)
       return -1;
     }
 
-  return 0;
+  return 1;
 }
 
 

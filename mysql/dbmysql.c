@@ -275,6 +275,8 @@ u64_t db_get_user_from_alias(const char *alias)
 
 /* 
  * adds an alias for a specific user 
+ *
+ * returns -1 on error, 0 on success, 1 if alias already exists
  */
 int db_addalias (u64_t useridnr, char *alias, u64_t clientid)
 {
@@ -302,7 +304,7 @@ int db_addalias (u64_t useridnr, char *alias, u64_t clientid)
 	    alias, useridnr);
       
       mysql_free_result(res);
-      return 0;
+      return 1;
     }
   
   mysql_free_result(res);
@@ -323,6 +325,11 @@ int db_addalias (u64_t useridnr, char *alias, u64_t clientid)
 }
 
 
+/*
+ * db_addalias_ext()
+ *
+ * returns -1 on error, 0 on success, 1 if alias already exists
+ */
 int db_addalias_ext(char *alias, char *deliver_to, u64_t clientid)
 {
   /* check if this alias already exists */
@@ -358,7 +365,7 @@ int db_addalias_ext(char *alias, char *deliver_to, u64_t clientid)
 	    alias, deliver_to);
       
       mysql_free_result(res);
-      return 0;
+      return 1;
     }
   
   mysql_free_result(res);

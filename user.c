@@ -99,6 +99,8 @@ int main(int argc, char *argv[])
  */
 int do_make_alias(char *argv[])
 {
+  int result;
+
   if (!argv[0] || !argv[1])
     {
       printf ("invalid arguments specified. Check the man page\n");
@@ -106,14 +108,24 @@ int do_make_alias(char *argv[])
     }
 
   printf("Adding alias [%s] --> [%s]...", argv[0], argv[1]);
-  if (db_addalias_ext(argv[0], argv[1], 0) != 0)
+  switch  ( (result = db_addalias_ext(argv[0], argv[1], 0)) )
     {
+    case -1:
       printf("Failed\n\nCheck logs for details\n\n");
-      return -1;
+      break;
+
+    case 0:
+      printf("Ok alias added\n");
+      break;
+
+    case 1:
+      printf("Already exists. no extra alias added\n");
+      result = 0; /* return no error */
+      break;
+
     }
 
-  printf("Ok alias added\n");
-  return 0;
+  return result;
 }
 
 int do_remove_alias(char *argv[])
@@ -168,13 +180,21 @@ int do_add(int argc, char *argv[])
   for (i = 4, result = 0; i<argc; i++)
     {
       printf ("Adding alias %s...",argv[i]);
-      if (db_addalias(useridnr,argv[i],atoi(argv[2]))==-1)
+      switch ( db_addalias(useridnr,argv[i],atoi(argv[2])) )
 	{
+	case -1:
 	  printf ("Failed\n");
 	  result = -2;
+	  break;
+	  
+	case 0:
+	  printf ("Ok, added\n");
+	  break;
+
+	case 1:
+	  printf("Already exists. No extra alias added\n");
+	  break;
 	}
-      else
-	printf ("Ok, added\n");
     }
 		
   printf ("adduser done\n");
