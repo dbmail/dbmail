@@ -46,7 +46,7 @@ CREATE TABLE mailbox (
   
 CREATE TABLE message (
    messageidnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
-   mailboxidnr int(21) DEFAULT '0' NOT NULL,
+   mailboxidnr bigint(21) DEFAULT '0' NOT NULL,
    messagesize bigint(21) DEFAULT '0' NOT NULL,
    seen_flag tinyint(1) default '0' not null,
    answered_flag tinyint(1) default '0' not null,
