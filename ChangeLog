@@ -1,3 +1,12 @@
+2004-08-29  Aaron Stone  <aaron@serendipity.cx>
+
+	* dsn.c, dsn.h: added dsnuser_resolve to resolve just a single
+	deliver_to_user_t struct.
+	* dsn.c (dsnuser_resolve_list): this is a list wrapper around
+	the single-user resolver.
+	* lmtp.c: now replies after each RCPT TO command. fixed two
+	memory leaks within the 'rcpt' list of dsnuser's.
+
 2004-08-25  Ilja Booij  <ilja@ic-s.nl>
 
 	* user.c (main): if the command fails, return message to 

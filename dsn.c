@@ -247,171 +247,151 @@ void dsnuser_free(deliver_to_user_t * dsnuser)
 
 int dsnuser_resolve_list(struct list *deliveries)
 {
-	u64_t userid;
-	int alias_count = 0, domain_count = 0;
-	char *domain = NULL;
-	char *username = NULL;
+	int ret;
 	struct element *element;
 
 	/* Loop through the users list */
 	for (element = list_getstart(deliveries); element != NULL;
 	     element = element->nextnode) {
-		deliver_to_user_t *delivery =
-		    (deliver_to_user_t *) element->data;
+		if ((ret = dsnuser_resolve((deliver_to_user_t *) element->data)) != 0) {
+			return ret;
+		}
+	}
 
-		/* If the userid is already set, then we're doing direct-to-userid. */
-		if (delivery->useridnr != 0) {
-			/* This seems to be the only way to see if a useridnr is valid. */
-			username = auth_get_userid(delivery->useridnr);
-			if (username != NULL) {
-				/* Free the username, we don't actually need it. */
-				my_free(username);
+	return 0;
+}
 
-				/* Copy the delivery useridnr into the userids list. */
-				if (list_nodeadd
-				    (delivery->userids,
-				     &delivery->useridnr,
-				     sizeof(delivery->useridnr)) == 0) {
-					trace(TRACE_ERROR,
-					      "%s, %s: out of memory",
+int dsnuser_resolve(deliver_to_user_t *delivery)
+{
+	u64_t userid;
+	int alias_count = 0, domain_count = 0;
+	char *domain = NULL;
+	char *username = NULL;
+
+	/* If the userid is already set, then we're doing direct-to-userid. */
+	if (delivery->useridnr != 0) {
+		/* This seems to be the only way to see if a useridnr is valid. */
+		username = auth_get_userid(delivery->useridnr);
+		if (username != NULL) {
+			/* Free the username, we don't actually need it. */
+			my_free(username);
+
+			/* Copy the delivery useridnr into the userids list. */
+			if (list_nodeadd(delivery->userids,
+			     &delivery->useridnr,
+			     sizeof(delivery->useridnr)) == 0) {
+				trace(TRACE_ERROR,
+				      "%s, %s: out of memory",
+				      __FILE__, __func__);
+				return -1;
+			}
+
+			/* The userid was valid... */
+			delivery->dsn.class = DSN_CLASS_OK;	/* Success. */
+			delivery->dsn.subject = 1;	/* Address related. */
+			delivery->dsn.detail = 5;	/* Valid. */
+		} else {	/* from: 'if (username != NULL)' */
+
+			/* The userid was invalid... */
+			delivery->dsn.class = DSN_CLASS_FAIL;	/* Permanent failure. */
+			delivery->dsn.subject = 1;	/* Address related. */
+			delivery->dsn.detail = 1;	/* Does not exist. */
+		}
+	}
+	/* We don't have a useridnr, so we have either a username or an alias. */
+	else {		/* from: 'if (delivery->useridnr != 0)' */
+
+		/* See if the address is a username. */
+		switch (auth_user_exists(delivery->address, &userid)) {
+		case -1:
+			{
+				/* An error occurred */
+				trace(TRACE_ERROR,
+				      "%s, %s: error checking user [%s]",
+				      __FILE__, __func__, delivery->address);
+				return -1;
+			}
+		case 1:
+			{
+				if (list_nodeadd(delivery->userids, &userid,
+				     sizeof(u64_t)) == 0) {
+					trace(TRACE_ERROR, "%s, %s: out of memory",
 					      __FILE__, __func__);
 					return -1;
-				}
+				} else {
 
-				/* The userid was valid... */
-				delivery->dsn.class = DSN_CLASS_OK;	/* Success. */
-				delivery->dsn.subject = 1;	/* Address related. */
-				delivery->dsn.detail = 5;	/* Valid. */
-			} else {	/* from: 'if (username != NULL)' */
-
-				/* The userid was invalid... */
-				delivery->dsn.class = DSN_CLASS_FAIL;	/* Permanent failure. */
-				delivery->dsn.subject = 1;	/* Address related. */
-				delivery->dsn.detail = 1;	/* Does not exist. */
-			}
-		}
-		/* We don't have a useridnr, so we have either a username or an alias. */
-		else {		/* from: 'if (delivery->useridnr != 0)' */
-
-			/* See if the address is a username. */
-			switch (auth_user_exists
-				(delivery->address, &userid)) {
-			case -1:
-				{
-					/* An error occurred */
-					trace(TRACE_ERROR,
-					      "%s, %s: error checking user [%s]",
-					      __FILE__, __func__,
-					      delivery->address);
-					return -1;
-				}
-			case 1:
-				{
-					if (list_nodeadd
-					    (delivery->userids, &userid,
-					     sizeof(u64_t)) == 0) {
-						trace(TRACE_ERROR,
-						      "%s, %s: out of memory",
-						      __FILE__,
-						      __func__);
-						return -1;
-					} else {
-
-						trace(TRACE_DEBUG,
-						      "%s, %s: added user [%s] id [%llu] to delivery list",
-						      __FILE__,
-						      __func__,
-						      delivery->address,
-						      userid);
-						/* The userid was valid... */
-						delivery->dsn.class = DSN_CLASS_OK;	/* Success. */
-						delivery->dsn.subject = 1;	/* Address related. */
-						delivery->dsn.detail = 5;	/* Valid. */
-					}
-					break;
-				}
-				/* The address needs to be looked up */
-			default:
-				{
-					alias_count =
-					    auth_check_user_ext(delivery->
-								address,
-								delivery->
-								userids,
-								delivery->
-								forwards,
-								-1);
 					trace(TRACE_DEBUG,
-					      "%s, %s: user [%s] found total of [%d] aliases",
-					      __FILE__, __func__,
-					      delivery->address,
-					      alias_count);
+					      "%s, %s: added user [%s] id [%llu] to delivery list",
+					      __FILE__, __func__, delivery->address, userid);
+					/* The userid was valid... */
+					delivery->dsn.class = DSN_CLASS_OK;	/* Success. */
+					delivery->dsn.subject = 1;	/* Address related. */
+					delivery->dsn.detail = 5;	/* Valid. */
+				}
+				break;
+			}
+			/* The address needs to be looked up */
+		default:
+			{
+				alias_count =
+				    auth_check_user_ext(delivery->address,
+							delivery->userids,
+							delivery->forwards, -1);
+				trace(TRACE_DEBUG,
+				      "%s, %s: user [%s] found total of [%d] aliases",
+				      __FILE__, __func__, delivery->address, alias_count);
 
-					/* No aliases found for this user */
-					if (alias_count == 0) {
-						trace(TRACE_INFO,
-						      "%s, %s: user [%s] checking for domain forwards.",
-						      __FILE__,
-						      __func__,
-						      delivery->address);
+				/* No aliases found for this user */
+				if (alias_count == 0) {
+					trace(TRACE_INFO,
+					      "%s, %s: user [%s] checking for domain forwards.",
+					      __FILE__, __func__, delivery->address);
 
-						domain =
-						    strchr(delivery->
-							   address, '@');
+					domain = strchr(delivery->address, '@');
 
-						if (domain == NULL) {
-							/* That's it, we're done here. */
+					if (domain == NULL) {
+						/* That's it, we're done here. */
+						/* Permanent failure... */
+						delivery->dsn.class = DSN_CLASS_FAIL;	/* Permanent failure. */
+						delivery->dsn.subject = 1;	/* Address related. */
+						delivery->dsn.detail = 1;	/* Does not exist. */
+					} else {
+						trace(TRACE_DEBUG,
+						      "%s, %s: domain [%s] checking for domain forwards",
+						      __FILE__, __func__, domain);
+
+						/* Checking for domain aliases */
+						domain_count =
+						    auth_check_user_ext(domain,
+						     delivery->userids,
+						     delivery->forwards, -1);
+						trace(TRACE_DEBUG,
+						      "%s, %s: domain [%s] found total of [%d] aliases",
+						      __FILE__, __func__, domain, domain_count);
+
+						if (domain_count == 0) {
 							/* Permanent failure... */
 							delivery->dsn.class = DSN_CLASS_FAIL;	/* Permanent failure. */
 							delivery->dsn.subject = 1;	/* Address related. */
 							delivery->dsn.detail = 1;	/* Does not exist. */
-						} else {
-							trace(TRACE_DEBUG,
-							      "%s, %s: domain [%s] checking for domain forwards",
-							      __FILE__,
-							      __func__,
-							      domain);
+						} else {	/* from: 'if (domain_count == 0)' */
 
-							/* Checking for domain aliases */
-							domain_count =
-							    auth_check_user_ext
-							    (domain,
-							     delivery->
-							     userids,
-							     delivery->
-							     forwards, -1);
-							trace(TRACE_DEBUG,
-							      "%s, %s: domain [%s] found total of [%d] aliases",
-							      __FILE__,
-							      __func__,
-							      domain,
-							      domain_count);
+							/* The userid was valid... */
+							delivery->dsn.class = DSN_CLASS_OK;	/* Success. */
+							delivery->dsn.subject = 1;	/* Address related. */
+							delivery->dsn.detail = 5;	/* Valid. */
+						}	/* from: 'if (domain_count == 0)' */
+					}	/* from: 'if (domain == NULL)' */
+				} else {	/* from: 'if (alias_count == 0)' */
 
-							if (domain_count ==
-							    0) {
-								/* Permanent failure... */
-								delivery->dsn.class = DSN_CLASS_FAIL;	/* Permanent failure. */
-								delivery->dsn.subject = 1;	/* Address related. */
-								delivery->dsn.detail = 1;	/* Does not exist. */
-							} else {	/* from: 'if (domain_count == 0)' */
-
-								/* The userid was valid... */
-								delivery->dsn.class = DSN_CLASS_OK;	/* Success. */
-								delivery->dsn.subject = 1;	/* Address related. */
-								delivery->dsn.detail = 5;	/* Valid. */
-							}	/* from: 'if (domain_count == 0)' */
-						}	/* from: 'if (domain == NULL)' */
-					} else {	/* from: 'if (alias_count == 0)' */
-
-						/* The userid was valid... */
-						delivery->dsn.class = DSN_CLASS_OK;	/* Success. */
-						delivery->dsn.subject = 1;	/* Address related. */
-						delivery->dsn.detail = 5;	/* Valid. */
-					}	/* from: 'if (alias_count == 0)' */
-				}	/* from: 'default:' */
-			}	/* from: 'switch (auth_user_exists(delivery->address, &userid))' */
-		}		/* from: 'if (delivery->useridnr != 0)' */
-	}			/* from: the main for loop */
+					/* The userid was valid... */
+					delivery->dsn.class = DSN_CLASS_OK;	/* Success. */
+					delivery->dsn.subject = 1;	/* Address related. */
+					delivery->dsn.detail = 5;	/* Valid. */
+				}	/* from: 'if (alias_count == 0)' */
+			}	/* from: 'default:' */
+		}	/* from: 'switch (auth_user_exists(delivery->address, &userid))' */
+	}	/* from: 'if (delivery->useridnr != 0)' */
 
 	return 0;
 }

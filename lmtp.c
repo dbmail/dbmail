@@ -105,7 +105,8 @@ int lmtp_reset(PopSession_t * session)
 	 * but only if they were previously
 	 * initialized by LMTP_LHLO... */
 	if (session->state == LHLO) {
-		list_freelist(&rcpt.start);
+		// list_freelist(&rcpt.start);
+		dsnuser_free_list(&rcpt);
 		list_init(&rcpt);
 	}
 
@@ -526,13 +527,34 @@ int lmtp(void *stream, void *instream, char *buffer,
 					 * since dsnuser_free() will free it for us later on. */
 					dsnuser.address = tmpaddr;
 
-					/* Queue up the potential recipients. We can use one call to
-					 * dsnuser_resolve_list() to look them up. This should not
-					 * be a problem because the client is required to pipeline
-					 * the commands, i.e. not wait for a reply to each command. */
-					list_nodeadd(&rcpt, &dsnuser,
-						     sizeof
-						     (deliver_to_user_t));
+					if (dsnuser_resolve(&dsnuser) != 0) {
+						trace(TRACE_ERROR,
+						      "main(): dsnuser_resolve_list failed");
+						ci_write((FILE *) stream,
+							"430 Temporary failure in recipient lookup\r\n");
+						dsnuser_free(&dsnuser);
+						return 1;
+					}
+
+					/* Class 2 means the address was deliverable in some way. */
+					switch (dsnuser.dsn.class) {
+					case DSN_CLASS_OK:
+						ci_write((FILE *) stream,
+							"250 Recipient <%s> OK\r\n",
+							dsnuser.address);
+						/* A successfully found recipient goes onto the list.
+						 * The struct will be free'd from lmtp_reset(). */
+						list_nodeadd(&rcpt, &dsnuser,
+							     sizeof(deliver_to_user_t));
+						break;
+					default:
+						ci_write((FILE *) stream,
+							"550 Recipient <%s> FAIL\r\n",
+							dsnuser.address);
+						/* If the user wasn't added, free the non-entry. */
+						dsnuser_free(&dsnuser);
+						break;
+					}
 				}
 			}
 			return 1;
@@ -548,57 +570,13 @@ int lmtp(void *stream, void *instream, char *buffer,
 				ci_write((FILE *) stream,
 					"503 No valid recipients\r\n");
 			} else {
-				int has_recipients = 0;
-				struct element *element;
-
-				/* The replies MUST be in the order received */
-				rcpt.start =
-				    dbmail_list_reverse(rcpt.start);
-
-				/* Resolve the addresses into deliverable / non-deliverable form. */
-				if (dsnuser_resolve_list(&rcpt) == -1) {
-					trace(TRACE_ERROR,
-					      "main(): dsnuser_resolve_list failed");
-					ci_write((FILE *) stream,
-						"430 Temporary failure in recipient lookup\r\n");
-					return 1;
-				}
-				element = list_getstart(&rcpt);
-				while(element) {
-					deliver_to_user_t *dsnuser =
-					    (deliver_to_user_t *) element->
-						data;
-					element = element->nextnode;
-					/* Class 2 means the address was deliverable in some way. */
-					switch (dsnuser->dsn.class) {
-					case DSN_CLASS_OK:
-						ci_write((FILE *) stream,
-							"250 Recipient <%s> OK\r\n",
-							dsnuser->address);
-						has_recipients = 1;
-						break;
-					default:
-						ci_write((FILE *) stream,
-							"550 Recipient <%s> FAIL\r\n",
-							dsnuser->address);
-						/* Remove the failed user from the potential recipients list
-						 * so that we do not report a failed delivery later on. */
-						list_nodedel(&rcpt,
-							     dsnuser);
-						break;
-					}
-				}
-
-				/* Now we have a list of recipients! */
-				/* Let the client know if they should continue... */
-
-				if (has_recipients && envelopefrom != NULL) {
+				if (list_totalnodes(&rcpt) > 0 && envelopefrom != NULL) {
 					trace(TRACE_DEBUG,
 					      "main(): requesting sender to begin message.");
 					ci_write((FILE *) stream,
 						"354 Start mail input; end with <CRLF>.<CRLF>\r\n");
 				} else {
-					if (!has_recipients) {
+					if (list_totalnodes(&rcpt) < 1) {
 						trace(TRACE_DEBUG,
 						      "main(): no valid recipients found, cancel message.");
 						ci_write((FILE *) stream,
@@ -718,6 +696,10 @@ int lmtp(void *stream, void *instream, char *buffer,
 						/* The DATA command itself it not given a reply except
 						 * that of the status of each of the remaining recipients. */
 						const char *class, *subject, *detail;
+
+						/* The replies MUST be in the order received */
+						rcpt.start =
+						    dbmail_list_reverse(rcpt.start);
 
 						for (element = list_getstart(&rcpt);
 						     element != NULL;

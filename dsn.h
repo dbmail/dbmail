@@ -84,6 +84,19 @@ void dsnuser_free_list(struct list *deliveries);
 int dsnuser_resolve_list(struct list *deliveries);
 
 /**
+ * \brief The dsnuser structure should have either a useridnr or
+ * an address/alias set. It will be resolved to deliveries and
+ * flagged with a DSN code so that success or failure can be
+ * properly indicated at the top of the delivery call chain,
+ * such as in dbmail-smtp and dbmail-lmtpd.
+ * \param deliveries Pointer to a deliver_to_user_t.
+ * \return
+ *   - 0 on success
+ *   - -1 on failure
+ */
+int dsnuser_resolve(deliver_to_user_t *dsnuser);
+
+/**
  * \brief Loop through the list of delivery addresses
  * and find out what the single worst case scenario was
  * for situations where we are limited to returning a single
