@@ -2147,14 +2147,14 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
 
     time(&td);              /* get time */
 
-    /* copy message info */
-    snprintf(query, DEF_QUERYSIZE, "INSERT INTO messages (mailbox_idnr, messagesize, status, "
-            "deleted_flag, seen_flag, answered_flag, draft_flag, flagged_flag, recent_flag,"
-            " unique_id, internal_date) "
-            "SELECT mailbox_idnr, messagesize, status, deleted_flag, seen_flag, answered_flag, "
-            "draft_flag, flagged_flag, recent_flag, '', internal_date "
-            "FROM messages WHERE message_idnr = %llu",
-            msgid);
+  /* copy message info */
+  snprintf(query, DEF_QUERYSIZE, "INSERT INTO messages (mailbox_idnr, messagesize, status, "
+	   "deleted_flag, seen_flag, answered_flag, draft_flag, flagged_flag, recent_flag,"
+	   " unique_id, internal_date) "
+	   "SELECT %llu, messagesize, status, deleted_flag, seen_flag, answered_flag, "
+	   "draft_flag, flagged_flag, recent_flag, '', internal_date "
+	   "FROM messages WHERE message_idnr = %llu",
+	   destmboxid, msgid);
 
     if (db_query(query) == -1)
     {
@@ -2164,12 +2164,12 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
 
     newmsgid = db_insert_result("message_idnr");
 
-    /* copy message blocks */
-    snprintf(query, DEF_QUERYSIZE, "INSERT INTO messageblk (message_idnr, messageblk, blocksize) "
-            "SELECT %llu, messageblk, blocksize FROM messageblks "
-            "WHERE message_idnr = %llu ORDER BY messageblk_idnr", newmsgid, msgid);
-
-    if (db_query(query) == -1)
+  /* copy message blocks */
+  snprintf(query, DEF_QUERYSIZE, "INSERT INTO messageblks (message_idnr, messageblk, blocksize) "
+	   "SELECT %llu, messageblk, blocksize FROM messageblks "
+	   "WHERE message_idnr = %llu ORDER BY messageblk_idnr", newmsgid, msgid);
+  
+  if (db_query(query) == -1)
     {
         trace(TRACE_ERROR, "db_copymsg(): could not insert message blocks\n");
         return -1;

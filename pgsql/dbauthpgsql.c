@@ -6,7 +6,7 @@
  * (c) 2000-2002 IC&S, The Netherlands (http://www.ic-s.nl)
  */
 
-#include "../dbauth.h"
+#include "../auth.h"
 #include "/usr/local/pgsql/include/libpq-fe.h"
 #include "../list.h"
 #include "../debug.h"
