@@ -1,4 +1,12 @@
 2005-03-08  Paul Stevens <paul@nfg.nl>
+
+	* dbmail-message.c: added prototype for header caching during
+	insertion.
+	* sort/sort.c: moved sort_and_deliver to dbmail-message.c
+	* configure.in, acinclude.m4: dbmail now compiles --with-sieve,
+	well almost that is.
+
+2005-03-08  Paul Stevens <paul@nfg.nl>
 	
 	* db.c: added new calls db_user_create_shadow and db_user_find_create
 	to better accomodate automatic shadow accounts for ldap users.

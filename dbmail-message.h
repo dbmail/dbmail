@@ -33,6 +33,7 @@
 #endif
 
 #include "dbmailtypes.h"
+#include "dsn.h"
 #include <gmime/gmime.h>
 #include <assert.h>
 
@@ -46,6 +47,7 @@
  * very much unfinished, work in progress, subject to change, etc...
  *
  */
+
 
 
 enum DBMAIL_MESSAGE_CLASS {
@@ -65,29 +67,41 @@ enum DBMAIL_STREAM_TYPE {
 
 struct DbmailMessage {
 	u64_t id;
+	u64_t physid;
 	enum DBMAIL_MESSAGE_CLASS klass;
 	GMimeObject *content;
 	GRelation *headers;
 };
 
-struct DbmailMessage * dbmail_message_new(void);
-
-/**
- * read the whole message from the instream
- * \param[in] instream input stream (stdin)
- * \param[in] type of instream (pipe or lmtp)
- * \return
- *      - message struct
+/*
+ * initializers
  */
 
+struct DbmailMessage * dbmail_message_new(void);
 struct DbmailMessage * dbmail_message_new_from_stream(FILE *instream, int streamtype);
+struct DbmailMessage * dbmail_message_init_with_stream(struct DbmailMessage *self, GMimeStream *stream, int type);
+struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *self, const GString *content);
 
-int dbmail_message_set_class(struct DbmailMessage *self, int klass);
-int dbmail_message_get_class(struct DbmailMessage *self);
+/*
+ * database facilities
+ */
+
+int dbmail_message_store(struct DbmailMessage *message);
+int dbmail_message_headers_cache(struct DbmailMessage *message);
+
+dsn_class_t sort_and_deliver(struct DbmailMessage *self, u64_t useridnr, const char *mailbox);
+
 
 struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t id, int filter);
-struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *self, const GString *content);
-struct DbmailMessage * dbmail_message_init_with_stream(struct DbmailMessage *self, GMimeStream *stream, int type);
+
+/*
+ * attribute accessors
+ */
+void dbmail_message_set_physid(struct DbmailMessage *self, u64_t physid);
+u64_t dbmail_message_get_physid(struct DbmailMessage *self);
+	
+int dbmail_message_set_class(struct DbmailMessage *self, int klass);
+int dbmail_message_get_class(struct DbmailMessage *self);
 
 gchar * dbmail_message_to_string(struct DbmailMessage *self);
 gchar * dbmail_message_hdrs_to_string(struct DbmailMessage *self);
@@ -98,24 +112,16 @@ size_t dbmail_message_get_rfcsize(struct DbmailMessage *self);
 size_t dbmail_message_get_hdrs_size(struct DbmailMessage *self);
 size_t dbmail_message_get_body_size(struct DbmailMessage *self);
 
+/*
+ * manipulate the actual message content
+ */
+
 void dbmail_message_set_header(struct DbmailMessage *self, const char *header, const char *value);
 
-void dbmail_message_free(struct DbmailMessage *self);
-
 /*
- *
- * OLD Stuff. we will assimilate you.
- *
+ * destructor
  */
 
-
-/**
- * store a temporary copy of a message.
- * \return 
- *     - -1 on error
- *     -  1 on success
- */
-int dbmail_message_store_temp(struct DbmailMessage *message);
-
+void dbmail_message_free(struct DbmailMessage *self);
 
 #endif

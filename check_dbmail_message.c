@@ -40,6 +40,7 @@
 #include "check_dbmail.h"
 #include "debug.h"
 #include "db.h"
+#include "auth.h"
 #include "dbmail-message.h"
 
 extern char *configFile;
@@ -62,6 +63,7 @@ void setup(void)
 	config_read(configFile);
 	GetDBParams(&_db_params);
 	db_connect();
+	auth_connect();
 }
 
 void teardown(void)
@@ -209,6 +211,15 @@ START_TEST(test_dbmail_message_new_from_stream)
 END_TEST
 
 
+START_TEST(test_dbmail_message_cache_headers)
+{
+	struct DbmailMessage *m = dbmail_message_new();
+	m = dbmail_message_init_with_string(m, g_string_new(raw_message));
+	dbmail_message_store(m);
+
+}
+END_TEST
+
 
 Suite *dbmail_message_suite(void)
 {
@@ -228,6 +239,8 @@ Suite *dbmail_message_suite(void)
 	tcase_add_test(tc_message, test_dbmail_message_hdrs_to_string);
 	tcase_add_test(tc_message, test_dbmail_message_body_to_string);
 	tcase_add_test(tc_message, test_dbmail_message_get_rfcsize);
+
+	tcase_add_test(tc_message, test_dbmail_message_cache_headers);
 	tcase_add_test(tc_message, test_dbmail_message_free);
 	return s;
 }

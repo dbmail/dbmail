@@ -434,7 +434,7 @@ int insert_messages(struct DbmailMessage *message,
 		return -1;
 	}
 
-	switch (dbmail_message_store_temp(message)) {
+	switch (dbmail_message_store(message)) {
 	case -1:
 		trace(TRACE_ERROR, "%s, %s: failed to store temporary message.",
 		      __FILE__, __func__);
@@ -472,7 +472,7 @@ int insert_messages(struct DbmailMessage *message,
 			      "%s, %s: calling sort_and_deliver for useridnr [%llu]",
 			      __FILE__, __func__, useridnr);
 
-			switch (sort_and_deliver(message->id, header, headersize, msgsize, useridnr, delivery->mailbox)) {
+			switch (sort_and_deliver(message, useridnr, delivery->mailbox)) {
 			case DSN_CLASS_OK:
 				/* Indicate success. */
 				trace(TRACE_DEBUG,

@@ -189,8 +189,8 @@ AC_DEFUN([DBMAIL_CHECK_SIEVE_LIBS], [dnl
 # Look for libs needed to link to SIEVE first
 if test ! "${sieveheadername-x}" = "x"
 then
-  AC_CHECK_LIB(sieve,sieve2_listextensions,[ SIEVELIB="-lsieve"], [SIEVELIB=""])
-  if test -z "$SIEVELIB"
+  AC_CHECK_LIB(sieve,sieve2_extensions_listsupport,[ SORTLIB="-lsieve"], [SORTLIB=""])
+  if test -z "$SORTLIB"
   then
     AC_MSG_ERROR([
   Unable to link against libSieve.  It appears you are missing the
@@ -199,7 +199,7 @@ then
   fi
 else
   #no Sieve needed
-  SIEVELIB=""
+  SORTLIB=""
 fi
 ])
 	
