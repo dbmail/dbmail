@@ -47,7 +47,7 @@ int shm_id;
 #define SHM_ALLOC_SIZE (sizeof(int))
 
 /* signal handler */
-static void sigchld_handler (int signo)
+static void signal_handler (int signo)
 {
   pid_t PID;
   int status;
@@ -55,7 +55,7 @@ static void sigchld_handler (int signo)
   if ((signo == SIGALRM) && (tx!=NULL))
   {
 		done=-1;
-		trace (TRACE_DEBUG,"sigchld_handler(): received ALRM signal. Timeout");
+		trace (TRACE_DEBUG,"signal_handler(): received ALRM signal. Timeout");
 		fprintf (tx,"-ERR i cannot wait forever\r\n");
 		shutdown(fileno(rx),SHUT_RDWR);
 		return;
@@ -63,14 +63,20 @@ static void sigchld_handler (int signo)
   else
 	 if (signo == SIGCHLD)
 	  {
-	    while (waitpid (-1, &status, WNOHANG));
+		  trace (TRACE_DEBUG,"signal_handler(): sigCHLD, cleaning up zombies");
+		  do {
+			  PID = waitpid (-1,&status,WNOHANG);
+		  } while ( PID != -1);
+
+		  trace (TRACE_DEBUG,"signal_handler(): sigCHLD, cleaned");
+		  signal (SIGCHLD, signal_handler);
 	    return;
 	  }
 	  else
-		  trace (TRACE_STOP,"sigchld_handler(): received fatal signal [%d]",signo);
+		  trace (TRACE_STOP,"signal_handler(): received fatal signal [%d]",signo);
 }
 
-int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt, int *default_children_used, int is_client)
+int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 {
 	 /* returns 0 when a connection was successfull
 	 * returns -1 when a connection was unsuccessfull (continue in loop)
@@ -130,8 +136,8 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt, int *def
 		
 	/* set stream to line buffered mode 
 	* this way when we send a newline the buffer is flushed */
-	/* FIXME: setlinebuf(rx);
-	 * how should we set the buffer ? */
+	setlinebuf(tx);
+	setlinebuf(rx);
 
 	/* connect to the database */
 	if (db_connect()< 0)
@@ -139,10 +145,6 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt, int *def
 		trace(TRACE_ERROR,"handle_client(): could not connect to database");
 		return -1;
 	}
-			
-	/* another default child is in use */
-	if (is_client==1)
-		(*default_children_used)++;
 			
 	/* first initiate AUTHORIZATION state */
 	state = AUTHORIZATION;
@@ -165,7 +167,7 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt, int *def
 			
 	trace (TRACE_DEBUG,"handle_client(): setting timeout timer at %d seconds",server_timeout);	
 	/* setting time for timeout counter */
-	/* alarm (server_timeout); */
+	alarm (server_timeout); 
 
 	/* scanning for commands */
 	while ((done>0) && (buffer=fgets(buffer,INCOMING_BUFFER_SIZE,rx)))
@@ -174,9 +176,9 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt, int *def
 			done = -1;  /* check of client eof  */
 		else 
 		{
-			/* alarm (server_timeout);  */
+			alarm (server_timeout);  
 			done = pop3(tx,buffer); 
-			/* alarm (server_timeout);  */
+			alarm (server_timeout); 
 		}
 	fflush (tx);
 	}
@@ -209,6 +211,7 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt, int *def
 		shutdown (fileno(rx), SHUT_RDWR);
 		fclose(rx);
 	}
+	return 0;
 }
 
 int main (int argc, char *argv[])
@@ -225,14 +228,14 @@ int main (int argc, char *argv[])
   int new_level = 2, new_trace_syslog = 1, new_trace_verbose = 0;
   char *resolve_setting=NULL;
   
-	
-
+  pid_t processid;
+	  
   int len_inet;
   int reuseaddress;
   int s = -1;
   int c = -1;
   int z, i; /* counters */
-  int children=0;		/* child process counter */
+  int children=0, default_children=0;		/* child process counter */
   int defchld,maxchld; /* default children and maxchildren */
 
   /* open logs */
@@ -296,15 +299,12 @@ int main (int argc, char *argv[])
   /* daemonize */
   if (fork ())
     exit (0);
-  setsid ();
-		
-  if (fork ())
-    exit (0);
 		
   close (0);
   close (1);
   close (2); 
-
+  close (3);
+  
   /* reserve memory for hostname */
   memtst((myhostname=(char *)malloc(64))==NULL);
 	
@@ -312,30 +312,16 @@ int main (int argc, char *argv[])
   gethostname (myhostname,64);
 	
   /* set signal handler for SIGCHLD */
-  signal (SIGCHLD, sigchld_handler);
-  signal (SIGINT, sigchld_handler);
-  signal (SIGQUIT, sigchld_handler);
-  signal (SIGILL, sigchld_handler);
-  signal (SIGBUS, sigchld_handler);
-  signal (SIGFPE, sigchld_handler);
-  signal (SIGSEGV, sigchld_handler);
-  signal (SIGTERM, sigchld_handler);
-  signal (SIGSTOP, sigchld_handler);
-  signal (SIGALRM, sigchld_handler);
-
-	/* allocate a shared memory segment for interprocess communication */
-  shm_key = time (NULL);
-  /* FIXME: should this be 666? Can't another process tap in? */
-  shm_id = shmget (shm_key, SHM_ALLOC_SIZE, 0666 | IPC_CREAT);
-
-  if (shm_id == -1)
-  {
-	  free (myhostname);
-
-	  /* creation failed, we cannot continue */
-	  trace (TRACE_STOP,"main(): error getting shared memory segment [%s]\n",
-			  strerror(errno));
-  }
+  signal (SIGCHLD, signal_handler);
+  signal (SIGINT, signal_handler);
+  signal (SIGQUIT, signal_handler);
+  signal (SIGILL, signal_handler);
+  signal (SIGBUS, signal_handler);
+  signal (SIGFPE, signal_handler);
+  signal (SIGSEGV, signal_handler);
+  signal (SIGTERM, signal_handler);
+  signal (SIGSTOP, signal_handler);
+  signal (SIGALRM, signal_handler);
 
   adr_srvr.sin_family = AF_INET; 
   
@@ -412,92 +398,85 @@ int main (int argc, char *argv[])
   /* remember this pid, we're the father process */
   server_pid = getpid();
 
-  /* attach to shared memory */
-  default_children_used = (int*)shmat(shm_id, 0, 0);
-
-  if (default_children_used == (int*) (-1))
-	  trace (TRACE_FATAL,"main(): Could not attach to shared memory [%s]",
-			  strerror(errno));
-
 	/* we don't have any children yet */
-	*default_children_used = 0;
 	children = 0;
  
-	/* create children */
-	for (i=0; i<defchld; i++)
-	{
-		if (!fork())
-			break;
-		else
-			children++;
-	}
-
 	/* split up in the 'server' part and the client part */
-	if (getpid() != server_pid)
+
+	/* 
+	 * Server loop 
+	 */
+	for (;;)
 	{
-	
-		/* client part */
-		for (;;)
+		/* wait for a connection */
+		len_inet = sizeof (adr_clnt);
+		c = accept (s, (struct sockaddr *)&adr_clnt,
+		  &len_inet); /* incoming connection */
+
+		trace (TRACE_DEBUG,"Accepted connection");
+		
+		/* failure won't cause a quit forking is too expensive */	
+		if (c == -1)
 		{
-			/* wait for a connection */
-			len_inet = sizeof (adr_clnt);
-			c = accept (s, (struct sockaddr *)&adr_clnt,
-			  &len_inet); /* incoming connection */
-	
-			/* failure won't cause a quit forking is too expensive */	
-			if (c == -1)
-			{
-				trace (TRACE_ERROR,"main(): call accept(2) failed");
-				continue;
-			}
-			handle_client(myhostname, c, adr_clnt, default_children_used, 1); 
+			trace (TRACE_FATAL,"main(): call accept(2) failed");
 		}
-
-	}
-	else
-	{
-
-		/* server part */
-		for (;;)
-		{
-			sleep(1);
-			/* wait for a connection. If the max number of children
-				hasn't already been reached; fork */
-
-			if (*default_children_used < defchld)
-				continue;
-
-			while (children >= maxchld)
-			{
-				/* we've reached a maximum number of children 
-					here we wait for an exit */
-				wait (NULL);
-				children--;
-			}
-
-			/* wait for a connection */
-			len_inet = sizeof (adr_clnt);
-			c = accept (s, (struct sockaddr *)&adr_clnt,
-			  &len_inet); /* incoming connection */
+		
+		/* Fork a new server for this incoming client */
 	
-			/* failure won't cause a quit forking is too expensive */	
-			if (c == -1)
+		if ((children < maxchld) && server_pid==getpid())
+		{
+			children++;
+			trace (TRACE_DEBUG,"Ok only got %d children, forking",children);
+			if ((processid = fork()) == -1) 
 			{
-				trace (TRACE_ERROR,"main(): call accept(2) failed");
-				continue;
-			}
-
-			if (fork())
-			{
-				children++;
-				continue;
+				trace (TRACE_ERROR,"main(): cannot fork()");
+				close (c);
+				children--;
+				continue; /* get back to loop */
 			}
 			else
 			{
-				handle_client(myhostname, c, adr_clnt, default_children_used, 0);
-				return 0;
+				if ( processid > 0)
+				{
+					/* this is the parent 
+					 * it won't accept connections itself */
+					trace (TRACE_ERROR,"main(): i'm the parent");
+					children--;
+					close (c);
+					continue;
+				}
 			}
 		}
+
+		if (server_pid!=getpid())
+		{
+			/* a new child */	
+			trace (TRACE_DEBUG,"main(): handeling client");
+			
+			handle_client(myhostname, c, adr_clnt);
+		
+			trace (TRACE_DEBUG,"main(): handle_client finished");
+			/* done with this child */
+
+			/* we only let processes die under the default process
+			 * limit */
+	 
+			if (children<=defchld) 
+				continue;
+			else
+			{
+				children--;	
+				exit(0);
+			}
+		}
+		else
+		{
+			/* this is the server */
+			wait (0);
+			children--;
+		}
 	}
+
+	/* nothing will ever get here */
 	return 0;
 }		
