@@ -34,7 +34,7 @@
 #define MAXCHILDREN 5
 #define DEFAULT_CHILDREN 5 
 
-#define POP3_DEF_MAXCONNECT 500
+#define POP3_DEF_MAXCONNECT 1500
 
 /* connection */
 
