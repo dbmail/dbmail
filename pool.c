@@ -366,9 +366,11 @@ void manage_stop_children()
 	 */
 	trace(TRACE_MESSAGE, "%s,%s: General stop requested. Killing children.. ",
 			__FILE__,__func__);
-	int stillSomeAlive = 1;
-	int i, cnt = 0;
+	int stillSomeAlive, i, cnt;
 	pid_t chpid;
+	
+	stillSomeAlive= 1;
+	cnt = 0;
 	while (stillSomeAlive && cnt < 10) {
 		stillSomeAlive = 0;
 		cnt++;
@@ -428,11 +430,12 @@ void manage_spare_children()
 	 * manage spare children while running
 	 *
 	 */
-	int somethingchanged = 0;
+	int somethingchanged;
 	pid_t chpid;
 	
 	chpid = getpid();
-
+	somethingchanged = 0;
+	
 	/* scale up */
 	while ((count_children() < scoreboard->conf->maxChildren)
 	       && (count_spare_children() <
