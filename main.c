@@ -28,6 +28,7 @@ unsigned long headersize;
 
 int main (int argc, char *argv[]) {
 
+struct list returnpath; /* returnpath (should aways be just 1 hop */
 
   openlog(PNAME, LOG_PID, LOG_MAIL);
 
@@ -75,7 +76,12 @@ int main (int argc, char *argv[]) {
   /* first we need to read the header */
   if ((header=read_header(&headersize))==NULL)
     trace (TRACE_STOP,"main(): read_header() returned an invalid header");
-	
+
+
+  list_init(&returnpath);
+  /* parse returnpath from header */
+  mail_adr_list ("Return-Path",&returnpath,&mimelist,&returnpath,header,headersize);
+  
   /* we need to decide what delivery mode we're in */
   if (strcmp ("-d",argv[INDEX_DELIVERY_MODE])==0)
     {
@@ -106,7 +112,7 @@ int main (int argc, char *argv[]) {
     } 
 
   /* inserting messages into the database */
-  insert_messages(header, headersize,&users);
+  insert_messages(header, headersize,&users, &returnpath);
 	trace(TRACE_DEBUG,"main(): freeing memory blocks");
   trace (TRACE_DEBUG,"main(): they're all free. we're done.");
   return 0;

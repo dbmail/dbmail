@@ -5,7 +5,7 @@
 
 #include "forward.h"
 
-int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned long databasemessageid)
+int pipe_forward(FILE *instream, struct list *targets, char *from, char *header, unsigned long databasemessageid)
 {
 
   struct list descriptors; /* target streams */
@@ -17,11 +17,20 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
   int usedmem, totalmem;
   int err;
   char *sendmail;
-  
+  char timestr[50];
+  time_t td;
+  struct tm tm;
+
+ 
   /* takes input from instream and forwards that directly to 
 		a number of pipes (depending on the targets. Sends headers
 		first */
 
+
+  time(&td);              /* get time */
+  tm = *localtime(&td);   /* get components */
+  strftime(timestr, sizeof(timestr), "%a %b %e %H:%M:%S %Y", &tm);
+  
   totalmem = 0;
 	
   sendmail = db_get_config_item ("SENDMAIL", CONFIG_MANDATORY);
@@ -43,8 +52,9 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
 
   while (target != NULL)
     {
-      if (((char *)target->data)[0]=='|')
+      if ((((char *)target->data)[0]=='|') || (((char *)target->data)[0]=='!'))
 	{
+        
 	  /* external pipe command */
 	  sendmail_command = (char *)my_malloc(strlen((char *)(target->data)));
 	  if (!sendmail_command)
@@ -86,6 +96,14 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
 	  trace (TRACE_DEBUG,"pipe_forward(): call to popen() successfull"
 		 " opened descriptor %d", fileno(sendmail_pipe));
 			
+        if (((char *)target->data)[0]=='!')
+        {
+        /* ! tells u to prepend a mbox style header in this pipe */
+            trace (TRACE_DEBUG,"pipe_forward(): appending mbox style from header to pipe returnpath : %s", from);
+            /* format: From<space>address<space><space>Date */
+            fprintf (sendmail_pipe,"From %s  %s\n",from,timestr);   
+        }
+
 	  /* first send header if this is a direct pipe through */
 	  if (databasemessageid == 0)
 	    {

@@ -8,6 +8,8 @@
 #include "pipe.h"
 #include "debug.h"
 
+extern struct list *returnpath;
+
 #define HEADER_BLOCK_SIZE 1024
 #define QUERY_SIZE 255
 
@@ -97,7 +99,7 @@ char *read_header(unsigned long *blksize)
   return header;
 }
 
-int insert_messages(char *header, unsigned long headersize, struct list *users)
+int insert_messages(char *header, unsigned long headersize, struct list *users, struct list *returnpath)
 {
   /* 	this loop gets all the users from the list 
 	and check if they're in the database */
@@ -375,16 +377,18 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
   
       trace (TRACE_DEBUG,"insert_messages(): delivering to external addresses");
   
+      tmp = list_getstart(returnpath);
+      
       if (list_totalnodes(&messageids)==0)
 	{
 	  /* deliver using stdin */
-	  pipe_forward (stdin, &external_forwards, header, 0);
+	  pipe_forward (stdin, &external_forwards, tmp->data, header, 0);
 	}
       else
 	{
 	  /* deliver using database */
 	  tmp = list_getstart(&messageids);
-	  pipe_forward (stdin, &external_forwards, header, *((unsigned long *)tmp->data));
+	  pipe_forward (stdin, &external_forwards, tmp->data, header, *((unsigned long *)tmp->data));
 	}
     }
 	
