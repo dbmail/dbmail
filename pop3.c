@@ -372,7 +372,8 @@ int pop3 (void *stream, char *buffer)
 				/* they're asking for a specific message */
 	    while (tmpelement!=NULL)
 	      {
-		if (((struct message *)tmpelement->data)->messageid==strtoull(value, NULL, 10)) 
+		if (((struct message *)tmpelement->data)->messageid==strtoull(value, NULL, 10)&&
+		    ((struct message *)tmpelement->data)->virtual_messagestatus<2) 
 		  {
 		    fprintf ((FILE *)stream,"+OK %llu %s\r\n",((struct message *)tmpelement->data)->messageid,
 			     ((struct message *)tmpelement->data)->uidl);
@@ -392,8 +393,10 @@ int pop3 (void *stream, char *buffer)
 	    /* traversing list */
 	    while (tmpelement!=NULL)
 	      {
-		fprintf ((FILE *)stream,"%llu %s\r\n",((struct message *)tmpelement->data)->messageid,
-			 ((struct message *)tmpelement->data)->uidl);
+		if (((struct message *)tmpelement->data)->virtual_messagestatus<2)
+		  fprintf ((FILE *)stream,"%llu %s\r\n",((struct message *)tmpelement->data)->messageid,
+			   ((struct message *)tmpelement->data)->uidl);
+
 		tmpelement=tmpelement->nextnode;
 	      }
 	  }
