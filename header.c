@@ -150,9 +150,9 @@ int read_header(FILE * instream, u64_t * headerrfcsize, u64_t * headersize,
 			/* Update block counter */
 			allocated_blocks++;
 			trace(TRACE_DEBUG,
-			      "read_header(): mem current: [%zd] reallocated to [%lu]",
-			      usedmem,
-			      allocated_blocks * HEADER_BLOCK_SIZE);
+			      "read_header(): mem current: [%zd] reallocated "
+			      "to [%zd]",
+			      usedmem, allocated_blocks * HEADER_BLOCK_SIZE);
 			memtst((tmpheader =
 				(char *) realloc(tmpheader,
 						 allocated_blocks *
@@ -175,7 +175,7 @@ int read_header(FILE * instream, u64_t * headerrfcsize, u64_t * headersize,
 
 	trace(TRACE_DEBUG, "read_header(): readheader done");
 	trace(TRACE_DEBUG,
-	      "read_header(): found header [%s] of len [%lu] using mem [%zd]",
+	      "read_header(): found header [%s] of len [%zd] using mem [%zd]",
 	      tmpheader, strlen(tmpheader), usedmem);
 
 	my_free(tmpline);
