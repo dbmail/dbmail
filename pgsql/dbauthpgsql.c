@@ -34,6 +34,12 @@ u64_t db_user_exists(const char *username)
   u64_t uid;
   char *row;
 
+  if (!username)
+    {
+      trace(TRACE_ERROR,"db_user_exists(): got NULL as username\n");
+      return 0;
+    }
+
   snprintf(query, DEF_QUERYSIZE, "SELECT user_idnr FROM users WHERE userid='%s'",username);
 
   if (db_query(query)==-1)

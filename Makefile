@@ -30,7 +30,7 @@ LIB = -lpq
 # from compiler about vsyslog function 
 # Added the -D_SVID_SOURCE option because ipc.h asked me to.
 
-CFLAGS = -Wall -ggdb -D_BSD_SOURCE -D_SVID_SOURCE
+CFLAGS = -Wall -O2 -D_BSD_SOURCE -D_SVID_SOURCE
 
 .PHONY: clean install
 

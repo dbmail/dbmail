@@ -29,6 +29,12 @@ u64_t db_user_exists(const char *username)
 {
   u64_t uid;
 
+  if (!username)
+    {
+      trace(TRACE_ERROR,"db_user_exists(): got NULL as username\n");
+      return 0;
+    }
+
   snprintf(query, DEF_QUERYSIZE, "SELECT user_idnr FROM users WHERE userid='%s'",username);
 
   if (db_query(query)==-1)
@@ -168,22 +174,22 @@ int db_check_user (char *username, struct list *userids, int checks)
 
   if (mysql_num_rows(myres)<1) 
   {
-      if (checks>0)
+    if (checks>0)
       {
-          /* found the last one, this is the deliver to
-           * but checks needs to be bigger then 0 because
-           * else it could be the first query failure */
+	/* found the last one, this is the deliver to
+	 * but checks needs to be bigger then 0 because
+	 * else it could be the first query failure */
 
-          list_nodeadd(userids, username, strlen(username)+1);
-          trace (TRACE_DEBUG,"db_check_user(): adding [%s] to deliver_to address",username);
-          mysql_free_result(myres);
-          return 1;
+	list_nodeadd(userids, username, strlen(username)+1);
+	trace (TRACE_DEBUG,"db_check_user(): adding [%s] to deliver_to address",username);
+	mysql_free_result(myres);
+	return 1;
       }
-      else
+    else
       {
-      trace (TRACE_DEBUG,"db_check_user(): user %s not in aliases table", username);
-      mysql_free_result(myres);
-      return 0; 
+	trace (TRACE_DEBUG,"db_check_user(): user %s not in aliases table", username);
+	mysql_free_result(myres);
+	return 0; 
       }
   }
       

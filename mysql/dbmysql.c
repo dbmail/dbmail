@@ -424,7 +424,7 @@ u64_t db_insert_message (u64_t *useridnr)
 
 
 u64_t db_update_message (u64_t *message_idnr, char *unique_id,
-		u64_t messagesize)
+			 u64_t messagesize)
 {
   snprintf (query, DEF_QUERYSIZE,
 	   "UPDATE messages SET messagesize=%llu, unique_id=\"%s\" where message_idnr=%llu",
@@ -936,7 +936,8 @@ u64_t db_check_sizelimit (u64_t addblocksize, u64_t message_idnr,
   maxmail_size = db_getmaxmailsize(*useridnr);
 
 
-  trace (TRACE_DEBUG, "db_check_sizelimit(): comparing currsize + blocksize  [%d], maxsize [%d]\n",
+  trace (TRACE_DEBUG, "db_check_sizelimit(): comparing currsize + blocksize [%llu], "
+	 "maxsize [%llu]\n",
 	 currmail_size, maxmail_size);
 	
 
@@ -1414,7 +1415,7 @@ int db_imap_append_msg(char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid)
    */
   snprintf(query, DEF_QUERYSIZE, "INSERT INTO messages "
 	   "(mailbox_idnr,messagesize,unique_id,internal_date,status,"
-       " seen_flag) VALUES (%llu, 0, \"\", \"%s\",001,1)",
+	   " seen_flag) VALUES (%llu, 0, \"\", \"%s\",001,1)",
 	   mboxid, timestr);
 
   if (db_query(query) == -1)

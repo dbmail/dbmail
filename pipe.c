@@ -20,6 +20,7 @@
 
 #define HEADER_BLOCK_SIZE 1024
 #define QUERY_SIZE 255
+#define MAX_U64_STRINGSIZE 40
 
 void create_unique_id(char *target, u64_t messageid)
 {
@@ -108,7 +109,13 @@ char *read_header(u64_t *blksize)
   return header;
 }
 
-int insert_messages(char *header, u64_t headersize, struct list *users, struct list *returnpath)
+
+/*
+ * if users_are_usernames is nonzero, the list *users is supposed to
+ * contain actual usernames from the dbmail system (local delivery)
+ */
+int insert_messages(char *header, u64_t headersize, struct list *users, 
+		    struct list *returnpath, int users_are_usernames)
 {
   /* 	this loop gets all the users from the list 
 	and check if they're in the database */
@@ -122,6 +129,7 @@ int insert_messages(char *header, u64_t headersize, struct list *users, struct l
   char *tmpbuffer=NULL;
   char *bounce_id;
   size_t usedmem=0, totalmem=0;
+  char userid_string[MAX_U64_STRINGSIZE];
   struct list userids;
   struct list messageids;
   struct list external_forwards;
@@ -168,45 +176,75 @@ int insert_messages(char *header, u64_t headersize, struct list *users, struct l
       /* db_check_user(): returns a list with character array's containing 
        * either userid's or forward addresses 
        */
-      this_user = db_check_user((char *)tmp->data,&userids,-1);
-      trace (TRACE_DEBUG,"insert_messages(): user [%s] found total of [%d] aliases",(char *)tmp->data,
-	     userids.total_nodes);
-      
-      if (this_user==0) /* we did not find any direct delivers for this user */
-	{
-	  /* I needed to change this because my girlfriend said so
-	     and she was actually right. Domain forwards are last resorts
-	     if a delivery cannot be found with an existing address then
-	     and only then we need to check if there are domain delivery's */
-			
-	  trace (TRACE_INFO,"insert_messages(): no users found to deliver to. "
-		 "Checking for domain forwards");	
-			
-	  domain=strchr((char *)tmp->data,'@');
 
-	  if (domain!=NULL)	/* this should always be the case! */
+      if (!users_are_usernames)
+	{
+	  this_user = db_check_user((char *)tmp->data,&userids,-1);
+	  trace (TRACE_DEBUG,"insert_messages(): "
+		 "user [%s] found total of [%d] aliases",(char *)tmp->data,
+		 userids.total_nodes);
+      
+	  if (this_user==0) /* we did not find any direct delivers for this user */
 	    {
-	      trace (TRACE_DEBUG,"insert_messages(): checking for domain aliases. Domain = [%s]",domain);
-				/* checking for domain aliases */
-	      db_check_user(domain,&userids,-1);
-	      trace (TRACE_DEBUG,"insert_messages(): domain [%s] found total of [%d] aliases",domain,
-		     userids.total_nodes);
+	      /* I needed to change this because my girlfriend said so
+		 and she was actually right. Domain forwards are last resorts
+		 if a delivery cannot be found with an existing address then
+		 and only then we need to check if there are domain delivery's */
+			
+	      trace (TRACE_INFO,"insert_messages(): no users found to deliver to. "
+		     "Checking for domain forwards");	
+			
+	      domain=strchr((char *)tmp->data,'@');
+
+	      if (domain!=NULL)	/* this should always be the case! */
+		{
+		  trace (TRACE_DEBUG,"insert_messages(): "
+			 "checking for domain aliases. Domain = [%s]",domain);
+				
+		  /* checking for domain aliases */
+		  db_check_user(domain,&userids,-1);
+		  trace (TRACE_DEBUG,"insert_messages(): "
+			 "domain [%s] found total of [%d] aliases",domain,
+			 userids.total_nodes);
+		}
+	    }
+    
+	  /* user does not exists in aliases tables
+	 so bounce this message back with an error message */
+	  if (userids.total_nodes==0)
+	    {
+	      /* still no effective deliveries found, create bouncelist */
+	      list_nodeadd(&bounces, tmp->data, strlen(tmp->data)+1);
 	    }
 	}
-    
-      /* user does not exists in aliases tables
-	 so bounce this message back with an error message */
-      if (userids.total_nodes==0)
+      else
 	{
-	  /* still no effective deliveries found, create bouncelist */
-	  list_nodeadd(&bounces, tmp->data, strlen(tmp->data)+1);
+	  /* fetch the userid as a numeric string from the dbase */
+	  userid = db_user_exists((char*)tmp->data);
+	  if (userid == -1)
+	    {
+	      trace(TRACE_ERROR,"insert_messages(): dbase error checking user [%s]", (char*)tmp->data);
+	    }
+	  else if (userid == 0)
+	    {
+	      trace(TRACE_ERROR,"insert_messages(): user [%s] does not exist", (char*)tmp->data);
+	    }
+	  else
+	    {
+	      snprintf(userid_string, MAX_U64_STRINGSIZE, "%llu", userid);
+	      if (list_nodeadd(&userids, userid_string, strlen(userid_string)+1) == 0)
+		trace(TRACE_FATAL, "insert_messages(): out of memory");
+
+	      trace(TRACE_DEBUG, "insert_messages(): added user [%s] id [%s] to delivery list",
+		    (char*)tmp->data, userid_string);
+	    }
 	}
 
       /* get the next taget in list */
       tmp=tmp->nextnode;
     }
-		
-  /* get first target uiserid */
+      
+  /* get first target userid */
   tmp=list_getstart(&userids);
 
   while (tmp!=NULL)
@@ -214,15 +252,15 @@ int insert_messages(char *header, u64_t headersize, struct list *users, struct l
       /* traversing list with userids and creating a message for each userid */
 		
       /* checking if tmp->data is numeric. If so, we should try to 
-       * insert to that address in the database 
-       * else we need to forward the message 
-       * ---------------------------------------------------------
-       * FIXME: The id needs to be checked!, it might be so that it is set in the 
-       * virtual user table but that doesn't mean it's valid! */
+	   * insert to that address in the database 
+	   * else we need to forward the message 
+	   * ---------------------------------------------------------
+	   * FIXME: The id needs to be checked!, it might be so that it is set in the 
+	   * virtual user table but that doesn't mean it's valid! */
 
       trace (TRACE_DEBUG,"insert_messages(): alias deliver_to is [%s]",
 	     (char *)tmp->data);
-		
+	  
       ptr=(char *)tmp->data;
       i = 0;
 		
@@ -246,22 +284,23 @@ int insert_messages(char *header, u64_t headersize, struct list *users, struct l
 	{
 	  /* make the id numeric */
 	  userid=strtoull((char *)tmp->data, NULL, 10);
-
-	  /* create a message record */
+	      
+	      /* create a message record */
 	  temp_message_record_id=db_insert_message ((u64_t *)&userid);
 
 	  /* message id is an array of returned message id's
-	   * all messageblks are inserted for each message id
-	   * we could change this in the future for efficiency
-	   * still we would need a way of checking which messageblks
-	   * belong to which messages */
+	       * all messageblks are inserted for each message id
+	       * we could change this in the future for efficiency
+	       * still we would need a way of checking which messageblks
+	       * belong to which messages */
 	  
 	  if (db_insert_message_block (header,temp_message_record_id) == -1)
 	    trace(TRACE_STOP, "insert_messages(): error inserting msgblock\n");
 
-	  /* adding this messageid to the message id list */
+	      /* adding this messageid to the message id list */
 	  list_nodeadd(&messageids,&temp_message_record_id,sizeof(temp_message_record_id));
 	}
+      
       /* get next item */	
       tmp=tmp->nextnode;
     }

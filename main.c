@@ -6,6 +6,7 @@
 #include "config.h"
 #include "main.h"
 #include "pipe.h"
+#include "list.h"
 
 #define MESSAGEIDSIZE 100
 #define NORMAL_DELIVERY 1
@@ -29,6 +30,7 @@ u64_t headersize;
 int main (int argc, char *argv[]) 
 {
   struct list returnpath; /* returnpath (should aways be just 1 hop */
+  int users_are_usernames = 0,i;
   u64_t dummyidx=0,dummysize=0;
 
   openlog(PNAME, LOG_PID, LOG_MAIL);
@@ -38,7 +40,8 @@ int main (int argc, char *argv[])
     {
       printf ("\nUsage: %s -n [headerfield]   for normal deliveries "
 	      "(default: \"deliver-to\" header)\n",argv[0]);
-      printf ("       %s -d [addresses]  for delivery without using scanner\n\n",argv[0]);
+      printf ("       %s -d [addresses]  for delivery without using scanner\n",argv[0]);
+      printf ("       %s -u [usernames]  for direct delivery to users\n\n",argv[0]);
       return 0;
     }
 	
@@ -73,7 +76,8 @@ int main (int argc, char *argv[])
     }
 
   configure_debug(new_level, new_trace_syslog, new_trace_verbose);
- 
+  list_init(&users);
+  list_init(&mimelist);
 
   /* first we need to read the header */
   if ((header=read_header(&headersize))==NULL)
@@ -93,16 +97,34 @@ int main (int argc, char *argv[])
 
   
   /* we need to decide what delivery mode we're in */
-  if (strcmp ("-d",argv[INDEX_DELIVERY_MODE])==0)
+  if (strcmp ("-d", argv[INDEX_DELIVERY_MODE])==0)
     {
-      trace (TRACE_INFO,"main(): using SPECIAL_DELIVERY");
+      trace (TRACE_INFO,"main(): using SPECIAL_DELIVERY to email addresses");
+
       /* mail_adr_list_special will take the command line 
        * email addresses and use those addresses for this message 
        * delivery */
+
       if (mail_adr_list_special(INDEX_DELIVERY_MODE+1,argc, argv,&users)==0)
 	trace(TRACE_STOP,"main(): could not find any addresses");
     }
-  else 
+  else if (strcmp("-u", argv[INDEX_DELIVERY_MODE])==0)
+    {
+      trace (TRACE_INFO,"main(): using SPECIAL_DELIVERY to usernames");
+
+      /* build a list of usernames as supplied on the command line */
+      for (i=INDEX_DELIVERY_MODE+1; argv[i]; i++)
+	{
+	  if (list_nodeadd(&users, argv[i], strlen(argv[i]) + 1) == 0)
+	    {
+	      trace(TRACE_STOP, "main(): out of memory");
+	      return 1;
+	    }
+	}
+
+      users_are_usernames = 1;
+    }
+  else
     {
       trace (TRACE_INFO,"main(): using NORMAL_DELIVERY");
 
@@ -120,7 +142,7 @@ int main (int argc, char *argv[])
     } 
 
   /* inserting messages into the database */
-  insert_messages(header, headersize,&users, &returnpath);
+  insert_messages(header, headersize,&users, &returnpath, users_are_usernames);
   trace(TRACE_DEBUG,"main(): freeing memory blocks");
 
   trace (TRACE_DEBUG,"main(): they're all free. we're done.");

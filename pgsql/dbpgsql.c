@@ -887,7 +887,7 @@ u64_t db_check_sizelimit (u64_t addblocksize, u64_t messageidnr,
   maxmail_size = db_getmaxmailsize(*useridnr);
 
 
-  trace (TRACE_DEBUG, "db_check_sizelimit(): comparing currsize + blocksize  [%d], maxsize [%d]\n",
+  trace (TRACE_DEBUG, "db_check_sizelimit(): comparing currsize + blocksize  [%llu], maxsize [%llu]\n",
 	 currmail_size, maxmail_size);
 
 
