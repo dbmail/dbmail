@@ -61,11 +61,11 @@ void list_freelist(struct element **start)
 
 
 /* 
- * list_reverse()
+ * dbmail_list_reverse()
  *
  * reverse the order of a linked list
  */
-struct element* list_reverse(struct element *start)
+struct element* dbmail_list_reverse(struct element *start)
 {
   struct element *newstart;
 
@@ -75,7 +75,7 @@ struct element* list_reverse(struct element *start)
   if (!start->nextnode)
     return start; /* nothing to reverse */
 
-  newstart = list_reverse(start->nextnode); /* reverse rest of list */
+  newstart = dbmail_list_reverse(start->nextnode); /* reverse rest of list */
   start->nextnode->nextnode = start;
 
   start->nextnode = NULL; /* terminate list */

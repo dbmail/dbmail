@@ -2053,7 +2053,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	}
     }
 
-  fetch_list.start = list_reverse(fetch_list.start);
+  fetch_list.start = dbmail_list_reverse(fetch_list.start);
 
   /* now fetch results for each msg */
   endptr = args[0];

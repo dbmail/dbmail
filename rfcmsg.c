@@ -90,11 +90,11 @@ void db_reverse_msg(mime_message_t *msg)
     }
 
   /* reverse this list */
-  msg->children.start = list_reverse(msg->children.start);
+  msg->children.start = dbmail_list_reverse(msg->children.start);
 
   /* reverse header items */
-  msg->mimeheader.start = list_reverse(msg->mimeheader.start);
-  msg->rfcheader.start  = list_reverse(msg->rfcheader.start);
+  msg->mimeheader.start = dbmail_list_reverse(msg->mimeheader.start);
+  msg->rfcheader.start  = dbmail_list_reverse(msg->rfcheader.start);
 }
 
 /*

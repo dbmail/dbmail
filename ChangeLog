@@ -1,3 +1,20 @@
+2004-03-09  Ilja Booij  <ilja@ic-s.nl>
+
+	* rfcmsg.c (db_reverse_msg): changed function calls from list_reverse()
+	to dbmail_list_reverse()
+
+	* lmtp.c (lmtp): changed function call from list_reverse() to
+	dbmail_list_reverse()
+
+	* imapcommands.c (_ic_fetch): changed function call from list_reverse()
+	to dbmail_list_reverse()
+
+	* list.c (dbmail_list_reverse): renamed function from list_reverse()
+	to dbmail_list_reverse()
+
+	* list.h: renamed list_reverse() to dbmail_list_reverse() to 
+	fix conflict with function exported by some MySQL versions.
+
 2004-03-08  Aaron Stone <aaron@serendipity.cx>
 
 	* lmtp.c: improved compliance with RFC 2033, LMTP, in two key areas:

@@ -59,6 +59,11 @@ void list_freelist(struct element **start);
 long list_totalnodes(struct list *tlist);
 void list_showlist(struct list *tlist);
 void list_init(struct list *tlist);
-struct element* list_reverse(struct element *start);
+
+/* this function had to be renamed because some MySQL versions
+ * export a function with the name list_reverse(). Nice of them,
+ * but a pretty "strange" way to pollute the global namespace
+ */
+struct element* dbmail_list_reverse(struct element *start);
 
 #endif 

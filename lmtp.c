@@ -518,7 +518,7 @@ int lmtp(void *stream, void *instream, char *buffer, char *client_ip UNUSED, Pop
               struct element *element;
            
               /* The replies MUST be in the order received */
-              rcpt.start = list_reverse(rcpt.start);
+              rcpt.start = dbmail_list_reverse(rcpt.start);
 
               /* Resolve the addresses into deliverable / non-deliverable form. */
               if (dsnuser_resolve_list(&rcpt) == -1)
