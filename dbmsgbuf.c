@@ -40,6 +40,8 @@
 static unsigned _msgrow_idx = 0;
 static int _msg_fetch_inited = 0;
 
+/* for issuing queries to the backend */
+char query[DEF_QUERYSIZE];
 
 /**
  * CONDITIONS FOR MSGBUF

@@ -48,6 +48,8 @@ const char *month_desc[] = {
 	"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 };
 
+/* for issuing queries to the backend */
+char query[DEF_QUERYSIZE];
 
 /* used only locally */
 /** \brief performs a binary search on an array to find key. Array should

@@ -61,11 +61,6 @@
 /* users, aliases, mailboxes, messages, messageblks */
 #define DB_NTABLES 6
 
-/**
- * global variables
- */
-char query[DEF_QUERYSIZE]; /**< can be used for making queries to db backend */
-
 /* 
  * PROTOTYPES 
  */

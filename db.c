@@ -61,6 +61,10 @@ const char *DB_TABLENAMES[DB_NTABLES] = {
 	"messageblks"
 };
 
+/** can be used for making queries to db backend */
+char query[DEF_QUERYSIZE]; 
+
+
 /* size of buffer for writing messages to a client */
 #define WRITE_BUFFER_SIZE 2048
 
