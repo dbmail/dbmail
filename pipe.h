@@ -30,30 +30,24 @@
 #include "list.h"
 
 /**
- * \brief reads incoming pipe until header is found 
- * \param blksize this will hold the size of the header when the function
- * returns successfully
- * \return 
- *      - pointer to header if successful
- *      - NULL otherwise 
- */
-char *read_header(u64_t *blksize);
-
-/**
  * \brief inserts a message in the database. The header of the message is 
- * supposed to be given. The rest of the message will be received using stdin
+ * supposed to be given. The rest of the message will be read from instream
+ * \param instream is a FILE stream where the rest of the message is
  * \param header header of the message
  * \param headersize size of the header
  * \param users list of users to sent the message to
+ * \param errusers list of users who didn't work for some reason
  * \param returnpath From: addresses. Used for bouncing messages.
  * \param users_are_usernames if 0, the users list holds user_idnr, if 1 it
  * holds usernames
  * \param deliver_to_mailbox mailbox to deliver to
- * \param headerfields of header fields
+ * \param headerfields list of header fields
  * \return 0
  */
-int insert_messages(char *header, u64_t headersize,struct list *users, 
-		    struct list *returnpath, int users_are_usernames, 
-		    char *deliver_to_mailbox, struct list *headerfields);
+int insert_messages(FILE *instream, char *header, u64_t headersize,
+        struct list *users, struct list *errusers, 
+        struct list *returnpath, int users_are_usernames, 
+        char *deliver_to_mailbox, struct list *headerfields);
+
 
 #endif

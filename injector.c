@@ -57,8 +57,6 @@ int add_username(const char *uname, struct list *userids);
 int process_args(int argc, char *argv[], 
 		 struct list *userids, struct list *bounces, struct list *fwds, 
 		 char **field_to_scan);
-unsigned process_header(struct list *userids, struct list *bounces, struct list *fwds, 
-			const char *field, char *hdrdata, u64_t *newlines, char **bounce_path);
 
 int send_bounces(struct list *bounces, u64_t len, const char *bouncepath, 
 		 const char *sendmail, const char *postmaster, const char *fromaddr);
@@ -170,7 +168,7 @@ int main(int argc, char *argv[])
       trace(TRACE_FATAL, "main(): error processing command line options");
     }
 
-  if ((len = process_header(&userids, &bounces, &fwds, field_to_scan, blk, &newlines, &bouncepath)) == -1)
+  if ((len = read_header_process(&userids, &bounces, &fwds, field_to_scan, blk, &newlines, &bouncepath)) == -1)
     {
       db_disconnect();
       auth_disconnect();
@@ -414,122 +412,6 @@ int main(int argc, char *argv[])
 
 
 /*
- * process_header()
- *
- * Reads in a mail header (from stdin, reading is done until '\n\n' is encountered).
- * If field != NULL scanning is done for delivery on that particular field.
- *
- * Data is saved in hdrdata which should be capable of holding at least READ_BLOCK_SIZE characters.
- *
- * returns data cnt on success, -1 on failure
- */
-unsigned process_header(struct list *userids, struct list *bounces, struct list *fwds, 
-			const char *field, char *hdrdata, u64_t *newlines, char **bounce_path)
-{
-  int len = field ? strlen(field) : 0;
-  char *left, *right, *curr, save, *line;
-  char *frompath = 0;
-  unsigned cnt = 0;
-  *newlines = 0;
-  *bounce_path = 0;
-
-  while (!feof(stdin) && !ferror(stdin) && cnt < READ_BLOCK_SIZE)
-    {
-      line = &hdrdata[cnt]; /* write directly to hdrdata */
-      fgets(line, READ_BLOCK_SIZE - cnt, stdin);
-      (*newlines)++;
-
-      cnt += strlen(line);
-
-      if (strcmp(line, "\n") == 0)
-	break;
-
-      if (field && strncasecmp(line, field, len) == 0 && line[len] == ':' && line[len+1] == ' ')
-	{
-	  /* found the field we're scanning for */
-	  trace(TRACE_DEBUG, "process_header(): found field");
-	      
-	  curr = &line[len];
-
-	  while (curr && *curr)
-	    {
-	      left = strchr(curr, '@');
-	      if (!left)
-		break;
-
-	      right = left;
-
-	      /* walk to the left */
-	      while (left != line && left[0]!='<' && left[0]!=' ' && left[0]!='\0' && left[0]!=',')
-		left--;
-		  
-	      left++; /* walked one back too far */
-		  
-	      /* walk to the right */
-	      while (right[0]!='>' && right[0]!=' ' && right[0]!='\0' && right[0]!=',')
-		right++;
-		  
-	      save = *right;
-	      *right = 0; /* terminate string */
-	      
-	      if (add_address(left, userids, bounces, fwds) != 0)
-		trace(TRACE_ERROR,"process_header(): could not add [%s]", left);
-
-	      trace(TRACE_DEBUG,"process_header(): processed [%s]", left);
-	      *right = save;
-	      curr = right;
-	    }
-	}
-      else if (field && !(*bounce_path) && strncasecmp(line, "return-path", strlen("return-path")) == 0)
-	{
-	  /* found return-path */
-	  *bounce_path = (char*)my_malloc(strlen(line));
-	  if (!(*bounce_path))
-	    return -1;
-
-	  left = strchr(line, ':');
-	  if (left)
-	    strcpy(*bounce_path, &left[1]);
-	  else
-	    {
-	      my_free(bounce_path);
-	      bounce_path = 0;
-	    }
-	}
-      else if (field && !(*bounce_path) && !frompath && strncasecmp(line, "from", strlen("from")) == 0)
-	{
-	  /* found from field */
-	  frompath = (char*)my_malloc(strlen(line));
-	  if (!frompath)
-	    return -1;
-
-	  left = strchr(line, ':');
-	  if (left)
-	    strcpy(frompath, &left[1]);
-	  else
-	    {
-	      my_free(frompath);
-	      frompath = 0;
-	    }
-	}
-    }
-	
-  if (frompath)
-    {
-      if (!(*bounce_path))
-	*bounce_path = frompath;
-      else
-	my_free(frompath);
-    }
-
-  trace(TRACE_DEBUG,"process_header(): found bounce path [%s]", *bounce_path ? *bounce_path : "<<none>>");
-
-  return cnt;
-}
-
-
-
-/*
  * process_args()
  *
  * processes the command line arguments for the smtp injector program.
@@ -591,85 +473,6 @@ int process_args(int argc, char *argv[],
 
   return 0;
 }
-
-
-
-/*
- * add_address()
- *
- * takes an e-mail address and finds the correct delivery for it:
- * internal (numeric id), bounce, forward
- *
- * returns 0 on success, -1 on failure
- */
-int add_address(const char *address, struct list *userids, struct list *bounces, struct list *fwds)
-{
-  char *domain;
-
-  if (auth_check_user_ext(address, userids, fwds, -1) == 0)
-    {
-      /* not in alias table
-       * check for a domain fwd first; if none present
-       * then make it a bounce
-       */
-      
-      domain = strchr(address, '@');
-      if (!domain)
-	{
-	  /* ?? no '@' in address ? */
-	  trace(TRACE_ERROR, "add_address(): got invalid address [%s]", address);
-	}
-      else
-	{
-	  if (auth_check_user_ext(domain, userids, fwds, -1) == 0)
-	    {
-	      /* ok no domain fwds either --> bounce */
-	      if (list_nodeadd(bounces, address, strlen(address)+1) == 0)
-		{
-		  trace(TRACE_ERROR, "add_address(): could not add bounce [%s]", address);
-		  return -1;
-		}
-	    }
-	}
-    }
-
-  return 0;
-}
-      
-
-/*
- * add_username()
- *
- * adds the (numeric) ID of the user uname to the list of ids.
- *
- * returns 0 on success, -1 on failure
- */
-int add_username(const char *uname, struct list *userids)
-{
-  u64_t uid;
-
-  uid = auth_user_exists(uname);
-  switch (uid)
-    {
-    case (u64_t)(-1):
-      trace(TRACE_ERROR,"add_username(): error verifying user existence");
-      break;
-    case 0:
-      trace(TRACE_INFO,"add_username(): non-existent user specified");
-      break;
-    default:
-      trace(TRACE_DEBUG,"add_username(): adding user [%s] id [%llu] to list", uname, uid);
-      if (list_nodeadd(userids, &uid, sizeof(uid)) == NULL)
-	{
-	  trace(TRACE_ERROR,"add_username(): out of memory");
-	  list_freelist(&userids->start);
-	  return -1;
-	}
-    }
-  
-  return 0;
-}
-
 
 
 /* sends bounces to everyone in this list */

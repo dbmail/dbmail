@@ -227,19 +227,95 @@ else
   fi
 fi
 ])
+dnl DBMAIL_SIEVE_CONF
+dnl check for ldap or sql authentication
+AC_DEFUN(DBMAIL_SIEVE_CONF, [dnl
+AC_MSG_RESULT([checking for sorting configuration])
+AC_ARG_WITH(sieve,[  --with-sieve=PATH	  full path to libSieve header directory],
+	sieveheadername="$withval$")
+dnl This always needs to be defined
+SORTALIB="sort/libsortdbmail.a"
+
+WARN=0
+if test ! "${sieveheadername-x}" = "x"
+then
+  # --with-sieve was specified
+  AC_MSG_RESULT([using Sieve sorting])
+  if test "$withval" != "yes"
+  then
+    AC_MSG_CHECKING([for sieve2_interface.h (user supplied)])
+    if test -r "$sieveheadername/sieve2_interface.h"
+      then
+      # found
+        AC_MSG_RESULT([$sieveheadername/sieve2_interface.h])
+        SIEVEINC=$sieveheadername
+      else 
+      # Not found
+        AC_MSG_RESULT([not found])
+        SIEVEINC=""
+        sieveheadername=""
+        AC_MSG_ERROR([
+  Unable to find sieve2_inteface.h where you specified, try just --with-sieve to 
+  have configure guess])
+    fi
+  else
+    # Lets look in our standard paths
+    AC_MSG_CHECKING([for sieve2_interface.h])
+    for sievepaths in $sieveheaderpaths
+    do
+      if test -r "$sievepaths/sieve2_interface.h"
+      then
+        SIEVEINC="$sievepaths"
+        AC_MSG_RESULT([$sievepaths/sieve2_interface.h])
+        break
+      fi
+    done
+    if test -z "$SIEVEINC"
+    then
+      AC_MSG_RESULT([no])
+      AC_MSG_ERROR([
+  Unable to locate sieve2_inteface.h, try specifying with --with-sieve])
+    fi
+  fi
+else
+  AC_MSG_RESULT([not using any sorting])
+fi
+])
+
+dnl DBMAIL_CHECK_SIEVE_LIBS
+dnl
+AC_DEFUN(DBMAIL_CHECK_SIEVE_LIBS, [dnl
+# Look for libs needed to link to SIEVE first
+if test ! "${sieveheadername-x}" = "x"
+then
+  AC_CHECK_LIB(sieve,sieve2_listextensions,[ SIEVELIB="-lsieve"], [SIEVELIB=""])
+  if test -z "$SIEVELIB"
+  then
+    AC_MSG_ERROR([
+  Unable to link against libSieve.  It appears you are missing the
+  development libraries or they aren't in your linker's path
+  ])
+  fi
+else
+  #no Sieve needed
+  SIEVELIB=""
+fi
+])
 	
 dnl DBMAIL_AUTH_CONF
 dnl check for ldap or sql authentication
 AC_DEFUN(DBMAIL_AUTH_CONF, [dnl
-AC_MSG_NOTICE([checking for authentication configuration])
+AC_MSG_RESULT([checking for authentication configuration])
 AC_ARG_WITH(auth-ldap,[  --with-auth-ldap=PATH	  full path to ldap header directory],
 	authldapheadername="$withval$")
+dnl This always needs to be defined
+AUTHALIB="auth/libauthdbmail.a"
 
 WARN=0
 if test ! "${authldapheadername-x}" = "x"
 then
   # --with-auth-ldap was specified
-  AC_MSG_NOTICE([using LDAP authentication])
+  AC_MSG_RESULT([using LDAP authentication])
   if test "$withval" != "yes"
   then
     AC_MSG_CHECKING([for ldap.h (user supplied)])
@@ -277,7 +353,7 @@ then
     fi
   fi
 else
-  AC_MSG_NOTICE([using SQL authentication])
+  AC_MSG_RESULT([using SQL authentication])
 fi
 ])
 

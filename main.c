@@ -31,11 +31,9 @@
 #include "pipe.h"
 #include "list.h"
 #include "auth.h"
+#include "header.h"
 #include <string.h>
 #include <stdlib.h>
-#include <time.h>
-#include <sys/types.h>
-#include <unistd.h>
 
 #define MESSAGEIDSIZE 100
 #define NORMAL_DELIVERY 1
@@ -47,6 +45,7 @@
 #define PNAME "dbmail/smtp"
 
 struct list mimelist; 	        /* raw unformatted mimefields and values */
+struct list errusers; 	  	/* list of error codes corresponding to users */
 struct list users; 	  	/* list of email addresses in message */
 
 struct list sysItems, smtpItems; /* config item lists */
@@ -61,6 +60,7 @@ int mode;			/* how should we process */
 char *header = NULL;
 char *deliver_to_mailbox = NULL;
 u64_t headersize;
+u64_t newlines;
 
 int main (int argc, char *argv[]) 
 {
@@ -95,12 +95,12 @@ int main (int argc, char *argv[])
     trace(TRACE_FATAL,"main(): authentication connection failed");
 
   list_init(&users);
+  list_init(&errusers);
   list_init(&mimelist);
 
   /* first we need to read the header */
-  if ((header=read_header(&headersize))==NULL)
+  if (!read_header(stdin, &newlines, &headersize, &header))
     trace (TRACE_STOP,"main(): read_header() returned an invalid header");
-
 
   /* parse the list and scan for field and content */
   if (mime_readheader(header, &dummyidx, &mimelist, &dummysize) < 0)
@@ -189,13 +189,17 @@ int main (int argc, char *argv[])
 	  trace(TRACE_STOP,"main(): scanner found no email addresses (scanned for Deliver-To:)");
     } 
   
-  srand((int) ((int) time(NULL) + (int) getpid()) );
-
   /* inserting messages into the database */
-  insert_messages(header, headersize, &users, &returnpath, users_are_usernames,
-		  deliver_to_mailbox, &mimelist);
+  insert_messages(stdin, header, headersize, &users, &errusers, &returnpath,
+		  users_are_usernames, deliver_to_mailbox, &mimelist);
   trace(TRACE_DEBUG,"main(): freeing memory blocks");
-  
+  my_free(header);
+  list_freelist(&sysItems.start);
+  list_freelist(&smtpItems.start);
+  list_freelist(&returnpath.start);
+  list_freelist(&mimelist.start);
+  list_freelist(&errusers.start);
+  list_freelist(&users.start);
   trace (TRACE_DEBUG,"main(): they're all free. we're done.");
   
   db_disconnect();

@@ -74,6 +74,7 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
+AUTHALIB = @AUTHALIB@
 CC = @CC@
 LDAPINC = @LDAPINC@
 LDAPLIB = @LDAPLIB@
@@ -83,40 +84,61 @@ MYSQLINC = @MYSQLINC@
 PACKAGE = @PACKAGE@
 PGSQLINC = @PGSQLINC@
 RANLIB = @RANLIB@
+SIEVEINC = @SIEVEINC@
+SIEVELIB = @SIEVELIB@
+SORTALIB = @SORTALIB@
 SQLALIB = @SQLALIB@
 SQLLIB = @SQLLIB@
 VERSION = @VERSION@
 mysqlconfig = @mysqlconfig@
 pgsqlconfig = @pgsqlconfig@
 
-SUBDIRS = mysql pgsql auth
+SUBDIRS = mysql pgsql auth sort
 
-bin_PROGRAMS = dbmail-smtp dbmail-pop3d dbmail-imapd dbmail-maintenance dbmail-adduser dbmail-readvut
+@SIEVE_TRUE@SIEVEPROGS = dbmail-sievecmd dbmail-timsieved
+
+bin_PROGRAMS = dbmail-smtp dbmail-pop3d dbmail-imapd dbmail-maintenance dbmail-adduser dbmail-readvut dbmail-lmtpd $(SIEVEPROGS)
 bin_SCRIPTS = install-dbmail.sh
 
-dbmail_smtp_SOURCES = config.c list.c debug.c dbmd5.c md5.c mime.c main.c pipe.c bounce.c forward.c memblock.c misc.c db.c
-dbmail_smtp_LDADD = @SQLALIB@ $(top-builddir)auth/libauthdbmail.a
-dbmail_smtp_LDFLAGS = @SQLLIB@ @LDAPLIB@
+COMMON = config.c debug.c list.c dbmd5.c md5.c db.c misc.c mime.c
+SERVER = server.c serverchild.c
+DELIVER = header.c pipe.c bounce.c forward.c 
 
-dbmail_pop3d_SOURCES = config.c server.c serverchild.c pop3.c list.c debug.c dbmd5.c md5.c mime.c misc.c memblock.c pop3d.c db.c
-dbmail_pop3d_LDADD = @SQLALIB@ $(top-builddir)auth/libauthdbmail.a
-dbmail_pop3d_LDFLAGS = @SQLLIB@ @LDAPLIB@
+dbmail_smtp_SOURCES = $(COMMON) $(DELIVER) main.c
+dbmail_smtp_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@
+dbmail_smtp_LDFLAGS = @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
-dbmail_imapd_SOURCES = acl.c quota.c config.c server.c serverchild.c imap4.c debug.c list.c dbmd5.c md5.c imaputil.c imapcommands.c mime.c misc.c memblock.c rfcmsg.c imapd.c db.c dbsearch.c dbmsgbuf.c 1
-dbmail_imapd_LDADD = @SQLALIB@ $(top-builddir)auth/libauthdbmail.a
-dbmail_imapd_LDFLAGS = @SQLLIB@ @LDAPLIB@
+dbmail_pop3d_SOURCES = $(COMMON) $(SERVER) pop3.c pop3d.c
+dbmail_pop3d_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@
+dbmail_pop3d_LDFLAGS = @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
-dbmail_maintenance_SOURCES = config.c debug.c list.c dbmd5.c md5.c mime.c memblock.c maintenance.c auth.h db.c misc.c 
-dbmail_maintenance_LDADD = @SQLALIB@ $(top-builddir)auth/libauthdbmail.a
-dbmail_maintenance_LDFLAGS = @SQLLIB@ @LDAPLIB@
+dbmail_imapd_SOURCES = $(COMMON) $(SERVER) quota.c imap4.c imaputil.c imapcommands.c memblock.c rfcmsg.c imapd.c dbsearch.c dbmsgbuf.c acl.c
+dbmail_imapd_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@
+dbmail_imapd_LDFLAGS = @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
-dbmail_adduser_SOURCES = config.c debug.c list.c dbmd5.c md5.c mime.c memblock.c user.c db.c misc.c 
-dbmail_adduser_LDADD = @SQLALIB@ $(top-builddir)auth/libauthdbmail.a
-dbmail_adduser_LDFLAGS = @SQLLIB@ @LDAPLIB@
+dbmail_maintenance_SOURCES = $(COMMON) maintenance.c
+dbmail_maintenance_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@
+dbmail_maintenance_LDFLAGS = @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
-dbmail_readvut_SOURCES = config.c debug.c list.c dbmd5.c md5.c mime.c vut2dbmail.c db.c misc.c 
-dbmail_readvut_LDADD = @SQLALIB@ $(top-builddir)auth/libauthdbmail.a
-dbmail_readvut_LDFLAGS = @SQLLIB@ @LDAPLIB@
+dbmail_adduser_SOURCES = $(COMMON) user.c
+dbmail_adduser_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@
+dbmail_adduser_LDFLAGS = @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+
+dbmail_readvut_SOURCES = $(COMMON) vut2dbmail.c
+dbmail_readvut_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@
+dbmail_readvut_LDFLAGS = @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+
+dbmail_lmtpd_SOURCES = $(COMMON) $(SERVER) $(DELIVER) lmtp.c lmtpd.c
+dbmail_lmtpd_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@
+dbmail_lmtpd_LDFLAGS = @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+
+@SIEVE_TRUE@dbmail_sievecmd_SOURCES = $(COMMON) sievecmd.c 
+@SIEVE_TRUE@dbmail_sievecmd_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@
+@SIEVE_TRUE@dbmail_sievecmd_LDFLAGS = @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+
+@SIEVE_TRUE@dbmail_timsieved_SOURCES = $(COMMON) $(SERVER) timsieve.c timsieved.c
+@SIEVE_TRUE@dbmail_timsieved_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@
+@SIEVE_TRUE@dbmail_timsieved_LDFLAGS = @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 mkinstalldirs = $(SHELL) $(top_srcdir)/buildtools/mkinstalldirs
 CONFIG_HEADER = config.h
@@ -128,25 +150,36 @@ DEFS = @DEFS@ -I. -I$(srcdir) -I.
 CPPFLAGS = @CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
-dbmail_smtp_OBJECTS =  config.o list.o debug.o dbmd5.o md5.o mime.o \
-main.o pipe.o bounce.o forward.o memblock.o misc.o db.o
-dbmail_smtp_DEPENDENCIES =  $(top-builddir)auth/libauthdbmail.a
-dbmail_pop3d_OBJECTS =  config.o server.o serverchild.o pop3.o list.o \
-debug.o dbmd5.o md5.o mime.o misc.o memblock.o pop3d.o db.o
-dbmail_pop3d_DEPENDENCIES =  $(top-builddir)auth/libauthdbmail.a
-dbmail_imapd_OBJECTS =  acl.o quota.o config.o server.o serverchild.o \
-imap4.o debug.o list.o dbmd5.o md5.o imaputil.o imapcommands.o mime.o \
-misc.o memblock.o rfcmsg.o imapd.o db.o dbsearch.o dbmsgbuf.o
-dbmail_imapd_DEPENDENCIES =  $(top-builddir)auth/libauthdbmail.a
-dbmail_maintenance_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o \
-mime.o memblock.o maintenance.o db.o misc.o
-dbmail_maintenance_DEPENDENCIES =  $(top-builddir)auth/libauthdbmail.a
-dbmail_adduser_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o mime.o \
-memblock.o user.o db.o misc.o
-dbmail_adduser_DEPENDENCIES =  $(top-builddir)auth/libauthdbmail.a
-dbmail_readvut_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o mime.o \
-vut2dbmail.o db.o misc.o
-dbmail_readvut_DEPENDENCIES =  $(top-builddir)auth/libauthdbmail.a
+dbmail_smtp_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o db.o misc.o \
+mime.o header.o pipe.o bounce.o forward.o main.o
+dbmail_smtp_DEPENDENCIES = 
+dbmail_pop3d_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o db.o \
+misc.o mime.o server.o serverchild.o pop3.o pop3d.o
+dbmail_pop3d_DEPENDENCIES = 
+dbmail_imapd_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o db.o \
+misc.o mime.o server.o serverchild.o quota.o imap4.o imaputil.o \
+imapcommands.o memblock.o rfcmsg.o imapd.o dbsearch.o dbmsgbuf.o acl.o
+dbmail_imapd_DEPENDENCIES = 
+dbmail_maintenance_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o db.o \
+misc.o mime.o maintenance.o
+dbmail_maintenance_DEPENDENCIES = 
+dbmail_adduser_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o db.o \
+misc.o mime.o user.o
+dbmail_adduser_DEPENDENCIES = 
+dbmail_readvut_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o db.o \
+misc.o mime.o vut2dbmail.o
+dbmail_readvut_DEPENDENCIES = 
+dbmail_lmtpd_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o db.o \
+misc.o mime.o server.o serverchild.o header.o pipe.o bounce.o forward.o \
+lmtp.o lmtpd.o
+dbmail_lmtpd_DEPENDENCIES = 
+@SIEVE_TRUE@dbmail_sievecmd_OBJECTS =  config.o debug.o list.o dbmd5.o \
+@SIEVE_TRUE@md5.o db.o misc.o mime.o sievecmd.o
+@SIEVE_TRUE@dbmail_sievecmd_DEPENDENCIES = 
+@SIEVE_TRUE@dbmail_timsieved_OBJECTS =  config.o debug.o list.o dbmd5.o \
+@SIEVE_TRUE@md5.o db.o misc.o mime.o server.o serverchild.o timsieve.o \
+@SIEVE_TRUE@timsieved.o
+@SIEVE_TRUE@dbmail_timsieved_DEPENDENCIES = 
 SCRIPTS =  $(bin_SCRIPTS)
 
 CFLAGS = @CFLAGS@
@@ -164,13 +197,15 @@ TAR = gtar
 GZIP_ENV = --best
 DEP_FILES =  .deps/acl.P .deps/bounce.P .deps/config.P .deps/db.P \
 .deps/dbmd5.P .deps/dbmsgbuf.P .deps/dbsearch.P .deps/debug.P \
-.deps/forward.P .deps/imap4.P .deps/imapcommands.P .deps/imapd.P \
-.deps/imaputil.P .deps/list.P .deps/main.P .deps/maintenance.P \
-.deps/md5.P .deps/memblock.P .deps/mime.P .deps/misc.P .deps/pipe.P \
-.deps/pop3.P .deps/pop3d.P .deps/quota.P .deps/rfcmsg.P .deps/server.P \
-.deps/serverchild.P .deps/user.P .deps/vut2dbmail.P
-SOURCES = $(dbmail_smtp_SOURCES) $(dbmail_pop3d_SOURCES) $(dbmail_imapd_SOURCES) $(dbmail_maintenance_SOURCES) $(dbmail_adduser_SOURCES) $(dbmail_readvut_SOURCES)
-OBJECTS = $(dbmail_smtp_OBJECTS) $(dbmail_pop3d_OBJECTS) $(dbmail_imapd_OBJECTS) $(dbmail_maintenance_OBJECTS) $(dbmail_adduser_OBJECTS) $(dbmail_readvut_OBJECTS)
+.deps/forward.P .deps/header.P .deps/imap4.P .deps/imapcommands.P \
+.deps/imapd.P .deps/imaputil.P .deps/list.P .deps/lmtp.P .deps/lmtpd.P \
+.deps/main.P .deps/maintenance.P .deps/md5.P .deps/memblock.P \
+.deps/mime.P .deps/misc.P .deps/pipe.P .deps/pop3.P .deps/pop3d.P \
+.deps/quota.P .deps/rfcmsg.P .deps/server.P .deps/serverchild.P \
+.deps/sievecmd.P .deps/timsieve.P .deps/timsieved.P .deps/user.P \
+.deps/vut2dbmail.P
+SOURCES = $(dbmail_smtp_SOURCES) $(dbmail_pop3d_SOURCES) $(dbmail_imapd_SOURCES) $(dbmail_maintenance_SOURCES) $(dbmail_adduser_SOURCES) $(dbmail_readvut_SOURCES) $(dbmail_lmtpd_SOURCES) $(dbmail_sievecmd_SOURCES) $(dbmail_timsieved_SOURCES)
+OBJECTS = $(dbmail_smtp_OBJECTS) $(dbmail_pop3d_OBJECTS) $(dbmail_imapd_OBJECTS) $(dbmail_maintenance_OBJECTS) $(dbmail_adduser_OBJECTS) $(dbmail_readvut_OBJECTS) $(dbmail_lmtpd_OBJECTS) $(dbmail_sievecmd_OBJECTS) $(dbmail_timsieved_OBJECTS)
 
 all: all-redirect
 .SUFFIXES:
@@ -282,6 +317,18 @@ dbmail-adduser: $(dbmail_adduser_OBJECTS) $(dbmail_adduser_DEPENDENCIES)
 dbmail-readvut: $(dbmail_readvut_OBJECTS) $(dbmail_readvut_DEPENDENCIES)
 	@rm -f dbmail-readvut
 	$(LINK) $(dbmail_readvut_LDFLAGS) $(dbmail_readvut_OBJECTS) $(dbmail_readvut_LDADD) $(LIBS)
+
+dbmail-lmtpd: $(dbmail_lmtpd_OBJECTS) $(dbmail_lmtpd_DEPENDENCIES)
+	@rm -f dbmail-lmtpd
+	$(LINK) $(dbmail_lmtpd_LDFLAGS) $(dbmail_lmtpd_OBJECTS) $(dbmail_lmtpd_LDADD) $(LIBS)
+
+dbmail-sievecmd: $(dbmail_sievecmd_OBJECTS) $(dbmail_sievecmd_DEPENDENCIES)
+	@rm -f dbmail-sievecmd
+	$(LINK) $(dbmail_sievecmd_LDFLAGS) $(dbmail_sievecmd_OBJECTS) $(dbmail_sievecmd_LDADD) $(LIBS)
+
+dbmail-timsieved: $(dbmail_timsieved_OBJECTS) $(dbmail_timsieved_DEPENDENCIES)
+	@rm -f dbmail-timsieved
+	$(LINK) $(dbmail_timsieved_LDFLAGS) $(dbmail_timsieved_OBJECTS) $(dbmail_timsieved_LDADD) $(LIBS)
 
 install-binSCRIPTS: $(bin_SCRIPTS)
 	@$(NORMAL_INSTALL)

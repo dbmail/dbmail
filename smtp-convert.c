@@ -215,7 +215,7 @@ int process_mboxfile(char *file, u64_t userid)
 	    }
 
 	  /* start new message */
-	  msgid = db_insert_message(userid, 0, 0);
+	  msgid = db_insert_message(userid, 0, ERROR_IF_MBOX_NOT_FOUND, 0);
 	  header_passed = 0;
 	  cnt = 0;
 	  size = 0;

@@ -207,9 +207,8 @@ int mime_list(char *blkdata, struct list *mimelist)
 int mime_readheader(char *blkdata, u64_t *blkidx, struct list *mimelist, u64_t *headersize)
 {
   int valid_mime_lines=0,idx,totallines=0,j;
-  int fieldlen;
-  int vallen;
-  unsigned prevlen=0,new_add=1;
+  size_t fieldlen, vallen;
+  size_t prevlen=0,new_add=1;
 /*  u64_t saved_idx = *blkidx; only needed if we bail out on invalid data */
 	
   char *endptr, *startptr, *delimiter;
@@ -307,12 +306,12 @@ int mime_readheader(char *blkdata, u64_t *blkidx, struct list *mimelist, u64_t *
 	   * check the value. it does not count the \0.
 	   */
 
-	  if (fieldlen < 0 || fieldlen >= MIME_FIELD_MAX)
+	  if (fieldlen == -1 || fieldlen >= MIME_FIELD_MAX)
 	    *headersize += MIME_FIELD_MAX;
 	  else
 	    *headersize += fieldlen;
 
-	  if (vallen < 0 || vallen >= MIME_VALUE_MAX)
+	  if (vallen == -1 || vallen >= MIME_VALUE_MAX)
 	    *headersize += MIME_VALUE_MAX;
 	  else
 	    *headersize += vallen;
@@ -361,7 +360,7 @@ int mime_readheader(char *blkdata, u64_t *blkidx, struct list *mimelist, u64_t *
 	      strcpy(mr->field, "");
 	      vallen = snprintf(mr->value, MIME_VALUE_MAX, "%s", startptr);
 
-	      if (vallen < 0 || vallen >= MIME_VALUE_MAX)
+	      if (vallen == -1 || vallen >= MIME_VALUE_MAX)
 		*headersize += MIME_VALUE_MAX;
 	      else
 		*headersize += vallen;

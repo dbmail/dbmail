@@ -548,17 +548,17 @@ int db_insert_physmessage(u64_t *physmessage_id)
 
 	create_current_timestring(&timestring);
 
+    
 	snprintf(query, DEF_QUERYSIZE,
 		 "INSERT INTO physmessage (messagesize, internal_date) "
 		 "VALUES ('0', '%s')", timestring);
 	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: query failed", 
-		      __FILE__, __FUNCTION__);
+		trace(TRACE_ERROR, "%s,%s: query failed", __FILE__, __FUNCTION__);
 		return -1;
 	}
-     
+	
 	*physmessage_id = db_insert_result("physmessage_id");
-     
+	
 	return 1;
 }
 
@@ -622,27 +622,37 @@ int db_insert_message_with_physmessage(u64_t physmessage_id,
     return 1;
 }
 
-u64_t db_insert_message(u64_t user_idnr,
-			const char *deliver_to_mailbox,
-			const char *unique_id)
+int db_insert_message(u64_t user_idnr,
+			const char *mailbox,
+			int create_or_error_mailbox,
+			const char *unique_id,
+			u64_t *message_idnr)
 {
-    u64_t deliver_to_mailboxid;
+    u64_t mailboxid;
     u64_t physmessage_id;
     int result;
 
-    if (deliver_to_mailbox)
-	 result = db_findmailbox(deliver_to_mailbox, user_idnr, 
-				 &deliver_to_mailboxid);
-    else
-	 result = db_findmailbox("INBOX", user_idnr, &deliver_to_mailboxid);
+    if (!mailbox)
+	 mailbox = "INBOX";
+
+    switch (create_or_error_mailbox) {
+	 case CREATE_IF_MBOX_NOT_FOUND:
+	     result = db_find_create_mailbox(mailbox, user_idnr, &mailboxid);
+	     break;
+	 case ERROR_IF_MBOX_NOT_FOUND:
+	 default:
+	     result = db_findmailbox(mailbox, user_idnr, &mailboxid);
+	     break;
+    }
+
     if (result == -1) {
-	 trace(TRACE_ERROR, "%s,%s: error finding mailbox [%s]",
-	       __FILE__, __FUNCTION__, deliver_to_mailbox);
+	 trace(TRACE_ERROR, "%s,%s: error finding and/or creating mailbox [%s]",
+	       __FILE__, __FUNCTION__, mailbox);
 	 return -1;
     }
-    if (deliver_to_mailboxid == 0) {
+    if (mailboxid == 0) {
 	 trace(TRACE_WARNING, "%s,%s: mailbox [%s] could not be found!",
-	       __FILE__, __FUNCTION__, deliver_to_mailbox);
+	       __FILE__, __FUNCTION__, mailbox);
 	 return -1;
     }
 
@@ -658,12 +668,14 @@ u64_t db_insert_message(u64_t user_idnr,
 	     "messages(mailbox_idnr, physmessage_id, unique_id,"
 	     "recent_flag, status) "
 	     "VALUES ('%llu', '%llu', '%s', '1', '005')",
-	     deliver_to_mailboxid,
+	     mailboxid,
 	     physmessage_id, unique_id ? unique_id : "");
     if (db_query(query) == -1) {
 	 trace(TRACE_STOP, "%s,%s: query failed", __FILE__, __FUNCTION__);
     }
-    return db_insert_result("message_idnr");
+
+    *message_idnr = db_insert_result("message_idnr");
+    return 1;
 }
 
 int db_update_message(u64_t message_idnr, const char *unique_id,
@@ -693,7 +705,7 @@ int db_update_message(u64_t message_idnr, const char *unique_id,
 	       __FILE__, __FUNCTION__, physmessage_id);
     } 
         
-    if (db_calculate_quotum_used(db_get_useridnr(message_idnr)) == -1) {
+    if (db_calculate_quotum_used(db_get_useridnr(message_idnr)) == -1) {	 
 	    trace (TRACE_ERROR, "%s,%s: error calculating quotum "
 		   "used for user [%llu]. Database might be " 
 		   "inconsistent. run dbmail-maintenance",
@@ -935,49 +947,48 @@ int db_rollback_insert(u64_t owner_idnr, const char *unique_id)
 
 int db_log_ip(const char *ip)
 {
-	u64_t id = 0;
-	char *query_result;
+    u64_t id = 0;
+    char *query_result;
 
-	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT idnr FROM pbsp WHERE ipnumber = '%s'", ip);
+    snprintf(query, DEF_QUERYSIZE,
+	     "SELECT idnr FROM pbsp WHERE ipnumber = '%s'", ip);
+    if (db_query(query) == -1) {
+	trace(TRACE_ERROR, "%s,%s: could not access ip-log table "
+	      "(pop/imap-before-smtp): %s", __FILE__, __FUNCTION__);
+	return -1;
+    }
+
+    query_result = db_get_result(0, 0);
+    id = query_result ? strtoull(query_result, NULL, 10) : 0;
+
+    db_free_result();
+
+    if (id) {
+	/* this IP is already in the table, update the 'since' field */
+	snprintf(query, DEF_QUERYSIZE, "UPDATE pbsp "
+		 "SET since = CURRENT_TIMESTAMP " "WHERE idnr='%llu'", id);
+
 	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: could not access ip-log table "
-		      "(pop/imap-before-smtp): %s", __FILE__, __FUNCTION__);
-		return -1;
-	}
-
-	query_result = db_get_result(0, 0);
-	id = query_result ? strtoull(query_result, NULL, 10) : 0;
-	
-	db_free_result();
-	
-	if (id) {
-		/* this IP is already in the table, update the 'since' field */
-		snprintf(query, DEF_QUERYSIZE, "UPDATE pbsp "
-			 "SET since = CURRENT_TIMESTAMP " "WHERE idnr='%llu'", 
-			 id);
-
-		if (db_query(query) == -1) {
-			trace(TRACE_ERROR, "%s,%s: could not update ip-log "
+	    trace(TRACE_ERROR, "%s,%s: could not update ip-log "
 		  "(pop/imap-before-smtp)", __FILE__, __FUNCTION__);
-			return -1;
-		}
-	} else {
-		/* IP not in table, insert row */
-		snprintf(query, DEF_QUERYSIZE,
-			 "INSERT INTO pbsp (since, ipnumber) "
-			 "VALUES (CURRENT_TIMESTAMP, '%s')", ip);
-		if (db_query(query) == -1) {
-			trace(TRACE_ERROR, "%s,%s: could not log IP number to dbase "
-			      "(pop/imap-before-smtp)", __FILE__, __FUNCTION__);
-			return -1;
-		}
+	    return -1;
 	}
+    } else {
+	/* IP not in table, insert row */
+	snprintf(query, DEF_QUERYSIZE,
+		 "INSERT INTO pbsp (since, ipnumber) "
+		 "VALUES (CURRENT_TIMESTAMP, '%s')", ip);
+	if (db_query(query) == -1) {
+	    trace(TRACE_ERROR, "%s,%s: could not log IP number to dbase "
+		  "(pop/imap-before-smtp)", __FILE__, __FUNCTION__);
+	    return -1;
+	}
+    }
 
-	trace(TRACE_DEBUG, "%s,%s: ip [%s] logged\n", __FILE__, __FUNCTION__,
-	      ip);
+    trace(TRACE_DEBUG, "%s,%s: ip [%s] logged\n", __FILE__, __FUNCTION__,
+	  ip);
 
-	return 0;
+    return 0;
 }
 
 int db_cleanup_iplog(const char *lasttokeep)
@@ -1408,17 +1419,17 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty)
 		  "[%llu]", __FILE__, __FUNCTION__, mailbox_idnr);
 	    return 0;
     }
-    
+
     /* remove the mailbox */
     if (!only_empty) {
 	    /* delete mailbox */
 	    snprintf(query, DEF_QUERYSIZE,
 		     "DELETE FROM mailboxes WHERE mailbox_idnr = '%llu'",
 		     mailbox_idnr);
-	      
+	    
 	    if (db_query(query) == -1) {
-		    trace(TRACE_ERROR, "%s,%s: could not delete mailbox "
-			  "[%llu]", mailbox_idnr);
+		    trace(TRACE_ERROR, "%s,%s: could not delete mailbox [%llu]",
+			  mailbox_idnr);
 		    return -1;
 	    }
     }
@@ -1430,35 +1441,34 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty)
 	     "WHERE mailbox_idnr = '%llu'", mailbox_idnr);
 
     if (db_query(query) == -1) {
-	    trace(TRACE_ERROR,
-		  "%s,%s: could not select message ID's for mailbox [%llu]",
-		  mailbox_idnr);
-	    return -1;
+	trace(TRACE_ERROR,
+	      "%s,%s: could not select message ID's for mailbox [%llu]",
+	      mailbox_idnr);
+	return -1;
     }
-    
+
     n = db_num_rows();
     if (n == 0) {
 	db_free_result();
 	trace(TRACE_INFO, "%s,%s: mailbox is empty", __FILE__, __FUNCTION__);
     }
-    
+
     if (!(message_idnrs = (u64_t *) my_malloc(n * sizeof(u64_t)))) {
-	    trace(TRACE_ERROR, "%s,%s: error allocating memory",
+	trace(TRACE_ERROR, "%s,%s: error allocating memory",
 	      __FILE__, __FUNCTION__);
-	    return -1;
+	return -1;
     }
     for (i = 0; i < n; i++)
-	    message_idnrs[i] = strtoull(db_get_result(0, 0), NULL, 10);
+	message_idnrs[i] = strtoull(db_get_result(0, 0), NULL, 10);
     db_free_result();
     /* delete every message in the mailbox */
     for (i = 0; i < n; i++) {
 	    if (db_delete_message(message_idnrs[i]) == -1) {
 		    trace(TRACE_ERROR, "%s,%s: error deleting message [%llu] "
-			  "database might be inconsistent. run "
-			  "dbmail-maintenance",
+			  "database might be inconsistent. run dbmail-maintenance",
 			  __FILE__, __FUNCTION__, message_idnrs[i]);
 		    return -1;
-	}
+	    }
     }
     my_free(message_idnrs);
 
@@ -1816,9 +1826,9 @@ u64_t db_check_sizelimit(u64_t addblocksize UNUSED, u64_t message_idnr,
 {
     u64_t currmail_size = 0;
     u64_t maxmail_size = 0;
-    
-    *user_idnr = db_get_useridnr(message_idnr);
 
+    *user_idnr = db_get_useridnr(message_idnr);
+    
     /* get currently used quotum */
     db_get_quotum_used(*user_idnr, &currmail_size);
     
@@ -1826,7 +1836,6 @@ u64_t db_check_sizelimit(u64_t addblocksize UNUSED, u64_t message_idnr,
      * now check the maxsize for this user */
     auth_getmaxmailsize(*user_idnr, &maxmail_size);
 
-	 
     trace(TRACE_DEBUG, "%s,%s: comparing currsize + blocksize [%llu], "
 	  "maxsize [%llu]\n",
 	  __FILE__, __FUNCTION__, currmail_size, maxmail_size);
@@ -1861,8 +1870,8 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
 	u64_t count;
 	int result;
 	char unique_id[UID_SIZE];	/* unique id */
-
-
+	
+	create_current_timestring(&timestring);
     /* first create a new physmessage entry */
     snprintf(query, DEF_QUERYSIZE,
 	     "INSERT INTO physmessage "
@@ -2009,10 +2018,9 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
     return 0;
 }
 
-int db_findmailbox(const char *fq_name, u64_t user_idnr, 
-		       u64_t *mailbox_idnr)
+int db_findmailbox(const char *fq_name, u64_t user_idnr, u64_t *mailbox_idnr)
 {
-	char *username = NULL;
+ 	char *username = NULL;
 	char *mailbox_name;
 	char *name_str_copy;
 	char *tempstr;
@@ -2073,6 +2081,7 @@ int db_findmailbox(const char *fq_name, u64_t user_idnr,
 	return result;
 }
 
+
 int db_findmailbox_owner(const char *name, u64_t owner_idnr, 
 			 u64_t *mailbox_idnr)
 {
@@ -2113,7 +2122,6 @@ int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 	    return 0;
     return 1;
 }
-
 
 int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed, 
 			       regex_t *preg,
@@ -2211,37 +2219,37 @@ int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern,
 			    u64_t ** children, unsigned *nchildren,
 			    int only_subscribed)
 {
-    int result;
-    regex_t preg;
+	int result;
+	regex_t preg;
     
-    *children = NULL;
+	*children = NULL;
 
-    if ((result = regcomp(&preg, pattern, REG_ICASE | REG_NOSUB)) != 0) {
-	trace(TRACE_ERROR, "%s,%s: error compiling regex pattern: %d\n",
-	      __FILE__, __FUNCTION__, result);
-	return 1;
-    }
+	if ((result = regcomp(&preg, pattern, REG_ICASE | REG_NOSUB)) != 0) {
+		trace(TRACE_ERROR, "%s,%s: error compiling regex pattern: %d\n",
+		      __FILE__, __FUNCTION__, result);
+		return 1;
+	}
     
-    /* list normal mailboxes */
-    if (db_list_mailboxes_by_regex(owner_idnr, only_subscribed, &preg, 
-			  children, nchildren) < 0) {
-	 trace(TRACE_ERROR, "%s,%s: error listing mailboxes", 
-	       __FILE__, __FUNCTION__);
-	 return -1;
-    }
+	/* list normal mailboxes */
+	if (db_list_mailboxes_by_regex(owner_idnr, only_subscribed, &preg, 
+				       children, nchildren) < 0) {
+		trace(TRACE_ERROR, "%s,%s: error listing mailboxes", 
+		      __FILE__, __FUNCTION__);
+		return -1;
+	}
 
-    if (nchildren == 0) {
-	 trace(TRACE_INFO, "%s, %s: did not find any mailboxes that "
-	       "match pattern. returning 0, nchildren = 0", 
-	       __FILE__, __FUNCTION__);
-	 return 0;
-    }
+	if (nchildren == 0) {
+		trace(TRACE_INFO, "%s, %s: did not find any mailboxes that "
+		      "match pattern. returning 0, nchildren = 0", 
+		      __FILE__, __FUNCTION__);
+		return 0;
+	}
 	 
 
-    /* store matches */
-    trace(TRACE_INFO,"%s,%s: found [%d] mailboxes", __FILE__, __FUNCTION__,
-	 *nchildren);
-    return 0;
+	/* store matches */
+	trace(TRACE_INFO,"%s,%s: found [%d] mailboxes", __FILE__, __FUNCTION__,
+	      *nchildren);
+	return 0;
 }
 
 int db_getmailbox(mailbox_t * mb)
@@ -2366,27 +2374,56 @@ int db_getmailbox(mailbox_t * mb)
 int db_createmailbox(const char *name, u64_t owner_idnr, u64_t *mailbox_idnr)
 {
 	const char *simple_name;
+	assert(mailbox_idnr != NULL);
+	*mailbox_idnr = 0;
+	/* remove namespace information from mailbox name */
+	if (!(simple_name = mailbox_remove_namespace(name))) {
+		trace(TRACE_ERROR, "%s,%s: could not create simple mailbox name "
+		      "from full name", __FILE__, __FUNCTION__);
+		return -1;
+	}
+	snprintf(query, DEF_QUERYSIZE,
+		 "INSERT INTO mailboxes (name, owner_idnr,"
+		 "seen_flag, answered_flag, deleted_flag, flagged_flag, "
+		 "recent_flag, draft_flag, permission)"
+		 " VALUES ('%s', '%llu', 1, 1, 1, 1, 1, 1, 2)", simple_name,
+		 owner_idnr);
+     
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: could not create mailbox",
+		      __FILE__, __FUNCTION__);
+		return -1;
+	}
+	*mailbox_idnr = db_insert_result("mailbox_idnr");
+	return 0;
+}
+
+
+int db_find_create_mailbox(const char *name, u64_t owner_idnr, u64_t *mailbox_idnr)
+{
+     u64_t mboxidnr;
+
      assert(mailbox_idnr != NULL);
      *mailbox_idnr = 0;
-     /* remove namespace information from mailbox name */
-     if (!(simple_name = mailbox_remove_namespace(name))) {
-	     trace(TRACE_ERROR, "%s,%s: could not create simple mailbox name "
-		   "from full name", __FILE__, __FUNCTION__);
-	     return -1;
-     }
-     snprintf(query, DEF_QUERYSIZE,
-	      "INSERT INTO mailboxes (name, owner_idnr,"
-	      "seen_flag, answered_flag, deleted_flag, flagged_flag, "
-	      "recent_flag, draft_flag, permission)"
-	      " VALUES ('%s', '%llu', 1, 1, 1, 1, 1, 1, 2)", simple_name,
-	      owner_idnr);
-     
-     if (db_query(query) == -1) {
-	  trace(TRACE_ERROR, "%s,%s: could not create mailbox",
-		__FILE__, __FUNCTION__);
-	  return -1;
-     }
-     *mailbox_idnr = db_insert_result("mailbox_idnr");
+
+     /* Did we fail to find the mailbox? */
+     if (db_findmailbox_owner(name, owner_idnr, &mboxidnr) != 1)
+       {
+         /* Did we fail to create the mailbox? */
+         if (db_createmailbox(name, owner_idnr, &mboxidnr) != 0)
+           {
+             /* Serious failure situation! */
+             trace(TRACE_ERROR, "%s, %s: seriously could not create mailbox [%s]",
+                 __FILE__, __FUNCTION__, name);
+             return -1;
+           }
+         trace(TRACE_DEBUG, "%s, %s: mailbox [%s] created on the fly",
+             __FILE__, __FUNCTION__, name);
+       }
+     trace(TRACE_DEBUG, "%s, %s: mailbox [%s] found",
+         __FILE__, __FUNCTION__, name);
+
+     *mailbox_idnr = mboxidnr;
      return 0;
 }
 
@@ -2628,9 +2665,9 @@ int db_get_message_size(u64_t message_idnr, u64_t *message_size)
      return 1;
      
 }
-int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr)
+int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr,
+	       u64_t *newmsg_idnr)
 {
-     u64_t newid; /* id for message */
      u64_t curr_quotum; /* current mailsize */
      u64_t maxmail; /* maximum mailsize */
      u64_t msgsize; /* size of message */
@@ -2705,12 +2742,13 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr)
 	  return -1;
      }
      /* get the id of the inserted record */
-     newid = db_insert_result("message_idnr");
+     *newmsg_idnr = db_insert_result("message_idnr");
     /* all done, validate new msg by creating a new unique id
      * for the copied msg */
      snprintf(query, DEF_QUERYSIZE,
 	      "UPDATE messages SET unique_id='%lluA%lu' "
-	      "WHERE message_idnr='%llu'", newid, (unsigned long) td, newid);
+	      "WHERE message_idnr='%llu'", *newmsg_idnr, (unsigned long) td, 
+	      *newmsg_idnr);
      
      if (db_query(query) == -1) {
 	  trace(TRACE_ERROR, "%s,%s: could not set unique ID for copied msg",
@@ -2725,7 +2763,7 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr)
 		   __FILE__, __FUNCTION__, user_idnr);
 	     return -1;
      }    
-     return newid;			/* success */
+     return 1;			/* success */
 }				/* end db_copymsg() */
 
 int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name)

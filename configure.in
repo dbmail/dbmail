@@ -30,11 +30,14 @@ pgsqlheaderpaths="/usr/include/pgsql /usr/include /usr/local/include/pgsql \
 		  /usr/local/pgsql/include /usr/include/postgresql $HOME"
 
 ldapheaderpaths="/usr/include /usr/local/include"
+sieveheaderpaths="/usr/include /usr/local/include"
 
 DBMAIL_BOTH_SQL_CHECK
 DBMAIL_CHECK_SQL_LIBS
 DBMAIL_AUTH_CONF
 DBMAIL_CHECK_LDAP_LIBS
+DBMAIL_SIEVE_CONF
+DBMAIL_CHECK_SIEVE_LIBS
 
 AC_PROG_CC
 AC_COMPILE_WARNINGS
@@ -43,13 +46,18 @@ AC_C_INLINE
 
 AM_CONDITIONAL(MYSQL, [test -n "$MYSQLINC"])
 AM_CONDITIONAL(PGSQL, [test -n "$PGSQLINC"])
+AM_CONDITIONAL(SIEVE, [test -n "$SIEVEINC"])
 AM_CONDITIONAL(LDAP, [test -n "$LDAPINC"])
 AC_CHECK_HEADERS(endian.h)
 AC_CHECK_HEADERS(crypt.h)
 AC_SUBST(SQLLIB)
 AC_SUBST(LDAPLIB)
 AC_SUBST(SQLALIB)
+AC_SUBST(SORTALIB)
+AC_SUBST(AUTHALIB)
+AC_SUBST(SIEVELIB)
 AC_SUBST(MYSQLINC)
 AC_SUBST(PGSQLINC)
+AC_SUBST(SIEVEINC)
 AC_SUBST(LDAPINC)
-AC_OUTPUT(Makefile mysql/Makefile pgsql/Makefile auth/Makefile)
+AC_OUTPUT(Makefile mysql/Makefile pgsql/Makefile auth/Makefile sort/Makefile)

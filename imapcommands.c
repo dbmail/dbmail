@@ -3424,6 +3424,7 @@ int _ic_copy(char *tag, char **args, ClientInfo *ci)
   unsigned fn;
   u64_t destmboxid,thisnum;
   int result;
+  u64_t new_msgid;
   char *endptr, *lastchar = NULL;
 
   if (!check_state_and_args("COPY", tag, args, 2, IMAPCS_SELECTED, ci))
@@ -3535,7 +3536,7 @@ int _ic_copy(char *tag, char **args, ClientInfo *ci)
 		      continue; 
 	    }
 
-	  result = db_copymsg(thisnum, destmboxid, ud->userid);
+	  result = db_copymsg(thisnum, destmboxid, ud->userid, &new_msgid);
 	  if (result == -1)
 	    {
 	      fprintf(ci->tx,"* BYE internal dbase error\r\n");

@@ -40,52 +40,43 @@
 extern struct list smtpItems;
 
 
-int pipe_forward(FILE *instream, struct list *targets, char *from, char *header, unsigned long databasemessageid)
+/* For each of the addresses or programs in targets,
+ * send out a copy of the message pointed to by msgidnr.
+ *
+ * Returns 0 if all went well, -1 if there was an error.
+ * FIXME: there is no detail in the error reporting,
+ * so there's no way to tell *which* targets failed...
+ * */
+int forward(u64_t msgidnr, struct list *targets, char *from, char *header, u64_t headersize)
 {
 
-  struct list descriptors; /* target streams */
   struct element *target=NULL;
-  struct element *descriptor_temp=NULL;
-  char *sendmail_command=NULL;
-  char *strblock=NULL;
-  FILE *sendmail_pipe=NULL;
-  int usedmem, totalmem;
+  char *command=NULL;
+  FILE *pipe=NULL;
   int err;
   field_t sendmail;
   char timestr[50];
   time_t td;
   struct tm tm;
-
  
-  /* takes input from instream and forwards that directly to 
-     a number of pipes (depending on the targets. Sends headers
-     first */
-
 
   time(&td);              /* get time */
   tm = *localtime(&td);   /* get components */
   strftime(timestr, sizeof(timestr), "%a %b %e %H:%M:%S %Y", &tm);
   
-  totalmem = 0;
-	
   GetConfigValue("SENDMAIL", &smtpItems, sendmail);
   if (sendmail[0] == '\0')
-    trace(TRACE_FATAL, "pipe_forward(): SENDMAIL not configured (see config file). Stop.");
+    trace(TRACE_FATAL, "forward(): SENDMAIL not configured (see config file). Stop.");
   
-  trace (TRACE_INFO,"pipe_forward(): delivering to %d "
-	 "external addresses", list_totalnodes(targets));
+  trace (TRACE_INFO,"forward(): delivering to %d external addresses", list_totalnodes(targets));
 
-  if (!instream)
+  if (!msgidnr)
     {
-      trace(TRACE_ERROR,"pipe_forward(): got NULL as instream");
+      trace(TRACE_ERROR,"forward(): got NULL as message id number");
       return -1;
     }
   
-  memtst ((strblock = (char *)my_malloc(READ_BLOCK_SIZE + 1))==NULL);
-	
   target = list_getstart (targets);
-
-  list_init(&descriptors);
 
   while (target != NULL)
     {
@@ -93,220 +84,89 @@ int pipe_forward(FILE *instream, struct list *targets, char *from, char *header,
 	{
         
 	  /* external pipe command */
-	  sendmail_command = (char *)my_malloc(strlen((char *)(target->data)));
-	  if (!sendmail_command)
+	  command = (char *)my_malloc(strlen((char *)(target->data)));
+	  if (!command)
 	    {
-	      trace(TRACE_ERROR,"pipe_forward(): out of memory");
-	      list_freelist(&descriptors.start);
-	      my_free(strblock);
+	      trace(TRACE_ERROR,"forward(): out of memory");
 	      return -1;
 	    }
-	  strcpy (sendmail_command, (char *)(target->data)+1); /* skip the pipe (|) sign */
+	  strcpy (command, (char *)(target->data)+1); /* skip the pipe (|) sign */
 	}
       else
 	{
 	  /* pipe to sendmail */
-	  sendmail_command = (char *)my_malloc(strlen((char *)(target->data))+
+	  command = (char *)my_malloc(strlen((char *)(target->data))+
 					    strlen(sendmail)+2); /* +2 for extra space and \0 */
-	  if (!sendmail_command)
+	  if (!command)
 	    {
-	      trace(TRACE_ERROR,"pipe_forward(): out of memory");
-	      list_freelist(&descriptors.start);
-	      my_free(strblock);
+	      trace(TRACE_ERROR,"forward(): out of memory");
 	      return -1;
 	    }
 
-	  trace (TRACE_DEBUG,"pipe_forward(): allocated memory for"
-		 " external command call");
-	  sprintf (sendmail_command, "%s %s",sendmail, (char *)(target->data));
+	  trace (TRACE_DEBUG,"forward(): allocated memory for external command call");
+	  sprintf (command, "%s %s",sendmail, (char *)(target->data));
 	}
 
-      trace (TRACE_INFO,"pipe_forward(): opening pipe to command "
-	     "%s",sendmail_command);
+      trace (TRACE_INFO,"forward(): opening pipe to command %s", command);
 	
-      sendmail_pipe = popen(sendmail_command,"w"); /* opening pipe */
-      my_free (sendmail_command);
-      sendmail_command = NULL;
+      pipe = popen(command,"w"); /* opening pipe */
+      my_free (command);
+      command = NULL;
 
-      if (sendmail_pipe != NULL)
+      if (pipe != NULL)
 	{
-	  trace (TRACE_DEBUG,"pipe_forward(): call to popen() successfull"
-		 " opened descriptor %d", fileno(sendmail_pipe));
+	  trace (TRACE_DEBUG,"forward(): call to popen() successfully opened pipe %d", fileno(pipe));
 			
-        if (((char *)target->data)[0]=='!')
-        {
-        /* ! tells u to prepend a mbox style header in this pipe */
-            trace (TRACE_DEBUG,"pipe_forward(): appending mbox style from header to pipe returnpath : %s", from);
-            /* format: From<space>address<space><space>Date */
-            fprintf (sendmail_pipe,"From %s  %s\n",from,timestr);   
+          if (((char *)target->data)[0]=='!')
+            {
+              /* ! tells us to prepend an mbox style header in this pipe */
+              trace (TRACE_DEBUG,"forward(): appending mbox style from header to pipe returnpath : %s", from);
+              /* format: From<space>address<space><space>Date */
+              fprintf (pipe, "From %s  %s\n", from, timestr);   
+            }
+
+          /* first send header if this is a direct pipe through */
+          fprintf (pipe, "%s", header);
+          trace (TRACE_DEBUG,"forward(): wrote header to pipe");  
+
+	  trace (TRACE_INFO,"forward(): sending message id number [%llu] to forward pipe", msgidnr);
+			
+          err = ferror(pipe);
+
+          trace (TRACE_DEBUG, "forward(): ferror reports"
+              " %d, feof reports %d on pipe %d", err,
+              feof (pipe),
+              fileno (pipe));
+
+          if (!err)
+            {
+              if (msgidnr != 0)
+                {
+                  trace (TRACE_DEBUG, "forward(): sending lines from"
+                      "message %llu on pipe %d", msgidnr, fileno(pipe));
+                  db_send_message_lines (pipe, msgidnr, -2, 1);
+                }
+            }
+
+	  trace (TRACE_DEBUG, "forward(): closing pipes");
+
+          if (!ferror(pipe))
+            {
+              pclose (pipe);
+              trace (TRACE_DEBUG, "forward(): pipe closed");
+            }
+          else
+            {
+              trace (TRACE_ERROR,"forward(): error on pipe");
+            }
         }
-
-	  /* first send header if this is a direct pipe through */
-	  if (databasemessageid == 0)
-	    {
-				/* yes this is a direct pipe-through */
-	      if (!header)
-		{
-		  trace(TRACE_ERROR,"pipe_forward(): could not write header to pipe: header is NULL");
-		  list_freelist(&descriptors.start);
-		  my_free(strblock);
-		  return -1;
-		}
-
-	      fprintf (sendmail_pipe,"%s",header);
-	      trace (TRACE_DEBUG,"pipe_forward(): wrote header to pipe");  
-	    }
-
-	  /* add descriptor to pipe to a descriptors list */
-	  if (list_nodeadd(&descriptors, &sendmail_pipe, sizeof(FILE *))==NULL)
-	    trace (TRACE_ERROR,"pipe_forward(): failed to add descriptor");
-
-	}
       else 
-	{
-	  trace (TRACE_ERROR,"pipe_forward(): Could not open pipe to"
-		 " [%s]",sendmail);
-	}
+        {
+          trace (TRACE_ERROR,"forward(): Could not open pipe to" " [%s]",sendmail);
+        }
       target = target->nextnode;
     }
 
-  if (descriptors.total_nodes>0)
-    {
-
-      if (databasemessageid != 0)
-	{
-	  /* send messages directly from database
-	   * using message databasemessageid */
-			
-	  trace (TRACE_INFO,"pipe_forward(): writing to pipe using dbmessage %lu",
-		 databasemessageid);
-			
-	  descriptor_temp = list_getstart(&descriptors);
-	  while (descriptor_temp!=NULL)
-	    {
-	      err = ferror(*((FILE **)(descriptor_temp->data)));
-				
-	      trace (TRACE_DEBUG, "pipe_forward(): ferror reports"
-		     " %d, feof reports %d on descriptor %d", err,
-		     feof (*((FILE **)(descriptor_temp->data))),
-		     fileno(*((FILE **)(descriptor_temp->data))));
-
-	      if (!err)
-		{
-		  if (databasemessageid != 0)
-		    {
-		      db_send_message_lines (*((FILE **)(descriptor_temp->data)),
-					     databasemessageid, -2, 1);
-		    }
-		}
-	      descriptor_temp = descriptor_temp->nextnode;
-	    }
-	}
-
-      else
-		
-	{
-	  while (!feof (instream))
-	    {
-				/* read in a datablock */
-	      usedmem = fread (strblock, sizeof(char), READ_BLOCK_SIZE, instream);
-				
-				/* fread won't do this for us */
-	      if (strblock)
-		strblock[usedmem]='\0';
-				
-				
-	      if (databasemessageid != 0)
-		trace(TRACE_INFO,"pipe_forward(): forwarding from database using id %lu",
-		      databasemessageid);
-
-			
-	      if (usedmem>0)
-		{
-		  totalmem = totalmem + usedmem;
-	
-		  trace (TRACE_DEBUG,"pipe_forward(): Sending block"
-			 "size=%d total=%d (%d\%)", usedmem, totalmem,
-			 (((usedmem/totalmem)*100))); 
-					
-		  descriptor_temp = list_getstart(&descriptors);
-		  while (descriptor_temp != NULL)
-		    {
-		      err = ferror(*((FILE **)(descriptor_temp->data)));
-		      trace (TRACE_DEBUG, "pipe_forward(): ferror reports"
-			     " %d, feof reports %d on descriptor %d", err,
-			     feof (*((FILE **)(descriptor_temp->data))),
-			     fileno(*((FILE **)(descriptor_temp->data))));
-	
-		      if (!err)
-			{
-			  if (databasemessageid != 0)
-			    {
-			      db_send_message_lines (*((FILE **)(descriptor_temp->data)),
-						     databasemessageid, -2, 1);
-			    }
-			  else
-			    {
-			      fprintf (*((FILE **)(descriptor_temp->data)),"%s",strblock);
-			    }
-			}
-		      else
-			trace (TRACE_ERROR,"pipe_forward(): error writing"
-			       " to pipe");
-	
-		      trace (TRACE_DEBUG,"pipe_forward(): wrote data to pipe");
-	
-		      descriptor_temp = descriptor_temp->nextnode;
-		    }
-	
-				/* resetting buffer and index */
-		  memset (strblock, '\0', READ_BLOCK_SIZE);
-		  usedmem = 0;
-		}
-	      else
-		{
-		  trace(TRACE_DEBUG,"pipe_forward(): end of instream");
-		}
-	    }
-			
-	  /* done forwarding */
-	  trace (TRACE_DEBUG, "pipe_forward(): closing pipes");
-	  descriptor_temp = list_getstart(&descriptors);
-	  while (descriptor_temp != NULL)
-	    {
-	      if (descriptor_temp->data != NULL)
-		{
-		  if (!ferror(*((FILE **)(descriptor_temp->data))))
-		    {
-		      pclose (*((FILE **)(descriptor_temp->data)));
-		      trace (TRACE_DEBUG, "pipe_forward(): descriptor_closed");
-		    }
-		  else
-		    {
-		      trace (TRACE_ERROR,"pipe_forward(): error on descriptor");
-		    }
-		}
-	      else
-		{
-		  trace (TRACE_ERROR,"pipe_forward(): descriptor value NULL"
-			 " this is not supposed to happen");
-		}
-	      descriptor_temp = descriptor_temp->nextnode;
-	    }
-	  /* freeing descriptor list */
-	  list_freelist(&descriptors.start);
-	}
-    }
-  else
-    {
-      trace (TRACE_ERROR,"pipe_forward(): No descriptors in list"
-	     " nothing to send");
-      my_free(strblock);
-      return -1;
-    }
-
-  my_free (strblock);
   return 0;			
 }
-
 

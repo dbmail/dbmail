@@ -29,6 +29,6 @@
 
 #define FW_SENDMAIL SENDMAIL
 
-int pipe_forward(FILE *instream, struct list *targets, char *from,  char *header, unsigned long databasemessageid);
+int forward(u64_t msgidnr, struct list *targets, char *from,  char *header, u64_t headersize);
 
 #endif

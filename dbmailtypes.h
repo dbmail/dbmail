@@ -68,6 +68,7 @@ struct message
    * The server additionally uses:
    * 003 message is deleted by sysop
    * 004 message is ready for final deletion */
+		
   u64_t messagestatus;     /**< message status */
   u64_t virtual_messagestatus; /**< virtual message status */
 };
@@ -96,6 +97,8 @@ typedef struct
      char *password;
      
      char *apop_stamp;  /**< timestamp for APOP */
+
+     u64_t useridnr;	/**< Used by timsieved */
 	
      u64_t totalsize;   /**< total size of messages */
      u64_t virtual_totalsize;
@@ -221,6 +224,15 @@ typedef struct
   char internaldate[IMAP_INTERNALDATE_LEN];
   u64_t rfcsize,uid;
 } msginfo_t;
+
+/*
+ * A struct to hold info about a Sieve script
+ */
+struct ssinfo
+{
+  char *name;
+  int active;
+};
 
 #endif
 
