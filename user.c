@@ -13,7 +13,11 @@
 #include "list.h"
 #include "debug.h"
 #include "db.h"
+#if defined(__FreeBSD__)
+#include <unistd.h>
+#else
 #include <crypt.h>
+#endif
 #include <time.h>
 #include <stdarg.h>
 #include <sys/types.h>

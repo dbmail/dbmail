@@ -15,7 +15,11 @@
 #include <stdio.h>
 #include <string.h>
 #include "../dbmd5.h"
+#if defined(__FreeBSD__)
+#include <unistd.h>
+#else
 #include <crypt.h>
+#endif
 #include "../config.h"
 #include <time.h>
 
