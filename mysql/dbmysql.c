@@ -2003,6 +2003,139 @@ int db_icheck_mailboxes(struct list *lostlist)
 }
 
 
+/* 
+ * will check for messages that have 0 blks
+ *
+ * returns -1 on dbase error, -2 on memory error, 0 on succes
+ * on succes lostlist will be a list containing items being the messageidnr's of the
+ * lost messages
+ *
+ * the caller should free this memory!
+ */
+int db_icheck_null_messages(struct list *lostlist)
+{
+  u64_t nmsgs, start, j;
+  u64_t ncurr = 0;
+  u64_t *msgids = 0;
+  list_init(lostlist);
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr FROM messages ORDER BY message_idnr DESC LIMIT 0,1");
+  if (db_query(query)==-1)
+    {
+      trace (TRACE_ERROR,"db_icheck_null_messages(): Could not execute query [%s]",query);
+      return -1;
+    }
+  
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace (TRACE_ERROR,"db_icheck_null_messages(): mysql_store_result failed:  %s",mysql_error(&conn));
+      return -1;
+    }
+
+  if (mysql_num_rows(res) != 1)
+    {
+      trace(TRACE_WARNING, "db_icheck_null_messages(): empty message table");
+      mysql_free_result(res);
+      return 0; /* nothing in table ? */
+    }
+
+  row = mysql_fetch_row(res);
+  nmsgs = (row && row[0]) ? strtoull(row[0], NULL, 10) : 0;
+  mysql_free_result(res);
+
+  for (start=0; start < nmsgs; start += ICHECK_RESULTSETSIZE)
+    {
+      snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr FROM messages LIMIT %llu,%llu", 
+	       start, (u64_t)ICHECK_RESULTSETSIZE);
+
+      if (db_query(query)==-1)
+	{
+	  trace (TRACE_ERROR,"db_icheck_null_messages(): Could not execute query [%s]",query);
+	  return -1;
+	}
+      
+      if ((res = mysql_store_result(&conn)) == NULL)
+	{
+	  trace (TRACE_ERROR,"db_icheck_null_messages(): mysql_store_result failed:  %s",mysql_error(&conn));
+	  return -1;
+	}
+
+      trace(TRACE_DEBUG, "db_icheck_null_messages(): fetching another set of %llu message id's..",
+	    (u64_t)ICHECK_RESULTSETSIZE);
+
+      
+      ncurr = mysql_num_rows(res);
+      msgids = (struct u64_t*)my_malloc(sizeof(u64_t) * ncurr);
+      if (!msgids)
+	{
+	  trace(TRACE_ERROR,"db_icheck_null_messages(): out of memory when allocatin %d items\n",ncurr);
+	  mysql_free_result(res);
+	  return -2;
+	}
+
+      /*  copy current data set */
+      for (j=0; j<ncurr; j++)
+	{
+	  row = mysql_fetch_row(res);
+	  msgids[j] = (row && row[0]) ? strtoull(row[0], NULL, 10) : 0;
+	}
+
+      mysql_free_result(res); /* free result set */
+
+      /* now check for each msgID the number of blocks */
+      /* if not, the msgID is added to 'lostlist' */
+      
+      for (j=0; j<ncurr; j++)
+	{
+	  snprintf(query, DEF_QUERYSIZE, "SELECT count(*) FROM messageblks WHERE message_idnr = %llu",
+		   msgids[j]);
+ 
+	  if (db_query(query)==-1)
+	    {
+	      list_freelist(&lostlist->start);
+	      my_free(msgids);
+	      currids = NULL;
+	      trace (TRACE_ERROR,"db_icheck_null_messages(): Could not execute query [%s]",query);
+	      return -1;
+	    }
+	  
+	  if ((res = mysql_store_result(&conn)) == NULL)
+	    {
+	      trace (TRACE_ERROR,"db_icheck_null_messages(): mysql_store_result failed:  %s",mysql_error(&conn));
+	      list_freelist(&lostlist->start);
+	      my_free(msgids);
+	      return -1;
+	    }
+
+	  row = mysql_fetch_row(res); /* ALWAYS a row with count() */
+	  if (atoi(row[0]) == 0)
+	    {
+	      /* this is a lost block */
+	      trace(TRACE_INFO,"db_icheck_null_messages(): found lost message, ID [%llu]", msgids[j]);
+
+	      if (! list_nodeadd(lostlist, &msgids[j], sizeof(msgids[j])) )
+		{
+		  trace(TRACE_ERROR,"db_icheck_null_messages(): could not add message to list");
+		  list_freelist(&lostlist->start);
+		  my_free(currids);
+		  currids = NULL;
+		  mysql_free_result(res);
+		  return -2;
+		}
+	    }
+
+	  mysql_free_result(res); /* free result set */
+	}
+
+      /* free set of ID's */
+      my_free(msgids);
+      currids = NULL;
+    }
+
+  return 0;
+}
+
+
 /*
  * deletes the specified block. used by maintenance
  */

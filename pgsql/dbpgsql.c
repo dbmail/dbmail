@@ -1844,6 +1844,117 @@ int db_icheck_mailboxes(struct list *lostlist)
 }
 
 
+
+/* 
+ * will check for messages that have no messgeblks
+ *
+ * returns -1 on dbase error, -2 on memory error, 0 on succes
+ * on succes lostlist will be a list containing items being the messageidnr's of the
+ * lost messages
+ *
+ * the caller should free this memory!
+ */
+int db_icheck_null_messages(struct list *lostlist)
+{
+  u64_t nmsgs, start, j;
+  u64_t ncurr = 0;
+  u64_t *msgids = NULL;
+  list_init(lostlist);
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr FROM messages ORDER BY message_idnr DESC LIMIT 1");
+  if (db_query(query)==-1)
+    {
+      trace (TRACE_ERROR,"db_icheck_null_messages(): Could not execute query [%s]",query);
+      return -1;
+    }
+  
+  if (PQntuples(res) != 1)
+    {
+      trace(TRACE_WARNING, "db_icheck_null_messages(): empty message table");
+      PQclear(res);
+      return 0; /* nothing in table ? */
+    }
+
+  nmsgs = strtoull(PQgetvalue(res, 0, 0), NULL, 10);
+  PQclear(res);
+
+  for (start=0; start < nmsgs; start += ICHECK_RESULTSETSIZE)
+    {
+      snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr FROM messages OFFSET %llu LIMIT %llu", 
+	       start, (u64_t)ICHECK_RESULTSETSIZE);
+
+      if (db_query(query)==-1)
+	{
+	  trace (TRACE_ERROR,"db_icheck_null_messages(): Could not execute query [%s]",query);
+	  return -1;
+	}
+      
+      trace(TRACE_DEBUG, "db_icheck_null_messages(): fetching another set of %llu message id's..",
+	    (u64_t)ICHECK_RESULTSETSIZE);
+
+      
+      ncurr = PQntuples(res);
+      msgids = (u64_t*)my_malloc(sizeof(u64_t) * ncurr);
+      if (!msgids)
+	{
+	  trace(TRACE_ERROR,"db_icheck_null_messages(): out of memory when allocatin %d items\n",ncurr);
+	  PQclear(res);
+	  return -2;
+	}
+
+      /*  copy current data set */
+      for (j=0; j<ncurr; j++)
+	{
+	  msgids[j] = strtoull(PQgetvalue(res, j, 0), NULL, 10);
+	}
+
+      PQclear(res); /* free result set */
+
+      /* now check for each msgID if the associated mboxID exists */
+      /* if not, the msgID is added to 'lostlist' */
+      
+      for (j=0; j<ncurr; j++)
+	{
+	  snprintf(query, DEF_QUERYSIZE, "SELECT count(*) FROM messageblks WHERE message_idnr = %llu::bigint",
+		   msgids[j]);
+ 
+	  if (db_query(query)==-1)
+	    {
+	      list_freelist(&lostlist->start);
+	      my_free(msgids);
+	      msgids = NULL;
+	      trace (TRACE_ERROR,"db_icheck_null_messages(): Could not execute query [%s]",query);
+	      return -1;
+	    }
+	  
+	  if (atoi(PQgetvalue(res, j, 0)) == 0)
+	    {
+	      /* this is a lost message */
+	      trace(TRACE_INFO,"db_icheck_null_messages(): found lost message, ID [%llu]", msgids[j]);
+
+	      if (! list_nodeadd(lostlist, &msgids[j], sizeof(msgids[j])) )
+		{
+		  trace(TRACE_ERROR,"db_icheck_null_messages(): could not add message to list");
+		  list_freelist(&lostlist->start);
+		  my_free(msgids);
+		  msgids = NULL;
+		  PQclear(res);
+		  return -2;
+		}
+	    }
+
+	  PQclear(res);
+	}
+
+      /* free set of ID's */
+      my_free(msgids);
+      msgids = NULL;
+    }
+
+  return 0;
+}
+
+
 /*
  * deletes the specified block. used by maintenance
  */

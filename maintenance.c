@@ -34,6 +34,7 @@ void find_time(char *timestr, const char *timespec);
 int main(int argc, char *argv[])
 {
   int should_fix = 0, check_integrity = 0, check_iplog = 0;
+  int check_null_messages=0;
   int show_help=0, purge_deleted=0, set_deleted=0;
   int vacuum_db = 0;
   int do_nothing=1;
@@ -61,7 +62,7 @@ int main(int argc, char *argv[])
 	
   /* get options */
   opterr = 0; /* suppress error message from getopt() */
-  while ((opt = getopt(argc, argv, "cfil:phd")) != -1)
+  while ((opt = getopt(argc, argv, "cfinl:phd")) != -1)
     {
       switch (opt)
 	{
@@ -93,6 +94,11 @@ int main(int argc, char *argv[])
 
 	case 'i':
 	  check_integrity = 1;
+	  do_nothing = 0;
+	  break;
+
+	case 'n':
+	  check_null_messages = 1;
 	  do_nothing = 0;
 	  break;
 
@@ -167,6 +173,54 @@ int main(int argc, char *argv[])
       printf ("Ok. [%llu] messages set for deletion.\n",messages_set_to_delete);
     }
 
+  if (check_null_messages)
+    {
+      printf ("Now checking DBMAIL for NULL messages.. ");
+      time(&start);
+
+      /* this is what we do:
+       * First we're checking for loose messageblocks
+       * Secondly we're chekcing for loose messages
+       * Third we're checking for loose mailboxes 
+       */
+
+      /* first part */
+      if (db_icheck_null_messages(&lostlist) < 0)
+	{
+	  printf ("Failed. An error occured. Please check log.\n");
+	  db_disconnect();
+	  return -1;
+	}
+    
+      if (lostlist.total_nodes > 0)
+	{
+	  printf ("Ok. Found [%ld] null messages:\n", lostlist.total_nodes);
+      
+	  el = lostlist.start;
+	  while (el)
+	    {
+	      id = *((u64_t*)el->data);
+	      printf("%llu ", id);
+
+	      el = el->nextnode;
+	    }
+        
+	  list_freelist(&lostlist.start);
+
+	  printf ("\n");
+	  if (should_fix == 0)
+	    {
+	      printf("Try running dbmail-maintenance with the '-f' option "
+		     "in order to fix these problems\n\n");
+	    }
+	}
+      else 
+	printf ("Ok. Found 0 NULL messages.\n");
+
+      time(&stop);
+      printf("--- checking block integrity took %lu seconds\n", stop-start);
+      fprintf(stderr, "--- checking block integrity took %lu seconds\n", stop-start);
+    }
 
   if (check_integrity)
     {
