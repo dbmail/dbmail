@@ -67,7 +67,6 @@ What do you need?
 
 	Don't forget to start postgresql with the -i option, so it accepts TCP/IP connections.
 
-
 2. 	Set the database settings
 
 	Copy the dbmail.conf file to /etc
@@ -75,13 +74,13 @@ What do you need?
 	to your likeings.
 
 3.	Run configure & make
-    
-    Run the configure script. This script uses pg_config or mysql_config (depending on
-    --with-mysql or --with-pgsql) to detect where the libraries and include files
-    for these databases are.
+	Run the configure script. This script uses pg_config or mysql_config (depending on
+	--with-mysql or --with-pgsql) to detect where the libraries and include files
+	for these databases are.
 
-    After running configure, a 'make all' should suffice to build the executables.
-
+	After running configure, a 'make all' should suffice to build the executables.
+	Running install-dbmail.sh will install the executables in /usr/local/sbin
+	
 4.	Create users in the dbmail system
 
 	Next you will need to create some users into the dbmail mailing sytem.
@@ -112,7 +111,38 @@ What do you need?
 
 6.	Configure your MTA 
 
+	You have a choice here between using dbmail-smtp or dbmail-lmtp here. If you are
+	using Postfix, the preferred solution is to use dbmail-lmtp, especially on high
+	traffic servers. The reason for this is that dbmail-smtp will start a new process
+	for every delivery, which takes more time than using dbmail-lmtp, which uses a 
+	daemon that your MTA connects to.
+
+	
 	-- MTA installation for postfix --
+	
+	*** dbmail-lmtp ***
+
+	In the master.cf file for postfix add the following:
+
+	dbmail-lmtp     unix    -       -       n       -       -       lmtp
+
+	into the transport file (/etc/postfix/transport) add:
+	<domain>        dbmail-lmtp:<host>:<port>
+
+	with <host> and <port> replaced by the host and port dbmail-lmtp runs
+	on. The port number for dbmail-lmtp can be set in dbmail.conf
+	
+	be sure to run postmap /etc/postfix/transport after having editted the
+	transport file.
+
+	add the following to main.cf (/etc/postfix/main.cf):
+	
+	lmtp_cache_connection = no
+	
+	Run postfix reload after this and start the dbmail-lmtpd executable to
+	start the lmtp daemon
+
+	*** dbmail-smtp ***
 	
 	In the master.cf file for postfix add the following:
 	
