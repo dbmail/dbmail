@@ -1074,7 +1074,7 @@ int db_log_ip(const char *ip)
 
 int db_count_iplog(const char *lasttokeep, u64_t *affected_rows)
 {
-	char *escaped_lasttokeep;
+	char *escaped_lasttokeep = (char *)my_malloc(2*strlen(lasttokeep)+1);
 
 	assert(affected_rows != NULL);
 	*affected_rows = 0;
