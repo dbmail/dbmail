@@ -475,9 +475,19 @@ int main (int argc, char *argv[])
   for (i=0; i<defchld; i++)
     {
       if (!fork())
-	break;
+	{
+	  default_child_pids[i] = getpid();
+	  break;
+	}
       else
-	total_children++;
+	{
+	  while (default_child_pids[i] == 0) 
+	    {
+	      trace(TRACE_DEBUG, "main(): waiting for child to catch up...\n");
+	      sleep(1); /* wait until child has catched up */
+	    }
+	  total_children++;
+	}
     }
 
   /* this infinite loop is needed for killed default-children:
@@ -527,7 +537,8 @@ int main (int argc, char *argv[])
 		if (!fork())
 		  {
 		    default_child_pids[i] = getpid();
-		    break;  /* after this break the if (getpid() == ss_server_pid) will be re-executed */
+		    break;  
+		    /* after this break the if (getpid() == ss_server_pid) will be re-executed */
 		  }
 	      }
 	    
