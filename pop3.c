@@ -429,20 +429,23 @@ int pop3 (void *stream, char *buffer)
 	       md5_apop_he);
 				
 	result=db_md5_validate (username,md5_apop_he,apop_stamp);
+
+	my_free(md5_apop_he);
+	md5_apop_he = 0;
 				
 	switch (result)
 	  {
 	  case -1: return -1;
 	  case 0: 
-		  {
-			trace (TRACE_ERROR,"pop3(): user [%s] tried to login with wrong password",
-				username); 
-			my_free (username);
-			username=NULL;
-			my_free (password);
-			password=NULL;
-		 return pop3_error(stream,"-ERR authentication attempt is invalid\r\n");
-		  }
+	    trace (TRACE_ERROR,"pop3(): user [%s] tried to login with wrong password",
+		   username); 
+	    my_free (username);
+	    username=NULL;
+	    my_free (password);
+	    password=NULL;
+
+	    return pop3_error(stream,"-ERR authentication attempt is invalid\r\n");
+
 	  default:
 	    {
 	      state = TRANSACTION;

@@ -67,14 +67,21 @@ static void signal_handler (int signo, siginfo_t *info, void *data)
   pid_t PID;
   int status,i;
 
-  if ((signo == SIGALRM) && tx && rx)
+  if (signo == SIGALRM)
   {
     done=-1;
     trace (TRACE_DEBUG,"signal_handler(): received ALRM signal. Timeout");
-    fprintf (tx,"-ERR i cannot wait forever\r\n");
-    fflush (tx);
-    shutdown(fileno(tx),SHUT_RDWR);
-    shutdown(fileno(rx),SHUT_RDWR);
+
+    if (tx)
+      {
+	fprintf (tx,"-ERR i cannot wait forever\r\n");
+	fflush (tx);
+	shutdown(fileno(tx),SHUT_RDWR);
+      }
+
+    if (rx)
+      shutdown(fileno(rx),SHUT_RDWR);
+
     tx = NULL;
     rx = NULL;
     return;
@@ -84,8 +91,11 @@ static void signal_handler (int signo, siginfo_t *info, void *data)
       {
 	trace (TRACE_DEBUG,"signal_handler(): sigCHLD, cleaning up zombies");
 	do {
-	  PID = waitpid (info->si_pid,&status,WNOHANG);
-	  sleep (1);
+	  PID = waitpid (info->si_pid,&status,WUNTRACED);
+
+	  if (PID != -1)
+	    sleep(1); /* dont hog cpu while waiting */
+
 	} while ( PID != -1);
 
 	trace (TRACE_DEBUG,"signal_handler(): sigCHLD, cleaned");
@@ -281,6 +291,7 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 		
   /* reset timers */
   alarm (0); 
+  __debug_dumpallocs();
 
   return 0;
 }
@@ -385,6 +396,7 @@ int main (int argc, char *argv[])
   close (1);
   close (2); 
   close (3);
+
 
   /* getting hostname */
   gethostname (myhostname,64);
@@ -591,6 +603,20 @@ int main (int argc, char *argv[])
 		sleep (1); /* don't hog cpu */
 		wait (NULL); /* wait for children to finish */
 		total_children--;
+	      }
+
+	    /* check if it was a default-child that died in the above WHILE loop */
+	    for (i=0; i<defchld && default_child_pids[i]; i++) ;
+	      
+	    if (i<defchld)
+	      {
+		/* def-child has died, re-create */
+		if (!fork())
+		  {
+		    default_child_pids[i] = getpid();
+		    break;  
+		    /* after this break the if (getpid() == ss_server_pid) will be re-executed */
+		  }
 	      }
 
 	    /* wait for a connection */

@@ -26,8 +26,9 @@ debug_mem_t *__dm_first=0,*__dm_last=0;
 /* the debug variables */
 int TRACE_TO_SYSLOG = 1; /* default: yes */
 int TRACE_VERBOSE = 0;   /* default: no */
-int TRACE_LEVEL = 4;     /* default: normal operations */
- 
+int TRACE_LEVEL = 2;     /* default: normal operations */
+
+
 /*
  * configure the debug settings
  */
@@ -37,7 +38,6 @@ void configure_debug(int level, int trace_syslog, int trace_verbose)
   TRACE_TO_SYSLOG = trace_syslog;
   TRACE_VERBOSE = trace_verbose;
 }
-
 
 void func_memtst (const char *filename,int line,int tst)
 {
@@ -104,7 +104,11 @@ void* __debug_malloc(unsigned long size, const char *fname, int linenr)
 
   new->addr = (long)ptr;
   new->linenr = linenr;
-  strncpy(new->fname, fname, 200);
+  if (fname)
+    strncpy(new->fname, fname, 200);
+  else
+    new->fname[0] = 0;
+
   new->fname[199]= 0;
   new->nextaddr = 0;
 
@@ -116,7 +120,7 @@ void* __debug_malloc(unsigned long size, const char *fname, int linenr)
   else
     {
       __dm_last->nextaddr = new;
-      __dm_last = __dm_last->nextaddr;
+      __dm_last = new;
     }
 
   return ptr;
@@ -152,8 +156,11 @@ void __debug_free(void *ptr, const char *fname, int linenr)
   else
     {
       __dm_first = __dm_first->nextaddr;
-      if (__dm_last == __dm_first)
+      if (__dm_first == 0)
 	__dm_last = 0;
+
+/*      if (__dm_last == __dm_first)
+	__dm_last = 0; */
     }
 
   free(curr);

@@ -418,6 +418,20 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 		  wait(NULL);
 		  ss_nchildren--;
 		}
+	      
+	      /* check if it was a def-child that exited */
+	      for (i=0; i<default_children && default_child_pids[i]; i++) ;
+	      
+	      if (i<default_children)
+		{
+		  /* def-child has died, re-create */
+		  if (!fork())
+		    {
+		      default_child_pids[i] = getpid();
+		      break;  
+		      /* after this break the if (getpid() == ss_server_pid) will be re-executed */
+		    }
+		}
 
 	      /* wait for connect */
 	      len = sizeof(saClient);
@@ -610,7 +624,11 @@ void SS_sighandler(int sig, siginfo_t *info, void *data)
     case SIGCHLD:
       do 
 	{
-	  PID = waitpid(info->si_pid, &status, WNOHANG);
+	  PID = waitpid(info->si_pid, &status, WUNTRACED);
+
+	  if (PID != -1)
+	    usleep(50000); /* wait 50 ms if child hasn't exited yet */
+
 	} while (PID != -1);
 
       break;
