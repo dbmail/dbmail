@@ -1,5 +1,12 @@
 2004-08-23  Ilja Booij  <ilja@ic-s.nl>
 
+	* dbmail.conf: moved POSTMASTER entry from SMTP to DBMAIL section.
+	Removed DBMAIL_FROM_ADDRESS from config file because it's no
+	longer used.
+
+	* rfcmsg.c (db_parse_as_text): now sets POSTMASTER address
+	from dbmail.conf as From address.
+
 	* imap4.c (IMAPClientHandler): reset nfaultyresponses after 
 	a command was sent to the server that parsed OK.
 

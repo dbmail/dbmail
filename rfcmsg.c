@@ -747,6 +747,7 @@ int db_parse_as_text(mime_message_t * msg)
 	int result;
 	struct mime_record mr;
 	struct element *el = NULL;
+	field_t postmaster;
 
 	memset(msg, 0, sizeof(*msg));
 
@@ -758,7 +759,8 @@ int db_parse_as_text(mime_message_t * msg)
 		return -3;
 
 	strcpy(mr.field, "from");
-	strcpy(mr.value, "imapserver@dbmail.org");
+	GetConfigValue("POSTMASTER", "DBMAIL", postmaster);
+	strncpy(mr.value, postmaster, MIME_VALUE_MAX - 1);
 	el = list_nodeadd(&msg->rfcheader, &mr, sizeof(mr));
 	if (!el)
 		return -3;

@@ -260,13 +260,13 @@ int GetConfigValue(const field_t field_name, const char *service_name,
 							 scl->config_items,
 							 value);
 				return 0;
-			}
+			} 
 		}
 		el = el->nextnode;
 	}
 	
-	trace(TRACE_DEBUG, "%s,%s config for service not found",
-	      __FILE__, __func__);
+	trace(TRACE_DEBUG, "%s,%s config for service %s not found",
+	      __FILE__, __func__, service_name);
 	return 0;
 }
 			
