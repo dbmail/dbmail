@@ -4,8 +4,8 @@
  * function implementations for searching messages
  */
 
-#include "dbsearchmysql.h"
-#include "dbmysql.h"
+#include "dbsearch.h"
+#include "db.h"
 #include "/usr/include/mysql/mysql.h"
 #include "rfcmsg.h"
 #include <stdlib.h>
