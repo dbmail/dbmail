@@ -26,7 +26,7 @@ debug_mem_t *__dm_first=0,*__dm_last=0;
 /* the debug variables */
 int TRACE_TO_SYSLOG = 1; /* default: yes */
 int TRACE_VERBOSE = 0;   /* default: no */
-int TRACE_LEVEL = 2;     /* default: error operations */
+int TRACE_LEVEL = 5;     /* default: error operations */
 
 
 /*

@@ -242,8 +242,6 @@ int PerformChildTask(ChildInfo_t *info)
 	  continue;    /* accept failed, refuse connection & continue */
 	}
 
-      trace(TRACE_MESSAGE, "PerformChildTask(): incoming connection from [%s]", client.ip);
-      
       memset(&client, 0, sizeof(client));               /* zero-init */
 
       client.timeoutMsg = info->timeoutMsg;
