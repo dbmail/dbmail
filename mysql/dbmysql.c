@@ -2135,6 +2135,12 @@ int db_icheck_null_messages(struct list *lostlist)
   return 0;
 }
 
+int db_set_message_status(u64_t uid, int status)
+{
+  snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET status = %d WHERE message_idnr = %llu",status, uid);
+  return db_query(query);
+}
+
 
 /*
  * deletes the specified block. used by maintenance

@@ -141,6 +141,8 @@ int db_icheck_messages(struct list *lostlist);
 int db_icheck_mailboxes(struct list *lostlist);
 int db_icheck_null_messages(struct list *lostlist);
 
+int db_set_message_status(u64_t uid, int status);
+
 int db_delete_messageblk(u64_t uid);
 int db_delete_message(u64_t uid);
 int db_delete_mailbox(u64_t uid, int only_empty);

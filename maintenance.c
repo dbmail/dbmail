@@ -178,13 +178,6 @@ int main(int argc, char *argv[])
       printf ("Now checking DBMAIL for NULL messages.. ");
       time(&start);
 
-      /* this is what we do:
-       * First we're checking for loose messageblocks
-       * Secondly we're chekcing for loose messages
-       * Third we're checking for loose mailboxes 
-       */
-
-      /* first part */
       if (db_icheck_null_messages(&lostlist) < 0)
 	{
 	  printf ("Failed. An error occured. Please check log.\n");
@@ -200,7 +193,10 @@ int main(int argc, char *argv[])
 	  while (el)
 	    {
 	      id = *((u64_t*)el->data);
-	      printf("%llu ", id);
+	      if (db_set_message_status(id, 6) < 0)
+		printf("Warning: could not set message status #%llu. Check log.\n", id);
+	      else
+		printf("%llu (removed from dbase)\n", id);
 
 	      el = el->nextnode;
 	    }
@@ -208,11 +204,6 @@ int main(int argc, char *argv[])
 	  list_freelist(&lostlist.start);
 
 	  printf ("\n");
-	  if (should_fix == 0)
-	    {
-	      printf("Try running dbmail-maintenance with the '-f' option "
-		     "in order to fix these problems\n\n");
-	    }
 	}
       else 
 	printf ("Ok. Found 0 NULL messages.\n");
