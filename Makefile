@@ -35,7 +35,7 @@ CFLAGS = -Wall -O2 -D_BSD_SOURCE -D_SVID_SOURCE
 
 .PHONY: clean install
 
-all: smtp pop3d maintenance config imapd user readvut
+all: smtp pop3d maintenance config imapd user readvut mbox2dbmail
 
 smtp: config.h main.h $(SMTP_OBJECTS) main.c
 		$(CC)	$(CFLAGS) main.c -o dbmail-smtp $(SMTP_OBJECTS) $(LIBS) $(LIB)
@@ -57,6 +57,8 @@ user: user.h $(MAINTENANCE_OBJECTS) user.c
 
 readvut: db.h auth.h vut2dbmail.c $(VUTCONV_OBJECTS)
 	$(CC) $(CFLAGS) vut2dbmail.c -o dbmail-readvut $(VUTCONV_OBJECTS) $(LIBS) $(LIB)
+
+mbox2dbmail:	
 
 list.o: list.h debug.h
 debug.o: debug.h
@@ -83,7 +85,7 @@ $(SEARCHOBJECT): dbsearch.h db.h
 $(AUTHOBJECT): auth.h db.h
 
 distclean: clean
-	rm -rf dbmail-smtp dbmail-pop3d dbmail-maintenance dbmail-imapd dbmail-config dbmail-adduser
+	rm -rf dbmail-smtp dbmail-pop3d dbmail-maintenance dbmail-imapd dbmail-config dbmail-adduser dbmail-readvut mbox2dbmail
 
 clean:
 	rm -f *.o core

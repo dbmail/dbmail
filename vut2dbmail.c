@@ -98,7 +98,6 @@ int main()
 int process_piece(char *left, char *right)
 {
   u64_t useridnr,clientidnr;
-  char *domain;
 
   /* check what right contains:
    * username or email address

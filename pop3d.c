@@ -162,7 +162,7 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
     }
 
   /* duplicate descriptor and open it */
-  rx = fdopen (dup(c), "r"); 
+  rx = fdopen(dup(c), "r"); 
   if (!rx)
     {
       /* opening of descriptor failed */
@@ -170,7 +170,7 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
       return -1;
     }
 	
-  tx = fdopen (c, "w"); 
+  tx = fdopen(c, "w"); 
   if (!tx)
     {
       /* opening of descriptor failed */
