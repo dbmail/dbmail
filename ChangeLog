@@ -1,5 +1,9 @@
 2004-03-09  Ilja Booij  <ilja@ic-s.nl>
 
+	* forward.c (forward): only send header through pipe if there's no
+	message to send. Otherwise get the whole message from the database.
+	(forward): added __FILE__ and __FUNCTION__ to all trace() calls.
+
 	* rfcmsg.c (db_reverse_msg): changed function calls from list_reverse()
 	to dbmail_list_reverse()
 
