@@ -257,7 +257,7 @@ int pop3 (void *stream, char *buffer)
 	      {
 		((struct message *)tmpelement->data)->virtual_messagestatus=1;
 		fprintf ((FILE *)stream,"+OK %lu octets\r\n",((struct message *)tmpelement->data)->msize); 
-		return db_send_message_lines ((void *)stream, ((struct message *)tmpelement->data)->realmessageid,-2);
+		return db_send_message_lines ((void *)stream, ((struct message *)tmpelement->data)->realmessageid,-2, 0);
 	      }
 	    tmpelement=tmpelement->nextnode;
 	  }
@@ -491,7 +491,7 @@ int pop3 (void *stream, char *buffer)
 		((struct message *)tmpelement->data)->virtual_messagestatus<2) /* message is not deleted */
 	      {
 		fprintf ((FILE *)stream,"+OK %lu lines of message %lu\r\n",top_lines, top_messageid);
-		return db_send_message_lines (stream, ((struct message *)tmpelement->data)->realmessageid, top_lines);
+		return db_send_message_lines (stream, ((struct message *)tmpelement->data)->realmessageid, top_lines, 0);
 			}
 	    tmpelement=tmpelement->nextnode;
 	  }

@@ -658,7 +658,7 @@ int db_check_user (char *username, struct list *userids)
   return occurences;
 }
 
-int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines)
+int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines, int no_end_dot)
 {
   /* 
 	  this function writes "lines" to fstream.
@@ -705,7 +705,7 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines)
 		
 		/* reset our buffer */
       *buffer='\0';
-		
+	
 		while ((*nextpos!='\0') && (rowlength>0) && ((lines>0) || (lines==-2) || (block_count==0)))
 		{
 			if (*nextpos=='\n')
@@ -717,7 +717,7 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines)
 				if ((lines!=-2) && (block_count!=0))
 					lines--;
 						
-				if (tmppos!=NULL)
+			if (tmppos!=NULL)
 				{
 					if (*tmppos=='\r')
 						sprintf (buffer,"%s%c",buffer,*nextpos);
@@ -758,7 +758,7 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines)
 				*buffer='\0';
 			}
 		} 
-		
+	
 		/* next block in while loop */
 		block_count++;
 		trace (TRACE_DEBUG,"db_send_message_lines(): getting nextblock [%d]",block_count);
@@ -769,7 +769,8 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines)
 	}
 
 	/* delimiter */
-	fprintf ((FILE *)fstream,"\r\n.\r\n");
+	if (no_end_dot == 0)
+		fprintf ((FILE *)fstream,"\r\n.\r\n");
 	mysql_free_result(res);
 
 	return 1;

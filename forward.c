@@ -63,7 +63,7 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
 
 			/* first send header */
 			fprintf (sendmail_pipe,"%s",header);
-			trace (TRACE_DEBUG,"pipe_forward(): wrote header to pipe");
+			trace (TRACE_DEBUG,"pipe_forward(): wrote header to pipe");  
 
 			/* add descriptor to pipe to a descriptors list */
 			if (list_nodeadd(&descriptors, &sendmail_pipe, sizeof(FILE *))==NULL)
@@ -104,7 +104,7 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
 					if (databasemessageid != 0)
 					{
 						db_send_message_lines (*((FILE **)(descriptor_temp->data)),
-							databasemessageid, -2);
+							databasemessageid, -2, 1);
 					}
 				}
 				descriptor_temp = descriptor_temp->nextnode;
@@ -154,7 +154,7 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
 						if (databasemessageid != 0)
 							{
 								db_send_message_lines (*((FILE **)(descriptor_temp->data)),
-									databasemessageid, -2);
+									databasemessageid, -2, 1);
 							}
 						else
 						{
