@@ -71,7 +71,7 @@ Date:   19-03-2004
 
 	To send all email to DBMail, add this in /etc/postfix/main.cf
 
-	mailbox_transport: dbmail-smtp:
+	mailbox_transport = dbmail-smtp:
 
 	If you want to decide whether or not to send to DBMail per domain,
 	add this in /etc/postfix/transport:

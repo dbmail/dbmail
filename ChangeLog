@@ -1,3 +1,9 @@
+2004-10-13  Ilja Booij  <ilja@ic-s.nl>
+
+	* INSTALL.postfix: fixed typo. (closes #101).
+
+	* db.c (db_createsession): adjusted a useful comment line.
+
 2004-10-12  Paul Stevens <paul@nfg.nl>
 
 	* Makefile.in, aclocal.m4, configure: updating the autotools generated

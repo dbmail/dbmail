@@ -1591,8 +1591,11 @@ int db_createsession(u64_t user_idnr, PopSession_t * session_ptr)
 		      __FILE__, __func__, user_idnr);
 		return -1;
 	}
-	/* query is <2 because we don't want deleted messages 
-	 * the unique_id should not be empty, this could mean that the message is still being delivered */
+	/* query is < MESSAGE_STATUS_DELETE  because we don't want deleted 
+	 * messages the unique_id should not be empty, this could mean 
+	 * that the message is still being delivered
+	 * FIME: unique id's aren't empty anymore on delivery! Remove
+	 * from query */
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT pm.messagesize, msg.message_idnr, msg.status, "
 		 "msg.unique_id FROM %smessages msg, %sphysmessage pm "
