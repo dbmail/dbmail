@@ -45,14 +45,25 @@ int check_msg_set(const char *s);
 int check_date(const char *date);
 void clarify_data(char *str);
 char **build_args_array(const char *s);
+
 void base64encode(char *in,char *out);
 void base64decode(char *in,char *out);
+int binary_search(const unsigned long *array, int arraysize, unsigned long key);
+
 char **give_chunks(const char *str, char delimiter);
 void free_chunks(char **chunks);
-int binary_search(const unsigned long *array, int arraysize, unsigned long key);
 int quoted_string_out(FILE *outstream, const char *s);
 
 int build_imap_search(char **search_keys, struct list *sl, int *idx);
+int perform_imap_search(int *rset, int setlen, search_key_t *sk, mailbox_t *mb);
+void free_searchlist(struct list *sl);
+
+void invert_set(int *set, int setlen);
+void combine_sets(int *dest, int *sec, int setlen, int type);
+
+void build_set(int *set, int setlen, char *cset);
+void build_uid_set(int *set, int setlen, char *cset, mailbox_t *mb);
+void dumpsearch(search_key_t *sk, int level);
 
 int init_cache();
 void close_cache();

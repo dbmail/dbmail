@@ -222,6 +222,9 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 
   /* memory cleanup */
   free(buffer);
+  buffer = NULL;
+  free(apop_stamp);
+  apop_stamp = NULL;
 
   if (done == -3)
     {
@@ -285,7 +288,7 @@ int main (int argc, char *argv[])
   struct sockaddr_in adr_srvr;
   struct sockaddr_in adr_clnt;
   struct sigaction act;
-  char *myhostname;
+  char myhostname[64];
 
   char *newuser, *newgroup;
   
@@ -372,12 +375,9 @@ int main (int argc, char *argv[])
   close (2); 
   close (3);
 
-
-  /* reserve memory for hostname */
-  memtst((myhostname=(char *)malloc(64))==NULL);
-	
   /* getting hostname */
   gethostname (myhostname,64);
+  myhostname[63] = 0; /* make sure string is terminated */
 	
   /* init & install signal handlers */
   memset(&act, 0, sizeof(act));

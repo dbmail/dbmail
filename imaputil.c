@@ -1568,10 +1568,12 @@ char *date_sql2imap(const char *sqldate)
 
 
 /*
- * convert TO a mySQL date (yyyy-mm-dd hh:mm:ss) FROM a valid IMAP internal date:
- *                          0123456789012345678
- * dd-mon-yyyy hh:mm:ss with mon characters (i.e. 'Apr' for april)
- * 01234567890123456789
+ * convert TO a mySQL date (yyyy-mm-dd) FROM a valid IMAP internal date:
+ *                          0123456789
+ * dd-mon-yyyy with mon characters (i.e. 'Apr' for april)
+ * 01234567890
+ * OR
+ * d-mon-yyyy
  * return value is valid until next function call.
  *
  * sqldate is slightly tested for validity. NULL is returned in case of an erroneous date.
@@ -1579,22 +1581,24 @@ char *date_sql2imap(const char *sqldate)
  */
 char *date_imap2sql(const char *imapdate)
 {
-  int i;
+  int i,j;
   char sub[4];
 
-  if (strlen(imapdate) != strlen("dd-mon-yyyy hh:mm:ss"))
+  if (strlen(imapdate) != strlen("dd-mon-yyyy") && strlen(imapdate) != strlen("d-mon-yyyy"))
     return NULL;
 
+  j = (strlen(imapdate) == strlen("d-mon-yyyy")) ? 1 : 0;
+
   /* copy year */
-  _sqldate[0] = imapdate[7];
-  _sqldate[1] = imapdate[8];
-  _sqldate[2] = imapdate[9];
-  _sqldate[3] = imapdate[10];
+  _sqldate[0] = imapdate[7-j];
+  _sqldate[1] = imapdate[8-j];
+  _sqldate[2] = imapdate[9-j];
+  _sqldate[3] = imapdate[10-j];
 
   _sqldate[4] = '-';
 
   /* copy month */
-  strncpy(sub, &imapdate[3], 3);
+  strncpy(sub, &imapdate[3-j], 3);
   sub[3] = 0;
 
   for (i=0; i<12; i++)
@@ -1613,11 +1617,10 @@ char *date_imap2sql(const char *imapdate)
   _sqldate[7] = '-';
   
   /* copy day */
-  _sqldate[8] = imapdate[0];
-  _sqldate[9] = imapdate[1];
+  _sqldate[8] = j ? '0' : imapdate[0];
+  _sqldate[9] = imapdate[1-j];
   
-  /* copy time */
-  strcpy(&_sqldate[10], &imapdate[11]);
+  _sqldate[10] = 0; /* terminate */
 
   return _sqldate;
 }  
@@ -1732,16 +1735,18 @@ int checkmailboxname(const char *s)
 int check_date(const char *date)
 {
   char sub[4];
-  int days,i;
+  int days,i,j;
 
-  if (strlen(date) != strlen("01-Jan-1970"))
+  if (strlen(date) != strlen("01-Jan-1970") && strlen(date) != strlen("1-Jan-1970"))
     return 0;
 
-  if (date[2] != '-' || date[6] != '-')
+  j = (strlen(date) == strlen("1-Jan-1970")) ? 1 : 0;
+      
+  if (date[2-j] != '-' || date[6-j] != '-')
     return 0;
 
   days = strtoul(date, NULL, 10);
-  strncpy(sub, &date[3], 3);
+  strncpy(sub, &date[3-j], 3);
   sub[3] = 0;
 
   for (i=0; i<12; i++)
@@ -1754,7 +1759,7 @@ int check_date(const char *date)
     return 0;
 
   for (i=7; i<11; i++)
-    if (!isdigit(date[i])) return 0;
+    if (!isdigit(date[i-j])) return 0;
 
   return 1;
 }
@@ -1927,6 +1932,7 @@ int quoted_string_out(FILE *outstream, const char *s)
  * build_imap_search()
  *
  * builds a linked list of search items from a set of IMAP search keys
+ * sl should be initialized; new search items are simply added to the list
  *
  * returns -1 on syntax error, -2 on memory error; 0 on success, 1 if ')' has been encountered
  */
@@ -1938,18 +1944,23 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx)
   if (!search_keys || !search_keys[*idx])
     return 0;
 
-  list_init(sl);
   memset(&key, 0, sizeof(key));
 
   if (strcasecmp(search_keys[*idx], "all") == 0)
     {
       key.type = IST_SET;
       strcpy(key.search, "1:*");
+      (*idx)++;
     }
   else if (strcasecmp(search_keys[*idx], "uid") == 0)
     {
       key.type = IST_SET_UID;
-      strncpy(key.search, search_keys[(*idx)+1], MAX_SEARCH_LEN);
+      if (!search_keys[*idx+1])
+	return -1;
+
+      (*idx)++;
+
+      strncpy(key.search, search_keys[(*idx)], MAX_SEARCH_LEN);
       if (!check_msg_set(key.search))
 	return -1;
 
@@ -1964,34 +1975,41 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx)
     {
       key.type = IST_FLAG;
       strncpy(key.search, "answered_flag=1", MAX_SEARCH_LEN);
+      (*idx)++;
     }
   else if (strcasecmp(search_keys[*idx], "deleted") == 0)
     {
       key.type = IST_FLAG;
       strncpy(key.search, "deleted_flag=1", MAX_SEARCH_LEN);
+      (*idx)++;
     }
   else if (strcasecmp(search_keys[*idx], "flagged") == 0)
     {
       key.type = IST_FLAG;
       strncpy(key.search, "flagged_flag=1", MAX_SEARCH_LEN);
+      (*idx)++;
     }
   else if (strcasecmp(search_keys[*idx], "recent") == 0)
     {
       key.type = IST_FLAG;
       strncpy(key.search, "recent_flag=1", MAX_SEARCH_LEN);
+      (*idx)++;
     }
   else if (strcasecmp(search_keys[*idx], "seen") == 0)
     {
       key.type = IST_FLAG;
       strncpy(key.search, "seen_flag=1", MAX_SEARCH_LEN);
+      (*idx)++;
     }
   else if (strcasecmp(search_keys[*idx], "keyword") == 0)
     {
       /* no results from this one */
-      if (!search_keys[(*idx)+1])
+      if (!search_keys[(*idx)+1]) /* there should follow an argument */
 	return -1;
 
-      key.type = IST_SET_UID;
+      (*idx)++;
+
+      key.type = IST_SET;
       strcpy(key.search, "0");
       (*idx)++;
     }
@@ -1999,42 +2017,51 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx)
     {
       key.type = IST_FLAG;
       strncpy(key.search, "draft_flag=1", MAX_SEARCH_LEN);
+      (*idx)++;
     }
   else if (strcasecmp(search_keys[*idx], "new") == 0)
     {
       key.type = IST_FLAG;
       strncpy(key.search, "(seen_flag=0 AND recent_flag=1)", MAX_SEARCH_LEN);
+      (*idx)++;
     }
   else if (strcasecmp(search_keys[*idx], "old") == 0)
     {
       key.type = IST_FLAG;
       strncpy(key.search, "recent_flag=0", MAX_SEARCH_LEN);
+      (*idx)++;
     }
   else if (strcasecmp(search_keys[*idx], "unanswered") == 0)
     {
       key.type = IST_FLAG;
       strncpy(key.search, "answered_flag=0", MAX_SEARCH_LEN);
+      (*idx)++;
     }
   else if (strcasecmp(search_keys[*idx], "undeleted") == 0)
     {
       key.type = IST_FLAG;
       strncpy(key.search, "deleted_flag=0", MAX_SEARCH_LEN);
+      (*idx)++;
     }
   else if (strcasecmp(search_keys[*idx], "unflagged") == 0)
     {
       key.type = IST_FLAG;
       strncpy(key.search, "flagged_flag=0", MAX_SEARCH_LEN);
+      (*idx)++;
     }
   else if (strcasecmp(search_keys[*idx], "unseen") == 0)
     {
       key.type = IST_FLAG;
       strncpy(key.search, "seen_flag=0", MAX_SEARCH_LEN);
+      (*idx)++;
     }
   else if (strcasecmp(search_keys[*idx], "unkeyword") == 0)
     {
       /* matches every msg */
       if (!search_keys[(*idx)+1])
 	return -1;
+
+      (*idx)++;
 
       key.type = IST_SET;
       strcpy(key.search, "1:*");
@@ -2044,6 +2071,7 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx)
     {
       key.type = IST_FLAG;
       strncpy(key.search, "draft_flag=0", MAX_SEARCH_LEN);
+      (*idx)++;
     }
 
   /*
@@ -2059,6 +2087,7 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx)
 
       (*idx)++;
       strncpy(key.search, search_keys[(*idx)], MAX_SEARCH_LEN);
+      (*idx)++;
     }
   else if (strcasecmp(search_keys[*idx], "cc") == 0)
     {
@@ -2069,6 +2098,7 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx)
 
       (*idx)++;
       strncpy(key.search, search_keys[(*idx)], MAX_SEARCH_LEN);
+      (*idx)++;
     }
   else if (strcasecmp(search_keys[*idx], "from") == 0)
     {
@@ -2079,6 +2109,7 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx)
 
       (*idx)++;
       strncpy(key.search, search_keys[(*idx)], MAX_SEARCH_LEN);
+      (*idx)++;
     }
   else if (strcasecmp(search_keys[*idx], "to") == 0)
     {
@@ -2089,6 +2120,7 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx)
 
       (*idx)++;
       strncpy(key.search, search_keys[(*idx)], MAX_SEARCH_LEN);
+      (*idx)++;
     }
   else if (strcasecmp(search_keys[*idx], "subject") == 0)
     {
@@ -2099,6 +2131,7 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx)
 
       (*idx)++;
       strncpy(key.search, search_keys[(*idx)], MAX_SEARCH_LEN);
+      (*idx)++;
     }
   else if (strcasecmp(search_keys[*idx], "header") == 0)
     {
@@ -2109,7 +2142,7 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx)
       strncpy(key.hdrfld, search_keys[(*idx)+1], MIME_FIELD_MAX);
       strncpy(key.search, search_keys[(*idx)+2], MAX_SEARCH_LEN);
 
-      (*idx) += 2;
+      (*idx) += 3;
     }
   else if (strcasecmp(search_keys[*idx], "sentbefore") == 0)
     {
@@ -2120,6 +2153,7 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx)
 
       (*idx)++;
       strncpy(key.search, search_keys[(*idx)], MAX_SEARCH_LEN);
+      (*idx)++;
     }
   else if (strcasecmp(search_keys[*idx], "senton") == 0)
     {
@@ -2130,6 +2164,7 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx)
 
       (*idx)++;
       strncpy(key.search, search_keys[(*idx)], MAX_SEARCH_LEN);
+      (*idx)++;
     }
   else if (strcasecmp(search_keys[*idx], "sentsince") == 0)
     {
@@ -2140,6 +2175,7 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx)
 
       (*idx)++;
       strncpy(key.search, search_keys[(*idx)], MAX_SEARCH_LEN);
+      (*idx)++;
     }
 
   /*
@@ -2160,6 +2196,8 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx)
       strncat(key.search, date_imap2sql(search_keys[*idx]), 
 	      MAX_SEARCH_LEN - sizeof("internal_date<''"));
       strcat(key.search, "'");
+
+      (*idx)++;
     }
   else if (strcasecmp(search_keys[*idx], "on") == 0)
     {
@@ -2171,10 +2209,12 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx)
       if (!check_date(search_keys[*idx]))
 	return -1;
 
-      strncpy(key.search, "internal_date='", MAX_SEARCH_LEN);
+      strncpy(key.search, "internal_date LIKE '", MAX_SEARCH_LEN);
       strncat(key.search, date_imap2sql(search_keys[*idx]), 
-	      MAX_SEARCH_LEN - sizeof("internal_date=''"));
-      strcat(key.search, "'");
+	      MAX_SEARCH_LEN - sizeof("internal_date LIKE 'x'"));
+      strcat(key.search, "%'");
+
+      (*idx)++;
     }
   else if (strcasecmp(search_keys[*idx], "since") == 0)
     {
@@ -2190,6 +2230,8 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx)
       strncat(key.search, date_imap2sql(search_keys[*idx]), 
 	      MAX_SEARCH_LEN - sizeof("internal_date>''"));
       strcat(key.search, "'");
+
+      (*idx)++;
     }
 
   /*
@@ -2204,6 +2246,7 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx)
 
       (*idx)++;
       strncpy(key.search, search_keys[(*idx)], MAX_SEARCH_LEN);
+      (*idx)++;
     }
   else if (strcasecmp(search_keys[*idx], "text") == 0)
     {
@@ -2213,6 +2256,7 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx)
 
       (*idx)++;
       strncpy(key.search, search_keys[(*idx)], MAX_SEARCH_LEN);
+      (*idx)++;
     }
 
   /*
@@ -2227,6 +2271,7 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx)
 
       (*idx)++;
       key.size = strtoul(search_keys[(*idx)], NULL, 10);
+      (*idx)++;
     }
   else if (strcasecmp(search_keys[*idx], "smaller") == 0)
     {
@@ -2236,6 +2281,7 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx)
 
       (*idx)++;
       key.size = strtoul(search_keys[(*idx)], NULL, 10);
+      (*idx)++;
     }
 
   /*
@@ -2247,7 +2293,17 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx)
 
       (*idx)++;
       if ((result = build_imap_search(search_keys, &key.sub_search, idx)) < 0)
-	return result;
+	{
+	  list_freelist(&key.sub_search.start);
+	  return result;
+	}
+
+      /* a NOT should be unary */
+      if (key.sub_search.total_nodes != 1) 
+	{
+	  list_freelist(&key.sub_search.start);
+	  return -1;
+	}
     }
   else if (strcasecmp(search_keys[*idx], "or") == 0)
     {
@@ -2255,7 +2311,24 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx)
 
       (*idx)++;
       if ((result = build_imap_search(search_keys, &key.sub_search, idx)) < 0)
-	return result;
+	{
+	  list_freelist(&key.sub_search.start);
+	  return result;
+	}
+
+      if ((result = build_imap_search(search_keys, &key.sub_search, idx)) < 0)
+	{
+	  list_freelist(&key.sub_search.start);
+	  return result;
+	}
+
+      /* an OR should be binary */
+      if (key.sub_search.total_nodes != 2) 
+	{
+	  list_freelist(&key.sub_search.start);
+	  return -1;
+	}
+
     }
   else if (strcasecmp(search_keys[*idx], "(") == 0)
     {
@@ -2281,21 +2354,447 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx)
     }
   else if (strcasecmp(search_keys[*idx], ")") == 0)
     {
+      (*idx)++;
       return 1;
     }
   else if (check_msg_set(search_keys[*idx]))
     {
       key.type = IST_SET;
       strncpy(key.search, search_keys[*idx], MAX_SEARCH_LEN);
+      (*idx)++;
     }
-  
+  else
+    {
+      /* unknown search key */
+      return -1;
+    }
+
   if (!list_nodeadd(sl, &key, sizeof(key)))
     return -2;
 
-  (*idx)++;
   return 0;
 }
 
+
+/*
+ * perform_imap_search()
+ *
+ * returns 0 on succes, -1 on dbase error, -2 on memory error, 1 if result set is too small
+ * (new mail has been added to mailbox while searching, mailbox data out of sync)
+ */
+int perform_imap_search(int *rset, int setlen, search_key_t *sk, mailbox_t *mb)
+{
+  search_key_t *subsk;
+  struct element *el;
+  int result,*newset = NULL,i;
+  int subtype = IST_SUBSEARCH_OR;
+
+  if (!rset)
+    return -2; /* stupidity */
+
+  if (!sk)
+    return 0; /* no search */
+
+  newset = (int*)malloc(sizeof(int) * setlen);
+  if (!newset)
+    return -2;
+
+  switch (sk->type)
+    {
+    case IST_SET:
+      build_set(rset, setlen, sk->search);
+      break;
+
+    case IST_SET_UID: 
+      build_uid_set(rset, setlen, sk->search, mb);
+      break;
+
+    case IST_FLAG:
+      result = db_search(rset, setlen, sk->search, mb);
+      if (result != 0)
+	{
+	  free(newset);
+	  return result;
+	}
+      break;
+		
+    case IST_HDR: 
+    case IST_HDRDATE_BEFORE:
+    case IST_HDRDATE_ON: 
+    case IST_HDRDATE_SINCE:
+    case IST_IDATE: 
+      result = db_search(rset, setlen, sk->search, mb);
+      if (result != 0)
+	{
+	  free(newset);
+	  return result;
+	}
+      break;
+		
+    case IST_DATA_BODY: 
+    case IST_DATA_TEXT: 
+    case IST_SIZE_LARGER: 
+    case IST_SIZE_SMALLER: 
+      break;
+
+    case IST_SUBSEARCH_NOT:
+    case IST_SUBSEARCH_AND: 
+      subtype = IST_SUBSEARCH_AND;
+
+    case IST_SUBSEARCH_OR: 
+      el = list_getstart(&sk->sub_search);
+      while (el)
+	{
+	  subsk = (search_key_t*)el->data;
+
+	  if (subsk->type == IST_SUBSEARCH_OR)
+	    memset(newset, 0, sizeof(int)*setlen);
+	  else if (subsk->type == IST_SUBSEARCH_AND || subsk->type == IST_SUBSEARCH_NOT)
+	    for (i=0; i<setlen; i++)
+	      newset[i] = 1;
+	      
+	  result = perform_imap_search(newset, setlen, subsk, mb);
+	  if (result < 0 || result == 1)
+	    {
+	      free(newset);
+	      return result;
+	    }
+
+	  combine_sets(rset, newset, setlen, subtype);
+
+	  el = el->nextnode;
+	}
+
+      if (sk->type == IST_SUBSEARCH_NOT)
+	invert_set(rset, setlen);
+
+      break;
+
+    default:
+      free(newset);
+      return -2; /* ??? */
+    }
+  
+  free(newset);
+  return 0;
+}
+
+
+/*
+ * frees the search-list sl
+ *
+ * sl itself is NOT freed
+ */
+void free_searchlist(struct list *sl)
+{
+  search_key_t *sk;
+  struct element *el;
+
+  if (!sl)
+    return;
+
+  el = list_getstart(sl);
+  
+  while (el)
+    {
+      sk = (search_key_t*)el->data;
+
+      free_searchlist(&sk->sub_search);
+      list_freelist(&sk->sub_search.start);
+      
+      memset(sk, 0, sizeof(*sk));
+      
+      el = el->nextnode;
+    }
+
+  return;
+}
+
+
+void invert_set(int *set, int setlen)
+{
+  int i;
+
+  if (!set)
+    return;
+
+  for (i=0; i<setlen; i++)
+    set[i] = !set[i];
+}
+
+
+void combine_sets(int *dest, int *sec, int setlen, int type)
+{
+  int i;
+
+  if (!dest || !sec)
+    return;
+
+  if (type == IST_SUBSEARCH_AND)
+    {
+      for (i=0; i<setlen; i++)
+	dest[i] = (sec[i] && dest[i]);
+    }
+  else if (type == IST_SUBSEARCH_OR)
+    {
+      for (i=0; i<setlen; i++)
+	dest[i] = (sec[i] || dest[i]);
+    }
+}
+  
+
+/* 
+ * build_set()
+ *
+ * builds a msn-set from a IMAP message set spec. the IMAP set is supposed to be correct,
+ * no checks are performed.
+ */
+void build_set(int *set, int setlen, char *cset)
+{
+  int i;
+  unsigned long num,num2;
+  char *sep=NULL;
+
+  if (!set)
+    return;
+
+  memset(set, 0, setlen * sizeof(int));
+  
+  if (!cset)
+    return;
+
+  do
+    {
+      num = strtoul(cset, &sep, 10);
+
+      if (num <= setlen && num > 0)
+	{
+	  if (!*sep)
+	    set[num-1] = 1;
+	  else if (*sep == ',')
+	    {
+	      set[num-1] = 1;
+	      cset = sep+1;
+	    }
+	  else
+	    {
+	      /* sep == ':' here */
+	      sep++;
+	      if (*sep == '*')
+		{
+		  for (i=num-1; i<setlen; i++)
+		    set[i] = 1;
+
+		  cset = sep+1;
+		}
+	      else
+		{
+		  cset = sep;
+		  num2 = strtoul(cset, &sep, 10);
+		  
+		  if (num2 > setlen) num2 = setlen;
+		  if (num2 > 0)
+		    {
+		      /* NOTE: here: num2 > 0, num > 0 */
+		      if (num2 < num)
+			{
+			  /* swap! */
+			  i = num;
+			  num = num2;
+			  num2 = i;
+			}
+
+		      for (i=num-1; i<num2; i++)
+			set[i] = 1;
+		    }
+		  if (*sep)
+		    cset = sep+1;
+		}
+	    }
+	}	  
+      else
+	{
+	  /* invalid num, skip it */
+	  if (*sep)
+	    {
+	      cset = sep+1;
+	      sep++;
+	    }
+	}
+    } while (sep && *sep && cset && *cset);  
+}
+
+
+/* 
+ * build_uid_set()
+ *
+ * as build_set() but takes uid's instead of MSN's
+ */
+void build_uid_set(int *set, int setlen, char *cset, mailbox_t *mb)
+{
+  int i,msn,msn2;
+  unsigned long num,num2;
+  char *sep=NULL;
+
+  if (!set)
+    return;
+
+  memset(set, 0, setlen * sizeof(int));
+  
+  if (!cset || setlen == 0)
+    return;
+
+  do
+    {
+      num = strtoul(cset, &sep, 10);
+      msn = binary_search(mb->seq_list, mb->exists, num);
+
+      if (msn < 0 && num < mb->seq_list[mb->exists-1])
+	{
+	  /* ok this num is not a UID, but if a range is specified (i.e. 1:*) 
+	   * it is valid -> check *sep
+	   */
+	  if (*sep == ':')
+	    {
+	      for (msn=0; mb->seq_list[msn] < num; msn++) ;
+	      if (msn >= mb->exists)
+		msn = mb->exists-1;
+	    }
+	}
+	      
+      if (msn >= 0)
+	{
+	  if (!*sep)
+	    set[msn] = 1;
+	  else if (*sep == ',')
+	    {
+	      set[msn] = 1;
+	      cset = sep+1;
+	    }
+	  else
+	    {
+	      /* sep == ':' here */
+	      sep++;
+	      if (*sep == '*')
+		{
+		  for (i=msn; i<setlen; i++)
+		    set[i] = 1;
+
+		  cset = sep+1;
+		}
+	      else
+		{
+		  /* fetch second number */
+		  cset = sep;
+		  num2 = strtoul(cset, &sep, 10);
+		  msn2 = binary_search(mb->seq_list, mb->exists, num2);
+		  
+		  if (msn2 < 0)
+		    {
+		      /* in a range: (like 1:1000) so this number doesnt need to exist;
+		       * find the closest match below this UID value
+		       */
+		      for (msn2=mb->exists-1; mb->seq_list[msn2] > num2 && msn2 >= 0; msn2--) ;
+		    }
+
+		  if (msn2 >= 0)
+		    {
+		      if (msn2 < msn)
+			{
+			  /* swap! */
+			  i = msn;
+			  msn = msn2;
+			  msn2 = i;
+			}
+
+		      for (i=msn; i<=msn2; i++)
+			set[i] = 1;
+		    }
+
+		  if (*sep)
+		    cset = sep+1;
+		}
+	    }
+	}	  
+      else
+	{
+	  /* invalid num, skip it */
+	  if (*sep)
+	    {
+	      cset = sep+1;
+	      sep++;
+	    }
+	}
+    } while (sep && *sep && cset && *cset);  
+}
+
+
+void dumpsearch(search_key_t *sk, int level)
+{
+  char *spaces = (char*)malloc(level*3 +1);
+  struct element *el;
+  search_key_t *subsk;
+
+  if (!spaces)
+    return;
+
+  memset(spaces, ' ',level*3);
+  spaces[level*3] = 0;
+
+  if (!sk)
+    {
+      trace(TRACE_DEBUG,"%s(null)\n",spaces);
+      free(spaces);
+      return;
+    }
+
+  switch (sk->type)
+    {
+    case IST_SUBSEARCH_NOT:
+      trace(TRACE_DEBUG,"%sNOT\n",spaces);
+      
+      el = list_getstart(&sk->sub_search);
+      if (el)
+	subsk = (search_key_t*)el->data;
+      else
+	subsk = NULL;
+
+      dumpsearch(subsk, level+1);
+      break;
+
+    case IST_SUBSEARCH_AND:
+      trace(TRACE_DEBUG,"%sAND\n",spaces);
+      el = list_getstart(&sk->sub_search);
+
+      while (el)
+	{
+	  subsk = (search_key_t*)el->data;
+	  dumpsearch(subsk, level+1);
+	  
+	  el = el->nextnode;
+	}
+      break;
+
+    case IST_SUBSEARCH_OR:
+      trace(TRACE_DEBUG,"%sOR\n",spaces);
+      el = list_getstart(&sk->sub_search);
+
+      while (el)
+	{
+	  subsk = (search_key_t*)el->data;
+	  dumpsearch(subsk, level+1);
+	  
+	  el = el->nextnode;
+	}
+      break;
+
+    default:
+      trace(TRACE_DEBUG,"%s[type %d] \"%s\"\n",spaces,sk->type,sk->search);
+    }
+
+  free(spaces);
+  return;
+}
 
 
 /*

@@ -22,6 +22,9 @@
 
 #define MAX_EMAIL_SIZE 250
 
+/* used only locally, copied from imaputil.c */
+int db_binary_search(const unsigned long *array, int arraysize, unsigned long key);
+
 MYSQL conn;  
 MYSQL_RES *res,*_msg_result;
 MYSQL_ROW row;
@@ -3706,6 +3709,59 @@ int db_mailbox_msg_match(unsigned long mailboxuid, unsigned long msguid)
 
 
 /*
+ * db_search()
+ *
+ * searches the dbase for messages belonging to mailbox mb and matching the specified key
+ * entries of rset will be set for matching msgs (using their MSN as identifier)
+ * 
+ * returns 0 on succes, -1 on dbase error, -2 on memory error,
+ * 1 on synchronisation error (search returned a UID which was not in the MSN-list,
+ * mailbox should be updated)
+ */
+int db_search(int *rset, int setlen, const char *key, mailbox_t *mb)
+{
+  unsigned long uid;
+  int msn;
+
+  if (!key)
+    return -2;
+
+  memset(rset, 0, setlen * sizeof(int));
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message WHERE mailboxidnr = %lu "
+	   "AND status<2 AND %s", mb->uid, key);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_search(): could not execute query\n");
+      return (-1);
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_search(): mysql_store_result failed: %s\n",mysql_error(&conn));
+      return (-1);
+    }
+
+  while ((row = mysql_fetch_row(res)))
+    {
+      uid = strtoul(row[0], NULL, 10);
+      msn = db_binary_search(mb->seq_list, mb->exists, uid);
+
+      if (msn == -1 || msn >= setlen)
+	{
+	  mysql_free_result(res);
+	  return 1;
+	}
+
+      rset[msn] = 1;
+    }
+	  
+  mysql_free_result(res);
+  return 0;
+}
+
+/*
  * db_search_messages()
  *
  * searches the dbase for messages matching the search_keys
@@ -3818,3 +3874,32 @@ int db_search_messages(char **search_keys, unsigned long **search_results, int *
   return 0;
 }
 
+
+/*
+ * db_binary_search()
+ *
+ * performs a binary search on array to find key
+ * array should be ascending in values
+ *
+ * returns index of key in array or -1 if not found
+ */
+int db_binary_search(const unsigned long *array, int arraysize, unsigned long key)
+{
+  int low,high,mid;
+
+  low = 0;
+  high = arraysize-1;
+
+  while (low <= high)
+    {
+      mid = (high+low)/2;
+      if (array[mid] < key)
+	low = mid+1;
+      else if (array[mid] > key)
+	high = mid-1;
+      else
+	return mid;
+    }
+
+  return -1; /* not found */
+}

@@ -21,6 +21,10 @@
 #define MAX_LINESIZE 1024
 #endif
 
+#ifndef MAX_RETRIES
+#define MAX_RETRIES 12
+#endif
+
 #define IMAP_NFLAGS 6
 const char *imap_flag_desc[IMAP_NFLAGS] = 
 { 
@@ -1536,8 +1540,9 @@ int _ic_expunge(char *tag, char **args, ClientInfo *ci)
 int _ic_search(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
-  unsigned long *uids;
-  int nresults,i,result,msn,only_ascii=0;
+  int *result_set;
+  int i,result,only_ascii=0,idx=0;
+  search_key_t sk;
 
   if (ud->state != IMAPCS_SELECTED)
     {
@@ -1545,16 +1550,16 @@ int _ic_search(char *tag, char **args, ClientInfo *ci)
       return 1;
     }
   
-  /* update mailbox info */
-  result = db_getmailbox(&ud->mailbox, ud->userid);
+  memset(&sk, 0, sizeof(sk));
+  list_init(&sk.sub_search);
 
-  if (result == -1)
+  if (!args[0])
     {
-      fprintf(ci->tx,"* BYE internal dbase error\r\n");
-      return -1;
+      fprintf(ci->tx,"%s BAD invalid arguments to SEARCH\r\n",tag);
+      return 1;
     }
 
-  if (args[0] && strcasecmp(args[0], "charset") == 0)
+  if (strcasecmp(args[0], "charset") == 0)
     {
       /* charset specified */
       if (!args[1])
@@ -1570,46 +1575,103 @@ int _ic_search(char *tag, char **args, ClientInfo *ci)
 	}
 
       only_ascii = 1;
+      idx = 2;
     }
 
-  /* now find the messages; this function will return an ORDERED list of 
-   * message UID's (ascending)
-   */
-  result = db_search_messages(args, &uids, &nresults, ud->mailbox.uid);
+  /* parse the search keys */
+  while ( args[idx] && (result = build_imap_search(args, &sk.sub_search, &idx)) >= 0);
+
+  if (result == -2)
+    {
+      free_searchlist(&sk.sub_search);
+      fprintf(ci->tx, "* BYE server ran out of memory\r\n");
+      return -1;
+    }
+
   if (result == -1)
     {
-      fprintf(ci->tx, "* BAD error searching messages\r\n");
+      free_searchlist(&sk.sub_search);
+      fprintf(ci->tx, "%s BAD syntax error in search keys\r\n",tag);
       return 1;
     }
 
+
+  /* make it a top-level search key */
+  sk.type = IST_SUBSEARCH_AND;
+
+  dumpsearch(&sk,1);
+
+  i = 0;
+  do
+    {
+      /* update mailbox info */
+      result = db_getmailbox(&ud->mailbox, ud->userid);
+
+      if (result == -1)
+	{
+	  free_searchlist(&sk.sub_search);
+	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
+	  return -1;
+	}
+
+      /* allocate memory for result set */
+      result_set = (int*)malloc(sizeof(int) * ud->mailbox.exists);
+      if (!result_set)
+	{
+	  free_searchlist(&sk.sub_search);
+	  fprintf(ci->tx,"* BYE server ran out of memory\r\n");
+	  return -1;
+	}
+    
+      /* init set: select every message, this way the first search key 
+       * will be copied entirely (it is ANDed with this initial set), as it should
+       */
+       
+      for (i=0; i<ud->mailbox.exists; i++)
+	result_set[i] = 1;
+
+      /* now perform the search operations */
+      result = perform_imap_search(result_set, ud->mailbox.exists, &sk, &ud->mailbox);
+    
+      if (result < 0)
+	{
+	  free_searchlist(&sk.sub_search);
+	  free(result_set);
+	  fprintf(ci->tx,"%s", (result == -1) ? 
+		  "* BYE internal dbase error\r\n" :
+		  "* BYE server ran out of memory\r\n");
+
+	  trace(TRACE_ERROR, "ic_search(): fatal error [%d] from perform_imap_search()\n",result);
+	  return -1;
+	}
+
+      if (result == 1)
+	{
+	  free(result_set);
+	  result_set = NULL;
+	}
+
+    } while (result == 1 && ++i < MAX_RETRIES) ;
+
+  free_searchlist(&sk.sub_search);
+
+  if (result == 1)
+    {
+      fprintf(ci->tx,"%s BYE error synchronizing dbase\r\n",tag);
+      return -1;
+    }
+      
+  /* ok, display results */
   fprintf(ci->tx, "* SEARCH");
 
-  if (imapcommands_use_uid)
+  for (i=0; i<ud->mailbox.exists; i++)
     {
-      /* ok dump list */
-      for (i=0; i<nresults; i++)
-	fprintf(ci->tx," %lu",uids[i]);
-    }
-  else
-    {
-      for (i=0,msn=0; i<nresults; i++)
-	{
-	  msn = binary_search(ud->mailbox.seq_list, ud->mailbox.exists, uids[i]);
-
-	  if (msn == -1)
-	    {
-	      /* message not found in MSN list ?? */
-	      free(uids);
-	      fprintf(ci->tx,"* BYE msn list got fucked up\r\n");
-	      return -1;
-	    }
-	  fprintf(ci->tx," %d", msn+1);
-	}
+      if (result_set[i])
+	fprintf(ci->tx, " %lu", imapcommands_use_uid ? ud->mailbox.seq_list[i] : i+1);
     }
 
   fprintf(ci->tx,"\r\n");
-
-  free(uids);
+  free(result_set);
       
   fprintf(ci->tx,"%s OK SEARCH completed\r\n",tag);
   return 0;

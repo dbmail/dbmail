@@ -223,6 +223,8 @@ int db_msgdump(mime_message_t *msg, unsigned long msguid, int level);
 
 int db_mailbox_msg_match(unsigned long mailboxuid, unsigned long msguid);
 
+int db_search(int *rset, int setlen, const char *key, mailbox_t *mb);
+
 int db_search_messages(char **search_keys, unsigned long **search_results, int *nsresults,
 		       unsigned long mboxid);
 
