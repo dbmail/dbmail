@@ -55,13 +55,16 @@ static const char * tmprow; /**< temporary row number */
 
 int db_init_msgfetch(u64_t msg_idnr) 
 {
-	msgbuf_buf = (char *) my_malloc(sizeof(char) * (size_t) MSGBUF_WINDOWSIZE);
+	if (_msg_fetch_inited != 0) {
+		return 0;
+	}
+
+	msgbuf_buf = (char *) my_malloc(sizeof(char) *
+					(size_t) MSGBUF_WINDOWSIZE);
 	if (!msgbuf_buf) {
 		return -1;
 	}
 
-	if (_msg_fetch_inited != 0)
-		return 0;
 	memset(msgbuf_buf, '\0', (size_t) MSGBUF_WINDOWSIZE);
 	
 	snprintf(query, DEF_QUERYSIZE,
@@ -74,6 +77,7 @@ int db_init_msgfetch(u64_t msg_idnr)
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not get message",
 		      __FILE__, __func__);
+		my_free(msgbuf_buf);
 		return (-1);
 	}
 
@@ -83,7 +87,7 @@ int db_init_msgfetch(u64_t msg_idnr)
 		trace(TRACE_ERROR, "%s,%s: message has no blocks",
 		      __FILE__, __func__);
 		db_free_result();
-
+		my_free(msgbuf_buf);
 		return -1;	/* msg should have 1 block at least */
 	}
 
@@ -99,7 +103,7 @@ int db_init_msgfetch(u64_t msg_idnr)
 	
 	if (! strncpy(msgbuf_buf,tmprow, MSGBUF_WINDOWSIZE - 1)) {
 		db_free_result();
-		free(msgbuf_buf);
+		my_free(msgbuf_buf);
 		return -1;
 	}
 

@@ -208,8 +208,10 @@ int dsnuser_init(deliver_to_user_t * dsnuser)
 	if (dsnuser->userids == NULL)
 		return -1;
 	dsnuser->forwards = (struct list *) my_malloc(sizeof(struct list));
-	if (dsnuser->forwards == NULL)
+	if (dsnuser->forwards == NULL) {
+		my_free(dsnuser->userids);
 		return -1;
+	}
 
 	list_init(dsnuser->userids);
 	list_init(dsnuser->forwards);

@@ -1,3 +1,11 @@
+2004-07-13  Ilja Booij  <ilja@ic-s.nl>
+
+	* dsn.c (dsnuser_init): added my_free() to fix possible
+	memory leak.
+
+	* dbmsgbuf.c (db_init_msgfetch): fixed some possible memory 
+	leaks after reports by Hans Kristian Rosbach.
+
 2004-07-09  Ilja Booij  <ilja@ic-s.nl>
 
 	* db.c (db_calculate_quotum_all): added my_free statements for
