@@ -469,6 +469,8 @@ unsigned long db_validate (char *user, char *password)
   memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
   sprintf (ckquery, "SELECT useridnr FROM user WHERE userid=\"%s\" AND passwd=\"%s\"",
 	   user,password);
+
+  trace (TRACE_DEBUG,"db_validate(): validating using query %s",ckquery);
 	
   if (db_query(ckquery)==-1)
     {

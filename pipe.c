@@ -41,14 +41,16 @@ char *read_header(unsigned long *blksize)
     {
       /* fgets will read until \n occurs */
       strblock = fgets (strblock, READ_BLOCK_SIZE, stdin);
-      usedmem += (strlen(strblock)+1);
+		if (strblock)
+			usedmem += (strlen(strblock)+1);
 	
       /* If this happends it's a very big header */	
       if (usedmem>HEADER_BLOCK_SIZE)
 	memtst(((char *)realloc(header,usedmem))==NULL);
 		
       /* now we concatenate all we have to the header */
-      memtst((header=strcat(header,strblock))==NULL);
+		if (strblock)
+			memtst((header=strcat(header,strblock))==NULL);
 
       /* check if the end of header has occured */
       if (strstr(header,"\n\n")!=NULL)
@@ -59,7 +61,8 @@ char *read_header(unsigned long *blksize)
 	}
 		
       /* reset strlen to 0 */
-      *strblock='\0';
+		if (strblock)
+			strblock[0]='\0';
     }
 	
   trace (TRACE_INFO, "read_header(): readheader done\n");

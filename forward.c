@@ -32,12 +32,22 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
 
 	while (target != NULL)
 	{
-		sendmail_command = (char *)malloc(strlen((char *)target->data)+
+		if (((char *)target->data)[0]=='|')
+		{
+			/* external pipe command */
+			sendmail_command = (char *)malloc(strlen((char *)target->data));
+			strcpy (sendmail_command, (char *)target->data+1); /* skip the pipe (|) sign */
+		}
+		else
+		{
+			/* pipe to sendmail */
+			sendmail_command = (char *)malloc(strlen((char *)target->data)+
 				strlen(FW_SENDMAIL)+2); /* +2 for extra space and \0 */
-		trace (TRACE_DEBUG,"pipe_forward(): allocated memory for"
+			trace (TRACE_DEBUG,"pipe_forward(): allocated memory for"
 				" external command call");
+			sprintf (sendmail_command, "%s %s",FW_SENDMAIL, (char *)target->data);
+		}
 
-		sprintf (sendmail_command, "%s %s",FW_SENDMAIL, (char *)target->data);
 		trace (TRACE_INFO,"pipe_forward(): opening pipe to command "
 				"%s",sendmail_command);
 	
