@@ -33,10 +33,15 @@ if [ "$location_libmysqlclient_so" == "" ] ; then
 	location_libmysqlclient_so=$default_location_libmysqlclient_so
 fi
 
-
+echo "lokatie $location_mysql_h"
 echo -n "Ok creating Makefile out of Makefile.tmpl.. "
 
-cat Makefile.tmpl | sed "s/_libdir_/$location_libmysqlclient_so/g" > Makefile.new
+cat Makefile.tmpl | sed "s/_mysqlclient_/$location_libmysqlclient_so/g" > Makefile.new
 
-echo "Ok"
+echo "Done"
 
+echo -n "Ok creating dbmysql.h file out of dbmysql.tmpl.."
+
+cat dbmysql.tmpl | sed "s/_mysqlheader_/$location_mysql_h/g" > dbmysql.new
+
+echo "Done"
