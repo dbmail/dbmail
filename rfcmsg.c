@@ -210,7 +210,7 @@ int db_start_msg(mime_message_t *msg, char *stopbound, int *level, int maxlevel)
   char *newbound,*bptr;
   int continue_recursion = (maxlevel==0 && *level == 0) ? 0 : 1;
 
-  trace(TRACE_DEBUG,"db_start_msg(): starting, stopbound: '%s'\n",stopbound);
+  trace(TRACE_DEBUG,"db_start_msg(): starting, stopbound: '%s'\n",stopbound ? stopbound : "<null>");
 
   list_init(&msg->children);
   msg->message_has_errors = (!continue_recursion);
