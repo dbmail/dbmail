@@ -103,6 +103,7 @@ int traverse (char *path)
 	{
 	  printf("Ok id [%llu]\n", userid);
 	  printf("converting mailbox...");
+	  fflush(stdout);
 	  n = process_mboxfile(path, userid);
 	  if (n != 0)
 	    {
@@ -209,7 +210,7 @@ int process_mboxfile(char *file, u64_t userid)
 	      len = strlen(&blk[cnt]);
 	      cnt += len;
 	      
-	      if (cnt >= READ_BLOCK_SIZE)
+	      if (cnt >= READ_BLOCK_SIZE-1)
 		{
 		  /* write block */
 		  db_insert_message_block(blk, READ_BLOCK_SIZE, msgid);
