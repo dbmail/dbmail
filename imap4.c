@@ -263,13 +263,15 @@ int imap_process(ClientInfo *ci)
 	    }
 
 	  if (newmailbox.exists != ud->mailbox.exists)
-	    fprintf(ci->tx, "* %d EXISTS\r\n", newmailbox.exists);
+	    {
+	      fprintf(ci->tx, "* %d EXISTS\r\n", newmailbox.exists);
+	      trace(TRACE_INFO, "IMAPD: ok update sent\r\n");
+	    }
 
 	  if (newmailbox.recent != ud->mailbox.recent)
 	    fprintf(ci->tx, "* %d RECENT\r\n", newmailbox.recent);
 
 	  memcpy(&ud->mailbox, &newmailbox, sizeof(newmailbox));
-	  trace(TRACE_DEBUG, "IMAPD: ok update sent\r\n");
 	}
 
       result = (*imap_handler_functions[i])(tag, args, ci);

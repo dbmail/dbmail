@@ -295,7 +295,7 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 	      setlinebuf(client.rx);
 	      /*	  setlinebuf(client.tx);
 	       */
-	      setvbuf(client.tx, txbuf, _IONBF, 1);
+	      setvbuf(client.tx, txbuf, _IOFBF, TXBUFSIZE);
 
 	  
 #if LOG_USERS > 0
@@ -436,7 +436,7 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 		  /*	      setlinebuf(client.tx);
 		   */
 
-		  setvbuf(client.tx, txbuf, _IONBF, 1);
+		  setvbuf(client.tx, txbuf, _IOFBF, TXBUFSIZE);
 
 #if LOG_USERS > 0
 		  trace(TRACE_MESSAGE,"** Server: client @ socket %d (IP: %s) accepted\n",
