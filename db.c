@@ -3549,7 +3549,6 @@ int db_get_rfcsize(u64_t msg_idnr, u64_t mailbox_idnr, u64_t * rfc_size)
 int db_get_main_header(u64_t msg_idnr, struct list *hdrlist)
 {
 	const char *query_result;
-	u64_t dummy = 0, sizedummy = 0;
 	int result;
 
 	if (!hdrlist)
@@ -3590,8 +3589,7 @@ int db_get_main_header(u64_t msg_idnr, struct list *hdrlist)
 		return -1;
 	}
 
-	result =
-	    mime_readheader(query_result, &dummy, hdrlist, &sizedummy);
+	result = mime_fetch_headers(query_result, hdrlist);
 
 	db_free_result();
 

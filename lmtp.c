@@ -609,7 +609,6 @@ int lmtp(void *stream, void *instream, char *buffer,
 					u64_t headersize = 0;
 					u64_t body_size = 0;
 					u64_t rfcsize = 0;
-					u64_t dummyidx = 0, dummysize = 0;
 					struct list headerfields;
 					struct element *element;
 
@@ -667,16 +666,10 @@ int lmtp(void *stream, void *instream, char *buffer,
 						return 1;
 					}
 					/* Parse the list and scan for field and content */
-					if (mime_readheader(header, &dummyidx,
-					                    &headerfields,
-					                    &dummysize) < 0) {
-						trace(TRACE_ERROR,
-						      "main(): fatal error from mime_readheader()");
-						discard_client_input((FILE
-								      *)
-								     instream);
-						ci_write((FILE *) stream,
-							"500 Error reading header.\r\n");
+					if (mime_fetch_headers(header, &headerfields) < 0) {
+						trace(TRACE_ERROR, "main(): fatal error from mime_fetch_headers()");
+						discard_client_input((FILE *) instream);
+						ci_write((FILE *) stream, "500 Error reading header.\r\n");
 						my_free(whole_message);
 						return 1;
 					}

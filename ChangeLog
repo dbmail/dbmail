@@ -1,3 +1,9 @@
+2004-12-19  Paul Stevens <paul@nfg.nl>
+
+	* check_dbmail_imapd.c, db.c, imap4.h, imaputil.c, lmtp.c, main.c,
+	mime.c, mime.h: start refactoring of mime_readheader by introducing
+	mime_fetch_headers.
+	
 2004-12-15  Paul Stevens <paul@nfg.nl>
 
 	* dbmail-message.c, dbmail-message.h: abstracted message code a bit

@@ -48,4 +48,5 @@ int mail_adr_list(char *scan_for_field, struct list *targetlist,
 int mime_readheader(const char *datablock, u64_t * blkidx, 
 		    struct list *mimelist, u64_t * headersize);
 
+int mime_fetch_headers(const char *datablock, struct list *mimelist);
 #endif

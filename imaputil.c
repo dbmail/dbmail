@@ -819,14 +819,11 @@ u64_t rfcheader_dump(MEM * outmem, struct list * rfcheader,
 	while (curr) {
 		mr = (struct mime_record *) curr->data;
 
-		if (haystack_find(nfields, fieldnames, mr->field) ==
-		    equal_type) {
+		if (haystack_find(nfields, fieldnames, mr->field) == equal_type) {
 			/* ok output this field */
-			size +=
-			    mwrite(mr->field, strlen(mr->field), outmem);
+			size += mwrite(mr->field, strlen(mr->field), outmem);
 			size += mwrite(": ", 2, outmem);
-			size +=
-			    mwrite(mr->value, strlen(mr->value), outmem);
+			size += mwrite(mr->value, strlen(mr->value), outmem);
 			size += mwrite("\r\n", 2, outmem);
 		}
 

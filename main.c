@@ -126,7 +126,6 @@ int main(int argc, char *argv[])
 {
 	int exitcode = 0;
 	int c, c_prev = 0, usage_error = 0;
-	u64_t dummyidx = 0, dummysize = 0;
 	char *whole_message = NULL;
 	u64_t whole_message_size;
 	const char *body;
@@ -342,7 +341,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* parse the list and scan for field and content */
-	if (mime_readheader(header, &dummyidx, &mimelist, &dummysize) < 0) {
+	if (mime_fetch_headers(header, &mimelist) < 0) {
 		trace(TRACE_ERROR,
 		      "main(): mime_readheader failed to read a header list");
 		exitcode = EX_TEMPFAIL;

@@ -43,6 +43,35 @@
 
 /* checks if s points to the end of a header. */
 static int is_end_of_header(const char *s);
+
+
+/* mime_fetch_headers()
+ *
+ * same as mime_headerheader, except it doesn't determine the start-index of the
+ * body, nor the total size of the headers. Those values are only used by rfcmsg.c
+ * 
+ * 
+ */
+static void _register_header(const char *field, const char *value, gpointer mimelist);
+static void _register_header(const char *field, const char *value, gpointer mimelist)
+{
+	struct mime_record *mr = g_new0(struct mime_record, 1);
+	g_strlcpy(mr->field, field, MIME_FIELD_MAX);
+	g_strlcpy(mr->value, value, MIME_VALUE_MAX);
+	list_nodeadd((struct list *)mimelist, mr, sizeof(*mr));
+	g_free(mr);
+}
+
+int mime_fetch_headers(const char *datablock, struct list *mimelist) 
+{
+	struct DbmailMessage *m = dbmail_message_new();
+	m = dbmail_message_init_with_string(m, g_string_new(datablock));
+	g_mime_header_foreach(GMIME_OBJECT(m->content)->headers, _register_header, (gpointer)mimelist);
+	return 0;	
+}
+	
+	
+
 /* 
  * mime_readheader()
  *

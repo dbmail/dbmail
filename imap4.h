@@ -49,7 +49,7 @@ typedef struct {
 	int itemtype;		/* the item to be fetched */
 	int argstart;		/* start index in the arg array */
 	int argcnt;		/* number of args belonging to this bodyfetch */
-	long long octetstart, octetcnt;	/* number of octets to be retrieved */
+	guint64 octetstart, octetcnt;	/* number of octets to be retrieved */
 
 	char partspec[IMAP_MAX_PARTSPEC_LEN];	/* part specifier (i.e. '2.1.3' */
 

@@ -146,13 +146,31 @@ START_TEST(test_mime_readheader)
 }
 END_TEST
 
+START_TEST(test_mime_fetch_headers)
+{
+	struct list mimelist;
+	struct mime_record *mr;
+	
+	list_init(&mimelist);
+	
+	mime_fetch_headers(raw_message,&mimelist);
+	
+	fail_unless(mimelist.total_nodes==5, "number of mime-headers incorrect");
+	mr = (mimelist.start)->data;
+	fail_unless(strcmp(mr->field, "Received")==0, "Field name incorrect");
+	fail_unless(strcmp(mr->value, "at otherserver from localhost")==0, "Field value incorrect");
+	
+	list_freelist(&mimelist.start);
+
+}
+END_TEST
+
 START_TEST(test_dbmail_message)
 {
 	struct DbmailMessage *m;
 	GTuples *t;
 	m = dbmail_message_new();
 	m = dbmail_message_init_with_string(m, g_string_new(raw_message));
-	printf("message_head: [%s]\n", dbmail_message_get_headers_as_string(m));
 	t = g_relation_select(m->headers, (gpointer)"Received", 0);
 	fail_unless(t->len==2,"Too few headers in tuple");
 }
@@ -165,7 +183,6 @@ START_TEST(test_dbmail_message_part)
 	m = dbmail_message_new();
 	dbmail_message_set_class(m,DBMAIL_MESSAGE_PART);
 	m = dbmail_message_init_with_string(m, g_string_new(raw_message_part));
-	printf("part_head: [%s]\n", dbmail_message_get_headers_as_string(m));
 }
 END_TEST
 
@@ -189,6 +206,7 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_message, test_dbmail_message_part);
 	
 	tcase_add_test(tc_mime, test_mime_readheader);
+	tcase_add_test(tc_mime, test_mime_fetch_headers);
 	return s;
 }
 
