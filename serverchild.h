@@ -45,9 +45,11 @@ typedef struct {
 	int (*ClientHandler) (clientinfo_t *);
 } ChildInfo_t;
 
-void ChildSigHandler(int sig, siginfo_t * info, void *data);
+void active_child_sig_handler(int sig, siginfo_t *info, void *data);
+void noop_child_sig_handler(int sig, siginfo_t *info, void *data);
 int CheckChildAlive(pid_t pid);
 int SetChildSigHandler(void);
+int DelChildSigHandler(void);
 pid_t CreateChild(ChildInfo_t * info);
 
 

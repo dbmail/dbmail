@@ -30,6 +30,7 @@
 
 #include "debug.h"
 #include "server.h"
+#include "pool.h"
 #include "serverchild.h"
 #include <stdio.h>
 #include <unistd.h>
@@ -52,6 +53,7 @@
 int GeneralStopRequested = 0;
 int Restart = 0;
 pid_t ParentPID = 0;
+ChildInfo_t childinfo;
 
 /* some extra prototypes (defintions are below) */
 static void ParentSigHandler(int sig, siginfo_t * info, void *data);
@@ -85,14 +87,6 @@ int SetParentSigHandler()
 
 int StartServer(serverConfig_t * conf)
 {
-	int i, stillSomeAlive, cnt;
-	pid_t *pid = (pid_t *) my_malloc(sizeof(pid_t) * conf->nChildren);
-	ChildInfo_t childinfo;
-
-	if (!pid)
-		trace(TRACE_FATAL,
-		      "StartServer(): no memory for PID list. Fatal.");
-
 	if (!conf)
 		trace(TRACE_FATAL, "StartServer(): NULL configuration");
 
@@ -102,110 +96,27 @@ int StartServer(serverConfig_t * conf)
 	Restart = 0;
 	GeneralStopRequested = 0;
 	SetParentSigHandler();
-
-//  AllocSharedMemory();
-//  AttachSharedMemory();
-
-	trace(TRACE_DEBUG, "StartServer(): init ok. Creating children..");
-
+	
 	childinfo.maxConnect = conf->childMaxConnect;
 	childinfo.listenSocket = conf->listenSocket;
 	childinfo.timeout = conf->timeout;
 	childinfo.ClientHandler = conf->ClientHandler;
 	childinfo.timeoutMsg = conf->timeoutMsg;
 	childinfo.resolveIP = conf->resolveIP;
-
-
-	for (i = 0; i < conf->nChildren; i++) {
-		if ((pid[i] = CreateChild(&childinfo)) == -1) {
-			trace(TRACE_ERROR,
-			      "StartServer(): could not create child");
-			trace(TRACE_ERROR,
-			      "StartServer(): killing children");
-
-			while (--i >= 0)
-				kill(pid[i], SIGKILL);
-
-			trace(TRACE_FATAL,
-			      "StartServer(): could not create children. Fatal.");
-		}
-	}
-
-	trace(TRACE_DEBUG,
-	      "StartServer(): children created, starting main service loop");
-
-	while (!GeneralStopRequested) {
-		for (i = 0; i < conf->nChildren; i++) {
-			if (waitpid(pid[i], NULL, WNOHANG | WUNTRACED) ==
-			    pid[i]) {
-				trace(TRACE_DEBUG,
-				      "StartServer(): child [%u] has exited",
-				      (unsigned) pid[i]);
-				trace(TRACE_DEBUG,
-				      "StartServer(): creating new child");
-				pid[i] = CreateChild(&childinfo);
-			}
-		}
-
-		sleep(1);
-	}
-
-	trace(TRACE_INFO,
-	      "StartServer(): General stop requested. Killing children.. ");
-
-	stillSomeAlive = 1;
-	cnt = 0;
-	while (stillSomeAlive && cnt < 10) {
-		stillSomeAlive = 0;
-		cnt++;
-
-		for (i = 0; i < conf->nChildren; i++) {
-			if (pid[i] == 0)
-				continue;
-
-			if (CheckChildAlive(pid[i])) {
-				trace(TRACE_DEBUG,
-				      "StartServer(): child [%d] is still alive, sending SIGTERM",
-				      pid[i]);
-				kill(pid[i], SIGTERM);
-				usleep(1000);
-			} else
-				trace(TRACE_DEBUG,
-				      "StartServer(): child [%d] is dead, zombie not yet cleaned",
-				      pid[i]);
-
-
-			if (waitpid(pid[i], NULL, WNOHANG | WUNTRACED) ==
-			    pid[i]) {
-				trace(TRACE_DEBUG,
-				      "StartServer(): child [%d] has exited, zombie cleaned up",
-				      pid[i]);
-				pid[i] = 0;
-			} else {
-				stillSomeAlive = 1;
-				trace(TRACE_DEBUG,
-				      "StartServer(): child [%d] hasn't provided exit status yet",
-				      pid[i]);
-			}
-		}
-
-		if (stillSomeAlive)
-			usleep(500);
-	}
-
-	if (stillSomeAlive) {
-		trace(TRACE_INFO,
-		      "StartServer(): not all children terminated at SIGTERM, killing hard now");
-
-		for (i = 0; i < conf->nChildren; i++) {
-			if (pid[i] != 0)
-				kill(pid[i], SIGKILL);;
-		}
-	}
-
-//  DeleteSharedMemory();
-
-	my_free(pid);
+ 	
+ 	trace(TRACE_DEBUG, "StartServer(): init ok. Creating children..");
+ 	scoreboard_new(conf);
+ 	manage_start_children();
+ 	manage_spare_children();
+ 	alarm(10);
+  
+ 	trace(TRACE_DEBUG, "StartServer(): children created, starting main service loop");
+ 	while (!GeneralStopRequested) 
+ 		manage_restart_children();
+   
+ 	manage_stop_children();
+ 	scoreboard_delete();
+ 
 	return Restart;
 }
 
@@ -215,7 +126,7 @@ void ParentSigHandler(int sig, siginfo_t * info, void *data)
 	if (ParentPID != getpid()) {
 		trace(TRACE_INFO,
 		      "ParentSigHandler(): i'm no longer father");
-		ChildSigHandler(sig, info, data);	/* this call is for a child but it's handler is not yet installed */
+		active_child_sig_handler(sig, info, data); /* this call is for a child but it's handler is not yet installed */
 	}
 #ifdef _USE_STR_SIGNAL
 	trace(TRACE_INFO, "ParentSigHandler(): got signal [%s]",
@@ -225,6 +136,11 @@ void ParentSigHandler(int sig, siginfo_t * info, void *data)
 #endif
 
 	switch (sig) {
+	case SIGALRM:
+		manage_spare_children();
+		alarm(10);
+		break;
+ 
 	case SIGCHLD:
 		break;		/* ignore, wait for child in main loop */
 
@@ -304,3 +220,4 @@ int CreateSocket(serverConfig_t * conf)
 
 	return 0;
 }
+

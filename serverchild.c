@@ -33,6 +33,7 @@
 #include "db.h"
 #include "auth.h"
 #include "clientinfo.h"
+#include "pool.h"
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -59,45 +60,68 @@ clientinfo_t client;
 
 int PerformChildTask(ChildInfo_t * info);
 
+void client_close(void);
+void client_close(void)
+{
+	if (client.tx) {
+		trace(TRACE_DEBUG,"%s,%s: closing write stream", __FILE__,__FUNCTION__);
+		fflush(client.tx);
+		fclose(client.tx);	/* closes clientSocket as well */
+		client.tx = NULL;
+	}
+	if (client.rx) {
+		trace(TRACE_DEBUG,"%s,%s: closing read stream", __FILE__,__FUNCTION__);
+		shutdown(fileno(client.rx), SHUT_RDWR);
+		fclose(client.rx);
+		client.rx = NULL;
+	}
+}
 
-void ChildSigHandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
+void disconnect_all(void);
+void disconnect_all(void)
+{
+	if (! connected)
+		return;
+	
+	trace(TRACE_DEBUG,
+		"%s,%s: database connection still open, closing",
+		__FILE__,__FUNCTION__);
+	db_disconnect();
+	auth_disconnect();
+	connected = 0;		/* FIXME a signal between this line and the previous one 
+				 * would screw things up. Would like to have all this in
+				 * db_disconnect() making 'connected' obsolete
+				 */
+
+
+}
+
+void noop_child_sig_handler(int sig, siginfo_t *info UNUSED, void *data UNUSED)
+{
+       trace(TRACE_DEBUG, "%s,%s: ignoring signal [%d]", __FILE__, __FUNCTION__, sig);
+}
+
+void active_child_sig_handler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
 {
 	static int triedDisconnect = 0;
 
 #ifdef _USE_STR_SIGNAL
-	trace(TRACE_ERROR, "ChildSighandler(): got signal [%s]",
+	trace(TRACE_ERROR, "%s,%s: got signal [%s]", __FILE__, __FUNCTION__,
 	      strsignal(sig));
 #else
-	trace(TRACE_ERROR, "ChildSighandler(): got signal [%d]", sig);
+	trace(TRACE_ERROR, "%s,%s: got signal [%d]", __FILE__, __FUNCTION__, sig);
 #endif
 
 	/* perform reinit at SIGHUP otherwise exit, but do nothing on
 	 *  SIGCHLD*/
 	switch (sig) {
 	case SIGCHLD:
-		trace(TRACE_DEBUG, "ChildSighandler(): SIGCHLD received..."
-		      "ignoring");
+		trace(TRACE_DEBUG, "%s,%s: SIGCHLD received... ignoring",
+			__FILE__, __FUNCTION__);
 		break;
 	case SIGALRM:
-		trace(TRACE_DEBUG, "ChildSighandler(): timeout received");
-
-		if (client.tx) {
-			trace(TRACE_DEBUG,
-			      "ChildSighandler(): write stream open, closing");
-			fprintf(client.tx, "%s", client.timeoutMsg);
-			fflush(client.tx);
-			fclose(client.tx);	/* closes clientSocket as well */
-			client.tx = NULL;
-		}
-
-		if (client.rx) {
-			trace(TRACE_DEBUG,
-			      "ChildSighandler(): read stream open, closing");
-			shutdown(fileno(client.rx), SHUT_RDWR);
-			fclose(client.rx);
-			client.rx = NULL;
-		}
-
+		trace(TRACE_DEBUG, "%s,%s: timeout received", __FILE__, __FUNCTION__);
+		client_close();
 		break;
 
 	case SIGHUP:
@@ -106,82 +130,41 @@ void ChildSigHandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
 	case SIGSTOP:
 		if (ChildStopRequested) {
 			trace(TRACE_DEBUG,
-			      "ChildSighandler(): already caught a stop request. Closing right now");
+				"%s,%s: already caught a stop request. Closing right now",
+				__FILE__,__FUNCTION__);
 
 			/* already caught this signal, exit the hard way now */
-			if (client.tx) {
-				trace(TRACE_DEBUG,
-				      "ChildSighandler(): write stream still open, closing");
-				fflush(client.tx);
-				fclose(client.tx);	/* closes clientSocket as well */
-				client.tx = NULL;
-			}
-
-			if (client.rx) {
-				trace(TRACE_DEBUG,
-				      "ChildSighandler(): read stream still open, closing");
-				shutdown(fileno(client.rx), SHUT_RDWR);
-				fclose(client.rx);
-				client.rx = NULL;
-			}
-
-			if (connected) {
-				trace(TRACE_DEBUG,
-				      "ChildSighandler(): database connection still open, closing");
-				db_disconnect();
-				auth_disconnect();
-				connected = 0;
-			}
-
-			trace(TRACE_DEBUG, "ChildSighandler(): exit");
+			client_close();
+			disconnect_all();
+			child_unregister();
+			trace(TRACE_DEBUG, "%s,%s: exit",__FILE__,__FUNCTION__);
 			exit(1);
 		}
-		trace(TRACE_DEBUG,
-		      "ChildSighandler(): setting stop request");
-		ChildStopRequested = 1;
+		trace(TRACE_DEBUG, "%s,%s: setting stop request",__FILE__,__FUNCTION__);
+		DelChildSigHandler();
+	 	ChildStopRequested = 1;
 		break;
 	default:
 		/* bad shtuff, exit */
 		trace(TRACE_DEBUG,
-		      "ChildSighandler(): cannot ignore this. Terminating");
+		      "%s,%s: cannot ignore this. Terminating",__FILE__,__FUNCTION__);
 
 		/*
 		 * For some reason i have not yet determined the process starts eating up
 		 * all CPU time when trying to disconnect.
 		 * For now: just bail out :-)
 		 */
+		child_unregister();
 		_exit(1);
 
 		if (!triedDisconnect) {
 			triedDisconnect = 1;
-
-			if (client.tx) {
-				trace(TRACE_DEBUG,
-				      "ChildSighandler(): write stream still open, closing");
-				fflush(client.tx);
-				fclose(client.tx);	/* closes clientSocket as well */
-				client.tx = NULL;
-			}
-
-			if (client.rx) {
-				trace(TRACE_DEBUG,
-				      "ChildSighandler(): read stream still open, closing");
-				shutdown(fileno(client.rx), SHUT_RDWR);
-				fclose(client.rx);
-				client.rx = NULL;
-			}
-
-			if (connected) {
-				trace(TRACE_DEBUG,
-				      "ChildSighandler(): database connection still open, closing");
-				db_disconnect();
-				auth_disconnect();
-			}
-
-			connected = 0;
+			client_close();
+			disconnect_all();
 		}
 
-		trace(TRACE_DEBUG, "ChildSighandler(): exit");
+		trace(TRACE_DEBUG, "%s,%s: exit", __FILE__, __FUNCTION__);
+		child_unregister();
 		exit(1);
 	}
 }
@@ -200,7 +183,7 @@ int SetChildSigHandler()
 	/* init & install signal handlers */
 	memset(&act, 0, sizeof(act));
 
-	act.sa_sigaction = ChildSigHandler;
+	act.sa_sigaction = active_child_sig_handler;
 	sigemptyset(&act.sa_mask);
 	act.sa_flags = SA_SIGINFO;
 
@@ -215,9 +198,32 @@ int SetChildSigHandler()
 	sigaction(SIGHUP, &act, 0);
 	sigaction(SIGALRM, &act, 0);
 	sigaction(SIGCHLD, &act, 0);
-
 	return 0;
 }
+int DelChildSigHandler()
+{
+	struct sigaction act;
+
+	/* init & install signal handlers */
+	memset(&act, 0, sizeof(act));
+
+	act.sa_sigaction = noop_child_sig_handler;
+	sigemptyset(&act.sa_mask);
+	act.sa_flags = SA_SIGINFO;
+
+	sigaction(SIGINT, &act, 0);
+	sigaction(SIGQUIT, &act, 0);
+	sigaction(SIGILL, &act, 0);
+	sigaction(SIGBUS, &act, 0);
+	sigaction(SIGPIPE, &act, 0);
+	sigaction(SIGFPE, &act, 0);
+	sigaction(SIGSEGV, &act, 0);
+	sigaction(SIGTERM, &act, 0);
+	sigaction(SIGHUP, &act, 0);
+	sigaction(SIGALRM, &act, 0);
+	return 0;
+}
+
 
 
 /*
@@ -229,19 +235,28 @@ pid_t CreateChild(ChildInfo_t * info)
 {
 	pid_t pid = fork();
 
-	if (pid != 0)
-		return pid;
+	if (! pid) {
+		if (child_register() == -1) {
+			trace(TRACE_FATAL, "%s,%s: child_register failed", 
+				__FILE__, __FUNCTION__);
+			exit(0);
 
-	ChildStopRequested = 0;
-	SetChildSigHandler();
-	trace(TRACE_INFO,
-	      "CreateChild(): signal handler placed, going to perform task now");
-
-	PerformChildTask(info);
-
-	usleep(10000);
-	exit(0);
+		}
+	
+ 		ChildStopRequested = 0;
+ 		SetChildSigHandler();
+ 		trace(TRACE_INFO, "%s,%s: signal handler placed, going to perform task now",
+			__FILE__, __FUNCTION__);
+ 		PerformChildTask(info);
+ 		child_unregister();
+ 		exit(0);
+	} else {
+ 		usleep(5000);
+ 		return pid;
+	}
 }
+
+
 
 
 /*
@@ -285,6 +300,8 @@ int PerformChildTask(ChildInfo_t * info)
 		trace(TRACE_INFO,
 		      "PerformChildTask(): waiting for connection");
 
+		child_reg_disconnected();
+
 		/* wait for connect */
 		len = sizeof(saClient);
 		clientSocket =
@@ -298,6 +315,8 @@ int PerformChildTask(ChildInfo_t * info)
 			continue;	/* accept failed, refuse connection & continue */
 		}
 
+		child_reg_connected();
+		
 		memset(&client, 0, sizeof(client));	/* zero-init */
 
 		client.timeoutMsg = info->timeoutMsg;
@@ -360,28 +379,9 @@ int PerformChildTask(ChildInfo_t * info)
 
 		trace(TRACE_DEBUG,
 		      "PerformChildTask(): client handling complete, closing streams");
-
-		if (client.tx) {
-			fflush(client.tx);
-			fclose(client.tx);	/* closes clientSocket as well */
-			client.tx = NULL;
-		}
-
-		if (client.rx) {
-			shutdown(fileno(client.rx), SHUT_RDWR);
-			fclose(client.rx);
-			client.rx = NULL;
-		}
-
+		client_close();
 		trace(TRACE_INFO, "PerformChildTask(): connection closed");
 	}
-
-	db_disconnect();
-	auth_disconnect();
-	connected = 0;		/* FIXME a signal between this line and the previous one 
-				 * would screw things up. Would like to have all this in
-				 * db_disconnect() making 'connected' obsolete
-				 */
 
 	if (!ChildStopRequested)
 		trace(TRACE_ERROR,
@@ -389,5 +389,8 @@ int PerformChildTask(ChildInfo_t * info)
 	else
 		trace(TRACE_ERROR, "PerformChildTask(): stop requested");
 
+	child_reg_disconnected();
+	disconnect_all();
+	
 	return 0;
 }

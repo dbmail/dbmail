@@ -37,10 +37,14 @@
 #include <signal.h>
 #include "dbmail.h"
 #include "clientinfo.h"
-
+#include "serverchild.h"
+ 
 typedef struct {
 	int listenSocket;
-	int nChildren;
+	int startChildren;
+	int minSpareChildren;
+	int maxSpareChildren;
+	int maxChildren;
 	int childMaxConnect;
 	int timeout;
 	char ip[IPLEN];

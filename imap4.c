@@ -381,8 +381,12 @@ int IMAPClientHandler(ClientInfo * ci)
 		}
 
 		//result = (*imap_handler_functions[i])(tag, args, ci);
-		if (result == -1)
+		if (result == -1) {
+			trace(TRACE_ERROR,"%s,%s: command return with error [%s]",
+					__FILE__, __FUNCTION__, IMAP_COMMANDS[i]);
+			
 			done = 1;	/* fatal error occurred, kick this user */
+		}
 
 		if (result == 1)
 			nfaultyresponses++;	/* server returned BAD or NO response */

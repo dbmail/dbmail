@@ -286,14 +286,14 @@ void SetConfigItems(serverConfig_t * config)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for NCHILDREN in config file");
 
-	if ((config->nChildren = atoi(val)) <= 0)
+	if ((config->startChildren = atoi(val)) <= 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): value for NCHILDREN is invalid: [%d]",
-		      config->nChildren);
+		      config->startChildren);
 
 	trace(TRACE_DEBUG,
 	      "SetConfigItems(): server will create  [%d] children",
-	      config->nChildren);
+	      config->startChildren);
 
 
 	/* read items: MAXCONNECTS */
@@ -406,6 +406,50 @@ void SetConfigItems(serverConfig_t * config)
 	      "SetConfigItems(): effective group shall be [%s]",
 	      config->serverGroup);
 
+
+       /* read items: MINSPARECHILDREN */
+       GetConfigValue("MINSPARECHILDREN", "LMTP", val);
+       if (strlen(val) == 0)
+               trace(TRACE_FATAL,
+                       "SetConfigItems(): no value for MINSPARECHILDREN in config file");
+       if ( (config->minSpareChildren = atoi(val)) <= 0)
+               trace(TRACE_FATAL,
+                       "SetConfigItems(): value for MINSPARECHILDREN is invalid: [%d]",
+                       config->minSpareChildren);
+
+       trace(TRACE_DEBUG,
+               "SetConfigItems(): will maintain minimum of [%d] spare children in reserve",
+               config->minSpareChildren);
+
+
+       /* read items: MAXSPARECHILDREN */
+       GetConfigValue("MAXSPARECHILDREN", "LMTP", val);
+       if (strlen(val) == 0)
+               trace(TRACE_FATAL,
+                       "SetConfigItems(): no value for MAXSPARECHILDREN in config file");
+       if ( (config->maxSpareChildren = atoi(val)) <= 0)
+               trace(TRACE_FATAL,
+                       "SetConfigItems(): value for MAXSPARECHILDREN is invalid: [%d]",
+                       config->maxSpareChildren);
+
+       trace(TRACE_DEBUG,
+               "SetConfigItems(): will maintain maximum of [%d] spare children in reserve",
+               config->maxSpareChildren);
+
+
+       /* read items: MAXCHILDREN */
+       GetConfigValue("MAXCHILDREN", "LMTP", val);
+       if (strlen(val) == 0)
+               trace(TRACE_FATAL,
+                       "SetConfigItems(): no value for MAXCHILDREN in config file");
+       if ( (config->maxChildren = atoi(val)) <= 0)
+               trace(TRACE_FATAL,
+                       "SetConfigItems(): value for MAXCHILDREN is invalid: [%d]",
+                       config->maxSpareChildren);
+
+       trace(TRACE_DEBUG,
+               "SetConfigItems(): will allow maximum of [%d] children",
+               config->maxChildren);
 
 
 }

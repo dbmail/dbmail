@@ -1,4 +1,11 @@
 2004-09-09  Paul Stevens <paul@nfg.nl>
+
+	* Makefile.ami, imap4.c, imapd.c, lmtpd.c, pool.c, pool.h, 
+	pop3d.c, server.c, server.h, serverchild.c, serverchild.h,
+	dbmail.conf: applying the preforking patch.
+	
+2004-09-09  Paul Stevens <paul@nfg.nl>
+
 	* acinclude.m4 configure.in: adding glib-2.0 support. This is now
 	a build requirement.
 
