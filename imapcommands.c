@@ -7,7 +7,6 @@
  */
 
 #include "imapcommands.h"
-#include "debug.h"
 #include "imaputil.h"
 #include "dbmysql.h"
 #include <string.h>
@@ -16,6 +15,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <time.h>
+#include "debug.h"
 
 #ifndef MAX_LINESIZE
 #define MAX_LINESIZE 1024
@@ -538,7 +538,7 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
     }
 
   /* alloc a ptr which can contain up to the full name */
-  cpy = (char*)malloc(sizeof(char) * (strlen(args[0]) + 1));
+  cpy = (char*)my_malloc(sizeof(char) * (strlen(args[0]) + 1));
   if (!cpy)
     {
       /* out of mem */
@@ -555,7 +555,7 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
       /* serious error while making chunks */
       trace(TRACE_ERROR, "IMAPD: create(): could not create chunks\r\n");
       fprintf(ci->tx, "%s BYE server ran out of memory\r\n",tag);
-      free(cpy);
+      my_free(cpy);
       return -1;
     }
   
@@ -564,7 +564,7 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
       /* wrong argument */
       fprintf(ci->tx,"%s NO invalid mailbox name specified\r\n",tag);
       free_chunks(chunks);
-      free(cpy);
+      my_free(cpy);
       return 1;
     }
 
@@ -578,7 +578,7 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
 	  /* no can do */
 	  fprintf(ci->tx, "%s NO invalid mailbox name specified\r\n",tag);
 	  free_chunks(chunks);
-	  free(cpy);
+	  my_free(cpy);
 	  return 1;
 	}
 
@@ -605,7 +605,7 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
 	  /* dbase failure */
 	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
 	  free_chunks(chunks);
-	  free(cpy);
+	  my_free(cpy);
 	  return -1; /* fatal */
 	}
 
@@ -628,7 +628,7 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
 	    {
 	      fprintf(ci->tx, "%s NO mailbox cannot have inferior names\r\n",tag);
 	      free_chunks(chunks);
-	      free(cpy);
+	      my_free(cpy);
 	      return 1;
 	    }
 
@@ -637,7 +637,7 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
 	      /* dbase failure */
 	      fprintf(ci->tx,"* BYE internal dbase error\r\n");
 	      free_chunks(chunks);
-	      free(cpy);
+	      my_free(cpy);
 	      return -1; /* fatal */
 	    }
 	}
@@ -645,7 +645,7 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
 
   /* creation complete */
   free_chunks(chunks);
-  free(cpy);
+  my_free(cpy);
 
   fprintf(ci->tx,"%s OK CREATE completed\r\n",tag);
   return 0;
@@ -709,13 +709,13 @@ int _ic_delete(char *tag, char **args, ClientInfo *ci)
       if (result == 0)
 	{
 	  fprintf(ci->tx,"%s NO mailbox is non-selectable\r\n",tag);
-	  free(children);
+	  my_free(children);
 	  return 1;
 	}
       if (result == -1)
 	{
 	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
-	  free(children);
+	  my_free(children);
 	  return -1; /* fatal */
 	}
 
@@ -727,13 +727,13 @@ int _ic_delete(char *tag, char **args, ClientInfo *ci)
       if (result == -1)
 	{
 	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
-	  free(children);
+	  my_free(children);
 	  return -1; /* fatal */
 	}
 
       /* ok done */
       fprintf(ci->tx,"%s OK DELETE completed\r\n",tag);
-      free(children);
+      my_free(children);
       return 0;
     }
       
@@ -880,7 +880,7 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
       if (result == -1)
 	{
 	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
-	  free(children);
+	  my_free(children);
 	  return -1;
 	}
 
@@ -889,7 +889,7 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
 	  /* strange error, let's say its fatal */
 	  trace(TRACE_ERROR,"IMAPD: rename(): mailbox names are fucked up\r\n");
 	  fprintf(ci->tx,"* BYE internal error regarding mailbox names\r\n");
-	  free(children);
+	  my_free(children);
 	  return -1;
 	}
 	  
@@ -899,12 +899,12 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
       if (result == -1)
 	{
 	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
-	  free(children);
+	  my_free(children);
 	  return -1;
 	}
     }
   if (children)
-    free(children);
+    my_free(children);
 
   /* now replace name */
   result = db_setmailboxname(mboxid, args[1]);
@@ -1035,7 +1035,7 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
     }      
   
   plen = strlen(args[1]) * 6;
-  pattern = (char*)malloc(sizeof(char) * (plen + slen + 10)); /* +10 for some xtra space */
+  pattern = (char*)my_malloc(sizeof(char) * (plen + slen + 10)); /* +10 for some xtra space */
   if (!pattern)
     {
       fprintf(ci->tx,"* BYE out of memory\r\n");
@@ -1075,16 +1075,16 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
   if (result == -1)
     {
       fprintf(ci->tx,"* BYE internal dbase error\r\n");
-      free(children);
-      free(pattern);
+      my_free(children);
+      my_free(pattern);
       return -1;
     }
 
   if (result == 1)
     {
       fprintf(ci->tx,"%s BAD invalid pattern specified\r\n",tag);
-      free(children);
-      free(pattern);
+      my_free(children);
+      my_free(pattern);
       return 1;
     }
     
@@ -1096,8 +1096,8 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
       if (result == -1)
 	{
 	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
-	  free(children);
-	  free(pattern);
+	  my_free(children);
+	  my_free(pattern);
 	  return -1;
 	}
 
@@ -1108,8 +1108,8 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
       if (result == -1)
 	{
 	  fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
-	  free(children);
-	  free(pattern);
+	  my_free(children);
+	  my_free(pattern);
 	  return -1;
 	}
 
@@ -1119,8 +1119,8 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
       if (result == -1)
 	{
 	  fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
-	  free(children);
-	  free(pattern);
+	  my_free(children);
+	  my_free(pattern);
 	  return -1;
 	}
 
@@ -1131,9 +1131,9 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
     }
 
   if (children)
-    free(children);
+    my_free(children);
      
-  free(pattern);
+  my_free(pattern);
 
   fprintf(ci->tx,"%s OK %s completed\r\n",tag,thisname);
   return 0;
@@ -1260,7 +1260,7 @@ int _ic_status(char *tag, char **args, ClientInfo *ci)
       else
 	{
 	  fprintf(ci->tx,"\r\n%s BAD unrecognized option '%s' specified\r\n",tag,args[i]);
-	  free(mb.seq_list);
+	  my_free(mb.seq_list);
 	  return 1;
 	}
     }
@@ -1269,7 +1269,7 @@ int _ic_status(char *tag, char **args, ClientInfo *ci)
 
   fprintf(ci->tx,"%s OK STATUS completed\r\n",tag);
 
-  free(mb.seq_list);
+  my_free(mb.seq_list);
   return 0;
 }
 
@@ -1367,7 +1367,7 @@ int _ic_append(char *tag, char **args, ClientInfo *ci)
       return 1;
     }
 
-  msgdata = (char*)malloc((literal_size+1) * sizeof(char));
+  msgdata = (char*)my_malloc((literal_size+1) * sizeof(char));
   if (!msgdata)
     {
       trace(TRACE_ERROR, "ic_append(): not enough memory\n");
@@ -1422,7 +1422,7 @@ int _ic_append(char *tag, char **args, ClientInfo *ci)
       break;
     }
 
-  free(msgdata);
+  my_free(msgdata);
   msgdata = NULL;
 
   return result;
@@ -1513,7 +1513,7 @@ int _ic_expunge(char *tag, char **args, ClientInfo *ci)
 
       fprintf(ci->tx,"* %d EXPUNGE\r\n",idx+1); /* add one: IMAP MSN starts at 1 not zero */
     }
-  free(msgids);
+  my_free(msgids);
   msgids = NULL;
 
   /* update mailbox info */
@@ -1526,7 +1526,7 @@ int _ic_expunge(char *tag, char **args, ClientInfo *ci)
   if (result == -1)
     {
       fprintf(ci->tx,"* BYE internal dbase error\r\n");
-      free(newmailbox.seq_list);
+      my_free(newmailbox.seq_list);
       return -1; /* fatal  */
     }
 
@@ -1536,7 +1536,7 @@ int _ic_expunge(char *tag, char **args, ClientInfo *ci)
   if (newmailbox.recent != ud->mailbox.recent)
     fprintf(ci->tx, "* %d RECENT\r\n", newmailbox.recent);
 
-  free(ud->mailbox.seq_list);
+  my_free(ud->mailbox.seq_list);
   memcpy(&ud->mailbox, &newmailbox, sizeof(newmailbox));
 
   fprintf(ci->tx,"%s OK EXPUNGE completed\r\n",tag);
@@ -1626,7 +1626,7 @@ int _ic_search(char *tag, char **args, ClientInfo *ci)
 	}
 
       /* allocate memory for result set */
-      result_set = (int*)malloc(sizeof(int) * ud->mailbox.exists);
+      result_set = (int*)my_malloc(sizeof(int) * ud->mailbox.exists);
       if (!result_set)
 	{
 	  free_searchlist(&sk.sub_search);
@@ -1647,7 +1647,7 @@ int _ic_search(char *tag, char **args, ClientInfo *ci)
       if (result < 0)
 	{
 	  free_searchlist(&sk.sub_search);
-	  free(result_set);
+	  my_free(result_set);
 	  fprintf(ci->tx,"%s", (result == -1) ? 
 		  "* BYE internal dbase error\r\n" :
 		  "* BYE server ran out of memory\r\n");
@@ -1658,7 +1658,7 @@ int _ic_search(char *tag, char **args, ClientInfo *ci)
 
       if (result == 1)
 	{
-	  free(result_set);
+	  my_free(result_set);
 	  result_set = NULL;
 	}
 
@@ -1682,7 +1682,7 @@ int _ic_search(char *tag, char **args, ClientInfo *ci)
     }
 
   fprintf(ci->tx,"\r\n");
-  free(result_set);
+  my_free(result_set);
       
   fprintf(ci->tx,"%s OK SEARCH completed\r\n",tag);
   return 0;

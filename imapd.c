@@ -52,7 +52,7 @@ int main()
   if (daem)
     {
       d = (strcmp(daem, "yes") == 0);
-      free(daem);
+      my_free(daem);
       daem = NULL;
     }
   else
@@ -61,28 +61,28 @@ int main()
   if (to)
     {
       timeout = atoi(to);
-      free(to);
+      my_free(to);
       to = NULL;
     }
   
   if (trace_level)
     {
       new_level = atoi(trace_level);
-      free(trace_level);
+      my_free(trace_level);
       trace_level = NULL;
     }
 
   if (trace_syslog)
     {
       new_trace_syslog = atoi(trace_syslog);
-      free(trace_syslog);
+      my_free(trace_syslog);
       trace_syslog = NULL;
     }
 
   if (trace_verbose)
     {
       new_trace_verbose = atoi(trace_verbose);
-      free(trace_verbose);
+      my_free(trace_verbose);
       trace_verbose = NULL;
     }
 
@@ -92,8 +92,8 @@ int main()
   /* open socket */
   sock = SS_MakeServerSock(bindip, port, atoi(defchld), timeout);
 
-  free(port);
-  free(bindip);
+  my_free(port);
+  my_free(bindip);
   port = NULL;
   bindip = NULL;
 
@@ -113,8 +113,8 @@ int main()
     if (drop_priviledges (newuser, newgroup) != 0)
       trace(TRACE_FATAL,"IMAPD: could not set uid %s, gid %s\n",newuser,newgroup);
     
-    free(newuser);
-    free(newgroup);
+    my_free(newuser);
+    my_free(newgroup);
     newuser = NULL;
     newgroup = NULL;
   }
@@ -137,8 +137,8 @@ int main()
 
   SS_CloseServer(sock);
 
-  free(defchld);
-  free(maxchld);
+  my_free(defchld);
+  my_free(maxchld);
   defchld = NULL;
   maxchld = NULL;
 

@@ -37,9 +37,9 @@ int mime_list(char *blkdata, struct list *mimelist)
   list_init(mimelist);
   /* alloc mem */
 #ifdef USE_EXIT_ON_ERROR
-  memtst((mr=(struct mime_record *)malloc(sizeof(struct mime_record)))==NULL);
+  memtst((mr=(struct mime_record *)my_malloc(sizeof(struct mime_record)))==NULL);
 #else
-  mr=(struct mime_record *)malloc(sizeof(struct mime_record));
+  mr=(struct mime_record *)my_malloc(sizeof(struct mime_record));
 
   if (!mr)
     {
@@ -73,7 +73,7 @@ int mime_list(char *blkdata, struct list *mimelist)
       if (!(*endptr))
 	{
 	  /* end of data block reached */
-	  free(mr);
+	  my_free(mr);
 	  return 0;
 	}
 
@@ -112,7 +112,7 @@ int mime_list(char *blkdata, struct list *mimelist)
 	  if (!el)
 	    {
 	      trace(TRACE_ERROR, "mime_list(): cannot add element to list\n");
-	      free(mr);
+	      my_free(mr);
 	      return -1;
 	    }
 #endif
@@ -124,14 +124,14 @@ int mime_list(char *blkdata, struct list *mimelist)
 	  if (*startptr == '\n')
 	    {
 	      /* end of header: double newline */
-	      free(mr);
+	      my_free(mr);
 	      return 0;
 	    }
 	}
       else 
 	{
 	  /* no field/value delimiter found, non-valid MIME-header */
-	  free(mr);
+	  my_free(mr);
 	  trace(TRACE_ERROR,"Non valid mimeheader found, freeing list...\n");
 	  list_freelist(&mimelist->start);
 	  mimelist->total_nodes = 0;
@@ -141,13 +141,13 @@ int mime_list(char *blkdata, struct list *mimelist)
 	}
     }
 
-  free(mr); /* no longer need this */
+  my_free(mr); /* no longer need this */
 
   trace(TRACE_DEBUG,"mime_list(): mimeloop finished\n");
   if (valid_mime_lines < 2)
     {
 #ifdef USE_EXIT_ON_ERROR
-      free(blkdata);
+      my_free(blkdata);
       trace(TRACE_STOP,"mime_list(): no valid mime headers found");
 #else
       trace(TRACE_ERROR,"mime_list(): no valid mime headers found\n");
@@ -202,7 +202,7 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist,
     }
 
   /* alloc mem */
-  mr=(struct mime_record *)malloc(sizeof(struct mime_record));
+  mr=(struct mime_record *)my_malloc(sizeof(struct mime_record));
 
   if (!mr)
     {
@@ -231,7 +231,7 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist,
       if (!(*endptr))
 	{
 	  /* end of data block reached (??) */
-	  free(mr);
+	  my_free(mr);
 	  *blkidx += (endptr-startptr);
 
 	  return totallines;
@@ -302,7 +302,7 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist,
 	  if (!el)
 	    {
 	      trace(TRACE_ERROR, "mime_readheader(): cannot add element to list\n");
-	      free(mr);
+	      my_free(mr);
 	      return -2;
 	    }
 
@@ -346,7 +346,7 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist,
 	      if (!el)
 		{
 		  trace(TRACE_ERROR, "mime_readheader(): cannot add element to list\n");
-		  free(mr);
+		  my_free(mr);
 		  return -2;
 		}
 	    }
@@ -385,7 +385,7 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist,
 	  (*headersize)+=2;
 	  trace(TRACE_DEBUG,"mime_readheader(): found double newline; header size: %d lines\n",
 		totallines);
-	  free(mr);
+	  my_free(mr);
 	  return totallines;
 	}
 
@@ -393,7 +393,7 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist,
 
   /* everything down here should be unreachable */
 
-  free(mr); /* no longer need this */
+  my_free(mr); /* no longer need this */
 
   trace(TRACE_DEBUG,"mime_readheader(): mimeloop finished\n");
   if (valid_mime_lines < 2)
@@ -520,7 +520,7 @@ int mail_adr_list(char *scan_for_field, struct list *targetlist, struct list *mi
       raw=raw->nextnode;
     }
 
-  free(tmpvalue);
+  my_free(tmpvalue);
 
   trace (TRACE_DEBUG,"mail_adr_list(): found %d emailaddresses",list_totalnodes(targetlist));
 	

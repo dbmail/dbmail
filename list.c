@@ -9,8 +9,6 @@
 #include "debug.h"
 #include "list.h"
 
-extern void func_memtst (char filename[255],int line,int tst);
-
 void list_init(struct list *tlist)
 {
   tlist->start=NULL;
@@ -33,8 +31,8 @@ void list_freelist(struct element **start)
   list_freelist(&(*start)->nextnode);
   
   /* free this item */
-  free((*start)->data);
-  free(*start);
+  my_free((*start)->data);
+  my_free(*start);
   *start = NULL;
 }
 
@@ -81,20 +79,20 @@ struct element *list_nodeadd(struct list *tlist, void *data,
    
   p=tlist->start;
 	
-  tlist->start=(struct element *)malloc(sizeof(struct element));
+  tlist->start=(struct element *)my_malloc(sizeof(struct element));
 	
   /* allocating memory */
 #ifdef USE_EXIT_ON_ERROR
   memtst(tlist->start==NULL);
-  memtst((tlist->start->data=(void *)malloc(dsize))==NULL);
+  memtst((tlist->start->data=(void *)my_malloc(dsize))==NULL);
 #else
   if (!tlist->start)
     return NULL;
 
-  tlist->start->data=(void *)malloc(dsize);
+  tlist->start->data=(void *)my_malloc(dsize);
   if (!tlist->start->data)
     {
-      free(tlist->start);
+      my_free(tlist->start);
       tlist->start = NULL;
       return NULL;
     }
@@ -169,7 +167,7 @@ struct element *list_nodedel(struct list *tlist,void *data)
 	  else 
 	    {
 	      item->nextnode=temp->nextnode;
-	      free(temp->data); /* freeing memory */
+	      my_free(temp->data); /* freeing memory */
 	      free ((struct element *)temp);
 	      break;
 	    }

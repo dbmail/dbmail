@@ -20,7 +20,7 @@
 
 #define MAX_LINESIZE 1024
 
-#define null_free(p) { free(p); p = NULL; }
+#define null_free(p) { my_free(p); p = NULL; }
 
 /* cache */
 cache_t cached_msg;
@@ -85,7 +85,7 @@ int imap_login(ClientInfo *ci)
   setlinebuf(ci->tx);
 */
   /* add userdata */
-  ci->userData = malloc(sizeof(imap_userdata_t));
+  ci->userData = my_malloc(sizeof(imap_userdata_t));
   if (!ci->userData)
     {
       /* out of mem */
@@ -277,7 +277,7 @@ int imap_process(ClientInfo *ci)
 	  /* free used memory */
 	  for (i=0; args[i]; i++) 
 	    {
-	      free(args[i]);
+	      my_free(args[i]);
 	      args[i] = NULL;
 	    }
 	  
@@ -306,7 +306,7 @@ int imap_process(ClientInfo *ci)
 
 	      for (i=0; args[i]; i++) 
 		{
-		  free(args[i]);
+		  my_free(args[i]);
 		  args[i] = NULL;
 		}
 	  
@@ -322,7 +322,7 @@ int imap_process(ClientInfo *ci)
 	  if (newmailbox.recent != ud->mailbox.recent)
 	    fprintf(ci->tx, "* %d RECENT\r\n", newmailbox.recent);
 
-	  free(ud->mailbox.seq_list);
+	  my_free(ud->mailbox.seq_list);
 	  memcpy(&ud->mailbox, &newmailbox, sizeof(newmailbox));
 	}
 
@@ -343,7 +343,7 @@ int imap_process(ClientInfo *ci)
 
       for (i=0; args[i]; i++) 
 	{
-	  free(args[i]);
+	  my_free(args[i]);
 	  args[i] = NULL;
 	}
 
@@ -358,6 +358,8 @@ int imap_process(ClientInfo *ci)
 
   fprintf(ci->tx,"%s OK completed\r\n",tag);
   trace(TRACE_MESSAGE,"IMAPD: Closing connection for client from IP [%s]\n",ci->ip);
+
+  __debug_dumpallocs();
 
   return EOF;
 

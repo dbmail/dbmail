@@ -239,7 +239,7 @@ char *db_get_config_item (char *item, int type)
 	
   if (row[0]!=NULL)
     {
-      result=(char *)malloc(strlen(row[0])+1);
+      result=(char *)my_malloc(strlen(row[0])+1);
       if (result!=NULL)
 	strcpy (result,row[0]);
       trace (TRACE_DEBUG,"Ok result [%s]\n",result);
@@ -393,7 +393,7 @@ char *db_get_userid (unsigned long *useridnr)
 
   if (row[0])
     {
-      if (!(returnid = (char *)malloc(strlen(row[0])+1)))
+      if (!(returnid = (char *)my_malloc(strlen(row[0])+1)))
 	{
 	  trace(TRACE_ERROR,"db_get_userid(): out of memory");
 	  mysql_free_result(res);
@@ -599,13 +599,13 @@ unsigned long db_insert_message_block (char *block, int messageidnr)
       /* allocate memory twice as much, for eacht character might be escaped 
 	 added aditional 250 bytes for possible function err */
 
-      memtst((escblk=(char *)malloc(((len*2)+250)))==NULL); 
+      memtst((escblk=(char *)my_malloc(((len*2)+250)))==NULL); 
 
       /* escape the string */
       if ((esclen = mysql_escape_string(escblk, block, len)) > 0)
 	{
 	  /* add an extra 500 characters for the query */
-	  memtst((tmpquery=(char *)malloc(esclen + 500))==NULL);
+	  memtst((tmpquery=(char *)my_malloc(esclen + 500))==NULL);
 	
 	  snprintf (tmpquery, esclen+500,
 		   "INSERT INTO messageblk(messageblk,blocksize,messageidnr) "
@@ -614,15 +614,15 @@ unsigned long db_insert_message_block (char *block, int messageidnr)
 
 	  if (db_query (tmpquery)==-1)
 	    {
-	      free(escblk);
-	      free(tmpquery);
+	      my_free(escblk);
+	      my_free(tmpquery);
 	      trace(TRACE_ERROR,"db_insert_message_block(): dbquery failed\n");
 	      return -1;
 	    }
 
 	  /* freeing buffers */
-	  free (tmpquery);
-	  free (escblk);
+	  my_free(tmpquery);
+	  my_free(escblk);
 	  return db_insert_result();
 	}
       else
@@ -630,7 +630,7 @@ unsigned long db_insert_message_block (char *block, int messageidnr)
 	  trace (TRACE_ERROR,"db_insert_message_block(): mysql_real_escape_string() "
 		 "returned empty value\n");
 
-	  free(escblk);
+	  my_free(escblk);
 	  return -1;
 	}
     }
@@ -705,7 +705,7 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines,
   trace (TRACE_DEBUG,"db_send_message_lines(): request for [%d] lines",lines);
 
   
-  memtst ((buffer=(char *)malloc(READ_BLOCK_SIZE*2))==NULL);
+  memtst ((buffer=(char *)my_malloc(READ_BLOCK_SIZE*2))==NULL);
 
   snprintf (query, DEF_QUERYSIZE, 
 	    "SELECT * FROM messageblk WHERE messageidnr=%lu ORDER BY messageblknr ASC",
@@ -714,14 +714,14 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines,
 
   if (db_query(query)==-1)
     {
-      free (buffer);
+      my_free(buffer);
       return 0;
     }
 
   if ((res = mysql_store_result(&conn)) == NULL)
     {
       trace(TRACE_ERROR,"db_send_message_lines: mysql_store_result failed: %s",mysql_error(&conn));
-      free (buffer);
+      my_free(buffer);
       return 0;
     }
   
@@ -812,7 +812,7 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines,
 	
   mysql_free_result(res);
 	
-  free (buffer);
+  my_free(buffer);
   return 1;
 }
 
@@ -889,7 +889,7 @@ unsigned long db_md5_validate (char *username,unsigned char *md5_apop_he, char *
 
   trace (TRACE_DEBUG,"db_md5_validate(): apop_stamp=[%s], userpw=[%s]",apop_stamp,row[0]);
 	
-  memtst((checkstring=(char *)malloc(strlen(apop_stamp)+strlen(row[0])+2))==NULL);
+  memtst((checkstring=(char *)my_malloc(strlen(apop_stamp)+strlen(row[0])+2))==NULL);
   snprintf(checkstring, strlen(apop_stamp)+strlen(row[0])+2, "%s%s",apop_stamp,row[0]);
 
   md5_apop_we=makemd5(checkstring);
@@ -907,7 +907,7 @@ unsigned long db_md5_validate (char *username,unsigned char *md5_apop_he, char *
 	
       mysql_free_result(res);
       
-      free(checkstring);
+      my_free(checkstring);
 
       return useridnr;
     }
@@ -918,7 +918,7 @@ unsigned long db_md5_validate (char *username,unsigned char *md5_apop_he, char *
     mysql_free_result(res);
   
   
-  free(checkstring);
+  my_free(checkstring);
   
   return 0;
 }
@@ -1431,7 +1431,7 @@ int db_imap_append_msg(char *msgdata, unsigned long datalen, unsigned long mboxi
   if (db_query(query) == -1)
     {
       trace(TRACE_ERROR, "db_imap_append_msg(): could not create message\n");
-      free(query);
+      my_free(query);
       return -1;
     }
 
@@ -1670,7 +1670,7 @@ int db_findmailbox_by_regex(unsigned long ownerid, const char *pattern,
     }
   
   /* alloc mem */
-  tmp = (unsigned long *)malloc(sizeof(unsigned long) * mysql_num_rows(res));
+  tmp = (unsigned long *)my_malloc(sizeof(unsigned long) * mysql_num_rows(res));
   if (!tmp)
     {
       trace(TRACE_ERROR,"db_findmailbox_by_regex(): not enough memory\n");
@@ -1689,7 +1689,7 @@ int db_findmailbox_by_regex(unsigned long ownerid, const char *pattern,
 
   if (*nchildren == 0)
     {
-      free(tmp);
+      my_free(tmp);
       return 0;
     }
 
@@ -1698,7 +1698,7 @@ int db_findmailbox_by_regex(unsigned long ownerid, const char *pattern,
   if (!(*children))
     {
       trace(TRACE_ERROR,"db_findmailbox_by_regex(): realloc failed\n");
-      free(tmp);
+      my_free(tmp);
       return -1;
     }
 
@@ -1722,7 +1722,7 @@ int db_getmailbox(mailbox_t *mb, unsigned long userid)
   /* free existing MSN list */
   if (mb->seq_list)
     {
-      free(mb->seq_list);
+      my_free(mb->seq_list);
       mb->seq_list = NULL;
     }
 
@@ -1794,7 +1794,7 @@ int db_getmailbox(mailbox_t *mb, unsigned long userid)
   mb->exists = mysql_num_rows(res);
 
   /* alloc mem */
-  mb->seq_list = (unsigned long*)malloc(sizeof(unsigned long) * mb->exists);
+  mb->seq_list = (unsigned long*)my_malloc(sizeof(unsigned long) * mb->exists);
   if (!mb->seq_list)
     {
       /* out of mem */
@@ -1826,7 +1826,7 @@ int db_getmailbox(mailbox_t *mb, unsigned long userid)
     {
       trace(TRACE_ERROR, "db_getmailbox(): could not determine highest message ID\n");
 
-      free(mb->seq_list);
+      my_free(mb->seq_list);
       mb->seq_list = NULL;
 
       return -1;
@@ -1836,7 +1836,7 @@ int db_getmailbox(mailbox_t *mb, unsigned long userid)
     {
       trace(TRACE_ERROR,"db_getmailbox(): mysql_store_result failed: %s\n",mysql_error(&conn));
       
-      free(mb->seq_list);
+      my_free(mb->seq_list);
       mb->seq_list = NULL;
 
       return -1;
@@ -1956,7 +1956,7 @@ int db_listmailboxchildren(unsigned long uid, unsigned long useridnr,
       
       return 0;
     }
-  *children = (unsigned long*)malloc(sizeof(unsigned long) * (*nchildren));
+  *children = (unsigned long*)my_malloc(sizeof(unsigned long) * (*nchildren));
 
   if (!(*children))
     {
@@ -1973,7 +1973,7 @@ int db_listmailboxchildren(unsigned long uid, unsigned long useridnr,
       if (i == *nchildren)
 	{
 	  /*  big fatal */
-	  free(*children);
+	  my_free(*children);
 	  *children = NULL;
 	  *nchildren = 0;
 	  mysql_free_result(res);
@@ -2193,7 +2193,7 @@ int db_expunge(unsigned long uid,unsigned long **msgids,int *nmsgs)
 
   /* now alloc mem */
   *nmsgs = mysql_num_rows(res);
-  *msgids = (unsigned long *)malloc(sizeof(unsigned long) * (*nmsgs));
+  *msgids = (unsigned long *)my_malloc(sizeof(unsigned long) * (*nmsgs));
   if (!(*msgids))
     {
       /* out of mem */
@@ -2217,7 +2217,7 @@ int db_expunge(unsigned long uid,unsigned long **msgids,int *nmsgs)
   if (db_query(query) == -1)
     {
       trace(TRACE_ERROR, "db_expunge(): could not update messages in mailbox\n");
-      free(*msgids);
+      my_free(*msgids);
       *nmsgs = 0;
       return -1;
     }
@@ -2705,7 +2705,7 @@ int db_init_msgfetch(unsigned long uid)
       return -1;                     /* msg should have 1 block at least */
     }
   
-  if (!(blklengths = (unsigned long*)malloc(nblocks * sizeof(unsigned long))))
+  if (!(blklengths = (unsigned long*)my_malloc(nblocks * sizeof(unsigned long))))
     {
       trace(TRACE_ERROR, "db_init_msgfetch(): out of memory\n");
       mysql_free_result(_msg_result);
@@ -2723,7 +2723,7 @@ int db_init_msgfetch(unsigned long uid)
   if (db_query(query) == -1)
     {
       trace(TRACE_ERROR, "db_init_msgfetch(): could not get message\n");
-      free(blklengths);
+      my_free(blklengths);
       blklengths = NULL;
       return (-1);
     }
@@ -2732,7 +2732,7 @@ int db_init_msgfetch(unsigned long uid)
     {
       trace(TRACE_ERROR,"db_init_msgfetch(): mysql_store_result failed: %s\n",
 	    mysql_error(&conn));
-      free(blklengths);
+      my_free(blklengths);
       blklengths = NULL;
       return (-1);
     }
@@ -2891,7 +2891,7 @@ void db_close_msgfetch()
   if (!_msg_fetch_inited)
     return; /* nothing to be done */
 
-  free(blklengths);
+  my_free(blklengths);
   blklengths = NULL;
   nblocks = 0;
 
@@ -3192,7 +3192,7 @@ int db_start_msg(mime_message_t *msg, char *stopbound, int *level, int maxlevel)
 	}
 
       len = newbound - bptr;
-      if (!(newbound = (char*)malloc(len+1)))
+      if (!(newbound = (char*)my_malloc(len+1)))
 	{
 	  trace(TRACE_ERROR, "db_start_msg(): out of memory\n");
 	  return -3;
@@ -3207,7 +3207,7 @@ int db_start_msg(mime_message_t *msg, char *stopbound, int *level, int maxlevel)
       if (db_update_msgbuf(MSGBUF_FORCE_UPDATE) == -1)
 	{
 	  trace(TRACE_ERROR, "db_startmsg(): error updating msgbuf\n");
-	  free(newbound);
+	  my_free(newbound);
 	  return -2;
 	}
 
@@ -3225,7 +3225,7 @@ int db_start_msg(mime_message_t *msg, char *stopbound, int *level, int maxlevel)
       if (!msgbuf[msgidx])
 	{
 	  trace(TRACE_ERROR, "db_start_msg(): unexpected end-of-data\n");
-	  free(newbound);
+	  my_free(newbound);
 	  return -1;
 	}
 
@@ -3238,7 +3238,7 @@ int db_start_msg(mime_message_t *msg, char *stopbound, int *level, int maxlevel)
       if ((nlines = db_add_mime_children(&msg->children, newbound, level, maxlevel)) < 0)
 	{
 	  trace(TRACE_ERROR, "db_start_msg(): error adding MIME-children\n");
-	  free(newbound);
+	  my_free(newbound);
 	  return nlines;
 	}
       (*level)--;
@@ -3251,7 +3251,7 @@ int db_start_msg(mime_message_t *msg, char *stopbound, int *level, int maxlevel)
 	  msgidx += (2+sblen); /* double hyphen preceeds */
 	}
 
-      free(newbound);
+      my_free(newbound);
       newbound = NULL;
 
       if (msgidx > 0)
@@ -3384,6 +3384,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound, int *level, in
       if ((nlines = mime_readheader(&msgbuf[msgidx], &msgidx, &part.mimeheader, &dummy)) < 0)
 	{
 	  trace(TRACE_ERROR,"db_add_mime_children(): error reading MIME-header\n");
+	  db_free_msg(&part);
 	  return nlines;   /* error reading header */
 	}
       totallines += nlines;
@@ -3399,6 +3400,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound, int *level, in
 	  if ((nlines = db_start_msg(&part, splitbound, level, maxlevel)) < 0)
 	    {
 	      trace(TRACE_ERROR,"db_add_mime_children(): error retrieving message\n");
+	      db_free_msg(&part);
 	      return nlines;
 	    }
 	  trace(TRACE_DEBUG,"db_add_mime_children(): got %d newlines from start_msg()\n",nlines);
@@ -3418,6 +3420,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound, int *level, in
 	  if (!bptr)
 	    {
 	      trace(TRACE_ERROR, "db_add_mime_children(): could not find a new msg-boundary\n");
+	      db_free_msg(&part);
 	      return -1; /* no new boundary ??? */
 	    }
 
@@ -3435,9 +3438,10 @@ int db_add_mime_children(struct list *brothers, char *splitbound, int *level, in
 	    }
 
 	  len = newbound - bptr;
-	  if (!(newbound = (char*)malloc(len+1)))
+	  if (!(newbound = (char*)my_malloc(len+1)))
 	    {
 	      trace(TRACE_ERROR, "db_add_mime_children(): out of memory\n");
+	      db_free_msg(&part);
 	      return -3;
 	    }
 
@@ -3452,7 +3456,8 @@ int db_add_mime_children(struct list *brothers, char *splitbound, int *level, in
 	  if (db_update_msgbuf(MSGBUF_FORCE_UPDATE) == -1)
 	    {
 	      trace(TRACE_ERROR, "db_add_mime_children(): error updating msgbuf\n");
-	      free(newbound);
+	      db_free_msg(&part);
+	      my_free(newbound);
 	      return -2;
 	    }
 
@@ -3473,7 +3478,8 @@ int db_add_mime_children(struct list *brothers, char *splitbound, int *level, in
 	  if (!msgbuf[msgidx])
 	    {
 	      trace(TRACE_ERROR, "db_add_mime_children(): unexpected end-of-data\n");
-	      free(newbound);
+	      my_free(newbound);
+	      db_free_msg(&part);
 	      return -1;
 	    }
 
@@ -3487,12 +3493,13 @@ int db_add_mime_children(struct list *brothers, char *splitbound, int *level, in
 	  if ((nlines = db_add_mime_children(&part.children, newbound, level, maxlevel)) < 0)
 	    {
 	      trace(TRACE_ERROR, "db_add_mime_children(): error adding mime children\n");
-	      free(newbound);
+	      my_free(newbound);
+	      db_free_msg(&part);
 	      return nlines;
 	    }
 	  (*level)--;
 	  
-	  free(newbound);
+	  my_free(newbound);
 	  newbound = NULL;
 	  msgidx += sblen+2; /* skip splitbound */
 
@@ -3521,7 +3528,10 @@ int db_add_mime_children(struct list *brothers, char *splitbound, int *level, in
 	  while (msgbuf[msgidx])
 	    {
 	      if (db_update_msgbuf(sblen+3) == -1)
-		return -2;
+		{
+		  db_free_msg(&part);
+		  return -2;
+		}
 
 	      if (msgbuf[msgidx] == '\n')
 		part.bodylines++;
@@ -3543,6 +3553,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound, int *level, in
 	  if (!msgbuf[msgidx])
 	    {
 	      trace(TRACE_ERROR,"db_add_mime_children(): unexpected end of data\n");
+	      db_free_msg(&part);
 	      return -1; /* ?? splitbound should follow */
 	    }
 
@@ -3558,6 +3569,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound, int *level, in
       if (list_nodeadd(brothers, &part, sizeof(part)) == NULL)
 	{
 	  trace(TRACE_ERROR,"db_add_mime_children(): could not add node\n");
+	  db_free_msg(&part);
 	  return -3;
 	}
 
@@ -3684,7 +3696,7 @@ int db_msgdump(mime_message_t *msg, unsigned long msguid, int level)
       return 0;
     }
 
-  spaces = (char*)malloc(3*level + 1);
+  spaces = (char*)my_malloc(3*level + 1);
   if (!spaces)
     return 0;
 
@@ -3746,7 +3758,7 @@ int db_msgdump(mime_message_t *msg, unsigned long msguid, int level)
     }
   trace(TRACE_DEBUG,"%s*** child list end\n",spaces);
 
-  free(spaces);
+  my_free(spaces);
   return size;
 }
 
@@ -4324,7 +4336,7 @@ int db_search_messages(char **search_keys, unsigned long **search_results, int *
       return 0;
     }
 
-  *search_results = (unsigned long*)malloc(sizeof(unsigned long) * *nsresults);
+  *search_results = (unsigned long*)my_malloc(sizeof(unsigned long) * *nsresults);
   if (!*search_results)
     {
       trace(TRACE_ERROR, "db_search_messages(): out of memory\n");

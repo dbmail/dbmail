@@ -1079,7 +1079,7 @@ char **give_chunks(const char *str, char delimiter)
   int cnt,i;
   char **array,*cpy,*tmp;
   
-  cpy = (char*)malloc(sizeof(char) * (strlen(str) + 1));
+  cpy = (char*)my_malloc(sizeof(char) * (strlen(str) + 1));
   if (!cpy  )
     {
       trace(TRACE_ERROR, "give_chunks(): out of memory\n");
@@ -1100,12 +1100,12 @@ char **give_chunks(const char *str, char delimiter)
 
   /* alloc mem */
   cnt++; /* for NULL termination */
-  array = (char**)malloc(sizeof(char*) * cnt);
+  array = (char**)my_malloc(sizeof(char*) * cnt);
 
   if (!array)
     {
       trace(TRACE_ERROR, "give_chunks(): out of memory\n");
-      free(cpy);
+      my_free(cpy);
       return NULL;
     }
 
@@ -1137,9 +1137,9 @@ void free_chunks(char **chunks)
     return;
 
   if (chunks[0])
-    free(chunks[0]); /* the entire array will be freed now */
+    my_free(chunks[0]); /* the entire array will be freed now */
 
-  free(chunks); /* free ptrs to strings */
+  my_free(chunks); /* free ptrs to strings */
 }
 
 
@@ -1262,12 +1262,12 @@ char **build_args_array(const char *s)
 	  if (inquote)
 	    {
 	      /* quotation end, treat quoted string as argument */
-	      if (!(the_args[nargs] = (char*)malloc(sizeof(char) * (i-quotestart)) ))
+	      if (!(the_args[nargs] = (char*)my_malloc(sizeof(char) * (i-quotestart)) ))
 		{
 		  /* out of mem */
 		  while (--nargs >= 0)
 		    {
-		      free(the_args[nargs]);
+		      my_free(the_args[nargs]);
 		      the_args[nargs] = NULL;
 		    }
 		      
@@ -1334,19 +1334,19 @@ char **build_args_array(const char *s)
 	      /* error in parenthesis structure */
 	      while (--nargs >= 0)
 		{
-		  free(the_args[nargs]);
+		  my_free(the_args[nargs]);
 		  the_args[nargs] = NULL;
 		}
 	      return NULL;
 	    }
 
 	  /* add this parenthesis to the arg list and continue */
-	  if (!(the_args[nargs] = (char*)malloc( sizeof(" ") )) )
+	  if (!(the_args[nargs] = (char*)my_malloc( sizeof(" ") )) )
 	    {
 	      /* out of mem */
 	      while (--nargs >= 0)
 		{
-		  free(the_args[nargs]);
+		  my_free(the_args[nargs]);
 		  the_args[nargs] = NULL;
 		}
 		      
@@ -1375,12 +1375,12 @@ char **build_args_array(const char *s)
 	    else break;
 	  }
       
-      if (!(the_args[nargs] = (char*)malloc(sizeof(char) * (i-argstart +1)) ))
+      if (!(the_args[nargs] = (char*)my_malloc(sizeof(char) * (i-argstart +1)) ))
 	{
 	  /* out of mem */
 	  while (--nargs >= 0)
 	    {
-	      free(the_args[nargs]);
+	      my_free(the_args[nargs]);
 	      the_args[nargs] = NULL;
 	    }
 		      
@@ -1401,7 +1401,7 @@ char **build_args_array(const char *s)
       /* error in parenthesis structure */
       while (--nargs >= 0)
 	{
-	  free(the_args[nargs]);
+	  my_free(the_args[nargs]);
 	  the_args[nargs] = NULL;
 	}
       return NULL;
@@ -2394,7 +2394,7 @@ int perform_imap_search(int *rset, int setlen, search_key_t *sk, mailbox_t *mb)
   if (!sk)
     return 0; /* no search */
 
-  newset = (int*)malloc(sizeof(int) * setlen);
+  newset = (int*)my_malloc(sizeof(int) * setlen);
   if (!newset)
     return -2;
 
@@ -2412,7 +2412,7 @@ int perform_imap_search(int *rset, int setlen, search_key_t *sk, mailbox_t *mb)
       result = db_search(rset, setlen, sk->search, mb);
       if (result != 0)
 	{
-	  free(newset);
+	  my_free(newset);
 	  return result;
 	}
       break;
@@ -2435,7 +2435,7 @@ int perform_imap_search(int *rset, int setlen, search_key_t *sk, mailbox_t *mb)
       result = db_search(rset, setlen, sk->search, mb);
       if (result != 0)
 	{
-	  free(newset);
+	  my_free(newset);
 	  return result;
 	}
       break;
@@ -2459,7 +2459,7 @@ int perform_imap_search(int *rset, int setlen, search_key_t *sk, mailbox_t *mb)
 	  result = perform_imap_search(newset, setlen, subsk, mb);
 	  if (result < 0 || result == 1)
 	    {
-	      free(newset);
+	      my_free(newset);
 	      return result;
 	    }
 
@@ -2474,11 +2474,11 @@ int perform_imap_search(int *rset, int setlen, search_key_t *sk, mailbox_t *mb)
       break;
 
     default:
-      free(newset);
+      my_free(newset);
       return -2; /* ??? */
     }
   
-  free(newset);
+  my_free(newset);
   return 0;
 }
 
@@ -2734,7 +2734,7 @@ void build_uid_set(int *set, int setlen, char *cset, mailbox_t *mb)
 
 void dumpsearch(search_key_t *sk, int level)
 {
-  char *spaces = (char*)malloc(level*3 +1);
+  char *spaces = (char*)my_malloc(level*3 +1);
   struct element *el;
   search_key_t *subsk;
 
@@ -2747,7 +2747,7 @@ void dumpsearch(search_key_t *sk, int level)
   if (!sk)
     {
       trace(TRACE_DEBUG,"%s(null)\n",spaces);
-      free(spaces);
+      my_free(spaces);
       return;
     }
 
@@ -2795,7 +2795,7 @@ void dumpsearch(search_key_t *sk, int level)
       trace(TRACE_DEBUG,"%s[type %d] \"%s\"\n",spaces,sk->type,sk->search);
     }
 
-  free(spaces);
+  my_free(spaces);
   return;
 }
 

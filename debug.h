@@ -25,9 +25,16 @@ extern int TRACE_LEVEL;     /* 5: maximum debugging */
 #define TRACE_DEBUG 5
 
 #define memtst(tstbool) func_memtst (__FILE__,__LINE__,tstbool)
+#define my_malloc(s) __debug_malloc(s, __FILE__, __LINE__)
+#define my_free(p) __debug_free(p, __FILE__, __LINE__)
 
-void func_memtst (char filename[255],int line,int tst);
+void func_memtst (const char *filename,int line,int tst);
 void trace (int level, const char *formatstring, ...);
 void configure_debug(int level, int trace_syslog, int trace_verbose);
+
+void* __debug_malloc(unsigned long size, const char *fname, int linenr);
+void __debug_free(void *ptr, const char *fname, int linenr);
+
+void __debug_dumpallocs();
 
 #endif
