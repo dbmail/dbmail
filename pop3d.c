@@ -126,7 +126,7 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 			       adr_clnt.sin_family);
 
       if (!clientinfo)
-	trace(TRACE_ERROR,"handle_client(): error from gethostbyaddr(): %s",
+	trace(TRACE_MESSAGE,"handle_client(): error from gethostbyaddr(): %s",
 	      hstrerror(h_errno));
       else
 	{
