@@ -1,3 +1,9 @@
+2004-08-02  Ilja Booij  <ilja@ic-s.nl>
+
+	* config.c (ReadConfig): changed malloc and free to  my_malloc and 
+	my_free. Added code to prevent memory leakage in event of errors.
+	(config_free): changed free() to my_free()
+
 2004-07-27  Aaron Stone  <aaron@serendipity.cx>
 
 	* main.c: added support for address+mailbox@host syntax, needed for 

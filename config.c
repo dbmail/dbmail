@@ -85,14 +85,17 @@ int ReadConfig(const char *serviceName, const char *cfilename)
 
 	trace(TRACE_DEBUG, "ReadConfig(): starting procedure");
 
-	if (!(service_config = malloc(sizeof(struct service_config_list)))) {
+	if (!(service_config = 
+	      my_malloc(sizeof(struct service_config_list)))) {
 		trace(CONFIG_ERROR_LEVEL, "%s,%s: error allocating memory "
 		      "for config list", __FILE__, __func__);
 		return -1;
 	}
-	if (!(service_config->config_items = malloc(sizeof(struct list)))) {
+	if (!(service_config->config_items = 
+	      my_malloc(sizeof(struct list)))) {
 		trace(TRACE_ERROR, "%s,%s: unable to allocate memory "
 		      "for config items", __FILE__, __func__);
+		my_free(service_config);
 		return -1;
 	}
 	service_config->service_name = strdup(serviceName);
@@ -105,6 +108,9 @@ int ReadConfig(const char *serviceName, const char *cfilename)
 		trace(CONFIG_ERROR_LEVEL,
 		      "ReadConfig(): could not open config file [%s]",
 		      cfilename);
+		list_freelist(&(service_config->config_items->start));
+		my_free(service_config->config_items);
+		my_free(service_config);
 		return -1;
 	}
 
@@ -174,6 +180,11 @@ int ReadConfig(const char *serviceName, const char *cfilename)
 				     sizeof(item))) {
 					trace(CONFIG_ERROR_LEVEL,
 					      "ReadConfig(): could not add node");
+					list_freelist(
+						&(service_config->
+						  config_items->start));
+					my_free(service_config->config_items);
+					my_free(service_config);
 					return -1;
 				}
 
@@ -200,11 +211,14 @@ int ReadConfig(const char *serviceName, const char *cfilename)
 		trace(CONFIG_ERROR_LEVEL,
 		      "%s,%s: could not add config list",
 		      __FILE__, __func__);
+		list_freelist(&(service_config->config_items->start));
+		my_free(service_config->config_items);
+		my_free(service_config);
 		return -1;
 	}
 	/* list_nodeadd makes a shallow copy of the service_config_list 
 	   struct. So, we need to clean that up.*/
-	free(service_config);
+	my_free(service_config);
 	
 	return 0;
 }
@@ -221,8 +235,8 @@ void config_free()
 		scl = (struct service_config_list *) el->data;
 		next_el = el->nextnode;
 		list_freelist(&(scl->config_items->start));
-		free(scl->config_items);
-		free(scl->service_name);
+		my_free(scl->config_items);
+		my_free(scl->service_name);
 		list_nodedel(&config_list, el->data);
 		el = next_el;
 	}
