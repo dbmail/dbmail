@@ -1,5 +1,8 @@
 2004-03-16  Ilja Booij  <ilja@ic-s.nl>
 
+	* dbmsgbuf.c (db_dump_range): now only adds '\r' to every line
+	if no preceeding '\r' has been found before the '\n'.
+
 	* mime.c: removed mime_list() function because it was unused.
 	(mime_readheader): now deals correctly with messages that
 	have '\r\n' instead of '\n' as end of line markers.

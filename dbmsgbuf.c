@@ -386,8 +386,11 @@ long db_dump_range(MEM *outmem, db_pos_t start,
 	       }
 
 	       /* FIXME: field may be NULL from db_get_result! */
-	       if (field[i] == '\n')
+	       if (field[i] == '\n' &&
+		   !(i > 0 && field[i-1] == '\r'))
 	       {
+		       trace(TRACE_DEBUG,"%s,%s: adding '\r' to buf",
+			     __FILE__, __FUNCTION__);
 		    buf[bufcnt++] = '\r';
 		    buf[bufcnt++] = '\n';
 	       }
@@ -434,8 +437,12 @@ long db_dump_range(MEM *outmem, db_pos_t start,
 	       }
 
 	       /* FIXME: field may be NULL from db_get_result! */
-	       if (field[startpos+j] == '\n')
+	       if (field[startpos+j] == '\n' &&
+		   !(j > 0 && field[startpos + j - 1] == '\r'))
 	       {
+		       		       trace(TRACE_DEBUG,"%s,%s: adding '\r' to buf",
+			     __FILE__, __FUNCTION__);
+
 		    buf[bufcnt++] = '\r';
 		    buf[bufcnt++] = '\n';
 	       }
