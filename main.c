@@ -166,7 +166,7 @@ int main(int argc, char *argv[])
 	const char *body;
 	u64_t body_size;
 	u64_t body_rfcsize;
-	char *header;
+	char *header = NULL;
 	
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 

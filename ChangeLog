@@ -1,3 +1,9 @@
+2004-06-13 Aaron Stone <aaron@serendipity.cx>
+
+	* main.c (main): initialize the variable 'header' to NULL
+	so that it can be conditionally freed without a segfault.
+	Thanks to Blake Mitchell for identifying this bug.
+
 2004-06-11  Ilja Booij  <ilja@ic-s.nl>
 
 	* config.c (config_free): fixed memory leaks by really freeing all
