@@ -12,6 +12,8 @@
 /* default timeout for server daemon */
 #define DEFAULT_SERVER_TIMEOUT 100
 
+#define REVISION $Revision$
+
 #ifndef SHUT_RDWR
 #define SHUR_RDWR 3
 #endif
