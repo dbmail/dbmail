@@ -1,5 +1,12 @@
 2004-06-01  Ilja Booij  <ilja@ic-s.nl>
 
+	* INSTALL: reflowed text to 78 columns and consolidated two
+	paragraphs about LMTP vs. SMTP into one.
+	* auth/authldap.c (__auth_get_config): updated GetConfigValue
+	helper macro and ReadConfig calls to new function signature. 
+
+2004-06-01  Ilja Booij  <ilja@ic-s.nl>
+
 	* db.c (db_findmailbox_owner): now searches for a literal
 	'INBOX' if we're searching for the INBOX. No longer uses 
 	lower() to get the lowercase version.
