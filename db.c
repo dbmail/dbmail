@@ -356,12 +356,17 @@ int db_calculate_quotum_all()
 		return 0;
 	}
 
-	user_idnrs = (u64_t *) my_malloc(n * sizeof(u64_t));
-	curmail_sizes = (u64_t *) my_malloc(n * sizeof(u64_t));
-	if (user_idnrs == NULL || curmail_sizes == NULL) {
+	if (!(user_idnrs = (u64_t *) my_malloc(n * sizeof(u64_t)))) {
 		trace(TRACE_ERROR,
-		      "%s,%s: malloc failed. probably out of memory..",
+		      "%s,%s: malloc failed. Probably out of memory..",
 		      __FILE__, __func__);
+		return -2;
+	}
+	if (!(curmail_sizes = (u64_t *) my_malloc(n * sizeof(u64_t)))) {
+		trace(TRACE_ERROR,
+		      "%s,%s: malloc failed: Probably out of memort..",
+		      __FILE__, __func__);
+		my_free(user_idnrs);
 		return -2;
 	}
 	memset(user_idnrs, 0, n * sizeof(u64_t));

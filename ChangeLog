@@ -1,5 +1,8 @@
 2004-07-09  Ilja Booij  <ilja@ic-s.nl>
 
+	* db.c (db_calculate_quotum_all): added my_free statements for
+	freeing user_idnrs when returning with error code.
+
 	* pop3.c (pop3_handle_connection): fixed some possible mem leaks 
 	after reports from Hans Kristian Rosbach.
 
