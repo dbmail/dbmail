@@ -329,7 +329,7 @@ int process_mboxfile(char *file)
 		  
 		  add_line(line);
 		  close_blk(READ_BLOCK_SIZE);
-		  size += blksize;
+		  size += READ_BLOCK_SIZE;
 		  blk_opened = 0;
 
 		  line[blksize - READ_BLOCK_SIZE] = saved;
