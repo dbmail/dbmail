@@ -42,15 +42,130 @@
 #include "db.h"
 #include "auth.h"
 #include "misc.h"
+#include "dsn.h"
+#include "dbmail-message.h"
+#include "mime.h"
+#include "pipe.h"
 
 #include "check_dbmail.h"
 
+extern char * raw_message;
 extern char * configFile;
 extern db_param_t _db_params;
 
 
 /* we need this one because we can't directly link imapd.o */
 int imap_before_smtp = 0;
+	
+void init_testuser1(void) 
+{
+        u64_t user_idnr;
+	if (! (auth_user_exists("testuser1",&user_idnr)))
+		auth_adduser("testuser1","test", "md5", 101, 1024000, &user_idnr);
+}
+	
+void setup(void)
+{
+	configure_debug(5,1,1);
+	config_read(configFile);
+	GetDBParams(&_db_params);
+	db_connect();
+	auth_connect();
+	init_testuser1();
+}
+
+void teardown(void)
+{
+	db_disconnect();
+}
+
+
+/****************************************************************************************
+ *
+ *
+ * TestCases for pipe.h
+ *
+ *
+ ***************************************************************************************/
+
+
+/**
+ * \brief inserts a message in the database. The header of the message is 
+ * supposed to be given. The rest of the message will be read from instream
+ * \return 0
+ */
+//int insert_messages(struct DbmailMessage *message,
+//		struct list *headerfields, 
+//		struct list *dsnusers,
+//		struct list *returnpath);
+
+START_TEST(test_insert_messages)
+{
+	int result;
+	struct DbmailMessage *message;
+	struct list dsnusers, headerfields, returnpath;
+	GString *tmp;
+	deliver_to_user_t dsnuser;
+	
+	message = dbmail_message_new();
+	tmp = g_string_new(raw_message);
+	message = dbmail_message_init_with_string(message,tmp);
+
+	list_init(&dsnusers);
+	list_init(&headerfields);
+	list_init(&returnpath);
+	
+	dsnuser_init(&dsnuser);
+	dsnuser.address = "testuser1";
+	list_nodeadd(&dsnusers, &dsnuser, sizeof(deliver_to_user_t));
+	
+	mime_fetch_headers(dbmail_message_hdrs_to_string(message), &headerfields);
+
+	result = insert_messages(message, &headerfields, &dsnusers, &returnpath);
+
+	fail_unless(result==0,"insert_messages failed");
+
+	g_string_free(tmp,TRUE);
+	dbmail_message_free(message);
+}
+END_TEST
+/**
+ * \brief discards all input coming from instream
+ * \param instream FILE stream holding input from a client
+ * \return 
+ *      - -1 on error
+ *      -  0 on success
+ */
+//int discard_client_input(FILE * instream);
+
+/**
+ * store a messagebody (without headers in one or more blocks in the database
+ * \param message the message
+ * \param message_size size of message
+ * \param msgidnr idnr of message
+ * \return 
+ *     - -1 on error
+ *     -  1 on success
+ */
+//int store_message_in_blocks(const char* message,
+//				   u64_t message_size,
+//				   u64_t msgidnr);
+
+
+
+/****************************************************************************************
+ *
+ *
+ * TestCases for auth.h
+ *
+ *
+ ***************************************************************************************/
+
+/*
+ *
+ * some utilities
+ *
+ */
 
 static u64_t get_first_user_idnr(void);
 
@@ -70,28 +185,8 @@ u64_t get_first_user_idnr(void)
  * the test fixtures
  *
  */
-void init_testuser1(void) 
-{
-        u64_t user_idnr;
-	if (! (auth_user_exists("testuser1",&user_idnr)))
-		auth_adduser("testuser1","test", "md5", 101, 1024000, &user_idnr);
-}
-				
-	
-void setup(void)
-{
-	configure_debug(4,0,1);
-	config_read(configFile);
-	GetDBParams(&_db_params);
-	db_connect();
-	auth_connect();
-	init_testuser1();
-}
+			
 
-void teardown(void)
-{
-	db_disconnect();
-}
 
 /**
  * \brief connect to the authentication database. In case of an SQL connection,
@@ -629,6 +724,12 @@ Suite *dbmail_deliver_suite(void)
 	tcase_add_test(tc_auth, test_dm_ldap_get_freeid);
 #endif
 
+	TCase *tc_pipe = tcase_create("Pipe");
+	suite_add_tcase(s, tc_pipe);
+
+	tcase_add_checked_fixture(tc_pipe, setup, teardown);
+	tcase_add_test(tc_pipe, test_insert_messages);
+	
 	return s;
 }
 

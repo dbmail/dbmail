@@ -284,6 +284,12 @@ gchar * dbmail_message_body_to_string(struct DbmailMessage *self)
 	g_string_free(t,FALSE);
 	return s;
 }
+
+void dbmail_message_set_header(struct DbmailMessage *self, const char *header, const char *value)
+{
+	g_mime_message_set_header(GMIME_MESSAGE(self->content), header, value);
+}
+
 /* 
  * we don't cache these values 
  * to allow changes in message content
@@ -472,6 +478,7 @@ int _message_insert(struct DbmailMessage *self,
 {
 	u64_t mailboxid;
 	u64_t physmessage_id;
+	char *physid = g_new0(char, 16);
 
 	assert(unique_id);
 
@@ -491,6 +498,11 @@ int _message_insert(struct DbmailMessage *self,
 	if (db_insert_physmessage(&physmessage_id) == -1) 
 		return -1;
 
+	/* insert the physmessage-id into the message-headers */
+	g_snprintf(physid, 16, "%llu", physmessage_id);
+	dbmail_message_set_header(self, "X-DBMail-PhysMessage-ID", physid);
+	g_free(physid);
+	
 	/* now insert an entry into the messages table */
 	snprintf(query, DEF_QUERYSIZE, "INSERT INTO "
 		 "%smessages(mailbox_idnr, physmessage_id, unique_id,"

@@ -196,47 +196,39 @@ dsn_class_t sort_and_deliver(u64_t msgidnr,
 				}
 			case SA_FILEINTO:
 				{
-					char *fileinto_mailbox =
-					    (char *) ((sort_action_t *)
-						      tmp->data)->
-					    destination;
+					char *fileinto_mailbox = (char *) ((sort_action_t *) tmp->data)-> destination;
 
 					/* If the action doesn't come with a mailbox, use the default. */
 
 					if (fileinto_mailbox == NULL) {
 						/* Cast the const away because fileinto_mailbox may need to be freed. */
-						fileinto_mailbox =
-						    (char *) mailbox;
-						trace(TRACE_MESSAGE,
-						      "sort_and_deliver(): mailbox not specified, using [%s]",
-						      fileinto_mailbox);
+						fileinto_mailbox = (char *) mailbox;
+						trace(TRACE_MESSAGE, "%s,%s: mailbox not specified, using [%s]",
+								__FILE__, __func__, 
+								fileinto_mailbox);
 					}
 
 
 					/* Did we fail to create the mailbox? */
-					if (db_find_create_mailbox
-					    (fileinto_mailbox, useridnr,
-					     &mboxidnr) != 0) {
+					if (db_find_create_mailbox (fileinto_mailbox, useridnr, &mboxidnr) != 0) {
 						/* FIXME: Serious failure situation! This needs to be
 						 * passed up the chain to notify the user, sender, etc.
 						 * Perhaps we should *force* the implicit-keep to occur,
 						 * or give another try at using INBOX. */
-						trace(TRACE_ERROR,
-						      "sort_and_deliver(): mailbox [%s] not found nor created, message may not have been delivered",
-						      fileinto_mailbox);
+						trace(TRACE_ERROR, "%s,%s: mailbox [%s] not found nor created, "
+								"message may not have been delivered", 
+								__FILE__, __func__, 
+								fileinto_mailbox);
 					} else {
-						switch (db_copymsg
-							(msgidnr, mboxidnr,
-							 useridnr,
-							 &newmsgidnr)) {
+						switch (db_copymsg(msgidnr, mboxidnr, useridnr, &newmsgidnr)) {
 						case -2:
 							/* Couldn't deliver because the quota has been reached */
 							break;
 						case -1:
 							/* Couldn't deliver because something something went wrong */
-							trace(TRACE_ERROR,
-							      "sort_and_deliver(): error copying message to user [%llu]",
-							      useridnr);
+							trace(TRACE_ERROR, "%s,%s: error copying message to user [%llu]", 
+									__FILE__, __func__, 
+									useridnr);
 							/* Don't worry about error conditions.
 							 * It's annoying if the message isn't delivered,
 							 * but as long as *something* happens it's OK.
@@ -246,21 +238,15 @@ dsn_class_t sort_and_deliver(u64_t msgidnr,
 							 * */
 							break;
 						default:
-							trace
-							    (TRACE_MESSAGE,
-							     "sort_and_deliver(): message id=%llu, size=%llu is inserted",
-							     newmsgidnr,
-							     totalmsgsize);
+							trace(TRACE_MESSAGE, "%s,%s: message id=%llu, size=%llu is inserted", 
+									__FILE__, __func__, 
+									newmsgidnr, totalmsgsize);
 
 							/* Create a unique ID for this message;
 							 * Each message for each user must have a unique ID! 
 							 * */
-							create_unique_id
-							    (unique_id,
-							     newmsgidnr);
-							db_message_set_unique_id
-							    (newmsgidnr,
-							     unique_id);
+							create_unique_id(unique_id, newmsgidnr);
+							db_message_set_unique_id(newmsgidnr, unique_id);
 
 							actiontaken = 1;
 							break;
@@ -339,8 +325,7 @@ dsn_class_t sort_and_deliver(u64_t msgidnr,
 	 * mailbox, otherwise use INBOX. */
 	if (actiontaken == 0) {
 		/* Did we fail to create the mailbox? */
-		if (db_find_create_mailbox(mailbox, useridnr, &mboxidnr) !=
-		    0) {
+		if (db_find_create_mailbox(mailbox, useridnr, &mboxidnr) != 0) {
 			/* Serious failure situation! */
 			trace(TRACE_ERROR,
 			      "sort_and_deliver(): INBOX not found");

@@ -2258,6 +2258,7 @@ int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 	}
 
 	if (db_num_rows() < 1) {
+		trace(TRACE_DEBUG,"%s,%s: no mailbox found", __FILE__, __func__);
 		db_free_result();
 		return 0;
 	} else {

@@ -4,6 +4,9 @@
 	* server.c: stylistic cleanup
 	* user.c: fix handling of lists of aliases so dbmail-user works
 	almost as documented.
+	* proctitleutils.c: removed PROC_TITLE deadwood.
+	* dbmail-message.c: add X-DBMail-PhysMessage-ID message header during
+	insertion.
 
 2005-03-01  Paul Stevens <paul@nfg.nl>
 

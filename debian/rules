@@ -7,7 +7,7 @@ export DH_VERBOSE=1
 
 # This is the debhelper compatibility version to use.
 export DH_COMPAT=3
-#export DEB_BUILD_OPTIONS=debug
+export DEB_BUILD_OPTIONS=debug
 
 #export WITH_GC="--with-gc"
 export WITH_CHECK=--with-check
