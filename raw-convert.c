@@ -64,6 +64,7 @@ char *getusername (char *path);
 int traverse (char *path);
 int process_mboxfile(char *file);
 int init_files();
+int close_files();
 int add_user(const char *uname);
 int add_msg(u64_t size, u64_t rfcsize);
 int start_blk();
@@ -76,7 +77,7 @@ int main (int argc, char* argv[])
 {
   time_t start;
   time_t stop;
-  int result;
+  int result,i;
 
   if (argc < 2)
     {
@@ -119,11 +120,26 @@ int main (int argc, char* argv[])
   time (&start); /* mark the starting time */
 
   /* hard-coded POSTGRESQL queries to insert data */
-  db_query("COPY users FROM " USER_FILENAME ";");
-  db_query("COPY mailboxes FROM " MBOX_FILENAME ";");
-  db_query("COPY messages FROM " MSGS_FILENAME ";");
-  db_query("COPY messageblks FROM " MSGBLKS_FILENAME ";");
+/*  printf("Copying users..."); fflush(stdout);
+  db_query("COPY users FROM '" USER_FILENAME "'");
+  printf("done\n");
 
+  printf("Copying mailboxes..."); fflush(stdout);
+  db_query("COPY mailboxes FROM '" MBOX_FILENAME "'");
+  printf("done\n");
+
+  printf("Copying messages..."); fflush(stdout);
+  db_query("COPY messages FROM '" MSGS_FILENAME "'");
+  printf("done\n");
+
+  for (i=0; i<=currblkfile; i++)
+    {
+      printf("Copying messageblks[%d]...",i); fflush(stdout);
+      sprintf(q, "COPY messageblks FROM '%s%02d'", MSGBLKS_FILENAME, i);
+      
+      printf("done\n");
+    }
+*/
   time (&stop); /* mark the ending time */
 
   printf ("Table loading started @  %s", ctime(&start));
@@ -355,6 +371,17 @@ int init_files()
   msgidnr = 0; 
   msgblkidnr = 0;
   
+  return 0;
+}
+
+
+int close_files()
+{
+  fclose(userfile);
+  fclose(mailboxfile);
+  fclose(msgsfile);
+  fclose(msgblksfile[currblkfile]);
+
   return 0;
 }
 
