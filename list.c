@@ -160,15 +160,15 @@ struct element *list_nodedel(struct list *tlist,void *data)
 	  if (item==NULL)
 	    {
 	      tlist->start=temp->nextnode;
-	      free (temp->data);
-	      free ((struct element *)temp);
+	      my_free(temp->data);
+	      my_free((struct element *)temp);
 	      break;
 	    }
 	  else 
 	    {
 	      item->nextnode=temp->nextnode;
 	      my_free(temp->data); /* freeing memory */
-	      free ((struct element *)temp);
+	      my_free((struct element *)temp);
 	      break;
 	    }
 	  /* updating node count */

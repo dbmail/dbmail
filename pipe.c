@@ -6,6 +6,7 @@
 
 #include "config.h"
 #include "pipe.h"
+#include "debug.h"
 
 #define HEADER_BLOCK_SIZE 1024
 #define QUERY_SIZE 255
@@ -30,8 +31,8 @@ char *read_header(unsigned long *blksize)
   int usedmem=0; 
   int end_of_header=0;
 	
-  memtst ((strblock = (char *)malloc(READ_BLOCK_SIZE))==NULL);
-  memtst ((header = (char *)malloc(HEADER_BLOCK_SIZE))==NULL);
+  memtst ((strblock = (char *)my_malloc(READ_BLOCK_SIZE))==NULL);
+  memtst ((header = (char *)my_malloc(HEADER_BLOCK_SIZE))==NULL);
 
 	/* resetting */
   memset (strblock, '\0', READ_BLOCK_SIZE);
@@ -74,12 +75,12 @@ char *read_header(unsigned long *blksize)
   trace (TRACE_INFO, "read_header(): readheader done");
   trace (TRACE_DEBUG, "read_header(): found header [%s]",header);
   trace (TRACE_DEBUG, "read_header(): header size [%d]",strlen(header));	
-  free(strblock);
+  my_free(strblock);
 	
   if (usedmem==0)
     {
-      free(strblock);
-      free(header);
+      my_free(strblock);
+      my_free(header);
       trace (TRACE_STOP, "read_header(): not a valid mailheader found\n");
       *blksize=0;
     }
@@ -125,9 +126,9 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
   /* all email users to which this message is sent much receive this */
 
 	
-  memtst((insertquery = (char *)malloc(QUERY_SIZE))==NULL);
-  memtst((updatequery = (char *)malloc(QUERY_SIZE))==NULL);
-  memtst((unique_id = (char *)malloc(UID_SIZE))==NULL);
+  memtst((insertquery = (char *)my_malloc(QUERY_SIZE))==NULL);
+  memtst((updatequery = (char *)my_malloc(QUERY_SIZE))==NULL);
+  memtst((unique_id = (char *)my_malloc(UID_SIZE))==NULL);
 
   /* initiating list with userid's */
   list_init(&userids);
@@ -257,7 +258,7 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 
   trace (TRACE_DEBUG,"insert_messages(): allocating [%d] bytes of memory for readblock",READ_BLOCK_SIZE);
 
-  memtst ((strblock = (char *)malloc(READ_BLOCK_SIZE))==NULL);
+  memtst ((strblock = (char *)my_malloc(READ_BLOCK_SIZE))==NULL);
 	
 	/* first we need to check if we need to deliver into the database */
   if (list_totalnodes(&messageids)>0)
@@ -318,14 +319,14 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 	      trace (TRACE_DEBUG,"insert_messages(): message NOT inserted. Maxmail exceeded");
 	      bounce_id = db_get_userid(&bounce_userid);
 	      bounce (header, bounce_id, BOUNCE_STORAGE_LIMIT_REACHED);
-	      free (bounce_id);
+	      my_free (bounce_id);
 	      break;
 
 	    case -1:
 	      trace (TRACE_ERROR,"insert_messages(): message NOT inserted. dbase error");
 	      bounce_id = db_get_userid(&bounce_userid);
 	      bounce (header, bounce_id, BOUNCE_STORAGE_LIMIT_REACHED);
-	      free (bounce_id);
+	      my_free (bounce_id);
 	      break;
 
 	    case -2:
@@ -333,7 +334,7 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 		     "Maxmail exceeded AND dbase error");
 	      bounce_id = db_get_userid(&bounce_userid);
 	      bounce (header, bounce_id, BOUNCE_STORAGE_LIMIT_REACHED);
-	      free (bounce_id);
+	      my_free (bounce_id);
 	      break;
 
 	    case 0:
@@ -387,23 +388,23 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
   if (tmpbuffer!=NULL)
     {
       trace (TRACE_DEBUG,"insert_messages(): tmpbuffer freed");
-      free(tmpbuffer);
+      my_free(tmpbuffer);
       tmpbuffer = NULL;
     }
   trace (TRACE_DEBUG,"insert_messages(): header freed");
-  free(header);
+  my_free(header);
 
   trace (TRACE_DEBUG,"insert_messages(): uniqueid freed");
-  free(unique_id);
+  my_free(unique_id);
 
   trace (TRACE_DEBUG,"insert_messages(): strblock freed");
-  free (strblock);
+  my_free (strblock);
 
   trace (TRACE_DEBUG,"insert_messages(): insertquery freed");
-  free(insertquery);
+  my_free(insertquery);
 
   trace (TRACE_DEBUG,"insert_messages(): updatequery freed");
-  free(updatequery);
+  my_free(updatequery);
 
   trace (TRACE_DEBUG,"insert_messages(): End of function");
   

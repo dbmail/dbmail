@@ -9,6 +9,7 @@
 #include "list.h"
 #include "mime.h"
 #include "dbmysql.h"
+#include "debug.h"
 
  extern char *header; 
  extern unsigned long headersize; 
@@ -131,7 +132,7 @@ int bounce (char *header, char *destination_address, int type)
 	break;
       }
     }
-  free (dbmail_from_address);
-  free (sendmail);
+  my_free (dbmail_from_address);
+  my_free (sendmail);
   return 0;
 }

@@ -5,6 +5,7 @@
 
 #include "pop3.h"
 #include "dbmysql.h"
+#include "debug.h"
 
 #define INCOMING_BUFFER_SIZE 512
 #define IP_ADDR_MAXSIZE 16
@@ -120,8 +121,6 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
   
   theiraddress=inet_ntoa(adr_clnt.sin_addr);
 
-  /* memtst((clientinfo=(struct hostent *)malloc(sizeof(struct hostent)))==NULL); */
-
   if (resolve_client==1)
     {
       clientinfo=gethostbyaddr((char *)&adr_clnt.sin_addr, 
@@ -179,10 +178,10 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
   /* first initiate AUTHORIZATION state */
   state = AUTHORIZATION;
 		
-  memtst((buffer=(char *)malloc(INCOMING_BUFFER_SIZE))==NULL);
+  memtst((buffer=(char *)my_malloc(INCOMING_BUFFER_SIZE))==NULL);
 
 	/* create an unique timestamp + processid for APOP authentication */
-  memtst((apop_stamp=(char *)malloc(APOP_STAMP_SIZE))==NULL);
+  memtst((apop_stamp=(char *)my_malloc(APOP_STAMP_SIZE))==NULL);
 				
   timestamp=time(NULL);
 				
@@ -221,9 +220,9 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
   state = UPDATE;
 
   /* memory cleanup */
-  free(buffer);
+  my_free(buffer);
   buffer = NULL;
-  free(apop_stamp);
+  my_free(apop_stamp);
   apop_stamp = NULL;
 
   if (done == -3)
@@ -264,14 +263,14 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
   if (username!=NULL)
     {
       /* username cleanup */
-      free(username);
+      my_free(username);
       username=NULL;
     }
 
   if (password!=NULL)
     {
       /* password cleanup */
-      free(password);
+      my_free(password);
       password=NULL;
     }
 
@@ -325,14 +324,14 @@ int main (int argc, char *argv[])
 				resolve_client = 1;
 		else
 				resolve_client = 0;
-		free(resolve_setting);
+		my_free(resolve_setting);
 		resolve_setting = NULL;
   }	
   
   if (timeout_setting) 
   {
 	  server_timeout = atoi(timeout_setting);
-	  free (timeout_setting);
+	  my_free (timeout_setting);
 	  if (server_timeout<10)
 		  trace (TRACE_STOP,"main(): POP3D_CHILD_TIMEOUT setting is insane [%d]",
 				  server_timeout);
@@ -344,21 +343,21 @@ int main (int argc, char *argv[])
   if (trace_level)
     {
       new_level = atoi(trace_level);
-      free(trace_level);
+      my_free(trace_level);
       trace_level = NULL;
     }
 
   if (trace_syslog)
     {
       new_trace_syslog = atoi(trace_syslog);
-      free(trace_syslog);
+      my_free(trace_syslog);
       trace_syslog = NULL;
     }
 
   if (trace_verbose)
     {
       new_trace_verbose = atoi(trace_verbose);
-      free(trace_verbose);
+      my_free(trace_verbose);
       trace_verbose = NULL;
     }
 
@@ -449,8 +448,8 @@ int main (int argc, char *argv[])
     if (drop_priviledges (newuser, newgroup) != 0)
       trace (TRACE_FATAL,"main(): could not set uid %s, gid %s",newuser,newgroup);
     
-    free(newuser);
-    free(newgroup);
+    my_free(newuser);
+    my_free(newgroup);
     newuser = NULL;
     newgroup = NULL;
   }
@@ -476,8 +475,8 @@ int main (int argc, char *argv[])
   /* server loop */
   trace (TRACE_MESSAGE,"main(): DBmail pop3 server ready (bound to [%s:%s])",ipaddr,port);
 	
-  free (ipaddr);
-  free (port);
+  my_free (ipaddr);
+  my_free (port);
   
 
   /* remember this pid, we're the father process */

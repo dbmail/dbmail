@@ -32,7 +32,7 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
       return -1;
     }
   
-  memtst ((strblock = (char *)malloc(READ_BLOCK_SIZE))==NULL);
+  memtst ((strblock = (char *)my_malloc(READ_BLOCK_SIZE))==NULL);
 	
   target = list_getstart (targets);
 
@@ -43,12 +43,12 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
       if (((char *)target->data)[0]=='|')
 	{
 	  /* external pipe command */
-	  sendmail_command = (char *)malloc(strlen((char *)(target->data)));
+	  sendmail_command = (char *)my_malloc(strlen((char *)(target->data)));
 	  if (!sendmail_command)
 	    {
 	      trace(TRACE_ERROR,"pipe_forward(): out of memory");
 	      list_freelist(&descriptors.start);
-	      free(strblock);
+	      my_free(strblock);
 	      return -1;
 	    }
 	  strcpy (sendmail_command, (char *)(target->data)+1); /* skip the pipe (|) sign */
@@ -56,13 +56,13 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
       else
 	{
 	  /* pipe to sendmail */
-	  sendmail_command = (char *)malloc(strlen((char *)(target->data))+
+	  sendmail_command = (char *)my_malloc(strlen((char *)(target->data))+
 					    strlen(FW_SENDMAIL)+2); /* +2 for extra space and \0 */
 	  if (!sendmail_command)
 	    {
 	      trace(TRACE_ERROR,"pipe_forward(): out of memory");
 	      list_freelist(&descriptors.start);
-	      free(strblock);
+	      my_free(strblock);
 	      return -1;
 	    }
 
@@ -75,7 +75,7 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
 	     "%s",sendmail_command);
 	
       sendmail_pipe = popen(sendmail_command,"w"); /* opening pipe */
-      free (sendmail_command);
+      my_free (sendmail_command);
       sendmail_command = NULL;
 
       if (sendmail_pipe != NULL)
@@ -91,7 +91,7 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
 		{
 		  trace(TRACE_ERROR,"pipe_forward(): could not write header to pipe: header is NULL");
 		  list_freelist(&descriptors.start);
-		  free(strblock);
+		  my_free(strblock);
 		  return -1;
 		}
 
@@ -243,11 +243,11 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
     {
       trace (TRACE_ERROR,"pipe_forward(): No descriptors in list"
 	     " nothing to send");
-      free(strblock);
+      my_free(strblock);
       return -1;
     }
 
-  free (strblock);
+  my_free (strblock);
   return 0;			
 }
 

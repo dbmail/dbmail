@@ -8,6 +8,7 @@
 
 #include "dbmd5.h"
 #include "md5.h"
+#include "debug.h"
 
 unsigned char *makemd5(char *buf)
 {
@@ -16,7 +17,7 @@ unsigned char *makemd5(char *buf)
 	unsigned char *md5hash;
 	int i;
 	
-	md5hash=(unsigned char *)malloc(33);
+	md5hash=(unsigned char *)my_malloc(33);
 	
 	gdm_md5_init (&mycontext);
 	gdm_md5_update (&mycontext,buf,strlen(buf));

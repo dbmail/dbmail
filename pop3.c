@@ -6,6 +6,7 @@
 #include "config.h"
 #include "pop3.h"
 #include "dbmysql.h"
+#include "debug.h"
 
 /* max_errors defines the maximum number of allowed failures */
 #define MAX_ERRORS 3
@@ -124,14 +125,14 @@ int pop3 (void *stream, char *buffer)
 
 	if (username!=NULL)
 	  {
-	    free(username);
+	    my_free(username);
 	    username=NULL;
 	  }
 
 	if (username==NULL)
 	  {
 	    /* create memspace for username */
-	    memtst((username=(char *)malloc(strlen(value)+1))==NULL);
+	    memtst((username=(char *)my_malloc(strlen(value)+1))==NULL);
 	    strncpy (username,value,strlen(value)+1);
 	  }
 
@@ -146,14 +147,14 @@ int pop3 (void *stream, char *buffer)
 
 	if (password!=NULL)
 	  {
-	    free(password);
+	    my_free(password);
 	    password=NULL;
 	  }
 
 	if (password==NULL)
 	  {
 	    /* create memspace for password */
-	    memtst((password=(char *)malloc(strlen(value)+1))==NULL);
+	    memtst((password=(char *)my_malloc(strlen(value)+1))==NULL);
 	    strncpy (password,value,strlen(value)+1);
 	  }
 				
@@ -166,11 +167,11 @@ int pop3 (void *stream, char *buffer)
 	    {
 			trace (TRACE_ERROR,"pop3(): user [%s] tried to login with wrong password",
 					username); 
-			free (username);
+			my_free (username);
 			username=NULL;
 			if (password!=NULL)
 				{
-				free (password);
+				my_free (password);
 				password=NULL;
 				}
 	      return pop3_error (stream,"-ERR username/password incorrect\r\n");
@@ -411,11 +412,11 @@ int pop3 (void *stream, char *buffer)
 	  return pop3_error(stream,"-ERR the thingy you issued is not a valid md5 hash\r\n");
 
 				/* create memspace for md5 hash */
-	memtst((md5_apop_he=(char *)malloc(strlen(searchptr)+1))==NULL);
+	memtst((md5_apop_he=(char *)my_malloc(strlen(searchptr)+1))==NULL);
 	strncpy (md5_apop_he,searchptr,strlen(searchptr)+1);
 				
 				/* create memspace for username */
-	memtst((username=(char *)malloc(strlen(value)+1))==NULL);
+	memtst((username=(char *)my_malloc(strlen(value)+1))==NULL);
 	strncpy (username,value,strlen(value)+1);
 				
 	trace (TRACE_DEBUG,"pop3(): APOP auth, username [%s], md5_hash [%s]",username,
@@ -430,9 +431,9 @@ int pop3 (void *stream, char *buffer)
 		  {
 			trace (TRACE_ERROR,"pop3(): user [%s] tried to login with wrong password",
 				username); 
-			free (username);
+			my_free (username);
 			username=NULL;
-			free (password);
+			my_free (password);
 			password=NULL;
 		 return pop3_error(stream,"-ERR authentication attempt is invalid\r\n");
 		  }

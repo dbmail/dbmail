@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "debug.h"
 
 #define MAX_ERROR_SIZE 128
 
@@ -34,7 +35,7 @@ int __m_blkadd(MEM *m);
  */
 MEM* mopen()
 {
-  MEM *mp = (MEM*)malloc(sizeof(MEM));
+  MEM *mp = (MEM*)my_malloc(sizeof(MEM));
 
   if (!mp)
     {
@@ -44,11 +45,11 @@ MEM* mopen()
 
   memset(mp, 0, sizeof(*mp));
   
-  mp->firstblk = (memblock_t*)malloc(sizeof(memblock_t));
+  mp->firstblk = (memblock_t*)my_malloc(sizeof(memblock_t));
   if (!mp->firstblk)
     {
       __m_errno = M_NOMEM;
-      free(mp);
+      my_free(mp);
       return NULL;
     }
 
@@ -84,11 +85,11 @@ void mclose(MEM **m)
   while (tmp)
     {
       next = tmp->nextblk; /* save address */
-      free(tmp);
+      my_free(tmp);
       tmp = next;
     }
 
-  free(*m);
+  my_free(*m);
   *m = NULL;
 
   return;
@@ -417,7 +418,7 @@ void mreset(MEM *m)
   while (tmp)
     {
       next = tmp->nextblk; /* save address */
-      free(tmp);
+      my_free(tmp);
       tmp = next;
       m->nblocks--;
     }
@@ -446,7 +447,7 @@ int __m_blkadd(MEM *m)
       return 0;
     }
 
-  newblk = (memblock_t*)malloc(sizeof(memblock_t));
+  newblk = (memblock_t*)my_malloc(sizeof(memblock_t));
   if (!newblk)
     {
       __m_errno = M_NOMEM;

@@ -51,21 +51,21 @@ int main (int argc, char *argv[]) {
   if (trace_level)
     {
       new_level = atoi(trace_level);
-      free(trace_level);
+      my_free(trace_level);
       trace_level = NULL;
     }
 
   if (trace_syslog)
     {
       new_trace_syslog = atoi(trace_syslog);
-      free(trace_syslog);
+      my_free(trace_syslog);
       trace_syslog = NULL;
     }
 
   if (trace_verbose)
     {
       new_trace_verbose = atoi(trace_verbose);
-      free(trace_verbose);
+      my_free(trace_verbose);
       trace_verbose = NULL;
     }
 

@@ -52,24 +52,24 @@ user: user.h $(MAINTENANCE_OBJECTS) user.c
 	$(CC) $(CFLAGS) user.c -o dbmail-adduser $(MAINTENANCE_OBJECTS) $(LIBS) $(LIB)
 
 dumpmsg.o: dbmysql.h
-list.o: list.h
+list.o: list.h debug.h
 debug.o: debug.h
-pipe.o: pipe.h config.h
-forward.o: forward.h config.h
-mime.o: mime.h config.h
-dbmysql.o:dbmysql.h dbmd5.h config.h mime.h list.h memblock.h
-misc.o:misc.h config.h
-pop3.o:pop3.h config.h
-dbmd5.o:dbmd5.h md5.h
-bounce.o:bounce.h list.h
+pipe.o: pipe.h config.h debug.h
+forward.o: forward.h config.h debug.h
+mime.o: mime.h config.h debug.h
+dbmysql.o:dbmysql.h dbmd5.h config.h mime.h list.h memblock.h debug.h
+misc.o:misc.h config.h debug.h
+pop3.o:pop3.h config.h debug.h
+dbmd5.o:dbmd5.h md5.h debug.h
+bounce.o:bounce.h list.h debug.h
 imap4.o: imap4.h dbmysql.h debug.h serverservice.h imaputil.h imapcommands.h
-imaputil.o: imaputil.h dbmysql.h memblock.h
-imapcommands.o: imapcommands.h imaputil.h imap4.h dbmysql.h memblock.h
+imaputil.o: imaputil.h dbmysql.h memblock.h debug.h
+imapcommands.o: imapcommands.h imaputil.h imap4.h dbmysql.h memblock.h debug.h
 serverservice.o: serverservice.h debug.h
-maintenance.o: maintenance.h
-settings.o: settings.h
-user.o: user.h
-memblock.o: memblock.h
+maintenance.o: maintenance.h debug.h
+settings.o: settings.h debug.h
+user.o: user.h debug.h
+memblock.o: memblock.h debug.h
 
 distclean: clean
 	rm -rf dbmail-smtp dbmail-pop3d dbmail-maintenance dbmail-imapd dbmail-config dbmail-adduser
