@@ -964,7 +964,7 @@ int do_show(const char * const name)
 
 			if (deliver_to[0] == '\0') {
 				qprintf("..is not an alias.\n");
-				return 0;
+				return -1;
 			}
 
 			useridnr = strtoul(deliver_to, NULL, 10);

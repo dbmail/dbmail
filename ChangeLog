@@ -1,3 +1,8 @@
+2005-01-18  Aaron Stone  <aaron@serendipity.cx>
+
+	* user.c (do_show): return -1 if userspec is neither a user nor an
+	alias. Fixes bug #163.
+
 2005-01-18  Paul Stevens <paul@nfg.nl>
 	
 	* imapcommands.c (_ic_store): treat seqnum of 0xffffffff as '*' to
