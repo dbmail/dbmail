@@ -1657,7 +1657,7 @@ int checkchars(const char *s)
 
   for (i=0; s[i]; i++)
     {
-      if (stridx(AcceptedChars, s[i]) == strlen(AcceptedChars))
+      if (!strchr(AcceptedChars, s[i]))
 	{
 	  /* wrong char found */
 	  return 0;
@@ -1679,7 +1679,7 @@ int checktag(const char *s)
 
   for (i=0; s[i]; i++)
     {
-      if (stridx(AcceptedTagChars, s[i]) == strlen(AcceptedTagChars))
+      if (!strchr(AcceptedTagChars, s[i]))
 	{
 	  /* wrong char found */
 	  return 0;
@@ -1708,7 +1708,7 @@ int checkmailboxname(const char *s)
   /* check for invalid characters */
   for (i=0; s[i]; i++)
     {
-      if (stridx(AcceptedMailboxnameChars, s[i]) == strlen(AcceptedMailboxnameChars))
+      if (!strchr(AcceptedMailboxnameChars, s[i]))
 	{
 	  /* wrong char found */
 	  return 0;
