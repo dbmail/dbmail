@@ -89,6 +89,7 @@ struct session
 		unsigned long totalmessages;
 		unsigned long virtual_totalmessages;
 		struct list messagelst;
+		int validated;
 	};
 
 int pop3 (void *stream, char *buffer);
