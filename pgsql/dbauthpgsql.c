@@ -35,7 +35,7 @@ u64_t db_user_exists(const char *username)
 
   snprintf(query, DEF_QUERYSIZE, "SELECT userid FROM user WHERE userid='%s'",username);
 
-  if (db_query(query,res)==-1)
+  if (db_query(query,&res)==-1)
     {
       trace(TRACE_ERROR, "db_user_exists(): could not execute query\n");
       return -1;
@@ -65,7 +65,7 @@ int db_get_known_users(struct list *users)
   /* do a inverted (DESC) query because adding the names to the final list inverts again */
   snprintf(query, DEF_QUERYSIZE, "SELECT userid FROM user ORDER BY userid DESC");
 
-  if (db_query(query, res) == -1)
+  if (db_query(query, &res) == -1)
     {
       trace(TRACE_ERROR,"db_get_known_users(): could not retrieve user list\n");
       return -1;
@@ -92,7 +92,7 @@ u64_t db_getclientid(u64_t useridnr)
 
   snprintf(query, DEF_QUERYSIZE, "SELECT client_idnr FROM user WHERE user_idnr = %llu",useridnr);
 
-  if (db_query(query, res) == -1)
+  if (db_query(query, &res) == -1)
     {
       trace(TRACE_ERROR,"db_getclientid(): could not retrieve client id for user [%llu]\n",useridnr);
       return -1;
@@ -113,7 +113,7 @@ u64_t db_getmaxmailsize(u64_t useridnr)
 
   snprintf(query, DEF_QUERYSIZE, "SELECT maxmail_size FROM user WHERE user_idnr = %llu",useridnr);
 
-  if (db_query(query,res) == -1)
+  if (db_query(query,&res) == -1)
     {
       trace(TRACE_ERROR,"db_getmaxmailsize(): could not retrieve client id for user [%llu]\n",useridnr);
       return -1;
@@ -138,7 +138,7 @@ int db_check_user (char *username, struct list *userids, int checks)
   
   snprintf (query, DEF_QUERYSIZE,  "SELECT * FROM aliases WHERE alias=\"%s\"",username);
   trace(TRACE_DEBUG,"db_check_user(): executing query : [%s] checks [%d]",query, checks);
-  if (db_query(query, myres)==-1)
+  if (db_query(query, &myres)==-1)
       return 0;
   
   if (PQntuples(myres)<1) 
@@ -192,7 +192,7 @@ u64_t db_adduser (char *username, char *password, char *clientid, char *maxmail)
   /* first check to see if this user already exists */
   snprintf(query, DEF_QUERYSIZE, "SELECT * FROM user WHERE userid = '%s'", username);
 
-  if (db_query(query, res) == -1)
+  if (db_query(query, &res) == -1)
     {
       /* query failed */
       trace (TRACE_ERROR, "db_adduser(): query [%s] failed\n", query);
@@ -222,7 +222,7 @@ u64_t db_adduser (char *username, char *password, char *clientid, char *maxmail)
 	   "('%s','%s',%s,%llu)",
 	   username,password,clientid, size);
 	
-  if (db_query(query, res) == -1)
+  if (db_query(query, &res) == -1)
     {
       /* query failed */
       trace (TRACE_ERROR, "db_adduser(): query for adding user failed : [%s]", query);
@@ -238,7 +238,7 @@ u64_t db_adduser (char *username, char *password, char *clientid, char *maxmail)
   trace (TRACE_DEBUG,"db_adduser(): executing query for mailbox: [%s]", query);
 
 	
-  if (db_query(query, res))
+  if (db_query(query, &res))
     {
       trace (TRACE_ERROR,"db_adduser(): query failed for adding mailbox: [%s]",query);
       return -1;
@@ -253,7 +253,7 @@ int db_delete_user(const char *username)
 {
   snprintf (query, DEF_QUERYSIZE, "DELETE FROM user WHERE userid = '%s'",username);
 
-  if (db_query(query, res) == -1)
+  if (db_query(query, &res) == -1)
     {
       /* query failed */
       trace (TRACE_ERROR, "db_delete_user(): query for removing user failed : [%s]", query);
@@ -268,7 +268,7 @@ int db_change_username(u64_t useridnr, const char *newname)
   snprintf(query, DEF_QUERYSIZE, "UPDATE user SET userid = '%s' WHERE user_idnr=%llu", 
 	   newname, useridnr);
 
-  if (db_query(query, res) == -1)
+  if (db_query(query, &res) == -1)
     {
       trace(TRACE_ERROR,"db_change_username(): could not change name for user [%llu]\n",useridnr);
       return -1;
@@ -283,7 +283,7 @@ int db_change_password(u64_t useridnr, const char *newpass)
   snprintf(query, DEF_QUERYSIZE, "UPDATE user SET passwd = '%s' WHERE user_idnr=%llu", 
 	   newpass, useridnr);
 
-  if (db_query(query, res) == -1)
+  if (db_query(query, &res) == -1)
     {
       trace(TRACE_ERROR,"db_change_password(): could not change passwd for user [%llu]\n",useridnr);
       return -1;
@@ -298,7 +298,7 @@ int db_change_clientid(u64_t useridnr, u64_t newcid)
   snprintf(query, DEF_QUERYSIZE, "UPDATE user SET clientid = %llu WHERE user_idnr=%llu", 
 	   newcid, useridnr);
 
-  if (db_query(query, res) == -1)
+  if (db_query(query, &res) == -1)
     {
       trace(TRACE_ERROR,"db_change_password(): could not change client id for user [%llu]\n",useridnr);
       return -1;
@@ -312,7 +312,7 @@ int db_change_mailboxsize(u64_t useridnr, u64_t newsize)
   snprintf(query, DEF_QUERYSIZE, "UPDATE user SET maxmail_size = %llu WHERE user_idnr=%llu", 
 	   newsize, useridnr);
 
-  if (db_query(query, res) == -1)
+  if (db_query(query, &res) == -1)
     {
       trace(TRACE_ERROR,"db_change_password(): could not change maxmailsize for user [%llu]\n",
 	    useridnr);
@@ -334,7 +334,7 @@ u64_t db_validate (char *user, char *password)
 
   trace (TRACE_DEBUG,"db_validate(): validating using query %s\n",query);
 	
-  if (db_query(query,res)==-1)
+  if (db_query(query,&res)==-1)
       return -1;
 	
   row = PQgetvalue (res, 0, 0);
@@ -356,7 +356,7 @@ u64_t db_md5_validate (char *username,unsigned char *md5_apop_he, char *apop_sta
   
   snprintf (query, DEF_QUERYSIZE, "SELECT passwd,user_idnr FROM user WHERE userid=\"%s\"",username);
 	
-  if (db_query(query, res)==-1)
+  if (db_query(query, &res)==-1)
       return -1;
 
   if (PQntuples(res)<1)
@@ -422,7 +422,7 @@ char *db_get_userid (u64_t *useridnr)
 	   *useridnr);
 
   trace(TRACE_DEBUG,"db_get_userid(): executing query : [%s]",query);
-  if (db_query(query,res)==-1)
+  if (db_query(query,&res)==-1)
     {
       return 0;
     }

@@ -111,38 +111,38 @@ u64_t db_insert_result (char *sequence_identifier)
 }
 
 
-int db_query (const char *thequery, void **target_result)
+int db_query (const char *thequery, void *target_result)
 {
     unsigned int querysize = 0;
     int PQresultStatusVar;
-
+    
     if (thequery != NULL)
     {
         querysize = strlen(thequery);
 
         if (querysize > 0 )
         {
-        (PGresult *)*(target_result) = PQexec (conn, thequery);
-        PQresultStatusVar = PQresultStatus ((PGresult *)*(target_result));
+        *(PGresult **) target_result = PQexec (conn, thequery);
+        PQresultStatusVar = PQresultStatus (*(PGresult **)target_result);
 
         switch (PQresultStatusVar)
             {
                 case PGRES_BAD_RESPONSE:
                 {
                     trace (TRACE_ERROR,"db_query(): postgresql error: BAD_RESPONSE");
-                    PQclear ((PGresult *)*(target_result));
+                    PQclear (*(PGresult **)target_result);
                     return -1;
                 }
                 case PGRES_NONFATAL_ERROR:
                 {
                     trace (TRACE_ERROR,"db_query(): postgresql error: NONFATAL_ERROR");
-                    PQclear ((PGresult *)*(target_result));
+                    PQclear (*(PGresult **)target_result);
                     return -1;
                 }
                 case PGRES_FATAL_ERROR:
                 {
                     trace (TRACE_ERROR,"db_query(): postgresql error: FATAL_ERROR");
-                    PQclear ((PGresult *)*(target_result));
+                    PQclear (*(PGresult **)target_result);
                     return -1;
                 }
             }
