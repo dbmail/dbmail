@@ -16,8 +16,6 @@
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 # $Id$
-
-
 # SQL for upgrading from dbmail-1.2 to dbmail-2.0
 # This script was written by Paul J Stevens. Some changes were made
 # by Ilja Booij @ IC & S to make it work with the optional tables from
@@ -35,16 +33,14 @@ BEGIN WORK;
 RENAME TABLE aliases TO dbmail_aliases;
 ALTER TABLE dbmail_aliases
 	DROP INDEX alias_idnr_2,
-	DROP KEY alias;
-ALTER TABLE dbmail_aliases 
+	DROP KEY alias,
 	ADD INDEX client_idnr_index (client_idnr),
 	ADD INDEX alias_index (alias);
 
 # alter users
 RENAME TABLE users TO dbmail_users;
 ALTER TABLE dbmail_users 
-	ADD COLUMN curmail_size bigint(21) NOT NULL DEFAULT '0';
-ALTER TABLE dbmail_users 
+	ADD COLUMN curmail_size bigint(21) NOT NULL DEFAULT '0',
 	DROP KEY user_idnr,
 	DROP INDEX useridnr_2,
 	DROP INDEX userid_2,
@@ -53,11 +49,10 @@ ALTER TABLE dbmail_users
 # alter mailboxes
 RENAME TABLE mailboxes TO dbmail_mailboxes;
 ALTER TABLE dbmail_mailboxes
-	DROP INDEX mailboxidnr_2,
+##	DROP INDEX mailboxidnr_2,
 	ADD INDEX name_index (name),
 	ADD INDEX owner_idnr_index (owner_idnr),
-	ADD INDEX name_owner_idnr_index (owner_idnr, name);
-ALTER TABLE dbmail_mailboxes
+	ADD INDEX name_owner_idnr_index (owner_idnr, name),
 	ADD FOREIGN KEY owner_idnr_fk (owner_idnr) 
 		REFERENCES dbmail_users (user_idnr)
 		ON DELETE CASCADE;
@@ -123,8 +118,8 @@ INSERT INTO dbmail_physmessage (id, messagesize, rfcsize, internal_date)
 # alter messages table.
 RENAME TABLE messages TO dbmail_messages;
 ALTER TABLE dbmail_messages 
-	DROP KEY message_idnr,
-	DROP INDEX message_idnr_2,
+###	DROP INDEX message_idnr,
+###	DROP INDEX message_idnr_2,
 	DROP COLUMN messagesize,
 	DROP COLUMN rfcsize,
 	DROP COLUMN internal_date,
@@ -137,13 +132,10 @@ ALTER TABLE dbmail_messages
 	ADD INDEX mailbox_idnr_index (mailbox_idnr),
 	ADD INDEX seen_flag_index (seen_flag),
 	ADD INDEX unique_id_index (unique_id),
-	ADD INDEX status_index (status);
-
-ALTER TABLE dbmail_messages
+	ADD INDEX status_index (status),
 	ADD FOREIGN KEY mailbox_idnr_fk (mailbox_idnr)
 		REFERENCES dbmail_mailboxes (mailbox_idnr)
-		ON DELETE CASCADE;
-ALTER TABLE dbmail_messages
+		ON DELETE CASCADE,
 	ADD FOREIGN KEY physmessage_id_fk (physmessage_id)
 		REFERENCES dbmail_physmessage (id)
 		ON DELETE CASCADE;
@@ -153,19 +145,15 @@ RENAME TABLE messageblks TO dbmail_messageblks;
 ALTER TABLE dbmail_messageblks
 	DROP INDEX messageblk_idnr,
 	DROP INDEX messageblk_idnr_2,
-	DROP INDEX msg_index;
-ALTER TABLE dbmail_messageblks
-	CHANGE message_idnr physmessage_id bigint(21) NOT NULL DEFAULT '0';
-ALTER TABLE dbmail_messageblks
-	ADD COLUMN is_header tinyint(1) DEFAULT '0' NOT NULL;
-UPDATE dbmail_messageblks SET is_header = '0';
-ALTER TABLE dbmail_messageblks
+	DROP INDEX msg_index,
+	CHANGE message_idnr physmessage_id bigint(21) NOT NULL DEFAULT '0',
+	ADD COLUMN is_header tinyint(1) DEFAULT '0' NOT NULL,
 	ADD INDEX physmessage_id_index (physmessage_id),
-	ADD INDEX physmessage_id_is_header_index (physmessage_id, is_header);
-ALTER TABLE dbmail_messageblks
+	ADD INDEX physmessage_id_is_header_index (physmessage_id, is_header),
 	ADD FOREIGN KEY physmessage_id_fk (physmessage_id)
 		REFERENCES physmessage_id (id)
 		ON DELETE CASCADE;
+UPDATE dbmail_messageblks SET is_header = '0';
 
 # in DBMail 1.x, the auto_replies and auto_notifications tables where not
 # always present. If they are not present, they are created here. These 
@@ -179,8 +167,6 @@ CREATE TABLE IF NOT EXISTS auto_notifications (
    FOREIGN KEY (`user_idnr`) 
 		REFERENCES `users`(`user_idnr`) ON DELETE CASCADE
 ) TYPE=InnoDB;
-ALTER TABLE auto_notifications ADD INDEX user_idnr_index (user_idnr);
-
 
 CREATE TABLE IF NOT EXISTS auto_replies (
    auto_reply_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
@@ -190,18 +176,19 @@ CREATE TABLE IF NOT EXISTS auto_replies (
    FOREIGN KEY (`user_idnr`) 
 		REFERENCES `users`(`user_idnr`) ON DELETE CASCADE
 ) TYPE=InnoDB;
-ALTER TABLE auto_replies ADD INDEX user_idnr_index (user_idnr);
 
 # Now we know that auto_notifications and auto_replies exist.
 RENAME TABLE auto_notifications TO dbmail_auto_notifications;
-ALTER TABLE dbmail_auto_notifications DROP COLUMN auto_notify_idnr;
-ALTER TABLE dbmail_auto_notifications DROP PRIMARY KEY;
-ALTER TABLE dbmail_auto_notifications ADD PRIMARY KEY (user_idnr);
+ALTER TABLE dbmail_auto_notifications 
+	DROP COLUMN auto_notify_idnr,
+	DROP PRIMARY KEY,
+	ADD PRIMARY KEY (user_idnr);
 
 RENAME TABLE auto_replies TO dbmail_auto_replies;
-ALTER TABLE dbmail_auto_replies DROP COLUMN auto_reply_idnr;
-ALTER TABLE dbmail_auto_replies DROP PRIMARY KEY;
-ALTER TABLE dbmail_auto_replies ADD PRIMARY KEY (user_idnr);
+ALTER TABLE dbmail_auto_replies 
+	DROP COLUMN auto_reply_idnr,
+	DROP PRIMARY KEY,
+	ADD PRIMARY KEY (user_idnr);
 
 
 DROP TABLE IF EXISTS pbsp;

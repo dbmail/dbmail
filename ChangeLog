@@ -1,5 +1,11 @@
 2004-08-05  Ilja Booij  <ilja@ic-s.nl>
 
+	* sql/mysql/migrate_from_1.x_to_2.0.mysql:  removed removal
+	of same indexes because they're not present in all installations.
+
+	* sql/mysql/migrate_from_1.x_to_2.0_innodb.mysql: removed removal
+	of same indexes because they're not present in all installations.
+
 	* pipe.c (store_message_temp): changed reference to 
 	dbmail-maintenance to dbmail-util.
 
