@@ -405,8 +405,8 @@ void manage_stop_children()
 				trace(TRACE_INFO,
 				      "%s,%s: child [%d] has exited, zombie cleaned up",
 				      __FILE__,__func__,(unsigned) chpid);
-				chpid = 0;
 				scoreboard_release(chpid);			
+				chpid = 0;
 			} else {
 				stillSomeAlive = 1;
 				trace(TRACE_INFO,

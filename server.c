@@ -151,7 +151,7 @@ void ParentSigHandler(int sig, siginfo_t * info, void *data)
 		trace(TRACE_DEBUG,
 		      "ParentSigHandler(): SIGHUP, setting Restart");
 		Restart = 1;
-
+		/* fall-through */
 	default:
 		GeneralStopRequested = 1;
 	}
