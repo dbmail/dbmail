@@ -120,64 +120,55 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
 {
 	char *fq_name;
 	char *owner_name;
-	size_t fq_name_len;
+	GString *tmp;
+	char *tmp_name;
 
 	if (mailbox_name == NULL) {
 		trace(TRACE_ERROR, "%s,%s: error, mailbox_name is "
 		      "NULL.", __FILE__, __func__);
 		return NULL;
 	}
+	
+	tmp_name = g_strdup(mailbox_name);
+	trace(TRACE_DEBUG,"%s,%s: mailbox_name [%s], owner_idnr [%llu], user_idnr [%llu]",
+			__FILE__, __func__, tmp_name, owner_idnr, user_idnr);
+
 
 	if (user_idnr == owner_idnr) {
 		/* mailbox owned by current user */
-		return dm_strdup(mailbox_name);
+		return tmp_name;
 	} else {
+		tmp = g_string_new("");
+		
 		owner_name = auth_get_userid(owner_idnr);
 		if (owner_name == NULL) {
-			trace(TRACE_ERROR,
-			      "%s,%s: error owner_name is NULL", __FILE__,
-			      __func__);
+			trace(TRACE_ERROR, "%s,%s: error owner_name is NULL", 
+					__FILE__, __func__);
 			return NULL;
 		}
-		trace(TRACE_ERROR, "%s,%s: owner name = %s", __FILE__,
-		      __func__, owner_name);
+		trace(TRACE_DEBUG, "%s,%s: owner name = %s", 
+				__FILE__, __func__, 
+				owner_name);
 		if (strcmp(owner_name, PUBLIC_FOLDER_USER) == 0) {
-			fq_name_len = strlen(NAMESPACE_PUBLIC) +
-			    strlen(MAILBOX_SEPERATOR) +
-			    strlen(mailbox_name) + 1;
-			if (!(fq_name = dm_malloc(fq_name_len *
-						  sizeof(char)))) {
-				trace(TRACE_ERROR,
-				      "%s,%s: not enough memory", __FILE__,
-				      __func__);
-				dm_free(owner_name);
-				return NULL;
-			}
-			snprintf(fq_name, fq_name_len, "%s%s%s",
-				 NAMESPACE_PUBLIC, MAILBOX_SEPERATOR,
-				 mailbox_name);
+			g_string_printf(tmp, "%s%s%s", 
+					NAMESPACE_PUBLIC, 
+					MAILBOX_SEPERATOR, 
+					tmp_name);
 		} else {
-			fq_name_len = strlen(NAMESPACE_USER) +
-			    strlen(MAILBOX_SEPERATOR) +
-			    strlen(owner_name) +
-			    strlen(MAILBOX_SEPERATOR) +
-			    strlen(mailbox_name) + 1;
-			if (!(fq_name = dm_malloc(fq_name_len *
-						  sizeof(char)))) {
-				trace(TRACE_ERROR,
-				      "%s,%s: not enough memory", __FILE__,
-				      __func__);
-				dm_free(owner_name);
-				return NULL;
-			}
-			snprintf(fq_name, fq_name_len, "%s%s%s%s%s",
-				 NAMESPACE_USER, MAILBOX_SEPERATOR,
-				 owner_name, MAILBOX_SEPERATOR,
-				 mailbox_name);
+			g_string_printf(tmp, "%s%s%s%s%s", 
+					NAMESPACE_USER, 
+					MAILBOX_SEPERATOR, 
+					owner_name, 
+					MAILBOX_SEPERATOR, 
+					tmp_name);
 		}
 		dm_free(owner_name);
-		trace(TRACE_INFO, "%s,%s: returning fully qualified name "
-		      "[%s]", __FILE__, __func__, fq_name);
+		fq_name = tmp->str;
+		g_string_free(tmp,FALSE);
+		trace(TRACE_INFO, "%s,%s: returning fully qualified name [%s]", 
+				__FILE__, __func__, 
+				fq_name);
+		g_free(tmp_name);
 		return fq_name;
 	}
 }

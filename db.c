@@ -2379,6 +2379,7 @@ int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
 				(*nr_mailboxes)++;
 			}
 		}
+		g_free(mailbox_name);
 	}
 	dm_free(all_mailbox_names);
 	dm_free(all_mailboxes);
@@ -3033,7 +3034,7 @@ int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name)
 	strncpy(name, tmp_fq_name, tmp_fq_name_len);
 	name[tmp_fq_name_len] = '\0';
 	dm_free(tmp_name);
-	dm_free(tmp_fq_name);
+	g_free(tmp_fq_name);
 	return 0;
 }
 
@@ -3920,6 +3921,7 @@ int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * m
 {
 	/* query mailbox for LIST results */
 	const char *query_result;
+	char *mbxname;
 	GString *fqname;
 	int i=0;
 
@@ -3943,10 +3945,12 @@ int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * m
 	
 	/* name */
 	query_result=db_get_result(0,i++);
-	fqname = g_string_new(mailbox_add_namespace(query_result, mb->owner_idnr, user_idnr));
+	mbxname = mailbox_add_namespace(query_result, mb->owner_idnr, user_idnr);
+	fqname = g_string_new(mbxname);
 	fqname = g_string_truncate(fqname,IMAP_MAX_MAILBOX_NAMELEN);
 	mb->name = fqname->str;
 	g_string_free(fqname,FALSE);
+	g_free(mbxname);
 
 	/* no_select */
 	query_result=db_get_result(0,i++);
