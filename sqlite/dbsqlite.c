@@ -157,6 +157,7 @@ int db_query(const char *the_query)
 		}
 	}
 
+	trace(TRACE_ERROR, "%s", the_query);
 	if (sqlite_get_table(conn, the_query, &lastq->resp,
 			&lastq->rows, &lastq->cols, &errmsg) != SQLITE_OK) {
 		trace(TRACE_ERROR,
@@ -173,10 +174,11 @@ unsigned long db_escape_string(char *to, const char *from, unsigned long length)
 	unsigned long did = 0;
 	while (length > 0) {
 		if (*from == '\'') *to++ = *from;
-		*to++ = *from;
+		*to++ = *from++;
 		length--;
 		did++;
 	}
+	*to++ = *from; /* err... */
 	return did;
 }
 int db_do_cleanup(const char **tables UNUSED, int num_tables UNUSED)
