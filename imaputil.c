@@ -172,11 +172,11 @@ int retrieve_structure(FILE * outstream, mime_message_t * msg,
 		/* now output size */
 		/* add msg->bodylines because \n is dumped as \r\n */
 		if (msg->mimeheader.start && msg->rfcheader.start)
-			fprintf(outstream, " %llu ",
+			fprintf(outstream, " %llu",
 				msg->bodysize + msg->mimerfclines +
 				msg->rfcheadersize - msg->rfcheaderlines);
 		else
-			fprintf(outstream, " %llu ",
+			fprintf(outstream, " %llu",
 				msg->bodysize + msg->bodylines);
 
 
@@ -217,10 +217,10 @@ int retrieve_structure(FILE * outstream, mime_message_t * msg,
 				    strlen("text")) == 0) || !mr) {
 			/* output # of lines */
 			if (msg->mimeheader.start && msg->rfcheader.start)
-				fprintf(outstream, "%llu",
+				fprintf(outstream, " %llu",
 					msg->mimerfclines);
 			else
-				fprintf(outstream, "%llu", msg->bodylines);
+				fprintf(outstream, " %llu", msg->bodylines);
 		}
 
 		if (show_extension_data) {
@@ -1841,7 +1841,7 @@ char *date_sql2imap(const char *sqldate)
 
 	/* parse sqldate */
 	last_char = strptime(sqldate, "%Y-%m-%d %T", &tm_sqldate);
-	if (*last_char != '\0') {
+	if (last_char == NULL || *last_char != '\0') {
 		trace(TRACE_DEBUG, "%s,%s, error parsing date [%s]",
 		      __FILE__, __func__, sqldate);
 		strcpy(_imapdate, IMAP_STANDARD_DATE);
@@ -1873,7 +1873,7 @@ char *date_imap2sql(const char *imapdate)
 	char *last_char;
 
 	last_char = strptime(imapdate, "%d-%b-%Y", &tm);
-	if (*last_char != '\0') {
+	if (last_char == NULL || *last_char != '\0') {
 		trace(TRACE_DEBUG, "%s,%s: error parsing IMAP date %s",
 		      __FILE__, __func__, imapdate);
 		return NULL;

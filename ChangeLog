@@ -1,6 +1,10 @@
 2004-09-16  Ilja Booij  <ilja@ic-s.nl>
 
+	* db.c (db_get_msgdate): fixed error in query. Strings were in the
+	wrong order, causing a weird query.
+
 	* imaputil.c (date_sql2imap): add daylight savings time information.
+	(retrieve_structure): fixed white issue in IMAP output.
 
 2004-09-15  Ilja Booij  <ilja@ic-s.nl>
 

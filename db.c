@@ -3193,8 +3193,9 @@ int db_get_msgdate(u64_t mailbox_idnr, u64_t msg_idnr, char *date)
 		 "SELECT %s FROM %sphysmessage pm, %smessages msg "
 		 "WHERE msg.mailbox_idnr = '%llu' "
 		 "AND msg.message_idnr = '%llu' AND msg.unique_id!='' "
-		 "AND pm.id = msg.physmessage_id",DBPFX,DBPFX,
-		 to_char_str, mailbox_idnr, msg_idnr);
+		 "AND pm.id = msg.physmessage_id",
+		 to_char_str, DBPFX, DBPFX,
+		 mailbox_idnr, msg_idnr);
 	my_free(to_char_str);
 
 	if (db_query(query) == -1) {
