@@ -1,8 +1,13 @@
 /* $Id$ 
  * (c) 2000-2002 IC&S, The Netherlands */
 
+For DBMail 2.0
+-   IMAP ACL
+-   IMAP Namespace
 -   LMTP server (this will speed up MTA -> dbmail communication)
+
+For DBMail 2.1
 -   Sieve scripting language
--   enhance response to NOOP command, so all client (esp. Mail.app) get some
-    useful information from it.
 -   header caching (cache headers like To: From: etc.)
+-   Fix wrong order of headers when doing a FETCH MSGNUM (RFC822.HEADER)
+

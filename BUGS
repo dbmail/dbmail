@@ -1,0 +1,4 @@
+$Id$
+
+2004-01-19 (Roel Rozendaal):
+FETCH MSGNUM (RFC822.HEADER) returns headers in wrong order.
