@@ -23,7 +23,7 @@ CC = cc
 
 PGSQLLIBDIR=/usr/local/pgsql/lib
 
-LIBS = -L$(MYSQLLIBDIR)
+LIBS = -L$(PGSQLLIBDIR)
 LIB = -lpq
 
 # Added the -D_BSD_SOURCE option to suppress warnings

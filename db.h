@@ -94,11 +94,12 @@ enum table_messageblk /* prototype for messageblk table */
 
 int db_connect();
 int db_disconnect();
-int db_query (const char *query);
+int db_query (const char *thequery, void *target_result);
+
 
 char *db_get_config_item (char *item, int type);
 int db_clear_config();
-int db_insert_config_item (char *item, char *value);
+int db_insert_config_item (char *item, char *val);
 
 int db_get_user_aliases(u64_t userid, struct list *aliases);
 int db_addalias (u64_t useridnr, char *alias, int clientid);
@@ -123,7 +124,7 @@ int db_delete_messageblk(u64_t uid);
 int db_delete_message(u64_t uid);
 int db_delete_mailbox(u64_t uid);
 
-u64_t db_insert_result ();
+u64_t db_insert_result (char *sequence_identifier);
 int db_send_message_lines (void *fstream, u64_t messageidnr, long lines, int no_end_dot);
 int db_createsession (u64_t useridnr, struct session *sessionptr);
 void db_session_cleanup (struct session *sessionptr);
@@ -148,7 +149,7 @@ int db_listmailboxchildren(u64_t uid, u64_t useridnr,
 int db_removemailbox(u64_t uid, u64_t ownerid);
 int db_isselectable(u64_t uid);
 int db_noinferiors(u64_t uid);
-int db_setselectable(u64_t uid, int value);
+int db_setselectable(u64_t uid, int val);
 int db_removemsg(u64_t uid);
 int db_movemsg(u64_t to, u64_t from);
 int db_copymsg(u64_t msgid, u64_t destmboxid);
