@@ -7,7 +7,6 @@
 
 #define HEADER_BLOCK_SIZE 1024
 #define QUERY_SIZE 255
-/* including the possible all escape strings blocks */
 
 void create_unique_id(char *target, unsigned long messageid)
 {
@@ -40,18 +39,22 @@ char *read_header(unsigned long *blksize)
 
   while ((end_of_header==0) && (!feof(stdin)))
     {
+		 /* fgets will read until \n occurs */
 		strblock = fgets (strblock, READ_BLOCK_SIZE, stdin);
       usedmem += (strlen(strblock)+1);
-		
+	
+		/* If this happends it's a very big header */	
       if (usedmem>HEADER_BLOCK_SIZE)
 			memtst(((char *)realloc(header,usedmem))==NULL);
 		
-      /* now we concatenate all we have to the header array */
-      memtst((header=strcat (header,strblock))==NULL);
+      /* now we concatenate all we have to the header */
+      memtst((header=strcat(header,strblock))==NULL);
+
+		/* check if the end of header has occured */
       if (strstr(header,"\n\n")!=NULL)
 		{
 			/* we've found the end of the header */
-			trace (TRACE_DEBUG,"read_header(): end header found!");
+			trace (TRACE_DEBUG,"read_header(): end header found");
 			end_of_header=1;
 		}
 		
@@ -65,22 +68,23 @@ char *read_header(unsigned long *blksize)
   free(strblock);
 	
   if (usedmem==0)
-    {
-      free(strblock);
-      free(header);
-      trace (TRACE_STOP, "read_header(): not a valid mailheader found");
-    }
-  *blksize=strlen(header);
+  {
+	  free(strblock);
+     free(header);
+     trace (TRACE_STOP, "read_header(): not a valid mailheader found");
+	  *blksize=0;
+  }
+  else
+		*blksize=strlen(header);
 
   trace (TRACE_INFO, "read_header(): function successfull");
   return header;
 }
 
-int insert_messages(char *firstblock, unsigned long headersize, struct list *users)
+int insert_messages(char *header, unsigned long headersize, struct list *users)
 {
   /* 	this loop gets all the users from the list 
-	and check if they're in the database
-	firstblock is the header which was already read */
+	and check if they're in the database */
 
   struct element *tmp, *tmp_pipe, *descriptor_temp;
   char *insertquery;
@@ -89,7 +93,7 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
   char *strblock;
   char *domain, *ptr;
   char *myscan, *nextscan;
-  char *tmpbuffer;
+  char *tmpbuffer=NULL;
   size_t usedmem=0, totalmem=0;
   struct list userids;
   struct list messageids;
@@ -97,8 +101,7 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
   struct list external_forwards;
   struct list bounces;
   struct list descriptors;
-  
-  unsigned long temp,userid;
+  unsigned long temp_message_record_id,userid;
   int i;
   
 	/* step 1.
@@ -130,6 +133,7 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 	/* initiating list with bounces */
 	list_init (&bounces);
 	
+	/* get the first target address */
   tmp=list_getstart(users);
 
   while (tmp!=NULL)
@@ -141,7 +145,7 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
       trace (TRACE_DEBUG,"insert_messages(): user [%s] found total of [%d] aliases",(char *)tmp->data,
 	     userids.total_nodes);
       
-		if (userids.total_nodes==0)
+		if (userids.total_nodes==0) /* userid's found */
 		{
 			/* I needed to change this because my girlfriend said so
 				and she was actually right. Domain forwards are last resorts
@@ -166,13 +170,15 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 			so bounce this message back with an error message */
       if (userids.total_nodes==0)
 		{
-			/* still no effective deliveries found */
+			/* still no effective deliveries found, create bouncelist */
 			list_nodeadd(&bounces, tmp->data, strlen(tmp->data)+1);
 		}
 
+		/* get the next taget in list */
       tmp=tmp->nextnode;
-    }
+	 }
 		
+  /* get first target uiserid */
    tmp=list_getstart(&userids);
 
   while (tmp!=NULL)
@@ -193,25 +199,27 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 		i = 0;
 		
 		while (isdigit(ptr[0]))
-				{
-				i++;
-				ptr++;
-				}
+		{
+			i++;
+			ptr++;
+		}
 		
 		if (i<strlen((char *)tmp->data))
-			{
-				/* FIXME: it's probably a forward to another address
-				 * to make sure it could be a mailaddress we're checking for a @*/
-				trace (TRACE_DEBUG,"insert_messages(): no numeric value in deliver_to, calling external_forward");
-				/* creating a list of external forward addresses */
-				list_nodeadd(&external_forwards,tmp->data,strlen((char *)tmp->data));
-			}
+		{
+			/* FIXME: it's probably a forward to another address
+			 * to make sure it could be a mailaddress we're checking for a @*/
+			trace (TRACE_DEBUG,"insert_messages(): no numeric value in deliver_to, calling external_forward");
 
+			/* creating a list of external forward addresses */
+			list_nodeadd(&external_forwards,tmp->data,strlen((char *)tmp->data));
+		}
 		else
 		{
+			/* make the id numeric */
 			userid=atol((char *)tmp->data);
 
-	      temp=db_insert_message ((unsigned long *)&userid);
+			/* create a message record */
+	      temp_message_record_id=db_insert_message ((unsigned long *)&userid);
 
 			/* message id is an array of returned message id's
 			 * all messageblks are inserted for each message id
@@ -220,13 +228,13 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 			 * belong to which messages */
 		
 			/* adding this messageid to the message id list */
-			list_nodeadd(&messageids,&temp,sizeof(temp));
+			list_nodeadd(&messageids,&temp_message_record_id,sizeof(temp_message_record_id));
 		
 		   /* adding the first header block per user */
-			db_insert_message_block (firstblock,temp);
+			db_insert_message_block (header,temp_message_record_id);
 		}
-			/* get next item */	
-		   tmp=tmp->nextnode;
+		/* get next item */	
+	   tmp=tmp->nextnode;
     }
 
 	trace(TRACE_MESSAGE,"insert_messages(): we need to deliver [%lu] messages to external addresses",
@@ -270,6 +278,7 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 	
 		/* we need to update messagesize in all messages */
 		tmp=list_getstart(&messageids);
+
 		while (tmp!=NULL)
 		{
 			/* we need to create a unique id per message 
@@ -280,11 +289,12 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 			db_update_message ((unsigned long*)tmp->data,unique_id,totalmem+headersize);
 			trace (TRACE_MESSAGE,"insert_messages(): message id=%lu, size=%lu is inserted",
 				*(unsigned long*)tmp->data, totalmem+headersize);
-			temp=*(unsigned long*)tmp->data;
+			temp_message_record_id=*(unsigned long*)tmp->data;
 			tmp=tmp->nextnode;
 		}
 	}
 
+	/* handle all bounced messages */
   if (list_totalnodes(&bounces)>0)
   {
 		/* bouncing invalid messages */
@@ -292,7 +302,7 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 		tmp=list_getstart(&bounces);
 		while (tmp!=NULL)
 		{	
-			bounce (firstblock,(char *)tmp->data,BOUNCE_NO_SUCH_USER);
+			bounce (header,(char *)tmp->data,BOUNCE_NO_SUCH_USER);
 			tmp=tmp->nextnode;	
 		}
   }
@@ -304,14 +314,12 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
   
 		trace (TRACE_DEBUG,"insert_messages(): delivering to external addresses");
   
-		/* send deliver to */
-		/* send header without original To field */
-		/* i don't know if this the legal way (tm) */
-		
-		/* we're storing the new header in tmpbuffer */	
-		memtst((tmpbuffer = (char *)malloc(strlen(firstblock)+512))==NULL); 
+		/* we're storing the new header in tmpbuffer 
+			the 512 bytes extra mem allocation is for the possiblity of large
+			addresses in the new header */
+		memtst((tmpbuffer = (char *)malloc(strlen(header)+512))==NULL); 
 	
-		myscan=strstr(firstblock,"\nTo:");
+		myscan=strstr(header,"\nTo:");
 		if (myscan!=NULL)
 		{
 			myscan++;
@@ -320,7 +328,7 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 			{
 				nextscan++;
 				myscan--;
-				myscan[0]='\0';
+				*myscan='\0';
 			
 				/* getting a message. Any message will do */
 				tmp=list_getstart(&messageids); 
@@ -343,7 +351,7 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 					/* first open the pipes and send the header */
 					while (tmp_pipe!=NULL)
 					{
-						sprintf (tmpbuffer,"%s\nTo: %s\n%s",firstblock,
+						sprintf (tmpbuffer,"%s\nTo: %s\n%s",header,
 								(char *)tmp_pipe->data,nextscan);
 						trace (TRACE_DEBUG,"insert_messages(): new header [%s]",tmpbuffer);
 						(FILE *)sendmail_pipe=popen(SENDMAIL,"w");
@@ -412,7 +420,7 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 					trace (TRACE_DEBUG,"insert_messages(): Forwarding message via database");
 					while (tmp_pipe!=NULL)
 					{
-						sprintf (tmpbuffer,"%s\nTo: %s\n%s",firstblock,
+						sprintf (tmpbuffer,"%s\nTo: %s\n%s",header,
 							(char *)tmp_pipe->data,nextscan);
 						trace (TRACE_DEBUG,"insert_messages(): new header [%s]",tmpbuffer);
 						(FILE *)sendmail_pipe=popen(SENDMAIL,"w");
@@ -446,11 +454,20 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 	
 	trace (TRACE_DEBUG,"insert_messages(): Freeing memory blocks");
 	/* memory cleanup */
-	free(tmpbuffer);
-	free(firstblock);  
+	if (tmpbuffer!=NULL)
+	{
+		trace (TRACE_DEBUG,"insert_messages(): tmpbuffer freed");
+		free(tmpbuffer);
+	}
+	trace (TRACE_DEBUG,"insert_messages(): header freed");
+	free(header);
+	trace (TRACE_DEBUG,"insert_messages(): uniqueid freed");
 	free(unique_id);
+	trace (TRACE_DEBUG,"insert_messages(): strblock freed");
 	free (strblock);
+	trace (TRACE_DEBUG,"insert_messages(): insertquery freed");
 	free(insertquery);
+	trace (TRACE_DEBUG,"insert_messages(): updatequery freed");
 	free(updatequery);
 	trace (TRACE_DEBUG,"insert_messages(): End of function");
   return 0;

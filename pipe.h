@@ -11,6 +11,6 @@
 
 void create_unique_id(char *target, unsigned long messageid);
 char *read_header(unsigned long *blksize);
-int insert_messages(char *firstblock, unsigned long headersize,struct list *users);
+int insert_messages(char *header, unsigned long headersize,struct list *users);
 
 #endif
