@@ -1,3 +1,10 @@
+2004-12-15  Paul Stevens <paul@nfg.nl>
+
+	* dbmail-message.c, dbmail-message.h: abstracted message code a bit
+	to handle mimeparts as well.
+	* dbmail-imapsession.c, dbmail-imapsession.h, check_dbmail_imapd.c:
+	fix in fetch code for octet-ranges.
+
 2004-12-14  Paul Stevens <paul@nfg.nl>
 
 	* main.c, lmtp.c, dbmail-message.c, dbmail-message.h: removed
