@@ -51,7 +51,7 @@ char *configFile = DEFAULT_CONFIG_FILE;
 /* set up database login data */
 extern db_param_t _db_params;
 
-static void SetConfigItems(serverConfig_t * config, struct list *items);
+static void SetConfigItems(serverConfig_t * config);
 static void Daemonize(void);
 static int SetMainSigHandler(void);
 static void MainSigHandler(int sig, siginfo_t * info, void *data);
@@ -69,7 +69,6 @@ int main(int argc, char *argv[])
 #endif
 {
 	serverConfig_t config;
-	struct list imapItems, sysItems;
 	int result, status;
 	pid_t pid;
 
@@ -100,11 +99,11 @@ int main(int argc, char *argv[])
 		set_proc_title("%s", "Idle");
 #endif
 
-		ReadConfig("IMAP", configFile, &imapItems);
-		ReadConfig("DBMAIL", configFile, &sysItems);
-		SetConfigItems(&config, &imapItems);
-		SetTraceLevel(&imapItems);
-		GetDBParams(&_db_params, &sysItems);
+		ReadConfig("IMAP", configFile);
+		ReadConfig("DBMAIL", configFile);
+		SetConfigItems(&config);
+		SetTraceLevel("IMAP");
+		GetDBParams(&_db_params);
 
 		config.ClientHandler = IMAPClientHandler;
 		config.timeoutMsg = IMAP_TIMEOUT_MSG;
@@ -156,11 +155,9 @@ int main(int argc, char *argv[])
 				result = 0;
 			}
 		}
-
-		list_freelist(&imapItems.start);
-		list_freelist(&sysItems.start);
+		
 		close(config.listenSocket);
-
+		config_free();
 	} while (result == 1 && !mainStop);	/* 1 means reread-config and restart */
 
 	trace(TRACE_INFO, "main(): exit");
@@ -211,12 +208,12 @@ int SetMainSigHandler()
 }
 
 
-void SetConfigItems(serverConfig_t * config, struct list *items)
+void SetConfigItems(serverConfig_t * config)
 {
 	field_t val;
 
 	/* read items: NCHILDREN */
-	GetConfigValue("NCHILDREN", items, val);
+	GetConfigValue("NCHILDREN", "IMAP", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for NCHILDREN in config file");
@@ -232,7 +229,7 @@ void SetConfigItems(serverConfig_t * config, struct list *items)
 
 
 	/* read items: MAXCONNECTS */
-	GetConfigValue("MAXCONNECTS", items, val);
+	GetConfigValue("MAXCONNECTS", "IMAP", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for MAXCONNECTS in config file");
@@ -248,7 +245,7 @@ void SetConfigItems(serverConfig_t * config, struct list *items)
 
 
 	/* read items: TIMEOUT */
-	GetConfigValue("TIMEOUT", items, val);
+	GetConfigValue("TIMEOUT", "IMAP", val);
 	if (strlen(val) == 0) {
 		trace(TRACE_DEBUG,
 		      "SetConfigItems(): no value for TIMEOUT in config file");
@@ -263,7 +260,7 @@ void SetConfigItems(serverConfig_t * config, struct list *items)
 
 
 	/* read items: PORT */
-	GetConfigValue("PORT", items, val);
+	GetConfigValue("PORT", "IMAP", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for PORT in config file");
@@ -278,7 +275,7 @@ void SetConfigItems(serverConfig_t * config, struct list *items)
 
 
 	/* read items: BINDIP */
-	GetConfigValue("BINDIP", items, val);
+	GetConfigValue("BINDIP", "IMAP", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for BINDIP in config file");
@@ -291,7 +288,7 @@ void SetConfigItems(serverConfig_t * config, struct list *items)
 
 
 	/* read items: RESOLVE_IP */
-	GetConfigValue("RESOLVE_IP", items, val);
+	GetConfigValue("RESOLVE_IP", "IMAP", val);
 	if (strlen(val) == 0)
 		trace(TRACE_DEBUG,
 		      "SetConfigItems(): no value for RESOLVE_IP in config file");
@@ -303,7 +300,7 @@ void SetConfigItems(serverConfig_t * config, struct list *items)
 
 
 	/* read items: IMAP-BEFORE-SMTP */
-	GetConfigValue("IMAP_BEFORE_SMTP", items, val);
+	GetConfigValue("IMAP_BEFORE_SMTP", "IMAP", val);
 	if (strlen(val) == 0)
 		trace(TRACE_DEBUG,
 		      "SetConfigItems(): no value for IMAP_BEFORE_SMTP  in config file");
@@ -315,7 +312,7 @@ void SetConfigItems(serverConfig_t * config, struct list *items)
 
 
 	/* read items: EFFECTIVE-USER */
-	GetConfigValue("EFFECTIVE_USER", items, val);
+	GetConfigValue("EFFECTIVE_USER", "IMAP", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for EFFECTIVE_USER in config file");
@@ -329,7 +326,7 @@ void SetConfigItems(serverConfig_t * config, struct list *items)
 
 
 	/* read items: EFFECTIVE-GROUP */
-	GetConfigValue("EFFECTIVE_GROUP", items, val);
+	GetConfigValue("EFFECTIVE_GROUP", "IMAP", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for EFFECTIVE_GROUP in config file");

@@ -77,7 +77,6 @@ int is_valid(const char *name);
 
 int main(int argc, char *argv[])
 {
-	struct list sysItems;
 	int result;
 	int argidx = 0;
 
@@ -100,9 +99,9 @@ int main(int argc, char *argv[])
 		argidx = 1;
 	}
 
-	ReadConfig("DBMAIL", configFile, &sysItems);
-	SetTraceLevel(&sysItems);
-	GetDBParams(&_db_params, &sysItems);
+	ReadConfig("DBMAIL", configFile);
+	SetTraceLevel("DBMAIL");
+	GetDBParams(&_db_params);
 
 	quiet_printf("\n*** dbmail-adduser ***\n");
 
@@ -151,12 +150,14 @@ int main(int argc, char *argv[])
 		show_help();
 		db_disconnect();
 		auth_disconnect();
+		config_free();
 		return 0;
 	}
 
 
 	db_disconnect();
 	auth_disconnect();
+	config_free();
 	return result;
 }
 

@@ -103,40 +103,42 @@ typedef struct {
  * \param serviceName name of service to get paramaters for. determines from which
  *        section in the configuration file values are taken.
  * \param cfilename name of configuration file 
- * \param cfg_items list of configuration values (should already be filled in using
-          ReadConfig()
  * \return
  *     - -1 on error
  *     -  0 on success
  */
-int ReadConfig(const char *serviceName, const char *cfilename,
-	       struct list *cfg_items);
+int ReadConfig(const char *serviceName, const char *cfilename);
+
+/**
+ * free all memory taken up by config.
+ */
+void config_free(void);
+	       
 /**
  * \brief get configuration value for an item
  * \param name name of configuration item
- * \param cfg_items list of configuration values (should already be filled in using
+ * \param service_name name of service
           ReadConfig()
  * \param value value of configuration item name
  * \return 0
  * \attention value is set to a string beginning with a '\\0' if no configuration
               item with name is found in items.
  */
-int GetConfigValue(const field_t name, /*@temp@*/ struct list *cfg_items,
+int GetConfigValue(const field_t name, const char *service_name,
 		   /*@out@*/ field_t value);
 
 /* some common used functions reading config options */
 /**
  \brief get parameters for database connection
  \param db_params list of database parameters (db_param_t)
- \param cfg_items list of configuration items
 */
-void GetDBParams(db_param_t * db_params, /*@temp@*/ struct list *cfg_items);
+void GetDBParams(db_param_t * db_params);
 /** 
  \brief set the overall trace level, using the value in cfg_items
- \param cfg_items list of configuration items
+ \param service_name name of service to get trace level for.
  \attention trace level is set to TRACE_ERROR if no trace level value is found
-            in cfg_items
+ *                for service.
  */
-void SetTraceLevel(struct list *cfg_items);
+void SetTraceLevel(const char *service_name);
 
 #endif

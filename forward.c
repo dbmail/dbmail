@@ -36,9 +36,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-extern struct list smtpItems;
-
-
 /* For each of the addresses or programs in targets,
  * send out a copy of the message pointed to by msgidnr.
  *
@@ -64,7 +61,7 @@ int forward(u64_t msgidnr, struct list *targets, const char *from,
 	tm = *localtime(&td);	/* get components */
 	strftime(timestr, sizeof(timestr), "%a %b %e %H:%M:%S %Y", &tm);
 
-	GetConfigValue("SENDMAIL", &smtpItems, sendmail);
+	GetConfigValue("SENDMAIL", "SMTP", sendmail);
 	if (sendmail[0] == '\0')
 		trace(TRACE_FATAL,
 		      "%s,%s: SENDMAIL not configured (see config file). "

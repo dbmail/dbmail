@@ -57,8 +57,6 @@ struct list dsnusers;		/* list of deliver_to_user_t structs */
 struct list users;		/* list of email addresses in message */
 struct element *tmp;
 
-struct list sysItems, smtpItems;	/* config item lists */
-
 char *configFile = DEFAULT_CONFIG_FILE;
 
 extern db_param_t _db_params;	/* set up database login data */
@@ -304,16 +302,16 @@ int main(int argc, char *argv[])
 
 	/* Read in the config file; do it after getopt
 	 * in case -f config.alt was specified. */
-	if (ReadConfig("DBMAIL", configFile, &sysItems) == -1
-	 || ReadConfig("SMTP", configFile, &smtpItems) == -1) {
+	if (ReadConfig("DBMAIL", configFile) == -1
+	 || ReadConfig("SMTP", configFile) == -1) {
 		trace(TRACE_ERROR,
 		      "main(): error reading alternate config file [%s]", configFile);
 		exitcode = EX_TEMPFAIL;
 		goto freeall;
 
 	}
-	SetTraceLevel(&smtpItems);
-	GetDBParams(&_db_params, &sysItems);
+	SetTraceLevel("SMTP");
+	GetDBParams(&_db_params);
 
 	if (db_connect() != 0) {
 		trace(TRACE_ERROR, "main(): database connection failed");
@@ -450,8 +448,6 @@ int main(int argc, char *argv[])
 	dsnuser_free_list(&dsnusers);
 
 	trace(TRACE_DEBUG, "main(): freeing all other lists");
-	list_freelist(&sysItems.start);
-	list_freelist(&smtpItems.start);
 	list_freelist(&mimelist.start);
 	list_freelist(&returnpath.start);
 	list_freelist(&users.start);
@@ -466,6 +462,7 @@ int main(int argc, char *argv[])
 
 	db_disconnect();
 	auth_disconnect();
+	config_free();
 
 	trace(TRACE_DEBUG, "main(): exit code is [%d].", exitcode);
 	return exitcode;

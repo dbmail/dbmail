@@ -28,16 +28,38 @@
 #endif
 
 #include "dbmail.h"
+#include "list.h"
+#include "debug.h"
+
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <errno.h>
-#include "list.h"
-#include "debug.h"
 
 #define LINESIZE 1024
 
+/* list of all config lists. Every item in this list holds a list for
+ * the specific service [SERVICE NAME] 
+ */
+static struct list config_list;
+
+/**
+ */
+struct service_config_list {
+	char *service_name;
+	struct list *config_items;
+};
+
+/**
+ * static local function which gets config items for one service.
+ * \param[in] name name of field to look for
+ * \param[in] config_items list of configuration items for a service
+ * \param[out] value will hold value of configuration item
+ */
+static int GetConfigValueConfigList(const field_t name, struct list *cfg_items,
+				    field_t value);
 /*
  * ReadConfig()
  *
@@ -53,9 +75,9 @@
  * returns 0 on succes, -1 on error unless CONFIG_ERROR_LEVEL is set TRACE_FATAL/TRACE_STOP;
  * if so the function will not return upon error but call exit().
  */
-int ReadConfig(const char *serviceName, const char *cfilename,
-	       struct list *cfg_items)
+int ReadConfig(const char *serviceName, const char *cfilename)
 {
+	struct service_config_list *service_config;
 	item_t item;
 	char line[LINESIZE], *tmp, *value, service[LINESIZE];
 	FILE *cfile = NULL;
@@ -63,9 +85,21 @@ int ReadConfig(const char *serviceName, const char *cfilename,
 
 	trace(TRACE_DEBUG, "ReadConfig(): starting procedure");
 
+	if (!(service_config = malloc(sizeof(struct service_config_list)))) {
+		trace(CONFIG_ERROR_LEVEL, "%s,%s: error allocating memory "
+		      "for config list", __FILE__, __FUNCTION__);
+		return -1;
+	}
+	if (!(service_config->config_items = malloc(sizeof(struct list)))) {
+		trace(TRACE_ERROR, "%s,%s: unable to allocate memory "
+		      "for config items", __FILE__, __FUNCTION__);
+		return -1;
+	}
+	service_config->service_name = strdup(serviceName);
+
 	(void) snprintf(service, LINESIZE, "[%s]", serviceName);
 
-	list_init(cfg_items);
+	list_init(service_config->config_items);
 
 	if (!(cfile = fopen(cfilename, "r"))) {
 		trace(CONFIG_ERROR_LEVEL,
@@ -136,7 +170,8 @@ int ReadConfig(const char *serviceName, const char *cfilename,
 				strncpy(item.value, value, FIELDSIZE);
 
 				if (!list_nodeadd
-				    (cfg_items, &item, sizeof(item))) {
+				    (service_config->config_items, &item, 
+				     sizeof(item))) {
 					trace(CONFIG_ERROR_LEVEL,
 					      "ReadConfig(): could not add node");
 					return -1;
@@ -154,35 +189,93 @@ int ReadConfig(const char *serviceName, const char *cfilename,
 	} while (!serviceFound);
 
 	trace(TRACE_DEBUG,
-	      "ReadConfig(): config for %s read, found [%ld] cfg_items",
-	      service, cfg_items->total_nodes);
+	      "ReadConfig(): config for %s read, found [%ld] config_items",
+	      service, service_config->config_items->total_nodes);
 	if (fclose(cfile) != 0) 
 		trace(TRACE_ERROR, "%s,%s: error closing file: [%s]",
 		      __FILE__, __FUNCTION__, strerror(errno));
+	
+	if (!list_nodeadd(&config_list, service_config, 
+			  sizeof(struct service_config_list))) {
+		trace(CONFIG_ERROR_LEVEL,
+		      "%s,%s: could not add config list",
+		      __FILE__, __FUNCTION__);
+		return -1;
+	}
 	return 0;
 }
 
+void config_free()
+{
+	struct element *el;
+	struct service_config_list *scl;
+	
+	/* first free all "sublists" */
+	el = list_getstart(&config_list);
+	while(el) {
+		scl = (struct service_config_list *) el->data;
+		list_freelist(scl->config_items);
+		el = el->nextnode;
+	}
+	
+	/* free the complete list */
+	list_freelist(&config_list);
+}
 
-int GetConfigValue(const field_t name, struct list *cfg_items,
-		   field_t value)
+int GetConfigValue(const field_t field_name, const char *service_name, 
+		   field_t value) {
+	struct element *el;
+	struct service_config_list *scl;
+
+	el = list_getstart(&config_list);
+	while(el) {
+		scl = (struct service_config_list *) el->data;
+		if (!scl || strlen(scl->service_name) == 0) 
+			trace(TRACE_INFO, "%s,%s: NULL config_list on "
+			      "config list", __FILE__, __FUNCTION__);
+		else {
+			if (strcmp(scl->service_name, service_name) == 0) {
+				/* found correct list */
+				GetConfigValueConfigList(field_name,
+							 scl->config_items,
+							 value);
+				return 0;
+			}
+		}
+		el = el->nextnode;
+	}
+	
+	trace(TRACE_DEBUG, "%s,%s config for service not found",
+	      __FILE__, __FUNCTION__);
+	return 0;
+}
+			
+int GetConfigValueConfigList(const field_t name, struct list *config_items,
+			     field_t value)
 {
 	item_t *item;
 	struct element *el;
+	int i = 0;
+
+	assert(config_items);
 
 	value[0] = '\0';
-
+	
 	trace(TRACE_DEBUG,
 	      "GetConfigValue(): searching value for config item [%s]",
 	      name);
 
-	el = list_getstart(cfg_items);
+	el = list_getstart(config_items);
 	while (el) {
 		item = (item_t *) el->data;
+		trace(TRACE_DEBUG, "%s,%s i = %d",
+		      __FILE__, __FUNCTION__, i++);
+
 
 		if (!item || strlen(item->name) == 0 || 
 		    strlen(item->value) == 0) {
 			trace(TRACE_INFO,
-			      "GetConfigValue(): NULL item%s in item-list",
+			      "GetConfigValue(): NULL item %s in item-list",
 			      item ? (strlen(item->name) > 0?
 				      " value" : " name") : "");
 
@@ -205,11 +298,11 @@ int GetConfigValue(const field_t name, struct list *cfg_items,
 	return 0;
 }
 
-void SetTraceLevel(struct list *cfg_items)
+void SetTraceLevel(const char *service_name)
 {
 	field_t val;
 
-	if (GetConfigValue("trace_level", cfg_items, val) < 0)
+	if (GetConfigValue("trace_level", service_name, val) < 0)
 		trace(TRACE_FATAL, "%s,%s: error getting config!",
 		      __FILE__, __FUNCTION__);
 	if (strlen(val) == 0)
@@ -218,26 +311,26 @@ void SetTraceLevel(struct list *cfg_items)
 		configure_debug(atoi(val), 1, 0);
 }
 
-void GetDBParams(db_param_t * db_params, struct list *cfg_items)
+void GetDBParams(db_param_t * db_params)
 {
 	field_t port_string;
 	field_t sock_string;
-	if (GetConfigValue("host", cfg_items, db_params->host) < 0)
+	if (GetConfigValue("host", "DBMAIL", db_params->host) < 0)
 		trace(TRACE_FATAL, "%s,%s: error getting config!",
 		      __FILE__, __FUNCTION__);
-	if (GetConfigValue("db", cfg_items, db_params->db) < 0) 
+	if (GetConfigValue("db", "DBMAIL", db_params->db) < 0) 
 		trace(TRACE_FATAL, "%s,%s: error getting config!",
 		      __FILE__, __FUNCTION__);
-	if (GetConfigValue("user", cfg_items, db_params->user) < 0) 
+	if (GetConfigValue("user", "DBMAIL", db_params->user) < 0) 
 		trace(TRACE_FATAL, "%s,%s: error getting config!",
 		      __FILE__, __FUNCTION__);
-	if (GetConfigValue("pass", cfg_items, db_params->pass) < 0)
+	if (GetConfigValue("pass", "DBMAIL", db_params->pass) < 0)
 		trace(TRACE_FATAL, "%s,%s: error getting config!",
 		      __FILE__, __FUNCTION__);
-	if (GetConfigValue("sqlport", cfg_items, port_string) < 0)
+	if (GetConfigValue("sqlport", "DBMAIL", port_string) < 0)
 		trace(TRACE_FATAL, "%s,%s: error getting config!",
 		      __FILE__, __FUNCTION__);
-	if (GetConfigValue("sqlsocket", cfg_items, sock_string) < 0)
+	if (GetConfigValue("sqlsocket", "DBMAIL", sock_string) < 0)
 		trace(TRACE_FATAL, "%s,%s: error getting config!",
 		      __FILE__, __FUNCTION__);
 

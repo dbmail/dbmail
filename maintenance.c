@@ -57,24 +57,20 @@ int main(int argc, char *argv[])
 	int show_help = 0, purge_deleted = 0, set_deleted = 0;
 	int vacuum_db = 0;
 	int do_nothing = 1;
-	struct list sysItems;
-
 	time_t start, stop;
-
 	char timespec[LEN], timestr[LEN];
 	int opt;
 	struct list lostlist;
 	struct element *el;
 	u64_t id;
-
 	u64_t deleted_messages;
 	u64_t messages_set_to_delete;
 
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 
-	ReadConfig("DBMAIL", configFile, &sysItems);
-	SetTraceLevel(&sysItems);
-	GetDBParams(&_db_params, &sysItems);
+	ReadConfig("DBMAIL", configFile);
+	SetTraceLevel("DBMAIL");
+	GetDBParams(&_db_params);
 
 	setvbuf(stdout, 0, _IONBF, 0);
 	printf("*** dbmail-maintenance ***\n");
@@ -498,6 +494,9 @@ int main(int argc, char *argv[])
 
 	db_disconnect();
 	auth_disconnect();
+	
+	config_free();
+
 	return 0;
 }
 

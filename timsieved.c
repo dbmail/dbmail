@@ -52,19 +52,15 @@ Copyright (C) 2004 Aaron Stone aaron at serendipity dot cx
 /* server timeout error */
 #define TIMS_TIMEOUT_MSG "221 Connection timeout BYE"
 
-struct list smtpItems;
-struct list timsItems;
-struct list sysItems;
-
 char *configFile = DEFAULT_CONFIG_FILE;
 
 /* set up database login data */
 extern db_param_t _db_params;
 
-void SetConfigItems(serverConfig_t * config, struct list *items);
+static void SetConfigItems(serverConfig_t * config);
 static int SetMainSigHandler(void);
 static void Daemonize(void);
-void MainSigHandler(int sig, siginfo_t * info, void *data);
+static void MainSigHandler(int sig, siginfo_t * info, void *data);
 
 int tims_before_smtp = 0;
 int mainRestart = 0;
@@ -111,12 +107,12 @@ int main(int argc, char *argv[])
 #endif
 
 		/* We need smtp config for bounce.c and forward.c */
-		ReadConfig("SMTP", configFile, &smtpItems);
-		ReadConfig("TIMSIEVED", configFile, &timsItems);
-		ReadConfig("DBMAIL", configFile, &sysItems);
-		SetConfigItems(&config, &timsItems);
-		SetTraceLevel(&timsItems);
-		GetDBParams(&_db_params, &sysItems);
+		ReadConfig("SMTP", configFile);
+		ReadConfig("TIMSIEVED", configFile);
+		ReadConfig("DBMAIL", configFile);
+		SetConfigItems(&config);
+		SetTraceLevel("TIMSIEVED");
+		GetDBParams(&_db_params);
 
 		config.ClientHandler = tims_handle_connection;
 		config.timeoutMsg = TIMS_TIMEOUT_MSG;
@@ -170,10 +166,8 @@ int main(int argc, char *argv[])
 			}
 		}
 
-		list_freelist(&smtpItems.start);
-		list_freelist(&timsItems.start);
-		list_freelist(&sysItems.start);
 		close(config.listenSocket);
+		config_free();
 
 	} while (result == 1 && !mainStop);	/* 1 means reread-config and restart */
 
@@ -224,12 +218,12 @@ int SetMainSigHandler()
 }
 
 
-void SetConfigItems(serverConfig_t * config, struct list *items)
+void SetConfigItems(serverConfig_t * config)
 {
 	field_t val;
 
 	/* read items: NCHILDREN */
-	GetConfigValue("NCHILDREN", items, val);
+	GetConfigValue("NCHILDREN", "TIMSIEVED", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for NCHILDREN in config file");
@@ -245,7 +239,7 @@ void SetConfigItems(serverConfig_t * config, struct list *items)
 
 
 	/* read items: MAXCONNECTS */
-	GetConfigValue("MAXCONNECTS", items, val);
+	GetConfigValue("MAXCONNECTS", "TIMSIEVED", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for MAXCONNECTS in config file");
@@ -261,7 +255,7 @@ void SetConfigItems(serverConfig_t * config, struct list *items)
 
 
 	/* read items: TIMEOUT */
-	GetConfigValue("TIMEOUT", items, val);
+	GetConfigValue("TIMEOUT", "TIMSIEVED", val);
 	if (strlen(val) == 0) {
 		trace(TRACE_DEBUG,
 		      "SetConfigItems(): no value for TIMEOUT in config file");
@@ -276,7 +270,7 @@ void SetConfigItems(serverConfig_t * config, struct list *items)
 
 
 	/* read items: PORT */
-	GetConfigValue("PORT", items, val);
+	GetConfigValue("PORT", "TIMSIEVED", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for PORT in config file");
@@ -291,7 +285,7 @@ void SetConfigItems(serverConfig_t * config, struct list *items)
 
 
 	/* read items: BINDIP */
-	GetConfigValue("BINDIP", items, val);
+	GetConfigValue("BINDIP", "TIMSIEVED", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for BINDIP in config file");
@@ -304,7 +298,7 @@ void SetConfigItems(serverConfig_t * config, struct list *items)
 
 
 	/* read items: RESOLVE_IP */
-	GetConfigValue("RESOLVE_IP", items, val);
+	GetConfigValue("RESOLVE_IP", "TIMSIEVED", val);
 	if (strlen(val) == 0)
 		trace(TRACE_DEBUG,
 		      "SetConfigItems(): no value for RESOLVE_IP in config file");
@@ -316,7 +310,7 @@ void SetConfigItems(serverConfig_t * config, struct list *items)
 
 
 	/* read items: IMAP-BEFORE-SMTP */
-	GetConfigValue("TIMS_BEFORE_SMTP", items, val);
+	GetConfigValue("TIMS_BEFORE_SMTP", "TIMSIEVED", val);
 	if (strlen(val) == 0)
 		trace(TRACE_DEBUG,
 		      "SetConfigItems(): no value for TIMS_BEFORE_SMTP  in config file");
@@ -328,7 +322,7 @@ void SetConfigItems(serverConfig_t * config, struct list *items)
 
 
 	/* read items: EFFECTIVE-USER */
-	GetConfigValue("EFFECTIVE_USER", items, val);
+	GetConfigValue("EFFECTIVE_USER", "TIMSIEVED", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for EFFECTIVE_USER in config file");
@@ -342,7 +336,7 @@ void SetConfigItems(serverConfig_t * config, struct list *items)
 
 
 	/* read items: EFFECTIVE-GROUP */
-	GetConfigValue("EFFECTIVE_GROUP", items, val);
+	GetConfigValue("EFFECTIVE_GROUP", "TIMSIEVED", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for EFFECTIVE_GROUP in config file");

@@ -62,9 +62,6 @@
 #define DBMAIL_DELIVERY_USERNAME "__@!internal_delivery_user!@__"
 #define DBMAIL_TEMPMBOX "INBOX"
 
-
-extern struct list smtpItems, sysItems;
-
 /**
  * store a messagebody (without headers in one or more blocks in the database
  * \param message the message
@@ -90,7 +87,7 @@ static int send_notification(const char *to, const char *from,
 	int result;
 	size_t sendmail_command_maxlen;
 
-	if (GetConfigValue("SENDMAIL", &smtpItems, sendmail) < 0) 
+	if (GetConfigValue("SENDMAIL", "SMTP", sendmail) < 0) 
 		trace(TRACE_FATAL,
 		      "%s,%s: error getting Config Values",
 		      __FILE__, __FUNCTION__);
@@ -165,7 +162,7 @@ static int send_reply(struct list *headerfields, const char *body)
 	int result;
 	unsigned int i, j;
 
-	if (GetConfigValue("SENDMAIL", &smtpItems, sendmail) < 0)
+	if (GetConfigValue("SENDMAIL", "SMTP", sendmail) < 0)
 		trace(TRACE_FATAL,
 		      "%s,%s: error getting config",
 		      __FILE__, __FUNCTION__);
@@ -272,14 +269,14 @@ static int execute_auto_ran(u64_t useridnr, struct list *headerfields)
 	char *notify_address = NULL;
 
 	/* message has been succesfully inserted, perform auto-notification & auto-reply */
-	if (GetConfigValue("AUTO_NOTIFY", &smtpItems, val) < 0)
+	if (GetConfigValue("AUTO_NOTIFY", "SMTP", val) < 0)
 		trace(TRACE_FATAL, "%s,%s error getting config",
 		      __FILE__, __FUNCTION__);
 
 	if (strcasecmp(val, "yes") == 0)
 		do_auto_notify = 1;
 
-	if (GetConfigValue("AUTO_REPLY", &smtpItems, val) < 0)
+	if (GetConfigValue("AUTO_REPLY", "SMTP", val) < 0)
 		trace(TRACE_FATAL, "%s,%s error getting config",
 		      __FILE__, __FUNCTION__);
 

@@ -51,8 +51,6 @@
 #include "sortsieve.h"
 #endif
 
-extern struct list smtpItems, sysItems;
-
 /* Run the user's sorting rules on this message
  * Retrieve the action list as either
  * a linked list of things to do, or a 
@@ -75,11 +73,11 @@ dsn_class_t sort_and_deliver(u64_t msgidnr,
 	char *inbox = "INBOX";
 
 
-	GetConfigValue("SQLREGEX", &smtpItems, val);
+	GetConfigValue("SQLREGEX", "SMTP", val);
 	if (strcasecmp(val, "yes") == 0)
 		do_regex = 1;
 
-	GetConfigValue("LIBSIEVE", &smtpItems, val);
+	GetConfigValue("LIBSIEVE", "SMTP", val);
 	if (strcasecmp(val, "yes") == 0)
 		do_sieve = 1;
 

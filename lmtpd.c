@@ -51,19 +51,15 @@
 /* server timeout error */
 #define LMTP_TIMEOUT_MSG "221 Connection timeout BYE"
 
-struct list smtpItems;
-struct list lmtpItems;
-struct list sysItems;
-
 char *configFile = DEFAULT_CONFIG_FILE;
 
 /* set up database login data */
 extern db_param_t _db_params;
 
-void SetConfigItems(serverConfig_t * config, struct list *items);
-void Daemonize(void);
-int SetMainSigHandler(void);
-void MainSigHandler(int sig, siginfo_t * info, void *data);
+static void SetConfigItems(serverConfig_t * config);
+static void Daemonize(void);
+static int SetMainSigHandler(void);
+static void MainSigHandler(int sig, siginfo_t * info, void *data);
 
 int lmtp_before_smtp = 0;
 int mainRestart = 0;
@@ -110,12 +106,12 @@ int main(int argc, char *argv[])
 #endif
 
 		/* We need smtp config for bounce.c and forward.c */
-		ReadConfig("SMTP", configFile, &smtpItems);
-		ReadConfig("LMTP", configFile, &lmtpItems);
-		ReadConfig("DBMAIL", configFile, &sysItems);
-		SetConfigItems(&config, &lmtpItems);
-		SetTraceLevel(&lmtpItems);
-		GetDBParams(&_db_params, &sysItems);
+		ReadConfig("SMTP", configFile);
+		ReadConfig("LMTP", configFile);
+		ReadConfig("DBMAIL", configFile);
+		SetConfigItems(&config);
+		SetTraceLevel("LMTP");
+		GetDBParams(&_db_params);
 
 		config.ClientHandler = lmtp_handle_connection;
 		config.timeoutMsg = LMTP_TIMEOUT_MSG;
@@ -168,11 +164,9 @@ int main(int argc, char *argv[])
 				result = 0;
 			}
 		}
-
-		list_freelist(&smtpItems.start);
-		list_freelist(&lmtpItems.start);
-		list_freelist(&sysItems.start);
+		
 		close(config.listenSocket);
+		config_free();
 
 	} while (result == 1 && !mainStop);	/* 1 means reread-config and restart */
 
@@ -223,12 +217,12 @@ int SetMainSigHandler()
 }
 
 
-void SetConfigItems(serverConfig_t * config, struct list *items)
+void SetConfigItems(serverConfig_t * config)
 {
 	field_t val;
 
 	/* read items: NCHILDREN */
-	GetConfigValue("NCHILDREN", items, val);
+	GetConfigValue("NCHILDREN", "LMTP", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for NCHILDREN in config file");
@@ -244,7 +238,7 @@ void SetConfigItems(serverConfig_t * config, struct list *items)
 
 
 	/* read items: MAXCONNECTS */
-	GetConfigValue("MAXCONNECTS", items, val);
+	GetConfigValue("MAXCONNECTS", "LMTP", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for MAXCONNECTS in config file");
@@ -260,7 +254,7 @@ void SetConfigItems(serverConfig_t * config, struct list *items)
 
 
 	/* read items: TIMEOUT */
-	GetConfigValue("TIMEOUT", items, val);
+	GetConfigValue("TIMEOUT", "LMTP", val);
 	if (strlen(val) == 0) {
 		trace(TRACE_DEBUG,
 		      "SetConfigItems(): no value for TIMEOUT in config file");
@@ -275,7 +269,7 @@ void SetConfigItems(serverConfig_t * config, struct list *items)
 
 
 	/* read items: PORT */
-	GetConfigValue("PORT", items, val);
+	GetConfigValue("PORT", "LMTP", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for PORT in config file");
@@ -290,7 +284,7 @@ void SetConfigItems(serverConfig_t * config, struct list *items)
 
 
 	/* read items: BINDIP */
-	GetConfigValue("BINDIP", items, val);
+	GetConfigValue("BINDIP", "LMTP", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for BINDIP in config file");
@@ -303,7 +297,7 @@ void SetConfigItems(serverConfig_t * config, struct list *items)
 
 
 	/* read items: RESOLVE_IP */
-	GetConfigValue("RESOLVE_IP", items, val);
+	GetConfigValue("RESOLVE_IP", "LMTP", val);
 	if (strlen(val) == 0)
 		trace(TRACE_DEBUG,
 		      "SetConfigItems(): no value for RESOLVE_IP in config file");
@@ -315,7 +309,7 @@ void SetConfigItems(serverConfig_t * config, struct list *items)
 
 
 	/* read items: IMAP-BEFORE-SMTP */
-	GetConfigValue("LMTP_BEFORE_SMTP", items, val);
+	GetConfigValue("LMTP_BEFORE_SMTP", "LMTP", val);
 	if (strlen(val) == 0)
 		trace(TRACE_DEBUG,
 		      "SetConfigItems(): no value for LMTP_BEFORE_SMTP  in config file");
@@ -327,7 +321,7 @@ void SetConfigItems(serverConfig_t * config, struct list *items)
 
 
 	/* read items: EFFECTIVE-USER */
-	GetConfigValue("EFFECTIVE_USER", items, val);
+	GetConfigValue("EFFECTIVE_USER", "LMTP", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for EFFECTIVE_USER in config file");
@@ -341,7 +335,7 @@ void SetConfigItems(serverConfig_t * config, struct list *items)
 
 
 	/* read items: EFFECTIVE-GROUP */
-	GetConfigValue("EFFECTIVE_GROUP", items, val);
+	GetConfigValue("EFFECTIVE_GROUP", "LMTP", val);
 	if (strlen(val) == 0)
 		trace(TRACE_FATAL,
 		      "SetConfigItems(): no value for EFFECTIVE_GROUP in config file");
