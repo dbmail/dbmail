@@ -1,5 +1,8 @@
 2004-08-23  Ilja Booij  <ilja@ic-s.nl>
 
+	* imap4.c (IMAPClientHandler): reset nfaultyresponses after 
+	a command was sent to the server that parsed OK.
+
 	* sql/mysql/migrate_from_1.x_to_2.0_innodb.mysql: fixed faulty
 	foreign key reference thanks to ville at thesubmachine dot com
 	* vut2dbmail.c: removed from distribution. Also removed from

@@ -261,7 +261,7 @@ int IMAPClientHandler(ClientInfo * ci)
 			nfaultyresponses++;
 			continue;
 		}
-
+		
 		/* read tag & command */
 		cpy = line;
 
@@ -356,6 +356,12 @@ int IMAPClientHandler(ClientInfo * ci)
 
 			continue;
 		}
+
+		/* reset the faulty responses counter. This is quick fix which
+		 * is useful for programs that depend on sending faulty
+		 * commands to the server, and checking the response. 
+		 * (IB: 2004-08-23) */
+		nfaultyresponses = 0;
 
 		trace(TRACE_INFO,
 		      "IMAPClientHandler(): Executing command %s...\n",
