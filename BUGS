@@ -3,8 +3,10 @@ $Id$
 2004-01-19 (Roel Rozendaal):
 FETCH MSGNUM (RFC822.HEADER) returns headers in wrong order.
 
-2004-01-29 (Ilja Booij):
-db_getmailbox seems to hang (last thing in log seems to indicate
-that it's this functions that's hanging.
+2004-02-04 (Ilja Booij):
+dbmail-smtp needs to handle command line arguments in a sane way. Possibly using
+getopt()
 
-
+2004-02-04 ():
+dbmail bounces have wrong envelope and needs to be more sane on where to send bounce
+to.
