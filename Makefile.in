@@ -102,7 +102,7 @@ bin_SCRIPTS = install-dbmail.sh
 
 COMMON = config.c debug.c list.c dbmd5.c md5.c db.c misc.c mime.c
 SERVER = server.c serverchild.c
-DELIVER = header.c pipe.c bounce.c forward.c dsn.c
+DELIVER = header.c pipe.c forward.c dsn.c
 
 # CFLAGS
 AM_CFLAGS = -fomit-frame-pointer
@@ -145,7 +145,7 @@ CPPFLAGS = @CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
 dbmail_smtp_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o db.o misc.o \
-mime.o header.o pipe.o bounce.o forward.o dsn.o main.o
+mime.o header.o pipe.o forward.o dsn.o main.o
 dbmail_smtp_DEPENDENCIES = 
 dbmail_smtp_LDFLAGS = 
 dbmail_pop3d_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o db.o \
@@ -170,8 +170,8 @@ misc.o mime.o vut2dbmail.o
 dbmail_readvut_DEPENDENCIES = 
 dbmail_readvut_LDFLAGS = 
 dbmail_lmtpd_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o db.o \
-misc.o mime.o server.o serverchild.o header.o pipe.o bounce.o forward.o \
-dsn.o lmtp.o lmtpd.o
+misc.o mime.o server.o serverchild.o header.o pipe.o forward.o dsn.o \
+lmtp.o lmtpd.o
 dbmail_lmtpd_DEPENDENCIES = 
 dbmail_lmtpd_LDFLAGS = 
 @SIEVE_TRUE@dbmail_sievecmd_OBJECTS =  config.o debug.o list.o dbmd5.o \
@@ -198,15 +198,15 @@ DISTFILES = $(DIST_COMMON) $(SOURCES) $(HEADERS) $(TEXINFOS) $(EXTRA_DIST)
 
 TAR = tar
 GZIP_ENV = --best
-DEP_FILES =  .deps/acl.P .deps/bounce.P .deps/config.P .deps/db.P \
-.deps/dbmd5.P .deps/dbmsgbuf.P .deps/dbsearch.P .deps/debug.P \
-.deps/dsn.P .deps/forward.P .deps/header.P .deps/imap4.P \
-.deps/imapcommands.P .deps/imapd.P .deps/imaputil.P .deps/list.P \
-.deps/lmtp.P .deps/lmtpd.P .deps/main.P .deps/maintenance.P .deps/md5.P \
-.deps/memblock.P .deps/mime.P .deps/misc.P .deps/pipe.P .deps/pop3.P \
-.deps/pop3d.P .deps/quota.P .deps/rfcmsg.P .deps/server.P \
-.deps/serverchild.P .deps/sievecmd.P .deps/timsieve.P .deps/timsieved.P \
-.deps/user.P .deps/vut2dbmail.P
+DEP_FILES =  .deps/acl.P .deps/config.P .deps/db.P .deps/dbmd5.P \
+.deps/dbmsgbuf.P .deps/dbsearch.P .deps/debug.P .deps/dsn.P \
+.deps/forward.P .deps/header.P .deps/imap4.P .deps/imapcommands.P \
+.deps/imapd.P .deps/imaputil.P .deps/list.P .deps/lmtp.P .deps/lmtpd.P \
+.deps/main.P .deps/maintenance.P .deps/md5.P .deps/memblock.P \
+.deps/mime.P .deps/misc.P .deps/pipe.P .deps/pop3.P .deps/pop3d.P \
+.deps/quota.P .deps/rfcmsg.P .deps/server.P .deps/serverchild.P \
+.deps/sievecmd.P .deps/timsieve.P .deps/timsieved.P .deps/user.P \
+.deps/vut2dbmail.P
 SOURCES = $(dbmail_smtp_SOURCES) $(dbmail_pop3d_SOURCES) $(dbmail_imapd_SOURCES) $(dbmail_maintenance_SOURCES) $(dbmail_adduser_SOURCES) $(dbmail_readvut_SOURCES) $(dbmail_lmtpd_SOURCES) $(dbmail_sievecmd_SOURCES) $(dbmail_timsieved_SOURCES)
 OBJECTS = $(dbmail_smtp_OBJECTS) $(dbmail_pop3d_OBJECTS) $(dbmail_imapd_OBJECTS) $(dbmail_maintenance_OBJECTS) $(dbmail_adduser_OBJECTS) $(dbmail_readvut_OBJECTS) $(dbmail_lmtpd_OBJECTS) $(dbmail_sievecmd_OBJECTS) $(dbmail_timsieved_OBJECTS)
 

@@ -26,7 +26,7 @@ bin_SCRIPTS = install-dbmail.sh
 
 COMMON = config.c debug.c list.c dbmd5.c md5.c db.c misc.c mime.c
 SERVER = server.c serverchild.c
-DELIVER = header.c pipe.c bounce.c forward.c dsn.c
+DELIVER = header.c pipe.c forward.c dsn.c
 
 # CFLAGS
 AM_CFLAGS = -fomit-frame-pointer

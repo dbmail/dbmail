@@ -30,7 +30,6 @@
 #include "auth.h"
 #include "debug.h"
 #include "list.h"
-#include "bounce.h"
 #include "forward.h"
 #include "sort.h"
 #include "dbmail.h"

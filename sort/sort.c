@@ -35,7 +35,6 @@
 #include "debug.h"
 #include "list.h"
 #include "pipe.h"
-#include "bounce.h"
 #include "forward.h"
 #include "sort.h"
 #include "dbmail.h"
@@ -73,7 +72,6 @@ dsn_class_t sort_and_deliver(u64_t msgidnr,
 	int actiontaken = 0, ret = 0;
 	u64_t mboxidnr, newmsgidnr;
 	char unique_id[UID_SIZE];
-	char *bounce_id = NULL;
 	char *inbox = "INBOX";
 
 
@@ -235,13 +233,6 @@ dsn_class_t sort_and_deliver(u64_t msgidnr,
 							 &newmsgidnr)) {
 						case -2:
 							/* Couldn't deliver because the quota has been reached */
-							bounce_id =
-							    auth_get_userid
-							    (useridnr);
-							bounce(header,
-							       bounce_id,
-							       BOUNCE_STORAGE_LIMIT_REACHED);
-							my_free(bounce_id);
 							break;
 						case -1:
 							/* Couldn't deliver because something something went wrong */
@@ -294,12 +285,6 @@ dsn_class_t sort_and_deliver(u64_t msgidnr,
 				{
 					// FIXME: I'm happy with this code, but it's not quite right...
 					// Plus we want to specify a message to go along with it!
-					bounce_id =
-					    auth_get_userid(useridnr);
-					bounce(header, bounce_id,
-					       BOUNCE_NO_SUCH_USER);
-
-					my_free(bounce_id);
 					actiontaken = 1;
 					break;
 				}

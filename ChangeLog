@@ -1,5 +1,16 @@
 2004-05-25  Ilja Booij  <ilja@ic-s.nl>
 
+	* sort/sort.c: no longer includes bounce.h
+	(sort_and_deliver): no longer calls bounce()
+
+	* pipe.c: no longer includes bounce.h
+
+	* forward.c: no longer includes bounce.h
+
+	* lmtp.c (init_session): simple function to initialize an
+	LMTP session
+	(lmtp_handle_connection): now calls init_session.
+
 	* db.c (db_calculate_quotum_all): changed query. It should now
 	work when there are no messages in a user's mailbox. 
 

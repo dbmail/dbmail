@@ -53,9 +53,6 @@
  * in the incoming buffer */
 #define MAX_IN_BUFFER 255
 
-/* This one needs global score for bounce.c */
-struct list mimelist;
-
 /* These are needed across multiple calls to lmtp() */
 struct list rcpt;
 char *envelopefrom = NULL;
@@ -83,6 +80,12 @@ char myhostname[64];
  */
 static int read_whole_message_network(FILE *instream, char **whole_message,
 				      u64_t *whole_message_size);
+
+/**
+ * initialize a new session. Sets all relevant variables in session
+ * \param[in,out] session to initialize
+ */
+static void init_session(PopSession_t *session);
 
 int lmtp_reset(PopSession_t * session)
 {
@@ -117,22 +120,8 @@ int lmtp_handle_connection(clientinfo_t * ci)
 	int cnt;		/* counter */
 
 	PopSession_t session;	/* current connection session */
-
-	/* setting Session variables */
-	session.state = STRT;
-	session.error_count = 0;
-
-	session.username = NULL;
-	session.password = NULL;
-
-	session.SessionResult = 0;
-
-	/* reset counters */
-	session.totalsize = 0;
-	session.virtual_totalsize = 0;
-	session.totalmessages = 0;
-	session.virtual_totalmessages = 0;
-
+	
+	init_session(&session);
 
 	/* getting hostname */
 	gethostname(myhostname, 64);
@@ -618,6 +607,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 					u64_t dummyidx = 0, dummysize = 0;
 					struct list fromlist, headerfields;
 					struct element *element;
+					struct list mimelist;
 
 					list_init(&mimelist);
 					list_init(&fromlist);
@@ -814,4 +804,22 @@ int read_whole_message_network(FILE *instream, char **whole_message,
 	*whole_message = tmpmessage;
 	*whole_message_size = total_size;
 	return 1;
+}
+
+void init_session(PopSession_t *session) 
+{
+	/* setting Session variables */
+	session->state = STRT;
+	session->error_count = 0;
+
+	session->username = NULL;
+	session->password = NULL;
+
+	session->SessionResult = 0;
+
+	/* reset counters */
+	session->totalsize = 0;
+	session->virtual_totalsize = 0;
+	session->totalmessages = 0;
+	session->virtual_totalmessages = 0;
 }

@@ -194,5 +194,5 @@ CREATE TABLE pbsp (
 
 SET FOREIGN_KEY_CHECKS=1;
 # create the user for the delivery chain
-INSERT INTO users (userid, passwd, encryption_type) 
-	VALUES ('__@!internal_delivery_user!@__', '', 'md5');
+#INSERT INTO users (userid, passwd, encryption_type) 
+#	VALUES ('__@!internal_delivery_user!@__', '', 'md5');

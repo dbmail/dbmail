@@ -27,10 +27,10 @@
 
 #include <stdio.h>
 #include <time.h>
+
 #include "db.h"
 #include "debug.h"
 #include "list.h"
-#include "bounce.h"
 #include "forward.h"
 #include "dbmail.h"
 #include <string.h>
