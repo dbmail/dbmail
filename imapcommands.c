@@ -1554,6 +1554,24 @@ int _ic_search(char *tag, char **args, ClientInfo *ci)
       return -1;
     }
 
+  if (args[0] && strcasecmp(args[0], "charset") == 0)
+    {
+      /* charset specified */
+      if (!args[1])
+	{
+	  fprintf(ci-tx,"%s BAD invalid argument list\r\n",tag);
+	  return 1;
+	}
+
+      if (strcasecmp(args[1], "us-ascii") != 0)
+	{
+	  fprintf(ci->tx,"%s NO specified charset is not supported\r\n",tag);
+	  return 0;
+	}
+
+      only_ascii = 1;
+    }
+
   /* now find the messages; this function will return an ORDERED list of 
    * message UID's (ascending)
    */
