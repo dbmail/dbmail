@@ -15,7 +15,7 @@ void create_unique_id(char *target, unsigned long messageid)
 {
   time_t now;
   time(&now);
-  trace (TRACE_DEBUG,"create_unique_id(): createding id",target);
+  trace (TRACE_DEBUG,"create_unique_id(): createding id");
   snprintf (target,UID_SIZE,"%luA%lu",messageid,now);
   trace (TRACE_DEBUG,"create_unique_id(): created: %s",target);
 }
@@ -49,8 +49,8 @@ char *read_header(unsigned long *blksize)
     {
       /* fgets will read until \n occurs */
       strblock = fgets (strblock, READ_BLOCK_SIZE, stdin);
-		if (strblock)
-			usedmem += (strlen(strblock)+1);
+      if (strblock)
+	usedmem += (strlen(strblock)+1);
 	
       /* If this happends it's a very big header */	
       if (usedmem>(allocated_blocks*HEADER_BLOCK_SIZE))
