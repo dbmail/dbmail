@@ -320,6 +320,7 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 		else
 		{
 			/* deliver using database */
+			tmp = list_getstart(&messageids);
 			pipe_forward (stdin, &external_forwards, header, *((unsigned long *)tmp->data));
 		}
 	}

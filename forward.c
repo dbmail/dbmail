@@ -79,7 +79,7 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
 
 				trace (TRACE_DEBUG,"pipe_forward(): Sending block"
 						"size=%d total=%d (%d\%)", usedmem, totalmem,
-						((usedmem/totalmem)*100)); 
+						(100-((usedmem/totalmem)*100))); 
 				
 				descriptor_temp = list_getstart(&descriptors);
 				while (descriptor_temp != NULL)
