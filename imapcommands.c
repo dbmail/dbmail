@@ -1076,6 +1076,7 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
     {
       fprintf(ci->tx,"* BYE internal dbase error\r\n");
       free(children);
+      free(pattern);
       return -1;
     }
 
@@ -1083,6 +1084,7 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
     {
       fprintf(ci->tx,"%s BAD invalid pattern specified\r\n",tag);
       free(children);
+      free(pattern);
       return 1;
     }
     
@@ -1095,6 +1097,7 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
 	{
 	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
 	  free(children);
+	  free(pattern);
 	  return -1;
 	}
 
@@ -1106,6 +1109,7 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
 	{
 	  fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
 	  free(children);
+	  free(pattern);
 	  return -1;
 	}
 
@@ -1116,6 +1120,7 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
 	{
 	  fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
 	  free(children);
+	  free(pattern);
 	  return -1;
 	}
 
@@ -1128,6 +1133,8 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
   if (children)
     free(children);
      
+  free(pattern);
+
   fprintf(ci->tx,"%s OK %s completed\r\n",tag,thisname);
   return 0;
 }
@@ -1253,6 +1260,7 @@ int _ic_status(char *tag, char **args, ClientInfo *ci)
       else
 	{
 	  fprintf(ci->tx,"\r\n%s BAD unrecognized option '%s' specified\r\n",tag,args[i]);
+	  free(mb.seq_list);
 	  return 1;
 	}
     }
@@ -1260,6 +1268,8 @@ int _ic_status(char *tag, char **args, ClientInfo *ci)
   fprintf(ci->tx,")\r\n");
 
   fprintf(ci->tx,"%s OK STATUS completed\r\n",tag);
+
+  free(mb.seq_list);
   return 0;
 }
 
@@ -1503,7 +1513,8 @@ int _ic_expunge(char *tag, char **args, ClientInfo *ci)
 
       fprintf(ci->tx,"* %d EXPUNGE\r\n",idx+1); /* add one: IMAP MSN starts at 1 not zero */
     }
-
+  free(msgids);
+  msgids = NULL;
 
   /* update mailbox info */
 
@@ -1515,6 +1526,7 @@ int _ic_expunge(char *tag, char **args, ClientInfo *ci)
   if (result == -1)
     {
       fprintf(ci->tx,"* BYE internal dbase error\r\n");
+      free(newmailbox.seq_list);
       return -1; /* fatal  */
     }
 
@@ -1524,6 +1536,7 @@ int _ic_expunge(char *tag, char **args, ClientInfo *ci)
   if (newmailbox.recent != ud->mailbox.recent)
     fprintf(ci->tx, "* %d RECENT\r\n", newmailbox.recent);
 
+  free(ud->mailbox.seq_list);
   memcpy(&ud->mailbox, &newmailbox, sizeof(newmailbox));
 
   fprintf(ci->tx,"%s OK EXPUNGE completed\r\n",tag);

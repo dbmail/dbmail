@@ -322,6 +322,7 @@ int imap_process(ClientInfo *ci)
 	  if (newmailbox.recent != ud->mailbox.recent)
 	    fprintf(ci->tx, "* %d RECENT\r\n", newmailbox.recent);
 
+	  free(ud->mailbox.seq_list);
 	  memcpy(&ud->mailbox, &newmailbox, sizeof(newmailbox));
 	}
 

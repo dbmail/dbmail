@@ -1825,7 +1825,10 @@ int db_getmailbox(mailbox_t *mb, unsigned long userid)
   if (db_query(query) == -1)
     {
       trace(TRACE_ERROR, "db_getmailbox(): could not determine highest message ID\n");
-      
+
+      free(mb->seq_list);
+      mb->seq_list = NULL;
+
       return -1;
     }
 
@@ -1833,6 +1836,9 @@ int db_getmailbox(mailbox_t *mb, unsigned long userid)
     {
       trace(TRACE_ERROR,"db_getmailbox(): mysql_store_result failed: %s\n",mysql_error(&conn));
       
+      free(mb->seq_list);
+      mb->seq_list = NULL;
+
       return -1;
     }
 
@@ -2198,7 +2204,7 @@ int db_expunge(unsigned long uid,unsigned long **msgids,int *nmsgs)
 
   /* save ID's in array */
   i = 0;
-  while ((row = mysql_fetch_row(res)))
+  while ((row = mysql_fetch_row(res)) && i<*nmsgs)
     {
       (*msgids)[i++] = strtoul(row[0], NULL, 10);
     }

@@ -28,7 +28,8 @@ void configure_debug(int level, int trace_syslog, int trace_verbose)
 void func_memtst (char filename[255],int line,int tst)
 {
   if (tst) 
-    trace(TRACE_FATAL,"func_memtst(): fatal: %s:%d Memory error, result should not be NULL)");
+    trace(TRACE_FATAL,"func_memtst(): fatal: %s:%d Memory error, result should not be NULL)",
+	  filename,line);
 }
 
 void trace (int level, const char *formatstring, ...)
