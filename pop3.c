@@ -933,9 +933,15 @@ int pop3(void *stream, char *buffer, char *client_ip,
 			if (session->state != POP3_AUTHORIZATION_STATE)
 				return pop3_error(session, stream,
 						  "-ERR wrong command mode, sir\r\n");
-
+			/* if we get anything but the naked "auth" command,
+			 * we return an error */
+			if (value != NULL) 
+				return pop3_error(session, stream,
+						  "-ERR unknown authorization mechanism\r\n");
+			
 			fprintf((FILE *) stream,
-				"+OK List of supported mechanisms\r\n.\r\n");
+				"+OK List of supported mechanisms\r\n"
+				"X-NONE-SO-USE-APOP\r\n");
 			return 1;
 		}
 
