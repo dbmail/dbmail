@@ -73,7 +73,7 @@ What do you need?
 	for all domains you want dbmail to be destiation for.
 	Next run postmap /etc/postfix/transport
 	Edit /etc/postfix/main.cf and add the line 
-	transport_maps = /etc/postfix/transport
+	transport_maps = hash:/etc/postfix/transport
 
 	do a postfix reload and if everything goes well 
 	mail should be delivered to dbmail. If not, try running 
