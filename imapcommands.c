@@ -139,7 +139,10 @@ int _ic_logout(struct ImapSession *self)
 {
 	timestring_t timestring;
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
-	
+
+	// flush recent messages from previous select
+	dbmail_imap_session_mailbox_update_recent(self);
+
 	if (!check_state_and_args(self, "LOGOUT", 0, 0, -1))
 		return 1;	/* error, return */
 
@@ -252,7 +255,10 @@ int _ic_select(struct ImapSession *self)
 		return 1;	/* error, return */
 
 	mailbox = self->args[0];
-
+	
+	// flush recent messages from previous select
+	dbmail_imap_session_mailbox_update_recent(self);
+	
 	if ((result = dbmail_imap_session_mailbox_open(self, mailbox)))
 		return result;
 
@@ -274,9 +280,11 @@ int _ic_select(struct ImapSession *self)
 	switch (ud->mailbox.permission) {
 	case IMAPPERM_READ:
 		g_snprintf(permstring, PERMSTRING_SIZE, "READ-ONLY");
+		//dbmail_imap_session_mailbox_select_recent(self);
 		break;
 	case IMAPPERM_READWRITE:
 		g_snprintf(permstring, PERMSTRING_SIZE, "READ-WRITE");
+		dbmail_imap_session_mailbox_select_recent(self);
 		break;
 	default:
 		trace(TRACE_ERROR,

@@ -42,6 +42,7 @@
 #include "mime.h"
 #include "rfcmsg.h"
 #include "dbmsgbuf.h"
+#include "imaputil.h"
 
 /* we need this one because we can't directly link imapd.o */
 int imap_before_smtp = 0;
@@ -268,6 +269,22 @@ START_TEST(test_db_set_msg)
 }
 END_TEST
 
+START_TEST(test_dbmail_imap_list_slices)
+{
+	unsigned i=0;
+	unsigned j=98;
+	unsigned s=11;
+	GList *list = NULL;
+	GList *sub = NULL;
+	for (i=0; i< j; i++) 
+		list = g_list_append_printf(list, "ELEM_%d", i);
+	list = dbmail_imap_list_slices(list, s);
+	list = g_list_first(list);
+	fail_unless(g_list_length(list)==9, "number of slices incorrect");
+	sub = g_string_split(g_string_new((gchar *)list->data), ",");
+	fail_unless(g_list_length(sub)==s,"Slice length incorrect");
+}
+END_TEST
 
 Suite *dbmail_suite(void)
 {
@@ -276,11 +293,13 @@ Suite *dbmail_suite(void)
 	TCase *tc_message = tcase_create("DbmailMessage");
 	TCase *tc_rfcmsg = tcase_create("Rfcmsg");
 	TCase *tc_mime = tcase_create("Mime");
+	TCase *tc_util = tcase_create("Utils");
 	
 	suite_add_tcase(s, tc_session);
 	suite_add_tcase(s, tc_message);
 	suite_add_tcase(s, tc_rfcmsg);
 	suite_add_tcase(s, tc_mime);
+	suite_add_tcase(s, tc_util);
 	
 	tcase_add_test(tc_session, test_imap_session_new);
 	tcase_add_test(tc_session, test_imap_bodyfetch);
@@ -292,6 +311,8 @@ Suite *dbmail_suite(void)
 
 	tcase_add_test(tc_mime, test_mime_readheader);
 	tcase_add_test(tc_mime, test_mime_fetch_headers);
+
+	tcase_add_test(tc_util, test_dbmail_imap_list_slices);
 	return s;
 }
 

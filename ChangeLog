@@ -1,3 +1,9 @@
+2004-12-23  Paul Stevens <paul@nfg.nl>
+
+	* check_dbmail_imapd.c, dbmail-imapsession.c, dbmail-imapsession.h,
+	imaputil.c, imaputil.h, imapcommands,c: First attempt at unsetting 
+	the recent flag on messages (closes #97).
+	
 2004-12-22  Paul Stevens <paul@nfg.nl>
 
 	* check_dbmail_imapd.c, mime.c, rfcmsg.c, dbmail-message.c,

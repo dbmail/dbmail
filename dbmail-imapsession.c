@@ -93,6 +93,7 @@ static GList * _imap_get_mime_parameters(struct mime_record *mr, int force_subty
 static void _imap_show_body_sections(struct ImapSession *self);
 static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data);
 	
+
 static u64_t get_dumpsize(body_fetch_t *bodyfetch, u64_t tmpdumpsize); 
 /* 
  *
@@ -2093,6 +2094,59 @@ int dbmail_imap_session_mailbox_open(struct ImapSession * self, char * mailbox)
 		return -1;	/* fatal  */
 	}
 
+	return 0;
+}
+
+int dbmail_imap_session_mailbox_select_recent(struct ImapSession *self) {
+	unsigned i;
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
+
+	self->recent = NULL;
+	snprintf(query, DEF_QUERYSIZE,
+		 "SELECT message_idnr FROM %smessages WHERE recent_flag = 1 AND mailbox_idnr = '%llu'",
+		 DBPFX, ud->mailbox.uid);
+
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: could not select message_idnrs",
+		      __FILE__, __func__);
+		return (-1);
+	}
+
+	for (i = 0; i < db_num_rows(); i++) 
+		self->recent = g_list_append(self->recent, g_strdup(db_get_result(i, 0)));
+	
+	db_free_result();
+	trace(TRACE_DEBUG, "%s,%s: recent [%d] in mailbox [%llu]",
+			__FILE__, __func__, g_list_length(self->recent), ud->mailbox.uid);
+
+	return g_list_length(self->recent);
+}
+
+int dbmail_imap_session_mailbox_update_recent(struct ImapSession *self) {
+	GList *slices = NULL;
+	
+	if (self->recent == NULL)
+		return 0;
+
+	slices = dbmail_imap_list_slices(self->recent,100);
+	slices = g_list_first(slices);
+	while (slices) {
+		snprintf(query, DEF_QUERYSIZE, "update %smessages set recent_flag = 0 "
+				"where message_idnr in (%s)", DBPFX, (gchar *)slices->data);
+		if (db_query(query) == -1) {
+			trace(TRACE_ERROR, "%s,%s: could not update recent_flags for message_idnrs",
+			      __FILE__, __func__);
+			return (-1);
+		}
+		slices = g_list_next(slices);
+	}
+	
+	g_list_foreach(self->recent,(GFunc)g_free, NULL);
+	g_list_free(self->recent);
+	g_list_foreach(slices, (GFunc)g_free, NULL);
+	g_list_free(slices);
+	
+	self->recent = NULL;
 	return 0;
 }
 int dbmail_imap_session_set_state(struct ImapSession *self, int state)
