@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 	
-	printf ("Ok, user added id [%d]\n",useridnr);
+	printf ("Ok, user added id [%lu]\n",useridnr);
 	
 	for (i = 5; i<argc; i++)
 	{

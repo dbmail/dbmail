@@ -5,7 +5,7 @@
 
 #define LINE_BUFFER_SIZE 255
 
-main (int argc, char *argv[])
+int main (int argc, char *argv[])
 {
   FILE *configfile;
   char *readbuf, *field, *value;

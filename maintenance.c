@@ -6,6 +6,7 @@
  *	deleted messages. */
 
 #include "maintenance.h"
+#include "dbmysql.h"
 
 int main()
 {
