@@ -1400,6 +1400,24 @@ int db_log_ip(const char *ip)
 }
   
 
+/*
+ * removes all entries from the IP log with a date/time before lasttokeep
+ */
+int db_cleanup_iplog(const char *lasttokeep)
+{
+  snprintf(query, DEF_QUERYSIZE, "DELETE FROM pbsp WHERE since < '%s'",lasttokeep);
+  
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR,"db_cleanup_log(): error executing query [%s] : [%s]",
+	    query, mysql_error(&conn));
+      return -1;
+    }
+
+  return 0;
+}
+
+
 
 /* 
  * will check for messageblks that are not

@@ -8,7 +8,7 @@ Does a cleanup and integrity check of the \fBDbmail\fR mailsystem
 .SH SYNOPSIS
 .na
 .nf
-\fBdbmail-maintenance [-f]\fR
+\fBdbmail-maintenance [-ifl]\fR
 .SH DESCRIPTION
 .ad
 .fi
@@ -18,7 +18,24 @@ check. All messages that are set for deletion will be marked for final deletion
 the database. The integrity check will check for unconnected messageblocks, 
 unconnected messages and
 unconnected mailboxes.
-If the '-f' option is specified the program will try to fix the integrity problems.
+.SH OPTIONS
+.ad
+.fi
+.TP 10
+.B -i 
+checks integrity
+.TP 10
+.B -f
+checks integrity and tries to fix problems
+.TP 10
+.BI \-l "timespan" 
+clean up IP-log (used when IMAP/POP-before-SMTP is on)
+.I timespan
+may contain hours, minutes or both. Every IP number logged
+before the current date/time minus this timespan will be removed from the
+table. The format for 
+.I timespan 
+is <n>h<m>m with n the number of hours and m the number of minutes.
 .SH DIAGNOSTICS
 .ad
 .fi

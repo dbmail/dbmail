@@ -162,6 +162,7 @@ unsigned long db_insert_message_block (char *block, int messageidnr);
 int db_check_id (char *id);
 
 int db_log_ip(const char *ip);
+int db_cleanup_iplog(const char *lasttokeep);
 
 int db_icheck_messageblks(int *nlost, unsigned long **lostlist);
 int db_icheck_messages(int *nlost, unsigned long **lostlist);
