@@ -118,11 +118,11 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
   
   theiraddress=inet_ntoa(adr_clnt.sin_addr);
 
-  trace (TRACE_DEBUG, "Hier ook ok");
+  trace (TRACE_MESSAGE, "Hier ook ok");
   
   memtst((clientinfo=(struct hostent *)malloc(sizeof(struct hostent)))==NULL);
 
-  trace (TRACE_DEBUG, "Hier ok");
+  trace (TRACE_MESSAGE, "Hier ok");
 
   if (resolve_client==1)
     {
