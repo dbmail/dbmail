@@ -81,10 +81,12 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg, int show_extension_
   fprintf(outstream,"(");
 
   mime_findfield("content-type", &msg->mimeheader, &mr);
-  is_mime_multipart = (mr && strncasecmp(mr->value,"multipart", strlen("multipart")) == 0);
+  is_mime_multipart = (mr && strncasecmp(mr->value,"multipart", strlen("multipart")) == 0 &&
+		       !msg->message_has_errors);
 
   mime_findfield("content-type", &msg->rfcheader, &mr);
-  is_rfc_multipart = (mr && strncasecmp(mr->value,"multipart", strlen("multipart")) == 0);
+  is_rfc_multipart = (mr && strncasecmp(mr->value,"multipart", strlen("multipart")) == 0 &&
+		      !msg->message_has_errors);
 
   if (!is_rfc_multipart && !is_mime_multipart)
     {
@@ -1269,7 +1271,7 @@ char **build_args_array(const char *s)
 		      the_args[nargs] = NULL;
 		    }
 		      
-		  trace(TRACE_DEBUG, 
+		  trace(TRACE_ERROR, 
 			"IMAPD: Not enough memory while building up argument array.");
 		  return NULL;
 		}
@@ -1348,7 +1350,7 @@ char **build_args_array(const char *s)
 		  the_args[nargs] = NULL;
 		}
 		      
-	      trace(TRACE_DEBUG, 
+	      trace(TRACE_ERROR, 
 		    "IMAPD: Not enough memory while building up argument array.");
 	      return NULL;
 	    }
@@ -1382,7 +1384,7 @@ char **build_args_array(const char *s)
 	      the_args[nargs] = NULL;
 	    }
 		      
-	  trace(TRACE_DEBUG, 
+	  trace(TRACE_ERROR, 
 		"IMAPD: Not enough memory while building up argument array.");
 	  return NULL;
 	}

@@ -2916,7 +2916,7 @@ void db_close_msgfetch()
  */
 int db_fetch_headers(unsigned long msguid, mime_message_t *msg)
 {
-  int result;
+  int result,level=0,maxlevel=-1;
 
   if (db_init_msgfetch(msguid) != 1)
     {
@@ -2924,21 +2924,60 @@ int db_fetch_headers(unsigned long msguid, mime_message_t *msg)
       return -2;
     }
 
-  result = db_start_msg(msg, NULL); /* fetch message */
+  result = db_start_msg(msg, NULL, &level, maxlevel); /* fetch message */
   if (result < 0)
     {
-      trace(TRACE_ERROR, "db_fetch_headers(): error fetching message, ID: %lu\n",msguid);
+      trace(TRACE_INFO, "db_fetch_headers(): error fetching message, ID: %lu\n",msguid);
+      trace(TRACE_INFO, "db_fetch_headers(): got error at level %d\n",level);
+
       db_close_msgfetch();
       db_free_msg(msg);
 
       if (result < -1)
 	return result; /* memory/dbase error */
+
       /* 
        * so an error occurred parsing the message. 
-       * An 'emergency' procedure is invoked now to show the message: 
-       * a header will be created and the message will be placed as text/plain
+       * try to lower the maxlevel of recursion
        */
 
+      for (maxlevel = level-1; maxlevel >= 0; maxlevel--)
+	{
+	  trace(TRACE_DEBUG, "db_fetch_headers(): trying to fetch at maxlevel %d...\n",maxlevel);
+
+	  if (db_init_msgfetch(msguid) != 1)
+	    {
+	      trace(TRACE_ERROR,"db_fetch_headers(): could not init msgfetch\n");
+	      return -2;
+	    }
+
+	  level = 0;
+	  result = db_start_msg(msg, NULL, &level, maxlevel);
+
+	  db_close_msgfetch();
+
+	  if (result != -1)
+	    break;
+
+	  db_free_msg(msg);
+	}
+
+      if (result < -1)
+	{
+	  db_free_msg(msg);
+	  return result;
+	}
+
+      if (result >= 0)
+	{
+	  trace(TRACE_ERROR,"db_fetch_headers(): succesfully recovered erroneous message %lu\n",
+		msguid);
+	  db_reverse_msg(msg);
+	  return 0;
+	}
+
+
+      /* ok still problems... try to make a message */
       if (db_init_msgfetch(msguid) != 1)
 	{
 	  trace(TRACE_ERROR,"db_fetch_headers(): could not init msgfetch\n");
@@ -2950,9 +2989,11 @@ int db_fetch_headers(unsigned long msguid, mime_message_t *msg)
 	{
 	  /* probably some serious dbase error */
 	  trace(TRACE_ERROR,"db_fetch_headers(): could not recover message as plain text\n");
+	  db_free_msg(msg);
 	  return result;
 	}
 
+      trace(TRACE_WARNING, "db_fetch_headers(): message recovered as plain text\n");
       db_close_msgfetch();
       return -1;
     }
@@ -3083,17 +3124,25 @@ unsigned long db_give_range_size(db_pos_t *start, db_pos_t *end)
  *
  * parses a msg; uses msgbuf[] as data
  *
+ * level & maxlevel are used to determine the max level of recursion (error-recovery)
+ * level is raised before calling add_mime_children() except when maxlevel and level
+ * are both zero, in that case the message is split in header/rest, add_mime_children
+ * will not be called at all.
+ *
  * returns the number of lines parsed or -1 on parse error, -2 on dbase error, -3 on memory error
  */
-int db_start_msg(mime_message_t *msg, char *stopbound)
+int db_start_msg(mime_message_t *msg, char *stopbound, int *level, int maxlevel)
 {
   int len,sblen,result,totallines=0,nlines,hdrlines;
   struct mime_record *mr;
   char *newbound,*bptr;
+  int continue_recursion = (maxlevel==0 && *level == 0) ? 0 : 1;
 
   trace(TRACE_DEBUG,"db_start_msg(): starting, stopbound: '%s'\n",stopbound);
 
   list_init(&msg->children);
+  msg->message_has_errors = (!continue_recursion);
+
 
   /* read header */
   if (db_update_msgbuf(MSGBUF_FORCE_UPDATE) == -1)
@@ -3107,7 +3156,8 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
   msg->rfcheaderlines = hdrlines;
 
   mime_findfield("content-type", &msg->rfcheader, &mr);
-  if (mr && strncasecmp(mr->value,"multipart", strlen("multipart")) == 0)
+  if (continue_recursion &&
+      mr && strncasecmp(mr->value,"multipart", strlen("multipart")) == 0)
     {
       trace(TRACE_DEBUG,"db_start_msg(): found multipart msg\n");
 
@@ -3123,11 +3173,17 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 	}
 
       bptr += sizeof("boundary=")-1;
-      if (*bptr == '\"')      
-	bptr++;
-
-      newbound = bptr;
-      while (*newbound && *newbound != '\"' && !isspace(*newbound)) newbound++;
+      if (*bptr == '\"')
+	{
+	  bptr++;
+	  newbound = bptr;
+	  while (*newbound && *newbound != '\"') newbound++;
+	}
+      else
+	{
+	  newbound = bptr;
+	  while (*newbound && !isspace(*newbound) && *newbound!=';') newbound++;
+	}
 
       len = newbound - bptr;
       if (!(newbound = (char*)malloc(len+1)))
@@ -3172,12 +3228,14 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
       totallines++;                 /* and count it */
 
       /* find MIME-parts */
-      if ((nlines = db_add_mime_children(&msg->children, newbound)) < 0)
+      (*level)++;
+      if ((nlines = db_add_mime_children(&msg->children, newbound, level, maxlevel)) < 0)
 	{
 	  trace(TRACE_ERROR, "db_start_msg(): error adding MIME-children\n");
 	  free(newbound);
 	  return nlines;
 	}
+      (*level)--;
       totallines += nlines;
 
       /* skip stopbound if present */
@@ -3188,6 +3246,8 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 	}
 
       free(newbound);
+      newbound = NULL;
+
       if (msgidx > 0)
 	{
 	  /* walk back because bodyend is inclusive */
@@ -3296,13 +3356,14 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
  * assume to enter just after a splitbound 
  * returns -1 on parse error, -2 on dbase error, -3 on memory error
  */
-int db_add_mime_children(struct list *brothers, char *splitbound)
+int db_add_mime_children(struct list *brothers, char *splitbound, int *level, int maxlevel)
 {
   mime_message_t part;
   struct mime_record *mr;
   int sblen,nlines,totallines = 0,len;
   unsigned long dummy;
   char *bptr,*newbound;
+  int continue_recursion = (maxlevel < 0 || *level < maxlevel) ? 1 : 0;
 
   trace(TRACE_DEBUG,"db_add_mime_children(): starting, splitbound: '%s'\n",splitbound);
   sblen = strlen(splitbound);
@@ -3311,6 +3372,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
     {
       db_update_msgbuf(MSGBUF_FORCE_UPDATE);
       memset(&part, 0, sizeof(part));
+      part.message_has_errors = (!continue_recursion);
 
       /* should have a MIME header right here */
       if ((nlines = mime_readheader(&msgbuf[msgidx], &msgidx, &part.mimeheader, &dummy)) < 0)
@@ -3322,12 +3384,13 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
 
       mime_findfield("content-type", &part.mimeheader, &mr);
 
-      if (mr && strncasecmp(mr->value, "message/rfc822", strlen("message/rfc822")) == 0)
+      if (continue_recursion &&
+	  mr && strncasecmp(mr->value, "message/rfc822", strlen("message/rfc822")) == 0)
 	{
 	  trace(TRACE_DEBUG,"db_add_mime_children(): found an RFC822 message\n");
 
 	  /* a message will follow */
-	  if ((nlines = db_start_msg(&part, splitbound)) < 0)
+	  if ((nlines = db_start_msg(&part, splitbound, level, maxlevel)) < 0)
 	    {
 	      trace(TRACE_ERROR,"db_add_mime_children(): error retrieving message\n");
 	      return nlines;
@@ -3336,7 +3399,8 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
 	  totallines += nlines;
 	  part.mimerfclines = nlines;
 	}
-      else if (mr && strncasecmp(mr->value, "multipart", strlen("multipart")) == 0)
+      else if (continue_recursion &&
+	       mr && strncasecmp(mr->value, "multipart", strlen("multipart")) == 0)
 	{
 	  trace(TRACE_DEBUG,"db_add_mime_children(): found a MIME multipart sub message\n");
 
@@ -3352,11 +3416,17 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
 	    }
 
 	  bptr += sizeof("boundary=")-1;
-	  if (*bptr == '\"')      
-	    bptr++;
-
-	  newbound = bptr;
-	  while (*newbound && *newbound != '\"' && !isspace(*newbound)) newbound++;
+	  if (*bptr == '\"')
+	    {
+	      bptr++;
+	      newbound = bptr;
+	      while (*newbound && *newbound != '\"') newbound++;
+	    }
+	  else
+	    {
+	      newbound = bptr;
+	      while (*newbound && !isspace(*newbound) && *newbound!=';') newbound++;
+	    }
 
 	  len = newbound - bptr;
 	  if (!(newbound = (char*)malloc(len+1)))
@@ -3407,14 +3477,17 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
 	  part.bodylines++;
 	  db_give_msgpos(&part.bodystart); /* remember position */
 
-	  if ((nlines = db_add_mime_children(&part.children, newbound)) < 0)
+	  (*level)++;
+	  if ((nlines = db_add_mime_children(&part.children, newbound, level, maxlevel)) < 0)
 	    {
 	      trace(TRACE_ERROR, "db_add_mime_children(): error adding mime children\n");
 	      free(newbound);
 	      return nlines;
 	    }
+	  (*level)--;
 	  
 	  free(newbound);
+	  newbound = NULL;
 	  msgidx += sblen+2; /* skip splitbound */
 
 	  if (msgidx > 0)

@@ -130,9 +130,7 @@ int imap_process(ClientInfo *ci)
       fprintf(ci->tx, "* BAD could not connect to dbase\r\n");
       fprintf(ci->tx, "BYE try again later\r\n");
 
-      null_free(((imap_userdata_t*)ci->userData)->mailbox.seq_list);
       null_free(ci->userData);
-
       return EOF;
     }
 
@@ -141,7 +139,6 @@ int imap_process(ClientInfo *ci)
       trace(TRACE_ERROR, "IMAPD: cannot open temporary file\n");
       fprintf(ci->tx, "BYE internal system failure\r\n");
 
-      null_free(((imap_userdata_t*)ci->userData)->mailbox.seq_list);
       null_free(ci->userData);
       return EOF;
     }
@@ -198,7 +195,7 @@ int imap_process(ClientInfo *ci)
       if (!checkchars(line))
 	{
 	  /* foute tekens ingetikt */
-	  fprintf(ci->tx, "* BAD Input contains invalid characters\r\n");
+	  fprintf(ci->tx, "* BYE Input contains invalid characters\r\n");
 	  close_cache();
 	  db_disconnect();
 
@@ -307,6 +304,12 @@ int imap_process(ClientInfo *ci)
 	      null_free(((imap_userdata_t*)ci->userData)->mailbox.seq_list);
 	      null_free(ci->userData);
 
+	      for (i=0; args[i]; i++) 
+		{
+		  free(args[i]);
+		  args[i] = NULL;
+		}
+	  
 	      return -1;
 	    }
 

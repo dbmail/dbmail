@@ -11,4 +11,6 @@
 #include "debug.h"
 #include "dbmysql.h"
 
+#define DEFAULT_CONFIG_FILE "dbmail.conf"
+
 #endif

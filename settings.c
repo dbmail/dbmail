@@ -8,7 +8,7 @@
 int main (int argc, char *argv[])
 {
   FILE *configfile;
-  char *readbuf, *field, *value;
+  char *readbuf, *field, *value,*fname;
   int i;
 	
   readbuf = (char *)malloc(LINE_BUFFER_SIZE);
@@ -16,8 +16,12 @@ int main (int argc, char *argv[])
   printf("*** dbmail-config ***\n\n");
   if (argc<2)
     {
-      printf("Usage: %s <configurationfile>   Reads in dbmail configuration\n\n",argv[0]);
-      return 0;
+      printf("No configuration file specified, using %s\n",DEFAULT_CONFIG_FILE);
+      fname = DEFAULT_CONFIG_FILE;
+    }
+  else
+    {
+      fname = argv[1];
     }
 
   if (db_connect()==-1)
@@ -26,11 +30,11 @@ int main (int argc, char *argv[])
       return -1;
     }
 	
-  printf("reading configuration for %s...\n", argv[1]);
-  configfile = fopen(argv[1],"r"); /* open the configuration file */
+  printf("reading configuration for %s...\n", fname);
+  configfile = fopen(fname,"r"); /* open the configuration file */
   if (configfile == NULL) /* error test */
     {
-      fprintf (stderr,"Error: can not open input file %s\n",argv[1]);
+      fprintf (stderr,"Error: can not open input file %s\n",fname);
       return 8;
     }
 	
