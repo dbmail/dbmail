@@ -255,6 +255,7 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 	/* scanning for commands */
   while (done>0)
     {
+      memset(buffer, 0, INCOMING_BUFFER_SIZE);
       for (cnt=0; cnt < INCOMING_BUFFER_SIZE-1; cnt++)
 	{
 	  fread(&buffer[cnt], 1, 1, rx);
@@ -271,7 +272,7 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 	    }
 	}
       
-      if (feof(rx)) 
+      if (feof(rx) || ferror(rx)) 
 	done = -1;  /* check of client eof  */
       else 
 	{
