@@ -1330,7 +1330,6 @@ int _ic_list(char *tag, char **args, ClientInfo * ci)
 			pattern[i++] = '\\';
 			pattern[i++] = '/';
 			pattern[i++] = ']';
-			pattern[i++] = '.';
 			pattern[i++] = '*';
 		} else
 			pattern[i++] = args[1][j];
