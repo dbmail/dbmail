@@ -720,7 +720,7 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines,
   block_count=0;
 
   while (((row = mysql_fetch_row(res))!=NULL) && ((lines>0) || (lines==-2) || (block_count==0)))
-    {
+  {
       nextpos=row[2];
       lengths = mysql_fetch_lengths(res);
       rowlength = lengths[2];
@@ -729,72 +729,75 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines,
       memset (buffer, '\0', (READ_BLOCK_SIZE)*2);
 		
       while ((*nextpos!='\0') && (rowlength>0) && ((lines>0) || (lines==-2) || (block_count==0)))
-	{
-	  if (*nextpos=='\n')
-	    {
-				/* first block is always the full header 
-				   so this should not be counted when parsing
-				   if lines == -2 none of the lines should be counted 
-				   since the whole message is requested */
-	      if ((lines!=-2) && (block_count!=0))
-		lines--;
+      {
+          if (*nextpos=='\n')
+          {
+              /* first block is always the full header 
+                 so this should not be counted when parsing
+                 if lines == -2 none of the lines should be counted 
+                 since the whole message is requested */
+              if ((lines!=-2) && (block_count!=0))
+                  lines--;
 						
-	      if (tmppos!=NULL)
-		{
-		  if (*tmppos=='\r')
-		    sprintf (buffer,"%s%c",buffer,*nextpos);
-		  else 
-		    sprintf (buffer,"%s\r%c",buffer,*nextpos);
-		}
-	      else 
-		sprintf (buffer,"%s\r%c",buffer,*nextpos);
-	    }
-	  else
-	    {
-	      if (*nextpos=='.')
-		{
-		  if (tmppos!=NULL)
-		    {
-		      if (*tmppos=='\n')
-			sprintf (buffer,"%s.%c",buffer,*nextpos);
-		      else
-			sprintf (buffer,"%s%c",buffer,*nextpos);
-		    }
-		  else 
-		    sprintf (buffer,"%s%c",buffer,*nextpos);
-		}
-	      else	
-		sprintf (buffer,"%s%c",buffer,*nextpos);
-	    }
+              if (tmppos!=NULL)
+              {
+                  if (*tmppos=='\r')
+                      sprintf (buffer,"%s%c",buffer,*nextpos);
+                  else 
+                      sprintf (buffer,"%s\r%c",buffer,*nextpos);
+              }
+              else 
+                  sprintf (buffer,"%s\r%c",buffer,*nextpos);
+          }
+          else
+          {
+              if (*nextpos=='.')
+              {
+                  if (tmppos!=NULL)
+                  {
+                      if (*tmppos=='\n')
+                          sprintf (buffer,"%s.%c",buffer,*nextpos);
+                      else
+                          sprintf (buffer,"%s%c",buffer,*nextpos);
+                  }
+                  else 
+                      sprintf (buffer,"%s%c",buffer,*nextpos);
+              }
+              else	
+                  sprintf (buffer,"%s%c",buffer,*nextpos);
+          }
 	  
-	  tmppos=nextpos;
+          tmppos=nextpos;
 	  
-	  /* get the next character */
-	  nextpos++;
-	  rowlength--;
+          /* get the next character */
+          nextpos++;
+          rowlength--;
 	   
-	  if (rowlength%1000==0)  /* purge buffer at every 6000 bytes  */
-	    {
-	      fprintf ((FILE *)fstream,"%s",buffer);
-	      /* fflush ((FILE *)fstream); */
+          if (rowlength%3000==0)  /* purge buffer at every 3000 bytes  */
+          {
+              /* fprintf ((FILE *)fstream,"%s",buffer); */
+              /* fflush ((FILE *)fstream); */
 
-	      /*  cleanup the buffer  */
-	      memset (buffer, '\0', (READ_BLOCK_SIZE*2));
-	    }
-	} 
-	
+              fwrite (buffer, sizeof(char), strlen(buffer), (FILE *)fstream);
+          
+              /*  cleanup the buffer  */
+              memset (buffer, '\0', (READ_BLOCK_SIZE*2));
+          }
+      }
+
       /* next block in while loop */
       block_count++;
       trace (TRACE_DEBUG,"db_send_message_lines(): getting nextblock [%d]\n",block_count);
 		
       /* flush our buffer */
-      fprintf ((FILE *)fstream,"%s",buffer);
-      fflush ((FILE *)fstream);
-    }
+      /* fprintf ((FILE *)fstream,"%s",buffer); */
+      fwrite (buffer, sizeof(char), strlen(buffer), (FILE *)fstream);
+      /* fflush ((FILE *)fstream); */
+  }
 
   /* delimiter */
   if (no_end_dot == 0)
-    fprintf ((FILE *)fstream,"\r\n.\r\n");
+      fprintf ((FILE *)fstream,"\r\n.\r\n");
 	
   mysql_free_result(res);
 	
