@@ -518,6 +518,8 @@ freeall:
 	auth_disconnect();
 	config_free();
 
+	if (result < 0)
+		qerrorf("Command failed.\n");
 	return result;
 }
 
@@ -538,7 +540,7 @@ int do_add(const char * const user,
 	}
 
 	qprintf("Adding user %s with password type %s,"
-	     "%llu bytes mailbox limit and clientid %llu...",
+	     "%llu bytes mailbox limit and clientid %llu... ",
 	     user, enctype, maxmail, clientid);
 
 	switch (auth_user_exists(user, &useridnr))
@@ -551,7 +553,7 @@ int do_add(const char * const user,
 		if (useridnr != 0) {
 			qprintf("Failed: user exists [%llu]\n",
 				     useridnr);
-			result = -1;
+			return -1;
 		} else {
 			/* If useridnr is 0, create the user */
 			add_user_result = auth_adduser(user, password, enctype,

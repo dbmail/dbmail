@@ -1,3 +1,9 @@
+2004-08-25  Ilja Booij  <ilja@ic-s.nl>
+
+	* user.c (main): if the command fails, return message to 
+	command line.
+	(do_add): returns -1 directly if user already exists.
+
 2004-08-24  Ilja Booij  <ilja@ic-s.nl>
 
 	* user.c (do_add): now adds aliases if needed.
