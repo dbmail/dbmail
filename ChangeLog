@@ -1,3 +1,9 @@
+2004-10-31  Aaron Stone  <aaron@serendipity.cx>
+
+        * user.c (do_delete): now deletes aliases belonging to a user
+        before the user is deleted; the prototype to the function now
+        includes useridnr.
+
 2004-10-25  Paul Stevens <paul@nfg.nl>
 
 	* db.c,dbsearch.c: stripped redundant unique_id<>'' from the queries. 

@@ -105,7 +105,7 @@ int do_add(const char * const user,
            const u64_t maxmail, const u64_t clientid,
 	   struct list * const alias_add,
 	   struct list * const alias_del);
-int do_delete(const char * const user);
+int do_delete(const u64_t useridnr, const char * const user);
 int do_show(const char * const user);
 int do_empty(const u64_t useridnr);
 /* Change operations */
@@ -479,7 +479,7 @@ int main(int argc, char *argv[])
 				&alias_add, &alias_del);
 		break;
 	case 'd':
-		result = do_delete(user);
+		result = do_delete(useridnr, user);
 		break;
 	case 'c':
 		qprintf("Performing changes for user [%s]...\n", user);
@@ -890,12 +890,16 @@ int do_aliases(const u64_t useridnr,
 }
 
 
-int do_delete(const char * const name)
+int do_delete(const u64_t useridnr, const char * const name)
 {
 	int result;
+	struct list aliases;
 
-	qprintf("Deleting user [%s]...", name);
+	qprintf("Deleting aliases for user [%s]...\n", name);
+	auth_get_user_aliases(useridnr, &aliases);
+	do_aliases(useridnr, NULL, &aliases);
 
+	qprintf("Deleting user [%s]...\n", name);
 	result = auth_delete_user(name);
 
 	if (result < 0) {
