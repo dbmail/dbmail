@@ -56,9 +56,8 @@ int main (int argc, char *argv[]) {
       /* parse the list and scan for field and content */
       mime_list(header,headersize);
       /* parse for destination addresses */
-		
-      if (!mail_adr_list())
-	trace(TRACE_STOP,"main(): scanner found no email addresses");
+	if (!mail_adr_list("deliver-to",&users))	
+		trace(TRACE_STOP,"main(): scanner found no email addresses");
     } 
 
   /* inserting messages into the database */

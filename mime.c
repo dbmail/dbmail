@@ -107,7 +107,7 @@ int mail_adr_list_special(int offset, int max, char *address_array[])
   return mycount;
 }
   
-int mail_adr_list()
+int mail_adr_list(char *scan_for_field, struct list *targetlist)
 {
   struct element *raw;
   struct mime_record *mr;
@@ -121,10 +121,7 @@ int mail_adr_list()
   while ((raw=list_getstart(&mimelist))!=NULL)
     {
       mr=(struct mime_record *)raw->data;
-      /* FIXME: need to check which header we
-       * need to scan. IMHO it's only the delivered 
-       * to */
-      if ((strcasecmp(mr->field,"delivered-to")==0))
+      if ((strcasecmp(mr->field, scan_for_field)==0))
 	{
 	  /* Scan for email addresses and add them to our list */
 	  /* the idea is to first find the first @ and go both ways */
@@ -154,7 +151,7 @@ int mail_adr_list()
 	      tmpvalue[ptr-tmp]='\0';
 
 				/* one extra for \0 in strlen */
-	      memtst((list_nodeadd(&users,tmpvalue,
+	      memtst((list_nodeadd(targetlist,tmpvalue,
 				   (strlen(tmpvalue)+1)))==NULL);
 
 				/* printf ("total nodes:\n");
@@ -168,7 +165,7 @@ int mail_adr_list()
       list_nodedel(&mimelist,raw->data);
     }
 
-  trace (TRACE_DEBUG,"mail_adr_list(): found %d emailaddresses",list_totalnodes(&users));
+  trace (TRACE_DEBUG,"mail_adr_list(): found %d emailaddresses",list_totalnodes(targetlist));
 	
   trace (TRACE_INFO,"mail_adr_list(): mail address parser finished");
 
