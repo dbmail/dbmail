@@ -409,7 +409,7 @@ int pop3 (void *stream, char *buffer)
 									state = TRANSACTION;
 									/* user seems to be valid, let's build a session */
 									trace(TRACE_DEBUG,"pop3(): validation OK, building a session for user [%s]");
-									result=db_create_session(result,&curr_session);
+									result=db_createsession(result,&curr_session);
 									if (result==1)
 										{
 										fprintf((FILE *)stream, "+OK %s has %lu messages (%lu octets).\r\n",
