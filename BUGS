@@ -2,3 +2,7 @@ $Id$
 
 2004-01-19 (Roel Rozendaal):
 FETCH MSGNUM (RFC822.HEADER) returns headers in wrong order.
+
+2004-01-23 (Ilja Booij):
+db_list_mailboxes_by_regex() only works when there are entries in
+the ACL table (on PostgreSQL, not tested on MySQL).

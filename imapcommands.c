@@ -347,6 +347,20 @@ int _ic_select(char *tag, char **args, ClientInfo *ci)
        return 1;
   }
  
+  /* check if user has right to select mailbox */
+  result = acl_has_right(ud->userid, mboxid, ACL_RIGHT_READ);
+  if (result < 0) {
+	  fprintf(ci->tx, "* BYE internal database error\r\n");
+	  return -1;
+  }
+  if (result == 0) {
+	  fprintf(ci->tx, "%s NO no permission to select mailbox\r\n", tag);
+	  ud->state = IMAPCS_AUTHENTICATED;
+	  my_free(ud->mailbox.seq_list);
+	  memset(&ud->mailbox, 0, sizeof(ud->mailbox));
+	  return 1;
+  }
+    
   /* check if mailbox is selectable */
   result = db_isselectable(mboxid);
   if (result == 0)
@@ -462,6 +476,20 @@ int _ic_examine(char *tag, char **args, ClientInfo *ci)
        return 1;
   }
      
+  /* check if user has right to examine mailbox */
+  result = acl_has_right(ud->userid, mboxid, ACL_RIGHT_READ);
+  if (result < 0) {
+	  fprintf(ci->tx, "* BYE internal database error\r\n");
+	  return -1;
+  }
+  if (result == 0) {
+	  fprintf(ci->tx, "%s NO no permission to examine mailbox\r\n", tag);
+	  ud->state = IMAPCS_AUTHENTICATED;
+	  my_free(ud->mailbox.seq_list);
+	  memset(&ud->mailbox, 0, sizeof(ud->mailbox));
+	  return 1;
+  }
+ 
   /* check if mailbox is selectable */
   result = db_isselectable(mboxid);
   if (result == 0)
@@ -539,6 +567,7 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
   int result,i;
   u64_t mboxid, tmp_mboxid;
+  u64_t parent_mboxid = 0; /* id of parent mailbox (if applicable) */
   char **chunks,*cpy;
 
   if (!check_state_and_args("CREATE", tag, args, 1, IMAPCS_AUTHENTICATED, ci))
@@ -645,6 +674,30 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
       if (mboxid == 0)
 	{
 	  /* mailbox does not exist */
+		/* check if we have the right to create mailboxes in this
+		   hierarchy */
+		trace(TRACE_DEBUG, "%s,%s: Checking if we have the right to "
+		      "create mailboxes under mailbox [%llu]", 
+		      __FILE__, __FUNCTION__, parent_mboxid);
+		if (parent_mboxid != 0) {
+			result = acl_has_right(ud->userid, parent_mboxid, 
+					       ACL_RIGHT_CREATE);
+			if (result < 0) {
+				fprintf(ci->tx, "* BYE internal database "
+					"error\r\n");
+				free_chunks(chunks);
+				my_free(cpy);
+				return -1; /* fatal */
+			}
+			if (result == 0) {
+				fprintf(ci->tx, "%s NO no permission to create "
+					"mailbox here\r\n", tag);
+				free_chunks(chunks);
+				my_free(cpy);
+				return 1;
+			}
+		}
+
 	     result = db_createmailbox(cpy, ud->userid, &tmp_mboxid);
 
 	  if (result == -1)
@@ -655,24 +708,27 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
 	}
       else
 	{
-	  /* mailbox does exist, failure if no_inferiors flag set */
-	  result = db_noinferiors(mboxid);
-	  if (result == 1)
-	    {
-	      fprintf(ci->tx, "%s NO mailbox cannot have inferior names\r\n",tag);
-	      free_chunks(chunks);
-	      my_free(cpy);
-	      return 1;
-	    }
-
-	  if (result == -1)
-	    {
-	      /* dbase failure */
-	      fprintf(ci->tx,"* BYE internal dbase error\r\n");
-	      free_chunks(chunks);
-	      my_free(cpy);
-	      return -1; /* fatal */
-	    }
+		/* this might be the parent of our new mailbox. store it's id */
+		parent_mboxid = mboxid;
+		/* mailbox does exist, failure if no_inferiors flag set */
+		result = db_noinferiors(mboxid);
+		if (result == 1)
+		{
+			fprintf(ci->tx, "%s NO mailbox cannot have inferior names\r\n",tag);
+			free_chunks(chunks);
+			my_free(cpy);
+			return 1;
+		}
+		
+		
+		if (result == -1)
+		{
+			/* dbase failure */
+			fprintf(ci->tx,"* BYE internal dbase error\r\n");
+			free_chunks(chunks);
+			my_free(cpy);
+			return -1; /* fatal */
+		}
 	}
     }
 
@@ -714,6 +770,22 @@ int _ic_delete(char *tag, char **args, ClientInfo *ci)
        fprintf(ci->tx,"%s NO mailbox does not exist\r\n",tag);
        return 1;
   }
+
+  /* check if the user is the owner of this mailbox. If so, then
+     the user has the right to delete it. */
+  result = db_user_is_mailbox_owner(ud->userid, mboxid);
+  if (result < 0) {
+	  fprintf(ci->tx, "* BYE internal database error\r\n");
+	  return -1;
+  }
+  if (result == 0) {
+	  fprintf(ci->tx, "%s NO no permission to delete mailbox\r\n", tag);
+	  ud->state = IMAPCS_AUTHENTICATED;
+	  my_free(ud->mailbox.seq_list);
+	  memset(&ud->mailbox, 0, sizeof(ud->mailbox));
+	  return 1;
+  }
+
 
   /* check if there is an attempt to delete inbox */
   if (strcasecmp(args[0],"inbox") == 0)
@@ -843,6 +915,21 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
       fprintf(ci->tx,"%s NO mailbox does not exist\r\n",tag);
       return 1;
     }
+
+  /* check if the user is the owner of this mailbox. If so, then
+     the user has the right to delete it. */
+  result = db_user_is_mailbox_owner(ud->userid, mboxid);
+  if (result < 0) {
+	  fprintf(ci->tx, "* BYE internal database error\r\n");
+	  return -1;
+  }
+  if (result == 0) {
+	  fprintf(ci->tx, "%s NO no permission to rename mailbox\r\n", tag);
+	  ud->state = IMAPCS_AUTHENTICATED;
+	  my_free(ud->mailbox.seq_list);
+	  memset(&ud->mailbox, 0, sizeof(ud->mailbox));
+	  return 1;
+  }
 
   /* check if new name is valid */
   if (!checkmailboxname(args[1]))
@@ -977,6 +1064,8 @@ int _ic_subscribe(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData; 
   u64_t mboxid;
+  int result;
+  
 
   if (!check_state_and_args("SUBSCRIBE", tag, args, 1, IMAPCS_AUTHENTICATED, ci))
     return 1; /* error, return */
@@ -990,6 +1079,22 @@ int _ic_subscribe(char *tag, char **args, ClientInfo *ci)
        /* mailbox does not exist */
        fprintf(ci->tx,"%s NO mailbox does not exist\r\n", tag);
        return 0;
+  }
+  
+  /* check for the lookup-right. RFC is unclear about which right to
+     use, so I guessed it should be lookup */
+  result = acl_has_right(ud->userid, mboxid, ACL_RIGHT_LOOKUP);
+  if (result < 0) {
+	  fprintf(ci->tx, "* BYE internal database error\r\n");
+	  return -1;
+  }
+  if (result == 0) {
+	  fprintf(ci->tx, "%s NO no permission to subscribe to  mailbox\r\n", 
+		  tag);
+	  ud->state = IMAPCS_AUTHENTICATED;
+	  my_free(ud->mailbox.seq_list);
+	  memset(&ud->mailbox, 0, sizeof(ud->mailbox));
+	  return 1;
   }
 
   if (db_subscribe(mboxid, ud->userid) == -1)
@@ -1012,6 +1117,8 @@ int _ic_unsubscribe(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
   u64_t mboxid;
+  int result;
+  
 
   if (!check_state_and_args("UNSUBSCRIBE", tag, args, 1, IMAPCS_AUTHENTICATED, ci))
     return 1; /* error, return */
@@ -1027,6 +1134,22 @@ int _ic_unsubscribe(char *tag, char **args, ClientInfo *ci)
        return 0;
   }
 
+  /* check for the lookup-right. RFC is unclear about which right to
+     use, so I guessed it should be lookup */
+  result = acl_has_right(ud->userid, mboxid, ACL_RIGHT_LOOKUP);
+  if (result < 0) {
+	  fprintf(ci->tx, "* BYE internal database error\r\n");
+	  return -1;
+  }
+  if (result == 0) {
+	  fprintf(ci->tx, "%s NO no permission to unsubscribe from mailbox\r\n", 
+		  tag);
+	  ud->state = IMAPCS_AUTHENTICATED;
+	  my_free(ud->mailbox.seq_list);
+	  memset(&ud->mailbox, 0, sizeof(ud->mailbox));
+	  return 1;
+  }
+  
   if (db_unsubscribe(mboxid, ud->userid) == -1)
     {
       fprintf(ci->tx,"* BYE internal dbase error\r\n");
@@ -1276,6 +1399,17 @@ int _ic_status(char *tag, char **args, ClientInfo *ci)
       return 1;
     }
 
+  result = acl_has_right(ud->userid, mb.uid, ACL_RIGHT_READ);
+  if (result == -1) {
+	  fprintf(ci->tx, "* BYE internal database error\r\n");
+	  return -1;
+  }
+  if (result == 0) {
+	  fprintf(ci->tx, "%s NO no rights to get status for mailbox\r\n",
+		  tag);
+	  return 1;
+  }
+  
   /* retrieve mailbox data */
   result = db_getmailbox(&mb);
 
@@ -1348,6 +1482,20 @@ int _ic_append(char *tag, char **args, ClientInfo *ci)
     }
 
   trace(TRACE_DEBUG, "ic_append(): mailbox [%s] found, id: %llu\n",args[0],mboxid);
+  /* check if user has right to append to  mailbox */
+  result = acl_has_right(ud->userid, mboxid, ACL_RIGHT_INSERT);
+  if (result < 0) {
+	  fprintf(ci->tx, "* BYE internal database error\r\n");
+	  return -1;
+  }
+  if (result == 0) {
+	  fprintf(ci->tx, "%s NO no permission to append to mailbox\r\n", tag);
+	  ud->state = IMAPCS_AUTHENTICATED;
+	  my_free(ud->mailbox.seq_list);
+	  memset(&ud->mailbox, 0, sizeof(ud->mailbox));
+	  return 1;
+  }
+
 
   i=1;
   
@@ -1431,11 +1579,26 @@ int _ic_append(char *tag, char **args, ClientInfo *ci)
  */
 int _ic_check(char *tag, char **args, ClientInfo *ci)
 {
-  if (!check_state_and_args("CHECK", tag, args, 0, IMAPCS_SELECTED, ci))
-    return 1; /* error, return */
-
-  fprintf(ci->tx,"%s OK CHECK completed\r\n",tag);
-  return 0;
+	int result;
+	imap_userdata_t *ud = (imap_userdata_t*) ci->userData;
+	
+	if (!check_state_and_args("CHECK", tag, args, 0, IMAPCS_SELECTED, ci))
+		
+		return 1; /* error, return */
+	
+	result = acl_has_right(ud->userid, ud->mailbox.uid, ACL_RIGHT_READ);
+	if (result < 0) {
+		fprintf(ci->tx, "* BYE Internal database error\r\n");
+		return -1;
+	}
+	if (result == 0) {
+		fprintf(ci->tx,"%s NO no permission to do check on "
+			"mailbox\r\n", tag);
+		return 1;
+	}
+	
+	fprintf(ci->tx,"%s OK CHECK completed\r\n",tag);
+	return 0;
 }
 
 
@@ -1448,14 +1611,25 @@ int _ic_check(char *tag, char **args, ClientInfo *ci)
 int _ic_close(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
-
+  int result;
+  
   if (!check_state_and_args("CLOSE", tag, args, 0, IMAPCS_SELECTED, ci))
     return 1; /* error, return */
 
-  if (ud->mailbox.permission == IMAPPERM_READWRITE)
-    db_expunge(ud->mailbox.uid, NULL, NULL);
+  /* check if the user has to right to expunge all messages from the
+     mailbox. */
+  result = acl_has_right(ud->userid, ud->mailbox.uid, ACL_RIGHT_DELETE);
+  if (result < 0) {
+	  fprintf(ci->tx, "* BYE Internal database error\r\n");
+	  return -1;
+  }
+  /* only perform the expunge if the user has the right to do it */
+  if (result == 1) 
+	  if (ud->mailbox.permission == IMAPPERM_READWRITE)
+		  db_expunge(ud->mailbox.uid, NULL, NULL);
 
-  /* ok, update state */
+  
+  /* ok, update state (always go to IMAPCS_AUTHENTICATED)*/
   ud->state = IMAPCS_AUTHENTICATED;
 
   my_free(ud->mailbox.seq_list);
@@ -1489,7 +1663,18 @@ int _ic_expunge(char *tag, char **args, ClientInfo *ci)
       fprintf(ci->tx,"%s NO you do not have write permission on this folder\r\n",tag);
       return 1;
     }
-
+  
+  result = acl_has_right(ud->userid, ud->mailbox.uid, ACL_RIGHT_DELETE);
+  if (result < 0) {
+	  fprintf(ci->tx, "* BYE internal database error\r\n");
+	  return -1;
+  }
+  if (result == 0) {
+	  fprintf(ci->tx, "%s NO you do not have delete rights on this "
+		  "mailbox\r\n", tag);
+	  return -1;
+  }
+  
   /* delete messages */
   result = db_expunge(ud->mailbox.uid,&msgids,&nmsgs);
   if (result == -1)
@@ -1603,7 +1788,19 @@ int _ic_search(char *tag, char **args, ClientInfo *ci)
       return 1;
     }
 
-
+  /* check if user has the right to search in this mailbox */
+  result = acl_has_right(ud->userid, ud->mailbox.uid, ACL_RIGHT_READ);
+  if (result < 0) {
+	  fprintf(ci->tx,"* BYE internal database error\r\n");
+	  free_searchlist(&sk.sub_search);
+	  return -1;
+  }
+  if (result == 0) {
+	  fprintf(ci->tx,"%s NO no permission to search mailbox\r\n", tag);
+	  free_searchlist(&sk.sub_search);
+	  return 1;
+  }
+  
   /* make it a top-level search key */
   sk.type = IST_SUBSEARCH_AND;
 
@@ -1734,6 +1931,17 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
       return 1;
     }
 
+  /* check if the user has the right to fetch messages in this mailbox */
+  result = acl_has_right(ud->userid, ud->mailbox.uid, ACL_RIGHT_READ);
+  if (result < 0) {
+	  fprintf(ci->tx, "* BYE internal database error\r\n");
+	  return -1;
+  }
+  if (result == 0) {
+	  fprintf(ci->tx, "%s NO no permission to fetch from mailbox\r\n", tag);
+	  return 1;
+  }
+  
   /* fetch fetch items */
   list_init(&fetch_list);
   idx = 1;
@@ -2967,6 +3175,46 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
 	  return 1;
 	}
     }
+  
+  /** check ACL's for STORE */
+  if (flaglist[IMAP_STORE_FLAG_SEEN] == 1) {
+	  result = acl_has_right(ud->userid, ud->mailbox.uid, ACL_RIGHT_SEEN);
+	  if (result < 0) {
+		  fprintf(ci->tx, "* BYE internal database error");
+		  return -1; /* fatal */
+	  }
+	  if (result == 0) {
+		  fprintf(ci->tx, "%s NO no right to store \\SEEN flag", tag);
+		  return 1;
+	  }
+  }
+  if (flaglist[IMAP_STORE_FLAG_DELETED] == 1) {
+	  result = acl_has_right(ud->userid, ud->mailbox.uid, ACL_RIGHT_DELETE);
+	  if (result < 0) {
+		  fprintf(ci->tx, "* BYE internal database error");
+		  return -1; /* fatal */
+	  }
+	  if (result == 0) {
+		  fprintf(ci->tx, "%s NO no right to store \\DELETED flag", tag);
+		  return 1;
+	  }
+  }
+  if (flaglist[IMAP_STORE_FLAG_ANSWERED] == 1 ||
+      flaglist[IMAP_STORE_FLAG_FLAGGED] == 1 ||
+      flaglist[IMAP_STORE_FLAG_DRAFT] == 1 ||
+      flaglist[IMAP_STORE_FLAG_RECENT] == 1) {
+	  result = acl_has_right(ud->userid, ud->mailbox.uid, ACL_RIGHT_WRITE);
+	  if (result < 0) {
+		  fprintf(ci->tx, "*BYE internal database error");
+		  return -1;
+	  }
+	  if (result == 0) {
+		  fprintf(ci->tx, "%s NO no right to store flags", tag);
+		  return 1;
+	  }
+  }
+  /* end of ACL checking. If we get here without returning, the user has
+     the right to store the flags */
 
   /* set flags & show if needed */
   endptr = args[0];
@@ -3167,7 +3415,28 @@ int _ic_copy(char *tag, char **args, ClientInfo *ci)
        fprintf(ci->tx, "%s NO [TRYCREATE] specified mailbox does not exist\r\n",tag);
        return 1;
   }
- 
+
+  // check if user has right to COPY from source mailbox
+  result = acl_has_right(ud->userid, ud->mailbox.uid, ACL_RIGHT_READ);
+  if (result < 0) {
+	  fprintf(ci->tx, "* BYE internal database error\r\n");
+	  return -1; /* fatal */
+  }
+  if (result == 0) {
+	  fprintf(ci->tx, "%s NO no permission to copy from mailbox\r\n", tag);
+	  return 1;
+  }
+  // check if user has right to COPY to destination mailbox
+  result = acl_has_right(ud->userid, destmboxid, ACL_RIGHT_INSERT);
+  if (result < 0) {
+	  fprintf(ci->tx, "* BYE internal database error\r\n");
+	  return -1; /* fatal */
+  }
+  if (result == 0) {
+	  fprintf(ci->tx, "%s NO no permission to copy to mailbox\r\n", tag);
+	  return 1;
+  }
+
   /* ok copy msgs */
   endptr = args[0];
   while (*endptr)
@@ -3284,7 +3553,7 @@ int _ic_uid(char *tag, char **args, ClientInfo *ci)
     }
 
   imapcommands_use_uid = 1; /* set global var to make clear we will be using UID's */
-
+  /* ACL rights for UID are handled by the other functions called below */
   if (strcasecmp(args[0], "fetch") == 0)
     result = _ic_fetch(tag, &args[1], ci);
   else if (strcasecmp(args[0], "copy") == 0)
@@ -3391,7 +3660,7 @@ int _ic_getquota(char *tag, char **args, ClientInfo *ci) {
 }
 
 /* returns -1 on error, 0 if user or mailbox not found and 1 otherwise */
-int imap_acl_pre_administer(const char *mailboxname,
+static int imap_acl_pre_administer(const char *mailboxname,
 			    const char *username,
 			    u64_t executing_userid,
 			    u64_t *mboxid,

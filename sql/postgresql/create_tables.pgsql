@@ -58,13 +58,37 @@ CREATE TABLE mailboxes (
    no_inferiors INT2 DEFAULT '0' NOT NULL,
    no_select INT2 DEFAULT '0' NOT NULL,
    permission INT2 DEFAULT '2',
-   is_subscribed INT2 DEFAULT '0' NOT NULL,
    PRIMARY KEY (mailbox_idnr),
    FOREIGN KEY (owner_idnr) REFERENCES users(user_idnr) ON DELETE CASCADE
 );
 CREATE INDEX mailboxes_owner_idx ON mailboxes(owner_idnr);
 CREATE INDEX mailboxes_name_idx ON mailboxes(name);
-CREATE INDEX mailboxes_is_subscribed_idx ON mailboxes(is_subscribed);
+
+CREATE TABLE subscription (
+	user_id INT8 NOT NULL,
+	mailbox_id INT8 NOT NULL,
+	PRIMARY KEY (user_id, mailbox_id),
+	FOREIGN KEY (user_id) REFERENCES users(user_idnr) ON DELETE CASCADE
+	FOREIGN KEY (mailbox_id) 
+		REFERENCES mailboxes(mailbox_idnr) ON DELETE CASCADE
+);
+
+CREATE TABLE acl (
+    user_id INT8 NOT NULL,
+    mailbox_id INT8 NOT NULL,
+    lookup_flag INT2 DEFAULT '0' NOT NULL,
+    read_flag INT2 DEFAULT '0' NOT NULL,
+    seen_flag INT2 DEFAULT '0' NOT NULL,
+    write_flag INT2 DEFAULT '0' NOT NULL,
+    insert_flag INT2 DEFAULT '0' NOT NULL,
+    post_flag INT2 DEFAULT '0' NOT NULL,
+    create_flag INT2 DEFAULT '0' NOT NULL,
+    delete_flag INT2 DEFAULT '0' NOT NULL,
+    administer_flag INT2 DEFAULT '0' NOT NULL,
+    PRIMARY KEY (user_id, mailbox_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_idnr) ON DELETE CASCADE,
+    FOREIGN KEY (mailbox_id) REFERENCES mailboxes(mailbox_idnr) ON DELETE CASCADE
+);
 
 CREATE SEQUENCE shared_mailbox_seq;
 CREATE TABLE shared_mailbox (

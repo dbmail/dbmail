@@ -59,13 +59,34 @@ CREATE TABLE mailboxes (
    no_inferiors tinyint(1) default '0' not null,
    no_select tinyint(1) default '0' not null,
    permission tinyint(1) default '2',
-   is_subscribed tinyint(1) default 0 not null,
    PRIMARY KEY (mailbox_idnr),
    INDEX (name),
    INDEX (owner_idnr),
-   INDEX (is_subscribed)
  );
 
+DROP TABLE IF EXISTS subscription;
+CREATE TABLE subscription (
+	user_id bigint(21) NOT NULL,
+	mailbox_id bigint(21) NOT NULL,
+	PRIMARY KEY (user_id, mailbox_id)
+);
+
+DROP TABLE IF EXISTS acl;
+CREATE TABLE acl (
+	user_id bigint(21) NOT NULL,
+	mailbox_id bigint(21) NOT NULL,
+	lookup_flag tinyint(1) default '0' not null,
+	read_flag tinyint(1) default '0' not null,
+	seen_flag tinyint(1) default '0' not null,
+	write_flag tinyint(1) default '0' not null,
+	insert_flag tinyint(1) default '0' not null,	
+	post_flag tinyint(1) default '0' not null,
+	create_flag tinyint(1) default '0' not null,	
+	delete_flag tinyint(1) default '0' not null,	
+	administer_flag tinyint(1) default '0' not null,	
+	PRIMARY KEY(user_id, mailbox_id)
+);
+	
 DROP TABLE IF EXISTS shared_mailbox;
 CREATE TABLE shared_mailbox (
   id bigint(21) NOT NULL auto_increment,

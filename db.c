@@ -2080,12 +2080,22 @@ int db_list_mailboxes_by_regex(u64_t owner_idnr, int only_subscribed,
      *nr_mailboxes = 0;
      if (only_subscribed)
 	  snprintf(query, DEF_QUERYSIZE,
-		   "SELECT name, mailbox_idnr FROM mailboxes WHERE "
-		   "owner_idnr='%llu' AND is_subscribed != '0'", owner_idnr);
+		   "SELECT name, mailbox_idnr, owner_idnr "
+		   "FROM mailboxes mbx, subscription sub, acl "
+		   "WHERE mbx.mailbox_idnr = sub.mailbox_id "
+		   "AND sub.user_id = '%llu' "
+		   "AND (mbx.owner_idnr = sub.user_id "
+		   "OR (acl.user_id = sub.user_id "
+		   "AND acl.mailbox_id = mbx.mailbox_idnr "
+		   "AND acl.lookup_flag = '1'))", owner_idnr);
      else
 	  snprintf(query, DEF_QUERYSIZE,
-		   "SELECT name, mailbox_idnr FROM mailboxes WHERE "
-		   "owner_idnr='%llu'", owner_idnr);
+		   "SELECT name, mailbox_idnr, owner_idnr "
+		   "FROM mailboxes mbx, acl "
+		   "WHERE mbx.owner_idnr = '%llu' OR "
+		   "(acl.mailbox_id = mbx.mailbox_idnr "
+		   "AND acl.user_id = '%llu' "
+		   "AND acl.lookup_flag = '1')", owner_idnr, owner_idnr);
      
      if (db_query(query) == -1) {
 	  trace(TRACE_ERROR, "%s,%s: error during mailbox query",
@@ -2847,16 +2857,36 @@ int db_subscribe(u64_t mailbox_idnr, u64_t user_idnr)
 	  }
      } else {
 	  snprintf(query, DEF_QUERYSIZE,
-		   "UPDATE mailboxes SET is_subscribed = 1 "
-		   "WHERE mailbox_idnr = '%llu'", mailbox_idnr);
+		   "SELECT * FROM subscription "
+		   "WHERE mailbox_id = '%llu' "
+		   "AND user_id = '%llu'", mailbox_idnr, user_idnr);
 	  
 	  if (db_query(query) == -1) {
-	       trace(TRACE_ERROR, "%s,%s: could not update mailbox",
+	       trace(TRACE_ERROR, "%s,%s: could not verify subscription",
 		     __FILE__, __FUNCTION__);
 	       return (-1);
 	  }
+	  
+	  if (db_num_rows() > 0) {
+		  trace(TRACE_DEBUG, "%s,%s: already subscribed to mailbox "
+			"[%llu]", __FILE__, __FUNCTION__, mailbox_idnr);
+		  db_free_result();
+		  return 0;
+	  }
+	  
+	  db_free_result();
+	  
+	  snprintf(query, DEF_QUERYSIZE,
+		   "INSERT INTO subscription (user_id, mailbox_id) "
+		   "VALUES ('%llu', '%llu')", user_idnr, mailbox_idnr);
+	  
+	  if (db_query(query) == -1) {
+		  trace(TRACE_ERROR, "%s,%s: could not insert subscription",
+			__FILE__, __FUNCTION__);
+		  return -1;
+	  }
      }
-    return 0;
+     return 0;
 }
 
 int db_unsubscribe(u64_t mailbox_idnr, u64_t user_idnr)
@@ -2869,9 +2899,10 @@ int db_unsubscribe(u64_t mailbox_idnr, u64_t user_idnr)
 	  }    
      } else {
 	  snprintf(query, DEF_QUERYSIZE,
-		   "UPDATE mailboxes SET is_subscribed = 0 "
-		   "WHERE mailbox_idnr = '%llu'", mailbox_idnr);
-	  
+		   "DELETE FROM subscription "
+		   "WHERE user_id = '%llu' AND mailbox_id = '%llu'",
+		   user_idnr, mailbox_idnr);
+	  	  
 	  if (db_query(query) == -1) {
 	       trace(TRACE_ERROR, "%s,%s: could not update mailbox",
 		     __FILE__, __FUNCTION__);
@@ -3349,6 +3380,8 @@ int db_acl_has_right(u64_t userid, u64_t mboxid, const char *right_flag)
 	int result;
 	int owner_result;
 	
+	trace(TRACE_DEBUG, "%s,%s: checking ACL for user [%llu] on "
+	      "mailbox [%llu]", __FILE__, __FUNCTION__, userid, mboxid);
 	owner_result = db_user_is_mailbox_owner(userid, mboxid);
 
 	if (owner_result < 0) {

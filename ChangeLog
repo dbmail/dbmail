@@ -1,3 +1,41 @@
+2004-01-23  Ilja Booij  <ilja@ic-s.nl>
+
+	* imapcommands.c (_ic_store): checks ACLs. does different checks
+	for the store of different flags. \Deleted needs 'd', \Seen needs 's'
+	and other flags need 'w' permissions.
+	(_ic_create): checks ACLs. Currently only checks acl of parent mailboxes.
+	This should be enhanced by adding checks for namespaces when adding
+	namespace stuff.
+
+	* imap4.h (imap_store_flag_t): new enum to denote store flags.
+
+	* db.c (db_list_mailboxes_by_regex): subscribed mailbox already looks
+	at all mailboxes a user is subscribed to (probably it should only look
+	at mailboxes the user has access to via ACL's!)
+	(db_subscribe): uses the new subscription table.
+	(db_unsubscribe): uses the new subscription table.
+	(db_list_mailboxes_by_regex): updated to make sure it only looks at
+	mailboxes the user has access to using ACLs. This makes for some
+	very interesting, complex queries (Performance..?)
+
+2004-01-21  Ilja Booij  <ilja@ic-s.nl>
+
+	* imapcommands.c (_ic_select): uses ACLs
+	(_ic_examine): uses ACLs
+	(_ic_delete): checks if user is owner of mailbox
+	(_ic_rename): checks if user is owner of mailbox
+	(_ic_subscribe): checks ACL_RIGHT_LOOKUP
+	(_ic_unsubscribe): checks ACL_RIGHT_LOOKUP
+	(_ic_status): checks ACL_RIGHT_READ
+	(_ic_append): checks ACL_RIGHT_INSERT
+	(_ic_check): checks ACL_RIGHT_READ
+	(_ic_close): checks ACL_RIGHT_DELETE
+	(_ic_expunge): checks ACL_RIGHT_DELETE
+	(_ic_search): checks ACL_RIGHT_READ
+	(_ic_fetch): checks ACL_RIGHT_READ
+
+	* imap4.h (IMAP_CAPABILITY_STRING): added ACL
+
 2004-01-20  Ilja Booij  <ilja@ic-s.nl>
 
 	* db.c (db_findmailbox): now functions correctly by returning 0 if

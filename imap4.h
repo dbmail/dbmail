@@ -35,7 +35,7 @@
 
 #define IMAP_SERVER_VERSION VERSION
 //#define IMAP_CAPABILITY_STRING "IMAP4 IMAP4rev1 AUTH=LOGIN QUOTA"
-#define IMAP_CAPABILITY_STRING "IMAP4 IMAP4rev1 AUTH=LOGIN"
+#define IMAP_CAPABILITY_STRING "IMAP4 IMAP4rev1 AUTH=LOGIN ACL"
 #define IMAP_TIMEOUT_MSG "* BYE dbmail IMAP4 server signing off due to timeout\r\n"
 
 /* max number of BAD/NO responses */
@@ -86,6 +86,16 @@ typedef struct
   u64_t userid;             /* userID of client in dbase */
   mailbox_t mailbox;        /* currently selected mailbox */
 } imap_userdata_t;
+
+typedef enum 
+{
+	IMAP_STORE_FLAG_SEEN,
+	IMAP_STORE_FLAG_ANSWERED,
+	IMAP_STORE_FLAG_DELETED,
+	IMAP_STORE_FLAG_FLAGGED,
+	IMAP_STORE_FLAG_DRAFT,
+	IMAP_STORE_FLAG_RECENT
+} imap_store_flag_t;
 
 #endif
 
