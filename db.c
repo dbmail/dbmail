@@ -536,27 +536,24 @@ u64_t db_get_useridnr(u64_t message_idnr)
 
 int db_insert_physmessage(u64_t *physmessage_id) 
 {
-     char timestr[30];
-     time_t td;
-     struct tm tm;
+	timestring_t timestring;
 
-     *physmessage_id = 0;
+	*physmessage_id = 0;
 
-     time(&td);
-     tm = *localtime(&td);
-     strftime(timestr, sizeof(timestr), "%Y-%m-%d %H:%M:%S", &tm);
+	create_current_timestring(&timestring);
 
-     snprintf(query, DEF_QUERYSIZE,
-	      "INSERT INTO physmessage (messagesize, internal_date) "
-	      "VALUES ('0', '%s')", timestr);
-     if (db_query(query) == -1) {
-	  trace(TRACE_ERROR, "%s,%s: query failed", __FILE__, __FUNCTION__);
-	  return -1;
-     }
+	snprintf(query, DEF_QUERYSIZE,
+		 "INSERT INTO physmessage (messagesize, internal_date) "
+		 "VALUES ('0', '%s')", timestring);
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: query failed", 
+		      __FILE__, __FUNCTION__);
+		return -1;
+	}
      
-     *physmessage_id = db_insert_result("physmessage_id");
+	*physmessage_id = db_insert_result("physmessage_id");
      
-     return 1;
+	return 1;
 }
 
 int db_update_physmessage(u64_t physmessage_id, u64_t message_size,
@@ -949,55 +946,49 @@ int db_rollback_insert(u64_t owner_idnr, const char *unique_id)
 
 int db_log_ip(const char *ip)
 {
-    char timestr[30];
-    time_t td;
-    struct tm tm;
-    u64_t id = 0;
-    char *query_result;
+	u64_t id = 0;
+	char *query_result;
 
-    time(&td);			/* get time */
-    tm = *localtime(&td);	/* get components */
-    strftime(timestr, sizeof(timestr), "%Y-%m-%d %H:%M:%S", &tm);
-
-    snprintf(query, DEF_QUERYSIZE,
-	     "SELECT idnr FROM pbsp WHERE ipnumber = '%s'", ip);
-    if (db_query(query) == -1) {
-	trace(TRACE_ERROR, "%s,%s: could not access ip-log table "
-	      "(pop/imap-before-smtp): %s", __FILE__, __FUNCTION__);
-	return -1;
-    }
-
-    query_result = db_get_result(0, 0);
-    id = query_result ? strtoull(query_result, NULL, 10) : 0;
-
-    db_free_result();
-
-    if (id) {
-	/* this IP is already in the table, update the 'since' field */
-	snprintf(query, DEF_QUERYSIZE, "UPDATE pbsp "
-		 "SET since = CURRENT_TIMESTAMP " "WHERE idnr='%llu'", id);
-
-	if (db_query(query) == -1) {
-	    trace(TRACE_ERROR, "%s,%s: could not update ip-log "
-		  "(pop/imap-before-smtp)", __FILE__, __FUNCTION__);
-	    return -1;
-	}
-    } else {
-	/* IP not in table, insert row */
 	snprintf(query, DEF_QUERYSIZE,
-		 "INSERT INTO pbsp (since, ipnumber) "
-		 "VALUES (CURRENT_TIMESTAMP, '%s')", ip);
+		 "SELECT idnr FROM pbsp WHERE ipnumber = '%s'", ip);
 	if (db_query(query) == -1) {
-	    trace(TRACE_ERROR, "%s,%s: could not log IP number to dbase "
-		  "(pop/imap-before-smtp)", __FILE__, __FUNCTION__);
-	    return -1;
+		trace(TRACE_ERROR, "%s,%s: could not access ip-log table "
+		      "(pop/imap-before-smtp): %s", __FILE__, __FUNCTION__);
+		return -1;
 	}
-    }
 
-    trace(TRACE_DEBUG, "%s,%s: ip [%s] logged\n", __FILE__, __FUNCTION__,
-	  ip);
+	query_result = db_get_result(0, 0);
+	id = query_result ? strtoull(query_result, NULL, 10) : 0;
+	
+	db_free_result();
+	
+	if (id) {
+		/* this IP is already in the table, update the 'since' field */
+		snprintf(query, DEF_QUERYSIZE, "UPDATE pbsp "
+			 "SET since = CURRENT_TIMESTAMP " "WHERE idnr='%llu'", 
+			 id);
 
-    return 0;
+		if (db_query(query) == -1) {
+			trace(TRACE_ERROR, "%s,%s: could not update ip-log "
+		  "(pop/imap-before-smtp)", __FILE__, __FUNCTION__);
+			return -1;
+		}
+	} else {
+		/* IP not in table, insert row */
+		snprintf(query, DEF_QUERYSIZE,
+			 "INSERT INTO pbsp (since, ipnumber) "
+			 "VALUES (CURRENT_TIMESTAMP, '%s')", ip);
+		if (db_query(query) == -1) {
+			trace(TRACE_ERROR, "%s,%s: could not log IP number to dbase "
+			      "(pop/imap-before-smtp)", __FILE__, __FUNCTION__);
+			return -1;
+		}
+	}
+
+	trace(TRACE_DEBUG, "%s,%s: ip [%s] logged\n", __FILE__, __FUNCTION__,
+	      ip);
+
+	return 0;
 }
 
 int db_cleanup_iplog(const char *lasttokeep)
@@ -1875,25 +1866,20 @@ u64_t db_check_sizelimit(u64_t addblocksize UNUSED, u64_t message_idnr,
 int db_imap_append_msg(const char *msgdata, u64_t datalen,
 		       u64_t mailbox_idnr, u64_t user_idnr)
 {
-    char timestr[30];
-    time_t td;
-    struct tm tm;
-    u64_t message_idnr;
-    u64_t messageblk_idnr;
-    u64_t physmessage_id = 0;
-    u64_t count;
-    int result;
-    char unique_id[UID_SIZE];	/* unique id */
+	timestring_t timestring;
+	u64_t message_idnr;
+	u64_t messageblk_idnr;
+	u64_t physmessage_id = 0;
+	u64_t count;
+	int result;
+	char unique_id[UID_SIZE];	/* unique id */
 
-    time(&td);			/* get time */
-    tm = *localtime(&td);	/* get components */
-    strftime(timestr, sizeof(timestr), "%Y-%m-%d %H:%M:%S", &tm);
 
     /* first create a new physmessage entry */
     snprintf(query, DEF_QUERYSIZE,
 	     "INSERT INTO physmessage "
 	     "(messagesize, rfcsize, internal_date) "
-	     "VALUES ('0', '0', '%s')", timestr);
+	     "VALUES ('0', '0', '%s')", timestring);
 
     if (db_query(query) == -1) {
 	trace(TRACE_ERROR, "%s,%s: could not create physmessage",

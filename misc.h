@@ -60,4 +60,9 @@ char * itoa (int i);
  */
 void create_unique_id(char *target, u64_t message_idnr);
 
+/**
+ * \brief create a timestring with the current time.
+ * \param timestring an allocated timestring object.
+ */
+void create_current_timestring(timestring_t *timestring);
 #endif

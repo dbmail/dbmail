@@ -34,6 +34,7 @@
 #include "db.h"
 #include "auth.h"
 #include "memblock.h"
+#include "misc.h"
 #include "rfcmsg.h"
 #include "dbmsgbuf.h"
 #include "quota.h"
@@ -129,14 +130,9 @@ int _ic_noop(char *tag, char **args, ClientInfo *ci)
 int _ic_logout(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
-  char timestr[30];
-  time_t td;
-  struct tm tm;
-
-  time(&td);              /* get time */
-  tm = *localtime(&td);   /* get components */
-  strftime(timestr, sizeof(timestr), "%Y-%m-%d %H:%M:%S", &tm);
-
+  timestring_t timestring;
+  
+  create_current_timestring(&timestring);
   if (!check_state_and_args("LOGOUT", tag, args, 0, -1, ci))
     return 1; /* error, return */
 
@@ -144,7 +140,7 @@ int _ic_logout(char *tag, char **args, ClientInfo *ci)
   ud->state = IMAPCS_LOGOUT;
 
   trace(TRACE_MESSAGE, "_ic_logout(): user (id:%llu) logging out @ [%s]\r\n",
-	ud->userid, timestr);
+	ud->userid, timestring);
 
   fprintf(ci->tx,"* BYE dbmail imap server kisses you goodbye\r\n");
 
@@ -164,14 +160,10 @@ int _ic_login(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
   u64_t userid;
-  char timestr[30];
-  time_t td;
-  struct tm tm;
+  timestring_t timestring;
   int validate_result;
-
-  time(&td);              /* get time */
-  tm = *localtime(&td);   /* get components */
-  strftime(timestr, sizeof(timestr), "%Y-%m-%d %H:%M:%S", &tm);
+  
+  create_current_timestring(&timestring);
 
   if (!check_state_and_args("LOGIN", tag, args, 2, IMAPCS_NON_AUTHENTICATED, ci))
     return 1; /* error, return */
@@ -196,7 +188,7 @@ int _ic_login(char *tag, char **args, ClientInfo *ci)
 
       /* validation failed: invalid user/pass combination */
       trace(TRACE_MESSAGE, "IMAPD [PID %d]: user (name %s) login rejected @ %s\r\n",
-	    (int)getpid(),args[0],timestr);
+	    (int)getpid(),args[0],timestring);
       fprintf(ci->tx, "%s NO login rejected\r\n",tag);
 
       return 1;
@@ -204,7 +196,7 @@ int _ic_login(char *tag, char **args, ClientInfo *ci)
 
   /* login ok */
   trace(TRACE_MESSAGE, "_ic_login(): user (id %llu, name %s) login accepted @ %s\r\n",
-	userid,args[0],timestr);
+	userid,args[0],timestring);
 #ifdef PROC_TITLES
   set_proc_title("USER %s [%s]", args[0], ci->ip);
 #endif
@@ -233,15 +225,10 @@ int _ic_authenticate(char *tag, char **args, ClientInfo *ci)
   u64_t userid;
   char username[MAX_LINESIZE],buf[MAX_LINESIZE],pass[MAX_LINESIZE];
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
-  char timestr[30];
-  time_t td;
-  struct tm tm;
   int validate_result;
-
-  time(&td);              /* get time */
-  tm = *localtime(&td);   /* get components */
-  strftime(timestr, sizeof(timestr), "%Y-%m-%d %H:%M:%S", &tm);
-
+  timestring_t timestring;
+  
+  create_current_timestring(&timestring);
   if (!check_state_and_args("AUTHENTICATE", tag, args, 1, IMAPCS_NON_AUTHENTICATED, ci))
     return 1; /* error, return */
 
@@ -299,7 +286,7 @@ int _ic_authenticate(char *tag, char **args, ClientInfo *ci)
 
       /* validation failed: invalid user/pass combination */
       trace(TRACE_MESSAGE, "IMAPD [PID %d]: user (name %s) login rejected @ %s\r\n",
-	    (int)getpid(),username,timestr);
+	    (int)getpid(),username,timestring);
       
       return 1;
     }
@@ -313,7 +300,7 @@ int _ic_authenticate(char *tag, char **args, ClientInfo *ci)
     db_log_ip(ci->ip);
 
   trace(TRACE_MESSAGE, "IMAPD [PID %d]: user (id %llu, name %s) login accepted @ %s\r\n",(int)getpid(),
-	userid,username,timestr);
+	userid,username,timestring);
 #ifdef PROC_TITLES
   set_proc_title("USER %s [%s]", args[0], ci->ip);
 #endif

@@ -83,3 +83,17 @@ void create_unique_id(char *target, u64_t message_idnr)
      snprintf (target, UID_SIZE, "%s", makemd5 (target) );
      trace (TRACE_DEBUG,"%s,%s: created: %s", __FILE__, __FUNCTION__, target);
 }
+
+void create_current_timestring(timestring_t *timestring)
+{
+	time_t td;
+	struct tm tm;
+	
+	if (time(&td) == -1)
+		trace(TRACE_FATAL, "%s,%s: error getting time from OS",
+		      __FILE__, __FUNCTION__);
+
+	tm = *localtime(&td);   /* get components */
+	strftime((char*)timestring, sizeof(timestring_t), 
+		 "%Y-%m-%d %H:%M:%S", &tm);
+}

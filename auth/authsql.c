@@ -35,6 +35,7 @@
 #include "debug.h"
 #include "dbmd5.h"
 #include "dbmail.h"
+#include "misc.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -644,19 +645,20 @@ int auth_validate (char *username, char *password, u64_t* user_idnr)
 {
 	char *query_result;
 	int is_validated = 0;
-	char timestr[30];
-	time_t td;
-	struct tm tm;
+	timestring_t timestring;
 	char salt[13];
 	char cryptres[35];
 	char *escuser;
 
 	assert(user_idnr != NULL);
 	*user_idnr = 0;
+	
+	
+	create_current_timestring(&timestring);
 
-	time(&td);              /* get time */
-	tm = *localtime(&td);   /* get components */
-	strftime(timestr, sizeof(timestr), "%Y-%m-%d %H:%M:%S", &tm);
+	/* the shared mailbox user should not log in! */
+	if (strcmp(username, SHARED_MAILBOX_USERNAME) == 0) 
+		return 0;
 
 	if (! (escuser = (char*)malloc(strlen(username)*2 +1)) )
 	{
@@ -748,7 +750,7 @@ int auth_validate (char *username, char *password, u64_t* user_idnr)
 	     /* log login in the dbase */
 	     snprintf(__auth_query_data, AUTH_QUERY_SIZE, 
 		      "UPDATE users SET last_login = '%s' "
-		      "WHERE user_idnr = '%llu'", timestr, *user_idnr);
+		      "WHERE user_idnr = '%llu'", timestring, *user_idnr);
 	     
 	     if (__auth_query(__auth_query_data)==-1)
 		  trace(TRACE_ERROR, "%s,%s: could not update user login time",
@@ -769,14 +771,9 @@ u64_t auth_md5_validate (char *username,unsigned char *md5_apop_he,
   unsigned char *md5_apop_we;
   u64_t user_idnr;	
   char *query_result;
-  char timestr[30];
-  time_t td;
-  struct tm tm;
-
-  time(&td);              /* get time */
-  tm = *localtime(&td);   /* get components */
-  strftime(timestr, sizeof(timestr), "%Y-%m-%d %H:%M:%S", &tm);
+  timestring_t timestring;
   
+  create_current_timestring(&timestring);
   db_use_auth_result();
   snprintf (__auth_query_data, AUTH_QUERY_SIZE, 
 		  "SELECT passwd,user_idnr FROM users WHERE "
@@ -828,7 +825,7 @@ u64_t auth_md5_validate (char *username,unsigned char *md5_apop_he,
        /* log login in the dbase */
       snprintf(__auth_query_data, AUTH_QUERY_SIZE, 
 			  "UPDATE users SET last_login = '%s' "
-			  "WHERE user_idnr = '%llu'", timestr, user_idnr);
+			  "WHERE user_idnr = '%llu'", timestring, user_idnr);
       
 	  if (__auth_query(__auth_query_data)==-1)
 		  trace(TRACE_ERROR, "%s,%s: could not update user login time",

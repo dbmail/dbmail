@@ -50,11 +50,19 @@
 /** default configuration file */
 #define DEFAULT_CONFIG_FILE "/etc/dbmail.conf"
 
+/** username of user that is owner of all mailboxes */
+#define SHARED_MAILBOX_USERNAME "__shared__"
+
 /* uncomment this if you want informative process titles */
 //#define PROC_TITLES
 
 /** field_t is used for storing configuration values */
 typedef char field_t[FIELDSIZE];
+
+/** size of a timestring_t field */
+#define TIMESTRING_SIZE 30
+/** timestring_t is used for holding timestring */
+typedef char timestring_t[TIMESTRING_SIZE];
 
 /** parameters for the database connection */
 typedef struct {

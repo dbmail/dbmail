@@ -30,8 +30,9 @@
 #include "dbmail.h"
 #include "db.h"
 #include "dbmd5.h"
-#include "list.h"
 #include "debug.h"
+#include "list.h"
+#include "misc.h"
 #include <ldap.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -1649,22 +1650,17 @@ int auth_change_mailboxsize(u64_t user_idnr, u64_t new_size)
  */
 int auth_validate (char *username, char *password, u64_t *user_idnr)
 {
-     char timestr[30];
-     time_t td;
-     struct tm tm;
+	timestring_t timestring;
      
-     int ldap_err;
-     char *ldap_dn = NULL;
-     char *id_char = NULL;
-     char query[AUTH_QUERY_SIZE];
-     /*char *fields[] = { "dn", _ldap_cfg.field_nid, NULL }; unused variable */
+	int ldap_err;
+	char *ldap_dn = NULL;
+	char *id_char = NULL;
+	char query[AUTH_QUERY_SIZE];
+	/*char *fields[] = { "dn", _ldap_cfg.field_nid, NULL }; unused variable */
      
-     assert(user_idnr != NULL);
-     *user_idnr = 0;
-     time(&td);              /* get time */
-     tm = *localtime(&td);   /* get components */
-  strftime(timestr, sizeof(timestr), "%Y-%m-%d %H:%M:%S", &tm);
-  
+	assert(user_idnr != NULL);
+	*user_idnr = 0;
+	create_current_timestring(&timestring);
   snprintf( query, AUTH_QUERY_SIZE, "(%s=%s)", _ldap_cfg.field_uid, username );
 //  ldap_dn = __auth_get_first_match( query, fields ); 
 //  id_char = __auth_get_first_match( query, _ldap_cfg.field_nid ); 
@@ -1689,7 +1685,7 @@ int auth_validate (char *username, char *password, u64_t *user_idnr)
        
       /* FIXME: implement this in LDAP...  log login in the database
 	 snprintf(__auth_query_data, AUTH_QUERY_SIZE, "UPDATE users SET last_login = '%s' "
-	 "WHERE user_idnr = '%llu'", timestr, id);
+	 "WHERE user_idnr = '%llu'", timestring, id);
 	 
 	 if (__auth_query(__auth_query_data)==-1)
 	 trace(TRACE_ERROR, "auth_validate(): could not update user login time");

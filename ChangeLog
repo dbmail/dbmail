@@ -1,3 +1,29 @@
+2004-01-15  Ilja Booij  <ilja@ic-s.nl>
+
+	* auth/authsql.c (auth_validate): use create_current_timestring
+	to get timestring
+
+	* auth/authldap.c (auth_validate): use create_current_timestring
+	to get timestring
+
+	* misc.c (create_current_timestring): added implementation
+	of functions create_current_timestring.
+
+	* misc.h (create_current_timestring): added function 
+	create_current_timestring() which creates the timestrings used
+	throughout DBMail.
+
+	* db.c (db_insert_physmessage): use create_current_timestring to 
+	get timestring
+
+	* dbmail.h: created the timestring_t typedef, which is used
+	for storing timestrings.
+
+	* imapcommands.c (_ic_logout): use create_current_timestring to 
+	get timestring
+	(_ic_login): use create_current_timestring to get timestring
+	(_ic_authenticate): use create_current_timestring to get timestring
+
 2003-12-15  Ilja Booij  <ilja@ic-s.nl>
 
 	* db.h (db_get_user_from_alias): removed function. It was not
