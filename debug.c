@@ -162,6 +162,8 @@ void __debug_free(void *ptr, const char *fname, int linenr)
 
 void __debug_dumpallocs()
 {
+#ifdef __DEBUG_TRACE_MEMALLOC
+
   debug_mem_t *curr = __dm_first;
 
   trace(TRACE_WARNING,"__debug_dumpallocs(): retrieving list of currently allocated items\n");
@@ -173,6 +175,8 @@ void __debug_dumpallocs()
     }
 
   trace(TRACE_WARNING,"\n__debug_dumpallocs(): end\n");
+
+#endif
 }
 
 

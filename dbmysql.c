@@ -678,7 +678,7 @@ int db_check_user (char *username, struct list *userids, int checks)
           list_nodeadd(userids, username, strlen(username)+1);
           trace (TRACE_DEBUG,"db_check_user(): adding [%s] to deliver_to address",username);
           mysql_free_result(myres);
-          return 0;
+          return 1;
       }
       else
       {

@@ -2334,7 +2334,7 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx)
       /* a NOT should be unary */
       if (key.sub_search.total_nodes != 1) 
 	{
-	  list_freelist(&key.sub_search.start);
+	  free_searchlist(&key.sub_search);
 	  return -1;
 	}
     }
@@ -2358,7 +2358,7 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx)
       /* an OR should be binary */
       if (key.sub_search.total_nodes != 2) 
 	{
-	  list_freelist(&key.sub_search.start);
+	  free_searchlist(&key.sub_search);
 	  return -1;
 	}
 
@@ -2381,7 +2381,7 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx)
       if (result == 0)
 	{
 	  /* no ')' encountered (should not happen, parentheses are matched at the command line) */
-	  list_freelist(&key.sub_search.start);
+	  free_searchlist(&key.sub_search);
 	  return -1;
 	}
     }
@@ -2520,7 +2520,6 @@ int perform_imap_search(int *rset, int setlen, search_key_t *sk, mailbox_t *mb)
 /*
  * frees the search-list sl
  *
- * sl itself is NOT freed
  */
 void free_searchlist(struct list *sl)
 {
@@ -2539,11 +2538,10 @@ void free_searchlist(struct list *sl)
       free_searchlist(&sk->sub_search);
       list_freelist(&sk->sub_search.start);
       
-      memset(sk, 0, sizeof(*sk));
-      
       el = el->nextnode;
     }
 
+  list_freelist(&sl->start);
   return;
 }
 
