@@ -2535,7 +2535,7 @@ int db_fetch_headers(unsigned long msguid, mime_message_t *msg)
   result = db_start_msg(msg, NULL); /* fetch message */
   if (result == -1)
     {
-      trace(TRACE_ERROR, "db_fetch_headers(): error fetching message\n");
+      trace(TRACE_ERROR, "db_fetch_headers(): error fetching message, ID: %lu\n",msguid);
       db_close_msgfetch();
       db_free_msg(msg);
       return -1;
@@ -2746,8 +2746,7 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 	}
 
       msgidx += strlen(newbound);   /* skip the boundary */
-      msgidx++;                     /* skip \n ... */
-      /*totallines++;*/                 /* ... but count it */
+      msgidx++;                     /* skip \n */
 
       /* find MIME-parts */
       if ((nlines = db_add_mime_children(&msg->children, newbound)) == -1)

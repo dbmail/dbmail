@@ -1674,7 +1674,6 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		  
 	      if (fi->getSize)
 		{
-		  /* add 2 for an extra \r\n ??? */
 		  fprintf(ci->tx,"RFC822.SIZE %lu ", msg.rfcheadersize + msg.bodysize + 
 			  + msg.bodylines);
 		}
@@ -1723,6 +1722,8 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	      if (fi->getRFC822Text)
 		{
 		  dumpsize = db_dump_range(tmpfile, msg.bodystart, msg.bodyend, thisnum);
+
+		  fseek(tmpfile, 0, SEEK_SET);
 
 		  fprintf(ci->tx, "RFC822.TEXT {%ld}\r\n",dumpsize);
 		  while (dumpsize--)
@@ -1905,7 +1906,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			      if (cnt<0) cnt = 0;
 			      if (cnt > fi->bodyfetch.octetcnt) cnt = fi->bodyfetch.octetcnt;
  
-			      fprintf(ci->tx, "]<%u> {%ld}\r\n",
+			      fprintf(ci->tx, "<%u> {%ld}\r\n",
 				      fi->bodyfetch.octetstart, cnt);
 			      
 			      fseek(tmpfile, fi->bodyfetch.octetstart, SEEK_SET);
@@ -1913,7 +1914,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			  else
 			    {
 			      cnt = dumpsize;
-			      fprintf(ci->tx, "] {%ld}\r\n", dumpsize);
+			      fprintf(ci->tx, "{%ld}\r\n", dumpsize);
 			      fseek(tmpfile, 0, SEEK_SET);
 			    }
 
@@ -1954,7 +1955,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			      if (cnt<0) cnt = 0;
 			      if (cnt > fi->bodyfetch.octetcnt) cnt = fi->bodyfetch.octetcnt;
  
-			      fprintf(ci->tx, "]<%u> {%ld}\r\n",
+			      fprintf(ci->tx, "<%u> {%ld}\r\n",
 				      fi->bodyfetch.octetstart, cnt);
 			      
 			      fseek(tmpfile, fi->bodyfetch.octetstart, SEEK_SET);
@@ -1962,7 +1963,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			  else
 			    {
 			      cnt = dumpsize;
-			      fprintf(ci->tx, "] {%ld}\r\n", dumpsize);
+			      fprintf(ci->tx, "{%ld}\r\n", dumpsize);
 			      fseek(tmpfile, 0, SEEK_SET);
 			    }
 
@@ -1987,7 +1988,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			      if (cnt<0) cnt = 0;
 			      if (cnt > fi->bodyfetch.octetcnt) cnt = fi->bodyfetch.octetcnt;
  
-			      fprintf(ci->tx, "]<%u> {%ld}\r\n",
+			      fprintf(ci->tx, "<%u> {%ld}\r\n",
 				      fi->bodyfetch.octetstart, cnt);
 			      
 			      fseek(tmpfile, fi->bodyfetch.octetstart, SEEK_SET);
@@ -1995,7 +1996,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			  else
 			    {
 			      cnt = dumpsize;
-			      fprintf(ci->tx, "] {%ld}\r\n", dumpsize);
+			      fprintf(ci->tx, "{%ld}\r\n", dumpsize);
 			      fseek(tmpfile, 0, SEEK_SET);
 			    }
 
@@ -2087,7 +2088,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
   fclose(tmpfile);
   unlink(tmpname);
 
-  fprintf(ci->tx,"%s OK FETCH completed\r\n",tag);
+  fprintf(ci->tx,"%s OK %sFETCH completed\r\n", tag, imapcommands_use_uid ? "UID " : "");
   return 0;
 }
 
@@ -2328,7 +2329,7 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
 	    fprintf(ci->tx,"))\r\n");
 	}
     }
-  fprintf(ci->tx,"%s OK STORE completed\r\n",tag);
+  fprintf(ci->tx,"%s OK %sSTORE completed\r\n", tag, imapcommands_use_uid ? "UID ":"");
   return 0;
 }
 
@@ -2462,7 +2463,7 @@ int _ic_copy(char *tag, char **args, ClientInfo *ci)
 	}
     }
 
-  fprintf(ci->tx,"%s OK COPY completed\r\n", tag);
+  fprintf(ci->tx,"%s OK %sCOPY completed\r\n", tag, imapcommands_use_uid?"UID ":"");
   return 0;
 }
 

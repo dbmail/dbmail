@@ -457,7 +457,7 @@ void SS_sighandler(int sig, siginfo_t *info, void *data)
       break;
 
     case SIGPIPE: 
-      trace(TRACE_ERROR,"Received SIGPIPE\n");
+      trace(TRACE_FATAL,"Received SIGPIPE\n");
       break;
 
     case SIGINT: 

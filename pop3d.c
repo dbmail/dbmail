@@ -462,7 +462,10 @@ int main (int argc, char *argv[])
 	for (;;)
 	{
 		if (*default_children < defchld)
+		  {
+			sleep (1); /* don't hog cpu */
 			continue;
+		  }
 
 		while (total_children >= maxchld)
 		{

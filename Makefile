@@ -64,7 +64,7 @@ dbmd5.o:dbmd5.h md5.h
 bounce.o:bounce.h list.h
 imap4.o: imap4.h dbmysql.h debug.h serverservice.h imaputil.h imapcommands.h
 imaputil.o: imaputil.h
-imapcommands.o: imapcommands.h imaputil.h
+imapcommands.o: imapcommands.h imaputil.h imap4.h
 serverservice.o: serverservice.h debug.h
 maintenance.o: maintenance.h
 settings.o: settings.h
