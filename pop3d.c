@@ -39,7 +39,8 @@ int error_count;
 FILE *tx = NULL;	/* write socket */
 FILE *rx = NULL;	/* read socket */
 
-int *children;
+int *default_children;
+int total_children = 0;
 
 key_t	shmkey = 0;
 int shmid;
@@ -139,7 +140,7 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 		
 	/* set stream to line buffered mode 
 	* this way when we send a newline the buffer is flushed */
-	setlinebuf(tx);
+/*	setlinebuf(tx); */
 	setlinebuf(rx);
 
 	/* connect to the database */
@@ -149,6 +150,8 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 		return -1;
 	}
 			
+	(*default_children++);
+
 	/* first initiate AUTHORIZATION state */
 	state = AUTHORIZATION;
 		
@@ -217,6 +220,8 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 
 	/* reset timers */
 	alarm (0);
+	
+	(*default_children)--;
 	
 	return 0;
 }
@@ -395,8 +400,8 @@ int main (int argc, char *argv[])
   if (shmid == -1)
 	  trace (TRACE_FATAL,"main(): could not allocate shared memory");
 
-  children = (int *)shmat(shmid, 0, 0);
-  if (children == (int *)-1)
+  default_children = (int *)shmat(shmid, 0, 0);
+  if (default_children == (int *)-1)
 	  trace (TRACE_FATAL,"main(): could not attach to shared memory block");
 
   /* server loop */
@@ -416,25 +421,26 @@ int main (int argc, char *argv[])
   server_pid = getpid();
 
 	/* we don't have any children yet */
-	*children = 0;
- 
+	*default_children = 0;
+	
+	/* spawn the default children */
+	for (i=0; i<defchld; i++)
+	{
+		if (!fork())
+			break;
+		else
+			total_children++;
+	}
+
 	/* split up in the 'server' part and the client part */
 
 	/* 
-	 * Server loop 
+	 * Client loop 
 	 */
-	for (;;)
+	if (getpid() != server_pid)
 	{
-		while ((*children>=maxchld) && (server_pid==getpid()))
+		for (;;)
 		{
-			/* wait for some children to die */
-			wait (NULL);
-			sleep (1); /* don't hog the processlist */
-			(*children)--;
-		}
-	
-		if (*children<maxchld) 
-		{		
 			/* wait for a connection */
 			len_inet = sizeof (adr_clnt);
 			c = accept (s, (struct sockaddr *)&adr_clnt,
@@ -446,51 +452,48 @@ int main (int argc, char *argv[])
 				trace (TRACE_FATAL,"main(): call accept(2) failed");
 			}
 		
-			/* Fork a new server for this incoming client */
-	
-			trace (TRACE_DEBUG,"Ok only got %d children, forking",*children);
-			if ((processid = fork()) == -1) 
-			{
-				trace (TRACE_ERROR,"main(): cannot fork()");
-				close (c);
-				continue; /* get back to loop */
-			}
-			else
-			{
-				if ( processid > 0)
-				{
-					/* this is the parent 
-					 * it won't accept connections itself */
-					close (c);
-					continue;
-				}
-			}
-			trace (TRACE_DEBUG,"main(): we got forked");
-			(*children)++;
-		}
-		else 
-		{
-			if (server_pid!=getpid())
-			{
-				trace (TRACE_DEBUG,"main(): connection limit, closing sock");	
-				(*children)--;
-				close (c);
-				exit(0);
-			}
-		}
-
-		/* a new child */	
-		trace (TRACE_DEBUG,"main(): handeling client");
-			
 		handle_client(myhostname, c, adr_clnt);
-	
-		trace (TRACE_DEBUG,"main(): handle_client finished");
-		/* done with this child */
 
-		/* we only let processes die under the default process
-		 * limit */
+		}
 	}
 
+	else
+		
+	for (;;)
+	{
+		if (*default_children < defchld)
+			continue;
+
+		while (total_children >= maxchld)
+		{
+			sleep (1); /* don't hog cpu */
+			wait (NULL); /* wait for children to finish */
+			total_children--;
+		}
+
+		/* wait for a connection */
+		len_inet = sizeof (adr_clnt);
+		c = accept (s, (struct sockaddr *)&adr_clnt,
+			  &len_inet); /* incoming connection */
+	
+		/* failure won't cause a quit forking is too expensive */	
+		if (c == -1)
+		{
+			trace (TRACE_FATAL,"main(): call accept(2) failed");
+		}
+		
+		if (fork())
+		{
+			total_children++;
+			continue;
+		}
+		else
+		{
+		/* handle client connection */
+		handle_client(myhostname, c, adr_clnt);
+		return 0;
+		}
+	}
 	/* nothing will ever get here */
 	return 0;
 }		
