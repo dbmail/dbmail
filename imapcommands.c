@@ -1512,6 +1512,9 @@ int _ic_close(char *tag, char **args, ClientInfo *ci)
   /* ok, update state */
   ud->state = IMAPCS_AUTHENTICATED;
 
+  my_free(ud->mailbox.seq_list);
+  memset(&ud->mailbox, 0, sizeof(ud->mailbox));
+
   fprintf(ci->tx,"%s OK CLOSE completed\r\n",tag);
   return 0;
 }

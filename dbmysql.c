@@ -2347,48 +2347,53 @@ int db_removemsg(unsigned long uid)
  * removes by means of setting status to 3
  * makes a list of delete msg UID's 
  *
+ * allocated memory should be freed by client; if msgids and/or nmsgs are NULL 
+ * no list of deleted msg UID's will be made
+ *
  * returns -1 on failure, 0 on success
  */
 int db_expunge(unsigned long uid,unsigned long **msgids,int *nmsgs)
 {
-  
   int i;
 
-  /* first select msg UIDs */
-  snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message WHERE"
-	   " mailboxidnr = %lu AND deleted_flag=1 AND status<2 ORDER BY messageidnr DESC", uid);
-
-  if (db_query(query) == -1)
+  if (nmsgs && msgids)
     {
-      trace(TRACE_ERROR, "db_expunge(): could not select messages in mailbox\n");
-      return -1;
-    }
+      /* first select msg UIDs */
+      snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message WHERE"
+	       " mailboxidnr = %lu AND deleted_flag=1 AND status<2 ORDER BY messageidnr DESC", uid);
 
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace(TRACE_ERROR,"db_expunge(): mysql_store_result failed: %s\n",mysql_error(&conn));
-      return -1;
-    }
+      if (db_query(query) == -1)
+	{
+	  trace(TRACE_ERROR, "db_expunge(): could not select messages in mailbox\n");
+	  return -1;
+	}
+      
+      if ((res = mysql_store_result(&conn)) == NULL)
+	{
+	  trace(TRACE_ERROR,"db_expunge(): mysql_store_result failed: %s\n",mysql_error(&conn));
+	  return -1;
+	}
 
-  /* now alloc mem */
-  *nmsgs = mysql_num_rows(res);
-  *msgids = (unsigned long *)my_malloc(sizeof(unsigned long) * (*nmsgs));
-  if (!(*msgids))
-    {
-      /* out of mem */
-      *nmsgs = 0;
+      /* now alloc mem */
+      *nmsgs = mysql_num_rows(res);
+      *msgids = (unsigned long *)my_malloc(sizeof(unsigned long) * (*nmsgs));
+      if (!(*msgids))
+	{
+	  /* out of mem */
+	  *nmsgs = 0;
+	  mysql_free_result(res);
+	  return -1;
+	}
+
+      /* save ID's in array */
+      i = 0;
+      while ((row = mysql_fetch_row(res)) && i<*nmsgs)
+	{
+	  (*msgids)[i++] = strtoul(row[0], NULL, 10);
+	}
       mysql_free_result(res);
-      return -1;
     }
 
-  /* save ID's in array */
-  i = 0;
-  while ((row = mysql_fetch_row(res)) && i<*nmsgs)
-    {
-      (*msgids)[i++] = strtoul(row[0], NULL, 10);
-    }
-  mysql_free_result(res);
-  
   /* update messages belonging to this mailbox: mark as expunged (status 3) */
   snprintf(query, DEF_QUERYSIZE, "UPDATE message SET status=3 WHERE"
 	   " mailboxidnr = %lu AND deleted_flag=1 AND status<2", uid);
@@ -2396,8 +2401,12 @@ int db_expunge(unsigned long uid,unsigned long **msgids,int *nmsgs)
   if (db_query(query) == -1)
     {
       trace(TRACE_ERROR, "db_expunge(): could not update messages in mailbox\n");
-      my_free(*msgids);
-      *nmsgs = 0;
+      if (msgids)
+	my_free(*msgids);
+
+      if (nmsgs)
+	*nmsgs = 0;
+
       return -1;
     }
 
