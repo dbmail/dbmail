@@ -245,15 +245,32 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
   if (done == -3)
     {
       trace (TRACE_ERROR,"handle_client(): alert: possible flood attempt, closing connection.");
-      fclose (tx);
-      shutdown (fileno(rx), SHUT_RDWR);
-      fclose(rx);
+      if (tx)
+	{
+	  fclose (tx);
+	  tx = NULL;
+	}
+      if (rx)
+	{
+	  shutdown (fileno(rx), SHUT_RDWR);
+	  fclose(rx);
+	  rx = NULL;
+	}
     }
   else if (done < 0)
     {
       trace (TRACE_ERROR,"handle_client(): client EOF, connection terminated");
       if (tx)
-	fclose(tx);
+	{
+	  fclose(tx);
+	  tx = NULL;
+	}
+      if (rx)
+	{
+	  shutdown (fileno(rx), SHUT_RDWR);
+	  fclose(rx);
+	  rx = NULL;
+	}
     }
   else
     {

@@ -44,7 +44,7 @@ int pop3_error (void *stream, const char *formatstring, ...)
     {
       trace (TRACE_MESSAGE,"pop3_error(): too many errors (MAX_ERRORS is %d)",MAX_ERRORS);
       fprintf ((FILE *)stream, "-ERR loser, go play somewhere else\r\n");
-      return -1;
+      return -3;
     }
   else
     vfprintf ((FILE *)stream, formatstring, argp);
