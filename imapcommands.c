@@ -1407,6 +1407,9 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
   endptr = args[0];
   while (*endptr)
     {
+      if (endptr != args[0])
+	endptr++; /* skip delimiter */
+
       fetch_start = strtoul(endptr, &endptr, 10);
 
       if (fetch_start == 0 || fetch_start > ud->mailbox.exists)
@@ -1432,12 +1435,9 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	      fetch_start = fetch_end;
 	      fetch_end = i;
 	    }
-	  if (*endptr) endptr++;
-
 	  break;
 
 	case ',':
-	  endptr++;
 	case 0:
 	  fetch_end = fetch_start;
 	  break;
