@@ -17,11 +17,12 @@ struct list mimelist; 	/* raw unformatted mimefields and values */
 struct list users; 	  	/* list of email addresses in message */
 
 int mode;					/* how should we process */
+  
+char *header;
+unsigned long headersize;
 
 int main (int argc, char *argv[]) {
 
-  char *header;
-  unsigned long headersize;
 
   openlog(PNAME, LOG_PID, LOG_MAIL);
 

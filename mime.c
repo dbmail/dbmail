@@ -9,6 +9,9 @@
 #define MIME_VALUE_MAX 1024
 #define MEM_BLOCK 1024
 
+extern char *header;
+extern unsigned long headersize;
+
 struct mime_record
 {
   char field[MIME_FIELD_MAX];
@@ -113,14 +116,27 @@ int mail_adr_list(char *scan_for_field, struct list *targetlist)
   struct mime_record *mr;
   char *tmpvalue, *ptr,*tmp;
 
-	
+
+  trace (TRACE_DEBUG,"mail_adr_list(): mimelist currently has [%d] nodes",mimelist.total_nodes);
+  if (mimelist.total_nodes==0)
+	 {
+		/* we need to parse the header first 
+		  this is because we're in SPECIAL_DELIVERY mode so
+			normally we wouldn't need any scanning */
+		 trace (TRACE_INFO,"mail_adr_list(): parsing mimeheader from message");
+		 mime_list(header,headersize);
+	 }
+  
   memtst((tmpvalue=(char *)calloc(MIME_VALUE_MAX,sizeof(char)))==NULL);
 
   trace (TRACE_INFO,"mail_adr_list(): mail address parser starting");
 
-  while ((raw=list_getstart(&mimelist))!=NULL)
+  raw=list_getstart(&mimelist);
+  trace (TRACE_DEBUG,"mail_adr_list(): total fields in header %lu",mimelist.total_nodes);
+  while (raw!=NULL)
     {
       mr=(struct mime_record *)raw->data;
+		trace (TRACE_DEBUG,"mail_adr_list(): scanning for %s",scan_for_field);
       if ((strcasecmp(mr->field, scan_for_field)==0))
 	{
 	  /* Scan for email addresses and add them to our list */
@@ -162,7 +178,7 @@ int mail_adr_list(char *scan_for_field, struct list *targetlist)
 		     tmpvalue,ptr);
 	    }
 	}
-      list_nodedel(&mimelist,raw->data);
+      raw=raw->nextnode;
     }
 
   trace (TRACE_DEBUG,"mail_adr_list(): found %d emailaddresses",list_totalnodes(targetlist));

@@ -7,3 +7,4 @@ $Id$
 - cronjob should be created for deleting messsages
 - it would be interesting to know who is receiving a message (in log)
 - need to add IMAP server
+- need to create a list_delete function to clear a list

@@ -44,19 +44,20 @@ int bounce (char *header, char *destination_address, int type)
 				fprintf ((FILE *)sendmail_stream,"To: %s\n",(char *)tmpelement->data);
 				fprintf ((FILE *)sendmail_stream,"Subject: DBMAIL: delivery failure\n");
 				fprintf ((FILE *)sendmail_stream,"\n");
-				fprintf ((FILE *)sendmail_stream,"This is DBMAIL-SMTP program.\n");
-				fprintf ((FILE *)sendmail_stream,"I'm sorry to inform you that your message, addressed to %s,",
+				fprintf ((FILE *)sendmail_stream,"This is the DBMAIL-SMTP program.\n\n");
+				fprintf ((FILE *)sendmail_stream,"I'm sorry to inform you that your message, addressed to %s,\n",
 						destination_address);
-				fprintf ((FILE *)sendmail_stream,"could not be delivered due to the following error.\n");
-				fprintf ((FILE *)sendmail_stream,"E-mail address %s is not known here.\n",destination_address);
-				fprintf ((FILE *)sendmail_stream,"Header of your message follows...\n\n");
+				fprintf ((FILE *)sendmail_stream,"could not be delivered due to the following error.\n\n");
+				fprintf ((FILE *)sendmail_stream,"*** E-mail address %s is not known here. ***\n\n",destination_address);
+				fprintf ((FILE *)sendmail_stream,"If you think this message is incorrect please contact %s.\n\n",POSTMASTER);
+				fprintf ((FILE *)sendmail_stream,"Header of your message follows...\n\n\n");
 				fprintf ((FILE *)sendmail_stream,"--- header of your message ---\n");
-				fprintf ((FILE *)sendmail_stream,"%s\n",header);
-				fprintf ((FILE *)sendmail_stream,"--- end of header ---\n");
+				fprintf ((FILE *)sendmail_stream,"%s",header);
+				fprintf ((FILE *)sendmail_stream,"--- end of header ---\n\n\n");
 				fprintf ((FILE *)sendmail_stream,"\n.\n");
-				/* jump forward to next recipient */
 				pclose ((FILE *)sendmail_stream);
 				
+				/* jump forward to next recipient */
 				tmpelement=tmpelement->nextnode;
 				}
 			break;
