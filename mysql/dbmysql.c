@@ -1098,7 +1098,7 @@ int db_createsession (u64_t useridnr, PopSession_t *sessionptr)
   u64_t messagecounter=0;
 
 
-  list_init (&sessionptr->messagelist);
+  list_init (&sessionptr->messagelst);
   
   
   /* query is <2 because we don't want deleted messages 
