@@ -78,6 +78,7 @@ int main (int argc, char* argv[])
   time_t start;
   time_t stop;
   int result,i;
+  char q[1024];
 
   if (argc < 2)
     {
@@ -136,7 +137,8 @@ int main (int argc, char* argv[])
     {
       printf("Copying messageblks[%d]...",i); fflush(stdout);
       sprintf(q, "COPY messageblks FROM '%s%02d'", MSGBLKS_FILENAME, i);
-      
+      db_query(q);
+
       printf("done\n");
     }
 
