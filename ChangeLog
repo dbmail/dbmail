@@ -1,3 +1,15 @@
+2004-08-24  Ilja Booij  <ilja@ic-s.nl>
+
+	* acl.c (acl_has_right): adapted function to also check for rights
+	of 'anyone' user. This code also functions if there's no anyone
+	user in the database, it just won't find any rights for the anyone
+	user.
+
+	* acl.h: added ACL_ANYONE_USER define
+
+	* imapcommands.c (_ic_myrights): removed comma which was send
+	after IMAP tag.
+
 2004-08-23  Ilja Booij  <ilja@ic-s.nl>
 
 	* dbmail.conf: moved POSTMASTER entry from SMTP to DBMAIL section.

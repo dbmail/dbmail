@@ -4649,7 +4649,7 @@ int _ic_myrights(char *tag, char **args, ClientInfo * ci)
 		return -1;
 	} else if (result == 0) {
 		ci_write(ci->tx,
-			"%s, NO MYRIGHTS failure: unknown mailbox\r\n",
+			"%s NO MYRIGHTS failure: unknown mailbox\r\n",
 			tag);
 		return 1;
 	}

@@ -22,10 +22,16 @@
 /**
  * \file acl.h
  *
- * \brief header file for ACL (access control list) functions of DBMail
+ * \brief header file for ACL (access control list) functions of DBMail.
+ *        see RFC 2086 for details on IMAP ACL
  *
  * \author (c) 2004 IC&S
  */
+
+/**
+ * standard user for ACL anyone (see RFC 2086)
+ */
+#define ACL_ANYONE_USER "anyone"
 
 /** 
  * different rights a user can have on a mailbox 

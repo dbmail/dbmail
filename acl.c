@@ -61,9 +61,32 @@ static int acl_get_rightsstring(u64_t userid, u64_t mboxid,
 
 int acl_has_right(u64_t userid, u64_t mboxid, ACLRight_t right)
 {
+	u64_t anyone_userid;
+	int auth_result;
+	int user_acl_result, anyone_acl_result;
+
 	const char *right_flag = acl_right_strings[right];
 
-	return db_acl_has_right(userid, mboxid, right_flag);
+	/* first try if the user has the right */
+	user_acl_result = db_acl_has_right(userid, mboxid, right_flag);
+	if (user_acl_result != 0)
+		return user_acl_result;
+
+	/* if the user does not have the right, perhaps the 'anyone' 
+	   user has it */
+	auth_result = auth_user_exists(ACL_ANYONE_USER, &anyone_userid);
+	if (auth_result == -1) {
+		trace(TRACE_ERROR, "%s,%s: error getting user_idnr of "
+		      "ACL anyone user", __FILE__, __func__);
+		return -1;
+	}
+	if (auth_result != 0)
+		anyone_acl_result = db_acl_has_right(anyone_userid, mboxid,
+						     right_flag);
+	else
+		anyone_acl_result = 0;
+	
+	return anyone_acl_result;
 }
 
 int acl_set_rights(u64_t userid, u64_t mboxid, const char *rightsstring)
@@ -171,6 +194,7 @@ char *acl_get_acl(u64_t mboxid)
 	u64_t userid;
 	char *username;
 	size_t acl_string_size = 0;
+	size_t acl_strlen;
 	char *acl_string;	/* return string */
 	char *identifier;	/* one identifier */
 	char rightsstring[NR_ACL_FLAGS + 1];
@@ -215,7 +239,6 @@ char *acl_get_acl(u64_t mboxid)
 	}
 	my_free(username);
 
-
 	identifier_elm = list_getstart(&identifier_list);
 	trace(TRACE_DEBUG, "%s,%s: before looping identifiers!",
 	      __FILE__, __func__);
@@ -254,10 +277,12 @@ char *acl_get_acl(u64_t mboxid)
 		}
 		trace(TRACE_DEBUG, "%s,%s: %s", __FILE__, __func__,
 		      rightsstring);
-		if (strlen(rightsstring) > 0)
-			(void) snprintf(acl_string, acl_string_size + 1,
-					"%s%s %s ", acl_string, identifier,
-					rightsstring);
+		if (strlen(rightsstring) > 0) {
+			acl_strlen = strlen(acl_string);
+			(void) snprintf(&acl_string[acl_strlen], 
+					acl_string_size - acl_strlen,
+					"%s %s ", identifier, rightsstring);
+		}
 		identifier_elm = identifier_elm->nextnode;
 
 	}
