@@ -23,7 +23,7 @@ LIB = -lmysqlclient
 # from compiler about vsyslog function 
 # Added the -D_SVID_SOURCE option because ipc.h asked me to.
 
-CFLAGS = -Wall -pg -fprofile-arcs -D_BSD_SOURCE -D_SVID_SOURCE 
+CFLAGS = -Wall -D_BSD_SOURCE -D_SVID_SOURCE 
 
 .PHONY: clean install
 
