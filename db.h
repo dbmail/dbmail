@@ -95,19 +95,12 @@ enum table_messageblk /* prototype for messageblk table */
 int db_connect();
 int db_disconnect();
 int db_query (const char *query);
-u64_t db_user_exists(const char *username);
-int db_get_known_users(struct list *users);
-int db_get_user_aliases(u64_t userid, struct list *aliases);
-u64_t db_getclientid(u64_t useridnr);
-u64_t db_getmaxmailsize(u64_t useridnr);
 
-int db_check_user (char *username, struct list *userids, int checks);
 char *db_get_config_item (char *item, int type);
 int db_clear_config();
 int db_insert_config_item (char *item, char *value);
 
-u64_t db_adduser (char *username, char *password, char *clientid, char *maxmail);
-int db_delete_user(const char *username);
+int db_get_user_aliases(u64_t userid, struct list *aliases);
 int db_addalias (u64_t useridnr, char *alias, int clientid);
 int db_removealias (u64_t useridnr, const char *alias);
 
@@ -118,11 +111,6 @@ u64_t db_insert_message (u64_t *useridnr);
 u64_t db_update_message (u64_t *messageidnr, char *unique_id,
 				 u64_t messagesize);
 u64_t db_insert_message_block (char *block, int messageidnr);
-
-int db_change_username(u64_t useridnr, const char *newname);
-int db_change_password(u64_t useridnr, const char *newpass);
-int db_change_clientid(u64_t useridnr, u64_t newcid);
-int db_change_mailboxsize(u64_t useridnr, u64_t newsize);
 
 int db_log_ip(const char *ip);
 int db_cleanup_iplog(const char *lasttokeep);
@@ -137,8 +125,6 @@ int db_delete_mailbox(u64_t uid);
 
 u64_t db_insert_result ();
 int db_send_message_lines (void *fstream, u64_t messageidnr, long lines, int no_end_dot);
-u64_t db_validate (char *user, char *password);
-u64_t db_md5_validate (char *username,unsigned char *md5_apop_he, char *apop_stamp);
 int db_createsession (u64_t useridnr, struct session *sessionptr);
 void db_session_cleanup (struct session *sessionptr);
 int db_update_pop (struct session *sessionptr);
@@ -146,7 +132,6 @@ u64_t db_set_deleted ();
 u64_t db_deleted_purge();
 u64_t db_check_sizelimit (u64_t addblocksize, u64_t messageidnr, 
 				  u64_t *useridnr);
-char *db_get_userid (u64_t *useridnr);
 int db_imap_append_msg(char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid);
 
 

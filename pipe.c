@@ -7,6 +7,7 @@
 #include <time.h>
 #include <ctype.h>
 #include "db.h"
+#include "dbauth.h"
 #include "debug.h"
 #include "list.h"
 #include "bounce.h"

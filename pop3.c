@@ -8,6 +8,7 @@
 #include "db.h"
 #include "debug.h"
 #include "dbmailtypes.h"
+#include "dbauth.h"
 
 /* max_errors defines the maximum number of allowed failures */
 #define MAX_ERRORS 3
