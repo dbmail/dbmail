@@ -1757,7 +1757,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
   u64_t i,fetch_start,fetch_end;
   unsigned fn;
   int result,setseen,idx,j,k;
-  int only_main_header_parsing = 1;
+  int only_main_header_parsing = 1, insert_rfcsize;
   int isfirstout,uid_will_be_fetched;
   int partspeclen,only_text_from_msgpart = 0;
   int bad_response_send = 0;
@@ -1766,7 +1766,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
   mime_message_t *msgpart;
   char date[IMAP_INTERNALDATE_LEN],*endptr;
   u64_t thisnum;
-  u64_t tmpdumpsize;
+  u64_t tmpdumpsize, rfcsize;
   long long cnt;
   int msgflags[IMAP_NFLAGS];
   struct list fetch_list;
@@ -1836,8 +1836,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	      only_main_header_parsing = 0;
 	    }
 	}
-	       
-
+      
       if (fetchitem.getUID)
 	uid_will_be_fetched = 1;
 
@@ -1934,6 +1933,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
       for (i=fetch_start; i<=fetch_end; i++)
 	{
 	  thisnum = (imapcommands_use_uid ? i : ud->mailbox.seq_list[i]);
+	  insert_rfcsize = 0;
 
 	  if (imapcommands_use_uid)
 	    {
@@ -1968,6 +1968,28 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	      fflush(ci->tx);
 
 	      only_text_from_msgpart = 0;
+	      
+	      /* check RFC822.SIZE request */
+	      if (fi->getSize)
+		{
+		  /* ok, try to fetch size from dbase */
+		  rfcsize = db_get_rfcsize(thisnum);
+		  if (rfcsize == -1)
+		    {
+		      fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
+		      list_freelist(&fetch_list.start);
+		      return -1;
+		    }
+
+		  if (rfcsize == 0)
+		    {
+		      /* field is empty in dbase, message needs to be parsed */
+		      fi->msgparse_needed = 1;
+		      only_main_header_parsing = 0;
+		      insert_rfcsize = 1;
+		    }
+		}
+		      
 
 	      /* update cache */
 	      if (fi->msgparse_needed && thisnum != cached_msg.num)
@@ -2028,6 +2050,25 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
 		      cached_msg.msg_parsed = 1;
 		      cached_msg.num = thisnum;
+
+		      rfcsize = (cached_msg.msg.rfcheadersize + 
+				 cached_msg.msg.bodysize + 
+				 cached_msg.msg.bodylines);
+
+		      if (insert_rfcsize)
+			{
+			  /* insert the rfc822 size into the dbase */
+			  if (db_set_rfcsize(rfcsize, thisnum) == -1)
+			    {
+			      fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
+			      list_freelist(&fetch_list.start);
+			      db_free_msg(&headermsg);
+			      return -1;
+			    }
+			  
+			  insert_rfcsize = 0;
+			}
+			      
 
 		      /*		  trace(TRACE_DEBUG, "ic_fetch(): size of parsed msg: %d\n",
 					  db_msgdump(&cached_msg.msg, thisnum, 0));
@@ -2131,10 +2172,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		  
 	      if (fi->getSize)
 		{
-		  fprintf(ci->tx,"RFC822.SIZE %llu", 
-			  (cached_msg.msg.rfcheadersize + 
-			  cached_msg.msg.bodysize + 
-			  cached_msg.msg.bodylines));
+		  fprintf(ci->tx,"RFC822.SIZE %llu", rfcsize);
 		}
 
 	      if (fi->getBodyTotal || fi->getBodyTotalPeek)

@@ -124,5 +124,7 @@ int main (int argc, char *argv[])
   trace(TRACE_DEBUG,"main(): freeing memory blocks");
 
   trace (TRACE_DEBUG,"main(): they're all free. we're done.");
+
+  db_disconnect();
   return 0;
 }

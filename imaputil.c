@@ -787,7 +787,7 @@ int next_fetch_item(char **args, int idx, fetch_items_t *fi)
   else if (strcasecmp(args[idx], "rfc822.size") == 0)
     {
       fi->getSize = 1;
-      fi->msgparse_needed = 1;
+/*      fi->msgparse_needed = 1;*/ /* after first calc, it will be in the dbase */
     }
   else if (strcasecmp(args[idx], "rfc822.text") == 0)
     {

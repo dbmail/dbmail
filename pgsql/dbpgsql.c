@@ -2147,6 +2147,13 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
 
   time(&td);              /* get time */
 
+  /* start transaction */
+  if (db_query("BEGIN WORK") == -1)
+    {
+      trace(TRACE_ERROR, "db_copymsg(): could not start transaction\n");
+      return -1;
+    }
+
   /* copy message info */
   snprintf(query, DEF_QUERYSIZE, "INSERT INTO messages (mailbox_idnr, messagesize, status, "
 	   "deleted_flag, seen_flag, answered_flag, draft_flag, flagged_flag, recent_flag,"
@@ -2158,7 +2165,10 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
 
   if (db_query(query) == -1)
     {
-      trace(TRACE_ERROR, "db_copymsg(): could not copy message (messages table)\n");
+      trace(TRACE_ERROR, "db_copymsg(): could not copy message\n");
+
+      db_query("ROLLBACK WORK"); /* close transaction */
+
       return -1;
     }
 
@@ -2172,6 +2182,9 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
   if (db_query(query) == -1)
     {
       trace(TRACE_ERROR, "db_copymsg(): could not insert message blocks\n");
+
+      db_query("ROLLBACK WORK"); /* close transaction */
+
       return -1;
     }
 
@@ -2182,9 +2195,19 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
   if (db_query(query) == -1)
     {
       trace(TRACE_ERROR, "db_copymsg(): could not set unique ID for copied msg\n");
+
+      db_query("ROLLBACK WORK"); /* close transaction */
+
       return -1;
     }
 
+  /* commit transaction */
+  if (db_query("COMMIT WORK") == -1)
+    {
+      trace(TRACE_ERROR, "db_copymsg(): could not commit transaction\n");
+      return -1;
+    }
+  
   return 0; /* success */
 }
 
@@ -2514,6 +2537,50 @@ int db_get_msgdate(u64_t mailboxuid, u64_t msguid, char *date)
 }
 
 
+/*
+ * db_set_rfcsize()
+ *
+ * sets the RFCSIZE field for a message.
+ *
+ * returns -1 on failure, 0 on success
+ */
+int db_set_rfcsize(u64_t size, u64_t msguid)
+{
+  snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET rfcsize = %llu WHERE message_idnr = %llu",
+	   size, msguid);
+  
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_set_rfcsize(): could not insert RFC size into table\n");
+      return -1;
+    }
+
+  return 0;
+}
+
+
+u64_t db_get_rfcsize(u64_t msguid)
+{
+  u64_t size;
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT rfcsize FROM messages WHERE message_idnr = %llu "
+	   "AND status<2 AND unique_id != ''", msguid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_get_rfcsize(): could not fetch RFC size from table\n");
+      return -1;
+    }
+  
+  if (PQntuples(res) < 1)
+    {
+      trace(TRACE_ERROR, "db_get_rfcsize(): message not found\n");
+      return -1;
+    }
+
+  size = strtoull( PQgetvalue(res, 0, 0), NULL, 10);
+  return size;
+}
 
 
 /*
