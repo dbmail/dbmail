@@ -326,7 +326,7 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines)
 			/* get the next character */
 			nextpos++;
 			rowlength--;
-			if (rowlength%5000==0)
+			if (rowlength%500==0)
 				{
 				fprintf ((FILE *)fstream,"%s",buffer);
 				fflush ((FILE *)fstream);
