@@ -596,6 +596,8 @@ int lmtp(void *stream, void *instream, char *buffer,
 					struct element *element;
 					struct DbmailMessage *msg;
 
+					list_init(&headerfields);
+
 					if (! (msg = dbmail_message_new_from_stream((FILE *)instream, DBMAIL_STREAM_LMTP))) {
 						trace(TRACE_ERROR, "%s,%s: dbmail_message_new_from_stream() failed",
 						      __FILE__, __func__);
@@ -654,8 +656,8 @@ int lmtp(void *stream, void *instream, char *buffer,
 							}
 						}
 					}
-
 					list_freelist(&headerfields.start);
+					
 				}
 				/* Reset the session after a successful delivery;
 				 * MTA's like Exim prefer to immediately begin the
