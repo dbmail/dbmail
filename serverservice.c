@@ -321,7 +321,7 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 	      memset(&client, 0, sizeof(client));
 
 	      /* make streams */
-	      client.rx = fdopen(dup(csock), "r");
+	      client.rx = fdopen(/*dup*/(csock), "r");
 
 	      if (!client.rx)
 		{
@@ -330,7 +330,7 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 		  continue;
 		}
 
-	      client.tx = fdopen(dup(csock), "w");
+	      client.tx = fdopen(/*dup*/(csock), "w");
 	      if (!client.tx)
 		{
 		  /* write-FILE opening failure */
@@ -523,7 +523,7 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 		  memset(&client, 0, sizeof(client));
 
 		  /* make streams */
-		  client.rx = fdopen(dup(csock), "r");
+		  client.rx = fdopen(/*dup*/(csock), "r");
 
 		  if (!client.rx)
 		    {
@@ -532,7 +532,7 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 		      exit(0);
 		    }
 
-		  client.tx = fdopen(dup(csock), "w");
+		  client.tx = fdopen(/*dup*/(csock), "w");
 		  if (!client.tx)
 		    {
 		      /* write-FILE opening failure */

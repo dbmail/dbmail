@@ -191,9 +191,40 @@ char *db_get_config_item (char *item, int type)
 }
 
 
+/* 
+ * adds an alias for a specific user 
+ */
 int db_addalias (u64_t useridnr, char *alias, int clientid)
 {
-  /* adds an alias for a specific user */
+  /* check if this alias already exists */
+  snprintf (query, DEF_QUERYSIZE,
+            "SELECT alias FROM aliases WHERE alias = '%s' AND deliver_to = '%llu' "
+	    "AND client_idnr = '%d'", alias, useridnr, clientid);
+
+  if (db_query(query) == -1)
+    {
+      /* query failed */
+      trace (TRACE_ERROR, "db_addalias(): query for searching alias failed");
+      return -1;
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL) 
+    {
+      trace(TRACE_ERROR, "db_addalias(): could not store query result");
+      return -1;
+    }
+
+  if (mysql_num_rows(res)>0) 
+    {
+      trace(TRACE_INFO, "db_addalias(): alias [%s] for user [%llu] already exists", 
+	    alias, useridnr);
+      
+      mysql_free_result(res);
+      return 0;
+    }
+  
+  mysql_free_result(res);
+
   snprintf (query, DEF_QUERYSIZE,
 	    "INSERT INTO aliases (alias,deliver_to,client_idnr) VALUES ('%s','%llu',%d)",
 	   alias, useridnr, clientid);
@@ -214,7 +245,7 @@ int db_addalias (u64_t useridnr, char *alias, int clientid)
 int db_removealias (u64_t useridnr,const char *alias)
 {
   snprintf (query, DEF_QUERYSIZE,
-	    "DELETE FROM aliases WHERE deliver_to=%llu AND alias = '%s'", useridnr, alias);
+	    "DELETE FROM aliases WHERE deliver_to='%llu' AND alias = '%s'", useridnr, alias);
 	   
   if (db_query(query) == -1)
     {
