@@ -6,8 +6,8 @@ mylibdir=/usr/local/lib/mysql/
 pgincdir=/usr/local/pgsql/include/
 myincdir=/usr/include/mysql/
 
-pglibs="-lpq -lcrypto -lssl"
-mylibs="-lmysqlclient -lcrypto"
+pglibs="-lpq -lcrypto -lssl -lz"
+mylibs="-lmysqlclient -lcrypto -lz"
 
 bindir=/usr/local/sbin
 
@@ -62,10 +62,10 @@ fi
 
 # This is poor, but there's no easy way to check for a header file
 # (that's what the autoconf system is for)
-if [ -f /usr/include/endian.h ] || [-f "${incdir}/endian.h" ]; then
+if [ -f /usr/include/endian.h ] || [ -f "${incdir}/endian.h" ]; then
     cflags="$cflags -DHAVE_ENDIAN_H"
 fi
-if [ -f /usr/include/crypt.h ] || [-f "${incdir}/crypt.h" ]; then
+if [ -f /usr/include/crypt.h ] || [ -f "${incdir}/crypt.h" ]; then
     cflags="$cflags -DHAVE_CRYPT_H"
 fi
 
