@@ -843,9 +843,10 @@ int db_insert_message(u64_t user_idnr,
 		 "VALUES ('%llu', '%llu', '%s', '1', '%d')",
 		 DBPFX, mailboxid, physmessage_id, unique_id,
 		 MESSAGE_STATUS_INSERT);
+
 	if (db_query(query) == -1) {
-		trace(TRACE_STOP, "%s,%s: query failed", __FILE__,
-		      __func__);
+		trace(TRACE_STOP, "%s,%s: query failed", __FILE__, __func__);
+		return -1;
 	}
 
 	*message_idnr = db_insert_result("message_idnr");
@@ -907,16 +908,15 @@ int db_update_message(u64_t message_idnr, const char *unique_id,
 		return -1;
 	}
 
-	if (db_physmessage_set_sizes(physmessage_id, message_size, rfc_size)
-	    == -1) {
+	if (db_physmessage_set_sizes(physmessage_id, message_size, rfc_size) == -1) {
 		trace(TRACE_ERROR,
 		      "%s,%s: error updating physmessage [%llu]. "
 		      "The database might be inconsistent. Run dbmail-util",
 		      __FILE__, __func__, physmessage_id);
+		return -1;
 	}
 
-	if (db_add_quotum_used(db_get_useridnr(message_idnr), message_size)
-	    == -1) {
+	if (db_add_quotum_used(db_get_useridnr(message_idnr), message_size) == -1) {
 		trace(TRACE_ERROR,
 		      "%s,%s: error calculating quotum "
 		      "used for user [%llu]. Database might be "
