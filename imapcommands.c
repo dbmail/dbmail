@@ -925,7 +925,7 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
   if (strlen(args[0]) == 0 && strlen(args[1]) == 0)
     {
       /* this has special meaning, show root & delimiter */
-      fprintf(ci->tx,"* LIST (\\r\noselect) \"/\" \"\"\r\n");
+      fprintf(ci->tx,"* LIST (\\NoSelect) \"/\" \"\"\r\n");
       fprintf(ci->tx,"%s OK LIST completed\r\n",tag);
       return 0;
     }
