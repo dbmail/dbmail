@@ -624,12 +624,12 @@ void SS_sighandler(int sig, siginfo_t *info, void *data)
     case SIGCHLD:
       do 
 	{
-	  PID = waitpid(info->si_pid, &status, WUNTRACED);
+	  PID = waitpid(info->si_pid, &status, WNOHANG | WUNTRACED);
 
-	  if (PID != -1)
+	  if (PID > 0)
 	    usleep(50000); /* wait 50 ms if child hasn't exited yet */
 
-	} while (PID != -1);
+	} while (PID > 0);
 
       break;
 

@@ -91,12 +91,12 @@ static void signal_handler (int signo, siginfo_t *info, void *data)
       {
 	trace (TRACE_DEBUG,"signal_handler(): sigCHLD, cleaning up zombies");
 	do {
-	  PID = waitpid (info->si_pid,&status,WUNTRACED);
+	  PID = waitpid (info->si_pid, &status, WNOHANG | WUNTRACED);
 
-	  if (PID != -1)
+	  if (PID > 0)
 	    sleep(1); /* dont hog cpu while waiting */
 
-	} while ( PID != -1);
+	} while ( PID > 0);
 
 	trace (TRACE_DEBUG,"signal_handler(): sigCHLD, cleaned");
 	return;
