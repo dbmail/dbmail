@@ -5,8 +5,8 @@
  * using a mysql database
  */
 
-#include "dbmsgbuf.h"
-#include "db.h"
+#include "../dbmsgbuf.h"
+#include "../db.h"
 #include "/usr/include/mysql/mysql.h"
 #include <stdlib.h>
 #include <string.h>

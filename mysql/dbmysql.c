@@ -4,20 +4,20 @@
  * mysql driver file
  * Functions for connecting and talking to the Mysql database */
 
-#include "db.h"
+#include "../db.h"
 #include "/usr/include/mysql/mysql.h"
-#include "config.h"
-#include "pop3.h"
-#include "list.h"
-#include "mime.h"
-#include "pipe.h"
-#include "memblock.h"
+#include "../config.h"
+#include "../pop3.h"
+#include "../list.h"
+#include "../mime.h"
+#include "../pipe.h"
+#include "../memblock.h"
 #include <time.h>
 #include <ctype.h>
 #include <sys/types.h>
 #include <regex.h>
-#include "rfcmsg.h"
-#include "dbauth.h"
+#include "../rfcmsg.h"
+#include "../dbauth.h"
 
 
 MYSQL conn;  

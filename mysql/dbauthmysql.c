@@ -5,15 +5,15 @@
  * user management for mySQL dbases
  */
 
-#include "dbauth.h"
+#include "../dbauth.h"
 #include "/usr/include/mysql/mysql.h"
-#include "list.h"
-#include "debug.h"
+#include "../list.h"
+#include "../debug.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "db.h"
-#include "dbmd5.h"
+#include "../db.h"
+#include "../dbmd5.h"
 
 
 /* 
