@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
     
   openlog(PNAME, LOG_PID, LOG_MAIL);
 
-  ReadConfig("DBMAIL", "dbmail.conf", &sysItems);
+  ReadConfig("DBMAIL", configFile, &sysItems);
   SetTraceLevel(&sysItems);
   GetDBParams(_db_host, _db_db, _db_user, _db_pass, &sysItems);
 	

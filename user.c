@@ -521,8 +521,22 @@ int do_show(char *name)
 
       if (userid == 0)
 	{
-	  quiet_printf("Error: user [%s] does not exist.\n",name);
-	  return -1;
+	  /* 'name' is not a user, try it as an alias */
+	  userid = db_get_user_from_alias(name);
+
+	  if (userid == -1)
+	    {
+	      quiet_printf("Error verifying existence of alias [%s]. Please check the log.\n",name);
+	      return -1;
+	    }
+	    
+	  if (userid == 0)
+	    {
+	      quiet_printf("[%s] is not a user nor an alias.\n", name);
+	      return -1;
+	    }
+
+	  quiet_printf("Found user for alias [%s]:\n\n");
 	}
 
       cid = auth_getclientid(userid);
