@@ -33,6 +33,10 @@ char *read_header(unsigned long *blksize)
   memtst ((strblock = (char *)malloc(READ_BLOCK_SIZE))==NULL);
   memtst ((header = (char *)malloc(HEADER_BLOCK_SIZE))==NULL);
 
+  /* make sure these are clean */
+  *header='\0';
+  *strblock='\0';
+  
   /* here we will start a loop to read in the message header */
   /* the header will be everything up until \n\n or an EOF of */
   /* in_stream (stdin) */
@@ -230,7 +234,6 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 	   * we could change this in the future for efficiency
 	   * still we would need a way of checking which messageblks
 	   * belong to which messages */
-		
 		
 		db_insert_message_block (header,temp_message_record_id);
 	
