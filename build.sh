@@ -9,6 +9,8 @@ myincdir=/usr/local/include/mysql/
 pglibs="-lpq -lcrypto -lssl"
 mylibs="-lmysqlclient -lcrypto"
 
+bindir=/usr/local/sbin
+
 echo This is the dbmail build script
 echo I will have to ask you some questions about your system
 echo ""
@@ -31,26 +33,25 @@ else
     db=mysql
 fi
 
-echo The library directory for $dbtype is now \[$libdir\]
-echo The include directory for $dbtype is now \[$incdir\]
-echo Do you wish to change this \(y/n\)?
+echo The library directory for $dbtype is now \[$libdir\]. 
+echo Enter new directory or press RETURN to keep this setting:
 read line
-
-if [ $line = y ]; then
-    echo Enter new library directory:
-    read line
+if [ "$line" != "" ]; then
     libdir=$line
-	
-    echo Enter new include directory:
-    read line
+fi
+
+echo The include directory for $dbtype is now \[$incdir\]. 
+echo Enter new directory or press RETURN to keep this setting:
+read line
+if [ "$line" != "" ]; then	
     incdir=$line
 fi
 
-echo The libraries are currently set to \[$libs\]. Do you want to change this?
-read line
 
-if [ $line = y ]; then
-    echo Enter new library settings \(preceed each lib with \-l\):
+echo The libraries are currently set to \[$libs\]. 
+echo Enter new libraries \(preceed each by \-l\) or press RETURN to keep this setting:
+read line
+if [ "$line" != "" ]; then
     read libs
 fi
 
@@ -87,18 +88,18 @@ if [ $line = y ]; then
 	read line
 
 	if [ $line = y ]; then
-	    echo binary directory is now $bindir. Do you want to change this?
+	    echo Target binary directory is now $bindir. 
+	    echo Enter new directory or press RETURN to keep this setting:
 	    read line
 
-	    if [ $line = y ]; then
-		echo Give new binary directory:
-		read bindir
+	    if [ "$line" != "" ]; then
+		bindir=$line
 	    fi
 	    
 	    install.sh $bindir
 
 	else
-	    echo Note: You can install the files manually by running install.sh
+	    echo Note: You can install the files manually by running install-dbmail.sh
 	fi
     fi
 

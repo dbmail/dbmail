@@ -209,8 +209,8 @@ int main(int argc, char *argv[])
 	printf ("Ok. Found 0 NULL messages.\n");
 
       time(&stop);
-      printf("--- checking block integrity took %lu seconds\n", stop-start);
-      fprintf(stderr, "--- checking block integrity took %lu seconds\n", stop-start);
+      printf("--- checking NULL messages took %lu seconds\n", stop-start);
+      fprintf(stderr, "--- checking NULL messages took %lu seconds\n", stop-start);
     }
 
   if (check_integrity)

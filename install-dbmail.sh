@@ -7,7 +7,12 @@
 
 amiroot=`id -u`
 
-targetexec=/usr/local/sbin/
+if [ "$1" != "" ]; then
+    targetexec=$1
+else
+    targetexec=/usr/local/sbin/
+fi
+
 targetman=/usr/local/man/man1/
 
 if [ "`id -u`" != "0" ] ; then
