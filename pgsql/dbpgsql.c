@@ -20,12 +20,14 @@
 #include "../dbauth.h"
 
 
-PGconn conn;  
+PGconn *conn;  
 PGresult *res;
-char *row; /* temporary for error supression */
 PGresult *checkres;
-char *query = 0;
 
+char *query = 0;
+char *value = NULL; /* used for PQgetvalue */
+
+char *row; /* temporary for error supression */
 
 /*
  * queries to create/drop temporary tables
@@ -62,6 +64,7 @@ const char *drop_tmp_tables_queries[] = { "DROP TABLE tmpmessage","DROP SEQUENCE
 
 int db_connect ()
 {
+    char connectionstring[255];
     /* create storage space for queries */
   query = (char*)my_malloc(DEF_QUERYSIZE);
   if (!query)
@@ -71,12 +74,15 @@ int db_connect ()
     }
 
   /* connecting */
-  conn = PQconnectdb ("host=%s user=%s password=%s dbname=%s",
-                        HOST,USER,PASS,MAILDATABASE); 
+
+  sprintf (connectionstring, "host=%s user=%s password=%s dbmail=%s",
+            HOST, USER, PASS, MAILDATABASE);
+
+  conn = PQconnectdb(connectionstring);
 
   if (PQstatus(conn) == CONNECTION_BAD) 
   {
-    trace(TRACE_ERROR,"dbconnect(): PQconnectdb failed: %s",PQerrorMessage(&conn));
+    trace(TRACE_ERROR,"dbconnect(): PQconnectdb failed: %s",PQerrorMessage(conn));
     return -1;
   }
 	
@@ -85,42 +91,75 @@ int db_connect ()
   return 0;
 }
 
-u64_t db_insert_result ()
+u64_t db_insert_result (char *sequence_identifier)
 {
-  u64_t insert_result;
-  insert_result=mysql_insert_id(&conn);
-  return insert_result;
+    u64_t insert_result;
+    
+    /* postgres uses the currval call on a sequence to
+    determine the result value of an insert query */
+    
+    snprintf (query, DEF_QUERYSIZE,"SELECT currval('%s_seq');",sequence_identifier);
+    
+    db_query (query);
+
+    if (PQresultStatus(res) != PGRES_TUPLES_OK)
+        {
+            PQclear (res);
+            return 0;
+        }
+
+    insert_result=strtol(PQgetvalue(res, 0, 0), NULL, 10); /* should only be one result value */
+    return insert_result;
 }
 
 
 int db_query (const char *thequery)
 {
-  unsigned int querysize = 0;
+    unsigned int querysize = 0;
+    int PQresultStatusVar;
 
-  if (thequery != NULL)
+    if (thequery != NULL)
     {
-      querysize = strlen(thequery);
+        querysize = strlen(thequery);
 
-      if (querysize > 0 )
-	{
-	  if (mysql_real_query(&conn, thequery, querysize) <0) 
-	    {
-	      trace(TRACE_ERROR,"db_query(): mysql_real_query failed: %s\n",mysql_error(&conn)); 
-	      return -1;
-	    }
-	}
-      else
-	{
-	  trace (TRACE_ERROR,"db_query(): querysize is wrong: [%d]\n",querysize);
-	  return -1;
-	}
+        if (querysize > 0 )
+        {
+        res = PQexec (conn, thequery);
+        PQresultStatusVar = PQresultStatus (res);
+
+        switch (PQresultStatusVar)
+            {
+                case PGRES_BAD_RESPONSE:
+                {
+                    trace (TRACE_ERROR,"db_query(): postgresql error: BAD_RESPONSE");
+                    PQclear (res);
+                    return -1;
+                }
+                case PGRES_NONFATAL_ERROR:
+                {
+                    trace (TRACE_ERROR,"db_query(): postgresql error: NONFATAL_ERROR");
+                    PQclear (res);
+                    return -1;
+                }
+                case PGRES_FATAL_ERROR:
+                {
+                    trace (TRACE_ERROR,"db_query(): postgresql error: FATAL_ERROR");
+                    PQclear (res);
+                    return -1;
+                }
+            }
+        }
+        else
+            {
+             trace (TRACE_ERROR,"db_query(): query size is too small");
+             return -1;
+            }
     }
-  else
-    {
-      trace (TRACE_ERROR,"db_query(): query buffer is NULL, this is not supposed to happen\n",
-	     querysize);
-      return -1;
-    }
+    else
+        {
+         trace (TRACE_ERROR,"db_query(): query buffer is NULL, this is not supposed to happen\n");
+        return -1;
+        }
   return 0;
 }
 
@@ -134,12 +173,11 @@ int db_clear_config()
 }
 
 
-int db_insert_config_item (char *item, char *value)
+int db_insert_config_item (char *item, char *val)
 {
   /* insert_config_item will insert a configuration item in the database */
 
-  /* allocating memory for query */
-  snprintf (query, DEF_QUERYSIZE,"INSERT INTO config (item,value) VALUES ('%s', '%s')",item, value);
+  snprintf (query, DEF_QUERYSIZE,"INSERT INTO config (item,value) VALUES ('%s', '%s')",item, val);
   trace (TRACE_DEBUG,"insert_config_item(): executing query: [%s]",query);
 
   if (db_query(query)==-1)
@@ -158,7 +196,6 @@ char *db_get_config_item (char *item, int type)
 {
   /* retrieves an config item from database */
   char *result = NULL;
-  
 	
   snprintf (query, DEF_QUERYSIZE, "SELECT value FROM config WHERE item = '%s'",item);
   trace (TRACE_DEBUG,"db_get_config_item(): retrieving config_item %s by query %s\n",
@@ -177,20 +214,7 @@ char *db_get_config_item (char *item, int type)
       return NULL;
     }
   
-  if ((res = mysql_store_result(&conn)) == NULL) 
-    {
-      if (type == CONFIG_MANDATORY)
-	trace(TRACE_FATAL,"db_get_config_item(): mysql_store_result failed: %s\n",
-	      mysql_error(&conn));
-      else
-	if (type == CONFIG_EMPTY)
-	  trace (TRACE_ERROR,"db_get_config_item(): mysql_store_result failed (fatal): %s\n",
-		 mysql_error(&conn));
-
-      return 0;
-    }
-
-  if ((row = mysql_fetch_row(res))==NULL)
+    if (PQntuples (res)==0)
     {
       if (type == CONFIG_MANDATORY)
 	trace (TRACE_FATAL,"db_get_config_item(): configvalue not found for %s. rowfetch failure. "
@@ -200,19 +224,18 @@ char *db_get_config_item (char *item, int type)
 	  trace (TRACE_ERROR,"db_get_config_item(): configvalue not found. rowfetch failure.  "
 		 "Could not get value for %s\n",item);
 
-      mysql_free_result(res);
+      PQclear(res);
       return NULL;
     }
 	
-  if (row[0]!=NULL)
-    {
-      result=(char *)my_malloc(strlen(row[0])+1);
-      if (result!=NULL)
-	strcpy (result,row[0]);
+    value = PQgetvalue (res, 0, 0);
+    result=(char *)my_malloc(strlen(value+1);
+    if (result!=NULL)
+        strcpy (result, value);
       trace (TRACE_DEBUG,"Ok result [%s]\n",result);
     }
 	
-  mysql_free_result(res);
+  PQclear(res);
   return result;
 }
 
@@ -256,6 +279,8 @@ int db_removealias (u64_t useridnr,const char *alias)
 
 u64_t db_get_inboxid (u64_t *useridnr)
 {
+    char *value = NULL;
+
   /* returns the mailbox id (of mailbox inbox) for a user or a 0 if no mailboxes were found */
   u64_t inboxid;
 
@@ -268,30 +293,19 @@ u64_t db_get_inboxid (u64_t *useridnr)
       return 0;
     }
 
-  if ((res = mysql_store_result(&conn)) == NULL) 
-    {
-      trace(TRACE_ERROR,"db_get_mailboxid(): mysql_store_result failed: %s",mysql_error(&conn));
-      return 0;
-    }
-
-  if (mysql_num_rows(res)<1) 
+  if (PQntuples(res)<1) 
     {
       trace (TRACE_DEBUG,"db_get_mailboxid(): user has no INBOX");
-      mysql_free_result(res);
+      PQclear(res);
       
       return 0; 
     } 
 
-  if ((row = mysql_fetch_row(res))==NULL)
-    {
-      trace (TRACE_DEBUG,"db_get_mailboxid(): fetch_row call failed");
-    }
+  value = PQgetvalue(res, 0, 0);
+  inboxid = (value) ? atol(value) : 0; 
 
-  inboxid = (row && row[0]) ? atol(row[0]) : 0; 
-
-  mysql_free_result (res);
+  PQclear (res);
   
-	
   return inboxid;
 }
 
@@ -300,7 +314,6 @@ u64_t db_get_message_mailboxid (u64_t *messageidnr)
 {
   /* returns the mailbox id of a message */
   u64_t mailboxid;
-  
   
   snprintf (query, DEF_QUERYSIZE,"SELECT mailboxidnr FROM message WHERE messageidnr = %llu",
 	   *messageidnr);
@@ -311,31 +324,19 @@ u64_t db_get_message_mailboxid (u64_t *messageidnr)
       return 0;
     }
 
-  if ((res = mysql_store_result(&conn)) == NULL) 
-    {
-      trace(TRACE_ERROR,"db_get_message_mailboxid(): mysql_store_result failed: %s",
-	    mysql_error(&conn));
-      
-      return 0;
-    }
-
-  if (mysql_num_rows(res)<1) 
+  if (PQntuples(res)<1) 
     {
       trace (TRACE_DEBUG,"db_get_message_mailboxid(): this message had no mailboxid? "
 	     "Message without a mailbox!");
-      mysql_free_result(res);
+      PQclear(res);
       
       return 0; 
     } 
 
-  if ((row = mysql_fetch_row(res))==NULL)
-    {
-      trace (TRACE_DEBUG,"db_get_mailboxid(): fetch_row call failed");
-    }
-
-  mailboxid = (row && row[0]) ? atol(row[0]) : 0;
+  value = PQgetvalue (res, 0, 0);
+  mailboxid = (value) ? atol(value) : 0;
 	
-  mysql_free_result (res);
+  PQclear (res);
   
 	
   return mailboxid;
@@ -357,67 +358,39 @@ u64_t db_get_useridnr (u64_t messageidnr)
       return 0;
     }
 
-  if ((res = mysql_store_result(&conn)) == NULL) 
-    {
-      trace(TRACE_ERROR,"db_get_useridnr(): mysql_store_result failed: %s",mysql_error(&conn));
-      
-      return 0;
-    }
-
-  if (mysql_num_rows(res)<1) 
+  if (PQntuples(res)<1) 
     {
       trace (TRACE_DEBUG,"db_get_useridnr(): this is not right!");
-      mysql_free_result(res);
+      PQclear(res);
       
       return 0; 
     } 
 
-  if ((row = mysql_fetch_row(res))==NULL)
-    {
-      trace (TRACE_DEBUG,"db_get_useridnr(): fetch_row call failed");
-    }
-
-  mailboxidnr = (row && row[0]) ? atol(row[0]) : -1;
-  mysql_free_result(res);
+  value = PQgetvalue (res, 0, 0);
+  mailboxidnr = (value) ? atol(value) : -1;
+  PQclear(res);
 	
   if (mailboxidnr == -1)
-    {
-      
       return 0;
-    }
-
+  
   snprintf (query, DEF_QUERYSIZE, "SELECT owneridnr FROM mailbox WHERE mailboxidnr = %llu",
 	   mailboxidnr);
 
   if (db_query(query)==-1)
-    {
       return 0;
-    }
 
-  if ((res = mysql_store_result(&conn)) == NULL) 
-    {
-      trace(TRACE_ERROR,"db_get_useridnr(): mysql_store_result failed: %s",mysql_error(&conn));
-      return 0;
-    }
-
-  if (mysql_num_rows(res)<1) 
+  if (PQntuples(res)<1) 
     {
       trace (TRACE_DEBUG,"db_get_useridnr(): this is not right!");
-      mysql_free_result(res);
-      
+      PQclear(res);
       return 0; 
     } 
 
-  if ((row = mysql_fetch_row(res))==NULL)
-    {
-      trace (TRACE_DEBUG,"db_get_useridnr(): fetch_row call failed");
-    }
+  value = PQgetvalue (res, 0, 0);	
+  userid = (value) ? atol(value) : 0;
 	
-  userid = (row && row[0]) ? atol(row[0]) : 0;
-	
-  mysql_free_result (res);
+  PQclear (res);
   
-	
   return userid;
 }
 
@@ -445,7 +418,7 @@ u64_t db_insert_message (u64_t *useridnr)
       trace(TRACE_STOP,"db_insert_message(): dbquery failed");
     }	
   
-  return db_insert_result();
+  return db_insert_result(mailbox_idnr);
 }
 
 
@@ -571,7 +544,7 @@ int db_get_user_aliases(u64_t userid, struct list *aliases)
 	}
     }
       
-  mysql_free_result(res);
+  PQclear(res);
   return 0;
 }
 
@@ -700,7 +673,7 @@ int db_send_message_lines (void *fstream, u64_t messageidnr, long lines, int no_
   if (no_end_dot == 0)
       fprintf ((FILE *)fstream,"\r\n.\r\n");
 	
-  mysql_free_result(res);
+  PQclear(res);
 	
   my_free(buffer);
   return 1;
@@ -753,11 +726,11 @@ int db_createsession (u64_t useridnr, struct session *sessionptr)
   sessionptr->totalsize=0;
 
   
-  if ((messagecounter=mysql_num_rows(res))<1)
+  if ((messagecounter=PQntuples(res))<1)
     {
       /* there are no messages for this user */
       
-      mysql_free_result(res);
+      PQclear(res);
       return 1;
     }
 
@@ -790,7 +763,7 @@ int db_createsession (u64_t useridnr, struct session *sessionptr)
   sessionptr->virtual_totalmessages=sessionptr->totalmessages;
   sessionptr->virtual_totalsize=sessionptr->totalsize;
 
-  mysql_free_result(res);
+  PQclear(res);
   
 
   return 1;
@@ -869,18 +842,18 @@ u64_t db_check_mailboxsize (u64_t mailboxid)
       return -1;
     }
 
-  if (mysql_num_rows(localres)<1)
+  if (PQntuples(localres)<1)
     {
       trace (TRACE_ERROR,"db_check_mailboxsize(): weird, cannot execute SUM query\n");
 
-      mysql_free_result(localres);
+      PQclear(localres);
       return 0;
     }
 
   localrow = mysql_fetch_row(localres);
 
   size = (localrow && localrow[0]) ? strtoul(localrow[0], NULL, 10) : 0;
-  mysql_free_result(localres);
+  PQclear(localres);
   
 
   return size;
@@ -923,11 +896,11 @@ u64_t db_check_sizelimit (u64_t addblocksize, u64_t messageidnr,
     }
 
 
-  if (mysql_num_rows(res)<1)
+  if (PQntuples(res)<1)
     {
       trace (TRACE_ERROR,"db_check_sizelimit(): user has NO mailboxes\n");
       
-      mysql_free_result(res);
+      PQclear(res);
       return 0;
     }
 
@@ -940,14 +913,14 @@ u64_t db_check_sizelimit (u64_t addblocksize, u64_t messageidnr,
 	{
 	  trace(TRACE_ERROR,"db_check_sizelimit(): could not verify mailboxsize\n");
 
-	  mysql_free_result(res);
+	  PQclear(res);
 	  return -1;
 	}
 
       currmail_size += j;
     }
 
-  mysql_free_result(res);
+  PQclear(res);
 
   /* current mailsize from INBOX is now known, now check the maxsize for this user */
   maxmail_size = db_getmaxmailsize(*useridnr);
@@ -1018,10 +991,10 @@ u64_t db_deleted_purge()
       return -1;
     }
   
-  if (mysql_num_rows(res)<1)
+  if (PQntuples(res)<1)
     {
       
-      mysql_free_result(res);
+      PQclear(res);
       return 0;
     }
 	
@@ -1032,7 +1005,7 @@ u64_t db_deleted_purge()
       if (db_query(query)==-1)
 	{
 	  
-	  mysql_free_result(res);
+	  PQclear(res);
 	  return -1;
 	}
     }
@@ -1043,12 +1016,12 @@ u64_t db_deleted_purge()
   if (db_query(query)==-1)
     {
       
-      mysql_free_result(res);
+      PQclear(res);
       return -1;
     }
 	
   affected_rows = mysql_affected_rows(&conn);
-  mysql_free_result(res);
+  PQclear(res);
   
 
   return affected_rows;
@@ -1109,7 +1082,7 @@ int db_log_ip(const char *ip)
   row = mysql_fetch_row(res);
   id = row ? strtol(row[0], NULL, 10) : 0;
 
-  mysql_free_result(res);
+  PQclear(res);
 
   if (id)
     {
@@ -1196,7 +1169,7 @@ int db_icheck_messageblks(int *nlost, u64_t **lostlist)
       return -1;
     }
     
-  *nlost = mysql_num_rows(res);
+  *nlost = PQntuples(res);
   trace(TRACE_DEBUG,"db_icheck_messageblks(): found %d lost message blocks\n", *nlost);
 
   if (*nlost == 0)
@@ -1253,7 +1226,7 @@ int db_icheck_messages(int *nlost, u64_t **lostlist)
       return -1;
     }
     
-  *nlost = mysql_num_rows(res);
+  *nlost = PQntuples(res);
   trace(TRACE_DEBUG,"db_icheck_messages(): found %d lost messages\n", *nlost);
 
   if (*nlost == 0)
@@ -1310,7 +1283,7 @@ int db_icheck_mailboxes(int *nlost, u64_t **lostlist)
       return -1;
     }
     
-  *nlost = mysql_num_rows(res);
+  *nlost = PQntuples(res);
   trace(TRACE_DEBUG,"db_icheck_mailboxes(): found %d lost mailboxes\n", *nlost);
 
   if (*nlost == 0)
@@ -1626,7 +1599,7 @@ u64_t db_findmailbox(const char *name, u64_t useridnr)
   else
     id = 0;
 
-  mysql_free_result(res);
+  PQclear(res);
 
   return id;
 }
@@ -1676,7 +1649,7 @@ int db_findmailbox_by_regex(u64_t ownerid, const char *pattern,
       return (-1);
     }
   
-  if (mysql_num_rows(res) == 0)
+  if (PQntuples(res) == 0)
     {
       /* none exist, none matched */
       *nchildren = 0;
@@ -1684,7 +1657,7 @@ int db_findmailbox_by_regex(u64_t ownerid, const char *pattern,
     }
 
   /* alloc mem */
-  tmp = (u64_t *)my_malloc(sizeof(u64_t) * mysql_num_rows(res));
+  tmp = (u64_t *)my_malloc(sizeof(u64_t) * PQntuples(res));
   if (!tmp)
     {
       trace(TRACE_ERROR,"db_findmailbox_by_regex(): not enough memory\n");
@@ -1699,7 +1672,7 @@ int db_findmailbox_by_regex(u64_t ownerid, const char *pattern,
 	tmp[(*nchildren)++] = strtoul(row[1], NULL, 10);
     }
 
-  mysql_free_result(res);
+  PQclear(res);
 
   if (*nchildren == 0)
     {
@@ -1786,7 +1759,7 @@ int db_getmailbox(mailbox_t *mb, u64_t userid)
   if (row[5]) mb->flags |= IMAPFLAG_RECENT;
   if (row[6]) mb->flags |= IMAPFLAG_DRAFT;
 
-  mysql_free_result(res);
+  PQclear(res);
 
   /* select messages */
   snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr, seen_flag, recent_flag "
@@ -1805,14 +1778,14 @@ int db_getmailbox(mailbox_t *mb, u64_t userid)
       return -1;
     }
 
-  mb->exists = mysql_num_rows(res);
+  mb->exists = PQntuples(res);
 
   /* alloc mem */
   mb->seq_list = (u64_t*)my_malloc(sizeof(u64_t) * mb->exists);
   if (!mb->seq_list)
     {
       /* out of mem */
-      mysql_free_result(res);
+      PQclear(res);
       return -1;
     }
 
@@ -1825,7 +1798,7 @@ int db_getmailbox(mailbox_t *mb, u64_t userid)
       mb->seq_list[i++] = strtoul(row[0],NULL,10);
     }
   
-  mysql_free_result(res);
+  PQclear(res);
 
   
   /* now determine the next message UID */
@@ -1862,7 +1835,7 @@ int db_getmailbox(mailbox_t *mb, u64_t userid)
   else
     mb->msguidnext = 1; /* empty set: no messages yet in dbase */
 
-  mysql_free_result(res);
+  PQclear(res);
   
   
   /* done */
@@ -1937,7 +1910,7 @@ int db_listmailboxchildren(u64_t uid, u64_t useridnr,
     snprintf(query, DEF_QUERYSIZE, "SELECT mailboxidnr FROM mailbox WHERE name LIKE '%s'"
 	     " AND owneridnr = %llu",filter,useridnr);
 
-  mysql_free_result(res);
+  PQclear(res);
   
   /* now find the children */
   if (db_query(query) == -1)
@@ -1959,11 +1932,11 @@ int db_listmailboxchildren(u64_t uid, u64_t useridnr,
       /* empty set */
       *children = NULL;
       *nchildren = 0;
-      mysql_free_result(res);
+      PQclear(res);
       return 0;
     }
 
-  *nchildren = mysql_num_rows(res);
+  *nchildren = PQntuples(res);
   if (*nchildren == 0)
     {
       *children = NULL;
@@ -1976,7 +1949,7 @@ int db_listmailboxchildren(u64_t uid, u64_t useridnr,
     {
       /* out of mem */
       trace(TRACE_ERROR,"db_listmailboxchildren(): out of memory\n");
-      mysql_free_result(res);
+      PQclear(res);
       
       return -1;
     }
@@ -1990,7 +1963,7 @@ int db_listmailboxchildren(u64_t uid, u64_t useridnr,
 	  my_free(*children);
 	  *children = NULL;
 	  *nchildren = 0;
-	  mysql_free_result(res);
+	  PQclear(res);
 	  trace(TRACE_ERROR, "db_listmailboxchildren: data when none expected.\n");
 	  
 	  return -1;
@@ -2000,7 +1973,7 @@ int db_listmailboxchildren(u64_t uid, u64_t useridnr,
     }
   while ((row = mysql_fetch_row(res)));
 
-  mysql_free_result(res);
+  PQclear(res);
   
 
   return 0; /* success */
@@ -2063,17 +2036,17 @@ int db_isselectable(u64_t uid)
   if (!row)
     {
       /* empty set, mailbox does not exist */
-      mysql_free_result(res);
+      PQclear(res);
       return 0;
     }
 
   if (atoi(row[0]) == 0)
     {    
-      mysql_free_result(res);
+      PQclear(res);
       return 1;
     }
 
-  mysql_free_result(res);
+  PQclear(res);
   return 0;
 }
   
@@ -2111,17 +2084,17 @@ int db_noinferiors(u64_t uid)
   if (!row)
     {
       /* empty set, mailbox does not exist */
-      mysql_free_result(res);
+      PQclear(res);
       return 0;
     }
 
   if (atoi(row[0]) == 1)
     {    
-      mysql_free_result(res);
+      PQclear(res);
       return 1;
     }
 
-  mysql_free_result(res);
+  PQclear(res);
   return 0;
 }
 
@@ -2132,7 +2105,7 @@ int db_noinferiors(u64_t uid)
  * set the noselect flag of a mailbox on/off
  * returns 0 on success, -1 on failure
  */
-int db_setselectable(u64_t uid, int value)
+int db_setselectable(u64_t uid, int val)
 {
   
 
@@ -2210,13 +2183,13 @@ int db_expunge(u64_t uid,u64_t **msgids,u64_t *nmsgs)
 	}
 
       /* now alloc mem */
-      *nmsgs = mysql_num_rows(res);
+      *nmsgs = PQntuples(res);
       *msgids = (u64_t *)my_malloc(sizeof(u64_t) * (*nmsgs));
       if (!(*msgids))
 	{
 	  /* out of mem */
 	  *nmsgs = 0;
-	  mysql_free_result(res);
+	  PQclear(res);
 	  return -1;
 	}
 
@@ -2226,7 +2199,7 @@ int db_expunge(u64_t uid,u64_t **msgids,u64_t *nmsgs)
 	{
 	  (*msgids)[i++] = strtoul(row[0], NULL, 10);
 	}
-      mysql_free_result(res);
+      PQclear(res);
     }
 
   /* update messages belonging to this mailbox: mark as expunged (status 3) */
@@ -2429,13 +2402,13 @@ int db_getmailboxname(u64_t uid, char *name)
   if (!row)
     {
       /* empty set, mailbox does not exist */
-      mysql_free_result(res);
+      PQclear(res);
       *name = '\0';
       return 0;
     }
 
   strncpy(name, row[0], IMAP_MAX_MAILBOX_NAMELEN);
-  mysql_free_result(res);
+  PQclear(res);
   return 0;
 }
   
@@ -2495,7 +2468,7 @@ u64_t db_first_unseen(u64_t uid)
   else
     id = 0; /* none found */
       
-  mysql_free_result(res);
+  PQclear(res);
   return id;
 }
   
@@ -2597,7 +2570,7 @@ int db_get_msgflag(const char *name, u64_t mailboxuid, u64_t msguid)
   else
     val = 0; /* none found */
       
-  mysql_free_result(res);
+  PQclear(res);
   return val;
 }
 
@@ -2681,7 +2654,7 @@ int db_get_msgdate(u64_t mailboxuid, u64_t msguid, char *date)
       date[IMAP_INTERNALDATE_LEN - 1] = '\0';
     }
 
-  mysql_free_result(res);
+  PQclear(res);
   return 0;
 }
 
@@ -2733,13 +2706,13 @@ int db_get_main_header(u64_t msguid, struct list *hdrlist)
   if (!row)
     {
       /* no header for this message ?? */
-      mysql_free_result(res);
+      PQclear(res);
       return -1;
     }
 
   result = mime_readheader(row[0], &dummy, hdrlist, &sizedummy);
 
-  mysql_free_result(res);
+  PQclear(res);
 
   if (result == -1)
     {
@@ -2815,7 +2788,7 @@ int db_search_range(db_pos_t start, db_pos_t end, const char *key, u64_t msguid)
   if (!row)
     {
       trace(TRACE_ERROR,"db_search_range(): bad range specified\n");
-      mysql_free_result(res);
+      PQclear(res);
       return 0;
     }
 
@@ -2826,12 +2799,12 @@ int db_search_range(db_pos_t start, db_pos_t end, const char *key, u64_t msguid)
 	{
 	  if (strncasecmp(&row[0][i], key, strlen(key)) == 0)
 	    {
-	      mysql_free_result(res);
+	      PQclear(res);
 	      return 1;
 	    }
 	}
 
-      mysql_free_result(res);
+      PQclear(res);
       return 0;
     }
 
@@ -2845,7 +2818,7 @@ int db_search_range(db_pos_t start, db_pos_t end, const char *key, u64_t msguid)
       if (!row)
 	{
 	  trace(TRACE_ERROR,"db_search_range(): bad range specified\n");
-	  mysql_free_result(res);
+	  PQclear(res);
 	  return 0;
 	}
 
@@ -2858,7 +2831,7 @@ int db_search_range(db_pos_t start, db_pos_t end, const char *key, u64_t msguid)
 	{
 	  if (strncasecmp(&row[0][i], key, strlen(key)) == 0)
 	    {
-	      mysql_free_result(res);
+	      PQclear(res);
 	      return 1;
 	    }
 	}
@@ -2866,7 +2839,7 @@ int db_search_range(db_pos_t start, db_pos_t end, const char *key, u64_t msguid)
       row = mysql_fetch_row(res); /* fetch next row */
     }
 
-  mysql_free_result(res);
+  PQclear(res);
 
   return 0;
 }
@@ -2897,8 +2870,8 @@ int db_mailbox_msg_match(u64_t mailboxuid, u64_t msguid)
       return (-1);
     }
 
-  val = mysql_num_rows(res);
-  mysql_free_result(res);
+  val = PQntuples(res);
+  PQclear(res);
 
   return val;
 }
