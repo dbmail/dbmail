@@ -63,7 +63,7 @@ static void signal_handler (int signo, siginfo_t *info, void *data)
   pid_t PID;
   int status,i;
 
-  if ((signo == SIGALRM) && (tx!=NULL))
+  if ((signo == SIGALRM) && tx && rx)
   {
     done=-1;
     trace (TRACE_DEBUG,"signal_handler(): received ALRM signal. Timeout");
@@ -71,6 +71,8 @@ static void signal_handler (int signo, siginfo_t *info, void *data)
     fflush (tx);
     shutdown(fileno(tx),SHUT_RDWR);
     shutdown(fileno(rx),SHUT_RDWR);
+    tx = NULL;
+    rx = NULL;
     return;
   }
   else
@@ -203,7 +205,7 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 	done = -1;  /* check of client eof  */
       else 
 	{
-	  alarm (server_timeout);  
+	  alarm (0);  
 	  /* handle pop3 commands */
 	  done = pop3(tx,buffer); 
 	  /* cleanup the buffer */
@@ -536,7 +538,8 @@ int main (int argc, char *argv[])
 	      /* failure won't cause a quit forking is too expensive */	
 	      if (c == -1)
 		{
-		  trace (TRACE_ERROR,"main(): call accept(2) failed");
+		  trace (TRACE_ERROR,"main(): call accept(2) failed [%s]", strerror(errno));
+		  continue;
 		}
 		
 	      (*default_children)++;		
@@ -586,7 +589,8 @@ int main (int argc, char *argv[])
 	    /* failure won't cause a quit forking is too expensive */	
 	    if (c == -1)
 	      {
-		trace (TRACE_ERROR,"main(): call accept(2) failed");
+		trace (TRACE_ERROR,"main(): call accept(2) failed [%s]", strerror(errno));
+		continue;
 	      }
 		
 	    if (fork())
