@@ -714,12 +714,14 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines,
   if (db_query(ckquery)==-1)
     {
       free(ckquery);
+		free (buffer);
       return 0;
     }
   if ((res = mysql_store_result(&conn)) == NULL)
     {
       trace(TRACE_ERROR,"db_send_message_lines: mysql_store_result failed: %s",mysql_error(&conn));
       free(ckquery);
+		free (buffer);
       return 0;
     }
   
@@ -735,8 +737,8 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines,
       rowlength = lengths[2];
 		
 		/* reset our buffer */
-      *buffer='\0';
-	
+		memset (buffer, '\0', (READ_BLOCK_SIZE)*2);
+		
 		while ((*nextpos!='\0') && (rowlength>0) && ((lines>0) || (lines==-2) || (block_count==0)))
 		{
 			if (*nextpos=='\n')
@@ -786,7 +788,8 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines,
 			{
 				fprintf ((FILE *)fstream,"%s",buffer);
 				fflush ((FILE *)fstream);
-				*buffer='\0';
+				/* cleanup the buffer */
+				memset (buffer, '\0', (READ_BLOCK_SIZE*2));
 			}
 		} 
 	
@@ -802,8 +805,12 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines,
 	/* delimiter */
 	if (no_end_dot == 0)
 		fprintf ((FILE *)fstream,"\r\n.\r\n");
+	
 	mysql_free_result(res);
-
+	
+	free (ckquery);
+	free (buffer);
+	
 	return 1;
 }
 
