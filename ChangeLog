@@ -1,3 +1,21 @@
+2004-08-05  Ilja Booij  <ilja@ic-s.nl>
+
+	* pipe.c (store_message_temp): changed reference to 
+	dbmail-maintenance to dbmail-util.
+
+	* dbmail.conf: changed all references to dbmail-maintenance to 
+	dbmail-util
+
+	* db.h: changed all references to dbmail-maintenance to 
+	dbmail-util
+
+	* db.c: changed all references to dbmail-maintenance to 
+	dbmail-util
+
+	* INSTALL: changed references to dbmail-maintenance to dbmail-util and
+	from dbmail-adduser to dbmail-users. Also changed their command lines
+	to represent the new getopt() way of doing things.
+
 2004-08-04  Ilja Booij  <ilja@ic-s.nl>
 
 	* sql/postgresql/create_tables.pgsql: changed foreign key definitions

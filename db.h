@@ -860,7 +860,7 @@ int db_deleted_purge(u64_t * affected_rows);
  *        idnr of the user associated with the message
  * \return
  *      - -2 on database failure after a limit overrun (if this
- *           occurs the DB might be inconsistent and dbmail-maintenance
+ *           occurs the DB might be inconsistent and dbmail-util
  *           needs to be run)
  *      - -1 on database failure
  *      - 0 on success

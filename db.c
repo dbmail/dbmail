@@ -900,7 +900,7 @@ int db_update_message(u64_t message_idnr, const char *unique_id,
 	    == -1) {
 		trace(TRACE_ERROR,
 		      "%s,%s: error updating physmessage [%llu]. "
-		      "The database might be inconsistent. Run dbmail-maintenance",
+		      "The database might be inconsistent. Run dbmail-util",
 		      __FILE__, __func__, physmessage_id);
 	}
 
@@ -909,7 +909,7 @@ int db_update_message(u64_t message_idnr, const char *unique_id,
 		trace(TRACE_ERROR,
 		      "%s,%s: error calculating quotum "
 		      "used for user [%llu]. Database might be "
-		      "inconsistent. run dbmail-maintenance", __FILE__,
+		      "inconsistent. run dbmail-util", __FILE__,
 		      __func__, db_get_useridnr(message_idnr));
 		return -1;
 	}
@@ -1426,7 +1426,7 @@ int db_delete_physmessage(u64_t physmessage_id)
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not execute query. There "
 		      "are now messageblocks in the database that have no "
-		      "physmessage attached to them. run dbmail-maintenance "
+		      "physmessage attached to them. run dbmail-util "
 		      "to fix this.", __FILE__, __func__);
 
 		return -1;
@@ -1565,7 +1565,8 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
 		if (db_delete_message(message_idnrs[i]) == -1) {
 			trace(TRACE_ERROR,
 			      "%s,%s: error deleting message [%llu] "
-			      "database might be inconsistent. run dbmail-maintenance",
+			      "database might be inconsistent. "
+			      "run dbmail-util",
 			      __FILE__, __func__, message_idnrs[i]);
 			my_free(message_idnrs);
 			return -1;
@@ -2849,7 +2850,7 @@ int db_removemsg(u64_t user_idnr, u64_t mailbox_idnr)
 		trace(TRACE_ERROR,
 		      "%s,%s: error subtracting mailbox size from "
 		      "used quotum for mailbox [%llu], user [%llu]. Database "
-		      "might be inconsistent. Run dbmail-maintenance",
+		      "might be inconsistent. Run dbmail-util",
 		      __FILE__, __func__, mailbox_idnr, user_idnr);
 		return -1;
 	}

@@ -438,7 +438,7 @@ static int store_message_temp(const char *header, const char *body,
 		if (db_delete_message(msgidnr) < 0) 
 			trace(TRACE_ERROR, "%s,%s error deleting message "
 			      "[%llu]. Database might be inconsistent, run "
-			      "dbmail-maintenance", __FILE__, __func__,
+			      "dbmail-util", __FILE__, __func__,
 			      msgidnr);
 		return -1;
 	}

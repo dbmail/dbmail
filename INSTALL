@@ -121,20 +121,24 @@ What do you need?
 
 	Next you will need to create some users into the dbmail mailing sytem.
 	Currently this can be done in two ways. One way is using the
-	dbmail-adduser utility. The other way is doing it in the database
-	itself. To do it using the dbmail-adduser utility and do the following:
+	dbmail-users utility. The other way is doing it in the database
+	itself. To do it using the dbmail-users utility and do the following:
 
-	dbmail-adduser a <username> <password> <clientid> <maxmail> [aliases]
+	dbmail-users -a <username> -w <password> -g <clientid>\
+	             -m <maxmail> [-s aliases]
 	
 	clientid can be left 0 (this is if you want certain mailadministrators
 	administer specific groups of mailusers). maxmail is the maximum
 	number of bytes this user may have in his/her mailboxes. 0 is
-	unlimited. Aliases are a number of aliases for this user. @domain are
-	domain aliases. A user always needs to have at least one alias to
-	receive mail.
+	unlimited. Add K or M for kilobytes and megabytes. Aliases are a 
+	number of aliases for this user. @domain are domain aliases. 
+	A user always needs to have at least one alias to receive mail, unless
+	the users username is something like foo@bar.org, where bar.org is 
+	a domain the mailserver deliveres to.
 	
 	example: 
-	./dbmail-adduser a john secret 0 25000000 john@dude.org john@dude.net @net.com
+	./dbmail-users -a john -w secret -g 0 -m 25M\
+	               -s john@dude.org john@dude.net @net.com
 	
 	This will create a user john, with a password secret. It will set
 	john's maillimit 25 Mb and all mail for john@dude.org, john@dude.net
@@ -169,16 +173,16 @@ What do you need?
 
 	The dbmail daemons and the smtp injector itself will never actually
 	delete mail from the database. The only program that will do this is
-	the dbmail-maintanance program. This program will also check the
+	the dbmail-util program. This program will also check the
 	integrity of the dbmail database and, if nescessary, fix it. The
-	dbmail-maintenance program will first delete all messages that are set
+	dbmail-util program will first delete all messages that are set
 	for final deletion. After that it will set all messages that have the
 	delete status set to status final deletion. This way dbmail always
 	has a backup based upon the interval difference between maintenance
-	jobs. We recommend running the dbmail-maintenance program in a daily
+	jobs. We recommend running the dbmail-util program in a daily
 	interval from cron:
 
-	0 3 * * * /usr/local/sbin/dbmail-maintenance -cfpd >> /dev/null 2>&1
+	0 3 * * * /usr/local/sbin/dbmail-util -c -r f -p -d >> /dev/null 2>&1
 	
 7.	Starting the servers
 
