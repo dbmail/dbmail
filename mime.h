@@ -11,9 +11,15 @@
 
 struct mime_record
 {
+/* if these are to be changed to ptrs, the following has to be updated:
+   mime.c (duh)
+   db_parse_as_text
+   a cleanup for all the memory allocated 
+*/
   char field[MIME_FIELD_MAX];
   char value[MIME_VALUE_MAX];
 };
+
 
 
 int mime_list(char *blkdata, struct list *mimelist);

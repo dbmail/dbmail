@@ -22,7 +22,11 @@
 
 #define MAX_EMAIL_SIZE 250
 
-extern const char *month_desc[];
+const char *month_desc[]= 
+{ 
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+};
+
 
 /* used only locally */
 int db_binary_search(const unsigned long *array, int arraysize, unsigned long key);

@@ -1599,8 +1599,6 @@ int _ic_search(char *tag, char **args, ClientInfo *ci)
   /* make it a top-level search key */
   sk.type = IST_SUBSEARCH_AND;
 
-  dumpsearch(&sk,1);
-
   i = 0;
   do
     {
@@ -2878,7 +2876,7 @@ int _ic_uid(char *tag, char **args, ClientInfo *ci)
       result = 1;
     }
     
-  imapcommands_use_uid = 0; /* set global var to make clear we will be using UID's */
+  imapcommands_use_uid = 0; 
 
   return result;
 }

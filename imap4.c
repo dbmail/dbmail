@@ -47,11 +47,6 @@ const char *IMAP_COMMANDS[] =
   "***NOMORE***"
 };
 
-const char *month_desc[]= 
-{ 
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-};
-
 
 enum IMAP_COMMAND_TYPES { IMAP_COMM_NONE, 
 			  IMAP_COMM_CAPABILITY, IMAP_COMM_NOOP, IMAP_COMM_LOGOUT, 
