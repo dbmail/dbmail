@@ -2,6 +2,8 @@
 
 # Copyright (C) 2004 Dan Weber <dan at mirrorlynx dot com>
 #
+# $Id$
+#
 # This program is free software; you can redistribute it and/or 
 # modify it under the terms of the GNU General Public License 
 # as published by the Free Software Foundation; either 
@@ -19,7 +21,7 @@
 # $Id$
 
 import os,sys,getopt,email,email.Errors,mailbox
-version = "%s 2.0" %(sys.argv[0],)
+version = "%s version 2.0" %(sys.argv[0],)
 
 def main():
     try:
@@ -35,16 +37,11 @@ def main():
             elif o in ("-h","--help"):
                 usage()
                 sys.exit()
-            elif o in ("-u","--user"):
-                user = a
-            elif o in ("-m","--mail"):
-                mbox = a
-            elif o in ("-b","--box"):
-                box = a
-            elif o in ("-p","--path"):
-                path = a
-            elif o in ("-t","--type"):
-                type = a
+            elif o in ("-u","--user"): user = a
+            elif o in ("-m","--mail"): mbox = a
+            elif o in ("-b","--box"): box = a
+            elif o in ("-p","--path"): path = a
+            elif o in ("-t","--type"): type = a
         if not user:
             print "No user specified"
             sys.exit(1)
@@ -70,13 +67,19 @@ def main():
 
 def usage():
     print version
-    print "%s -u|--user <user> -t|--type <mbox, maildir, and mhdir> --mail|-m <location of mailbox> -b|--box <Inbox,Inbox.Sent etc> -p <path to dbmail-smtp>" %(sys.argv[0],)
+    print """%s 
+    -u|--user <user> 
+    -t|--type <mbox, maildir, and mhdir> 
+    -m|--mail <location of mailbox> 
+    -b|--box <Inbox,Inbox.Sent etc> 
+    -p <path to dbmail-smtp>
+    """ %(sys.argv[0],)
     
 def convert(user,mbox,box,path,msgnumber):
     try:
      	while 1:
             mailmsg = mbox.next()
-            command = "%s -m %s -u %s" %(path,box,user)
+            command = """%s -m "%s" -u "%s" """ %(path,box,user)
             if not mailmsg:
                 print "All Done!"
             	sys.exit()
