@@ -268,9 +268,6 @@ int GetConfigValueConfigList(const field_t name, struct list *config_items,
 	el = list_getstart(config_items);
 	while (el) {
 		item = (item_t *) el->data;
-		trace(TRACE_DEBUG, "%s,%s i = %d",
-		      __FILE__, __FUNCTION__, i++);
-
 
 		if (!item || strlen(item->name) == 0 || 
 		    strlen(item->value) == 0) {

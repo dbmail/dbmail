@@ -59,7 +59,6 @@
 /* Must be at least 998 or 1000 by RFC's */
 #define MAX_LINE_SIZE 1024
 
-#define DBMAIL_DELIVERY_USERNAME "__@!internal_delivery_user!@__"
 #define DBMAIL_TEMPMBOX "INBOX"
 
 /**

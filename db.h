@@ -55,8 +55,8 @@
 #define CONFIG_MANDATORY 1
 #define CONFIG_EMPTY 0
 
-
-//struct list;
+/* name of internal delivery user. */
+#define DBMAIL_DELIVERY_USERNAME "__@!internal_delivery_user!@__"
 
 /* users, aliases, mailboxes, messages, messageblks */
 #define DB_NTABLES 6

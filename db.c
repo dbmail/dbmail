@@ -104,6 +104,16 @@ static char *date2char_str(const char *column);
  */
 static char *char2date_str(const char *date);
 
+/**
+ * check if the user_idnr is the same as that of the DBMAIL_DELIVERY_USERNAME
+ * \param user_idnr user idnr to check
+ * \return
+ *     - -1 on error
+ *     -  0 of different user
+ *     -  1 if same user (user_idnr belongs to DBMAIL_DELIVERY_USERNAME
+ */
+static int user_idnr_is_delivery_user_idnr(u64_t user_idnr);
+
 int db_get_physmessage_id(u64_t message_idnr, u64_t * physmessage_id)
 {
 	assert(physmessage_id != NULL);
@@ -167,8 +177,21 @@ int db_set_quotum_used(u64_t user_idnr, u64_t curmail_size)
 
 int db_add_quotum_used(u64_t user_idnr, u64_t add_size)
 {
+	int result;
 	trace(TRACE_DEBUG, "%s,%s: adding %llu to mailsize",
 	      __FILE__, __FUNCTION__, add_size);
+	result = user_idnr_is_delivery_user_idnr(user_idnr);
+	if (result < 0) {
+		trace(TRACE_ERROR, "%s,%s: call to "
+		      "user_idnr_is_delivery_user_idnr() failed",
+		      __FILE__, __FUNCTION__);
+		return -1;
+	}
+	/* don't do anything if this DBMAIL_DELIVERY_USERNAME's user_idnr
+	 * is given */
+	if (result == 1) 
+		return 0;
+		
 	snprintf(query, DEF_QUERYSIZE,
 		 "UPDATE users SET curmail_size = curmail_size + '%llu' "
 		 "WHERE user_idnr = '%llu'", add_size, user_idnr);
@@ -183,8 +206,22 @@ int db_add_quotum_used(u64_t user_idnr, u64_t add_size)
 
 int db_subtract_quotum_used(u64_t user_idnr, u64_t sub_size)
 {
+	int result;
+
 	trace(TRACE_DEBUG, "%s,%s: subtracting %llu from mailsize",
 	      __FILE__, __FUNCTION__, sub_size);
+	result = user_idnr_is_delivery_user_idnr(user_idnr);
+	if (result < 0) {
+		trace(TRACE_ERROR, "%s,%s: call to "
+		      "user_idnr_is_delivery_user_idnr() failed",
+		      __FILE__, __FUNCTION__);
+		return -1;
+	}
+	/* don't do anything if this DBMAIL_DELIVERY_USERNAME's user_idnr
+	 * is given */
+	if (result == 1) 
+		return 0;
+
 	snprintf(query, DEF_QUERYSIZE,
 		 "UPDATE users SET curmail_size = curmail_size - '%llu' "
 		 "WHERE user_idnr = '%llu'", sub_size, user_idnr);
@@ -3857,4 +3894,31 @@ char *char2date_str(const char *date)
 	snprintf(s, len, TO_DATE, date);
 
 	return s;
+}
+
+int user_idnr_is_delivery_user_idnr(u64_t user_idnr)
+{
+	static int delivery_user_idnr_looked_up = 0;
+	static u64_t delivery_user_idnr;
+
+	if (delivery_user_idnr_looked_up == 0) {
+		trace(TRACE_DEBUG, "%s.%s: looking up user_idnr for %s",
+		      __FILE__, __FUNCTION__, DBMAIL_DELIVERY_USERNAME);
+		if (auth_user_exists(DBMAIL_DELIVERY_USERNAME,
+				     &delivery_user_idnr) < 0) {
+			trace(TRACE_ERROR, "%s,%s: error looking up "
+			      "user_idnr for DBMAIL_DELIVERY_USERNAME",
+			      __FILE__, __FUNCTION__);
+			return -1;
+		}
+		delivery_user_idnr_looked_up = 1;
+	} else 
+		trace(TRACE_DEBUG, "%s.%s: no need to look up user_idnr "
+		      "for %s",
+		      __FILE__, __FUNCTION__, DBMAIL_DELIVERY_USERNAME);
+	
+	if (delivery_user_idnr == user_idnr)
+		return 1;
+	else
+		return 0;
 }

@@ -1,3 +1,15 @@
+2004-05-28  Ilja Booij  <ilja@ic-s.nl>
+
+	* db.h (DBMAIL_DELIVERY_USERNAME): define moved here from pipe.c
+	
+	* db.c (user_idnr_is_delivery_user_idnr): new function: checks if
+	the user_idnr that is given is the user_idnr of the internal
+	delivery user. Uses local static variables to reduce nr of queries.
+	(db_add_quotum_used): now uses user_idnr_is_delivery_user_idnr
+	(db_subtract_quotum_used): now uses user_idnr_is_delivery_user_idnr
+
+	* main.c (main): small change. whole_message is initialised to NULL.
+
 2004-05-25  Ilja Booij  <ilja@ic-s.nl>
 	* THANKS: added Dan Weber for autoconf work
 
