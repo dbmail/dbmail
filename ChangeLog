@@ -1,3 +1,10 @@
+2005-03-01  Paul Stevens <paul@nfg.nl>
+
+	* Makefile.am, acinclude.m4: changed the autotools setup to build
+	libdbmail as a convenience lib only, and renamed the backend modules
+	to libsqldbmail for every backend. All libs execpt libsqldbmail are
+	now noinst_ type static convenience libs.
+
 2005-02-23  Paul Stevens <paul@nfg.nl>
 
 	* check_dbmail.h: use separate config in /etc/dbmail/dbmail-test.conf

@@ -20,9 +20,9 @@ if MYSQL
 AM_CFLAGS = @MYSQLINC@ -fomit-frame-pointer 
 INCLUDES = -I$(top_srcdir)
 
-pkglib_LTLIBRARIES = libmysqldbmail.la
+pkglib_LTLIBRARIES = libsqldbmail.la
 
-libmysqldbmail_la_SOURCES = dbmysql.c
-libmysqldbmail_la_LIBADD = @SQLLIB@
+libsqldbmail_la_SOURCES = dbmysql.c
+libsqldbmail_la_LIBADD = @SQLLIB@
 
 endif

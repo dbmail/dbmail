@@ -19,7 +19,7 @@
 AM_CFLAGS = -fomit-frame-pointer
 INCLUDES = -I$(top_srcdir)
 
-pkglib_LTLIBRARIES = libauthdbmail.la
+noinst_LTLIBRARIES = libauthdbmail.la
 if LDAP
 libauthdbmail_la_SOURCES = authldap.c
 else

@@ -20,8 +20,8 @@ if PGSQL
 AM_CFLAGS = @PGSQLINC@ -fomit-frame-pointer
 INCLUDES = -I$(top_srcdir)
 
-pkglib_LTLIBRARIES = libpgsqldbmail.la
+pkglib_LTLIBRARIES = libsqldbmail.la
 
-libpgsqldbmail_la_SOURCES = dbpgsql.c
-libpgsqldbmail_la_LIBADD = @SQLLIB@
+libsqldbmail_la_SOURCES = dbpgsql.c
+libsqldbmail_la_LIBADD = @SQLLIB@
 endif

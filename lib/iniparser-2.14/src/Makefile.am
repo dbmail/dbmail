@@ -16,6 +16,6 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-pkglib_LTLIBRARIES = libiniparser.la
+noinst_LTLIBRARIES = libiniparser.la
 
 libiniparser_la_SOURCES = iniparser.c dictionary.c strlib.c

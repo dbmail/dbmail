@@ -83,8 +83,8 @@ then
 	AC_MSG_RESULT([$MYSQLINC])	
         AC_MSG_CHECKING([MySQL libraries])
         SQLLIB=`${mysqlconfig} --libs`
-        SQLALIB="mysql/.libs/libmysqldbmail.a"
-	SQLLTLIB="mysql/libmysqldbmail.la"
+        SQLALIB="mysql/.libs/libsqldbmail.a"
+	SQLLTLIB="mysql/libsqldbmail.la"
         AC_MSG_RESULT([$SQLLIB])
     fi
 fi   
@@ -103,8 +103,8 @@ if test ! "${pgsqlheadername-x}" = "x"
         AC_MSG_CHECKING([PostgreSQL libraries])
         PGLIBDIR=`${pgsqlconfig} --libdir`
         SQLLIB="-L$PGLIBDIR -lpq"
-        SQLALIB="pgsql/.libs/libpgsqldbmail.a"
-	SQLLTLIB="pgsql/libpgsqldbmail.la"
+        SQLALIB="pgsql/.libs/libsqldbmail.a"
+	SQLLTLIB="pgsql/libsqldbmail.la"
         AC_MSG_RESULT([$SQLLIB])
     fi
 fi
@@ -121,8 +121,8 @@ if test ! "${sqliteheadername-x}" = "x"
 	AC_MSG_RESULT([$SQLITEINC])
         AC_MSG_CHECKING([SQLite libraries])
         SQLLIB=`${sqliteconfig} --libs sqlite`
-        SQLALIB="sqlite/.libs/libsqlitedbmail.a"
-	SQLLTLIB="sqlite/libsqlitedbmail.la"
+        SQLALIB="sqlite/.libs/libsqldbmail.a"
+	SQLLTLIB="sqlite/libsqldbmail.la"
         AC_MSG_RESULT([$SQLLIB])
     fi
 fi
