@@ -239,7 +239,7 @@ u64_t db_get_quotum_used(u64_t userid)
   q = strtoull(PQgetvalue(res, 0, 0), NULL, 10);
   PQclear(res);
   
-  trace(TRACE_DEBUG, "db_get_quotum_used(): found quotum usage of [%llu::bigint] bytes", q);
+  trace(TRACE_DEBUG, "db_get_quotum_used(): found quotum usage of [%llu] bytes", q);
   return q;
 }
       
@@ -285,7 +285,7 @@ int db_addalias (u64_t useridnr, char *alias, u64_t clientid)
 {
   /* check if this alias already exists */
   snprintf (query, DEF_QUERYSIZE,
-            "SELECT alias_idnr FROM aliases WHERE alias ~* '^%s$' AND deliver_to = '%llu::bigint' "
+            "SELECT alias_idnr FROM aliases WHERE alias ~* '^%s$' AND deliver_to = '%llu' "
 	    "AND client_idnr = %llu::bigint", alias, useridnr, clientid);
 
   if (db_query(query) == -1)
@@ -297,7 +297,7 @@ int db_addalias (u64_t useridnr, char *alias, u64_t clientid)
 
   if (PQntuples(res) > 0)
     {
-      trace(TRACE_INFO, "db_addalias(): alias [%s] for user [%llu::bigint] already exists", 
+      trace(TRACE_INFO, "db_addalias(): alias [%s] for user [%llu] already exists", 
 	    alias, useridnr);
 
       PQclear(res);
@@ -612,7 +612,7 @@ int db_update_message_multiple(const char *unique_id, u64_t messagesize, u64_t r
       if (db_query(query) == -1)
 	{
 	  trace(TRACE_ERROR, "db_update_message_multiple(): "
-		"could not update message data for message [%llu::bigint]", uids[i]);
+		"could not update message data for message [%llu]", uids[i]);
 	  /* try to continue anyways */
 	}
     }
@@ -643,7 +643,7 @@ u64_t db_insert_message_block(const char *block, u64_t len, u64_t msgid)
 
   if (len > READ_BLOCK_SIZE)
     {
-      trace (TRACE_ERROR,"db_insert_message_block(): blocksize [%llu::bigint], maximum is [%llu::bigint]",
+      trace (TRACE_ERROR,"db_insert_message_block(): blocksize [%llu], maximum is [%llu]",
 	     len, READ_BLOCK_SIZE);
       return -1;
     }
@@ -701,7 +701,7 @@ int db_insert_message_block_multiple(const char *uniqueid, const char *block, u6
 
   if (len > READ_BLOCK_SIZE)
     {
-      trace (TRACE_ERROR,"db_insert_message_block_multiple(): blocksize [%llu::bigint], maximum is [%llu::bigint]",
+      trace (TRACE_ERROR,"db_insert_message_block_multiple(): blocksize [%llu], maximum is [%llu]",
 	     len, READ_BLOCK_SIZE);
       return -1;
     }
@@ -776,14 +776,14 @@ int db_rollback_insert(u64_t ownerid, const char *unique_id)
   snprintf(query, DEF_QUERYSIZE, "DELETE FROM messageblks WHERE message_idnr = %llu::bigint", msgid);
   if (db_query(query) == -1)
     {
-      trace(TRACE_ERROR,"db_rollback_insert(): could not delete message blocks, msg ID [%llu::bigint]", msgid);
+      trace(TRACE_ERROR,"db_rollback_insert(): could not delete message blocks, msg ID [%llu]", msgid);
       result = -1;
     }
 
   snprintf(query, DEF_QUERYSIZE, "DELETE FROM messages WHERE message_idnr = %llu::bigint", msgid);
   if (db_query(query) == -1)
     {
-      trace(TRACE_ERROR,"db_rollback_insert(): could not delete message, msg ID [%llu::bigint]", msgid);
+      trace(TRACE_ERROR,"db_rollback_insert(): could not delete message, msg ID [%llu]", msgid);
       result = -1;
     }
 
@@ -864,7 +864,7 @@ int db_send_message_lines (void *fstream, u64_t messageidnr, long lines, int no_
 
   if (PQntuples(res)>0)
     {
-      trace (TRACE_DEBUG,"db_send_message_lines(): sending [%d] lines from message [%llu::bigint]",
+      trace (TRACE_DEBUG,"db_send_message_lines(): sending [%d] lines from message [%llu]",
 	     lines,messageidnr);
 
       block_count=0;
@@ -1196,7 +1196,7 @@ u64_t db_check_sizelimit (u64_t addblocksize, u64_t messageidnr,
   maxmail_size = auth_getmaxmailsize(*useridnr);
 
 
-  trace (TRACE_DEBUG, "db_check_sizelimit(): comparing currsize + blocksize  [%llu::bigint], maxsize [%llu::bigint]\n",
+  trace (TRACE_DEBUG, "db_check_sizelimit(): comparing currsize + blocksize  [%llu], maxsize [%llu]\n",
 	 currmail_size, maxmail_size);
 
 
@@ -1204,7 +1204,7 @@ u64_t db_check_sizelimit (u64_t addblocksize, u64_t messageidnr,
 
   if (((currmail_size) > maxmail_size) && (maxmail_size != 0))
     {
-      trace (TRACE_INFO,"db_check_sizelimit(): mailboxsize of useridnr %llu::bigint exceed with %llu::bigint bytes\n", 
+      trace (TRACE_INFO,"db_check_sizelimit(): mailboxsize of useridnr %llu exceed with %llu bytes\n", 
 	     *useridnr, (currmail_size)-maxmail_size);
 
       /* user is exceeding, we're going to execute a rollback now */
@@ -1684,7 +1684,7 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen, u64_t mboxid, u64_t u
 
   if (result)
     {     
-      trace(TRACE_INFO, "db_imap_append_msg(): user %llu::bigint would exceed quotum\n",uid);
+      trace(TRACE_INFO, "db_imap_append_msg(): user %llu would exceed quotum\n",uid);
       return 2;
     }
 
@@ -1699,7 +1699,7 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen, u64_t mboxid, u64_t u
       trace(TRACE_INFO, "db_imap_append_msg(): no double newline found [invalid msg]\n");
       snprintf(query, DEF_QUERYSIZE, "DELETE FROM messages WHERE message_idnr = %llu::bigint", msgid);
       if (db_query(query) == -1)
-	trace(TRACE_ERROR, "db_imap_append_msg(): could not delete message id [%llu::bigint], "
+	trace(TRACE_ERROR, "db_imap_append_msg(): could not delete message id [%llu], "
 	      "dbase invalid now..\n", msgid);
 
       return 1;
@@ -1717,12 +1717,12 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen, u64_t mboxid, u64_t u
 
 	  snprintf(query, DEF_QUERYSIZE, "DELETE FROM messages WHERE message_idnr = %llu::bigint", msgid);
 	  if (db_query(query) == -1)
-	    trace(TRACE_ERROR, "db_imap_append_msg(): could not delete message id [%llu::bigint], "
+	    trace(TRACE_ERROR, "db_imap_append_msg(): could not delete message id [%llu], "
 		  "dbase could be invalid now, run dbmail-maintenance\n", msgid);
 
 	  snprintf(query, DEF_QUERYSIZE, "DELETE FROM messageblks WHERE message_idnr = %llu::bigint", msgid);
 	  if (db_query(query) == -1)
-	    trace(TRACE_ERROR, "db_imap_append_msg(): could not delete messageblks for msg id [%llu::bigint], "
+	    trace(TRACE_ERROR, "db_imap_append_msg(): could not delete messageblks for msg id [%llu], "
 		  "dbase could be invalid now run dbmail-maintenance\n", msgid);
 
 
@@ -1744,12 +1744,12 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen, u64_t mboxid, u64_t u
 
 	  snprintf(query, DEF_QUERYSIZE, "DELETE FROM messages WHERE message_idnr = %llu::bigint", msgid);
 	  if (db_query(query) == -1)
-	    trace(TRACE_ERROR, "db_imap_append_msg(): could not delete message id [%llu::bigint], "
+	    trace(TRACE_ERROR, "db_imap_append_msg(): could not delete message id [%llu], "
 		  "dbase invalid now, run dbmail-maintenance\n", msgid);
 
 	  snprintf(query, DEF_QUERYSIZE, "DELETE FROM messageblks WHERE message_idnr = %llu::bigint", msgid);
 	  if (db_query(query) == -1)
-	    trace(TRACE_ERROR, "db_imap_append_msg(): could not delete messageblks for msg id [%llu::bigint], "
+	    trace(TRACE_ERROR, "db_imap_append_msg(): could not delete messageblks for msg id [%llu], "
 		  "dbase could be invalid now, run dbmail-maintenance\n", msgid);
 
 
@@ -1765,13 +1765,13 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen, u64_t mboxid, u64_t u
 
 	      snprintf(query, DEF_QUERYSIZE, "DELETE FROM messages WHERE message_idnr = %llu::bigint", msgid);
 	      if (db_query(query) == -1)
-		trace(TRACE_ERROR, "db_imap_append_msg(): could not delete message id [%llu::bigint], "
+		trace(TRACE_ERROR, "db_imap_append_msg(): could not delete message id [%llu], "
 		      "dbase invalid now run dbmail-maintenance\n", msgid);
 
 	      snprintf(query, DEF_QUERYSIZE, "DELETE FROM messageblks WHERE message_idnr = %llu::bigint", msgid);
 	      if (db_query(query) == -1)
 		trace(TRACE_ERROR, "db_imap_append_msg(): could not delete messageblks "
-		      "for msg id [%llu::bigint], dbase could be invalid now run dbmail-maintenance\n", msgid);
+		      "for msg id [%llu], dbase could be invalid now run dbmail-maintenance\n", msgid);
 	      return -1;
             }
 
@@ -1791,7 +1791,7 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen, u64_t mboxid, u64_t u
 	  snprintf(query, DEF_QUERYSIZE, "DELETE FROM messageblks WHERE message_idnr = %llu::bigint", msgid);
 	  if (db_query(query) == -1)
 	    trace(TRACE_ERROR, "db_imap_append_msg(): could not delete messageblks "
-		  "for msg id [%llu::bigint], dbase could be invalid now run dbmail-maintenance\n", msgid);
+		  "for msg id [%llu], dbase could be invalid now run dbmail-maintenance\n", msgid);
 
 
 	  return -1;
@@ -1800,7 +1800,7 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen, u64_t mboxid, u64_t u
     }  
 
   /* create a unique id */
-  snprintf (unique_id,UID_SIZE,"%llu::bigintA%lu",msgid,td);
+  snprintf (unique_id,UID_SIZE,"%lluA%lu",msgid,td);
 
   /* set info on message */
   db_update_message (msgid, unique_id, datalen, 0);
@@ -1859,7 +1859,7 @@ int db_insert_message_complete(u64_t useridnr, MEM *hdr, MEM *body,
   mboxid = db_get_mailboxid(useridnr, "INBOX");
   if (mboxid == 0 || mboxid == -1)
     {
-      trace(TRACE_ERROR,"db_insert_message_complete(): could not find INBOX for user [%llu::bigint]", 
+      trace(TRACE_ERROR,"db_insert_message_complete(): could not find INBOX for user [%llu]", 
 	    useridnr);
       my_free(escaped_query);
       return -1;
@@ -1937,7 +1937,7 @@ int db_insert_message_complete(u64_t useridnr, MEM *hdr, MEM *body,
   else
     {
       trace(TRACE_ERROR,"db_insert_message_complete(): size difference not yet supported "
-	    "_MEMBLOCK_SIZE [%llu::bigint], READ_BLOCK_SIZE [%llu::bigint]", 
+	    "_MEMBLOCK_SIZE [%llu], READ_BLOCK_SIZE [%llu]", 
 	    _MEMBLOCK_SIZE, READ_BLOCK_SIZE);
 
       db_query("ROLLBACK WORK");
@@ -1961,7 +1961,7 @@ int db_insert_message_complete(u64_t useridnr, MEM *hdr, MEM *body,
       return -1;
     }
 
-  trace(TRACE_MESSAGE,"Inserted message, size [%llu::bigint] bytes", hdrsize+bodysize);
+  trace(TRACE_MESSAGE,"Inserted message, size [%llu] bytes", hdrsize+bodysize);
 
   return 0;
 }
@@ -2622,7 +2622,7 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
   maxmail = auth_getmaxmailsize(userid);
   if (maxmail == -1)
     {
-      trace(TRACE_ERROR, "db_copymsg(): error fetching max quotum for user [%llu::bigint]", userid);
+      trace(TRACE_ERROR, "db_copymsg(): error fetching max quotum for user [%llu]", userid);
       return -1;
     }
   
@@ -2631,7 +2631,7 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
       curr_quotum = db_get_quotum_used(userid);
       if (curr_quotum == -1 || curr_quotum == -2)
 	{
-	  trace(TRACE_ERROR, "db_copymsg(): error fetching used quotum for user [%llu::bigint]", userid);
+	  trace(TRACE_ERROR, "db_copymsg(): error fetching used quotum for user [%llu]", userid);
 	  return -1;
 	}
      
@@ -2658,14 +2658,14 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
   
       if (db_query(query) == -1)
 	{
-	  trace(TRACE_ERROR, "db_copymsg(): could not fetch message size for message id [%llu::bigint]\n", msgid);
+	  trace(TRACE_ERROR, "db_copymsg(): could not fetch message size for message id [%llu]\n", msgid);
 	  db_query("ROLLBACK WORK");
 	  return -1;
 	}
       
       if (PQntuples(res) != 1)
 	{
-	  trace(TRACE_ERROR, "db_copymsg(): message [%llu::bigint] does not exist/has multiple entries\n", msgid);
+	  trace(TRACE_ERROR, "db_copymsg(): message [%llu] does not exist/has multiple entries\n", msgid);
 	  db_query("ROLLBACK WORK");
 	  PQclear(res);
 	  return -1;
@@ -3477,7 +3477,7 @@ int db_get_main_header(u64_t msguid, struct list *hdrlist)
   if (result == -1)
     {
       /* parse error */
-      trace(TRACE_ERROR,"db_get_main_header(): error parsing header of message %llu::bigint\n",msguid);
+      trace(TRACE_ERROR,"db_get_main_header(): error parsing header of message %llu\n",msguid);
       if (hdrlist->start)
         {
 	  list_freelist(&hdrlist->start);

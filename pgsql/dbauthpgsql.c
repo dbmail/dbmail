@@ -251,7 +251,7 @@ u64_t auth_getclientid(u64_t useridnr)
 
   if (__auth_query(__auth_query_data) == -1)
     {
-      trace(TRACE_ERROR,"auth_getclientid(): could not retrieve client id for user [%llu::bigint]\n",useridnr);
+      trace(TRACE_ERROR,"auth_getclientid(): could not retrieve client id for user [%llu]\n",useridnr);
       return -1;
     }
 
