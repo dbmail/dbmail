@@ -227,7 +227,7 @@ int mime_readheader(const char *datablock, u64_t * blkidx, struct list *mimelist
 					strcpy(&prev_mr-> value[prevlen + 2], startptr);
 					*headersize += (strlen(startptr) + 2);
 				} else {
-					trace(TRACE_WARNING, "%s,%S: failed adding data (length would exceed "
+					trace(TRACE_WARNING, "%s,%s: failed adding data (length would exceed "
 					      "MIME_VALUE_MAX [currently %d])", __FILE__, __func__,
 					      MIME_VALUE_MAX);
 				}
