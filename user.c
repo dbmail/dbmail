@@ -88,6 +88,7 @@ struct change_flags {
 	unsigned int newclientid     : 1;
 	unsigned int newpasswd       : 1;
 	unsigned int newpasswdfile   : 1;
+	unsigned int newpasswdstdin  : 1;
 	unsigned int newpasswdshadow : 1;
 };
 
@@ -249,17 +250,19 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'W':
-			change_flags.newpasswdfile = 1;
-			if (optarg && strlen(optarg))
+			if (optarg && strlen(optarg)) {
 				passwdfile = optarg;
-			// FIXME: Need some way of passing stdin.
+				change_flags.newpasswdfile = 1;
+			} else {
+				change_flags.newpasswdstdin = 1;
+			}
 			break;
 
 		case 'p':
 			if (!passwdtype)
 				passwdtype = optarg;
-			else
-			{} // Complain about only one type allowed.
+			// else
+				// Complain about only one type allowed.
 			break;
 
 		case 'P':
@@ -416,6 +419,14 @@ int main(int argc, char *argv[])
 	switch (mode) {
 	case 'a':
 	case 'c':
+		if (change_flags.newpasswdstdin) {
+			char pw[50];
+			qprintf("Please enter a password (will not echo): ");
+			/* Prompt for a password and read until \n or EOF. */
+			fgets(pw, 50, stdin);
+			/* fgets guarantees a nul terminated string. */
+			passwd = strdup(pw);
+		}
 		/* Do we need the password for this mode? */
 		if (mkpassword(user, passwd, passwdtype, passwdfile,
 		               &password, &enctype)) {

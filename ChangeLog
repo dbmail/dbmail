@@ -3,6 +3,7 @@
 	* main.c, user.c, vut2dbmail.c, maintenance.c: improved handling
 	of several common command line options and added more comments.
 	* user.c: fixed missing options in the optstring argument to getopt.
+	* user.c: added prompt and processing for password on stdin.
 
 2004-07-22  Aaron Stone  <aaron@serendipity.cx>
 
