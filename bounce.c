@@ -11,8 +11,8 @@
 #include "dbmysql.h"
 #include "debug.h"
 
- extern char *header; 
- extern unsigned long headersize; 
+/* extern char *header; */
+extern unsigned long headersize; 
 
  extern struct list mimelist;  
  extern struct list users;  
@@ -37,6 +37,18 @@ int bounce (char *header, char *destination_address, int type)
   if (!destination_address)
     {
       trace(TRACE_ERROR,"bounce(): cannot deliver to NULL.");
+      return -1;
+    }
+
+  if (!sendmail)
+    {
+      trace(TRACE_ERROR,"bounce(): cannot send via NULL.\n");
+      return -1;
+    }
+
+  if (!postmaster)
+    {
+      trace(TRACE_ERROR,"bounce(): cannot have NULL postmaster.\n");
       return -1;
     }
 

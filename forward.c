@@ -3,6 +3,12 @@
  *
  * takes care of forwarding mail to an external address */
 
+#include <stdio.h>
+#include <time.h>
+#include "dbmysql.h"
+#include "debug.h"
+#include "list.h"
+#include "bounce.h"
 #include "forward.h"
 
 int pipe_forward(FILE *instream, struct list *targets, char *from, char *header, unsigned long databasemessageid)

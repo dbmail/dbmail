@@ -3,12 +3,6 @@
 
 #ifndef FORWARD_H_
 #define FORWARD_H_
-#include <stdio.h>
-#include <time.h>
-#include "dbmysql.h"
-#include "debug.h"
-#include "list.h"
-#include "bounce.h"
 
 #define FW_SENDMAIL SENDMAIL
 

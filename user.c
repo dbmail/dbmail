@@ -8,7 +8,8 @@
 
 /* valid characters for passwd/username */
 const char ValidChars[] = 
-"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
+"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+"_.!@#$%^&*()-+=~";
 
 void show_help();
 

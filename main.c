@@ -85,6 +85,7 @@ int main (int argc, char *argv[])
     trace(TRACE_STOP,"main(): fatal error creating MIME-header list\n");
 
   list_init(&returnpath);
+
   /* parse returnpath from header */
   mail_adr_list ("Return-Path",&returnpath,&mimelist);
   if (returnpath.total_nodes == 0)
@@ -120,7 +121,8 @@ int main (int argc, char *argv[])
 
   /* inserting messages into the database */
   insert_messages(header, headersize,&users, &returnpath);
-	trace(TRACE_DEBUG,"main(): freeing memory blocks");
+  trace(TRACE_DEBUG,"main(): freeing memory blocks");
+
   trace (TRACE_DEBUG,"main(): they're all free. we're done.");
   return 0;
 }

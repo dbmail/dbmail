@@ -4,11 +4,18 @@
  * Functions for reading the pipe from the MTA */
 
 
+#include <time.h>
+#include <ctype.h>
+#include "dbmysql.h"
+#include "debug.h"
+#include "list.h"
+#include "bounce.h"
+#include "forward.h"
 #include "config.h"
 #include "pipe.h"
 #include "debug.h"
 
-extern struct list *returnpath;
+/*extern struct list *returnpath;*/
 
 #define HEADER_BLOCK_SIZE 1024
 #define QUERY_SIZE 255
@@ -89,8 +96,9 @@ char *read_header(unsigned long *blksize)
     {
       my_free(strblock);
       my_free(header);
-      trace (TRACE_STOP, "read_header(): not a valid mailheader found\n");
       *blksize=0;
+      trace (TRACE_STOP, "read_header(): not a valid mailheader found\n");
+      return 0;
     }
   else
     *blksize=strlen(header);
@@ -170,7 +178,8 @@ int insert_messages(char *header, unsigned long headersize, struct list *users, 
 	     if a delivery cannot be found with an existing address then
 	     and only then we need to check if there are domain delivery's */
 			
-	  trace (TRACE_INFO,"insert_messages(): no users found to deliver to. Checking for domain forwards");	
+	  trace (TRACE_INFO,"insert_messages(): no users found to deliver to. "
+		 "Checking for domain forwards");	
 			
 	  domain=strchr((char *)tmp->data,'@');
 
