@@ -387,7 +387,7 @@ u64_t db_insert_message (u64_t *useridnr)
   strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
 
   snprintf (query, DEF_QUERYSIZE,"INSERT INTO messages(mailbox_idnr,messagesize,unique_id,internal_date)"
-            " VALUES (%llu::bigint8,0,' ','%s')",
+            " VALUES (%llu,0,' ','%s')",
             db_get_inboxid(useridnr), timestr);
 
   trace (TRACE_DEBUG,"db_insert_message(): inserting message query [%s]",query);
@@ -444,7 +444,7 @@ u64_t db_insert_message_block (char *block, u64_t messageidnr)
 
 	  snprintf (tmpquery, esclen+500,
                     "INSERT INTO messageblks(messageblk,blocksize,message_idnr) "
-                    "VALUES ('%s',%d,%llu::bigint8)",
+                    "VALUES ('%s',%d,%llu)",
                     escblk,len,messageidnr);
 
 	  if (db_query (tmpquery)==-1)
@@ -1352,7 +1352,7 @@ int db_imap_append_msg(char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid)
    */
   snprintf(query, DEF_QUERYSIZE, "INSERT INTO messages "
 	   "(mailbox_idnr,messagesize,unique_id,internal_date,status,"
-	   " seen_flag) VALUES (%llu::bigint8, 0, '', '%s',001,1)",
+	   " seen_flag) VALUES (%llu, 0, '', '%s',001,1)",
 	   mboxid, timestr);
 
   if (db_query(query) == -1)
