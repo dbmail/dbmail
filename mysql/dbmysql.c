@@ -409,7 +409,7 @@ u64_t db_insert_message (u64_t *useridnr)
   tm = *localtime(&td);   /* get components */
   strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
   
-  snprintf (query, DEF_QUERYSIZE,"INSERT INTO message(mailbox_idnr,messagesize,unique_id,internal_date)"
+  snprintf (query, DEF_QUERYSIZE,"INSERT INTO messages(mailbox_idnr,messagesize,unique_id,internal_date)"
 	   " VALUES (%llu,0,\" \",\"%s\")",
 	   db_get_inboxid(useridnr), timestr);
 
@@ -1837,7 +1837,7 @@ int db_getmailbox(mailbox_t *mb, u64_t userid)
     }
 
   row = mysql_fetch_row(res);
-  mb->msguidnext = row[0] ? strtoull(row[0], NULL, 10)+1 : 1;
+  mb->msguidnext = (row && row[0]) ? strtoull(row[0], NULL, 10)+1 : 1;
 
   mysql_free_result(res);
   
