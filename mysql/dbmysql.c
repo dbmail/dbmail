@@ -2742,7 +2742,7 @@ u64_t db_get_rfcsize(u64_t msguid)
       return -1;
     }
   
-  if (mysql_store_result(&conn) == NULL)
+  if ((res = mysql_store_result(&conn)) == NULL)
     {
       trace(TRACE_ERROR,"db_get_rfcsize(): mysql_store_result failed: %s\n",mysql_error(&conn));
       return (-1);
