@@ -157,7 +157,7 @@ int main(int argc, char *argv[])
   size = 0;
   while (!feof(stdin) && !ferror(stdin))
     {
-      len = fread(blk, sizeof(char), READ_BLOCK_SIZE, stdin);
+      len = fread(blk, sizeof(char), READ_BLOCK_SIZE-1, stdin);
       blk[len] = 0; /* terminate */
       
       if (db_insert_message_block_multiple(uniqueid, blk, len) != 0)

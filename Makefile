@@ -3,8 +3,8 @@
 
 #! /bin/sh
 
-DBASETYPE = mysql
-DBASE_AUTHTYPE = mysql
+DBASETYPE = pgsql
+DBASE_AUTHTYPE = pgsql
 
 AUTHOBJECT = $(DBASETYPE)/dbauth$(DBASE_AUTHTYPE).o
 MSGBUFOBJECT = $(DBASETYPE)/dbmsgbuf$(DBASETYPE).o
@@ -17,18 +17,19 @@ INJECTOR_OBJECTS = list.o debug.o $(DBOBJECT) dbmd5.o md5.o $(AUTHOBJECT) mime.o
 POP_OBJECTS = pop3.o list.o debug.o $(DBOBJECT) dbmd5.o md5.o mime.o misc.o memblock.o $(AUTHOBJECT)
 IMAP_OBJECTS = imap4.o debug.o $(DBOBJECT) serverservice.o list.o dbmd5.o md5.o imaputil.o \
 imapcommands.o mime.o misc.o memblock.o rfcmsg.o $(MSGBUFOBJECT) $(SEARCHOBJECT) $(AUTHOBJECT)
-REALSMTP_OBJECTS = smtp.o debug.o dbmd5.o md5.o list.o mime.o serverservice.o misc.o \
-smtpcommands.o memblock.o $(DBOBJECT) $(AUTHOBJECT)
 MAINTENANCE_OBJECTS = debug.o list.o dbmd5.o md5.o $(DBOBJECT) mime.o memblock.o $(AUTHOBJECT)
 CONFIG_OBJECTS = $(DBOBJECT) list.o md5.o debug.o dbmd5.o mime.o memblock.o $(AUTHOBJECT)
 USER_OBJECTS = debug.o list.o dbmd5.o md5.o $(DBOBJECT) mime.o memblock.o $(AUTHOBJECT)
 VUTCONV_OBJECTS = debug.o list.o dbmd5.o md5.o mime.o $(DBOBJECT) $(AUTHOBJECT)
+DBTEST_OBJECTS = debug.o list.o dbmd5.o md5.o mime.o $(DBOBJECT) $(AUTHOBJECT)
+REALSMTP_OBJECTS = smtp.o debug.o dbmd5.o md5.o list.o mime.o serverservice.o misc.o \
+smtpcommands.o memblock.o $(DBOBJECT) $(AUTHOBJECT)
 CC = cc
 
-MYSQLLIBDIR=/usr/local/lib/mysql
+PGSQLLIBDIR=/usr/lib/postgresql/lib
 
-LIBS = -L$(MYSQLLIBDIR)
-LIB = -lmysqlclient -lcrypt
+LIBS = -L$(PGSQLLIBDIR)
+LIB = -lpq -lcrypt
 
 # Added the -D_BSD_SOURCE option to suppress warnings
 # from compiler about vsyslog function 
@@ -55,8 +56,8 @@ maintenance: maintenance.h $(MAINTENANCE_OBJECTS) maintenance.c
 config: $(CONFIG_OBJECTS) settings.c
 	$(CC) $(CFLAGS) settings.c -o dbmail-config $(CONFIG_OBJECTS) $(LIBS) $(LIB)
 
-user: user.h $(MAINTENANCE_OBJECTS) user.c
-	$(CC) $(CFLAGS) user.c -o dbmail-adduser $(MAINTENANCE_OBJECTS) $(LIBS) $(LIB)
+user: user.h $(USER_OBJECTS) user.c
+	$(CC) $(CFLAGS) user.c -o dbmail-adduser $(USER_OBJECTS) $(LIBS) $(LIB)
 
 readvut: db.h auth.h vut2dbmail.c $(VUTCONV_OBJECTS)
 	$(CC) $(CFLAGS) vut2dbmail.c -o dbmail-readvut $(VUTCONV_OBJECTS) $(LIBS) $(LIB)
@@ -68,6 +69,9 @@ injector: db.h auth.h $(INJECTOR_OBJECTS) injector.c
 	$(CC) $(CFLAGS) injector.c -o dbmail-smtp-injector $(INJECTOR_OBJECTS) $(LIBS) $(LIB)
 
 mbox2dbmail:	
+
+dbtest: $(DBTEST_OBJECTS) dbtest.c db.h
+	$(CC) $(CFLAGS) dbtest.c -o dbtest $(DBTEST_OBJECTS) $(LIBS) $(LIB)
 
 list.o: list.h debug.h
 debug.o: debug.h
@@ -81,9 +85,9 @@ bounce.o:bounce.h list.h debug.h
 imap4.o: imap4.h db.h debug.h serverservice.h imaputil.h imapcommands.h
 imaputil.o: imaputil.h db.h memblock.h debug.h dbmailtypes.h
 imapcommands.o: imapcommands.h imaputil.h imap4.h db.h memblock.h debug.h dbmailtypes.h
+serverservice.o: serverservice.h debug.h
 smtp.o: smtp.h db.h debug.h serverservice.h smtpcommands.h memblock.h
 smtpcommands.o: smtpcommands.h db.h debug.h dbmailtypes.h memblock.h
-serverservice.o: serverservice.h debug.h
 maintenance.o: maintenance.h debug.h
 settings.o: settings.h debug.h
 user.o: user.h debug.h

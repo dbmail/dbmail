@@ -5,7 +5,8 @@
  * Functions for connecting and talking to the PostgreSQL database */
 
 #include "../db.h"
-#include "/usr/local/pgsql/include/libpq-fe.h"
+/*#include "/usr/local/pgsql/include/libpq-fe.h"*/
+#include "/usr/include/postgresql/libpq-fe.h"
 #include "../config.h"
 #include "../pop3.h"
 #include "../list.h"
@@ -94,46 +95,33 @@ u64_t db_insert_result (const char *sequence_identifier)
  */
 int db_query (const char *thequery)
 {
-  unsigned int querysize = 0;
   int PQresultStatusVar;
 
   if (thequery != NULL)
     {
-      querysize = strlen(thequery);
+      trace(TRACE_DEBUG, "db_query(): executing query [%s]", thequery);
+      res = PQexec (conn, thequery);
 
-      if (querysize > 0 )
-        {
-	  trace(TRACE_DEBUG, "db_query(): executing query [%s]", thequery);
-	  res = PQexec (conn, thequery);
+      if (!res)
+	return -1;
+      
+      PQresultStatusVar = PQresultStatus (res);
 
-	  if (!res)
-            {
-	      return -1;
-            }
+      if (PQresultStatusVar != PGRES_COMMAND_OK && PQresultStatusVar != PGRES_TUPLES_OK)
+	{
+	  trace(TRACE_ERROR,"db_query(): Error executing query [%s] : [%s]\n", 
+		thequery, PQresultErrorMessage(res));
 
-	  PQresultStatusVar = PQresultStatus (res);
-
-	  if (PQresultStatusVar != PGRES_COMMAND_OK && PQresultStatusVar != PGRES_TUPLES_OK)
-            {
-	      trace(TRACE_ERROR,"db_query(): Error executing query [%s] : [%s]\n", 
-		    thequery, PQresultErrorMessage(res));
-
-	      PQclear(res);
-	      return -1;
-            }
-
-	  /* only save the result set for SELECT queries */
-	  if (strncasecmp(thequery, "SELECT", 6) != 0)
-	    {
-	      PQclear(res);
-	      res = NULL;
-	    }
-        }
-      else
-        {
-	  trace (TRACE_ERROR,"db_query(): query size is too small");
+	  PQclear(res);
 	  return -1;
-        }
+	}
+
+      /* only save the result set for SELECT queries */
+      if (strncasecmp(thequery, "SELECT", 6) != 0)
+	{
+	  PQclear(res);
+	  res = NULL;
+	}
     }
   else
     {
