@@ -16,7 +16,7 @@ $(AUTHOBJECT) config.o
 INJECTOR_OBJECTS = list.o debug.o $(DBOBJECT) dbmd5.o md5.o $(AUTHOBJECT) mime.o config.o
 UNIONE_OBJECTS = list.o debug.o $(DBOBJECT) dbmd5.o md5.o $(AUTHOBJECT) mime.o config.o
 MINI_OBJECTS = debug.o $(DBOBJECT) list.o dbmd5.o md5.o $(AUTHOBJECT) mime.o config.o
-POP_OBJECTS = pop3.o list.o debug.o $(DBOBJECT) dbmd5.o md5.o mime.o misc.o memblock.o $(AUTHOBJECT) config.o
+POP_OBJECTS = pop3.o server.o serverchild.o list.o debug.o $(DBOBJECT) dbmd5.o md5.o mime.o misc.o memblock.o $(AUTHOBJECT) config.o
 IMAP_OBJECTS = imap4.o debug.o $(DBOBJECT) server.o serverchild.o list.o dbmd5.o md5.o imaputil.o \
 imapcommands.o mime.o misc.o memblock.o rfcmsg.o $(MSGBUFOBJECT) $(SEARCHOBJECT) $(AUTHOBJECT) config.o
 MAINTENANCE_OBJECTS = debug.o list.o dbmd5.o md5.o $(DBOBJECT) mime.o memblock.o $(AUTHOBJECT) config.o

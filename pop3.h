@@ -28,6 +28,7 @@
 #include "debug.h"
 #include "config.h"
 #include "dbmailtypes.h"
+#include "clientinfo.h"
 
 /* processes */
 
@@ -37,9 +38,6 @@
 #define POP3_DEF_MAXCONNECT 1500
 
 /* connection */
-
-#define PORT 110  
-#define BACKLOG 10
 
 #define AUTHORIZATION 1
 #define TRANSACTION 2
@@ -62,7 +60,7 @@
 #define POP3_TOP 13
 #define POP3_END 14
 
-
-int pop3 (void *stream, char *buffer);
+int pop3 (void *stream, char *buffer, char *client_ip);
+int pop3_handle_connection (clientinfo_t *ci);
 
 #endif
