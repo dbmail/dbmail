@@ -382,15 +382,20 @@ int db_send_message_special (void *fstream, unsigned long messageidnr, long line
   while (((row = mysql_fetch_row(res))!=NULL) && ((lines>0) || (lines==-2)))
     {
       if (firstblock!=NULL)
-	nextpos=firstblock;
+		{
+			/* firstblock must be sent */
+			nextpos=firstblock;
+		}
       else
-	nextpos=row[2];
+		{
+			nextpos=row[2];
+		}
 
       lengths = mysql_fetch_lengths(res);
       rowlength = lengths[2];
 		
       /* reset our buffer */
-      *buffer='\0';
+      buffer[0]='\0';
 		
       while ((*nextpos!='\0') && (rowlength>0) && ((lines>0) || (lines==-2)))
 	{

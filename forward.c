@@ -81,24 +81,53 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
 
 		if (databasemessageid != 0)
 		{
-		trace (TRACE_DEBUG, "pipe_forward(): Sending from database id=%lu",
-				databasemessageid);
-		db_send_message_special (*((FILE **)(descriptor_temp->data)),
-			databasemessageid, -2, header, 0);
+			/* send messages directly from database
+			 * using message databasemessageid */
+			
+			trace (TRACE_INFO,"pipe_forward(): writing to pipe using dbmessage %lu",
+					databasemessageid);
+			
+			descriptor_temp = list_getstart(&descriptors);
+			while (descriptor_temp!=NULL)
+			{
+				err = ferror(*((FILE **)(descriptor_temp->data)));
+				
+				trace (TRACE_DEBUG, "pipe_forward(): ferror reports"
+					" %d, feof reports %d on descriptor %d", err,
+					feof (*((FILE **)(descriptor_temp->data))),
+					fileno(*((FILE **)(descriptor_temp->data))));
+
+				if (!err)
+				{
+					if (databasemessageid != 0)
+					{
+						db_send_message_lines (*((FILE **)(descriptor_temp->data)),
+							databasemessageid, -2);
+					}
+				}
+				descriptor_temp = descriptor_temp->nextnode;
+			}
 		}
+
 		else
+		
 		{
 			while (!feof (instream))
 			{
 				/* read in a datablock */
 				usedmem = fread (strblock, sizeof(char), READ_BLOCK_SIZE, instream);
 				
+				if (databasemessageid != 0)
+				trace(TRACE_INFO,"pipe_forward(): forwarding from database using id %lu",
+						databasemessageid);
+
+			
 				if (usedmem>0)
 				{
 					totalmem = totalmem + usedmem;
 	
 					trace (TRACE_DEBUG,"pipe_forward(): Sending block"
-							"size=%d total=%d (%d\%)", usedmem, totalmem,
+						"size=%d total=%d (%d\%)", usedmem, totalmem,
 							(100-((usedmem/totalmem)*100))); 
 					
 					descriptor_temp = list_getstart(&descriptors);
@@ -112,17 +141,25 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
 	
 					if (!err)
 					{
-						fprintf (*((FILE **)(descriptor_temp->data)),"%s",strblock);
+						if (databasemessageid != 0)
+							{
+								db_send_message_lines (*((FILE **)(descriptor_temp->data)),
+									databasemessageid, -2);
+							}
+						else
+						{
+							fprintf (*((FILE **)(descriptor_temp->data)),"%s",strblock);
+						}
 					}
 					else
 						trace (TRACE_ERROR,"pipe_forward(): error writing"
 								" to pipe");
-
+	
 					trace (TRACE_DEBUG,"pipe_forward(): wrote data to pipe");
-
+	
 					descriptor_temp = descriptor_temp->nextnode;
 					}
-
+	
 				/* resetting buffer and index */
 				strblock[0]='\0';
 				usedmem = 0;
@@ -132,35 +169,35 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
 					trace(TRACE_DEBUG,"pipe_forward(): end of instream");
 				}
 			}
-		}
-		
-		/* done forwarding */
-		trace (TRACE_DEBUG, "pipe_forward(): closing pipes");
-		descriptor_temp = list_getstart(&descriptors);
-		while (descriptor_temp != NULL)
-		{
-			if (descriptor_temp->data != NULL)
+			
+			/* done forwarding */
+			trace (TRACE_DEBUG, "pipe_forward(): closing pipes");
+			descriptor_temp = list_getstart(&descriptors);
+			while (descriptor_temp != NULL)
 			{
-				if (!ferror(*((FILE **)(descriptor_temp->data))))
+				if (descriptor_temp->data != NULL)
 				{
-					fprintf (*((FILE **)(descriptor_temp->data)),"\n.\n");
-					pclose (*((FILE **)(descriptor_temp->data)));
-					trace (TRACE_DEBUG, "pipe_forward(): descriptor_closed");
+					if (!ferror(*((FILE **)(descriptor_temp->data))))
+					{
+						fprintf (*((FILE **)(descriptor_temp->data)),"\n.\n");
+						pclose (*((FILE **)(descriptor_temp->data)));
+						trace (TRACE_DEBUG, "pipe_forward(): descriptor_closed");
+					}
+					else
+					{
+						trace (TRACE_ERROR,"pipe_forward(): error on descriptor");
+					}
 				}
 				else
 				{
-					trace (TRACE_ERROR,"pipe_forward(): error on descriptor");
+					trace (TRACE_ERROR,"pipe_forward(): descriptor value NULL"
+							" this is not supposed to happen");
 				}
+				descriptor_temp = descriptor_temp->nextnode;
 			}
-			else
-			{
-				trace (TRACE_ERROR,"pipe_forward(): descriptor value NULL"
-						" this is not supposed to happen");
-			}
-			descriptor_temp = descriptor_temp->nextnode;
+			/* freeing descriptor list */
+			list_freelist(&descriptors.start);
 		}
-		/* freeing descriptor list */
-		list_freelist(&descriptors.start);
 	}
 	else
 	{
