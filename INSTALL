@@ -71,7 +71,7 @@ What do you need?
 2. 	Set the database settings
 
 	Copy the dbmail.conf file to /etc
-	Edit the dbmai.conf file and set everything in there
+	Edit the dbmail.conf file and set everything in there
 	to your likeings.
 
 3.	Run build.sh
@@ -83,7 +83,7 @@ What do you need?
 	utility. The other way is doing it in the database itself. 
 	To do it using the dbmail-adduser utility and do the following:
 
-	dbmail-adduser <username> <password> <clientid> <maxmail> [aliases]
+	dbmail-adduser a <username> <password> <clientid> <maxmail> [aliases]
 	
 	clientid can be left 0 (this is if you want certain mailadministrators administer 
 	specific groups of mailusers). maxmail is the maximum number of bytes this user may
@@ -101,6 +101,7 @@ What do you need?
 
 5.	
 	Become root and run install-dbmail.sh, it will install the dbmail executables.
+	This is not necessary if you have installed the binaries at step 4.
 
 
 6.	Configure your MTA 
@@ -121,7 +122,7 @@ What do you need?
 
 	<domain>		dbmail:
 
-	for all domains you want dbmail to be destiation for.
+	for all domains you want dbmail to be destination for.
 	
 	Next run postmap /etc/postfix/transport
 
