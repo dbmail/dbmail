@@ -184,8 +184,15 @@ int imap_process(ClientInfo *ci)
 	    clearerr(ci->tx);
 	}
 
+      /* install timeout handler */
+      alarm(ci->timeout);
+
       /* read command line */
       fgets(line, MAX_LINESIZE, ci->rx);
+      
+      /* remove timeout handler */
+      alarm(0); 
+
       trace(TRACE_INFO,"IMAPD: line read for PID %d\n",getpid());
 
       if (!checkchars(line))
@@ -362,6 +369,8 @@ void imap_error_cleanup(ClientInfo *ci)
 
   close_cache();
   db_disconnect();
+
+  alarm(0);
 }
 
 

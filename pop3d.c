@@ -393,7 +393,7 @@ int main (int argc, char *argv[])
   sigaction(SIGSEGV, &act, 0);
   sigaction(SIGTERM, &act, 0);
   sigaction(SIGSTOP, &act, 0);
-
+  sigaction(SIGALRM, &act, 0);
 
   adr_srvr.sin_family = PF_INET; 
   

@@ -57,6 +57,8 @@ int n_default_children;
 ClientInfo client;
 int *ss_n_default_children_used;
 void (*the_client_cleanup)(ClientInfo *ci);
+int server_timeout;
+
 
 /* transmit buffer */
 #define TXBUFSIZE 1024
@@ -71,7 +73,7 @@ char *SS_GetErrorMsg()
 void SS_sighandler(int sig, siginfo_t *info, void *data);
 
 
-int SS_MakeServerSock(const char *ipaddr, const char *port, int default_children)
+int SS_MakeServerSock(const char *ipaddr, const char *port, int default_children, int timeout)
 {
   int sock,r,len;
   struct sockaddr_in saServer;
@@ -159,7 +161,10 @@ int SS_MakeServerSock(const char *ipaddr, const char *port, int default_children
 
   n_default_children = default_children;
 
-  snprintf(ss_error_msg,SS_ERROR_MSG_LEN,"Server socket has been created.");
+  /* save timeout value */
+  server_timeout = (timeout < SS_MINIMAL_TIMEOUT) ? SS_DEFAULT_TIMEOUT : timeout;
+
+  snprintf(ss_error_msg,SS_ERROR_MSG_LEN,"Server socket has been created.\n");
   return sock;
 }
 
@@ -204,6 +209,7 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
   sigaction(SIGSEGV, &act, 0);
   sigaction(SIGTERM, &act, 0);
   sigaction(SIGSTOP, &act, 0);
+  sigaction(SIGALRM, &act, 0);
 
   /* daemonize */
   if (daemonize)
@@ -308,11 +314,10 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 		}
 
 	      setlinebuf(client.tx);
-	      /*	  setlinebuf(client.rx);
-	       */
-	      setvbuf(client.tx, txbuf, _IONBF, 1);
+	      setvbuf(client.tx, txbuf, _IOFBF, TXBUFSIZE);
 
-	  
+	      client.timeout = server_timeout; /* remember timeout */
+
 #if LOG_USERS > 0
 	      trace(TRACE_MESSAGE,"IMAPD [PID %d]: client @ socket %d (IP: %s) accepted\n",
 		    getpid(), csock, inet_ntoa(saClient.sin_addr));
@@ -349,6 +354,7 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 
 	      /* handle client */
 	      (*ClientHandler)(&client); 
+	      alarm(0);           /* remove any installed timeout-alarms */
 
 #if LOG_USERS > 0
 	      trace(TRACE_MESSAGE,"IMAPD [PID %d]: client @ socket %d (IP: %s) logged out, "
@@ -449,11 +455,9 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 		    }
 
 		  setlinebuf(client.tx);
-		  /*	      setlinebuf(client.rx);
-		   */
+		  setvbuf(client.tx, txbuf, _IOFBF, TXBUFSIZE);
 
-		  setvbuf(client.tx, txbuf, _IONBF, 1);
-
+		  client.timeout = server_timeout; /* remember timeout */
 
 #if LOG_USERS > 0
 		  trace(TRACE_MESSAGE,"IMAPD [PID %d]: client @ socket %d (IP: %s) accepted\n",
@@ -486,6 +490,7 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 
 		  /* handle client */
 		  (*ClientHandler)(&client); 
+		  alarm(0);                   /* remove any installed timeout-alarms */
 
 #if LOG_USERS > 0
 		  trace(TRACE_MESSAGE,"IMAPD [PID %d]: client @ socket %d (IP: %s) logged out, "
@@ -534,6 +539,36 @@ void SS_sighandler(int sig, siginfo_t *info, void *data)
   pid_t PID;
   int status;
   int i;
+
+  if (sig == SIGALRM && client.tx)
+    {
+      /* timeout occurred, close client, terminate process */
+      fprintf(client.tx, "* BYE dbmail IMAP4 server signing off due to timeout\r\n");
+
+      /* close streams */
+      if (client.tx && client.rx)
+	{
+	  fflush(client.tx);
+	  fclose(client.tx);
+	  shutdown(fileno(client.rx),SHUT_RDWR);
+	  fclose(client.rx);
+
+	  (*the_client_cleanup)(&client);
+
+	  memset(&client, 0, sizeof(client));
+	}
+
+      /* reset the entry of this process if it is a default child (so it can be restored) */
+      for (i=0; i<n_default_children && default_child_pids; i++)
+	if (getpid() == default_child_pids[i])
+	  {
+	    default_child_pids[i] = 0;
+	    (*ss_n_default_children_used)--;
+	    break;
+	  }
+
+      exit(0);
+    }
 
   if (sig != SIGCHLD)
     {

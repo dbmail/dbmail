@@ -19,9 +19,9 @@
 int main()
 {
   int sock,d;
-  char *newuser,*newgroup,*port,*bindip,*defchld,*maxchld,*daem;
+  char *newuser,*newgroup,*port,*bindip,*defchld,*maxchld,*daem,*to;
   char *trace_level,*trace_syslog,*trace_verbose;
-  int new_level = 2, new_trace_syslog = 1, new_trace_verbose = 0;
+  int new_level = 2, new_trace_syslog = 1, new_trace_verbose = 0, timeout = 0;
 
   /* open logs */
   openlog(PNAME, LOG_PID, LOG_MAIL);
@@ -36,6 +36,7 @@ int main()
   defchld = db_get_config_item("IMAPD_DEFAULT_CHILD",CONFIG_MANDATORY);
   maxchld = db_get_config_item("IMAPD_MAX_CHILD",CONFIG_MANDATORY);
   daem = db_get_config_item("IMAPD_DAEMONIZES", CONFIG_EMPTY);
+  to =  db_get_config_item("IMAPD_CHILD_TIMEOUT", CONFIG_EMPTY);
 
   trace_level = db_get_config_item("TRACE_LEVEL", CONFIG_EMPTY);
   trace_syslog = db_get_config_item("TRACE_TO_SYSLOG", CONFIG_EMPTY);
@@ -57,6 +58,13 @@ int main()
   else
     d = 0;
 
+  if (to)
+    {
+      timeout = atoi(to);
+      free(to);
+      to = NULL;
+    }
+  
   if (trace_level)
     {
       new_level = atoi(trace_level);
@@ -82,7 +90,7 @@ int main()
 
   
   /* open socket */
-  sock = SS_MakeServerSock(bindip, port, atoi(defchld));
+  sock = SS_MakeServerSock(bindip, port, atoi(defchld), timeout);
 
   free(port);
   free(bindip);

@@ -159,6 +159,9 @@ int _ic_login(char *tag, char **args, ClientInfo *ci)
       trace(TRACE_MESSAGE, "IMAPD [PID %d]: user (name %s) login rejected @ %s\r\n",
 	    getpid(),args[0],timestr);
       fprintf(ci->tx, "%s NO login rejected\r\n",tag);
+
+      sleep(1);  /* security */
+      
       return 1;
     }
 
@@ -209,14 +212,22 @@ int _ic_authenticate(char *tag, char **args, ClientInfo *ci)
   base64encode("username\r\n",buf);
   fprintf(ci->tx,"+ %s\r\n",buf);
   fflush(ci->tx);
+  
+  alarm(ci->timeout);
   fgets(buf, MAX_LINESIZE, ci->rx);
+  alarm(0);
+
   base64decode(buf, username);
 
   /* ask for password */
   base64encode("password\r\n",buf);
   fprintf(ci->tx,"+ %s\r\n",buf);
   fflush(ci->tx);
+
+  alarm(ci->timeout);
   fgets(buf, MAX_LINESIZE, ci->rx);
+  alarm(0);
+
   base64decode(buf,pass);
   
 
@@ -1290,7 +1301,7 @@ int _ic_append(char *tag, char **args, ClientInfo *ci)
   int i,internal_date_idx=-1,dataidx,result;
   char *msgdata;
 
-  if (!args[0])
+  if (!args[0] || !args[1])
     {
       fprintf(ci->tx,"%s BAD invalid arguments specified to APPEND\r\n", tag);
       return 1;
@@ -1338,6 +1349,7 @@ int _ic_append(char *tag, char **args, ClientInfo *ci)
       return 1;
     }
 
+
   if (args[i][0] != '{')
     {
       /* internal date specified */
@@ -1345,6 +1357,13 @@ int _ic_append(char *tag, char **args, ClientInfo *ci)
       i++;
       trace(TRACE_DEBUG, "ic_append(): internal date [%s] found, next arg [%s]\n",
 	    args[i-1], args[i]);
+    }
+
+  if (!args[i])
+    {
+      trace(TRACE_INFO,"ic_append(): unexpected end of arguments\n");
+      fprintf(ci->tx,"%s BAD invalid arguments specified to APPEND\r\n", tag);
+      return 1;
     }
 
 
@@ -1370,11 +1389,15 @@ int _ic_append(char *tag, char **args, ClientInfo *ci)
       fprintf(ci->tx,"* BYE server ran out of memory\r\n");
       return -1;
     }
+  memset(msgdata, 0, (literal_size+1));
 
   trace(TRACE_DEBUG,"ok fetching message, %lu bytes:\n",literal_size);
 
   fprintf(ci->tx,"+ OK gimme that message boy\r\n");
   fflush(ci->tx);
+
+  /* set timeout alarm */
+  alarm(ci->timeout);
 
   for (cnt=0,dataidx=0; cnt < literal_size && !feof(ci->rx); cnt++)
     {
@@ -1388,8 +1411,8 @@ int _ic_append(char *tag, char **args, ClientInfo *ci)
 
   msgdata[dataidx++] = 0;   /* terminate */
 
-  trace(TRACE_DEBUG, "\nTrying to fetch another char... got %02X\n", fgetc(ci->rx));
-  
+  alarm(0); /* clear alarm */
+
   /* insert this msg */
   result = db_imap_append_msg(msgdata, dataidx, mboxid, ud->userid);
   switch (result)
@@ -1476,6 +1499,7 @@ int _ic_close(char *tag, char **args, ClientInfo *ci)
 int _ic_expunge(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
+  mailbox_t newmailbox;
   unsigned long *msgids;
   int nmsgs,i,idx,result;
 
@@ -1508,9 +1532,13 @@ int _ic_expunge(char *tag, char **args, ClientInfo *ci)
 
   /* update mailbox info */
   i = 0;
+
+  memset(&newmailbox, 0, sizeof(newmailbox));
+  newmailbox.uid = ud->mailbox.uid;
+
   do
     {
-      result = db_getmailbox(&ud->mailbox, ud->userid);
+      result = db_getmailbox(&newmailbox, ud->userid);
     } while (result == 1 && i++<MAX_RETRIES);
 
   if (result == 1)
@@ -1525,6 +1553,13 @@ int _ic_expunge(char *tag, char **args, ClientInfo *ci)
       return -1; /* fatal  */
     }
 
+  if (newmailbox.exists != ud->mailbox.exists)
+    fprintf(ci->tx,"* %d EXISTS\r\n", newmailbox.exists);
+  
+  if (newmailbox.recent != ud->mailbox.recent)
+    fprintf(ci->tx, "* %d RECENT\r\n", newmailbox.recent);
+
+  memcpy(&ud->mailbox, &newmailbox, sizeof(newmailbox));
 
   fprintf(ci->tx,"%s OK EXPUNGE completed\r\n",tag);
   return 0;
@@ -2424,7 +2459,7 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
   char *endptr;
-  int i,store_start,store_end,result,j;
+  int i,store_start,store_end,result,j,fn;
   int be_silent=0,action=IMAPFA_NONE;
   int flaglist[IMAP_NFLAGS];
   unsigned long thisnum;
@@ -2566,12 +2601,12 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
 	  if (imapcommands_use_uid)
 	    {
 	      /* check if the message with this UID belongs to this mailbox */
-	      if (!db_mailbox_msg_match(ud->mailbox.uid, thisnum))
-		continue;
+	      fn = binary_search(ud->mailbox.seq_list, ud->mailbox.exists, i);
+	      if (fn == -1)
+		continue; 
 
 	      if (!be_silent)
-		fprintf(ci->tx,"* %d FETCH (FLAGS (", 
-			binary_search(ud->mailbox.seq_list, ud->mailbox.exists, i)+1);
+		fprintf(ci->tx,"* %d FETCH (FLAGS (", fn+1);
 	    }
 	  else if (!be_silent)
 	      fprintf(ci->tx,"* %d FETCH (FLAGS (",i+1);
@@ -2646,7 +2681,7 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
 int _ic_copy(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
-  int i,copy_start,copy_end,result;
+  int i,copy_start,copy_end,result,fn;
   unsigned long destmboxid,thisnum;
   char *endptr;
 
@@ -2734,9 +2769,9 @@ int _ic_copy(char *tag, char **args, ClientInfo *ci)
 	  if (imapcommands_use_uid)
 	    {
 	      /* check if the message with this UID belongs to this mailbox */
-	      if (!db_mailbox_msg_match(ud->mailbox.uid, thisnum))
-		continue;
-
+	      fn = binary_search(ud->mailbox.seq_list, ud->mailbox.exists, i);
+	      if (fn == -1)
+		continue; 
 	    }
 
 	  result = db_copymsg(thisnum, destmboxid);
