@@ -34,6 +34,7 @@
 #define PACKAGE "dbmail"
 #endif
 
+#include <glib.h>
 #include "list.h"
 
 /* Define several macros for GCC specific attributes.

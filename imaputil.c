@@ -37,6 +37,7 @@
 #include <ctype.h>
 #include <unistd.h>
 #include <errno.h>
+#include "dbmail.h"
 #include "imaputil.h"
 #include "imap4.h"
 #include "debug.h"
@@ -86,6 +87,84 @@ const char *envelope_items[] = {
 	"from", "sender", "reply-to", "to", "cc", "bcc", NULL
 };
 
+/*
+ *
+ *
+ *  Some basic string handling utilities
+ *
+ *
+ *
+ */
+GString * g_list_join(GList * list, char * sep)
+{
+	GString *string = g_string_new("");
+	if (sep == NULL)
+		sep="";
+	if (list == NULL)
+		return string;
+	list = g_list_first(list);
+	string = g_string_append(string, (gchar *)list->data);
+	while((list = g_list_next(list))) {
+		string = g_string_append(string,sep);
+		string = g_string_append(string,(gchar *)list->data);
+	}
+	return string;	
+}
+
+GList * g_string_split(GString * string, char * sep)
+{
+	GList * list = NULL;
+	char **array = (char **)g_strsplit((const gchar *)string->str, (const gchar *)sep,0);
+	int i, len = 0;
+	while(array[len++]);
+	len--;
+	for (i=0; i<len; i++)
+		list = g_list_append(list,g_strdup(array[i]));
+	g_strfreev(array);
+	return list;
+}
+/*
+ * append a formatted GString to a GList
+ */
+GList * g_list_append_printf(GList * list, char * format, ...)
+{
+	char *str = (char *)my_malloc(sizeof(char) * BUFLEN);
+	va_list argp;
+	va_start(argp, format);
+	vsnprintf(str, sizeof(char) * BUFLEN, format, argp);
+	list = g_list_append(list, strdup(str));
+	my_free(str);
+	return list;
+}
+
+/* some basic imap type utils */
+
+/*
+ *  build a parentisized list (4.4) from a GList
+ */
+GString *dbmail_imap_plist_as_string(GList * list)
+{
+	GString * tmp = g_list_join(list, " ");
+	g_strstrip(tmp->str);
+	g_string_printf(tmp,"(%s)", g_strdup(tmp->str));
+	return tmp;
+}
+/* 
+ * return a quoted or literal astring
+ */
+
+GString *dbmail_imap_astring_as_string(const char *s)
+{
+	int i;
+	GString * tmp = g_string_new("");
+	g_string_printf(tmp, "\"%s\"", s); // fallback to quoted "string"
+	// but check whether we must use literal string {octets}\r\nstring
+	for (i = 0; s[i]; i++) {
+		if ( !(s[i] & 0xe0) || (s[i] & 0x80) || (s[i] == '"') || (s[i] == '\\')) 
+			g_string_printf(tmp, "{%lu}\r\n%s", (unsigned long) strlen(s), s);
+	}
+	return tmp;
+}
 /* 
  * retrieve_structure()
  *

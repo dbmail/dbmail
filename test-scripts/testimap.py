@@ -98,8 +98,10 @@ class testImapServer(unittest.TestCase):
         'create(mailbox)'
             Create new mailbox named MAILBOX.
         """
-        self.assertEquals(self.o.create('testcreate'),('OK',['CREATE completed']))
-        self.o.delete('testcreate')
+        self.assertEquals(self.o.create('test create'),('OK',['CREATE completed']))
+        print self.o.create("dir1")
+        print self.o.list()
+        #self.o.delete('test create')
 
     def testDelete(self):
         """ 
@@ -350,6 +352,8 @@ class testImapServer(unittest.TestCase):
         status(mailbox, names)
             Request named status conditions for MAILBOX.
         """
+        self.o.create("test status");
+        print self.o.status("test status",'(UIDNEXT UIDVALIDITY MESSAGES UNSEEN RECENT)');
         self.assertEquals(self.o.status('INBOX','(UIDNEXT MESSAGES UNSEEN RECENT)')[0],'OK')
 
 

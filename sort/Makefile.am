@@ -20,7 +20,7 @@ pkglib_LTLIBRARIES = libsortdbmail.la
 
 if SIEVE
 libsortdbmail_la_SOURCES = sort.c sortsieve.c
-CFLAGS += -DSIEVE
+AM_CFLAGS += -DSIEVE
 else
 libsortdbmail_la_SOURCES = sort.c
 endif

@@ -25,9 +25,6 @@
 #define STATE_CONNECTED 1
 #define STATE_WAIT 2
 
-#define TRUE 1
-#define FALSE 0
-
 #define SCOREBOARD_LOCK_FILE "/tmp/dbmail_scoreboard.LCK"
 
 #define scoreboard_rdlck() set_lock(F_RDLCK)

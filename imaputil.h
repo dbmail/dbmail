@@ -26,6 +26,8 @@
 #ifndef _IMAPUTIL_H
 #define _IMAPUTIL_H
 
+#include "dbmail.h"
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -95,5 +97,12 @@ void dumpsearch(search_key_t * sk, int level);
 
 int init_cache(void);
 void close_cache(void);
+
+GString * dbmail_imap_astring_as_string(const char *s);
+GString * dbmail_imap_plist_as_string(GList *plist);
+
+GString * g_list_join(GList * list, char * sep);
+GList * g_string_split(GString * string, char * sep);
+GList * g_list_append_printf(GList * list, char * format, ...);
 
 #endif

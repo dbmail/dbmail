@@ -1444,28 +1444,24 @@ int _ic_status(char *tag, char **args, ClientInfo * ci)
 	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
 	mailbox_t mb;
 	int i, endfound, result;
-	char response[255];
-	char a[32];
-
+	GString *tmp1 = g_string_new("");
+	GString *tmp2 = g_string_new("");
+	GString *response = g_string_new("");
+	GList *plst = NULL;
 	
 	if (ud->state != IMAPCS_AUTHENTICATED
 	    && ud->state != IMAPCS_SELECTED) {
-		ci_write(ci->tx,
-			"%s BAD STATUS command received in invalid state\r\n",
-			tag);
+		ci_write(ci->tx, "%s BAD STATUS command received in invalid state\r\n", tag);
 		return 1;
 	}
 
 	if (!args[0] || !args[1] || !args[2]) {
-		ci_write(ci->tx, "%s BAD missing argument(s) to STATUS\r\n",
-			tag);
+		ci_write(ci->tx, "%s BAD missing argument(s) to STATUS\r\n", tag);
 		return 1;
 	}
 
 	if (strcmp(args[1], "(") != 0) {
-		ci_write(ci->tx,
-			"%s BAD argument list should be parenthesed\r\n",
-			tag);
+		ci_write(ci->tx, "%s BAD argument list should be parenthesed\r\n", tag);
 		return 1;
 	}
 
@@ -1477,9 +1473,7 @@ int _ic_status(char *tag, char **args, ClientInfo * ci)
 		}
 
 		if (strcmp(args[i], "(") == 0) {
-			ci_write(ci->tx,
-				"%s BAD too many parentheses specified\r\n",
-				tag);
+			ci_write(ci->tx, "%s BAD too many parentheses specified\r\n", tag);
 			return 1;
 		}
 	}
@@ -1506,8 +1500,7 @@ int _ic_status(char *tag, char **args, ClientInfo * ci)
 
 	if (mb.uid == 0) {
 		/* mailbox does not exist */
-		ci_write(ci->tx,
-			"%s NO specified mailbox does not exist\r\n", tag);
+		ci_write(ci->tx, "%s NO specified mailbox does not exist\r\n", tag);
 		return 1;
 	}
 
@@ -1517,9 +1510,7 @@ int _ic_status(char *tag, char **args, ClientInfo * ci)
 		return -1;
 	}
 	if (result == 0) {
-		ci_write(ci->tx,
-			"%s NO no rights to get status for mailbox\r\n",
-			tag);
+		ci_write(ci->tx, "%s NO no rights to get status for mailbox\r\n", tag);
 		return 1;
 	}
 
@@ -1530,23 +1521,19 @@ int _ic_status(char *tag, char **args, ClientInfo * ci)
 		ci_write(ci->tx, "* BYE internal dbase error\r\n");
 		return -1;	/* fatal  */
 	}
-	
-	snprintf(response,255, "* STATUS %s (", args[0]);
 	for (i = 2; args[i]; i++) {
-		if ((i > 2) && strcasecmp(args[i], ")"))
-			strncat(response, " ", 255 - strlen(response) - 1);
 		if (strcasecmp(args[i], "messages") == 0)
-			snprintf(a,32, "MESSAGES %u", mb.exists);
+			plst = g_list_append_printf(plst,"MESSAGES %u", mb.exists);
 		else if (strcasecmp(args[i], "recent") == 0)
-			snprintf(a,32, "RECENT %u", mb.recent);
+			plst = g_list_append_printf(plst,"RECENT %u", mb.recent);
 		else if (strcasecmp(args[i], "unseen") == 0)
-			snprintf(a,32, "UNSEEN %u", mb.unseen);
-		else if (strcasecmp(args[i], "uidnext") == 0)
-			snprintf(a,32, "UIDNEXT %llu", mb.msguidnext);
-		else if (strcasecmp(args[i], "uidvalidity") == 0)
-			snprintf(a,32, "UIDVALIDITY %llu", mb.uid);
-		else if (strcasecmp(args[i], ")") == 0)
-			break;	/* done */
+			plst = g_list_append_printf(plst,"UNSEEN %u", mb.unseen);
+		else if (strcasecmp(args[i], "uidnext") == 0) {
+			plst = g_list_append_printf(plst,"UIDNEXT %llu", mb.msguidnext);
+		} else if (strcasecmp(args[i], "uidvalidity") == 0) {
+			plst = g_list_append_printf(plst,"UIDVALIDITY %llu", mb.uid);
+		} else if (strcasecmp(args[i], ")") == 0)
+			break;
 		else {
 			ci_write(ci->tx,
 				"\r\n%s BAD unrecognized option '%s' specified\r\n",
@@ -1554,14 +1541,22 @@ int _ic_status(char *tag, char **args, ClientInfo * ci)
 			my_free(mb.seq_list);
 			return 1;
 		}
-		strncat(response, a, 255 - strlen(response) - 1);
 	}
-	strncat(response, ")\r\n", 255 - strlen(response) - 1);
-	trace(TRACE_DEBUG,"%s,%s: RESPONSE [ %s ]", __FILE__, __func__, response);
-	ci_write(ci->tx, "%s", response);
+	tmp1 = dbmail_imap_astring_as_string(args[0]);
+	tmp2 = dbmail_imap_plist_as_string(plst);
+	g_string_printf(response, "* STATUS %s %s\r\n", 
+			tmp1->str, tmp2->str);
+			
+	trace(TRACE_DEBUG,"%s,%s: RESPONSE [ %s ]", __FILE__, __func__, response->str);
+	ci_write(ci->tx, "%s", response->str);
 	ci_write(ci->tx, "%s OK STATUS completed\r\n", tag);
 
 	my_free(mb.seq_list);
+	g_list_foreach(plst,(GFunc)g_free,NULL);
+	g_list_free(plst);
+	g_string_free(response,1);
+	g_string_free(tmp1,1);
+	g_string_free(tmp2,1);
 	return 0;
 }
 

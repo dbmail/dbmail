@@ -1,3 +1,11 @@
+2004-10-04  Paul Stevens <paul@nfg.nl>
+
+	* dbmail.h: add include glib.h
+	* imapcommands.c (_ic_status): refactored with glib
+	* imaputil.c, imaputil.h: added several glib based utility functions.
+	* pool.h: removed overloaded boolean defines.
+	* sort/Makefile.am: set CFLAGS to AM_CFLAGS.
+
 2004-09-20  Ilja Booij  <ilja@ic-s.nl>
 
 	* pool.c (child_reg_disconnected): trace message to TRACE_DEBUG
