@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
 	for (i = 5; i<argc; i++)
 	{
 		printf ("Adding alias %s...",argv[i]);
-		if (db_addalias(useridnr,argv[i],atoi(argv[3])==-1)
+		if (db_addalias(useridnr,argv[i],atoi(argv[3]))==-1)
 			printf ("Failed\n");
 		else
 			printf ("Ok, added\n");
