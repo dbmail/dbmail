@@ -688,6 +688,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 							stream,
 							"500 Error reading header, "
 							"header too big.\r\n");
+						my_free(whole_message);
 						return 1;
 					}
 					/* Parse the list and scan for field and content */
@@ -701,6 +702,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 								     instream);
 						ci_write((FILE *) stream,
 							"500 Error reading header.\r\n");
+						my_free(whole_message);
 						return 1;
 					}
 

@@ -1,5 +1,8 @@
 2004-08-02  Ilja Booij  <ilja@ic-s.nl>
 
+	* lmtp.c (lmtp): my_free(whole_message) added if (headersize > READ_BLOCK_SIZE)
+	(lmtp): my_free(whole_message) added if (mime_readheader() < 0)
+
 	* server.c (StartServer): changed malloc() to my_malloc()
 	(StartServer):free() -> my_free()
 	
