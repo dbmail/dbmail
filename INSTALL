@@ -90,7 +90,7 @@ If you follow the steps below you'll have DBMAIL running in no-time.
 7.	In the master.cf file for postfix add the following:
 	
 	dbmail    unix  -       n       n       -       -       pipe
-	    flags=  user=dbmail:dbmail argv=/usr/local/bin/dbmail-smtp -d ${recipient}
+	    flags=  user=dbmail:dbmail argv=/usr/local/sbin/dbmail-smtp -d ${recipient}
 
 	at the user= field you can add any user that is allowed to run dbmail-smtp. 
 	I suggest adding a user dbmail with a group dbmail and have all dbmail programs 
