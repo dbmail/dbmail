@@ -15,7 +15,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: dbmail 1.1-1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2003-11-03 14:15+0100\n"
+"POT-Creation-Date: 2003-12-03 12:52+0100\n"
 "PO-Revision-Date: 2003-10-02 16:44+0100\n"
 "Last-Translator: Christian Perrier <bubulle@debian.org>\n"
 "Language-Team: French <debian-l10n-french@lists.debian.org>\n"
@@ -147,26 +147,16 @@ msgstr ""
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:49
-msgid "Start the IMAP server after reboot?"
-msgstr "Faut-il lancer le serveur IMAP au démarrage ?"
-
-#. Type: boolean
-#. Description
-#: ../dbmail.templates:49
-msgid "Do you want to start the IMAP service after a reboot?"
-msgstr "Faut-il lancer le service IMAP au démarrage ?"
-
-#. Type: boolean
-#. Description
-#: ../dbmail.templates:57
-msgid "Start the POP3 server after reboot?"
+#, fuzzy
+msgid "start the imap server after reboot?"
 msgstr "Faut-il lancer le serveur POP3 au démarrage ?"
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:57
+#: ../dbmail.templates:49
+#, fuzzy
 msgid ""
-"Dbmail supports both IMAP and POP3 services. You can choose to run either "
+"Dbmail supports both imap and pop3 services. You can choose to run either "
 "one or both services."
 msgstr ""
 "Dbmail gère à la fois les services IMAP et POP3. Vous pouvez choisir "
@@ -174,8 +164,34 @@ msgstr ""
 
 #. Type: boolean
 #. Description
+#: ../dbmail.templates:49
+#, fuzzy
+msgid "Do you want to start the imap service after a reboot?"
+msgstr "Faut-il lancer le service IMAP au démarrage ?"
+
+#. Type: boolean
+#. Description
 #: ../dbmail.templates:57
-msgid "Do you want to start the POP3 service after a reboot?"
+#, fuzzy
+msgid "start the pop3 server after reboot?"
+msgstr "Faut-il lancer le serveur POP3 au démarrage ?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:57
+#, fuzzy
+msgid ""
+"Dbmail support both imap and pop3 services. You can choose to run either one "
+"or both services."
+msgstr ""
+"Dbmail gère à la fois les services IMAP et POP3. Vous pouvez choisir "
+"d'utiliser l'un ou l'autre de ces services, ou les deux."
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:57
+#, fuzzy
+msgid "Do you want to start the pop3 service after a reboot?"
 msgstr "Faut-il lancer le service POP3 au démarrage ?"
 
 #. Type: boolean
@@ -187,9 +203,10 @@ msgstr "Faut-il lancer l'enveloppe stunnel SSL depuis le script de démarrage ?"
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:65
+#, fuzzy
 msgid ""
-"The stunnel SSL wrapper allows you to provide secure IMAP and POP services "
-"even though dbmail doesn't support neither IMAPS nor POP3S (yet)."
+"The stunnel SSL wrapper allows you to provide secure imap and pop services "
+"even though dbmail doesn't support neither imaps nor pop3s (yet)."
 msgstr ""
 "L'enveloppe stunnel SSL (« stunnel SSL wrapper ») permet la mise en place de "
 "services IMAP et POP3 sécurisés bien que dbmail ne gère pas (encore) les "
@@ -231,3 +248,6 @@ msgid ""
 msgstr ""
 "Veuillez consulter le fichier /usr/share/doc/stunnel/README.Debian pour des "
 "détails sur la génération de ce fichier."
+
+#~ msgid "Start the IMAP server after reboot?"
+#~ msgstr "Faut-il lancer le serveur IMAP au démarrage ?"

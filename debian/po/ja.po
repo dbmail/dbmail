@@ -16,7 +16,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: dbmail 1.2.9-1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2003-11-03 14:15+0100\n"
+"POT-Creation-Date: 2003-12-03 12:52+0100\n"
 "PO-Revision-Date: 2004-11-03 01:43+0900\n"
 "Last-Translator: Hideki Yamane <henrich@samba.gr.jp>\n"
 "Language-Team: Japanese <debian-japanese@lists.debian.org>\n"
@@ -144,26 +144,16 @@ msgstr "これは、dbmail がデータベースサーバに接続するのに使うパスワードです。"
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:49
-msgid "Start the IMAP server after reboot?"
-msgstr "再起動後に IMAP サーバを起動しますか?"
-
-#. Type: boolean
-#. Description
-#: ../dbmail.templates:49
-msgid "Do you want to start the IMAP service after a reboot?"
-msgstr "再起動後に IMAP サービスを開始しますか?"
-
-#. Type: boolean
-#. Description
-#: ../dbmail.templates:57
-msgid "Start the POP3 server after reboot?"
+#, fuzzy
+msgid "start the imap server after reboot?"
 msgstr "再起動後に POP3 サーバを起動しますか?"
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:57
+#: ../dbmail.templates:49
+#, fuzzy
 msgid ""
-"Dbmail supports both IMAP and POP3 services. You can choose to run either "
+"Dbmail supports both imap and pop3 services. You can choose to run either "
 "one or both services."
 msgstr ""
 "dbmail は IMAP と POP3 の両方のサービスをサポートしています。どちらか、もしく"
@@ -171,8 +161,34 @@ msgstr ""
 
 #. Type: boolean
 #. Description
+#: ../dbmail.templates:49
+#, fuzzy
+msgid "Do you want to start the imap service after a reboot?"
+msgstr "再起動後に IMAP サービスを開始しますか?"
+
+#. Type: boolean
+#. Description
 #: ../dbmail.templates:57
-msgid "Do you want to start the POP3 service after a reboot?"
+#, fuzzy
+msgid "start the pop3 server after reboot?"
+msgstr "再起動後に POP3 サーバを起動しますか?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:57
+#, fuzzy
+msgid ""
+"Dbmail support both imap and pop3 services. You can choose to run either one "
+"or both services."
+msgstr ""
+"dbmail は IMAP と POP3 の両方のサービスをサポートしています。どちらか、もしく"
+"は両方のサービスの起動を選択できます。"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:57
+#, fuzzy
+msgid "Do you want to start the pop3 service after a reboot?"
 msgstr "再起動後に POP3 サービスを開始しますか?"
 
 #. Type: boolean
@@ -184,9 +200,10 @@ msgstr "起動スクリプトで stunnel SSL ラッパーを呼び出しますか?"
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:65
+#, fuzzy
 msgid ""
-"The stunnel SSL wrapper allows you to provide secure IMAP and POP services "
-"even though dbmail doesn't support neither IMAPS nor POP3S (yet)."
+"The stunnel SSL wrapper allows you to provide secure imap and pop services "
+"even though dbmail doesn't support neither imaps nor pop3s (yet)."
 msgstr ""
 "stunnel SSL ラッパーは、dbmail が IMAPS または POP3S を (まだ) 提供していなく"
 "ても、セキュアな IMAP・POP サービスを提供可能にしてくれます。"
@@ -227,3 +244,6 @@ msgid ""
 msgstr ""
 "このファイルの作り方については /usr/share/doc/stunnel/README.Debian を参照し"
 "てください。"
+
+#~ msgid "Start the IMAP server after reboot?"
+#~ msgstr "再起動後に IMAP サーバを起動しますか?"
