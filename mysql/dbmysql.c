@@ -1,6 +1,8 @@
 /*
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 
+ Modified 2004 by Mikhail Ramendik mr@ramendik.ru (MR)
+
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
  as published by the Free Software Foundation; either 
@@ -48,6 +50,11 @@ static MYSQL_RES *res = NULL; /**< MySQL result set */
 static MYSQL_RES *msgbuf_res = NULL; /**< MySQL result set for msgbuf */
 static MYSQL_RES *stored_res = NULL; /**< MySQL result set backup */
 static MYSQL_ROW last_row; /**< MySQL result row */
+
+/* Additions by MR */
+
+static int res_changed = 1; /* result set changed */
+static unsigned last_row_number = 0; /* the number of the row in last_row */
 
 /** database parameters */
 db_param_t _db_params;
@@ -134,6 +141,7 @@ void db_free_result()
 		trace(TRACE_WARNING, "%s,%s: Trying to free result set "
 		      "that is already NULL!", __FILE__, __func__);
 	res = NULL;
+        res_changed = 1; /*MR*/
 }
 
 
@@ -154,9 +162,28 @@ const char *db_get_result(unsigned row, unsigned field)
 		return NULL;
 	}
 	
-	mysql_data_seek(res, row);
-	last_row = mysql_fetch_row(res);
+        /*MR*/
+        
+        if (res_changed) 
+        
+        {
+        	mysql_data_seek(res, row);
+        	last_row = mysql_fetch_row(res);
+        } else {
+                if (row == last_row_number+1)
+                        last_row = mysql_fetch_row(res);    
+                else if (row != last_row_number) {
+                        mysql_data_seek(res, row);
+	                last_row = mysql_fetch_row(res);
+                        };
+                        /* otherwise last_row is already loaded and does not need to change! MR*/
+        };
 	
+        res_changed = 0;
+        last_row_number = row;
+        
+        /*MR changes end here*/
+        
 	if (last_row == NULL) {
 		trace(TRACE_WARNING, "%s,%s: row is NULL\n",
 		      __FILE__, __func__);
@@ -238,6 +265,7 @@ int db_query(const char *the_query)
 	}
 
 	res = mysql_store_result(&conn);
+        res_changed = 1; /*MR*/
 
 	return 0;
 }
@@ -304,12 +332,14 @@ void db_use_msgbuf_result()
 {
 	stored_res = res;
 	res = msgbuf_res;
+        res_changed = 1; /*MR*/
 }
 
 void db_store_msgbuf_result()
 {
 	msgbuf_res = res;
 	res = stored_res;
+        res_changed = 1; /*MR*/
 }
 
 void *db_get_result_set()
@@ -320,4 +350,5 @@ void *db_get_result_set()
 void db_set_result_set(void *the_result_set)
 {
 	res = (MYSQL_RES *) the_result_set;
+        res_changed = 1; /*MR*/
 }
