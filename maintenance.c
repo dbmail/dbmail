@@ -13,6 +13,8 @@ int main()
 	unsigned long deleted_messages;
 	unsigned long messages_set_to_delete;
 
+    struct list failed_messageblks;
+    
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 	
 	setvbuf(stdout,0,_IONBF,0);
@@ -46,6 +48,24 @@ int main()
 	}
 	printf ("Ok. [%lu] messages set for deletion.\n",messages_set_to_delete);
 
+    printf ("Now checking DBMAIL messageblocks integrity.. ");
+
+    /* this is what we do:
+     * First we're checking for loose messageblocks
+     * Secondly we're chekcing for loose messages
+     * Third we're checking for loose mailboxes 
+     */
+
+    list_init (&failed_messageblks);
+    
+    if (db_icheck_messageblks (&failed_messageblks)==-1)
+    {
+        printf ("Failed. An error occured. Please check log.\n");
+        return -1;
+    }
+    
+    printf ("Ok. Found [%lu] unconnected messageblks.\n",list_totalnodes (&failed_messageblks));
+    
 	printf ("Maintenance done.\n");
 	
 	return 0;

@@ -159,6 +159,7 @@ unsigned long db_update_message (unsigned long *messageidnr, char *unique_id,
 				 unsigned long messagesize);
 unsigned long db_insert_message_block (char *block, int messageidnr);
 int db_check_id (char *id);
+int db_icheck_messageblks(struct list *lost_messageblks);
 int db_disconnect();
 unsigned long db_insert_result ();
 int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines, int no_end_dot);

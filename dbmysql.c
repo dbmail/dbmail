@@ -36,6 +36,7 @@ int num_from_imapdate(const char *date);
 
 MYSQL conn;  
 MYSQL_RES *res,*_msg_result;
+MYSQL_RES *checkres;
 MYSQL_ROW row;
 MYSQL_ROW _msgrow;
 char query[DEF_QUERYSIZE];
@@ -93,8 +94,6 @@ const char *create_tmp_tables_queries[] =
 };
 
 const char *drop_tmp_tables_queries[] = { "DROP TABLE tmpmessage", "DROP TABLE tmpmessageblk" };
-
-
 
 int db_connect ()
 {
@@ -1314,12 +1313,77 @@ unsigned long db_set_deleted ()
 
   if (db_query(query)==-1)
     {
-      trace(TRACE_ERROR,"db_set_deleted(): Cound not execute query [%s]",query);
+      trace(TRACE_ERROR,"db_set_deleted(): Could not execute query [%s]",query);
       return -1;
     }
  
   
   return mysql_affected_rows(&conn);
+}
+
+int db_icheck_messageblks(struct list *lost_messageblks)
+{
+    /* 
+     * will check for messageblks that are not
+     * connected to messages 
+     */
+
+
+    snprintf (query,DEF_QUERYSIZE,"SELECT messageblknr, messageidnr FROM messageblk");
+    trace (TRACE_DEBUG,"db_icheck_messageblks(): executing query [%s]",query);
+
+    if (db_query(query)==-1)
+    {
+        trace (TRACE_ERROR,"db_icheck_messageblks(): Could not execute query [%s]",query);
+        return -1;
+    }
+  
+    if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace (TRACE_ERROR,"db_icheck_messageblks(): mysql_store_result failed:  %s",mysql_error(&conn));
+      return -1;
+    }
+  
+  if (mysql_num_rows(res)<1)
+    {
+      
+      mysql_free_result(res);
+      return 0;
+    }
+	
+  while ((row = mysql_fetch_row(res))!=NULL)
+    {
+      snprintf (query,DEF_QUERYSIZE,"SELECT messageidnr FROM message "
+              "WHERE messageidnr=%s",row[0]);
+    
+      trace (TRACE_DEBUG,"db_icheck_messageblks(): executing query [%s]",query);
+      
+      if (db_query(query)==-1)
+      {
+	  mysql_free_result(res);
+	  return -1;
+      }
+
+      if ((checkres = mysql_store_result(&conn)) == NULL)
+      {
+          trace (TRACE_ERROR,"db_icheck_messageblks(): mysql_store_result failed: %s",
+                  mysql_error(&conn));
+          mysql_free_result(res);
+          return -1;
+      }
+
+      if (mysql_num_rows(checkres)<1)
+      {
+          /* this one is not connected to a message
+           * add to the list 
+           */
+
+          list_nodeadd (lost_messageblks, row[0], sizeof(row[0]));
+      }
+      /*
+       * else do nothing, just check the next one */
+    }
+  return 0;
 }
 
 
