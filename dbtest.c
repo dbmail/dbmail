@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include "debug.h"
+#include "/usr/local/pgsql/include/libpq-fe.h"
 
 #define PNAME "dbmail/insert-test"
 
