@@ -304,7 +304,7 @@ int db_addalias (unsigned long useridnr, char *alias, int clientid)
 	
   memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
 
-  sprintf (ckquery,"INSERT INTO aliases (alias,deliver_to,owner_id) VALUES ('%s','%lu',%d)",
+  sprintf (ckquery,"INSERT INTO aliases (alias,deliver_to,client_id) VALUES ('%s','%lu',%d)",
 	   alias, useridnr, clientid);
 	
   trace (TRACE_DEBUG,"db_addalias(): executing query for user: [%s]", ckquery);
