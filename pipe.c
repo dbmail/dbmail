@@ -5,7 +5,6 @@
 #include "config.h"
 #include "pipe.h"
 
-#define READ_BLOCK_SIZE 524288		/* be carefull, MYSQL has a limit */
 #define HEADER_BLOCK_SIZE 1024
 #define QUERY_SIZE 255
 /* including the possible all escape strings blocks */
@@ -24,7 +23,7 @@ char *read_header(unsigned long *blksize)
      /* returns <0 on failure */
 {
   /* reads incoming pipe until header is found */
-  /* we're going to check every READ_BLOCK_SIZE if header is read in memory */
+  /* we're going to check every DB_READ_BLOCK_SIZE if header is read in memory */
 
   char *header, *strblock;
   int usedmem=0; 

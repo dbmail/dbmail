@@ -23,7 +23,7 @@ CFLAGS = -Wall -ggdb -D_BSD_SOURCE
 
 .PHONY: clean install
 
-all: smtp pop3d imapd
+all: smtp pop3d imapd maintenance
 
 dump: dbmysql.h dumpmsg.c $(DUMP_OBJECTS)
 	$(CC) $(CFLAGS) dumpmsg.c -o dumpmsg $(DUMP_OBJECTS) $(LIBS) $(LIB)

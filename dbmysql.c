@@ -7,6 +7,7 @@
 #include "dbmd5.h"
 #include "list.h"
 #include "mime.h"
+#include "pipe.h"
 #include <ctype.h>
 
 #define DEF_QUERYSIZE 1024
@@ -237,14 +238,17 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines)
 	  newlines are rewritten to crlf */
 
   char *ckquery;
-  char *currpos, *prevpos, *nextpos;
+  char *buffer;
+  char *nextpos, *tmppos;
   int block_count;
   
   trace (TRACE_DEBUG,"db_send_message_lines(): request for [%d] lines",lines);
 
   memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
-  sprintf (ckquery, "SELECT * FROM messageblk WHERE messageidnr=%lu",
+  memtst ((buffer=(char *)malloc(READ_BLOCK_SIZE*2))==NULL);
+  sprintf (ckquery, "SELECT * FROM messageblk WHERE messageidnr=%lu ORDER BY messageblknr ASC",
 	   messageidnr);
+  trace (TRACE_DEBUG,"db_send_message_lines(): executing query [%s]",ckquery);
   if (db_query(ckquery)==-1)
     {
       free(ckquery);
@@ -268,47 +272,63 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines)
   
 	block_count=0;
 
-	/* setting mode to fully buffered
-		this way dbmail will write everything to the buffer
-		instead of having to wait for every write */
-
   while (((row = mysql_fetch_row(res))!=NULL) && ((lines>0) || (lines==-2)))
 	{
-	/* we're going to do this one line at the time */  
-	prevpos = row[2];
-	nextpos = prevpos;
-	while (((lines>0) || (lines==-2)) && (nextpos!=NULL))
+		nextpos=row[2];
+		
+		/* reset our buffer */
+		buffer[0]='\0';
+
+		
+		while ((*nextpos!='\0') && ((lines>0) || (lines==-2)))
 		{
-		/* search for a newline character in prevpos (which is the buffer) */
-		currpos=strchr(prevpos,'\n');	
-			if ((currpos!=NULL) && (strlen (currpos)>0))
-				{
-				/* newline found starting at currpos+1 (currpos is the \n)*/
-				nextpos=currpos+1;
-				/* to delimiter the buffer for fprintf 
-				 This means the \n is stripped */
-				currpos[0]='\0';	
+			if (*nextpos=='\n')
+			{
 
-				/*	\r is added because multi-line responses must end on 
-					crlf */
-				fprintf ((FILE *)fstream,"%s\r\n",prevpos);
+				/* we found an newline, now check if there's
+					a return before that */
+				
+				if (lines!=-2)
+					lines--;
+				
+				if (tmppos!=NULL)
+				{
+					if (*tmppos=='\r')
+						sprintf (buffer,"%s%c",buffer,*nextpos);
+					else 
+						sprintf (buffer,"%s\r%c",buffer,*nextpos);
 				}
+				else 
+					sprintf (buffer,"%s\r%c",buffer,*nextpos);
+			}
 			else
-				{
-					/* the last line doesn't have a \n character 
-						this is corrected in the next block */
-					fprintf ((FILE *)fstream,"%s",prevpos); 
-					nextpos=NULL;
-				}
+			{
+				if (*nextpos=='.')
+					{
+						if (tmppos!=NULL)
+							{
+								trace (TRACE_DEBUG,"nextpos [%c] tmppos [%c]",*nextpos,*tmppos);
+								if (*tmppos=='\n')
+									sprintf (buffer,"%s.%c",buffer,*nextpos);
+								else
+									sprintf (buffer,"%s%c",buffer,*nextpos);
+							}
+						else 
+							sprintf (buffer,"%s%c",buffer,*nextpos);
+					}
+				else	
+					sprintf (buffer,"%s%c",buffer,*nextpos);
+			}
 
-			if ((lines!=-2) && (block_count>0))
-				lines--;
-			/* set prevpos to the new position */
-			prevpos=nextpos;
+			tmppos=nextpos;
+				
+			/* get the next character */
+			nextpos++;
 		}
-		/* count's which messageblk we're working on */
-		block_count++;
+		/* flush our buffer */
+		fprintf (fstream,"%s",buffer);
 	}
+
    /* delimiter */
    fprintf ((FILE *)fstream,"\r\n.\r\n");
    mysql_free_result(res);

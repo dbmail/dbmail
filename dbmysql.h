@@ -10,6 +10,9 @@
 #include "mime.h"
 #include "list.h"
 
+/* size of the messageblk's */
+#define READ_BLOCK_SIZE 524288		/* be carefull, MYSQL has a limit */
+
 struct session;
 struct list;
 
