@@ -119,7 +119,7 @@ static int send_notification(const char *to, const char *from, const char *subje
 
   return 0;
 }
-  
+
 
 /*
  * Send an automatic reply using sendmail
@@ -218,7 +218,7 @@ static int send_reply(struct list *headerfields, const char *body)
   return 0;
 }
 
-  
+
 /* Yeah, RAN. That's Reply And Notify ;-) */
 static int execute_auto_ran(u64_t useridnr, struct list *headerfields)
 {
@@ -275,157 +275,8 @@ static int execute_auto_ran(u64_t useridnr, struct list *headerfields)
 
   return 0;
 }
-            
-        
-/* Loop through the list of delivery addresses and
- * resolve them, making lists of final delivery useridnr's,
- * forwards, and flagging appropriate DSN's so that success
- * and/or failures can be properly indicated at the top of the
- * delivery call chain (e.g. dbmail-smtp and dbmail-lmtpd).
- * */
-static int resolve_deliveries(struct list *deliveries)
-{
-  u64_t userid;
-  int alias_count = 0, domain_count = 0;
-  char *domain = NULL;
-  char *username = NULL;
-  struct element *element;
 
-  /* Loop through the users list */
-  for (element = list_getstart(deliveries); element != NULL; element = element->nextnode)
-    {
-      deliver_to_user_t *delivery = (deliver_to_user_t *)element->data;
 
-      /* If the userid is already set, then we're doing direct-to-userid. */
-      if (delivery->useridnr != 0)
-        {
-          /* This seems to be the only way to see if a useridnr is valid. */
-          username = auth_get_userid(&delivery->useridnr);
-          if (username != NULL)
-            {
-              /* Free the username, we don't actually need it. */
-              my_free(username);
-
-              /* Copy the delivery useridnr into the userids list. */
-              if (list_nodeadd(delivery->userids, &delivery->useridnr, sizeof(delivery->useridnr)) == 0)
-                {
-                  trace(TRACE_ERROR, "%s, %s: out of memory",
-                      __FILE__, __FUNCTION__);
-                  return -1;
-                }
-
-              /* The userid was valid... */
-              delivery->dsn.class = 2; /* Success. */
-              delivery->dsn.subject = 1; /* Address related. */
-              delivery->dsn.detail = 5; /* Valid. */
-            }
-          else /* from: 'if (username != NULL)' */
-            {
-              /* The userid was invalid... */
-              delivery->dsn.class = 5; /* Permanent failure. */
-              delivery->dsn.subject = 1; /* Address related. */
-              delivery->dsn.detail = 1; /* Does not exist. */
-            }
-        }
-      /* We don't have a useridnr, so we have either a username or an alias. */
-      else /* from: 'if (delivery->useridnr != 0)' */
-        {
-          /* See if the address is a username. */
-          switch (auth_user_exists(delivery->address, &userid))
-            {
-              case -1:
-                {
-                  /* An error occurred */
-                  trace(TRACE_ERROR,"%s, %s: error checking user [%s]",
-                      __FILE__, __FUNCTION__, delivery->address);
-                  return -1;
-                  break;
-                }
-              case 1:
-                {
-                  if (list_nodeadd(delivery->userids, &userid, sizeof(u64_t)) == 0)
-	            {
-                      trace(TRACE_ERROR, "%s, %s: out of memory",
-                          __FILE__, __FUNCTION__);
-                      return -1;
-	            }
-	          else
-	            {
-              
-                      trace(TRACE_DEBUG, "%s, %s: added user [%s] id [%llu] to delivery list",
-                          __FILE__, __FUNCTION__, delivery->address, userid);
-                      /* The userid was valid... */
-                      delivery->dsn.class = 2; /* Success. */
-                      delivery->dsn.subject = 1; /* Address related. */
-                      delivery->dsn.detail = 5; /* Valid. */
-	            }
-                  break;
-                }
-                /* The address needs to be looked up */
-              default:
-                {
-                  alias_count = auth_check_user_ext(delivery->address, delivery->userids, delivery->forwards, -1);
-                  trace(TRACE_DEBUG, "%s, %s: user [%s] found total of [%d] aliases",
-                      __FILE__, __FUNCTION__, delivery->address, alias_count);
-              
-                  /* No aliases found for this user */
-                  if (alias_count == 0)
-                    {
-                      trace(TRACE_INFO,"%s, %s: user [%s] checking for domain forwards.",
-                          __FILE__, __FUNCTION__, delivery->address);  
-               
-                      domain = strchr(delivery->address, '@');
-               
-                      if (domain == NULL)
-                        {
-                          /* That's it, we're done here. */
-                          /* Permanent failure... */
-                          delivery->dsn.class = 5; /* Permanent failure. */
-                          delivery->dsn.subject = 1; /* Address related. */
-                          delivery->dsn.detail = 1; /* Does not exist. */
-                        }
-                      else
-                        {
-                          trace(TRACE_DEBUG, "%s, %s: domain [%s] checking for domain forwards",
-                              __FILE__, __FUNCTION__, domain);
-               
-                          /* Checking for domain aliases */
-                          domain_count = auth_check_user_ext(domain, delivery->userids, delivery->forwards, -1);
-                          trace(TRACE_DEBUG,"%s, %s: domain [%s] found total of [%d] aliases",
-                              __FILE__, __FUNCTION__, domain, domain_count);
-               
-                          if (domain_count == 0)
-                            {
-                              /* Permanent failure... */
-                              delivery->dsn.class = 5; /* Permanent failure. */
-                              delivery->dsn.subject = 1; /* Address related. */
-                              delivery->dsn.detail = 1; /* Does not exist. */
-                            }
-                          else /* from: 'if (domain_count == 0)' */
-                            {
-                              /* The userid was valid... */
-                              delivery->dsn.class = 2; /* Success. */
-                              delivery->dsn.subject = 1; /* Address related. */
-                              delivery->dsn.detail = 5; /* Valid. */
-                            } /* from: 'if (domain_count == 0)' */
-                        } /* from: 'if (domain == NULL)' */
-                    }
-                  else /* from: 'if (alias_count == 0)' */
-                    {
-                      /* The userid was valid... */
-                      delivery->dsn.class = 2; /* Success. */
-                      delivery->dsn.subject = 1; /* Address related. */
-                      delivery->dsn.detail = 5; /* Valid. */
-                    } /* from: 'if (alias_count == 0)' */
-                } /* from: 'default:' */
-            } /* from: 'switch (auth_user_exists(delivery->address, &userid))' */
-        } /* from: 'if (delivery->useridnr != 0)' */
-    } /* from: the main for loop */
-
-  return 0;
-}
-
-  
 /* Read from insteam until eof, and store to the
  * dedicated dbmail user account. Later, we'll
  * read the message back for forwarding and 
@@ -646,12 +497,6 @@ int insert_messages(FILE *instream, char *header, u64_t headersize, u64_t header
       break;
   }
   
-  /* Get the user list resolved into fully deliverable form */
-  if (resolve_deliveries(dsnusers) != 0)
-    {
-      return -1;
-    }
-
   /* Loop through the users list */
   for (element = list_getstart(dsnusers); element != NULL; element = element->nextnode)
     {

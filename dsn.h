@@ -5,15 +5,23 @@
 
 /*
  * Struct to hold codes that correspond
- * to RFC 1893 its successor, RFC 3463.
- *
+ * to RFC 1893, and its successor, RFC 3463.
+ * TODO: 
  * Plain text "translations" of these codes
  * are defined in the header dsn.h and
  * accessed by functions in dsn.c
  */
+
+typedef enum
+{
+  DSN_CLASS_OK = 2,
+  DSN_CLASS_TEMP = 4,
+  DSN_CLASS_FAIL = 5
+} dsn_class_t;
+
 typedef struct
 {
-  int class;
+  dsn_class_t class;
   int subject;
   int detail;
 } delivery_status_t;
@@ -28,7 +36,28 @@ typedef struct
   delivery_status_t dsn; /* Return status of this "delivery basket" (to outside). */
 } deliver_to_user_t;
 
-void dsnuser_init(deliver_to_user_t *dsnuser);
+/**
+ * \brief Initialize a dsnuser structure and its lists.
+ * \param dsnuser Pointer to a dsnuser structure in need of initialization.
+ * \return
+ *   - 0 on success
+ *   - -1 on failure
+ */
+int dsnuser_init(deliver_to_user_t *dsnuser);
 void dsnuser_free(deliver_to_user_t *dsnuser);
+
+/**
+ * \brief Loop through the list of delivery addresses
+ * and resolve them into lists of final delivery useridnr's,
+ * and external forwarding addresses. Each dsnuser is flagged
+ * with DSN codes so that successes and failures can be properly
+ * indicated at the top of the delivery call chain, such as in
+ * dbmail-smtp and dbmail-lmtpd.
+ * \param deliveries Pointer to a list of dsnuser structs.
+ * \return
+ *   - 0 on success
+ *   - -1 on failure
+ */
+int dsnuser_resolve_list(struct list *deliveries);
 
 #endif /* DSN_H */

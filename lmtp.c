@@ -498,9 +498,15 @@ int lmtp(void *stream, void *instream, char *buffer, char *client_ip UNUSED, Pop
                 }
               else
                 {
+                  /* Note that this is not a pointer, but really is on the stack!
+                   * Because list_nodeadd() memcpy's the structure, we don't need
+                   * it to live any longer than the duration of this stack frame. */
                   deliver_to_user_t dsnuser;
 
                   dsnuser_init(&dsnuser);
+
+                  /* find_bounded() allocated tmpaddr for us, and that's ok
+                   * since dsnuser_free() will free it for us later on. */
                   dsnuser.address = tmpaddr;
 
                   list_nodeadd(&rcpt, &dsnuser, sizeof(deliver_to_user_t));
@@ -533,21 +539,32 @@ int lmtp(void *stream, void *instream, char *buffer, char *client_ip UNUSED, Pop
            
               /* The replies MUST be in the order received */
               rcpt.start = list_reverse(rcpt.start);
+
+              /* Resolve the addresses into deliverable / non-deliverable form. */
+              if (dsnuser_resolve_list(&rcpt) == -1)
+                {
+                  trace(TRACE_ERROR, "main(): dsnuser_resolve_list failed");
+                  fprintf((FILE *)stream, "554 No valid recipients\r\n" );
+                  return 1;
+                }
            
               for(element = list_getstart(&rcpt);
                   element != NULL; element = element->nextnode)
                 {
                   deliver_to_user_t *dsnuser = (deliver_to_user_t *)element->data;
 
-                  if (auth_check_user_ext(dsnuser->address,
-                                          dsnuser->userids, dsnuser->forwards, -1) > 0 )
+                  /* Class 2 means the address was deliverable in some way. */
+                  switch (dsnuser->dsn.class)
                     {
-                      fprintf((FILE *)stream, "250 Recipient <%s> OK\r\n", dsnuser->address);
-                      has_recipients = 1;
-                    }
-                  else
-                    {
-                      fprintf((FILE *)stream, "550 Recipient <%s> FAIL\r\n", dsnuser->address);
+                      case DSN_CLASS_OK:
+                        fprintf((FILE *)stream, "250 Recipient <%s> OK\r\n",
+                                dsnuser->address);
+                        has_recipients = 1;
+                        break;
+                      default:
+                        fprintf((FILE *)stream, "550 Recipient <%s> FAIL\r\n",
+                                dsnuser->address);
+                        break;
                     }
                 }
            
@@ -629,22 +646,22 @@ int lmtp(void *stream, void *instream, char *buffer, char *client_ip UNUSED, Pop
                     for (element = list_getstart(&rcpt);
                             element != NULL; element = element->nextnode)
                       {
-                        deliver_to_user_t *delivery = (deliver_to_user_t *)element->data;
+                        deliver_to_user_t *dsnuser = (deliver_to_user_t *)element->data;
 
-                        switch (delivery->dsn.class)
+                        switch (dsnuser->dsn.class)
                           {
-                            case 2:
+                            case DSN_CLASS_OK:
                               fprintf((FILE *)stream, "250 Recipient <%s> OK\r\n",
-                                      delivery->address);
+                                      dsnuser->address);
                               break;
-                            case 4:
+                            case DSN_CLASS_TEMP:
                               fprintf((FILE *)stream, "450 Recipient <%s> TEMP FAIL\r\n",
-                                      delivery->address);
+                                      dsnuser->address);
                               break;
-                            case 5:
+                            case DSN_CLASS_FAIL:
                             default:
                               fprintf((FILE *)stream, "550 Recipient <%s> PERM FAIL\r\n",
-                                      delivery->address);
+                                      dsnuser->address);
                               break;
                           }
                       }

@@ -280,6 +280,14 @@ int main(int argc, char *argv[])
         }
     }
 
+  if (dsnuser_resolve_list(&dsnusers) == -1)
+    {
+      trace(TRACE_ERROR, "main(): dsnuser_resolve_list failed");
+      /* Most likely a random failure... */
+      exitcode = EX_TEMPFAIL;
+      goto freeall;
+    }
+
   /* inserting messages into the database */
   if (insert_messages(stdin,
                       header, headersize, headerrfcsize,

@@ -1,3 +1,12 @@
+2004-03-04  Aaron Stone <aaron@serendipity.cx>
+	* pipe.c (resolve_deliveries): moved to dsn.c, renamed, not static.
+	* dsn.c (dsnuser_resolve_list): newly relocated from pipe.c.
+	* dsn.h: added enum types for dsn class, updated structs to match.
+	* lmtp.c: modified the delivery resolution loop to first call
+	dsnuser_resolve_list and then to directly check for DSN_STATUS_OK
+	rather than less reliable heuristics.
+	* main.c: added a call to dsnuser_resolve_list.
+
 2004-03-03  Ilja Booij  <ilja@ic-s.nl>
 
 	* db.c (db_get_msgdate): uses the date2char function to construct a 
