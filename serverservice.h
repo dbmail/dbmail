@@ -32,7 +32,8 @@ typedef struct
 } ClientInfo;
 
 
-int   SS_MakeServerSock(const char *ipaddr, const char *port, int default_children, int timeout);
+int   SS_MakeServerSock(const char *ipaddr, const char *port, int default_children, int max_children,
+			int timeout);
 int   SS_WaitAndProcess(int sock, int default_children, int max_children, int daemonize,
 			int (*ClientHandler)(ClientInfo*), int (*Login)(ClientInfo*),
 			void (*ClientCleanup)(ClientInfo*));

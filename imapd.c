@@ -102,7 +102,7 @@ int main()
 
   
   /* open socket */
-  sock = SS_MakeServerSock(bindip, port, atoi(defchld), timeout);
+  sock = SS_MakeServerSock(bindip, port, atoi(defchld), atoi(maxchld), timeout);
 
   my_free(port);
   my_free(bindip);

@@ -46,6 +46,7 @@ FILE *rx = NULL;	/* read socket */
 int *default_children;  /* # of default children in use */
 int defchld;            /* # of default children as specified in conf */
 int total_children = 0;
+pid_t *xtrachild_pids;
 
 int done;
 
@@ -53,6 +54,9 @@ int done;
 /* 'dcp' stands for 'default children pids' */
 key_t shmkey_dcu=0,shmkey_dcp=0;
 int shmid_dcu,shmid_dcp;
+
+key_t shmkey_xtrachilds=0;
+int shmid_xtrachilds;
 
 #define SHM_ALLOC_SIZE (sizeof(int))
 
@@ -90,13 +94,8 @@ static void signal_handler (int signo, siginfo_t *info, void *data)
     if (signo == SIGCHLD)
       {
 	trace (TRACE_DEBUG,"signal_handler(): sigCHLD, cleaning up zombies");
-	do {
-	  PID = waitpid (info->si_pid, &status, WNOHANG | WUNTRACED);
 
-	  if (PID > 0)
-	    sleep(1); /* dont hog cpu while waiting */
-
-	} while ( PID > 0);
+	PID = waitpid (info->si_pid, &status, WNOHANG | WUNTRACED);
 
 	trace (TRACE_DEBUG,"signal_handler(): sigCHLD, cleaned");
 	return;
@@ -318,6 +317,8 @@ int main (int argc, char *argv[])
   int c = -1;
   int z, i; /* counters */
   int maxchld; /* maxchildren */
+  pid_t deadchildpid;
+
 
   /* open logs */
   openlog(PNAME, LOG_PID, LOG_MAIL);
@@ -492,7 +493,10 @@ int main (int argc, char *argv[])
   shmkey_dcp = time (NULL)+1; /* get an unique key */
   shmid_dcp = shmget (shmkey_dcp, sizeof (pid_t) * defchld, 0666 | IPC_CREAT);
 
-  if (shmid_dcu == -1 || shmid_dcp == -1)
+  shmkey_xtrachilds = time (NULL)+2; /* get an unique key */
+  shmid_xtrachilds = shmget (shmkey_xtrachilds, sizeof (pid_t) * maxchld, 0666 | IPC_CREAT);
+
+  if (shmid_dcu == -1 || shmid_dcp == -1 || shmid_xtrachilds == -1)
     trace (TRACE_FATAL,"main(): could not allocate shared memory");
 
 
@@ -515,6 +519,11 @@ int main (int argc, char *argv[])
   default_child_pids = (pid_t*)shmat(shmid_dcp, 0, 0);
   if (default_child_pids == (pid_t*)-1)
     trace (TRACE_FATAL,"main(): could not attach to shared memory block (dcp)");
+
+  xtrachild_pids = (pid_t*)shmat(shmid_xtrachilds, 0, 0);
+  memset(xtrachild_pids, 0, sizeof(pid_t)*maxchld);
+  if (xtrachild_pids == (pid_t*)-1)
+    trace (TRACE_FATAL,"main(): could not attach to shared memory block (xtrachild_pids)");
 
 
   /* we don't have any children yet so no active children neither */
@@ -567,7 +576,7 @@ int main (int argc, char *argv[])
 		}
 		
 	      (*default_children)++;		
-			
+
 	      handle_client(myhostname, c, adr_clnt);
 		
 	      (*default_children)--;
@@ -576,47 +585,62 @@ int main (int argc, char *argv[])
       else
 	for (;;)
 	  {
-	    /* check if a default-child has died 
-	     * (it's entry has been set to zero in default_child_pids[]) 
+	    /* check if default-child have died 
+	     * (their entries have been set to zero in default_child_pids[]) 
 	     */
-	    for (i=0; i<defchld && default_child_pids[i]; i++) ;
-	      
-	    if (i<defchld)
+	    for (i=0; i<defchld; i++)
 	      {
-		/* def-child has died, re-create */
-		if (!fork())
+		if (default_child_pids[i] == 0)
 		  {
-		    default_child_pids[i] = getpid();
-		    break;  
-		    /* after this break the if (getpid() == ss_server_pid) will be re-executed */
+		    /* def-child has died, re-create */
+		    if (!fork())
+		      {
+			default_child_pids[i] = getpid();
+			break;  
+			/* after this break the if (getpid() == server_pid) will be re-executed */
+		      }
+		    else
+		      while (default_child_pids[i] == 0) sleep(1);
 		  }
 	      }
+
+	    if (getpid() != server_pid)
+	      break;
 	    
-	    if (*default_children < defchld)
+
+	    while ((deadchildpid = waitpid (-1, NULL, WNOHANG | WUNTRACED)) > 0)
 	      {
-		sleep (1); /* don't hog cpu */
+		trace(TRACE_DEBUG,"got %ld from waitpid\n",deadchildpid);
+		for (i=0; i<maxchld; i++)
+		  if (xtrachild_pids[i] == deadchildpid)
+		    {
+		      xtrachild_pids[i] = 0;
+		      total_children--;
+		      break;
+		    }
+	      }
+
+	    /* clean up list */
+	    for (i=0; i<maxchld; i++)
+	      if (xtrachild_pids[i] && 
+		  waitpid(xtrachild_pids[i], NULL, WNOHANG | WUNTRACED) == -1 &&
+		  errno == ECHILD)
+		{
+		  xtrachild_pids[i] = 0;
+		  total_children--;
+		}
+
+	    if ((*default_children) < defchld)
+	      {
+		/* not all the def-childs are in use, continue */
+		sleep(1); /* don't hog cpu */
 		continue;
 	      }
 
-	    while (total_children >= maxchld)
+	    if (total_children >= maxchld)
 	      {
-		sleep (1); /* don't hog cpu */
-		wait (NULL); /* wait for children to finish */
-		total_children--;
-	      }
-
-	    /* check if it was a default-child that died in the above WHILE loop */
-	    for (i=0; i<defchld && default_child_pids[i]; i++) ;
-	      
-	    if (i<defchld)
-	      {
-		/* def-child has died, re-create */
-		if (!fork())
-		  {
-		    default_child_pids[i] = getpid();
-		    break;  
-		    /* after this break the if (getpid() == ss_server_pid) will be re-executed */
-		  }
+		sleep(1);
+		continue;
 	      }
 
 	    /* wait for a connection */
@@ -638,6 +662,14 @@ int main (int argc, char *argv[])
 	      }
 	    else
 	      {
+		/* save pid */
+		for (i=0; i<maxchld; i++)
+		  if (!xtrachild_pids[i])
+		    {
+		      xtrachild_pids[i] = getpid();
+		      break;
+		    }
+
 		/* handle client connection */
 		handle_client(myhostname, c, adr_clnt);
 		exit(0);

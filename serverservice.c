@@ -46,9 +46,14 @@ int   shm_id_dcp;
 
 #define SHM_ONE_DCP_ALLOC_SIZE (sizeof(pid_t))
 
+/* xc stands for 'xtra child'*/
+key_t shm_key_xc = 0;
+int   shm_id_xc;
 
-/* list of PID's of the default-children */
-pid_t *default_child_pids;
+#define SHM_ONE_XC_ALLOC_SIZE (sizeof(pid_t))
+
+/* list of PID's of the default-children & extra spawned children */
+pid_t *default_child_pids,*xtrachild_pids;
 int n_default_children;
 
 /* the client being processed, this data is global 
@@ -73,7 +78,8 @@ char *SS_GetErrorMsg()
 void SS_sighandler(int sig, siginfo_t *info, void *data);
 
 
-int SS_MakeServerSock(const char *ipaddr, const char *port, int default_children, int timeout)
+int SS_MakeServerSock(const char *ipaddr, const char *port, int default_children, int max_children,
+		      int timeout)
 {
   int sock,r,len;
   struct sockaddr_in saServer;
@@ -159,6 +165,17 @@ int SS_MakeServerSock(const char *ipaddr, const char *port, int default_children
       return -1;
     }
 
+  shm_key_xc = time(NULL)+2;
+  shm_id_xc = shmget(shm_key_xc, SHM_ONE_XC_ALLOC_SIZE * max_children, 0660 | IPC_CREAT);
+
+  if (shm_id_xc == -1)
+    {
+      snprintf(ss_error_msg, SS_ERROR_MSG_LEN, "SS_MakeServerSock(): error getting shared "
+	       "memory segment [%s] (xc)\n", strerror(errno));
+      close(sock);
+      return -1;
+    }
+
   n_default_children = default_children;
 
   /* save timeout value */
@@ -185,6 +202,7 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
   struct sigaction act;
   int ss_nchildren=0;
   pid_t ss_server_pid=0; /* PID of the great father process */
+  pid_t deadchildpid;
 
   if (n_default_children != default_children)
     trace(TRACE_FATAL,"SS_WaitAndProcess(): incompatible number of default-children specified.\n");
@@ -238,6 +256,12 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
     trace(TRACE_FATAL, "SS_WaitAndProcess(): Could not attach to shm [%s]\n",strerror(errno));
 
   memset(default_child_pids, 0, default_children * SHM_ONE_DCP_ALLOC_SIZE);
+
+  xtrachild_pids = (pid_t*)shmat(shm_id_xc, 0, 0);
+  if (xtrachild_pids == (pid_t*)(-1))
+    trace(TRACE_FATAL, "SS_WaitAndProcess(): Could not attach to shm [%s]\n",strerror(errno));
+
+  memset(xtrachild_pids, 0, max_children * SHM_ONE_XC_ALLOC_SIZE);
 
 
   /* fork into default number of children */
@@ -386,25 +410,56 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 
 	  for (;;)
 	    {
-	      /* check if a default-child has died 
-	       * (it's entry has been set to zero in default_child_pids[]) 
+	      /* check if default-child have died 
+	       * (their entries have been set to zero in default_child_pids[]) 
 	       */
-	      for (i=0; i<default_children && default_child_pids[i]; i++) ;
-	      
-	      if (i<default_children)
+	      for (i=0; i<default_children; i++)
 		{
-		  /* def-child has died, re-create */
-		  if (!fork())
+		  if (default_child_pids[i] == 0)
 		    {
-		      default_child_pids[i] = getpid();
-		      break;  
-		      /* after this break the if (getpid() == ss_server_pid) will be re-executed */
+		      /* def-child has died, re-create */
+		      if (!fork())
+			{
+			  default_child_pids[i] = getpid();
+			  break;  
+			  /* after this break the if (getpid() == ss_server_pid) 
+			     will be re-executed */
+			}
+		      else
+			while (default_child_pids[i] == 0) sleep(1);
 		    }
 		}
-		  
+
+	      if (getpid() != ss_server_pid)
+		break; /* this is the newly created defchld */
+
+
 	      /* wait for a connect then fork if the maximum number of children
 	       * hasn't already been reached
 	       */
+
+	      while ((deadchildpid = waitpid (-1, NULL, WNOHANG | WUNTRACED)) > 0)
+		{
+		  trace(TRACE_DEBUG,"got %ld from waitpid\n",deadchildpid);
+		  for (i=0; i<max_children; i++)
+		    if (xtrachild_pids[i] == deadchildpid)
+		      {
+			xtrachild_pids[i] = 0;
+			ss_nchildren--;
+			break;
+		      }
+		      
+		}
+
+	      /* clean up list */
+	      for (i=0; i<max_children; i++)
+		if (xtrachild_pids[i] && 
+		    waitpid(xtrachild_pids[i], NULL, WNOHANG | WUNTRACED) == -1 &&
+		    errno == ECHILD)
+		  {
+		    xtrachild_pids[i] = 0;
+		    ss_nchildren--;
+		  }
 
 	      if (*ss_n_default_children_used < default_children)
 		{
@@ -412,26 +467,12 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 		  continue; 
 		}
 
-	      while (ss_nchildren >= max_children)
+	      if (ss_nchildren >= max_children)
 		{
-		  /* maximum number of children has already been reached, wait for an exit */
-		  wait(NULL);
-		  ss_nchildren--;
+		  sleep(1);
+		  continue;
 		}
-	      
-	      /* check if it was a def-child that exited */
-	      for (i=0; i<default_children && default_child_pids[i]; i++) ;
-	      
-	      if (i<default_children)
-		{
-		  /* def-child has died, re-create */
-		  if (!fork())
-		    {
-		      default_child_pids[i] = getpid();
-		      break;  
-		      /* after this break the if (getpid() == ss_server_pid) will be re-executed */
-		    }
-		}
+
 
 	      /* wait for connect */
 	      len = sizeof(saClient);
@@ -447,6 +488,14 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 		}
 	      else
 		{
+		  /* save pid */
+		  for (i=0; i<max_children; i++)
+		    if (!xtrachild_pids[i])
+		      {
+			xtrachild_pids[i] = getpid();
+			break;
+		      }
+
 		  /* zero-init */
 		  memset(&client, 0, sizeof(client));
 
@@ -622,14 +671,9 @@ void SS_sighandler(int sig, siginfo_t *info, void *data)
   switch (sig)
     {
     case SIGCHLD:
-      do 
-	{
-	  PID = waitpid(info->si_pid, &status, WNOHANG | WUNTRACED);
+      trace(TRACE_ERROR,"Got SIGCHLD for %d\n",info->si_pid);
 
-	  if (PID > 0)
-	    usleep(50000); /* wait 50 ms if child hasn't exited yet */
-
-	} while (PID > 0);
+      PID = waitpid(info->si_pid, &status, WNOHANG | WUNTRACED);
 
       break;
 
