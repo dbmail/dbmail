@@ -263,6 +263,8 @@ int main(int argc, char *argv[])
 		  else
 		    printf("%llu (removed from dbase)\n", id);
 		}
+
+	      el = el->nextnode;
 	    }
         
 	  printf ("\n");
@@ -311,6 +313,8 @@ int main(int argc, char *argv[])
 		  else
 		    printf("%llu (removed from dbase)\n",id);
 		}
+
+	      el = el->nextnode;
 	    }
         
 	  printf ("\n");
