@@ -19,7 +19,7 @@ extern int error_count;
 const char *commands [] = 
 {
   "quit", "user", "pass", "stat", "list", "retr", "dele", "noop", "last", "rset",
-  "uidl","apop","auth"
+  "uidl","apop","auth","top"
 };
 
 const char validchars[] = ".@ abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -90,9 +90,11 @@ int pop3 (void *stream, char *buffer)
 
   trace (TRACE_DEBUG,"pop3(): command looked up as commandtype %d",cmdtype);
 	
+	/* commands that are allowed to have no arguments */
   if ((value==NULL) && (cmdtype!=POP3_QUIT) && (cmdtype!=POP3_LIST) &&
       (cmdtype!=POP3_STAT) && (cmdtype!=POP3_RSET) && (cmdtype!=POP3_NOOP) &&
-      (cmdtype!=POP3_LAST) && (cmdtype!=POP3_UIDL) && (cmdtype!=POP3_AUTH))
+      (cmdtype!=POP3_LAST) && (cmdtype!=POP3_UIDL) && (cmdtype!=POP3_AUTH) &&
+			(cmdtype!=POP3_TOP))
     {
       return pop3_error(stream,"-ERR your command does not compute\r\n");
     }
@@ -431,6 +433,37 @@ int pop3 (void *stream, char *buffer)
 	fprintf  ((FILE *)stream, "+OK List of supported mechanisms\r\n.\r\n");
 	return 1;
       }
+
+	  case POP3_TOP:
+			{
+	if (state!=TRANSACTION)
+			return pop3_error(stream,"-ERR wrong command mode, sir\r\n");
+  
+	/* find out how many lines they want */
+	searchptr=strstr(value," ");
+
+  if (searchptr==NULL)
+    return pop3_error (stream,"-ERR your command does not compute\r\n");
+
+        /* skip the space */
+  searchptr=searchptr+1;
+
+        /* value should now be the username */
+  value[searchptr-value-1]='\0';
+
+  if (strlen(searchptr)>32)
+    return pop3_error(stream,"-ERR the thingy you issued is not a valid md5 hash\r\n");
+
+        /* create memspace for md5 hash */
+  memtst((md5_apop_he=(char *)malloc(strlen(searchptr)+1))==NULL);
+  strncpy (md5_apop_he,searchptr,strlen(searchptr)+1);
+
+        /* create memspace for username */
+  memtst((username=(char *)malloc(strlen(value)+1))==NULL);
+  strncpy (username,value,strlen(value)+1);
+
+		return 1;
+			}
 
     default : 
       {

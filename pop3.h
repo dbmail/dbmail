@@ -52,7 +52,8 @@
 #define POP3_UIDL 10
 #define POP3_APOP 11
 #define POP3_AUTH 12
-#define POP3_END 13
+#define POP3_TOP 13
+#define POP3_END 14
 
 /* all virtual_ definitions are session specific
  * when a RSET occurs all will be set to the real values */
