@@ -108,7 +108,7 @@ CREATE TRIGGER dbmail_acl_constraint_insert
 CREATE TRIGGER dbmail_acl_constraint_update
 	BEFORE UPDATE ON dbmail_acl
 	BEGIN
-		SELECT CASE WHEN foo.a > 0 THEN RAISE(ROLLBACK, 'UNIQUEness constraint violation')
+		SELECT CASE WHEN foo.a > 1 THEN RAISE(ROLLBACK, 'UNIQUEness constraint violation')
 		ELSE 1 END FROM (
 		SELECT COUNT(*) AS a FROM dbmail_acl
 			WHERE new.user_id = dbmail_acl.user_id
