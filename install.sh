@@ -27,9 +27,13 @@ echo -n "Where can we find libmysqlclient.so? [default: $default_location_libmys
 read location_libmysqlclient_so	
 
 if [ "$location_libmysqlclient_so" == "" ] ; then 
-	location_mysqlclient_so=$default_location_libmysqlclient_so
+	location_libmysqlclient_so=$default_location_libmysqlclient_so
 fi
+
 
 echo -n "Ok creating Makefile out of Makefile.tmpl.. "
 
+cat Makefile.tmpl | sed "s/_libdir_/$location_libmysqlclient_so/g" > Makefile.new
+
+echo "Ok"
 
