@@ -3995,6 +3995,6 @@ void convert_inbox_to_uppercase(char *name)
 	
 	if (strlen(name) == strlen("INBOX") ||
 	    strncasecmp(name, "INBOX/", strlen("INBOX/")) == 0)
-		memcpy(name, inbox, strlen(inbox));
+		memcpy((void *) name, (void *) inbox, strlen(inbox));
 	return;
 }

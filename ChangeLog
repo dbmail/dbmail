@@ -1,3 +1,25 @@
+2004-06-18  Ilja Booij  <ilja@ic-s.nl>
+
+	* main.c (read_whole_message_pipe): added (void *) casts to memcpy's
+	arguments.
+
+	* imaputil.c (build_args_array_ext): added (void *) casts to memcpy's
+	arguments.
+	(build_args_array): added (void *) casts to memcpy's arguments.
+
+	* imapcommands.c (_ic_expunge): added (void *) casts to memcpy's
+	arguments.
+
+	* imap4.c (IMAPClientHandler): added (void *) casts to memcpy's
+	arguments.
+
+	* db.c (convert_inbox_to_uppercase): added (void *) casts to memcpy's
+	arguments.
+
+	* lmtp.c (read_whole_message_network): check if a line that's been
+	read has length 0 or 1. If so, step over the line. Secondly, memcpy's
+	arguments are now cast to (void *)
+
 2004-06-16  Ilja Booij  <ilja@ic-s.nl>
 
 	* misc.c (ci_write): ci_write() moved here

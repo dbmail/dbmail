@@ -442,7 +442,8 @@ int IMAPClientHandler(ClientInfo * ci)
 					}
 
 				my_free(ud->mailbox.seq_list);
-				memcpy(&ud->mailbox, &newmailbox,
+				memcpy((void *) &ud->mailbox, 
+				       (void *)&newmailbox,
 				       sizeof(newmailbox));
 			}
 		}

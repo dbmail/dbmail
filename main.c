@@ -99,7 +99,8 @@ static int read_whole_message_pipe(FILE *instream, char **whole_message,
 			error = 1;
 			break;
 		}
-		if (!(memcpy(&tmpmessage[current_pos], read_buffer, 
+		if (!(memcpy((void *) &tmpmessage[current_pos], 
+			     (void *) read_buffer, 
 			     read_len))) {
 			error = 1;
 			break;

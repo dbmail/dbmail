@@ -1293,7 +1293,8 @@ char **build_args_array(const char *s)
 					return NULL;
 				}
 
-				memcpy(the_args[nargs], &s[quotestart + 1],
+				memcpy((void *) the_args[nargs], 
+				       (void *) &s[quotestart + 1],
 				       i - quotestart - 1);
 				the_args[nargs][i - quotestart - 1] = '\0';
 
@@ -1399,7 +1400,8 @@ char **build_args_array(const char *s)
 			return NULL;
 		}
 
-		memcpy(the_args[nargs], &s[argstart], i - argstart);
+		memcpy((void *) the_args[nargs], (void *) &s[argstart], 
+		       i - argstart);
 		the_args[nargs][i - argstart] = '\0';
 
 		nargs++;
@@ -1481,7 +1483,8 @@ char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 					return NULL;
 				}
 
-				memcpy(the_args[nargs], &s[quotestart + 1],
+				memcpy((void *) the_args[nargs], 
+				       (void *) &s[quotestart + 1],
 				       i - quotestart - 1);
 				the_args[nargs][i - quotestart - 1] = '\0';
 
@@ -1679,7 +1682,8 @@ char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 			return NULL;
 		}
 
-		memcpy(the_args[nargs], &s[argstart], i - argstart);
+		memcpy((void *) the_args[nargs], (void *) &s[argstart], 
+		       i - argstart);
 		the_args[nargs][i - argstart] = '\0';
 
 		nargs++;

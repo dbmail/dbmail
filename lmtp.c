@@ -763,6 +763,11 @@ int read_whole_message_network(FILE *instream, char **whole_message,
 	memset(tmpline, '\0', MESSAGE_MAX_LINE_SIZE + 1);
 	while (fgets(tmpline, MESSAGE_MAX_LINE_SIZE, instream) != NULL) {
 		line_size = strlen(tmpline);
+		
+		/* It sometimes happens that we read a line of size 0,
+		   which is odd.. For now, we just step over it. */
+		if (line_size < 2)
+			continue;
 
 		/* check for '.\r\n' */
 		if (line_size == 3 && strncmp(tmpline, ".\r\n", 3) == 0) 
@@ -776,8 +781,8 @@ int read_whole_message_network(FILE *instream, char **whole_message,
 			break;
 		}
 		
-		if (!(memcpy(&tmpmessage[current_pos], tmpline, 
-			     line_size -2))) {
+		if (!(memcpy((void *) &tmpmessage[current_pos], 
+			     (void *) tmpline, line_size -2))) {
 			error = 1;
 			break;
 		}

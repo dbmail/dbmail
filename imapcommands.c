@@ -1941,7 +1941,8 @@ int _ic_expunge(char *tag, char **args, ClientInfo * ci)
 		ci_write(ci->tx, "* %u RECENT\r\n", newmailbox.recent);
 
 	my_free(ud->mailbox.seq_list);
-	memcpy(&ud->mailbox, &newmailbox, sizeof(newmailbox));
+	memcpy((void *) &ud->mailbox, (void *) &newmailbox, 
+	       sizeof(newmailbox));
 
 	ci_write(ci->tx, "%s OK EXPUNGE completed\r\n", tag);
 	return 0;
