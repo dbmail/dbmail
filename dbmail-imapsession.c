@@ -72,8 +72,8 @@ extern char _sqldate[SQL_INTERNALDATE_LEN + 1];
 extern const int month_len[];
 extern const char *item_desc[];
 extern const char *envelope_items[];
-extern const char *imap_flag_desc[IMAP_NFLAGS];
-extern const char *imap_flag_desc_escaped[IMAP_NFLAGS];
+extern const char *imap_flag_desc[];
+extern const char *imap_flag_desc_escaped[];
 
 static int _imap_session_fetch_parse_partspec(struct ImapSession *self, int idx);
 static int _imap_session_fetch_parse_octet_range(struct ImapSession *self, int idx);
@@ -882,7 +882,6 @@ int dbmail_imap_session_fetch_parse_args(struct ImapSession * self, int idx)
 
 int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self, u64_t fetch_start, u64_t fetch_end)
 {
-	trace(TRACE_DEBUG, "%s,%s: no parsing at all", __FILE__, __func__ );
 
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	/* all the info we need can be retrieved by a single
@@ -895,6 +894,12 @@ int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self, u64_t fetch
 	unsigned nmatching;
 	unsigned fn;
 
+	GList *list = NULL;
+	GList *sublist = NULL;
+	GString *tmp = g_string_new("");
+	
+	trace(TRACE_DEBUG, "%s,%s: no parsing at all", __FILE__, __func__ );
+	
 	if (!self->use_uid) {
 		/* find the msgUID's to use */
 		lo = ud->mailbox.seq_list[fetch_start];
@@ -951,9 +956,10 @@ int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self, u64_t fetch
 		}
 
 		// start building the output
-		GList *list = NULL;
-		GString *string;
-		GString *tmp = g_string_new("");
+		
+		list = NULL;
+		sublist = NULL;
+		tmp = g_string_new("");
 		
 		/* fetching results */
 		trace(TRACE_DEBUG, "_ic_fetch(): no parsing, into fetch loop");
@@ -964,7 +970,7 @@ int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self, u64_t fetch
 			list = g_list_append(list,g_strdup(tmp->str));
 		}
 
-		if (self->fi.getUID) {
+		if (self->fi.getUID || self->use_uid) {
 			g_string_printf(tmp, "UID %llu", self->msginfo[i].uid);
 			list = g_list_append(list,g_strdup(tmp->str));
 		}
@@ -976,22 +982,23 @@ int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self, u64_t fetch
 
 		if (self->fi.getFlags) {
 
-			GList *sublist = NULL;
+			sublist = NULL;
 			
 			for (j = 0; j < IMAP_NFLAGS; j++) {
 				if (self->msginfo[i].flags[j]) 
 					sublist = g_list_append(sublist,(gchar *)imap_flag_desc_escaped[j]);
 			}
-			string = g_list_join(sublist," ");
-			
-			g_string_printf(tmp, "FLAGS (%s)", string->str);
-			list = g_list_append(list,g_strdup(tmp->str));
+			list = g_list_append_printf(list,"FLAGS %s", dbmail_imap_plist_as_string(sublist));
 		}
-
-		string = g_list_join(list," ");
-		dbmail_imap_session_printf(self, "* %u FETCH (%s)\r\n", (fn + 1), string->str);
+		dbmail_imap_session_printf(self, "* %u FETCH %s\r\n", (fn + 1), dbmail_imap_plist_as_string(list));
 	}
-
+	/*
+	g_list_foreach(list,(GFunc)g_free,NULL);
+	g_list_foreach(sublist,(GFunc)g_free,NULL);
+	g_list_free(list);
+	g_list_free(sublist);
+	g_string_free(tmp,TRUE);
+	*/
 	my_free(self->msginfo);
 	return 0;
 }
@@ -1756,7 +1763,7 @@ struct ImapSession * dbmail_imap_session_new(void)
 struct ImapSession * dbmail_imap_session_resetFi(struct ImapSession * self)
 {
 	self->fi.msgparse_needed = 0;	/* by default no body parsing required */	
-	self->fi.hdrparse_needed = 1;	/* by default header parsing is required */
+	self->fi.hdrparse_needed = 0;	/* by default header parsing is required */
 	self->fi.bodyfetch.itemtype = -1;	/* expect no body fetches (a priori) */
 	self->fi.getBodyTotal = 0;
 	self->fi.getBodyTotalPeek = 0;

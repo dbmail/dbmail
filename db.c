@@ -2353,6 +2353,7 @@ int db_getmailbox(mailbox_t * mb)
 			return -1;
 		}
 		
+		trace(TRACE_DEBUG,"%s,%s: exists [%d] num_rows [%d]",__FILE__, __func__, mb->exists, db_num_rows());
 		if (! (mb->seq_list = (u64_t *) my_malloc(sizeof(u64_t) * mb->exists))) {
 			db_free_result();
 			return -1;
@@ -3362,8 +3363,7 @@ int db_get_msginfo_range(u64_t msg_idnr_low, u64_t msg_idnr_high,
 	for (i = 0; i < nrows; i++) {
 		if (get_flags) {
 			for (j = 0; j < IMAP_NFLAGS; j++) {
-				(*result)[i].flags[j] =
-				    db_get_result_bool(i, j);
+				(*result)[i].flags[j] = db_get_result_bool(i, j);
 			}
 		}
 

@@ -77,7 +77,6 @@ const char *imap_flag_desc_escaped[IMAP_NFLAGS] = {
 	"\\Recent"
 };
 
-int imapcommands_use_uid = 0;
 int list_is_lsub = 0;
 
 extern cache_t cached_msg;
@@ -1849,7 +1848,7 @@ int _ic_sort(struct ImapSession *self)
 	for (i=0; i<ud->mailbox.exists; i++) {
 		/*trace(TRACE_INFO, "ic_sort(): i: %d, rs[i]: %d, mbuid[i]: %llu ", i, result_set[i], ud->mailbox.seq_list[i]); */
 		if (result_set[i])
-			dbmail_imap_session_printf(self, " %llu", imapcommands_use_uid ? ud->mailbox.seq_list[i] : (u64_t)result_set[i]);
+			dbmail_imap_session_printf(self, " %llu", self->use_uid ? ud->mailbox.seq_list[i] : (u64_t)result_set[i]);
 	}
 
 	dbmail_imap_session_printf(self,"\r\n");
@@ -2170,7 +2169,7 @@ dbmail_imap_session_printf(self,"* BYE internal dbase error\r\n");
 	for (i = 0; i < ud->mailbox.exists; i++) {
 		if (result_set[i])
 			dbmail_imap_session_printf(self, " %llu",
-				imapcommands_use_uid ? ud->mailbox.
+				self->use_uid ? ud->mailbox.
 				seq_list[i] : (u64_t) (i + 1));
 	}
 
@@ -2288,35 +2287,37 @@ int _ic_fetch(struct ImapSession *self)
 		if (! (self->fi.msgparse_needed || self->fi.hdrparse_needed)) {
 			if (dbmail_imap_session_fetch_get_unparsed(self, fetch_start, fetch_end) < 0)
 				return -1;
-		}
+			
+		} else {
 
-		/* if there is no parsing at all, this loop is not needed */
-		for (i = fetch_start; i <= fetch_end; i++) {
-			self->msg_idnr = (self->use_uid ? i : ud->mailbox.seq_list[i]);
-			insert_rfcsize = 0;
+			/* if there is no parsing at all, this loop is not needed */
+			for (i = fetch_start; i <= fetch_end; i++) {
+				self->msg_idnr = (self->use_uid ? i : ud->mailbox.seq_list[i]);
+				insert_rfcsize = 0;
 
-			if (self->use_uid) {
-				if (i > ud->mailbox.msguidnext - 1) {
-					/* passed the last one */
-					dbmail_imap_session_printf(self, "%s OK FETCH completed\r\n", self->tag);
-					return 0;
-				}
+				if (self->use_uid) {
+					if (i > ud->mailbox.msguidnext - 1) {
+						/* passed the last one */
+						dbmail_imap_session_printf(self, "%s OK FETCH completed\r\n", self->tag);
+						return 0;
+					}
 
-				/* check if the message with this UID belongs to this mailbox */
-				if (binary_search (ud->mailbox.seq_list, ud->mailbox.exists, i, &fn) == -1) {
-					continue;
-				}
+					/* check if the message with this UID belongs to this mailbox */
+					if (binary_search (ud->mailbox.seq_list, ud->mailbox.exists, i, &fn) == -1) {
+						continue;
+					}
 
-				dbmail_imap_session_printf(self, "* %u FETCH (", fn + 1);
+					dbmail_imap_session_printf(self, "* %u FETCH (", fn + 1);
 
-			} else
-				dbmail_imap_session_printf(self, "* %llu FETCH (", i + 1);
+				} else
+					dbmail_imap_session_printf(self, "* %llu FETCH (", i + 1);
 
-			trace(TRACE_DEBUG, "Fetching msgID %llu (fetch num %llu)", self->msg_idnr, i + 1);
-			/* go fetch the items */
-			fflush(self->ci->tx);
-			if (dbmail_imap_session_fetch_get_items(self) < 0)
-				return -1;
+				trace(TRACE_DEBUG, "Fetching msgID %llu (fetch num %llu)", self->msg_idnr, i + 1);
+				/* go fetch the items */
+				fflush(self->ci->tx);
+				if (dbmail_imap_session_fetch_get_items(self) < 0)
+					return -1;
+			}
 		}
 	}
 
@@ -2469,7 +2470,7 @@ int _ic_store(struct ImapSession *self)
 		store_start = strtoull(endptr, &endptr, 10);
 
 		if (store_start == 0 || store_start >
-		    (imapcommands_use_uid ? (ud->mailbox.msguidnext - 1) :
+		    (self->use_uid ? (ud->mailbox.msguidnext - 1) :
 		     ud->mailbox.exists)) {
 			dbmail_imap_session_printf(self,
 				"%s BAD invalid message range specified\r\n",
@@ -2483,7 +2484,7 @@ int _ic_store(struct ImapSession *self)
 			endptr = lastchar;
 
 			if (*endptr == '*') {
-				store_end = (imapcommands_use_uid ?
+				store_end = (self->use_uid ?
 					     (ud->mailbox.msguidnext -
 					      1) : ud->mailbox.exists);
 				endptr++;
@@ -2491,7 +2492,7 @@ int _ic_store(struct ImapSession *self)
 			}
 
 			if (store_end == 0 || store_end >
-			    (imapcommands_use_uid
+			    (self->use_uid
 			     ? (ud->mailbox.msguidnext -
 				1) : ud->mailbox.exists)) {
 				dbmail_imap_session_printf(self,
@@ -2519,17 +2520,17 @@ int _ic_store(struct ImapSession *self)
 			return 1;
 		}
 
-		if (!imapcommands_use_uid) {
+		if (!self->use_uid) {
 			store_start--;
 			store_end--;
 		}
 
 		if (store_start == store_end) {
 			thisnum =
-			    (imapcommands_use_uid ? store_start : ud->
+			    (self->use_uid ? store_start : ud->
 			     mailbox.seq_list[store_start]);
 
-			if (imapcommands_use_uid) {
+			if (self->use_uid) {
 				/* check if the message with this UID belongs to this mailbox */
 				if (binary_search
 				    (ud->mailbox.seq_list,
@@ -2552,7 +2553,7 @@ int _ic_store(struct ImapSession *self)
 				}
 
 				dbmail_imap_session_printf(self, "* %llu FETCH (FLAGS (",
-					imapcommands_use_uid ? (u64_t) (fn + 1) : store_start + 1);
+					self->use_uid ? (u64_t) (fn + 1) : store_start + 1);
 
 				for (j = 0, isfirstout = 1;
 				     j < IMAP_NFLAGS; j++) {
@@ -2570,7 +2571,7 @@ int _ic_store(struct ImapSession *self)
 				dbmail_imap_session_printf(self, "))\r\n");
 			}
 		} else {
-			if (!imapcommands_use_uid) {
+			if (!self->use_uid) {
 				/* find the msgUID's to use */
 				lo = ud->mailbox.seq_list[store_start];
 				hi = ud->mailbox.seq_list[store_end];
@@ -2590,10 +2591,10 @@ int _ic_store(struct ImapSession *self)
 			if (!be_silent) {
 				for (i = store_start; i <= store_end; i++) {
 					thisnum =
-					    (imapcommands_use_uid ? i :
+					    (self->use_uid ? i :
 					     ud->mailbox.seq_list[i]);
 
-					if (imapcommands_use_uid) {
+					if (self->use_uid) {
 						/* check if the message with this UID belongs
 						   to this mailbox */
 						if (binary_search
@@ -2616,7 +2617,7 @@ int _ic_store(struct ImapSession *self)
 
 					dbmail_imap_session_printf(self,
 						"* %llu FETCH (FLAGS (",
-						imapcommands_use_uid
+						self->use_uid
 						? (u64_t) (fn + 1) : i +
 						1);
 
@@ -2642,7 +2643,7 @@ int _ic_store(struct ImapSession *self)
 	}
 
 	dbmail_imap_session_printf(self, "%s OK %sSTORE completed\r\n", self->tag,
-		imapcommands_use_uid ? "UID " : "");
+		self->use_uid ? "UID " : "");
 	return 0;
 }
 
@@ -2712,7 +2713,7 @@ int _ic_copy(struct ImapSession *self)
 		endptr = lastchar;
 
 		if (copy_start == 0 || copy_start >
-		    (imapcommands_use_uid ? (ud->mailbox.msguidnext - 1) :
+		    (self->use_uid ? (ud->mailbox.msguidnext - 1) :
 		     ud->mailbox.exists)) {
 			dbmail_imap_session_printf(self,
 				"%s BAD invalid message range specified\r\n",
@@ -2726,7 +2727,7 @@ int _ic_copy(struct ImapSession *self)
 			endptr = lastchar;
 
 			if (*endptr == '*') {
-				copy_end = (imapcommands_use_uid ?
+				copy_end = (self->use_uid ?
 					    (ud->mailbox.msguidnext -
 					     1) : ud->mailbox.exists);
 				endptr++;
@@ -2734,7 +2735,7 @@ int _ic_copy(struct ImapSession *self)
 			}
 
 			if (copy_end == 0 || copy_end >
-			    (imapcommands_use_uid
+			    (self->use_uid
 			     ? (ud->mailbox.msguidnext -
 				1) : ud->mailbox.exists)) {
 				dbmail_imap_session_printf(self,
@@ -2762,17 +2763,17 @@ int _ic_copy(struct ImapSession *self)
 			return 1;
 		}
 
-		if (!imapcommands_use_uid) {
+		if (!self->use_uid) {
 			copy_start--;
 			copy_end--;
 		}
 
 		for (i = copy_start; i <= copy_end; i++) {
 			thisnum =
-			    (imapcommands_use_uid ? i : ud->mailbox.
+			    (self->use_uid ? i : ud->mailbox.
 			     seq_list[i]);
 
-			if (imapcommands_use_uid) {
+			if (self->use_uid) {
 				/* check if the message with this UID belongs to this mailbox */
 				if (binary_search
 				    (ud->mailbox.seq_list,
@@ -2798,7 +2799,7 @@ int _ic_copy(struct ImapSession *self)
 	}
 
 	dbmail_imap_session_printf(self, "%s OK %sCOPY completed\r\n", self->tag,
-		imapcommands_use_uid ? "UID " : "");
+		self->use_uid ? "UID " : "");
 	return 0;
 }
 
@@ -2826,7 +2827,7 @@ int _ic_uid(struct ImapSession *self)
 		return 1;
 	}
 
-	imapcommands_use_uid = 1;	/* set global var to make clear we will be using UID's */
+	self->use_uid = 1;	/* set global var to make clear we will be using UID's */
 	
 	/* ACL rights for UID are handled by the other functions called below */
 	if (strcasecmp(self->args[0], "fetch") == 0) {
@@ -2849,7 +2850,7 @@ int _ic_uid(struct ImapSession *self)
 		result = 1;
 	}
 
-	imapcommands_use_uid = 0;
+	self->use_uid = 0;
 
 	return result;
 }
