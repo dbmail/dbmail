@@ -105,5 +105,4 @@ GString * g_list_join(GList * list, char * sep);
 GList * g_string_split(GString * string, char * sep);
 GList * g_list_append_printf(GList * list, char * format, ...);
 
-int db_getmailbox_list_result(u64_t mailbox_idnr, imap_userdata_t * ud);
 #endif

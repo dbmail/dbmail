@@ -164,7 +164,7 @@ enum BODY_FETCH_ITEM_TYPES { BFIT_TEXT, BFIT_HEADER, BFIT_MIME,
  * (imap) mailbox data type
  */
 typedef struct {
-	u64_t uid, msguidnext;
+	u64_t uid, msguidnext, owner_idnr;
 	char *name;
 	unsigned no_select, no_inferiors;
 	unsigned exists, recent, unseen;

@@ -1240,4 +1240,5 @@ int db_acl_delete_acl(u64_t userid, u64_t mboxid);
 int db_acl_get_identifier(u64_t mboxid, 
 			  /*@out@*/ struct list *identifier_list);
 
+int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * mb);
 #endif

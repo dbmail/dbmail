@@ -1277,6 +1277,9 @@ int _ic_list(char *tag, char **args, ClientInfo * ci)
 	char name[IMAP_MAX_MAILBOX_NAMELEN];
 	char *pattern;
 	char *thisname = list_is_lsub ? "LSUB" : "LIST";
+	
+	mailbox_t *mb = (mailbox_t *)my_malloc(sizeof(mailbox_t));
+	memset(mb,0,sizeof(mailbox_t));
 
 	if (!check_state_and_args
 	    (thisname, tag, args, 2, IMAPCS_AUTHENTICATED, ci))
@@ -1362,29 +1365,17 @@ int _ic_list(char *tag, char **args, ClientInfo * ci)
 		return 1;
 	}
 
-
 	for (i = 0; i < nchildren; i++) {
-		/* get name */
-		trace(TRACE_DEBUG, "%s,%s: children[%d] = %llu",
-		      __FILE__, __func__, i, children[i]);
-		result = db_getmailbox_list_result(children[i],ud);
-		if (result == -1) {
-			ci_write(ci->tx, "* BYE internal dbase error\r\n");
-			my_free(children);
-			my_free(pattern);
-			return -1;
-		}
-
+		result = db_getmailbox_list_result(children[i], ud->userid, mb);
 		ci_write(ci->tx, "* %s (", thisname);
 
-		/* show flags */
-		if (ud->mailbox.no_select)
+		if (mb->no_select)
 			ci_write(ci->tx, "\\noselect ");
-		if (ud->mailbox.no_inferiors)
+		if (mb->no_inferiors)
 			ci_write(ci->tx, "\\noinferiors ");
 
 		/* show delimiter & name */
-		ci_write(ci->tx, ") \"/\" \"%s\"\r\n", ud->mailbox.name);
+		ci_write(ci->tx, ") \"/\" \"%s\"\r\n", mb->name);
 	}
 
 	if (children)

@@ -31,7 +31,6 @@
 #include "dbmail.h"
 #include "auth.h"
 #include "misc.h"
-#include "imap4.h"
 #include <stdio.h>
 #include <time.h>
 #include <stdlib.h>
@@ -3824,14 +3823,17 @@ void convert_inbox_to_uppercase(char *name)
 	return;
 }
 
-int db_getmailbox_list_result(u64_t mailbox_idnr, imap_userdata_t * ud)
+int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * mb)
 {
 	/* query mailbox for LIST results */
 	const char *query_result;
+	GString *fqname;
+	int i=0;
 
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT name, no_select, no_inferiors FROM %smailboxes WHERE mailbox_idnr = '%llu'",DBPFX,
-		 mailbox_idnr);
+		 "SELECT owner_idnr, name, no_select, no_inferiors "
+		 "FROM %smailboxes WHERE mailbox_idnr = '%llu'",
+		 DBPFX, mailbox_idnr);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: db error", __FILE__, __func__);
@@ -3842,17 +3844,24 @@ int db_getmailbox_list_result(u64_t mailbox_idnr, imap_userdata_t * ud)
 		db_free_result();
 		return 0;
 	}
+	/* owner_idnr */
+	query_result=db_get_result(0,i++);
+	mb->owner_idnr=strtol(query_result,NULL,10);
+	
 	/* name */
-	query_result=db_get_result(0,0);
-	ud->mailbox.name = strdup(query_result);
+	query_result=db_get_result(0,i++);
+	fqname = g_string_new(mailbox_add_namespace(query_result, mb->owner_idnr, user_idnr));
+	fqname = g_string_truncate(fqname,IMAP_MAX_MAILBOX_NAMELEN);
+	mb->name = fqname->str;
+	g_string_free(fqname,FALSE);
 
 	/* no_select */
-	query_result=db_get_result(0,1);
-	ud->mailbox.no_select=strtol(query_result,NULL,1);
+	query_result=db_get_result(0,i++);
+	mb->no_select=strtol(query_result,NULL,1);
 
 	/* no_inferior */
-	query_result=db_get_result(0,1);
-	ud->mailbox.no_inferiors=strtol(query_result,NULL,1);
+	query_result=db_get_result(0,i++);
+	mb->no_inferiors=strtol(query_result,NULL,1);
 
 	db_free_result();
 	return 0;
