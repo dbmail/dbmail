@@ -243,6 +243,14 @@ CREATE INDEX dbmail_idx_since ON dbmail_pbsp(since);
 INSERT INTO dbmail_users (userid, passwd, encryption_type)
 	VALUES ('__@!internal_delivery_user!@__', '', 'md5');
 
+-- All users must have the right value for the curmail_size:
+UPDATE dbmail_users SET curmail_size = (
+	SELECT COALESCE(SUM(pm.messagesize), 0) FROM dbmail_mailboxes mbx,
+	dbmail_messages msg, dbmail_physmessage pm
+	WHERE mbx.owner_idnr = dbmail_users.user_idnr
+	AND msg.mailbox_idnr = mbx.mailbox_idnr
+	AND pm.id = msg.physmessage_id);
+
 -- Commit transaction
 
 COMMIT;
