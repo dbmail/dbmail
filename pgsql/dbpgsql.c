@@ -26,6 +26,11 @@ char *query = 0;
 char *value = NULL; /* used for PQgetvalue */
 unsigned long PQcounter = 0; /* used for PQgetvalue loops */
 
+const char *db_flag_desc[] = 
+{
+  "seen_flag", "answered_flag", "deleted_flag", "flagged_flag", "draft_flag", "recent_flag"
+};
+
 
 int db_connect ()
 {
@@ -2213,6 +2218,85 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
 
 
 /*
+ * db_copymsg_range()
+ *
+ * copies a range of msgs to a specified mailbox
+ * returns 0 on success, -1 on failure
+ */
+int db_copymsg_range(u64_t msgidlow, u64_t msgidhigh, u64_t destmboxid)
+{
+  u64_t newmsgid;
+  time_t td;
+
+  time(&td);              /* get time */
+
+  /* start transaction */
+  if (db_query("BEGIN WORK") == -1)
+    {
+      trace(TRACE_ERROR, "db_copymsg_range(): could not start transaction\n");
+      return -1;
+    }
+
+  /* copy message info */
+  snprintf(query, DEF_QUERYSIZE, "INSERT INTO messages (mailbox_idnr, messagesize, status, "
+	   "deleted_flag, seen_flag, answered_flag, draft_flag, flagged_flag, recent_flag,"
+	   " unique_id, internal_date) "
+	   "SELECT %llu, messagesize, status, deleted_flag, seen_flag, answered_flag, "
+	   "draft_flag, flagged_flag, recent_flag, '', internal_date "
+	   "FROM messages WHERE message_idnr >= %llu AND message_idnr <= %llu",
+	   destmboxid, msgidlow, msgidhigh);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_copymsg(): could not copy message\n");
+
+      db_query("ROLLBACK WORK"); /* close transaction */
+
+      return -1;
+    }
+
+  newmsgid = db_insert_result("message_idnr");
+
+  /* copy message blocks */
+  snprintf(query, DEF_QUERYSIZE, "INSERT INTO messageblks (message_idnr, messageblk, blocksize) "
+	   "SELECT %llu, messageblk, blocksize FROM messageblks "
+	   "WHERE message_idnr = %llu ORDER BY messageblk_idnr", newmsgid, msgid);
+  
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_copymsg(): could not insert message blocks\n");
+
+      db_query("ROLLBACK WORK"); /* close transaction */
+
+      return -1;
+    }
+
+  /* all done, validate new msg by creating a new unique id for the copied msg */
+  snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET unique_id=\'%lluA%lu\' "
+	   "WHERE message_idnr=%llu", newmsgid, td, newmsgid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_copymsg(): could not set unique ID for copied msg\n");
+
+      db_query("ROLLBACK WORK"); /* close transaction */
+
+      return -1;
+    }
+
+  /* commit transaction */
+  if (db_query("COMMIT WORK") == -1)
+    {
+      trace(TRACE_ERROR, "db_copymsg(): could not commit transaction\n");
+      return -1;
+    }
+  
+  return 0; /* success */
+}
+
+
+
+/*
  * db_getmailboxname()
  *
  * retrieves the name of a specified mailbox
@@ -2364,7 +2448,7 @@ int db_unsubscribe(u64_t mboxid)
  *   0  flag not set
  *   1  flag set
  */
-int db_get_msgflag(const char *name, u64_t msguid)
+int db_get_msgflag(const char *name, u64_t msguid, u64_t mailboxuid)
 {
 
   char flagname[DEF_QUERYSIZE/2]; /* should be sufficient ;) */
@@ -2388,7 +2472,8 @@ int db_get_msgflag(const char *name, u64_t msguid)
     return 0; /* non-existent flag is not set */
 
  snprintf(query, DEF_QUERYSIZE, "SELECT %s FROM messages WHERE "
-	   "message_idnr = %llu AND status<2 AND unique_id != ''", flagname, msguid);
+	  "message_idnr = %llu AND status<2 AND unique_id != '' "
+	  "AND mailbox_idnr = %llu", flagname, msguid, mailboxuid);
  
  if (db_query(query) == -1)
     {
@@ -2422,7 +2507,7 @@ int db_get_msgflag(const char *name, u64_t msguid)
  *  -1  error
  *   0  success
  */
-int db_get_msgflag_all(u64_t msguid, int *flags)
+int db_get_msgflag_all(u64_t msguid, u64_t mailboxuid, int *flags)
 {
   char *row;
   int i;
@@ -2431,7 +2516,8 @@ int db_get_msgflag_all(u64_t msguid, int *flags)
 
   snprintf(query, DEF_QUERYSIZE, "SELECT seen_flag, answered_flag, deleted_flag, "
 	   "flagged_flag, draft_flag, recent_flag FROM messages WHERE "
-	   "message_idnr = %llu AND status<2 AND unique_id != ''", msguid);
+	   "message_idnr = %llu AND status<2 AND unique_id != '' "
+	   "AND mailbox_idnr = %llu", msguid, mailboxuid);
  
   if (db_query(query) == -1)
     {
@@ -2452,39 +2538,87 @@ int db_get_msgflag_all(u64_t msguid, int *flags)
    return 0;
 }
 
-
 /*
  * db_set_msgflag()
  *
- * sets a flag specified by 'name' to on/off
+ * sets flags for a message
+ * Flag set is specified in *flags; indexed as follows (see top of imapcommands.c file)
+ * [0] "Seen", 
+ * [1] "Answered", 
+ * [2] "Deleted", 
+ * [3] "Flagged", 
+ * [4] "Draft", 
+ * [5] "Recent"
  *
+ * a value of zero represents 'off', a value of one "sets" the flag
+ *
+ * action_type can be one of the IMAP_FLAG_ACTIONS:
+ *
+ * IMAPFA_REPLACE  new set will be exactly as *flags
+ * IMAPFA_ADD      update only flags which have '1' as value in *flags
+ * IMAPFA_REMOVE   update only flags which have '0' as value in *flags
+ * 
  * returns:
  *  -1  error
- *   0  success
+ *   0  success 
  */
-int db_set_msgflag(const char *name, u64_t msguid, int val)
+int db_set_msgflag(u64_t msguid, u64_t mailboxuid, int *flags, int action_type)
 {
+  int i,placed=0;
+  int left = DEF_QUERYSIZE - sizeof("answered_flag=1,");
 
-  char flagname[DEF_QUERYSIZE/2]; /* should be sufficient ;) */
+  snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET ");
+  
+  for (i=0; i<IMAP_NFLAGS; i++)
+    {
+      switch (action_type)
+	{
+	case IMAPFA_ADD:
+	  if (flags[i] > 0)
+	    {
+	      strncat(query, db_flag_desc[i], left);
+	      left -= sizeof("answered_flag");
+	      strncat(query, "=1,", left);
+	      left -= sizeof(" =1, ");
+	      placed = 1;
+	    }
+	  break;
 
-  /* determine flag */
-  if (strcasecmp(name,"seen") == 0)
-    snprintf(flagname, DEF_QUERYSIZE/2, "seen_flag");
-  else if (strcasecmp(name,"deleted") == 0)
-    snprintf(flagname, DEF_QUERYSIZE/2, "deleted_flag");
-  else if (strcasecmp(name,"answered") == 0)
-    snprintf(flagname, DEF_QUERYSIZE/2, "answered_flag");
-  else if (strcasecmp(name,"flagged") == 0)
-    snprintf(flagname, DEF_QUERYSIZE/2, "flagged_flag");
-  else if (strcasecmp(name,"recent") == 0)
-    snprintf(flagname, DEF_QUERYSIZE/2, "recent_flag");
-  else if (strcasecmp(name,"draft") == 0)
-    snprintf(flagname, DEF_QUERYSIZE/2, "draft_flag");
-  else
-    return 0; /* non-existent flag is cannot set */
+	case IMAPFA_REMOVE:
+	  if (flags[i] == 0)
+	    {
+	      strncat(query, db_flag_desc[i], left);
+	      left -= sizeof("answered_flag");
+	      strncat(query, "=0,", left);
+	      left -= sizeof("=0,");
+	      placed = 1;
+	    }
+	  break;
 
-  snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET %s = %d WHERE "
-	   "message_idnr = %llu AND status<2 ", flagname, val, msguid);
+	case IMAPFA_REPLACE:
+	  strncat(query, db_flag_desc[i], left);
+	  left -= sizeof("answered_flag");
+
+	  if (flags[i] == 0)
+	    strncat(query, "=0,", left);
+	  else
+	    strncat(query, "=1,", left);
+
+	  left -= sizeof("=1,");
+	  placed = 1;
+
+	  break;
+	}
+    }
+
+  if (!placed) 
+    return 0; /* nothing to update */
+  
+  
+  /* last character in string is comma, replace it --> strlen()-1 */
+  snprintf(&query[strlen(query)-1], left, " WHERE "
+	   "message_idnr = %llu AND status<2 "
+	   "AND mailbox_idnr = %llu", msguid, mailboxuid);
 
   if (db_query(query) == -1)
     {
@@ -2494,6 +2628,86 @@ int db_set_msgflag(const char *name, u64_t msguid, int val)
 
   return 0;
 }
+
+
+
+/*
+ * db_set_msgflag_range()
+ *
+ * as db_set_msgflag() but acts on a range of messages
+ * 
+ * returns:
+ *  -1  error
+ *   0  success 
+ */
+int db_set_msgflag_range(u64_t msguidlow, u64_t msguidhigh, u64_t mailboxuid, 
+		   int *flags, int action_type)
+{
+  int i,placed=0;
+  int left = DEF_QUERYSIZE - sizeof("answered_flag=1,");
+
+  snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET ");
+  
+  for (i=0; i<IMAP_NFLAGS; i++)
+    {
+      switch (action_type)
+	{
+	case IMAPFA_ADD:
+	  if (flags[i] > 0)
+	    {
+	      strncat(query, db_flag_desc[i], left);
+	      left -= sizeof("answered_flag");
+	      strncat(query, "=1,", left);
+	      left -= sizeof(" =1, ");
+	      placed = 1;
+	    }
+	  break;
+
+	case IMAPFA_REMOVE:
+	  if (flags[i] == 0)
+	    {
+	      strncat(query, db_flag_desc[i], left);
+	      left -= sizeof("answered_flag");
+	      strncat(query, "=0,", left);
+	      left -= sizeof("=0,");
+	      placed = 1;
+	    }
+	  break;
+
+	case IMAPFA_REPLACE:
+	  strncat(query, db_flag_desc[i], left);
+	  left -= sizeof("answered_flag");
+
+	  if (flags[i] == 0)
+	    strncat(query, "=0,", left);
+	  else
+	    strncat(query, "=1,", left);
+
+	  left -= sizeof("=1,");
+	  placed = 1;
+
+	  break;
+	}
+    }
+
+  if (!placed) 
+    return 0; /* nothing to update */
+  
+  
+  /* last character in string is comma, replace it --> strlen()-1 */
+  snprintf(&query[strlen(query)-1], left, " WHERE "
+	   "message_idnr >= %llu AND message_idnr <= %llu AND "
+	   "status<2 AND mailbox_idnr = %llu", msguidlow, msguidhigh, mailboxuid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_set_msgflag_range(): could not set flag\n");
+      return (-1);
+    }
+
+  return 0;
+}
+
 
 
 /*
