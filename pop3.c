@@ -94,8 +94,7 @@ int pop3 (void *stream, char *buffer)
 	/* commands that are allowed to have no arguments */
   if ((value==NULL) && (cmdtype!=POP3_QUIT) && (cmdtype!=POP3_LIST) &&
       (cmdtype!=POP3_STAT) && (cmdtype!=POP3_RSET) && (cmdtype!=POP3_NOOP) &&
-      (cmdtype!=POP3_LAST) && (cmdtype!=POP3_UIDL) && (cmdtype!=POP3_AUTH) &&
-			(cmdtype!=POP3_TOP))
+      (cmdtype!=POP3_LAST) && (cmdtype!=POP3_UIDL) && (cmdtype!=POP3_AUTH)) 
     {
       return pop3_error(stream,"-ERR your command does not compute\r\n");
     }

@@ -1,5 +1,6 @@
 $Id$
 
+- dbmail-pop3d dies when top is issued without arguments
 - dbmail-smtp should return failed inserts to sender
 - it should be possible to send to external addresses
 - fix the resolving (pop daemon is not resolving)
