@@ -871,17 +871,21 @@ char *auth_get_userid (u64_t *user_idnr)
 
   query_result = db_get_result(0, 0);
   if (query_result) {
-      if (!(returnid = (char *) my_malloc (strlen(query_result)+1))) {
+	  trace(TRACE_DEBUG, "%s,%s: query_result = %s", __FILE__,
+		__FUNCTION__, query_result);
+	  if (!(returnid = (char *) my_malloc (strlen(query_result)+1))) {
 		  trace(TRACE_ERROR,"%s,%s: out of memory", __FILE__, __FUNCTION__);
 		  db_free_result();
 		  db_store_auth_result();
 		  return NULL;
 	  }
-      strncpy (returnid, query_result, strlen(query_result));
+	  strncpy (returnid, query_result, strlen(query_result) + 1);
   }
   
   db_free_result();
   db_store_auth_result();
+  trace(TRACE_DEBUG, "%s,%s: returning %s as returnid", __FILE__,
+	__FUNCTION__, returnid);
   return returnid;
 }
 
