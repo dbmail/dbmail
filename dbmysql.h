@@ -114,7 +114,7 @@ typedef struct
   FILE *filedump,*tmpdump;
   char filename[30];
   char tmpname[30];
-  int num,file_dumped;
+  int num,file_dumped,msg_parsed;
   long dumpsize;
 } cache_t;
 

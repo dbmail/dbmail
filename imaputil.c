@@ -1706,10 +1706,11 @@ int binary_search(const unsigned long *array, int arraysize, unsigned long key)
  */
 void close_cache()
 {
-  if (cached_msg.num != -1)
+  if (cached_msg.msg_parsed)
     db_free_msg(&cached_msg.msg);
 
   cached_msg.num = -1;
+  cached_msg.msg_parsed = 0;
   memset(&cached_msg.msg, 0, sizeof(cached_msg.msg));
   if (cached_msg.filedump)
     {
@@ -1740,6 +1741,7 @@ void close_cache()
 int init_cache()
 {
   cached_msg.num = -1;
+  cached_msg.msg_parsed = 0;
   memset(&cached_msg.msg, 0, sizeof(cached_msg.msg));
 
   strcpy(cached_msg.filename, "/tmp/imapdump.tmp.XXXXXX");

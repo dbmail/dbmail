@@ -1794,9 +1794,10 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	      if (fi->msgparse_needed && thisnum != cached_msg.num)
 		{
 		  /* parse message structure */
-		  if (cached_msg.num != -1)
+		  if (cached_msg.msg_parsed)
 		    db_free_msg(&cached_msg.msg);
 
+		  cached_msg.msg_parsed = 0;
 		  cached_msg.num = -1;
 		  cached_msg.file_dumped = 0;
 		  rewind(cached_msg.filedump);
@@ -1807,9 +1808,9 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		      bad_response_send = 1;
 		      continue;
 		    }
-		  db_msgdump(&cached_msg.msg, thisnum);
+		  cached_msg.msg_parsed = 1;
 		  cached_msg.num = thisnum;
-
+		  db_msgdump(&cached_msg.msg, thisnum);
 		}
 
 	      if (fi->getInternalDate)
@@ -1868,7 +1869,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	      if (fi->getRFC822 || fi->getRFC822Peek)
 		{
 		  rewind(cached_msg.filedump);
-		  if (cached_msg.file_dumped == 0)
+		  if (cached_msg.file_dumped == 0 || cached_msg.num != thisnum)
 		    {
 		      cached_msg.dumpsize  = 
 			rfcheader_dump(cached_msg.filedump, &cached_msg.msg.rfcheader, args, 0, 0);
@@ -1878,6 +1879,17 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 				      cached_msg.msg.bodyend, thisnum);
 
 		      cached_msg.file_dumped = 1;
+		      
+		      if (cached_msg.num != thisnum)
+			{
+			  /* if there is a parsed msg in the cache it will be invalid now */
+			  if (cached_msg.msg_parsed)
+			    {
+			      cached_msg.msg_parsed = 0;
+			      db_free_msg(&cached_msg.msg);
+			    }
+			  cached_msg.num = thisnum;
+			}
 		    }
 		  
 		  fseek(cached_msg.filedump, 0, SEEK_SET);
@@ -1904,7 +1916,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	      if (fi->getBodyTotal || fi->getBodyTotalPeek)
 		{
 		  rewind(cached_msg.filedump);
-		  if (cached_msg.file_dumped == 0)
+		  if (cached_msg.file_dumped == 0 || cached_msg.num != thisnum)
 		    {
 		      cached_msg.dumpsize  = 
 			rfcheader_dump(cached_msg.filedump, &cached_msg.msg.rfcheader, args, 0, 0);
@@ -1912,6 +1924,18 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		      cached_msg.dumpsize += 
 			db_dump_range(cached_msg.filedump, cached_msg.msg.bodystart, 
 				      cached_msg.msg.bodyend, thisnum);
+
+
+		      if (cached_msg.num != thisnum)
+			{
+			  /* if there is a parsed msg in the cache it will be invalid now */
+			  if (cached_msg.msg_parsed)
+			    {
+			      cached_msg.msg_parsed = 0;
+			      db_free_msg(&cached_msg.msg);
+			    }
+			  cached_msg.num = thisnum;
+			}
 
 		      cached_msg.file_dumped = 1;
 		    }
