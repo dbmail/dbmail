@@ -88,9 +88,11 @@ int pop3 (void *stream, char *buffer)
 	for (cmdtype = POP3_STRT; cmdtype < POP3_END; cmdtype ++)
 		if (strcasecmp(command, commands[cmdtype]) == 0) break;
 
+	trace (TRACE_DEBUG,"pop3(): command looked up as commandtype %d",cmdtype);
+	
 	if ((value==NULL) && (cmdtype!=POP3_QUIT) && (cmdtype!=POP3_LIST) &&
 			(cmdtype!=POP3_STAT) && (cmdtype!=POP3_RSET) && (cmdtype!=POP3_NOOP) &&
-			(cmdtype!=POP3_LAST) && (cmdtype!=POP3_UIDL)) 
+			(cmdtype!=POP3_LAST) && (cmdtype!=POP3_UIDL) && (cmdtype!=POP3_AUTH))
 		{
 		return pop3_error(stream,"-ERR your command does not compute\r\n");
 		}
@@ -121,7 +123,7 @@ int pop3 (void *stream, char *buffer)
 					}
 
 				fprintf ((FILE *)stream, "+OK Password required for %s\r\n",username);
-				break;
+				return 1;
 			}
 
 		case POP3_PASS :
@@ -169,7 +171,7 @@ int pop3 (void *stream, char *buffer)
 								return result;
 								}
 						}
-				break;
+				return 1;
 			}
 
 		case POP3_LIST :
@@ -275,40 +277,40 @@ int pop3 (void *stream, char *buffer)
 
 		 case POP3_RSET :
 			{
-      if (state!=TRANSACTION)
-			return pop3_error(stream,"-ERR wrong command mode, sir\r\n");
+			if (state!=TRANSACTION)
+				return pop3_error(stream,"-ERR wrong command mode, sir\r\n");
       	
-		tmpelement=list_getstart(&curr_session.messagelst);
+			tmpelement=list_getstart(&curr_session.messagelst);
 
-				curr_session.virtual_totalsize=curr_session.totalsize;
-				curr_session.virtual_totalmessages=curr_session.totalmessages;
-				while (tmpelement!=NULL)
-						{
-						((struct message *)tmpelement->data)->virtual_messagestatus=((struct message *)tmpelement->data)->messagestatus;
-						tmpelement=tmpelement->nextnode;
-						}
+			curr_session.virtual_totalsize=curr_session.totalsize;
+			curr_session.virtual_totalmessages=curr_session.totalmessages;
+			while (tmpelement!=NULL)
+					{
+					((struct message *)tmpelement->data)->virtual_messagestatus=((struct message *)tmpelement->data)->messagestatus;
+					tmpelement=tmpelement->nextnode;
+					}
 			
-				fprintf ((FILE *)stream, "+OK %lu messages (%lu octets)\r\n",curr_session.virtual_totalmessages,
+			fprintf ((FILE *)stream, "+OK %lu messages (%lu octets)\r\n",curr_session.virtual_totalmessages,
 				 curr_session.virtual_totalsize);
-				
-				return 1;
+			
+			return 1;
 			}
 
 		case POP3_LAST :
 			{
-      if (state!=TRANSACTION)
-			return pop3_error(stream,"-ERR wrong command mode, sir\r\n");
+			if (state!=TRANSACTION)
+				return pop3_error(stream,"-ERR wrong command mode, sir\r\n");
 			
-		tmpelement=list_getstart(&curr_session.messagelst);
+			tmpelement=list_getstart(&curr_session.messagelst);
 
-				while (tmpelement!=NULL)
+			while (tmpelement!=NULL)
 				{
-					if (((struct message *)tmpelement->data)->virtual_messagestatus==0)
-						{
-						/* we need the last message that has been accessed */
-						fprintf ((FILE *)stream, "+OK %lu\r\n",((struct message *)tmpelement->data)->messageid-1);
-						return 1;
-						}
+				if (((struct message *)tmpelement->data)->virtual_messagestatus==0)
+					{
+					/* we need the last message that has been accessed */
+					fprintf ((FILE *)stream, "+OK %lu\r\n",((struct message *)tmpelement->data)->messageid-1);
+					return 1;
+					}
 				tmpelement=tmpelement->nextnode;
 				}
 				/* all old messages */
@@ -318,8 +320,8 @@ int pop3 (void *stream, char *buffer)
 					
 		case POP3_NOOP :
 			{
-      if (state!=TRANSACTION)
-			return pop3_error(stream,"-ERR wrong command mode, sir\r\n");
+			if (state!=TRANSACTION)
+				return pop3_error(stream,"-ERR wrong command mode, sir\r\n");
 				
 			fprintf ((FILE *)stream, "+OK\r\n");
 			return 1;
@@ -346,7 +348,7 @@ int pop3 (void *stream, char *buffer)
 					}
 				if (!found)
 					return pop3_error (stream,"-ERR no such message\r\n");
-			}
+				}
 			/* just drop the list */
 			fprintf ((FILE *)stream, "+OK Some very unique numbers for you\r\n");
 					if (curr_session.virtual_totalmessages>0)
@@ -418,7 +420,9 @@ int pop3 (void *stream, char *buffer)
 									return result;
 								}
 					}
+				return 1;
 				}	
+
 			case POP3_AUTH:
 				{
 				if (state!=AUTHORIZATION)
@@ -427,7 +431,6 @@ int pop3 (void *stream, char *buffer)
 				return 1;
 				}
 
-			
 		default : 
 			{
 				return pop3_error(stream,"-ERR command not understood, sir\r\n");
