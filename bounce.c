@@ -11,13 +11,10 @@
 #include "dbmysql.h"
 #include "debug.h"
 
-/* extern char *header; */
-extern unsigned long headersize; 
+extern struct list mimelist;  
+extern struct list users;  
 
- extern struct list mimelist;  
- extern struct list users;  
-
-int bounce (char *header, char *destination_address, int type)
+int bounce (char *header, unsigned long headersize,char *destination_address, int type)
 {
   void *sendmail_stream;
   struct list from_addresses;

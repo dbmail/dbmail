@@ -14,6 +14,6 @@
 #define BOUNCE_STORAGE_LIMIT_REACHED 2
 #define BOUNCE_INVALID_MAIL_FORMAT 3
 
-int bounce (char *header, char *destination_address, int type);
+int bounce (char *header, unsigned long headersize, char *destination_address, int type);
 
 #endif
