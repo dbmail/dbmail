@@ -702,7 +702,7 @@ int mkpassword(const char * const user, const char * const passwd,
 			*enctype = "md5";
 			break;
 		case MD5_DIGEST:
-			strncat(pw, makemd5(passwd), 49);
+			null_strncpy(pw, makemd5(passwd), 49);
 			*enctype = "md5sum";
 			break;
 		case MD5_DIGEST_RAW:
@@ -720,7 +720,7 @@ int mkpassword(const char * const user, const char * const passwd,
 				break;
 			}
                 
-			strncat(pw, entry, 49);
+			null_strncpy(pw, entry, 49);
 			if (strcmp(pw, "") == 0) {
 				qerrorf("Error: password for user [%s] not found in file [%s].\n",
 				     user, passwdfile);

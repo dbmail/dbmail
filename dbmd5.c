@@ -40,6 +40,12 @@ unsigned char *makemd5(const char * const buf)
 	unsigned char *md5hash;
 	int i;
 
+	if (buf == NULL) {
+		trace(TRACE_ERROR, "%s,%s: received NULL argument",
+		      __FILE__, __func__);
+		return NULL;
+	}
+
 	md5hash = (unsigned char *) my_malloc(33);
 	if (md5hash == NULL) {
 		trace(TRACE_ERROR, "%s,%s: error allocating memory",

@@ -1,3 +1,10 @@
+2004-12-21  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmd5.c (makemd5): return NULL if passed NULL.
+	* user.c (mkpassword): replaced two instances of strncat with
+	null_strncpy, which handles NULL pointers with ease. This resolves
+	bug #141.
+
 2004-12-19  Paul Stevens <paul@nfg.nl>
 
 	* check_dbmail_imapd.c, db.c, imap4.h, imaputil.c, lmtp.c, main.c,
