@@ -469,10 +469,10 @@ static int store_message_temp(FILE * instream,
 
 			/* Find the message terminator. */
 			if (ringbuf[MOD(ringpos - 1, RING_SIZE)] == '\n'
-			 && ringbuf[MOD(ringpos - 2, RING_SIZE)] == '\r'
-			 && ringbuf[MOD(ringpos - 3, RING_SIZE)] == '.'
-			 && ((usedmem == 2) 
-			     || ringbuf[MOD(ringpos - 4, RING_SIZE)] == '\n')) {
+			    && ringbuf[MOD(ringpos - 2, RING_SIZE)] == '\r'
+			    && ringbuf[MOD(ringpos - 3, RING_SIZE)] == '.'
+			    && ((usedmem < 3 && totalmem < 3)
+				|| ringbuf[MOD(ringpos - 4, RING_SIZE)] == '\n')) {
 				/* Back off the trailing ".\r" (final \n not copied yet)
 				 * The \n or \r\n preceding it are part of the message. */
 				if (usedmem > 2) {
