@@ -122,7 +122,7 @@ u64_t db_get_quotum_used(u64_t userid)
   u64_t q=0;
 
   snprintf(query, DEF_QUERYSIZE, "SELECT SUM(m.messagesize) FROM messages m, mailboxes mb "
-	   "WHERE m.mailbox_idnr = mb.mailbox_idnr AND mb.owner_idnr = %llu",
+	   "WHERE m.mailbox_idnr = mb.mailbox_idnr AND mb.owner_idnr = %llu AND m.status < 2",
 	   userid);
 
   if (db_query(query) == -1)
