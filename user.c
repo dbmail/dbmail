@@ -138,7 +138,7 @@ int do_showhelp(void) {
 	printf("     -e user   empty all mailboxes for a user\n");
 	printf("     -l uspec  list information for matching users\n");
 	printf("     -x alias  create an external forwarding address\n");
-	printf("     -i        enter an interactive user management console\n");
+//	printf("     -i        enter an interactive user management console\n");
 
 	printf("\nSummary of options for all modes:\n");
 	printf("     -w passwd specify user's password on the command line\n");
@@ -195,9 +195,8 @@ int main(int argc, char *argv[])
 
 	/* get options */
 	opterr = 0;		/* suppress error message from getopt() */
-	while ((opt = getopt(argc, argv, "-a:d:c:e:l::x:" /* Major modes */
-					"u:i:W::w:P::p:" /* Minor options */
-					"f:qnyvVh")) != -1) { /* Common options */
+	while ((opt = getopt(argc, argv, "-a:d:c:e:l::x:" /* Major */
+		"u:W::w:P::p:" /* Minor */ "i" "f:qnyvVh" /* Common */ )) != -1) {
 		/* The initial "-" of optstring allows unaccompanied
 		 * options and reports them as the optarg to opt 1 (not '1') */
 		if (opt == 1)
@@ -237,10 +236,9 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'i':
-			if (mode)
-				mode_toomany = 1;
-			mode = opt;
-			break;
+			printf("Interactive console is not supported in this release.\n");
+			return 1;
+
 
 		/* Minor options */
 		case 'w':

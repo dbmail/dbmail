@@ -48,8 +48,14 @@ extern db_param_t _db_params;
 FILE *inputFile = NULL;
 char *configFile = DEFAULT_CONFIG_FILE;
 
-/* Command line options. */
-int quiet = 0, verbose = 0, no_to_all = 0, yes_to_all = 0;
+/* Loudness and assumptions. */
+int yes_to_all = 0;
+int no_to_all = 0;
+int verbose = 0;
+/* Don't be helpful. */
+int quiet = 0;
+/* Don't print errors. */
+int reallyquiet = 0;
 
 char line[MAXLINESIZE];
 int process_piece(char *left, char *right);
@@ -57,7 +63,7 @@ int process_piece(char *left, char *right);
 int do_showhelp(void) {
 	printf("*** dbmail-readvut ***\n");
 
-	printf("Use this program to copy a virtual user table among your DBMail users.\n");
+	printf("Use this program to copy a virtual user table into your DBMail users database.\n");
 	printf("See the man page for more info. Summary:\n\n");
 	printf("     [file]    read the specified VUT file or stdin if not specified\n");
 
@@ -142,7 +148,7 @@ int main(int argc, char *argv[])
 		case 'V':
 			printf("\n*** DBMAIL: dbmail-readvut version "
 			       "$Revision$ %s\n\n", COPYRIGHT);
-			return 0;
+			return 1;
 
 		default:
 			/*printf("unrecognized option [%c], continuing...\n",optopt); */

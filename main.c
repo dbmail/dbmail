@@ -301,8 +301,8 @@ int main(int argc, char *argv[])
 		case 'V':
 			/* We must return non-zero in case someone put -V
 			 * into the mail server config and thus may lose mail. */
-			printf("\n*** DBMAIL: dbmail-smtp version $Revision$ %s\n\n",
-			     COPYRIGHT);
+			printf("\n*** DBMAIL: dbmail-smtp version "
+			       "$Revision$ %s\n\n", COPYRIGHT);
 			return 1;
 
 		default:

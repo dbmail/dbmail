@@ -108,7 +108,9 @@ int main(int argc, char *argv[])
 
 	/* get options */
 	opterr = 0;		/* suppress error message from getopt() */
-	while ((opt = getopt(argc, argv, "-crtl:phd if:qnyvVh")) != -1) {
+	while ((opt = getopt(argc, argv, "-crtl:pud" "i" "f:qnyvVh")) != -1) {
+		/* The initial "-" of optstring allows unaccompanied
+		 * options and reports them as the optarg to opt 1 (not '1') */
 		switch (opt) {
 		case 'c':
 			vacuum_db = 1;
@@ -152,6 +154,10 @@ int main(int argc, char *argv[])
 			timespec[LEN] = 0;
 			break;
 
+		case 'i':
+			printf("Interactive console is not supported in this release.\n");
+			return 1;
+
 		/* Common options */
 		case 'h':
 			show_help = 1;
@@ -185,10 +191,9 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'V':
-			printf
-			    ("\n*** DBMAIL: dbmail-util version $Revision$ %s\n\n",
-			     COPYRIGHT);
-			return 0;
+			printf("\n*** DBMAIL: dbmail-util version "
+			       "$Revision$ %s\n\n", COPYRIGHT);
+			return 1;
 
 		default:
 			/*printf("unrecognized option [%c], continuing...\n",optopt); */
@@ -205,13 +210,13 @@ int main(int argc, char *argv[])
 	SetTraceLevel("DBMAIL");
 	GetDBParams(&_db_params);
 
-	printf("Opening connection to database... ");
+	printf("Opening connection to database... \n");
 	if (db_connect() != 0) {
 		printf("Failed. An error occured. Please check log.\n");
 		return -1;
 	}
 
-	printf("Opening connection to authentication... ");
+	printf("Opening connection to authentication... \n");
 	if (auth_connect() != 0) {
 		printf("Failed. An error occured. Please check log.\n");
 		return -1;
