@@ -7,4 +7,5 @@ Aaron Stone (aaron at serendipity dot cx):
 
 Paul Stevens (paul at nfg dot nl):
 	entire files -> sql/mysql/create_tables_innodb.mysql
+			test-scripts/testimap.py
 
