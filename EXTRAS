@@ -3,5 +3,8 @@ $Id$
 DBmail extra's
 ==============
 
-
+-	Dbmail can forward to external programs. 
+	Create an alias. Set the deliver_to for that alias to:
+	"|/usr/bin/procmail" will pipe the message for the alias to procmail
+	"!/usr/bin/procmail" will do the same but add a mbox style header 
 
