@@ -1,9 +1,7 @@
 $Id$
 
 
-- UIDL command returns 2 OK's when asking for a specific UIDL
 - message arrival in datatime field 
 - fix the resolving (pop daemon is not resolving)
 - commandline program should be created for adding email addresses
 - it would be interesting to know who is receiving a message (in log)
-- need to create a list_delete function to clear a list
