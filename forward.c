@@ -16,13 +16,16 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
   FILE *sendmail_pipe=NULL;
   int usedmem, totalmem;
   int err;
-	
+  char *sendmail;
+  
   /* takes input from instream and forwards that directly to 
 		a number of pipes (depending on the targets. Sends headers
 		first */
 
   totalmem = 0;
 	
+  sendmail = db_get_config_item ("SENDMAIL", CONFIG_MANDATORY);
+  
   trace (TRACE_INFO,"pipe_forward(): delivering to %d "
 	 "external addresses", list_totalnodes(targets));
 
@@ -57,7 +60,7 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
 	{
 	  /* pipe to sendmail */
 	  sendmail_command = (char *)my_malloc(strlen((char *)(target->data))+
-					    strlen(FW_SENDMAIL)+2); /* +2 for extra space and \0 */
+					    strlen(sendmail)+2); /* +2 for extra space and \0 */
 	  if (!sendmail_command)
 	    {
 	      trace(TRACE_ERROR,"pipe_forward(): out of memory");
@@ -68,7 +71,7 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
 
 	  trace (TRACE_DEBUG,"pipe_forward(): allocated memory for"
 		 " external command call");
-	  sprintf (sendmail_command, "%s %s",FW_SENDMAIL, (char *)(target->data));
+	  sprintf (sendmail_command, "%s %s",sendmail, (char *)(target->data));
 	}
 
       trace (TRACE_INFO,"pipe_forward(): opening pipe to command "
@@ -107,7 +110,7 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
       else 
 	{
 	  trace (TRACE_ERROR,"pipe_forward(): Could not open pipe to"
-		 " [%s]",FW_SENDMAIL);
+		 " [%s]",sendmail);
 	}
       target = target->nextnode;
     }
@@ -247,6 +250,7 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
       return -1;
     }
 
+  my_free (sendmail);
   my_free (strblock);
   return 0;			
 }

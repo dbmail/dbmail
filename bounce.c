@@ -24,11 +24,14 @@ int bounce (char *header, char *destination_address, int type)
   struct element *tmpelement;
   char *dbmail_from_address;
   char *sendmail;
+  char *postmaster;
 
   /* reading configuration from db */
   dbmail_from_address = db_get_config_item ("DBMAIL_FROM_ADDRESS",CONFIG_MANDATORY);
   sendmail = db_get_config_item ("SENDMAIL", CONFIG_MANDATORY);
 	
+  postmaster = db_get_config_item ("POSTMASTER",CONFIG_MANDATORY);
+  
   trace (TRACE_DEBUG,"bounce(): creating bounce message for bounce type [%d]",type);
 		
   if (!destination_address)
@@ -72,7 +75,7 @@ int bounce (char *header, char *destination_address, int type)
 		     destination_address);
 	    fprintf ((FILE *)sendmail_stream,"could not be delivered due to the following error.\n\n");
 	    fprintf ((FILE *)sendmail_stream,"*** E-mail address %s is not known here. ***\n\n",destination_address);
-	    fprintf ((FILE *)sendmail_stream,"If you think this message is incorrect please contact %s.\n\n",POSTMASTER);
+	    fprintf ((FILE *)sendmail_stream,"If you think this message is incorrect please contact %s.\n\n",postmaster);
 	    fprintf ((FILE *)sendmail_stream,"Header of your message follows...\n\n\n");
 	    fprintf ((FILE *)sendmail_stream,"--- header of your message ---\n");
 	    fprintf ((FILE *)sendmail_stream,"%s",header);
@@ -118,7 +121,7 @@ int bounce (char *header, char *destination_address, int type)
 		     destination_address);
 	    fprintf ((FILE *)sendmail_stream,"could not be delivered due to the following error.\n\n");
 	    fprintf ((FILE *)sendmail_stream,"*** Mailbox of user %s is FULL ***\n\n",destination_address);
-	    fprintf ((FILE *)sendmail_stream,"If you think this message is incorrect please contact %s.\n\n",POSTMASTER);
+	    fprintf ((FILE *)sendmail_stream,"If you think this message is incorrect please contact %s.\n\n",postmaster);
 	    fprintf ((FILE *)sendmail_stream,"Header of your message follows...\n\n\n");
 	    fprintf ((FILE *)sendmail_stream,"--- header of your message ---\n");
 	    fprintf ((FILE *)sendmail_stream,"%s",header);
@@ -133,6 +136,7 @@ int bounce (char *header, char *destination_address, int type)
       }
     }
   my_free (dbmail_from_address);
+  my_free (postmaster);
   my_free (sendmail);
   return 0;
 }
