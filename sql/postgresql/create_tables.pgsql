@@ -68,7 +68,7 @@ CREATE TABLE subscription (
 	user_id INT8 NOT NULL,
 	mailbox_id INT8 NOT NULL,
 	PRIMARY KEY (user_id, mailbox_id),
-	FOREIGN KEY (user_id) REFERENCES users(user_idnr) ON DELETE CASCADE
+	FOREIGN KEY (user_id) REFERENCES users(user_idnr) ON DELETE CASCADE,
 	FOREIGN KEY (mailbox_id) 
 		REFERENCES mailboxes(mailbox_idnr) ON DELETE CASCADE
 );
