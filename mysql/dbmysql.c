@@ -43,7 +43,7 @@ int db_connect ()
 
   /* connecting */
   mysql_init(&conn);
-  if (mysql_real_connect (&conn,HOST,USER,PASS,MAILDATABASE,0,NULL,0) == NULL)
+  if (mysql_real_connect (&conn,MAIL_HOST,MAIL_USER,MAIL_PASS,MAILDATABASE,0,NULL,0) == NULL)
     {
       trace(TRACE_ERROR,"dbconnect(): mysql_real_connect failed: %s",mysql_error(&conn));
       return -1;
@@ -326,9 +326,18 @@ int db_addalias (u64_t useridnr, char *alias, u64_t clientid)
 int db_addalias_ext(char *alias, char *deliver_to, u64_t clientid)
 {
   /* check if this alias already exists */
-  snprintf (query, DEF_QUERYSIZE,
-            "SELECT alias_idnr FROM aliases WHERE alias = '%s' AND deliver_to = '%s' "
-	    "AND client_idnr = %llu", alias, deliver_to, clientid);
+  if (clientid != 0)
+    {
+      snprintf (query, DEF_QUERYSIZE,
+		"SELECT alias_idnr FROM aliases WHERE alias = '%s' AND deliver_to = '%s' "
+		"AND client_idnr = %llu", alias, deliver_to, clientid);
+    }
+  else
+    {
+      snprintf (query, DEF_QUERYSIZE,
+		"SELECT alias_idnr FROM aliases WHERE alias = '%s' AND deliver_to = '%s' ",
+		alias, deliver_to);
+    }
 
   if (db_query(query) == -1)
     {
@@ -378,6 +387,22 @@ int db_removealias (u64_t useridnr,const char *alias)
     {
       /* query failed */
       trace (TRACE_ERROR, "db_removealias(): query for removing alias failed : [%s]", query);
+      return -1;
+    }
+  
+  return 0;
+}
+  
+
+int db_removealias_ext(const char *alias, const char *deliver_to)
+{
+  snprintf (query, DEF_QUERYSIZE,
+	    "DELETE FROM aliases WHERE deliver_to='%s' AND alias = '%s'", deliver_to, alias);
+	   
+  if (db_query(query) == -1)
+    {
+      /* query failed */
+      trace (TRACE_ERROR, "db_removealias(): query for removing alias failed");
       return -1;
     }
   
@@ -521,7 +546,8 @@ u64_t db_get_useridnr (u64_t message_idnr)
 /* 
  * inserts into inbox ! 
  */
-u64_t db_insert_message (u64_t useridnr, const char *deliver_to_mailbox)
+u64_t db_insert_message (u64_t useridnr, const char *deliver_to_mailbox,
+			 const char *uniqueid)
 {
   char timestr[30];
   time_t td;
@@ -532,11 +558,12 @@ u64_t db_insert_message (u64_t useridnr, const char *deliver_to_mailbox)
   strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
   
   snprintf (query, DEF_QUERYSIZE,"INSERT INTO messages(mailbox_idnr,messagesize,unique_id,"
-	    "internal_date,recent_flag)"
-	    " VALUES (%llu,0,\" \",\"%s\",0)",
+	    "internal_date,recent_flag,status)"
+	    " VALUES (%llu, 0, \"%s\", \"%s\", 1, '005')",
 	    deliver_to_mailbox ? db_get_mailboxid(useridnr, deliver_to_mailbox) : 
-        db_get_mailboxid (useridnr, "INBOX"), timestr);
-
+	    db_get_mailboxid (useridnr, "INBOX"),
+	    uniqueid ? uniqueid : "", timestr);
+  
   if (db_query (query)==-1)
     {
       trace(TRACE_STOP,"db_insert_message(): dbquery failed");
@@ -550,7 +577,8 @@ u64_t db_update_message (u64_t message_idnr, const char *unique_id,
 			 u64_t messagesize)
 {
   snprintf (query, DEF_QUERYSIZE,
-	   "UPDATE messages SET messagesize=%llu, unique_id=\"%s\" where message_idnr=%llu",
+	   "UPDATE messages SET messagesize=%llu, unique_id=\"%s\", status='000'"
+	    "where message_idnr=%llu",
 	   messagesize, unique_id, message_idnr);
   
   if (db_query (query)==-1)
@@ -564,12 +592,84 @@ u64_t db_update_message (u64_t message_idnr, const char *unique_id,
 
 
 /*
+ * db_update_message_multiple()
+ *
+ * updates a range of messages. A unique ID is created fro each of them.
+ */
+int db_update_message_multiple(const char *unique_id, u64_t messagesize, u64_t rfcsize)
+{
+  u64_t *uids;
+  int n,i;
+  char newunique[UID_SIZE];
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr FROM messages WHERE "
+	   "unique_id = '%s'", unique_id);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR,"db_update_message_multiple(): could not select messages: [%s]",
+	    mysql_error(&conn));
+      return -1;
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL) 
+    {
+      trace(TRACE_ERROR,"db_update_message_multiple(): mysql_store_result failed: [%s]",
+	    mysql_error(&conn));
+      return -1;
+    }
+
+  n = mysql_num_rows(res);
+  if (n <= 0)
+    {
+      trace(TRACE_INFO,"db_update_message_multiple(): nothing to update (?)");
+      mysql_free_result(res);
+      return 0;
+    }
+
+  if ( (uids = (u64_t*)my_malloc(n * sizeof(u64_t))) == 0)
+    {
+      trace(TRACE_ERROR,"db_update_message_multiple(): out of memory");
+      mysql_free_result(res);
+      return -1;
+    }
+
+  for (i=0; i<n; i++)
+    {
+      row = mysql_fetch_row(res);
+      uids[i] = (row && row[0]) ? strtoull(row[0], NULL, 10) : 0;
+    }
+
+  mysql_free_result(res);
+  
+  /* now update for each message */
+  for (i=0; i<n; i++)
+    {
+      snprintf(newunique, UID_SIZE, "%lluA%lu", uids[i], time(NULL));
+      snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET "
+	       "messagesize=%llu, rfcsize = %llu, unique_id='%s', status='000'"
+	       "WHERE message_idnr=%llu", messagesize, rfcsize, newunique, uids[i]);
+
+      if (db_query(query) == -1)
+	{
+	  trace(TRACE_ERROR, "db_update_message_multiple(): "
+		"could not update message data for message [%llu]: [%s]", uids[i],
+		mysql_error(&conn));
+	  /* try to continue anyways */
+	}
+    }
+
+  my_free(uids);
+  return 0;
+}
+
+
+/*
  * insert a msg block
  * returns msgblkid on succes, -1 on failure
  */
-u64_t db_insert_message_block (const char *block, u64_t len, u64_t message_idnr)
+u64_t db_insert_message_block (const char *block, u64_t len, u64_t msgid)
 {
-  u64_t msgid;
   char *escaped_query = NULL;
   unsigned maxesclen = READ_BLOCK_SIZE * 2 + DEF_QUERYSIZE, startlen = 0, esclen = 0;
 
@@ -603,7 +703,7 @@ u64_t db_insert_message_block (const char *block, u64_t len, u64_t message_idnr)
   /* escape & add data */
   esclen = mysql_real_escape_string(&conn, &escaped_query[startlen], block, len); 
            
-  snprintf(&escaped_query[esclen + startlen],
+  snprintf(&escaped_query[esclen + startlen - (escaped_query[esclen + startlen - 1] ? 0 : 1)],
 	   maxesclen - esclen - startlen, "', %llu, %llu)", len, msgid);
 
   if (db_query(escaped_query) == -1)
@@ -621,6 +721,65 @@ u64_t db_insert_message_block (const char *block, u64_t len, u64_t message_idnr)
 }
 
 
+/*
+ * db_insert_message_block_multiple()
+ *
+ * As db_insert_message_block() but inserts multiple rows at a time.
+ */
+int db_insert_message_block_multiple(const char *uniqueid, const char *block, u64_t len)
+{
+  char *escaped_query = NULL;
+  unsigned maxesclen = READ_BLOCK_SIZE * 2 + DEF_QUERYSIZE, startlen = 0, esclen = 0;
+
+  if (block == NULL)
+    {
+      trace (TRACE_ERROR,"db_insert_message_block_multiple(): got NULL as block, "
+	     "insertion not possible\n");
+      return -1;
+    }
+
+  if (len > READ_BLOCK_SIZE)
+    {
+      trace (TRACE_ERROR,"db_insert_message_block_multiple(): blocksize [%llu], "
+	     "maximum is [%llu]",
+	     len, READ_BLOCK_SIZE);
+      return -1;
+    }
+
+  escaped_query = (char*)my_malloc(sizeof(char) * maxesclen);
+  if (!escaped_query)
+    {
+      trace(TRACE_ERROR,"db_insert_message_block_multiple(): not enough memory");
+      return -1;
+    }
+
+  snprintf(escaped_query, maxesclen, "INSERT INTO messageblks"
+	   "(messageblk,blocksize,message_idnr) SELECT '");
+
+  startlen = sizeof("INSERT INTO messageblks"
+		    "(messageblk,blocksize,message_idnr) SELECT '") - 1;
+
+  /* escape & add data */
+  esclen = mysql_real_escape_string(&conn, &escaped_query[startlen], block, len); 
+           
+  snprintf(&escaped_query[esclen + startlen - (escaped_query[esclen + startlen - 1] ? 0 : 1)],
+	   maxesclen - esclen - startlen, 
+	   "', %llu, message_idnr FROM messages WHERE unique_id = '%s'", len, uniqueid);
+
+  if (db_query(escaped_query) == -1)
+    {
+      my_free(escaped_query);
+
+      trace(TRACE_ERROR,"db_insert_message_block_multiple(): dbquery failed\n");
+      return -1;
+    }
+
+  /* all done, clean up & exit */
+  my_free(escaped_query);
+
+  return 0;
+}
+  
 
 /* get a list of aliases associated with user userid */
 /* return -1 on db error, -2 on mem error, 0 on succes */

@@ -287,7 +287,7 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
 
           /* create a message record */
           temp_message_record_id = db_insert_message ((u64_t)userid,
-						    deliver_to_mailbox);
+						    deliver_to_mailbox, "");
 
           /* message id is an array of returned message id's
            * all messageblks are inserted for each message id

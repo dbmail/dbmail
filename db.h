@@ -108,14 +108,17 @@ int db_get_user_aliases(u64_t userid, struct list *aliases);
 int db_addalias(u64_t useridnr, char *alias, u64_t clientid);
 int db_addalias_ext(char *alias, char *deliver_to, u64_t clientid);
 int db_removealias(u64_t useridnr, const char *alias);
+int db_removealias_ext(const char *alias, const char *deliver_to);
 
 u64_t db_get_mailboxid(u64_t useridnr, const char *mailbox);
 u64_t db_get_useridnr(u64_t messageidnr);
 u64_t db_get_message_mailboxid(u64_t messageidnr);
-u64_t db_insert_message(u64_t useridnr, const char *deliver_to_mailbox);
+u64_t db_insert_message(u64_t useridnr, const char *deliver_to_mailbox, const char *uniqueid);
 u64_t db_update_message(u64_t messageidnr, const char *unique_id,
 			u64_t messagesize);
+int db_update_message_multiple(const char *unique_id, u64_t messagesize, u64_t rfcsize);
 u64_t db_insert_message_block(const char *block, u64_t len, u64_t messageidnr);
+int db_insert_message_block_multiple(const char *unique_id, const char *block, u64_t len);
 
 int db_log_ip(const char *ip);
 int db_cleanup_iplog(const char *lasttokeep);

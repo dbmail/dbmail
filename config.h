@@ -13,16 +13,15 @@
 #include <syslog.h>
 
 /* DATABASE SPECIFIC */
-#define HOST "/tmp"
-#define USER "dbmail"
-#define PASS "dbmail"
-
-/* #define USE_DEVELOPMENT  */
-#ifdef USE_DEVELOPMENT
-#define MAILDATABASE "dbmail_dev"
-#else
+#define MAIL_HOST "localhost"
+#define MAIL_USER "root"
+#define MAIL_PASS "W3R50c00l"
 #define MAILDATABASE "dbmail"
-#endif
+
+#define AUTH_HOST "localhost"
+#define AUTH_USER "root"
+#define AUTH_PASS "W3R50c00l"
+#define USERDATABASE "dbmail"
 
 #define UID_SIZE 70
 

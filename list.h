@@ -26,7 +26,7 @@ struct list
 };
 
 
-struct element *list_nodeadd(struct list *tlist, void *data,
+struct element *list_nodeadd(struct list *tlist, const void *data,
 				    size_t dsize);
 
 struct element *list_nodedel(struct list *tlist, void *data);

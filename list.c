@@ -69,7 +69,7 @@ struct element* list_reverse(struct element *start)
  *
  * returns NULL on failure or first element on success
  */
-struct element *list_nodeadd(struct list *tlist, void *data,
+struct element *list_nodeadd(struct list *tlist, const void *data,
 			     size_t dsize)
 {
   struct element *p;

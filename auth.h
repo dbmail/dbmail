@@ -21,7 +21,8 @@ u64_t auth_getclientid(u64_t useridnr);
 u64_t auth_getmaxmailsize(u64_t useridnr);
 char* auth_getencryption(u64_t useridnr);
 
-int auth_check_user (char *username, struct list *userids, int checks);
+int auth_check_user (const char *username, struct list *userids, int checks);
+int auth_check_user_ext(const char *username, struct list *userids, struct list *fwds, int checks);
 u64_t auth_adduser (char *username, char *password, char *enctype, char *clientid, char *maxmail);
 int auth_delete_user(const char *username);
 

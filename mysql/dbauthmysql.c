@@ -37,7 +37,7 @@ MYSQL_ROW __auth_row;
 int auth_connect()
 {
   mysql_init(&__auth_conn);
-  if (mysql_real_connect (&__auth_conn,HOST,USER,PASS,MAILDATABASE,0,NULL,0) == NULL)
+  if (mysql_real_connect (&__auth_conn,AUTH_HOST,AUTH_USER,AUTH_PASS,USERDATABASE,0,NULL,0) == NULL)
     {
       trace(TRACE_ERROR,"auth_connect(): mysql_real_connect failed: %s",
 	    mysql_error(&__auth_conn));
@@ -275,7 +275,7 @@ char* auth_getencryption(u64_t useridnr)
 }
 
 
-int auth_check_user (char *username, struct list *userids, int checks) 
+int auth_check_user (const char *username, struct list *userids, int checks) 
 {
   int occurences=0;
   MYSQL_RES *myres;
@@ -324,6 +324,80 @@ int auth_check_user (char *username, struct list *userids, int checks)
       /* do a recursive search for deliver_to */
       trace (TRACE_DEBUG,"auth_check_user(): checking user %s to %s",username, myrow[0]);
       occurences += auth_check_user (myrow[0], userids, 1);
+  }
+  
+  /* trace(TRACE_INFO,"auth_check_user(): user [%s] has [%d] entries",username,occurences); */
+  mysql_free_result(myres);
+
+  return occurences;
+}
+
+	
+
+/*
+ * auth_check_user_ext()
+ * 
+ * As auth_check_user() but adds the numeric ID of the user found
+ * to userids or the forward to the fwds.
+ * 
+ * returns the number of occurences. 
+ */
+int auth_check_user_ext(const char *username, struct list *userids, struct list *fwds, int checks) 
+{
+  int occurences=0;
+  MYSQL_RES *myres;
+  MYSQL_ROW myrow;
+  u64_t id;
+  char *endptr = NULL;
+
+  trace(TRACE_DEBUG,"auth_check_user_ext(): checking user [%s] in alias table",username);
+  
+  snprintf (__auth_query_data, DEF_QUERYSIZE,  "SELECT deliver_to FROM aliases WHERE "
+	    "alias=\"%s\"",username);
+
+  trace(TRACE_DEBUG,"auth_check_user_ext(): executing query, checks [%d]", checks);
+  if (__auth_query(__auth_query_data)==-1)
+      return 0;
+  
+  if ((myres = mysql_store_result(&__auth_conn)) == NULL) 
+    {
+      trace(TRACE_ERROR,"auth_check_user_ext(): mysql_store_result failed: [%s]",mysql_error(&__auth_conn));
+      return 0;
+    }
+
+  if (mysql_num_rows(myres)<1) 
+  {
+    if (checks>0)
+      {
+	/* found the last one, this is the deliver to
+	 * but checks needs to be bigger then 0 because
+	 * else it could be the first query failure */
+
+	id = strtoull(username, &endptr, 10);
+	if (*endptr == 0)
+	  list_nodeadd(userids, &id, sizeof(id)); /* numeric deliver-to --> this is a userid */
+	else
+	  list_nodeadd(fwds, username, strlen(username)+1);
+
+	trace (TRACE_DEBUG,"auth_check_user_ext(): adding [%s] to deliver_to address",username);
+	mysql_free_result(myres);
+	return 1;
+      }
+    else
+      {
+	trace (TRACE_DEBUG,"auth_check_user_ext(): user %s not in aliases table", username);
+	mysql_free_result(myres);
+	return 0; 
+      }
+  }
+      
+  trace (TRACE_DEBUG,"auth_check_user_ext(): into checking loop");
+
+  while ((myrow = mysql_fetch_row(myres))!=NULL)
+  {
+      /* do a recursive search for deliver_to */
+      trace (TRACE_DEBUG,"auth_check_user_ext(): checking user %s to %s",username, myrow[0]);
+      occurences += auth_check_user_ext(myrow[0], userids, fwds, 1);
   }
   
   /* trace(TRACE_INFO,"auth_check_user(): user [%s] has [%d] entries",username,occurences); */

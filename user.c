@@ -33,6 +33,8 @@ int do_add(int argc, char *argv[]);
 int do_change(int argc, char *argv[]);
 int do_delete(char *name);
 int do_show(char *name);
+int do_make_alias(char *argv[]);
+int do_remove_alias(char *argv[]);
 
 int is_valid(const char *name);
 
@@ -73,6 +75,8 @@ int main(int argc, char *argv[])
     case 'c': do_change(argc-2,&argv[2]); break;
     case 'd': do_delete(argv[2]); break;
     case 's': do_show(argv[2]); break;
+    case 'f': do_make_alias(&argv[2]); break;
+    case 'x': do_remove_alias(&argv[2]); break;
     default:
       show_help();
       db_disconnect();
@@ -87,6 +91,47 @@ int main(int argc, char *argv[])
 }
 
 
+
+/* 
+ * adds a single alias (not connected to any user) 
+ */
+int do_make_alias(char *argv[])
+{
+  if (!argv[0] || !argv[1])
+    {
+      printf ("invalid arguments specified. Check the man page\n");
+      return -1;
+    }
+
+  printf("Adding alias [%s] --> [%s]...", argv[0], argv[1]);
+  if (db_addalias_ext(argv[0], argv[1], 0) != 0)
+    {
+      printf("Failed\n\nCheck logs for details\n\n");
+      return -1;
+    }
+
+  printf("Ok alias added\n");
+  return 0;
+}
+
+int do_remove_alias(char *argv[])
+{
+  if (!argv[0] || !argv[1])
+    {
+      printf ("invalid arguments specified. Check the man page\n");
+      return -1;
+    }
+
+  printf("Removing alias [%s] --> [%s]...", argv[0], argv[1]);
+  if (db_removealias_ext(argv[0], argv[1]) != 0)
+    {
+      printf("Failed\n\nCheck logs for details\n\n");
+      return -1;
+    }
+
+  printf("Ok alias removed\n");
+  return 0;
+}
 
 int do_add(int argc, char *argv[])
 {
@@ -379,7 +424,7 @@ void show_help()
 
   printf("Use this program to manage the users for your dbmail system.\n");
   printf("See the man page for more info. Summary:\n\n");
-  printf("dbmail-adduser <a|d|c|s> [username] [options...]\n\n");
+  printf("dbmail-adduser <a|d|c|s|f|x> [username] [options...]\n\n");
 
 }
 

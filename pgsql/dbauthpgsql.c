@@ -41,7 +41,7 @@ int auth_connect ()
 
   /* connecting */
   snprintf (connectionstring, 255, "host=%s user=%s password=%s dbname=%s",
-	   HOST, USER, PASS, MAILDATABASE);
+	   AUTH_HOST, AUTH_USER, AUTH_PASS, USERDATABASE);
 
   __auth_conn = PQconnectdb(connectionstring);
 
@@ -344,7 +344,7 @@ char* auth_getencryption(u64_t useridnr)
 
 
 
-int auth_check_user (char *username, struct list *userids, int checks) 
+int auth_check_user (const char *username, struct list *userids, int checks) 
 {
   int occurences=0;
   PGresult *saveres = __auth_res;
@@ -403,6 +403,85 @@ int auth_check_user (char *username, struct list *userids, int checks)
     }   
   
   /* trace(TRACE_INFO,"auth_check_user(): user [%s] has [%d] entries",username,occurences); */
+  PQclear(__auth_res);
+  __auth_res = saveres;
+
+  return occurences;
+}
+
+
+/*
+ * auth_check_user_ext()
+ * 
+ * As auth_check_user() but adds the numeric ID of the user found
+ * to userids or the forward to the fwds.
+ * 
+ * returns the number of occurences. 
+ */
+int auth_check_user_ext(const char *username, struct list *userids, struct list *fwds, int checks) 
+{
+  int occurences=0;
+  PGresult *saveres = __auth_res;
+  u64_t PQcounter;
+  char *value,*endptr;
+  u64_t id;
+
+  trace(TRACE_DEBUG,"auth_check_user_ext(): checking user [%s] in alias table",username);
+  
+  snprintf (__auth_query_data, AUTH_QUERY_SIZE,  "SELECT deliver_to FROM aliases WHERE "
+	    "alias=\'%s\'",username);
+  trace(TRACE_DEBUG,"auth_check_user_ext(): checks [%d]", checks);
+
+  if (__auth_query(__auth_query_data) == -1)
+    {
+      __auth_res = saveres;
+      return 0;
+    }
+  
+  if (PQntuples(__auth_res)<1) 
+  {
+    if (checks>0)
+      {
+	/* found the last one, this is the deliver to
+	 * but checks needs to be bigger then 0 because
+	 * else it could be the first query failure */
+
+	id = strtoull(username, &endptr, 10);
+	if (*endptr == 0)
+	  list_nodeadd(userids, &id, sizeof(id)); /* numeric deliver-to --> this is a userid */
+	else
+	  list_nodeadd(fwds, username, strlen(username)+1);
+
+	trace (TRACE_DEBUG,"auth_check_user_ext(): adding [%s] to deliver_to address",username);
+
+	PQclear(__auth_res);
+	__auth_res = saveres;
+
+	return 1;
+      }
+    else
+      {
+	trace (TRACE_DEBUG,"auth_check_user_ext(): user %s not in aliases table", username);
+	PQclear(__auth_res);
+	__auth_res = saveres;
+
+	return 0; 
+      }
+  }
+      
+  trace (TRACE_DEBUG,"auth_check_user_ext(): into checking loop");
+
+  if (PQntuples(__auth_res)>0)
+    {
+      for (PQcounter=0; PQcounter < PQntuples(__auth_res); PQcounter++)
+        {
+	  /* do a recursive search for deliver_to */
+	  value = PQgetvalue(__auth_res, PQcounter, 0);
+	  trace (TRACE_DEBUG,"auth_check_user_ext(): checking user %s to %s",username, value);
+	  occurences += auth_check_user_ext (value, userids, fwds, 1);
+        }
+    }   
+  
   PQclear(__auth_res);
   __auth_res = saveres;
 
