@@ -122,9 +122,10 @@ mysqlconfig = @mysqlconfig@
 pgsqlconfig = @pgsqlconfig@
 
 pkglib_LTLIBRARIES = libsortdbmail.la
+INCLUDES = -I$(top_srcdir)
 @SIEVE_TRUE@libsortdbmail_la_SOURCES = sort.c sortsieve.c
 @SIEVE_FALSE@libsortdbmail_la_SOURCES = sort.c
-@SIEVE_TRUE@AM_CFLAGS =  -DSIEVE
+@SIEVE_TRUE@AM_CFLAGS = -DSIEVE
 mkinstalldirs = $(SHELL) $(top_srcdir)/buildtools/mkinstalldirs
 CONFIG_HEADER = ../config.h
 CONFIG_CLEAN_FILES = 

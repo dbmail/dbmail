@@ -122,6 +122,7 @@ mysqlconfig = @mysqlconfig@
 pgsqlconfig = @pgsqlconfig@
 
 @PGSQL_TRUE@AM_CFLAGS = @PGSQLINC@ -fomit-frame-pointer
+@PGSQL_TRUE@INCLUDES = -I$(top_srcdir)
 
 @PGSQL_TRUE@pkglib_LTLIBRARIES = libpgsqldbmail.la
 

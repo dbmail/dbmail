@@ -122,6 +122,7 @@ mysqlconfig = @mysqlconfig@
 pgsqlconfig = @pgsqlconfig@
 
 @MYSQL_TRUE@AM_CFLAGS = @MYSQLINC@ -fomit-frame-pointer 
+@MYSQL_TRUE@INCLUDES = -I$(top_srcdir)
 
 @MYSQL_TRUE@pkglib_LTLIBRARIES = libmysqldbmail.la
 

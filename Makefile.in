@@ -133,6 +133,7 @@ DELIVER = header.c pipe.c forward.c dsn.c
 
 # CFLAGS
 AM_CFLAGS = -fomit-frame-pointer
+INCLUDES = -I$(top_srcdir)
 
 dbmail_smtp_SOURCES = main.c
 dbmail_smtp_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @SIEVELIB@
@@ -140,7 +141,7 @@ dbmail_smtp_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @SI
 dbmail_pop3d_SOURCES = pop3.c pop3d.c
 dbmail_pop3d_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
-dbmail_imapd_SOURCES = quota.c imap4.c imaputil.c imapcommands.c memblock.c rfcmsg.c imapd.c dbsearch.c dbmsgbuf.c acl.c
+dbmail_imapd_SOURCES = quota.c imap4.c imaputil.c imapcommands.c memblock.c rfcmsg.c imapd.c dbsearch.c dbmsgbuf.c acl.c dbmail-imapsession.c
 dbmail_imapd_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ 
 
 dbmail_util_SOURCES = maintenance.c
@@ -201,7 +202,7 @@ dbmail_pop3d_LDFLAGS =
 dbmail_imapd_OBJECTS =  quota.$(OBJEXT) imap4.$(OBJEXT) \
 imaputil.$(OBJEXT) imapcommands.$(OBJEXT) memblock.$(OBJEXT) \
 rfcmsg.$(OBJEXT) imapd.$(OBJEXT) dbsearch.$(OBJEXT) dbmsgbuf.$(OBJEXT) \
-acl.$(OBJEXT)
+acl.$(OBJEXT) dbmail-imapsession.$(OBJEXT)
 dbmail_imapd_DEPENDENCIES =  libdbmail.la
 dbmail_imapd_LDFLAGS = 
 dbmail_util_OBJECTS =  maintenance.$(OBJEXT)
@@ -228,14 +229,15 @@ DISTFILES = $(DIST_COMMON) $(SOURCES) $(HEADERS) $(TEXINFOS) $(EXTRA_DIST)
 TAR = tar
 GZIP_ENV = --best
 DEP_FILES =  .deps/acl.P .deps/config.P .deps/db.P \
-.deps/dbmail-message.P .deps/dbmd5.P .deps/dbmsgbuf.P .deps/dbsearch.P \
-.deps/debug.P .deps/dsn.P .deps/forward.P .deps/header.P .deps/imap4.P \
-.deps/imapcommands.P .deps/imapd.P .deps/imaputil.P .deps/list.P \
-.deps/lmtp.P .deps/lmtpd.P .deps/main.P .deps/maintenance.P .deps/md5.P \
-.deps/memblock.P .deps/mime.P .deps/misc.P .deps/pidfile.P .deps/pipe.P \
-.deps/pool.P .deps/pop3.P .deps/pop3d.P .deps/quota.P .deps/rfcmsg.P \
-.deps/server.P .deps/serverchild.P .deps/sievecmd.P .deps/timsieve.P \
-.deps/timsieved.P .deps/user.P
+.deps/dbmail-imapsession.P .deps/dbmail-message.P .deps/dbmd5.P \
+.deps/dbmsgbuf.P .deps/dbsearch.P .deps/debug.P .deps/dsn.P \
+.deps/forward.P .deps/header.P .deps/imap4.P .deps/imapcommands.P \
+.deps/imapd.P .deps/imaputil.P .deps/list.P .deps/lmtp.P .deps/lmtpd.P \
+.deps/main.P .deps/maintenance.P .deps/md5.P .deps/memblock.P \
+.deps/mime.P .deps/misc.P .deps/pidfile.P .deps/pipe.P .deps/pool.P \
+.deps/pop3.P .deps/pop3d.P .deps/quota.P .deps/rfcmsg.P .deps/server.P \
+.deps/serverchild.P .deps/sievecmd.P .deps/timsieve.P .deps/timsieved.P \
+.deps/user.P
 SOURCES = $(libdbmail_la_SOURCES) $(dbmail_sievecmd_SOURCES) $(dbmail_timsieved_SOURCES) $(dbmail_smtp_SOURCES) $(dbmail_pop3d_SOURCES) $(dbmail_imapd_SOURCES) $(dbmail_util_SOURCES) $(dbmail_users_SOURCES) $(dbmail_lmtpd_SOURCES)
 OBJECTS = $(libdbmail_la_OBJECTS) $(dbmail_sievecmd_OBJECTS) $(dbmail_timsieved_OBJECTS) $(dbmail_smtp_OBJECTS) $(dbmail_pop3d_OBJECTS) $(dbmail_imapd_OBJECTS) $(dbmail_util_OBJECTS) $(dbmail_users_OBJECTS) $(dbmail_lmtpd_OBJECTS)
 

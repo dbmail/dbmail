@@ -1253,60 +1253,6 @@ void free_chunks(char **chunks)
 
 
 
-/*
- * check_state_and_args()
- *
- * checks if the user is in the right state & the numbers of arguments;
- * a state of -1 specifies any state
- * arguments can be grouped by means of parentheses
- *
- * returns 1 on succes, 0 on failure
- */
-int check_state_and_args(const char *command, const char *tag, char **args,
-			 int nargs, int state, ClientInfo * ci)
-{
-	int i;
-	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
-
-	/* check state */
-	if (state != -1) {
-		if (ud->state != state) {
-			if (!
-			    (state == IMAPCS_AUTHENTICATED
-			     && ud->state == IMAPCS_SELECTED)) {
-				fprintf(ci->tx,
-					"%s BAD %s command received in invalid state\r\n",
-					tag, command);
-				return 0;
-			}
-		}
-	}
-
-	/* check args */
-	for (i = 0; i < nargs; i++) {
-		if (!args[i]) {
-			/* error: need more args */
-			fprintf(ci->tx,
-				"%s BAD missing argument%s to %s\r\n", tag,
-				(nargs == 1) ? "" : "(s)", command);
-			return 0;
-		}
-	}
-
-	for (i = 0; args[i]; i++);
-
-	if (i > nargs) {
-		/* error: too many args */
-		fprintf(ci->tx, "%s BAD too many arguments to %s\r\n", tag,
-			command);
-		return 0;
-	}
-
-	/* succes */
-	return 1;
-}
-
-
 
 /*
  * build_args_array()

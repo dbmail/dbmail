@@ -45,8 +45,6 @@
 
 int IMAPClientHandler(ClientInfo * ci);
 
-typedef int (*IMAP_COMMAND_HANDLER) (char *, char **, ClientInfo *);
-
 typedef struct {
 	int noseen;		/* set the seen flag ? */
 	int itemtype;		/* the item to be fetched */
@@ -66,6 +64,7 @@ typedef struct {
 	body_fetch_t bodyfetch;
 
 	int msgparse_needed;
+	int hdrparse_needed;
 
 	int getBodyTotal, getBodyTotalPeek;
 	int getInternalDate, getFlags, getUID;

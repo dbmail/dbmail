@@ -54,8 +54,6 @@ u64_t mimeheader_dump(MEM * outmem, struct list *mimeheader);
 
 int haystack_find(int haystacklen, char **haystack, const char *needle);
 
-int check_state_and_args(const char *command, const char *tag, char **args,
-			 int nargs, int state, ClientInfo * ci);
 int next_fetch_item(char **args, int idx, fetch_items_t * fi);
 int is_textplain(struct list *hdr);
 

@@ -1,3 +1,10 @@
+2004-10-21  Paul Stevens <paul@nfg.nl>
+	
+	* Makefile.am, dbmail-imapsession.c, dbmail-imapsession.h, imap4.c,
+	imap4.h, imapcommands.c, imapcommands.h, imaputil.c, imaputil.h:
+	adding support for ImapSession as first phase of the imapcommands.c
+	cleanup.
+
 2004-10-14  Paul Stevens <paul@nfg.nl>
 
 	* acconfig.h: removed.
@@ -15,7 +22,6 @@
 2004-10-13  Ilja Booij  <ilja@ic-s.nl>
 
 	* INSTALL.postfix: fixed typo. (closes #101).
-
 	* db.c (db_createsession): adjusted a useful comment line.
 
 2004-10-12  Paul Stevens <paul@nfg.nl>

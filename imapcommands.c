@@ -34,6 +34,7 @@
 
 /* dbmail.h is included first */
 #include "dbmail.h"
+#include "dbmail-imapsession.h"
 #include "acl.h"
 #include "auth.h"
 #include "db.h"
@@ -103,13 +104,13 @@ extern int imap_before_smtp;
  *
  * returns a string to the client containing the server capabilities
  */
-int _ic_capability(char *tag, char **args, ClientInfo * ci)
+int _ic_capability(struct ImapSession *self)
 {
-	if (!check_state_and_args("CAPABILITY", tag, args, 0, -1, ci))
+	if (!check_state_and_args(self, "CAPABILITY", 0, 0, -1))
 		return 1;	/* error, return */
 
-	ci_write(ci->tx, "* CAPABILITY %s\r\n", IMAP_CAPABILITY_STRING);
-	ci_write(ci->tx, "%s OK CAPABILITY completed\r\n", tag);
+	dbmail_imap_session_printf(self, "* CAPABILITY %s\r\n", IMAP_CAPABILITY_STRING);
+	dbmail_imap_session_printf(self, "%s OK CAPABILITY completed\r\n", self->tag);
 
 	return 0;
 }
@@ -120,12 +121,12 @@ int _ic_capability(char *tag, char **args, ClientInfo * ci)
  *
  * performs No operation
  */
-int _ic_noop(char *tag, char **args, ClientInfo * ci)
+int _ic_noop(struct ImapSession *self)
 {
-	if (!check_state_and_args("NOOP", tag, args, 0, -1, ci))
+	if (!check_state_and_args(self, "NOOP", 0, 0, -1))
 		return 1;	/* error, return */
 
-	ci_write(ci->tx, "%s OK NOOP completed\r\n", tag);
+	dbmail_imap_session_printf(self, "%s OK NOOP completed\r\n", self->tag);
 	return 0;
 }
 
@@ -135,15 +136,16 @@ int _ic_noop(char *tag, char **args, ClientInfo * ci)
  *
  * prepares logout from IMAP-server
  */
-int _ic_logout(char *tag, char **args, ClientInfo * ci)
+int _ic_logout(struct ImapSession *self)
 {
-	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
-	timestring_t timestring;
-
-	create_current_timestring(&timestring);
-	if (!check_state_and_args("LOGOUT", tag, args, 0, -1, ci))
+	if (!check_state_and_args(self, "LOGOUT", 0, 0, -1))
 		return 1;	/* error, return */
 
+
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
+	timestring_t timestring;
+	create_current_timestring(&timestring);
+	
 	/* change status */
 	ud->state = IMAPCS_LOGOUT;
 
@@ -151,7 +153,7 @@ int _ic_logout(char *tag, char **args, ClientInfo * ci)
 	      "_ic_logout(): user (id:%llu) logging out @ [%s]",
 	      ud->userid, timestring);
 
-	ci_write(ci->tx, "* BYE dbmail imap server kisses you goodbye\r\n");
+	dbmail_imap_session_printf(self, "* BYE dbmail imap server kisses you goodbye\r\n");
 
 	return 0;
 }
@@ -165,32 +167,29 @@ int _ic_logout(char *tag, char **args, ClientInfo * ci)
  *
  * Performs login-request handling.
  */
-int _ic_login(char *tag, char **args, ClientInfo * ci)
+int _ic_login(struct ImapSession *self)
 {
-	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
+	if (!check_state_and_args(self, "LOGIN", 2, 2, IMAPCS_NON_AUTHENTICATED))
+		return 1;
+	
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	u64_t userid = 0;
 	timestring_t timestring;
 	int validate_result;
 
 	create_current_timestring(&timestring);
 
-	if (!check_state_and_args
-	    ("LOGIN", tag, args, 2, IMAPCS_NON_AUTHENTICATED, ci))
-		return 1;	/* error, return */
 
 	trace(TRACE_DEBUG, "_ic_login(): trying to validate user");
-	validate_result = auth_validate(args[0], args[1], &userid);
-	trace(TRACE_MESSAGE,
-	      "_ic_login(): user (id:%llu, name %s) tries login",
-	      userid, args[0]);
+	validate_result = auth_validate(self->args[0], self->args[1], &userid);
+	trace(TRACE_MESSAGE, "_ic_login(): user (id:%llu, name %s) tries login", userid, self->args[0]);
 
 	if (validate_result == -1) {
 		/* a db-error occurred */
-		ci_write(ci->tx,
-			"* BYE internal db error validating user\r\n");
+		dbmail_imap_session_printf(self, "* BYE db error\r\n");
 		trace(TRACE_ERROR,
 		      "_ic_login(): db-validate error while validating user %s (pass %s).",
-		      args[0], args[1]);
+		      self->args[0], self->args[1]);
 		return -1;
 	}
 
@@ -198,10 +197,9 @@ int _ic_login(char *tag, char **args, ClientInfo * ci)
 		sleep(2);	/* security */
 
 		/* validation failed: invalid user/pass combination */
-		trace(TRACE_MESSAGE,
-		      "IMAPD [PID %d]: user (name %s) login rejected @ %s",
-		      (int) getpid(), args[0], timestring);
-		ci_write(ci->tx, "%s NO login rejected\r\n", tag);
+		trace(TRACE_MESSAGE, "IMAPD [PID %d]: user (name %s) login rejected @ %s",
+		      (int) getpid(), self->args[0], timestring);
+		dbmail_imap_session_printf(self, "%s NO login rejected\r\n",self->tag);
 
 		return 1;
 	}
@@ -209,9 +207,9 @@ int _ic_login(char *tag, char **args, ClientInfo * ci)
 	/* login ok */
 	trace(TRACE_MESSAGE,
 	      "_ic_login(): user (id %llu, name %s) login accepted @ %s",
-	      userid, args[0], timestring);
+	      userid, self->args[0], timestring);
 #ifdef PROC_TITLES
-	set_proc_title("USER %s [%s]", args[0], ci->ip);
+	set_proc_title("USER %s [%s]", self->args[0], self->ci->ip);
 #endif
 
 	/* update client info */
@@ -219,9 +217,9 @@ int _ic_login(char *tag, char **args, ClientInfo * ci)
 	ud->state = IMAPCS_AUTHENTICATED;
 
 	if (imap_before_smtp)
-		db_log_ip(ci->ip);
+		db_log_ip(self->ci->ip);
 
-	ci_write(ci->tx, "%s OK LOGIN completed\r\n", tag);
+	dbmail_imap_session_printf(self, "%s OK LOGIN completed\r\n", self->tag);
 	return 0;
 }
 
@@ -233,38 +231,39 @@ int _ic_login(char *tag, char **args, ClientInfo * ci)
  *
  *
  */
-int _ic_authenticate(char *tag, char **args, ClientInfo * ci)
+int _ic_authenticate(struct ImapSession *self)
 {
+	if (!check_state_and_args(self, "AUTHENTICATE", 1, 1, IMAPCS_NON_AUTHENTICATED))
+		return 1;
+	
 	u64_t userid;
 	char username[MAX_LINESIZE], buf[MAX_LINESIZE], pass[MAX_LINESIZE];
-	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	int validate_result;
+	
 	timestring_t timestring;
 
 	create_current_timestring(&timestring);
-	if (!check_state_and_args
-	    ("AUTHENTICATE", tag, args, 1, IMAPCS_NON_AUTHENTICATED, ci))
-		return 1;	/* error, return */
 
 	/* check authentication method */
-	if (strcasecmp(args[0], "login") != 0) {
-		ci_write(ci->tx,
+	if (strcasecmp(self->args[0], "login") != 0) {
+		dbmail_imap_session_printf(self,
 			"%s NO Invalid authentication mechanism specified\r\n",
-			tag);
+			self->tag);
 		return 1;
 	}
 
 	/* ask for username (base64 encoded) */
 	memset(buf, 0, MAX_LINESIZE);
 	base64encode("username\r\n", buf);
-	ci_write(ci->tx, "+ %s\r\n", buf);
-	fflush(ci->tx);
+	dbmail_imap_session_printf(self, "+ %s\r\n", buf);
+	fflush(self->ci->tx);
 
-	alarm(ci->timeout);
-	if (fgets(buf, MAX_LINESIZE, ci->rx) == NULL) {
+	alarm(self->ci->timeout);
+	if (fgets(buf, MAX_LINESIZE, self->ci->rx) == NULL) {
 		trace(TRACE_ERROR, "%s,%s: error reading from client",
 		      __FILE__, __func__);
-		ci_write(ci->tx, "* BYE Error reading input\r\n");
+		dbmail_imap_session_printf(self, "* BYE Error reading input\r\n");
 		return -1;
 	}
 	alarm(0);
@@ -274,14 +273,14 @@ int _ic_authenticate(char *tag, char **args, ClientInfo * ci)
 	/* ask for password */
 	memset(buf, 0, MAX_LINESIZE);
 	base64encode("password\r\n", buf);
-	ci_write(ci->tx, "+ %s\r\n", buf);
-	fflush(ci->tx);
+	dbmail_imap_session_printf(self, "+ %s\r\n", buf);
+	fflush(self->ci->tx);
 
-	alarm(ci->timeout);
-	if (fgets(buf, MAX_LINESIZE, ci->rx) == NULL) {
+	alarm(self->ci->timeout);
+	if (fgets(buf, MAX_LINESIZE, self->ci->rx) == NULL) {
 		trace(TRACE_ERROR, "%s,%s: error reading from client",
 		      __FILE__, __func__);
-		ci_write(ci->tx, "* BYE Error reading input\r\n");
+		dbmail_imap_session_printf(self, "* BYE Error reading input\r\n");
 		return -1;
 	}
 	alarm(0);
@@ -294,7 +293,7 @@ int _ic_authenticate(char *tag, char **args, ClientInfo * ci)
 
 	if (validate_result == -1) {
 		/* a db-error occurred */
-		ci_write(ci->tx,
+		dbmail_imap_session_printf(self,
 			"* BYE internal db error validating user\r\n");
 		trace(TRACE_ERROR,
 		      "IMAPD: authenticate(): db-validate error while validating user %s "
@@ -306,7 +305,7 @@ int _ic_authenticate(char *tag, char **args, ClientInfo * ci)
 		sleep(2);	/* security */
 
 		/* validation failed: invalid user/pass combination */
-		ci_write(ci->tx, "%s NO login rejected\r\n", tag);
+		dbmail_imap_session_printf(self, "%s NO login rejected\r\n", self->tag);
 
 		/* validation failed: invalid user/pass combination */
 		trace(TRACE_MESSAGE,
@@ -322,16 +321,16 @@ int _ic_authenticate(char *tag, char **args, ClientInfo * ci)
 	ud->state = IMAPCS_AUTHENTICATED;
 
 	if (imap_before_smtp)
-		db_log_ip(ci->ip);
+		db_log_ip(self->ci->ip);
 
 	trace(TRACE_MESSAGE,
 	      "IMAPD [PID %d]: user (id %llu, name %s) login accepted @ %s",
 	      (int) getpid(), userid, username, timestring);
 #ifdef PROC_TITLES
-	set_proc_title("USER %s [%s]", args[0], ci->ip);
+	set_proc_title("USER %s [%s]", self->args[0], self->ci->ip);
 #endif
 
-	ci_write(ci->tx, "%s OK AUTHENTICATE completed\r\n", tag);
+	dbmail_imap_session_printf(self, "%s OK AUTHENTICATE completed\r\n", self->tag);
 	return 0;
 }
 
@@ -347,26 +346,24 @@ int _ic_authenticate(char *tag, char **args, ClientInfo * ci)
  * 
  * select a specified mailbox
  */
-int _ic_select(char *tag, char **args, ClientInfo * ci)
+int _ic_select(struct ImapSession *self)
 {
-	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	u64_t mboxid, key;
 	int result;
 	unsigned idx = 0;
 #define PERMSTRING_SIZE 80
 	char permstring[PERMSTRING_SIZE];
 
-	if (!check_state_and_args
-	    ("SELECT", tag, args, 1, IMAPCS_AUTHENTICATED, ci))
+	if (!check_state_and_args(self, "SELECT", 1, 1, IMAPCS_AUTHENTICATED))
 		return 1;	/* error, return */
 
-	if (db_findmailbox(args[0], ud->userid, &mboxid) == -1) {
-		ci_write(ci->tx, "* BYE internal dbase error\r\n");
+	if (db_findmailbox(self->args[0], ud->userid, &mboxid) == -1) {
+		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 		return -1;
 	}
 	if (mboxid == 0) {
-		ci_write(ci->tx,
-			"%s NO Could not find specified mailbox\r\n", tag);
+		dbmail_imap_session_printf(self, "%s NO Could not find specified mailbox\r\n", self->tag);
 
 		ud->state = IMAPCS_AUTHENTICATED;
 		my_free(ud->mailbox.seq_list);
@@ -378,12 +375,12 @@ int _ic_select(char *tag, char **args, ClientInfo * ci)
 	/* check if user has right to select mailbox */
 	result = acl_has_right(ud->userid, mboxid, ACL_RIGHT_READ);
 	if (result < 0) {
-		ci_write(ci->tx, "* BYE internal database error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		return -1;
 	}
 	if (result == 0) {
-		ci_write(ci->tx,
-			"%s NO no permission to select mailbox\r\n", tag);
+		dbmail_imap_session_printf(self,
+			"%s NO no permission to select mailbox\r\n", self->tag);
 		ud->state = IMAPCS_AUTHENTICATED;
 		my_free(ud->mailbox.seq_list);
 		memset(&ud->mailbox, 0, sizeof(ud->mailbox));
@@ -394,9 +391,9 @@ int _ic_select(char *tag, char **args, ClientInfo * ci)
 	result = db_isselectable(mboxid);
 	if (result == 0) {
 		/* error: cannot select mailbox */
-		ci_write(ci->tx,
+		dbmail_imap_session_printf(self,
 			"%s NO specified mailbox is not selectable\r\n",
-			tag);
+			self->tag);
 
 		ud->state = IMAPCS_AUTHENTICATED;
 		my_free(ud->mailbox.seq_list);
@@ -405,7 +402,7 @@ int _ic_select(char *tag, char **args, ClientInfo * ci)
 		return 1;
 	}
 	if (result == -1) {
-		ci_write(ci->tx, "* BYE internal dbase error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 		return -1;	/* fatal */
 	}
 
@@ -413,63 +410,63 @@ int _ic_select(char *tag, char **args, ClientInfo * ci)
 
 	/* read info from mailbox */ result = db_getmailbox(&ud->mailbox);
 	if (result == -1) {
-		ci_write(ci->tx, "* BYE internal dbase error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 		return -1;	/* fatal  */
 	}
 
 	/* show mailbox info */
 	/* msg counts */
-	ci_write(ci->tx, "* %u EXISTS\r\n", ud->mailbox.exists);
-	ci_write(ci->tx, "* %u RECENT\r\n", ud->mailbox.recent);
+	dbmail_imap_session_printf(self, "* %u EXISTS\r\n", ud->mailbox.exists);
+	dbmail_imap_session_printf(self, "* %u RECENT\r\n", ud->mailbox.recent);
 
 	/* flags */
-	ci_write(ci->tx, "* FLAGS (");
+	dbmail_imap_session_printf(self, "* FLAGS (");
 
 	if (ud->mailbox.flags & IMAPFLAG_SEEN)
-		ci_write(ci->tx, "\\Seen ");
+		dbmail_imap_session_printf(self, "\\Seen ");
 	if (ud->mailbox.flags & IMAPFLAG_ANSWERED)
-		ci_write(ci->tx, "\\Answered ");
+		dbmail_imap_session_printf(self, "\\Answered ");
 	if (ud->mailbox.flags & IMAPFLAG_DELETED)
-		ci_write(ci->tx, "\\Deleted ");
+		dbmail_imap_session_printf(self, "\\Deleted ");
 	if (ud->mailbox.flags & IMAPFLAG_FLAGGED)
-		ci_write(ci->tx, "\\Flagged ");
+		dbmail_imap_session_printf(self, "\\Flagged ");
 	if (ud->mailbox.flags & IMAPFLAG_DRAFT)
-		ci_write(ci->tx, "\\Draft ");
+		dbmail_imap_session_printf(self, "\\Draft ");
 	if (ud->mailbox.flags & IMAPFLAG_RECENT)
-		ci_write(ci->tx, "\\Recent ");
+		dbmail_imap_session_printf(self, "\\Recent ");
 
-	ci_write(ci->tx, ")\r\n");
+	dbmail_imap_session_printf(self, ")\r\n");
 
 	/* permanent flags */
-	ci_write(ci->tx, "* OK [PERMANENTFLAGS (");
+	dbmail_imap_session_printf(self, "* OK [PERMANENTFLAGS (");
 	if (ud->mailbox.flags & IMAPFLAG_SEEN)
-		ci_write(ci->tx, "\\Seen ");
+		dbmail_imap_session_printf(self, "\\Seen ");
 	if (ud->mailbox.flags & IMAPFLAG_ANSWERED)
-		ci_write(ci->tx, "\\Answered ");
+		dbmail_imap_session_printf(self, "\\Answered ");
 	if (ud->mailbox.flags & IMAPFLAG_DELETED)
-		ci_write(ci->tx, "\\Deleted ");
+		dbmail_imap_session_printf(self, "\\Deleted ");
 	if (ud->mailbox.flags & IMAPFLAG_FLAGGED)
-		ci_write(ci->tx, "\\Flagged ");
+		dbmail_imap_session_printf(self, "\\Flagged ");
 	if (ud->mailbox.flags & IMAPFLAG_DRAFT)
-		ci_write(ci->tx, "\\Draft ");
+		dbmail_imap_session_printf(self, "\\Draft ");
 	if (ud->mailbox.flags & IMAPFLAG_RECENT)
-		ci_write(ci->tx, "\\Recent ");
+		dbmail_imap_session_printf(self, "\\Recent ");
 
-	ci_write(ci->tx, ")]\r\n");
+	dbmail_imap_session_printf(self, ")]\r\n");
 
 	/* UID */
-	ci_write(ci->tx, "* OK [UIDVALIDITY %llu] UID value\r\n",
+	dbmail_imap_session_printf(self, "* OK [UIDVALIDITY %llu] UID value\r\n",
 		ud->mailbox.uid);
 
 	/* show idx of first unseen msg (if present) */
 	key = db_first_unseen(ud->mailbox.uid);
 	if (key == (u64_t) (-1)) {
-		ci_write(ci->tx, "* BYE internal dbase error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 		return -1;
 	}
 	if (binary_search(ud->mailbox.seq_list, ud->mailbox.exists,
 			  key, &idx) != -1)
-		ci_write(ci->tx,
+		dbmail_imap_session_printf(self,
 			"* OK [UNSEEN %u] first unseen message\r\n",
 			idx + 1);
 
@@ -485,9 +482,9 @@ int _ic_select(char *tag, char **args, ClientInfo * ci)
 		/* invalid permission --> fatal */
 		trace(TRACE_ERROR,
 		      "IMAPD: select(): detected invalid permission mode for mailbox %llu ('%s')",
-		      ud->mailbox.uid, args[0]);
+		      ud->mailbox.uid, self->args[0]);
 
-		ci_write(ci->tx,
+		dbmail_imap_session_printf(self,
 			"* BYE fatal: detected invalid mailbox settings\r\n");
 		return -1;
 	}
@@ -495,7 +492,7 @@ int _ic_select(char *tag, char **args, ClientInfo * ci)
 	/* ok, update state */
 	ud->state = IMAPCS_SELECTED;
 
-	ci_write(ci->tx, "%s OK [%s] SELECT completed\r\n", tag,
+	dbmail_imap_session_printf(self, "%s OK [%s] SELECT completed\r\n", self->tag,
 		permstring);
 	return 0;
 }
@@ -506,35 +503,34 @@ int _ic_select(char *tag, char **args, ClientInfo * ci)
  * 
  * examines a specified mailbox 
  */
-int _ic_examine(char *tag, char **args, ClientInfo * ci)
+int _ic_examine(struct ImapSession *self)
 {
-	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	u64_t mboxid;
 	int result;
 
-	if (!check_state_and_args
-	    ("EXAMINE", tag, args, 1, IMAPCS_AUTHENTICATED, ci))
-		return 1;	/* error, return */
+	if (!check_state_and_args(self, "EXAMINE", 1, 1, IMAPCS_AUTHENTICATED))
+		return 1;
 
-	if (db_findmailbox(args[0], ud->userid, &mboxid) == -1) {
-		ci_write(ci->tx, "* BYE internal dbase error\r\n");
+	if (db_findmailbox(self->args[0], ud->userid, &mboxid) == -1) {
+		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 		return -1;
 	}
 	if (mboxid == 0) {
-		ci_write(ci->tx,
-			"%s NO Could not find specified mailbox\r\n", tag);
+		dbmail_imap_session_printf(self,
+			"%s NO Could not find specified mailbox\r\n", self->tag);
 		return 1;
 	}
 
 	/* check if user has right to examine mailbox */
 	result = acl_has_right(ud->userid, mboxid, ACL_RIGHT_READ);
 	if (result < 0) {
-		ci_write(ci->tx, "* BYE internal database error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		return -1;
 	}
 	if (result == 0) {
-		ci_write(ci->tx,
-			"%s NO no permission to examine mailbox\r\n", tag);
+		dbmail_imap_session_printf(self,
+			"%s NO no permission to examine mailbox\r\n", self->tag);
 		ud->state = IMAPCS_AUTHENTICATED;
 		my_free(ud->mailbox.seq_list);
 		memset(&ud->mailbox, 0, sizeof(ud->mailbox));
@@ -545,13 +541,13 @@ int _ic_examine(char *tag, char **args, ClientInfo * ci)
 	result = db_isselectable(mboxid);
 	if (result == 0) {
 		/* error: cannot select mailbox */
-		ci_write(ci->tx,
+		dbmail_imap_session_printf(self,
 			"%s NO specified mailbox is not selectable\r\n",
-			tag);
+			self->tag);
 		return 1;	/* fatal */
 	}
 	if (result == -1) {
-		ci_write(ci->tx, "* BYE internal dbase error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 		return -1;	/* fatal */
 	}
 
@@ -561,52 +557,52 @@ int _ic_examine(char *tag, char **args, ClientInfo * ci)
 	result = db_getmailbox(&ud->mailbox);
 
 	if (result == -1) {
-		ci_write(ci->tx, "* BYE internal dbase error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 		return -1;	/* fatal */
 	}
 
 	/* show mailbox info */
 	/* msg counts */
-	ci_write(ci->tx, "* %u EXISTS\r\n", ud->mailbox.exists);
-	ci_write(ci->tx, "* %u RECENT\r\n", ud->mailbox.recent);
+	dbmail_imap_session_printf(self, "* %u EXISTS\r\n", ud->mailbox.exists);
+	dbmail_imap_session_printf(self, "* %u RECENT\r\n", ud->mailbox.recent);
 
 	/* flags */
-	ci_write(ci->tx, "* FLAGS (");
+	dbmail_imap_session_printf(self, "* FLAGS (");
 
 	if (ud->mailbox.flags & IMAPFLAG_SEEN)
-		ci_write(ci->tx, "\\Seen ");
+		dbmail_imap_session_printf(self, "\\Seen ");
 	if (ud->mailbox.flags & IMAPFLAG_ANSWERED)
-		ci_write(ci->tx, "\\Answered ");
+		dbmail_imap_session_printf(self, "\\Answered ");
 	if (ud->mailbox.flags & IMAPFLAG_DELETED)
-		ci_write(ci->tx, "\\Deleted ");
+		dbmail_imap_session_printf(self, "\\Deleted ");
 	if (ud->mailbox.flags & IMAPFLAG_FLAGGED)
-		ci_write(ci->tx, "\\Flagged ");
+		dbmail_imap_session_printf(self, "\\Flagged ");
 	if (ud->mailbox.flags & IMAPFLAG_DRAFT)
-		ci_write(ci->tx, "\\Draft ");
+		dbmail_imap_session_printf(self, "\\Draft ");
 	if (ud->mailbox.flags & IMAPFLAG_RECENT)
-		ci_write(ci->tx, "\\Recent ");
+		dbmail_imap_session_printf(self, "\\Recent ");
 
-	ci_write(ci->tx, ")\r\n");
+	dbmail_imap_session_printf(self, ")\r\n");
 
 	/* permanent flags */
-	ci_write(ci->tx, "* OK [PERMANENTFLAGS (");
+	dbmail_imap_session_printf(self, "* OK [PERMANENTFLAGS (");
 	if (ud->mailbox.flags & IMAPFLAG_SEEN)
-		ci_write(ci->tx, "\\Seen ");
+		dbmail_imap_session_printf(self, "\\Seen ");
 	if (ud->mailbox.flags & IMAPFLAG_ANSWERED)
-		ci_write(ci->tx, "\\Answered ");
+		dbmail_imap_session_printf(self, "\\Answered ");
 	if (ud->mailbox.flags & IMAPFLAG_DELETED)
-		ci_write(ci->tx, "\\Deleted ");
+		dbmail_imap_session_printf(self, "\\Deleted ");
 	if (ud->mailbox.flags & IMAPFLAG_FLAGGED)
-		ci_write(ci->tx, "\\Flagged ");
+		dbmail_imap_session_printf(self, "\\Flagged ");
 	if (ud->mailbox.flags & IMAPFLAG_DRAFT)
-		ci_write(ci->tx, "\\Draft ");
+		dbmail_imap_session_printf(self, "\\Draft ");
 	if (ud->mailbox.flags & IMAPFLAG_RECENT)
-		ci_write(ci->tx, "\\Recent ");
+		dbmail_imap_session_printf(self, "\\Recent ");
 
-	ci_write(ci->tx, ")]\r\n");
+	dbmail_imap_session_printf(self, ")]\r\n");
 
 	/* UID */
-	ci_write(ci->tx, "* OK [UIDVALIDITY %llu] UID value\r\n",
+	dbmail_imap_session_printf(self, "* OK [UIDVALIDITY %llu] UID value\r\n",
 		ud->mailbox.uid);
 
 	/* update permission: examine forces read-only */
@@ -615,7 +611,7 @@ int _ic_examine(char *tag, char **args, ClientInfo * ci)
 	/* ok, update state */
 	ud->state = IMAPCS_SELECTED;
 
-	ci_write(ci->tx, "%s OK [READ-ONLY] EXAMINE completed\r\n", tag);
+	dbmail_imap_session_printf(self, "%s OK [READ-ONLY] EXAMINE completed\r\n", self->tag);
 	return 0;
 }
 
@@ -625,74 +621,73 @@ int _ic_examine(char *tag, char **args, ClientInfo * ci)
  *
  * create a mailbox
  */
-int _ic_create(char *tag, char **args, ClientInfo * ci)
+int _ic_create(struct ImapSession *self)
 {
-	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	int result, i;
 	u64_t mboxid, tmp_mboxid;
 	u64_t parent_mboxid = 0;	/* id of parent mailbox (if applicable) */
 	char **chunks, *cpy;
 	int other_namespace = 0;
 
-	if (!check_state_and_args
-	    ("CREATE", tag, args, 1, IMAPCS_AUTHENTICATED, ci))
-		return 1;	/* error, return */
+	if (!check_state_and_args(self, "CREATE", 1, 1, IMAPCS_AUTHENTICATED))
+		return 1;
 
 	/* remove trailing '/' if present */
-	while (strlen(args[0]) > 0 && args[0][strlen(args[0]) - 1] == '/')
-		args[0][strlen(args[0]) - 1] = '\0';
+	while (strlen(self->args[0]) > 0 && self->args[0][strlen(self->args[0]) - 1] == '/')
+		self->args[0][strlen(self->args[0]) - 1] = '\0';
 
 	/* remove leading '/' if present */
-	for (i = 0; args[0][i] && args[0][i] == '/'; i++);
-	memmove(&args[0][0], &args[0][i],
-		(strlen(args[0]) - i) * sizeof(char));
+	for (i = 0; self->args[0][i] && self->args[0][i] == '/'; i++);
+	memmove(&self->args[0][0], &self->args[0][i],
+		(strlen(self->args[0]) - i) * sizeof(char));
 
 	/* check if this mailbox already exists */
-	if (db_findmailbox(args[0], ud->userid, &mboxid) == -1) {
+	if (db_findmailbox(self->args[0], ud->userid, &mboxid) == -1) {
 		/* dbase failure */
-		ci_write(ci->tx, "* BYE internal dbase error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 		return -1;	/* fatal */
 	}
 
 	if (mboxid != 0) {
 		/* mailbox already exists */
-		ci_write(ci->tx, "%s NO mailbox already exists\r\n", tag);
+		dbmail_imap_session_printf(self, "%s NO mailbox already exists\r\n", self->tag);
 		return 1;
 	}
 
 	/* check if new name is valid */
-	if (!checkmailboxname(args[0])) {
-		ci_write(ci->tx,
+	if (!checkmailboxname(self->args[0])) {
+		dbmail_imap_session_printf(self,
 			"%s BAD new mailbox name contains invalid characters\r\n",
-			tag);
+			self->tag);
 		return 1;
 	}
 
 	/* alloc a ptr which can contain up to the full name */
-	cpy = (char *) my_malloc(sizeof(char) * (strlen(args[0]) + 1));
+	cpy = (char *) my_malloc(sizeof(char) * (strlen(self->args[0]) + 1));
 	if (!cpy) {
 		/* out of mem */
 		trace(TRACE_ERROR, "IMAPD: create(): not enough memory");
-		ci_write(ci->tx, "* BYE server ran out of memory\r\n");
+		dbmail_imap_session_printf(self, "* BYE server ran out of memory\r\n");
 		return -1;
 	}
 
 	/* split up the name & create parent folders as necessary */
-	chunks = give_chunks(args[0], '/');
+	chunks = give_chunks(self->args[0], '/');
 
 	if (chunks == NULL) {
 		/* serious error while making chunks */
 		trace(TRACE_ERROR,
 		      "IMAPD: create(): could not create chunks");
-		ci_write(ci->tx, "* BYE server ran out of memory\r\n");
+		dbmail_imap_session_printf(self, "* BYE server ran out of memory\r\n");
 		my_free(cpy);
 		return -1;
 	}
 
 	if (chunks[0] == NULL) {
 		/* wrong argument */
-		ci_write(ci->tx, "%s NO invalid mailbox name specified\r\n",
-			tag);
+		dbmail_imap_session_printf(self, "%s NO invalid mailbox name specified\r\n",
+			self->tag);
 		free_chunks(chunks);
 		my_free(cpy);
 		return 1;
@@ -704,9 +699,9 @@ int _ic_create(char *tag, char **args, ClientInfo * ci)
 	for (i = 0; chunks[i]; i++) {
 		if (strlen(chunks[i]) == 0) {
 			/* no can do */
-			ci_write(ci->tx,
+			dbmail_imap_session_printf(self,
 				"%s NO invalid mailbox name specified\r\n",
-				tag);
+				self->tag);
 			free_chunks(chunks);
 			my_free(cpy);
 			return 1;
@@ -740,7 +735,7 @@ int _ic_create(char *tag, char **args, ClientInfo * ci)
 		/* check if this mailbox already exists */
 		if (db_findmailbox(cpy, ud->userid, &mboxid) == -1) {
 			/* dbase failure */
-			ci_write(ci->tx, "* BYE internal dbase error\r\n");
+			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 			free_chunks(chunks);
 			my_free(cpy);
 			return -1;	/* fatal */
@@ -760,7 +755,7 @@ int _ic_create(char *tag, char **args, ClientInfo * ci)
 						  parent_mboxid,
 						  ACL_RIGHT_CREATE);
 				if (result < 0) {
-					ci_write(ci->tx,
+					dbmail_imap_session_printf(self,
 						"* BYE internal database "
 						"error\r\n");
 					free_chunks(chunks);
@@ -768,9 +763,9 @@ int _ic_create(char *tag, char **args, ClientInfo * ci)
 					return -1;	/* fatal */
 				}
 				if (result == 0) {
-					ci_write(ci->tx,
+					dbmail_imap_session_printf(self,
 						"%s NO no permission to create "
-						"mailbox here\r\n", tag);
+						"mailbox here\r\n", self->tag);
 					free_chunks(chunks);
 					my_free(cpy);
 					return 1;
@@ -781,9 +776,9 @@ int _ic_create(char *tag, char **args, ClientInfo * ci)
 					   another namespace, but we don't specify 
 					   the parent's mailbox, we should not be
 					   allowed to do so */
-					ci_write(ci->tx,
+					dbmail_imap_session_printf(self,
 						"%s NO no permission to create "
-						"mailbox here\r\n", tag);
+						"mailbox here\r\n", self->tag);
 					free_chunks(chunks);
 					my_free(cpy);
 					return 1;
@@ -794,7 +789,7 @@ int _ic_create(char *tag, char **args, ClientInfo * ci)
 
 
 			if (result == -1) {
-				ci_write(ci->tx,
+				dbmail_imap_session_printf(self,
 					"* BYE internal dbase error\r\n");
 				free_chunks(chunks);
 				my_free(cpy);
@@ -806,9 +801,9 @@ int _ic_create(char *tag, char **args, ClientInfo * ci)
 			/* mailbox does exist, failure if no_inferiors flag set */
 			result = db_noinferiors(mboxid);
 			if (result == 1) {
-				ci_write(ci->tx,
+				dbmail_imap_session_printf(self,
 					"%s NO mailbox cannot have inferior names\r\n",
-					tag);
+					self->tag);
 				free_chunks(chunks);
 				my_free(cpy);
 				return 1;
@@ -817,7 +812,7 @@ int _ic_create(char *tag, char **args, ClientInfo * ci)
 
 			if (result == -1) {
 				/* dbase failure */
-				ci_write(ci->tx,
+				dbmail_imap_session_printf(self,
 					"* BYE internal dbase error\r\n");
 				free_chunks(chunks);
 				my_free(cpy);
@@ -830,7 +825,7 @@ int _ic_create(char *tag, char **args, ClientInfo * ci)
 	free_chunks(chunks);
 	my_free(cpy);
 
-	ci_write(ci->tx, "%s OK CREATE completed\r\n", tag);
+	dbmail_imap_session_printf(self, "%s OK CREATE completed\r\n", self->tag);
 	return 0;
 }
 
@@ -840,29 +835,28 @@ int _ic_create(char *tag, char **args, ClientInfo * ci)
  *
  * deletes a specified mailbox
  */
-int _ic_delete(char *tag, char **args, ClientInfo * ci)
+int _ic_delete(struct ImapSession *self)
 {
-	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	int result, nchildren = 0;
 	u64_t *children = NULL, mboxid;
 
-	if (!check_state_and_args
-	    ("DELETE", tag, args, 1, IMAPCS_AUTHENTICATED, ci))
+	if (!check_state_and_args(self, "DELETE", 1, 1, IMAPCS_AUTHENTICATED))
 		return 1;	/* error, return */
 
 	/* remove trailing '/' if present */
-	while (strlen(args[0]) > 0 && args[0][strlen(args[0]) - 1] == '/')
-		args[0][strlen(args[0]) - 1] = '\0';
+	while (strlen(self->args[0]) > 0 && self->args[0][strlen(self->args[0]) - 1] == '/')
+		self->args[0][strlen(self->args[0]) - 1] = '\0';
 
 	/* check if this mailbox exists */
-	if (db_findmailbox(args[0], ud->userid, &mboxid) == -1) {
+	if (db_findmailbox(self->args[0], ud->userid, &mboxid) == -1) {
 		/* dbase failure */
-		ci_write(ci->tx, "* BYE internal dbase error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 		return -1;	/* fatal */
 	}
 	if (mboxid == 0) {
 		/* mailbox does not exist */
-		ci_write(ci->tx, "%s NO mailbox does not exist\r\n", tag);
+		dbmail_imap_session_printf(self, "%s NO mailbox does not exist\r\n", self->tag);
 		return 1;
 	}
 
@@ -870,12 +864,12 @@ int _ic_delete(char *tag, char **args, ClientInfo * ci)
 	   the user has the right to delete it. */
 	result = db_user_is_mailbox_owner(ud->userid, mboxid);
 	if (result < 0) {
-		ci_write(ci->tx, "* BYE internal database error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		return -1;
 	}
 	if (result == 0) {
-		ci_write(ci->tx,
-			"%s NO no permission to delete mailbox\r\n", tag);
+		dbmail_imap_session_printf(self,
+			"%s NO no permission to delete mailbox\r\n", self->tag);
 		ud->state = IMAPCS_AUTHENTICATED;
 		my_free(ud->mailbox.seq_list);
 		memset(&ud->mailbox, 0, sizeof(ud->mailbox));
@@ -883,10 +877,10 @@ int _ic_delete(char *tag, char **args, ClientInfo * ci)
 	}
 
 	/* check if there is an attempt to delete inbox */
-	if (strcasecmp(args[0], "inbox") == 0) {
-		ci_write(ci->tx,
+	if (strcasecmp(self->args[0], "inbox") == 0) {
+		dbmail_imap_session_printf(self,
 			"%s NO cannot delete special mailbox INBOX\r\n",
-			tag);
+			self->tag);
 		return 1;
 	}
 
@@ -898,7 +892,7 @@ int _ic_delete(char *tag, char **args, ClientInfo * ci)
 		/* error */
 		trace(TRACE_ERROR,
 		      "IMAPD: delete(): cannot retrieve list of mailbox children");
-		ci_write(ci->tx, "* BYE dbase/memory error\r\n");
+		dbmail_imap_session_printf(self, "* BYE dbase/memory error\r\n");
 		return -1;
 	}
 
@@ -906,14 +900,14 @@ int _ic_delete(char *tag, char **args, ClientInfo * ci)
 		/* mailbox has inferior names; error if \noselect specified */
 		result = db_isselectable(mboxid);
 		if (result == 0) {
-			ci_write(ci->tx,
+			dbmail_imap_session_printf(self,
 				"%s NO mailbox is non-selectable\r\n",
-				tag);
+				self->tag);
 			my_free(children);
 			return 1;
 		}
 		if (result == -1) {
-			ci_write(ci->tx, "* BYE internal dbase error\r\n");
+			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 			my_free(children);
 			return -1;	/* fatal */
 		}
@@ -924,7 +918,7 @@ int _ic_delete(char *tag, char **args, ClientInfo * ci)
 			result = db_setselectable(mboxid, 0);	/* set non-selectable flag */
 
 		if (result == -1) {
-			ci_write(ci->tx, "* BYE internal dbase error\r\n");
+			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 			my_free(children);
 			return -1;	/* fatal */
 		}
@@ -937,7 +931,7 @@ int _ic_delete(char *tag, char **args, ClientInfo * ci)
 		}
 
 		/* ok done */
-		ci_write(ci->tx, "%s OK DELETE completed\r\n", tag);
+		dbmail_imap_session_printf(self, "%s OK DELETE completed\r\n", self->tag);
 		my_free(children);
 		return 0;
 	}
@@ -952,7 +946,7 @@ int _ic_delete(char *tag, char **args, ClientInfo * ci)
 		ud->state = IMAPCS_AUTHENTICATED;
 	}
 
-	ci_write(ci->tx, "%s OK DELETE completed\r\n", tag);
+	dbmail_imap_session_printf(self, "%s OK DELETE completed\r\n", self->tag);
 	return 0;
 }
 
@@ -962,57 +956,56 @@ int _ic_delete(char *tag, char **args, ClientInfo * ci)
  *
  * renames a specified mailbox
  */
-int _ic_rename(char *tag, char **args, ClientInfo * ci)
+int _ic_rename(struct ImapSession *self)
 {
-	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	u64_t mboxid, newmboxid, *children, parentmboxid;
 	size_t oldnamelen;
 	int nchildren, i, result;
 	char newname[IMAP_MAX_MAILBOX_NAMELEN],
 	    name[IMAP_MAX_MAILBOX_NAMELEN];
 
-	if (!check_state_and_args
-	    ("RENAME", tag, args, 2, IMAPCS_AUTHENTICATED, ci))
-		return 1;	/* error, return */
+	if (!check_state_and_args(self, "RENAME", 2, 2, IMAPCS_AUTHENTICATED))
+		return 1;
 
 	/* remove trailing '/' if present */
-	while (strlen(args[0]) > 0 && args[0][strlen(args[0]) - 1] == '/')
-		args[0][strlen(args[0]) - 1] = '\0';
-	while (strlen(args[1]) > 0 && args[1][strlen(args[1]) - 1] == '/')
-		args[1][strlen(args[1]) - 1] = '\0';
+	while (strlen(self->args[0]) > 0 && self->args[0][strlen(self->args[0]) - 1] == '/')
+		self->args[0][strlen(self->args[0]) - 1] = '\0';
+	while (strlen(self->args[1]) > 0 && self->args[1][strlen(self->args[1]) - 1] == '/')
+		self->args[1][strlen(self->args[1]) - 1] = '\0';
 
 	/* remove leading '/' if present */
-	for (i = 0; args[1][i] && args[1][i] == '/'; i++);
-	memmove(&args[1][0], &args[1][i],
-		(strlen(args[1]) - i) * sizeof(char));
+	for (i = 0; self->args[1][i] && self->args[1][i] == '/'; i++);
+	memmove(&self->args[1][0], &self->args[1][i],
+		(strlen(self->args[1]) - i) * sizeof(char));
 
-	for (i = 0; args[0][i] && args[0][i] == '/'; i++);
-	memmove(&args[0][0], &args[0][i],
-		(strlen(args[0]) - i) * sizeof(char));
+	for (i = 0; self->args[0][i] && self->args[0][i] == '/'; i++);
+	memmove(&self->args[0][0], &self->args[0][i],
+		(strlen(self->args[0]) - i) * sizeof(char));
 
 
 	/* check if new mailbox exists */
-	if (db_findmailbox(args[1], ud->userid, &mboxid) == -1) {
+	if (db_findmailbox(self->args[1], ud->userid, &mboxid) == -1) {
 		/* dbase failure */
-		ci_write(ci->tx, "* BYE internal dbase error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 		return -1;	/* fatal */
 	}
 	if (mboxid != 0) {
 		/* mailbox exists */
-		ci_write(ci->tx, "%s NO new mailbox already exists\r\n",
-			tag);
+		dbmail_imap_session_printf(self, "%s NO new mailbox already exists\r\n",
+			self->tag);
 		return 1;
 	}
 
 	/* check if original mailbox exists */
-	if (db_findmailbox(args[0], ud->userid, &mboxid) == -1) {
+	if (db_findmailbox(self->args[0], ud->userid, &mboxid) == -1) {
 		/* dbase failure */
-		ci_write(ci->tx, "* BYE internal dbase error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 		return -1;	/* fatal */
 	}
 	if (mboxid == 0) {
 		/* mailbox does not exist */
-		ci_write(ci->tx, "%s NO mailbox does not exist\r\n", tag);
+		dbmail_imap_session_printf(self, "%s NO mailbox does not exist\r\n", self->tag);
 		return 1;
 	}
 
@@ -1020,12 +1013,12 @@ int _ic_rename(char *tag, char **args, ClientInfo * ci)
 	   the user has the right to delete it. */
 	result = db_user_is_mailbox_owner(ud->userid, mboxid);
 	if (result < 0) {
-		ci_write(ci->tx, "* BYE internal database error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		return -1;
 	}
 	if (result == 0) {
-		ci_write(ci->tx,
-			"%s NO no permission to rename mailbox\r\n", tag);
+		dbmail_imap_session_printf(self,
+			"%s NO no permission to rename mailbox\r\n", self->tag);
 		ud->state = IMAPCS_AUTHENTICATED;
 		my_free(ud->mailbox.seq_list);
 		memset(&ud->mailbox, 0, sizeof(ud->mailbox));
@@ -1033,72 +1026,72 @@ int _ic_rename(char *tag, char **args, ClientInfo * ci)
 	}
 
 	/* check if new name is valid */
-	if (!checkmailboxname(args[1])) {
-		ci_write(ci->tx,
+	if (!checkmailboxname(self->args[1])) {
+		dbmail_imap_session_printf(self,
 			"%s NO new mailbox name contains invalid characters\r\n",
-			tag);
+			self->tag);
 		return 1;
 	}
 
-	oldnamelen = strlen(args[0]);
+	oldnamelen = strlen(self->args[0]);
 
 	/* check if new name would invade structure as in
 	 * test (exists)
 	 * rename test test/testing
 	 * would create test/testing but delete test
 	 */
-	if (strncasecmp(args[0], args[1], (int) oldnamelen) == 0 &&
-	    strlen(args[1]) > oldnamelen && args[1][oldnamelen] == '/') {
-		ci_write(ci->tx,
+	if (strncasecmp(self->args[0], self->args[1], (int) oldnamelen) == 0 &&
+	    strlen(self->args[1]) > oldnamelen && self->args[1][oldnamelen] == '/') {
+		dbmail_imap_session_printf(self,
 			"%s NO new mailbox would invade mailbox structure\r\n",
-			tag);
+			self->tag);
 		return 1;
 	}
 
 
 	/* check if structure of new name is valid */
 	/* i.e. only last part (after last '/' can be nonexistent) */
-	for (i = strlen(args[1]) - 1; i >= 0 && args[1][i] != '/'; i--);
+	for (i = strlen(self->args[1]) - 1; i >= 0 && self->args[1][i] != '/'; i--);
 	if (i >= 0) {
-		args[1][i] = '\0';	/* note: original char was '/' */
+		self->args[1][i] = '\0';	/* note: original char was '/' */
 
-		if (db_findmailbox(args[1], ud->userid, &parentmboxid) ==
+		if (db_findmailbox(self->args[1], ud->userid, &parentmboxid) ==
 		    -1) {
 			/* dbase failure */
-			ci_write(ci->tx, "* BYE internal dbase error\r\n");
+			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 			return -1;	/* fatal */
 		}
 		if (parentmboxid == 0) {
 			/* parent mailbox does not exist */
-			ci_write(ci->tx,
+			dbmail_imap_session_printf(self,
 				"%s NO new mailbox would invade mailbox structure\r\n",
-				tag);
+				self->tag);
 			return 1;
 		}
 
 		/* ok, reset arg */
-		args[1][i] = '/';
+		self->args[1][i] = '/';
 	}
 
 	/* check if it is INBOX to be renamed */
-	if (strcasecmp(args[0], "inbox") == 0) {
+	if (strcasecmp(self->args[0], "inbox") == 0) {
 		/* ok, renaming inbox */
 		/* this means creating a new mailbox and moving all the INBOX msgs to the new mailbox */
 		/* inferior names of INBOX are left unchanged */
-		result = db_createmailbox(args[1], ud->userid, &newmboxid);
+		result = db_createmailbox(self->args[1], ud->userid, &newmboxid);
 		if (result == -1) {
-			ci_write(ci->tx, "* BYE internal dbase error\r\n");
+			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 			return -1;
 		}
 
 		result = db_movemsg(newmboxid, mboxid);
 		if (result == -1) {
-			ci_write(ci->tx, "* BYE internal dbase error\r\n");
+			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 			return -1;
 		}
 
 		/* ok done */
-		ci_write(ci->tx, "%s OK RENAME completed\r\n", tag);
+		dbmail_imap_session_printf(self, "%s OK RENAME completed\r\n", self->tag);
 		return 0;
 	}
 
@@ -1107,7 +1100,7 @@ int _ic_rename(char *tag, char **args, ClientInfo * ci)
 	    db_listmailboxchildren(mboxid, ud->userid, &children,
 				   &nchildren, "%");
 	if (result == -1) {
-		ci_write(ci->tx, "* BYE internal dbase error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 		return -1;
 	}
 
@@ -1115,7 +1108,7 @@ int _ic_rename(char *tag, char **args, ClientInfo * ci)
 	for (i = 0; i < nchildren; i++) {
 		result = db_getmailboxname(children[i], ud->userid, name);
 		if (result == -1) {
-			ci_write(ci->tx, "* BYE internal dbase error\r\n");
+			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 			my_free(children);
 			return -1;
 		}
@@ -1124,18 +1117,18 @@ int _ic_rename(char *tag, char **args, ClientInfo * ci)
 			/* strange error, let's say its fatal */
 			trace(TRACE_ERROR,
 			      "IMAPD: rename(): mailbox names appear to be corrupted");
-			ci_write(ci->tx,
+			dbmail_imap_session_printf(self,
 				"* BYE internal error regarding mailbox names\r\n");
 			my_free(children);
 			return -1;
 		}
 
 		snprintf(newname, IMAP_MAX_MAILBOX_NAMELEN, "%s%s",
-			 args[1], &name[oldnamelen]);
+			 self->args[1], &name[oldnamelen]);
 
 		result = db_setmailboxname(children[i], newname);
 		if (result == -1) {
-			ci_write(ci->tx, "* BYE internal dbase error\r\n");
+			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 			my_free(children);
 			return -1;
 		}
@@ -1144,13 +1137,13 @@ int _ic_rename(char *tag, char **args, ClientInfo * ci)
 		my_free(children);
 
 	/* now replace name */
-	result = db_setmailboxname(mboxid, args[1]);
+	result = db_setmailboxname(mboxid, self->args[1]);
 	if (result == -1) {
-		ci_write(ci->tx, "* BYE internal dbase error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 		return -1;
 	}
 
-	ci_write(ci->tx, "%s OK RENAME completed\r\n", tag);
+	dbmail_imap_session_printf(self, "%s OK RENAME completed\r\n", self->tag);
 	return 0;
 }
 
@@ -1160,24 +1153,23 @@ int _ic_rename(char *tag, char **args, ClientInfo * ci)
  *
  * subscribe to a specified mailbox
  */
-int _ic_subscribe(char *tag, char **args, ClientInfo * ci)
+int _ic_subscribe(struct ImapSession *self)
 {
-	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	u64_t mboxid;
 	int result;
 
 
-	if (!check_state_and_args
-	    ("SUBSCRIBE", tag, args, 1, IMAPCS_AUTHENTICATED, ci))
-		return 1;	/* error, return */
+	if (!check_state_and_args(self, "SUBSCRIBE", 1, 1, IMAPCS_AUTHENTICATED))
+		return 1;
 
-	if (db_findmailbox(args[0], ud->userid, &mboxid) == -1) {
-		ci_write(ci->tx, "* BYE internal dbase error\r\n");
+	if (db_findmailbox(self->args[0], ud->userid, &mboxid) == -1) {
+		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 		return -1;
 	}
 	if (mboxid == 0) {
 		/* mailbox does not exist */
-		ci_write(ci->tx, "%s NO mailbox does not exist\r\n", tag);
+		dbmail_imap_session_printf(self, "%s NO mailbox does not exist\r\n", self->tag);
 		return 0;
 	}
 
@@ -1185,13 +1177,13 @@ int _ic_subscribe(char *tag, char **args, ClientInfo * ci)
 	   use, so I guessed it should be lookup */
 	result = acl_has_right(ud->userid, mboxid, ACL_RIGHT_LOOKUP);
 	if (result < 0) {
-		ci_write(ci->tx, "* BYE internal database error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		return -1;
 	}
 	if (result == 0) {
-		ci_write(ci->tx,
+		dbmail_imap_session_printf(self,
 			"%s NO no permission to subscribe to  mailbox\r\n",
-			tag);
+			self->tag);
 		ud->state = IMAPCS_AUTHENTICATED;
 		my_free(ud->mailbox.seq_list);
 		memset(&ud->mailbox, 0, sizeof(ud->mailbox));
@@ -1199,11 +1191,11 @@ int _ic_subscribe(char *tag, char **args, ClientInfo * ci)
 	}
 
 	if (db_subscribe(mboxid, ud->userid) == -1) {
-		ci_write(ci->tx, "* BYE internal dbase error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 		return -1;
 	}
 
-	ci_write(ci->tx, "%s OK SUBSCRIBE completed\r\n", tag);
+	dbmail_imap_session_printf(self, "%s OK SUBSCRIBE completed\r\n", self->tag);
 	return 0;
 }
 
@@ -1213,24 +1205,23 @@ int _ic_subscribe(char *tag, char **args, ClientInfo * ci)
  *
  * removes a mailbox from the users' subscription list
  */
-int _ic_unsubscribe(char *tag, char **args, ClientInfo * ci)
+int _ic_unsubscribe(struct ImapSession *self)
 {
-	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	u64_t mboxid;
 	int result;
 
 
-	if (!check_state_and_args
-	    ("UNSUBSCRIBE", tag, args, 1, IMAPCS_AUTHENTICATED, ci))
-		return 1;	/* error, return */
+	if (!check_state_and_args(self, "UNSUBSCRIBE", 1, 1, IMAPCS_AUTHENTICATED))
+		return 1;
 
-	if (db_findmailbox(args[0], ud->userid, &mboxid) == -1) {
-		ci_write(ci->tx, "* BYE internal dbase error\r\n");
+	if (db_findmailbox(self->args[0], ud->userid, &mboxid) == -1) {
+		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 		return -1;
 	}
 	if (mboxid == 0) {
 		/* mailbox does not exist */
-		ci_write(ci->tx, "%s NO mailbox does not exist\r\n", tag);
+		dbmail_imap_session_printf(self, "%s NO mailbox does not exist\r\n", self->tag);
 		return 0;
 	}
 
@@ -1238,13 +1229,13 @@ int _ic_unsubscribe(char *tag, char **args, ClientInfo * ci)
 	   use, so I guessed it should be lookup */
 	result = acl_has_right(ud->userid, mboxid, ACL_RIGHT_LOOKUP);
 	if (result < 0) {
-		ci_write(ci->tx, "* BYE internal database error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		return -1;
 	}
 	if (result == 0) {
-		ci_write(ci->tx,
+		dbmail_imap_session_printf(self,
 			"%s NO no permission to unsubscribe from mailbox\r\n",
-			tag);
+			self->tag);
 		ud->state = IMAPCS_AUTHENTICATED;
 		my_free(ud->mailbox.seq_list);
 		memset(&ud->mailbox, 0, sizeof(ud->mailbox));
@@ -1252,11 +1243,11 @@ int _ic_unsubscribe(char *tag, char **args, ClientInfo * ci)
 	}
 
 	if (db_unsubscribe(mboxid, ud->userid) == -1) {
-		ci_write(ci->tx, "* BYE internal dbase error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 		return -1;
 	}
 
-	ci_write(ci->tx, "%s OK UNSUBSCRIBE completed\r\n", tag);
+	dbmail_imap_session_printf(self, "%s OK UNSUBSCRIBE completed\r\n", self->tag);
 	return 0;
 }
 
@@ -1266,9 +1257,9 @@ int _ic_unsubscribe(char *tag, char **args, ClientInfo * ci)
  *
  * executes a list command
  */
-int _ic_list(char *tag, char **args, ClientInfo * ci)
+int _ic_list(struct ImapSession *self)
 {
-	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	u64_t *children = NULL;
 	int result;
 	size_t slen, plen;
@@ -1281,53 +1272,51 @@ int _ic_list(char *tag, char **args, ClientInfo * ci)
 	memset(mb,0,sizeof(mailbox_t));
 	GList * plist = NULL;
 
-	if (!check_state_and_args
-	    (thisname, tag, args, 2, IMAPCS_AUTHENTICATED, ci))
-		return 1;	/* error, return */
+	if (!check_state_and_args(self, thisname, 2, 2, IMAPCS_AUTHENTICATED))
+		return 1;
 
-
-	/* check if args are both empty strings */
-	if (strlen(args[0]) == 0 && strlen(args[1]) == 0) {
+	/* check if self->args are both empty strings */
+	if (strlen(self->args[0]) == 0 && strlen(self->args[1]) == 0) {
 		/* this has special meaning; show root & delimiter */
 		trace(TRACE_ERROR,
 		      "_ic_list(): showing delimiter [(\\NoSelect) \"/\" \"\"]");
-		ci_write(ci->tx, "* %s (\\NoSelect) \"/\" \"\"\r\n",
+		dbmail_imap_session_printf(self, "* %s (\\NoSelect) \"/\" \"\"\r\n",
 			thisname);
-		ci_write(ci->tx, "%s OK %s completed\r\n", tag, thisname);
+		dbmail_imap_session_printf(self, "%s OK %s completed\r\n", self->tag, thisname);
 		return 0;
 	}
 
 	/* check the reference name, should contain only accepted mailboxname chars */
-	for (i = 0, slen = strlen(args[0]); args[0][i]; i++) {
-		if (stridx(AcceptedMailboxnameChars, args[0][i]) == slen) {
+	for (i = 0, slen = strlen(self->args[0]); self->args[0][i]; i++) {
+		if (stridx(AcceptedMailboxnameChars, self->args[0][i]) == slen) {
 			/* wrong char found */
-			ci_write(ci->tx,
+			dbmail_imap_session_printf(self,
 				"%s BAD reference name contains invalid characters\r\n",
-				tag);
+				self->tag);
 			return 1;
 		}
 	}
 
-	plen = strlen(args[1]) * 6;
+	plen = strlen(self->args[1]) * 6;
 	/* FIXME: We need to allocated a sane amount of memory for this, 
 	   instead of adding an extra 20 places for just for having extra
 	   space. This is bound to fail sometime!! */
 	pattern = (char *) my_malloc(sizeof(char) * (plen + slen + 20));
 	if (!pattern) {
-		ci_write(ci->tx, "* BYE out of memory\r\n");
+		dbmail_imap_session_printf(self, "* BYE out of memory\r\n");
 		return -1;
 	}
 
 	memset(pattern, '\0', plen + slen + 12);
 	pattern[0] = '^';
-	strcpy(&pattern[1], args[0]);
+	strcpy(&pattern[1], self->args[0]);
 
 	i = slen + 1;
-	for (j = 0; args[1][j] && i < (plen + slen + 1); j++) {
-		if (args[1][j] == '*') {
+	for (j = 0; self->args[1][j] && i < (plen + slen + 1); j++) {
+		if (self->args[1][j] == '*') {
 			pattern[i++] = '.';
 			pattern[i++] = '*';
-		} else if (args[1][j] == '%') {
+		} else if (self->args[1][j] == '%') {
 			pattern[i++] = '[';
 			pattern[i++] = '^';
 			pattern[i++] = '\\';
@@ -1335,7 +1324,7 @@ int _ic_list(char *tag, char **args, ClientInfo * ci)
 			pattern[i++] = ']';
 			pattern[i++] = '*';
 		} else
-			pattern[i++] = args[1][j];
+			pattern[i++] = self->args[1][j];
 	}
 
 	/* small addition by Ilja */
@@ -1351,15 +1340,15 @@ int _ic_list(char *tag, char **args, ClientInfo * ci)
 	    db_findmailbox_by_regex(ud->userid, pattern, &children,
 				    &nchildren, list_is_lsub);
 	if (result == -1) {
-		ci_write(ci->tx, "* BYE internal dbase error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 		my_free(children);
 		my_free(pattern);
 		return -1;
 	}
 
 	if (result == 1) {
-		ci_write(ci->tx, "%s BAD invalid pattern specified\r\n",
-			tag);
+		dbmail_imap_session_printf(self, "%s BAD invalid pattern specified\r\n",
+			self->tag);
 		my_free(children);
 		my_free(pattern);
 		return 1;
@@ -1374,7 +1363,7 @@ int _ic_list(char *tag, char **args, ClientInfo * ci)
 			plist = g_list_append(plist, "\\noinferiors");
 		
 		/* show */
-		ci_write(ci->tx, "* %s %s \"/\" \"%s\"\r\n", thisname, dbmail_imap_plist_as_string(plist), mb->name);
+		dbmail_imap_session_printf(self, "* %s %s \"/\" \"%s\"\r\n", thisname, dbmail_imap_plist_as_string(plist), mb->name);
 	}
 
 	g_list_foreach(plist,(GFunc)g_free,NULL);
@@ -1385,7 +1374,7 @@ int _ic_list(char *tag, char **args, ClientInfo * ci)
 
 	my_free(pattern);
 
-	ci_write(ci->tx, "%s OK %s completed\r\n", tag, thisname);
+	dbmail_imap_session_printf(self, "%s OK %s completed\r\n", self->tag, thisname);
 	return 0;
 }
 
@@ -1395,12 +1384,12 @@ int _ic_list(char *tag, char **args, ClientInfo * ci)
  *
  * list subscribed mailboxes
  */
-int _ic_lsub(char *tag, char **args, ClientInfo * ci)
+int _ic_lsub(struct ImapSession *self)
 {
 	int result;
 
 	list_is_lsub = 1;
-	result = _ic_list(tag, args, ci);
+	result = _ic_list(self);
 	list_is_lsub = 0;
 	return result;
 }
@@ -1411,50 +1400,51 @@ int _ic_lsub(char *tag, char **args, ClientInfo * ci)
  *
  * inquire the status of a mailbox
  */
-int _ic_status(char *tag, char **args, ClientInfo * ci)
+int _ic_status(struct ImapSession *self)
 {
-	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	mailbox_t mb;
 	int i, endfound, result;
 	GString *response = g_string_new("");
 	GList *plst = NULL;
 	
-	if (ud->state != IMAPCS_AUTHENTICATED
-	    && ud->state != IMAPCS_SELECTED) {
-		ci_write(ci->tx, "%s BAD STATUS command received in invalid state\r\n", tag);
+	/* TODO: check_state_and_args */
+	
+	if (ud->state != IMAPCS_AUTHENTICATED && ud->state != IMAPCS_SELECTED) {
+		dbmail_imap_session_printf(self, "%s BAD STATUS command received in invalid state\r\n", self->tag);
 		return 1;
 	}
 
-	if (!args[0] || !args[1] || !args[2]) {
-		ci_write(ci->tx, "%s BAD missing argument(s) to STATUS\r\n", tag);
+	if (!self->args[0] || !self->args[1] || !self->args[2]) {
+		dbmail_imap_session_printf(self, "%s BAD missing argument(s) to STATUS\r\n", self->tag);
 		return 1;
 	}
 
-	if (strcmp(args[1], "(") != 0) {
-		ci_write(ci->tx, "%s BAD argument list should be parenthesed\r\n", tag);
+	if (strcmp(self->args[1], "(") != 0) {
+		dbmail_imap_session_printf(self, "%s BAD argument list should be parenthesed\r\n", self->tag);
 		return 1;
 	}
 
 	/* check final arg: should be ')' and no new '(' in between */
-	for (i = 2, endfound = 0; args[i]; i++) {
-		if (strcmp(args[i], ")") == 0) {
+	for (i = 2, endfound = 0; self->args[i]; i++) {
+		if (strcmp(self->args[i], ")") == 0) {
 			endfound = i;
 			break;
 		}
 
-		if (strcmp(args[i], "(") == 0) {
-			ci_write(ci->tx, "%s BAD too many parentheses specified\r\n", tag);
+		if (strcmp(self->args[i], "(") == 0) {
+			dbmail_imap_session_printf(self, "%s BAD too many parentheses specified\r\n", self->tag);
 			return 1;
 		}
 	}
 
 	if (endfound == 2) {
-		ci_write(ci->tx, "%s BAD argument list empty\r\n", tag);
+		dbmail_imap_session_printf(self, "%s BAD argument list empty\r\n", self->tag);
 		return 1;
 	}
 
-	if (args[endfound + 1]) {
-		ci_write(ci->tx, "%s BAD argument list too long\r\n", tag);
+	if (self->args[endfound + 1]) {
+		dbmail_imap_session_printf(self, "%s BAD argument list too long\r\n", self->tag);
 		return 1;
 	}
 
@@ -1463,24 +1453,24 @@ int _ic_status(char *tag, char **args, ClientInfo * ci)
 	memset(&mb, 0, sizeof(mb));
 
 	/* check if mailbox exists */
-	if (db_findmailbox(args[0], ud->userid, &(mb.uid)) == -1) {
-		ci_write(ci->tx, "* BYE internal dbase error\r\n");
+	if (db_findmailbox(self->args[0], ud->userid, &(mb.uid)) == -1) {
+		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 		return -1;
 	}
 
 	if (mb.uid == 0) {
 		/* mailbox does not exist */
-		ci_write(ci->tx, "%s NO specified mailbox does not exist\r\n", tag);
+		dbmail_imap_session_printf(self, "%s NO specified mailbox does not exist\r\n", self->tag);
 		return 1;
 	}
 
 	result = acl_has_right(ud->userid, mb.uid, ACL_RIGHT_READ);
 	if (result == -1) {
-		ci_write(ci->tx, "* BYE internal database error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		return -1;
 	}
 	if (result == 0) {
-		ci_write(ci->tx, "%s NO no rights to get status for mailbox\r\n", tag);
+		dbmail_imap_session_printf(self, "%s NO no rights to get status for mailbox\r\n", self->tag);
 		return 1;
 	}
 
@@ -1488,36 +1478,36 @@ int _ic_status(char *tag, char **args, ClientInfo * ci)
 	result = db_getmailbox(&mb);
 
 	if (result == -1) {
-		ci_write(ci->tx, "* BYE internal dbase error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 		return -1;	/* fatal  */
 	}
-	for (i = 2; args[i]; i++) {
-		if (strcasecmp(args[i], "messages") == 0)
+	for (i = 2; self->args[i]; i++) {
+		if (strcasecmp(self->args[i], "messages") == 0)
 			plst = g_list_append_printf(plst,"MESSAGES %u", mb.exists);
-		else if (strcasecmp(args[i], "recent") == 0)
+		else if (strcasecmp(self->args[i], "recent") == 0)
 			plst = g_list_append_printf(plst,"RECENT %u", mb.recent);
-		else if (strcasecmp(args[i], "unseen") == 0)
+		else if (strcasecmp(self->args[i], "unseen") == 0)
 			plst = g_list_append_printf(plst,"UNSEEN %u", mb.unseen);
-		else if (strcasecmp(args[i], "uidnext") == 0) {
+		else if (strcasecmp(self->args[i], "uidnext") == 0) {
 			plst = g_list_append_printf(plst,"UIDNEXT %llu", mb.msguidnext);
-		} else if (strcasecmp(args[i], "uidvalidity") == 0) {
+		} else if (strcasecmp(self->args[i], "uidvalidity") == 0) {
 			plst = g_list_append_printf(plst,"UIDVALIDITY %llu", mb.uid);
-		} else if (strcasecmp(args[i], ")") == 0)
+		} else if (strcasecmp(self->args[i], ")") == 0)
 			break;
 		else {
-			ci_write(ci->tx,
+			dbmail_imap_session_printf(self,
 				"\r\n%s BAD unrecognized option '%s' specified\r\n",
-				tag, args[i]);
+				self->tag, self->args[i]);
 			my_free(mb.seq_list);
 			return 1;
 		}
 	}
 	g_string_printf(response, "* STATUS %s %s", 
-		dbmail_imap_astring_as_string(args[0]),
+		dbmail_imap_astring_as_string(self->args[0]),
 		dbmail_imap_plist_as_string(plst));	
-	trace(TRACE_DEBUG,"%s,%s: RESPONSE [%s]", __FILE__, __func__, response->str);
-	ci_write(ci->tx, "%s\r\n", response->str);
-	ci_write(ci->tx, "%s OK STATUS completed\r\n", tag);
+	trace(TRACE_DEBUG,"%s,%s: RESPONSE [ %s ]", __FILE__, __func__, response->str);
+	dbmail_imap_session_printf(self, "%s\r\n", response->str);
+	dbmail_imap_session_printf(self, "%s OK STATUS completed\r\n", self->tag);
 
 	my_free(mb.seq_list);
 	g_list_foreach(plst,(GFunc)g_free,NULL);
@@ -1532,9 +1522,9 @@ int _ic_status(char *tag, char **args, ClientInfo * ci)
  *
  * append a message to a mailbox
  */
-int _ic_append(char *tag, char **args, ClientInfo * ci)
+int _ic_append(struct ImapSession *self)
 {
-	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	u64_t mboxid;
 	u64_t msg_idnr;
 	int i, j, result;
@@ -1545,38 +1535,38 @@ int _ic_append(char *tag, char **args, ClientInfo * ci)
 	for (i = 0; i < IMAP_NFLAGS; i++)
 		flaglist[i] = 0;
 
-	if (!args[0] || !args[1]) {
-		ci_write(ci->tx,
+	if (!self->args[0] || !self->args[1]) {
+		dbmail_imap_session_printf(self,
 			"%s BAD invalid arguments specified to APPEND\r\n",
-			tag);
+			self->tag);
 		return 1;
 	}
 
 	/* find the mailbox to place the message */
-	if (db_findmailbox(args[0], ud->userid, &mboxid) == -1) {
-		ci_write(ci->tx, "* BYE internal dbase error");
+	if (db_findmailbox(self->args[0], ud->userid, &mboxid) == -1) {
+		dbmail_imap_session_printf(self, "* BYE internal dbase error");
 		return -1;
 	}
 
 	if (mboxid == 0) {
-		ci_write(ci->tx,
+		dbmail_imap_session_printf(self,
 			"%s NO [TRYCREATE] could not find specified mailbox\r\n",
-			tag);
+			self->tag);
 		return 1;
 	}
 
 	trace(TRACE_DEBUG, "ic_append(): mailbox [%s] found, id: %llu",
-	      args[0], mboxid);
+	      self->args[0], mboxid);
 	/* check if user has right to append to  mailbox */
 	result = acl_has_right(ud->userid, mboxid, ACL_RIGHT_INSERT);
 	if (result < 0) {
-		ci_write(ci->tx, "* BYE internal database error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		return -1;
 	}
 	if (result == 0) {
-		ci_write(ci->tx,
+		dbmail_imap_session_printf(self,
 			"%s NO no permission to append to mailbox\r\n",
-			tag);
+			self->tag);
 		ud->state = IMAPCS_AUTHENTICATED;
 		my_free(ud->mailbox.seq_list);
 		memset(&ud->mailbox, 0, sizeof(ud->mailbox));
@@ -1590,15 +1580,15 @@ int _ic_append(char *tag, char **args, ClientInfo * ci)
 	/* FIXME: We need to take of care of the Flags that are set here. They
 	   should be set to the new message!
 	 */
-	if (args[i][0] == '(') {
+	if (self->args[i][0] == '(') {
 		/* ok fetch the flags specified */
 		trace(TRACE_DEBUG, "ic_append(): flag list found:");
 
-		while (args[i] && args[i][0] != ')') {
-			trace(TRACE_DEBUG, "%s ", args[i]);
+		while (self->args[i] && self->args[i][0] != ')') {
+			trace(TRACE_DEBUG, "%s ", self->args[i]);
 			for (j = 0; j < IMAP_NFLAGS; j++) {
 				if (strcasecmp
-				    (args[i],
+				    (self->args[i],
 				     imap_flag_desc_escaped[j]) == 0) {
 					flaglist[j] = 1;
 					flagcount++;
@@ -1612,12 +1602,12 @@ int _ic_append(char *tag, char **args, ClientInfo * ci)
 		trace(TRACE_DEBUG, ")");
 	}
 
-	if (!args[i]) {
+	if (!self->args[i]) {
 		trace(TRACE_INFO,
 		      "ic_append(): unexpected end of arguments");
-		ci_write(ci->tx,
+		dbmail_imap_session_printf(self,
 			"%s BAD invalid arguments specified to APPEND\r\n",
-			tag);
+			self->tag);
 		return 1;
 	}
 
@@ -1630,14 +1620,14 @@ int _ic_append(char *tag, char **args, ClientInfo * ci)
 	if (flaglist[IMAP_STORE_FLAG_SEEN] == 1) {
 		result = acl_has_right(ud->userid, mboxid, ACL_RIGHT_SEEN);
 		if (result < 0) {
-			ci_write(ci->tx,
+			dbmail_imap_session_printf(self,
 				"* BYE internal database error\r\n");
 			return -1;	/* fatal */
 		}
 		if (result == 0) {
-			ci_write(ci->tx,
+			dbmail_imap_session_printf(self,
 				"%s NO no right to store \\SEEN flag\r\n",
-				tag);
+				self->tag);
 			return 1;
 		}
 	}
@@ -1645,14 +1635,14 @@ int _ic_append(char *tag, char **args, ClientInfo * ci)
 		result =
 		    acl_has_right(ud->userid, mboxid, ACL_RIGHT_DELETE);
 		if (result < 0) {
-			ci_write(ci->tx,
+			dbmail_imap_session_printf(self,
 				"* BYE internal database error\r\n");
 			return -1;	/* fatal */
 		}
 		if (result == 0) {
-			ci_write(ci->tx,
+			dbmail_imap_session_printf(self,
 				"%s NO no right to store \\DELETED flag\r\n",
-				tag);
+				self->tag);
 			return 1;
 		}
 	}
@@ -1663,13 +1653,13 @@ int _ic_append(char *tag, char **args, ClientInfo * ci)
 		result =
 		    acl_has_right(ud->userid, mboxid, ACL_RIGHT_WRITE);
 		if (result < 0) {
-			ci_write(ci->tx,
+			dbmail_imap_session_printf(self,
 				"*BYE internal database error\r\n");
 			return -1;
 		}
 		if (result == 0) {
-			ci_write(ci->tx,
-				"%s NO no right to store flags\r\n", tag);
+			dbmail_imap_session_printf(self,
+				"%s NO no right to store flags\r\n", self->tag);
 			return 1;
 		}
 	}
@@ -1678,10 +1668,10 @@ int _ic_append(char *tag, char **args, ClientInfo * ci)
 	/* there could be a literal date here, check if the next argument exists
 	 * if so, assume this is the literal date.
 	 */
-	if (args[i + 1]) {
+	if (self->args[i + 1]) {
 		struct tm tm;
 
-		if (strptime(args[i], "%d-%b-%Y %T", &tm) != NULL)
+		if (strptime(self->args[i], "%d-%b-%Y %T", &tm) != NULL)
 			strftime(sqldate,
 				 sizeof(sqldate), "%Y-%m-%d %H:%M:%S",
 				 &tm);
@@ -1692,37 +1682,37 @@ int _ic_append(char *tag, char **args, ClientInfo * ci)
 		i++;
 		trace(TRACE_DEBUG,
 		      "ic_append(): internal date [%s] found, next arg [%s]",
-		      sqldate, args[i]);
+		      sqldate, self->args[i]);
 	} else {
 		sqldate[0] = '\0';
 	}
 
-	/* ok literal msg should be in args[i] */
+	/* ok literal msg should be in self->args[i] */
 	/* insert this msg */
 
 	result =
-	    db_imap_append_msg(args[i], strlen(args[i]), mboxid,
+	    db_imap_append_msg(self->args[i], strlen(self->args[i]), mboxid,
 			       ud->userid, sqldate, &msg_idnr);
 	switch (result) {
 	case -1:
 		trace(TRACE_ERROR, "ic_append(): error appending msg");
-		ci_write(ci->tx,
+		dbmail_imap_session_printf(self,
 			"* BYE internal dbase error storing message\r\n");
 		break;
 
 	case 1:
 		trace(TRACE_ERROR, "ic_append(): faulty msg");
-		ci_write(ci->tx, "%s NO invalid message specified\r\n",
-			tag);
+		dbmail_imap_session_printf(self, "%s NO invalid message specified\r\n",
+			self->tag);
 		break;
 
 	case 2:
 		trace(TRACE_INFO, "ic_append(): quotum would exceed");
-		ci_write(ci->tx, "%s NO not enough quotum left\r\n", tag);
+		dbmail_imap_session_printf(self, "%s NO not enough quotum left\r\n", self->tag);
 		break;
 
 	case 0:
-		ci_write(ci->tx, "%s OK APPEND completed\r\n", tag);
+		dbmail_imap_session_printf(self, "%s OK APPEND completed\r\n", self->tag);
 		break;
 	}
 
@@ -1752,36 +1742,36 @@ int _ic_append(char *tag, char **args, ClientInfo * ci)
  * 
  * sort and return sorted IDS for the selected mailbox
  */
-int _ic_sort(char *tag, char **args, ClientInfo *ci)
+int _ic_sort(struct ImapSession *self)
 {
-	imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
+	imap_userdata_t *ud = (imap_userdata_t*)self->ci->userData;
 	unsigned *result_set;
 	unsigned i;
 	int result=0,only_ascii=0,idx=0;
 	search_key_t sk;
 
 	if (ud->state != IMAPCS_SELECTED) {
-		ci_write(ci->tx,"%s BAD SORT command received in invalid state\r\n", tag);
+		dbmail_imap_session_printf(self,"%s BAD SORT command received in invalid state\r\n", self->tag);
 		return 1;
 	}
   
 	memset(&sk, 0, sizeof(sk));
 	list_init(&sk.sub_search);
 
-	if (!args[0]) {
-		ci_write(ci->tx,"%s BAD invalid arguments to SORT\r\n",tag);
+	if (!self->args[0]) {
+		dbmail_imap_session_printf(self,"%s BAD invalid arguments to SORT\r\n",self->tag);
 		return 1;
 	}
 
-	if (strcasecmp(args[0], "charset") == 0) {
+	if (strcasecmp(self->args[0], "charset") == 0) {
 	/* charset specified */
-	if (!args[1]) {
-		ci_write(ci->tx,"%s BAD invalid argument list\r\n",tag);
+	if (!self->args[1]) {
+		dbmail_imap_session_printf(self,"%s BAD invalid argument list\r\n",self->tag);
 		return 1;
 	}
 
-	if (strcasecmp(args[1], "us-ascii") != 0) {
-		ci_write(ci->tx,"%s NO specified charset is not supported\r\n",tag);
+	if (strcasecmp(self->args[1], "us-ascii") != 0) {
+		dbmail_imap_session_printf(self,"%s NO specified charset is not supported\r\n",self->tag);
 		return 0;
 	}
 
@@ -1790,29 +1780,29 @@ int _ic_sort(char *tag, char **args, ClientInfo *ci)
 }
 
 	/* parse the search keys */
-	while ( args[idx] && (result = build_imap_search(args, &sk.sub_search, &idx,1)) >= 0);
+	while ( self->args[idx] && (result = build_imap_search(self->args, &sk.sub_search, &idx,1)) >= 0);
 
 	if (result == -2) {
 		free_searchlist(&sk.sub_search);
-		ci_write(ci->tx, "* BYE server ran out of memory\r\n");
+		dbmail_imap_session_printf(self, "* BYE server ran out of memory\r\n");
 		return -1;
 	}
 
 	if (result == -1) {
 		free_searchlist(&sk.sub_search);
-		ci_write(ci->tx, "%s BAD syntax error in sort keys\r\n",tag);
+		dbmail_imap_session_printf(self, "%s BAD syntax error in sort keys\r\n",self->tag);
 		return 1;
 	}
 
 	/* check if user has the right to search in this mailbox */
 	result = acl_has_right(ud->userid, ud->mailbox.uid, ACL_RIGHT_READ);
 	if (result < 0) {
-		ci_write(ci->tx,"* BYE internal database error\r\n");
+		dbmail_imap_session_printf(self,"* BYE internal database error\r\n");
 		free_searchlist(&sk.sub_search);
 		return -1;
 	}
 	if (result == 0) {
-		ci_write(ci->tx,"%s NO no permission to sort mailbox\r\n", tag);
+		dbmail_imap_session_printf(self,"%s NO no permission to sort mailbox\r\n", self->tag);
 		free_searchlist(&sk.sub_search);
 		return 1;
 	}
@@ -1824,7 +1814,7 @@ int _ic_sort(char *tag, char **args, ClientInfo *ci)
 	result_set = (unsigned*)my_malloc(sizeof(unsigned) * ud->mailbox.exists);
 	if (!result_set) {
 		free_searchlist(&sk.sub_search);
-		ci_write(ci->tx,"* NO server ran out of memory\r\n");
+		dbmail_imap_session_printf(self,"* NO server ran out of memory\r\n");
 		return -1;
 	}
    
@@ -1838,7 +1828,7 @@ int _ic_sort(char *tag, char **args, ClientInfo *ci)
 	if (result < 0) {
 		free_searchlist(&sk.sub_search);
 		my_free(result_set);
-		ci_write(ci->tx,"%s", (result == -1) ? 
+		dbmail_imap_session_printf(self,"%s", (result == -1) ? 
 			"* NO internal dbase error\r\n" :
 			"* NO server ran out of memory\r\n");
 
@@ -1849,23 +1839,23 @@ int _ic_sort(char *tag, char **args, ClientInfo *ci)
 	free_searchlist(&sk.sub_search);
 
 	if (result == 1) {
-		ci_write(ci->tx,"* NO error synchronizing dbase\r\n");
+		dbmail_imap_session_printf(self,"* NO error synchronizing dbase\r\n");
 		return -1;
 	}
       
 	/* ok, display results */
-	ci_write(ci->tx, "* SORT");
+	dbmail_imap_session_printf(self, "* SORT");
 
 	for (i=0; i<ud->mailbox.exists; i++) {
 		/*trace(TRACE_INFO, "ic_sort(): i: %d, rs[i]: %d, mbuid[i]: %llu ", i, result_set[i], ud->mailbox.seq_list[i]); */
 		if (result_set[i])
-			ci_write(ci->tx, " %llu", imapcommands_use_uid ? ud->mailbox.seq_list[i] : (u64_t)result_set[i]);
+			dbmail_imap_session_printf(self, " %llu", imapcommands_use_uid ? ud->mailbox.seq_list[i] : (u64_t)result_set[i]);
 	}
 
-	ci_write(ci->tx,"\r\n");
+	dbmail_imap_session_printf(self,"\r\n");
 	my_free(result_set);
       
-	ci_write(ci->tx,"%s OK SORT completed\r\n",tag);
+	dbmail_imap_session_printf(self,"%s OK SORT completed\r\n",self->tag);
 	return 0;
 }
 
@@ -1875,29 +1865,26 @@ int _ic_sort(char *tag, char **args, ClientInfo *ci)
  * request a checkpoint for the selected mailbox
  * (equivalent to NOOP)
  */
-int _ic_check(char *tag, char **args, ClientInfo * ci)
+int _ic_check(struct ImapSession *self)
 {
 	int result;
-	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 
-	if (!check_state_and_args
-	    ("CHECK", tag, args, 0, IMAPCS_SELECTED, ci))
-
+	if (!check_state_and_args(self, "CHECK", 0, 0, IMAPCS_SELECTED))
 		return 1;	/* error, return */
 
-	result =
-	    acl_has_right(ud->userid, ud->mailbox.uid, ACL_RIGHT_READ);
+	result = acl_has_right(ud->userid, ud->mailbox.uid, ACL_RIGHT_READ);
 	if (result < 0) {
-		ci_write(ci->tx, "* BYE Internal database error\r\n");
+		dbmail_imap_session_printf(self, "* BYE Internal database error\r\n");
 		return -1;
 	}
 	if (result == 0) {
-		ci_write(ci->tx, "%s NO no permission to do check on "
-			"mailbox\r\n", tag);
+		dbmail_imap_session_printf(self, "%s NO no permission to do check on "
+			"mailbox\r\n", self->tag);
 		return 1;
 	}
 
-	ci_write(ci->tx, "%s OK CHECK completed\r\n", tag);
+	dbmail_imap_session_printf(self, "%s OK CHECK completed\r\n", self->tag);
 	return 0;
 }
 
@@ -1908,13 +1895,12 @@ int _ic_check(char *tag, char **args, ClientInfo * ci)
  * expunge deleted messages from selected mailbox & return to AUTH state
  * do not show expunge-output
  */
-int _ic_close(char *tag, char **args, ClientInfo * ci)
+int _ic_close(struct ImapSession *self)
 {
-	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	int result;
 
-	if (!check_state_and_args
-	    ("CLOSE", tag, args, 0, IMAPCS_SELECTED, ci))
+	if (!check_state_and_args(self, "CLOSE", 0, 0, IMAPCS_SELECTED))
 		return 1;	/* error, return */
 
 	/* check if the user has to right to expunge all messages from the
@@ -1922,7 +1908,7 @@ int _ic_close(char *tag, char **args, ClientInfo * ci)
 	result =
 	    acl_has_right(ud->userid, ud->mailbox.uid, ACL_RIGHT_DELETE);
 	if (result < 0) {
-		ci_write(ci->tx, "* BYE Internal database error\r\n");
+		dbmail_imap_session_printf(self, "* BYE Internal database error\r\n");
 		return -1;
 	}
 	/* only perform the expunge if the user has the right to do it */
@@ -1938,7 +1924,7 @@ int _ic_close(char *tag, char **args, ClientInfo * ci)
 	my_free(ud->mailbox.seq_list);
 	memset(&ud->mailbox, 0, sizeof(ud->mailbox));
 
-	ci_write(ci->tx, "%s OK CLOSE completed\r\n", tag);
+	dbmail_imap_session_printf(self, "%s OK CLOSE completed\r\n", self->tag);
 	return 0;
 }
 
@@ -1949,43 +1935,42 @@ int _ic_close(char *tag, char **args, ClientInfo * ci)
  * expunge deleted messages from selected mailbox
  * show expunge output per message
  */
-int _ic_expunge(char *tag, char **args, ClientInfo * ci)
+int _ic_expunge(struct ImapSession *self)
 {
-	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	mailbox_t newmailbox;
 	u64_t *msgids;
 	u64_t nmsgs, i;
 	unsigned idx;
 	int result;
 
-	if (!check_state_and_args
-	    ("EXPUNGE", tag, args, 0, IMAPCS_SELECTED, ci))
+	if (!check_state_and_args(self, "EXPUNGE", 0, 0, IMAPCS_SELECTED))
 		return 1;	/* error, return */
 
 	if (ud->mailbox.permission != IMAPPERM_READWRITE) {
-		ci_write(ci->tx,
+		dbmail_imap_session_printf(self,
 			"%s NO you do not have write permission on this folder\r\n",
-			tag);
+			self->tag);
 		return 1;
 	}
 
 	result =
 	    acl_has_right(ud->userid, ud->mailbox.uid, ACL_RIGHT_DELETE);
 	if (result < 0) {
-		ci_write(ci->tx, "* BYE internal database error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		return -1;
 	}
 	if (result == 0) {
-		ci_write(ci->tx,
+		dbmail_imap_session_printf(self,
 			"%s NO you do not have delete rights on this "
-			"mailbox\r\n", tag);
+			"mailbox\r\n", self->tag);
 		return -1;
 	}
 
 	/* delete messages */
 	result = db_expunge(ud->mailbox.uid, ud->userid, &msgids, &nmsgs);
 	if (result == -1) {
-		ci_write(ci->tx, "* BYE dbase/memory error\r\n");
+		dbmail_imap_session_printf(self, "* BYE dbase/memory error\r\n");
 		return -1;
 	}
 
@@ -1995,7 +1980,7 @@ int _ic_expunge(char *tag, char **args, ClientInfo * ci)
 		binary_search(ud->mailbox.seq_list, ud->mailbox.exists,
 			      msgids[i], &idx);
 
-		ci_write(ci->tx, "* %u EXPUNGE\r\n", idx + 1);	/* add one: IMAP MSN starts at 1 not zero */
+		dbmail_imap_session_printf(self, "* %u EXPUNGE\r\n", idx + 1);	/* add one: IMAP MSN starts at 1 not zero */
 	}
 	my_free(msgids);
 	msgids = NULL;
@@ -2008,22 +1993,22 @@ int _ic_expunge(char *tag, char **args, ClientInfo * ci)
 	result = db_getmailbox(&newmailbox);
 
 	if (result == -1) {
-		ci_write(ci->tx, "* BYE internal dbase error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 		my_free(newmailbox.seq_list);
 		return -1;	/* fatal  */
 	}
 
 	if (newmailbox.exists != ud->mailbox.exists)
-		ci_write(ci->tx, "* %u EXISTS\r\n", newmailbox.exists);
+		dbmail_imap_session_printf(self, "* %u EXISTS\r\n", newmailbox.exists);
 
 	if (newmailbox.recent != ud->mailbox.recent)
-		ci_write(ci->tx, "* %u RECENT\r\n", newmailbox.recent);
+		dbmail_imap_session_printf(self, "* %u RECENT\r\n", newmailbox.recent);
 
 	my_free(ud->mailbox.seq_list);
 	memcpy((void *) &ud->mailbox, (void *) &newmailbox, 
 	       sizeof(newmailbox));
 
-	ci_write(ci->tx, "%s OK EXPUNGE completed\r\n", tag);
+	dbmail_imap_session_printf(self, "%s OK EXPUNGE completed\r\n", self->tag);
 	return 0;
 }
 
@@ -2034,42 +2019,42 @@ int _ic_expunge(char *tag, char **args, ClientInfo * ci)
  * search the selected mailbox for messages
  *
  */
-int _ic_search(char *tag, char **args, ClientInfo * ci)
+int _ic_search(struct ImapSession *self)
 {
-	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	unsigned *result_set;
 	unsigned i;
 	int result = 0, only_ascii = 0, idx = 0;
 	search_key_t sk;
 
 	if (ud->state != IMAPCS_SELECTED) {
-		ci_write(ci->tx,
+		dbmail_imap_session_printf(self,
 			"%s BAD SEARCH command received in invalid state\r\n",
-			tag);
+			self->tag);
 		return 1;
 	}
 
 	memset(&sk, 0, sizeof(sk));
 	list_init(&sk.sub_search);
 
-	if (!args[0]) {
-		ci_write(ci->tx, "%s BAD invalid arguments to SEARCH\r\n",
-			tag);
+	if (!self->args[0]) {
+		dbmail_imap_session_printf(self, "%s BAD invalid arguments to SEARCH\r\n",
+			self->tag);
 		return 1;
 	}
 
-	if (strcasecmp(args[0], "charset") == 0) {
+	if (strcasecmp(self->args[0], "charset") == 0) {
 		/* charset specified */
-		if (!args[1]) {
-			ci_write(ci->tx, "%s BAD invalid argument list\r\n",
-				tag);
+		if (!self->args[1]) {
+			dbmail_imap_session_printf(self, "%s BAD invalid argument list\r\n",
+				self->tag);
 			return 1;
 		}
 
-		if (strcasecmp(args[1], "us-ascii") != 0) {
-			ci_write(ci->tx,
+		if (strcasecmp(self->args[1], "us-ascii") != 0) {
+			dbmail_imap_session_printf(self,
 				"%s NO specified charset is not supported\r\n",
-				tag);
+				self->tag);
 			return 0;
 		}
 
@@ -2078,20 +2063,20 @@ int _ic_search(char *tag, char **args, ClientInfo * ci)
 	}
 
 	/* parse the search keys */
-	while (args[idx]
+	while (self->args[idx]
 	       && (result =
-		   build_imap_search(args, &sk.sub_search, &idx, 0)) >= 0);
+		   build_imap_search(self->args, &sk.sub_search, &idx, 0)) >= 0);
 
 	if (result == -2) {
 		free_searchlist(&sk.sub_search);
-		ci_write(ci->tx, "* BYE server ran out of memory\r\n");
+		dbmail_imap_session_printf(self, "* BYE server ran out of memory\r\n");
 		return -1;
 	}
 
 	if (result == -1) {
 		free_searchlist(&sk.sub_search);
-		ci_write(ci->tx, "%s BAD syntax error in search keys\r\n",
-			tag);
+		dbmail_imap_session_printf(self, "%s BAD syntax error in search keys\r\n",
+			self->tag);
 		return 1;
 	}
 
@@ -2099,13 +2084,13 @@ int _ic_search(char *tag, char **args, ClientInfo * ci)
 	result =
 	    acl_has_right(ud->userid, ud->mailbox.uid, ACL_RIGHT_READ);
 	if (result < 0) {
-		ci_write(ci->tx, "* BYE internal database error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		free_searchlist(&sk.sub_search);
 		return -1;
 	}
 	if (result == 0) {
-		ci_write(ci->tx,
-			"%s NO no permission to search mailbox\r\n", tag);
+		dbmail_imap_session_printf(self,
+			"%s NO no permission to search mailbox\r\n", self->tag);
 		free_searchlist(&sk.sub_search);
 		return 1;
 	}
@@ -2123,7 +2108,7 @@ int _ic_search(char *tag, char **args, ClientInfo * ci)
 if (result == -1)
 {
 free_searchlist(&sk.sub_search);
-ci_write(ci->tx,"* BYE internal dbase error\r\n");
+dbmail_imap_session_printf(self,"* BYE internal dbase error\r\n");
 	  return -1;
 	  }
 */
@@ -2134,7 +2119,7 @@ ci_write(ci->tx,"* BYE internal dbase error\r\n");
 					   ud->mailbox.exists);
 		if (!result_set) {
 			free_searchlist(&sk.sub_search);
-			ci_write(ci->tx,
+			dbmail_imap_session_printf(self,
 				"* BYE server ran out of memory\r\n");
 			return -1;
 		}
@@ -2154,7 +2139,7 @@ ci_write(ci->tx,"* BYE internal dbase error\r\n");
 		if (result < 0) {
 			free_searchlist(&sk.sub_search);
 			my_free(result_set);
-			ci_write(ci->tx, "%s", (result == -1) ?
+			dbmail_imap_session_printf(self, "%s", (result == -1) ?
 				"* BYE internal dbase error\r\n" :
 				"* BYE server ran out of memory\r\n");
 
@@ -2174,25 +2159,25 @@ ci_write(ci->tx,"* BYE internal dbase error\r\n");
 	free_searchlist(&sk.sub_search);
 
 	if (result == 1) {
-		ci_write(ci->tx, "* BYE error synchronizing dbase\r\n");
+		dbmail_imap_session_printf(self, "* BYE error synchronizing dbase\r\n");
 		my_free(result_set);
 		return -1;
 	}
 
 	/* ok, display results */
-	ci_write(ci->tx, "* SEARCH");
+	dbmail_imap_session_printf(self, "* SEARCH");
 
 	for (i = 0; i < ud->mailbox.exists; i++) {
 		if (result_set[i])
-			ci_write(ci->tx, " %llu",
+			dbmail_imap_session_printf(self, " %llu",
 				imapcommands_use_uid ? ud->mailbox.
 				seq_list[i] : (u64_t) (i + 1));
 	}
 
-	ci_write(ci->tx, "\r\n");
+	dbmail_imap_session_printf(self, "\r\n");
 	my_free(result_set);
 
-	ci_write(ci->tx, "%s OK SEARCH completed\r\n", tag);
+	dbmail_imap_session_printf(self, "%s OK SEARCH completed\r\n", self->tag);
 	return 0;
 }
 
@@ -2202,9 +2187,9 @@ ci_write(ci->tx,"* BYE internal dbase error\r\n");
  *
  * fetch message(s) from the selected mailbox
  */
-int _ic_fetch(char *tag, char **args, ClientInfo * ci)
+int _ic_fetch(struct ImapSession *self)
 {
-	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	u64_t i, fetch_start, fetch_end;
 	unsigned fn;
 	int result, setseen, idx, j, k;
@@ -2234,15 +2219,15 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 	memset(&headermsg, 0, sizeof(headermsg));
 
 	if (ud->state != IMAPCS_SELECTED) {
-		ci_write(ci->tx,
+		dbmail_imap_session_printf(self,
 			"%s BAD FETCH command received in invalid state\r\n",
-			tag);
+			self->tag);
 		return 1;
 	}
 
-	if (!args[0] || !args[1]) {
-		ci_write(ci->tx, "%s BAD missing argument(s) to FETCH\r\n",
-			tag);
+	if (!self->args[0] || !self->args[1]) {
+		dbmail_imap_session_printf(self, "%s BAD missing argument(s) to FETCH\r\n",
+			self->tag);
 		return 1;
 	}
 
@@ -2250,13 +2235,13 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 	result =
 	    acl_has_right(ud->userid, ud->mailbox.uid, ACL_RIGHT_READ);
 	if (result < 0) {
-		ci_write(ci->tx, "* BYE internal database error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		return -1;
 	}
 	if (result == 0) {
-		ci_write(ci->tx,
+		dbmail_imap_session_printf(self,
 			"%s NO no permission to fetch from mailbox\r\n",
-			tag);
+			self->tag);
 		return 1;
 	}
 
@@ -2265,12 +2250,12 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 	idx = 1;
 	uid_will_be_fetched = 0;
 	do {
-		idx = next_fetch_item(args, idx, &fetchitem);
+		idx = next_fetch_item(self->args, idx, &fetchitem);
 		if (idx == -2) {
 			list_freelist(&fetch_list.start);
-			ci_write(ci->tx,
+			dbmail_imap_session_printf(self,
 				"%s BAD invalid argument list to fetch\r\n",
-				tag);
+				self->tag);
 			return 1;
 		}
 
@@ -2278,7 +2263,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 		    && !list_nodeadd(&fetch_list, &fetchitem,
 				     sizeof(fetchitem))) {
 			list_freelist(&fetch_list.start);
-			ci_write(ci->tx, "* BYE out of memory\r\n");
+			dbmail_imap_session_printf(self, "* BYE out of memory\r\n");
 			return 1;
 		}
 
@@ -2336,7 +2321,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 		if (!list_nodeadd
 		    (&fetch_list, &fetchitem, sizeof(fetchitem))) {
 			list_freelist(&fetch_list.start);
-			ci_write(ci->tx, "* BYE out of memory\r\n");
+			dbmail_imap_session_printf(self, "* BYE out of memory\r\n");
 			return -1;
 		}
 	}
@@ -2344,9 +2329,9 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 	fetch_list.start = dbmail_list_reverse(fetch_list.start);
 
 	/* now fetch results for each msg */
-	endptr = args[0];
+	endptr = self->args[0];
 	while (*endptr) {
-		if (endptr != args[0])
+		if (endptr != self->args[0])
 			endptr++;	/* skip delimiter */
 
 		fetch_start = strtoull(endptr, &endptr, 10);
@@ -2355,12 +2340,12 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 		    (imapcommands_use_uid ? (ud->mailbox.msguidnext - 1) :
 		     ud->mailbox.exists)) {
 			if (imapcommands_use_uid)
-				ci_write(ci->tx,
-					"%s OK FETCH completed\r\n", tag);
+				dbmail_imap_session_printf(self,
+					"%s OK FETCH completed\r\n", self->tag);
 			else
-				ci_write(ci->tx,
+				dbmail_imap_session_printf(self,
 					"%s BAD invalid message range specified\r\n",
-					tag);
+					self->tag);
 
 			list_freelist(&fetch_list.start);
 			return !imapcommands_use_uid;
@@ -2384,9 +2369,9 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 			     ? (ud->mailbox.msguidnext -
 				1) : ud->mailbox.exists)) {
 				if (!imapcommands_use_uid) {
-					ci_write(ci->tx,
+					dbmail_imap_session_printf(self,
 						"%s BAD invalid message range specified\r\n",
-						tag);
+						self->tag);
 
 					list_freelist(&fetch_list.start);
 					return 1;
@@ -2406,9 +2391,9 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 			break;
 
 		default:
-			ci_write(ci->tx,
+			dbmail_imap_session_printf(self,
 				"%s BAD invalid character in message range\r\n",
-				tag);
+				self->tag);
 			list_freelist(&fetch_list.start);
 			return 1;
 		}
@@ -2444,14 +2429,14 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 
 			if (result == -1) {
 				list_freelist(&fetch_list.start);
-				ci_write(ci->tx,
+				dbmail_imap_session_printf(self,
 					"* BYE internal dbase error\r\n");
 				return -1;
 			}
 
 			if (result == -2) {
 				list_freelist(&fetch_list.start);
-				ci_write(ci->tx, "* BYE out of memory\r\n");
+				dbmail_imap_session_printf(self, "* BYE out of memory\r\n");
 				return -1;
 			}
 
@@ -2463,7 +2448,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 							     uid,
 							     &headermsg);
 					if (result == -2) {
-						ci_write(ci->tx,
+						dbmail_imap_session_printf(self,
 							"\r\n* BYE internal dbase error\r\n");
 						list_freelist(&fetch_list.
 							      start);
@@ -2471,7 +2456,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 						return -1;
 					}
 					if (result == -3) {
-						ci_write(ci->tx,
+						dbmail_imap_session_printf(self,
 							"\r\n* BYE out of memory\r\n");
 						list_freelist(&fetch_list.
 							      start);
@@ -2499,7 +2484,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 					 * when building the mailbox info
 					 * let's call it fatal and let the client re-connect :)
 					 */
-					ci_write(ci->tx,
+					dbmail_imap_session_printf(self,
 						"* BYE internal syncing error\r\n");
 
 					list_freelist(&fetch_list.start);
@@ -2507,7 +2492,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 					return -1;
 				}
 
-				ci_write(ci->tx, "* %u FETCH (", (fn + 1));
+				dbmail_imap_session_printf(self, "* %u FETCH (", (fn + 1));
 
 				curr = list_getstart(&fetch_list);
 				isfirstfetchout = 1;
@@ -2523,10 +2508,10 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 							isfirstfetchout =
 							    0;
 						else
-							ci_write(ci->tx,
+							dbmail_imap_session_printf(self,
 								" ");
 
-						ci_write(ci->tx,
+						dbmail_imap_session_printf(self,
 							"INTERNALDATE \"%s\"",
 							date_sql2imap
 							(msginfo[i].
@@ -2538,10 +2523,10 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 							isfirstfetchout =
 							    0;
 						else
-							ci_write(ci->tx,
+							dbmail_imap_session_printf(self,
 								" ");
 
-						ci_write(ci->tx, "UID %llu",
+						dbmail_imap_session_printf(self, "UID %llu",
 							msginfo[i].uid);
 					}
 
@@ -2550,10 +2535,10 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 							isfirstfetchout =
 							    0;
 						else
-							ci_write(ci->tx,
+							dbmail_imap_session_printf(self,
 								" ");
 
-						ci_write(ci->tx,
+						dbmail_imap_session_printf(self,
 							"RFC822.SIZE %llu",
 							msginfo[i].
 							rfcsize);
@@ -2566,17 +2551,17 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 							isfirstfetchout =
 							    0;
 						else
-							ci_write(ci->tx,
+							dbmail_imap_session_printf(self,
 								" ");
 
-						ci_write(ci->tx, "FLAGS (");
+						dbmail_imap_session_printf(self, "FLAGS (");
 						for (j = 0;
 						     j < IMAP_NFLAGS;
 						     j++) {
 							if (msginfo[i].
 							    flags[j]) {
 								fprintf
-								    (ci->
+								    (self->ci->
 								     tx,
 								     "%s%s",
 								     isfirstout
@@ -2590,13 +2575,13 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 									    0;
 							}
 						}
-						ci_write(ci->tx, ")");
+						dbmail_imap_session_printf(self, ")");
 					}
 
 					curr = curr->nextnode;
 				}
 
-				ci_write(ci->tx, ")\r\n");
+				dbmail_imap_session_printf(self, ")\r\n");
 			}
 
 			my_free(msginfo);
@@ -2613,9 +2598,9 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 			if (imapcommands_use_uid) {
 				if (i > ud->mailbox.msguidnext - 1) {
 					/* passed the last one */
-					ci_write(ci->tx,
+					dbmail_imap_session_printf(self,
 						"%s OK FETCH completed\r\n",
-						tag);
+						self->tag);
 					list_freelist(&fetch_list.start);
 					return 0;
 				}
@@ -2627,10 +2612,10 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 					continue;
 				}
 
-				ci_write(ci->tx, "* %u FETCH (", fn + 1);
+				dbmail_imap_session_printf(self, "* %u FETCH (", fn + 1);
 
 			} else
-				ci_write(ci->tx, "* %llu FETCH (", i + 1);
+				dbmail_imap_session_printf(self, "* %llu FETCH (", i + 1);
 
 			trace(TRACE_DEBUG,
 			      "Fetching msgID %llu (fetch num %llu)",
@@ -2644,7 +2629,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 
 			while (curr && !bad_response_send) {
 				fi = (fetch_items_t *) curr->data;
-				fflush(ci->tx);
+				fflush(self->ci->tx);
 
 				only_text_from_msgpart = 0;
 
@@ -2654,7 +2639,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 					if (db_get_rfcsize
 					    (thisnum, ud->mailbox.uid,
 					     &rfcsize) == -1) {
-						ci_write(ci->tx,
+						dbmail_imap_session_printf(self,
 							"\r\n* BYE internal dbase error\r\n");
 						list_freelist(&fetch_list.
 							      start);
@@ -2683,14 +2668,14 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 						result = db_get_main_header(thisnum, &headermsg.rfcheader);
 
 						if (result == -1) {
-							ci_write(ci->tx, "\r\n* BYE internal dbase error\r\n");
+							dbmail_imap_session_printf(self, "\r\n* BYE internal dbase error\r\n");
 							list_freelist(&fetch_list.start);
 							db_free_msg(&headermsg);
 							return -1;
 						}
 
 						if (result == -2) {
-							ci_write(ci->tx, "\r\n* BYE out of memory\r\n");
+							dbmail_imap_session_printf(self, "\r\n* BYE out of memory\r\n");
 							list_freelist(&fetch_list.start);
 							db_free_msg(&headermsg);
 							return -1;
@@ -2710,13 +2695,13 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 
 						result = db_fetch_headers(thisnum, &cached_msg.msg);
 						if (result == -2) {
-							ci_write(ci->tx, "\r\n* BYE internal dbase error\r\n");
+							dbmail_imap_session_printf(self, "\r\n* BYE internal dbase error\r\n");
 							list_freelist (&fetch_list.  start);
 							db_free_msg (&headermsg);
 							return -1;
 						}
 						if (result == -3) {
-							ci_write(ci->tx, "\r\n* BYE out of memory\r\n");
+							dbmail_imap_session_printf(self, "\r\n* BYE out of memory\r\n");
 							list_freelist (&fetch_list.start);
 							db_free_msg (&headermsg);
 							return -1;
@@ -2735,7 +2720,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 							     ud->mailbox.
 							     uid) == -1) {
 								fprintf
-								    (ci->
+								    (self->ci->
 								     tx,
 								     "\r\n* BYE internal dbase error\r\n");
 								list_freelist
@@ -2757,7 +2742,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 					    db_get_msgdate(ud->mailbox.uid,
 							   thisnum, date);
 					if (result == -1) {
-						ci_write(ci->tx,
+						dbmail_imap_session_printf(self,
 							"\r\n* BYE internal dbase error\r\n");
 						list_freelist(&fetch_list.
 							      start);
@@ -2768,9 +2753,9 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 					if (isfirstfetchout)
 						isfirstfetchout = 0;
 					else
-						ci_write(ci->tx, " ");
+						dbmail_imap_session_printf(self, " ");
 
-					ci_write(ci->tx,
+					dbmail_imap_session_printf(self,
 						"INTERNALDATE \"%s\"",
 						date_sql2imap(date));
 				}
@@ -2779,9 +2764,9 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 					if (isfirstfetchout)
 						isfirstfetchout = 0;
 					else
-						ci_write(ci->tx, " ");
+						dbmail_imap_session_printf(self, " ");
 
-					ci_write(ci->tx, "UID %llu",
+					dbmail_imap_session_printf(self, "UID %llu",
 						thisnum);
 				}
 
@@ -2789,15 +2774,15 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 					if (isfirstfetchout)
 						isfirstfetchout = 0;
 					else
-						ci_write(ci->tx, " ");
+						dbmail_imap_session_printf(self, " ");
 
-					ci_write(ci->tx, "BODYSTRUCTURE ");
+					dbmail_imap_session_printf(self, "BODYSTRUCTURE ");
 					result =
-					    retrieve_structure(ci->tx,
+					    retrieve_structure(self->ci->tx,
 							       &cached_msg.
 							       msg, 1);
 					if (result == -1) {
-						ci_write(ci->tx,
+						dbmail_imap_session_printf(self,
 							"\r\n* BYE error fetching body structure\r\n");
 						list_freelist(&fetch_list.
 							      start);
@@ -2810,15 +2795,15 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 					if (isfirstfetchout)
 						isfirstfetchout = 0;
 					else
-						ci_write(ci->tx, " ");
+						dbmail_imap_session_printf(self, " ");
 
-					ci_write(ci->tx, "BODY ");
+					dbmail_imap_session_printf(self, "BODY ");
 					result =
-					    retrieve_structure(ci->tx,
+					    retrieve_structure(self->ci->tx,
 							       &cached_msg.
 							       msg, 0);
 					if (result == -1) {
-						ci_write(ci->tx,
+						dbmail_imap_session_printf(self,
 							"\r\n* BYE error fetching body\r\n");
 						list_freelist(&fetch_list.
 							      start);
@@ -2831,17 +2816,17 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 					if (isfirstfetchout)
 						isfirstfetchout = 0;
 					else
-						ci_write(ci->tx, " ");
+						dbmail_imap_session_printf(self, " ");
 
-					ci_write(ci->tx, "ENVELOPE ");
+					dbmail_imap_session_printf(self, "ENVELOPE ");
 					result =
-					    retrieve_envelope(ci->tx,
+					    retrieve_envelope(self->ci->tx,
 							      &cached_msg.
 							      msg.
 							      rfcheader);
 
 					if (result == -1) {
-						ci_write(ci->tx,
+						dbmail_imap_session_printf(self,
 							"\r\n* BYE error fetching envelope structure\r\n");
 						list_freelist(&fetch_list.
 							      start);
@@ -2858,7 +2843,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 						cached_msg.dumpsize =
 						    rfcheader_dump
 						    (cached_msg.memdump,
-						     &cached_msg.msg.rfcheader, args, 0,
+						     &cached_msg.msg.rfcheader, self->args, 0,
 						     0);
 
 						cached_msg.dumpsize +=
@@ -2892,12 +2877,12 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 					if (isfirstfetchout)
 						isfirstfetchout = 0;
 					else
-						ci_write(ci->tx, " ");
+						dbmail_imap_session_printf(self, " ");
 
-					ci_write(ci->tx,
+					dbmail_imap_session_printf(self,
 						"RFC822 {%llu}\r\n",
 						cached_msg.dumpsize);
-					send_data(ci->tx,
+					send_data(self->ci->tx,
 						  cached_msg.memdump,
 						  cached_msg.dumpsize);
 
@@ -2910,9 +2895,9 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 					if (isfirstfetchout)
 						isfirstfetchout = 0;
 					else
-						ci_write(ci->tx, " ");
+						dbmail_imap_session_printf(self, " ");
 
-					ci_write(ci->tx, "RFC822.SIZE %llu",
+					dbmail_imap_session_printf(self, "RFC822.SIZE %llu",
 						rfcsize);
 				}
 
@@ -2924,7 +2909,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 						    rfcheader_dump
 						    (cached_msg.memdump,
 						     &cached_msg.msg.
-						     rfcheader, args, 0,
+						     rfcheader, self->args, 0,
 						     0);
 
 						cached_msg.dumpsize +=
@@ -2958,17 +2943,17 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 					if (isfirstfetchout)
 						isfirstfetchout = 0;
 					else
-						ci_write(ci->tx, " ");
+						dbmail_imap_session_printf(self, " ");
 
 					if (fi->bodyfetch.octetstart == -1) {
 						mseek(cached_msg.memdump,
 						      0, SEEK_SET);
 
-						ci_write(ci->tx,
+						dbmail_imap_session_printf(self,
 							"BODY[] {%llu}\r\n",
 							cached_msg.
 							dumpsize);
-						send_data(ci->tx,
+						send_data(self->ci->tx,
 							  cached_msg.
 							  memdump,
 							  cached_msg.
@@ -2999,13 +2984,13 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 						       octetstart) : fi->
 						    bodyfetch.octetcnt;
 
-						ci_write(ci->tx,
+						dbmail_imap_session_printf(self,
 							"BODY[]<%llu> {%llu}\r\n",
 							fi->bodyfetch.
 							octetstart,
 							actual_cnt);
 
-						send_data(ci->tx,
+						send_data(self->ci->tx,
 							  cached_msg.
 							  memdump,
 							  actual_cnt);
@@ -3026,7 +3011,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 					if (isfirstfetchout)
 						isfirstfetchout = 0;
 					else
-						ci_write(ci->tx, " ");
+						dbmail_imap_session_printf(self, " ");
 
 					if (cached_msg.num == thisnum) {
 						mrewind(cached_msg.
@@ -3035,16 +3020,16 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 						    rfcheader_dump
 						    (cached_msg.tmpdump,
 						     &cached_msg.msg.
-						     rfcheader, args, 0,
+						     rfcheader, self->args, 0,
 						     0);
 
 						mseek(cached_msg.tmpdump,
 						      0, SEEK_SET);
 
-						ci_write(ci->tx,
+						dbmail_imap_session_printf(self,
 							"RFC822.HEADER {%llu}\r\n",
 							tmpdumpsize);
-						send_data(ci->tx,
+						send_data(self->ci->tx,
 							  cached_msg.
 							  tmpdump,
 							  tmpdumpsize);
@@ -3058,15 +3043,15 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 						    rfcheader_dump
 						    (cached_msg.tmpdump,
 						     &headermsg.rfcheader,
-						     args, 0, 0);
+						     self->args, 0, 0);
 
 						mseek(cached_msg.tmpdump,
 						      0, SEEK_SET);
 
-						ci_write(ci->tx,
+						dbmail_imap_session_printf(self,
 							"RFC822.HEADER {%llu}\r\n",
 							tmpdumpsize);
-						send_data(ci->tx,
+						send_data(self->ci->tx,
 							  cached_msg.
 							  tmpdump,
 							  tmpdumpsize);
@@ -3077,7 +3062,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 					if (isfirstfetchout)
 						isfirstfetchout = 0;
 					else
-						ci_write(ci->tx, " ");
+						dbmail_imap_session_printf(self, " ");
 
 					mrewind(cached_msg.tmpdump);
 					tmpdumpsize =
@@ -3092,10 +3077,10 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 					mseek(cached_msg.tmpdump, 0,
 					      SEEK_SET);
 
-					ci_write(ci->tx,
+					dbmail_imap_session_printf(self,
 						"RFC822.TEXT {%llu}\r\n",
 						tmpdumpsize);
-					send_data(ci->tx,
+					send_data(self->ci->tx,
 						  cached_msg.tmpdump,
 						  tmpdumpsize);
 
@@ -3108,9 +3093,9 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 					if (fi->bodyfetch.partspec[0]) {
 						if (fi->bodyfetch.
 						    partspec[0] == '0') {
-							ci_write(ci->tx,
+							dbmail_imap_session_printf(self,
 								"\r\n%s BAD protocol error\r\n",
-								tag);
+								self->tag);
 							trace(TRACE_DEBUG,
 							      "PROTOCOL ERROR");
 							list_freelist
@@ -3225,14 +3210,14 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 					if (isfirstfetchout)
 						isfirstfetchout = 0;
 					else
-						ci_write(ci->tx, " ");
+						dbmail_imap_session_printf(self, " ");
 
 					if (fi->bodyfetch.noseen)
-						ci_write(ci->tx, "BODY[%s",
+						dbmail_imap_session_printf(self, "BODY[%s",
 							fi->bodyfetch.
 							partspec);
 					else {
-						ci_write(ci->tx, "BODY[%s",
+						dbmail_imap_session_printf(self, "BODY[%s",
 							fi->bodyfetch.
 							partspec);
 						setseen = 1;
@@ -3241,7 +3226,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 					switch (fi->bodyfetch.itemtype) {
 					case BFIT_TEXT_SILENT:
 						if (!msgpart)
-							ci_write(ci->tx,
+							dbmail_imap_session_printf(self,
 								"] NIL ");
 						else {
 							tmpdumpsize = 0;
@@ -3254,7 +3239,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 								     tmpdump,
 								     &msgpart->
 								     rfcheader,
-								     args,
+								     self->args,
 								     0, 0);
 
 							tmpdumpsize +=
@@ -3286,7 +3271,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 									cnt = fi->bodyfetch.octetcnt;
 
 								fprintf
-								    (ci->
+								    (self->ci->
 								     tx,
 								     "]<%llu> {%llu}\r\n",
 								     fi->
@@ -3305,7 +3290,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 								cnt =
 								    tmpdumpsize;
 								fprintf
-								    (ci->
+								    (self->ci->
 								     tx,
 								     "] {%llu}\r\n",
 								     tmpdumpsize);
@@ -3317,7 +3302,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 							}
 
 							/* output data */
-							send_data(ci->tx,
+							send_data(self->ci->tx,
 								  cached_msg.
 								  tmpdump,
 								  cnt);
@@ -3328,9 +3313,9 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 
 					case BFIT_TEXT:
 						/* dump body text */
-						ci_write(ci->tx, "TEXT");
+						dbmail_imap_session_printf(self, "TEXT");
 						if (!msgpart)
-							ci_write(ci->tx,
+							dbmail_imap_session_printf(self,
 								"] NIL ");
 						else {
 							tmpdumpsize =
@@ -3362,7 +3347,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 									cnt = fi->bodyfetch.octetcnt;
 
 								fprintf
-								    (ci->
+								    (self->ci->
 								     tx,
 								     "]<%llu> {%llu}\r\n",
 								     fi->
@@ -3381,7 +3366,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 								cnt =
 								    tmpdumpsize;
 								fprintf
-								    (ci->
+								    (self->ci->
 								     tx,
 								     "] {%llu}\r\n",
 								     tmpdumpsize);
@@ -3393,7 +3378,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 							}
 
 							/* output data */
-							send_data(ci->tx,
+							send_data(self->ci->tx,
 								  cached_msg.
 								  tmpdump,
 								  cnt);
@@ -3401,11 +3386,11 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 						break;
 
 					case BFIT_HEADER:
-						ci_write(ci->tx, "HEADER");
+						dbmail_imap_session_printf(self, "HEADER");
 						if (!msgpart
 						    ||
 						    only_text_from_msgpart)
-							ci_write(ci->tx,
+							dbmail_imap_session_printf(self,
 								"] NIL\r\n");
 						else {
 							tmpdumpsize =
@@ -3414,11 +3399,11 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 							     tmpdump,
 							     &msgpart->
 							     rfcheader,
-							     args, 0, 0);
+							     self->args, 0, 0);
 
 							if (!tmpdumpsize) {
 								fprintf
-								    (ci->
+								    (self->ci->
 								     tx,
 								     "] NIL\r\n");
 							} else {
@@ -3433,7 +3418,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 										cnt = fi->bodyfetch.octetcnt;
 
 									fprintf
-									    (ci->
+									    (self->ci->
 									     tx,
 									     "]<%llu> {%llu}\r\n",
 									     fi->
@@ -3451,7 +3436,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 								} else {
 									cnt = tmpdumpsize;
 									fprintf
-									    (ci->
+									    (self->ci->
 									     tx,
 									     "] {%llu}\r\n",
 									     tmpdumpsize);
@@ -3464,7 +3449,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 
 								/* output data */
 								send_data
-								    (ci->
+								    (self->ci->
 								     tx,
 								     cached_msg.
 								     tmpdump,
@@ -3475,7 +3460,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 						break;
 
 					case BFIT_HEADER_FIELDS:
-						ci_write(ci->tx,
+						dbmail_imap_session_printf(self,
 							"HEADER.FIELDS (");
 
 						isfirstout = 1;
@@ -3485,10 +3470,10 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 						     k++) {
 							if (isfirstout) {
 								fprintf
-								    (ci->
+								    (self->ci->
 								     tx,
 								     "%s",
-								     args[k
+								     self->args[k
 									  +
 									  fi->
 									  bodyfetch.
@@ -3497,22 +3482,21 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 								    = 0;
 							} else
 								fprintf
-								    (ci->
+								    (self->ci->
 								     tx,
 								     " %s",
-								     args[k
+								     self->args[k
 									  +
 									  fi->
-									  bodyfetch.
-									  argstart]);
+									  bodyfetch.argstart]);
 						}
 
-						ci_write(ci->tx, ")] ");
+						dbmail_imap_session_printf(self, ")] ");
 
 						if (!msgpart
 						    ||
 						    only_text_from_msgpart)
-							ci_write(ci->tx,
+							dbmail_imap_session_printf(self,
 								"NIL\r\n");
 						else {
 							tmpdumpsize =
@@ -3521,15 +3505,14 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 							     tmpdump,
 							     &msgpart->
 							     rfcheader,
-							     &args[fi->
-								   bodyfetch.
-								   argstart],
+							     &self->args[fi->
+								   bodyfetch.argstart],
 							     fi->bodyfetch.
 							     argcnt, 1);
 
 							if (!tmpdumpsize) {
 								fprintf
-								    (ci->
+								    (self->ci->
 								     tx,
 								     "NIL\r\n");
 							} else {
@@ -3544,7 +3527,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 										cnt = fi->bodyfetch.octetcnt;
 
 									fprintf
-									    (ci->
+									    (self->ci->
 									     tx,
 									     "<%llu> {%llu}\r\n",
 									     fi->
@@ -3562,7 +3545,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 								} else {
 									cnt = tmpdumpsize;
 									fprintf
-									    (ci->
+									    (self->ci->
 									     tx,
 									     "{%llu}\r\n",
 									     tmpdumpsize);
@@ -3575,7 +3558,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 
 								/* output data */
 								send_data
-								    (ci->
+								    (self->ci->
 								     tx,
 								     cached_msg.
 								     tmpdump,
@@ -3585,7 +3568,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 						}
 						break;
 					case BFIT_HEADER_FIELDS_NOT:
-						ci_write(ci->tx,
+						dbmail_imap_session_printf(self,
 							"HEADER.FIELDS.NOT (");
 
 						isfirstout = 1;
@@ -3595,34 +3578,32 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 						     k++) {
 							if (isfirstout) {
 								fprintf
-								    (ci->
+								    (self->ci->
 								     tx,
 								     "%s",
-								     args[k
+								     self->args[k
 									  +
 									  fi->
-									  bodyfetch.
-									  argstart]);
+									  bodyfetch.argstart]);
 								isfirstout
 								    = 0;
 							} else
 								fprintf
-								    (ci->
+								    (self->ci->
 								     tx,
 								     " %s",
-								     args[k
+								     self->args[k
 									  +
 									  fi->
-									  bodyfetch.
-									  argstart]);
+									  bodyfetch.argstart]);
 						}
 
-						ci_write(ci->tx, ")] ");
+						dbmail_imap_session_printf(self, ")] ");
 
 						if (!msgpart
 						    ||
 						    only_text_from_msgpart)
-							ci_write(ci->tx,
+							dbmail_imap_session_printf(self,
 								"NIL\r\n");
 						else {
 							tmpdumpsize =
@@ -3631,15 +3612,14 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 							     tmpdump,
 							     &msgpart->
 							     rfcheader,
-							     &args[fi->
-								   bodyfetch.
-								   argstart],
+							     &self->args[fi->
+								   bodyfetch.argstart],
 							     fi->bodyfetch.
 							     argcnt, 0);
 
 							if (!tmpdumpsize) {
 								fprintf
-								    (ci->
+								    (self->ci->
 								     tx,
 								     "NIL\r\n");
 							} else {
@@ -3654,7 +3634,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 										cnt = fi->bodyfetch.octetcnt;
 
 									fprintf
-									    (ci->
+									    (self->ci->
 									     tx,
 									     "<%llu> {%llu}\r\n",
 									     fi->
@@ -3672,7 +3652,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 								} else {
 									cnt = tmpdumpsize;
 									fprintf
-									    (ci->
+									    (self->ci->
 									     tx,
 									     "{%llu}\r\n",
 									     tmpdumpsize);
@@ -3685,7 +3665,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 
 								/* output data */
 								send_data
-								    (ci->
+								    (self->ci->
 								     tx,
 								     cached_msg.
 								     tmpdump,
@@ -3695,10 +3675,10 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 						}
 						break;
 					case BFIT_MIME:
-						ci_write(ci->tx, "MIME] ");
+						dbmail_imap_session_printf(self, "MIME] ");
 
 						if (!msgpart)
-							ci_write(ci->tx,
+							dbmail_imap_session_printf(self,
 								"NIL\r\n");
 						else {
 							tmpdumpsize =
@@ -3710,7 +3690,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 
 							if (!tmpdumpsize) {
 								fprintf
-								    (ci->
+								    (self->ci->
 								     tx,
 								     "NIL\r\n");
 							} else {
@@ -3725,7 +3705,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 										cnt = fi->bodyfetch.octetcnt;
 
 									fprintf
-									    (ci->
+									    (self->ci->
 									     tx,
 									     "<%llu> {%llu}\r\n",
 									     fi->
@@ -3743,7 +3723,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 								} else {
 									cnt = tmpdumpsize;
 									fprintf
-									    (ci->
+									    (self->ci->
 									     tx,
 									     "{%llu}\r\n",
 									     tmpdumpsize);
@@ -3756,7 +3736,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 
 								/* output data */
 								send_data
-								    (ci->
+								    (self->ci->
 								     tx,
 								     cached_msg.
 								     tmpdump,
@@ -3767,7 +3747,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 
 						break;
 					default:
-						ci_write(ci->tx,
+						dbmail_imap_session_printf(self,
 							"\r\n* BYE internal server error\r\n");
 						list_freelist(&fetch_list.
 							      start);
@@ -3786,7 +3766,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 					   flag be set! */
 					result = acl_has_right(ud->userid, ud->mailbox.uid, ACL_RIGHT_SEEN);
 					if (result == -1) {
-						ci_write(ci->tx, "\r\n *BYE internal dbase error\r\n");
+						dbmail_imap_session_printf(self, "\r\n *BYE internal dbase error\r\n");
 						list_freelist(&fetch_list.start);
 						db_free_msg(&headermsg);
 						return -1;
@@ -3795,7 +3775,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 					if (result == 1 && ud->mailbox.permission == IMAPPERM_READWRITE) {
 						result = db_set_msgflag(thisnum, ud->mailbox.uid, setSeenSet, IMAPFA_ADD);
 						if (result == -1) {
-							ci_write(ci->tx, "\r\n* BYE internal dbase error\r\n");
+							dbmail_imap_session_printf(self, "\r\n* BYE internal dbase error\r\n");
 							list_freelist(&fetch_list.  start);
 							db_free_msg(&headermsg);
 							return -1;
@@ -3803,7 +3783,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 					}
 
 					fi->getFlags = 1;
-					ci_write(ci->tx, " ");
+					dbmail_imap_session_printf(self, " ");
 				}
 
 				/* FLAGS ? */
@@ -3811,9 +3791,9 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 					if (isfirstfetchout)
 						isfirstfetchout = 0;
 					else
-						ci_write(ci->tx, " ");
+						dbmail_imap_session_printf(self, " ");
 
-					ci_write(ci->tx, "FLAGS (");
+					dbmail_imap_session_printf(self, "FLAGS (");
 
 					isfirstout = 1;
 
@@ -3823,7 +3803,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 							       uid,
 							       msgflags);
 					if (result == -1) {
-						ci_write(ci->tx,
+						dbmail_imap_session_printf(self,
 							"\r\n* BYE internal dbase error\r\n");
 						list_freelist(&fetch_list.
 							      start);
@@ -3835,7 +3815,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 						if (msgflags[j]) {
 							if (isfirstout) {
 								fprintf
-								    (ci->
+								    (self->ci->
 								     tx,
 								     "\\%s",
 								     imap_flag_desc
@@ -3844,21 +3824,21 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 								    = 0;
 							} else
 								fprintf
-								    (ci->
+								    (self->ci->
 								     tx,
 								     " \\%s",
 								     imap_flag_desc
 								     [j]);
 						}
 					}
-					ci_write(ci->tx, ")");
+					dbmail_imap_session_printf(self, ")");
 				}
 
 				curr = curr->nextnode;
 			}
 
 			if (!bad_response_send)
-				ci_write(ci->tx, ")\r\n");
+				dbmail_imap_session_printf(self, ")\r\n");
 
 		}
 	}
@@ -3867,7 +3847,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 	list_freelist(&fetch_list.start);
 	db_free_msg(&headermsg);
 
-	ci_write(ci->tx, "%s OK %sFETCH completed\r\n", tag,
+	dbmail_imap_session_printf(self, "%s OK %sFETCH completed\r\n", self->tag,
 		imapcommands_use_uid ? "UID " : "");
 	return 0;
 }
@@ -3878,9 +3858,9 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
  *
  * alter message-associated data in selected mailbox
  */
-int _ic_store(char *tag, char **args, ClientInfo * ci)
+int _ic_store(struct ImapSession *self)
 {
-	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	char *endptr, *lastchar = NULL;
 	u64_t i, store_start, store_end;
 	unsigned fn = 0;
@@ -3892,65 +3872,65 @@ int _ic_store(char *tag, char **args, ClientInfo * ci)
 	memset(flaglist, 0, sizeof(int) * IMAP_NFLAGS);
 
 	if (ud->state != IMAPCS_SELECTED) {
-		ci_write(ci->tx,
+		dbmail_imap_session_printf(self,
 			"%s BAD STORE command received in invalid state\r\n",
-			tag);
+			self->tag);
 		return 1;
 	}
 
-	if (!args[0] || !args[1] || !args[2]) {
-		ci_write(ci->tx, "%s BAD missing argument(s) to STORE\r\n",
-			tag);
+	if (!self->args[0] || !self->args[1] || !self->args[2]) {
+		dbmail_imap_session_printf(self, "%s BAD missing argument(s) to STORE\r\n",
+			self->tag);
 		return 1;
 	}
 
 	/* multiple flags should be parenthesed */
-	if (args[3] && strcmp(args[2], "(") != 0) {
-		ci_write(ci->tx, "%s BAD invalid argument(s) to STORE\r\n",
-			tag);
+	if (self->args[3] && strcmp(self->args[2], "(") != 0) {
+		dbmail_imap_session_printf(self, "%s BAD invalid argument(s) to STORE\r\n",
+			self->tag);
 		return 1;
 	}
 
 
 	/* retrieve action type */
-	if (strcasecmp(args[1], "flags") == 0)
+	if (strcasecmp(self->args[1], "flags") == 0)
 		action = IMAPFA_REPLACE;
-	else if (strcasecmp(args[1], "flags.silent") == 0) {
+	else if (strcasecmp(self->args[1], "flags.silent") == 0) {
 		action = IMAPFA_REPLACE;
 		be_silent = 1;
-	} else if (strcasecmp(args[1], "+flags") == 0)
+	} else if (strcasecmp(self->args[1], "+flags") == 0)
 		action = IMAPFA_ADD;
-	else if (strcasecmp(args[1], "+flags.silent") == 0) {
+	else if (strcasecmp(self->args[1], "+flags.silent") == 0) {
 		action = IMAPFA_ADD;
 		be_silent = 1;
-	} else if (strcasecmp(args[1], "-flags") == 0)
+	} else if (strcasecmp(self->args[1], "-flags") == 0)
 		action = IMAPFA_REMOVE;
-	else if (strcasecmp(args[1], "-flags.silent") == 0) {
+	else if (strcasecmp(self->args[1], "-flags.silent") == 0) {
 		action = IMAPFA_REMOVE;
 		be_silent = 1;
 	}
 
 	if (action == IMAPFA_NONE) {
-		ci_write(ci->tx,
-			"%s BAD invalid STORE action specified\r\n", tag);
+		dbmail_imap_session_printf(self,
+			"%s BAD invalid STORE action specified\r\n", self->tag);
 		return 1;
 	}
 
 	/* now fetch flag list */
-	i = (strcmp(args[2], "(") == 0) ? 3 : 2;
+	i = (strcmp(self->args[2], "(") == 0) ? 3 : 2;
 
-	for (; args[i] && strcmp(args[i], ")") != 0; i++) {
+	for (; self->args[i] && strcmp(self->args[i], ")") != 0; i++) {
 		for (j = 0; j < IMAP_NFLAGS; j++)
-			if (strcasecmp(args[i], imap_flag_desc_escaped[j])
+			if (strcasecmp(self->args[i], imap_flag_desc_escaped[j])
 			    == 0) {
 				flaglist[j] = 1;
 				break;
 			}
 
 		if (j == IMAP_NFLAGS) {
-			ci_write(ci->tx,
+			dbmail_imap_session_printf(self,
 				"%s BAD invalid flag list to STORE command\r\n",
-				tag);
+				self->tag);
 			return 1;
 		}
 	}
@@ -3961,13 +3941,13 @@ int _ic_store(char *tag, char **args, ClientInfo * ci)
 		    acl_has_right(ud->userid, ud->mailbox.uid,
 				  ACL_RIGHT_SEEN);
 		if (result < 0) {
-			ci_write(ci->tx, "* BYE internal database error");
+			dbmail_imap_session_printf(self, "* BYE internal database error");
 			return -1;	/* fatal */
 		}
 		if (result == 0) {
-			ci_write(ci->tx,
+			dbmail_imap_session_printf(self,
 				"%s NO no right to store \\SEEN flag\r\n",
-				tag);
+				self->tag);
 			return 1;
 		}
 	}
@@ -3976,13 +3956,13 @@ int _ic_store(char *tag, char **args, ClientInfo * ci)
 		    acl_has_right(ud->userid, ud->mailbox.uid,
 				  ACL_RIGHT_DELETE);
 		if (result < 0) {
-			ci_write(ci->tx, "* BYE internal database error\r\n");
+			dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 			return -1;	/* fatal */
 		}
 		if (result == 0) {
-			ci_write(ci->tx,
+			dbmail_imap_session_printf(self,
 				"%s NO no right to store \\DELETED flag\r\n",
-				tag);
+				self->tag);
 			return 1;
 		}
 	}
@@ -3994,12 +3974,12 @@ int _ic_store(char *tag, char **args, ClientInfo * ci)
 		    acl_has_right(ud->userid, ud->mailbox.uid,
 				  ACL_RIGHT_WRITE);
 		if (result < 0) {
-			ci_write(ci->tx, "*BYE internal database error");
+			dbmail_imap_session_printf(self, "*BYE internal database error");
 			return -1;
 		}
 		if (result == 0) {
-			ci_write(ci->tx, "%s NO no right to store flags",
-				tag);
+			dbmail_imap_session_printf(self, "%s NO no right to store flags",
+				self->tag);
 			return 1;
 		}
 	}
@@ -4007,9 +3987,9 @@ int _ic_store(char *tag, char **args, ClientInfo * ci)
 	   the right to store the flags */
 
 	/* set flags & show if needed */
-	endptr = args[0];
+	endptr = self->args[0];
 	while (*endptr) {
-		if (endptr != args[0])
+		if (endptr != self->args[0])
 			endptr++;	/* skip delimiter */
 
 		store_start = strtoull(endptr, &endptr, 10);
@@ -4017,9 +3997,9 @@ int _ic_store(char *tag, char **args, ClientInfo * ci)
 		if (store_start == 0 || store_start >
 		    (imapcommands_use_uid ? (ud->mailbox.msguidnext - 1) :
 		     ud->mailbox.exists)) {
-			ci_write(ci->tx,
+			dbmail_imap_session_printf(self,
 				"%s BAD invalid message range specified\r\n",
-				tag);
+				self->tag);
 			return 1;
 		}
 
@@ -4040,9 +4020,9 @@ int _ic_store(char *tag, char **args, ClientInfo * ci)
 			    (imapcommands_use_uid
 			     ? (ud->mailbox.msguidnext -
 				1) : ud->mailbox.exists)) {
-				ci_write(ci->tx,
+				dbmail_imap_session_printf(self,
 					"%s BAD invalid message range specified\r\n",
-					tag);
+					self->tag);
 				return 1;
 			}
 
@@ -4059,9 +4039,9 @@ int _ic_store(char *tag, char **args, ClientInfo * ci)
 			break;
 
 		default:
-			ci_write(ci->tx,
+			dbmail_imap_session_printf(self,
 				"%s BAD invalid character in message range\r\n",
-				tag);
+				self->tag);
 			return 1;
 		}
 
@@ -4086,24 +4066,24 @@ int _ic_store(char *tag, char **args, ClientInfo * ci)
 			if (ud->mailbox.permission == IMAPPERM_READWRITE) {
 				result = db_set_msgflag(thisnum, ud->mailbox.uid, flaglist, action);
 				if (result == -1) {
-					ci_write(ci->tx, "\r\n* BYE internal dbase error\r\n");
+					dbmail_imap_session_printf(self, "\r\n* BYE internal dbase error\r\n");
 					return -1;
 				}
 			}
 			if (!be_silent) {
 				result = db_get_msgflag_all(thisnum, ud->mailbox.uid, msgflags);
 				if (result == -1) {
-					ci_write(ci->tx, "\r\n* BYE internal dbase error\r\n");
+					dbmail_imap_session_printf(self, "\r\n* BYE internal dbase error\r\n");
 					return -1;
 				}
 
-				ci_write(ci->tx, "* %llu FETCH (FLAGS (",
+				dbmail_imap_session_printf(self, "* %llu FETCH (FLAGS (",
 					imapcommands_use_uid ? (u64_t) (fn + 1) : store_start + 1);
 
 				for (j = 0, isfirstout = 1;
 				     j < IMAP_NFLAGS; j++) {
 					if (msgflags[j]) {
-						ci_write(ci->tx, "%s%s",
+						dbmail_imap_session_printf(self, "%s%s",
 							isfirstout ? "" :
 							" ",
 							imap_flag_desc_escaped
@@ -4113,7 +4093,7 @@ int _ic_store(char *tag, char **args, ClientInfo * ci)
 					}
 				}
 
-				ci_write(ci->tx, "))\r\n");
+				dbmail_imap_session_printf(self, "))\r\n");
 			}
 		} else {
 			if (!imapcommands_use_uid) {
@@ -4129,7 +4109,7 @@ int _ic_store(char *tag, char **args, ClientInfo * ci)
 			if (ud->mailbox.permission == IMAPPERM_READWRITE) {
 				result = db_set_msgflag_range(lo, hi, ud->mailbox.uid, flaglist, action);
 				if (result == -1) {
-					ci_write(ci->tx, "\r\n* BYE internal dbase error\r\n");
+					dbmail_imap_session_printf(self, "\r\n* BYE internal dbase error\r\n");
 					return -1;
 				}
 			}
@@ -4155,12 +4135,12 @@ int _ic_store(char *tag, char **args, ClientInfo * ci)
 							       uid,
 							       msgflags);
 					if (result == -1) {
-						ci_write(ci->tx,
+						dbmail_imap_session_printf(self,
 							"\r\n* BYE internal dbase error\r\n");
 						return -1;
 					}
 
-					ci_write(ci->tx,
+					dbmail_imap_session_printf(self,
 						"* %llu FETCH (FLAGS (",
 						imapcommands_use_uid
 						? (u64_t) (fn + 1) : i +
@@ -4169,7 +4149,7 @@ int _ic_store(char *tag, char **args, ClientInfo * ci)
 					for (j = 0, isfirstout = 1;
 					     j < IMAP_NFLAGS; j++) {
 						if (msgflags[j]) {
-							ci_write(ci->tx,
+							dbmail_imap_session_printf(self,
 								"%s%s",
 								isfirstout
 								? "" : " ",
@@ -4181,13 +4161,13 @@ int _ic_store(char *tag, char **args, ClientInfo * ci)
 						}
 					}
 
-					ci_write(ci->tx, "))\r\n");
+					dbmail_imap_session_printf(self, "))\r\n");
 				}
 			}
 		}
 	}
 
-	ci_write(ci->tx, "%s OK %sSTORE completed\r\n", tag,
+	dbmail_imap_session_printf(self, "%s OK %sSTORE completed\r\n", self->tag,
 		imapcommands_use_uid ? "UID " : "");
 	return 0;
 }
@@ -4198,9 +4178,9 @@ int _ic_store(char *tag, char **args, ClientInfo * ci)
  *
  * copy a message to another mailbox
  */
-int _ic_copy(char *tag, char **args, ClientInfo * ci)
+int _ic_copy(struct ImapSession *self)
 {
-	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	u64_t i, copy_start, copy_end;
 	unsigned fn;
 	u64_t destmboxid, thisnum;
@@ -4208,51 +4188,50 @@ int _ic_copy(char *tag, char **args, ClientInfo * ci)
 	u64_t new_msgid;
 	char *endptr, *lastchar = NULL;
 
-	if (!check_state_and_args
-	    ("COPY", tag, args, 2, IMAPCS_SELECTED, ci))
+	if (!check_state_and_args(self, "COPY", 2, 2, IMAPCS_SELECTED))
 		return 1;	/* error, return */
 
 	/* check if destination mailbox exists */
-	if (db_findmailbox(args[1], ud->userid, &destmboxid) == -1) {
-		ci_write(ci->tx, "* BYE internal dbase error\r\n");
+	if (db_findmailbox(self->args[1], ud->userid, &destmboxid) == -1) {
+		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 		return -1;	/* fatal */
 	}
 	if (destmboxid == 0) {
 		/* error: cannot select mailbox */
-		ci_write(ci->tx,
+		dbmail_imap_session_printf(self,
 			"%s NO [TRYCREATE] specified mailbox does not exist\r\n",
-			tag);
+			self->tag);
 		return 1;
 	}
 	// check if user has right to COPY from source mailbox
 	result =
 	    acl_has_right(ud->userid, ud->mailbox.uid, ACL_RIGHT_READ);
 	if (result < 0) {
-		ci_write(ci->tx, "* BYE internal database error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		return -1;	/* fatal */
 	}
 	if (result == 0) {
-		ci_write(ci->tx,
+		dbmail_imap_session_printf(self,
 			"%s NO no permission to copy from mailbox\r\n",
-			tag);
+			self->tag);
 		return 1;
 	}
 	// check if user has right to COPY to destination mailbox
 	result = acl_has_right(ud->userid, destmboxid, ACL_RIGHT_INSERT);
 	if (result < 0) {
-		ci_write(ci->tx, "* BYE internal database error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		return -1;	/* fatal */
 	}
 	if (result == 0) {
-		ci_write(ci->tx,
-			"%s NO no permission to copy to mailbox\r\n", tag);
+		dbmail_imap_session_printf(self,
+			"%s NO no permission to copy to mailbox\r\n", self->tag);
 		return 1;
 	}
 
 	/* ok copy msgs */
-	endptr = args[0];
+	endptr = self->args[0];
 	while (*endptr) {
-		if (endptr != args[0])
+		if (endptr != self->args[0])
 			endptr++;	/* skip delimiter */
 
 		copy_start = strtoull(endptr, &lastchar, 10);
@@ -4261,9 +4240,9 @@ int _ic_copy(char *tag, char **args, ClientInfo * ci)
 		if (copy_start == 0 || copy_start >
 		    (imapcommands_use_uid ? (ud->mailbox.msguidnext - 1) :
 		     ud->mailbox.exists)) {
-			ci_write(ci->tx,
+			dbmail_imap_session_printf(self,
 				"%s BAD invalid message range specified\r\n",
-				tag);
+				self->tag);
 			return 1;
 		}
 
@@ -4284,9 +4263,9 @@ int _ic_copy(char *tag, char **args, ClientInfo * ci)
 			    (imapcommands_use_uid
 			     ? (ud->mailbox.msguidnext -
 				1) : ud->mailbox.exists)) {
-				ci_write(ci->tx,
+				dbmail_imap_session_printf(self,
 					"%s BAD invalid message range specified\r\n",
-					tag);
+					self->tag);
 				return 1;
 			}
 
@@ -4303,9 +4282,9 @@ int _ic_copy(char *tag, char **args, ClientInfo * ci)
 			break;
 
 		default:
-			ci_write(ci->tx,
+			dbmail_imap_session_printf(self,
 				"%s BAD invalid character in message range\r\n",
-				tag);
+				self->tag);
 			return 1;
 		}
 
@@ -4331,20 +4310,20 @@ int _ic_copy(char *tag, char **args, ClientInfo * ci)
 			    db_copymsg(thisnum, destmboxid, ud->userid,
 				       &new_msgid);
 			if (result == -1) {
-				ci_write(ci->tx,
+				dbmail_imap_session_printf(self,
 					"* BYE internal dbase error\r\n");
 				return -1;
 			}
 			if (result == -2) {
-				ci_write(ci->tx,
+				dbmail_imap_session_printf(self,
 					"%s NO quotum would exceed\r\n",
-					tag);
+					self->tag);
 				return 1;
 			}
 		}
 	}
 
-	ci_write(ci->tx, "%s OK %sCOPY completed\r\n", tag,
+	dbmail_imap_session_printf(self, "%s OK %sCOPY completed\r\n", self->tag,
 		imapcommands_use_uid ? "UID " : "");
 	return 0;
 }
@@ -4355,38 +4334,44 @@ int _ic_copy(char *tag, char **args, ClientInfo * ci)
  *
  * fetch/store/copy/search message UID's
  */
-int _ic_uid(char *tag, char **args, ClientInfo * ci)
+int _ic_uid(struct ImapSession *self)
 {
-	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	int result;
 
 	if (ud->state != IMAPCS_SELECTED) {
-		ci_write(ci->tx,
+		dbmail_imap_session_printf(self,
 			"%s BAD UID command received in invalid state\r\n",
-			tag);
+			self->tag);
 		return 1;
 	}
 
-	if (!args[0]) {
-		ci_write(ci->tx, "%s BAD missing argument(s) to UID\r\n",
-			tag);
+	if (!self->args[0]) {
+		dbmail_imap_session_printf(self, "%s BAD missing argument(s) to UID\r\n",
+			self->tag);
 		return 1;
 	}
 
 	imapcommands_use_uid = 1;	/* set global var to make clear we will be using UID's */
+	
 	/* ACL rights for UID are handled by the other functions called below */
-	if (strcasecmp(args[0], "fetch") == 0)
-		result = _ic_fetch(tag, &args[1], ci);
-	else if (strcasecmp(args[0], "copy") == 0)
-		result = _ic_copy(tag, &args[1], ci);
-	else if (strcasecmp(args[0], "store") == 0)
-		result = _ic_store(tag, &args[1], ci);
-	else if (strcasecmp(args[0], "search") == 0)
-		result = _ic_search(tag, &args[1], ci);
-	else if (strcasecmp(args[0], "sort") == 0)
-		result = _ic_sort(tag, &args[1], ci);
-	else {
-		ci_write(ci->tx, "%s BAD invalid UID command\r\n", tag);
+	if (strcasecmp(self->args[0], "fetch") == 0) {
+		self->args++;
+		result = _ic_fetch(self);
+	} else if (strcasecmp(self->args[0], "copy") == 0) {
+		self->args++;
+		result = _ic_copy(self);
+	} else if (strcasecmp(self->args[0], "store") == 0) {
+		self->args++;
+		result = _ic_store(self);
+	} else if (strcasecmp(self->args[0], "search") == 0) {
+		self->args++;
+		result = _ic_search(self);
+	} else if (strcasecmp(self->args[0], "sort") == 0) {
+		self->args++;
+		result = _ic_sort(self);
+	} else {
+		dbmail_imap_session_printf(self, "%s BAD invalid UID command\r\n", self->tag);
 		result = 1;
 	}
 
@@ -4399,7 +4384,7 @@ int _ic_uid(char *tag, char **args, ClientInfo * ci)
 /* Helper function for _ic_getquotaroot() and _ic_getquota().
  * Send all resource limits in `quota'.
  */
-void send_quota(quota_t * quota, ClientInfo * ci)
+void send_quota(struct ImapSession *self, quota_t * quota)
 {
 	int r;
 	u64_t usage, limit;
@@ -4416,7 +4401,7 @@ void send_quota(quota_t * quota, ClientInfo * ci)
 			default:
 				continue;
 			}
-			ci_write(ci->tx,
+			dbmail_imap_session_printf(self,
 				"* QUOTA \"%s\" (%s %llu %llu)\r\n",
 				quota->root, name, usage, limit);
 		}
@@ -4428,34 +4413,33 @@ void send_quota(quota_t * quota, ClientInfo * ci)
  *
  * get quota root and send quota
  */
-int _ic_getquotaroot(char *tag, char **args, ClientInfo * ci)
+int _ic_getquotaroot(struct ImapSession *self)
 {
-	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	quota_t *quota;
 	char *root, *errormsg;
 
-	if (!check_state_and_args("GETQUOTAROOT", tag, args, 1,
-				  IMAPCS_AUTHENTICATED, ci))
+	if (!check_state_and_args(self, "GETQUOTAROOT", 1, 1, IMAPCS_AUTHENTICATED))
 		return 1;	/* error, return */
 
-	root = quota_get_quotaroot(ud->userid, args[0], &errormsg);
+	root = quota_get_quotaroot(ud->userid, self->args[0], &errormsg);
 	if (root == NULL) {
-		ci_write(ci->tx, "%s NO %s\r\n", tag, errormsg);
+		dbmail_imap_session_printf(self, "%s NO %s\r\n", self->tag, errormsg);
 		return 1;
 	}
 
 	quota = quota_get_quota(ud->userid, root, &errormsg);
 	if (quota == NULL) {
-		ci_write(ci->tx, "%s NO %s\r\n", tag, errormsg);
+		dbmail_imap_session_printf(self, "%s NO %s\r\n", self->tag, errormsg);
 		return 1;
 	}
 
-	ci_write(ci->tx, "* QUOTAROOT \"%s\" \"%s\"\r\n", args[0],
+	dbmail_imap_session_printf(self, "* QUOTAROOT \"%s\" \"%s\"\r\n", self->args[0],
 		quota->root);
-	send_quota(quota, ci);
+	send_quota(self, quota);
 	quota_free(quota);
 
-	ci_write(ci->tx, "%s OK GETQUOTAROOT completed\r\n", tag);
+	dbmail_imap_session_printf(self, "%s OK GETQUOTAROOT completed\r\n", self->tag);
 	return 0;
 }
 
@@ -4464,26 +4448,25 @@ int _ic_getquotaroot(char *tag, char **args, ClientInfo * ci)
  *
  * get quota
  */
-int _ic_getquota(char *tag, char **args, ClientInfo * ci)
+int _ic_getquota(struct ImapSession *self)
 {
-	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	quota_t *quota;
 	char *errormsg;
 
-	if (!check_state_and_args("GETQUOTA", tag, args, 1,
-				  IMAPCS_AUTHENTICATED, ci))
+	if (!check_state_and_args(self, "GETQUOTA", 1, 1, IMAPCS_AUTHENTICATED))
 		return 1;	/* error, return */
 
-	quota = quota_get_quota(ud->userid, args[0], &errormsg);
+	quota = quota_get_quota(ud->userid, self->args[0], &errormsg);
 	if (quota == NULL) {
-		ci_write(ci->tx, "%s NO %s\r\n", tag, errormsg);
+		dbmail_imap_session_printf(self, "%s NO %s\r\n", self->tag, errormsg);
 		return 1;
 	}
 
-	send_quota(quota, ci);
+	send_quota(self, quota);
 	quota_free(quota);
 
-	ci_write(ci->tx, "%s OK GETQUOTA completed\r\n", tag);
+	dbmail_imap_session_printf(self, "%s OK GETQUOTA completed\r\n", self->tag);
 	return 0;
 }
 
@@ -4505,201 +4488,195 @@ static int imap_acl_pre_administer(const char *mailboxname,
 	return 1;
 }
 
-int _ic_setacl(char *tag, char **args, ClientInfo * ci)
+int _ic_setacl(struct ImapSession *self)
 {
 	/* SETACL mailboxname identifier mod_rights */
-	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	int result;
 	u64_t mboxid;
 	u64_t targetuserid;
 
-	if (!check_state_and_args("SETACL", tag, args, 3,
-				  IMAPCS_AUTHENTICATED, ci))
+	if (!check_state_and_args(self, "SETACL", 3, 3, IMAPCS_AUTHENTICATED))
 		return 1;
 
-	result = imap_acl_pre_administer(args[0], args[1], ud->userid,
+	result = imap_acl_pre_administer(self->args[0], self->args[1], ud->userid,
 					 &mboxid, &targetuserid);
 	if (result == -1) {
-		ci_write(ci->tx, "* BYE internal database error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		return -1;
 	} else if (result == 0) {
-		ci_write(ci->tx, "%s NO SETACL failure: can't set acl\r\n",
-			tag);
+		dbmail_imap_session_printf(self, "%s NO SETACL failure: can't set acl\r\n",
+			self->tag);
 		return 1;
 	}
 	// has the rights to 'administer' this mailbox? 
 	if (acl_has_right(ud->userid, mboxid, ACL_RIGHT_ADMINISTER) != 1) {
-		ci_write(ci->tx, "%s NO SETACL failure: can't set acl, "
-			"you don't have the proper rights\r\n", tag);
+		dbmail_imap_session_printf(self, "%s NO SETACL failure: can't set acl, "
+			"you don't have the proper rights\r\n", self->tag);
 		return 1;
 	}
 	// set the new acl
-	if (acl_set_rights(targetuserid, mboxid, args[2]) < 0) {
-		ci_write(ci->tx, "* BYE internal database error\r\n");
+	if (acl_set_rights(targetuserid, mboxid, self->args[2]) < 0) {
+		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		return -1;
 	}
 
-	ci_write(ci->tx, "%s OK SETACL completed\r\n", tag);
+	dbmail_imap_session_printf(self, "%s OK SETACL completed\r\n", self->tag);
 	return 0;
 }
 
 
-int _ic_deleteacl(char *tag, char **args, ClientInfo * ci)
+int _ic_deleteacl(struct ImapSession *self)
 {
 	// DELETEACL mailboxname identifier
-	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	u64_t mboxid;
 	u64_t targetuserid;
 
-	if (!check_state_and_args("DELETEACL", tag, args, 2,
-				  IMAPCS_AUTHENTICATED, ci))
+	if (!check_state_and_args(self, "DELETEACL", 2, 2, IMAPCS_AUTHENTICATED))
 		return 1;
 
-	if (imap_acl_pre_administer(args[0], args[1], ud->userid,
+	if (imap_acl_pre_administer(self->args[0], self->args[1], ud->userid,
 				    &mboxid, &targetuserid) == -1) {
-		ci_write(ci->tx, "* BYE internal dbase error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 		return -1;
 	}
 	// has the rights to 'administer' this mailbox? 
 	if (acl_has_right(ud->userid, mboxid, ACL_RIGHT_ADMINISTER) != 1) {
-		ci_write(ci->tx, "%s NO DELETEACL failure: can't delete "
-			"acl\r\n", tag);
+		dbmail_imap_session_printf(self, "%s NO DELETEACL failure: can't delete "
+			"acl\r\n", self->tag);
 		return 1;
 	}
 	// set the new acl
 	if (acl_delete_acl(targetuserid, mboxid) < 0) {
-		ci_write(ci->tx, "* BYE internal database error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		return -1;
 	}
 
-	ci_write(ci->tx, "%s OK DELETEACL completed\r\n", tag);
+	dbmail_imap_session_printf(self, "%s OK DELETEACL completed\r\n", self->tag);
 	return 0;
 }
 
-int _ic_getacl(char *tag, char **args, ClientInfo * ci)
+int _ic_getacl(struct ImapSession *self)
 {
 	/* GETACL mailboxname */
-	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	int result;
 	u64_t mboxid;
 	char *acl_string;
 
-	if (!check_state_and_args("GETACL", tag, args, 1,
-				  IMAPCS_AUTHENTICATED, ci))
+	if (!check_state_and_args(self, "GETACL", 1, 1, IMAPCS_AUTHENTICATED))
 		return 1;
 
-	result = db_findmailbox(args[0], ud->userid, &mboxid);
+	result = db_findmailbox(self->args[0], ud->userid, &mboxid);
 	if (result == -1) {
-		ci_write(ci->tx, "* BYE internal database error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		return -1;
 	} else if (result == 0) {
-		ci_write(ci->tx, "%s NO GETACL failure: can't get acl\r\n",
-			tag);
+		dbmail_imap_session_printf(self, "%s NO GETACL failure: can't get acl\r\n",
+			self->tag);
 		return 1;
 	}
 	// get acl string (string of identifier-rights pairs)
 	if (!(acl_string = acl_get_acl(mboxid))) {
-		ci_write(ci->tx, "* BYE internal database error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		return -1;
 	}
 
-	ci_write(ci->tx, "* ACL \"%s\" %s\r\n", args[0], acl_string);
+	dbmail_imap_session_printf(self, "* ACL \"%s\" %s\r\n", self->args[0], acl_string);
 	my_free(acl_string);
-	ci_write(ci->tx, "%s OK GETACL completed\r\n", tag);
+	dbmail_imap_session_printf(self, "%s OK GETACL completed\r\n", self->tag);
 	return 0;
 }
 
-int _ic_listrights(char *tag, char **args, ClientInfo * ci)
+int _ic_listrights(struct ImapSession *self)
 {
 	/* LISTRIGHTS mailboxname identifier */
-	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	int result;
 	u64_t mboxid;
 	u64_t targetuserid;
 	char *listrights_string;
 
 
-	if (!check_state_and_args("LISTRIGHTS", tag, args, 2,
-				  IMAPCS_AUTHENTICATED, ci))
+	if (!check_state_and_args(self, "LISTRIGHTS", 2, 2, IMAPCS_AUTHENTICATED))
 		return 1;
 
-	result = imap_acl_pre_administer(args[0], args[1], ud->userid,
+	result = imap_acl_pre_administer(self->args[0], self->args[1], ud->userid,
 					 &mboxid, &targetuserid);
 	if (result == -1) {
-		ci_write(ci->tx, "* BYE internal database error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		return -1;
 	} else if (result == 0) {
-		ci_write(ci->tx,
+		dbmail_imap_session_printf(self,
 			"%s, NO LISTRIGHTS failure: can't set acl\r\n",
-			tag);
+			self->tag);
 		return 1;
 	}
 	// has the rights to 'administer' this mailbox? 
 	if (acl_has_right(ud->userid, mboxid, ACL_RIGHT_ADMINISTER) != 1) {
-		ci_write(ci->tx,
+		dbmail_imap_session_printf(self,
 			"%s NO LISTRIGHTS failure: can't set acl\r\n",
-			tag);
+			self->tag);
 		return 1;
 	}
 	// set the new acl
 	if (!(listrights_string = acl_listrights(targetuserid, mboxid))) {
-		ci_write(ci->tx, "* BYE internal database error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		return -1;
 	}
 
-	ci_write(ci->tx, "* LISTRIGHTS \"%s\" %s %s\r\n",
-		args[0], args[1], listrights_string);
-	ci_write(ci->tx, "%s OK LISTRIGHTS completed\r\n", tag);
+	dbmail_imap_session_printf(self, "* LISTRIGHTS \"%s\" %s %s\r\n",
+		self->args[0], self->args[1], listrights_string);
+	dbmail_imap_session_printf(self, "%s OK LISTRIGHTS completed\r\n", self->tag);
 	my_free(listrights_string);
 	return 0;
 }
 
-int _ic_myrights(char *tag, char **args, ClientInfo * ci)
+int _ic_myrights(struct ImapSession *self)
 {
 	/* MYRIGHTS mailboxname */
-	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	int result;
 	u64_t mboxid;
 	char *myrights_string;
 
-	if (!check_state_and_args("LISTRIGHTS", tag, args, 1,
-				  IMAPCS_AUTHENTICATED, ci))
+	if (!check_state_and_args(self, "LISTRIGHTS", 1, 1, IMAPCS_AUTHENTICATED))
 		return 1;
 
-	result = db_findmailbox(args[0], ud->userid, &mboxid);
+	result = db_findmailbox(self->args[0], ud->userid, &mboxid);
 	if (result == -1) {
-		ci_write(ci->tx, "* BYE internal database error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		return -1;
 	} else if (result == 0) {
-		ci_write(ci->tx,
+		dbmail_imap_session_printf(self,
 			"%s NO MYRIGHTS failure: unknown mailbox\r\n",
-			tag);
+			self->tag);
 		return 1;
 	}
 
 	if (!(myrights_string = acl_myrights(ud->userid, mboxid))) {
-		ci_write(ci->tx, "* BYE internal database error\r\n");
+		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		return -1;
 	}
 
-	ci_write(ci->tx, "* MYRIGHTS \"%s\" %s\r\n", args[0],
+	dbmail_imap_session_printf(self, "* MYRIGHTS \"%s\" %s\r\n", self->args[0],
 		myrights_string);
 	my_free(myrights_string);
-	ci_write(ci->tx, "%s OK MYRIGHTS complete\r\n", tag);
+	dbmail_imap_session_printf(self, "%s OK MYRIGHTS complete\r\n", self->tag);
 	return 0;
 }
 
-int _ic_namespace(char *tag, char **args, ClientInfo * ci)
+int _ic_namespace(struct ImapSession *self)
 {
 	/* NAMESPACE command */
-	if (!check_state_and_args("NAMESPACE", tag, args, 0,
-				  IMAPCS_AUTHENTICATED, ci))
+	if (!check_state_and_args(self, "NAMESPACE", 0, 0, IMAPCS_AUTHENTICATED))
 		return 1;
 
-	ci_write(ci->tx, "* NAMESPACE ((\"\" \"%s\")) ((\"%s\" \"%s\")) "
+	dbmail_imap_session_printf(self, "* NAMESPACE ((\"\" \"%s\")) ((\"%s\" \"%s\")) "
 		"((\"%s\" \"%s\"))\r\n",
 		MAILBOX_SEPERATOR, NAMESPACE_USER,
 		MAILBOX_SEPERATOR, NAMESPACE_PUBLIC, MAILBOX_SEPERATOR);
-	ci_write(ci->tx, "%s OK NAMESPACE complete\r\n", tag);
+	dbmail_imap_session_printf(self, "%s OK NAMESPACE complete\r\n", self->tag);
 	return 0;
 }

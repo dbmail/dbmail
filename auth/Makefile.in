@@ -122,6 +122,7 @@ mysqlconfig = @mysqlconfig@
 pgsqlconfig = @pgsqlconfig@
 
 AM_CFLAGS = -fomit-frame-pointer
+INCLUDES = -I$(top_srcdir)
 
 pkglib_LTLIBRARIES = libauthdbmail.la
 @LDAP_TRUE@libauthdbmail_la_SOURCES = authldap.c
