@@ -92,6 +92,12 @@ u64_t db_insert_result (const char *sequence_identifier)
 }
 
 
+/*
+ * executes a SQL query
+ *
+ * IMPORTANT NOTE:
+ * postgresql always returns a result set but it will only be retained for SELECT queries (!)
+ */
 int db_query (const char *thequery)
 {
   unsigned int querysize = 0;
@@ -121,6 +127,13 @@ int db_query (const char *thequery)
 	      PQclear(res);
 	      return -1;
             }
+
+	  /* only save the result set for SELECT queries */
+	  if (strncasecmp(query, "SELECT", 6) != 0)
+	    {
+	      PQclear(res);
+	      res = NULL;
+	    }
         }
       else
         {
@@ -2239,20 +2252,80 @@ int db_movemsg(u64_t to, u64_t from)
  * db_copymsg()
  *
  * copies a msg to a specified mailbox
- * returns 0 on success, -1 on failure
+ * returns 0 on success, -1 on failure, -2 on quotum exceeded/quotum would exceed
  */
 int db_copymsg(u64_t msgid, u64_t destmboxid)
 {
-  u64_t newmsgid;
+  u64_t newmsgid, curr_quotum, userid, maxmail, msgsize;
   time_t td;
 
   time(&td);              /* get time */
+
+  /* check if there is space left for this message */
+  userid = db_get_useridnr(msgid);
+  if (userid == -1)
+    {
+      trace(TRACE_ERROR, "db_copymsg(): error fetching userid");
+      return -1;
+    }
+
+  curr_quotum = db_get_quotum_used(userid);
+  if (curr_quotum == -1 || curr_quotum == -2)
+    {
+      trace(TRACE_ERROR, "db_copymsg(): error fetching used quotum for user [%llu]", userid);
+      return -1;
+    }
+     
+  maxmail = db_getmaxmailsize(userid);
+  if (userid == -1)
+    {
+      trace(TRACE_ERROR, "db_copymsg(): error fetching max quotum for user [%llu]", userid);
+      return -1;
+    }
+
+  if (curr_quotum >= maxmail)
+    {
+      trace(TRACE_INFO, "db_copymsg(): quotum already exceeded\n");
+      return -2;
+    }
+
+  /* we now check the size of the message to be inserted plus the current used quotum
+     versus the allowed quotum.
+     First the transaction is started because right after a comparable SELECT will
+     be performed.
+  */
 
   /* start transaction */
   if (db_query("BEGIN WORK") == -1)
     {
       trace(TRACE_ERROR, "db_copymsg(): could not start transaction\n");
       return -1;
+    }
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT messagesize FROM messages WHERE message_idnr = %llu", msgid);
+  
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_copymsg(): could not fetch message size for message id [%llu]\n", msgid);
+      db_query("ROLLBACK WORK");
+      return -1;
+    }
+
+  if (PQntuples(res) != 1)
+    {
+      trace(TRACE_ERROR, "db_copymsg(): message [%llu] does not exist/has multiple entries\n", msgid);
+      db_query("ROLLBACK WORK");
+      PQclear(res);
+      return -1;
+    }
+
+  msgsize = strtoull(PQgetvalue(res, 0, 0), NULL, 10);
+  PQclear(res);
+
+  if (msgsize > maxmail - curr_quotum)
+    {
+      trace(TRACE_INFO, "db_copymsg(): quotum would exceed");
+      return -2;
     }
 
   /* copy message info */

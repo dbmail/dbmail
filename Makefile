@@ -20,6 +20,7 @@ MAINTENANCE_OBJECTS = debug.o list.o dbmd5.o md5.o $(DBOBJECT) mime.o memblock.o
 CONFIG_OBJECTS = $(DBOBJECT) list.o md5.o debug.o dbmd5.o mime.o memblock.o $(AUTHOBJECT)
 USER_OBJECTS = debug.o list.o dbmd5.o md5.o $(DBOBJECT) mime.o memblock.o $(AUTHOBJECT)
 VUTCONV_OBJECTS = debug.o list.o dbmd5.o md5.o mime.o $(DBOBJECT) $(AUTHOBJECT)
+DBTEST_OBJECTS = debug.o list.o dbmd5.o md5.o mime.o $(DBOBJECT) $(AUTHOBJECT)
 CC = cc
 
 PGSQLLIBDIR=/usr/local/pgsql/lib
@@ -59,6 +60,9 @@ readvut: db.h auth.h vut2dbmail.c $(VUTCONV_OBJECTS)
 	$(CC) $(CFLAGS) vut2dbmail.c -o dbmail-readvut $(VUTCONV_OBJECTS) $(LIBS) $(LIB)
 
 mbox2dbmail:	
+
+dbtest: $(DBTEST_OBJECTS) dbtest.c db.h
+	$(CC) $(CFLAGS) dbtest.c -o dbtest $(DBTEST_OBJECTS) $(LIBS) $(LIB)
 
 list.o: list.h debug.h
 debug.o: debug.h

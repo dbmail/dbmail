@@ -3208,6 +3208,11 @@ int _ic_copy(char *tag, char **args, ClientInfo *ci)
 	      fprintf(ci->tx,"* BYE internal dbase error\r\n");
 	      return -1;
 	    }
+	  if (result == -2)
+	    {
+	      fprintf(ci->tx,"* BAD quotum would exceed\r\n");
+	      return 1;
+	    }
 	}
     }
 

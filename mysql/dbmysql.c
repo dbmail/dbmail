@@ -2433,14 +2433,82 @@ int db_movemsg(u64_t to, u64_t from)
  * db_copymsg()
  *
  * copies a msg to a specified mailbox
- * returns 0 on success, -1 on failure
+ * returns 0 on success, -1 on failure, -2 on quotum exceeded/quotum would exceed
  */
 int db_copymsg(u64_t msgid, u64_t destmboxid)
 {
-  u64_t newid,tmpid;
+  u64_t newid,tmpid, curr_quotum, userid, maxmail, msgsize;
   time_t td;
 
   time(&td);              /* get time */
+
+  /* check if there is space left for this message */
+  userid = db_get_useridnr(msgid);
+  if (userid == -1)
+    {
+      trace(TRACE_ERROR, "db_copymsg(): error fetching userid");
+      return -1;
+    }
+
+  curr_quotum = db_get_quotum_used(userid);
+  if (curr_quotum == -1 || curr_quotum == -2)
+    {
+      trace(TRACE_ERROR, "db_copymsg(): error fetching used quotum for user [%llu]", userid);
+      return -1;
+    }
+     
+  maxmail = db_getmaxmailsize(userid);
+  if (userid == -1)
+    {
+      trace(TRACE_ERROR, "db_copymsg(): error fetching max quotum for user [%llu]", userid);
+      return -1;
+    }
+
+  if (curr_quotum >= maxmail)
+    {
+      trace(TRACE_INFO, "db_copymsg(): quotum already exceeded\n");
+      return -2;
+    }
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT messagesize FROM messages WHERE message_idnr = %llu", msgid);
+  
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_copymsg(): could not fetch message size for message id [%llu]\n", msgid);
+      return -1;
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_copymsg(): mysql_store_result failed: %s\n",mysql_error(&conn));
+      return -1;
+    }
+
+  if (mysql_num_rows(res) != 1)
+    {
+      trace(TRACE_ERROR, "db_copymsg(): message [%llu] does not exist/has multiple entries\n", msgid);
+      mysql_free_result(res);
+      return -1;
+    }
+
+  row = mysql_fetch_row(res);
+  
+  if (row && row[0])
+    msgsize = strtoull(row[0], NULL, 10);
+  else
+    {
+      trace(TRACE_ERROR, "db_copymsg(): no result set after requesting msgsize of msg [%llu]\n", msgid);
+      mysql_free_result(res);
+      return -1;
+    }
+      
+  mysql_free_result(res);
+
+  if (msgsize > maxmail - curr_quotum)
+    {
+      trace(TRACE_INFO, "db_copymsg(): quotum would exceed");
+      return -2;
+    }
 
   /* copy: */
 
@@ -2448,10 +2516,10 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
   /* copy message info */
   snprintf(query, DEF_QUERYSIZE, "INSERT INTO tmpmessage (mailbox_idnr, messagesize, status, "
 	   "deleted_flag, seen_flag, answered_flag, draft_flag, flagged_flag, recent_flag,"
-       " unique_id, internal_date) "
+	   " unique_id, internal_date) "
 	   "SELECT mailbox_idnr, messagesize, status, deleted_flag, seen_flag, answered_flag, "
 	   "draft_flag, flagged_flag, recent_flag, \"\", internal_date "
-       "FROM messages WHERE messages.message_idnr = %llu",
+	   "FROM messages WHERE messages.message_idnr = %llu",
 	   msgid);
 
   if (db_query(query) == -1)
