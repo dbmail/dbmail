@@ -72,10 +72,12 @@ static void signal_handler (int signo, siginfo_t *info, void *data)
 {
   pid_t PID;
   int status,i;
+  int saved_errno = errno; /* save error status */
 
   if (signo == SIGUSR1)
     {
       trace(TRACE_DEBUG, "signal_handler(): caught SIGUSR1, assuming ping");
+      errno = saved_errno;
       return;
     }
 
@@ -96,6 +98,8 @@ static void signal_handler (int signo, siginfo_t *info, void *data)
 
     tx = NULL;
     rx = NULL;
+
+    errno = saved_errno;
     return;
   }
   else
@@ -114,17 +118,25 @@ static void signal_handler (int signo, siginfo_t *info, void *data)
 	    trace(TRACE_ERROR,"signal_handler(): SIGKILL from [%u]", info->si_uid);
 	    
 	    for (i=0; i<defchld; i++)
-	      if (kill(default_child_pids[i], SIGUSR1) == -1 && errno == ESRCH)
-		{
-		  /* this child no longer exists */
-		  trace(TRACE_DEBUG, "signal_handler(): cleaning up PID %u", default_child_pids[i]);
-		  default_child_pids[i] = 0;
-		  (*default_children)--;
-		  break;
-		}
+	      {
+		if (default_child_pids[i] <= 0) /* only allow real PID's (> 0) */
+		  continue;
+
+		trace(TRACE_DEBUG,"signal_handler(): sending SIGUSR1 to [%u]\n",default_child_pids[i]);
+
+		if (kill(default_child_pids[i], SIGUSR1) == -1 && errno == ESRCH)
+		  {
+		    /* this child no longer exists */
+		    trace(TRACE_DEBUG, "signal_handler(): cleaning up PID %u", default_child_pids[i]);
+		    default_child_pids[i] = 0;
+		    (*default_children)--;
+		    break;
+		  }
+	      }
 	    
 	    trace (TRACE_DEBUG,"signal_handler(): sigCHLD, cleaned");
 	  }
+	errno = saved_errno;
 	return;
       }
     else
