@@ -156,7 +156,7 @@ int forward(u64_t msgidnr, struct list *targets, const char *from,
 			if (!err) {
 				if (msgidnr != 0) {
 					trace(TRACE_DEBUG,
-					      "%s,%s: sending lines from"
+					      "%s,%s: sending lines from "
 					      "message %llu on pipe %d",
 					      __FILE__, __FUNCTION__,
 					      msgidnr, fileno(pipe));
@@ -195,6 +195,5 @@ int forward(u64_t msgidnr, struct list *targets, const char *from,
 		}
 		target = target->nextnode;
 	}
-
 	return 0;
 }
