@@ -3,7 +3,7 @@
 # you may need to make some changes to the following paths
 
 # directory where the POP3 server executable resides
-PROGDIR=/usr/local/bin
+PROGDIR=/usr/local/sbin
 
 # directory containing database shared libraries
 # - multiple directories separated by a colon (':') are acceptable
