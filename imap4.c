@@ -17,6 +17,7 @@
 #include "serverservice.h"
 #include "debug.h"
 #include "db.h"
+#include "auth.h"
 
 #define MAX_LINESIZE 1024
 #define COMMAND_SHOW_LEVEL TRACE_ERROR
@@ -136,6 +137,18 @@ int imap_process(ClientInfo *ci)
       return EOF;
     }
 
+  if (auth_connect() != 0)
+    {
+      /* could not connect */
+      trace(TRACE_ERROR, "imap_process(): Connection to user dbase failed.\n");
+      fprintf(ci->tx, "* BAD could not connect to user dbase\r\n");
+      fprintf(ci->tx, "* BYE try again later\r\n");
+
+      db_disconnect();
+      null_free(ci->userData);
+      return EOF;
+    }
+
   if (init_cache() != 0)
     {
       trace(TRACE_ERROR, "imap_process(): cannot open temporary file\n");
@@ -167,6 +180,8 @@ int imap_process(ClientInfo *ci)
 	    {
 	      close_cache();
 	      db_disconnect();
+	      auth_disconnect();
+
 	      null_free(((imap_userdata_t*)ci->userData)->mailbox.seq_list);
 	      null_free(ci->userData);
 
@@ -183,6 +198,7 @@ int imap_process(ClientInfo *ci)
 	    {
 	      close_cache();
 	      db_disconnect();
+	      auth_disconnect();
 
 	      null_free(((imap_userdata_t*)ci->userData)->mailbox.seq_list);
 	      null_free(ci->userData);
@@ -210,6 +226,7 @@ int imap_process(ClientInfo *ci)
 	  fprintf(ci->tx, "* BYE Input contains invalid characters\r\n");
 	  close_cache();
 	  db_disconnect();
+	  auth_disconnect();
 
 	  null_free(((imap_userdata_t*)ci->userData)->mailbox.seq_list);
 	  null_free(ci->userData);
@@ -319,6 +336,7 @@ int imap_process(ClientInfo *ci)
 	      
 	      close_cache();
 	      db_disconnect();
+	      auth_disconnect();
 	      null_free(((imap_userdata_t*)ci->userData)->mailbox.seq_list);
 	      null_free(ci->userData);
 
@@ -376,6 +394,7 @@ int imap_process(ClientInfo *ci)
   /* cleanup */
   close_cache();
   db_disconnect();
+  auth_disconnect();
 
   null_free(((imap_userdata_t*)ci->userData)->mailbox.seq_list);
   null_free(ci->userData);
@@ -404,6 +423,7 @@ void imap_error_cleanup(ClientInfo *ci)
 
   close_cache();
   db_disconnect();
+  auth_disconnect();
 
   alarm(0);
 }

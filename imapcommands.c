@@ -147,7 +147,7 @@ int _ic_login(char *tag, char **args, ClientInfo *ci)
   if (!check_state_and_args("LOGIN", tag, args, 2, IMAPCS_NON_AUTHENTICATED, ci))
     return 1; /* error, return */
 
-  userid = db_validate(args[0], args[1]);
+  userid = auth_validate(args[0], args[1]);
   trace(TRACE_MESSAGE, "IMAPD [PID %d]: user (id:%llu, name %s) tries login\r\n",(int)getpid(),
 	userid,args[0]);
 
@@ -242,7 +242,7 @@ int _ic_authenticate(char *tag, char **args, ClientInfo *ci)
   
 
   /* try to validate user */
-  userid = db_validate(username, pass);
+  userid = auth_validate(username, pass);
 
   if (userid == -1)
     {

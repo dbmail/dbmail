@@ -51,10 +51,17 @@ int main(int argc, char *argv[])
     }
   
   printf ("Opening connection to the database... ");
-
   if (db_connect()==-1)
     {
       printf ("Failed. Could not connect to database (check log)\n");
+      return -1;
+    }
+	
+  printf ("Opening connection to the user database... ");
+  if (auth_connect()==-1)
+    {
+      printf ("Failed. Could not connect to user database (check log)\n");
+      db_disconnect();
       return -1;
     }
 	
@@ -69,11 +76,13 @@ int main(int argc, char *argv[])
     default:
       show_help();
       db_disconnect();
+      auth_disconnect();
       return 0;
     }
 
 	
   db_disconnect();
+  auth_disconnect();
   return 0;
 }
 
@@ -99,7 +108,7 @@ int do_add(int argc, char *argv[])
   printf ("Adding user %s with password %s, %s bytes mailbox limit and clientid %s...",
 	  argv[0], argv[1], argv[3], argv[2]);
 
-  useridnr = db_adduser(argv[0],argv[1],"",argv[2],argv[3]);
+  useridnr = auth_adduser(argv[0],argv[1],"",argv[2],argv[3]);
 	
   if (useridnr == -1)
     {
@@ -132,7 +141,7 @@ int do_change(int argc, char *argv[])
   char pw[50]="";
 
   /* verify the existence of this user */
-  userid = db_user_exists(argv[0]);
+  userid = auth_user_exists(argv[0]);
   if (userid == -1)
     {
       printf("Error verifying existence of user [%s]. Please check the log.\n",argv[0]);
@@ -162,7 +171,7 @@ int do_change(int argc, char *argv[])
 	  if (!is_valid(argv[i+1]))
 	    printf("\nWarning: username contains invalid characters. Username not updated. ");
 
-	  if (db_change_username(userid,argv[i+1]) != 0)
+	  if (auth_change_username(userid,argv[i+1]) != 0)
 	    printf("\nWarning: could not change username ");
 
 	  i++;
@@ -177,12 +186,12 @@ int do_change(int argc, char *argv[])
 	    {
 	      /* +p will converse clear text into crypt hash value */
 	      strcat(pw,crypt(argv[i+1], cget_salt()));
-	      result = db_change_password(userid,pw,"crypt");
+	      result = auth_change_password(userid,pw,"crypt");
 	    } 
 	  else 
 	    {
 	      strcpy(pw,argv[i+1]);
-	      result = db_change_password(userid,pw,"");
+	      result = auth_change_password(userid,pw,"");
 	    }
 	  if (result != 0)
 	    printf("\nWarning: could not change password ");
@@ -207,7 +216,7 @@ int do_change(int argc, char *argv[])
 	    } 
 	  else 
 	    {
-	      if (db_change_password(userid,pw,"crypt") != 0)
+	      if (auth_change_password(userid,pw,"crypt") != 0)
 		printf("\nWarning: could not change password");
 	    }
           break;
@@ -215,7 +224,7 @@ int do_change(int argc, char *argv[])
 	case 'c':
 	  newcid = strtoull(argv[i+1], 0, 10);
 
-	  if (db_change_clientid(userid, newcid) != 0)
+	  if (auth_change_clientid(userid, newcid) != 0)
 	    printf("\nWarning: could not change client id ");
 
 	  i++;
@@ -236,7 +245,7 @@ int do_change(int argc, char *argv[])
 	      break;
 	    }
 
-	  if (db_change_mailboxsize(userid, newsize) != 0)
+	  if (auth_change_mailboxsize(userid, newsize) != 0)
 	    printf("\nWarning: could not change max mailboxsize ");
 
 	  i++;
@@ -252,7 +261,7 @@ int do_change(int argc, char *argv[])
 	  else
 	    {
 	      /* add alias */
-	      if (db_addalias(userid, argv[i+1], db_getclientid(userid)) < 0)
+	      if (db_addalias(userid, argv[i+1], auth_getclientid(userid)) < 0)
 		printf("\nWarning: could not add alias [%s]",argv[i+1]);
 	    }
 	  i++;
@@ -276,7 +285,7 @@ int do_delete(char *name)
 
   printf("Deleting user [%s]...",name);
 
-  result = db_delete_user(name);
+  result = auth_delete_user(name);
 
   if (result < 0)
     {
@@ -299,7 +308,8 @@ int do_show(char *name)
     {
       /* show all users */
       printf("Existing users:\n");
-      db_get_known_users(&userlist);
+
+      auth_get_known_users(&userlist);
       
       tmp = list_getstart(&userlist);
       while (tmp)
@@ -315,7 +325,7 @@ int do_show(char *name)
     {
       printf("Info for user [%s]\n",name);
 
-      userid = db_user_exists(name);
+      userid = auth_user_exists(name);
       if (userid == -1)
 	{
 	  printf("Error verifying existence of user [%s]. Please check the log.\n",name);
@@ -328,8 +338,8 @@ int do_show(char *name)
 	  return -1;
 	}
 
-      cid = db_getclientid(userid);
-      quotum = db_getmaxmailsize(userid);
+      cid = auth_getclientid(userid);
+      quotum = auth_getmaxmailsize(userid);
 
       printf("Client ID: %llu\n",cid);
       printf("Max. mailboxsize: %llu bytes\n",quotum);

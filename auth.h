@@ -7,30 +7,33 @@
  * (c) 2000-2002 IC&S
  */
 
-#ifndef _DBAUTH_H
-#define _DBAUTH_H
+#ifndef _DBMAIL_AUTH_H
+#define _DBMAIL_AUTH_H
 
 #include "dbmailtypes.h"
 
-u64_t db_user_exists(const char *username);
-int db_get_known_users(struct list *users);
-u64_t db_getclientid(u64_t useridnr);
-u64_t db_getmaxmailsize(u64_t useridnr);
-char* db_getencryption(u64_t useridnr);
+int auth_connect();
+int auth_disconnect();
 
-int db_check_user (char *username, struct list *userids, int checks);
-u64_t db_adduser (char *username, char *password, char *enctype, char *clientid, char *maxmail);
-int db_delete_user(const char *username);
+u64_t auth_user_exists(const char *username);
+int auth_get_known_users(struct list *users);
+u64_t auth_getclientid(u64_t useridnr);
+u64_t auth_getmaxmailsize(u64_t useridnr);
+char* auth_getencryption(u64_t useridnr);
 
-int db_change_username(u64_t useridnr, const char *newname);
-int db_change_password(u64_t useridnr, const char *newpass, const char *enctype);
-int db_change_clientid(u64_t useridnr, u64_t newcid);
-int db_change_mailboxsize(u64_t useridnr, u64_t newsize);
+int auth_check_user (char *username, struct list *userids, int checks);
+u64_t auth_adduser (char *username, char *password, char *enctype, char *clientid, char *maxmail);
+int auth_delete_user(const char *username);
 
-u64_t db_validate (char *user, char *password);
-u64_t db_md5_validate (char *username,unsigned char *md5_apop_he, char *apop_stamp);
+int auth_change_username(u64_t useridnr, const char *newname);
+int auth_change_password(u64_t useridnr, const char *newpass, const char *enctype);
+int auth_change_clientid(u64_t useridnr, u64_t newcid);
+int auth_change_mailboxsize(u64_t useridnr, u64_t newsize);
 
-char *db_get_userid (u64_t *useridnr);
+u64_t auth_validate (char *user, char *password);
+u64_t auth_md5_validate (char *username,unsigned char *md5_apop_he, char *apop_stamp);
+
+char *auth_get_userid (u64_t *useridnr);
 
 
 #endif

@@ -162,7 +162,7 @@ int pop3 (void *stream, char *buffer)
 	    strncpy (password,value,strlen(value)+1);
 	  }
 				
-	result=db_validate (username,password);
+	result=auth_validate (username,password);
 				
 	switch (result)
 	  {
@@ -432,7 +432,7 @@ int pop3 (void *stream, char *buffer)
 	 * note that if the user does not exist it is not noted
 	 * by db_getencryption()
 	 */
-	if (strcasecmp(db_getencryption(db_user_exists(username)), "") != 0)
+	if (strcasecmp(auth_getencryption(auth_user_exists(username)), "") != 0)
 	  {
 	    /* it should be clear text */
 	    my_free(md5_apop_he);
@@ -445,7 +445,7 @@ int pop3 (void *stream, char *buffer)
 	trace (TRACE_DEBUG,"pop3(): APOP auth, username [%s], md5_hash [%s]",username,
 	       md5_apop_he);
 				
-	result = db_md5_validate (username,md5_apop_he,apop_stamp);
+	result = auth_md5_validate (username,md5_apop_he,apop_stamp);
 
 	my_free(md5_apop_he);
 	md5_apop_he = 0;

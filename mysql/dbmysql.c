@@ -436,7 +436,7 @@ u64_t db_get_message_mailboxid (u64_t message_idnr)
   
   
   snprintf (query, DEF_QUERYSIZE,"SELECT mailbox_idnr FROM messages WHERE message_idnr = %llu",
-	   *message_idnr);
+	   message_idnr);
 
   trace(TRACE_DEBUG,"db_get_message_mailboxid(): executing query : [%s]",query);
   if (db_query(query)==-1)
@@ -567,7 +567,7 @@ u64_t db_update_message (u64_t message_idnr, const char *unique_id,
  * insert a msg block
  * returns msgblkid on succes, -1 on failure
  */
-u64_t db_insert_message_block (char *block, u64_t message_idnr)
+u64_t db_insert_message_block (const char *block, u64_t len, u64_t message_idnr)
 {
   u64_t msgid;
   char *escaped_query = NULL;
@@ -601,7 +601,7 @@ u64_t db_insert_message_block (char *block, u64_t message_idnr)
 		    "(messageblk,blocksize,message_idnr) VALUES ('") - 1;
 
   /* escape & add data */
-  esclen = mysql_real_escape_string(&conn, &escaped_query[startlen], block, len);
+  esclen = mysql_real_escape_string(&conn, &escaped_query[startlen], block, len); 
            
   snprintf(&escaped_query[esclen + startlen],
 	   maxesclen - esclen - startlen, "', %llu, %llu)", len, msgid);
@@ -617,7 +617,7 @@ u64_t db_insert_message_block (char *block, u64_t message_idnr)
   /* all done, clean up & exit */
   my_free(escaped_query);
 
-  return db_insert_result();
+  return db_insert_result("");
 }
 
 
@@ -1047,7 +1047,7 @@ u64_t db_check_sizelimit (u64_t addblocksize, u64_t message_idnr,
   mysql_free_result(res);
 
   /* current mailsize from INBOX is now known, now check the maxsize for this user */
-  maxmail_size = db_getmaxmailsize(*useridnr);
+  maxmail_size = auth_getmaxmailsize(*useridnr);
 
 
   trace (TRACE_DEBUG, "db_check_sizelimit(): comparing currsize + blocksize [%llu], "
@@ -1510,14 +1510,13 @@ int db_disconnect()
  *  2 mail quotum exceeded
  *
  */
-int db_imap_append_msg(char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid)
+int db_imap_append_msg(const char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid)
 {
   char timestr[30];
   time_t td;
   struct tm tm;
   u64_t msgid,cnt;
   int result;
-  char savechar;
   char unique_id[UID_SIZE]; /* unique id */
   
   time(&td);              /* get time */
@@ -1572,7 +1571,6 @@ int db_imap_append_msg(char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid)
 	trace(TRACE_ERROR, "db_imap_append_msg(): could not delete message id [%llu], "
 	      "dbase invalid now..\n", msgid);
 
-      
       return 1;
     }
 
@@ -1581,8 +1579,8 @@ int db_imap_append_msg(char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid)
       /* msg consists of a single header */
       trace(TRACE_INFO, "db_imap_append_msg(): msg only contains a header\n");
 
-      if (db_insert_message_block(msgdata, msgid) == -1 || 
-	  db_insert_message_block(" \n", msgid)   == -1)
+      if (db_insert_message_block(msgdata, datalen, msgid) == -1 || 
+	  db_insert_message_block(" \n", 2, msgid)   == -1)
 	{
 	  trace(TRACE_ERROR, "db_imap_append_msg(): could not insert msg block\n");
 
@@ -1603,11 +1601,13 @@ int db_imap_append_msg(char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid)
     }
   else
     {
-      /* output header */
+      /* 
+       * output header: 
+       * the first cnt bytes is the header
+       */
       cnt++;
-      savechar = msgdata[cnt];                        /* remember char */
-      msgdata[cnt] = 0;                               /* terminate string */
-      if (db_insert_message_block(msgdata, msgid) == -1)
+
+      if (db_insert_message_block(msgdata, cnt, msgid) == -1)
 	{
 	  trace(TRACE_ERROR, "db_imap_append_msg(): could not insert msg block\n");
 
@@ -1625,15 +1625,10 @@ int db_imap_append_msg(char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid)
 	  return -1;
 	}
 
-      msgdata[cnt] = savechar;                        /* restore */
-
       /* output message */
       while ((datalen - cnt) > READ_BLOCK_SIZE)
 	{
-	  savechar = msgdata[cnt + READ_BLOCK_SIZE];        /* remember char */
-	  msgdata[cnt + READ_BLOCK_SIZE] = 0;               /* terminate string */
-
-	  if (db_insert_message_block(&msgdata[cnt], msgid) == -1)
+	  if (db_insert_message_block(&msgdata[cnt], READ_BLOCK_SIZE, msgid) == -1)
 	    {
 	      trace(TRACE_ERROR, "db_imap_append_msg(): could not insert msg block\n");
 
@@ -1651,13 +1646,11 @@ int db_imap_append_msg(char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid)
 	      return -1;
 	    }
 
-	  msgdata[cnt + READ_BLOCK_SIZE] = savechar;        /* restore */
-
 	  cnt += READ_BLOCK_SIZE;
 	}
 
 
-      if (db_insert_message_block(&msgdata[cnt], msgid) == -1)
+      if (db_insert_message_block(&msgdata[cnt], datalen-cnt, msgid) == -1)
 	{
 	  trace(TRACE_ERROR, "db_imap_append_msg(): could not insert msg block\n");
 
@@ -1681,7 +1674,7 @@ int db_imap_append_msg(char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid)
   snprintf (unique_id,UID_SIZE,"%lluA%lu",msgid,td);
 
   /* set info on message */
-  db_update_message (&msgid, unique_id, datalen);
+  db_update_message (msgid, unique_id, datalen);
   
   return 0;
 }
@@ -2404,7 +2397,7 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
       return -1;
     }
      
-  maxmail = db_getmaxmailsize(userid);
+  maxmail = auth_getmaxmailsize(userid);
   if (maxmail == -1)
     {
       trace(TRACE_ERROR, "db_copymsg(): error fetching max quotum for user [%llu]", userid);

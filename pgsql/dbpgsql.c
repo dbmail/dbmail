@@ -24,7 +24,7 @@ PGresult *res;
 PGresult *checkres;
 char *query = 0;
 char *value = NULL; /* used for PQgetvalue */
-unsigned long PQcounter = 0; /* used for PQgetvalue loops */
+u64_t PQcounter = 0; /* used for PQgetvalue loops */
 
 const char *db_flag_desc[] = 
 {
@@ -45,7 +45,7 @@ int db_connect ()
 
   /* connecting */
 
-  sprintf (connectionstring, "host=%s user=%s password=%s dbname=%s",
+  snprintf (connectionstring, 255, "host=%s user=%s password=%s dbname=%s",
 	   HOST, USER, PASS, MAILDATABASE);
 
   conn = PQconnectdb(connectionstring);
@@ -71,12 +71,6 @@ u64_t db_insert_result (const char *sequence_identifier)
   snprintf (query, DEF_QUERYSIZE,"SELECT currval('%s_seq');",sequence_identifier);
 
   db_query (query);
-
-  if (PQresultStatus(res) != PGRES_TUPLES_OK)
-    {
-      PQclear (res);
-      return 0;
-    }
 
   if (PQntuples(res)==0)
     {
@@ -1003,7 +997,7 @@ u64_t db_check_sizelimit (u64_t addblocksize, u64_t messageidnr,
   PQclear(res);
 
     /* current mailsize from INBOX is now known, now check the maxsize for this user */
-  maxmail_size = db_getmaxmailsize(*useridnr);
+  maxmail_size = auth_getmaxmailsize(*useridnr);
 
 
   trace (TRACE_DEBUG, "db_check_sizelimit(): comparing currsize + blocksize  [%llu], maxsize [%llu]\n",
@@ -1511,7 +1505,6 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen, u64_t mboxid, u64_t u
       if (db_query(query) == -1)
 	trace(TRACE_ERROR, "db_imap_append_msg(): could not delete message id [%llu], "
 	      "dbase invalid now..\n", msgid);
-
 
       return 1;
     }
@@ -2430,7 +2423,7 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
       return -1;
     }
 
-  maxmail = db_getmaxmailsize(userid);
+  maxmail = auth_getmaxmailsize(userid);
   if (maxmail == -1)
     {
       trace(TRACE_ERROR, "db_copymsg(): error fetching max quotum for user [%llu]", userid);

@@ -7,6 +7,7 @@
 #include "pop3.h"
 #include "db.h"
 #include "debug.h"
+#include "auth.h"
 
 #define INCOMING_BUFFER_SIZE 512
 #define IP_ADDR_MAXSIZE 16
@@ -191,6 +192,15 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
       fclose(tx);
       return -1;
     }
+
+  if (auth_connect()< 0)
+    {	
+      trace(TRACE_ERROR,"handle_client(): could not connect to user database");
+      fclose(rx);
+      fclose(tx);
+      db_disconnect();
+      return -1;
+    }
 			
   /* first initiate AUTHORIZATION state */
   state = AUTHORIZATION;
@@ -284,7 +294,8 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
       /* if everything went well, write down everything and do a cleanup */
       db_update_pop(&curr_session);
       db_disconnect(); 
-	
+      auth_disconnect();
+
       fclose(tx);
       shutdown (fileno(rx), SHUT_RDWR);
       fclose(rx);
@@ -344,7 +355,7 @@ int main (int argc, char *argv[])
   
   /* connect to the database */
   if (db_connect()< 0) 
-	trace(TRACE_FATAL,"main(): could not connect to database"); 
+    trace(TRACE_FATAL,"main(): could not connect to database"); 
 	
   /* debug settings */
   trace_level = db_get_config_item("TRACE_LEVEL", CONFIG_EMPTY);

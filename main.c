@@ -7,6 +7,7 @@
 #include "main.h"
 #include "pipe.h"
 #include "list.h"
+#include "auth.h"
 
 #define MESSAGEIDSIZE 100
 #define NORMAL_DELIVERY 1
@@ -52,6 +53,11 @@ int main (int argc, char *argv[])
   if (db_connect() < 0) 
     trace(TRACE_FATAL,"main(): database connection failed");
 
+  if (auth_connect() < 0)
+    {
+      db_disconnect();
+      trace(TRACE_FATAL,"main(): user database connection failed");
+    }
   /* reading settings */
   
 /*  trace_level = db_get_config_item("TRACE_LEVEL", CONFIG_EMPTY);
@@ -184,5 +190,6 @@ int main (int argc, char *argv[])
   trace (TRACE_DEBUG,"main(): they're all free. we're done.");
   
   db_disconnect();
+  auth_disconnect();
   return 0;
 }

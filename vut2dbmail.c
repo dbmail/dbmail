@@ -29,6 +29,13 @@ int main()
       return 1;
     }
 
+  if (auth_connect() == -1)
+    {
+      fprintf(stderr, "Could not connect to authentication server\n");
+      db_disconnect();
+      return 1;
+    }
+
   do
     {
       fgets(line, MAXLINESIZE, stdin);
@@ -91,6 +98,7 @@ int main()
    */
 
   db_disconnect();
+  auth_disconnect();
   return 0;
 }
 	
@@ -121,13 +129,13 @@ int process_piece(char *left, char *right)
        * check if this user exists
        */
 
-      if ((useridnr = db_user_exists(right)) == -1)
+      if ((useridnr = auth_user_exists(right)) == -1)
 	return -1;
 
       if (useridnr == 0)
 	{
 	  /* new user */
-	  if ((useridnr = db_adduser(right, "geheim", "", "0", "0")) == -1)
+	  if ((useridnr = auth_adduser(right, "geheim", "", "0", "0")) == -1)
 	    {
 	      fprintf(stderr,"Could not add user [%s]\n",right);
 	      return -1;
@@ -135,7 +143,7 @@ int process_piece(char *left, char *right)
 	}
 
       /* this user now exists, add alias */
-      if ( (clientidnr = db_getclientid(useridnr)) == -1)
+      if ( (clientidnr = auth_getclientid(useridnr)) == -1)
 	{
 	  fprintf(stderr,"Could not retrieve client id nr for user [%s] [id %llu]\n", 
 		  right, useridnr);
