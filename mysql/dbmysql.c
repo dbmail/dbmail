@@ -710,7 +710,7 @@ u64_t db_insert_message_block (const char *block, u64_t len, u64_t msgid)
   /* escape & add data */
   esclen = mysql_real_escape_string(&conn, &escaped_query[startlen], block, len); 
            
-  snprintf(&escaped_query[esclen + startlen - (escaped_query[esclen + startlen - 1] ? 0 : 1)],
+  snprintf(&escaped_query[esclen + startlen /*- (escaped_query[esclen + startlen - 1] ? 0 : 1)*/ ],
 	   maxesclen - esclen - startlen, "', %llu, %llu)", len, msgid);
 
   if (db_query(escaped_query) == -1)
@@ -769,7 +769,7 @@ int db_insert_message_block_multiple(const char *uniqueid, const char *block, u6
   /* escape & add data */
   esclen = mysql_real_escape_string(&conn, &escaped_query[startlen], block, len); 
            
-  snprintf(&escaped_query[esclen + startlen - (escaped_query[esclen + startlen - 1] ? 0 : 1)],
+  snprintf(&escaped_query[esclen + startlen /*- (escaped_query[esclen + startlen - 1] ? 0 : 1)*/ ],
 	   maxesclen - esclen - startlen, 
 	   "', %llu, message_idnr FROM messages WHERE unique_id = '%s'", len, uniqueid);
 
