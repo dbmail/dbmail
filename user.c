@@ -40,6 +40,8 @@ int is_valid(const char *name);
 
 int main(int argc, char *argv[])
 {
+  int result;
+
   openlog(PNAME, LOG_PID, LOG_MAIL);
 	
   setvbuf(stdout,0,_IONBF,0);
@@ -71,12 +73,12 @@ int main(int argc, char *argv[])
 
   switch (argv[1][0])
     {
-    case 'a': do_add(argc-2,&argv[2]); break;
-    case 'c': do_change(argc-2,&argv[2]); break;
-    case 'd': do_delete(argv[2]); break;
-    case 's': do_show(argv[2]); break;
-    case 'f': do_make_alias(&argv[2]); break;
-    case 'x': do_remove_alias(&argv[2]); break;
+    case 'a': result = do_add(argc-2,&argv[2]); break;
+    case 'c': result = do_change(argc-2,&argv[2]); break;
+    case 'd': result = do_delete(argv[2]); break;
+    case 's': result = do_show(argv[2]); break;
+    case 'f': result = do_make_alias(&argv[2]); break;
+    case 'x': result = do_remove_alias(&argv[2]); break;
     default:
       show_help();
       db_disconnect();
@@ -87,7 +89,7 @@ int main(int argc, char *argv[])
 	
   db_disconnect();
   auth_disconnect();
-  return 0;
+  return result;
 }
 
 
@@ -136,7 +138,7 @@ int do_remove_alias(char *argv[])
 int do_add(int argc, char *argv[])
 {
   u64_t useridnr;
-  int i;
+  int i, result;
 
   if (argc < 4)
     {
@@ -163,18 +165,23 @@ int do_add(int argc, char *argv[])
 	
   printf ("Ok, user added id [%llu]\n",useridnr);
 	
-  for (i = 4; i<argc; i++)
+  for (i = 4, result = 0; i<argc; i++)
     {
       printf ("Adding alias %s...",argv[i]);
       if (db_addalias(useridnr,argv[i],atoi(argv[2]))==-1)
-	printf ("Failed\n");
+	{
+	  printf ("Failed\n");
+	  result = -2;
+	}
       else
 	printf ("Ok, added\n");
     }
 		
   printf ("adduser done\n");
+  if (result != 0)
+    printf("Warning: user added but not all the specified aliases\n");
 
-  return 0;
+  return result;
 }
 
 
