@@ -5,7 +5,7 @@
 
 SMTP_OBJECTS = list.o debug.o pipe.o mime.o dbmysql.o misc.o dbmd5.o md5.o bounce.o
 POP_OBJECTS = pop3.o list.o debug.o dbmysql.o dbmd5.o md5.o
-IMAP_OBJECTS = imap4.o debug.o dbmysql.o serverservice.o list.o dbmd5.o md5.o
+IMAP_OBJECTS = imap4.o debug.o dbmysql.o serverservice.o list.o dbmd5.o md5.o imaputil.o imapcommands.o
 CC = cc
 
 MYSQLLIBDIR=/usr/local/lib/mysql
@@ -33,14 +33,16 @@ imapd: imap4.h $(IMAP_OBJECTS) imapd.c
 
 list.o: list.h
 debug.o: debug.h
-pipe.o: pipe.h
-mime.o: mime.h
-dbmysql.o:dbmysql.h dbmd5.h
-misc.o:misc.h
-pop3.o:pop3.h
+pipe.o: pipe.h config.h
+mime.o: mime.h config.h
+dbmysql.o:dbmysql.h dbmd5.h config.h
+misc.o:misc.h config.h
+pop3.o:pop3.h config.h
 dbmd5.o:dbmd5.h md5.h
 bounce.o:bounce.h list.h
-imap4.o: imap4.h dbmysql.h debug.h serverservice.h
+imap4.o: imap4.h dbmysql.h debug.h serverservice.h imaputil.h imapcommands.h
+imaputil.o: imaputil.h
+imapcommands.o: imapcommands.h imaputil.h
 serverservice.o: serverservice.h debug.h
 
 distclean: clean
