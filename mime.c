@@ -40,6 +40,8 @@
 /* extern struct list mimelist;  */
 /* extern struct list users; */
 
+/* checks if s points to the end of a header. */
+static int is_end_of_header(const char *s);
 /* 
  * mime_readheader()
  *
@@ -67,6 +69,7 @@ int mime_readheader(char *blkdata, u64_t *blkidx, struct list *mimelist, u64_t *
   char *endptr, *startptr, *delimiter;
   struct mime_record *mr,*prev_mr=NULL;
   struct element *el = NULL;   
+  int cr_nl_present; /* 1 if a '\r\n' is found */
 	
   trace(TRACE_DEBUG, "mime_readheader(): entering mime loop, block is [%s]\n",
 	blkdata);
@@ -92,7 +95,8 @@ int mime_readheader(char *blkdata, u64_t *blkidx, struct list *mimelist, u64_t *
 
   startptr = blkdata;
   while (*startptr)
-    {
+  {
+	  cr_nl_present = 0;
       /* quick hack to jump over those naughty \n\t fields */
       endptr = startptr;
       while (*endptr)
@@ -101,10 +105,17 @@ int mime_readheader(char *blkdata, u64_t *blkidx, struct list *mimelist, u64_t *
 	  if (*endptr == '\n') 
 	    {
 	      totallines++;
-	      if (!isspace(endptr[1]) || endptr[1] == '\n')
-		break;
+	      
+	      if (is_end_of_header(endptr))
+		      break;
 	    }
-	  
+	  if (*endptr == '\r' && *(endptr + 1) == '\n') {
+		  cr_nl_present = 1;
+		  endptr++;
+		  totallines++;
+		  if (is_end_of_header(endptr))
+			  break;
+	  }
 	  endptr++;
 	}
 
@@ -119,10 +130,10 @@ int mime_readheader(char *blkdata, u64_t *blkidx, struct list *mimelist, u64_t *
 
       /* endptr points to linebreak now */
       /* MIME field+value is string from startptr till endptr */
-
+      if (cr_nl_present)
+	      *(endptr-1) = '\0';
       *endptr = '\0'; /* replace newline to terminate string */
-
-
+            
       /* parsing tmpstring for field and data */
       /* field is name:value */
 
@@ -250,15 +261,22 @@ int mime_readheader(char *blkdata, u64_t *blkidx, struct list *mimelist, u64_t *
 	    }
 	}
 
+      if (cr_nl_present)
+	      *(endptr-1) = '\r';
       *endptr = '\n'; /* restore blkdata */
+      
+      trace(TRACE_DEBUG, "%s,%s: startptr before change = %s",
+	    __FILE__, __FUNCTION__, startptr);
 
       *blkidx += (endptr-startptr);
       (*blkidx)++;
 
       startptr = endptr+1; /* advance to next field */
       
-      if (*startptr == '\n')
-	{
+      trace(TRACE_DEBUG, "%s,%s: startptr = %s", __FILE__, __FUNCTION__, startptr);
+      if (*startptr == '\n' ||
+	  (*startptr == '\r' && *(startptr+1) == '\n')) 
+      {
 	  /* end of header: double newline */
 	  totallines++;
 	  (*blkidx)++;
@@ -286,8 +304,6 @@ int mime_readheader(char *blkdata, u64_t *blkidx, struct list *mimelist, u64_t *
   trace(TRACE_DEBUG," *** mime_readheader() done ***\n");
   return totallines;
 }
-
-
 
 /*
  * mime_findfield()
@@ -398,4 +414,24 @@ int mail_adr_list(char *scan_for_field, struct list *targetlist, struct list *mi
     return -1;
 
   return 0;
+}
+
+/* return 1 if this is the end of a header. That is, it returns 1 if
+ * the next character is a non-whitespace character, or a newline or
+ * carriage return + newline. If the next character is a white space
+ * character, but not a newline, or carriage return + newline, the
+ * header continues.
+ */
+int is_end_of_header(const char *s) 
+{
+	if (!isspace(s[1]))
+		return 1;
+	
+	if (s[1] == '\n') 
+		return 1;
+	
+	if (s[1] == '\r' && s[2] == '\n')
+		return 1;
+
+	return 0;
 }

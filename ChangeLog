@@ -1,6 +1,9 @@
 2004-03-16  Ilja Booij  <ilja@ic-s.nl>
 
 	* mime.c: removed mime_list() function because it was unused.
+	(mime_readheader): now deals correctly with messages that
+	have '\r\n' instead of '\n' as end of line markers.
+	(is_end_of_header): function for signaling the end of a header
 
 	* mime.h: removed mime_list() function because it was unused.
 
