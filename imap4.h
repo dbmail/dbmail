@@ -13,6 +13,9 @@
 #define IMAP_SERVER_VERSION "0.3"
 #define IMAP_CAPABILITY_STRING "IMAP4 IMAP4rev1 AUTH=LOGIN"
 
+/* max number of BAD/NO responses */
+#define MAX_FAULTY_RESPONSES 5
+
 /* max number of retries when synchronizing mailbox with dbase */
 #define MAX_RETRIES 20
 

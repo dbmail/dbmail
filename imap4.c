@@ -120,6 +120,7 @@ int imap_process(ClientInfo *ci)
   char line[MAX_LINESIZE];
   char *tag = NULL,*cpy,**args,*command;
   int i,done,result;
+  int nfaultyresponses;
   imap_userdata_t *ud = ci->userData;
   mailbox_t newmailbox;
 
@@ -129,7 +130,7 @@ int imap_process(ClientInfo *ci)
       /* could not connect */
       trace(TRACE_ERROR, "IMAPD: Connection to dbase failed.\n");
       fprintf(ci->tx, "* BAD could not connect to dbase\r\n");
-      fprintf(ci->tx, "BYE try again later\r\n");
+      fprintf(ci->tx, "* BYE try again later\r\n");
 
       null_free(ci->userData);
       return EOF;
@@ -138,7 +139,7 @@ int imap_process(ClientInfo *ci)
   if (init_cache() != 0)
     {
       trace(TRACE_ERROR, "IMAPD: cannot open temporary file\n");
-      fprintf(ci->tx, "BYE internal system failure\r\n");
+      fprintf(ci->tx, "* BYE internal system failure\r\n");
 
       null_free(ci->userData);
       return EOF;
@@ -146,6 +147,7 @@ int imap_process(ClientInfo *ci)
 
   done = 0;
   args = NULL;
+  nfaultyresponses = 0;
 
   do
     {
@@ -214,6 +216,7 @@ int imap_process(ClientInfo *ci)
       if (!(*line))
 	{
 	  fprintf(ci->tx, "* BAD No tag specified\r\n");
+	  nfaultyresponses++;
 	  continue;
 	}
 	  
@@ -231,6 +234,8 @@ int imap_process(ClientInfo *ci)
 		fprintf(ci->tx, "%s BAD No command specified\r\n",cpy);
 	      else
 		fprintf(ci->tx, "* BAD Invalid tag specified\r\n");
+
+	      nfaultyresponses++;
 	    }
 	      
 	  continue;
@@ -245,6 +250,7 @@ int imap_process(ClientInfo *ci)
       if (!checktag(tag))
 	{
 	  fprintf(ci->tx, "* BAD Invalid tag specified\r\n");
+	  nfaultyresponses++;
 	  continue;
 	}
 
@@ -265,6 +271,7 @@ int imap_process(ClientInfo *ci)
       if (!args)
 	{
 	  fprintf(ci->tx,"%s BAD invalid argument specified\r\n",tag);
+	  nfaultyresponses++;
 	  continue;
 	}
 
@@ -274,6 +281,7 @@ int imap_process(ClientInfo *ci)
 	{
 	  /* unknown command */
 	  fprintf(ci->tx,"%s BAD command not recognized\r\n",tag);
+	  nfaultyresponses++;
 
 	  /* free used memory */
 	  for (i=0; args[i]; i++) 
@@ -332,6 +340,19 @@ int imap_process(ClientInfo *ci)
 	{
 	  /* fatal error occurred, kick this user */
 	  done = 1;
+	}
+
+      if (result == 1)
+	{
+	  /* server returned BAD or NO response */
+	  nfaultyresponses++;
+	  if (nfaultyresponses >= MAX_FAULTY_RESPONSES)
+	    {
+	      /* we have had just about it with this user */
+	      sleep(2); /* avoid DOS attacks */
+	      fprintf(ci->tx,"* BYE [TRY RFC]\r\n");
+	      done = 1;
+	    }
 	}
 
       if (result == 0 && i == IMAP_COMM_LOGOUT)

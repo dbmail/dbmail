@@ -162,13 +162,13 @@ int _ic_login(char *tag, char **args, ClientInfo *ci)
 
   if (userid == 0)
     {
+      sleep(2);  /* security */
+
       /* validation failed: invalid user/pass combination */
       trace(TRACE_MESSAGE, "IMAPD [PID %d]: user (name %s) login rejected @ %s\r\n",
 	    (int)getpid(),args[0],timestr);
       fprintf(ci->tx, "%s NO login rejected\r\n",tag);
 
-      sleep(1);  /* security */
-      
       return 1;
     }
 
@@ -256,14 +256,14 @@ int _ic_authenticate(char *tag, char **args, ClientInfo *ci)
 
   if (userid == 0)
     {
+      sleep(2);  /* security */
+
       /* validation failed: invalid user/pass combination */
       fprintf(ci->tx, "%s NO login rejected\r\n",tag);
 
       /* validation failed: invalid user/pass combination */
       trace(TRACE_MESSAGE, "IMAPD [PID %d]: user (name %s) login rejected @ %s\r\n",
 	    (int)getpid(),username,timestr);
-
-      sleep(1);  /* security */
       
       return 1;
     }
@@ -554,7 +554,7 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
   /* check if new name is valid */
   if (!checkmailboxname(args[0]))
     {
-      fprintf(ci->tx,"%s NO new mailbox name contains invalid characters\r\n",tag);
+      fprintf(ci->tx,"%s BAD new mailbox name contains invalid characters\r\n",tag);
       return 1;
     }
 
@@ -564,7 +564,7 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
     {
       /* out of mem */
       trace(TRACE_ERROR, "IMAPD: create(): not enough memory\r\n");
-      fprintf(ci->tx, "%s BYE server ran out of memory\r\n",tag);
+      fprintf(ci->tx, "* BYE server ran out of memory\r\n");
       return -1;
     }
 
@@ -575,7 +575,7 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
     {
       /* serious error while making chunks */
       trace(TRACE_ERROR, "IMAPD: create(): could not create chunks\r\n");
-      fprintf(ci->tx, "%s BYE server ran out of memory\r\n",tag);
+      fprintf(ci->tx, "* BYE server ran out of memory\r\n");
       my_free(cpy);
       return -1;
     }
@@ -719,7 +719,7 @@ int _ic_delete(char *tag, char **args, ClientInfo *ci)
     {
       /* error */
       trace(TRACE_ERROR, "IMAPD: delete(): cannot retrieve list of mailbox children\r\n");
-      fprintf(ci->tx, "%s BYE dbase/memory error\r\n",tag);
+      fprintf(ci->tx, "* BYE dbase/memory error\r\n");
       return -1;
     }
 
@@ -1354,7 +1354,7 @@ int _ic_append(char *tag, char **args, ClientInfo *ci)
 
   if (mboxid == 0)
     {
-      fprintf(ci->tx,"%s NO could not find specified mailbox\r\n", tag);
+      fprintf(ci->tx,"%s NO [TRYCREATE] could not find specified mailbox\r\n", tag);
       return 1;
     }
 
@@ -1725,7 +1725,7 @@ int _ic_search(char *tag, char **args, ClientInfo *ci)
 
   if (result == 1)
     {
-      fprintf(ci->tx,"%s BYE error synchronizing dbase\r\n",tag);
+      fprintf(ci->tx,"* BYE error synchronizing dbase\r\n");
       return -1;
     }
       
