@@ -23,12 +23,12 @@
 #include "rfcmsg.h"
 
 #ifndef MAX_LINESIZE
-#define MAX_LINESIZE 1024
+#define MAX_LINESIZE (10*1024)
 #endif
 
 #define BUFLEN 2048
 #define SEND_BUF_SIZE 1024
-#define MAX_ARGS 128
+#define MAX_ARGS 512
 
 /* cache */
 extern cache_t cached_msg;
