@@ -522,7 +522,8 @@ int insert_messages(const char *header, const char* body, u64_t headersize,
 	/* first start a new database transaction */
 	if (db_begin_transaction() < 0) {
 		trace(TRACE_ERROR, "%s,%s: error executing "
-		      "db_begin_transaction(). aborting delivery...");
+		      "db_begin_transaction(). aborting delivery...",
+		      __FILE__, __func__);
 		return -1;
 	}
 
