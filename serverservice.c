@@ -522,7 +522,7 @@ void SS_sighandler(int sig, siginfo_t *info, void *data)
     if (info->si_pid == default_child_pids[i])
       {
 	default_child_pids[i] = 0;
-	ss_n_default_children_used--;
+	(*ss_n_default_children_used)--;
       }
 
   switch (sig)
