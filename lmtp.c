@@ -90,14 +90,8 @@ static int read_whole_message_network(FILE *instream, char **whole_message,
  * \param formatstring format string
  * \param ... values to fill up formatstring
  */
-#ifdef __GNUC__
 int lmtp_error(PopSession_t * session, void *stream,
-	       const char *formatstring, ...)
-__attribute__ ((format(printf, 3, 4)));
-#else
-int lmtp_error(PopSession_t * session, void *stream,
-	       const char *formatstring, ...);
-#endif
+	       const char *formatstring, ...) PRINTF_ARGS(3, 4);
 
 /**
  * initialize a new session. Sets all relevant variables in session

@@ -57,14 +57,8 @@ extern int pop_before_smtp;
 int pop3(void *stream, char *buffer, char *client_ip,
 	 PopSession_t * session);
 
-#ifdef __GNUC__
 int pop3_error(PopSession_t * session, void *stream,
-	       const char *formatstring, ...)
-__attribute__ ((format(printf, 3, 4)));
-#else
-int pop3_error(PopSession_t * session, void *stream,
-	       const char *formatstring, ...);
-#endif
+	       const char *formatstring, ...) PRINTF_ARGS(3, 4);
 
 /* allowed pop3 commands */
 const char *commands[] = {

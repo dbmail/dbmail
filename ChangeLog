@@ -1,3 +1,9 @@
+2004-06-03 Aaron Stone <aaron@serendipity.cx>
+
+	* dbmail.h: added macro PRINTF_ARGS as a wrapper around
+	__attribute__(format(printf...))), which is GCC specific.
+	* debug.h, pop3.c, lmtp.c: now using PRINTF_ARGS.
+
 2004-06-03  Ilja Booij  <ilja@ic-s.nl>
 
 	* auth/authsql.c (auth_user_exists): escape user name using

@@ -35,14 +35,19 @@
 #endif
 
 #include "list.h"
-#include "debug.h"
 
-/* define UNUSED for parameters that are not used in functions */
+/* Define several macros for GCC specific attributes.
+ * Although the __attribute__ macro can be easily defined
+ * to nothing, these macros make them a little prettier.
+ * */
 #ifdef __GNUC__
 #define UNUSED __attribute__((__unused__))
+#define PRINTF_ARGS(X, Y) __attribute__((format(printf, X, Y)))
 #else
 #define UNUSED
+#define PRINTF_ARGS(X, Y)
 #endif
+
 
 #define CONFIG_ERROR_LEVEL TRACE_WARNING
 
