@@ -773,7 +773,7 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines,
 	  nextpos++;
 	  rowlength--;
 	   
-	  if (rowlength%6000==0)  /* purge buffer at every 6000 bytes  */
+	  if (rowlength%1000==0)  /* purge buffer at every 6000 bytes  */
 	    {
 	      fprintf ((FILE *)fstream,"%s",buffer);
 	      /* fflush ((FILE *)fstream); */
