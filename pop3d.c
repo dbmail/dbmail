@@ -57,7 +57,7 @@ int main (int argc, char *argv[])
   
   char *ipaddr, *port;
 
-  char *trace_level,*trace_syslog,*trace_verbose;
+  char *trace_level=NULL,*trace_syslog=NULL,*trace_verbose=NULL;
   int new_level = 2, new_trace_syslog = 1, new_trace_verbose = 0;
 
   time_t timestamp;
