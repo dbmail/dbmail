@@ -53,6 +53,7 @@ If you follow the steps below you'll have DBMAIL running in no-time.
 	dbmail-config			- the dbmail configuration program
 	dbmail-adduser			- the dbmail user add program
 
+
 4. Next you will need to create some users into the dbmail mailing sytem.
 	Currently this can be done in two ways. One way is using the dbmail-adduser
 	utility. The other way is doing it in the database itself. 
@@ -76,9 +77,13 @@ If you follow the steps below you'll have DBMAIL running in no-time.
 5.	
 	Become root and run install-dbmail.sh which will install the dbmail executables.
 
+
 6. check your dbmail.conf file and set it to your likeings. After that you can 
-	best copy it to the /etc/ directory and set it to chmod 700 for user root.
-	Then run dbmail-config /etc/dbmail.conf.
+	best copy it to the /etc/ directory and set it to chmod 600 for the user dbmail
+	runs as.
+	Don't forget to run dbmail-config /etc/dbmail.conf everytime you make changes
+	to the dbmail.conf file!
+
 
 -- The next lines are MTA dependend, this is for postfix --
 	
@@ -115,7 +120,8 @@ If you follow the steps below you'll have DBMAIL running in no-time.
 If you do not use postfix. The dbmail injector program, dbmail-smtp,
 can receive information in two ways. Either through raw mail (for example, 
 delivered by procmail) using the -n option or from a MTA with recipients 
-in the commandline using the -d option.
+in the commandline using the -d option. Be carefull, the -n option is not fully 
+tested and may behave unexected. If possible use the -d option.
 
 Steven Kroon <steven@stevenkroon.com> suggested using fetchmail:
 
@@ -130,13 +136,6 @@ defaults        proto   pop3
 mda "/usr/local/bin/dbmail-smtp -n to"
 ---
 
-
-
-
-
 If u get dbmail running on other MTA's please tell me at
-eelco@eelco.com.
-
-For other problems you can subscribe to the dbmaillist. If you want to
-subscribe, send a "subscribe dbmail" in the body of a message to 
-majordomo@fastxs.net. 
+the mailinglist. For other problems you can subscribe to the dbmail
+mailinglist : https://mailman.fastxs.nl/mailman/listinfo/dbmail

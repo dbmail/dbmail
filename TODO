@@ -1,7 +1,7 @@
 /* $Id$ 
  * (c) 2000-2001 IC&S, The Netherlands */
 
-
-- fix the resolving (pop daemon is not resolving)
-- commandline program should be created for adding email addresses
-- it would be interesting to know who is receiving a message (in log)
+- speed improvements (nested aliases lookups)
+- code cleanup and documentation (already working on this)
+- GUI through PHP / CGI (already working on this)
+- postgresql layer 
