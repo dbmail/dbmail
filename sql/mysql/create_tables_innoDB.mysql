@@ -1,4 +1,3 @@
-# $Id$
 
 CREATE DATABASE dbmail;
 
@@ -12,7 +11,7 @@ CREATE TABLE aliases (
    PRIMARY KEY (alias_idnr),
    KEY alias (alias),
    UNIQUE alias_idnr_2 (alias_idnr)
-);
+) type = innoDB;
 
 CREATE INDEX aliases_alias_idx ON aliases(alias);
 
@@ -28,7 +27,7 @@ CREATE TABLE users (
    KEY user_idnr (user_idnr, userid),
    UNIQUE useridnr_2 (user_idnr, userid),
    UNIQUE userid_2 (userid)
-);
+) type = innoDB;
 
 CREATE TABLE mailboxes (
    mailbox_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
@@ -46,7 +45,7 @@ CREATE TABLE mailboxes (
    is_subscribed tinyint(1) default 0 not null,
    PRIMARY KEY (mailbox_idnr),
    UNIQUE mailboxidnr_2 (mailbox_idnr)
-);
+) type = innoDB;
 
 CREATE INDEX mailbox_ownerid_idx ON mailboxes(owner_idnr);
 CREATE INDEX mailbox_name_idx ON mailboxes(name);
@@ -69,7 +68,7 @@ CREATE TABLE messages (
    PRIMARY KEY (message_idnr),
    KEY message_idnr (message_idnr),
    UNIQUE message_idnr_2 (message_idnr)
-);
+) type = innoDB;
 
 CREATE INDEX message_uniqueid_idx ON messages(unique_id);
 CREATE INDEX message_mbox_idx ON messages(mailbox_idnr);
@@ -85,7 +84,7 @@ CREATE TABLE messageblks (
    KEY messageblk_idnr (messageblk_idnr),
 	KEY msg_index (message_idnr),
    UNIQUE messageblk_idnr_2 (messageblk_idnr)
-) TYPE=MyISAM;
+) TYPE = innoDB;
 
 CREATE INDEX messageblks_msgid_idx ON messageblks(message_idnr);
 
@@ -95,7 +94,7 @@ CREATE TABLE auto_notifications (
    user_idnr bigint(21) DEFAULT '0' NOT NULL,
    notify_address VARCHAR(100),
    PRIMARY KEY (auto_notify_idnr)
-);
+) type = innoDB;
 
 CREATE INDEX auto_notify_user_idx ON auto_notifications(user_idnr);
 
@@ -105,7 +104,7 @@ CREATE TABLE auto_replies (
    user_idnr bigint(21) DEFAULT '0' NOT NULL,
    reply_body mediumtext,
    PRIMARY KEY (auto_reply_idnr)
-);
+) type = innoDB;
 
 CREATE INDEX auto_reply_user_idx ON auto_replies(user_idnr);
 
@@ -114,7 +113,7 @@ CREATE TABLE config (
 	configid int(11) DEFAULT '0' NOT NULL,
 	item varchar(128) NOT NULL,
 	value varchar(128) NOT NULL
-);
+) type = innoDB;
 
 
 CREATE TABLE tmpmessage (
@@ -134,7 +133,7 @@ CREATE TABLE tmpmessage (
        PRIMARY KEY (message_idnr),
        KEY message_idnr (message_idnr),
        UNIQUE message_idnr_2 (message_idnr)
-);
+) type = innoDB;
 
 CREATE TABLE tmpmessageblk (
        messageblk_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
@@ -146,4 +145,4 @@ CREATE TABLE tmpmessageblk (
        KEY messageblk_idnr (messageblk_idnr),
        KEY msg_index (message_idnr),
        UNIQUE messageblk_idnr_2 (messageblk_idnr)
-) TYPE=MyISAM;
+) TYPE = innoDB;
