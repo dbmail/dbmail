@@ -172,7 +172,8 @@ const char *db_get_result(unsigned row, unsigned field)
 
 int db_disconnect()
 {
-	db_free_result();
+	if (res)
+		db_free_result();
 	mysql_close(&conn);
 	return 0;
 }
