@@ -5,7 +5,6 @@ For DBMail 2.1
 -   Database table prefixes
 -   Sieve scripting language
 -   header caching (cache headers like To: From: etc.)
--   Fix wrong order of headers when doing a FETCH MSGNUM (RFC822.HEADER)
 -   put (part of) configuration into the database
 -   Increase speed by doing database optimizations (indexes) and removing
     unneeded database usage.

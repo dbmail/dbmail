@@ -3,13 +3,8 @@ $Id$
 2004-01-19 (Roel Rozendaal):
 FETCH MSGNUM (RFC822.HEADER) returns headers in wrong order.
 
-2004-02-04 (Ilja Booij):
-dbmail-smtp needs to handle command line arguments in a sane way. Possibly using
-getopt()
-
-2004-02-04 ():
-dbmail bounces have wrong envelope and needs to be more sane on where to send bounce
-to.
-
 2004-03-02 ():
 IMAP APPEND should handle optional INTERNAL DATE and FLAGS
+
+2004-03-05 ():
+dbmail-lmtp does not handle cached lmtp connections.
