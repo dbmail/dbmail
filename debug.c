@@ -11,7 +11,7 @@
 int TRACE_TO_SYSLOG = 1; /* default: yes */
 int TRACE_VERBOSE = 0;   /* default: no */
 
-int TRACE_LEVEL = 2;     /* default: normal operations */
+int TRACE_LEVEL = 5;     /* default: normal operations */
  
 /*
  * configure the debug settings

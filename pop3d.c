@@ -251,7 +251,9 @@ int main (int argc, char *argv[])
 		{
 			/* register incoming connection */
 			theiraddress=inet_ntoa(adr_clnt.sin_addr);
-			clientinfo=gethostbyname(theiraddress);
+			clientinfo=gethostbyaddr((char *)&adr_clnt.sin_addr, 
+					sizeof(adr_clnt.sin_addr),
+					adr_clnt.sin_family);
 				
 			if (theiraddress != NULL)
 			trace (TRACE_MESSAGE,"main(): incoming connection from [%s] [resolved to: %s]",
