@@ -104,6 +104,9 @@ COMMON = config.c debug.c list.c dbmd5.c md5.c db.c misc.c mime.c
 SERVER = server.c serverchild.c
 DELIVER = header.c pipe.c bounce.c forward.c 
 
+# CFLAGS
+AM_CFLAGS = -fomit-frame-pointer
+
 dbmail_smtp_SOURCES = $(COMMON) $(DELIVER) main.c
 dbmail_smtp_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
