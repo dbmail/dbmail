@@ -647,7 +647,7 @@ int _ic_delete(char *tag, char **args, ClientInfo *ci)
     }
 
   /* check for children of this mailbox */
-  result = db_listmailboxchildren(mboxid, &children, &nchildren, "%");
+  result = db_listmailboxchildren(mboxid, ud->userid, &children, &nchildren, "%");
   if (result == -1)
     {
       /* error */
@@ -819,7 +819,7 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
     }
 
   /* check for inferior names */
-  result = db_listmailboxchildren(mboxid, &children, &nchildren, "%");
+  result = db_listmailboxchildren(mboxid, ud->userid, &children, &nchildren, "%");
   if (result == -1)
     {
       fprintf(ci->tx,"* BYE internal dbase error\r\n");
@@ -916,7 +916,7 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
   unsigned long *children=NULL,mboxid;
-  int nchildren=0,result,i,j,cnt,percpresent,starpresent;
+  int nchildren=0,result,i,percpresent,starpresent;
   char name[IMAP_MAX_MAILBOX_NAMELEN];
   char *thisname = list_is_lsub ? "LSUB" : "LIST";
 
@@ -930,7 +930,7 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
   /* check if args are both empty strings */
   if (strlen(args[0]) == 0 && strlen(args[1]) == 0)
     {
-      /* this has special meaning, show root & delimiter */
+      /* this has special meaning; show root & delimiter */
       fprintf(ci->tx,"* %s (\\NoSelect) \"/\" \"\"\r\n",thisname);
       fprintf(ci->tx,"%s OK %s completed\r\n",tag,thisname);
       return 0;
@@ -996,7 +996,7 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
 	}
     }
 
-  result = db_listmailboxchildren(mboxid, &children, &nchildren, args[1]);
+  result = db_listmailboxchildren(mboxid, ud->userid, &children, &nchildren, args[1]);
   if (result == -1)
     {
       fprintf(ci->tx,"* BYE internal dbase error\r\n");
@@ -1122,6 +1122,10 @@ int _ic_status(char *tag, char **args, ClientInfo *ci)
       return 1;
     }
     
+  
+  /* zero init */
+  memset(&mb, 0, sizeof(mb));
+
   /* check if mailbox exists */
   mb.uid = db_findmailbox(args[0], ud->userid);
   if (mb.uid == (unsigned long)(-1))
@@ -1261,7 +1265,7 @@ int _ic_expunge(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
   unsigned long *msgids;
-  int nmsgs,i,idx,result,j;
+  int nmsgs,i,idx,result;
 
   if (!check_state_and_args("EXPUNGE", tag, args, 0, IMAPCS_SELECTED, ci))
     return 1; /* error, return */
@@ -1564,7 +1568,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		  /* parse message structure */
 		  if (db_fetch_headers(thisnum, &msg) == -1)
 		    {
-		      fprintf(ci->tx,"* BAD error fetching message %d\r\n",i+1);
+		      fprintf(ci->tx,"\r\n* BAD error fetching message %d\r\n",i+1);
 		      curr = curr->nextnode;
 		      continue;
 		    }
@@ -1598,7 +1602,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		  fprintf(ci->tx," ");
 		  if (result == -1)
 		    {
-		      fprintf(ci->tx,"* BYE error fetching body structure\r\n");
+		      fprintf(ci->tx,"\r\n* BYE error fetching body structure\r\n");
 		      db_free_msg(&msg);
 		      list_freelist(&fetch_list.start);
 		      fclose(tmpfile);
@@ -1614,7 +1618,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		  fprintf(ci->tx," ");
 		  if (result == -1)
 		    {
-		      fprintf(ci->tx,"* BYE error fetching body\r\n");
+		      fprintf(ci->tx,"\r\n* BYE error fetching body\r\n");
 		      db_free_msg(&msg);
 		      list_freelist(&fetch_list.start);
 		      fclose(tmpfile);
@@ -1629,7 +1633,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		  result = retrieve_envelope(ci->tx, &msg.rfcheader);
 		  if (result == -1)
 		    {
-		      fprintf(ci->tx,"* BYE error fetching envelope structure\r\n");
+		      fprintf(ci->tx,"\r\n* BYE error fetching envelope structure\r\n");
 		      db_free_msg(&msg);
 		      list_freelist(&fetch_list.start);
 		      fclose(tmpfile);
@@ -1743,6 +1747,17 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		{
 		  if (fi->bodyfetch.partspec[0])
 		    {
+		      if (fi->bodyfetch.partspec[0] == '0')
+			{
+			  fprintf(ci->tx,"\r\n%s BAD protocol error\r\n",tag);
+			  trace(TRACE_DEBUG,"PROTOCOL ERROR\r\n");
+			  list_freelist(&fetch_list.start);
+			  db_free_msg(&msg);
+			  fclose(tmpfile);
+			  unlink(tmpname);
+			  return 1;
+			}
+
 		      msgpart = get_part_by_num(&msg, fi->bodyfetch.partspec);
 
 		      if (!msgpart)
@@ -1825,7 +1840,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			      if (cnt<0) cnt = 0;
 			      if (cnt > fi->bodyfetch.octetcnt) cnt = fi->bodyfetch.octetcnt;
  
-			      fprintf(ci->tx, "]<%lu> {%ld}\r\n",
+			      fprintf(ci->tx, "]<%u> {%ld}\r\n",
 				      fi->bodyfetch.octetstart, cnt);
 			      
 			      fseek(tmpfile, fi->bodyfetch.octetstart, SEEK_SET);
@@ -1859,7 +1874,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			      if (cnt<0) cnt = 0;
 			      if (cnt > fi->bodyfetch.octetcnt) cnt = fi->bodyfetch.octetcnt;
  
-			      fprintf(ci->tx, "]<%lu> {%ld}\r\n",
+			      fprintf(ci->tx, "]<%u> {%ld}\r\n",
 				      fi->bodyfetch.octetstart, cnt);
 			      
 			      fseek(tmpfile, fi->bodyfetch.octetstart, SEEK_SET);
@@ -1909,7 +1924,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			      if (cnt<0) cnt = 0;
 			      if (cnt > fi->bodyfetch.octetcnt) cnt = fi->bodyfetch.octetcnt;
  
-			      fprintf(ci->tx, "]<%lu> {%ld}\r\n",
+			      fprintf(ci->tx, "]<%u> {%ld}\r\n",
 				      fi->bodyfetch.octetstart, cnt);
 			      
 			      fseek(tmpfile, fi->bodyfetch.octetstart, SEEK_SET);
@@ -1958,7 +1973,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			      if (cnt<0) cnt = 0;
 			      if (cnt > fi->bodyfetch.octetcnt) cnt = fi->bodyfetch.octetcnt;
  
-			      fprintf(ci->tx, "]<%lu> {%ld}\r\n",
+			      fprintf(ci->tx, "]<%u> {%ld}\r\n",
 				      fi->bodyfetch.octetstart, cnt);
 			      
 			      fseek(tmpfile, fi->bodyfetch.octetstart, SEEK_SET);
@@ -1990,7 +2005,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			      if (cnt<0) cnt = 0;
 			      if (cnt > fi->bodyfetch.octetcnt) cnt = fi->bodyfetch.octetcnt;
  
-			      fprintf(ci->tx, "]<%lu> {%ld}\r\n",
+			      fprintf(ci->tx, "]<%u> {%ld}\r\n",
 				      fi->bodyfetch.octetstart, cnt);
 			      
 			      fseek(tmpfile, fi->bodyfetch.octetstart, SEEK_SET);
@@ -2028,7 +2043,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		  result = db_set_msgflag("seen", ud->mailbox.uid, thisnum, 1);
 		  if (result == -1)
 		    {
-		      fprintf(ci->tx,"* BYE internal dbase error\r\n");
+		      fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
 		      db_free_msg(&msg);
 		      list_freelist(&fetch_list.start);
 		      fclose(tmpfile);
@@ -2052,7 +2067,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
 		      if (result == -1)
 			{
-			  fprintf(ci->tx,"* BYE internal dbase error\r\n");
+			  fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
 			  list_freelist(&fetch_list.start);
 			  db_free_msg(&msg);
 			  fclose(tmpfile);

@@ -1362,7 +1362,7 @@ int db_getmailbox(mailbox_t *mb, unsigned long userid)
 
 
   /* now select messages: ALL */
-  snprintf(query, DEF_QUERYSIZE, "SELECT COUNT(*) FROM message WHERE mailboxidnr = %lu AND status!=3", 
+  snprintf(query, DEF_QUERYSIZE, "SELECT COUNT(*) FROM message WHERE mailboxidnr = %lu AND status<2", 
 	   mb->uid);
 
   if (db_query(query) == -1)
@@ -1388,7 +1388,7 @@ int db_getmailbox(mailbox_t *mb, unsigned long userid)
 
   /* now select messages:  RECENT */
   snprintf(query, DEF_QUERYSIZE, "SELECT COUNT(*) FROM message WHERE recent_flag=1 AND "
-	   "mailboxidnr = %lu AND status!=3", mb->uid);
+	   "mailboxidnr = %lu AND status<2", mb->uid);
 
   if (db_query(query) == -1)
     {
@@ -1412,7 +1412,7 @@ int db_getmailbox(mailbox_t *mb, unsigned long userid)
 
   /* now select messages: UNSEEN */
   snprintf(query, DEF_QUERYSIZE, "SELECT COUNT(*) FROM message WHERE seen_flag=0 AND "
-	   "mailboxidnr = %lu AND status!=3", mb->uid);
+	   "mailboxidnr = %lu AND status<2", mb->uid);
 
   if (db_query(query) == -1)
     {
@@ -1503,7 +1503,8 @@ int db_createmailbox(const char *name, unsigned long ownerid)
  *
  * returns -1 on error, 0 on succes
  */
-int db_listmailboxchildren(unsigned long uid, unsigned long **children, int *nchildren, 
+int db_listmailboxchildren(unsigned long uid, unsigned long useridnr, 
+			   unsigned long **children, int *nchildren, 
 			   const char *filter)
 {
   char query[DEF_QUERYSIZE];
@@ -1511,7 +1512,7 @@ int db_listmailboxchildren(unsigned long uid, unsigned long **children, int *nch
 
   /* retrieve the name of this mailbox */
   snprintf(query, DEF_QUERYSIZE, "SELECT name FROM mailbox WHERE"
-	   " mailboxidnr = %lu", uid);
+	   " mailboxidnr = %lu AND owneridnr = %lu", uid, useridnr);
 
   if (db_query(query) == -1)
     {
@@ -1527,10 +1528,12 @@ int db_listmailboxchildren(unsigned long uid, unsigned long **children, int *nch
 
   row = mysql_fetch_row(res);
   if (row)
-    snprintf(query, DEF_QUERYSIZE, "SELECT mailboxidnr FROM mailbox WHERE name LIKE '%s/%s'",
-	     row[0],filter);
+    snprintf(query, DEF_QUERYSIZE, "SELECT mailboxidnr FROM mailbox WHERE name LIKE '%s/%s'"
+	     " AND owneridnr = %lu",
+	     row[0],filter,useridnr);
   else
-    snprintf(query, DEF_QUERYSIZE, "SELECT mailboxidnr FROM mailbox WHERE name LIKE '%s'",filter);
+    snprintf(query, DEF_QUERYSIZE, "SELECT mailboxidnr FROM mailbox WHERE name LIKE '%s'"
+	     " AND owneridnr = %lu",filter,useridnr);
 
   mysql_free_result(res);
   
@@ -2086,7 +2089,7 @@ int db_build_msn_list(mailbox_t *mb)
     }
 
   snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message WHERE mailboxidnr = %lu "
-	   "AND status != 3 ORDER BY messageidnr ASC", mb->uid);
+	   "AND status<2 ORDER BY messageidnr ASC", mb->uid);
 
   if (db_query(query) == -1)
     {
@@ -2140,7 +2143,7 @@ unsigned long db_first_unseen(unsigned long uid)
   unsigned long id;
 
   snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message WHERE mailboxidnr = %lu "
-	   "AND status != 3 AND seen_flag = 0 ORDER BY messageidnr ASC LIMIT 0,1", uid);
+	   "AND status<2 AND seen_flag = 0 ORDER BY messageidnr ASC LIMIT 0,1", uid);
 
   if (db_query(query) == -1)
     {
@@ -2198,7 +2201,7 @@ int db_get_msgflag(const char *name, unsigned long mailboxuid, unsigned long msg
     return 0; /* non-existent flag is not set */
 
   snprintf(query, DEF_QUERYSIZE, "SELECT %s FROM message WHERE mailboxidnr = %lu "
-	   "AND status != 3 AND messageidnr = %lu", flagname, mailboxuid, msguid);
+	   "AND status<2 AND messageidnr = %lu", flagname, mailboxuid, msguid);
 
   if (db_query(query) == -1)
     {
@@ -2254,7 +2257,7 @@ int db_set_msgflag(const char *name, unsigned long mailboxuid, unsigned long msg
     return 0; /* non-existent flag is cannot set */
 
   snprintf(query, DEF_QUERYSIZE, "UPDATE message SET %s = %d WHERE mailboxidnr = %lu "
-	   "AND status != 3 AND messageidnr = %lu", flagname, val, mailboxuid, msguid);
+	   "AND status<2 AND messageidnr = %lu", flagname, val, mailboxuid, msguid);
 
   if (db_query(query) == -1)
     {
@@ -3109,9 +3112,9 @@ long db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long 
   if (start.block == end.block)
     {
       /* dump everything */
-      if (expand_newlines)
+      if (expand_newlines == expand_newlines)
 	{
-	  for (i=start.pos; i<=end.pos; i++)
+	  for (i=start.pos; i<end.pos+1; i++)
 	    {
 	      if (row[0][i] == '\n')
 		outcnt += fprintf(outstream,"\r\n");
@@ -3120,8 +3123,9 @@ long db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long 
 	    }
 	}
       else
-	outcnt += fwrite(&row[0][start.pos], 1, end.pos-start.pos+1, outstream);
+	outcnt += fwrite(&row[0][start.pos], 1, end.pos - start.pos, outstream);
 
+      fflush(outstream);
       mysql_free_result(res);
       return outcnt;
     }

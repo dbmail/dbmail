@@ -109,7 +109,7 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg, int show_extension_
 	fprintf(outstream, " NIL");
 
       /* now output size */
-      fprintf(outstream, " %lu ", msg->bodysize + msg->bodylines);
+      fprintf(outstream, " %lu ", msg->bodysize + msg->bodylines + 1); /* +1 ??? */
 
 
       /* now check special cases, first case: message/rfc822 */
@@ -183,7 +183,7 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg, int show_extension_
 	      curr = curr->nextnode;
 	    }
 
-	  /* show mulipart subtype */
+	  /* show multipart subtype */
 	  subtype = strchr(mr->value, '/');
 	  extension = strchr(subtype, ';');
 	  
@@ -245,13 +245,13 @@ int retrieve_envelope(FILE *outstream, struct list *rfcheader)
 
   mime_findfield("date", rfcheader, &mr);
   if (mr && strlen(mr->value) > 0)
-    fprintf(outstream, "\"%s\"",mr->value);
+    fprintf(outstream, " \"%s\"",mr->value);
   else
     fprintf(outstream, "NIL");
 
   mime_findfield("subject", rfcheader, &mr);
   if (mr && strlen(mr->value) > 0)
-    fprintf(outstream, " \"%s\"",mr->value);
+    fprintf(outstream, " {%d}\r\n%s",strlen(mr->value),mr->value);
   else
     fprintf(outstream, " NIL");
 
@@ -314,7 +314,7 @@ int retrieve_envelope(FILE *outstream, struct list *rfcheader)
  */
 int show_address_list(FILE *outstream, struct mime_record *mr)
 {
-  int delimiter,i,inquote,start;
+  int delimiter,i,inquote,start,has_split;
 
   fprintf(outstream," (");
       
@@ -378,15 +378,22 @@ int show_address_list(FILE *outstream, struct mime_record *mr)
       /*
        * added a check for whitespace within the address (not good)
        */
-      for (i=start; mr->value[i] && mr->value[i] != '>' && !isspace(mr->value[i]); i++)
+      for (i=start, has_split=0; mr->value[i] && mr->value[i] != '>' && !isspace(mr->value[i]); 
+	   i++)
 	{
 	  if (mr->value[i] == '@')
-	    fprintf(outstream,"\" \"");
+	    {
+	      fprintf(outstream,"\" \"");
+	      has_split = 1;
+	    }
 	  else
 	    fprintf(outstream,"%c",mr->value[i]);
 	}
 
-      fprintf(outstream, "\"");
+      if (!has_split)
+	fprintf(outstream,"\" \"\""); /* '@' did not occur */
+      else
+	fprintf(outstream, "\"");
 		  
       if (delimiter > 0)
 	{

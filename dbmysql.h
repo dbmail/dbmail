@@ -143,7 +143,8 @@ char *db_get_userid (unsigned long *useridnr);
 unsigned long db_findmailbox(const char *name, unsigned long useridnr);
 int db_getmailbox(mailbox_t *mb, unsigned long userid);
 int db_createmailbox(const char *name, unsigned long ownerid);
-int db_listmailboxchildren(unsigned long uid, unsigned long **children, int *nchildren,
+int db_listmailboxchildren(unsigned long uid, unsigned long useridnr, 
+			   unsigned long **children, int *nchildren,
 			   const char *filter);
 int db_removemailbox(unsigned long uid, unsigned long ownerid);
 int db_isselectable(unsigned long uid);
