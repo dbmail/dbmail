@@ -134,7 +134,7 @@ char *db_get_config_item (char *item, int type)
 	memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
 
 	sprintf (ckquery,"SELECT %s FROM config WHERE configid = 0",item);
-	trace (TRACE_DEBUG,"db_get_config_item_char(): retrieving config_item %s by query %s",item, ckquery);
+	trace (TRACE_DEBUG,"db_get_config_item(): retrieving config_item %s by query %s",item, ckquery);
 
 	if (db_query(ckquery)==-1)
 	{
@@ -154,27 +154,27 @@ char *db_get_config_item (char *item, int type)
 		else
 			if (type == CONFIG_EMPTY)
 				trace (TRACE_ERROR,"db_get_config_item(): mysql_store_result failed (fatal): %s",mysql_error(&conn));
-      		free(ckquery);
-      		return 0;
+     		free(ckquery);
+     		return 0;
    	}
 
 	if ((row = mysql_fetch_row(res))==NULL)
 	{
-	if (type == CONFIG_MANDATORY)
-		trace (TRACE_FATAL,"db_get_config_item(): configvalue not found for %s. rowfetch failure. This is needed to continue",item);
-	else
-	if (type == CONFIG_EMPTY)
-		trace (TRACE_ERROR,"db_get_config_item(): configvalue not found. rowfetch failure.  Could not get value for %s",item);
-	free (ckquery);
-	return NULL;
+		if (type == CONFIG_MANDATORY)
+			trace (TRACE_FATAL,"db_get_config_item(): configvalue not found for %s. rowfetch failure. This is needed to continue",item);
+		else
+		if (type == CONFIG_EMPTY)
+			trace (TRACE_ERROR,"db_get_config_item(): configvalue not found. rowfetch failure.  Could not get value for %s",item);
+		free (ckquery);
+		return NULL;
 	}
 	
-	free (ckquery);
-
 	if (row[0]!=NULL)
 	{
-		memtst(result=(char *)malloc(strlen(row[0]+1))==0);
-		strcpy (result,row[0]);
+		result=(char *)malloc(strlen(row[0])+1);
+		if (result!=NULL)
+			strcpy (result,row[0]);
+		trace (TRACE_DEBUG,"Ok result [%s]",result);
 	}
 	
 	return result;
