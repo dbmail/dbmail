@@ -56,7 +56,7 @@ int n_default_children;
  */
 ClientInfo client;
 int *ss_n_default_children_used;
-
+void (*the_client_cleanup)(ClientInfo *ci);
 
 /* transmit buffer */
 #define TXBUFSIZE 1024
@@ -172,7 +172,8 @@ int SS_MakeServerSock(const char *ipaddr, const char *port, int default_children
  *
  */
 int SS_WaitAndProcess(int sock, int default_children, int max_children, int daemonize,
-		      int (*ClientHandler)(ClientInfo*), int (*Login)(ClientInfo*))
+		      int (*ClientHandler)(ClientInfo*), int (*Login)(ClientInfo*),
+		      void (*ClientCleanup)(ClientInfo*))
 {
   struct sockaddr_in saClient;
   int csock,len,i;
@@ -182,6 +183,9 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 
   if (n_default_children != default_children)
     trace(TRACE_FATAL,"SS_WaitAndProcess(): incompatible number of default-children specified.\n");
+
+  /* cleanup call in case of a signal */
+  the_client_cleanup = ClientCleanup;
 
   /* init & install signal handlers */
   memset(&act, 0, sizeof(act));
@@ -479,7 +483,7 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 		  strncpy(client.ip, inet_ntoa(saClient.sin_addr), SS_IPNUM_LEN);
 		  client.ip[SS_IPNUM_LEN - 1] = '\0';
 
-	      /* handle client */
+		  /* handle client */
 		  (*ClientHandler)(&client); 
 
 #if LOG_USERS > 0
@@ -547,6 +551,8 @@ void SS_sighandler(int sig, siginfo_t *info, void *data)
 	  fclose(client.tx);
 	  shutdown(fileno(client.rx),SHUT_RDWR);
 	  fclose(client.rx);
+
+	  (*the_client_cleanup)(&client);
 
 	  memset(&client, 0, sizeof(client));
 	}

@@ -327,4 +327,14 @@ int imap_process(ClientInfo *ci)
 }
 
 
+/*
+ * imap_error_cleanup()
+ *
+ * clears cache in case of a serious error
+ */
+void imap_error_cleanup(ClientInfo *ci)
+{
+  close_cache();
+}
+
 

@@ -26,6 +26,7 @@
 
 int imap_process(ClientInfo *ci);
 int imap_login(ClientInfo *ci);
+void imap_error_cleanup(ClientInfo *ci);
 
 
 enum IMAP4_CLIENT_STATES { IMAPCS_INITIAL_CONNECT, IMAPCS_NON_AUTHENTICATED, 

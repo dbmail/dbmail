@@ -120,7 +120,8 @@ int main()
 
   /* get started */
   trace(TRACE_MESSAGE, "IMAPD: server ready to run\n");
-  if (SS_WaitAndProcess(sock, atoi(defchld), atoi(maxchld), d, imap_process, imap_login) == -1)
+  if (SS_WaitAndProcess(sock, atoi(defchld), atoi(maxchld), d, 
+			imap_process, imap_login, imap_error_cleanup) == -1)
     {
       trace(TRACE_FATAL,"IMAPD: Fatal error while processing clients: %s\n",SS_GetErrorMsg());
       return 1;

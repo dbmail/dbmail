@@ -13,6 +13,7 @@
 #include <stdarg.h>
 #include <ctype.h>
 #include <unistd.h>
+#include <errno.h>
 #include "imaputil.h"
 #include "imap4.h"
 #include "debug.h"
@@ -1721,8 +1722,13 @@ void close_cache()
       cached_msg.tmpdump = NULL;
     }
 
-  unlink(cached_msg.filename);
-  unlink(cached_msg.tmpname);
+  if (unlink(cached_msg.filename) != 0)
+    trace(TRACE_ERROR, "close_cache(): could not unlink temporary file %s [%s]\n", 
+	  cached_msg.filename, strerror(errno));
+
+  if (unlink(cached_msg.tmpname) != 0)
+    trace(TRACE_ERROR, "close_cache(): could not unlink temporary file %s [%s]\n", 
+	  cached_msg.tmpname, strerror(errno));
 }
 
 /* 
