@@ -10,7 +10,7 @@ export DH_COMPAT=3
 export DEB_BUILD_OPTIONS=debug
 
 #export WITH_GC="--with-gc"
-#export WITH_CHECK="--with-check"
+export WITH_CHECK="--with-check"
 
 CFLAGS = -Wall -O1
 LDFLAGS = -lcrypt
