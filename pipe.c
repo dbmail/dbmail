@@ -16,8 +16,9 @@
 #include "pipe.h"
 #include "debug.h"
 #include <errno.h>
+#include <string.h>
+#include <stdlib.h>
 
-/*extern struct list *returnpath;*/
 
 #define HEADER_BLOCK_SIZE 1024
 #define QUERY_SIZE 255
@@ -26,6 +27,9 @@
 
 #define AUTO_NOTIFY_SENDER "autonotify@dbmail"
 #define AUTO_NOTIFY_SUBJECT "NEW MAIL NOTIFICATION"
+
+extern struct list smtpItems, sysItems;
+
 
 int send_notification(const char *to, const char *from, const char *subject);
 int send_reply(struct list *headerfields, const char *body);
@@ -133,7 +137,7 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
   char *updatequery;
   char *unique_id;
   char *strblock;
-  char *domain, *ptr, *tmpitem;
+  char *domain, *ptr;
   char *tmpbuffer=NULL;
   char *bounce_id;
   size_t usedmem=0, totalmem=0;
@@ -147,7 +151,8 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
   int do_auto_notify = 0, do_auto_reply = 0;
   char *reply_body, *notify_address;
   FILE *instream = stdin;
-  
+  field_t val;
+
   /* step 1.
      inserting first message
      first insert the header into the database
@@ -424,16 +429,13 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
 		     *(u64_t*)tmp->data, totalmem+headersize);
 
 	      /* message has been succesfully inserted, perform auto-notification & auto-reply */
-	      tmpitem = db_get_config_item("AUTO-NOTIFY", CONFIG_EMPTY);
-	      if (tmpitem && strcasecmp(tmpitem, "yes") == 0)
-		  do_auto_notify = 1;
-	      my_free(tmpitem);
+	      GetConfigValue("AUTO_NOTIFY", &smtpItems, val);
+	      if (strcasecmp(val, "yes") == 0)
+		do_auto_notify = 1;
 
-	      tmpitem = db_get_config_item("AUTO-REPLY", CONFIG_EMPTY);
-	      if (tmpitem && strcasecmp(tmpitem, "yes") == 0)
-		  do_auto_reply = 1;
-	      my_free(tmpitem);
-
+	      GetConfigValue("AUTO_REPLY", &smtpItems, val);
+	      if (strcasecmp(val, "yes") == 0)
+		do_auto_reply = 1;
 
 	      if (do_auto_notify)
 		{
@@ -558,10 +560,13 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
 int send_notification(const char *to, const char *from, const char *subject)
 {
   FILE *mailpipe = NULL;
-  char *sendmail;
+  field_t sendmail;
   int result;
 
-  sendmail = db_get_config_item ("SENDMAIL", CONFIG_MANDATORY);
+  GetConfigValue("SENDMAIL", &smtpItems, sendmail);
+  if (sendmail[0] == '\0')
+    trace(TRACE_FATAL, "send_notification(): SENDMAIL not configured (see config file). Stop.");
+
   trace(TRACE_DEBUG, "send_notification(): found sendmail command to be [%s]", sendmail);
 
   if (! (mailpipe = popen(sendmail, "w")) )
@@ -593,10 +598,14 @@ int send_reply(struct list *headerfields, const char *body)
   struct mime_record *record;
   char *from = NULL, *to = NULL, *replyto = NULL, *subject = NULL;
   FILE *mailpipe = NULL;
-  char *sendmail, comm[MAX_COMM_SIZE];
+  char comm[MAX_COMM_SIZE];
+  field_t sendmail;
   int result;
 
-  sendmail = db_get_config_item ("SENDMAIL", CONFIG_MANDATORY);
+  GetConfigValue("SENDMAIL", &smtpItems, sendmail);
+  if (sendmail[0] == '\0')
+    trace(TRACE_FATAL, "send_reply(): SENDMAIL not configured (see config file). Stop.");
+
   trace(TRACE_DEBUG, "send_reply(): found sendmail command to be [%s]", sendmail);
   
   /* find To: and Reply-To:/From: field */

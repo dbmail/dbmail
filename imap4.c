@@ -14,7 +14,7 @@
 #include "imap4.h"
 #include "imaputil.h"
 #include "imapcommands.h"
-#include "serverservice.h"
+#include "clientinfo.h"
 #include "debug.h"
 #include "db.h"
 #include "auth.h"
@@ -77,81 +77,42 @@ const IMAP_COMMAND_HANDLER imap_handler_functions[] =
 
 
 
-/* 
- * standard login for SS_WaitAndProcess(): always success
+/*
+ * Main handling procedure
+ *
+ * returns EOF on logout/fatal error or 1 otherwise
  */
-int imap_login(ClientInfo *ci)
+int IMAPClientHandler(ClientInfo *ci)
 {
-  /* make sure we read/write in line-buffered mode */
-/*  setlinebuf(ci->rx);
-  setlinebuf(ci->tx);
-*/
-  /* add userdata */
+  char line[MAX_LINESIZE];
+  char *tag = NULL,*cpy,**args,*command;
+  int i,done,result;
+  int nfaultyresponses;
+  imap_userdata_t *ud = NULL;
+  mailbox_t newmailbox;
+
+  /* init: add userdata */
   ci->userData = my_malloc(sizeof(imap_userdata_t));
   if (!ci->userData)
     {
       /* out of mem */
-      trace(TRACE_ERROR,"imap_login(): not enough memory.");
-      ci->loginStatus = SS_LOGIN_FAIL;
-      return SS_LOGIN_FAIL;
+      trace(TRACE_ERROR,"IMAPClientHandler(): not enough memory.");
+      return -1;
     }
 
   memset(ci->userData, 0, sizeof(imap_userdata_t));
   ((imap_userdata_t*)ci->userData)->state = IMAPCS_NON_AUTHENTICATED;
+  ud = ci->userData;
 
   /* greet user */
   fprintf(ci->tx,"* OK dbmail imap (protocol version 4r1) server %s ready to run\r\n",
 	  IMAP_SERVER_VERSION);
   fflush(ci->tx);
 
-
-  /* done */
-  ci->loginStatus = SS_LOGIN_OK;
-  return SS_LOGIN_OK;
-}
-
-
-/*
- * Main handling procedure
- *
- * returns EOF on logout/fatal error or 1 otherwise
- */
-int imap_process(ClientInfo *ci)
-{
-  char line[MAX_LINESIZE];
-  char *tag = NULL,*cpy,**args,*command;
-  int i,done,result;
-  int nfaultyresponses;
-  imap_userdata_t *ud = ci->userData;
-  mailbox_t newmailbox;
-
-  /* init */
-  if (db_connect() != 0)
-    {
-      /* could not connect */
-      trace(TRACE_ERROR, "imap_process(): Connection to dbase failed.\n");
-      fprintf(ci->tx, "* BAD could not connect to dbase\r\n");
-      fprintf(ci->tx, "* BYE try again later\r\n");
-
-      null_free(ci->userData);
-      return EOF;
-    }
-
-  if (auth_connect() != 0)
-    {
-      /* could not connect */
-      trace(TRACE_ERROR, "imap_process(): Connection to user dbase failed.\n");
-      fprintf(ci->tx, "* BAD could not connect to user dbase\r\n");
-      fprintf(ci->tx, "* BYE try again later\r\n");
-
-      db_disconnect();
-      null_free(ci->userData);
-      return EOF;
-    }
-
+  /* init: cache */
   if (init_cache() != 0)
     {
-      trace(TRACE_ERROR, "imap_process(): cannot open temporary file\n");
+      trace(TRACE_ERROR, "IMAPClientHandler(): cannot open temporary file\n");
       fprintf(ci->tx, "* BYE internal system failure\r\n");
 
       null_free(ci->userData);
@@ -167,7 +128,7 @@ int imap_process(ClientInfo *ci)
       if (nfaultyresponses >= MAX_FAULTY_RESPONSES)
 	{
 	  /* we have had just about it with this user */
-	  sleep(2); /* avoid DOS attacks */
+	  sleep(2);                                   /* avoid DOS attacks */
 	  fprintf(ci->tx,"* BYE [TRY RFC]\r\n");
 	  done = 1;
 	  break;
@@ -175,13 +136,10 @@ int imap_process(ClientInfo *ci)
 
       if (ferror(ci->rx))
 	{
-	  trace(TRACE_ERROR, "imap_process(): error [%s] on read-stream\n",strerror(errno));
+	  trace(TRACE_ERROR, "IMAPClientHandler(): error [%s] on read-stream\n",strerror(errno));
 	  if (errno == EPIPE)
 	    {
 	      close_cache();
-	      db_disconnect();
-	      auth_disconnect();
-
 	      null_free(((imap_userdata_t*)ci->userData)->mailbox.seq_list);
 	      null_free(ci->userData);
 
@@ -193,13 +151,10 @@ int imap_process(ClientInfo *ci)
 
       if (ferror(ci->tx))
 	{
-	  trace(TRACE_ERROR, "imap_process(): error [%s] on write-stream\n",strerror(errno));
+	  trace(TRACE_ERROR, "IMAPClientHandler(): error [%s] on write-stream\n",strerror(errno));
 	  if (errno == EPIPE)
 	    {
 	      close_cache();
-	      db_disconnect();
-	      auth_disconnect();
-
 	      null_free(((imap_userdata_t*)ci->userData)->mailbox.seq_list);
 	      null_free(ci->userData);
 
@@ -218,15 +173,24 @@ int imap_process(ClientInfo *ci)
       /* remove timeout handler */
       alarm(0); 
 
-      trace(TRACE_DEBUG,"imap_process(): line read for PID %d\n",getpid());
+      if (!ci->rx || !ci->tx)
+	{
+	  /* if a timeout occured the streams will be closed & set to NULL */
+	  trace(TRACE_ERROR, "IMAPClientHandler(): timeout occurred.");
+	  close_cache();
+	  null_free(((imap_userdata_t*)ci->userData)->mailbox.seq_list);
+	  null_free(ci->userData);
+	  
+	  return 1;
+	}
+
+      trace(TRACE_DEBUG,"IMAPClientHandler(): line read for PID %d\n",getpid());
 
       if (!checkchars(line))
 	{
 	  /* foute tekens ingetikt */
 	  fprintf(ci->tx, "* BYE Input contains invalid characters\r\n");
 	  close_cache();
-	  db_disconnect();
-	  auth_disconnect();
 
 	  null_free(((imap_userdata_t*)ci->userData)->mailbox.seq_list);
 	  null_free(ci->userData);
@@ -319,7 +283,7 @@ int imap_process(ClientInfo *ci)
 	  continue;
 	}
 
-      trace(TRACE_INFO, "imap_process(): Executing command %s...\n",IMAP_COMMANDS[i]);
+      trace(TRACE_INFO, "IMAPClientHandler(): Executing command %s...\n",IMAP_COMMANDS[i]);
 
       /* check if mailbox status has changed (notify client) */
       if (ud->state == IMAPCS_SELECTED)
@@ -332,11 +296,9 @@ int imap_process(ClientInfo *ci)
 	  if (result == -1)
 	    {
 	      fprintf(ci->tx,"* BYE internal dbase error\r\n");
-	      trace(TRACE_ERROR, "imap_process(): could not get mailbox info\n");
+	      trace(TRACE_ERROR, "IMAPClientHandler(): could not get mailbox info\n");
 	      
 	      close_cache();
-	      db_disconnect();
-	      auth_disconnect();
 	      null_free(((imap_userdata_t*)ci->userData)->mailbox.seq_list);
 	      null_free(ci->userData);
 
@@ -352,7 +314,7 @@ int imap_process(ClientInfo *ci)
 	  if (newmailbox.exists != ud->mailbox.exists)
 	    {
 	      fprintf(ci->tx, "* %u EXISTS\r\n", newmailbox.exists);
-	      trace(TRACE_INFO, "imap_process(): ok update sent\r\n");
+	      trace(TRACE_INFO, "IMAPClientHandler(): ok update sent\r\n");
 	    }
 
 	  if (newmailbox.recent != ud->mailbox.recent)
@@ -364,16 +326,10 @@ int imap_process(ClientInfo *ci)
 
       result = (*imap_handler_functions[i])(tag, args, ci);
       if (result == -1)
-	{
-	  /* fatal error occurred, kick this user */
-	  done = 1;
-	}
+	done = 1; /* fatal error occurred, kick this user */
 
       if (result == 1)
-	{
-	  /* server returned BAD or NO response */
-	  nfaultyresponses++;
-	}
+	nfaultyresponses++; /* server returned BAD or NO response */
 
       if (result == 0 && i == IMAP_COMM_LOGOUT)
 	done = 1;
@@ -381,7 +337,7 @@ int imap_process(ClientInfo *ci)
 
       fflush(ci->tx); /* write! */
 
-      trace(TRACE_INFO, "imap_process(): Finished command %s\n",IMAP_COMMANDS[i]);
+      trace(TRACE_INFO, "IMAPClientHandler(): Finished command %s\n",IMAP_COMMANDS[i]);
 
       for (i=0; args[i]; i++) 
 	{
@@ -393,14 +349,12 @@ int imap_process(ClientInfo *ci)
 
   /* cleanup */
   close_cache();
-  db_disconnect();
-  auth_disconnect();
 
   null_free(((imap_userdata_t*)ci->userData)->mailbox.seq_list);
   null_free(ci->userData);
 
   fprintf(ci->tx,"%s OK completed\r\n",tag);
-  trace(TRACE_MESSAGE,"imap_process(): Closing connection for client from IP [%s]\n",ci->ip);
+  trace(TRACE_MESSAGE,"IMAPClientHandler(): Closing connection for client from IP [%s]\n",ci->ip);
 
   __debug_dumpallocs(); 
 
@@ -409,23 +363,5 @@ int imap_process(ClientInfo *ci)
 }
 
 
-/*
- * imap_error_cleanup()
- *
- * clears cache in case of a serious error
- */
-void imap_error_cleanup(ClientInfo *ci)
-{
-  if (ci->userData)
-    null_free(((imap_userdata_t*)ci->userData)->mailbox.seq_list);
-  
-  null_free(ci->userData);
-
-  close_cache();
-  db_disconnect();
-  auth_disconnect();
-
-  alarm(0);
-}
 
 

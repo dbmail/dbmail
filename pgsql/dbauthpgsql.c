@@ -30,13 +30,15 @@ PGconn *__auth_conn = NULL;
 PGresult *__auth_res;
 char __auth_query_data[AUTH_QUERY_SIZE];
 
+field_t _auth_host, _auth_user, _auth_db, _auth_pass;
+
 
 /*
  * auth_connect()
  *
  * initializes the connection for authentication.
  * 
- * returns 0 on success, -1 on failure.
+ * returns 0 ons success, -1 on failure
  */
 int auth_connect ()
 {
@@ -44,7 +46,7 @@ int auth_connect ()
 
   /* connecting */
   snprintf (connectionstring, 255, "host='%s' user='%s' password='%s' dbname='%s'",
-	   AUTH_HOST, AUTH_USER, AUTH_PASS, USERDATABASE);
+	   _auth_host, _auth_user, _auth_pass, _auth_db);
 
   __auth_conn = PQconnectdb(connectionstring);
 
@@ -65,6 +67,11 @@ int auth_disconnect()
   return 0;
 }
 
+/* sets a connection to use */
+void auth_set_connection(void *dbconn)
+{
+  __auth_conn = (PGconn*)dbconn;
+}
 
 /* 
  * __auth_query()

@@ -8,6 +8,8 @@
 #include "pipe.h"
 #include "list.h"
 #include "auth.h"
+#include <string.h>
+#include <stdlib.h>
 
 #define MESSAGEIDSIZE 100
 #define NORMAL_DELIVERY 1
@@ -21,12 +23,21 @@
 struct list mimelist; 	        /* raw unformatted mimefields and values */
 struct list users; 	  	/* list of email addresses in message */
 
+struct list sysItems, smtpItems; /* config item lists */
+
+char *configFile = "dbmail.conf";
+
+/* set up database login data */
+extern field_t _db_host;
+extern field_t _db_db;
+extern field_t _db_user;
+extern field_t _db_pass;
+
+
 int mode;			/* how should we process */
   
 char *header = NULL;
 char *deliver_to_mailbox = NULL;
-char *trace_level = NULL, *trace_syslog = NULL, *trace_verbose = NULL;
-int new_level = 2, new_trace_syslog = 1, new_trace_verbose = 0;
 u64_t headersize;
 
 int main (int argc, char *argv[]) 
@@ -49,44 +60,16 @@ int main (int argc, char *argv[])
       return 0;
     }
 
+  ReadConfig("DBMAIL", configFile, &sysItems);
+  ReadConfig("SMTP", configFile, &smtpItems);
+  SetTraceLevel(&smtpItems);
+  GetDBParams(_db_host, _db_db, _db_user, _db_pass, &sysItems);
 
   if (db_connect() < 0) 
     trace(TRACE_FATAL,"main(): database connection failed");
 
-  if (auth_connect() < 0)
-    {
-      db_disconnect();
-      trace(TRACE_FATAL,"main(): user database connection failed");
-    }
-  /* reading settings */
-  
-/*  trace_level = db_get_config_item("TRACE_LEVEL", CONFIG_EMPTY);
-  trace_syslog = db_get_config_item("TRACE_TO_SYSLOG", CONFIG_EMPTY);
-  trace_verbose = db_get_config_item("TRACE_VERBOSE", CONFIG_EMPTY);
+  auth_set_connection(db_get_connection());
 
-  if (trace_level)
-    {
-      new_level = atoi(trace_level);
-      my_free(trace_level);
-      trace_level = NULL;
-    }
-
-  if (trace_syslog)
-    {
-      new_trace_syslog = atoi(trace_syslog);
-      my_free(trace_syslog);
-      trace_syslog = NULL;
-    }
-
-  if (trace_verbose)
-    {
-      new_trace_verbose = atoi(trace_verbose);
-      my_free(trace_verbose);
-      trace_verbose = NULL;
-    }
-*/
-  
-  configure_debug(new_level, new_trace_syslog, new_trace_verbose);
   list_init(&users);
   list_init(&mimelist);
 

@@ -9,6 +9,7 @@
 #include "debug.h"
 #include "auth.h"
 #include <errno.h>
+#include "config.h"
 
 #define INCOMING_BUFFER_SIZE 512
 #define IP_ADDR_MAXSIZE 16
@@ -22,6 +23,15 @@
 
 /* syslog */
 #define PNAME "dbmail/pop3d"
+
+char *configFile = "dbmail.conf";
+
+/* set up database login data */
+extern field_t _db_host;
+extern field_t _db_db;
+extern field_t _db_user;
+extern field_t _db_pass;
+
 
 int state;
 char *username=NULL, *password=NULL;
@@ -406,15 +416,8 @@ int main (int argc, char *argv[])
   struct sockaddr_in adr_clnt;
   struct sigaction act;
   char myhostname[64];
-
-  char *newuser, *newgroup;
-  
-  char *ipaddr, *port;
-
-  char *trace_level=NULL,*trace_syslog=NULL,*trace_verbose=NULL;
-  int new_level = 2, new_trace_syslog = 1, new_trace_verbose = 0;
-  char *resolve_setting=NULL, *before_smtp=NULL, *max_connects=0;
-  
+  struct list popItems, sysItems;
+  field_t val, newuser, newgroup;
   pid_t childpid = 0;
 
   int len_inet;
@@ -427,71 +430,81 @@ int main (int argc, char *argv[])
 
   /* open logs */
   openlog(PNAME, LOG_PID, LOG_MAIL);
+
+  if (argc >= 2 && strcmp(argv[1], "-f") == 0)
+    {
+      if (!argv[2])
+	trace(TRACE_FATAL,"main(): no file specified for -f option. Fatal.");
+
+      configFile = argv[2];
+    }
   
+  ReadConfig("POP", configFile, &popItems);
+  ReadConfig("DBMAIL", configFile, &sysItems);
+  SetTraceLevel(&popItems);
+  GetDBParams(_db_host, _db_db, _db_user, _db_pass, &sysItems);
+
   /* connect to the database */
   if (db_connect()< 0) 
     trace(TRACE_FATAL,"main(): could not connect to database"); 
 	
-  /* debug settings */
-  trace_level = db_get_config_item("TRACE_LEVEL", CONFIG_EMPTY);
-  trace_syslog = db_get_config_item("TRACE_TO_SYSLOG", CONFIG_EMPTY);
-  trace_verbose = db_get_config_item("TRACE_VERBOSE", CONFIG_EMPTY);
-  timeout_setting = db_get_config_item("POP3D_CHILD_TIMEOUT", CONFIG_EMPTY);
-  resolve_setting = db_get_config_item("POP3D_IP_RESOLVE",CONFIG_EMPTY);
-
-  before_smtp = db_get_config_item("DBMAIL_POP_BEFORE_SMTP",CONFIG_EMPTY);
-  if (before_smtp && strcasecmp(before_smtp,"yes") == 0)
-    {
-      pop_before_smtp = 1;
-      my_free(before_smtp);
-      before_smtp = NULL;
-    }
-
-  if (resolve_setting)
-  {
-    if (strcasecmp(resolve_setting,"yes")==0)
-      resolve_client = 1;
-    else
-      resolve_client = 0;
-
-    my_free(resolve_setting);
-    resolve_setting = NULL;
-  }	
-  
-  if (timeout_setting) 
-  {
-    server_timeout = atoi(timeout_setting);
-    my_free (timeout_setting);
-    if (server_timeout<10)
-      trace (TRACE_STOP,"main(): POP3D_CHILD_TIMEOUT setting is insane [%d]",
-	     server_timeout);
-    timeout_setting = NULL;
-  }
-  else
+  GetConfigValue("TIMEOUT", &popItems, val);
+  server_timeout = atoi(val);
+  if (server_timeout < 10)
     server_timeout = DEFAULT_SERVER_TIMEOUT;
-  
-  if (trace_level)
+
+  GetConfigValue("RESOLVE_IP", &popItems, val);
+  if (strcasecmp(val,"yes")==0)
+    resolve_client = 1;
+  else
+    resolve_client = 0;
+
+  GetConfigValue("POP_BEFORE_SMTP", &popItems, val);
+  if (strcasecmp(val,"yes") == 0)
+    pop_before_smtp = 1;
+  else
+    pop_before_smtp = 0;
+
+
+  GetConfigValue("BINDIP", &popItems, val);
+  if (val[0] == '\0')
+    trace(TRACE_FATAL,"main(): no IP to bind to specified. Fatal.");
+
+  if (val[0] == '*') /* bind to all interfaces */
+      adr_srvr.sin_addr.s_addr = htonl (INADDR_ANY); 
+  else 
     {
-      new_level = atoi(trace_level);
-      my_free(trace_level);
-      trace_level = NULL;
+      if (!inet_aton(val, &adr_srvr.sin_addr))
+	trace (TRACE_FATAL, "main(): [%s] is not a valid ipaddress", val);
     }
 
-  if (trace_syslog)
-    {
-      new_trace_syslog = atoi(trace_syslog);
-      my_free(trace_syslog);
-      trace_syslog = NULL;
-    }
+  GetConfigValue("PORT", &popItems, val);
+  if (val[0] != '\0')
+    adr_srvr.sin_port = htons (atoi(val));
+  else
+    trace (TRACE_FATAL,"main(): no PORT in config. fatal.");
 
-  if (trace_verbose)
-    {
-      new_trace_verbose = atoi(trace_verbose);
-      my_free(trace_verbose);
-      trace_verbose = NULL;
-    }
 
-  configure_debug(new_level, new_trace_syslog, new_trace_verbose);
+  /* get child config */
+  GetConfigValue("NCHILDREN", &popItems, val);
+  if (val[0] == '\0')
+    trace(TRACE_FATAL, "main(): no value for NCHILDREN in config. Fatal.");
+  defchld = atoi(val);
+
+  GetConfigValue("MAXCHILDREN", &popItems, val);
+  if (val[0] == '\0')
+    trace(TRACE_FATAL, "main(): no value for MAXCHILDREN in config. Fatal.");
+  maxchld = atoi(val);
+
+  GetConfigValue("MAXCONNECTS", &popItems, val);
+  n_max_connects = atoi(val);
+  if (n_max_connects <= 1)
+    n_max_connects = POP3_DEF_MAXCONNECT;
+
+  GetConfigValue("EFFECTIVE_USER", &popItems, newuser);
+  GetConfigValue("EFFECTIVE_GROUP", &popItems, newgroup);
+  if (!newuser[0] || !newgroup[0])
+    trace(TRACE_FATAL,"main(): no newuser and newgroup in config");
 
 
   /* daemonize */
@@ -534,27 +547,6 @@ int main (int argc, char *argv[])
   if (s == -1 ) 
     trace (TRACE_FATAL,"main(): call socket(2) failed");
 
-  ipaddr = db_get_config_item("POP3D_BIND_IP",CONFIG_MANDATORY); 
-  port = db_get_config_item("POP3D_BIND_PORT",CONFIG_MANDATORY);
-
-
-  if (ipaddr != NULL)
-  {
-    if (ipaddr[0] == '*') /* bind to all interfaces */
-      adr_srvr.sin_addr.s_addr = htonl (INADDR_ANY); 
-    else 
-      {
-	if (!inet_aton(ipaddr, &adr_srvr.sin_addr))
-	  trace (TRACE_FATAL, "main(): %s is not a valid ipaddress",ipaddr);
-      }
-  }
-  else
-    trace (TRACE_FATAL,"main(): could not read bind ip from config");
-
-  if (port != NULL)
-    adr_srvr.sin_port = htons (atoi(port));
-  else
-    trace (TRACE_FATAL,"main(): could not read port from config");
 			
   setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &reuseaddress, sizeof(reuseaddress));
 	
@@ -562,7 +554,7 @@ int main (int argc, char *argv[])
 
   z = bind (s, (struct sockaddr *)&adr_srvr, len_inet); /* bind to socket */
   if (z == -1 )
-    trace (TRACE_FATAL,"main(): call bind(2) failed (could not bind to %s:%s)",ipaddr,port);
+    trace (TRACE_FATAL,"main(): call bind(2) failed");
 
   z = listen (s, BACKLOG); /* make the socket listen */
   if (z == -1 )
@@ -571,42 +563,10 @@ int main (int argc, char *argv[])
   /* drop priviledges */
   trace (TRACE_MESSAGE,"main(): Dropping priviledges");		
 
-	
-  newuser = db_get_config_item("POP3D_EFFECTIVE_USER",CONFIG_MANDATORY);
-  newgroup = db_get_config_item("POP3D_EFFECTIVE_GROUP",CONFIG_MANDATORY);
-	
-  if ((newuser!=NULL) && (newgroup!=NULL))
-  {
-    if (drop_priviledges (newuser, newgroup) != 0)
-      trace (TRACE_FATAL,"main(): could not set uid %s, gid %s",newuser,newgroup);
-    
-    my_free(newuser);
-    my_free(newgroup);
-    newuser = NULL;
-    newgroup = NULL;
-  }
-  else
-    trace(TRACE_FATAL,"main(): newuser and newgroup should not be NULL");
-
-  /* get child config */
-  defchld = atoi(db_get_config_item("POP3D_DEFAULT_CHILD",CONFIG_MANDATORY));
-  maxchld = atoi(db_get_config_item("POP3D_MAX_CHILD",CONFIG_MANDATORY));
-
-  max_connects = db_get_config_item("POP3D_CHILD_MAX_CONNECTS",CONFIG_EMPTY);
-  if (max_connects)
-    {
-      n_max_connects = atoi(max_connects);
-      my_free(max_connects);
-      max_connects = 0;
-    }
-
-  if (n_max_connects <= 1)
-    n_max_connects = POP3_DEF_MAXCONNECT;
-
+  if (drop_priviledges (newuser, newgroup) != 0)
+    trace (TRACE_FATAL,"main(): could not set uid %s, gid %s",newuser,newgroup);
   
   /* OK all config read, close dbase connection */
-  db_disconnect();
-
 
   /* getting shared memory children counter */
   shmkey_dcu = time (NULL); /* get an unique key */
@@ -623,11 +583,8 @@ int main (int argc, char *argv[])
 
 
   /* server loop */
-  trace (TRACE_MESSAGE,"main(): DBmail pop3 server ready (bound to [%s:%s])",ipaddr,port);
+  trace (TRACE_MESSAGE,"main(): DBmail pop3 server ready");
 	
-  my_free (ipaddr);
-  my_free (port);
-  
 
   /* remember this pid, we're the father process */
   server_pid = getpid();

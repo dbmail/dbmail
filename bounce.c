@@ -10,24 +10,35 @@
 #include "mime.h"
 #include "db.h"
 #include "debug.h"
+#include "config.h"
+#include <stdlib.h>
+#include <string.h>
 
 extern struct list mimelist;  
 extern struct list users;  
+extern struct list smtpItems;  
 
 int bounce (char *header, unsigned long headersize,char *destination_address, int type)
 {
   void *sendmail_stream;
   struct list from_addresses;
   struct element *tmpelement;
-  char *dbmail_from_address;
-  char *sendmail;
-  char *postmaster;
+  field_t dbmail_from_address, sendmail, postmaster;
+
 
   /* reading configuration from db */
-  dbmail_from_address = db_get_config_item ("DBMAIL_FROM_ADDRESS",CONFIG_MANDATORY);
-  sendmail = db_get_config_item ("SENDMAIL", CONFIG_MANDATORY);
+  GetConfigValue("DBMAIL_FROM_ADDRESS", &smtpItems, dbmail_from_address);
+  if (dbmail_from_address[0] == '\0')
+    trace(TRACE_FATAL, "bounce(): DBMAIL_FROM_ADDRESS not configured (see config file). Stop.");
+
+  GetConfigValue("SENDMAIL", &smtpItems, sendmail);
+  if (sendmail[0] == '\0')
+    trace(TRACE_FATAL, "bounce(): SENDMAIL not configured (see config file). Stop.");
 	
-  postmaster = db_get_config_item ("POSTMASTER",CONFIG_MANDATORY);
+  GetConfigValue("POSTMASTER", &smtpItems, postmaster);
+  if (postmaster[0] == '\0')
+    trace(TRACE_FATAL, "bounce(): POSTMASTER not configured (see config file). Stop.");
+	
   
   trace (TRACE_DEBUG,"bounce(): creating bounce message for bounce type [%d]",type);
 		
@@ -37,17 +48,6 @@ int bounce (char *header, unsigned long headersize,char *destination_address, in
       return -1;
     }
 
-  if (!sendmail)
-    {
-      trace(TRACE_ERROR,"bounce(): cannot send via NULL.\n");
-      return -1;
-    }
-
-  if (!postmaster)
-    {
-      trace(TRACE_ERROR,"bounce(): cannot have NULL postmaster.\n");
-      return -1;
-    }
 
   switch (type)
     {

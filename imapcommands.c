@@ -115,8 +115,8 @@ int _ic_logout(char *tag, char **args, ClientInfo *ci)
   /* change status */
   ud->state = IMAPCS_LOGOUT;
 
-  trace(TRACE_MESSAGE, "IMAPD [PID %d]: user (id:%d) logging out @ %s\r\n",getpid(),
-	ud->userid,timestr);
+  trace(TRACE_MESSAGE, "_ic_logout(): user (id:%llu) logging out @ [%s]\r\n",
+	ud->userid, timestr);
 
   fprintf(ci->tx,"* BYE dbmail imap server kisses you goodbye\r\n");
 
@@ -147,15 +147,16 @@ int _ic_login(char *tag, char **args, ClientInfo *ci)
   if (!check_state_and_args("LOGIN", tag, args, 2, IMAPCS_NON_AUTHENTICATED, ci))
     return 1; /* error, return */
 
+  trace(TRACE_DEBUG, "_ic_login(): trying to validate user");
   userid = auth_validate(args[0], args[1]);
-  trace(TRACE_MESSAGE, "IMAPD [PID %d]: user (id:%llu, name %s) tries login\r\n",(int)getpid(),
+  trace(TRACE_MESSAGE, "_ic_login(): user (id:%llu, name %s) tries login\r\n",
 	userid,args[0]);
 
   if (userid == -1)
     {
       /* a db-error occurred */
       fprintf(ci->tx,"* BYE internal db error validating user\r\n");
-      trace(TRACE_ERROR,"IMAPD: login(): db-validate error while validating user %s (pass %s).",
+      trace(TRACE_ERROR,"_ic_login(): db-validate error while validating user %s (pass %s).",
 	    args[0],args[1]);
       return -1;
     }
@@ -173,7 +174,7 @@ int _ic_login(char *tag, char **args, ClientInfo *ci)
     }
 
   /* login ok */
-  trace(TRACE_MESSAGE, "IMAPD [PID %d]: user (id %llu, name %s) login accepted @ %s\r\n",(int)getpid(),
+  trace(TRACE_MESSAGE, "_ic_login(): user (id %llu, name %s) login accepted @ %s\r\n",
 	userid,args[0],timestr);
 
   /* update client info */

@@ -28,17 +28,20 @@ MYSQL __auth_conn;
 MYSQL_RES *__auth_res;
 MYSQL_ROW __auth_row;
 
+field_t _auth_host, _auth_user, _auth_db, _auth_pass;
+
+
 /*
  * auth_connect()
  *
  * initializes the connection for authentication.
  * 
- * returns 0 on success, -1 on failure.
+ * returns 0 on success, -1 on failure
  */
 int auth_connect()
 {
   mysql_init(&__auth_conn);
-  if (mysql_real_connect (&__auth_conn,AUTH_HOST,AUTH_USER,AUTH_PASS,USERDATABASE,0,NULL,0) == NULL)
+  if (mysql_real_connect (&__auth_conn, _auth_host, _auth_user, _auth_pass, _auth_db, 0, NULL, 0) == NULL)
     {
       trace(TRACE_ERROR,"auth_connect(): mysql_real_connect failed: %s",
 	    mysql_error(&__auth_conn));
@@ -53,6 +56,13 @@ int auth_disconnect()
 {
   mysql_close(&__auth_conn);
   return 0;
+}
+
+
+/* sets a connection to use */
+void auth_set_connection(void *dbconn)
+{
+  __auth_conn = *(MYSQL*)dbconn;
 }
 
 

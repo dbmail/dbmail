@@ -9,14 +9,24 @@
 #include "maintenance.h"
 #include "db.h"
 #include "debug.h"
+#include "config.h"
+#include "list.h"
+#include "debug.h"
 #include <unistd.h>
 #include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "config.h"
-#include "list.h"
-#include "debug.h"
 #include <time.h>
+#include <string.h>
+
+char *configFile = "dbmail.conf";
+
+/* set up database login data */
+extern field_t _db_host;
+extern field_t _db_db;
+extern field_t _db_user;
+extern field_t _db_pass;
+
 
 void find_time(char *timestr, const char *timespec);
 
@@ -27,13 +37,11 @@ int main(int argc, char *argv[])
   int show_help=0, purge_deleted=0, set_deleted=0;
   int vacuum_db = 0;
   int do_nothing=1;
+  struct list sysItems;
 
   time_t start,stop;
 
   char timespec[LEN],timestr[LEN];
-  char *trace_level,*trace_syslog,*trace_verbose;
-  int new_level = 2, new_trace_syslog = 1, new_trace_verbose = 0;
-
   int opt;
   struct list lostlist;
   struct element *el;
@@ -43,6 +51,10 @@ int main(int argc, char *argv[])
   u64_t messages_set_to_delete;
     
   openlog(PNAME, LOG_PID, LOG_MAIL);
+
+  ReadConfig("DBMAIL", "dbmail.conf", &sysItems);
+  SetTraceLevel(&sysItems);
+  GetDBParams(_db_host, _db_db, _db_user, _db_pass, &sysItems);
 	
   setvbuf(stdout,0,_IONBF,0);
   printf ("*** dbmail-maintenance ***\n");
@@ -97,6 +109,7 @@ int main(int argc, char *argv[])
 
 	default:
 	  /*printf("unrecognized option [%c], continuing...\n",optopt);*/
+	  break;
 	}
     }
 
@@ -126,34 +139,6 @@ int main(int argc, char *argv[])
     }
 
   printf ("Ok. Connected\n");
-
-	
-  trace_level = db_get_config_item("TRACE_LEVEL", CONFIG_EMPTY);
-  trace_syslog = db_get_config_item("TRACE_TO_SYSLOG", CONFIG_EMPTY);
-  trace_verbose = db_get_config_item("TRACE_VERBOSE", CONFIG_EMPTY);
-
-  if (trace_level)
-    {
-      new_level = atoi(trace_level);
-      my_free(trace_level);
-      trace_level = NULL;
-    }
-
-  if (trace_syslog)
-    {
-      new_trace_syslog = atoi(trace_syslog);
-      my_free(trace_syslog);
-      trace_syslog = NULL;
-    }
-
-  if (trace_verbose)
-    {
-      new_trace_verbose = atoi(trace_verbose);
-      my_free(trace_verbose);
-      trace_verbose = NULL;
-    }
-
-  configure_debug(new_level, new_trace_syslog, new_trace_verbose);
 
   if (purge_deleted)
     {

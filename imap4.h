@@ -7,10 +7,10 @@
 #ifndef _IMAP4_H
 #define _IMAP4_H
 
-#include "serverservice.h"
 #include "dbmailtypes.h"
+#include "clientinfo.h"
 
-#define IMAP_SERVER_VERSION "0.3"
+#define IMAP_SERVER_VERSION "0.9"
 #define IMAP_CAPABILITY_STRING "IMAP4 IMAP4rev1 AUTH=LOGIN"
 #define IMAP_TIMEOUT_MSG "* BYE dbmail IMAP4 server signing off due to timeout\r\n"
 
@@ -20,21 +20,19 @@
 /* max number of retries when synchronizing mailbox with dbase */
 #define MAX_RETRIES 20
 
-int imap_process(ClientInfo *ci);
-int imap_login(ClientInfo *ci);
-void imap_error_cleanup(ClientInfo *ci);
+int IMAPClientHandler(ClientInfo *ci);
 
 typedef int (*IMAP_COMMAND_HANDLER)(char*, char**, ClientInfo*);
 
 typedef struct 
 {
-  int noseen;                /* set the seen flag ? */
-  int itemtype;              /* the item to be fetched */
-  int argstart;              /* start index in the arg array */
-  int argcnt;                /* number of args belonging to this bodyfetch */
-  long long octetstart,octetcnt;   /* number of octets to be retrieved */
+  int noseen;                              /* set the seen flag ? */
+  int itemtype;                            /* the item to be fetched */
+  int argstart;                            /* start index in the arg array */
+  int argcnt;                              /* number of args belonging to this bodyfetch */
+  long long octetstart,octetcnt;           /* number of octets to be retrieved */
 
-  char partspec[IMAP_MAX_PARTSPEC_LEN]; /* part specifier (i.e. '2.1.3' */
+  char partspec[IMAP_MAX_PARTSPEC_LEN];    /* part specifier (i.e. '2.1.3' */
 
 } body_fetch_t;
 

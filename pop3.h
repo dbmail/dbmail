@@ -62,36 +62,6 @@
 #define POP3_TOP 13
 #define POP3_END 14
 
-/* all virtual_ definitions are session specific
- * when a RSET occurs all will be set to the real values */
-
-struct message
-{
-  u64_t msize;
-  u64_t messageid;
-  u64_t realmessageid;
-  char uidl[UID_SIZE];
-  /* message status :
-   * 000 message is new, never touched 
-   * 001 message is read
-   * 002 message is deleted by user 
-   * ----------------------------------
-   * The server additionally uses:
-   * 003 message is deleted by sysop
-   * 004 message is ready for final deletion */
-		
-  u64_t messagestatus;
-  u64_t virtual_messagestatus;
-};
-
-struct session
-{
-  u64_t totalsize;
-  u64_t virtual_totalsize; 
-  u64_t totalmessages;
-  u64_t virtual_totalmessages;
-  struct list messagelst;
-};
 
 int pop3 (void *stream, char *buffer);
 

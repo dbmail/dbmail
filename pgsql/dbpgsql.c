@@ -8,16 +8,18 @@
 #include "/usr/local/pgsql/include/libpq-fe.h"
 /*#include "/usr/include/postgresql/libpq-fe.h"*/
 #include "../config.h"
-#include "../pop3.h"
 #include "../list.h"
 #include "../mime.h"
 #include "../pipe.h"
 #include "../memblock.h"
+#include "../rfcmsg.h"
+#include "../auth.h"
 #include <time.h>
 #include <ctype.h>
 #include <sys/types.h>
-#include "../rfcmsg.h"
-#include "../auth.h"
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 
 PGconn *conn;  
@@ -26,6 +28,11 @@ PGresult *checkres;
 char *query = 0;
 char *value = NULL; /* used for PQgetvalue */
 u64_t PQcounter = 0; /* used for PQgetvalue loops */
+
+typedef PGconn db_conn_t;
+
+field_t _db_host, _db_user, _db_db, _db_pass;
+
 
 const char *db_flag_desc[] = 
   {
@@ -54,7 +61,7 @@ int db_connect ()
   /* connecting */
 
   snprintf (connectionstring, 255, "host='%s' user='%s' password='%s' dbname='%s'",
-	   MAIL_HOST, MAIL_USER, MAIL_PASS, MAILDATABASE);
+	    _db_host, _db_user, _db_pass, _db_db);
 
   conn = PQconnectdb(connectionstring);
 
@@ -65,8 +72,13 @@ int db_connect ()
     }
 
   /* database connection OK */  
-
   return 0;
+}
+
+
+void* db_get_connection()
+{
+  return conn;
 }
 
 u64_t db_insert_result (const char *sequence_identifier)
@@ -137,85 +149,6 @@ int db_query (const char *thequery)
   return 0;
 }
 
-
-/*
- * clears the configuration table
- */
-int db_clear_config()
-{
-  return db_query("DELETE FROM config");
-}
-
-
-int db_insert_config_item (char *item, char *val)
-{
-  /* insert_config_item will insert a configuration item in the database */
-
-  snprintf (query, DEF_QUERYSIZE,"INSERT INTO config (item,value) VALUES ('%s', '%s')",item, val);
-  trace (TRACE_DEBUG,"insert_config_item(): executing query: [%s]",query);
-
-  if (db_query(query)==-1)
-    {
-      trace (TRACE_DEBUG,"insert_config_item(): item [%s] value [%s] failed",item,value);
-      return -1;
-    }
-  else 
-    {
-      return 0;
-    }
-}
-
-
-char *db_get_config_item (char *item, int type)
-{
-  /* retrieves an config item from database */
-  char *result = NULL;
-
-  snprintf (query, DEF_QUERYSIZE, "SELECT value FROM config WHERE item='%s'",item);
-  trace (TRACE_DEBUG,"db_get_config_item(): retrieving config_item %s by query [%s]\n",
-	 item, query);
-
-  if (db_query(query)==-1)
-    {
-      if (type == CONFIG_MANDATORY)
-        {
-	  db_disconnect();
-	  trace (TRACE_FATAL,"db_get_config_item(): query failed could not get value for %s. "
-		 "This is needed to continue\n",item);
-        }
-      else
-	if (type == CONFIG_EMPTY)
-	  trace (TRACE_ERROR,"db_get_config_item(): query failed. Could not get value for %s\n",
-		 item);
-
-      return NULL;
-    }
-
-  if (PQntuples (res)==0)
-    {
-      if (type == CONFIG_MANDATORY)
-	trace (TRACE_FATAL,"db_get_config_item(): configvalue not found for %s"
-	       "This is needed to continue\n",item);
-      else
-	if (type == CONFIG_EMPTY)
-	  trace (TRACE_ERROR,"db_get_config_item(): configvalue not found. "
-		 "Could not get value for %s\n",item);
-
-      PQclear(res);
-      return NULL;
-    }
-
-  value = PQgetvalue (res, 0, 0);
-  result=(char *)my_malloc(strlen(value)+1);
-  if (result!=NULL)
-    {
-      strcpy (result, value);
-      trace (TRACE_DEBUG,"Ok result [%s]\n",result);
-    }
-
-  PQclear(res);
-  return result;
-}
 
 
 /*
@@ -438,7 +371,7 @@ int db_get_nofity_address(u64_t userid, char **notify_address)
     {
       if (PQgetvalue(res, 0, 0) && strlen(PQgetvalue(res, 0, 0)) > 0)
 	{
-	  if ( !(*notify_address = (char*)malloc(strlen(PQgetvalue(res,0,0)) + 1)) )
+	  if ( !(*notify_address = (char*)my_malloc(strlen(PQgetvalue(res,0,0)) + 1)) )
 	    {
 	      trace(TRACE_ERROR, "db_get_nofity_address(): could not allocate memory for address");
 	      PQclear(res);
@@ -472,7 +405,7 @@ int db_get_reply_body(u64_t userid, char **body)
     {
       if (PQgetvalue(res, 0, 0) && strlen(PQgetvalue(res, 0, 0)) > 0)
 	{
-	  if ( !(*body = (char*)malloc(strlen(PQgetvalue(res,0,0)) + 1)) )
+	  if ( !(*body = (char*)my_malloc(strlen(PQgetvalue(res,0,0)) + 1)) )
 	    {
 	      trace(TRACE_ERROR, "db_get_reply_body(): could not allocate memory for body");
 	      PQclear(res);

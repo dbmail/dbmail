@@ -19,6 +19,8 @@
 int auth_connect();
 int auth_disconnect();
 
+void auth_set_connection(void *dbconn);
+
 u64_t auth_user_exists(const char *username);
 int auth_get_known_users(struct list *users);
 u64_t auth_getclientid(u64_t useridnr);

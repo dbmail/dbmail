@@ -1,29 +1,31 @@
-/* $Id$ 
- * (c) 2000-2001 IC&S, The Netherlands */
+/*
+ * config.h
+ * header file for a general configurationfile read tool
+ */
 
+#ifndef _CONFIG_H
+#define _CONFIG_H
 
-#ifndef  _CONFIG_H
-#define  _CONFIG_H
+#include "list.h"
+#include "debug.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <strings.h>
-#include <unistd.h>
-#include <syslog.h>
+#define CONFIG_ERROR_LEVEL TRACE_WARNING
 
-/* DATABASE SPECIFIC */
-#define MAIL_HOST "/tmp"
-#define MAIL_USER "dbmail"
-#define MAIL_PASS "dbma1l"
-#define MAILDATABASE "dbmail"
+#define FIELDSIZE 1024
+#define FIELDLEN FIELDSIZE
+typedef char field_t[FIELDSIZE];
+ 
+typedef struct
+{
+  field_t name, value;
+} item_t;
 
-#define AUTH_HOST "/tmp"
-#define AUTH_USER "dbmail"
-#define AUTH_PASS "dbma1l"
-#define USERDATABASE "dbmail"
+int ReadConfig(const char *serviceName, const char *cfilename, struct list *items);
+int GetConfigValue(const field_t name, struct list *items, field_t value);
 
-#define UID_SIZE 70
+/* some common used functions reading config options */
+void GetDBParams(field_t host, field_t db, field_t user, field_t pass, struct list *cfg);
+void SetTraceLevel(struct list *cfg);
 
 
 #endif

@@ -4,10 +4,12 @@
  * Functions for parsing a mime mailheader (actually just for scanning for email messages
 	and parsing the messageID */
 
-#include "config.h"
 #include "mime.h"
 #include "debug.h"
 #include <ctype.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 /* extern char *header; */
 /* extern u64_t headersize; */

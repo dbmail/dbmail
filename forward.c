@@ -10,7 +10,12 @@
 #include "list.h"
 #include "bounce.h"
 #include "forward.h"
+#include "config.h"
 #include <string.h>
+#include <stdlib.h>
+
+extern struct list smtpItems;
+
 
 int pipe_forward(FILE *instream, struct list *targets, char *from, char *header, unsigned long databasemessageid)
 {
@@ -23,7 +28,7 @@ int pipe_forward(FILE *instream, struct list *targets, char *from, char *header,
   FILE *sendmail_pipe=NULL;
   int usedmem, totalmem;
   int err;
-  char *sendmail;
+  field_t sendmail;
   char timestr[50];
   time_t td;
   struct tm tm;
@@ -40,7 +45,9 @@ int pipe_forward(FILE *instream, struct list *targets, char *from, char *header,
   
   totalmem = 0;
 	
-  sendmail = db_get_config_item ("SENDMAIL", CONFIG_MANDATORY);
+  GetConfigValue("SENDMAIL", &smtpItems, sendmail);
+  if (sendmail[0] == '\0')
+    trace(TRACE_FATAL, "pipe_forward(): SENDMAIL not configured (see config file). Stop.");
   
   trace (TRACE_INFO,"pipe_forward(): delivering to %d "
 	 "external addresses", list_totalnodes(targets));

@@ -12,26 +12,26 @@ SEARCHOBJECT = $(DBASETYPE)/dbsearch$(DBASETYPE).o
 DBOBJECT = $(DBASETYPE)/db$(DBASETYPE).o
 
 SMTP_OBJECTS = list.o debug.o pipe.o mime.o $(DBOBJECT) dbmd5.o md5.o bounce.o forward.o memblock.o \
-$(AUTHOBJECT)
-INJECTOR_OBJECTS = list.o debug.o $(DBOBJECT) dbmd5.o md5.o $(AUTHOBJECT) mime.o
-UNIONE_OBJECTS = list.o debug.o $(DBOBJECT) dbmd5.o md5.o $(AUTHOBJECT) mime.o
-MINI_OBJECTS = debug.o $(DBOBJECT) list.o dbmd5.o md5.o $(AUTHOBJECT) mime.o
-POP_OBJECTS = pop3.o list.o debug.o $(DBOBJECT) dbmd5.o md5.o mime.o misc.o memblock.o $(AUTHOBJECT)
-IMAP_OBJECTS = imap4.o debug.o $(DBOBJECT) serverservice.o list.o dbmd5.o md5.o imaputil.o \
-imapcommands.o mime.o misc.o memblock.o rfcmsg.o $(MSGBUFOBJECT) $(SEARCHOBJECT) $(AUTHOBJECT)
-MAINTENANCE_OBJECTS = debug.o list.o dbmd5.o md5.o $(DBOBJECT) mime.o memblock.o $(AUTHOBJECT)
-CONFIG_OBJECTS = $(DBOBJECT) list.o md5.o debug.o dbmd5.o mime.o memblock.o $(AUTHOBJECT)
-USER_OBJECTS = debug.o list.o dbmd5.o md5.o $(DBOBJECT) mime.o memblock.o $(AUTHOBJECT)
-VUTCONV_OBJECTS = debug.o list.o dbmd5.o md5.o mime.o $(DBOBJECT) $(AUTHOBJECT)
-DBTEST_OBJECTS = debug.o list.o dbmd5.o md5.o mime.o $(DBOBJECT) $(AUTHOBJECT)
+$(AUTHOBJECT) config.o
+INJECTOR_OBJECTS = list.o debug.o $(DBOBJECT) dbmd5.o md5.o $(AUTHOBJECT) mime.o config.o
+UNIONE_OBJECTS = list.o debug.o $(DBOBJECT) dbmd5.o md5.o $(AUTHOBJECT) mime.o config.o
+MINI_OBJECTS = debug.o $(DBOBJECT) list.o dbmd5.o md5.o $(AUTHOBJECT) mime.o config.o
+POP_OBJECTS = pop3.o list.o debug.o $(DBOBJECT) dbmd5.o md5.o mime.o misc.o memblock.o $(AUTHOBJECT) config.o
+IMAP_OBJECTS = imap4.o debug.o $(DBOBJECT) server.o serverchild.o list.o dbmd5.o md5.o imaputil.o \
+imapcommands.o mime.o misc.o memblock.o rfcmsg.o $(MSGBUFOBJECT) $(SEARCHOBJECT) $(AUTHOBJECT) config.o
+MAINTENANCE_OBJECTS = debug.o list.o dbmd5.o md5.o $(DBOBJECT) mime.o memblock.o $(AUTHOBJECT) config.o
+CONFIG_OBJECTS = $(DBOBJECT) list.o md5.o debug.o dbmd5.o mime.o memblock.o $(AUTHOBJECT) config.o
+USER_OBJECTS = debug.o list.o dbmd5.o md5.o $(DBOBJECT) mime.o memblock.o $(AUTHOBJECT) config.o
+VUTCONV_OBJECTS = debug.o list.o dbmd5.o md5.o mime.o $(DBOBJECT) $(AUTHOBJECT) config.o
+DBTEST_OBJECTS = debug.o list.o dbmd5.o md5.o mime.o $(DBOBJECT) $(AUTHOBJECT) config.o
 REALSMTP_OBJECTS = smtp.o debug.o dbmd5.o md5.o list.o mime.o serverservice.o misc.o \
-smtpcommands.o memblock.o $(DBOBJECT) $(AUTHOBJECT)
+smtpcommands.o memblock.o $(DBOBJECT) $(AUTHOBJECT) config.o
 CC = cc
 
 PGSQLLIBDIR=/usr/local/pgsql/lib
 
 LIBS = -L$(PGSQLLIBDIR)
-LIB = -lpq -lcrypt
+LIB = -lpq -lcrypto -lssl
 
 # Added the -D_BSD_SOURCE option to suppress warnings
 # from compiler about vsyslog function 
@@ -41,7 +41,7 @@ CFLAGS = -Wall -O2 -D_BSD_SOURCE -D_SVID_SOURCE
 
 .PHONY: clean install
 
-all: smtp pop3d maintenance config imapd user readvut mbox2dbmail injector miniinjector unione raw
+all: smtp pop3d maintenance imapd user
 
 smtp: config.h main.h $(SMTP_OBJECTS) main.c
 		$(CC)	$(CFLAGS) main.c -o dbmail-smtp $(SMTP_OBJECTS) $(LIBS) $(LIB)
@@ -96,7 +96,8 @@ bounce.o:bounce.h list.h debug.h
 imap4.o: imap4.h db.h debug.h serverservice.h imaputil.h imapcommands.h
 imaputil.o: imaputil.h db.h memblock.h debug.h dbmailtypes.h
 imapcommands.o: imapcommands.h imaputil.h imap4.h db.h memblock.h debug.h dbmailtypes.h
-serverservice.o: serverservice.h debug.h
+server.o: server.h debug.h list.h serverchild.h config.h
+serverchild.o: serverchild.h debug.h config.h list.h
 smtp.o: smtp.h db.h debug.h serverservice.h smtpcommands.h memblock.h
 smtpcommands.o: smtpcommands.h db.h debug.h dbmailtypes.h memblock.h
 maintenance.o: maintenance.h debug.h
