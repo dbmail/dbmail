@@ -265,6 +265,15 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines)
 	trace (TRACE_DEBUG,"db_send_message_lines(): sending [%d] lines from message [%lu]",lines,messageidnr);
   
 	block_count=0;
+
+	/* setting mode to fully buffered
+		this way dbmail will write everything to the buffer
+		instead of having to wait for every write */
+
+	trace (TRACE_DEBUG,"db_send_message_lines(): setting send buffer to _IOFBF");
+	setbuf ((FILE *)fstream, _IOFBF);
+	
+	
   while (((row = mysql_fetch_row(res))!=NULL) && ((lines>0) || (lines==-2)))
 	{
 	/* we're going to do this one line at the time */  
@@ -305,6 +314,11 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines)
    /* delimiter */
    fprintf ((FILE *)fstream,"\r\n.\r\n");
    mysql_free_result(res);
+
+	/* resetting buffer to linebuffering mode */
+	trace (TRACE_DEBUG,"db_send_message_lines(): setting send buffer to _IOLBF");
+	setbuf ((FILE *)fstream, _IOLBF);
+	
    return 1;
 }
 
