@@ -131,6 +131,9 @@ void db_free_result()
 {
 	if (res)
 		mysql_free_result(res);
+	else
+		trace(TRACE_WARNING, "%s,%s: Trying to free result set "
+		      "that is already NULL!", __FILE__, __FUNCTION__);
 	res = NULL;
 }
 
@@ -306,18 +309,6 @@ void db_use_msgbuf_result()
 void db_store_msgbuf_result()
 {
 	msgbuf_res = res;
-	res = stored_res;
-}
-
-void db_use_auth_result()
-{
-	stored_res = res;
-	res = auth_res;
-}
-
-void db_store_auth_result()
-{
-	auth_res = res;
 	res = stored_res;
 }
 

@@ -35,6 +35,7 @@
 #include "dbmd5.h"
 #include "dbmail.h"
 #include "misc.h"
+
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -93,7 +94,6 @@ int auth_user_exists(const char *username, u64_t * user_idnr)
 		return 0;
 	}
 
-	db_use_auth_result();
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
 		 "SELECT user_idnr FROM users WHERE userid='%s'",
 		 username);
@@ -101,20 +101,17 @@ int auth_user_exists(const char *username, u64_t * user_idnr)
 	if (__auth_query(__auth_query_data) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not execute query",
 		      __FILE__, __FUNCTION__);
-		db_store_auth_result();
 		return -1;
 	}
 
 	if (db_num_rows() == 0) {
 		db_free_result();
-		db_store_auth_result();
 		return 0;
 	}
 
 	query_result = db_get_result(0, 0);
 	*user_idnr = (query_result) ? strtoull(query_result, 0, 10) : 0;
 	db_free_result();
-	db_store_auth_result();
 	return 1;
 }
 
@@ -133,14 +130,12 @@ int auth_get_known_users(struct list *users)
 
 	/* do a inverted (DESC) query because adding the names to the
 	 * final list inverts again */
-	db_use_auth_result();
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
 		 "SELECT userid FROM users ORDER BY userid DESC");
 
 	if (__auth_query(__auth_query_data) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not retrieve user list",
 		      __FILE__, __FUNCTION__);
-		db_store_auth_result();
 		return -1;
 	}
 
@@ -151,13 +146,11 @@ int auth_get_known_users(struct list *users)
 			    (users, query_result,
 			     strlen(query_result) + 1)) {
 				list_freelist(&users->start);
-				db_store_auth_result();
 				return -2;
 			}
 		}
 	}
 	db_free_result();
-	db_store_auth_result();
 	return 0;
 }
 
@@ -168,7 +161,6 @@ int auth_getclientid(u64_t user_idnr, u64_t * client_idnr)
 	assert(client_idnr != NULL);
 	*client_idnr = 0;
 
-	db_use_auth_result();
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
 		 "SELECT client_idnr FROM users WHERE user_idnr = '%llu'",
 		 user_idnr);
@@ -177,13 +169,11 @@ int auth_getclientid(u64_t user_idnr, u64_t * client_idnr)
 		trace(TRACE_ERROR,
 		      "%s,%s: could not retrieve client id for user [%llu]\n",
 		      __FILE__, __FUNCTION__, user_idnr);
-		db_store_auth_result();
 		return -1;
 	}
 
 	if (db_num_rows() == 0) {
 		db_free_result();
-		db_store_auth_result();
 		return 1;
 	}
 
@@ -191,7 +181,6 @@ int auth_getclientid(u64_t user_idnr, u64_t * client_idnr)
 	*client_idnr = (query_result) ? strtoull(query_result, 0, 10) : 0;
 
 	db_free_result();
-	db_store_auth_result();
 	return 1;
 }
 
@@ -202,7 +191,6 @@ int auth_getmaxmailsize(u64_t user_idnr, u64_t * maxmail_size)
 	assert(maxmail_size != NULL);
 	*maxmail_size = 0;
 
-	db_use_auth_result();
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
 		 "SELECT maxmail_size FROM users WHERE user_idnr = '%llu'",
 		 user_idnr);
@@ -211,13 +199,11 @@ int auth_getmaxmailsize(u64_t user_idnr, u64_t * maxmail_size)
 		trace(TRACE_ERROR,
 		      "%s,%s: could not retrieve client id for user [%llu]",
 		      __FILE__, __FUNCTION__, user_idnr);
-		db_store_auth_result();
 		return -1;
 	}
 
 	if (db_num_rows() == 0) {
 		db_free_result();
-		db_store_auth_result();
 		return 0;
 	}
 
@@ -228,7 +214,6 @@ int auth_getmaxmailsize(u64_t user_idnr, u64_t * maxmail_size)
 		return -1;
 
 	db_free_result();
-	db_store_auth_result();
 	return 1;
 }
 
@@ -246,7 +231,6 @@ char *auth_getencryption(u64_t user_idnr)
 		return __auth_encryption_desc_string;	/* return empty */
 	}
 
-	db_use_auth_result();
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
 		 "SELECT encryption_type FROM users WHERE user_idnr = '%llu'",
 		 user_idnr);
@@ -255,13 +239,11 @@ char *auth_getencryption(u64_t user_idnr)
 		trace(TRACE_ERROR,
 		      "%s,%s: could not retrieve encryption type for user [%llu]",
 		      __FILE__, __FUNCTION__, user_idnr);
-		db_store_auth_result();
 		return __auth_encryption_desc_string;	/* return empty */
 	}
 
 	if (db_num_rows() == 0) {
 		db_free_result();
-		db_store_auth_result();
 		return __auth_encryption_desc_string;	/* return empty */
 	}
 
@@ -269,7 +251,6 @@ char *auth_getencryption(u64_t user_idnr)
 	strncpy(__auth_encryption_desc_string, query_result, _DESCSTRLEN);
 
 	db_free_result();
-	db_store_auth_result();
 	return __auth_encryption_desc_string;
 }
 
@@ -282,18 +263,17 @@ int auth_check_user(const char *username, struct list *userids, int checks)
 	unsigned num_rows;
 	char *query_result;
 
-	db_use_auth_result();
-	saveres = db_get_result_set();
-
 	trace(TRACE_DEBUG, "%s,%s: checking user [%s] in alias table",
 	      __FILE__, __FUNCTION__, username);
+
+	saveres = db_get_result_set();
+	db_set_result_set(NULL);
 
 	if (checks > MAX_CHECKS_DEPTH) {
 		trace(TRACE_ERROR,
 		      "%s,%s: maximum checking depth reached, "
 		      "there probably is a loop in your alias table",
 		      __FILE__, __FUNCTION__);
-		db_store_auth_result();
 		return -1;
 	}
 
@@ -306,8 +286,6 @@ int auth_check_user(const char *username, struct list *userids, int checks)
 	if (__auth_query(__auth_query_data) == -1) {
 		/* copy the old result set */
 		db_set_result_set(saveres);
-		/* result -> auth_result & stored_result -> result */
-		db_store_auth_result();
 		return 0;
 	}
 	num_rows = db_num_rows();
@@ -323,7 +301,6 @@ int auth_check_user(const char *username, struct list *userids, int checks)
 			      __FILE__, __FUNCTION__, username);
 			db_free_result();
 			db_set_result_set(saveres);
-			db_store_auth_result();
 			return 1;
 		} else {
 			trace(TRACE_DEBUG,
@@ -331,7 +308,6 @@ int auth_check_user(const char *username, struct list *userids, int checks)
 			      __FILE__, __FUNCTION__, username);
 			db_free_result();
 			db_set_result_set(saveres);
-			db_store_auth_result();
 			return 0;
 		}
 	}
@@ -353,7 +329,6 @@ int auth_check_user(const char *username, struct list *userids, int checks)
 				/* loop detected */
 				db_free_result();
 				db_set_result_set(saveres);
-				db_store_auth_result();
 
 				if (checks > 0)
 					return -1;	/* still in recursive call */
@@ -372,7 +347,6 @@ int auth_check_user(const char *username, struct list *userids, int checks)
 
 	db_free_result();
 	db_set_result_set(saveres);
-	db_store_auth_result();
 	return occurences;
 }
 
@@ -387,8 +361,9 @@ int auth_check_user_ext(const char *username, struct list *userids,
 	u64_t id;
 	unsigned num_rows;
 
-	db_use_auth_result();
 	saveres = db_get_result_set();
+	db_set_result_set(NULL);
+
 	trace(TRACE_DEBUG, "%s,%s: checking user [%s] in alias table",
 	      __FILE__, __FUNCTION__, username);
 
@@ -400,7 +375,6 @@ int auth_check_user_ext(const char *username, struct list *userids,
 
 	if (__auth_query(__auth_query_data) == -1) {
 		db_set_result_set(saveres);
-		db_store_auth_result();
 		return 0;
 	}
 
@@ -424,7 +398,6 @@ int auth_check_user_ext(const char *username, struct list *userids,
 			      __FILE__, __FUNCTION__, username);
 			db_free_result();
 			db_set_result_set(saveres);
-			db_store_auth_result();
 			return 1;
 		} else {
 			trace(TRACE_DEBUG,
@@ -432,8 +405,6 @@ int auth_check_user_ext(const char *username, struct list *userids,
 			      __FILE__, __FUNCTION__, username);
 			db_free_result();
 			db_set_result_set(saveres);
-			db_store_auth_result();
-
 			return 0;
 		}
 	}
@@ -455,7 +426,6 @@ int auth_check_user_ext(const char *username, struct list *userids,
 	}
 	db_free_result();
 	db_set_result_set(saveres);
-	db_store_auth_result();	/* restore the old result set */
 	return occurences;
 }
 
@@ -480,7 +450,6 @@ int auth_adduser(char *username, char *password, char *enctype,
 	assert(user_idnr != NULL);
 	*user_idnr = 0;
 
-	db_use_auth_result();
 #ifdef _DBAUTH_STRICT_USER_CHECK
 	/* first check to see if this user already exists */
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
@@ -490,7 +459,6 @@ int auth_adduser(char *username, char *password, char *enctype,
 		/* query failed */
 		trace(TRACE_ERROR, "%s,%s: query failed",
 		      __FILE__, __FUNCTION__);
-		db_store_auth_result();
 		return -1;
 	}
 
@@ -499,7 +467,6 @@ int auth_adduser(char *username, char *password, char *enctype,
 		trace(TRACE_ERROR, "%s,%s: user already exists",
 		      __FILE__, __FUNCTION__);
 		db_free_result();
-		db_store_auth_result();
 		return -1;
 	}
 
@@ -518,7 +485,6 @@ int auth_adduser(char *username, char *password, char *enctype,
 	if (strlen(password) >= AUTH_QUERY_SIZE) {
 		trace(TRACE_ERROR, "%s,%s: password length is insane",
 		      __FILE__, __FUNCTION__);
-		db_store_auth_result();
 		return -1;
 	}
 
@@ -535,7 +501,6 @@ int auth_adduser(char *username, char *password, char *enctype,
 		/* query failed */
 		trace(TRACE_ERROR, "%s,%s: query for adding user failed",
 		      __FILE__, __FUNCTION__);
-		db_store_auth_result();
 		return -1;
 	}
 
@@ -553,17 +518,14 @@ int auth_adduser(char *username, char *password, char *enctype,
 		trace(TRACE_ERROR,
 		      "%s,%s: query failed for adding mailbox", __FILE__,
 		      __FUNCTION__);
-		db_store_auth_result();
 		return -1;
 	}
 
-	db_store_auth_result();
 	return 1;
 }
 
 int auth_delete_user(const char *username)
 {
-	db_use_auth_result();
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
 		 "DELETE FROM users WHERE userid = '%s'", username);
 
@@ -571,17 +533,14 @@ int auth_delete_user(const char *username)
 		/* query failed */
 		trace(TRACE_ERROR, "%s,%s: query for removing user failed",
 		      __FILE__, __FUNCTION__);
-		db_store_auth_result();
 		return -1;
 	}
 
-	db_store_auth_result();
 	return 0;
 }
 
 int auth_change_username(u64_t user_idnr, const char *new_name)
 {
-	db_use_auth_result();
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
 		 "UPDATE users SET userid = '%s' WHERE user_idnr='%llu'",
 		 new_name, user_idnr);
@@ -590,18 +549,15 @@ int auth_change_username(u64_t user_idnr, const char *new_name)
 		trace(TRACE_ERROR,
 		      "%s,%s: could not change name for user [%llu]",
 		      __FILE__, __FUNCTION__, user_idnr);
-		db_store_auth_result();
 		return -1;
 	}
 
-	db_store_auth_result();
 	return 0;
 }
 
 int auth_change_password(u64_t user_idnr, const char *new_pass,
 			 const char *enctype)
 {
-	db_use_auth_result();
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
 		 "UPDATE users SET passwd = '%s', encryption_type = '%s' "
 		 " WHERE user_idnr='%llu'",
@@ -611,17 +567,14 @@ int auth_change_password(u64_t user_idnr, const char *new_pass,
 		trace(TRACE_ERROR,
 		      "%s,%s: could not change passwd for user [%llu]",
 		      __FILE__, __FUNCTION__, user_idnr);
-		db_store_auth_result();
 		return -1;
 	}
 
-	db_store_auth_result();
 	return 0;
 }
 
 int auth_change_clientid(u64_t user_idnr, u64_t new_cid)
 {
-	db_use_auth_result();
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
 		 "UPDATE users SET client_idnr = '%llu' "
 		 "WHERE user_idnr='%llu'", new_cid, user_idnr);
@@ -630,17 +583,14 @@ int auth_change_clientid(u64_t user_idnr, u64_t new_cid)
 		trace(TRACE_ERROR,
 		      "%s,%s: could not change client id for user [%llu]",
 		      __FILE__, __FUNCTION__, user_idnr);
-		db_store_auth_result();
 		return -1;
 	}
 
-	db_store_auth_result();
 	return 0;
 }
 
 int auth_change_mailboxsize(u64_t user_idnr, u64_t new_size)
 {
-	db_use_auth_result();
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
 		 "UPDATE users SET maxmail_size = '%llu' "
 		 "WHERE user_idnr = '%llu'", new_size, user_idnr);
@@ -649,11 +599,9 @@ int auth_change_mailboxsize(u64_t user_idnr, u64_t new_size)
 		trace(TRACE_ERROR,
 		      "%s,%s: could not change maxmailsize for user [%llu]",
 		      __FILE__, __FUNCTION__, user_idnr);
-		db_store_auth_result();
 		return -1;
 	}
 
-	db_store_auth_result();
 	return 0;
 }
 
@@ -689,7 +637,6 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 	}
 
 	db_escape_string(escuser, username, strlen(username));
-	db_use_auth_result();
 
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
 		 "SELECT user_idnr, passwd, encryption_type FROM users "
@@ -699,7 +646,6 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 		trace(TRACE_ERROR,
 		      "%s,%s: could not select user information", __FILE__,
 		      __FUNCTION__);
-		db_store_auth_result();
 		my_free(escuser);
 		return -1;
 	}
@@ -708,7 +654,6 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 
 	if (db_num_rows() == 0) {
 		db_free_result();
-		db_store_auth_result();
 		return 0;
 	}
 
@@ -790,7 +735,6 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 	}
 
 	db_free_result();
-	db_store_auth_result();
 	return (is_validated ? 1 : 0);
 }
 
@@ -806,20 +750,17 @@ u64_t auth_md5_validate(char *username, unsigned char *md5_apop_he,
 	timestring_t timestring;
 
 	create_current_timestring(&timestring);
-	db_use_auth_result();
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
 		 "SELECT passwd,user_idnr FROM users WHERE "
 		 "userid='%s'", username);
 
 	if (__auth_query(__auth_query_data) == -1) {
-		db_store_auth_result();
 		return -1;
 	}
 
 	if (db_num_rows() < 1) {
 		/* no such user found */
 		db_free_result();
-		db_store_auth_result();
 		return 0;
 	}
 
@@ -870,7 +811,6 @@ u64_t auth_md5_validate(char *username, unsigned char *md5_apop_he,
 			      "%s,%s: could not update user login time",
 			      __FILE__, __FUNCTION__);
 
-		db_store_auth_result();
 		return user_idnr;
 	}
 
@@ -878,7 +818,6 @@ u64_t auth_md5_validate(char *username, unsigned char *md5_apop_he,
 	      __FILE__, __FUNCTION__, username);
 
 	db_free_result();
-	db_store_auth_result();
 	my_free(checkstring);
 	return 0;
 }
@@ -888,7 +827,6 @@ char *auth_get_userid(u64_t user_idnr)
 	char *query_result;
 	char *returnid = NULL;
 
-	db_use_auth_result();
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
 		 "SELECT userid FROM users WHERE user_idnr = '%llu'",
 		 user_idnr);
@@ -896,7 +834,6 @@ char *auth_get_userid(u64_t user_idnr)
 	if (__auth_query(__auth_query_data) == -1) {
 		trace(TRACE_ERROR, "%s,%s: query failed",
 		      __FILE__, __FUNCTION__);
-		db_store_auth_result();
 		return 0;
 	}
 
@@ -904,7 +841,6 @@ char *auth_get_userid(u64_t user_idnr)
 		trace(TRACE_DEBUG, "%s,%s: user has no username?",
 		      __FILE__, __FUNCTION__);
 		db_free_result();
-		db_store_auth_result();
 		return 0;
 	}
 
@@ -918,14 +854,12 @@ char *auth_get_userid(u64_t user_idnr)
 			trace(TRACE_ERROR, "%s,%s: out of memory",
 			      __FILE__, __FUNCTION__);
 			db_free_result();
-			db_store_auth_result();
 			return NULL;
 		}
 		strncpy(returnid, query_result, strlen(query_result) + 1);
 	}
 
 	db_free_result();
-	db_store_auth_result();
 	trace(TRACE_DEBUG, "%s,%s: returning %s as returnid", __FILE__,
 	      __FUNCTION__, returnid);
 	return returnid;
@@ -934,8 +868,6 @@ char *auth_get_userid(u64_t user_idnr)
 u64_t __auth_insert_result(const char *sequence_identifier)
 {
 	u64_t insert_result;
-	db_use_auth_result();
 	insert_result = db_insert_result(sequence_identifier);
-	db_store_auth_result();
 	return insert_result;
 }

@@ -644,7 +644,6 @@ int do_delete(char *name)
 	return 0;
 }
 
-
 int do_show(char *name)
 {
 	u64_t userid, cid, quotum, quotumused;

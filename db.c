@@ -864,7 +864,7 @@ int db_insert_message_block_physmessage(const char *block,
 	    snprintf(escaped_query, maxesclen,
 		     "INSERT INTO messageblks"
 		     "(messageblk,blocksize, physmessage_id) VALUES ('");
-
+	
 	/* escape & add data */
 	esclen =
 	    db_escape_string(&escaped_query[startlen], block, block_size);
@@ -2790,8 +2790,6 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr,
 
 	/* get the id of the inserted record */
 	*newmsg_idnr = db_insert_result("message_idnr");
-
-	db_free_result();
 
 	/* update quotum */
 	if (db_add_quotum_used(user_idnr, msgsize) == -1) {

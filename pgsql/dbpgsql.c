@@ -40,7 +40,7 @@ const char *TO_CHAR = "TO_CHAR(%s, 'YYYY-MM-DD HH24:MI:SS' )";
 const char *TO_DATE = "TO_TIMESTAMP('%s', 'YYYY-MM-DD HH:MI:SS')";
 
 static PGconn *conn;
-static PGresult *res;
+static PGresult *res = NULL;
 static PGresult *msgbuf_res;
 static PGresult *stored_res;
 static PGresult *auth_res;
@@ -163,6 +163,9 @@ void db_free_result()
 {
 	if (res != NULL)
 		PQclear(res);
+	else
+		trace(TRACE_WARNING, "%s,%s: trying to free a result set "
+		      "that is already NULL!", __FILE__, __FUNCTION__);
 	res = NULL;
 }
 
@@ -325,18 +328,6 @@ void db_use_msgbuf_result()
 void db_store_msgbuf_result()
 {
 	msgbuf_res = res;
-	res = stored_res;
-}
-
-void db_use_auth_result()
-{
-	stored_res = res;
-	res = auth_res;
-}
-
-void db_store_auth_result()
-{
-	auth_res = res;
 	res = stored_res;
 }
 

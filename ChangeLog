@@ -1,3 +1,44 @@
+2004-04-08  Ilja Booij  <ilja@ic-s.nl>
+
+	* auth/authsql.c (auth_user_exists): removed use of 
+	db_use_auth_result() and db_store_auth_result().
+	(auth_get_known_users): removed use of db_use_auth_result() and 
+	db_store_auth_result().
+	(auth_getclientid): removed use of db_use_auth_result() and 
+	db_store_auth_result().
+	(auth_getmaxmailsize): removed use of db_use_auth_result() and 
+	db_store_auth_result().
+	(auth_getencryption):  removed use of db_use_auth_result() and 
+	db_store_auth_result().
+	(auth_check_user): removed use of db_use_auth_result() and 
+	db_store_auth_result().
+	(auth_check_user_ext): removed use of db_use_auth_result() and 
+	db_store_auth_result().
+	(auth_adduser): removed use of db_use_auth_result() and 
+	db_store_auth_result().
+	(auth_delete_user):  removed use of db_use_auth_result() and 
+	db_store_auth_result().
+	(auth_change_username): removed use of db_use_auth_result() and 
+	db_store_auth_result().
+	(auth_change_password): removed use of db_use_auth_result() and 
+	db_store_auth_result().
+	(auth_change_clientid): removed use of db_use_auth_result() and 
+	db_store_auth_result().
+	(auth_change_mailboxsize): removed use of db_use_auth_result() and 
+	db_store_auth_result().
+	(auth_validate): removed use of db_use_auth_result() and 
+	db_store_auth_result().
+	(auth_md5_validate): removed use of db_use_auth_result() and 
+	db_store_auth_result().
+	(auth_get_userid): removed use of db_use_auth_result() and 
+	db_store_auth_result().
+	(__auth_insert_result): removed use of db_use_auth_result() and 
+	db_store_auth_result().
+
+	* mysql/dbmysql.c: removed db_store_auth_result(), db_use_auth_result()
+
+	* pgsql/dbpgsql.c: removed db_store_auth_result(), db_use_auth_result()
+	
 2004-04-05  Ilja Booij  <ilja@ic-s.nl>
 
 	* serverchild.c (SetChildSigHandler): add handler for SIGCHLD
