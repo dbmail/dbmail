@@ -82,7 +82,7 @@ int main()
 
   
   /* open socket */
-  sock = SS_MakeServerSock(bindip, port);
+  sock = SS_MakeServerSock(bindip, port, atoi(defchld));
 
   free(port);
   free(bindip);
