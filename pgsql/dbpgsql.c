@@ -579,7 +579,7 @@ u64_t db_insert_message (u64_t useridnr, const char *deliver_to_mailbox,
 
   time(&td);              /* get time */
   tm = *localtime(&td);   /* get components */
-  strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
+  strftime(timestr, sizeof(timestr), "%Y-%m-%d %H:%M:%S", &tm);
 
   if (! uniqueid)
     create_unique_id(newunique,0);
@@ -1422,7 +1422,7 @@ int db_log_ip(const char *ip)
 
   time(&td);              /* get time */
   tm = *localtime(&td);   /* get components */
-  strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
+  strftime(timestr, sizeof(timestr), "%Y-%m-%d %H:%M:%S", &tm);
 
   snprintf(query, DEF_QUERYSIZE, "SELECT idnr FROM pbsp WHERE ipnumber = '%s'", ip);
   if (db_query(query) == -1)
@@ -2166,7 +2166,7 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen, u64_t mboxid, u64_t u
 
   time(&td);              /* get time */
   tm = *localtime(&td);   /* get components */
-  strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
+  strftime(timestr, sizeof(timestr), "%Y-%m-%d %H:%M:%S", &tm);
 
   /* Why isn't a transaction used here, like the other functions? */
 
@@ -2345,7 +2345,7 @@ int db_insert_message_complete(u64_t useridnr, MEM *hdr, MEM *body,
 
   time(&td);              /* get time */
   tm = *localtime(&td);   /* get components */
-  strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
+  strftime(timestr, sizeof(timestr), "%Y-%m-%d %H:%M:%S", &tm);
 
   if (!hdr || !body)
     {

@@ -717,7 +717,7 @@ u64_t auth_validate (char *user, char *password)
 
   time(&td);              /* get time */
   tm = *localtime(&td);   /* get components */
-  strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
+  strftime(timestr, sizeof(timestr), "%Y-%m-%d %H:%M:%S", &tm);
 
   if (! (escuser = (char*)malloc(strlen(user)*2 +1)) )
     {
@@ -822,7 +822,7 @@ u64_t auth_md5_validate (char *username,unsigned char *md5_apop_he, char *apop_s
 
   time(&td);              /* get time */
   tm = *localtime(&td);   /* get components */
-  strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
+  strftime(timestr, sizeof(timestr), "%Y-%m-%d %H:%M:%S", &tm);
   
   snprintf (__auth_query_data, AUTH_QUERY_SIZE, "SELECT passwd,user_idnr FROM users WHERE "
 	    "userid=\'%s\'",username);

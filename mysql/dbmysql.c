@@ -634,7 +634,7 @@ u64_t db_insert_message (u64_t useridnr, const char *deliver_to_mailbox,
 
   time(&td);              /* get time */
   tm = *localtime(&td);   /* get components */
-  strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
+  strftime(timestr, sizeof(timestr), "%Y-%m-%d %H:%M:%S", &tm);
   
   snprintf (query, DEF_QUERYSIZE,"INSERT INTO messages(mailbox_idnr,messagesize,unique_id,"
 	    "internal_date,recent_flag,status)"
@@ -1511,7 +1511,7 @@ int db_log_ip(const char *ip)
 
   time(&td);              /* get time */
   tm = *localtime(&td);   /* get components */
-  strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
+  strftime(timestr, sizeof(timestr), "%Y-%m-%d %H:%M:%S", &tm);
 
   snprintf(query, DEF_QUERYSIZE, "SELECT idnr FROM pbsp WHERE ipnumber = '%s'", ip);
   if (db_query(query) == -1)
@@ -2360,7 +2360,7 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen, u64_t mboxid, u64_t u
   
   time(&td);              /* get time */
   tm = *localtime(&td);   /* get components */
-  strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
+  strftime(timestr, sizeof(timestr), "%Y-%m-%d %H:%M:%S", &tm);
 
   /* create a msg 
    * status set to STATUS_SEEN and seen_flag set to 001,
