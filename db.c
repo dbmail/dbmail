@@ -1079,7 +1079,7 @@ int db_count_iplog(const char *lasttokeep, u64_t *affected_rows)
 	assert(affected_rows != NULL);
 	*affected_rows = 0;
 
-	if (db_escape_string(&escaped_lasttokeep, lasttokeep)) {
+	if (db_escape_string(escaped_lasttokeep, lasttokeep, strlen(lasttokeep))) {
 		trace(TRACE_ERROR, "%s,%s: error escaping last to keep.",
 			__FILE__, __func__);
 		return -1;
