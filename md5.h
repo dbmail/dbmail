@@ -26,11 +26,10 @@
 #include "config.h"
 #endif
 
-#ifdef __alpha
+/* FIXME: Perhaps there should be an AC_CHECK_SIZEOF
+ * in the configure script to ensure that this is really
+ * 32 bits / 4 bytes long... */
 typedef unsigned int uint32;
-#else
-typedef unsigned long uint32;
-#endif
 
 struct GdmMD5Context {
 	uint32 buf[4];
