@@ -26,7 +26,7 @@ char *cget_salt();
 /* valid characters for passwd/username */
 const char ValidChars[] = 
 "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-"_.!@#$%^&*()-+=~[]{}<>:;";
+"_.!@#$%^&*()-+=~[]{}<>:;\\";
 
 void show_help();
 int quiet = 0;

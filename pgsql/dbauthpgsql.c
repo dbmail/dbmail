@@ -503,6 +503,7 @@ u64_t auth_adduser (char *username, char *password, char *enctype, char *clienti
   u64_t useridnr;
   char *tst;
   u64_t size;
+  char escapedpass[AUTH_QUERY_SIZE];
 
 #ifdef _DBAUTH_STRICT_USER_CHECK
   /* first check to see if this user already exists */
@@ -535,10 +536,18 @@ u64_t auth_adduser (char *username, char *password, char *enctype, char *clienti
 	size *= 1000;
     }
       
+  if (strlen(password) >= AUTH_QUERY_SIZE)
+    {
+      trace(TRACE_ERROR,"auth_adduser(): password length is insane");
+      return -1;
+    }
+
+  PQescapeString(escapedpass, password, strlen(password));
+
   snprintf (__auth_query_data, AUTH_QUERY_SIZE,"INSERT INTO users "
 	    "(userid,passwd,client_idnr,maxmail_size,encryption_type) VALUES "
 	    "('%s','%s',%s,%llu::bigint,'%s')",
-	    username,password,clientid, size, enctype ? enctype : "");
+	    username,escapedpass,clientid, size, enctype ? enctype : "");
 	
   if (__auth_query(__auth_query_data) == -1)
     {

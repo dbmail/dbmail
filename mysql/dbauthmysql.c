@@ -110,7 +110,7 @@ u64_t auth_user_exists(const char *username)
       return 0;
     }
 
-  snprintf(__auth_query_data, DEF_QUERYSIZE, "SELECT user_idnr FROM users WHERE userid='%s'",username);
+  snprintf(__auth_query_data, AUTH_QUERY_SIZE, "SELECT user_idnr FROM users WHERE userid='%s'",username);
 
   if (__auth_query(__auth_query_data)==-1)
     {
@@ -146,7 +146,7 @@ int auth_get_known_users(struct list *users)
   list_init(users);
 
   /* do a inverted (DESC) query because adding the names to the final list inverts again */
-  snprintf(__auth_query_data, DEF_QUERYSIZE, "SELECT userid FROM users ORDER BY userid DESC");
+  snprintf(__auth_query_data, AUTH_QUERY_SIZE, "SELECT userid FROM users ORDER BY userid DESC");
 
   if (__auth_query(__auth_query_data) == -1)
     {
@@ -178,7 +178,7 @@ u64_t auth_getclientid(u64_t useridnr)
 {
   u64_t cid;
 
-  snprintf(__auth_query_data, DEF_QUERYSIZE, "SELECT client_idnr FROM users WHERE user_idnr = %llu",useridnr);
+  snprintf(__auth_query_data, AUTH_QUERY_SIZE, "SELECT client_idnr FROM users WHERE user_idnr = %llu",useridnr);
 
   if (__auth_query(__auth_query_data) == -1)
     {
@@ -204,7 +204,7 @@ u64_t auth_getmaxmailsize(u64_t useridnr)
 {
   u64_t maxmailsize;
 
-  snprintf(__auth_query_data, DEF_QUERYSIZE, "SELECT maxmail_size FROM users WHERE user_idnr = %llu",useridnr);
+  snprintf(__auth_query_data, AUTH_QUERY_SIZE, "SELECT maxmail_size FROM users WHERE user_idnr = %llu",useridnr);
 
   if (__auth_query(__auth_query_data) == -1)
     {
@@ -250,7 +250,7 @@ char* auth_getencryption(u64_t useridnr)
       return __auth_encryption_desc_string; /* return empty */
     }
       
-  snprintf(__auth_query_data, DEF_QUERYSIZE, "SELECT encryption_type FROM users WHERE user_idnr = %llu",
+  snprintf(__auth_query_data, AUTH_QUERY_SIZE, "SELECT encryption_type FROM users WHERE user_idnr = %llu",
 	   useridnr);
 
   if (__auth_query(__auth_query_data) == -1)
@@ -284,7 +284,7 @@ int auth_check_user (const char *username, struct list *userids, int checks)
   
   trace(TRACE_DEBUG,"auth_check_user(): checking user [%s] in alias table",username);
   
-  snprintf (__auth_query_data, DEF_QUERYSIZE,  "SELECT deliver_to FROM aliases WHERE "
+  snprintf (__auth_query_data, AUTH_QUERY_SIZE,  "SELECT deliver_to FROM aliases WHERE "
 	    "alias=\"%s\"",username);
 
   trace(TRACE_DEBUG,"auth_check_user(): executing query, checks [%d]", checks);
@@ -353,7 +353,7 @@ int auth_check_user_ext(const char *username, struct list *userids, struct list 
 
   trace(TRACE_DEBUG,"auth_check_user_ext(): checking user [%s] in alias table",username);
   
-  snprintf (__auth_query_data, DEF_QUERYSIZE,  "SELECT deliver_to FROM aliases WHERE "
+  snprintf (__auth_query_data, AUTH_QUERY_SIZE,  "SELECT deliver_to FROM aliases WHERE "
 	    "alias=\"%s\"",username);
 
   trace(TRACE_DEBUG,"auth_check_user_ext(): executing query, checks [%d]", checks);
@@ -420,11 +420,12 @@ u64_t auth_adduser (char *username, char *password, char *enctype, char *clienti
   u64_t useridnr;
   char *tst;
   u64_t size;
+  char escapedpass[AUTH_QUERY_SIZE];
 
 #ifdef _DBAUTH_STRICT_USER_CHECK
 
   /* first check to see if this user already exists */
-  snprintf(__auth_query_data, DEF_QUERYSIZE, "SELECT * FROM users WHERE userid = '%s'", username);
+  snprintf(__auth_query_data, AUTH_QUERY_SIZE, "SELECT * FROM users WHERE userid = '%s'", username);
 
   if (__auth_query(__auth_query_data) == -1)
     {
@@ -459,11 +460,20 @@ u64_t auth_adduser (char *username, char *password, char *enctype, char *clienti
 	size *= 1000;
     }
       
-  snprintf (__auth_query_data, DEF_QUERYSIZE,"INSERT INTO users "
+  if (strlen(password) >= AUTH_QUERY_SIZE)
+    {
+      trace(TRACE_ERROR,"auth_adduser(): password length is insane");
+      return -1;
+    }
+
+  mysql_real_escape_string(&__auth_conn, escapedpass, password, strlen(password)); 
+
+  snprintf (__auth_query_data, AUTH_QUERY_SIZE,"INSERT INTO users "
 	    "(userid,passwd,client_idnr,maxmail_size,encryption_type) VALUES "
 	    "('%s','%s',%s,%llu,'%s')",
-	    username,password,clientid, size, enctype ? enctype : "");
+	    username,escapedpass,clientid, size, enctype ? enctype : "");
 	
+
   if (__auth_query(__auth_query_data) == -1)
     {
       /* query failed */
@@ -474,7 +484,7 @@ u64_t auth_adduser (char *username, char *password, char *enctype, char *clienti
   useridnr = mysql_insert_id(&__auth_conn);
 	
   /* creating query for adding mailbox */
-  snprintf (__auth_query_data, DEF_QUERYSIZE,"INSERT INTO mailboxes (owner_idnr, name) VALUES (%llu,'INBOX')",
+  snprintf (__auth_query_data, AUTH_QUERY_SIZE,"INSERT INTO mailboxes (owner_idnr, name) VALUES (%llu,'INBOX')",
 	   useridnr);
 	
   trace (TRACE_DEBUG,"auth_adduser(): executing query for mailbox");
@@ -493,7 +503,7 @@ u64_t auth_adduser (char *username, char *password, char *enctype, char *clienti
 
 int auth_delete_user(const char *username)
 {
-  snprintf (__auth_query_data, DEF_QUERYSIZE, "DELETE FROM users WHERE userid = '%s'",username);
+  snprintf (__auth_query_data, AUTH_QUERY_SIZE, "DELETE FROM users WHERE userid = '%s'",username);
 
   if (__auth_query(__auth_query_data) == -1)
     {
@@ -507,7 +517,7 @@ int auth_delete_user(const char *username)
   
 int auth_change_username(u64_t useridnr, const char *newname)
 {
-  snprintf(__auth_query_data, DEF_QUERYSIZE, "UPDATE users SET userid = '%s' WHERE user_idnr=%llu", 
+  snprintf(__auth_query_data, AUTH_QUERY_SIZE, "UPDATE users SET userid = '%s' WHERE user_idnr=%llu", 
 	   newname, useridnr);
 
   if (__auth_query(__auth_query_data) == -1)
@@ -522,7 +532,7 @@ int auth_change_username(u64_t useridnr, const char *newname)
 
 int auth_change_password(u64_t useridnr, const char *newpass, const char *enctype)
 {
-  snprintf(__auth_query_data, DEF_QUERYSIZE, "UPDATE users SET passwd = '%s', encryption_type = '%s' "
+  snprintf(__auth_query_data, AUTH_QUERY_SIZE, "UPDATE users SET passwd = '%s', encryption_type = '%s' "
 	   "WHERE user_idnr=%llu", 
 	   newpass, enctype ? enctype : "", useridnr);
 
@@ -538,7 +548,7 @@ int auth_change_password(u64_t useridnr, const char *newpass, const char *enctyp
 
 int auth_change_clientid(u64_t useridnr, u64_t newcid)
 {
-  snprintf(__auth_query_data, DEF_QUERYSIZE, "UPDATE users SET client_idnr = %llu WHERE user_idnr=%llu", 
+  snprintf(__auth_query_data, AUTH_QUERY_SIZE, "UPDATE users SET client_idnr = %llu WHERE user_idnr=%llu", 
 	   newcid, useridnr);
 
   if (__auth_query(__auth_query_data) == -1)
@@ -552,7 +562,7 @@ int auth_change_clientid(u64_t useridnr, u64_t newcid)
 
 int auth_change_mailboxsize(u64_t useridnr, u64_t newsize)
 {
-  snprintf(__auth_query_data, DEF_QUERYSIZE, "UPDATE users SET maxmail_size = %llu WHERE user_idnr=%llu", 
+  snprintf(__auth_query_data, AUTH_QUERY_SIZE, "UPDATE users SET maxmail_size = %llu WHERE user_idnr=%llu", 
 	   newsize, useridnr);
 
   if (__auth_query(__auth_query_data) == -1)
@@ -585,7 +595,7 @@ u64_t auth_validate (char *user, char *password)
   tm = *localtime(&td);   /* get components */
   strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
 
-  snprintf(__auth_query_data, DEF_QUERYSIZE, "SELECT user_idnr, passwd, encryption_type FROM users "
+  snprintf(__auth_query_data, AUTH_QUERY_SIZE, "SELECT user_idnr, passwd, encryption_type FROM users "
 	   "WHERE userid = '%s'", user);
 
   if (__auth_query(__auth_query_data)==-1)
@@ -654,7 +664,7 @@ u64_t auth_md5_validate (char *username,unsigned char *md5_apop_he, char *apop_s
   tm = *localtime(&td);   /* get components */
   strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
   
-  snprintf (__auth_query_data, DEF_QUERYSIZE, "SELECT passwd,user_idnr FROM users WHERE userid=\"%s\"",username);
+  snprintf (__auth_query_data, AUTH_QUERY_SIZE, "SELECT passwd,user_idnr FROM users WHERE userid=\"%s\"",username);
 	
   if (__auth_query(__auth_query_data)==-1)
     {
@@ -729,7 +739,7 @@ char *auth_get_userid (u64_t *useridnr)
   
   char *returnid = NULL;
   
-  snprintf (__auth_query_data, DEF_QUERYSIZE,"SELECT userid FROM users WHERE user_idnr = %llu",
+  snprintf (__auth_query_data, AUTH_QUERY_SIZE,"SELECT userid FROM users WHERE user_idnr = %llu",
 	   *useridnr);
 
   trace(TRACE_DEBUG,"auth_get_userid(): executing query");
