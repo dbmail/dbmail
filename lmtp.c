@@ -399,7 +399,7 @@ int lmtp(void *stream, void *instream, char *buffer, char *client_ip UNUSED, Pop
                       tmpbody++;
            
               /* This is all a bit nested now... */
-              if (tmplen < 1)
+              if (tmplen < 1 && tmpaddr == NULL)
                 {
                   fprintf((FILE *)stream,"500 No address found.\r\n" );
 		  goodtogo = 0;

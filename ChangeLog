@@ -3,6 +3,11 @@
 	* lmtp.c: improved compliance with RFC 2033, LMTP, in two key areas:
 	proper replies to the DATA command and removal of failed recipients
 	from the recipients list, to prevent reporting their failures twice.
+	* lmtp.c: allow for zero length envelope senders, which is common
+	practice for MTA's sending bounces and other error messages.
+	* misc.c (find_bounded): a zero length bounded string is now returned
+	as a pointer to a zero length string (exactly one nul character)
+	rather than as a NULL pointer to a nonexistant string.
 
 2004-03-06  Aaron Stone <aaron@serendipity.cx>
 

@@ -429,22 +429,22 @@ int find_bounded(char *value, char left, char right, char **retchar, size_t *ret
   while (tmpright[0] != right && tmpright > tmpleft)
     tmpright--;
 
-  /* Step left up to skip the actual left thinger */
-  if (tmpright != tmpleft)
-    tmpleft++;
-
-  tmplen = tmpright - tmpleft;
-  if (tmplen < 1)
+  if (tmpleft[0] != left || tmpright[0] != right)
     {
+      trace(TRACE_INFO, "%s, %s: Found nothing between '%c' and '%c'",
+          __FILE__, __FUNCTION__, left, right);
       *retchar = NULL;
       *retsize = 0;
       *retlast = 0;
-      trace(TRACE_INFO, "%s, %s: Found nothing between '%c' and '%c'",
-          __FILE__, __FUNCTION__, left, right);
       return -1;
     }
   else
     {
+      /* Step left up to skip the actual left thinger */
+      if (tmpright != tmpleft)
+        tmpleft++;
+
+      tmplen = tmpright - tmpleft;
       *retchar = my_malloc(sizeof(char) * (tmplen + 1));
       if (*retchar == NULL)
         {
