@@ -22,6 +22,8 @@ struct list users; 	  	/* list of email addresses in message */
 int mode;					/* how should we process */
   
 char *header;
+char *trace_level, *trace_syslog, *trace_verbose;
+int new_level = 2, new_trace_syslog = 1, new_trace_verbose = 0;
 unsigned long headersize;
 
 int main (int argc, char *argv[]) {
@@ -39,6 +41,36 @@ int main (int argc, char *argv[]) {
 	
   if (db_connect() < 0) 
     trace(TRACE_FATAL,"main(): database connection failed");
+
+  /* reading settings */
+  
+  trace_level = db_get_config_item("TRACE_LEVEL", CONFIG_EMPTY);
+  trace_syslog = db_get_config_item("TRACE_TO_SYSLOG", CONFIG_EMPTY);
+  trace_verbose = db_get_config_item("TRACE_VERBOSE", CONFIG_EMPTY);
+
+  if (trace_level)
+    {
+      new_level = atoi(trace_level);
+      free(trace_level);
+      trace_level = NULL;
+    }
+
+  if (trace_syslog)
+    {
+      new_trace_syslog = atoi(trace_syslog);
+      free(trace_syslog);
+      trace_syslog = NULL;
+    }
+
+  if (trace_verbose)
+    {
+      new_trace_verbose = atoi(trace_verbose);
+      free(trace_verbose);
+      trace_verbose = NULL;
+    }
+
+  configure_debug(new_level, new_trace_syslog, new_trace_verbose);
+ 
 
   /* first we need to read the header */
   if ((header=read_header(&headersize))==NULL)
