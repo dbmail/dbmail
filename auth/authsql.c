@@ -669,6 +669,12 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 	assert(user_idnr != NULL);
 	*user_idnr = 0;
 
+	if (username == NULL || password == NULL) {
+		trace(TRACE_DEBUG, "%s,%s: username or password is NULL",
+		      __FILE__, __FUNCTION__);
+		return 0;
+	}
+
 	create_current_timestring(&timestring);
 
 	/* the shared mailbox user should not log in! */

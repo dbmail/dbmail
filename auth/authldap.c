@@ -1917,6 +1917,13 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 	/*char *fields[] = { "dn", _ldap_cfg.field_nid, NULL }; unused variable */
 
 	assert(user_idnr != NULL);
+
+	if (username == NULL || password == NULL) {
+		trace(TRACE_DEBUG, "auth__validate() username or password "
+		      "is NULL");
+		return 0;
+	}
+
 	*user_idnr = 0;
 	create_current_timestring(&timestring);
 	snprintf(query, AUTH_QUERY_SIZE, "(%s=%s)", _ldap_cfg.field_uid,

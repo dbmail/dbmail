@@ -1,3 +1,11 @@
+2004-04-02  Ilja Booij  <ilja@ic-s.nl>
+
+	* auth/authsql.c (auth_validate): checks if username or password
+	is NULL
+
+	* auth/authldap.c (auth_validate): checks if username or password
+	is NULL
+
 2004-04-01  Ilja Booij  <ilja@ic-s.nl>
 
 	* imap4.c (IMAPClientHandler): add ci_cleanup() calls before
