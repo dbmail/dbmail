@@ -159,7 +159,7 @@ int pop3 (void *stream, char *buffer)
 								result=db_createsession (result, &curr_session);
 								if (result==1)
 									{
-									fprintf ((FILE *)stream, "+OK %s has %lu messages (%lu octets).\r\n",
+									fprintf ((FILE *)stream, "+OK %s has %lu messages (%lu octets)\r\n",
 										username, curr_session.virtual_totalmessages,
 										curr_session.virtual_totalsize);
 									trace(TRACE_MESSAGE,"pop3(): user %s logged in [messages=%lu, octets=%lu]",
@@ -412,7 +412,7 @@ int pop3 (void *stream, char *buffer)
 									result=db_createsession(result,&curr_session);
 									if (result==1)
 										{
-										fprintf((FILE *)stream, "+OK %s has %lu messages (%lu octets).\r\n",
+										fprintf((FILE *)stream, "+OK %s has %lu messages (%lu octets)\r\n",
 												username, curr_session.virtual_totalmessages,
 												curr_session.virtual_totalsize);
 										trace(TRACE_MESSAGE,"pop3(): user %s logged in [messages=%lu, octets=%lu]",
