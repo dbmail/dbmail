@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
 			/* TODO: Perhaps verbose should log to the console with -n? */
 			break;
 		case 'V':
-			printf("\n*** DBMAIL: dbmail-pop3d version "
+			printf("\n*** DBMAIL: dbmail-lmtpd version "
 			       "$Revision$ %s\n\n", COPYRIGHT);
 			return 0;
 		case 'n':
@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
 				pidFile = optarg;
 			else {
 				fprintf(stderr,
-					"dbmail-pop3d: -p requires a filename "
+					"dbmail-lmtpd: -p requires a filename "
 					"argument\n\n");
 				return 1;
 			}
@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
 				configFile = optarg;
 			else {
 				fprintf(stderr,
-					"dbmail-pop3d: -f requires a filename "
+					"dbmail-lmtpd: -f requires a filename "
 					"argument\n\n");
 				return 1;
 			}
