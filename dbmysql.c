@@ -3844,7 +3844,7 @@ long db_dump_range(MEM *outmem, db_pos_t start, db_pos_t end, unsigned long msgu
 	    buf[bufcnt++] = row[0][i];
 	}
       
-      mwrite(buf, bufcnt, outmem);
+      outcnt += mwrite(buf, bufcnt, outmem);
       bufcnt = 0;
 
       mysql_free_result(res);
@@ -3888,7 +3888,7 @@ long db_dump_range(MEM *outmem, db_pos_t start, db_pos_t end, unsigned long msgu
 	  else if (row[0][startpos+j])
 	    buf[bufcnt++] = row[0][startpos+j];
 	}
-      mwrite(buf, bufcnt, outmem);
+      outcnt += mwrite(buf, bufcnt, outmem);
       bufcnt = 0;
 
       row = mysql_fetch_row(res); /* fetch next row */
