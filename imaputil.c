@@ -142,20 +142,24 @@ GList * g_list_append_printf(GList * list, char * format, ...)
 /*
  *  build a parentisized list (4.4) from a GList
  */
-GString *dbmail_imap_plist_as_string(GList * list)
+char *dbmail_imap_plist_as_string(GList * list)
 {
+	char *p;
 	GString * tmp = g_list_join(list, " ");
 	g_strstrip(tmp->str);
-	g_string_printf(tmp,"(%s)", g_strdup(tmp->str));
-	return tmp;
+	g_string_printf(tmp,"(%s)", tmp->str);
+	p = tmp->str;
+	g_string_free(tmp,FALSE);
+	return p;
 }
 /* 
  * return a quoted or literal astring
  */
 
-GString *dbmail_imap_astring_as_string(const char *s)
+char *dbmail_imap_astring_as_string(const char *s)
 {
 	int i;
+	char *p;
 	GString * tmp = g_string_new("");
 	g_string_printf(tmp, "\"%s\"", s); // fallback to quoted "string"
 	// but check whether we must use literal string {octets}\r\nstring
@@ -163,7 +167,9 @@ GString *dbmail_imap_astring_as_string(const char *s)
 		if ( !(s[i] & 0xe0) || (s[i] & 0x80) || (s[i] == '"') || (s[i] == '\\')) 
 			g_string_printf(tmp, "{%lu}\r\n%s", (unsigned long) strlen(s), s);
 	}
-	return tmp;
+	p = tmp->str;
+	g_string_free(tmp,FALSE);
+	return p;
 }
 /* 
  * retrieve_structure()

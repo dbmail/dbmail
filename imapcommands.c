@@ -1274,12 +1274,12 @@ int _ic_list(char *tag, char **args, ClientInfo * ci)
 	size_t slen, plen;
 	unsigned i, j;
 	unsigned nchildren;
-	char name[IMAP_MAX_MAILBOX_NAMELEN];
 	char *pattern;
 	char *thisname = list_is_lsub ? "LSUB" : "LIST";
 	
 	mailbox_t *mb = (mailbox_t *)my_malloc(sizeof(mailbox_t));
 	memset(mb,0,sizeof(mailbox_t));
+	GList * plist = NULL;
 
 	if (!check_state_and_args
 	    (thisname, tag, args, 2, IMAPCS_AUTHENTICATED, ci))
@@ -1367,16 +1367,18 @@ int _ic_list(char *tag, char **args, ClientInfo * ci)
 
 	for (i = 0; i < nchildren; i++) {
 		result = db_getmailbox_list_result(children[i], ud->userid, mb);
-		ci_write(ci->tx, "* %s (", thisname);
-
+		plist = NULL;
 		if (mb->no_select)
-			ci_write(ci->tx, "\\noselect ");
+			plist = g_list_append(plist, "\\noselect");
 		if (mb->no_inferiors)
-			ci_write(ci->tx, "\\noinferiors ");
-
-		/* show delimiter & name */
-		ci_write(ci->tx, ") \"/\" \"%s\"\r\n", mb->name);
+			plist = g_list_append(plist, "\\noinferiors");
+		
+		/* show */
+		ci_write(ci->tx, "* %s %s \"/\" \"%s\"\r\n", thisname, dbmail_imap_plist_as_string(plist), mb->name);
 	}
+
+	g_list_foreach(plist,(GFunc)g_free,NULL);
+	g_list_free(plist);
 
 	if (children)
 		my_free(children);
@@ -1414,8 +1416,6 @@ int _ic_status(char *tag, char **args, ClientInfo * ci)
 	imap_userdata_t *ud = (imap_userdata_t *) ci->userData;
 	mailbox_t mb;
 	int i, endfound, result;
-	GString *tmp1 = g_string_new("");
-	GString *tmp2 = g_string_new("");
 	GString *response = g_string_new("");
 	GList *plst = NULL;
 	
@@ -1512,11 +1512,9 @@ int _ic_status(char *tag, char **args, ClientInfo * ci)
 			return 1;
 		}
 	}
-	tmp1 = dbmail_imap_astring_as_string(args[0]);
-	tmp2 = dbmail_imap_plist_as_string(plst);
 	g_string_printf(response, "* STATUS %s %s\r\n", 
-			tmp1->str, tmp2->str);
-			
+		dbmail_imap_astring_as_string(args[0]),
+		dbmail_imap_plist_as_string(plst));	
 	trace(TRACE_DEBUG,"%s,%s: RESPONSE [ %s ]", __FILE__, __func__, response->str);
 	ci_write(ci->tx, "%s", response->str);
 	ci_write(ci->tx, "%s OK STATUS completed\r\n", tag);
@@ -1525,8 +1523,6 @@ int _ic_status(char *tag, char **args, ClientInfo * ci)
 	g_list_foreach(plst,(GFunc)g_free,NULL);
 	g_list_free(plst);
 	g_string_free(response,1);
-	g_string_free(tmp1,1);
-	g_string_free(tmp2,1);
 	return 0;
 }
 
@@ -1837,7 +1833,7 @@ int _ic_sort(char *tag, char **args, ClientInfo *ci)
 		result_set[i] = (i+1);
 
 	/* now perform the search operations */
-	result = perform_imap_search(result_set, ud->mailbox.exists, &sk, &ud->mailbox,1);
+	result = perform_imap_search((int *)result_set, ud->mailbox.exists, &sk, &ud->mailbox,1);
     
 	if (result < 0) {
 		free_searchlist(&sk.sub_search);
@@ -2152,7 +2148,7 @@ ci_write(ci->tx,"* BYE internal dbase error\r\n");
 
 		/* now perform the search operations */
 		result =
-		    perform_imap_search(result_set, ud->mailbox.exists,
+		    perform_imap_search((int *)result_set, ud->mailbox.exists,
 					&sk, &ud->mailbox,0);
 
 		if (result < 0) {
@@ -4130,7 +4126,7 @@ int _ic_store(char *tag, char **args, ClientInfo * ci)
 				hi = store_end;
 			}
 
-			if (ud->mailbox.permission = IMAPPERM_READWRITE) {
+			if (ud->mailbox.permission == IMAPPERM_READWRITE) {
 				result = db_set_msgflag_range(lo, hi, ud->mailbox.uid, flaglist, action);
 				if (result == -1) {
 					ci_write(ci->tx, "\r\n* BYE internal dbase error\r\n");

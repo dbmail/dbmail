@@ -141,11 +141,6 @@ static void _fetch_full(struct DbmailMessage *self)
 	_retrieve(self, query_template);
 }
 
-
-
-
-
-
 struct DbmailMessage * dbmail_message_new(void)
 {
 	g_mime_init(0);
@@ -232,7 +227,6 @@ static void _set_message(struct DbmailMessage *self, const GString *message)
 	GMimeStream *stream = g_mime_stream_mem_new_with_buffer(message->str, message->len);
 	_set_message_from_stream(self, stream);
 	g_object_unref(stream);
-	self->size = message->len;
 }
 
 struct DbmailMessage * dbmail_message_init_with_stream(struct DbmailMessage *self, GMimeStream *stream)
@@ -245,12 +239,41 @@ struct DbmailMessage * dbmail_message_init_with_stream(struct DbmailMessage *sel
 
 static void _set_message_from_stream(struct DbmailMessage *self, GMimeStream *stream)
 {
-	GMimeParser *parser = g_mime_parser_new_with_stream(stream);
+	/* 
+	 * We convert all messages to crlf->lf for internal usage and
+	 * db-insertion
+	 */
+	
+	GMimeStream *ostream, *fstream;
+	GMimeFilter *filter;
+	GMimeParser *parser;
+
+	ostream = g_mime_stream_mem_new();
+	fstream = g_mime_stream_filter_new_with_stream(ostream);
+	filter = g_mime_filter_crlf_new(GMIME_FILTER_CRLF_DECODE,GMIME_FILTER_CRLF_MODE_CRLF_ONLY);
+	
+	g_mime_stream_filter_add((GMimeStreamFilter *) fstream, filter);
+	g_mime_stream_write_to_stream(stream,fstream);
+	g_mime_stream_reset(ostream);
+	
+	parser = g_mime_parser_new_with_stream(ostream);
+	
 	self->message = g_mime_parser_construct_message(parser);
+	self->size = g_mime_stream_length(ostream);
+	
+	g_object_unref(filter);
+	g_object_unref(fstream);
+	g_object_unref(ostream);
 	g_object_unref(parser);
 }
 
-size_t dbmail_message_get_rfcsize(struct DbmailMessage *self) {
+size_t dbmail_message_get_rfcsize(struct DbmailMessage *self) 
+{
+	/*
+	 * We convert all messages lf->crlf in-memory to determine
+	 * the rfcsize
+	 */
+	
 	if (self->rfcsize)
 		return self->rfcsize;
 
@@ -262,12 +285,12 @@ size_t dbmail_message_get_rfcsize(struct DbmailMessage *self) {
 	filter = g_mime_filter_crlf_new(GMIME_FILTER_CRLF_ENCODE,GMIME_FILTER_CRLF_MODE_CRLF_ONLY);
 	
 	g_mime_stream_filter_add((GMimeStreamFilter *) fstream, filter);
-	g_object_unref(filter);
-	
 	g_mime_object_write_to_stream((GMimeObject *)self->message,fstream);
-	g_object_unref(fstream);
 	
 	self->rfcsize = g_mime_stream_length(ostream);
+	
+	g_object_unref(filter);
+	g_object_unref(fstream);
 	g_object_unref(ostream);
 
 	return self->rfcsize;
