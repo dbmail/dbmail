@@ -319,12 +319,13 @@ GList * _imap_get_structure(mime_message_t * msg, int show_extension_data)
 		/* check for a multipart message */
 		if (is_rfc_multipart || is_mime_multipart) {
 			curr = list_getstart(&msg->children);
+			tmp = g_string_new("");
 			while (curr) {
 				tlist = _imap_get_structure((mime_message_t *) curr->data, show_extension_data);
-				list = g_list_append(list, g_strdup(dbmail_imap_plist_as_string(tlist)));
-
+				g_string_append_printf(tmp, "%s", dbmail_imap_plist_as_string(tlist));
 				curr = curr->nextnode;
 			}
+			list = g_list_append(list, g_strdup(tmp->str));
 
 			/* show multipart subtype */
 			if (is_mime_multipart)
@@ -1239,16 +1240,6 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 
 		dbmail_imap_session_printf(self, "INTERNALDATE \"%s\"", date_sql2imap(date));
 	}
-
-	if (self->fi->getUID) {
-		if (self->fi->isfirstfetchout)
-			self->fi->isfirstfetchout = 0;
-		else
-			dbmail_imap_session_printf(self, " ");
-
-		dbmail_imap_session_printf(self, "UID %llu", self->msg_idnr);
-	}
-
 	if (self->fi->getMIME_IMB) {
 		if (self->fi->isfirstfetchout)
 			self->fi->isfirstfetchout = 0;
@@ -1286,7 +1277,8 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 			dbmail_imap_session_printf(self, " ");
 
 		tlist = _imap_get_envelope(&cached_msg.msg.rfcheader);
-		if (dbmail_imap_session_printf(self, "ENVELOPE %s", dbmail_imap_plist_as_string(tlist)) == -1) {
+		tmp = g_list_join(tlist,NULL);
+		if (dbmail_imap_session_printf(self, "ENVELOPE (%s)", g_strdup(tmp->str)) == -1) {
 			dbmail_imap_session_printf(self, "\r\n* BYE error fetching envelope structure\r\n");
 			return -1;
 		}
@@ -1490,6 +1482,16 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 		}
 		dbmail_imap_session_printf(self,"FLAGS %s", dbmail_imap_plist_as_string(tlist));
 	}
+
+	if (self->fi->getUID) {
+		if (self->fi->isfirstfetchout)
+			self->fi->isfirstfetchout = 0;
+		else
+			dbmail_imap_session_printf(self, " ");
+
+		dbmail_imap_session_printf(self, "UID %llu", self->msg_idnr);
+	}
+
 	dbmail_imap_session_printf(self, ")\r\n");
 	g_string_free(tmp,TRUE);
 	return 0;
