@@ -3,8 +3,8 @@
 
 #! /bin/sh
 
-DBASETYPE = mysql
-DBASE_AUTHTYPE = mysql
+DBASETYPE = pgsql
+DBASE_AUTHTYPE = pgsql
 
 AUTHOBJECT = $(DBASETYPE)/dbauth$(DBASE_AUTHTYPE).o
 MSGBUFOBJECT = $(DBASETYPE)/dbmsgbuf$(DBASETYPE).o
@@ -21,10 +21,10 @@ CONFIG_OBJECTS = $(DBOBJECT) list.o md5.o debug.o dbmd5.o mime.o memblock.o $(AU
 USER_OBJECTS = debug.o list.o dbmd5.o md5.o $(DBOBJECT) mime.o memblock.o $(AUTHOBJECT)
 CC = cc
 
-MYSQLLIBDIR=/usr/local/lib/mysql
+PGSQLLIBDIR=/usr/local/pgsql/lib
 
-LIBS = -L$(MYSQLLIBDIR)
-LIB = -lmysqlclient
+LIBS = -L$(PGSQLLIBDIR)
+LIB = -lpq
 
 # Added the -D_BSD_SOURCE option to suppress warnings
 # from compiler about vsyslog function 
