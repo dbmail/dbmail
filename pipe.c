@@ -369,7 +369,7 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 			  trace (TRACE_DEBUG,"insert_messages(): wrote header to pipe");
 
 			  /* add the external pipe descriptor to a list */
-			  list_nodeadd(&descriptors,sendmail_pipe,sizeof(FILE));
+			  list_nodeadd(&descriptors,&sendmail_pipe,sizeof(FILE*));
 			}
 		      else 
 			{
@@ -400,15 +400,15 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 			      while (descriptor_temp!=NULL)
 				{
 				  trace (TRACE_DEBUG,"insert_messages(): fprintf now");
-				  err = ferror((FILE *)descriptor_temp->data);
+				  err = ferror((descriptor_temp->data));
 				  trace (TRACE_DEBUG,"insert_messages(): "
 					 "ferror reports %d, feof reports %d on descriptor %d",err, 
-					 feof((FILE*)descriptor_temp->data),fileno((FILE*)descriptor_temp->data));
+					 feof(descriptor_temp->data),fileno(descriptor_temp->data));
 
 				   /* if (!err)
 				    fwrite (strblock, sizeof(char), usedmem,
 					    (FILE *)(descriptor_temp->data));  */
-				  fprintf ((FILE *)(descriptor_temp->data),"%s",strblock);
+				  fprintf (descriptor_temp->data,"%s",strblock);
 
 				  trace (TRACE_DEBUG,"insert_messages(): wrote data");
 				  descriptor_temp=descriptor_temp->nextnode;
