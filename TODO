@@ -1,0 +1,3 @@
+- commandline program should be created for adding email addresses
+- cronjob should be created for deleting messsages
+- it would be interesting to know who is receiving a message (in log)

@@ -1,0 +1,94 @@
+DBMAIL installation
+===================
+
+What do you need?
+
+- working MYSQL
+- working smtp server (preferrably Postfix)
+- a little knowledge about SQL
+
+1.	First you'll need to create the DBMAIL database in MYSQL.
+	This is easy. You'll need the mysql commandline program for this. 
+	Just do :
+	
+	mysql -u root -p <sql/create_tables.sql
+	
+	After this, the DBMAIL tables will be created.
+
+
+2. Next you will need to create some users into the database.
+	Run the mysql utility again.
+	Now type:
+	
+	use dbmail;
+	insert into mailbox (userid,passwd,clientid,maxmail) values 
+	("username", "password",0,0);
+
+	username should be replaced by a username (which is used by the pop3d
+	as well as by the deliver program to identify a mailbox) and password
+	should be replaced by a cleartext password.
+	Now you'll need to create a alias to this user. Every mailbox needs 
+	at least one alias. In the same session as above type:
+	
+	insert into aliases (alias,useridnr) values ("emailaddress",0);
+	
+	emailaddress should be replaced with an address that your machine is 
+	final destination for. The useridnr is the useridnr of the mailbox that
+	mail for this emailaddress should be delivered to. 
+
+
+3. Look at the config.h file in this directory. You will see a few #define
+	statements. First the #define HOST should contain the hostname of the 
+	machine that runs the MYSQL database. USER and PASS need to be replaced
+	with a user and password that can access the DBMAIL database. 
+
+	Do a find or a locate for mysql.h. Copy this path and set it in the 
+	dbmysql.h in the #include "full path to mysql.h"
+
+	If you want verbose debugging you can set the TRACE_LEVEL to 4 or 5. 
+	For normal messages the TRACE_LEVEL should be 2.
+
+	You might check the location for the mysqlclient file (usually it's 
+	in /usr/local/lib/mysql). If it is different you need to change this
+	into the Makefile.
+	
+	
+4.	Run make 
+	Both dbmail-pop3d as dbmail-smtp should be created.
+
+5	Become root and copy dbmail-pop3d and dbmail-smtp to
+	/usr/local/bin.
+
+-- The next lines are MTA dependend, this is for postfix --
+	
+6.	In the master.cf file for postfix add the following:
+	dbmail    unix  -       n       n       -       -       pipe
+	    flags=  user=eelco:eelco argv=/usr/local/bin/dbmail-smtp -d ${recipient}
+
+	and insert into the /etc/postfix/transport file 
+	<domain>		dbmail:
+	for all domains you want dbmail to be destiation for.
+	Next run postmap /etc/postfix/transport
+	Edit /etc/postfix/main.cf and add the line 
+	transport_maps = /etc/postfix/transport
+
+	do a postfix reload and if everything goes well 
+	mail should be delivered to dbmail. If not, try running 
+	postfix with the -v option to see what's going on. If the 
+	problem seems to be in dbmail, try changing the tracelevel in debug.h
+	to 4 or 5. This should give enough info. You need to recompile and 
+	copy the dbmail- executables.
+
+--  -----------------------------------------------------------
+
+If you do not use postfix. The dbmail injector program, dbmail-smtp,
+can receive information in two ways. Either through raw mail (for example, 
+delivered by procmail) using the -n option or from a MTA with receipients 
+in the commandline using the -d option.
+
+If you get dbmail running on other MTA's please let me know at 
+eelco@eelco.com.
+
+For other problems you can subscribe to the dbmaillist. If you want to
+subscribe, send a subscribe dbmail in the body of a message to 
+majordomo@fastxs.net. 
