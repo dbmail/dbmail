@@ -217,6 +217,19 @@ void list_showlist(struct list *tlist)
 		temp = temp->nextnode;
 	}
 }
+/*
+ * shallow copy of struct list into GList
+ */
+
+GList * g_list_copy_list(GList *dst, struct element *el)
+{
+	while(el) {
+		dst = g_list_append(dst, el->data);
+		el = el->nextnode;
+	}
+	return dst;
+}
+
 
 /* basic binary tree */
 void list_btree_insert(sortitems_t ** tree, sortitems_t * item) {

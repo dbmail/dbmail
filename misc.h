@@ -35,6 +35,8 @@
 #include "debug.h"
 #include "list.h"
 
+#define BUFLEN 2048
+
 /**
    \brief drop process privileges. Change change euid and egid to
    uid and gid of newuser and newgroup
@@ -107,5 +109,9 @@ int find_bounded(char *value, char left, char right, char **retchar,
 		 size_t * retsize, size_t * retlast);
 int base64_grow_ret(char ***inchar, size_t ** inint, size_t newcount,
 		    size_t newchar);
+
+GString * g_list_join(GList * list, char * sep);
+GList * g_string_split(GString * string, char * sep);
+GList * g_list_append_printf(GList * list, char * format, ...);
 
 #endif

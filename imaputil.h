@@ -98,10 +98,6 @@ char * dbmail_imap_astring_as_string(const char *s);
 char * dbmail_imap_plist_as_string(GList *plist);
 GList *dbmail_imap_list_slices(GList *list, unsigned limit);
 
-GString * g_list_join(GList * list, char * sep);
-GList * g_string_split(GString * string, char * sep);
-GList * g_list_append_printf(GList * list, char * format, ...);
-
 int mime_unwrap(char *to, const char *from); 
 int sort_search(struct list *searchlist);
 

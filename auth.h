@@ -117,15 +117,19 @@ char *auth_getencryption(u64_t user_idnr);
 
 /**
  * \brief find all deliver_to addresses for a username (?, code is not exactly
- * clear to me at the moment, IB 21-08-03)
+ * clear to me at the moment, IB 21-08-03) 
+ *
+ * Unused so I removed it, PS 30-01-05
+ * 
  * \param username 
  * \param userids list of user ids (empty on call)
  * \param checks nr of checks. Used internally in recursive calls. It \b should
  * be set to -1 when called!
  * \return number of deliver_to addresses found
  */
-int auth_check_user(const char *username, struct list *userids,
-		    int checks);
+//int auth_check_user(const char *username, struct list *userids,
+//		    int checks);
+
 /**
  * \brief as auth_check_user() but adds the numeric ID of the user found to
  * userids or the forward to the fwds list
@@ -268,10 +272,8 @@ char *auth_get_deliver_from_alias(const char *alias);
  * 		- -2 on memory failure
  * 		- -1 on database failure
  * 		- 0 on success
- * \attention aliases list needs to be empty. Method calls list_init()
- *            which sets list->start to NULL.
  */
-int auth_get_user_aliases(u64_t user_idnr, struct list *aliases);
+GList * auth_get_user_aliases(u64_t user_idnr);
 /**
  * \brief add an alias for a user
  * \param user_idnr user's id
@@ -314,6 +316,14 @@ int auth_removealias(u64_t user_idnr, const char *alias);
  *        - 0 on success
  */
 int auth_removealias_ext(const char *alias, const char *deliver_to);
+
+#ifdef AUTHLDAP
+
+char *dm_ldap_get_filter(const gchar boolean, const gchar *attribute, GList *values);
+u64_t dm_ldap_get_freeid(const gchar *attribute);
+GList * dm_ldap_entlist_get_values(GList *entlist);
+
+#endif
 
 
 #endif

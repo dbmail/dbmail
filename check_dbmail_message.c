@@ -175,13 +175,13 @@ START_TEST(test_dbmail_message_get_rfcsize)
 }
 END_TEST
 
-//void dbmail_message_delete(struct DbmailMessage *self);
-/*
-START_TEST(test_dbmail_message_delete)
+//void dbmail_message_free(struct DbmailMessage *self);
+START_TEST(test_dbmail_message_free)
 {
+	struct DbmailMessage *m = dbmail_message_new();
+	dbmail_message_free(m);
 }
 END_TEST
-*/
 
 START_TEST(test_dbmail_message_new_from_stream)
 {
@@ -228,7 +228,7 @@ Suite *dbmail_message_suite(void)
 	tcase_add_test(tc_message, test_dbmail_message_hdrs_to_string);
 	tcase_add_test(tc_message, test_dbmail_message_body_to_string);
 	tcase_add_test(tc_message, test_dbmail_message_get_rfcsize);
-//	tcase_add_test(tc_message, test_dbmail_message_delete);
+	tcase_add_test(tc_message, test_dbmail_message_free);
 	return s;
 }
 

@@ -165,4 +165,5 @@ void GetDBParams(db_param_t * db_params);
  */
 void SetTraceLevel(const char *service_name);
 
+
 #endif

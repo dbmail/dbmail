@@ -57,6 +57,8 @@ long list_totalnodes(struct list *tlist);
 void list_showlist(struct list *tlist);
 void list_init(struct list *tlist);
 
+GList * g_list_copy_list(GList *dst, struct element *el);
+
 /* this function had to be renamed because some MySQL versions
  * export a function with the name list_reverse(). Nice of them,
  * but a pretty "strange" way to pollute the global namespace

@@ -102,56 +102,6 @@ const char *envelope_items[] = {
 static const char *search_cost[] = { "b","b","c","c","c","d","d","d","d","c","e","e","b","b","j","j","j" };
 
 
-/*
- *
- *
- *  Some basic string handling utilities
- *
- *
- *
- */
-GString * g_list_join(GList * list, char * sep)
-{
-	GString *string = g_string_new("");
-	if (sep == NULL)
-		sep="";
-	if (list == NULL)
-		return string;
-	list = g_list_first(list);
-	string = g_string_append(string, (gchar *)list->data);
-	while((list = g_list_next(list))) {
-		string = g_string_append(string,sep);
-		string = g_string_append(string,(gchar *)list->data);
-	}
-	return string;	
-}
-
-GList * g_string_split(GString * string, char * sep)
-{
-	GList * list = NULL;
-	char **array = (char **)g_strsplit((const gchar *)string->str, (const gchar *)sep,0);
-	int i, len = 0;
-	while(array[len++]);
-	len--;
-	for (i=0; i<len; i++)
-		list = g_list_append(list,g_strdup(array[i]));
-	g_strfreev(array);
-	return list;
-}
-/*
- * append a formatted GString to a GList
- */
-GList * g_list_append_printf(GList * list, char * format, ...)
-{
-	char *str = (char *)dm_malloc(sizeof(char) * BUFLEN);
-	va_list argp;
-	va_start(argp, format);
-	vsnprintf(str, sizeof(char) * BUFLEN, format, argp);
-	list = g_list_append(list, strdup(str));
-	dm_free(str);
-	return list;
-}
-
 /* some basic imap type utils */
 
 /*

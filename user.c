@@ -35,6 +35,7 @@
 #include "list.h"
 #include "debug.h"
 #include "db.h"
+#include "misc.h"
 #include <time.h>
 #include <stdarg.h>
 #include <sys/types.h>
@@ -103,8 +104,8 @@ int do_add(const char * const user,
            const char * const password,
            const char * const enctype,
            const u64_t maxmail, const u64_t clientid,
-	   struct list * const alias_add,
-	   struct list * const alias_del);
+	   GList * alias_add,
+	   GList * alias_del);
 int do_delete(const u64_t useridnr, const char * const user);
 int do_show(const char * const user);
 int do_empty(const u64_t useridnr);
@@ -116,12 +117,12 @@ int do_password(const u64_t useridnr,
                 const char * const password,
                 const char * const enctype);
 int do_aliases(const u64_t useridnr,
-               struct list * const alias_add,
-               struct list * const alias_del);
+               GList * alias_add,
+               GList * alias_del);
 /* External forwards */
 int do_forwards(const char *alias, const u64_t clientid,
-                struct list * const fwds_add,
-                struct list * const fwds_del);
+                GList * fwds_add,
+                GList * fwds_del);
 
 /* Helper functions */
 int is_valid(const char * const str);
@@ -185,14 +186,10 @@ int main(int argc, char *argv[])
 	     *passwdfile = NULL;
 	char *password = NULL, *enctype = NULL;
 	u64_t useridnr = 0, clientid = 0, maxmail = 0;
-	struct list alias_add, alias_del, fwds_add, fwds_del;
+	GList *alias_add = NULL, *alias_del = NULL, *fwds_add = NULL, *fwds_del = NULL;
 	struct change_flags change_flags;
 	size_t len = 0;
 
-	list_init(&alias_add);
-	list_init(&alias_del);
-	list_init(&fwds_add);
-	list_init(&fwds_del);
 
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 	setvbuf(stdout, 0, _IONBF, 0);
@@ -299,25 +296,25 @@ int main(int argc, char *argv[])
 		case 's':
 			// Add this item to the user's aliases.
 			if (optarg && (len = strlen(optarg)))
-				list_nodeadd(&alias_add, optarg, len+1);
+				alias_add = g_list_append(alias_add, g_strdup(optarg));
 			break;
 
 		case 'S':
 			// Delete this item from the user's aliases.
 			if (optarg && (len = strlen(optarg)))
-				list_nodeadd(&alias_del, optarg, len+1);
+				alias_del = g_list_append(alias_del, g_strdup(optarg));
 			break;
 
 		case 't':
 			// Add this item to the alias's forwards.
 			if (optarg && (len = strlen(optarg)))
-				list_nodeadd(&fwds_add, optarg, len+1);
+				fwds_add = g_list_append(fwds_add, g_strdup(optarg));
 			break;
 
 		case 'T':
 			// Delete this item from the alias's forwards.
 			if (optarg && (len = strlen(optarg)))
-				list_nodeadd(&fwds_del, optarg, len+1);
+				fwds_del = g_list_append(fwds_del, g_strdup(optarg));
 			break;
 
 		/* Common options */
@@ -394,7 +391,6 @@ int main(int argc, char *argv[])
 	GetDBParams(&_db_params);
 
 	/* open database connection */
-	qprintf("Opening connection to database...\n");
 	if (db_connect() != 0) {
 		qerrorf
 		    ("Failed. Could not connect to database (check log)\n");
@@ -403,7 +399,6 @@ int main(int argc, char *argv[])
 	}
 
 	/* open authentication connection */
-	qprintf("Opening connection to authentication...\n");
 	if (auth_connect() != 0) {
 		qerrorf
 		    ("Failed. Could not connect to authentication (check log)\n");
@@ -411,8 +406,7 @@ int main(int argc, char *argv[])
 		goto freeall;
 	}
 
-	qprintf("Ok. Connected\n");
-	configure_debug(TRACE_ERROR, 1, 0);
+	//configure_debug(TRACE_ERROR, 1, 0);
 
 	switch (mode) {
 	case 'c':
@@ -482,7 +476,7 @@ int main(int argc, char *argv[])
 	switch (mode) {
 	case 'a':
 		result = do_add(user, password, enctype, maxmail, clientid,
-				&alias_add, &alias_del);
+				alias_add, alias_del);
 		break;
 	case 'd':
 		result = do_delete(useridnr, user);
@@ -501,7 +495,7 @@ int main(int argc, char *argv[])
 		if (change_flags.newmaxmail) {
 			result |= do_maxmail(useridnr, maxmail);
 		}
-		result |= do_aliases(useridnr, &alias_add, &alias_del);
+		result |= do_aliases(useridnr, alias_add, alias_del);
 		break;
 	case 'e':
 		result = do_empty(useridnr);
@@ -510,7 +504,7 @@ int main(int argc, char *argv[])
 		result = do_show(userspec);
 		break;
 	case 'x':
-		result = do_forwards(alias, clientid, &fwds_add, &fwds_del);
+		result = do_forwards(alias, clientid, fwds_add, fwds_del);
 		break;
 	default:
 		result = 1;
@@ -521,14 +515,22 @@ int main(int argc, char *argv[])
 freeall:
 
 	/* Free the lists. */
-	if (alias_del.start)
-		list_freelist(&alias_del.start);
-	if (alias_add.start)
-		list_freelist(&alias_add.start);
-	if (fwds_del.start)
-		list_freelist(&alias_del.start);
-	if (fwds_add.start)
-		list_freelist(&alias_add.start);
+	if (alias_del) {
+		g_list_foreach(alias_del, (GFunc)g_free, NULL);
+		g_list_free(alias_del);
+	}
+	if (alias_add) {
+		g_list_foreach(alias_add, (GFunc)g_free, NULL);
+		g_list_free(alias_add);
+	}
+	if (fwds_del) {
+		g_list_foreach(fwds_del, (GFunc)g_free, NULL);
+		g_list_free(fwds_del);
+	}
+	if (fwds_add) {
+		g_list_foreach(fwds_add, (GFunc)g_free, NULL);
+		g_list_free(fwds_add);
+	}
 
 	db_disconnect();
 	auth_disconnect();
@@ -542,8 +544,8 @@ freeall:
 int do_add(const char * const user,
            const char * const password, const char * const enctype,
            const u64_t maxmail, const u64_t clientid,
-	   struct list * const alias_add,
-	   struct list * const alias_del)
+	   GList * alias_add,
+	   GList * alias_del)
 {
 	u64_t useridnr;
 	u64_t mailbox_idnr;
@@ -775,18 +777,17 @@ int do_maxmail(u64_t useridnr, u64_t maxmail)
 }
 
 int do_forwards(const char * const alias, const u64_t clientid,
-                struct list * const fwds_add,
-                struct list * const fwds_del)
+                GList * fwds_add,
+                GList * fwds_del)
 {
 	int result = 0;
 	char *forward;
-	struct element *tmp;
 
 	/* Delete aliases for the user. */
 	if (fwds_del) {
-		tmp = list_getstart(fwds_del);
-		while (tmp) {
-			forward = (char *)tmp->data;
+		fwds_del = g_list_first(fwds_del);
+		while (fwds_del) {
+			forward = (char *)fwds_del->data;
 
 			qprintf("[%s]\n", forward);
 
@@ -795,15 +796,15 @@ int do_forwards(const char * const alias, const u64_t clientid,
 				     forward);
 				result = -1;
 			}
-			tmp = tmp->nextnode;
+			fwds_del = g_list_next(fwds_del);
 		}
 	}
 
 	/* Add aliases for the user. */
 	if (fwds_add) {
-		tmp = list_getstart(fwds_add);
-		while (tmp) {
-			forward = (char *)tmp->data;
+		fwds_add = g_list_first(fwds_add);
+		while (fwds_add) {
+			forward = (char *)fwds_add->data;
 			qprintf("[%s]\n", forward);
 
 			if (auth_addalias_ext(alias, forward, clientid) < 0) {
@@ -811,7 +812,7 @@ int do_forwards(const char * const alias, const u64_t clientid,
 				     alias);
 				result = -1;
 			}
-			tmp = tmp->nextnode;
+			fwds_add = g_list_next(fwds_add);
 		}
 	}
 
@@ -840,53 +841,43 @@ int do_forwards(const char * const alias, const u64_t clientid,
 }
 
 int do_aliases(const u64_t useridnr,
-               struct list * const alias_add,
-               struct list * const alias_del)
+               GList * alias_add,
+               GList * alias_del)
 {
 	int result = 0;
+	char *alias;
 	u64_t clientid;
 
 	auth_getclientid(useridnr, &clientid);
 
 	/* Delete aliases for the user. */
 	if (alias_del) {
-		char *alias;
-		struct element *tmp;
-
-		tmp = list_getstart(alias_del);
-		while (tmp) {
-			alias = (char *)tmp->data;
+		alias_del = g_list_first(alias_del);
+		while (alias_del) {
+			alias = (char *)alias_del->data;
 
 			qprintf("[%s]\n", alias);
 
-			if (auth_removealias(useridnr, alias) <
-			    0) {
-				qerrorf("Error: could not remove alias [%s] \n",
-				     alias);
+			if (auth_removealias(useridnr, alias) < 0) {
+				qerrorf("Error: could not remove alias [%s] \n", alias);
 				result = -1;
 			}
-			tmp = tmp->nextnode;
+			alias_del = g_list_next(alias_del);
 		}
 	}
 
 	/* Add aliases for the user. */
 	if (alias_add) {
-		char *alias;
-		struct element *tmp;
-		
-
-		tmp = list_getstart(alias_add);
-		while (tmp) {
-			alias = (char *)tmp->data;
+		alias_add = g_list_first(alias_add);
+		while (alias_add) {
+			alias = (char *)alias_add->data;
 			qprintf("[%s]\n", alias);
 
-			if (auth_addalias
-			    (useridnr, alias, clientid) < 0) {
-				qerrorf("Error: could not add alias [%s]\n",
-				     alias);
+			if (auth_addalias (useridnr, alias, clientid) < 0) {
+				qerrorf("Error: could not add alias [%s]\n", alias);
 				result = -1;
 			}
-			tmp = tmp->nextnode;
+			alias_add = g_list_next(alias_add);
 		}
 	}
 
@@ -899,11 +890,11 @@ int do_aliases(const u64_t useridnr,
 int do_delete(const u64_t useridnr, const char * const name)
 {
 	int result;
-	struct list aliases;
+	GList *aliases = NULL;
 
 	qprintf("Deleting aliases for user [%s]...\n", name);
-	auth_get_user_aliases(useridnr, &aliases);
-	do_aliases(useridnr, NULL, &aliases);
+	aliases = auth_get_user_aliases(useridnr);
+	do_aliases(useridnr, NULL, aliases);
 
 	qprintf("Deleting user [%s]...\n", name);
 	result = auth_delete_user(name);
@@ -921,19 +912,21 @@ int do_show(const char * const name)
 {
 	u64_t useridnr, cid, quotum, quotumused;
 	GList *users = NULL;
-	struct list userlist;
-	struct element *tmp;
-	char *deliver_to;
+	GList *userlist = NULL;
+	char *username;
+	int result;
+	struct list uids;
+	struct list fwds;
+	GList *userids = NULL;
+	GList *forwards = NULL;
 
 	if (!name) {
 		/* show all users */
-		qprintf("Existing users:\n");
-
 		users = auth_get_known_users();
 		if (g_list_length(users) > 0) {
 			users = g_list_first(users);
 			while (users) {
-				qprintf("[%s]\n", (char *) users->data);
+				do_show(users->data);
 				users = g_list_next(users);
 			}
 			g_list_foreach(users,(GFunc)g_free,NULL);
@@ -941,74 +934,79 @@ int do_show(const char * const name)
 		g_list_free(users);
 
 	} else {
-		qprintf("Info for user [%s]", name);
-
 		if (auth_user_exists(name, &useridnr) == -1) {
-			qerrorf("Error: cannot verify existence of user [%s].\n",
-			     name);
+			qerrorf("Error while verifying user [%s].\n", name);
 			return -1;
 		}
 
 		if (useridnr == 0) {
-			/* 'name' is not a user, try it as an alias */
-			qprintf
-			    ("..is not a user, trying as an alias");
-
-			deliver_to = auth_get_deliver_from_alias(name);
-
-			if (!deliver_to) {
-				qerrorf("Error: cannot verify existence of alias [%s].\n",
-				     name);
+			/* not a user, search aliases */
+			list_init(&fwds);
+			list_init(&uids);
+			result = auth_check_user_ext(name,&uids,&fwds,-1);
+			
+			if (!result) {
+				qerrorf("Nothing found searching for [%s].\n", name);
 				return -1;
 			}
-
-			if (deliver_to[0] == '\0') {
-				qprintf("..is not an alias.\n");
-				return -1;
+		
+			if (list_getstart(&uids))
+				userids = g_list_copy_list(userids,list_getstart(&uids));
+			if (list_getstart(&fwds))
+				forwards = g_list_copy_list(forwards,list_getstart(&fwds));
+			
+			forwards = g_list_first(forwards);
+			if (forwards) {
+				while(forwards) {
+					qerrorf("forward [%s] to [%s]\n", name, (char *)forwards->data);
+					forwards = g_list_next(forwards);
+				}
+				g_list_foreach(forwards,(GFunc)g_free, NULL);
+				g_list_free(forwards);
 			}
-
-			useridnr = strtoul(deliver_to, NULL, 10);
-			if (useridnr == 0) {
-				qprintf
-				    ("\n[%s] is an alias for [%s]\n", name,
-				     deliver_to);
-				dm_free(deliver_to);
-				return 0;
+			
+			userids = g_list_first(userids);
+			if (userids) {
+				while (userids) {
+					username = auth_get_userid(*(u64_t *)userids->data);
+					qerrorf("deliver [%s] to [%s]\n-------\n", name, username);
+					do_show(username);
+					userids = g_list_next(userids);
+				}
+				g_list_free(userids);
 			}
-
-			dm_free(deliver_to);
-			qprintf("\nFound user for alias [%s]:\n\n",
-				     name);
+			return 0;
 		}
 
 		auth_getclientid(useridnr, &cid);
 		auth_getmaxmailsize(useridnr, &quotum);
 		db_get_quotum_used(useridnr, &quotumused);
 
-		qprintf("\n");
-		qprintf("User ID         : %llu\n", useridnr);
-		qprintf("Username        : %s\n",
-			     auth_get_userid(useridnr));
-		qprintf("Client ID       : %llu\n", cid);
-		qprintf("Max. mailboxsize: %.02f MB\n",
-			     (double) quotum / (1024.0 * 1024.0));
-		qprintf("Quotum used     : %.02f MB (%.01f%%)\n",
-			     (double) quotumused / (1024.0 * 1024.0),
-			     (100.0 * quotumused) / (double) quotum);
-		qprintf("\n");
+		GList *out = NULL;
+		GString *s = g_string_new("");
+		out = g_list_append_printf(out,"%s", auth_get_userid(useridnr));
+		out = g_list_append_printf(out,"x");
+		out = g_list_append_printf(out,"%llu", useridnr);
+		out = g_list_append_printf(out,"%llu", cid);
+		out = g_list_append_printf(out,"%.02f", 
+				(double) quotum / (1024.0 * 1024.0));
+		out = g_list_append_printf(out,"%.02f", 
+				(double) quotumused / (1024.0 * 1024.0));
+		out = g_list_append_printf(out,"%.01f%%", 
+				(100.0 * quotumused) / ( quotum ? (double) quotum: 1));
 
-		qprintf("Aliases:\n");
-		auth_get_user_aliases(useridnr, &userlist);
+		userlist = auth_get_user_aliases(useridnr);
 
-		tmp = list_getstart(&userlist);
-		while (tmp) {
-			qprintf("%s\n", (char *) tmp->data);
-			tmp = tmp->nextnode;
+		if (g_list_length(userlist)) {
+			userlist = g_list_first(userlist);
+			s = g_list_join(userlist,",");
+			g_list_append_printf(out,"%s", s->str);
+			g_list_foreach(userlist,(GFunc)g_free, NULL);
 		}
-
-		qprintf("\n");
-		if (userlist.start)
-			list_freelist(&userlist.start);
+		g_list_free(userlist);
+		s = g_list_join(out,":");
+		qprintf("%s\n", s->str);
+		g_string_free(s,TRUE);
 	}
 
 	return 0;

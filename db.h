@@ -473,29 +473,6 @@ int db_insert_physmessage_with_internal_date(timestring_t internal_date,
 					     u64_t * physmessage_id);
 
 /**
- * \brief insert a message into inbox. This function creates an entry
- * into the messages table and an entry into the physmessage table
- * \param user_idnr user idnr
- * \param deliver_to mailbox to deliver to
- * \param create_or_error_mailbox responds to the constants
- * 	- CREATE_IF_MBOX_NOT_FOUND
- * 	- ERROR_IF_MBOX_NOT_FOUND
- * \param unique_id unique id of message
- * \param messge_idnr call by reference to new message id number
- * \return
- * 	- -1 on failure
- * 	-  1 on success
- */
-int db_insert_message(u64_t user_idnr,
-		      const char *deliver_to,
-		      int create_or_error_mailbox,
-		      const char *unique_id, u64_t * message_idnr);
-
-#define CREATE_IF_MBOX_NOT_FOUND 1
-#define ERROR_IF_MBOX_NOT_FOUND -1
-
-
-/**
  * \brief update unique_id, message_size and rfc_size of
  *        a message identified by message_idnr
  * \param message_idnr
@@ -1261,4 +1238,11 @@ char *date2char_str(const char *column);
 
 
 int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * mb);
+
+/* 
+ * db-user accessors
+ */
+
+int db_user_exists(const char *username, u64_t * user_idnr);
+
 #endif

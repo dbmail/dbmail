@@ -1,3 +1,17 @@
+2005-02-07  Paul Stevens <paul@nfg.nl>
+
+	* auth.h, auth/authsql.c, auth/authldap.c: first wave of authldap
+	fixes. 
+	* check_dbmail_deliver.c: implement testcases for auth.h api. The rest
+	of the tests for the delivery chain is still todo.
+	* user.c: change output from dbmail-users -l to make it machine
+	parseable and emulate unix getent standard.
+	* db.c, dbmail-message.c: move db_insert_message functionality to dbmail-message.c
+	* misc.c, imaputil.c: move some generic utilities to misc.c.
+	* list.c (g_list_copy_list): added shallow copy of old-style list to
+	glist.
+	* pipe.c, dbmail-message.c: cleanup dbmail_message_store_temp.
+
 2005-01-26  Paul Stevens <paul@nfg.nl>
 
 	* imaputil.c, imapcommands.c (_ic_search): introduce sort_search which

@@ -87,45 +87,7 @@ int auth_disconnect()
 
 int auth_user_exists(const char *username, u64_t * user_idnr)
 {
-	const char *query_result;
-	char *escaped_username;
-
-	assert(user_idnr != NULL);
-	*user_idnr = 0;
-	if (!username) {
-		trace(TRACE_ERROR, "%s,%s: got NULL as username",
-		      __FILE__, __func__);
-		return 0;
-	}
-
-	if (!(escaped_username = (char *) dm_malloc(strlen(username) * 2 + 1))) {
-		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
-		      "escaped username", __FILE__, __func__);
-		return -1;
-	}
-
-	db_escape_string(escaped_username, username, strlen(username));
-
-	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
-		 "SELECT user_idnr FROM %susers WHERE userid='%s'",DBPFX,
-		 escaped_username);
-	dm_free(escaped_username);
-
-	if (__auth_query(__auth_query_data) == -1) {
-		trace(TRACE_ERROR, "%s,%s: could not execute query",
-		      __FILE__, __func__);
-		return -1;
-	}
-
-	if (db_num_rows() == 0) {
-		db_free_result();
-		return 0;
-	}
-
-	query_result = db_get_result(0, 0);
-	*user_idnr = (query_result) ? strtoull(query_result, 0, 10) : 0;
-	db_free_result();
-	return 1;
+	return db_user_exists(username, user_idnr);
 }
 
 GList * auth_get_known_users(void)
@@ -249,115 +211,7 @@ char *auth_getencryption(u64_t user_idnr)
 	return __auth_encryption_desc_string;
 }
 
-int auth_check_user(const char *username, struct list *userids, int checks)
-{
-	int occurences = 0;
-	int r;
-	void *saveres;
-	u64_t counter;
-	unsigned num_rows;
-	const char *query_result;
-	char *escaped_username;
-
-	trace(TRACE_DEBUG, "%s,%s: checking user [%s] in alias table",
-	      __FILE__, __func__, username);
-
-	saveres = db_get_result_set();
-	db_set_result_set(NULL);
-
-	if (checks > MAX_CHECKS_DEPTH) {
-		trace(TRACE_ERROR,
-		      "%s,%s: maximum checking depth reached, "
-		      "there probably is a loop in your alias table",
-		      __FILE__, __func__);
-		return -1;
-	}
-
-	if (!(escaped_username = (char *) dm_malloc(strlen(username) * 2 + 1))) {
-		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
-			"escaped username", __FILE__, __func__);
-		return -1;
-	}
-
-	db_escape_string(escaped_username, username, strlen(username));
-
-	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
-		 "SELECT deliver_to FROM %saliases WHERE "
-		 "lower(alias) = lower('%s')",DBPFX, escaped_username);
-	dm_free(escaped_username);
-
-	trace(TRACE_DEBUG, "%s,%s: checks [%d]", __FILE__, __func__,
-	      checks);
-
-	if (__auth_query(__auth_query_data) == -1) {
-		/* copy the old result set */
-		db_set_result_set(saveres);
-		return 0;
-	}
-	num_rows = db_num_rows();
-	if (num_rows < 1) {
-		if (checks > 0) {
-			/* found the last one, this is the deliver to
-			 * but checks needs to be bigger then 0 because
-			 * else it could be the first query failure */
-			list_nodeadd(userids, username,
-				     strlen(username) + 1);
-			trace(TRACE_DEBUG,
-			      "%s,%s: adding [%s] to deliver_to address",
-			      __FILE__, __func__, username);
-			db_free_result();
-			db_set_result_set(saveres);
-			return 1;
-		} else {
-			trace(TRACE_DEBUG,
-			      "%s,%s: user %s not in aliases table",
-			      __FILE__, __func__, username);
-			db_free_result();
-			db_set_result_set(saveres);
-			return 0;
-		}
-	}
-
-	trace(TRACE_DEBUG, "%s,%s: into checking loop", __FILE__,
-	      __func__);
-
-	if (num_rows > 0) {
-		for (counter = 0; counter < num_rows; counter++) {
-			/* do a recursive search for deliver_to */
-			query_result = db_get_result(counter, 0);
-			trace(TRACE_DEBUG, "%s,%s: checking user %s to %s",
-			      __FILE__, __func__, username,
-			      query_result);
-
-			r = auth_check_user(query_result, userids,
-					    (checks < 0) ? 1 : checks + 1);
-			if (r < 0) {
-				/* loop detected */
-				db_free_result();
-				db_set_result_set(saveres);
-
-				if (checks > 0)
-					return -1;	/* still in recursive call */
-
-				if (userids->start) {
-					list_freelist(&userids->start);
-					userids->total_nodes = 0;
-				}
-
-				return 0;	/* report to calling routine: no results */
-			}
-
-			occurences += r;
-		}
-	}
-
-	db_free_result();
-	db_set_result_set(saveres);
-	return occurences;
-}
-
-int auth_check_user_ext(const char *username, struct list *userids,
-			struct list *fwds, int checks)
+int auth_check_user_ext(const char *username, struct list *userids, struct list *fwds, int checks)
 {
 	int occurences = 0;
 	void *saveres;
@@ -434,11 +288,8 @@ int auth_check_user_ext(const char *username, struct list *userids,
 			/* do a recursive search for deliver_to */
 			query_result = db_get_result(counter, 0);
 			trace(TRACE_DEBUG, "%s,%s: checking user %s to %s",
-			      __FILE__, __func__, username,
-			      query_result);
-			occurences +=
-			    auth_check_user_ext(query_result, userids,
-						fwds, 1);
+			      __FILE__, __func__, username, query_result);
+			occurences += auth_check_user_ext(query_result, userids, fwds, 1);
 		}
 	}
 	db_free_result();
@@ -1195,18 +1046,11 @@ int auth_removealias_ext(const char *alias, const char *deliver_to)
 }
 
 
-int auth_get_user_aliases(u64_t user_idnr, struct list *aliases)
+GList * auth_get_user_aliases(u64_t user_idnr)
 {
 	int i, n;
 	const char *query_result;
-
-	if (!aliases) {
-		trace(TRACE_ERROR, "%s,%s: got a NULL pointer as argument",
-		      __FILE__, __func__);
-		return -2;
-	}
-
-	list_init(aliases);
+	GList *aliases = NULL;
 
 	/* do a inverted (DESC) query because adding the names to the 
 	 * final list inverts again */
@@ -1217,23 +1061,21 @@ int auth_get_user_aliases(u64_t user_idnr, struct list *aliases)
 	if (__auth_query(__auth_query_data) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not retrieve  list",
 		      __FILE__, __func__);
-		return -1;
+		return NULL;
 	}
 
 	n = db_num_rows();
 	for (i = 0; i < n; i++) {
 		query_result = db_get_result(i, 0);
-		if (!query_result || !list_nodeadd(aliases,
-						   query_result,
-						   strlen(query_result) +
-						   1)) {
-			list_freelist(&aliases->start);
+		if (!query_result || ! (aliases = g_list_append(aliases,g_strdup(query_result)))) {
+			g_list_foreach(aliases, (GFunc)g_free, NULL);
+			g_list_free(aliases);
 			db_free_result();
-			return -2;
+			return NULL;
 		}
 	}
 
 	db_free_result();
-	return 0;
+	return aliases;
 }
 

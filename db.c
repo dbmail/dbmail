@@ -790,69 +790,6 @@ int db_insert_physmessage(u64_t * physmessage_id)
 	return 1;
 }
 
-int db_insert_message(u64_t user_idnr,
-		      const char *mailbox,
-		      int create_or_error_mailbox,
-		      const char *unique_id, u64_t * message_idnr)
-{
-	u64_t mailboxid;
-	u64_t physmessage_id;
-	int result;
-
-	assert(message_idnr);
-	assert(unique_id);
-
-	if (!mailbox)
-		mailbox = dm_strdup("INBOX");
-
-	switch (create_or_error_mailbox) {
-	case CREATE_IF_MBOX_NOT_FOUND:
-		result =
-		    db_find_create_mailbox(mailbox, user_idnr, &mailboxid);
-		break;
-	case ERROR_IF_MBOX_NOT_FOUND:
-	default:
-		result = db_findmailbox(mailbox, user_idnr, &mailboxid);
-		break;
-	}
-
-	if (result == -1) {
-		trace(TRACE_ERROR,
-		      "%s,%s: error finding and/or creating mailbox [%s]",
-		      __FILE__, __func__, mailbox);
-		return -1;
-	}
-	if (mailboxid == 0) {
-		trace(TRACE_WARNING,
-		      "%s,%s: mailbox [%s] could not be found!", __FILE__,
-		      __func__, mailbox);
-		return -1;
-	}
-
-	/* insert a new physmessage entry */
-	if (db_insert_physmessage(&physmessage_id) == -1) {
-		trace(TRACE_ERROR, "%s,%s: error inserting physmessage",
-		      __FILE__, __func__);
-		return -1;
-	}
-
-	/* now insert an entry into the messages table */
-	snprintf(query, DEF_QUERYSIZE, "INSERT INTO "
-		 "%smessages(mailbox_idnr, physmessage_id, unique_id,"
-		 "recent_flag, status) "
-		 "VALUES ('%llu', '%llu', '%s', '1', '%d')",
-		 DBPFX, mailboxid, physmessage_id, unique_id,
-		 MESSAGE_STATUS_INSERT);
-
-	if (db_query(query) == -1) {
-		trace(TRACE_STOP, "%s,%s: query failed", __FILE__, __func__);
-		return -1;
-	}
-
-	*message_idnr = db_insert_result("message_idnr");
-	return 1;
-}
-
 int db_message_set_unique_id(u64_t message_idnr, const char *unique_id)
 {
 	assert(unique_id);
@@ -2663,15 +2600,12 @@ int db_find_create_mailbox(const char *name, u64_t owner_idnr,
 	if (db_findmailbox_owner(name, owner_idnr, &mboxidnr) != 1) {
 		/* Did we fail to create the mailbox? */
 		if (db_createmailbox(name, owner_idnr, &mboxidnr) != 0) {
-			/* Serious failure situation! */
-			trace(TRACE_ERROR,
-			      "%s, %s: seriously could not create mailbox [%s]",
-			      __FILE__, __func__, name);
+			trace(TRACE_ERROR, "%s, %s: could not create mailbox [%s]",
+					__FILE__, __func__, name);
 			return -1;
 		}
-		trace(TRACE_DEBUG,
-		      "%s, %s: mailbox [%s] created on the fly", __FILE__,
-		      __func__, name);
+		trace(TRACE_DEBUG, "%s, %s: mailbox [%s] created on the fly", 
+				__FILE__, __func__, name);
 	}
 	trace(TRACE_DEBUG, "%s, %s: mailbox [%s] found",
 	      __FILE__, __func__, name);
@@ -4024,4 +3958,46 @@ int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * m
 	return 0;
 }
 
+int db_user_exists(const char *username, u64_t * user_idnr) 
+{
+	const char *query_result;
+	char *escaped_username;
+
+	assert(user_idnr != NULL);
+	*user_idnr = 0;
+	if (!username) {
+		trace(TRACE_ERROR, "%s,%s: got NULL as username",
+		      __FILE__, __func__);
+		return 0;
+	}
+
+	if (!(escaped_username = (char *) dm_malloc(strlen(username) * 2 + 1))) {
+		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
+		      "escaped username", __FILE__, __func__);
+		return -1;
+	}
+
+	db_escape_string(escaped_username, username, strlen(username));
+
+	snprintf(query, DEF_QUERYSIZE,
+		 "SELECT user_idnr FROM %susers WHERE userid='%s'",DBPFX,
+		 escaped_username);
+	dm_free(escaped_username);
+
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: could not execute query",
+		      __FILE__, __func__);
+		return -1;
+	}
+
+	if (db_num_rows() == 0) {
+		db_free_result();
+		return 0;
+	}
+
+	query_result = db_get_result(0, 0);
+	*user_idnr = (query_result) ? strtoull(query_result, 0, 10) : 0;
+	db_free_result();
+	return 1;
+}
 

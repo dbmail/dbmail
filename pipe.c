@@ -424,7 +424,7 @@ int insert_messages(struct DbmailMessage *message,
 	char *header, *body;
 	u64_t headersize, bodysize, rfcsize;
 	struct element *element, *ret_path;
-	u64_t msgsize, tmpmsgidnr;
+	u64_t msgsize;
 
 	/* first start a new database transaction */
 	if (db_begin_transaction() < 0) {
@@ -434,17 +434,15 @@ int insert_messages(struct DbmailMessage *message,
 		return -1;
 	}
 
-	switch (dbmail_message_store_temp(message, &tmpmsgidnr)) {
+	switch (dbmail_message_store_temp(message)) {
 	case -1:
-		/* Major trouble. Bail out immediately. */
-		trace(TRACE_ERROR,
-		      "%s, %s: failed to store temporary message.",
+		trace(TRACE_ERROR, "%s, %s: failed to store temporary message.",
 		      __FILE__, __func__);
 		db_rollback_transaction();
 		return -1;
 	default:
 		trace(TRACE_DEBUG, "%s, %s: temporary msgidnr is [%llu]",
-		      __FILE__, __func__, tmpmsgidnr);
+		      __FILE__, __func__, message->id);
 		break;
 	}
 
@@ -474,7 +472,7 @@ int insert_messages(struct DbmailMessage *message,
 			      "%s, %s: calling sort_and_deliver for useridnr [%llu]",
 			      __FILE__, __func__, useridnr);
 
-			switch (sort_and_deliver(tmpmsgidnr, header, headersize, msgsize, useridnr, delivery->mailbox)) {
+			switch (sort_and_deliver(message->id, header, headersize, msgsize, useridnr, delivery->mailbox)) {
 			case DSN_CLASS_OK:
 				/* Indicate success. */
 				trace(TRACE_DEBUG,
@@ -548,7 +546,7 @@ int insert_messages(struct DbmailMessage *message,
 			ret_path = list_getstart(returnpath);
 
 			/* Forward using the temporary stored message. */
-			if (forward(tmpmsgidnr, delivery->forwards,
+			if (forward(message->id, delivery->forwards,
 				(ret_path ? ret_path->
 				 data : "DBMAIL-MAILER"), header,
 				headersize) < 0)
@@ -563,9 +561,9 @@ int insert_messages(struct DbmailMessage *message,
 	/* Always delete the temporary message, even if the delivery failed.
 	 * It is the MTA's job to requeue or bounce the message,
 	 * and our job to keep a tidy database ;-) */
-	if (db_delete_message(tmpmsgidnr) < 0) 
+	if (db_delete_message(message->id) < 0) 
 		trace(TRACE_ERROR, "%s,%s: failed to delete temporary message "
-		      "[%llu]", __FILE__, __func__, tmpmsgidnr);
+		      "[%llu]", __FILE__, __func__, message->id);
 	trace(TRACE_DEBUG,
 	      "insert_messages(): temporary message deleted from database");
 

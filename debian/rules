@@ -10,7 +10,8 @@ export DH_COMPAT=3
 export DEB_BUILD_OPTIONS=debug
 
 #export WITH_GC="--with-gc"
-export WITH_CHECK="--with-check"
+export WITH_CHECK=--with-check
+export NOSHARED=--enable-share=no
 
 CFLAGS = -Wall -O1
 LDFLAGS = -lcrypt
@@ -35,7 +36,7 @@ include /usr/share/dpatch/dpatch.make
 
 CONFFLAGS=--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --sysconfdir=/etc/dbmail/ \
-	--infodir=\$${prefix}/share/info $(WITH_GC) $(WITH_CHECK)
+	--infodir=\$${prefix}/share/info $(WITH_GC) $(WITH_CHECK) $(NOSHARED)
 
 build: stamps/build
 stamps/build: stamps patch configure $(PACKAGES)

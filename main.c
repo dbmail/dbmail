@@ -392,7 +392,7 @@ int main(int argc, char *argv[])
 	list_freelist(&returnpath.start);
 	list_freelist(&users.start);
 
-	dbmail_message_delete(msg);
+	dbmail_message_free(msg);
 
 	trace(TRACE_DEBUG, "main(): they're all free. we're done.");
 

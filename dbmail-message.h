@@ -64,10 +64,8 @@ enum DBMAIL_STREAM_TYPE {
 };
 
 struct DbmailMessage {
-	gulong id;
+	u64_t id;
 	enum DBMAIL_MESSAGE_CLASS klass;
-	size_t size;
-	size_t rfcsize;
 	GMimeObject *content;
 	GRelation *headers;
 };
@@ -95,13 +93,12 @@ gchar * dbmail_message_to_string(struct DbmailMessage *self);
 gchar * dbmail_message_hdrs_to_string(struct DbmailMessage *self);
 gchar * dbmail_message_body_to_string(struct DbmailMessage *self);
 
+size_t dbmail_message_get_size(struct DbmailMessage *self);
+size_t dbmail_message_get_rfcsize(struct DbmailMessage *self);
 size_t dbmail_message_get_hdrs_size(struct DbmailMessage *self);
 size_t dbmail_message_get_body_size(struct DbmailMessage *self);
 
-size_t dbmail_message_get_size(struct DbmailMessage *self);
-size_t dbmail_message_get_rfcsize(struct DbmailMessage *self);
-
-void dbmail_message_delete(struct DbmailMessage *self);
+void dbmail_message_free(struct DbmailMessage *self);
 
 /*
  *
@@ -112,13 +109,11 @@ void dbmail_message_delete(struct DbmailMessage *self);
 
 /**
  * store a temporary copy of a message.
- * \param message pointer to dbmailmessage struct
- * \param[out] temp_message_idnr message idnr of temporary message
  * \return 
  *     - -1 on error
  *     -  1 on success
  */
-int dbmail_message_store_temp(struct DbmailMessage *message, /*@out@*/ u64_t * temp_message_idnr);
+int dbmail_message_store_temp(struct DbmailMessage *message);
 
 
 #endif

@@ -29,7 +29,12 @@ SERVER = server.c serverchild.c pool.c
 DELIVER = pipe.c forward.c dsn.c
 
 # CFLAGS
+if LDAP
+AM_CFLAGS = -fomit-frame-pointer -DAUTHLDAP
+else
 AM_CFLAGS = -fomit-frame-pointer
+endif
+
 INCLUDES = -I$(top_srcdir)
 
 dbmail_smtp_SOURCES = main.c
