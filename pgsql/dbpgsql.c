@@ -318,7 +318,7 @@ int db_addalias (u64_t useridnr, char *alias, u64_t clientid)
       return -1;
     }
 
-  return 1;
+  return 0;
 }
 
 
@@ -373,7 +373,7 @@ int db_addalias_ext(char *alias, char *deliver_to, u64_t clientid)
       return -1;
     }
 
-  return 1;
+  return 0;
 }
 
 

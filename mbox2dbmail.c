@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
       return 1;
     }
 
-  snprintf(cmdstr, MAX_LINESIZE, "dbmail-smtp -u %s", argv[1]);
+  snprintf(cmdstr, MAX_LINESIZE, "dbmail-smtp-injector -u %s", argv[1]);
   in_msg = 0;
 
   while (!feof(stdin) && !ferror(stdin))
