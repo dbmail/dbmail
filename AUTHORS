@@ -6,6 +6,7 @@ Ilja Booij (ilja@ic-s.nl)
 
 Aaron Stone (aaron@serendipity.cx):
 	entire files -> auth/authldap.c
+    all of the LMTP and Sieve files
 
 Paul Stevens (paul@nfg.nl):
 	entire files -> sql/mysql/create_tables_innodb.mysql
