@@ -2065,7 +2065,7 @@ int db_icheck_null_messages(struct list *lostlist)
 
       
       ncurr = mysql_num_rows(res);
-      msgids = (struct u64_t*)my_malloc(sizeof(u64_t) * ncurr);
+      msgids = (u64_t*)my_malloc(sizeof(u64_t) * ncurr);
       if (!msgids)
 	{
 	  trace(TRACE_ERROR,"db_icheck_null_messages(): out of memory when allocatin %d items\n",ncurr);
@@ -2094,7 +2094,7 @@ int db_icheck_null_messages(struct list *lostlist)
 	    {
 	      list_freelist(&lostlist->start);
 	      my_free(msgids);
-	      currids = NULL;
+	      msgids = NULL;
 	      trace (TRACE_ERROR,"db_icheck_null_messages(): Could not execute query [%s]",query);
 	      return -1;
 	    }
@@ -2117,8 +2117,8 @@ int db_icheck_null_messages(struct list *lostlist)
 		{
 		  trace(TRACE_ERROR,"db_icheck_null_messages(): could not add message to list");
 		  list_freelist(&lostlist->start);
-		  my_free(currids);
-		  currids = NULL;
+		  my_free(msgids);
+		  msgids = NULL;
 		  mysql_free_result(res);
 		  return -2;
 		}
@@ -2129,7 +2129,7 @@ int db_icheck_null_messages(struct list *lostlist)
 
       /* free set of ID's */
       my_free(msgids);
-      currids = NULL;
+      msgids = NULL;
     }
 
   return 0;
