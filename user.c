@@ -169,6 +169,7 @@ int do_add(int argc, char *argv[])
 {
   u64_t useridnr;
   int i, result;
+  char pw[50]="";
 
   if (argc < 4)
     {
@@ -185,7 +186,17 @@ int do_add(int argc, char *argv[])
   quiet_printf ("Adding user %s with password %s, %s bytes mailbox limit and clientid %s...",
 	  argv[0], argv[1], argv[3], argv[2]);
 
-  useridnr = auth_adduser(argv[0],argv[1],"",argv[2],argv[3]);
+  /* check if we need to encrypt this pwd */
+  if (strncasecmp(argv[1], "{crypt:}", strlen("{crypt:}")) == 0)
+    {
+      /* encrypt  using crypt() */
+      strcat(pw,crypt(&argv[1][strlen("{crypt:}")], cget_salt()));
+      useridnr = auth_adduser(argv[0], pw, "crypt",argv[2],argv[3]);
+    }
+  else
+    {
+      useridnr = auth_adduser(argv[0],argv[1],"",argv[2],argv[3]);
+    }
 
   if (useridnr == -1)
     {
