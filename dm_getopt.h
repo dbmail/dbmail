@@ -1,5 +1,5 @@
 /*
- *  Renamed dm_getopt because MySQL keept putting things in my_ space.
+ *  Renamed dm_getopt because MySQL keeps putting things in my_ space.
  *
  *  getopt.h - cpp wrapper for dm_getopt to make it look like getopt.
  *  Copyright 1997, 2000, 2001, 2002, Benjamin Sittler
@@ -28,35 +28,39 @@
 #include "config.h"
 
 #ifndef USE_DM_GETOPT
-
-#include <getopt.h>
-
+#  include <getopt.h>
 #endif
+
 #ifdef USE_DM_GETOPT
 
-#ifndef DM_GETOPT_H
-#define DM_GETOPT_H
+#  ifndef DM_GETOPT_H
+     /* Our include guard first. */
+#    define DM_GETOPT_H
+     /* Try to kill the system getopt.h */
+#    define _GETOPT_DECLARED
+#    define _GETOPT_H
+#    define GETOPT_H
 
-#undef getopt
-#define getopt dm_getopt
-#undef getopt_long
-#define getopt_long dm_getopt_long
-#undef getopt_long_only
-#define getopt_long_only dm_getopt_long_only
-#undef _getopt_internal
-#define _getopt_internal _dm_getopt_internal
-#undef opterr
-#define opterr dm_opterr
-#undef optind
-#define optind dm_optind
-#undef optopt
-#define optopt dm_optopt
-#undef optarg
-#define optarg dm_optarg
+#    undef getopt
+#    define getopt dm_getopt
+#    undef getopt_long
+#    define getopt_long dm_getopt_long
+#    undef getopt_long_only
+#    define getopt_long_only dm_getopt_long_only
+#    undef _getopt_internal
+#    define _getopt_internal _dm_getopt_internal
+#    undef opterr
+#    define opterr dm_opterr
+#    undef optind
+#    define optind dm_optind
+#    undef optopt
+#    define optopt dm_optopt
+#    undef optarg
+#    define optarg dm_optarg
 
-#ifdef __cplusplus
+#    ifdef __cplusplus
 extern "C" {
-#endif
+#    endif
 
 /* UNIX-style short-argument parser */
 extern int dm_getopt(int argc, char * argv[], const char *opts);
@@ -72,28 +76,28 @@ struct option {
 };
 
 /* human-readable values for has_arg */
-#undef no_argument
-#define no_argument 0
-#undef required_argument
-#define required_argument 1
-#undef optional_argument
-#define optional_argument 2
-
+#    undef no_argument
+#    define no_argument 0
+#    undef required_argument
+#    define required_argument 1
+#    undef optional_argument
+#    define optional_argument 2
+ 
 /* GNU-style long-argument parsers */
 extern int dm_getopt_long(int argc, char * argv[], const char *shortopts,
                        const struct option *longopts, int *longind);
-
+ 
 extern int dm_getopt_long_only(int argc, char * argv[], const char *shortopts,
                             const struct option *longopts, int *longind);
-
+ 
 extern int _dm_getopt_internal(int argc, char * argv[], const char *shortopts,
                             const struct option *longopts, int *longind,
-                            int long_only);
+                           int long_only);
 
-#ifdef __cplusplus
+#    ifdef __cplusplus
 }
-#endif
+#    endif
 
-#endif /* DM_GETOPT_H */
+#  endif /* DM_GETOPT_H */
 
 #endif /* USE_DM_GETOPT */
