@@ -177,7 +177,7 @@ CREATE TABLE dbmail_auto_replies (
 ) TYPE=InnoDB;
 
 DROP TABLE IF EXISTS dbmail_pbsp;
-CREATE TABLE pbsp (
+CREATE TABLE dbmail_pbsp (
    idnr bigint(21) NOT NULL auto_increment,
    since datetime default '0' not null,
    ipnumber varchar(40) NOT NULL,
