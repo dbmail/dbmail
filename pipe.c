@@ -467,7 +467,10 @@ static int store_message_temp(FILE * instream,
 			 && ringbuf[(ringpos - 5) % RING_SIZE] == '\r') {
 				/* Back off the trailing "\r\n.\r" (last \n not copied yet)
 				 * and set the myeof flag, stopping this loop. */
-				usedmem -= 4;
+				if (usedmem > 4)
+					usedmem -= 4;
+				else
+					usedmem = 0;
 				myeof = 1;
 			} else {
 				/* Copy the current character into the storage buffer. */
