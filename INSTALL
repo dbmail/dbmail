@@ -183,12 +183,13 @@ What do you need?
 	jobs. We recommend running the dbmail-util program in a daily
 	interval from cron:
 
-	0 3 * * * /usr/local/sbin/dbmail-util -c -r f -p -d >> /dev/null 2>&1
+	0 3 * * * /usr/local/sbin/dbmail-util -cturpd -l 24h -qq
 	
 7.	Starting the servers
 
 	If you want users to be able to retrieve email via IMAP or POP3, run
-	dbmail-imapd and/or dbmail-pop3d
+	dbmail-imapd and/or dbmail-pop3d. If you are delivering email via
+	LMTP, run dbmail-lmtpd (you should start LMTP before your MTA!).
 
 8.	Problems
 	--------

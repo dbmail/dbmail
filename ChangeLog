@@ -1,3 +1,7 @@
+2004-11-01  Aaron Stone  <aaron@serendipity.cx>
+
+	* INSTALL: couple of minor edits, per Sean Kelly.
+
 2004-10-31  Aaron Stone  <aaron@serendipity.cx>
 
 	* db.c, dbmail.conf, dbmailtypes.h, sievecmd.c, sievecmd.h,
@@ -7,9 +11,9 @@
 
 2004-10-31  Aaron Stone  <aaron@serendipity.cx>
 
-        * user.c (do_delete): now deletes aliases belonging to a user
-        before the user is deleted; the prototype to the function now
-        includes useridnr.
+	* user.c (do_delete): now deletes aliases belonging to a user
+	before the user is deleted; the prototype to the function now
+	includes useridnr.
 	* maintenance.c: -q quiet flag is respected.
 	* auth/authsql.c: added escaping code for all SQL strings, and
 	suggest building a better framework for this in the future.
