@@ -1858,15 +1858,30 @@ int check_state_and_args(struct ImapSession * self, const char *command, int min
 
 int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...)
 {
+	int maxlen=100;
+	int result;
+	char *re = g_new0(char, maxlen+1);
 	va_list ap;
-	va_start(ap, message);
+	
 	FILE * fd = self->ci->tx;
 	int len;	
+	va_start(ap, message);
 	if (feof(fd) || (len = vfprintf(fd,message,ap)) < 0 || fflush(fd) < 0) {
 		va_end(ap);
 		return -1;
 	}
 	va_end(ap);
+	
+	va_start(ap, message);
+	result = vsnprintf(re,maxlen,message,ap);
+	va_end(ap);
+	
+	if (result < maxlen)
+		trace(TRACE_DEBUG,"RESPONSE: [%s]", re);
+	else
+		trace(TRACE_DEBUG,"RESPONSE: [%s...]", re);
+	g_free(re);
+	
 	return len;
 }
 	

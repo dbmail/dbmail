@@ -1170,7 +1170,6 @@ int _ic_status(struct ImapSession *self)
 	g_string_printf(response, "* STATUS %s %s", 
 		dbmail_imap_astring_as_string(self->args[0]),
 		dbmail_imap_plist_as_string(plst));	
-	trace(TRACE_DEBUG,"%s,%s: RESPONSE [ %s ]", __FILE__, __func__, response->str);
 	dbmail_imap_session_printf(self, "%s\r\n", response->str);
 	dbmail_imap_session_printf(self, "%s OK STATUS completed\r\n", self->tag);
 
