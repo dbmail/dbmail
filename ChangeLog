@@ -1,5 +1,49 @@
 2004-04-14  Ilja Booij  <ilja@ic-s.nl>
 
+	* mysql/dbmysql.c: auth_res removed
+
+	* mime.c (mime_readheader): now makes a copy of the block data before
+	finding headers. Before, the block data was altered, which it should
+	not be doing! The block is now passed a const char*
+
+	* pgsql/dbpgsql.c: auth_res removed
+
+	* db.c (db_get_notify_address): changed query_result to const char*
+	(db_get_reply_body): changed query_result to const char*
+	(db_get_useridnr): changed query_result to const char*
+	(db_icheck_messageblks): changed query_result to const char*
+	(db_icheck_messages): changed query_result to const char*
+	(db_icheck_mailboxes): changed query_result to const char*
+	(db_icheck_null_physmessages): changed query_result to const char*
+	(db_send_message_lines): changed query_result to const char*
+	(db_createsession): changed query_result to const char*
+	(db_listmailboxchildren): changed query_result to const char*
+	(db_isselectable): changed query_result to const char*
+	(db_noinferiors): changed query_result to const char*
+	(db_get_message_size): changed query_result to const char*
+	(db_getmailboxname): changed query_result to const char*
+	(db_get_msgdate): changed query_result to const char*
+	(db_get_main_header): changed query_result to const char*
+	(db_get_user_aliases): changed query_result to const char*
+	(db_acl_get_identifier): changed query_result to const char*
+	(db_get_result_int): changed tmp to const char*
+	(db_get_result_bool): changed tmp to const char*
+	(db_get_result_u64): changed tmp to const char*
+
+	* dbsearch.c (db_search_range): changed query_result to const char*
+
+	* auth/authsql.c (auth_user_exists): changed query_result to
+	const char*
+	(auth_get_known_users): changed_query result to const char*
+	(auth_getclientid): changed query_result to const char*
+	(auth_getmaxmailsize): changed query_result to const char*
+	(auth_getencryption): changed query_result to const char*
+	(auth_check_user): changed query_result to const char*
+	(auth_check_user_ext): changed query_result to const char*
+	(auth_validate): changed query_result to const char*
+	(auth_md5_validate): changed query_result to const char*
+	(auth_get_userid): changed query_result to const char*
+
 	* dbmsgbuf.c (db_init_msgfetch): added a memset() to clear msgbuf before
 	anything is written to it.
 

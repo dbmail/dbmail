@@ -19,28 +19,51 @@
 # $Id$
 
 import unittest, imaplib, re
-import traceback
+import sys, traceback, getopt
+from email.MIMEText import MIMEText
 
 unimplementedError = 'Dbmail testcase unimplemented'
 
-IMAPSERVER = ('localhost', 10143)
+HOST,PORT = "localhost", 143
+DEBUG = 0
 
-class testDbmailImap(unittest.TestCase):
+TESTMSG={}
+
+def getMessageStrict():
+    m=MIMEText("this is a test message")
+    m.add_header("To","testuser")
+    return str(m)
+
+TESTMSG['strict822']=getMessageStrict()
+
+
+class testImapServer(unittest.TestCase):
 
     def setUp(self):
-        #self.o.debug = 4
-        self.o = imaplib.IMAP4(IMAPSERVER[0], IMAPSERVER[1])
+        self.o = imaplib.IMAP4(HOST, PORT)
+        self.o.debug = DEBUG
         self.assertEquals(self.o.login('testuser1','test'),('OK',['LOGIN completed']))
 
     def testAppend(self):
-        """ test:
+        """ 
         'append(mailbox, flags, date_time, message)'
              Append message to named mailbox.
         """
-        #raise unimplementedError
+        # check for OK
+        self.assertEquals(self.o.append('INBOX',(),"",TESTMSG['strict822'])[0],'OK')
+        # check for TRYCREATE
+        result=self.o.append('nosuchbox',(),"",TESTMSG['strict822'])
+        self.assertEquals(result[0],'NO')
+        self.assertEquals(result[1][0][:11],'[TRYCREATE]')
+        # test flags
+        self.o.create('testappend')
+        self.o.append('testappend','\Flagged',"",TESTMSG['strict822'])
+        self.o.select('testappend')
+        ids=self.o.recent()[1]
+        self.assertEquals(self.o.fetch(ids[0],"(UID BODY[TEXT])")[1][1],'  FLAGS (\\Seen \\Flagged \\Recent))')
 
     def testCheck(self):
-        """ test:
+        """ 
         'check()'
             Checkpoint mailbox on server.
         """     
@@ -48,7 +71,7 @@ class testDbmailImap(unittest.TestCase):
         self.assertEquals(self.o.check(),('OK', ['CHECK completed']))
 
     def testClose(self):
-        """ test:
+        """ 
         'close()'
              Close currently selected mailbox. Deleted messages are removed from
             writable mailbox. This is the recommended command before `LOGOUT'.
@@ -57,21 +80,26 @@ class testDbmailImap(unittest.TestCase):
         self.assertEquals(self.o.close(),('OK', ['CLOSE completed']))
 
     def testCopy(self):
-        """ test:
+        """ 
         'copy(message_set, new_mailbox)'
             Copy MESSAGE_SET messages onto end of NEW_MAILBOX.
         """
-        #raise unimplementedError
+        self.o.create('testcopy1')
+        self.o.create('testcopy2')
+        self.o.append('testcopy1',"","",TESTMSG['strict822'])
+        self.o.select('testcopy1')
+        id = self.o.recent()[1][0]
+        self.assertEquals(self.o.copy(id,'testcopy2'),('OK', ['COPY completed']))
 
     def testCreate(self):
-        """ test:
+        """ 
         'create(mailbox)'
             Create new mailbox named MAILBOX.
         """
         self.assertEquals(self.o.create('testbox'),('OK',['CREATE completed']))
 
     def testDelete(self):
-        """ test:
+        """ 
         'delete(mailbox)'
             Delete old mailbox named MAILBOX.
         """
@@ -79,7 +107,7 @@ class testDbmailImap(unittest.TestCase):
         self.assertEquals(self.o.delete('testdelete'),('OK',['DELETE completed']))
 
     def testExpunge(self):
-        """ test:
+        """ 
         expunge()'
             Permanently remove deleted items from selected mailbox. Generates
             an `EXPUNGE' response for each deleted message. Returned data
@@ -89,40 +117,46 @@ class testDbmailImap(unittest.TestCase):
         self.assertEquals(self.o.expunge(),('OK', [None]))
 
     def testFetch(self):
-        """ test:
+        """ 
         fetch(message_set, message_parts)'
             Fetch (parts of) messages.  MESSAGE_PARTS should be a string of
             message part names enclosed within parentheses, eg: `"(UID
             BODY[TEXT])"'.  Returned data are tuples of message part envelope
             and data.
         """
-        #raise unimplementedError
+        self.o.append('INBOX','','',TESTMSG['strict822'])
+        self.o.select()
+        id=self.o.recent()[1][0]
+        self.assertEquals(self.o.fetch(id,"(UID BODY[TEXT])")[0],'OK')
+        self.assertEquals(self.o.fetch(id,"(UID BODY.PEEK[TEXT])")[0],'OK')
+        self.assertEquals(self.o.fetch(id,"(UID RFC822.SIZE)")[0],'OK')
+        self.assertEquals(self.o.fetch(id,"(UID RFC822.HEADER)")[0],'OK')
 
     def testGetacl(self):
-        """ test:
+        """ 
         `getacl(mailbox)'
             Get the `ACL's for MAILBOX. 
         """
         self.assertEquals(self.o.getacl('INBOX'),('OK', ['"INBOX" testuser1 lrswipcda ']))
         
     def getQuota(self):
-        """ test:
+        """ 
         getquota(root)
             Get the `quota' ROOT's resource usage and limits.  This method is
             part of the IMAP4 QUOTA extension defined in rfc2087.
         """
-        #raise unimplementedError
+        self.fail(unimplementedError)
         
     def getQuotaroot(self):
-        """ test:
+        """ 
         getquotaroot(mailbox)
             Get the list of `quota' `roots' for the named MAILBOX.  This
             method is part of the IMAP4 QUOTA extension defined in rfc2087.
         """
-        #raise unimplementedError
+        self.fail(unimplementedError)
         
     def testList(self):
-        """ test:
+        """ 
         list([directory[, pattern]])
             List mailbox names in DIRECTORY matching PATTERN.  DIRECTORY
             defaults to the top-level mail folder, and PATTERN defaults to
@@ -148,65 +182,64 @@ class testDbmailImap(unittest.TestCase):
         for d in dirlist: self.o.delete(d)
 
     def testLogin(self):
-        """ test:
+        """ 
         login(user, password)
             Identify the client using a plaintext password.  The PASSWORD will
             be quoted.
         """
-        #raise unimplementedError
 
     def testLogin_cram_md5(self):
-        """ test:
+        """ 
         login_cram_md5(user, password)
             Force use of `CRAM-MD5' authentication when identifying the client
             to protect the password.  Will only work if the server
             `CAPABILITY' response includes the phrase `AUTH=CRAM-MD5'.
         """
-        #raise unimplementedError
+        self.fail(unimplementedError)
 
     def testLogout(self):
-        """ test:
+        """ 
         logout()
              Shutdown connection to server. Returns server `BYE' response.
         """
         self.assertEquals(self.o.logout()[0],'BYE')
 
     def testLsub(self):
-        """ test:
+        """ 
         lsub([directory[, pattern]])'
             List subscribed mailbox names in directory matching pattern.
             DIRECTORY defaults to the top level directory and PATTERN defaults
             to match any mailbox.  Returned data are tuples of message part
             envelope and data.
         """
-        #raise unimplementedError
+        self.fail(unimplementedError)
 
     def testNoop(self):
-        """ test:
+        """ 
         noop()
              Send `NOOP' to server.
         """
         self.assertEquals(self.o.noop(),('OK', ['NOOP completed']))
 
     def testPartial(self):
-        """ test:
+        """ 
         partial(message_num, message_part, start, length)
             Fetch truncated part of a message.  Returned data is a tuple of
             message part envelope and data.
                   
         """
-        #raise unimplementedError
+        self.fail(unimplementedError)
         
     def testProxyauth(self):
-        """ test:
+        """ 
         proxyauth(user)
             Assume authentication as USER.  Allows an authorised administrator
             to proxy into any user's mailbox.
         """
-        #raise unimplementedError
+        self.fail(unimplementedError)
 
     def testRecent(self):
-        """ test:
+        """ 
         recent()
             Prompt server for an update. Returned data is `None' if no new
             messages, else value of `RECENT' response.
@@ -214,7 +247,7 @@ class testDbmailImap(unittest.TestCase):
         self.assertEquals(self.o.recent(),('OK', [None]))
 
     def testRename(self):
-        """ test:
+        """ 
         rename(oldmailbox, newmailbox)
              Rename mailbox named OLDMAILBOX to NEWMAILBOX.
         """
@@ -228,7 +261,7 @@ class testDbmailImap(unittest.TestCase):
         self.o.delete('dir1/testrename2')
 
     def testSearch(self):
-        """ test:
+        """ 
         search(charset, criterion[, ...])
             Search mailbox for matching messages.  Returned data contains a
             space separated list of matching message numbers.  CHARSET may be
@@ -237,23 +270,27 @@ class testDbmailImap(unittest.TestCase):
             one criterion be specified; an exception will be raised when the
             server returns an error.
         """
-        #raise unimplementedError
+        self.o.append('INBOX','','',TESTMSG['strict822'])
+        self.o.select()
+        result=self.o.search(None, "UNDELETED", "BODY", "test")
+        self.assertEquals(result[0],'OK')
+        self.failIf(result[1]==[''])
 
 
     def testSelect(self):
-        """ test:
+        """ 
         select([mailbox[, readonly]])
             Select a mailbox. Returned data is the count of messages in
             MAILBOX (`EXISTS' response).  The default MAILBOX is `'INBOX''.
             If the READONLY flag is set, modifications to the mailbox are not
             allowed.
         """
-        #raise unimplementedError
-        
-        
+        self.assertEquals(self.o.select()[0],'OK')
+        self.assertEquals(self.o.select('INBOX')[0],'OK')
+        self.assertEquals(self.o.select('INBOX',1)[0],'OK')
 
     def testSetacl(self):
-        """ test:
+        """ 
         setacl(mailbox, who, what)
             Set an `ACL' for MAILBOX.
         """
@@ -261,7 +298,7 @@ class testDbmailImap(unittest.TestCase):
         self.o.create('testaclbox')
         self.o.setacl('testaclbox','testuser2','slrw')
 
-        p = imaplib.IMAP4(IMAPSERVER[0], IMAPSERVER[1])
+        p = imaplib.IMAP4(HOST,PORT)
         p.login('testuser2','test'),('OK',['LOGIN completed'])
         p.debug = 4
         try:
@@ -272,16 +309,16 @@ class testDbmailImap(unittest.TestCase):
         self.o.delete('testaclbox')
 
     def testSetquota(self):
-        """ test:
+        """ 
         setquota(root, limits)'
             Set the `quota' ROOT's resource LIMITS.  This method is part of
             the IMAP4 QUOTA extension defined in rfc2087
         """
-        #raise unimplementedError
+        self.fail(unimplementedError)
         
 
     def testSort(self):
-        """ test:
+        """ 
         sort(sort_criteria, charset, search_criterion[, ...])
             The `sort' command is a variant of `search' with sorting semantics
             for the results.  Returned data contains a space separated list of
@@ -297,28 +334,29 @@ class testDbmailImap(unittest.TestCase):
             interpretation of strings in the searching criteria.  It then
             returns the numbers of matching messages.
         """
-        #raise unimplementedError
+        self.fail(unimplementedError)
 
     def testStatus(self):
-        """ test:
+        """ 
         status(mailbox, names)
             Request named status conditions for MAILBOX.
         """
-        #raise unimplementedError
+        self.assertEquals(self.o.status('INBOX','(UIDNEXT MESSAGES UNSEEN RECENT)')[0],'OK')
+
 
     def testStore(self):
-        """ test:
+        """ 
         store(message_set, command, flag_list)
             Alters flag dispositions for messages in mailbox.
         """
-        #raise unimplementedError
+        self.fail(unimplementedError)
         
     def testSubscribe(self):
-        """ test:
+        """
         subscribe(mailbox)
             Subscribe to new mailbox.
         """
-        #raise unimplementedError
+        self.fail(unimplementedError)
 
     def testUid(self):
         """
@@ -328,14 +366,14 @@ class testDbmailImap(unittest.TestCase):
             one argument must be supplied; if none are provided, the server
             will return an error and an exception will be raised.
         """                
-        #raise unimplementedError
+        self.fail(unimplementedError)
         
     def testUnsubscribe(self):
         """
         unsubscribe(mailbox)
             Unsubscribe from old mailbox.
         """
-        #raise unimplementedError
+        self.fail(unimplementedError)
         
     def tearDown(self):
         try:
@@ -350,6 +388,34 @@ class testDbmailImap(unittest.TestCase):
         except: pass
 
 
-if __name__=='__main__': unittest.main()
+def usage():
+    print """testimap.py:   test dbmail imapserver
+    
+    -h <host>|--host=<host>     hostname or address of imap server
+    -p <port>|--port=<port>     portname or number of imap server
+    -d <debuglevel>|--debug=<debuglevel>    debug level
+    
+    """
+    
 
+if __name__=='__main__':
+    try:
+        opts,args = getopt.getopt(sys.argv[1:], "", ["host=","port=","help","debug="])
+    except getopt.GetoptError:
+        usage()
+        sys.exit(2)
+    for o,a in opts:
+        if o == "--help":
+            usage()
+            sys.exit(0)
+        if o in ['--host']:
+            HOST=a
+        if o in ['--port']:
+            PORT=a
+        if o in ['--debug']:
+            DEBUG=a
+            
+    suite=unittest.TestSuite()
+    suite.addTest(unittest.makeSuite(testImapServer))
+    unittest.TextTestRunner(verbosity=2).run(suite)
         

@@ -46,7 +46,6 @@ const char *TO_DATE = "'%s'";
 static MYSQL conn; /**< MySQL database connection */
 static MYSQL_RES *res = NULL; /**< MySQL result set */
 static MYSQL_RES *msgbuf_res = NULL; /**< MySQL result set for msgbuf */
-static MYSQL_RES *auth_res = NULL; /**< MySQL result set for authentication */
 static MYSQL_RES *stored_res = NULL; /**< MySQL result set backup */
 static MYSQL_ROW last_row; /**< MySQL result row */
 
@@ -138,7 +137,7 @@ void db_free_result()
 }
 
 
-char *db_get_result(unsigned row, unsigned field)
+const char *db_get_result(unsigned row, unsigned field)
 {
 	char *result;
 

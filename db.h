@@ -123,7 +123,7 @@ void db_free_result(void);
  *     - pointer to string holding result. 
  *     - NULL if no such result
  */
-char *db_get_result(unsigned row, unsigned field);
+const char *db_get_result(unsigned row, unsigned field);
 
 /** \ingroup db_get_result_group
  * \brief Returns the result as an Integer
@@ -233,7 +233,7 @@ void db_set_result_set(void *res);
  * \attention function will fail and halt program if physmessage_id is
  * NULL on call.
  */
-int db_get_physmessage_id(u64_t message_idnr, u64_t * physmessage_id);
+int db_get_physmessage_id(u64_t message_idnr, /*@out@*/ u64_t * physmessage_id);
 
 /**
  * \brief return number of bytes used by user identified by userid

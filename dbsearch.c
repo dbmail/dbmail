@@ -342,7 +342,7 @@ int db_search_range(db_pos_t start, db_pos_t end,
 	unsigned startpos, endpos;
 	int distance;
 
-	char *query_result;
+	const char *query_result;
 
 	if (start.block > end.block) {
 		trace(TRACE_ERROR, "%s,%s: bad range specified",

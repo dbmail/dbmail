@@ -58,7 +58,7 @@ static int is_end_of_header(const char *s);
  *
  * returns -1 on parse failure, -2 on memory error; number of newlines on succes
  */
-int mime_readheader(char *blkdata, u64_t * blkidx, struct list *mimelist,
+int mime_readheader(const char *datablock, u64_t * blkidx, struct list *mimelist,
 		    u64_t * headersize)
 {
 	int valid_mime_lines = 0, idx, totallines = 0, j;
@@ -67,12 +67,14 @@ int mime_readheader(char *blkdata, u64_t * blkidx, struct list *mimelist,
 /*  u64_t saved_idx = *blkidx; only needed if we bail out on invalid data */
 
 	char *endptr, *startptr, *delimiter;
+	char *blkdata;
 	struct mime_record *mr, *prev_mr = NULL;
 	struct element *el = NULL;
 	int cr_nl_present;	/* 1 if a '\r\n' is found */
 
 	trace(TRACE_DEBUG, "mime_readheader(): entering mime loop");
 
+	blkdata = strdup(datablock);
 
 	list_init(mimelist);
 	*headersize = 0;
@@ -81,6 +83,7 @@ int mime_readheader(char *blkdata, u64_t * blkidx, struct list *mimelist,
 		trace(TRACE_DEBUG,
 		      "mime_readheader(): found an empty header\n");
 		(*blkidx)++;	/* skip \n */
+		free(blkdata);
 		return 1;	/* found 1 newline */
 	}
 
@@ -89,6 +92,7 @@ int mime_readheader(char *blkdata, u64_t * blkidx, struct list *mimelist,
 
 	if (!mr) {
 		trace(TRACE_ERROR, "mime_readheader(): out of memory\n");
+		free(blkdata);
 		return -2;
 	}
 
@@ -119,7 +123,7 @@ int mime_readheader(char *blkdata, u64_t * blkidx, struct list *mimelist,
 			/* end of data block reached (??) */
 			my_free(mr);
 			*blkidx += (endptr - startptr);
-
+			free(blkdata);
 			return totallines;
 		}
 
@@ -192,6 +196,7 @@ int mime_readheader(char *blkdata, u64_t * blkidx, struct list *mimelist,
 				trace(TRACE_ERROR,
 				      "mime_readheader(): cannot add element to list\n");
 				my_free(mr);
+				free(blkdata);
 				return -2;
 			}
 
@@ -239,6 +244,7 @@ int mime_readheader(char *blkdata, u64_t * blkidx, struct list *mimelist,
 					trace(TRACE_ERROR,
 					      "mime_readheader(): cannot add element to list\n");
 					my_free(mr);
+					free(blkdata);
 					return -2;
 				}
 			} else {
@@ -283,6 +289,7 @@ int mime_readheader(char *blkdata, u64_t * blkidx, struct list *mimelist,
 			      "mime_readheader(): found double newline; header size: %d lines\n",
 			      totallines);
 			my_free(mr);
+			free(blkdata);
 			return totallines;
 		}
 
@@ -296,9 +303,11 @@ int mime_readheader(char *blkdata, u64_t * blkidx, struct list *mimelist,
 	if (valid_mime_lines < 2) {
 		trace(TRACE_ERROR,
 		      "mime_readheader(): no valid mime headers found\n");
+		free(blkdata);
 		return -1;
 	}
 
+	free(blkdata);
 	/* success ? */
 	trace(TRACE_DEBUG, " *** mime_readheader() done ***\n");
 	return totallines;

@@ -520,7 +520,7 @@ int db_removealias_ext(const char *alias, const char *deliver_to)
 }
 int db_get_notify_address(u64_t user_idnr, char **notify_address)
 {
-	char *query_result = NULL;
+	const char *query_result = NULL;
 	*notify_address = NULL;
 	snprintf(query, DEF_QUERYSIZE, "SELECT notify_address "
 		 "FROM auto_notifications WHERE user_idnr = %llu",
@@ -559,7 +559,7 @@ int db_get_notify_address(u64_t user_idnr, char **notify_address)
 
 int db_get_reply_body(u64_t user_idnr, char **reply_body)
 {
-	char *query_result;
+	const char *query_result;
 	*reply_body = NULL;
 
 	snprintf(query, DEF_QUERYSIZE,
@@ -624,7 +624,7 @@ u64_t db_get_mailbox_from_message(u64_t message_idnr)
 
 u64_t db_get_useridnr(u64_t message_idnr)
 {
-	char *query_result;
+	const char *query_result;
 	u64_t user_idnr;
 
 	snprintf(query, DEF_QUERYSIZE,
@@ -1039,7 +1039,7 @@ int db_empty_mailbox(u64_t user_idnr)
 
 int db_icheck_messageblks(struct list *lost_list)
 {
-	char *query_result;
+	const char *query_result;
 	u64_t messageblk_idnr;
 	int i, n;
 	list_init(lost_list);
@@ -1097,7 +1097,7 @@ int db_icheck_messageblks(struct list *lost_list)
 int db_icheck_messages(struct list *lost_list)
 {
 	u64_t message_idnr;
-	char *query_result;
+	const char *query_result;
 	int i, n;
 
 	list_init(lost_list);
@@ -1148,7 +1148,7 @@ int db_icheck_messages(struct list *lost_list)
 int db_icheck_mailboxes(struct list *lost_list)
 {
 	u64_t mailbox_idnr;
-	char *query_result;
+	const char *query_result;
 	int i, n;
 
 	list_init(lost_list);
@@ -1199,7 +1199,7 @@ int db_icheck_mailboxes(struct list *lost_list)
 int db_icheck_null_physmessages(struct list *lost_list)
 {
 	u64_t physmessage_id;
-	char *result_string;
+	const char *result_string;
 	unsigned i, n;
 
 	list_init(lost_list);
@@ -1251,7 +1251,7 @@ int db_icheck_null_physmessages(struct list *lost_list)
 int db_icheck_null_messages(struct list *lost_list)
 {
 	u64_t message_idnr;
-	char *query_result;
+	const char *query_result;
 	int i, n;
 
 	list_init(lost_list);
@@ -1496,11 +1496,12 @@ int db_send_message_lines(void *fstream, u64_t message_idnr,
 	u64_t physmessage_id = 0;
 	char *buffer = NULL;
 	int buffer_pos;
-	char *nextpos, *tmppos = NULL;
+	const char *nextpos;
+	const char *tmppos = NULL;
 	int block_count;
 	u64_t rowlength;
 	int n;
-	char *query_result;
+	const char *query_result;
 
 	trace(TRACE_DEBUG, "%s,%s: request for [%ld] lines",
 	      __FILE__, __FUNCTION__, lines);
@@ -1639,7 +1640,7 @@ int db_createsession(u64_t user_idnr, PopSession_t * session_ptr)
 	struct message tmpmessage;
 	int message_counter = 0;
 	unsigned i;
-	char *query_result;
+	const char *query_result;
 	u64_t inbox_mailbox_idnr;
 
 	list_init(&session_ptr->messagelst);
@@ -2482,7 +2483,8 @@ int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
 			   const char *filter)
 {
 	int i;
-	char *mailbox_name = NULL, *tmp;
+	char *mailbox_name = NULL;
+	const char *tmp;
 
 	/* retrieve the name of this mailbox */
 	snprintf(query, DEF_QUERYSIZE,
@@ -2565,7 +2567,7 @@ int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
 
 int db_isselectable(u64_t mailbox_idnr)
 {
-	char *query_result;
+	const char *query_result;
 	long not_selectable;
 
 	snprintf(query, DEF_QUERYSIZE,
@@ -2597,7 +2599,7 @@ int db_isselectable(u64_t mailbox_idnr)
 
 int db_noinferiors(u64_t mailbox_idnr)
 {
-	char *query_result;
+	const char *query_result;
 	long no_inferiors;
 
 	snprintf(query, DEF_QUERYSIZE,
@@ -2728,7 +2730,7 @@ int db_movemsg(u64_t mailbox_to, u64_t mailbox_from)
 
 int db_get_message_size(u64_t message_idnr, u64_t * message_size)
 {
-	char *result_string;
+	const char *result_string;
 
 	assert(message_size != NULL);
 
@@ -2831,7 +2833,7 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr,
 int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name)
 {
 	char *tmp_name, *tmp_fq_name;
-	char *query_result;
+	const char *query_result;
 	int result;
 	size_t tmp_name_len, tmp_fq_name_len;
 	u64_t owner_idnr;
@@ -3210,7 +3212,7 @@ int db_set_msgflag_range(u64_t msg_idnr_low, u64_t msg_idnr_high,
 
 int db_get_msgdate(u64_t mailbox_idnr, u64_t msg_idnr, char *date)
 {
-	char *query_result;
+	const char *query_result;
 	char *to_char_str;
 
 	to_char_str = date2char_str("pm.internal_date");
@@ -3317,7 +3319,7 @@ int db_get_msginfo_range(u64_t msg_idnr_low, u64_t msg_idnr_high,
 			 msginfo_t ** result, unsigned *resultsetlen)
 {
 	unsigned nrows, i, j;
-	char *query_result;
+	const char *query_result;
 	char *to_char_str;
 	*result = 0;
 	*resultsetlen = 0;
@@ -3389,7 +3391,7 @@ int db_get_msginfo_range(u64_t msg_idnr_low, u64_t msg_idnr_high,
 
 int db_get_main_header(u64_t msg_idnr, struct list *hdrlist)
 {
-	char *query_result;
+	const char *query_result;
 	u64_t dummy = 0, sizedummy = 0;
 	int result;
 
@@ -3488,7 +3490,7 @@ int db_mailbox_msg_match(u64_t mailbox_idnr, u64_t msg_idnr)
 int db_get_user_aliases(u64_t user_idnr, struct list *aliases)
 {
 	int i, n;
-	char *query_result;
+	const char *query_result;
 	if (!aliases) {
 		trace(TRACE_ERROR, "%s,%s: got a NULL pointer as argument",
 		      __FILE__, __FUNCTION__);
@@ -3683,7 +3685,7 @@ int db_acl_delete_acl(u64_t userid, u64_t mboxid)
 int db_acl_get_identifier(u64_t mboxid, struct list *identifier_list)
 {
 	unsigned i, n;
-	char *result_string;
+	const char *result_string;
 
 	assert(identifier_list != NULL);
 
@@ -3773,21 +3775,21 @@ int db_user_is_mailbox_owner(u64_t userid, u64_t mboxid)
 
 int db_get_result_int(unsigned row, unsigned field)
 {
-	char *tmp;
+	const char *tmp;
 	tmp = db_get_result(row, field);
 	return (tmp ? atoi(tmp) : 0);
 }
 
 int db_get_result_bool(unsigned row, unsigned field)
 {
-	char *tmp;
+	const char *tmp;
 	tmp = db_get_result(row, field);
 	return (tmp ? (atoi(tmp) ? 1 : 0) : 0);
 }
 
 u64_t db_get_result_u64(unsigned row, unsigned field)
 {
-	char *tmp;
+	const char *tmp;
 	tmp = db_get_result(row, field);
 	return (tmp ? strtoull(tmp, NULL, 10) : 0);
 }

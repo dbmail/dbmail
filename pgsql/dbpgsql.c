@@ -43,7 +43,6 @@ static PGconn *conn;
 static PGresult *res = NULL;
 static PGresult *msgbuf_res;
 static PGresult *stored_res;
-static PGresult *auth_res;
 static u64_t affected_rows; /**< stores the number of rows affected by the
 			     * the last query */
 db_param_t _db_params;
@@ -90,7 +89,8 @@ int db_connect()
 
 int db_disconnect()
 {
-	db_free_result();
+	if (res)
+		db_free_result();
 	PQfinish(conn);
 	conn = NULL;
 
@@ -169,7 +169,7 @@ void db_free_result()
 	res = NULL;
 }
 
-char *db_get_result(unsigned row, unsigned field)
+const char *db_get_result(unsigned row, unsigned field)
 {
 	if (!res) {
 		trace(TRACE_WARNING, "%s,%s: result set is NULL",

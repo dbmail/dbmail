@@ -50,7 +50,7 @@ static db_pos_t zeropos; /**< absolute position (block/offset) of
 			    msgbuf_buf[0]*/
 static unsigned nblocks = 0; /**< number of block  */
 
-int db_init_msgfetch(u64_t msg_idnr)
+int db_init_msgfetch(u64_t msg_idnr) 
 {
 	u64_t physmessage_id;
 
@@ -59,14 +59,15 @@ int db_init_msgfetch(u64_t msg_idnr)
 		      __FILE__, __FUNCTION__);
 		return -1;
 	}
-
-	msgbuf_buf = (char *) my_malloc(sizeof(char) * MSGBUF_WINDOWSIZE);
-	if (!msgbuf_buf)
+	
+	msgbuf_buf = (char *) my_malloc(sizeof(char) * (size_t) MSGBUF_WINDOWSIZE);
+	if (!msgbuf_buf) {
 		return -1;
+	}
 
-	if (_msg_fetch_inited)
+	if (_msg_fetch_inited != 0)
 		return 0;
-	memset(msgbuf_buf, '\0', MSGBUF_WINDOWSIZE);
+	memset(msgbuf_buf, '\0', (size_t) MSGBUF_WINDOWSIZE);
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT messageblk FROM messageblks "
@@ -98,7 +99,7 @@ int db_init_msgfetch(u64_t msg_idnr)
 	/* FIXME: this will explode is db_get_result returns NULL. */
 	rowlength = db_get_length(_msgrow_idx, 0);
 	strncpy(msgbuf_buf, db_get_result(_msgrow_idx, 0),
-		MSGBUF_WINDOWSIZE - 1);
+		(size_t) MSGBUF_WINDOWSIZE - 1);
 
 	zeropos.block = 0;
 	zeropos.pos = 0;
@@ -326,7 +327,7 @@ long db_dump_range(MEM * outmem, db_pos_t start,
 	u64_t outcnt;
 	u64_t distance;
 	char buf[DUMP_BUF_SIZE];
-	char *field;
+	const char *field;
 
 	if (db_get_physmessage_id(msg_idnr, &physmessage_id) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error getting physmessage_id",
