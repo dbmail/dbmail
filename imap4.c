@@ -280,7 +280,7 @@ int IMAPClientHandler(ClientInfo * ci)
 		
 		if (i == strlen(cpy)) {
 			/* no arguments present */
-			args = NULL;
+			args = build_args_array_ext("", session->ci);
 		} else {
 			cpy[i] = '\0';	/* terminated command */
 			cpy = cpy + i + 1;	/* cpy points to args now */
