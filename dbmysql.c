@@ -1414,7 +1414,8 @@ int db_imap_append_msg(char *msgdata, unsigned long datalen, unsigned long mboxi
   unsigned long msgid,cnt;
   int result;
   char savechar;
-
+  char unique_id[UID_SIZE]; /* unique id */
+  
   time(&td);              /* get time */
   tm = *localtime(&td);   /* get components */
   strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
@@ -1568,7 +1569,11 @@ int db_imap_append_msg(char *msgdata, unsigned long datalen, unsigned long mboxi
 	}
 
     }  
-      
+  
+  /* create a unique id */
+  snprintf (unique_id,UID_SIZE,"%luA%lu",msgid,td);
+  /* set info on message */
+  db_update_message (&msgid, unique_id, datalen);
   
   return 0;
 }
