@@ -1,6 +1,6 @@
-# Makefile.in generated automatically by automake 1.4-p4 from Makefile.am
+# Makefile.in generated automatically by automake 1.4-p5 from Makefile.am
 
-# Copyright (C) 1994, 1995-8, 1999 Free Software Foundation, Inc.
+# Copyright (C) 1994, 1995-8, 1999, 2001 Free Software Foundation, Inc.
 # This Makefile.in is free software; the Free Software Foundation
 # gives unlimited permission to copy and/or distribute it,
 # with or without modifications, as long as this notice is preserved.
@@ -70,55 +70,51 @@ VERSION = @VERSION@
 
 SUBDIRS = mysql pgsql .
 
-bin_PROGRAMS = dbmail-smtp dbmail-pop3d dbmail-imapd dbmail-maintenance dbmail-config dbmail-adduser dbmail-readvut dbmail-smtp-injector uni-one-convertor raw-convertor dbmail-mini-injector 
+bin_PROGRAMS = dbmail-smtp dbmail-pop3d dbmail-imapd dbmail-maintenance dbmail-adduser dbmail-readvut raw-convertor dbmail-mini-injector
 bin_SCRIPTS = install-dbmail.sh
 
-dbmail_smtp_SOURCES = list.c debug.c dbmd5.c md5.c mime.c main.c pipe.c bounce.c forward.c memblock.c
+dbmail_smtp_SOURCES = config.c list.c debug.c dbmd5.c md5.c mime.c main.c pipe.c bounce.c forward.c memblock.c
 dbmail_smtp_LDADD = @SQLALIB@
 dbmail_smtp_LDFLAGS = @SQLLIB@
 
-dbmail_pop3d_SOURCES = pop3.c list.c debug.c dbmd5.c md5.c mime.c misc.c memblock.c pop3d.c
+dbmail_pop3d_SOURCES = config.c server.c serverchild.c pop3.c list.c debug.c dbmd5.c md5.c mime.c misc.c memblock.c pop3d.c
 dbmail_pop3d_LDADD = @SQLALIB@
 dbmail_pop3d_LDFLAGS = @SQLLIB@
 
-dbmail_imapd_SOURCES = imap4.c debug.c serverservice.c list.c dbmd5.c md5.c imaputil.c imapcommands.c mime.c misc.c memblock.c rfcmsg.c imapd.c
+dbmail_imapd_SOURCES = quota.c config.c server.c serverchild.c imap4.c debug.c list.c dbmd5.c md5.c imaputil.c imapcommands.c mime.c misc.c memblock.c rfcmsg.c imapd.c 1
 dbmail_imapd_LDADD = @SQLALIB@
 dbmail_imapd_LDFLAGS = @SQLLIB@
 
-dbmail_maintenance_SOURCES = debug.c list.c dbmd5.c md5.c mime.c memblock.c maintenance.c auth.h
+dbmail_maintenance_SOURCES = config.c debug.c list.c dbmd5.c md5.c mime.c memblock.c maintenance.c auth.h
 dbmail_maintenance_LDADD = @SQLALIB@
 dbmail_maintenance_LDFLAGS = @SQLLIB@
 
-dbmail_config_SOURCES = list.c md5.c debug.c dbmd5.c mime.c memblock.c settings.c
-dbmail_config_LDADD = @SQLALIB@
-dbmail_config_LDFLAGS = @SQLLIB@
-
-dbmail_adduser_SOURCES = debug.c list.c dbmd5.c md5.c mime.c memblock.c user.c
+dbmail_adduser_SOURCES = config.c debug.c list.c dbmd5.c md5.c mime.c memblock.c user.c
 dbmail_adduser_LDADD = @SQLALIB@
 dbmail_adduser_LDFLAGS = @SQLLIB@
 
-dbmail_readvut_SOURCES = debug.c list.c dbmd5.c md5.c mime.c vut2dbmail.c
+dbmail_readvut_SOURCES = config.c debug.c list.c dbmd5.c md5.c mime.c vut2dbmail.c
 dbmail_readvut_LDADD = @SQLALIB@
 dbmail_readvut_LDFLAGS = @SQLLIB@
 
-#dbmail_realsmtp_SOURCES = debug.c dbmd5.c md5.c list.c mime.c \
+#dbmail_realsmtp_SOURCES = config.c debug.c dbmd5.c md5.c list.c mime.c \
 #                          serverservice.c misc.c memblock.c
 #dbmail_realsmtp_LDADD = @SQLALIB@
 #dbmail_realsmtp_LDFLAGS = @SQLLIB@
 
-dbmail_smtp_injector_SOURCES = list.c debug.c dbmd5.c md5.c mime.c injector.c
-dbmail_smtp_injector_LDADD = @SQLALIB@
-dbmail_smtp_injector_LDFLAGS = @SQLLIB@
+#dbmail_smtp_injector_SOURCES = config.c list.c debug.c dbmd5.c md5.c mime.c injector.c
+#dbmail_smtp_injector_LDADD = @SQLALIB@
+#dbmail_smtp_injector_LDFLAGS = @SQLLIB@
 
-uni_one_convertor_SOURCES = list.c debug.c dbmd5.c md5.c mime.c uni-one-convert.c
-uni_one_convertor_LDADD = @SQLALIB@
-uni_one_convertor_LDFLAGS = @SQLLIB@
+#uni_one_convertor_SOURCES = config.c list.c debug.c dbmd5.c md5.c mime.c uni-one-convert.c
+#uni_one_convertor_LDADD = @SQLALIB@
+#uni_one_convertor_LDFLAGS = @SQLLIB@
 
-raw_convertor_SOURCES = list.c debug.c dbmd5.c md5.c mime.c raw-convert.c
+raw_convertor_SOURCES = config.c list.c debug.c dbmd5.c md5.c mime.c raw-convert.c
 raw_convertor_LDADD = @SQLALIB@
 raw_convertor_LDFLAGS = @SQLLIB@
 
-dbmail_mini_injector_SOURCES = debug.c list.c dbmd5.c md5.c mime.c mini-injector.c
+dbmail_mini_injector_SOURCES = config.c debug.c list.c dbmd5.c md5.c mime.c mini-injector.c
 dbmail_mini_injector_LDADD = @SQLALIB@
 dbmail_mini_injector_LDFLAGS = @SQLLIB@
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -131,39 +127,30 @@ DEFS = @DEFS@ -I. -I$(srcdir)
 CPPFLAGS = @CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
-dbmail_smtp_OBJECTS =  list.o debug.o dbmd5.o md5.o mime.o main.o pipe.o \
-bounce.o forward.o memblock.o
+dbmail_smtp_OBJECTS =  config.o list.o debug.o dbmd5.o md5.o mime.o \
+main.o pipe.o bounce.o forward.o memblock.o
 dbmail_smtp_DEPENDENCIES = 
-dbmail_pop3d_OBJECTS =  pop3.o list.o debug.o dbmd5.o md5.o mime.o \
-misc.o memblock.o pop3d.o
+dbmail_pop3d_OBJECTS =  config.o server.o serverchild.o pop3.o list.o \
+debug.o dbmd5.o md5.o mime.o misc.o memblock.o pop3d.o
 dbmail_pop3d_DEPENDENCIES = 
-dbmail_imapd_OBJECTS =  imap4.o debug.o serverservice.o list.o dbmd5.o \
-md5.o imaputil.o imapcommands.o mime.o misc.o memblock.o rfcmsg.o \
-imapd.o
+dbmail_imapd_OBJECTS =  quota.o config.o server.o serverchild.o imap4.o \
+debug.o list.o dbmd5.o md5.o imaputil.o imapcommands.o mime.o misc.o \
+memblock.o rfcmsg.o imapd.o
 dbmail_imapd_DEPENDENCIES = 
-dbmail_maintenance_OBJECTS =  debug.o list.o dbmd5.o md5.o mime.o \
-memblock.o maintenance.o
+dbmail_maintenance_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o \
+mime.o memblock.o maintenance.o
 dbmail_maintenance_DEPENDENCIES = 
-dbmail_config_OBJECTS =  list.o md5.o debug.o dbmd5.o mime.o memblock.o \
-settings.o
-dbmail_config_DEPENDENCIES = 
-dbmail_adduser_OBJECTS =  debug.o list.o dbmd5.o md5.o mime.o memblock.o \
-user.o
+dbmail_adduser_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o mime.o \
+memblock.o user.o
 dbmail_adduser_DEPENDENCIES = 
-dbmail_readvut_OBJECTS =  debug.o list.o dbmd5.o md5.o mime.o \
+dbmail_readvut_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o mime.o \
 vut2dbmail.o
 dbmail_readvut_DEPENDENCIES = 
-dbmail_smtp_injector_OBJECTS =  list.o debug.o dbmd5.o md5.o mime.o \
-injector.o
-dbmail_smtp_injector_DEPENDENCIES = 
-uni_one_convertor_OBJECTS =  list.o debug.o dbmd5.o md5.o mime.o \
-uni-one-convert.o
-uni_one_convertor_DEPENDENCIES = 
-raw_convertor_OBJECTS =  list.o debug.o dbmd5.o md5.o mime.o \
+raw_convertor_OBJECTS =  config.o list.o debug.o dbmd5.o md5.o mime.o \
 raw-convert.o
 raw_convertor_DEPENDENCIES = 
-dbmail_mini_injector_OBJECTS =  debug.o list.o dbmd5.o md5.o mime.o \
-mini-injector.o
+dbmail_mini_injector_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o \
+mime.o mini-injector.o
 dbmail_mini_injector_DEPENDENCIES = 
 SCRIPTS =  $(bin_SCRIPTS)
 
@@ -177,18 +164,17 @@ Makefile.in NEWS TODO aclocal.m4 configure configure.in
 
 DISTFILES = $(DIST_COMMON) $(SOURCES) $(HEADERS) $(TEXINFOS) $(EXTRA_DIST)
 
-TAR = tar
+TAR = gtar
 GZIP_ENV = --best
-DEP_FILES =  .deps/bounce.P .deps/dbmd5.P .deps/debug.P .deps/forward.P \
-.deps/imap4.P .deps/imapcommands.P .deps/imapd.P .deps/imaputil.P \
-.deps/injector.P .deps/list.P .deps/main.P .deps/maintenance.P \
+DEP_FILES =  .deps/bounce.P .deps/config.P .deps/dbmd5.P .deps/debug.P \
+.deps/forward.P .deps/imap4.P .deps/imapcommands.P .deps/imapd.P \
+.deps/imaputil.P .deps/list.P .deps/main.P .deps/maintenance.P \
 .deps/md5.P .deps/memblock.P .deps/mime.P .deps/mini-injector.P \
-.deps/misc.P .deps/pipe.P .deps/pop3.P .deps/pop3d.P \
-.deps/raw-convert.P .deps/rfcmsg.P .deps/serverservice.P \
-.deps/settings.P .deps/uni-one-convert.P .deps/user.P \
-.deps/vut2dbmail.P
-SOURCES = $(dbmail_smtp_SOURCES) $(dbmail_pop3d_SOURCES) $(dbmail_imapd_SOURCES) $(dbmail_maintenance_SOURCES) $(dbmail_config_SOURCES) $(dbmail_adduser_SOURCES) $(dbmail_readvut_SOURCES) $(dbmail_smtp_injector_SOURCES) $(uni_one_convertor_SOURCES) $(raw_convertor_SOURCES) $(dbmail_mini_injector_SOURCES)
-OBJECTS = $(dbmail_smtp_OBJECTS) $(dbmail_pop3d_OBJECTS) $(dbmail_imapd_OBJECTS) $(dbmail_maintenance_OBJECTS) $(dbmail_config_OBJECTS) $(dbmail_adduser_OBJECTS) $(dbmail_readvut_OBJECTS) $(dbmail_smtp_injector_OBJECTS) $(uni_one_convertor_OBJECTS) $(raw_convertor_OBJECTS) $(dbmail_mini_injector_OBJECTS)
+.deps/misc.P .deps/pipe.P .deps/pop3.P .deps/pop3d.P .deps/quota.P \
+.deps/raw-convert.P .deps/rfcmsg.P .deps/server.P .deps/serverchild.P \
+.deps/user.P .deps/vut2dbmail.P
+SOURCES = $(dbmail_smtp_SOURCES) $(dbmail_pop3d_SOURCES) $(dbmail_imapd_SOURCES) $(dbmail_maintenance_SOURCES) $(dbmail_adduser_SOURCES) $(dbmail_readvut_SOURCES) $(raw_convertor_SOURCES) $(dbmail_mini_injector_SOURCES)
+OBJECTS = $(dbmail_smtp_OBJECTS) $(dbmail_pop3d_OBJECTS) $(dbmail_imapd_OBJECTS) $(dbmail_maintenance_OBJECTS) $(dbmail_adduser_OBJECTS) $(dbmail_readvut_OBJECTS) $(raw_convertor_OBJECTS) $(dbmail_mini_injector_OBJECTS)
 
 all: all-redirect
 .SUFFIXES:
@@ -203,7 +189,7 @@ Makefile: $(srcdir)/Makefile.in  $(top_builddir)/config.status $(BUILT_SOURCES)
 $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ configure.in 
 	cd $(srcdir) && $(ACLOCAL)
 
-config.status: $(srcdir)/configure.in $(CONFIG_STATUS_DEPENDENCIES)
+config.status: $(srcdir)/configure $(CONFIG_STATUS_DEPENDENCIES)
 	$(SHELL) ./config.status --recheck
 $(srcdir)/configure: @MAINTAINER_MODE_TRUE@$(srcdir)/configure.in $(ACLOCAL_M4) $(CONFIGURE_DEPENDENCIES)
 	cd $(srcdir) && $(AUTOCONF)
@@ -265,10 +251,6 @@ dbmail-maintenance: $(dbmail_maintenance_OBJECTS) $(dbmail_maintenance_DEPENDENC
 	@rm -f dbmail-maintenance
 	$(LINK) $(dbmail_maintenance_LDFLAGS) $(dbmail_maintenance_OBJECTS) $(dbmail_maintenance_LDADD) $(LIBS)
 
-dbmail-config: $(dbmail_config_OBJECTS) $(dbmail_config_DEPENDENCIES)
-	@rm -f dbmail-config
-	$(LINK) $(dbmail_config_LDFLAGS) $(dbmail_config_OBJECTS) $(dbmail_config_LDADD) $(LIBS)
-
 dbmail-adduser: $(dbmail_adduser_OBJECTS) $(dbmail_adduser_DEPENDENCIES)
 	@rm -f dbmail-adduser
 	$(LINK) $(dbmail_adduser_LDFLAGS) $(dbmail_adduser_OBJECTS) $(dbmail_adduser_LDADD) $(LIBS)
@@ -276,14 +258,6 @@ dbmail-adduser: $(dbmail_adduser_OBJECTS) $(dbmail_adduser_DEPENDENCIES)
 dbmail-readvut: $(dbmail_readvut_OBJECTS) $(dbmail_readvut_DEPENDENCIES)
 	@rm -f dbmail-readvut
 	$(LINK) $(dbmail_readvut_LDFLAGS) $(dbmail_readvut_OBJECTS) $(dbmail_readvut_LDADD) $(LIBS)
-
-dbmail-smtp-injector: $(dbmail_smtp_injector_OBJECTS) $(dbmail_smtp_injector_DEPENDENCIES)
-	@rm -f dbmail-smtp-injector
-	$(LINK) $(dbmail_smtp_injector_LDFLAGS) $(dbmail_smtp_injector_OBJECTS) $(dbmail_smtp_injector_LDADD) $(LIBS)
-
-uni-one-convertor: $(uni_one_convertor_OBJECTS) $(uni_one_convertor_DEPENDENCIES)
-	@rm -f uni-one-convertor
-	$(LINK) $(uni_one_convertor_LDFLAGS) $(uni_one_convertor_OBJECTS) $(uni_one_convertor_LDADD) $(LIBS)
 
 raw-convertor: $(raw_convertor_OBJECTS) $(raw_convertor_DEPENDENCIES)
 	@rm -f raw-convertor
@@ -348,7 +322,7 @@ maintainer-clean-recursive:
 	dot_seen=no; \
 	rev=''; list='$(SUBDIRS)'; for subdir in $$list; do \
 	  rev="$$subdir $$rev"; \
-	  test "$$subdir" = "." && dot_seen=yes; \
+	  test "$$subdir" != "." || dot_seen=yes; \
 	done; \
 	test "$$dot_seen" = "no" && rev=". $$rev"; \
 	target=`echo $@ | sed s/-recursive//`; \
@@ -577,6 +551,10 @@ all-redirect all-am all installdirs-am installdirs mostlyclean-generic \
 distclean-generic clean-generic maintainer-clean-generic clean \
 mostlyclean distclean maintainer-clean
 
+
+#mb2db_SOURCES = config.c debug.c list.c dbmd5.c md5.c mime.c mb2db.c
+#mb2db_LDADD = @SQLALIB@
+#mb2db_LDFLAGS = @SQLLIB@
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

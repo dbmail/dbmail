@@ -1,6 +1,6 @@
 SUBDIRS = mysql pgsql .
 
-bin_PROGRAMS = dbmail-smtp dbmail-pop3d dbmail-imapd dbmail-maintenance dbmail-adduser dbmail-readvut raw-convertor dbmail-mini-injector mb2db
+bin_PROGRAMS = dbmail-smtp dbmail-pop3d dbmail-imapd dbmail-maintenance dbmail-adduser dbmail-readvut raw-convertor dbmail-mini-injector
 bin_SCRIPTS = install-dbmail.sh
 
 dbmail_smtp_SOURCES = config.c list.c debug.c dbmd5.c md5.c mime.c main.c pipe.c bounce.c forward.c memblock.c

@@ -23,7 +23,7 @@ AC_DEFUN([AM_INIT_AUTOMAKE],
 [AC_REQUIRE([AC_PROG_INSTALL])
 PACKAGE=[$1]
 AC_SUBST(PACKAGE)
-VERSION=[$2]
+VERSION=["1.1"]
 AC_SUBST(VERSION)
 dnl test to see if srcdir already configured
 if test "`cd $srcdir && pwd`" != "`pwd`" && test -f $srcdir/config.status; then
@@ -155,6 +155,26 @@ AC_ARG_WITH(pgsql,[  --with-pgsql=PATH       full path to pgsql header directory
 
 WARN=0
 # Make sure we only select one, mysql or pgsql
+if test "${mysqlheadername-x}" = "x"
+then
+  if test "${pgsqlheadername-x}" = "x"
+  then
+    NEITHER=1
+    mysqlheadername=""
+    MYSQLINC=""
+    PGSQLINC=""
+  fi
+fi
+if test "$NEITHER" = 1
+  then
+     AC_MSG_ERROR([
+
+     You have to specify --with-mysql or --with-pgsql to build.
+])
+fi
+
+
+
 if test ! "${mysqlheadername-x}" = "x"
 then
   if test ! "${pgsqlheadername-x}" = "x"
