@@ -1,3 +1,10 @@
+2004-08-20  Ilja Booij  <ilja@ic-s.nl>
+
+	* sql/postgresql/migrate_from_1.x_to_2.0.pgsql: removed old foreign
+	key constraint.
+
+	* lmtp.c (lmtp): fixed off by one error adding element to list.
+
 2004-08-16  Ilja Booij  <ilja@ic-s.nl>
 
 	* sql/postgresql/migrate_from_1.x_to_2.0.pgsql: now also renames

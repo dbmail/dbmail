@@ -28,7 +28,6 @@ BEGIN TRANSACTION;
 CREATE SEQUENCE auto_notification_seq;
 CREATE TABLE auto_notifications (
    auto_notify_idnr INT8 DEFAULT nextval('auto_notification_seq'),
-   user_idnr INT8 REFERENCES users (user_idnr) ON DELETE CASCADE,
    notify_address VARCHAR(100),
    PRIMARY KEY (auto_notify_idnr)
 );
@@ -36,7 +35,6 @@ CREATE TABLE auto_notifications (
 CREATE SEQUENCE auto_reply_seq;
 CREATE TABLE auto_replies (
    auto_reply_idnr INT8 DEFAULT nextval('auto_reply_seq'),
-   user_idnr INT8 REFERENCES users (user_idnr) ON DELETE CASCADE,
    reply_body TEXT,
    PRIMARY KEY(auto_reply_idnr)
 );
@@ -185,6 +183,8 @@ UPDATE dbmail_messageblks SET is_header = '0';
 ALTER TABLE dbmail_messageblks ALTER COLUMN is_header
 	SET NOT NULL;
 ALTER TABLE dbmail_messageblks RENAME COLUMN message_idnr TO physmessage_id;
+/* drop old foreign key constraint on message_idnr */
+ALTER TABLE dbmail_messageblks DROP CONSTRAINT "$1";
 CREATE INDEX dbmail_messageblks_physmessage_idx ON 
 	dbmail_messageblks(physmessage_id);
 CREATE INDEX dbmail_messageblks_physmessage_is_header_idx 
@@ -241,3 +241,4 @@ BEGIN TRANSACTION;
 DROP TABLE config;
 
 COMMIT;
+

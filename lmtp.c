@@ -636,7 +636,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 					/* We know this to be true from the 354 code, above. */
 					list_nodeadd(&fromlist,
 						     envelopefrom,
-						     strlen(envelopefrom));
+						     strlen(envelopefrom) + 1);
 					
 					if (read_whole_message_network(
 						    (FILE *) instream,
