@@ -3716,18 +3716,35 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 				    && db_get_msgflag("seen", thisnum,
 						      ud->mailbox.uid) !=
 				    1) {
-					result =
-					    db_set_msgflag(thisnum,
-							   ud->mailbox.uid,
-							   setSeenSet,
-							   IMAPFA_ADD);
+					/* only if the user has an ACL which grants
+					   him rights to set the flag should the
+					   flag be set! */
+					result = acl_has_right(ud->userid,
+							       ud->mailbox.uid,
+							       ACL_RIGHT_SEEN);
 					if (result == -1) {
 						fprintf(ci->tx,
-							"\r\n* BYE internal dbase error\r\n");
-						list_freelist(&fetch_list.
-							      start);
+							"\r\n *BYE internal dbase "
+							"error\r\n");
+						list_freelist(&fetch_list.start);
 						db_free_msg(&headermsg);
 						return -1;
+					}
+					
+					if (result == 1) {
+						result =
+							db_set_msgflag(thisnum,
+								       ud->mailbox.uid,
+								       setSeenSet,
+								       IMAPFA_ADD);
+						if (result == -1) {
+							fprintf(ci->tx,
+								"\r\n* BYE internal dbase error\r\n");
+							list_freelist(&fetch_list.
+								      start);
+							db_free_msg(&headermsg);
+							return -1;
+						}
 					}
 
 					fi->getFlags = 1;
@@ -3894,7 +3911,7 @@ int _ic_store(char *tag, char **args, ClientInfo * ci)
 		}
 		if (result == 0) {
 			fprintf(ci->tx,
-				"%s NO no right to store \\SEEN flag",
+				"%s NO no right to store \\SEEN flag\r\n",
 				tag);
 			return 1;
 		}
@@ -3904,12 +3921,12 @@ int _ic_store(char *tag, char **args, ClientInfo * ci)
 		    acl_has_right(ud->userid, ud->mailbox.uid,
 				  ACL_RIGHT_DELETE);
 		if (result < 0) {
-			fprintf(ci->tx, "* BYE internal database error");
+			fprintf(ci->tx, "* BYE internal database error\r\n");
 			return -1;	/* fatal */
 		}
 		if (result == 0) {
 			fprintf(ci->tx,
-				"%s NO no right to store \\DELETED flag",
+				"%s NO no right to store \\DELETED flag\r\n",
 				tag);
 			return 1;
 		}

@@ -30,7 +30,13 @@ Date:   19-03-2004
 
 	Mind that you get a LOT of output in your logs when using this setting.
 
-	in /etc/postfix/tranport add:
+	If you want to send all the email the MTA accepts to DBMail, use the
+	following setting in /etc/postfix/transport:
+
+	mailbox_transport = dbmail-lmtp:<host>:<port>
+
+	If you want to decide if DBMail should be used per domain please add
+	the following in /etc/postfix/tranport:
 
 	<domain>        dbmail-lmtp:<host>:<port>
 
@@ -62,7 +68,12 @@ Date:   19-03-2004
 	where <dbmailuser> and <dbmailgroup> should be the user and group the
 	dbmail-smtp program should run as.
 
-	in /etc/postfix/transport add:
+	To send all email to DBMail, add this in /etc/postfix/main.cf
+
+	mailbox_transport: dbmail-smtp:
+
+	If you want to decide whether or not to send to DBMail per domain,
+	add this in /etc/postfix/transport:
 	
 	<domain>        dbmail-smtp:
 
