@@ -62,6 +62,7 @@ int main (int argc, char *argv[]) {
       /* parse for destination addresses */
 		if (argc>2) 
 		{
+			trace (TRACE_DEBUG, "main(): scanning for [%s]",argv[INDEX_DELIVERY_MODE+1]);
 			if (!mail_adr_list (argv[INDEX_DELIVERY_MODE+1],&users,&mimelist,&users,header,headersize))
 				trace (TRACE_STOP,"main(): scanner found no email addresses (scanned for %s)", argv[INDEX_DELIVERY_MODE+1]);
 		}
