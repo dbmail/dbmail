@@ -33,7 +33,7 @@ u64_t db_user_exists(const char *username)
   u64_t uid;
   char *row;
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT userid FROM user WHERE userid='%s'",username);
+  snprintf(query, DEF_QUERYSIZE, "SELECT userid FROM users WHERE userid='%s'",username);
 
   if (db_query(query,&res)==-1)
     {
@@ -63,7 +63,7 @@ int db_get_known_users(struct list *users)
   list_init(users);
 
   /* do a inverted (DESC) query because adding the names to the final list inverts again */
-  snprintf(query, DEF_QUERYSIZE, "SELECT userid FROM user ORDER BY userid DESC");
+  snprintf(query, DEF_QUERYSIZE, "SELECT userid FROM users ORDER BY userid DESC");
 
   if (db_query(query, &res) == -1)
     {
@@ -90,7 +90,7 @@ u64_t db_getclientid(u64_t useridnr)
   u64_t cid;
   char *row;
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT client_idnr FROM user WHERE user_idnr = %llu",useridnr);
+  snprintf(query, DEF_QUERYSIZE, "SELECT client_idnr FROM users WHERE user_idnr = %llu",useridnr);
 
   if (db_query(query, &res) == -1)
     {
@@ -111,7 +111,7 @@ u64_t db_getmaxmailsize(u64_t useridnr)
   u64_t maxmailsize;
   char *row;
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT maxmail_size FROM user WHERE user_idnr = %llu",useridnr);
+  snprintf(query, DEF_QUERYSIZE, "SELECT maxmail_size FROM users WHERE user_idnr = %llu",useridnr);
 
   if (db_query(query,&res) == -1)
     {
@@ -190,7 +190,7 @@ u64_t db_adduser (char *username, char *password, char *clientid, char *maxmail)
   u64_t size;
 
   /* first check to see if this user already exists */
-  snprintf(query, DEF_QUERYSIZE, "SELECT * FROM user WHERE userid = '%s'", username);
+  snprintf(query, DEF_QUERYSIZE, "SELECT * FROM users WHERE userid = '%s'", username);
 
   if (db_query(query, &res) == -1)
     {
@@ -251,7 +251,7 @@ u64_t db_adduser (char *username, char *password, char *clientid, char *maxmail)
 
 int db_delete_user(const char *username)
 {
-  snprintf (query, DEF_QUERYSIZE, "DELETE FROM user WHERE userid = '%s'",username);
+  snprintf (query, DEF_QUERYSIZE, "DELETE FROM users WHERE userid = '%s'",username);
 
   if (db_query(query, &res) == -1)
     {
@@ -329,7 +329,7 @@ u64_t db_validate (char *user, char *password)
   u64_t id;
   char *row;
   
-  snprintf (query, DEF_QUERYSIZE, "SELECT user_idnr FROM user WHERE userid=\"%s\" AND passwd=\"%s\"",
+  snprintf (query, DEF_QUERYSIZE, "SELECT user_idnr FROM users WHERE userid=\"%s\" AND passwd=\"%s\"",
 	   user,password);
 
   trace (TRACE_DEBUG,"db_validate(): validating using query %s\n",query);
@@ -354,7 +354,7 @@ u64_t db_md5_validate (char *username,unsigned char *md5_apop_he, char *apop_sta
   u64_t useridnr;	
   
   
-  snprintf (query, DEF_QUERYSIZE, "SELECT passwd,user_idnr FROM user WHERE userid=\"%s\"",username);
+  snprintf (query, DEF_QUERYSIZE, "SELECT passwd,user_idnr FROM users WHERE userid=\"%s\"",username);
 	
   if (db_query(query, &res)==-1)
       return -1;
@@ -418,7 +418,7 @@ char *db_get_userid (u64_t *useridnr)
   
   char *returnid = NULL;
   
-  snprintf (query, DEF_QUERYSIZE,"SELECT userid FROM user WHERE user_idnr = %llu",
+  snprintf (query, DEF_QUERYSIZE,"SELECT userid FROM users WHERE user_idnr = %llu",
 	   *useridnr);
 
   trace(TRACE_DEBUG,"db_get_userid(): executing query : [%s]",query);
