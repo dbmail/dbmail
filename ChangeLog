@@ -1,6 +1,7 @@
 2004-09-14  Ilja Booij  <ilja@ic-s.nl>
 
-	* INSTALL.postfix: trivial fix.
+	* INSTALL.postfix: trivial fix. changed reference to 'aliases' table
+	to 'dbmail_aliases'.
 
 2004-09-14  Paul Stevens <paul@nfg.nl>
 
