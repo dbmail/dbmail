@@ -1,0 +1,20 @@
+/* config.in.  Generated automatically from configure.in by autoheader 2.13.  */
+
+/* Define to empty if the keyword does not work.  */
+#undef const
+
+/* Define as __inline if that's what the C compiler calls it.  */
+#undef inline
+
+/* Define if you have the <crypt.h> header file.  */
+#undef HAVE_CRYPT_H
+
+/* Define if you have the <endian.h> header file.  */
+#undef HAVE_ENDIAN_H
+
+/* Name of package */
+#undef PACKAGE
+
+/* Version number of package */
+#undef VERSION
+
