@@ -57,6 +57,13 @@
 #define SEND_BUF_SIZE 1024
 #define MAX_ARGS 512
 
+extern db_param_t _db_params;
+#define DBPFX _db_params.pfx
+
+/* for issuing queries to the backend */
+char query[DEF_QUERYSIZE];
+
+
 /* cache */
 extern cache_t cached_msg;
 
@@ -889,6 +896,7 @@ int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self, u64_t fetch
 	u64_t lo, hi;
 	u64_t i;
 	int j;
+	int result;
 	unsigned nmatching;
 	unsigned fn;
 
@@ -909,19 +917,11 @@ int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self, u64_t fetch
 	}
 
 	/* (always retrieve uid) */
-	int result = db_get_msginfo_range(lo, hi, ud->mailbox.uid,
-				 self->fi.getFlags, self->fi.getInternalDate,
-				 self->fi.getSize, 1, &self->msginfo, &nmatching);
-	if (result == -1) {
-		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-		return -1;
-	}
+	if ((result = dbmail_imap_session_get_msginfo_range(self, lo, hi)) <= 0)
+		return result;
 
-	if (result == -2) {
-		dbmail_imap_session_printf(self, "* BYE out of memory\r\n");
-		return -1;
-	}
-
+	nmatching = (unsigned)result;
+	
 	for (i = 0; i < nmatching; i++) {
 		if (self->fi.getSize && self->msginfo[i].rfcsize == 0) {
 			/* parse the message to calc the size */
@@ -1000,6 +1000,75 @@ int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self, u64_t fetch
 	my_free(self->msginfo);
 	return 0;
 }
+
+int dbmail_imap_session_get_msginfo_range(struct ImapSession *self, u64_t msg_idnr_low, u64_t msg_idnr_high)
+{
+	unsigned nrows, i, j;
+	const char *query_result;
+	char *to_char_str;
+	msginfo_t *result;
+	
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
+
+	db_free_result();
+
+	to_char_str = date2char_str("internal_date");
+	snprintf(query, DEF_QUERYSIZE,
+		 "SELECT seen_flag, answered_flag, deleted_flag, flagged_flag, "
+		 "draft_flag, recent_flag, %s, rfcsize, message_idnr "
+		 "FROM %smessages msg, %sphysmessage pm "
+		 "WHERE pm.id = msg.physmessage_id "
+		 "AND message_idnr BETWEEN '%llu' AND '%llu' "
+		 "AND mailbox_idnr = '%llu' AND status < '%d' "
+		 "ORDER BY message_idnr ASC",to_char_str,DBPFX,DBPFX,
+		 msg_idnr_low, msg_idnr_high, ud->mailbox.uid,
+		 MESSAGE_STATUS_DELETE);
+	my_free(to_char_str);
+
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: could not select message",
+		      __FILE__, __func__);
+		return (-1);
+	}
+
+	if ((nrows = db_num_rows()) == 0) {
+		db_free_result();
+		return 0;
+	}
+
+	if (! (result = (msginfo_t *) my_malloc(nrows * sizeof(msginfo_t)))) {
+		trace(TRACE_ERROR, "%s,%s: out of memory", __FILE__, __func__);
+		db_free_result();
+		return -2;
+	}
+
+	memset(result, 0, nrows * sizeof(msginfo_t));
+
+	for (i = 0; i < nrows; i++) {
+		if (self->fi.getFlags) {
+			for (j = 0; j < IMAP_NFLAGS; j++)
+				result[i].flags[j] = db_get_result_bool(i, j);
+		}
+
+		if (self->fi.getInternalDate) {
+			query_result = db_get_result(i, IMAP_NFLAGS);
+			strncpy(result[i].internaldate,
+				(query_result) ? query_result :
+				"1970-01-01 00:00:01",
+				IMAP_INTERNALDATE_LEN);
+		}
+		if (self->fi.getSize) {
+			result[i].rfcsize = db_get_result_u64(i, IMAP_NFLAGS + 1);
+		}
+		
+		result[i].uid = db_get_result_u64(i, IMAP_NFLAGS + 2);
+	}
+	db_free_result();
+	dbmail_imap_session_setMsginfo(self, result);
+
+	return (int)nrows;
+}
+
 
 int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 {
@@ -1811,6 +1880,8 @@ struct ImapSession * dbmail_imap_session_setFi(struct ImapSession * self, fetch_
 }
 struct ImapSession * dbmail_imap_session_setMsginfo(struct ImapSession * self, msginfo_t * msginfo)
 {
+	if (self->msginfo)
+		my_free(self->msginfo);
 	self->msginfo = msginfo;
 	return self;
 }

@@ -99,15 +99,6 @@ static int db_get_mailbox_size(u64_t mailbox_idnr, int only_deleted,
 			       u64_t * mailbox_size);
 /**
  * constructs a string for use in queries. This is used to not be dependent
- * on the internal representation of a date in the database. Whenever the
- * date is queried for in a query, this function is used to get the right
- * database function for the query (TO_CHAR(date,format) for Postgres, 
- * DATE_FORMAT(date, format) for MySQL).
- */
-static char *date2char_str(const char *column);
-
-/**
- * constructs a string for use in queries. This is used to not be dependent
  * on the date representations a database can handle. Unfortunately, MySQL
  * only implements a function to handle this in version > 4.1.1. PostgreSQL
  * implements the TO_DATE function, which handles this very well.
@@ -3502,83 +3493,6 @@ int db_get_rfcsize(u64_t msg_idnr, u64_t mailbox_idnr, u64_t * rfc_size)
 
 	db_free_result();
 	return 1;
-}
-
-int db_get_msginfo_range(u64_t msg_idnr_low, u64_t msg_idnr_high,
-			 u64_t mailbox_idnr, int get_flags,
-			 int get_internaldate,
-			 int get_rfcsize, int get_msg_idnr,
-			 msginfo_t ** result, unsigned *resultsetlen)
-{
-	unsigned nrows, i, j;
-	const char *query_result;
-	char *to_char_str;
-	*result = 0;
-	*resultsetlen = 0;
-
-	db_free_result();
-
-	to_char_str = date2char_str("internal_date");
-	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT seen_flag, answered_flag, deleted_flag, flagged_flag, "
-		 "draft_flag, recent_flag, %s, rfcsize, message_idnr "
-		 "FROM %smessages msg, %sphysmessage pm "
-		 "WHERE pm.id = msg.physmessage_id "
-		 "AND message_idnr BETWEEN '%llu' AND '%llu' "
-		 "AND mailbox_idnr = '%llu' AND status < '%d' "
-		 "ORDER BY message_idnr ASC",to_char_str,DBPFX,DBPFX,
-		 msg_idnr_low, msg_idnr_high, mailbox_idnr,
-		 MESSAGE_STATUS_DELETE);
-	my_free(to_char_str);
-
-	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: could not select message",
-		      __FILE__, __func__);
-		return (-1);
-	}
-
-	if ((nrows = db_num_rows()) == 0) {
-		db_free_result();
-		return 0;
-	}
-
-	*result = (msginfo_t *) my_malloc(nrows * sizeof(msginfo_t));
-	if (!(*result)) {
-		trace(TRACE_ERROR, "%s,%s: out of memory", __FILE__,
-		      __func__);
-		db_free_result();
-		return -2;
-	}
-
-	memset(*result, 0, nrows * sizeof(msginfo_t));
-
-	for (i = 0; i < nrows; i++) {
-		if (get_flags) {
-			for (j = 0; j < IMAP_NFLAGS; j++) {
-				(*result)[i].flags[j] = db_get_result_bool(i, j);
-			}
-		}
-
-		if (get_internaldate) {
-			query_result = db_get_result(i, IMAP_NFLAGS);
-			strncpy((*result)[i].internaldate,
-				(query_result) ? query_result :
-				"1970-01-01 00:00:01",
-				IMAP_INTERNALDATE_LEN);
-		}
-		if (get_rfcsize) {
-			(*result)[i].rfcsize =
-			    db_get_result_u64(i, IMAP_NFLAGS + 1);
-		}
-		if (get_msg_idnr) {
-			(*result)[i].uid =
-			    db_get_result_u64(i, IMAP_NFLAGS + 2);
-		}
-	}
-	db_free_result();
-
-	*resultsetlen = nrows;
-	return 0;
 }
 
 int db_get_main_header(u64_t msg_idnr, struct list *hdrlist)

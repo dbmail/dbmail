@@ -2190,6 +2190,7 @@ int _ic_fetch(struct ImapSession *self)
 {
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	u64_t i, fetch_start, fetch_end;
+	u64_t fetch_max;
 	unsigned fn;
 	int result, idx;
 	int insert_rfcsize;
@@ -2223,6 +2224,8 @@ int _ic_fetch(struct ImapSession *self)
 		}
 	} while (idx > 0);
 
+	fetch_max = self->use_uid ? (ud->mailbox.msguidnext - 1) : ud->mailbox.exists;
+	
 	trace(TRACE_DEBUG,"%s,%s: hdrparse_needed [%d]", __FILE__,__func__, self->fi.hdrparse_needed);
 	trace(TRACE_DEBUG,"%s,%s: msgparse_needed [%d]", __FILE__,__func__, self->fi.msgparse_needed);
 	/* now fetch results for each msg */
@@ -2232,8 +2235,7 @@ int _ic_fetch(struct ImapSession *self)
 			endptr++;	/* skip delimiter */
 
 		fetch_start = strtoull(endptr, &endptr, 10);
-
-		if (fetch_start == 0 || fetch_start > (self->use_uid ? (ud->mailbox.msguidnext - 1) : ud->mailbox.exists)) {
+		if (fetch_start == 0 || fetch_start > fetch_max) {
 			if (self->fi.getUID)
 				dbmail_imap_session_printf(self, "%s OK FETCH completed\r\n", self->tag);
 			else
@@ -2248,12 +2250,12 @@ int _ic_fetch(struct ImapSession *self)
 			endptr = lastchar;
 
 			if (*endptr == '*') {
-				fetch_end = (self->use_uid ?  (ud->mailbox.msguidnext - 1) : ud->mailbox.exists);
+				fetch_end = fetch_max;
 				endptr++;
 				break;
 			}
 
-			if (fetch_end == 0 || fetch_end > (self->use_uid ? (ud->mailbox.msguidnext - 1) : ud->mailbox.exists)) {
+			if (fetch_end == 0 || fetch_end > fetch_max) {
 				if (!self->fi.getUID) {
 					dbmail_imap_session_printf(self, "%s BAD invalid message range specified\r\n", self->tag);
 					return 1;
@@ -2283,6 +2285,8 @@ int _ic_fetch(struct ImapSession *self)
 			fetch_end--;
 		}
 
+		trace(TRACE_DEBUG,"%s,%s: fetch_start [%llu] fetch_end [%llu]",
+				__FILE__, __func__, fetch_start, fetch_end);
 		
 		if (! (self->fi.msgparse_needed || self->fi.hdrparse_needed)) {
 			if (dbmail_imap_session_fetch_get_unparsed(self, fetch_start, fetch_end) < 0)
@@ -2296,7 +2300,7 @@ int _ic_fetch(struct ImapSession *self)
 				insert_rfcsize = 0;
 
 				if (self->use_uid) {
-					if (i > ud->mailbox.msguidnext - 1) {
+					if (i > fetch_max) {
 						/* passed the last one */
 						dbmail_imap_session_printf(self, "%s OK FETCH completed\r\n", self->tag);
 						return 0;

@@ -1,3 +1,10 @@
+2004-11-10  Paul Stevens <paul@nfg.nl>
+
+	* db.c, db.h, dbmail-imapsession.c, dbmail-imapsession.h: changed 
+	db_get_msginfo_range to dbmail_imap_session_get_msginfo_range and
+	moved it to dbmail-imapsession.c
+	* imapcommands.c: minor cleanup in _ic_fetch.
+	
 2004-11-04  Paul Stevens <paul@nfg.nl>
 	
 	* dbmail-imapsession.c: fixed broken fetch command.

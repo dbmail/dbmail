@@ -1239,6 +1239,15 @@ int db_acl_delete_acl(u64_t userid, u64_t mboxid);
  */
 int db_acl_get_identifier(u64_t mboxid, 
 			  /*@out@*/ struct list *identifier_list);
+/**
+ * constructs a string for use in queries. This is used to not be dependent
+ * on the internal representation of a date in the database. Whenever the
+ * date is queried for in a query, this function is used to get the right
+ * database function for the query (TO_CHAR(date,format) for Postgres, 
+ * DATE_FORMAT(date, format) for MySQL).
+ */
+char *date2char_str(const char *column);
+
 
 int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * mb);
 #endif
