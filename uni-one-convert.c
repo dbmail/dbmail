@@ -213,8 +213,8 @@ int process_mboxfile(char *file, u64_t userid)
 	      if (cnt >= READ_BLOCK_SIZE-1)
 		{
 		  /* write block */
-		  db_insert_message_block(blk, READ_BLOCK_SIZE, msgid);
-		  memmove(blk, &blk[cnt], cnt - READ_BLOCK_SIZE);
+		  db_insert_message_block(blk, READ_BLOCK_SIZE-1, msgid);
+		  memmove(blk, &blk[cnt], cnt - READ_BLOCK_SIZE-1);
 		  size += cnt;
 		  cnt = 0;
 		}
