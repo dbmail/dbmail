@@ -1073,6 +1073,7 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
   if (strlen(args[0]) == 0 && strlen(args[1]) == 0)
     {
       /* this has special meaning; show root & delimiter */
+      trace(TRACE_ERROR, "_ic_list(): showing delimiter [(\\NoSelect) \"/\" \"\"]");
       fprintf(ci->tx,"* %s (\\NoSelect) \"/\" \"\"\r\n",thisname);
       fprintf(ci->tx,"%s OK %s completed\r\n",tag,thisname);
       return 0;
