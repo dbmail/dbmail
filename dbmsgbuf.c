@@ -51,17 +51,10 @@ static u64_t rowpos = 0; /**< current position in row */
 static db_pos_t zeropos; /**< absolute position (block/offset) of 
 			    msgbuf_buf[0]*/
 static unsigned nblocks = 0; /**< number of block  */
+static const char * tmprow; /**< temporary row number */
 
 int db_init_msgfetch(u64_t msg_idnr) 
 {
-	u64_t physmessage_id;
-
-	if (db_get_physmessage_id(msg_idnr, &physmessage_id) == -1) {
-		trace(TRACE_ERROR, "%s,%s: error getting physmessage_id",
-		      __FILE__, __func__);
-		return -1;
-	}
-	
 	msgbuf_buf = (char *) my_malloc(sizeof(char) * (size_t) MSGBUF_WINDOWSIZE);
 	if (!msgbuf_buf) {
 		return -1;
@@ -70,11 +63,13 @@ int db_init_msgfetch(u64_t msg_idnr)
 	if (_msg_fetch_inited != 0)
 		return 0;
 	memset(msgbuf_buf, '\0', (size_t) MSGBUF_WINDOWSIZE);
-
+	
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT messageblk FROM messageblks "
-		 "WHERE physmessage_id = '%llu' ORDER BY messageblk_idnr",
-		 physmessage_id);
+		"SELECT messageblk FROM messageblks LEFT JOIN messages "
+		"USING (physmessage_id) "
+		"WHERE messages.message_idnr = '%llu' "
+		"ORDER BY messageblk_idnr",
+		msg_idnr);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not get message",
@@ -99,9 +94,14 @@ int db_init_msgfetch(u64_t msg_idnr)
 	_msgrow_idx = 0;
 
 	/* FIXME: this will explode is db_get_result returns NULL. */
-	rowlength = db_get_length(_msgrow_idx, 0);
-	strncpy(msgbuf_buf, db_get_result(_msgrow_idx, 0),
-		(size_t) MSGBUF_WINDOWSIZE - 1);
+	tmprow = db_get_result(_msgrow_idx, 0);
+	rowlength = (u64_t)strlen(tmprow);
+	
+	if (! strncpy(msgbuf_buf,tmprow, MSGBUF_WINDOWSIZE - 1)) {
+		db_free_result();
+		free(msgbuf_buf);
+		return -1;
+	}
 
 	zeropos.block = 0;
 	zeropos.pos = 0;
@@ -123,10 +123,11 @@ int db_init_msgfetch(u64_t msg_idnr)
 	}
 
 	/* FIXME: this will explode is db_get_result returns NULL. */
-	rowlength = db_get_length(_msgrow_idx, 0);
 	rowpos = 0;
-	strncpy(&msgbuf_buf[msgbuf_buflen], db_get_result(_msgrow_idx, 0),
-		MSGBUF_WINDOWSIZE - msgbuf_buflen - 1);
+	tmprow = db_get_result(_msgrow_idx, 0);
+	rowlength = (u64_t)strlen(tmprow);
+	
+	strncpy(&msgbuf_buf[msgbuf_buflen], tmprow, MSGBUF_WINDOWSIZE - msgbuf_buflen - 1);
 
 	if (rowlength <= MSGBUF_WINDOWSIZE - msgbuf_buflen - 1) {
 		/* 2nd block fits entirely */
@@ -144,6 +145,7 @@ int db_init_msgfetch(u64_t msg_idnr)
 	return 1;
 }
 
+	
 int db_update_msgbuf(int minlen)
 {
 	/* use the former msgbuf_result */
@@ -324,18 +326,11 @@ u64_t db_give_range_size(db_pos_t * start, db_pos_t * end)
 long db_dump_range(MEM * outmem, db_pos_t start,
 		   db_pos_t end, u64_t msg_idnr)
 {
-	u64_t physmessage_id;
 	u64_t i, startpos, endpos, j, bufcnt;
 	u64_t outcnt;
 	u64_t distance;
 	char buf[DUMP_BUF_SIZE];
 	const char *field;
-
-	if (db_get_physmessage_id(msg_idnr, &physmessage_id) == -1) {
-		trace(TRACE_ERROR, "%s,%s: error getting physmessage_id",
-		      __FILE__, __func__);
-		return -1;
-	}
 
 	trace(TRACE_DEBUG,
 	      "%s,%s: Dumping range: (%llu,%llu) - (%llu,%llu)",
@@ -353,11 +348,13 @@ long db_dump_range(MEM * outmem, db_pos_t start,
 		      __FILE__, __func__);
 		return -1;
 	}
-
+	
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT messageblk FROM messageblks "
-		 "WHERE physmessage_id = '%llu' "
-		 "ORDER BY messageblk_idnr", physmessage_id);
+		"SELECT messageblk FROM messageblks LEFT JOIN messages "
+		"USING (physmessage_id) "
+		"WHERE messages.message_idnr = '%llu' "
+		"ORDER BY messageblk_idnr",
+		msg_idnr);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not get message",

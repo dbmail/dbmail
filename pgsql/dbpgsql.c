@@ -32,8 +32,8 @@
 #include "dbmail.h"
 #include "dbmailtypes.h"
 
-#include <stdlib.h>
 #include <limits.h>
+#include <stdlib.h>
 #include <string.h>
 
 const char *TO_CHAR = "TO_CHAR(%s, 'YYYY-MM-DD HH24:MI:SS' )";

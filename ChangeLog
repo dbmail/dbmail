@@ -1,3 +1,10 @@
+2004-06-09  Ilja Booij  <ilja@ic-s.nl>
+
+	* dbmsgbuf.c (db_dump_range): changed query to cut down
+	on the number of queries. Patch by Paul J Stevens
+	(db_init_msgfetch): changed query to cut down
+	on the number of queries. Patch by Paul J Stevens
+
 2004-06-03 Aaron Stone <aaron@serendipity.cx>
 
 	* dbmail.h: added macro PRINTF_ARGS as a wrapper around
