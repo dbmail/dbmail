@@ -59,7 +59,7 @@ char *read_header(unsigned long *blksize)
           allocated_blocks++;
           trace (TRACE_DEBUG,"read_header(): mem current: [%d] reallocated to [%d]",
                   usedmem, allocated_blocks*HEADER_BLOCK_SIZE);
-          memtst(((char *)realloc(header,allocated_blocks*HEADER_BLOCK_SIZE))==NULL);
+          memtst((header = (char *)realloc(header,allocated_blocks*HEADER_BLOCK_SIZE))==NULL);
       }
       /* now we concatenate all we have to the header */
 		if (strblock)
