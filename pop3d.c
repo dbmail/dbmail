@@ -440,8 +440,6 @@ int main (int argc, char *argv[])
 			c = accept (s, (struct sockaddr *)&adr_clnt,
 			  &len_inet); /* incoming connection */
 	
-			trace (TRACE_DEBUG,"Accepted connection");
-		
 			/* failure won't cause a quit forking is too expensive */	
 			if (c == -1)
 			{
