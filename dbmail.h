@@ -48,7 +48,7 @@
 
 /** string length of configuration values */
 #define FIELDSIZE 1024
-#define COPYRIGHT "(c) 1999-2003 IC&S, The Netherlands"
+#define COPYRIGHT "(c) 1999-2004 IC&S, The Netherlands"
 /** default configuration file */
 #define DEFAULT_CONFIG_FILE "/etc/dbmail.conf"
 
