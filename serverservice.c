@@ -641,7 +641,7 @@ void SS_sighandler(int sig, siginfo_t *info, void *data)
   if (sig == SIGALRM)
     {
       /* timeout occurred, close client, terminate process */
-      trace(TRACE_INFO, "SS_sighandler(): PID %d received alarm (time-out)\n", getpid());
+      trace(TRACE_DEBUG, "SS_sighandler(): PID %d received alarm (time-out)\n", getpid());
 
       /* close streams */
       if (client.tx)
@@ -713,9 +713,13 @@ void SS_sighandler(int sig, siginfo_t *info, void *data)
       if (info->si_pid == 0)
 	{
 	  /* SIGKILL occured, 'ping' every child we have */
-	  trace(TRACE_ERROR,"signal_handler(): SIGKILL from [%u]", info->si_uid);
+	  trace(TRACE_DEBUG,"signal_handler(): SIGKILL from [%u]", info->si_uid);
 	    
 	  for (i=0; i<n_default_children && default_child_pids; i++)
+	    {
+	      if (default_child_pids[i] <= 0)
+		continue;
+
 	      if (kill(default_child_pids[i], SIGUSR1) == -1 && errno == ESRCH)
 		{
 		  /* this child no longer exists */
@@ -724,6 +728,7 @@ void SS_sighandler(int sig, siginfo_t *info, void *data)
 		  (*ss_n_default_children_used)--;
 		  break;
 		}
+	    }
 	}
       trace (TRACE_DEBUG,"signal_handler(): sigCHLD, cleaned");
       return;

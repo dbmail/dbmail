@@ -56,13 +56,13 @@ void trace (int level, char *formatstring, ...)
     {
       if (TRACE_VERBOSE)
       { 
-	    vfprintf (err_out_stream, formatstring, argp);
+	vfprintf (err_out_stream, formatstring, argp);
         if (formatstring[strlen(formatstring)]!='\n')
-            fprintf (err_out_stream,"\n");
+	  fprintf (err_out_stream,"\n");
       }
       if (TRACE_TO_SYSLOG)
 	{
-        if (formatstring[strlen(formatstring)]=='\n')
+	  if (formatstring[strlen(formatstring)]=='\n')
             formatstring[strlen(formatstring)]='\0';
 	  if (level <= TRACE_WARNING) 
 	    {

@@ -83,7 +83,7 @@ static void signal_handler (int signo, siginfo_t *info, void *data)
 
   if (signo == SIGALRM)
   {
-    done=-1;
+    done = -1;
     trace (TRACE_DEBUG,"signal_handler(): received ALRM signal. Timeout");
 
     if (tx)
@@ -119,12 +119,12 @@ static void signal_handler (int signo, siginfo_t *info, void *data)
 	    
 	    for (i=0; i<defchld; i++)
 	      {
-		if (default_child_pids[i] <= 0) /* only allow real PID's (> 0) */
+		if (default_child_pids[i] == 0) /* only allow real PID's (> 0) */
 		  continue;
 
-		trace(TRACE_DEBUG,"signal_handler(): sending SIGUSR1 to [%u]\n",default_child_pids[i]);
+		trace(TRACE_DEBUG,"signal_handler(): pinging to [%u]\n",default_child_pids[i]);
 
-		if (kill(default_child_pids[i], SIGUSR1) == -1 && errno == ESRCH)
+		if (kill(default_child_pids[i], 0) == -1 && errno == ESRCH)
 		  {
 		    /* this child no longer exists */
 		    trace(TRACE_DEBUG, "signal_handler(): cleaning up PID %u", default_child_pids[i]);
