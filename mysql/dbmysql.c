@@ -195,7 +195,7 @@ int db_addalias (u64_t useridnr, char *alias, int clientid)
 {
   /* adds an alias for a specific user */
   snprintf (query, DEF_QUERYSIZE,
-	    "INSERT INTO aliases (alias,deliver_to,client_id) VALUES ('%s','%llu',%d)",
+	    "INSERT INTO aliases (alias,deliver_to,client_idnr) VALUES ('%s','%llu',%d)",
 	   alias, useridnr, clientid);
 	
   trace (TRACE_DEBUG,"db_addalias(): executing query for user: [%s]", query);
@@ -2897,6 +2897,84 @@ u64_t db_get_rfcsize(u64_t msguid)
   return size;
 }
 
+
+/*
+ * db_get_msginfo_range()
+ *
+ * retrieves message info in a single query for a range of messages.
+ *
+ * returns 0 on succes, -1 on dbase error, -2 on memory error
+ *
+ * caller should free *result
+ */
+int db_get_msginfo_range(u64_t msguidlow, u64_t msguidhigh, u64_t mailboxuid,
+			 int getflags, int getinternaldate, int getsize, int getuid,
+			 msginfo_t **result, unsigned *resultsetlen)
+{
+  unsigned nrows, i, j;
+
+  *result = 0;
+  *resultsetlen = 0;
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT seen_flag, answered_flag, deleted_flag, "
+	   "flagged_flag, draft_flag, recent_flag, internal_date, rfcsize, message_idnr "
+	   "FROM messages WHERE "
+	   "message_idnr >= %llu AND message_idnr <= %llu AND mailbox_idnr = %llu"
+	   "AND status<2 AND unique_id != '' ", msguidlow, msguidhigh, mailboxuid);
+ 
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_get_msginfo_range(): could not select message\n");
+      return (-1);
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_get_msginfo_range(): mysql_store_result failed: %s\n",
+	    mysql_error(&conn));
+      return (-1);
+    }
+  
+   if ((nrows = mysql_num_rows(res)) == 0)
+    {
+      return 0;
+    }
+
+   *result = (msginfo_t*)my_malloc(nrows * sizeof(msginfo_t));
+   if (! (*result)) 
+     {
+      trace(TRACE_ERROR,"db_get_msginfo_range(): out of memory\n");
+      mysql_free_result(res);
+      return -2;
+     }
+
+   memset(*result, 0, nrows * sizeof(msginfo_t));
+
+   i = 0;
+   
+   while (i<nrows && (row = mysql_fetch_row(res)) )
+     {
+       if (getflags)
+	 {
+	   for (j=0; j<IMAP_NFLAGS; j++)
+	     (*result)[i].flags[j] = (row[j] && row[j][0] != '0') ? 1 : 0;
+	 }
+
+       if (getinternaldate && row[IMAP_NFLAGS])
+	 strncpy((*result)[i].internaldate, row[IMAP_NFLAGS], IMAP_INTERNALDATE_LEN);
+
+       if (getsize && row[IMAP_NFLAGS + 1])
+	 (*result)[i].rfcsize = strtoull(row[IMAP_NFLAGS + 1], NULL, 10);
+
+       if (getuid && row[IMAP_NFLAGS + 2])
+	 (*result)[i].uid = strtoull(row[IMAP_NFLAGS + 2], NULL, 10);
+     }
+
+   mysql_free_result(res);
+   *resultsetlen = i; /* should _always_ be equal to nrows */
+
+   return 0;
+}
 
 
 /*

@@ -129,7 +129,16 @@ typedef struct
 } cache_t;
 
 
-
+/*
+ * structure for basic message info 
+ * so it can be retrieved at once
+ */
+typedef struct
+{
+  int flags[IMAP_NFLAGS];
+  char internaldate[IMAP_INTERNALDATE_LEN];
+  u64_t rfcsize,uid;
+} msginfo_t;
 
 #endif
 

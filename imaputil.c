@@ -1040,7 +1040,7 @@ int next_fetch_item(char **args, int idx, fetch_items_t *fi)
       fi->getFlags = 1;
       fi->getInternalDate = 1;
       fi->getSize = 1;
-      fi->msgparse_needed = 1;
+/*      fi->msgparse_needed = 1; */ /* size will be in dbase after first calc */
     }
   else if (strcasecmp(args[idx], "full") == 0)
     {

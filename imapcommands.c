@@ -1773,6 +1773,9 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
   mime_message_t headermsg; /* only the rfcheader-member of this message will  be used */
   struct element *curr;
   int setSeenSet[IMAP_NFLAGS] = { 1,0,0,0,0,0 };
+  msginfo_t *msginfo;
+  u64_t lo,hi;
+  unsigned nmatching;
 
   memset(&fetch_list, 0, sizeof(fetch_list));
   memset(&headermsg, 0, sizeof(headermsg));
@@ -1854,7 +1857,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	{
 	  list_freelist(&fetch_list.start);
 	  fprintf(ci->tx,"* BYE out of memory\r\n");
-	  return 1;
+	  return -1;
 	}
     }
 
@@ -1931,6 +1934,47 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	  fetch_end--;
 	}
 
+      if (!fi->msgparse_needed)
+	{
+	  /* all the info we need can be retrieved by a single
+	   * call to db_get_msginfo_range()
+	   */
+	  if (!imapcommands_use_uid)
+	    {
+	      /* find the msgUID's to use */
+	      lo = ud->mailbox.seq_list[fetch_start];
+	      hi = ud->mailbox.seq_list[fetch_end];
+
+	    }
+	  else
+	    {
+	      lo = fetch_start;
+	      hi = fetch_end;
+	    }
+	  
+	  result = db_get_msginfo_range(lo, hi, ud->mailbox.uid, 
+					fi->getFlags, fi->getInternalDate, fi->getSize, fi->getUID,
+					&msginfo, &nmatching);
+
+	  if (result == -1)
+	    {
+	      list_freelist(&fetch_list.start);
+	      fprintf(ci->tx,"* BYE internal dbase error\r\n");
+	      return -1;
+	    }
+	  if (result == -2)
+	    {
+	      list_freelist(&fetch_list.start);
+	      fprintf(ci->tx,"* BYE out of memory\r\n");
+	      return -1;
+	    }
+
+	  for (i=0; i<nmatching; i++)
+	    {
+	      if (fi->getSize && msginfo[i].rfcsize == 0)
+	    }
+	}
+	  
       for (i=fetch_start; i<=fetch_end; i++)
 	{
 	  thisnum = (imapcommands_use_uid ? i : ud->mailbox.seq_list[i]);

@@ -172,6 +172,10 @@ int db_get_msgdate(u64_t mailboxuid, u64_t msguid, char *date);
 int db_set_rfcsize(u64_t size, u64_t msguid);
 u64_t db_get_rfcsize(u64_t msguid);
 
+int db_get_msginfo_range(u64_t msguidlow, u64_t msguidhigh, u64_t mailboxuid,
+			 int getflags, int getinternaldate, int getsize, int getuid,
+			 msginfo_t **result, unsigned *resultsetlen);
+
 int db_get_main_header(u64_t msguid, struct list *hdrlist);
 
 int db_mailbox_msg_match(u64_t mailboxuid, u64_t msguid);
