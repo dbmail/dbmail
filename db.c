@@ -770,8 +770,6 @@ int db_insert_message_block_physmessage(const char *block,
 	}
 
 	escaped_query = (char *) my_malloc(sizeof(char) * maxesclen);
-	memset(escaped_query,'\0',sizeof(char) * maxesclen);
-
 	if (!escaped_query) {
 		trace(TRACE_ERROR, "%s,%s: not enough memory", __FILE__,
 		      __func__);
