@@ -8,12 +8,12 @@ Adds mailusers to the \fBDbmail\fR mailsystem
 .SH SYNOPSIS
 .na
 .nf
-\fBdbmail-adduser\fR \fIa\fR \fIusername\fR \fIpassword\fR \fIclientid\fR \fImaxmail\fR [\fIaliases\fR]
-\fBdbmail-adduser\fR \fId\fR \fIusername\fR
-\fBdbmail-adduser\fR \fIf\fR \fIalias\fR \fIdeliver-to\fR
-\fBdbmail-adduser\fR \fIx\fR \fIalias\fR \fIdeliver-to\fR
-\fBdbmail-adduser\fR \fIc\fR \fIusername\fR [\fI-u username\fR] [\fI-p password\fR] [\fI-c clientid\fR] [\fI-q maxmail\fR] [\fI+a alias\fR] [\fI-a alias\fR]
-\fBdbmail-adduser\fR \fIs\fR [\fIusername\fR]
+\fBdbmail-adduser\fR [\fIquiet\fR] \fIa\fR \fIusername\fR \fIpassword\fR \fIclientid\fR \fImaxmail\fR [\fIaliases\fR]
+\fBdbmail-adduser\fR [\fIquiet\fR] \fId\fR \fIusername\fR
+\fBdbmail-adduser\fR [\fIquiet\fR] \fIf\fR \fIalias\fR \fIdeliver-to\fR
+\fBdbmail-adduser\fR [\fIquiet\fR] \fIx\fR \fIalias\fR \fIdeliver-to\fR
+\fBdbmail-adduser\fR [\fIquiet\fR] \fIc\fR \fIusername\fR [\fI-u username\fR] [\fI-p password\fR] [\fI-c clientid\fR] [\fI-q maxmail\fR] [\fI+a alias\fR] [\fI-a alias\fR]
+\fBdbmail-adduser\fR [\fIquiet\fR] \fIs\fR [\fIusername\fR]
 
 .SH DESCRIPTION
 .ad
@@ -25,8 +25,12 @@ It also has the capability of adding/removing separate aliases.
 
 Options:
 .TP
+.BI \fIquiet\fR
+Holds for all options. Suppresses all output to stdout except when using the \fIa\fR option (see below).
+
+.TP
 .BI \fIa\fR
-Add a user. Options:
+Add a user. If \fIquiet\fR is specified, the user ID will be printed to stdout if the adding was succesfull or if the user already exists. Further options:
 
 .BI \fIusername\fR
 The username of the user to be added. This username is used for access and authentication (through pop3 or imap4).

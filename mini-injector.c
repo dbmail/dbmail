@@ -41,13 +41,6 @@ int main(int argc, char *argv[])
   openlog(PNAME, LOG_PID, LOG_MAIL);   /* open connection to syslog */
   configure_debug(TRACE_ERROR, 1, 0);  /* do not spill time on reading settings */
 
-  /* check command-line options */
-  if (argc != 2)
-    {
-      printf ("\nUsage: %s <user id nr>\n", argv[0]);
-      return 0;
-    }
-
   /* open dbase connections */
   if (db_connect() != 0)
     {
@@ -55,7 +48,14 @@ int main(int argc, char *argv[])
       return -1;
     }
 
-  uid = strtoull(argv[1], NULL, 10);
+  if (argc >= 2)
+    uid = strtoull(argv[1], NULL, 10);   /* user ID specified on command line */
+  else
+    {
+      /* read user ID from stdin (first line) */
+      fgets(blk, MAX_LINESIZE, stdin);
+      uid = strtoull(blk, NULL, 10);
+    }
 
   if ((len = process_header(blk, &newlines)) == -1)
     {

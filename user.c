@@ -15,6 +15,7 @@
 #include "db.h"
 #include <crypt.h>
 #include <time.h>
+#include <stdarg.h>
 
 #define SHADOWFILE "/etc/shadow"
 char *getToken(char** str,const char* delims);
@@ -28,6 +29,9 @@ const char ValidChars[] =
 "_.!@#$%^&*()-+=~[]{}<>:;";
 
 void show_help();
+int quiet = 0;
+
+int quiet_printf(const char *fmt, ...);
 
 int do_add(int argc, char *argv[]);
 int do_change(int argc, char *argv[]);
@@ -41,12 +45,11 @@ int is_valid(const char *name);
 int main(int argc, char *argv[])
 {
   int result;
+  int argidx = 0;
 
   openlog(PNAME, LOG_PID, LOG_MAIL);
 	
   setvbuf(stdout,0,_IONBF,0);
-	
-  printf ("\n*** dbmail-adduser ***\n");
 	
   if (argc<2)
     {
@@ -54,32 +57,46 @@ int main(int argc, char *argv[])
       return 0;
     }
   
-  printf ("Opening connection to the database... ");
+  if (strcasecmp(argv[1], "quiet") == 0)
+    {
+      if (argc < 3)
+	{
+	  show_help();
+	  return 0;
+	}
+
+      quiet = 1;
+      argidx = 1;
+    }
+	    
+  quiet_printf ("\n*** dbmail-adduser ***\n");
+	
+  quiet_printf ("Opening connection to the database... ");
   if (db_connect()==-1)
     {
-      printf ("Failed. Could not connect to database (check log)\n");
+      quiet_printf ("Failed. Could not connect to database (check log)\n");
       return -1;
     }
 	
-  printf ("Opening connection to the user database... ");
+  quiet_printf ("Opening connection to the user database... ");
   if (auth_connect()==-1)
     {
-      printf ("Failed. Could not connect to user database (check log)\n");
+      quiet_printf ("Failed. Could not connect to user database (check log)\n");
       db_disconnect();
       return -1;
     }
 	
-  printf ("Ok. Connected\n");
+  quiet_printf ("Ok. Connected\n");
   configure_debug(TRACE_ERROR, 1, 0);
   
-  switch (argv[1][0])
+  switch (argv[argidx+1][0])
     {
-    case 'a': result = do_add(argc-2,&argv[2]); break;
-    case 'c': result = do_change(argc-2,&argv[2]); break;
-    case 'd': result = do_delete(argv[2]); break;
-    case 's': result = do_show(argv[2]); break;
-    case 'f': result = do_make_alias(&argv[2]); break;
-    case 'x': result = do_remove_alias(&argv[2]); break;
+    case 'a': result = do_add(argc- (2+argidx),&argv[2+argidx]); break;
+    case 'c': result = do_change(argc- (2+argidx),&argv[2+argidx]); break;
+    case 'd': result = do_delete(argv[2+argidx]); break;
+    case 's': result = do_show(argv[2+argidx]); break;
+    case 'f': result = do_make_alias(&argv[2+argidx]); break;
+    case 'x': result = do_remove_alias(&argv[2+argidx]); break;
     default:
       show_help();
       db_disconnect();
@@ -104,23 +121,23 @@ int do_make_alias(char *argv[])
 
   if (!argv[0] || !argv[1])
     {
-      printf ("invalid arguments specified. Check the man page\n");
+      quiet_printf ("invalid arguments specified. Check the man page\n");
       return -1;
     }
 
-  printf("Adding alias [%s] --> [%s]...", argv[0], argv[1]);
+  quiet_printf("Adding alias [%s] --> [%s]...", argv[0], argv[1]);
   switch  ( (result = db_addalias_ext(argv[0], argv[1], 0)) )
     {
     case -1:
-      printf("Failed\n\nCheck logs for details\n\n");
+      quiet_printf("Failed\n\nCheck logs for details\n\n");
       break;
 
     case 0:
-      printf("Ok alias added\n");
+      quiet_printf("Ok alias added\n");
       break;
 
     case 1:
-      printf("Already exists. no extra alias added\n");
+      quiet_printf("Already exists. no extra alias added\n");
       result = -1; /* return error */
       break;
 
@@ -133,18 +150,18 @@ int do_remove_alias(char *argv[])
 {
   if (!argv[0] || !argv[1])
     {
-      printf ("invalid arguments specified. Check the man page\n");
+      quiet_printf ("invalid arguments specified. Check the man page\n");
       return -1;
     }
 
-  printf("Removing alias [%s] --> [%s]...", argv[0], argv[1]);
+  quiet_printf("Removing alias [%s] --> [%s]...", argv[0], argv[1]);
   if (db_removealias_ext(argv[0], argv[1]) != 0)
     {
-      printf("Failed\n\nCheck logs for details\n\n");
+      quiet_printf("Failed\n\nCheck logs for details\n\n");
       return -1;
     }
 
-  printf("Ok alias removed\n");
+  quiet_printf("Ok alias removed\n");
   return 0;
 }
 
@@ -155,53 +172,74 @@ int do_add(int argc, char *argv[])
 
   if (argc < 4)
     {
-      printf ("invalid number of options specified. Check the man page\n");
+      quiet_printf ("invalid number of options specified. Check the man page\n");
       return -1;
     }
 
   if (!is_valid(argv[0]))
     {
-      printf("Error: invalid characters in username [%s] encountered\n",argv[0]);
+      quiet_printf("Error: invalid characters in username [%s] encountered\n",argv[0]);
       return -1;
     }
 
-  printf ("Adding user %s with password %s, %s bytes mailbox limit and clientid %s...",
+  quiet_printf ("Adding user %s with password %s, %s bytes mailbox limit and clientid %s...",
 	  argv[0], argv[1], argv[3], argv[2]);
 
   useridnr = auth_adduser(argv[0],argv[1],"",argv[2],argv[3]);
-	
+
   if (useridnr == -1)
     {
-      printf ("Failed\n\nCheck logs for details\n\n");
+      /* check if the existence of the user caused the failure */
+      if ( (useridnr = auth_user_exists(argv[0])) != 0 )
+	{
+	  if (useridnr == -1)
+	    {
+	      quiet_printf ("Failed\n\nCheck logs for details\n\n");
+	      return -1;  /* dbase failure */
+	    }
+	  
+	  quiet_printf("Failed: user exists [%llu]\n", useridnr);!man
+	  if (quiet)
+	    printf("%llu\n", useridnr);
+	}
+      else
+	{
+	  quiet_printf ("Failed\n\nCheck logs for details\n\n");
+	  useridnr = -1;
+	}
+
       return -1;
     }
 	
-  printf ("Ok, user added id [%llu]\n",useridnr);
-	
+  quiet_printf ("Ok, user added id [%llu]\n",useridnr);
+  if (quiet)
+    printf("%llu\n", useridnr); /* show user ID */
+
+
   for (i = 4, result = 0; i<argc; i++)
     {
-      printf ("Adding alias %s...",argv[i]);
+      quiet_printf ("Adding alias %s...",argv[i]);
       switch ( db_addalias(useridnr,argv[i],atoi(argv[2])) )
 	{
 	case -1:
-	  printf ("Failed\n");
+	  quiet_printf ("Failed\n");
 	  result = -1;
 	  break;
 	  
 	case 0:
-	  printf ("Ok, added\n");
+	  quiet_printf ("Ok, added\n");
 	  break;
 
 	case 1:
-	  printf("Already exists. No extra alias added\n");
+	  quiet_printf("Already exists. No extra alias added\n");
 	  result = -1;
 	  break;
 	}
     }
 		
-  printf ("adduser done\n");
+  quiet_printf ("adduser done\n");
   if (result != 0)
-    printf("Warning: user added but not all the specified aliases\n");
+    quiet_printf("Warning: user added but not all the specified aliases\n");
 
   return result;
 }
@@ -218,23 +256,23 @@ int do_change(int argc, char *argv[])
   userid = auth_user_exists(argv[0]);
   if (userid == -1)
     {
-      printf("Error verifying existence of user [%s]. Please check the log.\n",argv[0]);
+      quiet_printf("Error verifying existence of user [%s]. Please check the log.\n",argv[0]);
       return -1;
     }
 
   if (userid == 0)
     {
-      printf("Error: user [%s] does not exist.\n",argv[0]);
+      quiet_printf("Error: user [%s] does not exist.\n",argv[0]);
       return -1;
     }
 
-  printf("Performing changes for user [%s]...",argv[0]);
+  quiet_printf("Performing changes for user [%s]...",argv[0]);
 
   for (i=1; argv[i]; i++)
     {
       if (argv[i][0] != '-' && argv[i][0] != '+')
 	{
-	  printf ("Failed: invalid option specified. Check the man page\n");
+	  quiet_printf ("Failed: invalid option specified. Check the man page\n");
 	  return -1;
 	}
       
@@ -244,13 +282,13 @@ int do_change(int argc, char *argv[])
 	  /* change the name */
 	  if (!is_valid(argv[i+1]))
 	    {
-	      printf("\nWarning: username contains invalid characters. Username not updated. ");
+	      quiet_printf("\nWarning: username contains invalid characters. Username not updated. ");
 	      retval = -1;
 	    }
 
 	  if (auth_change_username(userid,argv[i+1]) != 0)
 	    {
-	      printf("\nWarning: could not change username ");
+	      quiet_printf("\nWarning: could not change username ");
 	      retval = -1;
 	    }
 
@@ -261,7 +299,7 @@ int do_change(int argc, char *argv[])
 	  /* change the password */
 	  if (!is_valid(argv[i+1]))
 	    {
-	      printf("\nWarning: password contains invalid characters. Password not updated. ");
+	      quiet_printf("\nWarning: password contains invalid characters. Password not updated. ");
 	      retval = -1;
 	    }
 
@@ -278,7 +316,7 @@ int do_change(int argc, char *argv[])
 	    }
 	  if (result != 0)
 	    {
-	      printf("\nWarning: could not change password ");
+	      quiet_printf("\nWarning: could not change password ");
 	      retval = -1;
 	    }
 
@@ -290,7 +328,7 @@ int do_change(int argc, char *argv[])
 	  entry = bgetpwent(SHADOWFILE, argv[0]);
 	  if (!entry)
 	    {
-	      printf("\nWarning: error finding password from [%s] - are you superuser?\n", 
+	      quiet_printf("\nWarning: error finding password from [%s] - are you superuser?\n", 
 		     SHADOWFILE);
 	      retval = -1;
 	      break;
@@ -299,14 +337,14 @@ int do_change(int argc, char *argv[])
           strncat(pw,entry,50);
           if ( strcmp(pw, "") == 0 ) 
 	    {
-	      printf("\n%s's password not found at \"%s\" !\n", argv[0],SHADOWFILE);
+	      quiet_printf("\n%s's password not found at \"%s\" !\n", argv[0],SHADOWFILE);
 	      retval = -1;
 	    } 
 	  else 
 	    {
 	      if (auth_change_password(userid,pw,"crypt") != 0)
 		{
-		  printf("\nWarning: could not change password");
+		  quiet_printf("\nWarning: could not change password");
 		  retval = -1;
 		}
 	    }
@@ -317,7 +355,7 @@ int do_change(int argc, char *argv[])
 
 	  if (auth_change_clientid(userid, newcid) != 0)
 	    {
-	      printf("\nWarning: could not change client id ");
+	      quiet_printf("\nWarning: could not change client id ");
 	      retval = -1;
 	    }
 
@@ -341,7 +379,7 @@ int do_change(int argc, char *argv[])
 
 	  if (auth_change_mailboxsize(userid, newsize) != 0)
 	    {
-	      printf("\nWarning: could not change max mailboxsize ");
+	      quiet_printf("\nWarning: could not change max mailboxsize ");
 	      retval = -1;
 	    }
 
@@ -354,7 +392,7 @@ int do_change(int argc, char *argv[])
 	      /* remove alias */
 	      if (db_removealias(userid, argv[i+1]) < 0)
 		{
-		  printf("\nWarning: could not remove alias [%s] ",argv[i+1]);
+		  quiet_printf("\nWarning: could not remove alias [%s] ",argv[i+1]);
 		  retval = -1;
 		}
 	    }
@@ -363,7 +401,7 @@ int do_change(int argc, char *argv[])
 	      /* add alias */
 	      if (db_addalias(userid, argv[i+1], auth_getclientid(userid)) < 0)
 		{
-		  printf("\nWarning: could not add alias [%s]",argv[i+1]);
+		  quiet_printf("\nWarning: could not add alias [%s]",argv[i+1]);
 		  retval = -1;
 		}
 	    }
@@ -371,13 +409,13 @@ int do_change(int argc, char *argv[])
 	  break;
 
 	default:
-	  printf ("invalid option specified. Check the man page\n");
+	  quiet_printf ("invalid option specified. Check the man page\n");
 	  return -1;
 	}
       
     }
 
-  printf("Done\n");
+  quiet_printf("Done\n");
 
   return retval;
 }
@@ -387,17 +425,17 @@ int do_delete(char *name)
 {
   int result;
 
-  printf("Deleting user [%s]...",name);
+  quiet_printf("Deleting user [%s]...",name);
 
   result = auth_delete_user(name);
 
   if (result < 0)
     {
-      printf("Failed. Please check the log\n");
+      quiet_printf("Failed. Please check the log\n");
       return -1;
     }
 
-  printf("Done\n");
+  quiet_printf("Done\n");
   return 0;
 }
 
@@ -411,14 +449,14 @@ int do_show(char *name)
   if (!name)
     {
       /* show all users */
-      printf("Existing users:\n");
+      quiet_printf("Existing users:\n");
 
       auth_get_known_users(&userlist);
       
       tmp = list_getstart(&userlist);
       while (tmp)
 	{
-	  printf("[%s]\n", (char*)tmp->data);
+	  quiet_printf("[%s]\n", (char*)tmp->data);
 	  tmp = tmp->nextnode;
 	}
 
@@ -427,34 +465,34 @@ int do_show(char *name)
     }
   else
     {
-      printf("Info for user [%s]\n",name);
+      quiet_printf("Info for user [%s]\n",name);
 
       userid = auth_user_exists(name);
       if (userid == -1)
 	{
-	  printf("Error verifying existence of user [%s]. Please check the log.\n",name);
+	  quiet_printf("Error verifying existence of user [%s]. Please check the log.\n",name);
 	  return -1;
 	}
 
       if (userid == 0)
 	{
-	  printf("Error: user [%s] does not exist.\n",name);
+	  quiet_printf("Error: user [%s] does not exist.\n",name);
 	  return -1;
 	}
 
       cid = auth_getclientid(userid);
       quotum = auth_getmaxmailsize(userid);
 
-      printf("Client ID: %llu\n",cid);
-      printf("Max. mailboxsize: %llu bytes\n",quotum);
+      quiet_printf("Client ID: %llu\n",cid);
+      quiet_printf("Max. mailboxsize: %llu bytes\n",quotum);
 
-      printf("Aliases:\n");
+      quiet_printf("Aliases:\n");
       db_get_user_aliases(userid, &userlist);
 
       tmp = list_getstart(&userlist);
       while (tmp)
 	{
-	  printf("%s\n",(char*)tmp->data);
+	  quiet_printf("%s\n",(char*)tmp->data);
 	  tmp = tmp->nextnode;
 	}
 
@@ -480,12 +518,30 @@ int is_valid(const char *name)
 
 void show_help()
 {
-
+  printf ("\n*** dbmail-adduser ***\n");
+	
   printf("Use this program to manage the users for your dbmail system.\n");
   printf("See the man page for more info. Summary:\n\n");
-  printf("dbmail-adduser <a|d|c|s|f|x> [username] [options...]\n\n");
+  printf("dbmail-adduser [quiet] <a|d|c|s|f|x> [username] [options...]\n\n");
 
 }
+
+
+int quiet_printf(const char *fmt, ...)
+{
+  va_list argp;
+  int r;
+
+  if (quiet)
+    return 0;
+ 
+  va_start(argp, fmt);
+  r = vprintf(fmt, argp);
+  va_end(argp);
+
+  return r;
+}
+  
 
 /*eddy
   This two function was base from "cpu" by Blake Matheny <matheny@dbaseiv.net>
