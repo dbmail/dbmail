@@ -195,7 +195,7 @@ unsigned long db_insert_message_block (char *block, int messageidnr)
 		memtst((escblk=(char *)malloc(((strlen(block)*2)+250)))==NULL); 
 		/* mysql description is not really clear about this function, so i'm not 
 			sure if the +1 needs to be added to the length of block */
-		if (mysql_real_escape_string (&conn,escblk,block,strlen(block)+1) > 0)
+		if (mysql_escape_string (escblk,block,strlen(block)+1) > 0)
 		{
 			/* add an extra 500 characters for the query */
 			memtst((tmpquery=(char *)malloc(strlen(escblk)+500))==NULL);
