@@ -104,7 +104,7 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
   struct list external_forwards;
   struct list bounces;
   unsigned long temp_message_record_id,userid, bounce_userid;
-  int i;
+  int i, this_user;
   FILE *instream = stdin;
   
   /* step 1.
@@ -145,11 +145,11 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
       /* db_check_user(): returns a list with character array's containing 
        * either userid's or forward addresses 
        */
-      db_check_user((char *)tmp->data,&userids);
+      this_user = db_check_user((char *)tmp->data,&userids);
       trace (TRACE_DEBUG,"insert_messages(): user [%s] found total of [%d] aliases",(char *)tmp->data,
 	     userids.total_nodes);
       
-      if (userids.total_nodes==0) /* userid's found */
+      if (this_user==0) /* we did not find any direct delivers for this user */
 	{
 	  /* I needed to change this because my girlfriend said so
 	     and she was actually right. Domain forwards are last resorts
