@@ -116,6 +116,7 @@ SQLLIB = @SQLLIB@
 SQLLTLIB = @SQLLTLIB@
 STRIP = @STRIP@
 VERSION = @VERSION@
+glibconfig = @glibconfig@
 mysqlconfig = @mysqlconfig@
 pgsqlconfig = @pgsqlconfig@
 

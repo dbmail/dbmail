@@ -407,4 +407,24 @@ unset ac_compile_warnings_msg
 unset ac_compile_warnings_opt
 ])
 
-							
+dnl DBMAIL_CHECK_GLIB
+dnl
+AC_DEFUN(DBMAIL_CHECK_GLIB, [dnl
+#Look for include files and libs needed to link
+#use the configuration utilities (pkg-config for this)
+AC_PATH_PROG(glibconfig,pkg-config)
+if test [ -z "$glibconfig" ]
+then
+	AC_MSG_ERROR([pkg-config executable not found. Make sure pkg-config is in your path])
+else
+	AC_MSG_CHECKING([GLib headers])
+	ac_glib_cflags=`${glibconfig} --cflags glib-2.0`
+	CFLAGS="$CFLAGS $ac_glib_cflags"
+	AC_MSG_RESULT([$ac_glib_cflags])
+        AC_MSG_CHECKING([Glib libraries])
+	ac_glib_libs=`${glibconfig} --libs glib-2.0`
+	LDFLAGS="$LDFLAGS $ac_glib_libs"
+        AC_MSG_RESULT([$ac_glib_libs])
+fi
+])
+

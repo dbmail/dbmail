@@ -1,4 +1,8 @@
 2004-09-09  Paul Stevens <paul@nfg.nl>
+	* acinclude.m4 configure.in: adding glib-2.0 support. This is now
+	a build requirement.
+
+2004-09-09  Paul Stevens <paul@nfg.nl>
 
 	* sql/mysql/migrate_from_1.x_to_2.0_innodb.mysql: fixed several
 	foreign key constraints that still refered to the old users and
