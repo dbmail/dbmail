@@ -194,6 +194,51 @@ u64_t db_get_user_from_alias(const char *alias)
 }
 
 
+/* gets the deliver_to for an alias
+ * memory should by freed by caller 
+ */
+char* db_get_deliver_from_alias(const char *alias)
+{
+  char *deliver;
+
+  snprintf (query, DEF_QUERYSIZE,
+	    "SELECT deliver_to FROM aliases WHERE alias = '%s'", alias);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_get_deliver_from_alias(): could not execute query");
+      return -1;
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL) 
+    {
+      trace(TRACE_ERROR, "db_get_deliver_from_alias(): could not store query result");
+      return -1;
+    }
+
+  if (mysql_num_rows(res) == 0)
+    {
+      /* no such user */
+      mysql_free_result(res);
+      return "";
+    }
+  
+  row = mysql_fetch_row(res);
+  
+  if (! (deliver = (char*)my_malloc(strlen(row[0]) + 1)) )
+    {
+      trace(TRACE_ERROR, "db_get_deliver_from_alias(): out of mem");
+      mysql_free_result(res);
+      return 0;
+    }
+
+  strcpy(deliver, row[0])
+  mysql_free_result(res);
+
+  return deliver;
+}
+
+
 /* 
  * adds an alias for a specific user 
  *

@@ -490,6 +490,7 @@ int do_show(char *name)
   u64_t userid,cid,quotum;
   struct list userlist;
   struct element *tmp;
+  char *deliver_to;
 
   if (!name)
     {
@@ -510,33 +511,44 @@ int do_show(char *name)
     }
   else
     {
-      quiet_printf("Info for user [%s]\n",name);
+      quiet_printf("Info for user [%s]",name);
 
       userid = auth_user_exists(name);
       if (userid == -1)
 	{
-	  quiet_printf("Error verifying existence of user [%s]. Please check the log.\n",name);
+	  quiet_printf("\nError verifying existence of user [%s]. Please check the log.\n",name);
 	  return -1;
 	}
 
       if (userid == 0)
 	{
 	  /* 'name' is not a user, try it as an alias */
-	  userid = db_get_user_from_alias(name);
+	  quiet_printf("..is not a user, trying as an alias");
 
-	  if (userid == -1)
+	  deliver_to = db_get_deliver_from_alias(name);
+	  
+	  if (!deliver_to)
 	    {
-	      quiet_printf("Error verifying existence of alias [%s]. Please check the log.\n",name);
+	      quiet_printf("\nError verifying existence of alias [%s]. Please check the log.\n",name);
 	      return -1;
 	    }
-	    
+
+	  if (deliver_to[0] == '\0')
+	    {
+	      quiet_printf("..is not an alias.\n");
+	      return 0;
+	    }
+
+	  userid = strtoul(deliver_to, NULL, 10);
 	  if (userid == 0)
 	    {
-	      quiet_printf("[%s] is not a user nor an alias.\n", name);
-	      return -1;
+	      quiet_printf("\n[%s] is an alias for [%s]\n", name, deliver_to);
+	      my_free(deliver_to);
+	      return 0;
 	    }
 
-	  quiet_printf("Found user for alias [%s]:\n\n");
+	  my_free(deliver_to);
+	  quiet_printf("Found user for alias [%s]:\n\n", name);
 	}
 
       cid = auth_getclientid(userid);

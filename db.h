@@ -105,6 +105,7 @@ int db_query (const char *thequery);
 u64_t db_get_quotum_used(u64_t userid);
 
 u64_t db_get_user_from_alias(const char *alias);
+char* db_get_deliver_from_alias(const char *alias);
 
 int db_get_user_aliases(u64_t userid, struct list *aliases);
 int db_addalias(u64_t useridnr, char *alias, u64_t clientid);
