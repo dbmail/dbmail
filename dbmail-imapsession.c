@@ -1995,6 +1995,7 @@ u64_t dbmail_imap_session_mailbox_get_idnr(struct ImapSession * self, char * mai
 		(strlen(mailbox) - i) * sizeof(char));
 
 	db_findmailbox(mailbox, ud->userid, &uid);
+	
 	return uid;
 }
 

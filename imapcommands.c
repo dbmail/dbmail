@@ -637,66 +637,24 @@ int _ic_rename(struct ImapSession *self)
 	if (!check_state_and_args(self, "RENAME", 2, 2, IMAPCS_AUTHENTICATED))
 		return 1;
 
-	/* remove trailing '/' if present */
-	while (strlen(self->args[0]) > 0 && self->args[0][strlen(self->args[0]) - 1] == '/')
-		self->args[0][strlen(self->args[0]) - 1] = '\0';
-	while (strlen(self->args[1]) > 0 && self->args[1][strlen(self->args[1]) - 1] == '/')
-		self->args[1][strlen(self->args[1]) - 1] = '\0';
-
-	/* remove leading '/' if present */
-	for (i = 0; self->args[1][i] && self->args[1][i] == '/'; i++);
-	memmove(&self->args[1][0], &self->args[1][i],
-		(strlen(self->args[1]) - i) * sizeof(char));
-
-	for (i = 0; self->args[0][i] && self->args[0][i] == '/'; i++);
-	memmove(&self->args[0][0], &self->args[0][i],
-		(strlen(self->args[0]) - i) * sizeof(char));
-
-
-	/* check if new mailbox exists */
-	if (db_findmailbox(self->args[1], ud->userid, &mboxid) == -1) {
-		/* dbase failure */
-		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-		return -1;	/* fatal */
-	}
-	if (mboxid != 0) {
-		/* mailbox exists */
-		dbmail_imap_session_printf(self, "%s NO new mailbox already exists\r\n",
-			self->tag);
-		return 1;
-	}
-
-	/* check if original mailbox exists */
-	if (db_findmailbox(self->args[0], ud->userid, &mboxid) == -1) {
-		/* dbase failure */
-		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-		return -1;	/* fatal */
-	}
-	if (mboxid == 0) {
-		/* mailbox does not exist */
+	if ((mboxid = dbmail_imap_session_mailbox_get_idnr(self, self->args[0])) == 0) {
 		dbmail_imap_session_printf(self, "%s NO mailbox does not exist\r\n", self->tag);
 		return 1;
 	}
 
-	/* check if the user is the owner of this mailbox. If so, then
-	   the user has the right to delete it. */
-	result = db_user_is_mailbox_owner(ud->userid, mboxid);
-	if (result < 0) {
-		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
-		return -1;
+	if ((newmboxid = dbmail_imap_session_mailbox_get_idnr(self, self->args[1])) != 0) {
+		dbmail_imap_session_printf(self, "%s NO new mailbox already exists\r\n", self->tag);
+		return 1;
 	}
-	if (result == 0) {
-		dbmail_imap_session_printf(self,
-			"%s NO no permission to rename mailbox\r\n", self->tag);
-		dbmail_imap_session_set_state(self, IMAPCS_AUTHENTICATED);
+
+	if (dbmail_imap_session_mailbox_check_acl(self, mboxid, ACL_RIGHT_ADMINISTER)) {
 		return 1;
 	}
 
 	/* check if new name is valid */
 	if (!checkmailboxname(self->args[1])) {
 		dbmail_imap_session_printf(self,
-			"%s NO new mailbox name contains invalid characters\r\n",
-			self->tag);
+			"%s NO new mailbox name contains invalid characters\r\n", self->tag);
 		return 1;
 	}
 
@@ -722,9 +680,7 @@ int _ic_rename(struct ImapSession *self)
 	if (i >= 0) {
 		self->args[1][i] = '\0';	/* note: original char was '/' */
 
-		if (db_findmailbox(self->args[1], ud->userid, &parentmboxid) ==
-		    -1) {
-			/* dbase failure */
+		if (db_findmailbox(self->args[1], ud->userid, &parentmboxid) == -1) {
 			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 			return -1;	/* fatal */
 		}
@@ -763,9 +719,7 @@ int _ic_rename(struct ImapSession *self)
 	}
 
 	/* check for inferior names */
-	result =
-	    db_listmailboxchildren(mboxid, ud->userid, &children,
-				   &nchildren, "%");
+	result = db_listmailboxchildren(mboxid, ud->userid, &children, &nchildren, "%");
 	if (result == -1) {
 		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 		return -1;
@@ -782,16 +736,13 @@ int _ic_rename(struct ImapSession *self)
 
 		if (oldnamelen >= strlen(name)) {
 			/* strange error, let's say its fatal */
-			trace(TRACE_ERROR,
-			      "IMAPD: rename(): mailbox names appear to be corrupted");
-			dbmail_imap_session_printf(self,
-				"* BYE internal error regarding mailbox names\r\n");
+			trace(TRACE_ERROR, "IMAPD: rename(): mailbox names appear to be corrupted");
+			dbmail_imap_session_printf(self, "* BYE internal error regarding mailbox names\r\n");
 			my_free(children);
 			return -1;
 		}
 
-		g_snprintf(newname, IMAP_MAX_MAILBOX_NAMELEN, "%s%s",
-			 self->args[1], &name[oldnamelen]);
+		g_snprintf(newname, IMAP_MAX_MAILBOX_NAMELEN, "%s%s", self->args[1], &name[oldnamelen]);
 
 		result = db_setmailboxname(children[i], newname);
 		if (result == -1) {
@@ -824,38 +775,20 @@ int _ic_subscribe(struct ImapSession *self)
 {
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	u64_t mboxid;
-	int result;
-
 
 	if (!check_state_and_args(self, "SUBSCRIBE", 1, 1, IMAPCS_AUTHENTICATED))
 		return 1;
 
-	if (db_findmailbox(self->args[0], ud->userid, &mboxid) == -1) {
-		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-		return -1;
-	}
-	if (mboxid == 0) {
-		/* mailbox does not exist */
+	if (! (mboxid = dbmail_imap_session_mailbox_get_idnr(self, self->args[0]))) {
 		dbmail_imap_session_printf(self, "%s NO mailbox does not exist\r\n", self->tag);
 		return 0;
 	}
 
 	/* check for the lookup-right. RFC is unclear about which right to
 	   use, so I guessed it should be lookup */
-	result = acl_has_right(ud->userid, mboxid, ACL_RIGHT_LOOKUP);
-	if (result < 0) {
-		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
-		return -1;
-	}
-	if (result == 0) {
-		dbmail_imap_session_printf(self,
-			"%s NO no permission to subscribe to  mailbox\r\n",
-			self->tag);
-		ud->state = IMAPCS_AUTHENTICATED;
-		my_free(ud->mailbox.seq_list);
-		memset(&ud->mailbox, 0, sizeof(ud->mailbox));
+
+	if (dbmail_imap_session_mailbox_check_acl(self, mboxid, ACL_RIGHT_LOOKUP))
 		return 1;
-	}
 
 	if (db_subscribe(mboxid, ud->userid) == -1) {
 		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
@@ -876,36 +809,20 @@ int _ic_unsubscribe(struct ImapSession *self)
 {
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	u64_t mboxid;
-	int result;
-
 
 	if (!check_state_and_args(self, "UNSUBSCRIBE", 1, 1, IMAPCS_AUTHENTICATED))
 		return 1;
 
-	if (db_findmailbox(self->args[0], ud->userid, &mboxid) == -1) {
-		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-		return -1;
-	}
-	if (mboxid == 0) {
-		/* mailbox does not exist */
+	if (! (mboxid = dbmail_imap_session_mailbox_get_idnr(self, self->args[0]))) {
 		dbmail_imap_session_printf(self, "%s NO mailbox does not exist\r\n", self->tag);
 		return 0;
 	}
 
 	/* check for the lookup-right. RFC is unclear about which right to
 	   use, so I guessed it should be lookup */
-	result = acl_has_right(ud->userid, mboxid, ACL_RIGHT_LOOKUP);
-	if (result < 0) {
-		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
-		return -1;
-	}
-	if (result == 0) {
-		dbmail_imap_session_printf(self,
-			"%s NO no permission to unsubscribe from mailbox\r\n",
-			self->tag);
-		dbmail_imap_session_set_state(self, IMAPCS_AUTHENTICATED);
+	
+	if (dbmail_imap_session_mailbox_check_acl(self, mboxid, ACL_RIGHT_LOOKUP))
 		return 1;
-	}
 
 	if (db_unsubscribe(mboxid, ud->userid) == -1) {
 		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
@@ -2372,6 +2289,10 @@ int _ic_copy(struct ImapSession *self)
 	
 	/* ok copy msgs */
 	endptr = self->args[0];
+	
+	if (db_begin_transaction() < 0)
+		return -1;
+	
 	while (*endptr) {
 		if (endptr != self->args[0])
 			endptr++;	/* skip delimiter */
@@ -2385,6 +2306,7 @@ int _ic_copy(struct ImapSession *self)
 			dbmail_imap_session_printf(self,
 				"%s BAD invalid message range specified\r\n",
 				self->tag);
+			db_rollback_transaction();
 			return 1;
 		}
 
@@ -2408,6 +2330,7 @@ int _ic_copy(struct ImapSession *self)
 				dbmail_imap_session_printf(self,
 					"%s BAD invalid message range specified\r\n",
 					self->tag);
+				db_rollback_transaction();
 				return 1;
 			}
 
@@ -2427,6 +2350,7 @@ int _ic_copy(struct ImapSession *self)
 			dbmail_imap_session_printf(self,
 				"%s BAD invalid character in message range\r\n",
 				self->tag);
+			db_rollback_transaction();
 			return 1;
 		}
 
@@ -2452,18 +2376,20 @@ int _ic_copy(struct ImapSession *self)
 			    db_copymsg(thisnum, destmboxid, ud->userid,
 				       &new_msgid);
 			if (result == -1) {
-				dbmail_imap_session_printf(self,
-					"* BYE internal dbase error\r\n");
+				dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
+				db_rollback_transaction();
 				return -1;
 			}
 			if (result == -2) {
-				dbmail_imap_session_printf(self,
-					"%s NO quotum would exceed\r\n",
-					self->tag);
+				dbmail_imap_session_printf(self, "%s NO quotum would exceed\r\n", self->tag);
+				db_rollback_transaction();
 				return 1;
 			}
 		}
 	}
+
+	if (db_commit_transaction() < 0)
+		return -1;
 
 	dbmail_imap_session_printf(self, "%s OK %sCOPY completed\r\n", self->tag,
 		self->use_uid ? "UID " : "");
