@@ -116,8 +116,7 @@ int db_query (const char *thequery)
 
       if (PQresultStatusVar != PGRES_COMMAND_OK && PQresultStatusVar != PGRES_TUPLES_OK)
 	{
-	  trace(TRACE_ERROR,"db_query(): Error executing query [%s] : [%s]\n", 
-		thequery, PQresultErrorMessage(res));
+	  trace(TRACE_ERROR,"db_query(): Error executing query [] : [%s]\n", PQresultErrorMessage(res));
 
 	  PQclear(res);
 	  return -1;
