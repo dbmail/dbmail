@@ -420,6 +420,8 @@ u64_t auth_adduser (char *username, char *password, char *enctype, char *clienti
   char *tst;
   u64_t size;
 
+#ifdef _DBAUTH_STRICT_USER_CHECK
+
   /* first check to see if this user already exists */
   snprintf(__auth_query_data, DEF_QUERYSIZE, "SELECT * FROM users WHERE userid = '%s'", username);
 
@@ -444,6 +446,7 @@ u64_t auth_adduser (char *username, char *password, char *enctype, char *clienti
     }
 
   mysql_free_result(__auth_res);
+#endif
 
   size = strtoull(maxmail,&tst,10);
   if (tst)

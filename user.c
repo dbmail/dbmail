@@ -260,7 +260,7 @@ int do_change(int argc, char *argv[])
 {
   int i,result, retval=0;
   u64_t newsize,userid,newcid;
-  char *endptr,*entry;
+  char *endptr,*entry,*passwdfile;
   char pw[50]="";
 
   /* verify the existence of this user */
@@ -336,11 +336,18 @@ int do_change(int argc, char *argv[])
 
         case 'P':
           /* -P will copy password from SHADOWFILE */
-	  entry = bgetpwent(SHADOWFILE, argv[0]);
+	  /* -P:filename will copy password from filename */
+	  if (argv[i][2] == ':')
+	    passwdfile = &argv[i][3];
+	  else
+	    passwdfile = SHADOWFILE;
+	      
+
+	  entry = bgetpwent(passwdfile, argv[0]);
 	  if (!entry)
 	    {
 	      quiet_printf("\nWarning: error finding password from [%s] - are you superuser?\n", 
-		     SHADOWFILE);
+			   passwdfile);
 	      retval = -1;
 	      break;
 	    }
@@ -348,7 +355,7 @@ int do_change(int argc, char *argv[])
           strncat(pw,entry,50);
           if ( strcmp(pw, "") == 0 ) 
 	    {
-	      quiet_printf("\n%s's password not found at \"%s\" !\n", argv[0],SHADOWFILE);
+	      quiet_printf("\n%s's password not found at \"%s\" !\n", argv[0],passwdfile);
 	      retval = -1;
 	    } 
 	  else 

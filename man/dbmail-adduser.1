@@ -12,7 +12,7 @@ Adds mailusers to the \fBDbmail\fR mailsystem
 \fBdbmail-adduser\fR [\fIquiet\fR] \fId\fR \fIusername\fR
 \fBdbmail-adduser\fR [\fIquiet\fR] \fIf\fR \fIalias\fR \fIdeliver-to\fR
 \fBdbmail-adduser\fR [\fIquiet\fR] \fIx\fR \fIalias\fR \fIdeliver-to\fR
-\fBdbmail-adduser\fR [\fIquiet\fR] \fIc\fR \fIusername\fR [\fI-u username\fR] [\fI-p password\fR] [\fI-c clientid\fR] [\fI-q maxmail\fR] [\fI+a alias\fR] [\fI-a alias\fR]
+\fBdbmail-adduser\fR [\fIquiet\fR] \fIc\fR \fIusername\fR [\fI-u username\fR] [\fI-p password\fR] [\fI+p password\fR] [\fI-P[:filename]\fR] [\fI-c clientid\fR] [\fI-q maxmail\fR] [\fI+a alias\fR] [\fI-a alias\fR]
 \fBdbmail-adduser\fR [\fIquiet\fR] \fIs\fR [\fIusername\fR]
 
 .SH DESCRIPTION
@@ -36,7 +36,7 @@ Add a user. If \fIquiet\fR is specified, the user ID will be printed to stdout i
 The username of the user to be added. This username is used for access and authentication (through pop3 or imap4).
 
 .BI \fIpassword\fR 
-Cleartext password for user.
+Cleartext password for user. If the password is preceeded by '{crypt:}' the (cleartext) password will be encrypted.
 
 .BI \fIclientid\fR 
 This option enables users to be grouped. \fIclientid\fR specifies the owner of the user.
@@ -73,6 +73,12 @@ The new username for this user.
 
 .BI [\fI-p\ password\fR]
 The new (cleartext) password for this user.
+
+.BI [\fI+p\ password\fR]
+The new (cleartext) password for this user which will be stored encrypted.
+
+.BI [\fI-P[:filename]\fR]
+The new password for this user will be copied from '/etc/shadow' (default) or from \fIfilename\fR (if specified). These files are supposed to contain encrypted passwords, the passwords will be copied encrypted from the file.
 
 .BI [\fI-c\ clientid\fR]
 The new client-ID for this user.

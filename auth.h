@@ -12,6 +12,8 @@
 
 #include "dbmailtypes.h"
 
+/* #define _DBAUTH_STRICT_USER_CHECK */
+
 int auth_connect();
 int auth_disconnect();
 

@@ -40,7 +40,7 @@ CFLAGS = -Wall -ggdb -D_BSD_SOURCE -D_SVID_SOURCE
 
 .PHONY: clean install
 
-all: smtp pop3d maintenance config imapd user readvut mbox2dbmail injector miniinjector unione
+all: smtp pop3d maintenance config imapd user readvut mbox2dbmail injector miniinjector unione raw
 
 smtp: config.h main.h $(SMTP_OBJECTS) main.c
 		$(CC)	$(CFLAGS) main.c -o dbmail-smtp $(SMTP_OBJECTS) $(LIBS) $(LIB)
@@ -71,6 +71,9 @@ injector: db.h auth.h $(INJECTOR_OBJECTS) injector.c
 
 unione: db.h auth.h $(INJECTOR_OBJECTS) uni-one-convert.c
 	$(CC) $(CFLAGS) uni-one-convert.c -o uni-one-convertor $(UNIONE_OBJECTS) $(LIBS) $(LIB)
+
+raw: db.h auth.h $(INJECTOR_OBJECTS) raw-convert.c
+	$(CC) $(CFLAGS) raw-convert.c -o raw-convertor $(UNIONE_OBJECTS) $(LIBS) $(LIB)
 
 miniinjector: db.h $(MINI_OBJECTS) mini-injector.c
 	$(CC) $(CFLAGS) mini-injector.c -o dbmail-mini-injector $(MINI_OBJECTS) $(LIBS) $(LIB)
