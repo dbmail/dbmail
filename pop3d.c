@@ -117,7 +117,7 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
   
   theiraddress=inet_ntoa(adr_clnt.sin_addr);
 
-  memtst((clientinfo=(struct hostent *)malloc(1))==NULL);
+  memtst((clientinfo=(struct hostent *)malloc(sizeof(struct hostent)))==NULL);
 
   if (resolve_client==1)
 	{
