@@ -407,51 +407,53 @@ void dsnuser_free_list(struct list *deliveries)
 	list_freelist(&deliveries->start);
 }
 
-dsn_class_t dsnuser_worstcase_int(int has_2, int has_4, int has_5)
+delivery_status_t dsnuser_worstcase_int(int ok, int temp, int fail, int fail_quota)
 {
-	dsn_class_t exitcode;
+	delivery_status_t dsn;
+	
+	dsn.class = DSN_CLASS_NONE;
+	dsn.subject = 0;
+	dsn.detail = 0;
 
-	/* If only one code, use it. */
-	if (has_2 && !has_4 && !has_5)	/* Only 2 */
-		exitcode = DSN_CLASS_OK;
-	else if (!has_2 && has_4 && !has_5)	/* Only 4 */
-		exitcode = DSN_CLASS_TEMP;
-	else if (!has_2 && !has_4 && has_5)	/* Only 5 */
-		exitcode = DSN_CLASS_FAIL;
-	/* If two codes, prefer temporary, otherwise fail. */
-	else if (has_2 && has_4 && !has_5)	/* 2 and 4 */
-		exitcode = DSN_CLASS_TEMP;
-	else if (has_2 && !has_4 && has_5)	/* 2 and 5 */
-		exitcode = DSN_CLASS_FAIL;
-	else if (!has_2 && has_4 && has_5)	/* 4 and 5 */
-		exitcode = DSN_CLASS_TEMP;
-	/* All three or none, again prefer temporary. */
-	else			/* 2, 4, 5 */
-		exitcode = DSN_CLASS_NONE;
-
-	return exitcode;
+	if (ok)
+		dsn.class = DSN_CLASS_OK;
+	if (fail_quota)
+		dsn.class = DSN_CLASS_QUOTA;
+	if (fail)
+		dsn.class = DSN_CLASS_FAIL;
+	if (temp)
+		dsn.class = DSN_CLASS_TEMP;
+	
+	return dsn;
 }
 
-dsn_class_t dsnuser_worstcase_list(struct list * deliveries)
+delivery_status_t dsnuser_worstcase_list(struct list * deliveries)
 {
+	delivery_status_t dsn;
 	struct element *tmp;
-	int has_2 = 0, has_4 = 0, has_5 = 0;
+	int ok = 0, temp = 0, fail = 0, fail_quota = 0;
+	
 
 	/* Get one reasonable error code for everyone. */
 	for (tmp = list_getstart(deliveries); tmp != NULL;
 	     tmp = tmp->nextnode) {
-		switch (((deliver_to_user_t *) tmp->data)->dsn.class) {
+		dsn = ((deliver_to_user_t *) tmp->data)->dsn;
+		switch (dsn.class) {
 		case DSN_CLASS_OK:
 			/* Success. */
-			has_2 = 1;
+			ok = 1;
 			break;
 		case DSN_CLASS_TEMP:
 			/* Temporary transient failure. */
-			has_4 = 1;
+			temp = 1;
 			break;
 		case DSN_CLASS_FAIL:
+		case DSN_CLASS_QUOTA:
 			/* Permanent failure. */
-			has_5 = 1;
+			if (dsn.subject == 2)
+				fail_quota = 1;
+			else
+				fail = 1;
 			break;
 		case DSN_CLASS_NONE:
 			/* Nothing doing. */
@@ -461,5 +463,6 @@ dsn_class_t dsnuser_worstcase_list(struct list * deliveries)
 
 	/* If we never made it into the list, all zeroes will
 	 * yield a temporary failure, which is pretty reasonable. */
-	return dsnuser_worstcase_int(has_2, has_4, has_5);
+	return dsnuser_worstcase_int(ok, temp, fail, fail_quota);
 }
+

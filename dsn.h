@@ -26,7 +26,8 @@ typedef enum {
 	DSN_CLASS_NONE = 0,
 	DSN_CLASS_OK = 2,
 	DSN_CLASS_TEMP = 4,
-	DSN_CLASS_FAIL = 5
+	DSN_CLASS_FAIL = 5,
+	DSN_CLASS_QUOTA,
 } dsn_class_t;
 
 typedef struct {
@@ -106,19 +107,20 @@ int dsnuser_resolve(deliver_to_user_t *dsnuser);
  * \return
  *   - see dsn_class_t for details.
  */
-dsn_class_t dsnuser_worstcase_list(struct list *deliveries);
+delivery_status_t dsnuser_worstcase_list(struct list *deliveries);
 
 /**
  * \brief Given true/false values for each of the three
  * delivery classes, find out what the single worst case scenario was
  * for situations where we are limited to returning a single
  * status code yet might have had a whole lot of deliveries.
- * \param has_2 0 if nothing was DSN_CLASS_OK, 1 if there was.
- * \param has_4 0 if nothing was DSN_CLASS_TEMP, 1 if there was.
- * \param has_5 0 if nothing was DSN_CLASS_FAIL, 1 if there was.
+ * \param ok 0 if nothing was DSN_CLASS_OK, 1 if there was.
+ * \param temp 0 if nothing was DSN_CLASS_TEMP, 1 if there was.
+ * \param fail 0 if nothing was DSN_CLASS_FAIL, 1 if there was.
+ * \param fail_quota 0 if nothing was DSN_CLASS_QUOTA, 1 if there was.
  * \return
  *   - see dsn_class_t for details.
  */
-dsn_class_t dsnuser_worstcase_int(int has_2, int has_4, int has_5);
+delivery_status_t dsnuser_worstcase_int(int ok, int temp, int fail, int fail_quota);
 
 #endif				/* DSN_H */

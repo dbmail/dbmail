@@ -88,8 +88,15 @@ struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *sel
 
 int dbmail_message_store(struct DbmailMessage *message);
 int dbmail_message_headers_cache(struct DbmailMessage *message);
+  
+typedef enum {
+	SORT_SUCCESS = 0,
+	SORT_OVER_QUOTA,
+	SORT_WEIRD_ERROR,
+	SORT_FAILURE
+} sort_result_t;
 
-dsn_class_t sort_and_deliver(struct DbmailMessage *self, u64_t useridnr, const char *mailbox);
+sort_result_t sort_and_deliver(struct DbmailMessage *self, u64_t useridnr, const char *mailbox);
 
 
 struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t id, int filter);

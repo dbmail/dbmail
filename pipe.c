@@ -426,6 +426,8 @@ int insert_messages(struct DbmailMessage *message,
 	struct element *element, *ret_path;
 	u64_t msgsize;
 
+ 	delivery_status_t final_dsn;
+
 	/* first start a new database transaction */
 	if (db_begin_transaction() < 0) {
 		trace(TRACE_ERROR, "%s,%s: error executing "
@@ -458,7 +460,7 @@ int insert_messages(struct DbmailMessage *message,
 	for (element = list_getstart(dsnusers); element != NULL;
 	     element = element->nextnode) {
 		struct element *userid_elem;
-		int has_2 = 0, has_4 = 0, has_5 = 0;
+		int has_2 = 0, has_4 = 0, has_5 = 0, has_5_2 = 0;
 		deliver_to_user_t *delivery =
 		    (deliver_to_user_t *) element->data;
 		
@@ -473,22 +475,28 @@ int insert_messages(struct DbmailMessage *message,
 			      __FILE__, __func__, useridnr);
 
 			switch (sort_and_deliver(message, useridnr, delivery->mailbox)) {
-			case DSN_CLASS_OK:
+			case SORT_SUCCESS:
 				/* Indicate success. */
 				trace(TRACE_DEBUG,
 				      "%s, %s: successful sort_and_deliver for useridnr [%llu]",
 				      __FILE__, __func__, useridnr);
 				has_2 = 1;
 				break;
-			case DSN_CLASS_FAIL:
+			case SORT_FAILURE:
 				/* Indicate permanent failure. */
 				trace(TRACE_ERROR,
 				      "%s, %s: permanent failure sort_and_deliver for useridnr [%llu]",
 				      __FILE__, __func__, useridnr);
 				has_5 = 1;
 				break;
-			case DSN_CLASS_TEMP:
-			case -1:
+			case SORT_OVER_QUOTA:
+			/* Indicate over quota. */
+				trace(TRACE_ERROR,
+				      "%s, %s: temporary failure sort_and_deliver for useridnr [%llu]",
+				      __FILE__, __func__, useridnr);
+				has_5_2 = 1;
+				break;
+			case SORT_WEIRD_ERROR:
 			default:
 				/* Assume a temporary failure */
 				trace(TRACE_ERROR,
@@ -505,7 +513,8 @@ int insert_messages(struct DbmailMessage *message,
 				      __FILE__, __func__);
 		}		/* from: the useridnr for loop */
 
-		switch (dsnuser_worstcase_int(has_2, has_4, has_5)) {
+		final_dsn = dsnuser_worstcase_int(has_2, has_4, has_5, has_5_2);
+		switch (final_dsn.class) {
 		case DSN_CLASS_OK:
 			delivery->dsn.class = DSN_CLASS_OK;	/* Success. */
 			delivery->dsn.subject = 1;	/* Address related. */
@@ -528,6 +537,11 @@ int insert_messages(struct DbmailMessage *message,
 			delivery->dsn.class = DSN_CLASS_FAIL;	/* Permanent failure. */
 			delivery->dsn.subject = 1;	/* Address related. */
 			delivery->dsn.detail = 1;	/* Does not exist. */
+			break;
+		case DSN_CLASS_QUOTA:
+			delivery->dsn.class = DSN_CLASS_FAIL;	/* Permanent failure. */
+			delivery->dsn.subject = 2;	/* Mailbox related. */
+			delivery->dsn.detail = 2;	/* Over quota limit. */
 			break;
 		case DSN_CLASS_NONE:
 			/* Leave the DSN status at whatever dsnuser_resolve set it at. */

@@ -369,8 +369,12 @@ int main(int argc, char *argv[])
 	/* If there wasn't already an EX_TEMPFAIL from insert_messages(),
 	 * then see if one of the status flags was marked with an error. */
 	if (!exitcode) {
+		delivery_status_t final_dsn;
+
 		/* Get one reasonable error code for everyone. */
-		switch (dsnuser_worstcase_list(&dsnusers)) {
+		final_dsn = dsnuser_worstcase_list(&dsnusers);
+
+		switch (final_dsn.class) {
 		case DSN_CLASS_OK:
 			exitcode = EX_OK;
 			break;
@@ -379,7 +383,12 @@ int main(int argc, char *argv[])
 			break;
 		case DSN_CLASS_NONE:
 		case DSN_CLASS_FAIL:
-			exitcode = EX_NOUSER;
+			/* If we're over-quota, say that,
+			 * else it's a generic user error. */
+			if (final_dsn.subject = 2)
+				exitcode = EX_CANTCREAT;
+			else
+				exitcode = EX_NOUSER;
 			break;
 		}
 	}

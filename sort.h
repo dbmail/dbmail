@@ -39,7 +39,6 @@
 #define SA_REDIRECT	3
 #define SA_REJECT	4
 #define SA_FILEINTO	5
-#define SA_SIEVE	6
 
 typedef struct sort_action {
 	int method;
