@@ -96,7 +96,7 @@ CREATE TABLE physmessage (
    id INT8 DEFAULT nextval('physmessage_id_seq'),
    messagesize INT8 DEFAULT '0' NOT NULL,   
    rfcsize INT8 DEFAULT '0' NOT NULL,
-   internal_date TIMESTAMP,
+   internal_date TIMESTAMP WITHOUT TIME ZONE,
    PRIMARY KEY(id)
 );
 

@@ -1,3 +1,11 @@
+2004-03-02  Ilja Booij  <ilja@ic-s.nl>
+
+	* sql/postgresql/migrate_from_1.x_to_2.0.pgsql: alter internal_date 
+	field in physmessage. This is now a TIMESTAMP WITHOUT TIME ZONE column.
+
+	* sql/postgresql/create_tables.pgsql: alter internal_date field in
+	physmessage. This is now a TIMESTAMP WITHOUT TIME ZONE column.
+
 2004-03-01  Ilja Booij  <ilja@ic-s.nl>
 
 	* db.c (db_copymsg): always set Recent flag of new message to '1'. The
