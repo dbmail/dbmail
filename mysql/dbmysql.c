@@ -1326,54 +1326,74 @@ u64_t db_check_sizelimit (u64_t addblocksize, u64_t message_idnr,
 /* purges all the messages with a deleted status */
 u64_t db_deleted_purge()
 {
-  
+  unsigned i,n;
+  u64_t *msgids = NULL;
   u64_t affected_rows=0;
 
-  
-	
   /* first we're deleting all the messageblks */
   snprintf (query,DEF_QUERYSIZE,"SELECT message_idnr FROM messages WHERE status=003");
   trace (TRACE_DEBUG,"db_deleted_purge(): executing query [%s]",query);
 	
   if (db_query(query)==-1)
     {
-      trace(TRACE_ERROR,"db_deleted_purge(): Cound not execute query [%s]",query);
-      
+      trace(TRACE_ERROR,"db_deleted_purge(): Cound not fetch message ID numbers: [%s]",
+	    mysql_error(&conn));
       return -1;
     }
   
   if ((res = mysql_store_result(&conn)) == NULL)
     {
-      trace (TRACE_ERROR,"db_deleted_purge(): mysql_store_result failed:  %s",mysql_error(&conn));
-      
+      trace (TRACE_ERROR,"db_deleted_purge(): mysql_store_result failed: [%s]",mysql_error(&conn));
       return -1;
     }
   
-  if (mysql_num_rows(res)<1)
+  if ( (n = mysql_num_rows(res)) < 1)
     {
-      
       mysql_free_result(res);
       return 0;
     }
 	
-  while ((row = mysql_fetch_row(res))!=NULL)
+  if (! (msgids = my_malloc(sizeof(u64_t)*n)) )
     {
-      snprintf (query,DEF_QUERYSIZE,"DELETE FROM messageblks WHERE message_idnr=%s",row[0]);
-      trace (TRACE_DEBUG,"db_deleted_purge(): executing query [%s]",query);
+      trace(TRACE_ERROR, "db_deleted_purge(): out of memory");
+      mysql_free_result(res);
+      return -2;
+    }
+  memset(msgids, 0, n*sizeof(u64_t));
+
+  for (i=0; i<n && (row = mysql_fetch_row(res))!=NULL; i++)
+    msgids[i] = (row && row[0]) ? strtoull(row[0], NULL, 10) : 0;
+      
+  mysql_free_result(res);
+
+  for (i=0; i<n; i++)
+    {
+      snprintf (query,DEF_QUERYSIZE,"DELETE FROM messageblks WHERE message_idnr=%llu", msgids[i]);
+      trace (TRACE_DEBUG,"db_deleted_purge(): trying to delete blocks for  message [%llu]", msgids[i]);
       if (db_query(query)==-1)
 	{
-	  
+	  trace(TRACE_ERROR, "db_deleted_purge(): could not delete blocks for message [%llu]: %s",
+		msgids[i], mysql_error(&conn));
+	  my_free(msgids);
+	  msgids = 0;
 	  mysql_free_result(res);
 	  return -1;
 	}
+
+      mysql_free_result(res);
     }
+
+  my_free(msgids);
+  msgids = 0;
 
   /* messageblks are deleted. Now delete the messages */
   snprintf (query,DEF_QUERYSIZE,"DELETE FROM messages WHERE status=003");
   trace (TRACE_DEBUG,"db_deleted_purge(): executing query [%s]",query);
   if (db_query(query)==-1)
     {
-      
+      trace(TRACE_ERROR, "db_deleted_purge(): could not delete messages: %s", 
+	    mysql_error(&conn));
+    
       mysql_free_result(res);
       return -1;
     }
