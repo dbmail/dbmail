@@ -2952,10 +2952,17 @@ int db_get_msginfo_range(u64_t msguidlow, u64_t msguidhigh, u64_t mailboxuid,
 
    memset(*result, 0, nrows * sizeof(msginfo_t));
 
-   i = 0;
-   
-   while (i<nrows && (row = mysql_fetch_row(res)) )
+   for (i=0; i<nrows; i++)
      {
+       row = mysql_fetch_row(res);
+       if (!row)
+	 {
+	   trace(TRACE_ERROR, "db_get_msginfo_range(): unexpected end of data\n");
+	   my_free(*result);
+	   mysql_free_result(res);
+	   return -1;
+	 }
+
        if (getflags)
 	 {
 	   for (j=0; j<IMAP_NFLAGS; j++)
@@ -2973,7 +2980,7 @@ int db_get_msginfo_range(u64_t msguidlow, u64_t msguidhigh, u64_t mailboxuid,
      }
 
    mysql_free_result(res);
-   *resultsetlen = i; /* should _always_ be equal to nrows */
+   *resultsetlen = nrows;
 
    return 0;
 }
