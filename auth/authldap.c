@@ -73,18 +73,6 @@ typedef struct _ldap_cfg {
 
 _ldap_cfg_t _ldap_cfg;
 
-/* Define a macro to cut down on code duplication... */
-#define GETCONFIGVALUE(key, sect, var)		\
-	config_get_value(key, sect, var);		\
-	if (strlen(var) == 0)			\
-		trace(TRACE_DEBUG, "%s, %s: no value for "	\
-			#key " in config file section " #sect,	\
-		    	__FILE__, __func__ );		\
-	trace(TRACE_DEBUG, "%s, %s: value for "			\
-		#key " from section " #sect " stored in "	\
-		#var " as [%s]", __FILE__, __func__, var)
-	/* No final ; so macro can be called "like a function" */
-
 static void __auth_get_config(void);
 
 static GList * __auth_get_every_match(const char *q, char **retfields);

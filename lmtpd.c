@@ -63,6 +63,8 @@ static void Daemonize(void);
 static int SetMainSigHandler(void);
 static void MainSigHandler(int sig, siginfo_t * info, void *data);
 
+static void get_config(serverConfig_t *config);
+	
 static int lmtp_before_smtp = 0;
 static int mainRestart = 0;
 static int mainStop = 0;
@@ -109,8 +111,6 @@ int main(int argc, char *argv[])
 			       "$Revision$ %s\n\n", COPYRIGHT);
 			return 0;
 		case 'n':
-			/* TODO: We should also prevent children from forking,
-			 * but for now we'll just set a flag and skip Daemonize. */
 			no_daemonize = 1;
 			break;
 		case 'h':
@@ -145,9 +145,14 @@ int main(int argc, char *argv[])
 
 	SetMainSigHandler();
 
-	/* TODO: don't spawn children, either. this is at least a good start. */
-	if (!no_daemonize)
-		Daemonize();
+	if (no_daemonize) {
+		get_config(&config);
+		StartCliServer(&config);
+		config_free();
+		return 0;
+	}
+	
+	Daemonize();
 
 	/* We write the pidFile after Daemonize because
 	 * we may actually be a child of the original process. */
@@ -158,21 +163,12 @@ int main(int argc, char *argv[])
 		mainStop = 0;
 		mainRestart = 0;
 
-		trace(TRACE_DEBUG, "main(): reading config");
 #ifdef PROC_TITLES
 		init_set_proc_title(argc, argv, envp, PNAME);
 		set_proc_title("%s", "Idle");
 #endif
 
-		/* We need smtp config for bounce.c and forward.c */
-                config_read(configFile);
-		SetConfigItems(&config);
-		SetTraceLevel("LMTP");
-		GetDBParams(&_db_params);
-
-		config.ClientHandler = lmtp_handle_connection;
-		config.timeoutMsg = LMTP_TIMEOUT_MSG;
-
+		get_config(&config);
 		CreateSocket(&config);
 
 		switch ((pid = fork())) {
@@ -229,6 +225,18 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
+void get_config(serverConfig_t *config) 
+{
+	trace(TRACE_DEBUG, "main(): reading config");
+	/* We need smtp config for bounce.c and forward.c */
+	config_read(configFile);
+	SetConfigItems(config);
+	SetTraceLevel("LMTP");
+	GetDBParams(&_db_params);
+
+	config->ClientHandler = lmtp_handle_connection;
+	config->timeoutMsg = LMTP_TIMEOUT_MSG;
+}
 
 void MainSigHandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
 {

@@ -50,6 +50,16 @@
 #endif
 
 
+#define GETCONFIGVALUE(key, sect, var) \
+	config_get_value(key, sect, var); \
+	if (strlen(var) == 0) \
+		trace(TRACE_DEBUG, "%s, %s: no value for "#key" in section "#sect, \
+		    	__FILE__, __func__ ); \
+	trace(TRACE_DEBUG, "%s, %s: key "#key" section "#sect" var "#var" value [%s]", \
+			__FILE__, __func__, \
+			var)
+	/* No final ';' so macro can be called "like a function" */
+
 #define CONFIG_ERROR_LEVEL TRACE_WARNING
 
 /** string length of configuration values */

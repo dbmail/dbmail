@@ -52,5 +52,6 @@ int SetChildSigHandler(void);
 int DelChildSigHandler(void);
 pid_t CreateChild(ChildInfo_t * info);
 
+int manage_start_cli_server(ChildInfo_t * info);
 
 #endif

@@ -403,3 +403,60 @@ int PerformChildTask(ChildInfo_t * info)
 	
 	return 0;
 }
+
+int manage_start_cli_server(ChildInfo_t * info)
+{
+	if (!info) {
+		trace(TRACE_ERROR, "%s,%s: NULL info supplied", __FILE__, __func__);
+		return -1;
+	}
+
+	if (db_connect() != 0) {
+		trace(TRACE_ERROR, "%s,%s: could not connect to database", __FILE__, __func__);
+		return -1;
+	}
+
+	if (auth_connect() != 0) {
+		trace(TRACE_ERROR, "%s,%s: could not connect to authentication", __FILE__, __func__);
+		return -1;
+	}
+
+	srand((int) ((int) time(NULL) + (int) getpid()));
+	connected = 1;
+
+	if (db_check_connection()) {
+		trace(TRACE_ERROR, "%s,%s: database has gone away", __FILE__, __func__);
+		return -1;
+	}
+
+		
+	memset(&client, 0, sizeof(client));	/* zero-init */
+
+	client.timeoutMsg = info->timeoutMsg;
+	client.timeout = info->timeout;
+
+	/* make streams */
+	client.rx = stdin;
+	client.tx = stdout;
+
+	setvbuf(client.tx, (char *) NULL, _IOLBF, 0);
+	setvbuf(client.rx, (char *) NULL, _IOLBF, 0);
+
+	trace(TRACE_DEBUG,
+	      "%s,%s: client info init complete, calling client handler", __FILE__, __func__);
+
+	/* streams are ready, perform handling */
+	info->ClientHandler(&client);
+#ifdef PROC_TITLES
+	set_proc_title("%s", "Idle");
+#endif
+
+	trace(TRACE_DEBUG,
+	      "%s,%s: client handling complete, closing streams", __FILE__, __func__);
+	client_close();
+	trace(TRACE_INFO, "%s,%s: connection closed", __FILE__, __func__);
+	
+	disconnect_all();
+	
+	return 0;
+}

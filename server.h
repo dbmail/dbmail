@@ -57,5 +57,5 @@ typedef struct {
 
 int CreateSocket(serverConfig_t * conf);
 int StartServer(serverConfig_t * conf);
-
+int StartCliServer(serverConfig_t * conf);
 #endif

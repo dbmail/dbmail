@@ -1,5 +1,12 @@
 2005-02-18  Paul Stevens <paul@nfg.nl>
 
+	* pop3d.c, imapd.c, lmtpd.c, server.c, serverchild.c: added
+	non-forking support for inetd users, aka cli-server.
+	* dbmail.h, auth/authldap.c: moved GETCONFIGVALUE macro to dbmail.h
+
+
+2005-02-18  Paul Stevens <paul@nfg.nl>
+
 	* sqlite/dbsqlite.c: added initial sqlite support provided by Geo
 	Carncross. Also fixed the autoconf files to support this.
 	* user.c: remove percentage from user listing.

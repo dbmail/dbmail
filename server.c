@@ -85,6 +85,31 @@ int SetParentSigHandler()
 	return 0;
 }
 
+int StartCliServer(serverConfig_t * conf)
+{
+	if (!conf)
+		trace(TRACE_FATAL, "%s,%s: NULL configuration", __FILE__, __func__);
+
+	trace(TRACE_DEBUG, "%s,%s: init", __FILE__, __func__);
+
+	ParentPID = getpid();
+	Restart = 0;
+	GeneralStopRequested = 0;
+	SetParentSigHandler();
+	
+	childinfo.maxConnect = conf->childMaxConnect;
+	childinfo.listenSocket = conf->listenSocket;
+	childinfo.timeout = conf->timeout;
+	childinfo.ClientHandler = conf->ClientHandler;
+	childinfo.timeoutMsg = conf->timeoutMsg;
+	childinfo.resolveIP = conf->resolveIP;
+ 	
+	manage_start_cli_server(&childinfo);
+ 
+	return Restart;
+}
+
+
 
 int StartServer(serverConfig_t * conf)
 {
