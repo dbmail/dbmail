@@ -40,8 +40,9 @@ char *read_header(unsigned long *blksize)
 
   while ((end_of_header==0) && (!feof(stdin)))
     {
-      strblock=fgets(strblock,READ_BLOCK_SIZE,stdin);
-	
+		trace(TRACE_DEBUG,"Reading blocks");
+		usedmem = fread (strblock, sizeof (char), READ_BLOCK_SIZE, stdin);
+		trace (TRACE_DEBUG,"First block read, size [%d]",strlen(strblock));
       usedmem=usedmem + strlen(strblock);
 		
       if (usedmem>HEADER_BLOCK_SIZE)
@@ -95,7 +96,6 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
   void *sendmail_pipe;
   struct list external_forwards;
   struct list bounces;
-  struct list descriptors;
   
   unsigned long temp,userid;
   int i;
@@ -139,16 +139,26 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
       db_check_user((char *)tmp->data,&userids);
       trace (TRACE_DEBUG,"insert_messages(): user [%s] found total of [%d] aliases",(char *)tmp->data,
 	     userids.total_nodes);
-      domain=strchr((char *)tmp->data,'@');
-     
-	  	if (domain!=NULL)	/* this should always be the case! */
-		{
-			trace (TRACE_DEBUG,"insert_messages(): checking for domain aliases. Domain = [%s]",domain);
-			/* checking for domain aliases */
-			db_check_user(domain,&userids);
-			trace (TRACE_DEBUG,"insert_messages(): domain [%s] found total of [%d] aliases",domain,
-				userids.total_nodes);
-		}
+      
+		if (userids.total_nodes==0)
+			{
+				/* I needed to change this because my girlfriend said so
+					and she was actually right. Domain forwards are last resorts
+					if a delivery cannot be found with an existing address then
+					and only then we need to check if there are domain delivery's */
+				
+				trace (TRACE_INFO,"insert_messages(): no users found to deliver to. Checking for domain forwards");	
+				
+				domain=strchr((char *)tmp->data,'@');
+				if (domain!=NULL)	/* this should always be the case! */
+				{
+					trace (TRACE_DEBUG,"insert_messages(): checking for domain aliases. Domain = [%s]",domain);
+					/* checking for domain aliases */
+					db_check_user(domain,&userids);
+					trace (TRACE_DEBUG,"insert_messages(): domain [%s] found total of [%d] aliases",domain,
+						userids.total_nodes);
+				}
+			}
     
 	 	/* user does not excists in aliases tables
 			so bounce this message back with an error message */
@@ -284,6 +294,7 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 		}
   }
 
+  /* do we have forward addresses ? */
 	if (list_totalnodes(&external_forwards)>0)
 	{
 		/* sending the message to forwards */
@@ -295,7 +306,7 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 		/* i don't know if this the legal way (tm) */
 		
 		/* we're storing the new header in tmpbuffer */	
-		memtst((tmpbuffer = (char *)malloc(strlen(firstblock)+512))==NULL); 
+		memtst((tmpbuffer = (char *)malloc(strlen(firstblock)+1025))==NULL); 
 	
 		myscan=strstr(firstblock,"\nTo:");
 		if (myscan!=NULL)
@@ -346,14 +357,17 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 								{
 								totalmem=totalmem+usedmem;
 		
-								trace(TRACE_DEBUG,"insert_messages(): Opening descriptor list");
-								tmp=list_getstart(&descriptors);
+								trace(TRACE_DEBUG,"insert_messages(): Sending block size=[%d] total=[%d]",
+										usedmem, totalmem);
 								fprintf ((FILE *)sendmail_pipe,"%s",strblock);
-								}
 								/* resetting strlen for strblock */
 								strblock[0]='\0';
 								usedmem = 0;
+								}
+								else 
+									trace (TRACE_DEBUG,"insert_messages(): End of STDIN reached. we're done here");
 							}
+							/* done forwarding */
 							trace(TRACE_DEBUG, "insert_messages(): Closing pipe");
 							{	
 								if (sendmail_pipe!=NULL)
@@ -377,8 +391,6 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 						sprintf (tmpbuffer,"%s\nTo: %s\n%s",firstblock,
 								(char *)tmp_pipe->data,nextscan);
 						trace (TRACE_DEBUG,"insert_messages(): new header [%s]",tmpbuffer);
-						/* popen() manpages suggest doing this */
-						fflush(stdin);
 						(FILE *)sendmail_pipe=popen(SENDMAIL,"w");
 						trace (TRACE_DEBUG,"insert_messages(): popen() executed");
 						if (sendmail_pipe!=NULL)
@@ -409,6 +421,7 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 			}
 	}
 	
+	trace (TRACE_DEBUG,"insert_messages(): Freeing memory blocks");
 	/* memory cleanup */
 	free(tmpbuffer);
 	free(firstblock);  
@@ -416,5 +429,6 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 	free (strblock);
 	free(insertquery);
 	free(updatequery);
+	trace (TRACE_DEBUG,"insert_messages(): End of function");
   return 0;
 }
