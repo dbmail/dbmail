@@ -1,3 +1,8 @@
+2004-06-16  Ilja Booij  <ilja@ic-s.nl>
+
+	* dbmail.conf: number of children and maxconnects for LMTP upped
+	to 20 and 10000.
+
 2004-06-14  Ilja Booij  <ilja@ic-s.nl>
 
 	* pgsql/dbpgsql.c (db_query): now checks and resets the connection
