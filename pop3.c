@@ -19,7 +19,7 @@ extern int error_count;
 const char *commands [] = 
 	{
 	"quit", "user", "pass", "stat", "list", "retr", "dele", "noop", "last", "rset",
-	"uidl","top","apop"
+	"uidl","apop","auth"
 	};
 
 const char validchars[] = ".@ abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -361,11 +361,7 @@ int pop3 (void *stream, char *buffer)
 						}
 					fprintf ((FILE *)stream,".\r\n");
 				return 1;
-
-			case POP3_TOP:
-				{
-
-				}
+			}
 
 			case POP3_APOP:
 				{
@@ -421,12 +417,17 @@ int pop3 (void *stream, char *buffer)
 										}
 									return result;
 								}
-							}
-				break;
-
+					}
+				}	
+			case POP3_AUTH:
+				{
+				if (state!=AUTHORIZATION)
+					return pop3_error(stream,"-ERR wrong command mode, sir\r\n");
+				fprintf  ((FILE *)stream, "+OK List of supported mechanisms\r\n.\r\n");
+				return 1;
 				}
-			}
 
+			
 		default : 
 			{
 				return pop3_error(stream,"-ERR command not understood, sir\r\n");

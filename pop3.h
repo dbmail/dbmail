@@ -50,9 +50,10 @@
 #define POP3_LAST 8
 #define POP3_RSET 9
 #define POP3_UIDL 10
-#define POP3_TOP 11
+/* #define POP3_TOP 11 */
 #define POP3_APOP 12
-#define POP3_END 13
+#define POP3_AUTH 13
+#define POP3_END 14
 
 /* all virtual_ definitions are session specific
  * when a RSET occurs all will be set to the real values */
