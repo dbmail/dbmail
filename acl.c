@@ -226,7 +226,7 @@ char *acl_get_acl(u64_t mboxid)
 		identifier_elm = identifier_elm->nextnode;
 	}
 
-	trace(TRACE_DEBUG, "%s,%s: acl_string size = %u",
+	trace(TRACE_DEBUG, "%s,%s: acl_string size = %zd",
 	      __FILE__, __FUNCTION__, acl_string_size);
 
 	if (!
