@@ -3732,7 +3732,8 @@ int db_get_msgdate(u64_t mailboxuid, u64_t msguid, char *date)
 
   char *row;
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT internal_date FROM messages WHERE mailbox_idnr = %llu::bigint "
+  snprintf(query, DEF_QUERYSIZE, "SELECT to_char(internal_date, 'YYYY-MM-DD HH24:MI:SS') "
+	   "FROM messages WHERE mailbox_idnr = %llu::bigint "
 	   "AND message_idnr = %llu::bigint AND unique_id!=''", mailboxuid, msguid);
 
   if (db_query(query) == -1)
@@ -3832,8 +3833,8 @@ int db_get_msginfo_range(u64_t msguidlow, u64_t msguidhigh, u64_t mailboxuid,
   *resultsetlen = 0;
 
   snprintf(query, DEF_QUERYSIZE, "SELECT seen_flag, answered_flag, deleted_flag, "
-	   "flagged_flag, draft_flag, recent_flag, internal_date, rfcsize, message_idnr "
-	   "FROM messages WHERE "
+	   "flagged_flag, draft_flag, recent_flag, to_char(internal_date, 'YYYY-MM-DD HH24:MI:SS'), "
+	   "rfcsize, message_idnr FROM messages WHERE "
 	   "message_idnr >= %llu::bigint AND message_idnr <= %llu::bigint AND mailbox_idnr = %llu::bigint "
 	   "AND status<2 AND unique_id != '' "
 	   "ORDER BY message_idnr ASC", msguidlow, msguidhigh, mailboxuid);
@@ -4034,7 +4035,7 @@ int db_search_range(db_pos_t start, db_pos_t end, const char *key, u64_t msguid)
       return 0;
     }
 
-  if (PQntuples(res)>0)
+  if (PQntuples(res) == 0)
     {
       trace (TRACE_ERROR,"db_search_range(): bad range specified\n");
       PQclear(res);
