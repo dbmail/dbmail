@@ -128,17 +128,7 @@ int process_piece(char *left, char *right)
       if (useridnr == 0)
 	{
 	  /* new user */
-	  domain = strchr(left, '@');
-	  if (!domain)
-	    {
-	      fprintf(stderr,"[%s] does not form a valid entry (left)\n", left);
-	      return -2;
-	    }
-
-	  domain++; /* skip the '@' */
-
-	  /* ok add this user to the user table */
-	  if ((useridnr = db_adduser(right, "geheim", 0, 0)) == -1)
+	  if ((useridnr = db_adduser(right, "geheim", 0, "0")) == -1)
 	    {
 	      fprintf(stderr,"Could not add user [%s]\n",right);
 	      return -1;
