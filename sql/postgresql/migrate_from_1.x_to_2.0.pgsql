@@ -167,7 +167,7 @@ LEFT JOIN messages m ON m.mailbox_idnr = b.mailbox_idnr
 LEFT JOIN physmessage p ON m.physmessage_id = p.id 
 GROUP BY u.user_idnr, u.userid, u.passwd, u.client_idnr, u.maxmail_size, u.encryption_type,u.last_login;
 
-#drop the old tables
+--- drop the old tables
 DROP TABLE aliases_1, users_1, mailboxes_1, messages_1, messageblks_1;
 
 ALTER TABLE mailboxes ADD   FOREIGN KEY (owner_idnr) REFERENCES users(user_idnr) ON DELETE CASCADE;
@@ -179,7 +179,7 @@ ALTER TABLE messages ADD FOREIGN KEY (physmessage_id) REFERENCES physmessage(id)
 ALTER TABLE messages ADD FOREIGN KEY (mailbox_idnr) REFERENCES mailboxes(mailbox_idnr) ON DELETE CASCADE;
 ALTER TABLE messageblks ADD FOREIGN KEY (physmessage_id) REFERENCES physmessage (id) ON DELETE CASCADE;
 
-# Create the user for the delivery chain:
+--- Create the user for the delivery chain:
 INSERT INTO users (userid, passwd, encryption_type)
 	VALUES ('__@!internal_delivery_user!@__', '', 'md5');
 

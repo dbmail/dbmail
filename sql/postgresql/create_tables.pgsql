@@ -156,7 +156,7 @@ CREATE TABLE auto_replies (
 );
 CREATE INDEX auto_replies_user_idnr_idx ON auto_replies(user_idnr);
 
-# Create the user for the delivery chain:
+--- Create the user for the delivery chain:
 INSERT INTO users (userid, passwd, encryption_type) 
 	VALUES ('__@!internal_delivery_user!@__', '', 'md5');
  
