@@ -1015,9 +1015,7 @@ int db_createsession (unsigned long useridnr, struct session *sessionptr)
       list_nodeadd (&sessionptr->messagelst, &tmpmessage, sizeof (tmpmessage));
     }
 	
-  sessionptr->messagelst.start = list_reverse(sessionptr->messagelst.start);
-  
-  trace (TRACE_DEBUG,"db_create_session(): adding succesfull");
+  trace (TRACE_DEBUG,"db_createsession(): adding succesfull");
 	
   /* setting all virtual values */
   sessionptr->virtual_totalmessages=sessionptr->totalmessages;
@@ -1072,12 +1070,13 @@ int db_update_pop (struct session *sessionptr)
 
 unsigned long db_check_mailboxsize (unsigned long mailboxid)
 {
-  /* checks the size of a mailbox */
+  MYSQL_RES *localres;
+  MYSQL_ROW localrow;
   
+  /* checks the size of a mailbox */
   unsigned long size;
 
   /* checking current size */
-  
   snprintf (query, DEF_QUERYSIZE,
 	    "SELECT SUM(messagesize) FROM message WHERE mailboxidnr = %lu AND status<002",
 	   mailboxid);
@@ -1093,7 +1092,7 @@ unsigned long db_check_mailboxsize (unsigned long mailboxid)
       return -1;
     }
   
-  if ((res = mysql_store_result(&conn)) == NULL)
+  if ((localres = mysql_store_result(&conn)) == NULL)
     {
       trace (TRACE_ERROR,"db_check_mailboxsize(): mysql_store_result failed: %s\n",
 	     mysql_error(&conn));
@@ -1101,17 +1100,18 @@ unsigned long db_check_mailboxsize (unsigned long mailboxid)
       return -1;
     }
 
-  if (mysql_num_rows(res)<1)
+  if (mysql_num_rows(localres)<1)
     {
       trace (TRACE_ERROR,"db_check_mailboxsize(): weird, cannot execute SUM query\n");
-      
+
+      mysql_free_result(localres);
       return 0;
     }
 
-  row = mysql_fetch_row(res);
+  localrow = mysql_fetch_row(localres);
 
-  size = (row && row[0]) ? strtoul(row[0], NULL, 10) : 0;
-  mysql_free_result(res);
+  size = (localrow && localrow[0]) ? strtoul(localrow[0], NULL, 10) : 0;
+  mysql_free_result(localres);
   
 
   return size;
@@ -1128,17 +1128,11 @@ unsigned long db_check_sizelimit (unsigned long addblocksize, unsigned long mess
    * returns 0 when situation is ok 
    */
 
-  
-  unsigned long mailboxidnr;
-  unsigned long currmail_size = 0, maxmail_size = 0;
+  unsigned long currmail_size = 0, maxmail_size = 0, j;
 
   *useridnr = db_get_useridnr (messageidnr);
 	
-  /* looking up messageidnr */
-  mailboxidnr = db_get_message_mailboxid (&messageidnr);
-	
   /* checking current size */
-  
   snprintf (query, DEF_QUERYSIZE,"SELECT mailboxidnr FROM mailbox WHERE owneridnr = %lu",
 	   *useridnr);
 
@@ -1171,19 +1165,29 @@ unsigned long db_check_sizelimit (unsigned long addblocksize, unsigned long mess
   while ((row = mysql_fetch_row(res))!=NULL)
     {
       trace (TRACE_DEBUG,"db_check_sizelimit(): checking mailbox [%s]\n",row[0]);
-      currmail_size += db_check_mailboxsize(atol(row[0]));
+      j = db_check_mailboxsize(atol(row[0]));
+
+      if (j == (unsigned long)-1)
+	{
+	  trace(TRACE_ERROR,"db_check_sizelimit(): could not verify mailboxsize\n");
+
+	  mysql_free_result(res);
+	  return -1;
+	}
+
+      currmail_size += j;
     }
+
+  mysql_free_result(res);
 
   /* current mailsize from INBOX is now known, now check the maxsize for this user */
   snprintf (query, DEF_QUERYSIZE,"SELECT maxmail_size FROM user WHERE useridnr = %lu", *useridnr);
-  trace (TRACE_DEBUG,"db_check_sizelimit(): executing query: %s\n", query);
 
   if (db_query(query) != 0)
     {
       trace (TRACE_ERROR,"db_check_sizelimit(): could not execute query [%s]\n",
 	     query);
       
-      mysql_free_result(res);
       return -1;
     }
   
@@ -1192,7 +1196,6 @@ unsigned long db_check_sizelimit (unsigned long addblocksize, unsigned long mess
       trace (TRACE_ERROR,"db_check_sizelimit(): mysql_store_result failed: %s\n",
 	     mysql_error(&conn));
       
-      mysql_free_result(res);
       return -1;
     }
 
