@@ -210,6 +210,7 @@ int process_mboxfile(char *file)
   newlines = 0;
   blk_opened = 0;
   msg_opened = 0;
+  blksize = 0;
 
   while (!feof(infile) && !ferror(infile))
     {
@@ -238,6 +239,7 @@ int process_mboxfile(char *file)
 	  newlines = 0;
 	  msg_opened = 0;
 	  blk_opened = 0;
+	  blksize = 0;
 	}
       else
 	{
@@ -274,6 +276,7 @@ int process_mboxfile(char *file)
 		{
 		  start_blk();
 		  blk_opened = 1;
+		  blksize = 0;
 		}
 
 	      len = strlen(line);
@@ -287,6 +290,7 @@ int process_mboxfile(char *file)
 		  
 		  add_line(line);
 		  close_blk(READ_BLOCK_SIZE);
+		  size += blksize;
 		  blk_opened = 0;
 
 		  line[blksize - READ_BLOCK_SIZE] = saved;
@@ -304,6 +308,7 @@ int process_mboxfile(char *file)
   if (blk_opened)
     {
       close_blk(blksize);
+      size += blksize;
       blk_opened = 0;
     }
 
