@@ -2708,6 +2708,62 @@ int db_get_msgdate(u64_t mailboxuid, u64_t msguid, char *date)
 }
 
 
+/*
+ * db_set_rfcsize()
+ *
+ * sets the RFCSIZE field for a message.
+ *
+ * returns -1 on failure, 0 on success
+ */
+int db_set_rfcsize(u64_t size, u64_t msguid)
+{
+  snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET rfcsize = %llu WHERE message_idnr = %llu",
+	   size, msguid);
+  
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_set_rfcsize(): could not insert RFC size into table\n");
+      return -1;
+    }
+
+  return 0;
+}
+
+
+u64_t db_get_rfcsize(u64_t msguid)
+{
+  u64_t size;
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT rfcsize FROM messages WHERE message_idnr = %llu "
+	   "AND status<2 AND unique_id != ''", msguid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_get_rfcsize(): could not fetch RFC size from table\n");
+      return -1;
+    }
+  
+  if (mysql_store_result(&conn) == NULL)
+    {
+      trace(TRACE_ERROR,"db_get_rfcsize(): mysql_store_result failed: %s\n",mysql_error(&conn));
+      return (-1);
+    }
+
+  if (mysql_num_rows(res) < 1)
+    {
+      trace(TRACE_ERROR, "db_get_rfcsize(): message not found\n");
+      return -1;
+    }
+
+  row = mysql_fetch_row(res);
+  if (row && row[0])
+    size = strtoull(row[0], NULL, 10);
+  else
+    size = 0;
+
+  return size;
+}
+
 
 
 /*
