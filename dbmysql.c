@@ -343,7 +343,7 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines)
   return 1;
 }
 
-int db_send_message_special (void *fstream, unsigned long messageidnr, long lines, char *firstblock)
+int db_send_message_special (void *fstream, unsigned long messageidnr, long lines, char *firstblock, int flush)
 {
   /* this function writes "lines" to fstream.
 	  if lines == -2 then the whole message is dumped to fstream 
@@ -405,7 +405,7 @@ int db_send_message_special (void *fstream, unsigned long messageidnr, long line
 				
 	      if (tmppos!=NULL)
 		{
-		  if (*tmppos=='\r')
+		  if (tmppos[0]=='\r')
 		    sprintf (buffer,"%s%c",buffer,*nextpos);
 		  else 
 		    sprintf (buffer,"%s\r%c",buffer,*nextpos);
@@ -415,11 +415,11 @@ int db_send_message_special (void *fstream, unsigned long messageidnr, long line
 	    }
 	  else
 	    {
-	      if (*nextpos=='.')
+	      if (nextpos[0]=='.')
 		{
 		  if (tmppos!=NULL)
 		    {
-		      if (*tmppos=='\n')
+		      if (tmppos[0]=='\n')
 			sprintf (buffer,"%s.%c",buffer,*nextpos);
 		      else
 			sprintf (buffer,"%s%c",buffer,*nextpos);
@@ -440,13 +440,14 @@ int db_send_message_special (void *fstream, unsigned long messageidnr, long line
 	    {
 	      fprintf ((FILE *)fstream,"%s",buffer);
 	      fflush ((FILE *)fstream);
-	      *buffer='\0';
+	      buffer[0]='\0';
 	    }
 	}
 
       /* flush our buffer */
       fprintf ((FILE *)fstream,"%s",buffer);
-      fflush ((FILE *)fstream);
+		if (flush)
+			fflush ((FILE *)fstream);
 		
       /* setting firstblock to NULL, this way it will be used only once */
       if (firstblock!=NULL)

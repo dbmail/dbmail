@@ -209,7 +209,7 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 	  trace (TRACE_DEBUG,"insert_messages(): no numeric value in deliver_to, calling external_forward");
 
 			/* creating a list of external forward addresses */
-	  list_nodeadd(&external_forwards,tmp->data,strlen(tmp->data)+1);
+	  list_nodeadd(&external_forwards,(char *)tmp->data,strlen(tmp->data)+1);
 	}
       else
 	{

@@ -33,7 +33,7 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
 	while (target != NULL)
 	{
 		sendmail_command = (char *)malloc(strlen((char *)target->data)+
-				strlen(FW_SENDMAIL)+1); /* +1 for extra space */
+				strlen(FW_SENDMAIL)+2); /* +2 for extra space and \0 */
 		trace (TRACE_DEBUG,"pipe_forward(): allocated memory for"
 				" external command call");
 
@@ -68,58 +68,59 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
 
 	if (descriptors.total_nodes>0)
 	{
-		while (!feof (instream))
+
+		if (databasemessageid != 0)
 		{
-			/* read in a datablock */
-			usedmem = fread (strblock, sizeof(char), READ_BLOCK_SIZE, instream);
-			
-			if (usedmem>0)
+		trace (TRACE_DEBUG, "pipe_forward(): Sending from database id=%lu",
+				databasemessageid);
+		db_send_message_special (*((FILE **)(descriptor_temp->data)),
+			databasemessageid, -2, header, 0);
+		}
+		else
+		{
+			while (!feof (instream))
 			{
-				totalmem = totalmem + usedmem;
-
-				trace (TRACE_DEBUG,"pipe_forward(): Sending block"
-						"size=%d total=%d (%d\%)", usedmem, totalmem,
-						(100-((usedmem/totalmem)*100))); 
+				/* read in a datablock */
+				usedmem = fread (strblock, sizeof(char), READ_BLOCK_SIZE, instream);
 				
-				descriptor_temp = list_getstart(&descriptors);
-				while (descriptor_temp != NULL)
+				if (usedmem>0)
 				{
-					err = ferror(*((FILE **)(descriptor_temp->data)));
-					trace (TRACE_DEBUG, "pipe_forward(): ferror reports"
-							" %d, feof reports %d on descriptor %d", err,
-							feof (*((FILE **)(descriptor_temp->data))),
-							fileno(*((FILE **)(descriptor_temp->data))));
-
+					totalmem = totalmem + usedmem;
+	
+					trace (TRACE_DEBUG,"pipe_forward(): Sending block"
+							"size=%d total=%d (%d\%)", usedmem, totalmem,
+							(100-((usedmem/totalmem)*100))); 
+					
+					descriptor_temp = list_getstart(&descriptors);
+					while (descriptor_temp != NULL)
+					{
+						err = ferror(*((FILE **)(descriptor_temp->data)));
+						trace (TRACE_DEBUG, "pipe_forward(): ferror reports"
+								" %d, feof reports %d on descriptor %d", err,
+								feof (*((FILE **)(descriptor_temp->data))),
+								fileno(*((FILE **)(descriptor_temp->data))));
+	
 					if (!err)
 					{
-						if (!databasemessageid)
-						{
-							fprintf (*((FILE **)(descriptor_temp->data)),"%s",strblock);
-						}
-						else
-						{
-							trace (TRACE_DEBUG, "Sending from database");
-							db_send_message_special (*((FILE **)(descriptor_temp->data)),
-									databasemessageid, -2, header);
-						}
+						fprintf (*((FILE **)(descriptor_temp->data)),"%s",strblock);
 					}
 					else
 						trace (TRACE_ERROR,"pipe_forward(): error writing"
 								" to pipe");
 
-					
 					trace (TRACE_DEBUG,"pipe_forward(): wrote data to pipe");
 
 					descriptor_temp = descriptor_temp->nextnode;
-				}
+					}
 
 				/* resetting buffer and index */
 				strblock[0]='\0';
 				usedmem = 0;
-			}
-			else
-			{
-				trace(TRACE_DEBUG,"pipe_forward(): end of instream");
+				}
+				else
+				{
+					trace(TRACE_DEBUG,"pipe_forward(): end of instream");
+				}
 			}
 		}
 		
