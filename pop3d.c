@@ -198,6 +198,7 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 
 	if (done < 0)
 	{
+		db_session_cleanup(&curr_session);
 		trace (TRACE_ERROR,"handle_client(): timeout, connection terminated");
 		fclose(tx);
 		shutdown (fileno(rx), SHUT_RDWR);
@@ -214,6 +215,7 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 
 		/* if everything went well, write down everything and do a cleanup */
 		db_update_pop(&curr_session);
+		db_session_cleanup(&curr_session);
 
 		db_disconnect(); 
 	

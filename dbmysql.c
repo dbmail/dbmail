@@ -806,6 +806,17 @@ unsigned long db_md5_validate (char *username,unsigned char *md5_apop_he, char *
   return 0;
 }
 
+void db_session_cleanup (struct session *sessionptr)
+{
+	/* cleanups a session 
+		removes a list and all references */
+	sessionptr->totalsize=0;
+	sessionptr->virtual_totalsize=0;
+	sessionptr->totalmessages=0;
+	sessionptr->virtual_totalmessages=0;
+	list_freelist(&(sessionptr->messagelst.start));
+}
+
 
 int db_createsession (unsigned long useridnr, struct session *sessionptr)
 {
