@@ -1,0 +1,37 @@
+AC_INIT(main.c)
+AC_CONFIG_AUX_DIR(buildtools)
+DBMAIL_MSG_CONFIGURE_START
+AM_INIT_AUTOMAKE(dbmail-smtp, 1.0)
+AM_MAINTAINER_MODE
+
+AC_PROG_RANLIB
+
+mysqllibpaths="/usr/lib /usr/local/lib /lib /usr/freeware/lib \
+               /usr/freeware/lib32 $HOME/lib $HOME/tcl/lib $HOME"
+mysqlheaderpaths="/usr/include/mysql /usr/include /usr/local/include/mysql \
+                  /usr/local/include /usr/freeware/include/mysql \
+                  /usr/freeware/include $HOME/include $HOME/mysql/include \
+                  $HOME"
+
+pgsqllibpaths="/usr/lib /usr/local/lib /lib /usr/freeware/lib \
+               /usr/freeware/lib32 $HOME/lib $HOME/tcl/lib $HOME"
+
+pgsqlheaderpaths="/usr/include/pgsql /usr/include /usr/local/include/pgsql \
+                  /usr/local/include /usr/freeware/include/pgsql \
+                  /usr/freeware/include $HOME/include $HOME/pgsql/include \
+                  $HOME"
+
+DBMAIL_BOTH_SQL_CHECK
+DBMAIL_CHECK_SQL_LIBS
+
+AC_PROG_CC
+AC_C_CONST
+AC_C_INLINE
+
+AM_CONDITIONAL(MYSQL, [test -n "$MYSQLINC"])
+AM_CONDITIONAL(PGSQL, [test -n "$PGSQLINC"])
+AC_SUBST(SQLLIB)
+AC_SUBST(SQLALIB)
+AC_SUBST(MYSQLINC)
+AC_SUBST(PGSQLINC)
+AC_OUTPUT(Makefile mysql/Makefile pgsql/Makefile)
