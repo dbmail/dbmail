@@ -364,13 +364,13 @@ void manage_stop_children()
 	 * cleanup all remaining forked processes
 	 *
 	 */
-	trace(TRACE_MESSAGE, "%s,%s: General stop requested. Killing children.. ",
-			__FILE__,__func__);
-	int stillSomeAlive, i, cnt;
+	int stillSomeAlive = 1;
+	int i, cnt = 0;
 	pid_t chpid;
 	
-	stillSomeAlive= 1;
-	cnt = 0;
+	trace(TRACE_MESSAGE, "%s,%s: General stop requested. Killing children.. ",
+			__FILE__,__func__);
+
 	while (stillSomeAlive && cnt < 10) {
 		stillSomeAlive = 0;
 		cnt++;
