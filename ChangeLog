@@ -1,3 +1,18 @@
+2004-09-20  Ilja Booij  <ilja@ic-s.nl>
+
+	* pool.c (child_reg_disconnected): trace message to TRACE_DEBUG
+	level.
+	(child_reg_connected): trace message to TRACE_DEBUG level.
+	(scoreboard_delete): tries to remove SCOREBOARD_LOCK_FILE when
+	shutting down.
+	(scoreboard_new): no longer allocates unused (and un-freed) memory.
+
+	* config.c (ReadConfig): added missing my_free() statements.
+	(config_free): added a statement to free global config list.
+	(GetDBParams): changed so it's possible to set a table prefix
+	of "".
+	(GetConfigValue): now returns 1 if config value is found. 0 otherwise.
+
 2004-09-17  Ilja Booij  <ilja@ic-s.nl>
 
 	* db.c (db_list_mailboxes_by_regex): Fixed queries. I fscked them

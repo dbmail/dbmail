@@ -110,6 +110,7 @@ int ReadConfig(const char *serviceName, const char *cfilename)
 		      cfilename);
 		list_freelist(&(service_config->config_items->start));
 		my_free(service_config->config_items);
+		my_free(service_config->service_name);
 		my_free(service_config);
 		return -1;
 	}
@@ -184,6 +185,7 @@ int ReadConfig(const char *serviceName, const char *cfilename)
 						&(service_config->
 						  config_items->start));
 					my_free(service_config->config_items);
+					my_free(service_config->service_name);
 					my_free(service_config);
 					return -1;
 				}
@@ -213,6 +215,7 @@ int ReadConfig(const char *serviceName, const char *cfilename)
 		      __FILE__, __func__);
 		list_freelist(&(service_config->config_items->start));
 		my_free(service_config->config_items);
+		my_free(service_config->service_name);
 		my_free(service_config);
 		return -1;
 	}
@@ -240,6 +243,8 @@ void config_free()
 		list_nodedel(&config_list, el->data);
 		el = next_el;
 	}
+	/* free global list */
+	list_freelist(&(config_list.start));
 }
 
 int GetConfigValue(const field_t field_name, const char *service_name, 
@@ -259,7 +264,7 @@ int GetConfigValue(const field_t field_name, const char *service_name,
 				GetConfigValueConfigList(field_name,
 							 scl->config_items,
 							 value);
-				return 0;
+				return 1;
 			} 
 		}
 		el = el->nextnode;
@@ -349,9 +354,22 @@ void GetDBParams(db_param_t * db_params)
 	if (GetConfigValue("sqlsocket", "DBMAIL", sock_string) < 0)
 		trace(TRACE_FATAL, "%s,%s: error getting config!",
 		      __FILE__, __func__);
-	if (GetConfigValue("table_prefix", "DBMAIL", db_params->pfx) < 0)
+
+	switch (GetConfigValue("table_prefix", "DBMAIL", db_params->pfx) < 0) {
+	case -1:
 		trace(TRACE_FATAL, "%s,%s: error getting config!",
 		      __FILE__, __func__);
+		break;
+	case 0:
+		/* only default to DEFAULT_DBPFX if there is no
+		   table_prefix mentioned in config file, not when it's 
+		   "", which should be possible (in fact, that's what 
+		   the prefix code is for. */
+		strncpy(db_params->pfx, DEFAULT_DBPFX, FIELDSIZE);
+		break;
+	default:
+		break;
+	}
 
 	/* check if port_string holds a value */
 	if (strlen(port_string) != 0) {
@@ -370,6 +388,5 @@ void GetDBParams(db_param_t * db_params)
 	else
 		db_params->sock[0] = '\0';
 
-	if (strlen(db_params->pfx) == 0)
-		strncpy(db_params->pfx, DEFAULT_DBPFX, FIELDSIZE);
+
 }

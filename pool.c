@@ -70,9 +70,13 @@ int set_lock(int type)
 
 void scoreboard_new(serverConfig_t * conf)
 {
+	/* This next malloc() doesn't seem to do anything, except take
+	 * time and use memory. commented out (Ilja 2004-09-20) */
+        /*
 	if ((scoreboard = (Scoreboard_t *) malloc(P_SIZE)) == NULL)
 		trace(TRACE_FATAL,
 		      "%s,%s: malloc scoreboard failed",__FILE__,__FUNCTION__);
+	*/
 	if ((shmid = shmget(IPC_PRIVATE, P_SIZE, 0644 | IPC_CREAT)) == -1)
 		trace(TRACE_FATAL, "%s,%s: shmget failed",__FILE__,__FUNCTION__);
 	scoreboard = shmat(shmid, (void *) 0, 0);
@@ -151,6 +155,12 @@ void scoreboard_delete()
 	if (shmctl(shmid, IPC_RMID, NULL) == -1)
 		trace(TRACE_FATAL,
 		      "scoreboard_delete(): delete shared mem segment failed");
+	
+	if (unlink(SCOREBOARD_LOCK_FILE) == -1) 
+		trace(TRACE_ERROR,
+		      "scoreboard_delete(): error deleting scoreboard lock "
+		      "file %s", SCOREBOARD_LOCK_FILE);
+	
 	return;
 }
 int count_spare_children()
@@ -269,7 +279,7 @@ void child_reg_connected()
 	scoreboard->child[key].status = STATE_CONNECTED;
 	scoreboard_unlck();
 
-	trace(TRACE_MESSAGE, "%s,%s: [%d]", __FILE__, __FUNCTION__,
+	trace(TRACE_DEBUG, "%s,%s: [%d]", __FILE__, __FUNCTION__,
 			getpid());
 }
 
@@ -285,7 +295,7 @@ void child_reg_disconnected()
 	scoreboard->child[key].status = STATE_IDLE;
 	scoreboard_unlck();
 
-	trace(TRACE_MESSAGE, "%s,%s: [%d]", __FILE__, __FUNCTION__,
+	trace(TRACE_DEBUG, "%s,%s: [%d]", __FILE__, __FUNCTION__,
 		getpid());
 }
 
