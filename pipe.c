@@ -402,8 +402,8 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 				  trace (TRACE_DEBUG,"insert_messages(): fprintf now");
 				  err = ferror((FILE *)descriptor_temp->data);
 				  trace (TRACE_DEBUG,"insert_messages(): "
-					 "ferror reports %d on descriptor %d",err, 
-					 fileno((FILE*)descriptor_temp->data));
+					 "ferror reports %d, feof reports %d on descriptor %d",err, 
+					 feof((FILE*)descriptor_temp->data),fileno((FILE*)descriptor_temp->data));
 
 				   /* if (!err)
 				    fwrite (strblock, sizeof(char), usedmem,
