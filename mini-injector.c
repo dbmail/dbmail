@@ -89,6 +89,8 @@ int main(int argc, char *argv[])
   snprintf(newunique, UID_SIZE, "%lluA%lu", uid, time(NULL));
   db_update_message(msgid, newunique, size, size+newlines);
 
+  trace(TRACE_ERROR,"message [%llu] inserted, size [%llu]", msgid, size);
+
   /* cleanup */
   db_disconnect();
 
