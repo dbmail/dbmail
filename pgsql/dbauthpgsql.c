@@ -319,7 +319,7 @@ u64_t db_adduser (char *username, char *password, char *enctype, char *clientid,
       
   snprintf (query, DEF_QUERYSIZE,"INSERT INTO users "
 	    "(userid,passwd,client_idnr,maxmail_size,encryption_type) VALUES "
-	    "('%s','%s',%s,%llu,%s)",
+	    "('%s','%s',%s,%llu,'%s')",
 	    username,password,clientid, size, enctype ? enctype : "");
 	
   if (db_query(query) == -1)
