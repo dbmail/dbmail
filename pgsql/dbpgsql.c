@@ -109,6 +109,7 @@ int db_query (const char *thequery)
 
       if (querysize > 0 )
         {
+	  trace(TRACE_DEBUG, "db_query(): executing query [%s]", thequery);
 	  res = PQexec (conn, thequery);
 
 	  if (!res)
@@ -121,8 +122,7 @@ int db_query (const char *thequery)
 	  if (PQresultStatusVar != PGRES_COMMAND_OK && PQresultStatusVar != PGRES_TUPLES_OK)
             {
 	      trace(TRACE_ERROR,"db_query(): Error executing query [%s] : [%s]\n", 
-		    thequery, 
-		    PQresultErrorMessage(res));
+		    thequery, PQresultErrorMessage(res));
 
 	      PQclear(res);
 	      return -1;
@@ -401,17 +401,19 @@ int db_removealias (u64_t useridnr,const char *alias)
  * returns the mailbox id (of mailbox inbox) for a user or a 0 if no mailboxes were found 
  *
  */
-u64_t db_get_mailboxid (u64_t *useridnr, char *mailbox)
+u64_t db_get_mailboxid (u64_t useridnr, const char *mailbox)
 {
   u64_t inboxid;
 
   snprintf (query, DEF_QUERYSIZE,"SELECT mailbox_idnr FROM mailboxes WHERE "
             "name ~* '^%s$' AND owner_idnr=%llu",
-            mailbox, *useridnr);
+            mailbox, useridnr);
 
-  trace(TRACE_DEBUG,"db_get_mailboxid(): executing query : [%s]",query);
   if (db_query(query)==-1)
-    return 0;
+    {
+      trace(TRACE_ERROR, "db_get_mailboxid(): query failed");
+      return 0;
+    }
 
   if (PQntuples(res)<1) 
     {
@@ -430,17 +432,19 @@ u64_t db_get_mailboxid (u64_t *useridnr, char *mailbox)
 }
 
 
-u64_t db_get_message_mailboxid (u64_t *messageidnr)
+/* 
+ * returns the mailbox id of a message 
+ */
+u64_t db_get_message_mailboxid (u64_t messageidnr)
 {
-  /* returns the mailbox id of a message */
   u64_t mailboxid;
 
   snprintf (query, DEF_QUERYSIZE,"SELECT mailbox_idnr FROM messages WHERE message_idnr = %llu",
-            *messageidnr);
+            messageidnr);
 
-  trace(TRACE_DEBUG,"db_get_message_mailboxid(): executing query : [%s]",query);
   if (db_query(query)==-1)
     {
+      trace(TRACE_ERROR, "db_get_message_mailboxid(): query failed");
       return 0;
     }
 
@@ -519,7 +523,7 @@ u64_t db_get_useridnr (u64_t messageidnr)
  * defaultly inserts into inbox, unless deliver_to_mailbox exists 
  * and is a valid mbox.
  */
-u64_t db_insert_message (u64_t *useridnr, char *deliver_to_mailbox)
+u64_t db_insert_message (u64_t useridnr, const char *deliver_to_mailbox)
 {
   char timestr[30];
   time_t td;
@@ -534,24 +538,22 @@ u64_t db_insert_message (u64_t *useridnr, char *deliver_to_mailbox)
           (deliver_to_mailbox) ? db_get_mailboxid(useridnr, deliver_to_mailbox) 
           : db_get_mailboxid(useridnr, "INBOX"), timestr);
 
-  trace (TRACE_DEBUG,"db_insert_message(): inserting message query [%s]",query);
   if (db_query (query)==-1)
   {
-      trace(TRACE_STOP,"db_insert_message(): dbquery failed");
-    }	
+    trace(TRACE_STOP,"db_insert_message(): dbquery failed");
+  }	
 
   return db_insert_result("message_idnr");
 }
 
 
-u64_t db_update_message (u64_t *messageidnr, char *unique_id,
+u64_t db_update_message (u64_t messageidnr, const char *unique_id,
 			 u64_t messagesize)
 {
   snprintf (query, DEF_QUERYSIZE,
             "UPDATE messages SET messagesize=%llu, unique_id=\'%s\' where message_idnr=%llu",
-            messagesize, unique_id, *messageidnr);
+            messagesize, unique_id, messageidnr);
 
-  trace (TRACE_DEBUG,"db_update_message(): updating message query [%s]",query);
   if (db_query (query)==-1)
     trace(TRACE_STOP,"db_update_message(): dbquery failed");
 
@@ -561,68 +563,61 @@ u64_t db_update_message (u64_t *messageidnr, char *unique_id,
 
 /*
  * insert a msg block
+ * 
+ * len should be equal to strlen(block) and always <= READ_BLOCK_SIZE
+ * 
  * returns msgblkid on succes, -1 on failure
  */
-u64_t db_insert_message_block (char *block, u64_t messageidnr)
+u64_t db_insert_message_block(const char *block, unsigned len, u64_t messageidnr)
 {
-  char *escblk=NULL, *tmpquery=NULL;
-  int len,esclen=0;
+  char *escaped_query = NULL;
+  unsigned maxesclen = READ_BLOCK_SIZE * 2 + DEF_QUERYSIZE, startlen = 0, esclen = 0;
 
-  if (block != NULL)
+  if (block == NULL)
     {
-      len = strlen(block);
-
-      trace (TRACE_DEBUG,"db_insert_message_block(): inserting a %d bytes block\n",
-	     len);
-
-      /* allocate memory twice as much, for eacht character might be escaped 
-	 added aditional 250 bytes for possible function err */
-
-      memtst((escblk=(char *)my_malloc(((len*2)+250)))==NULL); 
-
-      /* escape the string */
-      if ((esclen = PQescapeString (escblk, block, len)) > 0)
-        {
-	  /* add an extra 500 characters for the query */
-	  memtst((tmpquery=(char *)my_malloc(esclen + 500))==NULL);
-
-	  snprintf (tmpquery, esclen+500,
-                    "INSERT INTO messageblks(messageblk,blocksize,message_idnr) "
-                    "VALUES ('%s',%d,%llu)",
-                    escblk,len,messageidnr);
-
-	  if (db_query (tmpquery)==-1)
-            {
-	      my_free(escblk);
-	      my_free(tmpquery);
-	      trace(TRACE_ERROR,"db_insert_message_block(): dbquery failed\n");
-	      return -1;
-            }
-
-	  PQclear(res);
-	  /* freeing buffers */
-	  my_free(tmpquery);
-	  my_free(escblk);
-
-	  return db_insert_result("messageblk_idnr");
-        }
-      else
-        {
-	  trace (TRACE_ERROR,"db_insert_message_block(): PQescapeString() "
-		 "returned empty value\n");
-
-	  my_free(escblk);
-	  return -1;
-        }
-    }
-  else
-    {
-      trace (TRACE_ERROR,"db_insert_message_block(): value of block cannot be NULL, "
+      trace (TRACE_ERROR,"db_insert_message_block(): got NULL as block, "
 	     "insertion not possible\n");
       return -1;
     }
 
-  return -1;
+  if (len > READ_BLOCK_SIZE)
+    {
+      trace (TRACE_ERROR,"db_insert_message_block(): blocksize [%llu], maximum is [%llu]",
+	     len, READ_BLOCK_SIZE);
+      return -1;
+    }
+
+  escaped_query = (char*)my_malloc(sizeof(char) * maxesclen);
+  if (!escaped_query)
+    {
+      trace(TRACE_ERROR,"db_insert_message_block(): not enough memory");
+      return -1;
+    }
+
+  snprintf(escaped_query, maxesclen, "INSERT INTO messageblks"
+	   "(messageblk,blocksize,message_idnr) VALUES ('");
+      
+  startlen = sizeof("INSERT INTO messageblks"
+		    "(messageblk,blocksize,message_idnr) VALUES ('") - 1;
+
+  /* escape & add data */
+  esclen = PQescapeString(&escaped_query[startlen], block, len);
+           
+  snprintf(&escaped_query[esclen + startlen],
+	   maxesclen - esclen - startlen, "', %llu, %llu)", len, msgid);
+
+  if (db_query(escaped_query) == -1)
+    {
+      my_free(escaped_query);
+
+      trace(TRACE_ERROR,"db_insert_message_block(): dbquery failed\n");
+      return -1;
+    }
+
+  /* all done, clean up & exit */
+  my_free(escaped_query);
+
+  return db_insert_result("messageblk_idnr");
 }
 
 
@@ -822,7 +817,7 @@ int db_createsession (u64_t useridnr, struct session *sessionptr)
   u64_t messagecounter=0,mboxid;
 
   /* pop3 can only defaultly read INBOXes */
-  mboxid = (db_get_mailboxid(&useridnr, "INBOX"));
+  mboxid = (db_get_mailboxid(useridnr, "INBOX"));
 
   /* query is <2 because we don't want deleted messages 
      * the unique_id should not be empty, this could mean that the message is still being delivered */
@@ -1480,14 +1475,13 @@ int db_disconnect()
  *  2 mail quotum exceeded
  *
  */
-int db_imap_append_msg(char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid)
+int db_imap_append_msg(const char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid)
 {
   char timestr[30];
   time_t td;
   struct tm tm;
   u64_t msgid,cnt;
   int result;
-  char savechar;
   char unique_id[UID_SIZE]; /* unique id */
 
   time(&td);              /* get time */
@@ -1548,8 +1542,8 @@ int db_imap_append_msg(char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid)
       /* msg consists of a single header */
       trace(TRACE_INFO, "db_imap_append_msg(): msg only contains a header\n");
 
-      if (db_insert_message_block(msgdata, msgid) == -1 || 
-	  db_insert_message_block(" \n", msgid)   == -1)
+      if (db_insert_message_block(msgdata, datalen, msgid) == -1 || 
+	  db_insert_message_block(" \n", 2, msgid)   == -1)
         {
 	  trace(TRACE_ERROR, "db_imap_append_msg(): could not insert msg block\n");
 
@@ -1570,11 +1564,13 @@ int db_imap_append_msg(char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid)
     }
   else
     {
-      /* output header */
+      /* 
+       * output header: 
+       * the first cnt bytes is the header
+       */
       cnt++;
-      savechar = msgdata[cnt];                        /* remember char */
-      msgdata[cnt] = 0;                               /* terminate string */
-      if (db_insert_message_block(msgdata, msgid) == -1)
+
+      if (db_insert_message_block(msgdata, cnt, msgid) == -1)
         {
 	  trace(TRACE_ERROR, "db_imap_append_msg(): could not insert msg block\n");
 
@@ -1592,15 +1588,10 @@ int db_imap_append_msg(char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid)
 	  return -1;
         }
 
-      msgdata[cnt] = savechar;                        /* restore */
-
       /* output message */
       while ((datalen - cnt) > READ_BLOCK_SIZE)
         {
-	  savechar = msgdata[cnt + READ_BLOCK_SIZE];        /* remember char */
-	  msgdata[cnt + READ_BLOCK_SIZE] = 0;               /* terminate string */
-
-	  if (db_insert_message_block(&msgdata[cnt], msgid) == -1)
+	  if (db_insert_message_block(&msgdata[cnt], READ_BLOCK_SIZE, msgid) == -1)
             {
 	      trace(TRACE_ERROR, "db_imap_append_msg(): could not insert msg block\n");
 
@@ -1616,13 +1607,11 @@ int db_imap_append_msg(char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid)
 	      return -1;
             }
 
-	  msgdata[cnt + READ_BLOCK_SIZE] = savechar;        /* restore */
-
 	  cnt += READ_BLOCK_SIZE;
         }
 
 
-      if (db_insert_message_block(&msgdata[cnt], msgid) == -1)
+      if (db_insert_message_block(&msgdata[cnt], datalen-cnt, msgid) == -1)
         {
 	  trace(TRACE_ERROR, "db_imap_append_msg(): could not insert msg block\n");
 
@@ -1646,7 +1635,7 @@ int db_imap_append_msg(char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid)
   snprintf (unique_id,UID_SIZE,"%lluA%lu",msgid,td);
 
   /* set info on message */
-  db_update_message (&msgid, unique_id, datalen);
+  db_update_message (msgid, unique_id, datalen);
 
   return 0;
 }
@@ -1699,11 +1688,12 @@ int db_insert_message_complete(u64_t useridnr, MEM *hdr, MEM *body,
       return -1;
     }
 
-  mboxid = db_get_mailboxid(&useridnr, "INBOX");
+  mboxid = db_get_mailboxid(useridnr, "INBOX");
   if (mboxid == 0 || mboxid == -1)
     {
       trace(TRACE_ERROR,"db_insert_message_complete(): could not find INBOX for user [%llu]", 
 	    useridnr);
+      my_free(escaped_query);
       return -1;
     }
 
@@ -1717,6 +1707,8 @@ int db_insert_message_complete(u64_t useridnr, MEM *hdr, MEM *body,
     {
       trace(TRACE_ERROR,"db_insert_message_complete(): could not insert into messages");
       db_query("ROLLBACK WORK");
+      my_free(escaped_query);
+
       return (-1);
     }
 
@@ -1746,6 +1738,8 @@ int db_insert_message_complete(u64_t useridnr, MEM *hdr, MEM *body,
 	{
 	  trace(TRACE_ERROR,"db_insert_message_complete(): could not insert message header");
 	  db_query("ROLLBACK WORK");
+	  my_free(escaped_query);
+
 	  return -1;
 	}
 
@@ -1767,6 +1761,7 @@ int db_insert_message_complete(u64_t useridnr, MEM *hdr, MEM *body,
 	    {
 	      trace(TRACE_ERROR,"db_insert_message_complete(): could not insert message block");
 	      db_query("ROLLBACK WORK");
+	      my_free(escaped_query);
 	      return -1;
 	    }
 	}
@@ -1778,8 +1773,11 @@ int db_insert_message_complete(u64_t useridnr, MEM *hdr, MEM *body,
 	    _MEMBLOCK_SIZE, READ_BLOCK_SIZE);
 
       db_query("ROLLBACK WORK");
+      my_free(escaped_query);
       return -1;
     }
+
+  my_free(escaped_query);
 
   /* create unique ID */
   snprintf(unique_id,UID_SIZE,"%lluA%lu",msgid,td);

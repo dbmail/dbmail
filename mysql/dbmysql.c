@@ -385,17 +385,20 @@ int db_removealias (u64_t useridnr,const char *alias)
 }
   
 
-u64_t db_get_mailboxid (u64_t *useridnr, char *mailbox)
+/* 
+ * returns the mailbox id (of mailbox inbox) for a user or a 0 if no mailboxes were found 
+ */
+u64_t db_get_mailboxid (u64_t useridnr, const char *mailbox)
 {
-  /* returns the mailbox id (of mailbox inbox) for a user or a 0 if no mailboxes were found */
   u64_t inboxid;
 
-  snprintf (query, DEF_QUERYSIZE,"SELECT mailbox_idnr FROM mailboxes WHERE name=\'%s\' AND owner_idnr=%llu",
-	   mailbox, *useridnr);
+  snprintf (query, DEF_QUERYSIZE,"SELECT mailbox_idnr FROM mailboxes WHERE "
+	    "name=\'%s\' AND owner_idnr=%llu",
+	   mailbox, useridnr);
 
-  trace(TRACE_DEBUG,"db_get_mailboxid(): executing query : [%s]",query);
   if (db_query(query)==-1)
     {
+      trace(TRACE_ERROR, "db_get_mailboxid(): query failed");
       return 0;
     }
 
@@ -422,12 +425,11 @@ u64_t db_get_mailboxid (u64_t *useridnr, char *mailbox)
 
   mysql_free_result (res);
   
-	
   return inboxid;
 }
 
 
-u64_t db_get_message_mailboxid (u64_t *message_idnr)
+u64_t db_get_message_mailboxid (u64_t message_idnr)
 {
   /* returns the mailbox id of a message */
   u64_t mailboxid;
@@ -556,7 +558,7 @@ u64_t db_get_useridnr (u64_t message_idnr)
 /* 
  * inserts into inbox ! 
  */
-u64_t db_insert_message (u64_t *useridnr, char *deliver_to_mailbox)
+u64_t db_insert_message (u64_t useridnr, const char *deliver_to_mailbox)
 {
   char timestr[30];
   time_t td;
@@ -572,7 +574,6 @@ u64_t db_insert_message (u64_t *useridnr, char *deliver_to_mailbox)
 	    deliver_to_mailbox ? db_get_mailboxid(useridnr, deliver_to_mailbox) : 
         db_get_mailboxid (useridnr, "INBOX"), timestr);
 
-  trace (TRACE_DEBUG,"db_insert_message(): inserting message query [%s]",query);
   if (db_query (query)==-1)
     {
       trace(TRACE_STOP,"db_insert_message(): dbquery failed");
@@ -582,17 +583,15 @@ u64_t db_insert_message (u64_t *useridnr, char *deliver_to_mailbox)
 }
 
 
-u64_t db_update_message (u64_t *message_idnr, char *unique_id,
+u64_t db_update_message (u64_t message_idnr, const char *unique_id,
 			 u64_t messagesize)
 {
   snprintf (query, DEF_QUERYSIZE,
 	   "UPDATE messages SET messagesize=%llu, unique_id=\"%s\" where message_idnr=%llu",
-	   messagesize, unique_id, *message_idnr);
+	   messagesize, unique_id, message_idnr);
   
-  trace (TRACE_DEBUG,"db_update_message(): updating message query [%s]",query);
   if (db_query (query)==-1)
     {
-      
       trace(TRACE_STOP,"db_update_message(): dbquery failed");
     }
 	
@@ -868,7 +867,7 @@ int db_createsession (u64_t useridnr, struct session *sessionptr)
    * the unique_id should not be empty, this could mean that the message is still being delivered */
   snprintf (query, DEF_QUERYSIZE, "SELECT * FROM messages WHERE mailbox_idnr=%llu AND status<002 AND "
 	   "unique_id!=\"\" order by status ASC",
-	   (db_get_mailboxid(&useridnr, "INBOX")));
+	   (db_get_mailboxid(useridnr, "INBOX")));
 
   if (db_query(query)==-1)
     {

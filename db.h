@@ -20,7 +20,7 @@
 #define MAX_EMAIL_SIZE 250
 
 /* size of the messageblk's */
-#define READ_BLOCK_SIZE 524288		/* be carefull, MYSQL has a limit */
+#define READ_BLOCK_SIZE (512ul*1024ul)		/* be carefull, MYSQL has a limit */
 
 /* config types */
 #define CONFIG_MANDATORY 1			
@@ -109,13 +109,13 @@ int db_addalias(u64_t useridnr, char *alias, u64_t clientid);
 int db_addalias_ext(char *alias, char *deliver_to, u64_t clientid);
 int db_removealias(u64_t useridnr, const char *alias);
 
-u64_t db_get_mailboxid (u64_t *useridnr, char *mailbox);
+u64_t db_get_mailboxid (u64_t useridnr, const char *mailbox);
 u64_t db_get_useridnr (u64_t messageidnr);
-u64_t db_get_message_mailboxid (u64_t *messageidnr);
-u64_t db_insert_message (u64_t *useridnr, char *deliver_to_mailbox);
-u64_t db_update_message (u64_t *messageidnr, char *unique_id,
-				 u64_t messagesize);
-u64_t db_insert_message_block (char *block, u64_t messageidnr);
+u64_t db_get_message_mailboxid (u64_t messageidnr);
+u64_t db_insert_message (u64_t useridnr, const char *deliver_to_mailbox);
+u64_t db_update_message (u64_t messageidnr, const char *unique_id,
+			 u64_t messagesize);
+u64_t db_insert_message_block(const char *block, unsigned len, u64_t messageidnr);
 
 int db_log_ip(const char *ip);
 int db_cleanup_iplog(const char *lasttokeep);
@@ -137,11 +137,7 @@ u64_t db_set_deleted ();
 u64_t db_deleted_purge();
 u64_t db_check_sizelimit (u64_t addblocksize, u64_t messageidnr, 
 				  u64_t *useridnr);
-int db_imap_append_msg(char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid);
-
-int db_insert_message_complete(u64_t useridnr, MEM *hdr, MEM *body, 
-			       u64_t hdrsize, u64_t bodysize, u64_t rfcsize);
-
+int db_imap_append_msg(const char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid);
 
 /* mailbox functionality */
 u64_t db_findmailbox(const char *name, u64_t useridnr);

@@ -286,8 +286,8 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
           userid=strtoull((char *)tmp->data, NULL, 10);
 
           /* create a message record */
-          temp_message_record_id=db_insert_message ((u64_t *)&userid,
-                  deliver_to_mailbox);
+          temp_message_record_id=db_insert_message ((u64_t)userid,
+						    deliver_to_mailbox);
 
           /* message id is an array of returned message id's
            * all messageblks are inserted for each message id
@@ -366,7 +366,7 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
 	   * a special field is created in the database for other possible 
 	   * even more unique strings */
 	  create_unique_id(unique_id,*(u64_t*)tmp->data); 
-	  db_update_message ((u64_t*)tmp->data,unique_id,totalmem+headersize);
+	  db_update_message (*(u64_t*)tmp->data,unique_id,totalmem+headersize);
 
 	  /* checking size */
 	  switch (db_check_sizelimit (totalmem+headersize, *(u64_t*)tmp->data,
