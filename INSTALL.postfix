@@ -103,7 +103,7 @@ Date:   19-03-2004
 
 	user = <username>
 	password = <password>
-	host = <dbhost>
+	hosts = <dbhost>
 	dbname = <dbname>
 	table = dbmail_aliases
 	select_field = alias

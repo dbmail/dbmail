@@ -1,3 +1,7 @@
+2004-09-15  Ilja Booij  <ilja@ic-s.nl>
+
+	* INSTALL.postfix: host -> hosts in postfix-mysql config.
+
 2004-09-15  Paul Stevens <paul@nfg.nl>
 
 	* db.c, db.h, dbmsgbuf.c, dbmsgbuf.h, pipe.c, rfcmsg.c,
