@@ -110,7 +110,28 @@ const IMAP_COMMAND_HANDLER imap_handler_functions[] = {
 };
 
 
+int ci_write(FILE * fd, char * msg, ...);
 
+int ci_write(FILE * fd, char * msg, ...)
+{
+	va_list ap;
+	va_start(ap, msg);
+	
+	if (feof(fd) || vfprintf(fd,msg,ap) < 0 || fflush(fd) < 0) {
+		va_end(ap);
+		return -1;
+	}
+	va_end(ap);
+	return 0;
+}
+
+void ci_cleanup(ClientInfo *ci);
+void ci_cleanup(ClientInfo *ci)
+{
+	close_cache();
+	null_free(((imap_userdata_t*)ci->userData)->mailbox.seq_list);
+	null_free(ci->userData);
+}
 
 /*
  * Main handling procedure
@@ -142,18 +163,21 @@ int IMAPClientHandler(ClientInfo * ci)
 	ud = ci->userData;
 
 	/* greet user */
-	fprintf(ci->tx,
-		"* OK dbmail imap (protocol version 4r1) server %s ready to run\r\n",
-		IMAP_SERVER_VERSION);
+	if (ci_write(ci->tx,
+		     "* OK dbmail imap (protocol version 4r1) server %s "
+		     "ready to run\r\n", IMAP_SERVER_VERSION)) {
+		ci_cleanup(ci);
+		return EOF;
+	}
 	fflush(ci->tx);
 
 	/* init: cache */
 	if (init_cache() != 0) {
 		trace(TRACE_ERROR,
 		      "IMAPClientHandler(): cannot open temporary file\n");
-		fprintf(ci->tx, "* BYE internal system failure\r\n");
-
-		null_free(ci->userData);
+		if (ci_write(ci->tx, "* BYE internal system failure\r\n"))
+			return -1;
+		ci_cleanup(ci);
 		return EOF;
 	}
 
@@ -165,7 +189,10 @@ int IMAPClientHandler(ClientInfo * ci)
 		if (nfaultyresponses >= MAX_FAULTY_RESPONSES) {
 			/* we have had just about it with this user */
 			sleep(2);	/* avoid DOS attacks */
-			fprintf(ci->tx, "* BYE [TRY RFC]\r\n");
+			if (ci_write(ci->tx, "* BYE [TRY RFC]\r\n")) {
+				ci_cleanup(ci);
+				return EOF;
+			}
 			done = 1;
 			break;
 		}
@@ -175,11 +202,7 @@ int IMAPClientHandler(ClientInfo * ci)
 			      "IMAPClientHandler(): error [%s] on read-stream\n",
 			      strerror(errno));
 			if (errno == EPIPE) {
-				close_cache();
-				null_free(((imap_userdata_t *) ci->
-					   userData)->mailbox.seq_list);
-				null_free(ci->userData);
-
+				ci_cleanup(ci);
 				return -1;	/* broken pipe */
 			} else
 				clearerr(ci->rx);
@@ -190,29 +213,24 @@ int IMAPClientHandler(ClientInfo * ci)
 			      "IMAPClientHandler(): error [%s] on write-stream\n",
 			      strerror(errno));
 			if (errno == EPIPE) {
-				close_cache();
-				null_free(((imap_userdata_t *) ci->
-					   userData)->mailbox.seq_list);
-				null_free(ci->userData);
-
+				ci_cleanup(ci);
 				return -1;	/* broken pipe */
 			} else
 				clearerr(ci->tx);
 		}
 
 		alarm(ci->timeout);	/* install timeout handler */
-		fgets(line, MAX_LINESIZE, ci->rx);	/* read command line */
+		if (fgets(line, MAX_LINESIZE, ci->rx) == NULL) {
+			ci_cleanup(ci);
+			return -1;
+		}
 		alarm(0);	/* remove timeout handler */
 
 		if (!ci->rx || !ci->tx) {
 			/* if a timeout occured the streams will be closed & set to NULL */
 			trace(TRACE_ERROR,
 			      "IMAPClientHandler(): timeout occurred.");
-			close_cache();
-			null_free(((imap_userdata_t *) ci->userData)->
-				  mailbox.seq_list);
-			null_free(ci->userData);
-
+			ci_cleanup(ci);
 			return 1;
 		}
 
@@ -222,14 +240,13 @@ int IMAPClientHandler(ClientInfo * ci)
 
 		if (!checkchars(line)) {
 			/* foute tekens ingetikt */
-			fprintf(ci->tx,
-				"* BYE Input contains invalid characters\r\n");
-			close_cache();
-
-			null_free(((imap_userdata_t *) ci->userData)->
-				  mailbox.seq_list);
-			null_free(ci->userData);
-
+			if (ci_write(ci->tx,
+				     "* BYE Input contains invalid "
+				     "characters\r\n")) {
+				ci_cleanup(ci);
+				return EOF;
+			}
+			ci_cleanup(ci);
 			return 1;
 		}
 
@@ -246,7 +263,11 @@ int IMAPClientHandler(ClientInfo * ci)
 		trace(COMMAND_SHOW_LEVEL, "COMMAND: [%s]\n", line);
 
 		if (!(*line)) {
-			fprintf(ci->tx, "* BAD No tag specified\r\n");
+			
+			if (ci_write(ci->tx, "* BAD No tag specified\r\n")) {
+				ci_cleanup(ci);
+				return EOF;
+			}
 			nfaultyresponses++;
 			continue;
 		}
@@ -256,32 +277,37 @@ int IMAPClientHandler(ClientInfo * ci)
 
 		i = stridx(cpy, ' ');	/* find next space */
 		if (i == (int) strlen(cpy)) {
-			if (strcmp(cpy, "yeah!") == 0)
-				fprintf(ci->tx,
-					"* YEAH dbmail ROCKS sunnyboy!\r\n");
-			else {
-				if (checktag(cpy))
-					fprintf(ci->tx,
-						"%s BAD No command specified\r\n",
-						cpy);
-				else
-					fprintf(ci->tx,
-						"* BAD Invalid tag specified\r\n");
-
-				nfaultyresponses++;
+			if (checktag(cpy)) {
+				if (ci_write(ci->tx,
+					     "%s BAD No command specified\r\n",
+					     cpy)) {
+					ci_cleanup(ci);
+					return EOF;
+				}
+			} else {
+				if (ci_write(ci->tx,
+					     "* BAD Invalid tag specified\r\n")) {
+					ci_cleanup(ci);
+					return EOF;
+				}
 			}
-
+			nfaultyresponses++;
 			continue;
+			
 		}
-
-
+		
 		tag = cpy;	/* set tag */
 		cpy[i] = '\0';
 		cpy = cpy + i + 1;	/* cpy points to command now */
 
 		/* check tag */
 		if (!checktag(tag)) {
-			fprintf(ci->tx, "* BAD Invalid tag specified\r\n");
+
+			if (ci_write(ci->tx, 
+				     "* BAD Invalid tag specified\r\n")) {
+				ci_cleanup(ci);
+				return EOF;
+			}
 			nfaultyresponses++;
 			continue;
 		}
@@ -301,19 +327,19 @@ int IMAPClientHandler(ClientInfo * ci)
 				/* some error occurred during the read of extra command info */
 				trace(TRACE_ERROR,
 				      "IMAPClientHandler(): error reading extra command info");
-				close_cache();
-				null_free(((imap_userdata_t *) ci->
-					   userData)->mailbox.seq_list);
-				null_free(ci->userData);
-
+				ci_cleanup(ci);
 				return -1;
 			}
 		}
 
 		if (!args) {
-			fprintf(ci->tx,
-				"%s BAD invalid argument specified\r\n",
-				tag);
+			if (ci_write(ci->tx,
+				     "%s BAD invalid argument specified\r\n",
+				     tag)) {
+				ci_cleanup(ci);
+				return EOF;
+			}
+				
 			nfaultyresponses++;
 			continue;
 		}
@@ -324,8 +350,12 @@ int IMAPClientHandler(ClientInfo * ci)
 
 		if (i <= IMAP_COMM_NONE || i >= IMAP_COMM_LAST) {
 			/* unknown command */
-			fprintf(ci->tx,
-				"%s BAD command not recognized\r\n", tag);
+			if (ci_write(ci->tx,
+				     "%s BAD command not recognized\r\n",
+				     tag)) {
+				ci_cleanup(ci);
+				return EOF;
+			}
 			nfaultyresponses++;
 
 			/* free used memory */
@@ -383,17 +413,16 @@ int IMAPClientHandler(ClientInfo * ci)
 
 				result = db_getmailbox(&newmailbox);
 				if (result == -1) {
-					fprintf(ci->tx,
-						"* BYE internal dbase error\r\n");
+					if (ci_write(ci->tx,
+						     "* BYE internal dbase "
+						     "error\r\n")) {
+						ci_cleanup(ci);
+						return EOF;
+					}
 					trace(TRACE_ERROR,
-					      "IMAPClientHandler(): could not get mailbox info\n");
-
-					close_cache();
-					null_free(((imap_userdata_t *) ci->
-						   userData)->mailbox.
-						  seq_list);
-					null_free(ci->userData);
-
+					      "IMAPClientHandler(): could not "
+					      "get mailbox info\n");
+					ci_cleanup(ci);
 					for (i = 0; args[i]; i++) {
 						my_free(args[i]);
 						args[i] = NULL;
@@ -404,25 +433,37 @@ int IMAPClientHandler(ClientInfo * ci)
 
 				if (newmailbox.exists !=
 				    ud->mailbox.exists) {
-					fprintf(ci->tx, "* %u EXISTS\r\n",
-						newmailbox.exists);
+					if(ci_write(ci->tx, "* %u EXISTS\r\n",
+						    newmailbox.exists)) {
+						ci_cleanup(ci);
+						return EOF;
+					}
 					trace(TRACE_INFO,
-					      "IMAPClientHandler(): ok update sent\r\n");
+					      "IMAPClientHandler(): ok update "
+					      "sent\r\n");
 				}
 
 				if (newmailbox.recent !=
 				    ud->mailbox.recent)
-					fprintf(ci->tx, "* %u RECENT\r\n",
-						newmailbox.recent);
+					if(ci_write(ci->tx, "* %u RECENT\r\n",
+						    newmailbox.recent)) {
+						ci_cleanup(ci);
+						return EOF;
+					}
 
 				my_free(ud->mailbox.seq_list);
 				memcpy(&ud->mailbox, &newmailbox,
 				       sizeof(newmailbox));
 			}
 		}
-		if (this_was_noop)
-			fprintf(ci->tx, "%s OK NOOP completed\r\n", tag);
-
+		if (this_was_noop) {
+			if(ci_write(ci->tx, "%s OK NOOP completed\r\n", tag)) {
+				ci_cleanup(ci);
+				return EOF; 
+			}
+			trace(TRACE_DEBUG, "%s,%s: tag = %s", __FILE__, __FUNCTION__,
+			      tag);
+		}
 		for (i = 0; args[i]; i++) {
 			my_free(args[i]);
 			args[i] = NULL;
@@ -431,12 +472,11 @@ int IMAPClientHandler(ClientInfo * ci)
 	} while (!done);
 
 	/* cleanup */
-	close_cache();
-
-	null_free(((imap_userdata_t *) ci->userData)->mailbox.seq_list);
-	null_free(ci->userData);
-
-	fprintf(ci->tx, "%s OK completed\r\n", tag);
+	if (ci_write(ci->tx, "%s OK completed\r\n", tag)) {
+		ci_cleanup(ci);
+		return EOF;
+	}
+	ci_cleanup(ci);
 	trace(TRACE_MESSAGE,
 	      "IMAPClientHandler(): Closing connection for client from IP [%s]\n",
 	      ci->ip);
@@ -444,5 +484,4 @@ int IMAPClientHandler(ClientInfo * ci)
 	__debug_dumpallocs();
 
 	return EOF;
-
 }

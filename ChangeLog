@@ -1,5 +1,9 @@
 2004-04-01  Ilja Booij  <ilja@ic-s.nl>
 
+	* imap4.c (IMAPClientHandler): add ci_cleanup() calls before
+	returning from function. All fprintf() calls are exchanged
+	for ci_write() calls, which add error checking.
+
 	* lmtp.c (lmtp_handle_connection): initialize session state to
 	STRT
 
