@@ -1,3 +1,23 @@
+2004-01-29  Ilja Booij  <ilja@ic-s.nl>
+
+	* mysql/dbmysql.c (db_connect): added auto reconnect flag to MYSQL 
+	structure.
+	(db_check_connection): added attempt to reconnect to database.
+
+	* db.c (db_delete_message): added db_free_result() statements to
+	always free result set.
+	(db_send_message_lines): added a db_free_result statements to always
+	free result set.
+
+2004-01-28  Ilja Booij  <ilja@ic-s.nl>
+
+	* db.c (db_get_users_from_clientid): added db_free_result() 
+	statements to always free result set.
+	(db_get_notify_address): added db_free_result() statement.
+
+	* auth/authsql.c (auth_validate): added to free() statements to
+	always free the memory allocated for escuser
+
 2004-01-27  Ilja Booij  <ilja@ic-s.nl>
 
 	* sql/mysql/create_tables_innoDB.mysql: tables shared_mailbox and

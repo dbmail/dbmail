@@ -63,6 +63,9 @@ int db_connect()
 	char *sock = NULL;
 	/* connect */                                             
 	mysql_init(&conn);
+	
+	/* auto re-connect */
+	conn.reconnect = 1;
 
 	/* use the standard MySQL port by default */
 	if (_db_params.port == 0)
@@ -170,12 +173,17 @@ int db_disconnect()
 int db_check_connection()
 {
 	if (mysql_ping(&conn) != 0) {
-	  trace(TRACE_ERROR, "%s,%s: connection error", 
-		__FILE__, __FUNCTION__);
-		return -1;
+		trace(TRACE_DEBUG, "%s,%s: no database connection, trying "
+		      "to establish on.", __FILE__, __FUNCTION__);
+		if (db_connect() < 0) {
+			trace(TRACE_ERROR, "%s,%s: unable to connect to "
+			      "database.", __FILE__, __FUNCTION__);
+			return -1;
+		}
 	}
 	return 0;
 }
+
 u64_t db_insert_result(const char *sequence_identifier UNUSED)            
 {                                                             
 	u64_t insert_result;                                      

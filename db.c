@@ -259,6 +259,7 @@ int db_get_users_from_clientid(u64_t client_id, u64_t **user_ids,
 	if (*user_ids == NULL) {
 		trace(TRACE_ERROR, "%s,%s: error allocating memory, probably "
 		      "out of memory", __FILE__, __FUNCTION__);
+		db_free_result();
 		return -2;
 	}
 	for (i = 0; i < *num_users; i++) {
@@ -266,6 +267,7 @@ int db_get_users_from_clientid(u64_t client_id, u64_t **user_ids,
 		(*user_ids)[i] = result_string ? 
 			strtoull(result_string, NULL, 10) : 0;
 	}
+	db_free_result();
 	return 1;
 }
 
@@ -445,6 +447,8 @@ int db_get_notify_address(u64_t user_idnr, char **notify_address)
 		  __FILE__, __FUNCTION__, *notify_address);
 	}
     }
+
+    db_free_result();
     return 0;
 }
 
@@ -477,6 +481,7 @@ int db_get_reply_body(u64_t user_idnr, char **reply_body)
 		  __FILE__, __FUNCTION__, *reply_body);
 	}
     }
+    db_free_result();
     return 0;
 }
 
@@ -1373,12 +1378,14 @@ int db_delete_message(u64_t message_idnr)
 	    /* there are no other messages with the same physmessage left.
 	     *  the physmessage records and message blocks now need to
 	     * be removed */
+	    db_free_result();
 	    if (db_delete_physmessage(physmessage_id) < 0) {
 		    trace(TRACE_ERROR,"%s,%s: error deleting physmessage",
 			  __FILE__, __FUNCTION__);
 		    return -1;
 	    }
-    }
+    } else 
+	    db_free_result();
     return 1;
 }
 
@@ -1475,6 +1482,7 @@ int db_send_message_lines(void *fstream, u64_t message_idnr,
 	return 0;
     }
     physmessage_id = strtoull(db_get_result(0, 0), NULL, 10);
+    db_free_result();
 
     memtst((buffer = (char *) my_malloc(WRITE_BUFFER_SIZE * 2)) == NULL);
 

@@ -679,8 +679,11 @@ int auth_validate (char *username, char *password, u64_t* user_idnr)
 	     trace(TRACE_ERROR, "%s,%s: could not select user information",
 		   __FILE__, __FUNCTION__);
 	     db_store_auth_result();
+	     my_free(escuser);
 	     return -1;
 	}
+
+	my_free(escuser);
 
 	if (db_num_rows() == 0) {
 	     db_free_result();
