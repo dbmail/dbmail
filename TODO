@@ -1,6 +1,5 @@
 $Id$
 
-- support for TOP command in pop server
 - support for @domain in aliases table
 - dbmail-smtp should return failed inserts to sender
 
