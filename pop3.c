@@ -155,6 +155,8 @@ int pop3 (void *stream, char *buffer)
 	  case -1: return -1;
 	  case 0: 
 	    {
+			trace (TRACE_ERROR,"pop3(): user [%s] tried to login with wrong password",
+					username); 
 	      return pop3_error (stream,"-ERR username/password incorrect\r\n");
 	    }
 	  default:
@@ -408,7 +410,12 @@ int pop3 (void *stream, char *buffer)
 	switch (result)
 	  {
 	  case -1: return -1;
-	  case 0: return pop3_error(stream,"-ERR authentication attempt is invalid\r\n");
+	  case 0: 
+		  {
+			trace (TRACE_ERROR,"pop3(): user [%s] tried to login with wrong password",
+				username); 
+		 return pop3_error(stream,"-ERR authentication attempt is invalid\r\n");
+		  }
 	  default:
 	    {
 	      state = TRANSACTION;
