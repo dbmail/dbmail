@@ -123,7 +123,7 @@ void db_free_result(void);
  *     - pointer to string holding result. 
  *     - NULL if no such result
  */
-const char *db_get_result(unsigned row, unsigned field);
+/*@dependent@*/ const char *db_get_result(unsigned row, unsigned field);
 
 /** \ingroup db_get_result_group
  * \brief Returns the result as an Integer
@@ -277,8 +277,9 @@ int db_calculate_quotum_used(u64_t user_idnr);
  *      - -1 on database error
  *      -  1 on success
  */
-int db_get_users_from_clientid(u64_t client_id, u64_t ** user_ids,
-			       unsigned *num_users);
+int db_get_users_from_clientid(u64_t client_id, 
+			       /*@out@*/ u64_t ** user_ids,
+			       /*@out@*/ unsigned *num_users);
 /**
  * \brief get deliver_to from alias. Gets a list of deliver_to
  * addresses
@@ -289,7 +290,7 @@ int db_get_users_from_clientid(u64_t client_id, u64_t ** user_ids,
  *         - deliver_to address otherwise
  * \attention caller needs to free the return value
  */
-char *db_get_deliver_from_alias(const char *alias);
+/*@null@*/ char *db_get_deliver_from_alias(const char *alias);
 /**
  * \brief get a list of aliases associated with a user's user_idnr
  * \param user_idnr idnr of user

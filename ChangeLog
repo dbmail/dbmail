@@ -1,5 +1,10 @@
 2004-04-19  Ilja Booij  <ilja@ic-s.nl>
 
+	* db.c (db_get_deliver_from_alias): now returns strdup() of ""
+	instead of the literal itself. Also, we just use strdup() to
+	copy the query result to a new string.
+	(db_get_notify_address): use strdup instead of complicated stuff..
+
 	* config.c (ReadConfig): added checks to satisfy splint warnings
 	(GetConfigValue): corrected some checks that did not work in the
 	form they were in (tests for null pointers that were never null!)

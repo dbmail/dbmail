@@ -268,6 +268,7 @@ int db_calculate_quotum_all()
 		      __FILE__, __FUNCTION__);
 		return -2;
 	}
+
 	for (i = 0; i < n; i++) {
 		user_idnrs[i] = db_get_result_u64(i, 0);
 		curmail_sizes[i] = db_get_result_u64(i, 1);
@@ -337,6 +338,9 @@ int db_get_users_from_clientid(u64_t client_id, u64_t ** user_ids,
 
 	assert(user_ids != NULL);
 	assert(num_users != NULL);
+	
+	*user_ids = NULL;
+	*num_users = 0;
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT user_idnr FROM users WHERE client_idnr = '%llu'",
@@ -381,7 +385,7 @@ char *db_get_deliver_from_alias(const char *alias)
 	if (db_num_rows() == 0) {
 		/* no such user */
 		db_free_result();
-		return "";
+		return strdup("");
 	}
 
 	query_result = db_get_result(0, 0);
@@ -390,15 +394,7 @@ char *db_get_deliver_from_alias(const char *alias)
 		return NULL;
 	}
 
-	/* FIXME: Why not just use a strdup() here? */
-	if (!(deliver = (char *) my_malloc(strlen(query_result) + 1))) {
-		trace(TRACE_ERROR, "%s,%s: out of mem", __FILE__,
-		      __FUNCTION__);
-		db_free_result();
-		return NULL;
-	}
-
-	strncpy(deliver, query_result, strlen(query_result) + 1);
+	deliver = strdup(query_result);
 	db_free_result();
 	return deliver;
 }
@@ -520,10 +516,14 @@ int db_removealias_ext(const char *alias, const char *deliver_to)
 	}
 	return 0;
 }
+
 int db_get_notify_address(u64_t user_idnr, char **notify_address)
 {
 	const char *query_result = NULL;
+
+	assert(notify_address != NULL);
 	*notify_address = NULL;
+
 	snprintf(query, DEF_QUERYSIZE, "SELECT notify_address "
 		 "FROM auto_notifications WHERE user_idnr = %llu",
 		 user_idnr);
@@ -537,19 +537,7 @@ int db_get_notify_address(u64_t user_idnr, char **notify_address)
 	if (db_num_rows() > 0) {
 		query_result = db_get_result(0, 0);
 		if (query_result && strlen(query_result) > 0) {
-			/* FIXME: Why not just use a strdup() here? */
-			if (!
-			    (*notify_address =
-			     (char *) my_malloc(strlen(query_result) +
-						1))) {
-				trace(TRACE_ERROR,
-				      "%s,%s: could not allocate",
-				      __FILE__, __FUNCTION__);
-				db_free_result();
-				return -2;
-			}
-			snprintf(*notify_address, strlen(query_result) + 1,
-				 "%s", query_result);
+			*notify_address = strdup(query_result);
 			trace(TRACE_DEBUG, "%s,%s: found address [%s]",
 			      __FILE__, __FUNCTION__, *notify_address);
 		}
@@ -708,7 +696,7 @@ int db_insert_message(u64_t user_idnr,
 	int result;
 
 	if (!mailbox)
-		mailbox = "INBOX";
+		mailbox = strdup("INBOX");
 
 	switch (create_or_error_mailbox) {
 	case CREATE_IF_MBOX_NOT_FOUND:
