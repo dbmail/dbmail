@@ -369,9 +369,9 @@ static struct DbmailMessage * _retrieve(struct DbmailMessage *self, char *query_
 	int row = 0, rows = 0;
 	GString *message = g_string_new("");
 	
-	assert(self->id != 0);
+	assert(dbmail_message_get_physid(self));
 	
-	snprintf(query, DEF_QUERYSIZE, query_template, DBPFX, DBPFX, self->id);
+	snprintf(query, DEF_QUERYSIZE, query_template, DBPFX, dbmail_message_get_physid(self));
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: sql error", __FILE__, __func__);
@@ -401,12 +401,10 @@ static struct DbmailMessage * _retrieve(struct DbmailMessage *self, char *query_
  */
 static void _fetch_head(struct DbmailMessage *self)
 {
-	char *query_template = 	"SELECT block.messageblk "
-		"FROM %smessageblks block, %smessages msg "
-		"WHERE block.physmessage_id = msg.physmessage_id "
-		"AND block.is_header = 1"
-		"AND msg.message_idnr = '%llu' "
-		"ORDER BY block.messageblk_idnr";
+	char *query_template = 	"SELECT messageblk "
+		"FROM %smessageblks "
+		"WHERE physmessage_id = '%llu' "
+		"AND is_header = 1 ";
 	_retrieve(self, query_template);
 
 }
@@ -418,23 +416,24 @@ static void _fetch_head(struct DbmailMessage *self)
  */
 static void _fetch_full(struct DbmailMessage *self) 
 {
-	char *query_template = "SELECT block.messageblk "
-		"FROM %smessageblks block, %smessages msg "
-		"WHERE block.physmessage_id = msg.physmessage_id "
-		"AND msg.message_idnr = '%llu' "
-		"ORDER BY block.messageblk_idnr";
+	char *query_template = "SELECT messageblk "
+		"FROM %smessageblks "
+		"WHERE physmessage_id = '%llu' "
+		"ORDER BY messageblk_idnr";
 	_retrieve(self, query_template);
 }
 
 /* \brief retrieve message
  * \param empty DbmailMessage
- * \param message_idnr
+ * \param physmessage_id
  * \param filter (header-only or full message)
  * \return filled DbmailMessage
  */
-struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t id, int filter)
+struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t physid, int filter)
 {
-	self->id = id;
+	assert(physid);
+	
+	dbmail_message_set_physid(self, physid);
 	
 	switch (filter) {
 		case DBMAIL_MESSAGE_FILTER_HEAD:
@@ -447,8 +446,8 @@ struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t
 	
 	if (! self->content) {
 		trace(TRACE_ERROR, 
-				"%s,%s: retrieval failed for id [%llu]", 
-				__FILE__, __func__, id
+				"%s,%s: retrieval failed for physid [%llu]", 
+				__FILE__, __func__, dbmail_message_get_physid(self)
 				);
 		return NULL;
 	}
@@ -578,9 +577,7 @@ int dbmail_message_headers_cache(struct DbmailMessage *self)
 {
 	assert(self);
 	assert(self->physid);
-	db_begin_transaction();
 	g_mime_header_foreach(GMIME_OBJECT(self->content)->headers, _header_cache, self);
-	db_commit_transaction();
 	return 1;
 }
 
@@ -612,8 +609,17 @@ void _header_cache(const char *header, const char *value, gpointer user_data)
 {
 	u64_t id;
 	struct DbmailMessage *self = (struct DbmailMessage *)user_data;
-	GString *q = g_string_new("");
-	db_header_get_id(header, &id);
+	GString *q;
+	
+	/* skip headernames with spaces like From_ */
+	if (strchr(header, ' '))
+		return;
+	
+	if ((db_header_get_id(header, &id) < 0))
+		return;
+	
+	q = g_string_new("");
+	
 	g_string_printf(q,"INSERT INTO %sheadervalue (headername_id, physmessage_id, headervalue)"
 			"VALUES (%llu,%llu,'%s')", DBPFX, id, self->physid, value);
 	if (db_query(q->str)) {

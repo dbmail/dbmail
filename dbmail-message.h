@@ -91,7 +91,7 @@ int dbmail_message_headers_cache(struct DbmailMessage *message);
 
 dsn_class_t sort_and_deliver(struct DbmailMessage *self, u64_t useridnr, const char *mailbox);
 
-struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t id, int filter);
+struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t physid, int filter);
 
 /*
  * attribute accessors
