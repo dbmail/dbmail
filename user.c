@@ -9,7 +9,7 @@
 /* valid characters for passwd/username */
 const char ValidChars[] = 
 "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-"_.!@#$%^&*()-+=~";
+"_.!@#$%^&*()-+=~[]{}<>:;";
 
 void show_help();
 

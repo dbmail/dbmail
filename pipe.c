@@ -287,8 +287,7 @@ int insert_messages(char *header, unsigned long headersize, struct list *users, 
 	  usedmem = fread (strblock, sizeof(char), READ_BLOCK_SIZE, instream);
 		
 	  /* fread won't do this for us! */	
-	  if (strblock)
-	    strblock[usedmem]='\0';
+	  strblock[usedmem]='\0';
 			
 	  if (usedmem>0) /* usedmem is 0 with an EOF */
 	    {
