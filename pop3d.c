@@ -38,46 +38,64 @@ int error_count;
 FILE *tx = NULL;	/* write socket */
 FILE *rx = NULL;	/* read socket */
 
-int *default_children;
+int *default_children;  /* # of default children in use */
+int defchld;            /* # of default children as specified in conf */
 int total_children = 0;
 
 int done;
 
-key_t	shmkey = 0;
-int shmid;
+/* 'dcu' stands for 'default children used' */
+/* 'dcp' stands for 'default children pids' */
+key_t shmkey_dcu=0,shmkey_dcp=0;
+int shmid_dcu,shmid_dcp;
 
 #define SHM_ALLOC_SIZE (sizeof(int))
+
+/* list of PID's of the default-children */
+pid_t *default_child_pids;
+int n_default_children;
+
 
 /* signal handler */
 static void signal_handler (int signo)
 {
   pid_t PID;
-  int status;
+  int status,i;
 
   if ((signo == SIGALRM) && (tx!=NULL))
   {
-		done=-1;
-		trace (TRACE_DEBUG,"signal_handler(): received ALRM signal. Timeout");
-		fprintf (tx,"-ERR i cannot wait forever\r\n");
-		fflush (tx);
-		shutdown(fileno(tx),SHUT_RDWR);
-		shutdown(fileno(rx),SHUT_RDWR);
-		return;
+    done=-1;
+    trace (TRACE_DEBUG,"signal_handler(): received ALRM signal. Timeout");
+    fprintf (tx,"-ERR i cannot wait forever\r\n");
+    fflush (tx);
+    shutdown(fileno(tx),SHUT_RDWR);
+    shutdown(fileno(rx),SHUT_RDWR);
+    return;
   }
   else
-	 if (signo == SIGCHLD)
-	  {
-		  trace (TRACE_DEBUG,"signal_handler(): sigCHLD, cleaning up zombies");
-		  do {
-			  PID = waitpid (-1,&status,WNOHANG);
-		  } while ( PID != -1);
+    if (signo == SIGCHLD)
+      {
+	trace (TRACE_DEBUG,"signal_handler(): sigCHLD, cleaning up zombies");
+	do {
+	  PID = waitpid (-1,&status,WNOHANG);
+	} while ( PID != -1);
 
-		  trace (TRACE_DEBUG,"signal_handler(): sigCHLD, cleaned");
-		  signal (SIGCHLD, signal_handler);
-	    return;
-	  }
-	  else
-		  trace (TRACE_STOP,"signal_handler(): received fatal signal [%d]",signo);
+	trace (TRACE_DEBUG,"signal_handler(): sigCHLD, cleaned");
+	signal (SIGCHLD, signal_handler);
+	return;
+      }
+    else
+      {
+	/* reset the entry of this process if it is a default child (so it can be restored) */
+	for (i=0; i<defchld; i++)
+	  if (getpid() == default_child_pids[i])
+	    {
+	      default_child_pids[i] = 0;
+	      (*default_children)--;
+	    }
+
+	trace (TRACE_STOP,"signal_handler(): received fatal signal [%d]",signo);
+      }
 }
 
 int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
@@ -266,7 +284,7 @@ int main (int argc, char *argv[])
   int s = -1;
   int c = -1;
   int z, i; /* counters */
-  int defchld,maxchld; /* default children and maxchildren */
+  int maxchld; /* maxchildren */
 
   /* open logs */
   openlog(PNAME, LOG_PID, LOG_MAIL);
@@ -394,7 +412,7 @@ int main (int argc, char *argv[])
     trace (TRACE_FATAL,"main(): call listen(2) failed");
 
   /* drop priviledges */
-	trace (TRACE_MESSAGE,"main(): Dropping priviledges");		
+  trace (TRACE_MESSAGE,"main(): Dropping priviledges");		
 
 	
   newuser = db_get_config_item("POP3D_EFFECTIVE_USER",CONFIG_MANDATORY);
@@ -413,112 +431,144 @@ int main (int argc, char *argv[])
   else
     trace(TRACE_FATAL,"main(): newuser and newgroup should not be NULL");
 
-  /* getting shared memory children counter */
-  shmkey = time (NULL); /* get an unique key */
-  shmid = shmget (shmkey, sizeof (int), 0666 | IPC_CREAT);
+  /* get child config */
+  defchld = atoi(db_get_config_item("POP3D_DEFAULT_CHILD",CONFIG_MANDATORY));
+  maxchld = atoi(db_get_config_item("POP3D_MAX_CHILD",CONFIG_MANDATORY));
 
-  if (shmid == -1)
-	  trace (TRACE_FATAL,"main(): could not allocate shared memory");
+
+  /* getting shared memory children counter */
+  shmkey_dcu = time (NULL); /* get an unique key */
+  shmid_dcu = shmget (shmkey_dcu, sizeof (int), 0666 | IPC_CREAT);
+
+  shmkey_dcp = time (NULL)+1; /* get an unique key */
+  shmid_dcp = shmget (shmkey_dcp, sizeof (pid_t) * defchld, 0666 | IPC_CREAT);
+
+  if (shmid_dcu == -1 || shmid_dcp == -1)
+    trace (TRACE_FATAL,"main(): could not allocate shared memory");
 
 
   /* server loop */
   trace (TRACE_MESSAGE,"main(): DBmail pop3 server ready (bound to [%s:%s])",ipaddr,port);
 	
-	free (ipaddr);
-	free (port);
+  free (ipaddr);
+  free (port);
   
- 
- /* get child config */
-
-  defchld = atoi(db_get_config_item("POP3D_DEFAULT_CHILD",CONFIG_MANDATORY));
-  maxchld = atoi(db_get_config_item("POP3D_MAX_CHILD",CONFIG_MANDATORY));
-
 
   /* remember this pid, we're the father process */
   server_pid = getpid();
   
-  default_children = (int *)shmat(shmid, 0, 0);
+
+  /* attach to shared mem */
+  default_children = (int *)shmat(shmid_dcu, 0, 0);
   if (default_children == (int *)-1)
-	  trace (TRACE_FATAL,"main(): could not attach to shared memory block");
+    trace (TRACE_FATAL,"main(): could not attach to shared memory block (dcu)");
 
-	/* we don't have any children yet */
-	*default_children = 0;
+  default_child_pids = (pid_t*)shmat(shmid_dcp, 0, 0);
+  if (default_child_pids == (pid_t*)-1)
+    trace (TRACE_FATAL,"main(): could not attach to shared memory block (dcp)");
+
+
+  /* we don't have any children yet so no active children neither */
+  *default_children = 0;
 	
-	/* spawn the default children */
-	for (i=0; i<defchld; i++)
-	{
-		if (!fork())
-			break;
-		else
-			total_children++;
-	}
+  /* spawn the default children */
+  for (i=0; i<defchld; i++)
+    {
+      if (!fork())
+	break;
+      else
+	total_children++;
+    }
 
-	/* split up in the 'server' part and the client part */
+  /* this infinite loop is needed for killed default-children:
+   * they should re-enter at the following if-statement
+   */
 
-	/* 
-	 * Client loop 
-	 */
-	if (getpid() != server_pid)
+  for ( ;; )
+    {
+      /* split up in the 'server' part and the client part */
+
+      /* 
+       * Client loop 
+       */
+      if (getpid() != server_pid)
 	{
-		for (;;)
-		{
-			/* wait for a connection */
-			len_inet = sizeof (adr_clnt);
-			c = accept (s, (struct sockaddr *)&adr_clnt,
+	  for (;;)
+	    {
+	      /* wait for a connection */
+	      len_inet = sizeof (adr_clnt);
+	      c = accept (s, (struct sockaddr *)&adr_clnt,
 			  &len_inet); /* incoming connection */
 	
-			/* failure won't cause a quit forking is too expensive */	
-			if (c == -1)
-			{
-				trace (TRACE_FATAL,"main(): call accept(2) failed");
-			}
+	      /* failure won't cause a quit forking is too expensive */	
+	      if (c == -1)
+		{
+		  trace (TRACE_FATAL,"main(): call accept(2) failed");
+		}
 		
-		(*default_children)++;		
+	      (*default_children)++;		
 			
-		handle_client(myhostname, c, adr_clnt);
+	      handle_client(myhostname, c, adr_clnt);
 		
-		(*default_children)--;
-		}
+	      (*default_children)--;
+	    }
 	}
-	else
+      else
 	for (;;)
-	{
-		if (*default_children < defchld)
+	  {
+	    /* check if a default-child has died 
+	     * (it's entry has been set to zero in default_child_pids[]) 
+	     */
+	    for (i=0; i<defchld && default_child_pids[i]; i++) ;
+	      
+	    if (i<defchld)
+	      {
+		/* def-child has died, re-create */
+		if (!fork())
 		  {
-			sleep (1); /* don't hog cpu */
-			continue;
+		    default_child_pids[i] = getpid();
+		    break;  /* after this break the if (getpid() == ss_server_pid) will be re-executed */
 		  }
+	      }
+	    
+	    if (*default_children < defchld)
+	      {
+		sleep (1); /* don't hog cpu */
+		continue;
+	      }
 
-		while (total_children >= maxchld)
-		{
-			sleep (1); /* don't hog cpu */
-			wait (NULL); /* wait for children to finish */
-			total_children--;
-		}
+	    while (total_children >= maxchld)
+	      {
+		sleep (1); /* don't hog cpu */
+		wait (NULL); /* wait for children to finish */
+		total_children--;
+	      }
 
-		/* wait for a connection */
-		len_inet = sizeof (adr_clnt);
-		c = accept (s, (struct sockaddr *)&adr_clnt,
-			  &len_inet); /* incoming connection */
+	    /* wait for a connection */
+	    len_inet = sizeof (adr_clnt);
+	    c = accept (s, (struct sockaddr *)&adr_clnt,
+			&len_inet); /* incoming connection */
 	
-		/* failure won't cause a quit forking is too expensive */	
-		if (c == -1)
-		{
-			trace (TRACE_FATAL,"main(): call accept(2) failed");
-		}
+	    /* failure won't cause a quit forking is too expensive */	
+	    if (c == -1)
+	      {
+		trace (TRACE_FATAL,"main(): call accept(2) failed");
+	      }
 		
-		if (fork())
-		{
-			total_children++;
-			continue;
-		}
-		else
-		{
+	    if (fork())
+	      {
+		total_children++;
+		continue;
+	      }
+	    else
+	      {
 		/* handle client connection */
 		handle_client(myhostname, c, adr_clnt);
 		exit(0);
-		}
-	}
-	/* nothing will ever get here */
-	return 0;
+	      }
+	  }
+    }
+
+  /* nothing will ever get here */
+  return 0;
 }		
