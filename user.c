@@ -165,8 +165,8 @@ int do_showhelp(void) {
 	printf("     -f file   specify an alternative config file\n");
 	printf("     -q        quietly skip interactive prompts\n"
 	       "               use twice to suppress error messages\n");
-	printf("     -n        show the intended action but do not perform it, no to all\n");
-	printf("     -y        perform all proposed actions, as though yes to all\n");
+//	printf("     -n        show the intended action but do not perform it, no to all\n");
+//	printf("     -y        perform all proposed actions, as though yes to all\n");
 	printf("     -v        verbose details\n");
 	printf("     -V        show the version\n");
 	printf("     -h        show this help message\n");
@@ -335,14 +335,14 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'n':
-			if (!yes_to_all)
-				no_to_all = 1;
-			break;
+			printf("-n switch is not supported in this "
+			       "version.\n");
+			return 1;
 
 		case 'y':
-			if (!no_to_all)
-				yes_to_all = 1;
-			break;
+			printf("-y switch is not supported in this "
+			       "version.\n");
+			return 1;
 
 		case 'q':
 			/* If we get q twice, be really quiet! */

@@ -4,7 +4,7 @@ dbmail-util
 \-
 maintains the integrity and cleanliness of the \fBDBMail\fR datatables.
 .SH SYNOPSIS
-.BR "dbmail-util [-cturpd] [-l " "time" "] [-qnyvVh]"
+.BR "dbmail-util [-cturpd] [-l " "time" "] [-qvVh]"
 .BI "[-f " "configFile" "]"
 .SH DESCRIPTION
 The \fBdbmail-util\fR program does a global database cleanup and integrity
@@ -42,10 +42,13 @@ system's preferred config file location.
 Quietly skip interactive prompts and helpful status messages which
 would otherwise be printed to \fIstdout\fR.  Use two \fB-q\fR's to
 silence errors which would otherwise be printed to \fIstderr\fR.
-.IP \fB-n\fR
-Show the intended action but do not perform it, as though no to all.
-.IP \fB-y\fR
-Perform all proposed actions, as though yes to all.
+
+.% Will be supported in the future.
+.% .IP \fB-n\fR
+.% Show the intended action but do not perform it, as though no to all.
+.% .IP \fB-y\fR
+.% Perform all proposed actions, as though yes to all.
+
 .IP \fB-v\fR
 Operate verbosely.
 Some of the utilities in the DBMail suite can take two \fB-v\fR's

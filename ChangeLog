@@ -1,5 +1,13 @@
 2004-09-16  Ilja Booij  <ilja@ic-s.nl>
 
+	* man/dbmail-util.8: commented out -n and -y switches docs.
+
+	* maintenance.c (main): disabled -n and -y switches.
+
+	* man/dbmail-users.8: commented out -n and -y switches docs.
+
+	* user.c: disabled -n and -y switche.
+
 	* db.c (db_get_msgdate): fixed error in query. Strings were in the
 	wrong order, causing a weird query.
 
