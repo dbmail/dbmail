@@ -885,6 +885,7 @@ int db_get_user_aliases(u64_t userid, struct list *aliases)
       if (!list_nodeadd(aliases, row[0], strlen(row[0])+1))
 	{
 	  list_freelist(&aliases->start);
+	  mysql_free_result(res);
 	  return -2;
 	}
     }
@@ -1631,6 +1632,7 @@ int db_icheck_messageblks(struct list *lostlist)
   if (mysql_num_rows(res) != 1)
     {
       trace(TRACE_WARNING, "db_icheck_messageblks(): empty messageblk table");
+      mysql_free_result(res);
       return 0; /* nothing in table ? */
     }
 
@@ -1664,6 +1666,7 @@ int db_icheck_messageblks(struct list *lostlist)
       if (!currids)
 	{
 	  trace(TRACE_ERROR,"db_icheck_messageblks(): out of memory when allocatin %d items\n",ncurr);
+	  mysql_free_result(res);
 	  return -2;
 	}
 
@@ -1711,6 +1714,7 @@ int db_icheck_messageblks(struct list *lostlist)
 		  list_freelist(&lostlist->start);
 		  my_free(currids);
 		  currids = NULL;
+		  mysql_free_result(res);
 		  return -2;
 		}
 	    }
@@ -1760,6 +1764,7 @@ int db_icheck_messages(struct list *lostlist)
   if (mysql_num_rows(res) != 1)
     {
       trace(TRACE_WARNING, "db_icheck_messages(): empty message table");
+      mysql_free_result(res);
       return 0; /* nothing in table ? */
     }
 
@@ -1793,6 +1798,7 @@ int db_icheck_messages(struct list *lostlist)
       if (!currids)
 	{
 	  trace(TRACE_ERROR,"db_icheck_messages(): out of memory when allocatin %d items\n",ncurr);
+	  mysql_free_result(res);
 	  return -2;
 	}
 
@@ -1840,6 +1846,7 @@ int db_icheck_messages(struct list *lostlist)
 		  list_freelist(&lostlist->start);
 		  my_free(currids);
 		  currids = NULL;
+		  mysql_free_result(res);
 		  return -2;
 		}
 	    }
@@ -1889,6 +1896,7 @@ int db_icheck_mailboxes(struct list *lostlist)
   if (mysql_num_rows(res) != 1)
     {
       trace(TRACE_WARNING, "db_icheck_mailboxes(): empty mailbox table");
+      mysql_free_result(res);
       return 0; /* nothing in table ? */
     }
 
@@ -1922,6 +1930,7 @@ int db_icheck_mailboxes(struct list *lostlist)
       if (!currids)
 	{
 	  trace(TRACE_ERROR,"db_icheck_mailboxes(): out of memory when allocatin %d items\n",ncurr);
+	  mysql_free_result(res);
 	  return -2;
 	}
 
@@ -1955,6 +1964,7 @@ int db_icheck_mailboxes(struct list *lostlist)
 	  if ((res = mysql_store_result(&conn)) == NULL)
 	    {
 	      trace (TRACE_ERROR,"db_icheck_mailboxes(): mysql_store_result failed:  %s",mysql_error(&conn));
+	      mysql_free_result(res);
 	      return -1;
 	    }
 
@@ -1969,6 +1979,7 @@ int db_icheck_mailboxes(struct list *lostlist)
 		  list_freelist(&lostlist->start);
 		  my_free(currids);
 		  currids = NULL;
+		  mysql_free_result(res);
 		  return -2;
 		}
 	    }
@@ -2385,7 +2396,6 @@ int db_findmailbox_by_regex(u64_t ownerid, const char *pattern,
   if (db_query(query) == -1)
     {
       trace(TRACE_ERROR,"db_findmailbox_by_regex(): error during mailbox query\r\n");
-      
       return (-1);
     }
 
@@ -2401,6 +2411,7 @@ int db_findmailbox_by_regex(u64_t ownerid, const char *pattern,
     {
       /* none exist, none matched */
       *nchildren = 0;
+      mysql_free_result(res);
       return 0;
     }
 
@@ -2495,6 +2506,7 @@ int db_getmailbox(mailbox_t *mb, u64_t userid)
   if (!row)
     {
       trace(TRACE_ERROR,"db_getmailbox(): invalid mailbox id specified\n");
+      mysql_free_result(res);
       return -1;
     }
 
@@ -2684,6 +2696,7 @@ int db_listmailboxchildren(u64_t uid, u64_t useridnr,
   if (*nchildren == 0)
     {
       *children = NULL;
+      mysql_free_result(res);
       return 0;
     }
   *children = (u64_t*)my_malloc(sizeof(u64_t) * (*nchildren));
@@ -3698,6 +3711,7 @@ u64_t db_get_rfcsize(u64_t msguid, u64_t mailboxuid)
   if (mysql_num_rows(res) < 1)
     {
       trace(TRACE_ERROR, "db_get_rfcsize(): message not found\n");
+      mysql_free_result(res);
       return -1;
     }
 
@@ -3707,6 +3721,7 @@ u64_t db_get_rfcsize(u64_t msguid, u64_t mailboxuid)
   else
     size = 0;
 
+  mysql_free_result(res);
   return size;
 }
 
@@ -3751,6 +3766,7 @@ int db_get_msginfo_range(u64_t msguidlow, u64_t msguidhigh, u64_t mailboxuid,
   
    if ((nrows = mysql_num_rows(res)) == 0)
     {
+      mysql_free_result(res);
       return 0;
     }
 

@@ -824,6 +824,7 @@ int db_get_user_aliases(u64_t userid, struct list *aliases)
 	  if (!list_nodeadd(aliases, value, strlen(value)+1))
             {
 	      list_freelist(&aliases->start);
+	      PQclear(res);
 	      return -2;
             }
         }
@@ -1526,6 +1527,7 @@ int db_icheck_messageblks(struct list *lostlist)
   if (PQntuples(res) != 1)
     {
       trace(TRACE_WARNING, "db_icheck_messageblks(): empty messageblk table");
+      PQclear(res);
       return 0; /* nothing in table ? */
     }
 
@@ -1552,6 +1554,7 @@ int db_icheck_messageblks(struct list *lostlist)
       if (!currids)
 	{
 	  trace(TRACE_ERROR,"db_icheck_messageblks(): out of memory when allocatin %d items\n",ncurr);
+	  PQclear(res);
 	  return -2;
 	}
 
@@ -1592,6 +1595,7 @@ int db_icheck_messageblks(struct list *lostlist)
 		  list_freelist(&lostlist->start);
 		  my_free(currids);
 		  currids = NULL;
+		  PQclear(res);
 		  return -2;
 		}
 	    }
@@ -1635,6 +1639,7 @@ int db_icheck_messages(struct list *lostlist)
   if (PQntuples(res) != 1)
     {
       trace(TRACE_WARNING, "db_icheck_messages(): empty message table");
+      PQclear(res);
       return 0; /* nothing in table ? */
     }
 
@@ -1661,6 +1666,7 @@ int db_icheck_messages(struct list *lostlist)
       if (!currids)
 	{
 	  trace(TRACE_ERROR,"db_icheck_messages(): out of memory when allocatin %d items\n",ncurr);
+	  PQclear(res);
 	  return -2;
 	}
 
@@ -1701,6 +1707,7 @@ int db_icheck_messages(struct list *lostlist)
 		  list_freelist(&lostlist->start);
 		  my_free(currids);
 		  currids = NULL;
+		  PQclear(res);
 		  return -2;
 		}
 	    }
@@ -1744,6 +1751,7 @@ int db_icheck_mailboxes(struct list *lostlist)
   if (PQntuples(res) != 1)
     {
       trace(TRACE_WARNING, "db_icheck_mailboxes(): empty mailbox table");
+      PQclear(res);
       return 0; /* nothing in table ? */
     }
 
@@ -1770,6 +1778,7 @@ int db_icheck_mailboxes(struct list *lostlist)
       if (!currids)
 	{
 	  trace(TRACE_ERROR,"db_icheck_mailboxes(): out of memory when allocatin %d items\n",ncurr);
+	  PQclear(res);
 	  return -2;
 	}
 
@@ -1810,6 +1819,7 @@ int db_icheck_mailboxes(struct list *lostlist)
 		  list_freelist(&lostlist->start);
 		  my_free(currids);
 		  currids = NULL;
+		  PQclear(res);
 		  return -2;
 		}
 	    }
@@ -2348,6 +2358,7 @@ int db_findmailbox_by_regex(u64_t ownerid, const char *pattern,
   if (*nchildren == 0)
     {
       /* none exist, none matched */
+      PQclear(res);
       return 0;
     }
 
@@ -2356,6 +2367,7 @@ int db_findmailbox_by_regex(u64_t ownerid, const char *pattern,
   if (!(*children))
     {
       trace(TRACE_ERROR,"db_findmailbox_by_regex(): not enough memory\n");
+      PQclear(res);
       return (-1);
     }
 
@@ -2417,6 +2429,7 @@ int db_getmailbox(mailbox_t *mb, u64_t userid)
   if (PQntuples(res)==0)
     {
       trace(TRACE_ERROR,"db_getmailbox(): invalid mailbox id specified\n");
+      PQclear(res);
       return -1;
     }
 
@@ -2619,6 +2632,7 @@ int db_listmailboxchildren(u64_t uid, u64_t useridnr,
   else
     {
       *children = NULL;
+      PQclear(res);
       return 0;
     }
   *children = (u64_t*)my_malloc(sizeof(u64_t) * (*nchildren));
@@ -3624,10 +3638,12 @@ u64_t db_get_rfcsize(u64_t msguid, u64_t mailboxuid)
   if (PQntuples(res) < 1)
     {
       trace(TRACE_ERROR, "db_get_rfcsize(): message not found\n");
+      PQclear(res);
       return -1;
     }
 
   size = strtoull( PQgetvalue(res, 0, 0), NULL, 10);
+  PQclear(res);
   return size;
 }
 
@@ -3667,6 +3683,7 @@ int db_get_msginfo_range(u64_t msguidlow, u64_t msguidhigh, u64_t mailboxuid,
 
    if ((nrows = PQntuples(res)) == 0)
     {
+      PQclear(res);
       return 0;
     }
 
