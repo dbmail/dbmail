@@ -74,12 +74,16 @@ typedef struct _ldap_cfg {
 _ldap_cfg_t _ldap_cfg;
 
 /* Define a macro to cut down on code duplication... */
-#define GETCONFIGVALUE( func, list, val, var )	\
-	GetConfigValue(val, list, var);		\
+#define GETCONFIGVALUE(key, sect, var)		\
+	GetConfigValue(key, sect, var);		\
 	if (strlen(var) == 0)			\
-		trace(TRACE_DEBUG, #func ": no value for " #val " in config file");	\
-	trace(TRACE_DEBUG, #func ": value for " #val " stored in " #var " as [%s]", var)
-	/* that's correct, no final ; so when the macro is called, it looks "normal" */
+		trace(TRACE_DEBUG, "%s, %s: no value for "	\
+			#key " in config file section " #sect,	\
+		    	__FILE__, __FUNCTION__ );		\
+	trace(TRACE_DEBUG, "%s, %s: value for "			\
+		#key " from section " #sect " stored in "	\
+		#var " as [%s]", __FILE__, __FUNCTION__, var)
+	/* No final ; so macro can be called "like a function" */
 
 static void __auth_get_config(void);
 
@@ -87,49 +91,29 @@ static void __auth_get_config()
 {
 	struct list ldapItems;
 
-	ReadConfig("LDAP", configFile, &ldapItems);
-	SetTraceLevel(&ldapItems);
+	ReadConfig("LDAP", configFile);
+	SetTraceLevel("LDAP");
 
-	GETCONFIGVALUE(__auth_get_config(), &ldapItems, "BIND_DN",
-		       _ldap_cfg.bind_dn);
-	GETCONFIGVALUE(__auth_get_config(), &ldapItems, "BIND_PW",
-		       _ldap_cfg.bind_pw);
-	GETCONFIGVALUE(__auth_get_config(), &ldapItems, "BASE_DN",
-		       _ldap_cfg.base_dn);
-	GETCONFIGVALUE(__auth_get_config(), &ldapItems, "PORT",
-		       _ldap_cfg.port);
-	GETCONFIGVALUE(__auth_get_config(), &ldapItems, "HOSTNAME",
-		       _ldap_cfg.hostname);
-	GETCONFIGVALUE(__auth_get_config(), &ldapItems, "OBJECTCLASS",
-		       _ldap_cfg.objectclass);
-	GETCONFIGVALUE(__auth_get_config(), &ldapItems, "FIELD_UID",
-		       _ldap_cfg.field_uid);
-	GETCONFIGVALUE(__auth_get_config(), &ldapItems, "FIELD_CID",
-		       _ldap_cfg.field_cid);
-	GETCONFIGVALUE(__auth_get_config(), &ldapItems, "FIELD_NID",
-		       _ldap_cfg.field_nid);
-	GETCONFIGVALUE(__auth_get_config(), &ldapItems, "FIELD_MAIL",
-		       _ldap_cfg.field_mail);
-	GETCONFIGVALUE(__auth_get_config(), &ldapItems, "FIELD_MAILALT",
-		       _ldap_cfg.field_mailalt);
-	GETCONFIGVALUE(__auth_get_config(), &ldapItems, "MAILALTPREFIX",
-		       _ldap_cfg.mailaltprefix);
-	GETCONFIGVALUE(__auth_get_config(), &ldapItems, "FIELD_QUOTA",
-		       _ldap_cfg.field_maxmail);
-	GETCONFIGVALUE(__auth_get_config(), &ldapItems, "FIELD_PASSWD",
-		       _ldap_cfg.field_passwd);
-	GETCONFIGVALUE(__auth_get_config(), &ldapItems, "FIELD_FORWARD",
-		       _ldap_cfg.field_fwd);
-	GETCONFIGVALUE(__auth_get_config(), &ldapItems, "FIELD_FWDSAVE",
-		       _ldap_cfg.field_fwdsave);
-	GETCONFIGVALUE(__auth_get_config(), &ldapItems, "FIELD_FWDTARGET",
-		       _ldap_cfg.field_fwdtarget);
-	GETCONFIGVALUE(__auth_get_config(), &ldapItems, "FWDTARGETPREFIX",
-		       _ldap_cfg.fwdtargetprefix);
-	GETCONFIGVALUE(__auth_get_config(), &ldapItems, "FIELD_MEMBERS",
-		       _ldap_cfg.field_members);
-	GETCONFIGVALUE(__auth_get_config(), &ldapItems, "SCOPE",
-		       _ldap_cfg.scope);
+	GETCONFIGVALUE("BIND_DN",         "LDAP", _ldap_cfg.bind_dn);
+	GETCONFIGVALUE("BIND_PW",         "LDAP", _ldap_cfg.bind_pw);
+	GETCONFIGVALUE("BASE_DN",         "LDAP", _ldap_cfg.base_dn);
+	GETCONFIGVALUE("PORT",            "LDAP", _ldap_cfg.port);
+	GETCONFIGVALUE("HOSTNAME",        "LDAP", _ldap_cfg.hostname);
+	GETCONFIGVALUE("OBJECTCLASS",     "LDAP", _ldap_cfg.objectclass);
+	GETCONFIGVALUE("FIELD_UID",       "LDAP", _ldap_cfg.field_uid);
+	GETCONFIGVALUE("FIELD_CID",       "LDAP", _ldap_cfg.field_cid);
+	GETCONFIGVALUE("FIELD_NID",       "LDAP", _ldap_cfg.field_nid);
+	GETCONFIGVALUE("FIELD_MAIL",      "LDAP", _ldap_cfg.field_mail);
+	GETCONFIGVALUE("FIELD_MAILALT",   "LDAP", _ldap_cfg.field_mailalt);
+	GETCONFIGVALUE("MAILALTPREFIX",   "LDAP", _ldap_cfg.mailaltprefix);
+	GETCONFIGVALUE("FIELD_QUOTA",     "LDAP", _ldap_cfg.field_maxmail);
+	GETCONFIGVALUE("FIELD_PASSWD",    "LDAP", _ldap_cfg.field_passwd);
+	GETCONFIGVALUE("FIELD_FORWARD",   "LDAP", _ldap_cfg.field_fwd);
+	GETCONFIGVALUE("FIELD_FWDSAVE",   "LDAP", _ldap_cfg.field_fwdsave);
+	GETCONFIGVALUE("FIELD_FWDTARGET", "LDAP", _ldap_cfg.field_fwdtarget);
+	GETCONFIGVALUE("FWDTARGETPREFIX", "LDAP", _ldap_cfg.fwdtargetprefix);
+	GETCONFIGVALUE("FIELD_MEMBERS",   "LDAP", _ldap_cfg.field_members);
+	GETCONFIGVALUE("SCOPE",           "LDAP", _ldap_cfg.scope);
 
 	/* Store the port as an integer for later use. */
 	_ldap_cfg.port_int = atoi(_ldap_cfg.port);
