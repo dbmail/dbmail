@@ -1,0 +1,10 @@
+alter table users rename passwd to old_passwd_cruft;
+alter table users add passwd varchar(34);
+/* set NOT NULL column constraint */
+update pg_attribute set attnotnull = true
+  where attname = 'passwd'
+  and attrelid = (select oid from pg_class where relname = 'users');
+update users set passwd = old_passwd_cruft;
+/* can't actually drop the column until pgsql 7.3;
+   you might prefer to drop the table and recreate */
+update users set old_passwd_cruft = '';

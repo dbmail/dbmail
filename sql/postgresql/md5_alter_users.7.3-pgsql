@@ -1,0 +1,7 @@
+alter table users rename passwd to opasswd;
+alter table users add passwd varchar(34);
+alter table users alter column passwd set not null;
+update users set passwd = opasswd;
+/* if you have foreign keys, views, etc. that reference this,
+   you might want to put more thought into this next line */
+alter table users drop column opasswd restrict;
