@@ -148,6 +148,7 @@ int pop3_handle_connection(clientinfo_t * ci)
 	if (!session.apop_stamp) {
 		trace(TRACE_MESSAGE,
 		      "pop3_handle_connection(): Could not allocate buffer for apop");
+		my_free(buffer);
 		return 0;
 	}
 	/* create an unique timestamp + processid for APOP authentication */
@@ -164,6 +165,8 @@ int pop3_handle_connection(clientinfo_t * ci)
 	} else {
 		trace(TRACE_MESSAGE,
 		      "pop3_handle_connection(): TX stream is null!");
+		my_free(session.apop_stamp);
+		my_free(buffer);
 		return 0;
 	}
 
@@ -183,8 +186,11 @@ int pop3_handle_connection(clientinfo_t * ci)
 				fread(&buffer[cnt], 1, 1, ci->rx);
 
 				/* leave, an alarm has occured during fread */
-				if (!ci->rx)
+				if (!ci->rx) {
+					my_free(buffer);
+					my_free(session.apop_stamp);
 					return 0;
+				}
 
 			} while (ferror(ci->rx) && errno == EINTR);
 

@@ -1,5 +1,8 @@
 2004-07-09  Ilja Booij  <ilja@ic-s.nl>
 
+	* pop3.c (pop3_handle_connection): fixed some possible mem leaks 
+	after reports from Hans Kristian Rosbach.
+
 	* sql/postgresql/migrate_from_1.x_to_2.0.pgsql: changed pbsp.idnr
 	FROM BIGINT to INT8.
 
