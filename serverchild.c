@@ -95,13 +95,19 @@ void disconnect_all(void)
 
 void noop_child_sig_handler(int sig, siginfo_t *info UNUSED, void *data UNUSED)
 {
+	int saved_errno = errno;
+	
 	if (sig == SIGSEGV)
 		_exit(0);
 	trace(TRACE_DEBUG, "%s,%s: ignoring signal [%d]", __FILE__, __func__, sig);
+
+	errno = saved_errno;
 }
 
 void active_child_sig_handler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
 {
+	int saved_errno = errno;
+	
 	static int triedDisconnect = 0;
 
 	trace(TRACE_ERROR, "%s,%s: got signal [%s]", __FILE__, __func__,
@@ -163,6 +169,8 @@ void active_child_sig_handler(int sig, siginfo_t * info UNUSED, void *data UNUSE
 		child_unregister();
 		exit(1);
 	}
+
+	errno = saved_errno;
 }
 
 
@@ -187,7 +195,7 @@ int SetChildSigHandler()
 	sigaction(SIGQUIT, &act, 0);
 	sigaction(SIGILL, &act, 0);
 	sigaction(SIGBUS, &act, 0);
-	//sigaction(SIGPIPE, &act, 0);
+	//sigaction(SIGPIPE, &act, 0); /* let the database backends handle these */
 	sigaction(SIGFPE, &act, 0);
 	sigaction(SIGSEGV, &act, 0);
 	sigaction(SIGTERM, &act, 0);
