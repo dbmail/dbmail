@@ -78,7 +78,9 @@ void scoreboard_new(serverConfig_t * conf)
 	scoreboard = shmat(shmid, (void *) 0, 0);
 	serr=errno;
 	if (scoreboard == (Scoreboard_t *) (-1)) {
-		trace(TRACE_FATAL, "%s,%s: scoreboard init failed [%s]",__FILE__,__func__,strerror(serr));
+		trace(TRACE_FATAL, "%s,%s: scoreboard init failed [%s]",
+		      __FILE__,__func__,
+		      strerror(serr));
 		scoreboard_delete();
 	}
 	scoreboard_lock_new();
@@ -101,8 +103,9 @@ void scoreboard_lock_new(void)
 {
 	if ( (sb_lockfd = open(scoreboard_lock_getfilename(),O_EXCL|O_RDWR|O_CREAT|O_TRUNC,0600)) < 0) {
 		trace(TRACE_FATAL,
-			"%s,%s, opening lockfile [%s] failed", 
-			__FILE__, __func__,scoreboard_lock_getfilename());
+		      "%s,%s, opening lockfile [%s] failed", 
+		      __FILE__, __func__,
+		      scoreboard_lock_getfilename());
 	}
 }
 
@@ -122,24 +125,28 @@ void scoreboard_conf_check(void)
 	if (scoreboard->conf->maxChildren > HARD_MAX_CHILDREN) {
 		trace(TRACE_WARNING,
 		      "%s,%s: MAXCHILDREN too large. Decreasing to [%d]",
-		      __FILE__,__func__,HARD_MAX_CHILDREN);
+		      __FILE__,__func__,
+		      HARD_MAX_CHILDREN);
 		scoreboard->conf->maxChildren = HARD_MAX_CHILDREN;
 	} else if (scoreboard->conf->maxChildren < scoreboard->conf->startChildren) {
 		trace(TRACE_WARNING,
 		      "%s,%s: MAXCHILDREN too small. Increasing to NCHILDREN [%d]",
-		      __FILE__,__func__,scoreboard->conf->startChildren);
+		      __FILE__,__func__,
+		      scoreboard->conf->startChildren);
 		scoreboard->conf->maxChildren = scoreboard->conf->startChildren;
 	}
 
 	if (scoreboard->conf->maxSpareChildren > scoreboard->conf->maxChildren) {
 		trace(TRACE_WARNING,
 		      "%s,%s: MAXSPARECHILDREN too large. Decreasing to MAXCHILDREN [%d]",
-		      __FILE__,__func__,scoreboard->conf->maxChildren);
+		      __FILE__,__func__,
+		      scoreboard->conf->maxChildren);
 		scoreboard->conf->maxSpareChildren = scoreboard->conf->maxChildren;
 	} else if (scoreboard->conf->maxSpareChildren < scoreboard->conf->minSpareChildren) {
 		trace(TRACE_WARNING,
 		      "%s,%s: MAXSPARECHILDREN too small. Increasing to MINSPARECHILDREN [%d]",
-		      __FILE__,__func__,scoreboard->conf->minSpareChildren);
+		      __FILE__,__func__,
+		      scoreboard->conf->minSpareChildren);
 		scoreboard->conf->maxSpareChildren = scoreboard->conf->minSpareChildren;
 	}
 	scoreboard_unlck();
@@ -158,15 +165,18 @@ void scoreboard_delete()
 {
 	if (shmdt(scoreboard) == -1)
 		trace(TRACE_FATAL,
-		      "scoreboard_delete(): detach shared mem failed");
+		      "%s,%s: detach shared mem failed",
+		      __FILE__, __func__);
 	if (shmctl(shmid, IPC_RMID, NULL) == -1)
 		trace(TRACE_FATAL,
-		      "scoreboard_delete(): delete shared mem segment failed");
+		      "%s,%s: delete shared mem segment failed",
+		      __FILE__, __func__);
 	
 	if (unlink(scoreboard_lock_getfilename()) == -1) 
 		trace(TRACE_ERROR,
-		      "scoreboard_delete(): error deleting scoreboard lock "
-		      "file %s", scoreboard_lock_getfilename());
+		      "%s,%s: error deleting scoreboard lock file %s", 
+		      __FILE__, __func__, 
+		      scoreboard_lock_getfilename());
 	
 	return;
 }
@@ -229,7 +239,7 @@ int getKey(pid_t pid)
 	}
 	scoreboard_unlck();
 	trace(TRACE_FATAL,
-	      "%s,%s: pid NOT found on scoreboard [%d]", __FILE__, __FUNCTION__, pid);
+	      "%s,%s: pid NOT found on scoreboard [%d]", __FILE__, __func__, pid);
 	return -1;
 }
 
@@ -245,7 +255,8 @@ int child_register()
 {
 	int i;
 	trace(TRACE_MESSAGE, "%s,%s: register child [%d]",
-		__FILE__, __FUNCTION__, getpid());
+	      __FILE__, __func__, 
+	      getpid());
 	
 	scoreboard_wrlck();
 	for (i = 0; i < scoreboard->conf->maxChildren; i++) {
@@ -254,7 +265,7 @@ int child_register()
 		if (scoreboard->child[i].pid == getpid()) {
 			trace(TRACE_ERROR,
 			      "%s,%s: child already registered.",
-			      __FILE__, __FUNCTION__);
+			      __FILE__, __func__);
 			scoreboard_unlck();
 			return -1;
 		}
@@ -262,7 +273,7 @@ int child_register()
 	if (i == scoreboard->conf->maxChildren) {
 		trace(TRACE_WARNING,
 		      "%s,%s: no empty slot found",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		scoreboard_unlck();
 		return -1;
 	}
@@ -272,7 +283,7 @@ int child_register()
 	scoreboard_unlck();
 
 	trace(TRACE_INFO, "%s,%s: initializing child_state [%d] using slot [%d]",
-		__FILE__, __FUNCTION__, getpid(), i);
+		__FILE__, __func__, getpid(), i);
 	return 0;
 }
 
@@ -288,7 +299,7 @@ void child_reg_connected()
 	scoreboard->child[key].status = STATE_CONNECTED;
 	scoreboard_unlck();
 
-	trace(TRACE_DEBUG, "%s,%s: [%d]", __FILE__, __FUNCTION__,
+	trace(TRACE_DEBUG, "%s,%s: [%d]", __FILE__, __func__,
 			getpid());
 }
 
@@ -304,7 +315,7 @@ void child_reg_disconnected()
 	scoreboard->child[key].status = STATE_IDLE;
 	scoreboard_unlck();
 
-	trace(TRACE_DEBUG, "%s,%s: [%d]", __FILE__, __FUNCTION__,
+	trace(TRACE_DEBUG, "%s,%s: [%d]", __FILE__, __func__,
 		getpid());
 }
 
@@ -327,7 +338,7 @@ void child_unregister()
 	scoreboard_unlck();
 
 	trace(TRACE_MESSAGE,
-	      "%s,%s: child [%d] unregistered", __FILE__, __FUNCTION__,
+	      "%s,%s: child [%d] unregistered", __FILE__, __func__,
 	      getpid());
 }
 
@@ -353,7 +364,7 @@ void manage_start_children()
 			manage_stop_children();
 			trace(TRACE_FATAL,
 			      "%s,%s: could not create children. Fatal.",
-			      __FILE__, __FUNCTION__);
+			      __FILE__, __func__);
 			exit(0);
 		}
 	}
@@ -368,7 +379,7 @@ void manage_restart_children() {
 			continue;
 		if (waitpid(chpid, NULL, WNOHANG|WUNTRACED) == chpid) {
 			trace(TRACE_MESSAGE,"%s,%s: child [%d] exited. Restarting...",
-				__FILE__, __FUNCTION__, chpid);
+				__FILE__, __func__, chpid);
 			scoreboard_release(chpid);			
 			CreateChild(&childinfo);
 		}
