@@ -119,7 +119,8 @@ static char *char2date_str(const char *date);
 static int user_idnr_is_delivery_user_idnr(u64_t user_idnr);
 
 /**
- * set the first 5 characters of a mailbox name to "INBOX". This is used
+ * set the first 5 characters of a mailbox name to "INBOX" if the name is
+ * "inbox" or "inbox/somemailbox". This is used
  * when a mailbox with a name like "inbox" or "inbox/someMailbox" is used
  * to make sure the "inbox" part is always uppercase.
  * \param name name of the mailbox. strlen(name) must be bigger or equal
@@ -2228,10 +2229,7 @@ int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 		return -1;
 	}
 
-	/* if we check the INBOX or a folder beneath INBOX, we need 
-	 * that part of the name to be case insensitive */
-	if (strncasecmp(name, "INBOX", 5) == 0) 
-		convert_inbox_to_uppercase(local_name);
+	convert_inbox_to_uppercase(local_name);
 	
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT mailbox_idnr FROM mailboxes "
@@ -3980,7 +3978,12 @@ int user_idnr_is_delivery_user_idnr(u64_t user_idnr)
 void convert_inbox_to_uppercase(char *name)
 {
 	const char *inbox = "INBOX";
-	assert(strlen(name) >= strlen("INBOX"));
 	
-	memcpy(name, inbox, strlen(inbox));
+	if (strncasecmp(name, "INBOX", strlen("INBOX")) != 0)
+		return;
+	
+	if (strlen(name) == strlen("INBOX") ||
+	    strncasecmp(name, "INBOX/", strlen("INBOX/")) == 0)
+		memcpy(name, inbox, strlen(inbox));
+	return;
 }
