@@ -270,7 +270,7 @@ int main(int argc, char *argv[])
 		qerrorf("\nMaintenance done. Errors were found");
 		if (no_to_all) {
 			qerrorf(" but not fixed.\n");
-			qerrorf("Try running dbmail-util with the '-r' "
+			qerrorf("Try running dbmail-util with the '-y' "
 			    "option to repair the errors.\n");
 		}
 		if (yes_to_all) {

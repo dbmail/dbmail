@@ -1,3 +1,10 @@
+2005-03-22  Paul Stevens <paul@nfg.nl>
+
+	* pool.c: make shmget failure more verbose using strerror.
+	* maintenance.c: remove all references to -r.
+	* maintenance.c, db.c, db.h, dbmail-message.c, dbmail-message.h: let 
+	-b do_is_header and do_header_cache.
+
 2005-03-19  Paul Stevens <paul@nfg.nl>
 
 	* pipe.c, lmtp.c: add Return-Path header on final delivery (closes:
