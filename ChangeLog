@@ -1,3 +1,9 @@
+2004-03-05  Ilja Booij  <ilja@ic-s.nl>
+
+	* auth/authsql.c (auth_check_user_ext): uses lower(alias) to find
+	the alias. This makes sure that searching for aliases is always done
+	case-insensitively.
+
 2004-03-04  Aaron Stone <aaron@serendipity.cx>
 	* pipe.c (resolve_deliveries): moved to dsn.c, renamed, not static.
 	* dsn.c (dsnuser_resolve_list): newly relocated from pipe.c.

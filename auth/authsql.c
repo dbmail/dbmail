@@ -387,7 +387,7 @@ int auth_check_user_ext(const char *username, struct list *userids,
   
   snprintf (__auth_query_data, AUTH_QUERY_SIZE, 
 		  "SELECT deliver_to FROM aliases "
-		  "WHERE alias='%s'",username);
+		  "WHERE lower(alias) = lower('%s')", username);
   trace(TRACE_DEBUG,"%s,%s: checks [%d]", __FILE__, __FUNCTION__, checks);
 
   if (__auth_query(__auth_query_data) == -1) {
