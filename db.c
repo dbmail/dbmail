@@ -467,7 +467,7 @@ int db_get_sievescript_byname(u64_t user_idnr, char *scriptname, char **script)
 		return -1;
 	}
 
-	*script = strdup(query_result);
+	*script = my_strdup(query_result);
 	db_free_result();
 
 	return 0;
@@ -514,7 +514,7 @@ int db_get_sievescript_listall(u64_t user_idnr, struct list *scriptlist)
 
 	while(i < n) {
 		info = (struct ssinfo *)my_malloc(sizeof(struct ssinfo));
-		info->name = strdup(db_get_result(i, 0));   
+		info->name = my_strdup(db_get_result(i, 0));   
 		info->active = (int)db_get_result(i, 1);
 		list_nodeadd(scriptlist,info,sizeof(struct ssinfo));	
 		i++;
@@ -653,7 +653,7 @@ int db_get_notify_address(u64_t user_idnr, char **notify_address)
 	if (db_num_rows() > 0) {
 		query_result = db_get_result(0, 0);
 		if (query_result && strlen(query_result) > 0) {
-			*notify_address = strdup(query_result);
+			*notify_address = my_strdup(query_result);
 			trace(TRACE_DEBUG, "%s,%s: found address [%s]",
 			      __FILE__, __func__, *notify_address);
 		}
@@ -680,7 +680,7 @@ int db_get_reply_body(u64_t user_idnr, char **reply_body)
 	if (db_num_rows() > 0) {
 		query_result = db_get_result(0, 0);
 		if (query_result && strlen(query_result) > 0) {
-			*reply_body = strdup(query_result);
+			*reply_body = my_strdup(query_result);
 			trace(TRACE_DEBUG, "%s,%s: found reply_body [%s]",
 			      __FILE__, __func__, *reply_body);
 		}
@@ -803,7 +803,7 @@ int db_insert_message(u64_t user_idnr,
 	assert(unique_id);
 
 	if (!mailbox)
-		mailbox = strdup("INBOX");
+		mailbox = my_strdup("INBOX");
 
 	switch (create_or_error_mailbox) {
 	case CREATE_IF_MBOX_NOT_FOUND:
@@ -2240,7 +2240,7 @@ int db_findmailbox(const char *fq_name, u64_t user_idnr,
 	trace(TRACE_DEBUG, "%s,%s: looking for mailbox with FQN [%s].",
 	      __FILE__, __func__, fq_name);
 
-	name_str_copy = strdup(fq_name);
+	name_str_copy = my_strdup(fq_name);
 	/* see if this is a #User mailbox */
 	if ((strlen(NAMESPACE_USER) > 0) &&
 	    (strstr(fq_name, NAMESPACE_USER) == fq_name)) {
@@ -2297,9 +2297,9 @@ int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 	assert(mailbox_idnr != NULL);
 	*mailbox_idnr = 0;
 
-	local_name = strdup(name);
+	local_name = my_strdup(name);
 	if (local_name == NULL) {
-		trace(TRACE_ERROR, "%s,%s: error strdup(name). Out of memory?",
+		trace(TRACE_ERROR, "%s,%s: error my_strdup(name). Out of memory?",
 		      __FILE__, __func__);
 		return -1;
 	}
@@ -2310,7 +2310,7 @@ int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 		 "SELECT mailbox_idnr FROM %smailboxes "
 		 "WHERE name='%s' AND owner_idnr='%llu'",DBPFX, local_name,
 		 owner_idnr);
-	free(local_name); /* allocated with strdup(), so uses normal free() */
+	my_free(local_name);
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR,
 		      "%s,%s: could not select mailbox '%s'\n", __FILE__,
@@ -2417,7 +2417,7 @@ int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
 	}
 	
 	for (i = 0; i < n_rows; i++) {
-		all_mailbox_names[i] = strdup(db_get_result(i, 0));
+		all_mailbox_names[i] = my_strdup(db_get_result(i, 0));
 		all_mailboxes[i] = db_get_result_u64(i, 1);
 		all_mailbox_owners[i] = db_get_result_u64(i, 2);
 	} 
@@ -2440,8 +2440,6 @@ int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
 					mailbox_idnr;
 				(*nr_mailboxes)++;
 			}
-			my_free(mailbox_name);
-			my_free(all_mailbox_names[i]);
 		}
 	}
 	my_free(all_mailbox_names);
@@ -2714,7 +2712,7 @@ int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
 	}
 
 	if ((tmp = db_get_result(0, 0))) 
-		mailbox_name = strdup(tmp);
+		mailbox_name = my_strdup(tmp);
 
 	db_free_result();
 	if (mailbox_name) {
@@ -2722,7 +2720,7 @@ int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
 			 "SELECT mailbox_idnr FROM %smailboxes WHERE name LIKE '%s/%s'"
 			 " AND owner_idnr = '%llu'",DBPFX,
 			 mailbox_name, filter, user_idnr);
-		free(mailbox_name); /* alloc'd with strdup so uses free() */
+		my_free(mailbox_name);
 	}
 	else
 		snprintf(query, DEF_QUERYSIZE,
@@ -3084,11 +3082,10 @@ int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name)
 		*name = '\0';
 		return 0;
 	}
-	tmp_name = strdup(query_result);
+	tmp_name = my_strdup(query_result);
 	
 	db_free_result();
-	tmp_fq_name =
-	    mailbox_add_namespace(tmp_name, owner_idnr, user_idnr);
+	tmp_fq_name = mailbox_add_namespace(tmp_name, owner_idnr, user_idnr);
 	if (!tmp_fq_name) {
 		trace(TRACE_ERROR, "%s,%s: error getting fully qualified "
 		      "mailbox name", __FILE__, __func__);

@@ -100,7 +100,7 @@ static int db_search_range(db_pos_t start, db_pos_t end, const char *key,
  */
 static int num_from_imapdate(const char *date);
 
-int db_search(int *rset, int setlen, const char *key, mailbox_t * mb,
+int db_search(unsigned int *rset, int setlen, const char *key, mailbox_t * mb,
 	      int type)
 {
 	u64_t uid;
@@ -171,7 +171,7 @@ void addto_btree_curr(sortitems_t ** root, char *str, int mid)
    list_btree_insert(root, curr);
 }
 
-int db_sort_parsed(int *rset, unsigned int setlen,
+int db_sort_parsed(unsigned int *rset, unsigned int setlen,
                      search_key_t *sk, mailbox_t *mb)
 {
 
@@ -215,7 +215,7 @@ int db_sort_parsed(int *rset, unsigned int setlen,
     return 0;
 }
 
-int db_search_parsed(int *rset, unsigned int setlen,
+int db_search_parsed(unsigned int *rset, unsigned int setlen,
 		     search_key_t * sk, mailbox_t * mb)
 {
 	unsigned i;

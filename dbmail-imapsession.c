@@ -90,7 +90,7 @@ static GList * _imap_get_addresses(struct mime_record *mr);
 static GList * _imap_get_envelope(struct list *rfcheader);
 static GList * _imap_get_mime_parameters(struct mime_record *mr, int force_subtype, int only_extension);
 
-static u64_t get_dumpsize(struct ImapSession *self, u64_t tmpdumpsize); 
+static u64_t get_dumpsize(body_fetch_t bodyfetch, u64_t tmpdumpsize); 
 
 /* 
  *
@@ -909,7 +909,7 @@ int dbmail_imap_session_fetch_parse_args(struct ImapSession * self, int idx)
 			}
 			
 			if (ispeek)
-				self->fi.bodyfetch.noseen = 1;
+				self->fi.noseen = 1;
 
 			
 			idx = _imap_session_fetch_parse_partspec(self,idx);
@@ -1285,7 +1285,7 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 		dbmail_imap_session_printf(self, "ENVELOPE ");
 
 		tlist = _imap_get_envelope(&cached_msg.msg.rfcheader);
-		if (dbmail_imap_session_printf(self, dbmail_imap_plist_as_string(tlist)) == -1) {
+		if (dbmail_imap_session_printf(self, "%s", dbmail_imap_plist_as_string(tlist)) == -1) {
 			dbmail_imap_session_printf(self, "\r\n* BYE error fetching envelope structure\r\n");
 			return -1;
 		}
@@ -1498,7 +1498,7 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 		else
 			dbmail_imap_session_printf(self, " ");
 
-		if (! self->fi.bodyfetch.noseen)
+		if (! self->fi.noseen)
 			setseen = 1;
 		dbmail_imap_session_printf(self, "BODY[%s", self->fi.bodyfetch.partspec);
 
@@ -1517,7 +1517,7 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 				     msgpart->bodystart, msgpart->bodyend, self->msg_idnr);
 
 				if (self->fi.bodyfetch.octetstart >= 0) {
-					cnt = get_dumpsize(self, tmpdumpsize);
+					cnt = get_dumpsize(self->fi.bodyfetch, tmpdumpsize);
 					dbmail_imap_session_printf(self, "]<%llu> {%llu}\r\n", self->fi.bodyfetch.octetstart, cnt);
 					mseek(cached_msg.tmpdump, self->fi.bodyfetch.octetstart, SEEK_SET);
 				} else {
@@ -1542,7 +1542,7 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 						msgpart->bodystart, msgpart->bodyend, self->msg_idnr);
 
 				if (self->fi.bodyfetch.octetstart >= 0) {
-					cnt = get_dumpsize(self,tmpdumpsize);
+					cnt = get_dumpsize(self->fi.bodyfetch,tmpdumpsize);
 					dbmail_imap_session_printf(self, "]<%llu> {%llu}\r\n", self->fi.bodyfetch.octetstart,cnt);
 					mseek(cached_msg.tmpdump, self->fi.bodyfetch.octetstart, SEEK_SET);
 				} else {
@@ -1567,7 +1567,7 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 					dbmail_imap_session_printf(self, "] NIL\r\n");
 				} else {
 					if (self->fi.bodyfetch.octetstart >= 0) {
-						cnt = get_dumpsize(self, tmpdumpsize);
+						cnt = get_dumpsize(self->fi.bodyfetch, tmpdumpsize);
 						dbmail_imap_session_printf(self, "]<%llu> {%llu}\r\n", self->fi.bodyfetch.octetstart,cnt);
 						mseek(cached_msg.tmpdump, self->fi.bodyfetch.octetstart, SEEK_SET);
 					} else {
@@ -1609,7 +1609,7 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 					dbmail_imap_session_printf(self, "NIL\r\n");
 				} else {
 					if (self->fi.bodyfetch.octetstart >= 0) {
-						cnt = get_dumpsize(self, tmpdumpsize);
+						cnt = get_dumpsize(self->fi.bodyfetch, tmpdumpsize);
 						dbmail_imap_session_printf(self, "<%llu> {%llu}\r\n", self->fi.bodyfetch.octetstart, cnt);
 						mseek(cached_msg.tmpdump, self->fi.bodyfetch.octetstart, SEEK_SET);
 					} else {
@@ -1650,7 +1650,7 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 					dbmail_imap_session_printf(self, "NIL\r\n");
 				} else {
 					if (self->fi.bodyfetch.octetstart >= 0) {
-						cnt = get_dumpsize(self, tmpdumpsize);
+						cnt = get_dumpsize(self->fi.bodyfetch, tmpdumpsize);
 						dbmail_imap_session_printf(self, "<%llu> {%llu}\r\n", self->fi.bodyfetch.octetstart, cnt);
 						mseek(cached_msg.tmpdump, self->fi.bodyfetch.octetstart, SEEK_SET);
 					} else {
@@ -1675,7 +1675,7 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 					dbmail_imap_session_printf(self, "NIL\r\n");
 				} else {
 					if (self->fi.bodyfetch.octetstart >= 0) {
-						cnt = get_dumpsize(self, tmpdumpsize);
+						cnt = get_dumpsize(self->fi.bodyfetch, tmpdumpsize);
 						dbmail_imap_session_printf(self, "<%llu> {%llu}\r\n", self->fi.bodyfetch.octetstart, cnt);
 						mseek(cached_msg.tmpdump, self->fi.bodyfetch.octetstart, SEEK_SET);
 					} else {
@@ -2069,13 +2069,13 @@ int dbmail_imap_session_set_state(struct ImapSession *self, int state)
 	}
 	return 0;
 }
-static u64_t get_dumpsize(struct ImapSession *self, u64_t dumpsize) 
+static u64_t get_dumpsize(body_fetch_t bodyfetch, u64_t dumpsize) 
 {
-	long long cnt = dumpsize - self->fi.bodyfetch.octetstart;
+	long long cnt = dumpsize - bodyfetch.octetstart;
 	if (cnt < 0)
 		cnt = 0;
-	if (cnt > self->fi.bodyfetch.octetcnt)
-		cnt = self->fi.bodyfetch.octetcnt;
+	if (cnt > bodyfetch.octetcnt)
+		cnt = bodyfetch.octetcnt;
 	return (u64_t)cnt;
 }
 

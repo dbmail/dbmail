@@ -245,7 +245,7 @@ void list_btree_printout(sortitems_t * tree, int * i) {
 		list_btree_printout(tree->right, i);
 }
 
-void list_btree_traverse(sortitems_t * tree, int * i, int *rset) {
+void list_btree_traverse(sortitems_t * tree, int * i, unsigned int *rset) {
 	if(tree->left) 
 		list_btree_traverse(tree->left, i, rset);
 	trace(TRACE_DEBUG, "list_btree_traverse: i '%d' '%d', '%s'\n", 

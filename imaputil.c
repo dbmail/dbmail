@@ -884,318 +884,6 @@ int haystack_find(int haystacklen, char **haystack, const char *needle)
 }
 
 
-/*
- * next_fetch_item()
- *
- * retrieves next item to be fetched from an argument list starting at the given
- * index. The update index is returned being -1 on 'no-more' and -2 on error.
- * arglist is supposed to be formatted according to build_args_array()
- *
- */
-int next_fetch_item(char **args, int idx, fetch_items_t * fi)
-{
-	int invalidargs, indigit, ispeek, shouldclose, delimpos;
-	unsigned int j = 0;
-
-	memset(fi, 0, sizeof(fetch_items_t));	/* init */
-	fi->bodyfetch.itemtype = -1;	/* expect no body fetches (a priori) */
-	invalidargs = 0;
-
-	if (!args[idx])
-		return -1;	/* no more */
-
-	if (args[idx][0] == '(')
-		idx++;
-
-	if (!args[idx])
-		return -2;	/* error */
-
-	if (strcasecmp(args[idx], "flags") == 0)
-		fi->getFlags = 1;
-	else if (strcasecmp(args[idx], "internaldate") == 0)
-		fi->getInternalDate = 1;
-	else if (strcasecmp(args[idx], "uid") == 0)
-		fi->getUID = 1;
-	else if (strcasecmp(args[idx], "rfc822") == 0) {
-		fi->getRFC822 = 1;
-		fi->msgparse_needed = 1;
-	} else if (strcasecmp(args[idx], "rfc822.peek") == 0) {
-		fi->getRFC822Peek = 1;
-		fi->msgparse_needed = 1;
-	} else if (strcasecmp(args[idx], "rfc822.header") == 0) {
-		fi->getRFC822Header = 1;
-		fi->msgparse_needed = 1;
-	} else if (strcasecmp(args[idx], "rfc822.size") == 0) {
-		fi->getSize = 1;
-/*      fi->msgparse_needed = 1;*//* after first calc, it will be in the dbase */
-	} else if (strcasecmp(args[idx], "rfc822.text") == 0) {
-		fi->getRFC822Text = 1;
-		fi->msgparse_needed = 1;
-	} else if (strcasecmp(args[idx], "body") == 0
-		   || strcasecmp(args[idx], "body.peek") == 0) {
-		fi->msgparse_needed = 1;
-
-		if (!args[idx + 1] || strcmp(args[idx + 1], "[") != 0) {
-			if (strcasecmp(args[idx], "body.peek") == 0)
-				return -2;	/* error DONE */
-			else
-				fi->getMIME_IMB_noextension = 1;	/* just BODY specified */
-		} else {
-			/* determine wheter or not to set the seen flag */
-			ispeek = (strcasecmp(args[idx], "body.peek") == 0);
-
-			/* now read the argument list to body */
-			idx++;	/* now pointing at '[' (not the last arg, parentheses are matched) */
-			idx++;	/* now pointing at what should be the item type */
-
-			if (strcmp(args[idx], "]") == 0) {
-				/* specified body[] or body.peek[] */
-				if (ispeek)
-					fi->getBodyTotalPeek = 1;
-				else
-					fi->getBodyTotal = 1;
-
-				/* check if octet start/cnt is specified */
-				if (args[idx + 1]
-				    && args[idx + 1][0] == '<') {
-					idx++;	/* advance */
-
-					/* check argument */
-					if (args[idx]
-					    [strlen(args[idx]) - 1] != '>')
-						return -2;	/* error DONE */
-
-					delimpos = -1;
-					for (j = 1;
-					     j < strlen(args[idx]) - 1;
-					     j++) {
-						if (args[idx][j] == '.') {
-							if (delimpos != -1) {
-								invalidargs
-								    = 1;
-								break;
-							}
-							delimpos = j;
-						} else
-						    if (!isdigit
-							(args[idx][j])) {
-							invalidargs = 1;
-							break;
-						}
-					}
-
-					if (invalidargs || delimpos == -1
-					    || delimpos == 1
-					    || delimpos ==
-					    (int) (strlen(args[idx]) - 2))
-						return -2;	/* no delimiter found or at first/last pos OR invalid args DONE */
-
-					/* read the numbers */
-					args[idx][strlen(args[idx]) - 1] =
-					    '\0';
-					args[idx][delimpos] = '\0';
-					fi->bodyfetch.octetstart =
-					    strtoll(&args[idx][1], NULL,
-						    10);
-					fi->bodyfetch.octetcnt =
-					    strtoll(&args[idx]
-						    [delimpos + 1], NULL,
-						    10);
-
-					/* restore argument */
-					args[idx][delimpos] = '.';
-					args[idx][strlen(args[idx]) - 1] =
-					    '>';
-				} else {
-					fi->bodyfetch.octetstart = -1;
-					fi->bodyfetch.octetcnt = -1;
-				}
-
-				return idx + 1;	/* DONE */
-			}
-
-			if (ispeek)
-				fi->bodyfetch.noseen = 1;
-
-			/* check for a partspecifier */
-			/* first check if there is a partspecifier (numbers & dots) */
-			indigit = 0;
-
-			for (j = 0; args[idx][j]; j++) {
-				if (isdigit(args[idx][j])) {
-					indigit = 1;
-					continue;
-				} else if (args[idx][j] == '.') {
-					if (!indigit) {
-						/* error, single dot specified */
-						invalidargs = 1;
-						break;
-					}
-
-					indigit = 0;
-					continue;
-				} else
-					break;	/* other char found */
-			}
-
-			if (invalidargs)
-				return -2;	/* error DONE */
-
-			if (j > 0) {
-				if (indigit && args[idx][j])
-					return -2;	/* error DONE */
-
-				/* partspecifier present, save it */
-				if (j >= IMAP_MAX_PARTSPEC_LEN)
-					return -2;	/* error DONE */
-
-				strncpy(fi->bodyfetch.partspec, args[idx],
-					j);
-			}
-
-			fi->bodyfetch.partspec[j] = '\0';
-
-
-			shouldclose = 0;
-			if (strcasecmp(&args[idx][j], "text") == 0) {
-				fi->bodyfetch.itemtype = BFIT_TEXT;
-				shouldclose = 1;
-			} else if (strcasecmp(&args[idx][j], "header") ==
-				   0) {
-				fi->bodyfetch.itemtype = BFIT_HEADER;
-				shouldclose = 1;
-			} else if (strcasecmp(&args[idx][j], "mime") == 0) {
-				if (j == 0)
-					return -2;	/* error DONE */
-
-				fi->bodyfetch.itemtype = BFIT_MIME;
-				shouldclose = 1;
-			} else
-			    if (strcasecmp(&args[idx][j], "header.fields")
-				== 0)
-				fi->bodyfetch.itemtype =
-				    BFIT_HEADER_FIELDS;
-			else if (strcasecmp
-				 (&args[idx][j], "header.fields.not") == 0)
-				fi->bodyfetch.itemtype =
-				    BFIT_HEADER_FIELDS_NOT;
-			else if (args[idx][j] == '\0') {
-				fi->bodyfetch.itemtype = BFIT_TEXT_SILENT;
-				shouldclose = 1;
-			} else
-				return -2;	/* error DONE */
-
-			if (shouldclose) {
-				if (strcmp(args[idx + 1], "]") != 0)
-					return -2;	/* error DONE */
-			} else {
-				idx++;	/* should be at '(' now */
-				if (strcmp(args[idx], "(") != 0)
-					return -2;	/* error DONE */
-
-				idx++;	/* at first item of field list now, remember idx */
-				fi->bodyfetch.argstart = idx;
-
-				/* walk on untill list terminates (and it does 'cause parentheses are matched) */
-				while (strcmp(args[idx], ")") != 0)
-					idx++;
-
-				fi->bodyfetch.argcnt =
-				    idx - fi->bodyfetch.argstart;
-
-				if (fi->bodyfetch.argcnt == 0
-				    || strcmp(args[idx + 1], "]") != 0)
-					return -2;	/* error DONE */
-			}
-
-			idx++;	/* points to ']' now */
-
-			/* check if octet start/cnt is specified */
-			if (args[idx + 1] && args[idx + 1][0] == '<') {
-				idx++;	/* advance */
-
-				/* check argument */
-				if (args[idx][strlen(args[idx]) - 1] !=
-				    '>')
-					return -2;	/* error DONE */
-
-				delimpos = -1;
-				for (j = 1; j < strlen(args[idx]) - 1; j++) {
-					if (args[idx][j] == '.') {
-						if (delimpos != -1) {
-							invalidargs = 1;
-							break;
-						}
-						delimpos = j;
-					} else if (!isdigit(args[idx][j])) {
-						invalidargs = 1;
-						break;
-					}
-				}
-
-				if (invalidargs || delimpos == -1 ||
-				    delimpos == 1
-				    || delimpos ==
-				    (int) (strlen(args[idx]) - 2))
-					return -2;	/* no delimiter found or at first/last pos OR invalid args DONE */
-
-				/* read the numbers */
-				args[idx][strlen(args[idx]) - 1] = '\0';
-				args[idx][delimpos] = '\0';
-				fi->bodyfetch.octetstart =
-				    strtoll(&args[idx][1], NULL, 10);
-				fi->bodyfetch.octetcnt =
-				    strtoll(&args[idx][delimpos + 1], NULL,
-					    10);
-
-				/* restore argument */
-				args[idx][delimpos] = '.';
-				args[idx][strlen(args[idx]) - 1] = '>';
-			} else {
-				fi->bodyfetch.octetstart = -1;
-				fi->bodyfetch.octetcnt = -1;
-			}
-			/* ok all done for body item */
-		}
-	} else if (strcasecmp(args[idx], "all") == 0) {
-		fi->getFlags = 1;
-		fi->getInternalDate = 1;
-		fi->getSize = 1;
-		fi->getEnvelope = 1;
-		fi->msgparse_needed = 1;
-	} else if (strcasecmp(args[idx], "fast") == 0) {
-		fi->getFlags = 1;
-		fi->getInternalDate = 1;
-		fi->getSize = 1;
-/*      fi->msgparse_needed = 1; *//* size will be in dbase after first calc */
-	} else if (strcasecmp(args[idx], "full") == 0) {
-		fi->getFlags = 1;
-		fi->getInternalDate = 1;
-		fi->getSize = 1;
-		fi->getEnvelope = 1;
-		fi->getMIME_IMB = 1;
-		fi->msgparse_needed = 1;
-	} else if (strcasecmp(args[idx], "bodystructure") == 0) {
-		fi->getMIME_IMB = 1;
-		fi->msgparse_needed = 1;
-	} else if (strcasecmp(args[idx], "envelope") == 0) {
-		fi->getEnvelope = 1;
-		fi->msgparse_needed = 1;
-	} else if (strcmp(args[idx], ")") == 0) {
-		/* only allowed if last arg here */
-		if (args[idx + 1])
-			return -2;	/* DONE */
-		else
-			return -1;
-	} else
-		return -2;	/* DONE */
-
-	trace(TRACE_DEBUG,
-	      "next_fetch_item(): args[idx = %d] = %s (returning %d)\n",
-	      idx, args[idx], idx + 1);
-	return idx + 1;
-}
-
 
 /*
  * give_chunks()
@@ -2688,12 +2376,13 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx, int sorted)
  * returns 0 on succes, -1 on dbase error, -2 on memory error, 1 if result set is too small
  * (new mail has been added to mailbox while searching, mailbox data out of sync)
  */
-int perform_imap_search(int *rset, int setlen, search_key_t * sk,
+int perform_imap_search(unsigned int *rset, int setlen, search_key_t * sk,
 			mailbox_t * mb, int sorted)
 {
 	search_key_t *subsk;
 	struct element *el;
-	int result, *newset = NULL, i;
+	int result, i;
+	unsigned int *newset = NULL;
 	int subtype = IST_SUBSEARCH_OR;
 
 	if (!rset)
@@ -2834,7 +2523,7 @@ void free_searchlist(struct list *sl)
 }
 
 
-void invert_set(int *set, int setlen)
+void invert_set(unsigned int *set, int setlen)
 {
 	int i;
 
@@ -2846,7 +2535,7 @@ void invert_set(int *set, int setlen)
 }
 
 
-void combine_sets(int *dest, int *sec, int setlen, int type)
+void combine_sets(unsigned int *dest, unsigned int *sec, int setlen, int type)
 {
 	int i;
 
@@ -2869,7 +2558,7 @@ void combine_sets(int *dest, int *sec, int setlen, int type)
  * builds a msn-set from a IMAP message set spec. the IMAP set is supposed to be correct,
  * no checks are performed.
  */
-void build_set(int *set, unsigned int setlen, char *cset)
+void build_set(unsigned int *set, unsigned int setlen, char *cset)
 {
 	unsigned int i;
 	u64_t num, num2;
@@ -2939,7 +2628,7 @@ void build_set(int *set, unsigned int setlen, char *cset)
  *
  * as build_set() but takes uid's instead of MSN's
  */
-void build_uid_set(int *set, unsigned int setlen, char *cset,
+void build_uid_set(unsigned int *set, unsigned int setlen, char *cset,
 		   mailbox_t * mb)
 {
 	unsigned int i, msn, msn2;

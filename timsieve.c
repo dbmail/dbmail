@@ -411,13 +411,13 @@ int tims(void *stream, void *instream, char *buffer, char *client_ip UNUSED,
 								session->
 								    username
 								    =
-								    strdup
+								    my_strdup
 								    (tmp64
 								     [1]);
 								session->
 								    password
 								    =
-								    strdup
+								    my_strdup
 								    (tmp64
 								     [2]);
 							} else {

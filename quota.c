@@ -71,7 +71,7 @@ void quota_set_resource_limit(quota_t * quota, int resource_idx,
 int quota_set_root(quota_t * quota, char *root)
 {
 	my_free(quota->root);
-	quota->root = strdup(root);
+	quota->root = my_strdup(root);
 	return (quota->root == NULL);
 }
 

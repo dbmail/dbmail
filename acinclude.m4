@@ -333,3 +333,65 @@ INIPARSERALIB="lib/iniparser-2.14/src/.libs/libiniparser.a"
 INIPARSERLTLIB="lib/iniparser-2.14/src/libiniparser.la"
 ])
 
+# ----------------------------------------------------------------
+# DBMAIL_CHECK_GC
+# I cheated I copied from w3m's acinclude.m4 :)
+# Modified for DBMAIL by Dan Weber
+# ----------------------------------------------------------------
+AC_DEFUN([DBMAIL_CHECK_GC],
+[AC_MSG_CHECKING(for --with-gc)
+AC_ARG_WITH(gc,
+ [  --with-gc[=PREFIX]        libgc PREFIX],
+ [test x"$with_gc" = xno && with_gc="no"],
+ [with_gc="no"])
+ AC_MSG_RESULT($with_gc)
+# Don't check for gc if not appended to command line
+ if test x"$with_gc" = xyes
+ then
+ test x"$with_gc" = xyes && with_gc="/usr /usr/local ${HOME}"
+ unset ac_cv_header_gc_h
+  AC_CHECK_HEADER(gc/gc.h)
+ if test x"$ac_cv_header_gc_h" = xno; then
+   AC_MSG_CHECKING(GC header location)
+   AC_MSG_RESULT($with_gc)
+   gcincludedir=no
+    for dir in $with_gc; do
+     for inc in include include/gc; do
+       cflags="$CFLAGS"
+       CFLAGS="$CFLAGS -I$dir/$inc -DUSE_GC=1"
+       AC_MSG_CHECKING($dir/$inc)
+       unset ac_cv_header_gc_h
+       AC_CHECK_HEADER(gc/gc.h, [gcincludedir="$dir/$inc"; CFLAGS="$CFLAGS -I$dir/$inc -DUSE_GC=1"; break])
+       CFLAGS="$cflags"
+     done
+     if test x"$gcincludedir" != xno; then
+       break;
+     fi
+   done
+   if test x"$gcincludedir" = xno; then
+     AC_MSG_ERROR([gc/gc.h not found])
+   fi
+ else
+  cflags="$CFLAGS -DUSE_GC=1"
+  CFLAGS="$cflags"
+ fi
+ unset ac_cv_lib_gc_GC_init
+ AC_CHECK_LIB(gc, GC_init, [LIBS="$LIBS -lgc"])
+ if test x"$ac_cv_lib_gc_GC_init" = xno; then
+    AC_MSG_CHECKING(GC library location)
+    AC_MSG_RESULT($with_gc)
+    gclibdir=no
+    for dir in $with_gc; do
+      ldflags="$LDFLAGS"
+      LDFLAGS="$LDFLAGS -L$dir/lib"
+      AC_MSG_CHECKING($dir)
+      unset ac_cv_lib_gc_GC_init
+      AC_CHECK_LIB(gc, GC_init, [gclibdir="$dir/lib"; LIBS="$LIBS -L$dir/lib -lgc"; break])
+      LDFLAGS="$ldflags"
+    done
+    if test x"$gclibdir" = xno; then
+      AC_MSG_ERROR([libgc not found])
+    fi
+ fi
+fi])
+

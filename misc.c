@@ -130,7 +130,7 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
 
 	if (user_idnr == owner_idnr) {
 		/* mailbox owned by current user */
-		return strdup(mailbox_name);
+		return my_strdup(mailbox_name);
 	} else {
 		owner_name = auth_get_userid(owner_idnr);
 		if (owner_name == NULL) {
@@ -357,7 +357,7 @@ char **base64_decode(char *str, size_t len)
 	/* If there are more strings, copy those, too */
 	for (i = j = n = 0; i <= len_decoded; i++) {
 		if (str_decoded[i] == '\0') {
-			ret[n] = strdup(str_decoded + j);
+			ret[n] = my_strdup(str_decoded + j);
 			j = i + 1;
 			n++;
 		}
@@ -412,7 +412,7 @@ int read_from_stream(FILE * instream, char **m_buf, size_t maxlen)
 			 * buffer every time it is too small. This yields
 			 * a logarithmic number of reallocations. */
 			tmp_buf =
-			    realloc(f_buf, sizeof(char) * (f_len *= 2));
+			    my_realloc(f_buf, sizeof(char) * (f_len *= 2));
 			if (tmp_buf != NULL)
 				f_buf = tmp_buf;
 			else

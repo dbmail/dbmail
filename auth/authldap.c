@@ -655,7 +655,7 @@ int auth_user_exists(const char *username, u64_t * user_idnr)
 	      *user_idnr);
 
 	if (id_char)
-		free(id_char);
+		my_free(id_char);
 
 	if (*user_idnr == 0)
 		return 0;
@@ -718,7 +718,7 @@ int auth_getclientid(u64_t user_idnr, u64_t * client_idnr)
 	      *client_idnr);
 
 	if (cid_char)
-		free(cid_char);
+		my_free(cid_char);
 
 	return 1;
 }
@@ -749,7 +749,7 @@ int auth_getmaxmailsize(u64_t user_idnr, u64_t * maxmail_size)
 	      *maxmail_size);
 
 	if (max_char)
-		free(max_char);
+		my_free(max_char);
 
 	return 1;
 }
@@ -1001,7 +1001,7 @@ int auth_check_user_ext(const char *address, struct list *userids,
 			} else {
 				list_nodeadd(fwds, address,
 					     strlen(address) + 1);
-				free(endptr);
+				my_free(endptr);
 			}
 
 			trace(TRACE_DEBUG,
@@ -1194,8 +1194,8 @@ int auth_adduser(const char *username, const char *password,
 	/*int ret; unused variable */
 	int NUM_MODS = 9;
 	char *kaboom = "123";
-	char *cid = (char *)malloc(sizeof(char *));
-	char *maxm = (char *)malloc(sizeof(char *));
+	char *cid = (char *)my_malloc(sizeof(char *)*64);
+	char *maxm = (char *)my_malloc(sizeof(char *)*64);
 	sprintf(cid,"%llu",clientid);
 	sprintf(maxm,"%llu",maxmail);
 	
@@ -1910,7 +1910,7 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 	}
 
 	if (id_char)
-		free(id_char);
+		my_free(id_char);
 	if (ldap_dn)
 		ldap_memfree(ldap_dn);
 
@@ -1959,7 +1959,7 @@ int auth_get_users_from_clientid(u64_t client_id,
  */
 char *auth_get_deliver_from_alias(const char *alias)
 {
-	char *deliver_to = (char *)malloc(sizeof(char *));
+	char *deliver_to = (char *)my_malloc(sizeof(char *));
 	deliver_to = NULL;
 
 

@@ -769,7 +769,7 @@ int read_whole_message_network(FILE *instream, char **whole_message,
 		
 		/* change the \r\n ending to \n */
 		
-		if (!(tmpmessage = realloc(tmpmessage, 
+		if (!(tmpmessage = my_realloc(tmpmessage, 
 					   total_size + line_size - 1))) {
 			error = 1;
 			break;
@@ -799,7 +799,7 @@ int read_whole_message_network(FILE *instream, char **whole_message,
 	}
 
 	total_size += 1;
-	if (!(tmpmessage = realloc(tmpmessage, total_size))) {
+	if (!(tmpmessage = my_realloc(tmpmessage, total_size))) {
 		trace(TRACE_ERROR, "%s.%s: realloc failed",
 		      __FILE__, __func__);
 		error = 1;

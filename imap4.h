@@ -46,7 +46,6 @@
 int IMAPClientHandler(ClientInfo * ci);
 
 typedef struct {
-	int noseen;		/* set the seen flag ? */
 	int itemtype;		/* the item to be fetched */
 	int argstart;		/* start index in the arg array */
 	int argcnt;		/* number of args belonging to this bodyfetch */
@@ -61,8 +60,10 @@ typedef struct {
 /*  int nbodyfetches;
   body_fetch_t *bodyfetches;
 */
-	body_fetch_t bodyfetch;
+	body_fetch_t bodyfetch; 
+//	GList *bodyfetch;
 
+	int noseen;		/* set the seen flag ? */
 	int msgparse_needed;
 	int hdrparse_needed;
 

@@ -81,15 +81,15 @@ int quoted_string_out(FILE * outstream, const char *s);
 void send_data(FILE * to, MEM * from, int cnt);
 
 int build_imap_search(char **search_keys, struct list *sl, int *idx, int sorted);
-int perform_imap_search(int *rset, int setlen, search_key_t * sk,
+int perform_imap_search(unsigned int *rset, int setlen, search_key_t * sk,
 			mailbox_t * mb, int sorted);
 void free_searchlist(struct list *sl);
 
-void invert_set(int *set, int setlen);
-void combine_sets(int *dest, int *sec, int setlen, int type);
+void invert_set(unsigned int *set, int setlen);
+void combine_sets(unsigned int *dest, unsigned int *sec, int setlen, int type);
 
-void build_set(int *set, unsigned int setlen, char *cset);
-void build_uid_set(int *set, unsigned int setlen, char *cset,
+void build_set(unsigned int *set, unsigned int setlen, char *cset);
+void build_uid_set(unsigned int *set, unsigned int setlen, char *cset,
 		   mailbox_t * mb);
 void dumpsearch(search_key_t * sk, int level);
 

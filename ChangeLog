@@ -1,3 +1,16 @@
+2004-12-08  Paul Stevens <paul@nfg.nl>
+
+	* acinclude.m4, configure.in, debug.h, lmtp.c, main.c, mime.c, misc.c,
+	sievecmd.c: adding garbage collection through the configure switch
+	--with-gc and map all non-glib memory allocation calls to their my_ 
+	variants.
+
+	* acl.c, config.c, db.c, dbsearch.c, dbsearch.h, debug.c, debug.h,
+	imapcommands.c, imaputil.c, imaputil.h, list.c, list.h, main.c,
+	mime.c, misc.c, quota.c, sievecmd.c, smtp-convert.c, sort/sortsieve.c,
+	timsieve.c, user.c: change all strdup call to my_strdup which uses
+	my_malloc.
+
 2004-12-06  Aaron Stone  <aaron@serendipity.cx>
 
 	* lmtp.c: changed around a bunch of list handling to alleviate

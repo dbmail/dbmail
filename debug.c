@@ -199,3 +199,20 @@ void __debug_dumpallocs()
 
 #endif
 }
+
+
+char * my_strdup(const char *str)
+{
+	char *new_str;
+	size_t length;
+	
+	if (str) {
+		length = strlen(str) + 1;
+		new_str = (char *)my_malloc(length);
+		memcpy(new_str,str,length);
+	} else {
+		new_str = NULL;
+	}
+
+	return new_str;
+}

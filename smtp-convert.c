@@ -149,9 +149,9 @@ int traverse(char *path)
 					namelist[n]->d_name);
 				traverse(newpath);
 			}
-			free(namelist[n]);
+			my_free(namelist[n]);
 		}
-		free(namelist);
+		my_free(namelist);
 	}
 	return 0;
 }

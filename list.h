@@ -73,7 +73,7 @@ typedef struct _sortitems
 
 void list_btree_insert(sortitems_t ** tree, sortitems_t * item);
 void list_btree_printout(sortitems_t * tree, int *i);
-void list_btree_traverse(sortitems_t * tree, int * i, int *rset);
+void list_btree_traverse(sortitems_t * tree, int * i, unsigned int *rset);
 void list_btree_free(sortitems_t * tree);
 
 #endif

@@ -74,7 +74,7 @@ int mime_readheader(const char *datablock, u64_t * blkidx, struct list *mimelist
 
 	trace(TRACE_DEBUG, "mime_readheader(): entering mime loop");
 
-	blkdata = strdup(datablock);
+	blkdata = my_strdup(datablock);
 
 	list_init(mimelist);
 	*headersize = 0;
@@ -83,7 +83,7 @@ int mime_readheader(const char *datablock, u64_t * blkidx, struct list *mimelist
 		trace(TRACE_DEBUG,
 		      "mime_readheader(): found an empty header\n");
 		(*blkidx)++;	/* skip \n */
-		free(blkdata);
+		my_free(blkdata);
 		return 1;	/* found 1 newline */
 	}
 
@@ -92,7 +92,7 @@ int mime_readheader(const char *datablock, u64_t * blkidx, struct list *mimelist
 
 	if (!mr) {
 		trace(TRACE_ERROR, "mime_readheader(): out of memory\n");
-		free(blkdata);
+		my_free(blkdata);
 		return -2;
 	}
 
@@ -123,7 +123,7 @@ int mime_readheader(const char *datablock, u64_t * blkidx, struct list *mimelist
 			/* end of data block reached (??) */
 			my_free(mr);
 			*blkidx += (endptr - startptr);
-			free(blkdata);
+			my_free(blkdata);
 			return totallines;
 		}
 
@@ -196,7 +196,7 @@ int mime_readheader(const char *datablock, u64_t * blkidx, struct list *mimelist
 				trace(TRACE_ERROR,
 				      "mime_readheader(): cannot add element to list\n");
 				my_free(mr);
-				free(blkdata);
+				my_free(blkdata);
 				return -2;
 			}
 
@@ -244,7 +244,7 @@ int mime_readheader(const char *datablock, u64_t * blkidx, struct list *mimelist
 					trace(TRACE_ERROR,
 					      "mime_readheader(): cannot add element to list\n");
 					my_free(mr);
-					free(blkdata);
+					my_free(blkdata);
 					return -2;
 				}
 			} else {
@@ -289,7 +289,7 @@ int mime_readheader(const char *datablock, u64_t * blkidx, struct list *mimelist
 			      "mime_readheader(): found double newline; header size: %d lines\n",
 			      totallines);
 			my_free(mr);
-			free(blkdata);
+			my_free(blkdata);
 			return totallines;
 		}
 
@@ -303,11 +303,11 @@ int mime_readheader(const char *datablock, u64_t * blkidx, struct list *mimelist
 	if (valid_mime_lines < 2) {
 		trace(TRACE_ERROR,
 		      "mime_readheader(): no valid mime headers found\n");
-		free(blkdata);
+		my_free(blkdata);
 		return -1;
 	}
 
-	free(blkdata);
+	my_free(blkdata);
 	/* success ? */
 	trace(TRACE_DEBUG, " *** mime_readheader() done ***\n");
 	return totallines;
@@ -353,7 +353,7 @@ int mail_adr_list(char *scan_for_field, struct list *targetlist,
 	      mimelist->total_nodes);
 
 	memtst((tmpvalue =
-		(char *) calloc(MIME_VALUE_MAX, sizeof(char))) == NULL);
+		(char *) my_calloc(MIME_VALUE_MAX, sizeof(char))) == NULL);
 
 	trace(TRACE_INFO, "mail_adr_list(): mail address parser starting");
 

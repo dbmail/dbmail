@@ -142,18 +142,12 @@ static void _fetch_full(struct DbmailMessage *self)
 
 struct DbmailMessage * dbmail_message_new(void)
 {
-	struct DbmailMessage *self = (struct DbmailMessage *)my_malloc(sizeof(struct DbmailMessage));
-	
-	g_mime_init(0);
+	struct DbmailMessage *self = g_new0(struct DbmailMessage,1);
 	if (! self) {
 		trace(TRACE_ERROR, "%s,%s: memory error", __FILE__, __func__);
 		return NULL;
 	}
-	self->id=0;
-	self->message=NULL;
-	self->headers=NULL;
-	self->size=0;
-	self->rfcsize=0;
+	g_mime_init(0);
 	return self;
 }
 

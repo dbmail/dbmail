@@ -549,8 +549,8 @@ int _ic_delete(struct ImapSession *self)
 	if (!check_state_and_args(self, "DELETE", 1, 1, IMAPCS_AUTHENTICATED))
 		return 1;	/* error, return */
 
-	if ( (mboxid = dbmail_imap_session_mailbox_get_idnr(self, mailbox)) ) {
-		dbmail_imap_session_printf(self, "%s NO mailbox already exists\r\n", self->tag);
+	if (! (mboxid = dbmail_imap_session_mailbox_get_idnr(self, mailbox)) ) {
+		dbmail_imap_session_printf(self, "%s NO mailbox doesn't exists\r\n", self->tag);
 		return 1;
 	}
 

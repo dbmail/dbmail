@@ -306,11 +306,11 @@ char *acl_listrights(u64_t userid, u64_t mboxid)
 		/* user is not owner. User will never be granted any right
 		   by default, but may be granted any right by setting the
 		   right ACL */
-		return strdup("\"\" l r s w i p c d a");
+		return my_strdup("\"\" l r s w i p c d a");
 	}
 
 	/* user is owner, User will always be granted all rights */
-	return strdup(acl_right_chars);
+	return my_strdup(acl_right_chars);
 }
 
 char *acl_myrights(u64_t userid, u64_t mboxid)

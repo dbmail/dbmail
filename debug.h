@@ -30,6 +30,11 @@
 #include <sys/syslog.h>
 #include <stdarg.h>
 
+#ifdef USE_GC
+#define GC_DEBUG
+#include <gc/gc.h>
+#endif
+
 #ifndef  _DEBUG_H
 #define  _DEBUG_H
 
@@ -56,9 +61,22 @@ typedef enum {
 #define my_free(p) __debug_free(p, __FILE__, __LINE__)
 #define __DEBUG_TRACE_MEMALLOC
 */
+#ifdef USE_GC
+
+#define my_malloc(s) GC_MALLOC(s)
+#define my_free(p) GC_FREE(p)
+#define my_calloc(n,p) GC_MALLOC((n) * (p))
+#define my_realloc(n,p) GC_REALLOC((n),(p))
+
+#else
 
 #define my_malloc(s) malloc(s)
 #define my_free(p) free(p)
+#define my_calloc(n,p) calloc(n,p)
+#define my_realloc(n,p) realloc(n,p)
+
+#endif
+
 #ifdef __DEBUG_TRACE_MEMALLOC
 #undef __DEBUG_TRACE_MEMALLOC
 #endif
@@ -74,4 +92,5 @@ void __debug_free(void *ptr, const char *fname, int linenr);
 
 void __debug_dumpallocs(void);
 
+char * my_strdup(const char *str);
 #endif
