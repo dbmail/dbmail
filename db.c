@@ -2450,7 +2450,6 @@ int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern,
 
 int db_getmailbox(mailbox_t * mb)
 {
-	u64_t highest_id;
 	unsigned i;
 
 	/* free existing MSN list */

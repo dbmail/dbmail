@@ -1357,16 +1357,16 @@ int _ic_list(struct ImapSession *self)
 		result = db_getmailbox_list_result(children[i], ud->userid, mb);
 		plist = NULL;
 		if (mb->no_select)
-			plist = g_list_append(plist, "\\noselect");
+			plist = g_list_append(plist, g_strdup("\\noselect"));
 		if (mb->no_inferiors)
-			plist = g_list_append(plist, "\\noinferiors");
+			plist = g_list_append(plist, g_strdup("\\noinferiors"));
 		
 		/* show */
 		dbmail_imap_session_printf(self, "* %s %s \"/\" \"%s\"\r\n", thisname, dbmail_imap_plist_as_string(plist), mb->name);
+		g_list_foreach(plist,(GFunc)g_free,NULL);
+		g_list_free(plist);
 	}
 
-	g_list_foreach(plist,(GFunc)g_free,NULL);
-	g_list_free(plist);
 
 	if (children)
 		my_free(children);

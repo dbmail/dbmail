@@ -379,6 +379,7 @@ static GList * _imap_get_addresses(struct mime_record *mr)
 {
 	int delimiter, i, inquote, start, has_split;
 	char savechar;
+	
 	GList * list = NULL;
 	GList * sublist = NULL;
 	GString * tmp = g_string_new("");
@@ -429,17 +430,18 @@ static GList * _imap_get_addresses(struct mime_record *mr)
 				mr->value[i - 1] = savechar;
 
 			} else
-				sublist = g_list_append(sublist, "NIL");
+				sublist = g_list_append(sublist, g_strdup("NIL"));
 
 			start = i + 1;	/* skip to after '<' */
 		} else
-			sublist = g_list_append(sublist, "NIL");
+			sublist = g_list_append(sublist, g_strdup("NIL"));
 
-		sublist = g_list_append(sublist, "NIL");	/* source route ?? smtp at-domain-list ?? */
+		sublist = g_list_append(sublist, g_strdup("NIL"));	/* source route ?? smtp at-domain-list ?? */
 
 		/*
 		 * now display user domainname; &mr->value[start] is starting point 
 		 */
+		
 		g_string_printf(tmp,"\"");
 		// added a check for whitespace within the address (not good)
 		for (i = start, has_split = 0; mr->value[i] && mr->value[i] != '>' && !isspace(mr->value[i]); i++) {
@@ -458,7 +460,7 @@ static GList * _imap_get_addresses(struct mime_record *mr)
 		else
 			tmp = g_string_append(tmp, "\"");
 
-		sublist = g_list_append(sublist,strdup(tmp->str));
+		sublist = g_list_append(sublist,g_strdup(tmp->str));
 		
 		if (delimiter > 0) {
 			mr->value[delimiter++] = ',';	/* restore & prepare for next iteration */
@@ -529,7 +531,7 @@ static GList * _imap_get_mime_parameters(struct mime_record *mr, int force_subty
 			mr->value[idx] = '/';
 		} else {
 			list = g_list_append(list,dbmail_imap_astring_as_string(mr->value));
-			list = g_list_append(list, force_subtype ? "NIL" : "");
+			list = g_list_append(list, g_strdup(force_subtype ? "NIL" : ""));
 		}
 	}
 	if (delimiter >= 0) {
@@ -538,7 +540,7 @@ static GList * _imap_get_mime_parameters(struct mime_record *mr, int force_subty
 		idx = delimiter;
 
 		if (start)
-			subl = g_list_append(subl, "\"CHARSET\" \"US-ASCII\"");
+			subl = g_list_append(subl, g_strdup("\"CHARSET\" \"US-ASCII\""));
 		/* extra params: <name>=<val> [; <name>=<val> [; ...etc...]]
 		 * note that both name and val may or may not be enclosed by 
 		 * either single or double quotation marks
@@ -610,7 +612,7 @@ static GList * _imap_get_mime_parameters(struct mime_record *mr, int force_subty
 		subl = NULL;
 		g_string_free(tmp,1);
 	} else {
-		list = g_list_append(list, "NIL");
+		list = g_list_append(list, g_strdup("NIL"));
 	}
 	
 	return list;
@@ -962,40 +964,29 @@ int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self, u64_t fetch
 		/* fetching results */
 		trace(TRACE_DEBUG, "_ic_fetch(): no parsing, into fetch loop");
 
-		if (self->fi.getInternalDate) {
-			g_string_printf(tmp, "INTERNALDATE \"%s\"",
-					date_sql2imap (self->msginfo[i].internaldate));
-			list = g_list_append(list,g_strdup(tmp->str));
-		}
+		if (self->fi.getInternalDate) 
+			list = g_list_append_printf(list,"INTERNALDATE \"%s\"", date_sql2imap (self->msginfo[i].internaldate));
 
-		if (self->fi.getUID || self->use_uid) {
-			g_string_printf(tmp, "UID %llu", self->msginfo[i].uid);
-			list = g_list_append(list,g_strdup(tmp->str));
-		}
+		if (self->fi.getUID || self->use_uid) 
+			list = g_list_append_printf(list,"UID %llu", self->msginfo[i].uid);
 
-		if (self->fi.getSize) {
-			g_string_printf(tmp, "RFC822.SIZE %llu", self->msginfo[i].rfcsize);
-			list = g_list_append(list,g_strdup(tmp->str));
-		}
+		if (self->fi.getSize) 
+			list = g_list_append_printf(list,"RFC822.SIZE %llu", self->msginfo[i].rfcsize);
 
 		if (self->fi.getFlags) {
-
 			sublist = NULL;
-			
 			for (j = 0; j < IMAP_NFLAGS; j++) {
 				if (self->msginfo[i].flags[j]) 
-					sublist = g_list_append(sublist,(gchar *)imap_flag_desc_escaped[j]);
+					sublist = g_list_append(sublist,g_strdup((gchar *)imap_flag_desc_escaped[j]));
 			}
 			list = g_list_append_printf(list,"FLAGS %s", dbmail_imap_plist_as_string(sublist));
 		}
 		dbmail_imap_session_printf(self, "* %u FETCH %s\r\n", (fn + 1), dbmail_imap_plist_as_string(list));
 	}
 	g_list_foreach(list,(GFunc)g_free,NULL);
-//	g_list_foreach(sublist,(GFunc)g_free,NULL);
+	g_list_foreach(sublist,(GFunc)g_free,NULL);
 	g_list_free(list);
 	g_list_free(sublist);
-	list = NULL;
-	sublist = NULL;
 	g_string_free(tmp,TRUE);
 	my_free(self->msginfo);
 	return 0;
@@ -1735,7 +1726,7 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 	}
 	dbmail_imap_session_printf(self, ")\r\n");
 
-	g_string_free(tmp,1);
+	g_string_free(tmp,TRUE);
 	g_list_foreach(tlist, (GFunc)g_free, NULL);
 	g_list_free(tlist);
 	tlist = NULL;
@@ -1880,8 +1871,6 @@ struct ImapSession * dbmail_imap_session_setFi(struct ImapSession * self, fetch_
 }
 struct ImapSession * dbmail_imap_session_setMsginfo(struct ImapSession * self, msginfo_t * msginfo)
 {
-	if (self->msginfo)
-		my_free(self->msginfo);
 	self->msginfo = msginfo;
 	return self;
 }
@@ -2085,6 +2074,7 @@ int dbmail_imap_session_mailbox_show_info(struct ImapSession * self)
 	if (ud->mailbox.flags & IMAPFLAG_RECENT)
 		list = g_list_append(list,"\\Recent");
 	string = g_list_join(list," ");
+	g_list_free(list);
 	dbmail_imap_session_printf(self, "* FLAGS (%s)\r\n", string->str);
 
 	/* permanent flags */
@@ -2102,12 +2092,14 @@ int dbmail_imap_session_mailbox_show_info(struct ImapSession * self)
 	if (ud->mailbox.flags & IMAPFLAG_RECENT)
 		list = g_list_append(list,"\\Recent");
 	string = g_list_join(list," ");
+	g_list_free(list);
 	dbmail_imap_session_printf(self, "* OK [PERMANENTFLAGS (%s)]\r\n", string->str);
 
 	/* UID */
 	dbmail_imap_session_printf(self, "* OK [UIDVALIDITY %llu] UID value\r\n",
 		ud->mailbox.uid);
 
+	g_string_free(string,TRUE);
 	return 0;
 }
 	
