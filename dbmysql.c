@@ -2516,9 +2516,6 @@ int db_expunge(unsigned long uid,unsigned long **msgids,int *nmsgs)
  */
 int db_movemsg(unsigned long to, unsigned long from)
 {
-  
-
-  /* update messages belonging to this mailbox: mark as deleted (status 3) */
   snprintf(query, DEF_QUERYSIZE, "UPDATE message SET mailboxidnr=%ld WHERE"
 	   " mailboxidnr = %lu", to, from);
 
@@ -3181,6 +3178,89 @@ void db_close_msgfetch()
   _msg_fetch_inited = 0;
 }
 
+
+/*
+ * db_get_main_header()
+ *
+ * builds a list containing the fields of the main header (== the first) of
+ * a message
+ *
+ * returns:
+ * 0   success
+ * -1  dbase error
+ * -2  out of memory
+ * -3  parse error
+ */
+int db_get_main_header(unsigned long msguid, struct list *hdrlist)
+{
+  unsigned long dummy = 0, sizedummy = 0;
+  int result;
+
+  if (!hdrlist)
+    return 0;
+
+  if (hdrlist->start)
+    list_freelist(&hdrlist->start);
+
+  list_init(hdrlist);
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT messageblk FROM messageblk WHERE "
+	   "messageidnr = %lu ORDER BY messageblknr LIMIT 1", msguid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_get_main_header(): could not get message header\n");
+      return (-1);
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_get_main_header(): mysql_store_result failed: %s\n",
+	    mysql_error(&conn));
+      return (-1);
+    }
+
+  row = mysql_fetch_row(res);
+  if (!row)
+    {
+      /* no header for this message ?? */
+      mysql_free_result(res);
+      return -1;
+    }
+
+  result = mime_readheader(row[0], &dummy, hdrlist, &sizedummy);
+
+  mysql_free_result(res);
+
+  if (result == -1)
+    {
+      /* parse error */
+      trace(TRACE_ERROR,"db_get_main_header(): error parsing header of message %lu\n",msguid);
+      if (hdrlist->start)
+	{
+	  list_freelist(&hdrlist->start);
+	  list_init(hdrlist);
+	}
+
+      return -3;
+    }
+
+  if (result == -2)
+    {
+      /* out of memory */
+      trace(TRACE_ERROR,"db_get_main_header(): out of memory\n");
+      if (hdrlist->start)
+	{
+	  list_freelist(&hdrlist->start);
+	  list_init(hdrlist);
+	}
+      
+      return -2;
+    }
+
+  /* success ! */
+  return 0;
+}
 
 
 /*
