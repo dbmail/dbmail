@@ -29,7 +29,7 @@ char *timeout_setting;
 char *buffer;
 int done=1;
 
-int resolve_client = 1;
+int resolve_client = 0;
 
 int server_timeout;
 int server_pid;
@@ -85,7 +85,8 @@ int main (int argc, char *argv[])
 
   char *trace_level=NULL,*trace_syslog=NULL,*trace_verbose=NULL;
   int new_level = 2, new_trace_syslog = 1, new_trace_verbose = 0;
-
+  char *resolve_setting=NULL;
+  
   time_t timestamp;
   time_t timeout;
 	
@@ -111,6 +112,16 @@ int main (int argc, char *argv[])
   trace_syslog = db_get_config_item("TRACE_TO_SYSLOG", CONFIG_EMPTY);
   trace_verbose = db_get_config_item("TRACE_VERBOSE", CONFIG_EMPTY);
   timeout_setting = db_get_config_item("POP3D_CHILD_TIMEOUT", CONFIG_EMPTY);
+  resolve_setting = db_get_config_item("POP3D_IP_RESOLVE",CONFIG_EMPTY);
+
+  if (resolve_setting)
+  {
+		if (strcasecmp(resolve_setting,"yes"))
+				resolve_client = 1;
+		else
+				resolve_client = 0;
+		free(resolve_setting);
+  }	
   
   if (timeout_setting) 
   {
@@ -394,6 +405,7 @@ int main (int argc, char *argv[])
 					done = -1; /* check of client eof */
 				else
 					{
+					alarm (server_timeout);
 					done = pop3(tx,buffer); 
 					alarm (server_timeout);
 					}
@@ -553,6 +565,7 @@ int main (int argc, char *argv[])
 						done = -1; /* check of client eof */
 					else
 						{
+						alarm (server_timeout);		
 						done = pop3(tx,buffer); 
 						alarm (server_timeout);
 						}
