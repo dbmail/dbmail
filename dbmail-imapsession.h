@@ -20,6 +20,7 @@ struct ImapSession {
 	char **args;
 	fetch_items_t fi;
 	struct DbmailMessage *message;
+	mime_message_t headermsg;
 	msginfo_t *msginfo;
 };
 
@@ -49,6 +50,11 @@ int dbmail_imap_session_mailbox_check_acl(struct ImapSession * self, u64_t idnr,
 int dbmail_imap_session_mailbox_get_selectable(struct ImapSession * self, u64_t idnr);
 int dbmail_imap_session_mailbox_show_info(struct ImapSession * self);
 int dbmail_imap_session_mailbox_open(struct ImapSession * self, char * mailbox);
+
+
+int dbmail_imap_session_fetch_parse_args(struct ImapSession * self, int idx);
+int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self, u64_t fetch_start, u64_t fetch_end);
+int dbmail_imap_session_fetch_get_items(struct ImapSession *self);
 
 #endif
 

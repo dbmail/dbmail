@@ -35,6 +35,7 @@
 #include "imap4.h"
 #include "imaputil.h"
 #include "imapcommands.h"
+#include "dbmail-imapsession.h"
 #include "misc.h"
 #include "clientinfo.h"
 #include "debug.h"
@@ -49,18 +50,6 @@
 
 /* cache */
 cache_t cached_msg;
-
-/* consts */
-const char AcceptedChars[] =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    "!@#$%^&*()-=_+`~[]{}\\|'\" ;:,.<>/? \n\r";
-
-const char AcceptedTagChars[] =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    "!@#$%^&-=_`~\\|'\" ;:,.<>/? ";
-
-const char AcceptedMailboxnameChars[] =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-=/ _.&,+";
 
 const char *IMAP_COMMANDS[] = {
 	"", "capability", "noop", "logout",

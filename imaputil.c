@@ -57,10 +57,20 @@
 /* cache */
 extern cache_t cached_msg;
 
-extern const char AcceptedChars[];
-extern const char AcceptedTagChars[];
-extern const char AcceptedMailboxnameChars[];
+/* consts */
+const char AcceptedChars[] =
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    "!@#$%^&*()-=_+`~[]{}\\|'\" ;:,.<>/? \n\r";
+
+const char AcceptedTagChars[] =
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    "!@#$%^&-=_`~\\|'\" ;:,.<>/? ";
+
+const char AcceptedMailboxnameChars[] =
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-=/ _.&,+";
+
 extern const char *month_desc[];
+
 
 
 char base64encodestring[] =
