@@ -1832,8 +1832,10 @@ int _ic_fetch(struct ImapSession *self)
 
 		
 		if (! self->use_uid) {
-			fetch_start--;
-			fetch_end--;
+			if (fetch_start > 0)
+				fetch_start--;
+			if (fetch_end > 0)
+				fetch_end--;
 		}
 
 		trace(TRACE_DEBUG,"%s,%s: fetch_start [%llu] fetch_end [%llu]",
