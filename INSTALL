@@ -74,7 +74,7 @@ If you follow the steps below you'll have DBMAIL running in no-time.
 
 
 5.	
-	Become root and run install-dbmail.sh which does all this.
+	Become root and run install-dbmail.sh which will install the dbmail executables.
 
 6. check your dbmail.conf file and set it to your likeings. After that you can 
 	best copy it to the /etc/ directory and set it to chmod 700 for user root.
