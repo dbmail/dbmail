@@ -178,8 +178,10 @@ CREATE TABLE messageblks (
 	physmessage_id bigint(21) NOT NULL default '0',
 	messageblk longtext NOT NULL,
 	blocksize bigint(21) NOT NULL default '0',
+	is_header tinyint(1) NOT NULL default '0',
 	PRIMARY KEY  (messageblk_idnr),
 	INDEX physmsg_index (physmessage_id),
+	INDEX physmsg_is_header_index (physmessage_id, is_header),
 	FOREIGN KEY (`physmessage_id`) 
 		REFERENCES `physmessage` (`id`) ON DELETE CASCADE
 ) TYPE=InnoDB;

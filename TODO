@@ -1,6 +1,11 @@
 /* $Id$ 
  * (c) 2000-2002 IC&S, The Netherlands */
 
+For DBMail 2.0
+-   remove unique_id != '' from queries, if possible without
+    breaking anything.
+-   check if id BETWEEN x AND x is slower than id = x (I would
+    guess this is optimized away. 
 For DBMail 2.1
 -   Database table prefixes
 -   Sieve scripting language
@@ -13,3 +18,4 @@ For DBMail 2.1
     suspended account, courtesy forwarding address) via LMTP's
     enhanced status codes and via stdout messages to the MTA
 -   Handle NULLs in messages better than currently done (RFC821!).
+

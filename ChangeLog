@@ -1,3 +1,9 @@
+2004-06-11  Ilja Booij  <ilja@ic-s.nl>
+
+	* All database files: added is_header flag in messageblks
+	table, and index to this flag. The flag is not used in any
+	code yet, but is present because we'll need it later on.
+	
 2004-06-09  Ilja Booij  <ilja@ic-s.nl>
 
 	* dbmsgbuf.c (db_dump_range): changed query to cut down

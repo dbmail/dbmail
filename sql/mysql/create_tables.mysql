@@ -120,9 +120,11 @@ CREATE TABLE messageblks (
    physmessage_id bigint(21) DEFAULT '0' NOT NULL,
    messageblk longtext NOT NULL,
    blocksize bigint(21) DEFAULT '0' NOT NULL,
+   is_header tinyint(1) DEFAULT '0' NOT NULL,
    PRIMARY KEY (messageblk_idnr),
-   INDEX (physmessage_id)
-) ;
+   INDEX (physmessage_id),
+   INDEX (physmessage_id, is_header)
+);
 
 DROP TABLE IF EXISTS auto_notifications;
 CREATE TABLE auto_notifications (

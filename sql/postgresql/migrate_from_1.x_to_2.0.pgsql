@@ -134,9 +134,12 @@ CREATE TABLE messageblks (
    physmessage_id INT8 DEFAULT '0' NOT NULL,
    messageblk TEXT NOT NULL,
    blocksize INT8 DEFAULT '0' NOT NULL,
+   is_header INT2 DEFAULT '0' NOT NULL,
    PRIMARY KEY (messageblk_idnr)
 );
 CREATE INDEX messageblks_physmessage_idx ON messageblks(physmessage_id);
+CREATE INDEX messageblks_physmessage_is_header_idx 
+	ON messageblks(physmessage_id, is_header);
 
 CREATE SEQUENCE seq_pbsp_id;
 CREATE TABLE pbsp (
