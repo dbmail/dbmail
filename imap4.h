@@ -21,6 +21,9 @@
 /* max length of number/dots part specifier */
 #define IMAP_MAX_PARTSPEC_LEN 100
 
+/* max number of retries when synchronizing mailbox with dbase */
+#define MAX_RETRIES 20
+
 int imap_process(ClientInfo *ci);
 int imap_login(ClientInfo *ci);
 

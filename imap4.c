@@ -113,7 +113,9 @@ int imap_process(ClientInfo *ci)
 {
   char line[MAX_LINESIZE];
   char *tag = NULL,*cpy,**args,*command;
-  int i,done,result;
+  int i,done,result,j;
+  imap_userdata_t *ud = ci->userData;
+  mailbox_t newmailbox;
 
   /* init */
   if (db_connect() != 0)
@@ -250,6 +252,38 @@ int imap_process(ClientInfo *ci)
 
       if (result == 0 && i == IMAP_COMM_LOGOUT)
 	done = 1;
+
+      /* check if mailbox status has changed (notify client) */
+      if (!done && ud->state == IMAPCS_SELECTED)
+	{
+	  /* update mailbox info */
+	  memset(&newmailbox, 0, sizeof(newmailbox));
+	  newmailbox.uid = ud->mailbox.uid;
+
+	  j = 0;
+	  do
+	    {
+	      result = db_getmailbox(&newmailbox, ud->userid);
+	    } while (result == 1 && j++<MAX_RETRIES);
+
+	  if (result == 1)
+	    {
+	      fprintf(ci->tx,"* BYE troubles synchronizing dbase\r\n");
+	      done = 1;
+	    }
+
+	  if (newmailbox.exists != ud->mailbox.exists)
+	    fprintf(ci->tx, "* %d EXISTS\r\n", newmailbox.exists);
+
+	  if (newmailbox.recent != ud->mailbox.recent)
+	    fprintf(ci->tx, "* %d RECENT\r\n", newmailbox.recent);
+
+	  if (newmailbox.unseen != ud->mailbox.unseen)
+	    fprintf(ci->tx, "* %d UNSEEN\r\n", newmailbox.unseen);
+
+	  memcpy(&ud->mailbox, &newmailbox, sizeof(newmailbox));
+	}
+
 
       fflush(ci->tx); /* write! */
 

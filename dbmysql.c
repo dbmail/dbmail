@@ -2768,6 +2768,18 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 	}
       totallines += nlines;
 
+      /* skip stopbound if present */
+      if (stopbound)
+	{
+	  sblen = strlen(stopbound);
+	  msgidx += (2+sblen); /* double hypen preceeds */
+	  while (msgbuf[msgidx] == '\n')
+	    {
+	      totallines++;
+	      msgidx++;
+	    }
+	}
+
       free(newbound);
       db_give_msgpos(&msg->bodyend);
       msg->bodysize = db_give_range_size(&msg->bodystart, &msg->bodyend);
