@@ -430,7 +430,10 @@ void mime_findfield(const char *fname, struct list *mimelist, struct mime_record
     {
       *mr = current->data;   /* get field/value */
       
-      if (strncasecmp((*mr)->field, fname, strlen(fname)) == 0)
+//      if (strncasecmp((*mr)->field, fname, strlen(fname)) == 0)
+// some mail is prepended by a line like "From <host> <datetime>"
+// using strncasecmp causes problems with this: it is seen as the From: field
+      if (strcasecmp((*mr)->field, fname) == 0)
 	return; /* found */
 
       current = current->nextnode;
