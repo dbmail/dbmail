@@ -159,8 +159,11 @@ int pop3 (void *stream, char *buffer)
 					username); 
 			free (username);
 			username=NULL;
-			free (password);
-			password=NULL;
+			if (password!=NULL)
+				{
+				free (password);
+				password=NULL;
+				}
 	      return pop3_error (stream,"-ERR username/password incorrect\r\n");
 	    }
 	  default:

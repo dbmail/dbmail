@@ -801,7 +801,8 @@ unsigned long db_validate (char *user, char *password)
     }
 
   row = mysql_fetch_row(res);
-  id = row[0] ? strtoul(row[0], NULL, 10) : 0;
+
+  id = (row && row[0]) ? strtoul(row[0], NULL, 10) : 0;
   
   free(ckquery);
   mysql_free_result(res);
