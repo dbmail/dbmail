@@ -2614,7 +2614,7 @@ int db_get_msgflag_all(u64_t msguid, int *flags)
 
       for (i=0; i<IMAP_NFLAGS && row; i++)
 	{
-	  if (row[0] && row[0][0] != '0') flags[i] = 1;
+	  if (row[i] && row[i][0] != '0') flags[i] = 1;
 	}
     }
  
