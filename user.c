@@ -120,7 +120,7 @@ int do_make_alias(char *argv[])
 
     case 1:
       printf("Already exists. no extra alias added\n");
-      result = 0; /* return no error */
+      result = -1; /* return error */
       break;
 
     }
@@ -184,7 +184,7 @@ int do_add(int argc, char *argv[])
 	{
 	case -1:
 	  printf ("Failed\n");
-	  result = -2;
+	  result = -1;
 	  break;
 	  
 	case 0:
@@ -193,6 +193,7 @@ int do_add(int argc, char *argv[])
 
 	case 1:
 	  printf("Already exists. No extra alias added\n");
+	  result = -1;
 	  break;
 	}
     }
