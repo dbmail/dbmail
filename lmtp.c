@@ -406,6 +406,9 @@ int lmtp(void *stream, void *instream, char *buffer,
 			} else if (envelopefrom != NULL) {
 				ci_write((FILE *) stream,
 					"500 Sender already received. Use RSET to clear.\r\n");
+				trace(TRACE_ERROR, "%s,%s: Sender already "
+				      "received: last envfrom: %s",
+				      __FILE__, __func__, envelopefrom);
 			} else {
 				/* First look for an email address.
 				 * Don't bother verifying or whatever,
