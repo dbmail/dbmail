@@ -88,12 +88,15 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
   char *strblock;
   char *domain, *ptr;
   char *myscan, *nextscan;
+  char *tmpbuffer;
   size_t usedmem=0, totalmem=0;
   struct list userids;
   struct list messageids;
   void *sendmail_pipe;
   struct list external_forwards;
-
+  struct list bounces;
+  struct list descriptors;
+  
   unsigned long temp,userid;
   int i;
   
@@ -120,6 +123,12 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
   /* initiating list with messageid's */
   list_init(&messageids);
 	
+  /* initiating list with external forwards */
+	list_init(&external_forwards);
+
+	/* initiating list with bounces */
+	list_init (&bounces);
+	
   tmp=list_getstart(users);
 
   while (tmp!=NULL)
@@ -144,12 +153,12 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 	 	/* user does not excists in aliases tables
 			so bounce this message back with an error message */
       if (userids.total_nodes==0)
-			bounce (firstblock,(char *)tmp->data,BOUNCE_NO_SUCH_USER);
+			list_nodeadd(&bounces, tmp->data, strlen(tmp->data)+1);
 
       tmp=tmp->nextnode;
     }
 		
-  tmp=list_getstart(&userids);
+   tmp=list_getstart(&userids);
 
   while (tmp!=NULL)
     {	
@@ -173,8 +182,6 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 				i++;
 				ptr++;
 				}
-		
-		list_init(&external_forwards);
 		
 		if (i<strlen((char *)tmp->data))
 			{
@@ -221,112 +228,202 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 	/* here we'll loop until we've read all what's left in the buffer 
 	 * fread is used here because we want large blocks */
 
-  while (!feof(stdin))
-    {
-      usedmem = fread (strblock, sizeof (char), READ_BLOCK_SIZE, stdin);
-		
-      if (strblock!=NULL) /* this happends when a eof occurs */
+	if (list_totalnodes(&messageids)>0)
 	{
-	  totalmem=totalmem+usedmem;
+		while (!feof(stdin))
+		{
+			usedmem = fread (strblock, sizeof (char), READ_BLOCK_SIZE, stdin);
+		
+			if (strblock!=NULL) /* this happends when a eof occurs */
+			{
+				totalmem=totalmem+usedmem;
 			
-	  tmp=list_getstart(&messageids);
+				tmp=list_getstart(&messageids);
 
-	  while (tmp!=NULL)
-	    {
-	      trace(TRACE_DEBUG,"insert_messages(): inserting for [%lu]",
-		    *(unsigned long *)tmp->data);
-	      db_insert_message_block (strblock,*(unsigned long *)tmp->data);
-			tmp=tmp->nextnode;
-	    }
-
-	  /* resetting strlen for strblock */
-	  strblock[0]='\0';
-	  usedmem = 0;
-	}
-    }
-
-  trace (TRACE_DEBUG,"insert_messages(): updating size fields");
+				while (tmp!=NULL)
+				{
+					trace(TRACE_DEBUG,"insert_messages(): inserting for [%lu]",
+						*(unsigned long *)tmp->data);
+					db_insert_message_block (strblock,*(unsigned long *)tmp->data);
+					tmp=tmp->nextnode;
+				}
+			}
+		/* resetting strlen for strblock */
+		strblock[0]='\0';
+		usedmem = 0;
+		}
+		
+		trace (TRACE_DEBUG,"insert_messages(): updating size fields");
 	
 		/* we need to update messagesize in all messages */
-  tmp=list_getstart(&messageids);
-  while (tmp!=NULL)
-    {
-      /* we need to create a unique id per message 
-       * we're using the messageidnr for this, it's unique 
-       * a special field is created in the database for other possible 
-       * even more unique strings */
-      create_unique_id(unique_id,*(unsigned long*)tmp->data); 
-      db_update_message ((unsigned long*)tmp->data,unique_id,totalmem+headersize);
-      trace (TRACE_MESSAGE,"insert_messages(): message id=%lu, size=%lu is inserted",
-	     *(unsigned long*)tmp->data, totalmem+headersize);
-		temp=*(unsigned long*)tmp->data;
-      tmp=tmp->nextnode;
-    }
-
-	/* sending the message to forwards
-		first we need to change the header */
-  
-	trace (TRACE_DEBUG,"insert_messages(): delivering to external addresses");
-  
-	/* send deliver to */
-	/* send header without original To field */
-	/* i don't know if this the legal way (tm) */
-	myscan=strstr(firstblock,"\nTo:");
-	if (myscan!=NULL)
-	{
-		myscan++;
-		nextscan=strchr(myscan,'\n');
-		if (nextscan!=NULL)
+		tmp=list_getstart(&messageids);
+		while (tmp!=NULL)
 		{
-			nextscan++;
-			myscan--;
-			myscan[0]='\0';
-			
-			/* getting a message. Any message will do */
-			tmp=list_getstart(&messageids); 
-			
-			/* sending block to external deliverers 
-				we're using the db_send_message_lines() call for this */
-			tmp_pipe=list_getstart(&external_forwards);
-			
-			memtst((firstblock = realloc(firstblock, strlen(firstblock)+256))==NULL);
-			
-			while (tmp_pipe!=NULL)
-			{
-				sprintf (firstblock,"%s\nTo: %s\n%s",firstblock,
-						(char *)tmp_pipe->data,nextscan);
-				trace (TRACE_DEBUG,"insert_messages(): new header [%s]",firstblock);
-				fflush(stdin);
-				(FILE *)sendmail_pipe=popen(SENDMAIL,"w");
-				trace (TRACE_DEBUG,"insert_messages(): popen() executed");
-				if (sendmail_pipe!=NULL)
-				{
-					trace (TRACE_DEBUG,"insert_messages(): popen() successfull");
-					/* -2 will send the complete message to sendmail_pipe */
-					db_send_message_lines (sendmail_pipe,*(unsigned long*)tmp->data, -2);
-					pclose ((FILE *)sendmail_pipe); 
-				}
-				else 
-					trace (TRACE_ERROR,"insert_messages(): Could not open pipe to [%s]",SENDMAIL);
-			tmp_pipe=tmp_pipe->nextnode;
-			}
-		
-		   tmp=tmp->nextnode;
-		}	
-		else 
-		{
-			trace (TRACE_ERROR,"insert_messages(): Could not forward message. Header is invalid");
+			/* we need to create a unique id per message 
+			* we're using the messageidnr for this, it's unique 
+			* a special field is created in the database for other possible 
+			* even more unique strings */
+			create_unique_id(unique_id,*(unsigned long*)tmp->data); 
+			db_update_message ((unsigned long*)tmp->data,unique_id,totalmem+headersize);
+			trace (TRACE_MESSAGE,"insert_messages(): message id=%lu, size=%lu is inserted",
+				*(unsigned long*)tmp->data, totalmem+headersize);
+			temp=*(unsigned long*)tmp->data;
+			tmp=tmp->nextnode;
 		}
 	}
-	else 
+
+  if (list_totalnodes(&bounces)>0)
+  {
+		/* bouncing invalid messages */
+		trace (TRACE_DEBUG,"insert_messages(): sending bounces");
+		tmp=list_getstart(&bounces);
+		while (tmp!=NULL)
+		{	
+			bounce (firstblock,(char *)tmp->data,BOUNCE_NO_SUCH_USER);
+			tmp=tmp->nextnode;	
+		}
+  }
+
+	if (list_totalnodes(&external_forwards)>0)
 	{
-		trace (TRACE_ERROR,"insert_messages(): Could not forward message. Header is invalid");
+		/* sending the message to forwards */
+  
+		trace (TRACE_DEBUG,"insert_messages(): delivering to external addresses");
+  
+		/* send deliver to */
+		/* send header without original To field */
+		/* i don't know if this the legal way (tm) */
+		
+		/* we're storing the new header in tmpbuffer */	
+		memtst((tmpbuffer = (char *)malloc(strlen(firstblock)+512))==NULL); 
+	
+		myscan=strstr(firstblock,"\nTo:");
+		if (myscan!=NULL)
+		{
+			myscan++;
+			nextscan=strchr(myscan,'\n');
+			if (nextscan!=NULL)
+			{
+				nextscan++;
+				myscan--;
+				myscan[0]='\0';
+			
+				/* getting a message. Any message will do */
+				tmp=list_getstart(&messageids); 
+			
+				/* sending block to external deliverers 
+					we're using the db_send_message_lines() call for this */
+				tmp_pipe=list_getstart(&external_forwards);
+
+				if (list_totalnodes(&messageids)==0)
+				{
+					/* this is tricky. Since there are no messages inserted 
+						in the database we need to redirect the pipe into all forwards */
+					list_init (&descriptors);
+					/* first open the pipes and send the header */
+					while (tmp_pipe!=NULL)
+					{
+						sprintf (tmpbuffer,"%s\nTo: %s\n%s",firstblock,
+								(char *)tmp_pipe->data,nextscan);
+						trace (TRACE_DEBUG,"insert_messages(): new header [%s]",tmpbuffer);
+						/* popen() manpages suggest doing this */
+						(FILE *)sendmail_pipe=popen(SENDMAIL,"w");
+						trace (TRACE_DEBUG,"insert_messages(): popen() executed");
+						if (sendmail_pipe!=NULL)
+						{
+							/* build a list of descriptors */
+							list_nodeadd(&descriptors,sendmail_pipe, sizeof(sendmail_pipe));
+							trace (TRACE_DEBUG,"insert_messages(): popen() successfull");
+							/* -2 will send the complete message to sendmail_pipe */
+							fprintf ((FILE *)sendmail_pipe,"%s\n\n",tmpbuffer);
+						}
+						else 
+						{
+							trace (TRACE_ERROR,"insert_messages(): Could not open pipe to [%s]",SENDMAIL);
+						}
+						tmp_pipe=tmp_pipe->nextnode;
+					}
+
+					/* ok every pipe has it's header 
+						now we need to loop to read the stdin and forward everyting to the other 
+						pipes */
+					while (!feof(stdin))
+					{
+						usedmem = fread (strblock, sizeof (char), READ_BLOCK_SIZE, stdin);
+	
+						if (strblock!=NULL) /* this happends when a eof occurs */
+						{
+							totalmem=totalmem+usedmem;
+		
+							trace(TRACE_DEBUG,"insert_messages(): Opening descriptor list");
+							tmp=list_getstart(&descriptors);
+
+							while (tmp!=NULL)
+							{
+								fprintf ((FILE *)(tmp->data),"%s",strblock);
+								tmp=tmp->nextnode;
+							}
+						}
+						/* resetting strlen for strblock */
+						strblock[0]='\0';
+						usedmem = 0;
+					}
+					tmp=list_getstart(&descriptors);
+					/* closing descriptors */
+					trace(TRACE_DEBUG, "insert_messages(): Done. now closing pipes");
+					while (tmp!=NULL)
+					{
+						fprintf ((FILE *)(tmp->data),"\n.\n");
+						pclose(tmp->data);
+					}
+					
+				}
+				else	
+				{		
+					while (tmp_pipe!=NULL)
+					{
+						sprintf (tmpbuffer,"%s\nTo: %s\n%s",firstblock,
+								(char *)tmp_pipe->data,nextscan);
+						trace (TRACE_DEBUG,"insert_messages(): new header [%s]",tmpbuffer);
+						/* popen() manpages suggest doing this */
+						fflush(stdin);
+						(FILE *)sendmail_pipe=popen(SENDMAIL,"w");
+						trace (TRACE_DEBUG,"insert_messages(): popen() executed");
+						if (sendmail_pipe!=NULL)
+						{
+							trace (TRACE_DEBUG,"insert_messages(): popen() successfull");
+							/* -2 will send the complete message to sendmail_pipe */
+							fprintf ((FILE *)sendmail_pipe,"%s",tmpbuffer);
+							trace (TRACE_DEBUG,"insert_messages(): sending message from database");
+							db_send_message_special (sendmail_pipe, *(unsigned long*)tmp->data, -2, tmpbuffer); 
+						}
+						else 
+						{
+							trace (TRACE_ERROR,"insert_messages(): Could not open pipe to [%s]",SENDMAIL);
+						}
+
+					tmp_pipe=tmp_pipe->nextnode;
+					}
+				}
+			}
+			else 
+			{
+				trace (TRACE_ERROR,"insert_messages(): Could not forward message. Header is invalid");
+			}
+		}
+		else
+			{
+				trace (TRACE_ERROR,"insert_messages(): Could not forward message. Header is invalid");
+			}
 	}
 	
-  free(unique_id);
-  free (strblock);
-  free(insertquery);
-  free(updatequery);
+	/* memory cleanup */
+	free(tmpbuffer);
+	free(firstblock);  
+	free(unique_id);
+	free (strblock);
+	free(insertquery);
+	free(updatequery);
   return 0;
 }
 

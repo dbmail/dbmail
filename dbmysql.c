@@ -345,47 +345,121 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines)
    return 1;
 }
 
-int db_send_message (void *fstream, unsigned long messageidnr)
+int db_send_message_special (void *fstream, unsigned long messageidnr, long lines, char *firstblock)
 {
-  /* this function writes the messageid to stream 
-   * returns -1 on err, 1 on success */
+  /* this function writes "lines" to fstream.
+	  if lines == -2 then the whole message is dumped to fstream 
+	  newlines are rewritten to crlf 
+	  firstblock that is sent is firstblock */
+
   char *ckquery;
+  char *buffer;
+  char *nextpos, *tmppos;
+  int block_count;
+  unsigned long *lengths;
+  
+  trace (TRACE_DEBUG,"db_send_message_special(): request for [%d] lines",lines);
 
   memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
-  sprintf (ckquery, "SELECT * FROM messageblk WHERE messageidnr=%lu",
+  memtst ((buffer=(char *)malloc(READ_BLOCK_SIZE*2))==NULL);
+  sprintf (ckquery, "SELECT * FROM messageblk WHERE messageidnr=%lu ORDER BY messageblknr ASC",
 	   messageidnr);
+  trace (TRACE_DEBUG,"db_send_message_special(): executing query [%s]",ckquery);
   if (db_query(ckquery)==-1)
     {
       free(ckquery);
-      return -1;
+      return 0;
     }
   if ((res = mysql_store_result(&conn)) == NULL)
     {
-      trace (TRACE_ERROR,"db_send_message(): mysql_store_result failed:  %s",mysql_error(&conn));
+      trace(TRACE_ERROR,"db_send_message_special: mysql_store_result failed: %s",mysql_error(&conn));
       free(ckquery);
-      return -1;
+      return 0;
     }
-  if (mysql_num_rows(res)<1)
-    {
-      trace (TRACE_ERROR,"db_send_message(): no message blocks for user %lu",messageidnr);
-      free(ckquery);
-      return -1;
-    }
-		
-  trace(TRACE_DEBUG,"db_send_message(): retrieving message=[%lu]",
-	messageidnr);
-  while ((row = mysql_fetch_row(res))!=NULL)
-    {
-      fprintf ((FILE *)fstream,"%s",row[2]);
-    }
-  trace(TRACE_DEBUG,"db_send_message(): done sending, freeing result");
-  mysql_free_result(res);
-		
-  /* end of stream for pop 
-		 * has to be send on a clearline */
 
-  fprintf ((FILE *)fstream,"\r\n.\r\n");
-  return 1;
+	trace (TRACE_DEBUG,"db_send_message_special(): sending [%d] lines from message [%lu]",lines,messageidnr);
+  
+	block_count=0;
+
+  while (((row = mysql_fetch_row(res))!=NULL) && ((lines>0) || (lines==-2)))
+	{
+		if (firstblock!=NULL)
+			nextpos=firstblock;
+		else
+			nextpos=row[2];
+
+		lengths = mysql_fetch_lengths(res);
+		rowlength = lengths[2];
+		
+		/* reset our buffer */
+		*buffer='\0';
+		
+		while ((*nextpos!='\0') && (rowlength>0) && ((lines>0) || (lines==-2)))
+		{
+			if (*nextpos=='\n')
+			{
+
+				/* we found an newline, now check if there's
+					a return before that */
+				
+				if (lines!=-2)
+					lines--;
+				
+				if (tmppos!=NULL)
+				{
+					if (*tmppos=='\r')
+						sprintf (buffer,"%s%c",buffer,*nextpos);
+					else 
+						sprintf (buffer,"%s\r%c",buffer,*nextpos);
+				}
+				else 
+					sprintf (buffer,"%s\r%c",buffer,*nextpos);
+			}
+			else
+			{
+				if (*nextpos=='.')
+					{
+						if (tmppos!=NULL)
+							{
+								if (*tmppos=='\n')
+									sprintf (buffer,"%s.%c",buffer,*nextpos);
+								else
+									sprintf (buffer,"%s%c",buffer,*nextpos);
+							}
+						else 
+							sprintf (buffer,"%s%c",buffer,*nextpos);
+					}
+				else	
+					sprintf (buffer,"%s%c",buffer,*nextpos);
+			}
+
+			tmppos=nextpos;
+				
+			/* get the next character */
+			nextpos++;
+			rowlength--;
+			if (rowlength%500==0)
+				{
+				fprintf ((FILE *)fstream,"%s",buffer);
+				fflush ((FILE *)fstream);
+				*buffer='\0';
+				}
+		}
+
+		/* flush our buffer */
+		fprintf ((FILE *)fstream,"%s",buffer);
+		fflush ((FILE *)fstream);
+		
+		/* setting firstblock to NULL, this way it will be used only once */
+		if (firstblock!=NULL)
+			firstblock=NULL;
+	}
+
+   /* delimiter */
+   fprintf ((FILE *)fstream,"\r\n.\r\n");
+   mysql_free_result(res);
+
+   return 1;
 }
 
 unsigned long db_validate (char *user, char *password)
