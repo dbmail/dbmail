@@ -2544,9 +2544,9 @@ int db_get_msgflag_all_range(u64_t msguidlow, u64_t msguidhigh, u64_t mailboxuid
  *
  * action_type can be one of the IMAP_FLAG_ACTIONS:
  *
- * IMAPFA_REPLACE  new set will be exactly as *flags
- * IMAPFA_ADD      update only flags which have '1' as value in *flags
- * IMAPFA_REMOVE   update only flags which have '0' as value in *flags
+ * IMAPFA_REPLACE  new set will be exactly as *flags with '1' to set, '0' to clear
+ * IMAPFA_ADD      set all flags which have '1' as value in *flags
+ * IMAPFA_REMOVE   clear all flags which have '1' as value in *flags
  * 
  * returns:
  *  -1  error
@@ -2575,7 +2575,7 @@ int db_set_msgflag(u64_t msguid, u64_t mailboxuid, int *flags, int action_type)
 	  break;
 
 	case IMAPFA_REMOVE:
-	  if (flags[i] == 0)
+	  if (flags[i] > 0)
 	    {
 	      strncat(query, db_flag_desc[i], left);
 	      left -= sizeof("answered_flag");
@@ -2654,7 +2654,7 @@ int db_set_msgflag_range(u64_t msguidlow, u64_t msguidhigh, u64_t mailboxuid,
 	  break;
 
 	case IMAPFA_REMOVE:
-	  if (flags[i] == 0)
+	  if (flags[i] > 0)
 	    {
 	      strncat(query, db_flag_desc[i], left);
 	      left -= sizeof("answered_flag");
