@@ -116,6 +116,19 @@ int main (int argc, char* argv[])
       return -1;
     }
 
+  time (&start); /* mark the starting time */
+
+  /* hard-coded POSTGRESQL queries to insert data */
+  db_query("COPY users FROM " USER_FILENAME ";");
+  db_query("COPY mailboxes FROM " MBOX_FILENAME ";");
+  db_query("COPY messages FROM " MSGS_FILENAME ";");
+  db_query("COPY messageblks FROM " MSGBLKS_FILENAME ";");
+
+  time (&stop); /* mark the ending time */
+
+  printf ("Table loading started @  %s", ctime(&start));
+  printf ("Table loading finished @ %s", ctime(&stop));
+
   db_disconnect();
   return result;
 }
