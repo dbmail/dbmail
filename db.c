@@ -2444,7 +2444,8 @@ int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern,
 int db_getmailbox(mailbox_t * mb)
 {
 	unsigned i;
-
+	unsigned exists, seen, recent;
+	
 	/* free existing MSN list */
 	if (mb->seq_list) {
 		dm_free(mb->seq_list);
@@ -2501,19 +2502,29 @@ int db_getmailbox(mailbox_t * mb)
 
 	/* count messages */
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT COUNT(message_idnr), COUNT(message_idnr) - SUM(seen_flag), SUM(recent_flag) "
-		 "FROM %smessages WHERE mailbox_idnr = '%llu' "
-		 "AND status < '%d' ",
-		 DBPFX, mb->uid, MESSAGE_STATUS_DELETE);
+ 			 "SELECT 'a',COUNT(*) FROM dbmail_messages WHERE mailbox_idnr='%llu' "
+ 			 "AND (status='%d' OR status='%d') UNION "
+ 			 "SELECT 'b',COUNT(*) FROM dbmail_messages WHERE mailbox_idnr='%llu' "
+ 			 "AND (status='%d' OR status='%d') AND seen_flag=1 UNION "
+ 			 "SELECT 'c',COUNT(*) FROM dbmail_messages WHERE mailbox_idnr='%llu' "
+ 			 "AND (status='%d' OR status='%d') AND recent_flag=1", 
+ 			 mb->uid, MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
+ 			 mb->uid, MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
+ 			 mb->uid, MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: query error", __FILE__, __func__);
 		return -1;
 	}
-
-	mb->exists = (unsigned)db_get_result_int(0,0);
-	mb->unseen = (unsigned)db_get_result_int(0,1);
-	mb->recent = (unsigned)db_get_result_int(0,2);
+	
+ 	exists = (unsigned)db_get_result_int(0,1);
+ 	seen   = (unsigned)db_get_result_int(1,1);
+ 	recent = (unsigned)db_get_result_int(2,1);
+  
+ 	mb->exists = exists;
+ 	mb->unseen = exists - seen;
+ 	mb->recent = recent;
+ 
 	db_free_result();
 	
 	if(mb->exists) {
@@ -2531,6 +2542,9 @@ int db_getmailbox(mailbox_t * mb)
 		trace(TRACE_DEBUG,"%s,%s: exists [%d] num_rows [%d]",__FILE__, __func__, mb->exists, db_num_rows());
 		if (! (mb->seq_list = (u64_t *) dm_malloc(sizeof(u64_t) * mb->exists))) {
 			db_free_result();
+			trace(TRACE_ERROR,"%s,%s: malloc error mb->seq_list [%d]",
+					__FILE__, __func__,
+					mb->exists);
 			return -1;
 		}
 		

@@ -1,4 +1,9 @@
-2005-03-08  Paul Stevens <paul@nfg.nl>
+2005-03-10  Paul Stevens <paul@nfg.nl>
+
+	* db.c (db_getmailbox): optimized query for postgresql which can't
+	handle SUM aggregates fast enough.
+
+2005-03-09  Paul Stevens <paul@nfg.nl>
 
 	* dbmail-message.c: added prototype for header caching during
 	insertion.
