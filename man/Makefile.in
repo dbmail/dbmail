@@ -116,10 +116,11 @@ SQLLTLIB = @SQLLTLIB@
 STRIP = @STRIP@
 VERSION = @VERSION@
 glibconfig = @glibconfig@
+gmimeconfig = @gmimeconfig@
 mysqlconfig = @mysqlconfig@
 pgsqlconfig = @pgsqlconfig@
 
-man_MANS = dbmail-pop3d.8 dbmail-smtp.1 dbmail-imapd.8 		dbmail-users.8 dbmail-util.8
+man_MANS = dbmail-pop3d.8 dbmail-smtp.1 dbmail-imapd.8 	dbmail-users.8 dbmail-util.8 dbmail-lmtpd.8
 
 mkinstalldirs = $(SHELL) $(top_srcdir)/buildtools/mkinstalldirs
 CONFIG_HEADER = ../config.h

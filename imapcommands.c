@@ -1367,7 +1367,7 @@ int _ic_list(char *tag, char **args, ClientInfo * ci)
 		/* get name */
 		trace(TRACE_DEBUG, "%s,%s: children[%d] = %llu",
 		      __FILE__, __func__, i, children[i]);
-		result = db_getmailboxname(children[i], ud->userid, name);
+		result = db_getmailbox_list_result(children[i],ud);
 		if (result == -1) {
 			ci_write(ci->tx, "* BYE internal dbase error\r\n");
 			my_free(children);
@@ -1378,34 +1378,13 @@ int _ic_list(char *tag, char **args, ClientInfo * ci)
 		ci_write(ci->tx, "* %s (", thisname);
 
 		/* show flags */
-		result = db_isselectable(children[i]);
-		if (result == -1) {
-			ci_write(ci->tx,
-				"\r\n* BYE internal dbase error\r\n");
-			my_free(children);
-			my_free(pattern);
-			return -1;
-		}
-
-		if (!result)
+		if (ud->mailbox.no_select)
 			ci_write(ci->tx, "\\noselect ");
-
-		result = db_noinferiors(children[i]);
-		if (result == -1) {
-			trace(TRACE_ERROR, "%s,%s: error in call to db_noinferiors",
-			      __FILE__, __func__);
-			ci_write(ci->tx,
-				"\r\n* BYE internal dbase error\r\n");
-			my_free(children);
-			my_free(pattern);
-			return -1;
-		}
-
-		if (result)
+		if (ud->mailbox.no_inferiors)
 			ci_write(ci->tx, "\\noinferiors ");
 
 		/* show delimiter & name */
-		ci_write(ci->tx, ") \"/\" \"%s\"\r\n", name);
+		ci_write(ci->tx, ") \"/\" \"%s\"\r\n", ud->mailbox.name);
 	}
 
 	if (children)
@@ -2714,84 +2693,52 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 						 * but do retrieve this main header
 						 */
 
-						result =
-						    db_get_main_header
-						    (thisnum,
-						     &headermsg.rfcheader);
+						result = db_get_main_header(thisnum, &headermsg.rfcheader);
 
 						if (result == -1) {
-							ci_write(ci->tx,
-								"\r\n* BYE internal dbase error\r\n");
-							list_freelist
-							    (&fetch_list.
-							     start);
-							db_free_msg
-							    (&headermsg);
+							ci_write(ci->tx, "\r\n* BYE internal dbase error\r\n");
+							list_freelist(&fetch_list.start);
+							db_free_msg(&headermsg);
 							return -1;
 						}
 
 						if (result == -2) {
-							ci_write(ci->tx,
-								"\r\n* BYE out of memory\r\n");
-							list_freelist
-							    (&fetch_list.
-							     start);
-							db_free_msg
-							    (&headermsg);
+							ci_write(ci->tx, "\r\n* BYE out of memory\r\n");
+							list_freelist(&fetch_list.start);
+							db_free_msg(&headermsg);
 							return -1;
 						}
 
 					} else {
 						/* parse message structure */
 						if (cached_msg.msg_parsed)
-							db_free_msg
-							    (&cached_msg.
-							     msg);
+							db_free_msg(&cached_msg.msg);
 
-						memset(&cached_msg.msg, 0,
-						       sizeof(cached_msg.
-							      msg));
+						memset(&cached_msg.msg, 0, sizeof(cached_msg.msg));
 
 						cached_msg.msg_parsed = 0;
 						cached_msg.num = -1;
 						cached_msg.file_dumped = 0;
 						mreset(cached_msg.memdump);
 
-						result =
-						    db_fetch_headers
-						    (thisnum,
-						     &cached_msg.msg);
+						result = db_fetch_headers(thisnum, &cached_msg.msg);
 						if (result == -2) {
-							ci_write(ci->tx,
-								"\r\n* BYE internal dbase error\r\n");
-							list_freelist
-							    (&fetch_list.
-							     start);
-							db_free_msg
-							    (&headermsg);
+							ci_write(ci->tx, "\r\n* BYE internal dbase error\r\n");
+							list_freelist (&fetch_list.  start);
+							db_free_msg (&headermsg);
 							return -1;
 						}
 						if (result == -3) {
-							ci_write(ci->tx,
-								"\r\n* BYE out of memory\r\n");
-							list_freelist
-							    (&fetch_list.
-							     start);
-							db_free_msg
-							    (&headermsg);
+							ci_write(ci->tx, "\r\n* BYE out of memory\r\n");
+							list_freelist (&fetch_list.start);
+							db_free_msg (&headermsg);
 							return -1;
 						}
 
 						cached_msg.msg_parsed = 1;
 						cached_msg.num = thisnum;
 
-						rfcsize =
-						    (cached_msg.msg.
-						     rfcheadersize +
-						     cached_msg.msg.
-						     bodysize +
-						     cached_msg.msg.
-						     bodylines);
+						rfcsize = (cached_msg.msg.rfcheadersize + cached_msg.msg.bodysize + cached_msg.msg.bodylines);
 
 						if (insert_rfcsize) {
 							/* insert the rfc822 size into the dbase */
@@ -2924,17 +2871,14 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 						cached_msg.dumpsize =
 						    rfcheader_dump
 						    (cached_msg.memdump,
-						     &cached_msg.msg.
-						     rfcheader, args, 0,
+						     &cached_msg.msg.rfcheader, args, 0,
 						     0);
 
 						cached_msg.dumpsize +=
-						    db_dump_range
-						    (cached_msg.memdump,
-						     cached_msg.msg.
-						     bodystart,
-						     cached_msg.msg.
-						     bodyend, thisnum);
+						    db_dump_range(cached_msg.memdump, 
+								    cached_msg.msg.bodystart, 
+								    cached_msg.msg.bodyend, 
+								    thisnum);
 
 						cached_msg.file_dumped = 1;
 

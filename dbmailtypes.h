@@ -165,6 +165,8 @@ enum BODY_FETCH_ITEM_TYPES { BFIT_TEXT, BFIT_HEADER, BFIT_MIME,
  */
 typedef struct {
 	u64_t uid, msguidnext;
+	char *name;
+	unsigned no_select, no_inferiors;
 	unsigned exists, recent, unseen;
 	unsigned flags;
 	int permission;

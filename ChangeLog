@@ -1,3 +1,12 @@
+2004-10-12  Paul Stevens <paul@nfg.nl>
+
+	* Makefile.in, aclocal.m4, configure: updating the autotools generated
+	files.
+	* db.c, imapcommands.c, imaputil.h, dbmailtypes.h: cleanup in _ic_list 
+	which cuts the number of queries by three.
+	* dbmail-message.c: some string cleanups.
+	* db.c (db_list_mailboxes_by_regex): removed redundant trace calls.
+
 2004-10-06  Paul Stevens <paul@nfg.nl>
 
 	* dbmsgbuf.c (db_update_msgbuf): fix off-by-one error.

@@ -31,6 +31,7 @@
 #include "dbmail.h"
 #include "auth.h"
 #include "misc.h"
+#include "imap4.h"
 #include <stdio.h>
 #include <time.h>
 #include <stdlib.h>
@@ -2609,6 +2610,8 @@ int db_setselectable(u64_t mailbox_idnr, int select_value)
 	return 0;
 }
 
+
+
 int db_get_mailbox_size(u64_t mailbox_idnr, int only_deleted,
 			u64_t * mailbox_size)
 {
@@ -3820,3 +3823,39 @@ void convert_inbox_to_uppercase(char *name)
 		memcpy((void *) name, (void *) inbox, strlen(inbox));
 	return;
 }
+
+int db_getmailbox_list_result(u64_t mailbox_idnr, imap_userdata_t * ud)
+{
+	/* query mailbox for LIST results */
+	const char *query_result;
+
+	snprintf(query, DEF_QUERYSIZE,
+		 "SELECT name, no_select, no_inferiors FROM %smailboxes WHERE mailbox_idnr = '%llu'",DBPFX,
+		 mailbox_idnr);
+
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: db error", __FILE__, __func__);
+		return -1;
+	}
+
+	if (db_num_rows() == 0) {
+		db_free_result();
+		return 0;
+	}
+	/* name */
+	query_result=db_get_result(0,0);
+	ud->mailbox.name = strdup(query_result);
+
+	/* no_select */
+	query_result=db_get_result(0,1);
+	ud->mailbox.no_select=strtol(query_result,NULL,1);
+
+	/* no_inferior */
+	query_result=db_get_result(0,1);
+	ud->mailbox.no_inferiors=strtol(query_result,NULL,1);
+
+	db_free_result();
+	return 0;
+}
+
+

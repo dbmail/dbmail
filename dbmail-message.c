@@ -164,16 +164,23 @@ struct DbmailMessage * dbmail_message_new(void)
 
 char * dbmail_message_get_headers_as_string(struct DbmailMessage *self)
 {
+	char *result;
 	GString *headers = g_string_new(g_mime_object_get_headers((GMimeObject *)(self->message)));
-	return headers->str;
+	result = headers->str;
+	g_string_free(headers,FALSE);
+	return result;
 }
 
 char * dbmail_message_get_body_as_string(struct DbmailMessage *self)
 {
+	char *result;
 	GString *header = g_string_new(g_mime_object_get_headers((GMimeObject *)(self->message)));
 	GString *body = g_string_new(g_mime_object_to_string((GMimeObject *)(self->message)));
 	body = g_string_erase(body,0,header->len);
-	return body->str;
+	result = body->str;
+	g_string_free(body,FALSE);
+	g_string_free(header,TRUE);
+	return result;
 }
 
 void dbmail_message_destroy(struct DbmailMessage *self)
