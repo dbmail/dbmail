@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
   /* open dbase connections */
   if (db_connect() != 0)
     {
-      trace(TRACE_FATAL,"main(): could not connect to dbases");
+      trace(TRACE_FATAL,"main(): could not connect to dbase");
       return -1;
     }
 
