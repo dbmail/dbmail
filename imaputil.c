@@ -33,6 +33,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <time.h>
 #include <ctype.h>
 #include <unistd.h>
 #include <errno.h>
@@ -65,10 +66,13 @@ char base64encodestring[] =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 /* returned by date_sql2imap() */
-char _imapdate[IMAP_INTERNALDATE_LEN] = "03-Nov-1979 00:00:00";
+#define IMAP_STANDARD_DATE "03-Nov-1979 00:00:00 +0000"
+char _imapdate[IMAP_INTERNALDATE_LEN] = IMAP_STANDARD_DATE;
 
 /* returned by date_imap2sql() */
-char _sqldate[] = "1979-11-03 00:00:00";
+#define SQL_STANDARD_DATE "1979-11-03 00:00:00"
+char _sqldate[SQL_INTERNALDATE_LEN + 1] = SQL_STANDARD_DATE;
+
 
 const int month_len[] = {
 	31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
@@ -196,7 +200,7 @@ int retrieve_structure(FILE * outstream, mime_message_t * msg,
 
 			memmove(&rfcmsg, msg, sizeof(rfcmsg));
 			rfcmsg.mimeheader.start = NULL;	/* forget MIME-part */
-
+			
 			if (retrieve_structure
 			    (outstream, &rfcmsg,
 			     show_extension_data) == -1)
@@ -1819,40 +1823,28 @@ int is_textplain(struct list *hdr)
  * dd-mon-yyyy hh:mm:ss with mon characters (i.e. 'Apr' for april)
  * 01234567890123456789
  * return value is valid until next function call.
- * NOTE: sqldate is not tested for validity. Behaviour is undefined for non-sql
- * dates.
+ * NOTE: if date is not valid, IMAP_STANDARD_DATE is returned
  */
 char *date_sql2imap(const char *sqldate)
 {
-	int mon;
+	char *last_char;
+	struct tm tm_localtime, tm_sqldate;
+	time_t td;
 
-	if (strlen(sqldate) != strlen("yyyy-mm-dd hh:mm:ss")) {
-		strcpy(_imapdate, "03-Nov-1979 00:00:00");
+	/* we need to get the localtime to get the current timezone */
+	tm_localtime = *localtime(&td);
+
+	/* parse sqldate */
+	last_char = strptime(sqldate, "%Y-%m-%d %T", &tm_sqldate);
+	if (*last_char != '\0') {
+		trace(TRACE_DEBUG, "%s,%s, error parsing date [%s]",
+		      __FILE__, __func__, sqldate);
+		strcpy(_imapdate, IMAP_STANDARD_DATE);
 		return _imapdate;
 	}
-
-	/* copy day */
-	_imapdate[0] = sqldate[8];
-	_imapdate[1] = sqldate[9];
-
-	/* find out which month */
-	mon = strtoul(&sqldate[5], NULL, 10) - 1;
-	if (mon < 0 || mon > 11)
-		mon = 0;
-
-	/* copy month */
-	_imapdate[3] = month_desc[mon][0];
-	_imapdate[4] = month_desc[mon][1];
-	_imapdate[5] = month_desc[mon][2];
-
-	/* copy year */
-	_imapdate[7] = sqldate[0];
-	_imapdate[8] = sqldate[1];
-	_imapdate[9] = sqldate[2];
-	_imapdate[10] = sqldate[3];
-
-	/* copy time */
-	strcpy(&_imapdate[11], &sqldate[10]);
+	tm_sqldate.tm_gmtoff = tm_localtime.tm_gmtoff;
+	(void) strftime(_imapdate, IMAP_INTERNALDATE_LEN, 
+			"%d-%b-%Y %T %z", &tm_sqldate);
 
 	return _imapdate;
 }
@@ -1866,56 +1858,23 @@ char *date_sql2imap(const char *sqldate)
  * OR
  * d-mon-yyyy
  * return value is valid until next function call.
- *
- * sqldate is slightly tested for validity. NULL is returned in case of an erroneous date.
- * however, the tests performed are NOT extensive enough.
  */
 char *date_imap2sql(const char *imapdate)
 {
-	int i, j;
-	char sub[4];
+	struct tm tm;
+	char *last_char;
 
-	if (strlen(imapdate) != strlen("dd-mon-yyyy")
-	    && strlen(imapdate) != strlen("d-mon-yyyy"))
+	last_char = strptime(imapdate, "%d-%b-%Y", &tm);
+	if (*last_char != '\0') {
+		trace(TRACE_DEBUG, "%s,%s: error parsing IMAP date %s",
+		      __FILE__, __func__, imapdate);
 		return NULL;
-
-	j = (strlen(imapdate) == strlen("d-mon-yyyy")) ? 1 : 0;
-
-	/* copy year */
-	_sqldate[0] = imapdate[7 - j];
-	_sqldate[1] = imapdate[8 - j];
-	_sqldate[2] = imapdate[9 - j];
-	_sqldate[3] = imapdate[10 - j];
-
-	_sqldate[4] = '-';
-
-	/* copy month */
-	strncpy(sub, &imapdate[3 - j], 3);
-	sub[3] = 0;
-
-	for (i = 0; i < 12; i++) {
-		if (strcasecmp(month_desc[i], sub) == 0)
-			break;
 	}
-
-	if (i >= 12)
-		return NULL;
-
-	i++;			/* make i in [1,12] */
-	_sqldate[5] = (i < 10) ? '0' : '1';
-	_sqldate[6] = (i < 10) ? (i + '0') : ((i - 10) + '0');
-
-	_sqldate[7] = '-';
-
-	/* copy day */
-	_sqldate[8] = j ? '0' : imapdate[0];
-	_sqldate[9] = imapdate[1 - j];
-
-	_sqldate[10] = 0;	/* terminate */
+	(void) strftime(_sqldate, SQL_INTERNALDATE_LEN,
+			"%Y-%m-%d 00:00:00", &tm);
 
 	return _sqldate;
 }
-
 
 /*
  *

@@ -1,3 +1,11 @@
+2004-09-07  Ilja Booij  <ilja@ic-s.nl>
+
+	* imaputil.c (date_sql2imap): changed from array magic function to
+	function using strptime() and strftime() for data parsing and
+	formatting. Now adds timezone to IMAP Internal Date.
+	(date_imap2sql): removed array magic and now uses strptime and
+	strftime for date parsing and formatting.
+
 2004-09-06  Ilja Booij  <ilja@ic-s.nl>
 
 	* imapcommands.c (_ic_list): change in regex to fix "%" operator. It

@@ -152,6 +152,11 @@ enum BODY_FETCH_ITEM_TYPES { BFIT_TEXT, BFIT_HEADER, BFIT_MIME,
 /* length of internaldate string */
 #define IMAP_INTERNALDATE_LEN 30
 
+/* length of database date string 
+   YYYY-MM-DD HH:MM:SS
+   1234567890123456789 */
+#define SQL_INTERNALDATE_LEN 19
+
 /* max length of number/dots part specifier */
 #define IMAP_MAX_PARTSPEC_LEN 100
 
