@@ -8,18 +8,20 @@ Adds mailusers to the \fBDbmail\fR mailsystem
 .SH SYNOPSIS
 .na
 .nf
-\fBdbmail-adduser\fR \fIusername\fR \fIpassword\fR \fIclientid\fR \fImaxmail\fR [\fIaliases ...\fR]
+\fBdbmail-adduser\fR \fIa\fR \fIusername\fR \fIpassword\fR \fIclientid\fR \fImaxmail\fR \fI[aliases]\fR 
 .SH DESCRIPTION
 .ad
 .fi
-The \fBdbmail-adduser\fR program adds mailusers to \fBDbmail\fR. 
-It will also add a default alias (which is the default delivery address) and 
-set all user based information like the quota (\fImaxmail\fR).
+The \fBdbmail-adduser\fR program enables you to manage the \fBDbmail\fR users. 
+It lets you add, delete and change users as well as show information about a specific user.
 
 Options:
 .TP
+.BI \fIa\fR
+Add a user. Options:
+.TP
 .BI \fIusername\fR
-Any username. This username is used for access and authentication (through pop3 or imap4).
+The username of the user to be added. This username is used for access and authentication (through pop3 or imap4).
 .TP
 .BI \fIpassword\fR 
 Cleartext password for user.

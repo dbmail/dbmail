@@ -252,7 +252,8 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
   else if (done < 0)
     {
       trace (TRACE_ERROR,"handle_client(): client EOF, connection terminated");
-      fclose(tx);
+      if (tx)
+	fclose(tx);
     }
   else
     {
