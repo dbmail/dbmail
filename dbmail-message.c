@@ -75,7 +75,7 @@ struct DbmailMessage * dbmail_message_new(void)
 	dbmail_message_set_class(self, DBMAIL_MESSAGE);
 	return self;
 }
-void dbmail_message_set_class(struct DbmailMessage *self, enum DBMAIL_MESSAGE_CLASS klass)
+void dbmail_message_set_class(struct DbmailMessage *self, int klass)
 {
 	self->klass = klass;
 }

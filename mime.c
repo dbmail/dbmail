@@ -65,8 +65,15 @@ static void _register_header(const char *field, const char *value, gpointer mime
 int mime_fetch_headers(const char *datablock, struct list *mimelist) 
 {
 	struct DbmailMessage *m = dbmail_message_new();
-	m = dbmail_message_init_with_string(m, g_string_new(datablock));
+	GString *raw = g_string_new(datablock);
+	m = dbmail_message_init_with_string(m, raw);
+	/* If there's no From header assume it's a message-part and re-init */
+	if (! g_mime_object_get_header(GMIME_OBJECT(m->content),"From")) {
+		dbmail_message_set_class(m, DBMAIL_MESSAGE_PART);
+		m = dbmail_message_init_with_string(m, raw);
+	}
 	g_mime_header_foreach(GMIME_OBJECT(m->content)->headers, _register_header, (gpointer)mimelist);
+	g_string_free(raw,1);
 	return 0;	
 }
 	
@@ -96,14 +103,15 @@ int mime_readheader(const char *datablock, u64_t * blkidx, struct list *mimelist
 {
 	int valid_mime_lines = 0, idx, totallines = 0, j;
 	int fieldlen, vallen;
-	size_t prevlen = 0, new_add = 1;
 	char *endptr, *startptr, *delimiter;
 	char *blkdata;
-	struct mime_record *mr, *prev_mr = NULL;
-	struct element *el = NULL;
 	int cr_nl_present;	/* 1 if a '\r\n' is found */
 
-	list_init(mimelist);
+	char field[MIME_FIELD_MAX];
+	char value[MIME_VALUE_MAX];
+	
+	/* moved header-parsing to separate function */
+	mime_fetch_headers(datablock, mimelist);
 	
 	trace(TRACE_DEBUG, "%s,%s: entering mime loop", __FILE__, __func__);
 
@@ -116,13 +124,6 @@ int mime_readheader(const char *datablock, u64_t * blkidx, struct list *mimelist
 		(*blkidx)++;	/* skip \n */
 		g_free(blkdata);
 		return 1;	/* found 1 newline */
-	}
-
-	/* alloc mem */
-	if (! (mr = g_new0(struct mime_record,1))) {
-		trace(TRACE_ERROR, "%s,%s: out of memory", __FILE__, __func__);
-		g_free(blkdata);
-		return -2;
 	}
 
 	startptr = blkdata;
@@ -151,7 +152,6 @@ int mime_readheader(const char *datablock, u64_t * blkidx, struct list *mimelist
 			/* end of data block reached (??) */
 			*blkidx += (endptr - startptr);
 			g_free(blkdata);
-			g_free(mr);
 			return totallines;
 		}
 
@@ -177,19 +177,19 @@ int mime_readheader(const char *datablock, u64_t * blkidx, struct list *mimelist
 				idx++;
 
 			/* &delimiter[idx] is field value, startptr is field name */
-			fieldlen = snprintf(mr->field, MIME_FIELD_MAX, "%s", startptr);
+			fieldlen = snprintf(field, MIME_FIELD_MAX, "%s", startptr);
 			for (vallen = 0, j = 0;
 			     delimiter[idx + j] && vallen < MIME_VALUE_MAX; j++, vallen++) {
 				if (delimiter[idx + j] == '\n') 
-					mr->value[vallen++] = '\r';
+					value[vallen++] = '\r';
 
-				mr->value[vallen] = delimiter[idx + j];
+				value[vallen] = delimiter[idx + j];
 			}
 
 			if (vallen < MIME_VALUE_MAX)
-				mr->value[vallen] = 0;
+				value[vallen] = 0;
 			else
-				mr->value[MIME_VALUE_MAX - 1] = 0;
+				value[MIME_VALUE_MAX - 1] = 0;
 
 			/* snprintf returns -1 if max is readched (libc <= 2.0.6) or the strlen (libc >= 2.1)
 			 * check the value. it does not count the \0.
@@ -207,64 +207,9 @@ int mime_readheader(const char *datablock, u64_t * blkidx, struct list *mimelist
 
 			*headersize += 4;	/* <field>: <value>\r\n --> four more */
 
-/*	  trace(TRACE_DEBUG,"mime_readheader(): mimepair found: [%s] [%s] \n",mr->field, mr->value); 
-*/
-			if (! (el = list_nodeadd(mimelist, mr, sizeof(*mr)))) {
-				trace(TRACE_ERROR, "%s,%s: cannot add element to list", __FILE__, __func__);
-				g_free(blkdata);
-				g_free(mr);
-				return -2;
-			}
-
 			/* restore blkdata */
 			*delimiter = ':';
-		} else {
-			/* 
-			 * ok invalid mime header, what now ? 
-			 * just add it with an empty field name EXCEPT
-			 * when the previous stored field value ends on a ';'
-			 * in this case probably someone forget to place a \t on the next line
-			 * then we will try to add it to the previous element
-			 */
 
-			new_add = 1;
-			if (el) {
-				prev_mr = (struct mime_record *) (el->data);
-				prevlen = strlen(prev_mr->value);
-				new_add = (prev_mr->value[prevlen - 1] == ';') ? 0 : 1;
-			}
-
-			if (new_add) {
-				/* add a new field with no name */
-				strcpy(mr->field, "");
-				vallen = snprintf(mr->value, MIME_VALUE_MAX, "%s", startptr);
-
-				if (vallen == -1 || vallen >= MIME_VALUE_MAX)
-					*headersize += MIME_VALUE_MAX;
-				else
-					*headersize += vallen;
-
-				*headersize += 4;	/* <field>: <value>\r\n --> four more */
-
-				if (! (el = list_nodeadd(mimelist, mr, sizeof(*mr)))) {
-					trace(TRACE_ERROR, "%s,%s: cannot add element to list", __FILE__, __func__);
-					g_free(blkdata);
-					g_free(mr);
-					return -2;
-				}
-			} else {
-				/* try to add the value to the previous one */
-				if (prevlen < MIME_VALUE_MAX - (strlen(startptr) + 4)) {
-					prev_mr->value[prevlen] = '\n';
-					prev_mr->value[prevlen + 1] = '\t';
-					strcpy(&prev_mr-> value[prevlen + 2], startptr);
-					*headersize += (strlen(startptr) + 2);
-				} else {
-					trace(TRACE_WARNING, "%s,%s: failed adding data (length would exceed "
-					      "MIME_VALUE_MAX [currently %d])", __FILE__, __func__,
-					      MIME_VALUE_MAX);
-				}
-			}
 		}
 
 		if (cr_nl_present)
@@ -284,7 +229,6 @@ int mime_readheader(const char *datablock, u64_t * blkidx, struct list *mimelist
 			trace(TRACE_DEBUG, "%s,%s: found double newline; header size: %d lines", 
 					__FILE__, __func__, totallines);
 			g_free(blkdata);
-			g_free(mr);
 			return totallines;
 		}
 
@@ -292,12 +236,9 @@ int mime_readheader(const char *datablock, u64_t * blkidx, struct list *mimelist
 
 	/* everything down here should be unreachable */
 
-	g_free(mr);		/* no longer need this */
-
 	trace(TRACE_DEBUG, "%s,%s: mimeloop finished", __FILE__, __func__);
 	if (valid_mime_lines < 2) {
-		trace(TRACE_ERROR, "%s,%s: no valid mime headers found\n",
-				__FILE__, __func__);
+		trace(TRACE_ERROR, "%s,%s: no valid mime headers found\n", __FILE__, __func__);
 		g_free(blkdata);
 		return -1;
 	}

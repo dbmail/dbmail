@@ -68,7 +68,7 @@ struct DbmailMessage {
 };
 
 struct DbmailMessage * dbmail_message_new(void);
-void dbmail_message_set_class(struct DbmailMessage *self, enum DBMAIL_MESSAGE_CLASS klass);
+void dbmail_message_set_class(struct DbmailMessage *self, int klass);
 struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t id, int filter);
 struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *self, const GString *content);
 struct DbmailMessage * dbmail_message_init_with_stream(struct DbmailMessage *self, GMimeStream *stream);

@@ -131,17 +131,24 @@ START_TEST(test_mime_readheader)
 {
 	int res;
 	u64_t blkidx=0, headersize=0;
-	
 	struct list mimelist;
+	
 	list_init(&mimelist);
-	
 	res = mime_readheader(raw_message,&blkidx,&mimelist,&headersize);
-	
 	fail_unless(res==6, "number of newlines incorrect");
 	fail_unless(blkidx==144, "blkidx incorrect");
 	fail_unless(headersize==blkidx+res, "headersize incorrect");
 	fail_unless(mimelist.total_nodes==5, "number of mime-headers incorrect");
+	list_freelist(&mimelist.start);
 	
+	blkidx = 0; headersize = 0;
+
+	list_init(&mimelist);
+	res = mime_readheader(raw_message_part, &blkidx, &mimelist, &headersize);
+	fail_unless(res==6, "number of newlines incorrect");
+	fail_unless(blkidx==142, "blkidx incorrect");
+	fail_unless(headersize==blkidx+res, "headersize incorrect");
+	fail_unless(mimelist.total_nodes==3, "number of mime-headers incorrect");
 	list_freelist(&mimelist.start);
 }
 END_TEST
@@ -152,15 +159,23 @@ START_TEST(test_mime_fetch_headers)
 	struct mime_record *mr;
 	
 	list_init(&mimelist);
-	
 	mime_fetch_headers(raw_message,&mimelist);
-	
 	fail_unless(mimelist.total_nodes==5, "number of mime-headers incorrect");
 	mr = (mimelist.start)->data;
 	fail_unless(strcmp(mr->field, "Received")==0, "Field name incorrect");
 	fail_unless(strcmp(mr->value, "at otherserver from localhost")==0, "Field value incorrect");
 	
 	list_freelist(&mimelist.start);
+
+	list_init(&mimelist);
+	mime_fetch_headers(raw_message_part,&mimelist);
+	fail_unless(mimelist.total_nodes==3, "number of mime-headers incorrect");
+	mr = (mimelist.start)->data;
+	fail_unless(strcmp(mr->field, "Content-Disposition")==0, "Field name incorrect");
+	fail_unless(strcmp(mr->value, "inline; filename=\"mime_alternative\"")==0, "Field value incorrect");
+	
+	list_freelist(&mimelist.start);
+
 
 }
 END_TEST

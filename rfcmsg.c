@@ -228,7 +228,7 @@ int db_start_msg(mime_message_t * msg, char *stopbound, int *level,
 	char *newbound, *bptr;
 	int continue_recursion = (maxlevel == 0 && *level == 0) ? 0 : 1;
 
-	trace(TRACE_DEBUG, "db_start_msg(): starting, stopbound: '%s'\n",
+	trace(TRACE_DEBUG, "%s,%s: starting, stopbound: '%s'\n", __FILE__, __func__,
 	      stopbound ? stopbound : "<null>");
 
 	list_init(&msg->children);
@@ -239,32 +239,24 @@ int db_start_msg(mime_message_t * msg, char *stopbound, int *level,
 	if (db_update_msgbuf(MSGBUF_FORCE_UPDATE) == -1)
 		return -2;
 
-	if ((hdrlines =
-	     mime_readheader(&msgbuf_buf[msgbuf_idx], &msgbuf_idx,
-			     &msg->rfcheader, &msg->rfcheadersize)) < 0)
+	if ((hdrlines = mime_readheader(&msgbuf_buf[msgbuf_idx], &msgbuf_idx, &msg->rfcheader, &msg->rfcheadersize)) < 0)
 		return hdrlines;	/* error reading header */
 
 	db_give_msgpos(&msg->bodystart);
 	msg->rfcheaderlines = hdrlines;
 
 	mime_findfield("content-type", &msg->rfcheader, &mr);
-	if (continue_recursion &&
-	    mr
-	    && strncasecmp(mr->value, "multipart",
-			   strlen("multipart")) == 0) {
-		trace(TRACE_DEBUG,
-		      "db_start_msg(): found multipart msg\n");
+	if (continue_recursion && mr && strncasecmp(mr->value, "multipart", strlen("multipart")) == 0) {
+		trace(TRACE_DEBUG, "%s,%s: found multipart msg\n", __FILE__, __func__);
 
 		/* multipart msg, find new boundary */
 		for (bptr = mr->value; *bptr; bptr++)
-			if (strncasecmp
-			    (bptr, "boundary=",
-			     sizeof("boundary=") - 1) == 0)
+			if (strncasecmp (bptr, "boundary=", sizeof("boundary=") - 1) == 0)
 				break;
 
 		if (!bptr) {
-			trace(TRACE_WARNING,
-			      "db_start_msg(): could not find a new msg-boundary\n");
+			trace(TRACE_WARNING, "%s,%s: could not find a new msg-boundary\n", 
+					__FILE__, __func__);
 			return -1;	/* no new boundary ??? */
 		}
 
@@ -276,37 +268,32 @@ int db_start_msg(mime_message_t * msg, char *stopbound, int *level,
 				newbound++;
 		} else {
 			newbound = bptr;
-			while (*newbound && !isspace(*newbound)
-			       && *newbound != ';')
+			while (*newbound && !isspace(*newbound) && *newbound != ';')
 				newbound++;
 		}
 
 		len = newbound - bptr;
 		if (!(newbound = (char *) my_malloc(len + 1))) {
-			trace(TRACE_ERROR,
-			      "db_start_msg(): out of memory\n");
+			trace(TRACE_ERROR, "%s,%s: out of memory\n", __FILE__, __func__);
 			return -3;
 		}
 
 		strncpy(newbound, bptr, len);
 		newbound[len] = '\0';
 
-		trace(TRACE_DEBUG,
-		      "db_start_msg(): found new boundary: [%s], msgbuf_idx %llu\n",
-		      newbound, msgbuf_idx);
+		trace(TRACE_DEBUG, "%s,%s: found new boundary: [%s], msgbuf_idx %llu\n",
+		      __FILE__, __func__, newbound, msgbuf_idx);
 
 		/* advance to first boundary */
 		if (db_update_msgbuf(MSGBUF_FORCE_UPDATE) == -1) {
-			trace(TRACE_ERROR,
-			      "db_startmsg(): error updating msgbuf\n");
+			trace(TRACE_ERROR, "%s,%s: error updating msgbuf\n",
+					__FILE__, __func__);
 			my_free(newbound);
 			return -2;
 		}
 
 		while (msgbuf_buf[msgbuf_idx]) {
-			if (strncmp
-			    (&msgbuf_buf[msgbuf_idx], newbound,
-			     strlen(newbound)) == 0)
+			if (strncmp(&msgbuf_buf[msgbuf_idx], newbound, strlen(newbound)) == 0)
 				break;
 
 			if (msgbuf_buf[msgbuf_idx] == '\n')
@@ -316,8 +303,8 @@ int db_start_msg(mime_message_t * msg, char *stopbound, int *level,
 		}
 
 		if (!msgbuf_buf[msgbuf_idx]) {
-			trace(TRACE_WARNING,
-			      "db_start_msg(): unexpected end-of-data\n");
+			trace(TRACE_WARNING, "%s,%s: unexpected end-of-data\n",
+					__FILE__, __func__);
 			my_free(newbound);
 			return -1;
 		}
@@ -328,11 +315,8 @@ int db_start_msg(mime_message_t * msg, char *stopbound, int *level,
 
 		/* find MIME-parts */
 		(*level)++;
-		if ((nlines =
-		     db_add_mime_children(&msg->children, newbound, level,
-					  maxlevel)) < 0) {
-			trace(TRACE_WARNING,
-			      "db_start_msg(): error adding MIME-children\n");
+		if ((nlines = db_add_mime_children(&msg->children, newbound, level, maxlevel)) < 0) {
+			trace(TRACE_WARNING, "%s,%s: error adding MIME-children\n", __FILE__, __func__);
 			my_free(newbound);
 			return nlines;
 		}
@@ -357,15 +341,13 @@ int db_start_msg(mime_message_t * msg, char *stopbound, int *level,
 			db_give_msgpos(&msg->bodyend);	/* this case should never happen... */
 
 
-		msg->bodysize =
-		    db_give_range_size(&msg->bodystart, &msg->bodyend);
+		msg->bodysize = db_give_range_size(&msg->bodystart, &msg->bodyend);
 		msg->bodylines = totallines;
 
 		return totallines + hdrlines;	/* done */
 	} else {
 		/* single part msg, read untill stopbound OR end of buffer */
-		trace(TRACE_DEBUG,
-		      "db_start_msg(): found singlepart msg\n");
+		trace(TRACE_DEBUG, "%s,%s: found singlepart msg\n", __FILE__, __func__);
 
 		if (stopbound) {
 			sblen = strlen(stopbound);
@@ -379,31 +361,23 @@ int db_start_msg(mime_message_t * msg, char *stopbound, int *level,
 
 				if (msgbuf_buf[msgbuf_idx + 1] == '-'
 				    && msgbuf_buf[msgbuf_idx + 2] == '-'
-				    && strncmp(&msgbuf_buf[msgbuf_idx + 3],
-					       stopbound, sblen) == 0) {
+				    && strncmp(&msgbuf_buf[msgbuf_idx + 3], stopbound, sblen) == 0) {
 					db_give_msgpos(&msg->bodyend);
-					msg->bodysize =
-					    db_give_range_size(&msg->
-							       bodystart,
-							       &msg->
-							       bodyend);
+					msg->bodysize = db_give_range_size(&msg->bodystart, &msg->bodyend);
 
 					msgbuf_idx++;	/* msgbuf_buf[msgbuf_idx] == '-' now */
 
 					/* advance to after stopbound */
 					msgbuf_idx += sblen + 2;	/* (add 2 cause double hyphen preceeds) */
-					while (isspace
-					       (msgbuf_buf[msgbuf_idx])) {
-						if (msgbuf_buf[msgbuf_idx]
-						    == '\n')
+					while (isspace(msgbuf_buf[msgbuf_idx])) {
+						if (msgbuf_buf[msgbuf_idx] == '\n')
 							totallines++;
 						msgbuf_idx++;
 					}
 
-					trace(TRACE_DEBUG,
-					      "db_start_msg(): stopbound reached\n");
-					return (totallines +
-						msg->bodylines + hdrlines);
+					trace(TRACE_DEBUG, "%s,%s: stopbound reached\n",
+							__FILE__, __func__);
+					return (totallines + msg->bodylines + hdrlines);
 				}
 
 				msgbuf_idx++;
@@ -412,13 +386,11 @@ int db_start_msg(mime_message_t * msg, char *stopbound, int *level,
 			/* end of buffer reached, invalid message encountered: there should be a stopbound! */
 			/* but lets pretend there's nothing wrong... */
 			db_give_msgpos(&msg->bodyend);
-			msg->bodysize =
-			    db_give_range_size(&msg->bodystart,
-					       &msg->bodyend);
+			msg->bodysize = db_give_range_size(&msg->bodystart, &msg->bodyend);
 			totallines += msg->bodylines;
 
-			trace(TRACE_WARNING,
-			      "db_start_msg(): no stopbound where expected...\n");
+			trace(TRACE_WARNING, "%s,%s: no stopbound where expected...\n",
+					__FILE__, __func__);
 
 /*	  return -1;
 */
@@ -426,10 +398,7 @@ int db_start_msg(mime_message_t * msg, char *stopbound, int *level,
 			/* walk on till end of buffer */
 			result = 1;
 			while (1) {
-				for (;
-				     msgbuf_idx < msgbuf_buflen - 1
-				     && msgbuf_buf[msgbuf_idx];
-				     msgbuf_idx++)
+				for (; msgbuf_idx < msgbuf_buflen - 1 && msgbuf_buf[msgbuf_idx]; msgbuf_idx++)
 					if (msgbuf_buf[msgbuf_idx] == '\n')
 						msg->bodylines++;
 
@@ -441,21 +410,18 @@ int db_start_msg(mime_message_t * msg, char *stopbound, int *level,
 					break;
 				}
 
-				result =
-				    db_update_msgbuf(MSGBUF_FORCE_UPDATE);
+				result = db_update_msgbuf(MSGBUF_FORCE_UPDATE);
 				if (result == -1)
 					return -2;
 			}
 
 			db_give_msgpos(&msg->bodyend);
-			msg->bodysize =
-			    db_give_range_size(&msg->bodystart,
-					       &msg->bodyend);
+			msg->bodysize = db_give_range_size(&msg->bodystart, &msg->bodyend);
 			totallines += msg->bodylines;
 		}
 	}
 
-	trace(TRACE_DEBUG, "db_start_msg(): exit\n");
+	trace(TRACE_DEBUG, "%s,%s: exit\n", __FILE__, __func__);
 
 	return totallines;
 }
