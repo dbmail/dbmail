@@ -47,6 +47,7 @@ int check_msg_set(const char *s);
 int check_date(const char *date);
 void clarify_data(char *str);
 char **build_args_array(const char *s);
+char **build_args_array_ext(const char *originalString, clientinfo_t *ci);
 
 void base64encode(char *in,char *out);
 void base64decode(char *in,char *out);

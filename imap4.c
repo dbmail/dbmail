@@ -34,7 +34,7 @@ const char AcceptedChars[] =
 
 const char AcceptedTagChars[] = 
 "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-"!@#$%^&+()-=_`~[]{}\\|'\" ;:,.<>/? ";
+"!@#$%^&+()-=_`~\\|'\" ;:,.<>/? ";
 
 const char AcceptedMailboxnameChars[] = 
 "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-=/ _";
@@ -194,7 +194,15 @@ int IMAPClientHandler(ClientInfo *ci)
 	}
 
       /* clarify data a little */
-      clarify_data(line);
+      cpy = &line[strlen(line)];
+      cpy--;
+      while (cpy >= line && (*cpy == '\r' || *cpy == '\n'))
+	{
+	  *cpy = '\0';
+	  cpy--;
+	}
+
+//      clarify_data(line);
 
       trace(COMMAND_SHOW_LEVEL,"COMMAND: [%s]\n",line);
       
@@ -250,7 +258,18 @@ int IMAPClientHandler(ClientInfo *ci)
 	{
 	  cpy[i] = '\0';       /* terminated command */
 	  cpy = cpy+i+1;       /* cpy points to args now */
-	  args = build_args_array(cpy); /* build argument array */
+	  args = build_args_array_ext(cpy, ci); /* build argument array */
+	  
+	  if (!ci->rx || !ci->tx || ferror(ci->rx) || ferror(ci->tx))
+	    {
+	      /* some error occurred during the read of extra command info */
+	      trace(TRACE_ERROR, "IMAPClientHandler(): error reading extra command info");
+	      close_cache();
+	      null_free(((imap_userdata_t*)ci->userData)->mailbox.seq_list);
+	      null_free(ci->userData);
+
+	      return -1;
+	    }
 	}
 
       if (!args)

@@ -1447,6 +1447,290 @@ char **build_args_array(const char *s)
 
   return the_args;
 }
+
+/*
+ * as build_args_array(), but reads strings on cmd line specified by {##}\0
+ * (\r\n had been removed from string)
+ */
+char **build_args_array_ext(const char *originalString, clientinfo_t *ci)
+{
+  int nargs=0,inquote=0,i,quotestart=0;
+  int nnorm=0,nsquare=0,paridx=0,argstart=0;
+  char parlist[MAX_LINESIZE];
+  char s[MAX_LINESIZE];
+  char *tmp, *lastchar;
+  int quotedSize, cnt, dataidx;
+
+  /* this is done for the possible extra lines to be read from the client:
+   * the line is read into currline; s will always point to the line currently
+   * being processed
+   */
+  strncpy(s, originalString, MAX_LINESIZE);
+
+  if (!s)
+    return NULL;
+
+  /* check for empty string */
+  if (!(*s))
+    {
+      the_args[0] = NULL;
+      return the_args;
+    }
+
+  /* find the arguments */
+  paridx = 0;
+  parlist[paridx] = NOPAR;
+
+  inquote = 0;
+
+  for (i=0,nargs=0; s[i] && nargs < MAX_ARGS-1; i++)
+    {
+      /* check quotes */
+      if (s[i] == '"' && ((i > 0 && s[i-1] != '\\') || i == 0))
+	{
+	  if (inquote)
+	    {
+	      /* quotation end, treat quoted string as argument */
+	      if (!(the_args[nargs] = (char*)my_malloc(sizeof(char) * (i-quotestart)) ))
+		{
+		  /* out of mem */
+		  while (--nargs >= 0)
+		    {
+		      my_free(the_args[nargs]);
+		      the_args[nargs] = NULL;
+		    }
+		      
+		  trace(TRACE_ERROR, 
+			"IMAPD: Not enough memory while building up argument array.");
+		  return NULL;
+		}
+		  
+	      memcpy(the_args[nargs], &s[quotestart+1], i-quotestart-1);
+	      the_args[nargs][i-quotestart -1] = '\0';
+
+	      nargs++;
+	      inquote = 0;
+	    }
+	  else
+	    {
+	      inquote = 1;
+	      quotestart = i;
+	    }
+
+	  continue;
+	}
+
+      if (inquote)
+	continue;
+	
+      /* check for (, ), [ or ] in string */
+      if (s[i] == '(' || s[i] == ')' || s[i] == '[' || s[i] == ']')
+	{
+	  /* check parenthese structure */
+	  if (s[i] == ')')
+	    {
+	      if (paridx < 0 || parlist[paridx] != NORMPAR)
+		paridx = -1;
+	      else
+		{
+		  nnorm--;
+		  paridx--;
+		}
+	    }
+	  else if (s[i] == ']')
+	    {
+	      if (paridx < 0 || parlist[paridx] != SQUAREPAR)
+		paridx = -1;
+	      else
+		{
+		  paridx--;
+		  nsquare--;
+		}
+	    }
+	  else if (s[i] == '(')
+	    {
+	      parlist[++paridx] = NORMPAR;
+	      nnorm++;
+	    }
+	  else /* s[i] == '[' */
+	    {
+	      parlist[++paridx] = SQUAREPAR;
+	      nsquare++;
+	    }
+
+	  if (paridx < 0)
+	    {
+	      /* error in parenthesis structure */
+	      while (--nargs >= 0)
+		{
+		  my_free(the_args[nargs]);
+		  the_args[nargs] = NULL;
+		}
+	      return NULL;
+	    }
+
+	  /* add this parenthesis to the arg list and continue */
+	  if (!(the_args[nargs] = (char*)my_malloc( sizeof(" ") )) )
+	    {
+	      /* out of mem */
+	      while (--nargs >= 0)
+		{
+		  my_free(the_args[nargs]);
+		  the_args[nargs] = NULL;
+		}
+		      
+	      trace(TRACE_ERROR, 
+		    "IMAPD: Not enough memory while building up argument array.");
+	      return NULL;
+	    }
+	  the_args[nargs][0] = s[i];
+	  the_args[nargs][1] = '\0';
+
+	  nargs++;
+	  continue;
+	}
+      
+      if (s[i] == ' ')
+	continue;
+
+      /* check for {number}\0 */
+      if (s[i] == '{')
+	{
+	  quotedSize = strtoul(&s[i+1], &lastchar, 10);
+
+	  /* only continue if the number is followed by '}\0' */
+	  if (*lastchar == '}' && *(lastchar+1) == '\0')
+	    {
+	      /* allocate space for this argument (could be a message when used with APPEND) */
+	      if (!(the_args[nargs] = (char*)my_malloc(sizeof(char) * (quotedSize+1)) ))
+		{
+		  /* out of mem */
+		  while (--nargs >= 0)
+		    {
+		      my_free(the_args[nargs]);
+		      the_args[nargs] = NULL;
+		    }
+		  
+		  trace(TRACE_ERROR, 
+			"build_args_array_ext(): out of memory allocating [%u] bytes for extra string", quotedSize+1);
+		  return NULL;
+		}
+	      
+	      fprintf(ci->tx, "+ OK gimme that string\r\n");
+	      alarm(ci->timeout); /* dont wait forever */
+	      for (cnt=0, dataidx=0; cnt<quotedSize; cnt++)
+		{
+		  the_args[nargs][dataidx] = fgetc(ci->rx);
+		  
+		  if (the_args[nargs][dataidx] != '\r')
+		    dataidx++; /* only store if it is not \r */
+		}
+		
+	      alarm(0);
+	      the_args[nargs][dataidx] = '\0';       /* terminate string */
+	      nargs++;
+
+	      if (!ci->rx || !ci->tx || ferror(ci->rx) || ferror(ci->tx))
+		{
+		  /* timeout occurred or connection has gone away */
+		  while (--nargs >= 0)
+		    {
+		      my_free(the_args[nargs]);
+		      the_args[nargs] = NULL;
+		    }
+		  
+		  trace(TRACE_ERROR, "build_args_array_ext(): timeout occurred");
+		  return NULL;
+		}
+
+	      /* now read the rest of this line */
+	      alarm(ci->timeout);
+	      fgets(s, MAX_LINESIZE, ci->rx);
+	      alarm(0);
+
+	      if (!ci->rx || !ci->tx || ferror(ci->rx) || ferror(ci->tx))
+		{
+		  /* timeout occurred */
+		  while (--nargs >= 0)
+		    {
+		      my_free(the_args[nargs]);
+		      the_args[nargs] = NULL;
+		    }
+		  
+		  trace(TRACE_ERROR, "build_args_array_ext(): timeout occurred");
+		  return NULL;
+		}
+
+	      /* remove trailing \r\n */
+	      tmp = &s[strlen(s)];
+	      tmp--; /* go before trailing \0; watch this with empty strings! */
+	      while (tmp >= s && (*tmp == '\r' || *tmp == '\n')) 
+		{
+		  *tmp = '\0';
+		  tmp--;
+		}
+
+	      trace(TRACE_DEBUG, "build_args_array_ext(): got extra line [%s]", s);
+
+	      /* start over! */
+	      continue;
+	    }
+	}
+
+      /* at an argument start now, walk on until next delimiter
+       * and save argument 
+       */
+      
+      for (argstart = i; i<strlen(s) && !strchr(" []()",s[i]); i++)
+	if (s[i] == '"')
+	  {
+	    if (s[i-1] == '\\') continue;
+	    else break;
+	  }
+      
+      if (!(the_args[nargs] = (char*)my_malloc(sizeof(char) * (i-argstart +1)) ))
+	{
+	  /* out of mem */
+	  while (--nargs >= 0)
+	    {
+	      my_free(the_args[nargs]);
+	      the_args[nargs] = NULL;
+	    }
+		      
+	  trace(TRACE_ERROR, 
+		"IMAPD: Not enough memory while building up argument array.");
+	  return NULL;
+	}
+		  
+      memcpy(the_args[nargs], &s[argstart], i-argstart);
+      the_args[nargs][i-argstart] = '\0';
+
+      nargs++;
+      i--; /* walked one too far */
+    }
+
+  if (paridx != 0)
+    {
+      /* error in parenthesis structure */
+      while (--nargs >= 0)
+	{
+	  my_free(the_args[nargs]);
+	  the_args[nargs] = NULL;
+	}
+      return NULL;
+    }
+
+  the_args[nargs] = NULL; /* terminate */
+
+  /* dump args (debug) */
+  for (i=0; the_args[i]; i++)
+    {
+      trace(TRACE_DEBUG, "arg[%d]: '%s'\n",i,the_args[i]);
+    }
+
+  return the_args;
+}
+
 #undef NOPAR
 #undef NORMPAR
 #undef RIGHTPAR

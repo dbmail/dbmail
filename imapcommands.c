@@ -1332,14 +1332,13 @@ int _ic_status(char *tag, char **args, ClientInfo *ci)
 /*
  * _ic_append()
  *
- * append a (literal) message to a mailbox
+ * append a message to a mailbox
  */
 int _ic_append(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
-  u64_t mboxid,literal_size=0,cnt;
-  int i,internal_date_idx=-1,dataidx,result;
-  char *msgdata;
+  u64_t mboxid;
+  int i,internal_date_idx=-1,result;
 
   if (!args[0] || !args[1])
     {
@@ -1390,7 +1389,10 @@ int _ic_append(char *tag, char **args, ClientInfo *ci)
     }
 
 
-  if (args[i][0] != '{')
+  /* there could be a literal date here, check if the next argument exists
+   * if so, assume this is the literal date
+   */
+  if (args[i+1])
     {
       /* internal date specified */
       internal_date_idx = i;
@@ -1399,101 +1401,31 @@ int _ic_append(char *tag, char **args, ClientInfo *ci)
 	    args[i-1], args[i]);
     }
 
-  if (!args[i])
+  /* ok literal msg should be in args[i] */
+  /* insert this msg */
+
+  result = db_imap_append_msg(args[i], strlen(args[i]), mboxid, ud->userid);
+  switch (result)
     {
-      trace(TRACE_INFO,"ic_append(): unexpected end of arguments\n");
-      fprintf(ci->tx,"%s BAD invalid arguments specified to APPEND\r\n", tag);
-      return 1;
-    }
-
-
-  /* ok literal msg should follow now */
-  if (args[i][0] != '{')
-    {
-      trace(TRACE_INFO, "ic_append(): No literal size found\n");
-      fprintf(ci->tx,"%s BAD invalid arguments specified to APPEND\r\n", tag);
-      return 1;
-    }
-  
-  literal_size = strtoull(&args[i][1], NULL, 10);
-  if (!literal_size)
-    {
-      fprintf(ci->tx,"%s BAD invalid literal size specified\r\n",tag);
-      return 1;
-    }
-
-  msgdata = (char*)my_malloc((literal_size+1) * sizeof(char));
-  if (!msgdata)
-    {
-      trace(TRACE_ERROR, "ic_append(): not enough memory\n");
-      fprintf(ci->tx,"* BYE server ran out of memory\r\n");
-      return -1;
-    }
-  memset(msgdata, 0, (literal_size+1));
-
-  trace(TRACE_DEBUG,"ok fetching message, %llu bytes:\n",literal_size);
-
-  fprintf(ci->tx,"+ OK gimme that message boy\r\n");
-  fflush(ci->tx);
-
-  /* set timeout alarm */
-  alarm(ci->timeout);
-
-  for (cnt=0,dataidx=0; cnt < literal_size && !feof(ci->rx); cnt++)
-    {
-      msgdata[dataidx] = fgetc(ci->rx);
-      trace(TRACE_DEBUG,"%c",msgdata[dataidx]);
-
-      if (msgdata[dataidx] != '\r') /* dont store \r */
-	dataidx++;
-	
-    }
-
-  msgdata[dataidx] = 0;   /* terminate (safety, this byte will not be stored) */
-
-  /* the literal string MUST be followed by CRLF */
-  result = 0;
-  if (fgetc(ci->rx) != '\r')
-    result = 1;
-  else if (fgetc(ci->rx) != '\n')
-    result = 1;
-
-  alarm(0); /* clear alarm */
-
-  if (result != 0)
-    {
-      trace(TRACE_ERROR,"ic_append(): msg followed by CRLF\n");
-      fprintf(ci->tx,"%s BAD expected crlf after literal string\r\n", tag);
-    }
-  else
-    {
-      /* insert this msg */
-      result = db_imap_append_msg(msgdata, dataidx, mboxid, ud->userid);
-      switch (result)
-        {
-        case -1:
-	  trace(TRACE_ERROR,"ic_append(): error appending msg\n");
-	  fprintf(ci->tx,"* BYE internal dbase error storing message\r\n");
-	  break;
+    case -1:
+      trace(TRACE_ERROR,"ic_append(): error appending msg\n");
+      fprintf(ci->tx,"* BYE internal dbase error storing message\r\n");
+      break;
 	  
-        case 1:
-	  trace(TRACE_ERROR,"ic_append(): faulty msg\n");
-	  fprintf(ci->tx,"%s NO invalid message specified\r\n", tag);
-	  break;
+    case 1:
+      trace(TRACE_ERROR,"ic_append(): faulty msg\n");
+      fprintf(ci->tx,"%s NO invalid message specified\r\n", tag);
+      break;
 	  
-        case 2:
-	  trace(TRACE_INFO,"ic_append(): quotum would exceed\n");
-	  fprintf(ci->tx,"%s NO not enough quotum left\r\n", tag);
-	  break;
+    case 2:
+      trace(TRACE_INFO,"ic_append(): quotum would exceed\n");
+      fprintf(ci->tx,"%s NO not enough quotum left\r\n", tag);
+      break;
 	  
-        case 0:
-	  fprintf(ci->tx,"%s OK APPEND completed\r\n",tag);
-	  break;
-        }
-     }
-
-  my_free(msgdata);
-  msgdata = NULL;
+    case 0:
+      fprintf(ci->tx,"%s OK APPEND completed\r\n",tag);
+      break;
+    }
 
   return result;
 }
