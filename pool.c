@@ -73,8 +73,12 @@ int set_lock(int type)
 void scoreboard_new(serverConfig_t * conf)
 {
 	int serr;
-	if ((shmid = shmget(IPC_PRIVATE, P_SIZE, 0644 | IPC_CREAT)) == -1)
-		trace(TRACE_FATAL, "%s,%s: shmget failed",__FILE__,__func__);
+	if ((shmid = shmget(IPC_PRIVATE, P_SIZE, 0644 | IPC_CREAT)) == -1) {
+		serr = errno;
+		trace(TRACE_FATAL, "%s,%s: shmget failed [%s]",
+				__FILE__,__func__, 
+				strerror(serr));
+	}
 	scoreboard = shmat(shmid, (void *) 0, 0);
 	serr=errno;
 	if (scoreboard == (Scoreboard_t *) (-1)) {
