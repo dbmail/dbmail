@@ -50,14 +50,26 @@ struct message
   u64_t virtual_messagestatus;
 };
 
-struct session
+typedef struct
 {
-  u64_t totalsize;
-  u64_t virtual_totalsize; 
-  u64_t totalmessages;
-  u64_t virtual_totalmessages;
-  struct list messagelst;
-};
+	int error_count;		/* how many errors have occured? */
+	int state; 				/* what is the current pop state */
+
+	int SessionResult;	/* what happened during the session */
+	
+	char *username;
+	char *password;
+
+	char *apop_stamp;
+	
+	u64_t totalsize;
+	u64_t virtual_totalsize;
+	u64_t totalmessages;
+	u64_t virtual_totalmessages;
+
+	struct list messagelst;
+
+} PopSession_t;
 
 
 

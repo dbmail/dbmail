@@ -1004,7 +1004,7 @@ int db_send_message_lines (void *fstream, u64_t messageidnr, long lines, int no_
 }
 
 
-void db_session_cleanup (struct session *sessionptr)
+void db_session_cleanup (PopSession_t *sessionptr)
 {
   /* cleanups a session 
      removes a list and all references */
@@ -1021,7 +1021,7 @@ void db_session_cleanup (struct session *sessionptr)
  * sessionptr is changed with the right session info
  * useridnr is the userid index for the user whose mailbox we're viewing 
  */
-int db_createsession (u64_t useridnr, struct session *sessionptr)
+int db_createsession (u64_t useridnr, PopSession_t *sessionptr)
 {
   /* first we do a query on the messages of this user */
   struct message tmpmessage;
@@ -1093,7 +1093,7 @@ int db_createsession (u64_t useridnr, struct session *sessionptr)
   return 1;
 }
 
-int db_update_pop (struct session *sessionptr)
+int db_update_pop (PopSession_t *sessionptr)
 {
 
   struct element *tmpelement;

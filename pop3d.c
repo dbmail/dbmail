@@ -30,7 +30,6 @@
 /* server timeout error */
 #define POP_TIMEOUT_MSG "-ERR I'm leaving, you're tooo slow"
 
-
 char *configFile = "/etc/dbmail.conf";
 
 /* set up database login data */
@@ -39,23 +38,17 @@ extern field_t _db_db;
 extern field_t _db_user;
 extern field_t _db_pass;
 
-int error_count = 0;
-
 void SetConfigItems(serverConfig_t *config, struct list *items);
 void Daemonize();
 int SetMainSigHandler();
 void MainSigHandler(int sig, siginfo_t *info, void *data);
 
-
 int pop_before_smtp = 0;
 int mainRestart = 0;
 int mainStop = 0;
 
-int state; 					/* current pop state */
-char *username=NULL, *password=NULL;
-struct session curr_session;
+PopSession_t session;
 char *myhostname;
-char *apop_stamp;
 char *timeout_setting;
 
 #ifdef PROC_TITLES
@@ -120,9 +113,6 @@ int main(int argc, char *argv[], char **envp)
 	  /* child process */
 	  drop_priviledges(config.serverUser, config.serverGroup);
 	  result = StartServer(&config);
-
-
-
 
 	  trace(TRACE_INFO, "main(): server done, exit.");
 	  exit(result);

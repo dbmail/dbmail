@@ -29,7 +29,6 @@
 #define CONFIG_EMPTY 0
 
 
-struct session;
 struct list;
 
 /* users, aliases, mailboxes, messages, messageblks */
@@ -148,9 +147,9 @@ int db_delete_mailbox(u64_t uid, int only_empty);
 
 u64_t db_insert_result (const char *sequence_identifier);
 int db_send_message_lines (void *fstream, u64_t messageidnr, long lines, int no_end_dot);
-int db_createsession (u64_t useridnr, struct session *sessionptr);
-void db_session_cleanup (struct session *sessionptr);
-int db_update_pop (struct session *sessionptr);
+int db_createsession (u64_t useridnr, PopSession_t *sessionptr);
+void db_session_cleanup (PopSession_t *sessionptr);
+int db_update_pop (PopSession_t *sessionptr);
 u64_t db_set_deleted ();
 u64_t db_deleted_purge();
 u64_t db_check_sizelimit (u64_t addblocksize, u64_t messageidnr, 

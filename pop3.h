@@ -60,7 +60,7 @@
 #define POP3_TOP 13
 #define POP3_END 14
 
-int pop3 (void *stream, char *buffer, char *client_ip);
+int pop3 (void *stream, char *buffer, char *client_ip, PopSession_t *session);
 int pop3_handle_connection (clientinfo_t *ci);
 
 #endif
