@@ -1336,71 +1336,235 @@ unsigned long db_set_deleted ()
   return mysql_affected_rows(&conn);
 }
 
-int db_icheck_messageblks(struct list *lost_messageblks)
+
+/* 
+ * will check for messageblks that are not
+ * connected to messages 
+ *
+ * returns -1 on dbase error, -2 on memory error, 0 on succes
+ * on succes lostlist will be a list containing nlost items being the messageblknr's of the
+ * lost messageblks
+ *
+ * the caller should free this memory!
+ */
+int db_icheck_messageblks(int *nlost, unsigned long **lostlist)
 {
-    /* 
-     * will check for messageblks that are not
-     * connected to messages 
-     */
+  int i;
+  *nlost = 0;
+  *lostlist = NULL;
 
+  /* this query can take quite some time! */
+  snprintf (query,DEF_QUERYSIZE,"SELECT messageblk.messageblknr FROM messageblk "
+	    "LEFT JOIN message ON messageblk.messageidnr = message.messageidnr "
+	    "WHERE message.messageidnr IS NULL");
 
-    snprintf (query,DEF_QUERYSIZE,"SELECT messageblknr, messageidnr FROM messageblk");
-    trace (TRACE_DEBUG,"db_icheck_messageblks(): executing query [%s]",query);
+  trace (TRACE_DEBUG,"db_icheck_messageblks(): executing query [%s]",query);
 
-    if (db_query(query)==-1)
+  if (db_query(query)==-1)
     {
-        trace (TRACE_ERROR,"db_icheck_messageblks(): Could not execute query [%s]",query);
-        return -1;
+      trace (TRACE_ERROR,"db_icheck_messageblks(): Could not execute query [%s]",query);
+      return -1;
     }
   
-    if ((res = mysql_store_result(&conn)) == NULL)
+  if ((res = mysql_store_result(&conn)) == NULL)
     {
       trace (TRACE_ERROR,"db_icheck_messageblks(): mysql_store_result failed:  %s",mysql_error(&conn));
       return -1;
     }
-  
-  if (mysql_num_rows(res)<1)
-    {
-      
-      mysql_free_result(res);
-      return 0;
-    }
-	
-  while ((row = mysql_fetch_row(res))!=NULL)
-    {
-      snprintf (query,DEF_QUERYSIZE,"SELECT messageidnr FROM message "
-              "WHERE messageidnr=%s",row[1]);
     
-      trace (TRACE_DEBUG,"db_icheck_messageblks(): executing query [%s]",query);
-      
-      if (db_query(query)==-1)
-      {
-	  mysql_free_result(res);
-	  return -1;
-      }
+  *nlost = mysql_num_rows(res);
+  trace(TRACE_DEBUG,"db_icheck_messageblks(): found %d lost message blocks\n", *nlost);
 
-      if ((checkres = mysql_store_result(&conn)) == NULL)
-      {
-          trace (TRACE_ERROR,"db_icheck_messageblks(): mysql_store_result failed: %s",
-                  mysql_error(&conn));
-          mysql_free_result(res);
-          return -1;
-      }
+  if (*nlost == 0)
+    return 0;
 
-      if (mysql_num_rows(checkres)<1)
-      {
-          /* this one is not connected to a message
-           * add to the list 
-           */
 
-          list_nodeadd (lost_messageblks, row[1], strlen(row[1])+1);
-      }
-      /*
-       * else do nothing, just check the next one */
+  *lostlist = (unsigned long*)my_malloc(sizeof(unsigned long) * (*nlost));
+  if (!*lostlist)
+    {
+      *nlost = 0;
+      trace(TRACE_ERROR,"db_icheck_messageblks(): out of memory when allocatin %d items\n",*nlost);
+      return -2;
     }
+
+  i = 0;
+  while ((row = mysql_fetch_row(res)) && i<*nlost)
+    (*lostlist)[i++] = strtoul(row[0], NULL, 10);
+
   return 0;
 }
 
+
+/* 
+ * will check for messages that are not
+ * connected to mailboxes 
+ *
+ * returns -1 on dbase error, -2 on memory error, 0 on succes
+ * on succes lostlist will be a list containing nlost items being the messageid's of the
+ * lost messages
+ *
+ * the caller should free this memory!
+ */
+int db_icheck_messages(int *nlost, unsigned long **lostlist)
+{
+  int i;
+  *nlost = 0;
+  *lostlist = NULL;
+
+  snprintf (query,DEF_QUERYSIZE,"SELECT message.messageidnr FROM message "
+	    "LEFT JOIN mailbox ON message.mailboxidnr = mailbox.mailboxidnr "
+	    "WHERE mailbox.mailboxidnr IS NULL");
+
+  trace (TRACE_DEBUG,"db_icheck_messages(): executing query [%s]",query);
+
+  if (db_query(query)==-1)
+    {
+      trace (TRACE_ERROR,"db_icheck_messages(): Could not execute query [%s]",query);
+      return -1;
+    }
+  
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace (TRACE_ERROR,"db_icheck_messages(): mysql_store_result failed:  %s",mysql_error(&conn));
+      return -1;
+    }
+    
+  *nlost = mysql_num_rows(res);
+  trace(TRACE_DEBUG,"db_icheck_messages(): found %d lost messages\n", *nlost);
+
+  if (*nlost == 0)
+    return 0;
+
+
+  *lostlist = (unsigned long*)my_malloc(sizeof(unsigned long) * (*nlost));
+  if (!*lostlist)
+    {
+      *nlost = 0;
+      trace(TRACE_ERROR,"db_icheck_messages(): out of memory when allocating %d items\n",*nlost);
+      return -2;
+    }
+
+  i = 0;
+  while ((row = mysql_fetch_row(res)) && i<*nlost)
+    (*lostlist)[i++] = strtoul(row[0], NULL, 10);
+
+  return 0;
+}
+
+
+/* 
+ * will check for mailboxes that are not
+ * connected to users 
+ *
+ * returns -1 on dbase error, -2 on memory error, 0 on succes
+ * on succes lostlist will be a list containing nlost items being the mailboxid's of the
+ * lost mailboxes
+ *
+ * the caller should free this memory!
+ */
+int db_icheck_mailboxes(int *nlost, unsigned long **lostlist)
+{
+  int i;
+  *nlost = 0;
+  *lostlist = NULL;
+
+  snprintf (query,DEF_QUERYSIZE,"SELECT mailbox.mailboxidnr FROM mailbox "
+	    "LEFT JOIN user ON mailbox.owneridnr = user.useridnr "
+	    "WHERE user.useridnr IS NULL");
+
+  trace (TRACE_DEBUG,"db_icheck_mailboxes(): executing query [%s]",query);
+
+  if (db_query(query)==-1)
+    {
+      trace (TRACE_ERROR,"db_icheck_mailboxes(): Could not execute query [%s]",query);
+      return -1;
+    }
+  
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace (TRACE_ERROR,"db_icheck_mailboxes(): mysql_store_result failed:  %s",mysql_error(&conn));
+      return -1;
+    }
+    
+  *nlost = mysql_num_rows(res);
+  trace(TRACE_DEBUG,"db_icheck_mailboxes(): found %d lost mailboxes\n", *nlost);
+
+  if (*nlost == 0)
+    return 0;
+
+
+  *lostlist = (unsigned long*)my_malloc(sizeof(unsigned long) * (*nlost));
+  if (!*lostlist)
+    {
+      *nlost = 0;
+      trace(TRACE_ERROR,"db_icheck_mailboxes(): out of memory when allocating %d items\n",*nlost);
+      return -2;
+    }
+
+  i = 0;
+  while ((row = mysql_fetch_row(res)) && i<*nlost)
+    (*lostlist)[i++] = strtoul(row[0], NULL, 10);
+
+  return 0;
+}
+
+
+/*
+ * deletes the specified block. used by maintenance
+ */
+int db_delete_messageblk(unsigned long uid)
+{
+  snprintf(query, DEF_QUERYSIZE, "DELETE FROM messageblk WHERE messageblknr = %lu",uid);
+  return db_query(query);
+}
+
+
+/*
+ * deletes the specified message. used by maintenance
+ */
+int db_delete_message(unsigned long uid)
+{
+  snprintf(query, DEF_QUERYSIZE, "DELETE FROM messageblk WHERE messageidnr = %lu",uid);
+  if (db_query(query) == -1)
+    return -1;
+
+  snprintf(query, DEF_QUERYSIZE, "DELETE FROM message WHERE messageidnr = %lu",uid);
+  return db_query(query);
+}
+
+/*
+ * deletes the specified mailbox. used by maintenance
+ */
+int db_delete_mailbox(unsigned long uid)
+{
+  unsigned long msgid;
+  snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message WHERE mailboxidnr = %lu",uid);
+
+  if (db_query(query) == -1)
+    return -1;
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_delete_mailbox(): mysql_store_result() failed [%s]\n",mysql_error(&conn));
+      return -1;
+    }
+
+  while ((row = mysql_fetch_row(res)))
+    {
+      msgid = strtoul(row[0], NULL, 10);
+
+      snprintf(query, DEF_QUERYSIZE, "DELETE FROM messageblk WHERE messageidnr = %lu",msgid);
+      if (db_query(query) == -1)
+	return -1;
+
+      snprintf(query, DEF_QUERYSIZE, "DELETE FROM message WHERE messageidnr = %lu",msgid);
+      if (db_query(query) == -1)
+	return -1;
+    }
+  
+  snprintf(query, DEF_QUERYSIZE, "DELETE FROM mailbox WHERE mailboxidnr = %lu",uid);
+  return db_query(query);
+}
 
 int db_disconnect()
 {

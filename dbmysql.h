@@ -159,7 +159,16 @@ unsigned long db_update_message (unsigned long *messageidnr, char *unique_id,
 				 unsigned long messagesize);
 unsigned long db_insert_message_block (char *block, int messageidnr);
 int db_check_id (char *id);
-int db_icheck_messageblks(struct list *lost_messageblks);
+
+int db_icheck_messageblks(int *nlost, unsigned long **lostlist);
+int db_icheck_messages(int *nlost, unsigned long **lostlist);
+int db_icheck_mailboxes(int *nlost, unsigned long **lostlist);
+
+int db_delete_messageblk(unsigned long uid);
+int db_delete_message(unsigned long uid);
+int db_delete_mailbox(unsigned long uid);
+
+
 int db_disconnect();
 unsigned long db_insert_result ();
 int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines, int no_end_dot);
