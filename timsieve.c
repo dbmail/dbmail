@@ -122,6 +122,7 @@ int tims_handle_connection(clientinfo_t * ci)
 	} else {
 		trace(TRACE_MESSAGE,
 		      "tims_handle_connection(): TX stream is null!");
+		my_free(buffer);
 		return 0;
 	}
 
@@ -138,8 +139,10 @@ int tims_handle_connection(clientinfo_t * ci)
 				fread(&buffer[cnt], 1, 1, ci->rx);
 
 				/* leave, an alarm has occured during fread */
-				if (!ci->rx)
+				if (!ci->rx) {
+					my_free(buffer);
 					return 0;
+				}
 			}
 			while (ferror(ci->rx) && errno == EINTR);
 
