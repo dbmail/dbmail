@@ -14,20 +14,45 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-# 
 
-# schema for innodb tables with added indexes and foreign keys
-# for more speed. 
-# This file was originally created by Paul Stevens and added
-# to dbmail on August 27th, 2003.
-# 
 # $Id$
 
-# if database needs to be created, uncomment next line
-#CREATE DATABASE dbmail;
 
-#USE dbmail;
+# SQL for upgrading from dbmail-1.2 to dbmail-2.0
+# This script was written by Paul J Stevens. Some changes were made
+# by Ilja Booij @ IC & S to make it work with the optional tables from
+# DBMail 1.x
+SET FOREIGN_KEY_CHECKS=0;
+SET SQL_LOG_OFF=1;
+SET SQL_LOG_UPDATE=0;
 
+# required tables:
+RENAME table aliases to aliases_1, users to users_1, mailboxes to mailboxes_1, messages to messages_1, messageblks to messageblks_1;
+
+# in DBMail 1.x, the auto_replies and auto_notifications tables where not
+# always present. If they are not present, they are created here. These 
+# tables do not have a new structure in dbmail 2.0, so they can be left
+# as they are.
+ 
+CREATE TABLE IF NOT EXISTS auto_notifications (
+   auto_notify_idnr bigint(21) default '0' not null auto_increment,
+   user_idnr bigint(21) DEFAULT '0' NOT NULL,
+   notify_address VARCHAR(100),
+   PRIMARY KEY (auto_notify_idnr),
+   FOREIGN KEY (`user_idnr`) 
+		REFERENCES `users`(`user_idnr`) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS auto_replies (
+   auto_reply_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
+   user_idnr bigint(21) DEFAULT '0' NOT NULL,
+   reply_body mediumtext,
+   PRIMARY KEY (auto_reply_idnr),
+   FOREIGN KEY (`user_idnr`) 
+		REFERENCES `users`(`user_idnr`) ON DELETE CASCADE
+);
+
+# Now create the new tables:
 DROP TABLE IF EXISTS aliases;
 CREATE TABLE aliases (
 	alias_idnr bigint(21) NOT NULL auto_increment,
@@ -181,6 +206,40 @@ CREATE TABLE auto_replies (
 		REFERENCES `users`(`user_idnr`) ON DELETE CASCADE
 ) TYPE=InnoDB;
 
+SET FOREIGN_KEY_CHECKS=0;
+
+# Fill the new tables
+
+INSERT INTO aliases SELECT * from aliases_1;
+
+INSERT INTO subscription ( user_id, mailbox_id ) SELECT owner_idnr, mailbox_idnr FROM mailboxes_1 where is_subscribed > 0;
+
+INSERT INTO mailboxes ( mailbox_idnr, owner_idnr, name, seen_flag, answered_flag, deleted_flag, flagged_flag, recent_flag, draft_flag, no_inferiors, no_select, permission )
+SELECT mailbox_idnr, owner_idnr, name, seen_flag, answered_flag, deleted_flag, flagged_flag, recent_flag, draft_flag, no_inferiors, no_select, permission FROM mailboxes_1;
+
+INSERT INTO messages ( message_idnr, mailbox_idnr, seen_flag, answered_flag, deleted_flag, flagged_flag, recent_flag, draft_flag, unique_id )
+SELECT message_idnr, mailbox_idnr, seen_flag, answered_flag, deleted_flag, flagged_flag, recent_flag, draft_flag, unique_id FROM messages_1;
+
+INSERT INTO physmessage ( id, messagesize, rfcsize, internal_date) 
+SELECT message_idnr, messagesize, rfcsize, internal_date FROM messages_1; 
+
+UPDATE messages SET physmessage_id = message_idnr;
+
+INSERT INTO messageblks ( messageblk_idnr, physmessage_id, messageblk, blocksize )
+SELECT messageblk_idnr, message_idnr, messageblk, blocksize FROM messageblks_1;
+
+
+INSERT INTO users ( user_idnr, userid, passwd, client_idnr, maxmail_size, encryption_type, last_login, curmail_size )
+SELECT u.*, sum(p.messagesize) AS curmail_size
+FROM users_1 u LEFT JOIN mailboxes b ON b.owner_idnr = u.user_idnr LEFT JOIN messages m ON m.mailbox_idnr = b.mailbox_idnr LEFT JOIN physmessage p ON m.physmessage_id = p.id
+GROUP BY u.user_idnr;
+
+DROP TABLE aliases_1, users_1, mailboxes_1, messages_1, messageblks_1;
+
+SET FOREIGN_KEY_CHECKS=1;
+
 # create the user for the delivery chain
 INSERT INTO users (userid, passwd, encryption_type) 
 	VALUES ('__@!internal_delivery_user!@__', '', 'md5');
+
+# end

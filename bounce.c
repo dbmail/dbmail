@@ -44,6 +44,7 @@ int bounce (char *header, char *destination_address,
 	    bounce_reason_t reason)
 {
   void *sendmail_stream;
+  char *sendmail_command = NULL;
   struct list from_addresses;
   struct element *tmpelement;
   field_t dbmail_from_address, sendmail, postmaster;
@@ -102,8 +103,24 @@ int bounce (char *header, char *destination_address,
 	    {
 	      /* open a stream to sendmail 
 		 the sendmail macro is defined in bounce.h */
-	      
-	      (FILE *)sendmail_stream=popen (sendmail,"w");
+	      sendmail_command = (char *)my_malloc(
+			    strlen((char *)(tmpelement->data))+
+			    strlen(sendmail)+2); /* +2 for extra space and \0 */
+		    if (!sendmail_command)
+	        {
+	          trace(TRACE_ERROR,"bounce(): out of memory");
+	          list_freelist(&from_addresses.start);
+	          return -1;
+	        }
+
+	      trace (TRACE_DEBUG,"bounce(): allocated memory for"
+		     " external command call");
+	      sprintf (sendmail_command, "%s %s",
+		       sendmail, (char *)(tmpelement->data));
+
+              trace (TRACE_INFO,"bounce(): opening pipe to command "
+	             "%s",sendmail_command);
+	      (FILE *)sendmail_stream=popen (sendmail_command,"w");
 
 	      if (sendmail_stream==NULL)
 		{
@@ -166,8 +183,22 @@ int bounce (char *header, char *destination_address,
 	    {
 	      /* open a stream to sendmail 
 		 the sendmail macro is defined in bounce.h */
+		    sendmail_command = (char *)my_malloc(strlen((char *)(tmpelement->data))+
+					    strlen(sendmail)+2); /* +2 for extra space and \0 */
+	      if (!sendmail_command)
+	        {
+	          trace(TRACE_ERROR,"bounce(): out of memory");
+	          list_freelist(&from_addresses.start);
+	          return -1;
+	        }
 
-	      (FILE *)sendmail_stream=popen (sendmail,"w");
+	      trace (TRACE_DEBUG,"bounce(): allocated memory for"
+		     " external command call");
+	      sprintf (sendmail_command, "%s %s",sendmail, (char *)(tmpelement->data));
+
+              trace (TRACE_INFO,"bounce(): opening pipe to command "
+	             "%s",sendmail_command);
+	      (FILE *)sendmail_stream=popen (sendmail_command,"w");
 
 	      if (sendmail_stream==NULL)
 		{

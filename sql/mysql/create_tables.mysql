@@ -62,6 +62,7 @@ CREATE TABLE mailboxes (
    PRIMARY KEY (mailbox_idnr),
    INDEX (name),
    INDEX (owner_idnr),
+   INDEX (owner_idnr, name)
  );
 
 DROP TABLE IF EXISTS subscription;
@@ -143,3 +144,6 @@ CREATE TABLE auto_replies (
    PRIMARY KEY (auto_reply_idnr)
 );
 
+# create the user for the delivery chain
+INSERT INTO users (userid, passwd, encryption_type) 
+	VALUES ('__@!internal_delivery_user!@__', '', 'md5');

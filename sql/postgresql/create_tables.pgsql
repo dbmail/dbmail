@@ -27,8 +27,8 @@ CREATE TABLE aliases (
     client_idnr INT8 DEFAULT '0' NOT NULL,
     PRIMARY KEY (alias_idnr)
 );
-CREATE UNIQUE INDEX aliases_alias_idx ON aliases(alias);
-CREATE UNIQUE INDEX aliases_alias_low_idx ON aliases(lower(alias));
+CREATE INDEX aliases_alias_idx ON aliases(alias);
+CREATE INDEX aliases_alias_low_idx ON aliases(lower(alias));
 
 CREATE SEQUENCE user_idnr_seq;
 CREATE TABLE users (
@@ -63,6 +63,7 @@ CREATE TABLE mailboxes (
 );
 CREATE INDEX mailboxes_owner_idx ON mailboxes(owner_idnr);
 CREATE INDEX mailboxes_name_idx ON mailboxes(name);
+CREATE INDEX mailboxes_owner_name_idx ON mailboxes(owner_idnr, name);
 
 CREATE TABLE subscription (
 	user_id INT8 NOT NULL,
@@ -154,3 +155,8 @@ CREATE TABLE auto_replies (
    FOREIGN KEY (user_idnr) REFERENCES users (user_idnr) ON DELETE CASCADE
 );
 CREATE INDEX auto_replies_user_idnr_idx ON auto_replies(user_idnr);
+
+# Create the user for the delivery chain:
+INSERT INTO users (userid, passwd, encryption_type) 
+	VALUES ('__@!internal_delivery_user!@__', '', 'md5');
+ 

@@ -57,7 +57,7 @@
 /* Must be at least 998 or 1000 by RFC's */
 #define MAX_LINE_SIZE 1024
 
-#define DBMAIL_USERIDNR 0
+#define DBMAIL_DELIVERY_USERNAME "__@!internal_delivery_user!@__"
 #define DBMAIL_TEMPMBOX "INBOX"
 
 extern struct list smtpItems, sysItems;
@@ -65,11 +65,13 @@ extern struct list smtpItems, sysItems;
 static int resolve_address(char *address, struct list *userids, struct list *forwards, struct list *bounces);
 static int store_message_temp(FILE *instream, char *header, u64_t headersize, u64_t *temp_message_idnr);
 
-/* Send an automatic notification using sendmail
+/* 
+ * Send an automatic notification using sendmail
  */
 static int send_notification(const char *to, const char *from, const char *subject)
 {
   FILE *mailpipe = NULL;
+  char *sendmail_command = NULL;
   field_t sendmail;
   int result;
 
@@ -79,7 +81,24 @@ static int send_notification(const char *to, const char *from, const char *subje
 
   trace(TRACE_DEBUG, "send_notification(): found sendmail command to be [%s]", sendmail);
 
-  if (! (mailpipe = popen(sendmail, "w")) )
+  
+  sendmail_command = (char *)my_malloc(strlen((char *)(to))+
+        strlen(sendmail)+2); /* +2 for extra space and \0 */
+  if (!sendmail_command)
+    {
+      trace(TRACE_ERROR,"send_notification(): out of memory");
+      return -1;
+    }
+
+  trace (TRACE_DEBUG,"send_notification(): allocated memory for"
+         " external command call");
+  sprintf (sendmail_command, "%s %s",sendmail, to);
+
+  trace (TRACE_INFO,"send_notification(): opening pipe to command "
+          "%s",sendmail_command);
+
+
+  if (! (mailpipe = popen(sendmail_command, "w")) )
     {
       trace(TRACE_ERROR, "send_notification(): could not open pipe to sendmail using cmd [%s]", sendmail);
       return 1;
@@ -290,7 +309,7 @@ static int execute_auto_ran(u64_t useridnr, struct list *headerfields)
  */
 int insert_messages(FILE *instream, char *header, u64_t headersize,
     struct list *users, struct list *errusers, struct list *returnpath,
-    int users_are_usernames, char *deliver_to_mailbox, struct list *headerfields)
+    int users_are_usernames UNUSED, char *deliver_to_mailbox, struct list *headerfields)
 {
   struct element *tmp, *ret_path;
   struct list userids;
@@ -521,11 +540,27 @@ static int store_message_temp(FILE *instream, char *header, u64_t headersize, u6
   char *strblock=NULL, *tmpline=NULL;
   char unique_id[UID_SIZE];
   u64_t messageblk_idnr;
+  u64_t user_idnr;
+  int result;
 
-  create_unique_id(unique_id, DBMAIL_USERIDNR); 
+  result = auth_user_exists(DBMAIL_DELIVERY_USERNAME, &user_idnr);
+  if (result < 0) {
+	  trace(TRACE_ERROR, "%s,%s: unable to find user_idnr for user "
+		"[%s]\n", __FILE__, __FUNCTION__, DBMAIL_DELIVERY_USERNAME);
+	  return -1;
+  }
+  if (result == 0) {
+	  trace(TRACE_ERROR, "%s,%s: unable to find user_idnr for user "
+		"[%s]. Make sure this system user is in the database!\n",
+		__FILE__, __FUNCTION__, DBMAIL_DELIVERY_USERNAME);
+	  return -1;
+  }
+  
+  create_unique_id(unique_id, user_idnr); 
 
   /* create a message record */
-  switch (db_insert_message(DBMAIL_USERIDNR, DBMAIL_TEMPMBOX, CREATE_IF_MBOX_NOT_FOUND, unique_id, &msgidnr))
+  switch (db_insert_message(user_idnr, DBMAIL_TEMPMBOX, 
+			    CREATE_IF_MBOX_NOT_FOUND, unique_id, &msgidnr))
   {
     case -1:
       trace(TRACE_ERROR, "store_message_temp(): returned -1, aborting");

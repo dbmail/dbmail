@@ -1,5 +1,8 @@
 2004-02-02  Ilja Booij  <ilja@ic-s.nl>
 
+	* db.c (db_getmailboxname): fixed bugs with strncpy's, which resulted
+	in segfaults.
+
 	* misc.c: added missing #include <time.h>
 
 2004-01-29  Ilja Booij  <ilja@ic-s.nl>

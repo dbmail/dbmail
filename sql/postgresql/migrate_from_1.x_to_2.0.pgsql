@@ -42,8 +42,8 @@ CREATE TABLE aliases (
     PRIMARY KEY (alias_idnr)
 );
 
-CREATE UNIQUE INDEX aliases_alias_idx ON aliases(alias);
-CREATE UNIQUE INDEX aliases_alias_low_idx ON aliases(lower(alias));
+CREATE INDEX aliases_alias_idx ON aliases(alias);
+CREATE INDEX aliases_alias_low_idx ON aliases(lower(alias));
 
 CREATE TABLE users (
    user_idnr INT8 DEFAULT nextval('user_idnr_seq'),
@@ -75,6 +75,7 @@ CREATE TABLE mailboxes (
 );
 CREATE INDEX mailboxes_owner_idx ON mailboxes(owner_idnr);
 CREATE INDEX mailboxes_name_idx ON mailboxes(name);
+CREATE INDEX mailboxes_owner_name_idx ON mailboxes(owner_idnr, name);
 
 CREATE TABLE subscription (
 	user_id INT8 NOT NULL,
@@ -166,6 +167,7 @@ LEFT JOIN messages m ON m.mailbox_idnr = b.mailbox_idnr
 LEFT JOIN physmessage p ON m.physmessage_id = p.id 
 GROUP BY u.user_idnr, u.userid, u.passwd, u.client_idnr, u.maxmail_size, u.encryption_type,u.last_login;
 
+#drop the old tables
 DROP TABLE aliases_1, users_1, mailboxes_1, messages_1, messageblks_1;
 
 ALTER TABLE mailboxes ADD   FOREIGN KEY (owner_idnr) REFERENCES users(user_idnr) ON DELETE CASCADE;
@@ -177,4 +179,7 @@ ALTER TABLE messages ADD FOREIGN KEY (physmessage_id) REFERENCES physmessage(id)
 ALTER TABLE messages ADD FOREIGN KEY (mailbox_idnr) REFERENCES mailboxes(mailbox_idnr) ON DELETE CASCADE;
 ALTER TABLE messageblks ADD FOREIGN KEY (physmessage_id) REFERENCES physmessage (id) ON DELETE CASCADE;
 
+# Create the user for the delivery chain:
+INSERT INTO users (userid, passwd, encryption_type)
+	VALUES ('__@!internal_delivery_user!@__', '', 'md5');
 
