@@ -1,11 +1,8 @@
 /* $Id$ 
  * (c) 2000-2002 IC&S, The Netherlands */
 
-For DBMail 2.0
--   LMTP server (this will speed up MTA -> dbmail communication)
--   Database table prefixes
-
 For DBMail 2.1
+-   Database table prefixes
 -   Sieve scripting language
 -   header caching (cache headers like To: From: etc.)
 -   Fix wrong order of headers when doing a FETCH MSGNUM (RFC822.HEADER)
