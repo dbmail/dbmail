@@ -10,6 +10,7 @@
 	(db_copymsg): rewritten to use the db_check_quotum_used function,
 	and to use a single INSERT INTO ... SELECT FROM query, and to use
 	the canonical create_unique_id function and rather than its own.
+	(db_insert_physmessage_with_internal_date): fixed missing quotes.
 
 	* dsn.c (dsnuser_free_list): added function to free a list
 	containing dsnuser structures, followed by freeing the list itself.
