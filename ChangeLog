@@ -1,3 +1,12 @@
+2005-04-05  Paul Stevens <paul@nfg.nl>
+
+	* auth/authsql.c: prevent loop in auth_check_user_ext where
+	alias==deliver_to.
+	* auth/authldap.c: define configFile as extern.
+	* imaputil.c: fix date_sql2imap. Closes bug #79.
+	* Makefile.am: remove redundant AM_CFLAGS
+	* server.c, serverchild.c: save and restore errno in signal handler.
+
 2005-04-01  Paul Stevens <paul@nfg.nl>
 
 	* auth/authldap.c: make forwarding actually work.
