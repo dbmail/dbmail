@@ -3341,7 +3341,7 @@ void send_quota(quota_t *quota, ClientInfo *ci) {
 		break;
 	    default: continue;
 	    }
-	    fprintf(ci->tx, "* QUOTA \"%s\" (\"%s\" %llu %llu)\r\n",
+	    fprintf(ci->tx, "* QUOTA \"%s\" (%s %llu %llu)\r\n",
 		    quota->root, name, usage, limit);
 	}
     }
