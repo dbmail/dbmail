@@ -15,7 +15,6 @@
 typedef struct
 {
   FILE *tx,*rx;
-  void *conn;               /* db connection */
   char ip[IPNUM_LEN];       /* client IP-number */
   field_t clientname;       /* resolved client ip */
   char *timeoutMsg;

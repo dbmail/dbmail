@@ -69,11 +69,6 @@ int db_connect ()
   return 0;
 }
 
-void *db_get_connection()
-{
-  return &conn;
-}
-
 
 u64_t db_insert_result (const char *sequence_identifier)
 {

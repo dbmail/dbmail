@@ -27,7 +27,7 @@
 #include <signal.h>
 
 int ChildStopRequested = 0;
-void *conn = NULL;
+int connected = 0;
 clientinfo_t client;
 
 int PerformChildTask(ChildInfo_t *info);
@@ -89,11 +89,11 @@ void ChildSigHandler(int sig, siginfo_t *info, void *data)
 	      client.rx = NULL;
 	    }
 
-	  if (conn)
+	  if (connected)
 	    {
 	      trace(TRACE_DEBUG, "ChildSighandler(): database connection still open, closing");
 	      db_disconnect();
-	      conn = NULL;
+	      connected = 0;
 	    }
 
 	  trace(TRACE_DEBUG, "ChildSighandler(): exit");
@@ -127,13 +127,13 @@ void ChildSigHandler(int sig, siginfo_t *info, void *data)
 	      client.rx = NULL;
 	    }
 
-	  if (conn)
+	  if (connected)
 	    {
 	      trace(TRACE_DEBUG, "ChildSighandler(): database connection still open, closing");
 	      db_disconnect();
 	    }
 
-	  conn = NULL;
+	  connected = 0;
 	}
       
       trace(TRACE_DEBUG, "ChildSighandler(): exit");
@@ -224,8 +224,7 @@ int PerformChildTask(ChildInfo_t *info)
       return -1;
     }
 
-  conn = db_get_connection();
-  auth_set_connection(conn); /* use the same connection for authentication */
+  connected = 1;
 
   for (i=0; i<info->maxConnect && !ChildStopRequested; i++)
     {
@@ -245,7 +244,7 @@ int PerformChildTask(ChildInfo_t *info)
       trace(TRACE_ERROR, "PerformChildTask(): incoming connection from [%s]", inet_ntoa(saClient.sin_addr));
       
       memset(&client, 0, sizeof(client));               /* zero-init */
-      client.conn = conn;                               /* db connection */
+
       client.timeoutMsg = info->timeoutMsg;
       strncpy(client.ip, inet_ntoa(saClient.sin_addr), IPNUM_LEN);
       client.clientname[0] = '\0'; /* do not perform ip-lookup's yet */
@@ -299,7 +298,10 @@ int PerformChildTask(ChildInfo_t *info)
     }
 
   db_disconnect();
-  conn = NULL;
+  connected = 0;         /* FIXME a signal between this line and the previous one 
+			  * would screw things up. Would like to have all this in
+			  * db_disconnect() making 'connected' obsolete
+			  */
 
   if (!ChildStopRequested)
     trace(TRACE_ERROR, "PerformChildTask(): maximum number of connections reached, stopping now");

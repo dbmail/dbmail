@@ -68,8 +68,6 @@ int main (int argc, char *argv[])
   if (db_connect() < 0) 
     trace(TRACE_FATAL,"main(): database connection failed");
 
-  auth_set_connection(db_get_connection());
-
   list_init(&users);
   list_init(&mimelist);
 
@@ -173,7 +171,6 @@ int main (int argc, char *argv[])
   trace (TRACE_DEBUG,"main(): they're all free. we're done.");
   
   db_disconnect();
-  auth_disconnect();
 
   return 0;
 }

@@ -13,13 +13,12 @@
 #include "dbmailtypes.h"
 
 #define MAX_CHECKS_DEPTH 1000
+#define DBMAIL_USE_SAME_CONNECTION
 
 /* #define _DBAUTH_STRICT_USER_CHECK */
 
 int auth_connect();
 int auth_disconnect();
-
-void auth_set_connection(void *dbconn);
 
 u64_t auth_user_exists(const char *username);
 int auth_get_known_users(struct list *users);

@@ -26,7 +26,13 @@
  * var's for dbase connection/query
  */
 
+#ifdef DBMAIL_USE_SAME_CONNECTION
+extern PGconn *conn;
+#define __auth_conn conn
+#else
 PGconn *__auth_conn = NULL;  
+#endif
+
 PGresult *__auth_res;
 char __auth_query_data[AUTH_QUERY_SIZE];
 
@@ -67,11 +73,6 @@ int auth_disconnect()
   return 0;
 }
 
-/* sets a connection to use */
-void auth_set_connection(void *dbconn)
-{
-  __auth_conn = (PGconn*)dbconn;
-}
 
 /* 
  * __auth_query()

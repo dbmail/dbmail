@@ -24,7 +24,14 @@
  * var's for dbase connection/query
  */
 char __auth_query_data[AUTH_QUERY_SIZE]; 
+
+#ifdef DBMAIL_USE_SAME_CONNECTION
+extern MYSQL conn;
+#define __auth_conn conn
+#else
 MYSQL __auth_conn;
+#endif
+
 MYSQL_RES *__auth_res;
 MYSQL_ROW __auth_row;
 
@@ -56,13 +63,6 @@ int auth_disconnect()
 {
   mysql_close(&__auth_conn);
   return 0;
-}
-
-
-/* sets a connection to use */
-void auth_set_connection(void *dbconn)
-{
-  memcpy(&__auth_conn, (MYSQL*)dbconn, sizeof(MYSQL));
 }
 
 

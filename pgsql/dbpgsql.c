@@ -76,11 +76,6 @@ int db_connect ()
 }
 
 
-void* db_get_connection()
-{
-  return conn;
-}
-
 u64_t db_insert_result (const char *sequence_identifier)
 {
   u64_t insert_result;

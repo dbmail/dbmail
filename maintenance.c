@@ -196,7 +196,7 @@ int main(int argc, char *argv[])
 	      if (db_set_message_status(id, 6) < 0)
 		printf("Warning: could not set message status #%llu. Check log.\n", id);
 	      else
-		printf("%llu (removed from dbase)\n", id);
+		printf("%llu (status update to 6)\n", id);
 
 	      el = el->nextnode;
 	    }

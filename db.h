@@ -102,8 +102,6 @@ int db_connect();
 int db_disconnect();
 int db_query (const char *thequery);
 
-void* db_get_connection();
-
 u64_t db_get_quotum_used(u64_t userid);
 
 u64_t db_get_user_from_alias(const char *alias);

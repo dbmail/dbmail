@@ -23,6 +23,13 @@ char csalt[] = "........";
 char *bgetpwent (char *filename, char *name);
 char *cget_salt();
 
+/* database login data */
+extern field_t _db_host;
+extern field_t _db_db;
+extern field_t _db_user;
+extern field_t _db_pass;
+
+
 /* valid characters for passwd/username */
 const char ValidChars[] = 
 "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -45,6 +52,7 @@ int is_valid(const char *name);
 
 int main(int argc, char *argv[])
 {
+  struct list sysItems;
   int result;
   int argidx = 0;
 
@@ -70,6 +78,10 @@ int main(int argc, char *argv[])
       argidx = 1;
     }
 	    
+  ReadConfig("DBMAIL", "dbmail.conf", &sysItems);
+  SetTraceLevel(&sysItems);
+  GetDBParams(_db_host, _db_db, _db_user, _db_pass, &sysItems);
+
   quiet_printf ("\n*** dbmail-adduser ***\n");
 	
   quiet_printf ("Opening connection to the database... ");
@@ -79,14 +91,15 @@ int main(int argc, char *argv[])
       return -1;
     }
 	
-  quiet_printf ("Opening connection to the user database... ");
+/*  quiet_printf ("Opening connection to the user database... ");
   if (auth_connect()==-1)
     {
       quiet_printf ("Failed. Could not connect to user database (check log)\n");
       db_disconnect();
       return -1;
     }
-	
+*/
+
   quiet_printf ("Ok. Connected\n");
   configure_debug(TRACE_ERROR, 1, 0);
   
@@ -102,13 +115,13 @@ int main(int argc, char *argv[])
     default:
       show_help();
       db_disconnect();
-      auth_disconnect();
+//      auth_disconnect();
       return 0;
     }
 
 	
   db_disconnect();
-  auth_disconnect();
+//  auth_disconnect();
   return result;
 }
 

@@ -255,6 +255,7 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
       return -1;
     }
 
+/* Use same connection for auth; FIXME should have some #ifdef here
   if (auth_connect()< 0)
     {	
       trace(TRACE_ERROR,"handle_client(): could not connect to user database");
@@ -263,7 +264,8 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
       db_disconnect();
       return -1;
     }
-			
+*/
+		
   /* first initiate AUTHORIZATION state */
   state = AUTHORIZATION;
 		
@@ -346,7 +348,7 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 	}
 
       db_disconnect(); 
-      auth_disconnect();
+//      auth_disconnect();
     }
   else if (done < 0)
     {
@@ -364,7 +366,7 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 	}
 
       db_disconnect(); 
-      auth_disconnect();
+//      auth_disconnect();
     }
   else
     {
@@ -378,7 +380,7 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
       /* if everything went well, write down everything and do a cleanup */
       db_update_pop(&curr_session);
       db_disconnect(); 
-      auth_disconnect();
+//      auth_disconnect();
 
       fclose(tx);
       shutdown (fileno(rx), SHUT_RDWR);
@@ -444,10 +446,6 @@ int main (int argc, char *argv[])
   SetTraceLevel(&popItems);
   GetDBParams(_db_host, _db_db, _db_user, _db_pass, &sysItems);
 
-  /* connect to the database */
-  if (db_connect()< 0) 
-    trace(TRACE_FATAL,"main(): could not connect to database"); 
-	
   GetConfigValue("TIMEOUT", &popItems, val);
   server_timeout = atoi(val);
   if (server_timeout < 10)
@@ -566,8 +564,6 @@ int main (int argc, char *argv[])
   if (drop_priviledges (newuser, newgroup) != 0)
     trace (TRACE_FATAL,"main(): could not set uid %s, gid %s",newuser,newgroup);
   
-  /* OK all config read, close dbase connection */
-
   /* getting shared memory children counter */
   shmkey_dcu = time (NULL); /* get an unique key */
   shmid_dcu = shmget (shmkey_dcu, sizeof (int), 0666 | IPC_CREAT);
