@@ -1,4 +1,4 @@
-/*
+ /*
   $Id$
 
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
