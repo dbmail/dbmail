@@ -491,6 +491,15 @@ int show_mime_parameter_list(FILE *outstream, struct mime_record *mr,
   /* find first delimiter */
   for (delimiter = 0; mr->value[delimiter] && mr->value[delimiter] != ';'; delimiter++) ;
 
+  /* are there non-whitespace chars after the delimiter?                    */
+  /* looking for the case where the mime type ends with a ";"               */
+  /* if it is of type "text" it must have a default character set generated */
+  end = strlen(mr->value);
+  for (start = delimiter+1; (isspace(mr->value[start])==0 && start<=end) ; start++ ); 
+  end = start - delimiter - 1;
+  start = 0;
+  if ( end && strstr(mr->value,"text") ) start++;
+
   if (mr->value[delimiter])
     mr->value[delimiter] = 0;
   else
@@ -526,10 +535,11 @@ int show_mime_parameter_list(FILE *outstream, struct mime_record *mr,
 
       fprintf(outstream," (");
 
+      if ( start ) fprintf(outstream,"\"CHARSET\" \'US-ASCII\"");
       /* extra params: <name>=<val> [; <name>=<val> [; ...etc...]]
-	       * note that both name and val may or may not be enclosed by 
-	       * either single or double quotation marks
-	       */
+       * note that both name and val may or may not be enclosed by 
+       * either single or double quotation marks
+       */
 
       do
 	{

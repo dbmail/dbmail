@@ -219,6 +219,7 @@ int _ic_authenticate(char *tag, char **args, ClientInfo *ci)
     }
 
   /* ask for username (base64 encoded) */
+  memset(buf,0,MAX_LINESIZE);
   base64encode("username\r\n",buf);
   fprintf(ci->tx,"+ %s\r\n",buf);
   fflush(ci->tx);
@@ -230,6 +231,7 @@ int _ic_authenticate(char *tag, char **args, ClientInfo *ci)
   base64decode(buf, username);
 
   /* ask for password */
+  memset(buf,0,MAX_LINESIZE);
   base64encode("password\r\n",buf);
   fprintf(ci->tx,"+ %s\r\n",buf);
   fflush(ci->tx);
