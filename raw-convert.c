@@ -260,6 +260,8 @@ int process_mboxfile(char *file)
 	  if (blk_opened)
 	    {
 	      close_blk(blksize); /* update & end message */
+	      size += blksize;
+	      blksize = 0;
 	      blk_opened = 0;
 	    }
 	  
