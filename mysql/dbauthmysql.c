@@ -259,7 +259,7 @@ u64_t db_adduser (char *username, char *password, char *clientid, char *maxmail)
       return -1;
     }
 
-  useridnr = db_insert_result ();
+  useridnr = db_insert_result ("");
 	
   /* creating query for adding mailbox */
   snprintf (query, DEF_QUERYSIZE,"INSERT INTO mailbox (owneridnr, name) VALUES (%llu,'INBOX')",

@@ -92,7 +92,7 @@ int db_connect ()
   return 0;
 }
 
-u64_t db_insert_result ()
+u64_t db_insert_result (const char *sequence_identifier)
 {
   u64_t insert_result;
   insert_result=mysql_insert_id(&conn);
@@ -452,7 +452,7 @@ u64_t db_insert_message (u64_t *useridnr)
       trace(TRACE_STOP,"db_insert_message(): dbquery failed");
     }	
   
-  return db_insert_result();
+  return db_insert_result("");
 }
 
 
@@ -479,7 +479,7 @@ u64_t db_update_message (u64_t *messageidnr, char *unique_id,
  * insert a msg block
  * returns msgblkid on succes, -1 on failure
  */
-u64_t db_insert_message_block (char *block, int messageidnr)
+u64_t db_insert_message_block (char *block, u64_t messageidnr)
 {
   char *escblk=NULL, *tmpquery=NULL;
   int len,esclen=0;
@@ -504,7 +504,7 @@ u64_t db_insert_message_block (char *block, int messageidnr)
 	
 	  snprintf (tmpquery, esclen+500,
 		   "INSERT INTO messageblk(messageblk,blocksize,messageidnr) "
-		   "VALUES (\"%s\",%d,%d)",
+		   "VALUES (\"%s\",%d,%llu)",
 		   escblk,len,messageidnr);
 
 	  if (db_query (tmpquery)==-1)
@@ -518,7 +518,7 @@ u64_t db_insert_message_block (char *block, int messageidnr)
 	  /* freeing buffers */
 	  my_free(tmpquery);
 	  my_free(escblk);
-	  return db_insert_result();
+	  return db_insert_result("");
 	}
       else
 	{
@@ -788,7 +788,7 @@ int db_createsession (u64_t useridnr, struct session *sessionptr)
       strncpy(tmpmessage.uidl,row[MESSAGE_UNIQUE_ID],UID_SIZE);
 		
       tmpmessage.virtual_messagestatus =
-	row[MESSAGE_STATUS] ? strtoull(row[MESSAGE_STATUS, NULL, 10) : 0;
+	row[MESSAGE_STATUS] ? strtoull(row[MESSAGE_STATUS], NULL, 10) : 0;
 	
       sessionptr->totalmessages+=1;
       sessionptr->totalsize+=tmpmessage.msize;
@@ -949,7 +949,7 @@ u64_t db_check_sizelimit (u64_t addblocksize, u64_t messageidnr,
     {
       trace (TRACE_DEBUG,"db_check_sizelimit(): checking mailbox [%s]\n",row[0]);
 
-      n = row[0] ? strtoull(row[0], NULL, 10);
+      n = row[0] ? strtoull(row[0], NULL, 10) : 0;
       j = db_check_mailboxsize(n);
 
       if (j == (u64_t)-1)

@@ -124,7 +124,7 @@ int db_delete_messageblk(u64_t uid);
 int db_delete_message(u64_t uid);
 int db_delete_mailbox(u64_t uid);
 
-u64_t db_insert_result (char *sequence_identifier);
+u64_t db_insert_result (const char *sequence_identifier);
 int db_send_message_lines (void *fstream, u64_t messageidnr, long lines, int no_end_dot);
 int db_createsession (u64_t useridnr, struct session *sessionptr);
 void db_session_cleanup (struct session *sessionptr);

@@ -56,9 +56,9 @@ int db_connect ()
     return 0;
 }
 
-u64_t db_insert_result (char *sequence_identifier)
+u64_t db_insert_result (const char *sequence_identifier)
 {
-    u64_t insert_result;
+  u64_t insert_result;
 
     /* postgres uses the currval call on a sequence to
        determine the result value of an insert query */
