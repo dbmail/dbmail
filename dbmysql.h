@@ -149,7 +149,6 @@ void db_session_cleanup (struct session *sessionptr);
 int db_update_pop (struct session *sessionptr);
 unsigned long db_set_deleted ();
 unsigned long db_deleted_purge();
-int db_update_user_size (unsigned long useridnr, unsigned long addbytes);
 unsigned long db_check_sizelimit (unsigned long addblocksize, unsigned long messageidnr, 
 				  unsigned long *useridnr);
 char *db_get_userid (unsigned long *useridnr);

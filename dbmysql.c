@@ -285,7 +285,9 @@ unsigned long db_adduser (char *username, char *password, char *clientid, char *
 		return -1;
 	}
 
+	mysql_free_result (res);
 	free (ckquery);
+
 	return useridnr;
 }
 
@@ -316,6 +318,8 @@ unsigned long db_get_inboxid (unsigned long *useridnr)
 {
 	/* returns the mailbox id (of mailbox inbox) for a user or a 0 if no mailboxes were found */
   char *ckquery;
+  unsigned long inboxid;
+
   
   /* allocating memory for query */
   memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
@@ -347,8 +351,13 @@ unsigned long db_get_inboxid (unsigned long *useridnr)
 	{
 	  trace (TRACE_DEBUG,"db_get_mailboxid(): fetch_row call failed");
 	}
-	/* return the inbox id */
-	return atoi(row[0]);
+
+	inboxid = (row && row[0]) ? atol(row[0]) : 0; 
+
+	mysql_free_result (res);
+	free (ckquery);
+	
+	return inboxid;
 }
 
 char *db_get_userid (unsigned long *useridnr)
@@ -386,7 +395,9 @@ char *db_get_userid (unsigned long *useridnr)
 	{
 		trace (TRACE_DEBUG,"db_userid(): fetch_row call failed");
 	}
-	/* return the inbox id */
+
+	free (ckquery);
+
 	return row[0];
 }
 
@@ -394,6 +405,8 @@ unsigned long db_get_message_mailboxid (unsigned long *messageidnr)
 {
 	/* returns the mailbox id of a message */
   char *ckquery;
+  unsigned long mailboxid;
+  
   
   /* allocating memory for query */
   memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
@@ -425,8 +438,13 @@ unsigned long db_get_message_mailboxid (unsigned long *messageidnr)
 	{
 		trace (TRACE_DEBUG,"db_get_mailboxid(): fetch_row call failed");
 	}
-	/* return the inbox id */
-	return atoi(row[0]);
+
+	mailboxid = (row && row[0]) ? atol(row[0]) : 0;
+	
+	mysql_free_result (res);
+	free (ckquery);
+	
+	return mailboxid;
 }
 
 
@@ -435,6 +453,7 @@ unsigned long db_get_useridnr (unsigned long messageidnr)
 	/* returns the userid from a messageidnr */
   char *ckquery;
   unsigned long mailboxidnr;
+  unsigned long userid;
   
   /* allocating memory for query */
   memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
@@ -467,8 +486,16 @@ unsigned long db_get_useridnr (unsigned long messageidnr)
 		trace (TRACE_DEBUG,"db_get_useridnr(): fetch_row call failed");
 	}
 
-	mailboxidnr = atol(row[0]);
+	mailboxidnr = (row && row[0]) ? atol(row[0]) : -1;
+	
+	if (mailboxidnr == -1)
+		{
+			free (ckquery);
+			return 0;
+		}
 
+	mysql_free_result (res);
+	
 	sprintf (ckquery, "SELECT owneridnr FROM mailbox WHERE mailboxidnr = %lu",
 			mailboxidnr);
 
@@ -496,8 +523,12 @@ unsigned long db_get_useridnr (unsigned long messageidnr)
 		trace (TRACE_DEBUG,"db_get_useridnr(): fetch_row call failed");
 	}
 	
-	/* return the useridnr */
-	return atol(row[0]);
+	userid = (row && row[0]) ? atol(row[0]) : 0;
+	
+	mysql_free_result (res);
+	free (ckquery);
+	
+	return userid;
 }
 
 
@@ -816,7 +847,9 @@ unsigned long db_md5_validate (char *username,unsigned char *md5_apop_he, char *
   char *ckquery;
   char *checkstring;
   unsigned char *md5_apop_we;
-	
+  unsigned long useridnr;	
+
+  
   memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
   sprintf (ckquery, "SELECT passwd,useridnr FROM user WHERE userid=\"%s\"",username);
 	
@@ -860,10 +893,22 @@ unsigned long db_md5_validate (char *username,unsigned char *md5_apop_he, char *
   if (strcmp(md5_apop_he,makemd5(checkstring))==0)
     {
       trace(TRACE_MESSAGE,"db_md5_validate(): user [%s] is validated using APOP",username);
-      return atoi(row[1]);
+		
+		useridnr = (row && row[1]) ? atol(row[1]) : 0;
+	
+		mysql_free_result(res);
+		free (ckquery);
+
+      return useridnr;
     }
 	
   trace(TRACE_MESSAGE,"db_md5_validate(): user [%s] could not be validated",username);
+
+  if (res!=NULL)
+	  mysql_free_result(res);
+  
+  free (ckquery);
+  
   return 0;
 }
 
@@ -917,6 +962,8 @@ int db_createsession (unsigned long useridnr, struct session *sessionptr)
   if ((messagecounter=mysql_num_rows(res))<1)
     {
       /* there are no messages for this user */
+		 free(ckquery);
+		 mysql_free_result(res);
       return 1;
     }
 
@@ -949,7 +996,9 @@ int db_createsession (unsigned long useridnr, struct session *sessionptr)
   sessionptr->virtual_totalmessages=sessionptr->totalmessages;
   sessionptr->virtual_totalsize=sessionptr->totalsize;
 
-  mysql_free_result(res); 
+  mysql_free_result(res);
+  free (ckquery);
+
   return 1;
 }
 		
@@ -977,7 +1026,7 @@ int db_update_pop (struct session *sessionptr)
 	
 				/* FIXME: a message could be deleted already if it has been accessed
 				 * by another interface and be deleted by sysop
-				 * we need a check if the query failes because it doesn't excists anymore
+				 * we need a check if the query failes because it doesn't exists anymore
 				 * now it will just bailout */
 	
 	  if (db_query(ckquery)==-1)
@@ -989,71 +1038,9 @@ int db_update_pop (struct session *sessionptr)
 	}
       tmpelement=tmpelement->nextnode;
     }
-  return 0;
-}
-
-int db_update_user_size (unsigned long useridnr, unsigned long addbytes)
-{
-	/* adds addbytes to the currmail_size in the user table */
-	char *ckquery;
-	unsigned long currbytes;	
-	
-	memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
-	sprintf (ckquery, "SELECT currmail_size FROM user WHERE useridnr = %lu",
-			useridnr);
-
-	if (db_query(ckquery) != 0)
-	{
-		trace (TRACE_ERROR,"db_update_user_size(): could not execute query [%s]",
-				ckquery);
-		free(ckquery);
-		return -1;
-	}
-  
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace (TRACE_ERROR,"db_update_user_size(): mysql_store_result failed:  %s",mysql_error(&conn));
-      free(ckquery);
-      return -1;
-    }
-
-  if (mysql_num_rows(res)<1)
-    {
-		trace (TRACE_ERROR,"db_update_user_size(): weird, this user does not seem to exist!");
-      free(ckquery);
-      return 0;
-    }
-	
-  row = mysql_fetch_row(res);
-  currbytes = atol (row[0]);
-	
-  trace (TRACE_DEBUG, "db_update_user_size(): the current bytecount for user %lu is %lu",
-		  useridnr, currbytes);
-
-  currbytes += addbytes;
-
-  trace (TRACE_DEBUG, "db_update_user_size(): new bytecount for user %lu is %lu",
-		  useridnr, currbytes);
-
-  sprintf (ckquery, "UPDATE user SET currmail_size = %lu WHERE useridnr = %lu",
-		  currbytes, useridnr);
-
-  trace (TRACE_DEBUG, "db_update_user_size(): updating using query [%s]",
-		  ckquery);
-
-  if (db_query(ckquery) != 0)
-  {
-		trace (TRACE_ERROR,"db_update_user_size(): could not execute query [%s]",
-				ckquery);
-		free(ckquery);
-		return -1;
-  }
-
   free (ckquery);
-
   return 0;
 }
-
 
 unsigned long db_check_mailboxsize (unsigned long mailboxid)
 {
