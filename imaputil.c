@@ -31,6 +31,10 @@ const char *item_desc[] =
   "TEXT", "HEADER", "HEADER.FIELDS", "HEADER.FIELDS.NOT"
 };
 
+const char *envelope_items[] = 
+{
+  "from", "sender", "reply-to", "to", "cc", "bcc", "in-reply-to", NULL
+};
 
 /* 
  * retrieve_structure()
@@ -44,21 +48,30 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg)
 {
   struct mime_record *mr;
   struct element *curr;
+  struct list *header_to_use;
   mime_message_t rfcmsg;
   int idx,delimiter,start,end;
   unsigned long size;
 
   fprintf(outstream,"(");
 
-  if (msg->mimeheader.start != NULL)
+  mime_findfield("content-type", &msg->rfcheader, &mr);
+
+  if (msg->mimeheader.start != NULL || !mr ||
+      (mr && strncasecmp(mr->value,"multipart", strlen("multipart")) != 0))
     {
       /* show basic fields:
        * content-type, content-subtype, (parameter list), 
        * content-id, content-description, content-transfer-encoding,
        * size
        */
+      
+      if (msg->mimeheader.start == NULL)
+	header_to_use = &msg->rfcheader;   /* we're dealing with a single-part RFC msg here */
+      else
+	header_to_use = &msg->mimeheader;  /* we're dealing with a single-part RFC msg here */
 
-      mime_findfield("content-type", &msg->mimeheader, &mr);
+      mime_findfield("content-type", header_to_use, &mr);
       if (mr && strlen(mr->value) > 0)
 	{
 	  /* find first delimiter */
@@ -75,7 +88,7 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg)
 	  if (mr->value[idx] && (idx<delimiter || delimiter == -1))
 	    {
 	      mr->value[idx] = 0;
-	      fprintf(outstream,"\"%s\" \"%s\" ", mr->value, &mr->value[idx+1]);
+	      fprintf(outstream,"\"%s\" \"%s\"", mr->value, &mr->value[idx+1]);
 	      mr->value[idx] = '/';
 	    }
 	  else
@@ -176,19 +189,19 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg)
 	  fprintf(outstream,"NIL NIL NIL");
 	}
 
-      mime_findfield("content-id", &msg->mimeheader, &mr);
+      mime_findfield("content-id", header_to_use, &mr);
       if (mr && strlen(mr->value) > 0)
 	fprintf(outstream, " \"%s\"",mr->value);
       else
 	fprintf(outstream, " NIL");
 
-      mime_findfield("content-description", &msg->mimeheader, &mr);
+      mime_findfield("content-description", header_to_use, &mr);
       if (mr && strlen(mr->value) > 0)
 	fprintf(outstream, " \"%s\"",mr->value);
       else
 	fprintf(outstream, " NIL");
 
-      mime_findfield("content-transfer-encoding", &msg->mimeheader, &mr);
+      mime_findfield("content-transfer-encoding", header_to_use, &mr);
       if (mr && strlen(mr->value) > 0)
 	fprintf(outstream, " \"%s\"",mr->value);
       else
@@ -196,11 +209,11 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg)
 
       /* now output size */
       size = db_give_range_size(&msg->bodystart, &msg->bodyend);
-      fprintf(outstream, " %lu", size);
+      fprintf(outstream, " %lu ", size);
 
 
       /* now check special cases, first case: message/rfc822 */
-      mime_findfield("content-type", &msg->mimeheader, &mr);
+      mime_findfield("content-type", header_to_use, &mr);
       if (mr && strncasecmp(mr->value, "message/rfc822", strlen("message/rfc822")) == 0)
 	{
 	  /* msg/rfc822 found; extra items to be displayed:
@@ -218,29 +231,30 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg)
 	  if (retrieve_structure(outstream, &rfcmsg) == -1)
 	    return -1;
 	  
+	  /* output # of lines */
 	  
 	}
 
       /* second case: text */
-      mime_findfield("content-type", &msg->mimeheader, &mr);
+      mime_findfield("content-type", header_to_use, &mr);
       if (mr && strncasecmp(mr->value, "text", strlen("text")) == 0)
 	{
 	  /* output # of lines */
 	}
 
-      mime_findfield("content-md5", &msg->mimeheader, &mr);
+      mime_findfield("content-md5", header_to_use, &mr);
       if (mr && strlen(mr->value) > 0)
 	fprintf(outstream, " \"%s\"",mr->value);
       else
 	fprintf(outstream, " NIL");
 
-      mime_findfield("content-disposition", &msg->mimeheader, &mr);
+      mime_findfield("content-disposition", header_to_use, &mr);
       if (mr && strlen(mr->value) > 0)
 	fprintf(outstream, " \"%s\"",mr->value);
       else
 	fprintf(outstream, " NIL");
 
-      mime_findfield("content-language", &msg->mimeheader, &mr);
+      mime_findfield("content-language", header_to_use, &mr);
       if (mr && strlen(mr->value) > 0)
 	fprintf(outstream, " \"%s\"",mr->value);
       else
@@ -257,7 +271,9 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg)
 	  curr = list_getstart(&msg->children);
 	  while (curr)
 	    {
-	      retrieve_structure(outstream, (mime_message_t*)curr->data);
+	      if (retrieve_structure(outstream, (mime_message_t*)curr->data) == -1)
+		return -1;
+
 	      curr = curr->nextnode;
 	    }
 
@@ -279,6 +295,102 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg)
  */
 int retrieve_envelope(FILE *outstream, struct list *rfcheader)
 {
+  struct mime_record *mr;
+  int i,idx,delimiter,start;
+
+  fprintf(outstream,"(");
+
+  mime_findfield("date", rfcheader, &mr);
+  if (mr && strlen(mr->value) > 0)
+    fprintf(outstream, "\"%s\"",mr->value);
+  else
+    fprintf(outstream, "NIL");
+
+  mime_findfield("subject", rfcheader, &mr);
+  if (mr && strlen(mr->value) > 0)
+    fprintf(outstream, " \"%s\"",mr->value);
+  else
+    fprintf(outstream, " NIL");
+
+  /* now from, sender, reply-to, to, cc, bcc, in-reply-to fields;
+   * note that multiple mailaddresses are separated by ','
+   */
+
+  for (idx=0; envelope_items[idx]; idx++)
+    {
+      mime_findfield(envelope_items[idx], rfcheader, &mr);
+      if (mr && strlen(mr->value) > 0)
+	{
+	  fprintf(outstream,"(");
+      
+	  /* find ',' to split up multiple addresses */
+	  delimiter = 0;
+	  
+	  do
+	    {
+	      fprintf(outstream,"(");
+
+	      start = delimiter;
+
+	      for ( ; mr->value[delimiter] && mr->value[delimiter] != ','; delimiter++) ;
+
+	      if (mr->value[delimiter])
+		mr->value[delimiter] = 0; /* replace ',' by NULL-termination */
+	      else
+		delimiter = -1; /* this will be the last one */
+
+	      /* the address currently being processed is now contained within
+	       * &mr->value[start] 'till first '\0'
+	       */
+	      
+	      /* two possibilities for the mail address:
+	       * (1) name <user@domain>
+	       * (2) user@domain
+	       * scan for '<' to determine which case we should be dealing with 
+	       */
+
+	      for (i=start; mr->value[i] && mr->value[i] != '<'; i++) ;
+
+	      if (mr->value[i] && i>start+2)
+		{
+		  /* name is contained in &mr->value[start] untill &mr->value[i-2] */
+		  fprintf(outstream, "%.*s", i-start-1,&mr->value[start]);
+
+		  start = i+1; /* skip to after '<' */
+		}
+	      else
+		{
+		  fprintf(outstream, "NIL");
+		}
+
+	      fprintf(outstream, " NIL "); /* source route ?? smtp at-domain-list ?? */
+
+	      /* now display user domainname; &mr->value[start] is starting point */
+	      for (i=start; mr->value[i] && mr->value[i] != '>'; i++)
+		fprintf(outstream,"%c", (mr->value[i] == '@') ? ' ' : mr->value[i]);
+		  
+	      if (delimiter > 0)
+		mr->value[delimiter++] = ','; /* restore & prepare for next iteration */
+
+	      fprintf(outstream, ")");
+
+	    } while (delimiter > 0) ;
+	  
+	  fprintf(outstream,")");
+	}
+      else
+	fprintf(outstream, " NIL");
+  
+    }
+
+  mime_findfield("message-id", rfcheader, &mr);
+  if (mr && strlen(mr->value) > 0)
+    fprintf(outstream, " \"%s\"",mr->value);
+  else
+    fprintf(outstream, " NIL");
+
+  fprintf(outstream,")");
+
   return 0;
 }
 

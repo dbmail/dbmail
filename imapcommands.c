@@ -1527,11 +1527,26 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
       
       if (fetchitems.getMIME_IMB)
 	{
-	  retrieve_structure(ci->tx, &msg);
+	  fprintf(ci->tx,"BODYSTRUCTURE ");
+	  result = retrieve_structure(ci->tx, &msg);
+	  if (result == -1)
+	    {
+	      fprintf(ci->tx,"* BYE error fetching body structure\n");
+	      if (fetchitems.bodyfetches) free(fetchitems.bodyfetches);
+	      return -1;
+	    }
 	}
 
       if (fetchitems.getEnvelope)
 	{
+	  fprintf(ci->tx,"ENVELOPE ");
+	  result = retrieve_envelope(ci->tx, &msg.rfcheader);
+	  if (result == -1)
+	    {
+	      fprintf(ci->tx,"* BYE error fetching envelope structure\n");
+	      if (fetchitems.bodyfetches) free(fetchitems.bodyfetches);
+	      return -1;
+	    }
 	}
 
       if (fetchitems.getSize)
@@ -1566,12 +1581,13 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	      return -1;
 	    }
 	}
+
+      fprintf(ci->tx,")\n");
     }
       
   if (fetchitems.bodyfetches)
     free(fetchitems.bodyfetches);
   
-  fprintf(ci->tx," )\n");
   fprintf(ci->tx,"%s OK FETCH completed\n",tag);
   return 0;
 }

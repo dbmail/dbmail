@@ -60,8 +60,8 @@ int main (int argc, char *argv[]) {
 	trace(TRACE_STOP,"main(): fatal error creating MIME-header list\n");
 
       /* parse for destination addresses */
-	if (!mail_adr_list ("deliver-to",&users,&mimelist,&users,header,headersize))	
-		trace(TRACE_STOP,"main(): scanner found no email addresses");
+      if (!mail_adr_list ("deliver-to",&users,&mimelist,&users,header,headersize))	
+	trace(TRACE_STOP,"main(): scanner found no email addresses");
     } 
 
   /* inserting messages into the database */

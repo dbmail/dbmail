@@ -33,8 +33,10 @@ int _msg_fetch_inited = 0;
  */
 
 char msgbuf[MSGBUF_WINDOWSIZE];
-unsigned long rowlength,msgidx,buflen,rowpos;
-db_pos_t zeropos;
+unsigned long rowlength = 0,msgidx=0,buflen=0,rowpos=0;
+db_pos_t zeropos = 0;
+unsigned nblocks = 0;
+unsigned long *blklengths = NULL;
 
 
 int db_connect ()
@@ -269,80 +271,80 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines)
       return 0;
     } */
 
-	trace (TRACE_DEBUG,"db_send_message_lines(): sending [%d] lines from message [%lu]",lines,messageidnr);
+  trace (TRACE_DEBUG,"db_send_message_lines(): sending [%d] lines from message [%lu]",
+	 lines,messageidnr);
   
-	block_count=0;
+  block_count=0;
 
   while (((row = mysql_fetch_row(res))!=NULL) && ((lines>0) || (lines==-2)))
-	{
-		nextpos=row[2];
-		lengths = mysql_fetch_lengths(res);
-		rowlength = lengths[2];
+    {
+      nextpos=row[2];
+      lengths = mysql_fetch_lengths(res);
+      rowlength = lengths[2];
 		
 		/* reset our buffer */
-		*buffer='\0';
+      *buffer='\0';
 		
-		while ((*nextpos!='\0') && (rowlength>0) && ((lines>0) || (lines==-2)))
+      while ((*nextpos!='\0') && (rowlength>0) && ((lines>0) || (lines==-2)))
+	{
+	  if (*nextpos=='\n')
+	    {
+
+	      /* we found an newline, now check if there's a return before that */
+				
+	      if (lines!=-2)
+		lines--;
+				
+	      if (tmppos!=NULL)
 		{
-			if (*nextpos=='\n')
-			{
+		  if (*tmppos=='\r')
+		    sprintf (buffer,"%s%c",buffer,*nextpos);
+		  else 
+		    sprintf (buffer,"%s\r%c",buffer,*nextpos);
+		}
+	      else 
+		sprintf (buffer,"%s\r%c",buffer,*nextpos);
+	    }
+	  else
+	    {
+	      if (*nextpos=='.')
+		{
+		  if (tmppos!=NULL)
+		    {
+		      if (*tmppos=='\n')
+			sprintf (buffer,"%s.%c",buffer,*nextpos);
+		      else
+			sprintf (buffer,"%s%c",buffer,*nextpos);
+		    }
+		  else 
+		    sprintf (buffer,"%s%c",buffer,*nextpos);
+		}
+	      else	
+		sprintf (buffer,"%s%c",buffer,*nextpos);
+	    }
 
-				/* we found an newline, now check if there's
-					a return before that */
-				
-				if (lines!=-2)
-					lines--;
-				
-				if (tmppos!=NULL)
-				{
-					if (*tmppos=='\r')
-						sprintf (buffer,"%s%c",buffer,*nextpos);
-					else 
-						sprintf (buffer,"%s\r%c",buffer,*nextpos);
-				}
-				else 
-					sprintf (buffer,"%s\r%c",buffer,*nextpos);
-			}
-			else
-			{
-				if (*nextpos=='.')
-					{
-						if (tmppos!=NULL)
-							{
-								if (*tmppos=='\n')
-									sprintf (buffer,"%s.%c",buffer,*nextpos);
-								else
-									sprintf (buffer,"%s%c",buffer,*nextpos);
-							}
-						else 
-							sprintf (buffer,"%s%c",buffer,*nextpos);
-					}
-				else	
-					sprintf (buffer,"%s%c",buffer,*nextpos);
-			}
-
-			tmppos=nextpos;
+	  tmppos=nextpos;
 				
 			/* get the next character */
-			nextpos++;
-			rowlength--;
-			if (rowlength%500==0)
-				{
-				fprintf ((FILE *)fstream,"%s",buffer);
-				fflush ((FILE *)fstream);
-				*buffer='\0';
-				}
-		}
-		/* flush our buffer */
-		fprintf ((FILE *)fstream,"%s",buffer);
-		fflush ((FILE *)fstream);
+	  nextpos++;
+	  rowlength--;
+	  if (rowlength%500==0)
+	    {
+	      fprintf ((FILE *)fstream,"%s",buffer);
+	      fflush ((FILE *)fstream);
+	      *buffer='\0';
+	    }
 	}
+      /* flush our buffer */
+      fprintf ((FILE *)fstream,"%s",buffer);
+      fflush ((FILE *)fstream);
+    }
 
-   /* delimiter */
-   fprintf ((FILE *)fstream,"\r\n.\r\n");
-   mysql_free_result(res);
+  /* delimiter */
+  fprintf ((FILE *)fstream,"\r\n.\r\n");
+  mysql_free_result(res);
 
-   return 1;
+  return 1;
 }
 
 int db_send_message_special (void *fstream, unsigned long messageidnr, long lines, char *firstblock)
@@ -377,89 +379,89 @@ int db_send_message_special (void *fstream, unsigned long messageidnr, long line
       return 0;
     }
 
-	trace (TRACE_DEBUG,"db_send_message_special(): sending [%d] lines from message [%lu]",lines,messageidnr);
+  trace (TRACE_DEBUG,"db_send_message_special(): sending [%d] lines from message [%lu]",lines,messageidnr);
   
-	block_count=0;
+  block_count=0;
 
   while (((row = mysql_fetch_row(res))!=NULL) && ((lines>0) || (lines==-2)))
-	{
-		if (firstblock!=NULL)
-			nextpos=firstblock;
-		else
-			nextpos=row[2];
+    {
+      if (firstblock!=NULL)
+	nextpos=firstblock;
+      else
+	nextpos=row[2];
 
-		lengths = mysql_fetch_lengths(res);
-		rowlength = lengths[2];
+      lengths = mysql_fetch_lengths(res);
+      rowlength = lengths[2];
 		
-		/* reset our buffer */
-		*buffer='\0';
+      /* reset our buffer */
+      *buffer='\0';
 		
-		while ((*nextpos!='\0') && (rowlength>0) && ((lines>0) || (lines==-2)))
-		{
-			if (*nextpos=='\n')
-			{
+      while ((*nextpos!='\0') && (rowlength>0) && ((lines>0) || (lines==-2)))
+	{
+	  if (*nextpos=='\n')
+	    {
 
 				/* we found an newline, now check if there's
-					a return before that */
+				   a return before that */
 				
-				if (lines!=-2)
-					lines--;
+	      if (lines!=-2)
+		lines--;
 				
-				if (tmppos!=NULL)
-				{
-					if (*tmppos=='\r')
-						sprintf (buffer,"%s%c",buffer,*nextpos);
-					else 
-						sprintf (buffer,"%s\r%c",buffer,*nextpos);
-				}
-				else 
-					sprintf (buffer,"%s\r%c",buffer,*nextpos);
-			}
-			else
-			{
-				if (*nextpos=='.')
-					{
-						if (tmppos!=NULL)
-							{
-								if (*tmppos=='\n')
-									sprintf (buffer,"%s.%c",buffer,*nextpos);
-								else
-									sprintf (buffer,"%s%c",buffer,*nextpos);
-							}
-						else 
-							sprintf (buffer,"%s%c",buffer,*nextpos);
-					}
-				else	
-					sprintf (buffer,"%s%c",buffer,*nextpos);
-			}
-
-			tmppos=nextpos;
-				
-			/* get the next character */
-			nextpos++;
-			rowlength--;
-			if (rowlength%500==0)
-				{
-				fprintf ((FILE *)fstream,"%s",buffer);
-				fflush ((FILE *)fstream);
-				*buffer='\0';
-				}
+	      if (tmppos!=NULL)
+		{
+		  if (*tmppos=='\r')
+		    sprintf (buffer,"%s%c",buffer,*nextpos);
+		  else 
+		    sprintf (buffer,"%s\r%c",buffer,*nextpos);
 		}
+	      else 
+		sprintf (buffer,"%s\r%c",buffer,*nextpos);
+	    }
+	  else
+	    {
+	      if (*nextpos=='.')
+		{
+		  if (tmppos!=NULL)
+		    {
+		      if (*tmppos=='\n')
+			sprintf (buffer,"%s.%c",buffer,*nextpos);
+		      else
+			sprintf (buffer,"%s%c",buffer,*nextpos);
+		    }
+		  else 
+		    sprintf (buffer,"%s%c",buffer,*nextpos);
+		}
+	      else	
+		sprintf (buffer,"%s%c",buffer,*nextpos);
+	    }
 
-		/* flush our buffer */
-		fprintf ((FILE *)fstream,"%s",buffer);
-		fflush ((FILE *)fstream);
-		
-		/* setting firstblock to NULL, this way it will be used only once */
-		if (firstblock!=NULL)
-			firstblock=NULL;
+	  tmppos=nextpos;
+				
+	  /* get the next character */
+	  nextpos++;
+	  rowlength--;
+	  if (rowlength%500==0)
+	    {
+	      fprintf ((FILE *)fstream,"%s",buffer);
+	      fflush ((FILE *)fstream);
+	      *buffer='\0';
+	    }
 	}
 
-   /* delimiter */
-   fprintf ((FILE *)fstream,"\r\n.\r\n");
-   mysql_free_result(res);
+      /* flush our buffer */
+      fprintf ((FILE *)fstream,"%s",buffer);
+      fflush ((FILE *)fstream);
+		
+      /* setting firstblock to NULL, this way it will be used only once */
+      if (firstblock!=NULL)
+	firstblock=NULL;
+    }
 
-   return 1;
+  /* delimiter */
+  fprintf ((FILE *)fstream,"\r\n.\r\n");
+  mysql_free_result(res);
+
+  return 1;
 }
 
 unsigned long db_validate (char *user, char *password)
@@ -1801,6 +1803,7 @@ int db_get_msgdate(unsigned long mailboxuid, unsigned long msguid, char *date)
  */
 int db_init_msgfetch(unsigned long uid)
 {
+  int i;
   char query[DEF_QUERYSIZE];
   
   if (_msg_fetch_inited)
@@ -1822,17 +1825,52 @@ int db_init_msgfetch(unsigned long uid)
       return (-1);
     }
 
+  /* first determine block lengths */
+  nblocks = mysql_num_rows(_msg_result);
+  if (nblocks == 0)
+    {
+      trace(TRACE_ERROR, "db_init_msgfetch(): message has no blocks\n");
+      mysql_free_result(_msg_result);
+      return -1;                     /* msg should have 1 block at least */
+    }
+  
+  if (!(blklengths = (unsigned long*)malloc(nblocks * sizeof(unsigned long))))
+    {
+      trace(TRACE_ERROR, "db_init_msgfetch(): out of memory\n");
+      mysql_free_result(_msg_result);
+      return (-1);
+    }
+     
+  for (i=0; i<nblocks; i++)
+    {
+      _msgrow = mysql_fetch_row(_msg_result);
+      blklengths[i] = (mysql_fetch_lengths(_msg_result))[0];
+    }
+
+  /* re-execute query */
+  mysql_free_result(_msg_result);
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_init_msgfetch(): could not get message\n");
+      free(blklengths);
+      blklengths = NULL;
+      return (-1);
+    }
+
+  if ((_msg_result = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_init_msgfetch(): mysql_store_result failed: %s\n",
+	    mysql_error(&conn));
+      free(blklengths);
+      blklengths = NULL;
+      return (-1);
+    }
+
   _msg_fetch_inited = 1;
   msgidx = 0;
 
   /* save rows */
   _msgrow = mysql_fetch_row(_msg_result);
-  if (!_msgrow)
-    {
-      trace(TRACE_ERROR, "db_init_msgfetch(): message has no blocks\n");
-      _msg_fetch_inited = 0;
-      return -1;                     /* msg should have 1 block at least */
-    }
 
   rowlength = (mysql_fetch_lengths(_msg_result))[0];
   strncpy(msgbuf, _msgrow[0], MSGBUF_WINDOWSIZE-1);
@@ -1978,6 +2016,10 @@ void db_close_msgfetch()
   if (!_msg_fetch_inited)
     return; /* nothing to be done */
 
+  free(blklengths);
+  blklengths = NULL;
+  nblocks = 0;
+
   mysql_free_result(_msg_result);
   _msg_fetch_inited = 0;
 }
@@ -2106,7 +2148,29 @@ void db_give_msgpos(db_pos_t *pos)
  */
 unsigned long db_give_range_size(db_pos_t *start, db_pos_t *end)
 {
-  return (end->pos-start->pos+1)+1024*(end->block-start->block);
+  int i;
+  unsigned long size;
+
+  if (start->block > end->block)
+    return 0; /* bad range */
+
+  if (start->block >= nblocks || end->block >= nblocks)
+    return 0; /* bad range */
+
+  if (start->block == end->block)
+    return (start->pos > end->pos) ? 0 : (end->pos - start->pos);
+
+  if (start->pos >= blklengths[start->block] || end->pos >= blklengths[end->block])
+    return 0; /* bad range */
+
+  size = blklengths[start->block] - start->pos;
+
+  for (i = start->block+1; i<end->block; i++)
+    size += blklengths[i];
+
+  
+
+
 }
 
 /*
@@ -2226,12 +2290,13 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 	      if (db_update_msgbuf(sblen) == -1)
 		return -1;
 
-	      if (msgbuf[msgidx] == '\n' && 
-		  strncmp(&msgbuf[msgidx+1], stopbound, strlen(stopbound)) == 0)
+	      if (strncmp(&msgbuf[msgidx], stopbound, strlen(stopbound)) == 0)
 		{
 		  db_give_msgpos(&msg->bodyend);
 		  return 0;
 		}
+
+	      msgidx++;
 	    }
 
 	  /* end of buffer reached, bodyend is prev pos */
