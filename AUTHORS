@@ -1,13 +1,10 @@
 $Id$
 
-Eelco van Beek (eelco@ic-s.nl)
-Roel Rozendaal (roel@ic-s.nl)
-Ilja Booij (ilja@ic-s.nl)
+Eelco van Beek (eelco at ic-s dot nl)
+Roel Rozendaal (roel at ic-s dot nl)
+Ilja Booij (ilja at ic-s dot nl)
+Aaron Stone (aaron at serendipity dot cx):
 
-Aaron Stone (aaron@serendipity.cx):
-	entire files -> auth/authldap.c
-    all of the LMTP and Sieve files
-
-Paul Stevens (paul@nfg.nl):
+Paul Stevens (paul at nfg dot nl):
 	entire files -> sql/mysql/create_tables_innodb.mysql
 
