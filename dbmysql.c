@@ -2193,7 +2193,8 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
   if (db_update_msgbuf(MSGBUF_FORCE_UPDATE) == -1)
     return -1;
 
-  if ((nlines = mime_readheader(&msgbuf[msgidx], &msgidx, &msg->rfcheader)) == -1)
+  if ((nlines = mime_readheader(&msgbuf[msgidx], &msgidx, 
+				&msg->rfcheader, &msg->rfcheadersize)) == -1)
     return -1;   /* error reading header */
 
   totallines += nlines;
@@ -2354,6 +2355,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
   mime_message_t part;
   struct mime_record *mr;
   int sblen,nlines,totallines = 0;
+  unsigned dummy;
 
   trace(TRACE_DEBUG,"db_add_mime_children(): starting, splitbound: '%s'\n",splitbound);
 
@@ -2363,7 +2365,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
       memset(&part, 0, sizeof(part));
 
       /* should have a MIME header right here */
-      if ((nlines = mime_readheader(&msgbuf[msgidx], &msgidx, &part.mimeheader)) == -1)
+      if ((nlines = mime_readheader(&msgbuf[msgidx], &msgidx, &part.mimeheader, &dummy)) == -1)
 	{
 	  trace(TRACE_ERROR,"db_add_mime_children(): error reading MIME-header\n");
 	  return -1;   /* error reading header */
@@ -2504,6 +2506,13 @@ int db_msgdump(mime_message_t *msg, unsigned long msguid)
     }
   trace(TRACE_DEBUG,"*** RFC822-header end\n");
 
+  trace(TRACE_DEBUG,"*** Body range:\n");
+  trace(TRACE_DEBUG,"    (%lu, %lu) - (%lu, %lu), size: %lu\n",
+	msg->bodystart.block, msg->bodystart.pos,
+	msg->bodyend.block, msg->bodyend.pos,
+	msg->bodysize);
+	
+
 /*  trace(TRACE_DEBUG,"body: \n");
   db_dump_range(msg->bodystart, msg->bodyend, msguid);
   trace(TRACE_DEBUG,"*** body end\n");
@@ -2528,13 +2537,16 @@ int db_msgdump(mime_message_t *msg, unsigned long msguid)
  * dumps a range specified by start,end for the msg with ID msguid
  * starts dumping at offset from start up to a max of cnt bytes
  * if either cnt equals -1 the entire range will be dumped (starting @ offset)
+ *
+ * returns -1 on error or the number of output bytes otherwise
  */
-int db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long msguid,
+long db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long msguid,
 		  int offset, int cnt)
 {
   char query[DEF_QUERYSIZE];
-  int i,startpos,endpos;
-  unsigned long nbytespassed,outcnt;
+  int i,startpos,endpos,j;
+  unsigned long nbytespassed;
+  long outcnt;
   int distance;
 
   trace(TRACE_DEBUG,"Dumping range: (%lu,%lu) - (%lu,%lu)\n",
@@ -2576,23 +2588,51 @@ int db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long m
       return -1;
     }
 
+  outcnt = 0;
+
+  /* just one block? */
   if (start.block == end.block)
     {
       if (offset<0 || cnt<0)
-	fprintf(outstream,"%.*s\r\n",(int)(end.pos - start.pos),&row[0][start.pos]);
+	{
+	  /* dump everything */
+	  for (i=start.pos; i<end.pos; i++)
+	    {
+	      if (row[0][i] == '\n')
+		outcnt += fprintf(outstream,"\r\n");
+	      else
+		outcnt += fprintf(outstream,"%c",row[0][i]);
+	    }
+	}
       else
 	{
 	  if (offset+start.pos >= end.pos)
 	    return 0;
 
 	  if (cnt >= end.pos - start.pos)
-	    fprintf(outstream,"%.*s\r\n",(int)(end.pos - start.pos),&row[0][start.pos + offset]);
+	    {
+	      for (i=0;i<(end.pos - start.pos); i++)
+		{
+		  if (row[0][start.pos + offset+i] == '\n')
+		    outcnt += fprintf(outstream,"\r\n");
+		  else
+		    outcnt += fprintf(outstream,"%c",row[0][start.pos + offset+i]);
+		}
+	    }
 	  else
-	    fprintf(outstream,"%.*s\r\n",(int)cnt,&row[0][start.pos + offset]);
+	    {
+	      for (i=0;i<cnt; i++)
+		{
+		  if (row[0][start.pos + offset+i] == '\n')
+		    outcnt += fprintf(outstream,"\r\n");
+		  else
+		    outcnt += fprintf(outstream,"%c",row[0][start.pos + offset+i]);
+		}
+	    }
 	}
 
       mysql_free_result(res);
-      return 0;
+      return outcnt;
     }
 
 
@@ -2627,31 +2667,59 @@ int db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long m
 	{
 	  /* output */
 	  if (distance < cnt-outcnt || cnt<0)
-	    outcnt += fprintf(outstream,"%.*s", distance, &row[0][startpos]);
+	    for (j=0; j<distance; j++)
+	      {
+		if (row[0][startpos+j] == '\n')
+		  outcnt += fprintf(outstream,"\r\n");
+		else
+		  outcnt += fprintf(outstream,"%c", row[0][startpos+j]);
+	      }
 	  else
-	    outcnt += fprintf(outstream,"%.*s",(int)(cnt-outcnt),&row[0][startpos]);
+	    for (j=0; j<(cnt-outcnt); j++)
+	      {
+		if (row[0][startpos+j] == '\n')
+		  outcnt += fprintf(outstream,"\r\n");
+		else
+		  outcnt += fprintf(outstream,"%c", row[0][startpos+j]);
+	      }
 	}
       else
 	{
 	  /* output will occur in this block */
 	  
 	  if (distance < cnt-outcnt)
-	    outcnt += fprintf(outstream,"%.*s", distance, 
-			      &row[0][startpos + (offset - nbytespassed)]);
+	    for (j=0; j<distance; j++)
+	      {
+		if (row[0][startpos + (offset - nbytespassed)+j] == '\n')
+		  outcnt += fprintf(outstream,"\r\n");
+		else
+		  outcnt += fprintf(outstream,"%c", row[0][startpos + (offset - nbytespassed)+j]);
+	      }
 	  else
-	    outcnt += fprintf(outstream,"%.*s",(int)(cnt-outcnt),
-			      &row[0][startpos + (offset - nbytespassed)]);
+	    for (j=0; j<(cnt-outcnt); j++)
+	      {
+		if (row[0][startpos + (offset - nbytespassed)+j] == '\n')
+		  outcnt += fprintf(outstream,"\r\n");
+		else
+		  outcnt += fprintf(outstream,"%c", row[0][startpos + (offset - nbytespassed)+j]);
+	      }
 
 	  nbytespassed = offset; 
 	}
 	  
     }
 
-  fprintf(outstream,"%.*s",(int)end.pos,row[0]);
+  for (j=0; j<end.pos; j++)
+    {
+      if (row[0][j] == '\n')
+	outcnt += fprintf(outstream,"\r\n");
+      else
+	outcnt += fprintf(outstream,"%c", row[0][j]);
+    }
 
   mysql_free_result(res);
 
-  return 0;
+  return outcnt;
 }
 
 

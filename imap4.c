@@ -103,6 +103,8 @@ int imap_login(ClientInfo *ci)
 
 /*
  * Main handling procedure
+ *
+ * returns EOF on logout/fatal error or 1 otherwise
  */
 int imap_process(ClientInfo *ci)
 {
@@ -128,129 +130,141 @@ int imap_process(ClientInfo *ci)
   done = 0;
   args = NULL;
 
-  /* start main loop */
-  do
+  /* read command line */
+  fgets(line, MAX_LINESIZE, ci->rx);
+  if (ferror(ci->rx))
     {
-      /* read command line */
-      fgets(line, MAX_LINESIZE, ci->rx);
-      if (!checkchars(line))
-	{
-	  /* foute tekens ingetikt */
-	  fprintf(ci->tx, "* BAD Input contains invalid characters\n");
-	  continue;
-	}
+      db_disconnect();
+      trace(TRACE_MESSAGE, "IMAP: error %d on connection to client from IP %s\n",ferror(ci->rx),ci->ip);
+      return EOF;
+    }
 
-      /* clarify data a little */
-      clarify_data(line);
+  if (!checkchars(line))
+    {
+      /* foute tekens ingetikt */
+      fprintf(ci->tx, "* BAD Input contains invalid characters\n");
+      db_disconnect();
+      return 1;
+    }
 
-      trace(TRACE_MESSAGE,"COMMAND: [%s]\n",line);
+  /* clarify data a little */
+  clarify_data(line);
 
-      if (!(*line))
-	{
-	  fprintf(ci->tx, "* BAD No tag specified\n");
-	  continue;
-	}
+  trace(TRACE_MESSAGE,"COMMAND: [%s]\n",line);
+      
+  if (!(*line))
+    {
+      fprintf(ci->tx, "* BAD No tag specified\n");
+      db_disconnect();
+      return 1;
+    }
 	  
-      /* read tag & command */
-      cpy = line;
+  /* read tag & command */
+  cpy = line;
 
-      i = stridx(cpy,' '); /* find next space */
-      if (i == strlen(cpy))
-	{
-	  fprintf(ci->tx, "* BAD No command specified\n");
-	  continue;
-	}
+  i = stridx(cpy,' '); /* find next space */
+  if (i == strlen(cpy))
+    {
+      fprintf(ci->tx, "* BAD No command specified\n");
+      db_disconnect();
+      return 1;
+    }
 
-      tag = cpy;           /* set tag */
-      cpy[i] = '\0';
-      cpy = cpy+i+1;       /* cpy points to command now */
+  tag = cpy;           /* set tag */
+  cpy[i] = '\0';
+  cpy = cpy+i+1;       /* cpy points to command now */
 
-      command = cpy;       /* set command */
-      i = stridx(cpy,' '); /* find next space */
-      if (i == strlen(cpy))
-	{
-	  /* no arguments present */
-	  args = build_args_array("");
-	}
-      else
-	{
-	  cpy[i] = '\0';       /* terminated command */
-	  cpy = cpy+i+1;       /* cpy points to args now */
-	  args = build_args_array(cpy); /* build argument array */
-	}
+  command = cpy;       /* set command */
+  i = stridx(cpy,' '); /* find next space */
+  if (i == strlen(cpy))
+    {
+      /* no arguments present */
+      args = build_args_array("");
+    }
+  else
+    {
+      cpy[i] = '\0';       /* terminated command */
+      cpy = cpy+i+1;       /* cpy points to args now */
+      args = build_args_array(cpy); /* build argument array */
+    }
 
-      if (!args)
-	{
-	  fprintf(ci->tx,"* BAD Not enough memory OR invalid argument specified\n");
-	  continue;
-	}
+  if (!args)
+    {
+      fprintf(ci->tx,"* BAD Not enough memory OR invalid argument specified\n");
+      db_disconnect();
+      return 1;
+    }
 
-      /* check tag */
-      if (!checktag(tag))
-	{
-	  fprintf(ci->tx, "* BAD Invalid tag specified\n");
+  /* check tag */
+  if (!checktag(tag))
+    {
+      fprintf(ci->tx, "* BAD Invalid tag specified\n");
 	  
-	  /* free used memory */
-	  for (i=0; args[i]; i++) 
-	    {
-	      free(args[i]);
-	      args[i] = NULL;
-	    }
-	  continue;
-	}
-
-      for (i=IMAP_COMM_NONE; i<IMAP_COMM_LAST && strcasecmp(command, IMAP_COMMANDS[i]); i++) ;
-
-      if (i <= IMAP_COMM_NONE || i >= IMAP_COMM_LAST)
-	{
-	  /* unknown command */
-	  fprintf(ci->tx,"%s BAD command not recognized\n",tag);
-
-	  /* free used memory */
-	  for (i=0; args[i]; i++) 
-	    {
-	      free(args[i]);
-	      args[i] = NULL;
-	    }
-	  continue;
-	}
-
-      trace(TRACE_MESSAGE, "IMAPD: Executing command %s...\n",IMAP_COMMANDS[i]);
-
-      result = (*imap_handler_functions[i])(tag, args, ci);
-      if (result == -1)
-	{
-	  /* fatal error occurred, kick this user */
-	  done = 1;
-	}
-
-      if (result == 0 && i == IMAP_COMM_LOGOUT)
-	done = 1;
-
-      fflush(ci->tx); /* write! */
-
-      trace(TRACE_MESSAGE, "IMAPD: Finished command %s\n",IMAP_COMMANDS[i]);
-
+      /* free used memory */
       for (i=0; args[i]; i++) 
 	{
 	  free(args[i]);
 	  args[i] = NULL;
 	}
+      db_disconnect();
+      return 1;
+    }
 
-    } while (!done);
+  for (i=IMAP_COMM_NONE; i<IMAP_COMM_LAST && strcasecmp(command, IMAP_COMMANDS[i]); i++) ;
+
+  if (i <= IMAP_COMM_NONE || i >= IMAP_COMM_LAST)
+    {
+      /* unknown command */
+      fprintf(ci->tx,"%s BAD command not recognized\n",tag);
+
+	  /* free used memory */
+      for (i=0; args[i]; i++) 
+	{
+	  free(args[i]);
+	  args[i] = NULL;
+	}
+      db_disconnect();
+      return 1;
+    }
+
+  trace(TRACE_MESSAGE, "IMAPD: Executing command %s...\n",IMAP_COMMANDS[i]);
+
+  result = (*imap_handler_functions[i])(tag, args, ci);
+  if (result == -1)
+    {
+      /* fatal error occurred, kick this user */
+      done = 1;
+    }
+
+  if (result == 0 && i == IMAP_COMM_LOGOUT)
+    done = 1;
+
+  fflush(ci->tx); /* write! */
+
+  trace(TRACE_MESSAGE, "IMAPD: Finished command %s\n",IMAP_COMMANDS[i]);
+
+  for (i=0; args[i]; i++) 
+    {
+      free(args[i]);
+      args[i] = NULL;
+    }
 
   /* cleanup */
   db_disconnect();
 
-  /* say bye! */
-  fprintf(ci->tx,"%s OK completed\n",tag);
-  trace(TRACE_MESSAGE,"IMAP: Closing connection for client from IP %s\n",ci->ip);
+  if (done)
+    {
+      fprintf(ci->tx,"%s OK completed\n",tag);
+      trace(TRACE_MESSAGE,"IMAP: Closing connection for client from IP %s\n",ci->ip);
 
-  fflush(ci->tx);
-  shutdown(fileno(ci->tx),SHUT_WR);
-  fclose(ci->tx);
+      fflush(ci->tx);
+      shutdown(fileno(ci->tx),SHUT_WR);
+      fclose(ci->tx);
 
-  return EOF;
+      return EOF;
+    }
+
+  return 1;
 }
 
 

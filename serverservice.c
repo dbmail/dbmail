@@ -340,7 +340,7 @@ void SS_CloseServer(int sock)
  */
 void SS_sighandler(int sig)
 {
-  /*fprintf(stderr," !!! SIGPIPE !!! \n");*/ /* UNSAFE FUNCTION CALL !!! */
+  /* fprintf(stderr," !!! SIGPIPE !!! \n");*/ /* UNSAFE FUNCTION CALL !!! */
 
   if (client_being_processed)
     {

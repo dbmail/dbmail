@@ -28,7 +28,8 @@ int haystack_find(int haystacklen, char **haystack, const char *needle);
 
 int check_state_and_args(const char *command, const char *tag, char **args, 
 			 int nargs, int state, ClientInfo *ci);
-int get_fetch_items(char **args, fetch_items_t *fi);
+int next_fetch_item(char **args, int idx, fetch_items_t *fi);
+
 int stridx(const char *s, char ch);
 int checkchars(const char *s);
 int checktag(const char *s);

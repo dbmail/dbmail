@@ -30,6 +30,14 @@ extern const char AcceptedMailboxnameChars[];
 
 char base64encodestring[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
+/* returned by date_sql2imap() */
+char _imapdate[IMAP_INTERNALDATE_LEN] = "03-Nov-1979 00:00:00";
+
+const char *month_desc[]= 
+{ 
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+};
+
 const char *item_desc[] = 
 {
   "TEXT", "HEADER", "MIME", "HEADER.FIELDS", "HEADER.FIELDS.NOT"
@@ -101,7 +109,7 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg, int show_extension_
 	fprintf(outstream, " NIL");
 
       /* now output size */
-      fprintf(outstream, " %lu ", msg->bodysize);
+      fprintf(outstream, " %lu ", msg->bodysize + msg->bodylines);
 
 
       /* now check special cases, first case: message/rfc822 */
@@ -231,7 +239,7 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg, int show_extension_
 int retrieve_envelope(FILE *outstream, struct list *rfcheader)
 {
   struct mime_record *mr;
-  int i,idx,delimiter,start;
+  int i,idx,delimiter,start,inquote;
 
   fprintf(outstream,"(");
 
@@ -267,7 +275,9 @@ int retrieve_envelope(FILE *outstream, struct list *rfcheader)
 
 	      start = delimiter;
 
-	      for ( ; mr->value[delimiter] && mr->value[delimiter] != ','; delimiter++) ;
+	      for (inquote=0; mr->value[delimiter] && !(mr->value[delimiter] == ',' && !inquote); 
+		   delimiter++) 
+		if (mr->value[delimiter] == '\"') inquote ^= 1;
 
 	      if (mr->value[delimiter])
 		mr->value[delimiter] = 0; /* replace ',' by NULL-termination */
@@ -284,12 +294,18 @@ int retrieve_envelope(FILE *outstream, struct list *rfcheader)
 	       * scan for '<' to determine which case we should be dealing with 
 	       */
 
-	      for (i=start; mr->value[i] && mr->value[i] != '<'; i++) ;
+	      for (i=start, inquote=0; mr->value[i] && !(mr->value[i] == '<' && !inquote); i++) 
+		if (mr->value[i] == '\"') inquote ^= 1;
 
 	      if (mr->value[i] && i>start+2)
 		{
 		  /* name is contained in &mr->value[start] untill &mr->value[i-2] */
-		  fprintf(outstream, "\"%.*s\"", i-start-1,&mr->value[start]);
+		  /* name might be quoted */
+		  if (mr->value[start] == '\"')
+		    fprintf(outstream, "\"%.*s\"", i-start-3,&mr->value[start+1]);
+		  else
+		    fprintf(outstream, "\"%.*s\"", i-start-1,&mr->value[start]);
+
 		  start = i+1; /* skip to after '<' */
 		}
 	      else
@@ -300,7 +316,10 @@ int retrieve_envelope(FILE *outstream, struct list *rfcheader)
 	      /* now display user domainname; &mr->value[start] is starting point */
 	      fprintf(outstream, "\"");
 
-	      for (i=start; mr->value[i] && mr->value[i] != '>'; i++)
+	      /*
+	       * added a check for whitespace within the address (not good)
+	       */
+	      for (i=start; mr->value[i] && mr->value[i] != '>' && !isspace(mr->value[i]); i++)
 		{
 		  if (mr->value[i] == '@')
 		    fprintf(outstream,"\" \"");
@@ -319,6 +338,16 @@ int retrieve_envelope(FILE *outstream, struct list *rfcheader)
 	  
 	  fprintf(outstream,")");
 	}
+      else if (strcasecmp(envelope_items[idx], "reply-to") == 0)
+	{
+	  /* default this field */
+	  fprintf(outstream, "((NIL NIL \"reply\" \"replier.com\"))");
+	}
+      else if (strcasecmp(envelope_items[idx], "sender") == 0)
+	{
+	  /* default this field */
+	  fprintf(outstream, "((NIL NIL \"sender\" \"senders.com\"))");
+	}
       else
 	fprintf(outstream, " NIL");
   
@@ -330,7 +359,7 @@ int retrieve_envelope(FILE *outstream, struct list *rfcheader)
   else
     fprintf(outstream, " NIL");
 
-  fprintf(outstream,")");
+  fprintf(outstream,") ");
 
   return 0;
 }
@@ -513,7 +542,8 @@ int rfcheader_dump(FILE *outstream, struct list *rfcheader, char **fieldnames, i
   struct element *curr;
   FILE *tmpfile;
   char tmpname[] = "rfcheader_out.tmp.XXXXXX";
-  unsigned long size;
+  long size;
+  int retval;
 
   curr = list_getstart(rfcheader);
   if (rfcheader == NULL || curr == NULL)
@@ -536,7 +566,7 @@ int rfcheader_dump(FILE *outstream, struct list *rfcheader, char **fieldnames, i
 
       curr = curr->nextnode;
     }
-  fprintf(tmpfile,"\n");
+  fprintf(tmpfile,"\r\n");
   size = ftell(tmpfile);
   
   /* change var's if necessary */
@@ -553,21 +583,27 @@ int rfcheader_dump(FILE *outstream, struct list *rfcheader, char **fieldnames, i
 	    cnt = size-offset;
 	}
       else
-	{
-	  offset = 0;
-	  cnt = size;
-	}
+	cnt = size;
     }
 
   if (showsize)
-    fprintf(outstream, "<%d> {%d}\r\n", offset, cnt);
+    {
+      if (offset >= 0)
+	fprintf(outstream, "<%d> {%d}\r\n", offset, cnt);
+      else
+	fprintf(outstream, "{%d}\r\n", cnt);
+    }
 
-  fseek(tmpfile, offset, SEEK_SET);
+  if (offset >= 0)
+    fseek(tmpfile, offset, SEEK_SET);
+  else
+    fseek(tmpfile, 0, SEEK_SET);
 
   /* output data */
   while (cnt-- > 0)
     fputc(fgetc(tmpfile),outstream);
 	  
+  fputc(' ', outstream);
   fclose(tmpfile);
   unlink(tmpname);
   return 0;
@@ -587,7 +623,7 @@ int mimeheader_dump(FILE *outstream, struct list *mimeheader, int offset, int cn
   struct element *curr;
   FILE *tmpfile;
   char tmpname[] = "mimeheader_out.tmp.XXXXXX";
-  unsigned long size;
+  long size;
 
   curr = list_getstart(mimeheader);
   if (mimeheader == NULL || curr == NULL)
@@ -606,7 +642,7 @@ int mimeheader_dump(FILE *outstream, struct list *mimeheader, int offset, int cn
       fprintf(tmpfile, "%s: %s\r\n", mr->field, mr->value);
       curr = curr->nextnode;
     }
-  fprintf(tmpfile,"\n");
+  fprintf(tmpfile,"\r\n");
   size = ftell(tmpfile);
   
   /* change var's if necessary */
@@ -623,19 +659,24 @@ int mimeheader_dump(FILE *outstream, struct list *mimeheader, int offset, int cn
 	    cnt = size-offset;
 	}
       else
-	{
-	  offset = 0;
-	  cnt = size;
-	}
+	cnt = size;
     }
 
-  fprintf(outstream, "<%d> {%d}\r\n", offset, cnt);
-  fseek(tmpfile, offset, SEEK_SET);
+  if (offset >= 0)
+    fprintf(outstream, "<%d> {%d}\r\n", offset, cnt);
+  else
+    fprintf(outstream, "{%d}\r\n", cnt);
+
+  if (offset >= 0)
+    fseek(tmpfile, offset, SEEK_SET);
+  else
+    fseek(tmpfile, 0, SEEK_SET);
 
   /* output data */
   while (cnt-- > 0)
     fputc(fgetc(tmpfile),outstream);
 	  
+  fputc(' ', outstream);
   fclose(tmpfile);
   unlink(tmpname);
   return 0;
@@ -658,408 +699,289 @@ int haystack_find(int haystacklen, char **haystack, const char *needle)
 
 
 /*
- * get_fetch_items()
+ * next_fetch_item()
  *
- * retrieves the fetch item list (imap FETCH command) from an argument list.
- * the argument list is supposed to be in formatted according to 
- * build_args_array()
+ * retrieves next item to be fetched from an argument list starting at the given
+ * index. The update index is returned being -1 on 'no-more' and -2 on error.
+ * arglist is supposed to be formatted according to build_args_array()
  *
- * returns -1 on error, 0 on succes, 1 on fault (wrong arg list)
  */
-int get_fetch_items(char **args, fetch_items_t *fi)
+int next_fetch_item(char **args, int idx, fetch_items_t *fi)
 {
-  int i,j,inbody,bodyidx,invalidargs,shouldclose,delimpos,indigit,ispeek=0;
+  int invalidargs,indigit,j,ispeek,shouldclose,delimpos;
 
-  /* init fetch item list */
-  memset(fi, 0, sizeof(fetch_items_t));
-  
-  /* check multiple args: should be parenthesed */
-  if (args[1] && strcmp(args[0],"(") != 0)
+  memset(fi, 0, sizeof(fetch_items_t)); /* init */
+  fi->bodyfetch.itemtype = -1; /* expect no body fetches (a priori) */
+  invalidargs = 0;
+
+  if (!args[idx])
+    return -1; /* no more */
+
+  if (args[idx][0] == '(')
+    idx++;
+
+  if (!args[idx])
+    return -2; /* error */
+
+  if (strcasecmp(args[idx], "flags") == 0)
+    fi->getFlags = 1;
+  else if (strcasecmp(args[idx], "internaldate") == 0)
+    fi->getInternalDate = 1;
+  else if (strcasecmp(args[idx], "uid") == 0)
+    fi->getUID = 1;
+  else if (strcasecmp(args[idx], "rfc822") == 0)
     {
-      /* now args[0] should be 'body' or 'body.peek' */
-      if (strcasecmp(args[0],"body") != 0 && strcasecmp(args[0],"body.peek") != 0)
-	return 1;
+      fi->getRFC822 = 1;
+      fi->msgparse_needed = 1;
+    }
+  else if (strcasecmp(args[idx], "rfc822.peek") == 0)
+    {
+      fi->getRFC822Peek = 1;
+      fi->msgparse_needed = 1;
+    }
+  else if (strcasecmp(args[idx], "rfc822.header") == 0)
+    {
+      fi->getRFC822Header = 1;
+      fi->msgparse_needed = 1;
+    }
+  else if (strcasecmp(args[idx], "rfc822.size") == 0)
+    {
+      fi->getSize = 1;
+      fi->msgparse_needed = 1;
+    }
+  else if (strcasecmp(args[idx], "rfc822.text") == 0)
+    {
+      fi->getRFC822Text = 1;
+      fi->msgparse_needed = 1;
+    }
+  else if (strcasecmp(args[idx], "body") == 0 || strcasecmp(args[idx],"body.peek") == 0)
+    {
+      fi->msgparse_needed = 1;
+
+      if (!args[idx+1] || strcmp(args[idx+1],"[") != 0)
+	{
+	  if (strcasecmp(args[idx],"body.peek") == 0)
+	    return -2; /* error DONE */
+	  else
+	    fi->getMIME_IMB_noextension = 1; /* just BODY specified */
+	}
       else
 	{
-	  /* next ']' should be last arg */
-	  for (i=1; args[i] && strcmp(args[i],"]") != 0; i++) ;
+	  /* determine wheter or not to set the seen flag */
+	  ispeek = (strcasecmp(args[idx],"body.peek") == 0);
+	      
+	  /* now read the argument list to body */
+	  idx++; /* now pointing at '[' (not the last arg, parentheses are matched) */
+	  idx++; /* now pointing at what should be the item type */
 
-	  if (!args[i]) /* impossible according to build-args-array */
-	    return -1;
-
-	  if (args[i+1])
-	    return 1; /* wrong argument list */
-	}	    
-    }
-
-  /* determine how many body-fields are needed */
-  fi->nbodyfetches = 0;
-  for (i=0; args[i]; i++)
-    {
-      if ((strcasecmp(args[i], "body") == 0 || strcasecmp(args[i], "body.peek") == 0) &&
-	  args[i+1] && strcmp(args[i+1],"[") == 0)
-	{
-	  if (!args[i+2])
-	    return 1; 
-
-	  if (strcmp(args[i+2],"]") != 0)
-	    fi->nbodyfetches++;
-
-	  /* now walk on 'till this body[] finishes */
-	  i+=2;
-	  while (args[i] && strcmp(args[i],"]") != 0) i++;
-	}
-    }	
-
-  trace(TRACE_DEBUG,"Found %d body items\n",fi->nbodyfetches);
-
-  /* alloc mem */
-  if (fi->nbodyfetches > 0)
-    {
-      fi->bodyfetches = (body_fetch_t*)malloc(sizeof(body_fetch_t) * fi->nbodyfetches);
-      if (!fi->bodyfetches)
-	return -1;  /* out of mem */
-
-      memset(fi->bodyfetches, 0, sizeof(body_fetch_t) * fi->nbodyfetches);
-    }
-  else
-    fi->bodyfetches = NULL;
-
-  invalidargs = 0;
-  inbody = 0;
-  bodyidx = 0;
-
-  i = 0;
-  if (strcmp(args[i],"(") == 0) i++; /* skip parentheses */
-
-  for ( ; args[i]; i++)
-    {
-      trace(TRACE_DEBUG,"a[i]: %s\n",args[i]);
-      if (strcasecmp(args[i], "flags") == 0)
-	{
-	  fi->getFlags = 1;
-	}
-      else if (strcasecmp(args[i], "internaldate") == 0)
-	{
-	  fi->getInternalDate = 1;
-	}
-      else if (strcasecmp(args[i], "uid") == 0)
-	{
-	  fi->getUID = 1;
-	}
-      else if (strcasecmp(args[i], "rfc822") == 0)
-	{
-	  fi->getRFC822 = 1;
-	}
-      else if (strcasecmp(args[i], "rfc822.header") == 0)
-	{
-	  fi->getRFC822Header = 1;
-	}
-      else if (strcasecmp(args[i], "rfc822.size") == 0)
-	{
-	  fi->getSize = 1;
-	}
-      else if (strcasecmp(args[i], "rfc822.text") == 0)
-	{
-	  fi->getRFC822Text = 1;
-	}
-      else if (strcasecmp(args[i], "body") == 0 || strcasecmp(args[i],"body.peek") == 0)
-	{
-	  if (!args[i+1] || strcmp(args[i+1],"[") != 0)
+	  if (strcmp(args[idx], "]") == 0)
 	    {
-	      if (strcasecmp(args[i],"body.peek") == 0)
+	      /* specified body[] or body.peek[] */
+	      if (ispeek)
+		fi->getBodyTotalPeek = 1;
+	      else
+		fi->getBodyTotal = 1;
+
+	      return idx+1; /* DONE */
+	    }
+	      
+	  if (ispeek)
+	    fi->bodyfetch.noseen = 1;
+
+	  /* first check if there is a partspecifier (numbers & dots) */
+	  indigit = 0;
+	  for (j=0; args[idx][j]; j++)
+	    {
+	      if (isdigit(args[idx][j]))
 		{
-		  invalidargs = 1;
-		  break;
+		  indigit = 1;
+		  continue;
+		}
+	      else if (args[idx][j] == '.')
+		{
+		  if (!indigit)
+		    {
+		      /* error, single dot specified */
+		      invalidargs = 1;
+		      break;
+		    }
+		      
+		  indigit = 0;
+		  continue;
 		}
 	      else
-		{
-		  fi->getMIME_IMB_noextension = 1; /* just BODY specified */
-		}
+		break; /* other char found */
+	    }
+	      
+	  if (invalidargs)
+	    return -2; /* error DONE */
+
+	  if (j > 0)
+	    {
+	      if (indigit && args[idx][j])
+		return -2; /* error DONE */
+		
+	      /* partspecifier present, save it */
+	      if (j >= IMAP_MAX_PARTSPEC_LEN)
+		return -2; /* error DONE */
+
+	      strncpy(fi->bodyfetch.partspec, args[idx], j);
+	    }
+	  fi->bodyfetch.partspec[j] = '\0';
+
+	  shouldclose = 0;
+	  if (strcasecmp(&args[idx][j], "text") == 0)
+	    {
+	      fi->bodyfetch.itemtype = BFIT_TEXT;
+	      shouldclose = 1;
+	    }
+	  else if (strcasecmp(&args[idx][j], "header") == 0)
+	    {
+	      fi->bodyfetch.itemtype = BFIT_HEADER;
+	      shouldclose = 1;
+	    }
+	  else if (strcasecmp(&args[idx][j], "mime") == 0)
+	    {
+	      if (j == 0)
+		return -2; /* error DONE */
+
+	      fi->bodyfetch.itemtype = BFIT_MIME;
+	      shouldclose = 1;
+	    }
+	  else if (strcasecmp(&args[idx][j], "header.fields") == 0)
+	    fi->bodyfetch.itemtype = BFIT_HEADER_FIELDS;
+	  else if (strcasecmp(&args[idx][j], "header.fields.not") == 0)
+	    fi->bodyfetch.itemtype = BFIT_HEADER_FIELDS_NOT;
+	  else if (args[idx][j] == '\0')
+	    {
+	      fi->bodyfetch.itemtype = BFIT_TEXT_SILENT;
+	      shouldclose = 1;
+	    }
+	  else
+	    return -2; /* error DONE */
+
+	  if (shouldclose)
+	    {
+	      if (strcmp(args[idx+1],"]") != 0)
+		return -2; /* error DONE */
 	    }
 	  else
 	    {
-	      /* determine wheter or not to set the seen flag */
-	      ispeek = (strcasecmp(args[i],"body.peek") == 0);
-	      
-	      /* now read the argument list to body */
-	      i++; /* now pointing at '[' (not the last arg, parentheses are matched) */
-	      i++; /* now pointing at what should be the item type */
-
-	      if (strcmp(args[i], "]") == 0)
-		{
-		  /* specified body[] or body.peek[] */
-		  if (ispeek)
-		    fi->getBodyTotalPeek = 1;
-		  else
-		    fi->getBodyTotal = 1;
-
-		  /* do not increment i, it is done by the for-loop */
-		  continue;
-		}
-	      
-	      if (ispeek)
-		fi->bodyfetches[bodyidx].noseen = 1;
-
-	      /* first check if there is a partspecifier (numbers & dots) */
-	      indigit = 0;
-	      for (j=0; args[i][j]; j++)
-		{
-		  if (isdigit(args[i][j]))
-		    {
-		      indigit = 1;
-		      continue;
-		    }
-		  else if (args[i][j] == '.')
-		    {
-		      if (!indigit)
-			{
-			  /* error, single dot specified */
-			  invalidargs = 1;
-			  break;
-			}
-		      
-		      indigit = 0;
-		      continue;
-		    }
-		  else
-		    break; /* other char found */
-		}
-	      
-	      if (invalidargs)
-		break;
-
-	      if (j > 0)
-		{
-		  if (indigit)
-		    {
-		      /* wrong */
-		      invalidargs = 1;
-		      break;
-		    }
-
-		  /* partspecifier present, save it */
-		  if (j >= IMAP_MAX_PARTSPEC_LEN)
-		    {
-		      invalidargs = 1;
-		      break;
-		    }
-		  strncpy(fi->bodyfetches[bodyidx].partspec, args[i], j);
-		}
-	      fi->bodyfetches[bodyidx].partspec[j] = '\0';
-
-	      shouldclose = 0;
-	      if (strcasecmp(&args[i][j], "text") == 0)
-		{
-		  fi->bodyfetches[bodyidx].itemtype = BFIT_TEXT;
-		  shouldclose = 1;
-		}
-	      else if (strcasecmp(&args[i][j], "header") == 0)
-		{
-		  fi->bodyfetches[bodyidx].itemtype = BFIT_HEADER;
-		  shouldclose = 1;
-		}
-	      else if (strcasecmp(&args[i][j], "mime") == 0)
-		{
-		  if (j == 0)
-		    {
-		      /* no can do */
-		      invalidargs = 1;
-		      break;
-		    }
-		  fi->bodyfetches[bodyidx].itemtype = BFIT_MIME;
-		  shouldclose = 1;
-		}
-	      else if (strcasecmp(&args[i][j], "header.fields") == 0)
-		fi->bodyfetches[bodyidx].itemtype = BFIT_HEADER_FIELDS;
-	      else if (strcasecmp(&args[i][j], "header.fields.not") == 0)
-		fi->bodyfetches[bodyidx].itemtype = BFIT_HEADER_FIELDS_NOT;
-	      else
-		{
-		  invalidargs = 1;
-		  break;
-		}
-
-	      if (shouldclose)
-		{
-		  if (strcmp(args[i+1],"]") != 0)
-		    {
-		      invalidargs = 1;
-		      break;
-		    }
-		}
-	      else
-		{
-		  i++; /* should be at '(' now */
-		  if (strcmp(args[i],"(") != 0)
-		    {
-		      invalidargs = 1;
-		      break;
-		    }
-		  
-		  i++; /* at first item of field list now, remember idx */
-		  fi->bodyfetches[bodyidx].argstart = i;
-
-		  /* walk on untill list terminates (and it does 'cause parentheses are matched) */
-		  while (strcmp(args[i],")") != 0)
-		    i++;
-
-		  fi->bodyfetches[bodyidx].argcnt = i - fi->bodyfetches[bodyidx].argstart;
-		  
-		  if (fi->bodyfetches[bodyidx].argcnt == 0)
-		    {
-		      invalidargs = 1;
-		      break;
-		    }
-
-		  /* next argument should be ']' */
-		  if (strcmp(args[i+1],"]") != 0)
-		    {
-		      invalidargs = 1;
-		      break;
-		    }
-		}
-	      
-	      i++; /* points to ']' now */
-
-	      /* check if octet start/cnt is specified */
-	      if (args[i+1] && args[i+1][0] == '<')
-		{
-		  i++; /* advance */
-
-		  /* check argument */
-		  if (args[i][strlen(args[i]) - 1 ] != '>')
-		    {
-		      invalidargs = 1;
-		      break;
-		    }
-
-		  delimpos = -1;
-		  for (j=1; j < strlen(args[i])-1; j++)
-		    {
-		      if (args[i][j] == '.')
-			{
-			  if (delimpos != -1)
-			    {
-			      invalidargs = 1;
-			      break;
-			    }
-			  delimpos = j;
-			}
-		      else if (!isdigit(args[i][j]))
-			{
-			  invalidargs = 1;
-			  break;
-			}
-		    }
-
-		  if (invalidargs)
-		    break;
-
-		  if (delimpos == -1 || delimpos == 1 || delimpos == (strlen(args[i])-2) )
-		    {
-		      /* no delimiter found or at first/last pos */
-		      invalidargs = 1;
-		      break;
-		    }
-
-		  /* read the numbers */
-		  args[i][strlen(args[i]) - 1] = '\0';
-		  args[i][delimpos] = '\0';
-		  fi->bodyfetches[bodyidx].octetstart = atoi(&args[i][1]);
-		  fi->bodyfetches[bodyidx].octetcnt   = atoi(&args[i][delimpos+1]);
-			
-		  /* restore argument */
-		  args[i][delimpos] = '.';
-		  args[i][strlen(args[i]) - 1] = '>';
-		}
-	      else
-		{
-		  fi->bodyfetches[bodyidx].octetstart = 0;
-		  fi->bodyfetches[bodyidx].octetcnt   = -1;
-		}
-	      /* ok all done for body item */
-	      bodyidx++;
-	    }
-	}
-      else if (strcasecmp(args[i], "all") == 0)
-	{
-	  fi->getFlags = 1;
-	  fi->getInternalDate = 1;
-	  fi->getSize = 1;
-	  fi->getEnvelope = 1;
-	}
-      else if (strcasecmp(args[i], "fast") == 0)
-	{
-	  fi->getFlags = 1;
-	  fi->getInternalDate = 1;
-	  fi->getSize = 1;
-	}
-      else if (strcasecmp(args[i], "full") == 0)
-	{
-	  fi->getFlags = 1;
-	  fi->getInternalDate = 1;
-	  fi->getSize = 1;
-	  fi->getEnvelope = 1;
-	  fi->getMIME_IMB = 1;
-	}
-      else if (strcasecmp(args[i], "bodystructure") == 0)
-	{
-	  fi->getMIME_IMB = 1;
-	}
-      else if (strcasecmp(args[i], "envelope") == 0)
-	{
-	  fi->getEnvelope = 1;
-	}
-      else if (strcmp(args[i], ")") == 0)
-	{
-	  /* only allowed if last arg here */
-	  if (args[i+1])
-	    {
-	      invalidargs = 1;
-	      break;
-	    }
-	}
-      else
-	{
-	  invalidargs = 1;
-	  break;
-	}
-    }
-
-  if (invalidargs)
-    {
-      trace(TRACE_DEBUG,"invalid argument detected at %d: '%s'\n",i,args[i]);
-
-      free(fi->bodyfetches);
-      fi->bodyfetches = NULL;
-      return 1;
-    }
-
-  /* DEBUG dump read item list */
-  trace(TRACE_DEBUG,"get_item_list():\n");
-  trace(TRACE_DEBUG,"Got %d BODY / BODY.PEEK items\n",fi->nbodyfetches);
-  trace(TRACE_DEBUG,"Comparing with bodyidx now: %d\n",bodyidx);
+	      idx++; /* should be at '(' now */
+	      if (strcmp(args[idx],"(") != 0)
+		return -2; /* error DONE */
   
-  for (i=0; i<fi->nbodyfetches; i++)
-    {
-      trace(TRACE_DEBUG,"bodyfetch, type %d ('%s')\n",fi->bodyfetches[i].itemtype,
-	    item_desc[fi->bodyfetches[i].itemtype]);
-      trace(TRACE_DEBUG,"noseen: %d\n",fi->bodyfetches[i].noseen);
-      trace(TRACE_DEBUG,"size delimited: %d %d\n", fi->bodyfetches[i].octetstart,
-	    fi->bodyfetches[i].octetcnt);
+	      idx++; /* at first item of field list now, remember idx */
+	      fi->bodyfetch.argstart = idx;
 
-      trace(TRACE_DEBUG,"arguments: \n");
+	      /* walk on untill list terminates (and it does 'cause parentheses are matched) */
+	      while (strcmp(args[idx],")") != 0)
+		idx++;
 
-      for (j = fi->bodyfetches[i].argstart; 
-	   j < fi->bodyfetches[i].argstart+fi->bodyfetches[i].argcnt;
-	   j++)
-	trace(TRACE_DEBUG,"  arg[%d]: '%s'\n",j-fi->bodyfetches[i].argstart,args[j]);
+	      fi->bodyfetch.argcnt = idx - fi->bodyfetch.argstart;
+		  
+	      if (fi->bodyfetch.argcnt == 0 || strcmp(args[idx+1],"]") != 0)
+		return -2; /* error DONE */
+	    }
+	      
+	  idx++; /* points to ']' now */
+
+	  /* check if octet start/cnt is specified */
+	  if (args[idx+1] && args[idx+1][0] == '<')
+	    {
+	      idx++; /* advance */
+
+	      /* check argument */
+	      if (args[idx][strlen(args[idx]) - 1 ] != '>')
+		return -2; /* error DONE */
+
+	      delimpos = -1;
+	      for (j=1; j < strlen(args[idx])-1; j++)
+		{
+		  if (args[idx][j] == '.')
+		    {
+		      if (delimpos != -1)
+			{
+			  invalidargs = 1;
+			  break;
+			}
+		      delimpos = j;
+		    }
+		  else if (!isdigit(args[idx][j]))
+		    {
+		      invalidargs = 1;
+		      break;
+		    }
+		}
+	      
+	      if (invalidargs || delimpos == -1 || delimpos == 1 || delimpos == (strlen(args[idx])-2) )
+		return -2;  /* no delimiter found or at first/last pos OR invalid args DONE */
+
+	      /* read the numbers */
+	      args[idx][strlen(args[idx]) - 1] = '\0';
+	      args[idx][delimpos] = '\0';
+	      fi->bodyfetch.octetstart = atoi(&args[idx][1]);
+	      fi->bodyfetch.octetcnt   = atoi(&args[idx][delimpos+1]);
+			
+	      /* restore argument */
+	      args[idx][delimpos] = '.';
+	      args[idx][strlen(args[idx]) - 1] = '>';
+	    }
+	  else
+	    {
+	      fi->bodyfetch.octetstart = -1;
+	      fi->bodyfetch.octetcnt   = -1;
+	    }
+	  /* ok all done for body item */
+	}
     }
+  else if (strcasecmp(args[idx], "all") == 0)
+    {
+      fi->getFlags = 1;
+      fi->getInternalDate = 1;
+      fi->getSize = 1;
+      fi->getEnvelope = 1;
+      fi->msgparse_needed = 1;
+    }
+  else if (strcasecmp(args[idx], "fast") == 0)
+    {
+      fi->getFlags = 1;
+      fi->getInternalDate = 1;
+      fi->getSize = 1;
+      fi->msgparse_needed = 1;
+    }
+  else if (strcasecmp(args[idx], "full") == 0)
+    {
+      fi->getFlags = 1;
+      fi->getInternalDate = 1;
+      fi->getSize = 1;
+      fi->getEnvelope = 1;
+      fi->getMIME_IMB = 1;
+      fi->msgparse_needed = 1;
+    }
+  else if (strcasecmp(args[idx], "bodystructure") == 0)
+    {
+      fi->getMIME_IMB = 1;
+      fi->msgparse_needed = 1;
+    }
+  else if (strcasecmp(args[idx], "envelope") == 0)
+    {
+      fi->getEnvelope = 1;
+      fi->msgparse_needed = 1;
+    }
+  else if (strcmp(args[idx], ")") == 0)
+    {
+      /* only allowed if last arg here */
+      if (args[idx+1])
+	return -2; /* DONE */
+    }
+  else
+    return -2; /* DONE */
 
-  return 0;
-
+  trace(TRACE_DEBUG,"next_fetch_item(): args[idx = %d] = %s (returning %d)\n",idx,args[idx],idx+1);
+  return idx+1;
 }
+
 
 /*
  * give_chunks()
@@ -1487,8 +1409,54 @@ void clarify_data(char *str)
      
 
 /*
- * retourneert de idx v/h eerste voorkomen van ch in s,
- * of strlen(s) als ch niet voorkomt
+ * convert a mySQL date (yyyy-mm-dd hh:mm:ss) to a valid IMAP internal date:
+ *                       0123456789012345678
+ * dd-mon-yyyy hh:mm:ss with mon characters (i.e. 'Apr' for april)
+ * 01234567890123456789
+ * return value is valid until next function call.
+ * NOTE: sqldate is not tested for validity. Behaviour is undefined for non-sql
+ * dates (probably segfaults).
+ */
+char *date_sql2imap(char *sqldate)
+{
+  int mon;
+
+  /* copy day */
+  _imapdate[0] = sqldate[8];
+  _imapdate[1] = sqldate[9];
+
+  /* find out which month */
+  mon = strtoul(&sqldate[5], NULL, 10);
+  
+  /* copy month */
+  _imapdate[3] = month_desc[mon][0];
+  _imapdate[4] = month_desc[mon][1];
+  _imapdate[5] = month_desc[mon][2];
+
+  /* copy year */
+  _imapdate[7] = sqldate[0];
+  _imapdate[8] = sqldate[1];
+  _imapdate[9] = sqldate[2];
+  _imapdate[10] = sqldate[3];
+
+  /* copy hour */
+  _imapdate[12] = sqldate[11];
+  _imapdate[13] = sqldate[12];
+
+  /* copy minutes */
+  _imapdate[15] = sqldate[14];
+  _imapdate[16] = sqldate[15];
+
+  /* copy secs */
+  _imapdate[18] = sqldate[17];
+  _imapdate[19] = sqldate[18];
+
+  return _imapdate;
+}  
+
+
+/*
+ *
  */
 int stridx(const char *s, char ch)
 {

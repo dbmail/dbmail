@@ -165,11 +165,16 @@ int mime_list(char *blkdata, struct list *mimelist)
  * same as mime_list() but adds the number of bytes read to blkidx
  * and returns the number of newlines passed
  *
+ * headersize will be set to the actual amount of bytes used to store the header:
+ * field/value strlen()'s plus 4 bytes for each headeritem: ': ' (field/value
+ * separator) and '\r\n' to end the line.
+ *
  * returns -1 on failure, # '\n' on succes
  */
-int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist)
+int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist, unsigned *headersize)
 {
   int valid_mime_lines=0,idx,totallines=0;
+  unsigned fieldlen,vallen;
 	
   char *endptr, *startptr, *delimiter;
   struct mime_record *mr;
@@ -178,6 +183,8 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist)
   trace (TRACE_INFO, "mime_readheader(): entering mime loop\n");
 
   list_init(mimelist);
+  *headersize = 0;
+
   /* alloc mem */
   mr=(struct mime_record *)malloc(sizeof(struct mime_record));
 
@@ -235,9 +242,29 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist)
 	  while ((delimiter[idx]==':') || (delimiter[idx]==' ')) idx++;
 
 	  /* &delimiter[idx] is field value, startptr is field name */
-	  strncpy(mr->field, startptr, MIME_FIELD_MAX);
-	  strncpy(mr->value, &delimiter[idx], MIME_VALUE_MAX);
+	  fieldlen = snprintf(mr->field, MIME_FIELD_MAX, "%s", startptr);
+	  vallen   = snprintf(mr->value, MIME_VALUE_MAX, "%s", &delimiter[idx]);
 
+	  /* snprintf returns -1 if max is readched (libc <= 2.0.6) or the strlen (libc >= 2.1)
+	   * check the value. it does not count the \0.
+	   */
+
+	  if (fieldlen < 0 || fieldlen >= MIME_FIELD_MAX)
+	    *headersize += MIME_FIELD_MAX;
+	  else
+	    *headersize += fieldlen;
+
+	  if (vallen < 0 || vallen >= MIME_VALUE_MAX)
+	    *headersize += MIME_VALUE_MAX;
+	  else
+	    *headersize += vallen;
+
+	  *headersize += 4; /* <field>: <value>\r\n --> four more */
+
+
+/*	  strncpy(mr->field, startptr, MIME_FIELD_MAX);
+	  strncpy(mr->value, &delimiter[idx], MIME_VALUE_MAX);
+*/
 /*	  trace (TRACE_DEBUG,"mime_readheader(): mimepair found: [%s] [%s] \n",mr->field, mr->value); 
 */
 	  el = list_nodeadd(mimelist,mr,sizeof (*mr));

@@ -8,7 +8,7 @@
 #include "serverservice.h"
 
 #define IMAP_SERVER_VERSION "0.1"
-#define IMAP_CAPABILITY_STRING "IMAP4rev1 AUTH=LOGIN"
+#define IMAP_CAPABILITY_STRING "IMAP4"
 
 /* maximum size of a mailbox name */
 #define IMAP_MAX_MAILBOX_NAMELEN 100
@@ -38,7 +38,7 @@ typedef int (*IMAP_COMMAND_HANDLER)(char*, char**, ClientInfo*);
 
 enum BODY_FETCH_ITEM_TYPES { BFIT_TEXT, BFIT_HEADER, BFIT_MIME,
 			     BFIT_HEADER_FIELDS,
-			     BFIT_HEADER_FIELDS_NOT };
+			     BFIT_HEADER_FIELDS_NOT, BFIT_TEXT_SILENT };
 
 typedef struct 
 {
@@ -55,15 +55,19 @@ typedef struct
 
 typedef struct 
 {
-  int nbodyfetches;
+/*  int nbodyfetches;
   body_fetch_t *bodyfetches;
+*/
+  body_fetch_t bodyfetch;
+
+  int msgparse_needed;
 
   int getBodyTotal,getBodyTotalPeek;
   int getInternalDate,getFlags,getUID;
   int getMIME_IMB,getEnvelope,getSize;
   int getMIME_IMB_noextension;
   int getRFC822Header,getRFC822Text;
-  int getRFC822;
+  int getRFC822,getRFC822Peek;
 } fetch_items_t;
 
 
