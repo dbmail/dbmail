@@ -36,7 +36,7 @@ char *SS_GetErrorMsg()
 
 void SS_sighandler(int sig);
 
-int SS_MakeServerSock(const char *ipaddr, const char *port, int sighandmode)
+int SS_MakeServerSock(const char *ipaddr, const char *port)
 {
   int sock,r,len;
   struct sockaddr_in saServer;
@@ -93,13 +93,6 @@ int SS_MakeServerSock(const char *ipaddr, const char *port, int sighandmode)
       snprintf(ss_error_msg,SS_ERROR_MSG_LEN,"SS_MakeServerSock(): socket cannot listen.");
       close(sock);
       return -1;
-    }
-
-
-  /* serversocket is done, check for signal-handling */ 
-  if (sighandmode == SS_CATCH_KILL)
-    {
-      /* !!! */
     }
 
   snprintf(ss_error_msg,SS_ERROR_MSG_LEN,"Server socket has been created.");

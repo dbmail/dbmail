@@ -131,11 +131,16 @@ int main (int argc, char *argv[])
 	
   if ((newuser!=NULL) && (newgroup!=NULL))
   {
-	if (drop_priviledges (newuser, newgroup) != 0)
-		trace (TRACE_FATAL,"main(): could not set uid %s, gid %s",newuser,newgroup);
+    if (drop_priviledges (newuser, newgroup) != 0)
+      trace (TRACE_FATAL,"main(): could not set uid %s, gid %s",newuser,newgroup);
+    
+    free(newuser);
+    free(newgroup);
+    newuser = NULL;
+    newgroup = NULL;
   }
   else
-	trace(TRACE_FATAL,"main(): newuser and newgroup should not be NULL");
+    trace(TRACE_FATAL,"main(): newuser and newgroup should not be NULL");
 	
   /* server loop */
   trace (TRACE_MESSAGE,"main(): DBmail pop3 server ready");

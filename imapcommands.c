@@ -1363,7 +1363,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
   long dumpsize,cnt;
   struct list fetch_list;
   struct element *curr;
-  char tmpname[] = "fetch.tmp.XXXXXX";
+  char tmpname[] = "/tmp/fetch.tmp.XXXXXX";
   FILE *tmpfile;
 
   memset(&msg, 0, sizeof(msg));
@@ -1446,6 +1446,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
       /* make sure UID will be on the fetch-item list */
       memset(&fetchitem, 0, sizeof(fetchitem));
       fetchitem.getUID = 1;
+      fetchitem.bodyfetch.itemtype = -1;
 
       if (!list_nodeadd(&fetch_list, &fetchitem, sizeof(fetchitem)))
 	{

@@ -73,111 +73,114 @@ unsigned long db_insert_result ()
 
 int db_query (char *query)
 {
-	unsigned int querysize;
+  unsigned int querysize;
 
-	if (query != NULL)
-	{
-		querysize = strlen(query);
+  if (query != NULL)
+    {
+      querysize = strlen(query);
 
-		if (querysize > 0 )
-		{
-			if (mysql_real_query(&conn, query,strlen(query)) <0) 
-			{
-				trace(TRACE_ERROR,"db_query(): mysql_real_query failed: %s",mysql_error(&conn)); 
-				return -1;
-			}
-		}
-		else
-		{
-			trace (TRACE_ERROR,"db_query(): querysize is wrong: [%d]",querysize);
-			return -1;
-		}
-	}
-	else
+      if (querysize > 0 )
 	{
-		trace (TRACE_ERROR,"db_query(): query buffer is NULL, this is not supposed to happen",querysize);
-		return -1;
+	  if (mysql_real_query(&conn, query,strlen(query)) <0) 
+	    {
+	      trace(TRACE_ERROR,"db_query(): mysql_real_query failed: %s",mysql_error(&conn)); 
+	      return -1;
+	    }
 	}
+      else
+	{
+	  trace (TRACE_ERROR,"db_query(): querysize is wrong: [%d]",querysize);
+	  return -1;
+	}
+    }
+  else
+    {
+      trace (TRACE_ERROR,"db_query(): query buffer is NULL, this is not supposed to happen",querysize);
+      return -1;
+    }
   return 0;
 }
 
 int db_insert_config_item (char *item, char *value)
 {
-	/* insert_config_item will insert a configuration item in the database */
+  /* insert_config_item will insert a configuration item in the database */
 	
-	char *ckquery;
+  char *ckquery;
 
 	/* allocating memory for query */
-	memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
+  memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
 	
-	sprintf (ckquery, "UPDATE config SET %s=\"%s\"",item, value);
-	trace (TRACE_DEBUG,"insert_config_item(): executing query: [%s]",ckquery);
+  sprintf (ckquery, "UPDATE config SET %s=\"%s\"",item, value);
+  trace (TRACE_DEBUG,"insert_config_item(): executing query: [%s]",ckquery);
 
-	if (db_query(ckquery)==-1)
-	{
-		trace (TRACE_DEBUG,"insert_config_item(): item [%s] value [%s] failed",item,value);
-		free (ckquery);
-		return -1;
-	}
-	else 
-		return 0;
+  if (db_query(ckquery)==-1)
+    {
+      trace (TRACE_DEBUG,"insert_config_item(): item [%s] value [%s] failed",item,value);
+      free (ckquery);
+      return -1;
+    }
+  else 
+    return 0;
 }
 
 char *db_get_config_item (char *item, int type)
 {
-	/* retrieves an config item from database */
+  /* retrieves an config item from database */
 	
-	char *result;
-	char *ckquery;
+  char *result;
+  char *ckquery;
 	
-	/* allocating memory for query */
-	memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
+  /* allocating memory for query */
+  memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
 
-	sprintf (ckquery,"SELECT %s FROM config WHERE configid = 0",item);
-	trace (TRACE_DEBUG,"db_get_config_item(): retrieving config_item %s by query %s",item, ckquery);
+  sprintf (ckquery,"SELECT %s FROM config WHERE configid = 0",item);
+  trace (TRACE_DEBUG,"db_get_config_item(): retrieving config_item %s by query %s\n",item, ckquery);
 
-	if (db_query(ckquery)==-1)
-	{
-		if (type == CONFIG_MANDATORY)
-			trace (TRACE_FATAL,"db_get_config_item(): query failed could not get value for %s. This is needed to continue",item);
-		else
-			if (type == CONFIG_EMPTY)
-				trace (TRACE_ERROR,"db_get_config_item(): query failed. Could not get value for %s",item);
-		free (ckquery);
-		return NULL;
-	}
+  if (db_query(ckquery)==-1)
+    {
+      if (type == CONFIG_MANDATORY)
+	trace (TRACE_FATAL,"db_get_config_item(): query failed could not get value for %s. This is needed to continue\n",item);
+      else
+	if (type == CONFIG_EMPTY)
+	  trace (TRACE_ERROR,"db_get_config_item(): query failed. Could not get value for %s\n",item);
+      free (ckquery);
+      return NULL;
+    }
   
-	if ((res = mysql_store_result(&conn)) == NULL) 
-    	{
-		if (type == CONFIG_MANDATORY)
-      			trace(TRACE_FATAL,"db_get_config_item(): mysql_store_result failed: %s",mysql_error(&conn));
-		else
-			if (type == CONFIG_EMPTY)
-				trace (TRACE_ERROR,"db_get_config_item(): mysql_store_result failed (fatal): %s",mysql_error(&conn));
-     		free(ckquery);
-     		return 0;
-   	}
+  if ((res = mysql_store_result(&conn)) == NULL) 
+    {
+      if (type == CONFIG_MANDATORY)
+	trace(TRACE_FATAL,"db_get_config_item(): mysql_store_result failed: %s\n",mysql_error(&conn));
+      else
+	if (type == CONFIG_EMPTY)
+	  trace (TRACE_ERROR,"db_get_config_item(): mysql_store_result failed (fatal): %s\n",mysql_error(&conn));
+      free(ckquery);
+      return 0;
+    }
 
-	if ((row = mysql_fetch_row(res))==NULL)
-	{
-		if (type == CONFIG_MANDATORY)
-			trace (TRACE_FATAL,"db_get_config_item(): configvalue not found for %s. rowfetch failure. This is needed to continue",item);
-		else
-		if (type == CONFIG_EMPTY)
-			trace (TRACE_ERROR,"db_get_config_item(): configvalue not found. rowfetch failure.  Could not get value for %s",item);
-		free (ckquery);
-		return NULL;
-	}
+  if ((row = mysql_fetch_row(res))==NULL)
+    {
+      if (type == CONFIG_MANDATORY)
+	trace (TRACE_FATAL,"db_get_config_item(): configvalue not found for %s. rowfetch failure. This is needed to continue\n",item);
+      else
+	if (type == CONFIG_EMPTY)
+	  trace (TRACE_ERROR,"db_get_config_item(): configvalue not found. rowfetch failure.  Could not get value for %s\n",item);
+
+      mysql_free_result(res);
+      free (ckquery);
+      return NULL;
+    }
 	
-	if (row[0]!=NULL)
-	{
-		result=(char *)malloc(strlen(row[0])+1);
-		if (result!=NULL)
-			strcpy (result,row[0]);
-		trace (TRACE_DEBUG,"Ok result [%s]",result);
-	}
+  if (row[0]!=NULL)
+    {
+      result=(char *)malloc(strlen(row[0])+1);
+      if (result!=NULL)
+	strcpy (result,row[0]);
+      trace (TRACE_DEBUG,"Ok result [%s]\n",result);
+    }
 	
-	return result;
+  mysql_free_result(res);
+  return result;
 }
 	
 unsigned long db_get_inboxid (unsigned long *useridnr)
@@ -2456,7 +2459,7 @@ int db_update_msgbuf(int minlen)
   if (msgidx > ((buflen+1) - rowpos))
     {
       zeropos.block++;
-      zeropos.pos = (msgidx - ((buflen+1) - rowpos));
+      zeropos.pos = (msgidx - ((buflen) - rowpos));
     }
   else
     zeropos.pos += msgidx;
@@ -3143,7 +3146,7 @@ long db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long 
       distance = endpos - startpos;
 
       /* output */
-      if (expand_newlines)
+      if (expand_newlines == expand_newlines) /* always expand newlines */
 	{
 	  for (j=0; j<distance; j++)
 	    {
@@ -3161,6 +3164,7 @@ long db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long 
 
   mysql_free_result(res);
 
+  fflush(outstream);
   return outcnt;
 }
 

@@ -9,7 +9,7 @@
 #define  _DEBUG_H
 
 #define TRACE_TO_SYSLOG 1
-#define TRACE_VERBOSE 0
+#define TRACE_VERBOSE 1
 
 #define TRACE_LEVEL  5  /* 5 maximum debugging */
 /* #define TRACE_LEVEL 2 */ /* normal operations */
