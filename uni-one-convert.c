@@ -200,9 +200,10 @@ int process_mboxfile(char *file, u64_t userid)
 		  db_insert_message_block(blk, cnt, msgid);
 		  header_passed = 1;
 		  size += cnt;
+		  cnt = 0;
 		}
-
-	      cnt += len;
+	      else
+		cnt += len;
 	    }
 	  else
 	    {
@@ -214,13 +215,20 @@ int process_mboxfile(char *file, u64_t userid)
 		{
 		  /* write block */
 		  db_insert_message_block(blk, READ_BLOCK_SIZE-1, msgid);
-		  memmove(blk, &blk[cnt], cnt - READ_BLOCK_SIZE-1);
+		  memmove(blk, &blk[cnt], cnt - (READ_BLOCK_SIZE-1));
 		  size += cnt;
 		  cnt = 0;
 		}
 	    }
 	}
     }
+
+  /* update & end message */
+  db_insert_message_block(blk, cnt, msgid);
+
+  snprintf(newunique, UID_SIZE, "%lluA%lu", userid, time(NULL));
+  db_update_message(msgid, newunique, size+cnt, size+cnt+newlines);
+  trace(TRACE_ERROR, "message [%llu] inserted, [%u] bytes", msgid, size+cnt);
 
   fclose(infile);
   return 0;
