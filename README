@@ -7,6 +7,9 @@ In short:
 DBMAIL is a collection of programs that enables email to be
 stored in and retrieved from a database. 
 
+Read the INSTALL file for installation of DBMAIL.
+Read the EXTRAS file about extra features of DBMAIL.
+
 
 Why is it usefull?
 ==================
@@ -19,7 +22,7 @@ Well, for me it's usefull because a number of reasons.
   a flat file or a Maildir. We don't need to parse first.
 - In my case, i can easily link a mailbox to a certain client
   which enables me to let the client maintaining his/her own mailboxes
-  without me needed to technically support it.
+  without me needing to technically support it.
 - It's scalable. You can run the dbmail programs on different servers
   talking to the same database(cluster).
 - It is more secure. There's no need to maintain system users or write to
@@ -35,7 +38,7 @@ So i asked Roel <roel@ic-s.nl>, one of the people working with me
 here at IC&S, to join in developing DBMAIL further.
 Roel started working on the imapd, while i was debugging the pop3d
 and the injector program dbmail-smtp.
-After that, Roel improved all dbmail component for speed and killed a 
+After that, Roel improved all dbmail components for speed and killed a 
 lot of bugs allong the way.
 
 DBMAIL is now a company effort to create a fast, effecient and
@@ -48,11 +51,11 @@ send an email to info@ic-s.nl.
 ***
 Disclaimer: I nor IC&S is responsible for anything. This software
 could eat your harddisk then kill your processor. 
-Anyways, we can't do anything about it. It was your decision.
+Anyways, we can't do anything about it. 
 ***
 
 It should work with almost no problem. We have clients that run dbmail
-with more than 25.000 useraccounts. The system is fully stable.
+with more than 25.000 useraccounts. The system is stable.
 
 How do i install it?
 ====================
@@ -65,9 +68,7 @@ Future
 - more database drivers
 - GUI's
 
-
 check the website for further DBMAIL plans.
-
 
 What kind of licence is DBmail?
 ===============================

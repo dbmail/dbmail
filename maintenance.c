@@ -1,5 +1,5 @@
 /* $Id$
- * (c) 2000-2001 IC&S, The Netherlands
+ * (c) 2000-2002 IC&S, The Netherlands
  *
  * This is the dbmail housekeeping program. 
  *	It checks the integrity of the database and does a cleanup of all

@@ -1,7 +1,0 @@
-
-CREATE TABLE auto_replies (
-   auto_reply_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
-   user_idnr bigint(21) DEFAULT '0' NOT NULL,
-   reply_body mediumtext,
-   PRIMARY KEY (auto_reply_idnr)
-);
