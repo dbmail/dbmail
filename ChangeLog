@@ -3,6 +3,8 @@
 	* imaputil.c, dbmail-imapsession.c: some changes in bodystructure
 	response construction.
 	* sort.h (sort_and_deliver): removed redundant rfcsize argument.
+	* main.c, pipe.c, lmtp.c, dbmail-message.c, dbmail-message.h,
+	check_dbmail_common.c: unified read_whole_message functions.
 	
 2005-01-04  Paul Stevens <paul@nfg.nl>
 
