@@ -13,37 +13,52 @@ can contact me directly on ilja at ic dash s dot nl
 	* A DBMail installation
 	* A QMail installation
 
-2.	add the domain you wish to receive mail for in 
-	/var/qmail/control/rcpthosts, for example, you can add
+2.	Add the domain you wish to receive mail for to
+	/var/qmail/control/rcpthosts. For example, you can add
 	
 	example.com
 
 	(yes, only that :) ) to /var/qmail/control/rcpthosts
 
-	Add delivery information to /var/qmail/control/virtualdomains:
+3.	Add delivery information to /var/qmail/control/virtualdomains:
 	
 	example.com:dbmail
 
-	Make sure the file /var/qmail/control/locals exists and is empty!
+	where 'dbmail' is the dbmail system user you chose. If the file 
+	virtualdomains doesn't exist you have to create it.
+	
+4.	Make sure the file /var/qmail/control/locals exists and is empty.
 
-	Now create a file in the dbmail home directory called .qmail:
+5.	Now create a dot-qmail file in the dbmail home directory called 
+	.qmail-default that contains the next single line:
 
-	 ~dbmail/.qmail:	
 	|/usr/local/sbin/dbmail-smtp -d ${RECIPIENT:7}
 
 	The pipe tells qmail to pipe the email through a command.  The 
-	${RECIPIENT:7} takes the Environement Variable $RECIPIENT and chops off
+	${RECIPIENT:7} takes the environment variable $RECIPIENT and chops off
 	the first seven characters.  This is needed because the value of 
-	RECIPIENT is dbmail-the_email_address.  If your dbmail user is not dbmail,
-	 you'll need to change the 7 to the number of characters in your dbmail 
-	users's name plus one.  The other approach, I guess, would just be to 
-	add a dbmail alias of the form dbmail-allenej@squeakerbill.com for each
-	user...
+	RECIPIENT is dbmail-the_e-mail_address (for example: 
+	dbmail-john@example.com or dbmail-frank@example.com). 
+	
+	If your dbmail user is not dbmail, you'll need to change the 7 to 
+	the number of characters in your dbmail user's name plus one (the 
+	dash '-' after the dbmail user's name). So, if the dbmail user's 
+	name you chose is joe, your .qmail-default file should contain:
 
-	Currently we have no information on how to use QMail with dbmail-lmtp.
+	|/usr/local/sbin/dbmail-smtp -d ${RECIPIENT:4}
+	
+	For more information about dot-qmail files please check the 
+	man page of dot-qmail, you can check it online at: 
+	http://www.qmail.org/man/man5/dot-qmail.html. Pay special 
+	attention to the section 'Extension Addresses'.
+	
+
+Note: 	Right now Qmail (the most recent version of Qmail at the time of 
+	this writing is netqmail-1.05) has no support for the protocol LMTP, 
+	so you can't use dbmail-lmtp with Qmail in an "easy" way (as you do 
+	with Postfix).
+
 	If you know more about QMail and wish to contribute this information,
 	please e-mail me at ilja at ic dash s dot nl.
 
-	
 
-	
