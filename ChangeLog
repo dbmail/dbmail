@@ -1,5 +1,7 @@
 2004-04-21  Ilja Booij  <ilja@ic-s.nl>
 
+	* imap4.c (IMAPClientHandler): changed i to size_t
+
 	* imaputil.c (stridx): changed return type to size_t
 
 	* imapcommands.c (_ic_authenticate): no checks return value of

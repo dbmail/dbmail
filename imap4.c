@@ -129,7 +129,8 @@ int IMAPClientHandler(ClientInfo * ci)
 {
 	char line[MAX_LINESIZE];
 	char *tag = NULL, *cpy, **args, *command;
-	int i, done, result;
+	int done, result;
+	size_t i;
 	int nfaultyresponses;
 	imap_userdata_t *ud = NULL;
 	mailbox_t newmailbox;
@@ -263,7 +264,7 @@ int IMAPClientHandler(ClientInfo * ci)
 		cpy = line;
 
 		i = stridx(cpy, ' ');	/* find next space */
-		if (i == (int) strlen(cpy)) {
+		if (i == strlen(cpy)) {
 			if (checktag(cpy)) {
 				if (ci_write(ci->tx,
 					     "%s BAD No command specified\r\n",
@@ -301,7 +302,7 @@ int IMAPClientHandler(ClientInfo * ci)
 
 		command = cpy;	/* set command */
 		i = stridx(cpy, ' ');	/* find next space */
-		if (i == (int) strlen(cpy)) {
+		if (i == strlen(cpy)) {
 			/* no arguments present */
 			args = build_args_array("");
 		} else {
