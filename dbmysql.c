@@ -772,13 +772,13 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines,
 	  /* get the next character */
 	  nextpos++;
 	  rowlength--;
-	  
-	  if (rowlength%500==0) /* purge buffer at every 500 bytes */
+	   
+	  if (rowlength%6000==0)  /* purge buffer at every 6000 bytes  */
 	    {
 	      fprintf ((FILE *)fstream,"%s",buffer);
-	      fflush ((FILE *)fstream);
+	      /* fflush ((FILE *)fstream); */
 
-	      /* cleanup the buffer */
+	      /*  cleanup the buffer  */
 	      memset (buffer, '\0', (READ_BLOCK_SIZE*2));
 	    }
 	} 

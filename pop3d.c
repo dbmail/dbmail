@@ -167,6 +167,7 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
   /* set stream to line buffered mode 
 	* this way when we send a newline the buffer is flushed */
   setlinebuf(rx);
+  setlinebuf(tx); 
 
   /* connect to the database */
   if (db_connect()< 0)
