@@ -21,9 +21,9 @@ int main()
   time_t start,stop;
 
   openlog(PNAME, LOG_PID, LOG_MAIL);   /* open connection to syslog */
-  configure_debug(TRACE_ERROR, 1, 0);
+  configure_debug(TRACE_d, 1, 0);
 
-  memset(blk, READ_BLOCK_SIZE, 'x');
+  memset(blk, 'x', READ_BLOCK_SIZE);
   blk[READ_BLOCK_SIZE-1] = 0;
 
   if (db_connect() != 0)
@@ -40,8 +40,9 @@ int main()
       printf("inserting %d...", i);
       msgid = db_insert_message(1, 0, 0);
       db_insert_message_block(header, strlen(header), msgid);
-      db_insert_message_block(blk, READ_BLOCK_SIZE, msgid);
-      db_insert_message_block(blk, READ_BLOCK_SIZE, msgid);
+      printf("[%s]\n",blk);
+      db_insert_message_block(blk, READ_BLOCK_SIZE-1, msgid);
+      db_insert_message_block(blk, READ_BLOCK_SIZE-1, msgid);
       snprintf(uniqueid, 70, "testing%d%lu",i,start);
       db_update_message(msgid, uniqueid, strlen(header)+READ_BLOCK_SIZE+READ_BLOCK_SIZE, 0);
       printf("done\n");

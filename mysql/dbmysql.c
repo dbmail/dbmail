@@ -584,7 +584,7 @@ u64_t db_update_message (u64_t message_idnr, const char *unique_id,
 			 u64_t messagesize, u64_t rfcsize)
 {
   snprintf (query, DEF_QUERYSIZE,
-	   "UPDATE messages SET messagesize=%llu, unique_id=\"%s\", status='000', rfcsize = %llu"
+	   "UPDATE messages SET messagesize=%llu, unique_id=\"%s\", status='000', rfcsize = %llu "
 	    "where message_idnr=%llu",
 	   messagesize, unique_id, rfcsize, message_idnr);
   
@@ -654,7 +654,7 @@ int db_update_message_multiple(const char *unique_id, u64_t messagesize, u64_t r
     {
       snprintf(newunique, UID_SIZE, "%lluA%lu", uids[i], time(NULL));
       snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET "
-	       "messagesize=%llu, rfcsize = %llu, unique_id='%s', status='000'"
+	       "messagesize=%llu, rfcsize = %llu, unique_id='%s', status='000' "
 	       "WHERE message_idnr=%llu", messagesize, rfcsize, newunique, uids[i]);
 
       if (db_query(query) == -1)
