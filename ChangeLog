@@ -2,6 +2,8 @@
 
 	* db.c: added acl, pbsp and subscription to the list of tables
 	and added the dbmail_ prefix to them in all queries.
+	* db.c: also added auto_replies and auto_notifications to the 
+	list of tables and added the dbmail_ prefix to them in all queries.
 	* contrib/startup-scripts/gentoo/dbmail-lmtpd,imapd,pop3d:
 	pidfiles now go into /var/run rather than /var/run/dbmail
 	as most people won't have that directory already existing.

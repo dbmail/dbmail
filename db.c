@@ -56,11 +56,12 @@ extern const char *TO_CHAR;
 extern const char *TO_DATE;
 
 /** list of tables used in dbmail */
-#define DB_NTABLES 9
+#define DB_NTABLES 11
 const char *DB_TABLENAMES[DB_NTABLES] = {
 	"dbmail_users", "dbmail_aliases", "dbmail_mailboxes",
 	"dbmail_messages", "dbmail_physmessage", "dbmail_messageblks",
-	"dbmail_acl", "dbmail_subscription", "dbmail_pbsp"
+	"dbmail_acl", "dbmail_subscription", "dbmail_pbsp",
+	"dbmail_auto_notifications", "dbmail_auto_replies"
 };
 
 /** can be used for making queries to db backend */
@@ -631,7 +632,7 @@ int db_get_notify_address(u64_t user_idnr, char **notify_address)
 	*notify_address = NULL;
 
 	snprintf(query, DEF_QUERYSIZE, "SELECT notify_address "
-		 "FROM auto_notifications WHERE user_idnr = %llu",
+		 "FROM dbmail_auto_notifications WHERE user_idnr = %llu",
 		 user_idnr);
 
 	if (db_query(query) == -1) {
@@ -659,7 +660,7 @@ int db_get_reply_body(u64_t user_idnr, char **reply_body)
 	*reply_body = NULL;
 
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT reply_body FROM auto_replies "
+		 "SELECT reply_body FROM dbmail_auto_replies "
 		 "WHERE user_idnr = %llu", user_idnr);
 	if (db_query(query) == -1) {
 		/* query failed */
