@@ -84,6 +84,8 @@ unsigned long db_validate (char *user, char *password);
 unsigned long db_md5_validate (char *username,unsigned char *md5_apop_he, char *apop_stamp);
 int db_createsession (unsigned long useridnr, struct session *sessionptr);
 int db_update_pop (struct session *sessionptr);
+unsigned long db_set_deleted ();
+unsigned long db_deleted_purge();
 
 /* mailbox functionality */
 unsigned long db_findmailbox(const char *name, unsigned long useridnr);

@@ -1,4 +1,3 @@
-/* hoi ik ben eelco */
 /* $Id$
  * Functions for connecting and talking to the Mysql database */
 
@@ -534,8 +533,81 @@ int db_update_pop (struct session *sessionptr)
   return 0;
 }
 
+unsigned long db_deleted_purge()
+{
+	/* purges all the messages with a deleted status */
+	char *ckquery;
+	
+	memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
+	
+	/* first we're deleting all the messageblks */
+	sprintf (ckquery,"SELECT messageidnr FROM message WHERE status=003");
+	trace (TRACE_DEBUG,"db_deleted_purge(): executing query [%s]",ckquery);
+	
+	if (db_query(ckquery)==-1)
+	{
+		trace(TRACE_ERROR,"db_deleted_purge(): Cound not execute query [%s]",ckquery);
+		free(ckquery);
+		return -1;
+	}
+  
+	if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace (TRACE_ERROR,"db_deleted_purge(): mysql_store_result failed:  %s",mysql_error(&conn));
+      free(ckquery);
+      return -1;
+    }
+  
+	if (mysql_num_rows(res)<1)
+    {
+      free(ckquery);
+      return 0;
+    }
+	
+  while ((row = mysql_fetch_row(res))!=NULL)
+	{
+		sprintf (ckquery,"DELETE FROM messageblk WHERE messageidnr=%s",row[0]);
+		trace (TRACE_DEBUG,"db_deleted_purge(): executing query [%s]",ckquery);
+		if (db_query(ckquery)==-1)
+			return -1;
+	}
+
+	/* messageblks are deleted. Now delete the messages */
+	sprintf (ckquery,"DELETE FROM message WHERE status=003");
+	trace (TRACE_DEBUG,"db_deleted_purge(): executing query [%s]",ckquery);
+	if (db_query(ckquery)==-1)
+		return -1;
+	
+	return mysql_affected_rows(&conn);
+}
+
+unsigned long db_set_deleted ()
+{
+	/* sets al messages with status 002 to status 003 for final
+	 * deletion */
+
+	char *ckquery;
+	
+	memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
+	
+	/* first we're deleting all the messageblks */
+	sprintf (ckquery,"UPDATE message SET status=003 WHERE status=002");
+	trace (TRACE_DEBUG,"db_set_deleted(): executing query [%s]",ckquery);
+
+	if (db_query(ckquery)==-1)
+	{
+		trace(TRACE_ERROR,"db_set_deleted(): Cound not execute query [%s]",ckquery);
+		free(ckquery);
+		return -1;
+	}
+ 
+	return mysql_affected_rows(&conn);
+}
+
+
 int db_disconnect()
 {
+	mysql_close(&conn);
   return 0;
 }
 
