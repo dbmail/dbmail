@@ -261,7 +261,7 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 	  do
 	    {
 	      clearerr(rx);
-	      fread(&buf[cnt], 1, 1, rx);
+	      fread(&buffer[cnt], 1, 1, rx);
 	    } while (ferror(rx) && errno == EINTR);
 
 	  if (buffer[cnt] == '\n' || feof(rx) || ferror(rx))
