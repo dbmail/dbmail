@@ -455,28 +455,32 @@ static int store_message_temp(FILE * instream,
 			ringbuf[ringpos] = tmpchar;
 			ringpos = (ringpos + 1) % RING_SIZE;
 
-			if (tmpchar == '\n' && ringbuf[(ringpos - 1) % RING_SIZE] != '\r') {
+			/* Find \n not preceded by \r. */
+			if (ringbuf[(ringpos - 1) % RING_SIZE] == '\n'
+			 && ringbuf[(ringpos - 2) % RING_SIZE] != '\r') {
 				trace(TRACE_DEBUG, "store_message_temp(): counted an rfcline");
 				rfclines++;
 			}
 
+			/* Find the message terminator. */
 			if (ringbuf[(ringpos - 1) % RING_SIZE] == '\n'
 			 && ringbuf[(ringpos - 2) % RING_SIZE] == '\r'
 			 && ringbuf[(ringpos - 3) % RING_SIZE] == '.'
-			 && ringbuf[(ringpos - 4) % RING_SIZE] == '\n'
-			 && ringbuf[(ringpos - 5) % RING_SIZE] == '\r') {
-				/* Back off the trailing "\r\n.\r" (last \n not copied yet)
-				 * and set the myeof flag, stopping this loop. */
-				if (usedmem > 4)
-					usedmem -= 4;
-				else
+			 && ringbuf[(ringpos - 4) % RING_SIZE] == '\n') {
+				/* Back off the trailing ".\r" (final \n not copied yet)
+				 * The \n or \r\n preceding it are part of the message. */
+				if (usedmem > 2) {
+					usedmem -= 2;
+				} else {
 					usedmem = 0;
+				}
+				/* Flag to end the stream reading loop. */
 				myeof = 1;
 			} else {
 				/* Copy the current character into the storage buffer. */
 				strblock[usedmem++] = tmpchar;
 			}
-		}
+		} /* while (!myeof) */
 
 		if (ferror(instream)) {
 			trace(TRACE_ERROR,

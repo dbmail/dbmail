@@ -1,3 +1,10 @@
+2004-05-04  Aaron Stone  <aaron@serendipity.cx>
+
+	* pipe.c (store_message_temp): the ring buffer now only looks
+	for \n.\r\n, as some messages are in an "\n-only" format.
+	* lmtp.c: changed a debugging message from TRACE_ERROR
+	to TRACE_DEBUG.
+
 2004-05-03  Aaron Stone  <aaron@serendipity.cx>
 
 	* pipe.c (store_message_temp): added a small ring buffer to

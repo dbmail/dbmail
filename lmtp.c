@@ -629,7 +629,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 					}
 
 					if (header != NULL) {
-						trace(TRACE_ERROR,
+						trace(TRACE_DEBUG,
 						      "main(): size of read_header() header "
 						      "is [%llu]",
 						      headersize);
