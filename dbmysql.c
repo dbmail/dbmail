@@ -1930,6 +1930,13 @@ int db_findmailbox_by_regex(unsigned long ownerid, const char *pattern,
       return (-1);
     }
   
+  if (mysql_num_rows(res) == 0)
+    {
+      /* none exist, none matched */
+      *nchildren = 0;
+      return 0;
+    }
+
   /* alloc mem */
   tmp = (unsigned long *)my_malloc(sizeof(unsigned long) * mysql_num_rows(res));
   if (!tmp)
