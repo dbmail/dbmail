@@ -864,12 +864,15 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
       return 1;
     }
 
+  oldnamelen = strlen(args[0]);
+
   /* check if new name would invade structure as in
    * test (exists)
    * rename test test/testing
    * would create test/testing but delete test
    */
-  if (strncasecmp(args[0], args[1], strlen(args[0])) == 0)
+  if (strncasecmp(args[0], args[1], oldnamelen) == 0 &&
+      strlen(args[1]) > oldnamelen && args[1][oldnamelen] == '/')
     {
       fprintf(ci->tx,"%s NO new mailbox would invade mailbox structure\r\n",tag);
       return 1;
@@ -943,7 +946,6 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
     }
 
   /* replace name for each child */
-  oldnamelen = strlen(args[0]);
   for (i=0; i<nchildren; i++)
     {
       result = db_getmailboxname(children[i], name);
