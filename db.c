@@ -69,6 +69,8 @@ const char *DB_TABLENAMES[DB_NTABLES] = {
 static int db_set_quotum_used(u64_t user_idnr, u64_t curmail_size);
 /** add to quotum used */
 static int db_add_quotum_used(u64_t user_idnr, u64_t add_size);
+/** subtract from quotum used */
+static int db_subtract_quotum_used(u64_t user_idnr, u64_t sub_size);
 
 /** list all mailboxes owned by user owner_idnr */
 static int db_list_mailboxes_by_regex(u64_t owner_idnr, int only_subscribed,
@@ -79,7 +81,9 @@ static int db_get_message_size(u64_t message_idnr, u64_t *message_size);
 /** find a mailbox with a specific owner */
 static int db_findmailbox_owner(const char *name, u64_t owner_idnr, 
 				u64_t *mailbox_idnr);
- 
+/** get the total size of messages in a mailbox. Does not work recursively! */
+static int db_get_mailbox_size(u64_t mailbox_idnr, int only_deleted, 
+			       u64_t *mailbox_size); 
 /**
  * constructs a string for use in queries. This is used to not be dependent
  * on the internal representation of a date in the database. Whenever the
@@ -169,6 +173,22 @@ int db_add_quotum_used(u64_t user_idnr, u64_t add_size)
 		trace(TRACE_ERROR, "%s,%s: error adding [%llu] to quotum "
 		      "of user [%llu]", __FILE__, __FUNCTION__,
 		      add_size, user_idnr);
+		return -1;
+	}
+	return 0;
+}
+
+int db_subtract_quotum_used(u64_t user_idnr, u64_t sub_size)
+{
+	trace(TRACE_DEBUG, "%s,%s: subtracting %llu from mailsize",
+	      __FILE__, __FUNCTION__, sub_size);
+	snprintf(query, DEF_QUERYSIZE,
+		 "UPDATE users SET curmail_size = curmail_size - '%llu' "
+		 "WHERE user_idnr = '%llu'", sub_size, user_idnr);
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: error subtracting [%llu] from quotum "
+		      "of user [%llu]", __FILE__, __FUNCTION__,
+		      sub_size, user_idnr);
 		return -1;
 	}
 	return 0;
@@ -606,51 +626,6 @@ int db_update_physmessage(u64_t physmessage_id, u64_t message_size,
      }
      return 1;
 }
-     
-int db_insert_message_with_physmessage(u64_t physmessage_id,
-				       u64_t user_idnr,
-				       const char *deliver_to_mailbox,
-				       const char *unique_id,
-				       u64_t *message_idnr)
-{
-     u64_t deliver_to_mailbox_id;
-     int result = 0;
-
-     assert(message_idnr != NULL);
-
-     if (deliver_to_mailbox)
-	  result = db_findmailbox(deliver_to_mailbox, user_idnr,
-				  &deliver_to_mailbox_id);
-     else
-	  result = db_findmailbox("INBOX", user_idnr, &deliver_to_mailbox_id);
-     if (result < 0) {
-	  trace(TRACE_ERROR, "%s,%s: error finding mailbox [%s] for user "
-		"[%llu]", __FILE__, __FUNCTION__, deliver_to_mailbox, 
-		user_idnr);
-	  return -1;
-     }
-     if (deliver_to_mailbox_id == 0) {
-	  trace(TRACE_ERROR, "%s,%s: mailbox [%s] for user [%llu] could not "
-		"be found!", __FILE__, __FUNCTION__, 
-		deliver_to_mailbox, user_idnr);
-	  return -1;
-     }
-
-     snprintf(query, DEF_QUERYSIZE, "INSERT INTO "
-	      "messages(mailbox_idnr, physmessage_id, unique_id,"
-	      "recent_flag, status) "
-	      "VALUES ('%llu', '%llu', '%s', '1', '000')",
-	      deliver_to_mailbox_id,
-	      physmessage_id, unique_id ? unique_id : "");
-
-    if (db_query(query) == -1) {
-	 trace(TRACE_ERROR, "%s,%s: query failed", __FILE__, __FUNCTION__);
-	 return -1;
-    }
-    
-    *message_idnr = db_insert_result("message_idnr");
-    return 1;
-}
 
 int db_insert_message(u64_t user_idnr,
 		      const char *mailbox,
@@ -842,44 +817,6 @@ int db_insert_message_block(const char *block, u64_t block_size,
     return 1;
 }
 
-int db_rollback_insert(u64_t owner_idnr, const char *unique_id)
-{
-    u64_t msgid;
-
-    snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr "
-	     "FROM messages m, mailboxes mb "
-	     "WHERE mb.owner_idnr = '%llu' "
-	     "AND m.mailbox_idnr = mb.mailbox_idnr "
-	     "AND m.unique_id = '%s'", owner_idnr, unique_id);
-
-    if (db_query(query) == -1) {
-	trace(TRACE_ERROR, "%s,%s: could not select message-id",
-	      __FILE__, __FUNCTION__);
-	return -1;
-    }
-    if (db_num_rows() < 1) {
-	trace(TRACE_ERROR, "%s,%s: non-existent message specified",
-	      __FILE__, __FUNCTION__);
-	db_free_result();
-	return 0;
-    }
-
-    msgid = db_get_result_u64(0, 0);
-    db_free_result();
-
-    /* now just call db_delete_message to delete this message */
-    if (db_delete_message(msgid) == -1) {
-	trace(TRACE_ERROR, "%s,%s:error deleting message [%llu]",
-	      __FILE__, __FUNCTION__, msgid);
-	return -1;
-    }
-
-    /* recalculate used quotum */
-    db_calculate_quotum_used(owner_idnr);
-
-    return 0;
-}
-
 int db_log_ip(const char *ip)
 {
     u64_t id = 0;
@@ -981,7 +918,7 @@ int db_empty_mailbox(u64_t user_idnr)
     db_free_result();
 
     for (i = 0; i < n; i++) {
-	if (db_delete_mailbox(mboxids[i], 1) == -1) {
+	if (db_delete_mailbox(mboxids[i], 1, 1) == -1) {
 	    trace(TRACE_ERROR, "%s,%s: error emptying mailbox [%llu]",
 		  __FILE__, __FUNCTION__, mboxids[i]);
 	    result = -1;
@@ -1292,56 +1229,56 @@ int db_delete_physmessage(u64_t physmessage_id)
 
 int db_delete_message(u64_t message_idnr)
 {
-    u64_t physmessage_id;
+	u64_t physmessage_id;
 
-    /* find the physmessage_id of the message */
-    if (db_get_physmessage_id(message_idnr, &physmessage_id) < 0) {
-	    trace(TRACE_ERROR, "%s,%s: error getting physmessage_id",
-		  __FILE__, __FUNCTION__);
-	    return -1;
-    }
+	if (db_get_physmessage_id(message_idnr, &physmessage_id) < 0) {
+		trace(TRACE_ERROR, "%s,%s: error getting physmessage_id",
+		      __FILE__, __FUNCTION__);
+		return -1;
+	}
     
-    /* now delete the message from the message table */
-    snprintf(query, DEF_QUERYSIZE,
-	     "DELETE FROM messages WHERE message_idnr = '%llu'",
-	     message_idnr);
-    if (db_query(query) == -1) {
-	trace(TRACE_ERROR, "%s,%s: could not execute query",
-	      __FILE__, __FUNCTION__);
-	return -1;
-    }
-
-    /* find if there are other messages pointing to the same
-       physmessage entry */
-    snprintf(query, DEF_QUERYSIZE,
-	     "SELECT message_idnr FROM messages "
-	     "WHERE physmessage_id = '%llu'", physmessage_id);
-    if (db_query(query) == -1) {
-	    trace(TRACE_ERROR, "%s,%s: could not execute query",
-		  __FILE__, __FUNCTION__);
-	    return -1;
-    }
-    if (db_num_rows() == 0) {
-	    /* there are no other messages with the same physmessage left.
-	     *  the physmessage records and message blocks now need to
-	     * be removed */
-	    db_free_result();
-	    if (db_delete_physmessage(physmessage_id) < 0) {
-		    trace(TRACE_ERROR,"%s,%s: error deleting physmessage",
-			  __FILE__, __FUNCTION__);
-		    return -1;
-	    }
-    } else 
-	    db_free_result();
-    return 1;
+	/* now delete the message from the message table */
+	snprintf(query, DEF_QUERYSIZE,
+		 "DELETE FROM messages WHERE message_idnr = '%llu'",
+		 message_idnr);
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: could not execute query",
+		      __FILE__, __FUNCTION__);
+		return -1;
+	}
+	
+	/* find if there are other messages pointing to the same
+	   physmessage entry */
+	snprintf(query, DEF_QUERYSIZE,
+		 "SELECT message_idnr FROM messages "
+		 "WHERE physmessage_id = '%llu'", physmessage_id);
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: could not execute query",
+		      __FILE__, __FUNCTION__);
+		return -1;
+	}
+	if (db_num_rows() == 0) {
+		/* there are no other messages with the same physmessage left.
+		 *  the physmessage records and message blocks now need to
+		 * be removed */
+		db_free_result();
+		if (db_delete_physmessage(physmessage_id) < 0) {
+			trace(TRACE_ERROR,"%s,%s: error deleting physmessage",
+			      __FILE__, __FUNCTION__);
+			return -1;
+		}
+	} else 
+		db_free_result();
+	return 1;
 }
 
-int db_delete_mailbox(u64_t mailbox_idnr, int only_empty)
+int db_delete_mailbox(u64_t mailbox_idnr, int only_empty, int update_curmail_size)
 {
     unsigned i, n;
     u64_t *message_idnrs;
     u64_t user_idnr = 0;
     int result;
+    u64_t mailbox_size;
 
     /* get the user_idnr of the owner of the mailbox */
     result = db_get_mailbox_owner(mailbox_idnr, &user_idnr);
@@ -1356,6 +1293,15 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty)
 	    return 0;
     }
 
+    if (update_curmail_size) {
+	    if (db_get_mailbox_size(mailbox_idnr, 0, &mailbox_size) < 0) {
+		    trace(TRACE_ERROR, "%s,%s: error getting mailbox size "
+			  "for mailbox [%llu]", __FILE__, __FUNCTION__,
+			  mailbox_idnr);
+		    return -1;
+	    }
+    }
+    
     /* remove the mailbox */
     if (!only_empty) {
 	    /* delete mailbox */
@@ -1409,7 +1355,13 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty)
     my_free(message_idnrs);
 
     /* calculate the new quotum */
-    db_calculate_quotum_used(user_idnr);
+    if (update_curmail_size) {
+	    if (db_subtract_quotum_used(user_idnr, mailbox_size) < 0) {
+		    trace(TRACE_ERROR, "%s,%s: error decreasing curmail_size",
+			  __FILE__, __FUNCTION__);
+		    return -1;
+	    }
+    }
     return 0;
 }
 
@@ -1735,7 +1687,6 @@ int db_deleted_purge(u64_t *affected_rows)
 	      __FILE__, __FUNCTION__);
 	return -2;
     }
-
 
     /* delete each message */
     for (i = 0; i < *affected_rows; i++)
@@ -2416,20 +2367,6 @@ int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
     return 0;			/* success */
 }
 
-/* this function is redundant! 
- * also, because mailbox_idnr is unique, owner_idnr is not
- * needed in the call.*/
-int db_removemailbox(u64_t mailbox_idnr, u64_t owner_idnr UNUSED)
-{
-    if (db_delete_mailbox(mailbox_idnr, 0) == -1) {
-	trace(TRACE_ERROR, "%s,%s: error deleting mailbox",
-	      __FILE__, __FUNCTION__);
-	return -1;
-    }
-
-    return 0;
-}
-
 int db_isselectable(u64_t mailbox_idnr)
 {
     char *query_result;
@@ -2505,20 +2442,71 @@ int db_setselectable(u64_t mailbox_idnr, int select_value)
     return 0;
 }
 
-int db_removemsg(u64_t mailbox_idnr)
+int db_get_mailbox_size(u64_t mailbox_idnr, int only_deleted, u64_t *mailbox_size)
+{	
+	assert(mailbox_size != NULL);
+	
+	*mailbox_size = 0;
+	
+	if (only_deleted) 
+		snprintf(query, DEF_QUERYSIZE,
+			 "SELECT sum(pm.messagesize) FROM messages msg, "
+			 "physmessage pm "
+			 "WHERE msg.physmessage_id = pm.id "
+			 "AND msg.mailbox_idnr = '%llu' "
+			 "AND msg.status < '002' "
+			 "AND msg.deleted_flag = '1'", mailbox_idnr);
+	else
+		snprintf(query, DEF_QUERYSIZE,
+			 "SELECT sum(pm.messagesize) FROM messages msg, "
+			 "physmessage pm "
+			 "WHERE msg.physmessage_id = pm.id "
+			 "AND msg.mailbox_idnr = '%llu' "
+			 "AND msg.status < '002'", mailbox_idnr);
+
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: could not calculate size of "
+		      "mailbox [%llu]", __FILE__, __FUNCTION__, mailbox_idnr);
+		return -1;
+	}
+
+	if (db_num_rows() > 0) {
+		*mailbox_size = db_get_result_u64(0, 0);
+	}
+
+	db_free_result();
+	return 0;
+}
+
+int db_removemsg(u64_t user_idnr, u64_t mailbox_idnr)
 {
-    /* update messages belonging to this mailbox: mark as deleted (status 3) */
-    snprintf(query, DEF_QUERYSIZE,
-	     "UPDATE messages SET status='3' WHERE mailbox_idnr = '%llu'",
-	     mailbox_idnr);
+	u64_t mailbox_size;
 
-    if (db_query(query) == -1) {
-	trace(TRACE_ERROR, "%s,%s: could not update messages in mailbox",
-	      __FILE__, __FUNCTION__);
-	return -1;
-    }
+	if (db_get_mailbox_size(mailbox_idnr, 0, &mailbox_size) < 0) {
+		trace(TRACE_ERROR, "%s,%s: error getting size for mailbox [%llu]",
+		      __FILE__, __FUNCTION__, mailbox_idnr);
+		return -1;
+	}
 
-    return 0;			/* success */
+	/* update messages belonging to this mailbox: mark as deleted (status 3) */
+	snprintf(query, DEF_QUERYSIZE,
+		 "UPDATE messages SET status='3' WHERE mailbox_idnr = '%llu'",
+		 mailbox_idnr);
+
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: could not update messages in mailbox",
+		      __FILE__, __FUNCTION__);
+		return -1;
+	}
+	
+	if (db_subtract_quotum_used(user_idnr, mailbox_size) < 0) {
+		trace(TRACE_ERROR, "%s,%s: error subtracting mailbox size from "
+		      "used quotum for mailbox [%llu], user [%llu]. Database "
+		      "might be inconsistent. Run dbmail-maintenance",
+		      __FILE__, __FUNCTION__, mailbox_idnr, user_idnr);
+		return -1;
+	}
+	return 0;			/* success */
 }
 
 int db_movemsg(u64_t mailbox_to, u64_t mailbox_from)
@@ -2764,11 +2752,22 @@ int db_setmailboxname(u64_t mailbox_idnr, const char *name)
 	return 0;
 }
 
-int db_expunge(u64_t mailbox_idnr, u64_t ** msg_idnrs, u64_t * nmsgs)
+int db_expunge(u64_t mailbox_idnr, u64_t user_idnr, 
+	       u64_t ** msg_idnrs, u64_t * nmsgs)
 {
     u64_t i;
+    u64_t mailbox_size;
+    
+    if (db_get_mailbox_size(mailbox_idnr, 1, &mailbox_size) < 0) {
+	    trace(TRACE_ERROR, "%s,%s: error getting mailbox size "
+		  "for mailbox [%llu]", 
+		  __FILE__, __FUNCTION__, mailbox_idnr);
+	    return -1;
+    }
 
     if (nmsgs && msg_idnrs) {
+	
+
 	/* first select msg UIDs */
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT message_idnr FROM messages WHERE "
@@ -2783,7 +2782,7 @@ int db_expunge(u64_t mailbox_idnr, u64_t ** msg_idnrs, u64_t * nmsgs)
 		  __FUNCTION__);
 	    return -1;
 	}
-
+	
 	/* now alloc mem */
 	*nmsgs = db_num_rows();
 	*msg_idnrs = (u64_t *) my_malloc(sizeof(u64_t) * (*nmsgs));
@@ -2820,9 +2819,13 @@ int db_expunge(u64_t mailbox_idnr, u64_t ** msg_idnrs, u64_t * nmsgs)
 	return -1;
     }
 
-    /* calculate new quotum (use the msg_idnrs to get the user_idnr */
-    if (nmsgs && *nmsgs > 0)
-	    db_calculate_quotum_used(db_get_useridnr((*msg_idnrs)[0]));
+    if (db_subtract_quotum_used(user_idnr, mailbox_size) < 0) {
+	    trace(TRACE_ERROR, "%s,%s: error decreasing used quotum for "
+		  "user [%llu]. Database might be inconsistent now",
+		  __FILE__, __FUNCTION__, user_idnr);
+	    return -1;
+    }
+
     return 0;			/* success */
 }
 

@@ -846,7 +846,7 @@ int _ic_delete(char *tag, char **args, ClientInfo *ci)
 	}
 
       /* mailbox has inferior names; remove all msgs and set noselect flag */
-      result = db_removemsg(mboxid);
+      result = db_removemsg(ud->userid, mboxid);
       if (result != -1)
 	result = db_setselectable(mboxid, 0); /* set non-selectable flag */
 
@@ -872,7 +872,7 @@ int _ic_delete(char *tag, char **args, ClientInfo *ci)
     }
       
   /* ok remove mailbox */
-  db_removemailbox(mboxid, ud->userid);
+  db_delete_mailbox(mboxid, 0, 1);
 
   /* check if this was the currently selected mailbox */
   if (mboxid == ud->mailbox.uid)
@@ -1656,7 +1656,7 @@ int _ic_close(char *tag, char **args, ClientInfo *ci)
   /* only perform the expunge if the user has the right to do it */
   if (result == 1) 
 	  if (ud->mailbox.permission == IMAPPERM_READWRITE)
-		  db_expunge(ud->mailbox.uid, NULL, NULL);
+		  db_expunge(ud->mailbox.uid, ud->userid, NULL, NULL);
 
   
   /* ok, update state (always go to IMAPCS_AUTHENTICATED)*/
@@ -1706,7 +1706,7 @@ int _ic_expunge(char *tag, char **args, ClientInfo *ci)
   }
   
   /* delete messages */
-  result = db_expunge(ud->mailbox.uid,&msgids,&nmsgs);
+  result = db_expunge(ud->mailbox.uid, ud->userid, &msgids,&nmsgs);
   if (result == -1)
     {
       fprintf(ci->tx,"* BYE dbase/memory error\r\n");

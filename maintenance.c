@@ -417,7 +417,7 @@ int main(int argc, char *argv[])
 		printf("%llu ", id);
 	      else
 		{
-		  if (db_delete_mailbox(id, 0) < 0)
+		  if (db_delete_mailbox(id, 0, 0) < 0)
 		    printf("Warning: could not delete mailbox #%llu. Check log.\n", id);
 		  else
 		    printf("%llu (removed from dbase)\n",id);

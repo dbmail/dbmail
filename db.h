@@ -540,21 +540,6 @@ int db_insert_message(u64_t user_idnr,
 #define CREATE_IF_MBOX_NOT_FOUND 1
 #define ERROR_IF_MBOX_NOT_FOUND -1
 
-/**
- * \brief insert a message into the messages table for an existing physmessage.
- * \param physmessage_id id of the physmessage
- * \param user_idnr id of user
- * \param deliver_to_mailbox name of mailbox to deliver to
- * \param unique_id unique id for message
- * \return 
- *      - -1 on failure
- *      -  1 on success
- */
-int db_insert_message_with_physmessage(u64_t physmessage_id,
-				       u64_t user_idnr,
-				       const char *deliver_to_mailbox,
-				       const char *unique_id,
-                                       u64_t *message_idnr);
 	
 /**
  * \brief update unique_id, message_size and rfc_size of
@@ -606,20 +591,6 @@ int db_insert_message_block_physmessage(const char *block, u64_t block_size,
 */
 int db_insert_message_block(const char *block, u64_t block_size,
 			    u64_t message_idnr, u64_t *messageblock_idnr);
-/**
-* \brief perform a rollback for a message that has just been 
-* 		inserted
-* \param owner_idnr idrn of owner of message
-* \param unique_id unique id of message
-* \return 
-* 		- -1 on failure
-* 		- 0 on success
-* \attention Rollback only works for normal mailboxes. It does not work
-*            for shared mailboxes.
-* \todo change rollback to also support shared mailboxes.
-*/
-int db_rollback_insert(u64_t owner_idnr, const char *unique_id);
-
 /**
  * \brief log IP-address for POP/IMAP_BEFORE_SMTP. If the IP-address
  *        is already logged, it's timestamp is renewed.
@@ -776,12 +747,14 @@ int db_delete_message(u64_t message_idnr);
  * \param mailbox_idnr
  * \param only_empty if non-zero the mailbox will only be emptied,
  *        i.e. all messages in it will be deleted.
+ * \param update_curmail_size if non-zero the curmail_size of the
+ *        user will be updated.
 * \return 
 *    - -1 on database failure
 *    - 0 on success
 * \attention this function is unable to delete shared mailboxes
 */
-int db_delete_mailbox(u64_t mailbox_idnr, int only_empty);
+int db_delete_mailbox(u64_t mailbox_idnr, int only_empty, int update_curmail_size);
 
 /**
  * \brief write lines of message to fstream. Does not write the header
@@ -974,19 +947,7 @@ int db_find_create_mailbox(const char *name, u64_t owner_idnr, u64_t *mailbox_id
 int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr, 
 			   u64_t **children, int *nchildren,
 			   const char *filter);
-/**
- * \brief remove mailbox
- * \param mailbox_idnr
- * \param owner_idnr
- * \return 
- *     - -1 on failure
- *     - 0 on success
- * \bug the mailbox should have no children. However
- * this is not checked by the function. 
- * \bug This function is redundant. functions should not
- * call this function but should use db_delete_mailbox instead
- */
-int db_removemailbox(u64_t mailbox_idnr, u64_t owner_idnr);
+
 /**
  * \brief check if mailbox is selectable
  * \param mailbox_idnr
@@ -1024,7 +985,7 @@ int db_setselectable(u64_t mailbox_idnr, int select_value);
  * 		- -1 on failure
  * 		- 0 on success
  */
-int db_removemsg(u64_t mailbox_idnr);
+int db_removemsg(u64_t user_idnr, u64_t mailbox_idnr);
 /**
  * \brief move all messages from one mailbox to another.
  * \param mailbox_to idnr of mailbox to move messages from.
@@ -1082,8 +1043,9 @@ int db_setmailboxname(u64_t mailbox_idnr, const char *name);
  * \attention caller should free msg_idnrs and nmsg
  */
 int db_expunge(u64_t mailbox_idnr,
-		u64_t **msg_idnrs,
-		u64_t *nmsgs);
+	       u64_t user_idnr,
+	       u64_t **msg_idnrs,
+	       u64_t *nmsgs);
 /**
  * \brief get first unseen message in a mailbox
  * \param mailbox_idnr

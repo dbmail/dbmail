@@ -1,3 +1,34 @@
+2004-03-10  Ilja Booij  <ilja@ic-s.nl>
+
+	* maintenance.c (main): uses 0 for update_curmail_size.
+
+	* imapcommands.c (_ic_delete): uses db_delete_mailbox() instead
+	of db_removemailbox(). Uses 1 for update_curmail_size.
+	(_ic_close): calls db_expunge() with the user_idnr
+	(_ic_expunge):calls db_expunge() with the user_idnr
+
+	* db.h (db_insert_message_with_physmessage): removed because not used.
+	(db_removemailbox): removed because not used.
+	(db_rollback_insert): removed because not used
+
+	* db.c (db_subtract_quotum_used): new function. subtract a certain
+	amount from the users used quotum.
+	(db_get_mailbox_size): new function. gets the total size of all 
+	messages in a mailbox.
+	(db_removemsg): now updated the used quotum of a user after removing
+	the messages.
+	(db_insert_message_with_physmessage): removed because not used.
+	(db_removemailbox): removed because not used
+	(db_delete_mailbox): added parameter update_curmail_size. If this
+	parameter is non-zero, the curmail_size of the user has to be
+	updated after removing the mailbox (or only emptying it).
+	(db_empty_mailbox): uses db_delete_mailbox with 1 for 
+	update_curmail_size.
+	(db_rollback_insert): removed because not used
+	(db_expunge): uses db_subtract_quotum_used to subtract from used quotum.
+	has a new parameter. It now expects the user_idnr of the for whom the
+	mailbox is expunged. This saves a new lookup of the mailbox owner.
+
 2004-03-09  Ilja Booij  <ilja@ic-s.nl>
 
 	* db.h: removed db_update_message_multiple()
