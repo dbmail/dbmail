@@ -1971,7 +1971,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
 	  for (i=0; i<nmatching; i++)
 	    {
-	      if (fi->getSize && msginfo[i].rfcsize == 0)
+	      if (fi->getSize && msginfo[i].rfcsize == 0);
 	    }
 	}
 	  
