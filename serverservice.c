@@ -62,7 +62,6 @@ int *ss_n_default_children_used;
 char txbuf[TXBUFSIZE];
 
 
-
 char *SS_GetErrorMsg()
 {
   return ss_error_msg;

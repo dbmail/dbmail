@@ -252,7 +252,7 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist,
 	      if (delimiter[idx+j] == '\n')
 		{
 		  mr->value[vallen++] = '\r';
-		  totallines++;
+		  /* dont count newline: this \n is already expanded */
 		}
 	      
 	      mr->value[vallen] = delimiter[idx+j];

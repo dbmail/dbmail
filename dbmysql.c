@@ -2969,12 +2969,12 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
 	      msgidx++;
 	    }
 
-	  return totallines;
+	  return totallines+1; /* ??? */
 	}
 
       if (msgbuf[msgidx] == '\n') 
 	{
-	  totallines++;
+/*	  totallines++;*/
 	  msgidx++; /* skip newline */
 	}
     }

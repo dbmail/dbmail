@@ -1628,6 +1628,8 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	      rewind(tmpfile);
 	      fflush(ci->tx);
 
+	      only_text_from_msgpart = 0;
+
 	      if (!headers_fetched && fi->msgparse_needed)
 		{
 		  /* parse message structure */
