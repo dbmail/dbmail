@@ -6,7 +6,11 @@
 	* imapcommands.c (_ic_login): return if authentication fails.
 	* dbmail_imapsession.c (dbmail_imap_session_mailbox_open): send tagged
 	NO response to client if mailbox doesn't exists.
-
+	* db.c, misc.c: string cleanups in mailbox_add_namespace.
+	* sql/sqlite/create_tables.sqlite: fixed dbmail_acl_constraint_update
+	trigger.
+	* debian/rules, debian/control: added support for sqlite based debian
+	packages.
 
 2005-02-18  Paul Stevens <paul@nfg.nl>
 
