@@ -69,6 +69,7 @@ CREATE TRIGGER dbmail_subscription_constraint_insert
 		SELECT COUNT(*) AS a FROM dbmail_subscription
 			WHERE new.user_id = dbmail_subscription.user_id
 			AND new.mailbox_id = dbmail_subscription.mailbox_id
+			AND new.rowid != dbmail_subscription.rowid
 		) AS foo;
 	END;
 CREATE TRIGGER dbmail_subscription_constraint_update
@@ -79,6 +80,7 @@ CREATE TRIGGER dbmail_subscription_constraint_update
 		SELECT COUNT(*) AS a FROM dbmail_subscription
 			WHERE new.user_id = dbmail_subscription.user_id
 			AND new.mailbox_id = dbmail_subscription.mailbox_id
+			AND new.rowid != dbmail_subscription.rowid
 		) AS foo;
 	END;
 
@@ -103,16 +105,18 @@ CREATE TRIGGER dbmail_acl_constraint_insert
 		SELECT COUNT(*) AS a FROM dbmail_acl
 			WHERE new.user_id = dbmail_acl.user_id
 			AND new.mailbox_id = dbmail_acl.mailbox_id
+			AND new.rowid != dbmail_acl.rowid
 		) AS foo;
 	END;
 CREATE TRIGGER dbmail_acl_constraint_update
 	BEFORE UPDATE ON dbmail_acl
 	BEGIN
-		SELECT CASE WHEN foo.a > 1 THEN RAISE(ROLLBACK, 'UNIQUEness constraint violation')
+		SELECT CASE WHEN foo.a > 0 THEN RAISE(ROLLBACK, 'UNIQUEness constraint violation')
 		ELSE 1 END FROM (
 		SELECT COUNT(*) AS a FROM dbmail_acl
 			WHERE new.user_id = dbmail_acl.user_id
 			AND new.mailbox_id = dbmail_acl.mailbox_id
+			AND new.rowid != dbmail_acl.rowid
 		) AS foo;
 	END;
 	
