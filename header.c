@@ -64,11 +64,12 @@ extern struct list smtpItems;
 int read_header(FILE * instream, u64_t * headerrfcsize, u64_t * headersize,
 		char **header)
 {
+	int tmpchar;
 	char *tmpline;
 	char *tmpheader;
 	u64_t tmpheadersize = 0, tmpheaderrfcsize = 0;
 	size_t usedmem = 0, linemem = 0;
-	size_t allocated_blocks = 1, i;
+	size_t allocated_blocks = 1;
 	int myeof = 0;
 
 	memtst((tmpheader =
@@ -83,28 +84,29 @@ int read_header(FILE * instream, u64_t * headerrfcsize, u64_t * headersize,
 	/* the header will be everything up until \n\n or an EOF of */
 	/* in_stream (instream) */
 
-	trace(TRACE_INFO, "read_header(): readheader start\n");
+	trace(TRACE_INFO, "read_header(): readheader start");
 
 	while (!feof(instream) && !myeof) {
-		/* fread may stop before finding a \n, or may continue reading past one. */
-		linemem = fread(tmpline, sizeof(char), MAX_LINE_SIZE, instream);
+
+		/* Read a char at a time until there's a full line in tmpline. */
+		linemem = 0;
+		for (;;) {
+			if (linemem == MAX_LINE_SIZE)
+				break;
+
+			tmpchar = fgetc(instream);
+			if (tmpchar == EOF)
+				break;
+
+			tmpline[linemem++] = tmpchar;
+			if (tmpchar == '\n'
+			    && tmpline[linemem-1] != '\r')
+				tmpheaderrfcsize++;
+		}
 		tmpheadersize += linemem;
 		tmpheaderrfcsize += linemem;
 
-		/* Check to see if we're starting on a CR/NL boundary. */
-		if (tmpline[0] == '\n' && tmpheader[usedmem] != '\r')
-			tmpheaderrfcsize++;
-
-		/* Check to see if we read in any newlines. If so, look to
-		 * see if they are preceded by carriage returns.
-		 * If not, increment the rfcsize because rfc output 
-		 * automatically inserts carriage returns. */
-		for (i = 1; i < linemem; i++) {
-			if (tmpline[i] == '\n'
-			    && tmpline[i - 1] != '\r')
-				tmpheaderrfcsize++;
-		}
-
+		/* fgetc return EOF for both EOF and ERR. Check it here! */
 		if (ferror(instream)) {
 			trace(TRACE_ERROR,
 			      "read_header(): error on instream: [%s]",
@@ -177,8 +179,7 @@ int read_header(FILE * instream, u64_t * headerrfcsize, u64_t * headersize,
 	my_free(tmpline);
 
 	if (usedmem == 0) {
-		/* FIXME: Why are we hard aborting? That's ridiculous. */
-		trace(TRACE_STOP,
+		trace(TRACE_ERROR,
 		      "read_header(): no valid mail header found\n");
 		if (tmpheader)
 			my_free(tmpheader);

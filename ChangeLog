@@ -1,5 +1,10 @@
 2004-04-23  Aaron Stone  <aaron@serendipity.cx>
 
+	* header.c (read_header): switched from fread to fgetc.
+	* main.c (print_usage): added two spaces to line up the columns.
+
+2004-04-23  Aaron Stone  <aaron@serendipity.cx>
+
 	* dsn.c/dsn.h (dsn_tostring): added new function dsn_tostring,
 	which take a delivery_status_t argument and returns corresponding
 	text for the class, subject and detail codes.

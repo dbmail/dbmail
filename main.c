@@ -75,7 +75,7 @@ void print_usage(const char *progname)
 	    ("Usage: %s -n [headerfield]   for normal deliveries (default: \"deliver-to\")\n",
 	     progname);
 	printf
-	    ("       %s -m \"mailbox\"     for delivery to a specific mailbox\n",
+	    ("       %s -m \"mailbox\"       for delivery to a specific mailbox\n",
 	     progname);
 	printf
 	    ("       %s -d [addresses]     for delivery without using scanner\n",
