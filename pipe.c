@@ -323,10 +323,13 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 		  /* this is tricky. Since there are no messages inserted 
 		     in the database we need to redirect the pipe into all forwards */
 
+		tmp_pipe = list_getstart(&external_forwards);
+		  
 		  /* first open the pipes and send the header */
 		  while (tmp_pipe!=NULL)
 		    {
 		      sendmail_command = (char *)malloc(strlen((char *)tmp_pipe->data)+strlen(SENDMAIL)+1); /* add 1 for the space */
+				trace (TRACE_DEBUG,"allocated memory");
 				sprintf (sendmail_command,"%s %s",SENDMAIL,(char *)tmp_pipe->data);
 				trace (TRACE_DEBUG,"insert_messages(): opening pipe using command [%s]",sendmail_command);
 		      sendmail_pipe = popen(sendmail_command,"w");
@@ -434,6 +437,7 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 	      else	
 		{		
 		  trace (TRACE_DEBUG,"insert_messages(): Forwarding message via database");
+		  tmp_pipe = list_getstart(&external_forwards);
 		  while (tmp_pipe!=NULL)
 		    {
 		      sendmail_command = (char *)malloc(strlen((char *)tmp_pipe->data)+strlen(SENDMAIL)+1); /* add 1 for the space */
