@@ -161,7 +161,7 @@ int db_insert_config_item (char *item, char *value)
   /* insert_config_item will insert a configuration item in the database */
 
   /* allocating memory for query */
-  sprintf (query, "INSERT INTO config (item,value) VALUES ('%s', '%s')",item, value);
+  snprintf (query, DEF_QUERYSIZE,"INSERT INTO config (item,value) VALUES ('%s', '%s')",item, value);
   trace (TRACE_DEBUG,"insert_config_item(): executing query: [%s]",query);
 
   if (db_query(query)==-1)
@@ -182,7 +182,7 @@ char *db_get_config_item (char *item, int type)
   char *result = NULL;
   
 	
-  sprintf (query,"SELECT value FROM config WHERE item = '%s'",item);
+  snprintf (query, DEF_QUERYSIZE, "SELECT value FROM config WHERE item = '%s'",item);
   trace (TRACE_DEBUG,"db_get_config_item(): retrieving config_item %s by query %s\n",
 	 item, query);
 
@@ -248,7 +248,7 @@ unsigned long db_adduser (char *username, char *password, char *clientid, char *
   unsigned long useridnr;
 	
 
-  sprintf (query,"INSERT INTO user (userid,passwd,clientid,maxmail_size) VALUES "
+  snprintf (query, DEF_QUERYSIZE,"INSERT INTO user (userid,passwd,clientid,maxmail_size) VALUES "
 	   "('%s','%s',%s,%s)",
 	   username,password,clientid, maxmail);
 	
@@ -265,7 +265,7 @@ unsigned long db_adduser (char *username, char *password, char *clientid, char *
   useridnr = db_insert_result ();
 	
   /* creating query for adding mailbox */
-  sprintf (query,"INSERT INTO mailbox (owneridnr, name) VALUES (%lu,'INBOX')",
+  snprintf (query, DEF_QUERYSIZE,"INSERT INTO mailbox (owneridnr, name) VALUES (%lu,'INBOX')",
 	   useridnr);
 	
   trace (TRACE_DEBUG,"db_adduser(): executing query for mailbox: [%s]", query);
@@ -286,7 +286,8 @@ int db_addalias (unsigned long useridnr, char *alias, int clientid)
   /* adds an alias for a specific user */
   
 
-  sprintf (query,"INSERT INTO aliases (alias,deliver_to,client_id) VALUES ('%s','%lu',%d)",
+  snprintf (query, DEF_QUERYSIZE,
+	    "INSERT INTO aliases (alias,deliver_to,client_id) VALUES ('%s','%lu',%d)",
 	   alias, useridnr, clientid);
 	
   trace (TRACE_DEBUG,"db_addalias(): executing query for user: [%s]", query);
@@ -306,7 +307,7 @@ unsigned long db_get_inboxid (unsigned long *useridnr)
   /* returns the mailbox id (of mailbox inbox) for a user or a 0 if no mailboxes were found */
   unsigned long inboxid;
 
-  sprintf (query,"SELECT mailboxidnr FROM mailbox WHERE name='INBOX' AND owneridnr=%lu",
+  snprintf (query, DEF_QUERYSIZE,"SELECT mailboxidnr FROM mailbox WHERE name='INBOX' AND owneridnr=%lu",
 	   *useridnr);
 
   trace(TRACE_DEBUG,"db_get_inboxid(): executing query : [%s]",query);
@@ -348,7 +349,7 @@ char *db_get_userid (unsigned long *useridnr)
   
   char *returnid;
   
-  sprintf (query,"SELECT userid FROM user WHERE useridnr = %lu",
+  snprintf (query, DEF_QUERYSIZE,"SELECT userid FROM user WHERE useridnr = %lu",
 	   *useridnr);
 
   trace(TRACE_DEBUG,"db_get_userid(): executing query : [%s]",query);
@@ -400,7 +401,7 @@ unsigned long db_get_message_mailboxid (unsigned long *messageidnr)
   unsigned long mailboxid;
   
   
-  sprintf (query,"SELECT mailboxidnr FROM message WHERE messageidnr = %lu",
+  snprintf (query, DEF_QUERYSIZE,"SELECT mailboxidnr FROM message WHERE messageidnr = %lu",
 	   *messageidnr);
 
   trace(TRACE_DEBUG,"db_get_message_mailboxid(): executing query : [%s]",query);
@@ -446,7 +447,7 @@ unsigned long db_get_useridnr (unsigned long messageidnr)
   unsigned long mailboxidnr;
   unsigned long userid;
   
-  sprintf (query,"SELECT mailboxidnr FROM message WHERE messageidnr = %lu",
+  snprintf (query, DEF_QUERYSIZE,"SELECT mailboxidnr FROM message WHERE messageidnr = %lu",
 	   messageidnr);
 
   trace(TRACE_DEBUG,"db_get_useridnr(): executing query : [%s]",query);
@@ -484,7 +485,7 @@ unsigned long db_get_useridnr (unsigned long messageidnr)
       return 0;
     }
 
-  sprintf (query, "SELECT owneridnr FROM mailbox WHERE mailboxidnr = %lu",
+  snprintf (query, DEF_QUERYSIZE, "SELECT owneridnr FROM mailbox WHERE mailboxidnr = %lu",
 	   mailboxidnr);
 
   if (db_query(query)==-1)
@@ -533,17 +534,15 @@ unsigned long db_insert_message (unsigned long *useridnr)
   tm = *localtime(&td);   /* get components */
   strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
   
-  sprintf (query,"INSERT INTO message(mailboxidnr,messagesize,unique_id,internal_date)"
+  snprintf (query, DEF_QUERYSIZE,"INSERT INTO message(mailboxidnr,messagesize,unique_id,internal_date)"
 	   " VALUES (%lu,0,\" \",\"%s\")",
 	   db_get_inboxid(useridnr), timestr);
 
   trace (TRACE_DEBUG,"db_insert_message(): inserting message query [%s]",query);
   if (db_query (query)==-1)
     {
-      
       trace(TRACE_STOP,"db_insert_message(): dbquery failed");
     }	
-
   
   return db_insert_result();
 }
@@ -552,7 +551,7 @@ unsigned long db_insert_message (unsigned long *useridnr)
 unsigned long db_update_message (unsigned long *messageidnr, char *unique_id,
 		unsigned long messagesize)
 {
-  sprintf (query,
+  snprintf (query, DEF_QUERYSIZE,
 	   "UPDATE message SET messagesize=%lu, unique_id=\"%s\" where messageidnr=%lu",
 	   messagesize, unique_id, *messageidnr);
   
@@ -575,7 +574,7 @@ unsigned long db_update_message (unsigned long *messageidnr, char *unique_id,
 unsigned long db_insert_message_block (char *block, int messageidnr)
 {
   char *escblk=NULL, *tmpquery=NULL;
-  int len;
+  int len,esclen=0;
 
   if (block != NULL)
     {
@@ -590,12 +589,13 @@ unsigned long db_insert_message_block (char *block, int messageidnr)
       memtst((escblk=(char *)malloc(((len*2)+250)))==NULL); 
 
       /* escape the string */
-      if (mysql_escape_string(escblk, block, len) > 0)
+      if ((esclen = mysql_escape_string(escblk, block, len)) > 0)
 	{
 	  /* add an extra 500 characters for the query */
-	  memtst((tmpquery=(char *)malloc(strlen(escblk)+500))==NULL);
+	  memtst((tmpquery=(char *)malloc(esclen + 500))==NULL);
 	
-	  sprintf (tmpquery,"INSERT INTO messageblk(messageblk,blocksize,messageidnr) "
+	  snprintf (tmpquery, esclen+500,
+		   "INSERT INTO messageblk(messageblk,blocksize,messageidnr) "
 		   "VALUES (\"%s\",%d,%d)",
 		   escblk,len,messageidnr);
 
@@ -610,7 +610,7 @@ unsigned long db_insert_message_block (char *block, int messageidnr)
 	  /* freeing buffers */
 	  free (tmpquery);
 	  free (escblk);
-	  return db_insert_result(&conn);
+	  return db_insert_result();
 	}
       else
 	{
@@ -639,7 +639,7 @@ int db_check_user (char *username, struct list *userids)
 	
   trace(TRACE_DEBUG,"db_check_user(): checking user [%s] in alias table",username);
   
-  sprintf (query, "SELECT * FROM aliases WHERE alias=\"%s\"",username);
+  snprintf (query, DEF_QUERYSIZE,  "SELECT * FROM aliases WHERE alias=\"%s\"",username);
   trace(TRACE_DEBUG,"db_check_user(): executing query : [%s]",query);
   if (db_query(query)==-1)
     {
@@ -694,13 +694,13 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines,
   
   memtst ((buffer=(char *)malloc(READ_BLOCK_SIZE*2))==NULL);
 
-  sprintf (query, "SELECT * FROM messageblk WHERE messageidnr=%lu ORDER BY messageblknr ASC",
+  snprintf (query, DEF_QUERYSIZE, 
+	    "SELECT * FROM messageblk WHERE messageidnr=%lu ORDER BY messageblknr ASC",
 	   messageidnr);
   trace (TRACE_DEBUG,"db_send_message_lines(): executing query [%s]",query);
 
   if (db_query(query)==-1)
     {
-      
       free (buffer);
       return 0;
     }
@@ -708,7 +708,6 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines,
   if ((res = mysql_store_result(&conn)) == NULL)
     {
       trace(TRACE_ERROR,"db_send_message_lines: mysql_store_result failed: %s",mysql_error(&conn));
-      
       free (buffer);
       return 0;
     }
@@ -797,9 +796,7 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines,
 	
   mysql_free_result(res);
 	
-  
   free (buffer);
-	
   return 1;
 }
 
@@ -810,7 +807,7 @@ unsigned long db_validate (char *user, char *password)
   unsigned long id;
 
   
-  sprintf (query, "SELECT useridnr FROM user WHERE userid=\"%s\" AND passwd=\"%s\"",
+  snprintf (query, DEF_QUERYSIZE, "SELECT useridnr FROM user WHERE userid=\"%s\" AND passwd=\"%s\"",
 	   user,password);
 
   trace (TRACE_DEBUG,"db_validate(): validating using query %s\n",query);
@@ -847,7 +844,7 @@ unsigned long db_md5_validate (char *username,unsigned char *md5_apop_he, char *
 
   
   
-  sprintf (query, "SELECT passwd,useridnr FROM user WHERE userid=\"%s\"",username);
+  snprintf (query, DEF_QUERYSIZE, "SELECT passwd,useridnr FROM user WHERE userid=\"%s\"",username);
 	
   if (db_query(query)==-1)
     {
@@ -877,7 +874,7 @@ unsigned long db_md5_validate (char *username,unsigned char *md5_apop_he, char *
   trace (TRACE_DEBUG,"db_md5_validate(): apop_stamp=[%s], userpw=[%s]",apop_stamp,row[0]);
 	
   memtst((checkstring=(char *)malloc(strlen(apop_stamp)+strlen(row[0])+2))==NULL);
-  sprintf(checkstring,"%s%s",apop_stamp,row[0]);
+  snprintf(checkstring, strlen(apop_stamp)+strlen(row[0])+2, "%s%s",apop_stamp,row[0]);
 
   md5_apop_we=makemd5(checkstring);
 	
@@ -938,7 +935,7 @@ int db_createsession (unsigned long useridnr, struct session *sessionptr)
   
   /* query is <2 because we don't want deleted messages 
    * the unique_id should not be empty, this could mean that the message is still being delivered */
-  sprintf (query, "SELECT * FROM message WHERE mailboxidnr=%lu AND status<002 AND "
+  snprintf (query, DEF_QUERYSIZE, "SELECT * FROM message WHERE mailboxidnr=%lu AND status<002 AND "
 	   "unique_id!=\"\" order by status ASC",
 	   (db_get_inboxid(&useridnr)));
 
@@ -1020,7 +1017,8 @@ int db_update_pop (struct session *sessionptr)
 	  ((struct message *)tmpelement->data)->messagestatus) 
 	{
 	  /* yes they need an update, do the query */
-	  sprintf (query, "UPDATE message set status=%lu WHERE messageidnr=%lu AND status<002",
+	  snprintf (query,DEF_QUERYSIZE,
+		    "UPDATE message set status=%lu WHERE messageidnr=%lu AND status<002",
 		   ((struct message *)tmpelement->data)->virtual_messagestatus,
 		   ((struct message *)tmpelement->data)->realmessageid);
 	
@@ -1050,7 +1048,8 @@ unsigned long db_check_mailboxsize (unsigned long mailboxid)
 
   /* checking current size */
   
-  sprintf (query, "SELECT SUM(messagesize) FROM message WHERE mailboxidnr = %lu AND status<002",
+  snprintf (query, DEF_QUERYSIZE,
+	    "SELECT SUM(messagesize) FROM message WHERE mailboxidnr = %lu AND status<002",
 	   mailboxid);
 
   trace (TRACE_DEBUG,"db_check_mailboxsize(): executing query [%s]\n",
@@ -1110,7 +1109,7 @@ unsigned long db_check_sizelimit (unsigned long addblocksize, unsigned long mess
 	
   /* checking current size */
   
-  sprintf (query, "SELECT mailboxidnr FROM mailbox WHERE owneridnr = %lu",
+  snprintf (query, DEF_QUERYSIZE,"SELECT mailboxidnr FROM mailbox WHERE owneridnr = %lu",
 	   *useridnr);
 
 
@@ -1146,7 +1145,7 @@ unsigned long db_check_sizelimit (unsigned long addblocksize, unsigned long mess
     }
 
   /* current mailsize from INBOX is now known, now check the maxsize for this user */
-  sprintf (query, "SELECT maxmail_size FROM user WHERE useridnr = %lu", *useridnr);
+  snprintf (query, DEF_QUERYSIZE,"SELECT maxmail_size FROM user WHERE useridnr = %lu", *useridnr);
   trace (TRACE_DEBUG,"db_check_sizelimit(): executing query: %s\n", query);
 
   if (db_query(query) != 0)
@@ -1190,7 +1189,7 @@ unsigned long db_check_sizelimit (unsigned long addblocksize, unsigned long mess
 	     useridnr, (currmail_size)-maxmail_size);
 
       /* user is exceeding, we're going to execute a rollback now */
-      sprintf (query,"DELETE FROM messageblk WHERE messageidnr = %lu", 
+      snprintf (query,DEF_QUERYSIZE,"DELETE FROM messageblk WHERE messageidnr = %lu", 
 	       messageidnr);
       if (db_query(query) != 0)
 	{
@@ -1200,7 +1199,7 @@ unsigned long db_check_sizelimit (unsigned long addblocksize, unsigned long mess
 	  return -2;
 	}
 
-      sprintf (query,"DELETE FROM message WHERE messageidnr = %lu",
+      snprintf (query,DEF_QUERYSIZE,"DELETE FROM message WHERE messageidnr = %lu",
 	       messageidnr);
 
       if (db_query(query) != 0)
@@ -1233,7 +1232,7 @@ unsigned long db_deleted_purge()
   
 	
   /* first we're deleting all the messageblks */
-  sprintf (query,"SELECT messageidnr FROM message WHERE status=003");
+  snprintf (query,DEF_QUERYSIZE,"SELECT messageidnr FROM message WHERE status=003");
   trace (TRACE_DEBUG,"db_deleted_purge(): executing query [%s]",query);
 	
   if (db_query(query)==-1)
@@ -1259,7 +1258,7 @@ unsigned long db_deleted_purge()
 	
   while ((row = mysql_fetch_row(res))!=NULL)
     {
-      sprintf (query,"DELETE FROM messageblk WHERE messageidnr=%s",row[0]);
+      snprintf (query,DEF_QUERYSIZE,"DELETE FROM messageblk WHERE messageidnr=%s",row[0]);
       trace (TRACE_DEBUG,"db_deleted_purge(): executing query [%s]",query);
       if (db_query(query)==-1)
 	{
@@ -1270,7 +1269,7 @@ unsigned long db_deleted_purge()
     }
 
   /* messageblks are deleted. Now delete the messages */
-  sprintf (query,"DELETE FROM message WHERE status=003");
+  snprintf (query,DEF_QUERYSIZE,"DELETE FROM message WHERE status=003");
   trace (TRACE_DEBUG,"db_deleted_purge(): executing query [%s]",query);
   if (db_query(query)==-1)
     {
@@ -1293,7 +1292,7 @@ unsigned long db_deleted_purge()
 unsigned long db_set_deleted ()
 {
   /* first we're deleting all the messageblks */
-  sprintf (query,"UPDATE message SET status=003 WHERE status=002");
+  snprintf (query,DEF_QUERYSIZE,"UPDATE message SET status=003 WHERE status=002");
   trace (TRACE_DEBUG,"db_set_deleted(): executing query [%s]",query);
 
   if (db_query(query)==-1)
@@ -3511,7 +3510,8 @@ int db_search_messages(char **search_keys, unsigned long **search_results, int *
 {
   int i,qidx=0;
 
-  qidx = sprintf(query, "SELECT messageidnr FROM message WHERE mailboxidnr = %lu AND status<2",
+  qidx = snprintf(query, DEF_QUERYSIZE,
+		  "SELECT messageidnr FROM message WHERE mailboxidnr = %lu AND status<2",
 		 mboxid);
 
   i = 0;
