@@ -53,7 +53,7 @@ char *read_header(unsigned long *blksize)
 			usedmem += (strlen(strblock)+1);
 	
       /* If this happends it's a very big header */	
-      if (usedmem>HEADER_BLOCK_SIZE)
+      if (usedmem>(allocated_blocks*HEADER_BLOCK_SIZE))
       {
           /* update block counter */
           allocated_blocks++;
