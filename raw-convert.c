@@ -12,7 +12,7 @@
  *       size will be a bit larger (up to a few megabytes usually).
  *       Note as well that it could cause a BUG if a LARGE mailmessage is inserted and the UNIX
  *       filesizelimit is exceeded (at present def's, it would require for that particular msg to
- *       be about 2GB in size..).
+ *       be about 1GB in size..).
  */
 
 #include <stdio.h>
@@ -30,7 +30,8 @@
 #define MAX_LINESIZE 1024
 #define UID_SIZE 70
 #define MAX_MSGBLKFILES 16
-#define MAX_BLKFILESIZE (2ul*1024ul*1024ul)
+#define GIGABYTE (1024ul*1024ul*1024ul)
+#define MAX_BLKFILESIZE (1ul*GIGABYTE)
 
 #define USER_FILENAME "users.data"
 #define MBOX_FILENAME "mailboxes.data"
