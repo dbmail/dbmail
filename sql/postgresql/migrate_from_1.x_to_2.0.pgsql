@@ -20,19 +20,17 @@
 
 -- $Id$
 
--- required tables:
-CREATE TABLE aliases_1 AS SELECT * FROM aliases;
-CREATE TABLE users_1 AS SELECT * FROM users;
-CREATE TABLE mailboxes_1 AS SELECT * FROM mailboxes;
-CREATE TABLE messages_1 AS SELECT * FROM messages;
-CREATE TABLE messageblks_1 AS SELECT * FROM messageblks;
+-- begin transaction:
 
-DROP TABLE aliases;
-DROP TABLE messageblks;
-DROP TABLE messages;
-DROP TABLE mailboxes;
-DROP TABLE users;
-DROP TABLE pbsp;
+BEGIN TRANSACTION;
+
+-- renaming old tables:
+ALTER TABLE aliases RENAME TO aliases_1;
+ALTER TABLE users RENAME TO users_1;
+ALTER TABLE mailboxes RENAME TO mailboxes_1;
+ALTER TABLE messages RENAME TO messages_1;
+ALTER TABLE messageblks RENAME TO messageblks_1;
+
 -- create dbmail-2 tables
 
 CREATE TABLE aliases (
@@ -197,3 +195,6 @@ ALTER TABLE messageblks ADD FOREIGN KEY (physmessage_id) REFERENCES physmessage 
 INSERT INTO users (userid, passwd, encryption_type)
 	VALUES ('__@!internal_delivery_user!@__', '', 'md5');
 
+-- Commit transaction
+
+COMMIT;
