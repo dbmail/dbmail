@@ -385,15 +385,15 @@ int db_removealias (u64_t useridnr,const char *alias)
 }
   
 
-u64_t db_get_inboxid (u64_t *useridnr)
+u64_t db_get_mailboxid (u64_t *useridnr, char *mailbox)
 {
   /* returns the mailbox id (of mailbox inbox) for a user or a 0 if no mailboxes were found */
   u64_t inboxid;
 
-  snprintf (query, DEF_QUERYSIZE,"SELECT mailbox_idnr FROM mailboxes WHERE name='INBOX' AND owner_idnr=%llu",
-	   *useridnr);
+  snprintf (query, DEF_QUERYSIZE,"SELECT mailbox_idnr FROM mailboxes WHERE name=\'%s\' AND owner_idnr=%llu",
+	   mailbox, *useridnr);
 
-  trace(TRACE_DEBUG,"db_get_inboxid(): executing query : [%s]",query);
+  trace(TRACE_DEBUG,"db_get_mailboxid(): executing query : [%s]",query);
   if (db_query(query)==-1)
     {
       return 0;
@@ -407,7 +407,7 @@ u64_t db_get_inboxid (u64_t *useridnr)
 
   if (mysql_num_rows(res)<1) 
     {
-      trace (TRACE_DEBUG,"db_get_mailboxid(): user has no INBOX");
+      trace (TRACE_DEBUG,"db_get_mailboxid(): user has no mailbox named [%s]", mailbox);
       mysql_free_result(res);
       
       return 0; 
@@ -556,7 +556,7 @@ u64_t db_get_useridnr (u64_t message_idnr)
 /* 
  * inserts into inbox ! 
  */
-u64_t db_insert_message (u64_t *useridnr)
+u64_t db_insert_message (u64_t *useridnr, char *deliver_to_mailbox)
 {
   char timestr[30];
   time_t td;
@@ -569,7 +569,8 @@ u64_t db_insert_message (u64_t *useridnr)
   snprintf (query, DEF_QUERYSIZE,"INSERT INTO messages(mailbox_idnr,messagesize,unique_id,"
 	    "internal_date,recent_flag)"
 	    " VALUES (%llu,0,\" \",\"%s\",0)",
-	    db_get_inboxid(useridnr), timestr);
+	    deliver_to_mailbox ? db_get_mailboxid(useridnr, deliver_to_mailbox) : 
+        db_get_mailboxid (useridnr, "INBOX"), timestr);
 
   trace (TRACE_DEBUG,"db_insert_message(): inserting message query [%s]",query);
   if (db_query (query)==-1)
@@ -867,7 +868,7 @@ int db_createsession (u64_t useridnr, struct session *sessionptr)
    * the unique_id should not be empty, this could mean that the message is still being delivered */
   snprintf (query, DEF_QUERYSIZE, "SELECT * FROM messages WHERE mailbox_idnr=%llu AND status<002 AND "
 	   "unique_id!=\"\" order by status ASC",
-	   (db_get_inboxid(&useridnr)));
+	   (db_get_mailboxid(&useridnr, "INBOX")));
 
   if (db_query(query)==-1)
     {

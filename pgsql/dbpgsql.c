@@ -401,21 +401,21 @@ int db_removealias (u64_t useridnr,const char *alias)
  * returns the mailbox id (of mailbox inbox) for a user or a 0 if no mailboxes were found 
  *
  */
-u64_t db_get_inboxid (u64_t *useridnr)
+u64_t db_get_mailboxid (u64_t *useridnr, char *mailbox)
 {
   u64_t inboxid;
 
   snprintf (query, DEF_QUERYSIZE,"SELECT mailbox_idnr FROM mailboxes WHERE "
-            "name ~* '^INBOX$' AND owner_idnr=%llu",
-            *useridnr);
+            "name ~* '^%s$' AND owner_idnr=%llu",
+            mailbox, *useridnr);
 
-  trace(TRACE_DEBUG,"db_get_inboxid(): executing query : [%s]",query);
+  trace(TRACE_DEBUG,"db_get_mailboxid(): executing query : [%s]",query);
   if (db_query(query)==-1)
     return 0;
 
   if (PQntuples(res)<1) 
     {
-      trace (TRACE_DEBUG,"db_get_mailboxid(): user has no INBOX");
+      trace (TRACE_DEBUG,"db_get_mailboxid(): user has no mailbox named [%s]", mailbox);
       PQclear(res);
 
       return 0; 
@@ -516,9 +516,10 @@ u64_t db_get_useridnr (u64_t messageidnr)
 
 
 /* 
- * inserts into inbox ! 
+ * defaultly inserts into inbox, unless deliver_to_mailbox exists 
+ * and is a valid mbox.
  */
-u64_t db_insert_message (u64_t *useridnr)
+u64_t db_insert_message (u64_t *useridnr, char *deliver_to_mailbox)
 {
   char timestr[30];
   time_t td;
@@ -529,12 +530,13 @@ u64_t db_insert_message (u64_t *useridnr)
   strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
 
   snprintf (query, DEF_QUERYSIZE,"INSERT INTO messages(mailbox_idnr,messagesize,unique_id,"
-	    "internal_date,recent_flag) VALUES (%llu,0,' ','%s',1)",
-            db_get_inboxid(useridnr), timestr);
+          "internal_date,recent_flag) VALUES (%llu,0,' ','%s',1)",
+          (deliver_to_mailbox) ? db_get_mailboxid(useridnr, deliver_to_mailbox) 
+          : db_get_mailboxid(useridnr, "INBOX"), timestr);
 
   trace (TRACE_DEBUG,"db_insert_message(): inserting message query [%s]",query);
   if (db_query (query)==-1)
-    {
+  {
       trace(TRACE_STOP,"db_insert_message(): dbquery failed");
     }	
 
@@ -819,7 +821,8 @@ int db_createsession (u64_t useridnr, struct session *sessionptr)
   struct message tmpmessage;
   u64_t messagecounter=0,mboxid;
 
-  mboxid = (db_get_inboxid(&useridnr));
+  /* pop3 can only defaultly read INBOXes */
+  mboxid = (db_get_mailboxid(&useridnr, "INBOX"));
 
   /* query is <2 because we don't want deleted messages 
      * the unique_id should not be empty, this could mean that the message is still being delivered */
@@ -1665,7 +1668,7 @@ int db_insert_message_complete(u64_t useridnr, MEM *hdr, MEM *body,
 /*  u64_t msgid,mboxid;
   u64_t total, passed;
 
-  mboxid = db_get_inboxid(&useridnr);
+  mboxid = db_get_mailboxid(&useridnr, "INBOX");
   if (mboxid == 0 || mboxid == -1)
     {
       trace(TRACE_ERROR,"db_insert_message_complete(): could not find INBOX for user [%llu]", 

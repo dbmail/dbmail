@@ -23,6 +23,7 @@ struct list users; 	  	/* list of email addresses in message */
 int mode;			/* how should we process */
   
 char *header;
+char *deliver_to_mailbox = NULL;
 char *trace_level, *trace_syslog, *trace_verbose;
 int new_level = 2, new_trace_syslog = 1, new_trace_verbose = 0;
 u64_t headersize;
@@ -40,11 +41,16 @@ int main (int argc, char *argv[])
     {
       printf ("\nUsage: %s -n [headerfield]   for normal deliveries "
 	      "(default: \"deliver-to\" header)\n",argv[0]);
+      printf ("       %s -m \"mailbox\" -u [username] for delivery to mailbox (name)\n"
+              ,argv[0]);
+      printf ("       %s -M <mailboxid> -u [username] for delivery to mailbox_idnr\n"
+              ,argv[0]);
       printf ("       %s -d [addresses]  for delivery without using scanner\n",argv[0]);
       printf ("       %s -u [usernames]  for direct delivery to users\n\n",argv[0]);
       return 0;
     }
-	
+
+
   if (db_connect() < 0) 
     trace(TRACE_FATAL,"main(): database connection failed");
 
@@ -104,26 +110,58 @@ int main (int argc, char *argv[])
       /* mail_adr_list_special will take the command line 
        * email addresses and use those addresses for this message 
        * delivery */
-
+      
       if (mail_adr_list_special(INDEX_DELIVERY_MODE+1,argc, argv,&users)==0)
-	trace(TRACE_STOP,"main(): could not find any addresses");
+          trace(TRACE_STOP,"main(): could not find any addresses");
     }
+
+  else if ((strcmp (argv[INDEX_DELIVERY_MODE],"-m")==0) || 
+          (strcmp(argv[INDEX_DELIVERY_MODE],"-M")==0))
+  {
+      if (argc>4)
+      {
+          if (strcmp (argv[3],"-u")!=0)
+          {
+              printf ("\nError: When using the mailbox delivery option,"
+                      " you should specify a username\n\n");
+              return 0;
+          }
+      }
+      else
+      {
+          printf ("\nError: Mailbox delivery needs a -u clause to specify"
+                  " a user that should be used for delivery\n\n");
+          return 0;
+      }
+
+      trace (TRACE_INFO,"main(): using SPECIAL_DELIVERY to mailbox");
+      
+      if (list_nodeadd(&users, argv[4], strlen(argv[4])+1) == 0)
+      {
+          trace (TRACE_STOP, "main(): out of memory");
+          return 1;
+      }
+
+      users_are_usernames = 1;
+      deliver_to_mailbox = argv[2];
+      
+  }
   else if (strcmp("-u", argv[INDEX_DELIVERY_MODE])==0)
-    {
+  {
       trace (TRACE_INFO,"main(): using SPECIAL_DELIVERY to usernames");
 
       /* build a list of usernames as supplied on the command line */
       for (i=INDEX_DELIVERY_MODE+1; argv[i]; i++)
-	{
-	  if (list_nodeadd(&users, argv[i], strlen(argv[i]) + 1) == 0)
-	    {
-	      trace(TRACE_STOP, "main(): out of memory");
-	      return 1;
-	    }
-	}
+      {
+          if (list_nodeadd(&users, argv[i], strlen(argv[i]) + 1) == 0)
+          {
+              trace(TRACE_STOP, "main(): out of memory");
+              return 1;
+          }
+      }
 
       users_are_usernames = 1;
-    }
+  }
   else
     {
       trace (TRACE_INFO,"main(): using NORMAL_DELIVERY");
@@ -142,7 +180,8 @@ int main (int argc, char *argv[])
     } 
 
   /* inserting messages into the database */
-  insert_messages(header, headersize,&users, &returnpath, users_are_usernames);
+  insert_messages(header, headersize,&users, &returnpath, users_are_usernames,
+          deliver_to_mailbox);
   trace(TRACE_DEBUG,"main(): freeing memory blocks");
 
   trace (TRACE_DEBUG,"main(): they're all free. we're done.");

@@ -109,10 +109,10 @@ int db_addalias(u64_t useridnr, char *alias, u64_t clientid);
 int db_addalias_ext(char *alias, char *deliver_to, u64_t clientid);
 int db_removealias(u64_t useridnr, const char *alias);
 
-u64_t db_get_inboxid (u64_t *useridnr);
+u64_t db_get_mailboxid (u64_t *useridnr, char *mailbox);
 u64_t db_get_useridnr (u64_t messageidnr);
 u64_t db_get_message_mailboxid (u64_t *messageidnr);
-u64_t db_insert_message (u64_t *useridnr);
+u64_t db_insert_message (u64_t *useridnr, char *deliver_to_mailbox);
 u64_t db_update_message (u64_t *messageidnr, char *unique_id,
 				 u64_t messagesize);
 u64_t db_insert_message_block (char *block, u64_t messageidnr);

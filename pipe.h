@@ -9,6 +9,7 @@
 void create_unique_id(char *target, u64_t messageid);
 char *read_header(u64_t *blksize);
 int insert_messages(char *header, u64_t headersize,struct list *users, 
-		    struct list *returnpath, int users_are_usernames);
+		    struct list *returnpath, int users_are_usernames, 
+            char *deliver_to_mailbox);
 
 #endif
