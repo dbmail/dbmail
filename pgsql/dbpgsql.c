@@ -15,7 +15,6 @@
 #include <time.h>
 #include <ctype.h>
 #include <sys/types.h>
-#include <regex.h>
 #include "../rfcmsg.h"
 #include "../dbauth.h"
 
@@ -27,38 +26,6 @@ char *query = 0;
 char *value = NULL; /* used for PQgetvalue */
 unsigned long PQcounter = 0; /* used for PQgetvalue loops */
 
-/*
- * queries to create/drop temporary tables
- */
-const char *create_tmp_tables_queries[] = 
-{ "CREATE SEQUENCE tmp_message_idnr ON tmpmessage;"
-  "CREATE TABLE tmpmessage ("
-  "message_idnr INT8 DEFAULT nextval ('tmp_message_idnr'),"
-  "mailbox_idnr INT8 DEFAULT '0' NOT NULL,"
-  "messagesize INT8 DEFAULT '0' NOT NULL,"
-  "seen_flag INT2 DEFAULT '0' NOT NULL,"
-  "answered_flag INT2 DEFAULT '0' NOT NULL,"
-  "deleted_flag INT2 DEFAULT '0' NOT NULL,"
-  "flagged_flag INT2 DEFAULT '0' NOT NULL,"
-  "recent_flag INT2 DEFAULT '0' NOT NULL,"
-  "draft_flag INT2 DEFAULT '0' NOT NULL,"
-  "unique_id VARCHAR (70) NOT NULL,"
-  "internal_date datetime, "
-  "status INT2 DEFAULT '000' NOT NULL,"
-  "PRIMARY KEY (message_idnr)"
-  ");"
-
-  "CREATE SEQUENCE tmp_messageblk_idnr ON tmpmessageblk;"
-  "CREATE TABLE tmpmessageblk ("
-  "messageblk_idnr INT8 DEFAULT nextval ('tmp_messageblk_idnr'),"
-  "messageidnr INT8 DEFAULT '0' NOT NULL,"
-  "messageblk TEXT NOT NULL,"
-  "blocksize INT8 DEFAULT '0' NOT NULL,"
-  "PRIMARY KEY (messageblk_idnr),"
-  ");"
-};
-
-const char *drop_tmp_tables_queries[] = { "DROP TABLE tmpmessage","DROP SEQUENCE tmp_message_idnr", "DROP TABLE tmpmessageblk", "DROP SEQUENCE tmp_messageblk_idnr" };
 
 int db_connect ()
 {
@@ -286,7 +253,7 @@ u64_t db_get_inboxid (u64_t *useridnr)
   u64_t inboxid;
 
   snprintf (query, DEF_QUERYSIZE,"SELECT mailbox_idnr FROM mailboxes WHERE "
-	    "name='INBOX' AND owner_idnr=%llu",
+	    "name ~* 'INBOX' AND owner_idnr=%llu",
 	    *useridnr);
 
   trace(TRACE_DEBUG,"db_get_inboxid(): executing query : [%s]",query);
@@ -1117,10 +1084,8 @@ int db_icheck_messageblks(int *nlost, u64_t **lostlist)
   *nlost = 0;
   *lostlist = NULL;
 
-  /* this query can take quite some time! */
-  snprintf (query,DEF_QUERYSIZE,"SELECT messageblk.message_blknr FROM messageblks "
-	    "LEFT JOIN message ON messageblks.message_idnr = message.message_idnr "
-	    "WHERE messages.message_idnr IS NULL");
+  snprintf(query, DEF_QUERYSIZE, "SELECT messageblk_idnr FROM messageblks WHERE message_idnr NOT IN "
+	   "(SELECT message_idnr FROM messages)");
 
   trace (TRACE_DEBUG,"db_icheck_messageblks(): executing query [%s]",query);
 
@@ -1176,9 +1141,9 @@ int db_icheck_messages(int *nlost, u64_t **lostlist)
   *nlost = 0;
   *lostlist = NULL;
 
-  snprintf (query,DEF_QUERYSIZE,"SELECT messages.message_idnr FROM message "
-	    "LEFT JOIN mailboxes ON message.mailbox_idnr = mailboxes.mailbox_idnr "
-	    "WHERE mailboxes.mailbox_idnr IS NULL");
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr FROM messages WHERE mailbox_idnr NOT IN "
+	   "(SELECT mailbox_idnr FROM mailboxes)");
 
   trace (TRACE_DEBUG,"db_icheck_messages(): executing query [%s]",query);
 
@@ -1233,9 +1198,9 @@ int db_icheck_mailboxes(int *nlost, u64_t **lostlist)
   *nlost = 0;
   *lostlist = NULL;
 
-  snprintf (query,DEF_QUERYSIZE,"SELECT mailboxes.mailbox_idnr FROM mailboxes "
-	    "LEFT JOIN user ON mailbox.owner_idnr = user.user_idnr "
-	    "WHERE user.user_idnr IS NULL");
+  snprintf(query,DEF_QUERYSIZE,"SELECT mailbox_idnr FROM mailboxes WHERE owner_idnr NOT IN "
+	   "(SELECT user_idnr FROM users)");
+
 
   trace (TRACE_DEBUG,"db_icheck_mailboxes(): executing query [%s]",query);
 
@@ -1532,7 +1497,8 @@ u64_t db_findmailbox(const char *name, u64_t useridnr)
 {
   u64_t id;
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT mailbox_idnr FROM mailboxes WHERE name='%s' AND owner_idnr=%llu",
+  snprintf(query, DEF_QUERYSIZE, "SELECT mailbox_idnr FROM mailboxes WHERE name ~* '%s' "
+	   "AND owner_idnr=%llu",
 	   name, useridnr);
   
   if (db_query(query) == -1)
@@ -1559,26 +1525,14 @@ u64_t db_findmailbox(const char *name, u64_t useridnr)
 int db_findmailbox_by_regex(u64_t ownerid, const char *pattern, 
 			    u64_t **children, unsigned *nchildren, int only_subscribed)
 {
-  
-  int result;
-  u64_t *tmp = NULL;
-  regex_t preg;
   *children = NULL;
 
-  if ((result = regcomp(&preg, pattern, REG_ICASE|REG_NOSUB)) != 0)
-    {
-      trace(TRACE_ERROR, "db_findmailbox_by_regex(): error compiling regex pattern: %d\n",
-	    result);
-      
-      return 1;
-    }
-
   if (only_subscribed)
-    snprintf(query, DEF_QUERYSIZE, "SELECT name, mailbox_idnr FROM mailboxes WHERE "
-	     "owner_idnr=%llu AND is_subscribed != 0", ownerid);
+    snprintf(query, DEF_QUERYSIZE, "SELECT mailbox_idnr FROM mailboxes WHERE "
+	     "owner_idnr=%llu AND is_subscribed != 0 AND name ~* '%s'", ownerid, pattern);
   else
-    snprintf(query, DEF_QUERYSIZE, "SELECT name, mailbox_idnr FROM mailboxes WHERE "
-	     "owner_idnr=%llu", ownerid);
+    snprintf(query, DEF_QUERYSIZE, "SELECT mailbox_idnr FROM mailboxes WHERE "
+	     "owner_idnr=%llu AND name ~* '%s'", ownerid, pattern);
 
   if (db_query(query) == -1)
     {
@@ -1586,46 +1540,30 @@ int db_findmailbox_by_regex(u64_t ownerid, const char *pattern,
       return (-1);
     }
 
-  if (PQntuples(res) == 0)
+
+  *nchildren = PQntuples(res);
+
+  if (*nchildren == 0)
     {
       /* none exist, none matched */
-      *nchildren = 0;
       return 0;
     }
 
   /* alloc mem */
-  tmp = (u64_t *)my_malloc(sizeof(u64_t) * PQntuples(res));
-  if (!tmp)
+  *children = (u64_t *)my_malloc(sizeof(u64_t) * PQntuples(res));
+  if (!(*children))
     {
       trace(TRACE_ERROR,"db_findmailbox_by_regex(): not enough memory\n");
       return (-1);
     }
      
   /* store matches */
-  *nchildren = 0;
-
   for (PQcounter = 0; PQcounter < PQntuples(res); PQcounter++)
     {
-      if (regexec(&preg, PQgetvalue(res, PQcounter, 0), 0, NULL, 0) == 0)
-	tmp[(*nchildren)++] = strtoull(PQgetvalue(res, PQcounter,1), NULL, 10);
+      (*children)[PQcounter] = strtoull(PQgetvalue(res, PQcounter, 0), NULL, 10);
     }
 
   PQclear(res);
-
-  if (*nchildren == 0)
-    {
-      my_free(tmp);
-      return 0;
-    }
-
-  /* realloc mem */
-  *children = (u64_t *)realloc(tmp, sizeof(u64_t) * *nchildren);
-  if (!(*children))
-    {
-      trace(TRACE_ERROR,"db_findmailbox_by_regex(): realloc failed\n");
-      my_free(tmp);
-      return -1;
-    }
 
   return 0;
 }
@@ -1785,6 +1723,9 @@ int db_createmailbox(const char *name, u64_t ownerid)
  *
  * produces a list containing the UID's of the specified mailbox' children 
  * matching the search criterion
+ * 
+ * the filter contains '%' as a wildcard which will be replaced in this function
+ * by '.*' as regex searching is used
  *
  * returns -1 on error, 0 on succes
  */
@@ -1793,8 +1734,31 @@ int db_listmailboxchildren(u64_t uid, u64_t useridnr,
 			   const char *filter)
 {
   
-  int i;
+  int i,j;
   char *row;
+  char *pgsql_filter;
+
+  /* alloc mem */
+  pgsql_filter = (char*)my_malloc(strlen(filter) * 2 +1);
+  if (!pgsql_filter)
+    {
+      trace(TRACE_ERROR, "db_listmailboxchildren(): out of memory\n");
+      return -1;
+    }
+
+  /* build regex filter */
+  for (i=0,j=0; filter[i]; i++,j++)
+    {
+      if (filter[i] == '%')
+	{
+	  pgsql_filter[j++] = '.';
+	  pgsql_filter[j] = '*';
+	}
+      else
+	pgsql_filter[j] = filter[i];
+    }
+  pgsql_filter[j] = filter[i]; /* terminate string */
+
 
   /* retrieve the name of this mailbox */
   snprintf(query, DEF_QUERYSIZE, "SELECT name FROM mailboxes WHERE"
@@ -1803,17 +1767,18 @@ int db_listmailboxchildren(u64_t uid, u64_t useridnr,
   if (db_query(query) == -1)
     {
       trace(TRACE_ERROR, "db_listmailboxchildren(): could not retrieve mailbox name\n");
+      my_free(pgsql_filter);
       return -1;
     }
 
   row = PQgetvalue (res, 0, 0);
   if (row)
-    snprintf(query, DEF_QUERYSIZE, "SELECT mailbox_idnr FROM mailboxes WHERE name LIKE '%s/%s'"
+    snprintf(query, DEF_QUERYSIZE, "SELECT mailbox_idnr FROM mailboxes WHERE name ~* '%s/%s'"
 	     " AND owner_idnr = %llu",
-	     row,filter,useridnr);
+	     row,pgsql_filter,useridnr);
   else
-    snprintf(query, DEF_QUERYSIZE, "SELECT mailbox_idnr FROM mailboxes WHERE name LIKE '%s'"
-	     " AND owner_idnr = %llu",filter,useridnr);
+    snprintf(query, DEF_QUERYSIZE, "SELECT mailbox_idnr FROM mailboxes WHERE name ~* '%s'"
+	     " AND owner_idnr = %llu",pgsql_filter,useridnr);
 
   PQclear(res);
   
@@ -1821,8 +1786,14 @@ int db_listmailboxchildren(u64_t uid, u64_t useridnr,
   if (db_query(query) == -1)
     {
       trace(TRACE_ERROR, "db_listmailboxchildren(): could not retrieve mailbox name\n");
+      my_free(pgsql_filter);
       return -1;
     }
+
+  /* free mem */
+  my_free(pgsql_filter);
+  pgsql_filter = NULL;
+
 
   row = PQgetvalue(res, 0, 0);
   if (!row)
@@ -2134,116 +2105,42 @@ int db_movemsg(u64_t to, u64_t from)
  */
 int db_copymsg(u64_t msgid, u64_t destmboxid)
 {
-  u64_t newid,tmpid;
+  u64_t newmsgid;
   time_t td;
 
   time(&td);              /* get time */
 
-  /* create temporary tables */
-  if (db_query(create_tmp_tables_queries[0]) == -1 || db_query(create_tmp_tables_queries[1]) == -1)
-    {
-      trace(TRACE_ERROR, "db_copymsg(): could not create temporary tables\n");
-      return -1;
-    }
-
-  /* copy: */
-
-  /* first to temporary table */
   /* copy message info */
-  snprintf(query, DEF_QUERYSIZE, "INSERT INTO tmpmessage (mailbox_idnr, messagesize, status, "
+  snprintf(query, DEF_QUERYSIZE, "INSERT INTO messages (mailbox_idnr, messagesize, status, "
 	   "deleted_flag, seen_flag, answered_flag, draft_flag, flagged_flag, recent_flag,"
-       " unique_id, internal_date) "
+	   " unique_id, internal_date) "
 	   "SELECT mailbox_idnr, messagesize, status, deleted_flag, seen_flag, answered_flag, "
 	   "draft_flag, flagged_flag, recent_flag, '', internal_date "
-       "FROM messages WHERE messages.message_idnr = %llu",
+	   "FROM messages WHERE message_idnr = %llu",
 	   msgid);
 
   if (db_query(query) == -1)
     {
-      trace(TRACE_ERROR, "db_copymsg(): could not insert temporary message\n");
-
-      /* drop temporary tables */
-      if (db_query(drop_tmp_tables_queries[0]) == -1 || db_query(drop_tmp_tables_queries[1]) == -1)
-	trace(TRACE_ERROR, "db_copymsg(): could not drop temporary tables\n");
-
+      trace(TRACE_ERROR, "db_copymsg(): could not copy message (messages table)\n");
       return -1;
     }
 
-  tmpid = db_insert_result ("tmp_mailbox_idnr");
+  newmsgid = db_insert_result("message_idnr");
 
   /* copy message blocks */
-  snprintf(query, DEF_QUERYSIZE, "INSERT INTO tmpmessageblk (message_idnr, messageblk, blocksize) "
+  snprintf(query, DEF_QUERYSIZE, "INSERT INTO messageblk (message_idnr, messageblk, blocksize) "
 	   "SELECT %llu, messageblk, blocksize FROM messageblks "
-	   "WHERE messageblks.message_idnr = %llu ORDER BY messageblks.messageblk_idnr", tmpid, msgid);
-  
-  if (db_query(query) == -1)
-    {
-      trace(TRACE_ERROR, "db_copymsg(): could not insert temporary message blocks\n");
-
-      /* drop temporary tables */
-      if (db_query(drop_tmp_tables_queries[0]) == -1 || db_query(drop_tmp_tables_queries[1]) == -1)
-	trace(TRACE_ERROR, "db_copymsg(): could not drop temporary tables\n");
-
-      return -1;
-    }
-
-
-  /* now to actual tables */
-  /* copy message info */
-  snprintf(query, DEF_QUERYSIZE, "INSERT INTO messages (mailbox_idnr, messagesize, status, "
-	   "deleted_flag, seen_flag, answered_flag, draft_flag, flagged_flag, recent_flag,"
-       " unique_id, internal_date) "
-	   "SELECT %llu, messagesize, status, deleted_flag, seen_flag, answered_flag, "
-	   "draft_flag, flagged_flag, recent_flag, '', internal_date "
-       "FROM tmpmessage WHERE tmpmessage.message_idnr = %llu",
-	   destmboxid, tmpid);
-
-  if (db_query(query) == -1)
-    {
-      trace(TRACE_ERROR, "db_copymsg(): could not insert message\n");
-
-      /* drop temporary tables */
-      if (db_query(drop_tmp_tables_queries[0]) == -1 || db_query(drop_tmp_tables_queries[1]) == -1)
-	trace(TRACE_ERROR, "db_copymsg(): could not drop temporary tables\n");
-
-      return -1;
-    }
-
-  /* retrieve id of new message */
-  newid = db_insert_result ("message_idnr");
-
-  /* copy message blocks */
-  snprintf(query, DEF_QUERYSIZE, "INSERT INTO messageblks (message_idnr, messageblk, blocksize) "
-	   "SELECT %llu, messageblk, blocksize FROM tmpmessageblk "
-	   "WHERE tmpmessageblk.message_idnr = %llu ORDER BY tmpmessageblk.messageblk_idnr", newid, tmpid);
+	   "WHERE message_idnr = %llu ORDER BY messageblk_idnr", newmsgid, msgid);
   
   if (db_query(query) == -1)
     {
       trace(TRACE_ERROR, "db_copymsg(): could not insert message blocks\n");
-
-      /* drop temporary tables */
-      if (db_query(drop_tmp_tables_queries[0]) == -1 || db_query(drop_tmp_tables_queries[1]) == -1)
-	trace(TRACE_ERROR, "db_copymsg(): could not drop temporary tables\n");
-
-      /* delete inserted message */
-      snprintf(query, DEF_QUERYSIZE, "DELETE FROM messages WHERE message_idnr = %llu",newid);
-      if (db_query(query) == -1)
-	trace(TRACE_FATAL, "db_copymsg(): could not delete faulty message, dbase contains "
-	      "invalid data now; msgid [%llu]\n",newid);
-      
-      return -1;
-    }
-
-  /* drop temporary tables */
-  if (db_query(drop_tmp_tables_queries[0]) == -1 || db_query(drop_tmp_tables_queries[1]) == -1)
-    {
-      trace(TRACE_ERROR, "db_copymsg(): could not drop temporary tables\n");
       return -1;
     }
 
   /* all done, validate new msg by creating a new unique id for the copied msg */
   snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET unique_id=\'%lluA%lu\' "
-	   "WHERE message_idnr=%llu", newid, td, newid);
+	   "WHERE message_idnr=%llu", newmsgid, td, newmsgid);
 
   if (db_query(query) == -1)
     {
@@ -2352,8 +2249,6 @@ u64_t db_first_unseen(u64_t uid)
  */
 int db_subscribe(u64_t mboxid)
 {
-  
-
   snprintf(query, DEF_QUERYSIZE, "UPDATE mailboxes SET is_subscribed = 1 WHERE mailbox_idnr = %llu", 
 	   mboxid);
 
