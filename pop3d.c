@@ -12,8 +12,6 @@
 /* default timeout for server daemon */
 #define DEFAULT_SERVER_TIMEOUT 100
 
-#define REVISION $Revision$
-
 #ifndef SHUT_RDWR
 #define SHUR_RDWR 3
 #endif
@@ -185,7 +183,7 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 	sprintf (apop_stamp,"<%d.%u@%s>",getpid(),timestamp,myhostname);
 
 	/* sending greeting */
-	fprintf (tx,"+OK DBMAIL server v$revision$ ready %s\r\n",apop_stamp);
+	fprintf (tx,"+OK DBMAIL pop3 server ready %s\r\n",apop_stamp);
 	fflush (tx);
 			
 	/* no errors yet */
