@@ -27,7 +27,6 @@ char *apop_stamp;
 char *timeout_setting;
 
 char *buffer;
-int done=1;
 
 int resolve_client = 0;
 
@@ -93,6 +92,8 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
   
   time_t timestamp;
   time_t timeout;
+ 
+  int done = 1;
   
   theiraddress=inet_ntoa(adr_clnt.sin_addr);
 
