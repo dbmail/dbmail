@@ -70,7 +70,7 @@ int db_search(int *rset, int setlen, const char *key, mailbox_t *mb)
 
   while ((row = mysql_fetch_row(res)))
     {
-      uid = strtoul(row[0], NULL, 10);
+      uid = strtoull(row[0], NULL, 10);
       msn = db_binary_search(mb->seq_list, mb->exists, uid);
 
       if (msn == -1 || msn >= setlen)
@@ -376,7 +376,7 @@ int db_search_messages(char **search_keys, u64_t **search_results, int *nsresult
   i=0;
   while ((row = mysql_fetch_row(res)) && i<*nsresults)
     {
-      (*search_results)[i++] = strtoul(row[0],NULL,10);
+      (*search_results)[i++] = strtoull(row[0],NULL,10);
     }
       
 

@@ -68,7 +68,7 @@ int db_search(int *rset, int setlen, const char *key, mailbox_t *mb)
 
   for (i=0; i<PQntuples(res); i++)
     {
-      uid = strtoul(PQgetvalue(res, i, 0), NULL, 10);
+      uid = strtoull(PQgetvalue(res, i, 0), NULL, 10);
       msn = db_binary_search(mb->seq_list, mb->exists, uid);
 
       if (msn == -1 || msn >= setlen)
@@ -368,7 +368,7 @@ int db_search_messages(char **search_keys, u64_t **search_results, int *nsresult
   i=0;
   while (i<*nsresults)
     {
-      (*search_results)[i] = strtoul(PQgetvalue(res, i, 0),NULL,10);
+      (*search_results)[i] = strtoull(PQgetvalue(res, i, 0),NULL,10);
       i++;
     }
       

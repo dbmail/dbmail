@@ -1413,7 +1413,7 @@ int _ic_append(char *tag, char **args, ClientInfo *ci)
       return 1;
     }
   
-  literal_size = strtoul(&args[i][1], NULL, 10);
+  literal_size = strtoull(&args[i][1], NULL, 10);
   if (!literal_size)
     {
       fprintf(ci->tx,"%s BAD invalid literal size specified\r\n",tag);
@@ -1867,7 +1867,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
       if (endptr != args[0])
 	endptr++; /* skip delimiter */
 
-      fetch_start = strtoul(endptr, &endptr, 10);
+      fetch_start = strtoull(endptr, &endptr, 10);
 
       if (fetch_start == 0 || fetch_start > 
 	  (imapcommands_use_uid ?  (ud->mailbox.msguidnext-1) : ud->mailbox.exists))
@@ -1884,7 +1884,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
       switch (*endptr)
 	{
 	case ':':
-	  fetch_end = strtoul(++endptr, &endptr, 10);
+	  fetch_end = strtoull(++endptr, &endptr, 10);
 
 	  if (*endptr == '*')
 	    {
@@ -2756,7 +2756,7 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
       if (endptr != args[0])
 	endptr++; /* skip delimiter */
 
-      store_start = strtoul(endptr, &endptr, 10);
+      store_start = strtoull(endptr, &endptr, 10);
 
       if (store_start == 0 || store_start > 
 	  (imapcommands_use_uid ? (ud->mailbox.msguidnext-1) : ud->mailbox.exists))
@@ -2768,7 +2768,7 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
       switch (*endptr)
 	{
 	case ':':
-	  store_end = strtoul(++endptr, &endptr, 10);
+	  store_end = strtoull(++endptr, &endptr, 10);
 
 	  if (*endptr == '*')
 	    {
@@ -2926,7 +2926,7 @@ int _ic_copy(char *tag, char **args, ClientInfo *ci)
       if (endptr != args[0])
 	endptr++; /* skip delimiter */
 
-      copy_start = strtoul(endptr, &endptr, 10);
+      copy_start = strtoull(endptr, &endptr, 10);
 
       if (copy_start == 0 || copy_start >
 	  (imapcommands_use_uid ? (ud->mailbox.msguidnext-1) : ud->mailbox.exists))
@@ -2938,7 +2938,7 @@ int _ic_copy(char *tag, char **args, ClientInfo *ci)
       switch (*endptr)
 	{
 	case ':':
-	  copy_end = strtoul(++endptr, &endptr, 10);
+	  copy_end = strtoull(++endptr, &endptr, 10);
 
 	  if (*endptr == '*')
 	    {

@@ -245,7 +245,7 @@ int insert_messages(char *header, u64_t headersize, struct list *users, struct l
       else
 	{
 	  /* make the id numeric */
-	  userid=strtoul((char *)tmp->data, NULL, 10);
+	  userid=strtoull((char *)tmp->data, NULL, 10);
 
 	  /* create a message record */
 	  temp_message_record_id=db_insert_message ((u64_t *)&userid);

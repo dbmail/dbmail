@@ -101,12 +101,12 @@ u64_t db_insert_result (char *sequence_identifier)
     db_query (query);
 
     if (PQresultStatus(res) != PGRES_TUPLES_OK)
-        {
-            PQclear (res);
-            return 0;
-        }
+      {
+	PQclear (res);
+	return 0;
+      }
 
-    insert_result=strtoul(PQgetvalue(res, 0, 0), NULL, 10); /* should only be one result value */
+    insert_result = strtoull(PQgetvalue(res, 0, 0), NULL, 10); /* should only be one result value */
 
     PQclear(res);
 
@@ -276,15 +276,18 @@ int db_removealias (u64_t useridnr,const char *alias)
   
 
 
+/* 
+ * 
+ * returns the mailbox id (of mailbox inbox) for a user or a 0 if no mailboxes were found 
+ *
+ */
 u64_t db_get_inboxid (u64_t *useridnr)
 {
-    char *value = NULL;
-
-  /* returns the mailbox id (of mailbox inbox) for a user or a 0 if no mailboxes were found */
   u64_t inboxid;
 
-  snprintf (query, DEF_QUERYSIZE,"SELECT mailbox_idnr FROM mailboxes WHERE name='INBOX' AND owner_idnr=%llu",
-	   *useridnr);
+  snprintf (query, DEF_QUERYSIZE,"SELECT mailbox_idnr FROM mailboxes WHERE "
+	    "name='INBOX' AND owner_idnr=%llu",
+	    *useridnr);
 
   trace(TRACE_DEBUG,"db_get_inboxid(): executing query : [%s]",query);
   if (db_query(query)==-1)
@@ -299,7 +302,7 @@ u64_t db_get_inboxid (u64_t *useridnr)
     } 
 
   value = PQgetvalue(res, 0, 0);
-  inboxid = (value) ? atol(value) : 0; 
+  inboxid = (value) ? strtoull(value, NULL, 10) : 0; 
 
   PQclear (res);
   
@@ -331,7 +334,7 @@ u64_t db_get_message_mailboxid (u64_t *messageidnr)
     } 
 
   value = PQgetvalue (res, 0, 0);
-  mailboxid = (value) ? atol(value) : 0;
+  mailboxid = (value) ? strtoull(value, NULL, 10) : 0;
 	
   PQclear (res);
   
@@ -364,7 +367,7 @@ u64_t db_get_useridnr (u64_t messageidnr)
     } 
 
   value = PQgetvalue (res, 0, 0);
-  mailboxidnr = (value) ? atol(value) : -1;
+  mailboxidnr = (value) ? strtoull(value, NULL, 10) : -1;
   PQclear(res);
 	
   if (mailboxidnr == -1)
@@ -384,7 +387,7 @@ u64_t db_get_useridnr (u64_t messageidnr)
     } 
 
   value = PQgetvalue (res, 0, 0);	
-  userid = (value) ? atol(value) : 0;
+  userid = (value) ? strtoull(value, NULL, 10) : 0;
 	
   PQclear (res);
   
@@ -718,18 +721,25 @@ int db_createsession (u64_t useridnr, struct session *sessionptr)
   trace (TRACE_DEBUG,"db_createsession(): adding items to list");
   for (PQcounter = 0; PQcounter < PQntuples(res); PQcounter++)
     {
-      tmpmessage.msize=atol(PQgetvalue(res, PQcounter, 2));
-      tmpmessage.realmessageid=atol(PQgetvalue (res, PQcounter, 0));
-      tmpmessage.messagestatus=atol(PQgetvalue (res, PQcounter, 11));
+      value = PQgetvalue(res, PQcounter, 2);
+      tmpmessage.msize = value ? strtoull(value, NULL, 10) : 0;
+
+      value = PQgetvalue(res, PQcounter, 0);
+      tmpmessage.realmessageid = value ? strtoull(value, NULL, 10) : 0;
+
+      value = PQgetvalue(res, PQcounter, 11);
+      tmpmessage.messagestatus = value ? strtoull(value, NULL, 10) : 0;
+
       value = PQgetvalue (res, PQcounter, 9);
       strncpy(tmpmessage.uidl, value, strlen(value)+1);
 		
-      tmpmessage.virtual_messagestatus=tmpmessage.messagestatus;
+      tmpmessage.virtual_messagestatus = tmpmessage.messagestatus;
 		
-      sessionptr->totalmessages+=1;
+      sessionptr->totalmessages++;
       sessionptr->totalsize+=tmpmessage.msize;
+
       /* descending to create inverted list */
-      messagecounter-=1;
+      messagecounter--;
       tmpmessage.messageid=messagecounter;
       list_nodeadd (&sessionptr->messagelst, &tmpmessage, sizeof (tmpmessage));
     }
@@ -825,7 +835,7 @@ u64_t db_check_mailboxsize (u64_t mailboxid)
 
   localrow = PQgetvalue (res, 0, 0);
 
-  size = (localrow) ? strtoul(localrow, NULL, 10) : 0;
+  size = (localrow) ? strtoull(localrow, NULL, 10) : 0;
   PQclear(res);
   
   res = saveres;
@@ -843,7 +853,7 @@ u64_t db_check_sizelimit (u64_t addblocksize, u64_t messageidnr,
    * returns 0 when situation is ok 
    */
 
-  u64_t currmail_size = 0, maxmail_size = 0, j;
+  u64_t currmail_size = 0, maxmail_size = 0, j, n;
 
   *useridnr = db_get_useridnr (messageidnr);
 	
@@ -868,9 +878,11 @@ u64_t db_check_sizelimit (u64_t addblocksize, u64_t messageidnr,
 
     for (PQcounter = 0; PQcounter < PQntuples (res); PQcounter++)
     {
-      value = PQgetvalue (res, PQcounter, 0);
       trace (TRACE_DEBUG,"db_check_sizelimit(): checking mailbox [%s]\n",value);
-      j = db_check_mailboxsize(atol(value));
+      value = PQgetvalue (res, PQcounter, 0);
+
+      n = value ? strtoull(value, NULL, 10) : 0;
+      j = db_check_mailboxsize(n);
 
       if (j == (u64_t)-1)
 	{
@@ -933,7 +945,6 @@ u64_t db_check_sizelimit (u64_t addblocksize, u64_t messageidnr,
 /* purges all the messages with a deleted status */
 u64_t db_deleted_purge()
 {
-  
   u64_t affected_rows=0;
 
   /* first we're deleting all the messageblks */
@@ -973,8 +984,10 @@ u64_t db_deleted_purge()
       PQclear(res);
       return -1;
     }
-	
-  affected_rows = atol (PQcmdTuples (res));
+
+  value = PQcmdTuples(res);
+  affected_rows = value ? strtoull(value, NULL, 10) : 0;
+
   PQclear(res);
   
   return affected_rows;
@@ -985,11 +998,8 @@ u64_t db_deleted_purge()
  * deletion 
  */
 u64_t db_set_deleted ()
-
-
 {
-
-    u64_t affected_rows;
+  u64_t affected_rows;
   
   /* first we're deleting all the messageblks */
   snprintf (query,DEF_QUERYSIZE,"UPDATE messages SET status=003 WHERE status=002");
@@ -1001,7 +1011,9 @@ u64_t db_set_deleted ()
       return -1;
     }
 
-  affected_rows = atol (PQcmdTuples (res));
+  value = PQcmdTuples(res);
+  affected_rows = value ? strtoull(value, NULL, 10) : 0;
+
   PQclear (res);
   
   return affected_rows;
@@ -1018,7 +1030,7 @@ int db_log_ip(const char *ip)
   char timestr[30];
   time_t td;
   struct tm tm;
-  long id=0;
+  u64_t id=0;
   char *row;
 
   time(&td);              /* get time */
@@ -1034,14 +1046,14 @@ int db_log_ip(const char *ip)
     }
 
   row = PQgetvalue (res, 0, 0);
-  id = row ? strtol(row, NULL, 10) : 0;
+  id = row ? strtoull(row, NULL, 10) : 0;
 
   PQclear(res);
 
   if (id)
     {
       /* this IP is already in the table, update the 'since' field */
-      snprintf(query, DEF_QUERYSIZE, "UPDATE pbsp SET since = '%s' WHERE idnr=%ld",timestr,id);
+      snprintf(query, DEF_QUERYSIZE, "UPDATE pbsp SET since = '%s' WHERE idnr=%llu",timestr,id);
 
       if (db_query(query) == -1)
 	{
@@ -1140,7 +1152,7 @@ int db_icheck_messageblks(int *nlost, u64_t **lostlist)
   while ((PQcounter<PQntuples(res)) && i<*nlost)
     {
         row = PQgetvalue (res, PQcounter, 0);    
-        (*lostlist)[i++] = strtoul(row, NULL, 10);
+        (*lostlist)[i++] = strtoull(row, NULL, 10);
         PQcounter++;
     }
   return 0;
@@ -1197,7 +1209,7 @@ int db_icheck_messages(int *nlost, u64_t **lostlist)
   while ((PQcounter<PQntuples(res)) && i<*nlost)
   {
       row = PQgetvalue (res, PQcounter, 0);
-    (*lostlist)[i++] = strtoul(row, NULL, 10);
+    (*lostlist)[i++] = strtoull(row, NULL, 10);
     PQcounter++;
   }
 
@@ -1254,7 +1266,7 @@ int db_icheck_mailboxes(int *nlost, u64_t **lostlist)
       
   while ((PQcounter < PQntuples(res)) && i<*nlost)
   {
-    (*lostlist)[i++] = strtoul(PQgetvalue (res, PQcounter, 0), NULL, 10);
+    (*lostlist)[i++] = strtoull(PQgetvalue (res, PQcounter, 0), NULL, 10);
     PQcounter++;
   }
   return 0;
@@ -1297,7 +1309,7 @@ int db_delete_mailbox(u64_t uid)
 
   for (PQcounter = 0; PQcounter < PQntuples (res); PQcounter ++)
     {
-      msgid = strtoul(PQgetvalue (res, PQcounter, 0), NULL, 10);
+      msgid = strtoull(PQgetvalue (res, PQcounter, 0), NULL, 10);
 
       snprintf(query, DEF_QUERYSIZE, "DELETE FROM messageblks WHERE message_idnr = %llu",msgid);
       if (db_query(query) == -1)
@@ -1519,7 +1531,6 @@ int db_imap_append_msg(char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid)
 u64_t db_findmailbox(const char *name, u64_t useridnr)
 {
   u64_t id;
-  char *row;
 
   snprintf(query, DEF_QUERYSIZE, "SELECT mailbox_idnr FROM mailboxes WHERE name='%s' AND owner_idnr=%llu",
 	   name, useridnr);
@@ -1530,11 +1541,9 @@ u64_t db_findmailbox(const char *name, u64_t useridnr)
       return (u64_t)(-1);
     }
 
-  row = PQgetvalue(res, 0, 0);
-  if (row)
-    id = atoi(row);
-  else
-    id = 0;
+  value = PQgetvalue(res, 0, 0);
+  id = value ? strtoull(value, NULL, 10) : 0;
+
 
   PQclear(res);
 
@@ -1598,7 +1607,7 @@ int db_findmailbox_by_regex(u64_t ownerid, const char *pattern,
   for (PQcounter = 0; PQcounter < PQntuples(res); PQcounter++)
     {
       if (regexec(&preg, PQgetvalue(res, PQcounter, 0), 0, NULL, 0) == 0)
-	tmp[(*nchildren)++] = strtoul(PQgetvalue(res, PQcounter,1), NULL, 10);
+	tmp[(*nchildren)++] = strtoull(PQgetvalue(res, PQcounter,1), NULL, 10);
     }
 
   PQclear(res);
@@ -1634,7 +1643,6 @@ int db_findmailbox_by_regex(u64_t ownerid, const char *pattern,
 int db_getmailbox(mailbox_t *mb, u64_t userid)
 {
   u64_t i;
-  char *row;
 
   /* free existing MSN list */
   if (mb->seq_list)
@@ -1711,7 +1719,7 @@ int db_getmailbox(mailbox_t *mb, u64_t userid)
       if (PQgetvalue(res, PQcounter, 1)[0] == '0') mb->unseen++;
       if (PQgetvalue(res, PQcounter, 2)[0] == '1') mb->recent++;
 
-      mb->seq_list[i++] = strtoul(PQgetvalue(res, PQcounter, 0),NULL,10);
+      mb->seq_list[i++] = strtoull(PQgetvalue(res, PQcounter, 0),NULL,10);
     }
   
   PQclear(res);
@@ -1735,11 +1743,8 @@ int db_getmailbox(mailbox_t *mb, u64_t userid)
       return -1;
     }
 
-  row = PQgetvalue(res, 0, 0);
-  if (row)
-    mb->msguidnext = atoi(row)+1;
-  else
-    mb->msguidnext = 1; /* empty set: no messages yet in dbase */
+  value = PQgetvalue(res, 0, 0);
+  mb->msguidnext = value ? strtoull(value, NULL, 10)+1 : 1;
 
   PQclear(res);
   
@@ -1863,7 +1868,7 @@ int db_listmailboxchildren(u64_t uid, u64_t useridnr,
 	  return -1;
 	}
 
-      (*children)[i++] = strtoul(row, NULL, 10);
+      (*children)[i++] = strtoull(row, NULL, 10);
       row = PQgetvalue (res, PQcounter, 0);
       PQcounter ++;
     }
@@ -1911,9 +1916,6 @@ int db_removemailbox(u64_t uid, u64_t ownerid)
  */  
 int db_isselectable(u64_t uid)
 {
-  
-  char *row;
-  
   snprintf(query, DEF_QUERYSIZE, "SELECT no_select FROM mailboxes WHERE mailbox_idnr = %llu",uid);
 
   if (db_query(query) == -1)
@@ -1922,16 +1924,16 @@ int db_isselectable(u64_t uid)
       return -1;
     }
 
-  row = PQgetvalue(res, 0, 0);
+  value = PQgetvalue(res, 0, 0);
 
-  if (!row)
+  if (!value)
     {
       /* empty set, mailbox does not exist */
       PQclear(res);
       return 0;
     }
 
-  if (atoi(row) == 0)
+  if (atoi(value) == 0)
     {    
       PQclear(res);
       return 1;
@@ -1954,7 +1956,6 @@ int db_isselectable(u64_t uid)
  */
 int db_noinferiors(u64_t uid)
 {
-  
   char *row;
 
   snprintf(query, DEF_QUERYSIZE, "SELECT no_inferiors FROM mailboxes WHERE mailbox_idnr = %llu",uid);
@@ -2078,7 +2079,7 @@ int db_expunge(u64_t uid,u64_t **msgids,u64_t *nmsgs)
       PQcounter = 0;
       while ((PQcounter < PQntuples (res)) && i<*nmsgs)
 	{
-	  (*msgids)[i++] = strtoul(PQgetvalue(res,PQcounter,0), NULL, 10);
+	  (*msgids)[i++] = strtoull(PQgetvalue(res,PQcounter,0), NULL, 10);
       PQcounter++;
 	}
       PQclear(res);
@@ -2335,7 +2336,7 @@ u64_t db_first_unseen(u64_t uid)
 
   row = PQgetvalue(res,0,0);
   if (row)
-    id = strtoul(row,NULL,10);
+    id = strtoull(row,NULL,10);
   else
     id = 0; /* none found */
       

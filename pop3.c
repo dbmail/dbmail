@@ -69,7 +69,7 @@ int pop3 (void *stream, char *buffer)
 
   /* buffer overflow attempt */
   if (strlen(buffer)>MAX_IN_BUFFER)
-	  return -3;
+    return -3;
   
   /* check for command issued */
   while (strchr(validchars, buffer[indx]))
@@ -107,7 +107,7 @@ int pop3 (void *stream, char *buffer)
 
   trace (TRACE_DEBUG,"pop3(): command looked up as commandtype %d",cmdtype);
 	
-	/* commands that are allowed to have no arguments */
+  /* commands that are allowed to have no arguments */
   if ((value==NULL) && (cmdtype!=POP3_QUIT) && (cmdtype!=POP3_LIST) &&
       (cmdtype!=POP3_STAT) && (cmdtype!=POP3_RSET) && (cmdtype!=POP3_NOOP) &&
       (cmdtype!=POP3_LAST) && (cmdtype!=POP3_UIDL) && (cmdtype!=POP3_AUTH)) 
@@ -169,15 +169,15 @@ int pop3 (void *stream, char *buffer)
 	  case -1: return -1;
 	  case 0: 
 	    {
-			trace (TRACE_ERROR,"pop3(): user [%s] tried to login with wrong password",
-					username); 
-			my_free (username);
-			username=NULL;
-			if (password!=NULL)
-				{
-				my_free (password);
-				password=NULL;
-				}
+	      trace (TRACE_ERROR,"pop3(): user [%s] tried to login with wrong password",
+		     username); 
+	      my_free (username);
+	      username=NULL;
+	      if (password!=NULL)
+		{
+		  my_free (password);
+		  password=NULL;
+		}
 	      return pop3_error (stream,"-ERR username/password incorrect\r\n");
 	    }
 	  default:
@@ -216,7 +216,7 @@ int pop3 (void *stream, char *buffer)
 	    /* they're asking for a specific message */
 	    while (tmpelement!=NULL)
 	      {
-		if (((struct message *)tmpelement->data)->messageid==atol(value) &&
+		if (((struct message *)tmpelement->data)->messageid==strtoull(value, NULL, 10) &&
 		    ((struct message *)tmpelement->data)->virtual_messagestatus<2)
 		  {
 		    fprintf ((FILE *)stream,"+OK %llu %llu\r\n",((struct message *)tmpelement->data)->messageid,
@@ -270,7 +270,7 @@ int pop3 (void *stream, char *buffer)
 	trace(TRACE_DEBUG,"pop3(): RETR command, selecting message");
 	while (tmpelement!=NULL)
 	  {
-	    if (((struct message *)tmpelement->data)->messageid==atol(value) &&
+	    if (((struct message *)tmpelement->data)->messageid==strtoull(value, NULL, 10) &&
 		((struct message *)tmpelement->data)->virtual_messagestatus<2) /* message is not deleted */
 	      {
 		((struct message *)tmpelement->data)->virtual_messagestatus=1;
@@ -291,7 +291,7 @@ int pop3 (void *stream, char *buffer)
 	/* selecting a message */
 	while (tmpelement!=NULL)
 	  {
-	    if (((struct message *)tmpelement->data)->messageid==atol(value) &&
+	    if (((struct message *)tmpelement->data)->messageid==strtoull(value, NULL, 10) &&
 		((struct message *)tmpelement->data)->virtual_messagestatus<2) /* message is not deleted */
 	      {
 		((struct message *)tmpelement->data)->virtual_messagestatus=2;
@@ -368,20 +368,20 @@ int pop3 (void *stream, char *buffer)
 	if (value!=NULL) 
 	  {
 				/* they're asking for a specific message */
-			while (tmpelement!=NULL)
-			{
-				if (((struct message *)tmpelement->data)->messageid==atol(value)) 
-				{
-					fprintf ((FILE *)stream,"+OK %llu %s\r\n",((struct message *)tmpelement->data)->messageid,
-						((struct message *)tmpelement->data)->uidl);
-					found=1;
-				}
-			tmpelement=tmpelement->nextnode;
-			}
-			if (!found)
-				return pop3_error (stream,"-ERR no such message\r\n");
-			else
-				return 1;
+	    while (tmpelement!=NULL)
+	      {
+		if (((struct message *)tmpelement->data)->messageid==strtoull(value, NULL, 10)) 
+		  {
+		    fprintf ((FILE *)stream,"+OK %llu %s\r\n",((struct message *)tmpelement->data)->messageid,
+			     ((struct message *)tmpelement->data)->uidl);
+		    found=1;
+		  }
+		tmpelement=tmpelement->nextnode;
+	      }
+	    if (!found)
+	      return pop3_error (stream,"-ERR no such message\r\n");
+	    else
+	      return 1;
 	  }
 	/* just drop the list */
 	fprintf ((FILE *)stream, "+OK Some very unique numbers for you\r\n");
@@ -477,29 +477,29 @@ int pop3 (void *stream, char *buffer)
 	return 1;
       }
 
-	  case POP3_TOP:
-			{
+    case POP3_TOP:
+      {
 	if (state!=TRANSACTION)
-			return pop3_error(stream,"-ERR wrong command mode, sir\r\n");
+	  return pop3_error(stream,"-ERR wrong command mode, sir\r\n");
   
 	/* find out how many lines they want */
 	searchptr=strstr(value," ");
 
-  /* insufficient parameters */
-  if (searchptr==NULL)
-    return pop3_error (stream,"-ERR your command does not compute\r\n");
+	/* insufficient parameters */
+	if (searchptr==NULL)
+	  return pop3_error (stream,"-ERR your command does not compute\r\n");
 
         /* skip the space */
-  searchptr=searchptr+1;
+	searchptr=searchptr+1;
 
         /* value should now be the the message that needs to be retrieved */
-  value[searchptr-value-1]='\0';
+	value[searchptr-value-1]='\0';
 
-	top_lines = atol (searchptr);
-	top_messageid = atol (value);
+	top_lines = strtoull(searchptr, NULL, 10);
+	top_messageid = strtoull(value, NULL, 10);
 
 	if ((top_lines<0) || (top_messageid<1))
-    return pop3_error(stream,"-ERR wrong parameter\r\n");
+	  return pop3_error(stream,"-ERR wrong parameter\r\n");
 	
 	trace(TRACE_DEBUG,"pop3():TOP command (partially) retrieving message");
      
@@ -513,13 +513,13 @@ int pop3 (void *stream, char *buffer)
 	      {
 		fprintf ((FILE *)stream,"+OK %llu lines of message %llu\r\n",top_lines, top_messageid);
 		return db_send_message_lines (stream, ((struct message *)tmpelement->data)->realmessageid, top_lines, 0);
-			}
+	      }
 	    tmpelement=tmpelement->nextnode;
 	  }
 	return pop3_error (stream,"-ERR no such message\r\n");
 
 	return 1;
-			}
+      }
 
     default : 
       {

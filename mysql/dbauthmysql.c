@@ -45,7 +45,7 @@ u64_t db_user_exists(const char *username)
   
   row = mysql_fetch_row(res);
   
-  uid = (row && row[0]) ? strtoul(row[0], 0, 0) : 0;
+  uid = (row && row[0]) ? strtoull(row[0], 0, 0) : 0;
 
   mysql_free_result(res);
 
@@ -111,7 +111,7 @@ u64_t db_getclientid(u64_t useridnr)
     }
 
   row = mysql_fetch_row(res);
-  cid = (row && row[0]) ? strtoul(row[0], 0, 10) : -1;
+  cid = (row && row[0]) ? strtoull(row[0], 0, 10) : -1;
 
   mysql_free_result(res);
   return cid;
@@ -138,7 +138,7 @@ u64_t db_getmaxmailsize(u64_t useridnr)
     }
 
   row = mysql_fetch_row(res);
-  maxmailsize = (row && row[0]) ? strtoul(row[0], 0, 10) : -1;
+  maxmailsize = (row && row[0]) ? strtoull(row[0], 0, 10) : -1;
 
   mysql_free_result(res);
   return maxmailsize;
@@ -238,7 +238,7 @@ u64_t db_adduser (char *username, char *password, char *clientid, char *maxmail)
 
   mysql_free_result(res);
 
-  size = strtoul(maxmail,&tst,10);
+  size = strtoull(maxmail,&tst,10);
   if (tst)
     {
       if (tst[0] == 'M' || tst[0] == 'm')
@@ -379,7 +379,7 @@ u64_t db_validate (char *user, char *password)
 
   row = mysql_fetch_row(res);
 
-  id = (row && row[0]) ? strtoul(row[0], NULL, 10) : 0;
+  id = (row && row[0]) ? strtoull(row[0], NULL, 10) : 0;
   
   
   mysql_free_result(res);
@@ -439,7 +439,7 @@ u64_t db_md5_validate (char *username,unsigned char *md5_apop_he, char *apop_sta
     {
       trace(TRACE_MESSAGE,"db_md5_validate(): user [%s] is validated using APOP",username);
 		
-      useridnr = (row && row[1]) ? atol(row[1]) : 0;
+      useridnr = (row && row[1]) ? strtoull(row[1], NULL, 10) : 0;
 	
       mysql_free_result(res);
       

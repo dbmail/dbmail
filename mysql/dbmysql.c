@@ -294,7 +294,7 @@ u64_t db_get_inboxid (u64_t *useridnr)
       trace (TRACE_DEBUG,"db_get_mailboxid(): fetch_row call failed");
     }
 
-  inboxid = (row && row[0]) ? atol(row[0]) : 0; 
+  inboxid = (row && row[0]) ? strtoull(row[0], NULL, 10) : 0; 
 
   mysql_free_result (res);
   
@@ -340,7 +340,7 @@ u64_t db_get_message_mailboxid (u64_t *messageidnr)
       trace (TRACE_DEBUG,"db_get_mailboxid(): fetch_row call failed");
     }
 
-  mailboxid = (row && row[0]) ? atol(row[0]) : 0;
+  mailboxid = (row && row[0]) ? strtoull(row[0], NULL, 10) : 0;
 	
   mysql_free_result (res);
   
@@ -384,7 +384,7 @@ u64_t db_get_useridnr (u64_t messageidnr)
       trace (TRACE_DEBUG,"db_get_useridnr(): fetch_row call failed");
     }
 
-  mailboxidnr = (row && row[0]) ? atol(row[0]) : -1;
+  mailboxidnr = (row && row[0]) ? strtoull(row[0], NULL, 10) : -1;
   mysql_free_result(res);
 	
   if (mailboxidnr == -1)
@@ -420,7 +420,7 @@ u64_t db_get_useridnr (u64_t messageidnr)
       trace (TRACE_DEBUG,"db_get_useridnr(): fetch_row call failed");
     }
 	
-  userid = (row && row[0]) ? atol(row[0]) : 0;
+  userid = (row && row[0]) ? strtoull(row[0], NULL, 10) : 0;
 	
   mysql_free_result (res);
   
@@ -776,13 +776,20 @@ int db_createsession (u64_t useridnr, struct session *sessionptr)
   trace (TRACE_DEBUG,"db_createsession(): adding items to list");
   while ((row = mysql_fetch_row(res))!=NULL)
     {
-      tmpmessage.msize=atol(row[MESSAGE_MESSAGESIZE]);
-      tmpmessage.realmessageid=atol(row[MESSAGE_MESSAGEIDNR]);
-      tmpmessage.messagestatus=atoi(row[MESSAGE_STATUS]);
+      tmpmessage.msize = 
+	row[MESSAGE_MESSAGESIZE] ? strtoull(row[MESSAGE_MESSAGESIZE], NULL, 10) : 0;
+
+      tmpmessage.realmessageid = 
+	row[MESSAGE_MESSAGEIDNR] ? strtoull(row[MESSAGE_MESSAGEIDNR], NULL, 10) : 0;
+
+      tmpmessage.messagestatus = 
+	row[MESSAGE_STATUS] ? strtoull(row[MESSAGE_STATUS], NULL, 10) : 0;
+
       strncpy(tmpmessage.uidl,row[MESSAGE_UNIQUE_ID],UID_SIZE);
 		
-      tmpmessage.virtual_messagestatus=atoi(row[MESSAGE_STATUS]);
-		
+      tmpmessage.virtual_messagestatus =
+	row[MESSAGE_STATUS] ? strtoull(row[MESSAGE_STATUS, NULL, 10) : 0;
+	
       sessionptr->totalmessages+=1;
       sessionptr->totalsize+=tmpmessage.msize;
       /* descending to create inverted list */
@@ -886,7 +893,7 @@ u64_t db_check_mailboxsize (u64_t mailboxid)
 
   localrow = mysql_fetch_row(localres);
 
-  size = (localrow && localrow[0]) ? strtoul(localrow[0], NULL, 10) : 0;
+  size = (localrow && localrow[0]) ? strtoull(localrow[0], NULL, 10) : 0;
   mysql_free_result(localres);
   
 
@@ -904,7 +911,7 @@ u64_t db_check_sizelimit (u64_t addblocksize, u64_t messageidnr,
    * returns 0 when situation is ok 
    */
 
-  u64_t currmail_size = 0, maxmail_size = 0, j;
+  u64_t currmail_size = 0, maxmail_size = 0, j, n;
 
   *useridnr = db_get_useridnr (messageidnr);
 	
@@ -941,7 +948,9 @@ u64_t db_check_sizelimit (u64_t addblocksize, u64_t messageidnr,
   while ((row = mysql_fetch_row(res))!=NULL)
     {
       trace (TRACE_DEBUG,"db_check_sizelimit(): checking mailbox [%s]\n",row[0]);
-      j = db_check_mailboxsize(atol(row[0]));
+
+      n = row[0] ? strtoull(row[0], NULL, 10);
+      j = db_check_mailboxsize(n);
 
       if (j == (u64_t)-1)
 	{
@@ -1092,7 +1101,7 @@ int db_log_ip(const char *ip)
   char timestr[30];
   time_t td;
   struct tm tm;
-  long id=0;
+  u64_t id=0;
 
   time(&td);              /* get time */
   tm = *localtime(&td);   /* get components */
@@ -1114,14 +1123,14 @@ int db_log_ip(const char *ip)
     }
 
   row = mysql_fetch_row(res);
-  id = row ? strtol(row[0], NULL, 10) : 0;
+  id = row ? strtoull(row[0], NULL, 10) : 0;
 
   mysql_free_result(res);
 
   if (id)
     {
       /* this IP is already in the table, update the 'since' field */
-      snprintf(query, DEF_QUERYSIZE, "UPDATE pbsp SET since = '%s' WHERE idnr=%ld",timestr,id);
+      snprintf(query, DEF_QUERYSIZE, "UPDATE pbsp SET since = '%s' WHERE idnr=%llu",timestr,id);
 
       if (db_query(query) == -1)
 	{
@@ -1220,7 +1229,7 @@ int db_icheck_messageblks(int *nlost, u64_t **lostlist)
 
   i = 0;
   while ((row = mysql_fetch_row(res)) && i<*nlost)
-    (*lostlist)[i++] = strtoul(row[0], NULL, 10);
+    (*lostlist)[i++] = strtoull(row[0], NULL, 10);
 
   return 0;
 }
@@ -1277,7 +1286,7 @@ int db_icheck_messages(int *nlost, u64_t **lostlist)
 
   i = 0;
   while ((row = mysql_fetch_row(res)) && i<*nlost)
-    (*lostlist)[i++] = strtoul(row[0], NULL, 10);
+    (*lostlist)[i++] = strtoull(row[0], NULL, 10);
 
   return 0;
 }
@@ -1334,7 +1343,7 @@ int db_icheck_mailboxes(int *nlost, u64_t **lostlist)
 
   i = 0;
   while ((row = mysql_fetch_row(res)) && i<*nlost)
-    (*lostlist)[i++] = strtoul(row[0], NULL, 10);
+    (*lostlist)[i++] = strtoull(row[0], NULL, 10);
 
   return 0;
 }
@@ -1382,7 +1391,7 @@ int db_delete_mailbox(u64_t uid)
 
   while ((row = mysql_fetch_row(res)))
     {
-      msgid = strtoul(row[0], NULL, 10);
+      msgid = strtoull(row[0], NULL, 10);
 
       snprintf(query, DEF_QUERYSIZE, "DELETE FROM messageblk WHERE messageidnr = %llu",msgid);
       if (db_query(query) == -1)
@@ -1628,10 +1637,7 @@ u64_t db_findmailbox(const char *name, u64_t useridnr)
   
   
   row = mysql_fetch_row(res);
-  if (row)
-    id = atoi(row[0]);
-  else
-    id = 0;
+  id = (row) ? strtoull(row[0], NULL, 10) : 0;
 
   mysql_free_result(res);
 
@@ -1703,7 +1709,7 @@ int db_findmailbox_by_regex(u64_t ownerid, const char *pattern,
   while ((row = mysql_fetch_row(res)))
     {
       if (regexec(&preg, row[0], 0, NULL, 0) == 0)
-	tmp[(*nchildren)++] = strtoul(row[1], NULL, 10);
+	tmp[(*nchildren)++] = strtoull(row[1], NULL, 10);
     }
 
   mysql_free_result(res);
@@ -1829,7 +1835,7 @@ int db_getmailbox(mailbox_t *mb, u64_t userid)
       if (row[1][0] == '0') mb->unseen++;
       if (row[2][0] == '1') mb->recent++;
 
-      mb->seq_list[i++] = strtoul(row[0],NULL,10);
+      mb->seq_list[i++] = strtoull(row[0],NULL,10);
     }
   
   mysql_free_result(res);
@@ -1864,10 +1870,7 @@ int db_getmailbox(mailbox_t *mb, u64_t userid)
     }
 
   row = mysql_fetch_row(res);
-  if (row)
-    mb->msguidnext = atoi(row[0])+1;
-  else
-    mb->msguidnext = 1; /* empty set: no messages yet in dbase */
+  mb->msguidnext = row[0] ? strtoull(row[0], NULL, 10)+1 : 1;
 
   mysql_free_result(res);
   
@@ -2003,7 +2006,7 @@ int db_listmailboxchildren(u64_t uid, u64_t useridnr,
 	  return -1;
 	}
 
-      (*children)[i++] = strtoul(row[0], NULL, 10);
+      (*children)[i++] = strtoull(row[0], NULL, 10);
     }
   while ((row = mysql_fetch_row(res)));
 
@@ -2231,7 +2234,7 @@ int db_expunge(u64_t uid,u64_t **msgids,u64_t *nmsgs)
       i = 0;
       while ((row = mysql_fetch_row(res)) && i<*nmsgs)
 	{
-	  (*msgids)[i++] = strtoul(row[0], NULL, 10);
+	  (*msgids)[i++] = strtoull(row[0], NULL, 10);
 	}
       mysql_free_result(res);
     }
@@ -2498,7 +2501,7 @@ u64_t db_first_unseen(u64_t uid)
   
   row = mysql_fetch_row(res);
   if (row)
-    id = strtoul(row[0],NULL,10);
+    id = strtoull(row[0],NULL,10);
   else
     id = 0; /* none found */
       

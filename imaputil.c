@@ -857,8 +857,8 @@ int next_fetch_item(char **args, int idx, fetch_items_t *fi)
 		  /* read the numbers */
 		  args[idx][strlen(args[idx]) - 1] = '\0';
 		  args[idx][delimpos] = '\0';
-		  fi->bodyfetch.octetstart = atoi(&args[idx][1]);
-		  fi->bodyfetch.octetcnt   = atoi(&args[idx][delimpos+1]);
+		  fi->bodyfetch.octetstart = strtoll(&args[idx][1], NULL, 10);
+		  fi->bodyfetch.octetcnt   = strtoll(&args[idx][delimpos+1], NULL, 10);
 			
 		  /* restore argument */
 		  args[idx][delimpos] = '.';
@@ -1012,8 +1012,8 @@ int next_fetch_item(char **args, int idx, fetch_items_t *fi)
 	      /* read the numbers */
 	      args[idx][strlen(args[idx]) - 1] = '\0';
 	      args[idx][delimpos] = '\0';
-	      fi->bodyfetch.octetstart = atoi(&args[idx][1]);
-	      fi->bodyfetch.octetcnt   = atoi(&args[idx][delimpos+1]);
+	      fi->bodyfetch.octetstart = strtoll(&args[idx][1], NULL, 10);
+	      fi->bodyfetch.octetcnt   = strtoll(&args[idx][delimpos+1], NULL, 10);
 			
 	      /* restore argument */
 	      args[idx][delimpos] = '.';
@@ -2308,7 +2308,7 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx)
 	return -1;
 
       (*idx)++;
-      key.size = strtoul(search_keys[(*idx)], NULL, 10);
+      key.size = strtoull(search_keys[(*idx)], NULL, 10);
       (*idx)++;
     }
   else if (strcasecmp(search_keys[*idx], "smaller") == 0)
@@ -2318,7 +2318,7 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx)
 	return -1;
 
       (*idx)++;
-      key.size = strtoul(search_keys[(*idx)], NULL, 10);
+      key.size = strtoull(search_keys[(*idx)], NULL, 10);
       (*idx)++;
     }
 
@@ -2605,7 +2605,7 @@ void build_set(int *set, int setlen, char *cset)
 
   do
     {
-      num = strtoul(cset, &sep, 10);
+      num = strtoull(cset, &sep, 10);
 
       if (num <= setlen && num > 0)
 	{
@@ -2630,7 +2630,7 @@ void build_set(int *set, int setlen, char *cset)
 	      else
 		{
 		  cset = sep;
-		  num2 = strtoul(cset, &sep, 10);
+		  num2 = strtoull(cset, &sep, 10);
 		  
 		  if (num2 > setlen) num2 = setlen;
 		  if (num2 > 0)
@@ -2686,7 +2686,7 @@ void build_uid_set(int *set, int setlen, char *cset, mailbox_t *mb)
 
   do
     {
-      num = strtoul(cset, &sep, 10);
+      num = strtoull(cset, &sep, 10);
       msn = binary_search(mb->seq_list, mb->exists, num);
 
       if (msn < 0 && num < mb->seq_list[mb->exists-1])
@@ -2726,7 +2726,7 @@ void build_uid_set(int *set, int setlen, char *cset, mailbox_t *mb)
 		{
 		  /* fetch second number */
 		  cset = sep;
-		  num2 = strtoul(cset, &sep, 10);
+		  num2 = strtoull(cset, &sep, 10);
 		  msn2 = binary_search(mb->seq_list, mb->exists, num2);
 		  
 		  if (msn2 < 0)

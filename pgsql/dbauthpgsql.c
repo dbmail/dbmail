@@ -43,7 +43,7 @@ u64_t db_user_exists(const char *username)
 
   row = PQgetvalue(res, 0, 0);
   
-  uid = (row) ? strtoul(row, 0, 0) : 0;
+  uid = (row) ? strtoull(row, 0, 0) : 0;
 
   PQclear(res);
 
@@ -100,7 +100,7 @@ u64_t db_getclientid(u64_t useridnr)
     }
 
   row = PQgetvalue (res, 0, 0);
-  cid = (row) ? strtoul(row, 0, 10) : -1;
+  cid = (row) ? strtoull(row, 0, 10) : -1;
 
   PQclear(res);
   return cid;
@@ -121,7 +121,7 @@ u64_t db_getmaxmailsize(u64_t useridnr)
     }
 
   row = PQgetvalue(res, 0, 0);
-  maxmailsize = (row) ? strtoul(row, 0, 10) : -1;
+  maxmailsize = (row) ? strtoull(row, 0, 10) : -1;
 
   PQclear(res);
   return maxmailsize;
@@ -220,7 +220,7 @@ u64_t db_adduser (char *username, char *password, char *clientid, char *maxmail)
 
   PQclear(res);
 
-  size = strtoul(maxmail,&tst,10);
+  size = strtoull(maxmail,&tst,10);
   if (tst)
     {
       if (tst[0] == 'M' || tst[0] == 'm')
@@ -351,7 +351,7 @@ u64_t db_validate (char *user, char *password)
 	
   row = PQgetvalue (res, 0, 0);
 
-  id = (row) ? strtoul(row, NULL, 10) : 0;
+  id = (row) ? strtoull(row, NULL, 10) : 0;
   
   PQclear(res);
   return id;
@@ -403,7 +403,7 @@ u64_t db_md5_validate (char *username,unsigned char *md5_apop_he, char *apop_sta
       value = PQgetvalue (res, 0, 1); 
       /* value contains useridnr */
 
-      useridnr = (value) ? atol(value) : 0;
+      useridnr = (value) ? strtoull(value, NULL, 10) : 0;
 	
       PQclear(res);
       
