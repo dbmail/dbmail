@@ -49,7 +49,7 @@ int bounce (char *header, char *destination_address, int type)
 	       destination_address);
 	list_init(&from_addresses);
 	/* scan the from header for addresses */
-	mail_adr_list ("from", &from_addresses,&mimelist,&users,header,headersize);
+	mail_adr_list ("from", &from_addresses,&mimelist);
 
 	/* loop target addresses */
 	tmpelement=list_getstart (&from_addresses);
@@ -95,7 +95,7 @@ int bounce (char *header, char *destination_address, int type)
 	       destination_address);
 	list_init(&from_addresses);
 	/* scan the from header for addresses */
-	mail_adr_list ("from", &from_addresses,&mimelist,&users,header,headersize);
+	mail_adr_list ("from", &from_addresses,&mimelist);
 
 	/* loop target addresses */
 	tmpelement=list_getstart (&from_addresses);
