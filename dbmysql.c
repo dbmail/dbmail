@@ -133,7 +133,10 @@ int db_insert_config_item (char *item, char *value)
       return -1;
     }
   else 
+  {
+	 free (ckquery); 
     return 0;
+  }
 }
 
 
@@ -240,7 +243,8 @@ unsigned long db_adduser (char *username, char *password, char *clientid, char *
 		trace (TRACE_ERROR,"db_adduser(): query failed for adding mailbox: [%s]",ckquery);
 		return -1;
 	}
-	
+
+	free (ckquery);
 	return useridnr;
 }
 
