@@ -363,7 +363,7 @@ int auth_check_user (const char *username, struct list *userids, int checks)
     }
 
   snprintf (__auth_query_data, AUTH_QUERY_SIZE,  "SELECT deliver_to FROM aliases WHERE "
-	    "alias ~* '^%s$'",username);
+	    "lower(alias) = lower('%s')", username);
   trace(TRACE_DEBUG,"auth_check_user(): checks [%d]", checks);
 
   if (__auth_query(__auth_query_data)==-1)

@@ -292,7 +292,7 @@ int db_addalias (u64_t useridnr, char *alias, u64_t clientid)
 {
   /* check if this alias already exists */
   snprintf (query, DEF_QUERYSIZE,
-            "SELECT alias_idnr FROM aliases WHERE alias ~* '^%s$' AND deliver_to = '%llu' "
+            "SELECT alias_idnr FROM aliases WHERE lower(alias) = lower('%s') AND deliver_to = '%llu' "
 	    "AND client_idnr = %llu::bigint", alias, useridnr, clientid);
 
   if (db_query(query) == -1)
@@ -340,13 +340,13 @@ int db_addalias_ext(char *alias, char *deliver_to, u64_t clientid)
   if (clientid != 0)
     {
       snprintf (query, DEF_QUERYSIZE,
-		"SELECT alias_idnr FROM aliases WHERE alias ~* '^%s$' AND deliver_to ~* '^%s$' "
+		"SELECT alias_idnr FROM aliases WHERE lower(alias) = lower('%s') AND lower(deliver_to) = lower('%s') "
 		"AND client_idnr = %llu::bigint", alias, deliver_to, clientid);
     }
   else
     {
       snprintf (query, DEF_QUERYSIZE,
-		"SELECT alias_idnr FROM aliases WHERE alias ~* '^%s$' AND deliver_to ~* '^%s$' ",
+		"SELECT alias_idnr FROM aliases WHERE lower(alias) = lower('%s') AND lower(deliver_to) = lower('%s') ",
 		alias, deliver_to);
     }
 
@@ -387,7 +387,7 @@ int db_addalias_ext(char *alias, char *deliver_to, u64_t clientid)
 int db_removealias (u64_t useridnr,const char *alias)
 {
   snprintf (query, DEF_QUERYSIZE,
-            "DELETE FROM aliases WHERE deliver_to = '%llu' AND alias ~* '^%s$'", useridnr, alias);
+            "DELETE FROM aliases WHERE deliver_to = '%llu' AND lower(alias) = lower('%s')", useridnr, alias);
 
   if (db_query(query) == -1)
     {
@@ -403,7 +403,7 @@ int db_removealias (u64_t useridnr,const char *alias)
 int db_removealias_ext(const char *alias, const char *deliver_to)
 {
   snprintf (query, DEF_QUERYSIZE,
-	    "DELETE FROM aliases WHERE deliver_to ~* '^%s$' AND alias ~* '^%s$'", deliver_to, alias);
+	    "DELETE FROM aliases WHERE lower(deliver_to) = lower('%s') AND lower(alias) = lower('%s')", deliver_to, alias);
 	   
   if (db_query(query) == -1)
     {
@@ -426,7 +426,7 @@ u64_t db_get_mailboxid (u64_t useridnr, const char *mailbox)
   u64_t inboxid;
 
   snprintf (query, DEF_QUERYSIZE,"SELECT mailbox_idnr FROM mailboxes WHERE "
-            "name ~* '^%s$' AND owner_idnr=%llu::bigint",
+            "lower(name) = lower('%s') AND owner_idnr=%llu::bigint",
             mailbox, useridnr);
 
   if (db_query(query)==-1)
@@ -2299,7 +2299,7 @@ u64_t db_findmailbox(const char *name, u64_t useridnr)
 {
   u64_t id;
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT mailbox_idnr FROM mailboxes WHERE name ~* '^%s$' "
+  snprintf(query, DEF_QUERYSIZE, "SELECT mailbox_idnr FROM mailboxes WHERE lower(name) = lower('%s') "
 	   "AND owner_idnr=%llu::bigint",
 	   name, useridnr);
 
