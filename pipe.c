@@ -266,12 +266,6 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 			
 			if (usedmem>0) /* usedmem is 0 with an EOF */
 			{
-				trace (TRACE_DEBUG, "comparing %d with %d",usedmem, READ_BLOCK_SIZE);
-				if (strstr(strblock,"thend")) 
-				{
-					trace (TRACE_DEBUG,"insert_messages(): last block [%s] blocksize [%d]",strblock,strlen(strblock)); 
-				}
-				trace (TRACE_DEBUG,"insert_messages(): read [%d] from instream",usedmem);
 				totalmem = totalmem + usedmem;
 			
 				tmp=list_getstart(&messageids);
