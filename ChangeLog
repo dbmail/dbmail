@@ -1,3 +1,9 @@
+2004-06-28  Ilja Booij  <ilja@ic-s.nl>
+
+	* imaputil.c (build_args_array_ext): also accepts {681+} as mail size (not only
+	{681} (681 is a random number!). This fixes an IMAP APPEND problem with
+	Mozilla Thunderbird.
+
 2004-06-18  Ilja Booij  <ilja@ic-s.nl>
 
 	* main.c (read_whole_message_pipe): added (void *) casts to memcpy's

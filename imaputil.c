@@ -1568,7 +1568,10 @@ char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 			quotedSize = strtoul(&s[i + 1], &lastchar, 10);
 
 			/* only continue if the number is followed by '}\0' */
-			if (*lastchar == '}' && *(lastchar + 1) == '\0') {
+			trace(TRACE_DEBUG, "%s,%s: last char = %c", __FILE__, __func__, *lastchar);
+			if ((*lastchar == '+' && *(lastchar + 1) == '}' && 
+			     *(lastchar + 2) == '\0') || 
+			    (*lastchar == '}' && *(lastchar + 1) == '\0')) {
 				/* allocate space for this argument (could be a message when used with APPEND) */
 				if (!
 				    (the_args[nargs] =

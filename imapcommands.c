@@ -1661,13 +1661,12 @@ int _ic_append(char *tag, char **args, ClientInfo * ci)
 		return 1;
 	}
 
-
 	for (j = 0; j < IMAP_NFLAGS; j++)
 		if (flaglist[j] == 1)
 			trace(TRACE_DEBUG, "%s,%s: %s set",
 			      __FILE__, __func__, imap_flag_desc[j]);
 
-  /** check ACL's for STORE */
+	/** check ACL's for STORE */
 	if (flaglist[IMAP_STORE_FLAG_SEEN] == 1) {
 		result = acl_has_right(ud->userid, mboxid, ACL_RIGHT_SEEN);
 		if (result < 0) {
@@ -1718,9 +1717,6 @@ int _ic_append(char *tag, char **args, ClientInfo * ci)
 
 	/* there could be a literal date here, check if the next argument exists
 	 * if so, assume this is the literal date.
-	 * FIXME: this internal date has to be used in the append command to set
-	 * the internal date of the message (if it should be something else than
-	 * CURRENT_TIMESTAMP.
 	 */
 	if (args[i + 1]) {
 		struct tm tm;
