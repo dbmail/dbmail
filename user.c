@@ -43,6 +43,7 @@
 #endif
 #include "dbmd5.h"
 
+
 char *configFile = DEFAULT_CONFIG_FILE;
 
 #define SHADOWFILE "/etc/shadow"

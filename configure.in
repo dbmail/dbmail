@@ -23,7 +23,6 @@ DBMAIL_MSG_CONFIGURE_START
 AM_INIT_AUTOMAKE(dbmail, 2.0)
 AM_MAINTAINER_MODE
 
-AC_PROG_RANLIB
 
 pgsqlheaderpaths="/usr/include/pgsql /usr/include /usr/local/include/pgsql \
                   /usr/local/include /usr/freeware/include/pgsql \
@@ -33,7 +32,7 @@ pgsqlheaderpaths="/usr/include/pgsql /usr/include /usr/local/include/pgsql \
 ldapheaderpaths="/usr/include /usr/local/include"
 sieveheaderpaths="/usr/include /usr/local/include"
 
-AC_DEFINE(_GNU_SOURCE)
+AC_DEFINE(_GNU_SOURCE,'','Defined GNU SOURCE')
 
 DBMAIL_BOTH_SQL_CHECK
 DBMAIL_CHECK_SQL_LIBS
@@ -56,11 +55,18 @@ AC_CHECK_HEADERS(crypt.h)
 AC_SUBST(SQLLIB)
 AC_SUBST(LDAPLIB)
 AC_SUBST(SQLALIB)
+AC_SUBST(SQLLTLIB)
 AC_SUBST(SORTALIB)
+AC_SUBST(SORTLTLIB)
 AC_SUBST(AUTHALIB)
+AC_SUBST(AUTHLTLIB)
 AC_SUBST(SIEVELIB)
 AC_SUBST(MYSQLINC)
 AC_SUBST(PGSQLINC)
 AC_SUBST(SIEVEINC)
 AC_SUBST(LDAPINC)
+
+# libtool patch
+AC_PROG_LIBTOOL
+
 AC_OUTPUT(Makefile mysql/Makefile pgsql/Makefile auth/Makefile sort/Makefile)

@@ -45,6 +45,7 @@
 
 #define null_free(p) { my_free(p); p = NULL; }
 
+
 /* cache */
 cache_t cached_msg;
 

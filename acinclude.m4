@@ -203,7 +203,8 @@ then
 	AC_MSG_RESULT([$MYSQLINC])	
         AC_MSG_CHECKING([MySQL libraries])
         SQLLIB=`${mysqlconfig} --libs`
-        SQLALIB="mysql/libmysqldbmail.a"
+        SQLALIB="mysql/.libs/libmysqldbmail.a"
+	SQLLTLIB="mysql/libmysqldbmail.la"
         AC_MSG_RESULT([$SQLLIB])
    fi
 else
@@ -221,7 +222,8 @@ else
         AC_MSG_CHECKING([PostgreSQL libraries])
         PGLIBDIR=`${pgsqlconfig} --libdir`
         SQLLIB="-L$PGLIBDIR -lpq"
-        SQLALIB="pgsql/libpgsqldbmail.a"
+        SQLALIB="pgsql/.libs/libpgsqldbmail.a"
+	SQLLTLIB="pgsql/libpgsqldbmail.la"
         AC_MSG_RESULT([$SQLLIB])
     fi
   fi
@@ -234,7 +236,8 @@ AC_MSG_RESULT([checking for sorting configuration])
 AC_ARG_WITH(sieve,[  --with-sieve=PATH	  full path to libSieve header directory],
 	sieveheadername="$withval$")
 dnl This always needs to be defined
-SORTALIB="sort/libsortdbmail.a"
+SORTALIB="sort/.libs/libsortdbmail.a"
+SORTLTLIB="sort/libsortdbmail.la"
 
 WARN=0
 if test ! "${sieveheadername-x}" = "x"
@@ -309,7 +312,8 @@ AC_MSG_RESULT([checking for authentication configuration])
 AC_ARG_WITH(auth-ldap,[  --with-auth-ldap=PATH	  full path to ldap header directory],
 	authldapheadername="$withval$")
 dnl This always needs to be defined
-AUTHALIB="auth/libauthdbmail.a"
+AUTHALIB="auth/.libs/libauthdbmail.a"
+AUTHLTLIB="auth/libauthdbmail.la"
 
 WARN=0
 if test ! "${authldapheadername-x}" = "x"

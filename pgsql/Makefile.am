@@ -19,7 +19,7 @@ if PGSQL
 
 AM_CFLAGS = @PGSQLINC@ -fomit-frame-pointer
 
-lib_LIBRARIES = libpgsqldbmail.a
+pkglib_LTLIBRARIES = libpgsqldbmail.la
 
-libpgsqldbmail_a_SOURCES = dbpgsql.c
+libpgsqldbmail_la_SOURCES = dbpgsql.c
 endif

@@ -74,21 +74,35 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
+host_alias = @host_alias@
+host_triplet = @host@
+AS = @AS@
 AUTHALIB = @AUTHALIB@
+AUTHLTLIB = @AUTHLTLIB@
 CC = @CC@
+DLLTOOL = @DLLTOOL@
+ECHO = @ECHO@
+EXEEXT = @EXEEXT@
 LDAPINC = @LDAPINC@
 LDAPLIB = @LDAPLIB@
+LIBTOOL = @LIBTOOL@
+LN_S = @LN_S@
 MAINT = @MAINT@
 MAKEINFO = @MAKEINFO@
 MYSQLINC = @MYSQLINC@
+OBJDUMP = @OBJDUMP@
+OBJEXT = @OBJEXT@
 PACKAGE = @PACKAGE@
 PGSQLINC = @PGSQLINC@
 RANLIB = @RANLIB@
 SIEVEINC = @SIEVEINC@
 SIEVELIB = @SIEVELIB@
 SORTALIB = @SORTALIB@
+SORTLTLIB = @SORTLTLIB@
 SQLALIB = @SQLALIB@
 SQLLIB = @SQLLIB@
+SQLLTLIB = @SQLLTLIB@
+STRIP = @STRIP@
 VERSION = @VERSION@
 mysqlconfig = @mysqlconfig@
 pgsqlconfig = @pgsqlconfig@
@@ -107,86 +121,96 @@ DELIVER = header.c pipe.c forward.c dsn.c
 # CFLAGS
 AM_CFLAGS = -fomit-frame-pointer
 
-dbmail_smtp_SOURCES = $(COMMON) $(DELIVER) main.c
-dbmail_smtp_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_smtp_SOURCES = main.c
+dbmail_smtp_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @SIEVELIB@
 
-dbmail_pop3d_SOURCES = $(COMMON) $(SERVER) pop3.c pop3d.c
-dbmail_pop3d_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_pop3d_SOURCES = pop3.c pop3d.c
+dbmail_pop3d_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
-dbmail_imapd_SOURCES = $(COMMON) $(SERVER) quota.c imap4.c imaputil.c imapcommands.c memblock.c rfcmsg.c imapd.c dbsearch.c dbmsgbuf.c acl.c
-dbmail_imapd_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_imapd_SOURCES = quota.c imap4.c imaputil.c imapcommands.c memblock.c rfcmsg.c imapd.c dbsearch.c dbmsgbuf.c acl.c
+dbmail_imapd_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ 
 
-dbmail_maintenance_SOURCES = $(COMMON) maintenance.c
-dbmail_maintenance_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_maintenance_SOURCES = maintenance.c
+dbmail_maintenance_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
-dbmail_adduser_SOURCES = $(COMMON) user.c
-dbmail_adduser_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_adduser_SOURCES = user.c
+dbmail_adduser_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
-dbmail_readvut_SOURCES = $(COMMON) vut2dbmail.c
-dbmail_readvut_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_readvut_SOURCES = vut2dbmail.c
+dbmail_readvut_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
-dbmail_lmtpd_SOURCES = $(COMMON) $(SERVER) $(DELIVER) lmtp.c lmtpd.c
-dbmail_lmtpd_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_lmtpd_SOURCES = lmtp.c lmtpd.c
+dbmail_lmtpd_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
-@SIEVE_TRUE@dbmail_sievecmd_SOURCES = $(COMMON) sievecmd.c 
-@SIEVE_TRUE@dbmail_sievecmd_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+@SIEVE_TRUE@dbmail_sievecmd_SOURCES = sievecmd.c 
+@SIEVE_TRUE@dbmail_sievecmd_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
-@SIEVE_TRUE@dbmail_timsieved_SOURCES = $(COMMON) $(SERVER) timsieve.c timsieved.c
-@SIEVE_TRUE@dbmail_timsieved_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+@SIEVE_TRUE@dbmail_timsieved_SOURCES = timsieve.c timsieved.c
+@SIEVE_TRUE@dbmail_timsieved_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+
+lib_LTLIBRARIES = libdbmail.la
+libdbmail_la_SOURCES = $(COMMON) $(SERVER) $(DELIVER)
+libdbmail_la_LIBADD = @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 mkinstalldirs = $(SHELL) $(top_srcdir)/buildtools/mkinstalldirs
 CONFIG_HEADER = config.h
 CONFIG_CLEAN_FILES = 
-PROGRAMS =  $(bin_PROGRAMS) $(sbin_PROGRAMS)
+LTLIBRARIES =  $(lib_LTLIBRARIES)
 
 
 DEFS = @DEFS@ -I. -I$(srcdir) -I.
 CPPFLAGS = @CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
-dbmail_readvut_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o db.o \
-misc.o mime.o vut2dbmail.o
-dbmail_readvut_DEPENDENCIES = 
+libdbmail_la_LDFLAGS = 
+libdbmail_la_DEPENDENCIES = 
+libdbmail_la_OBJECTS =  config.lo debug.lo list.lo dbmd5.lo md5.lo db.lo \
+misc.lo mime.lo server.lo serverchild.lo header.lo pipe.lo forward.lo \
+dsn.lo
+@SIEVE_FALSE@bin_PROGRAMS =  dbmail-readvut$(EXEEXT)
+@SIEVE_TRUE@bin_PROGRAMS =  dbmail-readvut$(EXEEXT) \
+@SIEVE_TRUE@dbmail-sievecmd$(EXEEXT) dbmail-timsieved$(EXEEXT)
+sbin_PROGRAMS =  dbmail-smtp$(EXEEXT) dbmail-pop3d$(EXEEXT) \
+dbmail-imapd$(EXEEXT) dbmail-maintenance$(EXEEXT) \
+dbmail-adduser$(EXEEXT) dbmail-lmtpd$(EXEEXT)
+PROGRAMS =  $(bin_PROGRAMS) $(sbin_PROGRAMS)
+
+dbmail_readvut_OBJECTS =  vut2dbmail.$(OBJEXT)
+dbmail_readvut_DEPENDENCIES =  libdbmail.la
 dbmail_readvut_LDFLAGS = 
-@SIEVE_TRUE@dbmail_sievecmd_OBJECTS =  config.o debug.o list.o dbmd5.o \
-@SIEVE_TRUE@md5.o db.o misc.o mime.o sievecmd.o
-@SIEVE_TRUE@dbmail_sievecmd_DEPENDENCIES = 
+@SIEVE_TRUE@dbmail_sievecmd_OBJECTS =  sievecmd.$(OBJEXT)
+@SIEVE_TRUE@dbmail_sievecmd_DEPENDENCIES =  libdbmail.la
 dbmail_sievecmd_LDFLAGS = 
-@SIEVE_TRUE@dbmail_timsieved_OBJECTS =  config.o debug.o list.o dbmd5.o \
-@SIEVE_TRUE@md5.o db.o misc.o mime.o server.o serverchild.o timsieve.o \
-@SIEVE_TRUE@timsieved.o
-@SIEVE_TRUE@dbmail_timsieved_DEPENDENCIES = 
+@SIEVE_TRUE@dbmail_timsieved_OBJECTS =  timsieve.$(OBJEXT) \
+@SIEVE_TRUE@timsieved.$(OBJEXT)
+@SIEVE_TRUE@dbmail_timsieved_DEPENDENCIES =  libdbmail.la
 dbmail_timsieved_LDFLAGS = 
-dbmail_smtp_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o db.o misc.o \
-mime.o header.o pipe.o forward.o dsn.o main.o
-dbmail_smtp_DEPENDENCIES = 
+dbmail_smtp_OBJECTS =  main.$(OBJEXT)
+dbmail_smtp_DEPENDENCIES =  libdbmail.la
 dbmail_smtp_LDFLAGS = 
-dbmail_pop3d_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o db.o \
-misc.o mime.o server.o serverchild.o pop3.o pop3d.o
-dbmail_pop3d_DEPENDENCIES = 
+dbmail_pop3d_OBJECTS =  pop3.$(OBJEXT) pop3d.$(OBJEXT)
+dbmail_pop3d_DEPENDENCIES =  libdbmail.la
 dbmail_pop3d_LDFLAGS = 
-dbmail_imapd_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o db.o \
-misc.o mime.o server.o serverchild.o quota.o imap4.o imaputil.o \
-imapcommands.o memblock.o rfcmsg.o imapd.o dbsearch.o dbmsgbuf.o acl.o
-dbmail_imapd_DEPENDENCIES = 
+dbmail_imapd_OBJECTS =  quota.$(OBJEXT) imap4.$(OBJEXT) \
+imaputil.$(OBJEXT) imapcommands.$(OBJEXT) memblock.$(OBJEXT) \
+rfcmsg.$(OBJEXT) imapd.$(OBJEXT) dbsearch.$(OBJEXT) dbmsgbuf.$(OBJEXT) \
+acl.$(OBJEXT)
+dbmail_imapd_DEPENDENCIES =  libdbmail.la
 dbmail_imapd_LDFLAGS = 
-dbmail_maintenance_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o db.o \
-misc.o mime.o maintenance.o
-dbmail_maintenance_DEPENDENCIES = 
+dbmail_maintenance_OBJECTS =  maintenance.$(OBJEXT)
+dbmail_maintenance_DEPENDENCIES =  libdbmail.la
 dbmail_maintenance_LDFLAGS = 
-dbmail_adduser_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o db.o \
-misc.o mime.o user.o
-dbmail_adduser_DEPENDENCIES = 
+dbmail_adduser_OBJECTS =  user.$(OBJEXT)
+dbmail_adduser_DEPENDENCIES =  libdbmail.la
 dbmail_adduser_LDFLAGS = 
-dbmail_lmtpd_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o db.o \
-misc.o mime.o server.o serverchild.o header.o pipe.o forward.o dsn.o \
-lmtp.o lmtpd.o
-dbmail_lmtpd_DEPENDENCIES = 
+dbmail_lmtpd_OBJECTS =  lmtp.$(OBJEXT) lmtpd.$(OBJEXT)
+dbmail_lmtpd_DEPENDENCIES =  libdbmail.la
 dbmail_lmtpd_LDFLAGS = 
 CFLAGS = @CFLAGS@
 COMPILE = $(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
+LTCOMPILE = $(LIBTOOL) --mode=compile $(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
-LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(LDFLAGS) -o $@
+LINK = $(LIBTOOL) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(LDFLAGS) -o $@
 DIST_COMMON =  README ./stamp-h.in AUTHORS COPYING ChangeLog INSTALL \
 Makefile.am Makefile.in NEWS THANKS TODO acconfig.h acinclude.m4 \
 aclocal.m4 config.in configure configure.in
@@ -205,12 +229,12 @@ DEP_FILES =  .deps/acl.P .deps/config.P .deps/db.P .deps/dbmd5.P \
 .deps/quota.P .deps/rfcmsg.P .deps/server.P .deps/serverchild.P \
 .deps/sievecmd.P .deps/timsieve.P .deps/timsieved.P .deps/user.P \
 .deps/vut2dbmail.P
-SOURCES = $(dbmail_readvut_SOURCES) $(dbmail_sievecmd_SOURCES) $(dbmail_timsieved_SOURCES) $(dbmail_smtp_SOURCES) $(dbmail_pop3d_SOURCES) $(dbmail_imapd_SOURCES) $(dbmail_maintenance_SOURCES) $(dbmail_adduser_SOURCES) $(dbmail_lmtpd_SOURCES)
-OBJECTS = $(dbmail_readvut_OBJECTS) $(dbmail_sievecmd_OBJECTS) $(dbmail_timsieved_OBJECTS) $(dbmail_smtp_OBJECTS) $(dbmail_pop3d_OBJECTS) $(dbmail_imapd_OBJECTS) $(dbmail_maintenance_OBJECTS) $(dbmail_adduser_OBJECTS) $(dbmail_lmtpd_OBJECTS)
+SOURCES = $(libdbmail_la_SOURCES) $(dbmail_readvut_SOURCES) $(dbmail_sievecmd_SOURCES) $(dbmail_timsieved_SOURCES) $(dbmail_smtp_SOURCES) $(dbmail_pop3d_SOURCES) $(dbmail_imapd_SOURCES) $(dbmail_maintenance_SOURCES) $(dbmail_adduser_SOURCES) $(dbmail_lmtpd_SOURCES)
+OBJECTS = $(libdbmail_la_OBJECTS) $(dbmail_readvut_OBJECTS) $(dbmail_sievecmd_OBJECTS) $(dbmail_timsieved_OBJECTS) $(dbmail_smtp_OBJECTS) $(dbmail_pop3d_OBJECTS) $(dbmail_imapd_OBJECTS) $(dbmail_maintenance_OBJECTS) $(dbmail_adduser_OBJECTS) $(dbmail_lmtpd_OBJECTS)
 
 all: all-redirect
 .SUFFIXES:
-.SUFFIXES: .S .c .o .s
+.SUFFIXES: .S .c .lo .o .obj .s
 $(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ Makefile.am $(top_srcdir)/configure.in $(ACLOCAL_M4) 
 	cd $(top_srcdir) && $(AUTOMAKE) --gnu Makefile
 
@@ -254,6 +278,72 @@ distclean-hdr:
 
 maintainer-clean-hdr:
 
+mostlyclean-libLTLIBRARIES:
+
+clean-libLTLIBRARIES:
+	-test -z "$(lib_LTLIBRARIES)" || rm -f $(lib_LTLIBRARIES)
+
+distclean-libLTLIBRARIES:
+
+maintainer-clean-libLTLIBRARIES:
+
+install-libLTLIBRARIES: $(lib_LTLIBRARIES)
+	@$(NORMAL_INSTALL)
+	$(mkinstalldirs) $(DESTDIR)$(libdir)
+	@list='$(lib_LTLIBRARIES)'; for p in $$list; do \
+	  if test -f $$p; then \
+	    echo "$(LIBTOOL)  --mode=install $(INSTALL) $$p $(DESTDIR)$(libdir)/$$p"; \
+	    $(LIBTOOL)  --mode=install $(INSTALL) $$p $(DESTDIR)$(libdir)/$$p; \
+	  else :; fi; \
+	done
+
+uninstall-libLTLIBRARIES:
+	@$(NORMAL_UNINSTALL)
+	list='$(lib_LTLIBRARIES)'; for p in $$list; do \
+	  $(LIBTOOL)  --mode=uninstall rm -f $(DESTDIR)$(libdir)/$$p; \
+	done
+
+# FIXME: We should only use cygpath when building on Windows,
+# and only if it is available.
+.c.obj:
+	$(COMPILE) -c `cygpath -w $<`
+
+.s.o:
+	$(COMPILE) -c $<
+
+.S.o:
+	$(COMPILE) -c $<
+
+mostlyclean-compile:
+	-rm -f *.o core *.core
+	-rm -f *.$(OBJEXT)
+
+clean-compile:
+
+distclean-compile:
+	-rm -f *.tab.c
+
+maintainer-clean-compile:
+
+.s.lo:
+	$(LIBTOOL) --mode=compile $(COMPILE) -c $<
+
+.S.lo:
+	$(LIBTOOL) --mode=compile $(COMPILE) -c $<
+
+mostlyclean-libtool:
+	-rm -f *.lo
+
+clean-libtool:
+	-rm -rf .libs _libs
+
+distclean-libtool:
+
+maintainer-clean-libtool:
+
+libdbmail.la: $(libdbmail_la_OBJECTS) $(libdbmail_la_DEPENDENCIES)
+	$(LINK) -rpath $(libdir) $(libdbmail_la_LDFLAGS) $(libdbmail_la_OBJECTS) $(libdbmail_la_LIBADD) $(LIBS)
+
 mostlyclean-binPROGRAMS:
 
 clean-binPROGRAMS:
@@ -268,8 +358,8 @@ install-binPROGRAMS: $(bin_PROGRAMS)
 	$(mkinstalldirs) $(DESTDIR)$(bindir)
 	@list='$(bin_PROGRAMS)'; for p in $$list; do \
 	  if test -f $$p; then \
-	    echo "  $(INSTALL_PROGRAM) $$p $(DESTDIR)$(bindir)/`echo $$p|sed 's/$(EXEEXT)$$//'|sed '$(transform)'|sed 's/$$/$(EXEEXT)/'`"; \
-	     $(INSTALL_PROGRAM) $$p $(DESTDIR)$(bindir)/`echo $$p|sed 's/$(EXEEXT)$$//'|sed '$(transform)'|sed 's/$$/$(EXEEXT)/'`; \
+	    echo " $(LIBTOOL)  --mode=install $(INSTALL_PROGRAM) $$p $(DESTDIR)$(bindir)/`echo $$p|sed 's/$(EXEEXT)$$//'|sed '$(transform)'|sed 's/$$/$(EXEEXT)/'`"; \
+	    $(LIBTOOL)  --mode=install $(INSTALL_PROGRAM) $$p $(DESTDIR)$(bindir)/`echo $$p|sed 's/$(EXEEXT)$$//'|sed '$(transform)'|sed 's/$$/$(EXEEXT)/'`; \
 	  else :; fi; \
 	done
 
@@ -293,8 +383,8 @@ install-sbinPROGRAMS: $(sbin_PROGRAMS)
 	$(mkinstalldirs) $(DESTDIR)$(sbindir)
 	@list='$(sbin_PROGRAMS)'; for p in $$list; do \
 	  if test -f $$p; then \
-	    echo "  $(INSTALL_PROGRAM) $$p $(DESTDIR)$(sbindir)/`echo $$p|sed 's/$(EXEEXT)$$//'|sed '$(transform)'|sed 's/$$/$(EXEEXT)/'`"; \
-	     $(INSTALL_PROGRAM) $$p $(DESTDIR)$(sbindir)/`echo $$p|sed 's/$(EXEEXT)$$//'|sed '$(transform)'|sed 's/$$/$(EXEEXT)/'`; \
+	    echo " $(LIBTOOL)  --mode=install $(INSTALL_PROGRAM) $$p $(DESTDIR)$(sbindir)/`echo $$p|sed 's/$(EXEEXT)$$//'|sed '$(transform)'|sed 's/$$/$(EXEEXT)/'`"; \
+	    $(LIBTOOL)  --mode=install $(INSTALL_PROGRAM) $$p $(DESTDIR)$(sbindir)/`echo $$p|sed 's/$(EXEEXT)$$//'|sed '$(transform)'|sed 's/$$/$(EXEEXT)/'`; \
 	  else :; fi; \
 	done
 
@@ -304,56 +394,40 @@ uninstall-sbinPROGRAMS:
 	  rm -f $(DESTDIR)$(sbindir)/`echo $$p|sed 's/$(EXEEXT)$$//'|sed '$(transform)'|sed 's/$$/$(EXEEXT)/'`; \
 	done
 
-.s.o:
-	$(COMPILE) -c $<
-
-.S.o:
-	$(COMPILE) -c $<
-
-mostlyclean-compile:
-	-rm -f *.o core *.core
-
-clean-compile:
-
-distclean-compile:
-	-rm -f *.tab.c
-
-maintainer-clean-compile:
-
-dbmail-readvut: $(dbmail_readvut_OBJECTS) $(dbmail_readvut_DEPENDENCIES)
-	@rm -f dbmail-readvut
+dbmail-readvut$(EXEEXT): $(dbmail_readvut_OBJECTS) $(dbmail_readvut_DEPENDENCIES)
+	@rm -f dbmail-readvut$(EXEEXT)
 	$(LINK) $(dbmail_readvut_LDFLAGS) $(dbmail_readvut_OBJECTS) $(dbmail_readvut_LDADD) $(LIBS)
 
-dbmail-sievecmd: $(dbmail_sievecmd_OBJECTS) $(dbmail_sievecmd_DEPENDENCIES)
-	@rm -f dbmail-sievecmd
+dbmail-sievecmd$(EXEEXT): $(dbmail_sievecmd_OBJECTS) $(dbmail_sievecmd_DEPENDENCIES)
+	@rm -f dbmail-sievecmd$(EXEEXT)
 	$(LINK) $(dbmail_sievecmd_LDFLAGS) $(dbmail_sievecmd_OBJECTS) $(dbmail_sievecmd_LDADD) $(LIBS)
 
-dbmail-timsieved: $(dbmail_timsieved_OBJECTS) $(dbmail_timsieved_DEPENDENCIES)
-	@rm -f dbmail-timsieved
+dbmail-timsieved$(EXEEXT): $(dbmail_timsieved_OBJECTS) $(dbmail_timsieved_DEPENDENCIES)
+	@rm -f dbmail-timsieved$(EXEEXT)
 	$(LINK) $(dbmail_timsieved_LDFLAGS) $(dbmail_timsieved_OBJECTS) $(dbmail_timsieved_LDADD) $(LIBS)
 
-dbmail-smtp: $(dbmail_smtp_OBJECTS) $(dbmail_smtp_DEPENDENCIES)
-	@rm -f dbmail-smtp
+dbmail-smtp$(EXEEXT): $(dbmail_smtp_OBJECTS) $(dbmail_smtp_DEPENDENCIES)
+	@rm -f dbmail-smtp$(EXEEXT)
 	$(LINK) $(dbmail_smtp_LDFLAGS) $(dbmail_smtp_OBJECTS) $(dbmail_smtp_LDADD) $(LIBS)
 
-dbmail-pop3d: $(dbmail_pop3d_OBJECTS) $(dbmail_pop3d_DEPENDENCIES)
-	@rm -f dbmail-pop3d
+dbmail-pop3d$(EXEEXT): $(dbmail_pop3d_OBJECTS) $(dbmail_pop3d_DEPENDENCIES)
+	@rm -f dbmail-pop3d$(EXEEXT)
 	$(LINK) $(dbmail_pop3d_LDFLAGS) $(dbmail_pop3d_OBJECTS) $(dbmail_pop3d_LDADD) $(LIBS)
 
-dbmail-imapd: $(dbmail_imapd_OBJECTS) $(dbmail_imapd_DEPENDENCIES)
-	@rm -f dbmail-imapd
+dbmail-imapd$(EXEEXT): $(dbmail_imapd_OBJECTS) $(dbmail_imapd_DEPENDENCIES)
+	@rm -f dbmail-imapd$(EXEEXT)
 	$(LINK) $(dbmail_imapd_LDFLAGS) $(dbmail_imapd_OBJECTS) $(dbmail_imapd_LDADD) $(LIBS)
 
-dbmail-maintenance: $(dbmail_maintenance_OBJECTS) $(dbmail_maintenance_DEPENDENCIES)
-	@rm -f dbmail-maintenance
+dbmail-maintenance$(EXEEXT): $(dbmail_maintenance_OBJECTS) $(dbmail_maintenance_DEPENDENCIES)
+	@rm -f dbmail-maintenance$(EXEEXT)
 	$(LINK) $(dbmail_maintenance_LDFLAGS) $(dbmail_maintenance_OBJECTS) $(dbmail_maintenance_LDADD) $(LIBS)
 
-dbmail-adduser: $(dbmail_adduser_OBJECTS) $(dbmail_adduser_DEPENDENCIES)
-	@rm -f dbmail-adduser
+dbmail-adduser$(EXEEXT): $(dbmail_adduser_OBJECTS) $(dbmail_adduser_DEPENDENCIES)
+	@rm -f dbmail-adduser$(EXEEXT)
 	$(LINK) $(dbmail_adduser_LDFLAGS) $(dbmail_adduser_OBJECTS) $(dbmail_adduser_LDADD) $(LIBS)
 
-dbmail-lmtpd: $(dbmail_lmtpd_OBJECTS) $(dbmail_lmtpd_DEPENDENCIES)
-	@rm -f dbmail-lmtpd
+dbmail-lmtpd$(EXEEXT): $(dbmail_lmtpd_OBJECTS) $(dbmail_lmtpd_DEPENDENCIES)
+	@rm -f dbmail-lmtpd$(EXEEXT)
 	$(LINK) $(dbmail_lmtpd_LDFLAGS) $(dbmail_lmtpd_OBJECTS) $(dbmail_lmtpd_LDADD) $(LIBS)
 
 # This directory's subdirectories are mostly independent; you can cd
@@ -551,7 +625,8 @@ installcheck: installcheck-recursive
 all-recursive-am: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
-install-exec-am: install-binPROGRAMS install-sbinPROGRAMS
+install-exec-am: install-libLTLIBRARIES install-binPROGRAMS \
+		install-sbinPROGRAMS
 install-exec: install-exec-recursive
 
 install-data-am:
@@ -560,15 +635,17 @@ install-data: install-data-recursive
 install-am: all-am
 	@$(MAKE) $(AM_MAKEFLAGS) install-exec-am install-data-am
 install: install-recursive
-uninstall-am: uninstall-binPROGRAMS uninstall-sbinPROGRAMS
+uninstall-am: uninstall-libLTLIBRARIES uninstall-binPROGRAMS \
+		uninstall-sbinPROGRAMS
 uninstall: uninstall-recursive
-all-am: Makefile $(PROGRAMS) config.h
+all-am: Makefile $(LTLIBRARIES) $(PROGRAMS) config.h
 all-redirect: all-recursive-am
 install-strip:
 	$(MAKE) $(AM_MAKEFLAGS) AM_INSTALL_PROGRAM_FLAGS=-s install
 installdirs: installdirs-recursive
 installdirs-am:
-	$(mkinstalldirs)  $(DESTDIR)$(bindir) $(DESTDIR)$(sbindir)
+	$(mkinstalldirs)  $(DESTDIR)$(libdir) $(DESTDIR)$(bindir) \
+		$(DESTDIR)$(sbindir)
 
 
 mostlyclean-generic:
@@ -580,28 +657,35 @@ distclean-generic:
 	-rm -f config.cache config.log stamp-h stamp-h[0-9]*
 
 maintainer-clean-generic:
-mostlyclean-am:  mostlyclean-hdr mostlyclean-binPROGRAMS \
-		mostlyclean-sbinPROGRAMS mostlyclean-compile \
+mostlyclean-am:  mostlyclean-hdr mostlyclean-libLTLIBRARIES \
+		mostlyclean-compile mostlyclean-libtool \
+		mostlyclean-binPROGRAMS mostlyclean-sbinPROGRAMS \
 		mostlyclean-tags mostlyclean-depend mostlyclean-generic
 
 mostlyclean: mostlyclean-recursive
 
-clean-am:  clean-hdr clean-binPROGRAMS clean-sbinPROGRAMS clean-compile \
-		clean-tags clean-depend clean-generic mostlyclean-am
+clean-am:  clean-hdr clean-libLTLIBRARIES clean-compile clean-libtool \
+		clean-binPROGRAMS clean-sbinPROGRAMS clean-tags \
+		clean-depend clean-generic mostlyclean-am
 
 clean: clean-recursive
 
-distclean-am:  distclean-hdr distclean-binPROGRAMS \
-		distclean-sbinPROGRAMS distclean-compile distclean-tags \
-		distclean-depend distclean-generic clean-am
+distclean-am:  distclean-hdr distclean-libLTLIBRARIES distclean-compile \
+		distclean-libtool distclean-binPROGRAMS \
+		distclean-sbinPROGRAMS distclean-tags distclean-depend \
+		distclean-generic clean-am
+	-rm -f libtool
 
 distclean: distclean-recursive
 	-rm -f config.status
 
-maintainer-clean-am:  maintainer-clean-hdr maintainer-clean-binPROGRAMS \
-		maintainer-clean-sbinPROGRAMS maintainer-clean-compile \
-		maintainer-clean-tags maintainer-clean-depend \
-		maintainer-clean-generic distclean-am
+maintainer-clean-am:  maintainer-clean-hdr \
+		maintainer-clean-libLTLIBRARIES \
+		maintainer-clean-compile maintainer-clean-libtool \
+		maintainer-clean-binPROGRAMS \
+		maintainer-clean-sbinPROGRAMS maintainer-clean-tags \
+		maintainer-clean-depend maintainer-clean-generic \
+		distclean-am
 	@echo "This command is intended for maintainers to use;"
 	@echo "it deletes files that may require special tools to rebuild."
 
@@ -609,16 +693,20 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f config.status
 
 .PHONY: mostlyclean-hdr distclean-hdr clean-hdr maintainer-clean-hdr \
-mostlyclean-binPROGRAMS distclean-binPROGRAMS clean-binPROGRAMS \
-maintainer-clean-binPROGRAMS uninstall-binPROGRAMS install-binPROGRAMS \
-mostlyclean-sbinPROGRAMS distclean-sbinPROGRAMS clean-sbinPROGRAMS \
-maintainer-clean-sbinPROGRAMS uninstall-sbinPROGRAMS \
-install-sbinPROGRAMS mostlyclean-compile distclean-compile \
-clean-compile maintainer-clean-compile install-data-recursive \
-uninstall-data-recursive install-exec-recursive \
-uninstall-exec-recursive installdirs-recursive uninstalldirs-recursive \
-all-recursive check-recursive installcheck-recursive info-recursive \
-dvi-recursive mostlyclean-recursive distclean-recursive clean-recursive \
+mostlyclean-libLTLIBRARIES distclean-libLTLIBRARIES \
+clean-libLTLIBRARIES maintainer-clean-libLTLIBRARIES \
+uninstall-libLTLIBRARIES install-libLTLIBRARIES mostlyclean-compile \
+distclean-compile clean-compile maintainer-clean-compile \
+mostlyclean-libtool distclean-libtool clean-libtool \
+maintainer-clean-libtool mostlyclean-binPROGRAMS distclean-binPROGRAMS \
+clean-binPROGRAMS maintainer-clean-binPROGRAMS uninstall-binPROGRAMS \
+install-binPROGRAMS mostlyclean-sbinPROGRAMS distclean-sbinPROGRAMS \
+clean-sbinPROGRAMS maintainer-clean-sbinPROGRAMS uninstall-sbinPROGRAMS \
+install-sbinPROGRAMS install-data-recursive uninstall-data-recursive \
+install-exec-recursive uninstall-exec-recursive installdirs-recursive \
+uninstalldirs-recursive all-recursive check-recursive \
+installcheck-recursive info-recursive dvi-recursive \
+mostlyclean-recursive distclean-recursive clean-recursive \
 maintainer-clean-recursive tags tags-recursive mostlyclean-tags \
 distclean-tags clean-tags maintainer-clean-tags distdir \
 mostlyclean-depend distclean-depend clean-depend \

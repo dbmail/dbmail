@@ -31,32 +31,36 @@ DELIVER = header.c pipe.c forward.c dsn.c
 # CFLAGS
 AM_CFLAGS = -fomit-frame-pointer
 
-dbmail_smtp_SOURCES = $(COMMON) $(DELIVER) main.c
-dbmail_smtp_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_smtp_SOURCES = main.c
+dbmail_smtp_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @SIEVELIB@
 
 
-dbmail_pop3d_SOURCES = $(COMMON) $(SERVER) pop3.c pop3d.c
-dbmail_pop3d_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_pop3d_SOURCES = pop3.c pop3d.c
+dbmail_pop3d_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
-dbmail_imapd_SOURCES = $(COMMON) $(SERVER) quota.c imap4.c imaputil.c imapcommands.c memblock.c rfcmsg.c imapd.c dbsearch.c dbmsgbuf.c acl.c
-dbmail_imapd_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_imapd_SOURCES = quota.c imap4.c imaputil.c imapcommands.c memblock.c rfcmsg.c imapd.c dbsearch.c dbmsgbuf.c acl.c
+dbmail_imapd_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ 
 
-dbmail_maintenance_SOURCES = $(COMMON) maintenance.c
-dbmail_maintenance_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_maintenance_SOURCES = maintenance.c
+dbmail_maintenance_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
-dbmail_adduser_SOURCES = $(COMMON) user.c
-dbmail_adduser_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_adduser_SOURCES = user.c
+dbmail_adduser_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
-dbmail_readvut_SOURCES = $(COMMON) vut2dbmail.c
-dbmail_readvut_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_readvut_SOURCES = vut2dbmail.c
+dbmail_readvut_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
-dbmail_lmtpd_SOURCES = $(COMMON) $(SERVER) $(DELIVER) lmtp.c lmtpd.c
-dbmail_lmtpd_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_lmtpd_SOURCES = lmtp.c lmtpd.c
+dbmail_lmtpd_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
   
 if SIEVE
-dbmail_sievecmd_SOURCES = $(COMMON) sievecmd.c 
-dbmail_sievecmd_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_sievecmd_SOURCES = sievecmd.c 
+dbmail_sievecmd_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
-dbmail_timsieved_SOURCES = $(COMMON) $(SERVER) timsieve.c timsieved.c
-dbmail_timsieved_LDADD = @SQLALIB@ @SORTALIB@ @AUTHALIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_timsieved_SOURCES = timsieve.c timsieved.c
+dbmail_timsieved_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 endif
+
+lib_LTLIBRARIES = libdbmail.la
+libdbmail_la_SOURCES = $(COMMON) $(SERVER) $(DELIVER)
+libdbmail_la_LIBADD = @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@

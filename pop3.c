@@ -54,6 +54,7 @@
 
 extern int pop_before_smtp;
 
+
 int pop3(void *stream, char *buffer, char *client_ip,
 	 PopSession_t * session);
 

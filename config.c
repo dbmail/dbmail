@@ -255,7 +255,6 @@ int GetConfigValueConfigList(const field_t name, struct list *config_items,
 {
 	item_t *item;
 	struct element *el;
-	int i = 0;
 
 	assert(config_items);
 

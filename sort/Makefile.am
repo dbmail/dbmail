@@ -16,11 +16,11 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-lib_LIBRARIES = libsortdbmail.a
+pkglib_LTLIBRARIES = libsortdbmail.la
 
 if SIEVE
-libsortdbmail_a_SOURCES = sort.c sortsieve.c
+libsortdbmail_la_SOURCES = sort.c sortsieve.c
 CFLAGS += -DSIEVE
 else
-libsortdbmail_a_SOURCES = sort.c
+libsortdbmail_la_SOURCES = sort.c
 endif

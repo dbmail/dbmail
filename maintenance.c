@@ -42,6 +42,7 @@
 #include <time.h>
 #include <string.h>
 
+
 char *configFile = DEFAULT_CONFIG_FILE;
 
 /* set up database login data */

@@ -18,9 +18,9 @@
 
 AM_CFLAGS = -fomit-frame-pointer
 
-lib_LIBRARIES = libauthdbmail.a
+pkglib_LTLIBRARIES = libauthdbmail.la
 if LDAP
-libauthdbmail_a_SOURCES = authldap.c
+libauthdbmail_la_SOURCES = authldap.c
 else
-libauthdbmail_a_SOURCES = authsql.c
+libauthdbmail_la_SOURCES = authsql.c
 endif
