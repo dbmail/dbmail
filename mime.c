@@ -72,9 +72,8 @@ int mime_readheader(char *blkdata, u64_t * blkidx, struct list *mimelist,
 	struct element *el = NULL;
 	int cr_nl_present;	/* 1 if a '\r\n' is found */
 
-	trace(TRACE_DEBUG,
-	      "mime_readheader(): entering mime loop, block is [%s]\n",
-	      blkdata);
+	trace(TRACE_DEBUG, "mime_readheader(): entering mime loop");
+
 
 	list_init(mimelist);
 	*headersize = 0;
@@ -270,16 +269,11 @@ int mime_readheader(char *blkdata, u64_t * blkidx, struct list *mimelist,
 			*(endptr - 1) = '\r';
 		*endptr = '\n';	/* restore blkdata */
 
-		trace(TRACE_DEBUG, "%s,%s: startptr before change = %s",
-		      __FILE__, __FUNCTION__, startptr);
-
 		*blkidx += (endptr - startptr);
 		(*blkidx)++;
 
 		startptr = endptr + 1;	/* advance to next field */
 
-		trace(TRACE_DEBUG, "%s,%s: startptr = %s", __FILE__,
-		      __FUNCTION__, startptr);
 		if (*startptr == '\n'
 		    || (*startptr == '\r' && *(startptr + 1) == '\n')) {
 			/* end of header: double newline */

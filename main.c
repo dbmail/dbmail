@@ -236,6 +236,14 @@ int main(int argc, char *argv[])
       exitcode = EX_TEMPFAIL;
       goto freeall;
     }
+  
+  if (headersize > READ_BLOCK_SIZE) {
+	  trace(TRACE_ERROR, "%s,%s: failed to read header because header is "
+		"too big (bigger than READ_BLOCK_SIZE (%llu))", 
+		__FILE__, __FUNCTION__, (u64_t)READ_BLOCK_SIZE);
+	  exitcode = EX_DATAERR;
+	  goto freeall;
+  }
 
   /* parse the list and scan for field and content */
   if (mime_readheader(header, &dummyidx, &mimelist, &dummysize) < 0)

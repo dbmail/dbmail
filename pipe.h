@@ -49,6 +49,10 @@ int insert_messages(FILE *instream,
                     char *header, u64_t headersize, u64_t headerrfcsize,
                     struct list *headerfields, struct list *dsnusers, struct list *returnpath);
 
-
+/**
+ * \brief discards all input coming from instream
+ * \param instream FILE stream holding input from a client
+ */
+void discard_client_input(FILE *instream);
 
 #endif

@@ -277,6 +277,26 @@ static int execute_auto_ran(u64_t useridnr, struct list *headerfields)
 }
 
 
+/* read from instream, but simply discard all input! */
+void discard_client_input(FILE *instream)
+{
+	char *tmpline;
+
+	memtst ((tmpline= (char *)my_malloc(MAX_LINE_SIZE+1))==NULL);
+	while(!feof(instream)) {
+		fgets(tmpline, MAX_LINE_SIZE, instream);
+		
+		if (!tmpline)
+			break;
+
+		trace(TRACE_DEBUG, "%s,%s: tmpline = [%s]", __FILE__,
+		      __FUNCTION__, tmpline);
+		if (strcmp(tmpline, ".\r\n") == 0)
+			break;
+	}
+	my_free(tmpline);
+}
+
 /* Read from insteam until eof, and store to the
  * dedicated dbmail user account. Later, we'll
  * read the message back for forwarding and 

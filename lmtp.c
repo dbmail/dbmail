@@ -271,6 +271,7 @@ int lmtp(void *stream, void *instream, char *buffer, char *client_ip UNUSED, Pop
       (cmdtype==LMTP_NOOP) || (cmdtype==LMTP_HELP)
       ))
     {
+	    trace(TRACE_ERROR, "ARGUMENT %d", cmdtype);
       return lmtp_error(session, stream, "500 This command requires an argument.\r\n");
     }
 
@@ -593,25 +594,38 @@ int lmtp(void *stream, void *instream, char *buffer, char *client_ip UNUSED, Pop
                 if (!read_header((FILE *)instream, &headerrfcsize, &headersize, &header))
 		  {
                     trace(TRACE_ERROR,"main(): fatal error from read_header()");
+		    discard_client_input((FILE*) instream);
                     fprintf((FILE *)stream, "500 Error reading header.\r\n" );
 		    return 1;
 		  }
 
                 if (header != NULL)
 		  {
-                    trace(TRACE_ERROR,"main(): size of read_header() header is [%llu]", headersize);
+                    trace(TRACE_ERROR,"main(): size of read_header() header "
+			  "is [%llu]", headersize);
+		    if (headersize > READ_BLOCK_SIZE) {
+			    trace(TRACE_ERROR, "main(): header is too "
+				  "big");
+			    discard_client_input((FILE *)instream);
+			    fprintf((FILE*)stream, "500 Error reading header, "
+				    "header too big.\r\n");
+			    return 1;
+		    }
 		  }
                 else
                   {
                     trace(TRACE_ERROR,"main(): read_header() returned a null header [%s]", header);
+		    discard_client_input((FILE*) instream);
                     fprintf((FILE *)stream, "500 Error reading header.\r\n" );
                     return 1;
                   }
+
 
                 /* Parse the list and scan for field and content */
                 if (mime_readheader(header, &dummyidx, &mimelist, &dummysize) < 0)
                   {
                     trace(TRACE_ERROR,"main(): fatal error from mime_readheader()");
+		    discard_client_input((FILE*) instream);
                     fprintf((FILE *)stream, "500 Error reading header.\r\n" );
                     return 1;
                   }

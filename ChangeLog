@@ -1,3 +1,16 @@
+2004-03-19  Ilja Booij  <ilja@ic-s.nl>
+
+	* pipe.c (discard_client_input): new function, used to empty a 
+	file stream coming from a client.
+
+	* lmtp.c (lmtp): messages with headers that are bigger than 
+	READ_BLOCK_SIZE are rejected. Some changes were made to make sure
+	that we don't get anymore data from the client before sending 
+	a message indicating the failure.
+
+	* main.c (main): now rejects headers that are bigger than READ_BLOCK_SIZE.
+	This lets dbmail-smtp fail with a "data format error".
+
 2004-03-18  Ilja Booij  <ilja@ic-s.nl>
 
 	* sql/postgresql/migrate_from_1.x_to_2.0.pgsql: added pbsp table
