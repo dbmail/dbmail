@@ -1913,9 +1913,9 @@ char *date_imap2sql(const char *imapdate)
 /*
  *
  */
-unsigned stridx(const char *s, char ch)
+size_t stridx(const char *s, char ch)
 {
-	unsigned i;
+	size_t i;
 
 	for (i = 0; s[i] && s[i] != ch; i++);
 
