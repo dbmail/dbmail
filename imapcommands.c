@@ -2092,6 +2092,7 @@ ci_write(ci->tx,"* BYE internal dbase error\r\n");
 
 	if (result == 1) {
 		ci_write(ci->tx, "* BYE error synchronizing dbase\r\n");
+		my_free(result_set);
 		return -1;
 	}
 

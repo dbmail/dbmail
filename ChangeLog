@@ -1,5 +1,7 @@
 2004-07-13  Ilja Booij  <ilja@ic-s.nl>
 
+	* imapcommands.c: added my_free to fix possible memory leak.
+
 	* dsn.c (dsnuser_init): added my_free() to fix possible
 	memory leak.
 
