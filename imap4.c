@@ -19,7 +19,7 @@
 #include "db.h"
 #include "auth.h"
 
-#define MAX_LINESIZE 4096
+#define MAX_LINESIZE (10*1024)
 #define COMMAND_SHOW_LEVEL TRACE_ERROR
 
 #define null_free(p) { my_free(p); p = NULL; }

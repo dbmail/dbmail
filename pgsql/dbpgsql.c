@@ -2993,7 +2993,7 @@ int db_removemsg(u64_t uid)
  * db_expunge()
  *
  * removes all messages from a mailbox with delete-flag
- * removes by means of setting status to 3
+ * removes by means of setting status to 2
  * makes a list of delete msg UID's 
  *
  * allocated memory should be freed by client; if msgids and/or nmsgs are NULL 
@@ -3039,8 +3039,8 @@ int db_expunge(u64_t uid,u64_t **msgids,u64_t *nmsgs)
       PQclear(res);
     }
 
-  /* update messages belonging to this mailbox: mark as expunged (status 3) */
-  snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET status=3 WHERE"
+  /* update messages belonging to this mailbox: mark as expunged (status 2) */
+  snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET status=2 WHERE"
 	   " mailbox_idnr = %llu::bigint AND deleted_flag=1 AND status<2", uid);
 
   if (db_query(query) == -1)
