@@ -1,3 +1,13 @@
+2004-04-16  Ilja Booij  <ilja@ic-s.nl>
+
+	* imap4.c: ci_write() function removed (moved to imap4.c)
+
+	* imaputil.c (ci_write): ci_write function is now added to 
+	imaputil.c (was in imap4.c)
+
+	* imapcommands.c: all fprintf statements are replaced by ci_write 
+	calls to add error checking.
+
 2004-04-15  Ilja Booij  <ilja@ic-s.nl>
 
 	* db.c (db_check_quotum_used): changed query so it also returns 1 if

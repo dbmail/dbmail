@@ -110,20 +110,6 @@ const IMAP_COMMAND_HANDLER imap_handler_functions[] = {
 };
 
 
-int ci_write(FILE * fd, char * msg, ...);
-
-int ci_write(FILE * fd, char * msg, ...)
-{
-	va_list ap;
-	va_start(ap, msg);
-	
-	if (feof(fd) || vfprintf(fd,msg,ap) < 0 || fflush(fd) < 0) {
-		va_end(ap);
-		return -1;
-	}
-	va_end(ap);
-	return 0;
-}
 
 void ci_cleanup(ClientInfo *ci);
 void ci_cleanup(ClientInfo *ci)
@@ -132,6 +118,7 @@ void ci_cleanup(ClientInfo *ci)
 	null_free(((imap_userdata_t*)ci->userData)->mailbox.seq_list);
 	null_free(ci->userData);
 }
+
 
 /*
  * Main handling procedure

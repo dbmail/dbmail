@@ -96,4 +96,5 @@ void dumpsearch(search_key_t * sk, int level);
 int init_cache(void);
 void close_cache(void);
 
+int ci_write(FILE * fd, char * msg, ...);
 #endif
