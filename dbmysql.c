@@ -254,7 +254,7 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines)
       free(ckquery);
       return 0;
     }
-  if ((res = mysql_use_result(&conn)) == NULL)
+  if ((res = mysql_store_result(&conn)) == NULL)
     {
       trace(TRACE_ERROR,"db_send_message_lines: mysql_store_result failed: %s",mysql_error(&conn));
       free(ckquery);
@@ -275,6 +275,8 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines)
   while (((row = mysql_fetch_row(res))!=NULL) && ((lines>0) || (lines==-2)))
 	{
 		nextpos=row[2];
+	
+		trace(TRACE_MESSAGE,"db_send_message_lines(): retrieving next buffer");
 		
 		/* reset our buffer */
 		buffer[0]='\0';
