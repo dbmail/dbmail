@@ -75,8 +75,8 @@ int add_line(const char *line);
 
 int main (int argc, char* argv[])
 {
-  time_t start;
-  time_t stop;
+  time_t start,blkstart;
+  time_t stop,blkstop;
   int result,i;
   char q[1024];
 
@@ -98,6 +98,8 @@ int main (int argc, char* argv[])
   time (&start); /* mark the starting time */
   result = traverse (argv[1]);
   time (&stop); /* mark the ending time */
+
+  close_files();
 
   printf ("Conversion started @  %s", ctime(&start));
   printf ("Conversion finished @ %s", ctime(&stop));
@@ -135,11 +137,14 @@ int main (int argc, char* argv[])
 
   for (i=0; i<=currblkfile; i++)
     {
+      time(&blkstart);
+
       printf("Copying messageblks[%d]...",i); fflush(stdout);
       sprintf(q, "COPY messageblks FROM '%s%02d'", MSGBLKS_FILENAME, i);
       db_query(q);
 
-      printf("done\n");
+      time(&blkstop);
+      printf("done in %lu seconds\n", blkstop-blkstart);
     }
 
   time (&stop); /* mark the ending time */
