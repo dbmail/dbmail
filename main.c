@@ -16,26 +16,27 @@
 /* syslog */
 #define PNAME "dbmail/smtp"
 
-struct list mimelist; 	/* raw unformatted mimefields and values */
+struct list mimelist; 	        /* raw unformatted mimefields and values */
 struct list users; 	  	/* list of email addresses in message */
 
-int mode;					/* how should we process */
+int mode;			/* how should we process */
   
 char *header;
 char *trace_level, *trace_syslog, *trace_verbose;
 int new_level = 2, new_trace_syslog = 1, new_trace_verbose = 0;
 unsigned long headersize;
 
-int main (int argc, char *argv[]) {
-
-struct list returnpath; /* returnpath (should aways be just 1 hop */
+int main (int argc, char *argv[]) 
+{
+  struct list returnpath; /* returnpath (should aways be just 1 hop */
 
   openlog(PNAME, LOG_PID, LOG_MAIL);
 
   /* first check for commandline options */
   if (argc<2)
     {
-      printf ("\nUsage: %s -n [headerfield]   for normal deliveries (default: \"deliver-to\" header)\n",argv[0]);
+      printf ("\nUsage: %s -n [headerfield]   for normal deliveries "
+	      "(default: \"deliver-to\" header)\n",argv[0]);
       printf ("       %s -d [addresses]  for delivery without using scanner\n\n",argv[0]);
       return 0;
     }
@@ -78,9 +79,16 @@ struct list returnpath; /* returnpath (should aways be just 1 hop */
     trace (TRACE_STOP,"main(): read_header() returned an invalid header");
 
 
+  /* parse the list and scan for field and content */
+  if (mime_list(header, &mimelist) == -1)
+    trace(TRACE_STOP,"main(): fatal error creating MIME-header list\n");
+
   list_init(&returnpath);
   /* parse returnpath from header */
-  mail_adr_list ("Return-Path",&returnpath,&mimelist,&returnpath,header,headersize);
+  mail_adr_list ("Return-Path",&returnpath,&mimelist);
+  if (returnpath.total_nodes == 0)
+    mail_adr_list("From",&returnpath,&mimelist);
+
   
   /* we need to decide what delivery mode we're in */
   if (strcmp ("-d",argv[INDEX_DELIVERY_MODE])==0)
@@ -95,19 +103,17 @@ struct list returnpath; /* returnpath (should aways be just 1 hop */
   else 
     {
       trace (TRACE_INFO,"main(): using NORMAL_DELIVERY");
-      /* parse the list and scan for field and content */
-      if (mime_list(header, &mimelist) == -1)
-	trace(TRACE_STOP,"main(): fatal error creating MIME-header list\n");
 
       /* parse for destination addresses */
       if (argc>2) 
 	{
 	  trace (TRACE_DEBUG, "main(): scanning for [%s]",argv[INDEX_DELIVERY_MODE+1]);
-	  if (mail_adr_list (argv[INDEX_DELIVERY_MODE+1],&users,&mimelist,&users,header,headersize) != 0)
-	    trace (TRACE_STOP,"main(): scanner found no email addresses (scanned for %s)", argv[INDEX_DELIVERY_MODE+1]);
+	  if (mail_adr_list(argv[INDEX_DELIVERY_MODE+1],&users,&mimelist) !=0)
+	    trace (TRACE_STOP,"main(): scanner found no email addresses (scanned for %s)", 
+		   argv[INDEX_DELIVERY_MODE+1]);
 	}
       else
-	if (!mail_adr_list ("deliver-to",&users,&mimelist,&users,header,headersize) != 0)	
+	if (mail_adr_list ("deliver-to",&users,&mimelist) != 0)
 	  trace(TRACE_STOP,"main(): scanner found no email addresses (scanned for Deliver-To:)");
     } 
 

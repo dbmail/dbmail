@@ -64,9 +64,9 @@ char *read_header(unsigned long *blksize)
           memtst((header = (char *)realloc(header,allocated_blocks*HEADER_BLOCK_SIZE))==NULL);
       }
       /* now we concatenate all we have to the header */
-		if (strblock)
-			memtst((header=strcat(header,strblock))==NULL);
-
+      if (strblock)
+	memtst((header=strcat(header,strblock))==NULL);
+		
       /* check if the end of header has occured */
       if (strstr(header,"\n\n")!=NULL)
 	{
@@ -76,8 +76,8 @@ char *read_header(unsigned long *blksize)
 	}
 		
       /* reset strblock to 0 */
-		if (strblock)
-			memset (strblock,'\0',READ_BLOCK_SIZE);
+      if (strblock)
+	memset (strblock,'\0',READ_BLOCK_SIZE);
     }
 	
   trace (TRACE_INFO, "read_header(): readheader done");
@@ -104,7 +104,7 @@ int insert_messages(char *header, unsigned long headersize, struct list *users, 
   /* 	this loop gets all the users from the list 
 	and check if they're in the database */
 
-  struct element *tmp;
+  struct element *tmp,*ret_path;
   char *insertquery;
   char *updatequery;
   char *unique_id;
@@ -377,18 +377,19 @@ int insert_messages(char *header, unsigned long headersize, struct list *users, 
   
       trace (TRACE_DEBUG,"insert_messages(): delivering to external addresses");
   
-      tmp = list_getstart(returnpath);
+      ret_path = list_getstart(returnpath);
       
       if (list_totalnodes(&messageids)==0)
 	{
 	  /* deliver using stdin */
-	  pipe_forward (stdin, &external_forwards, tmp ? tmp->data : "DBMAIL-MAILER", header, 0);
+	  pipe_forward (stdin, &external_forwards, ret_path ? ret_path->data : "DBMAIL-MAILER", header, 0);
 	}
       else
 	{
 	  /* deliver using database */
 	  tmp = list_getstart(&messageids);
-	  pipe_forward (stdin, &external_forwards, tmp ? tmp->data: "DBMAIL-MAILER", header, *((unsigned long *)tmp->data));
+	  pipe_forward (stdin, &external_forwards, ret_path ? ret_path->data: "DBMAIL-MAILER", header, 
+			*((unsigned long *)tmp->data));
 	}
     }
 	
@@ -425,3 +426,7 @@ int insert_messages(char *header, unsigned long headersize, struct list *users, 
   
   return 0;
 }
+
+
+
+

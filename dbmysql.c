@@ -259,7 +259,8 @@ unsigned long db_adduser (char *username, char *password, char *clientid, char *
    * returns a useridnr on succes, -1 on failure */
 
   unsigned long useridnr;
-	
+  char *tst;
+  unsigned long size;
 
   /* first check to see if this user already exists */
   snprintf(query, DEF_QUERYSIZE, "SELECT * FROM user WHERE userid = '%s'", username);
@@ -286,10 +287,19 @@ unsigned long db_adduser (char *username, char *password, char *clientid, char *
 
   mysql_free_result(res);
 
+  size = strtoul(maxmail,&tst,10);
+  if (tst)
+    {
+      if (tst[0] == 'M' || tst[0] == 'm')
+	size *= 1000000;
 
+      if (tst[0] == 'K' || tst[0] == 'k')
+	size *= 1000;
+    }
+      
   snprintf (query, DEF_QUERYSIZE,"INSERT INTO user (userid,passwd,clientid,maxmail_size) VALUES "
-	   "('%s','%s',%s,%s)",
-	   username,password,clientid, maxmail);
+	   "('%s','%s',%s,%lu)",
+	   username,password,clientid, size);
 	
   if (db_query(query) == -1)
     {

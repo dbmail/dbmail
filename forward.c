@@ -23,8 +23,8 @@ int pipe_forward(FILE *instream, struct list *targets, char *from, char *header,
 
  
   /* takes input from instream and forwards that directly to 
-		a number of pipes (depending on the targets. Sends headers
-		first */
+     a number of pipes (depending on the targets. Sends headers
+     first */
 
 
   time(&td);              /* get time */

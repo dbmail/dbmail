@@ -449,23 +449,20 @@ int mail_adr_list_special(int offset, int max, char *address_array[], struct lis
 }
 
   
-int mail_adr_list(char *scan_for_field, struct list *targetlist, struct list *mimelist,
-		  struct list *users, char *header, unsigned long headersize)
+int mail_adr_list(char *scan_for_field, struct list *targetlist, struct list *mimelist)
 {
   struct element *raw;
   struct mime_record *mr;
   char *tmpvalue, *ptr,*tmp;
 
   trace (TRACE_DEBUG,"mail_adr_list(): mimelist currently has [%d] nodes",mimelist->total_nodes);
-  if (mimelist->total_nodes==0)
+
+  if (!mimelist)
     {
-      /* we need to parse the header first 
-	 this is because we're in SPECIAL_DELIVERY mode so
-	 normally we wouldn't need any scanning */
-      trace (TRACE_INFO,"mail_adr_list(): parsing mimeheader from message");
-      mime_list(header,mimelist);
+      trace(TRACE_ERROR, "mail_adr_list(): got NULL for mimelist\n");
+      return -1;
     }
-  
+
   memtst((tmpvalue=(char *)calloc(MIME_VALUE_MAX,sizeof(char)))==NULL);
 
   trace (TRACE_INFO,"mail_adr_list(): mail address parser starting");
@@ -510,7 +507,7 @@ int mail_adr_list(char *scan_for_field, struct list *targetlist, struct list *mi
 				   (strlen(tmpvalue)+1)))==NULL);
 
 				/* printf ("total nodes:\n");
-				   list_showlist(&users);
+				   list_showlist(&targetlist);
 				   next address */
 	      ptr=strstr(ptr,"@");
 	      trace (TRACE_DEBUG,"mail_adr_list(): found %s, next in list is %s",
@@ -526,7 +523,8 @@ int mail_adr_list(char *scan_for_field, struct list *targetlist, struct list *mi
 	
   trace (TRACE_INFO,"mail_adr_list(): mail address parser finished");
 
-  if (list_totalnodes(users)==0) /* no addresses found */
+  if (list_totalnodes(targetlist)==0) /* no addresses found */
     return -1;
+
   return 0;
 }
