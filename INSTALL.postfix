@@ -52,7 +52,7 @@ Date:   19-03-2004
 
 	now run:
 
-	# postmap /etc/postfix/tranport
+	# postmap /etc/postfix/transport
 	# postfix reload
 
 	and you're on your way!
