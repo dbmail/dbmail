@@ -300,6 +300,11 @@ int _ic_select(char *tag, char **args, ClientInfo *ci)
   if (mboxid == 0)
     {
       fprintf(ci->tx, "%s NO Could not find specified mailbox\r\n", tag);
+
+      ud->state = IMAPCS_AUTHENTICATED;
+      my_free(ud->mailbox.seq_list);
+      memset(&ud->mailbox, 0, sizeof(ud->mailbox));
+
       return 1;
     }
   if (mboxid == (unsigned long)(-1))
@@ -314,6 +319,11 @@ int _ic_select(char *tag, char **args, ClientInfo *ci)
     {
       /* error: cannot select mailbox */
       fprintf(ci->tx, "%s NO specified mailbox is not selectable\r\n",tag);
+
+      ud->state = IMAPCS_AUTHENTICATED;
+      my_free(ud->mailbox.seq_list);
+      memset(&ud->mailbox, 0, sizeof(ud->mailbox));
+
       return 1;
     }
   if (result == -1)
@@ -705,7 +715,7 @@ int _ic_delete(char *tag, char **args, ClientInfo *ci)
 
   if (nchildren != 0)
     {
-      /* mailbox has inferior names; error if \r\noselect specified */
+      /* mailbox has inferior names; error if \noselect specified */
       result = db_isselectable(mboxid);
       if (result == 0)
 	{
@@ -732,6 +742,14 @@ int _ic_delete(char *tag, char **args, ClientInfo *ci)
 	  return -1; /* fatal */
 	}
 
+      /* check if this was the currently selected mailbox */
+      if (mboxid == ud->mailbox.uid)
+	{
+	  my_free(ud->mailbox.seq_list);
+	  memset(&ud->mailbox, 0, sizeof(ud->mailbox));
+	  ud->state = IMAPCS_AUTHENTICATED;
+	}
+
       /* ok done */
       fprintf(ci->tx,"%s OK DELETE completed\r\n",tag);
       my_free(children);
@@ -740,6 +758,14 @@ int _ic_delete(char *tag, char **args, ClientInfo *ci)
       
   /* ok remove mailbox */
   db_removemailbox(mboxid, ud->userid);
+
+  /* check if this was the currently selected mailbox */
+  if (mboxid == ud->mailbox.uid)
+    {
+      my_free(ud->mailbox.seq_list);
+      memset(&ud->mailbox, 0, sizeof(ud->mailbox));
+      ud->state = IMAPCS_AUTHENTICATED;
+    }
 
   fprintf(ci->tx,"%s OK DELETE completed\r\n",tag);
   return 0;
@@ -765,9 +791,12 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
   while (strlen(args[0]) > 0 && args[0][strlen(args[0]) - 1] == '/') args[0][strlen(args[0]) - 1] = '\0';
   while (strlen(args[1]) > 0 && args[1][strlen(args[1]) - 1] == '/') args[1][strlen(args[1]) - 1] = '\0';
 
-  /* remove leading '/' if present for new name */
+  /* remove leading '/' if present */
   for (i=0; args[1][i] && args[1][i] == '/'; i++) ;
   memmove(&args[1][0],&args[1][i], (strlen(args[1]) - i) * sizeof(char));
+
+  for (i=0; args[0][i] && args[0][i] == '/'; i++) ;
+  memmove(&args[0][0],&args[0][i], (strlen(args[0]) - i) * sizeof(char));
 
 
   /* check if new mailbox exists */
@@ -806,6 +835,18 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
       fprintf(ci->tx,"%s NO new mailbox name contains invalid characters\r\n",tag);
       return 1;
     }
+
+  /* check if new name would invade structure as in
+   * test (exists)
+   * rename test test/testing
+   * would create test/testing but delete test
+   */
+  if (strncasecmp(args[0], args[1], strlen(args[0])) == 0)
+    {
+      fprintf(ci->tx,"%s NO new mailbox would invade mailbox structure\r\n",tag);
+      return 1;
+    }
+  
 
   /* check if structure of new name is valid */
   /* i.e. only last part (after last '/' can be nonexistent) */
