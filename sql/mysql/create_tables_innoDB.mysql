@@ -85,8 +85,7 @@ CREATE TABLE subscription (
 	FOREIGN KEY (`user_id`) 
 		REFERENCES `users` (`user_idnr`) ON DELETE CASCADE,
 	FOREIGN KEY (`mailbox_id`) 
-		REFERENCES `mailboxes` (`mailbox_idnr`) ON DELETE CASCADE,
-	
+		REFERENCES `mailboxes` (`mailbox_idnr`) ON DELETE CASCADE
 ) TYPE=InnoDB;
 
 
