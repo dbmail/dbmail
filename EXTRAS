@@ -7,7 +7,15 @@ DBmail extra's
 	Create an alias. Set the deliver_to for that alias to:
 	"|/usr/bin/procmail" will pipe the message for the alias to procmail
 	"!/usr/bin/procmail" will do the same but add a mbox style header 
+	You can also use this scan mail for certain users:
+	"|/usr/bin/spamassasin | dbmail-smtp -d <username>"
+	
 
 -	Conversion programs
-	raw-convert.c -> reads mbox styled mailboxes and inserts them into DBmail
+	raw-convert.c	->	reads mbox styled mailboxes and inserts them into DBmail
+	smtp-convert.c	->	uses the dbmail-smtp program to insert mbox styled mailboxes
+						into the DBmail system.
 	
+-	Conversion between mysql - pgsql
+	See the mysql2pgsql dir
+	We will also add software to convert from pgsql -> mysql						
