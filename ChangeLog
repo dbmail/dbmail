@@ -5,6 +5,9 @@
 	* db.c (db_insert_physmessage_with_internal_date): removed the
 	quotes that Aaron has just put in. They've moved to dbmysql.c to
 	make sure PostgreSQL handling does not break.
+	(db_send_message_lines): a db_get_length() call asked for the length
+	of field 2 (3rd field), while there was only one field in the result
+	set.
 
 2004-03-14  Aaron Stone <aaron@serendipity.cx>
 

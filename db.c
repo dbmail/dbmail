@@ -1470,7 +1470,7 @@ int db_send_message_lines(void *fstream, u64_t message_idnr,
 	   && ((lines > 0) || (lines == -2) || (block_count == 0))) {
 	query_result = db_get_result(block_count, 0);
 	nextpos = query_result;
-	rowlength = (u64_t) db_get_length(block_count, 2);
+	rowlength = (u64_t) db_get_length(block_count, 0);
 
 	/* reset our buffer */
 	memset(buffer, '\0', (WRITE_BUFFER_SIZE) * 2);
