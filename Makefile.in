@@ -130,7 +130,7 @@ dbmail_pop3d_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @L
 dbmail_imapd_SOURCES = quota.c imap4.c imaputil.c imapcommands.c memblock.c rfcmsg.c imapd.c dbsearch.c dbmsgbuf.c acl.c
 dbmail_imapd_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ 
 
-dbmail_util_SOURCES = util.c
+dbmail_util_SOURCES = maintenance.c
 dbmail_util_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
 dbmail_users_SOURCES = user.c
@@ -197,7 +197,7 @@ rfcmsg.$(OBJEXT) imapd.$(OBJEXT) dbsearch.$(OBJEXT) dbmsgbuf.$(OBJEXT) \
 acl.$(OBJEXT)
 dbmail_imapd_DEPENDENCIES =  libdbmail.la
 dbmail_imapd_LDFLAGS = 
-dbmail_util_OBJECTS =  util.$(OBJEXT)
+dbmail_util_OBJECTS =  maintenance.$(OBJEXT)
 dbmail_util_DEPENDENCIES =  libdbmail.la
 dbmail_util_LDFLAGS = 
 dbmail_users_OBJECTS =  user.$(OBJEXT)
@@ -224,7 +224,7 @@ DEP_FILES =  .deps/acl.P .deps/config.P .deps/db.P .deps/dbmd5.P \
 .deps/dbmsgbuf.P .deps/dbsearch.P .deps/debug.P .deps/dsn.P \
 .deps/forward.P .deps/header.P .deps/imap4.P .deps/imapcommands.P \
 .deps/imapd.P .deps/imaputil.P .deps/list.P .deps/lmtp.P .deps/lmtpd.P \
-.deps/main.P .deps/util.P .deps/md5.P .deps/memblock.P \
+.deps/main.P .deps/maintenance.P .deps/md5.P .deps/memblock.P \
 .deps/mime.P .deps/misc.P .deps/pidfile.P .deps/pipe.P .deps/pop3.P .deps/pop3d.P \
 .deps/quota.P .deps/rfcmsg.P .deps/server.P .deps/serverchild.P \
 .deps/sievecmd.P .deps/timsieve.P .deps/timsieved.P .deps/user.P \
