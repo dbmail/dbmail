@@ -6,7 +6,7 @@
 
 CREATE SEQUENCE alias_idnr_seq;
 CREATE TABLE aliases (
-    alias_idnr INT8 DEFAULT nextval('alias_idnr_seq'),
+    alias_idnr INT8 DEFAULT nextval('alias_idnr_seq') NOT NULL,
     alias VARCHAR(100) NOT NULL, 
     deliver_to VARCHAR(250) NOT NULL,
     client_idnr INT8 DEFAULT '0' NOT NULL
@@ -14,7 +14,7 @@ CREATE TABLE aliases (
 
 CREATE SEQUENCE user_idnr_seq;
 CREATE TABLE users (
-   user_idnr INT8 DEFAULT nextval('user_idnr_seq'),
+   user_idnr INT8 DEFAULT nextval('user_idnr_seq') NOT NULL,
    userid VARCHAR(100) NOT NULL,
    passwd VARCHAR(32) NOT NULL,
    client_idnr INT8 DEFAULT '0' NOT NULL,
@@ -24,7 +24,7 @@ CREATE TABLE users (
 
 CREATE SEQUENCE mailbox_idnr_seq;
 CREATE TABLE mailboxes (
-   mailbox_idnr INT8 DEFAULT nextval('mailbox_idnr_seq'),
+   mailbox_idnr INT8 DEFAULT nextval('mailbox_idnr_seq') NOT NULL,
    owner_idnr INTEGER NOT NULL,
    name VARCHAR(100) NOT NULL,
    seen_flag INT2 DEFAULT '0' NOT NULL,
@@ -41,7 +41,7 @@ CREATE TABLE mailboxes (
 
 CREATE SEQUENCE message_idnr_seq;
 CREATE TABLE messages (
-   message_idnr INT8 DEFAULT nextval('message_idnr_seq'),
+   message_idnr INT8 DEFAULT nextval('message_idnr_seq') NOT NULL,
    mailbox_idnr INT8 DEFAULT '0' NOT NULL,
    messagesize INT8 DEFAULT '0' NOT NULL,
    seen_flag INT2 DEFAULT '0' NOT NULL,
@@ -58,7 +58,7 @@ CREATE TABLE messages (
 
 CREATE SEQUENCE messageblk_idnr_seq;
 CREATE TABLE messageblks (
-   messageblk_idnr INT8 DEFAULT nextval('messageblk_idnr_seq'),
+   messageblk_idnr INT8 DEFAULT nextval('messageblk_idnr_seq') NOT NULL,
    message_idnr INT8 DEFAULT '0' NOT NULL,
    messageblk TEXT NOT NULL,
    blocksize INT8 DEFAULT '0' NOT NULL
