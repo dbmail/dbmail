@@ -7,8 +7,10 @@
 	* contrib/startup-scripts/gentoo/dbmail-lmtpd,imapd,pop3d:
 	pidfiles now go into /var/run rather than /var/run/dbmail
 	as most people won't have that directory already existing.
-	* pidfile.c: added an fflush call so that filesystems like XFS
-	which cache agressively will be forced to write out the pid.
+	* pidfile.c (pidfile_create): added an fflush call so that filesystems
+	like XFS which cache agressively will be forced to write out the pid.
+	* pidfile.c (pidfile_remove): added atexit call so that the
+	pidfile is cleaned up upon program termination.
 
 2004-07-21  Aaron Stone  <aaron@serendipity.cx>
 

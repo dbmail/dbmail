@@ -37,6 +37,10 @@
 #include "debug.h"
 #include "pidfile.h"
 
+/* These are used by pidfile_remove. */
+static FILE *pidfile_to_close = NULL;
+static const char *pidfile_to_remove = NULL;
+
 /* Check if a process exists. */
 static int process_exists(pid_t pid)
 {
@@ -78,6 +82,15 @@ static pid_t pidfile_pid(const char *pidFile)
 	return 0;
 }
 
+void pidfile_remove(void)
+{
+	if (pidfile_to_close)
+		fclose(pidfile_to_close);
+
+	if (pidfile_to_remove)
+		remove(pidfile_to_remove);
+}
+
 /* Create a pidfile and leave it open. */
 void pidfile_create(const char *pidFile, pid_t pid)
 {
@@ -105,6 +118,13 @@ void pidfile_create(const char *pidFile, pid_t pid)
 
 	fflush(f);
 
-	/* Leave pid file open & locked for the duration... */
+	/* Leave pid file open & locked for the duration,
+	 * but close and remove it upon termination.  */
+
+	pidfile_to_close = f;
+	pidfile_to_remove = pidFile;
+
+	atexit(pidfile_remove);
+
 }
 
