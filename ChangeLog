@@ -1,5 +1,11 @@
 2004-12-08  Paul Stevens <paul@nfg.nl>
 
+	* dbmail-imapsession.c, dbmail-imapsession.h, imap4.h, imapcommands.c:
+	converted bodyfetch item to GList to allow fetching of multiple body
+	parts in one fetch command.
+
+2004-12-08  Paul Stevens <paul@nfg.nl>
+
 	* acinclude.m4, configure.in, debug.h, lmtp.c, main.c, mime.c, misc.c,
 	sievecmd.c: adding garbage collection through the configure switch
 	--with-gc and map all non-glib memory allocation calls to their my_ 

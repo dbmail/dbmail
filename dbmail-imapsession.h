@@ -18,7 +18,7 @@ struct ImapSession {
 	char *tag;
 	char *command;
 	char **args;
-	fetch_items_t fi;
+	fetch_items_t *fi;
 	struct DbmailMessage *message;
 	mime_message_t headermsg;
 	msginfo_t *msginfo;
@@ -31,7 +31,7 @@ struct ImapSession * dbmail_imap_session_setClientInfo(struct ImapSession * self
 struct ImapSession * dbmail_imap_session_setTag(struct ImapSession * self, char * tag);
 struct ImapSession * dbmail_imap_session_setCommand(struct ImapSession * self, char * command);
 struct ImapSession * dbmail_imap_session_setArgs(struct ImapSession * self, char ** args);
-struct ImapSession * dbmail_imap_session_setFi(struct ImapSession * self, fetch_items_t fi);
+struct ImapSession * dbmail_imap_session_setFi(struct ImapSession * self, fetch_items_t *fi);
 struct ImapSession * dbmail_imap_session_setHeadermsg(struct ImapSession * self, mime_message_t headermsg);
 struct ImapSession * dbmail_imap_session_setMsginfo(struct ImapSession * self, msginfo_t * msginfo);
 struct ImapSession * dbmail_imap_session_resetFi(struct ImapSession * self);
@@ -58,6 +58,7 @@ int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self, u64_t fetch
 int dbmail_imap_session_fetch_get_items(struct ImapSession *self);
 
 int dbmail_imap_session_get_msginfo_range(struct ImapSession *self, u64_t msg_idnr_low, u64_t msg_idnr_high);
+
 
 #endif
 

@@ -1882,7 +1882,7 @@ int _ic_fetch(struct ImapSession *self)
 	
 	dbmail_imap_session_resetFi(self);
 
-	self->fi.getUID = self->use_uid;
+	self->fi->getUID = self->use_uid;
 
 	idx = 1;
 	do {
@@ -1895,8 +1895,8 @@ int _ic_fetch(struct ImapSession *self)
 
 	fetch_max = self->use_uid ? (ud->mailbox.msguidnext - 1) : ud->mailbox.exists;
 	
-	trace(TRACE_DEBUG,"%s,%s: hdrparse_needed [%d]", __FILE__,__func__, self->fi.hdrparse_needed);
-	trace(TRACE_DEBUG,"%s,%s: msgparse_needed [%d]", __FILE__,__func__, self->fi.msgparse_needed);
+	trace(TRACE_DEBUG,"%s,%s: hdrparse_needed [%d]", __FILE__,__func__, self->fi->hdrparse_needed);
+	trace(TRACE_DEBUG,"%s,%s: msgparse_needed [%d]", __FILE__,__func__, self->fi->msgparse_needed);
 	/* now fetch results for each msg */
 	endptr = self->args[0];
 	while (*endptr) {
@@ -1905,12 +1905,12 @@ int _ic_fetch(struct ImapSession *self)
 
 		fetch_start = strtoull(endptr, &endptr, 10);
 		if (fetch_start == 0 || fetch_start > fetch_max) {
-			if (self->fi.getUID)
+			if (self->fi->getUID)
 				dbmail_imap_session_printf(self, "%s OK FETCH completed\r\n", self->tag);
 			else
 				dbmail_imap_session_printf(self, "%s BAD invalid message range specified\r\n", self->tag);
 
-			return !self->fi.getUID;
+			return !self->fi->getUID;
 		}
 
 		switch (*endptr) {
@@ -1925,7 +1925,7 @@ int _ic_fetch(struct ImapSession *self)
 			}
 
 			if (fetch_end == 0 || fetch_end > fetch_max) {
-				if (!self->fi.getUID) {
+				if (!self->fi->getUID) {
 					dbmail_imap_session_printf(self, "%s BAD invalid message range specified\r\n", self->tag);
 					return 1;
 				}
@@ -1957,7 +1957,7 @@ int _ic_fetch(struct ImapSession *self)
 		trace(TRACE_DEBUG,"%s,%s: fetch_start [%llu] fetch_end [%llu]",
 				__FILE__, __func__, fetch_start, fetch_end);
 		
-		if (! (self->fi.msgparse_needed || self->fi.hdrparse_needed)) {
+		if (! (self->fi->msgparse_needed || self->fi->hdrparse_needed)) {
 			if (dbmail_imap_session_fetch_get_unparsed(self, fetch_start, fetch_end) < 0)
 				return -1;
 			

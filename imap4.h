@@ -60,10 +60,17 @@ typedef struct {
 /*  int nbodyfetches;
   body_fetch_t *bodyfetches;
 */
-	body_fetch_t bodyfetch; 
-//	GList *bodyfetch;
+//	body_fetch_t bodyfetch; 
+	GList *bodyfetch;
 
 	int noseen;		/* set the seen flag ? */
+
+	/* temporary additions: */
+	int setseen;
+	int isfirstout;
+	int isfirstfetchout;
+	/* end temp additions */
+	
 	int msgparse_needed;
 	int hdrparse_needed;
 
