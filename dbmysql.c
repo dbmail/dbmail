@@ -935,7 +935,7 @@ int db_update_pop (struct session *sessionptr)
 	  ((struct message *)tmpelement->data)->messagestatus) 
 	{
 	  /* yes they need an update, do the query */
-	  sprintf (ckquery, "UPDATE message set status=%lu WHERE messageidnr=%lu",
+	  sprintf (ckquery, "UPDATE message set status=%lu WHERE messageidnr=%lu AND status<002",
 		   ((struct message *)tmpelement->data)->virtual_messagestatus,
 		   ((struct message *)tmpelement->data)->realmessageid);
 	
