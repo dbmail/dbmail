@@ -37,7 +37,6 @@
 #include <unistd.h>
 #include <errno.h>
 #include <unistd.h>		/* for getopt() */
-#include "imap4.h"
 #include "server.h"
 #include "debug.h"
 #include "misc.h"
@@ -64,13 +63,11 @@ static void Daemonize(void);
 static int SetMainSigHandler(void);
 static void MainSigHandler(int sig, siginfo_t * info, void *data);
 
+/* also used in pop3.c */
 int pop_before_smtp = 0;
-int mainRestart = 0;
-int mainStop = 0;
 
-PopSession_t session;
-char *myhostname;
-char *timeout_setting;
+static int mainRestart = 0;
+static int mainStop = 0;
 
 #ifdef PROC_TITLES
 int main(int argc, char *argv[], char **envp)

@@ -54,20 +54,20 @@
 #define MAX_IN_BUFFER 255
 
 /* These are needed across multiple calls to lmtp() */
-struct list rcpt;
-char *envelopefrom = NULL;
+static struct list rcpt;
+static char *envelopefrom = NULL;
 
 /* allowed lmtp commands */
-const char *const commands[] = {
+static const char *const commands[] = {
 	"LHLO", "QUIT", "RSET", "DATA", "MAIL",
 	"VRFY", "EXPN", "HELP", "NOOP", "RCPT"
 };
 
-const char validchars[] =
+static const char validchars[] =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     "_.!@#$%^&*()-+=~[]{}<>:;\\/ ";
 
-char myhostname[64];
+static char myhostname[64];
 
 /**
  * read the whole message from a network connection

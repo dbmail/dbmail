@@ -61,18 +61,18 @@
 	   * and so that part of the Implementation line is absolutely required. */
 
 /* allowed timsieve commands */
-const char *commands[] = {
+static const char *commands[] = {
 	"LOGOUT", "STARTTLS", "CAPABILITY", "LISTSCRIPTS",
 	"AUTHENTICATE", "DELETESCRIPT", "GETSCRIPT", "SETACTIVE",
 	"HAVESPACE", "PUTSCRIPT"
 };
 
 /* \" is added to the standard set of stuff... */
-const char validchars[] =
+static const char validchars[] =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     "_.!@#$%^&*()-+=~[]{}<>:;\\\"/ ";
 
-char myhostname[64];
+static char myhostname[64];
 
 int tims_handle_connection(clientinfo_t * ci)
 {

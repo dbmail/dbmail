@@ -62,13 +62,13 @@ static int SetMainSigHandler(void);
 static void Daemonize(void);
 static void MainSigHandler(int sig, siginfo_t * info, void *data);
 
-int tims_before_smtp = 0;
-int mainRestart = 0;
-int mainStop = 0;
+static int tims_before_smtp = 0;
+static int mainRestart = 0;
+static int mainStop = 0;
 
-PopSession_t session;
-char *myhostname;
-char *timeout_setting;
+static PopSession_t session;
+static char *myhostname;
+static char *timeout_setting;
 
 #ifdef PROC_TITLES
 int main(int argc, char *argv[], char **envp)
