@@ -130,8 +130,6 @@ int main (int argc, char* argv[])
   result = traverse (argv[1]);
   time (&stop); /* mark the ending time */
 
-  close_files();
-
   printf ("Conversion started @  %s", ctime(&start));
   printf ("Conversion finished @ %s", ctime(&stop));
 
@@ -145,6 +143,8 @@ int main (int argc, char* argv[])
   create_remaining_users();
   printf("done :)\n");
   
+  close_files();
+
   printf("Inserting into dbase...");
   fflush(stdout);
 
