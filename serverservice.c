@@ -18,6 +18,8 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/wait.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -29,8 +31,10 @@
 
 #define SS_ERROR_MSG_LEN 100
 char  ss_error_msg[SS_ERROR_MSG_LEN];
-int   ss_nchildren=0;
-pid_t ss_server_pid=0;
+key_t shm_key = 0;
+int   shm_id;
+
+#define SHM_ALLOC_SIZE (sizeof(int))
 
 char *SS_GetErrorMsg()
 {
@@ -101,6 +105,19 @@ int SS_MakeServerSock(const char *ipaddr, const char *port)
       close(sock);
       return -1;
     }
+  
+
+  /* now allocate a shared memory segment */
+  shm_key = time(NULL);
+  shm_id = shmget(shm_key, SHM_ALLOC_SIZE, 0666 | IPC_CREAT);
+
+  if (shm_id == -1)
+    {
+      snprintf(ss_error_msg, SS_ERROR_MSG_LEN, "SS_MakeServerSock(): error getting shared "
+	       "memory segment [%s]\n", strerror(errno));
+      close(sock);
+      return -1;
+    }
 
   snprintf(ss_error_msg,SS_ERROR_MSG_LEN,"Server socket has been created.");
   return sock;
@@ -114,13 +131,16 @@ int SS_MakeServerSock(const char *ipaddr, const char *port)
  * process the requests.
  *
  */
-int SS_WaitAndProcess(int sock, int default_children, int max_children,
+int SS_WaitAndProcess(int sock, int default_children, int max_children, int daemonize,
 		      int (*ClientHandler)(ClientInfo*), int (*Login)(ClientInfo*))
 {
   struct sockaddr_in saClient;
   int csock,len,i;
   ClientInfo client;
   struct sigaction act;
+  int ss_nchildren=0;
+  pid_t ss_server_pid=0;
+  int *ss_n_default_children_used;
 
   /* init & install signal handlers */
   memset(&act, 0, sizeof(act));
@@ -141,15 +161,25 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children,
   sigaction(SIGSTOP, &act, 0);
 
   /* daemonize */
-/*  if (fork())
-    exit(0);
-  setsid();
+  if (daemonize)
+    {
+      if (fork())
+	exit(0);
+      setsid();
 
-  if (fork())
-    exit(0);
-*/
+      if (fork())
+	exit(0);
+    }
+
   /* this process will be the server, remember pid */
   ss_server_pid = getpid();
+
+  /* attach to shm */
+  ss_n_default_children_used = (int*)shmat(shm_id, 0, 0);
+  if (ss_n_default_children_used == (int*)(-1))
+    trace(TRACE_FATAL, "SS_WaitAndProcess(): Could not attach to shm [%s]\n",strerror(errno));
+
+  *ss_n_default_children_used = 0;
 
   /* fork into default number of children */
   for (i=0; i<default_children; i++)
@@ -229,6 +259,10 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children,
 	  strncpy(client.ip, inet_ntoa(saClient.sin_addr), SS_IPNUM_LEN);
 	  client.ip[SS_IPNUM_LEN - 1] = '\0';
 
+	  /* remember */
+	  (*ss_n_default_children_used)++;
+	  trace(TRACE_DEBUG, "[%ld] child accept, dcu: %d\n",getpid(),*ss_n_default_children_used);
+
 	  /* handle client */
 	  (*ClientHandler)(&client); 
 
@@ -242,6 +276,9 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children,
 	  shutdown(fileno(client.rx),SHUT_RDWR);
 	  fclose(client.rx);
 
+	  (*ss_n_default_children_used)--;
+	  trace(TRACE_DEBUG, "[%ld] child close, dcu: %d\n",getpid(),*ss_n_default_children_used);
+
 	} /* main client loop */
     }
   else
@@ -253,6 +290,9 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children,
 	  /* wait for a connect then fork if the maximum number of children
 	   * hasn't already been reached
 	   */
+
+	  if (*ss_n_default_children_used < default_children)
+	    continue; 
 
 	  while (ss_nchildren >= max_children)
 	    {
@@ -268,7 +308,7 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children,
 	  if (csock == -1)
 	    continue;    /* accept failed, refuse connection & continue */
 
-	  if (!fork())
+	  if (fork())
 	    {
 	      ss_nchildren++;
 	      continue;

@@ -32,7 +32,7 @@ typedef struct
 
 
 int   SS_MakeServerSock(const char *ipaddr, const char *port);
-int   SS_WaitAndProcess(int sock, int default_children, int max_children,
+int   SS_WaitAndProcess(int sock, int default_children, int max_children, int daemonize,
 			int (*ClientHandler)(ClientInfo*), int (*Login)(ClientInfo*));
 void  SS_CloseServer(int sock);
 char* SS_GetErrorMsg();
