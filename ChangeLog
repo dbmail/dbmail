@@ -1,5 +1,8 @@
 2004-04-01  Ilja Booij  <ilja@ic-s.nl>
 
+	* lmtp.c (lmtp_handle_connection): initialize session state to
+	STRT
+
 	* mysql/dbmysql.c (db_get_length): uses mysql_data_seek() directly
 	again, without trying to do smart things which should be resolved
 	by the library

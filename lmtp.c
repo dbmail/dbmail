@@ -107,6 +107,7 @@ int lmtp_handle_connection(clientinfo_t * ci)
 	PopSession_t session;	/* current connection session */
 
 	/* setting Session variables */
+	session.state = STRT;
 	session.error_count = 0;
 
 	session.username = NULL;
