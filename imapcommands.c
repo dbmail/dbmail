@@ -56,10 +56,6 @@
 #include <time.h>
 #include <unistd.h>
 
-#ifdef PROC_TITLES
-#include "proctitleutils.h"
-#endif
-
 #ifndef MAX_LINESIZE
 #define MAX_LINESIZE 1024
 #endif

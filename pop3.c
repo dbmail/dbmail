@@ -32,9 +32,6 @@
 #include "dbmailtypes.h"
 #include "auth.h"
 #include "pop3.h"
-#ifdef PROC_TITLES
-#include "proctitleutils.h"
-#endif
 #include "misc.h"
 
 #define INCOMING_BUFFER_SIZE 512
@@ -501,13 +498,6 @@ int pop3(void *stream, char *buffer, char *client_ip,
 						      virtual_totalmessages,
 						      session->
 						      virtual_totalsize);
-#ifdef PROC_TITLES
-						/* sets the program ARGV's with username */
-						set_proc_title
-						    ("USER %s [%s]",
-						     session->username,
-						     client_ip);
-#endif
 					} else
 						session->SessionResult = 4;	/* something went wrong on DB layer */
 					return result;
@@ -926,12 +916,6 @@ int pop3(void *stream, char *buffer, char *client_ip,
 						      virtual_totalmessages,
 						      session->
 						      virtual_totalsize);
-#ifdef PROC_TITLES
-						set_proc_title
-						    ("USER %s [%s]",
-						     session->username,
-						     client_ip);
-#endif
 					} else
 						session->SessionResult = 4;	/* storage layer error */
 

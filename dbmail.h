@@ -66,7 +66,7 @@
 #define FIELDSIZE 1024
 #define COPYRIGHT "(c) 1999-2004 IC&S, The Netherlands"
 /** default directory and extension for pidfiles */
-#define DEFAULT_PID_DIR "/var/run/"
+#define DEFAULT_PID_DIR "/var/run/dbmail"
 #define DEFAULT_PID_EXT ".pid"
 /** default configuration file */
 #define DEFAULT_CONFIG_FILE "/etc/dbmail.conf"
@@ -87,9 +87,6 @@
 #define DEFAULT_DBPFX "dbmail_"
 
 #define MATCH(x,y) strcasecmp(x,y)==0
-
-/* uncomment this if you want informative process titles */
-//#define PROC_TITLES
 
 /** status fields for messages */
 typedef enum {

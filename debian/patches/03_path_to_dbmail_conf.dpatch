@@ -23,14 +23,15 @@ esac
 exit 0
 
 @DPATCH@
---- ../dbmail.h-orig	2003-12-03 13:23:53.000000000 +0100
-+++ ../dbmail.h	2003-12-03 13:50:02.000000000 +0100
-@@ -48,7 +48,7 @@
- #define FIELDSIZE 1024
- #define COPYRIGHT "(c) 1999-2003 IC&S, The Netherlands"
+diff -urNad dbmail-2.1/dbmail.h /tmp/dpep.xopAdf/dbmail-2.1/dbmail.h
+--- dbmail-2.1/dbmail.h	2005-03-07 14:21:36.000000000 +0100
++++ /tmp/dpep.xopAdf/dbmail-2.1/dbmail.h	2005-03-07 14:21:37.000000000 +0100
+@@ -69,7 +69,7 @@
+ #define DEFAULT_PID_DIR "/var/run/dbmail"
+ #define DEFAULT_PID_EXT ".pid"
  /** default configuration file */
 -#define DEFAULT_CONFIG_FILE "/etc/dbmail.conf"
 +#define DEFAULT_CONFIG_FILE "/etc/dbmail/dbmail.conf"
  
- /* uncomment this if you want informative process titles */
- //#define PROC_TITLES
+ /** username of user that is owner of all mailboxes */
+ #define SHARED_MAILBOX_USERNAME "__public__"

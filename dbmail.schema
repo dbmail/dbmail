@@ -1,18 +1,12 @@
 #
 # dbmail-ldap v3 directory schema
 #
-# The offical qmail-ldap OID assigned by IANA is 7914
-#
-# Created by: David E. Storey <dave@tamos.net>
-# Modified and included into qmail-ldap by Andre Oppermann <opi@nrg4u.com>
-# Modified for dbmail by Paul Stevens <paul@nfg.nl>
-#
+# Create by Paul Stevens <paul@nfg.nl>
 #
 # This schema depends on:
 #	- core.schema
 #	- cosine.schema
 #	- nis.schema
-#
 
 # Attribute Type Definitions
 
@@ -27,7 +21,6 @@ attributetype ( 1.3.6.1.4.1.12340.6.2.1.2 NAME 'mailForwardingAddress'
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 )
 
 # Object Class Definitions
-
 objectclass ( 1.3.6.1.4.1.12340.6.2.2.1 NAME 'dbmailUser'
 	DESC 'DBMail-LDAP User' SUP top AUXILIARY
 	MUST ( uid $ mail $ uidNumber )

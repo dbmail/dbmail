@@ -44,10 +44,6 @@
 #include "dbmail.h"
 #include "dbmailtypes.h"
 #include "pop3.h"
-#ifdef PROC_TITLES
-#include "proctitleutils.h"
-#endif
-
 
 #define PNAME "dbmail/pop3d"
 
@@ -91,11 +87,7 @@ int do_showhelp(void) {
 }
 
 
-#ifdef PROC_TITLES
-int main(int argc, char *argv[], char **envp)
-#else
 int main(int argc, char *argv[])
-#endif
 {
 	serverConfig_t config;
 	int result, status, no_daemonize = 0;
@@ -165,11 +157,6 @@ int main(int argc, char *argv[])
 	do {
 		mainStop = 0;
 		mainRestart = 0;
-
-#ifdef PROC_TITLES
-		init_set_proc_title(argc, argv, envp, PNAME);
-		set_proc_title("%s", "Idle");
-#endif
 
 		get_config(&config);
 		CreateSocket(&config);

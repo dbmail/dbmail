@@ -41,9 +41,6 @@
 #include "misc.h"
 #include "pidfile.h"
 #include "dbmail.h"
-#ifdef PROC_TITLES
-#include "proctitleutils.h"
-#endif
 
 #define PNAME "dbmail/imap4d"
 
@@ -81,11 +78,7 @@ int do_showhelp(void) {
 	return 0;
 }
 
-#ifdef PROC_TITLES
-int main(int argc, char *argv[], char **envp)
-#else
 int main(int argc, char *argv[])
-#endif
 {
 	serverConfig_t config;
 	int result, status, no_daemonize = 0;
@@ -154,11 +147,6 @@ int main(int argc, char *argv[])
 	do {
 		mainStop = 0;
 		mainRestart = 0;
-
-#ifdef PROC_TITLES
-		init_set_proc_title(argc, argv, envp, PNAME);
-		set_proc_title("%s", "Idle");
-#endif
 
 		get_config(&config);
 		CreateSocket(&config);

@@ -44,9 +44,6 @@ Copyright (C) 2004 Aaron Stone aaron at serendipity dot cx
 #include "dbmailtypes.h"
 #include "timsieve.h"
 #include "sort/sortsieve.h"
-#ifdef PROC_TITLES
-#include "proctitleutils.h"
-#endif
 
 
 #define PNAME "dbmail/timsieved"
@@ -89,11 +86,7 @@ int do_showhelp(void) {
 	return 0;
 }
 
-#ifdef PROC_TITLES
-int main(int argc, char *argv[], char **envp)
-#else
 int main(int argc, char *argv[])
-#endif
 {
 	serverConfig_t config;
 	int result, status, no_daemonize = 0;
@@ -190,10 +183,6 @@ int main(int argc, char *argv[])
 		mainRestart = 0;
 
 		trace(TRACE_DEBUG, "main(): reading config");
-#ifdef PROC_TITLES
-		init_set_proc_title(argc, argv, envp, PNAME);
-		set_proc_title("%s", "Idle");
-#endif
 
 		/* We need smtp config for bounce.c and forward.c */
                 config_read(configFile);

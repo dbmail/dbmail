@@ -35,9 +35,6 @@
 #include "dbmailtypes.h"
 #include "auth.h"
 #include "lmtp.h"
-#ifdef PROC_TITLES
-#include "proctitleutils.h"
-#endif
 
 #define INCOMING_BUFFER_SIZE 512
 

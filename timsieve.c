@@ -32,9 +32,6 @@
 #include "dbmailtypes.h"
 #include "auth.h"
 #include "misc.h"
-#ifdef PROC_TITLES
-#include "proctitleutils.h"
-#endif
 
 #include <sieve2_interface.h>
 

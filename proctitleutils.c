@@ -28,6 +28,8 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include "dbmail.h"
+#include "debug.h"
 #include "proctitleutils.h"
 
 /* Globals */
@@ -35,7 +37,7 @@ static char **Argv = ((void *) 0);
 static char *LastArgv = ((void *) 0);
 static int start = 0;
 
-void init_set_proc_title(int argc, char *argv[], char *envp[],
+void init_set_proc_title(int argc UNUSED, char *argv[], char *envp[],
 			 const char *name)
 {
 	int i, envpsize;
