@@ -1,5 +1,11 @@
 $Id$
 
+2004-04-05 (Ilja Booij):
+Messages that are forwarded get the wrong status (TEMP FAIL).
+This status is sent to the MTA, which tries to deliver the
+message again. Because of this, forwarded messages are delivered
+multiple times.
+
 2004-01-19 (Roel Rozendaal):
 FETCH MSGNUM (RFC822.HEADER) returns headers in wrong order.
 
