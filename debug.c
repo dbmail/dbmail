@@ -6,6 +6,7 @@
 #include "debug.h"
 
 #define err_out_stream stderr
+#define EXIT_CODE 75
 
 /* the debug variables */
 int TRACE_TO_SYSLOG = 1; /* default: yes */
@@ -60,8 +61,8 @@ void trace (int level, const char *formatstring, ...)
    * bailout */
 	
   if (level==TRACE_FATAL)
-    exit(1);
+    exit(EXIT_CODE);
 
   if (level==TRACE_STOP)
-    exit(0);
+    exit(EXIT_CODE);
 }
