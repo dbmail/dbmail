@@ -12,8 +12,10 @@ int main()
 {
 	unsigned long deleted_messages;
 	unsigned long messages_set_to_delete;
-
+    unsigned long unlinked_messageblks;
+    
     struct list failed_messageblks;
+    struct element *e;
     
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 	
@@ -64,9 +66,25 @@ int main()
         return -1;
     }
     
-    printf ("Ok. Found [%lu] unconnected messageblks.\n",list_totalnodes (&failed_messageblks));
+    unlinked_messageblks = list_totalnodes (&failed_messageblks);
     
-	printf ("Maintenance done.\n");
-	
-	return 0;
+    if (unlinked_messageblks>0)
+    {
+    printf ("Ok. Found [%lu] unconnected messageblks:\n",unlinked_messageblks);
+        e = list_getstart (&failed_messageblks);
+        
+        while (e)
+        {
+            printf ("%s", (char *)e->data);
+            e = e->nextnode;
+        }
+        
+        printf ("\n");
+    }
+    else 
+        printf ("Ok. Found 0 unconnected messageblks.\n");
+        
+printf ("Maintenance done.\n");
+        
+return 0;
 }

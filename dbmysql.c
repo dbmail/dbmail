@@ -1378,7 +1378,7 @@ int db_icheck_messageblks(struct list *lost_messageblks)
            * add to the list 
            */
 
-          list_nodeadd (lost_messageblks, row[1], sizeof(row[1]));
+          list_nodeadd (lost_messageblks, row[1], strlen(row[1])+1);
       }
       /*
        * else do nothing, just check the next one */
