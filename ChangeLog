@@ -1,5 +1,8 @@
 2004-04-02  Ilja Booij  <ilja@ic-s.nl>
 
+	* header.c (read_header): at one place, read_header returned -1,
+	instead of 0.
+
 	* auth/authsql.c (auth_validate): checks if username or password
 	is NULL
 

@@ -108,7 +108,7 @@ int read_header(FILE * instream, u64_t * headerrfcsize, u64_t * headersize,
 			my_free(tmpline);
 			/* NOTA BENE: Make sure that the caller knows to free
 			 * the header block even if there's been an error! */
-			return -1;
+			return 0;
 		}
 
 		/* The end of the header could be \n\n, \r\n\r\n,
