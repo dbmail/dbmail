@@ -26,6 +26,8 @@
 #include <signal.h>
 #include "serverservice.h"
 #include "debug.h"
+#include <fcntl.h>
+
 
 #define LOG_USERS 1
 
@@ -436,7 +438,7 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 	       */
 	      for (i=0; i<default_children; i++)
 		{
-		  if (default_child_pids[i] == 0)
+		  if (default_child_pids[i] == 0 || kill(default_child_pids[i], 0) == -1)
 		    {
 		      /* def-child has died, re-create */
 		      if (!fork())
@@ -720,7 +722,7 @@ void SS_sighandler(int sig, siginfo_t *info, void *data)
 	      if (default_child_pids[i] <= 0)
 		continue;
 
-	      if (kill(default_child_pids[i], SIGUSR1) == -1 && errno == ESRCH)
+	      if (kill(default_child_pids[i], 0) == -1 && errno == ESRCH)
 		{
 		  /* this child no longer exists */
 		  trace(TRACE_DEBUG, "signal_handler(): cleaning up PID %u", default_child_pids[i]);

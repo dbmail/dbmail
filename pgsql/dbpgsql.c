@@ -3848,8 +3848,9 @@ int db_get_main_header(u64_t msguid, struct list *hdrlist)
 
   list_init(hdrlist);
 
+  /* this query should contain LIMIT 1 (only need the first row) but it drives postgreSQL wild (>3 minutes exec time) */
   snprintf(query, DEF_QUERYSIZE, "SELECT messageblk FROM messageblks WHERE "
-	   "message_idnr = %llu::bigint ORDER BY messageblk_idnr LIMIT 1", msguid);
+	   "message_idnr = %llu::bigint ORDER BY messageblk_idnr", msguid);
 
   if (db_query(query) == -1)
     {

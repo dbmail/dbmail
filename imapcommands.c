@@ -1450,31 +1450,46 @@ int _ic_append(char *tag, char **args, ClientInfo *ci)
 
   msgdata[dataidx] = 0;   /* terminate (safety, this byte will not be stored) */
 
+  /* the literal string MUST be followed by CRLF */
+  result = 0;
+  if (fgetc(ci->rx) != '\r')
+    result = 1;
+  else if (fgetc(ci->rx) != '\n')
+    result = 1;
+
   alarm(0); /* clear alarm */
 
-  /* insert this msg */
-  result = db_imap_append_msg(msgdata, dataidx, mboxid, ud->userid);
-  switch (result)
+  if (result != 0)
     {
-    case -1:
-      trace(TRACE_ERROR,"ic_append(): error appending msg\n");
-      fprintf(ci->tx,"* BYE internal dbase error storing message\r\n");
-      break;
-      
-    case 1:
-      trace(TRACE_ERROR,"ic_append(): faulty msg\n");
-      fprintf(ci->tx,"%s NO invalid message specified\r\n", tag);
-      break;
-
-    case 2:
-      trace(TRACE_INFO,"ic_append(): quotum would exceed\n");
-      fprintf(ci->tx,"%s NO not enough quotum left\r\n", tag);
-      break;
-
-    case 0:
-      fprintf(ci->tx,"%s OK APPEND completed\r\n",tag);
-      break;
+      trace(TRACE_ERROR,"ic_append(): msg followed by CRLF\n");
+      fprintf(ci->tx,"%s BAD expected crlf after literal string\r\n", tag);
     }
+  else
+    {
+      /* insert this msg */
+      result = db_imap_append_msg(msgdata, dataidx, mboxid, ud->userid);
+      switch (result)
+        {
+        case -1:
+	  trace(TRACE_ERROR,"ic_append(): error appending msg\n");
+	  fprintf(ci->tx,"* BYE internal dbase error storing message\r\n");
+	  break;
+	  
+        case 1:
+	  trace(TRACE_ERROR,"ic_append(): faulty msg\n");
+	  fprintf(ci->tx,"%s NO invalid message specified\r\n", tag);
+	  break;
+	  
+        case 2:
+	  trace(TRACE_INFO,"ic_append(): quotum would exceed\n");
+	  fprintf(ci->tx,"%s NO not enough quotum left\r\n", tag);
+	  break;
+	  
+        case 0:
+	  fprintf(ci->tx,"%s OK APPEND completed\r\n",tag);
+	  break;
+        }
+     }
 
   my_free(msgdata);
   msgdata = NULL;

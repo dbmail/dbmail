@@ -51,7 +51,7 @@ int pipe_forward(FILE *instream, struct list *targets, char *from, char *header,
       return -1;
     }
   
-  memtst ((strblock = (char *)my_malloc(READ_BLOCK_SIZE))==NULL);
+  memtst ((strblock = (char *)my_malloc(READ_BLOCK_SIZE + 1))==NULL);
 	
   target = list_getstart (targets);
 
