@@ -139,6 +139,8 @@ int StartServer(serverConfig_t * conf)
 
 void ParentSigHandler(int sig, siginfo_t * info, void *data)
 {
+	int saved_errno = errno;
+	
 	if (ParentPID != getpid()) {
 		trace(TRACE_INFO, "%s,%s: no longer parent", __FILE__, __func__);
 		/* this call is for a child but it's handler is not yet installed */
@@ -166,6 +168,8 @@ void ParentSigHandler(int sig, siginfo_t * info, void *data)
 	default:
 		GeneralStopRequested = 1;
 	}
+
+	errno = saved_errno;
 }
 
 
