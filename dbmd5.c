@@ -10,7 +10,6 @@
 unsigned char *makemd5(char *buf)
 {
 	struct GdmMD5Context mycontext;
-	unsigned char const mystring[]="aaaa\n";
 	unsigned char result[16];
 	unsigned char *md5hash;
 	int i;
@@ -18,11 +17,14 @@ unsigned char *makemd5(char *buf)
 	md5hash=(unsigned char *)malloc(33);
 	
 	gdm_md5_init (&mycontext);
-	gdm_md5_update (&mycontext,mystring,strlen(buf));
+	gdm_md5_update (&mycontext,buf,strlen(buf));
 	gdm_md5_final (result,&mycontext);
 	
 	for (i = 0; i < 16; i++) {
 	    sprintf (&md5hash[i*2],"%02x", result[i]);
 	}
+
+	printf ("hash found [%s]\n",md5hash);
+	
 	return md5hash;
 }

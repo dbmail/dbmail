@@ -268,6 +268,8 @@ unsigned long db_md5_validate (char *username,unsigned char *md5_apop_he, char *
 
 	md5_apop_we=makemd5(checkstring);
 	
+	trace(TRACE_DEBUG,"db_md5_validate(): checkstring for md5 [%s] -> result [%s]",checkstring,
+			md5_apop_we);
 	trace(TRACE_DEBUG,"db_md5_validate(): validating md5_apop_we=[%s] md5_apop_he=[%s]",
 			md5_apop_we, md5_apop_he);
 

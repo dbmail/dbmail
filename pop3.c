@@ -6,7 +6,7 @@
 #include "dbmysql.h"
 
 /* max_errors defines the maximum number of allowed failures */
-#define MAX_ERRORS 3
+#define MAX_ERRORS 10
 
 extern int state; /* tells the current negotiation state of the server */
 extern char *username, *password; /* session username and password */
@@ -408,7 +408,7 @@ int pop3 (void *stream, char *buffer)
 								{
 									state = TRANSACTION;
 									/* user seems to be valid, let's build a session */
-									trace(TRACE_DEBUG,"pop3(): validation OK, building a session for user [%s]");
+									trace(TRACE_DEBUG,"pop3(): validation OK, building a session for user [%s]",username);
 									result=db_createsession(result,&curr_session);
 									if (result==1)
 										{
