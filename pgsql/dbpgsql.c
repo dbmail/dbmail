@@ -195,8 +195,8 @@ char *db_get_config_item (char *item, int type)
   /* retrieves an config item from database */
   char *result = NULL;
 	
-  snprintf (query, DEF_QUERYSIZE, "SELECT value FROM config WHERE item = '%s'",item);
-  trace (TRACE_DEBUG,"db_get_config_item(): retrieving config_item %s by query %s\n",
+  snprintf (query, DEF_QUERYSIZE, "SELECT value FROM config WHERE item='%s'",item);
+  trace (TRACE_DEBUG,"db_get_config_item(): retrieving config_item %s by query [%s]\n",
 	 item, query);
 
   if (db_query(query, &res)==-1)
@@ -243,7 +243,7 @@ int db_addalias (u64_t useridnr, char *alias, int clientid)
 {
   /* adds an alias for a specific user */
   snprintf (query, DEF_QUERYSIZE,
-	    "INSERT INTO aliases (alias,deliver_to,client_id) VALUES ('%s','%llu',%d)",
+	    "INSERT INTO aliases (alias,deliver_to,client_idnr) VALUES ('%s','%llu',%d)",
 	   alias, useridnr, clientid);
 	
   trace (TRACE_DEBUG,"db_addalias(): executing query for user: [%s]", query);
@@ -406,7 +406,7 @@ u64_t db_insert_message (u64_t *useridnr)
   strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
   
   snprintf (query, DEF_QUERYSIZE,"INSERT INTO messages(mailbox_idnr,messagesize,unique_id,internal_date)"
-	   " VALUES (%llu,0,\" \",\"%s\")",
+	   " VALUES (%llu,0,' ','%s')",
 	   db_get_inboxid(useridnr), timestr);
 
   trace (TRACE_DEBUG,"db_insert_message(): inserting message query [%s]",query);
@@ -463,7 +463,7 @@ u64_t db_insert_message_block (char *block, int messageidnr)
 	
 	  snprintf (tmpquery, esclen+500,
 		   "INSERT INTO messageblks(messageblk,blocksize,message_idnr) "
-		   "VALUES (\"%s\",%d,%d)",
+		   "VALUES ('%s',%d,%d)",
 		   escblk,len,messageidnr);
 
 	  if (db_query (tmpquery, &res)==-1)
@@ -1341,7 +1341,7 @@ int db_imap_append_msg(char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid)
    */
   snprintf(query, DEF_QUERYSIZE, "INSERT INTO messages "
 	   "(mailbox_idnr,messagesize,unique_id,internal_date,status,"
-       " seen_flag) VALUES (%llu, 0, \"\", \"%s\",001,1)",
+       " seen_flag) VALUES (%llu, 0, '', '%s',001,1)",
 	   mboxid, timestr);
 
   if (db_query(query,&res) == -1)
@@ -1710,7 +1710,7 @@ int db_getmailbox(mailbox_t *mb, u64_t userid)
    * NOTE expunged messages are selected as well in order to be able to restore them 
    */
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr FROM messages WHERE unique_id!=\"\""
+  snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr FROM messages WHERE unique_id!=''"
 	   "ORDER BY message_idnr DESC LIMIT 0,1");
   
   if (db_query(query,&res) == -1)
@@ -2141,7 +2141,7 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
 	   "deleted_flag, seen_flag, answered_flag, draft_flag, flagged_flag, recent_flag,"
        " unique_id, internal_date) "
 	   "SELECT mailbox_idnr, messagesize, status, deleted_flag, seen_flag, answered_flag, "
-	   "draft_flag, flagged_flag, recent_flag, \"\", internal_date "
+	   "draft_flag, flagged_flag, recent_flag, '', internal_date "
        "FROM messages WHERE messages.message_idnr = %llu",
 	   msgid);
 
@@ -2181,7 +2181,7 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
 	   "deleted_flag, seen_flag, answered_flag, draft_flag, flagged_flag, recent_flag,"
        " unique_id, internal_date) "
 	   "SELECT %llu, messagesize, status, deleted_flag, seen_flag, answered_flag, "
-	   "draft_flag, flagged_flag, recent_flag, \"\", internal_date "
+	   "draft_flag, flagged_flag, recent_flag, '', internal_date "
        "FROM tmpmessage WHERE tmpmessage.message_idnr = %llu",
 	   destmboxid, tmpid);
 
@@ -2312,7 +2312,7 @@ u64_t db_first_unseen(u64_t uid)
   u64_t id;
 
   snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr FROM messages WHERE mailbox_idnr = %llu "
-	   "AND status<2 AND seen_flag = 0 AND unique_id != \"\" "
+	   "AND status<2 AND seen_flag = 0 AND unique_id != '' "
 	   "ORDER BY message_idnr ASC LIMIT 0,1", uid);
 
   if (db_query(query,&res) == -1)
@@ -2410,7 +2410,7 @@ int db_get_msgflag(const char *name, u64_t mailboxuid, u64_t msguid)
     return 0; /* non-existent flag is not set */
 
   snprintf(query, DEF_QUERYSIZE, "SELECT %s FROM messages WHERE mailbox_idnr = %llu "
-	   "AND status<2 AND message_idnr = %llu AND unique_id != \"\"", flagname, mailboxuid, msguid);
+	   "AND status<2 AND message_idnr = %llu AND unique_id != ''", flagname, mailboxuid, msguid);
 
   if (db_query(query,&res) == -1)
     {
@@ -2484,7 +2484,7 @@ int db_get_msgdate(u64_t mailboxuid, u64_t msguid, char *date)
   char *row;
     
   snprintf(query, DEF_QUERYSIZE, "SELECT internal_date FROM messages WHERE mailbox_idnr = %llu "
-	   "AND message_idnr = %llu AND unique_id!=\"\"", mailboxuid, msguid);
+	   "AND message_idnr = %llu AND unique_id!=''", mailboxuid, msguid);
 
   if (db_query(query,&res) == -1)
     {
@@ -2714,7 +2714,7 @@ int db_mailbox_msg_match(u64_t mailboxuid, u64_t msguid)
   int val;
 
   snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr FROM message WHERE message_idnr = %llu AND "
-	   "mailbox_idnr = %llu AND status<002 AND unique_id!=\"\"", msguid, mailboxuid); 
+	   "mailbox_idnr = %llu AND status<002 AND unique_id!=''", msguid, mailboxuid); 
 
   if (db_query(query,&res) == -1)
     {

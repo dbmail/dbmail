@@ -9,7 +9,7 @@ CREATE TABLE aliases (
     alias_idnr INT8 DEFAULT nextval('alias_idnr_seq'),
     alias VARCHAR(100) NOT NULL, 
     deliver_to VARCHAR(250) NOT NULL,
-    client_id INTEGER DEFAULT '0' NOT NULL,
+    client_idnr INTEGER DEFAULT '0' NOT NULL,
     PRIMARY KEY (alias_idnr)
 );
 CREATE INDEX alias_idx ON aliases (alias);
@@ -21,7 +21,7 @@ CREATE TABLE users (
    user_idnr INT8 DEFAULT nextval('user_idnr_seq'),
    userid VARCHAR(100) NOT NULL,
    passwd VARCHAR(32) NOT NULL,
-   client_id INTEGER DEFAULT '0' NOT NULL,
+   client_idnr INTEGER DEFAULT '0' NOT NULL,
    maxmail_size INT8 DEFAULT '0' NOT NULL,
    PRIMARY KEY (user_idnr)
 );

@@ -218,7 +218,7 @@ u64_t db_adduser (char *username, char *password, char *clientid, char *maxmail)
 	size *= 1000;
     }
       
-  snprintf (query, DEF_QUERYSIZE,"INSERT INTO user (userid,passwd,client_idnr,maxmail_size) VALUES "
+  snprintf (query, DEF_QUERYSIZE,"INSERT INTO users (userid,passwd,client_idnr,maxmail_size) VALUES "
 	   "('%s','%s',%s,%llu)",
 	   username,password,clientid, size);
 	
