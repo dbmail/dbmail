@@ -346,8 +346,8 @@ int PerformChildTask(ChildInfo_t * info)
 			continue;
 		}
 
-		setlinebuf(client.tx);
-		setlinebuf(client.rx);
+		setvbuf(client.tx, (char *) NULL, _IOLBF, 0);
+		setvbuf(client.rx, (char *) NULL, _IOLBF, 0);
 
 		trace(TRACE_DEBUG,
 		      "PerformChildTask(): client info init complete, calling client handler");

@@ -1,5 +1,10 @@
 2004-06-03  Ilja Booij  <ilja@ic-s.nl>
 
+	* serverchild.c (PerformChildTask): changed call to setlinebuf()
+	to setvbuf() to make it work on non-BSD and non-GNU systems. The
+	new call is functionally completely equivalent, it just looks
+	different.
+
 	* lmtp.c (lmtp_error): only add __attribute__ if __GNUC__
 	is defined.
 
