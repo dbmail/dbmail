@@ -111,6 +111,13 @@ void ChildSigHandler(int sig, siginfo_t *info, void *data)
       /* bad shit, exit */
       trace(TRACE_DEBUG, "ChildSighandler(): cannot ignore this. Terminating");
 
+      /*
+       * For some reason i have not yet determined the process starts eating up
+       * all CPU time when trying to disconnect.
+       * For now: just bail out :-)
+       */
+      exit(1);
+
       if (!triedDisconnect)
 	{
 	  triedDisconnect = 1;
