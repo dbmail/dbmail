@@ -2293,13 +2293,6 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
 
   time(&td);              /* get time */
 
-  /* create temporary tables */
-  if (db_query(create_tmp_tables_queries[0]) == -1 || db_query(create_tmp_tables_queries[1]) == -1)
-    {
-      trace(TRACE_ERROR, "db_copymsg(): could not create temporary tables\n");
-      return -1;
-    }
-
   /* copy: */
 
   /* first to temporary table */
@@ -2315,11 +2308,6 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
   if (db_query(query) == -1)
     {
       trace(TRACE_ERROR, "db_copymsg(): could not insert temporary message\n");
-
-      /* drop temporary tables */
-      if (db_query(drop_tmp_tables_queries[0]) == -1 || db_query(drop_tmp_tables_queries[1]) == -1)
-	trace(TRACE_ERROR, "db_copymsg(): could not drop temporary tables\n");
-
       return -1;
     }
 
@@ -2334,10 +2322,11 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
     {
       trace(TRACE_ERROR, "db_copymsg(): could not insert temporary message blocks\n");
 
-      /* drop temporary tables */
-      if (db_query(drop_tmp_tables_queries[0]) == -1 || db_query(drop_tmp_tables_queries[1]) == -1)
-	trace(TRACE_ERROR, "db_copymsg(): could not drop temporary tables\n");
+      snprintf(query, DEF_QUERYSIZE, "DELETE FROM tmpmessage WHERE messageidnr = %llu", tmpid);
 
+      if (db_query(query) == -1)
+	trace(TRACE_ERROR, "db_copymsg(): could not delete temporary message\n");
+      
       return -1;
     }
 
@@ -2346,20 +2335,24 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
   /* copy message info */
   snprintf(query, DEF_QUERYSIZE, "INSERT INTO message (mailboxidnr, messagesize, status, "
 	   "deleted_flag, seen_flag, answered_flag, draft_flag, flagged_flag, recent_flag,"
-       " unique_id, internal_date) "
+	   " unique_id, internal_date) "
 	   "SELECT %llu, messagesize, status, deleted_flag, seen_flag, answered_flag, "
 	   "draft_flag, flagged_flag, recent_flag, \"\", internal_date "
-       "FROM tmpmessage WHERE tmpmessage.messageidnr = %llu",
+	   "FROM tmpmessage WHERE tmpmessage.messageidnr = %llu",
 	   destmboxid, tmpid);
 
   if (db_query(query) == -1)
     {
       trace(TRACE_ERROR, "db_copymsg(): could not insert message\n");
 
-      /* drop temporary tables */
-      if (db_query(drop_tmp_tables_queries[0]) == -1 || db_query(drop_tmp_tables_queries[1]) == -1)
-	trace(TRACE_ERROR, "db_copymsg(): could not drop temporary tables\n");
-
+      snprintf(query, DEF_QUERYSIZE, "DELETE FROM tmpmessage WHERE messageidnr = %llu", tmpid);
+      if (db_query(query) == -1)
+	trace(TRACE_ERROR, "db_copymsg(): could not delete temporary message\n");
+      
+      snprintf(query, DEF_QUERYSIZE, "DELETE FROM tmpmessageblk WHERE messageidnr = %llu", tmpid);
+      if (db_query(query) == -1)
+	trace(TRACE_ERROR, "db_copymsg(): could not delete temporary message blocks\n");
+      
       return -1;
     }
 
@@ -2375,9 +2368,14 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
     {
       trace(TRACE_ERROR, "db_copymsg(): could not insert message blocks\n");
 
-      /* drop temporary tables */
-      if (db_query(drop_tmp_tables_queries[0]) == -1 || db_query(drop_tmp_tables_queries[1]) == -1)
-	trace(TRACE_ERROR, "db_copymsg(): could not drop temporary tables\n");
+      /* delete temporary messages */
+      snprintf(query, DEF_QUERYSIZE, "DELETE FROM tmpmessage WHERE messageidnr = %llu", tmpid);
+      if (db_query(query) == -1)
+	trace(TRACE_ERROR, "db_copymsg(): could not delete temporary message\n");
+      
+      snprintf(query, DEF_QUERYSIZE, "DELETE FROM tmpmessageblk WHERE messageidnr = %llu", tmpid);
+      if (db_query(query) == -1)
+	trace(TRACE_ERROR, "db_copymsg(): could not delete temporary message blocks\n");
 
       /* delete inserted message */
       snprintf(query, DEF_QUERYSIZE, "DELETE FROM message WHERE messageidnr = %llu",newid);
@@ -2388,12 +2386,14 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
       return -1;
     }
 
-  /* drop temporary tables */
-  if (db_query(drop_tmp_tables_queries[0]) == -1 || db_query(drop_tmp_tables_queries[1]) == -1)
-    {
-      trace(TRACE_ERROR, "db_copymsg(): could not drop temporary tables\n");
-      return -1;
-    }
+  /* delete temporary messages */
+  snprintf(query, DEF_QUERYSIZE, "DELETE FROM tmpmessage WHERE messageidnr = %llu", tmpid);
+  if (db_query(query) == -1)
+    trace(TRACE_ERROR, "db_copymsg(): could not delete temporary message\n");
+      
+  snprintf(query, DEF_QUERYSIZE, "DELETE FROM tmpmessageblk WHERE messageidnr = %llu", tmpid);
+  if (db_query(query) == -1)
+    trace(TRACE_ERROR, "db_copymsg(): could not delete temporary message blocks\n");
 
   /* all done, validate new msg by creating a new unique id for the copied msg */
   snprintf(query, DEF_QUERYSIZE, "UPDATE message SET unique_id=\"%lluA%lu\" "
