@@ -97,8 +97,9 @@ SUBDIRS = mysql pgsql auth sort
 
 @SIEVE_TRUE@SIEVEPROGS = dbmail-sievecmd dbmail-timsieved
 
-bin_PROGRAMS = dbmail-smtp dbmail-pop3d dbmail-imapd dbmail-maintenance dbmail-adduser dbmail-readvut dbmail-lmtpd $(SIEVEPROGS)
-bin_SCRIPTS = install-dbmail.sh
+bin_PROGRAMS = dbmail-readvut $(SIEVEPROGS)
+sbin_SCRIPTS = install-dbmail.sh
+sbin_PROGRAMS = dbmail-smtp dbmail-pop3d dbmail-imapd dbmail-maintenance dbmail-adduser dbmail-lmtpd 
 
 COMMON = config.c debug.c list.c dbmd5.c md5.c db.c misc.c mime.c
 SERVER = server.c serverchild.c
@@ -137,13 +138,26 @@ ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 mkinstalldirs = $(SHELL) $(top_srcdir)/buildtools/mkinstalldirs
 CONFIG_HEADER = config.h
 CONFIG_CLEAN_FILES = 
-PROGRAMS =  $(bin_PROGRAMS)
+PROGRAMS =  $(bin_PROGRAMS) $(sbin_PROGRAMS)
 
 
 DEFS = @DEFS@ -I. -I$(srcdir) -I.
 CPPFLAGS = @CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
+dbmail_readvut_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o db.o \
+misc.o mime.o vut2dbmail.o
+dbmail_readvut_DEPENDENCIES = 
+dbmail_readvut_LDFLAGS = 
+@SIEVE_TRUE@dbmail_sievecmd_OBJECTS =  config.o debug.o list.o dbmd5.o \
+@SIEVE_TRUE@md5.o db.o misc.o mime.o sievecmd.o
+@SIEVE_TRUE@dbmail_sievecmd_DEPENDENCIES = 
+dbmail_sievecmd_LDFLAGS = 
+@SIEVE_TRUE@dbmail_timsieved_OBJECTS =  config.o debug.o list.o dbmd5.o \
+@SIEVE_TRUE@md5.o db.o misc.o mime.o server.o serverchild.o timsieve.o \
+@SIEVE_TRUE@timsieved.o
+@SIEVE_TRUE@dbmail_timsieved_DEPENDENCIES = 
+dbmail_timsieved_LDFLAGS = 
 dbmail_smtp_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o db.o misc.o \
 mime.o header.o pipe.o forward.o dsn.o main.o
 dbmail_smtp_DEPENDENCIES = 
@@ -165,25 +179,12 @@ dbmail_adduser_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o db.o \
 misc.o mime.o user.o
 dbmail_adduser_DEPENDENCIES = 
 dbmail_adduser_LDFLAGS = 
-dbmail_readvut_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o db.o \
-misc.o mime.o vut2dbmail.o
-dbmail_readvut_DEPENDENCIES = 
-dbmail_readvut_LDFLAGS = 
 dbmail_lmtpd_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o db.o \
 misc.o mime.o server.o serverchild.o header.o pipe.o forward.o dsn.o \
 lmtp.o lmtpd.o
 dbmail_lmtpd_DEPENDENCIES = 
 dbmail_lmtpd_LDFLAGS = 
-@SIEVE_TRUE@dbmail_sievecmd_OBJECTS =  config.o debug.o list.o dbmd5.o \
-@SIEVE_TRUE@md5.o db.o misc.o mime.o sievecmd.o
-@SIEVE_TRUE@dbmail_sievecmd_DEPENDENCIES = 
-dbmail_sievecmd_LDFLAGS = 
-@SIEVE_TRUE@dbmail_timsieved_OBJECTS =  config.o debug.o list.o dbmd5.o \
-@SIEVE_TRUE@md5.o db.o misc.o mime.o server.o serverchild.o timsieve.o \
-@SIEVE_TRUE@timsieved.o
-@SIEVE_TRUE@dbmail_timsieved_DEPENDENCIES = 
-dbmail_timsieved_LDFLAGS = 
-SCRIPTS =  $(bin_SCRIPTS)
+SCRIPTS =  $(sbin_SCRIPTS)
 
 CFLAGS = @CFLAGS@
 COMPILE = $(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -207,8 +208,8 @@ DEP_FILES =  .deps/acl.P .deps/config.P .deps/db.P .deps/dbmd5.P \
 .deps/quota.P .deps/rfcmsg.P .deps/server.P .deps/serverchild.P \
 .deps/sievecmd.P .deps/timsieve.P .deps/timsieved.P .deps/user.P \
 .deps/vut2dbmail.P
-SOURCES = $(dbmail_smtp_SOURCES) $(dbmail_pop3d_SOURCES) $(dbmail_imapd_SOURCES) $(dbmail_maintenance_SOURCES) $(dbmail_adduser_SOURCES) $(dbmail_readvut_SOURCES) $(dbmail_lmtpd_SOURCES) $(dbmail_sievecmd_SOURCES) $(dbmail_timsieved_SOURCES)
-OBJECTS = $(dbmail_smtp_OBJECTS) $(dbmail_pop3d_OBJECTS) $(dbmail_imapd_OBJECTS) $(dbmail_maintenance_OBJECTS) $(dbmail_adduser_OBJECTS) $(dbmail_readvut_OBJECTS) $(dbmail_lmtpd_OBJECTS) $(dbmail_sievecmd_OBJECTS) $(dbmail_timsieved_OBJECTS)
+SOURCES = $(dbmail_readvut_SOURCES) $(dbmail_sievecmd_SOURCES) $(dbmail_timsieved_SOURCES) $(dbmail_smtp_SOURCES) $(dbmail_pop3d_SOURCES) $(dbmail_imapd_SOURCES) $(dbmail_maintenance_SOURCES) $(dbmail_adduser_SOURCES) $(dbmail_lmtpd_SOURCES)
+OBJECTS = $(dbmail_readvut_OBJECTS) $(dbmail_sievecmd_OBJECTS) $(dbmail_timsieved_OBJECTS) $(dbmail_smtp_OBJECTS) $(dbmail_pop3d_OBJECTS) $(dbmail_imapd_OBJECTS) $(dbmail_maintenance_OBJECTS) $(dbmail_adduser_OBJECTS) $(dbmail_lmtpd_OBJECTS)
 
 all: all-redirect
 .SUFFIXES:
@@ -281,6 +282,31 @@ uninstall-binPROGRAMS:
 	  rm -f $(DESTDIR)$(bindir)/`echo $$p|sed 's/$(EXEEXT)$$//'|sed '$(transform)'|sed 's/$$/$(EXEEXT)/'`; \
 	done
 
+mostlyclean-sbinPROGRAMS:
+
+clean-sbinPROGRAMS:
+	-test -z "$(sbin_PROGRAMS)" || rm -f $(sbin_PROGRAMS)
+
+distclean-sbinPROGRAMS:
+
+maintainer-clean-sbinPROGRAMS:
+
+install-sbinPROGRAMS: $(sbin_PROGRAMS)
+	@$(NORMAL_INSTALL)
+	$(mkinstalldirs) $(DESTDIR)$(sbindir)
+	@list='$(sbin_PROGRAMS)'; for p in $$list; do \
+	  if test -f $$p; then \
+	    echo "  $(INSTALL_PROGRAM) $$p $(DESTDIR)$(sbindir)/`echo $$p|sed 's/$(EXEEXT)$$//'|sed '$(transform)'|sed 's/$$/$(EXEEXT)/'`"; \
+	     $(INSTALL_PROGRAM) $$p $(DESTDIR)$(sbindir)/`echo $$p|sed 's/$(EXEEXT)$$//'|sed '$(transform)'|sed 's/$$/$(EXEEXT)/'`; \
+	  else :; fi; \
+	done
+
+uninstall-sbinPROGRAMS:
+	@$(NORMAL_UNINSTALL)
+	list='$(sbin_PROGRAMS)'; for p in $$list; do \
+	  rm -f $(DESTDIR)$(sbindir)/`echo $$p|sed 's/$(EXEEXT)$$//'|sed '$(transform)'|sed 's/$$/$(EXEEXT)/'`; \
+	done
+
 .s.o:
 	$(COMPILE) -c $<
 
@@ -296,6 +322,18 @@ distclean-compile:
 	-rm -f *.tab.c
 
 maintainer-clean-compile:
+
+dbmail-readvut: $(dbmail_readvut_OBJECTS) $(dbmail_readvut_DEPENDENCIES)
+	@rm -f dbmail-readvut
+	$(LINK) $(dbmail_readvut_LDFLAGS) $(dbmail_readvut_OBJECTS) $(dbmail_readvut_LDADD) $(LIBS)
+
+dbmail-sievecmd: $(dbmail_sievecmd_OBJECTS) $(dbmail_sievecmd_DEPENDENCIES)
+	@rm -f dbmail-sievecmd
+	$(LINK) $(dbmail_sievecmd_LDFLAGS) $(dbmail_sievecmd_OBJECTS) $(dbmail_sievecmd_LDADD) $(LIBS)
+
+dbmail-timsieved: $(dbmail_timsieved_OBJECTS) $(dbmail_timsieved_DEPENDENCIES)
+	@rm -f dbmail-timsieved
+	$(LINK) $(dbmail_timsieved_LDFLAGS) $(dbmail_timsieved_OBJECTS) $(dbmail_timsieved_LDADD) $(LIBS)
 
 dbmail-smtp: $(dbmail_smtp_OBJECTS) $(dbmail_smtp_DEPENDENCIES)
 	@rm -f dbmail-smtp
@@ -317,39 +355,27 @@ dbmail-adduser: $(dbmail_adduser_OBJECTS) $(dbmail_adduser_DEPENDENCIES)
 	@rm -f dbmail-adduser
 	$(LINK) $(dbmail_adduser_LDFLAGS) $(dbmail_adduser_OBJECTS) $(dbmail_adduser_LDADD) $(LIBS)
 
-dbmail-readvut: $(dbmail_readvut_OBJECTS) $(dbmail_readvut_DEPENDENCIES)
-	@rm -f dbmail-readvut
-	$(LINK) $(dbmail_readvut_LDFLAGS) $(dbmail_readvut_OBJECTS) $(dbmail_readvut_LDADD) $(LIBS)
-
 dbmail-lmtpd: $(dbmail_lmtpd_OBJECTS) $(dbmail_lmtpd_DEPENDENCIES)
 	@rm -f dbmail-lmtpd
 	$(LINK) $(dbmail_lmtpd_LDFLAGS) $(dbmail_lmtpd_OBJECTS) $(dbmail_lmtpd_LDADD) $(LIBS)
 
-dbmail-sievecmd: $(dbmail_sievecmd_OBJECTS) $(dbmail_sievecmd_DEPENDENCIES)
-	@rm -f dbmail-sievecmd
-	$(LINK) $(dbmail_sievecmd_LDFLAGS) $(dbmail_sievecmd_OBJECTS) $(dbmail_sievecmd_LDADD) $(LIBS)
-
-dbmail-timsieved: $(dbmail_timsieved_OBJECTS) $(dbmail_timsieved_DEPENDENCIES)
-	@rm -f dbmail-timsieved
-	$(LINK) $(dbmail_timsieved_LDFLAGS) $(dbmail_timsieved_OBJECTS) $(dbmail_timsieved_LDADD) $(LIBS)
-
-install-binSCRIPTS: $(bin_SCRIPTS)
+install-sbinSCRIPTS: $(sbin_SCRIPTS)
 	@$(NORMAL_INSTALL)
-	$(mkinstalldirs) $(DESTDIR)$(bindir)
-	@list='$(bin_SCRIPTS)'; for p in $$list; do \
+	$(mkinstalldirs) $(DESTDIR)$(sbindir)
+	@list='$(sbin_SCRIPTS)'; for p in $$list; do \
 	  if test -f $$p; then \
-	    echo " $(INSTALL_SCRIPT) $$p $(DESTDIR)$(bindir)/`echo $$p|sed '$(transform)'`"; \
-	    $(INSTALL_SCRIPT) $$p $(DESTDIR)$(bindir)/`echo $$p|sed '$(transform)'`; \
+	    echo " $(INSTALL_SCRIPT) $$p $(DESTDIR)$(sbindir)/`echo $$p|sed '$(transform)'`"; \
+	    $(INSTALL_SCRIPT) $$p $(DESTDIR)$(sbindir)/`echo $$p|sed '$(transform)'`; \
 	  else if test -f $(srcdir)/$$p; then \
-	    echo " $(INSTALL_SCRIPT) $(srcdir)/$$p $(DESTDIR)$(bindir)/`echo $$p|sed '$(transform)'`"; \
-	    $(INSTALL_SCRIPT) $(srcdir)/$$p $(DESTDIR)$(bindir)/`echo $$p|sed '$(transform)'`; \
+	    echo " $(INSTALL_SCRIPT) $(srcdir)/$$p $(DESTDIR)$(sbindir)/`echo $$p|sed '$(transform)'`"; \
+	    $(INSTALL_SCRIPT) $(srcdir)/$$p $(DESTDIR)$(sbindir)/`echo $$p|sed '$(transform)'`; \
 	  else :; fi; fi; \
 	done
 
-uninstall-binSCRIPTS:
+uninstall-sbinSCRIPTS:
 	@$(NORMAL_UNINSTALL)
-	list='$(bin_SCRIPTS)'; for p in $$list; do \
-	  rm -f $(DESTDIR)$(bindir)/`echo $$p|sed '$(transform)'`; \
+	list='$(sbin_SCRIPTS)'; for p in $$list; do \
+	  rm -f $(DESTDIR)$(sbindir)/`echo $$p|sed '$(transform)'`; \
 	done
 
 # This directory's subdirectories are mostly independent; you can cd
@@ -547,7 +573,8 @@ installcheck: installcheck-recursive
 all-recursive-am: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
-install-exec-am: install-binPROGRAMS install-binSCRIPTS
+install-exec-am: install-binPROGRAMS install-sbinPROGRAMS \
+		install-sbinSCRIPTS
 install-exec: install-exec-recursive
 
 install-data-am:
@@ -556,7 +583,8 @@ install-data: install-data-recursive
 install-am: all-am
 	@$(MAKE) $(AM_MAKEFLAGS) install-exec-am install-data-am
 install: install-recursive
-uninstall-am: uninstall-binPROGRAMS uninstall-binSCRIPTS
+uninstall-am: uninstall-binPROGRAMS uninstall-sbinPROGRAMS \
+		uninstall-sbinSCRIPTS
 uninstall: uninstall-recursive
 all-am: Makefile $(PROGRAMS) $(SCRIPTS) config.h
 all-redirect: all-recursive-am
@@ -564,7 +592,8 @@ install-strip:
 	$(MAKE) $(AM_MAKEFLAGS) AM_INSTALL_PROGRAM_FLAGS=-s install
 installdirs: installdirs-recursive
 installdirs-am:
-	$(mkinstalldirs)  $(DESTDIR)$(bindir) $(DESTDIR)$(bindir)
+	$(mkinstalldirs)  $(DESTDIR)$(bindir) $(DESTDIR)$(sbindir) \
+		$(DESTDIR)$(sbindir)
 
 
 mostlyclean-generic:
@@ -577,27 +606,27 @@ distclean-generic:
 
 maintainer-clean-generic:
 mostlyclean-am:  mostlyclean-hdr mostlyclean-binPROGRAMS \
-		mostlyclean-compile mostlyclean-tags mostlyclean-depend \
-		mostlyclean-generic
+		mostlyclean-sbinPROGRAMS mostlyclean-compile \
+		mostlyclean-tags mostlyclean-depend mostlyclean-generic
 
 mostlyclean: mostlyclean-recursive
 
-clean-am:  clean-hdr clean-binPROGRAMS clean-compile clean-tags \
-		clean-depend clean-generic mostlyclean-am
+clean-am:  clean-hdr clean-binPROGRAMS clean-sbinPROGRAMS clean-compile \
+		clean-tags clean-depend clean-generic mostlyclean-am
 
 clean: clean-recursive
 
-distclean-am:  distclean-hdr distclean-binPROGRAMS distclean-compile \
-		distclean-tags distclean-depend distclean-generic \
-		clean-am
+distclean-am:  distclean-hdr distclean-binPROGRAMS \
+		distclean-sbinPROGRAMS distclean-compile distclean-tags \
+		distclean-depend distclean-generic clean-am
 
 distclean: distclean-recursive
 	-rm -f config.status
 
 maintainer-clean-am:  maintainer-clean-hdr maintainer-clean-binPROGRAMS \
-		maintainer-clean-compile maintainer-clean-tags \
-		maintainer-clean-depend maintainer-clean-generic \
-		distclean-am
+		maintainer-clean-sbinPROGRAMS maintainer-clean-compile \
+		maintainer-clean-tags maintainer-clean-depend \
+		maintainer-clean-generic distclean-am
 	@echo "This command is intended for maintainers to use;"
 	@echo "it deletes files that may require special tools to rebuild."
 
@@ -607,12 +636,15 @@ maintainer-clean: maintainer-clean-recursive
 .PHONY: mostlyclean-hdr distclean-hdr clean-hdr maintainer-clean-hdr \
 mostlyclean-binPROGRAMS distclean-binPROGRAMS clean-binPROGRAMS \
 maintainer-clean-binPROGRAMS uninstall-binPROGRAMS install-binPROGRAMS \
-mostlyclean-compile distclean-compile clean-compile \
-maintainer-clean-compile uninstall-binSCRIPTS install-binSCRIPTS \
-install-data-recursive uninstall-data-recursive install-exec-recursive \
-uninstall-exec-recursive installdirs-recursive uninstalldirs-recursive \
-all-recursive check-recursive installcheck-recursive info-recursive \
-dvi-recursive mostlyclean-recursive distclean-recursive clean-recursive \
+mostlyclean-sbinPROGRAMS distclean-sbinPROGRAMS clean-sbinPROGRAMS \
+maintainer-clean-sbinPROGRAMS uninstall-sbinPROGRAMS \
+install-sbinPROGRAMS mostlyclean-compile distclean-compile \
+clean-compile maintainer-clean-compile uninstall-sbinSCRIPTS \
+install-sbinSCRIPTS install-data-recursive uninstall-data-recursive \
+install-exec-recursive uninstall-exec-recursive installdirs-recursive \
+uninstalldirs-recursive all-recursive check-recursive \
+installcheck-recursive info-recursive dvi-recursive \
+mostlyclean-recursive distclean-recursive clean-recursive \
 maintainer-clean-recursive tags tags-recursive mostlyclean-tags \
 distclean-tags clean-tags maintainer-clean-tags distdir \
 mostlyclean-depend distclean-depend clean-depend \

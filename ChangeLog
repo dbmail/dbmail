@@ -1,4 +1,13 @@
 2004-05-25  Ilja Booij  <ilja@ic-s.nl>
+	* THANKS: added Dan Weber for autoconf work
+
+	* INSTALL: changed after removing install-dbmail.sh
+
+	* install-dbmail.sh: removed file because it's no longer needed.
+	
+	* Makefile.am (DELIVER): change by Dan Weber: using 'make install'
+	executables now install in /usr/local/sbin. This makes 
+	install-dbmail.sh obsolete.
 
 	* sort/sort.c: no longer includes bounce.h
 	(sort_and_deliver): no longer calls bounce()
