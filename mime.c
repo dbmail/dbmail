@@ -540,7 +540,7 @@ int mail_adr_list(char *scan_for_field, struct list *targetlist, struct list *mi
 				   next address */
 	      ptr=strstr(ptr,"@");
 	      trace (TRACE_DEBUG,"mail_adr_list(): found %s, next in list is %s",
-		     tmpvalue,ptr);
+		     tmpvalue,ptr ? ptr : "<null>");
 	    }
 	}
       raw=raw->nextnode;
