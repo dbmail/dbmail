@@ -1,3 +1,13 @@
+2005-02-23  Paul Stevens <paul@nfg.nl>
+
+	* check_dbmail.h: use separate config in /etc/dbmail/dbmail-test.conf
+	for test-cases.
+	* imaputil.c (perform_imap_search): return if setlen is zero.
+	* imapcommands.c (_ic_login): return if authentication fails.
+	* dbmail_imapsession.c (dbmail_imap_session_mailbox_open): send tagged
+	NO response to client if mailbox doesn't exists.
+
+
 2005-02-18  Paul Stevens <paul@nfg.nl>
 
 	* pop3d.c, imapd.c, lmtpd.c, server.c, serverchild.c: added
