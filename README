@@ -15,11 +15,15 @@ Because the DBMAIL mailing system is big i needed help.
 So i asked Roel <roel@ic-s.nl>, one of the people working with me 
 here at IC&S, to join in developing DBMAIL further.
 Roel started working on the imapd, while i was debugging the pop3d
-and the injector program DBMAIL-smtp.
+and the injector program dbmail-smtp.
 
 DBMAIL is now a company effort to create a fast, effecient and
 scalable database driven mailingsystem. IC&S is fully behind 
-the opensource and the GPL. Therefore DBMAIL is has the GPL licence.
+the opensource and the GPL. Therefore DBMAIL has the GPL licence.
+However IC&S has a different methods of commercial support
+for this product. For more information about this you can 
+send an email to info@ic-s.nl.
+
 
 ***
 Disclaimer: I nor IC&S is responsible for anything. This software
@@ -27,15 +31,17 @@ could eat your harddisk then kill your processor.
 Anyways, we can't do anything about it. It was your decision.
 ***
 
-It should work without a lot of problems. I've been running it
-for months now. It seems REALLY stable. If you find any bugs, please
+It should work with almost no problems. I've been running it
+for months now. It seems really stable. If you find any bugs, please
 report them to me, eelco@eelco.com, or at the mailinglist
 (dbmail@fastxs.net).
+
 
 What is it?
 ===========
 DBMAIL is a collection of programs that enables email to be
 stored in and retrieved from a (MY)sql database. 
+
 
 Why is it usefull?
 ==================
@@ -43,8 +49,7 @@ Well, for me it's usefull because a number of reasons.
 - it enables me to create mailboxes without the need of systemusers.
 - mail is more effeciently stored and therefore it can
   be inserted an retrieved much faster dan any regular system 
-  (DBmail is currently able to retrieve 500 mail messages in 2 
-   seconds, depending on the mailclient used).
+  (DBmail is currently able to retrieve aprox. 250 mail messages per second)
 - it's more expandable. A database is much easier to access than
   a flat file or a Maildir. We don't need to parse first.
 - In my case, i can easily link a mailbox to a certain client
@@ -52,6 +57,7 @@ Well, for me it's usefull because a number of reasons.
   without me needed to technically support it.
 - It's scalable. You can run the dbmail programs on different servers
   talking to the same database(cluster).
+
 
 How do i install it?
 ====================
@@ -63,8 +69,10 @@ Future
 - create a dbpostgresql.c/dbpostgresql.h to talk to PostgreSQL.
 - speed improvements.
 - code cleanups.
+- gui (webbased, working on that already)
 
 check the website for further DBMAIL plans.
+
 
 What kind of licence is DBmail?
 ===============================
@@ -72,6 +80,7 @@ DBmail is used under the GPL+ licence.
 The + is that i would like to know how stuff is working out. So
 If you have DBMAIL running and you have like 1002919183 users, 
 i would want to know (to bragg about it ;).
+
 
 The rest of the licence is described below:
 -------------------------------------------
