@@ -1353,6 +1353,8 @@ int _ic_list(char *tag, char **args, ClientInfo * ci)
 
 	for (i = 0; i < nchildren; i++) {
 		/* get name */
+		trace(TRACE_DEBUG, "%s,%s: children[%d] = %llu",
+		      __FILE__, __FUNCTION__, i, children[i]);
 		result = db_getmailboxname(children[i], ud->userid, name);
 		if (result == -1) {
 			fprintf(ci->tx, "* BYE internal dbase error\r\n");
