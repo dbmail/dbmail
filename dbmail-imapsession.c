@@ -153,26 +153,26 @@ GList * _imap_get_structure(mime_message_t * msg, int show_extension_data)
 			tmp = g_list_join(tlist," ");
 			list = g_list_append(list, g_strdup(tmp->str));
 		} else
-			list = g_list_append(list, "\"TEXT\" \"PLAIN\" (\"CHARSET\" \"US-ASCII\")");	/* default */
+			list = g_list_append(list, g_strdup("\"TEXT\" \"PLAIN\" (\"CHARSET\" \"US-ASCII\")"));	/* default */
 
 		mime_findfield("content-id", header_to_use, &mr);
 		if (mr && strlen(mr->value) > 0) { 
 			list = g_list_append(list, dbmail_imap_astring_as_string(mr->value));
 		} else
-			list = g_list_append(list, "NIL");
+			list = g_list_append(list, g_strdup("NIL"));
 
 		mime_findfield("content-description", header_to_use, &mr);
 		if (mr && strlen(mr->value) > 0) {
 			list = g_list_append(list, dbmail_imap_astring_as_string(mr->value));
 		} else
-			list = g_list_append(list, "NIL");
+			list = g_list_append(list, g_strdup("NIL"));
 
 		mime_findfield("content-transfer-encoding", header_to_use,
 			       &mr);
 		if (mr && strlen(mr->value) > 0) {
 			list = g_list_append(list, dbmail_imap_astring_as_string(mr->value));
 		} else
-			list = g_list_append(list, "\"7BIT\"");
+			list = g_list_append(list, g_strdup("\"7BIT\""));
 
 		/* now output size */
 		/* add msg->bodylines because \n is dumped as \r\n */
@@ -227,7 +227,7 @@ GList * _imap_get_structure(mime_message_t * msg, int show_extension_data)
 			if (mr && strlen(mr->value) > 0) {
 				list = g_list_append_printf(list, dbmail_imap_astring_as_string(mr->value));
 			} else
-				list = g_list_append(list, "NIL");
+				list = g_list_append(list, g_strdup("NIL"));
 
 			mime_findfield("content-disposition",
 				       header_to_use, &mr);
@@ -235,13 +235,13 @@ GList * _imap_get_structure(mime_message_t * msg, int show_extension_data)
 				tlist = _imap_get_mime_parameters(mr, 0, 0);
 				list = g_list_append(list, g_strdup(dbmail_imap_plist_as_string(tlist)));
 			} else
-				list = g_list_append(list, "NIL");
+				list = g_list_append(list, g_strdup("NIL"));
 
 			mime_findfield("content-language", header_to_use, &mr);
 			if (mr && strlen(mr->value) > 0) {
 				list = g_list_append(list, dbmail_imap_astring_as_string(mr->value));
 			} else
-				list = g_list_append(list, "NIL");
+				list = g_list_append(list, g_strdup("NIL"));
 		}
 	} else {
 		/* check for a multipart message */
@@ -264,7 +264,7 @@ GList * _imap_get_structure(mime_message_t * msg, int show_extension_data)
 			extension = strchr(subtype, ';');
 
 			if (!subtype)
-				list = g_list_append(list, "NIL");
+				list = g_list_append(list, g_strdup("NIL"));
 			else {
 				if (!extension) {
 					newline = strchr(subtype, '\n');
@@ -288,7 +288,7 @@ GList * _imap_get_structure(mime_message_t * msg, int show_extension_data)
 				list = g_list_append(list, g_strdup(tmp->str));
 
 				/* FIXME: should give body-disposition & body-language here */
-				list = g_list_append(list, "NIL NIL");
+				list = g_list_append(list, g_strdup("NIL NIL"));
 			}
 		} else {
 			/* ??? */
