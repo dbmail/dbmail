@@ -10,11 +10,12 @@
 
 extern void func_memtst (char filename[255],int line,int tst);
 
-void list_init (struct list *tlist)
+void list_init(struct list *tlist)
 {
   tlist->start=NULL;
   tlist->total_nodes=0;
 }
+
 
 /*
  * list_freelist()

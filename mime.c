@@ -11,6 +11,7 @@
 /* extern struct list mimelist;  */
 /* extern struct list users; */
 
+
 /* 
  * mime_list()
  *
@@ -75,7 +76,7 @@ int mime_list(char *blkdata, struct list *mimelist)
       /* endptr points to linebreak now */
       /* MIME field+value is string from startptr till endptr */
 
-      *endptr = '\0'; /* replace newline to terminated string */
+      *endptr = '\0'; /* replace newline to terminate string */
 
       trace(TRACE_DEBUG,"mime_list(): captured array [%s]\n",startptr); 
 
@@ -160,7 +161,7 @@ int mime_list(char *blkdata, struct list *mimelist)
 /* 
  * mime_readheader()
  *
- * same as mime_list() but keeps track of idx in blkdata
+ * same as mime_list() but adds the number of bytes read to blkidx
  *
  * returns -1 on failure, 0 on success
  */

@@ -2106,7 +2106,9 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
   if (db_update_msgbuf(MSGBUF_FORCE_UPDATE) == -1)
     return -1;
 
-  mime_readheader(&msgbuf[msgidx], &msgidx, &msg->mimeheader);
+  if (mime_readheader(&msgbuf[msgidx], &msgidx, &msg->mimeheader) == -1)
+    return -1;   /* error reading header */
+
   db_give_msgpos(&msg->headerend);
 
   msgidx++;
@@ -2240,19 +2242,19 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
       memset(&part, 0, sizeof(part));
 
       /* should have a MIME header right here */
-      mime_readheader(&msgbuf[msgidx], &msgidx, &part.mimeheader);
+      if (mime_readheader(&msgbuf[msgidx], &msgidx, &part.mimeheader) == -1)
+	return -1;   /* error reading header */
+
       mime_findfield("content-type", &part.mimeheader, mr);
 
       if (mr && strncasecmp(mr->value, "message/rfc822", strlen("message/rfc822")) == 0)
 	{
 	  /* a message will follow */
-
 	  db_start_msg(&part, splitbound);
 
 	  /* advance to after splitbound */
 	  msgidx++;
 	  msgidx += strlen(splitbound);
-
 	}
       else
 	{
@@ -2272,8 +2274,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
 
 	  if (!msgbuf[msgidx])
 	    {
-	      /* ?? splitbound should follow */
-	      return -1;
+	      return -1; /* ?? splitbound should follow */
 	    }
 	  db_give_msgpos(&part.bodyend);
 	}
