@@ -27,6 +27,7 @@
 
 #include "dbmail.h"
 #include "main.h"
+#include "misc.h"
 #include "pipe.h"
 #include "list.h"
 #include "auth.h"
@@ -295,7 +296,7 @@ int main(int argc, char *argv[])
 
 			dsnuser_init(&dsnuser);
 
-                        if (tmplen) {
+                        if (boxlen) {
 				address = strdup(optarg);
 				detail = strchr(address, '+');
 				if (detail)
@@ -303,9 +304,7 @@ int main(int argc, char *argv[])
 				strcat(address, (optarg+boxpos));
 				/* No need to strdup because these are allocated here. */
 				dsnuser.address = address;
-				print_r( "Address is [%s]\n", dsnuser.address);
 				dsnuser.mailbox = mailbox;
-				print_r( "Mailbox is [%s]\n", dsnuser.mailbox);
                         } else {
 				/* Use strdup because you can't free any argv elements. */
 				dsnuser.address = strdup(optarg);
