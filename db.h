@@ -753,7 +753,7 @@ int db_icheck_null_physmessages(struct list *lost_list);
  * \param status new status of message
  * \return result of db_query()
  */
-int db_set_message_status(u64_t message_idnr, int status);
+int db_set_message_status(u64_t message_idnr, MessageStatus_t status);
 
 /**
 * \brief delete a message block

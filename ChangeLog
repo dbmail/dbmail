@@ -1,4 +1,23 @@
-2004-06-01  Ilja Booij  <ilja@ic-s.nl>
+2004-06-03  Ilja Booij  <ilja@ic-s.nl>
+
+	* maintenance.c (main): uses MESSAGE_STATUS_ERROR from
+	MessageStatus_t instead of hard-coded value.
+
+	* db.c: all queries which use status now use values from
+	MessageStatus_t instead of hard-coded values.
+
+	* dbsearch.c: all queries which use status now use values from
+	MessageStatus_t instead of hard-coded values.
+
+	* dbmailtypes.h: struct message now hold MessageStatus_t values
+
+	* db.c (db_set_message_status): now accepts a MessageStatus_t
+	as argument instead of an int.
+
+	* dbmail.h: added enum MessageStatus_t to hold the different
+	statusses a message can have.
+
+2004-06-02 Aaron Stone <aaron@serendipity.cx>
 
 	* INSTALL: reflowed text to 78 columns and consolidated two
 	paragraphs about LMTP vs. SMTP into one.
@@ -15,6 +34,7 @@
 	(db_begin_transaction): function used to begin a transaction
 	(db_commit_transaction): function used to commit a transaction
 	(db_rollback_transaction): function used to roll back a transaction
+	(db_calculate_quotum_all): now also checks for correct status.
 
 	* pop3.c (pop3): AUTH command changed slightly to give
 	X-NONE-SO-USE-APOP as authentication list and return an

@@ -336,20 +336,12 @@ int db_calculate_quotum_all()
 		 "ON msg.mailbox_idnr = mbx.mailbox_idnr "
 		 "LEFT JOIN physmessage pm "
 		 "ON pm.id = msg.physmessage_id "
+		 "AND msg.status < '%d' "
 		 "GROUP BY usr.user_idnr, usr.curmail_size "
 		 "HAVING ((SUM(pm.messagesize) <> usr.curmail_size) OR "
 		 "(NOT (SUM(pm.messagesize) IS NOT NULL) "
-		 "AND usr.curmail_size <> 0))");
-/*	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT usr.user_idnr, sum(pm.messagesize), usr.curmail_size "
-		 "FROM users usr, mailboxes mbx, messages msg, physmessage pm "
-		 "WHERE pm.id = msg.physmessage_id "
-		 "AND msg.mailbox_idnr = mbx.mailbox_idnr "
-		 "AND mbx.owner_idnr = usr.user_idnr "
-		 "AND msg.status < '2' "
-		 "GROUP BY usr.user_idnr, usr.curmail_size "
-		 "HAVING sum(pm.messagesize) <> usr.curmail_size");
-*/
+		 "AND usr.curmail_size <> 0))", MESSAGE_STATUS_DELETE);
+
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error findng quotum used",
 		      __FILE__, __FUNCTION__);
@@ -408,8 +400,8 @@ int db_calculate_quotum_used(u64_t user_idnr)
 		 "FROM physmessage pm, messages m, mailboxes mb "
 		 "WHERE m.physmessage_id = pm.id "
 		 "AND m.mailbox_idnr = mb.mailbox_idnr "
-		 "AND mb.owner_idnr = '%llu' " "AND m.status < 2",
-		 user_idnr);
+		 "AND mb.owner_idnr = '%llu' " "AND m.status < '%d'",
+		 user_idnr, MESSAGE_STATUS_DELETE);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not execute query",
@@ -831,8 +823,9 @@ int db_insert_message(u64_t user_idnr,
 	snprintf(query, DEF_QUERYSIZE, "INSERT INTO "
 		 "messages(mailbox_idnr, physmessage_id, unique_id,"
 		 "recent_flag, status) "
-		 "VALUES ('%llu', '%llu', '%s', '1', '005')",
-		 mailboxid, physmessage_id, unique_id ? unique_id : "");
+		 "VALUES ('%llu', '%llu', '%s', '1', '%d')",
+		 mailboxid, physmessage_id, unique_id ? unique_id : "",
+		 MESSAGE_STATUS_INSERT);
 	if (db_query(query) == -1) {
 		trace(TRACE_STOP, "%s,%s: query failed", __FILE__,
 		      __FUNCTION__);
@@ -845,8 +838,9 @@ int db_insert_message(u64_t user_idnr,
 int db_message_set_unique_id(u64_t message_idnr, const char *unique_id)
 {
 	snprintf(query, DEF_QUERYSIZE,
-		 "UPDATE messages SET unique_id = '%s', status = '000' "
-		 "WHERE message_idnr = '%llu'", unique_id, message_idnr);
+		 "UPDATE messages SET unique_id = '%s', status = '%d' "
+		 "WHERE message_idnr = '%llu'", unique_id, MESSAGE_STATUS_NEW,
+		 message_idnr);
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: setting unique id for message "
 		      "[%llu] failed", __FILE__, __FUNCTION__,
@@ -1387,10 +1381,11 @@ int db_icheck_null_messages(struct list *lost_list)
 	return 0;
 }
 
-int db_set_message_status(u64_t message_idnr, int status)
+int db_set_message_status(u64_t message_idnr, MessageStatus_t status)
 {
 	/** FIXME: We should check that, if a message is set from
-	 * a status < 2 to >= 2, the curmail_size is also changed */
+	 * a status < MESSAGE_STATUS_DELETE 
+	 * to >= MESSAGE_STATUS_DELETE, the curmail_size is also changed */
 	snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET status = %d "
 		 "WHERE message_idnr = '%llu'", status, message_idnr);
 	return db_query(query);
@@ -1766,10 +1761,10 @@ int db_createsession(u64_t user_idnr, PopSession_t * session_ptr)
 		 "SELECT pm.messagesize, msg.message_idnr, msg.status, "
 		 "msg.unique_id FROM messages msg, physmessage pm "
 		 "WHERE msg.mailbox_idnr = '%llu' "
-		 "AND msg.status < 002 "
+		 "AND msg.status < '%d' "
 		 "AND msg.physmessage_id = pm.id "
 		 "AND unique_id != '' order by status ASC",
-		 inbox_mailbox_idnr);
+		 inbox_mailbox_idnr, MESSAGE_STATUS_DELETE);
 
 	if (db_query(query) == -1) {
 		return -1;
@@ -1862,12 +1857,12 @@ int db_update_pop(PopSession_t * session_ptr)
 
 			/* yes they need an update, do the query */
 			snprintf(query, DEF_QUERYSIZE,
-				 "UPDATE messages set status='%llu' WHERE "
-				 "message_idnr='%llu' AND status<002",
+				 "UPDATE messages set status='%d' WHERE "
+				 "message_idnr='%llu' AND status < '%d'",
 				 ((struct message *)
 				  tmpelement->data)->virtual_messagestatus,
 				 ((struct message *) tmpelement->data)->
-				 realmessageid);
+				 realmessageid, MESSAGE_STATUS_DELETE);
 
 			/* FIXME: a message could be deleted already if it has been accessed
 			 * by another interface and be deleted by sysop
@@ -1887,7 +1882,8 @@ int db_update_pop(PopSession_t * session_ptr)
 	}
 
 	/* because the status of some messages might have changed (for instance
-	   to status >= 002, the quotum has to be recalculated */
+	 * to status >= MESSAGE_STATUS_DELETE, the quotum has to be 
+	 * recalculated */
 	if (user_idnr != 0) {
 		if (db_calculate_quotum_used(user_idnr) == -1) {
 			trace(TRACE_ERROR, "%s,%s: error calculating quotum used",
@@ -1904,7 +1900,8 @@ int db_set_deleted(u64_t * affected_rows)
 	*affected_rows = 0;
 
 	snprintf(query, DEF_QUERYSIZE,
-		 "UPDATE messages SET status = '003' WHERE status = '002'");
+		 "UPDATE messages SET status = '%d' WHERE status = '%d'",
+		 MESSAGE_STATUS_PURGE, MESSAGE_STATUS_DELETE);
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: Could not execute query",
 		      __FILE__, __FUNCTION__);
@@ -1925,7 +1922,8 @@ int db_deleted_purge(u64_t * affected_rows)
 
 	/* first we're deleting all the messageblks */
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT message_idnr FROM messages WHERE status='003'");
+		 "SELECT message_idnr FROM messages WHERE status='%d'",
+		 MESSAGE_STATUS_PURGE);
 	trace(TRACE_DEBUG, "%s,%s: executing query [%s]",
 	      __FILE__, __FUNCTION__, query);
 
@@ -2013,8 +2011,8 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
 	snprintf(query, DEF_QUERYSIZE,
 		 "INSERT INTO messages "
 		 "(mailbox_idnr, physmessage_id, unique_id, status,"
-		 "recent_flag) VALUES ('%llu', '%llu', '', '001', '1')",
-		 mailbox_idnr, physmessage_id);
+		 "recent_flag) VALUES ('%llu', '%llu', '', '%d', '1')",
+		 mailbox_idnr, physmessage_id, MESSAGE_STATUS_SEEN);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not create message",
@@ -2489,8 +2487,8 @@ int db_getmailbox(mailbox_t * mb)
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT message_idnr, seen_flag, recent_flag "
 		 "FROM messages WHERE mailbox_idnr = '%llu' "
-		 "AND status < 2 AND unique_id != '' "
-		 "ORDER BY message_idnr ASC", mb->uid);
+		 "AND status < '%d' AND unique_id != '' "
+		 "ORDER BY message_idnr ASC", mb->uid, MESSAGE_STATUS_DELETE);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not retrieve messages",
@@ -2787,15 +2785,17 @@ int db_get_mailbox_size(u64_t mailbox_idnr, int only_deleted,
 			 "physmessage pm "
 			 "WHERE msg.physmessage_id = pm.id "
 			 "AND msg.mailbox_idnr = '%llu' "
-			 "AND msg.status < '002' "
-			 "AND msg.deleted_flag = '1'", mailbox_idnr);
+			 "AND msg.status < '%d' "
+			 "AND msg.deleted_flag = '1'", mailbox_idnr,
+			 MESSAGE_STATUS_DELETE);
 	else
 		snprintf(query, DEF_QUERYSIZE,
 			 "SELECT sum(pm.messagesize) FROM messages msg, "
 			 "physmessage pm "
 			 "WHERE msg.physmessage_id = pm.id "
 			 "AND msg.mailbox_idnr = '%llu' "
-			 "AND msg.status < '002'", mailbox_idnr);
+			 "AND msg.status < '%d'", mailbox_idnr,
+			 MESSAGE_STATUS_DELETE);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not calculate size of "
@@ -2823,10 +2823,11 @@ int db_removemsg(u64_t user_idnr, u64_t mailbox_idnr)
 		return -1;
 	}
 
-	/* update messages belonging to this mailbox: mark as deleted (status 3) */
+	/* update messages belonging to this mailbox: mark as deleted (status 
+	   MESSAGE_STATUS_PURGE) */
 	snprintf(query, DEF_QUERYSIZE,
-		 "UPDATE messages SET status='3' WHERE mailbox_idnr = '%llu'",
-		 mailbox_idnr);
+		 "UPDATE messages SET status='%d' WHERE mailbox_idnr = '%llu'",
+		 MESSAGE_STATUS_PURGE, mailbox_idnr);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR,
@@ -3055,8 +3056,9 @@ int db_expunge(u64_t mailbox_idnr, u64_t user_idnr,
 		snprintf(query, DEF_QUERYSIZE,
 			 "SELECT message_idnr FROM messages WHERE "
 			 "mailbox_idnr = '%llu' AND deleted_flag='1' "
-			 "AND status<'2' "
-			 "ORDER BY message_idnr DESC", mailbox_idnr);
+			 "AND status < '%d' "
+			 "ORDER BY message_idnr DESC", mailbox_idnr,
+			 MESSAGE_STATUS_DELETE);
 
 		if (db_query(query) == -1) {
 
@@ -3084,11 +3086,13 @@ int db_expunge(u64_t mailbox_idnr, u64_t user_idnr,
 	}
 
 	/* update messages belonging to this mailbox: 
-	 * mark as expunged (status 2) */
+	 * mark as expunged (status MESSAGE_STATUS_DELETE) */
 	snprintf(query, DEF_QUERYSIZE,
-		 "UPDATE messages SET status='002' "
+		 "UPDATE messages SET status='%d' "
 		 "WHERE mailbox_idnr = '%llu' "
-		 "AND deleted_flag='1' AND status < '002'", mailbox_idnr);
+		 "AND deleted_flag='1' AND status < '%d'", 
+		 MESSAGE_STATUS_DELETE, mailbox_idnr,
+		 MESSAGE_STATUS_DELETE);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR,
@@ -3121,8 +3125,8 @@ u64_t db_first_unseen(u64_t mailbox_idnr)
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT MIN(message_idnr) FROM messages "
 		 "WHERE mailbox_idnr = '%llu' "
-		 "AND status < '2' AND seen_flag = '0' AND unique_id != ''",
-		 mailbox_idnr);
+		 "AND status < '%d' AND seen_flag = '0' AND unique_id != ''",
+		 mailbox_idnr, MESSAGE_STATUS_DELETE);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not select messages",
@@ -3211,10 +3215,10 @@ int db_get_msgflag(const char *flag_name, u64_t msg_idnr,
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT %s FROM messages "
-		 "WHERE message_idnr = '%llu' AND status< '2' "
+		 "WHERE message_idnr = '%llu' AND status < '%d' "
 		 "AND unique_id != '' "
 		 "AND mailbox_idnr = '%llu'",
-		 the_flag_name, msg_idnr, mailbox_idnr);
+		 the_flag_name, msg_idnr, MESSAGE_STATUS_DELETE, mailbox_idnr);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not select message",
@@ -3237,8 +3241,10 @@ int db_get_msgflag_all(u64_t msg_idnr, u64_t mailbox_idnr, int *flags)
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT seen_flag, answered_flag, deleted_flag, "
 		 "flagged_flag, draft_flag, recent_flag FROM messages "
-		 "WHERE message_idnr = '%llu' AND status<2 AND unique_id != '' "
-		 "AND mailbox_idnr = '%llu'", msg_idnr, mailbox_idnr);
+		 "WHERE message_idnr = '%llu' AND status < '%d' "
+		 "AND unique_id != '' "
+		 "AND mailbox_idnr = '%llu'", msg_idnr, MESSAGE_STATUS_DELETE,
+		 mailbox_idnr);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not select message",
@@ -3321,8 +3327,9 @@ int db_set_msgflag_range(u64_t msg_idnr_low, u64_t msg_idnr_high,
 	left = DEF_QUERYSIZE - strlen(query);
 	snprintf(&query[strlen(query) - 1], left,
 		 " WHERE message_idnr BETWEEN '%llu' AND '%llu' AND "
-		 "status < '2' AND mailbox_idnr = '%llu'",
-		 msg_idnr_low, msg_idnr_high, mailbox_idnr);
+		 "status < '%d' AND mailbox_idnr = '%llu'",
+		 msg_idnr_low, msg_idnr_high, MESSAGE_STATUS_DELETE, 
+		 mailbox_idnr);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not set flags",
@@ -3411,9 +3418,10 @@ int db_get_rfcsize(u64_t msg_idnr, u64_t mailbox_idnr, u64_t * rfc_size)
 		 "SELECT pm.rfcsize FROM physmessage pm, messages msg "
 		 "WHERE pm.id = msg.physmessage_id "
 		 "AND msg.message_idnr = '%llu' "
-		 "AND msg.status< '2' "
+		 "AND msg.status< '%d' "
 		 "AND msg.unique_id != '' "
-		 "AND msg.mailbox_idnr = '%llu'", msg_idnr, mailbox_idnr);
+		 "AND msg.mailbox_idnr = '%llu'", msg_idnr, MESSAGE_STATUS_DELETE,
+		 mailbox_idnr);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR,
@@ -3456,9 +3464,11 @@ int db_get_msginfo_range(u64_t msg_idnr_low, u64_t msg_idnr_high,
 		 "FROM messages msg, physmessage pm "
 		 "WHERE pm.id = msg.physmessage_id "
 		 "AND message_idnr BETWEEN '%llu' AND '%llu' "
-		 "AND mailbox_idnr = '%llu' AND status < '2' AND unique_id != '' "
+		 "AND mailbox_idnr = '%llu' AND status < '%d' "
+		 "AND unique_id != '' "
 		 "ORDER BY message_idnr ASC",
-		 to_char_str, msg_idnr_low, msg_idnr_high, mailbox_idnr);
+		 to_char_str, msg_idnr_low, msg_idnr_high, mailbox_idnr,
+		 MESSAGE_STATUS_DELETE);
 	my_free(to_char_str);
 
 	if (db_query(query) == -1) {
@@ -3596,8 +3606,8 @@ int db_mailbox_msg_match(u64_t mailbox_idnr, u64_t msg_idnr)
 		 "SELECT message_idnr FROM messages "
 		 "WHERE message_idnr = '%llu' "
 		 "AND mailbox_idnr = '%llu' "
-		 "AND status< '002' AND unique_id!=''", msg_idnr,
-		 mailbox_idnr);
+		 "AND status< '%d' AND unique_id!=''", msg_idnr,
+		 mailbox_idnr, MESSAGE_STATUS_DELETE);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not get message",

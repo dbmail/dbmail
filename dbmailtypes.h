@@ -33,6 +33,7 @@
 #include "config.h"
 #endif
 
+#include "dbmail.h"
 #include "memblock.h"
 #include "list.h"
 
@@ -72,10 +73,10 @@ struct message {
 	 * 003 message is deleted by sysop
 	 * 004 message is ready for final deletion */
 
-	u64_t messagestatus;
-			   /**< message status */
-	u64_t virtual_messagestatus;
-			       /**< virtual message status */
+	/** message status */
+	MessageStatus_t messagestatus;
+	/** virtual message status */
+	MessageStatus_t virtual_messagestatus;
 };
 
 /**

@@ -67,6 +67,17 @@
 /* uncomment this if you want informative process titles */
 //#define PROC_TITLES
 
+/** status fields for messages */
+typedef enum {
+	MESSAGE_STATUS_NEW     = 0,
+	MESSAGE_STATUS_SEEN    = 1,
+	MESSAGE_STATUS_DELETE  = 2,
+	MESSAGE_STATUS_PURGE   = 3,
+	MESSAGE_STATUS_UNUSED  = 4,
+	MESSAGE_STATUS_INSERT  = 5,
+	MESSAGE_STATUS_ERROR   = 6
+} MessageStatus_t;
+
 /** field_t is used for storing configuration values */
 typedef char field_t[FIELDSIZE];
 

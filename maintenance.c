@@ -224,13 +224,13 @@ int main(int argc, char *argv[])
 			el = lostlist.start;
 			while (el) {
 				id = *((u64_t *) el->data);
-				if (db_set_message_status(id, 6) < 0)
+				if (db_set_message_status(id, MESSAGE_STATUS_ERROR) < 0)
 					printf
 					    ("Warning: could not set message status #%llu. Check log.\n",
 					     id);
 				else
 					printf
-					    ("%llu (status update to 6)\n",
+					    ("%llu (status update to MESSAGE_STATUS_ERROR)\n",
 					     id);
 
 				el = el->nextnode;

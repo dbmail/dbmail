@@ -115,15 +115,15 @@ int db_search(int *rset, int setlen, const char *key, mailbox_t * mb,
 			 "SELECT msg.message_idnr FROM messages msg, physmessage pms "
 			 "WHERE msg.mailbox_idnr = '%llu' "
 			 "AND msg.physmessage_id = pms.id "
-			 "AND msg.status < 2 "
+			 "AND msg.status < '%d' "
 			 "AND msg.unique_id <> '' "
-			 "AND pms.%s", mb->uid, key);
+			 "AND pms.%s", mb->uid, MESSAGE_STATUS_DELETE, key);
 	} else {
 		snprintf(query, DEF_QUERYSIZE,
 			 "SELECT message_idnr FROM messages "
 			 "WHERE mailbox_idnr = '%llu' "
-			 "AND status<2 AND unique_id!='' AND %s", mb->uid,
-			 key);
+			 "AND status < '%d'  AND unique_id!='' AND %s", mb->uid,
+			 MESSAGE_STATUS_DELETE, key);
 	}
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not execute query",

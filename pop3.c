@@ -519,7 +519,7 @@ int pop3(void *stream, char *buffer, char *client_ip,
 								  NULL, 10)
 					    && ((struct message *)
 						tmpelement->data)->
-					    virtual_messagestatus < 2) {
+					    virtual_messagestatus < MESSAGE_STATUS_DELETE) {
 						fprintf((FILE *) stream,
 							"+OK %llu %llu\r\n",
 							((struct message *)
@@ -550,7 +550,7 @@ int pop3(void *stream, char *buffer, char *client_ip,
 				while (tmpelement != NULL) {
 					if (((struct message *)
 					     tmpelement->data)->
-					    virtual_messagestatus < 2)
+					    virtual_messagestatus < MESSAGE_STATUS_DELETE)
 						fprintf((FILE *) stream,
 							"%llu %llu\r\n",
 							((struct message *)
@@ -594,9 +594,9 @@ int pop3(void *stream, char *buffer, char *client_ip,
 			trace(TRACE_DEBUG,
 			      "pop3(): RETR command, selecting message");
 			while (tmpelement != NULL) {
-				if (((struct message *) tmpelement->data)->messageid == strtoull(value, NULL, 10) && ((struct message *) tmpelement->data)->virtual_messagestatus < 2) {	/* message is not deleted */
+				if (((struct message *) tmpelement->data)->messageid == strtoull(value, NULL, 10) && ((struct message *) tmpelement->data)->virtual_messagestatus < MESSAGE_STATUS_DELETE) {	/* message is not deleted */
 					((struct message *) tmpelement->
-					 data)->virtual_messagestatus = 1;
+					 data)->virtual_messagestatus = MESSAGE_STATUS_SEEN;
 					fprintf((FILE *) stream,
 						"+OK %llu octets\r\n",
 						((struct message *)
@@ -628,9 +628,9 @@ int pop3(void *stream, char *buffer, char *client_ip,
 
 			/* selecting a message */
 			while (tmpelement != NULL) {
-				if (((struct message *) tmpelement->data)->messageid == strtoull(value, NULL, 10) && ((struct message *) tmpelement->data)->virtual_messagestatus < 2) {	/* message is not deleted */
+				if (((struct message *) tmpelement->data)->messageid == strtoull(value, NULL, 10) && ((struct message *) tmpelement->data)->virtual_messagestatus < MESSAGE_STATUS_DELETE) {	/* message is not deleted */
 					((struct message *) tmpelement->
-					 data)->virtual_messagestatus = 2;
+					 data)->virtual_messagestatus = MESSAGE_STATUS_DELETE;
 					/* decrease our virtual list fields */
 					session->virtual_totalsize -=
 					    ((struct message *)
@@ -690,7 +690,7 @@ int pop3(void *stream, char *buffer, char *client_ip,
 
 			while (tmpelement != NULL) {
 				if (((struct message *) tmpelement->data)->
-				    virtual_messagestatus == 0) {
+				    virtual_messagestatus == MESSAGE_STATUS_NEW) {
 					/* we need the last message that has been accessed */
 					fprintf((FILE *) stream,
 						"+OK %llu\r\n",
@@ -736,7 +736,7 @@ int pop3(void *stream, char *buffer, char *client_ip,
 								  NULL, 10)
 					    && ((struct message *)
 						tmpelement->data)->
-					    virtual_messagestatus < 2) {
+					    virtual_messagestatus < MESSAGE_STATUS_DELETE) {
 						fprintf((FILE *) stream,
 							"+OK %llu %s\r\n",
 							((struct message *)
@@ -765,7 +765,7 @@ int pop3(void *stream, char *buffer, char *client_ip,
 				while (tmpelement != NULL) {
 					if (((struct message *)
 					     tmpelement->data)->
-					    virtual_messagestatus < 2)
+					    virtual_messagestatus < MESSAGE_STATUS_DELETE)
 						fprintf((FILE *) stream,
 							"%llu %s\r\n",
 							((struct message *)
@@ -793,7 +793,7 @@ int pop3(void *stream, char *buffer, char *client_ip,
 			/* find out where the md5 hash starts */
 			searchptr = strstr(value, " ");
 
-			if (searchptr == NULL)
+			if (searchptr == NULL) 
 				return pop3_error(session, stream,
 						  "-ERR your command does not compute\r\n");
 
@@ -992,7 +992,7 @@ int pop3(void *stream, char *buffer, char *client_ip,
 			      "pop3(): TOP command, selecting message");
 
 			while (tmpelement != NULL) {
-				if (((struct message *) tmpelement->data)->messageid == top_messageid && ((struct message *) tmpelement->data)->virtual_messagestatus < 2) {	/* message is not deleted */
+				if (((struct message *) tmpelement->data)->messageid == top_messageid && ((struct message *) tmpelement->data)->virtual_messagestatus < MESSAGE_STATUS_DELETE) {	/* message is not deleted */
 					fprintf((FILE *) stream,
 						"+OK %llu lines of message %llu\r\n",
 						top_lines, top_messageid);
