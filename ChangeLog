@@ -1,3 +1,8 @@
+2004-09-15  Ilja Booij  <ilja@ic-s.nl>
+
+	* pop3.c (pop3_handle_connection): added call to db_session_cleanup()
+	to clean up session messagelist after disconnect.
+
 2004-09-14  Ilja Booij  <ilja@ic-s.nl>
 
 	* acl.c (acl_has_right): changed from ACL_ANYONE_USER to 

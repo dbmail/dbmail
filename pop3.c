@@ -262,6 +262,9 @@ int pop3_handle_connection(clientinfo_t * ci)
 		trace(TRACE_ERROR,
 		      "pop3_handle_connection(): error, uncomplete session");
 
+	/* remove session info like messagelist etc. */
+	db_session_cleanup(&session);
+
 	if (session.username != NULL) {
 		/* username cleanup */
 		my_free(session.username);
