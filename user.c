@@ -28,6 +28,7 @@
 #include "user.h"
 #include "auth.h"
 #include <stdio.h>
+#include <termios.h>
 #include <stdlib.h>
 #include <string.h>
 #include "dbmail.h"
@@ -250,6 +251,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'W':
+			change_flags.newpasswd = 1;
 			if (optarg && strlen(optarg)) {
 				passwdfile = optarg;
 				change_flags.newpasswdfile = 1;
@@ -421,12 +423,39 @@ int main(int argc, char *argv[])
 	case 'c':
 		if (change_flags.newpasswdstdin) {
 			char pw[50];
+			struct termios oldattr, newattr;
+
+			/* Get the current terminal state, then disable echo. */
+			tcgetattr(fileno(stdin), &oldattr);
+			newattr = oldattr;
+			newattr.c_lflag &= ~ECHO;
+			tcsetattr(fileno(stdin), TCSAFLUSH, &newattr);
+
 			qprintf("Please enter a password (will not echo): ");
 			/* Prompt for a password and read until \n or EOF. */
 			fgets(pw, 50, stdin);
 			/* fgets guarantees a nul terminated string. */
 			passwd = strdup(pw);
+			/* Prompt, and make sure the prompt appears. */
+			qprintf("Please enter a password (will not echo): ");
+			/* Prompt for a password and read until \n or EOF. */
+			fflush(stdout);
+
+			/* Read until \n or EOF. */
+			fgets(pw, 50, stdin);
+
+			/* We don't want the trailing newline. */
+			len = strlen(pw);
+			if (pw[len-1] == '\n')
+			        pw[len-1] = '\0';
+			/* fgets guarantees a nul terminated string. */
+			passwd = strdup(pw);
+
+			/* Restore the previous terminal state (with echo back on). */
+			tcsetattr(fileno(stdin), TCSANOW, &oldattr);
+			qprintf("\n");
 		}
+
 		/* Do we need the password for this mode? */
 		if (mkpassword(user, passwd, passwdtype, passwdfile,
 		               &password, &enctype)) {
