@@ -75,7 +75,7 @@ int main()
         
         while (e)
         {
-            printf ("%s", (char *)e->data);
+            printf ("%s ", (char *)e->data);
             e = e->nextnode;
         }
         
