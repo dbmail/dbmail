@@ -1,5 +1,8 @@
 2004-09-15  Ilja Booij  <ilja@ic-s.nl>
 
+	* auth/authsql.c (auth_validate): added a db_free_result() statement
+	where one was missing. 
+
 	* pop3.c (pop3_handle_connection): added call to db_session_cleanup()
 	to clean up session messagelist after disconnect.
 

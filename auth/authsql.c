@@ -702,8 +702,7 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 		*user_idnr =
 		    (query_result) ? strtoull(query_result, NULL, 10) : 0;
 
-		/* MEM LEAK: old result should be free-ed here! We can also
-		 * free it in the query code... maybe a good idea? */
+		db_free_result();
 
 		/* log login in the dbase */
 		snprintf(__auth_query_data, AUTH_QUERY_SIZE,
@@ -715,9 +714,9 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 			trace(TRACE_ERROR,
 			      "%s,%s: could not update user login time",
 			      __FILE__, __func__);
+	} else {
+		db_free_result();
 	}
-
-	db_free_result();
 	return (is_validated ? 1 : 0);
 }
 
