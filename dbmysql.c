@@ -1,4 +1,4 @@
-/* $Id$
+/* $iD: Dbmysql.c,v 1.63 2001/09/23 12:36:41 eelco Exp $
  * Functions for connecting and talking to the Mysql database */
 
 #include "dbmysql.h"
@@ -73,7 +73,7 @@ unsigned long db_insert_result ()
 
 int db_query (char *query)
 {
-  unsigned int querysize;
+  unsigned int querysize = 0;
 
   if (query != NULL)
     {
@@ -127,7 +127,7 @@ char *db_get_config_item (char *item, int type)
 {
   /* retrieves an config item from database */
 	
-  char *result;
+  char *result = NULL;
   char *ckquery;
 	
   /* allocating memory for query */
@@ -520,7 +520,7 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines)
 
   char *ckquery;
   char *buffer;
-  char *nextpos, *tmppos;
+  char *nextpos, *tmppos = NULL;
   int block_count;
   unsigned long *lengths;
   
@@ -635,7 +635,7 @@ int db_send_message_special (void *fstream, unsigned long messageidnr, long line
 
   char *ckquery;
   char *buffer;
-  char *nextpos, *tmppos;
+  char *nextpos, *tmppos = NULL;
   int block_count;
   unsigned long *lengths;
   
