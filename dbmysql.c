@@ -1374,6 +1374,7 @@ int db_getmailbox(mailbox_t *mb, unsigned long userid)
 {
   char query[DEF_QUERYSIZE];
 
+  /* select mailbox */
   snprintf(query, DEF_QUERYSIZE, 
 	   "SELECT permission,"
 	   "seen_flag,"
@@ -1416,7 +1417,7 @@ int db_getmailbox(mailbox_t *mb, unsigned long userid)
   mysql_free_result(res);
 
 
-  /* now select messages: ALL */
+  /* now select all messages */
   snprintf(query, DEF_QUERYSIZE, "SELECT COUNT(*) FROM message WHERE mailboxidnr = %lu AND status<2", 
 	   mb->uid);
 
@@ -1495,8 +1496,8 @@ int db_getmailbox(mailbox_t *mb, unsigned long userid)
    * NOTE EXPUNGED MESSAGES ARE SELECTED AS WELL IN ORDER TO BE ABLE TO RESTORE THEM 
    */
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message WHERE mailboxidnr = %lu "
-	   "ORDER BY messageidnr DESC LIMIT 0,1", mb->uid);
+  snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message "
+	   "ORDER BY messageidnr DESC LIMIT 0,1");
   
   if (db_query(query) == -1)
     {
@@ -1601,7 +1602,8 @@ int db_listmailboxchildren(unsigned long uid, unsigned long useridnr,
 
   if ((res = mysql_store_result(&conn)) == NULL)
     {
-      trace(TRACE_ERROR,"db_listmailboxchildren(): mysql_store_result failed: %s\n",mysql_error(&conn));
+      trace(TRACE_ERROR,"db_listmailboxchildren(): mysql_store_result failed: %s\n",
+	    mysql_error(&conn));
       return -1;
     }
 
@@ -2181,7 +2183,6 @@ int db_build_msn_list(mailbox_t *mb)
       mb->seq_list[i++] = strtoul(row[0],NULL,10);
     }
   
-
   mysql_free_result(res);
   return 0;
 }

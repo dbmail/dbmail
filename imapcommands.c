@@ -965,7 +965,7 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
 	}
     }      
   
-  plen = strlen(args[1]) * 4;
+  plen = strlen(args[1]) * 6;
   pattern = (char*)malloc(sizeof(char) * (plen + slen + 10)); /* +10 for some xtra space */
   if (!pattern)
     {
@@ -973,7 +973,7 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
       return -1;
     }
 
-  memset(pattern, 0, sizeof(char) * (plen + slen + 3));
+  memset(pattern, 0, sizeof(char) * (plen + slen + 10));
   pattern[0] = '^';
   strcpy(&pattern[1], args[0]);
 
@@ -1452,29 +1452,6 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
       return -1; /* failed opening temporary file */
     }
   
-  /* update mailbox info */
-  i = 0;
-  do
-    {
-      result = db_getmailbox(&ud->mailbox, ud->userid);
-    } while (result == 1 && i++<MAX_RETRIES);
-
-  if (result == 1)
-    {
-      fprintf(ci->tx,"* BYE troubles synchronizing dbase\r\n");
-      fclose(tmpfile);
-      unlink(tmpname);
-      return -1;
-    }
-  
-  if (result == -1)
-    {
-      fprintf(ci->tx,"* BYE internal dbase error\r\n");
-      fclose(tmpfile);
-      unlink(tmpname);
-      return -1; /* fatal  */
-    }
-
   /* fetch fetch items */
   list_init(&fetch_list);
   idx = 1;
@@ -2225,27 +2202,7 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
     }
 
 
-  /* update mailbox info */
-  i = 0;
-  do
-    {
-      result = db_getmailbox(&ud->mailbox, ud->userid);
-    } while (result == 1 && i++<MAX_RETRIES);
-
-  if (result == 1)
-    {
-      fprintf(ci->tx,"* BYE troubles synchronizing dbase\r\n");
-      return -1;
-    }
-  
-  if (result == -1)
-    {
-      fprintf(ci->tx,"* BYE internal dbase error\r\n");
-      return -1; /* fatal  */
-    }
-
   /* retrieve action type */
-
   if (strcasecmp(args[1], "flags") == 0)
     action = IMAPFA_REPLACE;
   else if (strcasecmp(args[1], "flags.silent") == 0)
@@ -2445,25 +2402,6 @@ int _ic_copy(char *tag, char **args, ClientInfo *ci)
 
   if (!check_state_and_args("COPY", tag, args, 2, IMAPCS_SELECTED, ci))
     return 1; /* error, return */
-
-  /* update mailbox info */
-  i = 0;
-  do
-    {
-      result = db_getmailbox(&ud->mailbox, ud->userid);
-    } while (result == 1 && i++<MAX_RETRIES);
-
-  if (result == 1)
-    {
-      fprintf(ci->tx,"* BYE troubles synchronizing dbase\r\n");
-      return -1;
-    }
-  
-  if (result == -1)
-    {
-      fprintf(ci->tx,"* BYE internal dbase error\r\n");
-      return -1; /* fatal  */
-    }
 
   /* check if destination mailbox exists */
   destmboxid = db_findmailbox(args[1], ud->userid);

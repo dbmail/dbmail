@@ -178,7 +178,7 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
   int csock,len,i;
   struct sigaction act;
   int ss_nchildren=0;
-  pid_t ss_server_pid=0;
+  pid_t ss_server_pid=0; /* PID of the great father process */
 
   if (n_default_children != default_children)
     trace(TRACE_FATAL,"SS_WaitAndProcess(): incompatible number of default-children specified.\n");
@@ -212,7 +212,7 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 	exit(0);
     }
 
-  /* this process will be the main server, remember pid */
+  /* this process will be the father process, remember pid */
   ss_server_pid = getpid();
 
 

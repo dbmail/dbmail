@@ -153,7 +153,7 @@ int imap_process(ClientInfo *ci)
 
       /* read command line */
       fgets(line, MAX_LINESIZE, ci->rx);
-      trace(TRACE_DEBUG,"IMAPD: line read for PID %d\n",getpid());
+      trace(TRACE_INFO,"IMAPD: line read for PID %d\n",getpid());
 
       if (!checkchars(line))
 	{
