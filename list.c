@@ -58,7 +58,6 @@ void list_freelist(struct element **start)
 	*start = NULL;
 }
 
-
 /* 
  * dbmail_list_reverse()
  *

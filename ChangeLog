@@ -1,5 +1,9 @@
 2004-04-19  Ilja Booij  <ilja@ic-s.nl>
 
+	* config.c (ReadConfig): added checks to satisfy splint warnings
+	(GetConfigValue): corrected some checks that did not work in the
+	form they were in (tests for null pointers that were never null!)
+
 	* acl.c (acl_get_acl): added checks and annotations.
 	(acl_listrights): changed to return a string that has
 	to be freed by caller. added splint annotation.

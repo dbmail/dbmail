@@ -63,7 +63,7 @@ int ReadConfig(const char *serviceName, const char *cfilename,
 
 	trace(TRACE_DEBUG, "ReadConfig(): starting procedure");
 
-	snprintf(service, LINESIZE, "[%s]", serviceName);
+	(void) snprintf(service, LINESIZE, "[%s]", serviceName);
 
 	list_init(cfg_items);
 
@@ -75,13 +75,14 @@ int ReadConfig(const char *serviceName, const char *cfilename,
 	}
 
 	do {
-		fgets(line, LINESIZE, cfile);
+		if (fgets(line, LINESIZE, cfile) == NULL)
+			break;
 
 		if (feof(cfile) || ferror(cfile))
 			break;
 
 		/* chop whitespace front */
-		for (tmp = line; *tmp && isspace(*tmp); tmp++);
+		for (tmp = line; (*tmp != '\0') && isspace(*tmp); tmp++);
 		memmove(line, tmp, strlen(tmp));
 
 		if (strncasecmp(line, service, strlen(service)) == 0) {
@@ -95,7 +96,8 @@ int ReadConfig(const char *serviceName, const char *cfilename,
 			while (1) {
 				isCommentline = 0;
 
-				fgets(line, LINESIZE, cfile);
+				if (fgets(line, LINESIZE, cfile) == NULL)
+					break;
 
 				if (feof(cfile) || ferror(cfile)
 				    || strlen(line) == 0)
@@ -107,7 +109,8 @@ int ReadConfig(const char *serviceName, const char *cfilename,
 				}
 
 				/* chop whitespace front */
-				for (tmp = line; *tmp && isspace(*tmp);
+				for (tmp = line; ((*tmp != '\0') && 
+						  isspace(*tmp));
 				     tmp++);
 				memmove(line, tmp, strlen(tmp));
 
@@ -153,7 +156,9 @@ int ReadConfig(const char *serviceName, const char *cfilename,
 	trace(TRACE_DEBUG,
 	      "ReadConfig(): config for %s read, found [%ld] cfg_items",
 	      service, cfg_items->total_nodes);
-	fclose(cfile);
+	if (fclose(cfile) != 0) 
+		trace(TRACE_ERROR, "%s,%s: error closing file: [%s]",
+		      __FILE__, __FUNCTION__, strerror(errno));
 	return 0;
 }
 
@@ -174,11 +179,12 @@ int GetConfigValue(const field_t name, struct list *cfg_items,
 	while (el) {
 		item = (item_t *) el->data;
 
-		if (!item || !item->name || !item->value) {
+		if (!item || strlen(item->name) == 0 || 
+		    strlen(item->value) == 0) {
 			trace(TRACE_INFO,
 			      "GetConfigValue(): NULL item%s in item-list",
-			      item ? (item->
-				      name ? " value" : " name") : "");
+			      item ? (strlen(item->name) > 0?
+				      " value" : " name") : "");
 
 			el = el->nextnode;
 			continue;
@@ -203,7 +209,9 @@ void SetTraceLevel(struct list *cfg_items)
 {
 	field_t val;
 
-	GetConfigValue("trace_level", cfg_items, val);
+	if (GetConfigValue("trace_level", cfg_items, val) < 0)
+		trace(TRACE_FATAL, "%s,%s: error getting config!",
+		      __FILE__, __FUNCTION__);
 	if (strlen(val) == 0)
 		configure_debug(TRACE_ERROR, 1, 0);
 	else
@@ -214,12 +222,24 @@ void GetDBParams(db_param_t * db_params, struct list *cfg_items)
 {
 	field_t port_string;
 	field_t sock_string;
-	GetConfigValue("host", cfg_items, db_params->host);
-	GetConfigValue("db", cfg_items, db_params->db);
-	GetConfigValue("user", cfg_items, db_params->user);
-	GetConfigValue("pass", cfg_items, db_params->pass);
-	GetConfigValue("sqlport", cfg_items, port_string);
-	GetConfigValue("sqlsocket", cfg_items, sock_string);
+	if (GetConfigValue("host", cfg_items, db_params->host) < 0)
+		trace(TRACE_FATAL, "%s,%s: error getting config!",
+		      __FILE__, __FUNCTION__);
+	if (GetConfigValue("db", cfg_items, db_params->db) < 0) 
+		trace(TRACE_FATAL, "%s,%s: error getting config!",
+		      __FILE__, __FUNCTION__);
+	if (GetConfigValue("user", cfg_items, db_params->user) < 0) 
+		trace(TRACE_FATAL, "%s,%s: error getting config!",
+		      __FILE__, __FUNCTION__);
+	if (GetConfigValue("pass", cfg_items, db_params->pass) < 0)
+		trace(TRACE_FATAL, "%s,%s: error getting config!",
+		      __FILE__, __FUNCTION__);
+	if (GetConfigValue("sqlport", cfg_items, port_string) < 0)
+		trace(TRACE_FATAL, "%s,%s: error getting config!",
+		      __FILE__, __FUNCTION__);
+	if (GetConfigValue("sqlsocket", cfg_items, sock_string) < 0)
+		trace(TRACE_FATAL, "%s,%s: error getting config!",
+		      __FILE__, __FUNCTION__);
 
 	/* check if port_string holds a value */
 	if (strlen(port_string) != 0) {

@@ -121,7 +121,7 @@ int ReadConfig(const char *serviceName, const char *cfilename,
  * \attention value is set to a string beginning with a '\\0' if no configuration
               item with name is found in items.
  */
-int GetConfigValue(const field_t name, struct list *cfg_items,
+int GetConfigValue(const field_t name, /*@temp@*/ struct list *cfg_items,
 		   /*@out@*/ field_t value);
 
 /* some common used functions reading config options */
@@ -130,7 +130,7 @@ int GetConfigValue(const field_t name, struct list *cfg_items,
  \param db_params list of database parameters (db_param_t)
  \param cfg_items list of configuration items
 */
-void GetDBParams(db_param_t * db_params, struct list *cfg_items);
+void GetDBParams(db_param_t * db_params, /*@temp@*/ struct list *cfg_items);
 /** 
  \brief set the overall trace level, using the value in cfg_items
  \param cfg_items list of configuration items
