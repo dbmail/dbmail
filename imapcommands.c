@@ -2216,7 +2216,8 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
       return 1;
     }
 
-  if (strcmp(args[2],"(") != 0)
+  /* multiple flags should be parenthesed */
+  if (args[3] && strcmp(args[2],"(") != 0)
     {
       fprintf(ci->tx,"%s BAD invalid argument(s) to STORE\r\n", tag);
       return 1;
@@ -2253,8 +2254,9 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
     }
 
   /* now fetch flag list */
-  /* remember: args[2] == "(" */
-  for (i=3; args[i] && strcmp(args[i] ,")") != 0; i++)
+  i = (strcmp(args[2], "(") == 0) ? 3: 2;
+
+  for ( ; args[i] && strcmp(args[i] ,")") != 0; i++)
     {
       for (j=0; j<IMAP_NFLAGS; j++)
 	if (strcasecmp(args[i],imap_flag_desc_escaped[j]) == 0)
