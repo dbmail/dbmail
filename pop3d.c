@@ -42,7 +42,7 @@
 #include "misc.h"
 #include "pidfile.h"
 #include "dbmail.h"
-#include "clientinfo.h"
+#include "dbmailtypes.h"
 #include "pop3.h"
 #ifdef PROC_TITLES
 #include "proctitleutils.h"
@@ -158,6 +158,7 @@ int main(int argc, char *argv[])
 	
 	/* We write the pidFile after Daemonize because
 	 * we may actually be a child of the original process. */
+	Daemonize();
 	pidfile_create(pidFile, getpid());
 
 	result = 0;

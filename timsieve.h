@@ -52,7 +52,6 @@ Copyright (C) 2004 Aaron Stone aaron at serendipity dot cx
 #include "debug.h"
 #include "dbmail.h"
 #include "dbmailtypes.h"
-#include "clientinfo.h"
 
 /* processes */
 

@@ -33,6 +33,7 @@
 #include "config.h"
 #endif
 
+#include <stdio.h>
 #include "dbmail.h"
 #include "memblock.h"
 #include "list.h"
@@ -44,10 +45,29 @@
 #define MIME_VALUE_MAX 4096
 
 #define UID_SIZE 70
-
+#define IPNUM_LEN 32
 
 /** use 64-bit unsigned integers as common data type */
 typedef unsigned long long u64_t;
+
+
+typedef struct {
+	FILE *tx, *rx;
+	char ip[IPNUM_LEN];	/* client IP-number */
+	field_t clientname;	/* resolved client ip */
+	char *timeoutMsg;
+	int timeout;		/* server timeout (seconds) */
+	void *userData;
+} clientinfo_t;
+
+typedef struct {
+	int maxConnect;
+	int listenSocket;
+	int resolveIP;
+	int timeout;
+	char *timeoutMsg;
+	int (*ClientHandler) (clientinfo_t *);
+} ChildInfo_t;
 
 
 /*

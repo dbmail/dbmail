@@ -31,7 +31,6 @@
 #include "debug.h"
 #include "dbmailtypes.h"
 #include "auth.h"
-#include "clientinfo.h"
 #include "pop3.h"
 #ifdef PROC_TITLES
 #include "proctitleutils.h"

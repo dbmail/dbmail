@@ -41,7 +41,7 @@ Copyright (C) 2004 Aaron Stone aaron at serendipity dot cx
 #include "misc.h"
 #include "pidfile.h"
 #include "dbmail.h"
-#include "clientinfo.h"
+#include "dbmailtypes.h"
 #include "timsieve.h"
 #include "sort/sortsieve.h"
 #ifdef PROC_TITLES

@@ -34,7 +34,6 @@
 #include "debug.h"
 #include "dbmailtypes.h"
 #include "auth.h"
-#include "clientinfo.h"
 #include "lmtp.h"
 #ifdef PROC_TITLES
 #include "proctitleutils.h"

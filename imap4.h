@@ -30,7 +30,6 @@
 #endif
 
 #include "dbmailtypes.h"
-#include "clientinfo.h"
 
 #define IMAP_SERVER_VERSION VERSION
 //#define IMAP_CAPABILITY_STRING "IMAP4 IMAP4rev1 AUTH=LOGIN ACL NAMESPACE SORT"
@@ -46,7 +45,7 @@
 #define null_free(p) { dm_free(p); p = NULL; }
 
 
-int IMAPClientHandler(ClientInfo * ci);
+int IMAPClientHandler(clientinfo_t * ci);
 
 typedef struct {
 	int itemtype;		/* the item to be fetched */

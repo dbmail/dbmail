@@ -108,7 +108,7 @@ struct ImapSession * dbmail_imap_session_new(void)
 	if (! self)
 		trace(TRACE_ERROR,"%s,%s: OOM error", __FILE__, __func__);
 
-	self->ci = g_new0(ClientInfo,1);
+	self->ci = g_new0(clientinfo_t,1);
 	self->fi = g_new0(fetch_items_t,1);
 	self->msginfo = g_new0(msginfo_t,1);
 	
@@ -123,7 +123,7 @@ struct ImapSession * dbmail_imap_session_resetFi(struct ImapSession * self)
 	return self;
 }
      
-struct ImapSession * dbmail_imap_session_setClientInfo(struct ImapSession * self, ClientInfo *ci)
+struct ImapSession * dbmail_imap_session_setClientinfo(struct ImapSession * self, clientinfo_t *ci)
 {
 	self->ci = ci;
 	return self;

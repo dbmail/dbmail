@@ -34,16 +34,7 @@
 
 #include <sys/types.h>
 #include <signal.h>
-#include "clientinfo.h"
-
-typedef struct {
-	int maxConnect;
-	int listenSocket;
-	int resolveIP;
-	int timeout;
-	char *timeoutMsg;
-	int (*ClientHandler) (clientinfo_t *);
-} ChildInfo_t;
+#include "dbmailtypes.h"
 
 void active_child_sig_handler(int sig, siginfo_t *info, void *data);
 void noop_child_sig_handler(int sig, siginfo_t *info, void *data);

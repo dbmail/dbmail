@@ -37,7 +37,6 @@
 #include "imapcommands.h"
 #include "dbmail-imapsession.h"
 #include "misc.h"
-#include "clientinfo.h"
 #include "debug.h"
 #include "db.h"
 #include "auth.h"
@@ -105,7 +104,7 @@ const IMAP_COMMAND_HANDLER imap_handler_functions[] = {
  *
  * returns EOF on logout/fatal error or 1 otherwise
  */
-int IMAPClientHandler(ClientInfo * ci)
+int IMAPClientHandler(clientinfo_t * ci)
 {
 	char line[MAX_LINESIZE];
 	char *tag = NULL, *cpy, **args, *command;
@@ -117,7 +116,7 @@ int IMAPClientHandler(ClientInfo * ci)
 	int this_was_noop = 0;
 	
 	struct ImapSession *session = dbmail_imap_session_new();
-	dbmail_imap_session_setClientInfo(session,ci);
+	dbmail_imap_session_setClientinfo(session,ci);
 
 	/* init: add userdata */
 	ud = dm_malloc(sizeof(imap_userdata_t));

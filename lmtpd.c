@@ -41,7 +41,6 @@
 #include "misc.h"
 #include "pidfile.h"
 #include "dbmail.h"
-#include "clientinfo.h"
 #include "lmtp.h"
 #ifdef PROC_TITLES
 #include "proctitleutils.h"

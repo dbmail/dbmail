@@ -185,7 +185,7 @@ int CreateSocket(serverConfig_t * conf)
 	/* make a tcp/ip socket */
 	if ((sock = socket(PF_INET, SOCK_STREAM, 0)) == -1) {
 		err = errno;
-		trace(TRACE_FATAL, "%s,%s: %s" __FILE__, __func__, strerror(err));
+		trace(TRACE_FATAL, "%s,%s: %s", __FILE__, __func__, strerror(err));
 	}
 
 	trace(TRACE_DEBUG, "%s,%s: socket created", __FILE__, __func__);

@@ -12,7 +12,7 @@
 
 /* ImapSession definition */
 struct ImapSession {
-	ClientInfo *ci;
+	clientinfo_t *ci;
 	int use_uid;
 	u64_t msg_idnr;  // replace this with a GList
 	char *tag;
@@ -28,7 +28,7 @@ struct ImapSession {
 typedef int (*IMAP_COMMAND_HANDLER) (struct ImapSession *);
 
 struct ImapSession * dbmail_imap_session_new(void);
-struct ImapSession * dbmail_imap_session_setClientInfo(struct ImapSession * self, ClientInfo *ci);
+struct ImapSession * dbmail_imap_session_setClientinfo(struct ImapSession * self, clientinfo_t *ci);
 struct ImapSession * dbmail_imap_session_setTag(struct ImapSession * self, char * tag);
 struct ImapSession * dbmail_imap_session_setCommand(struct ImapSession * self, char * command);
 struct ImapSession * dbmail_imap_session_setArgs(struct ImapSession * self, char ** args);

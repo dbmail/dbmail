@@ -51,7 +51,6 @@
 #include "debug.h"
 #include "dbmail.h"
 #include "dbmailtypes.h"
-#include "clientinfo.h"
 
 /* processes */
 

@@ -32,7 +32,6 @@
 #include "serverchild.h"
 #include "db.h"
 #include "auth.h"
-#include "clientinfo.h"
 #include "pool.h"
 #include <stdio.h>
 #include <unistd.h>

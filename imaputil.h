@@ -36,7 +36,6 @@
 #include "db.h"
 #include "memblock.h"
 #include "dbmailtypes.h"
-#include "clientinfo.h"
 #include <stdio.h>
 
 int retrieve_structure(FILE * outstream, mime_message_t * msg,

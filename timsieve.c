@@ -32,7 +32,6 @@
 #include "dbmailtypes.h"
 #include "auth.h"
 #include "misc.h"
-#include "clientinfo.h"
 #ifdef PROC_TITLES
 #include "proctitleutils.h"
 #endif

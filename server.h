@@ -36,7 +36,7 @@
 
 #include <signal.h>
 #include "dbmail.h"
-#include "clientinfo.h"
+#include "dbmailtypes.h"
 #include "serverchild.h"
  
 typedef struct {
