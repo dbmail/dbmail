@@ -628,8 +628,8 @@ int build_user_list(const char *userfile)
 
       *split = '\0'; /* terminate */
 
-      strncpy(line, userlist[i].uname, STR_SIZE);
-      strncpy(split+1, userlist[i].passwd, STR_SIZE);
+      strncpy(userlist[i].uname, line, STR_SIZE);
+      strncpy(userlist[i].passwd, split+1, STR_SIZE);
 
       if (ferror(infile) || feof(infile))
 	{
