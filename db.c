@@ -2216,9 +2216,10 @@ int db_findmailbox(const char *fq_name, u64_t user_idnr,
 int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 			 u64_t * mailbox_idnr)
 {
+	char *local_name;
+
 	assert(mailbox_idnr != NULL);
 	*mailbox_idnr = 0;
-	char *local_name;
 
 	local_name = strdup(name);
 	if (local_name == NULL) {
