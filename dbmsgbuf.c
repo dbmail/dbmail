@@ -218,7 +218,7 @@ int db_update_msgbuf(int minlen)
 	/* move buf to make msgbuf_idx 0 */
 	memmove(msgbuf_buf, &msgbuf_buf[msgbuf_idx],
 		(msgbuf_buflen - msgbuf_idx));
-	if (msgbuf_idx > ((msgbuf_buflen + 1) - rowpos)) {
+	if (msgbuf_idx > (msgbuf_buflen  - rowpos)) {
 		zeropos.block++;
 		zeropos.pos = (msgbuf_idx - ((msgbuf_buflen) - rowpos));
 	} else {

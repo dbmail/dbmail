@@ -1,5 +1,9 @@
 2004-10-06  Paul Stevens <paul@nfg.nl>
 
+	* dbmsgbuf.c (db_update_msgbuf): fix off-by-one error.
+
+2004-10-06  Paul Stevens <paul@nfg.nl>
+
 	* dbmail-message.c, dbmail-message.h: new files implement
 	DbmailMessage object and interfaces.
 	* Makefile.am: added dbmail-message.c to COMMON files list
