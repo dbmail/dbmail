@@ -187,7 +187,7 @@ int do_add(int argc, char *argv[])
 
 int do_change(int argc, char *argv[])
 {
-  int i,result;
+  int i,result, retval=0;
   u64_t newsize,userid,newcid;
   char *endptr,*entry;
   char pw[50]="";
@@ -221,10 +221,16 @@ int do_change(int argc, char *argv[])
 	case 'u':
 	  /* change the name */
 	  if (!is_valid(argv[i+1]))
-	    printf("\nWarning: username contains invalid characters. Username not updated. ");
+	    {
+	      printf("\nWarning: username contains invalid characters. Username not updated. ");
+	      retval = -1;
+	    }
 
 	  if (auth_change_username(userid,argv[i+1]) != 0)
-	    printf("\nWarning: could not change username ");
+	    {
+	      printf("\nWarning: could not change username ");
+	      retval = -1;
+	    }
 
 	  i++;
 	  break;
@@ -232,7 +238,10 @@ int do_change(int argc, char *argv[])
 	case 'p':
 	  /* change the password */
 	  if (!is_valid(argv[i+1]))
-	    printf("\nWarning: password contains invalid characters. Password not updated. ");
+	    {
+	      printf("\nWarning: password contains invalid characters. Password not updated. ");
+	      retval = -1;
+	    }
 
           if (argv[i][0] == '+') 
 	    {
@@ -246,7 +255,10 @@ int do_change(int argc, char *argv[])
 	      result = auth_change_password(userid,pw,"");
 	    }
 	  if (result != 0)
-	    printf("\nWarning: could not change password ");
+	    {
+	      printf("\nWarning: could not change password ");
+	      retval = -1;
+	    }
 
 	  i++;
 	  break;
@@ -258,6 +270,7 @@ int do_change(int argc, char *argv[])
 	    {
 	      printf("\nWarning: error finding password from [%s] - are you superuser?\n", 
 		     SHADOWFILE);
+	      retval = -1;
 	      break;
 	    }
 	     
@@ -265,11 +278,15 @@ int do_change(int argc, char *argv[])
           if ( strcmp(pw, "") == 0 ) 
 	    {
 	      printf("\n%s's password not found at \"%s\" !\n", argv[0],SHADOWFILE);
+	      retval = -1;
 	    } 
 	  else 
 	    {
 	      if (auth_change_password(userid,pw,"crypt") != 0)
-		printf("\nWarning: could not change password");
+		{
+		  printf("\nWarning: could not change password");
+		  retval = -1;
+		}
 	    }
           break;
 
@@ -277,7 +294,10 @@ int do_change(int argc, char *argv[])
 	  newcid = strtoull(argv[i+1], 0, 10);
 
 	  if (auth_change_clientid(userid, newcid) != 0)
-	    printf("\nWarning: could not change client id ");
+	    {
+	      printf("\nWarning: could not change client id ");
+	      retval = -1;
+	    }
 
 	  i++;
 	  break;
@@ -298,7 +318,10 @@ int do_change(int argc, char *argv[])
 	    }
 
 	  if (auth_change_mailboxsize(userid, newsize) != 0)
-	    printf("\nWarning: could not change max mailboxsize ");
+	    {
+	      printf("\nWarning: could not change max mailboxsize ");
+	      retval = -1;
+	    }
 
 	  i++;
 	  break;
@@ -308,13 +331,19 @@ int do_change(int argc, char *argv[])
 	    {
 	      /* remove alias */
 	      if (db_removealias(userid, argv[i+1]) < 0)
-		printf("\nWarning: could not remove alias [%s] ",argv[i+1]);
+		{
+		  printf("\nWarning: could not remove alias [%s] ",argv[i+1]);
+		  retval = -1;
+		}
 	    }
 	  else
 	    {
 	      /* add alias */
 	      if (db_addalias(userid, argv[i+1], auth_getclientid(userid)) < 0)
-		printf("\nWarning: could not add alias [%s]",argv[i+1]);
+		{
+		  printf("\nWarning: could not add alias [%s]",argv[i+1]);
+		  retval = -1;
+		}
 	    }
 	  i++;
 	  break;
@@ -327,7 +356,8 @@ int do_change(int argc, char *argv[])
     }
 
   printf("Done\n");
-  return 0;
+
+  return retval;
 }
 
 
