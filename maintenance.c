@@ -212,10 +212,10 @@ int main(int argc, char *argv[])
 	  while (el)
 	    {
 	      id = *((u64_t*)el->data);
-	      if (db_set_message_status(id, 6) < 0)
+	      if (db_set_message_status(id, STATUS_ERROR) < 0)
 		printf("Warning: could not set message status #%llu. Check log.\n", id);
 	      else
-		printf("%llu (status update to 6)\n", id);
+		printf("%llu (status update to STATUS_ERROR)\n", id);
 
 	      el = el->nextnode;
 	    }

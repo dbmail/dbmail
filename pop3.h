@@ -25,7 +25,6 @@
 #include <netdb.h>
 #include <sys/wait.h>
 #include <signal.h>
-#include <time.h>
 
 #include "misc.h"
 #include "list.h"

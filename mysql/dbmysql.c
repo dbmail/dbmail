@@ -22,6 +22,7 @@
 #include <regex.h>
 #include "rfcmsg.h"
 #include "auth.h"
+#include "misc.h"
 
 /* #define UNUSED suppresses compiler warnings about unused
  * variables
@@ -133,8 +134,8 @@ u64_t db_get_quotum_used(u64_t userid)
   u64_t q=0;
 
   snprintf(query, DEF_QUERYSIZE, "SELECT SUM(m.messagesize) FROM messages m, mailboxes mb "
-	   "WHERE m.mailbox_idnr = mb.mailbox_idnr AND mb.owner_idnr = %llu AND m.status < 2",
-	   userid);
+	   "WHERE m.mailbox_idnr = mb.mailbox_idnr AND mb.owner_idnr = %llu AND m.status < %d",
+	   userid, STATUS_DELETE);
 
   if (db_query(query) == -1)
     {
@@ -626,6 +627,10 @@ u64_t db_insert_message (u64_t useridnr, const char *deliver_to_mailbox,
   char timestr[30];
   time_t td;
   struct tm tm;
+  char newunique[UID_SIZE];
+
+  if (! uniqueid)
+    create_unique_id(newunique,0);
 
   time(&td);              /* get time */
   tm = *localtime(&td);   /* get components */
@@ -633,10 +638,10 @@ u64_t db_insert_message (u64_t useridnr, const char *deliver_to_mailbox,
   
   snprintf (query, DEF_QUERYSIZE,"INSERT INTO messages(mailbox_idnr,messagesize,unique_id,"
 	    "internal_date,recent_flag,status)"
-	    " VALUES (%llu, 0, \"%s\", \"%s\", 1, '005')",
+	    " VALUES (%llu, 0, \"%s\", \"%s\", 1, '%d')",
 	    deliver_to_mailbox ? db_get_mailboxid(useridnr, deliver_to_mailbox) : 
 	    db_get_mailboxid (useridnr, "INBOX"),
-	    uniqueid ? uniqueid : "", timestr);
+	    uniqueid ? uniqueid : newunique, timestr, STATUS_INSERT);
   
   if (db_query (query)==-1)
     {
@@ -651,9 +656,9 @@ u64_t db_update_message (u64_t message_idnr, const char *unique_id,
 			 u64_t messagesize, u64_t rfcsize)
 {
   snprintf (query, DEF_QUERYSIZE,
-	    "UPDATE messages SET messagesize=%llu, unique_id=\"%s\", status='000', rfcsize = %llu "
+	    "UPDATE messages SET messagesize=%llu, unique_id=\"%s\", status='%d', rfcsize = %llu "
 	    "where message_idnr=%llu",
-	   messagesize, unique_id, rfcsize, message_idnr);
+	   messagesize, unique_id, STATUS_NEW, rfcsize, message_idnr);
   
   if (db_query (query)==-1)
     {
@@ -668,7 +673,7 @@ u64_t db_update_message (u64_t message_idnr, const char *unique_id,
 /*
  * db_update_message_multiple()
  *
- * updates a range of messages. A unique ID is created fro each of them.
+ * updates a range of messages. A unique ID is created for each of them.
  */
 int db_update_message_multiple(const char *unique_id, u64_t messagesize, u64_t rfcsize)
 {
@@ -719,10 +724,10 @@ int db_update_message_multiple(const char *unique_id, u64_t messagesize, u64_t r
   /* now update for each message */
   for (i=0; i<n; i++)
     {
-      snprintf(newunique, UID_SIZE, "%lluA%lu", uids[i], time(NULL));
+      create_unique_id(newunique, uids[i]);
       snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET "
-	       "messagesize=%llu, rfcsize = %llu, unique_id='%s', status='000' "
-	       "WHERE message_idnr=%llu", messagesize, rfcsize, newunique, uids[i]);
+	       "messagesize=%llu, rfcsize = %llu, unique_id='%s', status='%d' "
+	       "WHERE message_idnr=%llu", messagesize, rfcsize, newunique, STATUS_NEW, uids[i]);
 
       trace(TRACE_ERROR,"message [%llu] inserted, [%llu] bytes", uids[i], messagesize);
 
@@ -1123,11 +1128,11 @@ int db_createsession (u64_t useridnr, PopSession_t *sessionptr)
   list_init (&sessionptr->messagelst);
   
   
-  /* query is <2 because we don't want deleted messages 
+  /* query is <STATUS_DELETE because we don't want deleted messages 
    * the unique_id should not be empty, this could mean that the message is still being delivered */
-  snprintf (query, DEF_QUERYSIZE, "SELECT * FROM messages WHERE mailbox_idnr=%llu AND status<002 AND "
+  snprintf (query, DEF_QUERYSIZE, "SELECT * FROM messages WHERE mailbox_idnr=%llu AND status<%d AND "
 	   "unique_id!=\"\" order by status ASC",
-	   (db_get_mailboxid(useridnr, "INBOX")));
+	   (db_get_mailboxid(useridnr, "INBOX")), STATUS_DELETE);
 
   if (db_query(query)==-1)
     {
@@ -1168,12 +1173,12 @@ int db_createsession (u64_t useridnr, PopSession_t *sessionptr)
 	row[MESSAGE_MESSAGEIDNR] ? strtoull(row[MESSAGE_MESSAGEIDNR], NULL, 10) : 0;
 
       tmpmessage.messagestatus = 
-	row[MESSAGE_STATUS] ? strtoull(row[MESSAGE_STATUS], NULL, 10) : 0;
+	row[MESSAGE_STATUS] ? strtoull(row[MESSAGE_STATUS], NULL, 10) : (u64_t) STATUS_NEW;
 
       strncpy(tmpmessage.uidl,row[MESSAGE_UNIQUE_ID],UID_SIZE);
 		
       tmpmessage.virtual_messagestatus =
-	row[MESSAGE_STATUS] ? strtoull(row[MESSAGE_STATUS], NULL, 10) : 0;
+	row[MESSAGE_STATUS] ? strtoull(row[MESSAGE_STATUS], NULL, 10) : (u64_t) STATUS_NEW;
 	
       sessionptr->totalmessages+=1;
       sessionptr->totalsize+=tmpmessage.msize;
@@ -1214,9 +1219,9 @@ int db_update_pop (PopSession_t *sessionptr)
 	{
 	  /* yes they need an update, do the query */
 	  snprintf (query,DEF_QUERYSIZE,
-		    "UPDATE messages set status=%llu WHERE message_idnr=%llu AND status<002",
+		    "UPDATE messages set status=%llu WHERE message_idnr=%llu AND status<%d",
 		   ((struct message *)tmpelement->data)->virtual_messagestatus,
-		   ((struct message *)tmpelement->data)->realmessageid);
+		   ((struct message *)tmpelement->data)->realmessageid, STATUS_DELETE);
 	
 	  /* FIXME: a message could be deleted already if it has been accessed
 	   * by another interface and be deleted by sysop
@@ -1246,8 +1251,8 @@ u64_t db_check_mailboxsize (u64_t mailboxid)
 
   /* checking current size */
   snprintf (query, DEF_QUERYSIZE,
-	    "SELECT SUM(messagesize) FROM messages WHERE mailbox_idnr = %llu AND status<002",
-	   mailboxid);
+	    "SELECT SUM(messagesize) FROM messages WHERE mailbox_idnr = %llu AND status<%d",
+	   mailboxid, STATUS_DELETE);
 
   trace (TRACE_DEBUG,"db_check_mailboxsize(): executing query [%s]\n",
 	 query);
@@ -1402,7 +1407,7 @@ u64_t db_deleted_purge()
   u64_t affected_rows=0;
 
   /* first we're deleting all the messageblks */
-  snprintf (query,DEF_QUERYSIZE,"SELECT message_idnr FROM messages WHERE status=003");
+  snprintf (query,DEF_QUERYSIZE,"SELECT message_idnr FROM messages WHERE status=%d", STATUS_PURGE);
   trace (TRACE_DEBUG,"db_deleted_purge(): executing query [%s]",query);
 	
   if (db_query(query)==-1)
@@ -1456,7 +1461,7 @@ u64_t db_deleted_purge()
   msgids = 0;
 
   /* messageblks are deleted. Now delete the messages */
-  snprintf (query,DEF_QUERYSIZE,"DELETE FROM messages WHERE status=003");
+  snprintf (query,DEF_QUERYSIZE,"DELETE FROM messages WHERE status=%d", STATUS_PURGE);
   trace (TRACE_DEBUG,"db_deleted_purge(): executing query [%s]",query);
   if (db_query(query)==-1)
     {
@@ -1471,13 +1476,14 @@ u64_t db_deleted_purge()
 }
 
 
-/* sets al messages with status 002 to status 003 for final
+/* sets al messages with status STATUS_DELETE to STATUS_PURGE for final
  * deletion 
  */
 u64_t db_set_deleted ()
 {
   /* first we're deleting all the messageblks */
-  snprintf (query,DEF_QUERYSIZE,"UPDATE messages SET status=003 WHERE status=002");
+  snprintf (query,DEF_QUERYSIZE,"UPDATE messages SET status=%d WHERE status=%d",
+    STATUS_PURGE, STATUS_DELETE);
   trace (TRACE_DEBUG,"db_set_deleted(): executing query [%s]",query);
 
   if (db_query(query)==-1)
@@ -2357,12 +2363,13 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen, u64_t mboxid, u64_t u
   strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
 
   /* create a msg 
-   * status and seen_flag are set to 001, which means the message has been read 
+   * status set to STATUS_SEEN and seen_flag set to 001,
+   * which means the message has been read 
    */
   snprintf(query, DEF_QUERYSIZE, "INSERT INTO messages "
 	   "(mailbox_idnr,messagesize,unique_id,internal_date,status,"
-	   " seen_flag) VALUES (%llu, 0, \"\", \"%s\",001,1)",
-	   mboxid, timestr);
+	   " seen_flag) VALUES (%llu, 0, \"\", \"%s\",%d,1)",
+	   mboxid, timestr, STATUS_SEEN);
 
   if (db_query(query) == -1)
     {
@@ -2504,7 +2511,7 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen, u64_t mboxid, u64_t u
     }  
   
   /* create a unique id */
-  snprintf (unique_id,UID_SIZE,"%lluA%lu",msgid,td);
+  create_unique_id(unique_id,msgid);
 
   /* set info on message */
   db_update_message (msgid, unique_id, datalen, 0);
@@ -2730,7 +2737,7 @@ int db_getmailbox(mailbox_t *mb, u64_t userid)
   /* select messages */
   snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr, seen_flag, recent_flag "
 	   "FROM messages WHERE mailbox_idnr = %llu "
-	   "AND status<2 AND unique_id!=\"\" ORDER BY message_idnr ASC", mb->uid);
+	   "AND status<%d AND unique_id!=\"\" ORDER BY message_idnr ASC", mb->uid, STATUS_DELETE);
 
   if (db_query(query) == -1)
     {
@@ -3089,7 +3096,7 @@ int db_setselectable(u64_t uid, int select_value)
  * db_removemsg()
  *
  * removes ALL messages from a mailbox
- * removes by means of setting status to 3
+ * removes by means of setting status to STATUS_PURGE
  *
  * returns -1 on failure, 0 on success
  */
@@ -3097,9 +3104,9 @@ int db_removemsg(u64_t uid)
 {
   
 
-  /* update messages belonging to this mailbox: mark as deleted (status 3) */
-  snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET status=3 WHERE"
-	   " mailbox_idnr = %llu", uid);
+  /* update messages belonging to this mailbox: mark as deleted (status STATUS_PURGE) */
+  snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET status=%d WHERE"
+	   " mailbox_idnr = %llu", STATUS_PURGE, uid);
 
   if (db_query(query) == -1)
     {
@@ -3115,7 +3122,7 @@ int db_removemsg(u64_t uid)
  * db_expunge()
  *
  * removes all messages from a mailbox with delete-flag
- * removes by means of setting status to 2
+ * removes by means of setting status to STATUS_DELETE
  * makes a list of delete msg UID's 
  *
  * allocated memory should be freed by client; if msgids and/or nmsgs are NULL 
@@ -3131,7 +3138,7 @@ int db_expunge(u64_t uid,u64_t **msgids,u64_t *nmsgs)
     {
       /* first select msg UIDs */
       snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr FROM messages WHERE"
-	       " mailbox_idnr = %llu AND deleted_flag=1 AND status<2 ORDER BY message_idnr DESC", uid);
+	       " mailbox_idnr = %llu AND deleted_flag=1 AND status<%d ORDER BY message_idnr DESC", uid, STATUS_DELETE);
 
       if (db_query(query) == -1)
 	{
@@ -3165,9 +3172,9 @@ int db_expunge(u64_t uid,u64_t **msgids,u64_t *nmsgs)
       mysql_free_result(res);
     }
 
-  /* update messages belonging to this mailbox: mark as expunged (status 2) */
-  snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET status=2 WHERE"
-	   " mailbox_idnr = %llu AND deleted_flag=1 AND status<2", uid);
+  /* update messages belonging to this mailbox: mark as expunged (status STATUS_DELETE) */
+  snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET status=%d WHERE"
+	   " mailbox_idnr = %llu AND deleted_flag=1 AND status<%d", STATUS_DELETE, uid, STATUS_DELETE);
 
   if (db_query(query) == -1)
     {
@@ -3216,6 +3223,7 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
 {
   u64_t newid,tmpid, curr_quotum, userid, maxmail, msgsize;
   time_t td;
+  char newunique[UID_SIZE];
 
   time(&td);              /* get time */
 
@@ -3344,13 +3352,13 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
     {
       trace(TRACE_ERROR, "db_copymsg(): could not insert message\n");
 
-      snprintf(query, DEF_QUERYSIZE, "DELETE FROM tmpmessage WHERE message_idnr = %llu", tmpid);
-      if (db_query(query) == -1)
-	trace(TRACE_ERROR, "db_copymsg(): could not delete temporary message\n");
-      
       snprintf(query, DEF_QUERYSIZE, "DELETE FROM tmpmessageblk WHERE message_idnr = %llu", tmpid);
       if (db_query(query) == -1)
 	trace(TRACE_ERROR, "db_copymsg(): could not delete temporary message blocks\n");
+      
+      snprintf(query, DEF_QUERYSIZE, "DELETE FROM tmpmessage WHERE message_idnr = %llu", tmpid);
+      if (db_query(query) == -1)
+	trace(TRACE_ERROR, "db_copymsg(): could not delete temporary message\n");
       
       return -1;
     }
@@ -3368,14 +3376,14 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
       trace(TRACE_ERROR, "db_copymsg(): could not insert message blocks\n");
 
       /* delete temporary messages */
-      snprintf(query, DEF_QUERYSIZE, "DELETE FROM tmpmessage WHERE message_idnr = %llu", tmpid);
-      if (db_query(query) == -1)
-	trace(TRACE_ERROR, "db_copymsg(): could not delete temporary message\n");
-      
       snprintf(query, DEF_QUERYSIZE, "DELETE FROM tmpmessageblk WHERE message_idnr = %llu", tmpid);
       if (db_query(query) == -1)
 	trace(TRACE_ERROR, "db_copymsg(): could not delete temporary message blocks\n");
 
+      snprintf(query, DEF_QUERYSIZE, "DELETE FROM tmpmessage WHERE message_idnr = %llu", tmpid);
+      if (db_query(query) == -1)
+	trace(TRACE_ERROR, "db_copymsg(): could not delete temporary message\n");
+      
       /* delete inserted message */
       snprintf(query, DEF_QUERYSIZE, "DELETE FROM messages WHERE message_idnr = %llu",newid);
       if (db_query(query) == -1)
@@ -3386,17 +3394,18 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
     }
 
   /* delete temporary messages */
-  snprintf(query, DEF_QUERYSIZE, "DELETE FROM tmpmessage WHERE message_idnr = %llu", tmpid);
-  if (db_query(query) == -1)
-    trace(TRACE_ERROR, "db_copymsg(): could not delete temporary message\n");
-      
   snprintf(query, DEF_QUERYSIZE, "DELETE FROM tmpmessageblk WHERE message_idnr = %llu", tmpid);
   if (db_query(query) == -1)
     trace(TRACE_ERROR, "db_copymsg(): could not delete temporary message blocks\n");
 
+  snprintf(query, DEF_QUERYSIZE, "DELETE FROM tmpmessage WHERE message_idnr = %llu", tmpid);
+  if (db_query(query) == -1)
+    trace(TRACE_ERROR, "db_copymsg(): could not delete temporary message\n");
+      
   /* all done, validate new msg by creating a new unique id for the copied msg */
-  snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET unique_id=\"%lluA%lu\" "
-	   "WHERE message_idnr=%llu", newid, td, newid);
+  create_unique_id(newunique, newid);
+  snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET unique_id=\"%s\" "
+	   "WHERE message_idnr=%llu", newunique, newid);
 
   if (db_query(query) == -1)
     {
@@ -3483,8 +3492,8 @@ u64_t db_first_unseen(u64_t uid)
   u64_t id;
 
   snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr FROM messages WHERE mailbox_idnr = %llu "
-	   "AND status<2 AND seen_flag = 0 AND unique_id != \"\" "
-	   "ORDER BY message_idnr ASC LIMIT 0,1", uid);
+	   "AND status<%d AND seen_flag = 0 AND unique_id != \"\" "
+	   "ORDER BY message_idnr ASC LIMIT 0,1", uid, STATUS_DELETE);
 
   if (db_query(query) == -1)
     {
@@ -3586,8 +3595,8 @@ int db_get_msgflag(const char *name, u64_t msguid, u64_t mailboxuid)
     return 0; /* non-existent flag is not set */
 
   snprintf(query, DEF_QUERYSIZE, "SELECT %s FROM messages WHERE "
-	   "message_idnr = %llu AND status<2 AND unique_id != \"\" "
-	   "AND mailbox_idnr = %llu", flagname, msguid, mailboxuid);
+	   "message_idnr = %llu AND status<%d AND unique_id != \"\" "
+	   "AND mailbox_idnr = %llu", flagname, msguid, STATUS_DELETE, mailboxuid);
 
   if (db_query(query) == -1)
     {
@@ -3632,8 +3641,8 @@ int db_get_msgflag_all(u64_t msguid, u64_t mailboxuid, int *flags)
 
   snprintf(query, DEF_QUERYSIZE, "SELECT seen_flag, answered_flag, deleted_flag, "
 	   "flagged_flag, draft_flag, recent_flag FROM messages WHERE "
-	   "message_idnr = %llu AND status<2 AND unique_id != '' "
-	   "AND mailbox_idnr = %llu", msguid, mailboxuid);
+	   "message_idnr = %llu AND status<%d AND unique_id != '' "
+	   "AND mailbox_idnr = %llu", msguid, STATUS_DELETE, mailboxuid);
  
   if (db_query(query) == -1)
     {
@@ -3741,8 +3750,8 @@ int db_set_msgflag(u64_t msguid, u64_t mailboxuid, int *flags, int action_type)
   
   /* last character in string is comma, replace it --> strlen()-1 */
   snprintf(&query[strlen(query)-1], left, " WHERE "
-	   "message_idnr = %llu AND status<2 "
-	   "AND mailbox_idnr = %llu", msguid, mailboxuid);
+	   "message_idnr = %llu AND status<%d "
+	   "AND mailbox_idnr = %llu", msguid, STATUS_DELETE, mailboxuid);
 
   if (db_query(query) == -1)
     {
@@ -3820,7 +3829,7 @@ int db_set_msgflag_range(u64_t msguidlow, u64_t msguidhigh, u64_t mailboxuid,
   /* last character in string is comma, replace it --> strlen()-1 */
   snprintf(&query[strlen(query)-1], left, " WHERE "
 	   "message_idnr >= %llu AND message_idnr <= %llu AND "
-	   "status<2 AND mailbox_idnr = %llu", msguidlow, msguidhigh, mailboxuid);
+	   "status<%d AND mailbox_idnr = %llu", msguidlow, msguidhigh, STATUS_DELETE, mailboxuid);
 
   if (db_query(query) == -1)
     {
@@ -3901,7 +3910,7 @@ u64_t db_get_rfcsize(u64_t msguid, u64_t mailboxuid)
   u64_t size;
 
   snprintf(query, DEF_QUERYSIZE, "SELECT rfcsize FROM messages WHERE message_idnr = %llu "
-	   "AND status<2 AND unique_id != '' AND mailbox_idnr = %llu", msguid, mailboxuid);
+	   "AND status<%d AND unique_id != '' AND mailbox_idnr = %llu", msguid, STATUS_DELETE, mailboxuid);
 
   if (db_query(query) == -1)
     {
@@ -3955,8 +3964,8 @@ int db_get_msginfo_range(u64_t msguidlow, u64_t msguidhigh, u64_t mailboxuid,
 	   "flagged_flag, draft_flag, recent_flag, internal_date, rfcsize, message_idnr "
 	   "FROM messages WHERE "
 	   "message_idnr >= %llu AND message_idnr <= %llu AND mailbox_idnr = %llu "
-	   "AND status<2 AND unique_id != '' "
-	   "ORDER BY message_idnr ASC", msguidlow, msguidhigh, mailboxuid);
+	   "AND status<%d AND unique_id != '' "
+	   "ORDER BY message_idnr ASC", msguidlow, msguidhigh, mailboxuid, STATUS_DELETE);
  
   if (db_query(query) == -1)
     {
@@ -4217,7 +4226,7 @@ int db_mailbox_msg_match(u64_t mailboxuid, u64_t msguid)
   int val;
 
   snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr FROM messages WHERE message_idnr = %llu AND "
-	   "mailbox_idnr = %llu AND status<002 AND unique_id!=\"\"", msguid, mailboxuid); 
+	   "mailbox_idnr = %llu AND status<%d AND unique_id!=\"\"", msguid, mailboxuid, STATUS_DELETE); 
 
   if (db_query(query) == -1)
     {

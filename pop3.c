@@ -18,6 +18,7 @@
 #ifdef PROC_TITLES
 #include "proctitleutils.h"
 #endif
+#include "misc.h"
 
 #define INCOMING_BUFFER_SIZE 512
 #define APOP_STAMP_SIZE 255
@@ -61,6 +62,7 @@ int pop3_handle_connection (clientinfo_t *ci)
 	char myhostname[64];
 	int cnt; 						/* counter */
 	time_t timestamp;
+	char unique_id[UID_SIZE];
 
 	PopSession_t session;		/* current connection session */
 
@@ -103,9 +105,9 @@ int pop3_handle_connection (clientinfo_t *ci)
 		return 0;
 	}
 
-	/* compile error string */
-	timestamp = time(NULL);
-	sprintf (session.apop_stamp,"<%d.%lu@%s>",getpid(),timestamp,myhostname);
+	/* create apop "timestamp", which is simply a unique string in msg-id format */
+	create_unique_id(unique_id,0);
+	sprintf (session.apop_stamp,"<%s@%s>",unique_id,myhostname);
 
 	if (ci->tx)
 	{
@@ -432,13 +434,13 @@ int pop3 (void *stream, char *buffer, char *client_ip, PopSession_t *session)
 					/* they're asking for a specific message */
 					while (tmpelement != NULL)
 					{
-						if (((struct message *)tmpelement->data)->messageid==strtoull(value, NULL, 10) &&
-								((struct message *)tmpelement->data)->virtual_messagestatus<2)
-						{
-							fprintf ((FILE *)stream,"+OK %llu %llu\r\n",((struct message *)tmpelement->data)->messageid,
-									((struct message *)tmpelement->data)->msize);
-							found = 1;
-						}
+					  if (((struct message *)tmpelement->data)->messageid==strtoull(value, NULL, 10) &&
+					     ((struct message *)tmpelement->data)->virtual_messagestatus<STATUS_DELETE)
+					  {
+					    fprintf ((FILE *)stream,"+OK %llu %llu\r\n",((struct message *)tmpelement->data)->messageid,
+					      ((struct message *)tmpelement->data)->msize);
+					    found = 1;
+					  }
 						tmpelement=tmpelement->nextnode;
 					}
 					if (!found)
@@ -457,7 +459,7 @@ int pop3 (void *stream, char *buffer, char *client_ip, PopSession_t *session)
 					/* traversing list */
 					while (tmpelement!=NULL)
 					{
-						if (((struct message *)tmpelement->data)->virtual_messagestatus<2)
+						if (((struct message *)tmpelement->data)->virtual_messagestatus<STATUS_DELETE)
 							fprintf ((FILE *)stream,"%llu %llu\r\n",((struct message *)tmpelement->data)->messageid,
 									((struct message *)tmpelement->data)->msize);
 						tmpelement=tmpelement->nextnode;
@@ -493,9 +495,9 @@ int pop3 (void *stream, char *buffer, char *client_ip, PopSession_t *session)
 				while (tmpelement!=NULL)
 				{
 					if (((struct message *)tmpelement->data)->messageid==strtoull(value, NULL, 10) &&
-							((struct message *)tmpelement->data)->virtual_messagestatus<2) /* message is not deleted */
+						((struct message *)tmpelement->data)->virtual_messagestatus<STATUS_DELETE) /* message is not deleted */
 					{
-						((struct message *)tmpelement->data)->virtual_messagestatus=1;
+						((struct message *)tmpelement->data)->virtual_messagestatus=STATUS_SEEN;
 						fprintf ((FILE *)stream,"+OK %llu octets\r\n",((struct message *)tmpelement->data)->msize);
 						return db_send_message_lines ((void *)stream, ((struct message *)tmpelement->data)->realmessageid,-2, 0);
 					}
@@ -515,9 +517,9 @@ int pop3 (void *stream, char *buffer, char *client_ip, PopSession_t *session)
 				while (tmpelement!=NULL)
 				{
 					if (((struct message *)tmpelement->data)->messageid==strtoull(value, NULL, 10) &&
-							((struct message *)tmpelement->data)->virtual_messagestatus<2) /* message is not deleted */
+						((struct message *)tmpelement->data)->virtual_messagestatus<STATUS_DELETE) /* message is not deleted */
 					{
-						((struct message *)tmpelement->data)->virtual_messagestatus=2;
+						((struct message *)tmpelement->data)->virtual_messagestatus=STATUS_DELETE;
 						/* decrease our virtual list fields */
 						session->virtual_totalsize-=((struct message *)tmpelement->data)->msize;
 						session->virtual_totalmessages-=1;
@@ -563,7 +565,7 @@ int pop3 (void *stream, char *buffer, char *client_ip, PopSession_t *session)
 
 				while (tmpelement!=NULL)
 				{
-					if (((struct message *)tmpelement->data)->virtual_messagestatus==0)
+					if (((struct message *)tmpelement->data)->virtual_messagestatus==STATUS_NEW)
 					{
 						/* we need the last message that has been accessed */
 						fprintf ((FILE *)stream, "+OK %llu\r\n",((struct message *)tmpelement->data)->messageid-1);
@@ -601,7 +603,7 @@ int pop3 (void *stream, char *buffer, char *client_ip, PopSession_t *session)
 					while (tmpelement!=NULL)
 					{
 						if (((struct message *)tmpelement->data)->messageid==strtoull(value, NULL, 10)&&
-								((struct message *)tmpelement->data)->virtual_messagestatus<2)
+							((struct message *)tmpelement->data)->virtual_messagestatus<STATUS_DELETE)
 						{
 							fprintf ((FILE *)stream,"+OK %llu %s\r\n",((struct message *)tmpelement->data)->messageid,
 									((struct message *)tmpelement->data)->uidl);
@@ -623,7 +625,7 @@ int pop3 (void *stream, char *buffer, char *client_ip, PopSession_t *session)
 					/* traversing list */
 					while (tmpelement!=NULL)
 					{
-						if (((struct message *)tmpelement->data)->virtual_messagestatus<2)
+						if (((struct message *)tmpelement->data)->virtual_messagestatus<STATUS_DELETE)
 							fprintf ((FILE *)stream,"%llu %s\r\n",((struct message *)tmpelement->data)->messageid,
 									((struct message *)tmpelement->data)->uidl);
 
@@ -785,7 +787,7 @@ int pop3 (void *stream, char *buffer, char *client_ip, PopSession_t *session)
 				while (tmpelement != NULL)
 				{
 					if (((struct message *)tmpelement->data)->messageid==top_messageid &&
-							((struct message *)tmpelement->data)->virtual_messagestatus<2) /* message is not deleted */
+						((struct message *)tmpelement->data)->virtual_messagestatus<STATUS_DELETE) /* message is not deleted */
 					{
 						fprintf ((FILE *)stream,"+OK %llu lines of message %llu\r\n",top_lines, top_messageid);
 						return db_send_message_lines (stream, ((struct message *)tmpelement->data)->realmessageid, top_lines, 0);

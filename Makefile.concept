@@ -13,16 +13,16 @@ DBSOURCE = $(__DBTYPE__)/db$(__DBTYPE__).c
 
 SMTP_OBJECTS = list.o debug.o pipe.o mime.o $(DBOBJECT) dbmd5.o md5.o bounce.o forward.o memblock.o \
 $(AUTHOBJECT) config.o misc.o
-INJECTOR_OBJECTS = list.o debug.o $(DBOBJECT) dbmd5.o md5.o $(AUTHOBJECT) mime.o config.o
-UNIONE_OBJECTS = list.o debug.o $(DBOBJECT) dbmd5.o md5.o $(AUTHOBJECT) mime.o config.o
-MINI_OBJECTS = debug.o $(DBOBJECT) list.o dbmd5.o md5.o $(AUTHOBJECT) mime.o config.o
+INJECTOR_OBJECTS = list.o debug.o $(DBOBJECT) dbmd5.o md5.o $(AUTHOBJECT) mime.o config.o misc.o
+UNIONE_OBJECTS = list.o debug.o $(DBOBJECT) dbmd5.o md5.o $(AUTHOBJECT) mime.o config.o misc.o
+MINI_OBJECTS = debug.o $(DBOBJECT) list.o dbmd5.o md5.o $(AUTHOBJECT) mime.o config.o misc.o
 POP_OBJECTS = pop3.o list.o debug.o $(DBOBJECT) serverchild.o server.o dbmd5.o md5.o mime.o misc.o memblock.o $(AUTHOBJECT) config.o proctitleutils.o
 IMAP_OBJECTS = imap4.o debug.o $(DBOBJECT) serverchild.o server.o config.o list.o dbmd5.o md5.o imaputil.o \
 imapcommands.o mime.o misc.o memblock.o rfcmsg.o $(MSGBUFOBJECT) $(SEARCHOBJECT) $(AUTHOBJECT) quota.o proctitleutils.o
-MAINTENANCE_OBJECTS = debug.o list.o dbmd5.o md5.o $(DBOBJECT) mime.o memblock.o $(AUTHOBJECT) config.o
+MAINTENANCE_OBJECTS = debug.o list.o dbmd5.o md5.o $(DBOBJECT) mime.o memblock.o $(AUTHOBJECT) config.o misc.o
 CONFIG_OBJECTS = $(DBOBJECT) list.o md5.o debug.o dbmd5.o mime.o memblock.o $(AUTHOBJECT) config.o
-USER_OBJECTS = debug.o list.o dbmd5.o md5.o $(DBOBJECT) mime.o memblock.o $(AUTHOBJECT) config.o
-VUTCONV_OBJECTS = debug.o list.o dbmd5.o md5.o mime.o $(DBOBJECT) $(AUTHOBJECT) config.o
+USER_OBJECTS = debug.o list.o dbmd5.o md5.o $(DBOBJECT) mime.o memblock.o $(AUTHOBJECT) config.o misc.o
+VUTCONV_OBJECTS = debug.o list.o dbmd5.o md5.o mime.o $(DBOBJECT) $(AUTHOBJECT) config.o misc.o
 CC = cc
 
 DIRS = -L$(__LIBDIR__) -I$(__INCDIR__)
@@ -81,22 +81,22 @@ serverchild.o: serverchild.h debug.h dbmail.h list.h
 pipe.o: pipe.h dbmail.h debug.h misc.h dbmd5.h
 forward.o: forward.h dbmail.h debug.h
 mime.o: mime.h dbmail.h debug.h
-misc.o:misc.h dbmail.h debug.h
-pop3.o:pop3.h dbmail.h debug.h dbmailtypes.h
+misc.o:misc.h dbmail.h debug.h dbmd5.h
+pop3.o:pop3.h dbmail.h debug.h dbmailtypes.h misc.h
 dbmd5.o:dbmd5.h md5.h debug.h
 bounce.o:bounce.h list.h debug.h
-imap4.o: dbmail.h imap4.h db.h debug.h imaputil.h imapcommands.h
-imaputil.o: imaputil.h db.h memblock.h debug.h dbmailtypes.h
-imapcommands.o: imapcommands.h imaputil.h imap4.h db.h memblock.h debug.h dbmailtypes.h
+imap4.o: dbmail.h imap4.h db.h debug.h imaputil.h imapcommands.h misc.h
+imaputil.o: imaputil.h db.h memblock.h debug.h dbmailtypes.h misc.h
+imapcommands.o: imapcommands.h imaputil.h imap4.h db.h memblock.h debug.h dbmailtypes.h misc.h
 quota.o: quota.h
-maintenance.o: auth.h maintenance.h debug.h
+maintenance.o: auth.h maintenance.h debug.h misc.h
 settings.o: dbmail.h debug.h
 proctitleutils.o: proctitleutils.h
-user.o: user.h debug.h
+user.o: user.h debug.h misc.h
 memblock.o: memblock.h debug.h
 rfcmsg.o: rfcmsg.h dbmailtypes.h
-vut2dbmail.o: db.h auth.h
-$(DBOBJECT): db.h dbmd5.h dbmail.h mime.h list.h memblock.h debug.h dbmailtypes.h auth.h
+vut2dbmail.o: db.h auth.h misc.h
+$(DBOBJECT): db.h dbmd5.h dbmail.h mime.h list.h memblock.h debug.h dbmailtypes.h auth.h misc.h
 	     $(CC) -o $(DBOBJECT) -c $(DBSOURCE) $(DIRS)
 $(MSGBUFOBJECT): dbmsgbuf.h db.h
 	     $(CC) -o $(MSGBUFOBJECT) -c $(MSGBUFSOURCE) $(DIRS)

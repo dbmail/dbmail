@@ -12,6 +12,7 @@
 #include "db.h"
 #include "debug.h"
 #include "list.h"
+#include "misc.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -284,8 +285,8 @@ int main(int argc, char *argv[])
       return -1;
     }
 
-  srand(time(NULL));
-  snprintf(uniqueid, UID_SIZE, "%luA%u%u", time(NULL), getpid(), rand()%1000);
+  srand((int) ((int) time(NULL) + (int) getpid()) );
+  create_unique_id(uniqueid,0);
   
   if (using_dbase)
     {

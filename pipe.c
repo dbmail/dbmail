@@ -42,14 +42,6 @@ extern struct list smtpItems, sysItems;
 int send_notification(const char *to, const char *from, const char *subject);
 int send_reply(struct list *headerfields, const char *body);
 
-void create_unique_id(char *target, u64_t messageid)
-{
-  trace (TRACE_DEBUG,"create_unique_id(): creating id");
-  srand((int) ((int) time(NULL) + (int) getpid()) );
-  snprintf (target,UID_SIZE,"%s",makemd5( itoa((int) rand() * (int) messageid) ));
-  trace (TRACE_DEBUG,"create_unique_id(): created: %s",target);
-}
-	
 
 char *read_header(u64_t *blksize)
      /* returns <0 on failure */

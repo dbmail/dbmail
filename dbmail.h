@@ -40,4 +40,12 @@ int GetConfigValue(const field_t name, struct list *items, field_t value);
 void GetDBParams(field_t host, field_t db, field_t user, field_t pass, struct list *cfg);
 void SetTraceLevel(struct list *cfg);
 
+#define STATUS_NEW	0
+#define STATUS_SEEN	1
+#define STATUS_DELETE	2
+#define STATUS_PURGE	3
+#define STATUS_UNUSED	4
+#define STATUS_INSERT	5
+#define STATUS_ERROR	6
+
 #endif

@@ -90,8 +90,8 @@ void db_reverse_msg(mime_message_t *msg)
  * creates a linked-list of headers found
  *
  * NOTE: there are no checks performed to verify that the indicated msg isn't expunged 
- *       (status 002) or has been inserted completely. This should be done before calling
- *       this function (unless, of course, it is your intention to specificly parse an 
+ *       (status STATUS_DELETE) or has been inserted completely. This should be done before calling
+ *       this function (unless, of course, it is your intention to specifically parse an 
  *       incomplete message or an expunged one).
  *
  * returns:

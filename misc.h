@@ -18,5 +18,6 @@
 
 int drop_priviledges (char *newuser, char *newgroup);
 char * itoa (int i);
+void create_unique_id(char *target, u64_t messageid);
 
 #endif

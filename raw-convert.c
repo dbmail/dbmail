@@ -31,6 +31,7 @@
 #include "debug.h"
 #include <regex.h>
 #include "dbmail.h"
+#include "misc.h"
 
 #define MAX_LINESIZE 1024
 #define UID_SIZE 70
@@ -511,7 +512,7 @@ int add_msg(u64_t size, u64_t rfcsize)
       cnt = 1; /* reset counter */
       prevt = td; /* remember this time */
     }
-  snprintf(uniqueid, UID_SIZE, "%lluA%lu%03u", useridnr, time(NULL), cnt);
+  create_unique_id(uniqueid,0);
 
   msgidnr++;
 
@@ -523,7 +524,7 @@ int add_msg(u64_t size, u64_t rfcsize)
   fprintf(msgsfile, "%llu\t%llu\t%llu\t"
 	  "0\t0\t0\t0\t1\t0\t"
 	  "%s\t%s\t"
-	  "000\t%llu\n", msgidnr, mboxidnr, size, uniqueid, timestr, rfcsize);
+	  "%d\t%llu\n", msgidnr, mboxidnr, size, uniqueid, timestr, STATUS_NEW, rfcsize);
 
   return (ferror(msgsfile)) ? -1 : 0;
 }

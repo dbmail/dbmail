@@ -24,6 +24,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include "dbmail.h"
+#include "misc.h"
 
 #define MAX_LINESIZE 1024
 #define UID_SIZE 70
@@ -101,8 +102,10 @@ int main(int argc, char *argv[])
       newlines++;
     }
 
+  srand((int) ((int) time(NULL) + (int) getpid()) );
+
   /* update message */
-  snprintf(newunique, UID_SIZE, "%lluA%lu", uid, time(NULL));
+  create_unique_id(newunique,msgid);
   db_update_message(msgid, newunique, size, size+newlines);
 
   trace(TRACE_ERROR,"message [%llu] inserted, size [%llu]", msgid, size);

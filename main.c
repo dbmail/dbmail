@@ -14,6 +14,9 @@
 #include "auth.h"
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #define MESSAGEIDSIZE 100
 #define NORMAL_DELIVERY 1
@@ -171,6 +174,8 @@ int main (int argc, char *argv[])
 	  trace(TRACE_STOP,"main(): scanner found no email addresses (scanned for Deliver-To:)");
     } 
   
+  srand((int) ((int) time(NULL) + (int) getpid()) );
+
   /* inserting messages into the database */
   insert_messages(header, headersize, &users, &returnpath, users_are_usernames,
 		  deliver_to_mailbox, &mimelist);

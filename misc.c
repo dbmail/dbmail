@@ -8,7 +8,9 @@
 #endif
 
 #include "dbmail.h"
+#include "dbmd5.h"
 #include "misc.h"
+#include <stdlib.h>
 
 int drop_priviledges (char *newuser, char *newgroup)
 {
@@ -51,3 +53,14 @@ char *itoa(int i)
        if (s) sprintf(s,"%d",i);
        return s;
 }
+
+void create_unique_id(char *target, u64_t messageid)
+{
+  if (messageid != 0)
+    snprintf (target,UID_SIZE,"%s:%s",itoa(messageid),itoa(rand()));
+  else
+    snprintf (target,UID_SIZE,"%s",itoa(rand()));
+  snprintf (target,UID_SIZE,"%s",makemd5(target));
+  trace (TRACE_DEBUG,"create_unique_id(): created: %s",target);
+}
+

@@ -64,6 +64,8 @@ int main (int argc, char* argv[])
       return -1;
     }
 
+  srand((int) ((int) time(NULL) + (int) getpid()) );
+
   time (&start); /* mark the starting time */
   result = traverse (argv[1]);
   time (&stop); /* mark the ending time */
@@ -188,7 +190,7 @@ int process_mboxfile(char *file, u64_t userid)
 	      /* update & end message */
 	      db_insert_message_block(blk, cnt, msgid);
 
-	      snprintf(newunique, UID_SIZE, "%lluA%lu", userid, time(NULL));
+	      create_unique_id(newunique,msgid);
 	      db_update_message(msgid, newunique, size+cnt, size+cnt+newlines);
 	      trace(TRACE_ERROR, "message [%llu] inserted, [%u] bytes", msgid, size+cnt);
 	    }
@@ -245,7 +247,7 @@ int process_mboxfile(char *file, u64_t userid)
     {
       db_insert_message_block(blk, cnt, msgid);
 
-      snprintf(newunique, UID_SIZE, "%lluA%lu", userid, time(NULL));
+      create_unique_id(newunique,msgid);
       db_update_message(msgid, newunique, size+cnt, size+cnt+newlines);
       trace(TRACE_ERROR, "message [%llu] inserted, [%u] bytes", msgid, size+cnt);
     }

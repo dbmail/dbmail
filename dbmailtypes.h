@@ -41,15 +41,6 @@ struct message
   u64_t messageid;
   u64_t realmessageid;
   char uidl[UID_SIZE];
-  /* message status :
-   * 000 message is new, never touched 
-   * 001 message is read
-   * 002 message is deleted by user 
-   * ----------------------------------
-   * The server additionally uses:
-   * 003 message is deleted by sysop
-   * 004 message is ready for final deletion */
-		
   u64_t messagestatus;
   u64_t virtual_messagestatus;
 };

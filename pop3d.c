@@ -16,6 +16,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <signal.h>
+#include <unistd.h>
 #include <errno.h>
 #include "imap4.h"
 #include "server.h"
@@ -32,7 +33,7 @@
 #define PNAME "dbmail/pop3d"
 
 /* server timeout error */
-#define POP_TIMEOUT_MSG "-ERR I'm leaving, you're tooo slow"
+#define POP_TIMEOUT_MSG "-ERR I'm leaving, you're tooo slow\r\n"
 
 char *configFile = DEFAULT_CONFIG_FILE;
 
@@ -64,20 +65,39 @@ int main(int argc, char *argv[], char **envp)
   serverConfig_t config;
   struct list popItems, sysItems;
   int result, status;
+  int opt;
   pid_t pid;
 
   openlog(PNAME, LOG_PID, LOG_MAIL);
 
-  if (argc >= 2 && (argv[1]))
-  {
-	  if (strcmp (argv[1],"-v") == 0)
-	  {
-		  printf ("\n*** DBMAIL: dbmail-pop3d version $Revision$ %s\n\n",COPYRIGHT);
-		  return 0;
-	  }
+  /* get options */
+  opterr = 0; /* suppress error message from getopt() */
+  while ((opt = getopt(argc, argv, "vhf:")) != -1)
+    {
+      switch (opt)
+	{
+	case 'v':
+	  printf ("\n*** DBMAIL: dbmail-pop3d version $Revision$ %s\n\n",COPYRIGHT);
+	  return 0;
+
+	case 'h':
+	  printf ("\ndbmail-pop3d: DBMAIL pop3 daemon\n");
+	  printf ("Usage: dbmail-pop3d (-v|-h|[-f config_filename])\n");
+	  return 0;
+
+	case 'f':
+	  if (optarg && strlen(optarg) > 0)
+	    configFile = optarg;
 	  else
-		  if (strcmp(argv[1],"-f")==0 && (argv[2]))
-				configFile = argv[2];
+	    {
+	      fprintf(stderr,"dbmail-pop3d: -f requires a filename argument\n\n");
+	      return 1;
+	    }
+	  break;
+
+	default:
+	  break;
+	}
     }
 
   SetMainSigHandler();

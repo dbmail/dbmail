@@ -8,6 +8,7 @@
 #include "config.h"
 #endif
 
+#include "dbmail.h"
 #include "dbsearch.h"
 #include "db.h"
 #include "mysql.h"
@@ -58,7 +59,7 @@ int db_search(int *rset, int setlen, const char *key, mailbox_t *mb)
   memset(rset, 0, setlen * sizeof(int));
 
   snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr FROM messages WHERE mailbox_idnr = %llu "
-	   "AND status<2 AND unique_id!=\"\" AND %s", mb->uid, key);
+	   "AND status<%u AND unique_id!=\"\" AND %s", mb->uid, STATUS_DELETE, key);
 
   if (db_query(query) == -1)
     {
@@ -295,9 +296,9 @@ int db_search_messages(char **search_keys, u64_t **search_results, int *nsresult
   trace(TRACE_WARNING,"\n");
 
   qidx = snprintf(query, DEF_QUERYSIZE,
-		  "SELECT message_idnr FROM messages WHERE mailbox_idnr = %llu AND status<2 "
+		  "SELECT message_idnr FROM messages WHERE mailbox_idnr = %llu AND status<%u "
 		  "AND unique_id!=\"\"",
-		  mboxid);
+		  mboxid, STATUS_DELETE);
 
   i = 0;
   while (search_keys[i])

@@ -252,6 +252,7 @@ int PerformChildTask(ChildInfo_t *info)
       return -1;
     }
 
+  srand((int) ((int) time(NULL) + (int) getpid()) );
   connected = 1;
 
   for (i=0; i<info->maxConnect && !ChildStopRequested; i++)
