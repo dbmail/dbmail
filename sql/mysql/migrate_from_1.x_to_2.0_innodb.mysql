@@ -55,7 +55,7 @@ ALTER TABLE dbmail_mailboxes
 	ADD UNIQUE INDEX name_owner_idnr_index (owner_idnr, name),
 	ADD FOREIGN KEY owner_idnr_fk (owner_idnr) 
 		REFERENCES dbmail_users (user_idnr)
-		ON DELETE CASCADE;
+		ON DELETE CASCADE ON UPDATE CASCADE;
 
 DROP TABLE IF EXISTS dbmail_subscription;
 CREATE TABLE dbmail_subscription (
@@ -65,9 +65,9 @@ CREATE TABLE dbmail_subscription (
 	index (user_id),
 	index (mailbox_id),
 	FOREIGN KEY user_id_fk (user_id) 
-		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE,
+		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE,
 	FOREIGN KEY mailbox_id_fk (mailbox_id) 
-		REFERENCES dbmail_mailboxes (mailbox_idnr) ON DELETE CASCADE
+		REFERENCES dbmail_mailboxes (mailbox_idnr) ON DELETE CASCADE ON UPDATE CASCADE
 ) TYPE=InnoDB;
 
 # fill the subscription table
@@ -96,9 +96,9 @@ CREATE TABLE dbmail_acl (
 	INDEX (user_id),
 	INDEX (mailbox_id),
 	FOREIGN KEY user_id_fk (user_id) 
-		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE,	
+		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE,	
 	FOREIGN KEY mailbox_id_fk (mailbox_id) 
-		REFERENCES dbmail_mailboxes (mailbox_idnr) ON DELETE CASCADE
+		REFERENCES dbmail_mailboxes (mailbox_idnr) ON DELETE CASCADE ON UPDATE CASCADE
 ) TYPE=InnoDB;
 
 # physmessage table 
@@ -135,10 +135,10 @@ ALTER TABLE dbmail_messages
 	ADD INDEX status_index (status),
 	ADD FOREIGN KEY mailbox_idnr_fk (mailbox_idnr)
 		REFERENCES dbmail_mailboxes (mailbox_idnr)
-		ON DELETE CASCADE,
+		ON DELETE CASCADE ON UPDATE CASCADE,
 	ADD FOREIGN KEY physmessage_id_fk (physmessage_id)
 		REFERENCES dbmail_physmessage (id)
-		ON DELETE CASCADE;
+		ON DELETE CASCADE ON UPDATE CASCADE;
 
 # alter messageblks table
 RENAME TABLE messageblks TO dbmail_messageblks;
@@ -152,7 +152,7 @@ ALTER TABLE dbmail_messageblks
 	ADD INDEX physmessage_id_is_header_index (physmessage_id, is_header),
 	ADD FOREIGN KEY physmessage_id_fk (physmessage_id)
 		REFERENCES dbmail_physmessage (id)
-		ON DELETE CASCADE;
+		ON DELETE CASCADE ON UPDATE CASCADE;
 UPDATE dbmail_messageblks SET is_header = '0';
 
 # in DBMail 1.x, the auto_replies and auto_notifications tables where not
@@ -165,7 +165,7 @@ CREATE TABLE IF NOT EXISTS auto_notifications (
    notify_address VARCHAR(100),
    PRIMARY KEY (auto_notify_idnr),
    FOREIGN KEY (`user_idnr`) 
-		REFERENCES `dbmail_users`(`user_idnr`) ON DELETE CASCADE
+		REFERENCES `dbmail_users`(`user_idnr`) ON DELETE CASCADE ON UPDATE CASCADE
 ) TYPE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS auto_replies (
@@ -174,7 +174,7 @@ CREATE TABLE IF NOT EXISTS auto_replies (
    reply_body mediumtext,
    PRIMARY KEY (auto_reply_idnr),
    FOREIGN KEY (`user_idnr`) 
-		REFERENCES `dbmail_users`(`user_idnr`) ON DELETE CASCADE
+		REFERENCES `dbmail_users`(`user_idnr`) ON DELETE CASCADE ON UPDATE CASCADE
 ) TYPE=InnoDB;
 
 # Now we know that auto_notifications and auto_replies exist.

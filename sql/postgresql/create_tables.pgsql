@@ -49,7 +49,7 @@ CREATE UNIQUE INDEX dbmail_users_name_idx ON dbmail_users(userid);
 CREATE SEQUENCE dbmail_mailbox_idnr_seq;
 CREATE TABLE dbmail_mailboxes (
    mailbox_idnr INT8 DEFAULT nextval('dbmail_mailbox_idnr_seq'),
-   owner_idnr INT8 REFERENCES dbmail_users(user_idnr) ON DELETE CASCADE,
+   owner_idnr INT8 REFERENCES dbmail_users(user_idnr) ON DELETE CASCADE ON UPDATE CASCADE,
    name VARCHAR(100) NOT NULL,
    seen_flag INT2 DEFAULT '0' NOT NULL,
    answered_flag INT2 DEFAULT '0' NOT NULL,
@@ -68,16 +68,16 @@ CREATE UNIQUE INDEX dbmail_mailboxes_owner_name_idx
 	ON dbmail_mailboxes(owner_idnr, name);
 
 CREATE TABLE dbmail_subscription (
-   user_id INT8 REFERENCES dbmail_users(user_idnr) ON DELETE CASCADE,
+   user_id INT8 REFERENCES dbmail_users(user_idnr) ON DELETE CASCADE ON UPDATE CASCADE,
    mailbox_id INT8 REFERENCES dbmail_mailboxes(mailbox_idnr)
-	ON DELETE CASCADE,
+	ON DELETE CASCADE ON UPDATE CASCADE,
    PRIMARY KEY (user_id, mailbox_id)
 );
 
 CREATE TABLE dbmail_acl (
-    user_id INT8 REFERENCES dbmail_users(user_idnr) ON DELETE CASCADE,
+    user_id INT8 REFERENCES dbmail_users(user_idnr) ON DELETE CASCADE ON UPDATE CASCADE,
     mailbox_id INT8 REFERENCES dbmail_mailboxes(mailbox_idnr)
-	ON DELETE CASCADE,
+	ON DELETE CASCADE ON UPDATE CASCADE,
     lookup_flag INT2 DEFAULT '0' NOT NULL,
     read_flag INT2 DEFAULT '0' NOT NULL,
     seen_flag INT2 DEFAULT '0' NOT NULL,
@@ -103,9 +103,9 @@ CREATE SEQUENCE dbmail_message_idnr_seq;
 CREATE TABLE dbmail_messages (
    message_idnr INT8 DEFAULT nextval('dbmail_message_idnr_seq'),
    mailbox_idnr INT8 REFERENCES dbmail_mailboxes(mailbox_idnr)
-	ON DELETE CASCADE,
+	ON DELETE CASCADE ON UPDATE CASCADE,
    physmessage_id INT8 REFERENCES dbmail_physmessage(id)
-	ON DELETE CASCADE,
+	ON DELETE CASCADE ON UPDATE CASCADE,
    seen_flag INT2 DEFAULT '0' NOT NULL,
    answered_flag INT2 DEFAULT '0' NOT NULL,
    deleted_flag INT2 DEFAULT '0' NOT NULL,
@@ -131,7 +131,7 @@ CREATE SEQUENCE dbmail_messageblk_idnr_seq;
 CREATE TABLE dbmail_messageblks (
    messageblk_idnr INT8 DEFAULT nextval('dbmail_messageblk_idnr_seq'),
    physmessage_id INT8 REFERENCES dbmail_physmessage(id)
-	ON DELETE CASCADE,
+	ON DELETE CASCADE ON UPDATE CASCADE,
    messageblk TEXT NOT NULL,
    blocksize INT8 DEFAULT '0' NOT NULL,
    is_header INT2 DEFAULT '0' NOT NULL,
@@ -143,13 +143,13 @@ CREATE INDEX dbmail_messageblks_physmessage_is_header_idx
 	ON dbmail_messageblks(physmessage_id, is_header);
 
 CREATE TABLE dbmail_auto_notifications (
-   user_idnr INT8 REFERENCES dbmail_users(user_idnr) ON DELETE CASCADE,
+   user_idnr INT8 REFERENCES dbmail_users(user_idnr) ON DELETE CASCADE ON UPDATE CASCADE,
    notify_address VARCHAR(100),
    PRIMARY KEY (user_idnr)
 );
 
 CREATE TABLE dbmail_auto_replies (
-   user_idnr INT8 REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE,
+   user_idnr INT8 REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE,
    reply_body TEXT,
    PRIMARY KEY (user_idnr)
 );

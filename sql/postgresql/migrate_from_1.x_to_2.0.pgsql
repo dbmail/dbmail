@@ -87,8 +87,8 @@ CREATE UNIQUE INDEX dbmail_mailboxes_owner_name_idx
 
 -- create the subscription table.
 CREATE TABLE dbmail_subscription (
-   user_id INT8 REFERENCES dbmail_users(user_idnr) ON DELETE CASCADE,
-   mailbox_id INT8 REFERENCES dbmail_mailboxes(mailbox_idnr) ON DELETE CASCADE,
+   user_id INT8 REFERENCES dbmail_users(user_idnr) ON DELETE CASCADE ON UPDATE CASCADE,
+   mailbox_id INT8 REFERENCES dbmail_mailboxes(mailbox_idnr) ON DELETE CASCADE ON UPDATE CASCADE,
    PRIMARY KEY (user_id, mailbox_id)
 );
 
@@ -104,9 +104,9 @@ ALTER TABLE dbmail_mailboxes DROP COLUMN is_subscribed;
 
 -- the dbmail_acl table is completely new in 2.0
 CREATE TABLE dbmail_acl (
-    user_id INT8 REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE,
+    user_id INT8 REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE,
     mailbox_id INT8 REFERENCES dbmail_mailboxes (mailbox_idnr) 
-	ON DELETE CASCADE,
+	ON DELETE CASCADE ON UPDATE CASCADE,
     lookup_flag INT2 DEFAULT '0' NOT NULL,
     read_flag INT2 DEFAULT '0' NOT NULL,
     seen_flag INT2 DEFAULT '0' NOT NULL,
@@ -155,7 +155,7 @@ UPDATE dbmail_messages SET physmessage_id = message_idnr;
 ALTER TABLE dbmail_messages ALTER COLUMN physmessage_id
 	SET NOT NULL;
 ALTER TABLE dbmail_messages ADD FOREIGN KEY (physmessage_id) 
-	REFERENCES dbmail_physmessage(id) ON DELETE CASCADE;
+	REFERENCES dbmail_physmessage(id) ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE dbmail_messages DROP COLUMN messagesize;
 ALTER TABLE dbmail_messages DROP COLUMN rfcsize;
 ALTER TABLE dbmail_messages DROP COLUMN internal_date;
@@ -190,7 +190,7 @@ CREATE INDEX dbmail_messageblks_physmessage_idx ON
 CREATE INDEX dbmail_messageblks_physmessage_is_header_idx 
 	ON dbmail_messageblks(physmessage_id, is_header);
 ALTER TABLE dbmail_messageblks ADD FOREIGN KEY (physmessage_id) 
-	REFERENCES dbmail_physmessage (id) ON DELETE CASCADE;
+	REFERENCES dbmail_physmessage (id) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- alter the auto_notifications table
 DROP SEQUENCE auto_notification_seq;
@@ -198,7 +198,7 @@ ALTER TABLE auto_notifications RENAME TO dbmail_auto_notifications;
 ALTER TABLE dbmail_auto_notifications DROP COLUMN auto_notify_idnr;
 ALTER TABLE dbmail_auto_notifications ADD PRIMARY KEY (user_idnr);
 ALTER TABLE dbmail_auto_notifications ADD FOREIGN KEY (user_idnr)
-	REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE;
+	REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- alter the auto_replies table
 DROP SEQUENCE auto_reply_seq;
@@ -206,7 +206,7 @@ ALTER TABLE auto_replies RENAME TO dbmail_auto_replies;
 ALTER TABLE dbmail_auto_replies DROP COLUMN auto_reply_idnr;
 ALTER TABLE dbmail_auto_replies ADD PRIMARY KEY (user_idnr);
 ALTER TABLE dbmail_auto_replies ADD FOREIGN KEY (user_idnr)
-	REFERENCES dbmail_users(user_idnr) ON DELETE CASCADE;
+	REFERENCES dbmail_users(user_idnr) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- alter the pbsp (pop-before-smtp) table
 CREATE SEQUENCE dbmail_pbsp_idnr_seq;

@@ -1,3 +1,9 @@
+2005-02-14  Paul Stevens <paul@nfg.nl>
+
+	* create_tables_innoDB.mysql, create_tables.pgsql, migrate_from_1.x_to_2.0.mysql, 
+	migratie_from_1.x_to_2.0.pgsql: added ON UPDATE CASCADE to all foreign keys.
+
+
 2005-02-07  Paul Stevens <paul@nfg.nl>
 
 	* auth.h, auth/authsql.c, auth/authldap.c: first wave of authldap

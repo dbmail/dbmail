@@ -70,7 +70,7 @@ CREATE TABLE dbmail_mailboxes (
 	INDEX owner_idnr_index (owner_idnr),
 	UNIQUE INDEX owner_idnr_name_index (owner_idnr, name),
 	FOREIGN KEY owner_idnr_fk (owner_idnr) 
-		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE
+		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE
 ) TYPE=InnoDB;
 
 DROP TABLE IF EXISTS dbmail_subscription;
@@ -81,9 +81,9 @@ CREATE TABLE dbmail_subscription (
 	index user_id_index (user_id),
 	index mailbox_id_index (mailbox_id),
 	FOREIGN KEY user_id_fk (user_id) 
-		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE,
+		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE,
 	FOREIGN KEY mailbox_id_fk (mailbox_id) 
-		REFERENCES dbmail_mailboxes (mailbox_idnr) ON DELETE CASCADE
+		REFERENCES dbmail_mailboxes (mailbox_idnr) ON DELETE CASCADE ON UPDATE CASCADE
 ) TYPE=InnoDB;
 
 
@@ -104,9 +104,9 @@ CREATE TABLE dbmail_acl (
 	INDEX user_id_index (user_id),
 	INDEX mailbox_id_index (mailbox_id),
 	FOREIGN KEY user_id_fk (user_id) 
-		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE,	
+		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE,
 	FOREIGN KEY mailbox_id_fk (mailbox_id) 
-		REFERENCES dbmail_mailboxes (mailbox_idnr) ON DELETE CASCADE
+		REFERENCES dbmail_mailboxes (mailbox_idnr) ON DELETE CASCADE ON UPDATE CASCADE
 ) TYPE=InnoDB;
 
 	
@@ -140,9 +140,9 @@ CREATE TABLE dbmail_messages (
 	INDEX status_index (status),
 	INDEX mailbox_status (mailbox_idnr, status),
 	FOREIGN KEY physmessage_id_fk (physmessage_id) 
-		REFERENCES dbmail_physmessage (id) ON DELETE CASCADE,
+		REFERENCES dbmail_physmessage (id) ON DELETE CASCADE ON UPDATE CASCADE,
 	FOREIGN KEY mailbox_idnr_fk (mailbox_idnr) 
-		REFERENCES dbmail_mailboxes (mailbox_idnr) ON DELETE CASCADE
+		REFERENCES dbmail_mailboxes (mailbox_idnr) ON DELETE CASCADE ON UPDATE CASCADE
 ) TYPE=InnoDB;
 
 DROP TABLE IF EXISTS dbmail_messageblks;
@@ -156,7 +156,7 @@ CREATE TABLE dbmail_messageblks (
 	INDEX physmessage_id_index (physmessage_id),
 	INDEX physmessage_id_is_header_index (physmessage_id, is_header),
 	FOREIGN KEY physmessage_id_fk (physmessage_id) 
-		REFERENCES dbmail_physmessage (id) ON DELETE CASCADE
+		REFERENCES dbmail_physmessage (id) ON DELETE CASCADE ON UPDATE CASCADE
 ) TYPE=InnoDB;
 
 DROP TABLE IF EXISTS dbmail_auto_notifications;
@@ -165,7 +165,7 @@ CREATE TABLE dbmail_auto_notifications (
 	notify_address VARCHAR(100) NOT NULL,
 	INDEX user_idnr_index (user_idnr),
 	FOREIGN KEY user_idnr_fk (user_idnr) 
-		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE
+		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE
 ) TYPE=InnoDB;
 
 DROP TABLE IF EXISTS dbmail_auto_replies;
@@ -174,7 +174,7 @@ CREATE TABLE dbmail_auto_replies (
    	reply_body mediumtext,
 	INDEX user_idnr_index (user_idnr),
 	FOREIGN KEY user_idnr_fk (user_idnr) 
-		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE
+		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE
 ) TYPE=InnoDB;
 
 DROP TABLE IF EXISTS dbmail_pbsp;
