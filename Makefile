@@ -3,7 +3,7 @@
 #! /bin/sh
 
 
-SMTP_OBJECTS = list.o debug.o pipe.o mime.o dbmysql.o misc.o dbmd5.o md5.o
+SMTP_OBJECTS = list.o debug.o pipe.o mime.o dbmysql.o misc.o dbmd5.o md5.o bounce.o
 POP_OBJECTS = pop3.o list.o debug.o dbmysql.o dbmd5.o md5.o
 IMAP_OBJECTS = imap4.o debug.o dbmysql.o serverservice.o list.o dbmd5.o md5.o
 CC = cc
@@ -39,6 +39,7 @@ dbmysql.o:dbmysql.h dbmd5.h
 misc.o:misc.h
 pop3.o:pop3.h
 dbmd5.o:dbmd5.h md5.h
+bounce.o:bounce.h
 imap4.o: imap4.h dbmysql.h debug.h serverservice.h
 serverservice.o: serverservice.h debug.h
 
