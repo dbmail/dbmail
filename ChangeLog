@@ -1,3 +1,9 @@
+2004-12-12  Paul Stevens <paul@nfg.nl>
+
+	* imapcommands.c (_ic_copy): added transactional support
+	* imapcommands.c: refactored several functions to remove duplicate
+	code.
+
 2004-12-10  Paul Stevens <paul@nfg.nl>
 
 	* dbmail-imapsession.c, imapcommands.c: added full logging of imap
