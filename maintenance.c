@@ -115,6 +115,8 @@ int main(int argc, char *argv[])
 
 
   /* second part */
+  printf ("Now checking DBMAIL message integrity.. ");
+
   if (db_icheck_messages(&nlost, &lostlist) < 0)
     {
       printf ("Failed. An error occured. Please check log.\n");
@@ -152,6 +154,8 @@ int main(int argc, char *argv[])
 
 
   /* third part */
+  printf ("Now checking DBMAIL mailbox integrity.. ");
+
   if (db_icheck_mailboxes(&nlost, &lostlist) < 0)
     {
       printf ("Failed. An error occured. Please check log.\n");
