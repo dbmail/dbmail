@@ -657,7 +657,7 @@ int db_insert_message(u64_t user_idnr,
 		 "%smessages(mailbox_idnr, physmessage_id, unique_id,"
 		 "recent_flag, status) "
 		 "VALUES ('%llu', '%llu', '%s', '1', '%d')",
-		 DBPFX, mailboxid, physmessage_id, unique_id ? unique_id : "",
+		 DBPFX, mailboxid, physmessage_id, unique_id,
 		 MESSAGE_STATUS_INSERT);
 	if (db_query(query) == -1) {
 		trace(TRACE_STOP, "%s,%s: query failed", __FILE__,
@@ -670,6 +670,8 @@ int db_insert_message(u64_t user_idnr,
 
 int db_message_set_unique_id(u64_t message_idnr, const char *unique_id)
 {
+	assert(unique_id);
+	
 	snprintf(query, DEF_QUERYSIZE,
 		 "UPDATE %smessages SET unique_id = '%s', status = '%d' "
 		 "WHERE message_idnr = '%llu'", DBPFX, unique_id, MESSAGE_STATUS_NEW,
@@ -704,6 +706,7 @@ int db_physmessage_set_sizes(u64_t physmessage_id, u64_t message_size,
 int db_update_message(u64_t message_idnr, const char *unique_id,
 		      u64_t message_size, u64_t rfc_size)
 {
+	assert(unique_id);
 	u64_t physmessage_id = 0;
 
 	if (db_message_set_unique_id(message_idnr, unique_id) < 0) {
@@ -1592,10 +1595,8 @@ int db_createsession(u64_t user_idnr, PopSession_t * session_ptr)
 		return -1;
 	}
 	/* query is < MESSAGE_STATUS_DELETE  because we don't want deleted 
-	 * messages the unique_id should not be empty, this could mean 
-	 * that the message is still being delivered
-	 * FIME: unique id's aren't empty anymore on delivery! Remove
-	 * from query */
+	 * messages
+	 */
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT pm.messagesize, msg.message_idnr, msg.status, "
 		 "msg.unique_id FROM %smessages msg, %sphysmessage pm "
