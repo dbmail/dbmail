@@ -24,3 +24,5 @@ libauthdbmail_la_SOURCES = authldap.c
 else
 libauthdbmail_la_SOURCES = authsql.c
 endif
+
+libauthdbmail_la_LIBADD = -lcrypt

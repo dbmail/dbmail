@@ -113,6 +113,8 @@ AM_CFLAGS = -fomit-frame-pointer
 pkglib_LTLIBRARIES = libauthdbmail.la
 @LDAP_TRUE@libauthdbmail_la_SOURCES = authldap.c
 @LDAP_FALSE@libauthdbmail_la_SOURCES = authsql.c
+
+libauthdbmail_la_LIBADD = -lcrypt
 mkinstalldirs = $(SHELL) $(top_srcdir)/buildtools/mkinstalldirs
 CONFIG_HEADER = ../config.h
 CONFIG_CLEAN_FILES = 
@@ -124,7 +126,7 @@ CPPFLAGS = @CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
 libauthdbmail_la_LDFLAGS = 
-libauthdbmail_la_LIBADD = 
+libauthdbmail_la_DEPENDENCIES = 
 @LDAP_FALSE@libauthdbmail_la_OBJECTS =  authsql.lo
 @LDAP_TRUE@libauthdbmail_la_OBJECTS =  authldap.lo
 CFLAGS = @CFLAGS@
