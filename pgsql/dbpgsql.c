@@ -25,9 +25,9 @@ PGresult *res;
 PGresult *checkres;
 
 char *query = 0;
-char *value = NULL; /* used for PQgetvalue */
 
-char *row; /* temporary for error supression */
+char *value = NULL; /* used for PQgetvalue */
+unsigned long PQcounter = 0; /* used for PQgetvalue loops */
 
 /*
  * queries to create/drop temporary tables
@@ -100,7 +100,7 @@ u64_t db_insert_result (char *sequence_identifier)
     
     snprintf (query, DEF_QUERYSIZE,"SELECT currval('%s_seq');",sequence_identifier);
     
-    db_query (query);
+    db_query (query, res);
 
     if (PQresultStatus(res) != PGRES_TUPLES_OK)
         {
@@ -113,7 +113,7 @@ u64_t db_insert_result (char *sequence_identifier)
 }
 
 
-int db_query (const char *thequery)
+int db_query (const char *thequery, PGresult *target_result)
 {
     unsigned int querysize = 0;
     int PQresultStatusVar;
@@ -124,27 +124,27 @@ int db_query (const char *thequery)
 
         if (querysize > 0 )
         {
-        res = PQexec (conn, thequery);
-        PQresultStatusVar = PQresultStatus (res);
+        target_result = PQexec (conn, thequery);
+        PQresultStatusVar = PQresultStatus (target_result);
 
         switch (PQresultStatusVar)
             {
                 case PGRES_BAD_RESPONSE:
                 {
                     trace (TRACE_ERROR,"db_query(): postgresql error: BAD_RESPONSE");
-                    PQclear (res);
+                    PQclear (target_result);
                     return -1;
                 }
                 case PGRES_NONFATAL_ERROR:
                 {
                     trace (TRACE_ERROR,"db_query(): postgresql error: NONFATAL_ERROR");
-                    PQclear (res);
+                    PQclear (target_result);
                     return -1;
                 }
                 case PGRES_FATAL_ERROR:
                 {
                     trace (TRACE_ERROR,"db_query(): postgresql error: FATAL_ERROR");
-                    PQclear (res);
+                    PQclear (target_result);
                     return -1;
                 }
             }
@@ -169,7 +169,7 @@ int db_query (const char *thequery)
  */
 int db_clear_config()
 {
-  return db_query("DELETE FROM config");
+  return db_query("DELETE FROM config", res);
 }
 
 
@@ -180,7 +180,7 @@ int db_insert_config_item (char *item, char *val)
   snprintf (query, DEF_QUERYSIZE,"INSERT INTO config (item,value) VALUES ('%s', '%s')",item, val);
   trace (TRACE_DEBUG,"insert_config_item(): executing query: [%s]",query);
 
-  if (db_query(query)==-1)
+  if (db_query(query, res)==-1)
     {
       trace (TRACE_DEBUG,"insert_config_item(): item [%s] value [%s] failed",item,value);
       return -1;
@@ -201,7 +201,7 @@ char *db_get_config_item (char *item, int type)
   trace (TRACE_DEBUG,"db_get_config_item(): retrieving config_item %s by query %s\n",
 	 item, query);
 
-  if (db_query(query)==-1)
+  if (db_query(query, res)==-1)
     {
       if (type == CONFIG_MANDATORY)
 	trace (TRACE_FATAL,"db_get_config_item(): query failed could not get value for %s. "
@@ -249,7 +249,7 @@ int db_addalias (u64_t useridnr, char *alias, int clientid)
 	
   trace (TRACE_DEBUG,"db_addalias(): executing query for user: [%s]", query);
 
-  if (db_query(query) == -1)
+  if (db_query(query, res) == -1)
     {
       /* query failed */
       trace (TRACE_ERROR, "db_addalias(): query for adding alias failed : [%s]", query);
@@ -265,7 +265,7 @@ int db_removealias (u64_t useridnr,const char *alias)
   snprintf (query, DEF_QUERYSIZE,
 	    "DELETE FROM aliases WHERE deliver_to=%llu AND alias = '%s'", useridnr, alias);
 	   
-  if (db_query(query) == -1)
+  if (db_query(query, res) == -1)
     {
       /* query failed */
       trace (TRACE_ERROR, "db_removealias(): query for removing alias failed : [%s]", query);
@@ -284,14 +284,12 @@ u64_t db_get_inboxid (u64_t *useridnr)
   /* returns the mailbox id (of mailbox inbox) for a user or a 0 if no mailboxes were found */
   u64_t inboxid;
 
-  snprintf (query, DEF_QUERYSIZE,"SELECT mailboxidnr FROM mailbox WHERE name='INBOX' AND owneridnr=%llu",
+  snprintf (query, DEF_QUERYSIZE,"SELECT mailbox_idnr FROM mailboxes WHERE name='INBOX' AND owner_idnr=%llu",
 	   *useridnr);
 
   trace(TRACE_DEBUG,"db_get_inboxid(): executing query : [%s]",query);
-  if (db_query(query)==-1)
-    {
+  if (db_query(query, res)==-1)
       return 0;
-    }
 
   if (PQntuples(res)<1) 
     {
@@ -315,11 +313,11 @@ u64_t db_get_message_mailboxid (u64_t *messageidnr)
   /* returns the mailbox id of a message */
   u64_t mailboxid;
   
-  snprintf (query, DEF_QUERYSIZE,"SELECT mailboxidnr FROM message WHERE messageidnr = %llu",
+  snprintf (query, DEF_QUERYSIZE,"SELECT mailbox_idnr FROM messages WHERE message_idnr = %llu",
 	   *messageidnr);
 
   trace(TRACE_DEBUG,"db_get_message_mailboxid(): executing query : [%s]",query);
-  if (db_query(query)==-1)
+  if (db_query(query, res)==-1)
     {
       return 0;
     }
@@ -349,11 +347,11 @@ u64_t db_get_useridnr (u64_t messageidnr)
   u64_t mailboxidnr;
   u64_t userid;
   
-  snprintf (query, DEF_QUERYSIZE,"SELECT mailboxidnr FROM message WHERE messageidnr = %llu",
+  snprintf (query, DEF_QUERYSIZE,"SELECT mailbox_idnr FROM messages WHERE message_idnr = %llu",
 	   messageidnr);
 
   trace(TRACE_DEBUG,"db_get_useridnr(): executing query : [%s]",query);
-  if (db_query(query)==-1)
+  if (db_query(query, res)==-1)
     {
       return 0;
     }
@@ -373,10 +371,10 @@ u64_t db_get_useridnr (u64_t messageidnr)
   if (mailboxidnr == -1)
       return 0;
   
-  snprintf (query, DEF_QUERYSIZE, "SELECT owneridnr FROM mailbox WHERE mailboxidnr = %llu",
+  snprintf (query, DEF_QUERYSIZE, "SELECT owner_idnr FROM mailboxes WHERE mailbox_idnr = %llu",
 	   mailboxidnr);
 
-  if (db_query(query)==-1)
+  if (db_query(query, res)==-1)
       return 0;
 
   if (PQntuples(res)<1) 
@@ -408,17 +406,17 @@ u64_t db_insert_message (u64_t *useridnr)
   tm = *localtime(&td);   /* get components */
   strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
   
-  snprintf (query, DEF_QUERYSIZE,"INSERT INTO message(mailboxidnr,messagesize,unique_id,internal_date)"
+  snprintf (query, DEF_QUERYSIZE,"INSERT INTO messages(mailbox_idnr,messagesize,unique_id,internal_date)"
 	   " VALUES (%llu,0,\" \",\"%s\")",
 	   db_get_inboxid(useridnr), timestr);
 
   trace (TRACE_DEBUG,"db_insert_message(): inserting message query [%s]",query);
-  if (db_query (query)==-1)
+  if (db_query (query, res)==-1)
     {
       trace(TRACE_STOP,"db_insert_message(): dbquery failed");
     }	
   
-  return db_insert_result(mailbox_idnr);
+  return db_insert_result("mailbox_idnr");
 }
 
 
@@ -426,16 +424,12 @@ u64_t db_update_message (u64_t *messageidnr, char *unique_id,
 		u64_t messagesize)
 {
   snprintf (query, DEF_QUERYSIZE,
-	   "UPDATE message SET messagesize=%llu, unique_id=\"%s\" where messageidnr=%llu",
+	   "UPDATE messages SET messagesize=%llu, unique_id=\"%s\" where message_idnr=%llu",
 	   messagesize, unique_id, *messageidnr);
   
   trace (TRACE_DEBUG,"db_update_message(): updating message query [%s]",query);
-  if (db_query (query)==-1)
-    {
-      
+  if (db_query (query, res)==-1)
       trace(TRACE_STOP,"db_update_message(): dbquery failed");
-    }
-	
   
   return 0;
 }
@@ -463,17 +457,17 @@ u64_t db_insert_message_block (char *block, int messageidnr)
       memtst((escblk=(char *)my_malloc(((len*2)+250)))==NULL); 
 
       /* escape the string */
-      if ((esclen = mysql_escape_string(escblk, block, len)) > 0)
+      if ((esclen = PQescapeString (escblk, block, len)) > 0)
 	{
 	  /* add an extra 500 characters for the query */
 	  memtst((tmpquery=(char *)my_malloc(esclen + 500))==NULL);
 	
 	  snprintf (tmpquery, esclen+500,
-		   "INSERT INTO messageblk(messageblk,blocksize,messageidnr) "
+		   "INSERT INTO messageblks(messageblk,blocksize,message_idnr) "
 		   "VALUES (\"%s\",%d,%d)",
 		   escblk,len,messageidnr);
 
-	  if (db_query (tmpquery)==-1)
+	  if (db_query (tmpquery, res)==-1)
 	    {
 	      my_free(escblk);
 	      my_free(tmpquery);
@@ -484,11 +478,11 @@ u64_t db_insert_message_block (char *block, int messageidnr)
 	  /* freeing buffers */
 	  my_free(tmpquery);
 	  my_free(escblk);
-	  return db_insert_result();
+	  return db_insert_result("messageblk_idnr");
 	}
       else
 	{
-	  trace (TRACE_ERROR,"db_insert_message_block(): mysql_real_escape_string() "
+	  trace (TRACE_ERROR,"db_insert_message_block(): PQescapeString() "
 		 "returned empty value\n");
 
 	  my_free(escblk);
@@ -523,25 +517,20 @@ int db_get_user_aliases(u64_t userid, struct list *aliases)
   snprintf(query, DEF_QUERYSIZE, "SELECT alias FROM aliases WHERE deliver_to = '%llu' ORDER BY alias "
 	   "DESC", userid);
 
-  if (db_query(query) == -1)
+  if (db_query(query, res) == -1)
     {
       trace(TRACE_ERROR,"db_get_user_aliases(): could not retrieve  list\n");
       return -1;
     }
 
-  if ((res = mysql_store_result(&conn)) == NULL) 
+    for (PQcounter=0; PQcounter < PQntuples(res); PQcounter++)
     {
-      trace(TRACE_ERROR,"db_get_user_aliases(): mysql_store_result failed: %s",mysql_error(&conn));
-      return -1;
-    }
-  
-  while ((row = mysql_fetch_row(res)))
-    {
-      if (!list_nodeadd(aliases, row[0], strlen(row[0])+1))
-	{
-	  list_freelist(&aliases->start);
-	  return -2;
-	}
+        value = PQgetvalue (res, PQcounter, 0);
+        if (!list_nodeadd(aliases, value, strlen(value)+1))
+        {
+        list_freelist(&aliases->start);
+        return -2;
+        }
     }
       
   PQclear(res);
@@ -571,33 +560,28 @@ int db_send_message_lines (void *fstream, u64_t messageidnr, long lines, int no_
   memtst ((buffer=(char *)my_malloc(READ_BLOCK_SIZE*2))==NULL);
 
   snprintf (query, DEF_QUERYSIZE, 
-	    "SELECT * FROM messageblk WHERE messageidnr=%llu ORDER BY messageblknr ASC",
+	    "SELECT * FROM messageblks WHERE messageidnr=%llu ORDER BY messageblk_idnr ASC",
 	   messageidnr);
   trace (TRACE_DEBUG,"db_send_message_lines(): executing query [%s]",query);
 
-  if (db_query(query)==-1)
+  if (db_query(query, res)==-1)
     {
       my_free(buffer);
       return 0;
     }
 
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace(TRACE_ERROR,"db_send_message_lines: mysql_store_result failed: %s",mysql_error(&conn));
-      my_free(buffer);
-      return 0;
-    }
-  
   trace (TRACE_DEBUG,"db_send_message_lines(): sending [%d] lines from message [%llu]",
 	 lines,messageidnr);
   
   block_count=0;
 
-  while (((row = mysql_fetch_row(res))!=NULL) && ((lines>0) || (lines==-2) || (block_count==0)))
+  PQcounter = 0;
+
+  while (PQcounter<PQntuples(res)) && ((lines>0) || (lines==-2) || (block_count==0)))
   {
-      nextpos = row[2];
-      lengths = mysql_fetch_lengths(res);
-      rowlength = lengths[2];
+      value = PQgetvalue (res, PQcounter, 2);
+      nextpos = value;
+      rowlength = PQgetlength(res, PQcounter, 2);
 		
       /* reset our buffer */
       memset (buffer, '\0', (READ_BLOCK_SIZE)*2);
@@ -667,6 +651,9 @@ int db_send_message_lines (void *fstream, u64_t messageidnr, long lines, int no_
       /* fprintf ((FILE *)fstream,"%s",buffer); */
       fwrite (buffer, sizeof(char), strlen(buffer), (FILE *)fstream);
       /* fflush ((FILE *)fstream); */
+
+    PQcounter++;
+      
   }
 
   /* delimiter */
@@ -702,26 +689,16 @@ int db_createsession (u64_t useridnr, struct session *sessionptr)
   /* first we do a query on the messages of this user */
   struct message tmpmessage;
   u64_t messagecounter=0;
-	
   
   /* query is <2 because we don't want deleted messages 
    * the unique_id should not be empty, this could mean that the message is still being delivered */
-  snprintf (query, DEF_QUERYSIZE, "SELECT * FROM message WHERE mailboxidnr=%llu AND status<002 AND "
+  snprintf (query, DEF_QUERYSIZE, "SELECT * FROM messages WHERE mailbox_idnr=%llu AND status<002 AND "
 	   "unique_id!=\"\" order by status ASC",
 	   (db_get_inboxid(&useridnr)));
 
-  if (db_query(query)==-1)
-    {
+  if (db_query(query, res)==-1)
       return -1;
-    }
 
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace (TRACE_ERROR,"db_createsession(): mysql_store_result failed:  %s",mysql_error(&conn));
-      
-      return -1;
-    }
-		
   sessionptr->totalmessages=0;
   sessionptr->totalsize=0;
 
@@ -729,7 +706,6 @@ int db_createsession (u64_t useridnr, struct session *sessionptr)
   if ((messagecounter=PQntuples(res))<1)
     {
       /* there are no messages for this user */
-      
       PQclear(res);
       return 1;
     }
@@ -740,14 +716,15 @@ int db_createsession (u64_t useridnr, struct session *sessionptr)
   /* filling the list */
 	
   trace (TRACE_DEBUG,"db_createsession(): adding items to list");
-  while ((row = mysql_fetch_row(res))!=NULL)
+  for (PQcounter = 0; PQcounter < PQntuples(res); PQcounter++)
     {
-      tmpmessage.msize=atol(row[MESSAGE_MESSAGESIZE]);
-      tmpmessage.realmessageid=atol(row[MESSAGE_MESSAGEIDNR]);
-      tmpmessage.messagestatus=atoi(row[MESSAGE_STATUS]);
-      strncpy(tmpmessage.uidl,row[MESSAGE_UNIQUE_ID],UID_SIZE);
+      tmpmessage.msize=atol(PQgetvalue(res, PQcounter, 2));
+      tmpmessage.realmessageid=atol(PQgetvalue (res, PQcounter, 0));
+      tmpmessage.messagestatus=atol(PQgetvalue (res, PQcounter, 11));
+      value = PQgetvalue (res, PQcounter, 9);
+      strncpy(tmpmessage.uidl, value, strlen(value)+1);
 		
-      tmpmessage.virtual_messagestatus=atoi(row[MESSAGE_STATUS]);
+      tmpmessage.virtual_messagestatus=tmpmessage.messagestatus;
 		
       sessionptr->totalmessages+=1;
       sessionptr->totalsize+=tmpmessage.msize;
@@ -773,8 +750,6 @@ int db_update_pop (struct session *sessionptr)
 {
   
   struct element *tmpelement;
-		
-  
 
   /* get first element in list */
   tmpelement=list_getstart(&sessionptr->messagelst);
@@ -788,7 +763,7 @@ int db_update_pop (struct session *sessionptr)
 	{
 	  /* yes they need an update, do the query */
 	  snprintf (query,DEF_QUERYSIZE,
-		    "UPDATE message set status=%llu WHERE messageidnr=%llu AND status<002",
+		    "UPDATE messages set status=%llu WHERE message_idnr=%llu AND status<002",
 		   ((struct message *)tmpelement->data)->virtual_messagestatus,
 		   ((struct message *)tmpelement->data)->realmessageid);
 	
@@ -797,10 +772,9 @@ int db_update_pop (struct session *sessionptr)
 	   * we need a check if the query failes because it doesn't exists anymore
 	   * now it will just bailout */
 	
-	  if (db_query(query)==-1)
+	  if (db_query(query, res)==-1)
 	    {
-	      trace(TRACE_ERROR,"db_update_pop(): could not execute query: []");
-	      
+	      trace(TRACE_ERROR,"db_update_pop(): could not execute query: [%s]", query);
 	      return -1;
 	    }
 	}
@@ -812,50 +786,38 @@ int db_update_pop (struct session *sessionptr)
 
 u64_t db_check_mailboxsize (u64_t mailboxid)
 {
-  MYSQL_RES *localres;
-  MYSQL_ROW localrow;
+  PGresult *localres;
   
   /* checks the size of a mailbox */
   u64_t size;
 
   /* checking current size */
   snprintf (query, DEF_QUERYSIZE,
-	    "SELECT SUM(messagesize) FROM message WHERE mailboxidnr = %llu AND status<002",
+	    "SELECT SUM(messagesize) FROM messages WHERE mailbox_idnr = %llu AND status<002",
 	   mailboxid);
 
   trace (TRACE_DEBUG,"db_check_mailboxsize(): executing query [%s]\n",
 	 query);
 
-  if (db_query(query) != 0)
+  if (db_query(query, localres) != 0)
     {
       trace (TRACE_ERROR,"db_check_mailboxsize(): could not execute query [%s]\n",
 	     query);
-      
       return -1;
     }
   
-  if ((localres = mysql_store_result(&conn)) == NULL)
-    {
-      trace (TRACE_ERROR,"db_check_mailboxsize(): mysql_store_result failed: %s\n",
-	     mysql_error(&conn));
-      
-      return -1;
-    }
-
   if (PQntuples(localres)<1)
     {
       trace (TRACE_ERROR,"db_check_mailboxsize(): weird, cannot execute SUM query\n");
-
       PQclear(localres);
       return 0;
     }
 
-  localrow = mysql_fetch_row(localres);
+  localrow = PQgetvalue (localres, 0, 1);
 
-  size = (localrow && localrow[0]) ? strtoul(localrow[0], NULL, 10) : 0;
+  size = (localrow) ? strtoul(localrow, NULL, 10) : 0;
   PQclear(localres);
   
-
   return size;
 }
 
@@ -875,39 +837,29 @@ u64_t db_check_sizelimit (u64_t addblocksize, u64_t messageidnr,
   *useridnr = db_get_useridnr (messageidnr);
 	
   /* checking current size */
-  snprintf (query, DEF_QUERYSIZE,"SELECT mailboxidnr FROM mailbox WHERE owneridnr = %llu",
+  snprintf (query, DEF_QUERYSIZE,"SELECT mailbox_idnr FROM mailboxes WHERE owner_idnr = %llu",
 	   *useridnr);
 
 
-  if (db_query(query) != 0)
+  if (db_query(query, res) != 0)
     {
       trace (TRACE_ERROR,"db_check_sizelimit(): could not execute query [%s]\n",
 	     query);
-      
       return -1;
     }
   
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace (TRACE_ERROR,"db_check_sizelimit(): mysql_store_result failed: %s\n",
-	     mysql_error(&conn));
-      
-      return -1;
-    }
-
-
   if (PQntuples(res)<1)
     {
       trace (TRACE_ERROR,"db_check_sizelimit(): user has NO mailboxes\n");
-      
       PQclear(res);
       return 0;
     }
 
-  while ((row = mysql_fetch_row(res))!=NULL)
+    for (PQcounter = 0; PQcounter < PQntuples (res); PQcounter++)
     {
-      trace (TRACE_DEBUG,"db_check_sizelimit(): checking mailbox [%s]\n",row[0]);
-      j = db_check_mailboxsize(atol(row[0]));
+      value = PQgetvalue (res, PQcounter, 0);
+      trace (TRACE_DEBUG,"db_check_sizelimit(): checking mailbox [%s]\n",value);
+      j = db_check_mailboxsize(atol(value));
 
       if (j == (u64_t)-1)
 	{
@@ -938,19 +890,21 @@ u64_t db_check_sizelimit (u64_t addblocksize, u64_t messageidnr,
 	     *useridnr, (currmail_size)-maxmail_size);
 
       /* user is exceeding, we're going to execute a rollback now */
-      snprintf (query,DEF_QUERYSIZE,"DELETE FROM messageblk WHERE messageidnr = %llu", 
+      /* FIXME: this should be a transaction based roll back in PostgreSQL */
+
+      snprintf (query,DEF_QUERYSIZE,"DELETE FROM messageblks WHERE message_idnr = %llu", 
 	       messageidnr);
 
-      if (db_query(query) != 0)
+      if (db_query(query, res) != 0)
 	{
 	  trace (TRACE_ERROR,"db_check_sizelimit(): rollback of mailbox add failed\n");
 	  return -2;
 	}
 
-      snprintf (query,DEF_QUERYSIZE,"DELETE FROM message WHERE messageidnr = %llu",
+      snprintf (query,DEF_QUERYSIZE,"DELETE FROM messages WHERE message_idnr = %llu",
 	       messageidnr);
 
-      if (db_query(query) != 0)
+      if (db_query(query, res) != 0)
 	{
 	  trace (TRACE_ERROR,"db_check_sizelimit(): rollblock of mailbox add failed."
 		 " DB might be inconsistent."
@@ -971,23 +925,13 @@ u64_t db_deleted_purge()
   
   u64_t affected_rows=0;
 
-  
-	
   /* first we're deleting all the messageblks */
-  snprintf (query,DEF_QUERYSIZE,"SELECT messageidnr FROM message WHERE status=003");
+  snprintf (query,DEF_QUERYSIZE,"SELECT message_idnr FROM messages WHERE status=003");
   trace (TRACE_DEBUG,"db_deleted_purge(): executing query [%s]",query);
 	
-  if (db_query(query)==-1)
+  if (db_query(query, res)==-1)
     {
       trace(TRACE_ERROR,"db_deleted_purge(): Cound not execute query [%s]",query);
-      
-      return -1;
-    }
-  
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace (TRACE_ERROR,"db_deleted_purge(): mysql_store_result failed:  %s",mysql_error(&conn));
-      
       return -1;
     }
   
@@ -998,32 +942,30 @@ u64_t db_deleted_purge()
       return 0;
     }
 	
-  while ((row = mysql_fetch_row(res))!=NULL)
+  for (PQcounter = 0; PQcounter < PQntuples (res); PQcounter ++)
     {
-      snprintf (query,DEF_QUERYSIZE,"DELETE FROM messageblk WHERE messageidnr=%s",row[0]);
+      snprintf (query,DEF_QUERYSIZE,"DELETE FROM messageblk WHERE messageidnr=%s",
+                PQgetvalue (res, PQcounter, 0));
       trace (TRACE_DEBUG,"db_deleted_purge(): executing query [%s]",query);
-      if (db_query(query)==-1)
-	{
-	  
-	  PQclear(res);
-	  return -1;
-	}
+      if (db_query(query, res)==-1)
+        {
+            PQclear(res);
+            return -1;
+        }
     }
 
   /* messageblks are deleted. Now delete the messages */
-  snprintf (query,DEF_QUERYSIZE,"DELETE FROM message WHERE status=003");
+  snprintf (query,DEF_QUERYSIZE,"DELETE FROM messages WHERE status=003");
   trace (TRACE_DEBUG,"db_deleted_purge(): executing query [%s]",query);
-  if (db_query(query)==-1)
+  if (db_query(query, res)==-1)
     {
-      
       PQclear(res);
       return -1;
     }
 	
-  affected_rows = mysql_affected_rows(&conn);
+  affected_rows = atol (PQcmdTuples (res));
   PQclear(res);
   
-
   return affected_rows;
 }
 
@@ -1032,19 +974,24 @@ u64_t db_deleted_purge()
  * deletion 
  */
 u64_t db_set_deleted ()
+
+u64_t affected_rows;
+
 {
   /* first we're deleting all the messageblks */
-  snprintf (query,DEF_QUERYSIZE,"UPDATE message SET status=003 WHERE status=002");
+  snprintf (query,DEF_QUERYSIZE,"UPDATE messages SET status=003 WHERE status=002");
   trace (TRACE_DEBUG,"db_set_deleted(): executing query [%s]",query);
 
-  if (db_query(query)==-1)
+  if (db_query(query, res)==-1)
     {
       trace(TRACE_ERROR,"db_set_deleted(): Could not execute query [%s]",query);
       return -1;
     }
- 
+
+  affected_rows = atol (PQcmdTuples (res));
+  PQclear (res);
   
-  return mysql_affected_rows(&conn);
+  return affected_rows;
 }
 
 
@@ -1059,28 +1006,22 @@ int db_log_ip(const char *ip)
   time_t td;
   struct tm tm;
   long id=0;
+  char *row;
 
   time(&td);              /* get time */
   tm = *localtime(&td);   /* get components */
   strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
 
   snprintf(query, DEF_QUERYSIZE, "SELECT idnr FROM pbsp WHERE ipnumber = '%s'", ip);
-  if (db_query(query) == -1)
+  if (db_query(query, res) == -1)
     {
       trace(TRACE_ERROR,"db_log_ip(): could not access ip-log table (pop/imap-before-smtp): %s",
-	    mysql_error(&conn));
+	    query);
       return -1;
     }
 
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace(TRACE_ERROR,"db_log_ip(): could not check ip-log (pop/imap-before-smtp): %s",
-	    mysql_error(&conn));
-      return -1;
-    }
-
-  row = mysql_fetch_row(res);
-  id = row ? strtol(row[0], NULL, 10) : 0;
+  row = PQgetvalue (res, 0, 0);
+  id = row ? strtol(row, NULL, 10) : 0;
 
   PQclear(res);
 
@@ -1089,10 +1030,10 @@ int db_log_ip(const char *ip)
       /* this IP is already in the table, update the 'since' field */
       snprintf(query, DEF_QUERYSIZE, "UPDATE pbsp SET since = '%s' WHERE idnr=%ld",timestr,id);
 
-      if (db_query(query) == -1)
+      if (db_query(query, res) == -1)
 	{
 	  trace(TRACE_ERROR,"db_log_ip(): could not update ip-log (pop/imap-before-smtp): %s",
-		mysql_error(&conn));
+		query);
 	  return -1;
 	}
     }
@@ -1102,10 +1043,10 @@ int db_log_ip(const char *ip)
       snprintf(query, DEF_QUERYSIZE, "INSERT INTO pbsp (since, ipnumber) VALUES ('%s','%s')", 
 	       timestr, ip);
 
-      if (db_query(query) == -1)
+      if (db_query(query, res) == -1)
 	{
 	  trace(TRACE_ERROR,"db_log_ip(): could not log IP number to dbase (pop/imap-before-smtp): %s",
-		mysql_error(&conn));
+		query);
 	  return -1;
 	}
     }
@@ -1122,10 +1063,10 @@ int db_cleanup_iplog(const char *lasttokeep)
 {
   snprintf(query, DEF_QUERYSIZE, "DELETE FROM pbsp WHERE since < '%s'",lasttokeep);
   
-  if (db_query(query) == -1)
+  if (db_query(query, res) == -1)
     {
-      trace(TRACE_ERROR,"db_cleanup_log(): error executing query [%s] : [%s]",
-	    query, mysql_error(&conn));
+      trace(TRACE_ERROR,"db_cleanup_log(): error executing query [%s]",
+	    query);
       return -1;
     }
 
@@ -1157,7 +1098,7 @@ int db_icheck_messageblks(int *nlost, u64_t **lostlist)
 
   trace (TRACE_DEBUG,"db_icheck_messageblks(): executing query [%s]",query);
 
-  if (db_query(query)==-1)
+  if (db_query(query,res)==-1)
     {
       trace (TRACE_ERROR,"db_icheck_messageblks(): Could not execute query [%s]",query);
       return -1;
@@ -1214,7 +1155,7 @@ int db_icheck_messages(int *nlost, u64_t **lostlist)
 
   trace (TRACE_DEBUG,"db_icheck_messages(): executing query [%s]",query);
 
-  if (db_query(query)==-1)
+  if (db_query(query,res)==-1)
     {
       trace (TRACE_ERROR,"db_icheck_messages(): Could not execute query [%s]",query);
       return -1;
@@ -1265,21 +1206,15 @@ int db_icheck_mailboxes(int *nlost, u64_t **lostlist)
   *nlost = 0;
   *lostlist = NULL;
 
-  snprintf (query,DEF_QUERYSIZE,"SELECT mailbox.mailboxidnr FROM mailbox "
-	    "LEFT JOIN user ON mailbox.owneridnr = user.useridnr "
-	    "WHERE user.useridnr IS NULL");
+  snprintf (query,DEF_QUERYSIZE,"SELECT mailboxes.mailbox_idnr FROM mailboxes "
+	    "LEFT JOIN user ON mailbox.owner_idnr = user.user_idnr "
+	    "WHERE user.user_idnr IS NULL");
 
   trace (TRACE_DEBUG,"db_icheck_mailboxes(): executing query [%s]",query);
 
-  if (db_query(query)==-1)
+  if (db_query(query,res)==-1)
     {
       trace (TRACE_ERROR,"db_icheck_mailboxes(): Could not execute query [%s]",query);
-      return -1;
-    }
-  
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace (TRACE_ERROR,"db_icheck_mailboxes(): mysql_store_result failed:  %s",mysql_error(&conn));
       return -1;
     }
     
@@ -1299,8 +1234,11 @@ int db_icheck_mailboxes(int *nlost, u64_t **lostlist)
     }
 
   i = 0;
-  while ((row = mysql_fetch_row(res)) && i<*nlost)
-    (*lostlist)[i++] = strtoul(row[0], NULL, 10);
+    
+  PQcounter = 0;  
+      
+  while ((PQcounter < PQntuples(res)) && i<*nlost)
+    (*lostlist)[i++] = strtoul(PQgetvalue (res, PQcounter, 0), NULL, 10);
 
   return 0;
 }
@@ -1311,8 +1249,8 @@ int db_icheck_mailboxes(int *nlost, u64_t **lostlist)
  */
 int db_delete_messageblk(u64_t uid)
 {
-  snprintf(query, DEF_QUERYSIZE, "DELETE FROM messageblk WHERE messageblknr = %llu",uid);
-  return db_query(query);
+  snprintf(query, DEF_QUERYSIZE, "DELETE FROM messageblks WHERE messageblk_idnr = %llu",uid);
+  return db_query(query,res);
 }
 
 
@@ -1321,12 +1259,12 @@ int db_delete_messageblk(u64_t uid)
  */
 int db_delete_message(u64_t uid)
 {
-  snprintf(query, DEF_QUERYSIZE, "DELETE FROM messageblk WHERE messageidnr = %llu",uid);
-  if (db_query(query) == -1)
+  snprintf(query, DEF_QUERYSIZE, "DELETE FROM messageblks WHERE message_idnr = %llu",uid);
+  if (db_query(query,res) == -1)
     return -1;
 
-  snprintf(query, DEF_QUERYSIZE, "DELETE FROM message WHERE messageidnr = %llu",uid);
-  return db_query(query);
+  snprintf(query, DEF_QUERYSIZE, "DELETE FROM messages WHERE message_idnr = %llu",uid);
+  return db_query(query,res);
 }
 
 /*
@@ -1335,32 +1273,26 @@ int db_delete_message(u64_t uid)
 int db_delete_mailbox(u64_t uid)
 {
   u64_t msgid;
-  snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message WHERE mailboxidnr = %llu",uid);
+  snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr FROM messages WHERE mailbox_idnr = %llu",uid);
 
-  if (db_query(query) == -1)
+  if (db_query(query,res) == -1)
     return -1;
 
-  if ((res = mysql_store_result(&conn)) == NULL)
+  for (PQcounter = 0; PQcounter < PQntuples (res); PQcounter ++)
     {
-      trace(TRACE_ERROR,"db_delete_mailbox(): mysql_store_result() failed [%s]\n",mysql_error(&conn));
-      return -1;
-    }
+      msgid = strtoul(PQgetvalue (res, PQcounter, 0), NULL, 10);
 
-  while ((row = mysql_fetch_row(res)))
-    {
-      msgid = strtoul(row[0], NULL, 10);
-
-      snprintf(query, DEF_QUERYSIZE, "DELETE FROM messageblk WHERE messageidnr = %llu",msgid);
-      if (db_query(query) == -1)
+      snprintf(query, DEF_QUERYSIZE, "DELETE FROM messageblks WHERE message_idnr = %llu",msgid);
+      if (db_query(query,res) == -1)
 	return -1;
 
-      snprintf(query, DEF_QUERYSIZE, "DELETE FROM message WHERE messageidnr = %llu",msgid);
-      if (db_query(query) == -1)
+      snprintf(query, DEF_QUERYSIZE, "DELETE FROM messages WHERE message_idnr = %llu",msgid);
+      if (db_query(query,res) == -1)
 	return -1;
     }
   
-  snprintf(query, DEF_QUERYSIZE, "DELETE FROM mailbox WHERE mailboxidnr = %llu",uid);
-  return db_query(query);
+  snprintf(query, DEF_QUERYSIZE, "DELETE FROM mailboxes WHERE mailbox_idnr = %llu",uid);
+  return db_query(query,res);
 }
 
 int db_disconnect()
@@ -1368,7 +1300,7 @@ int db_disconnect()
   my_free(query);
   query = NULL;
 
-  mysql_close(&conn);
+  PQfinish(&conn);
   return 0;
 }
 
@@ -1402,12 +1334,12 @@ int db_imap_append_msg(char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid)
   /* create a msg 
    * status and seen_flag are set to 001, which means the message has been read 
    */
-  snprintf(query, DEF_QUERYSIZE, "INSERT INTO message "
-	   "(mailboxidnr,messagesize,unique_id,internal_date,status,"
+  snprintf(query, DEF_QUERYSIZE, "INSERT INTO messages "
+	   "(mailbox_idnr,messagesize,unique_id,internal_date,status,"
        " seen_flag) VALUES (%llu, 0, \"\", \"%s\",001,1)",
 	   mboxid, timestr);
 
-  if (db_query(query) == -1)
+  if (db_query(query,res) == -1)
     {
       trace(TRACE_ERROR, "db_imap_append_msg(): could not create message\n");
       my_free(query);
@@ -1415,23 +1347,20 @@ int db_imap_append_msg(char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid)
     }
 
   /* fetch the id of the new message */
-  msgid = mysql_insert_id(&conn);
+  msgid = db_insert_result("message_idnr");
   
   result = db_check_sizelimit(datalen, msgid, &uid);
   if (result == -1 || result == -2)
     {     
       trace(TRACE_ERROR, "db_imap_append_msg(): dbase error checking size limit\n");
-      
       return -1;
     }
 
   if (result)
     {     
       trace(TRACE_INFO, "db_imap_append_msg(): user %llu would exceed quotum\n",uid);
-      
       return 2;
     }
-
 
   /* ok insert blocks */
   /* first the header: scan until double newline */
@@ -1442,8 +1371,8 @@ int db_imap_append_msg(char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid)
   if (cnt == datalen)
     {
       trace(TRACE_INFO, "db_imap_append_msg(): no double newline found [invalid msg]\n");
-      snprintf(query, DEF_QUERYSIZE, "DELETE FROM message WHERE messageidnr = %llu", msgid);
-      if (db_query(query) == -1)
+      snprintf(query, DEF_QUERYSIZE, "DELETE FROM messages WHERE message_idnr = %llu", msgid);
+      if (db_query(query,res) == -1)
 	trace(TRACE_ERROR, "db_imap_append_msg(): could not delete message id [%llu], "
 	      "dbase invalid now..\n", msgid);
 
@@ -1461,15 +1390,15 @@ int db_imap_append_msg(char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid)
 	{
 	  trace(TRACE_ERROR, "db_imap_append_msg(): could not insert msg block\n");
 
-	  snprintf(query, DEF_QUERYSIZE, "DELETE FROM message WHERE messageidnr = %llu", msgid);
-	  if (db_query(query) == -1)
+	  snprintf(query, DEF_QUERYSIZE, "DELETE FROM messages WHERE message_idnr = %llu", msgid);
+	  if (db_query(query,res) == -1)
 	    trace(TRACE_ERROR, "db_imap_append_msg(): could not delete message id [%llu], "
-		  "dbase could be invalid now..\n", msgid);
+		  "dbase could be invalid now, run dbmail-maintenance\n", msgid);
 
-	  snprintf(query, DEF_QUERYSIZE, "DELETE FROM messageblk WHERE messageidnr = %llu", msgid);
-	  if (db_query(query) == -1)
+	  snprintf(query, DEF_QUERYSIZE, "DELETE FROM messageblks WHERE message_idnr = %llu", msgid);
+	  if (db_query(query,res) == -1)
 	    trace(TRACE_ERROR, "db_imap_append_msg(): could not delete messageblks for msg id [%llu], "
-		  "dbase could be invalid now..\n", msgid);
+		  "dbase could be invalid now run dbmail-maintenance\n", msgid);
 
 	  
 	  return -1;
@@ -1486,15 +1415,15 @@ int db_imap_append_msg(char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid)
 	{
 	  trace(TRACE_ERROR, "db_imap_append_msg(): could not insert msg block\n");
 
-	  snprintf(query, DEF_QUERYSIZE, "DELETE FROM message WHERE messageidnr = %llu", msgid);
-	  if (db_query(query) == -1)
+	  snprintf(query, DEF_QUERYSIZE, "DELETE FROM messages WHERE message_idnr = %llu", msgid);
+	  if (db_query(query,res) == -1)
 	    trace(TRACE_ERROR, "db_imap_append_msg(): could not delete message id [%llu], "
-		  "dbase invalid now..\n", msgid);
+		  "dbase invalid now, run dbmail-maintenance\n", msgid);
 
-	  snprintf(query, DEF_QUERYSIZE, "DELETE FROM messageblk WHERE messageidnr = %llu", msgid);
-	  if (db_query(query) == -1)
+	  snprintf(query, DEF_QUERYSIZE, "DELETE FROM messageblks WHERE message_idnr = %llu", msgid);
+	  if (db_query(query,res) == -1)
 	    trace(TRACE_ERROR, "db_imap_append_msg(): could not delete messageblks for msg id [%llu], "
-		  "dbase could be invalid now..\n", msgid);
+		  "dbase could be invalid now, run dbmail-maintenance\n", msgid);
 
 	  
 	  return -1;
@@ -1512,17 +1441,15 @@ int db_imap_append_msg(char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid)
 	    {
 	      trace(TRACE_ERROR, "db_imap_append_msg(): could not insert msg block\n");
 
-	      snprintf(query, DEF_QUERYSIZE, "DELETE FROM message WHERE messageidnr = %llu", msgid);
-	      if (db_query(query) == -1)
+	      snprintf(query, DEF_QUERYSIZE, "DELETE FROM messages WHERE message_idnr = %llu", msgid);
+	      if (db_query(query,res) == -1)
 		trace(TRACE_ERROR, "db_imap_append_msg(): could not delete message id [%llu], "
-		      "dbase invalid now..\n", msgid);
+		      "dbase invalid now run dbmail-maintenance\n", msgid);
 
 	      snprintf(query, DEF_QUERYSIZE, "DELETE FROM messageblk WHERE messageidnr = %llu", msgid);
-	      if (db_query(query) == -1)
+	      if (db_query(query,res) == -1)
 		trace(TRACE_ERROR, "db_imap_append_msg(): could not delete messageblks "
-		      "for msg id [%llu], dbase could be invalid now..\n", msgid);
-
-	      
+		      "for msg id [%llu], dbase could be invalid now run dbmail-maintenance\n", msgid);
 	      return -1;
 	    }
 
@@ -1536,15 +1463,15 @@ int db_imap_append_msg(char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid)
 	{
 	  trace(TRACE_ERROR, "db_imap_append_msg(): could not insert msg block\n");
 
-	  snprintf(query, DEF_QUERYSIZE, "DELETE FROM message WHERE messageidnr = %llu", msgid);
-	  if (db_query(query) == -1)
+	  snprintf(query, DEF_QUERYSIZE, "DELETE FROM messages WHERE message_idnr = %llu", msgid);
+	  if (db_query(query,res) == -1)
 	    trace(TRACE_ERROR, "db_imap_append_msg(): could not delete message id [%llu], "
-		  "dbase invalid now..\n", msgid);
+		  "dbase invalid now run dbmail-maintance\n", msgid);
 
-	  snprintf(query, DEF_QUERYSIZE, "DELETE FROM messageblk WHERE messageidnr = %llu", msgid);
-	  if (db_query(query) == -1)
+	  snprintf(query, DEF_QUERYSIZE, "DELETE FROM messageblks WHERE message_idnr = %llu", msgid);
+	  if (db_query(query,res) == -1)
 	    trace(TRACE_ERROR, "db_imap_append_msg(): could not delete messageblks "
-		  "for msg id [%llu], dbase could be invalid now..\n", msgid);
+		  "for msg id [%llu], dbase could be invalid now run dbmail-maintenance\n", msgid);
 
 	  
 	  return -1;
@@ -1575,27 +1502,20 @@ int db_imap_append_msg(char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid)
 u64_t db_findmailbox(const char *name, u64_t useridnr)
 {
   u64_t id;
+  char *row;
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT mailboxidnr FROM mailbox WHERE name='%s' AND owneridnr=%llu",
+  snprintf(query, DEF_QUERYSIZE, "SELECT mailbox_idnr FROM mailboxes WHERE name='%s' AND owner_idnr=%llu",
 	   name, useridnr);
   
-  if (db_query(query) == -1)
+  if (db_query(query,res) == -1)
     {
       trace(TRACE_ERROR,"db_findmailbox(): could not select mailbox '%s'\n",name);
       return (u64_t)(-1);
     }
 
-  
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace(TRACE_ERROR,"db_findmailbox(): mysql_store_result failed:  %s\n",mysql_error(&conn));
-      return (u64_t)(-1);
-    }
-  
-  
-  row = mysql_fetch_row(res);
+  row = PQgetvalue(res, 0, 0);
   if (row)
-    id = atoi(row[0]);
+    id = atoi(row);
   else
     id = 0;
 
@@ -1628,27 +1548,18 @@ int db_findmailbox_by_regex(u64_t ownerid, const char *pattern,
     }
 
   if (only_subscribed)
-    snprintf(query, DEF_QUERYSIZE, "SELECT name, mailboxidnr FROM mailbox WHERE "
-	     "owneridnr=%llu AND is_subscribed != 0", ownerid);
+    snprintf(query, DEF_QUERYSIZE, "SELECT name, mailbox_idnr FROM mailboxes WHERE "
+	     "owner_idnr=%llu AND is_subscribed != 0", ownerid);
   else
-    snprintf(query, DEF_QUERYSIZE, "SELECT name, mailboxidnr FROM mailbox WHERE "
-	     "owneridnr=%llu", ownerid);
+    snprintf(query, DEF_QUERYSIZE, "SELECT name, mailbox_idnr FROM mailboxes WHERE "
+	     "owner_idnr=%llu", ownerid);
 
-  if (db_query(query) == -1)
+  if (db_query(query,res) == -1)
     {
       trace(TRACE_ERROR,"db_findmailbox_by_regex(): error during mailbox query\r\n");
-      
       return (-1);
     }
 
-  
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace(TRACE_ERROR,"db_findmailbox_by_regex(): mysql_store_result failed:  %s\n",
-	    mysql_error(&conn));
-      return (-1);
-    }
-  
   if (PQntuples(res) == 0)
     {
       /* none exist, none matched */
@@ -1666,10 +1577,11 @@ int db_findmailbox_by_regex(u64_t ownerid, const char *pattern,
      
   /* store matches */
   *nchildren = 0;
-  while ((row = mysql_fetch_row(res)))
+
+  for (PQcounter = 0; PQcounter < PQntuples(res); PQcounter++)
     {
-      if (regexec(&preg, row[0], 0, NULL, 0) == 0)
-	tmp[(*nchildren)++] = strtoul(row[1], NULL, 10);
+      if (regexec(&preg, PQgetvalue(res, PQcounter, 0), 0, NULL, 0) == 0)
+	tmp[(*nchildren)++] = strtoul(PQgetvalue(res, PQcounter,1), NULL, 10);
     }
 
   PQclear(res);
@@ -1728,53 +1640,39 @@ int db_getmailbox(mailbox_t *mb, u64_t userid)
 	   "flagged_flag,"
 	   "recent_flag,"
 	   "draft_flag "
-	   " FROM mailbox WHERE mailboxidnr = %llu", mb->uid);
+	   " FROM mailboxes WHERE mailbox_idnr = %llu", mb->uid);
 
-  if (db_query(query) == -1)
+  if (db_query(query,res) == -1)
     {
       trace(TRACE_ERROR, "db_getmailbox(): could not select mailbox\n");
       return -1;
     }
 
-
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace(TRACE_ERROR,"db_getmailbox(): mysql_store_result failed:  %s\n",mysql_error(&conn));
-      return -1;
-    }
-
-  row = mysql_fetch_row(res);
-  if (!row)
+  if (PQntuples(res)==0)
     {
       trace(TRACE_ERROR,"db_getmailbox(): invalid mailbox id specified\n");
       return -1;
     }
 
-  mb->permission = atoi(row[0]);
+  mb->permission = atoi(PQgetvalue(res,0,0));
 
-  if (row[1]) mb->flags |= IMAPFLAG_SEEN;
-  if (row[2]) mb->flags |= IMAPFLAG_ANSWERED;
-  if (row[3]) mb->flags |= IMAPFLAG_DELETED;
-  if (row[4]) mb->flags |= IMAPFLAG_FLAGGED;
-  if (row[5]) mb->flags |= IMAPFLAG_RECENT;
-  if (row[6]) mb->flags |= IMAPFLAG_DRAFT;
+  if (PQgetvalue(res,0,1)) mb->flags |= IMAPFLAG_SEEN;
+  if (PQgetvalue(res,0,2)) mb->flags |= IMAPFLAG_ANSWERED;
+  if (PQgetvalue(res,0,3)) mb->flags |= IMAPFLAG_DELETED;
+  if (PQgetvalue(res,0,4)) mb->flags |= IMAPFLAG_FLAGGED;
+  if (PQgetvalue(res,0,5)) mb->flags |= IMAPFLAG_RECENT;
+  if (PQgetvalue(res,0,6)) mb->flags |= IMAPFLAG_DRAFT;
 
   PQclear(res);
 
   /* select messages */
-  snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr, seen_flag, recent_flag "
-	   "FROM message WHERE mailboxidnr = %llu "
-	   "AND status<2 AND unique_id!=\"\" ORDER BY messageidnr ASC", mb->uid);
+  snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr, seen_flag, recent_flag "
+	   "FROM messages WHERE mailbox_idnr = %llu "
+	   "AND status<2 AND unique_id!=\"\" ORDER BY message_idnr ASC", mb->uid);
 
-  if (db_query(query) == -1)
+  if (db_query(query,res) == -1)
     {
       trace(TRACE_ERROR, "db_getmailbox(): could not retrieve messages\n");
-      return -1;
-    }
-
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace(TRACE_ERROR,"db_getmailbox(): mysql_store_result failed: %s\n",mysql_error(&conn));
       return -1;
     }
 
@@ -1790,12 +1688,12 @@ int db_getmailbox(mailbox_t *mb, u64_t userid)
     }
 
   i=0;
-  while ((row = mysql_fetch_row(res)))
-    {
-      if (row[1][0] == '0') mb->unseen++;
-      if (row[2][0] == '1') mb->recent++;
+  for (PQcounter = 0; PQcounter < PQntuples(res); PQcounter++)
+  {
+      if (PQgetvalue(res, PQcounter, 0)[0] == '0') mb->unseen++;
+      if (PQgetvalue(res, PQcounter, 1)[0] == '1') mb->recent++;
 
-      mb->seq_list[i++] = strtoul(row[0],NULL,10);
+      mb->seq_list[i++] = strtoul(PQgetvalue(res, PQcounter, 0),NULL,10);
     }
   
   PQclear(res);
@@ -1806,10 +1704,10 @@ int db_getmailbox(mailbox_t *mb, u64_t userid)
    * NOTE expunged messages are selected as well in order to be able to restore them 
    */
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message WHERE unique_id!=\"\""
-	   "ORDER BY messageidnr DESC LIMIT 0,1");
+  snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr FROM messages WHERE unique_id!=\"\""
+	   "ORDER BY message_idnr DESC LIMIT 0,1");
   
-  if (db_query(query) == -1)
+  if (db_query(query,res) == -1)
     {
       trace(TRACE_ERROR, "db_getmailbox(): could not determine highest message ID\n");
 
@@ -1819,19 +1717,9 @@ int db_getmailbox(mailbox_t *mb, u64_t userid)
       return -1;
     }
 
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace(TRACE_ERROR,"db_getmailbox(): mysql_store_result failed: %s\n",mysql_error(&conn));
-      
-      my_free(mb->seq_list);
-      mb->seq_list = NULL;
-
-      return -1;
-    }
-
-  row = mysql_fetch_row(res);
+  row = PQgetvalue(res, 0, 0);
   if (row)
-    mb->msguidnext = atoi(row[0])+1;
+    mb->msguidnext = atoi(row)+1;
   else
     mb->msguidnext = 1; /* empty set: no messages yet in dbase */
 
@@ -1853,11 +1741,11 @@ int db_getmailbox(mailbox_t *mb, u64_t userid)
  */
 int db_createmailbox(const char *name, u64_t ownerid)
 {
-  snprintf(query, DEF_QUERYSIZE, "INSERT INTO mailbox (name, owneridnr,"
+  snprintf(query, DEF_QUERYSIZE, "INSERT INTO mailboxes (name, owner_idnr,"
 	   "seen_flag, answered_flag, deleted_flag, flagged_flag, recent_flag, draft_flag, permission)"
 	   " VALUES ('%s', %llu, 1, 1, 1, 1, 1, 1, 2)", name,ownerid);
 
-  if (db_query(query) == -1)
+  if (db_query(query,res) == -1)
     {
       trace(TRACE_ERROR, "db_createmailbox(): could not create mailbox\n");
       
@@ -1883,50 +1771,37 @@ int db_listmailboxchildren(u64_t uid, u64_t useridnr,
 {
   
   int i;
+  char *row;
 
   /* retrieve the name of this mailbox */
-  snprintf(query, DEF_QUERYSIZE, "SELECT name FROM mailbox WHERE"
-	   " mailboxidnr = %llu AND owneridnr = %llu", uid, useridnr);
+  snprintf(query, DEF_QUERYSIZE, "SELECT name FROM mailboxes WHERE"
+	   " mailbox_idnr = %llu AND owner_idnr = %llu", uid, useridnr);
 
-  if (db_query(query) == -1)
+  if (db_query(query,res) == -1)
     {
       trace(TRACE_ERROR, "db_listmailboxchildren(): could not retrieve mailbox name\n");
       return -1;
     }
 
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace(TRACE_ERROR,"db_listmailboxchildren(): mysql_store_result failed: %s\n",
-	    mysql_error(&conn));
-      return -1;
-    }
-
-  row = mysql_fetch_row(res);
+  row = PQgetvalue (res, 0, 0);
   if (row)
-    snprintf(query, DEF_QUERYSIZE, "SELECT mailboxidnr FROM mailbox WHERE name LIKE '%s/%s'"
-	     " AND owneridnr = %llu",
-	     row[0],filter,useridnr);
+    snprintf(query, DEF_QUERYSIZE, "SELECT mailbox_idnr FROM mailboxes WHERE name LIKE '%s/%s'"
+	     " AND owner_idnr = %llu",
+	     row,filter,useridnr);
   else
-    snprintf(query, DEF_QUERYSIZE, "SELECT mailboxidnr FROM mailbox WHERE name LIKE '%s'"
-	     " AND owneridnr = %llu",filter,useridnr);
+    snprintf(query, DEF_QUERYSIZE, "SELECT mailbox_idnr FROM mailboxes WHERE name LIKE '%s'"
+	     " AND owner_idnr = %llu",filter,useridnr);
 
   PQclear(res);
   
   /* now find the children */
-  if (db_query(query) == -1)
+  if (db_query(query,res) == -1)
     {
       trace(TRACE_ERROR, "db_listmailboxchildren(): could not retrieve mailbox name\n");
       return -1;
     }
 
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace(TRACE_ERROR,"db_listmailboxchildren(): mysql_store_result failed: %s\n",
-	    mysql_error(&conn));
-      return -1;
-    }
-
-  row = mysql_fetch_row(res);
+  row = PQgetvalue(res, 0, 0);
   if (!row)
     {
       /* empty set */
@@ -1955,6 +1830,7 @@ int db_listmailboxchildren(u64_t uid, u64_t useridnr,
     }
 
   i = 0;
+  PQcounter = 0;
   do
     {
       if (i == *nchildren)
@@ -1964,14 +1840,16 @@ int db_listmailboxchildren(u64_t uid, u64_t useridnr,
 	  *children = NULL;
 	  *nchildren = 0;
 	  PQclear(res);
-	  trace(TRACE_ERROR, "db_listmailboxchildren: data when none expected.\n");
+	  trace(TRACE_ERROR, "db_listmailboxchildren(): data when none expected.\n");
 	  
 	  return -1;
 	}
 
-      (*children)[i++] = strtoul(row[0], NULL, 10);
+      (*children)[i++] = strtoul(row, NULL, 10);
+      row = PQgetvalue (res, PQcounter, 0);
+      PQcounter ++;
     }
-  while ((row = mysql_fetch_row(res)));
+  while (PQcounter < PQntuples (res));
 
   PQclear(res);
   
@@ -1996,8 +1874,8 @@ int db_removemailbox(u64_t uid, u64_t ownerid)
     }
 
   /* now remove mailbox */
-  snprintf(query, DEF_QUERYSIZE, "DELETE FROM mailbox WHERE mailboxidnr = %llu", uid);
-  if (db_query(query) == -1)
+  snprintf(query, DEF_QUERYSIZE, "DELETE FROM mailboxes WHERE mailbox_idnr = %llu", uid);
+  if (db_query(query,res) == -1)
     {
       trace(TRACE_ERROR, "db_removemailbox(): could not remove mailbox\n");
       return -1;
@@ -2016,22 +1894,17 @@ int db_removemailbox(u64_t uid, u64_t ownerid)
 int db_isselectable(u64_t uid)
 {
   
+  char *row;
+  
+  snprintf(query, DEF_QUERYSIZE, "SELECT no_select FROM mailboxes WHERE mailbox_idnr = %llu",uid);
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT no_select FROM mailbox WHERE mailboxidnr = %llu",uid);
-
-  if (db_query(query) == -1)
+  if (db_query(query,res) == -1)
     {
       trace(TRACE_ERROR, "db_isselectable(): could not retrieve select-flag\n");
       return -1;
     }
 
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace(TRACE_ERROR,"db_isselectable(): mysql_store_result failed: %s\n",mysql_error(&conn));
-      return -1;
-    }
-
-  row = mysql_fetch_row(res);
+  row = PQgetvalue(res, 0, 0);
 
   if (!row)
     {
@@ -2040,7 +1913,7 @@ int db_isselectable(u64_t uid)
       return 0;
     }
 
-  if (atoi(row[0]) == 0)
+  if (atoi(row) == 0)
     {    
       PQclear(res);
       return 1;
@@ -2064,22 +1937,17 @@ int db_isselectable(u64_t uid)
 int db_noinferiors(u64_t uid)
 {
   
+  char *row;
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT no_inferiors FROM mailbox WHERE mailboxidnr = %llu",uid);
+  snprintf(query, DEF_QUERYSIZE, "SELECT no_inferiors FROM mailboxes WHERE mailbox_idnr = %llu",uid);
 
-  if (db_query(query) == -1)
+  if (db_query(query,res) == -1)
     {
       trace(TRACE_ERROR, "db_noinferiors(): could not retrieve noinferiors-flag\n");
       return -1;
     }
 
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace(TRACE_ERROR,"db_noinferiors(): mysql_store_result failed: %s\n",mysql_error(&conn));
-      return -1;
-    }
-
-  row = mysql_fetch_row(res);
+  row = PQgetvalue (res, 0, 0);
 
   if (!row)
     {
@@ -2088,7 +1956,7 @@ int db_noinferiors(u64_t uid)
       return 0;
     }
 
-  if (atoi(row[0]) == 1)
+  if (atoi(row) == 1)
     {    
       PQclear(res);
       return 1;
@@ -2109,10 +1977,10 @@ int db_setselectable(u64_t uid, int val)
 {
   
 
-  snprintf(query, DEF_QUERYSIZE, "UPDATE mailbox SET no_select = %d WHERE mailboxidnr = %llu",
+  snprintf(query, DEF_QUERYSIZE, "UPDATE mailboxes SET no_select = %d WHERE mailbox_idnr = %llu",
 	   (!value), uid);
 
-  if (db_query(query) == -1)
+  if (db_query(query,res) == -1)
     {
       trace(TRACE_ERROR, "db_setselectable(): could not set noselect-flag\n");
       return -1;
@@ -2135,10 +2003,10 @@ int db_removemsg(u64_t uid)
   
 
   /* update messages belonging to this mailbox: mark as deleted (status 3) */
-  snprintf(query, DEF_QUERYSIZE, "UPDATE message SET status=3 WHERE"
-	   " mailboxidnr = %llu", uid);
+  snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET status=3 WHERE"
+	   " mailbox_idnr = %llu", uid);
 
-  if (db_query(query) == -1)
+  if (db_query(query,res) == -1)
     {
       trace(TRACE_ERROR, "db_removemsg(): could not update messages in mailbox\n");
       return -1;
@@ -2167,21 +2035,15 @@ int db_expunge(u64_t uid,u64_t **msgids,u64_t *nmsgs)
   if (nmsgs && msgids)
     {
       /* first select msg UIDs */
-      snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message WHERE"
-	       " mailboxidnr = %llu AND deleted_flag=1 AND status<2 ORDER BY messageidnr DESC", uid);
+      snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr FROM messages WHERE"
+	       " mailbox_idnr = %llu AND deleted_flag=1 AND status<2 ORDER BY message_idnr DESC", uid);
 
-      if (db_query(query) == -1)
+      if (db_query(query,res) == -1)
 	{
 	  trace(TRACE_ERROR, "db_expunge(): could not select messages in mailbox\n");
 	  return -1;
 	}
       
-      if ((res = mysql_store_result(&conn)) == NULL)
-	{
-	  trace(TRACE_ERROR,"db_expunge(): mysql_store_result failed: %s\n",mysql_error(&conn));
-	  return -1;
-	}
-
       /* now alloc mem */
       *nmsgs = PQntuples(res);
       *msgids = (u64_t *)my_malloc(sizeof(u64_t) * (*nmsgs));
@@ -2195,18 +2057,20 @@ int db_expunge(u64_t uid,u64_t **msgids,u64_t *nmsgs)
 
       /* save ID's in array */
       i = 0;
-      while ((row = mysql_fetch_row(res)) && i<*nmsgs)
+      PQcounter = 0;
+      while ((PQcounter < PQntuples (res)) && i<*nmsgs)
 	{
-	  (*msgids)[i++] = strtoul(row[0], NULL, 10);
+	  (*msgids)[i++] = strtoul(PQgetvalue(res,PQcounter,0), NULL, 10);
+      PQcounter++;
 	}
       PQclear(res);
     }
 
   /* update messages belonging to this mailbox: mark as expunged (status 3) */
-  snprintf(query, DEF_QUERYSIZE, "UPDATE message SET status=3 WHERE"
-	   " mailboxidnr = %llu AND deleted_flag=1 AND status<2", uid);
+  snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET status=3 WHERE"
+	   " mailbox_idnr = %llu AND deleted_flag=1 AND status<2", uid);
 
-  if (db_query(query) == -1)
+  if (db_query(query,res) == -1)
     {
       trace(TRACE_ERROR, "db_expunge(): could not update messages in mailbox\n");
       if (msgids)
@@ -2230,10 +2094,10 @@ int db_expunge(u64_t uid,u64_t **msgids,u64_t *nmsgs)
  */
 int db_movemsg(u64_t to, u64_t from)
 {
-  snprintf(query, DEF_QUERYSIZE, "UPDATE message SET mailboxidnr=%llu WHERE"
-	   " mailboxidnr = %llu", to, from);
+  snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET mailbox_idnr=%llu WHERE"
+	   " mailbox_idnr = %llu", to, from);
 
-  if (db_query(query) == -1)
+  if (db_query(query,res) == -1)
     {
       trace(TRACE_ERROR, "db_movemsg(): could not update messages in mailbox\n");
       return -1;
@@ -2267,33 +2131,33 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
 
   /* first to temporary table */
   /* copy message info */
-  snprintf(query, DEF_QUERYSIZE, "INSERT INTO tmpmessage (mailboxidnr, messagesize, status, "
+  snprintf(query, DEF_QUERYSIZE, "INSERT INTO tmpmessage (mailbox_idnr, messagesize, status, "
 	   "deleted_flag, seen_flag, answered_flag, draft_flag, flagged_flag, recent_flag,"
        " unique_id, internal_date) "
-	   "SELECT mailboxidnr, messagesize, status, deleted_flag, seen_flag, answered_flag, "
+	   "SELECT mailbox_idnr, messagesize, status, deleted_flag, seen_flag, answered_flag, "
 	   "draft_flag, flagged_flag, recent_flag, \"\", internal_date "
-       "FROM message WHERE message.messageidnr = %llu",
+       "FROM messages WHERE messages.message_idnr = %llu",
 	   msgid);
 
-  if (db_query(query) == -1)
+  if (db_query(query,res) == -1)
     {
       trace(TRACE_ERROR, "db_copymsg(): could not insert temporary message\n");
 
       /* drop temporary tables */
-      if (db_query(drop_tmp_tables_queries[0]) == -1 || db_query(drop_tmp_tables_queries[1]) == -1)
+      if (db_query(drop_tmp_tables_queries[0], res) == -1 || db_query(drop_tmp_tables_queries[1],res) == -1)
 	trace(TRACE_ERROR, "db_copymsg(): could not drop temporary tables\n");
 
       return -1;
     }
 
-  tmpid = mysql_insert_id(&conn);
+  tmpid = db_insert_result ("tmp_mailbox_idnr");
 
   /* copy message blocks */
-  snprintf(query, DEF_QUERYSIZE, "INSERT INTO tmpmessageblk (messageidnr, messageblk, blocksize) "
-	   "SELECT %llu, messageblk, blocksize FROM messageblk "
-	   "WHERE messageblk.messageidnr = %llu ORDER BY messageblk.messageblknr", tmpid, msgid);
+  snprintf(query, DEF_QUERYSIZE, "INSERT INTO tmpmessageblk (message_idnr, messageblk, blocksize) "
+	   "SELECT %llu, messageblk, blocksize FROM messageblks "
+	   "WHERE messageblks.message_idnr = %llu ORDER BY messageblks.messageblk_idnr", tmpid, msgid);
   
-  if (db_query(query) == -1)
+  if (db_query(query,res) == -1)
     {
       trace(TRACE_ERROR, "db_copymsg(): could not insert temporary message blocks\n");
 
@@ -2307,44 +2171,44 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
 
   /* now to actual tables */
   /* copy message info */
-  snprintf(query, DEF_QUERYSIZE, "INSERT INTO message (mailboxidnr, messagesize, status, "
+  snprintf(query, DEF_QUERYSIZE, "INSERT INTO messages (mailbox_idnr, messagesize, status, "
 	   "deleted_flag, seen_flag, answered_flag, draft_flag, flagged_flag, recent_flag,"
        " unique_id, internal_date) "
 	   "SELECT %llu, messagesize, status, deleted_flag, seen_flag, answered_flag, "
 	   "draft_flag, flagged_flag, recent_flag, \"\", internal_date "
-       "FROM tmpmessage WHERE tmpmessage.messageidnr = %llu",
+       "FROM tmpmessage WHERE tmpmessage.message_idnr = %llu",
 	   destmboxid, tmpid);
 
-  if (db_query(query) == -1)
+  if (db_query(query,res) == -1)
     {
       trace(TRACE_ERROR, "db_copymsg(): could not insert message\n");
 
       /* drop temporary tables */
-      if (db_query(drop_tmp_tables_queries[0]) == -1 || db_query(drop_tmp_tables_queries[1]) == -1)
+      if (db_query(drop_tmp_tables_queries[0], res) == -1 || db_query(drop_tmp_tables_queries[1], res) == -1)
 	trace(TRACE_ERROR, "db_copymsg(): could not drop temporary tables\n");
 
       return -1;
     }
 
   /* retrieve id of new message */
-  newid = mysql_insert_id(&conn);
+  newid = db_insert_result ("message_idnr");
 
   /* copy message blocks */
-  snprintf(query, DEF_QUERYSIZE, "INSERT INTO messageblk (messageidnr, messageblk, blocksize) "
+  snprintf(query, DEF_QUERYSIZE, "INSERT INTO messageblks (message_idnr, messageblk, blocksize) "
 	   "SELECT %llu, messageblk, blocksize FROM tmpmessageblk "
-	   "WHERE tmpmessageblk.messageidnr = %llu ORDER BY tmpmessageblk.messageblknr", newid, tmpid);
+	   "WHERE tmpmessageblk.message_idnr = %llu ORDER BY tmpmessageblk.messageblk_idnr", newid, tmpid);
   
-  if (db_query(query) == -1)
+  if (db_query(query,res) == -1)
     {
       trace(TRACE_ERROR, "db_copymsg(): could not insert message blocks\n");
 
       /* drop temporary tables */
-      if (db_query(drop_tmp_tables_queries[0]) == -1 || db_query(drop_tmp_tables_queries[1]) == -1)
+      if (db_query(drop_tmp_tables_queries[0], res) == -1 || db_query(drop_tmp_tables_queries[1],res) == -1)
 	trace(TRACE_ERROR, "db_copymsg(): could not drop temporary tables\n");
 
       /* delete inserted message */
-      snprintf(query, DEF_QUERYSIZE, "DELETE FROM message WHERE messageidnr = %llu",newid);
-      if (db_query(query) == -1)
+      snprintf(query, DEF_QUERYSIZE, "DELETE FROM messages WHERE message_idnr = %llu",newid);
+      if (db_query(query,res) == -1)
 	trace(TRACE_FATAL, "db_copymsg(): could not delete faulty message, dbase contains "
 	      "invalid data now; msgid [%llu]\n",newid);
       
@@ -2352,17 +2216,17 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
     }
 
   /* drop temporary tables */
-  if (db_query(drop_tmp_tables_queries[0]) == -1 || db_query(drop_tmp_tables_queries[1]) == -1)
+  if (db_query(drop_tmp_tables_queries[0],res) == -1 || db_query(drop_tmp_tables_queries[1],res) == -1)
     {
       trace(TRACE_ERROR, "db_copymsg(): could not drop temporary tables\n");
       return -1;
     }
 
   /* all done, validate new msg by creating a new unique id for the copied msg */
-  snprintf(query, DEF_QUERYSIZE, "UPDATE message SET unique_id=\"%lluA%lu\" "
-	   "WHERE messageidnr=%llu", newid, td, newid);
+  snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET unique_id=\"%lluA%lu\" "
+	   "WHERE message_idnr=%llu", newid, td, newid);
 
-  if (db_query(query) == -1)
+  if (db_query(query,res) == -1)
     {
       trace(TRACE_ERROR, "db_copymsg(): could not set unique ID for copied msg\n");
       return -1;
@@ -2382,22 +2246,17 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
 int db_getmailboxname(u64_t uid, char *name)
 {
   
+  char *row;
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT name FROM mailbox WHERE mailboxidnr = %llu",uid);
+  snprintf(query, DEF_QUERYSIZE, "SELECT name FROM mailboxes WHERE mailbox_idnr = %llu",uid);
 
-  if (db_query(query) == -1)
+  if (db_query(query,res) == -1)
     {
       trace(TRACE_ERROR, "db_getmailboxname(): could not retrieve name\n");
       return -1;
     }
 
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace(TRACE_ERROR,"db_getmailboxname(): mysql_store_result failed: %s\n",mysql_error(&conn));
-      return -1;
-    }
-
-  row = mysql_fetch_row(res);
+  row = PQgetvalue (res, 0, 0);
 
   if (!row)
     {
@@ -2407,7 +2266,7 @@ int db_getmailboxname(u64_t uid, char *name)
       return 0;
     }
 
-  strncpy(name, row[0], IMAP_MAX_MAILBOX_NAMELEN);
+  strncpy(name, row, IMAP_MAX_MAILBOX_NAMELEN);
   PQclear(res);
   return 0;
 }
@@ -2423,10 +2282,10 @@ int db_setmailboxname(u64_t uid, const char *name)
 {
   
 
-  snprintf(query, DEF_QUERYSIZE, "UPDATE mailbox SET name = '%s' WHERE mailboxidnr = %llu",
+  snprintf(query, DEF_QUERYSIZE, "UPDATE mailboxes SET name = '%s' WHERE mailbox_idnr = %llu",
 	   name, uid);
 
-  if (db_query(query) == -1)
+  if (db_query(query,res) == -1)
     {
       trace(TRACE_ERROR, "db_setmailboxname(): could not set name\n");
       return -1;
@@ -2443,28 +2302,22 @@ int db_setmailboxname(u64_t uid, const char *name)
  */
 u64_t db_first_unseen(u64_t uid)
 {
-  
+  char *row;
   u64_t id;
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message WHERE mailboxidnr = %llu "
+  snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr FROM messages WHERE mailbox_idnr = %llu "
 	   "AND status<2 AND seen_flag = 0 AND unique_id != \"\" "
-	   "ORDER BY messageidnr ASC LIMIT 0,1", uid);
+	   "ORDER BY message_idnr ASC LIMIT 0,1", uid);
 
-  if (db_query(query) == -1)
+  if (db_query(query,res) == -1)
     {
       trace(TRACE_ERROR, "db_first_unseen(): could not select messages\n");
       return (u64_t)(-1);
     }
 
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace(TRACE_ERROR,"db_first_unseen(): mysql_store_result failed: %s\n",mysql_error(&conn));
-      return (u64_t)(-1);
-    }
-  
-  row = mysql_fetch_row(res);
+  row = PQgetvalue(res,0,0);
   if (row)
-    id = strtoul(row[0],NULL,10);
+    id = strtoul(row,NULL,10);
   else
     id = 0; /* none found */
       
@@ -2482,10 +2335,10 @@ int db_subscribe(u64_t mboxid)
 {
   
 
-  snprintf(query, DEF_QUERYSIZE, "UPDATE mailbox SET is_subscribed = 1 WHERE mailboxidnr = %llu", 
+  snprintf(query, DEF_QUERYSIZE, "UPDATE mailboxes SET is_subscribed = 1 WHERE mailbox_idnr = %llu", 
 	   mboxid);
 
-  if (db_query(query) == -1)
+  if (db_query(query,res) == -1)
     {
       trace(TRACE_ERROR, "db_subscribe(): could not update mailbox\n");
       return (-1);
@@ -2504,10 +2357,10 @@ int db_unsubscribe(u64_t mboxid)
 {
   
 
-  snprintf(query, DEF_QUERYSIZE, "UPDATE mailbox SET is_subscribed = 0 WHERE mailboxidnr = %llu", 
+  snprintf(query, DEF_QUERYSIZE, "UPDATE mailboxes SET is_subscribed = 0 WHERE mailbox_idnr = %llu", 
 	   mboxid);
 
-  if (db_query(query) == -1)
+  if (db_query(query,res) == -1)
     {
       trace(TRACE_ERROR, "db_unsubscribe(): could not update mailbox\n");
       return (-1);
@@ -2532,6 +2385,7 @@ int db_get_msgflag(const char *name, u64_t mailboxuid, u64_t msguid)
   
   char flagname[DEF_QUERYSIZE/2]; /* should be sufficient ;) */
   int val;
+  char *row;
 
   /* determine flag */
   if (strcasecmp(name,"seen") == 0)
@@ -2549,24 +2403,18 @@ int db_get_msgflag(const char *name, u64_t mailboxuid, u64_t msguid)
   else
     return 0; /* non-existent flag is not set */
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT %s FROM message WHERE mailboxidnr = %llu "
-	   "AND status<2 AND messageidnr = %llu AND unique_id != \"\"", flagname, mailboxuid, msguid);
+  snprintf(query, DEF_QUERYSIZE, "SELECT %s FROM messages WHERE mailbox_idnr = %llu "
+	   "AND status<2 AND message_idnr = %llu AND unique_id != \"\"", flagname, mailboxuid, msguid);
 
-  if (db_query(query) == -1)
+  if (db_query(query,res) == -1)
     {
       trace(TRACE_ERROR, "db_get_msgflag(): could not select message\n");
       return (-1);
     }
 
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace(TRACE_ERROR,"db_get_msgflag(): mysql_store_result failed: %s\n",mysql_error(&conn));
-      return (-1);
-    }
-  
-  row = mysql_fetch_row(res);
+  row = PQgetvalue (res, 0, 0);
   if (row)
-    val = atoi(row[0]);
+    val = atoi(row);
   else
     val = 0; /* none found */
       
@@ -2605,10 +2453,10 @@ int db_set_msgflag(const char *name, u64_t mailboxuid, u64_t msguid, int val)
   else
     return 0; /* non-existent flag is cannot set */
 
-  snprintf(query, DEF_QUERYSIZE, "UPDATE message SET %s = %d WHERE mailboxidnr = %llu "
-	   "AND status<2 AND messageidnr = %llu", flagname, val, mailboxuid, msguid);
+  snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET %s = %d WHERE mailbox_idnr = %llu "
+	   "AND status<2 AND message_idnr = %llu", flagname, val, mailboxuid, msguid);
 
-  if (db_query(query) == -1)
+  if (db_query(query,res) == -1)
     {
       trace(TRACE_ERROR, "db_set_msgflag(): could not set flag\n");
       return (-1);
@@ -2626,31 +2474,28 @@ int db_set_msgflag(const char *name, u64_t mailboxuid, u64_t msguid, int val)
  */
 int db_get_msgdate(u64_t mailboxuid, u64_t msguid, char *date)
 {
-  snprintf(query, DEF_QUERYSIZE, "SELECT internal_date FROM message WHERE mailboxidnr = %llu "
-	   "AND messageidnr = %llu AND unique_id!=\"\"", mailboxuid, msguid);
 
-  if (db_query(query) == -1)
+  char *row;
+    
+  snprintf(query, DEF_QUERYSIZE, "SELECT internal_date FROM messages WHERE mailbox_idnr = %llu "
+	   "AND message_idnr = %llu AND unique_id!=\"\"", mailboxuid, msguid);
+
+  if (db_query(query,res) == -1)
     {
       trace(TRACE_ERROR, "db_get_msgdate(): could not get message\n");
       return (-1);
     }
 
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace(TRACE_ERROR,"db_get_msgdate(): mysql_store_result failed: %s\n",mysql_error(&conn));
-      return (-1);
-    }
-
-  row = mysql_fetch_row(res);
+  row = PQgetvalue (res, 0, 0);
   if (row)
     {
-      strncpy(date, row[0], IMAP_INTERNALDATE_LEN);
+      strncpy(date, row, IMAP_INTERNALDATE_LEN);
       date[IMAP_INTERNALDATE_LEN - 1] = '\0';
     }
   else
     {
-      /* no date ? let's say 1 jan 1970 */
-      strncpy(date, "1970-01-01 00:00:01", IMAP_INTERNALDATE_LEN);
+      /* no date ? let's say eelco's birthdate :) */
+      strncpy(date, "1976-09-11 06:45:00", IMAP_INTERNALDATE_LEN);
       date[IMAP_INTERNALDATE_LEN - 1] = '\0';
     }
 
@@ -2678,6 +2523,8 @@ int db_get_main_header(u64_t msguid, struct list *hdrlist)
   u64_t dummy = 0, sizedummy = 0;
   int result;
 
+  char *row;
+
   if (!hdrlist)
     return 0;
 
@@ -2686,31 +2533,25 @@ int db_get_main_header(u64_t msguid, struct list *hdrlist)
 
   list_init(hdrlist);
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT messageblk FROM messageblk WHERE "
-	   "messageidnr = %llu ORDER BY messageblknr LIMIT 1", msguid);
+  snprintf(query, DEF_QUERYSIZE, "SELECT messageblk FROM messageblks WHERE "
+	   "message_idnr = %llu ORDER BY messageblk_idnr LIMIT 1", msguid);
 
-  if (db_query(query) == -1)
+  if (db_query(query,res) == -1)
     {
       trace(TRACE_ERROR, "db_get_main_header(): could not get message header\n");
       return (-1);
     }
 
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace(TRACE_ERROR,"db_get_main_header(): mysql_store_result failed: %s\n",
-	    mysql_error(&conn));
-      return (-1);
-    }
-
-  row = mysql_fetch_row(res);
+  row = PQgetvalue (res, 0, 0);
   if (!row)
     {
       /* no header for this message ?? */
+      trace (TRACE_ERROR,"db_get_main_header(): error, no header for this message?");
       PQclear(res);
       return -1;
     }
 
-  result = mime_readheader(row[0], &dummy, hdrlist, &sizedummy);
+  result = mime_readheader(row, &dummy, hdrlist, &sizedummy);
 
   PQclear(res);
 
@@ -2755,6 +2596,8 @@ int db_search_range(db_pos_t start, db_pos_t end, const char *key, u64_t msguid)
   int i,startpos,endpos,j;
   int distance;
 
+  char *row;
+
   if (start.block > end.block)
     {
       trace(TRACE_ERROR,"db_search_range(): bad range specified\n");
@@ -2767,24 +2610,25 @@ int db_search_range(db_pos_t start, db_pos_t end, const char *key, u64_t msguid)
       return 0;
     }
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT messageblk FROM messageblk WHERE messageidnr = %llu"
-	   " ORDER BY messageblknr", 
+  snprintf(query, DEF_QUERYSIZE, "SELECT messageblk FROM messageblks WHERE message_idnr = %llu"
+	   " ORDER BY messageblk_idnr", 
 	   msguid);
 
-  if (db_query(query) == -1)
+  if (db_query(query,res) == -1)
     {
       trace(TRACE_ERROR, "db_search_range(): could not get message\n");
       return 0;
     }
 
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace(TRACE_ERROR,"db_search_range(): mysql_store_result failed: %s\n",mysql_error(&conn));
-      return 0;
-    }
-
+/*
+  ROELFIX:
+  oude code: 
   for (row = mysql_fetch_row(res), i=0; row && i < start.block; i++, row = mysql_fetch_row(res)) ;
-      
+  Je loopt gewoon de query results af totdat je de juiste gevonden hebt? */
+
+  /* volgens mij doet dit hetzelfde in PGsql */
+  row = PQgetvalue (res, start.block, 0);
+  
   if (!row)
     {
       trace(TRACE_ERROR,"db_search_range(): bad range specified\n");
@@ -2797,7 +2641,7 @@ int db_search_range(db_pos_t start, db_pos_t end, const char *key, u64_t msguid)
     {
       for (i=start.pos; i<=end.pos-strlen(key); i++)
 	{
-	  if (strncasecmp(&row[0][i], key, strlen(key)) == 0)
+	  if (strncasecmp(&row[i], key, strlen(key)) == 0)
 	    {
 	      PQclear(res);
 	      return 1;
@@ -2812,6 +2656,10 @@ int db_search_range(db_pos_t start, db_pos_t end, const char *key, u64_t msguid)
   /* 
    * multiple block range specified
    */
+
+   /* ROELFIX: dit moet je nog even bekijken
+      denk niet dat het helemaal klopt :)
+      */
   
   for (i=start.block; i<=end.block; i++)
     {
@@ -2823,20 +2671,24 @@ int db_search_range(db_pos_t start, db_pos_t end, const char *key, u64_t msguid)
 	}
 
       startpos = (i == start.block) ? start.pos : 0;
-      endpos   = (i == end.block) ? end.pos+1 : (mysql_fetch_lengths(res))[0];
+      /* ROELFIX:
+         PQgetlength haalt de lengte op via resultset res, tupel, field
+         Geen idee hoe je dat hier oplost :) 
+         */
+      endpos   = (i == end.block) ? end.pos+1 : (PQgetlength(res,i,0))[0];
 
       distance = endpos - startpos;
 
       for (j=0; j<distance-strlen(key); j++)
 	{
-	  if (strncasecmp(&row[0][i], key, strlen(key)) == 0)
+	  if (strncasecmp(&row[i], key, strlen(key)) == 0)
 	    {
 	      PQclear(res);
 	      return 1;
 	    }
 	}
 	
-      row = mysql_fetch_row(res); /* fetch next row */
+      row = PGgetvalue (res, i, 0); /* fetch next row */
     }
 
   PQclear(res);
@@ -2855,18 +2707,12 @@ int db_mailbox_msg_match(u64_t mailboxuid, u64_t msguid)
   
   int val;
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message WHERE messageidnr = %llu AND "
-	   "mailboxidnr = %llu AND status<002 AND unique_id!=\"\"", msguid, mailboxuid); 
+  snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr FROM message WHERE message_idnr = %llu AND "
+	   "mailbox_idnr = %llu AND status<002 AND unique_id!=\"\"", msguid, mailboxuid); 
 
-  if (db_query(query) == -1)
+  if (db_query(query,res) == -1)
     {
       trace(TRACE_ERROR, "db_mailbox_msg_match(): could not get message\n");
-      return (-1);
-    }
-
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace(TRACE_ERROR,"db_mailbox_msg_match(): mysql_store_result failed: %s\n",mysql_error(&conn));
       return (-1);
     }
 
