@@ -60,14 +60,14 @@
  * */
 dsn_class_t sort_and_deliver(u64_t msgidnr,
 			     const char *header, u64_t headersize,
-			     u64_t totalmsgsize, u64_t totalrfcsize,
+			     u64_t totalmsgsize,
 			     u64_t useridnr, const char *mailbox)
 {
 	field_t val;
 	int do_regex = 0, do_sieve = 0;
 	struct list actions;
 	struct element *tmp;
-	int actiontaken = 0, ret = 0;
+	int actiontaken = 0;
 	u64_t mboxidnr, newmsgidnr;
 	char unique_id[UID_SIZE];
 	char *inbox = "INBOX";
