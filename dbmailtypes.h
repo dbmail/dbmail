@@ -57,9 +57,10 @@ struct message
 typedef struct
 {
 	int error_count;		/* how many errors have occured? */
-	int state; 				/* what is the current pop state */
+	int state; 			/* what is the current pop state */
+	int cmdtype; 			/* index into commands array of last command issued */
 
-	int SessionResult;	/* what happened during the session */
+	int SessionResult;		/* what happened during the session */
 	
 	char *username;
 	char *password;

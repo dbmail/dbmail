@@ -21,6 +21,7 @@
 
 #define INCOMING_BUFFER_SIZE 512
 #define APOP_STAMP_SIZE 255
+#define MAX_USERID_SIZE 100
 
 /* default timeout for server daemon */
 #define DEFAULT_SERVER_TIMEOUT 300
@@ -168,7 +169,8 @@ int pop3_handle_connection (clientinfo_t *ci)
 	my_free(session.apop_stamp);
 	session.apop_stamp = NULL;
 
-	if (session.username != NULL && session.password != NULL)
+	/* there is no plaintext password for APOP (commandstype 11) */
+	if (session.username != NULL && (session.cmdtype == 11 || session.password != NULL))
 	{
 		switch (session.SessionResult)
 		{
@@ -290,9 +292,12 @@ int pop3 (void *stream, char *buffer, char *client_ip, PopSession_t *session)
 	}
 
 	for (cmdtype = POP3_STRT; cmdtype < POP3_END; cmdtype ++)
-		if (strcasecmp(command, commands[cmdtype]) == 0) break;
+		if (strcasecmp(command, commands[cmdtype]) == 0) {
+			session->cmdtype = cmdtype;
+			break;
+		}
 
-	trace (TRACE_DEBUG,"pop3(): command looked up as commandtype %d", cmdtype);
+	trace (TRACE_DEBUG,"pop3(): command looked up as commandtype %d", session->cmdtype);
 
 	/* commands that are allowed to have no arguments */
 	if ((value==NULL) && (cmdtype!=POP3_QUIT) && (cmdtype!=POP3_LIST) &&
@@ -323,6 +328,9 @@ int pop3 (void *stream, char *buffer, char *client_ip, PopSession_t *session)
 
 				if (session->username == NULL)
 				{
+					if (strlen(value)>MAX_USERID_SIZE)
+						return pop3_error(session, stream,"-ERR userid is too long\r\n");
+
 					/* create memspace for username */
 					memtst((session->username = (char *)my_malloc(strlen(value)+1))==NULL);
 					strncpy (session->username, value, strlen(value)+1);
@@ -644,14 +652,17 @@ int pop3 (void *stream, char *buffer, char *client_ip, PopSession_t *session)
 				/* value should now be the username */
 				value[searchptr-value-1]='\0';
 
-				if (strlen(searchptr)>32)
+				if (strlen(searchptr)!=32)
 					return pop3_error(session, stream,"-ERR the thingy you issued is not a valid md5 hash\r\n");
 
 				/* create memspace for md5 hash */
 				memtst((md5_apop_he=(char *)my_malloc(strlen(searchptr)+1))==NULL);
 				strncpy (md5_apop_he,searchptr,strlen(searchptr)+1);
 
-				/* create memspace for username */ /* FIXME: we should do a length check here ! */
+				if (strlen(value)>MAX_USERID_SIZE)
+					return pop3_error(session, stream,"-ERR userid is too long\r\n");
+
+				/* create memspace for username */
 				memtst((session->username = (char *)my_malloc(strlen(value)+1))==NULL);
 				strncpy (session->username,value,strlen(value)+1);
 

@@ -116,7 +116,7 @@ void ChildSigHandler(int sig, siginfo_t *info, void *data)
       break;
 
     default:
-      /* bad shit, exit */
+      /* bad shtuff, exit */
       trace(TRACE_DEBUG, "ChildSighandler(): cannot ignore this. Terminating");
 
       /*
