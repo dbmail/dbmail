@@ -672,7 +672,7 @@ int haystack_find(int haystacklen, char **haystack, const char *needle)
  */
 int next_fetch_item(char **args, int idx, fetch_items_t *fi)
 {
-  int invalidargs,indigit,j,ispeek,shouldclose,delimpos;
+  int invalidargs,j=0,indigit,ispeek,shouldclose,delimpos;
 
   memset(fi, 0, sizeof(fetch_items_t)); /* init */
   fi->bodyfetch.itemtype = -1; /* expect no body fetches (a priori) */
@@ -746,52 +746,60 @@ int next_fetch_item(char **args, int idx, fetch_items_t *fi)
 	      else
 		fi->getBodyTotal = 1;
 
+	      /* check if octet start/cnt is specified */
+	      if (args[idx+1] && args[idx+1][0] == '<')
+		{
+		  idx++; /* advance */
+
+		  /* check argument */
+		  if (args[idx][strlen(args[idx]) - 1 ] != '>')
+		    return -2; /* error DONE */
+
+		  delimpos = -1;
+		  for (j=1; j < strlen(args[idx])-1; j++)
+		    {
+		      if (args[idx][j] == '.')
+			{
+			  if (delimpos != -1)
+			    {
+			      invalidargs = 1;
+			      break;
+			    }
+			  delimpos = j;
+			}
+		      else if (!isdigit(args[idx][j]))
+			{
+			  invalidargs = 1;
+			  break;
+			}
+		    }
+	      
+		  if (invalidargs || delimpos == -1 || delimpos == 1 || delimpos == (strlen(args[idx])-2) )
+		    return -2;  /* no delimiter found or at first/last pos OR invalid args DONE */
+
+		  /* read the numbers */
+		  args[idx][strlen(args[idx]) - 1] = '\0';
+		  args[idx][delimpos] = '\0';
+		  fi->bodyfetch.octetstart = atoi(&args[idx][1]);
+		  fi->bodyfetch.octetcnt   = atoi(&args[idx][delimpos+1]);
+			
+		  /* restore argument */
+		  args[idx][delimpos] = '.';
+		  args[idx][strlen(args[idx]) - 1] = '>';
+		}
+	      else
+		{
+		  fi->bodyfetch.octetstart = -1;
+		  fi->bodyfetch.octetcnt   = -1;
+		}
+	      
 	      return idx+1; /* DONE */
 	    }
 	      
 	  if (ispeek)
 	    fi->bodyfetch.noseen = 1;
 
-	  /* first check if there is a partspecifier (numbers & dots) */
-	  indigit = 0;
-	  for (j=0; args[idx][j]; j++)
-	    {
-	      if (isdigit(args[idx][j]))
-		{
-		  indigit = 1;
-		  continue;
-		}
-	      else if (args[idx][j] == '.')
-		{
-		  if (!indigit)
-		    {
-		      /* error, single dot specified */
-		      invalidargs = 1;
-		      break;
-		    }
-		      
-		  indigit = 0;
-		  continue;
-		}
-	      else
-		break; /* other char found */
-	    }
-	      
-	  if (invalidargs)
-	    return -2; /* error DONE */
-
-	  if (j > 0)
-	    {
-	      if (indigit && args[idx][j])
-		return -2; /* error DONE */
-		
-	      /* partspecifier present, save it */
-	      if (j >= IMAP_MAX_PARTSPEC_LEN)
-		return -2; /* error DONE */
-
-	      strncpy(fi->bodyfetch.partspec, args[idx], j);
-	    }
-	  fi->bodyfetch.partspec[j] = '\0';
+	  /* check for a partspecifier */
 
 	  shouldclose = 0;
 	  if (strcasecmp(&args[idx][j], "text") == 0)

@@ -141,18 +141,18 @@ int SS_MakeServerSock(const char *ipaddr, const char *port, int default_children
   if (shm_id_dcu == -1)
     {
       snprintf(ss_error_msg, SS_ERROR_MSG_LEN, "SS_MakeServerSock(): error getting shared "
-	       "memory segment [%s]\n", strerror(errno));
+	       "memory segment [%s] (dcu)\n", strerror(errno));
       close(sock);
       return -1;
     }
 
-  shm_key_dcp = time(NULL);
+  shm_key_dcp = time(NULL)+1;
   shm_id_dcp = shmget(shm_key_dcp, SHM_ONE_DCP_ALLOC_SIZE * default_children, 0666 | IPC_CREAT);
 
   if (shm_id_dcp == -1)
     {
       snprintf(ss_error_msg, SS_ERROR_MSG_LEN, "SS_MakeServerSock(): error getting shared "
-	       "memory segment [%s]\n", strerror(errno));
+	       "memory segment [%s] (dcp)\n", strerror(errno));
       close(sock);
       return -1;
     }
@@ -241,7 +241,7 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 	ss_nchildren++;
     }
 
-  if (getpid() != ss_server_pid)
+  if (getpid() == ss_server_pid)
     {
       trace(TRACE_DEBUG,"SS_WaitAndProcess(): default children PID's:\n");
       for (i=0; i<default_children; i++)

@@ -1346,6 +1346,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
   int i,fetch_start,fetch_end,result,setseen,j,k;
   int isfirstout,idx,headers_fetched,uid_will_be_fetched;
   int partspeclen,only_text_from_msgpart = 0;
+  int bad_response_send = 0;
   fetch_items_t *fi,fetchitem;
   mime_message_t msg,*msgpart;
   char date[IMAP_INTERNALDATE_LEN],*endptr;
@@ -1558,8 +1559,9 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	  curr = list_getstart(&fetch_list);
 	  headers_fetched = 0;
 	  setseen = 0;
+	  bad_response_send = 0;
 
-	  while (curr)
+	  while (curr && !bad_response_send)
 	    {
 	      fi = (fetch_items_t*)curr->data;
 	      rewind(tmpfile);
@@ -1571,7 +1573,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		  if (db_fetch_headers(thisnum, &msg) == -1)
 		    {
 		      fprintf(ci->tx,"\r\n* BAD error fetching message %d\r\n",i+1);
-		      curr = curr->nextnode;
+		      bad_response_send = 1;
 		      continue;
 		    }
 		  db_msgdump(&msg, thisnum);
@@ -2077,7 +2079,8 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	      curr = curr->nextnode;
 	    }
 
-	  fprintf(ci->tx,")\r\n");
+	  if (!bad_response_send)
+	    fprintf(ci->tx,")\r\n");
 
 	  if (headers_fetched)
 	    db_free_msg(&msg);
