@@ -11,8 +11,10 @@
 
 #define CONFIG_ERROR_LEVEL TRACE_WARNING
 
+
 #define FIELDSIZE 1024
 #define FIELDLEN FIELDSIZE
+#define COPYRIGHT "(c) 1999-2002 IC&S, The Netherlands"
 /* set the process titles to something useful */
 //#define PROC_TITLES
 

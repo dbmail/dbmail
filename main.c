@@ -51,6 +51,7 @@ int main (int argc, char *argv[])
   /* first check for commandline options */
   if (argc<2)
     {
+	  printf ("\n*** DBMAIL: dbmail-smtp version $Revision$ %s\n",COPYRIGHT);
       printf ("\nUsage: %s -n [headerfield]   for normal deliveries "
 	      "(default: \"deliver-to\" header)\n",argv[0]);
       printf ("       %s -m \"mailbox\" -u [username] for delivery to mailbox (name)\n"
