@@ -12,9 +12,6 @@ CREATE TABLE aliases (
     client_idnr INTEGER DEFAULT '0' NOT NULL,
     PRIMARY KEY (alias_idnr)
 );
-CREATE INDEX alias_idnr_idx ON aliases (alias_idnr);
-
-
 
 CREATE SEQUENCE user_idnr_seq;
 CREATE TABLE users (
@@ -26,8 +23,6 @@ CREATE TABLE users (
    PRIMARY KEY (user_idnr)
 );
 CREATE UNIQUE INDEX userid_idx ON users (userid);
-CREATE INDEX user_idnr_idx ON users (user_idnr);
-
 
 CREATE SEQUENCE mailbox_idnr_seq;
 CREATE TABLE mailboxes (
@@ -46,9 +41,6 @@ CREATE TABLE mailboxes (
    is_subscribed INT2 DEFAULT '0' NOT NULL,
    PRIMARY KEY (mailbox_idnr)
 );
-CREATE INDEX mailbox_idnr_idx ON mailboxes (mailbox_idnr);
-
-
 
 CREATE SEQUENCE message_idnr_seq;
 CREATE TABLE messages (
@@ -67,9 +59,6 @@ CREATE TABLE messages (
    status INT2 DEFAULT '000' NOT NULL,
    PRIMARY KEY (message_idnr)
 );
-CREATE INDEX message_idnr_idx ON messages (message_idnr);
-
-
 
 CREATE SEQUENCE messageblk_idnr_seq;
 CREATE TABLE messageblks (
@@ -79,8 +68,6 @@ CREATE TABLE messageblks (
    blocksize INT8 DEFAULT '0' NOT NULL,
    PRIMARY KEY (messageblk_idnr)
 );
-CREATE INDEX messageblk_idnr_idx ON messageblks (messageblk_idnr);
-
 
 CREATE TABLE config (
 	config_idnr INTEGER DEFAULT '0' NOT NULL,
