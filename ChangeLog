@@ -1,3 +1,8 @@
+2004-08-20  Aaron Stone  <aaron@serendipity.cx>
+
+	* man/dbmail-users.1: options -s and -S had been left out of
+	part of the SYNONSIS section.
+
 2004-08-20  Ilja Booij  <ilja@ic-s.nl>
 
 	* sql/postgresql/migrate_from_1.x_to_2.0.pgsql: removed old foreign
