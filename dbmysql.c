@@ -8,6 +8,7 @@
 #include "list.h"
 #include "mime.h"
 #include "pipe.h"
+#include <time.h>
 #include <ctype.h>
 
 #define DEF_QUERYSIZE 1024
@@ -292,12 +293,20 @@ unsigned long db_get_useridnr (unsigned long messageidnr)
 
 unsigned long db_insert_message (unsigned long *useridnr)
 {
-  char *ckquery;
+  char *ckquery, timestr[30];
+  time_t td;
+  struct tm tm;
+
   /* allocating memory for query */
   memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
 
-  sprintf (ckquery,"INSERT INTO message(mailboxidnr,messagesize,unique_id) VALUES (%lu,0,\" \")",
-	   db_get_inboxid(useridnr));
+  time(&td);              /* get time */
+  tm = *localtime(&td);   /* get components */
+  strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
+  
+  sprintf (ckquery,"INSERT INTO message(mailboxidnr,messagesize,unique_id,internal_date)"
+	   " VALUES (%lu,0,\" \",\"%s\")",
+	   db_get_inboxid(useridnr), timestr);
 
   trace (TRACE_DEBUG,"db_insert_message(): inserting message query [%s]",ckquery);
   if (db_query (ckquery)==-1)
@@ -334,44 +343,48 @@ unsigned long db_update_message (unsigned long *messageidnr, char *unique_id,
 
 unsigned long db_insert_message_block (char *block, int messageidnr)
 {
-
   char *escblk, *tmpquery;
-  
+  int len;
+
   if (block != NULL)
-  {
-	  trace (TRACE_DEBUG,"db_insert_message_block(): inserting a %d bytes block",
-			  strlen(block));
-		/* allocate memory twice as much, for eacht character might be escaped 
-			added aditional 250 bytes for possible function err */
-		memtst((escblk=(char *)malloc(((strlen(block)*2)+250)))==NULL); 
-		/* mysql description is not really clear about this function, so i'm not 
-			sure if the +1 needs to be added to the length of block */
-		if (mysql_escape_string (escblk,block,strlen(block)+1) > 0)
-		{
-			/* add an extra 500 characters for the query */
-			memtst((tmpquery=(char *)malloc(strlen(escblk)+500))==NULL);
+    {
+      len = strlen(block);
+
+      trace (TRACE_DEBUG,"db_insert_message_block(): inserting a %d bytes block",
+	     len);
+
+      /* allocate memory twice as much, for eacht character might be escaped 
+	 added aditional 250 bytes for possible function err */
+
+      memtst((escblk=(char *)malloc(((len*2)+250)))==NULL); 
+
+      /* escape the string */
+      if (mysql_escape_string(escblk, block, len) > 0)
+	{
+	  /* add an extra 500 characters for the query */
+	  memtst((tmpquery=(char *)malloc(strlen(escblk)+500))==NULL);
 	
-			sprintf (tmpquery,"INSERT INTO messageblk(messageblk,blocksize,messageidnr) VALUES (\"%s\",%d,%d)",
-				escblk,strlen(block),messageidnr);
+	  sprintf (tmpquery,"INSERT INTO messageblk(messageblk,blocksize,messageidnr) VALUES (\"%s\",%d,%d)",
+		   escblk,len,messageidnr);
 
-			if (db_query (tmpquery)==-1)
-			{
-				free(tmpquery);
-				trace(TRACE_STOP,"db_insert_message_block(): dbquery failed");
-			}
+	  if (db_query (tmpquery)==-1)
+	    {
+	      free(tmpquery);
+	      trace(TRACE_STOP,"db_insert_message_block(): dbquery failed");
+	    }
 
-			/* freeing buffers */
-			free (tmpquery);
-			free (escblk);
-			return db_insert_result(&conn);
-		}
-		else
-			trace (TRACE_STOP,"db_insert_message_block(): mysql_real_escape_string() returned empty value");
-  }
+	  /* freeing buffers */
+	  free (tmpquery);
+	  free (escblk);
+	  return db_insert_result(&conn);
+	}
+      else
+	trace (TRACE_STOP,"db_insert_message_block(): mysql_real_escape_string() returned empty value");
+    }
   else
-	  trace (TRACE_STOP,"db_insert_message_block(): value of block cannot be NULL, insertion not possible");
+    trace (TRACE_STOP,"db_insert_message_block(): value of block cannot be NULL, insertion not possible");
 
-	return -1;
+  return -1;
 }
 
 
@@ -926,26 +939,26 @@ int db_update_user_size (unsigned long useridnr, unsigned long addbytes)
 
 unsigned long db_check_mailboxsize (unsigned long mailboxid)
 {
-	/* checks the size of a mailbox */
-	char *ckquery;
+  /* checks the size of a mailbox */
+  char *ckquery;
 
-	/* checking current size */
-	memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
-	sprintf (ckquery, "SELECT SUM(messagesize) FROM message WHERE mailboxidnr = %lu AND status<002",
-			mailboxid);
+  /* checking current size */
+  memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
+  sprintf (ckquery, "SELECT SUM(messagesize) FROM message WHERE mailboxidnr = %lu AND status<002",
+	   mailboxid);
 
-	trace (TRACE_DEBUG,"db_check_mailboxsize(): executing query [%s]",
-			ckquery);
+  trace (TRACE_DEBUG,"db_check_mailboxsize(): executing query [%s]",
+	 ckquery);
 
-	if (db_query(ckquery) != 0)
-	{
-		trace (TRACE_ERROR,"db_check_mailboxsize(): could not execute query [%s]",
-				ckquery);
-		free(ckquery);
-		return -1;
-	}
+  if (db_query(ckquery) != 0)
+    {
+      trace (TRACE_ERROR,"db_check_mailboxsize(): could not execute query [%s]",
+	     ckquery);
+      free(ckquery);
+      return -1;
+    }
   
-	if ((res = mysql_store_result(&conn)) == NULL)
+  if ((res = mysql_store_result(&conn)) == NULL)
     {
       trace (TRACE_ERROR,"db_check_mailboxsize(): mysql_store_result failed:  %s",mysql_error(&conn));
       free(ckquery);
@@ -954,17 +967,17 @@ unsigned long db_check_mailboxsize (unsigned long mailboxid)
 
   if (mysql_num_rows(res)<1)
     {
-		trace (TRACE_ERROR,"db_check_mailboxsize(): weird, cannot execute SUM query");
+      trace (TRACE_ERROR,"db_check_mailboxsize(): weird, cannot execute SUM query");
       free(ckquery);
       return 0;
     }
 
-	row = mysql_fetch_row(res);
+  row = mysql_fetch_row(res);
 
-	if (row[0]!=NULL)
-		return atol (row[0]);
-	else 
-		return 0;
+  if (row[0]!=NULL)
+    return atol (row[0]);
+  else 
+    return 0;
 }
 
 
@@ -2378,7 +2391,7 @@ int db_update_msgbuf(int minlen)
 
       /* rest of row does not fit entirely in buf */
       strncpy(&msgbuf[buflen], &_msgrow[0][rowpos], MSGBUF_WINDOWSIZE - buflen);
-      rowpos += (MSGBUF_WINDOWSIZE - buflen);
+      rowpos += (MSGBUF_WINDOWSIZE - buflen - 1);
 
       buflen = MSGBUF_WINDOWSIZE-1;
       msgbuf[buflen] = '\0';
@@ -2404,12 +2417,14 @@ int db_update_msgbuf(int minlen)
   rowlength = (mysql_fetch_lengths(_msg_result))[0];
   rowpos = 0;
 
-  trace(TRACE_DEBUG,"update msgbuf 3\n");
+  trace(TRACE_DEBUG,"update msgbuf, got new block, trying to place data\n");
 
   strncpy(&msgbuf[buflen], _msgrow[0], MSGBUF_WINDOWSIZE - buflen - 1);
   if (rowlength <= MSGBUF_WINDOWSIZE - buflen - 1)
     {
       /* 2nd block fits entirely */
+      trace(TRACE_DEBUG,"update msgbuf: new block fits entirely\n");
+
       rowpos = rowlength;
       buflen += rowlength;
     }
@@ -3082,7 +3097,7 @@ int db_mailbox_msg_match(unsigned long mailboxuid, unsigned long msguid)
   int val;
 
   snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message WHERE messageidnr = %lu AND "
-	   "mailboxidnr = %lu", msguid, mailboxuid); 
+	   "mailboxidnr = %lu AND status<002", msguid, mailboxuid); 
 
   if (db_query(query) == -1)
     {

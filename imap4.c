@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <unistd.h>
+#include <errno.h>
 #include "imap4.h"
 #include "imaputil.h"
 #include "imapcommands.h"
@@ -128,8 +130,27 @@ int imap_process(ClientInfo *ci)
 
   do
     {
+      if (ferror(ci->rx))
+	{
+	  trace(TRACE_ERROR, "IMAPD: error [%s] on read-stream\n",strerror(errno));
+	  if (errno == EPIPE)
+	    return -1; /* broken pipe */
+	  else
+	    clearerr(ci->rx);
+	}
+
+      if (ferror(ci->tx))
+	{
+	  trace(TRACE_ERROR, "IMAPD: error [%s] on write-stream\n",strerror(errno));
+	  if (errno == EPIPE)
+	    return -1; /* broken pipe */
+	  else
+	    clearerr(ci->tx);
+	}
+
       /* read command line */
       fgets(line, MAX_LINESIZE, ci->rx);
+      trace(TRACE_DEBUG,"IMAPD: line read for PID %d\n",getpid());
 
       if (!checkchars(line))
 	{

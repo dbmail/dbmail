@@ -1298,11 +1298,6 @@ int _ic_expunge(char *tag, char **args, ClientInfo *ci)
   /* show expunge info */
   for (i=0; i<nmsgs; i++)
     {
-      /* dump debug info */
-      trace(TRACE_DEBUG,"trying to find %lu...\r\n",msgids[i]);
-      for (j=0; j<ud->mailbox.exists; j++)
-	trace(TRACE_DEBUG,"member #%d: %lu\r\n",j,ud->mailbox.seq_list[j]);
-	  
       /* find the message sequence number */
       idx = binary_search(ud->mailbox.seq_list, ud->mailbox.exists, msgids[i]);
 

@@ -45,7 +45,7 @@ const char *item_desc[] =
 
 const char *envelope_items[] = 
 {
-  "from", "sender", "reply-to", "to", "cc", "bcc", "in-reply-to", NULL
+  "from", "sender", "reply-to", "to", "cc", "bcc", NULL
 };
 
 /* 
@@ -289,6 +289,12 @@ int retrieve_envelope(FILE *outstream, struct list *rfcheader)
   
     }
 
+  mime_findfield("in-reply-to", rfcheader, &mr);
+  if (mr && strlen(mr->value) > 0)
+    fprintf(outstream, " \"%s\"",mr->value);
+  else
+    fprintf(outstream, " NIL");
+
   mime_findfield("message-id", rfcheader, &mr);
   if (mr && strlen(mr->value) > 0)
     fprintf(outstream, " \"%s\"",mr->value);
@@ -334,23 +340,30 @@ int show_address_list(FILE *outstream, struct mime_record *mr)
        * &mr->value[start] 'till first '\0'
        */
 	      
-      /* two possibilities for the mail address:
+      /* possibilities for the mail address:
        * (1) name <user@domain>
-       * (2) user@domain
-       * scan for '<' to determine which case we should be dealing with 
+       * (2) <user@domain>
+       * (3) user@domain
+       * scan for '<' to determine which case we should be dealing with;
        */
 
       for (i=start, inquote=0; mr->value[i] && !(mr->value[i] == '<' && !inquote); i++) 
 	if (mr->value[i] == '\"') inquote ^= 1;
 
-      if (mr->value[i] && i>start+2)
+      if (mr->value[i])
 	{
-	  /* name is contained in &mr->value[start] untill &mr->value[i-2] */
-	  /* name might be quoted */
-	  if (mr->value[start] == '\"')
-	    fprintf(outstream, "\"%.*s\"", i-start-3,&mr->value[start+1]);
+	  if (i > start+2)
+	    {
+	      /* name is contained in &mr->value[start] untill &mr->value[i-2] */
+	      /* name might be quoted */
+	      if (mr->value[start] == '\"')
+		fprintf(outstream, "\"%.*s\"", i-start-3,&mr->value[start+1]);
+	      else
+		fprintf(outstream, "\"%.*s\"", i-start-1,&mr->value[start]);
+	      
+	    }
 	  else
-	    fprintf(outstream, "\"%.*s\"", i-start-1,&mr->value[start]);
+	    fprintf(outstream, "NIL");
 
 	  start = i+1; /* skip to after '<' */
 	}
@@ -376,7 +389,10 @@ int show_address_list(FILE *outstream, struct mime_record *mr)
       fprintf(outstream, "\"");
 		  
       if (delimiter > 0)
-	mr->value[delimiter++] = ','; /* restore & prepare for next iteration */
+	{
+	  mr->value[delimiter++] = ','; /* restore & prepare for next iteration */
+	  while (isspace(mr->value[delimiter])) delimiter++;
+	}
 
       fprintf(outstream, ")");
 
@@ -912,6 +928,8 @@ int next_fetch_item(char **args, int idx, fetch_items_t *fi)
       /* only allowed if last arg here */
       if (args[idx+1])
 	return -2; /* DONE */
+      else
+	return -1;
     }
   else
     return -2; /* DONE */

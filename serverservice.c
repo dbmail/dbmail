@@ -117,12 +117,12 @@ int SS_MakeServerSock(const char *ipaddr, const char *port, int sighandmode)
 int SS_WaitAndProcess(int sock, int (*ClientHandler)(ClientInfo*), int (*Login)(ClientInfo*))
 {
   struct sockaddr_in saClient;
-  int csock,len;
+  int csock,len,nclients=0;
   ClientInfo client;
   struct sigaction act;
   pid_t PID;
 
-  /* init & install signal handler for SIGCHLD */
+  /* init & install signal handlers */
   memset(&act, 0, sizeof(act));
 
   act.sa_handler = SS_sighandler;
@@ -131,107 +131,111 @@ int SS_WaitAndProcess(int sock, int (*ClientHandler)(ClientInfo*), int (*Login)(
 
   sigaction(SIGCHLD, &act, 0);
   sigaction(SIGPIPE, &act, 0);
+  sigaction(SIGINT, &act, 0);
+  sigaction(SIGQUIT, &act, 0);
+  sigaction(SIGILL, &act, 0);
+  sigaction(SIGBUS, &act, 0);
+  sigaction(SIGFPE, &act, 0);
+  sigaction(SIGSEGV, &act, 0);
+  sigaction(SIGTERM, &act, 0);
+  sigaction(SIGSTOP, &act, 0);
 
   /* start server loop */
   for (;;)
     {
-      /* wait for connect */
-      len = sizeof(saClient);
-      csock = accept(sock, (struct sockaddr*)&saClient, &len);
-
-      if (csock == -1)
+      if (nclients < SS_MAX_CLIENTS)
 	{
-	  /* accept failed, refuse connection & continue */
-	  continue;
-	}
+	  if (!fork())
+	    {
+	      /* wait for connect */
+	      len = sizeof(saClient);
+	      csock = accept(sock, (struct sockaddr*)&saClient, &len);
+
+	      if (csock == -1)
+		{
+		  /* accept failed, refuse connection & continue */
+		  exit(1);
+		}
       
-      /* fork into server/client processes */
-      if ( (PID = fork()) == -1)
-	{
-	  /* fork failed */
-	  close(csock);
-	  continue;
-	}
+	      /* zero-init */
+	      memset(&client, 0, sizeof(client));
 
-      if (PID > 0)
-	{
-	  /* parent process */
-/*	  close(csock); */
-	  continue;
-	}
+	      /* make streams */
+	      client.fd = csock;
+	      client.rx = fdopen(csock, "r");
 
-      /* 
-       * now entering CHILD proces 
-       */
+	      if (!client.rx)
+		{
+		  /* read-FILE opening failure */
+		  close(csock); 
+		  continue;
+		}
 
-      /* zero-init */
-      memset(&client, 0, sizeof(client));
+	      client.tx = fdopen(dup(csock), "w");
+	      if (!client.tx)
+		{
+		  /* write-FILE opening failure */
+		  fclose(client.rx);
+		  close(csock); 
+		  continue;
+		}
 
-      /* make streams */
-      client.fd = csock;
-      client.rx = fdopen(csock, "r");
-
-      if (!client.rx)
-	{
-	  /* read-FILE opening failure */
-	  close(csock); 
-	  continue;
-	}
-
-      client.tx = fdopen(dup(csock), "w");
-      if (!client.tx)
-	{
-	  /* write-FILE opening failure */
-	  fclose(client.rx);
-	  close(csock); 
-	  continue;
-	}
-
-      setlinebuf(client.rx);
-      setlinebuf(client.tx);
+	      setlinebuf(client.rx);
+	      setlinebuf(client.tx);
 
 #if LOG_USERS > 0
-      trace(TRACE_MESSAGE,"** Server: client @ socket %d (IP: %s) accepted\n",
-	    csock, inet_ntoa(saClient.sin_addr));
+	      trace(TRACE_MESSAGE,"** Server: client @ socket %d (IP: %s) accepted\n",
+		    csock, inet_ntoa(saClient.sin_addr));
 #endif
 
-      if ((*Login)(&client) == SS_LOGIN_OK)
-	{
-	  client.loginStatus = SS_LOGIN_OK; /* xtra, should have been set by Login() */
+	      if ((*Login)(&client) == SS_LOGIN_OK)
+		{
+		  client.loginStatus = SS_LOGIN_OK; /* xtra, should have been set by Login() */
+		}
+	      else
+		{
+		  /* login failure */
+		  fclose(client.rx);
+		  fclose(client.tx);
+		  close(csock);
+	  
+#if LOG_USERS > 0
+		  trace(TRACE_MESSAGE,"** Server: client @ socket %d (IP: %s) login refused, "
+			"connection closed\n",
+			csock, inet_ntoa(saClient.sin_addr));
+#endif
+		  continue;
+		}
+
+	      /* remember client IP-address */
+	      strncpy(client.ip, inet_ntoa(saClient.sin_addr), SS_IPNUM_LEN);
+	      client.ip[SS_IPNUM_LEN - 1] = '\0';
+
+	      /* handle client */
+	      (*ClientHandler)(&client); 
+
+#if LOG_USERS > 0
+	      fprintf(stderr,"** Server: client @ socket %d (IP: %s) logged out, connection closed\n",
+		      csock, client.ip);
+#endif
+
+	      fflush(client.tx);
+	      fclose(client.tx);
+	      shutdown(fileno(client.rx),SHUT_RDWR);
+	      fclose(client.rx);
+
+	      exit(0); /* child process must exit */
+	    }
+	  else
+	    {
+	      nclients++;
+	    }
 	}
       else
 	{
-	  /* login failure */
-	  fclose(client.rx);
-	  fclose(client.tx);
-	  close(csock);
-	  
-#if LOG_USERS > 0
-	  trace(TRACE_MESSAGE,"** Server: client @ socket %d (IP: %s) login refused, "
-		"connection closed\n",
-		csock, inet_ntoa(saClient.sin_addr));
-#endif
-
-	  continue;
+	  wait(NULL);
+	  nclients--;
 	}
-
-      /* remember client IP-address */
-      strncpy(client.ip, inet_ntoa(saClient.sin_addr), SS_IPNUM_LEN);
-      client.ip[SS_IPNUM_LEN - 1] = '\0';
-
-      (*ClientHandler)(&client);
-
-#if LOG_USERS > 0
-      fprintf(stderr,"** Server: client @ socket %d (IP: %s) logged out, connection closed\n",
-	      csock, client.ip);
-#endif
-
-      fflush(client.tx);
-      fclose(client.tx);
-      shutdown(fileno(client.rx),SHUT_RDWR);
-      fclose(client.rx);
-
-      exit(0); /* child process must exit */
     }
 
   return 0; /* unreachable code */
@@ -260,8 +264,9 @@ void SS_sighandler(int sig)
   int status;
   struct sigaction act;
 
-  if (sig == SIGCHLD)
+  switch (sig)
     {
+    case SIGCHLD:
       do 
 	{
 	  PID = waitpid(-1, &status, WNOHANG);
@@ -275,12 +280,48 @@ void SS_sighandler(int sig)
       act.sa_flags = 0;
 
       sigaction(SIGCHLD, &act, 0);
-    }
-  else if (sig == SIGPIPE)
-    {
-      
-    }
 
+      break;
+
+    case SIGPIPE: 
+      trace(TRACE_FATAL,"Received SIGPIPE\n");
+      break;
+
+    case SIGINT: 
+      trace(TRACE_FATAL,"Received SIGINT\n");
+      break;
+
+    case SIGQUIT: 
+      trace(TRACE_FATAL,"Received SIGQUIT\n");
+      break;
+
+    case SIGILL: 
+      trace(TRACE_FATAL,"Received SIGILL\n");
+      break;
+
+    case SIGBUS: 
+      trace(TRACE_FATAL,"Received SIGBUS\n");
+      break;
+
+    case SIGFPE: 
+      trace(TRACE_FATAL,"Received SIGFPE\n");
+      break;
+
+    case SIGSEGV: 
+      trace(TRACE_FATAL,"Received SIGSEGV\n");
+      break;
+
+    case SIGTERM: 
+      trace(TRACE_FATAL,"Received SIGTERM\n");
+      break;
+
+    case SIGSTOP: 
+      trace(TRACE_FATAL,"Received SIGSTOP\n");
+      break;
+
+    default:
+      trace(TRACE_FATAL,"Received signal %d\n",sig);
+    }
 }
 
  
