@@ -148,7 +148,7 @@ int db_search(unsigned int *rset, int setlen, const char *key, mailbox_t * mb,
 
 			if (msn == -1 || msn >= setlen) {
 				db_free_result();
-				return -1;
+				return 1;
 			}
 			rset[msn] = 1;
 		} else {
@@ -228,6 +228,7 @@ int db_search_parsed(unsigned int *rset, unsigned int setlen,
 	memset(rset, 0, sizeof(int) * setlen);
 
 	for (i = 0; i < setlen; i++) {
+		
 		memset(&msg, 0, sizeof(msg));
 
 		result = db_fetch_headers(mb->seq_list[i], &msg);

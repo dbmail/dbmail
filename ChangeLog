@@ -1,3 +1,9 @@
+2005-01-08  Paul Stevens <paul@nfg.nl>
+
+	* imapcommands.c (_ic_search): resync mailbox after detecting
+	out-of-sync condition.
+	* db.c (db_search): revert to returning out-of-sync.
+
 2005-01-07  Paul Stevens <paul@nfg.nl>
 
 	* debug.c: changed all usage of the my_ prefix to dm_ to avoid

@@ -1703,6 +1703,8 @@ int _ic_search(struct ImapSession *self)
 		}
 
 		if (result == 1) {
+			/* out-of-sync: resync mailbox and retry */
+			db_getmailbox(&ud->mailbox);
 			dm_free(result_set);
 			result_set = NULL;
 		}

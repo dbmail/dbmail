@@ -2349,17 +2349,23 @@ int perform_imap_search(unsigned int *rset, int setlen, search_key_t * sk,
 	unsigned int *newset = NULL;
 	int subtype = IST_SUBSEARCH_OR;
 
-	if (!rset)
+	if (!rset) {
+		trace(TRACE_ERROR,"%s,%s: error empty rset", __FILE__, __func__);
 		return -2;	/* stupidity */
+	}
 
-	if (!sk)
+	if (!sk) {
+		trace(TRACE_ERROR,"%s,%s: error empty sk", __FILE__, __func__);
 		return -2;	/* no search */
+	}
 
 	newset = (int *)g_malloc0(sizeof(int) * setlen);
 	
 	if (!newset)
 		return -2;
 
+	trace(TRACE_DEBUG,"%s,%s: search_key [%d] setlen [%d]", __FILE__, __func__, sk->type, setlen);
+	
 	switch (sk->type) {
 	case IST_SET:
 		build_set(rset, setlen, sk->search);
@@ -2385,6 +2391,8 @@ int perform_imap_search(unsigned int *rset, int setlen, search_key_t * sk,
 	case IST_FLAG:
 		result = db_search(rset, setlen, sk->search, mb, sk->type);
 		if (result != 0) {
+			trace(TRACE_DEBUG,"%s,%s: db_search return error [%d]", 
+					__FILE__, __func__, result);
 			dm_free(newset);
 			return result;
 		}
@@ -2423,8 +2431,7 @@ int perform_imap_search(unsigned int *rset, int setlen, search_key_t * sk,
 
 			if (subsk->type == IST_SUBSEARCH_OR)
 				memset(newset, 0, sizeof(int) * setlen);
-			else if (subsk->type == IST_SUBSEARCH_AND
-				 || subsk->type == IST_SUBSEARCH_NOT)
+			else
 				for (i = 0; i < setlen; i++)
 					newset[i] = 1;
 
