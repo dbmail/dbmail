@@ -1,3 +1,11 @@
+2004-07-09  Ilja Booij  <ilja@ic-s.nl>
+
+	* sql/postgresql/migrate_from_1.x_to_2.0.pgsql: changed pbsp.idnr
+	FROM BIGINT to INT8.
+
+	* sql/postgresql/create_tables.pgsql: changed pbsp.idnr from BIGINT
+	to INT8
+
 2004-07-06  Ilja Booij  <ilja@ic-s.nl>
 
 	* maintenance.c (main): gives more useful help. -f options is now
