@@ -1,3 +1,9 @@
+$Id$
+
+- support for APOP / AUTH / TOP command in pop server
+- support for @domain in aliases table
+- dbmail-smtp should return failed inserts to sender
+
 - commandline program should be created for adding email addresses
 - cronjob should be created for deleting messsages
 - it would be interesting to know who is receiving a message (in log)
