@@ -146,6 +146,9 @@ CREATE INDEX dbmail_messages_3 ON dbmail_messages(seen_flag);
 CREATE INDEX dbmail_messages_4 ON dbmail_messages(unique_id);
 CREATE INDEX dbmail_messages_5 ON dbmail_messages(status);
 CREATE INDEX dbmail_messages_6 ON dbmail_messages(mailbox_idnr,status);
+CREATE INDEX dbmail_messages_7 ON dbmail_messages(mailbox_idnr,status,seen_flag);
+CREATE INDEX dbmail_messages_8 ON dbmail_messages(mailbox_idnr,status,recent_flag);
+
 
 CREATE TABLE dbmail_messageblks (
    messageblk_idnr INTEGER PRIMARY KEY,
