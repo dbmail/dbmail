@@ -233,7 +233,9 @@ int db_check_user (char *username, struct list *userids)
 int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines)
 {
   /* this function writes "lines" to fstream.
-	  if lines == -2 then the whole message is dumped to fstream */
+	  if lines == -2 then the whole message is dumped to fstream 
+	  newlines are rewritten to crlf */
+
   char *ckquery;
   char *currpos, *prevpos, *nextpos;
   int block_count;
@@ -248,19 +250,19 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines)
       free(ckquery);
       return 0;
     }
-  if ((res = mysql_store_result(&conn)) == NULL)
+  if ((res = mysql_use_result(&conn)) == NULL)
     {
       trace(TRACE_ERROR,"db_send_message_lines: mysql_store_result failed: %s",mysql_error(&conn));
       free(ckquery);
       return 0;
     }
-  if (mysql_num_rows(res)<1)
+  /* if (mysql_num_rows(res)<1)
     {
       trace (TRACE_ERROR,"db_send_message_lines(): no messageblks for messageid %lu",messageidnr);
       mysql_free_result(res);
       free(ckquery);
       return 0;
-    }
+    } */
 
 	trace (TRACE_DEBUG,"db_send_message_lines(): sending [%d] lines from message [%lu]",lines,messageidnr);
   
@@ -270,10 +272,6 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines)
 		this way dbmail will write everything to the buffer
 		instead of having to wait for every write */
 
-	trace (TRACE_DEBUG,"db_send_message_lines(): setting send buffer to _IOFBF");
-	setbuf ((FILE *)fstream, _IOFBF);
-	
-	
   while (((row = mysql_fetch_row(res))!=NULL) && ((lines>0) || (lines==-2)))
 	{
 	/* we're going to do this one line at the time */  
@@ -315,10 +313,6 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines)
    fprintf ((FILE *)fstream,"\r\n.\r\n");
    mysql_free_result(res);
 
-	/* resetting buffer to linebuffering mode */
-	trace (TRACE_DEBUG,"db_send_message_lines(): setting send buffer to _IOLBF");
-	setbuf ((FILE *)fstream, _IOLBF);
-	
    return 1;
 }
 
