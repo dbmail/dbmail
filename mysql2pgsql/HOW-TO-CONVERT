@@ -1,0 +1,20 @@
+MySQL --> PostgreSQL conversion:
+
+1. copy the data from mysql to temp files:
+mysql -u <dbmailuser> [-p if needed] < copyfrommysql.sql
+
+this will create some files in /tmp containing all data
+
+2. create clean postgresql database and insert data
+NOTE: THIS WILL DELETE ALL CURRENT DATA IN YOUR POSTGRESQL DBMAIL DATABASE
+
+make sure you are user postgres ..
+then issue the command:
+./pgsql-convert.sh
+
+this will drop the dbmail database, create it, load the mysql data into it
+and finally create the sequences/indexes/constraints
+
+3. remove the data from /tmp
+
+good luck!
