@@ -40,23 +40,26 @@ char *read_header(unsigned long *blksize)
 
   while ((end_of_header==0) && (!feof(stdin)))
     {
-		trace(TRACE_DEBUG,"Reading blocks");
-		usedmem = fread (strblock, sizeof (char), READ_BLOCK_SIZE, stdin);
-		trace (TRACE_DEBUG,"First block read, size [%d]",strlen(strblock));
+		strblock = fgets (strblock, READ_BLOCK_SIZE, stdin);
       usedmem=usedmem + strlen(strblock);
 		
       if (usedmem>HEADER_BLOCK_SIZE)
-	
-	/* add one for \0, since we use strlen for size */
-	memtst(((char *)realloc(header,usedmem+1))==NULL);
+		{
+			/* add one for \0, since we use strlen for size */
+			memtst(((char *)realloc(header,usedmem+1))==NULL);
+		}
 		
       /* now we concatenate all we have to the header array */
       memtst((header=strcat (header,strblock))==NULL);
       if (strstr(header,"\n\n")!=NULL)
-	end_of_header=1;
+		{
+			/* we've found the end of the header */
+			trace (TRACE_DEBUG,"read_header(): end header found!");
+			end_of_header=1;
+		}
 		
       /* reset strlen to 0 */
-      strblock[0]='\0';
+      *strblock='\0';
     }
 	
   trace (TRACE_INFO, "read_header(): readheader done");
@@ -150,6 +153,7 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 				trace (TRACE_INFO,"insert_messages(): no users found to deliver to. Checking for domain forwards");	
 				
 				domain=strchr((char *)tmp->data,'@');
+
 				if (domain!=NULL)	/* this should always be the case! */
 				{
 					trace (TRACE_DEBUG,"insert_messages(): checking for domain aliases. Domain = [%s]",domain);
@@ -163,7 +167,10 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 	 	/* user does not excists in aliases tables
 			so bounce this message back with an error message */
       if (userids.total_nodes==0)
+		{
+			/* still no effective deliveries found */
 			list_nodeadd(&bounces, tmp->data, strlen(tmp->data)+1);
+		}
 
       tmp=tmp->nextnode;
     }
@@ -235,31 +242,30 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 
   memtst ((strblock = (char *)malloc(READ_BLOCK_SIZE))==NULL);
 	
-	/* here we'll loop until we've read all what's left in the buffer 
-	 * fread is used here because we want large blocks */
+	/* here we'll loop until we've read all what's left in the buffer  */
 
 	if (list_totalnodes(&messageids)>0)
 	{
-		while (!feof(stdin))
+		/* we have local deliveries */ 
+		while (!feof(stdin) || (strblock ==NULL))
 		{
-			usedmem = fread (strblock, sizeof (char), READ_BLOCK_SIZE, stdin);
-		
+			strblock = fgets (strblock, READ_BLOCK_SIZE, stdin);
+			
 			if (strblock!=NULL) /* this happends when a eof occurs */
 			{
+				usedmem = strlen (strblock);
 				totalmem=totalmem+usedmem;
 			
 				tmp=list_getstart(&messageids);
 
 				while (tmp!=NULL)
 				{
-					trace(TRACE_DEBUG,"insert_messages(): inserting for [%lu]",
-						*(unsigned long *)tmp->data);
 					db_insert_message_block (strblock,*(unsigned long *)tmp->data);
 					tmp=tmp->nextnode;
 				}
 			}
 		/* resetting strlen for strblock */
-		strblock[0]='\0';
+		*strblock='\0';
 		usedmem = 0;
 		}
 		
@@ -306,7 +312,7 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 		/* i don't know if this the legal way (tm) */
 		
 		/* we're storing the new header in tmpbuffer */	
-		memtst((tmpbuffer = (char *)malloc(strlen(firstblock)+1025))==NULL); 
+		memtst((tmpbuffer = (char *)malloc(strlen(firstblock)+512))==NULL); 
 	
 		myscan=strstr(firstblock,"\nTo:");
 		if (myscan!=NULL)
@@ -351,18 +357,19 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 							fprintf ((FILE *)sendmail_pipe,"%s",tmpbuffer);
 							while (!feof(stdin))
 							{
-								usedmem = fread (strblock, sizeof (char), READ_BLOCK_SIZE, stdin);
-	
+								strblock = fgets (strblock, READ_BLOCK_SIZE, stdin);
+								
 								if (strblock!=NULL) /* this happends when a eof occurs */
 								{
-								totalmem=totalmem+usedmem;
+									usedmem = strlen (strblock);
+									totalmem=totalmem+usedmem;
 		
-								trace(TRACE_DEBUG,"insert_messages(): Sending block size=[%d] total=[%d]",
+									trace(TRACE_DEBUG,"insert_messages(): Sending block size=[%d] total=[%d]",
 										usedmem, totalmem);
-								fprintf ((FILE *)sendmail_pipe,"%s",strblock);
-								/* resetting strlen for strblock */
-								strblock[0]='\0';
-								usedmem = 0;
+									fprintf ((FILE *)sendmail_pipe,"%s",strblock);
+									/* resetting strlen for strblock */
+									strblock[0]='\0';
+									usedmem = 0;
 								}
 								else 
 									trace (TRACE_DEBUG,"insert_messages(): End of STDIN reached. we're done here");
