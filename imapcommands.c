@@ -253,6 +253,8 @@ int _ic_authenticate(char *tag, char **args, ClientInfo *ci)
       trace(TRACE_MESSAGE, "IMAPD [PID %d]: user (name %s) login rejected @ %s\r\n",
 	    getpid(),username,timestr);
 
+      sleep(1);  /* security */
+      
       return 1;
     }
 
