@@ -1,0 +1,351 @@
+dbmail2 (2.1.0-0.20050224) experimental; urgency=low
+
+  * cvs snapshot 
+
+ -- Paul J Stevens <paul@nfg.nl>  Wed, 23 Feb 2005 16:56:15 +0100
+
+dbmail2 (2.1.0-0.20050223) experimental; urgency=low
+
+  * cvs snapshot
+
+ -- Paul J Stevens <paul@nfg.nl>  Wed, 23 Feb 2005 10:00:22 +0100
+
+dbmail2 (2.1.0-0.20050215) experimental; urgency=low
+
+  * finished ldap support.
+
+ -- Paul J Stevens <paul@nfg.nl>  Tue, 15 Feb 2005 09:53:55 +0100
+
+dbmail (2.1.0-0.20050114) experimental; urgency=low
+
+  * cvs snapshot
+
+ -- Paul J Stevens <paul@nfg.nl>  Fri, 14 Jan 2005 16:38:33 +0100
+
+dbmail (2.1.0-0.20050112) experimental; urgency=low
+
+  * fix bug #156
+
+ -- Paul J Stevens <paul@nfg.nl>  Wed, 12 Jan 2005 11:54:06 +0100
+
+dbmail (2.1.0-0.20050108) experimental; urgency=low
+
+  * resync mailbox if out-of-sync in search
+
+ -- Paul J Stevens <paul@nfg.nl>  Sat,  8 Jan 2005 16:49:10 +0100
+
+dbmail (2.1.0-0.20050107) experimental; urgency=low
+
+  * cvs update
+
+ -- Paul J Stevens <paul@nfg.nl>  Fri,  7 Jan 2005 13:47:02 +0100
+
+dbmail (2.1.0-0.20050106) experimental; urgency=low
+
+  * cvs update
+
+ -- Paul J Stevens <paul@nfg.nl>  Thu,  6 Jan 2005 12:48:47 +0100
+
+dbmail (2.1.0-0.20041215) experimental; urgency=low
+
+  * cvs update 
+
+ -- Paul J Stevens <paul@nfg.nl>  Wed, 15 Dec 2004 11:25:09 +0100
+
+dbmail (2.1.0-0.20041210) experimental; urgency=low
+
+  * cvs update
+
+ -- Paul J Stevens <paul@nfg.nl>  Fri, 10 Dec 2004 14:08:14 +0100
+
+dbmail (2.1.0-0.20041209) experimental; urgency=low
+
+  * cvs update
+
+ -- Paul J Stevens <paul@nfg.nl>  Thu,  9 Dec 2004 16:32:41 +0100
+
+dbmail (2.1.0-0.20041208) experimental; urgency=low
+
+  * cvs update
+
+ -- Paul J Stevens <paul@nfg.nl>  Wed,  8 Dec 2004 15:12:22 +0100
+
+dbmail (2.1.0-0.20041204) experimental; urgency=low
+
+  * cvs update
+
+ -- Paul J Stevens <paul@nfg.nl>  Sat,  4 Dec 2004 13:34:53 +0100
+
+dbmail (2.1.0-0.20041127) experimental; urgency=low
+
+  * cvs updates
+
+ -- Paul J Stevens <paul@nfg.nl>  Sat, 27 Nov 2004 13:42:29 +0100
+
+dbmail (2.1.0-0.20041115) experimental; urgency=low
+
+  * cvs updates
+
+ -- Paul J Stevens <paul@nfg.nl>  Mon, 15 Nov 2004 22:07:24 +0100
+
+dbmail (2.1.0-0.20041110) experimental; urgency=low
+
+  * cvs update
+
+ -- Paul J Stevens <paul@nfg.nl>  Wed, 10 Nov 2004 11:13:29 +0100
+
+dbmail (2.1.0-0.20041109) experimental; urgency=low
+
+  * cvs update
+
+ -- Paul J Stevens <paul@nfg.nl>  Tue,  9 Nov 2004 10:35:01 +0100
+
+dbmail (2.1.0-0.20041021) experimental; urgency=low
+
+  * imap_session patch applied upstream
+  * change pid_path to /var/run/dbmail/
+  * cleanup of init-script
+
+ -- Paul J Stevens <paul@nfg.nl>  Thu, 21 Oct 2004 12:00:25 +0200
+
+dbmail (2.1.0-0.20041020) experimental; urgency=low
+
+  * adding imap_session patch
+
+ -- Paul J Stevens <paul@nfg.nl>  Wed, 20 Oct 2004 12:59:02 +0200
+
+dbmail (2.1.0-0.20041012) experimental; urgency=low
+
+  * cvs update
+
+ -- Paul J Stevens <paul@nfg.nl>  Tue, 12 Oct 2004 16:29:38 +0200
+
+dbmail (2.1.0-0.20041005) experimental; urgency=low
+
+  * cvs update.
+
+ -- Paul J Stevens <paul@nfg.nl>  Tue,  5 Oct 2004 15:25:15 +0200
+
+dbmail (2.1.0-0.20041004) experimental; urgency=low
+
+  * cvs update. 
+
+ -- Paul J Stevens <paul@nfg.nl>  Mon,  4 Oct 2004 23:19:03 +0200
+
+dbmail (2.1.0-0.20040922) experimental; urgency=low
+
+  * updating from CVS
+
+ -- Paul J Stevens <paul@nfg.nl>  Wed, 22 Sep 2004 14:35:50 +0200
+
+dbmail (2.1.0-0.20040910) experimental; urgency=low
+
+  * applied the glibc and preforking patches upstream
+  * updating from CVS.
+
+ -- Paul J Stevens <paul@nfg.nl>  Fri, 10 Sep 2004 09:17:24 +0200
+
+dbmail (2.0-0.2004080901) experimental; urgency=low
+
+  * updating from CVS.
+
+ -- Paul J Stevens <paul@nfg.nl>  Mon,  9 Aug 2004 15:27:25 +0200
+
+dbmail (2.0-0.2004080601) experimental; urgency=low
+
+  * updating from CVS.
+  * updated pgsql2mysql.sh.
+  * updated dbmail.cron.d.
+
+ -- Paul J Stevens <paul@nfg.nl>  Fri,  6 Aug 2004 11:11:30 +0200
+
+dbmail (2.0-0.2004080501) experimental; urgency=low
+
+  * updating from CVS.
+  * fixed the stunnel part of the init script.
+
+ -- Paul J Stevens <paul@nfg.nl>  Thu,  5 Aug 2004 12:03:51 +0200
+
+dbmail (2.0-0.2004080201) experimental; urgency=low
+
+  * updating from CVS.
+  * updated all the patches to match table changes.
+
+ -- Paul J Stevens <paul@nfg.nl>  Mon,  2 Aug 2004 15:29:27 +0200
+
+dbmail (2.0-0.2004052605) experimental; urgency=low
+
+  * back-out 06_search (applied upstream)
+  * further search optimizations (07_is_header).
+
+ -- Paul J Stevens <paul@nfg.nl>  Thu, 10 Jun 2004 14:23:09 +0200
+
+dbmail (2.0-0.2004052604) experimental; urgency=low
+
+  * search optimisation (06_search.dpatch).
+
+ -- Paul J Stevens <paul@nfg.nl>  Tue,  8 Jun 2004 23:32:13 +0200
+
+dbmail (2.0-0.2004052603) experimental; urgency=low
+
+  * updated prefork patch. 
+
+ -- Paul J Stevens <paul@nfg.nl>  Mon,  7 Jun 2004 16:25:24 +0200
+
+dbmail (2.0-0.2004052602) experimental; urgency=low
+
+  * changed debian version.
+
+ -- Paul J Stevens <paul@nfg.nl>  Thu,  3 Jun 2004 14:13:14 +0200
+
+dbmail (2.0-0_20040526-1) experimental; urgency=low
+
+  * removed redeundant DEBHELPER stubs from postinst and friends. 
+
+ -- Paul J Stevens <paul@nfg.nl>  Wed,  2 Jun 2004 10:40:55 +0200
+
+dbmail (2.0-0_20040525-1) experimental; urgency=low
+
+  * updated cvs.
+  * cleanups in debian/rules.
+
+ -- Paul J Stevens <paul@nfg.nl>  Tue, 25 May 2004 23:07:06 +0200
+
+dbmail (2.0-0_20040516-1) experimental; urgency=low
+
+  * dropped the drop_priv patch again.
+  * added glib support to the build system.
+  * updated cvs (message insertion refactoring).
+
+ -- Paul J Stevens <paul@nfg.nl>  Sun, 16 May 2004 22:52:40 +0200
+
+dbmail (2.0-0_20040512-1) experimental; urgency=low
+
+  * updated cvs.
+  * include drop_privileges patch by Dan Weber.
+
+ -- Paul J Stevens <paul@nfg.nl>  Wed, 12 May 2004 16:57:11 +0200
+
+dbmail (2.0-0_20040505-1) experimental; urgency=low
+
+  * updated cvs.
+
+ -- Paul J Stevens <paul@nfg.nl>  Wed,  5 May 2004 11:15:57 +0200
+
+dbmail (2.0-0_20040422-1) experimental; urgency=low
+
+  * updated cvs.
+  * removed the patch to imapcommands which was applied upstream.
+
+ -- Paul J Stevens <paul@nfg.nl>  Thu, 22 Apr 2004 12:20:07 +0200
+
+dbmail (2.0-0_20040416-1) experimental; urgency=low
+
+  * updated cvs.
+  * fixed imapcommands.c so mozilla/thunderbird will check 
+    all imap folders when so specified in prefs.js.
+
+ -- Paul J Stevens <paul@nfg.nl>  Fri, 16 Apr 2004 00:42:55 +0200
+
+dbmail (2.0-0_20040401-4) experimental; urgency=low
+
+  * fixed the zombie bug in the preforking code.
+
+ -- Paul J Stevens <paul@nfg.nl>  Thu,  8 Apr 2004 19:41:44 +0200
+
+dbmail (2.0-0_20040401-3) experimental; urgency=low
+
+  * added fix in db.c (memset_escape_query).
+
+ -- Paul J Stevens <paul@nfg.nl>  Sun,  4 Apr 2004 10:18:37 +0200
+
+dbmail (2.0-0_20040401-2) experimental; urgency=low
+
+  * some of my patches made into the upstream cvs. 
+
+ -- Paul J Stevens <paul@nfg.nl>  Thu,  1 Apr 2004 16:40:45 +0200
+
+dbmail (2.0-0_20040401-1) experimental; urgency=low
+
+  * updated cvs.
+
+ -- Paul J Stevens <paul@nfg.nl>  Thu,  1 Apr 2004 15:27:48 +0200
+
+dbmail (2.0-0_20040331-1) experimental; urgency=low
+
+  * updated cvs.
+
+ -- Paul J Stevens <paul@nfg.nl>  Wed, 31 Mar 2004 14:12:21 +0200
+
+dbmail (2.0-0_20040326-1) experimental; urgency=low
+
+  * updated cvs.
+
+ -- Paul J Stevens <paul@nfg.nl>  Fri, 26 Mar 2004 13:51:00 +0100
+
+dbmail (2.0-0_20040323-1) experimental; urgency=low
+
+  * updated cvs.
+
+ -- Paul J Stevens <paul@nfg.nl>  Tue, 23 Mar 2004 13:15:22 +0100
+
+dbmail (2.0-0_20040319-1) experimental; urgency=low
+
+  * release candidate 4.
+
+ -- Paul J Stevens <paul@nfg.nl>  Fri, 19 Mar 2004 19:45:44 +0100
+
+dbmail (2.0-0_20040316-1) experimental; urgency=low
+
+  * updated cvs.
+  * included experimental patch to fix imap networking.
+
+ -- Paul J Stevens <paul@nfg.nl>  Tue, 16 Mar 2004 22:15:29 +0100
+
+dbmail (2.0-0_20040315-1) experimental; urgency=low
+
+  * updated cvs.
+  * fixed the botched ucf fix.
+
+ -- Paul J Stevens <paul@nfg.nl>  Mon, 15 Mar 2004 14:57:02 +0100
+
+dbmail (2.0-0_20040303-1) experimental; urgency=low
+
+  * updated cvs.
+  * removed the ucf hack in postinst.
+
+ -- Paul J Stevens <paul@nfg.nl>  Wed,  3 Mar 2004 14:33:24 +0100
+
+dbmail (2.0-0_20040224-2) experimental; urgency=low
+
+  * fixed some issues in the config-file.
+  * moved /etc/dbmail/dbmail-debian.conf to /etc/default/dbmail.
+  * implemented clean fcntl locking in the preforking code.
+  * cleaned out some bugs in the preforking code.
+
+ -- Paul J Stevens <paul@nfg.nl>  Wed, 25 Feb 2004 08:10:40 +0000
+
+dbmail (2.0-0_20040224-1) experimental; urgency=low
+
+  * adding experimental support for dynamic preforking.
+
+ -- Paul J Stevens <paul@nfg.nl>  Tue, 24 Feb 2004 09:03:22 +0100
+
+dbmail (2.0-0_20040210-1) experimental; urgency=low
+
+  * rc2 is out. Another update.
+
+ -- Paul J Stevens <paul@nfg.nl>  Tue, 10 Feb 2004 09:38:04 +0100
+
+dbmail (2.0-0_20040202-1) experimental; urgency=low
+
+  * rc1 is out, so I'm updating the packages. 
+
+ -- Paul J Stevens <paul@nfg.nl>  Mon,  2 Feb 2004 08:56:05 +0100
+
+dbmail (2.0-0_20040102-1) experimental; urgency=low
+
+  * test release of upcoming major revision.
+
+ -- Paul J Stevens <paul@nfg.nl>  Fri,  2 Jan 2004 14:55:05 +0100
+
