@@ -59,8 +59,7 @@ static void signal_handler (int signo)
 		done=-1;
 		trace (TRACE_DEBUG,"signal_handler(): received ALRM signal. Timeout");
 		fprintf (tx,"-ERR i cannot wait forever\r\n");
-		fclose (tx);
-		fclose (rx);
+		fflush (tx);
 		shutdown(fileno(tx),SHUT_RDWR);
 		shutdown(fileno(rx),SHUT_RDWR);
 		return;
@@ -154,8 +153,6 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 		return -1;
 	}
 			
-	(*default_children++);
-
 	/* first initiate AUTHORIZATION state */
 	state = AUTHORIZATION;
 		
@@ -224,8 +221,6 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 
 	/* reset timers */
 	alarm (0);
-	
-	(*default_children)--;
 	
 	return 0;
 }
@@ -331,6 +326,7 @@ int main (int argc, char *argv[])
   signal (SIGINT, signal_handler);
   signal (SIGQUIT, signal_handler);
   signal (SIGILL, signal_handler);
+  signal (SIGKILL, signal_handler);
   signal (SIGBUS, signal_handler);
   signal (SIGFPE, signal_handler);
   signal (SIGSEGV, signal_handler);
@@ -404,9 +400,6 @@ int main (int argc, char *argv[])
   if (shmid == -1)
 	  trace (TRACE_FATAL,"main(): could not allocate shared memory");
 
-  default_children = (int *)shmat(shmid, 0, 0);
-  if (default_children == (int *)-1)
-	  trace (TRACE_FATAL,"main(): could not attach to shared memory block");
 
   /* server loop */
   trace (TRACE_MESSAGE,"main(): DBmail pop3 server ready (bound to [%s:%s])",ipaddr,port);
@@ -423,6 +416,10 @@ int main (int argc, char *argv[])
 
   /* remember this pid, we're the father process */
   server_pid = getpid();
+  
+  default_children = (int *)shmat(shmid, 0, 0);
+  if (default_children == (int *)-1)
+	  trace (TRACE_FATAL,"main(): could not attach to shared memory block");
 
 	/* we don't have any children yet */
 	*default_children = 0;
@@ -456,13 +453,14 @@ int main (int argc, char *argv[])
 				trace (TRACE_FATAL,"main(): call accept(2) failed");
 			}
 		
+		(*default_children)++;		
+			
 		handle_client(myhostname, c, adr_clnt);
-
+		
+		(*default_children)--;
 		}
 	}
-
 	else
-		
 	for (;;)
 	{
 		if (*default_children < defchld)
