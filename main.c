@@ -182,7 +182,7 @@ int main(int argc, char *argv[])
 			      "main(): using SPECIAL_DELIVERY to usernames");
 
 			dsnuser_init(&dsnuser);
-			dsnuser.address = my_strdup(optarg);
+			dsnuser.address = dm_strdup(optarg);
 
 			/* Add argument onto the users list. */
 			if (list_nodeadd
@@ -202,7 +202,7 @@ int main(int argc, char *argv[])
 			      "main(): using SPECIAL_DELIVERY to email addresses");
 
 			dsnuser_init(&dsnuser);
-			dsnuser.address = my_strdup(optarg);
+			dsnuser.address = dm_strdup(optarg);
 
 			/* Add argument onto the users list. */
 			if (list_nodeadd
@@ -351,7 +351,7 @@ int main(int argc, char *argv[])
 			deliver_to_user_t dsnuser;
 
 			dsnuser_init(&dsnuser);
-			dsnuser.address = my_strdup((char *) tmp->data);
+			dsnuser.address = dm_strdup((char *) tmp->data);
 
 			list_nodeadd(&dsnusers, &dsnuser,
 				     sizeof(deliver_to_user_t));
@@ -365,7 +365,7 @@ int main(int argc, char *argv[])
 		/* Loop through the dsnusers list, setting the destination mailbox. */
 		for (tmp = list_getstart(&dsnusers); tmp != NULL;
 		     tmp = tmp->nextnode) {
-			((deliver_to_user_t *)tmp->data)->mailbox = my_strdup(deliver_to_mailbox);
+			((deliver_to_user_t *)tmp->data)->mailbox = dm_strdup(deliver_to_mailbox);
 		}
 	}
 

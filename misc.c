@@ -73,7 +73,7 @@ int drop_privileges(char *newuser, char *newgroup)
 
 char *itoa(int i)
 {
-	char *s = (char *) my_malloc(42); /* Enough for a 128 bit integer */
+	char *s = (char *) dm_malloc(42); /* Enough for a 128 bit integer */
 	if (s)
 		sprintf(s, "%d", i);
 	return s;
@@ -96,9 +96,9 @@ void create_unique_id(char *target, u64_t message_idnr)
 	snprintf(target, UID_SIZE, "%s", md5_str);
 	trace(TRACE_DEBUG, "%s,%s: created: %s", __FILE__, __func__,
 	      target);
-	my_free(md5_str);
-	my_free(a_message_idnr);
-	my_free(a_rand);
+	dm_free(md5_str);
+	dm_free(a_message_idnr);
+	dm_free(a_rand);
 }
 
 void create_current_timestring(timestring_t * timestring)
@@ -130,7 +130,7 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
 
 	if (user_idnr == owner_idnr) {
 		/* mailbox owned by current user */
-		return my_strdup(mailbox_name);
+		return dm_strdup(mailbox_name);
 	} else {
 		owner_name = auth_get_userid(owner_idnr);
 		if (owner_name == NULL) {
@@ -145,12 +145,12 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
 			fq_name_len = strlen(NAMESPACE_PUBLIC) +
 			    strlen(MAILBOX_SEPERATOR) +
 			    strlen(mailbox_name) + 1;
-			if (!(fq_name = my_malloc(fq_name_len *
+			if (!(fq_name = dm_malloc(fq_name_len *
 						  sizeof(char)))) {
 				trace(TRACE_ERROR,
 				      "%s,%s: not enough memory", __FILE__,
 				      __func__);
-				my_free(owner_name);
+				dm_free(owner_name);
 				return NULL;
 			}
 			snprintf(fq_name, fq_name_len, "%s%s%s",
@@ -162,12 +162,12 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
 			    strlen(owner_name) +
 			    strlen(MAILBOX_SEPERATOR) +
 			    strlen(mailbox_name) + 1;
-			if (!(fq_name = my_malloc(fq_name_len *
+			if (!(fq_name = dm_malloc(fq_name_len *
 						  sizeof(char)))) {
 				trace(TRACE_ERROR,
 				      "%s,%s: not enough memory", __FILE__,
 				      __func__);
-				my_free(owner_name);
+				dm_free(owner_name);
 				return NULL;
 			}
 			snprintf(fq_name, fq_name_len, "%s%s%s%s%s",
@@ -175,7 +175,7 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
 				 owner_name, MAILBOX_SEPERATOR,
 				 mailbox_name);
 		}
-		my_free(owner_name);
+		dm_free(owner_name);
 		trace(TRACE_INFO, "%s,%s: returning fully qualified name "
 		      "[%s]", __FILE__, __func__, fq_name);
 		return fq_name;
@@ -330,7 +330,7 @@ char **base64_decode(char *str, size_t len)
 	/* Base64 encoding required about 40% more space.
 	 * So we'll allocate 50% more space. */
 	maxlen = 3 * len / 2;
-	str_decoded = (char *) my_malloc(sizeof(char) * maxlen);
+	str_decoded = (char *) dm_malloc(sizeof(char) * maxlen);
 	if (str_decoded == NULL)
 		return NULL;
 
@@ -350,14 +350,14 @@ char **base64_decode(char *str, size_t len)
 
 	/* Allocate an array of arrays large enough
 	 * for the strings and a terminating NULL */
-	ret = (char **) my_malloc(sizeof(char *) * (numstrings + 1));
+	ret = (char **) dm_malloc(sizeof(char *) * (numstrings + 1));
 	if (ret == NULL)
 		return NULL;
 
 	/* If there are more strings, copy those, too */
 	for (i = j = n = 0; i <= len_decoded; i++) {
 		if (str_decoded[i] == '\0') {
-			ret[n] = my_strdup(str_decoded + j);
+			ret[n] = dm_strdup(str_decoded + j);
 			j = i + 1;
 			n++;
 		}
@@ -366,7 +366,7 @@ char **base64_decode(char *str, size_t len)
 	/* Put that final NULL on the end of the array */
 	ret[n] = NULL;
 
-	my_free(str_decoded);
+	dm_free(str_decoded);
 
 	return ret;
 }
@@ -379,10 +379,10 @@ void base64_free(char **ret)
 		return;
 
 	for (i = 0; ret[i] != NULL; i++) {
-		my_free(ret[i]);
+		dm_free(ret[i]);
 	}
 
-	my_free(ret);
+	dm_free(ret);
 }
 
 /* Return 0 is all's well. Returns something else if not... */
@@ -399,7 +399,7 @@ int read_from_stream(FILE * instream, char **m_buf, size_t maxlen)
 		return 0;
 	}
 
-	tmp_buf = my_malloc(sizeof(char) * (f_len += 512));
+	tmp_buf = dm_malloc(sizeof(char) * (f_len += 512));
 	if (tmp_buf != NULL)
 		f_buf = tmp_buf;
 	else
@@ -412,7 +412,7 @@ int read_from_stream(FILE * instream, char **m_buf, size_t maxlen)
 			 * buffer every time it is too small. This yields
 			 * a logarithmic number of reallocations. */
 			tmp_buf =
-			    my_realloc(f_buf, sizeof(char) * (f_len *= 2));
+			    dm_realloc(f_buf, sizeof(char) * (f_len *= 2));
 			if (tmp_buf != NULL)
 				f_buf = tmp_buf;
 			else
@@ -469,7 +469,7 @@ int find_bounded(char *value, char left, char right, char **retchar,
 			tmpleft++;
 
 		tmplen = tmpright - tmpleft;
-		*retchar = my_malloc(sizeof(char) * (tmplen + 1));
+		*retchar = dm_malloc(sizeof(char) * (tmplen + 1));
 		if (*retchar == NULL) {
 			*retchar = NULL;
 			*retsize = 0;

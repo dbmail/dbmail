@@ -142,7 +142,7 @@ int lmtp_handle_connection(clientinfo_t * ci)
 	gethostname(myhostname, 64);
 	myhostname[63] = 0;	/* make sure string is terminated */
 
-	buffer = (char *) my_malloc(INCOMING_BUFFER_SIZE * sizeof(char));
+	buffer = (char *) dm_malloc(INCOMING_BUFFER_SIZE * sizeof(char));
 
 	if (!buffer) {
 		trace(TRACE_MESSAGE,
@@ -159,7 +159,7 @@ int lmtp_handle_connection(clientinfo_t * ci)
 	} else {
 		trace(TRACE_MESSAGE,
 		      "lmtp_handle_connection(): TX stream is null!");
-		my_free(buffer);
+		dm_free(buffer);
 		return 0;
 	}
 
@@ -178,7 +178,7 @@ int lmtp_handle_connection(clientinfo_t * ci)
 
 				/* leave, an alarm has occured during fread */
 				if (!ci->rx) {
-					my_free(buffer);
+					dm_free(buffer);
 					return 0;
 				}
 			} while (ferror(ci->rx) && errno == EINTR);
@@ -205,7 +205,7 @@ int lmtp_handle_connection(clientinfo_t * ci)
 
 	/* memory cleanup */
 	lmtp_reset(&session);
-	my_free(buffer);
+	dm_free(buffer);
 	buffer = NULL;
 
 	/* reset timers */
@@ -491,7 +491,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 						(char *)(list_getstart(&from)->data));
 				} else {
 					if (tmpaddr != NULL)
-						my_free(tmpaddr);
+						dm_free(tmpaddr);
 				}
 			}
 			return 1;
@@ -628,7 +628,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 							  &rfcsize) < 0) {
 						trace(TRACE_ERROR, "%s,%s: split_message() failed",
 						      __FILE__, __func__);
-						my_free(whole_message);
+						dm_free(whole_message);
 						discard_client_input((FILE *) instream);
 						ci_write((FILE *) stream,
 							"500 Error in message");
@@ -645,7 +645,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 							stream,
 							"500 Error reading header, "
 							"header too big.\r\n");
-						my_free(whole_message);
+						dm_free(whole_message);
 						return 1;
 					}
 					/* Parse the list and scan for field and content */
@@ -653,7 +653,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 						trace(TRACE_ERROR, "main(): fatal error from mime_fetch_headers()");
 						discard_client_input((FILE *) instream);
 						ci_write((FILE *) stream, "500 Error reading header.\r\n");
-						my_free(whole_message);
+						dm_free(whole_message);
 						return 1;
 					}
 
@@ -697,9 +697,9 @@ int lmtp(void *stream, void *instream, char *buffer,
 					}
 
 					if (header != NULL)
-						my_free(header);
+						dm_free(header);
 					if (whole_message != NULL)
-						my_free(whole_message);
+						dm_free(whole_message);
 					list_freelist(&headerfields.start);
 				}
 				/* Reset the session after a successful delivery;

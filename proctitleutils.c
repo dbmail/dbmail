@@ -46,12 +46,12 @@ void init_set_proc_title(int argc, char *argv[], char *envp[],
 	for (i = envpsize = 0; envp[i] != NULL; i++)
 		envpsize += strlen(envp[i]) + 1;
 
-	if ((p = (char **) my_malloc((i + 1) * sizeof(char *))) != NULL) {
+	if ((p = (char **) dm_malloc((i + 1) * sizeof(char *))) != NULL) {
 		environ = p;
 
 		for (i = 0; envp[i] != NULL; i++) {
 			if ((environ[i] =
-			     my_malloc(strlen(envp[i]) + 1)) != NULL)
+			     dm_malloc(strlen(envp[i]) + 1)) != NULL)
 				strcpy(environ[i], envp[i]);
 		}
 

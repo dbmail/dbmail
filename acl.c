@@ -234,10 +234,10 @@ char *acl_get_acl(u64_t mboxid)
 		trace(TRACE_ERROR, "%s,%s: error adding username to list",
 		      __FILE__, __func__);
 		list_freelist(&identifier_list.start);
-		my_free(username);
+		dm_free(username);
 		return NULL;
 	}
-	my_free(username);
+	dm_free(username);
 
 	identifier_elm = list_getstart(&identifier_list);
 	trace(TRACE_DEBUG, "%s,%s: before looping identifiers!",
@@ -254,7 +254,7 @@ char *acl_get_acl(u64_t mboxid)
 
 	if (!
 	    (acl_string =
-	     my_malloc((acl_string_size + 1) * sizeof(char)))) {
+	     dm_malloc((acl_string_size + 1) * sizeof(char)))) {
 		list_freelist(&identifier_list.start);
 		trace(TRACE_FATAL, "%s,%s: error allocating memory",
 		      __FILE__, __func__);
@@ -272,7 +272,7 @@ char *acl_get_acl(u64_t mboxid)
 			      "rights for user with name [%s].",
 			      __FILE__, __func__, identifier);
 			list_freelist(&identifier_list.start);
-			my_free(acl_string);
+			dm_free(acl_string);
 			return NULL;
 		}
 		trace(TRACE_DEBUG, "%s,%s: %s", __FILE__, __func__,
@@ -306,18 +306,18 @@ char *acl_listrights(u64_t userid, u64_t mboxid)
 		/* user is not owner. User will never be granted any right
 		   by default, but may be granted any right by setting the
 		   right ACL */
-		return my_strdup("\"\" l r s w i p c d a");
+		return dm_strdup("\"\" l r s w i p c d a");
 	}
 
 	/* user is owner, User will always be granted all rights */
-	return my_strdup(acl_right_chars);
+	return dm_strdup(acl_right_chars);
 }
 
 char *acl_myrights(u64_t userid, u64_t mboxid)
 {
 	char *rightsstring;
 
-	if (!(rightsstring = my_malloc((NR_ACL_FLAGS + 1) * sizeof(char)))) {
+	if (!(rightsstring = dm_malloc((NR_ACL_FLAGS + 1) * sizeof(char)))) {
 		trace(TRACE_ERROR, "%s,%s: error allocating memory for "
 		      "rightsstring", __FILE__, __func__);
 		return NULL;
@@ -326,7 +326,7 @@ char *acl_myrights(u64_t userid, u64_t mboxid)
 	if (acl_get_rightsstring(userid, mboxid, rightsstring) < 0) {
 		trace(TRACE_ERROR, "%s,%s: error getting rightsstring.",
 		      __FILE__, __func__);
-		my_free(rightsstring);
+		dm_free(rightsstring);
 		return NULL;
 	}
 

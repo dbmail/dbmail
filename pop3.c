@@ -134,7 +134,7 @@ int pop3_handle_connection(clientinfo_t * ci)
 	gethostname(myhostname, 64);
 	myhostname[63] = '\0';	/* make sure string is terminated */
 
-	buffer = (char *) my_malloc(INCOMING_BUFFER_SIZE * sizeof(char));
+	buffer = (char *) dm_malloc(INCOMING_BUFFER_SIZE * sizeof(char));
 
 	if (!buffer) {
 		trace(TRACE_MESSAGE,
@@ -144,11 +144,11 @@ int pop3_handle_connection(clientinfo_t * ci)
 
 	/* create an unique timestamp + processid for APOP authentication */
 	session.apop_stamp =
-	    (char *) my_malloc(APOP_STAMP_SIZE * sizeof(char));
+	    (char *) dm_malloc(APOP_STAMP_SIZE * sizeof(char));
 	if (!session.apop_stamp) {
 		trace(TRACE_MESSAGE,
 		      "pop3_handle_connection(): Could not allocate buffer for apop");
-		my_free(buffer);
+		dm_free(buffer);
 		return 0;
 	}
 	/* create an unique timestamp + processid for APOP authentication */
@@ -165,8 +165,8 @@ int pop3_handle_connection(clientinfo_t * ci)
 	} else {
 		trace(TRACE_MESSAGE,
 		      "pop3_handle_connection(): TX stream is null!");
-		my_free(session.apop_stamp);
-		my_free(buffer);
+		dm_free(session.apop_stamp);
+		dm_free(buffer);
 		return 0;
 	}
 
@@ -187,8 +187,8 @@ int pop3_handle_connection(clientinfo_t * ci)
 
 				/* leave, an alarm has occured during fread */
 				if (!ci->rx) {
-					my_free(buffer);
-					my_free(session.apop_stamp);
+					dm_free(buffer);
+					dm_free(session.apop_stamp);
 					return 0;
 				}
 
@@ -214,10 +214,10 @@ int pop3_handle_connection(clientinfo_t * ci)
 	session.state = POP3_UPDATE_STATE;
 
 	/* memory cleanup */
-	my_free(buffer);
+	dm_free(buffer);
 	buffer = NULL;
 
-	my_free(session.apop_stamp);
+	dm_free(session.apop_stamp);
 	session.apop_stamp = NULL;
 
 	if (session.username != NULL
@@ -267,13 +267,13 @@ int pop3_handle_connection(clientinfo_t * ci)
 
 	if (session.username != NULL) {
 		/* username cleanup */
-		my_free(session.username);
+		dm_free(session.username);
 		session.username = NULL;
 	}
 
 	if (session.password != NULL) {
 		/* password cleanup */
-		my_free(session.password);
+		dm_free(session.password);
 		session.password = NULL;
 	}
 
@@ -392,7 +392,7 @@ int pop3(void *stream, char *buffer, char *client_ip,
 
 			if (session->username != NULL) {
 				/* reset username */
-				my_free(session->username);
+				dm_free(session->username);
 				session->username = NULL;
 			}
 
@@ -403,7 +403,7 @@ int pop3(void *stream, char *buffer, char *client_ip,
 
 				/* create memspace for username */
 				memtst((session->username =
-					(char *) my_malloc(strlen(value) +
+					(char *) dm_malloc(strlen(value) +
 							   1)) == NULL);
 				strncpy(session->username, value,
 					strlen(value) + 1);
@@ -422,14 +422,14 @@ int pop3(void *stream, char *buffer, char *client_ip,
 						  "-ERR wrong command mode, sir\r\n");
 
 			if (session->password != NULL) {
-				my_free(session->password);
+				dm_free(session->password);
 				session->password = NULL;
 			}
 
 			if (session->password == NULL) {
 				/* create memspace for password */
 				memtst((session->password =
-					(char *) my_malloc(strlen(value) +
+					(char *) dm_malloc(strlen(value) +
 							   1)) == NULL);
 				strncpy(session->password, value,
 					strlen(value) + 1);
@@ -451,12 +451,12 @@ int pop3(void *stream, char *buffer, char *client_ip,
 					      session->username);
 
 					/* clear username, must be re-entered according to RFC */
-					my_free(session->username);
+					dm_free(session->username);
 					session->username = NULL;
 
 					/* also, if the password is set, clear it */
 					if (session->password != NULL) {
-						my_free(session->password);
+						dm_free(session->password);
 						session->password = NULL;
 					}
 					return pop3_error(session, stream,
@@ -816,7 +816,7 @@ int pop3(void *stream, char *buffer, char *client_ip,
 
 			/* create memspace for md5 hash */
 			memtst((md5_apop_he =
-				(char *) my_malloc(strlen(searchptr) +
+				(char *) dm_malloc(strlen(searchptr) +
 						   1)) == NULL);
 			strncpy(md5_apop_he, searchptr,
 				strlen(searchptr) + 1);
@@ -827,7 +827,7 @@ int pop3(void *stream, char *buffer, char *client_ip,
 
 			/* create memspace for username */
 			memtst((session->username =
-				(char *) my_malloc(strlen(value) + 1)) ==
+				(char *) dm_malloc(strlen(value) + 1)) ==
 			       NULL);
 			strncpy(session->username, value,
 				strlen(value) + 1);
@@ -848,8 +848,8 @@ int pop3(void *stream, char *buffer, char *client_ip,
 			if (strcasecmp(auth_getencryption(user_idnr), "")
 			    != 0) {
 				/* it should be clear text */
-				my_free(md5_apop_he);
-				my_free(session->username);
+				dm_free(md5_apop_he);
+				dm_free(session->username);
 				session->username = NULL;
 				md5_apop_he = 0;
 				return pop3_error(session, stream,
@@ -865,7 +865,7 @@ int pop3(void *stream, char *buffer, char *client_ip,
 					      md5_apop_he,
 					      session->apop_stamp);
 
-			my_free(md5_apop_he);
+			dm_free(md5_apop_he);
 			md5_apop_he = 0;
 
 			switch (result) {
@@ -877,10 +877,10 @@ int pop3(void *stream, char *buffer, char *client_ip,
 				      "pop3(): user [%s] tried to login with wrong password",
 				      session->username);
 
-				my_free(session->username);
+				dm_free(session->username);
 				session->username = NULL;
 
-				my_free(session->password);
+				dm_free(session->password);
 				session->password = NULL;
 
 				return pop3_error(session, stream,

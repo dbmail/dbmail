@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
 			source = stdin;	// FIXME to take files as input, too
 			break;
 		case 'u':
-			user_name = my_strdup(optarg);
+			user_name = dm_strdup(optarg);
 			break;
 		case 'l':
 			if (act != 0)
@@ -164,7 +164,7 @@ int main(int argc, char *argv[])
 	}
 
       mainend:
-	my_free(user_name);
+	dm_free(user_name);
 	db_disconnect();
 	auth_disconnect();
 	return res;
@@ -343,7 +343,7 @@ int read_script_file(FILE * f, char **m_buf)
 	while (!feof(f)) {
 		if (f_pos + 1 >= f_len) {
 			tmp_buf =
-			    my_realloc(f_buf, sizeof(char) * (f_len += 200));
+			    dm_realloc(f_buf, sizeof(char) * (f_len += 200));
 			if (tmp_buf != NULL)
 				f_buf = tmp_buf;
 			else

@@ -266,7 +266,7 @@ int db_start_msg(mime_message_t * msg, char *stopbound, int *level,
 		}
 
 		len = newbound - bptr;
-		if (!(newbound = (char *) my_malloc(len + 1))) {
+		if (!(newbound = (char *) dm_malloc(len + 1))) {
 			trace(TRACE_ERROR, "%s,%s: out of memory\n", __FILE__, __func__);
 			return -3;
 		}
@@ -281,7 +281,7 @@ int db_start_msg(mime_message_t * msg, char *stopbound, int *level,
 		if (db_update_msgbuf(MSGBUF_FORCE_UPDATE) == -1) {
 			trace(TRACE_ERROR, "%s,%s: error updating msgbuf\n",
 					__FILE__, __func__);
-			my_free(newbound);
+			dm_free(newbound);
 			return -2;
 		}
 
@@ -298,7 +298,7 @@ int db_start_msg(mime_message_t * msg, char *stopbound, int *level,
 		if (!msgbuf_buf[msgbuf_idx]) {
 			trace(TRACE_WARNING, "%s,%s: unexpected end-of-data\n",
 					__FILE__, __func__);
-			my_free(newbound);
+			dm_free(newbound);
 			return -1;
 		}
 
@@ -310,7 +310,7 @@ int db_start_msg(mime_message_t * msg, char *stopbound, int *level,
 		(*level)++;
 		if ((nlines = db_add_mime_children(&msg->children, newbound, level, maxlevel)) < 0) {
 			trace(TRACE_WARNING, "%s,%s: error adding MIME-children\n", __FILE__, __func__);
-			my_free(newbound);
+			dm_free(newbound);
 			return nlines;
 		}
 		(*level)--;
@@ -322,7 +322,7 @@ int db_start_msg(mime_message_t * msg, char *stopbound, int *level,
 			msgbuf_idx += (2 + sblen);	/* double hyphen preceeds */
 		}
 
-		my_free(newbound);
+		dm_free(newbound);
 		newbound = NULL;
 
 		if (msgbuf_idx > 0) {
@@ -515,7 +515,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound,
 			}
 
 			len = newbound - bptr;
-			if (!(newbound = (char *) my_malloc(len + 1))) {
+			if (!(newbound = (char *) dm_malloc(len + 1))) {
 				trace(TRACE_ERROR,
 				      "db_add_mime_children(): out of memory\n");
 				db_free_msg(&part);
@@ -535,7 +535,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound,
 				trace(TRACE_ERROR,
 				      "db_add_mime_children(): error updating msgbuf\n");
 				db_free_msg(&part);
-				my_free(newbound);
+				dm_free(newbound);
 				return -2;
 			}
 
@@ -556,7 +556,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound,
 			if (!msgbuf_buf[msgbuf_idx]) {
 				trace(TRACE_WARNING,
 				      "db_add_mime_children(): unexpected end-of-data\n");
-				my_free(newbound);
+				dm_free(newbound);
 				db_free_msg(&part);
 				return -1;
 			}
@@ -573,13 +573,13 @@ int db_add_mime_children(struct list *brothers, char *splitbound,
 						  level, maxlevel)) < 0) {
 				trace(TRACE_WARNING,
 				      "db_add_mime_children(): error adding mime children\n");
-				my_free(newbound);
+				dm_free(newbound);
 				db_free_msg(&part);
 				return nlines;
 			}
 			(*level)--;
 
-			my_free(newbound);
+			dm_free(newbound);
 			newbound = NULL;
 			msgbuf_idx += sblen + 2;	/* skip splitbound */
 
@@ -780,7 +780,7 @@ int db_msgdump(mime_message_t * msg, u64_t msguid, int level)
 		return 0;
 	}
 
-	spaces = (char *) my_malloc(3 * level + 1);
+	spaces = (char *) dm_malloc(3 * level + 1);
 	if (!spaces)
 		return 0;
 
@@ -841,6 +841,6 @@ int db_msgdump(mime_message_t * msg, u64_t msguid, int level)
 	}
 	trace(TRACE_DEBUG, "%s*** child list end\n", spaces);
 
-	my_free(spaces);
+	dm_free(spaces);
 	return size;
 }

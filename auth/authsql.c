@@ -98,7 +98,7 @@ int auth_user_exists(const char *username, u64_t * user_idnr)
 		return 0;
 	}
 
-	if (!(escaped_username = (char *) my_malloc(strlen(username) * 2 + 1))) {
+	if (!(escaped_username = (char *) dm_malloc(strlen(username) * 2 + 1))) {
 		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
 		      "escaped username", __FILE__, __func__);
 		return -1;
@@ -109,7 +109,7 @@ int auth_user_exists(const char *username, u64_t * user_idnr)
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
 		 "SELECT user_idnr FROM %susers WHERE userid='%s'",DBPFX,
 		 escaped_username);
-	my_free(escaped_username);
+	dm_free(escaped_username);
 
 	if (__auth_query(__auth_query_data) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not execute query",
@@ -273,7 +273,7 @@ int auth_check_user(const char *username, struct list *userids, int checks)
 		return -1;
 	}
 
-	if (!(escaped_username = (char *) my_malloc(strlen(username) * 2 + 1))) {
+	if (!(escaped_username = (char *) dm_malloc(strlen(username) * 2 + 1))) {
 		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
 			"escaped username", __FILE__, __func__);
 		return -1;
@@ -284,7 +284,7 @@ int auth_check_user(const char *username, struct list *userids, int checks)
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
 		 "SELECT deliver_to FROM %saliases WHERE "
 		 "lower(alias) = lower('%s')",DBPFX, escaped_username);
-	my_free(escaped_username);
+	dm_free(escaped_username);
 
 	trace(TRACE_DEBUG, "%s,%s: checks [%d]", __FILE__, __func__,
 	      checks);
@@ -374,7 +374,7 @@ int auth_check_user_ext(const char *username, struct list *userids,
 	trace(TRACE_DEBUG, "%s,%s: checking user [%s] in alias table",
 	      __FILE__, __func__, username);
 
-	if (!(escaped_username = (char *) my_malloc(strlen(username) * 2 + 1))) {
+	if (!(escaped_username = (char *) dm_malloc(strlen(username) * 2 + 1))) {
 		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
 			"escaped username", __FILE__, __func__);
 		return -1;
@@ -385,7 +385,7 @@ int auth_check_user_ext(const char *username, struct list *userids,
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
 		 "SELECT deliver_to FROM %saliases "
 		 "WHERE lower(alias) = lower('%s')",DBPFX, escaped_username);
-	my_free(escaped_username);
+	dm_free(escaped_username);
 
 	trace(TRACE_DEBUG, "%s,%s: checks [%d]", __FILE__, __func__,
 	      checks);
@@ -467,7 +467,7 @@ int auth_adduser(const char *username, const char *password, const char *enctype
 	*user_idnr = 0;
 
 #ifdef _DBAUTH_STRICT_USER_CHECK
-	if (!(escaped_username = (char *) my_malloc(strlen(username) * 2 + 1))) {
+	if (!(escaped_username = (char *) dm_malloc(strlen(username) * 2 + 1))) {
 		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
 			"escaped username", __FILE__, __func__);
 		return -1;
@@ -477,7 +477,7 @@ int auth_adduser(const char *username, const char *password, const char *enctype
 	/* first check to see if this user already exists */
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
 		 "SELECT * FROM %susers WHERE userid = '%s'",DBPFX, escaped_username);
-	my_free(escaped_username);
+	dm_free(escaped_username);
 
 	if (__auth_query(__auth_query_data) == -1) {
 		/* query failed */
@@ -505,7 +505,7 @@ int auth_adduser(const char *username, const char *password, const char *enctype
 
 	db_escape_string(escapedpass, password, strlen(password));
 
-	if (!(escaped_username = (char *) my_malloc(strlen(username) * 2 + 1))) {
+	if (!(escaped_username = (char *) dm_malloc(strlen(username) * 2 + 1))) {
 		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
 			"escaped username", __FILE__, __func__);
 		return -1;
@@ -520,7 +520,7 @@ int auth_adduser(const char *username, const char *password, const char *enctype
 		 "('%s','%s',%llu,'%llu','%s', CURRENT_TIMESTAMP)",DBPFX,
 		 escaped_username, escapedpass, clientid, maxmail,
 		 enctype ? enctype : "");
-	my_free(escaped_username);
+	dm_free(escaped_username);
 
 	if (__auth_query(__auth_query_data) == -1) {
 		/* query failed */
@@ -537,7 +537,7 @@ int auth_delete_user(const char *username)
 {
 	char *escaped_username;
 
-	if (!(escaped_username = (char *) my_malloc(strlen(username) * 2 + 1))) {
+	if (!(escaped_username = (char *) dm_malloc(strlen(username) * 2 + 1))) {
 		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
 			"escaped username", __FILE__, __func__);
 		return -1;
@@ -548,7 +548,7 @@ int auth_delete_user(const char *username)
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
 		 "DELETE FROM %susers WHERE userid = '%s'",
 		 DBPFX, escaped_username);
-	my_free(escaped_username);
+	dm_free(escaped_username);
 
 	if (__auth_query(__auth_query_data) == -1) {
 		/* query failed */
@@ -564,7 +564,7 @@ int auth_change_username(u64_t user_idnr, const char *new_name)
 {
 	char *escaped_new_name;
 
-	if (!(escaped_new_name = (char *) my_malloc(strlen(new_name) * 2 + 1))) {
+	if (!(escaped_new_name = (char *) dm_malloc(strlen(new_name) * 2 + 1))) {
 		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
 			"escaped new_name", __FILE__, __func__);
 		return -1;
@@ -575,7 +575,7 @@ int auth_change_username(u64_t user_idnr, const char *new_name)
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
 		 "UPDATE %susers SET userid = '%s' WHERE user_idnr='%llu'",
 		 DBPFX, escaped_new_name, user_idnr);
-	my_free(escaped_new_name);
+	dm_free(escaped_new_name);
 
 	if (__auth_query(__auth_query_data) == -1) {
 		trace(TRACE_ERROR,
@@ -674,7 +674,7 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 	if (strcmp(username, SHARED_MAILBOX_USERNAME) == 0)
 		return 0;
 
-	if (!(escuser = (char *) my_malloc(strlen(username) * 2 + 1))) {
+	if (!(escuser = (char *) dm_malloc(strlen(username) * 2 + 1))) {
 		trace(TRACE_ERROR,
 		      "%s,%s: out of memory allocating for escaped userid",
 		      __FILE__, __func__);
@@ -691,11 +691,11 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 		trace(TRACE_ERROR,
 		      "%s,%s: could not select user information", __FILE__,
 		      __func__);
-		my_free(escuser);
+		dm_free(escuser);
 		return -1;
 	}
 
-	my_free(escuser);
+	dm_free(escuser);
 
 	if (db_num_rows() == 0) {
 		db_free_result();
@@ -795,7 +795,7 @@ u64_t auth_md5_validate(char *username, unsigned char *md5_apop_he,
 
 	create_current_timestring(&timestring);
 
-	if (!(escaped_username = (char *) my_malloc (strlen(username) * 2 + 1))) {
+	if (!(escaped_username = (char *) dm_malloc (strlen(username) * 2 + 1))) {
 		trace(TRACE_ERROR, "%s,%s: error allocating escaped_username",
 		      __FILE__, __func__);
 		return -1;
@@ -806,7 +806,7 @@ u64_t auth_md5_validate(char *username, unsigned char *md5_apop_he,
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
 		 "SELECT passwd,user_idnr FROM %susers WHERE "
 		 "userid = '%s'", DBPFX, escaped_username);
-	my_free(escaped_username);
+	dm_free(escaped_username);
 
 	if (__auth_query(__auth_query_data) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error calling __auth_query()",
@@ -830,7 +830,7 @@ u64_t auth_md5_validate(char *username, unsigned char *md5_apop_he,
 
 
 	memtst((checkstring =
-		(char *) my_malloc(strlen(apop_stamp) +
+		(char *) dm_malloc(strlen(apop_stamp) +
 				   strlen(query_result) + 2)) == NULL);
 	snprintf(checkstring,
 		 strlen(apop_stamp) + strlen(query_result) + 2, "%s%s",
@@ -854,7 +854,7 @@ u64_t auth_md5_validate(char *username, unsigned char *md5_apop_he,
 		user_idnr =
 		    (query_result) ? strtoull(query_result, NULL, 10) : 0;
 		db_free_result();
-		my_free(checkstring);
+		dm_free(checkstring);
 
 		/* log login in the dbase */
 		snprintf(__auth_query_data, AUTH_QUERY_SIZE,
@@ -874,7 +874,7 @@ u64_t auth_md5_validate(char *username, unsigned char *md5_apop_he,
 	      __FILE__, __func__, username);
 
 	db_free_result();
-	my_free(checkstring);
+	dm_free(checkstring);
 	return 0;
 }
 
@@ -905,7 +905,7 @@ char *auth_get_userid(u64_t user_idnr)
 		trace(TRACE_DEBUG, "%s,%s: query_result = %s",
 			__FILE__, __func__, query_result);
 		if (!(returnid =
-		     (char *) my_malloc(strlen(query_result) + 1))) {
+		     (char *) dm_malloc(strlen(query_result) + 1))) {
 			trace(TRACE_ERROR, "%s,%s: out of memory",
 			      __FILE__, __func__);
 			db_free_result();
@@ -947,7 +947,7 @@ int auth_get_users_from_clientid(u64_t client_id, u64_t ** user_ids,
 		return -1;
 	}
 	*num_users = db_num_rows();
-	*user_ids = (u64_t *) my_malloc(*num_users * sizeof(u64_t));
+	*user_ids = (u64_t *) dm_malloc(*num_users * sizeof(u64_t));
 	if (*user_ids == NULL) {
 		trace(TRACE_ERROR,
 		      "%s,%s: error allocating memory, probably "
@@ -969,7 +969,7 @@ char *auth_get_deliver_from_alias(const char *alias)
 	const char *query_result = NULL;
 	char *escaped_alias;
 
-	if (!(escaped_alias = (char *) my_malloc(strlen(alias) * 2 + 1))) {
+	if (!(escaped_alias = (char *) dm_malloc(strlen(alias) * 2 + 1))) {
 		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
 		      "escaped alias", __FILE__, __func__);
 		return NULL;
@@ -980,7 +980,7 @@ char *auth_get_deliver_from_alias(const char *alias)
 	snprintf(__auth_query_data, DEF_QUERYSIZE,
 		 "SELECT deliver_to FROM %saliases WHERE alias = '%s'",
 		 DBPFX, escaped_alias);
-	my_free(escaped_alias);
+	dm_free(escaped_alias);
 
 	if (__auth_query(__auth_query_data) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not execute query",
@@ -1009,7 +1009,7 @@ int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid)
 {
 	char *escaped_alias;
 
-	if (!(escaped_alias = (char *) my_malloc(strlen(alias) * 2 + 1))) {
+	if (!(escaped_alias = (char *) dm_malloc(strlen(alias) * 2 + 1))) {
 		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
 		      "escaped alias", __FILE__, __func__);
 		return -1;
@@ -1028,7 +1028,7 @@ int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid)
 		trace(TRACE_ERROR,
 		      "%s,%s: query for searching alias failed", __FILE__,
 		      __func__);
-		my_free(escaped_alias);
+		dm_free(escaped_alias);
 		return -1;
 	}
 
@@ -1037,7 +1037,7 @@ int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid)
 		      "%s,%s: alias [%s] for user [%llu] already exists",
 		      __FILE__, __func__, escaped_alias, user_idnr);
 
-		my_free(escaped_alias);
+		dm_free(escaped_alias);
 		db_free_result();
 		return 1;
 	}
@@ -1047,7 +1047,7 @@ int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid)
 		 "INSERT INTO %saliases (alias,deliver_to,client_idnr) "
 		 "VALUES ('%s','%llu','%llu')",DBPFX, escaped_alias, user_idnr,
 		 clientid);
-	my_free(escaped_alias);
+	dm_free(escaped_alias);
 
 	if (db_query(__auth_query_data) == -1) {
 		/* query failed */
@@ -1064,13 +1064,13 @@ int auth_addalias_ext(const char *alias,
 	char *escaped_alias;
 	char *escaped_deliver_to;
 
-	if (!(escaped_alias = (char *) my_malloc(strlen(alias) * 2 + 1))) {
+	if (!(escaped_alias = (char *) dm_malloc(strlen(alias) * 2 + 1))) {
 		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
 		      "escaped alias", __FILE__, __func__);
 		return -1;
 	}
 
-	if (!(escaped_deliver_to = (char *) my_malloc(strlen(deliver_to) * 2 + 1))) {
+	if (!(escaped_deliver_to = (char *) dm_malloc(strlen(deliver_to) * 2 + 1))) {
 		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
 		      "escaped deliver_to", __FILE__, __func__);
 		return -1;
@@ -1101,8 +1101,8 @@ int auth_addalias_ext(const char *alias,
 		trace(TRACE_ERROR,
 		      "%s,%s: query for searching alias failed", __FILE__,
 		      __func__);
-		my_free(escaped_alias);
-		my_free(escaped_deliver_to);
+		dm_free(escaped_alias);
+		dm_free(escaped_deliver_to);
 		return -1;
 	}
 
@@ -1111,8 +1111,8 @@ int auth_addalias_ext(const char *alias,
 		      "%s,%s: alias [%s] --> [%s] already exists",
 		      __FILE__, __func__, alias, deliver_to);
 
-		my_free(escaped_alias);
-		my_free(escaped_deliver_to);
+		dm_free(escaped_alias);
+		dm_free(escaped_deliver_to);
 		db_free_result();
 		return 1;
 	}
@@ -1121,8 +1121,8 @@ int auth_addalias_ext(const char *alias,
 	snprintf(__auth_query_data, DEF_QUERYSIZE,
 		 "INSERT INTO %saliases (alias,deliver_to,client_idnr) "
 		 "VALUES ('%s','%s','%llu')",DBPFX, escaped_alias, escaped_deliver_to, clientid);
-	my_free(escaped_alias);
-	my_free(escaped_deliver_to);
+	dm_free(escaped_alias);
+	dm_free(escaped_deliver_to);
 
 	if (__auth_query(__auth_query_data) == -1) {
 		/* query failed */
@@ -1137,7 +1137,7 @@ int auth_removealias(u64_t user_idnr, const char *alias)
 {
 	char *escaped_alias;
 
-	if (!(escaped_alias = (char *) my_malloc(strlen(alias) * 2 + 1))) {
+	if (!(escaped_alias = (char *) dm_malloc(strlen(alias) * 2 + 1))) {
 		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
 		      "escaped alias", __FILE__, __func__);
 		return -1;
@@ -1148,7 +1148,7 @@ int auth_removealias(u64_t user_idnr, const char *alias)
 	snprintf(__auth_query_data, DEF_QUERYSIZE,
 		 "DELETE FROM %saliases WHERE deliver_to='%llu' "
 		 "AND lower(alias) = lower('%s')",DBPFX, user_idnr, escaped_alias);
-	my_free(escaped_alias);
+	dm_free(escaped_alias);
 
 	if (__auth_query(__auth_query_data) == -1) {
 		/* query failed */
@@ -1164,13 +1164,13 @@ int auth_removealias_ext(const char *alias, const char *deliver_to)
 	char *escaped_alias;
 	char *escaped_deliver_to;
 
-	if (!(escaped_alias = (char *) my_malloc(strlen(alias) * 2 + 1))) {
+	if (!(escaped_alias = (char *) dm_malloc(strlen(alias) * 2 + 1))) {
 		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
 		      "escaped alias", __FILE__, __func__);
 		return -1;
 	}
 
-	if (!(escaped_deliver_to = (char *) my_malloc(strlen(deliver_to) * 2 + 1))) {
+	if (!(escaped_deliver_to = (char *) dm_malloc(strlen(deliver_to) * 2 + 1))) {
 		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
 		      "escaped deliver_to", __FILE__, __func__);
 		return -1;
@@ -1182,8 +1182,8 @@ int auth_removealias_ext(const char *alias, const char *deliver_to)
 	snprintf(__auth_query_data, DEF_QUERYSIZE,
 		 "DELETE FROM %saliases WHERE lower(deliver_to) = lower('%s') "
 		 "AND lower(alias) = lower('%s')",DBPFX, deliver_to, alias);
-	my_free(escaped_alias);
-	my_free(escaped_deliver_to);
+	dm_free(escaped_alias);
+	dm_free(escaped_deliver_to);
 
 	if (db_query(__auth_query_data) == -1) {
 		/* query failed */

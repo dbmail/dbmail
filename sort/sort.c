@@ -269,7 +269,7 @@ dsn_class_t sort_and_deliver(u64_t msgidnr,
 
 					/* If these are not same pointers, then we need to free. */
 					if (fileinto_mailbox != mailbox)
-						my_free(fileinto_mailbox);
+						dm_free(fileinto_mailbox);
 
 					break;
 				}
@@ -299,7 +299,7 @@ dsn_class_t sort_and_deliver(u64_t msgidnr,
 						     destination,
 						     strlen((char
 							     *) ((sort_action_t *) tmp->data)->destination) + 1);
-					my_free((char *) ((sort_action_t *)
+					dm_free((char *) ((sort_action_t *)
 							  tmp->data)->
 						destination);
 
@@ -312,7 +312,7 @@ dsn_class_t sort_and_deliver(u64_t msgidnr,
 						headersize);
 
 					list_freelist(&targets.start);
-					my_free(forward_id);
+					dm_free(forward_id);
 					actiontaken = 1;
 					break;
 				}

@@ -361,17 +361,17 @@ int db_calculate_quotum_all()
 		return 0;
 	}
 
-	if (!(user_idnrs = (u64_t *) my_malloc(n * sizeof(u64_t)))) {
+	if (!(user_idnrs = (u64_t *) dm_malloc(n * sizeof(u64_t)))) {
 		trace(TRACE_ERROR,
 		      "%s,%s: malloc failed. Probably out of memory..",
 		      __FILE__, __func__);
 		return -2;
 	}
-	if (!(curmail_sizes = (u64_t *) my_malloc(n * sizeof(u64_t)))) {
+	if (!(curmail_sizes = (u64_t *) dm_malloc(n * sizeof(u64_t)))) {
 		trace(TRACE_ERROR,
 		      "%s,%s: malloc failed: Probably out of memort..",
 		      __FILE__, __func__);
-		my_free(user_idnrs);
+		dm_free(user_idnrs);
 		return -2;
 	}
 	memset(user_idnrs, 0, n * sizeof(u64_t));
@@ -396,8 +396,8 @@ int db_calculate_quotum_all()
 	}
 
 	/* free allocated memory */
-	my_free(user_idnrs);
-	my_free(curmail_sizes);
+	dm_free(user_idnrs);
+	dm_free(curmail_sizes);
 	return result;
 }
 
@@ -467,7 +467,7 @@ int db_get_sievescript_byname(u64_t user_idnr, char *scriptname, char **script)
 		return -1;
 	}
 
-	*script = my_strdup(query_result);
+	*script = dm_strdup(query_result);
 	db_free_result();
 
 	return 0;
@@ -513,8 +513,8 @@ int db_get_sievescript_listall(u64_t user_idnr, struct list *scriptlist)
 	n = db_num_rows();
 
 	while(i < n) {
-		info = (struct ssinfo *)my_malloc(sizeof(struct ssinfo));
-		info->name = my_strdup(db_get_result(i, 0));   
+		info = (struct ssinfo *)dm_malloc(sizeof(struct ssinfo));
+		info->name = dm_strdup(db_get_result(i, 0));   
 		info->active = (int)db_get_result(i, 1);
 		list_nodeadd(scriptlist,info,sizeof(struct ssinfo));	
 		i++;
@@ -653,7 +653,7 @@ int db_get_notify_address(u64_t user_idnr, char **notify_address)
 	if (db_num_rows() > 0) {
 		query_result = db_get_result(0, 0);
 		if (query_result && strlen(query_result) > 0) {
-			*notify_address = my_strdup(query_result);
+			*notify_address = dm_strdup(query_result);
 			trace(TRACE_DEBUG, "%s,%s: found address [%s]",
 			      __FILE__, __func__, *notify_address);
 		}
@@ -680,7 +680,7 @@ int db_get_reply_body(u64_t user_idnr, char **reply_body)
 	if (db_num_rows() > 0) {
 		query_result = db_get_result(0, 0);
 		if (query_result && strlen(query_result) > 0) {
-			*reply_body = my_strdup(query_result);
+			*reply_body = dm_strdup(query_result);
 			trace(TRACE_DEBUG, "%s,%s: found reply_body [%s]",
 			      __FILE__, __func__, *reply_body);
 		}
@@ -756,7 +756,7 @@ int db_insert_physmessage_with_internal_date(timestring_t internal_date,
 	snprintf(query, DEF_QUERYSIZE,
 		 "INSERT INTO %sphysmessage (messagesize, internal_date) "
 		 "VALUES ('0', %s)", DBPFX,to_date_str);
-	my_free(to_date_str);
+	dm_free(to_date_str);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR,
@@ -803,7 +803,7 @@ int db_insert_message(u64_t user_idnr,
 	assert(unique_id);
 
 	if (!mailbox)
-		mailbox = my_strdup("INBOX");
+		mailbox = dm_strdup("INBOX");
 
 	switch (create_or_error_mailbox) {
 	case CREATE_IF_MBOX_NOT_FOUND:
@@ -955,7 +955,7 @@ int db_insert_message_block_physmessage(const char *block,
 		return -1;
 	}
 
-	escaped_query = (char *) my_malloc(sizeof(char) * maxesclen);
+	escaped_query = (char *) dm_malloc(sizeof(char) * maxesclen);
 	if (!escaped_query) {
 		trace(TRACE_ERROR, "%s,%s: not enough memory", __FILE__,
 		      __func__);
@@ -977,7 +977,7 @@ int db_insert_message_block_physmessage(const char *block,
 		 block_size, physmessage_id);
 
 	if (db_query(escaped_query) == -1) {
-		my_free(escaped_query);
+		dm_free(escaped_query);
 
 		trace(TRACE_ERROR, "%s,%s: dbquery failed", __FILE__,
 		      __func__);
@@ -985,7 +985,7 @@ int db_insert_message_block_physmessage(const char *block,
 	}
 
 	/* all done, clean up & exit */
-	my_free(escaped_query);
+	dm_free(escaped_query);
 
 	*messageblk_idnr = db_insert_result("messageblk_idnr");
 	return 1;
@@ -1074,7 +1074,7 @@ int db_log_ip(const char *ip)
 
 int db_count_iplog(const char *lasttokeep, u64_t *affected_rows)
 {
-	char *escaped_lasttokeep = (char *)my_malloc(2*strlen(lasttokeep)+1);
+	char *escaped_lasttokeep = (char *)dm_malloc(2*strlen(lasttokeep)+1);
 
 	assert(affected_rows != NULL);
 	*affected_rows = 0;
@@ -1086,7 +1086,7 @@ int db_count_iplog(const char *lasttokeep, u64_t *affected_rows)
 	}
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT * FROM dbmail_pbsp WHERE since < '%s'", escaped_lasttokeep);
-	my_free(escaped_lasttokeep);
+	dm_free(escaped_lasttokeep);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s:%s: error executing query",
@@ -1145,7 +1145,7 @@ int db_empty_mailbox(u64_t user_idnr)
 		return 0;
 	}
 
-	mboxids = (u64_t *) my_malloc(n * sizeof(u64_t));
+	mboxids = (u64_t *) dm_malloc(n * sizeof(u64_t));
 	if (!mboxids) {
 		trace(TRACE_ERROR, "%s,%s: not enough memory",
 		      __FILE__, __func__);
@@ -1167,7 +1167,7 @@ int db_empty_mailbox(u64_t user_idnr)
 			result = -1;
 		}
 	}
-	my_free(mboxids);
+	dm_free(mboxids);
 	return result;
 }
 
@@ -1595,7 +1595,7 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
 		      __func__);
 	}
 
-	if (!(message_idnrs = (u64_t *) my_malloc(n * sizeof(u64_t)))) {
+	if (!(message_idnrs = (u64_t *) dm_malloc(n * sizeof(u64_t)))) {
 		trace(TRACE_ERROR, "%s,%s: error allocating memory",
 		      __FILE__, __func__);
 		return -1;
@@ -1611,11 +1611,11 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
 			      "database might be inconsistent. "
 			      "run dbmail-util",
 			      __FILE__, __func__, message_idnrs[i]);
-			my_free(message_idnrs);
+			dm_free(message_idnrs);
 			return -1;
 		}
 	}
-	my_free(message_idnrs);
+	dm_free(message_idnrs);
 
 	/* calculate the new quotum */
 	if (update_curmail_size) {
@@ -1657,7 +1657,7 @@ int db_send_message_lines(void *fstream, u64_t message_idnr,
 	physmessage_id = db_get_result_u64(0, 0);
 	db_free_result();
 
-	buffer = my_malloc(WRITE_BUFFER_SIZE * 2);
+	buffer = dm_malloc(WRITE_BUFFER_SIZE * 2);
 	if (buffer == NULL) {
 		trace(TRACE_ERROR, "%s,%s: error allocating memory for buffer",
 		      __FILE__, __func__);
@@ -1672,7 +1672,7 @@ int db_send_message_lines(void *fstream, u64_t message_idnr,
 	      __FILE__, __func__, query);
 
 	if (db_query(query) == -1) {
-		my_free(buffer);
+		dm_free(buffer);
 		return 0;
 	}
 
@@ -1759,7 +1759,7 @@ int db_send_message_lines(void *fstream, u64_t message_idnr,
 					trace(TRACE_ERROR, "%s,%s: error writing to "
 					      "fstream", __FILE__, __func__);
 					db_free_result();
-					my_free(buffer);
+					dm_free(buffer);
 					return 0;
 				}
 				/*  cleanup the buffer  */
@@ -1778,7 +1778,7 @@ int db_send_message_lines(void *fstream, u64_t message_idnr,
 			trace(TRACE_ERROR, "%s,%s: error writing to file stream",
 			      __FILE__, __func__);
 			db_free_result();
-			my_free(buffer);
+			dm_free(buffer);
 			return 0;
 		}
 	}
@@ -1787,7 +1787,7 @@ int db_send_message_lines(void *fstream, u64_t message_idnr,
 		fprintf((FILE *) fstream, "\r\n.\r\n");
 
 	db_free_result();
-	my_free(buffer);
+	dm_free(buffer);
 	return 1;
 }
 
@@ -1994,7 +1994,7 @@ int db_deleted_purge(u64_t * affected_rows)
 		return 0;
 	}
 	if (!(message_idnrs =
-	      (u64_t *) my_malloc(*affected_rows * sizeof(u64_t)))) {
+	      (u64_t *) dm_malloc(*affected_rows * sizeof(u64_t)))) {
 		trace(TRACE_ERROR, "%s,%s: error allocating memory",
 		      __FILE__, __func__);
 		return -2;
@@ -2008,11 +2008,11 @@ int db_deleted_purge(u64_t * affected_rows)
 		if (db_delete_message(message_idnrs[i]) == -1) {
 			trace(TRACE_ERROR, "%s,%s: error deleting message",
 			      __FILE__, __func__);
-			my_free(message_idnrs);
+			dm_free(message_idnrs);
 			return -1;
 		}
 	}
-	my_free(message_idnrs);
+	dm_free(message_idnrs);
 	return 1;
 }
 
@@ -2240,7 +2240,7 @@ int db_findmailbox(const char *fq_name, u64_t user_idnr,
 	trace(TRACE_DEBUG, "%s,%s: looking for mailbox with FQN [%s].",
 	      __FILE__, __func__, fq_name);
 
-	name_str_copy = my_strdup(fq_name);
+	name_str_copy = dm_strdup(fq_name);
 	/* see if this is a #User mailbox */
 	if ((strlen(NAMESPACE_USER) > 0) &&
 	    (strstr(fq_name, NAMESPACE_USER) == fq_name)) {
@@ -2285,7 +2285,7 @@ int db_findmailbox(const char *fq_name, u64_t user_idnr,
 		      mailbox_name, username, owner_idnr);
 		return -1;
 	}
-	my_free(name_str_copy);
+	dm_free(name_str_copy);
 	return result;
 }
 
@@ -2297,9 +2297,9 @@ int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 	assert(mailbox_idnr != NULL);
 	*mailbox_idnr = 0;
 
-	local_name = my_strdup(name);
+	local_name = dm_strdup(name);
 	if (local_name == NULL) {
-		trace(TRACE_ERROR, "%s,%s: error my_strdup(name). Out of memory?",
+		trace(TRACE_ERROR, "%s,%s: error dm_strdup(name). Out of memory?",
 		      __FILE__, __func__);
 		return -1;
 	}
@@ -2310,7 +2310,7 @@ int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 		 "SELECT mailbox_idnr FROM %smailboxes "
 		 "WHERE name='%s' AND owner_idnr='%llu'",DBPFX, local_name,
 		 owner_idnr);
-	my_free(local_name);
+	dm_free(local_name);
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR,
 		      "%s,%s: could not select mailbox '%s'\n", __FILE__,
@@ -2397,27 +2397,27 @@ int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
 		db_free_result();
 		return 0;
 	}
-	all_mailboxes = (u64_t *) my_malloc(n_rows * sizeof(u64_t));
-	all_mailbox_names = (char **) my_malloc(n_rows * sizeof(char*));
-	all_mailbox_owners = (u64_t *) my_malloc(n_rows * sizeof(u64_t));
-	tmp_mailboxes = (u64_t *) my_malloc(n_rows * sizeof(u64_t));
+	all_mailboxes = (u64_t *) dm_malloc(n_rows * sizeof(u64_t));
+	all_mailbox_names = (char **) dm_malloc(n_rows * sizeof(char*));
+	all_mailbox_owners = (u64_t *) dm_malloc(n_rows * sizeof(u64_t));
+	tmp_mailboxes = (u64_t *) dm_malloc(n_rows * sizeof(u64_t));
 	if (!all_mailboxes || !all_mailbox_names || !all_mailbox_owners || 
 	    !tmp_mailboxes) {
 		trace(TRACE_ERROR, "%s,%s: not enough memory\n",
 		      __FILE__, __func__);
 		if (all_mailboxes)
-			my_free(all_mailboxes);
+			dm_free(all_mailboxes);
 		if (all_mailbox_names)
-			my_free(all_mailbox_names);
+			dm_free(all_mailbox_names);
 		if (all_mailbox_owners)
-			my_free(all_mailbox_owners);
+			dm_free(all_mailbox_owners);
 		if (tmp_mailboxes)
-			my_free(tmp_mailboxes);
+			dm_free(tmp_mailboxes);
 		return (-2);
 	}
 	
 	for (i = 0; i < n_rows; i++) {
-		all_mailbox_names[i] = my_strdup(db_get_result(i, 0));
+		all_mailbox_names[i] = dm_strdup(db_get_result(i, 0));
 		all_mailboxes[i] = db_get_result_u64(i, 1);
 		all_mailbox_owners[i] = db_get_result_u64(i, 2);
 	} 
@@ -2442,15 +2442,15 @@ int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
 			}
 		}
 	}
-	my_free(all_mailbox_names);
-	my_free(all_mailboxes);
-	my_free(all_mailbox_owners);
+	dm_free(all_mailbox_names);
+	dm_free(all_mailboxes);
+	dm_free(all_mailbox_owners);
 
 	trace(TRACE_DEBUG, "%s,%s: exit", __FILE__, __func__);
 
 	if (*nr_mailboxes == 0) {
 		/* none exist, none matched */
-		my_free(tmp_mailboxes);
+		dm_free(tmp_mailboxes);
 		return 0;
 	}
 
@@ -2507,7 +2507,7 @@ int db_getmailbox(mailbox_t * mb)
 
 	/* free existing MSN list */
 	if (mb->seq_list) {
-		my_free(mb->seq_list);
+		dm_free(mb->seq_list);
 		mb->seq_list = NULL;
 	}
 
@@ -2589,7 +2589,7 @@ int db_getmailbox(mailbox_t * mb)
 		}
 		
 		trace(TRACE_DEBUG,"%s,%s: exists [%d] num_rows [%d]",__FILE__, __func__, mb->exists, db_num_rows());
-		if (! (mb->seq_list = (u64_t *) my_malloc(sizeof(u64_t) * mb->exists))) {
+		if (! (mb->seq_list = (u64_t *) dm_malloc(sizeof(u64_t) * mb->exists))) {
 			db_free_result();
 			return -1;
 		}
@@ -2609,7 +2609,7 @@ int db_getmailbox(mailbox_t * mb)
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: query error [%s]", __FILE__, __func__, query);
 		if(mb->seq_list) {
-			my_free(mb->seq_list);
+			dm_free(mb->seq_list);
 			mb->seq_list = NULL;
 		}
 		return -1;
@@ -2712,7 +2712,7 @@ int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
 	}
 
 	if ((tmp = db_get_result(0, 0))) 
-		mailbox_name = my_strdup(tmp);
+		mailbox_name = dm_strdup(tmp);
 
 	db_free_result();
 	if (mailbox_name) {
@@ -2720,7 +2720,7 @@ int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
 			 "SELECT mailbox_idnr FROM %smailboxes WHERE name LIKE '%s/%s'"
 			 " AND owner_idnr = '%llu'",DBPFX,
 			 mailbox_name, filter, user_idnr);
-		my_free(mailbox_name);
+		dm_free(mailbox_name);
 	}
 	else
 		snprintf(query, DEF_QUERYSIZE,
@@ -2749,7 +2749,7 @@ int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
 		return 0;
 	}
 
-	*children = (u64_t *) my_malloc(sizeof(u64_t) * (*nchildren));
+	*children = (u64_t *) dm_malloc(sizeof(u64_t) * (*nchildren));
 
 	if (!(*children)) {
 		/* out of mem */
@@ -3082,7 +3082,7 @@ int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name)
 		*name = '\0';
 		return 0;
 	}
-	tmp_name = my_strdup(query_result);
+	tmp_name = dm_strdup(query_result);
 	
 	db_free_result();
 	tmp_fq_name = mailbox_add_namespace(tmp_name, owner_idnr, user_idnr);
@@ -3096,8 +3096,8 @@ int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name)
 		tmp_fq_name_len = IMAP_MAX_MAILBOX_NAMELEN - 1;
 	strncpy(name, tmp_fq_name, tmp_fq_name_len);
 	name[tmp_fq_name_len] = '\0';
-	my_free(tmp_name);
-	my_free(tmp_fq_name);
+	dm_free(tmp_name);
+	dm_free(tmp_fq_name);
 	return 0;
 }
 
@@ -3150,7 +3150,7 @@ int db_expunge(u64_t mailbox_idnr, u64_t user_idnr,
 
 		/* now alloc mem */
 		*nmsgs = db_num_rows();
-		*msg_idnrs = (u64_t *) my_malloc(sizeof(u64_t) * (*nmsgs));
+		*msg_idnrs = (u64_t *) dm_malloc(sizeof(u64_t) * (*nmsgs));
 		if (!(*msg_idnrs)) {
 			/* out of mem */
 			*nmsgs = 0;
@@ -3179,7 +3179,7 @@ int db_expunge(u64_t mailbox_idnr, u64_t user_idnr,
 		      "%s,%s: could not update messages in mailbox",
 		      __FILE__, __func__);
 		if (msg_idnrs)
-			my_free(*msg_idnrs);
+			dm_free(*msg_idnrs);
 
 		if (nmsgs)
 			*nmsgs = 0;
@@ -3454,7 +3454,7 @@ int db_get_msgdate(u64_t mailbox_idnr, u64_t msg_idnr, char *date)
 		 "AND pm.id = msg.physmessage_id",
 		 to_char_str, DBPFX, DBPFX,
 		 mailbox_idnr, msg_idnr);
-	my_free(to_char_str);
+	dm_free(to_char_str);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not get message",
@@ -3915,7 +3915,7 @@ char *date2char_str(const char *column)
 	char *s;
 	len = strlen(TO_CHAR) + MAX_COLUMN_LEN;
 
-	s = (char *) my_malloc(len);
+	s = (char *) dm_malloc(len);
 	if (!s)
 		return NULL;
 
@@ -3931,7 +3931,7 @@ char *char2date_str(const char *date)
 
 	len = strlen(TO_CHAR) + MAX_DATE_LEN;
 
-	s = (char *) my_malloc(len);
+	s = (char *) dm_malloc(len);
 	if (!s)
 		return NULL;
 

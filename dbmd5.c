@@ -46,7 +46,7 @@ unsigned char *makemd5(const char * const buf)
 		return NULL;
 	}
 
-	md5hash = (unsigned char *) my_malloc(33);
+	md5hash = (unsigned char *) dm_malloc(33);
 	if (md5hash == NULL) {
 		trace(TRACE_ERROR, "%s,%s: error allocating memory",
 		      __FILE__, __func__);

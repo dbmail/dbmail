@@ -139,12 +139,12 @@ GList * g_string_split(GString * string, char * sep)
  */
 GList * g_list_append_printf(GList * list, char * format, ...)
 {
-	char *str = (char *)my_malloc(sizeof(char) * BUFLEN);
+	char *str = (char *)dm_malloc(sizeof(char) * BUFLEN);
 	va_list argp;
 	va_start(argp, format);
 	vsnprintf(str, sizeof(char) * BUFLEN, format, argp);
 	list = g_list_append(list, strdup(str));
-	my_free(str);
+	dm_free(str);
 	return list;
 }
 
@@ -647,8 +647,8 @@ int show_mime_parameter_list(FILE * outstream, struct mime_record *mr,
 			     int force_subtype, int only_extension)
 {
 	int idx, delimiter, start, end;
-	char *fieldvalue = (char *)my_malloc(sizeof(char *)*255);
-	char *tmpstring = (char *)my_malloc(sizeof(char *)*255);
+	char *fieldvalue = (char *)dm_malloc(sizeof(char *)*255);
+	char *tmpstring = (char *)dm_malloc(sizeof(char *)*255);
 	
 	/* find first delimiter */
 	for (delimiter = 0;
@@ -787,8 +787,8 @@ int show_mime_parameter_list(FILE * outstream, struct mime_record *mr,
 	} else {
 		fprintf(outstream, " NIL");
 	}
-	my_free(fieldvalue);
-	my_free(tmpstring);
+	dm_free(fieldvalue);
+	dm_free(tmpstring);
 			
 	return 0;
 }
@@ -982,12 +982,12 @@ char **build_args_array(const char *s)
 				/* quotation end, treat quoted string as argument */
 				if (!
 				    (the_args[nargs] =
-				     (char *) my_malloc(sizeof(char) *
+				     (char *) dm_malloc(sizeof(char) *
 							(i -
 							 quotestart)))) {
 					/* out of mem */
 					while (--nargs >= 0) {
-						my_free(the_args[nargs]);
+						dm_free(the_args[nargs]);
 						the_args[nargs] = NULL;
 					}
 
@@ -1046,7 +1046,7 @@ char **build_args_array(const char *s)
 			if (paridx < 0) {
 				/* error in parenthesis structure */
 				while (--nargs >= 0) {
-					my_free(the_args[nargs]);
+					dm_free(the_args[nargs]);
 					the_args[nargs] = NULL;
 				}
 				return NULL;
@@ -1055,10 +1055,10 @@ char **build_args_array(const char *s)
 			/* add this parenthesis to the arg list and continue */
 			if (!
 			    (the_args[nargs] =
-			     (char *) my_malloc(sizeof(" ")))) {
+			     (char *) dm_malloc(sizeof(" ")))) {
 				/* out of mem */
 				while (--nargs >= 0) {
-					my_free(the_args[nargs]);
+					dm_free(the_args[nargs]);
 					the_args[nargs] = NULL;
 				}
 
@@ -1090,11 +1090,11 @@ char **build_args_array(const char *s)
 
 		if (!
 		    (the_args[nargs] =
-		     (char *) my_malloc(sizeof(char) *
+		     (char *) dm_malloc(sizeof(char) *
 					(i - argstart + 1)))) {
 			/* out of mem */
 			while (--nargs >= 0) {
-				my_free(the_args[nargs]);
+				dm_free(the_args[nargs]);
 				the_args[nargs] = NULL;
 			}
 
@@ -1114,7 +1114,7 @@ char **build_args_array(const char *s)
 	if (paridx != 0) {
 		/* error in parenthesis structure */
 		while (--nargs >= 0) {
-			my_free(the_args[nargs]);
+			dm_free(the_args[nargs]);
 			the_args[nargs] = NULL;
 		}
 		return NULL;
@@ -1172,12 +1172,12 @@ char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 				/* quotation end, treat quoted string as argument */
 				if (!
 				    (the_args[nargs] =
-				     (char *) my_malloc(sizeof(char) *
+				     (char *) dm_malloc(sizeof(char) *
 							(i -
 							 quotestart)))) {
 					/* out of mem */
 					while (--nargs >= 0) {
-						my_free(the_args[nargs]);
+						dm_free(the_args[nargs]);
 						the_args[nargs] = NULL;
 					}
 
@@ -1236,7 +1236,7 @@ char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 			if (paridx < 0) {
 				/* error in parenthesis structure */
 				while (--nargs >= 0) {
-					my_free(the_args[nargs]);
+					dm_free(the_args[nargs]);
 					the_args[nargs] = NULL;
 				}
 				return NULL;
@@ -1245,10 +1245,10 @@ char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 			/* add this parenthesis to the arg list and continue */
 			if (!
 			    (the_args[nargs] =
-			     (char *) my_malloc(sizeof(" ")))) {
+			     (char *) dm_malloc(sizeof(" ")))) {
 				/* out of mem */
 				while (--nargs >= 0) {
-					my_free(the_args[nargs]);
+					dm_free(the_args[nargs]);
 					the_args[nargs] = NULL;
 				}
 
@@ -1278,12 +1278,12 @@ char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 				/* allocate space for this argument (could be a message when used with APPEND) */
 				if (!
 				    (the_args[nargs] =
-				     (char *) my_malloc(sizeof(char) *
+				     (char *) dm_malloc(sizeof(char) *
 							(quotedSize +
 							 1)))) {
 					/* out of mem */
 					while (--nargs >= 0) {
-						my_free(the_args[nargs]);
+						dm_free(the_args[nargs]);
 						the_args[nargs] = NULL;
 					}
 
@@ -1314,7 +1314,7 @@ char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 				    || ferror(ci->tx)) {
 					/* timeout occurred or connection has gone away */
 					while (--nargs >= 0) {
-						my_free(the_args[nargs]);
+						dm_free(the_args[nargs]);
 						the_args[nargs] = NULL;
 					}
 
@@ -1332,7 +1332,7 @@ char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 				    || ferror(ci->tx)) {
 					/* timeout occurred */
 					while (--nargs >= 0) {
-						my_free(the_args[nargs]);
+						dm_free(the_args[nargs]);
 						the_args[nargs] = NULL;
 					}
 
@@ -1375,11 +1375,11 @@ char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 
 		if (!
 		    (the_args[nargs] =
-		     (char *) my_malloc(sizeof(char) *
+		     (char *) dm_malloc(sizeof(char) *
 					(i - argstart + 1)))) {
 			/* out of mem */
 			while (--nargs >= 0) {
-				my_free(the_args[nargs]);
+				dm_free(the_args[nargs]);
 				the_args[nargs] = NULL;
 			}
 
@@ -1399,7 +1399,7 @@ char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 	if (paridx != 0) {
 		/* error in parenthesis structure */
 		while (--nargs >= 0) {
-			my_free(the_args[nargs]);
+			dm_free(the_args[nargs]);
 			the_args[nargs] = NULL;
 		}
 		return NULL;
@@ -2371,13 +2371,13 @@ int perform_imap_search(unsigned int *rset, int setlen, search_key_t * sk,
 
 	case IST_SORT:
 		result = db_search(rset, setlen, sk->search, mb, sk->type);
-		my_free(newset);
+		dm_free(newset);
 		return 0;
 		break;
 
 	case IST_SORTHDR:
 		result = db_sort_parsed(rset, setlen, sk, mb);
-		my_free(newset);
+		dm_free(newset);
 		return 0;
 		break;
 
@@ -2385,7 +2385,7 @@ int perform_imap_search(unsigned int *rset, int setlen, search_key_t * sk,
 	case IST_FLAG:
 		result = db_search(rset, setlen, sk->search, mb, sk->type);
 		if (result != 0) {
-			my_free(newset);
+			dm_free(newset);
 			return result;
 		}
 		break;
@@ -2407,7 +2407,7 @@ int perform_imap_search(unsigned int *rset, int setlen, search_key_t * sk,
 	case IST_IDATE:
 		result = db_search(rset, setlen, sk->search, mb, sk->type);
 		if (result != 0) {
-			my_free(newset);
+			dm_free(newset);
 			return result;
 		}
 		break;
@@ -2428,10 +2428,9 @@ int perform_imap_search(unsigned int *rset, int setlen, search_key_t * sk,
 				for (i = 0; i < setlen; i++)
 					newset[i] = 1;
 
-			result =
-			    perform_imap_search(newset, setlen, subsk, mb, sorted);
+			result = perform_imap_search(newset, setlen, subsk, mb, sorted);
 			if (result < 0 || result == 1) {
-				my_free(newset);
+				dm_free(newset);
 				return result;
 			}
 			if (! sorted)
@@ -2450,11 +2449,11 @@ int perform_imap_search(unsigned int *rset, int setlen, search_key_t * sk,
 		break;
 
 	default:
-		my_free(newset);
+		dm_free(newset);
 		return -2;	/* ??? */
 	}
 
-	my_free(newset);
+	dm_free(newset);
 	return 0;
 }
 
@@ -2720,7 +2719,7 @@ void build_uid_set(unsigned int *set, unsigned int setlen, char *cset,
 
 void dumpsearch(search_key_t * sk, int level)
 {
-	char *spaces = (char *) my_malloc(level * 3 + 1);
+	char *spaces = (char *) dm_malloc(level * 3 + 1);
 	struct element *el;
 	search_key_t *subsk;
 
@@ -2732,7 +2731,7 @@ void dumpsearch(search_key_t * sk, int level)
 
 	if (!sk) {
 		trace(TRACE_DEBUG, "%s(null)\n", spaces);
-		my_free(spaces);
+		dm_free(spaces);
 		return;
 	}
 
@@ -2778,7 +2777,7 @@ void dumpsearch(search_key_t * sk, int level)
 		      sk->type, sk->search);
 	}
 
-	my_free(spaces);
+	dm_free(spaces);
 	return;
 }
 

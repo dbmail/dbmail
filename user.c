@@ -457,7 +457,7 @@ int main(int argc, char *argv[])
 			if (pw[len-1] == '\n')
 			        pw[len-1] = '\0';
 			/* fgets guarantees a nul terminated string. */
-			passwd = my_strdup(pw);
+			passwd = dm_strdup(pw);
 
 			/* Restore the previous terminal state (with echo back on). */
 			tcsetattr(fileno(stdin), TCSANOW, &oldattr);
@@ -743,7 +743,7 @@ int mkpassword(const char * const user, const char * const passwd,
 	}
 
 	/* Pass this out of the function. */
-	*password = my_strdup(pw);
+	*password = dm_strdup(pw);
 
 	return result;
 }
@@ -972,11 +972,11 @@ int do_show(const char * const name)
 				qprintf
 				    ("\n[%s] is an alias for [%s]\n", name,
 				     deliver_to);
-				my_free(deliver_to);
+				dm_free(deliver_to);
 				return 0;
 			}
 
-			my_free(deliver_to);
+			dm_free(deliver_to);
 			qprintf("\nFound user for alias [%s]:\n\n",
 				     name);
 		}

@@ -142,7 +142,7 @@ int sortsieve_msgsort(u64_t useridnr, char *header, u64_t headersize,
 	if (res != SIEVE2_OK) {
 		trace(TRACE_ERROR, "sieve2_script_parse() returns %d: %s\n", res,
 		       sieve2_errstr(res, &freestr));
-		my_free(freestr);
+		dm_free(freestr);
 		ret = -1;
 		goto need_free;
 	}
@@ -191,14 +191,14 @@ int sortsieve_msgsort(u64_t useridnr, char *header, u64_t headersize,
 		sieve2_action_free(a);
 
 	if (script != NULL)
-		my_free(script);
+		dm_free(script);
 	if (scriptname != NULL)
-		my_free(scriptname);
+		dm_free(scriptname);
   
 	if (script != NULL)
-		my_free(script);
+		dm_free(script);
 	if (scriptname != NULL)
-		my_free(scriptname);
+		dm_free(scriptname);
 
       skip_free:
 	return ret;
@@ -218,7 +218,7 @@ int sortsieve_unroll_action(sieve2_action_t * a, struct list *actions)
 	int tmpmeth = 0;
 
 	while (res == SIEVE2_OK) {
-		if ((tmpsa = my_malloc(sizeof(sort_action_t))) == NULL)
+		if ((tmpsa = dm_malloc(sizeof(sort_action_t))) == NULL)
 			break;
 		res = sieve2_action_next(&a, &code, &action_context);
 		if (res == SIEVE2_DONE) {
@@ -240,7 +240,7 @@ int sortsieve_unroll_action(sieve2_action_t * a, struct list *actions)
 				trace(TRACE_DEBUG, "Destination is %s\n",
 				       context->addr);
 				tmpmeth = SA_REDIRECT;
-				tmpdest = my_strdup(context->addr);
+				tmpdest = dm_strdup(context->addr);
 				break;
 			}
 		case SIEVE2_ACTION_REJECT:
@@ -251,7 +251,7 @@ int sortsieve_unroll_action(sieve2_action_t * a, struct list *actions)
 				trace(TRACE_DEBUG, "Action is REJECT: ");
 				trace(TRACE_DEBUG, "Message is %s\n", context->msg);
 				tmpmeth = SA_REJECT;
-				tmpmsg = my_strdup(context->msg);
+				tmpmsg = dm_strdup(context->msg);
 				break;
 			}
 		case SIEVE2_ACTION_DISCARD:
@@ -267,7 +267,7 @@ int sortsieve_unroll_action(sieve2_action_t * a, struct list *actions)
 				trace(TRACE_DEBUG, "Destination is %s\n",
 				       context->mailbox);
 				tmpmeth = SA_FILEINTO;
-				tmpdest = my_strdup(context->mailbox);
+				tmpdest = dm_strdup(context->mailbox);
 				break;
 			}
 		case SIEVE2_ACTION_NOTIFY:
@@ -317,13 +317,13 @@ int sortsieve_unroll_action(sieve2_action_t * a, struct list *actions)
 
 		list_nodeadd(actions, tmpsa, sizeof(sort_action_t));
 
-		my_free(tmpsa);
+		dm_free(tmpsa);
 		tmpsa = NULL;
 
 	}			/* while */
 
 	if (tmpsa != NULL)
-		my_free(tmpsa);
+		dm_free(tmpsa);
 
 	return res;
 }

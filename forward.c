@@ -85,7 +85,7 @@ int forward(u64_t msgidnr, struct list *targets, const char *from,
 
 			/* external pipe command */
 			command_len = strlen((char *) (target->data)) + 1;
-			command = my_malloc(command_len * sizeof(char));
+			command = dm_malloc(command_len * sizeof(char));
 			if (!command) {
 				trace(TRACE_ERROR,
 				      "%s,%s: out of memory",
@@ -99,7 +99,7 @@ int forward(u64_t msgidnr, struct list *targets, const char *from,
 			command_len = strlen(sendmail) + strlen(" -f ") +
 				strlen(from) + strlen (" ") +
 				strlen((char *) (target->data)) + 1;
-			command = my_malloc(command_len * sizeof(char));
+			command = dm_malloc(command_len * sizeof(char));
 			if (!command) {
 				trace(TRACE_ERROR,
 				      "%s,%s: out of memory",
@@ -118,7 +118,7 @@ int forward(u64_t msgidnr, struct list *targets, const char *from,
 		      __FILE__, __func__, command);
 
 		pipe = popen(command, "w");	/* opening pipe */
-		my_free(command);
+		dm_free(command);
 		command = NULL;
 
 		if (pipe != NULL) {

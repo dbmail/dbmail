@@ -161,7 +161,7 @@ void dbmail_imap_session_delete(struct ImapSession * self)
 		null_free(self->ci->userData);
 	}
 	dbmail_imap_session_bodyfetch_free(self);
-	my_free(self);
+	dm_free(self);
 }
 
 
@@ -1010,12 +1010,12 @@ int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self, u64_t fetch
 			result = db_fetch_headers(self->msginfo[i].uid, &self->headermsg);
 			if (result == -2) {
 				dbmail_imap_session_printf(self, "\r\n* BYE internal dbase error\r\n");
-				my_free(self->msginfo);
+				dm_free(self->msginfo);
 				return -1;
 			}
 			if (result == -3) {
 				dbmail_imap_session_printf(self, "\r\n* BYE out of memory\r\n");
-				my_free(self->msginfo);
+				dm_free(self->msginfo);
 				return -1;
 			}
 
@@ -1031,7 +1031,7 @@ int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self, u64_t fetch
 			 * let's call it fatal and let the client re-connect :)
 			 */
 			dbmail_imap_session_printf(self, "* BYE internal syncing error\r\n");
-			my_free(self->msginfo);
+			dm_free(self->msginfo);
 			return -1;
 		}
 
@@ -1066,7 +1066,7 @@ int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self, u64_t fetch
 	g_list_free(list);
 	g_list_free(sublist);
 	g_string_free(tmp,TRUE);
-	my_free(self->msginfo);
+	dm_free(self->msginfo);
 	return 0;
 }
 
@@ -1092,7 +1092,7 @@ int dbmail_imap_session_get_msginfo_range(struct ImapSession *self, u64_t msg_id
 		 "ORDER BY message_idnr ASC",to_char_str,DBPFX,DBPFX,
 		 msg_idnr_low, msg_idnr_high, ud->mailbox.uid,
 		 MESSAGE_STATUS_DELETE);
-	my_free(to_char_str);
+	dm_free(to_char_str);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not select message",
@@ -1941,7 +1941,7 @@ int dbmail_imap_session_prompt(struct ImapSession * self, char * prompt, char * 
 	memcpy(value,buf,strlen(buf));
 
 	g_string_free(tmp,1);
-	my_free(buf);
+	dm_free(buf);
 	
 	return 0;
 }
@@ -2065,7 +2065,7 @@ int dbmail_imap_session_mailbox_open(struct ImapSession * self, char * mailbox)
 	/* get the mailbox_idnr */
 	if (! (mailbox_idnr = dbmail_imap_session_mailbox_get_idnr(self, mailbox))) {
 		ud->state = IMAPCS_AUTHENTICATED;
-		my_free(ud->mailbox.seq_list);
+		dm_free(ud->mailbox.seq_list);
 		memset(&ud->mailbox, 0, sizeof(ud->mailbox));
 		return 1; /* error */
 	}
@@ -2142,7 +2142,7 @@ int dbmail_imap_session_set_state(struct ImapSession *self, int state)
 	switch (state) {
 		case IMAPCS_AUTHENTICATED:
 			ud->state = state;
-			my_free(ud->mailbox.seq_list);
+			dm_free(ud->mailbox.seq_list);
 			memset(&ud->mailbox, 0, sizeof(ud->mailbox));
 			break;
 			

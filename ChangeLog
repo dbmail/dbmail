@@ -1,3 +1,12 @@
+2005-01-07  Paul Stevens <paul@nfg.nl>
+
+	* debug.c: changed all usage of the my_ prefix to dm_ to avoid
+	conflicts with the mysql namespace.
+	* imapcommands.c (_ic_search): reverse the sub_search list.
+	* imapcommands.c (_ic_search): fix possible race condition in retry
+	loop.
+	* db.c (db_search): return error if mailbox out-of-sync.
+
 2005-01-06  Paul Stevens <paul@nfg.nl>
 
 	* imaputil.c, dbmail-imapsession.c: some changes in bodystructure

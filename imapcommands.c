@@ -368,7 +368,7 @@ int _ic_create(struct ImapSession *self)
 	}
 
 	/* alloc a ptr which can contain up to the full name */
-	cpy = (char *) my_malloc(sizeof(char) * (strlen(self->args[0]) + 1));
+	cpy = (char *) dm_malloc(sizeof(char) * (strlen(self->args[0]) + 1));
 	if (!cpy) {
 		/* out of mem */
 		trace(TRACE_ERROR, "IMAPD: create(): not enough memory");
@@ -383,7 +383,7 @@ int _ic_create(struct ImapSession *self)
 		/* serious error while making chunks */
 		trace(TRACE_ERROR, "IMAPD: create(): could not create chunks");
 		dbmail_imap_session_printf(self, "* BYE server ran out of memory\r\n");
-		my_free(cpy);
+		dm_free(cpy);
 		return -1;
 	}
 
@@ -391,7 +391,7 @@ int _ic_create(struct ImapSession *self)
 		/* wrong argument */
 		dbmail_imap_session_printf(self, "%s NO invalid mailbox name specified\r\n", self->tag);
 		g_strfreev(chunks);
-		my_free(cpy);
+		dm_free(cpy);
 		return 1;
 	}
 
@@ -403,7 +403,7 @@ int _ic_create(struct ImapSession *self)
 			/* no can do */
 			dbmail_imap_session_printf(self, "%s NO invalid mailbox name specified\r\n", self->tag);
 			g_strfreev(chunks);
-			my_free(cpy);
+			dm_free(cpy);
 			return 1;
 		}
 
@@ -434,7 +434,7 @@ int _ic_create(struct ImapSession *self)
 			/* dbase failure */
 			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 			g_strfreev(chunks);
-			my_free(cpy);
+			dm_free(cpy);
 			return -1;	/* fatal */
 		}
 
@@ -451,7 +451,7 @@ int _ic_create(struct ImapSession *self)
 				if (result < 0) {
 					dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 					g_strfreev(chunks);
-					my_free(cpy);
+					dm_free(cpy);
 					return -1;	/* fatal */
 				}
 				if (result == 0) {
@@ -459,7 +459,7 @@ int _ic_create(struct ImapSession *self)
 						"%s NO no permission to create "
 						"mailbox here\r\n", self->tag);
 					g_strfreev(chunks);
-					my_free(cpy);
+					dm_free(cpy);
 					return 1;
 				}
 			} else {
@@ -472,7 +472,7 @@ int _ic_create(struct ImapSession *self)
 						"%s NO no permission to create "
 						"mailbox here\r\n", self->tag);
 					g_strfreev(chunks);
-					my_free(cpy);
+					dm_free(cpy);
 					return 1;
 				}
 			}
@@ -481,7 +481,7 @@ int _ic_create(struct ImapSession *self)
 			if (result == -1) {
 				dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 				g_strfreev(chunks);
-				my_free(cpy);
+				dm_free(cpy);
 				return -1;	/* fatal */
 			}
 		} else {
@@ -494,7 +494,7 @@ int _ic_create(struct ImapSession *self)
 					"%s NO mailbox cannot have inferior names\r\n",
 					self->tag);
 				g_strfreev(chunks);
-				my_free(cpy);
+				dm_free(cpy);
 				return 1;
 			}
 
@@ -503,7 +503,7 @@ int _ic_create(struct ImapSession *self)
 				/* dbase failure */
 				dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 				g_strfreev(chunks);
-				my_free(cpy);
+				dm_free(cpy);
 				return -1;	/* fatal */
 			}
 		}
@@ -511,7 +511,7 @@ int _ic_create(struct ImapSession *self)
 
 	/* creation complete */
 	g_strfreev(chunks);
-	my_free(cpy);
+	dm_free(cpy);
 
 	dbmail_imap_session_printf(self, "%s OK CREATE completed\r\n", self->tag);
 	return 0;
@@ -571,12 +571,12 @@ int _ic_delete(struct ImapSession *self)
 		result = db_isselectable(mboxid);
 		if (result == 0) {
 			dbmail_imap_session_printf(self, "%s NO mailbox is non-selectable\r\n", self->tag);
-			my_free(children);
+			dm_free(children);
 			return 1;
 		}
 		if (result == -1) {
 			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-			my_free(children);
+			dm_free(children);
 			return -1;	/* fatal */
 		}
 
@@ -587,7 +587,7 @@ int _ic_delete(struct ImapSession *self)
 
 		if (result == -1) {
 			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-			my_free(children);
+			dm_free(children);
 			return -1;	/* fatal */
 		}
 
@@ -597,7 +597,7 @@ int _ic_delete(struct ImapSession *self)
 
 		/* ok done */
 		dbmail_imap_session_printf(self, "%s OK DELETE completed\r\n", self->tag);
-		my_free(children);
+		dm_free(children);
 		return 0;
 	}
 
@@ -723,7 +723,7 @@ int _ic_rename(struct ImapSession *self)
 		result = db_getmailboxname(children[i], ud->userid, name);
 		if (result == -1) {
 			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-			my_free(children);
+			dm_free(children);
 			return -1;
 		}
 
@@ -731,7 +731,7 @@ int _ic_rename(struct ImapSession *self)
 			/* strange error, let's say its fatal */
 			trace(TRACE_ERROR, "IMAPD: rename(): mailbox names appear to be corrupted");
 			dbmail_imap_session_printf(self, "* BYE internal error regarding mailbox names\r\n");
-			my_free(children);
+			dm_free(children);
 			return -1;
 		}
 
@@ -740,12 +740,12 @@ int _ic_rename(struct ImapSession *self)
 		result = db_setmailboxname(children[i], newname);
 		if (result == -1) {
 			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-			my_free(children);
+			dm_free(children);
 			return -1;
 		}
 	}
 	if (children)
-		my_free(children);
+		dm_free(children);
 
 	/* now replace name */
 	result = db_setmailboxname(mboxid, self->args[1]);
@@ -843,7 +843,7 @@ int _ic_list(struct ImapSession *self)
 	char *pattern;
 	char *thisname = list_is_lsub ? "LSUB" : "LIST";
 	
-	mailbox_t *mb = (mailbox_t *)my_malloc(sizeof(mailbox_t));
+	mailbox_t *mb = (mailbox_t *)dm_malloc(sizeof(mailbox_t));
 	memset(mb,0,sizeof(mailbox_t));
 	GList * plist = NULL;
 
@@ -876,7 +876,7 @@ int _ic_list(struct ImapSession *self)
 	/* FIXME: We need to allocated a sane amount of memory for this, 
 	   instead of adding an extra 20 places for just for having extra
 	   space. This is bound to fail sometime!! */
-	pattern = (char *) my_malloc(sizeof(char) * (plen + slen + 20));
+	pattern = (char *) dm_malloc(sizeof(char) * (plen + slen + 20));
 	if (!pattern) {
 		dbmail_imap_session_printf(self, "* BYE out of memory\r\n");
 		return -1;
@@ -916,16 +916,16 @@ int _ic_list(struct ImapSession *self)
 				    &nchildren, list_is_lsub);
 	if (result == -1) {
 		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-		my_free(children);
-		my_free(pattern);
+		dm_free(children);
+		dm_free(pattern);
 		return -1;
 	}
 
 	if (result == 1) {
 		dbmail_imap_session_printf(self, "%s BAD invalid pattern specified\r\n",
 			self->tag);
-		my_free(children);
-		my_free(pattern);
+		dm_free(children);
+		dm_free(pattern);
 		return 1;
 	}
 
@@ -945,9 +945,9 @@ int _ic_list(struct ImapSession *self)
 
 
 	if (children)
-		my_free(children);
+		dm_free(children);
 
-	my_free(pattern);
+	dm_free(pattern);
 
 	dbmail_imap_session_printf(self, "%s OK %s completed\r\n", self->tag, thisname);
 	return 0;
@@ -1073,7 +1073,7 @@ int _ic_status(struct ImapSession *self)
 			dbmail_imap_session_printf(self,
 				"\r\n%s BAD unrecognized option '%s' specified\r\n",
 				self->tag, self->args[i]);
-			my_free(mb.seq_list);
+			dm_free(mb.seq_list);
 			return 1;
 		}
 	}
@@ -1083,7 +1083,7 @@ int _ic_status(struct ImapSession *self)
 	dbmail_imap_session_printf(self, "%s\r\n", response->str);
 	dbmail_imap_session_printf(self, "%s OK STATUS completed\r\n", self->tag);
 
-	my_free(mb.seq_list);
+	dm_free(mb.seq_list);
 	g_list_foreach(plst,(GFunc)g_free,NULL);
 	g_list_free(plst);
 	g_string_free(response,TRUE);
@@ -1383,7 +1383,7 @@ int _ic_sort(struct ImapSession *self)
 	sk.type = IST_SUBSEARCH_AND;
 
 	/* allocate memory for result set */
-	result_set = (unsigned*)my_malloc(sizeof(unsigned) * ud->mailbox.exists);
+	result_set = (unsigned*)dm_malloc(sizeof(unsigned) * ud->mailbox.exists);
 	if (!result_set) {
 		free_searchlist(&sk.sub_search);
 		dbmail_imap_session_printf(self,"* NO server ran out of memory\r\n");
@@ -1399,7 +1399,7 @@ int _ic_sort(struct ImapSession *self)
     
 	if (result < 0) {
 		free_searchlist(&sk.sub_search);
-		my_free(result_set);
+		dm_free(result_set);
 		dbmail_imap_session_printf(self,"%s", (result == -1) ? 
 			"* NO internal dbase error\r\n" :
 			"* NO server ran out of memory\r\n");
@@ -1425,7 +1425,7 @@ int _ic_sort(struct ImapSession *self)
 	}
 
 	dbmail_imap_session_printf(self,"\r\n");
-	my_free(result_set);
+	dm_free(result_set);
       
 	dbmail_imap_session_printf(self,"%s OK SORT completed\r\n",self->tag);
 	return 0;
@@ -1550,7 +1550,7 @@ int _ic_expunge(struct ImapSession *self)
 
 		dbmail_imap_session_printf(self, "* %u EXPUNGE\r\n", idx + 1);	/* add one: IMAP MSN starts at 1 not zero */
 	}
-	my_free(msgids);
+	dm_free(msgids);
 	msgids = NULL;
 
 	/* update mailbox info */
@@ -1562,7 +1562,7 @@ int _ic_expunge(struct ImapSession *self)
 
 	if (result == -1) {
 		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-		my_free(newmailbox.seq_list);
+		dm_free(newmailbox.seq_list);
 		return -1;	/* fatal  */
 	}
 
@@ -1572,7 +1572,7 @@ int _ic_expunge(struct ImapSession *self)
 	if (newmailbox.recent != ud->mailbox.recent)
 		dbmail_imap_session_printf(self, "* %u RECENT\r\n", newmailbox.recent);
 
-	my_free(ud->mailbox.seq_list);
+	dm_free(ud->mailbox.seq_list);
 	memcpy((void *) &ud->mailbox, (void *) &newmailbox, 
 	       sizeof(newmailbox));
 
@@ -1591,9 +1591,10 @@ int _ic_search(struct ImapSession *self)
 {
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	unsigned *result_set;
-	unsigned i;
+	unsigned retry, i;
 	int result = 0, only_ascii = 0, idx = 0;
 	search_key_t sk;
+	struct list *sub_search;
 
 	if (ud->state != IMAPCS_SELECTED) {
 		dbmail_imap_session_printf(self,
@@ -1631,10 +1632,12 @@ int _ic_search(struct ImapSession *self)
 	}
 
 	/* parse the search keys */
-	while (self->args[idx]
-	       && (result =
-		   build_imap_search(self->args, &sk.sub_search, &idx, 0)) >= 0);
+	while (self->args[idx] && (result = build_imap_search(self->args, &sk.sub_search, &idx, 0)) >= 0);
 
+	/* reverse the search list back to it's original order */
+	sub_search = &sk.sub_search;
+	sub_search.start = dbmail_list_reverse(sub_search.start);
+	
 	if (result == -2) {
 		free_searchlist(&sk.sub_search);
 		dbmail_imap_session_printf(self, "* BYE server ran out of memory\r\n");
@@ -1649,8 +1652,7 @@ int _ic_search(struct ImapSession *self)
 	}
 
 	/* check if user has the right to search in this mailbox */
-	result =
-	    acl_has_right(ud->userid, ud->mailbox.uid, ACL_RIGHT_READ);
+	result = acl_has_right(ud->userid, ud->mailbox.uid, ACL_RIGHT_READ);
 	if (result < 0) {
 		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		free_searchlist(&sk.sub_search);
@@ -1666,25 +1668,10 @@ int _ic_search(struct ImapSession *self)
 	/* make it a top-level search key */
 	sk.type = IST_SUBSEARCH_AND;
 
-	i = 0;
+	retry = 0;
 	do {
-		/* update mailbox info */
-		/* commented out: the search should be on the mailbox 
-		   as the client thinks it is (!) */
-/* result = db_getmailbox(&ud->mailbox);
-   
-if (result == -1)
-{
-free_searchlist(&sk.sub_search);
-dbmail_imap_session_printf(self,"* BYE internal dbase error\r\n");
-	  return -1;
-	  }
-*/
-
 		/* allocate memory for result set */
-		result_set =
-		    (unsigned *) my_malloc(sizeof(unsigned) *
-					   ud->mailbox.exists);
+		result_set = (unsigned *) dm_malloc(sizeof(unsigned) * ud->mailbox.exists);
 		if (!result_set) {
 			free_searchlist(&sk.sub_search);
 			dbmail_imap_session_printf(self,
@@ -1700,13 +1687,11 @@ dbmail_imap_session_printf(self,"* BYE internal dbase error\r\n");
 			result_set[i] = 1;
 
 		/* now perform the search operations */
-		result =
-		    perform_imap_search((int *)result_set, ud->mailbox.exists,
-					&sk, &ud->mailbox,0);
+		result = perform_imap_search((int *)result_set, ud->mailbox.exists, &sk, &ud->mailbox,0);
 
 		if (result < 0) {
 			free_searchlist(&sk.sub_search);
-			my_free(result_set);
+			dm_free(result_set);
 			dbmail_imap_session_printf(self, "%s", (result == -1) ?
 				"* BYE internal dbase error\r\n" :
 				"* BYE server ran out of memory\r\n");
@@ -1718,17 +1703,17 @@ dbmail_imap_session_printf(self,"* BYE internal dbase error\r\n");
 		}
 
 		if (result == 1) {
-			my_free(result_set);
+			dm_free(result_set);
 			result_set = NULL;
 		}
 
-	} while (result == 1 && ++i < MAX_RETRIES);
+	} while (result == 1 && ++retry < MAX_RETRIES);
 
 	free_searchlist(&sk.sub_search);
 
 	if (result == 1) {
 		dbmail_imap_session_printf(self, "* BYE error synchronizing dbase\r\n");
-		my_free(result_set);
+		dm_free(result_set);
 		return -1;
 	}
 
@@ -1743,7 +1728,7 @@ dbmail_imap_session_printf(self,"* BYE internal dbase error\r\n");
 	}
 
 	dbmail_imap_session_printf(self, "\r\n");
-	my_free(result_set);
+	dm_free(result_set);
 
 	dbmail_imap_session_printf(self, "%s OK SEARCH completed\r\n", self->tag);
 	return 0;
@@ -2645,7 +2630,7 @@ int _ic_getacl(struct ImapSession *self)
 	}
 
 	dbmail_imap_session_printf(self, "* ACL \"%s\" %s\r\n", self->args[0], acl_string);
-	my_free(acl_string);
+	dm_free(acl_string);
 	dbmail_imap_session_printf(self, "%s OK GETACL completed\r\n", self->tag);
 	return 0;
 }
@@ -2690,7 +2675,7 @@ int _ic_listrights(struct ImapSession *self)
 	dbmail_imap_session_printf(self, "* LISTRIGHTS \"%s\" %s %s\r\n",
 		self->args[0], self->args[1], listrights_string);
 	dbmail_imap_session_printf(self, "%s OK LISTRIGHTS completed\r\n", self->tag);
-	my_free(listrights_string);
+	dm_free(listrights_string);
 	return 0;
 }
 
@@ -2723,7 +2708,7 @@ int _ic_myrights(struct ImapSession *self)
 
 	dbmail_imap_session_printf(self, "* MYRIGHTS \"%s\" %s\r\n", self->args[0],
 		myrights_string);
-	my_free(myrights_string);
+	dm_free(myrights_string);
 	dbmail_imap_session_printf(self, "%s OK MYRIGHTS complete\r\n", self->tag);
 	return 0;
 }

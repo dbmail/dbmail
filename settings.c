@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
 	char *readbuf, *field, *val, *fname;
 	int i;
 
-	if(!(readbuf = (char *) my_malloc(LINE_BUFFER_SIZE))) {
+	if(!(readbuf = (char *) dm_malloc(LINE_BUFFER_SIZE))) {
 		printf("Error allocating memory. Exiting..\n");
 		return 1;
 	}
@@ -53,13 +53,13 @@ int main(int argc, char *argv[])
 
 	if (db_connect() != 0) {
 		printf("Could not connect to database.\n");
-		my_free(readbuf);
+		dm_free(readbuf);
 		return -1;
 	}
 
 	if (auth_connect() != 0) {
 		printf("Could not connect to authentication.\n");
-		my_free(readbuf);
+		dm_free(readbuf);
 		return -1;
 	}
 
@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
 	if (configfile == NULL) {	/* error test */
 		fprintf(stderr, "Error: can not open input file %s\n",
 			fname);
-		my_free(readbuf);
+		dm_free(readbuf);
 		return 8;
 	}
 
@@ -107,6 +107,6 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "end of buffer\n");
 
 	}
-	my_free(readbuf);
+	dm_free(readbuf);
 	return 0;
 }

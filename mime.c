@@ -261,7 +261,7 @@ int mail_adr_list(char *scan_for_field, struct list *targetlist,
 	      mimelist->total_nodes);
 
 	memtst((tmpvalue =
-		(char *) my_calloc(MIME_VALUE_MAX, sizeof(char))) == NULL);
+		(char *) dm_calloc(MIME_VALUE_MAX, sizeof(char))) == NULL);
 
 	trace(TRACE_INFO, "mail_adr_list(): mail address parser starting");
 
@@ -317,7 +317,7 @@ int mail_adr_list(char *scan_for_field, struct list *targetlist,
 		raw = raw->nextnode;
 	}
 
-	my_free(tmpvalue);
+	dm_free(tmpvalue);
 
 	trace(TRACE_DEBUG, "mail_adr_list(): found %ld emailaddresses",
 	      targetlist->total_nodes);

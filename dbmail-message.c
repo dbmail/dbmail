@@ -250,7 +250,7 @@ void dbmail_message_delete(struct DbmailMessage *self)
 	self->id=0;
 	self->size=0;
 	self->rfcsize=0;
-	my_free(self);
+	dm_free(self);
 }
 
 

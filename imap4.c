@@ -120,7 +120,7 @@ int IMAPClientHandler(ClientInfo * ci)
 	dbmail_imap_session_setClientInfo(session,ci);
 
 	/* init: add userdata */
-	ud = my_malloc(sizeof(imap_userdata_t));
+	ud = dm_malloc(sizeof(imap_userdata_t));
 	if (! ud) {
 		/* out of mem */
 		trace(TRACE_ERROR,
@@ -381,7 +381,7 @@ int IMAPClientHandler(ClientInfo * ci)
 						return EOF;
 					}
 
-				my_free(ud->mailbox.seq_list);
+				dm_free(ud->mailbox.seq_list);
 				memcpy((void *) &ud->mailbox, (void *)&newmailbox, sizeof(newmailbox));
 			}
 		}

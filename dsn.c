@@ -204,12 +204,12 @@ int dsnuser_init(deliver_to_user_t * dsnuser)
 	dsnuser->address = NULL;
 	dsnuser->mailbox = NULL;
 
-	dsnuser->userids = (struct list *) my_malloc(sizeof(struct list));
+	dsnuser->userids = (struct list *) dm_malloc(sizeof(struct list));
 	if (dsnuser->userids == NULL)
 		return -1;
-	dsnuser->forwards = (struct list *) my_malloc(sizeof(struct list));
+	dsnuser->forwards = (struct list *) dm_malloc(sizeof(struct list));
 	if (dsnuser->forwards == NULL) {
-		my_free(dsnuser->userids);
+		dm_free(dsnuser->userids);
 		return -1;
 	}
 
@@ -231,14 +231,14 @@ void dsnuser_free(deliver_to_user_t * dsnuser)
 
 	/* These are nominally const, but
 	 * we really do want to free them. */
-	my_free((char *) dsnuser->address);
-	my_free((char *) dsnuser->mailbox);
+	dm_free((char *) dsnuser->address);
+	dm_free((char *) dsnuser->mailbox);
 
 	list_freelist(&dsnuser->userids->start);
 	list_freelist(&dsnuser->forwards->start);
 
-	my_free(dsnuser->userids);
-	my_free(dsnuser->forwards);
+	dm_free(dsnuser->userids);
+	dm_free(dsnuser->forwards);
 
 	trace(TRACE_DEBUG, "%s, %s: dsnuser freed",
 	      __FILE__, __func__);
@@ -274,7 +274,7 @@ int dsnuser_resolve(deliver_to_user_t *delivery)
 		username = auth_get_userid(delivery->useridnr);
 		if (username != NULL) {
 			/* Free the username, we don't actually need it. */
-			my_free(username);
+			dm_free(username);
 
 			/* Copy the delivery useridnr into the userids list. */
 			if (list_nodeadd(delivery->userids,

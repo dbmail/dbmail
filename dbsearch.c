@@ -148,7 +148,7 @@ int db_search(unsigned int *rset, int setlen, const char *key, mailbox_t * mb,
 
 			if (msn == -1 || msn >= setlen) {
 				db_free_result();
-				return 1;
+				return -1;
 			}
 			rset[msn] = 1;
 		} else {
@@ -162,10 +162,10 @@ int db_search(unsigned int *rset, int setlen, const char *key, mailbox_t * mb,
 
 void addto_btree_curr(sortitems_t ** root, char *str, int mid)
 {
-   sortitems_t *curr = (sortitems_t *)my_malloc(sizeof(sortitems_t));
+   sortitems_t *curr = (sortitems_t *)dm_malloc(sizeof(sortitems_t));
    curr->left = curr->right = NULL;
    curr->mid = mid;
-   curr->ustr = (char *)my_malloc(sizeof(char)*(strlen(str)+8)); 
+   curr->ustr = (char *)dm_malloc(sizeof(char)*(strlen(str)+8)); 
    memset(curr->ustr, '\0', sizeof(char)*(strlen(str)+8));
    sprintf(curr->ustr, "%s%06d", str,mid);
    list_btree_insert(root, curr);

@@ -600,7 +600,7 @@ char *__auth_get_first_match(const char *q, char **retfields)
 		goto endfree;
 	}
 	
-	if (! (returnid = (char *) my_malloc(LDAP_RES_SIZE))) {
+	if (! (returnid = (char *) dm_malloc(LDAP_RES_SIZE))) {
 		trace(TRACE_ERROR, "%s,%s: out of memory",__FILE__,__func__);
 		goto endfree;
 	}
@@ -655,7 +655,7 @@ int auth_user_exists(const char *username, u64_t * user_idnr)
 	      *user_idnr);
 
 	if (id_char)
-		my_free(id_char);
+		dm_free(id_char);
 
 	if (*user_idnr == 0)
 		return 0;
@@ -718,7 +718,7 @@ int auth_getclientid(u64_t user_idnr, u64_t * client_idnr)
 	      *client_idnr);
 
 	if (cid_char)
-		my_free(cid_char);
+		dm_free(cid_char);
 
 	return 1;
 }
@@ -749,7 +749,7 @@ int auth_getmaxmailsize(u64_t user_idnr, u64_t * maxmail_size)
 	      *maxmail_size);
 
 	if (max_char)
-		my_free(max_char);
+		dm_free(max_char);
 
 	return 1;
 }
@@ -1001,7 +1001,7 @@ int auth_check_user_ext(const char *address, struct list *userids,
 			} else {
 				list_nodeadd(fwds, address,
 					     strlen(address) + 1);
-				my_free(endptr);
+				dm_free(endptr);
 			}
 
 			trace(TRACE_DEBUG,
@@ -1194,8 +1194,8 @@ int auth_adduser(const char *username, const char *password,
 	/*int ret; unused variable */
 	int NUM_MODS = 9;
 	char *kaboom = "123";
-	char *cid = (char *)my_malloc(sizeof(char *)*64);
-	char *maxm = (char *)my_malloc(sizeof(char *)*64);
+	char *cid = (char *)dm_malloc(sizeof(char *)*64);
+	char *maxm = (char *)dm_malloc(sizeof(char *)*64);
 	sprintf(cid,"%llu",clientid);
 	sprintf(maxm,"%llu",maxmail);
 	
@@ -1221,7 +1221,7 @@ int auth_adduser(const char *username, const char *password,
 	/* Make the malloc for all of the pieces we're about to to sprintf into it */
 	_ldap_dn_len =
 	    strlen("cn=,") + strlen(username) + strlen(_ldap_cfg.base_dn);
-	_ldap_dn = (char *) my_malloc(_ldap_dn_len + 1);
+	_ldap_dn = (char *) dm_malloc(_ldap_dn_len + 1);
 
 	snprintf(_ldap_dn, _ldap_dn_len, "cn=%s,%s", username,
 		 _ldap_cfg.base_dn);
@@ -1231,7 +1231,7 @@ int auth_adduser(const char *username, const char *password,
 	 * of the new entry. There's a 12 byte leak here, better find it... */
 
 	_ldap_mod =
-	    (LDAPMod **) my_malloc((NUM_MODS + 1) * sizeof(LDAPMod *));
+	    (LDAPMod **) dm_malloc((NUM_MODS + 1) * sizeof(LDAPMod *));
 
 	if (_ldap_mod == NULL) {
 		trace(TRACE_ERROR,
@@ -1241,14 +1241,14 @@ int auth_adduser(const char *username, const char *password,
 
 	for (i = 0; i < NUM_MODS; i++) {
 		if ((_ldap_mod[i] =
-		     (LDAPMod *) my_malloc(sizeof(LDAPMod))) == NULL) {
+		     (LDAPMod *) dm_malloc(sizeof(LDAPMod))) == NULL) {
 			trace(TRACE_ERROR,
 			      "%s,%s: Cannot allocate memory for mods element %d", __FILE__, __func__,
 			      i);
 			/* Free everything that did get allocated, which is (i-1) elements */
 			for (j = 0; j < (i - 1); j++)
-				my_free(_ldap_mod[j]);
-			my_free(_ldap_mod);
+				dm_free(_ldap_mod[j]);
+			dm_free(_ldap_mod);
 			ldap_msgfree(_ldap_res);
 			return -1;
 		}
@@ -1341,8 +1341,8 @@ int auth_adduser(const char *username, const char *password,
 	/* make sure to free this stuff even if we do bomb out! */
 	/* there's a 12 byte leak here, but I can't figure out how to fix it :-( */
 	for (i = 0; i < NUM_MODS; i++)
-		my_free(_ldap_mod[i]);
-	my_free(_ldap_mod);
+		dm_free(_ldap_mod[i]);
+	dm_free(_ldap_mod);
 
 /*  this function should clear the leak, but it segfaults instead :-\ */
 /*  ldap_mods_free( _ldap_mod, 1 ); */
@@ -1433,7 +1433,7 @@ int auth_change_username(u64_t user_idnr, const char *new_name)
 	char *new_values[2];
 
 	new_name_str =
-	    (char *) my_malloc(sizeof(char) * (strlen(new_name) + 1));
+	    (char *) dm_malloc(sizeof(char) * (strlen(new_name) + 1));
 	strncpy(new_name_str, new_name, strlen(new_name));
 
 	new_values[0] = new_name_str;
@@ -1504,7 +1504,7 @@ int auth_change_username(u64_t user_idnr, const char *new_name)
 	 * of the new entry. */
 
 	_ldap_mod =
-	    (LDAPMod **) my_malloc((NUM_MODS + 1) * sizeof(LDAPMod *));
+	    (LDAPMod **) dm_malloc((NUM_MODS + 1) * sizeof(LDAPMod *));
 
 	if (_ldap_mod == NULL) {
 		trace(TRACE_ERROR,
@@ -1516,14 +1516,14 @@ int auth_change_username(u64_t user_idnr, const char *new_name)
 
 	for (i = 0; i < NUM_MODS; i++) {
 		if ((_ldap_mod[i] =
-		     (LDAPMod *) my_malloc(sizeof(LDAPMod))) == NULL) {
+		     (LDAPMod *) dm_malloc(sizeof(LDAPMod))) == NULL) {
 			trace(TRACE_ERROR,
 			      "%s,%s: Cannot allocate memory for mods element %d", __FILE__, __func__,
 			      i);
 			/* Free everything that did get allocated, which is (i-1) elements */
 			for (j = 0; j < (i - 1); j++)
-				my_free(_ldap_mod[j]);
-			my_free(_ldap_mod);
+				dm_free(_ldap_mod[j]);
+			dm_free(_ldap_mod);
 			ldap_memfree(_ldap_dn);
 			ldap_msgfree(_ldap_res);
 			return -1;
@@ -1550,8 +1550,8 @@ int auth_change_username(u64_t user_idnr, const char *new_name)
 
 	/* make sure to free this stuff even if we do bomb out! */
 	for (i = 0; i < NUM_MODS; i++)
-		my_free(_ldap_mod[i]);
-	my_free(_ldap_mod);
+		dm_free(_ldap_mod[i]);
+	dm_free(_ldap_mod);
 
 	ldap_memfree(_ldap_dn);
 	ldap_msgfree(_ldap_res);
@@ -1649,7 +1649,7 @@ int auth_change_clientid(u64_t user_idnr, u64_t newcid)
 	 * of the new entry. */
 
 	_ldap_mod =
-	    (LDAPMod **) my_malloc((NUM_MODS + 1) * sizeof(LDAPMod *));
+	    (LDAPMod **) dm_malloc((NUM_MODS + 1) * sizeof(LDAPMod *));
 
 	if (_ldap_mod == NULL) {
 		trace(TRACE_ERROR,
@@ -1661,14 +1661,14 @@ int auth_change_clientid(u64_t user_idnr, u64_t newcid)
 
 	for (i = 0; i < NUM_MODS; i++) {
 		if ((_ldap_mod[i] =
-		     (LDAPMod *) my_malloc(sizeof(LDAPMod))) == NULL) {
+		     (LDAPMod *) dm_malloc(sizeof(LDAPMod))) == NULL) {
 			trace(TRACE_ERROR,
 			      "%s,%s: Cannot allocate memory for mods element %d", __FILE__, __func__,
 			      i);
 			/* Free everything that did get allocated, which is (i-1) elements */
 			for (j = 0; j < (i - 1); j++)
-				my_free(_ldap_mod[j]);
-			my_free(_ldap_mod);
+				dm_free(_ldap_mod[j]);
+			dm_free(_ldap_mod);
 			ldap_memfree(_ldap_dn);
 			ldap_msgfree(_ldap_res);
 			return -1;
@@ -1695,8 +1695,8 @@ int auth_change_clientid(u64_t user_idnr, u64_t newcid)
 
 	/* make sure to free this stuff even if we do bomb out! */
 	for (i = 0; i < NUM_MODS; i++)
-		my_free(_ldap_mod[i]);
-	my_free(_ldap_mod);
+		dm_free(_ldap_mod[i]);
+	dm_free(_ldap_mod);
 
 	ldap_memfree(_ldap_dn);
 	ldap_msgfree(_ldap_res);
@@ -1785,7 +1785,7 @@ int auth_change_mailboxsize(u64_t user_idnr, u64_t new_size)
 	 * of the new entry. */
 
 	_ldap_mod =
-	    (LDAPMod **) my_malloc((NUM_MODS + 1) * sizeof(LDAPMod *));
+	    (LDAPMod **) dm_malloc((NUM_MODS + 1) * sizeof(LDAPMod *));
 
 	if (_ldap_mod == NULL) {
 		trace(TRACE_ERROR,
@@ -1797,14 +1797,14 @@ int auth_change_mailboxsize(u64_t user_idnr, u64_t new_size)
 
 	for (i = 0; i < NUM_MODS; i++) {
 		if ((_ldap_mod[i] =
-		     (LDAPMod *) my_malloc(sizeof(LDAPMod))) == NULL) {
+		     (LDAPMod *) dm_malloc(sizeof(LDAPMod))) == NULL) {
 			trace(TRACE_ERROR,
 			      "%s,%s: Cannot allocate memory for mods element %d", __FILE__, __func__,
 			      i);
 			/* Free everything that did get allocated, which is (i-1) elements */
 			for (j = 0; j < (i - 1); j++)
-				my_free(_ldap_mod[j]);
-			my_free(_ldap_mod);
+				dm_free(_ldap_mod[j]);
+			dm_free(_ldap_mod);
 			ldap_memfree(_ldap_dn);
 			ldap_msgfree(_ldap_res);
 			return -1;
@@ -1831,8 +1831,8 @@ int auth_change_mailboxsize(u64_t user_idnr, u64_t new_size)
 
 	/* make sure to free this stuff even if we do bomb out! */
 	for (i = 0; i < NUM_MODS; i++)
-		my_free(_ldap_mod[i]);
-	my_free(_ldap_mod);
+		dm_free(_ldap_mod[i]);
+	dm_free(_ldap_mod);
 
 	ldap_memfree(_ldap_dn);
 	ldap_msgfree(_ldap_res);
@@ -1910,7 +1910,7 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 	}
 
 	if (id_char)
-		my_free(id_char);
+		dm_free(id_char);
 	if (ldap_dn)
 		ldap_memfree(ldap_dn);
 
@@ -1959,7 +1959,7 @@ int auth_get_users_from_clientid(u64_t client_id,
  */
 char *auth_get_deliver_from_alias(const char *alias)
 {
-	char *deliver_to = (char *)my_malloc(sizeof(char *));
+	char *deliver_to = (char *)dm_malloc(sizeof(char *));
 	deliver_to = NULL;
 
 

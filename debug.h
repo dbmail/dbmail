@@ -57,23 +57,23 @@ typedef enum {
 #define memtst(tstbool) func_memtst (__FILE__,__LINE__,tstbool)
 
 /*
-#define my_malloc(s) __debug_malloc(s, __FILE__, __LINE__)
-#define my_free(p) __debug_free(p, __FILE__, __LINE__)
+#define dm_malloc(s) __debug_malloc(s, __FILE__, __LINE__)
+#define dm_free(p) __debug_free(p, __FILE__, __LINE__)
 #define __DEBUG_TRACE_MEMALLOC
 */
 #ifdef USE_GC
 
-#define my_malloc(s) GC_MALLOC(s)
-#define my_free(p) GC_FREE(p)
-#define my_calloc(n,p) GC_MALLOC((n) * (p))
-#define my_realloc(n,p) GC_REALLOC((n),(p))
+#define dm_malloc(s) GC_MALLOC(s)
+#define dm_free(p) GC_FREE(p)
+#define dm_calloc(n,p) GC_MALLOC((n) * (p))
+#define dm_realloc(n,p) GC_REALLOC((n),(p))
 
 #else
 
-#define my_malloc(s) malloc(s)
-#define my_free(p) free(p)
-#define my_calloc(n,p) calloc(n,p)
-#define my_realloc(n,p) realloc(n,p)
+#define dm_malloc(s) malloc(s)
+#define dm_free(p) free(p)
+#define dm_calloc(n,p) calloc(n,p)
+#define dm_realloc(n,p) realloc(n,p)
 
 #endif
 
@@ -92,5 +92,5 @@ void __debug_free(void *ptr, const char *fname, int linenr);
 
 void __debug_dumpallocs(void);
 
-char * my_strdup(const char *str);
+char * dm_strdup(const char *str);
 #endif

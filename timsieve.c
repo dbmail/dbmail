@@ -109,7 +109,7 @@ int tims_handle_connection(clientinfo_t * ci)
 	gethostname(myhostname, 64);
 	myhostname[63] = 0;	/* make sure string is terminated */
 
-	buffer = (char *) my_malloc(INCOMING_BUFFER_SIZE * sizeof(char));
+	buffer = (char *) dm_malloc(INCOMING_BUFFER_SIZE * sizeof(char));
 
 	if (!buffer) {
 		trace(TRACE_MESSAGE,
@@ -124,7 +124,7 @@ int tims_handle_connection(clientinfo_t * ci)
 	} else {
 		trace(TRACE_MESSAGE,
 		      "tims_handle_connection(): TX stream is null!");
-		my_free(buffer);
+		dm_free(buffer);
 		return 0;
 	}
 
@@ -142,7 +142,7 @@ int tims_handle_connection(clientinfo_t * ci)
 
 				/* leave, an alarm has occured during fread */
 				if (!ci->rx) {
-					my_free(buffer);
+					dm_free(buffer);
 					return 0;
 				}
 			}
@@ -180,7 +180,7 @@ int tims_handle_connection(clientinfo_t * ci)
 	}
 
 	/* memory cleanup */
-	my_free(buffer);
+	dm_free(buffer);
 	buffer = NULL;
 
 	/* reset timers */
@@ -346,7 +346,7 @@ int tims(void *stream, void *instream, char *buffer, char *client_ip UNUSED,
 							    tmplen ? 10 :
 							    tmplen)] =
 						    '\0';
-						my_free(tmpleft);
+						dm_free(tmpleft);
 
 						authlen =
 						    strtoull(tmpcharlen,
@@ -411,13 +411,13 @@ int tims(void *stream, void *instream, char *buffer, char *client_ip UNUSED,
 								session->
 								    username
 								    =
-								    my_strdup
+								    dm_strdup
 								    (tmp64
 								     [1]);
 								session->
 								    password
 								    =
-								    my_strdup
+								    dm_strdup
 								    (tmp64
 								     [2]);
 							} else {
@@ -426,11 +426,11 @@ int tims(void *stream, void *instream, char *buffer, char *client_ip UNUSED,
 							for (i = 0;
 							     tmp64[i] !=
 							     NULL; i++) {
-								my_free
+								dm_free
 								    (tmp64
 								     [i]);
 							}
-							my_free(tmp64);
+							dm_free(tmp64);
 						}
 					}	/* if... tmplen < 1 */
 				} /* if... strncasecmp() == "PLAIN" */
@@ -481,7 +481,7 @@ int tims(void *stream, void *instream, char *buffer, char *client_ip UNUSED,
 						    tmplen ?
 						    MAX_SIEVE_SCRIPTNAME :
 						    tmplen)] = '\0';
-					my_free(tmpleft);
+					dm_free(tmpleft);
 
 					/* Offset from the previous match to make sure not to pull
 					 * the "length" from a script with a malicious name */
@@ -506,7 +506,7 @@ int tims(void *stream, void *instream, char *buffer, char *client_ip UNUSED,
 							    tmplen ? 10 :
 							    tmplen)] =
 						    '\0';
-						my_free(tmpleft);
+						dm_free(tmpleft);
 
 						scriptlen =
 						    strtoull(tmpcharlen,
@@ -588,7 +588,7 @@ int tims(void *stream, void *instream, char *buffer, char *client_ip UNUSED,
 											    ((FILE *) stream, "OK \"Script successfully received.\"\r\n");
 										}
 									}
-									my_free
+									dm_free
 									    (f_buf);
 								}
 							}
@@ -627,7 +627,7 @@ int tims(void *stream, void *instream, char *buffer, char *client_ip UNUSED,
 						    tmplen ?
 						    MAX_SIEVE_SCRIPTNAME :
 						    tmplen)] = '\0';
-					my_free(tmpleft);
+					dm_free(tmpleft);
 
 					ret =
 					    db_activate_sievescript
@@ -659,7 +659,7 @@ int tims(void *stream, void *instream, char *buffer, char *client_ip UNUSED,
 						    db_deactivate_sievescript
 						    (session->useridnr,
 						     scriptname);
-						my_free(scriptname);
+						dm_free(scriptname);
 						if (ret == -3) {
 							fprintf((FILE *)
 								stream,
@@ -713,7 +713,7 @@ int tims(void *stream, void *instream, char *buffer, char *client_ip UNUSED,
 						    tmplen ?
 						    MAX_SIEVE_SCRIPTNAME :
 						    tmplen)] = '\0';
-					my_free(tmpleft);
+					dm_free(tmpleft);
 
 					ret =
 					    db_get_sievescript_byname
@@ -771,7 +771,7 @@ int tims(void *stream, void *instream, char *buffer, char *client_ip UNUSED,
 						    tmplen ?
 						    MAX_SIEVE_SCRIPTNAME :
 						    tmplen)] = '\0';
-					my_free(tmpleft);
+					dm_free(tmpleft);
 
 					ret =
 					    db_delete_sievescript(session->

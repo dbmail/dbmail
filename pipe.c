@@ -102,7 +102,7 @@ static int send_notification(const char *to, const char *from,
 	
 	sendmail_command_maxlen = strlen((char *) to) + strlen(sendmail) + 2;
 
-	sendmail_command = (char *) my_malloc(sendmail_command_maxlen *
+	sendmail_command = (char *) dm_malloc(sendmail_command_maxlen *
 					      sizeof(char));
 	if (!sendmail_command) {
 		trace(TRACE_ERROR, "send_notification(): out of memory");
@@ -122,7 +122,7 @@ static int send_notification(const char *to, const char *from,
 		trace(TRACE_ERROR,
 		      "send_notification(): could not open pipe to sendmail using cmd [%s]",
 		      sendmail);
-		my_free(sendmail_command);
+		dm_free(sendmail_command);
 		return 1;
 	}
 
@@ -140,7 +140,7 @@ static int send_notification(const char *to, const char *from,
 	if (result != 0)
 		trace(TRACE_ERROR,
 		      "send_notification(): reply could not be sent: sendmail error");
-	my_free(sendmail_command);
+	dm_free(sendmail_command);
 	return 0;
 }
 
@@ -214,7 +214,7 @@ static int send_reply(struct list *headerfields, const char *body)
 	send_address = replyto ? replyto : from;
 	/* allocate a string twice the size of send_address */
 	escaped_send_address =
-		(char *) my_malloc((strlen(send_address) + 1)
+		(char *) dm_malloc((strlen(send_address) + 1)
 				   * 2 * sizeof(char));
 	if (!escaped_send_address) {
 		trace(TRACE_ERROR, "%s,%s: unable to allocate memory. Memory "
@@ -237,7 +237,7 @@ static int send_reply(struct list *headerfields, const char *body)
 		trace(TRACE_ERROR,
 		      "send_reply(): could not open pipe to sendmail using cmd [%s]",
 		      comm);
-		my_free(escaped_send_address);
+		dm_free(escaped_send_address);
 		return 1;
 	}
 
@@ -255,7 +255,7 @@ static int send_reply(struct list *headerfields, const char *body)
 	if (result != 0)
 		trace(TRACE_ERROR,
 		      "send_reply(): reply could not be sent: sendmail error");
-	my_free(escaped_send_address);
+	dm_free(escaped_send_address);
 	return 0;
 }
 
@@ -303,10 +303,10 @@ static int execute_auto_ran(u64_t useridnr, struct list *headerfields)
 						      AUTO_NOTIFY_SUBJECT) < 0) {
 					trace(TRACE_ERROR, "%s,%s: error in call to send_notification.",
 					      __FILE__, __func__);
-					my_free(notify_address);
+					dm_free(notify_address);
 					return -1;
 				}
-				my_free(notify_address);
+				dm_free(notify_address);
 			}
 		}
 	}
@@ -326,10 +326,10 @@ static int execute_auto_ran(u64_t useridnr, struct list *headerfields)
 				if (send_reply(headerfields, reply_body) < 0) {
 					trace(TRACE_ERROR, "%s,%s: error in call to send_reply",
 					      __FILE__, __func__);
-					my_free(reply_body);
+					dm_free(reply_body);
 					return -1;
 				}
-				my_free(reply_body);
+				dm_free(reply_body);
 				
 			}
 		}
@@ -344,7 +344,7 @@ int discard_client_input(FILE * instream)
 {
 	char *tmpline;
 
-	tmpline = (char *) my_malloc(MAX_LINE_SIZE + 1);
+	tmpline = (char *) dm_malloc(MAX_LINE_SIZE + 1);
 	if (tmpline == NULL) {
 		trace(TRACE_ERROR, "%s,%s: unable to allocate memory.",
 		      __FILE__, __func__);
@@ -360,7 +360,7 @@ int discard_client_input(FILE * instream)
 		if (strcmp(tmpline, ".\r\n") == 0)
 			break;
 	}
-	my_free(tmpline);
+	dm_free(tmpline);
 	return 0;
 }
 
