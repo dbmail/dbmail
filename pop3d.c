@@ -28,7 +28,7 @@ char *timeout_setting;
 
 char *buffer;
 
-int resolve_client = 0;
+int resolve_client;
 
 int server_timeout;
 int server_pid;
@@ -284,7 +284,7 @@ int main (int argc, char *argv[])
 
   if (resolve_setting)
   {
-		if (strcasecmp(resolve_setting,"yes"))
+		if (strcasecmp(resolve_setting,"yes")==0)
 				resolve_client = 1;
 		else
 				resolve_client = 0;
