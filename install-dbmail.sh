@@ -53,7 +53,7 @@ if [ "$group_dbmail" == "" ] ; then
 fi
 
 echo "Ok installing dbmail executables as $user_dbmail:$group_dbmail.."
-for file in dbmail-smtp dbmail-pop3d dbmail-imapd dbmail-maintenance dbmail-adduser dbmail-config
+for file in dbmail-smtp dbmail-pop3d dbmail-imapd dbmail-maintenance dbmail-adduser
 do
 	/bin/chown $user_dbmail:$group_dbmail $file
 	/bin/chmod 770 $file

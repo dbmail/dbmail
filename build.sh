@@ -4,7 +4,7 @@ pglibdir=/usr/local/pgsql/lib/
 mylibdir=/usr/local/lib/mysql/
 
 pgincdir=/usr/local/pgsql/include/
-myincdir=/usr/local/include/mysql/
+myincdir=/usr/include/mysql/
 
 pglibs="-lpq -lcrypto -lssl"
 mylibs="-lmysqlclient -lcrypto"
@@ -14,8 +14,13 @@ bindir=/usr/local/sbin
 echo This is the dbmail build script
 echo I will have to ask you some questions about your system
 echo ""
-echo What database do you wish to use? Choices are \(m\)ysql and \(p\)ostgresql \>
-read database
+
+if [ "$1" != "" ]; then
+    database=$1
+else
+    echo What database do you wish to use? Choices are \(m\)ysql and \(p\)ostgresql \>
+    read database
+fi
 
 if [ $database = p ]; then
     echo You have selected PostgreSQL as database
@@ -52,7 +57,7 @@ echo The libraries are currently set to \[$libs\].
 echo Enter new libraries \(preceed each by \-l\) or press RETURN to keep this setting:
 read line
 if [ "$line" != "" ]; then
-    read libs
+    libs=$line
 fi
 
 echo ""
@@ -96,11 +101,19 @@ if [ $line = y ]; then
 		bindir=$line
 	    fi
 	    
-	    install.sh $bindir
+	    install-dbmail.sh $bindir
+	    if [ $? -ne 0 ]; then
+		echo install script failed. You can rerun this manually by running install-dbmail.sh
+		exit 1
+	    fi
 
 	else
 	    echo Note: You can install the files manually by running install-dbmail.sh
 	fi
+    else
+	echo Sorry, Make failed. 
+	echo Please report any problems to the mailing list: dbmail@dbmail.org
+	echo You can find more information \(including how to subscribe to the mailinglist\) on www.dbmail.org
     fi
 
 fi

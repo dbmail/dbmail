@@ -37,7 +37,11 @@ void ChildSigHandler(int sig, siginfo_t *info, void *data)
 {
   static int triedDisconnect = 0;
 
+#ifdef _USE_STR_SIGNAL
   trace(TRACE_ERROR, "ChildSighandler(): got signal [%s]", strsignal(sig));
+#else
+  trace(TRACE_ERROR, "ChildSighandler(): got signal [%d]", sig);
+#endif
 
   /* perform reinit at SIGHUP otherwise exit */
   switch (sig)

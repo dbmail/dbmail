@@ -5,7 +5,8 @@
  * Functions for connecting and talking to the Mysql database */
 
 #include "../db.h"
-#include "/usr/include/mysql/mysql.h"
+//#include "/usr/include/mysql/mysql.h"
+#include "mysql.h"
 #include "../config.h"
 #include "../pop3.h"
 #include "../list.h"

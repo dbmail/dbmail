@@ -189,7 +189,11 @@ void ParentSigHandler(int sig, siginfo_t *info, void *data)
       ChildSigHandler(sig, info, data); /* this call is for a child but it's handler is not yet installed */
     }
 
+#ifdef _USE_STR_SIGNAL
   trace(TRACE_INFO, "ParentSigHandler(): got signal [%s]", strsignal(sig));
+#else
+  trace(TRACE_INFO, "ParentSigHandler(): got signal [%d]", sig);
+#endif
 
   switch (sig)
     {

@@ -6,7 +6,8 @@
  */
 
 #include "../auth.h"
-#include "/usr/include/mysql/mysql.h"
+//#include "/usr/include/mysql/mysql.h"
+#include "mysql.h"
 #include "../list.h"
 #include "../debug.h"
 #include <stdlib.h>

@@ -276,9 +276,9 @@ int do_add(int argc, char *argv[])
 
 int do_change(int argc, char *argv[])
 {
-  int i,result, retval=0;
+  int i,result = 0, retval=0;
   u64_t newsize,userid,newcid;
-  char *endptr,*entry,*passwdfile;
+  char *endptr = NULL,*entry = NULL,*passwdfile = NULL;
   char pw[50]="";
 
   /* verify the existence of this user */
@@ -657,8 +657,8 @@ char *bgetpwent(char *filename, char *name)
   FILE *passfile = NULL;
   char pass_char[512];
   int pass_size = 511;
-  char *pw;
-  char *user;
+  char *pw = NULL;
+  char *user = NULL;
 
   if ((passfile = fopen(filename, "r")) == NULL)
     return NULL;

@@ -1728,8 +1728,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
   u64_t lo,hi;
   unsigned nmatching;
   int no_parsing_at_all = 1, getrfcsize = 0, getinternaldate = 0, getflags = 0;
-  char space_string[] = " ";
-
+  char *lastchar = NULL;
   memset(&fetch_list, 0, sizeof(fetch_list));
   memset(&headermsg, 0, sizeof(headermsg));
 
@@ -1852,7 +1851,8 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
       switch (*endptr)
 	{
 	case ':':
-	  fetch_end = strtoull(++endptr, &endptr, 10);
+	  fetch_end = strtoull(++endptr, &lastchar, 10);
+	  endptr = lastchar;
 
 	  if (*endptr == '*')
 	    {
@@ -2894,7 +2894,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 int _ic_store(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
-  char *endptr;
+  char *endptr, *lastchar = NULL;
   u64_t i,store_start,store_end;
   unsigned fn=0;
   int result,j,isfirstout=0;
@@ -2991,7 +2991,8 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
       switch (*endptr)
 	{
 	case ':':
-	  store_end = strtoull(++endptr, &endptr, 10);
+	  store_end = strtoull(++endptr, &lastchar, 10);
+	  endptr = lastchar;
 
 	  if (*endptr == '*')
 	    {
@@ -3155,7 +3156,7 @@ int _ic_copy(char *tag, char **args, ClientInfo *ci)
   unsigned fn;
   u64_t destmboxid,thisnum;
   int result;
-  char *endptr;
+  char *endptr, *lastchar = NULL;
 
   if (!check_state_and_args("COPY", tag, args, 2, IMAPCS_SELECTED, ci))
     return 1; /* error, return */
@@ -3181,7 +3182,8 @@ int _ic_copy(char *tag, char **args, ClientInfo *ci)
       if (endptr != args[0])
 	endptr++; /* skip delimiter */
 
-      copy_start = strtoull(endptr, &endptr, 10);
+      copy_start = strtoull(endptr, &lastchar, 10);
+      endptr = lastchar;
 
       if (copy_start == 0 || copy_start >
 	  (imapcommands_use_uid ? (ud->mailbox.msguidnext-1) : ud->mailbox.exists))
@@ -3193,7 +3195,8 @@ int _ic_copy(char *tag, char **args, ClientInfo *ci)
       switch (*endptr)
 	{
 	case ':':
-	  copy_end = strtoull(++endptr, &endptr, 10);
+	  copy_end = strtoull(++endptr, &lastchar, 10);
+	  endptr = lastchar;
 
 	  if (*endptr == '*')
 	    {

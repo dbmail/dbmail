@@ -1,8 +1,15 @@
 
 AUTHOBJECT = $(__DBTYPE__)/dbauth$(__DBTYPE__).o
+AUTHSOURCE = $(__DBTYPE__)/dbauth$(__DBTYPE__).c
+
 MSGBUFOBJECT = $(__DBTYPE__)/dbmsgbuf$(__DBTYPE__).o
+MSGBUFSOURCE = $(__DBTYPE__)/dbmsgbuf$(__DBTYPE__).c
+
 SEARCHOBJECT = $(__DBTYPE__)/dbsearch$(__DBTYPE__).o
+SEARCHSOURCE = $(__DBTYPE__)/dbsearch$(__DBTYPE__).c
+
 DBOBJECT = $(__DBTYPE__)/db$(__DBTYPE__).o
+DBSOURCE = $(__DBTYPE__)/db$(__DBTYPE__).c
 
 SMTP_OBJECTS = list.o debug.o pipe.o mime.o $(DBOBJECT) dbmd5.o md5.o bounce.o forward.o memblock.o \
 $(AUTHOBJECT) config.o
@@ -87,10 +94,14 @@ user.o: user.h debug.h
 memblock.o: memblock.h debug.h
 rfcmsg.o: rfcmsg.h dbmailtypes.h
 vut2dbmail.o: db.h auth.h
-$(DBOBJECT):db.h dbmd5.h config.h mime.h list.h memblock.h debug.h dbmailtypes.h auth.h
+$(DBOBJECT): db.h dbmd5.h config.h mime.h list.h memblock.h debug.h dbmailtypes.h auth.h
+	     $(CC) -o $(DBOBJECT) -c $(DBSOURCE) $(DIRS)
 $(MSGBUFOBJECT): dbmsgbuf.h db.h
+	     $(CC) -o $(MSGBUFOBJECT) -c $(MSGBUFSOURCE) $(DIRS)
 $(SEARCHOBJECT): dbsearch.h db.h
+	     $(CC) -o $(SEARCHOBJECT) -c $(SEARCHSOURCE) $(DIRS)
 $(AUTHOBJECT): auth.h db.h
+	     $(CC) -o $(AUTHOBJECT) -c $(AUTHSOURCE) $(DIRS)
 
 distclean: clean
 	rm -rf dbmail-smtp dbmail-pop3d dbmail-maintenance dbmail-imapd dbmail-config dbmail-adduser dbmail-readvut mbox2dbmail dbmail-realsmtp

@@ -7,7 +7,8 @@
 
 #include "../dbmsgbuf.h"
 #include "../db.h"
-#include "/usr/include/mysql/mysql.h"
+//#include "/usr/include/mysql/mysql.h"
+#include "mysql.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>

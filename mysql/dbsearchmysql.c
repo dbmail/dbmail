@@ -6,7 +6,8 @@
 
 #include "../dbsearch.h"
 #include "../db.h"
-#include "/usr/include/mysql/mysql.h"
+//#include "/usr/include/mysql/mysql.h"
+#include "mysql.h"
 #include "../rfcmsg.h"
 #include <stdlib.h>
 #include <stdio.h>

@@ -34,10 +34,10 @@ const char AcceptedChars[] =
 
 const char AcceptedTagChars[] = 
 "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-"!@#$%^&+()-=_`~\\|'\" ;:,.<>/? ";
+"!@#$%^&-=_`~\\|'\" ;:,.<>/? ";
 
 const char AcceptedMailboxnameChars[] = 
-"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-=/ _.&,";
+"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-=/ _.&,+";
 
 const char *IMAP_COMMANDS[] = 
 {
