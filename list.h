@@ -30,6 +30,6 @@ void list_freelist(struct element **start);
 long list_totalnodes(struct list *tlist);
 void list_showlist(struct list *tlist);
 void list_init(struct list *tlist);
-void list_reverse(struct element *start);
+struct element* list_reverse(struct element *start);
 
 #endif 

@@ -90,7 +90,8 @@ typedef struct
 typedef struct 
 {
   struct list mimeheader;           /* the MIME header of this part (if present) */
-  db_pos_t headerstart,headerend;   /* RFC822 header of this part (if present) */
+/*  db_pos_t headerstart,headerend;*/
+  struct list rfcheader;            /* RFC822 header of this part (if present) */
   db_pos_t bodystart,bodyend;       /* the body of this part */
   struct list children;             /* the children (multipart msg) */
 
@@ -150,6 +151,7 @@ int db_init_msgfetch(unsigned long uid);
 int db_update_msgbuf(int minlen);
 void db_close_msgfetch();
 void db_give_msgpos(db_pos_t *pos);
+unsigned long db_give_range_size(db_pos_t *start, db_pos_t *end);
 
 void db_free_msg(mime_message_t *msg);
 void db_reverse_msg(mime_message_t *msg);

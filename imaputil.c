@@ -32,19 +32,255 @@ const char *item_desc[] =
 };
 
 
-
-/*
- * fetch_envelope()
+/* 
+ * retrieve_structure()
  *
- * fetches the envelope a message; db_init_msgfetch() should be called first;
- * data should be (a part of) a msg block as retrieved by db_msgfetch_next()
+ * retrieves the MIME-IMB structure of a message. The msg should be in the format
+ * as build by db_fetch_headers().
  *
  * returns -1 on error, 0 on success
  */
+int retrieve_structure(FILE *outstream, mime_message_t *msg)
+{
+  struct mime_record *mr;
+  struct element *curr;
+  mime_message_t rfcmsg;
+  int idx,delimiter,start,end;
+  unsigned long size;
 
-      
-  
+  fprintf(outstream,"(");
 
+  if (msg->mimeheader.start != NULL)
+    {
+      /* show basic fields:
+       * content-type, content-subtype, (parameter list), 
+       * content-id, content-description, content-transfer-encoding,
+       * size
+       */
+
+      mime_findfield("content-type", &msg->mimeheader, &mr);
+      if (mr && strlen(mr->value) > 0)
+	{
+	  /* find first delimiter */
+	  for (delimiter = 0; mr->value[delimiter] && mr->value[delimiter] != ';'; delimiter++) ;
+
+	  if (mr->value[delimiter])
+	    mr->value[delimiter] = 0;
+	  else
+	    delimiter = -1;
+
+	  /* find main type in value */
+	  for (idx = 0; mr->value[idx] && mr->value[idx] != '/'; idx++) ;
+	  
+	  if (mr->value[idx] && (idx<delimiter || delimiter == -1))
+	    {
+	      mr->value[idx] = 0;
+	      fprintf(outstream,"\"%s\" \"%s\" ", mr->value, &mr->value[idx+1]);
+	      mr->value[idx] = '/';
+	    }
+	  else
+	    {
+	      fprintf(outstream,"\"%s\" NIL", mr->value);
+	    }
+	  
+	  if (delimiter >= 0)
+	    {
+	      /* extra parameters specified */
+	      mr->value[delimiter] = ';';
+	      idx=delimiter;
+
+	      fprintf(outstream,"(");
+
+	      /* extra params: <name>=<val> [; <name>=<val> [; ...etc...]]
+	       * note that both name and val may or may not be enclosed by 
+	       * either single or double quotation marks
+	       */
+
+	      do
+		{
+		  /* skip whitespace */
+		  for (idx++; isspace(mr->value[idx]); idx++) ;
+		  
+		  if (!mr->value[idx]) break; /* ?? */
+		  
+		  /* check if quotation marks are specified */
+		  if (mr->value[idx] == '\"' || mr->value[idx] == '\'')
+		    {
+		      start = ++idx;
+		      while (mr->value[idx] && mr->value[idx] != mr->value[start-1]) idx++;
+		      
+		      if (!mr->value[idx] || mr->value[idx+1] != '=') /* ?? no end quote */
+			break;
+
+		      end = idx;
+		      idx+=2;        /* skip to after '=' */
+		    }
+		  else
+		    {
+		      start = idx;
+		      while (mr->value[idx] && mr->value[idx] != '=') idx++;
+		      
+		      if (!mr->value[idx]) /* ?? no value specified */
+			break;
+		      
+		      end = idx;
+		      idx++;        /* skip to after '=' */
+		    }
+
+		  fprintf(outstream,"\"%.*s\" ", (end-start), &mr->value[start]);
+
+
+		  /* now process the value; practically same procedure */
+
+		  if (mr->value[idx] == '\"' || mr->value[idx] == '\'')
+		    {
+		      start = ++idx;
+		      while (mr->value[idx] && mr->value[idx] != mr->value[start-1]) idx++;
+		      
+		      if (!mr->value[idx]) /* ?? no end quote */
+			break;
+
+		      end = idx;
+		      idx++;
+		    }
+		  else
+		    {
+		      start = idx;
+
+		      while (mr->value[idx] && !isspace(mr->value[idx]) &&
+			     mr->value[idx] != ';') idx++;
+		      
+		      end = idx;
+		    }
+
+		  fprintf(outstream,"\"%.*s\"", (end-start), &mr->value[start]);
+		  
+		  /* check for more name/val pairs */
+		  while (mr->value[idx] && mr->value[idx] != ';') idx++;
+
+		  if (mr->value[idx])
+		    fprintf(outstream," ");
+
+		} while (mr->value[idx]); 
+
+	      fprintf(outstream,")");
+	      
+	    }
+	  else
+	    {
+	      fprintf(outstream," NIL");
+	    }
+	}
+      else
+	{
+	  fprintf(outstream,"NIL NIL NIL");
+	}
+
+      mime_findfield("content-id", &msg->mimeheader, &mr);
+      if (mr && strlen(mr->value) > 0)
+	fprintf(outstream, " \"%s\"",mr->value);
+      else
+	fprintf(outstream, " NIL");
+
+      mime_findfield("content-description", &msg->mimeheader, &mr);
+      if (mr && strlen(mr->value) > 0)
+	fprintf(outstream, " \"%s\"",mr->value);
+      else
+	fprintf(outstream, " NIL");
+
+      mime_findfield("content-transfer-encoding", &msg->mimeheader, &mr);
+      if (mr && strlen(mr->value) > 0)
+	fprintf(outstream, " \"%s\"",mr->value);
+      else
+	fprintf(outstream, " NIL");
+
+      /* now output size */
+      size = db_give_range_size(&msg->bodystart, &msg->bodyend);
+      fprintf(outstream, " %lu", size);
+
+
+      /* now check special cases, first case: message/rfc822 */
+      mime_findfield("content-type", &msg->mimeheader, &mr);
+      if (mr && strncasecmp(mr->value, "message/rfc822", strlen("message/rfc822")) == 0)
+	{
+	  /* msg/rfc822 found; extra items to be displayed:
+	   * (a) body envelope of rfc822 msg
+	   * (b) body structure of rfc822 msg
+	   * (c) msg size (lines)
+	   */
+	  
+	  if (retrieve_envelope(outstream, &msg->rfcheader) == -1)
+	    return -1;
+
+	  memmove(&rfcmsg, msg, sizeof(rfcmsg));
+	  rfcmsg.mimeheader.start = NULL; /* forget MIME-part */
+	  
+	  if (retrieve_structure(outstream, &rfcmsg) == -1)
+	    return -1;
+	  
+	  
+	}
+
+      /* second case: text */
+      mime_findfield("content-type", &msg->mimeheader, &mr);
+      if (mr && strncasecmp(mr->value, "text", strlen("text")) == 0)
+	{
+	  /* output # of lines */
+	}
+
+      mime_findfield("content-md5", &msg->mimeheader, &mr);
+      if (mr && strlen(mr->value) > 0)
+	fprintf(outstream, " \"%s\"",mr->value);
+      else
+	fprintf(outstream, " NIL");
+
+      mime_findfield("content-disposition", &msg->mimeheader, &mr);
+      if (mr && strlen(mr->value) > 0)
+	fprintf(outstream, " \"%s\"",mr->value);
+      else
+	fprintf(outstream, " NIL");
+
+      mime_findfield("content-language", &msg->mimeheader, &mr);
+      if (mr && strlen(mr->value) > 0)
+	fprintf(outstream, " \"%s\"",mr->value);
+      else
+	fprintf(outstream, " NIL");
+    }
+  else
+    {
+      /* check for a multipart message */
+      mime_findfield("content-type", &msg->rfcheader, &mr);
+      if (mr && strncasecmp(mr->value,"multipart", strlen("multipart")) == 0)
+	{
+	  fprintf(outstream,"(");
+
+	  curr = list_getstart(&msg->children);
+	  while (curr)
+	    {
+	      retrieve_structure(outstream, (mime_message_t*)curr->data);
+	      curr = curr->nextnode;
+	    }
+
+	  fprintf(outstream,")");
+	}
+    }
+  fprintf(outstream,")");
+
+  return 0;
+}
+
+
+/*
+ * retrieve_envelope()
+ *
+ * retrieves the body envelope of an RFC-822 msg
+ *
+ * returns -1 on error, 0 on success
+ */
+int retrieve_envelope(FILE *outstream, struct list *rfcheader)
+{
+  return 0;
+}
 
 
 /*

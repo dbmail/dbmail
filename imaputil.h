@@ -9,6 +9,11 @@
 
 #include "serverservice.h"
 #include "imap4.h"
+#include "dbmysql.h"
+#include <stdio.h>
+
+int retrieve_structure(FILE *outstream, mime_message_t *msg);
+int retrieve_envelope(FILE *outstream, struct list *rfcheader);
 
 int check_state_and_args(const char *command, const char *tag, char **args, 
 			 int nargs, int state, ClientInfo *ci);

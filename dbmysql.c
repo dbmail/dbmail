@@ -2015,7 +2015,7 @@ int db_fetch_headers(unsigned long msguid, mime_message_t *msg)
       return -1;
     }
 
-/*  db_reverse_msg(msg);*/
+  db_reverse_msg(msg);
 
   db_close_msgfetch();
   return 0;
@@ -2071,8 +2071,11 @@ void db_reverse_msg(mime_message_t *msg)
     }
 
   /* reverse this list */
-  tmp = list_getstart(&msg->children);
-  list_reverse(tmp);
+  msg->children.start = list_reverse(msg->children.start);
+
+  /* reverse header items */
+  msg->mimeheader.start = list_reverse(msg->mimeheader.start);
+  msg->rfcheader.start  = list_reverse(msg->rfcheader.start);
 }
 
 
@@ -2097,6 +2100,16 @@ void db_give_msgpos(db_pos_t *pos)
 
 
 /*
+ * db_give_range_size()
+ * 
+ * determines the number of bytes between 2 db_pos_t's
+ */
+unsigned long db_give_range_size(db_pos_t *start, db_pos_t *end)
+{
+  return (end->pos-start->pos+1)+1024*(end->block-start->block);
+}
+
+/*
  * db_start_msg()
  *
  * reads in a msg
@@ -2110,21 +2123,21 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
   trace(TRACE_DEBUG,"db_start_msg(): starting, stopbound: '%s'\n",stopbound);
 
   list_init(&msg->children);
-  db_give_msgpos(&msg->headerstart);
+/*  db_give_msgpos(&msg->headerstart); */
 
   /* read header */
   if (db_update_msgbuf(MSGBUF_FORCE_UPDATE) == -1)
     return -1;
 
-  if (mime_readheader(&msgbuf[msgidx], &msgidx, &msg->mimeheader) == -1)
+  if (mime_readheader(&msgbuf[msgidx], &msgidx, &msg->rfcheader) == -1)
     return -1;   /* error reading header */
 
-  db_give_msgpos(&msg->headerend);
+/*  db_give_msgpos(&msg->headerend); */
 
   msgidx++;
   db_give_msgpos(&msg->bodystart);
 
-  mime_findfield("content-type", &msg->mimeheader, &mr);
+  mime_findfield("content-type", &msg->rfcheader, &mr);
   if (mr && strncasecmp(mr->value,"multipart", strlen("multipart")) == 0)
     {
       trace(TRACE_DEBUG,"db_start_msg(): found multipart msg\n");
@@ -2367,25 +2380,37 @@ int db_msgdump(mime_message_t *msg, unsigned long msguid)
   trace(TRACE_DEBUG,"MIME-header: \n");
   curr = list_getstart(&msg->mimeheader);
   if (!curr)
-    trace(TRACE_DEBUG,"null\n");
+    trace(TRACE_DEBUG,"  null\n");
   else
     {
       while (curr)
 	{
 	  mr = (struct mime_record *)curr->data;
-	  trace(TRACE_DEBUG,"[%s] : [%s]\n",mr->field, mr->value);
+	  trace(TRACE_DEBUG,"  [%s] : [%s]\n",mr->field, mr->value);
 	  curr = curr->nextnode;
 	}
     }
+  trace(TRACE_DEBUG,"*** MIME-header end\n");
      
   trace(TRACE_DEBUG,"RFC822-header: \n");
-  db_dump_range(msg->headerstart, msg->headerend, msguid);
-  trace(TRACE_DEBUG,"*** header end\n");
+  curr = list_getstart(&msg->rfcheader);
+  if (!curr)
+    trace(TRACE_DEBUG,"  null\n");
+  else
+    {
+      while (curr)
+	{
+	  mr = (struct mime_record *)curr->data;
+	  trace(TRACE_DEBUG,"  [%s] : [%s]\n",mr->field, mr->value);
+	  curr = curr->nextnode;
+	}
+    }
+  trace(TRACE_DEBUG,"*** RFC822-header end\n");
 
-  trace(TRACE_DEBUG,"body: \n");
+/*  trace(TRACE_DEBUG,"body: \n");
   db_dump_range(msg->bodystart, msg->bodyend, msguid);
   trace(TRACE_DEBUG,"*** body end\n");
-
+*/
   trace(TRACE_DEBUG,"Children of this msg:\n");
   
   curr = list_getstart(&msg->children);
@@ -2405,8 +2430,6 @@ int db_dump_range(db_pos_t start, db_pos_t end, unsigned long msguid)
   int i;
 
   trace(TRACE_DEBUG,"Dumping range: (%d,%d) - (%d,%d)\n",start.block, start.pos, end.block, end.pos);
-
-  return 0;
 
   if (start.block > end.block)
     {

@@ -1482,6 +1482,10 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
       trace(TRACE_DEBUG, "Fetching msgID %lu\n", ud->mailbox.seq_list[i]);
 
+      db_fetch_headers(ud->mailbox.seq_list[i], &msg);
+      db_msgdump(&msg, ud->mailbox.seq_list[i]);
+
+
       /* walk by the arguments */
       if (fetchitems.getFlags) 
 	{
@@ -1523,7 +1527,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
       
       if (fetchitems.getMIME_IMB)
 	{
-	  
+	  retrieve_structure(ci->tx, &msg);
 	}
 
       if (fetchitems.getEnvelope)
@@ -1541,9 +1545,6 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
       if (fetchitems.getRFC822Text)
 	{
 	}
-
-      db_fetch_headers(ud->mailbox.seq_list[i], &msg);
-      db_msgdump(&msg, ud->mailbox.seq_list[i]);
 
       for (j=0; j<fetchitems.nbodyfetches; j++)
 	{

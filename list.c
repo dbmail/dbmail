@@ -43,19 +43,25 @@ void list_freelist(struct element **start)
  *
  * reverse the order of a linked list
  */
-void list_reverse(struct element *start)
+struct element* list_reverse(struct element *start)
 {
-  if (!start || !start->nextnode)
-    return; /* nothing to reverse */
+  struct element *newstart;
 
-  list_reverse(start->nextnode); /* reverse rest of list */
+  if (!start)
+    return NULL; /* nothing there */
+
+  if (!start->nextnode)
+    return start; /* nothing to reverse */
+
+  newstart = list_reverse(start->nextnode); /* reverse rest of list */
   start->nextnode->nextnode = start;
 
   start->nextnode = NULL; /* terminate list */
+
+  return newstart;
 }
 
       
-
 /* 
  * list_nodeadd()
  *
