@@ -33,8 +33,7 @@
 
 void list_init(struct list *tlist)
 {
-	tlist->start = NULL;
-	tlist->total_nodes = 0;
+	memset(tlist,'\0', sizeof(struct list));
 }
 
 
@@ -45,16 +44,14 @@ void list_init(struct list *tlist)
  */
 void list_freelist(struct element **start)
 {
-	/* check if list exists */
 	if (!(*start))
 		return;
 
-	/* free rest of list */
 	list_freelist(&(*start)->nextnode);
 
 	/* free this item */
-	my_free((*start)->data);
-	my_free(*start);
+	g_free((*start)->data);
+	g_free(*start);
 	*start = NULL;
 }
 
@@ -86,7 +83,7 @@ struct element *dbmail_list_reverse(struct element *start)
  */
 static struct element *element_new(void)
 {
-	return g_new0(struct element,1); //(struct element *)my_malloc(sizeof(struct element));
+	return g_new0(struct element,1);
 }
 
 /* 
@@ -108,8 +105,8 @@ struct element *list_nodeadd(struct list *tlist, const void *data,
 	if (! (p = element_new()))
 		return NULL;
 
-	if (! (p->data = (void *)my_malloc(dsize))) {
-		my_free(p);
+	if (! (p->data = (void *)g_malloc0(dsize))) {
+		g_free(p);
 		return NULL;
 	}
 	p->data = memcpy(p->data, data, dsize);
@@ -171,13 +168,13 @@ struct element *list_nodedel(struct list *tlist, void *data)
 		if (temp->data == data) {
 			if (item == NULL) {
 				tlist->start = temp->nextnode;
-				my_free(temp->data);
-				my_free((struct element *) temp);
+				g_free(temp->data);
+				g_free((struct element *) temp);
 				break;
 			} else {
 				item->nextnode = temp->nextnode;
-				my_free(temp->data);	/* freeing memory */
-				my_free((struct element *) temp);
+				g_free(temp->data);	/* freeing memory */
+				g_free((struct element *) temp);
 				break;
 			}
 			/* updating node count */
@@ -259,10 +256,10 @@ void list_btree_traverse(sortitems_t * tree, int * i, unsigned int *rset) {
 void list_btree_free(sortitems_t * tree) {
 	if(tree->left) 
 		list_btree_free(tree->left);
-	my_free(tree->ustr);
+	g_free(tree->ustr);
 	if(tree->right) 
 		list_btree_free(tree->right);
 	else 
-		my_free(tree);
+		g_free(tree);
 }
 
