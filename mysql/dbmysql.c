@@ -1416,17 +1416,15 @@ u64_t db_deleted_purge()
     {
       snprintf (query,DEF_QUERYSIZE,"DELETE FROM messageblks WHERE message_idnr=%llu", msgids[i]);
       trace (TRACE_DEBUG,"db_deleted_purge(): trying to delete blocks for  message [%llu]", msgids[i]);
+
       if (db_query(query)==-1)
 	{
 	  trace(TRACE_ERROR, "db_deleted_purge(): could not delete blocks for message [%llu]: %s",
 		msgids[i], mysql_error(&conn));
 	  my_free(msgids);
 	  msgids = 0;
-	  mysql_free_result(res);
 	  return -1;
 	}
-
-      mysql_free_result(res);
     }
 
   my_free(msgids);
@@ -1439,14 +1437,10 @@ u64_t db_deleted_purge()
     {
       trace(TRACE_ERROR, "db_deleted_purge(): could not delete messages: %s", 
 	    mysql_error(&conn));
-    
-      mysql_free_result(res);
       return -1;
     }
 	
   affected_rows = mysql_affected_rows(&conn);
-  mysql_free_result(res);
-  
 
   return affected_rows;
 }

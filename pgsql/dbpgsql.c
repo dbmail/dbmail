@@ -1325,6 +1325,8 @@ u64_t db_deleted_purge()
 	  my_free(msgids);
 	  return -1;
         }
+
+      PQclear(res);
     }
 
 
