@@ -41,6 +41,8 @@ FILE *rx = NULL;	/* read socket */
 int *default_children;
 int total_children = 0;
 
+int done;
+
 key_t	shmkey = 0;
 int shmid;
 
@@ -92,8 +94,9 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
   
   time_t timestamp;
   time_t timeout;
- 
-  int done = 1;
+
+  /* reset */
+  done = 1;
   
   theiraddress=inet_ntoa(adr_clnt.sin_addr);
 
