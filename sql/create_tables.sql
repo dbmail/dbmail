@@ -1,7 +1,9 @@
 # $Id$
 
 CREATE DATABASE dbmail;
+
 USE dbmail;
+
 CREATE TABLE aliases (
    alias_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
    alias varchar(100) NOT NULL,
@@ -20,7 +22,8 @@ CREATE TABLE user (
    maxmail_size bigint(21) DEFAULT '0' NOT NULL,
    PRIMARY KEY (useridnr),
    KEY useridnr (useridnr, userid),
-   UNIQUE useridnr_2 (useridnr, userid)
+   UNIQUE useridnr_2 (useridnr, userid),
+   UNIQUE userid_2 (userid)
 );
 
 CREATE TABLE mailbox (
