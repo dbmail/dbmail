@@ -293,6 +293,12 @@ typedef struct ssinfo {
 	int active;
 } sievescript_info_t;
 
+/* messageblk types */
+typedef enum {
+	BODY_BLOCK = 0,
+	HEAD_BLOCK = 1
+} blocktype_t;
+
 /*
  * A struct to say which Sieve allocations
  * will need an associated free.

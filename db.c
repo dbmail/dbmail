@@ -1370,6 +1370,54 @@ int db_icheck_null_messages(struct list *lost_list)
 	return 0;
 }
 
+int db_set_isheader(GList *lost)
+{
+	GList *slices;
+	if (! lost)
+		return 0;
+
+	slices = g_list_slices(lost,100);
+	slices = g_list_first(slices);
+	while(slices) {
+		snprintf(query, DEF_QUERYSIZE,
+			"UPDATE %smessageblks"
+			" SET is_header = '%u'"
+			" WHERE messageblk_idnr IN (%s)",
+			DBPFX, HEAD_BLOCK, (gchar *)slices->data);
+
+		if (db_query(query) == -1) {
+			trace(TRACE_ERROR, "%s,%s: could not access messageblks table",
+			     __FILE__, __func__);
+			return -1;
+		}
+		slices = g_list_next(slices);
+	}
+	g_list_free(slices);
+	return 0;
+}
+
+int db_icheck_isheader(GList  **lost)
+{
+	unsigned i;
+	snprintf(query, DEF_QUERYSIZE,
+			"SELECT MIN(messageblk_idnr),MAX(is_header) "
+			"FROM dbmail_messageblks "
+			"GROUP BY physmessage_id HAVING MAX(is_header)=0");
+	
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: could not access messageblks table",
+		     __FILE__, __func__);
+		return -1;
+	}
+
+	for (i = 0; i < db_num_rows(); i++) 
+		*(GList **)lost = g_list_append(*(GList **)lost, g_strdup(db_get_result(i, 0)));
+
+	db_free_result();
+
+	return 0;
+}
+
 int db_set_message_status(u64_t message_idnr, MessageStatus_t status)
 {
 	/** FIXME: We should check that, if a message is set from

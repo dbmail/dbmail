@@ -68,13 +68,13 @@ char *deliver_to_header = NULL;
 char *deliver_to_mailbox = NULL;
 
 /* loudness and assumptions */
-int yes_to_all = 0;
-int no_to_all = 0;
-int verbose = 0;
+static int yes_to_all = 0;
+static int no_to_all = 0;
+static int verbose = 0;
 /* Don't be helpful. */
-int quiet = 0;
+static int quiet = 0;
 /* Don't print errors. */
-int reallyquiet = 0;
+static int reallyquiet = 0;
 
 int do_showhelp(void) {
 	printf("*** dbmail-smtp ***\n");
@@ -382,10 +382,11 @@ int main(int argc, char *argv[])
 			exitcode = EX_TEMPFAIL;
 			break;
 		case DSN_CLASS_NONE:
+		case DSN_CLASS_QUOTA:
 		case DSN_CLASS_FAIL:
 			/* If we're over-quota, say that,
 			 * else it's a generic user error. */
-			if (final_dsn.subject = 2)
+			if (final_dsn.subject == 2)
 				exitcode = EX_CANTCREAT;
 			else
 				exitcode = EX_NOUSER;

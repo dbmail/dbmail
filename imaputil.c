@@ -147,42 +147,7 @@ char *dbmail_imap_astring_as_string(const char *s)
 	return p;
 }
 
-/*
- * return a list of strings (a,b,c,..N)
- */
 
-GList *dbmail_imap_list_slices(GList *list, unsigned limit)
-{
-	unsigned i,j;
-	GList *new = NULL;
-	GString *slice = g_string_new("");
-	if (g_list_length(list) <= limit) {
-		slice = g_list_join(list,",");
-		new=g_list_append(new,g_strdup(slice->str));
-		g_string_free(slice,TRUE);
-		return new;
-	}
-	
-	j = g_list_length(list) % limit;
-	
-	list = g_list_first(list);
-	
-	while(list) {
-		slice = g_string_new("");
-		slice = g_string_append(slice, (gchar *)list->data);
-		for (i=1; i<limit; i++) {
-			list = g_list_next(list);
-			if (! list) 
-				break;
-			slice = g_string_append(slice,",");
-			slice = g_string_append(slice,(gchar *)list->data);
-		}
-		new = g_list_append(new, g_strdup(slice->str));
-		list = g_list_next(list);
-	}
-	g_string_free(slice,TRUE);
-	return new;
-}
 
 /* 
  * sort_search()

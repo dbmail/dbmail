@@ -2119,7 +2119,7 @@ int dbmail_imap_session_mailbox_update_recent(struct ImapSession *self) {
 	if (self->recent == NULL)
 		return 0;
 
-	slices = dbmail_imap_list_slices(self->recent,100);
+	slices = g_list_slices(self->recent,100);
 	slices = g_list_first(slices);
 	while (slices) {
 		snprintf(query, DEF_QUERYSIZE, "update %smessages set recent_flag = 0 "

@@ -73,6 +73,7 @@ static int do_check_integrity(void);
 static int do_null_messages(void);
 static int do_purge_deleted(void);
 static int do_set_deleted(void);
+static int do_is_header(void);
 static int do_check_iplog(char *timestr, const char *timespec);
 static int do_vacuum_db(void);
 
@@ -85,6 +86,7 @@ int do_showhelp(void) {
 	printf("     -c        clean up database (optimize/vacuum)\n");
 	printf("     -t        test for message integrity\n");
 	printf("     -u        null message check\n");
+	printf("     -b        body/header check\n");
 //	printf("     -r        repair any integrity problems\n");
 /* 'r' and 'y' are now synonymous. */
 	printf("     -p        purge messages have the DELETE status set\n");
@@ -114,6 +116,7 @@ int main(int argc, char *argv[])
 	int vacuum_db = 0, purge_deleted = 0, set_deleted = 0;
 	int show_help = 0;
 	int do_nothing = 1;
+	int is_header = 0;
 	int opt;
 	char timespec[LEN];
 	char timestr[LEN];
@@ -123,7 +126,7 @@ int main(int argc, char *argv[])
 
 	/* get options */
 	opterr = 0;		/* suppress error message from getopt() */
-	while ((opt = getopt(argc, argv, "-acrtl:pud" "i" "f:qnyvVh")) != -1) {
+	while ((opt = getopt(argc, argv, "-acbrtl:pud" "i" "f:qnyvVh")) != -1) {
 		/* The initial "-" of optstring allows unaccompanied
 		 * options and reports them as the optarg to opt 1 (not '1') */
 		switch (opt) {
@@ -139,6 +142,11 @@ int main(int argc, char *argv[])
 
 		case 'c':
 			vacuum_db = 1;
+			do_nothing = 0;
+			break;
+
+		case 'b':
+			is_header = 1;
 			do_nothing = 0;
 			break;
 
@@ -255,6 +263,7 @@ int main(int argc, char *argv[])
 	if (check_integrity) do_check_integrity();
 	if (null_messages) do_null_messages();
 	if (purge_deleted) do_purge_deleted();
+	if (is_header) do_is_header();
 	if (set_deleted) do_set_deleted();
 	if (check_iplog) do_check_iplog(timestr, timespec);
 	if (vacuum_db) do_vacuum_db();
@@ -593,6 +602,49 @@ int do_check_integrity(void)
 	
 	return 0;
 }
+
+int do_is_header(void)
+{
+	time_t start, stop;
+	GList *lost = NULL;
+	u64_t id;
+
+	if (no_to_all) {
+		qprintf("\nChecking DBMAIL for incorrect is_header flags...\n");
+	}
+	if (yes_to_all) {
+		qprintf("\nRepairing DBMAIL for incorrect is_header flags...\n");
+	}
+	time(&start);
+
+	if (db_icheck_isheader(&lost) < 0) {
+		qerrorf("Failed. An error occured. Please check log.\n");
+		return -1;
+	}
+
+	if (g_list_length(lost) > 0) {
+		qerrorf("Ok. Found [%d] incorrect is_header flags.\n", g_list_length(lost));
+		has_errors = 1;
+	} else {
+		qprintf("Ok. Found [%d] incorrect is_header flags.\n", g_list_length(lost));
+	}
+
+	if (yes_to_all) {
+		if (db_set_isheader(lost) < 0) {
+			qerrorf("Error setting the is_header flags");
+			has_errors = 1;
+		}
+	}
+
+	g_list_free(lost);
+
+	time(&stop);
+	qverbosef("--- checking is_header flags took %g seconds\n",
+	       difftime(stop, start));
+	
+	return 0;
+}
+
 
 int do_check_iplog(char *timestr, const char *timespec)
 {

@@ -95,7 +95,6 @@ void close_cache(void);
 
 char * dbmail_imap_astring_as_string(const char *s);
 char * dbmail_imap_plist_as_string(GList *plist);
-GList *dbmail_imap_list_slices(GList *list, unsigned limit);
 
 int mime_unwrap(char *to, const char *from); 
 int sort_search(struct list *searchlist);

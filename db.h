@@ -659,6 +659,13 @@ int db_icheck_null_messages(struct list *lost_list);
 int db_icheck_null_physmessages(struct list *lost_list);
 
 /**
+ * \brief check for is_header flag on messageblks
+ *
+ */
+int db_icheck_isheader(GList  **lost);
+int db_set_isheader(GList *lost);
+
+/**
  * \brief set status of a message
  * \param message_idnr
  * \param status new status of message

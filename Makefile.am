@@ -24,7 +24,7 @@ endif
 bin_PROGRAMS = $(SIEVEPROGS)
 sbin_PROGRAMS = dbmail-smtp dbmail-pop3d dbmail-imapd dbmail-util dbmail-users dbmail-lmtpd 
 
-COMMON = config.c debug.c list.c dbmd5.c md5.c db.c misc.c mime.c pidfile.c dbmail-message.c
+COMMON = dbmail-user.c dbmail-message.c config.c debug.c list.c dbmd5.c md5.c db.c misc.c mime.c pidfile.c
 SERVER = server.c serverchild.c pool.c
 DELIVER = pipe.c forward.c dsn.c
 
@@ -70,13 +70,18 @@ TESTS=check_dbmail_common \
 	check_dbmail_deliver \
 	check_dbmail_imapd \
 	check_dbmail_message \
-	check_dbmail_user
+	check_dbmail_user \
+	check_dbmail_util
 
 noinst_PROGRAMS=$(TESTS)
 
 check_dbmail_user_SOURCES=check_dbmail_user.c
 check_dbmail_user_LDADD=@CHECK_LIBS@ libdbmail.la
 check_dbmail_user_INCLUDES=@CHECK_CFLAGS@
+
+check_dbmail_util_SOURCES=check_dbmail_util.c
+check_dbmail_util_LDADD=@CHECK_LIBS@ libdbmail.la
+check_dbmail_util_INCLUDES=@CHECK_CFLAGS@
 
 check_dbmail_common_SOURCES=check_dbmail_common.c
 check_dbmail_common_LDADD=@CHECK_LIBS@ libdbmail.la

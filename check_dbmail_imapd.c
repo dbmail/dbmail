@@ -240,7 +240,7 @@ START_TEST(test_db_set_msg)
 }
 END_TEST
 
-START_TEST(test_dbmail_imap_list_slices)
+START_TEST(test_g_list_slices)
 {
 	unsigned i=0;
 	unsigned j=98;
@@ -249,7 +249,7 @@ START_TEST(test_dbmail_imap_list_slices)
 	GList *sub = NULL;
 	for (i=0; i< j; i++) 
 		list = g_list_append_printf(list, "ELEM_%d", i);
-	list = dbmail_imap_list_slices(list, s);
+	list = g_list_slices(list, s);
 	list = g_list_first(list);
 	fail_unless(g_list_length(list)==9, "number of slices incorrect");
 	sub = g_string_split(g_string_new((gchar *)list->data), ",");
@@ -265,7 +265,7 @@ START_TEST(test_dbmail_imap_list_slices)
 	sub = NULL;
 	for (i=0; i< j; i++) 
 		list = g_list_append_printf(list, "ELEM_%d", i);
-	list = dbmail_imap_list_slices(list, s);
+	list = g_list_slices(list, s);
 	list = g_list_first(list);
 	fail_unless(g_list_length(list)==1, "number of slices incorrect");
 	sub = g_string_split(g_string_new((gchar *)list->data), ",");
@@ -358,7 +358,7 @@ Suite *dbmail_suite(void)
 	tcase_add_checked_fixture(tc_util, setup, NULL);
 	tcase_add_test(tc_util, test_g_list_join);
 	tcase_add_test(tc_util, test_dbmail_imap_plist_as_string);
-	tcase_add_test(tc_util, test_dbmail_imap_list_slices);
+	tcase_add_test(tc_util, test_g_list_slices);
 	tcase_add_test(tc_util, test_build_set);
 	return s;
 }

@@ -612,7 +612,10 @@ void _header_cache(const char *header, const char *value, gpointer user_data)
 	db_header_get_id(header, &id);
 	g_string_printf(q,"INSERT INTO %sheadervalue (headername_id, physmessage_id, headervalue)"
 			"VALUES (%llu,%llu,'%s')", DBPFX, id, self->physid, value);
-	db_query(q->str);
+	if (db_query(q->str)) {
+		/* log and ignore error. Could be a re-run */
+		trace(TRACE_WARNING,"%s,%s: insert headervalue failed", __FILE__,__func__);
+	}
 	g_string_free(q,TRUE);
 	
 }
@@ -631,6 +634,9 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message, u64_t useridnr, cons
 	size_t msgsize = (u64_t)dbmail_message_get_size(message);
 	u64_t msgidnr = message->id;
 	
+	if (! mailbox)
+		mailbox="INBOX";
+
 	if (db_find_create_mailbox(mailbox, useridnr, &mboxidnr) != 0) {
 		trace(TRACE_ERROR, "%s,%s: mailbox [%s] not found",
 				__FILE__, __func__,
