@@ -24,8 +24,6 @@ CONFIG_OBJECTS = $(DBOBJECT) list.o md5.o debug.o dbmd5.o mime.o memblock.o $(AU
 USER_OBJECTS = debug.o list.o dbmd5.o md5.o $(DBOBJECT) mime.o memblock.o $(AUTHOBJECT) config.o
 VUTCONV_OBJECTS = debug.o list.o dbmd5.o md5.o mime.o $(DBOBJECT) $(AUTHOBJECT) config.o
 DBTEST_OBJECTS = debug.o list.o dbmd5.o md5.o mime.o $(DBOBJECT) $(AUTHOBJECT) config.o
-REALSMTP_OBJECTS = smtp.o debug.o dbmd5.o md5.o list.o mime.o serverservice.o misc.o \
-smtpcommands.o memblock.o $(DBOBJECT) $(AUTHOBJECT) config.o
 CC = cc
 
 PGSQLLIBDIR=/usr/local/pgsql/lib
@@ -64,9 +62,6 @@ user: user.h $(USER_OBJECTS) user.c
 readvut: db.h auth.h vut2dbmail.c $(VUTCONV_OBJECTS)
 	$(CC) $(CFLAGS) vut2dbmail.c -o dbmail-readvut $(VUTCONV_OBJECTS) $(LIBS) $(LIB)
 
-realsmtp: db.h smtp.h $(REALSMTP_OBJECTS) smtpd.c
-	$(CC) $(CFLAGS) smtpd.c -o dbmail-realsmtp $(REALSMTP_OBJECTS) $(LIBS) $(LIB)
-
 injector: db.h auth.h $(INJECTOR_OBJECTS) injector.c
 	$(CC) $(CFLAGS) injector.c -o dbmail-smtp-injector $(INJECTOR_OBJECTS) $(LIBS) $(LIB)
 
@@ -92,14 +87,12 @@ mime.o: mime.h config.h debug.h
 misc.o:misc.h config.h debug.h
 pop3.o:pop3.h config.h debug.h dbmailtypes.h
 dbmd5.o:dbmd5.h md5.h debug.h
-bounce.o:bounce.h list.h debug.h
-imap4.o: imap4.h db.h debug.h serverservice.h imaputil.h imapcommands.h
+bounce.o:bounce.h list.h debug.h config.h
+imap4.o: imap4.h db.h debug.h imaputil.h imapcommands.h
 imaputil.o: imaputil.h db.h memblock.h debug.h dbmailtypes.h
 imapcommands.o: imapcommands.h imaputil.h imap4.h db.h memblock.h debug.h dbmailtypes.h
 server.o: server.h debug.h list.h serverchild.h config.h
 serverchild.o: serverchild.h debug.h config.h list.h
-smtp.o: smtp.h db.h debug.h serverservice.h smtpcommands.h memblock.h
-smtpcommands.o: smtpcommands.h db.h debug.h dbmailtypes.h memblock.h
 maintenance.o: maintenance.h debug.h
 settings.o: settings.h debug.h
 user.o: user.h debug.h

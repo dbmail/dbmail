@@ -12,7 +12,7 @@ SEARCHOBJECT = $(DBASETYPE)/dbsearch$(DBASETYPE).o
 DBOBJECT = $(DBASETYPE)/db$(DBASETYPE).o
 
 SMTP_OBJECTS = list.o debug.o pipe.o mime.o $(DBOBJECT) dbmd5.o md5.o bounce.o forward.o memblock.o \
-$(AUTHOBJECT)
+$(AUTHOBJECT) config.o
 INJECTOR_OBJECTS = list.o debug.o $(DBOBJECT) dbmd5.o md5.o $(AUTHOBJECT) mime.o config.o
 UNIONE_OBJECTS = list.o debug.o $(DBOBJECT) dbmd5.o md5.o $(AUTHOBJECT) mime.o config.o
 MINI_OBJECTS = debug.o $(DBOBJECT) list.o dbmd5.o md5.o $(AUTHOBJECT) mime.o config.o
