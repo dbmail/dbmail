@@ -6,6 +6,8 @@
 	* dbmail-message.c: added inline documentation
 	* server.c, serverchild.c: removed #ifdef _USE_STR_SIGNAL and use
 	strsignal by default.
+	* check_dbmail_imapd.c, mime.c: renamed mail_adr_list to
+	mail_address_build_list and added a testcase for this function.
 
 2005-03-07  Paul Stevens <paul@nfg.nl>
 

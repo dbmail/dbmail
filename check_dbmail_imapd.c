@@ -199,6 +199,28 @@ START_TEST(test_mime_fetch_headers)
 }
 END_TEST
 
+//int mail_address_build_list(char *scan_for_field, struct list *targetlist,
+//	                  struct list *mimelist)
+START_TEST(test_mail_address_build_list)
+{
+	int result;
+	struct list targetlist;
+	struct list mimelist;
+
+	list_init(&targetlist);
+	list_init(&mimelist);
+	mime_fetch_headers(raw_message, &mimelist);
+
+	result = mail_address_build_list("To", &targetlist, &mimelist);
+	struct element *el;
+	el = targetlist.start;
+
+	fail_unless(result==0, "mail_address_build_list failed");
+	fail_unless(targetlist.total_nodes==1,"mail_address_build_list failed");
+	fail_unless(strcmp((char *)el->data,"vol@inter7.com")==0, "mail_address_build_list failed");
+}
+END_TEST
+
 START_TEST(test_db_set_msg)
 {
 	mime_message_t *msg = g_new0(mime_message_t,1);
@@ -331,6 +353,7 @@ Suite *dbmail_suite(void)
 
 	tcase_add_test(tc_mime, test_mime_readheader);
 	tcase_add_test(tc_mime, test_mime_fetch_headers);
+	tcase_add_test(tc_mime, test_mail_address_build_list);
 
 	tcase_add_checked_fixture(tc_util, setup, NULL);
 	tcase_add_test(tc_util, test_g_list_join);

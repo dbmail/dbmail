@@ -243,7 +243,7 @@ void mime_findfield(const char *fname, struct list *mimelist,
 }
 
 
-int mail_adr_list(char *scan_for_field, struct list *targetlist,
+int mail_address_build_list(char *scan_for_field, struct list *targetlist,
 		  struct list *mimelist)
 {
 	struct element *raw;
@@ -252,25 +252,25 @@ int mail_adr_list(char *scan_for_field, struct list *targetlist,
 
 	if (!scan_for_field || !targetlist || !mimelist) {
 		trace(TRACE_ERROR,
-		      "mail_adr_list(): received a NULL argument\n");
+		      "mail_address_build_list(): received a NULL argument\n");
 		return -1;
 	}
 
 	trace(TRACE_DEBUG,
-	      "mail_adr_list(): mimelist currently has [%ld] nodes",
+	      "mail_address_build_list(): mimelist currently has [%ld] nodes",
 	      mimelist->total_nodes);
 
 	memtst((tmpvalue =
 		(char *) dm_calloc(MIME_VALUE_MAX, sizeof(char))) == NULL);
 
-	trace(TRACE_INFO, "mail_adr_list(): mail address parser starting");
+	trace(TRACE_INFO, "mail_address_build_list(): mail address parser starting");
 
 	raw = list_getstart(mimelist);
-	trace(TRACE_DEBUG, "mail_adr_list(): total fields in header %ld",
+	trace(TRACE_DEBUG, "mail_address_build_list(): total fields in header %ld",
 	      mimelist->total_nodes);
 	while (raw != NULL) {
 		mr = (struct mime_record *) raw->data;
-		trace(TRACE_DEBUG, "mail_adr_list(): scanning for %s",
+		trace(TRACE_DEBUG, "mail_address_build_list(): scanning for %s",
 		      scan_for_field);
 		if ((strcasecmp(mr->field, scan_for_field) == 0)) {
 			/* Scan for email addresses and add them to our list */
@@ -310,7 +310,7 @@ int mail_adr_list(char *scan_for_field, struct list *targetlist,
 				   next address */
 				ptr = strstr(ptr, "@");
 				trace(TRACE_DEBUG,
-				      "mail_adr_list(): found %s, next in list is %s",
+				      "mail_address_build_list(): found %s, next in list is %s",
 				      tmpvalue, ptr ? ptr : "<null>");
 			}
 		}
@@ -319,10 +319,10 @@ int mail_adr_list(char *scan_for_field, struct list *targetlist,
 
 	dm_free(tmpvalue);
 
-	trace(TRACE_DEBUG, "mail_adr_list(): found %ld emailaddresses",
+	trace(TRACE_DEBUG, "mail_address_build_list(): found %ld emailaddresses",
 	      targetlist->total_nodes);
 
-	trace(TRACE_INFO, "mail_adr_list(): mail address parser finished");
+	trace(TRACE_INFO, "mail_address_build_list(): mail address parser finished");
 
 	if (targetlist->total_nodes == 0)	/* no addresses found */
 		return -1;

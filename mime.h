@@ -43,7 +43,7 @@ struct mime_record {
 
 void mime_findfield(const char *fname, struct list *mimelist,
 		    struct mime_record **mr);
-int mail_adr_list(char *scan_for_field, struct list *targetlist,
+int mail_address_build_list(char *scan_for_field, struct list *targetlist,
 		  struct list *mimelist);
 int mime_readheader(const char *datablock, u64_t * blkidx, 
 		    struct list *mimelist, u64_t * headersize);

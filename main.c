@@ -310,9 +310,9 @@ int main(int argc, char *argv[])
 
 	/* parse returnpath from header */
 	if (returnpath.total_nodes == 0)
-		mail_adr_list("Return-Path", &returnpath, &mimelist);
+		mail_address_build_list("Return-Path", &returnpath, &mimelist);
 	if (returnpath.total_nodes == 0)
-		mail_adr_list("From", &returnpath, &mimelist);
+		mail_address_build_list("From", &returnpath, &mimelist);
 	if (returnpath.total_nodes == 0)
 		trace(TRACE_DEBUG, "main(): no return path found.");
 
@@ -320,7 +320,7 @@ int main(int argc, char *argv[])
 	if (deliver_to_header != NULL) {
 		/* parse for destination addresses */
 		trace(TRACE_DEBUG, "main(): scanning for [%s]", deliver_to_header);
-		if (mail_adr_list(deliver_to_header, &users, &mimelist) != 0) {
+		if (mail_address_build_list(deliver_to_header, &users, &mimelist) != 0) {
 			trace(TRACE_STOP, "main(): scanner found no email addresses (scanned for %s)",
 			      deliver_to_header);
 			exitcode = EX_NOUSER;
