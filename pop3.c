@@ -69,6 +69,12 @@ int pop3_handle_connection (clientinfo_t *ci)
 
 	session.SessionResult = 0;
 
+	/* reset counters */
+	session.totalsize = 0;
+	session.virtual_totalsize = 0;
+	session.totalmessages = 0;
+	session.vritual_totalmessages = 0;
+
 
 	/* getting hostname */
 	gethostname (myhostname,64);
