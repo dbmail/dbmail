@@ -487,7 +487,7 @@ int do_delete(char *name)
 
 int do_show(char *name)
 {
-  u64_t userid,cid,quotum;
+  u64_t userid,cid,quotum,quotumused;
   struct list userlist;
   struct element *tmp;
   char *deliver_to;
@@ -553,12 +553,13 @@ int do_show(char *name)
 
       cid = auth_getclientid(userid);
       quotum = auth_getmaxmailsize(userid);
+      quotumused = db_get_quotum_used(userid);
 
       quiet_printf("User ID         : %llu\n", userid);
       quiet_printf("Username        : %s\n", auth_get_userid(&userid));
       quiet_printf("Client ID       : %llu\n",cid);
-      quiet_printf("Max. mailboxsize: %llu bytes\n",quotum);
-      quiet_printf("Quotum used     : %llu bytes\n", db_get_quotum_used(userid));
+      quiet_printf("Max. mailboxsize: %llu MB\n",quotum);
+      quiet_printf("Quotum used     : %llu MB (%2.1lf%%)\n", quotumused, (100.0 * quotumused)/quotum);
       quiet_printf("\n");
 
       quiet_printf("Aliases:\n");
