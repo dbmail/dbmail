@@ -1,7 +1,7 @@
 /* $Id$
  * serverservice.c
  *
- * implementatie v/d server functies
+ * implements server functionality
  *
  * (c)2001 IC&S
  */
@@ -22,6 +22,7 @@
 #include <netdb.h>
 #include <signal.h>
 #include "serverservice.h"
+#include "debug.h"
 
 #define LOG_USERS 0
 
@@ -42,17 +43,17 @@ int SS_MakeServerSock(const char *ipaddr, const char *port, int sighandmode)
   struct sockaddr_in saServer;
   int so_reuseaddress;
   
-  /* maak een tcp/ip socket */
+  /* make a tcp/ip socket */
   sock = socket(PF_INET, SOCK_STREAM, 0);
   if (sock == -1)
     {
-      /* fout */
-      sprintf(ss_error_msg,"%.*s",SS_ERROR_MSG_LEN,"SS_MakeServerSock(): kan socket niet aanmaken");
+      /* error */
+      snprintf(ss_error_msg,SS_ERROR_MSG_LEN,"SS_MakeServerSock(): cannot create socket.");
       return -1;
     }
 
 
-  /* maak een (socket)adres */
+  /* make an (socket)address */
   memset(&saServer, 0, sizeof(saServer));
 
   saServer.sin_family = AF_INET;
@@ -61,27 +62,27 @@ int SS_MakeServerSock(const char *ipaddr, const char *port, int sighandmode)
   r = inet_aton(ipaddr, &saServer.sin_addr);
   if (!r)
     {
-      /* fout */
-      sprintf(ss_error_msg,"%.*s",SS_ERROR_MSG_LEN,"SS_MakeServerSock(): "
-	      "verkeerd ip-adres gespecificeerd");
+      /* error */
+      snprintf(ss_error_msg,SS_ERROR_MSG_LEN,"SS_MakeServerSock(): "
+	      "wrong ip-address specified");
       close(sock);
       return -1;
     }
 
 
-  /* zet socket option: reuse address */
+  /* set socket option: reuse address */
   setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &so_reuseaddress, sizeof(so_reuseaddress));
 
 
-  /* bind het adres */
+  /* bind the address */
   len = sizeof(saServer);
   r = bind(sock, (struct sockaddr*)&saServer, len);
 
   if (r == -1)
     {
       /* fout */
-      sprintf(ss_error_msg,"%.*s",SS_ERROR_MSG_LEN,"SS_MakeServerSock(): "
-	      "kan adres niet aan socket binden");
+      snprintf(ss_error_msg,SS_ERROR_MSG_LEN,"SS_MakeServerSock(): "
+	      "cannot bind address to socket.");
       close(sock);
       return -1;
     }
@@ -90,19 +91,20 @@ int SS_MakeServerSock(const char *ipaddr, const char *port, int sighandmode)
   r = listen(sock, SS_BACKLOG);
   if (r == -1)
     {
-      /* fout */
-      sprintf(ss_error_msg,"%.*s",SS_ERROR_MSG_LEN,"SS_MakeServerSock(): kan socket niet laten luisteren");
+      /* error */
+      snprintf(ss_error_msg,SS_ERROR_MSG_LEN,"SS_MakeServerSock(): socket cannot listen.");
       close(sock);
       return -1;
     }
 
 
-  /* serversocket is klaar, kijk of de signals afgevangen moeten worden */
+  /* serversocket is done, check for signal-handling */ 
   if (sighandmode == SS_CATCH_KILL)
     {
+      /* !!! */
     }
 
-  sprintf(ss_error_msg,"%.*s",SS_ERROR_MSG_LEN,"Alles ok");
+  snprintf(ss_error_msg,SS_ERROR_MSG_LEN,"Server socket has been created.");
   return sock;
 }
 
@@ -110,8 +112,8 @@ int SS_MakeServerSock(const char *ipaddr, const char *port, int sighandmode)
 /*
  * SS_WaitAndProcess()
  * 
- * Wacht op clients, laat ze inloggen en roept een handler aan voor
- * requests.
+ * Wait for clients, let 'm log in and call a user-specified handler to 
+ * process the requests.
  *
  */
 int SS_WaitAndProcess(int sock, int (*ClientHandler)(ClientInfo*), int (*Login)(ClientInfo*))
@@ -123,7 +125,7 @@ int SS_WaitAndProcess(int sock, int (*ClientHandler)(ClientInfo*), int (*Login)(
   ClientInfo client[SS_MAX_CLIENTS];
   struct sigaction act;
 
-  /* init & install signal handler voor broken pipe */
+  /* init & install signal handler for broken pipe */
   memset(&act, 0, sizeof(act));
 
   act.sa_handler = SS_sighandler;
@@ -141,10 +143,10 @@ int SS_WaitAndProcess(int sock, int (*ClientHandler)(ClientInfo*), int (*Login)(
   /* init data */
   memset(client, 0, sizeof(client));
 
-  /* begin de server loop */
+  /* start server loop */
   for (;;)
     {
-      /* copieer rx (read) naar wk (work) */
+      /* copy rx (read) to wk (work) */
       FD_ZERO(&wkSet);
       for (r=0; r<maxDesc; r++)
 	{
@@ -152,21 +154,20 @@ int SS_WaitAndProcess(int sock, int (*ClientHandler)(ClientInfo*), int (*Login)(
 	    FD_SET(r, &wkSet);
 	}
 
-      /* zet de timeout */
+      /* set timeout */
       timeout.tv_sec = SS_TIMEOUT;
       timeout.tv_usec = 0;
 
-      /* wacht op een happening */
-
+      /* wait for something to happen */
       do
 	{
-	  /* controleer op interrupts voor de select */
+	  /* check for interrupts on select */
 	  n = select(maxDesc, &wkSet, NULL, NULL, &timeout);
 	} while (n == -1 && errno == EINTR) ;
 
       if (n == -1)
 	{
-	  /* fout opgetreden */
+	  /* error occurred */
 	  switch (errno)
 	    {
 	    case EBADF:
@@ -185,7 +186,8 @@ int SS_WaitAndProcess(int sock, int (*ClientHandler)(ClientInfo*), int (*Login)(
 	      break;
 	    }
 
-	  /* gooi alle clients dicht */
+	  /* fatal error, close all connections and exit */
+	  /* NOTE: server socket remains */
 	  for (csock = 0; csock<maxDesc; csock++)
 	    {
 	      if (csock == sock)
@@ -204,24 +206,24 @@ int SS_WaitAndProcess(int sock, int (*ClientHandler)(ClientInfo*), int (*Login)(
 	}
       else if (n == 0)
 	{
-	  /* timeout */
+	  /* timeout occurred, ignore it */
 	  continue;
 	}
       
-      /* check voor een connectie */
+      /* check for connects */
       if (FD_ISSET(sock, &wkSet))
 	{
-	  /* wacht op de connectie */
+	  /* wait for connect */
 	  len = sizeof(saClient);
 	  csock = accept(sock, (struct sockaddr*)&saClient, &len);
 
 	  if (csock == -1)
 	    {
-	      /* fout bij accept */
+	      /* accept failed, refuse connection & continue */
 	      continue;
 	    }
       
-	  /* kijk of deze er nog bij kan */
+	  /* check if client-limit would be exceeded */
 	  if (csock >= SS_MAX_CLIENTS)
 	    {
 	      close(csock);
@@ -232,7 +234,7 @@ int SS_WaitAndProcess(int sock, int (*ClientHandler)(ClientInfo*), int (*Login)(
 	  memset(&client[csock], 0, sizeof(ClientInfo));
 	  client[csock].loginStatus = SS_LOGIN_FAIL;
 
-	  /* maak de streams */
+	  /* make streams */
 	  client[csock].fd = csock;
 	  client[csock].rx = fdopen(csock, "r");
 	  if (!client[csock].rx)
@@ -255,14 +257,14 @@ int SS_WaitAndProcess(int sock, int (*ClientHandler)(ClientInfo*), int (*Login)(
 	    maxDesc = csock+1;
 
 #if LOG_USERS > 0
-	  fprintf(stderr,"** Server: client @ socket %d (IP: %s) accepted\n",
+	  trace(TRACE_MESSAGE,"** Server: client @ socket %d (IP: %s) accepted\n",
 		  csock, inet_ntoa(saClient.sin_addr));
 #endif
 
 	  if ((*Login)(&client[csock]) == SS_LOGIN_OK)
 	    {
 	      FD_SET(csock, &rxSet); 	  /* OK */
-	      client[csock].loginStatus = SS_LOGIN_OK; /* dubbel, hoort gezet te worden door Login() */
+	      client[csock].loginStatus = SS_LOGIN_OK; /* xtra, should have been set by Login() */
 	    }
 	  else
 	    {
@@ -272,19 +274,19 @@ int SS_WaitAndProcess(int sock, int (*ClientHandler)(ClientInfo*), int (*Login)(
 	      close(csock);
 
 #if LOG_USERS > 0
-	  fprintf(stderr,"** Server: client @ socket %d (IP: %s) login refused, connection closed\n",
+	  trace(TRACE_MESSAGE,"** Server: client @ socket %d (IP: %s) login refused, connection closed\n",
 		  csock, inet_ntoa(saClient.sin_addr));
 #endif
 
 	      continue;
 	    }
 
-	  /* sla het IP-adres v/d client op */
+	  /* remember client IP-address */
 	  strncpy(client[csock].ip, inet_ntoa(saClient.sin_addr), SS_IPNUM_LEN);
 	  client[csock].ip[SS_IPNUM_LEN - 1] = '\0';
 	}
 
-      /* kijk of er wat te doen is voor een bepaalde client */
+      /* check for some work to do (client requests) */
       for (csock = 0; csock<maxDesc; csock++)
 	{
 	  if (csock == sock)
@@ -311,7 +313,7 @@ int SS_WaitAndProcess(int sock, int (*ClientHandler)(ClientInfo*), int (*Login)(
 	    }
 	}
 
-      /* probeer maxDesc naar beneden te halen */
+      /* try to lower maxDesc */
       for (csock=maxDesc-1; csock>=0 && !FD_ISSET(csock,&rxSet); csock=maxDesc-1)
 	maxDesc = csock;
     }
@@ -323,7 +325,7 @@ int SS_WaitAndProcess(int sock, int (*ClientHandler)(ClientInfo*), int (*Login)(
 /*
  * SS_CloseServer()
  *
- * Gooit de boel dicht.
+ * Closes the server socket.
  */
 void SS_CloseServer(int sock)
 {
@@ -334,7 +336,7 @@ void SS_CloseServer(int sock)
 /*
  * SS_sighandler()
  *
- * Handelt een SIGPIPE af
+ * Handels SIGPIPE 
  */
 void SS_sighandler(int sig)
 {
@@ -342,7 +344,7 @@ void SS_sighandler(int sig)
 
   if (client_being_processed)
     {
-      /* gooi de file-descriptor v/d client dicht */
+      /* close client file-descriptor */
       /*fprintf(stderr, "    !!! CLOSING FILE !!! \n");*/ /* UNSAFE FUNCTION CALL !!! */
       close(client_being_processed->fd);
     }

@@ -1,7 +1,7 @@
 /* $Id$
  * serverservice.h
  *
- * header-file voor het opzetten v/e server.
+ * setting up a server.
  *
  * (c)2001 IC&S
  */
@@ -22,13 +22,15 @@ enum SS_LOGIN_VALS {  SS_LOGIN_FAIL, SS_LOGIN_OK };
 #define SS_USERNAME_LEN 32
 #define SS_IPNUM_LEN 16
 
+/* client-info structure */
 typedef struct
 {
-  FILE *rx,*tx;
-  int  fd;
-  char *id;
-  char ip[SS_IPNUM_LEN];
-  int  loginStatus;
+  FILE *rx,*tx;             /* read & transmit file streams */
+  int  fd;                  /* file descriptor of connection */
+  char *id;                 /* ptr to client-id string */
+  char ip[SS_IPNUM_LEN];    /* client IP-number */
+  int  loginStatus;         /* login status */
+  void *userData;           /* xtra info (user-definable) */
 } ClientInfo;
 
 
