@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "dbmd5.h"
 #include "md5.h"
 
 unsigned char *makemd5(char *buf)

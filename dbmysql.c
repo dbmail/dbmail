@@ -4,6 +4,7 @@
 #include "dbmysql.h"
 #include "config.h"
 #include "pop3.h"
+#include "dbmd5.h"
 
 #define DEF_QUERYSIZE 1024
 
@@ -224,6 +225,62 @@ unsigned long db_validate (char *user, char *password)
 	
 	return atoi(row[0]);
 	}
+
+unsigned long db_md5_validate (char *username,unsigned char *md5_apop_he, char *apop_stamp)
+{
+	/* returns useridnr on OK, 0 on validation failed, -1 on error */
+	char *ckquery;
+	char *checkstring;
+	unsigned char *md5_apop_we;
+	
+	memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
+   sprintf (ckquery, "SELECT passwd,useridnr FROM mailbox WHERE userid=\"%s\"",username);
+	
+	if (db_query(ckquery)==-1)
+		{
+		free(ckquery);
+		return -1;
+		}
+	
+	if ((res = mysql_store_result(&conn)) == NULL)
+		{
+      trace (TRACE_ERROR,"db_md5_validate(): mysql_store_result failed:  %s",mysql_error(&conn));
+		free(ckquery);
+		return -1;
+		}
+
+	if (mysql_num_rows(res)<1)
+		{
+		/* no such user found */
+		free(ckquery);
+		return 0;
+		}
+	
+	row = mysql_fetch_row(res);
+	
+	/* now authenticate using MD5 hash comparisation 
+	 * row[0] contains the password */
+
+	trace (TRACE_DEBUG,"db_md5_validate(): apop_stamp=[%s], userpw=[%s]",apop_stamp,row[0]);
+	
+	memtst((checkstring=(char *)malloc(strlen(apop_stamp)+strlen(row[0])+2))==NULL);
+	sprintf(checkstring,"%s%s",apop_stamp,row[0]);
+
+	md5_apop_we=makemd5(checkstring);
+	
+	trace(TRACE_DEBUG,"db_md5_validate(): validating md5_apop_we=[%s] md5_apop_he=[%s]",
+			md5_apop_we, md5_apop_he);
+
+	if (strcmp(md5_apop_he,makemd5(checkstring))==0)
+		{
+			trace(TRACE_MESSAGE,"db_md5_validate(): user [%s] is validated using APOP",username);
+			return atoi(row[1]);
+		}
+	
+	trace(TRACE_MESSAGE,"db_md5_validate(): user [%s] could not be validated",username);
+	return 0;
+	}
+
 
 int db_createsession (unsigned long useridnr, struct session *sessionptr)
 	{

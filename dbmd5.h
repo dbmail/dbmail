@@ -1,4 +1,4 @@
 /* $Id$
  * MD5 creation */
 
-char makemd5[16](char *buf);
+unsigned char *makemd5(char *buf);

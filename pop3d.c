@@ -186,9 +186,6 @@ int main (int argc, char *argv[])
 				/* sending greeting */
 				fprintf (tx,"+OK DBMAIL server ready %s\r\n",apop_stamp);
 		
-				/* we don't need this anymore */
-				free(apop_stamp);
-				
 				/* no errors yet */
 				error_count = 0;
 				
@@ -218,6 +215,10 @@ int main (int argc, char *argv[])
 				/* we must send an exit as child */
 
 				free(myhostname);
+				
+				/* we don't need this anymore */
+				free(apop_stamp);
+				
 				exit(0);
 				}
 			else

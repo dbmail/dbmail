@@ -21,5 +21,6 @@ unsigned long db_insert_result ();
 int db_send_header (void *fstream, unsigned long messageidnr);
 int db_send_message (void *fstream, unsigned long messageidnr);
 unsigned long db_validate (char *user, char *password);
+unsigned long db_md5_validate (char *username,unsigned char *md5_apop_he, char *apop_stamp);
 int db_createsession (unsigned long useridnr, struct session *sessionptr);
 int db_update_pop (struct session *sessionptr);
