@@ -405,9 +405,10 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 					 "ferror reports %d on descriptor %d",err, 
 					 fileno((FILE*)descriptor_temp->data));
 
-				  if (!err)
+				   /* if (!err)
 				    fwrite (strblock, sizeof(char), usedmem,
-					    (FILE *)(descriptor_temp->data));
+					    (FILE *)(descriptor_temp->data));  */
+				  fprintf ((FILE *)(descriptor_temp->data),"%s",strblock);
 
 				  trace (TRACE_DEBUG,"insert_messages(): wrote data");
 				  descriptor_temp=descriptor_temp->nextnode;
@@ -429,7 +430,7 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 			{
 			  if (descriptor_temp->data!=NULL)
 			    {
-			      fprintf ((FILE *)sendmail_pipe,"\n.\n");
+					 fprintf ((FILE *)(descriptor_temp->data),"\n.\n");
 			      pclose((FILE *)sendmail_pipe);
 			    }
 			  else 
