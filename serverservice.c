@@ -57,6 +57,7 @@ int n_default_children;
 ClientInfo client;
 int *ss_n_default_children_used;
 
+
 /* transmit buffer */
 #define TXBUFSIZE 1024
 char txbuf[TXBUFSIZE];
@@ -374,7 +375,8 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 		  if (!fork())
 		    {
 		      default_child_pids[i] = getpid();
-		      break;  /* after this break the if (getpid() == ss_server_pid) will be re-executed */
+		      break;  
+		      /* after this break the if (getpid() == ss_server_pid) will be re-executed */
 		    }
 		}
 		  
