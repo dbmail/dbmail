@@ -249,6 +249,7 @@ int process_mboxfile(char *file)
   blk_opened = 0;
   msg_opened = 0;
   blksize = 0;
+  header_passed = 0;
 
   while (!feof(infile) && !ferror(infile))
     {
