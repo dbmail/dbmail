@@ -1359,11 +1359,12 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
   int i,fetch_start,fetch_end,result,setseen,j,k;
   int isfirstout,idx,headers_fetched,uid_will_be_fetched;
+  int partspeclen,only_text_from_msgpart = 0;
   fetch_items_t *fi,fetchitem;
   mime_message_t msg,*msgpart;
   char date[IMAP_INTERNALDATE_LEN],*endptr;
   unsigned long thisnum;
-  long dumpsize;
+  long dumpsize,cnt;
   struct list fetch_list;
   struct element *curr;
   char tmpname[] = "fetch.tmp.XXXXXX";
@@ -1574,6 +1575,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	  while (curr)
 	    {
 	      fi = (fetch_items_t*)curr->data;
+	      rewind(tmpfile);
 
 	      if (!headers_fetched && fi->msgparse_needed)
 		{
@@ -1656,70 +1658,82 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
 	      if (fi->getRFC822)
 		{
-		  fprintf(ci->tx, "RFC822 ");
-		  rfcheader_dump(ci->tx, &msg.rfcheader, args, 
-				 0,0,-1,0,0);
-		  dumpsize = db_dump_range(ci->tx, msg.bodystart, msg.bodyend,
-				thisnum,0,-1);
+		  dumpsize  = rfcheader_dump(tmpfile, &msg.rfcheader, args, 0, 0);
+		  dumpsize += db_dump_range(tmpfile, msg.bodystart, msg.bodyend, thisnum);
+		  
+		  fseek(tmpfile, 0, SEEK_SET);
 
-		  fprintf(ci->tx,"\r\n");
+		  fprintf(ci->tx, "RFC822 {%ld}\r\n", dumpsize);
+		  while (dumpsize--)
+		    fputc(fgetc(tmpfile), ci->tx);
+
 		  setseen = 1;
 		}
 		  
 	      if (fi->getRFC822Peek)
 		{
-		  fprintf(ci->tx, "RFC822 ");
-		  rfcheader_dump(ci->tx, &msg.rfcheader, args, 
-				 0,0,-1,0,0);
-		  dumpsize = db_dump_range(ci->tx, msg.bodystart, msg.bodyend,
-				thisnum,0,-1);
+		  dumpsize  = rfcheader_dump(tmpfile, &msg.rfcheader, args, 0, 0);
+		  dumpsize += db_dump_range(tmpfile, msg.bodystart, msg.bodyend, thisnum);
+		  
+		  fseek(tmpfile, 0, SEEK_SET);
 
-		  fprintf(ci->tx,"\r\n");
+		  fprintf(ci->tx, "RFC822 {%ld}\r\n", dumpsize);
+		  while (dumpsize--)
+		    fputc(fgetc(tmpfile), ci->tx);
 		}
 		  
 	      if (fi->getSize)
 		{
 		  /* add 2 for an extra \r\n */
-		  fprintf(ci->tx,"RFC822.SIZE %lu ", msg.rfcheadersize+msg.bodysize+2);
+		  fprintf(ci->tx,"RFC822.SIZE %lu ", msg.rfcheadersize + msg.bodysize + 
+			  + msg.bodylines + 2);
 		}
 
 	      if (fi->getBodyTotal)
 		{
-		  fprintf(ci->tx, "BODY[] ");
-		  rfcheader_dump(ci->tx, &msg.rfcheader, args, 
-				 0,0,-1,0,0);
-		  dumpsize = db_dump_range(ci->tx, msg.bodystart, msg.bodyend,
-				thisnum,0,-1);
+		  dumpsize  = rfcheader_dump(tmpfile, &msg.rfcheader, args, 0, 0);
+		  dumpsize += db_dump_range(tmpfile, msg.bodystart, msg.bodyend, thisnum);
+		  
+		  fseek(tmpfile, 0, SEEK_SET);
 
-		  fprintf(ci->tx,"\r\n");
+		  fprintf(ci->tx, "BODY[] {%ld}\r\n", dumpsize);
+		  while (dumpsize--)
+		    fputc(fgetc(tmpfile), ci->tx);
+
 		  setseen = 1;
 		}
 
 	      if (fi->getBodyTotalPeek)
 		{
-		  fprintf(ci->tx, "BODY[] ");
-		  rfcheader_dump(ci->tx, &msg.rfcheader, args, /* dummy: numfields == 0 */
-			     0,0,-1,0,0);
-		  db_dump_range(ci->tx, msg.bodystart, msg.bodyend,
-				thisnum,0,-1);
+		  dumpsize  = rfcheader_dump(tmpfile, &msg.rfcheader, args, 0, 0);
+		  dumpsize += db_dump_range(tmpfile, msg.bodystart, msg.bodyend, thisnum);
+		  
+		  fseek(tmpfile, 0, SEEK_SET);
 
-		  fprintf(ci->tx,"\r\n");
+		  fprintf(ci->tx, "BODY[] {%ld}\r\n", dumpsize);
+		  while (dumpsize--)
+		    fputc(fgetc(tmpfile), ci->tx);
 		}
 
 	      if (fi->getRFC822Header)
 		{
-		  fprintf(ci->tx, "RFC822.HEADER ");
-		  rfcheader_dump(ci->tx, &msg.rfcheader, args, /* dummy: numfields == 0 */
-				 0,-1,-1,0,1);
+		  dumpsize = rfcheader_dump(tmpfile, &msg.rfcheader, args, 0, 0);
+
+		  fseek(tmpfile, 0, SEEK_SET);
+
+		  fprintf(ci->tx, "RFC822.HEADER {%ld}\r\n",dumpsize);
+		  while (dumpsize--)
+		    fputc(fgetc(tmpfile), ci->tx);
 		}
 	      
 	      if (fi->getRFC822Text)
 		{
-		  fprintf(ci->tx, "RFC822.TEXT {%lu}\r\n",msg.bodysize+msg.bodylines);
-		  db_dump_range(ci->tx, msg.bodystart, msg.bodyend,
-				thisnum,0,-1);
+		  dumpsize = db_dump_range(tmpfile, msg.bodystart, msg.bodyend, thisnum);
 
-		  fprintf(ci->tx,"\r\n");
+		  fprintf(ci->tx, "RFC822.TEXT {%ld}\r\n",dumpsize);
+		  while (dumpsize--)
+		    fputc(fgetc(tmpfile), ci->tx);
+
 		  setseen = 1;
 		}
 
@@ -1727,16 +1741,48 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		{
 		  if (fi->bodyfetch.partspec[0])
 		    {
-		      if (msg.children.start)
-			msgpart = get_part_by_num(&msg, fi->bodyfetch.partspec);
+		      msgpart = get_part_by_num(&msg, fi->bodyfetch.partspec);
+
+		      if (!msgpart)
+			{
+			  /* if the partspec ends on "1" or "1." the msg body
+			   * of the parent message is to be retrieved
+			   */
+			  
+			  partspeclen = strlen(fi->bodyfetch.partspec);
+			  
+			  if ((fi->bodyfetch.partspec[partspeclen-1] == '1'  &&
+			       (partspeclen == 1 || fi->bodyfetch.partspec[partspeclen-2] == '.'))
+			      ||
+			      ((fi->bodyfetch.partspec[partspeclen-1] == '.' &&
+			       fi->bodyfetch.partspec[partspeclen-2] == '1') &&
+			       (partspeclen == 2 || fi->bodyfetch.partspec[partspeclen-3] == '.'))
+			      )
+			    {
+			      /* ok find the parent of this message */
+			      /* start value of k is partspeclen-2 'cause we could
+				 have partspec[partspeclen-1] == '.' right at the start
+			      */
+
+			      for (k = partspeclen-2; k>=0; k--)
+				if (fi->bodyfetch.partspec[k] == '.')
+				  break;
+
+			      if (k>0)
+				{
+				  fi->bodyfetch.partspec[k] = '\0';
+				  msgpart = get_part_by_num(&msg, fi->bodyfetch.partspec);
+				  fi->bodyfetch.partspec[k] = '.';
+				}
+			      else
+				msgpart = &msg;
+
+			      only_text_from_msgpart = 1;
+			    }
+			}
 		      else
 			{
-			  /* single part message, only '1' or '1.' has meaning */
-			  if (strcmp(fi->bodyfetch.partspec, "1") == 0 || 
-			      strcmp(fi->bodyfetch.partspec, "1.") == 0 )
-			    msgpart = &msg;
-			  else
-			    msgpart = NULL;
+			  only_text_from_msgpart = 0;
 			}
 		    }
 		  else
@@ -1762,19 +1808,28 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		      else
 			{
 			  dumpsize = db_dump_range(tmpfile, msgpart->bodystart, msgpart->bodyend,
-						   thisnum,
-						   fi->bodyfetch.octetstart,
-						   fi->bodyfetch.octetcnt);
+						   thisnum);
 
 			  if (fi->bodyfetch.octetstart >= 0)
-			    fprintf(ci->tx, "]<%lu> {%ld}\r\n",
-				    fi->bodyfetch.octetstart,dumpsize);
+			    {
+			      cnt = dumpsize - fi->bodyfetch.octetstart;
+			      if (cnt<0) cnt = 0;
+			      if (cnt > fi->bodyfetch.octetcnt) cnt = fi->bodyfetch.octetcnt;
+ 
+			      fprintf(ci->tx, "]<%lu> {%ld}\r\n",
+				      fi->bodyfetch.octetstart, cnt);
+			      
+			      fseek(tmpfile, fi->bodyfetch.octetstart, SEEK_SET);
+			    }
 			  else
-			    fprintf(ci->tx, "] {%ld}\r\n", dumpsize);
+			    {
+			      cnt = dumpsize;
+			      fprintf(ci->tx, "] {%ld}\r\n", dumpsize);
+			      fseek(tmpfile, 0, SEEK_SET);
+			    }
 
 			  /* output data */
-			  rewind(tmpfile);
-			  while (dumpsize--)
+			  while (cnt--)
 			    fputc(fgetc(tmpfile), ci->tx);
 
 			}
@@ -1782,16 +1837,35 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
 		    case BFIT_HEADER:
 		      fprintf(ci->tx, "HEADER] ");
-		      if (!msgpart)
+		      if (!msgpart || only_text_from_msgpart)
 			fprintf(ci->tx, "NIL\r\n");
 		      else
 			{
-			  rfcheader_dump(ci->tx, &msgpart->rfcheader, 
-					 args,  /* used as dummy since numfields == 0 */
-					 0,
-					 fi->bodyfetch.octetstart,
-					 fi->bodyfetch.octetcnt,
-					 0,1);
+			  dumpsize = rfcheader_dump(tmpfile, &msgpart->rfcheader, 
+					 args, 0, 0);
+
+			  if (fi->bodyfetch.octetstart >= 0)
+			    {
+			      cnt = dumpsize - fi->bodyfetch.octetstart;
+			      if (cnt<0) cnt = 0;
+			      if (cnt > fi->bodyfetch.octetcnt) cnt = fi->bodyfetch.octetcnt;
+ 
+			      fprintf(ci->tx, "]<%lu> {%ld}\r\n",
+				      fi->bodyfetch.octetstart, cnt);
+			      
+			      fseek(tmpfile, fi->bodyfetch.octetstart, SEEK_SET);
+			    }
+			  else
+			    {
+			      cnt = dumpsize;
+			      fprintf(ci->tx, "] {%ld}\r\n", dumpsize);
+			      fseek(tmpfile, 0, SEEK_SET);
+			    }
+
+			  /* output data */
+			  while (cnt--)
+			    fputc(fgetc(tmpfile), ci->tx);
+
 			}
 		      break;
 
@@ -1812,16 +1886,36 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
 		      fprintf(ci->tx,")] ");
 
-		      if (!msgpart)
+		      if (!msgpart || only_text_from_msgpart)
 			fprintf(ci->tx, "NIL\r\n");
 		      else
 			{
-			  rfcheader_dump(ci->tx, &msgpart->rfcheader, 
-					 &args[fi->bodyfetch.argstart],
-					 fi->bodyfetch.argcnt,
-					 fi->bodyfetch.octetstart,
-					 fi->bodyfetch.octetcnt,
-					 1,1);
+			  dumpsize = rfcheader_dump(tmpfile, &msgpart->rfcheader, 
+						    &args[fi->bodyfetch.argstart],
+						    fi->bodyfetch.argcnt, 1);
+						    
+			  if (fi->bodyfetch.octetstart >= 0)
+			    {
+			      cnt = dumpsize - fi->bodyfetch.octetstart;
+			      if (cnt<0) cnt = 0;
+			      if (cnt > fi->bodyfetch.octetcnt) cnt = fi->bodyfetch.octetcnt;
+ 
+			      fprintf(ci->tx, "]<%lu> {%ld}\r\n",
+				      fi->bodyfetch.octetstart, cnt);
+			      
+			      fseek(tmpfile, fi->bodyfetch.octetstart, SEEK_SET);
+			    }
+			  else
+			    {
+			      cnt = dumpsize;
+			      fprintf(ci->tx, "] {%ld}\r\n", dumpsize);
+			      fseek(tmpfile, 0, SEEK_SET);
+			    }
+
+			  /* output data */
+			  while (cnt--)
+			    fputc(fgetc(tmpfile), ci->tx);
+
 			}
 		      break;
 		    case BFIT_HEADER_FIELDS_NOT:
@@ -1841,16 +1935,35 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
 		      fprintf(ci->tx,")] ");
 
-		      if (!msgpart)
+		      if (!msgpart || only_text_from_msgpart)
 			fprintf(ci->tx, "NIL\r\n");
 		      else
 			{
-			  rfcheader_dump(ci->tx, &msgpart->rfcheader, 
-					 &args[fi->bodyfetch.argstart],
-					 fi->bodyfetch.argcnt,
-					 fi->bodyfetch.octetstart,
-					 fi->bodyfetch.octetcnt,
-					 0,1);
+			  dumpsize = rfcheader_dump(tmpfile, &msgpart->rfcheader, 
+						    &args[fi->bodyfetch.argstart],
+						    fi->bodyfetch.argcnt, 0);
+						    
+			  if (fi->bodyfetch.octetstart >= 0)
+			    {
+			      cnt = dumpsize - fi->bodyfetch.octetstart;
+			      if (cnt<0) cnt = 0;
+			      if (cnt > fi->bodyfetch.octetcnt) cnt = fi->bodyfetch.octetcnt;
+ 
+			      fprintf(ci->tx, "]<%lu> {%ld}\r\n",
+				      fi->bodyfetch.octetstart, cnt);
+			      
+			      fseek(tmpfile, fi->bodyfetch.octetstart, SEEK_SET);
+			    }
+			  else
+			    {
+			      cnt = dumpsize;
+			      fprintf(ci->tx, "] {%ld}\r\n", dumpsize);
+			      fseek(tmpfile, 0, SEEK_SET);
+			    }
+
+			  /* output data */
+			  while (cnt--)
+			    fputc(fgetc(tmpfile), ci->tx);
 			}
 		      break;
 		    case BFIT_MIME:
@@ -1860,9 +1973,30 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			fprintf(ci->tx, "NIL\r\n");
 		      else
 			{
-			  mimeheader_dump(ci->tx, &msgpart->mimeheader,
-					  fi->bodyfetch.octetstart,
-					  fi->bodyfetch.octetcnt);
+			  dumpsize = mimeheader_dump(tmpfile, &msgpart->mimeheader);
+
+			  if (fi->bodyfetch.octetstart >= 0)
+			    {
+			      cnt = dumpsize - fi->bodyfetch.octetstart;
+			      if (cnt<0) cnt = 0;
+			      if (cnt > fi->bodyfetch.octetcnt) cnt = fi->bodyfetch.octetcnt;
+ 
+			      fprintf(ci->tx, "]<%lu> {%ld}\r\n",
+				      fi->bodyfetch.octetstart, cnt);
+			      
+			      fseek(tmpfile, fi->bodyfetch.octetstart, SEEK_SET);
+			    }
+			  else
+			    {
+			      cnt = dumpsize;
+			      fprintf(ci->tx, "] {%ld}\r\n", dumpsize);
+			      fseek(tmpfile, 0, SEEK_SET);
+			    }
+
+			  /* output data */
+			  while (cnt--)
+			    fputc(fgetc(tmpfile), ci->tx);
+
 			}
 		  
 		      break;

@@ -20,15 +20,17 @@ int show_mime_parameter_list(FILE *outstream, struct mime_record *mr,
 
 mime_message_t* get_part_by_num(mime_message_t *msg, const char *part);
 
-int rfcheader_dump(FILE *outstream, struct list *rfcheader, char **fieldnames, int nfields,
-		   int offset, int cnt, int equal_type, int showsize);
-int mimeheader_dump(FILE *outstream, struct list *mimeheader, int offset, int cnt);
+long rfcheader_dump(FILE *outstream, struct list *rfcheader, char **fieldnames, int nfields,
+		    int equal_type);
+long mimeheader_dump(FILE *outstream, struct list *mimeheader);
 
 int haystack_find(int haystacklen, char **haystack, const char *needle);
 
 int check_state_and_args(const char *command, const char *tag, char **args, 
 			 int nargs, int state, ClientInfo *ci);
 int next_fetch_item(char **args, int idx, fetch_items_t *fi);
+
+char *date_sql2imap(char *sqldate);
 
 int stridx(const char *s, char ch);
 int checkchars(const char *s);

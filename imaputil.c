@@ -509,7 +509,6 @@ mime_message_t* get_part_by_num(mime_message_t *msg, const char *part)
   if (part == NULL || strlen(part) == 0 || msg == NULL)
     return msg;
 
-
   nextpart = strtoul(part, &endptr, 10); /* strtoul() stops at '.' */
 
   for (j=1, curr=list_getstart(&msg->children); j<nextpart && curr; j++, curr = curr->nextnode);
@@ -530,83 +529,40 @@ mime_message_t* get_part_by_num(mime_message_t *msg, const char *part)
  * dumps rfc-header fields belonging to rfcheader
  * the fields to be dumped are specified in fieldnames, an array containing nfields items
  *
- * the output will start after offset bytes and will have a maximum length of cnt bytes.
- *
  * if equal_type == 0 the field match criterium is inverted and non-matching fieldnames
  * will be selected
+ *
+ * to select every headerfield it suffices to set nfields and equal_type to 0
+ *
+ * returns number of bytes written to outstream
  */
-int rfcheader_dump(FILE *outstream, struct list *rfcheader, char **fieldnames, int nfields,
-		   int offset, int cnt, int equal_type, int showsize)
+long rfcheader_dump(FILE *outstream, struct list *rfcheader, char **fieldnames, int nfields,
+		    int equal_type)
 {
   struct mime_record *mr;
   struct element *curr;
-  FILE *tmpfile;
-  char tmpname[] = "rfcheader_out.tmp.XXXXXX";
-  long size;
-  int retval;
+  long size = 0;
 
   curr = list_getstart(rfcheader);
   if (rfcheader == NULL || curr == NULL)
     {
-      fprintf(outstream, "NIL\r\n");
-      return 0;
+      size += fprintf(outstream, "NIL\r\n");
+      return size;
     }
 
-  tmpfile = fdopen(mkstemp(tmpname),"r+w");
-  if (tmpfile == NULL)
-    return -1; /* failed opening temporary file */
-      
   curr = list_getstart(rfcheader);
   while (curr)
     {
       mr = (struct mime_record*)curr->data;
 
       if (haystack_find(nfields, fieldnames, mr->field) == equal_type)
-	fprintf(tmpfile, "%s: %s\r\n", mr->field, mr->value);  /* ok output this field */
+	size += fprintf(outstream, "%s: %s\r\n", mr->field, mr->value);  /* ok output this field */
 
       curr = curr->nextnode;
     }
-  fprintf(tmpfile,"\r\n");
-  size = ftell(tmpfile);
+  size += fprintf(outstream,"\r\n");
   
-  /* change var's if necessary */
-  if (offset >= size)
-    {
-      offset = size;
-      cnt = 0;
-    }
-  else
-    {
-      if (offset>=0 && cnt>=0)
-	{
-	  if (offset+cnt > size)
-	    cnt = size-offset;
-	}
-      else
-	cnt = size;
-    }
-
-  if (showsize)
-    {
-      if (offset >= 0)
-	fprintf(outstream, "<%d> {%d}\r\n", offset, cnt);
-      else
-	fprintf(outstream, "{%d}\r\n", cnt);
-    }
-
-  if (offset >= 0)
-    fseek(tmpfile, offset, SEEK_SET);
-  else
-    fseek(tmpfile, 0, SEEK_SET);
-
-  /* output data */
-  while (cnt-- > 0)
-    fputc(fgetc(tmpfile),outstream);
-	  
-  fputc(' ', outstream);
-  fclose(tmpfile);
-  unlink(tmpname);
-  return 0;
+  return size;
 }      
   
 
@@ -615,71 +571,29 @@ int rfcheader_dump(FILE *outstream, struct list *rfcheader, char **fieldnames, i
  * 
  * dumps mime-header fields belonging to mimeheader
  *
- * the output will start after offset bytes and will have a maximum length of cnt bytes.
  */
-int mimeheader_dump(FILE *outstream, struct list *mimeheader, int offset, int cnt)
+long mimeheader_dump(FILE *outstream, struct list *mimeheader)
 {
   struct mime_record *mr;
   struct element *curr;
-  FILE *tmpfile;
-  char tmpname[] = "mimeheader_out.tmp.XXXXXX";
-  long size;
+  long size = 0;
 
   curr = list_getstart(mimeheader);
   if (mimeheader == NULL || curr == NULL)
     {
-      fprintf(outstream, "NIL\r\n");
-      return 0;
+      size = fprintf(outstream, "NIL\r\n");
+      return size;
     }
 
-  tmpfile = fdopen(mkstemp(tmpname),"r+w");
-  if (tmpfile == NULL)
-    return -1; /* failed opening temporary file */
-      
   while (curr)
     {
       mr = (struct mime_record*)curr->data;
-      fprintf(tmpfile, "%s: %s\r\n", mr->field, mr->value);
+      size += fprintf(outstream, "%s: %s\r\n", mr->field, mr->value);
       curr = curr->nextnode;
     }
-  fprintf(tmpfile,"\r\n");
-  size = ftell(tmpfile);
-  
-  /* change var's if necessary */
-  if (offset >= size)
-    {
-      offset = size;
-      cnt = 0;
-    }
-  else
-    {
-      if (offset>=0 && cnt>=0)
-	{
-	  if (offset+cnt > size)
-	    cnt = size-offset;
-	}
-      else
-	cnt = size;
-    }
+  size += fprintf(outstream,"\r\n");
 
-  if (offset >= 0)
-    fprintf(outstream, "<%d> {%d}\r\n", offset, cnt);
-  else
-    fprintf(outstream, "{%d}\r\n", cnt);
-
-  if (offset >= 0)
-    fseek(tmpfile, offset, SEEK_SET);
-  else
-    fseek(tmpfile, 0, SEEK_SET);
-
-  /* output data */
-  while (cnt-- > 0)
-    fputc(fgetc(tmpfile),outstream);
-	  
-  fputc(' ', outstream);
-  fclose(tmpfile);
-  unlink(tmpname);
-  return 0;
+  return size;
 }      
 
 
@@ -1415,7 +1329,7 @@ void clarify_data(char *str)
  * 01234567890123456789
  * return value is valid until next function call.
  * NOTE: sqldate is not tested for validity. Behaviour is undefined for non-sql
- * dates (probably segfaults).
+ * dates.
  */
 char *date_sql2imap(char *sqldate)
 {
@@ -1426,8 +1340,10 @@ char *date_sql2imap(char *sqldate)
   _imapdate[1] = sqldate[9];
 
   /* find out which month */
-  mon = strtoul(&sqldate[5], NULL, 10);
-  
+  mon = strtoul(&sqldate[5], NULL, 10) - 1;
+  if (mon < 0 || mon > 11)
+    mon = 0;
+
   /* copy month */
   _imapdate[3] = month_desc[mon][0];
   _imapdate[4] = month_desc[mon][1];
