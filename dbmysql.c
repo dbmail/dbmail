@@ -230,15 +230,18 @@ int db_check_user (char *username, struct list *userids)
   return occurences;
 }
 
-int db_send_message_lines (void *fstream, unsigned long messageidnr, unsigned long lines)
+int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines)
 {
   /* this function writes "lines" to fstream.
 	  if lines == -2 then the whole message is dumped to fstream */
   char *ckquery;
   char *currpos, *prevpos, *nextpos;
+  int block_count;
+  
+  trace (TRACE_DEBUG,"db_send_message_lines(): request for [%d] lines",lines);
 
   memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
-  sprintf (ckquery, "SELECT * FROM messageblk WHERE messageidnr=%li",
+  sprintf (ckquery, "SELECT * FROM messageblk WHERE messageidnr=%lu",
 	   messageidnr);
   if (db_query(ckquery)==-1)
     {
@@ -259,48 +262,45 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, unsigned lo
       return 0;
     }
 
-	trace (TRACE_DEBUG,"db_send_message_lines(): sending header first");
-
-	row = mysql_fetch_row(res);
-	if (row!=NULL)
-			fprintf ((FILE *)fstream,"%s",row[2]);
-	else 
-		{
-			trace(TRACE_MESSAGE,"db_send_message_lines(): this is weird, now result rows!");
-			return 0;
-		}
-	
-	trace (TRACE_DEBUG,"db_send_message_lines(): sending [%lu] lines from message [%lu]",lines,messageidnr);
+	trace (TRACE_DEBUG,"db_send_message_lines(): sending [%d] lines from message [%lu]",lines,messageidnr);
   
+	block_count=0;
   while (((row = mysql_fetch_row(res))!=NULL) && ((lines>0) || (lines==-2)))
 	{
 	/* we're going to do this one line at the time */  
 	prevpos = row[2];
 	nextpos = prevpos;
-	while ((lines>0) && (nextpos!=NULL)) 
+	while (((lines>0) || (lines==-2)) && (nextpos!=NULL))
 		{
 		/* search for a newline character in prevpos (which is the buffer) */
 		currpos=strchr(prevpos,'\n');	
 			if ((currpos!=NULL) && (strlen (currpos)>0))
 				{
-				/* newline found */
+				/* newline found starting at currpos+1 (currpos is the \n)*/
 				nextpos=currpos+1;
-				/* to delimiter the buffer for fprintf */
+				/* to delimiter the buffer for fprintf 
+				 This means the \n is stripped */
 				currpos[0]='\0';	
 
-				/* the \n is added because it was stripped */
-				fprintf ((FILE *)fstream,"%s\n",prevpos);
+				/*	\r is added because multi-line responses must end on 
+					crlf */
+				fprintf ((FILE *)fstream,"%s\r\n",prevpos);
 				}
 			else
 				{
-				/* \n needs not to be included because it was set to \0 */
-				fprintf ((FILE *)fstream,"%s",prevpos); 
-				nextpos=NULL;
+					/* the last line doesn't have a \n character 
+						this is corrected in the next block */
+					fprintf ((FILE *)fstream,"%s",prevpos); 
+					nextpos=NULL;
 				}
-			lines--;
+
+			if ((lines!=-2) && (block_count>0))
+				lines--;
 			/* set prevpos to the new position */
 			prevpos=nextpos;
 		}
+		/* count's which messageblk we're working on */
+		block_count++;
 	}
    /* delimiter */
    fprintf ((FILE *)fstream,"\r\n.\r\n");
