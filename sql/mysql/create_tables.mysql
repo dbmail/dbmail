@@ -9,8 +9,8 @@ CREATE TABLE aliases (
    alias varchar(100) NOT NULL,
    deliver_to varchar(250) NOT NULL,
    client_idnr bigint(21) DEFAULT '0' NOT NULL,
-   PRIMARY KEY (alias_idnr),
-   KEY alias_idnr (alias_idnr),
+   PRIMARY KEY (alias),
+   KEY alias (alias),
    UNIQUE alias_idnr_2 (alias_idnr)
 );
 

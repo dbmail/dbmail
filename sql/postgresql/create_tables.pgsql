@@ -10,7 +10,7 @@ CREATE TABLE aliases (
     alias VARCHAR(100) NOT NULL, 
     deliver_to VARCHAR(250) NOT NULL,
     client_idnr INT8 DEFAULT '0' NOT NULL,
-    PRIMARY KEY (alias_idnr)
+    PRIMARY KEY (alias)
 );
 
 CREATE SEQUENCE user_idnr_seq;
