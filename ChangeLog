@@ -1,3 +1,8 @@
+2004-04-14  Ilja Booij  <ilja@ic-s.nl>
+
+	* dbmsgbuf.c (db_init_msgfetch): added a memset() to clear msgbuf before
+	anything is written to it.
+
 2004-04-13  Ilja Booij  <ilja@ic-s.nl>
 
 	* db.c (db_findmailbox_by_regex): corrected a small error. There was a check to see

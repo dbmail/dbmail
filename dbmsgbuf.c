@@ -66,6 +66,7 @@ int db_init_msgfetch(u64_t msg_idnr)
 
 	if (_msg_fetch_inited)
 		return 0;
+	memset(msgbuf_buf, '\0', MSGBUF_WINDOWSIZE);
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT messageblk FROM messageblks "
