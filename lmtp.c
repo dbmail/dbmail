@@ -463,18 +463,6 @@ int lmtp(void *stream, void *instream, char *buffer, char *client_ip UNUSED, Pop
         }
       case LMTP_RCPT :
         {
-          /* This would be the non-piplined version...
-          else if (0 < auth_check_user_ext(value, userids, fwds, -1))
-          {
-            fprintf((FILE *)stream, "250 OK\r\n" );
-          }
-          else
-          {
-            fprintf((FILE *)stream, "550 No such user here\r\n" );
-          }
-          return 1;
-          */
- 
           if (session->state != LHLO)
             {
               fprintf((FILE *)stream, "550 Command out of sequence.\r\n");
@@ -503,13 +491,11 @@ int lmtp(void *stream, void *instream, char *buffer, char *client_ip UNUSED, Pop
                    * since dsnuser_free() will free it for us later on. */
                   dsnuser.address = tmpaddr;
 
+		  /* Queue up the potential recipients. We can use one call to
+		   * dsnuser_resolve_list() to look them up. This should not
+		   * be a problem because the client is required to pipeline
+		   * the commands, i.e. not wait for a reply to each command. */
                   list_nodeadd(&rcpt, &dsnuser, sizeof(deliver_to_user_t));
-            
-		  /* FIXME: At the moment, we queue up recipients until DATA or BDAT
-		   * and then reply with their statuses. This may be in violation of
-		   * the pipelining requirement of LMTP... */
-                  /* fprintf((FILE *)stream,"250 Recipient <%s> OK\r\n", tmprcpt );
-		   * */
                 }
             }
           return 1;
@@ -524,7 +510,7 @@ int lmtp(void *stream, void *instream, char *buffer, char *client_ip UNUSED, Pop
             }
           else if (list_totalnodes(&rcpt) < 1)
             {
-              fprintf((FILE *)stream, "554 No valid recipients\r\n" );
+              fprintf((FILE *)stream, "503 No valid recipients\r\n" );
             }
           else
             {
@@ -538,7 +524,7 @@ int lmtp(void *stream, void *instream, char *buffer, char *client_ip UNUSED, Pop
               if (dsnuser_resolve_list(&rcpt) == -1)
                 {
                   trace(TRACE_ERROR, "main(): dsnuser_resolve_list failed");
-                  fprintf((FILE *)stream, "554 No valid recipients\r\n" );
+                  fprintf((FILE *)stream, "430 Temporary failure in recipient lookup\r\n" );
                   return 1;
                 }
            
@@ -558,6 +544,9 @@ int lmtp(void *stream, void *instream, char *buffer, char *client_ip UNUSED, Pop
                       default:
                         fprintf((FILE *)stream, "550 Recipient <%s> FAIL\r\n",
                                 dsnuser->address);
+                        /* Remove the failed user from the potential recipients list
+                         * so that we do not report a failed delivery later on. */
+                        list_nodedel(&rcpt, dsnuser);
                         break;
                     }
                 }
@@ -575,7 +564,7 @@ int lmtp(void *stream, void *instream, char *buffer, char *client_ip UNUSED, Pop
                   if (!has_recipients)
                     {
                       trace(TRACE_DEBUG,"main(): no valid recipients found, cancel message.");
-                      fprintf((FILE *)stream, "554 No valid recipients.\r\n" );
+                      fprintf((FILE *)stream, "503 No valid recipients\r\n" );
                     }
                   if (!envelopefrom)
                     {
@@ -635,6 +624,9 @@ int lmtp(void *stream, void *instream, char *buffer, char *client_ip UNUSED, Pop
                   }
                 else
                   {
+                    /* The DATA command itself it not given a reply except
+                     * that of the status of each of the remaining recipients. */
+
                     for (element = list_getstart(&rcpt);
                             element != NULL; element = element->nextnode)
                       {
