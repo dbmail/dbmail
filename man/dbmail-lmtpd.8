@@ -1,21 +1,23 @@
-.TH DBMAIL-POP3D 1 
+.TH DBMAIL-LMTPD 8 
 .ad
 .fi
 .SH NAME
-dbmail-pop3d
+dbmail-lmtpd
 \-
-provides access to the DBMail system to client supporting
-Post Office Protocol, POP3, as specified in RFC 1939.
+receive messages from an MTA supporting the Lightweight
+Mail Transport Protocol, as specified in RFC 2033.
 .SH SYNOPSIS
 .na
 .nf
-\fBdbmail-pop3d\fR [\fB-f\fR configfile] [\fB-p\fR pidfile] [\fB\-nvVh\fR]
+\fBdbmail-lmtpd\fR [\fB-f\fR configfile] [\fB-p\fR pidfile] [\fB\-nvVh\fR]
 .SH DESCRIPTION
 .ad
 .fi
-The \fBdbmail-pop3d\fR daemon is a fully featured POP3 server. It will spawn
-into a number of default processes as set in the \fBdbmail.conf\fR file.
-These processes will enable full POP3 communication with clients.
+The \fBdbmail-lmtpd\fR daemon will spawn child processes as specified in 
+the \fBdbmail.conf\fR file. These processes listen, by default, on port 24
+of the localhost interface. Mail Transfer Agents, MTA's such as Postfix and
+Exim, speak LMTP to their Mail Delivery Agents which receive and store
+messages. DBMail implements such a system using a database backend.
 .SH OPTIONS
 .IP "\fB\-f\fR configfile"
 Specify an alternate config file. The daemons are currently hardcoded to use
@@ -47,10 +49,10 @@ Show a brief summary of options, then exit.
 .ad
 .fi
 Errors and notifications are send to the trace output as set 
-in the \fBdbmail.conf\fR file.
+in the \fBDBMail\fR configfile.
 .SH BUGS
 .PP
-Plans are to add some more authentication schemes.
+Not all of the features recommended by RFC 2033 are implemented.
 .SH LICENSE
 .na
 .nf
@@ -60,9 +62,7 @@ DBMail and its components are (c) IC&S and distributed under the GPL.
 .SH AUTHOR(S)
 .na
 .nf
-Eelco van Beek
-IC&S 
-Koningsweg 4
-3582 GE Utrecht
-The Netherlands
-http://www.ic-s.nl
+Aaron Stone
+Open Source Programmer
+Palo Alto, California
+USA

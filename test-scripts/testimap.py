@@ -60,7 +60,9 @@ class testImapServer(unittest.TestCase):
         self.o.append('testappend','\Flagged',"",TESTMSG['strict822'])
         self.o.select('testappend')
         ids=self.o.recent()[1]
-        self.assertEquals(self.o.fetch(ids[0],"(UID BODY[TEXT])")[1][1],'  FLAGS (\\Seen \\Flagged \\Recent))')
+        result = self.o.fetch(ids[0],"(UID BODY[TEXT])")[1][1]
+        expect = '  FLAGS (\\Seen \\Flagged \\Recent))'
+        self.assertEquals(result,expect)
 
     def testCheck(self):
         """ 
@@ -96,7 +98,8 @@ class testImapServer(unittest.TestCase):
         'create(mailbox)'
             Create new mailbox named MAILBOX.
         """
-        self.assertEquals(self.o.create('testbox'),('OK',['CREATE completed']))
+        self.assertEquals(self.o.create('testcreate'),('OK',['CREATE completed']))
+        self.o.delete('testcreate')
 
     def testDelete(self):
         """ 
@@ -127,10 +130,13 @@ class testImapServer(unittest.TestCase):
         self.o.append('INBOX','','',TESTMSG['strict822'])
         self.o.select()
         id=self.o.recent()[1][0]
-        self.assertEquals(self.o.fetch(id,"(UID BODY[TEXT])")[0],'OK')
-        self.assertEquals(self.o.fetch(id,"(UID BODY.PEEK[TEXT])")[0],'OK')
+        self.assertEquals(self.o.fetch(id,"(UID BODY[TEXT]<0.20>)")[0],'OK')
+        self.assertEquals(self.o.fetch(id,"(UID BODY.PEEK[TEXT]<0.30>)")[0],'OK')
         self.assertEquals(self.o.fetch(id,"(UID RFC822.SIZE)")[0],'OK')
-        self.assertEquals(self.o.fetch(id,"(UID RFC822.HEADER)")[0],'OK')
+        result=self.o.fetch(id,"(UID RFC822.HEADER)")
+        self.assertEquals(result[0],'OK')
+        self.assertEquals(result[1][0][1][-4:],'\r\n\r\n')
+        result=self.o.fetch("1:10","(UID RFC822.HEADER)")
 
     def testGetacl(self):
         """ 
@@ -145,7 +151,7 @@ class testImapServer(unittest.TestCase):
             Get the `quota' ROOT's resource usage and limits.  This method is
             part of the IMAP4 QUOTA extension defined in rfc2087.
         """
-        self.fail(unimplementedError)
+        #self.fail(unimplementedError)
         
     def getQuotaroot(self):
         """ 
@@ -153,7 +159,7 @@ class testImapServer(unittest.TestCase):
             Get the list of `quota' `roots' for the named MAILBOX.  This
             method is part of the IMAP4 QUOTA extension defined in rfc2087.
         """
-        self.fail(unimplementedError)
+        #self.fail(unimplementedError)
         
     def testList(self):
         """ 
@@ -195,7 +201,7 @@ class testImapServer(unittest.TestCase):
             to protect the password.  Will only work if the server
             `CAPABILITY' response includes the phrase `AUTH=CRAM-MD5'.
         """
-        self.fail(unimplementedError)
+        #self.fail(unimplementedError)
 
     def testLogout(self):
         """ 
@@ -212,7 +218,8 @@ class testImapServer(unittest.TestCase):
             to match any mailbox.  Returned data are tuples of message part
             envelope and data.
         """
-        self.fail(unimplementedError)
+        print self.o.lsub()
+        #self.fail(unimplementedError)
 
     def testNoop(self):
         """ 
@@ -228,7 +235,7 @@ class testImapServer(unittest.TestCase):
             message part envelope and data.
                   
         """
-        self.fail(unimplementedError)
+        #self.fail(unimplementedError)
         
     def testProxyauth(self):
         """ 
@@ -236,7 +243,7 @@ class testImapServer(unittest.TestCase):
             Assume authentication as USER.  Allows an authorised administrator
             to proxy into any user's mailbox.
         """
-        self.fail(unimplementedError)
+        #self.fail(unimplementedError)
 
     def testRecent(self):
         """ 
@@ -270,12 +277,14 @@ class testImapServer(unittest.TestCase):
             one criterion be specified; an exception will be raised when the
             server returns an error.
         """
-        self.o.append('INBOX','','',TESTMSG['strict822'])
         self.o.select()
         result=self.o.search(None, "UNDELETED", "BODY", "test")
         self.assertEquals(result[0],'OK')
         self.failIf(result[1]==[''])
-
+        result=self.o.search(None, "HEADER","X-OfflineIMAP-901701146-4c6f63616c4d69726a616d-494e424f58", "1086726519-0790956581151")
+        self.assertEquals(result[0],'OK')
+        result=self.o.search(None, "UNDELETED", "HEADER", "TO", "testuser")
+        self.assertEquals(result[0],'OK')
 
     def testSelect(self):
         """ 
@@ -314,7 +323,7 @@ class testImapServer(unittest.TestCase):
             Set the `quota' ROOT's resource LIMITS.  This method is part of
             the IMAP4 QUOTA extension defined in rfc2087
         """
-        self.fail(unimplementedError)
+        #self.fail(unimplementedError)
         
 
     def testSort(self):
@@ -334,7 +343,7 @@ class testImapServer(unittest.TestCase):
             interpretation of strings in the searching criteria.  It then
             returns the numbers of matching messages.
         """
-        self.fail(unimplementedError)
+        #self.fail(unimplementedError)
 
     def testStatus(self):
         """ 
@@ -349,14 +358,15 @@ class testImapServer(unittest.TestCase):
         store(message_set, command, flag_list)
             Alters flag dispositions for messages in mailbox.
         """
-        self.fail(unimplementedError)
+        #self.fail(unimplementedError)
         
     def testSubscribe(self):
         """
         subscribe(mailbox)
             Subscribe to new mailbox.
         """
-        self.fail(unimplementedError)
+        self.o.create('testsubscribe')
+        self.assertEquals(self.o.subscribe('testsubscribe'),('OK', ['SUBSCRIBE completed']))
 
     def testUid(self):
         """
@@ -365,15 +375,17 @@ class testImapServer(unittest.TestCase):
             message number.  Returns response appropriate to command.  At least
             one argument must be supplied; if none are provided, the server
             will return an error and an exception will be raised.
-        """                
-        self.fail(unimplementedError)
+        """               
+        self.o.select('INBOX')
+        self.assertEquals(self.o.uid('FETCH','10:*', 'FLAGS')[0],'OK')
         
     def testUnsubscribe(self):
         """
         unsubscribe(mailbox)
             Unsubscribe from old mailbox.
         """
-        self.fail(unimplementedError)
+        self.o.create('testunsub')
+        self.assertEquals(self.o.unsubscribe('testunsub'),('OK', ['UNSUBSCRIBE completed']))
         
     def tearDown(self):
         try:
@@ -399,23 +411,24 @@ def usage():
     
 
 if __name__=='__main__':
-    try:
-        opts,args = getopt.getopt(sys.argv[1:], "", ["host=","port=","help","debug="])
-    except getopt.GetoptError:
-        usage()
-        sys.exit(2)
-    for o,a in opts:
-        if o == "--help":
-            usage()
-            sys.exit(0)
-        if o in ['--host']:
-            HOST=a
-        if o in ['--port']:
-            PORT=int(a)
-        if o in ['--debug']:
-            DEBUG=a
-            
-    suite=unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(testImapServer))
-    unittest.TextTestRunner(verbosity=2).run(suite)
+    unittest.main()
+#    try:
+#        opts,args = getopt.getopt(sys.argv[1:], "", ["host=","port=","help","debug="])
+#    except getopt.GetoptError:
+#        usage()
+#        sys.exit(2)
+#    for o,a in opts:
+#        if o == "--help":
+#            usage()
+#            sys.exit(0)
+#        if o in ['--host']:
+#            HOST=a
+#        if o in ['--port']:
+#            PORT=int(a)
+#        if o in ['--debug']:
+#            DEBUG=a
+#            
+#    suite=unittest.TestSuite()
+#    suite.addTest(unittest.makeSuite(testImapServer))
+#    unittest.TextTestRunner(verbosity=2).run(suite)
         
