@@ -173,7 +173,7 @@ CREATE TABLE auto_notifications (
 
 DROP TABLE IF EXISTS auto_replies;
 CREATE TABLE auto_replies (
-	auto_reply_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
+	auto_reply_idnr bigint(21) NOT NULL auto_increment,
    	user_idnr bigint(21) DEFAULT '0' NOT NULL,
    	reply_body mediumtext,
    	PRIMARY KEY (auto_reply_idnr),
@@ -184,7 +184,7 @@ CREATE TABLE auto_replies (
 
 DROP TABLE IF EXISTS pbsp;
 CREATE TABLE pbsp (
-   idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
+   idnr bigint(21) NOT NULL auto_increment,
    since datetime default '0' not null,
    ipnumber varchar(40) NOT NULL,
    PRIMARY KEY (idnr),

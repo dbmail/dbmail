@@ -18,7 +18,7 @@
 
 DROP TABLE IF EXISTS aliases;
 CREATE TABLE aliases (
-   alias_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
+   alias_idnr bigint(21) NOT NULL auto_increment,
    alias varchar(100) NOT NULL,
    deliver_to varchar(250) NOT NULL,
    client_idnr bigint(21) DEFAULT '0' NOT NULL,
@@ -29,7 +29,7 @@ CREATE TABLE aliases (
 
 DROP TABLE IF EXISTS users;
 CREATE TABLE users (
-   user_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
+   user_idnr bigint(21) NOT NULL auto_increment,
    userid varchar(100) NOT NULL,
    passwd varchar(34) NOT NULL,
    client_idnr bigint(21) DEFAULT '0' NOT NULL,
@@ -43,7 +43,7 @@ CREATE TABLE users (
 
 DROP TABLE IF EXISTS mailboxes;
 CREATE TABLE mailboxes (
-   mailbox_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
+   mailbox_idnr bigint(21) NOT NULL auto_increment,
    owner_idnr bigint(21) DEFAULT '0' NOT NULL,
    name varchar(100) NOT NULL,
    seen_flag tinyint(1) default '0' not null,
@@ -86,7 +86,7 @@ CREATE TABLE acl (
 	
 DROP TABLE IF EXISTS physmessage;
 CREATE TABLE physmessage (
-   id bigint(21) DEFAULT '0' NOT NULL auto_increment,
+   id bigint(21) NOT NULL auto_increment,
    messagesize bigint(21) DEFAULT '0' NOT NULL,
    rfcsize bigint(21) DEFAULT '0' NOT NULL,
    internal_date datetime default '0' not null,
@@ -95,7 +95,7 @@ CREATE TABLE physmessage (
  
 DROP TABLE IF EXISTS messages;
 CREATE TABLE messages (
-   message_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
+   message_idnr bigint(21) NOT NULL auto_increment,
    mailbox_idnr bigint(21) DEFAULT '0' NOT NULL,
    physmessage_id bigint(21) DEFAULT '0' NOT NULL,
    seen_flag tinyint(1) default '0' not null,
@@ -116,7 +116,7 @@ CREATE TABLE messages (
 
 DROP TABLE IF EXISTS messageblks;
 CREATE TABLE messageblks (
-   messageblk_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
+   messageblk_idnr bigint(21) NOT NULL auto_increment,
    physmessage_id bigint(21) DEFAULT '0' NOT NULL,
    messageblk longtext NOT NULL,
    blocksize bigint(21) DEFAULT '0' NOT NULL,
@@ -126,7 +126,7 @@ CREATE TABLE messageblks (
 
 DROP TABLE IF EXISTS auto_notifications;
 CREATE TABLE auto_notifications (
-   auto_notify_idnr bigint(21) default '0' not null auto_increment,
+   auto_notify_idnr bigint(21) NOT NULL auto_increment,
    user_idnr bigint(21) DEFAULT '0' NOT NULL,
    notify_address VARCHAR(100),
    PRIMARY KEY (auto_notify_idnr)
@@ -134,7 +134,7 @@ CREATE TABLE auto_notifications (
 
 DROP TABLE IF EXISTS auto_replies;
 CREATE TABLE auto_replies (
-   auto_reply_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
+   auto_reply_idnr bigint(21) NOT NULL auto_increment,
    user_idnr bigint(21) DEFAULT '0' NOT NULL,
    reply_body mediumtext,
    PRIMARY KEY (auto_reply_idnr)
@@ -142,7 +142,7 @@ CREATE TABLE auto_replies (
 
 DROP TABLE IF EXISTS pbsp;
 CREATE TABLE pbsp (
-   idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
+   idnr bigint(21) NOT NULL auto_increment,
    since datetime default '0' not null,
    ipnumber varchar(40) NOT NULL,
    PRIMARY KEY (idnr),
