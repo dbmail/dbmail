@@ -1,4 +1,4 @@
-/*
+/* $Id$
  * imapd.c
  * 
  * main prg for imap daemon

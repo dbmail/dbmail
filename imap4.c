@@ -1,4 +1,4 @@
-/*
+/* $Id$
  * imap4.c
  *
  * implements an IMAP 4 rev 1 server.

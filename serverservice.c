@@ -1,4 +1,4 @@
-/*
+/* $Id$
  * serverservice.c
  *
  * implementatie v/d server functies

@@ -1,4 +1,4 @@
-/*
+/* $Id$
  * serverservice.h
  *
  * header-file voor het opzetten v/e server.
