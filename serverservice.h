@@ -23,7 +23,6 @@ enum SS_LOGIN_VALS {  SS_LOGIN_FAIL, SS_LOGIN_OK };
 typedef struct
 {
   FILE *rx,*tx;             /* read & transmit file streams */
-  int  fd;                  /* file descriptor of connection */
   char *id;                 /* ptr to client-id string */
   char ip[SS_IPNUM_LEN];    /* client IP-number */
   int  loginStatus;         /* login status */

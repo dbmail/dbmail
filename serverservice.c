@@ -280,15 +280,14 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 	      if (csock == -1)
 		continue;    /* accept failed, refuse connection & continue */
 
-	      /* let other processes know */
+	      /* let other processes know we're busy */
 	      (*ss_n_default_children_used)++;
 
 	      /* zero-init */
 	      memset(&client, 0, sizeof(client));
 
 	      /* make streams */
-	      client.fd = csock;
-	      client.rx = fdopen(csock, "r");
+	      client.rx = fdopen(dup(csock), "r");
 
 	      if (!client.rx)
 		{
@@ -308,11 +307,11 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 		  continue;
 		}
 
-	      setlinebuf(client.rx);
-	      /*	  setlinebuf(client.tx);
+	      setlinebuf(client.tx);
+	      /*	  setlinebuf(client.rx);
 	       */
-	      setvbuf(client.tx, txbuf, _IOFBF, TXBUFSIZE);
-
+/*	      setvbuf(client.tx, txbuf, _IOFBF, TXBUFSIZE);
+*/
 	  
 #if LOG_USERS > 0
 	      trace(TRACE_MESSAGE,"IMAPD [PID %d]: client @ socket %d (IP: %s) accepted\n",
@@ -345,7 +344,8 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 	      strncpy(client.ip, inet_ntoa(saClient.sin_addr), SS_IPNUM_LEN);
 	      client.ip[SS_IPNUM_LEN - 1] = '\0';
 
-	      trace(TRACE_INFO, "[%ld] child accept, dcu: %d\n",getpid(),*ss_n_default_children_used);
+	      trace(TRACE_INFO, "[%ld] child accept, dcu: %d\n",
+		    getpid(),*ss_n_default_children_used);
 
 	      /* handle client */
 	      (*ClientHandler)(&client); 
@@ -430,8 +430,7 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 		  memset(&client, 0, sizeof(client));
 
 		  /* make streams */
-		  client.fd = csock;
-		  client.rx = fdopen(csock, "r");
+		  client.rx = fdopen(dup(csock), "r");
 
 		  if (!client.rx)
 		    {
@@ -449,8 +448,8 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 		      exit(0);
 		    }
 
-		  setlinebuf(client.rx);
-		  /*	      setlinebuf(client.tx);
+		  setlinebuf(client.tx);
+		  /*	      setlinebuf(client.rx);
 		   */
 
 		  setvbuf(client.tx, txbuf, _IOFBF, TXBUFSIZE);

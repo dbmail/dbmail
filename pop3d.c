@@ -120,158 +120,167 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
   memtst((clientinfo=(struct hostent *)malloc(sizeof(struct hostent)))==NULL);
 
   if (resolve_client==1)
-	{
-		clientinfo=gethostbyaddr((char *)&adr_clnt.sin_addr, 
-		sizeof(adr_clnt.sin_addr),
-			adr_clnt.sin_family);
-		if (theiraddress != NULL)
-			trace (TRACE_MESSAGE,"handle_client(): incoming connection from [%s (%s)]",
-						theiraddress,clientinfo->h_name);
-		else
-		{
-			trace (TRACE_ERROR,"handle_client(): error: could not get address of client"); 
-			return -1;
-		}
-	}
-	else
-	{
-		if (theiraddress != NULL)
-			trace (TRACE_MESSAGE,"handle_client(): incoming connection from [%s]",
-				theiraddress);
-		else
-			trace (TRACE_ERROR,"handle_client(): error: could not get address of client");
-	}
+    {
+      clientinfo=gethostbyaddr((char *)&adr_clnt.sin_addr, 
+			       sizeof(adr_clnt.sin_addr),
+			       adr_clnt.sin_family);
 
-	/* duplicate descriptor and open it */
-	rx = fdopen (dup (c), "r"); 
-	if (!rx)
+      if (!clientinfo)
+	trace(TRACE_ERROR,"handle_client(): error from gethostbyaddr(): %s",
+	      hstrerror(h_errno));
+      else
 	{
-		/* opening of descriptor failed */
-		close(c);
-		return -1;
+	  if (theiraddress != NULL)
+	    trace (TRACE_MESSAGE,"handle_client(): incoming connection from [%s (%s)]",
+		   theiraddress,
+		   clientinfo->h_name ? clientinfo->h_name : "NULL");
+	  else
+	    {
+	      trace (TRACE_ERROR,"handle_client(): error: could not get address of client"); 
+	      return -1;
+	    }
 	}
+    }
+  else
+    {
+      if (theiraddress != NULL)
+	trace (TRACE_MESSAGE,"handle_client(): incoming connection from [%s]",
+	       theiraddress);
+      else
+	trace (TRACE_ERROR,"handle_client(): error: could not get address of client");
+    }
+
+  /* duplicate descriptor and open it */
+  rx = fdopen (dup (c), "r"); 
+  if (!rx)
+    {
+      /* opening of descriptor failed */
+      close(c);
+      return -1;
+    }
 	
-	tx = fdopen (dup (c), "w"); 
-	if (!tx)
-	{
-		/* opening of descriptor failed */
-		close (c);
-		return -1;
-	}
+  tx = fdopen (dup (c), "w"); 
+  if (!tx)
+    {
+      /* opening of descriptor failed */
+      close (c);
+      return -1;
+    }
 		
-	/* set stream to line buffered mode 
+  /* set stream to line buffered mode 
 	* this way when we send a newline the buffer is flushed */
-	setlinebuf(rx);
+  setlinebuf(rx);
 
-	/* connect to the database */
-	if (db_connect()< 0)
-	{	
-		trace(TRACE_ERROR,"handle_client(): could not connect to database");
-		return -1;
-	}
+  /* connect to the database */
+  if (db_connect()< 0)
+    {	
+      trace(TRACE_ERROR,"handle_client(): could not connect to database");
+      return -1;
+    }
 			
-	/* first initiate AUTHORIZATION state */
-	state = AUTHORIZATION;
+  /* first initiate AUTHORIZATION state */
+  state = AUTHORIZATION;
 		
-	memtst((buffer=(char *)malloc(INCOMING_BUFFER_SIZE))==NULL);
+  memtst((buffer=(char *)malloc(INCOMING_BUFFER_SIZE))==NULL);
 
 	/* create an unique timestamp + processid for APOP authentication */
-	memtst((apop_stamp=(char *)malloc(APOP_STAMP_SIZE))==NULL);
+  memtst((apop_stamp=(char *)malloc(APOP_STAMP_SIZE))==NULL);
 				
-	timestamp=time(NULL);
+  timestamp=time(NULL);
 				
-	sprintf (apop_stamp,"<%d.%u@%s>",getpid(),timestamp,myhostname);
+  sprintf (apop_stamp,"<%d.%u@%s>",getpid(),timestamp,myhostname);
 
-	/* sending greeting */
-	fprintf (tx,"+OK DBMAIL pop3 server ready %s\r\n",apop_stamp);
-	fflush (tx);
+  /* sending greeting */
+  fprintf (tx,"+OK DBMAIL pop3 server ready %s\r\n",apop_stamp);
+  fflush (tx);
 			
 	/* no errors yet */
-	error_count = 0;
+  error_count = 0;
 			
-	trace (TRACE_DEBUG,"handle_client(): setting timeout timer at %d seconds",server_timeout);	
-	/* setting time for timeout counter */
-	alarm (server_timeout); 
+  trace (TRACE_DEBUG,"handle_client(): setting timeout timer at %d seconds",server_timeout);	
+  /* setting time for timeout counter */
+  alarm (server_timeout); 
 
 	/* scanning for commands */
-	while ((done>0) && (buffer=fgets(buffer,INCOMING_BUFFER_SIZE,rx)))
+  while ((done>0) && (buffer=fgets(buffer,INCOMING_BUFFER_SIZE,rx)))
+    {
+      if (feof(rx)) 
+	done = -1;  /* check of client eof  */
+      else 
 	{
-		if (feof(rx)) 
-			done = -1;  /* check of client eof  */
-		else 
-		{
-			alarm (server_timeout);  
-			/* handle pop3 commands */
-			done = pop3(tx,buffer); 
-			/* cleanup the buffer */
-			memset (buffer, '\0', INCOMING_BUFFER_SIZE);
-			/* reset the timeout counter */
-			alarm (server_timeout); 
-		}
-	fflush (tx);
+	  alarm (server_timeout);  
+	  /* handle pop3 commands */
+	  done = pop3(tx,buffer); 
+	  /* cleanup the buffer */
+	  memset (buffer, '\0', INCOMING_BUFFER_SIZE);
+	  /* reset the timeout counter */
+	  alarm (server_timeout); 
 	}
+      fflush (tx);
+    }
 					
-	/* we've reached the update state */
-	state = UPDATE;
+  /* we've reached the update state */
+  state = UPDATE;
 
-	/* memory cleanup */
-	free(buffer);
+  /* memory cleanup */
+  free(buffer);
 
-	if (done == -3)
-	{
-		trace (TRACE_ERROR,"handle_client(): alert: possible flood attempt, closing connection.");
-		fclose (tx);
-		shutdown (fileno(rx), SHUT_RDWR);
-		fclose(rx);
-	}
-	else if (done < 0)
-		{
-			trace (TRACE_ERROR,"handle_client(): timeout, connection terminated");
-			fclose(tx);
-			shutdown (fileno(rx), SHUT_RDWR);
-			fclose(rx);
-		}
-		else
-		{
-			if (username == NULL)
-				trace (TRACE_ERROR,"handle_client(): error, uncomplete session");
-			else
-				trace(TRACE_MESSAGE,"handle_client(): user %s logging out [message=%lu, octets=%lu]",
-					username, curr_session.virtual_totalmessages,
-					curr_session.virtual_totalsize);
+  if (done == -3)
+    {
+      trace (TRACE_ERROR,"handle_client(): alert: possible flood attempt, closing connection.");
+      fclose (tx);
+      shutdown (fileno(rx), SHUT_RDWR);
+      fclose(rx);
+    }
+  else if (done < 0)
+    {
+      trace (TRACE_ERROR,"handle_client(): timeout, connection terminated");
+      fclose(tx);
+      shutdown (fileno(rx), SHUT_RDWR);
+      fclose(rx);
+    }
+  else
+    {
+      if (username == NULL)
+	trace (TRACE_ERROR,"handle_client(): error, uncomplete session");
+      else
+	trace(TRACE_MESSAGE,"handle_client(): user %s logging out [message=%lu, octets=%lu]",
+	      username, curr_session.virtual_totalmessages,
+	      curr_session.virtual_totalsize);
 
-		/* if everything went well, write down everything and do a cleanup */
-		db_update_pop(&curr_session);
-		db_disconnect(); 
+      /* if everything went well, write down everything and do a cleanup */
+      db_update_pop(&curr_session);
+      db_disconnect(); 
 	
-		fclose(tx);
-		shutdown (fileno(rx), SHUT_RDWR);
-		fclose(rx);
-	}
+      fclose(tx);
+      shutdown (fileno(rx), SHUT_RDWR);
+      fclose(rx);
+    }
 
-	/* clean this session */
-	db_session_cleanup(&curr_session);
+  /* clean this session */
+  db_session_cleanup(&curr_session);
 	
-	if (username!=NULL)
-	{
-		/* username cleanup */
-		free(username);
-		username=NULL;
-	}
+  if (username!=NULL)
+    {
+      /* username cleanup */
+      free(username);
+      username=NULL;
+    }
 
-	if (password!=NULL)
-	{
-		/* password cleanup */
-		free(password);
-		password=NULL;
-	}
+  if (password!=NULL)
+    {
+      /* password cleanup */
+      free(password);
+      password=NULL;
+    }
 
 		
-	/* reset timers */
-	 alarm (0); 
+  /* reset timers */
+  alarm (0); 
 	
-	return 0;
+  return 0;
 }
+
 
 int main (int argc, char *argv[])
 {
@@ -360,11 +369,13 @@ int main (int argc, char *argv[])
   if (fork ())
     exit (0);
 		
+  
   close (0);
   close (1);
   close (2); 
   close (3);
-  
+
+
   /* reserve memory for hostname */
   memtst((myhostname=(char *)malloc(64))==NULL);
 	
@@ -395,21 +406,21 @@ int main (int argc, char *argv[])
 
   if (ipaddr != NULL)
   {
-	  if (ipaddr[0] == '*') /* bind to all interfaces */
-			adr_srvr.sin_addr.s_addr = htonl (INADDR_ANY); 
-	  else 
-		{
-		   if (!inet_aton(ipaddr, &adr_srvr.sin_addr))
-				trace (TRACE_FATAL, "main(): %s is not a valid ipaddress",ipaddr);
-		}
+    if (ipaddr[0] == '*') /* bind to all interfaces */
+      adr_srvr.sin_addr.s_addr = htonl (INADDR_ANY); 
+    else 
+      {
+	if (!inet_aton(ipaddr, &adr_srvr.sin_addr))
+	  trace (TRACE_FATAL, "main(): %s is not a valid ipaddress",ipaddr);
+      }
   }
   else
-	  trace (TRACE_FATAL,"main(): could not read bind ip from config");
+    trace (TRACE_FATAL,"main(): could not read bind ip from config");
 
   if (port != NULL)
-	  adr_srvr.sin_port = htons (atoi(port));
-	else
-		trace (TRACE_FATAL,"main(): could not read port from config");
+    adr_srvr.sin_port = htons (atoi(port));
+  else
+    trace (TRACE_FATAL,"main(): could not read port from config");
 			
   setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &reuseaddress, sizeof(reuseaddress));
 	
@@ -525,7 +536,7 @@ int main (int argc, char *argv[])
 	      /* failure won't cause a quit forking is too expensive */	
 	      if (c == -1)
 		{
-		  trace (TRACE_FATAL,"main(): call accept(2) failed");
+		  trace (TRACE_ERROR,"main(): call accept(2) failed");
 		}
 		
 	      (*default_children)++;		
@@ -575,7 +586,7 @@ int main (int argc, char *argv[])
 	    /* failure won't cause a quit forking is too expensive */	
 	    if (c == -1)
 	      {
-		trace (TRACE_FATAL,"main(): call accept(2) failed");
+		trace (TRACE_ERROR,"main(): call accept(2) failed");
 	      }
 		
 	    if (fork())

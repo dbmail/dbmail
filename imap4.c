@@ -79,9 +79,9 @@ const IMAP_COMMAND_HANDLER imap_handler_functions[] =
 int imap_login(ClientInfo *ci)
 {
   /* make sure we read/write in line-buffered mode */
-  setlinebuf(ci->rx);
+/*  setlinebuf(ci->rx);
   setlinebuf(ci->tx);
-
+*/
   /* add userdata */
   ci->userData = malloc(sizeof(imap_userdata_t));
   if (!ci->userData)
