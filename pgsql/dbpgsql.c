@@ -568,8 +568,9 @@ u64_t db_update_message (u64_t messageidnr, const char *unique_id,
  * 
  * returns msgblkid on succes, -1 on failure
  */
-u64_t db_insert_message_block(const char *block, unsigned len, u64_t messageidnr)
+u64_t db_insert_message_block(const char *block, u64_t len, u64_t messageidnr)
 {
+  u64_t msgid;
   char *escaped_query = NULL;
   unsigned maxesclen = READ_BLOCK_SIZE * 2 + DEF_QUERYSIZE, startlen = 0, esclen = 0;
 

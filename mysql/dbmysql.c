@@ -606,62 +606,55 @@ u64_t db_update_message (u64_t message_idnr, const char *unique_id,
  */
 u64_t db_insert_message_block (char *block, u64_t message_idnr)
 {
-  char *escblk=NULL, *tmpquery=NULL;
-  int len,esclen=0;
+  u64_t msgid;
+  char *escaped_query = NULL;
+  unsigned maxesclen = READ_BLOCK_SIZE * 2 + DEF_QUERYSIZE, startlen = 0, esclen = 0;
 
-  if (block != NULL)
+  if (block == NULL)
     {
-      len = strlen(block);
-
-      trace (TRACE_DEBUG,"db_insert_message_block(): inserting a %d bytes block\n",
-	     len);
-
-      /* allocate memory twice as much, for eacht character might be escaped 
-	 added aditional 250 bytes for possible function err */
-
-      memtst((escblk=(char *)my_malloc(((len*2)+250)))==NULL); 
-
-      /* escape the string */
-      if ((esclen = mysql_escape_string(escblk, block, len)) > 0)
-	{
-	  /* add an extra 500 characters for the query */
-	  memtst((tmpquery=(char *)my_malloc(esclen + 500))==NULL);
-	
-	  snprintf (tmpquery, esclen+500,
-		   "INSERT INTO messageblks(messageblk,blocksize,message_idnr) "
-		   "VALUES (\"%s\",%d,%llu)",
-		   escblk,len,message_idnr);
-
-	  if (db_query (tmpquery)==-1)
-	    {
-	      my_free(escblk);
-	      my_free(tmpquery);
-	      trace(TRACE_ERROR,"db_insert_message_block(): dbquery failed\n");
-	      return -1;
-	    }
-
-	  /* freeing buffers */
-	  my_free(tmpquery);
-	  my_free(escblk);
-	  return db_insert_result("");
-	}
-      else
-	{
-	  trace (TRACE_ERROR,"db_insert_message_block(): mysql_real_escape_string() "
-		 "returned empty value\n");
-
-	  my_free(escblk);
-	  return -1;
-	}
-    }
-  else
-    {
-      trace (TRACE_ERROR,"db_insert_message_block(): value of block cannot be NULL, "
+      trace (TRACE_ERROR,"db_insert_message_block(): got NULL as block, "
 	     "insertion not possible\n");
       return -1;
     }
 
-  return -1;
+  if (len > READ_BLOCK_SIZE)
+    {
+      trace (TRACE_ERROR,"db_insert_message_block(): blocksize [%llu], maximum is [%llu]",
+	     len, READ_BLOCK_SIZE);
+      return -1;
+    }
+
+  escaped_query = (char*)my_malloc(sizeof(char) * maxesclen);
+  if (!escaped_query)
+    {
+      trace(TRACE_ERROR,"db_insert_message_block(): not enough memory");
+      return -1;
+    }
+
+  snprintf(escaped_query, maxesclen, "INSERT INTO messageblks"
+	   "(messageblk,blocksize,message_idnr) VALUES ('");
+      
+  startlen = sizeof("INSERT INTO messageblks"
+		    "(messageblk,blocksize,message_idnr) VALUES ('") - 1;
+
+  /* escape & add data */
+  esclen = mysql_real_escape_string(&conn, &escaped_query[startlen], block, len);
+           
+  snprintf(&escaped_query[esclen + startlen],
+	   maxesclen - esclen - startlen, "', %llu, %llu)", len, msgid);
+
+  if (db_query(escaped_query) == -1)
+    {
+      my_free(escaped_query);
+
+      trace(TRACE_ERROR,"db_insert_message_block(): dbquery failed\n");
+      return -1;
+    }
+
+  /* all done, clean up & exit */
+  my_free(escaped_query);
+
+  return db_insert_result();
 }
 
 

@@ -54,7 +54,7 @@ int main (int argc, char *argv[])
 
   /* reading settings */
   
-  trace_level = db_get_config_item("TRACE_LEVEL", CONFIG_EMPTY);
+/*  trace_level = db_get_config_item("TRACE_LEVEL", CONFIG_EMPTY);
   trace_syslog = db_get_config_item("TRACE_TO_SYSLOG", CONFIG_EMPTY);
   trace_verbose = db_get_config_item("TRACE_VERBOSE", CONFIG_EMPTY);
 
@@ -78,7 +78,8 @@ int main (int argc, char *argv[])
       my_free(trace_verbose);
       trace_verbose = NULL;
     }
-
+*/
+  
   configure_debug(new_level, new_trace_syslog, new_trace_verbose);
   list_init(&users);
   list_init(&mimelist);
@@ -176,7 +177,7 @@ int main (int argc, char *argv[])
     } 
   
   /* inserting messages into the database */
-  insert_messages(header, headersize,&users, &returnpath, users_are_usernames,
+  insert_messages(header, headersize, &users, &returnpath, users_are_usernames,
 		  deliver_to_mailbox);
   trace(TRACE_DEBUG,"main(): freeing memory blocks");
   

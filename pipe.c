@@ -283,10 +283,10 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
       else
       {
           /* make the id numeric */
-          userid=strtoull((char *)tmp->data, NULL, 10);
+          userid = strtoull((char *)tmp->data, NULL, 10);
 
           /* create a message record */
-          temp_message_record_id=db_insert_message ((u64_t)userid,
+          temp_message_record_id = db_insert_message ((u64_t)userid,
 						    deliver_to_mailbox);
 
           /* message id is an array of returned message id's
@@ -295,7 +295,7 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
            * still we would need a way of checking which messageblks
            * belong to which messages */
 
-          if (db_insert_message_block (header,temp_message_record_id) == -1)
+          if (db_insert_message_block(header, headersize, temp_message_record_id) == -1)
               trace(TRACE_STOP, "insert_messages(): error inserting msgblock\n");
 
           /* adding this messageid to the message id list */
@@ -337,7 +337,8 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
 	      tmp=list_getstart(&messageids);
 	      while (tmp!=NULL)
 		{
-		  if (db_insert_message_block (strblock,*(u64_t *)tmp->data) == -1)
+		  if (db_insert_message_block (strblock, usedmem, *(u64_t *)tmp->data) 
+		      == -1)
 		    trace(TRACE_STOP, "insert_messages(): error inserting msgblock\n");
 
 		  tmp=tmp->nextnode;
