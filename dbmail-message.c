@@ -84,6 +84,9 @@ struct DbmailMessage * dbmail_message_new(void)
 		return NULL;
 	}
 	g_mime_init(0);
+	
+	self->header_dict = g_hash_table_new_full((GHashFunc)g_str_hash, (GEqualFunc)g_str_equal, (GDestroyNotify)g_free, NULL);
+	
 	dbmail_message_set_class(self, DBMAIL_MESSAGE);
 	return self;
 }
@@ -358,6 +361,9 @@ void dbmail_message_free(struct DbmailMessage *self)
 		g_object_unref(self->content);
 	self->headers=NULL;
 	self->content=NULL;
+	
+	g_hash_table_destroy(self->header_dict);
+	
 	self->id=0;
 	dm_free(self);
 }
@@ -581,8 +587,17 @@ int dbmail_message_headers_cache(struct DbmailMessage *self)
 	return 1;
 }
 
-int db_header_get_id(const char *header, u64_t *id)
+static int _header_get_id(struct DbmailMessage *self, const char *header, u64_t *id)
 {
+	u64_t tmp;
+	gpointer cacheid;
+	cacheid = g_hash_table_lookup(self->header_dict, (gconstpointer)header);
+
+	if (cacheid) {
+		*id = GPOINTER_TO_UINT(cacheid);
+		return 1;
+	}
+	
 	GString *q = g_string_new("");
 	g_string_printf(q, "SELECT id FROM %sheadername WHERE headername='%s'", DBPFX, header);
 	if (db_query(q->str) == -1) {
@@ -595,13 +610,14 @@ int db_header_get_id(const char *header, u64_t *id)
 			g_string_free(q,TRUE);
 			return -1;
 		}
-		*id = db_insert_result("headername_idnr");
-		g_string_free(q,TRUE);
-		return 1;
+		tmp = db_insert_result("headername_idnr");
+	} else {
+		tmp = db_get_result_u64(0,0);
+		db_free_result();
 	}
+	*id = tmp;
+	g_hash_table_insert(self->header_dict, (gpointer)(g_strdup(header)), GUINT_TO_POINTER((unsigned)tmp));
 	g_string_free(q,TRUE);
-	*id = db_get_result_u64(0,0);
-	db_free_result();
 	return 1;
 }
 
@@ -615,7 +631,7 @@ void _header_cache(const char *header, const char *value, gpointer user_data)
 	if (strchr(header, ' '))
 		return;
 	
-	if ((db_header_get_id(header, &id) < 0))
+	if ((_header_get_id(self, header, &id) < 0))
 		return;
 	
 	q = g_string_new("");

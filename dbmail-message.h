@@ -71,6 +71,7 @@ struct DbmailMessage {
 	enum DBMAIL_MESSAGE_CLASS klass;
 	GMimeObject *content;
 	GRelation *headers;
+	GHashTable *header_dict;
 };
 
 /*

@@ -668,10 +668,13 @@ int do_header_cache(void)
 	}
 
 	if (yes_to_all) {
+		db_begin_transaction();
 		if (db_set_headercache(lost) < 0) {
+			db_rollback_transaction();
 			qerrorf("Error caching the header values ");
 			has_errors = 1;
 		}
+		db_commit_transaction();
 	}
 
 	g_list_free(lost);

@@ -1429,24 +1429,21 @@ int db_set_headercache(GList *lost)
 	struct DbmailMessage *msg = dbmail_message_new();
 	
 	lost = g_list_first(lost);
-	db_begin_transaction();
 	while (lost) {
 		msg = dbmail_message_retrieve(msg, (u64_t)(GPOINTER_TO_UINT(lost->data)), DBMAIL_MESSAGE_FILTER_HEAD);
+		fprintf(stderr,".");
 		if (! msg) {
 			g_list_free(lost);
 			dbmail_message_free(msg);
-			db_rollback_transaction();
 			return -1;
 		}
 		if (dbmail_message_headers_cache(msg) != 1) {
 			g_list_free(lost);
 			dbmail_message_free(msg);
-			db_rollback_transaction();
 			return -1;
 		}
 		lost = g_list_next(lost);
 	}
-	db_commit_transaction();
 	return 0;
 }
 

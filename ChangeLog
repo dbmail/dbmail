@@ -4,6 +4,9 @@
 	* maintenance.c: remove all references to -r.
 	* maintenance.c, db.c, db.h, dbmail-message.c, dbmail-message.h: let 
 	-b do_is_header and do_header_cache.
+	* dbmail-message.c, dbmail-message.h: added GHashTable cache of
+	headernames to DbmailMessage struct to minimize db lookups of
+	dbmail_headername.id.
 
 2005-03-19  Paul Stevens <paul@nfg.nl>
 
