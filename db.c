@@ -268,6 +268,8 @@ int db_calculate_quotum_all()
 		      __FILE__, __FUNCTION__);
 		return -2;
 	}
+	memset(user_idnrs, 0, n * sizeof(u64_t));
+	memset(curmail_sizes, 0, n * sizeof(u64_t));
 
 	for (i = 0; i < n; i++) {
 		user_idnrs[i] = db_get_result_u64(i, 0);
@@ -360,6 +362,7 @@ int db_get_users_from_clientid(u64_t client_id, u64_t ** user_ids,
 		db_free_result();
 		return -2;
 	}
+	memset(*user_ids, 0, *num_users * sizeof(u64_t));
 	for (i = 0; i < *num_users; i++) {
 		(*user_ids)[i] = db_get_result_u64(i, 0);
 	}
@@ -564,19 +567,7 @@ int db_get_reply_body(u64_t user_idnr, char **reply_body)
 	if (db_num_rows() > 0) {
 		query_result = db_get_result(0, 0);
 		if (query_result && strlen(query_result) > 0) {
-			/* FIXME: Why not just use a strdup() here? */
-			if (!
-			    (*reply_body =
-			     (char *) my_malloc(strlen(query_result) +
-						1))) {
-				trace(TRACE_ERROR,
-				      "%s,%s: could not allocate",
-				      __FILE__, __FUNCTION__);
-				db_free_result();
-				return -2;
-			}
-			snprintf(*reply_body, strlen(query_result) + 1,
-				 "%s", query_result);
+			*reply_body = strdup(query_result);
 			trace(TRACE_DEBUG, "%s,%s: found reply_body [%s]",
 			      __FILE__, __FUNCTION__, *reply_body);
 		}
@@ -1753,7 +1744,10 @@ int db_update_pop(PopSession_t * session_ptr)
 			/* FIXME: a message could be deleted already if it has been accessed
 			 * by another interface and be deleted by sysop
 			 * we need a check if the query failes because it doesn't exists anymore
-			 * now it will just bailout */
+			 * now it will just bailout. 
+			 * ADDITION (ilja 2004-04-21) I don't think this is needed here.
+			 * The query does not fail when the message is already deleted, it
+			 * just does not do anything! */
 			if (db_query(query) == -1) {
 				trace(TRACE_ERROR,
 				      "%s,%s: could not execute query",
@@ -1766,10 +1760,12 @@ int db_update_pop(PopSession_t * session_ptr)
 
 	/* because the status of some messages might have changed (for instance
 	   to status >= 002, the quotum has to be recalculated */
-	if (db_calculate_quotum_used(user_idnr) == -1) {
-		trace(TRACE_ERROR, "%s,%s: error calculating quotum used",
-		      __FILE__, __FUNCTION__);
-		return -1;
+	if (user_idnr != 0) {
+		if (db_calculate_quotum_used(user_idnr) == -1) {
+			trace(TRACE_ERROR, "%s,%s: error calculating quotum used",
+			      __FILE__, __FUNCTION__);
+			return -1;
+		}
 	}
 	return 0;
 }
@@ -2570,13 +2566,17 @@ int db_isselectable(u64_t mailbox_idnr)
 		return -1;
 	}
 
-	/* FIXME: figure this one out... */
-	query_result = db_get_result(0, 0);
-
-	if (!query_result) {
-		/* empty set, mailbox does not exist */
+	if (db_num_rows() == 0) {
 		db_free_result();
 		return 0;
+	}
+
+	query_result = db_get_result(0, 0);
+	if (!query_result) {
+		trace(TRACE_ERROR, "%s,%s: query result is NULL, but there is a "
+		      "result set", __FILE__, __FUNCTION__);
+		db_free_result();
+		return -1;
 	}
 
 	not_selectable = strtol(query_result, NULL, 10);
@@ -2603,11 +2603,15 @@ int db_noinferiors(u64_t mailbox_idnr)
 		return -1;
 	}
 
-	/* FIXME: figure this one out... */
-	query_result = db_get_result(0, 0);
+	if (db_num_rows() == 0) {
+		db_free_result();
+		return 0;
+	}
 
+	query_result = db_get_result(0, 0);
 	if (!query_result) {
-		/* empty set, mailbox does not exist */
+		trace(TRACE_ERROR, "%s,%s: query result is NULL, but there is a "
+		      "result set", __FILE__, __FUNCTION__);
 		db_free_result();
 		return 0;
 	}
@@ -2745,7 +2749,6 @@ int db_get_message_size(u64_t message_idnr, u64_t * message_size)
 		return -1;
 	}
 
-	/* FIXME: figure this one out... */
 	result_string = db_get_result(0, 0);
 	if (result_string)
 		*message_size = strtoull(result_string, NULL, 10);
@@ -2825,7 +2828,7 @@ int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name)
 	char *tmp_name, *tmp_fq_name;
 	const char *query_result;
 	int result;
-	size_t tmp_name_len, tmp_fq_name_len;
+	size_t tmp_fq_name_len;
 	u64_t owner_idnr;
 
 	result = db_get_mailbox_owner(mailbox_idnr, &owner_idnr);
@@ -2851,7 +2854,6 @@ int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name)
 		return 0;
 	}
 
-	/* FIXME: isn't this just a stdup()??? */
 	query_result = db_get_result(0, 0);
 	if (!query_result) {
 		/* empty set, mailbox does not exist */
@@ -2859,16 +2861,8 @@ int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name)
 		*name = '\0';
 		return 0;
 	}
-	tmp_name_len = strlen(query_result);
-
-	if (!(tmp_name = my_malloc((tmp_name_len + 1) * sizeof(char)))) {
-		trace(TRACE_ERROR, "%s,%s: error allocating memory",
-		      __FILE__, __FUNCTION__);
-		return -1;
-	}
-
-	strncpy(tmp_name, query_result, tmp_name_len);
-	tmp_name[tmp_name_len] = '\0';
+	tmp_name = strdup(query_result);
+	
 	db_free_result();
 	tmp_fq_name =
 	    mailbox_add_namespace(tmp_name, owner_idnr, user_idnr);

@@ -1,3 +1,14 @@
+2004-04-21  Ilja Booij  <ilja@ic-s.nl>
+
+	* db.c (db_get_reply_body): fixed a FIXME by replacing complex
+	code with a strdup()
+	(db_isselectable): fixed a FIXME by adding extra check
+	(db_noinferiors):  fixed a FIXME by adding extra check
+	(db_getmailboxname): fixed a FIXME by replacing complex
+	code with a strdup()
+	(db_update_pop): added a check to only calculate the new quotum
+	if the user_idnr is set earlier in the function.
+
 2004-04-19  Ilja Booij  <ilja@ic-s.nl>
 
 	* db.c (db_get_deliver_from_alias): now returns strdup() of ""
