@@ -250,7 +250,7 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 		/* we have local deliveries */ 
 		while (!feof(stdin) || (strblock ==NULL))
 		{
-			strblock = fgets (strblock, READ_BLOCK_SIZE, stdin);
+			strblock = fread (strblock, sizeof(char), READ_BLOCK_SIZE, stdin);
 			
 			if (strblock!=NULL) /* this happends when a eof occurs */
 			{
@@ -373,7 +373,7 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 					{
 						while (!feof(stdin))
 						{
-							strblock = fgets (strblock, READ_BLOCK_SIZE, stdin);
+							strblock = fread (strblock, sizeof(char), READ_BLOCK_SIZE, stdin);
 									
 							if (strblock!=NULL) /* this happends when a eof occurs */
 							{
