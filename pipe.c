@@ -453,7 +453,7 @@ static int store_message_temp(FILE * instream,
 				break;
 
 			tmpchar = fgetc(instream);
-			if (tmpchar == EOF)
+			if (tmpchar == EOF) 
 				break;
 
 			ringbuf[ringpos] = tmpchar;
@@ -471,7 +471,8 @@ static int store_message_temp(FILE * instream,
 			if (ringbuf[MOD(ringpos - 1, RING_SIZE)] == '\n'
 			 && ringbuf[MOD(ringpos - 2, RING_SIZE)] == '\r'
 			 && ringbuf[MOD(ringpos - 3, RING_SIZE)] == '.'
-			 && ringbuf[MOD(ringpos - 4, RING_SIZE)] == '\n') {
+			 && ((usedmem == 2) 
+			     || ringbuf[MOD(ringpos - 4, RING_SIZE)] == '\n')) {
 				/* Back off the trailing ".\r" (final \n not copied yet)
 				 * The \n or \r\n preceding it are part of the message. */
 				if (usedmem > 2) {
