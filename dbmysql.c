@@ -3191,4 +3191,112 @@ int db_mailbox_msg_match(unsigned long mailboxuid, unsigned long msguid)
 }
 
 
+/*
+ * db_search_messages()
+ *
+ * searches the dbase for messages matching the search_keys
+ * search_keys are supposed to be IMAP4r1 compliant;
+ * results will be an ascending ordered array of message UIDS
+ *
+ *
+ */
+int db_search_messages(char **search_keys, unsigned long **search_results, int *nsresults,
+		       unsigned long mboxid)
+{
+  char query[DEF_QUERYSIZE];
+  int i,qidx=0;
+
+  qidx = sprintf(query, "SELECT messageidnr FROM message WHERE mailboxidnr = %lu AND status<2",
+		 mboxid);
+
+  i = 0;
+  while (search_keys[i])
+    {
+      if (search_keys[i][0] == '(' || search_keys[i][0] == ')')
+	{
+	  qidx += sprintf(&query[qidx], " %c",search_keys[i][0]);
+	}
+      else if (strcasecmp(search_keys[i], "answered") == 0)
+	{
+	  qidx += sprintf(&query[qidx], " AND answered_flag=1");
+	}
+      else if (strcasecmp(search_keys[i], "deleted") == 0)
+	{
+	  qidx += sprintf(&query[qidx], " AND deleted_flag=1");
+	}
+      else if (strcasecmp(search_keys[i], "seen") == 0)
+	{
+	  qidx += sprintf(&query[qidx], " AND seen_flag=1");
+	}
+      else if (strcasecmp(search_keys[i], "flagged") == 0)
+	{
+	  qidx += sprintf(&query[qidx], " AND flagged_flag=1");
+	}
+      else if (strcasecmp(search_keys[i], "recent") == 0)
+	{
+	  qidx += sprintf(&query[qidx], " AND recent_flag=1");
+	}
+      else if (strcasecmp(search_keys[i], "draft") == 0)
+	{
+	  qidx += sprintf(&query[qidx], " AND draft_flag=1");
+	}
+      else if (strcasecmp(search_keys[i], "unanswered") == 0)
+	{
+	  qidx += sprintf(&query[qidx], " AND answered_flag=0");
+	}
+      else if (strcasecmp(search_keys[i], "undeleted") == 0)
+	{
+	  qidx += sprintf(&query[qidx], " AND deleted_flag=0");
+	}
+      else if (strcasecmp(search_keys[i], "unseen") == 0)
+	{
+	  qidx += sprintf(&query[qidx], " AND seen_flag=0");
+	}
+      else if (strcasecmp(search_keys[i], "unflagged") == 0)
+	{
+	  qidx += sprintf(&query[qidx], " AND flagged_flag=0");
+	}
+      i++;
+    }
+      
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_search_messages(): could not execute query\n");
+      return (-1);
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_search_messages(): mysql_store_result failed: %s\n",mysql_error(&conn));
+      return (-1);
+    }
+
+  *nsresults = mysql_num_rows(res);
+  if (*nsresults == 0)
+    {
+      *search_results = NULL;
+      mysql_free_result(res);
+      return 0;
+    }
+
+  *search_results = (unsigned long*)malloc(sizeof(unsigned long) * *nsresults);
+  if (!*search_results)
+    {
+      trace(TRACE_ERROR, "db_search_messages(): out of memory\n");
+      mysql_free_result(res);
+      return -1;
+    }
+
+  i=0;
+  while ((row = mysql_fetch_row(res)) && i<*nsresults)
+    {
+      (*search_results)[i++] = strtoul(row[0],NULL,10);
+    }
+      
+
+  mysql_free_result(res);
+
+  return 0;
+}
+
 

@@ -413,7 +413,7 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 		  /* zero-init */
 		  memset(&client, 0, sizeof(client));
 
-	      /* make streams */
+		  /* make streams */
 		  client.fd = csock;
 		  client.rx = fdopen(csock, "r");
 

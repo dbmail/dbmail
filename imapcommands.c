@@ -1330,6 +1330,8 @@ int _ic_expunge(char *tag, char **args, ClientInfo *ci)
 int _ic_search(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
+  unsigned long *uids;
+  int nresults,i,result,msn;
 
   if (ud->state != IMAPCS_SELECTED)
     {
@@ -1337,7 +1339,57 @@ int _ic_search(char *tag, char **args, ClientInfo *ci)
       return 1;
     }
   
-      
+  /* update mailbox info */
+  i = 0;
+  do
+    {
+      result = db_getmailbox(&ud->mailbox, ud->userid);
+    } while (result == 1 && i++<MAX_RETRIES);
+
+  if (result == 1)
+    {
+      fprintf(ci->tx,"* BYE troubles synchronizing dbase\r\n");
+      return -1;
+    }
+
+  /* now find the messages; this function will return an ORDERED list of 
+   * message UID's (ascending)
+   */
+  result = db_search_messages(args, &uids, &nresults, ud->mailbox.uid);
+  if (result == -1)
+    {
+      fprintf(ci->tx, "* BAD error searching messages\r\n");
+      return 1;
+    }
+
+  fprintf(ci->tx, "* SEARCH");
+
+  if (imapcommands_use_uid)
+    {
+      /* ok dump list */
+      for (i=0; i<nresults; i++)
+	fprintf(ci->tx," %lu",uids[i]);
+    }
+  else
+    {
+      for (i=0,msn=0; i<nresults; i++)
+	{
+	  msn = binary_search(ud->mailbox.seq_list, ud->mailbox.exists, uids[i]);
+
+	  if (msn == -1)
+	    {
+	      /* message not found in MSN list ?? */
+	      free(uids);
+	      fprintf(ci->tx,"* BYE msn list got fucked up\r\n");
+	      return -1;
+	    }
+	  fprintf(ci->tx," %d", msn+1);
+	}
+    }
+
+  fprintf(ci->tx,"\r\n");
+
+  free(uids);
       
   fprintf(ci->tx,"%s OK SEARCH completed\r\n",tag);
   return 0;
@@ -1355,7 +1407,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
   int i,fetch_start,fetch_end,result,setseen,j,k;
   int isfirstout,idx,headers_fetched,uid_will_be_fetched;
   int partspeclen,only_text_from_msgpart = 0;
-  int bad_response_send = 0;
+  int bad_response_send = 0,actual_cnt;
   fetch_items_t *fi,fetchitem;
   mime_message_t msg,*msgpart;
   char date[IMAP_INTERNALDATE_LEN],*endptr;
@@ -1694,11 +1746,28 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		  dumpsize  = rfcheader_dump(tmpfile, &msg.rfcheader, args, 0, 0);
 		  dumpsize += db_dump_range(tmpfile, msg.bodystart, msg.bodyend, thisnum);
 		  
-		  fseek(tmpfile, 0, SEEK_SET);
+		  if (fi->bodyfetch.octetstart == -1)
+		    {
+		      fseek(tmpfile, 0, SEEK_SET);
 
-		  fprintf(ci->tx, "BODY[] {%ld}\r\n", dumpsize);
-		  while (dumpsize--)
-		    fputc(fgetc(tmpfile), ci->tx);
+		      fprintf(ci->tx, "BODY[] {%ld}\r\n", dumpsize);
+		      while (dumpsize--)
+			fputc(fgetc(tmpfile), ci->tx);
+		    }
+		  else
+		    {
+		      fseek(tmpfile, fi->bodyfetch.octetstart, SEEK_SET);
+
+		      actual_cnt = (fi->bodyfetch.octetcnt > 
+				    (dumpsize - fi->bodyfetch.octetstart)) ? 
+			(dumpsize - fi->bodyfetch.octetstart) : fi->bodyfetch.octetcnt;
+
+		      fprintf(ci->tx, "BODY[]<%d> {%d}\r\n", fi->bodyfetch.octetstart, 
+			      actual_cnt); 
+
+		      while (actual_cnt--)
+			fputc(fgetc(tmpfile), ci->tx);
+		    }		      
 
 		  setseen = 1;
 

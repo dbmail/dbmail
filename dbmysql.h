@@ -187,4 +187,7 @@ int db_msgdump(mime_message_t *msg, unsigned long msguid);
 
 int db_mailbox_msg_match(unsigned long mailboxuid, unsigned long msguid);
 
+int db_search_messages(char **search_keys, unsigned long **search_results, int *nsresults,
+		       unsigned long mboxid);
+
 #endif
