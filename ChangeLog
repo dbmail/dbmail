@@ -8,6 +8,8 @@
 	code with a strdup()
 	(db_update_pop): added a check to only calculate the new quotum
 	if the user_idnr is set earlier in the function.
+	(db_send_message_lines): added check to fwrite. This is needed
+	for when fwrite fails.
 
 2004-04-19  Ilja Booij  <ilja@ic-s.nl>
 

@@ -1000,6 +1000,7 @@ int db_empty_mailbox(u64_t user_idnr)
 		db_free_result();
 		return -2;
 	}
+	memset(mboxids, 0, n * sizeof(u64_t));
 
 	for (i = 0; i < n; i++) {
 		mboxids[i] = db_get_result_u64(i, 0);
@@ -1375,7 +1376,7 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
 	u64_t *message_idnrs;
 	u64_t user_idnr = 0;
 	int result;
-	u64_t mailbox_size;
+	u64_t mailbox_size = 0;
 
 	/* get the user_idnr of the owner of the mailbox */
 	result = db_get_mailbox_owner(mailbox_idnr, &user_idnr);
@@ -1454,6 +1455,7 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
 			      "%s,%s: error deleting message [%llu] "
 			      "database might be inconsistent. run dbmail-maintenance",
 			      __FILE__, __FUNCTION__, message_idnrs[i]);
+			my_free(message_idnrs);
 			return -1;
 		}
 	}
@@ -1499,8 +1501,12 @@ int db_send_message_lines(void *fstream, u64_t message_idnr,
 	physmessage_id = db_get_result_u64(0, 0);
 	db_free_result();
 
-	memtst((buffer =
-		(char *) my_malloc(WRITE_BUFFER_SIZE * 2)) == NULL);
+	buffer = my_malloc(WRITE_BUFFER_SIZE * 2);
+	if (buffer == NULL) {
+		trace(TRACE_ERROR, "%s,%s: error allocating memory for buffer",
+		      __FILE__, __FUNCTION__);
+		return 0;
+	}
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT messageblk FROM messageblks "
@@ -1591,8 +1597,15 @@ int db_send_message_lines(void *fstream, u64_t message_idnr,
 
 			if (rowlength % WRITE_BUFFER_SIZE == 0) {
 				/* purge buffer at every WRITE_BUFFER_SIZE bytes  */
-				fwrite(buffer, sizeof(char),
-				       strlen(buffer), (FILE *) fstream);
+				if (fwrite(buffer, sizeof(char), 
+					   strlen(buffer), (FILE *)fstream) !=
+				    strlen(buffer)) {
+					trace(TRACE_ERROR, "%s,%s: error writing to "
+					      "fstream", __FILE__, __FUNCTION__);
+					db_free_result();
+					my_free(buffer);
+					return 0;
+				}
 				/*  cleanup the buffer  */
 				memset(buffer, '\0',
 				       (WRITE_BUFFER_SIZE * 2));
@@ -1604,8 +1617,14 @@ int db_send_message_lines(void *fstream, u64_t message_idnr,
 		trace(TRACE_DEBUG, "%s,%s: getting nextblock [%d]\n",
 		      __FILE__, __FUNCTION__, block_count);
 		/* flush our buffer */
-		fwrite(buffer, sizeof(char), strlen(buffer),
-		       (FILE *) fstream);
+		if (fwrite(buffer, sizeof(char), strlen(buffer),
+			   (FILE *) fstream) != strlen(buffer)) {
+			trace(TRACE_ERROR, "%s,%s: error writing to file stream",
+			      __FILE__, __FUNCTION__);
+			db_free_result();
+			my_free(buffer);
+			return 0;
+		}
 	}
 	/* delimiter */
 	if (no_end_dot == 0)
@@ -1821,7 +1840,7 @@ int db_deleted_purge(u64_t * affected_rows)
 		      __FILE__, __FUNCTION__);
 		return -2;
 	}
-
+	
 	/* delete each message */
 	for (i = 0; i < *affected_rows; i++)
 		message_idnrs[i] = db_get_result_u64(i, 0);
@@ -2030,7 +2049,7 @@ int db_findmailbox(const char *fq_name, u64_t user_idnr,
 	char *tempstr;
 	size_t index;
 	int result;
-	u64_t owner_idnr;
+	u64_t owner_idnr = 0;
 
 	assert(mailbox_idnr != NULL);
 	*mailbox_idnr = 0;
@@ -2187,6 +2206,14 @@ int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
 	    !tmp_mailboxes) {
 		trace(TRACE_ERROR, "%s,%s: not enough memory\n",
 		      __FILE__, __FUNCTION__);
+		if (all_mailboxes)
+			my_free(all_mailboxes);
+		if (all_mailbox_names)
+			my_free(all_mailbox_names);
+		if (all_mailbox_owners)
+			my_free(all_mailbox_owners);
+		if (tmp_mailboxes)
+			my_free(tmp_mailboxes);
 		return (-2);
 	}
 	
@@ -2411,6 +2438,7 @@ int db_createmailbox(const char *name, u64_t owner_idnr,
 	const char *simple_name;
 	assert(mailbox_idnr != NULL);
 	*mailbox_idnr = 0;
+
 	/* remove namespace information from mailbox name */
 	if (!(simple_name = mailbox_remove_namespace(name))) {
 		trace(TRACE_ERROR,
@@ -3136,9 +3164,9 @@ int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr,
 int db_set_msgflag_range(u64_t msg_idnr_low, u64_t msg_idnr_high,
 			 u64_t mailbox_idnr, int *flags, int action_type)
 {
-	int i;
-	int placed = 0;
-	int left;
+	size_t i;
+	size_t placed = 0;
+	size_t left;
 
 	snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET ");
 
@@ -3785,6 +3813,8 @@ char *date2char_str(const char *column)
 	len = strlen(TO_CHAR) + MAX_COLUMN_LEN;
 
 	s = (char *) my_malloc(len);
+	if (!s)
+		return NULL;
 
 	snprintf(s, len, TO_CHAR, column);
 
@@ -3799,6 +3829,8 @@ char *char2date_str(const char *date)
 	len = strlen(TO_CHAR) + MAX_DATE_LEN;
 
 	s = (char *) my_malloc(len);
+	if (!s)
+		return NULL;
 
 	snprintf(s, len, TO_DATE, date);
 

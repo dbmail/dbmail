@@ -508,7 +508,7 @@ u64_t db_get_useridnr(u64_t message_idnr);
  *     - -1 on failure
  *     -  1 on success
  */
-int db_insert_physmessage(u64_t * physmessage_id);
+int db_insert_physmessage(/*@out@*/ u64_t * physmessage_id);
 
 /**
  * \brief insert a physmessage with an internal date.
@@ -884,7 +884,7 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
  *      - 1 if found
  */
 int db_findmailbox(const char *name, u64_t user_idnr,
-		   u64_t * mailbox_idnr);
+		   /*@out@*/ u64_t * mailbox_idnr);
 /**
  * \brief finds all the mailboxes owned by owner_idnr who match 
  *        the regex pattern pattern.
@@ -955,7 +955,7 @@ int db_createmailbox(const char *name, u64_t owner_idnr,
  *    -  0 on success
  */
 int db_find_create_mailbox(const char *name, u64_t owner_idnr,
-			   u64_t * mailbox_idnr);
+			   /*@out@*/ u64_t * mailbox_idnr);
 /**
  * \brief produce a list containing the UID's of the specified
  *        mailbox' children matching the search criterion
