@@ -2070,6 +2070,7 @@ int dbmail_imap_session_mailbox_open(struct ImapSession * self, char * mailbox)
 		ud->state = IMAPCS_AUTHENTICATED;
 		dm_free(ud->mailbox.seq_list);
 		memset(&ud->mailbox, 0, sizeof(ud->mailbox));
+		dbmail_imap_session_printf(self, "%s NO specified mailbox does not exist\r\n", self->tag);
 		return 1; /* error */
 	}
 

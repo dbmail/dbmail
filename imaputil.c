@@ -1583,6 +1583,10 @@ int perform_imap_search(unsigned int *rset, int setlen, search_key_t * sk,
 	unsigned int *newset = NULL;
 	int subtype = IST_SUBSEARCH_OR;
 
+
+	if (!setlen) // empty mailbox
+		return 0;
+	
 	if (!rset) {
 		trace(TRACE_ERROR,"%s,%s: error empty rset", __FILE__, __func__);
 		return -2;	/* stupidity */

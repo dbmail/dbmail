@@ -168,13 +168,15 @@ int _ic_logout(struct ImapSession *self)
  */
 int _ic_login(struct ImapSession *self)
 {
+	int result;
 	timestring_t timestring;
 	
 	if (!check_state_and_args(self, "LOGIN", 2, 2, IMAPCS_NON_AUTHENTICATED))
 		return 1;
 	
 	create_current_timestring(&timestring);
-	dbmail_imap_session_handle_auth(self, self->args[0], self->args[1]);
+	if ((result = dbmail_imap_session_handle_auth(self, self->args[0], self->args[1])))
+		return result;
 	if (imap_before_smtp)
 		db_log_ip(self->ci->ip);
 
