@@ -33,6 +33,9 @@ extern char *apop_stamp;					/* the APOP string */
 
 extern int error_count;
 
+char *apop_stamp;
+
+
 int pop3 (void *stream, char *buffer, char *client_ip);
 
 /* allowed pop3 commands */
@@ -49,130 +52,162 @@ const char validchars[] =
 
 int pop3_handle_connection (clientinfo_t *ci)
 {
-  /*
+	/*
     Handles connection and calls
     pop command handler
-  */
+	 */
 
-  int done = 1; 				/* loop state */
-  char *buffer = NULL;		/* connection buffer */
-  int cnt; 					/* counter */
+	int done = 1; 				/* loop state */
+	char *buffer = NULL;		/* connection buffer */
+	char myhostname[64];
+	int cnt; 					/* counter */
+	time_t timestamp;
 
-  buffer=(char *)my_malloc(INCOMING_BUFFER_SIZE);
+	/* getting hostname */
+	  gethostname (myhostname,64);
+	  myhostname[63] = 0; /* make sure string is terminated */
+	
+	buffer=(char *)my_malloc(INCOMING_BUFFER_SIZE);
 
-  if (!buffer)
-    {
+	if (!buffer)
+	{
       trace (TRACE_MESSAGE,"pop3_handle_connection(): Could not allocate buffer");
       return 0;
-    }
+	}
 
-  /* set authorization state */
-  state = AUTHORIZATION;
+	/* create an unique timestamp + processid for APOP authentication */
+	apop_stamp=(char *)my_malloc(APOP_STAMP_SIZE);
 
-  while (done>0)
-    {
+	if (!apop_stamp)
+	{
+		trace (TRACE_MESSAGE,"pop3_handle_connection(): Could not allocate buffer for apop");
+		return 0;
+	}
+
+	timestamp=time(NULL);
+
+	sprintf (apop_stamp,"<%d.%lu@%s>",getpid(),timestamp,myhostname);
+
+	if (ci->tx)
+	{
+		/* sending greeting */
+		fprintf (ci->tx,"+OK DBMAIL pop3 server ready %s\r\n",apop_stamp);
+		fflush (ci->tx);
+	}
+	else
+	{
+		trace (TRACE_MESSAGE,"pop3_handle_connection(): TX stream is null!");
+      return 0;
+	}
+	
+	/* set authorization state */
+	state = AUTHORIZATION;
+
+	while (done>0)
+	{
       /* set the timeout counter */
       alarm (ci->timeout);
 
       memset(buffer, 0, INCOMING_BUFFER_SIZE);
       for (cnt=0; cnt < INCOMING_BUFFER_SIZE-1; cnt++)
-	{
-	  do
-	    {
-	      clearerr(ci->rx);
-	      fread(&buffer[cnt], 1, 1, ci->rx);
+		{
+			do
+			{
+				clearerr(ci->rx);
+				fread(&buffer[cnt], 1, 1, ci->rx);
 
-	      /* leave, an alarm has occured during fread */
-	      if (!ci->rx) return 0;
+				/* leave, an alarm has occured during fread */
+				if (!ci->rx) return 0;
 
-	    } while (ferror(ci->rx) && errno == EINTR);
+			} while (ferror(ci->rx) && errno == EINTR);
 
-	  if (buffer[cnt] == '\n' || feof(ci->rx) || ferror(ci->rx))
-	    {
-	      buffer[cnt+1] = '\0';
-	      break;
-	    }
-	}
+			if (buffer[cnt] == '\n' || feof(ci->rx) || ferror(ci->rx))
+			{
+				buffer[cnt+1] = '\0';
+				break;
+			}
+		}
 
       if (feof(ci->rx) || ferror(ci->rx))
-	done = -1;  /* check client eof  */
+			done = -1;  /* check client eof  */
       else
-	{
-	  alarm (0);                            /* reset function handle timeout */
-	  done = pop3(ci->tx, buffer, ci->ip);  /* handle pop3 commands */
-	  memset (buffer, '\0', INCOMING_BUFFER_SIZE);  /* cleanup the buffer */
+		{
+			alarm (0);                            /* reset function handle timeout */
+			done = pop3(ci->tx, buffer, ci->ip);  /* handle pop3 commands */
+			memset (buffer, '\0', INCOMING_BUFFER_SIZE);  /* cleanup the buffer */
 
+		}
+fflush (ci->tx);
 	}
-      fflush (ci->tx);
-    }
 
-  /* we've reached the state */
-  state = UPDATE;
+/* we've reached the state */
+state = UPDATE;
 
-  /* memory cleanup */
-  my_free(buffer);
-  buffer = NULL;
-  my_free(apop_stamp);
-  apop_stamp = NULL;
+/* memory cleanup */
+my_free(buffer);
+my_free(apop_stamp);
+buffer = NULL;
+my_free(apop_stamp);
+apop_stamp = NULL;
 
-  if (done == -3)
-    trace (TRACE_ERROR,"pop3_handle_connection(): alert: possible flood attempt, closing connection.");
-  else if (done < 0)
-    trace (TRACE_ERROR,"pop3_handle_connection(): client EOF, connection terminated");
-  else
-    {
-      if (username == NULL)
-	trace (TRACE_ERROR,"pop3_handle_connection(): error, uncomplete session");
-      else
-	trace(TRACE_MESSAGE,"pop3_handle_connection(): user %s logging out [message=%llu, octets=%llu]",
-	      username, curr_session.virtual_totalmessages,
-	      curr_session.virtual_totalsize);
+if (done == -3)
+trace (TRACE_ERROR,"pop3_handle_connection(): alert: possible flood attempt, closing connection.");
+else if (done < 0)
+trace (TRACE_ERROR,"pop3_handle_connection(): client EOF, connection terminated");
+else
+{
+	if (username == NULL)
+		trace (TRACE_ERROR,"pop3_handle_connection(): error, uncomplete session");
+	else
+		trace(TRACE_MESSAGE,"pop3_handle_connection(): user %s logging out [message=%llu, octets=%llu]",
+		  username, curr_session.virtual_totalmessages,
+		  curr_session.virtual_totalsize);
 
-      /* if everything went well, write down everything and do a cleanup */
-      db_update_pop(&curr_session);
-    }
+	/* if everything went well, write down everything and do a cleanup */
+	db_update_pop(&curr_session);
+}
 
-  /* clean this session */
-  db_session_cleanup(&curr_session);
+/* clean this session */
+db_session_cleanup(&curr_session);
 
-  if (username!=NULL)
-    {
-      /* username cleanup */
-      my_free(username);
-      username=NULL;
-    }
+if (username!=NULL)
+{
+	/* username cleanup */
+	my_free(username);
+	username=NULL;
+}
 
-  if (password!=NULL)
-    {
-      /* password cleanup */
-      my_free(password);
-      password=NULL;
-    }
+if (password!=NULL)
+{
+	/* password cleanup */
+	my_free(password);
+	password=NULL;
+}
 
-  /* reset timers */
-  alarm (0);
-  __debug_dumpallocs();
+/* reset timers */
+alarm (0);
+__debug_dumpallocs();
 
-  return 0;
+return 0;
 }
 
 
 int pop3_error (void *stream, const char *formatstring, ...)
 {
-  va_list argp;
-  va_start(argp, formatstring);
+	va_list argp;
+	va_start(argp, formatstring);
 
-  if (error_count>=MAX_ERRORS)
-    {
+	if (error_count>=MAX_ERRORS)
+	{
       trace (TRACE_MESSAGE,"pop3_error(): too many errors (MAX_ERRORS is %d)",MAX_ERRORS);
       fprintf ((FILE *)stream, "-ERR loser, go play somewhere else\r\n");
       return -3;
-    }
-  else
-    vfprintf ((FILE *)stream, formatstring, argp);
-  trace (TRACE_DEBUG,"pop3_error(): an invalid command was issued");
-  error_count++;
-  return 1;
+	}
+	else
+		vfprintf ((FILE *)stream, formatstring, argp);
+	trace (TRACE_DEBUG,"pop3_error(): an invalid command was issued");
+	error_count++;
+	return 1;
 }
 
 int pop3 (void *stream, char *buffer, char *client_ip)
@@ -192,8 +227,8 @@ int pop3 (void *stream, char *buffer, char *client_ip)
 	/* buffer overflow attempt */
 	if (strlen(buffer)>MAX_IN_BUFFER)
 	  {
-	    trace(TRACE_DEBUG, "pop3(): buffer overflow attempt");
-	    return -3;
+		trace(TRACE_DEBUG, "pop3(): buffer overflow attempt");
+		return -3;
 	  }
 
 	/* check for command issued */
