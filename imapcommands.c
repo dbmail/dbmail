@@ -940,9 +940,8 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
   if (!check_state_and_args(thisname, tag, args, 2, IMAPCS_AUTHENTICATED, ci))
     return 1; /* error, return */
 
-  /* remove trailing '/' if exist */
-  while (strlen(args[0]) > 0 && args[0][strlen(args[0]) - 1] == '/') args[0][strlen(args[0]) - 1] = '\0';
-  while (strlen(args[1]) > 0 && args[1][strlen(args[1]) - 1] == '/') args[1][strlen(args[1]) - 1] = '\0';
+  /* check the reference name, should contain only accepted mailboxname chars */
+  for (i=0; i<
 
   /* check if args are both empty strings */
   if (strlen(args[0]) == 0 && strlen(args[1]) == 0)
@@ -953,113 +952,6 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
       return 0;
     }
 
-  /* show first arg info */
-  mboxid = db_findmailbox(args[0], ud->userid);
-  if (mboxid == (unsigned long)(-1))
-    {
-      fprintf(ci->tx,"* BYE internal dbase error\r\n");
-      return -1;
-    }
-  
-  if (mboxid > 0)
-    {
-      /* mailbox exists */
-      fprintf(ci->tx,"* %s (",thisname);
-      
-      /* show flags */
-      result = db_isselectable(mboxid);
-      if (result == -1)
-	{
-	  fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
-	  return -1;
-	}
-
-      if (result) fprintf(ci->tx,"\\noselect ");
-
-      result = db_noinferiors(mboxid);
-      if (result == -1)
-	{
-	  fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
-	  return -1;
-	}
-
-      if (result) fprintf(ci->tx,"\\r\noinferiors ");
-
-      result = db_getmailboxname(mboxid, name);
-      if (result == -1)
-	{
-	  fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
-	  return -1;
-	}
-
-      /* show delimiter & name */
-      fprintf(ci->tx,") \"/\" %s\r\n",name);
-    }
-
-  /* now check the children */
-  /* check if % wildcards are the only ones used */
-  /* replace '*' wildcard by '%' */
-  percpresent = 0;
-  starpresent = 0;
-  for (i=0; i<strlen(args[1]); i++)
-    {
-      if (args[1][i] == '%')
-	percpresent = 1;
-
-      if (args[1][i] == '*') 
-	{
-	  args[1][i] = '%';
-	  starpresent = 1;
-	}
-    }
-
-  result = db_listmailboxchildren(mboxid, ud->userid, &children, &nchildren, args[1]);
-  if (result == -1)
-    {
-      fprintf(ci->tx,"* BYE internal dbase error\r\n");
-      return -1;
-    }
-
-  for (i=0; i<nchildren; i++)
-    {
-      /* get name */
-      result = db_getmailboxname(children[i], name);
-      if (result == -1)
-	{
-	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
-	  free(children);
-	  return -1;
-	}
-
-      fprintf(ci->tx,"* %s (",thisname);
-
-      /* show flags */
-      result = db_isselectable(children[i]);
-      if (result == -1)
-	{
-	  fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
-	  free(children);
-	  return -1;
-	}
-
-      if (!result) fprintf(ci->tx,"\\r\noselect ");
-
-      result = db_noinferiors(children[i]);
-      if (result == -1)
-	{
-	  fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
-	  free(children);
-	  return -1;
-	}
-
-      if (result) fprintf(ci->tx,"\\r\noinferiors ");
-
-      /* show delimiter & name */
-      fprintf(ci->tx,") \"/\" %s\r\n",name);
-    }
-
-  if (children)
-    free(children);
 
   fprintf(ci->tx,"%s OK %s completed\r\n",tag,thisname);
   return 0;
