@@ -1346,7 +1346,6 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
   int i,fetch_start,fetch_end,result,setseen,j,k;
   int isfirstout,idx,headers_fetched,uid_will_be_fetched;
   int partspeclen,only_text_from_msgpart = 0;
-  int expand_newlines=0;
   fetch_items_t *fi,fetchitem;
   mime_message_t msg,*msgpart;
   char date[IMAP_INTERNALDATE_LEN],*endptr;
@@ -1564,6 +1563,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	    {
 	      fi = (fetch_items_t*)curr->data;
 	      rewind(tmpfile);
+	      fflush(ci->tx);
 
 	      if (!headers_fetched && fi->msgparse_needed)
 		{
@@ -1633,6 +1633,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		{
 		  fprintf(ci->tx,"ENVELOPE ");
 		  result = retrieve_envelope(ci->tx, &msg.rfcheader);
+
 		  if (result == -1)
 		    {
 		      fprintf(ci->tx,"\r\n* BYE error fetching envelope structure\r\n");
@@ -1646,12 +1647,8 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
 	      if (fi->getRFC822)
 		{
-		  expand_newlines =
-		    (is_textplain(&msg.rfcheader) || is_textplain(&msg.mimeheader));
-
 		  dumpsize  = rfcheader_dump(tmpfile, &msg.rfcheader, args, 0, 0);
-		  dumpsize += db_dump_range(tmpfile, msg.bodystart, msg.bodyend, thisnum,
-					    expand_newlines);
+		  dumpsize += db_dump_range(tmpfile, msg.bodystart, msg.bodyend, thisnum);
 		  
 		  fseek(tmpfile, 0, SEEK_SET);
 
@@ -1664,35 +1661,28 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		  
 	      if (fi->getRFC822Peek)
 		{
-		  expand_newlines =
-		    (is_textplain(&msg.rfcheader) || is_textplain(&msg.mimeheader));
-
 		  dumpsize  = rfcheader_dump(tmpfile, &msg.rfcheader, args, 0, 0);
-		  dumpsize += db_dump_range(tmpfile, msg.bodystart, msg.bodyend, thisnum,
-					    expand_newlines);
+		  dumpsize += db_dump_range(tmpfile, msg.bodystart, msg.bodyend, thisnum);
 		  
 		  fseek(tmpfile, 0, SEEK_SET);
 
 		  fprintf(ci->tx, "RFC822 {%ld}\r\n", dumpsize);
 		  while (dumpsize--)
 		    fputc(fgetc(tmpfile), ci->tx);
+
 		}
 		  
 	      if (fi->getSize)
 		{
-		  /* add 2 for an extra \r\n */
+		  /* add 2 for an extra \r\n ??? */
 		  fprintf(ci->tx,"RFC822.SIZE %lu ", msg.rfcheadersize + msg.bodysize + 
-			  + msg.bodylines + 2);
+			  + msg.bodylines);
 		}
 
 	      if (fi->getBodyTotal)
 		{
-		  expand_newlines =
-		    (is_textplain(&msg.rfcheader) || is_textplain(&msg.mimeheader));
-
 		  dumpsize  = rfcheader_dump(tmpfile, &msg.rfcheader, args, 0, 0);
-		  dumpsize += db_dump_range(tmpfile, msg.bodystart, msg.bodyend, thisnum,
-					    expand_newlines);
+		  dumpsize += db_dump_range(tmpfile, msg.bodystart, msg.bodyend, thisnum);
 		  
 		  fseek(tmpfile, 0, SEEK_SET);
 
@@ -1701,22 +1691,20 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		    fputc(fgetc(tmpfile), ci->tx);
 
 		  setseen = 1;
+
 		}
 
 	      if (fi->getBodyTotalPeek)
 		{
-		  expand_newlines =
-		    (is_textplain(&msg.rfcheader) || is_textplain(&msg.mimeheader));
-
 		  dumpsize  = rfcheader_dump(tmpfile, &msg.rfcheader, args, 0, 0);
-		  dumpsize += db_dump_range(tmpfile, msg.bodystart, msg.bodyend, thisnum,
-					    expand_newlines);
+		  dumpsize += db_dump_range(tmpfile, msg.bodystart, msg.bodyend, thisnum);
 		  
 		  fseek(tmpfile, 0, SEEK_SET);
 
 		  fprintf(ci->tx, "BODY[] {%ld}\r\n", dumpsize);
 		  while (dumpsize--)
 		    fputc(fgetc(tmpfile), ci->tx);
+
 		}
 
 	      if (fi->getRFC822Header)
@@ -1728,15 +1716,13 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		  fprintf(ci->tx, "RFC822.HEADER {%ld}\r\n",dumpsize);
 		  while (dumpsize--)
 		    fputc(fgetc(tmpfile), ci->tx);
+
+		  fprintf(ci->tx," ");
 		}
 	      
 	      if (fi->getRFC822Text)
 		{
-		  expand_newlines =
-		    (is_textplain(&msg.rfcheader) || is_textplain(&msg.mimeheader));
-
-		  dumpsize = db_dump_range(tmpfile, msg.bodystart, msg.bodyend, thisnum,
-					    expand_newlines);
+		  dumpsize = db_dump_range(tmpfile, msg.bodystart, msg.bodyend, thisnum);
 
 		  fprintf(ci->tx, "RFC822.TEXT {%ld}\r\n",dumpsize);
 		  while (dumpsize--)
@@ -1826,15 +1812,8 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			fprintf(ci->tx, "] NIL ");
 		      else
 			{
-			  /* check if newlines should be expanded to CRLF
-			   * (only for text/plain)
-			   */
-			  expand_newlines =
-			    (is_textplain(&msgpart->rfcheader) || is_textplain(&msgpart->mimeheader));
-			    
-			      
 			  dumpsize = db_dump_range(tmpfile, msgpart->bodystart, msgpart->bodyend,
-						   thisnum, expand_newlines);
+						   thisnum);
 
 			  if (fi->bodyfetch.octetstart >= 0)
 			    {
@@ -1990,6 +1969,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			  /* output data */
 			  while (cnt--)
 			    fputc(fgetc(tmpfile), ci->tx);
+
 			}
 		      break;
 		    case BFIT_MIME:
@@ -2088,7 +2068,9 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			}
 
 		    }
-		  fprintf(ci->tx,") ");
+		   
+		  fprintf(ci->tx,")%s",curr->nextnode ? " ":"");
+		  
 		}
 
 	      curr = curr->nextnode;

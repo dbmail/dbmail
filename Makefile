@@ -21,8 +21,9 @@ LIB = -lmysqlclient
 
 # Added the -D_BSD_SOURCE option to suppress warnings
 # from compiler about vsyslog function 
+# Added the -D_SVID_SOURCE option because ipc.h asked me to.
 
-CFLAGS = -Wall -ggdb -D_BSD_SOURCE -O2
+CFLAGS = -Wall -ggdb -D_BSD_SOURCE -D_SVID_SOURCE -O2
 
 .PHONY: clean install
 

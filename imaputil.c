@@ -90,7 +90,7 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg, int show_extension_
       if (mr && strlen(mr->value) > 0)
 	show_mime_parameter_list(outstream, mr, 1, 0);
       else
-	fprintf(outstream,"\"TEXT\" \"PLAIN\" NIL"); /* default */
+	fprintf(outstream,"\"TEXT\" \"PLAIN\" (\"CHARSET\" \"US-ASCII\")"); /* default */
 
       mime_findfield("content-id", header_to_use, &mr);
       if (mr && strlen(mr->value) > 0)
@@ -108,10 +108,11 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg, int show_extension_
       if (mr && strlen(mr->value) > 0)
 	fprintf(outstream, " \"%s\"",mr->value);
       else
-	fprintf(outstream, " NIL");
+	fprintf(outstream, " \"7BIT\"");
 
       /* now output size */
-      fprintf(outstream, " %lu ", msg->bodysize + msg->bodylines + 1); /* +1 ??? */
+      /* add msg->bodylines because \n is dumped as \r\n */
+      fprintf(outstream, " %lu ", msg->bodysize + msg->bodylines ); 
 
 
       /* now check special cases, first case: message/rfc822 */

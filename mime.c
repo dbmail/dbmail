@@ -182,7 +182,7 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist,
   struct mime_record *mr;
   struct element *el;   
 	
-  trace (TRACE_INFO, "mime_readheader(): entering mime loop\n");
+  trace (TRACE_DEBUG, "mime_readheader(): entering mime loop\n");
 
   list_init(mimelist);
   *headersize = 0;
@@ -291,6 +291,7 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist,
 	      /* end of header: double newline */
 	      totallines++;
 	      (*blkidx)++;
+	      (*headersize)+=2;
 	      trace(TRACE_DEBUG,"mime_readheader(): found double newline; header size: %d lines\n",
 		    totallines);
 	      free(mr);

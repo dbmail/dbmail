@@ -29,12 +29,27 @@
 
 #define LOG_USERS 0
 
+/* error data */
 #define SS_ERROR_MSG_LEN 100
 char  ss_error_msg[SS_ERROR_MSG_LEN];
+
+/* shared memory */
 key_t shm_key = 0;
 int   shm_id;
 
 #define SHM_ALLOC_SIZE (sizeof(int))
+
+/* the client being processed, this data is global 
+ * to be able to see it in the sighandler
+ */
+ClientInfo client;
+int *ss_n_default_children_used;
+
+/* transmit buffer */
+#define TXBUFSIZE 1024
+char txbuf[TXBUFSIZE];
+
+
 
 char *SS_GetErrorMsg()
 {
@@ -136,11 +151,9 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 {
   struct sockaddr_in saClient;
   int csock,len,i;
-  ClientInfo client;
   struct sigaction act;
   int ss_nchildren=0;
   pid_t ss_server_pid=0;
-  int *ss_n_default_children_used;
 
   /* init & install signal handlers */
   memset(&act, 0, sizeof(act));
@@ -190,7 +203,6 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 	ss_nchildren++;
     }
 
-
   /* now split program into client part and server part */
   if (getpid() != ss_server_pid)
     {
@@ -225,12 +237,17 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 	      /* write-FILE opening failure */
 	      fclose(client.rx);
 	      close(csock); 
+	      memset(&client, 0, sizeof(client));
+
 	      continue;
 	    }
 
 	  setlinebuf(client.rx);
 	  setlinebuf(client.tx);
 
+/*	  setvbuf(client.tx, txbuf, _IONBF, TXBUFSIZE);
+*/
+	  
 #if LOG_USERS > 0
 	  trace(TRACE_MESSAGE,"** Server: client @ socket %d (IP: %s) accepted\n",
 		csock, inet_ntoa(saClient.sin_addr));
@@ -245,6 +262,9 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 	      /* login failure */
 	      fclose(client.rx);
 	      fclose(client.tx);
+
+	      memset(&client, 0, sizeof(client));
+	      
 	      close(csock);
 	  
 #if LOG_USERS > 0
@@ -271,12 +291,18 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 		  csock, client.ip);
 #endif
 
-	  fflush(client.tx);
-	  fclose(client.tx);
-	  shutdown(fileno(client.rx),SHUT_RDWR);
-	  fclose(client.rx);
+	  if (client.tx && client.rx)
+	    {
+	      fflush(client.tx);
+	      fclose(client.tx);
+	      shutdown(fileno(client.rx),SHUT_RDWR);
+	      fclose(client.rx);
+	      
+	      memset(&client, 0, sizeof(client));
 
-	  (*ss_n_default_children_used)--;
+	      (*ss_n_default_children_used)--;
+	    }
+
 	  trace(TRACE_DEBUG, "[%ld] child close, dcu: %d\n",getpid(),*ss_n_default_children_used);
 
 	} /* main client loop */
@@ -341,6 +367,9 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 	      setlinebuf(client.rx);
 	      setlinebuf(client.tx);
 
+
+/*	      setvbuf(client.tx, txbuf, _IOFBF, TXBUFSIZE);
+*/
 #if LOG_USERS > 0
 	      trace(TRACE_MESSAGE,"** Server: client @ socket %d (IP: %s) accepted\n",
 		    csock, inet_ntoa(saClient.sin_addr));
@@ -377,10 +406,15 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 		      csock, client.ip);
 #endif
 
-	      fflush(client.tx);
-	      fclose(client.tx);
-	      shutdown(fileno(client.rx),SHUT_RDWR);
-	      fclose(client.rx);
+	      if (client.tx && client.rx)
+		{
+		  fflush(client.tx);
+		  fclose(client.tx);
+		  shutdown(fileno(client.rx),SHUT_RDWR);
+		  fclose(client.rx);
+
+		  memset(&client, 0, sizeof(client));
+		}
 
 	      return 0; /* child must exit */
 	    }
@@ -423,7 +457,7 @@ void SS_sighandler(int sig, siginfo_t *info, void *data)
       break;
 
     case SIGPIPE: 
-      trace(TRACE_FATAL,"Received SIGPIPE\n");
+      trace(TRACE_ERROR,"Received SIGPIPE\n");
       break;
 
     case SIGINT: 

@@ -1868,7 +1868,7 @@ int db_expunge(unsigned long uid,unsigned long **msgids,int *nmsgs)
 
   /* first select msg UIDs */
   snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message WHERE"
-	   " mailboxidnr = %lu AND deleted_flag=1 ORDER BY messageidnr DESC", uid);
+	   " mailboxidnr = %lu AND deleted_flag=1 AND status<2 ORDER BY messageidnr DESC", uid);
 
   if (db_query(query) == -1)
     {
@@ -1903,7 +1903,7 @@ int db_expunge(unsigned long uid,unsigned long **msgids,int *nmsgs)
   
   /* update messages belonging to this mailbox: mark as expunged (status 3) */
   snprintf(query, DEF_QUERYSIZE, "UPDATE message SET status=3 WHERE"
-	   " mailboxidnr = %lu AND deleted_flag=1", uid);
+	   " mailboxidnr = %lu AND deleted_flag=1 AND status<2", uid);
 
   if (db_query(query) == -1)
     {
@@ -2764,7 +2764,7 @@ unsigned long db_give_range_size(db_pos_t *start, db_pos_t *end)
   if (start->block == end->block)
     return (start->pos > end->pos) ? 0 : (end->pos - start->pos+1);
 
-  if (start->pos >= blklengths[start->block] || end->pos >= blklengths[end->block])
+  if (start->pos > blklengths[start->block] || end->pos > blklengths[end->block])
     return 0; /* bad range */
 
   size = blklengths[start->block] - start->pos;
@@ -2788,7 +2788,7 @@ unsigned long db_give_range_size(db_pos_t *start, db_pos_t *end)
  */
 int db_start_msg(mime_message_t *msg, char *stopbound)
 {
-  int len,sblen,result,totallines=0,nlines;
+  int len,sblen,result,totallines=0,nlines,hdrlines;
   struct mime_record *mr;
   char *newbound,*bptr;
 
@@ -2800,11 +2800,11 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
   if (db_update_msgbuf(MSGBUF_FORCE_UPDATE) == -1)
     return -1;
 
-  if ((nlines = mime_readheader(&msgbuf[msgidx], &msgidx, 
+  if ((hdrlines = mime_readheader(&msgbuf[msgidx], &msgidx, 
 				&msg->rfcheader, &msg->rfcheadersize)) == -1)
     return -1;   /* error reading header */
 
-/*  totallines += nlines;*/ /* dont count newlines in header... */
+/*  totallines += hdrlines;*/ /* dont count newlines in header... */
   db_give_msgpos(&msg->bodystart);
 
   mime_findfield("content-type", &msg->rfcheader, &mr);
@@ -2866,7 +2866,8 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 	}
 
       msgidx += strlen(newbound);   /* skip the boundary */
-      msgidx++;                     /* skip \n */
+      msgidx++;                     /* skip \n ... */
+      /*totallines++;*/                 /* ... but count it */
 
       /* find MIME-parts */
       if ((nlines = db_add_mime_children(&msg->children, newbound)) == -1)
@@ -2880,8 +2881,9 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
       free(newbound);
       db_give_msgpos(&msg->bodyend);
       msg->bodysize = db_give_range_size(&msg->bodystart, &msg->bodyend);
+      msg->bodylines = totallines;
 
-      return totallines;                        /* done */
+      return totallines+hdrlines;                        /* done */
     }
   else
     {
@@ -2930,16 +2932,26 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
       else
 	{
 	  /* walk on till end of buffer */
-	  do
+	  result = 1;
+	  while (1)
 	    {
 	      for ( ; msgidx < buflen-1; msgidx++)
 		if (msgbuf[msgidx] == '\n')
 		  msg->bodylines++;
 	      
+	      if (result == 0)
+		{
+		  /* end of msg reached, one char left in msgbuf */
+		  if (msgbuf[msgidx] == '\n')
+		    msg->bodylines++;
+
+		  break; 
+		}
+
 	      result = db_update_msgbuf(MSGBUF_FORCE_UPDATE);
 	      if (result == -1)
 		return -1;
-	    } while (result == 1);
+	    } 
 
 	  db_give_msgpos(&msg->bodyend);
 	  msg->bodysize = db_give_range_size(&msg->bodystart, &msg->bodyend);
@@ -3020,6 +3032,10 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
 
 	  totallines += part.bodylines;
 
+	  if (msgbuf[msgidx] == '\n')
+	    totallines++;
+
+
 	  if (!msgbuf[msgidx])
 	    {
 	      trace(TRACE_ERROR,"db_add_mime_children(): unexpected end of data\n");
@@ -3051,12 +3067,19 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
 
 	  /* probably some newlines will follow (not specified but often there) */
 	  while (msgbuf[msgidx] == '\n') 
-	    msgidx++;
+	    {
+	      totallines++;
+	      msgidx++;
+	    }
 
 	  return totallines;
 	}
 
-      if (msgbuf[msgidx] == '\n') msgidx++; /* skip newline */
+      if (msgbuf[msgidx] == '\n') 
+	{
+	  totallines++;
+	  msgidx++; /* skip newline */
+	}
     }
   while (msgbuf[msgidx]) ;
 
@@ -3143,8 +3166,7 @@ int db_msgdump(mime_message_t *msg, unsigned long msguid)
  *
  * returns -1 on error or the number of output bytes otherwise
  */
-long db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long msguid,
-		   int expand_newlines)
+long db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long msguid)
 {
   char query[DEF_QUERYSIZE];
   int i,startpos,endpos,j;
@@ -3196,18 +3218,13 @@ long db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long 
   if (start.block == end.block)
     {
       /* dump everything */
-      if (expand_newlines == expand_newlines)
+      for (i=start.pos; i<=end.pos; i++)
 	{
-	  for (i=start.pos; i<end.pos+1; i++)
-	    {
-	      if (row[0][i] == '\n')
-		outcnt += fprintf(outstream,"\r\n");
-	      else
-		outcnt += fprintf(outstream,"%c",row[0][i]);
-	    }
+	  if (row[0][i] == '\n')
+	    outcnt += fprintf(outstream,"\r\n");
+	  else
+	    outcnt += fprintf(outstream,"%c",row[0][i]);
 	}
-      else
-	outcnt += fwrite(&row[0][start.pos], 1, end.pos - start.pos, outstream);
 
       fflush(outstream);
       mysql_free_result(res);
@@ -3229,23 +3246,18 @@ long db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long 
 	}
 
       startpos = (i == start.block) ? start.pos : 0;
-      endpos   = (i == end.block) ? end.pos : (mysql_fetch_lengths(res))[0];
+      endpos   = (i == end.block) ? end.pos+1 : (mysql_fetch_lengths(res))[0];
 
       distance = endpos - startpos;
 
       /* output */
-      if (expand_newlines == expand_newlines) /* always expand newlines */
+      for (j=0; j<distance; j++)
 	{
-	  for (j=0; j<distance; j++)
-	    {
-	      if (row[0][startpos+j] == '\n')
-		outcnt += fprintf(outstream,"\r\n");
-	      else
-		outcnt += fprintf(outstream,"%c", row[0][startpos+j]);
-	    }
+	  if (row[0][startpos+j] == '\n')
+	    outcnt += fprintf(outstream,"\r\n");
+	  else
+	    outcnt += fprintf(outstream,"%c", row[0][startpos+j]);
 	}
-      else
-	outcnt += fwrite(&row[0][start.pos], 1, distance, outstream);
 	
       row = mysql_fetch_row(res); /* fetch next row */
     }
@@ -3287,4 +3299,6 @@ int db_mailbox_msg_match(unsigned long mailboxuid, unsigned long msguid)
 
   return val;
 }
+
+
 
