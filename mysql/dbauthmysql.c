@@ -62,7 +62,7 @@ int auth_disconnect()
 /* sets a connection to use */
 void auth_set_connection(void *dbconn)
 {
-  __auth_conn = *(MYSQL*)dbconn;
+  memcpy(&__auth_conn, (MYSQL*)dbconn, sizeof(MYSQL));
 }
 
 
