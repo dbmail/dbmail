@@ -1,0 +1,191 @@
+-- Copyright (C) 2005 Internet Connection, Inc.
+--
+-- This program is free software; you can redistribute it and/or 
+-- modify it under the terms of the GNU General Public License 
+-- as published by the Free Software Foundation; either 
+-- version 2 of the License, or (at your option) any later 
+-- version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program; if not, write to the Free Software
+-- Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+-- $Id$
+
+BEGIN TRANSACTION;
+
+CREATE TABLE dbmail_aliases (
+   alias_idnr INTEGER PRIMARY KEY,
+   alias TEXT NOT NULL,
+   deliver_to TEXT NOT NULL,
+   client_idnr INTEGER DEFAULT '0' NOT NULL
+);
+CREATE INDEX dbmail_aliases_index_1 ON dbmail_aliases(alias);
+CREATE INDEX dbmail_aliases_index_2 ON dbmail_aliases(client_idnr);
+
+CREATE TABLE dbmail_users (
+   user_idnr INTEGER PRIMARY KEY,
+   userid TEXT NOT NULL,
+   passwd TEXT NOT NULL,
+   client_idnr INTEGER DEFAULT '0' NOT NULL,
+   maxmail_size INTEGER DEFAULT '0' NOT NULL,
+   curmail_size INTEGER DEFAULT '0' NOT NULL,
+   encryption_type TEXT DEFAULT '' NOT NULL,
+   last_login DATETIME DEFAULT '1979-11-03 22:05:58' NOT NULL
+);
+CREATE UNIQUE INDEX dbmail_users_1 ON dbmail_users(userid);
+
+CREATE TABLE dbmail_mailboxes (
+   mailbox_idnr INTEGER PRIMARY KEY,
+   owner_idnr INTEGER DEFAULT '0' NOT NULL,
+   name TEXT BINARY NOT NULL,
+   seen_flag BOOLEAN default '0' not null,
+   answered_flag BOOLEAN default '0' not null,
+   deleted_flag BOOLEAN default '0' not null,
+   flagged_flag BOOLEAN default '0' not null,
+   recent_flag BOOLEAN default '0' not null,
+   draft_flag BOOLEAN default '0' not null,
+   no_inferiors BOOLEAN default '0' not null,
+   no_select BOOLEAN default '0' not null,
+   permission BOOLEAN default '2'
+);
+CREATE INDEX dbmail_mailboxes_1 ON dbmail_mailboxes(name);
+CREATE INDEX dbmail_mailboxes_2 ON dbmail_mailboxes(owner_idnr);
+CREATE UNIQUE INDEX dbmail_mailboxes_3 ON dbmail_mailboxes(owner_idnr,name);
+
+CREATE TABLE dbmail_subscription (
+	user_id INTEGER NOT NULL,
+	mailbox_id INTEGER NOT NULL
+);
+CREATE TRIGGER dbmail_subscription_constraint_insert
+	BEFORE INSERT ON dbmail_subscription
+	BEGIN
+		SELECT CASE WHEN foo.a > 0 THEN RAISE(ROLLBACK, 'UNIQUEness constraint violation')
+		ELSE 1 END FROM (
+		SELECT COUNT(*) AS a FROM dbmail_subscription
+			WHERE new.user_id = dbmail_subscription.user_id
+			AND new.mailbox_id = dbmail_subscription.mailbox_id
+		) AS foo;
+	END;
+CREATE TRIGGER dbmail_subscription_constraint_update
+	BEFORE UPDATE ON dbmail_subscription
+	BEGIN
+		SELECT CASE WHEN foo.a > 0 THEN RAISE(ROLLBACK, 'UNIQUEness constraint violation')
+		ELSE 1 END FROM (
+		SELECT COUNT(*) AS a FROM dbmail_subscription
+			WHERE new.user_id = dbmail_subscription.user_id
+			AND new.mailbox_id = dbmail_subscription.mailbox_id
+		) AS foo;
+	END;
+
+CREATE TABLE dbmail_acl (
+	user_id INTEGER NOT NULL,
+	mailbox_id INTEGER NOT NULL,
+	lookup_flag BOOLEAN default '0' not null,
+	read_flag BOOLEAN default '0' not null,
+	seen_flag BOOLEAN default '0' not null,
+	write_flag BOOLEAN default '0' not null,
+	insert_flag BOOLEAN default '0' not null,	
+	post_flag BOOLEAN default '0' not null,
+	create_flag BOOLEAN default '0' not null,	
+	delete_flag BOOLEAN default '0' not null,	
+	administer_flag BOOLEAN default '0' not null
+);
+CREATE TRIGGER dbmail_acl_constraint_insert
+	BEFORE INSERT ON dbmail_acl
+	BEGIN
+		SELECT CASE WHEN foo.a > 0 THEN RAISE(ROLLBACK, 'UNIQUEness constraint violation')
+		ELSE 1 END FROM (
+		SELECT COUNT(*) AS a FROM dbmail_acl
+			WHERE new.user_id = dbmail_acl.user_id
+			AND new.mailbox_id = dbmail_acl.mailbox_id
+		) AS foo;
+	END;
+CREATE TRIGGER dbmail_acl_constraint_update
+	BEFORE UPDATE ON dbmail_acl
+	BEGIN
+		SELECT CASE WHEN foo.a > 0 THEN RAISE(ROLLBACK, 'UNIQUEness constraint violation')
+		ELSE 1 END FROM (
+		SELECT COUNT(*) AS a FROM dbmail_acl
+			WHERE new.user_id = dbmail_acl.user_id
+			AND new.mailbox_id = dbmail_acl.mailbox_id
+		) AS foo;
+	END;
+	
+CREATE TABLE dbmail_physmessage (
+   id INTEGER PRIMARY KEY,
+   messagesize INTEGER DEFAULT '0' NOT NULL,
+   rfcsize INTEGER DEFAULT '0' NOT NULL,
+   internal_date DATETIME default '0' not null
+);
+ 
+CREATE TABLE dbmail_messages (
+   message_idnr INTEGER PRIMARY KEY,
+   mailbox_idnr INTEGER DEFAULT '0' NOT NULL,
+   physmessage_id INTEGER DEFAULT '0' NOT NULL,
+   seen_flag BOOLEAN default '0' not null,
+   answered_flag BOOLEAN default '0' not null,
+   deleted_flag BOOLEAN default '0' not null,
+   flagged_flag BOOLEAN default '0' not null,
+   recent_flag BOOLEAN default '0' not null,
+   draft_flag BOOLEAN default '0' not null,
+   unique_id TEXT NOT NULL,
+   status BOOLEAN unsigned default '0' not null
+);
+CREATE INDEX dbmail_messages_1 ON dbmail_messages(mailbox_idnr);
+CREATE INDEX dbmail_messages_2 ON dbmail_messages(physmessage_id);
+CREATE INDEX dbmail_messages_3 ON dbmail_messages(seen_flag);
+CREATE INDEX dbmail_messages_4 ON dbmail_messages(unique_id);
+CREATE INDEX dbmail_messages_5 ON dbmail_messages(status);
+CREATE INDEX dbmail_messages_6 ON dbmail_messages(mailbox_idnr,status);
+
+CREATE TABLE dbmail_messageblks (
+   messageblk_idnr INTEGER PRIMARY KEY,
+   physmessage_id INTEGER DEFAULT '0' NOT NULL,
+   messageblk TEXT NOT NULL,
+   blocksize INTEGER DEFAULT '0' NOT NULL,
+   is_header BOOLEAN DEFAULT '0' NOT NULL
+);
+CREATE INDEX dbmail_messageblks_1 ON dbmail_messageblks(physmessage_id);
+CREATE INDEX dbmail_messageblks_2 ON dbmail_messageblks(physmessage_id, is_header);
+
+CREATE TABLE dbmail_auto_notifications (
+   user_idnr INTEGER PRIMARY KEY,
+   notify_address VARCHAR(100)
+);
+
+CREATE TABLE dbmail_auto_replies (
+   user_idnr INTEGER PRIMARY KEY,
+   reply_body TEXT
+);
+
+CREATE TABLE dbmail_pbsp (
+   idnr INTEGER PRIMARY KEY,
+   since DATETIME default '0' not null,
+   ipnumber TEXT NOT NULL
+);
+CREATE UNIQUE INDEX dbmail_pbsp_1 ON dbmail_pbsp(ipnumber);
+CREATE INDEX dbmail_pbsp_2 ON dbmail_pbsp(since);
+
+CREATE TABLE dbmail_sievescripts (
+  owner_idnr INTEGER DEFAULT '0' NOT NULL,
+  name TEXT NOT NULL,
+  script TEXT,
+  active BOOLEAN default '0' not null
+);
+CREATE INDEX dbmail_sievescripts_1 ON dbmail_sievescripts(name);
+CREATE INDEX dbmail_sievescripts_2 ON dbmail_sievescripts(owner_idnr);
+CREATE INDEX dbmail_sievescripts_3 ON dbmail_sievescripts(owner_idnr,name);
+
+-- create the user for the delivery chain
+INSERT INTO dbmail_users (userid, passwd, encryption_type) 
+	VALUES ('__@!internal_delivery_user!@__', '', 'md5');
+-- insert the 'anyone' user which is used for ACLs.
+INSERT INTO dbmail_users (userid, passwd, encryption_type) 
+	VALUES ('anyone', '', 'md5');
+
+COMMIT;
