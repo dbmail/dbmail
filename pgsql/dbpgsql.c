@@ -115,33 +115,33 @@ int db_query (const char *thequery, void *target_result)
 {
     unsigned int querysize = 0;
     int PQresultStatusVar;
-    
+
     if (thequery != NULL)
     {
         querysize = strlen(thequery);
 
         if (querysize > 0 )
         {
-        *(PGresult **) target_result = PQexec (conn, thequery);
+        *(PGresult **)target_result = PQexec (conn, thequery);
         PQresultStatusVar = PQresultStatus (*(PGresult **)target_result);
 
         switch (PQresultStatusVar)
             {
                 case PGRES_BAD_RESPONSE:
                 {
-                    trace (TRACE_ERROR,"db_query(): postgresql error: BAD_RESPONSE");
+                    trace (TRACE_ERROR,"db_query(): postgresql error: PGRES_BAD_RESPONSE");
                     PQclear (*(PGresult **)target_result);
                     return -1;
                 }
                 case PGRES_NONFATAL_ERROR:
                 {
-                    trace (TRACE_ERROR,"db_query(): postgresql error: NONFATAL_ERROR");
+                    trace (TRACE_ERROR,"db_query(): postgresql error: PGRES_NONFATAL_ERROR");
                     PQclear (*(PGresult **)target_result);
                     return -1;
                 }
                 case PGRES_FATAL_ERROR:
                 {
-                    trace (TRACE_ERROR,"db_query(): postgresql error: FATAL_ERROR");
+                    trace (TRACE_ERROR,"db_query(): postgresql error: PGRES_FATAL_ERROR");
                     PQclear (*(PGresult **)target_result);
                     return -1;
                 }
@@ -167,7 +167,7 @@ int db_query (const char *thequery, void *target_result)
  */
 int db_clear_config()
 {
-  return db_query("DELETE FROM config", res);
+  return db_query("DELETE FROM config", &res);
 }
 
 
@@ -178,7 +178,7 @@ int db_insert_config_item (char *item, char *val)
   snprintf (query, DEF_QUERYSIZE,"INSERT INTO config (item,value) VALUES ('%s', '%s')",item, val);
   trace (TRACE_DEBUG,"insert_config_item(): executing query: [%s]",query);
 
-  if (db_query(query, res)==-1)
+  if (db_query(query, &res)==-1)
     {
       trace (TRACE_DEBUG,"insert_config_item(): item [%s] value [%s] failed",item,value);
       return -1;
@@ -199,7 +199,7 @@ char *db_get_config_item (char *item, int type)
   trace (TRACE_DEBUG,"db_get_config_item(): retrieving config_item %s by query %s\n",
 	 item, query);
 
-  if (db_query(query, res)==-1)
+  if (db_query(query, &res)==-1)
     {
       if (type == CONFIG_MANDATORY)
 	        trace (TRACE_FATAL,"db_get_config_item(): query failed could not get value for %s. "
@@ -211,8 +211,6 @@ char *db_get_config_item (char *item, int type)
 
       return NULL;
     }
-  
-    trace (TRACE_DEBUG, "db_get_config_item(): resource pointer is %d\n",res);
   
     if (PQntuples (res)==0)
     {
@@ -250,7 +248,7 @@ int db_addalias (u64_t useridnr, char *alias, int clientid)
 	
   trace (TRACE_DEBUG,"db_addalias(): executing query for user: [%s]", query);
 
-  if (db_query(query, res) == -1)
+  if (db_query(query, &res) == -1)
     {
       /* query failed */
       trace (TRACE_ERROR, "db_addalias(): query for adding alias failed : [%s]", query);
@@ -266,7 +264,7 @@ int db_removealias (u64_t useridnr,const char *alias)
   snprintf (query, DEF_QUERYSIZE,
 	    "DELETE FROM aliases WHERE deliver_to=%llu AND alias = '%s'", useridnr, alias);
 	   
-  if (db_query(query, res) == -1)
+  if (db_query(query, &res) == -1)
     {
       /* query failed */
       trace (TRACE_ERROR, "db_removealias(): query for removing alias failed : [%s]", query);
@@ -289,7 +287,7 @@ u64_t db_get_inboxid (u64_t *useridnr)
 	   *useridnr);
 
   trace(TRACE_DEBUG,"db_get_inboxid(): executing query : [%s]",query);
-  if (db_query(query, res)==-1)
+  if (db_query(query, &res)==-1)
       return 0;
 
   if (PQntuples(res)<1) 
@@ -318,7 +316,7 @@ u64_t db_get_message_mailboxid (u64_t *messageidnr)
 	   *messageidnr);
 
   trace(TRACE_DEBUG,"db_get_message_mailboxid(): executing query : [%s]",query);
-  if (db_query(query, res)==-1)
+  if (db_query(query, &res)==-1)
     {
       return 0;
     }
@@ -352,7 +350,7 @@ u64_t db_get_useridnr (u64_t messageidnr)
 	   messageidnr);
 
   trace(TRACE_DEBUG,"db_get_useridnr(): executing query : [%s]",query);
-  if (db_query(query, res)==-1)
+  if (db_query(query, &res)==-1)
     {
       return 0;
     }
@@ -375,7 +373,7 @@ u64_t db_get_useridnr (u64_t messageidnr)
   snprintf (query, DEF_QUERYSIZE, "SELECT owner_idnr FROM mailboxes WHERE mailbox_idnr = %llu",
 	   mailboxidnr);
 
-  if (db_query(query, res)==-1)
+  if (db_query(query, &res)==-1)
       return 0;
 
   if (PQntuples(res)<1) 

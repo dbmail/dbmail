@@ -86,4 +86,3 @@ CREATE TABLE config (
 	item VARCHAR(255) NOT NULL,
 	value VARCHAR(255) NOT NULL
 );
-CREATE UNIQUE INDEX item_idx ON config (item);
