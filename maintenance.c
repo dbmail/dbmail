@@ -16,6 +16,7 @@
 #include "config.h"
 #include "list.h"
 #include "debug.h"
+#include <time.h>
 
 void find_time(char *timestr, const char *timespec);
 
@@ -25,6 +26,8 @@ int main(int argc, char *argv[])
   int should_fix = 0, check_integrity = 0, check_iplog = 0;
   int show_help=0, purge_deleted=0, set_deleted=0;
   int do_nothing=1;
+
+  time_t start,stop;
 
   char timespec[LEN],timestr[LEN];
   char *trace_level,*trace_syslog,*trace_verbose;
@@ -180,6 +183,7 @@ int main(int argc, char *argv[])
   if (check_integrity)
     {
       printf ("Now checking DBMAIL messageblocks integrity.. ");
+      time(&start);
 
       /* this is what we do:
        * First we're checking for loose messageblocks
@@ -229,6 +233,10 @@ int main(int argc, char *argv[])
 	printf ("Ok. Found 0 unconnected messageblks.\n");
 
 
+      time(&stop);
+      printf("--- checking block integrity took %lu seconds\n", stop-start);
+      fprintf(stderr, "--- checking block integrity took %lu seconds\n", stop-start);
+      
       /* second part */
       printf ("Now checking DBMAIL message integrity.. ");
 
