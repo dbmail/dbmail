@@ -17,6 +17,7 @@
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 AM_CFLAGS = -fomit-frame-pointer
+INCLUDES = -I$(top_srcdir)
 
 pkglib_LTLIBRARIES = libauthdbmail.la
 if LDAP

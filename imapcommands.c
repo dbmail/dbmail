@@ -1512,17 +1512,17 @@ int _ic_status(char *tag, char **args, ClientInfo * ci)
 			return 1;
 		}
 	}
-	g_string_printf(response, "* STATUS %s %s\r\n", 
+	g_string_printf(response, "* STATUS %s %s", 
 		dbmail_imap_astring_as_string(args[0]),
 		dbmail_imap_plist_as_string(plst));	
-	trace(TRACE_DEBUG,"%s,%s: RESPONSE [ %s ]", __FILE__, __func__, response->str);
-	ci_write(ci->tx, "%s", response->str);
+	trace(TRACE_DEBUG,"%s,%s: RESPONSE [%s]", __FILE__, __func__, response->str);
+	ci_write(ci->tx, "%s\r\n", response->str);
 	ci_write(ci->tx, "%s OK STATUS completed\r\n", tag);
 
 	my_free(mb.seq_list);
 	g_list_foreach(plst,(GFunc)g_free,NULL);
 	g_list_free(plst);
-	g_string_free(response,1);
+	g_string_free(response,TRUE);
 	return 0;
 }
 

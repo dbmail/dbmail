@@ -18,6 +18,7 @@
 
 if MYSQL
 AM_CFLAGS = @MYSQLINC@ -fomit-frame-pointer 
+INCLUDES = -I$(top_srcdir)
 
 pkglib_LTLIBRARIES = libmysqldbmail.la
 

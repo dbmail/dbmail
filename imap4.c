@@ -382,7 +382,7 @@ int IMAPClientHandler(ClientInfo * ci)
 		//result = (*imap_handler_functions[i])(tag, args, ci);
 		if (result == -1) {
 			trace(TRACE_ERROR,"%s,%s: command return with error [%s]",
-					__FILE__, __FUNCTION__, IMAP_COMMANDS[i]);
+					__FILE__, __func__, IMAP_COMMANDS[i]);
 			
 			done = 1;	/* fatal error occurred, kick this user */
 		}
@@ -396,9 +396,9 @@ int IMAPClientHandler(ClientInfo * ci)
 
 		fflush(ci->tx);	/* write! */
 
-		trace(TRACE_INFO,
-		      "IMAPClientHandler(): Finished command %s\n",
-		      IMAP_COMMANDS[i]);
+		trace(TRACE_INFO, "IMAPClientHandler(): Finished command %s [%d]\n", 
+				IMAP_COMMANDS[i],
+				result);
 
 		/* check if mailbox status has changed (notify client) */
 		if (ud->state == IMAPCS_SELECTED) {
@@ -412,48 +412,35 @@ int IMAPClientHandler(ClientInfo * ci)
 
 				result = db_getmailbox(&newmailbox);
 				if (result == -1) {
-					if (ci_write(ci->tx,
-						     "* BYE internal dbase "
-						     "error\r\n")) {
+					if (ci_write(ci->tx, "* BYE internal dbase error\r\n")) {
 						ci_cleanup(ci);
 						return EOF;
 					}
-					trace(TRACE_ERROR,
-					      "IMAPClientHandler(): could not "
-					      "get mailbox info\n");
+					trace(TRACE_ERROR, "IMAPClientHandler(): could not get mailbox info\n");
 					ci_cleanup(ci);
 					for (i = 0; args[i]; i++) {
 						my_free(args[i]);
 						args[i] = NULL;
 					}
-
 					return -1;
 				}
 
-				if (newmailbox.exists !=
-				    ud->mailbox.exists) {
-					if(ci_write(ci->tx, "* %u EXISTS\r\n",
-						    newmailbox.exists)) {
+				if (newmailbox.exists != ud->mailbox.exists) {
+					if(ci_write(ci->tx, "* %u EXISTS\r\n", newmailbox.exists)) {
 						ci_cleanup(ci);
 						return EOF;
 					}
-					trace(TRACE_INFO,
-					      "IMAPClientHandler(): ok update "
-					      "sent\r\n");
+					trace(TRACE_INFO, "IMAPClientHandler(): ok update sent\r\n");
 				}
 
-				if (newmailbox.recent !=
-				    ud->mailbox.recent)
-					if(ci_write(ci->tx, "* %u RECENT\r\n",
-						    newmailbox.recent)) {
+				if (newmailbox.recent != ud->mailbox.recent)
+					if(ci_write(ci->tx, "* %u RECENT\r\n", newmailbox.recent)) {
 						ci_cleanup(ci);
 						return EOF;
 					}
 
 				my_free(ud->mailbox.seq_list);
-				memcpy((void *) &ud->mailbox, 
-				       (void *)&newmailbox,
-				       sizeof(newmailbox));
+				memcpy((void *) &ud->mailbox, (void *)&newmailbox, sizeof(newmailbox));
 			}
 		}
 		if (this_was_noop) {
@@ -461,8 +448,7 @@ int IMAPClientHandler(ClientInfo * ci)
 				ci_cleanup(ci);
 				return EOF; 
 			}
-			trace(TRACE_DEBUG, "%s,%s: tag = %s", __FILE__, __func__,
-			      tag);
+			trace(TRACE_DEBUG, "%s,%s: tag = %s", __FILE__, __func__, tag);
 		}
 		for (i = 0; args[i]; i++) {
 			my_free(args[i]);

@@ -30,6 +30,7 @@ DELIVER = header.c pipe.c forward.c dsn.c
 
 # CFLAGS
 AM_CFLAGS = -fomit-frame-pointer
+INCLUDES = -I$(top_srcdir)
 
 dbmail_smtp_SOURCES = main.c
 dbmail_smtp_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @SIEVELIB@

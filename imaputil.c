@@ -145,11 +145,12 @@ GList * g_list_append_printf(GList * list, char * format, ...)
 char *dbmail_imap_plist_as_string(GList * list)
 {
 	char *p;
-	GString * tmp = g_list_join(list, " ");
-	g_strstrip(tmp->str);
-	g_string_printf(tmp,"(%s)", tmp->str);
-	p = tmp->str;
-	g_string_free(tmp,FALSE);
+	GString * tmp1 = g_string_new("");
+	GString * tmp2 = g_list_join(list, " ");
+	g_string_printf(tmp1,"(%s)", tmp2->str);
+	p = tmp1->str;
+	g_string_free(tmp1,FALSE);
+	g_string_free(tmp2,TRUE);
 	return p;
 }
 /* 

@@ -17,10 +17,11 @@
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 pkglib_LTLIBRARIES = libsortdbmail.la
+INCLUDES = -I$(top_srcdir)
 
 if SIEVE
 libsortdbmail_la_SOURCES = sort.c sortsieve.c
-AM_CFLAGS += -DSIEVE
+AM_CFLAGS = -DSIEVE
 else
 libsortdbmail_la_SOURCES = sort.c
 endif

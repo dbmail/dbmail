@@ -18,6 +18,7 @@
 if PGSQL
 
 AM_CFLAGS = @PGSQLINC@ -fomit-frame-pointer
+INCLUDES = -I$(top_srcdir)
 
 pkglib_LTLIBRARIES = libpgsqldbmail.la
 
