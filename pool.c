@@ -26,6 +26,8 @@
 #include <sys/wait.h>
 #include <sys/shm.h>
 #include <time.h>
+#include <errno.h>
+#include <string.h>
 
 #define P_SIZE 100000
 
@@ -70,11 +72,13 @@ int set_lock(int type)
 
 void scoreboard_new(serverConfig_t * conf)
 {
+	int serr;
 	if ((shmid = shmget(IPC_PRIVATE, P_SIZE, 0644 | IPC_CREAT)) == -1)
-		trace(TRACE_FATAL, "%s,%s: shmget failed",__FILE__,__FUNCTION__);
+		trace(TRACE_FATAL, "%s,%s: shmget failed",__FILE__,__func__);
 	scoreboard = shmat(shmid, (void *) 0, 0);
+	serr=errno;
 	if (scoreboard == (Scoreboard_t *) (-1)) {
-		trace(TRACE_FATAL, "%s,%s: scoreboard init failed",__FILE__,__FUNCTION__);
+		trace(TRACE_FATAL, "%s,%s: scoreboard init failed [%s]",__FILE__,__func__,strerror(serr));
 		scoreboard_delete();
 	}
 	scoreboard_lock_new();
