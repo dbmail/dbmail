@@ -409,12 +409,19 @@ char *db_get_userid (unsigned long *useridnr)
     }
 
 	if (row[0])
+	{
 		returnid = (char *)malloc(strlen(row[0])+1);
+		if (!strcpy (returnid, row[0]))
+				{
+					free (ckquery);
+					return NULL;
+				}
+	}
 	else
-		{
+	{
 		free (ckquery);
 		return NULL;
-		}
+	}
   
 	free (ckquery);
   return returnid;
