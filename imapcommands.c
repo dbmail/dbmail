@@ -1482,9 +1482,13 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
       trace(TRACE_DEBUG, "Fetching msgID %lu\n", ud->mailbox.seq_list[i]);
 
-      db_fetch_headers(ud->mailbox.seq_list[i], &msg);
+      if (db_fetch_headers(ud->mailbox.seq_list[i], &msg) == -1)
+	{
+	  fprintf(ci->tx,"* BAD error fetching message %d\n",i+1);
+	  continue;
+	}
+      
       db_msgdump(&msg, ud->mailbox.seq_list[i]);
-
 
       /* walk by the arguments */
       if (fetchitems.getFlags) 
@@ -1499,6 +1503,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		{
 		  fprintf(ci->tx,"* BYE internal dbase error\n");
 		  if (fetchitems.bodyfetches) free(fetchitems.bodyfetches);
+		  db_free_msg(&msg);
 		  return -1;
 		}
 	      else if (result == 1)
@@ -1514,6 +1519,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	    {
 	      fprintf(ci->tx,"* BYE internal dbase error\n");
 	      if (fetchitems.bodyfetches) free(fetchitems.bodyfetches);
+	      db_free_msg(&msg);
 	      return -1;
 	    }
 
@@ -1529,10 +1535,12 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	{
 	  fprintf(ci->tx,"BODYSTRUCTURE ");
 	  result = retrieve_structure(ci->tx, &msg);
+	  fprintf(ci->tx," ");
 	  if (result == -1)
 	    {
 	      fprintf(ci->tx,"* BYE error fetching body structure\n");
 	      if (fetchitems.bodyfetches) free(fetchitems.bodyfetches);
+	      db_free_msg(&msg);
 	      return -1;
 	    }
 	}
@@ -1545,12 +1553,14 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	    {
 	      fprintf(ci->tx,"* BYE error fetching envelope structure\n");
 	      if (fetchitems.bodyfetches) free(fetchitems.bodyfetches);
+	      db_free_msg(&msg);
 	      return -1;
 	    }
 	}
 
       if (fetchitems.getSize)
 	{
+
 	}
 
       if (fetchitems.getRFC822Header)
@@ -1566,6 +1576,10 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	  switch (fetchitems.bodyfetches[j].itemtype)
 	    {
 	    case BFIT_TEXT:
+	      /* dump body text */
+	      fprintf(ci->tx, "BODY[TEXT] {%lu} \n",msg.bodysize);
+	      db_dump_range(ci->tx, msg.bodystart, msg.bodyend,ud->mailbox.seq_list[i]);
+	      fprintf(ci->tx,"\n");
 	      break;
 	    case BFIT_HEADER:
 	      break;
@@ -1578,10 +1592,12 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	    default:
 	      fprintf(ci->tx, "* BYE internal server error\n");
 	      free(fetchitems.bodyfetches);
+	      db_free_msg(&msg);
 	      return -1;
 	    }
 	}
 
+      db_free_msg(&msg);
       fprintf(ci->tx,")\n");
     }
       

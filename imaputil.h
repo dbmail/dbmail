@@ -14,6 +14,7 @@
 
 int retrieve_structure(FILE *outstream, mime_message_t *msg);
 int retrieve_envelope(FILE *outstream, struct list *rfcheader);
+int show_mime_parameter_list(FILE *outstream, struct mime_record *mr, int nil_for_firstval_missing);
 
 int check_state_and_args(const char *command, const char *tag, char **args, 
 			 int nargs, int state, ClientInfo *ci);

@@ -14,7 +14,7 @@ CC = cc
 MYSQLLIBDIR=/usr/local/lib/mysql
 
 LIBS = -L$(MYSQLLIBDIR)
-LIB = -lmysqlclient
+LIB = -lmysqlclient 
 
 # Added the -D_BSD_SOURCE option to suppress warnings
 # from compiler about vsyslog function 

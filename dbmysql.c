@@ -34,7 +34,7 @@ int _msg_fetch_inited = 0;
 
 char msgbuf[MSGBUF_WINDOWSIZE];
 unsigned long rowlength = 0,msgidx=0,buflen=0,rowpos=0;
-db_pos_t zeropos = 0;
+db_pos_t zeropos;
 unsigned nblocks = 0;
 unsigned long *blklengths = NULL;
 
@@ -1940,7 +1940,7 @@ int db_update_msgbuf(int minlen)
 	buflen,rowlength,rowpos);
 
   /* move buf to make msgidx 0 */
-  memmove(msgbuf, &msgbuf[msgidx], msgidx);
+  memmove(msgbuf, &msgbuf[msgidx], (buflen-msgidx));
   if (msgidx > ((buflen+1) - rowpos))
     {
       zeropos.block++;
@@ -2158,7 +2158,7 @@ unsigned long db_give_range_size(db_pos_t *start, db_pos_t *end)
     return 0; /* bad range */
 
   if (start->block == end->block)
-    return (start->pos > end->pos) ? 0 : (end->pos - start->pos);
+    return (start->pos > end->pos) ? 0 : (end->pos - start->pos+1);
 
   if (start->pos >= blklengths[start->block] || end->pos >= blklengths[end->block])
     return 0; /* bad range */
@@ -2168,9 +2168,10 @@ unsigned long db_give_range_size(db_pos_t *start, db_pos_t *end)
   for (i = start->block+1; i<end->block; i++)
     size += blklengths[i];
 
-  
+  size += end->pos;
+  size++;
 
-
+  return size;
 }
 
 /*
@@ -2187,7 +2188,6 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
   trace(TRACE_DEBUG,"db_start_msg(): starting, stopbound: '%s'\n",stopbound);
 
   list_init(&msg->children);
-/*  db_give_msgpos(&msg->headerstart); */
 
   /* read header */
   if (db_update_msgbuf(MSGBUF_FORCE_UPDATE) == -1)
@@ -2196,10 +2196,8 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
   if (mime_readheader(&msgbuf[msgidx], &msgidx, &msg->rfcheader) == -1)
     return -1;   /* error reading header */
 
-/*  db_give_msgpos(&msg->headerend); */
-
-  msgidx++;
   db_give_msgpos(&msg->bodystart);
+  msgidx++;
 
   mime_findfield("content-type", &msg->rfcheader, &mr);
   if (mr && strncasecmp(mr->value,"multipart", strlen("multipart")) == 0)
@@ -2273,6 +2271,7 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 
       free(newbound);
       db_give_msgpos(&msg->bodyend);
+      msg->bodysize = db_give_range_size(&msg->bodystart, &msg->bodyend);
 
       return 0;                        /* done */
     }
@@ -2290,9 +2289,13 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 	      if (db_update_msgbuf(sblen) == -1)
 		return -1;
 
+	      if (msgbuf[msgidx] == '\n')
+		msg->bodylines++;
+
 	      if (strncmp(&msgbuf[msgidx], stopbound, strlen(stopbound)) == 0)
 		{
 		  db_give_msgpos(&msg->bodyend);
+		  msg->bodysize = db_give_range_size(&msg->bodystart, &msg->bodyend);
 		  return 0;
 		}
 
@@ -2301,19 +2304,24 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 
 	  /* end of buffer reached, bodyend is prev pos */
 	  db_give_msgpos(&msg->bodyend);
+	  msg->bodysize = db_give_range_size(&msg->bodystart, &msg->bodyend);
 	}
       else
 	{
 	  /* walk on till end of buffer */
 	  do
 	    {
-	      msgidx = buflen - 1;
+	      for ( ; msgidx < buflen-1; msgidx++)
+		if (msgbuf[msgidx] == '\n')
+		  msg->bodylines++;
+	      
 	      result = db_update_msgbuf(MSGBUF_FORCE_UPDATE);
 	      if (result == -1)
 		return -1;
 	    } while (result == 1);
 
 	  db_give_msgpos(&msg->bodyend);
+	  msg->bodysize = db_give_range_size(&msg->bodystart, &msg->bodyend);
 	}
     }
 
@@ -2378,6 +2386,9 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
 	      if (db_update_msgbuf(sblen) == -1)
 		return -1;
 
+	      if (msgbuf[msgidx] == '\n')
+		part.bodylines++;
+
 	      if (strncmp(&msgbuf[msgidx], splitbound, strlen(splitbound)) == 0)
 		break;
 
@@ -2391,6 +2402,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
 	    }
 
 	  db_give_msgpos(&part.bodyend);
+	  part.bodysize = db_give_range_size(&part.bodystart, &part.bodyend);
 
 	  msgidx += strlen(splitbound);   /* skip the boundary */
 	}
@@ -2484,12 +2496,13 @@ int db_msgdump(mime_message_t *msg, unsigned long msguid)
       db_msgdump((mime_message_t*)curr->data,msguid);
       curr = curr->nextnode;
     }
+  trace(TRACE_DEBUG,"*** child list end\n");
 
   return 1;
 }
 
 
-int db_dump_range(db_pos_t start, db_pos_t end, unsigned long msguid)
+int db_dump_range(FILE *outstream,db_pos_t start, db_pos_t end, unsigned long msguid)
 {
   char query[DEF_QUERYSIZE];
   int i;
@@ -2533,13 +2546,13 @@ int db_dump_range(db_pos_t start, db_pos_t end, unsigned long msguid)
 
   if (start.block == end.block)
     {
-      trace(TRACE_DEBUG,"%.*s\n",end.pos - start.pos,&row[0][start.pos]);
+      fprintf(outstream,"%.*s\n",end.pos - start.pos,&row[0][start.pos]);
       mysql_free_result(res);
       return 0;
     }
 
   /* output startblock */
-  trace(TRACE_DEBUG,"%s",&row[0][start.pos]);
+  fprintf(outstream,"%s",&row[0][start.pos]);
   
   /* output blocks inbetween */
   for (i=start.block+1; i<end.block; i++)
@@ -2552,7 +2565,7 @@ int db_dump_range(db_pos_t start, db_pos_t end, unsigned long msguid)
 	  return -1;
 	}
 
-      trace(TRACE_DEBUG,"%s",row[0]);
+      fprintf(outstream,"%s",row[0]);
     }
 
   /* output endblock */
@@ -2564,8 +2577,7 @@ int db_dump_range(db_pos_t start, db_pos_t end, unsigned long msguid)
       return -1;
     }
 
-  trace(TRACE_DEBUG,"%.*s",end.pos,row[0]);
-  trace(TRACE_DEBUG,"\n");
+  fprintf(outstream,"%.*s",end.pos,row[0]);
 
   mysql_free_result(res);
 

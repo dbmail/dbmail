@@ -50,8 +50,6 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg)
   struct element *curr;
   struct list *header_to_use;
   mime_message_t rfcmsg;
-  int idx,delimiter,start,end;
-  unsigned long size;
 
   fprintf(outstream,"(");
 
@@ -69,125 +67,13 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg)
       if (msg->mimeheader.start == NULL)
 	header_to_use = &msg->rfcheader;   /* we're dealing with a single-part RFC msg here */
       else
-	header_to_use = &msg->mimeheader;  /* we're dealing with a single-part RFC msg here */
+	header_to_use = &msg->mimeheader;  /* we're dealing with a pure-MIME header here */
 
       mime_findfield("content-type", header_to_use, &mr);
       if (mr && strlen(mr->value) > 0)
-	{
-	  /* find first delimiter */
-	  for (delimiter = 0; mr->value[delimiter] && mr->value[delimiter] != ';'; delimiter++) ;
-
-	  if (mr->value[delimiter])
-	    mr->value[delimiter] = 0;
-	  else
-	    delimiter = -1;
-
-	  /* find main type in value */
-	  for (idx = 0; mr->value[idx] && mr->value[idx] != '/'; idx++) ;
-	  
-	  if (mr->value[idx] && (idx<delimiter || delimiter == -1))
-	    {
-	      mr->value[idx] = 0;
-	      fprintf(outstream,"\"%s\" \"%s\"", mr->value, &mr->value[idx+1]);
-	      mr->value[idx] = '/';
-	    }
-	  else
-	    {
-	      fprintf(outstream,"\"%s\" NIL", mr->value);
-	    }
-	  
-	  if (delimiter >= 0)
-	    {
-	      /* extra parameters specified */
-	      mr->value[delimiter] = ';';
-	      idx=delimiter;
-
-	      fprintf(outstream,"(");
-
-	      /* extra params: <name>=<val> [; <name>=<val> [; ...etc...]]
-	       * note that both name and val may or may not be enclosed by 
-	       * either single or double quotation marks
-	       */
-
-	      do
-		{
-		  /* skip whitespace */
-		  for (idx++; isspace(mr->value[idx]); idx++) ;
-		  
-		  if (!mr->value[idx]) break; /* ?? */
-		  
-		  /* check if quotation marks are specified */
-		  if (mr->value[idx] == '\"' || mr->value[idx] == '\'')
-		    {
-		      start = ++idx;
-		      while (mr->value[idx] && mr->value[idx] != mr->value[start-1]) idx++;
-		      
-		      if (!mr->value[idx] || mr->value[idx+1] != '=') /* ?? no end quote */
-			break;
-
-		      end = idx;
-		      idx+=2;        /* skip to after '=' */
-		    }
-		  else
-		    {
-		      start = idx;
-		      while (mr->value[idx] && mr->value[idx] != '=') idx++;
-		      
-		      if (!mr->value[idx]) /* ?? no value specified */
-			break;
-		      
-		      end = idx;
-		      idx++;        /* skip to after '=' */
-		    }
-
-		  fprintf(outstream,"\"%.*s\" ", (end-start), &mr->value[start]);
-
-
-		  /* now process the value; practically same procedure */
-
-		  if (mr->value[idx] == '\"' || mr->value[idx] == '\'')
-		    {
-		      start = ++idx;
-		      while (mr->value[idx] && mr->value[idx] != mr->value[start-1]) idx++;
-		      
-		      if (!mr->value[idx]) /* ?? no end quote */
-			break;
-
-		      end = idx;
-		      idx++;
-		    }
-		  else
-		    {
-		      start = idx;
-
-		      while (mr->value[idx] && !isspace(mr->value[idx]) &&
-			     mr->value[idx] != ';') idx++;
-		      
-		      end = idx;
-		    }
-
-		  fprintf(outstream,"\"%.*s\"", (end-start), &mr->value[start]);
-		  
-		  /* check for more name/val pairs */
-		  while (mr->value[idx] && mr->value[idx] != ';') idx++;
-
-		  if (mr->value[idx])
-		    fprintf(outstream," ");
-
-		} while (mr->value[idx]); 
-
-	      fprintf(outstream,")");
-	      
-	    }
-	  else
-	    {
-	      fprintf(outstream," NIL");
-	    }
-	}
+	show_mime_parameter_list(outstream, mr, 1);
       else
-	{
-	  fprintf(outstream,"NIL NIL NIL");
-	}
+	fprintf(outstream,"NIL NIL NIL");
 
       mime_findfield("content-id", header_to_use, &mr);
       if (mr && strlen(mr->value) > 0)
@@ -208,13 +94,13 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg)
 	fprintf(outstream, " NIL");
 
       /* now output size */
-      size = db_give_range_size(&msg->bodystart, &msg->bodyend);
-      fprintf(outstream, " %lu ", size);
+      fprintf(outstream, " %lu ", msg->bodysize);
 
 
       /* now check special cases, first case: message/rfc822 */
       mime_findfield("content-type", header_to_use, &mr);
-      if (mr && strncasecmp(mr->value, "message/rfc822", strlen("message/rfc822")) == 0)
+      if (mr && strncasecmp(mr->value, "message/rfc822", strlen("message/rfc822")) == 0 &&
+	  header_to_use != &msg->rfcheader)
 	{
 	  /* msg/rfc822 found; extra items to be displayed:
 	   * (a) body envelope of rfc822 msg
@@ -232,15 +118,13 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg)
 	    return -1;
 	  
 	  /* output # of lines */
-	  
+	  fprintf(outstream, " %lu", msg->bodylines);
 	}
 
       /* second case: text */
       mime_findfield("content-type", header_to_use, &mr);
       if (mr && strncasecmp(mr->value, "text", strlen("text")) == 0)
-	{
-	  /* output # of lines */
-	}
+	fprintf(outstream, "%lu", msg->bodylines);      /* output # of lines */
 
       mime_findfield("content-md5", header_to_use, &mr);
       if (mr && strlen(mr->value) > 0)
@@ -250,7 +134,11 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg)
 
       mime_findfield("content-disposition", header_to_use, &mr);
       if (mr && strlen(mr->value) > 0)
-	fprintf(outstream, " \"%s\"",mr->value);
+	{
+	  fprintf(outstream, " (");
+	  show_mime_parameter_list(outstream, mr, 0);
+	  fprintf(outstream, ")");
+	}
       else
 	fprintf(outstream, " NIL");
 
@@ -266,8 +154,6 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg)
       mime_findfield("content-type", &msg->rfcheader, &mr);
       if (mr && strncasecmp(mr->value,"multipart", strlen("multipart")) == 0)
 	{
-	  fprintf(outstream,"(");
-
 	  curr = list_getstart(&msg->children);
 	  while (curr)
 	    {
@@ -276,8 +162,6 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg)
 
 	      curr = curr->nextnode;
 	    }
-
-	  fprintf(outstream,")");
 	}
     }
   fprintf(outstream,")");
@@ -321,7 +205,7 @@ int retrieve_envelope(FILE *outstream, struct list *rfcheader)
       mime_findfield(envelope_items[idx], rfcheader, &mr);
       if (mr && strlen(mr->value) > 0)
 	{
-	  fprintf(outstream,"(");
+	  fprintf(outstream," (");
       
 	  /* find ',' to split up multiple addresses */
 	  delimiter = 0;
@@ -354,20 +238,26 @@ int retrieve_envelope(FILE *outstream, struct list *rfcheader)
 	      if (mr->value[i] && i>start+2)
 		{
 		  /* name is contained in &mr->value[start] untill &mr->value[i-2] */
-		  fprintf(outstream, "%.*s", i-start-1,&mr->value[start]);
-
+		  fprintf(outstream, "\"%.*s\"", i-start-1,&mr->value[start]);
 		  start = i+1; /* skip to after '<' */
 		}
 	      else
-		{
-		  fprintf(outstream, "NIL");
-		}
+		fprintf(outstream, "NIL");
 
 	      fprintf(outstream, " NIL "); /* source route ?? smtp at-domain-list ?? */
 
 	      /* now display user domainname; &mr->value[start] is starting point */
+	      fprintf(outstream, "\"");
+
 	      for (i=start; mr->value[i] && mr->value[i] != '>'; i++)
-		fprintf(outstream,"%c", (mr->value[i] == '@') ? ' ' : mr->value[i]);
+		{
+		  if (mr->value[i] == '@')
+		    fprintf(outstream,"\" \"");
+		  else
+		    fprintf(outstream,"%c",mr->value[i]);
+		}
+
+	      fprintf(outstream, "\"");
 		  
 	      if (delimiter > 0)
 		mr->value[delimiter++] = ','; /* restore & prepare for next iteration */
@@ -394,6 +284,121 @@ int retrieve_envelope(FILE *outstream, struct list *rfcheader)
   return 0;
 }
 
+
+int show_mime_parameter_list(FILE *outstream, struct mime_record *mr, int nil_for_firstval_missing)
+{
+  int idx,delimiter,start,end;
+
+  /* find first delimiter */
+  for (delimiter = 0; mr->value[delimiter] && mr->value[delimiter] != ';'; delimiter++) ;
+
+  if (mr->value[delimiter])
+    mr->value[delimiter] = 0;
+  else
+    delimiter = -1;
+
+  /* find main type in value */
+  for (idx = 0; mr->value[idx] && mr->value[idx] != '/'; idx++) ;
+	  
+  if (mr->value[idx] && (idx<delimiter || delimiter == -1))
+    {
+      mr->value[idx] = 0;
+      fprintf(outstream,"\"%s\" \"%s\"", mr->value, &mr->value[idx+1]);
+      mr->value[idx] = '/';
+    }
+  else
+    fprintf(outstream,"\"%s\" %s", mr->value, nil_for_firstval_missing ? "NIL" : "");
+	  
+  if (delimiter >= 0)
+    {
+      /* extra parameters specified */
+      mr->value[delimiter] = ';';
+      idx=delimiter;
+
+      fprintf(outstream," (");
+
+      /* extra params: <name>=<val> [; <name>=<val> [; ...etc...]]
+	       * note that both name and val may or may not be enclosed by 
+	       * either single or double quotation marks
+	       */
+
+      do
+	{
+	  /* skip whitespace */
+	  for (idx++; isspace(mr->value[idx]); idx++) ;
+		  
+	  if (!mr->value[idx]) break; /* ?? */
+		  
+	  /* check if quotation marks are specified */
+	  if (mr->value[idx] == '\"' || mr->value[idx] == '\'')
+	    {
+	      start = ++idx;
+	      while (mr->value[idx] && mr->value[idx] != mr->value[start-1]) idx++;
+		      
+	      if (!mr->value[idx] || mr->value[idx+1] != '=') /* ?? no end quote */
+		break;
+
+	      end = idx;
+	      idx+=2;        /* skip to after '=' */
+	    }
+	  else
+	    {
+	      start = idx;
+	      while (mr->value[idx] && mr->value[idx] != '=') idx++;
+		      
+	      if (!mr->value[idx]) /* ?? no value specified */
+		break;
+		      
+	      end = idx;
+	      idx++;        /* skip to after '=' */
+	    }
+
+	  fprintf(outstream,"\"%.*s\" ", (end-start), &mr->value[start]);
+
+
+	  /* now process the value; practically same procedure */
+
+	  if (mr->value[idx] == '\"' || mr->value[idx] == '\'')
+	    {
+	      start = ++idx;
+	      while (mr->value[idx] && mr->value[idx] != mr->value[start-1]) idx++;
+		      
+	      if (!mr->value[idx]) /* ?? no end quote */
+		break;
+
+	      end = idx;
+	      idx++;
+	    }
+	  else
+	    {
+	      start = idx;
+
+	      while (mr->value[idx] && !isspace(mr->value[idx]) &&
+		     mr->value[idx] != ';') idx++;
+		      
+	      end = idx;
+	    }
+
+	  fprintf(outstream,"\"%.*s\"", (end-start), &mr->value[start]);
+		  
+		  /* check for more name/val pairs */
+	  while (mr->value[idx] && mr->value[idx] != ';') idx++;
+
+	  if (mr->value[idx])
+	    fprintf(outstream," ");
+
+	} while (mr->value[idx]); 
+
+      fprintf(outstream,")");
+	      
+    }
+  else
+    {
+      fprintf(outstream," NIL");
+    }
+
+  return 0;
+}
 
 /*
  * get_fetch_items()
@@ -451,13 +456,16 @@ int get_fetch_items(char **args, fetch_items_t *fi)
   trace(TRACE_DEBUG,"Found %d body items\n",fi->nbodyfetches);
 
   /* alloc mem */
-  fi->bodyfetches = (body_fetch_t*)malloc(sizeof(body_fetch_t) * fi->nbodyfetches);
-  if (!fi->bodyfetches)
+  if (fi->nbodyfetches > 0)
     {
-      /* out of mem */
-      return -1;
+      fi->bodyfetches = (body_fetch_t*)malloc(sizeof(body_fetch_t) * fi->nbodyfetches);
+      if (!fi->bodyfetches)
+	return -1;  /* out of mem */
+
+      memset(fi->bodyfetches, 0, sizeof(body_fetch_t) * fi->nbodyfetches);
     }
-  memset(fi->bodyfetches, 0, sizeof(body_fetch_t) * fi->nbodyfetches);
+  else
+    fi->bodyfetches = NULL;
 
   invalidargs = 0;
   inbody = 0;
@@ -775,7 +783,8 @@ int get_fetch_items(char **args, fetch_items_t *fi)
 
       trace(TRACE_DEBUG,"arguments: \n");
 
-      for (j = fi->bodyfetches[i].argstart; j < fi->bodyfetches[i].argstart+fi->bodyfetches[i].argcnt;
+      for (j = fi->bodyfetches[i].argstart; 
+	   j < fi->bodyfetches[i].argstart+fi->bodyfetches[i].argcnt;
 	   j++)
 	trace(TRACE_DEBUG,"  arg[%d]: '%s'\n",j-fi->bodyfetches[i].argstart,args[j]);
     }
