@@ -26,6 +26,7 @@ char *myhostname;
 char *apop_stamp;
 char *timeout_setting;
 
+
 char *buffer;
 
 int resolve_client;
@@ -116,7 +117,7 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
   
   theiraddress=inet_ntoa(adr_clnt.sin_addr);
 
-  memtst((clientinfo=(struct hostent *)malloc(sizeof(struct hostent)))==NULL);
+  /* memtst((clientinfo=(struct hostent *)malloc(sizeof(struct hostent)))==NULL); */
 
   if (resolve_client==1)
     {
@@ -271,9 +272,6 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
   /* reset timers */
   alarm (0); 
 
-  free (clientinfo);
-
-  
   return 0;
 }
 
