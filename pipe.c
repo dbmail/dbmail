@@ -411,42 +411,42 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 					{	
 						trace (TRACE_ERROR,"insert_message(): Something went wrong when building a list structure for pipe descriptors");
 					}
-			else	
-			{		
-				trace (TRACE_DEBUG,"insert_messages(): Forwarding message via database");
-				while (tmp_pipe!=NULL)
-				{
-					sprintf (tmpbuffer,"%s\nTo: %s\n%s",firstblock,
+				}
+				else	
+				{		
+					trace (TRACE_DEBUG,"insert_messages(): Forwarding message via database");
+					while (tmp_pipe!=NULL)
+					{
+						sprintf (tmpbuffer,"%s\nTo: %s\n%s",firstblock,
 							(char *)tmp_pipe->data,nextscan);
-					trace (TRACE_DEBUG,"insert_messages(): new header [%s]",tmpbuffer);
-					(FILE *)sendmail_pipe=popen(SENDMAIL,"w");
-					trace (TRACE_DEBUG,"insert_messages(): popen() executed");
-					if (sendmail_pipe!=NULL)
-					{
-						trace (TRACE_DEBUG,"insert_messages(): popen() successfull");
-						/* -2 will send the complete message to sendmail_pipe */
-						fprintf ((FILE *)sendmail_pipe,"%s",tmpbuffer);
-						trace (TRACE_DEBUG,"insert_messages(): sending message from database");
-						db_send_message_special (sendmail_pipe, *(unsigned long*)tmp->data, -2, tmpbuffer); 
+						trace (TRACE_DEBUG,"insert_messages(): new header [%s]",tmpbuffer);
+						(FILE *)sendmail_pipe=popen(SENDMAIL,"w");
+						trace (TRACE_DEBUG,"insert_messages(): popen() executed");
+						if (sendmail_pipe!=NULL)
+						{
+							trace (TRACE_DEBUG,"insert_messages(): popen() successfull");
+							/* -2 will send the complete message to sendmail_pipe */
+							fprintf ((FILE *)sendmail_pipe,"%s",tmpbuffer);
+							trace (TRACE_DEBUG,"insert_messages(): sending message from database");
+							db_send_message_special (sendmail_pipe, *(unsigned long*)tmp->data, -2, tmpbuffer); 
+						}
+						else 
+						{
+							trace (TRACE_ERROR,"insert_messages(): Could not open pipe to [%s]",SENDMAIL);
+						}
+					tmp_pipe=tmp_pipe->nextnode;
 					}
-					else 
-					{
-						trace (TRACE_ERROR,"insert_messages(): Could not open pipe to [%s]",SENDMAIL);
-					}
-
-				tmp_pipe=tmp_pipe->nextnode;
 				}
 			}
-		}
-	else 
-	{
-		trace (TRACE_ERROR,"insert_messages(): Could not forward message. Header is invalid");
-	}
-	}
-		else
+			else 
 			{
 				trace (TRACE_ERROR,"insert_messages(): Could not forward message. Header is invalid");
 			}
+		}
+		else
+		{
+			trace (TRACE_ERROR,"insert_messages(): Could not forward message. Header is invalid");
+		}
 	}
 	
 	trace (TRACE_DEBUG,"insert_messages(): Freeing memory blocks");
