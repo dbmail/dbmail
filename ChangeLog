@@ -1,10 +1,20 @@
 2004-03-11  Ilja Booij  <ilja@ic-s.nl>
 
+	* imapcommands.c (_ic_append): passes the internal date through
+	to to db_imap_append_msg().
+	(_ic_append): sets flags for messages if needed by calling
+	db_set_msgflag()
+
 	* db.c (db_imap_append_msg): according to the RFC, the Recent flag
 	of a message that is append using IMAP append should always be set.
 	This is now taken care of. db_imap_append_msg() used to set the
 	\Seen flag to '1', but according to the RFC, this should not be done,
 	so it's been removed.
+	(db_insert_physmessage_with_internal_date): new function to insert
+	physmessages with an internal date.
+	(db_imap_append_msg): uses db_insert_physmessage_with_internal_date()
+	if an internal date is supplied. Otherwise it just uses 
+	db_insert_physmessage().
 
 2004-03-10  Ilja Booij  <ilja@ic-s.nl>
 

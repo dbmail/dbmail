@@ -34,6 +34,7 @@
 #endif
 
 #include "debug.h"
+#include "dbmail.h"
 #include "dbmailtypes.h"
 #include "mime.h"
 #include "list.h"
@@ -506,6 +507,17 @@ u64_t db_get_useridnr(u64_t message_idnr);
 int db_insert_physmessage(u64_t *physmessage_id);
 
 /**
+ * \brief insert a physmessage with an internal date.
+ * \param internal_date the internal date in "YYYY-MM-DD HH:Mi:SS"
+ * \param physmessage_id will hold the id of the physmessage on return. Must
+ * hold a valid pointer on call.
+ * \return 
+ *    - -1 on failure
+ *    -  1 on success
+ */
+int db_insert_physmessage_with_internal_date(timestring_t internal_date,
+					     u64_t *physmessage_id);
+/**
  * \Brief update a physmessage by setting messagesize and rfcsize
  * \param physmessage_id the id of the physmessage
  * \param message_size
@@ -841,6 +853,7 @@ u64_t db_check_sizelimit (u64_t addblocksize, u64_t message_idnr,
  * \param datalen length of message
  * \param mailbox_idnr mailbox to put it in
  * \param user_idnr
+ * \param internal_date internal date of message. May be '\0'.
  * \return 
  *     - -1 on failure
  *     - 0 on success
@@ -848,7 +861,8 @@ u64_t db_check_sizelimit (u64_t addblocksize, u64_t message_idnr,
  *     - 2 on mail quotum exceeded
  */
 int db_imap_append_msg(const char *msgdata, u64_t datalen,
-		u64_t mailbox_idnr, u64_t user_idnr);
+		       u64_t mailbox_idnr, u64_t user_idnr,
+		       timestring_t internal_date, u64_t *msg_idnr);
 
 /* mailbox functionality */
 /** 

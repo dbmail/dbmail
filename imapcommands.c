@@ -29,24 +29,33 @@
 #include "config.h"
 #endif
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
+/* dbmail.h is included first */
+#include "dbmail.h"
 #include "acl.h"
+#include "auth.h"
+#include "db.h"
+
+#include "dbmsgbuf.h"
+#include "debug.h"
 #include "imapcommands.h"
 #include "imaputil.h"
-#include "db.h"
-#include "auth.h"
 #include "memblock.h"
 #include "misc.h"
-#include "rfcmsg.h"
-#include "dbmsgbuf.h"
 #include "quota.h"
-#include <string.h>
+#include "rfcmsg.h"
+
 #include <ctype.h>
 #include <stdlib.h>
-#include <unistd.h>
+#include <string.h>
 #include <sys/types.h>
+
 #include <time.h>
-#include "debug.h"
-#include "dbmail.h"
+#include <unistd.h>
+
 #ifdef PROC_TITLES
 #include "proctitleutils.h"
 #endif
@@ -1485,7 +1494,14 @@ int _ic_append(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
   u64_t mboxid;
-  int i,internal_date_idx=-1,result;
+  u64_t msg_idnr;
+  int i, j, result;
+  timestring_t sqldate;
+  int flaglist[IMAP_NFLAGS];
+  int flagcount = 0;
+
+  for (i = 0; i < IMAP_NFLAGS; i++) 
+	  flaglist[i] = 0;
 
   if (!args[0] || !args[1])
     {
@@ -1529,25 +1545,78 @@ int _ic_append(char *tag, char **args, ClientInfo *ci)
   */
   if (args[i][0] == '(')
     {
-      /* ok fetch the flags specified */
+	    /* ok fetch the flags specified */
       trace(TRACE_DEBUG, "ic_append(): flag list found:\n");
 
       while (args[i] && args[i][0] != ')') 
 	{
 	  trace(TRACE_DEBUG, "%s ",args[i]);
+	  for (j = 0; j < IMAP_NFLAGS; j++) {
+		  if (strcasecmp(args[i], imap_flag_desc_escaped[j]) == 0) {
+			  flaglist[j] = 1;
+			  flagcount++;
+			  break;
+		  }
+	  }
 	  i++;
 	}
-
+      
       i++;
       trace(TRACE_DEBUG, "\n");
     }
-
+  
   if (!args[i])
     {
       trace(TRACE_INFO,"ic_append(): unexpected end of arguments\n");
       fprintf(ci->tx,"%s BAD invalid arguments specified to APPEND\r\n", tag);
       return 1;
     }
+
+
+  for (j = 0; j < IMAP_NFLAGS; j++) 
+	  if (flaglist[j] == 1)
+		  trace(TRACE_DEBUG, "%s,%s: %s set",
+			__FILE__, __FUNCTION__, imap_flag_desc[j]);
+  
+  /** check ACL's for STORE */
+  if (flaglist[IMAP_STORE_FLAG_SEEN] == 1) {
+	  result = acl_has_right(ud->userid, mboxid, ACL_RIGHT_SEEN);
+	  if (result < 0) {
+		  fprintf(ci->tx, "* BYE internal database error\r\n");
+		  return -1; /* fatal */
+	  }
+	  if (result == 0) {
+		  fprintf(ci->tx, "%s NO no right to store \\SEEN flag\r\n",
+			  tag);
+		  return 1;
+	  }
+  }
+  if (flaglist[IMAP_STORE_FLAG_DELETED] == 1) {
+	  result = acl_has_right(ud->userid, mboxid, ACL_RIGHT_DELETE);
+	  if (result < 0) {
+		  fprintf(ci->tx, "* BYE internal database error\r\n");
+		  return -1; /* fatal */
+	  }
+	  if (result == 0) {
+		  fprintf(ci->tx, "%s NO no right to store \\DELETED flag\r\n",
+			  tag);
+		  return 1;
+	  }
+  }
+  if (flaglist[IMAP_STORE_FLAG_ANSWERED] == 1 ||
+      flaglist[IMAP_STORE_FLAG_FLAGGED] == 1 ||
+      flaglist[IMAP_STORE_FLAG_DRAFT] == 1 ||
+      flaglist[IMAP_STORE_FLAG_RECENT] == 1) {
+	  result = acl_has_right(ud->userid, mboxid, ACL_RIGHT_WRITE);
+	  if (result < 0) {
+		  fprintf(ci->tx, "*BYE internal database error\r\n");
+		  return -1;
+	  }
+	  if (result == 0) {
+		  fprintf(ci->tx, "%s NO no right to store flags\r\n", tag);
+		  return 1;
+	  }
+  }
 
 
   /* there could be a literal date here, check if the next argument exists
@@ -1558,17 +1627,28 @@ int _ic_append(char *tag, char **args, ClientInfo *ci)
    */
   if (args[i+1])
     {
+	    struct tm tm;
+
+	    if (strptime(args[i], "%d-%b-%Y %T", &tm) != NULL) 
+		    strftime(sqldate, 
+			     sizeof(sqldate), "%Y-%m-%d %H:%M:%S", &tm);
+	    else 
+		    sqldate[0] = '\0';
       /* internal date specified */
-      internal_date_idx = i;
+
       i++;
       trace(TRACE_DEBUG, "ic_append(): internal date [%s] found, next arg [%s]\n",
-	    args[i-1], args[i]);
+	    sqldate, args[i]);
     }
+  else {
+	  sqldate[0] = '\0';
+  }
 
   /* ok literal msg should be in args[i] */
   /* insert this msg */
 
-  result = db_imap_append_msg(args[i], strlen(args[i]), mboxid, ud->userid);
+  result = db_imap_append_msg(args[i], strlen(args[i]), mboxid, ud->userid,
+			      sqldate, &msg_idnr);
   switch (result)
     {
     case -1:
@@ -1591,6 +1671,14 @@ int _ic_append(char *tag, char **args, ClientInfo *ci)
       break;
     }
 
+  if (result == 0 && flagcount > 0) {
+	  if(db_set_msgflag(msg_idnr, mboxid, flaglist, IMAPFA_ADD) < 0) {
+		  trace(TRACE_ERROR, "%s,%s: error setting flags for message "
+			"[%llu]", __FILE__, __FUNCTION__, msg_idnr);
+		  return -1;
+	  }
+  }
+	  
   return result;
 }
 

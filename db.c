@@ -594,8 +594,34 @@ u64_t db_get_useridnr(u64_t message_idnr)
     return user_idnr;
 }
 
+int db_insert_physmessage_with_internal_date(timestring_t internal_date,
+					     u64_t *physmessage_id)
+{
+	char *to_date_str;
+	assert(physmessage_id != NULL);
+
+	*physmessage_id = 0;
+	to_date_str = char2date_str(internal_date);
+	
+	snprintf(query, DEF_QUERYSIZE,
+		 "INSERT INTO physmessage (messagesize, internal_date) "
+		 "VALUES ('0', %s)", to_date_str);
+	my_free(to_date_str);
+	
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: insertion of physmessage failed", 
+		      __FILE__, __FUNCTION__);
+		return -1;
+	}
+	*physmessage_id = db_insert_result("physmessage_id");
+
+	return 1;
+}
+
 int db_insert_physmessage(u64_t *physmessage_id) 
 {
+	assert(physmessage_id != NULL);
+
 	*physmessage_id = 0;
 
 	snprintf(query, DEF_QUERYSIZE,
@@ -1744,7 +1770,8 @@ u64_t db_check_sizelimit(u64_t addblocksize UNUSED, u64_t message_idnr,
 }
 
 int db_imap_append_msg(const char *msgdata, u64_t datalen,
-		       u64_t mailbox_idnr, u64_t user_idnr)
+		       u64_t mailbox_idnr, u64_t user_idnr,
+		       timestring_t internal_date, u64_t *msg_idnr)
 {
     u64_t message_idnr;
     u64_t messageblk_idnr;
@@ -1753,10 +1780,20 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
     int result;
     char unique_id[UID_SIZE];	/* unique id */
     
-    if (db_insert_physmessage(&physmessage_id) < 0) {
-	    trace(TRACE_ERROR, "%s,%s: could not create physmessage",
-		  __FILE__, __FUNCTION__);
-	    return -1;
+    if (strlen(internal_date) > 0) {
+	    if (db_insert_physmessage_with_internal_date(internal_date,
+							 &physmessage_id) < 0){ 
+		    trace(TRACE_ERROR, "%s,%s: could not create physmessage "
+			  "with internal date [%s]",
+			  __FILE__, __FUNCTION__, internal_date);
+		    return -1;
+	    }
+    } else {
+	    if (db_insert_physmessage(&physmessage_id) < 0) {
+		    trace(TRACE_ERROR, "%s,%s: could not create physmessage",
+			  __FILE__, __FUNCTION__);
+		    return -1;
+	    }
     }
 
     /* create a msg 
@@ -1890,7 +1927,8 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
 
     /* recalculate quotum used */
     db_add_quotum_used(user_idnr, datalen);
-
+    
+    *msg_idnr = message_idnr;
     return 0;
 }
 
@@ -2649,6 +2687,8 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr,
      *newmsg_idnr = db_insert_result("message_idnr");
     /* all done, validate new msg by creating a new unique id
      * for the copied msg */
+     /* FIXME: this needs to use the proper algorithm to produce a sane
+	unique id!*/
      snprintf(query, DEF_QUERYSIZE,
 	      "UPDATE messages SET unique_id='%lluA%lu' "
 	      "WHERE message_idnr='%llu'", *newmsg_idnr, (unsigned long) td, 

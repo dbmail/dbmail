@@ -32,6 +32,8 @@ pgsqlheaderpaths="/usr/include/pgsql /usr/include /usr/local/include/pgsql \
 ldapheaderpaths="/usr/include /usr/local/include"
 sieveheaderpaths="/usr/include /usr/local/include"
 
+AC_DEFINE(_GNU_SOURCE)
+
 DBMAIL_BOTH_SQL_CHECK
 DBMAIL_CHECK_SQL_LIBS
 DBMAIL_AUTH_CONF
@@ -43,7 +45,6 @@ AC_PROG_CC
 AC_COMPILE_WARNINGS
 AC_C_CONST
 AC_C_INLINE
-
 AM_CONDITIONAL(MYSQL, [test -n "$MYSQLINC"])
 AM_CONDITIONAL(PGSQL, [test -n "$PGSQLINC"])
 AM_CONDITIONAL(SIEVE, [test -n "$SIEVEINC"])
