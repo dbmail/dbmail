@@ -363,7 +363,8 @@ int db_search_range(db_pos_t start, db_pos_t end,
 		 "SELECT block.messageblk "
 		 "FROM dbmail_messageblks block, dbmail_messages msg "
 		 "WHERE block.physmessage_id = msg.physmessage_id "
-		 "AND msg.message_idnr = '%llu'",
+		 "AND msg.message_idnr = '%llu' "
+		 "ORDER BY block.messageblk_idnr"
 		 msg_idnr);
 
 	if (db_query(query) == -1) {
