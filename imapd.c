@@ -24,8 +24,9 @@ int main()
   int sock,d;
   char *newuser,*newgroup,*port,*bindip,*defchld,*maxchld,*daem,*to;
   char *trace_level,*trace_syslog,*trace_verbose;
-  char *before_smtp;
+  char *before_smtp,*mc;
   int new_level = 2, new_trace_syslog = 1, new_trace_verbose = 0, timeout = 0;
+  int max_connects=0;
 
   /* open logs */
   openlog(PNAME, LOG_PID, LOG_MAIL);
@@ -41,7 +42,8 @@ int main()
   maxchld = db_get_config_item("IMAPD_MAX_CHILD",CONFIG_MANDATORY);
   daem = db_get_config_item("IMAPD_DAEMONIZES", CONFIG_EMPTY);
   to =  db_get_config_item("IMAPD_CHILD_TIMEOUT", CONFIG_EMPTY);
-  
+  mc = db_get_config_item("IMAPD_CHILD_MAX_CONNECTS",CONFIG_EMPTY);
+
   before_smtp = db_get_config_item("DBMAIL_IMAP_BEFORE_SMTP", CONFIG_EMPTY);
   if (before_smtp && strcasecmp(before_smtp,"yes") == 0)
     {
@@ -77,6 +79,18 @@ int main()
       to = NULL;
     }
   
+  if (mc)
+    {
+      max_connects = atoi(mc);
+      my_free(mc);
+      mc = NULL;
+    }
+
+  if (max_connects <= 1)
+    {
+      max_connects = SS_DEF_MAXCONNECTS;
+    }
+
   if (trace_level)
     {
       new_level = atoi(trace_level);
@@ -140,7 +154,7 @@ int main()
 
   /* get started */
   trace(TRACE_MESSAGE, "IMAPD: server ready to run\n");
-  if (SS_WaitAndProcess(sock, atoi(defchld), atoi(maxchld), d, 
+  if (SS_WaitAndProcess(sock, atoi(defchld), atoi(maxchld), d, max_connects,
 			imap_process, imap_login, imap_error_cleanup) == -1)
     {
       trace(TRACE_FATAL,"IMAPD: Fatal error while processing clients: %s\n",SS_GetErrorMsg());

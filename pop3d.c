@@ -117,9 +117,9 @@ static void signal_handler (int signo, siginfo_t *info, void *data)
 
 int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 {
-	 /* returns 0 when a connection was successfull
-	 * returns -1 when a connection was unsuccessfull (continue in loop)
-	 */
+  /* returns 0 when a connection was successfull
+   * returns -1 when a connection was unsuccessfull (continue in loop)
+   */
 
   char *theiraddress;
   char *buffer;
@@ -141,14 +141,16 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 			       adr_clnt.sin_family);
 
 		
-	  if (theiraddress != NULL)
-		trace (TRACE_MESSAGE,"handle_client(): incoming connection from [%s (%s)]",
-			theiraddress, clientinfo ? (clientinfo->h_name ? clientinfo->h_name: "NULL")  : "Lookup failed");
-	  else
-	    {
-	      trace (TRACE_ERROR,"handle_client(): error: could not get address of client"); 
-	      return -1;
-	    }
+      if (theiraddress != NULL)
+	trace (TRACE_MESSAGE,"handle_client(): incoming connection from [%s (%s)]",
+	       theiraddress, clientinfo ? 
+	       (clientinfo->h_name ? clientinfo->h_name: "NULL")  : "Lookup failed");
+      else
+	{
+	  trace (TRACE_ERROR,"handle_client(): error: could not get address of client"); 
+	  close(c);
+	  return -1;
+	}
     }
   else
     {
@@ -172,7 +174,7 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
   if (!tx)
     {
       /* opening of descriptor failed */
-      close (c);
+      fclose(rx);
       return -1;
     }
 		
@@ -185,6 +187,8 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
   if (db_connect()< 0)
     {	
       trace(TRACE_ERROR,"handle_client(): could not connect to database");
+      fclose(rx);
+      fclose(tx);
       return -1;
     }
 			
@@ -287,7 +291,6 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
       password=NULL;
     }
 
-		
   /* reset timers */
   alarm (0); 
   __debug_dumpallocs();
@@ -309,16 +312,16 @@ int main (int argc, char *argv[])
 
   char *trace_level=NULL,*trace_syslog=NULL,*trace_verbose=NULL;
   int new_level = 2, new_trace_syslog = 1, new_trace_verbose = 0;
-  char *resolve_setting=NULL, *before_smtp=NULL;
+  char *resolve_setting=NULL, *before_smtp=NULL, *max_connects=0;
   
   int len_inet;
   int reuseaddress;
   int s = -1;
   int c = -1;
-  int z, i; /* counters */
+  int z, i, j; /* counters */
   int maxchld; /* maxchildren */
   pid_t deadchildpid;
-
+  int n_connects = 0,n_max_connects;
 
   /* open logs */
   openlog(PNAME, LOG_PID, LOG_MAIL);
@@ -485,6 +488,17 @@ int main (int argc, char *argv[])
   defchld = atoi(db_get_config_item("POP3D_DEFAULT_CHILD",CONFIG_MANDATORY));
   maxchld = atoi(db_get_config_item("POP3D_MAX_CHILD",CONFIG_MANDATORY));
 
+  max_connects = db_get_config_item("POP3D_CHILD_MAX_CONNECTS",CONFIG_EMPTY);
+  if (max_connects)
+    {
+      n_max_connects = atoi(max_connects);
+      my_free(max_connects);
+      max_connects = 0;
+    }
+
+  if (n_max_connects <= 1)
+    n_max_connects = POP3_DEF_MAXCONNECT;
+
 
   /* getting shared memory children counter */
   shmkey_dcu = time (NULL); /* get an unique key */
@@ -535,6 +549,7 @@ int main (int argc, char *argv[])
       if (!fork())
 	{
 	  default_child_pids[i] = getpid();
+	  n_connects = 0;
 	  break;
 	}
       else
@@ -576,10 +591,23 @@ int main (int argc, char *argv[])
 		}
 		
 	      (*default_children)++;		
+	      n_connects++;
 
 	      handle_client(myhostname, c, adr_clnt);
 		
 	      (*default_children)--;
+
+	      if (n_connects >= n_max_connects)
+		{
+		  trace(TRACE_ERROR,"Maximum # of connections reached, committing suicide...\n");
+		  for (i=0; i<defchld; i++)
+		    if (default_child_pids[i] == getpid())
+		      {
+			sleep(1); /* allow father process to catch up */
+			default_child_pids[i] = 0;
+			exit(0);
+		      }
+		}
 	    }
 	}
       else
@@ -596,11 +624,15 @@ int main (int argc, char *argv[])
 		    if (!fork())
 		      {
 			default_child_pids[i] = getpid();
+			n_connects = 0;
 			break;  
 			/* after this break the if (getpid() == server_pid) will be re-executed */
 		      }
 		    else
-		      while (default_child_pids[i] == 0) sleep(1);
+		      {
+			j=0;
+			while (default_child_pids[i] == 0 && ++j<100) usleep(100);
+		      }
 		  }
 	      }
 
@@ -658,6 +690,7 @@ int main (int argc, char *argv[])
 	    if (fork())
 	      {
 		total_children++;
+		close(c);
 		continue;
 	      }
 	    else

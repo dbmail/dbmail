@@ -14,6 +14,7 @@
 #define SS_DEFAULT_TIMEOUT 300
 #define SS_MINIMAL_TIMEOUT 100
 #define SS_MAX_CLIENTS 5
+#define SS_DEF_MAXCONNECTS 500
 
 enum SS_LOGIN_VALS {  SS_LOGIN_FAIL, SS_LOGIN_OK };
 
@@ -35,6 +36,7 @@ typedef struct
 int   SS_MakeServerSock(const char *ipaddr, const char *port, int default_children, int max_children,
 			int timeout);
 int   SS_WaitAndProcess(int sock, int default_children, int max_children, int daemonize,
+			int max_connects,
 			int (*ClientHandler)(ClientInfo*), int (*Login)(ClientInfo*),
 			void (*ClientCleanup)(ClientInfo*));
 void  SS_CloseServer(int sock);

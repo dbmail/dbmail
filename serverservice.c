@@ -194,15 +194,17 @@ int SS_MakeServerSock(const char *ipaddr, const char *port, int default_children
  *
  */
 int SS_WaitAndProcess(int sock, int default_children, int max_children, int daemonize,
+		      int max_connects,
 		      int (*ClientHandler)(ClientInfo*), int (*Login)(ClientInfo*),
 		      void (*ClientCleanup)(ClientInfo*))
 {
   struct sockaddr_in saClient;
-  int csock,len,i;
+  int csock,len,i,j;
   struct sigaction act;
   int ss_nchildren=0;
   pid_t ss_server_pid=0; /* PID of the great father process */
   pid_t deadchildpid;
+  int n_connects=0;
 
   if (n_default_children != default_children)
     trace(TRACE_FATAL,"SS_WaitAndProcess(): incompatible number of default-children specified.\n");
@@ -270,6 +272,7 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
       if (!fork())
 	{
 	  default_child_pids[i] = getpid();
+	  n_connects=0;
 	  break;
 	}
       else
@@ -312,6 +315,7 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 
 	      /* let other processes know we're busy */
 	      (*ss_n_default_children_used)++;
+	      n_connects++;
 
 	      /* zero-init */
 	      memset(&client, 0, sizeof(client));
@@ -402,6 +406,19 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 	      trace(TRACE_INFO, "[%ld] child close, dcu: %d\n",
 		    getpid(),*ss_n_default_children_used);
 
+	      if (n_connects >= max_connects)
+		{
+		  /* maximum number of connections, commit suicide */
+		  trace(TRACE_DEBUG,"Maximum # of connections reached, committing suicide...\n");
+		  for (i=0; i<default_children; i++)
+		    if (default_child_pids[i] == getpid())
+		      {
+			sleep(1); /* allow father process to catch up */
+			default_child_pids[i] = 0;
+			exit(0);
+		      }
+		}
+
 	    } /* main client loop */
 	}
       else
@@ -421,12 +438,17 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 		      if (!fork())
 			{
 			  default_child_pids[i] = getpid();
+			  n_connects=0;
 			  break;  
 			  /* after this break the if (getpid() == ss_server_pid) 
 			     will be re-executed */
 			}
 		      else
-			while (default_child_pids[i] == 0) sleep(1);
+			{
+			  /* add a counter so we will not loop forever */
+			  j=0;
+			  while (default_child_pids[i] == 0 && ++j<100) usleep(100);
+			}
 		    }
 		}
 
@@ -484,6 +506,7 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 	      if (fork())
 		{
 		  ss_nchildren++;
+		  close(csock);
 		  continue;
 		}
 	      else
@@ -671,8 +694,6 @@ void SS_sighandler(int sig, siginfo_t *info, void *data)
   switch (sig)
     {
     case SIGCHLD:
-      trace(TRACE_ERROR,"Got SIGCHLD for %d\n",info->si_pid);
-
       PID = waitpid(info->si_pid, &status, WNOHANG | WUNTRACED);
 
       break;
