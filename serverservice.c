@@ -518,7 +518,7 @@ void SS_sighandler(int sig, siginfo_t *info, void *data)
   int i;
 
   /* reset the entry of this process if it is a default child (so it can be restored) */
-  for (i=0; i<n_default_children; i++)
+  for (i=0; i<n_default_children && default_child_pids; i++)
     if (info->si_pid == default_child_pids[i])
       {
 	default_child_pids[i] = 0;
