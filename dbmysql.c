@@ -1518,10 +1518,28 @@ int db_get_msgdate(unsigned long mailboxuid, unsigned long msguid, char *date)
  *
  * returns -1 on error, 0 on success
  */
-int db_build_bodystructure(bodystruct_t *bs)
+int db_build_bodystructure(bodystruct_t *bs, unsigned long uid)
 {
   char query[DEF_QUERYSIZE];
 
+  snprintf(query, DEF_QUERYSIZE, "SELECT messageblk FROM messageblk WHERE "
+	   "messageidnr = %lu", uid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_build_bodystructure(): could not get message\n");
+      return (-1);
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_build_bodystructure(): mysql_store_result failed: %s\n",
+	    mysql_error(&conn));
+      return (-1);
+    }
+
+  /* seek for first 'content-type' field */
+  
 }
 
 

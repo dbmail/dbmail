@@ -55,9 +55,11 @@ int main (int argc, char *argv[]) {
     {
       trace (TRACE_INFO,"main(): using NORMAL_DELIVERY");
       /* parse the list and scan for field and content */
-      mime_list(header,headersize);
+      if (mime_list(header, &mimelist) == -1)
+	trace(TRACE_STOP,"main(): fatal error creating MIME-header list\n");
+
       /* parse for destination addresses */
-	if (!mail_adr_list("deliver-to",&users))	
+	if (!mail_adr_list("deliver-to",&users,&mimelist))	
 		trace(TRACE_STOP,"main(): scanner found no email addresses");
     } 
 
