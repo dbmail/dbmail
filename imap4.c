@@ -275,6 +275,7 @@ int IMAPClientHandler(ClientInfo * ci)
 		if (!checktag(tag)) {
 			if (ci_write(session->ci->tx, "* BAD Invalid tag specified\r\n")) {
 				ci_cleanup(session->ci);
+				dbmail_imap_session_delete(session);
 				return EOF;
 			}
 			nfaultyresponses++;
