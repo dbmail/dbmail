@@ -70,7 +70,8 @@ int main(int argc, char *argv[])
     }
 	
   printf ("Ok. Connected\n");
-
+  configure_debug(TRACE_ERROR, 1, 0);
+  
   switch (argv[1][0])
     {
     case 'a': result = do_add(argc-2,&argv[2]); break;
