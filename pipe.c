@@ -97,7 +97,7 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
   size_t usedmem=0, totalmem=0;
   struct list userids;
   struct list messageids;
-  void *sendmail_pipe;
+  FILE *sendmail_pipe;
   struct list external_forwards;
   struct list bounces;
   struct list descriptors;
@@ -355,17 +355,17 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 		      sprintf (tmpbuffer,"%s\nTo: %s\n%s",header,
 			       (char *)tmp_pipe->data,nextscan);
 		      trace (TRACE_DEBUG,"insert_messages(): new header [%s]",tmpbuffer);
-		      (FILE *)sendmail_pipe = popen(SENDMAIL,"w");
+		      sendmail_pipe = popen(SENDMAIL,"w");
 		      trace (TRACE_DEBUG,"insert_messages(): popen() executed");
 
 		      if (sendmail_pipe!=NULL)
 			{
 			  /* build a list of descriptors */
 			  trace (TRACE_DEBUG,"insert_messages(): popen() successfull "
-				 "[descriptor=%d]",fileno((FILE*)sendmail_pipe));
+				 "[descriptor=%d]",fileno(sendmail_pipe));
 
 			  /* -2 will send the complete message to sendmail_pipe */
-			  fprintf ((FILE *)sendmail_pipe,"%s",tmpbuffer);
+			  fprintf (sendmail_pipe,"%s",tmpbuffer);
 			  trace (TRACE_DEBUG,"insert_messages(): wrote header to pipe");
 
 			  /* add the external pipe descriptor to a list */
@@ -400,15 +400,16 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 			      while (descriptor_temp!=NULL)
 				{
 				  trace (TRACE_DEBUG,"insert_messages(): fprintf now");
-				  err = ferror((descriptor_temp->data));
+				  err = ferror(*((FILE **)(descriptor_temp->data)));
 				  trace (TRACE_DEBUG,"insert_messages(): "
 					 "ferror reports %d, feof reports %d on descriptor %d",err, 
-					 feof(descriptor_temp->data),fileno(descriptor_temp->data));
+					 feof(*((FILE **)(descriptor_temp->data))),
+				    fileno(*((FILE **)(descriptor_temp->data))));
 
 				   /* if (!err)
 				    fwrite (strblock, sizeof(char), usedmem,
 					    (FILE *)(descriptor_temp->data));  */
-				  fprintf (descriptor_temp->data,"%s",strblock);
+				  fprintf (*((FILE **)(descriptor_temp->data)),"%s",strblock);
 
 				  trace (TRACE_DEBUG,"insert_messages(): wrote data");
 				  descriptor_temp=descriptor_temp->nextnode;
@@ -424,18 +425,27 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 			}
 
 		      /* done forwarding */
-		      trace(TRACE_DEBUG, "insert_messages(): Closing pipe");
+		      trace(TRACE_DEBUG, "insert_messages(): Closing pipes");
 		      descriptor_temp = list_getstart(&descriptors);
 		      while (descriptor_temp!=NULL)
 			{
-			  if (descriptor_temp->data!=NULL)
+			  if (descriptor_temp->data!=NULL) 
 			    {
-					 fprintf ((FILE *)(descriptor_temp->data),"\n.\n");
-			      pclose((FILE *)sendmail_pipe);
+					 if (!ferror(*((FILE **)(descriptor_temp->data))))
+							{
+							fprintf (*((FILE **)(descriptor_temp->data)),"\n.\n"); 
+							pclose (*((FILE **)(descriptor_temp->data)));
+							trace(TRACE_DEBUG,"insert_messages: descriptor %d closed",
+									fileno(*((FILE **)(descriptor_temp->data))));
+							}
+					 else 
+							trace(TRACE_DEBUG,"insert_messages: descriptor %d already closed",
+									fileno(*((FILE **)(descriptor_temp->data))));
 			    }
 			  else 
 			    trace (TRACE_ERROR,"insert_messages(): Huh? "
 				   "The descriptor died on me. That's not supposed to happen");
+			  descriptor_temp=descriptor_temp->nextnode;
 			}
 		    }
 		  else
@@ -444,7 +454,7 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 			     "Something went wrong when building a list "
 			     "structure for pipe descriptors");
 		    }
-		  list_freelist(&descriptors.start);
+		 list_freelist(&descriptors.start); 
 		}
 	      else	
 		{		
@@ -506,11 +516,11 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
   trace (TRACE_DEBUG,"insert_messages(): updatequery freed");
   free(updatequery);
   trace (TRACE_DEBUG,"insert_messages(): End of function");
-
+  
   list_freelist(&bounces.start);
   list_freelist(&userids.start);
   list_freelist(&messageids.start);
   list_freelist(&external_forwards.start);
-
+  
   return 0;
 }
