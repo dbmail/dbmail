@@ -9,7 +9,7 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #else
-#define VERSION "1.1"
+#define VERSION "1.2"
 #define PACKAGE "dbmail"
 #endif
 
