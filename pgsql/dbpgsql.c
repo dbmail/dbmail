@@ -2461,6 +2461,71 @@ int db_get_msgflag_all(u64_t msguid, u64_t mailboxuid, int *flags)
    return 0;
 }
 
+
+/*
+ * db_get_msgflag_all_range()
+ * 
+ * as db_get_msgflag_all() but queries for a range of messages.
+ * *flags should be freed by the client.
+ *
+ * upon success, *flags is an array containing resultsetlen*IMAP_NFLAGS items
+ * (a lineair dump of all the flags)
+ *
+ * for example, to retrieve the flags for the 2nd message you should index like
+ *
+ * flags[(2-1) * IMAP_NFLAGS + ___flag you want, range 0-5___]
+ * remember the minus 1: we start counting at zero
+ * 
+ * returns 0 on success, -1 on dbase error, -2 on memory error
+ */
+int db_get_msgflag_all_range(u64_t msguidlow, u64_t msguidhigh, u64_t mailboxuid, 
+			     int **flags, unsigned *resultsetlen)
+{
+  unsigned nrows, i, j;
+  char *row;
+
+  *flags = 0;
+  *resultsetlen = 0;
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT seen_flag, answered_flag, deleted_flag, "
+	   "flagged_flag, draft_flag, recent_flag FROM messages WHERE "
+	   "message_idnr >= %llu AND message_idnr <= %llu AND status<2 AND unique_id != '' "
+	   "AND mailbox_idnr = %llu", msguidlow, msguidhigh, mailboxuid);
+ 
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_get_msgflag_all_range(): could not select message\n");
+      return (-1);
+    }
+
+  if ((nrows = PQntuples(res)) == 0)
+    {
+      return 0;
+    }
+
+  *flags = (int*)my_malloc(nrows * IMAP_NFLAGS * sizeof(int));
+  if (! (*flags))
+    {
+      trace(TRACE_ERROR, "db_get_msgflag_all_range(): out of mem\n");
+      PQclear(res);
+      return -2;
+    }
+
+  for (i=0; i<nrows; i++)
+    {
+      for (j=0; j<IMAP_NFLAGS; j++)
+	{
+	  row = PQgetvalue(res, i, j);
+	  (*flags)[i * IMAP_NFLAGS +j] = (row && row[0] != '0') 1 : 0;
+	}
+    }
+
+  PQclear(res);
+  *resultsetlen = nrows;
+  return 0;
+}
+
+
 /*
  * db_set_msgflag()
  *

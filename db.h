@@ -163,6 +163,8 @@ int db_unsubscribe(u64_t mboxid);
 /* message functionality */
 int db_get_msgflag(const char *name, u64_t msguid, u64_t mailboxuid);
 int db_get_msgflag_all(u64_t msguid, u64_t mailboxuid, int *flags);
+int db_get_msgflag_all_range(u64_t msguidlow, u64_t msguidhigh, u64_t mailboxuid, 
+			     int **flags, unsigned *resultsetlen);
 int db_set_msgflag(u64_t msguid, u64_t mailboxuid, int *flags, int action_type);
 int db_set_msgflag_range(u64_t msguidlow, u64_t msguidhigh, u64_t mailboxuid, 
 			 int *flags, int action_type);

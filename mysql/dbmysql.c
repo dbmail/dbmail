@@ -2869,7 +2869,7 @@ u64_t db_get_rfcsize(u64_t msguid, u64_t mailboxuid)
   u64_t size;
 
   snprintf(query, DEF_QUERYSIZE, "SELECT rfcsize FROM messages WHERE message_idnr = %llu "
-	   "AND status<2 AND unique_id != '' AND mailbox_idnr = ", msguid, mailboxuid);
+	   "AND status<2 AND unique_id != '' AND mailbox_idnr = %llu", msguid, mailboxuid);
 
   if (db_query(query) == -1)
     {
