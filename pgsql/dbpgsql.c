@@ -1165,7 +1165,7 @@ int db_icheck_messages(int *nlost, u64_t **lostlist)
 
 
   snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr FROM messages WHERE mailbox_idnr NOT IN "
-	   "(SELECT mailbox_idnr FROM mailboxes)::bigint8");
+	   "(SELECT mailbox_idnr FROM mailboxes)");
 
   trace (TRACE_DEBUG,"db_icheck_messages(): executing query [%s]",query);
 
@@ -2489,7 +2489,7 @@ int db_get_msgflag_all_range(u64_t msguidlow, u64_t msguidhigh, u64_t mailboxuid
 
   snprintf(query, DEF_QUERYSIZE, "SELECT seen_flag, answered_flag, deleted_flag, "
 	   "flagged_flag, draft_flag, recent_flag FROM messages WHERE "
-	   "message_idnr >= %llu AND message_idnr <= %llu::bigint8 AND status<2 AND unique_id != '' "
+	   "message_idnr >= %llu AND message_idnr <= %llu AND status<2 AND unique_id != '' "
 	   "AND mailbox_idnr = %llu", msguidlow, msguidhigh, mailboxuid);
  
   if (db_query(query) == -1)
@@ -2684,7 +2684,7 @@ int db_set_msgflag_range(u64_t msguidlow, u64_t msguidhigh, u64_t mailboxuid,
   
   /* last character in string is comma, replace it --> strlen()-1 */
   snprintf(&query[strlen(query)-1], left, " WHERE "
-	   "message_idnr >= %llu AND message_idnr <= %llu::bigint8 AND "
+	   "message_idnr >= %llu AND message_idnr <= %llu AND "
 	   "status<2 AND mailbox_idnr = %llu", msguidlow, msguidhigh, mailboxuid);
 
   if (db_query(query) == -1)
@@ -2749,7 +2749,7 @@ int db_get_msgdate(u64_t mailboxuid, u64_t msguid, char *date)
 int db_set_rfcsize(u64_t size, u64_t msguid, u64_t mailboxuid)
 {
   snprintf(query, DEF_QUERYSIZE, "UPDATE messages SET rfcsize = %llu "
-	   "WHERE message_idnr = %llu AND mailbox_idnr = %llu::bigint8",
+	   "WHERE message_idnr = %llu AND mailbox_idnr = %llu",
 	   size, msguid, mailboxuid);
   
   if (db_query(query) == -1)
@@ -2809,7 +2809,7 @@ int db_get_msginfo_range(u64_t msguidlow, u64_t msguidhigh, u64_t mailboxuid,
   snprintf(query, DEF_QUERYSIZE, "SELECT seen_flag, answered_flag, deleted_flag, "
 	   "flagged_flag, draft_flag, recent_flag, internal_date, rfcsize, message_idnr "
 	   "FROM messages WHERE "
-	   "message_idnr >= %llu AND message_idnr <= %llu::bigint8 AND mailbox_idnr = %llu::bigint8"
+	   "message_idnr >= %llu AND message_idnr <= %llu AND mailbox_idnr = %llu"
 	   "AND status<2 AND unique_id != '' "
 	   "ORDER BY message_idnr ASC", msguidlow, msguidhigh, mailboxuid);
  
