@@ -22,7 +22,6 @@ SIEVEPROGS = dbmail-sievecmd dbmail-timsieved
 endif
 
 bin_PROGRAMS = dbmail-readvut $(SIEVEPROGS)
-sbin_SCRIPTS = install-dbmail.sh
 sbin_PROGRAMS = dbmail-smtp dbmail-pop3d dbmail-imapd dbmail-maintenance dbmail-adduser dbmail-lmtpd 
 
 COMMON = config.c debug.c list.c dbmd5.c md5.c db.c misc.c mime.c

@@ -98,7 +98,6 @@ SUBDIRS = mysql pgsql auth sort
 @SIEVE_TRUE@SIEVEPROGS = dbmail-sievecmd dbmail-timsieved
 
 bin_PROGRAMS = dbmail-readvut $(SIEVEPROGS)
-sbin_SCRIPTS = install-dbmail.sh
 sbin_PROGRAMS = dbmail-smtp dbmail-pop3d dbmail-imapd dbmail-maintenance dbmail-adduser dbmail-lmtpd 
 
 COMMON = config.c debug.c list.c dbmd5.c md5.c db.c misc.c mime.c
@@ -184,8 +183,6 @@ misc.o mime.o server.o serverchild.o header.o pipe.o forward.o dsn.o \
 lmtp.o lmtpd.o
 dbmail_lmtpd_DEPENDENCIES = 
 dbmail_lmtpd_LDFLAGS = 
-SCRIPTS =  $(sbin_SCRIPTS)
-
 CFLAGS = @CFLAGS@
 COMPILE = $(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
@@ -358,25 +355,6 @@ dbmail-adduser: $(dbmail_adduser_OBJECTS) $(dbmail_adduser_DEPENDENCIES)
 dbmail-lmtpd: $(dbmail_lmtpd_OBJECTS) $(dbmail_lmtpd_DEPENDENCIES)
 	@rm -f dbmail-lmtpd
 	$(LINK) $(dbmail_lmtpd_LDFLAGS) $(dbmail_lmtpd_OBJECTS) $(dbmail_lmtpd_LDADD) $(LIBS)
-
-install-sbinSCRIPTS: $(sbin_SCRIPTS)
-	@$(NORMAL_INSTALL)
-	$(mkinstalldirs) $(DESTDIR)$(sbindir)
-	@list='$(sbin_SCRIPTS)'; for p in $$list; do \
-	  if test -f $$p; then \
-	    echo " $(INSTALL_SCRIPT) $$p $(DESTDIR)$(sbindir)/`echo $$p|sed '$(transform)'`"; \
-	    $(INSTALL_SCRIPT) $$p $(DESTDIR)$(sbindir)/`echo $$p|sed '$(transform)'`; \
-	  else if test -f $(srcdir)/$$p; then \
-	    echo " $(INSTALL_SCRIPT) $(srcdir)/$$p $(DESTDIR)$(sbindir)/`echo $$p|sed '$(transform)'`"; \
-	    $(INSTALL_SCRIPT) $(srcdir)/$$p $(DESTDIR)$(sbindir)/`echo $$p|sed '$(transform)'`; \
-	  else :; fi; fi; \
-	done
-
-uninstall-sbinSCRIPTS:
-	@$(NORMAL_UNINSTALL)
-	list='$(sbin_SCRIPTS)'; for p in $$list; do \
-	  rm -f $(DESTDIR)$(sbindir)/`echo $$p|sed '$(transform)'`; \
-	done
 
 # This directory's subdirectories are mostly independent; you can cd
 # into them and run `make' without going through this Makefile.
@@ -573,8 +551,7 @@ installcheck: installcheck-recursive
 all-recursive-am: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
-install-exec-am: install-binPROGRAMS install-sbinPROGRAMS \
-		install-sbinSCRIPTS
+install-exec-am: install-binPROGRAMS install-sbinPROGRAMS
 install-exec: install-exec-recursive
 
 install-data-am:
@@ -583,17 +560,15 @@ install-data: install-data-recursive
 install-am: all-am
 	@$(MAKE) $(AM_MAKEFLAGS) install-exec-am install-data-am
 install: install-recursive
-uninstall-am: uninstall-binPROGRAMS uninstall-sbinPROGRAMS \
-		uninstall-sbinSCRIPTS
+uninstall-am: uninstall-binPROGRAMS uninstall-sbinPROGRAMS
 uninstall: uninstall-recursive
-all-am: Makefile $(PROGRAMS) $(SCRIPTS) config.h
+all-am: Makefile $(PROGRAMS) config.h
 all-redirect: all-recursive-am
 install-strip:
 	$(MAKE) $(AM_MAKEFLAGS) AM_INSTALL_PROGRAM_FLAGS=-s install
 installdirs: installdirs-recursive
 installdirs-am:
-	$(mkinstalldirs)  $(DESTDIR)$(bindir) $(DESTDIR)$(sbindir) \
-		$(DESTDIR)$(sbindir)
+	$(mkinstalldirs)  $(DESTDIR)$(bindir) $(DESTDIR)$(sbindir)
 
 
 mostlyclean-generic:
@@ -639,12 +614,11 @@ maintainer-clean-binPROGRAMS uninstall-binPROGRAMS install-binPROGRAMS \
 mostlyclean-sbinPROGRAMS distclean-sbinPROGRAMS clean-sbinPROGRAMS \
 maintainer-clean-sbinPROGRAMS uninstall-sbinPROGRAMS \
 install-sbinPROGRAMS mostlyclean-compile distclean-compile \
-clean-compile maintainer-clean-compile uninstall-sbinSCRIPTS \
-install-sbinSCRIPTS install-data-recursive uninstall-data-recursive \
-install-exec-recursive uninstall-exec-recursive installdirs-recursive \
-uninstalldirs-recursive all-recursive check-recursive \
-installcheck-recursive info-recursive dvi-recursive \
-mostlyclean-recursive distclean-recursive clean-recursive \
+clean-compile maintainer-clean-compile install-data-recursive \
+uninstall-data-recursive install-exec-recursive \
+uninstall-exec-recursive installdirs-recursive uninstalldirs-recursive \
+all-recursive check-recursive installcheck-recursive info-recursive \
+dvi-recursive mostlyclean-recursive distclean-recursive clean-recursive \
 maintainer-clean-recursive tags tags-recursive mostlyclean-tags \
 distclean-tags clean-tags maintainer-clean-tags distdir \
 mostlyclean-depend distclean-depend clean-depend \
