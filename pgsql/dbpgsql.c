@@ -1665,8 +1665,39 @@ int db_imap_append_msg(char *msgdata, u64_t datalen, u64_t mboxid, u64_t uid)
 int db_insert_message_complete(u64_t useridnr, MEM *hdr, MEM *body, 
 			       u64_t hdrsize, u64_t bodysize, u64_t rfcsize)
 {
-/*  u64_t msgid,mboxid;
-  u64_t total, passed;
+  char timestr[30];
+  char unique_id[UID_SIZE];
+  u64_t msgid,mboxid;
+  memblock_t *curr = NULL;
+  time_t td;
+  struct tm tm;
+  char *escaped_query = NULL;
+  unsigned maxesclen = READ_BLOCK_SIZE * 2 + DEF_QUERYSIZE, startlen = 0, esclen = 0;
+
+  time(&td);              /* get time */
+  tm = *localtime(&td);   /* get components */
+  strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
+
+  if (!hdr || !body)
+    {
+      trace(TRACE_ERROR, "db_insert_message_complete(): got a NULL pointer for data "
+	    "hdr [%lx] body [%lx]", hdr, body);
+      return -1;
+    }
+
+  if (!hdr->firstblk || !body->firstblk)
+    {
+      trace(TRACE_ERROR, "db_insert_message_complete(): structure contains no data: "
+	    "hdr->firstblk [%lx] body->firstblk [%lx]", hdr->firstblk, body->firstblk);
+      return -1;
+    }
+
+  escaped_query = (char*)my_malloc(sizeof(char) * maxesclen);
+  if (!escaped_query)
+    {
+      trace(TRACE_ERROR,"db_insert_message_complete(): not enough memory");
+      return -1;
+    }
 
   mboxid = db_get_mailboxid(&useridnr, "INBOX");
   if (mboxid == 0 || mboxid == -1)
@@ -1680,7 +1711,7 @@ int db_insert_message_complete(u64_t useridnr, MEM *hdr, MEM *body,
 
   snprintf(query, DEF_QUERYSIZE, "INSERT INTO messages(mailbox_idnr,messagesize,unique_id,"
 	   "internal_date,recent_flag,rfcsize) VALUES (%llu,%llu,' ','%s',1,%llu)",
-	   mboxid, hdrsize+bodysize, rfcsize);
+	   mboxid, hdrsize+bodysize, timestr, rfcsize);
 
   if (db_query(query) == -1)
     {
@@ -1691,9 +1722,81 @@ int db_insert_message_complete(u64_t useridnr, MEM *hdr, MEM *body,
 
   msgid = db_insert_result("message_idnr");
 
-  snprintf(query, DEF_QUERYSIZE, "INSERT INTO messageblks(messageblk,blocksize,message_idnr)"
-	   "VALUES ('%s',%d,%llu)", 
-*/
+  if (_MEMBLOCK_SIZE == READ_BLOCK_SIZE)
+    {
+      /* this should be the case for maximum efficiency */
+
+      /* insert header */
+      /* FIXME: assuming the header will consist of 1 block at most */
+      snprintf(escaped_query, maxesclen, "INSERT INTO messageblks"
+	       "(messageblk,blocksize,message_idnr) VALUES ('");
+      
+      startlen = sizeof("INSERT INTO messageblks"
+			"(messageblk,blocksize,message_idnr) VALUES ('") - 1;
+
+      /* escape & add data */
+      esclen = PQescapeString(&escaped_query[startlen],
+			   hdr->firstblk->data,
+			   hdrsize);
+           
+      snprintf(&escaped_query[esclen + startlen],
+	       maxesclen - esclen - startlen, "',%llu,%llu)", hdrsize, msgid);
+
+      if (db_query(escaped_query) == -1)
+	{
+	  trace(TRACE_ERROR,"db_insert_message_complete(): could not insert message header");
+	  db_query("ROLLBACK WORK");
+	  return -1;
+	}
+
+      /* insert the message body */
+      for (curr = body->firstblk; curr; curr = curr->nextblk)
+	{
+	  /* the first part of escaped_query[] remains the same */
+
+	  /* escape & add data */
+	  esclen = PQescapeString(&escaped_query[startlen],
+				  curr->data,
+				  curr->nextblk ? 
+				  _MEMBLOCK_SIZE : (unsigned long)strlen(curr->data));
+           
+	  snprintf(&escaped_query[esclen + startlen],
+		   maxesclen - esclen - startlen, "',%llu,%llu)", hdrsize, msgid);
+
+	  if (db_query(escaped_query) == -1)
+	    {
+	      trace(TRACE_ERROR,"db_insert_message_complete(): could not insert message block");
+	      db_query("ROLLBACK WORK");
+	      return -1;
+	    }
+	}
+    }
+  else
+    {
+      trace(TRACE_ERROR,"db_insert_message_complete(): size difference not yet supported "
+	    "_MEMBLOCK_SIZE [%llu], READ_BLOCK_SIZE [%llu]", 
+	    _MEMBLOCK_SIZE, READ_BLOCK_SIZE);
+
+      db_query("ROLLBACK WORK");
+      return -1;
+    }
+
+  /* create unique ID */
+  snprintf(unique_id,UID_SIZE,"%lluA%lu",msgid,td);
+
+  snprintf(query, DEF_QUERYSIZE,
+	   "UPDATE messages SET unique_id=\'%s\' where message_idnr=%llu",
+	   unique_id, msgid);
+  
+
+  if (db_query("COMMIT WORK") == -1)
+    {
+      trace(TRACE_ERROR, "db_insert_message_complete(): could not commit work");
+      return -1;
+    }
+
+  trace(TRACE_MESSAGE,"Inserted message, size [%llu] bytes", hdrsize+bodysize);
+
   return 0;
 }
 
