@@ -1636,7 +1636,7 @@ int _ic_search(struct ImapSession *self)
 
 	/* reverse the search list back to it's original order */
 	sub_search = &sk.sub_search;
-	sub_search.start = dbmail_list_reverse(sub_search.start);
+	sk.sub_search.start = dbmail_list_reverse(sub_searchi->start);
 	
 	if (result == -2) {
 		free_searchlist(&sk.sub_search);
