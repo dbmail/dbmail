@@ -470,7 +470,7 @@ u64_t db_insert_message_block (char *block, u64_t message_idnr)
 	  memtst((tmpquery=(char *)my_malloc(esclen + 500))==NULL);
 	
 	  snprintf (tmpquery, esclen+500,
-		   "INSERT INTO messageblk(messageblk,blocksize,message_idnr) "
+		   "INSERT INTO messageblks(messageblk,blocksize,message_idnr) "
 		   "VALUES (\"%s\",%d,%llu)",
 		   escblk,len,message_idnr);
 
