@@ -4,41 +4,37 @@
 #include "config.h"
 #include "misc.h"
 
-extern struct list users;
-
-struct list tmplist;
-
-struct element *finduser(char *username)
+int drop_priviledges (char *newuser, char *newgroup)
 {
-	struct element *e;
+	/* will drop running program's priviledges to newuser and newgroup */
+	struct passwd *pwd;
+	struct group *grp;
 	
-	e=list_getstart(&tmplist);
-	while (e!=NULL)
-		{
-		if (strcmp((char *)e->data,username)==0)
-				return e;
-		e=e->nextnode;
-		}
-	return NULL;
-}
+	grp = getgrnam(newgroup);
 
-void check_duplicates()
-{
-/* 	The target email addresses must not contain duplicates. 
-  	This would happen if somebody is in the to: and the Cc: field.
-	The MTA would deliver it twice. We won't. */
-
-	struct element *tmp;
-	
-	printf ("Checking for duplicates\n");
-	
-	tmp=list_getstart(&users);
-	while (tmp!=NULL)
+	if (grp == NULL)
 	{
-		if (finduser((char *)tmp->data)==NULL)
-			list_nodeadd(&tmplist,(void *)tmp->data,strlen((char *)tmp->data));
-		tmp=tmp->nextnode;
+		trace (TRACE_ERROR,"drop_priviledges(): could not find group %s",newgroup);
+		return -1;
 	}
-	users=tmplist;
-	printf ("total email addresses found %lu\n",list_totalnodes(&users));
+
+	pwd = getpwnam(newuser);
+	if (pwd == NULL)
+	{
+		trace (TRACE_ERROR,"drop_priviledges(): could not find user %s",newgroup);
+		return -1;
+	}
+
+	if (setgid (grp->gr_gid) !=0)
+	{
+		trace (TRACE_ERROR,"drop_priviledges(): could not set gid to %s",newuser);
+		return -1;
+	}
+	
+	if (setuid (pwd->pw_uid) != 0)
+	{
+		trace (TRACE_ERROR,"drop_priviledges(): could not set uid to %s",newuser);
+		return -1;
+	}
+	return 0;
 }

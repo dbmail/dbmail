@@ -116,12 +116,70 @@ int db_insert_config_item (char *item, char *value)
 	if (db_query(ckquery)==-1)
 	{
 		trace (TRACE_DEBUG,"insert_config_item(): item [%s] value [%s] failed",item,value);
+		free (ckquery);
 		return -1;
 	}
 	else 
 		return 0;
 }
 
+char *db_get_config_item (char *item, int type)
+{
+	/* retrieves an config item from database */
+	
+	char *result;
+	char *ckquery;
+	
+	/* allocating memory for query */
+	memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
+
+	sprintf (ckquery,"SELECT %s FROM config WHERE configid = 0",item);
+	trace (TRACE_DEBUG,"db_get_config_item_char(): retrieving config_item %s by query %s",item, ckquery);
+
+	if (db_query(ckquery)==-1)
+	{
+		if (type == CONFIG_MANDATORY)
+			trace (TRACE_FATAL,"db_get_config_item(): query failed could not get value for %s. This is needed to continue",item);
+		else
+			if (type == CONFIG_EMPTY)
+				trace (TRACE_ERROR,"db_get_config_item(): query failed. Could not get value for %s",item);
+		free (ckquery);
+		return NULL;
+	}
+  
+	if ((res = mysql_store_result(&conn)) == NULL) 
+    	{
+		if (type == CONFIG_MANDATORY)
+      			trace(TRACE_FATAL,"db_get_config_item(): mysql_store_result failed: %s",mysql_error(&conn));
+		else
+			if (type == CONFIG_EMPTY)
+				trace (TRACE_ERROR,"db_get_config_item(): mysql_store_result failed (fatal): %s",mysql_error(&conn));
+      		free(ckquery);
+      		return 0;
+   	}
+
+	if ((row = mysql_fetch_row(res))==NULL)
+	{
+	if (type == CONFIG_MANDATORY)
+		trace (TRACE_FATAL,"db_get_config_item(): configvalue not found for %s. rowfetch failure. This is needed to continue",item);
+	else
+	if (type == CONFIG_EMPTY)
+		trace (TRACE_ERROR,"db_get_config_item(): configvalue not found. rowfetch failure.  Could not get value for %s",item);
+	free (ckquery);
+	return NULL;
+	}
+	
+	free (ckquery);
+
+	if (row[0]!=NULL)
+	{
+		memtst(result=(char *)malloc(strlen(row[0]+1))==0);
+		strcpy (result,row[0]);
+	}
+	
+	return result;
+}
+	
 unsigned long db_get_inboxid (unsigned long *useridnr)
 {
 	/* returns the mailbox id (of mailbox inbox) for a user or a 0 if no mailboxes were found */

@@ -13,6 +13,11 @@
 /* size of the messageblk's */
 #define READ_BLOCK_SIZE 524288		/* be carefull, MYSQL has a limit */
 
+/* config types */
+#define CONFIG_MANDATORY 1			
+#define CONFIG_EMPTY 0
+
+
 struct session;
 struct list;
 
@@ -108,6 +113,7 @@ typedef struct
 int db_connect();
 int db_query (char *query);
 int db_check_user (char *username, struct list *userids);
+char *db_get_config_item (char *item, int type);
 int db_insert_config_item (char *item, char *value);
 unsigned long db_get_inboxid (unsigned long *useridnr);
 unsigned long db_get_useridnr (unsigned long messageidnr);

@@ -51,6 +51,8 @@ int main (int argc, char *argv[])
   char *myhostname;
   char *theiraddress;
 
+  char *newuser, *newgroup;
+  
   time_t timestamp;
   time_t timeout;
 	
@@ -70,7 +72,7 @@ int main (int argc, char *argv[])
 	
 
   /* daemonize */
-  if (fork ())
+/*  if (fork ())
     exit (0);
   setsid ();
 		
@@ -79,7 +81,7 @@ int main (int argc, char *argv[])
 		
   close (0);
   close (1);
-  close (2); 
+  close (2);  */
 
   /* reserve memory for hostname */
   memtst((myhostname=(char *)malloc(64))==NULL);
@@ -117,9 +119,25 @@ int main (int argc, char *argv[])
   z = listen (s, BACKLOG); /* make the socket listen */
   if (z == -1 )
     trace (TRACE_FATAL,"main(): call listen(2) failed");
+
+  /* drop priviledges */
+	trace (TRACE_MESSAGE,"main(): Dropping priviledges");		
+
+  if (db_connect()< 0) 
+	trace(TRACE_FATAL,"main(): could not connect to database"); 
+	
+  newuser = db_get_config_item("POP3D_EFFECTIVE_USER",CONFIG_MANDATORY);
+  newgroup = db_get_config_item("POP3D_EFFECTIVE_GROUP",CONFIG_MANDATORY);
+	
+  if ((newuser!=NULL) && (newgroup!=NULL))
+  {
+	if (drop_priviledges (newuser, newgroup) != 0)
+		trace (TRACE_FATAL,"main(): could not set uid %s, gid %s",newuser,newgroup);
+  }
+  else
+	trace(TRACE_FATAL,"main(): newuser and newgroup should not be NULL");
 	
   /* server loop */
-
   trace (TRACE_MESSAGE,"main(): DBmail pop3 server ready");
 	
   for (;;)
@@ -128,7 +146,8 @@ int main (int argc, char *argv[])
 	{
 	  if (!fork())
 	    {
-				/* wait for a connection */
+				
+			/* wait for a connection */
 	      len_inet = sizeof (adr_clnt);
 	      c = accept (s, (struct sockaddr *)&adr_clnt,
 			  &len_inet); /* incoming connection */
