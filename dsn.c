@@ -299,27 +299,48 @@ int dsnuser_resolve(deliver_to_user_t *delivery)
 		}
 	}
 	/* We don't have a useridnr, so we have either a username or an alias. */
+	/* Here's the process: 
+	   if (address has alias) 
+	       resolve aliases
+	   else if (address is username)
+	       deliver to username
+	   else if (address' domain matches a catch-all)
+	       deliver to domain-user
+	 */
 	else {		/* from: 'if (delivery->useridnr != 0)' */
 
-		/* See if the address is a username. */
-		switch (auth_user_exists(delivery->address, &userid)) {
-		case -1:
-			{
+		alias_count =
+		    auth_check_user_ext(delivery->address,
+					delivery->userids,
+					delivery->forwards, -1);
+		trace(TRACE_DEBUG,
+		      "%s, %s: user [%s] found total of [%d] aliases",
+		      __FILE__, __func__, delivery->address, alias_count);
+
+		if (alias_count > 0) {
+			/* The address has aliases. */
+			delivery->dsn.class = DSN_CLASS_OK;	/* Success. */
+			delivery->dsn.subject = 1;	/* Address related. */
+			delivery->dsn.detail = 5;	/* Valid. */
+		} else {
+			/* No aliases found for the address. */
+			int user_exists;
+			user_exists = auth_user_exists(delivery->address, &userid);
+
+			if (user_exists < 0) {
 				/* An error occurred */
 				trace(TRACE_ERROR,
 				      "%s, %s: error checking user [%s]",
 				      __FILE__, __func__, delivery->address);
 				return -1;
-			}
-		case 1:
-			{
+			} else if (user_exists == 1) {
 				if (list_nodeadd(delivery->userids, &userid,
 				     sizeof(u64_t)) == 0) {
 					trace(TRACE_ERROR, "%s, %s: out of memory",
 					      __FILE__, __func__);
 					return -1;
 				} else {
-
+                        
 					trace(TRACE_DEBUG,
 					      "%s, %s: added user [%s] id [%llu] to delivery list",
 					      __FILE__, __func__, delivery->address, userid);
@@ -328,69 +349,48 @@ int dsnuser_resolve(deliver_to_user_t *delivery)
 					delivery->dsn.subject = 1;	/* Address related. */
 					delivery->dsn.detail = 5;	/* Valid. */
 				}
-				break;
-			}
-			/* The address needs to be looked up */
-		default:
-			{
-				alias_count =
-				    auth_check_user_ext(delivery->address,
-							delivery->userids,
-							delivery->forwards, -1);
-				trace(TRACE_DEBUG,
-				      "%s, %s: user [%s] found total of [%d] aliases",
-				      __FILE__, __func__, delivery->address, alias_count);
+			} else {	/* from: if (user_exists < 0) || if (user_exists == 1)... */
+				trace(TRACE_INFO,
+				      "%s, %s: user [%s] checking for domain forwards.",
+				      __FILE__, __func__, delivery->address);
 
-				/* No aliases found for this user */
-				if (alias_count == 0) {
-					trace(TRACE_INFO,
-					      "%s, %s: user [%s] checking for domain forwards.",
-					      __FILE__, __func__, delivery->address);
+				domain = strchr(delivery->address, '@');
 
-					domain = strchr(delivery->address, '@');
+				if (domain == NULL) {
+					/* That's it, we're done here. */
+					/* Permanent failure... */
+					delivery->dsn.class = DSN_CLASS_FAIL;	/* Permanent failure. */
+					delivery->dsn.subject = 1;	/* Address related. */
+					delivery->dsn.detail = 1;	/* Does not exist. */
+				} else {
+					trace(TRACE_DEBUG,
+					      "%s, %s: domain [%s] checking for domain forwards",
+					      __FILE__, __func__, domain);
 
-					if (domain == NULL) {
-						/* That's it, we're done here. */
+					/* Checking for domain aliases */
+					domain_count =
+					    auth_check_user_ext(domain,
+					     delivery->userids,
+					     delivery->forwards, -1);
+					trace(TRACE_DEBUG,
+					      "%s, %s: domain [%s] found total of [%d] aliases",
+					      __FILE__, __func__, domain, domain_count);
+
+					if (domain_count == 0) {
 						/* Permanent failure... */
 						delivery->dsn.class = DSN_CLASS_FAIL;	/* Permanent failure. */
 						delivery->dsn.subject = 1;	/* Address related. */
 						delivery->dsn.detail = 1;	/* Does not exist. */
-					} else {
-						trace(TRACE_DEBUG,
-						      "%s, %s: domain [%s] checking for domain forwards",
-						      __FILE__, __func__, domain);
+					} else {	/* from: 'if (domain_count == 0)' */
 
-						/* Checking for domain aliases */
-						domain_count =
-						    auth_check_user_ext(domain,
-						     delivery->userids,
-						     delivery->forwards, -1);
-						trace(TRACE_DEBUG,
-						      "%s, %s: domain [%s] found total of [%d] aliases",
-						      __FILE__, __func__, domain, domain_count);
-
-						if (domain_count == 0) {
-							/* Permanent failure... */
-							delivery->dsn.class = DSN_CLASS_FAIL;	/* Permanent failure. */
-							delivery->dsn.subject = 1;	/* Address related. */
-							delivery->dsn.detail = 1;	/* Does not exist. */
-						} else {	/* from: 'if (domain_count == 0)' */
-
-							/* The userid was valid... */
-							delivery->dsn.class = DSN_CLASS_OK;	/* Success. */
-							delivery->dsn.subject = 1;	/* Address related. */
-							delivery->dsn.detail = 5;	/* Valid. */
-						}	/* from: 'if (domain_count == 0)' */
-					}	/* from: 'if (domain == NULL)' */
-				} else {	/* from: 'if (alias_count == 0)' */
-
-					/* The userid was valid... */
-					delivery->dsn.class = DSN_CLASS_OK;	/* Success. */
-					delivery->dsn.subject = 1;	/* Address related. */
-					delivery->dsn.detail = 5;	/* Valid. */
-				}	/* from: 'if (alias_count == 0)' */
-			}	/* from: 'default:' */
-		}	/* from: 'switch (auth_user_exists(delivery->address, &userid))' */
+						/* The userid was valid... */
+						delivery->dsn.class = DSN_CLASS_OK;	/* Success. */
+						delivery->dsn.subject = 1;	/* Address related. */
+						delivery->dsn.detail = 5;	/* Valid. */
+					}	/* from: 'if (domain_count == 0)' */
+				}	/* from: 'if (domain == NULL)' */
+			}	/* from: 'switch (auth_user_exists(delivery->address, &userid))' */
+		}	/* from: 'if (alias_count > 0) || else' */
 	}	/* from: 'if (delivery->useridnr != 0)' */
 
 	return 0;
