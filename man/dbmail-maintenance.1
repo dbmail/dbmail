@@ -8,7 +8,7 @@ Does a cleanup and integrity check of the \fBDbmail\fR mailsystem
 .SH SYNOPSIS
 .na
 .nf
-\fBdbmail-maintenance [-iflphd]\fR
+\fBdbmail-maintenance [-ciflphd]\fR
 .SH DESCRIPTION
 .ad
 .fi
@@ -21,6 +21,9 @@ unconnected mailboxes.
 .SH OPTIONS
 .ad
 .fi
+.TP 10
+.B -c 
+performs internal cleaning-up on the tables
 .TP 10
 .B -i 
 checks integrity

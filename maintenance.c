@@ -25,6 +25,7 @@ int main(int argc, char *argv[])
 {
   int should_fix = 0, check_integrity = 0, check_iplog = 0;
   int show_help=0, purge_deleted=0, set_deleted=0;
+  int vacuum_db = 0;
   int do_nothing=1;
 
   time_t start,stop;
@@ -48,10 +49,15 @@ int main(int argc, char *argv[])
 	
   /* get options */
   opterr = 0; /* suppress error message from getopt() */
-  while ((opt = getopt(argc, argv, "fil:phd")) != -1)
+  while ((opt = getopt(argc, argv, "cfil:phd")) != -1)
     {
       switch (opt)
 	{
+	case 'c':
+	  vacuum_db = 1;
+	  do_nothing = 0;
+	  break;
+
 	case 'h':
 	  show_help = 1;
 	  do_nothing = 0;
@@ -98,7 +104,7 @@ int main(int argc, char *argv[])
     {
       printf("\ndbmail maintenance utility\n\n");
       printf("Performs maintenance tasks on the dbmail-databases\n");
-      printf("Use: dbmail-maintenance -[fiphdl]\n");
+      printf("Use: dbmail-maintenance -[cfiphdl]\n");
       printf("See the man page for more info\n\n");
       return 0;
     }
@@ -356,6 +362,19 @@ int main(int argc, char *argv[])
       printf("Ok. All entries before [%s] have been removed.\n",timestr);
     }
   
+  if (vacuum_db)
+    {
+      printf("Cleaning up database structure... "); fflush(stdout);
+      if (db_cleanup() < 0)
+	{
+	  printf("Failed. Please check the log.\n");
+	  db_disconnect();
+	  return -1;
+	}
+      
+      printf("Ok. Database cleaned up.\n");
+    }
+
   printf ("Maintenance done.\n\n");
         
   db_disconnect();

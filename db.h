@@ -32,6 +32,10 @@
 struct session;
 struct list;
 
+/* users, aliases, mailboxes, messages, messageblks */
+#define DB_NTABLES 5
+    
+
 enum table_aliases /* prototype for aliases table */
 {
 	ALIASES_ALIAS_IDNR,
@@ -126,6 +130,8 @@ int db_rollback_insert(u64_t ownerid, const char *unique_id);
 
 int db_log_ip(const char *ip);
 int db_cleanup_iplog(const char *lasttokeep);
+
+int db_cleanup();
 
 int db_empty_mailbox(u64_t userid);
 

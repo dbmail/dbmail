@@ -31,6 +31,12 @@ const char *db_flag_desc[] =
   "seen_flag", "answered_flag", "deleted_flag", "flagged_flag", "draft_flag", "recent_flag"
 };
 
+const char *DB_TABLENAMES[DB_NTABLES] = 
+  {
+    "users", "aliases", "mailboxes", "messages", "messageblks" 
+  };
+
+
 
 int db_connect ()
 {
@@ -77,9 +83,10 @@ int db_query (const char *thequery)
 
       if (querysize > 0 )
 	{
+	  trace(TRACE_DEBUG, "db_query(): executing [%s]", thequery);
 	  if (mysql_real_query(&conn, thequery, querysize) <0) 
 	    {
-	      trace(TRACE_ERROR,"db_query(): query [%s] failed: ", query);
+	      trace(TRACE_ERROR,"db_query(): query [%s] failed: ", thequery);
 	      trace(TRACE_ERROR,"db_query(): mysql_real_query failed: %s\n",mysql_error(&conn)); 
 	      return -1;
 	    }
@@ -1483,6 +1490,30 @@ int db_cleanup_iplog(const char *lasttokeep)
   return 0;
 }
 
+/* cleaning up the tables */
+int db_cleanup()
+{
+  int result = 0;
+  int i;
+
+  for (i=0; i<DB_NTABLES; i++)
+    {
+      snprintf(query, DEF_QUERYSIZE, "OPTIMIZE TABLE %s", DB_TABLENAMES[i]);
+      
+      if (db_query(query) == -1)
+	{
+	  trace(TRACE_ERROR,"db_cleanup(): error optimizing table %s", DB_TABLENAMES[i]);
+	  result = -1;
+	}
+
+      /* store & free result set */
+      if ((res = mysql_store_result(&conn)) != NULL)
+	mysql_free_result(res);
+      
+    }
+
+  return result;
+}
 
 /*
  * db_empty_mailbox()

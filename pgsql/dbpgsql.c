@@ -28,9 +28,16 @@ char *value = NULL; /* used for PQgetvalue */
 u64_t PQcounter = 0; /* used for PQgetvalue loops */
 
 const char *db_flag_desc[] = 
-{
-  "seen_flag", "answered_flag", "deleted_flag", "flagged_flag", "draft_flag", "recent_flag"
-};
+  {
+    "seen_flag", "answered_flag", "deleted_flag", "flagged_flag", "draft_flag", "recent_flag"
+  };
+
+
+const char *DB_TABLENAMES[DB_NTABLES] =
+  {
+    "users", "aliases", "mailboxes", "messages", "messageblks" 
+  };
+
 
 
 int db_connect ()
@@ -1396,6 +1403,26 @@ int db_cleanup_iplog(const char *lasttokeep)
     }
 
   return 0;
+}
+
+/* cleaning up the tables */
+int db_cleanup()
+{
+  int result = 0;
+  int i;
+
+  for (i=0; i<DB_NTABLES; i++)
+    {
+      snprintf(query, DEF_QUERYSIZE, "VACUUM %s", DB_TABLENAMES[i]);
+      
+      if (db_query(query) == -1)
+	{
+	  trace(TRACE_ERROR,"db_cleanup(): error vacuuming table %s", DB_TABLENAMES[i]);
+	  result = -1;
+	}
+    }
+
+  return result;
 }
 
 
