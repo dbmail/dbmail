@@ -323,7 +323,7 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
   if (list_totalnodes(&messageids)>0)
     {
       totalmem = 0; /* reset totalmem counter */
-      cnt = 0;
+
       /* we have local deliveries */ 
       while (!feof(instream))
 	{
@@ -332,7 +332,13 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
 	    {
 	      trace(TRACE_ERROR,"insert_messages(): error on instream: [%s]", strerror(errno));
 	    }
-	  cnt++;
+
+	  for (i=0,cnt=0; i<usedmem; i++)
+	    {
+	      if (strblock[i] == '\0')
+		cnt++;
+	    }
+
 
 	  /* fread won't do this for us! */	
 	  strblock[usedmem]='\0';
@@ -346,7 +352,7 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
 		{
 		  if (db_insert_message_block (strblock, usedmem, *(u64_t *)tmp->data) 
 		      == -1)
-		    trace(TRACE_STOP, "insert_messages(): error inserting msgblock [blk %d]\n", cnt);
+		    trace(TRACE_STOP, "insert_messages(): error inserting msgblock [%d NULLs]\n", cnt);
 
 		  tmp=tmp->nextnode;
 		}
