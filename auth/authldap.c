@@ -539,12 +539,15 @@ GList * __auth_get_every_match(const char *q, char **retfields)
 		trace(TRACE_DEBUG,"%s,%s: scan results for DN: [%s]", __FILE__, __func__, dn);
 		
 		for (k = 0; retfields[k] != NULL; k++) {
+			trace(TRACE_DEBUG,"%s,%s: ldap_get_values [%s]",
+					__FILE__, __func__, retfields[k]);
 			if (! (ldap_vals = ldap_get_values(_ldap_conn, ldap_msg, retfields[k]))) {
 				ldap_get_option(_ldap_conn, LDAP_OPT_ERROR_NUMBER, &ldap_err);
 				trace(TRACE_ERROR, "%s,%s: ldap_get_values failed: [%s] %s",
 						__FILE__,__func__, 
 						retfields[k], 
 						ldap_err2string(ldap_err));
+		//		attlist = g_list_append(attlist, g_strdup(""));
 			} else {
 				m = 0;
 				while (ldap_vals[m]) { 
@@ -854,10 +857,11 @@ int auth_check_user_ext(const char *address, struct list *userids,
 
 	/* This is my private line for sending a DN rather than a search */
 	snprintf(query, AUTH_QUERY_SIZE, "(%s=%s)", _ldap_cfg.field_mail, address);
-	entlist = __auth_get_every_match(query, fields);
-
+	
 	trace(TRACE_DEBUG, "%s,%s: searching with query [%s], checks [%d]",
 			__FILE__,__func__, query, checks);
+
+	entlist = __auth_get_every_match(query, fields);
 
 	if (g_list_length(entlist) < 1) {
 		if (checks > 0) {
@@ -888,7 +892,8 @@ int auth_check_user_ext(const char *address, struct list *userids,
 	entlist = g_list_first(entlist);
 	while (entlist) {
 		fldlist = g_list_first(entlist->data);
-		for (c2 = 0; c2 < g_list_length(fldlist); c2++) {
+		c2 = 0;
+		while(fldlist) {
 			attlist = g_list_first(fldlist->data);
 			while(attlist) {
 				attrvalue = (char *)attlist->data;
@@ -912,6 +917,7 @@ int auth_check_user_ext(const char *address, struct list *userids,
 				attlist = g_list_next(attlist);
 			}
 			fldlist = g_list_next(fldlist);
+			c2++;
 		}
 		entlist = g_list_next(entlist);
 	}
