@@ -555,14 +555,12 @@ int lmtp(void *stream, void *instream, char *buffer,
 						"430 Temporary failure in recipient lookup\r\n");
 					return 1;
 				}
-
-				for (element = list_getstart(&rcpt);
-				     element != NULL;
-				     element = element->nextnode) {
+				element = list_getstart(&rcpt);
+				while(element) {
 					deliver_to_user_t *dsnuser =
 					    (deliver_to_user_t *) element->
-					    data;
-
+						data;
+					element = element->nextnode;
 					/* Class 2 means the address was deliverable in some way. */
 					switch (dsnuser->dsn.class) {
 					case DSN_CLASS_OK:
