@@ -13,6 +13,7 @@
 #include "memblock.h"
 #include "rfcmsg.h"
 #include "dbmsgbuf.h"
+#include "quota.h"
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
@@ -3322,7 +3323,87 @@ int _ic_uid(char *tag, char **args, ClientInfo *ci)
 }
 
 
+/* Helper function for _ic_getquotaroot() and _ic_getquota().
+ * Send all resource limits in `quota'.
+ */
+void send_quota(quota_t *quota, ClientInfo *ci) {
+    int r;
+    u64_t usage, limit;
+    char *name;
+    
+    for (r=0; r<quota->n_resources; r++) {
+	if (quota->resource[r].limit > 0) {
+	    switch (quota->resource[r].type) {
+	    case RT_STORAGE:
+		name  = "STORAGE";
+		usage = quota->resource[r].usage/1024;
+		limit = quota->resource[r].limit/1024;
+		break;
+	    default: continue;
+	    }
+	    fprintf(ci->tx, "* QUOTA \"%s\" (\"%s\" %llu %llu)\r\n",
+		    quota->root, name, usage, limit);
+	}
+    }
+}
 
+/*
+ * _ic_getquotaroot()
+ *
+ * get quota root and send quota
+ */
+int _ic_getquotaroot(char *tag, char **args, ClientInfo *ci) {
+    imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
+    quota_t *quota;
+    char *root, *errormsg;
+    
+    if (!check_state_and_args("GETQUOTAROOT", tag, args, 1,
+			      IMAPCS_AUTHENTICATED, ci))
+	return 1; /* error, return */
+    
+    root = quota_get_quotaroot(ud->userid, args[0], &errormsg);
+    if (root == NULL) {
+	fprintf(ci->tx, "%s NO %s\r\n", tag, errormsg);
+	return 1;
+    }
+    
+    quota = quota_get_quota(ud->userid, root, &errormsg);
+    if (quota == NULL) {
+	fprintf(ci->tx, "%s NO %s\r\n", tag, errormsg);
+	return 1;
+    }
+    
+    fprintf(ci->tx, "* QUOTAROOT \"%s\" \"%s\"\r\n", args[0], quota->root);
+    send_quota(quota, ci);
+    quota_free(quota);
+    
+    fprintf(ci->tx, "%s OK GETQUOTAROOT completed\r\n", tag);
+    return 0;
+}
 
-
-
+/*
+ * _ic_getquot()
+ *
+ * get quota
+ */
+int _ic_getquota(char *tag, char **args, ClientInfo *ci) {
+    imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
+    quota_t *quota;
+    char *errormsg;
+    
+    if (!check_state_and_args("GETQUOTA", tag, args, 1,
+			      IMAPCS_AUTHENTICATED, ci))
+	return 1; /* error, return */
+    
+    quota = quota_get_quota(ud->userid, args[0], &errormsg);
+    if (quota == NULL) {
+	fprintf(ci->tx, "%s NO %s\r\n", tag, errormsg);
+	return 1;
+    }
+    
+    send_quota(quota, ci);
+    quota_free(quota);
+    
+    fprintf(ci->tx, "%s OK GETQUOTA completed\r\n", tag);
+    return 0;
+}

@@ -43,5 +43,8 @@ int _ic_store(char *tag, char **args, ClientInfo *ci);
 int _ic_copy(char *tag, char **args, ClientInfo *ci);
 int _ic_uid(char *tag, char **args, ClientInfo *ci);
 
+/* quota commands */
+int _ic_getquotaroot(char *tag, char **args, ClientInfo *ci);
+int _ic_getquota(char *tag, char **args, ClientInfo *ci);
 
 #endif
