@@ -101,7 +101,7 @@ u64_t db_getclientid(u64_t useridnr)
   u64_t cid;
   char *row;
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT client_idnr FROM users WHERE user_idnr = %llu::bigint8",useridnr);
+  snprintf(query, DEF_QUERYSIZE, "SELECT client_idnr FROM users WHERE user_idnr = %llu",useridnr);
 
   if (db_query(query) == -1)
     {
@@ -128,7 +128,7 @@ u64_t db_getmaxmailsize(u64_t useridnr)
   u64_t maxmailsize;
   char *row;
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT maxmail_size FROM users WHERE user_idnr = %llu::bigint8",useridnr);
+  snprintf(query, DEF_QUERYSIZE, "SELECT maxmail_size FROM users WHERE user_idnr = %llu",useridnr);
 
   if (db_query(query) == -1)
     {
@@ -302,7 +302,7 @@ int db_delete_user(const char *username)
   
 int db_change_username(u64_t useridnr, const char *newname)
 {
-  snprintf(query, DEF_QUERYSIZE, "UPDATE users SET userid = '%s' WHERE user_idnr=%llu::bigint8", 
+  snprintf(query, DEF_QUERYSIZE, "UPDATE users SET userid = '%s' WHERE user_idnr=%llu", 
 	   newname, useridnr);
 
   if (db_query(query) == -1)
@@ -317,7 +317,7 @@ int db_change_username(u64_t useridnr, const char *newname)
 
 int db_change_password(u64_t useridnr, const char *newpass)
 {
-  snprintf(query, DEF_QUERYSIZE, "UPDATE users SET passwd = '%s' WHERE user_idnr=%llu::bigint8", 
+  snprintf(query, DEF_QUERYSIZE, "UPDATE users SET passwd = '%s' WHERE user_idnr=%llu", 
 	   newpass, useridnr);
 
   if (db_query(query) == -1)
@@ -332,7 +332,7 @@ int db_change_password(u64_t useridnr, const char *newpass)
 
 int db_change_clientid(u64_t useridnr, u64_t newcid)
 {
-  snprintf(query, DEF_QUERYSIZE, "UPDATE users SET client_idnr = %llu WHERE user_idnr=%llu::bigint8", 
+  snprintf(query, DEF_QUERYSIZE, "UPDATE users SET client_idnr = %llu WHERE user_idnr=%llu", 
 	   newcid, useridnr);
 
   if (db_query(query) == -1)
@@ -346,7 +346,7 @@ int db_change_clientid(u64_t useridnr, u64_t newcid)
 
 int db_change_mailboxsize(u64_t useridnr, u64_t newsize)
 {
-  snprintf(query, DEF_QUERYSIZE, "UPDATE users SET maxmail_size = %llu WHERE user_idnr=%llu::bigint8", 
+  snprintf(query, DEF_QUERYSIZE, "UPDATE users SET maxmail_size = %llu WHERE user_idnr=%llu", 
 	   newsize, useridnr);
 
   if (db_query(query) == -1)
@@ -461,7 +461,7 @@ char *db_get_userid (u64_t *useridnr)
   
   char *returnid = NULL;
   
-  snprintf (query, DEF_QUERYSIZE,"SELECT userid FROM users WHERE user_idnr = %llu::bigint8",
+  snprintf (query, DEF_QUERYSIZE,"SELECT userid FROM users WHERE user_idnr = %llu",
 	   *useridnr);
 
   trace(TRACE_DEBUG,"db_get_userid(): executing query : [%s]",query);
