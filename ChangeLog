@@ -1,3 +1,8 @@
+2004-09-17  Ilja Booij  <ilja@ic-s.nl>
+
+	* db.c (db_list_mailboxes_by_regex): Fixed queries. I fscked them
+	up in the changes make on 2004-09-14. They work now!
+
 2004-09-16  Ilja Booij  <ilja@ic-s.nl>
 
 	* man/dbmail-util.8: commented out -n and -y switches docs.

@@ -2112,33 +2112,38 @@ int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
 	if (only_subscribed)
 		snprintf(query, DEF_QUERYSIZE,
 			 "SELECT mbx.name, mbx.mailbox_idnr, mbx.owner_idnr "
-			 "FROM %smailboxes mbx, %sacl acl, "
-			 "%ssubscription sub, %susers usr "
-			 "WHERE (sub.user_id = '%llu' AND "
-			 "sub.mailbox_id = mbx.mailbox_idnr) AND "
-			 "(mbx.owner_idnr = '%llu' OR "
-			 "((acl.user_id = '%llu' OR "
-			 "(acl.user_id = usr.user_idnr AND "
-			 "usr.userid = '%s')) AND "
-			 "mbx.mailbox_idnr = acl.mailbox_id AND "
-			 "acl.lookup_flag = '1')) "
-			 "GROUP BY mbx.name, mbx.mailbox_idnr, mbx.owner_idnr",DBPFX,DBPFX,DBPFX,DBPFX,
-			 user_idnr, user_idnr, user_idnr, 
+			 "FROM %smailboxes mbx "
+			 "LEFT JOIN %sacl acl "
+			 "ON mbx.mailbox_idnr = acl.mailbox_id "
+			 "LEFT JOIN %susers usr "
+			 "ON acl.user_id = usr.user_idnr "
+			 "LEFT JOIN %ssubscription sub "
+			 "ON sub.mailbox_id = mbx.mailbox_idnr "
+			 "WHERE "
+			 "sub.user_id = '%llu' AND ("
+			 "(mbx.owner_idnr = '%llu') OR "
+			 "(acl.user_id = '%llu' AND "
+			 "  acl.lookup_flag = '1') OR "
+			 "(usr.userid = '%s' AND acl.lookup_flag = '1'))",
+			 DBPFX, DBPFX, DBPFX, DBPFX,
+			 user_idnr, user_idnr, user_idnr,
 			 DBMAIL_ACL_ANYONE_USER);
 	else
 		snprintf(query, DEF_QUERYSIZE,
 			 "SELECT mbx.name, mbx.mailbox_idnr, mbx.owner_idnr "
-			 "FROM %smailboxes mbx, %sacl acl, "
-			 "%susers usr "
-			 "WHERE (mbx.owner_idnr = '%llu') OR "
-			 "((acl.user_id = '%llu' OR "
-			 "(acl.user_id = usr.user_idnr AND "
-			 "usr.userid = '%s')) "
-			 "AND mbx.mailbox_idnr = acl.mailbox_id AND "
-			 "acl.lookup_flag = '1') "
-			 "GROUP BY mbx.name, mbx.mailbox_idnr, mbx.owner_idnr",DBPFX,DBPFX,DBPFX,
+			 "FROM %smailboxes mbx "
+			 "LEFT JOIN %sacl acl "
+			 "ON mbx.mailbox_idnr = acl.mailbox_id "
+			 "LEFT JOIN %susers usr "
+			 "ON acl.user_id = usr.user_idnr "
+			 "WHERE "
+			 "(mbx.owner_idnr = '%llu') OR "
+			 "(acl.user_id = '%llu' AND "
+			 "  acl.lookup_flag = '1') OR "
+			 "(usr.userid = '%s' AND acl.lookup_flag = '1')",
+			 DBPFX, DBPFX, DBPFX,
 			 user_idnr, user_idnr, DBMAIL_ACL_ANYONE_USER);
-
+	
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error during mailbox query",
 		      __FILE__, __func__);
