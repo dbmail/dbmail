@@ -29,7 +29,12 @@ endif
 
 # dpatch
 export PACKAGE=dbmail2
-export PACKAGES=dbmail2-mysql dbmail2-pgsql dbmail2-mysql-ldap dbmail2-pgsql-ldap
+export PACKAGES=dbmail2-mysql \
+	dbmail2-mysql-ldap \
+	dbmail2-pgsql \
+	dbmail2-pgsql-ldap \
+	dbmail2-sqlite \
+	dbmail2-sqlite-ldap
 
 include /usr/share/dpatch/dpatch.make 
 
@@ -60,7 +65,6 @@ stamps/dbmail2-mysql:
 		./configure $(CONFFLAGS) --with-mysql=/usr/include/mysql
 	$(MAKE)
 	$(MAKE) install DESTDIR=$(CURDIR)/debian/dbmail2-mysql
-	rm -f $(CURDIR)/debian/dbmail2-mysql/usr/bin/dbmail-readvut
 	touch $@
 
 dbmail2-mysql-ldap: stamps/dbmail2-mysql-ldap
@@ -70,7 +74,6 @@ stamps/dbmail2-mysql-ldap:
 		./configure $(CONFFLAGS) --with-auth-ldap --with-mysql=/usr/include/mysql
 	$(MAKE)
 	$(MAKE) install DESTDIR=$(CURDIR)/debian/dbmail2-mysql-ldap
-	rm -f $(CURDIR)/debian/dbmail2-mysql-ldap/usr/bin/dbmail-readvut
 	touch $@
 
 dbmail2-pgsql: stamps/dbmail2-pgsql	
@@ -80,7 +83,6 @@ stamps/dbmail2-pgsql:
 		./configure $(CONFFLAGS) --with-pgsql=/usr/include/postgresql 
 	$(MAKE)
 	$(MAKE) install DESTDIR=$(CURDIR)/debian/dbmail2-pgsql
-	rm -f $(CURDIR)/debian/dbmail2-pgsql/usr/bin/dbmail-readvut
 	touch $@
 	
 dbmail2-pgsql-ldap: stamps/dbmail2-pgsql-ldap
@@ -90,7 +92,24 @@ stamps/dbmail2-pgsql-ldap:
 		./configure $(CONFFLAGS) --with-auth-ldap --with-pgsql=/usr/include/postgresql
 	$(MAKE)
 	$(MAKE) install DESTDIR=$(CURDIR)/debian/dbmail2-pgsql-ldap
-	rm -f $(CURDIR)/debian/dbmail2-pgsql-ldap/usr/bin/dbmail-readvut
+	touch $@
+
+dbmail2-sqlite: stamps/dbmail2-sqlite	
+stamps/dbmail2-sqlite:
+	$(MAKE) clean || true
+	env CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" \
+		./configure $(CONFFLAGS) --with-sqlite
+	$(MAKE)
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/dbmail2-sqlite
+	touch $@
+	
+dbmail2-sqlite-ldap: stamps/dbmail2-sqlite-ldap
+stamps/dbmail2-sqlite-ldap:
+	$(MAKE) clean || true
+	env CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" \
+		./configure $(CONFFLAGS) --with-auth-ldap --with-sqlite
+	$(MAKE)
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/dbmail2-sqlite-ldap
 	touch $@
 	
 clean: clean1 unpatch
@@ -153,8 +172,6 @@ binary-common: build
 	dh_compress -a
 	dh_fixperms -a
 	dh_installdeb -a
-	# temporary hack until we can build a proper common package 
-	# with subsidiary libdbmail-XXsql packages.
 	dh_makeshlibs -a
 	for p in $(PACKAGES); do \
 		dpkg-shlibdeps -Ldebian/$$p/DEBIAN/shlibs \
