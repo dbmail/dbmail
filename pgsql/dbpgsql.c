@@ -148,7 +148,7 @@ u64_t db_insert_result(const char *sequence_identifier)
 	/* postgres uses the currval call on a sequence to determine
 	 * the result value of an insert query */
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT currval('%s_seq')", sequence_identifier);
+		 "SELECT currval('dbmail_%s_seq')", sequence_identifier);
 
 	db_query(query);
 	if (db_num_rows() == 0) {

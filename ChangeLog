@@ -1,20 +1,31 @@
 2004-08-03  Ilja Booij  <ilja@ic-s.nl>
 
-	* sql/mysql/migrate_from_1.x_to_2.0.mysql:  auto_replies and auto_notifications
-	tables are only created if they don't exist. If they do, an index on user_idnr
-	is added to them.
+	* sql/postgresql/create_tables.pgsql: added 'dbmail_' prefix
+	to all tables, sequences and indexes
 
-	* sql/mysql/migrate_from_1.x_to_2.0_innodb.mysql: auto_replies and auto_notifications
-	tables are only created if they don't exist. If they do, an index on user_idnr
-	is added to them.
+	* pgsql/dbpgsql.c (db_insert_result): added 'dbmail_' to 
+	the sequence identifier.
 
-	* sql/postgresql/migrate_from_1.x_to_2.0.pgsql: auto_replies and auto_notifications
-	tables are only created if they don't exist.  If they do, an index on user_idnr
-	is added to them.
+	* sql/mysql/migrate_from_1.x_to_2.0.mysql:  auto_replies 
+	and auto_notifications tables are only created if they don't 
+	exist. If they do, an index on user_idnr is added to them.
+
+	* sql/mysql/migrate_from_1.x_to_2.0_innodb.mysql: auto_replies 
+	and auto_notifications tables are only created if they don't 
+	exist. If they do, an index on user_idnr is added to them.
+
+	* sql/postgresql/migrate_from_1.x_to_2.0.pgsql: auto_replies and 
+	auto_notifications tables are only created if they don't exist.
+	If they do, an index on user_idnr is added to them.
+	Also, more importantly, all tables, sequences and indexes now
+	have the 'dbmail_' prefix. 
+	Finally, a lot of data copying has been avoided by doing all
+	changes in place. This should save a lot of time.
 
 2004-08-02  Ilja Booij  <ilja@ic-s.nl>
 
-	* lmtp.c (lmtp): my_free(whole_message) added if (headersize > READ_BLOCK_SIZE)
+	* lmtp.c (lmtp): my_free(whole_message) added 
+	if (headersize > READ_BLOCK_SIZE)
 	(lmtp): my_free(whole_message) added if (mime_readheader() < 0)
 
 	* server.c (StartServer): changed malloc() to my_malloc()

@@ -62,69 +62,67 @@ COMMIT;
 
 BEGIN TRANSACTION;
 
--- renaming old tables:
-CREATE TABLE messageblks_1 AS SELECT * FROM messageblks;
-DROP TABLE messageblks;
-CREATE TABLE messages_1 AS SELECT * FROM messages;
-DROP TABLE messages;
-CREATE TABLE mailboxes_1 AS SELECT * FROM mailboxes;
-DROP TABLE mailboxes;
-CREATE TABLE aliases_1 AS SELECT * FROM aliases;
-DROP TABLE aliases;
-CREATE TABLE users_1 AS SELECT * FROM users;
-DROP TABLE users;
+-- alter the aliases table
+DROP INDEX aliases_alias_idx;
+DROP INDEX aliases_alias_low_idx;
+ALTER TABLE alias_idnr_seq RENAME TO dbmail_alias_idnr_seq;
+ALTER TABLE aliases RENAME TO dbmail_aliases;
+ALTER TABLE dbmail_aliases ALTER COLUMN alias_idnr 
+	SET DEFAULT nextval('dbmail_alias_idnr_seq');
+CREATE INDEX dbmail_aliases_alias_idx ON dbmail_aliases(alias);
+CREATE INDEX dbmail_aliases_alias_low_idx ON dbmail_aliases(lower(alias));
 
--- create dbmail-2 tables
+-- alter the users table.
+DROP INDEX users_name_idx;
+ALTER TABLE user_idnr_seq RENAME TO dbmail_user_idnr_seq;
+ALTER TABLE users RENAME TO dbmail_users;
+ALTER TABLE dbmail_users ALTER COLUMN user_idnr
+	SET DEFAULT nextval('dbmail_user_idnr_seq');
+ALTER TABLE dbmail_users ADD COLUMN curmail_size INT8;
+ALTER TABLE dbmail_users ALTER COLUMN curmail_size SET DEFAULT '0';
+UPDATE dbmail_users SET curmail_size = '0';
+ALTER TABLE dbmail_users ALTER COLUMN curmail_size SET NOT NULL;
+CREATE UNIQUE INDEX dbmail_users_name_idx ON dbmail_users(userid);
 
-CREATE TABLE aliases (
-    alias_idnr INT8 DEFAULT nextval('alias_idnr_seq'),
-    alias VARCHAR(100) NOT NULL, 
-    deliver_to VARCHAR(250) NOT NULL,
-    client_idnr INT8 DEFAULT '0' NOT NULL,
-    PRIMARY KEY (alias_idnr)
-);
-CREATE INDEX aliases_alias_idx ON aliases(alias);
-CREATE INDEX aliases_alias_low_idx ON aliases(lower(alias));
+-- alter the mailboxes table
+DROP INDEX mailboxes_id_idx;
+DROP INDEX mailboxes_owner_idx;
+DROP INDEX mailboxes_name_idx;
+DROP INDEX mailboxes_is_subscribed_idx;
+ALTER TABLE mailbox_idnr_seq RENAME TO dbmail_mailbox_idnr_seq;
+ALTER TABLE mailboxes RENAME TO dbmail_mailboxes;
+ALTER TABLE dbmail_mailboxes ALTER COLUMN mailbox_idnr
+	SET DEFAULT nextval('dbmail_mailbox_idnr_seq');
+CREATE INDEX dbmail_mailboxes_owner_idx ON dbmail_mailboxes(owner_idnr);
+CREATE INDEX dbmail_mailboxes_name_idx ON dbmail_mailboxes(name);
+CREATE INDEX dbmail_mailboxes_owner_name_idx 
+	ON dbmail_mailboxes(owner_idnr, name);
 
-CREATE TABLE users (
-   user_idnr INT8 DEFAULT nextval('user_idnr_seq'),
-   userid VARCHAR(100) NOT NULL,
-   passwd VARCHAR(34) NOT NULL,
-   client_idnr INT8 DEFAULT '0' NOT NULL,
-   maxmail_size INT8 DEFAULT '0' NOT NULL,
-   curmail_size INT8 DEFAULT '0' NOT NULL,
-   encryption_type VARCHAR(20) DEFAULT '' NOT NULL,
-   last_login TIMESTAMP DEFAULT '1979-11-03 22:05:58' NOT NULL,
-   PRIMARY KEY (user_idnr)
-);
-CREATE UNIQUE INDEX users_name_idx ON users(userid);
-
-CREATE TABLE mailboxes (
-   mailbox_idnr INT8 DEFAULT nextval('mailbox_idnr_seq'),
-   owner_idnr INT8 NOT NULL,
-   name VARCHAR(100) NOT NULL,
-   seen_flag INT2 DEFAULT '0' NOT NULL,
-   answered_flag INT2 DEFAULT '0' NOT NULL,
-   deleted_flag INT2 DEFAULT '0' NOT NULL,
-   flagged_flag INT2 DEFAULT '0' NOT NULL,
-   recent_flag INT2 DEFAULT '0' NOT NULL,
-   draft_flag INT2 DEFAULT '0' NOT NULL,
-   no_inferiors INT2 DEFAULT '0' NOT NULL,
-   no_select INT2 DEFAULT '0' NOT NULL,
-   permission INT2 DEFAULT '2' NOT NULL,
-   PRIMARY KEY (mailbox_idnr)
-);
-CREATE INDEX mailboxes_owner_idx ON mailboxes(owner_idnr);
-CREATE INDEX mailboxes_name_idx ON mailboxes(name);
-CREATE INDEX mailboxes_owner_name_idx ON mailboxes(owner_idnr, name);
-
-CREATE TABLE subscription (
+-- create the subscription table.
+CREATE TABLE dbmail_subscription (
    user_id INT8 NOT NULL,
    mailbox_id INT8 NOT NULL,
    PRIMARY KEY (user_id, mailbox_id)
 );
 
-CREATE TABLE acl (
+-- the dbmail_subscription table can now be filled with values from the
+-- dbmail_mailboxes table
+INSERT INTO dbmail_subscription (user_id, mailbox_id) 
+SELECT owner_idnr, mailbox_idnr FROM dbmail_mailboxes
+WHERE is_subscribed = '1';
+
+-- no add the foreign key relations to the dbmail_subscription table
+ALTER TABLE dbmail_subscription ADD FOREIGN KEY (user_id) 
+	REFERENCES dbmail_users(user_idnr) ON DELETE CASCADE;
+ALTER TABLE dbmail_subscription ADD FOREIGN KEY (mailbox_id) 
+	REFERENCES dbmail_mailboxes(mailbox_idnr) ON DELETE CASCADE;
+
+-- The is_subscribed column can now be dropped from the dbmail_mailboxes
+-- table.
+ALTER TABLE dbmail_mailboxes DROP COLUMN is_subscribed;
+
+-- the dbmail_acl table is completely new in 2.0
+CREATE TABLE dbmail_acl (
     user_id INT8 NOT NULL,
     mailbox_id INT8 NOT NULL,
     lookup_flag INT2 DEFAULT '0' NOT NULL,
@@ -136,108 +134,122 @@ CREATE TABLE acl (
     create_flag INT2 DEFAULT '0' NOT NULL,
     delete_flag INT2 DEFAULT '0' NOT NULL,
     administer_flag INT2 DEFAULT '0' NOT NULL,
-    PRIMARY KEY (user_id, mailbox_id)
+    PRIMARY KEY (user_id, mailbox_id),
+    FOREIGN KEY (user_id) 
+	REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE,
+    FOREIGN KEY (mailbox_id) 
+	REFERENCES dbmail_mailboxes (mailbox_idnr) ON DELETE CASCADE
 );
 
-CREATE SEQUENCE physmessage_id_seq;
-CREATE TABLE physmessage (
-   id INT8 DEFAULT nextval('physmessage_id_seq'),
+-- create the physmessage table
+CREATE SEQUENCE dbmail_physmessage_id_seq;
+CREATE TABLE dbmail_physmessage (
+   id INT8 DEFAULT nextval('dbmail_physmessage_id_seq'),
    messagesize INT8 DEFAULT '0' NOT NULL,   
    rfcsize INT8 DEFAULT '0' NOT NULL,
    internal_date TIMESTAMP WITHOUT TIME ZONE,
    PRIMARY KEY(id)
 );
 
-CREATE TABLE messages (
-   message_idnr INT8 DEFAULT nextval('message_idnr_seq'),
-   mailbox_idnr INT8 DEFAULT '0' NOT NULL,
-   physmessage_id INT8 DEFAULT '0' NOT NULL,
-   seen_flag INT2 DEFAULT '0' NOT NULL,
-   answered_flag INT2 DEFAULT '0' NOT NULL,
-   deleted_flag INT2 DEFAULT '0' NOT NULL,
-   flagged_flag INT2 DEFAULT '0' NOT NULL,
-   recent_flag INT2 DEFAULT '0' NOT NULL,
-   draft_flag INT2 DEFAULT '0' NOT NULL,
-   unique_id varchar(70) NOT NULL,
-   status INT2 DEFAULT '0' NOT NULL,
-   PRIMARY KEY (message_idnr)
-);
+-- fill the table from the messages table.
+INSERT INTO dbmail_physmessage (id, messagesize, rfcsize, internal_date)
+SELECT message_idnr, messagesize, rfcsize, internal_date FROM messages;
+-- set the initial value for dbmail_physmessage_id_seq
+SELECT setval('dbmail_physmessage_id_seq', max(id)) FROM dbmail_physmessage;
 
-CREATE INDEX messages_mailbox_idx ON messages(mailbox_idnr);
-CREATE INDEX messages_physmessage_idx ON messages(physmessage_id);
-CREATE INDEX messages_seen_flag_idx ON messages(seen_flag);
-CREATE INDEX messages_unique_id_idx ON messages(unique_id);
-CREATE INDEX messages_status_idx ON messages(status);
-CREATE INDEX messages_status_notdeleted_idx ON messages(status) WHERE status < '2';
+-- alter the messages table
+DROP INDEX messages_id_idx;
+DROP INDEX messages_mailbox_idx;
+DROP INDEX messages_seen_flag_idx;
+DROP INDEX messages_unique_id_idx;
+DROP INDEX messages_status_idx;
+ALTER TABLE message_idnr_seq RENAME TO dbmail_message_idnr_seq;
+ALTER TABLE messages RENAME TO dbmail_messages;
+ALTER TABLE dbmail_messages ALTER COLUMN message_idnr 
+	SET DEFAULT nextval('dbmail_message_idnr_seq');
+ALTER TABLE dbmail_messages ALTER COLUMN status
+	SET DEFAULT '0';
+ALTER TABLE dbmail_messages ADD COLUMN physmessage_id INT8;
+ALTER TABLE dbmail_messages ALTER COLUMN physmessage_id
+	SET DEFAULT '0';
+UPDATE dbmail_messages SET physmessage_id = message_idnr;
+ALTER TABLE dbmail_messages ALTER COLUMN physmessage_id
+	SET NOT NULL;
+ALTER TABLE dbmail_messages ADD FOREIGN KEY (physmessage_id) 
+	REFERENCES dbmail_physmessage(id) ON DELETE CASCADE;
+ALTER TABLE dbmail_messages DROP COLUMN messagesize;
+ALTER TABLE dbmail_messages DROP COLUMN rfcsize;
+ALTER TABLE dbmail_messages DROP COLUMN internal_date;
+CREATE INDEX dbmail_messages_mailbox_idx ON dbmail_messages(mailbox_idnr);
+CREATE INDEX dbmail_messages_physmessage_idx 
+	ON dbmail_messages(physmessage_id);
+CREATE INDEX dbmail_messages_seen_flag_idx ON dbmail_messages(seen_flag);
+CREATE INDEX dbmail_messages_unique_id_idx ON dbmail_messages(unique_id);
+CREATE INDEX dbmail_messages_status_idx ON dbmail_messages(status);
+CREATE INDEX dbmail_messages_status_notdeleted_idx 
+	ON dbmail_messages(status) WHERE status < '2';
 
-CREATE TABLE messageblks (
-   messageblk_idnr INT8 DEFAULT nextval('messageblk_idnr_seq'),
-   physmessage_id INT8 DEFAULT '0' NOT NULL,
-   messageblk TEXT NOT NULL,
-   blocksize INT8 DEFAULT '0' NOT NULL,
-   is_header INT2 DEFAULT '0' NOT NULL,
-   PRIMARY KEY (messageblk_idnr)
-);
-CREATE INDEX messageblks_physmessage_idx ON messageblks(physmessage_id);
-CREATE INDEX messageblks_physmessage_is_header_idx 
-	ON messageblks(physmessage_id, is_header);
+-- alter dbmail_messageblks
+DROP INDEX messageblks_id_idx;
+DROP INDEX messageblks_msg_idx;
+ALTER TABLE messageblk_idnr_seq RENAME TO dbmail_messageblk_idnr_seq;
+ALTER TABLE messageblks RENAME TO dbmail_messageblks;
+ALTER TABLE dbmail_messageblks ALTER COLUMN messageblk_idnr
+	SET DEFAULT nextval('dbmail_messageblk_idnr_seq');
+ALTER TABLE dbmail_messageblks ADD COLUMN is_header INT2;
+ALTER TABLE dbmail_messageblks ALTER COLUMN is_header
+	SET DEFAULT '0';
+UPDATE dbmail_messageblks SET is_header = '0';
+ALTER TABLE dbmail_messageblks ALTER COLUMN is_header
+	SET NOT NULL;
+ALTER TABLE dbmail_messageblks RENAME COLUMN message_idnr TO physmessage_id;
+CREATE INDEX dbmail_messageblks_physmessage_idx ON 
+	dbmail_messageblks(physmessage_id);
+CREATE INDEX dbmail_messageblks_physmessage_is_header_idx 
+	ON dbmail_messageblks(physmessage_id, is_header);
+ALTER TABLE dbmail_messageblks ADD FOREIGN KEY (physmessage_id) 
+	REFERENCES dbmail_physmessage (id) ON DELETE CASCADE;
 
-CREATE SEQUENCE seq_pbsp_id;
-CREATE TABLE pbsp (
-  idnr INT8 NOT NULL DEFAULT NEXTVAL('seq_pbsp_id'),
+-- alter the auto_notifications table
+DROP SEQUENCE auto_notification_seq;
+ALTER TABLE auto_notifications RENAME TO dbmail_auto_notifications;
+ALTER TABLE dbmail_auto_notifications DROP COLUMN auto_notify_idnr;
+ALTER TABLE dbmail_auto_notifications ADD FOREIGN KEY (user_idnr)
+	REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE;
+CREATE INDEX dbmail_auto_notifications_user_index ON
+	dbmail_auto_notifications(user_idnr);
+
+-- alter the auto_replies table
+DROP SEQUENCE auto_reply_seq;
+ALTER TABLE auto_replies RENAME TO dbmail_auto_replies;
+ALTER TABLE dbmail_auto_replies DROP COLUMN auto_reply_idnr;
+ALTER TABLE dbmail_auto_replies ADD FOREIGN KEY (user_idnr)
+	REFERENCES dbmail_users(user_idnr) ON DELETE CASCADE;
+CREATE INDEX dbmail_auto_replies_user_index ON
+	dbmail_auto_replies(user_idnr);
+
+-- alter the pbsp (pop-before-smtp) table
+CREATE SEQUENCE dbmail_pbsp_idnr_seq;
+CREATE TABLE dbmail_pbsp (
+  idnr INT8 NOT NULL DEFAULT NEXTVAL('dbmail_pbsp_idnr_seq'),
   since TIMESTAMP NOT NULL DEFAULT '1970-01-01 00:00:00',
   ipnumber INET NOT NULL DEFAULT '0.0.0.0',
   PRIMARY KEY (idnr)
 );
-CREATE UNIQUE INDEX idx_ipnumber ON pbsp (ipnumber);
-CREATE INDEX idx_since ON pbsp (since);
-
-
--- fillerup
-
-INSERT INTO aliases SELECT * from aliases_1;
-
-INSERT INTO subscription ( user_id, mailbox_id ) SELECT owner_idnr, mailbox_idnr FROM mailboxes_1 where is_subscribed > 0;
-
-INSERT INTO mailboxes ( mailbox_idnr, owner_idnr, name, seen_flag, answered_flag, deleted_flag, flagged_flag, recent_flag, draft_flag, no_inferiors, no_select, permission )
-SELECT mailbox_idnr, owner_idnr, name, seen_flag, answered_flag, deleted_flag, flagged_flag, recent_flag, draft_flag, no_inferiors, no_select, permission FROM mailboxes_1;
-
-INSERT INTO messages ( message_idnr, mailbox_idnr, seen_flag, answered_flag, deleted_flag, flagged_flag, recent_flag, draft_flag, unique_id )
-SELECT message_idnr, mailbox_idnr, seen_flag, answered_flag, deleted_flag, flagged_flag, recent_flag, draft_flag, unique_id FROM messages_1;
-
-INSERT INTO physmessage ( id, messagesize, rfcsize, internal_date) 
-SELECT message_idnr, messagesize, rfcsize, internal_date FROM messages_1; 
-
-UPDATE messages SET physmessage_id = message_idnr;
-
-INSERT INTO messageblks ( messageblk_idnr, physmessage_id, messageblk, blocksize )
-SELECT messageblk_idnr, message_idnr, messageblk, blocksize FROM messageblks_1;
-
-
-INSERT INTO users ( user_idnr, userid, passwd, client_idnr, maxmail_size, encryption_type, last_login, curmail_size )
-SELECT u.*, sum(p.messagesize) AS curmail_size 
-FROM users_1 u 
-LEFT JOIN mailboxes b ON b.owner_idnr = u.user_idnr 
-LEFT JOIN messages m ON m.mailbox_idnr = b.mailbox_idnr 
-LEFT JOIN physmessage p ON m.physmessage_id = p.id 
-GROUP BY u.user_idnr, u.userid, u.passwd, u.client_idnr, u.maxmail_size, u.encryption_type,u.last_login;
-
---- drop the old tables
-DROP TABLE aliases_1, users_1, mailboxes_1, messages_1, messageblks_1;
-
-ALTER TABLE mailboxes ADD   FOREIGN KEY (owner_idnr) REFERENCES users(user_idnr) ON DELETE CASCADE;
-ALTER TABLE subscription ADD	FOREIGN KEY (user_id) REFERENCES users(user_idnr) ON DELETE CASCADE;
-ALTER TABLE subscription ADD	FOREIGN KEY (mailbox_id) REFERENCES mailboxes(mailbox_idnr) ON DELETE CASCADE;
-ALTER TABLE acl ADD FOREIGN KEY (user_id) REFERENCES users(user_idnr) ON DELETE CASCADE;
-ALTER TABLE acl ADD FOREIGN KEY (mailbox_id) REFERENCES mailboxes(mailbox_idnr) ON DELETE CASCADE;
-ALTER TABLE messages ADD FOREIGN KEY (physmessage_id) REFERENCES physmessage(id) ON DELETE CASCADE;
-ALTER TABLE messages ADD FOREIGN KEY (mailbox_idnr) REFERENCES mailboxes(mailbox_idnr) ON DELETE CASCADE;
-ALTER TABLE messageblks ADD FOREIGN KEY (physmessage_id) REFERENCES physmessage (id) ON DELETE CASCADE;
+CREATE UNIQUE INDEX dbmail_idx_ipnumber ON dbmail_pbsp(ipnumber);
+CREATE INDEX dbmail_idx_since ON dbmail_pbsp(since);
 
 --- Create the user for the delivery chain:
-INSERT INTO users (userid, passwd, encryption_type)
+INSERT INTO dbmail_users (userid, passwd, encryption_type)
 	VALUES ('__@!internal_delivery_user!@__', '', 'md5');
 
 -- Commit transaction
+
+COMMIT;
+
+/* the old config table might still be around. This will deleted */
+BEGIN TRANSACTION;
+
+DROP TABLE config;
 
 COMMIT;
