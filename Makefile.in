@@ -131,7 +131,7 @@ sbin_PROGRAMS = dbmail-smtp dbmail-pop3d dbmail-imapd dbmail-util dbmail-users d
 
 COMMON = config.c debug.c list.c dbmd5.c md5.c db.c misc.c mime.c pidfile.c dbmail-message.c
 SERVER = server.c serverchild.c pool.c
-DELIVER = header.c pipe.c forward.c dsn.c
+DELIVER = pipe.c forward.c dsn.c
 
 # CFLAGS
 AM_CFLAGS = -fomit-frame-pointer
@@ -179,7 +179,7 @@ libdbmail_la_LDFLAGS =
 libdbmail_la_DEPENDENCIES = 
 libdbmail_la_OBJECTS =  config.lo debug.lo list.lo dbmd5.lo md5.lo db.lo \
 misc.lo mime.lo pidfile.lo dbmail-message.lo server.lo serverchild.lo \
-pool.lo header.lo pipe.lo forward.lo dsn.lo
+pool.lo pipe.lo forward.lo dsn.lo
 @SIEVE_FALSE@bin_PROGRAMS = 
 @SIEVE_TRUE@bin_PROGRAMS =  dbmail-sievecmd$(EXEEXT) \
 @SIEVE_TRUE@dbmail-timsieved$(EXEEXT)
@@ -233,11 +233,11 @@ GZIP_ENV = --best
 DEP_FILES =  .deps/acl.P .deps/config.P .deps/db.P \
 .deps/dbmail-imapsession.P .deps/dbmail-message.P .deps/dbmd5.P \
 .deps/dbmsgbuf.P .deps/dbsearch.P .deps/debug.P .deps/dsn.P \
-.deps/forward.P .deps/header.P .deps/imap4.P .deps/imapcommands.P \
-.deps/imapd.P .deps/imaputil.P .deps/list.P .deps/lmtp.P .deps/lmtpd.P \
-.deps/main.P .deps/maintenance.P .deps/md5.P .deps/memblock.P \
-.deps/mime.P .deps/misc.P .deps/pidfile.P .deps/pipe.P .deps/pool.P \
-.deps/pop3.P .deps/pop3d.P .deps/quota.P .deps/rfcmsg.P .deps/server.P \
+.deps/forward.P .deps/imap4.P .deps/imapcommands.P .deps/imapd.P \
+.deps/imaputil.P .deps/list.P .deps/lmtp.P .deps/lmtpd.P .deps/main.P \
+.deps/maintenance.P .deps/md5.P .deps/memblock.P .deps/mime.P \
+.deps/misc.P .deps/pidfile.P .deps/pipe.P .deps/pool.P .deps/pop3.P \
+.deps/pop3d.P .deps/quota.P .deps/rfcmsg.P .deps/server.P \
 .deps/serverchild.P .deps/sievecmd.P .deps/timsieve.P .deps/timsieved.P \
 .deps/user.P
 SOURCES = $(libdbmail_la_SOURCES) $(dbmail_sievecmd_SOURCES) $(dbmail_timsieved_SOURCES) $(dbmail_smtp_SOURCES) $(dbmail_pop3d_SOURCES) $(dbmail_imapd_SOURCES) $(dbmail_util_SOURCES) $(dbmail_users_SOURCES) $(dbmail_lmtpd_SOURCES)
