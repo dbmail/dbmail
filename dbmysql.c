@@ -2578,16 +2578,16 @@ int db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long m
   if (start.block == end.block)
     {
       if (offset<0 || cnt<0)
-	fprintf(outstream,"%.*s\r\n",end.pos - start.pos,&row[0][start.pos]);
+	fprintf(outstream,"%.*s\r\n",(int)(end.pos - start.pos),&row[0][start.pos]);
       else
 	{
 	  if (offset+start.pos >= end.pos)
 	    return 0;
 
 	  if (cnt >= end.pos - start.pos)
-	    fprintf(outstream,"%.*s\r\n",end.pos - start.pos,&row[0][start.pos + offset]);
+	    fprintf(outstream,"%.*s\r\n",(int)(end.pos - start.pos),&row[0][start.pos + offset]);
 	  else
-	    fprintf(outstream,"%.*s\r\n",cnt,&row[0][start.pos + offset]);
+	    fprintf(outstream,"%.*s\r\n",(int)cnt,&row[0][start.pos + offset]);
 	}
 
       mysql_free_result(res);
@@ -2628,7 +2628,7 @@ int db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long m
 	  if (distance < cnt-outcnt || cnt<0)
 	    outcnt += fprintf(outstream,"%.*s", distance, &row[0][startpos]);
 	  else
-	    outcnt += fprintf(outstream,"%.*s",(cnt-outcnt),&row[0][startpos]);
+	    outcnt += fprintf(outstream,"%.*s",(int)(cnt-outcnt),&row[0][startpos]);
 	}
       else
 	{
@@ -2638,7 +2638,7 @@ int db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long m
 	    outcnt += fprintf(outstream,"%.*s", distance, 
 			      &row[0][startpos + (offset - nbytespassed)]);
 	  else
-	    outcnt += fprintf(outstream,"%.*s",(cnt-outcnt),
+	    outcnt += fprintf(outstream,"%.*s",(int)(cnt-outcnt),
 			      &row[0][startpos + (offset - nbytespassed)]);
 
 	  nbytespassed = offset; 
@@ -2646,7 +2646,7 @@ int db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long m
 	  
     }
 
-  fprintf(outstream,"%.*s",end.pos,row[0]);
+  fprintf(outstream,"%.*s",(int)end.pos,row[0]);
 
   mysql_free_result(res);
 
