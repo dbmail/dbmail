@@ -116,16 +116,14 @@ CREATE TABLE dbmail_messages (
    status INT2 DEFAULT '0' NOT NULL,
    PRIMARY KEY (message_idnr)
 );
-CREATE INDEX dbmail_messages_mailbox_idx ON dbmail_messages(mailbox_idnr);
-CREATE INDEX dbmail_messages_physmessage_idx 
-	ON dbmail_messages(physmessage_id);
-CREATE INDEX dbmail_messages_seen_flag_idx ON dbmail_messages(seen_flag);
-CREATE INDEX dbmail_messages_unique_id_idx ON dbmail_messages(unique_id);
-CREATE INDEX dbmail_messages_status_idx ON dbmail_messages(status);
-CREATE INDEX dbmail_messages_status_notdeleted_idx 
-	ON dbmail_messages(status) WHERE status < '2';
-CREATE INDEX dbmail_messages_mailbox_status ON dbmail_messages(mailbox_idnr,status);
- 
+CREATE INDEX dbmail_messages_1 ON dbmail_messages(mailbox_idnr);
+CREATE INDEX dbmail_messages_2 ON dbmail_messages(physmessage_id);
+CREATE INDEX dbmail_messages_3 ON dbmail_messages(seen_flag);
+CREATE INDEX dbmail_messages_4 ON dbmail_messages(unique_id);
+CREATE INDEX dbmail_messages_5 ON dbmail_messages(status);
+CREATE INDEX dbmail_messages_6 ON dbmail_messages(status) WHERE status < '2';
+CREATE INDEX dbmail_messages_7 ON dbmail_messages(mailbox_idnr,status,seen_flag);
+CREATE INDEX dbmail_messages_8 ON dbmail_messages(mailbox_idnr,status,recent_flag);
 
 CREATE SEQUENCE dbmail_messageblk_idnr_seq;
 CREATE TABLE dbmail_messageblks (
