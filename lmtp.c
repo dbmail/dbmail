@@ -149,7 +149,7 @@ int lmtp_handle_connection(clientinfo_t * ci)
 
 	if (ci->tx) {
 		/* sending greeting */
-		fprintf(ci->tx,
+		ci_write(ci->tx,
 			"220 %s DBMail LMTP service ready to rock\r\n",
 			myhostname);
 		fflush(ci->tx);
@@ -218,14 +218,19 @@ int lmtp_error(PopSession_t * session, void *stream,
 		trace(TRACE_MESSAGE,
 		      "lmtp_error(): too many errors (MAX_ERRORS is %d)",
 		      MAX_ERRORS);
-		fprintf((FILE *) stream,
+		ci_write((FILE *) stream,
 			"500 Too many errors, closing connection.\r\n");
 		session->SessionResult = 2;	/* possible flood */
 		lmtp_reset(session);
 		return -3;
 	} else {
 		va_start(argp, formatstring);
-		vfprintf((FILE *) stream, formatstring, argp);
+		if (vfprintf((FILE *) stream, formatstring, argp) < 0) {
+			va_end(argp);
+			trace(TRACE_ERROR, "%s,%s: error writing to stream",
+			      __FILE__, __func__);
+			return -1;
+		}
 		va_end(argp);
 	}
 
@@ -299,19 +304,19 @@ int lmtp(void *stream, void *instream, char *buffer,
 	switch (cmdtype) {
 	case LMTP_QUIT:
 		{
-			fprintf((FILE *) stream, "221 %s BYE\r\n",
-				myhostname);
+			ci_write((FILE *) stream, "221 %s BYE\r\n",
+				 myhostname);
 			lmtp_reset(session);
 			return 0;	/* return 0 to cause the connection to close */
 		}
 	case LMTP_NOOP:
 		{
-			fprintf((FILE *) stream, "250 OK\r\n");
+			ci_write((FILE *) stream, "250 OK\r\n");
 			return 1;
 		}
 	case LMTP_RSET:
 		{
-			fprintf((FILE *) stream, "250 OK\r\n");
+			ci_write((FILE *) stream, "250 OK\r\n");
 			lmtp_reset(session);
 			return 1;
 		}
@@ -321,21 +326,21 @@ int lmtp(void *stream, void *instream, char *buffer,
 			 * The RFC requires a couple of SMTP extensions
 			 * with a MUST statement, so just hardcode them.
 			 * */
-			fprintf((FILE *) stream,
-				"250-%s\r\n"
-				"250-PIPELINING\r\n"
-				"250-ENHANCEDSTATUSCODES\r\n"
-				/* This is a SHOULD implement:
-				 * "250-8BITMIME\r\n"
-				 * Might as well do these, too:
-				 * "250-CHUNKING\r\n"
-				 * "250-BINARYMIME\r\n"
-				 * */
-				"250 SIZE\r\n", myhostname);
+			ci_write((FILE *) stream,
+				 "250-%s\r\n"
+				 "250-PIPELINING\r\n"
+				 "250-ENHANCEDSTATUSCODES\r\n"
+				 /* This is a SHOULD implement:
+				  * "250-8BITMIME\r\n"
+				  * Might as well do these, too:
+				  * "250-CHUNKING\r\n"
+				  * "250-BINARYMIME\r\n"
+				  * */
+				 "250 SIZE\r\n", myhostname);
 			/* Free the recipients list and reinitialize it */
 			// list_freelist( &rcpt.start );
 			list_init(&rcpt);
-
+			
 			session->state = LHLO;
 			return 1;
 		}
@@ -363,10 +368,10 @@ int lmtp(void *stream, void *instream, char *buffer,
 			    || (helpcmd == LMTP_QUIT)
 			    || (helpcmd == LMTP_NOOP)
 			    || (helpcmd == LMTP_HELP)) {
-				fprintf((FILE *) stream, "%s",
-					LMTP_HELP_TEXT[helpcmd]);
+				ci_write((FILE *) stream, "%s",
+					 LMTP_HELP_TEXT[helpcmd]);
 			} else {
-				fprintf((FILE *) stream, "%s",
+				ci_write((FILE *) stream, "%s",
 					LMTP_HELP_TEXT[LMTP_END]);
 			}
 
@@ -377,7 +382,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 			/* RFC 2821 says this SHOULD be implemented...
 			 * and the goal is to say if the given address
 			 * is a valid delivery address at this server. */
-			fprintf((FILE *) stream,
+			ci_write((FILE *) stream,
 				"502 Command not implemented\r\n");
 			return 1;
 		}
@@ -386,7 +391,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 			/* RFC 2821 says this SHOULD be implemented...
 			 * and the goal is to return the membership
 			 * of the specified mailing list. */
-			fprintf((FILE *) stream,
+			ci_write((FILE *) stream,
 				"502 Command not implemented\r\n");
 			return 1;
 		}
@@ -396,10 +401,10 @@ int lmtp(void *stream, void *instream, char *buffer,
 			 * needs to know what extensions we support.
 			 * */
 			if (session->state != LHLO) {
-				fprintf((FILE *) stream,
+				ci_write((FILE *) stream,
 					"550 Command out of sequence.\r\n");
 			} else if (envelopefrom != NULL) {
-				fprintf((FILE *) stream,
+				ci_write((FILE *) stream,
 					"500 Sender already received. Use RSET to clear.\r\n");
 			} else {
 				/* First look for an email address.
@@ -430,7 +435,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 
 				/* This is all a bit nested now... */
 				if (tmplen < 1 && tmpaddr == NULL) {
-					fprintf((FILE *) stream,
+					ci_write((FILE *) stream,
 						"500 No address found.\r\n");
 					goodtogo = 0;
 				} else if (tmpbody != NULL) {
@@ -457,7 +462,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 						/* We can't do this yet. */
 						/* session->state = BIT8;
 						 * */
-						fprintf((FILE *) stream,
+						ci_write((FILE *) stream,
 							"500 Please use 7BIT MIME only.\r\n");
 						goodtogo = 0;
 					} else if (strlen(tmpbody) < 10) {
@@ -469,7 +474,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 						/* We can't do this yet. */
 						/* session->state = BDAT;
 						 * */
-						fprintf((FILE *) stream,
+						ci_write((FILE *) stream,
 							"500 Please use 7BIT MIME only.\r\n");
 						goodtogo = 0;
 					}
@@ -478,7 +483,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 				if (goodtogo) {
 					/* Sure fine go ahead. */
 					envelopefrom = tmpaddr;
-					fprintf((FILE *) stream,
+					ci_write((FILE *) stream,
 						"250 Sender <%s> OK\r\n",
 						envelopefrom);
 				} else {
@@ -491,7 +496,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 	case LMTP_RCPT:
 		{
 			if (session->state != LHLO) {
-				fprintf((FILE *) stream,
+				ci_write((FILE *) stream,
 					"550 Command out of sequence.\r\n");
 			} else {
 				size_t tmplen = 0, tmppos = 0;
@@ -501,7 +506,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 					     &tmplen, &tmppos);
 
 				if (tmplen < 1) {
-					fprintf((FILE *) stream,
+					ci_write((FILE *) stream,
 						"500 No address found.\r\n");
 				} else {
 					/* Note that this is not a pointer, but really is on the stack!
@@ -531,10 +536,10 @@ int lmtp(void *stream, void *instream, char *buffer,
 		{
 			// if (session->state != DATA || session->state != BIT8)
 			if (session->state != LHLO) {
-				fprintf((FILE *) stream,
+				ci_write((FILE *) stream,
 					"550 Command out of sequence\r\n");
 			} else if (list_totalnodes(&rcpt) < 1) {
-				fprintf((FILE *) stream,
+				ci_write((FILE *) stream,
 					"503 No valid recipients\r\n");
 			} else {
 				int has_recipients = 0;
@@ -548,7 +553,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 				if (dsnuser_resolve_list(&rcpt) == -1) {
 					trace(TRACE_ERROR,
 					      "main(): dsnuser_resolve_list failed");
-					fprintf((FILE *) stream,
+					ci_write((FILE *) stream,
 						"430 Temporary failure in recipient lookup\r\n");
 					return 1;
 				}
@@ -561,13 +566,13 @@ int lmtp(void *stream, void *instream, char *buffer,
 					/* Class 2 means the address was deliverable in some way. */
 					switch (dsnuser->dsn.class) {
 					case DSN_CLASS_OK:
-						fprintf((FILE *) stream,
+						ci_write((FILE *) stream,
 							"250 Recipient <%s> OK\r\n",
 							dsnuser->address);
 						has_recipients = 1;
 						break;
 					default:
-						fprintf((FILE *) stream,
+						ci_write((FILE *) stream,
 							"550 Recipient <%s> FAIL\r\n",
 							dsnuser->address);
 						/* Remove the failed user from the potential recipients list
@@ -584,19 +589,19 @@ int lmtp(void *stream, void *instream, char *buffer,
 				if (has_recipients && envelopefrom != NULL) {
 					trace(TRACE_DEBUG,
 					      "main(): requesting sender to begin message.");
-					fprintf((FILE *) stream,
+					ci_write((FILE *) stream,
 						"354 Start mail input; end with <CRLF>.<CRLF>\r\n");
 				} else {
 					if (!has_recipients) {
 						trace(TRACE_DEBUG,
 						      "main(): no valid recipients found, cancel message.");
-						fprintf((FILE *) stream,
+						ci_write((FILE *) stream,
 							"503 No valid recipients\r\n");
 					}
 					if (!envelopefrom) {
 						trace(TRACE_DEBUG,
 						      "main(): envelopefrom is empty, cancel message.");
-						fprintf((FILE *) stream,
+						ci_write((FILE *) stream,
 							"554 No valid sender.\r\n");
 					}
 					return 1;
@@ -635,7 +640,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 						      "%s,%s: read_whole_message_network() failed",
 						      __FILE__, __func__);
 						discard_client_input((FILE *) instream);
-						fprintf((FILE *) stream,
+						ci_write((FILE *) stream,
 							"500 Error reading message");
 						return 1;
 					}
@@ -645,7 +650,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 						trace(TRACE_ERROR, "%s,%s message is NULL!", __FILE__, __func__);
 						discard_client_input(
 							(FILE *) instream);
-						fprintf((FILE *) stream,
+						ci_write((FILE *) stream,
 							"500 Error reading header\r\n");
 						return 1;
 					}
@@ -662,7 +667,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 						      __FILE__, __func__);
 						my_free(whole_message);
 						discard_client_input((FILE *) instream);
-						fprintf((FILE *) stream,
+						ci_write((FILE *) stream,
 							"500 Error in message");
 						return 1;
 					}
@@ -673,7 +678,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 						discard_client_input
 							((FILE *)
 							     instream);
-						fprintf((FILE *)
+						ci_write((FILE *)
 							stream,
 							"500 Error reading header, "
 							"header too big.\r\n");
@@ -688,7 +693,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 						discard_client_input((FILE
 								      *)
 								     instream);
-						fprintf((FILE *) stream,
+						ci_write((FILE *) stream,
 							"500 Error reading header.\r\n");
 						return 1;
 					}
@@ -699,7 +704,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 						    body_size, body_rfcsize,
 						    &headerfields, &rcpt,
 						    &fromlist) == -1) {
-						fprintf((FILE *) stream,
+						ci_write((FILE *) stream,
 							"503 Message not received\r\n");
 					} else {
 						/* The DATA command itself it not given a reply except
@@ -716,12 +721,12 @@ int lmtp(void *stream, void *instream, char *buffer,
 							/* Give a simple OK, otherwise a detailed message. */
 							switch (dsnuser->dsn.class) {
 								case DSN_CLASS_OK:
-									fprintf((FILE *)stream, "%d%d%d Recipient <%s> OK\r\n",
+									ci_write((FILE *)stream, "%d%d%d Recipient <%s> OK\r\n",
 									        dsnuser->dsn.class, dsnuser->dsn.subject, dsnuser->dsn.detail,
 									        dsnuser->address);
 									break;
 								default:
-									fprintf((FILE *)stream, "%d%d%d Recipient <%s> %s %s %s\r\n",
+									ci_write((FILE *)stream, "%d%d%d Recipient <%s> %s %s %s\r\n",
 									        dsnuser->dsn.class, dsnuser->dsn.subject, dsnuser->dsn.detail,
 									        dsnuser->address, class, subject, detail);
 							}

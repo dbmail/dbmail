@@ -35,6 +35,7 @@
 #include "imap4.h"
 #include "imaputil.h"
 #include "imapcommands.h"
+#include "misc.h"
 #include "clientinfo.h"
 #include "debug.h"
 #include "db.h"

@@ -218,6 +218,20 @@ const char *mailbox_remove_namespace(const char *fq_name)
 	return fq_name;
 }
 
+int ci_write(FILE * fd, char * msg, ...)
+{
+	va_list ap;
+	va_start(ap, msg);
+	
+	if (feof(fd) || vfprintf(fd,msg,ap) < 0 || fflush(fd) < 0) {
+		va_end(ap);
+		return -1;
+	}
+	va_end(ap);
+	return 0;
+}
+
+
 /* This base64 code is heavily modified from fetchmail.
  *
  * Original copyright notice:

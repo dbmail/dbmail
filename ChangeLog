@@ -1,5 +1,17 @@
 2004-06-16  Ilja Booij  <ilja@ic-s.nl>
 
+	* misc.c (ci_write): ci_write() moved here
+
+	* misc.h: ci_write() moved here.
+
+	* lmtp.c: now uses ci_write instead of fprintf to write to socket.
+
+	* imaputil.h: ci_write() removed (moved to misc.h)
+
+	* imaputil.c: ci_write() removed (moved to misc.c)
+
+	* imap4.c: now #includes misc.h for ci_write()
+
 	* dbmail.conf: number of children and maxconnects for LMTP upped
 	to 20 and 10000.
 

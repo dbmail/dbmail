@@ -3095,16 +3095,3 @@ int init_cache()
 	return 0;
 }
 
-int ci_write(FILE * fd, char * msg, ...)
-{
-	va_list ap;
-	va_start(ap, msg);
-	
-	if (feof(fd) || vfprintf(fd,msg,ap) < 0 || fflush(fd) < 0) {
-		va_end(ap);
-		return -1;
-	}
-	va_end(ap);
-	return 0;
-}
-

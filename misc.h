@@ -89,6 +89,17 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
  */
 const char *mailbox_remove_namespace(const char *fq_name);
 
+/**
+ * write to a client socket. does error checking.
+ * \param fd socket to write to
+ * \param msg formatstring of message to write
+ * \param ... arguments for formatstring.
+ * \return 
+ *      - -1 on error
+ *      -  0 on success
+ */
+int ci_write(FILE * fd, char * msg, ...);
+
 char **base64_decode(char *str, size_t len);
 void base64_free(char **ret);
 int read_from_stream(FILE * instream, char **m_buf, size_t maxlen);
