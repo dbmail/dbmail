@@ -22,7 +22,6 @@ void db_give_msgpos(db_pos_t *pos);
 u64_t db_give_range_size(db_pos_t *start, db_pos_t *end);
 
 long db_dump_range(MEM *outmem, db_pos_t start, db_pos_t end, u64_t msguid);
-int db_msgdump(mime_message_t *msg, u64_t msguid, int level);
 
 #endif
 

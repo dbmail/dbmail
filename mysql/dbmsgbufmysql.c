@@ -307,6 +307,8 @@ void db_give_msgpos(db_pos_t *pos)
  * db_give_range_size()
  * 
  * determines the number of bytes between 2 db_pos_t's
+ *
+ * ONLY VALID WHEN THE MSGBUF SYSTEM HAS NOT BEEN CLOSED !!
  */
 u64_t db_give_range_size(db_pos_t *start, db_pos_t *end)
 {

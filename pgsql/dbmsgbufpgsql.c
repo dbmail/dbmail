@@ -27,14 +27,14 @@ extern unsigned long PQcounter; /* used for PQgetvalue loops */
 
 /* own var's */
 PGresult *_msg_result;
-MYSQL_ROW _msgrow;
+unsigned _msgrow_idx = 0;
 int _msg_fetch_inited = 0;
 
 /*
  * CONDITIONS FOR MSGBUF
  *
  * rowlength         length of current row
- * rowpos            current pos in row (_msgrow[0][rowpos-1] is last read char)
+ * rowpos            current pos in row 
  * msgidx            index within msgbuf, 0 <= msgidx < buflen
  * buflen            current buffer length: msgbuf[buflen] == '\0'
  * zeropos           absolute position (block/offset) of msgbuf[0]
@@ -44,7 +44,6 @@ char *msgbuf;
 u64_t rowlength = 0,msgidx=0,buflen=0,rowpos=0;
 db_pos_t zeropos;
 unsigned nblocks = 0;
-u64_t *blklengths = NULL;
 
 
 /*
@@ -55,8 +54,6 @@ u64_t *blklengths = NULL;
  */
 int db_init_msgfetch(u64_t uid)
 {
-  int i;
-  
   msgbuf = (char*)my_malloc(MSGBUF_WINDOWSIZE);
   if (!msgbuf)
     return -1;
@@ -64,8 +61,8 @@ int db_init_msgfetch(u64_t uid)
   if (_msg_fetch_inited)
     return 0;
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT messageblk FROM messageblk WHERE "
-	   "messageidnr = %llu ORDER BY messageblknr", uid);
+  snprintf(query, DEF_QUERYSIZE, "SELECT messageblk FROM messageblks WHERE "
+	   "message_idnr = %llu ORDER BY messageblk_idnr", uid);
 
   if (db_query(query) == -1)
     {
@@ -73,62 +70,25 @@ int db_init_msgfetch(u64_t uid)
       return (-1);
     }
 
-  if ((_msg_result = mysql_store_result(&conn)) == NULL)
-    {
-      trace(TRACE_ERROR,"db_init_msgfetch(): mysql_store_result failed: %s\n",
-	    mysql_error(&conn));
-      return (-1);
-    }
+  _msg_result = res; /* save query result */
 
-  /* first determine block lengths */
-  nblocks = mysql_num_rows(_msg_result);
+  nblocks = PQntuples(_msg_result);
   if (nblocks == 0)
     {
       trace(TRACE_ERROR, "db_init_msgfetch(): message has no blocks\n");
-      mysql_free_result(_msg_result);
+      PQclear(_msg_result);
       return -1;                     /* msg should have 1 block at least */
     }
   
-  if (!(blklengths = (u64_t*)my_malloc(nblocks * sizeof(u64_t))))
-    {
-      trace(TRACE_ERROR, "db_init_msgfetch(): out of memory\n");
-      mysql_free_result(_msg_result);
-      return (-1);
-    }
-     
-  for (i=0; i<nblocks; i++)
-    {
-      _msgrow = mysql_fetch_row(_msg_result);
-      blklengths[i] = (mysql_fetch_lengths(_msg_result))[0];
-    }
-
-  /* re-execute query */
-  mysql_free_result(_msg_result);
-  if (db_query(query) == -1)
-    {
-      trace(TRACE_ERROR, "db_init_msgfetch(): could not get message\n");
-      my_free(blklengths);
-      blklengths = NULL;
-      return (-1);
-    }
-
-  if ((_msg_result = mysql_store_result(&conn)) == NULL)
-    {
-      trace(TRACE_ERROR,"db_init_msgfetch(): mysql_store_result failed: %s\n",
-	    mysql_error(&conn));
-      my_free(blklengths);
-      blklengths = NULL;
-      return (-1);
-    }
-
   _msg_fetch_inited = 1;
   msgidx = 0;
 
-  /* save rows */
-  _msgrow = mysql_fetch_row(_msg_result);
+  /* start at row (tuple) 0 */
+  _msgrow_idx = 0;
 
-  rowlength = (mysql_fetch_lengths(_msg_result))[0];
-  strncpy(msgbuf, _msgrow[0], MSGBUF_WINDOWSIZE-1);
+  rowlength = PQgetlength(_msg_result, _msgrow_idx, 0);
+  strncpy(msgbuf, PQgetvalue(_msg_result, _msgrow_idx, 0), MSGBUF_WINDOWSIZE-1);
+
   zeropos.block = 0;
   zeropos.pos = 0;
 
@@ -140,18 +100,20 @@ int db_init_msgfetch(u64_t uid)
       return 1;                              /* msgbuf full */
     }
 
-  buflen = rowlength;   /* NOTE \0 has been copied from _msgrow) */
+  buflen = rowlength;   /* NOTE \0 has been copied from the result set */
   rowpos = rowlength;   /* no more to read from this row */
-  _msgrow = mysql_fetch_row(_msg_result);
-  if (!_msgrow)
+
+  _msgrow_idx++;
+  if (_msgrow_idx >= PQntuples(_msg_result))
     {
       rowlength = rowpos = 0;
       return 1;
     }
 
-  rowlength = (mysql_fetch_lengths(_msg_result))[0];
+  rowlength = PQgetlength(_msg_result, _msgrow_idx, 0);
   rowpos = 0;
-  strncpy(&msgbuf[buflen], _msgrow[0], MSGBUF_WINDOWSIZE - buflen - 1);
+  strncpy(&msgbuf[buflen], PQgetvalue(_msg_result, _msgrow_idx, 0), 
+	  MSGBUF_WINDOWSIZE - buflen - 1);
 
   if (rowlength <= MSGBUF_WINDOWSIZE - buflen - 1)
     {
@@ -181,7 +143,7 @@ int db_init_msgfetch(u64_t uid)
  */
 int db_update_msgbuf(int minlen)
 {
-  if (!_msgrow)
+  if (_msgrow_idx >= PQntuples(_msg_result))
     return 0; /* no more */
 
   if (msgidx > buflen)
@@ -214,7 +176,8 @@ int db_update_msgbuf(int minlen)
       trace(TRACE_DEBUG,"update msgbuf non-entire fit\n");
 
       /* rest of row does not fit entirely in buf */
-      strncpy(&msgbuf[buflen], &_msgrow[0][rowpos], MSGBUF_WINDOWSIZE - buflen);
+      strncpy(&msgbuf[buflen], &( (PQgetvalue(_msg_result, _msgrow_idx, 0))[rowpos] ),
+	      MSGBUF_WINDOWSIZE - buflen);
       rowpos += (MSGBUF_WINDOWSIZE - buflen - 1);
 
       buflen = MSGBUF_WINDOWSIZE-1;
@@ -225,25 +188,28 @@ int db_update_msgbuf(int minlen)
 
   trace(TRACE_DEBUG,"update msgbuf: entire fit\n");
 
-  strncpy(&msgbuf[buflen], &_msgrow[0][rowpos], (rowlength-rowpos));
+  strncpy(&msgbuf[buflen], &( (PQgetvalue(_msg_result, _msgrow_idx, 0))[rowpos] ), 
+	  (rowlength-rowpos));
   buflen += (rowlength-rowpos);
   msgbuf[buflen] = '\0';
   rowpos = rowlength;
   
   /* try to fetch a new row */
-  _msgrow = mysql_fetch_row(_msg_result);
-  if (!_msgrow)
+  _msgrow_idx++;
+  if (_msgrow_idx >= PQntuples(_msg_result))
     {
       trace(TRACE_DEBUG,"update msgbuf succes NOMORE\n");
       return 0;
     }
 
-  rowlength = (mysql_fetch_lengths(_msg_result))[0];
+  rowlength = PQgetlength(_msg_result, _msgrow_idx, 0);
   rowpos = 0;
 
   trace(TRACE_DEBUG,"update msgbuf, got new block, trying to place data\n");
 
-  strncpy(&msgbuf[buflen], _msgrow[0], MSGBUF_WINDOWSIZE - buflen - 1);
+  strncpy(&msgbuf[buflen], PQgetvalue(_msg_result, _msgrow_idx, 0), 
+	  MSGBUF_WINDOWSIZE - buflen - 1);
+
   if (rowlength <= MSGBUF_WINDOWSIZE - buflen - 1)
     {
       /* 2nd block fits entirely */
@@ -278,11 +244,9 @@ void db_close_msgfetch()
   my_free(msgbuf);
   msgbuf = NULL;
 
-  my_free(blklengths);
-  blklengths = NULL;
   nblocks = 0;
 
-  mysql_free_result(_msg_result);
+  PQclear(_msg_result);
   _msg_fetch_inited = 0;
 }
 
@@ -310,6 +274,8 @@ void db_give_msgpos(db_pos_t *pos)
  * db_give_range_size()
  * 
  * determines the number of bytes between 2 db_pos_t's
+ *
+ * ONLY VALID WHEN _MSG_RESULT CONTAINS A VALID RESULT SET!!
  */
 u64_t db_give_range_size(db_pos_t *start, db_pos_t *end)
 {
@@ -325,106 +291,18 @@ u64_t db_give_range_size(db_pos_t *start, db_pos_t *end)
   if (start->block == end->block)
     return (start->pos > end->pos) ? 0 : (end->pos - start->pos+1);
 
-  if (start->pos > blklengths[start->block] || end->pos > blklengths[end->block])
+  if (start->pos > PQgetlength(_msg_result, start->block, 0) || 
+      end->pos > PQgetlength(_msg_result, end->block, 0))
     return 0; /* bad range */
 
-  size = blklengths[start->block] - start->pos;
+  size =  PQgetlength(_msg_result, start->block, 0) - start->pos;
 
   for (i = start->block+1; i<end->block; i++)
-    size += blklengths[i];
+    size += PQgetlength(_msg_result, i, 0);
 
   size += end->pos;
   size++;
 
-  return size;
-}
-
-
-/*
- * db_msgdump()
- *
- * dumps a message to stderr
- * returns the size (in bytes) that the message occupies in memory
- */
-int db_msgdump(mime_message_t *msg, u64_t msguid, int level)
-{
-  struct element *curr;
-  struct mime_record *mr;
-  char *spaces;
-  int size = sizeof(mime_message_t);
-
-  if (level < 0)
-    return 0;
-
-  if (!msg)
-    {
-      trace(TRACE_DEBUG,"db_msgdump: got null\n");
-      return 0;
-    }
-
-  spaces = (char*)my_malloc(3*level + 1);
-  if (!spaces)
-    return 0;
-
-  memset(spaces, ' ', 3*level);
-  spaces[3*level] = 0;
-
-
-  trace(TRACE_DEBUG,"%sMIME-header: \n",spaces);
-  curr = list_getstart(&msg->mimeheader);
-  if (!curr)
-    trace(TRACE_DEBUG,"%s%snull\n",spaces,spaces);
-  else
-    {
-      while (curr)
-	{
-	  mr = (struct mime_record *)curr->data;
-	  trace(TRACE_DEBUG,"%s%s[%s] : [%s]\n",spaces,spaces,mr->field, mr->value);
-	  curr = curr->nextnode;
-	  size += sizeof(struct mime_record);
-	}
-    }
-  trace(TRACE_DEBUG,"%s*** MIME-header end\n",spaces);
-     
-  trace(TRACE_DEBUG,"%sRFC822-header: \n",spaces);
-  curr = list_getstart(&msg->rfcheader);
-  if (!curr)
-    trace(TRACE_DEBUG,"%s%snull\n",spaces,spaces);
-  else
-    {
-      while (curr)
-	{
-	  mr = (struct mime_record *)curr->data;
-	  trace(TRACE_DEBUG,"%s%s[%s] : [%s]\n",spaces,spaces,mr->field, mr->value);
-	  curr = curr->nextnode;
-	  size += sizeof(struct mime_record);
-	}
-    }
-  trace(TRACE_DEBUG,"%s*** RFC822-header end\n",spaces);
-
-  trace(TRACE_DEBUG,"%s*** Body range:\n",spaces);
-  trace(TRACE_DEBUG,"%s%s(%llu, %llu) - (%llu, %llu), size: %llu, newlines: %llu\n",
-	spaces,spaces,
-	msg->bodystart.block, msg->bodystart.pos,
-	msg->bodyend.block, msg->bodyend.pos,
-	msg->bodysize, msg->bodylines);
-	
-
-/*  trace(TRACE_DEBUG,"body: \n");
-  db_dump_range(msg->bodystart, msg->bodyend, msguid);
-  trace(TRACE_DEBUG,"*** body end\n");
-*/
-  trace(TRACE_DEBUG,"%sChildren of this msg:\n",spaces);
-  
-  curr = list_getstart(&msg->children);
-  while (curr)
-    {
-      size += db_msgdump((mime_message_t*)curr->data,msguid,level+1);
-      curr = curr->nextnode;
-    }
-  trace(TRACE_DEBUG,"%s*** child list end\n",spaces);
-
-  my_free(spaces);
   return size;
 }
 
@@ -459,8 +337,8 @@ long db_dump_range(MEM *outmem, db_pos_t start, db_pos_t end, u64_t msguid)
       return -1;
     }
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT messageblk FROM messageblk WHERE messageidnr = %llu"
-	   " ORDER BY messageblknr", 
+  snprintf(query, DEF_QUERYSIZE, "SELECT messageblk FROM messageblks WHERE message_idnr = %llu"
+	   " ORDER BY messageblk_idnr", 
 	   msguid);
 
   if (db_query(query) == -1)
@@ -469,18 +347,10 @@ long db_dump_range(MEM *outmem, db_pos_t start, db_pos_t end, u64_t msguid)
       return (-1);
     }
 
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace(TRACE_ERROR,"db_dump_range(): mysql_store_result failed: %s\n",mysql_error(&conn));
-      return (-1);
-    }
-
-  for (row = mysql_fetch_row(res), i=0; row && i < start.block; i++, row = mysql_fetch_row(res)) ;
-      
-  if (!row)
+  if (start.block >= PQntuples(res))
     {
       trace(TRACE_ERROR,"db_dump_range(): bad range specified\n");
-      mysql_free_result(res);
+      PQclear(res);
       return -1;
     }
 
@@ -499,19 +369,19 @@ long db_dump_range(MEM *outmem, db_pos_t start, db_pos_t end, u64_t msguid)
 	      bufcnt = 0;
 	    }
 
-	  if (row[0][i] == '\n')
+	  if (PQgetvalue(res, start.block, 0)[i] == '\n')
 	    {
 	      buf[bufcnt++] = '\r';
 	      buf[bufcnt++] = '\n';
 	    }
 	  else
-	    buf[bufcnt++] = row[0][i];
+	    buf[bufcnt++] = PQgetvalue(res, start.block, 0)[i];
 	}
       
       outcnt += mwrite(buf, bufcnt, outmem);
       bufcnt = 0;
 
-      mysql_free_result(res);
+      PQclear(res);
       return outcnt;
     }
 
@@ -522,15 +392,15 @@ long db_dump_range(MEM *outmem, db_pos_t start, db_pos_t end, u64_t msguid)
   
   for (i=start.block, outcnt=0; i<=end.block; i++)
     {
-      if (!row)
+      if (i >= PQntuples(res))
 	{
 	  trace(TRACE_ERROR,"db_dump_range(): bad range specified\n");
-	  mysql_free_result(res);
+	  PQclear(res);
 	  return -1;
 	}
 
       startpos = (i == start.block) ? start.pos : 0;
-      endpos   = (i == end.block) ? end.pos+1 : (mysql_fetch_lengths(res))[0];
+      endpos   = (i == end.block) ? end.pos+1 : PQgetlength(res, i, 0);
 
       distance = endpos - startpos;
 
@@ -544,21 +414,19 @@ long db_dump_range(MEM *outmem, db_pos_t start, db_pos_t end, u64_t msguid)
 	      bufcnt = 0;
 	    }
 
-	  if (row[0][startpos+j] == '\n')
+	  if (PQgetvalue(res, i, 0)[startpos+j] == '\n')
 	    {
 	      buf[bufcnt++] = '\r';
 	      buf[bufcnt++] = '\n';
 	    }
-	  else if (row[0][startpos+j])
-	    buf[bufcnt++] = row[0][startpos+j];
+	  else if (PQgetvalue(res, i, 0)[startpos+j])
+	    buf[bufcnt++] = PQgetvalue(res, i, 0)[startpos+j];
 	}
       outcnt += mwrite(buf, bufcnt, outmem);
       bufcnt = 0;
-
-      row = mysql_fetch_row(res); /* fetch next row */
     }
 
-  mysql_free_result(res);
+  PQclear(res);
 
   return outcnt;
 }

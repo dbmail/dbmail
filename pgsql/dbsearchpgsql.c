@@ -1,5 +1,5 @@
 /*
- * dbsearchmysql.c
+ * dbsearchpgsql.c
  *
  * function implementations for searching messages
  */
@@ -30,7 +30,7 @@ const char *month_desc[]=
 
 
 /* used only locally */
-int db_binary_search(const u64_t *array, int arraysize, u64_t key);
+unsigned db_binary_search(const u64_t *array, int arraysize, u64_t key);
 int db_exec_search(mime_message_t *msg, search_key_t *sk, u64_t msguid);
 int db_search_range(db_pos_t start, db_pos_t end, const char *key, u64_t msguid);
 int num_from_imapdate(const char *date);
@@ -50,14 +50,15 @@ int db_search(int *rset, int setlen, const char *key, mailbox_t *mb)
 {
   u64_t uid;
   int msn;
+  unsigned i;
 
   if (!key)
     return -2;
 
   memset(rset, 0, setlen * sizeof(int));
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message WHERE mailboxidnr = %llu "
-	   "AND status<2 AND unique_id!=\"\" AND %s", mb->uid, key);
+  snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr FROM messages WHERE mailbox_idnr = %llu "
+	   "AND status<2 AND unique_id!='' AND %s", mb->uid, key);
 
   if (db_query(query) == -1)
     {
@@ -65,27 +66,21 @@ int db_search(int *rset, int setlen, const char *key, mailbox_t *mb)
       return (-1);
     }
 
-  if ((res = mysql_store_result(&conn)) == NULL)
+  for (i=0; i<PQntuples(res); i++)
     {
-      trace(TRACE_ERROR,"db_search(): mysql_store_result failed: %s\n",mysql_error(&conn));
-      return (-1);
-    }
-
-  while ((row = mysql_fetch_row(res)))
-    {
-      uid = strtoul(row[0], NULL, 10);
+      uid = strtoul(PQgetvalue(res, i, 0), NULL, 10);
       msn = db_binary_search(mb->seq_list, mb->exists, uid);
 
       if (msn == -1 || msn >= setlen)
 	{
-	  mysql_free_result(res);
+	  PQclear(res);
 	  return 1;
 	}
 
       rset[msn] = 1;
     }
 	  
-  mysql_free_result(res);
+  PQclear(res);
   return 0;
 }
 
@@ -294,8 +289,8 @@ int db_search_messages(char **search_keys, u64_t **search_results, int *nsresult
   trace(TRACE_WARNING,"\n");
 
   qidx = snprintf(query, DEF_QUERYSIZE,
-		  "SELECT messageidnr FROM message WHERE mailboxidnr = %llu AND status<2 "
-		  "AND unique_id!=\"\"",
+		  "SELECT message_idnr FROM messages WHERE mailbox_idnr = %llu AND status<2 "
+		  "AND unique_id!=''",
 		  mboxid);
 
   i = 0;
@@ -354,17 +349,11 @@ int db_search_messages(char **search_keys, u64_t **search_results, int *nsresult
       return (-1);
     }
 
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace(TRACE_ERROR,"db_search_messages(): mysql_store_result failed: %s\n",mysql_error(&conn));
-      return (-1);
-    }
-
-  *nsresults = mysql_num_rows(res);
+  *nsresults = PQntuples(res);
   if (*nsresults == 0)
     {
       *search_results = NULL;
-      mysql_free_result(res);
+      PQclear(res);
       return 0;
     }
 
@@ -372,19 +361,19 @@ int db_search_messages(char **search_keys, u64_t **search_results, int *nsresult
   if (!*search_results)
     {
       trace(TRACE_ERROR, "db_search_messages(): out of memory\n");
-      mysql_free_result(res);
+      PQclear(res);
       return -1;
     }
 
   i=0;
-  while ((row = mysql_fetch_row(res)) && i<*nsresults)
+  while (i<*nsresults)
     {
-      (*search_results)[i++] = strtoul(row[0],NULL,10);
+      (*search_results)[i] = strtoul(PQgetvalue(res, i, 0),NULL,10);
+      i++;
     }
       
 
-  mysql_free_result(res);
-
+  PQclear(res);
   return 0;
 }
 
@@ -397,14 +386,14 @@ int db_search_messages(char **search_keys, u64_t **search_results, int *nsresult
  *
  * returns index of key in array or -1 if not found
  */
-int db_binary_search(const u64_t *array, int arraysize, u64_t key)
+unsigned db_binary_search(const u64_t *array, int arraysize, u64_t key)
 {
-  int low,high,mid;
+  unsigned low,high,mid;
 
   low = 0;
   high = arraysize-1;
 
-  while (low <= high)
+  while (low <= high && high != (unsigned)(-1))
     {
       mid = (high+low)/2;
       if (array[mid] < key)
