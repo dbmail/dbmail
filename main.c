@@ -1,4 +1,5 @@
-/* main file  */
+/* $Id$
+ * main file  */
 
 #include "config.h"
 #include "main.h"

@@ -1,4 +1,5 @@
-/* this defines some default messages for POP3 */
+/* $Id$
+ * this defines some default messages for POP3 */
 
 #ifndef  _POP3_H
 #define  _POP3_H

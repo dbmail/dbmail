@@ -1,4 +1,5 @@
-/* implementation for pop3 commands accoording to RFC 1081 */
+/* $Id$
+ * implementation for pop3 commands accoording to RFC 1081 */
 
 #include "config.h"
 #include "pop3.h"

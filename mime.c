@@ -1,5 +1,5 @@
-/*
-Functions for parsing a mime mailheader (actually just for scanning for email messages
+/* $Id$
+ * Functions for parsing a mime mailheader (actually just for scanning for email messages
 	and parsing the messageID */
 
 #include "config.h"

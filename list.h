@@ -1,4 +1,5 @@
-/* list.h: list header */
+/* $Id$
+ * list.h: list header */
 
 #ifndef  _LIST_H
 #define  _LIST_H

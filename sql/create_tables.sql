@@ -1,3 +1,5 @@
+# $Id$
+
 CREATE DATABASE dbmail;
 USE dbmail;
 CREATE TABLE aliases (

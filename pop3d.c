@@ -1,4 +1,5 @@
-/* pop3 daemon */
+/* $Id$
+ * pop3 daemon */
 
 #include "pop3.h"
 #include "dbmysql.h"

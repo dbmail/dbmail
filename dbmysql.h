@@ -1,4 +1,5 @@
-	/* Functions for database communication */
+/* $Id$
+ * Functions for database communication */
 
 #ifndef  _DBMYSQL_H
 #define  _DBMYSQL_H

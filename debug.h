@@ -1,5 +1,5 @@
-/*	debug.h : headers for debug.c
-*/
+/*	$Id$
+ *	debug.h : headers for debug.c */
 
 #include <stdio.h>
 #include <sys/syslog.h>

@@ -1,4 +1,5 @@
-	/* Debugging and memory checking functions */
+/* $Id$
+ * Debugging and memory checking functions */
 
 #include "debug.h"
 

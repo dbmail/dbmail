@@ -1,4 +1,5 @@
-/*	Miscelaneous functions */
+/*	$Id$
+ *	Miscelaneous functions */
 
 #include "config.h"
 #include "misc.h"

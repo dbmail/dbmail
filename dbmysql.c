@@ -1,4 +1,5 @@
-	/* Functions for connecting and talking to the Mysql database */
+/* $Id$
+ * Functions for connecting and talking to the Mysql database */
 
 #include "dbmysql.h"
 #include "config.h"

@@ -1,4 +1,5 @@
-	/* Functions for reading the pipe from the MTA */
+/* $Id$
+ * Functions for reading the pipe from the MTA */
 
 #include "config.h"
 #include "pipe.h"
