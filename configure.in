@@ -69,4 +69,4 @@ AC_SUBST(LDAPINC)
 # libtool patch
 AC_PROG_LIBTOOL
 
-AC_OUTPUT(Makefile mysql/Makefile pgsql/Makefile auth/Makefile sort/Makefile)
+AC_OUTPUT(Makefile mysql/Makefile pgsql/Makefile auth/Makefile sort/Makefile man/Makefile)

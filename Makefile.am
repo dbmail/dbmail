@@ -15,7 +15,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-SUBDIRS = mysql pgsql auth sort
+SUBDIRS = mysql pgsql auth sort man
 
 if SIEVE
 SIEVEPROGS = dbmail-sievecmd dbmail-timsieved

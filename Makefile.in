@@ -107,7 +107,7 @@ VERSION = @VERSION@
 mysqlconfig = @mysqlconfig@
 pgsqlconfig = @pgsqlconfig@
 
-SUBDIRS = mysql pgsql auth sort
+SUBDIRS = mysql pgsql auth sort man
 
 @SIEVE_TRUE@SIEVEPROGS = dbmail-sievecmd dbmail-timsieved
 
