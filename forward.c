@@ -61,10 +61,6 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
 			trace (TRACE_DEBUG,"pipe_forward(): call to popen() successfull"
 					" opened descriptor %d", fileno(sendmail_pipe));
 
-			/* first send header */
-			fprintf (sendmail_pipe,"%s",header);
-			trace (TRACE_DEBUG,"pipe_forward(): wrote header to pipe");  
-
 			/* add descriptor to pipe to a descriptors list */
 			if (list_nodeadd(&descriptors, &sendmail_pipe, sizeof(FILE *))==NULL)
 				trace (TRACE_ERROR,"pipe_forward(): failed to add descriptor");
@@ -114,6 +110,14 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
 		else
 		
 		{
+			/* first send header 
+			 * this is not nescesairy when sending from the database
+			 * since the database already has the header */
+
+			trace (TRACE_DEBUG,"printing header : [%s]", header);
+			fprintf (sendmail_pipe,"%s",header);
+			trace (TRACE_DEBUG,"pipe_forward(): wrote header to pipe");  
+
 			while (!feof (instream))
 			{
 				/* read in a datablock */
@@ -171,7 +175,7 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
 					}
 	
 				/* resetting buffer and index */
-				strblock[0]='\0';
+				memset (strblock, '\0', READ_BLOCK_SIZE);
 				usedmem = 0;
 				}
 				else
@@ -189,7 +193,6 @@ int pipe_forward(FILE *instream, struct list *targets, char *header, unsigned lo
 				{
 					if (!ferror(*((FILE **)(descriptor_temp->data))))
 					{
-						/* fprintf (*((FILE **)(descriptor_temp->data)),"\n.\n"); */
 						pclose (*((FILE **)(descriptor_temp->data)));
 						trace (TRACE_DEBUG, "pipe_forward(): descriptor_closed");
 					}

@@ -34,8 +34,8 @@ char *read_header(unsigned long *blksize)
   memtst ((header = (char *)malloc(HEADER_BLOCK_SIZE))==NULL);
 
 	/* resetting */
-  *strblock='\0';
-  *header='\0';
+  memset (strblock, '\0', READ_BLOCK_SIZE);
+  memset (header, '\0', HEADER_BLOCK_SIZE);
   
   /* here we will start a loop to read in the message header */
   /* the header will be everything up until \n\n or an EOF of */
@@ -66,9 +66,9 @@ char *read_header(unsigned long *blksize)
 	  end_of_header=1;
 	}
 		
-      /* reset strlen to 0 */
+      /* reset strblock to 0 */
 		if (strblock)
-			strblock[0]='\0';
+			memset (strblock,'\0',READ_BLOCK_SIZE);
     }
 	
   trace (TRACE_INFO, "read_header(): readheader done");
@@ -284,8 +284,8 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 		  tmp=tmp->nextnode;
 		}
 				
-				/* resetting strlen for strblock */
-	      strblock[0]='\0';
+			/* resetting strlen for strblock */
+			memset (strblock,'\0',READ_BLOCK_SIZE); 
 	      usedmem = 0;
 				
 	    }
