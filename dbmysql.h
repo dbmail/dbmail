@@ -166,4 +166,6 @@ int db_dump_range(FILE *outstream,db_pos_t start, db_pos_t end, unsigned long ms
 		  int offset, int cnt);
 int db_msgdump(mime_message_t *msg, unsigned long msguid);
 
+int db_mailbox_msg_match(unsigned long mailboxuid, unsigned long msguid);
+
 #endif

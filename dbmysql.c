@@ -189,7 +189,7 @@ unsigned long db_insert_message_block (char *block, int messageidnr)
 
 int db_check_user (char *username, struct list *userids) 
 {
-  char *ckquery, *tmp;
+  char *ckquery;
   int occurences=0;
 	
   trace(TRACE_DEBUG,"db_check_user(): checking user [%s] in alias table",username);
@@ -219,13 +219,9 @@ int db_check_user (char *username, struct list *userids)
   while ((row = mysql_fetch_row(res))!=NULL)
     {
       occurences++;
-		/* created this because it seems that the mysql response (the row[]'s) aren't
-			null terminated */ 
-		tmp=(char *)row[2];
-		tmp[strlen(tmp)+1]='\0';
-		/* --- */
-      list_nodeadd(userids, tmp,strlen(tmp)+1);
-		trace (TRACE_DEBUG,"db_check_user(): adding [%s] to deliver_to address",tmp);
+
+      list_nodeadd(userids, row[2], strlen(row[2])+1);
+      trace (TRACE_DEBUG,"db_check_user(): adding [%s] to deliver_to address",row[2]);
     }
 
   trace(TRACE_INFO,"db_check_user(): user [%s] has [%d] entries",username,occurences);
@@ -927,7 +923,8 @@ int db_getmailbox(mailbox_t *mb, unsigned long userid)
    * NOTE EXPUNGED MESSAGES ARE SELECTED AS WELL IN ORDER TO BE ABLE TO RESTORE THEM 
    */
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message ORDER BY messageidnr DESC LIMIT 0,1");
+  snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message WHERE mailboxidnr = %lu "
+	   "ORDER BY messageidnr DESC LIMIT 0,1", mb->uid);
   
   if (db_query(query) == -1)
     {
@@ -1762,7 +1759,7 @@ int db_get_msgdate(unsigned long mailboxuid, unsigned long msguid, char *date)
 {
   char query[DEF_QUERYSIZE];
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT internaldate FROM message WHERE mailboxidnr = %lu "
+  snprintf(query, DEF_QUERYSIZE, "SELECT internal_date FROM message WHERE mailboxidnr = %lu "
 	   "AND messageidnr = %lu", mailboxuid, msguid);
 
   if (db_query(query) == -1)
@@ -2655,3 +2652,36 @@ int db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long m
 
   return 0;
 }
+
+
+/*
+ * db_mailbox_msg_match()
+ *
+ * checks if a msg belongs to a mailbox 
+ */
+int db_mailbox_msg_match(unsigned long mailboxuid, unsigned long msguid)
+{
+  char query[DEF_QUERYSIZE];
+  int val;
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message WHERE messageidnr = %lu AND "
+	   "mailboxidnr = %lu", msguid, mailboxuid); 
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_mailbox_msg_match(): could not get message\n");
+      return (-1);
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_mailbox_msg_match(): mysql_store_result failed: %s\n",mysql_error(&conn));
+      return (-1);
+    }
+
+  val = mysql_num_rows(res);
+  mysql_free_result(res);
+
+  return val;
+}
+

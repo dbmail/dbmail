@@ -28,6 +28,7 @@ const char *imap_flag_desc_escaped[IMAP_NFLAGS] =
   "\\Seen", "\\Answered", "\\Deleted", "\\Flagged", "\\Draft", "\\Recent"
 };
 
+int imapcommands_use_uid = 0;
 
 /*
  * RETURN VALUES _ic_ functions:
@@ -1339,7 +1340,7 @@ int _ic_search(char *tag, char **args, ClientInfo *ci)
 {
 /*  imap_userdata_t *ud = (imap_userdata_t*)ci->userData;*/
 
-  fprintf(ci->tx,"%s OK SEARCH completed\r\n",tag);
+  fprintf(ci->tx,"%s OK %s completed\r\n",tag, imapcommands_use_uid ? "UID" : "SEARCH");
   return 0;
 }
 
@@ -1353,9 +1354,11 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
   int i,fetch_start,fetch_end,result,setseen,j,k,flagsjustonce;
+  int isfirstout;
   fetch_items_t fetchitems;
   mime_message_t msg,*msgpart;
   char date[IMAP_INTERNALDATE_LEN],*endptr;
+  unsigned long thisnum;
 
   memset(&msg, 0, sizeof(msg));
 
@@ -1412,7 +1415,8 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
       fetch_start = strtoul(endptr, &endptr, 10);
 
-      if (fetch_start == 0 || fetch_start > ud->mailbox.exists)
+      if (fetch_start == 0 || fetch_start > 
+	  (imapcommands_use_uid ?  (ud->mailbox.msguidnext-1) : ud->mailbox.exists))
 	{
 	  fprintf(ci->tx, "%s BAD invalid message range specified\r\n",tag);
 	  return 1;
@@ -1423,7 +1427,16 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	case ':':
 	  fetch_end = strtoul(++endptr, &endptr, 10);
 
-	  if (fetch_end == 0 || fetch_end > ud->mailbox.exists)
+	  if (*endptr == '*')
+	    {
+	      fetch_end = (imapcommands_use_uid ?  
+			   (ud->mailbox.msguidnext-1) : ud->mailbox.exists);
+	      endptr++;
+	      break;
+	    }
+
+	  if (fetch_end == 0 || fetch_end > 
+	      (imapcommands_use_uid ?  (ud->mailbox.msguidnext-1) : ud->mailbox.exists))
 	    {
 	      fprintf(ci->tx, "%s BAD invalid message range specified\r\n",tag);
 	      return 1;
@@ -1447,29 +1460,40 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	  return 1;
 	}
       
-      fetch_start--;
-      fetch_end--;
+      if (!imapcommands_use_uid)
+	{
+	  fetch_start--;
+	  fetch_end--;
+	}
 
       for (i=fetch_start; i<=fetch_end; i++)
 	{
 	  setseen = 0;
 	  flagsjustonce = 0;
+	  thisnum = (imapcommands_use_uid ? i : ud->mailbox.seq_list[i]);
+
+	  if (imapcommands_use_uid)
+	    {
+	      /* check if the message with this UID belongs to this mailbox */
+	      if (!db_mailbox_msg_match(ud->mailbox.uid, thisnum))
+		continue;
+	    }
+
 	  fprintf(ci->tx,"* %d FETCH (",i+1);
 
-	  trace(TRACE_DEBUG, "Fetching msgID %lu (fetch num %d)\r\n", ud->mailbox.seq_list[i],i+1);
+	  trace(TRACE_DEBUG, "Fetching msgID %lu (fetch num %d)\r\n", thisnum, i+1);
 
-	  if (db_fetch_headers(ud->mailbox.seq_list[i], &msg) == -1)
+	  if (db_fetch_headers(thisnum, &msg) == -1)
 	    {
 	      fprintf(ci->tx,"* BAD error fetching message %d\r\n",i+1);
 	      continue;
 	    }
       
-	  db_msgdump(&msg, ud->mailbox.seq_list[i]);
-
+	  db_msgdump(&msg, thisnum);
 
 	  if (fetchitems.getInternalDate)
 	    {
-	      result = db_get_msgdate(ud->mailbox.uid, ud->mailbox.seq_list[i], date);
+	      result = db_get_msgdate(ud->mailbox.uid, thisnum, date);
 	      if (result == -1)
 		{
 		  fprintf(ci->tx,"* BYE internal dbase error\r\n");
@@ -1483,7 +1507,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
 	  if (fetchitems.getUID)
 	    {
-	      fprintf(ci->tx,"UID %lu ",ud->mailbox.seq_list[i]);
+	      fprintf(ci->tx,"UID %lu ",thisnum);
 	    }
       
 	  if (fetchitems.getMIME_IMB)
@@ -1535,10 +1559,10 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	  if (fetchitems.getBodyTotal)
 	    {
 	      fprintf(ci->tx, "BODY[] ");
-	      rfcheader_dump(ci->tx, &msg.rfcheader, args,  /* used as dummy since numfields == 0 */
+	      rfcheader_dump(ci->tx, &msg.rfcheader, args, /* used as dummy since numfields == 0 */
 			     0,0,-1,0,0);
 	      db_dump_range(ci->tx, msg.bodystart, msg.bodyend,
-			    ud->mailbox.seq_list[i],0,-1);
+			    thisnum,0,-1);
 
 	      fprintf(ci->tx,"\r\n");
 	      setseen = 1;
@@ -1550,7 +1574,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	      rfcheader_dump(ci->tx, &msg.rfcheader, args, /* used as dummy since numfields == 0 */
 			     0,0,-1,0,0);
 	      db_dump_range(ci->tx, msg.bodystart, msg.bodyend,
-			    ud->mailbox.seq_list[i],0,-1);
+			    thisnum,0,-1);
 
 	      fprintf(ci->tx,"\r\n");
 	    }
@@ -1561,7 +1585,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	      rfcheader_dump(ci->tx, &msg.rfcheader, args, /* used as dummy since numfields == 0 */
 			     0,0,-1,0,0);
 	      db_dump_range(ci->tx, msg.bodystart, msg.bodyend,
-			    ud->mailbox.seq_list[i],0,-1);
+			    thisnum,0,-1);
 
 	      fprintf(ci->tx,"\r\n");
 	      setseen = 1;
@@ -1578,7 +1602,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	    {
 	      fprintf(ci->tx, "RFC822.TEXT {%lu}\r\n",msg.bodysize);
 	      db_dump_range(ci->tx, msg.bodystart, msg.bodyend,
-			    ud->mailbox.seq_list[i],0,-1);
+			    thisnum,0,-1);
 
 	      fprintf(ci->tx,"\r\n");
 	      setseen = 1;
@@ -1613,7 +1637,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			fprintf(ci->tx, "TEXT] {%lu} \r\n", msgpart->bodysize);
 
 		      db_dump_range(ci->tx, msgpart->bodystart, msgpart->bodyend,
-				    ud->mailbox.seq_list[i],
+				    thisnum,
 				    fetchitems.bodyfetches[j].octetstart,
 				    fetchitems.bodyfetches[j].octetcnt);
 		      fprintf(ci->tx,"\r\n");
@@ -1699,9 +1723,9 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	  /* set \Seen flag if necessary; note the absence of an error-check 
 	   * for db_get_msgflag()!
 	   */
-	  if (setseen && db_get_msgflag("seen", ud->mailbox.uid, ud->mailbox.seq_list[i]) != 1)
+	  if (setseen && db_get_msgflag("seen", ud->mailbox.uid, thisnum) != 1)
 	    {
-	      result = db_set_msgflag("seen", ud->mailbox.uid, ud->mailbox.seq_list[i], 1);
+	      result = db_set_msgflag("seen", ud->mailbox.uid, thisnum, 1);
 	      if (result == -1)
 		{
 		  fprintf(ci->tx,"* BYE internal dbase error\r\n");
@@ -1720,11 +1744,12 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	  if (fetchitems.getFlags) 
 	    {
 	      fprintf(ci->tx,"\r\nFLAGS (");
-	  
+
+	      isfirstout = 1;
 	      for (j=0; j<IMAP_NFLAGS; j++)
 		{
 		  result = db_get_msgflag(imap_flag_desc[j], ud->mailbox.uid, 
-					  ud->mailbox.seq_list[i]);
+					  thisnum);
 
 		  if (result == -1)
 		    {
@@ -1734,7 +1759,16 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		      return -1;
 		    }
 		  else if (result == 1)
-		    fprintf(ci->tx,"\\%s ",imap_flag_desc[j]);
+		    {
+		      if (isfirstout)
+			{
+			  fprintf(ci->tx,"\\%s",imap_flag_desc[j]);
+			  isfirstout = 0;
+			}
+		      else
+			fprintf(ci->tx," \\%s",imap_flag_desc[j]);
+		    }
+
 		}
 	      fprintf(ci->tx,") ");
 
@@ -1750,7 +1784,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
   if (fetchitems.bodyfetches)
     free(fetchitems.bodyfetches);
   
-  fprintf(ci->tx,"%s OK FETCH completed\r\n",tag);
+  fprintf(ci->tx,"%s OK %s completed\r\n",tag,imapcommands_use_uid ? "UID" : "FETCH");
   return 0;
 }
 
@@ -1763,9 +1797,11 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 int _ic_store(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
-  int i,store_start,store_end,delimpos,result,j;
+  char *endptr;
+  int i,store_start,store_end,result,j;
   int be_silent=0,action=IMAPFA_NONE;
   int flaglist[IMAP_NFLAGS];
+  unsigned long thisnum;
 
   memset(flaglist, 0, sizeof(int) * IMAP_NFLAGS);
 
@@ -1807,70 +1843,6 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
       return -1; /* fatal  */
     }
 
-
-  /* determine message range */
-  /* first check for a range specifier (':') */
-  for (i=0,delimpos=-1; args[0][i]; i++)
-    {
-      if (args[0][i] == ':')
-	delimpos = i;
-      else if (!isdigit(args[0][i]))
-	{
-	  fprintf(ci->tx, "%s BAD invalid message range specified\r\n",tag);
-	  return 1;
-	}
-    }
-
-  /* delimiter at start/end ? */
-  if (delimpos == 0 || delimpos == strlen(args[0])-1)
-    {
-      fprintf(ci->tx, "%s BAD invalid message range specified\r\n",tag);
-      return 1;
-    }
-
-  if (delimpos == -1)
-    {
-      /* no delimiter, just a single number */
-      store_start = atoi(args[0]);
-      store_end = store_start;
-    }
-  else
-    {
-      /* delimiter present */
-      args[0][delimpos] = '\0'; /* split up the two numbers */
-      
-      store_start = atoi(args[0]);
-      store_end   = atoi(&args[0][delimpos+1]);
-    }
-
-  if (store_start == 0 || store_end == 0)
-    {
-      /* MSN starts at 1 */
-      fprintf(ci->tx, "%s BAD invalid message range specified\r\n",tag);
-      return 1;
-    }
-
-  if (store_start > ud->mailbox.exists || store_end > ud->mailbox.exists)
-    {
-      /* range contains non-existing msgs */
-      fprintf(ci->tx, "%s BAD invalid message range specified\r\n",tag);
-      return 1;
-    }
-
-  /* make sure start & end are in right order */
-  if (store_start > store_end)
-    {
-      i = store_start;
-      store_start = store_end;
-      store_end = i;
-    }
-
-  /* lower start & end because our indices do start at 0 */
-  store_start--;
-  store_end--;
-
-
-  /* OK msg MSN boundaries established */
   /* retrieve action type */
 
   if (strcasecmp(args[1], "flags") == 0)
@@ -1920,66 +1892,137 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
     }
 
   /* set flags & show if needed */
-  for (i=store_start; i<=store_end; i++)
+  endptr = args[0];
+  while (*endptr)
     {
-      if (!be_silent)
-	fprintf(ci->tx,"* %d FETCH FLAGS (",i);
+      if (endptr != args[0])
+	endptr++; /* skip delimiter */
 
-      switch (action)
+      store_start = strtoul(endptr, &endptr, 10);
+
+      if (store_start == 0 || store_start > 
+	  (imapcommands_use_uid ? (ud->mailbox.msguidnext-1) : ud->mailbox.exists))
 	{
-	case IMAPFA_REPLACE:
-	  for (j=0; j<IMAP_NFLAGS; j++)
-	    {
-	      result = db_set_msgflag(imap_flag_desc[j], ud->mailbox.uid, ud->mailbox.seq_list[i],
-				      flaglist[j]);
-
-	      if (result == -1)
-		{
-		  fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
-		  return -1;
-		}
-
-	      if (!be_silent && flaglist[j])
-		fprintf(ci->tx,"%s ",imap_flag_desc_escaped[j]);
-	    }
-	  break;
-
-	case IMAPFA_ADD:
-	case IMAPFA_REMOVE:
-	  for (j=0; j<IMAP_NFLAGS; j++)
-	    {
-	      if (flaglist[j])
-		{
-		  result = db_set_msgflag(imap_flag_desc[j], ud->mailbox.uid, ud->mailbox.seq_list[i],
-					  (action==IMAPFA_ADD));
-
-		  if (result == -1)
-		    {
-		      fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
-		      return -1;
-		    }
-		}
-	      if (!be_silent)
-		{
-		  result = db_get_msgflag(imap_flag_desc[j], ud->mailbox.uid, ud->mailbox.seq_list[i]);
-
-		  if (result == -1)
-		    {
-		      fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
-		      return -1;
-		    }
-		  if (result == 1)
-		    fprintf(ci->tx,"%s ",imap_flag_desc_escaped[j]);
-		}
-	    }
-	  break;
+	  fprintf(ci->tx, "%s BAD invalid message range specified\r\n",tag);
+	  return 1;
 	}
 
-      if (!be_silent)
-	fprintf(ci->tx,")\r\n");
-    }
+      switch (*endptr)
+	{
+	case ':':
+	  store_end = strtoul(++endptr, &endptr, 10);
 
-  fprintf(ci->tx,"%s OK STORE completed\r\n",tag);
+	  if (*endptr == '*')
+	    {
+	      store_end = (imapcommands_use_uid ?  
+			   (ud->mailbox.msguidnext-1) : ud->mailbox.exists);
+	      endptr++;
+	      break;
+	    }
+
+	  if (store_end == 0 || store_end > 
+	      (imapcommands_use_uid ? (ud->mailbox.msguidnext-1) : ud->mailbox.exists))
+	    {
+	      fprintf(ci->tx, "%s BAD invalid message range specified\r\n",tag);
+	      return 1;
+	    }
+
+	  if (store_end < store_start)
+	    {
+	      i = store_start;
+	      store_start = store_end;
+	      store_end = i;
+	    }
+	  break;
+
+	case ',':
+	case 0:
+	  store_end = store_start;
+	  break;
+	  
+	default:
+	  fprintf(ci->tx, "%s BAD invalid character in message range\r\n",tag);
+	  return 1;
+	}
+      
+      if (!imapcommands_use_uid)
+	{
+	  store_start--;
+	  store_end--;
+	}
+
+      for (i=store_start; i<=store_end; i++)
+	{
+	  thisnum = (imapcommands_use_uid ? i : ud->mailbox.seq_list[i]);
+
+	  if (imapcommands_use_uid)
+	    {
+	      /* check if the message with this UID belongs to this mailbox */
+	      if (!db_mailbox_msg_match(ud->mailbox.uid, thisnum))
+		continue;
+	    }
+
+	  if (!be_silent)
+	    fprintf(ci->tx,"* %d FETCH FLAGS (",i);
+
+	  switch (action)
+	    {
+	    case IMAPFA_REPLACE:
+	      for (j=0; j<IMAP_NFLAGS; j++)
+		{
+		  result = db_set_msgflag(imap_flag_desc[j], ud->mailbox.uid, 
+					  thisnum,
+					  flaglist[j]);
+
+		  if (result == -1)
+		    {
+		      fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
+		      return -1;
+		    }
+
+		  if (!be_silent && flaglist[j])
+		    fprintf(ci->tx,"%s ",imap_flag_desc_escaped[j]);
+		}
+	      break;
+
+	    case IMAPFA_ADD:
+	    case IMAPFA_REMOVE:
+	      for (j=0; j<IMAP_NFLAGS; j++)
+		{
+		  if (flaglist[j])
+		    {
+		      result = db_set_msgflag(imap_flag_desc[j], ud->mailbox.uid, 
+					      thisnum,
+					      (action==IMAPFA_ADD));
+
+		      if (result == -1)
+			{
+			  fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
+			  return -1;
+			}
+		    }
+		  if (!be_silent)
+		    {
+		      result = db_get_msgflag(imap_flag_desc[j], ud->mailbox.uid, 
+					      thisnum);
+
+		      if (result == -1)
+			{
+			  fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
+			  return -1;
+			}
+		      if (result == 1)
+			fprintf(ci->tx,"%s ",imap_flag_desc_escaped[j]);
+		    }
+		}
+	      break;
+	    }
+
+	  if (!be_silent)
+	    fprintf(ci->tx,")\r\n");
+	}
+    }
+  fprintf(ci->tx,"%s OK %s completed\r\n",tag,imapcommands_use_uid ? "UID" : "STORE");
   return 0;
 }
 
@@ -1992,8 +2035,9 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
 int _ic_copy(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
-  int i,copy_start,copy_end,delimpos,result;
-  unsigned long destmboxid;
+  int i,copy_start,copy_end,result;
+  unsigned long destmboxid,thisnum;
+  char *endptr;
 
   if (!check_state_and_args("COPY", tag, args, 2, IMAPCS_SELECTED, ci))
     return 1; /* error, return */
@@ -2017,69 +2061,6 @@ int _ic_copy(char *tag, char **args, ClientInfo *ci)
       return -1; /* fatal  */
     }
 
-
-  /* determine message range */
-  /* first check for a range specifier (':') */
-  for (i=0,delimpos=-1; args[0][i]; i++)
-    {
-      if (args[0][i] == ':')
-	delimpos = i;
-      else if (!isdigit(args[0][i]))
-	{
-	  fprintf(ci->tx, "%s BAD invalid message range specified\r\n",tag);
-	  return 1;
-	}
-    }
-
-  /* delimiter at start/end ? */
-  if (delimpos == 0 || delimpos == strlen(args[0])-1)
-    {
-      fprintf(ci->tx, "%s BAD invalid message range specified\r\n",tag);
-      return 1;
-    }
-
-  if (delimpos == -1)
-    {
-      /* no delimiter, just a single number */
-      copy_start = atoi(args[0]);
-      copy_end = copy_start;
-    }
-  else
-    {
-      /* delimiter present */
-      args[0][delimpos] = '\0'; /* split up the two numbers */
-      
-      copy_start = atoi(args[0]);
-      copy_end   = atoi(&args[0][delimpos+1]);
-    }
-
-  if (copy_start == 0 || copy_end == 0)
-    {
-      /* MSN starts at 1 */
-      fprintf(ci->tx, "%s BAD invalid message range specified\r\n",tag);
-      return 1;
-    }
-
-  if (copy_start > ud->mailbox.exists || copy_end > ud->mailbox.exists)
-    {
-      /* range contains non-existing msgs */
-      fprintf(ci->tx, "%s BAD invalid message range specified\r\n",tag);
-      return 1;
-    }
-
-  /* make sure start & end are in right order */
-  if (copy_start > copy_end)
-    {
-      i = copy_start;
-      copy_start = copy_end;
-      copy_end = i;
-    }
-
-  /* lower start & end because our indices do start at 0 */
-  copy_start--;
-  copy_end--;
-
-  /* OK msg MSN boundaries established */
   /* check if destination mailbox exists */
   destmboxid = db_findmailbox(args[1], ud->userid);
   if (destmboxid == 0)
@@ -2095,17 +2076,86 @@ int _ic_copy(char *tag, char **args, ClientInfo *ci)
     }
 
   /* ok copy msgs */
-  for (i=copy_start; i<=copy_end; i++)
+  endptr = args[0];
+  while (*endptr)
     {
-      result = db_copymsg(ud->mailbox.seq_list[i], destmboxid);
-      if (result == -1)
+      if (endptr != args[0])
+	endptr++; /* skip delimiter */
+
+      copy_start = strtoul(endptr, &endptr, 10);
+
+      if (copy_start == 0 || copy_start >
+	  (imapcommands_use_uid ? (ud->mailbox.msguidnext-1) : ud->mailbox.exists))
 	{
-	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
-	  return -1;
+	  fprintf(ci->tx, "%s BAD invalid message range specified\r\n",tag);
+	  return 1;
+	}
+
+      switch (*endptr)
+	{
+	case ':':
+	  copy_end = strtoul(++endptr, &endptr, 10);
+
+	  if (*endptr == '*')
+	    {
+	      copy_end = (imapcommands_use_uid ?  
+			  (ud->mailbox.msguidnext-1) : ud->mailbox.exists);
+	      endptr++;
+	      break;
+	    }
+
+	  if (copy_end == 0 || copy_end >
+	      (imapcommands_use_uid ? (ud->mailbox.msguidnext-1) : ud->mailbox.exists))
+	    {
+	      fprintf(ci->tx, "%s BAD invalid message range specified\r\n",tag);
+	      return 1;
+	    }
+
+	  if (copy_end < copy_start)
+	    {
+	      i = copy_start;
+	      copy_start = copy_end;
+	      copy_end = i;
+	    }
+	  break;
+
+	case ',':
+	case 0:
+	  copy_end = copy_start;
+	  break;
+	  
+	default:
+	  fprintf(ci->tx, "%s BAD invalid character in message range\r\n",tag);
+	  return 1;
+	}
+      
+      if (!imapcommands_use_uid)
+	{
+	  copy_start--;
+	  copy_end--;
+	}
+
+      for (i=copy_start; i<=copy_end; i++)
+	{
+	  thisnum = (imapcommands_use_uid ? i : ud->mailbox.seq_list[i]);
+
+	  if (imapcommands_use_uid)
+	    {
+	      /* check if the message with this UID belongs to this mailbox */
+	      if (!db_mailbox_msg_match(ud->mailbox.uid, thisnum))
+		continue;
+	    }
+
+	  result = db_copymsg(thisnum, destmboxid);
+	  if (result == -1)
+	    {
+	      fprintf(ci->tx,"* BYE internal dbase error\r\n");
+	      return -1;
+	    }
 	}
     }
 
-  fprintf(ci->tx,"%s OK COPY completed\r\n",tag);
+  fprintf(ci->tx,"%s OK %s completed\r\n", tag, imapcommands_use_uid ? "UID" : "COPY");
   return 0;
 }
 
@@ -2117,14 +2167,40 @@ int _ic_copy(char *tag, char **args, ClientInfo *ci)
  */
 int _ic_uid(char *tag, char **args, ClientInfo *ci)
 {
-/*  imap_userdata_t *ud = (imap_userdata_t*)ci->userData;*/
+  imap_userdata_t *ud = (imap_userdata_t*)ci->userData; 
+  int result;
 
-  if (!check_state_and_args("UID", tag, args, 2, IMAPCS_SELECTED, ci) &&
-      !check_state_and_args("UID", tag, args, 3, IMAPCS_SELECTED, ci))
-    return 1; /* error, return */
+  if (ud->state != IMAPCS_SELECTED)
+    {
+      fprintf(ci->tx,"%s BAD UID command received in invalid state\r\n",tag);
+      return 1;
+    }
+  
+  if (!args[0])
+    {
+      fprintf(ci->tx,"%s BAD missing argument(s) to UID\r\n",tag);
+      return 1;
+    }
 
-  fprintf(ci->tx,"%s OK UID completed\r\n",tag);
-  return 0;
+  imapcommands_use_uid = 1; /* set global var to make clear we will be using UID's */
+
+  if (strcasecmp(args[0], "fetch") == 0)
+    result = _ic_fetch(tag, &args[1], ci);
+  else if (strcasecmp(args[0], "copy") == 0)
+    result = _ic_copy(tag, &args[1], ci);
+  else if (strcasecmp(args[0], "store") == 0)
+    result = _ic_store(tag, &args[1], ci);
+  else if (strcasecmp(args[0], "search") == 0)
+    result = _ic_search(tag, &args[1], ci);
+  else
+    {
+      fprintf(ci->tx,"%s BAD invalid UID command\r\n",tag);
+      result = 1;
+    }
+    
+  imapcommands_use_uid = 0; /* set global var to make clear we will be using UID's */
+
+  return result;
 }
 
 

@@ -35,7 +35,7 @@ char *read_header(unsigned long *blksize)
   /* the header will be everything up until \n\n or an EOF of */
   /* in_stream (stdin) */
 	
-  trace (TRACE_INFO, "read_header(): readheader start");
+  trace (TRACE_INFO, "read_header(): readheader start\n");
 
   while ((end_of_header==0) && (!feof(stdin)))
     {
@@ -54,7 +54,7 @@ char *read_header(unsigned long *blksize)
       if (strstr(header,"\n\n")!=NULL)
 	{
 	  /* we've found the end of the header */
-	  trace (TRACE_DEBUG,"read_header(): end header found");
+	  trace (TRACE_DEBUG,"read_header(): end header found\n");
 	  end_of_header=1;
 	}
 		
@@ -62,8 +62,8 @@ char *read_header(unsigned long *blksize)
       *strblock='\0';
     }
 	
-  trace (TRACE_INFO, "read_header(): readheader done");
-  trace (TRACE_DEBUG, "read_header(): found header [%s]",header);
+  trace (TRACE_INFO, "read_header(): readheader done\n");
+  trace (TRACE_DEBUG, "read_header(): found header [%s]\n",header);
 	
   free(strblock);
 	
@@ -71,13 +71,13 @@ char *read_header(unsigned long *blksize)
     {
       free(strblock);
       free(header);
-      trace (TRACE_STOP, "read_header(): not a valid mailheader found");
+      trace (TRACE_STOP, "read_header(): not a valid mailheader found\n");
       *blksize=0;
     }
   else
     *blksize=strlen(header);
 
-  trace (TRACE_INFO, "read_header(): function successfull");
+  trace (TRACE_INFO, "read_header(): function successfull\n");
   return header;
 }
 
@@ -212,7 +212,7 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 	  trace (TRACE_DEBUG,"insert_messages(): no numeric value in deliver_to, calling external_forward");
 
 			/* creating a list of external forward addresses */
-	  list_nodeadd(&external_forwards,tmp->data,strlen((char *)tmp->data));
+	  list_nodeadd(&external_forwards,tmp->data,strlen((char *)tmp->data)+1);
 	}
       else
 	{
@@ -343,7 +343,8 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 
 	      if (list_totalnodes(&messageids)==0)
 		{
-		  trace (TRACE_DEBUG,"insert_messages(): Forwarding message directly through pipes");
+		  trace (TRACE_DEBUG,
+			 "insert_messages(): Forwarding message directly through pipes");
 					
 		  /* this is tricky. Since there are no messages inserted 
 		     in the database we need to redirect the pipe into all forwards */
@@ -356,18 +357,24 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 		      trace (TRACE_DEBUG,"insert_messages(): new header [%s]",tmpbuffer);
 		      (FILE *)sendmail_pipe = popen(SENDMAIL,"w");
 		      trace (TRACE_DEBUG,"insert_messages(): popen() executed");
+
 		      if (sendmail_pipe!=NULL)
 			{
 			  /* build a list of descriptors */
-			  trace (TRACE_DEBUG,"insert_messages(): popen() successfull [descriptor=%d]",(int)*sendmail_pipe);
+			  trace (TRACE_DEBUG,"insert_messages(): popen() successfull "
+				 "[descriptor=%d]",fileno((FILE*)sendmail_pipe));
+
 			  /* -2 will send the complete message to sendmail_pipe */
 			  fprintf ((FILE *)sendmail_pipe,"%s",tmpbuffer);
+			  trace (TRACE_DEBUG,"insert_messages(): wrote header to pipe");
+
 			  /* add the external pipe descriptor to a list */
-			  list_nodeadd(&descriptors,sendmail_pipe,sizeof(sendmail_pipe));
+			  list_nodeadd(&descriptors,sendmail_pipe,sizeof(FILE));
 			}
 		      else 
 			{
-			  trace (TRACE_ERROR,"insert_messages(): Could not open pipe to [%s]",SENDMAIL);
+			  trace (TRACE_ERROR,"insert_messages(): Could not open pipe to [%s]",
+				 SENDMAIL);
 			}
 		      /* get next receipient */
 		      tmp_pipe=tmp_pipe->nextnode;
@@ -375,7 +382,9 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 			
 		  if (descriptors.total_nodes>0)
 		    {
-				trace (TRACE_DEBUG,"insert_messages(): forwarding to %d addresses",descriptors.total_nodes);
+		      trace (TRACE_DEBUG,"insert_messages(): forwarding to %d addresses",
+			     descriptors.total_nodes);
+
 		      while (!feof(stdin))
 			{
 			  usedmem = fread (strblock, sizeof(char), READ_BLOCK_SIZE, stdin);
@@ -384,25 +393,33 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 			    {
 			      totalmem=totalmem+usedmem;
 
-			      trace(TRACE_DEBUG,"insert_messages(): Sending block size=[%d] total=[%d]",
-				    usedmem, totalmem);
+			      trace(TRACE_DEBUG,"insert_messages(): "
+				    "Sending block size=[%d] total=[%d]",usedmem, totalmem);
+
 			      descriptor_temp = list_getstart(&descriptors);
 			      while (descriptor_temp!=NULL)
 				{
-					trace (TRACE_DEBUG,"insert_messages(): fprintf now");
-					err = ferror((FILE *)descriptor_temp->data);
-					trace (TRACE_DEBUG,"insert_messages(): ferror reports %d on descriptor %d",err, descriptor_temp->data);
-					if (!err)
-						fprintf ((FILE *)(descriptor_temp->data),"%s",strblock);
+				  trace (TRACE_DEBUG,"insert_messages(): fprintf now");
+				  err = ferror((FILE *)descriptor_temp->data);
+				  trace (TRACE_DEBUG,"insert_messages(): "
+					 "ferror reports %d on descriptor %d",err, 
+					 fileno((FILE*)descriptor_temp->data));
+
+				  if (!err)
+				    fwrite (strblock, sizeof(char), usedmem,
+					    (FILE *)(descriptor_temp->data));
+
+				  trace (TRACE_DEBUG,"insert_messages(): wrote data");
 				  descriptor_temp=descriptor_temp->nextnode;
-					trace (TRACE_DEBUG,"insert_messages(): fprintf done");
+				  trace (TRACE_DEBUG,"insert_messages(): fprintf done");
 				}
 			      /* resetting strlen for strblock */
 			      strblock[0]='\0';
 			      usedmem = 0;
 			    }
 			  else 
-			    trace (TRACE_DEBUG,"insert_messages(): End of STDIN reached. we're done here");
+			    trace (TRACE_DEBUG,
+				   "insert_messages(): End of STDIN reached. we're done here");
 			}
 
 		      /* done forwarding */
@@ -411,15 +428,22 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 		      while (descriptor_temp!=NULL)
 			{
 			  if (descriptor_temp->data!=NULL)
-			    fprintf ((FILE *)sendmail_pipe,"\n.\n");
+			    {
+			      fprintf ((FILE *)sendmail_pipe,"\n.\n");
+			      pclose((FILE *)sendmail_pipe);
+			    }
 			  else 
-			    trace (TRACE_ERROR,"insert_messages(): Huh? The descriptor died on me. That's not supposed to happen");
+			    trace (TRACE_ERROR,"insert_messages(): Huh? "
+				   "The descriptor died on me. That's not supposed to happen");
 			}
 		    }
 		  else
 		    {	
-		      trace (TRACE_ERROR,"insert_message(): Something went wrong when building a list structure for pipe descriptors");
+		      trace (TRACE_ERROR,"insert_message(): "
+			     "Something went wrong when building a list "
+			     "structure for pipe descriptors");
 		    }
+		  list_freelist(&descriptors.start);
 		}
 	      else	
 		{		
@@ -431,17 +455,21 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 		      trace (TRACE_DEBUG,"insert_messages(): new header [%s]",tmpbuffer);
 		      (FILE *)sendmail_pipe=popen(SENDMAIL,"w");
 		      trace (TRACE_DEBUG,"insert_messages(): popen() executed");
+
 		      if (sendmail_pipe!=NULL)
 			{
 			  trace (TRACE_DEBUG,"insert_messages(): popen() successfull");
+
 			  /* -2 will send the complete message to sendmail_pipe */
 			  fprintf ((FILE *)sendmail_pipe,"%s",tmpbuffer);
 			  trace (TRACE_DEBUG,"insert_messages(): sending message from database");
-			  db_send_message_special (sendmail_pipe, *(unsigned long*)tmp->data, -2, tmpbuffer); 
+			  db_send_message_special (sendmail_pipe, 
+						   *(unsigned long*)tmp->data, -2, tmpbuffer); 
 			}
 		      else 
 			{
-			  trace (TRACE_ERROR,"insert_messages(): Could not open pipe to [%s]",SENDMAIL);
+			  trace (TRACE_ERROR,"insert_messages(): Could not open pipe to [%s]",
+				 SENDMAIL);
 			}
 		      tmp_pipe=tmp_pipe->nextnode;
 		    }
@@ -449,7 +477,8 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 	    }
 	  else 
 	    {
-	      trace (TRACE_ERROR,"insert_messages(): Could not forward message. Header is invalid");
+	      trace (TRACE_ERROR,"insert_messages(): Could not forward message. "
+		     "Header is invalid");
 	    }
 	}
       else
@@ -476,5 +505,11 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
   trace (TRACE_DEBUG,"insert_messages(): updatequery freed");
   free(updatequery);
   trace (TRACE_DEBUG,"insert_messages(): End of function");
+
+  list_freelist(&bounces.start);
+  list_freelist(&userids.start);
+  list_freelist(&messageids.start);
+  list_freelist(&external_forwards.start);
+
   return 0;
 }
