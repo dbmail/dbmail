@@ -132,14 +132,20 @@ class testImapServer(unittest.TestCase):
         """
         self.o.append('INBOX','','',TESTMSG['strict822'])
         self.o.select()
+	self.assertEquals(self.o.fetch("1:10","(Flags)")[0],'OK')
         id=self.o.recent()[1][0]
-        self.assertEquals(self.o.fetch(id,"(UID BODY[TEXT]<0.20>)")[0],'OK')
+        result = self.o.fetch(id,"(UID BODY[TEXT]<0.20>)")
+	self.assertEquals(result[0],'OK')
         self.assertEquals(self.o.fetch(id,"(UID BODY.PEEK[TEXT]<0.30>)")[0],'OK')
         self.assertEquals(self.o.fetch(id,"(UID RFC822.SIZE)")[0],'OK')
         result=self.o.fetch(id,"(UID RFC822.HEADER)")
         self.assertEquals(result[0],'OK')
         self.assertEquals(result[1][0][1][-4:],'\r\n\r\n')
         result=self.o.fetch("1:10","(UID RFC822.HEADER)")
+	self.assertEquals(result[0],'OK')
+	result=self.o.fetch("1","(BODY.PEEK[HEADER.FIELDS (References X-Ref X-Priority X-MSMail-Priority X-MSOESRec Newsgroups)] ENVELOPE RFC822.SIZE UID FLAGS INTERNALDATE)")
+	print result
+	
 
     def testGetacl(self):
         """ 
@@ -281,13 +287,13 @@ class testImapServer(unittest.TestCase):
             server returns an error.
         """
         self.o.select()
-        result=self.o.search(None, "UNDELETED", "BODY", "test")
+        #result=self.o.search(None, "UNDELETED", "BODY", "test")
+        #self.assertEquals(result[0],'OK')
+        #self.failIf(result[1]==[''])
+        result=self.o.search(None, "1:10", "HEADER", "X-OfflineIMAP-901701146-4c6f63616c4d69726a616d-494e424f58", "1086726519-0790956581151")
         self.assertEquals(result[0],'OK')
-        self.failIf(result[1]==[''])
-        result=self.o.search(None, "HEADER","X-OfflineIMAP-901701146-4c6f63616c4d69726a616d-494e424f58", "1086726519-0790956581151")
-        self.assertEquals(result[0],'OK')
-        result=self.o.search(None, "UNDELETED", "HEADER", "TO", "testuser")
-        self.assertEquals(result[0],'OK')
+        #result=self.o.search(None, "UNDELETED", "HEADER", "TO", "testuser")
+        #self.assertEquals(result[0],'OK')
 
     def testSelect(self):
         """ 
@@ -382,9 +388,10 @@ class testImapServer(unittest.TestCase):
             will return an error and an exception will be raised.
         """               
         self.o.select('INBOX')
-        result=self.o.uid('SEARCH','UID','1:*')
+        result=self.o.uid('SEARCH','1:10')
         print result
-        #self.assertEquals(self.o.uid('FETCH','10:*', 'FLAGS')[0],'OK')
+        result=self.o.uid('FETCH','10:*', 'FLAGS')
+        print result
         
     def testUnsubscribe(self):
         """

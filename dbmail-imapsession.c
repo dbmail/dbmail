@@ -329,26 +329,18 @@ static GList * _imap_get_envelope(struct list *rfcheader)
 	for (idx = 0; envelope_items[idx]; idx++) {
 		mime_findfield(envelope_items[idx], rfcheader, &mr);
 		if (mr && strlen(mr->value) > 0) {
-			tmp = g_list_join(_imap_get_addresses(mr)," ");
-			g_string_printf(tmp,"(%s)", tmp->str);
-			list = g_list_append(list, g_strdup(tmp->str));
+			list = g_list_append(list, dbmail_imap_plist_as_string(_imap_get_addresses(mr)));
 		} else if (strcasecmp(envelope_items[idx], "reply-to") == 0) {
-			/* default this field */
 			mime_findfield("from", rfcheader, &mr);
 			if (mr && strlen(mr->value) > 0) {
-				tmp = g_list_join(_imap_get_addresses(mr)," ");
-				g_string_printf(tmp,"(%s)", tmp->str);
-				list = g_list_append(list, g_strdup(tmp->str));
-			} else	/* no from field ??? */
+				list = g_list_append(list, dbmail_imap_plist_as_string(_imap_get_addresses(mr)));
+			} else
 				list = g_list_append(list, "((NIL NIL \"nobody\" \"nowhere.nirgendwo\"))");
 		} else if (strcasecmp(envelope_items[idx], "sender") == 0) {
-			/* default this field */
 			mime_findfield("from", rfcheader, &mr);
 			if (mr && strlen(mr->value) > 0) {
-				tmp = g_list_join(_imap_get_addresses(mr)," ");
-				g_string_printf(tmp,"(%s)", tmp->str);
-				list = g_list_append(list, g_strdup(tmp->str));
-			} else	/* no from field ??? */
+				list = g_list_append(list, dbmail_imap_plist_as_string(_imap_get_addresses(mr)));
+			} else
 				list = g_list_append(list, "((NIL NIL \"nobody\" \"nowhere.nirgendwo\"))");
 		} else
 			list = g_list_append(list,"NIL");
@@ -465,9 +457,7 @@ static GList * _imap_get_addresses(struct mime_record *mr)
 			while (isspace(mr->value[delimiter]))
 				delimiter++;
 		}
-		tmp = g_list_join(sublist," ");
-		g_string_printf(tmp,"(%s)", tmp->str);
-		list = g_list_append(list, g_strdup(tmp->str));
+		list = g_list_append(list, dbmail_imap_plist_as_string(sublist));
 
 	} while (delimiter > 0);
 	
@@ -717,6 +707,8 @@ static int _imap_session_fetch_parse_octet_range(struct ImapSession *self, int i
 	
 	char *token = self->args[idx];
 	
+	trace(TRACE_DEBUG,"%s,%s: parse token [%s]",__FILE__, __func__, token);
+
 	if (token && token[0] == '<') {
 
 		/* check argument */
@@ -747,6 +739,7 @@ static int _imap_session_fetch_parse_octet_range(struct ImapSession *self, int i
 	} else {
 		self->fi.bodyfetch.octetstart = -1;
 		self->fi.bodyfetch.octetcnt = -1;
+		return idx;
 	}
 
 	return idx + 1;	/* DONE */
@@ -832,7 +825,7 @@ int dbmail_imap_session_fetch_parse_args(struct ImapSession * self, int idx)
 					self->fi.getBodyTotalPeek = 1;
 				else
 					self->fi.getBodyTotal = 1;
-				return _imap_session_fetch_parse_octet_range(self,idx);
+				return _imap_session_fetch_parse_octet_range(self,idx+1);
 			}
 			
 			if (ispeek)
@@ -840,10 +833,12 @@ int dbmail_imap_session_fetch_parse_args(struct ImapSession * self, int idx)
 
 			
 			idx = _imap_session_fetch_parse_partspec(self,idx);
-			if (idx < 0)
+			if (idx < 0) {
+				trace(TRACE_DEBUG,"%s,%s: fetch_parse_partspec return with error", __FILE__, __func__);
 				return -2;
-			idx++;	/* points to ']' now */
-			return _imap_session_fetch_parse_octet_range(self,idx);
+			}
+			/* idx points to ']' now */
+			return _imap_session_fetch_parse_octet_range(self,idx+1);
 		}
 	} else if (MATCH(token,"all")) {		
 		self->fi.msgparse_needed=1;
