@@ -65,4 +65,26 @@ void create_unique_id(char *target, u64_t message_idnr);
  * \param timestring an allocated timestring object.
  */
 void create_current_timestring(timestring_t *timestring);
+
+/**
+ * \brief decorate a mailbox name with a namespace if needed
+ * \param mailbox_name name of mailbox
+ * \param owner_idnr owner idnr of mailbox
+ * \param user_idnr idnr of current user
+ * \return
+ *     - NULL on error
+ *     - fully qualified mailbox name otherwise (e.g. #Users/username/INBOX)
+ * \note caller should free returned string
+ */
+char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
+			    u64_t user_idnr);
+
+/**
+ * \brief remove the namespace from the fully qualified name
+ * \param fq_name full name (with possible namespace) of mailbox
+ * \return
+ *     - NULL on error
+ *     - simple name of mailbox
+ */
+const char *mailbox_remove_namespace(const char *fq_name);
 #endif

@@ -26,10 +26,12 @@
 #include "config.h"
 #endif
 
+#include "auth.h"
 #include "dbmail.h"
 #include "dbmd5.h"
 #include "misc.h"
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 int drop_privileges (char *newuser, char *newgroup)
@@ -97,4 +99,101 @@ void create_current_timestring(timestring_t *timestring)
 	tm = *localtime(&td);   /* get components */
 	strftime((char*)timestring, sizeof(timestring_t), 
 		 "%Y-%m-%d %H:%M:%S", &tm);
+}
+
+char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr, 
+		       u64_t user_idnr)
+{
+	char *fq_name;
+	char *owner_name;
+	size_t fq_name_len;
+
+	if (mailbox_name == NULL) {
+		trace(TRACE_ERROR, "%s,%s: error, mailbox_name is "
+		      "NULL.", __FILE__, __FUNCTION__);
+		return NULL;
+	}
+		
+	if (user_idnr == owner_idnr) {
+		/* mailbox owned by current user */
+		return strdup(mailbox_name);
+	} else {
+		owner_name = auth_get_userid(&owner_idnr);
+		if (owner_name == NULL) {
+			trace(TRACE_ERROR, "%s,%s: error owner_name is NULL",
+			      __FILE__, __FUNCTION__);
+			return NULL;
+		}
+		trace(TRACE_ERROR, "%s,%s: owner name = %s", __FILE__,
+		      __FUNCTION__, owner_name);
+		if (strcmp(owner_name, PUBLIC_FOLDER_USER) == 0) {
+			fq_name_len = strlen(NAMESPACE_PUBLIC) +
+				strlen(MAILBOX_SEPERATOR) +
+				strlen(mailbox_name) + 1;
+			if (!(fq_name = my_malloc(fq_name_len * 
+						  sizeof(char)))) {
+				trace(TRACE_ERROR, "%s,%s: not enough memory",
+				      __FILE__, __FUNCTION__);
+				return NULL;
+			}
+			snprintf(fq_name, fq_name_len, "%s%s%s",
+				 NAMESPACE_PUBLIC, MAILBOX_SEPERATOR, 
+				 mailbox_name);
+		} else {
+			fq_name_len = strlen(NAMESPACE_USER) +
+				strlen(MAILBOX_SEPERATOR) +
+				strlen(owner_name) +
+				strlen(MAILBOX_SEPERATOR) +
+				strlen(mailbox_name) + 1;
+			if (!(fq_name = my_malloc(fq_name_len *
+						  sizeof(char)))) {
+				trace(TRACE_ERROR, "%s,%s: not enough memory",
+				      __FILE__, __FUNCTION__);
+				return NULL;
+			}
+			snprintf(fq_name, fq_name_len, "%s%s%s%s%s",
+				 NAMESPACE_USER, MAILBOX_SEPERATOR,
+				 owner_name, MAILBOX_SEPERATOR,
+				 mailbox_name);
+		}
+		my_free(owner_name);
+		trace(TRACE_INFO, "%s,%s: returning fully qualified name "
+		      "[%s]", __FILE__, __FUNCTION__, fq_name);
+		return fq_name;
+	}
+}
+
+const char *mailbox_remove_namespace(const char *fq_name)
+{
+	char *temp;
+
+	/* a lot of strlen() functions are used here, so this
+	   can be quite inefficient! On the other hand, this
+	   is a function that's not used that much. */
+	if (strcmp(fq_name, NAMESPACE_USER) == 0) {
+		temp = strstr(fq_name, MAILBOX_SEPERATOR);
+		if (temp == NULL || strlen(temp) <= 1) {
+			trace(TRACE_ERROR, "%s,%s wronly constructed mailbox "
+			      "name", __FILE__, __FUNCTION__);
+			return NULL;
+		}
+		temp = strstr(&temp[1], MAILBOX_SEPERATOR);
+		if (temp == NULL || strlen(temp) <= 1) {
+			trace(TRACE_ERROR, "%s,%s wronly constructed mailbox "
+			      "name", __FILE__, __FUNCTION__);
+			return NULL;
+		}
+		return &temp[1];
+	}
+	if (strcmp(fq_name, NAMESPACE_PUBLIC) == 0) {
+		temp = strstr(fq_name, MAILBOX_SEPERATOR);
+		
+		if (temp == NULL || strlen(temp) <= 1) {
+			trace(TRACE_ERROR, "%s,%s wronly constructed mailbox "
+			      "name", __FILE__, __FUNCTION__);
+			return NULL;
+		}
+		return &temp[1];
+	}
+	return fq_name;
 }

@@ -569,6 +569,7 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
   u64_t mboxid, tmp_mboxid;
   u64_t parent_mboxid = 0; /* id of parent mailbox (if applicable) */
   char **chunks,*cpy;
+  int other_namespace = 0;
 
   if (!check_state_and_args("CREATE", tag, args, 1, IMAPCS_AUTHENTICATED, ci))
     return 1; /* error, return */
@@ -653,15 +654,26 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
 	    strcpy(chunks[0], "INBOX");  /* make inbox uppercase */
 
 	  strcat(cpy, chunks[i]);
+	  /* check to see if this is a folder in Other Users/ or Public
+	     namespace */
+	  if (strcmp(cpy, NAMESPACE_USER) == 0 ||
+	      strcmp(cpy, NAMESPACE_PUBLIC) == 0) {
+		  other_namespace = 1;
+		  continue;
+	  }
 	}
       else
 	{
 	  strcat(cpy, "/");
 	  strcat(cpy, chunks[i]);
+	  /* if this is in Other Users namespace, continue to the next chunk */
+	  if (i == 1 && strncmp(cpy, NAMESPACE_USER, strlen(NAMESPACE_USER)) == 0) 
+		  continue;
+		  
 	}
-
+      
       trace(TRACE_DEBUG,"checking for '%s'...",cpy);
-
+      
       /* check if this mailbox already exists */
       if (db_findmailbox(cpy, ud->userid, &mboxid) == -1) {
 	   /* dbase failure */
@@ -696,9 +708,21 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
 				my_free(cpy);
 				return 1;
 			}
+		} else {
+			if (other_namespace) {
+				/* if we want to create a new mailbox in 
+				   another namespace, but we don't specify 
+				   the parent's mailbox, we should not be
+				   allowed to do so */
+				fprintf(ci->tx, "%s NO no permission to create "
+					"mailbox here\r\n", tag);
+				free_chunks(chunks);
+				my_free(cpy);
+				return 1;
+			}
 		}
+		result = db_createmailbox(cpy, ud->userid, &tmp_mboxid);
 
-	     result = db_createmailbox(cpy, ud->userid, &tmp_mboxid);
 
 	  if (result == -1)
 	    {
@@ -1012,7 +1036,7 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
   /* replace name for each child */
   for (i=0; i<nchildren; i++)
     {
-      result = db_getmailboxname(children[i], name);
+      result = db_getmailboxname(children[i], ud->userid, name);
       if (result == -1)
 	{
 	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
@@ -1261,7 +1285,7 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
   for (i=0; i<nchildren; i++)
     {
        /* get name */
-      result = db_getmailboxname(children[i], name);
+      result = db_getmailboxname(children[i], ud->userid, name);
       if (result == -1)
 	{
 	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
@@ -3774,12 +3798,6 @@ int _ic_getacl(char *tag, char **args, ClientInfo *ci)
 		return 1;
 	}
 
-	// has the rights to 'administer' this mailbox? 
-	if (acl_has_right(ud->userid, mboxid, ACL_RIGHT_ADMINISTER) != 1) {
-		fprintf(ci->tx, "%s NO GETACL failure: can't get acl\r\n",
-			tag);
-		return 1;
-	}
 	// get acl string (string of identifier-rights pairs)
 	if (!(acl_string = acl_get_acl(mboxid))) {
 		fprintf(ci->tx, "* BYE internal database error\r\n");
@@ -3868,6 +3886,19 @@ int _ic_myrights(char *tag, char **args, ClientInfo *ci)
 	return 0;
 }
 
+int _ic_namespace(char *tag, char **args, ClientInfo *ci)
+{
+	/* NAMESPACE command */
+	if (!check_state_and_args("NAMESPACE", tag, args, 0,
+				  IMAPCS_AUTHENTICATED, ci))
+		return 1;
 	
+	fprintf(ci->tx, "* NAMESPACE ((\"\" \"%s\")) ((\"%s\" \"%s\")) "
+		"((\"%s\" \"%s\"))\r\n", 
+		MAILBOX_SEPERATOR, NAMESPACE_USER,
+		MAILBOX_SEPERATOR, NAMESPACE_PUBLIC, MAILBOX_SEPERATOR);
+	fprintf(ci->tx, "%s OK NAMESPACE complete\r\n", tag);
+	return 0;
+}
 		   
 	

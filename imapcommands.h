@@ -92,5 +92,8 @@ int _ic_listrights(char *tag, char **args, ClientInfo *ci);
  * MYRIGHTS command
  */
 int _ic_myrights(char *tag, char **args, ClientInfo *ci);
-
+/**
+ * NAMESPACE command
+ */
+int _ic_namespace(char *tag, char **args, ClientInfo *ci);
 #endif

@@ -1,3 +1,28 @@
+2004-01-27  Ilja Booij  <ilja@ic-s.nl>
+
+	* misc.c (mailbox_remove_namespace): new function which makes a 
+	simple mailbox name from a mailbox name with namespace information 
+
+	* db.c (db_createmailbox): uses the mailbox_remove_namespace() function
+	to remove possible namespace information from the mailbox name.
+
+	* imap4.c (imap_handler_functions): added _ic_namespace
+	added IMAP_COMM_NAMESPACE to commands
+
+	* imap4.h (IMAP_CAPABILITY_STRING): added NAMESPACE
+
+	* imapcommands.c (_ic_namespace): added namespace command
+	(_ic_create): _ic_create now uses namespace information for
+	creation of mailboxes.
+
+2004-01-26  Ilja Booij  <ilja@ic-s.nl>
+
+	* auth/authsql.c (auth_get_userid): fixed a bug. a strncpy was called
+	with strlen(query_result) instead of strlen(query_result) + 1
+
+	* db.c (db_get_mailbox_owner): added function which can be used to get
+	the user_idnr of the user owning the mailbox.
+
 2004-01-23  Ilja Booij  <ilja@ic-s.nl>
 
 	* imapcommands.c (_ic_store): checks ACLs. does different checks

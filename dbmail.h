@@ -51,7 +51,16 @@
 #define DEFAULT_CONFIG_FILE "/etc/dbmail.conf"
 
 /** username of user that is owner of all mailboxes */
-#define SHARED_MAILBOX_USERNAME "__shared__"
+#define SHARED_MAILBOX_USERNAME "__public__"
+
+/** prefix for #Users namespace */
+#define NAMESPACE_USER "#Users"
+/** prefix for public namespace */
+#define NAMESPACE_PUBLIC "#Public"
+/** seperator for namespaces and mailboxes and submailboxes */
+#define MAILBOX_SEPERATOR "/"
+/** username for owner of public folders */
+#define PUBLIC_FOLDER_USER "__public__"
 
 /* uncomment this if you want informative process titles */
 //#define PROC_TITLES

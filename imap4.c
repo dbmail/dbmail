@@ -71,6 +71,7 @@ const char *IMAP_COMMANDS[] =
   "check", "close", "expunge", "search", "fetch", "store", "copy", "uid",
   "getquotaroot", "getquota", 
   "setacl", "deleteacl", "getacl", "listrights", "myrights",
+  "namespace",
   "***NOMORE***"
 };
 
@@ -88,6 +89,7 @@ enum IMAP_COMMAND_TYPES { IMAP_COMM_NONE,
 			  IMAP_COMM_GETQUOTAROOT, IMAP_COMM_GETQUOTA,
 			  IMAP_COMM_SETACL, IMAP_COMM_DELETEACL, IMAP_COMM_GETACL,
 			  IMAP_COMM_LISTRIGHTS, IMAP_COMM_MYRIGHTS,
+			  IMAP_COMM_NAMESPACE,
 			  IMAP_COMM_LAST };
 
 
@@ -101,6 +103,7 @@ const IMAP_COMMAND_HANDLER imap_handler_functions[] =
   _ic_check, _ic_close, _ic_expunge, _ic_search, _ic_fetch, _ic_store, _ic_copy, _ic_uid,
   _ic_getquotaroot, _ic_getquota,
   _ic_setacl, _ic_deleteacl, _ic_getacl, _ic_listrights, _ic_myrights,
+  _ic_namespace,
   NULL
 };
 
@@ -310,7 +313,7 @@ int IMAPClientHandler(ClientInfo *ci)
 	  continue;
 	}
 
-      for (i=IMAP_COMM_NONE; i<IMAP_COMM_LAST && strcasecmp(command, IMAP_COMMANDS[i]); i++) ;
+      for (i=IMAP_COMM_NONE; i<IMAP_COMM_LAST && strcasecmp(command, IMAP_COMMANDS[i]); i++);
 
       if (i <= IMAP_COMM_NONE || i >= IMAP_COMM_LAST)
 	{

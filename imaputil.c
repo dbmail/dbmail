@@ -2049,6 +2049,9 @@ int checkmailboxname(const char *s)
     {
       if (!strchr(AcceptedMailboxnameChars, s[i]))
 	{
+		/* dirty hack to allow namespaces to function */
+		if (i == 0 && s[0] == '#')
+			continue;
 	  /* wrong char found */
 	  return 0;
 	}

@@ -787,6 +787,17 @@ int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern,
 int db_getmailbox(mailbox_t *mb);
 
 /**
+ * \brief find owner of a mailbox
+ * \param mboxid id of mailbox
+ * \param owner_id will hold owner of mailbox after return
+ * \return
+ *    - -1 on db error
+ *    -  0 if owner not found
+ *    -  1 if owner found
+ */
+int db_get_mailbox_owner(u64_t mboxid, u64_t *owner_id);
+
+/**
  * \brief check if a user is owner of the specified mailbox 
  * \param userid id of user
  * \param mboxid id of mailbox
@@ -897,6 +908,7 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to,
 /**
  * \brief get name of mailbox
  * \param mailbox_idnr
+ * \param user_idnr id of current user
  * \param name will hold the name
  * \return 
  * 		- -1 on failure
@@ -904,7 +916,7 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to,
  * \attention name should be large enough to hold the name 
  * (preferably of size IMAP_MAX_MAILBOX_NAMELEN + 1)
  */
-int db_getmailboxname(u64_t mailbox_idnr, char *name);
+int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name);
 /**
  * \brief set name of mailbox
  * \param mailbox_idnr

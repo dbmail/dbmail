@@ -68,6 +68,9 @@ static int db_list_mailboxes_by_regex(u64_t owner_idnr, int only_subscribed,
 			     u64_t **mailboxes, unsigned int *nr_mailboxes);
 /** get size of a message */
 static int db_get_message_size(u64_t message_idnr, u64_t *message_size);
+/** find a mailbox with a specific owner */
+static int db_findmailbox_owner(const char *name, u64_t owner_idnr, 
+				u64_t *mailbox_idnr);
 
 int db_get_physmessage_id(u64_t message_idnr, u64_t *physmessage_id)
 {
@@ -154,7 +157,7 @@ int db_calculate_quotum_all()
 	     "HAVING sum(pm.messagesize) <> usr.curmail_size");
 
     if (db_query(query) == -1) {
-	trace(TRACE_ERROR, "%s,%s: error finding used quota",
+	trace(TRACE_ERROR, "%s,%s: error findng used quota",
 	      __FILE__, __FUNCTION__);
 	return -1;
     }
@@ -2021,7 +2024,72 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
     return 0;
 }
 
-int db_findmailbox(const char *name, u64_t user_idnr, u64_t *mailbox_idnr)
+int db_findmailbox(const char *fq_name, u64_t user_idnr, 
+		       u64_t *mailbox_idnr)
+{
+	char *username = NULL;
+	char *mailbox_name;
+	char *name_str_copy;
+	char *tempstr;
+	size_t index;
+	int result;
+	u64_t owner_idnr;
+
+	assert(mailbox_idnr != NULL);
+	*mailbox_idnr = 0;
+
+	trace(TRACE_DEBUG, "%s,%s: looking for mailbox with FQN [%s].",
+	      __FILE__, __FUNCTION__, fq_name);
+
+	name_str_copy = strdup(fq_name);
+	/* see if this is a #User mailbox */
+	if ((strlen(NAMESPACE_USER) > 0) &&
+	    (strstr(fq_name, NAMESPACE_USER) == fq_name)) {
+		index = strcspn(name_str_copy, MAILBOX_SEPERATOR);
+		tempstr = &name_str_copy[index + 1];
+		index = strcspn(tempstr, MAILBOX_SEPERATOR);
+		username = tempstr;
+		tempstr[index] = '\0';
+		mailbox_name = &tempstr[index + 1];
+	} else {
+		if ((strlen(NAMESPACE_PUBLIC) > 0) &&
+		    (strstr(fq_name, NAMESPACE_PUBLIC) == fq_name)) {
+			index = strcspn(name_str_copy, MAILBOX_SEPERATOR);
+			mailbox_name = &name_str_copy[index + 1];
+			username = PUBLIC_FOLDER_USER;
+		} else {
+			mailbox_name = name_str_copy;
+			owner_idnr = user_idnr;
+		}
+	}
+	if (username) {
+		trace(TRACE_DEBUG,"%s,%s: finding user with name [%s].",
+		      __FILE__, __FUNCTION__, username);
+		result = auth_user_exists(username, &owner_idnr);
+		if (result < 0) {
+			trace(TRACE_ERROR, "%s,%s: error checking id of "
+			      "user.", __FILE__, __FUNCTION__);
+			return -1;
+		}
+		if (result == 0) {
+			trace(TRACE_INFO, "%s,%s user [%s] not found.",
+			      __FILE__, __FUNCTION__, username);
+			return 0;
+		}
+	}
+	result = db_findmailbox_owner(mailbox_name, owner_idnr, mailbox_idnr);
+	if (result < 0) {
+		trace(TRACE_ERROR, "%s,%s: error finding mailbox [%s] with "
+		      "owner [%s, %llu]", __FILE__, __FUNCTION__,
+		      mailbox_name, username, owner_idnr);
+		return -1;
+	}
+	my_free(name_str_copy);
+	return result;
+}
+
+int db_findmailbox_owner(const char *name, u64_t owner_idnr, 
+			 u64_t *mailbox_idnr)
 {
     char *query_result;
     
@@ -2033,11 +2101,11 @@ int db_findmailbox(const char *name, u64_t user_idnr, u64_t *mailbox_idnr)
 	 snprintf(query, DEF_QUERYSIZE,
 		  "SELECT mailbox_idnr FROM mailboxes "
 		  "WHERE LOWER(name) = LOWER('%s') "
-		  "AND owner_idnr='%llu'", name, user_idnr);
+		  "AND owner_idnr='%llu'", name, owner_idnr);
     } else {
 	 snprintf(query, DEF_QUERYSIZE,
 		  "SELECT mailbox_idnr FROM mailboxes "
-		  "WHERE name='%s' AND owner_idnr='%llu'", name, user_idnr);
+		  "WHERE name='%s' AND owner_idnr='%llu'", name, owner_idnr);
     }
     if (db_query(query) == -1) {
 	trace(TRACE_ERROR, "%s,%s: could not select mailbox '%s'\n",
@@ -2049,7 +2117,7 @@ int db_findmailbox(const char *name, u64_t user_idnr, u64_t *mailbox_idnr)
     if (db_num_rows() < 1) {
 	 /* maybe we're looking for a shared mailbox? */
 	 db_free_result();
-	 if (shared_mailbox_find(name, user_idnr, mailbox_idnr) == -1) {
+	 if (shared_mailbox_find(name, owner_idnr, mailbox_idnr) == -1) {
 	      trace(TRACE_ERROR, "%s,%s: error finding shared mailbox",
 		    __FILE__, __FUNCTION__);
 	      return -1;
@@ -2065,13 +2133,17 @@ int db_findmailbox(const char *name, u64_t user_idnr, u64_t *mailbox_idnr)
     return 1;
 }
 
-int db_list_mailboxes_by_regex(u64_t owner_idnr, int only_subscribed, 
+
+int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed, 
 			       regex_t *preg,
 			       u64_t **mailboxes, unsigned int *nr_mailboxes)
 {
      unsigned int i;
      u64_t *tmp;
      char *result_string;
+     char *owner_idnr_str;
+     u64_t owner_idnr;
+     char *mailbox_name;
 
      assert(mailboxes != NULL);
      assert(nr_mailboxes != NULL);
@@ -2079,23 +2151,25 @@ int db_list_mailboxes_by_regex(u64_t owner_idnr, int only_subscribed,
      *mailboxes = NULL;
      *nr_mailboxes = 0;
      if (only_subscribed)
-	  snprintf(query, DEF_QUERYSIZE,
-		   "SELECT name, mailbox_idnr, owner_idnr "
-		   "FROM mailboxes mbx, subscription sub, acl "
-		   "WHERE mbx.mailbox_idnr = sub.mailbox_id "
-		   "AND sub.user_id = '%llu' "
-		   "AND (mbx.owner_idnr = sub.user_id "
-		   "OR (acl.user_id = sub.user_id "
-		   "AND acl.mailbox_id = mbx.mailbox_idnr "
-		   "AND acl.lookup_flag = '1'))", owner_idnr);
+	     snprintf(query, DEF_QUERYSIZE,
+		      "SELECT mbx.name, mbx.mailbox_idnr, mbx.owner_idnr "
+		      "FROM mailboxes mbx "
+		      "LEFT JOIN acl "
+		      "ON acl.mailbox_id = mbx.mailbox_idnr "
+		      "JOIN subscription sub ON sub.user_id = '%llu' "
+		      "AND sub.mailbox_id = mbx.mailbox_idnr "
+		      "WHERE mbx.owner_idnr = '%llu' "
+		      "OR (acl.user_id = '%llu' AND acl.lookup_flag = '1') "
+		      "GROUP BY mbx.name, mbx.mailbox_idnr, mbx.owner_idnr",
+		      user_idnr, user_idnr, user_idnr);
      else
-	  snprintf(query, DEF_QUERYSIZE,
-		   "SELECT name, mailbox_idnr, owner_idnr "
-		   "FROM mailboxes mbx, acl "
-		   "WHERE mbx.owner_idnr = '%llu' OR "
-		   "(acl.mailbox_id = mbx.mailbox_idnr "
-		   "AND acl.user_id = '%llu' "
-		   "AND acl.lookup_flag = '1')", owner_idnr, owner_idnr);
+	     snprintf(query, DEF_QUERYSIZE,
+		      "SELECT mbx.name, mbx.mailbox_idnr, mbx.owner_idnr "
+		      "FROM mailboxes mbx "
+		      "LEFT JOIN acl "
+		      "ON mbx.mailbox_idnr = acl.mailbox_id "
+		      "WHERE (acl.user_id = '%llu' AND acl.lookup_flag = '1') "
+		      "OR mbx.owner_idnr = '%llu'", user_idnr, user_idnr);
      
      if (db_query(query) == -1) {
 	  trace(TRACE_ERROR, "%s,%s: error during mailbox query",
@@ -2116,12 +2190,22 @@ int db_list_mailboxes_by_regex(u64_t owner_idnr, int only_subscribed,
      
      for (i = 0; i < (unsigned) db_num_rows(); i++) {
 	  result_string = db_get_result(i, 0);
-	  if (result_string) {
-	       if (regexec(preg, result_string, 0, NULL, 0) == 0) {
-		    tmp[*nr_mailboxes] = 
-			 strtoull(db_get_result(i, 1), NULL, 10);
-		    (*nr_mailboxes)++;
-	       }
+	  owner_idnr_str = db_get_result(i, 2);
+	  owner_idnr = owner_idnr_str ? strtoull(owner_idnr_str, NULL, 10): 0;
+	  /* add possible namespace prefix to mailbox_name */
+	  mailbox_name = mailbox_add_namespace(result_string, owner_idnr,
+					       user_idnr);
+	  if (mailbox_name) {
+		  trace(TRACE_DEBUG, "%s,%s: comparing mailbox [%s] to "
+			"regular expression", __FILE__, __FUNCTION__, mailbox_name);
+		  if (regexec(preg, mailbox_name, 0, NULL, 0) == 0) {
+			  tmp[*nr_mailboxes] = 
+				  strtoull(db_get_result(i, 1), NULL, 10);
+			  (*nr_mailboxes)++;
+			  trace(TRACE_DEBUG, "%s,%s: regex match %s",
+				__FILE__, __FUNCTION__, mailbox_name);
+		  }
+		  my_free(mailbox_name);
 	  }
      }
      db_free_result();
@@ -2339,13 +2423,20 @@ int db_getmailbox(mailbox_t * mb)
 
 int db_createmailbox(const char *name, u64_t owner_idnr, u64_t *mailbox_idnr)
 {
+	const char *simple_name;
      assert(mailbox_idnr != NULL);
      *mailbox_idnr = 0;
+     /* remove namespace information from mailbox name */
+     if (!(simple_name = mailbox_remove_namespace(name))) {
+	     trace(TRACE_ERROR, "%s,%s: could not create simple mailbox name "
+		   "from full name", __FILE__, __FUNCTION__);
+	     return -1;
+     }
      snprintf(query, DEF_QUERYSIZE,
 	      "INSERT INTO mailboxes (name, owner_idnr,"
 	      "seen_flag, answered_flag, deleted_flag, flagged_flag, "
 	      "recent_flag, draft_flag, permission)"
-	      " VALUES ('%s', '%llu', 1, 1, 1, 1, 1, 1, 2)", name,
+	      " VALUES ('%s', '%llu', 1, 1, 1, 1, 1, 1, 2)", simple_name,
 	      owner_idnr);
      
      if (db_query(query) == -1) {
@@ -2703,36 +2794,63 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr)
      return newid;			/* success */
 }				/* end db_copymsg() */
 
-int db_getmailboxname(u64_t mailbox_idnr, char *name)
+int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name)
 {
-    char *query_result;
-    snprintf(query, DEF_QUERYSIZE,
-	     "SELECT name FROM mailboxes WHERE mailbox_idnr = '%llu'",
-	     mailbox_idnr);
+	char *tmp_name, *tmp_fq_name;
+	char *query_result;
+	int result;
+	u64_t owner_idnr;
 
-    if (db_query(query) == -1) {
-	trace(TRACE_ERROR, "%s,%s: could not retrieve name",
-	      __FILE__, __FUNCTION__);
-	return -1;
-    }
+	result = db_get_mailbox_owner(mailbox_idnr, &owner_idnr);
+	if (result <= 0) {
+		trace(TRACE_ERROR, "%s,%s: error checking ownership of "
+		      "mailbox", __FILE__,__FUNCTION__);
+		return -1;
+	}
+		
+	snprintf(query, DEF_QUERYSIZE,
+		 "SELECT name FROM mailboxes WHERE mailbox_idnr = '%llu'",
+		 mailbox_idnr);
+    
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: could not retrieve name",
+		      __FILE__, __FUNCTION__);
+		return -1;
+	}
 
-    if (db_num_rows() < 1) {
+	if (db_num_rows() < 1) {
+		db_free_result();
+		*name = '\0';
+		return 0;
+	}
+
+	query_result = db_get_result(0, 0);
+
+	if (!query_result) {
+		/* empty set, mailbox does not exist */
+		db_free_result();
+		*name = '\0';
+		return 0;
+	}
+	if (!(tmp_name = my_malloc((strlen(query_result) + 1) * 
+				   sizeof(char)))) {
+		trace(TRACE_ERROR,"%s,%s: error allocating memory",
+		      __FILE__, __FUNCTION__);
+		return -1;
+	}
+	
+	strncpy(tmp_name, query_result, IMAP_MAX_MAILBOX_NAMELEN);
 	db_free_result();
-	*name = '\0';
+	tmp_fq_name = mailbox_add_namespace(tmp_name, owner_idnr, user_idnr);
+	if (!tmp_fq_name) {
+		trace(TRACE_ERROR,"%s,%s: error getting fully qualified "
+		      "mailbox name", __FILE__, __FUNCTION__);
+		return -1;
+	}
+	strncpy(name, tmp_fq_name, IMAP_MAX_MAILBOX_NAMELEN);
+	my_free(tmp_name);
+	my_free(tmp_fq_name);
 	return 0;
-    }
-
-    query_result = db_get_result(0, 0);
-
-    if (!query_result) {
-	/* empty set, mailbox does not exist */
-	db_free_result();
-	*name = '\0';
-	return 0;
-    }
-    strncpy(name, query_result, IMAP_MAX_MAILBOX_NAMELEN);
-    db_free_result();
-    return 0;
 }
 
 int db_setmailboxname(u64_t mailbox_idnr, const char *name)
@@ -3561,6 +3679,37 @@ int db_acl_get_identifier(u64_t mboxid, struct list *identifier_list)
 	}
 	db_free_result();
 	return 1;
+}
+
+int db_get_mailbox_owner(u64_t mboxid, u64_t *owner_id)
+{
+	char *result_string;
+       
+	assert(owner_id != NULL);
+
+	snprintf(query, DEF_QUERYSIZE,
+		 "SELECT owner_idnr FROM mailboxes "
+		 "WHERE mailbox_idnr = '%llu'", mboxid);
+	
+	if (db_query(query) < 0) {
+		trace(TRACE_ERROR, "%s,%s: error finding owner of mailbox "
+		      "[%llu]", __FILE__, __FUNCTION__, mboxid);
+		return -1;
+	}
+	
+	if (db_num_rows() == 0) {
+		db_free_result();
+		return 0;
+	} else {
+		result_string = db_get_result(0, 0);
+		*owner_id = result_string ? strtoull(result_string, NULL, 10):
+			0;
+		db_free_result();
+		if (*owner_id == 0)
+			return 0;
+		else
+			return 1;
+	}
 }
 
 int db_user_is_mailbox_owner(u64_t userid, u64_t mboxid) 
