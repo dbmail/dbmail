@@ -74,11 +74,13 @@ What do you need?
 	Edit the dbmail.conf file and set everything in there
 	to your likeings.
 
-3.	Run build.sh
+3.	Run configure & make
+    
+    Run the configure script. This script uses pg_config or mysql_config (depending on
+    --with-mysql or --with-pgsql) to detect where the libraries and include files
+    for these databases are.
 
-	If you want to use md5 hash passwords, you need to make sure the crypt() you link
-	in supports them.  For most people this amounts to linking in GNU libc's libcrypt
-	via entering -lcrypt instead of -lcrypto.
+    After running configure, a 'make all' should suffice to build the executables.
 
 4.	Create users in the dbmail system
 
@@ -120,7 +122,7 @@ What do you need?
 	at the user= field you can add any user that is allowed to run dbmail-smtp. 
 	I suggest adding a user dbmail with a group dbmail and have all dbmail programs 
 	be run by that user. The dbmail daemons (pop and imap) will drop their root
-	priviledges to the user which is defined in /etc/dbmail.conf.
+	privileges to the user which is defined in /etc/dbmail.conf.
 
 	and insert into the /etc/postfix/transport file 
 

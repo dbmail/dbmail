@@ -1,14 +1,15 @@
-dnl aclocal.m4 generated automatically by aclocal 1.4-p4
+# aclocal.m4 generated automatically by aclocal 1.6.3 -*- Autoconf -*-
 
-dnl Copyright (C) 1994, 1995-8, 1999 Free Software Foundation, Inc.
-dnl This file is free software; the Free Software Foundation
-dnl gives unlimited permission to copy and/or distribute it,
-dnl with or without modifications, as long as this notice is preserved.
+# Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002
+# Free Software Foundation, Inc.
+# This file is free software; the Free Software Foundation
+# gives unlimited permission to copy and/or distribute it,
+# with or without modifications, as long as this notice is preserved.
 
-dnl This program is distributed in the hope that it will be useful,
-dnl but WITHOUT ANY WARRANTY, to the extent permitted by law; without
-dnl even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-dnl PARTICULAR PURPOSE.
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY, to the extent permitted by law; without
+# even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+# PARTICULAR PURPOSE.
 
 # Do all the work for Automake.  This macro actually does too much --
 # some checks are only needed if your package does certain things.
@@ -148,9 +149,13 @@ make your compile work without much twiddling.
 dnl DBMAIL_BOTH_SQL_CHECK
 dnl
 AC_DEFUN(DBMAIL_BOTH_SQL_CHECK, [dnl
-AC_ARG_WITH(mysql,[  --with-mysql=PATH       full path to mysql header directory],
+AC_ARG_WITH(mysql,
+            [  --with-mysql            use MySQL as database. Uses mysql_config
+	       		  for finding includes and libraries],
             mysqlheadername="$withval")
-AC_ARG_WITH(pgsql,[  --with-pgsql=PATH       full path to pgsql header directory],
+AC_ARG_WITH(pgsql,
+	    [  --with-pgsql            use PostgreSQL as database. 
+                          Uses pg_config for finding includes and libraries],
             pgsqlheadername="$withval")
 
 WARN=0
@@ -161,8 +166,8 @@ then
   then
     NEITHER=1
     mysqlheadername=""
-    MYSQLINC=""
-    PGSQLINC=""
+#    MYSQLINC=""
+#    PGSQLINC=""
   fi
 fi
 if test "$NEITHER" = 1
@@ -173,16 +178,14 @@ if test "$NEITHER" = 1
 ])
 fi
 
-
-
 if test ! "${mysqlheadername-x}" = "x"
 then
   if test ! "${pgsqlheadername-x}" = "x"
     then
       WARN=1
       mysqlheadername=""
-      MYSQLINC=""
-      PGSQLINC=""
+#      MYSQLINC=""
+#      PGSQLINC=""
   fi
 fi
 if test "$WARN" = 1
@@ -193,143 +196,227 @@ if test "$WARN" = 1
      build...
 ])
 fi
-
-# If mysql is specified, lets check if they specified a place too first
-if test ! "${mysqlheadername-x}" = "x"
-then
-  # --with-mysql was specified
-  if test "$withval" != "yes"
-  then
-    AC_MSG_CHECKING([for mysql.h (user supplied)])
-    if test -r "$mysqlheadername/mysql.h"
-      then
-      # found
-        AC_MSG_RESULT([$mysqlheadername/mysql.h])
-        MYSQLINC=$mysqlheadername
-      else 
-      # Not found
-        AC_MSG_RESULT([not found])
-        MYSQLINC=""
-        mysqlheadername=""
-        AC_MSG_ERROR([
-  Unable to find mysql.h where you specified, try just --with-mysql to 
-  have configure guess])
-    fi
-  else
-    # Lets look in our standard paths
-    AC_MSG_CHECKING([for mysql.h])
-    for mysqlpaths in $mysqlheaderpaths
-    do
-      if test -r "$mysqlpaths/mysql.h"
-      then
-        MYSQLINC="$mysqlpaths"
-        AC_MSG_RESULT([$mysqlpaths/mysql.h])
-        break
-      fi
-    done
-    if test -z "$MYSQLINC"
-    then
-      AC_MSG_RESULT([no])
-      AC_MSG_ERROR([
-  Unable to locate mysql.h, try specifying with --with-mysql])
-    fi
-  fi
-fi
-
-
-# If postgres is specified, lets check if they specified a place too first
-if test ! "${pgsqlheadername-x}" = "x"
-then
-  # --with-pgsql was specified
-  if test "$withval" != "yes"
-  then
-    AC_MSG_CHECKING([for libpq-fe.h (user supplied)])
-    if test -r "$pgsqlheadername/libpq-fe.h"
-      then
-      # found
-        AC_MSG_RESULT([$pgsqlheadername/libpq-fe.h])
-        PGSQLINC=$pgsqlheadername
-      else 
-      # Not found
-        AC_MSG_RESULT([not found])
-        PGSQLINC=""
-        pgsqlheadername=""
-        AC_MSG_ERROR([
-  Unable to find libpq-fe.h where you specified, try just --with-pgsql to 
-  have configure guess])
-    fi
-  else
-    # Lets look in our standard paths
-    AC_MSG_CHECKING([for libpq-fe.h])
-    for pgsqlpaths in $pgsqlheaderpaths
-    do
-      if test -r "$pgsqlpaths/libpq-fe.h"
-      then
-        PGSQLINC="$pgsqlpaths"
-        AC_MSG_RESULT([$pgsqlpaths/libpq-fe.h])
-        break
-      fi
-    done
-    if test -z "$PGSQLINC"
-    then
-      AC_MSG_RESULT([no])
-      AC_MSG_ERROR([
-  Unable to locate libpq-fe.h, try specifying with --with-pgsql])
-    fi
-  fi
-fi
 ])
 
 dnl DBMAIL_CHECK_SQL_LIBS
 dnl
 AC_DEFUN(DBMAIL_CHECK_SQL_LIBS, [dnl
-#Look for libs needed to link
+#Look for include files and libs needed to link
+#use the configuration utilities (mysql_config and pg_config for this)
 # MySQL first
 if test ! "${mysqlheadername-x}" = "x"
 then
-  AC_CHECK_LIB(mysqlclient,mysql_real_connect,[ SQLLIB="-lmysqlclient" SQLALIB="mysql/libmysqldbmail.a"], [SQLLIB="" SQLALIB=""])
-  if test -z "$SQLLIB"
-  then
-    AC_MSG_ERROR([
-  Unable to link against mysqlclient.  It appears you are missing the
-  development libraries or they aren't in your linker's path
-])
-  fi
+    AC_PATH_PROG(mysqlconfig,mysql_config)
+    if test [ -z "$mysqlconfig" ]
+    then
+        AC_MSG_ERROR([mysql_config executable not found. Make sure mysql_config is in your path])
+    else
+	AC_MSG_CHECKING([MySQL headers])
+	MYSQLINC=`${mysqlconfig} --cflags`
+	AC_MSG_RESULT([$MYSQLINC])	
+        AC_MSG_CHECKING([MySQL libraries])
+        SQLLIB=`${mysqlconfig} --libs`
+        SQLALIB="mysql/libmysqldbmail.a"
+        AC_MSG_RESULT([$SQLLIB])
+   fi
 else
   if test ! "${pgsqlheadername-x}" = "x"
   then
-    AC_CHECK_LIB(pq, PQconnectdb, [ SQLLIB="-lpq" SQLALIB="pgsql/libpgsqldbmail.a"], [SQLLIB="" SQLALIB=""])
-    if test -z "$SQLLIB"
+    AC_PATH_PROG(pgsqlconfig,pg_config)
+    if test [ -z "$pgsqlconfig" ]
     then
-      AC_MSG_ERROR([
-  Unable to link against pq.  It appears you are missing the development
-  libraries or they aren't in your linker's path
-])
+        AC_MSG_ERROR([pg_config executable not found. Make sure pg_config is in your path])
+    else
+	AC_MSG_CHECKING([PostgreSQL headers])
+	PGINCDIR=`${pgsqlconfig} --includedir`
+	PGSQLINC="-I$PGINCDIR"
+	AC_MSG_RESULT([$PGSQLINC])
+        AC_MSG_CHECKING([PostgreSQL libraries])
+        PGLIBDIR=`${pgsqlconfig} --libdir`
+        SQLLIB="-L$PGLIBDIR -lpq"
+        SQLALIB="pgsql/libpgsqldbmail.a"
+        AC_MSG_RESULT([$SQLLIB])
     fi
   fi
 fi
 ])
+	
+dnl DBMAIL_AUTH_CONF
+dnl check for ldap or sql authentication
+AC_DEFUN(DBMAIL_AUTH_CONF, [dnl
+AC_MSG_NOTICE([checking for authentication configuration])
+AC_ARG_WITH(auth-ldap,[  --with-auth-ldap=PATH	  full path to ldap header directory],
+	authldapheadername="$withval$")
 
-# Like AC_CONFIG_HEADER, but automatically create stamp file.
+WARN=0
+if test ! "${authldapheadername-x}" = "x"
+then
+  # --with-auth-ldap was specified
+  AC_MSG_NOTICE([using LDAP authentication])
+  if test "$withval" != "yes"
+  then
+    AC_MSG_CHECKING([for ldap.h (user supplied)])
+    if test -r "$authldapheadername/ldap.h"
+      then
+      # found
+        AC_MSG_RESULT([$authldapheadername/ldap.h])
+        LDAPINC=$authldapheadername
+      else 
+      # Not found
+        AC_MSG_RESULT([not found])
+        LDAPINC=""
+        authldapheadername=""
+        AC_MSG_ERROR([
+  Unable to find ldap.h where you specified, try just --with-auth-ldap to 
+  have configure guess])
+    fi
+  else
+    # Lets look in our standard paths
+    AC_MSG_CHECKING([for ldap.h])
+    for ldappaths in $ldapheaderpaths
+    do
+      if test -r "$ldappaths/ldap.h"
+      then
+        LDAPINC="$ldappaths"
+        AC_MSG_RESULT([$ldappaths/ldap.h])
+        break
+      fi
+    done
+    if test -z "$LDAPINC"
+    then
+      AC_MSG_RESULT([no])
+      AC_MSG_ERROR([
+  Unable to locate ldap.h, try specifying with --with-ldap])
+    fi
+  fi
+else
+  AC_MSG_NOTICE([using SQL authentication])
+fi
+])
 
-AC_DEFUN(AM_CONFIG_HEADER,
-[AC_PREREQ([2.12])
-AC_CONFIG_HEADER([$1])
-dnl When config.status generates a header, we must update the stamp-h file.
-dnl This file resides in the same directory as the config header
-dnl that is generated.  We must strip everything past the first ":",
-dnl and everything past the last "/".
-AC_OUTPUT_COMMANDS(changequote(<<,>>)dnl
-ifelse(patsubst(<<$1>>, <<[^ ]>>, <<>>), <<>>,
-<<test -z "<<$>>CONFIG_HEADERS" || echo timestamp > patsubst(<<$1>>, <<^\([^:]*/\)?.*>>, <<\1>>)stamp-h<<>>dnl>>,
-<<am_indx=1
-for am_file in <<$1>>; do
-  case " <<$>>CONFIG_HEADERS " in
-  *" <<$>>am_file "*<<)>>
-    echo timestamp > `echo <<$>>am_file | sed -e 's%:.*%%' -e 's%[^/]*$%%'`stamp-h$am_indx
-    ;;
-  esac
-  am_indx=`expr "<<$>>am_indx" + 1`
-done<<>>dnl>>)
-changequote([,]))])
+dnl DBMAIL_CHECK_LDAP_LIBS
+dnl
+AC_DEFUN(DBMAIL_CHECK_LDAP_LIBS, [dnl
+# Look for libs needed to link to LDAP first
+if test ! "${authldapheadername-x}" = "x"
+then
+  AC_CHECK_LIB(ldap,ldap_bind,[ LDAPLIB="-lldap"], [LDAPLIB=""])
+  if test -z "$LDAPLIB"
+  then
+    AC_MSG_ERROR([
+  Unable to link against ldap.  It appears you are missing the
+  development libraries or they aren't in your linker's path
+  ])
+  fi
+else
+  #no ldap needed
+  LDAPLIB=""
+fi
+])
+dnl AC_COMPILE_WARNINGS
+dnl set to compile with '-W -Wall'
+AC_DEFUN([AC_COMPILE_WARNINGS],
+[AC_MSG_CHECKING(maximum warning verbosity option)
+if test -n "$CXX"
+then
+  if test "$GXX" = "yes"
+  then
+    ac_compile_warnings_opt='-Wall'
+  fi
+  CXXFLAGS="$CXXFLAGS $ac_compile_warnings_opt"
+  ac_compile_warnings_msg="$ac_compile_warnings_opt for C++"
+fi
+if test -n "$CC"
+then
+  if test "$GCC" = "yes"
+  then
+    ac_compile_warnings_opt='-W -Wall -Wpointer-arith -Wstrict-prototypes -O2'
+  fi
+  CFLAGS="$CFLAGS $ac_compile_warnings_opt"
+  ac_compile_warnings_msg="$ac_compile_warnings_msg $ac_compile_warnings_opt for C"
+fi
+AC_MSG_RESULT($ac_compile_warnings_msg)
+unset ac_compile_warnings_msg
+unset ac_compile_warnings_opt
+])
+
+							
+
+# Like AC_CONFIG_HEADER, but automatically create stamp file. -*- Autoconf -*-
+
+# Copyright 1996, 1997, 2000, 2001 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2, or (at your option)
+# any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+# 02111-1307, USA.
+
+AC_PREREQ([2.52])
+
+# serial 6
+
+# When config.status generates a header, we must update the stamp-h file.
+# This file resides in the same directory as the config header
+# that is generated.  We must strip everything past the first ":",
+# and everything past the last "/".
+
+# _AM_DIRNAME(PATH)
+# -----------------
+# Like AS_DIRNAME, only do it during macro expansion
+AC_DEFUN([_AM_DIRNAME],
+       [m4_if(regexp([$1], [^.*[^/]//*[^/][^/]*/*$]), -1,
+	      m4_if(regexp([$1], [^//\([^/]\|$\)]), -1,
+		    m4_if(regexp([$1], [^/.*]), -1,
+			  [.],
+			  patsubst([$1], [^\(/\).*], [\1])),
+		    patsubst([$1], [^\(//\)\([^/].*\|$\)], [\1])),
+	      patsubst([$1], [^\(.*[^/]\)//*[^/][^/]*/*$], [\1]))[]dnl
+])# _AM_DIRNAME
+
+
+# The stamp files are numbered to have different names.
+# We could number them on a directory basis, but that's additional
+# complications, let's have a unique counter.
+m4_define([_AM_STAMP_Count], [0])
+
+
+# _AM_STAMP(HEADER)
+# -----------------
+# The name of the stamp file for HEADER.
+AC_DEFUN([_AM_STAMP],
+[m4_define([_AM_STAMP_Count], m4_incr(_AM_STAMP_Count))dnl
+AS_ESCAPE(_AM_DIRNAME(patsubst([$1],
+                               [:.*])))/stamp-h[]_AM_STAMP_Count])
+
+
+# _AM_CONFIG_HEADER(HEADER[:SOURCES], COMMANDS, INIT-COMMANDS)
+# ------------------------------------------------------------
+# We used to try to get a real timestamp in stamp-h.  But the fear is that
+# that will cause unnecessary cvs conflicts.
+AC_DEFUN([_AM_CONFIG_HEADER],
+[# Add the stamp file to the list of files AC keeps track of,
+# along with our hook.
+AC_CONFIG_HEADERS([$1],
+                  [# update the timestamp
+echo 'timestamp for $1' >"_AM_STAMP([$1])"
+$2],
+                  [$3])
+])# _AM_CONFIG_HEADER
+
+
+# AM_CONFIG_HEADER(HEADER[:SOURCES]..., COMMANDS, INIT-COMMANDS)
+# --------------------------------------------------------------
+AC_DEFUN([AM_CONFIG_HEADER],
+[AC_FOREACH([_AM_File], [$1], [_AM_CONFIG_HEADER(_AM_File, [$2], [$3])])
+])# AM_CONFIG_HEADER
 

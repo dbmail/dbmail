@@ -1,108 +1,177 @@
+# Copyright (C) 1999-2003 IC & S  dbmail@ic-s.nl
+#
+# This program is free software; you can redistribute it and/or 
+# modify it under the terms of the GNU General Public License 
+# as published by the Free Software Foundation; either 
+# version 2 of the License, or (at your option) any later 
+# version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+# 
+
+# schema for innodb tables with added indexes and foreign keys
+# for more speed. 
+# This file was originally created by Paul Stevens and added
+# to dbmail on August 27th, 2003.
+# 
 # $Id$
 
-CREATE DATABASE dbmail;
+# if database needs to be created, uncomment next line
+#CREATE DATABASE dbmail;
 
-USE dbmail;
+#USE dbmail;
 
+DROP TABLE IF EXISTS aliases;
 CREATE TABLE aliases (
-   alias_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
-   alias varchar(100) NOT NULL,
-   deliver_to varchar(250) NOT NULL,
-   client_idnr bigint(21) DEFAULT '0' NOT NULL,
-   PRIMARY KEY (alias_idnr),
-   KEY alias (alias),
-   UNIQUE alias_idnr_2 (alias_idnr)
-) TYPE = InnoDB;
+	alias_idnr bigint(21) NOT NULL auto_increment,
+	alias varchar(100) NOT NULL default '',
+	deliver_to varchar(250) NOT NULL default '',
+	client_idnr bigint(21) NOT NULL default '0',
+	PRIMARY KEY  (alias_idnr),
+	INDEX (alias),
+	INDEX (client_idnr)	
+) TYPE=InnoDB;
 
+DROP TABLE IF EXISTS users;
 CREATE TABLE users (
-   user_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
-   userid varchar(100) NOT NULL,
-   passwd varchar(34) NOT NULL,
-   client_idnr bigint(21) DEFAULT '0' NOT NULL,
-   maxmail_size bigint(21) DEFAULT '0' NOT NULL,
-   encryption_type varchar(20) DEFAULT '' NOT NULL,
-   last_login DATETIME DEFAULT '1979-11-03 22:05:58' NOT NULL,
-   PRIMARY KEY (user_idnr),
-   KEY user_idnr (user_idnr, userid),
-   UNIQUE useridnr_2 (user_idnr, userid),
-   UNIQUE userid_2 (userid)
-) TYPE = InnoDB;
+	user_idnr bigint(21) NOT NULL auto_increment,
+	userid varchar(100) NOT NULL default '',
+	passwd varchar(34) NOT NULL default '',
+	client_idnr bigint(21) NOT NULL default '0',
+	maxmail_size bigint(21) NOT NULL default '0',
+	curmail_size bigint(21) NOT NULL default '0',
+	encryption_type varchar(20) NOT NULL default '',
+	last_login datetime NOT NULL default '1979-11-03 22:05:58',
+	PRIMARY KEY  (user_idnr),
+	UNIQUE INDEX (userid)
+) TYPE=InnoDB;
 
+DROP TABLE IF EXISTS mailboxes;
 CREATE TABLE mailboxes (
-   mailbox_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
-   owner_idnr bigint(21) DEFAULT '0' NOT NULL,
-   name varchar(100) NOT NULL,
-   seen_flag tinyint(1) default '0' not null,
-   answered_flag tinyint(1) default '0' not null,
-   deleted_flag tinyint(1) default '0' not null,
-   flagged_flag tinyint(1) default '0' not null,
-   recent_flag tinyint(1) default '0' not null,
-   draft_flag tinyint(1) default '0' not null,
-   no_inferiors tinyint(1) default '0' not null,
-   no_select tinyint(1) default '0' not null,
-   permission tinyint(1) default '2',
-   is_subscribed tinyint(1) default 0 not null,
-   PRIMARY KEY (mailbox_idnr),
-   UNIQUE mailboxidnr_2 (mailbox_idnr)
-) TYPE = InnoDB;
-  
+	mailbox_idnr bigint(21) NOT NULL auto_increment,
+	owner_idnr bigint(21) NOT NULL default '0',
+	name varchar(100) NOT NULL default '',
+	seen_flag tinyint(1) NOT NULL default '0',
+	answered_flag tinyint(1) NOT NULL default '0',
+	deleted_flag tinyint(1) NOT NULL default '0',
+	flagged_flag tinyint(1) NOT NULL default '0',
+	recent_flag tinyint(1) NOT NULL default '0',
+	draft_flag tinyint(1) NOT NULL default '0',
+	no_inferiors tinyint(1) NOT NULL default '0',
+	no_select tinyint(1) NOT NULL default '0',
+	permission tinyint(1) default '2',
+	is_subscribed tinyint(1) NOT NULL default '0',
+	PRIMARY KEY  (mailbox_idnr),
+	INDEX (name),
+	INDEX (owner_idnr),
+	INDEX (is_subscribed),
+	FOREIGN KEY (`owner_idnr`) 
+		REFERENCES `users` (`user_idnr`) ON DELETE CASCADE
+		) TYPE=InnoDB;
+
+DROP TABLE IF EXISTS shared_mailbox;
+CREATE TABLE shared_mailbox (
+	id bigint(21) NOT NULL auto_increment,
+	mailbox_id bigint(21) NOT NULL default '0',
+	maxmail_size bigint(21) NOT NULL default '0',
+	curmail_size bigint(21) NOT NULL default '0',
+	PRIMARY KEY  (id),
+	INDEX (mailbox_id),
+	FOREIGN KEY (`mailbox_id`) 
+		REFERENCES `mailboxes` (`mailbox_idnr`) ON DELETE CASCADE
+) TYPE=InnoDB;
+
+DROP TABLE IF EXISTS shared_mailbox_access;
+CREATE TABLE shared_mailbox_access (
+	id bigint(21) NOT NULL auto_increment,
+	shared_mailbox_id bigint(21) NOT NULL default '0',
+	user_id bigint(21) NOT NULL default '0',
+	lookup_flag tinyint(1) NOT NULL default '0',
+	read_flag tinyint(1) NOT NULL default '0',
+	insert_flag tinyint(1) NOT NULL default '0',
+	write_flag tinyint(1) NOT NULL default '0',
+	is_subscribed tinyint(1) unsigned NOT NULL default '0',
+	PRIMARY KEY  (`id`),
+	INDEX (shared_mailbox_id),
+	INDEX (user_id),
+	FOREIGN KEY (`shared_mailbox_id`) 
+		REFERENCES `shared_mailbox` (`id`) ON DELETE CASCADE,
+	FOREIGN KEY (`user_id`) 
+		REFERENCES `users` (`user_idnr`) ON DELETE CASCADE
+) TYPE=InnoDB;
+
+
+DROP TABLE IF EXISTS physmessage;
+CREATE TABLE physmessage (
+	id bigint(21) NOT NULL auto_increment,
+	messagesize bigint(21) NOT NULL default '0',
+	rfcsize bigint(21) NOT NULL default '0',
+	internal_date datetime NOT NULL default '0000-00-00 00:00:00',
+	PRIMARY KEY (id)
+) TYPE=InnoDB;
+
+DROP TABLE IF EXISTS messages;
 CREATE TABLE messages (
-   message_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
-   mailbox_idnr bigint(21) DEFAULT '0' NOT NULL,
-   messagesize bigint(21) DEFAULT '0' NOT NULL,
-   seen_flag tinyint(1) default '0' not null,
-   answered_flag tinyint(1) default '0' not null,
-   deleted_flag tinyint(1) default '0' not null,
-   flagged_flag tinyint(1) default '0' not null,
-   recent_flag tinyint(1) default '0' not null,
-   draft_flag tinyint(1) default '0' not null,
-   unique_id varchar(70) NOT NULL,
-   internal_date datetime default '0' not null,
-   status tinyint(3) unsigned zerofill default '000' not null,
-   rfcsize bigint(21) DEFAULT '0' NOT NULL,
-   PRIMARY KEY (message_idnr),
-   KEY message_idnr (message_idnr),
-   UNIQUE message_idnr_2 (message_idnr)
-) TYPE = InnoDB;
+	message_idnr bigint(21) NOT NULL auto_increment,
+	mailbox_idnr bigint(21) NOT NULL default '0',
+	physmessage_id bigint(21) NOT NULL default '0',
+	seen_flag tinyint(1) NOT NULL default '0',
+	answered_flag tinyint(1) NOT NULL default '0',
+	deleted_flag tinyint(1) NOT NULL default '0',
+	flagged_flag tinyint(1) NOT NULL default '0',
+	recent_flag tinyint(1) NOT NULL default '0',
+	draft_flag tinyint(1) NOT NULL default '0',
+	unique_id varchar(70) NOT NULL default '',
+	status tinyint(3) unsigned zerofill NOT NULL default '000',
+	PRIMARY KEY  (message_idnr),
+	INDEX physmessage_id (physmessage_id),		
+	INDEX mailbox_idnr (mailbox_idnr),
+	INDEX seen_flag (seen_flag),
+	INDEX unique_id (unique_id),
+	INDEX status (status),
+	FOREIGN KEY (`physmessage_id`) 
+		REFERENCES `physmessage` (`id`) ON DELETE CASCADE,
+	FOREIGN KEY (`mailbox_idnr`) 
+		REFERENCES `mailboxes` (`mailbox_idnr`) ON DELETE CASCADE
+) TYPE=InnoDB;
 
+DROP TABLE IF EXISTS messageblks;
 CREATE TABLE messageblks (
-   messageblk_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
-   message_idnr bigint(21) DEFAULT '0' NOT NULL,
-   messageblk longtext NOT NULL,
-   blocksize bigint(21) DEFAULT '0' NOT NULL,
-   PRIMARY KEY (messageblk_idnr),
-   KEY messageblk_idnr (messageblk_idnr),
-	KEY msg_index (message_idnr),
-   UNIQUE messageblk_idnr_2 (messageblk_idnr)
-) TYPE = InnoDB;
+	messageblk_idnr bigint(21) NOT NULL auto_increment,
+	physmessage_id bigint(21) NOT NULL default '0',
+	messageblk longtext NOT NULL,
+	blocksize bigint(21) NOT NULL default '0',
+	PRIMARY KEY  (messageblk_idnr),
+	INDEX physmsg_index (physmessage_id),
+	FOREIGN KEY (`physmessage_id`) 
+		REFERENCES `physmessage` (`id`) ON DELETE CASCADE
+) TYPE=InnoDB;
 
-CREATE TABLE tmpmessage (
-       message_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
-       mailbox_idnr int(21) DEFAULT '0' NOT NULL,
-       messagesize bigint(21) DEFAULT '0' NOT NULL,
-       seen_flag tinyint(1) default '0' not null,
-       answered_flag tinyint(1) default '0' not null,
-       deleted_flag tinyint(1) default '0' not null,
-       flagged_flag tinyint(1) default '0' not null,
-       recent_flag tinyint(1) default '0' not null,
-       draft_flag tinyint(1) default '0' not null,
-       unique_id varchar(70) NOT NULL,
-       internal_date datetime default '0' not null,
-       status tinyint(3) unsigned zerofill default '000' not null,
+DROP TABLE IF EXISTS auto_notifications;
+CREATE TABLE auto_notifications (
+	auto_notify_idnr bigint(21) NOT NULL AUTO_INCREMENT,
+ 	user_idnr bigint(21) NOT NULL,
+	notify_address VARCHAR(100) NOT NULL,
+	PRIMARY KEY (auto_notify_idnr),
+	INDEX (user_idnr),
+	FOREIGN KEY (`user_idnr`) 
+		REFERENCES `users`(`user_idnr`) ON DELETE CASCADE
+) TYPE=InnoDB;
 
-       PRIMARY KEY (message_idnr),
-       KEY message_idnr (message_idnr),
-       UNIQUE message_idnr_2 (message_idnr)
-) TYPE = InnoDB;
-
-CREATE TABLE tmpmessageblk (
-       messageblk_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
-       message_idnr bigint(21) DEFAULT '0' NOT NULL,
-       messageblk longtext NOT NULL,
-       blocksize bigint(21) DEFAULT '0' NOT NULL,
-
-       PRIMARY KEY (messageblk_idnr),
-       KEY messageblk_idnr (messageblk_idnr),
-       KEY msg_index (message_idnr),
-       UNIQUE messageblk_idnr_2 (messageblk_idnr)
-) TYPE = InnoDB;
+DROP TABLE IF EXISTS auto_replies;
+CREATE TABLE auto_replies (
+	auto_reply_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
+   	user_idnr bigint(21) DEFAULT '0' NOT NULL,
+   	reply_body mediumtext,
+   	PRIMARY KEY (auto_reply_idnr),
+	INDEX (user_idnr),
+	FOREIGN KEY (`user_idnr`) 
+		REFERENCES `users`(`user_idnr`) ON DELETE CASCADE
+) TYPE=InnoDB;

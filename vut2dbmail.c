@@ -1,9 +1,28 @@
 /*
- * vut2dbmail.c
+ Copyright (C) 1999-2003 IC & S  dbmail@ic-s.nl
+
+ This program is free software; you can redistribute it and/or 
+ modify it under the terms of the GNU General Public License 
+ as published by the Free Software Foundation; either 
+ version 2 of the License, or (at your option) any later 
+ version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program; if not, write to the Free Software
+ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*/
+/* $Id$ */
+
+/**
+ * \file vut2dbmail.c
  *
- * converts a virtual user table to dbmail entries
- *
- * the input is read from stdin
+ * \brief converts a virtual user table to dbmail entries
+ *        the input is read from stdin
  */
 
 #ifdef HAVE_CONFIG_H
@@ -25,7 +44,7 @@ char *configFile = DEFAULT_CONFIG_FILE;
 char line[MAXLINESIZE];
 int process_piece(char *left, char *right);
 
-int main()
+int main(void)
 {
   int i,result;
   char *left, *right, *tmp;
@@ -113,7 +132,7 @@ int main()
 int process_piece(char *left, char *right)
 {
   u64_t useridnr,clientidnr;
-
+ 
   /* check what right contains:
    * username or email address
    */
@@ -131,26 +150,26 @@ int process_piece(char *left, char *right)
       return 0;
     }
   else
-    {
-      /* username
-       * check if this user exists
-       */
-
-      if ((useridnr = auth_user_exists(right)) == -1)
-	return -1;
+  {
+       /* username
+	* check if this user exists
+	*/
+	 
+       if (auth_user_exists(right, &useridnr) < -1)
+	    return -1;
 
       if (useridnr == 0)
 	{
 	  /* new user */
-	  if ((useridnr = auth_adduser(right, "geheim", "", "0", "0")) == -1)
+	     if (auth_adduser(right, "geheim", "", "0", "0", &useridnr) == -1)
 	    {
-	      fprintf(stderr,"Could not add user [%s]\n",right);
-	      return -1;
+		 fprintf(stderr,"Could not add user [%s]\n",right);
+		 return -1;
 	    }
 	}
 
       /* this user now exists, add alias */
-      if ( (clientidnr = auth_getclientid(useridnr)) == -1)
+      if ( auth_getclientid(useridnr, &clientidnr) == -1)
 	{
 	  fprintf(stderr,"Could not retrieve client id nr for user [%s] [id %llu]\n", 
 		  right, useridnr);

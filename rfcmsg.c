@@ -1,4 +1,23 @@
 /*
+ Copyright (C) 1999-2003 IC & S  dbmail@ic-s.nl
+
+ This program is free software; you can redistribute it and/or 
+ modify it under the terms of the GNU General Public License 
+ as published by the Free Software Foundation; either 
+ version 2 of the License, or (at your option) any later 
+ version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program; if not, write to the Free Software
+ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*/
+
+/*
  * $Id$
  * (c) 2000-2002 IC&S, The Netherlands (http://www.ic-s.nl)
  * function implementations for parsing an RFC822/MIME 
@@ -18,9 +37,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
-
-extern char *msgbuf;
-extern u64_t msgidx,buflen;
 
 /* 
  * frees all the memory associated with a msg
@@ -194,7 +210,7 @@ int db_fetch_headers(u64_t msguid, mime_message_t *msg)
 /*
  * db_start_msg()
  *
- * parses a msg; uses msgbuf[] as data
+ * parses a msg; uses msgbuf_buf[] as data
  *
  * level & maxlevel are used to determine the max level of recursion (error-recovery)
  * level is raised before calling add_mime_children() except when maxlevel and level
@@ -220,7 +236,7 @@ int db_start_msg(mime_message_t *msg, char *stopbound, int *level, int maxlevel)
   if (db_update_msgbuf(MSGBUF_FORCE_UPDATE) == -1)
     return -2;
 
-  if ((hdrlines = mime_readheader(&msgbuf[msgidx], &msgidx, 
+  if ((hdrlines = mime_readheader(&msgbuf_buf[msgbuf_idx], &msgbuf_idx, 
 				  &msg->rfcheader, &msg->rfcheadersize)) < 0)
     return hdrlines;   /* error reading header */
 
@@ -267,7 +283,7 @@ int db_start_msg(mime_message_t *msg, char *stopbound, int *level, int maxlevel)
       strncpy(newbound, bptr, len);
       newbound[len] = '\0';
 
-      trace(TRACE_DEBUG,"db_start_msg(): found new boundary: [%s], msgidx %llu\n",newbound,msgidx);
+      trace(TRACE_DEBUG,"db_start_msg(): found new boundary: [%s], msgbuf_idx %llu\n",newbound,msgbuf_idx);
 
       /* advance to first boundary */
       if (db_update_msgbuf(MSGBUF_FORCE_UPDATE) == -1)
@@ -277,26 +293,26 @@ int db_start_msg(mime_message_t *msg, char *stopbound, int *level, int maxlevel)
 	  return -2;
 	}
 
-      while (msgbuf[msgidx])
+      while (msgbuf_buf[msgbuf_idx])
 	{
-	  if (strncmp(&msgbuf[msgidx], newbound, strlen(newbound)) == 0)
+	  if (strncmp(&msgbuf_buf[msgbuf_idx], newbound, strlen(newbound)) == 0)
 	    break;
 
-	  if (msgbuf[msgidx] == '\n')
+	  if (msgbuf_buf[msgbuf_idx] == '\n')
 	    totallines++;
 
-	  msgidx++;
+	  msgbuf_idx++;
 	}
 
-      if (!msgbuf[msgidx])
+      if (!msgbuf_buf[msgbuf_idx])
 	{
 	  trace(TRACE_WARNING, "db_start_msg(): unexpected end-of-data\n");
 	  my_free(newbound);
 	  return -1;
 	}
 
-      msgidx += strlen(newbound);   /* skip the boundary */
-      msgidx++;                     /* skip \n */
+      msgbuf_idx += strlen(newbound);   /* skip the boundary */
+      msgbuf_idx++;                     /* skip \n */
       totallines++;                 /* and count it */
 
       /* find MIME-parts */
@@ -314,18 +330,18 @@ int db_start_msg(mime_message_t *msg, char *stopbound, int *level, int maxlevel)
       if (stopbound)
 	{
 	  sblen = strlen(stopbound);
-	  msgidx += (2+sblen); /* double hyphen preceeds */
+	  msgbuf_idx += (2+sblen); /* double hyphen preceeds */
 	}
 
       my_free(newbound);
       newbound = NULL;
 
-      if (msgidx > 0)
+      if (msgbuf_idx > 0)
 	{
 	  /* walk back because bodyend is inclusive */
-	  msgidx--;
+	  msgbuf_idx--;
 	  db_give_msgpos(&msg->bodyend);
-	  msgidx++;
+	  msgbuf_idx++;
 	}
       else
 	db_give_msgpos(&msg->bodyend); /* this case should never happen... */
@@ -345,35 +361,35 @@ int db_start_msg(mime_message_t *msg, char *stopbound, int *level, int maxlevel)
 	{
 	  sblen = strlen(stopbound);
 
-	  while (msgbuf[msgidx])
+	  while (msgbuf_buf[msgbuf_idx])
 	    {
 	      if (db_update_msgbuf(sblen+3) == -1)
 		return -2;
 
-	      if (msgbuf[msgidx] == '\n')
+	      if (msgbuf_buf[msgbuf_idx] == '\n')
 		msg->bodylines++;
 
-	      if (msgbuf[msgidx+1] == '-' && msgbuf[msgidx+2] == '-' && 
-		  strncmp(&msgbuf[msgidx+3], stopbound, sblen) == 0)
+	      if (msgbuf_buf[msgbuf_idx+1] == '-' && msgbuf_buf[msgbuf_idx+2] == '-' && 
+		  strncmp(&msgbuf_buf[msgbuf_idx+3], stopbound, sblen) == 0)
 		{
 		  db_give_msgpos(&msg->bodyend);
 		  msg->bodysize = db_give_range_size(&msg->bodystart, &msg->bodyend);
 
-		  msgidx++; /* msgbuf[msgidx] == '-' now */
+		  msgbuf_idx++; /* msgbuf_buf[msgbuf_idx] == '-' now */
 		  
 		  /* advance to after stopbound */
-		  msgidx += sblen+2; /* (add 2 cause double hyphen preceeds) */
-		  while (isspace(msgbuf[msgidx]))
+		  msgbuf_idx += sblen+2; /* (add 2 cause double hyphen preceeds) */
+		  while (isspace(msgbuf_buf[msgbuf_idx]))
 		    {
-		      if (msgbuf[msgidx] == '\n') totallines++;
-		      msgidx++;
+		      if (msgbuf_buf[msgbuf_idx] == '\n') totallines++;
+		      msgbuf_idx++;
 		    }
 
 		  trace(TRACE_DEBUG,"db_start_msg(): stopbound reached\n");
 		  return (totallines+msg->bodylines+hdrlines);
 		}
 
-	      msgidx++;
+	      msgbuf_idx++;
 	    }
 
 	  /* end of buffer reached, invalid message encountered: there should be a stopbound! */
@@ -393,14 +409,14 @@ int db_start_msg(mime_message_t *msg, char *stopbound, int *level, int maxlevel)
 	  result = 1;
 	  while (1)
 	    {
-	      for ( ; msgidx < buflen-1 && msgbuf[msgidx]; msgidx++)
-		if (msgbuf[msgidx] == '\n')
+	      for ( ; msgbuf_idx < msgbuf_buflen-1 && msgbuf_buf[msgbuf_idx]; msgbuf_idx++)
+		if (msgbuf_buf[msgbuf_idx] == '\n')
 		  msg->bodylines++;
 	      
 	      if (result == 0)
 		{
 		  /* end of msg reached, one char left in msgbuf */
-		  if (msgbuf[msgidx] == '\n')
+		  if (msgbuf_buf[msgbuf_idx] == '\n')
 		    msg->bodylines++;
 
 		  break; 
@@ -447,7 +463,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound, int *level, in
       part.message_has_errors = (!continue_recursion);
 
       /* should have a MIME header right here */
-      if ((nlines = mime_readheader(&msgbuf[msgidx], &msgidx, &part.mimeheader, &dummy)) < 0)
+      if ((nlines = mime_readheader(&msgbuf_buf[msgbuf_idx], &msgbuf_idx, &part.mimeheader, &dummy)) < 0)
 	{
 	  trace(TRACE_WARNING,"db_add_mime_children(): error reading MIME-header\n");
 	  db_free_msg(&part);
@@ -514,8 +530,8 @@ int db_add_mime_children(struct list *brothers, char *splitbound, int *level, in
 	  strncpy(newbound, bptr, len);
 	  newbound[len] = '\0';
 
-	  trace(TRACE_DEBUG,"db_add_mime_children(): found new boundary: [%s], msgidx %llu\n",
-		newbound,msgidx);
+	  trace(TRACE_DEBUG,"db_add_mime_children(): found new boundary: [%s], msgbuf_idx %llu\n",
+		newbound,msgbuf_idx);
 
 
 	  /* advance to first boundary */
@@ -527,21 +543,21 @@ int db_add_mime_children(struct list *brothers, char *splitbound, int *level, in
 	      return -2;
 	    }
 
-	  while (msgbuf[msgidx])
+	  while (msgbuf_buf[msgbuf_idx])
 	    {
-	      if (strncmp(&msgbuf[msgidx], newbound, strlen(newbound)) == 0)
+	      if (strncmp(&msgbuf_buf[msgbuf_idx], newbound, strlen(newbound)) == 0)
 		break;
 
-	      if (msgbuf[msgidx] == '\n')
+	      if (msgbuf_buf[msgbuf_idx] == '\n')
 		{
 		  totallines++;
 		  part.bodylines++;
 		}
 
-	      msgidx++;
+	      msgbuf_idx++;
 	    }
 
-	  if (!msgbuf[msgidx])
+	  if (!msgbuf_buf[msgbuf_idx])
 	    {
 	      trace(TRACE_WARNING, "db_add_mime_children(): unexpected end-of-data\n");
 	      my_free(newbound);
@@ -549,8 +565,8 @@ int db_add_mime_children(struct list *brothers, char *splitbound, int *level, in
 	      return -1;
 	    }
 
-	  msgidx += strlen(newbound);   /* skip the boundary */
-	  msgidx++;                     /* skip \n */
+	  msgbuf_idx += strlen(newbound);   /* skip the boundary */
+	  msgbuf_idx++;                     /* skip \n */
 	  totallines++;                 /* and count it */
 	  part.bodylines++;
 	  db_give_msgpos(&part.bodystart); /* remember position */
@@ -567,14 +583,14 @@ int db_add_mime_children(struct list *brothers, char *splitbound, int *level, in
 	  
 	  my_free(newbound);
 	  newbound = NULL;
-	  msgidx += sblen+2; /* skip splitbound */
+	  msgbuf_idx += sblen+2; /* skip splitbound */
 
-	  if (msgidx > 0)
+	  if (msgbuf_idx > 0)
 	    {
 	      /* walk back because bodyend is inclusive */
-	      msgidx--;
+	      msgbuf_idx--;
 	      db_give_msgpos(&part.bodyend);
-	      msgidx++;
+	      msgbuf_idx++;
 	    }
 	  else
 	    db_give_msgpos(&part.bodyend); /* this case should never happen... */
@@ -591,7 +607,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound, int *level, in
 	  /* just body data follows, advance to splitbound */
 	  db_give_msgpos(&part.bodystart);
 
-	  while (msgbuf[msgidx])
+	  while (msgbuf_buf[msgbuf_idx])
 	    {
 	      if (db_update_msgbuf(sblen+3) == -1)
 		{
@@ -599,24 +615,24 @@ int db_add_mime_children(struct list *brothers, char *splitbound, int *level, in
 		  return -2;
 		}
 
-	      if (msgbuf[msgidx] == '\n')
+	      if (msgbuf_buf[msgbuf_idx] == '\n')
 		part.bodylines++;
 
-	      if (msgbuf[msgidx+1] == '-' && msgbuf[msgidx+2] == '-' &&
-		  strncmp(&msgbuf[msgidx+3], splitbound, sblen) == 0)
+	      if (msgbuf_buf[msgbuf_idx+1] == '-' && msgbuf_buf[msgbuf_idx+2] == '-' &&
+		  strncmp(&msgbuf_buf[msgbuf_idx+3], splitbound, sblen) == 0)
 		break;
 
-	      msgidx++;
+	      msgbuf_idx++;
 	    }
 
-	  /* at this point msgbuf[msgidx] is either
+	  /* at this point msgbuf_buf[msgbuf_idx] is either
 	   * 0 (end of data) -- invalid message!
 	   * or the character right before '--<splitbound>'
 	   */
 
 	  totallines += part.bodylines;
 
-	  if (!msgbuf[msgidx])
+	  if (!msgbuf_buf[msgbuf_idx])
 	    {
 	      trace(TRACE_WARNING,"db_add_mime_children(): unexpected end of data\n");
 	      db_free_msg(&part);
@@ -626,9 +642,9 @@ int db_add_mime_children(struct list *brothers, char *splitbound, int *level, in
 	  db_give_msgpos(&part.bodyend);
 	  part.bodysize = db_give_range_size(&part.bodystart, &part.bodyend);
 
-	  msgidx++; /* msgbuf[msgidx] == '-' after this statement */
+	  msgbuf_idx++; /* msgbuf_buf[msgbuf_idx] == '-' after this statement */
 
-	  msgidx += sblen+2;   /* skip the boundary & double hypen */
+	  msgbuf_idx += sblen+2;   /* skip the boundary & double hypen */
 	}
 
       /* add this part to brother list */
@@ -640,31 +656,31 @@ int db_add_mime_children(struct list *brothers, char *splitbound, int *level, in
 	}
 
       /* if double hyphen ('--') follows we're done */
-      if (msgbuf[msgidx] == '-' && msgbuf[msgidx+1] == '-')
+      if (msgbuf_buf[msgbuf_idx] == '-' && msgbuf_buf[msgbuf_idx+1] == '-')
 	{
 	  trace(TRACE_DEBUG,"db_add_mime_children(): found end after boundary [%s],\n",splitbound);
 	  trace(TRACE_DEBUG,"                        followed by [%.*s],\n",
-		48,&msgbuf[msgidx]);
+		48,&msgbuf_buf[msgbuf_idx]);
 
-	  msgidx += 2; /* skip hyphens */
+	  msgbuf_idx += 2; /* skip hyphens */
 
 	  /* probably some newlines will follow (not specified but often there) */
-	  while (msgbuf[msgidx] == '\n') 
+	  while (msgbuf_buf[msgbuf_idx] == '\n') 
 	    {
 	      totallines++;
-	      msgidx++;
+	      msgbuf_idx++;
 	    }
 
 	  return totallines;
 	}
 
-      if (msgbuf[msgidx] == '\n')
+      if (msgbuf_buf[msgbuf_idx] == '\n')
 	{
 	  totallines++;
-	  msgidx++;    /* skip the newline itself */
+	  msgbuf_idx++;    /* skip the newline itself */
 	}
     }
-  while (msgbuf[msgidx]) ;
+  while (msgbuf_buf[msgbuf_idx]) ;
 
   trace(TRACE_WARNING,"db_add_mime_children(): sudden end of message\n");
   return totallines;
@@ -714,14 +730,14 @@ int db_parse_as_text(mime_message_t *msg)
   result = 1;
   while (1)
     {
-      for ( ; msgidx < buflen-1; msgidx++)
-	if (msgbuf[msgidx] == '\n')
+      for ( ; msgbuf_idx < msgbuf_buflen - 1; msgbuf_idx++)
+	if (msgbuf_buf[msgbuf_idx] == '\n')
 	  msg->bodylines++;
 	      
       if (result == 0)
 	{
-	  /* end of msg reached, one char left in msgbuf */
-	  if (msgbuf[msgidx] == '\n')
+	  /* end of msg reached, one char left in msgbuf_buf */
+	  if (msgbuf_buf[msgbuf_idx] == '\n')
 	    msg->bodylines++;
 
 	  break; 

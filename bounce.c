@@ -1,3 +1,22 @@
+/*
+ Copyright (C) 1999-2003 IC & S  dbmail@ic-s.nl
+
+ This program is free software; you can redistribute it and/or 
+ modify it under the terms of the GNU General Public License 
+ as published by the Free Software Foundation; either 
+ version 2 of the License, or (at your option) any later 
+ version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program; if not, write to the Free Software
+ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*/
+
 /* $Id$
  * (c) 2000-2002 IC&S, The Netherlands
  *
@@ -21,7 +40,8 @@ extern struct list mimelist;
 extern struct list users;  
 extern struct list smtpItems;  
 
-int bounce (char *header, unsigned long headersize,char *destination_address, int type)
+int bounce (char *header, char *destination_address, 
+	    bounce_reason_t reason)
 {
   void *sendmail_stream;
   struct list from_addresses;
@@ -32,31 +52,36 @@ int bounce (char *header, unsigned long headersize,char *destination_address, in
   /* reading configuration from db */
   GetConfigValue("DBMAIL_FROM_ADDRESS", &smtpItems, dbmail_from_address);
   if (dbmail_from_address[0] == '\0')
-    trace(TRACE_FATAL, "bounce(): DBMAIL_FROM_ADDRESS not configured (see config file). Stop.");
+    trace(TRACE_FATAL, "%s,%s: DBMAIL_FROM_ADDRESS not configured "
+	  "(see config file). Stop.", __FILE__, __FUNCTION__);
 
   GetConfigValue("SENDMAIL", &smtpItems, sendmail);
   if (sendmail[0] == '\0')
-    trace(TRACE_FATAL, "bounce(): SENDMAIL not configured (see config file). Stop.");
+    trace(TRACE_FATAL, "%s,%s: SENDMAIL not configured "
+	  "(see config file). Stop.", __FILE__, __FUNCTION__);
 	
   GetConfigValue("POSTMASTER", &smtpItems, postmaster);
   if (postmaster[0] == '\0')
-    trace(TRACE_FATAL, "bounce(): POSTMASTER not configured (see config file). Stop.");
-	
-  
-  trace (TRACE_DEBUG,"bounce(): creating bounce message for bounce type [%d]",type);
+    trace(TRACE_FATAL, "%s,%s: POSTMASTER not configured "
+	  "(see config file). Stop.", __FILE__, __FUNCTION__);
+	  
+  trace (TRACE_DEBUG,"%s,%s: creating bounce message for bounce reason [%d]"
+	 __FILE__, __FUNCTION__, reason);
 		
   if (!destination_address)
     {
-      trace(TRACE_ERROR,"bounce(): cannot deliver to NULL.");
+	 trace(TRACE_ERROR,"%s,%s: cannot deliver to NULL.", 
+	       __FILE__, __FUNCTION__);
       return -1;
     }
 
 
-  switch (type)
+  switch (reason)
     {
     case BOUNCE_NO_SUCH_USER:
       /* no such user found */
-      trace (TRACE_MESSAGE,"bounce(): sending 'no such user' bounce for destination [%s]",
+      trace (TRACE_MESSAGE,"%s,%s: sending 'no such user' bounce "
+	     "for destination [%s]", __FILE__, __FUNCTION__,
 	     destination_address);
       list_init(&from_addresses);
       /* scan the from header for addresses */
@@ -64,7 +89,8 @@ int bounce (char *header, unsigned long headersize,char *destination_address, in
 
       if (list_totalnodes(&from_addresses) == 0)
 	{
-	  trace (TRACE_INFO,"bounce(): can't find Return-Path values, resorting to From values");
+	  trace (TRACE_INFO,"%s,%s: can't find Return-Path values, "
+		 "resorting to From values", __FILE__, __FUNCTION__);
 	  mail_adr_list ("From", &from_addresses, &mimelist);
 	} /* RR logix :) */
 
@@ -82,7 +108,8 @@ int bounce (char *header, unsigned long headersize,char *destination_address, in
 	      if (sendmail_stream==NULL)
 		{
 		  /* could not open a succesfull stream */
-		  trace(TRACE_MESSAGE,"bounce(): could not open a pipe to %s",sendmail);
+		  trace(TRACE_MESSAGE,"%s,%s: could not open a pipe "
+			"to %s", __FILE__, __FUNCTION__,sendmail);
 		  return -1;
 		}
 	      fprintf ((FILE *)sendmail_stream,"From: %s\n",dbmail_from_address);
@@ -108,15 +135,16 @@ int bounce (char *header, unsigned long headersize,char *destination_address, in
 	}
       else
 	{
-	  trace(TRACE_MESSAGE,"bounce(): "
-		"Message does not have a Return-Path nor a From headerfield, bounce failed");
+	  trace(TRACE_MESSAGE,"%s,%s: "
+		"Message does not have a Return-Path nor a From headerfield, "
+		"bounce failed", __FILE__, __FUNCTION__);
 	}
       
       break;
     case BOUNCE_STORAGE_LIMIT_REACHED:
       /* mailbox size exceeded */
-      trace (TRACE_MESSAGE,"bounce(): sending 'mailboxsize exceeded' bounce for user [%s]",
-	     destination_address);
+      trace (TRACE_MESSAGE,"%s,%s: sending 'mailboxsize exceeded' bounce "
+	     "for user [%s].",  __FILE__, __FUNCTION__, destination_address);
       list_init(&from_addresses);
 	
       /* scan the Return-Path header for addresses 
@@ -125,7 +153,8 @@ int bounce (char *header, unsigned long headersize,char *destination_address, in
       
       if (list_totalnodes(&from_addresses) == 0)
 	{
-	  trace (TRACE_INFO,"bounce(): can't find Return-Path values, resorting to From values");
+	  trace (TRACE_INFO,"%s,%s: can't find Return-Path values, "
+		 "resorting to From values", __FILE__, __FUNCTION__);
 	  mail_adr_list ("From", &from_addresses, &mimelist);
 	} /* RR logix :) */
       
@@ -143,7 +172,8 @@ int bounce (char *header, unsigned long headersize,char *destination_address, in
 	      if (sendmail_stream==NULL)
 		{
 		  /* could not open a succesfull stream */
-		  trace(TRACE_MESSAGE,"bounce(): could not open a pipe to %s",sendmail);
+		  trace(TRACE_MESSAGE,"%s,%s: could not open a pipe to %s",
+			__FILE__, __FUNCTION__, sendmail);
 		  return -1;
 		}
 	      fprintf ((FILE *)sendmail_stream,"From: %s\n",dbmail_from_address);
@@ -169,8 +199,9 @@ int bounce (char *header, unsigned long headersize,char *destination_address, in
 	}
       else
 	{
-	  trace(TRACE_MESSAGE,"bounce(): "
-		"Message does not have a Return-Path nor a From headerfield, bounce failed");
+	  trace(TRACE_MESSAGE,"%s,%s: "
+		"Message does not have a Return-Path nor a From headerfield, "
+		"bounce failed", __FILE__, __FUNCTION__);
 	break;
       }
     }

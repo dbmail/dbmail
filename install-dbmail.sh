@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # $Id$
 # (c) 2000 - 2001 IC&S, The Netherlands 
 
 # check if user root is running this script
-
+CHOWN=`which chown`
 amiroot=`id -u`
 
 if [ "$1" != "" ]; then
@@ -55,7 +55,7 @@ fi
 echo "Ok installing dbmail executables as $user_dbmail:$group_dbmail.."
 for file in dbmail-smtp dbmail-pop3d dbmail-imapd dbmail-maintenance dbmail-adduser
 do
-	/bin/chown $user_dbmail:$group_dbmail $file
+	$CHOWN $user_dbmail:$group_dbmail $file
 	/bin/chmod 770 $file
 	/bin/cp -fp $file $targetexec
 done

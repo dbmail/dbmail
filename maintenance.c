@@ -1,3 +1,22 @@
+/*
+ Copyright (C) 1999-2003 IC & S  dbmail@ic-s.nl
+
+ This program is free software; you can redistribute it and/or 
+ modify it under the terms of the GNU General Public License 
+ as published by the Free Software Foundation; either 
+ version 2 of the License, or (at your option) any later 
+ version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program; if not, write to the Free Software
+ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*/
+
 /* $Id$
  * (c) 2000-2002 IC&S, The Netherlands
  *
@@ -27,13 +46,9 @@
 char *configFile = DEFAULT_CONFIG_FILE;
 
 /* set up database login data */
-extern field_t _db_host;
-extern field_t _db_db;
-extern field_t _db_user;
-extern field_t _db_pass;
+extern db_param_t _db_params;
 
-
-void find_time(char *timestr, const char *timespec);
+static void find_time(char *timestr, const char *timespec);
 
 
 int main(int argc, char *argv[])
@@ -60,7 +75,7 @@ int main(int argc, char *argv[])
 
   ReadConfig("DBMAIL", configFile, &sysItems);
   SetTraceLevel(&sysItems);
-  GetDBParams(_db_host, _db_db, _db_user, _db_pass, &sysItems);
+  GetDBParams(&_db_params, &sysItems);
 	
   setvbuf(stdout,0,_IONBF,0);
   printf ("*** dbmail-maintenance ***\n");
@@ -165,30 +180,34 @@ int main(int argc, char *argv[])
   if (purge_deleted)
     {
       printf ("Deleting messages with DELETE status... ");
-      deleted_messages=db_deleted_purge();
-      if (deleted_messages==-1)
-	{
-	  printf ("Failed. An error occured. Please check log.\n");
-	  db_disconnect();
-	  auth_disconnect();
-	  return -1;
-	}
+      if (db_deleted_purge(&deleted_messages) < 0) {
+	   printf ("Failed. An error occured. Please check log.\n");
+	   db_disconnect();
+	   auth_disconnect();
+	   return -1;
+      }
       printf ("Ok. [%llu] messages deleted.\n",deleted_messages);
     }
-	
-
+  
+  
   if (set_deleted)
     {
       printf ("Setting DELETE status for deleted messages... ");
-      messages_set_to_delete= db_set_deleted ();
-      if (messages_set_to_delete==-1)
-	{
-	  printf ("Failed. An error occured. Please check log.\n");
-	  db_disconnect();
-	  auth_disconnect();
-	  return -1;
-	}
+      if (db_set_deleted(&messages_set_to_delete) == -1) {
+	   printf ("Failed. An error occured. Please check log.\n");
+	   db_disconnect();
+	   auth_disconnect();
+	   return -1;
+      }
       printf ("Ok. [%llu] messages set for deletion.\n",messages_set_to_delete);
+      printf("Re-calculating used quota for all users... ");
+      if (db_calculate_quotum_all() < 0) {
+	   printf("Failed. An error occured. Please check log.\n");
+	   db_disconnect();
+	   auth_disconnect();
+	   return -1;
+      }
+      printf("Ok. Used quota updated for all users.\n");
     }
 
   if (check_null_messages)
@@ -212,10 +231,10 @@ int main(int argc, char *argv[])
 	  while (el)
 	    {
 	      id = *((u64_t*)el->data);
-	      if (db_set_message_status(id, STATUS_ERROR) < 0)
+	      if (db_set_message_status(id, 6) < 0)
 		printf("Warning: could not set message status #%llu. Check log.\n", id);
 	      else
-		printf("%llu (status update to STATUS_ERROR)\n", id);
+		printf("%llu (status update to 6)\n", id);
 
 	      el = el->nextnode;
 	    }
@@ -228,8 +247,36 @@ int main(int argc, char *argv[])
 	printf ("Ok. Found 0 NULL messages.\n");
 
       time(&stop);
-      printf("--- checking NULL messages took %lu seconds\n", stop-start);
-      fprintf(stderr, "--- checking NULL messages took %lu seconds\n", stop-start);
+      printf("--- checking NULL messages took %g seconds\n", difftime(stop, start));
+      printf("Now checking DBMAIL for NULL physmessages..");
+      time(&start);
+      if (db_icheck_null_physmessages(&lostlist) < 0) {
+	      printf("Failed, an error occured. Please check log.\n");
+	      db_disconnect();
+	      auth_disconnect();
+	      return -1;
+      }
+
+      if (lostlist.total_nodes > 0) {
+	      printf("found %ld physmessages without messageblocks\n", 
+		     lostlist.total_nodes);
+	      el = lostlist.start;
+	      while(el) {
+		      id = *((u64_t*)el->data);
+		      if (db_delete_physmessage(id) < 0)
+			      printf("Warning: couldn't delete physmessage");
+		      else
+			      printf("deleted physmessage [%llu]\n", id);
+		      el = el->nextnode;
+	      }
+	      list_freelist(&lostlist.start);
+	      printf("\n");
+      } else 
+	      printf("found 0 physmessages without messageblks");
+      
+      time(&stop);
+      fprintf(stderr, "--- checking NULL physmessages took %g seconds\n", 
+	      difftime(stop,start));
     }
 
   if (check_integrity)
@@ -287,8 +334,10 @@ int main(int argc, char *argv[])
 
 
       time(&stop);
-      printf("--- checking block integrity took %lu seconds\n", stop-start);
-      fprintf(stderr, "--- checking block integrity took %lu seconds\n", stop-start);
+      printf("--- checking block integrity took %g seconds\n", 
+	     difftime(stop, start));
+      fprintf(stderr, "--- checking block integrity took %g seconds\n",
+	      difftime(stop,start));
       
       /* second part */
       start = stop;
@@ -337,8 +386,10 @@ int main(int argc, char *argv[])
 	printf ("Ok. Found 0 unconnected messages.\n");
         
       time(&stop);
-      printf("--- checking message integrity took %lu seconds\n", stop-start);
-      fprintf(stderr, "--- checking message integrity took %lu seconds\n", stop-start);
+      printf("--- checking message integrity took %g seconds\n", 
+	     difftime(stop, start));
+      fprintf(stderr, "--- checking message integrity took %g seconds\n", 
+	      difftime(stop, start));
 
 
       /* third part */
@@ -388,8 +439,10 @@ int main(int argc, char *argv[])
 	printf ("Ok. Found 0 unconnected mailboxes.\n");
         
       time(&stop);
-      printf("--- checking mailbox integrity took %lu seconds\n", stop-start);
-      fprintf(stderr, "--- checking mailbox integrity took %lu seconds\n", stop-start);
+      printf("--- checking mailbox integrity took %g seconds\n", 
+	     difftime(stop, start));
+      fprintf(stderr, "--- checking mailbox integrity took %g seconds\n", 
+	      difftime(stop, start));
    }
 
   if (check_iplog)
@@ -436,8 +489,6 @@ int main(int argc, char *argv[])
   auth_disconnect();
   return 0;
 }
-
-
 
 /* 
  * makes a date/time string: YYYY-MM-DD HH:mm:ss

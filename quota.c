@@ -1,3 +1,22 @@
+/*
+ Copyright (C) 1999-2003 IC & S  dbmail@ic-s.nl
+
+ This program is free software; you can redistribute it and/or 
+ modify it under the terms of the GNU General Public License 
+ as published by the Free Software Foundation; either 
+ version 2 of the License, or (at your option) any later 
+ version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program; if not, write to the Free Software
+ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*/
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -68,7 +87,9 @@ void quota_free(quota_t *quota) {
  */
 char *quota_get_quotaroot(u64_t useridnr, const char *mailbox,
 			  char **errormsg) {
-    if (db_get_mailboxid(useridnr, mailbox) == 0) {
+     u64_t mailbox_idnr;
+     
+     if (db_findmailbox(mailbox, useridnr, &mailbox_idnr) <= 0) {
 	*errormsg = "mailbox not found";
 	return NULL;
     }
@@ -97,18 +118,17 @@ quota_t *quota_get_quota(u64_t useridnr, char *quotaroot, char **errormsg) {
 	return NULL;
     }
     
-    maxmail_size = auth_getmaxmailsize(useridnr);
-    if (maxmail_size < 0) {
+    if (auth_getmaxmailsize(useridnr, &maxmail_size) == -1) {
 	trace(TRACE_ERROR, "quota_get_quota(): auth_getmaxmailsize() failed\n");
 	*errormsg = "invalid user";
 	return NULL;
     }
     
-    usage = db_get_quotum_used(useridnr);
-    if (usage == -1) {
-	trace(TRACE_ERROR, "quota_get_quota(): db_get_quotum_used() failed\n");
-	*errormsg = "internal error";
-	return NULL;	
+    if (db_get_quotum_used(useridnr, &usage) == -1) {
+	 trace(TRACE_ERROR, 
+	       "quota_get_quota(): db_get_quotum_used() failed\n");
+	 *errormsg = "internal error";
+	 return NULL;	
     }
     
     /* We support exactly one resource: RT_STORAGE */

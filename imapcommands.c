@@ -1,3 +1,22 @@
+/*
+ Copyright (C) 1999-2003 IC & S  dbmail@ic-s.nl
+
+ This program is free software; you can redistribute it and/or 
+ modify it under the terms of the GNU General Public License 
+ as published by the Free Software Foundation; either 
+ version 2 of the License, or (at your option) any later 
+ version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program; if not, write to the Free Software
+ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*/
+
 /* $Id$
  * (c) 2000-2002 IC&S, The Netherlands
  *
@@ -148,6 +167,7 @@ int _ic_login(char *tag, char **args, ClientInfo *ci)
   char timestr[30];
   time_t td;
   struct tm tm;
+  int validate_result;
 
   time(&td);              /* get time */
   tm = *localtime(&td);   /* get components */
@@ -157,20 +177,20 @@ int _ic_login(char *tag, char **args, ClientInfo *ci)
     return 1; /* error, return */
 
   trace(TRACE_DEBUG, "_ic_login(): trying to validate user");
-  userid = auth_validate(args[0], args[1]);
+  validate_result = auth_validate(args[0], args[1], &userid);
   trace(TRACE_MESSAGE, "_ic_login(): user (id:%llu, name %s) tries login\r\n",
 	userid,args[0]);
 
-  if (userid == -1)
-    {
-      /* a db-error occurred */
+  if (validate_result == -1)
+  {
+       /* a db-error occurred */
       fprintf(ci->tx,"* BYE internal db error validating user\r\n");
       trace(TRACE_ERROR,"_ic_login(): db-validate error while validating user %s (pass %s).",
 	    args[0],args[1]);
       return -1;
-    }
+  }
 
-  if (userid == 0)
+  if (validate_result == 0)
     {
       sleep(2);  /* security */
 
@@ -216,6 +236,7 @@ int _ic_authenticate(char *tag, char **args, ClientInfo *ci)
   char timestr[30];
   time_t td;
   struct tm tm;
+  int validate_result;
 
   time(&td);              /* get time */
   tm = *localtime(&td);   /* get components */
@@ -257,9 +278,9 @@ int _ic_authenticate(char *tag, char **args, ClientInfo *ci)
   
 
   /* try to validate user */
-  userid = auth_validate(username, pass);
+  validate_result = auth_validate(username, pass, &userid);
 
-  if (userid == -1)
+  if (validate_result == -1)
     {
       /* a db-error occurred */
       fprintf(ci->tx,"* BYE internal db error validating user\r\n");
@@ -269,7 +290,7 @@ int _ic_authenticate(char *tag, char **args, ClientInfo *ci)
       return -1;
     }
 
-  if (userid == 0)
+  if (validate_result == 0)
     {
       sleep(2);  /* security */
 
@@ -320,27 +341,24 @@ int _ic_select(char *tag, char **args, ClientInfo *ci)
   int result;
   unsigned idx;
   char permstring[80];
-
+ 
   if (!check_state_and_args("SELECT", tag, args, 1, IMAPCS_AUTHENTICATED, ci))
     return 1; /* error, return */
 
-  mboxid = db_findmailbox(args[0],ud->userid);
-  if (mboxid == 0)
-    {
-      fprintf(ci->tx, "%s NO Could not find specified mailbox\r\n", tag);
-
-      ud->state = IMAPCS_AUTHENTICATED;
-      my_free(ud->mailbox.seq_list);
-      memset(&ud->mailbox, 0, sizeof(ud->mailbox));
-
-      return 1;
-    }
-  if (mboxid == (u64_t)(-1))
-    {
-      fprintf(ci->tx, "* BYE internal dbase error\r\n");
-      return -1;
-    }
-
+  if (db_findmailbox(args[0], ud->userid, &mboxid) == -1) {
+       fprintf(ci->tx, "* BYE internal dbase error\r\n");
+       return -1;
+  }
+  if (mboxid == 0) {
+       fprintf(ci->tx, "%s NO Could not find specified mailbox\r\n", tag);
+       
+       ud->state = IMAPCS_AUTHENTICATED;
+       my_free(ud->mailbox.seq_list);
+       memset(&ud->mailbox, 0, sizeof(ud->mailbox));
+       
+       return 1;
+  }
+ 
   /* check if mailbox is selectable */
   result = db_isselectable(mboxid);
   if (result == 0)
@@ -362,9 +380,7 @@ int _ic_select(char *tag, char **args, ClientInfo *ci)
 
   ud->mailbox.uid = mboxid;
 
-  /* read info from mailbox */
-  result = db_getmailbox(&ud->mailbox, ud->userid);
-
+  /* read info from mailbox */  result = db_getmailbox(&ud->mailbox);
   if (result == -1)
     {
       fprintf(ci->tx,"* BYE internal dbase error\r\n");
@@ -409,10 +425,9 @@ int _ic_select(char *tag, char **args, ClientInfo *ci)
       fprintf(ci->tx, "* BYE internal dbase error\r\n");
       return -1;
     }
-  idx = binary_search(ud->mailbox.seq_list, ud->mailbox.exists, key);
-
-  if (idx >= 0)
-    fprintf(ci->tx,"* OK [UNSEEN %u] first unseen message\r\n",idx+1);
+  if (binary_search(ud->mailbox.seq_list, ud->mailbox.exists, 
+		    key, &idx) != -1) 
+       fprintf(ci->tx,"* OK [UNSEEN %u] first unseen message\r\n",idx+1);
 
   /* permission */
   switch (ud->mailbox.permission)
@@ -421,7 +436,7 @@ int _ic_select(char *tag, char **args, ClientInfo *ci)
     case IMAPPERM_READWRITE: sprintf(permstring, "READ-WRITE"); break;
     default: 
       /* invalid permission --> fatal */
-      trace(TRACE_ERROR,"IMAPD: select(): detected invalid permission mode for mailbox %llu ('%s')\r\n",
+      trace(TRACE_ERROR,"IMAPD: select(): detected invalid permission mode for mailbox %llu ('%s')",
 	    ud->mailbox.uid, args[0]);
 
       fprintf(ci->tx, "* BYE fatal: detected invalid mailbox settings\r\n");
@@ -450,19 +465,15 @@ int _ic_examine(char *tag, char **args, ClientInfo *ci)
   if (!check_state_and_args("EXAMINE", tag, args, 1, IMAPCS_AUTHENTICATED, ci))
     return 1; /* error, return */
 
-
-  mboxid = db_findmailbox(args[0],ud->userid);
-  if (mboxid == 0)
-    {
-      fprintf(ci->tx, "%s NO Could not find specified mailbox\r\n", tag);
-      return 1;
-    }
-  if (mboxid == (u64_t)(-1))
-    {
-      fprintf(ci->tx, "* BYE internal dbase error\r\n");
-      return -1;
-    }
-
+  if (db_findmailbox(args[0], ud->userid, &mboxid) == -1) {
+       fprintf(ci->tx, "* BYE internal dbase error\r\n");
+       return -1;
+  }
+  if (mboxid == 0) {
+       fprintf(ci->tx, "%s NO Could not find specified mailbox\r\n", tag);
+       return 1;
+  }
+     
   /* check if mailbox is selectable */
   result = db_isselectable(mboxid);
   if (result == 0)
@@ -480,7 +491,7 @@ int _ic_examine(char *tag, char **args, ClientInfo *ci)
   ud->mailbox.uid = mboxid;
 
   /* read info from mailbox */
-  result = db_getmailbox(&ud->mailbox, ud->userid);
+  result = db_getmailbox(&ud->mailbox);
 
   if (result == -1)
     {
@@ -539,7 +550,7 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
   int result,i;
-  u64_t mboxid;
+  u64_t mboxid, tmp_mboxid;
   char **chunks,*cpy;
 
   if (!check_state_and_args("CREATE", tag, args, 1, IMAPCS_AUTHENTICATED, ci))
@@ -554,13 +565,11 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
   memmove(&args[0][0],&args[0][i], (strlen(args[0]) - i) * sizeof(char));
 
   /* check if this mailbox already exists */
-  mboxid = db_findmailbox(args[0], ud->userid);
-  if (mboxid == (u64_t)(-1))
-    {
-      /* dbase failure */
-      fprintf(ci->tx,"* BYE internal dbase error\r\n");
-      return -1; /* fatal */
-    }
+  if (db_findmailbox(args[0], ud->userid, &mboxid) == -1) {
+       /* dbase failure */
+       fprintf(ci->tx,"* BYE internal dbase error\r\n");
+       return -1; /* fatal */
+  }
 
   if (mboxid != 0)
     {
@@ -581,7 +590,7 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
   if (!cpy)
     {
       /* out of mem */
-      trace(TRACE_ERROR, "IMAPD: create(): not enough memory\r\n");
+      trace(TRACE_ERROR, "IMAPD: create(): not enough memory");
       fprintf(ci->tx, "* BYE server ran out of memory\r\n");
       return -1;
     }
@@ -592,7 +601,7 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
   if (chunks == NULL)
     {
       /* serious error while making chunks */
-      trace(TRACE_ERROR, "IMAPD: create(): could not create chunks\r\n");
+      trace(TRACE_ERROR, "IMAPD: create(): could not create chunks");
       fprintf(ci->tx, "* BYE server ran out of memory\r\n");
       my_free(cpy);
       return -1;
@@ -634,24 +643,21 @@ int _ic_create(char *tag, char **args, ClientInfo *ci)
 	  strcat(cpy, chunks[i]);
 	}
 
-      trace(TRACE_DEBUG,"checking for '%s'...\r\n",cpy);
+      trace(TRACE_DEBUG,"checking for '%s'...",cpy);
 
       /* check if this mailbox already exists */
-      mboxid = db_findmailbox(cpy, ud->userid);
-      
-      if (mboxid == (u64_t)(-1))
-	{
-	  /* dbase failure */
-	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
-	  free_chunks(chunks);
-	  my_free(cpy);
-	  return -1; /* fatal */
-	}
+      if (db_findmailbox(cpy, ud->userid, &mboxid) == -1) {
+	   /* dbase failure */
+	   fprintf(ci->tx,"* BYE internal dbase error\r\n");
+	   free_chunks(chunks);
+	   my_free(cpy);
+	   return -1; /* fatal */
+      }
 
       if (mboxid == 0)
 	{
 	  /* mailbox does not exist */
-	  result = db_createmailbox(cpy, ud->userid);
+	     result = db_createmailbox(cpy, ud->userid, &tmp_mboxid);
 
 	  if (result == -1)
 	    {
@@ -710,19 +716,16 @@ int _ic_delete(char *tag, char **args, ClientInfo *ci)
     args[0][strlen(args[0]) - 1] = '\0';
 
   /* check if this mailbox exists */
-  mboxid = db_findmailbox(args[0], ud->userid);
-  if (mboxid == (u64_t)(-1))
-    {
-      /* dbase failure */
-      fprintf(ci->tx,"* BYE internal dbase error\r\n");
-      return -1; /* fatal */
-    }
-  if (mboxid == 0)
-    {
-      /* mailbox does not exist */
-      fprintf(ci->tx,"%s NO mailbox does not exist\r\n",tag);
-      return 1;
-    }
+  if (db_findmailbox(args[0], ud->userid, &mboxid) == -1) {
+       /* dbase failure */
+       fprintf(ci->tx,"* BYE internal dbase error\r\n");
+       return -1; /* fatal */
+  }
+  if (mboxid == 0) { 
+       /* mailbox does not exist */
+       fprintf(ci->tx,"%s NO mailbox does not exist\r\n",tag);
+       return 1;
+  }
 
   /* check if there is an attempt to delete inbox */
   if (strcasecmp(args[0],"inbox") == 0)
@@ -736,7 +739,7 @@ int _ic_delete(char *tag, char **args, ClientInfo *ci)
   if (result == -1)
     {
       /* error */
-      trace(TRACE_ERROR, "IMAPD: delete(): cannot retrieve list of mailbox children\r\n");
+      trace(TRACE_ERROR, "IMAPD: delete(): cannot retrieve list of mailbox children");
       fprintf(ci->tx, "* BYE dbase/memory error\r\n");
       return -1;
     }
@@ -828,13 +831,11 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
 
 
   /* check if new mailbox exists */
-  mboxid = db_findmailbox(args[1], ud->userid);
-  if (mboxid == (u64_t)-1)
-    {
-      /* dbase failure */
-      fprintf(ci->tx,"* BYE internal dbase error\r\n");
-      return -1; /* fatal */
-    }
+  if (db_findmailbox(args[1], ud->userid, &mboxid) == -1) {
+       /* dbase failure */
+       fprintf(ci->tx,"* BYE internal dbase error\r\n");
+       return -1; /* fatal */
+  }
   if (mboxid != 0)
     {
       /* mailbox exists */
@@ -843,13 +844,11 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
     }
 
   /* check if original mailbox exists */
-  mboxid = db_findmailbox(args[0], ud->userid);
-  if (mboxid == (u64_t)-1)
-    {
-      /* dbase failure */
-      fprintf(ci->tx,"* BYE internal dbase error\r\n");
-      return -1; /* fatal */
-    }
+  if (db_findmailbox(args[0], ud->userid, &mboxid) == -1) {
+       /* dbase failure */
+       fprintf(ci->tx,"* BYE internal dbase error\r\n");
+       return -1; /* fatal */
+  }
   if (mboxid == 0)
     {
       /* mailbox does not exist */
@@ -886,18 +885,16 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
     {
       args[1][i] = '\0'; /* note: original char was '/' */
 
-      parentmboxid = db_findmailbox(args[1], ud->userid);
-      if (parentmboxid == (u64_t)-1)
-	{
-	  /* dbase failure */
-	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
-	  return -1; /* fatal */
-	}
+      if (db_findmailbox(args[1], ud->userid, &parentmboxid) == -1) {
+	   /* dbase failure */
+	   fprintf(ci->tx,"* BYE internal dbase error\r\n");
+	   return -1; /* fatal */
+      }
       if (parentmboxid == 0)
 	{
-	  /* parent mailbox does not exist */
-	  fprintf(ci->tx,"%s NO new mailbox would invade mailbox structure\r\n",tag);
-	  return 1;
+	     /* parent mailbox does not exist */
+	     fprintf(ci->tx,"%s NO new mailbox would invade mailbox structure\r\n",tag);
+	     return 1;
 	}
 
       /* ok, reset arg */
@@ -910,21 +907,13 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
       /* ok, renaming inbox */
       /* this means creating a new mailbox and moving all the INBOX msgs to the new mailbox */
       /* inferior names of INBOX are left unchanged */
-      result = db_createmailbox(args[1], ud->userid);
-      if (result == -1)
-	{
-	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
-	  return -1;
-	}
+	 result = db_createmailbox(args[1], ud->userid, &newmboxid);
+	 if (result == -1)
+	 {
+	      fprintf(ci->tx,"* BYE internal dbase error\r\n");
+	      return -1;
+	 }
       
-      /* retrieve uid of newly created mailbox */
-      newmboxid = db_findmailbox(args[1], ud->userid);
-      if (newmboxid == (u64_t)(-1))
-	{
-	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
-	  return -1;
-	}
-
       result = db_movemsg(newmboxid, mboxid);
       if (result == -1)
 	{
@@ -959,7 +948,7 @@ int _ic_rename(char *tag, char **args, ClientInfo *ci)
       if (oldnamelen >= strlen(name))
 	{
 	  /* strange error, let's say its fatal */
-	  trace(TRACE_ERROR,"IMAPD: rename(): mailbox names are fucked up\r\n");
+	  trace(TRACE_ERROR,"IMAPD: rename(): mailbox names are fucked up");
 	  fprintf(ci->tx,"* BYE internal error regarding mailbox names\r\n");
 	  my_free(children);
 	  return -1;
@@ -1004,21 +993,18 @@ int _ic_subscribe(char *tag, char **args, ClientInfo *ci)
   if (!check_state_and_args("SUBSCRIBE", tag, args, 1, IMAPCS_AUTHENTICATED, ci))
     return 1; /* error, return */
 
-  mboxid = db_findmailbox(args[0], ud->userid);
-  if (mboxid == (u64_t)(-1))
-    {
-      fprintf(ci->tx,"* BYE internal dbase error\r\n");
-      return -1;
-    }
-
+  if (db_findmailbox(args[0], ud->userid, &mboxid) == -1) {
+       fprintf(ci->tx,"* BYE internal dbase error\r\n");
+       return -1;
+  }
   if (mboxid == 0)
-    {
-      /* mailbox does not exist */
-      fprintf(ci->tx,"%s NO mailbox does not exist\r\n", tag);
-      return 0;
-    }
+  {
+       /* mailbox does not exist */
+       fprintf(ci->tx,"%s NO mailbox does not exist\r\n", tag);
+       return 0;
+  }
 
-  if (db_subscribe(mboxid) == -1)
+  if (db_subscribe(mboxid, ud->userid) == -1)
     {
       fprintf(ci->tx,"* BYE internal dbase error\r\n");
       return -1;
@@ -1042,21 +1028,18 @@ int _ic_unsubscribe(char *tag, char **args, ClientInfo *ci)
   if (!check_state_and_args("UNSUBSCRIBE", tag, args, 1, IMAPCS_AUTHENTICATED, ci))
     return 1; /* error, return */
 
-  mboxid = db_findmailbox(args[0], ud->userid);
-  if (mboxid == (u64_t)(-1))
-    {
-      fprintf(ci->tx,"* BYE internal dbase error\r\n");
-      return -1;
-    }
-
+  if (db_findmailbox(args[0], ud->userid, &mboxid) == -1) {
+       fprintf(ci->tx,"* BYE internal dbase error\r\n");
+       return -1;
+  }
   if (mboxid == 0)
-    {
-      /* mailbox does not exist */
-      fprintf(ci->tx,"%s NO mailbox does not exist\r\n", tag);
-      return 0;
-    }
+  {
+       /* mailbox does not exist */
+       fprintf(ci->tx,"%s NO mailbox does not exist\r\n", tag);
+       return 0;
+  }
 
-  if (db_unsubscribe(mboxid) == -1)
+  if (db_unsubscribe(mboxid, ud->userid) == -1)
     {
       fprintf(ci->tx,"* BYE internal dbase error\r\n");
       return -1;
@@ -1076,7 +1059,9 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
   u64_t *children=NULL;
-  int result,i,j,slen,plen;
+  int result;
+  unsigned slen,plen;
+  unsigned i,j;
   unsigned nchildren;
   char name[IMAP_MAX_MAILBOX_NAMELEN];
   char *pattern;
@@ -1115,12 +1100,12 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
       return -1;
     }
 
-  memset(pattern, 0, sizeof(char) * (plen + slen + 10));
+  memset(pattern, '\0', plen + slen + 10);
   pattern[0] = '^';
   strcpy(&pattern[1], args[0]);
 
   i = slen+1;
-  for (j=0; args[1][j] && i<(plen + slen + 1); j++) 
+  for (j=0; args[1][j] && i < (plen + slen + 1); j++) 
     {
       if (args[1][j] == '*')
 	{
@@ -1291,12 +1276,10 @@ int _ic_status(char *tag, char **args, ClientInfo *ci)
   memset(&mb, 0, sizeof(mb));
 
   /* check if mailbox exists */
-  mb.uid = db_findmailbox(args[0], ud->userid);
-  if (mb.uid == (u64_t)(-1))
-    {
-      fprintf(ci->tx,"* BYE internal dbase error\r\n");
-      return -1;
-    }
+  if (db_findmailbox(args[0], ud->userid, &(mb.uid)) == -1) {
+       fprintf(ci->tx,"* BYE internal dbase error\r\n");
+       return -1;
+  }
 
   if (mb.uid == 0)
     {
@@ -1306,7 +1289,7 @@ int _ic_status(char *tag, char **args, ClientInfo *ci)
     }
 
   /* retrieve mailbox data */
-  result = db_getmailbox(&mb, ud->userid);
+  result = db_getmailbox(&mb);
 
   if (result == -1)
     {
@@ -1365,19 +1348,16 @@ int _ic_append(char *tag, char **args, ClientInfo *ci)
     }
 
   /* find the mailbox to place the message */
-  mboxid = db_findmailbox(args[0], ud->userid);
-  if (mboxid == (u64_t)(-1))
-    {
-      fprintf(ci->tx,"* BYE internal dbase error");
-      return -1;
-    }
+  if (db_findmailbox(args[0], ud->userid, &mboxid) == -1) {
+       fprintf(ci->tx,"* BYE internal dbase error");
+       return -1;
+  }
 
   if (mboxid == 0)
     {
       fprintf(ci->tx,"%s NO [TRYCREATE] could not find specified mailbox\r\n", tag);
       return 1;
     }
-
 
   trace(TRACE_DEBUG, "ic_append(): mailbox [%s] found, id: %llu\n",args[0],mboxid);
 
@@ -1509,7 +1489,8 @@ int _ic_expunge(char *tag, char **args, ClientInfo *ci)
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
   mailbox_t newmailbox;
   u64_t *msgids;
-  u64_t nmsgs,i,idx;
+  u64_t nmsgs, i; 
+  unsigned idx;
   int result;
 
   if (!check_state_and_args("EXPUNGE", tag, args, 0, IMAPCS_SELECTED, ci))
@@ -1533,9 +1514,10 @@ int _ic_expunge(char *tag, char **args, ClientInfo *ci)
   for (i=0; i<nmsgs; i++)
     {
       /* find the message sequence number */
-      idx = binary_search(ud->mailbox.seq_list, ud->mailbox.exists, msgids[i]);
+	 binary_search(ud->mailbox.seq_list, ud->mailbox.exists, 
+		       msgids[i], &idx);
 
-      fprintf(ci->tx,"* %llu EXPUNGE\r\n",idx+1); /* add one: IMAP MSN starts at 1 not zero */
+      fprintf(ci->tx,"* %u EXPUNGE\r\n",idx+1); /* add one: IMAP MSN starts at 1 not zero */
     }
   my_free(msgids);
   msgids = NULL;
@@ -1545,7 +1527,7 @@ int _ic_expunge(char *tag, char **args, ClientInfo *ci)
   memset(&newmailbox, 0, sizeof(newmailbox));
   newmailbox.uid = ud->mailbox.uid;
 
-  result = db_getmailbox(&newmailbox, ud->userid);
+  result = db_getmailbox(&newmailbox);
   
   if (result == -1)
     {
@@ -1640,18 +1622,19 @@ int _ic_search(char *tag, char **args, ClientInfo *ci)
   i = 0;
   do
     {
-      /* update mailbox info */
-      /* commented out: the search should be on the mailbox as the client thinks it is (!) */
-/*      result = db_getmailbox(&ud->mailbox, ud->userid);
-
-      if (result == -1)
-	{
-	  free_searchlist(&sk.sub_search);
-	  fprintf(ci->tx,"* BYE internal dbase error\r\n");
+	 /* update mailbox info */
+	 /* commented out: the search should be on the mailbox 
+	    as the client thinks it is (!) */
+/* result = db_getmailbox(&ud->mailbox);
+   
+if (result == -1)
+{
+free_searchlist(&sk.sub_search);
+fprintf(ci->tx,"* BYE internal dbase error\r\n");
 	  return -1;
-	}
+	  }
 */
-
+	 
       /* allocate memory for result set */
       result_set = (unsigned*)my_malloc(sizeof(unsigned) * ud->mailbox.exists);
       if (!result_set)
@@ -1986,21 +1969,20 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		  db_free_msg(&headermsg);
 		}
 
-	      fn = binary_search(ud->mailbox.seq_list, ud->mailbox.exists, msginfo[i].uid);
-	      if (fn == (unsigned)(-1))
-		{
-		  /* this is probably some sync error:
-		   * the msgUID belongs to this mailbox but was not found
-		   * when building the mailbox info
-		   * let's call it fatal and let the client re-connect :)
-		   */
-		  fprintf(ci->tx, "* BYE internal syncing error\r\n");
-
-		  list_freelist(&fetch_list.start);
-		  my_free(msginfo);
-		  return -1;
-		}
-      
+	      if (binary_search(ud->mailbox.seq_list, ud->mailbox.exists, 
+				msginfo[i].uid, &fn) == -1) {
+		   /* this is probably some sync error:
+		    * the msgUID belongs to this mailbox but was not found
+		    * when building the mailbox info
+		    * let's call it fatal and let the client re-connect :)
+		    */
+		   fprintf(ci->tx, "* BYE internal syncing error\r\n");
+		   
+		   list_freelist(&fetch_list.start);
+		   my_free(msginfo);
+		   return -1;
+	      }
+	      
 	      fprintf(ci->tx, "* %u FETCH (", (fn+1));
 	      
 	      curr = list_getstart(&fetch_list);
@@ -2091,9 +2073,10 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		}
 
 	      /* check if the message with this UID belongs to this mailbox */
-	      fn = binary_search(ud->mailbox.seq_list, ud->mailbox.exists, i);
-	      if (fn == (unsigned)(-1))
-		continue; 
+	      if (binary_search(ud->mailbox.seq_list, ud->mailbox.exists, 
+				i, &fn) == -1) {
+		   continue; 
+	      }
 
 	      fprintf(ci->tx,"* %u FETCH (", fn+1);
 		      
@@ -2101,7 +2084,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	  else
 	    fprintf(ci->tx,"* %llu FETCH (",i+1);
 
-	  trace(TRACE_DEBUG, "Fetching msgID %llu (fetch num %llu)\r\n", thisnum, i+1);
+	  trace(TRACE_DEBUG, "Fetching msgID %llu (fetch num %llu)", thisnum, i+1);
 
 	  curr = list_getstart(&fetch_list);
 	  setseen = 0;
@@ -2117,25 +2100,23 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	      only_text_from_msgpart = 0;
 	      
 	      /* check RFC822.SIZE request */
-	      if (fi->getSize)
-		{
-		  /* ok, try to fetch size from dbase */
-		  rfcsize = db_get_rfcsize(thisnum, ud->mailbox.uid);
-		  if (rfcsize == -1)
-		    {
-		      fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
-		      list_freelist(&fetch_list.start);
-		      return -1;
-		    }
+	      if (fi->getSize) {
+		   /* ok, try to fetch size from dbase */
+		   if(db_get_rfcsize(thisnum, ud->mailbox.uid, 
+				     &rfcsize) == -1) {
+			fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
+			list_freelist(&fetch_list.start);
+			return -1;
+		   }
 
-		  if (rfcsize == 0)
-		    {
-		      /* field is empty in dbase, message needs to be parsed */
-		      fi->msgparse_needed = 1;
-		      only_main_header_parsing = 0;
-		      insert_rfcsize = 1;
-		    }
-		}
+		   if (rfcsize == 0) {
+			/* field is empty in dbase, message needs 
+			   to be parsed */
+			fi->msgparse_needed = 1;
+			only_main_header_parsing = 0;
+			insert_rfcsize = 1;
+		   }
+	      }
 		      
 
 	      /* update cache */
@@ -2397,9 +2378,17 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		    {
 		      mseek(cached_msg.memdump, fi->bodyfetch.octetstart, SEEK_SET);
 
-		      actual_cnt = (fi->bodyfetch.octetcnt > 
-				    (cached_msg.dumpsize - fi->bodyfetch.octetstart)) ? 
-			(cached_msg.dumpsize - fi->bodyfetch.octetstart) : fi->bodyfetch.octetcnt;
+		      /** \todo this next statement is ugly because of the
+			  casts to 'long long'. Probably, octetcnt should be
+			  changed to be a u64_t instead of a long long, because
+			  it should never be negative anyway */
+		      actual_cnt = 
+			   (fi->bodyfetch.octetcnt > 
+			    (((long long) cached_msg.dumpsize) -
+			     fi->bodyfetch.octetstart)) ?
+			   (((long long)cached_msg.dumpsize)
+			    - fi->bodyfetch.octetstart) :
+			   fi->bodyfetch.octetcnt;
 
 		      fprintf(ci->tx, "BODY[]<%llu> {%llu}\r\n", fi->bodyfetch.octetstart, 
 			      actual_cnt); 
@@ -2480,7 +2469,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		      if (fi->bodyfetch.partspec[0] == '0')
 			{
 			  fprintf(ci->tx,"\r\n%s BAD protocol error\r\n",tag);
-			  trace(TRACE_DEBUG,"PROTOCOL ERROR\r\n");
+			  trace(TRACE_DEBUG,"PROTOCOL ERROR");
 			  list_freelist(&fetch_list.start);
 			  db_free_msg(&headermsg);
 			  return 1;
@@ -3059,9 +3048,9 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
 	  if (imapcommands_use_uid)
 	    {
 	      /* check if the message with this UID belongs to this mailbox */
-	      fn = binary_search(ud->mailbox.seq_list, ud->mailbox.exists, store_start);
-	      if (fn == (unsigned)(-1))
-		continue; 
+		 if (binary_search(ud->mailbox.seq_list, ud->mailbox.exists, 
+			       store_start, &fn) == -1)
+		      continue; 
 	    }
 	  
 	  result = db_set_msgflag(thisnum, ud->mailbox.uid, flaglist, action);
@@ -3125,13 +3114,13 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
 		{
 		  thisnum = (imapcommands_use_uid ? i : ud->mailbox.seq_list[i]);
 
-		  if (imapcommands_use_uid)
-		    {
-		      /* check if the message with this UID belongs to this mailbox */
-		      fn = binary_search(ud->mailbox.seq_list, ud->mailbox.exists, i);
-		      if (fn == (unsigned)(-1))
-			continue; 
-		    }
+		  if (imapcommands_use_uid) {
+		       /* check if the message with this UID belongs
+			  to this mailbox */
+		       if (binary_search(ud->mailbox.seq_list, 
+					 ud->mailbox.exists, i, &fn) == -1)
+			    continue; 
+		  }
 		  
 		  result = db_get_msgflag_all(thisnum, ud->mailbox.uid, msgflags);
 		  if (result == -1)
@@ -3181,19 +3170,16 @@ int _ic_copy(char *tag, char **args, ClientInfo *ci)
     return 1; /* error, return */
 
   /* check if destination mailbox exists */
-  destmboxid = db_findmailbox(args[1], ud->userid);
-  if (destmboxid == 0)
-    {
-      /* error: cannot select mailbox */
-      fprintf(ci->tx, "%s NO [TRYCREATE] specified mailbox does not exist\r\n",tag);
-      return 1;
-    }
-  if (destmboxid == (u64_t)(-1))
-    {
-      fprintf(ci->tx, "* BYE internal dbase error\r\n");
-      return -1; /* fatal */
-    }
-
+  if (db_findmailbox(args[1], ud->userid, &destmboxid) == -1) {
+       fprintf(ci->tx, "* BYE internal dbase error\r\n");
+       return -1; /* fatal */
+  }
+  if (destmboxid == 0) {
+       /* error: cannot select mailbox */
+       fprintf(ci->tx, "%s NO [TRYCREATE] specified mailbox does not exist\r\n",tag);
+       return 1;
+  }
+ 
   /* ok copy msgs */
   endptr = args[0];
   while (*endptr)
@@ -3263,12 +3249,12 @@ int _ic_copy(char *tag, char **args, ClientInfo *ci)
 	  if (imapcommands_use_uid)
 	    {
 	      /* check if the message with this UID belongs to this mailbox */
-	      fn = binary_search(ud->mailbox.seq_list, ud->mailbox.exists, i);
-	      if (fn == (unsigned)(-1))
-		continue; 
+		 if (binary_search(ud->mailbox.seq_list, ud->mailbox.exists,
+				   i, &fn) == -1) 
+		      continue; 
 	    }
 
-	  result = db_copymsg(thisnum, destmboxid);
+	  result = db_copymsg(thisnum, destmboxid, ud->userid);
 	  if (result == -1)
 	    {
 	      fprintf(ci->tx,"* BYE internal dbase error\r\n");

@@ -94,21 +94,20 @@ VERSION = @VERSION@
 mysqlconfig = @mysqlconfig@
 pgsqlconfig = @pgsqlconfig@
 
-@MYSQL_TRUE@AM_CFLAGS = @MYSQLINC@
-
-@MYSQL_TRUE@lib_LIBRARIES = libmysqldbmail.a
-
-@MYSQL_TRUE@libmysqldbmail_a_SOURCES = dbmysql.c
-subdir = mysql
+lib_LIBRARIES = libauthdbmail.a
+@LDAP_TRUE@libauthdbmail_a_SOURCES = authldap.c
+@LDAP_FALSE@libauthdbmail_a_SOURCES = authsql.c
+subdir = auth
 mkinstalldirs = $(SHELL) $(top_srcdir)/buildtools/mkinstalldirs
 CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES =
 LIBRARIES = $(lib_LIBRARIES)
 
-libmysqldbmail_a_AR = $(AR) cru
-libmysqldbmail_a_LIBADD =
-@MYSQL_TRUE@am_libmysqldbmail_a_OBJECTS = dbmysql.$(OBJEXT)
-libmysqldbmail_a_OBJECTS = $(am_libmysqldbmail_a_OBJECTS)
+libauthdbmail_a_AR = $(AR) cru
+libauthdbmail_a_LIBADD =
+@LDAP_TRUE@am_libauthdbmail_a_OBJECTS = authldap.$(OBJEXT)
+@LDAP_FALSE@am_libauthdbmail_a_OBJECTS = authsql.$(OBJEXT)
+libauthdbmail_a_OBJECTS = $(am_libauthdbmail_a_OBJECTS)
 
 DEFS = @DEFS@
 DEFAULT_INCLUDES =  -I. -I$(srcdir) -I$(top_builddir)
@@ -122,9 +121,9 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 CFLAGS = @CFLAGS@
-DIST_SOURCES = $(libmysqldbmail_a_SOURCES)
+DIST_SOURCES = $(libauthdbmail_a_SOURCES)
 DIST_COMMON = Makefile.am Makefile.in
-SOURCES = $(libmysqldbmail_a_SOURCES)
+SOURCES = $(libauthdbmail_a_SOURCES)
 
 all: all-am
 
@@ -132,7 +131,7 @@ all: all-am
 .SUFFIXES: .c .o .obj
 $(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ Makefile.am  $(top_srcdir)/configure.in $(ACLOCAL_M4)
 	cd $(top_srcdir) && \
-	  $(AUTOMAKE) --gnu  --ignore-deps mysql/Makefile
+	  $(AUTOMAKE) --gnu  --ignore-deps auth/Makefile
 Makefile: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.in  $(top_builddir)/config.status
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@ $(am__depfiles_maybe)
 
@@ -167,10 +166,10 @@ uninstall-libLIBRARIES:
 
 clean-libLIBRARIES:
 	-test -z "$(lib_LIBRARIES)" || rm -f $(lib_LIBRARIES)
-libmysqldbmail.a: $(libmysqldbmail_a_OBJECTS) $(libmysqldbmail_a_DEPENDENCIES) 
-	-rm -f libmysqldbmail.a
-	$(libmysqldbmail_a_AR) libmysqldbmail.a $(libmysqldbmail_a_OBJECTS) $(libmysqldbmail_a_LIBADD)
-	$(RANLIB) libmysqldbmail.a
+libauthdbmail.a: $(libauthdbmail_a_OBJECTS) $(libauthdbmail_a_DEPENDENCIES) 
+	-rm -f libauthdbmail.a
+	$(libauthdbmail_a_AR) libauthdbmail.a $(libauthdbmail_a_OBJECTS) $(libauthdbmail_a_LIBADD)
+	$(RANLIB) libauthdbmail.a
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT) core *.core

@@ -1,3 +1,22 @@
+/*
+ Copyright (C) 1999-2003 IC & S  dbmail@ic-s.nl
+
+ This program is free software; you can redistribute it and/or 
+ modify it under the terms of the GNU General Public License 
+ as published by the Free Software Foundation; either 
+ version 2 of the License, or (at your option) any later 
+ version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program; if not, write to the Free Software
+ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*/
+
 /* $Id$
  * (c) 2000-2002 IC&S, The Netherlands
  * 
@@ -35,11 +54,7 @@ struct list sysItems, smtpItems; /* config item lists */
 char *configFile = DEFAULT_CONFIG_FILE;
 
 /* set up database login data */
-extern field_t _db_host;
-extern field_t _db_db;
-extern field_t _db_user;
-extern field_t _db_pass;
-
+extern db_param_t _db_params;
 
 int mode;			/* how should we process */
   
@@ -71,7 +86,7 @@ int main (int argc, char *argv[])
   ReadConfig("DBMAIL", configFile, &sysItems);
   ReadConfig("SMTP", configFile, &smtpItems);
   SetTraceLevel(&smtpItems);
-  GetDBParams(_db_host, _db_db, _db_user, _db_pass, &sysItems);
+  GetDBParams(&_db_params, &sysItems);
 
   if (db_connect() != 0) 
     trace(TRACE_FATAL,"main(): database connection failed");

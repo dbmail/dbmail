@@ -1,3 +1,22 @@
+/*
+ Copyright (C) 1999-2003 IC & S  dbmail@ic-s.nl
+
+ This program is free software; you can redistribute it and/or 
+ modify it under the terms of the GNU General Public License 
+ as published by the Free Software Foundation; either 
+ version 2 of the License, or (at your option) any later 
+ version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program; if not, write to the Free Software
+ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*/
+
 /* $Id$
  * (c) 2000-2002 IC&S, The Netherlands
  * 
@@ -225,7 +244,7 @@ int IMAPClientHandler(ClientInfo *ci)
       cpy = line;
 
       i = stridx(cpy,' '); /* find next space */
-      if (i == strlen(cpy))
+      if (i == (int) strlen(cpy))
 	{
 	  if (strcmp(cpy, "yeah!") == 0)
 	    fprintf(ci->tx,"* YEAH dbmail ROCKS sunnyboy!\r\n");
@@ -257,7 +276,7 @@ int IMAPClientHandler(ClientInfo *ci)
 
       command = cpy;       /* set command */
       i = stridx(cpy,' '); /* find next space */
-      if (i == strlen(cpy))
+      if (i == (int) strlen(cpy))
 	{
 	  /* no arguments present */
 	  args = build_args_array("");
@@ -307,19 +326,20 @@ int IMAPClientHandler(ClientInfo *ci)
 
       trace(TRACE_INFO, "IMAPClientHandler(): Executing command %s...\n",IMAP_COMMANDS[i]);
 
-      /* dirty hack to bypass a NOOP problem: 
-	 unilateral server responses are not recognised by some clients 
-	 if they are after the OK response
-      */
+// dirty hack to bypass a NOOP problem: 
+// unilateral server responses are not recognised by some clients 
+// if they are after the OK response
       this_was_noop = 0;
-
-      if (i != IMAP_COMM_NOOP) 
+	
+      if (i != IMAP_COMM_NOOP)
 	      result = (*imap_handler_functions[i])(tag, args, ci);
-      else {
+      else
+      {
 	      this_was_noop = 1;
 	      result = 0;
       }
-      
+	
+      //result = (*imap_handler_functions[i])(tag, args, ci);
       if (result == -1)
 	done = 1; /* fatal error occurred, kick this user */
 
@@ -341,7 +361,7 @@ int IMAPClientHandler(ClientInfo *ci)
 	  memset(&newmailbox, 0, sizeof(newmailbox));
 	  newmailbox.uid = ud->mailbox.uid;
 
-	  result = db_getmailbox(&newmailbox, ud->userid);
+	  result = db_getmailbox(&newmailbox);
 	  if (result == -1)
 	    {
 	      fprintf(ci->tx,"* BYE internal dbase error\r\n");
@@ -372,7 +392,6 @@ int IMAPClientHandler(ClientInfo *ci)
 	  my_free(ud->mailbox.seq_list);
 	  memcpy(&ud->mailbox, &newmailbox, sizeof(newmailbox));
 	}
-      
       if (this_was_noop) 
 	      fprintf(ci->tx, "%s OK NOOP completed\r\n", tag);
 

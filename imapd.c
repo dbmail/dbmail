@@ -1,3 +1,22 @@
+/*
+ Copyright (C) 1999-2003 IC & S  dbmail@ic-s.nl
+
+ This program is free software; you can redistribute it and/or 
+ modify it under the terms of the GNU General Public License 
+ as published by the Free Software Foundation; either 
+ version 2 of the License, or (at your option) any later 
+ version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program; if not, write to the Free Software
+ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*/
+
 /* $Id$
  * (c) 2000-2002 IC&S, The Netherlands
  *
@@ -31,16 +50,12 @@
 char *configFile = DEFAULT_CONFIG_FILE;
 
 /* set up database login data */
-extern field_t _db_host;
-extern field_t _db_db;
-extern field_t _db_user;
-extern field_t _db_pass;
+extern db_param_t _db_params;
 
-
-void SetConfigItems(serverConfig_t *config, struct list *items);
-void Daemonize();
-int SetMainSigHandler();
-void MainSigHandler(int sig, siginfo_t *info, void *data);
+static void SetConfigItems(serverConfig_t *config, struct list *items);
+static void Daemonize(void);
+static int SetMainSigHandler(void);
+static void MainSigHandler(int sig, siginfo_t *info, void *data);
 
 
 int imap_before_smtp = 0;
@@ -93,7 +108,7 @@ int main(int argc, char *argv[])
       ReadConfig("DBMAIL", configFile, &sysItems);
       SetConfigItems(&config, &imapItems);
       SetTraceLevel(&imapItems);
-      GetDBParams(_db_host, _db_db, _db_user, _db_pass, &sysItems);
+      GetDBParams(&_db_params, &sysItems);
 
       config.ClientHandler = IMAPClientHandler;
       config.timeoutMsg = IMAP_TIMEOUT_MSG;
@@ -109,7 +124,7 @@ int main(int argc, char *argv[])
 	  
 	case 0:
 	  /* child process */
-	  drop_priviledges(config.serverUser, config.serverGroup);
+	  drop_privileges(config.serverUser, config.serverGroup);
 	  result = StartServer(&config);
 	  trace(TRACE_INFO, "main(): server done, exit.");
 	  exit(result);
@@ -155,7 +170,7 @@ int main(int argc, char *argv[])
 }
 
 
-void MainSigHandler(int sig, siginfo_t *info, void *data)
+void MainSigHandler(int sig, siginfo_t *info UNUSED, void *data UNUSED)
 {
   trace(TRACE_DEBUG, "MainSigHandler(): got signal [%d]", sig);
 
@@ -190,6 +205,7 @@ int SetMainSigHandler()
 
   sigaction(SIGINT, &act, 0);
   sigaction(SIGQUIT, &act, 0);
+
   sigaction(SIGTERM, &act, 0);
   sigaction(SIGHUP, &act, 0);
 
@@ -284,8 +300,8 @@ void SetConfigItems(serverConfig_t *config, struct list *items)
   if (strlen(val) == 0)
     trace(TRACE_FATAL, "SetConfigItems(): no value for EFFECTIVE_USER in config file");
 
-  strncpy(config->serverUser, val, FIELDLEN);
-  config->serverUser[FIELDLEN-1] = '\0';
+  strncpy(config->serverUser, val, FIELDSIZE);
+  config->serverUser[FIELDSIZE-1] = '\0';
 
   trace(TRACE_DEBUG, "SetConfigItems(): effective user shall be [%s]", config->serverUser);
 
@@ -295,8 +311,8 @@ void SetConfigItems(serverConfig_t *config, struct list *items)
   if (strlen(val) == 0)
     trace(TRACE_FATAL, "SetConfigItems(): no value for EFFECTIVE_GROUP in config file");
 
-  strncpy(config->serverGroup, val, FIELDLEN);
-  config->serverGroup[FIELDLEN-1] = '\0';
+  strncpy(config->serverGroup, val, FIELDSIZE);
+  config->serverGroup[FIELDSIZE-1] = '\0';
 
   trace(TRACE_DEBUG, "SetConfigItems(): effective group shall be [%s]", config->serverGroup);
 

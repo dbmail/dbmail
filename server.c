@@ -1,3 +1,22 @@
+/*
+ Copyright (C) 1999-2003 IC & S  dbmail@ic-s.nl
+
+ This program is free software; you can redistribute it and/or 
+ modify it under the terms of the GNU General Public License 
+ as published by the Free Software Foundation; either 
+ version 2 of the License, or (at your option) any later 
+ version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program; if not, write to the Free Software
+ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*/
+
 /* 
  * server.c
  *
@@ -34,8 +53,8 @@ int Restart = 0;
 pid_t ParentPID = 0;
 
 /* some extra prototypes (defintions are below) */
-void ParentSigHandler(int sig, siginfo_t *info, void *data);
-
+static void ParentSigHandler(int sig, siginfo_t *info, void *data);
+static int SetParentSigHandler(void);
 
 int SetParentSigHandler()
 {
@@ -218,7 +237,7 @@ int CreateSocket(serverConfig_t *conf)
 {
   int sock, r, len;
   struct sockaddr_in saServer;
-  int so_reuseaddress;
+  int so_reuseaddress = 1; /**< reuseaddr to 1, so address will be reused */
   
   /* make a tcp/ip socket */
   sock = socket(PF_INET, SOCK_STREAM, 0);

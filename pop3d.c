@@ -1,3 +1,22 @@
+/*
+ Copyright (C) 1999-2003 IC & S  dbmail@ic-s.nl
+
+ This program is free software; you can redistribute it and/or 
+ modify it under the terms of the GNU General Public License 
+ as published by the Free Software Foundation; either 
+ version 2 of the License, or (at your option) any later 
+ version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program; if not, write to the Free Software
+ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*/
+
 /* $Id$
 * (c) 2000-2002 IC&S, The Netherlands
 *
@@ -18,6 +37,7 @@
 #include <signal.h>
 #include <unistd.h>
 #include <errno.h>
+#include <unistd.h> /* for getopt() */
 #include "imap4.h"
 #include "server.h"
 #include "debug.h"
@@ -38,15 +58,12 @@
 char *configFile = DEFAULT_CONFIG_FILE;
 
 /* set up database login data */
-extern field_t _db_host;
-extern field_t _db_db;
-extern field_t _db_user;
-extern field_t _db_pass;
+extern db_param_t _db_params;
 
-void SetConfigItems(serverConfig_t *config, struct list *items);
-void Daemonize();
-int SetMainSigHandler();
-void MainSigHandler(int sig, siginfo_t *info, void *data);
+static void SetConfigItems(serverConfig_t *config, struct list *items);
+static void Daemonize(void);
+static int SetMainSigHandler(void);
+static void MainSigHandler(int sig, siginfo_t *info, void *data);
 
 int pop_before_smtp = 0;
 int mainRestart = 0;
@@ -65,40 +82,37 @@ int main(int argc, char *argv[], char **envp)
   serverConfig_t config;
   struct list popItems, sysItems;
   int result, status;
-  int opt;
   pid_t pid;
+  int opt;
 
   openlog(PNAME, LOG_PID, LOG_MAIL);
 
-  /* get options */
+  /* get command-line options */
   opterr = 0; /* suppress error message from getopt() */
-  while ((opt = getopt(argc, argv, "vhf:")) != -1)
-    {
-      switch (opt)
-	{
-	case 'v':
-	  printf ("\n*** DBMAIL: dbmail-pop3d version $Revision$ %s\n\n",COPYRIGHT);
-	  return 0;
-
-	case 'h':
-	  printf ("\ndbmail-pop3d: DBMAIL pop3 daemon\n");
-	  printf ("Usage: dbmail-pop3d (-v|-h|[-f config_filename])\n");
-	  return 0;
-
-	case 'f':
-	  if (optarg && strlen(optarg) > 0)
-	    configFile = optarg;
-	  else
-	    {
-	      fprintf(stderr,"dbmail-pop3d: -f requires a filename argument\n\n");
-	      return 1;
+  while ((opt = getopt(argc, argv, "vhf:")) != -1) {
+       switch (opt) {
+       case 'v':
+	    printf ("\n*** DBMAIL: dbmail-pop3d version "
+		    "$Revision$ %s\n\n",COPYRIGHT);
+	    return 0;
+       case 'h':
+	    printf ("\ndbmail-pop3d: DBMAIL pop3 daemon\n");
+	    printf ("Usage: dbmail-pop3d (-v|-h|[-f config_filename])\n");
+	    return 0;
+       case 'f':
+	    if (optarg && strlen(optarg) > 0)
+		 configFile = optarg;
+	    else {
+		 fprintf(stderr,"dbmail-pop3d: -f requires a filename "
+			 "argument\n\n");
+		 return 1;
 	    }
-	  break;
-
-	default:
-	  break;
-	}
-    }
+	    break;
+	    
+       default:
+	    break;
+       }
+  }
 
   SetMainSigHandler();
   Daemonize();
@@ -119,7 +133,7 @@ int main(int argc, char *argv[], char **envp)
       ReadConfig("DBMAIL", configFile, &sysItems);
       SetConfigItems(&config, &popItems);
       SetTraceLevel(&popItems);
-      GetDBParams(_db_host, _db_db, _db_user, _db_pass, &sysItems);
+      GetDBParams(&_db_params, &sysItems);
 
       config.ClientHandler = pop3_handle_connection;
       config.timeoutMsg = POP_TIMEOUT_MSG;
@@ -135,7 +149,7 @@ int main(int argc, char *argv[], char **envp)
 
 	case 0:
 	  /* child process */
-	  drop_priviledges(config.serverUser, config.serverGroup);
+	  drop_privileges(config.serverUser, config.serverGroup);
 	  result = StartServer(&config);
 
 	  trace(TRACE_INFO, "main(): server done, exit.");
@@ -182,7 +196,7 @@ int main(int argc, char *argv[], char **envp)
 }
 
 
-void MainSigHandler(int sig, siginfo_t *info, void *data)
+void MainSigHandler(int sig, siginfo_t *info UNUSED, void *data UNUSED)
 {
   trace(TRACE_DEBUG, "MainSigHandler(): got signal [%d]", sig);
 
@@ -311,8 +325,8 @@ void SetConfigItems(serverConfig_t *config, struct list *items)
   if (strlen(val) == 0)
     trace(TRACE_FATAL, "SetConfigItems(): no value for EFFECTIVE_USER in config file");
 
-  strncpy(config->serverUser, val, FIELDLEN);
-  config->serverUser[FIELDLEN-1] = '\0';
+  strncpy(config->serverUser, val, FIELDSIZE);
+  config->serverUser[FIELDSIZE-1] = '\0';
 
   trace(TRACE_DEBUG, "SetConfigItems(): effective user shall be [%s]", config->serverUser);
 
@@ -322,11 +336,8 @@ void SetConfigItems(serverConfig_t *config, struct list *items)
   if (strlen(val) == 0)
     trace(TRACE_FATAL, "SetConfigItems(): no value for EFFECTIVE_GROUP in config file");
 
-  strncpy(config->serverGroup, val, FIELDLEN);
-  config->serverGroup[FIELDLEN-1] = '\0';
+  strncpy(config->serverGroup, val, FIELDSIZE);
+  config->serverGroup[FIELDSIZE-1] = '\0';
 
   trace(TRACE_DEBUG, "SetConfigItems(): effective group shall be [%s]", config->serverGroup);
-
-
-
 }

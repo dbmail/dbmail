@@ -1,3 +1,22 @@
+/*
+ Copyright (C) 1999-2003 IC & S  dbmail@ic-s.nl
+
+ This program is free software; you can redistribute it and/or 
+ modify it under the terms of the GNU General Public License 
+ as published by the Free Software Foundation; either 
+ version 2 of the License, or (at your option) any later 
+ version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program; if not, write to the Free Software
+ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*/
+
 /* $Id$
  * (c) 2000-2002 IC&S, The Netherlands
  *
@@ -188,7 +207,9 @@ int mime_list(char *blkdata, struct list *mimelist)
 int mime_readheader(char *blkdata, u64_t *blkidx, struct list *mimelist, u64_t *headersize)
 {
   int valid_mime_lines=0,idx,totallines=0,j;
-  unsigned fieldlen,vallen,prevlen=0,new_add=1;
+  int fieldlen;
+  int vallen;
+  unsigned prevlen=0,new_add=1;
 /*  u64_t saved_idx = *blkidx; only needed if we bail out on invalid data */
 	
   char *endptr, *startptr, *delimiter;

@@ -1,3 +1,22 @@
+/*
+ Copyright (C) 1999-2003 IC & S  dbmail@ic-s.nl
+
+ This program is free software; you can redistribute it and/or 
+ modify it under the terms of the GNU General Public License 
+ as published by the Free Software Foundation; either 
+ version 2 of the License, or (at your option) any later 
+ version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program; if not, write to the Free Software
+ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*/
+
 /* $Id$
  * (c) 2000-2002 IC&S, The Netherlands 
  *
@@ -19,6 +38,7 @@
 #include "dbmail.h"
 #include "pipe.h"
 #include "debug.h"
+#include "misc.h"
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
@@ -38,11 +58,10 @@
 
 extern struct list smtpItems, sysItems;
 
-
-int send_notification(const char *to, const char *from, const char *subject);
-int send_reply(struct list *headerfields, const char *body);
-
-
+static int send_notification(const char *to, const char *from, 
+			     const char *subject);
+static int send_reply(struct list *headerfields, const char *body);
+	
 char *read_header(u64_t *blksize)
      /* returns <0 on failure */
 {
@@ -111,7 +130,7 @@ char *read_header(u64_t *blksize)
       my_free(header);
       *blksize=0;
       trace (TRACE_STOP, "read_header(): not a valid mailheader found\n");
-      return 0;
+      return NULL;
     }
   else
     *blksize=strlen(header);
@@ -146,11 +165,13 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
   struct list external_forwards;
   struct list bounces;
   u64_t temp_message_record_id,userid, bounce_userid;
-  int i, this_user;
+  unsigned int i;
+  int this_user;
   int do_auto_notify = 0, do_auto_reply = 0;
   char *reply_body, *notify_address;
   FILE *instream = stdin;
   field_t val;
+  u64_t messageblk_idnr;
 
   /* step 1.
      inserting first message
@@ -234,10 +255,10 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
       else
       {
           /* fetch the userid as a numeric string from the dbase */
-          userid = auth_user_exists((char*)tmp->data);
-          if (userid == -1)
-          {
-              trace(TRACE_ERROR,"insert_messages(): dbase error checking user [%s]", (char*)tmp->data);
+	   if(auth_user_exists((char*)tmp->data, &userid) == -1) {
+		trace(TRACE_ERROR,
+		      "insert_messages(): dbase error checking user [%s]", 
+		      (char*)tmp->data);
           }
           else if (userid == 0)
           {
@@ -284,7 +305,7 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
 	  ptr++;
 	}
 		
-      if (i<strlen((char *)tmp->data))
+      if (i < strlen((char *)tmp->data))
 	{
 	  /* FIXME: it's probably a forward to another address
 	   * we need to do an email address validity test if the first char !| */
@@ -299,7 +320,7 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
           /* make the id numeric */
           userid = strtoull((char *)tmp->data, NULL, 10);
 
-	  create_unique_id(unique_id,0); 
+	  create_unique_id(unique_id, 0); 
 
           /* create a message record */
           temp_message_record_id = db_insert_message ((u64_t)userid,
@@ -311,7 +332,9 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
            * still we would need a way of checking which messageblks
            * belong to which messages */
 
-          if (db_insert_message_block(header, headersize, temp_message_record_id) == -1)
+          if(db_insert_message_block(header, headersize, 
+				     temp_message_record_id, &messageblk_idnr)
+	     == -1)
               trace(TRACE_STOP, "insert_messages(): error inserting msgblock [header]\n");
 
           /* adding this messageid to the message id list */
@@ -367,8 +390,9 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
 	      tmp=list_getstart(&messageids);
 	      while (tmp!=NULL)
 		{
-		  if (db_insert_message_block (strblock, usedmem, *(u64_t *)tmp->data) 
-		      == -1)
+		  if (db_insert_message_block(strblock, usedmem, 
+					      *(u64_t *)tmp->data,
+					      &messageblk_idnr) == -1)
 		    trace(TRACE_STOP, "insert_messages(): error inserting msgblock\n");
 
 		  tmp=tmp->nextnode;
@@ -406,14 +430,14 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
 	    case 1:
 	      trace (TRACE_DEBUG,"insert_messages(): message NOT inserted. Maxmail exceeded");
 	      bounce_id = auth_get_userid(&bounce_userid);
-	      bounce (header, headersize, bounce_id, BOUNCE_STORAGE_LIMIT_REACHED);
+	      bounce (header, bounce_id, BOUNCE_STORAGE_LIMIT_REACHED);
 	      my_free (bounce_id);
 	      break;
 
 	    case -1:
 	      trace (TRACE_ERROR,"insert_messages(): message NOT inserted. dbase error");
 	      bounce_id = auth_get_userid(&bounce_userid);
-	      bounce (header, headersize, bounce_id, BOUNCE_STORAGE_LIMIT_REACHED);
+	      bounce (header, bounce_id, BOUNCE_STORAGE_LIMIT_REACHED);
 	      my_free (bounce_id);
 	      break;
 
@@ -421,7 +445,7 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
 	      trace (TRACE_ERROR,"insert_messages(): message NOT inserted. "
 		     "Maxmail exceeded AND dbase error");
 	      bounce_id = auth_get_userid(&bounce_userid);
-	      bounce (header, headersize, bounce_id, BOUNCE_STORAGE_LIMIT_REACHED);
+	      bounce (header, bounce_id, BOUNCE_STORAGE_LIMIT_REACHED);
 	      my_free (bounce_id);
 	      break;
 
@@ -442,7 +466,7 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
 		{
 		  trace(TRACE_DEBUG, "insert_messages(): starting auto-notification procedure");
 
-		  if (db_get_nofity_address(bounce_userid, &notify_address) != 0)
+		  if (db_get_notify_address(bounce_userid, &notify_address) != 0)
 		    trace(TRACE_ERROR, "insert_messages(): error fetching notification address");
 		  else
 		    {
@@ -493,7 +517,7 @@ int insert_messages(char *header, u64_t headersize, struct list *users,
       tmp=list_getstart(&bounces);
       while (tmp!=NULL)
       {	
-          bounce (header, headersize, (char *)tmp->data,BOUNCE_NO_SUCH_USER);
+          bounce (header, (char *)tmp->data,BOUNCE_NO_SUCH_USER);
           tmp=tmp->nextnode;	
       }
   }
@@ -604,7 +628,7 @@ int send_reply(struct list *headerfields, const char *body)
   char comm[MAX_COMM_SIZE]; /**< command sent to sendmail (needs to escaped) */
   field_t sendmail;
   int result;
-  int i,j;
+  unsigned int i,j;
 
   GetConfigValue("SENDMAIL", &smtpItems, sendmail);
   if (sendmail[0] == '\0')
@@ -646,7 +670,6 @@ int send_reply(struct list *headerfields, const char *body)
   if (!from && !replyto)
     {
       trace(TRACE_ERROR, "send_reply(): no address to send to");
-      my_free(sendmail);
       return 0;
     }
 

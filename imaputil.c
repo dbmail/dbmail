@@ -1,3 +1,22 @@
+/*
+ Copyright (C) 1999-2003 IC & S  dbmail@ic-s.nl
+
+ This program is free software; you can redistribute it and/or 
+ modify it under the terms of the GNU General Public License 
+ as published by the Free Software Foundation; either 
+ version 2 of the License, or (at your option) any later 
+ version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program; if not, write to the Free Software
+ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*/
+
 /* $Id$
  * (c) 2000-2002 IC&S, The Netherlands
  * 
@@ -10,6 +29,7 @@
 #include "config.h"
 #endif
 
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -776,7 +796,8 @@ int haystack_find(int haystacklen, char **haystack, const char *needle)
  */
 int next_fetch_item(char **args, int idx, fetch_items_t *fi)
 {
-  int invalidargs,j=0,indigit,ispeek,shouldclose,delimpos;
+  int invalidargs,indigit,ispeek,shouldclose,delimpos;
+  unsigned int j = 0;
 
   memset(fi, 0, sizeof(fetch_items_t)); /* init */
   fi->bodyfetch.itemtype = -1; /* expect no body fetches (a priori) */
@@ -879,7 +900,7 @@ int next_fetch_item(char **args, int idx, fetch_items_t *fi)
 		    }
 	      
 		  if (invalidargs || delimpos == -1 || delimpos == 1 || 
-		      delimpos == (strlen(args[idx])-2) )
+		      delimpos == (int) (strlen(args[idx])-2) )
 		    return -2;  /* no delimiter found or at first/last pos OR invalid args DONE */
 
 		  /* read the numbers */
@@ -1034,7 +1055,8 @@ int next_fetch_item(char **args, int idx, fetch_items_t *fi)
 		    }
 		}
 	      
-	      if (invalidargs || delimpos == -1 || delimpos == 1 || delimpos == (strlen(args[idx])-2) )
+	      if (invalidargs || delimpos == -1 || 
+		  delimpos == 1 || delimpos == (int) (strlen(args[idx])-2) )
 		return -2;  /* no delimiter found or at first/last pos OR invalid args DONE */
 
 	      /* read the numbers */
@@ -1461,8 +1483,9 @@ char **build_args_array(const char *s)
  */
 char **build_args_array_ext(const char *originalString, clientinfo_t *ci)
 {
-  int nargs=0,inquote=0,i,quotestart=0;
+  int nargs=0,inquote=0, quotestart=0;
   int nnorm=0,nsquare=0,paridx=0,argstart=0;
+  unsigned int i;
   char parlist[MAX_LINESIZE];
   char s[MAX_LINESIZE];
   char *tmp, *lastchar;
@@ -1752,7 +1775,8 @@ char **build_args_array_ext(const char *originalString, clientinfo_t *ci)
  */
 void clarify_data(char *str)
 {
-  int startidx,i,inquote,endidx;
+  int startidx,inquote,endidx;
+  unsigned int i;
 
 
   /* remove leading spaces */
@@ -1834,7 +1858,7 @@ int is_textplain(struct list *hdr)
     return 0;
 
   len = strlen(mr->value);
-  for (i=0; len-i >= sizeof("text/plain"); i++)
+  for (i=0; len - i >= (int) sizeof("text/plain"); i++)
     if (strncasecmp(&mr->value[i], "text/plain", sizeof("text/plain")-1) == 0)
       return 1;
   
@@ -1950,9 +1974,9 @@ char *date_imap2sql(const char *imapdate)
 /*
  *
  */
-int stridx(const char *s, char ch)
+unsigned stridx(const char *s, char ch)
 {
-  int i;
+  unsigned i;
 
   for (i=0; s[i] && s[i] != ch;  i++) ;
 
@@ -2196,28 +2220,36 @@ void base64decode(char *in,char *out)
  * performs a binary search on array to find key
  * array should be ascending in values
  *
- * returns index of key in array or -1 if not found
+ * returns -1 if not found. key_idx will hold key if found
  */
-unsigned binary_search(const u64_t *array, unsigned arraysize, u64_t key)
+int binary_search(const u64_t *array, unsigned arraysize, u64_t key,
+		  unsigned int *key_idx)
 {
-  unsigned low,high,mid;
+  unsigned low, high, mid = 1;
 
+  assert(key_idx != NULL);
+  *key_idx = 0;
   if (arraysize == 0)
-    return (unsigned)(-1);
+    return -1;
 
   low = 0;
   high = arraysize-1;
 
-  while (low <= high && high != (unsigned)(-1))
-    {
-      mid = (high+low)/2;
-      if (array[mid] < key)
-	low = mid+1;
-      else if (array[mid] > key)
-	high = mid-1;
-      else
-	return mid;
-    }
+  while (low <= high) {
+       mid = (high + low) / (unsigned) 2;
+       if (array[mid] < key)
+	    low = mid + 1;
+       else if (array[mid] > key) {
+	    if (mid > 0)
+		 high = mid - 1;
+	    else
+		 break;
+       }
+       else {
+	    *key_idx = mid;
+	    return 1;
+       }
+  }
 
   return -1; /* not found */
 }
@@ -2241,7 +2273,7 @@ int quoted_string_out(FILE *outstream, const char *s)
       if (!(s[i] & 0xe0) || (s[i] & 0x80) || (s[i] == '"') || (s[i] == '\\'))
 	{
 	  cnt = fprintf(outstream, "{");
-	  cnt += fprintf(outstream, "%i", strlen(s));
+	  cnt += fprintf(outstream, "%lu", (unsigned long) strlen(s));
 	  cnt += fprintf(outstream, "}\r\n");
 	  cnt += fprintf(outstream, "%s", s);
 	  return cnt;
@@ -2765,7 +2797,7 @@ int perform_imap_search(int *rset, int setlen, search_key_t *sk, mailbox_t *mb)
       break;
 
     case IST_FLAG:
-      result = db_search(rset, setlen, sk->search, mb);
+	 result = db_search(rset, setlen, sk->search, mb, sk->type);
       if (result != 0)
 	{
 	  my_free(newset);
@@ -2788,7 +2820,7 @@ int perform_imap_search(int *rset, int setlen, search_key_t *sk, mailbox_t *mb)
       break;
 
     case IST_IDATE: 
-      result = db_search(rset, setlen, sk->search, mb);
+	 result = db_search(rset, setlen, sk->search, mb, sk->type);
       if (result != 0)
 	{
 	  my_free(newset);
@@ -2906,9 +2938,9 @@ void combine_sets(int *dest, int *sec, int setlen, int type)
  * builds a msn-set from a IMAP message set spec. the IMAP set is supposed to be correct,
  * no checks are performed.
  */
-void build_set(int *set, int setlen, char *cset)
+void build_set(int *set, unsigned int setlen, char *cset)
 {
-  int i;
+  unsigned int i;
   u64_t num,num2;
   char *sep=NULL;
 
@@ -2987,9 +3019,11 @@ void build_set(int *set, int setlen, char *cset)
  *
  * as build_set() but takes uid's instead of MSN's
  */
-void build_uid_set(int *set, int setlen, char *cset, mailbox_t *mb)
+void build_uid_set(int *set, unsigned int setlen, char *cset, mailbox_t *mb)
 {
-  int i,msn,msn2;
+  unsigned int i, msn, msn2;
+  int result;
+  int num2found =  0;
   u64_t num,num2;
   char *sep=NULL;
 
@@ -3003,10 +3037,10 @@ void build_uid_set(int *set, int setlen, char *cset, mailbox_t *mb)
 
   do
     {
-      num = strtoull(cset, &sep, 10);
-      msn = binary_search(mb->seq_list, mb->exists, num);
+	 num = strtoull(cset, &sep, 10);
+      result = binary_search(mb->seq_list, mb->exists, num, &msn);
 
-      if (msn < 0 && num < mb->seq_list[mb->exists-1])
+      if (result < 0 && num < mb->seq_list[mb->exists-1])
 	{
 	  /* ok this num is not a UID, but if a range is specified (i.e. 1:*) 
 	   * it is valid -> check *sep
@@ -3019,7 +3053,7 @@ void build_uid_set(int *set, int setlen, char *cset, mailbox_t *mb)
 	    }
 	}
 	      
-      if (msn >= 0)
+      if (result >= 0)
 	{
 	  if (!*sep)
 	    set[msn] = 1;
@@ -3044,17 +3078,33 @@ void build_uid_set(int *set, int setlen, char *cset, mailbox_t *mb)
 		  /* fetch second number */
 		  cset = sep;
 		  num2 = strtoull(cset, &sep, 10);
-		  msn2 = binary_search(mb->seq_list, mb->exists, num2);
+		  result = binary_search(mb->seq_list, mb->exists, 
+					 num2, &msn2);
 		  
-		  if (msn2 < 0)
+		  if (result < 0)
 		    {
 		      /* in a range: (like 1:1000) so this number doesnt need to exist;
 		       * find the closest match below this UID value
 		       */
-		      for (msn2=mb->exists-1; mb->seq_list[msn2] > num2 && msn2 >= 0; msn2--) ;
-		    }
+		      if (mb->exists == 0) 
+			   num2found = 0;
+		      else {
+			   for (msn2 = mb->exists - 1;; msn2--) {
+				if (msn2 == 0 && mb->seq_list[msn2] > num2) {
+				     num2found = 0;
+				     break;
+				} else if (mb->seq_list[msn2] <= num2) { 
+				     /* found! */
+				     num2found = 1;
+				     break;
+				}
+			   }
+		      }
+			   
+		    } else 
+		       num2found = 1;
 
-		  if (msn2 >= 0)
+		  if (num2found == 1)
 		    {
 		      if (msn2 < msn)
 			{

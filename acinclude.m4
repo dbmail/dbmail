@@ -136,9 +136,13 @@ make your compile work without much twiddling.
 dnl DBMAIL_BOTH_SQL_CHECK
 dnl
 AC_DEFUN(DBMAIL_BOTH_SQL_CHECK, [dnl
-AC_ARG_WITH(mysql,[  --with-mysql=PATH       full path to mysql header directory],
+AC_ARG_WITH(mysql,
+            [  --with-mysql            use MySQL as database. Uses mysql_config
+	       		  for finding includes and libraries],
             mysqlheadername="$withval")
-AC_ARG_WITH(pgsql,[  --with-pgsql=PATH       full path to pgsql header directory],
+AC_ARG_WITH(pgsql,
+	    [  --with-pgsql            use PostgreSQL as database. 
+                          Uses pg_config for finding includes and libraries],
             pgsqlheadername="$withval")
 
 WARN=0
@@ -149,8 +153,8 @@ then
   then
     NEITHER=1
     mysqlheadername=""
-    MYSQLINC=""
-    PGSQLINC=""
+#    MYSQLINC=""
+#    PGSQLINC=""
   fi
 fi
 if test "$NEITHER" = 1
@@ -161,16 +165,14 @@ if test "$NEITHER" = 1
 ])
 fi
 
-
-
 if test ! "${mysqlheadername-x}" = "x"
 then
   if test ! "${pgsqlheadername-x}" = "x"
     then
       WARN=1
       mysqlheadername=""
-      MYSQLINC=""
-      PGSQLINC=""
+#      MYSQLINC=""
+#      PGSQLINC=""
   fi
 fi
 if test "$WARN" = 1
@@ -181,119 +183,148 @@ if test "$WARN" = 1
      build...
 ])
 fi
-
-# If mysql is specified, lets check if they specified a place too first
-if test ! "${mysqlheadername-x}" = "x"
-then
-  # --with-mysql was specified
-  if test "$withval" != "yes"
-  then
-    AC_MSG_CHECKING([for mysql.h (user supplied)])
-    if test -r "$mysqlheadername/mysql.h"
-      then
-      # found
-        AC_MSG_RESULT([$mysqlheadername/mysql.h])
-        MYSQLINC=$mysqlheadername
-      else 
-      # Not found
-        AC_MSG_RESULT([not found])
-        MYSQLINC=""
-        mysqlheadername=""
-        AC_MSG_ERROR([
-  Unable to find mysql.h where you specified, try just --with-mysql to 
-  have configure guess])
-    fi
-  else
-    # Lets look in our standard paths
-    AC_MSG_CHECKING([for mysql.h])
-    for mysqlpaths in $mysqlheaderpaths
-    do
-      if test -r "$mysqlpaths/mysql.h"
-      then
-        MYSQLINC="$mysqlpaths"
-        AC_MSG_RESULT([$mysqlpaths/mysql.h])
-        break
-      fi
-    done
-    if test -z "$MYSQLINC"
-    then
-      AC_MSG_RESULT([no])
-      AC_MSG_ERROR([
-  Unable to locate mysql.h, try specifying with --with-mysql])
-    fi
-  fi
-fi
-
-
-# If postgres is specified, lets check if they specified a place too first
-if test ! "${pgsqlheadername-x}" = "x"
-then
-  # --with-pgsql was specified
-  if test "$withval" != "yes"
-  then
-    AC_MSG_CHECKING([for libpq-fe.h (user supplied)])
-    if test -r "$pgsqlheadername/libpq-fe.h"
-      then
-      # found
-        AC_MSG_RESULT([$pgsqlheadername/libpq-fe.h])
-        PGSQLINC=$pgsqlheadername
-      else 
-      # Not found
-        AC_MSG_RESULT([not found])
-        PGSQLINC=""
-        pgsqlheadername=""
-        AC_MSG_ERROR([
-  Unable to find libpq-fe.h where you specified, try just --with-pgsql to 
-  have configure guess])
-    fi
-  else
-    # Lets look in our standard paths
-    AC_MSG_CHECKING([for libpq-fe.h])
-    for pgsqlpaths in $pgsqlheaderpaths
-    do
-      if test -r "$pgsqlpaths/libpq-fe.h"
-      then
-        PGSQLINC="$pgsqlpaths"
-        AC_MSG_RESULT([$pgsqlpaths/libpq-fe.h])
-        break
-      fi
-    done
-    if test -z "$PGSQLINC"
-    then
-      AC_MSG_RESULT([no])
-      AC_MSG_ERROR([
-  Unable to locate libpq-fe.h, try specifying with --with-pgsql])
-    fi
-  fi
-fi
 ])
 
 dnl DBMAIL_CHECK_SQL_LIBS
 dnl
 AC_DEFUN(DBMAIL_CHECK_SQL_LIBS, [dnl
-#Look for libs needed to link
+#Look for include files and libs needed to link
+#use the configuration utilities (mysql_config and pg_config for this)
 # MySQL first
 if test ! "${mysqlheadername-x}" = "x"
 then
-  AC_CHECK_LIB(mysqlclient,mysql_real_connect,[ SQLLIB="-lmysqlclient" SQLALIB="mysql/libmysqldbmail.a"], [SQLLIB="" SQLALIB=""])
-  if test -z "$SQLLIB"
-  then
-    AC_MSG_ERROR([
-  Unable to link against mysqlclient.  It appears you are missing the
-  development libraries or they aren't in your linker's path
-])
-  fi
+    AC_PATH_PROG(mysqlconfig,mysql_config)
+    if test [ -z "$mysqlconfig" ]
+    then
+        AC_MSG_ERROR([mysql_config executable not found. Make sure mysql_config is in your path])
+    else
+	AC_MSG_CHECKING([MySQL headers])
+	MYSQLINC=`${mysqlconfig} --cflags`
+	AC_MSG_RESULT([$MYSQLINC])	
+        AC_MSG_CHECKING([MySQL libraries])
+        SQLLIB=`${mysqlconfig} --libs`
+        SQLALIB="mysql/libmysqldbmail.a"
+        AC_MSG_RESULT([$SQLLIB])
+   fi
 else
   if test ! "${pgsqlheadername-x}" = "x"
   then
-    AC_CHECK_LIB(pq, PQconnectdb, [ SQLLIB="-lpq" SQLALIB="pgsql/libpgsqldbmail.a"], [SQLLIB="" SQLALIB=""])
-    if test -z "$SQLLIB"
+    AC_PATH_PROG(pgsqlconfig,pg_config)
+    if test [ -z "$pgsqlconfig" ]
     then
-      AC_MSG_ERROR([
-  Unable to link against pq.  It appears you are missing the development
-  libraries or they aren't in your linker's path
-])
+        AC_MSG_ERROR([pg_config executable not found. Make sure pg_config is in your path])
+    else
+	AC_MSG_CHECKING([PostgreSQL headers])
+	PGINCDIR=`${pgsqlconfig} --includedir`
+	PGSQLINC="-I$PGINCDIR"
+	AC_MSG_RESULT([$PGSQLINC])
+        AC_MSG_CHECKING([PostgreSQL libraries])
+        PGLIBDIR=`${pgsqlconfig} --libdir`
+        SQLLIB="-L$PGLIBDIR -lpq"
+        SQLALIB="pgsql/libpgsqldbmail.a"
+        AC_MSG_RESULT([$SQLLIB])
     fi
   fi
 fi
 ])
+	
+dnl DBMAIL_AUTH_CONF
+dnl check for ldap or sql authentication
+AC_DEFUN(DBMAIL_AUTH_CONF, [dnl
+AC_MSG_NOTICE([checking for authentication configuration])
+AC_ARG_WITH(auth-ldap,[  --with-auth-ldap=PATH	  full path to ldap header directory],
+	authldapheadername="$withval$")
+
+WARN=0
+if test ! "${authldapheadername-x}" = "x"
+then
+  # --with-auth-ldap was specified
+  AC_MSG_NOTICE([using LDAP authentication])
+  if test "$withval" != "yes"
+  then
+    AC_MSG_CHECKING([for ldap.h (user supplied)])
+    if test -r "$authldapheadername/ldap.h"
+      then
+      # found
+        AC_MSG_RESULT([$authldapheadername/ldap.h])
+        LDAPINC=$authldapheadername
+      else 
+      # Not found
+        AC_MSG_RESULT([not found])
+        LDAPINC=""
+        authldapheadername=""
+        AC_MSG_ERROR([
+  Unable to find ldap.h where you specified, try just --with-auth-ldap to 
+  have configure guess])
+    fi
+  else
+    # Lets look in our standard paths
+    AC_MSG_CHECKING([for ldap.h])
+    for ldappaths in $ldapheaderpaths
+    do
+      if test -r "$ldappaths/ldap.h"
+      then
+        LDAPINC="$ldappaths"
+        AC_MSG_RESULT([$ldappaths/ldap.h])
+        break
+      fi
+    done
+    if test -z "$LDAPINC"
+    then
+      AC_MSG_RESULT([no])
+      AC_MSG_ERROR([
+  Unable to locate ldap.h, try specifying with --with-ldap])
+    fi
+  fi
+else
+  AC_MSG_NOTICE([using SQL authentication])
+fi
+])
+
+dnl DBMAIL_CHECK_LDAP_LIBS
+dnl
+AC_DEFUN(DBMAIL_CHECK_LDAP_LIBS, [dnl
+# Look for libs needed to link to LDAP first
+if test ! "${authldapheadername-x}" = "x"
+then
+  AC_CHECK_LIB(ldap,ldap_bind,[ LDAPLIB="-lldap"], [LDAPLIB=""])
+  if test -z "$LDAPLIB"
+  then
+    AC_MSG_ERROR([
+  Unable to link against ldap.  It appears you are missing the
+  development libraries or they aren't in your linker's path
+  ])
+  fi
+else
+  #no ldap needed
+  LDAPLIB=""
+fi
+])
+dnl AC_COMPILE_WARNINGS
+dnl set to compile with '-W -Wall'
+AC_DEFUN([AC_COMPILE_WARNINGS],
+[AC_MSG_CHECKING(maximum warning verbosity option)
+if test -n "$CXX"
+then
+  if test "$GXX" = "yes"
+  then
+    ac_compile_warnings_opt='-Wall'
+  fi
+  CXXFLAGS="$CXXFLAGS $ac_compile_warnings_opt"
+  ac_compile_warnings_msg="$ac_compile_warnings_opt for C++"
+fi
+if test -n "$CC"
+then
+  if test "$GCC" = "yes"
+  then
+    ac_compile_warnings_opt='-W -Wall -Wpointer-arith -Wstrict-prototypes -O2'
+  fi
+  CFLAGS="$CFLAGS $ac_compile_warnings_opt"
+  ac_compile_warnings_msg="$ac_compile_warnings_msg $ac_compile_warnings_opt for C"
+fi
+AC_MSG_RESULT($ac_compile_warnings_msg)
+unset ac_compile_warnings_msg
+unset ac_compile_warnings_opt
+])
+
+							

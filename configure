@@ -308,7 +308,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA PACKAGE VERSION ACLOCAL AUTOCONF AUTOMAKE AUTOHEADER MAKEINFO SET_MAKE MAINTAINER_MODE_TRUE MAINTAINER_MODE_FALSE MAINT RANLIB ac_ct_RANLIB CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT MYSQL_TRUE MYSQL_FALSE PGSQL_TRUE PGSQL_FALSE CPP EGREP SQLLIB SQLALIB MYSQLINC PGSQLINC LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA PACKAGE VERSION ACLOCAL AUTOCONF AUTOMAKE AUTOHEADER MAKEINFO SET_MAKE MAINTAINER_MODE_TRUE MAINTAINER_MODE_FALSE MAINT RANLIB ac_ct_RANLIB mysqlconfig pgsqlconfig CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT MYSQL_TRUE MYSQL_FALSE PGSQL_TRUE PGSQL_FALSE LDAP_TRUE LDAP_FALSE CPP EGREP SQLLIB LDAPLIB SQLALIB MYSQLINC PGSQLINC LDAPINC LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -850,8 +850,11 @@ Optional Features:
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
-  --with-mysql=PATH       full path to mysql header directory
-  --with-pgsql=PATH       full path to pgsql header directory
+  --with-mysql            use MySQL as database. Uses mysql_config
+	       		  for finding includes and libraries
+  --with-pgsql            use PostgreSQL as database.
+                          Uses pg_config for finding includes and libraries
+  --with-auth-ldap=PATH	  full path to ldap header directory
 
 Some influential environment variables:
   CC          C compiler command
@@ -1293,10 +1296,11 @@ ac_config_guess="$SHELL $ac_aux_dir/config.guess"
 ac_config_sub="$SHELL $ac_aux_dir/config.sub"
 ac_configure="$SHELL $ac_aux_dir/configure" # This should be Cygnus configure.
 
-
+# Add the stamp file to the list of files AC keeps track of,
+# along with our hook.
           ac_config_headers="$ac_config_headers config.h:config.in"
 
-          ac_config_commands="$ac_config_commands default-1"
+
 
 echo "$as_me:$LINENO: result:
 This is dbmail's GNU configure script.
@@ -1476,7 +1480,7 @@ fi
 
 PACKAGE=dbmail
 
-VERSION=1.2
+VERSION=2.0
 
 if test "`cd $srcdir && pwd`" != "`pwd`" && test -f $srcdir/config.status; then
   { { echo "$as_me:$LINENO: error: source directory already configured; run \"make distclean\" there first" >&5
@@ -1677,25 +1681,12 @@ else
 fi
 
 
-mysqllibpaths="/usr/lib /usr/local/lib /lib /usr/freeware/lib \
-               /usr/freeware/lib32 $HOME/lib $HOME/mysql/lib \
-               /usr/lib/mysql /usr/local/lib/mysql $HOME/lib/mysql $HOME"
-
-mysqlheaderpaths="/usr/include/mysql /usr/include /usr/local/include/mysql \
-                  /usr/local/include /usr/freeware/include/mysql \
-                  /usr/freeware/include $HOME/include $HOME/mysql/include \
-                  $HOME"
-
-pgsqllibpaths="/usr/lib /usr/local/lib /lib /usr/freeware/lib \
-               /usr/freeware/lib32 $HOME/lib $HOME/pgsql/lib \
-               /usr/lib/pgsql /usr/local/lib/pgsql /usr/lib/postgresql \
-               /usr/local/lib/postgresql $HOME/lib/pgsql $HOME/lib/postgresql \
-               $HOME/postgresql/lib $HOME"
-
 pgsqlheaderpaths="/usr/include/pgsql /usr/include /usr/local/include/pgsql \
                   /usr/local/include /usr/freeware/include/pgsql \
                   /usr/freeware/include $HOME/include $HOME/pgsql/include \
 		  /usr/local/pgsql/include /usr/include/postgresql $HOME"
+
+ldapheaderpaths="/usr/include /usr/local/include"
 
 
 # Check whether --with-mysql or --without-mysql was given.
@@ -1718,8 +1709,8 @@ then
   then
     NEITHER=1
     mysqlheadername=""
-    MYSQLINC=""
-    PGSQLINC=""
+#    MYSQLINC=""
+#    PGSQLINC=""
   fi
 fi
 if test "$NEITHER" = 1
@@ -1735,16 +1726,14 @@ echo "$as_me: error:
    { (exit 1); exit 1; }; }
 fi
 
-
-
 if test ! "${mysqlheadername-x}" = "x"
 then
   if test ! "${pgsqlheadername-x}" = "x"
     then
       WARN=1
       mysqlheadername=""
-      MYSQLINC=""
-      PGSQLINC=""
+#      MYSQLINC=""
+#      PGSQLINC=""
   fi
 fi
 if test "$WARN" = 1
@@ -1762,115 +1751,200 @@ echo "$as_me: error:
    { (exit 1); exit 1; }; }
 fi
 
-# If mysql is specified, lets check if they specified a place too first
+#Look for include files and libs needed to link
+#use the configuration utilities (mysql_config and pg_config for this)
+# MySQL first
 if test ! "${mysqlheadername-x}" = "x"
 then
-  # --with-mysql was specified
-  if test "$withval" != "yes"
-  then
-    echo "$as_me:$LINENO: checking for mysql.h (user supplied)" >&5
-echo $ECHO_N "checking for mysql.h (user supplied)... $ECHO_C" >&6
-    if test -r "$mysqlheadername/mysql.h"
-      then
-      # found
-        echo "$as_me:$LINENO: result: $mysqlheadername/mysql.h" >&5
-echo "${ECHO_T}$mysqlheadername/mysql.h" >&6
-        MYSQLINC=$mysqlheadername
-      else
-      # Not found
-        echo "$as_me:$LINENO: result: not found" >&5
-echo "${ECHO_T}not found" >&6
-        MYSQLINC=""
-        mysqlheadername=""
-        { { echo "$as_me:$LINENO: error:
-  Unable to find mysql.h where you specified, try just --with-mysql to
-  have configure guess" >&5
-echo "$as_me: error:
-  Unable to find mysql.h where you specified, try just --with-mysql to
-  have configure guess" >&2;}
-   { (exit 1); exit 1; }; }
-    fi
-  else
-    # Lets look in our standard paths
-    echo "$as_me:$LINENO: checking for mysql.h" >&5
-echo $ECHO_N "checking for mysql.h... $ECHO_C" >&6
-    for mysqlpaths in $mysqlheaderpaths
-    do
-      if test -r "$mysqlpaths/mysql.h"
-      then
-        MYSQLINC="$mysqlpaths"
-        echo "$as_me:$LINENO: result: $mysqlpaths/mysql.h" >&5
-echo "${ECHO_T}$mysqlpaths/mysql.h" >&6
-        break
-      fi
-    done
-    if test -z "$MYSQLINC"
-    then
-      echo "$as_me:$LINENO: result: no" >&5
+    # Extract the first word of "mysql_config", so it can be a program name with args.
+set dummy mysql_config; ac_word=$2
+echo "$as_me:$LINENO: checking for $ac_word" >&5
+echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6
+if test "${ac_cv_path_mysqlconfig+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  case $mysqlconfig in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_mysqlconfig="$mysqlconfig" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+  for ac_exec_ext in '' $ac_executable_extensions; do
+  if $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_mysqlconfig="$as_dir/$ac_word$ac_exec_ext"
+    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+done
+
+  ;;
+esac
+fi
+mysqlconfig=$ac_cv_path_mysqlconfig
+
+if test -n "$mysqlconfig"; then
+  echo "$as_me:$LINENO: result: $mysqlconfig" >&5
+echo "${ECHO_T}$mysqlconfig" >&6
+else
+  echo "$as_me:$LINENO: result: no" >&5
 echo "${ECHO_T}no" >&6
-      { { echo "$as_me:$LINENO: error:
-  Unable to locate mysql.h, try specifying with --with-mysql" >&5
-echo "$as_me: error:
-  Unable to locate mysql.h, try specifying with --with-mysql" >&2;}
+fi
+
+    if test  -z "$mysqlconfig"
+    then
+        { { echo "$as_me:$LINENO: error: mysql_config executable not found. Make sure mysql_config is in your path" >&5
+echo "$as_me: error: mysql_config executable not found. Make sure mysql_config is in your path" >&2;}
    { (exit 1); exit 1; }; }
+    else
+	echo "$as_me:$LINENO: checking MySQL headers" >&5
+echo $ECHO_N "checking MySQL headers... $ECHO_C" >&6
+	MYSQLINC=`${mysqlconfig} --cflags`
+	echo "$as_me:$LINENO: result: $MYSQLINC" >&5
+echo "${ECHO_T}$MYSQLINC" >&6
+        echo "$as_me:$LINENO: checking MySQL libraries" >&5
+echo $ECHO_N "checking MySQL libraries... $ECHO_C" >&6
+        SQLLIB=`${mysqlconfig} --libs`
+        SQLALIB="mysql/libmysqldbmail.a"
+        echo "$as_me:$LINENO: result: $SQLLIB" >&5
+echo "${ECHO_T}$SQLLIB" >&6
+   fi
+else
+  if test ! "${pgsqlheadername-x}" = "x"
+  then
+    # Extract the first word of "pg_config", so it can be a program name with args.
+set dummy pg_config; ac_word=$2
+echo "$as_me:$LINENO: checking for $ac_word" >&5
+echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6
+if test "${ac_cv_path_pgsqlconfig+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  case $pgsqlconfig in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_pgsqlconfig="$pgsqlconfig" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+  for ac_exec_ext in '' $ac_executable_extensions; do
+  if $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_pgsqlconfig="$as_dir/$ac_word$ac_exec_ext"
+    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+done
+
+  ;;
+esac
+fi
+pgsqlconfig=$ac_cv_path_pgsqlconfig
+
+if test -n "$pgsqlconfig"; then
+  echo "$as_me:$LINENO: result: $pgsqlconfig" >&5
+echo "${ECHO_T}$pgsqlconfig" >&6
+else
+  echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6
+fi
+
+    if test  -z "$pgsqlconfig"
+    then
+        { { echo "$as_me:$LINENO: error: pg_config executable not found. Make sure pg_config is in your path" >&5
+echo "$as_me: error: pg_config executable not found. Make sure pg_config is in your path" >&2;}
+   { (exit 1); exit 1; }; }
+    else
+	echo "$as_me:$LINENO: checking PostgreSQL headers" >&5
+echo $ECHO_N "checking PostgreSQL headers... $ECHO_C" >&6
+	PGINCDIR=`${pgsqlconfig} --includedir`
+	PGSQLINC="-I$PGINCDIR"
+	echo "$as_me:$LINENO: result: $PGSQLINC" >&5
+echo "${ECHO_T}$PGSQLINC" >&6
+        echo "$as_me:$LINENO: checking PostgreSQL libraries" >&5
+echo $ECHO_N "checking PostgreSQL libraries... $ECHO_C" >&6
+        PGLIBDIR=`${pgsqlconfig} --libdir`
+        SQLLIB="-L$PGLIBDIR -lpq"
+        SQLALIB="pgsql/libpgsqldbmail.a"
+        echo "$as_me:$LINENO: result: $SQLLIB" >&5
+echo "${ECHO_T}$SQLLIB" >&6
     fi
   fi
 fi
 
+{ echo "$as_me:$LINENO: checking for authentication configuration" >&5
+echo "$as_me: checking for authentication configuration" >&6;}
 
-# If postgres is specified, lets check if they specified a place too first
-if test ! "${pgsqlheadername-x}" = "x"
+# Check whether --with-auth-ldap or --without-auth-ldap was given.
+if test "${with_auth_ldap+set}" = set; then
+  withval="$with_auth_ldap"
+  authldapheadername="$withval$"
+fi;
+
+WARN=0
+if test ! "${authldapheadername-x}" = "x"
 then
-  # --with-pgsql was specified
+  # --with-auth-ldap was specified
+  { echo "$as_me:$LINENO: using LDAP authentication" >&5
+echo "$as_me: using LDAP authentication" >&6;}
   if test "$withval" != "yes"
   then
-    echo "$as_me:$LINENO: checking for libpq-fe.h (user supplied)" >&5
-echo $ECHO_N "checking for libpq-fe.h (user supplied)... $ECHO_C" >&6
-    if test -r "$pgsqlheadername/libpq-fe.h"
+    echo "$as_me:$LINENO: checking for ldap.h (user supplied)" >&5
+echo $ECHO_N "checking for ldap.h (user supplied)... $ECHO_C" >&6
+    if test -r "$authldapheadername/ldap.h"
       then
       # found
-        echo "$as_me:$LINENO: result: $pgsqlheadername/libpq-fe.h" >&5
-echo "${ECHO_T}$pgsqlheadername/libpq-fe.h" >&6
-        PGSQLINC=$pgsqlheadername
+        echo "$as_me:$LINENO: result: $authldapheadername/ldap.h" >&5
+echo "${ECHO_T}$authldapheadername/ldap.h" >&6
+        LDAPINC=$authldapheadername
       else
       # Not found
         echo "$as_me:$LINENO: result: not found" >&5
 echo "${ECHO_T}not found" >&6
-        PGSQLINC=""
-        pgsqlheadername=""
+        LDAPINC=""
+        authldapheadername=""
         { { echo "$as_me:$LINENO: error:
-  Unable to find libpq-fe.h where you specified, try just --with-pgsql to
+  Unable to find ldap.h where you specified, try just --with-auth-ldap to
   have configure guess" >&5
 echo "$as_me: error:
-  Unable to find libpq-fe.h where you specified, try just --with-pgsql to
+  Unable to find ldap.h where you specified, try just --with-auth-ldap to
   have configure guess" >&2;}
    { (exit 1); exit 1; }; }
     fi
   else
     # Lets look in our standard paths
-    echo "$as_me:$LINENO: checking for libpq-fe.h" >&5
-echo $ECHO_N "checking for libpq-fe.h... $ECHO_C" >&6
-    for pgsqlpaths in $pgsqlheaderpaths
+    echo "$as_me:$LINENO: checking for ldap.h" >&5
+echo $ECHO_N "checking for ldap.h... $ECHO_C" >&6
+    for ldappaths in $ldapheaderpaths
     do
-      if test -r "$pgsqlpaths/libpq-fe.h"
+      if test -r "$ldappaths/ldap.h"
       then
-        PGSQLINC="$pgsqlpaths"
-        echo "$as_me:$LINENO: result: $pgsqlpaths/libpq-fe.h" >&5
-echo "${ECHO_T}$pgsqlpaths/libpq-fe.h" >&6
+        LDAPINC="$ldappaths"
+        echo "$as_me:$LINENO: result: $ldappaths/ldap.h" >&5
+echo "${ECHO_T}$ldappaths/ldap.h" >&6
         break
       fi
     done
-    if test -z "$PGSQLINC"
+    if test -z "$LDAPINC"
     then
       echo "$as_me:$LINENO: result: no" >&5
 echo "${ECHO_T}no" >&6
       { { echo "$as_me:$LINENO: error:
-  Unable to locate libpq-fe.h, try specifying with --with-pgsql" >&5
+  Unable to locate ldap.h, try specifying with --with-ldap" >&5
 echo "$as_me: error:
-  Unable to locate libpq-fe.h, try specifying with --with-pgsql" >&2;}
+  Unable to locate ldap.h, try specifying with --with-ldap" >&2;}
    { (exit 1); exit 1; }; }
     fi
   fi
+else
+  { echo "$as_me:$LINENO: using SQL authentication" >&5
+echo "$as_me: using SQL authentication" >&6;}
 fi
 
 ac_ext=c
@@ -2742,17 +2816,16 @@ ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
-#Look for libs needed to link
-# MySQL first
-if test ! "${mysqlheadername-x}" = "x"
+# Look for libs needed to link to LDAP first
+if test ! "${authldapheadername-x}" = "x"
 then
-  echo "$as_me:$LINENO: checking for mysql_real_connect in -lmysqlclient" >&5
-echo $ECHO_N "checking for mysql_real_connect in -lmysqlclient... $ECHO_C" >&6
-if test "${ac_cv_lib_mysqlclient_mysql_real_connect+set}" = set; then
+  echo "$as_me:$LINENO: checking for ldap_bind in -lldap" >&5
+echo $ECHO_N "checking for ldap_bind in -lldap... $ECHO_C" >&6
+if test "${ac_cv_lib_ldap_ldap_bind+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
   ac_check_lib_save_LIBS=$LIBS
-LIBS="-lmysqlclient  $LIBS"
+LIBS="-lldap  $LIBS"
 cat >conftest.$ac_ext <<_ACEOF
 #line $LINENO "configure"
 /* confdefs.h.  */
@@ -2767,11 +2840,11 @@ extern "C"
 #endif
 /* We use char because int might match the return type of a gcc2
    builtin and then its argument prototype would still apply.  */
-char mysql_real_connect ();
+char ldap_bind ();
 int
 main ()
 {
-mysql_real_connect ();
+ldap_bind ();
   ;
   return 0;
 }
@@ -2788,112 +2861,39 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
-  ac_cv_lib_mysqlclient_mysql_real_connect=yes
+  ac_cv_lib_ldap_ldap_bind=yes
 else
   echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-ac_cv_lib_mysqlclient_mysql_real_connect=no
+ac_cv_lib_ldap_ldap_bind=no
 fi
 rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-echo "$as_me:$LINENO: result: $ac_cv_lib_mysqlclient_mysql_real_connect" >&5
-echo "${ECHO_T}$ac_cv_lib_mysqlclient_mysql_real_connect" >&6
-if test $ac_cv_lib_mysqlclient_mysql_real_connect = yes; then
-   SQLLIB="-lmysqlclient" SQLALIB="mysql/libmysqldbmail.a"
+echo "$as_me:$LINENO: result: $ac_cv_lib_ldap_ldap_bind" >&5
+echo "${ECHO_T}$ac_cv_lib_ldap_ldap_bind" >&6
+if test $ac_cv_lib_ldap_ldap_bind = yes; then
+   LDAPLIB="-lldap"
 else
-  SQLLIB="" SQLALIB=""
+  LDAPLIB=""
 fi
 
-  if test -z "$SQLLIB"
+  if test -z "$LDAPLIB"
   then
     { { echo "$as_me:$LINENO: error:
-  Unable to link against mysqlclient.  It appears you are missing the
+  Unable to link against ldap.  It appears you are missing the
   development libraries or they aren't in your linker's path
-" >&5
+  " >&5
 echo "$as_me: error:
-  Unable to link against mysqlclient.  It appears you are missing the
+  Unable to link against ldap.  It appears you are missing the
   development libraries or they aren't in your linker's path
-" >&2;}
+  " >&2;}
    { (exit 1); exit 1; }; }
   fi
 else
-  if test ! "${pgsqlheadername-x}" = "x"
-  then
-    echo "$as_me:$LINENO: checking for PQconnectdb in -lpq" >&5
-echo $ECHO_N "checking for PQconnectdb in -lpq... $ECHO_C" >&6
-if test "${ac_cv_lib_pq_PQconnectdb+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lpq  $LIBS"
-cat >conftest.$ac_ext <<_ACEOF
-#line $LINENO "configure"
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-
-/* Override any gcc2 internal prototype to avoid an error.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-/* We use char because int might match the return type of a gcc2
-   builtin and then its argument prototype would still apply.  */
-char PQconnectdb ();
-int
-main ()
-{
-PQconnectdb ();
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
-  (eval $ac_link) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } &&
-         { ac_try='test -s conftest$ac_exeext'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  ac_cv_lib_pq_PQconnectdb=yes
-else
-  echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-ac_cv_lib_pq_PQconnectdb=no
-fi
-rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-echo "$as_me:$LINENO: result: $ac_cv_lib_pq_PQconnectdb" >&5
-echo "${ECHO_T}$ac_cv_lib_pq_PQconnectdb" >&6
-if test $ac_cv_lib_pq_PQconnectdb = yes; then
-   SQLLIB="-lpq" SQLALIB="pgsql/libpgsqldbmail.a"
-else
-  SQLLIB="" SQLALIB=""
-fi
-
-    if test -z "$SQLLIB"
-    then
-      { { echo "$as_me:$LINENO: error:
-  Unable to link against pq.  It appears you are missing the development
-  libraries or they aren't in your linker's path
-" >&5
-echo "$as_me: error:
-  Unable to link against pq.  It appears you are missing the development
-  libraries or they aren't in your linker's path
-" >&2;}
-   { (exit 1); exit 1; }; }
-    fi
-  fi
+  #no ldap needed
+  LDAPLIB=""
 fi
 
 
@@ -3562,6 +3562,31 @@ ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
+echo "$as_me:$LINENO: checking maximum warning verbosity option" >&5
+echo $ECHO_N "checking maximum warning verbosity option... $ECHO_C" >&6
+if test -n "$CXX"
+then
+  if test "$GXX" = "yes"
+  then
+    ac_compile_warnings_opt='-Wall'
+  fi
+  CXXFLAGS="$CXXFLAGS $ac_compile_warnings_opt"
+  ac_compile_warnings_msg="$ac_compile_warnings_opt for C++"
+fi
+if test -n "$CC"
+then
+  if test "$GCC" = "yes"
+  then
+    ac_compile_warnings_opt='-W -Wall -Wpointer-arith -Wstrict-prototypes -O2'
+  fi
+  CFLAGS="$CFLAGS $ac_compile_warnings_opt"
+  ac_compile_warnings_msg="$ac_compile_warnings_msg $ac_compile_warnings_opt for C"
+fi
+echo "$as_me:$LINENO: result: $ac_compile_warnings_msg" >&5
+echo "${ECHO_T}$ac_compile_warnings_msg" >&6
+unset ac_compile_warnings_msg
+unset ac_compile_warnings_opt
+
 echo "$as_me:$LINENO: checking for an ANSI C-conforming const" >&5
 echo $ECHO_N "checking for an ANSI C-conforming const... $ECHO_C" >&6
 if test "${ac_cv_c_const+set}" = set; then
@@ -3736,6 +3761,15 @@ if test -n "$PGSQLINC"; then
 else
   PGSQL_TRUE='#'
   PGSQL_FALSE=
+fi
+
+
+if test -n "$LDAPINC"; then
+  LDAP_TRUE=
+  LDAP_FALSE='#'
+else
+  LDAP_TRUE='#'
+  LDAP_FALSE=
 fi
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
@@ -4498,7 +4532,9 @@ done
 
 
 
-                              ac_config_files="$ac_config_files Makefile mysql/Makefile pgsql/Makefile"
+
+
+                                        ac_config_files="$ac_config_files Makefile mysql/Makefile pgsql/Makefile auth/Makefile"
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
 # tests run on this system so they can be shared between configure
@@ -4914,9 +4950,6 @@ $config_files
 Configuration headers:
 $config_headers
 
-Configuration commands:
-$config_commands
-
 Report bugs to <bug-autoconf@gnu.org>."
 _ACEOF
 
@@ -5017,14 +5050,7 @@ fi
 
 _ACEOF
 
-cat >>$CONFIG_STATUS <<_ACEOF
-#
-# INIT-COMMANDS section.
-#
 
-
-
-_ACEOF
 
 
 
@@ -5036,7 +5062,7 @@ do
   "Makefile" ) CONFIG_FILES="$CONFIG_FILES Makefile" ;;
   "mysql/Makefile" ) CONFIG_FILES="$CONFIG_FILES mysql/Makefile" ;;
   "pgsql/Makefile" ) CONFIG_FILES="$CONFIG_FILES pgsql/Makefile" ;;
-  "default-1" ) CONFIG_COMMANDS="$CONFIG_COMMANDS default-1" ;;
+  "auth/Makefile" ) CONFIG_FILES="$CONFIG_FILES auth/Makefile" ;;
   "config.h" ) CONFIG_HEADERS="$CONFIG_HEADERS config.h:config.in" ;;
   *) { { echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5
 echo "$as_me: error: invalid argument: $ac_config_target" >&2;}
@@ -5051,7 +5077,6 @@ done
 if $ac_need_defaults; then
   test "${CONFIG_FILES+set}" = set || CONFIG_FILES=$config_files
   test "${CONFIG_HEADERS+set}" = set || CONFIG_HEADERS=$config_headers
-  test "${CONFIG_COMMANDS+set}" = set || CONFIG_COMMANDS=$config_commands
 fi
 
 # Have a temporary directory for convenience.  Make it in the build tree
@@ -5139,6 +5164,8 @@ s,@MAINTAINER_MODE_FALSE@,$MAINTAINER_MODE_FALSE,;t t
 s,@MAINT@,$MAINT,;t t
 s,@RANLIB@,$RANLIB,;t t
 s,@ac_ct_RANLIB@,$ac_ct_RANLIB,;t t
+s,@mysqlconfig@,$mysqlconfig,;t t
+s,@pgsqlconfig@,$pgsqlconfig,;t t
 s,@CC@,$CC,;t t
 s,@CFLAGS@,$CFLAGS,;t t
 s,@LDFLAGS@,$LDFLAGS,;t t
@@ -5150,12 +5177,16 @@ s,@MYSQL_TRUE@,$MYSQL_TRUE,;t t
 s,@MYSQL_FALSE@,$MYSQL_FALSE,;t t
 s,@PGSQL_TRUE@,$PGSQL_TRUE,;t t
 s,@PGSQL_FALSE@,$PGSQL_FALSE,;t t
+s,@LDAP_TRUE@,$LDAP_TRUE,;t t
+s,@LDAP_FALSE@,$LDAP_FALSE,;t t
 s,@CPP@,$CPP,;t t
 s,@EGREP@,$EGREP,;t t
 s,@SQLLIB@,$SQLLIB,;t t
+s,@LDAPLIB@,$LDAPLIB,;t t
 s,@SQLALIB@,$SQLALIB,;t t
 s,@MYSQLINC@,$MYSQLINC,;t t
 s,@PGSQLINC@,$PGSQLINC,;t t
+s,@LDAPINC@,$LDAPINC,;t t
 s,@LIBOBJS@,$LIBOBJS,;t t
 s,@LTLIBOBJS@,$LTLIBOBJS,;t t
 CEOF
@@ -5583,65 +5614,11 @@ echo "$as_me: error: cannot create directory \"$ac_dir\"" >&2;}
     cat $tmp/config.h
     rm -f $tmp/config.h
   fi
-done
-_ACEOF
-cat >>$CONFIG_STATUS <<\_ACEOF
-
-#
-# CONFIG_COMMANDS section.
-#
-for ac_file in : $CONFIG_COMMANDS; do test "x$ac_file" = x: && continue
-  ac_dest=`echo "$ac_file" | sed 's,:.*,,'`
-  ac_source=`echo "$ac_file" | sed 's,[^:]*:,,'`
-  ac_dir=`(dirname "$ac_dest") 2>/dev/null ||
-$as_expr X"$ac_dest" : 'X\(.*[^/]\)//*[^/][^/]*/*$' \| \
-         X"$ac_dest" : 'X\(//\)[^/]' \| \
-         X"$ac_dest" : 'X\(//\)$' \| \
-         X"$ac_dest" : 'X\(/\)' \| \
-         .     : '\(.\)' 2>/dev/null ||
-echo X"$ac_dest" |
-    sed '/^X\(.*[^/]\)\/\/*[^/][^/]*\/*$/{ s//\1/; q; }
-  	  /^X\(\/\/\)[^/].*/{ s//\1/; q; }
-  	  /^X\(\/\/\)$/{ s//\1/; q; }
-  	  /^X\(\/\).*/{ s//\1/; q; }
-  	  s/.*/./; q'`
-  ac_builddir=.
-
-if test "$ac_dir" != .; then
-  ac_dir_suffix=/`echo "$ac_dir" | sed 's,^\.[\\/],,'`
-  # A "../" for each directory in $ac_dir_suffix.
-  ac_top_builddir=`echo "$ac_dir_suffix" | sed 's,/[^\\/]*,../,g'`
-else
-  ac_dir_suffix= ac_top_builddir=
-fi
-
-case $srcdir in
-  .)  # No --srcdir option.  We are building in place.
-    ac_srcdir=.
-    if test -z "$ac_top_builddir"; then
-       ac_top_srcdir=.
-    else
-       ac_top_srcdir=`echo $ac_top_builddir | sed 's,/$,,'`
-    fi ;;
-  [\\/]* | ?:[\\/]* )  # Absolute path.
-    ac_srcdir=$srcdir$ac_dir_suffix;
-    ac_top_srcdir=$srcdir ;;
-  *) # Relative path.
-    ac_srcdir=$ac_top_builddir$srcdir$ac_dir_suffix
-    ac_top_srcdir=$ac_top_builddir$srcdir ;;
-esac
-# Don't blindly perform a `cd "$ac_dir"/$ac_foo && pwd` since $ac_foo can be
-# absolute.
-ac_abs_builddir=`cd "$ac_dir" && cd $ac_builddir && pwd`
-ac_abs_top_builddir=`cd "$ac_dir" && cd ${ac_top_builddir}. && pwd`
-ac_abs_srcdir=`cd "$ac_dir" && cd $ac_srcdir && pwd`
-ac_abs_top_srcdir=`cd "$ac_dir" && cd $ac_top_srcdir && pwd`
-
-
-  { echo "$as_me:$LINENO: executing $ac_dest commands" >&5
-echo "$as_me: executing $ac_dest commands" >&6;}
-  case $ac_dest in
-    default-1 ) test -z "$CONFIG_HEADERS" || echo timestamp > stamp-h ;;
+  # Run the commands associated with the file.
+  case $ac_file in
+    config.h ) # update the timestamp
+echo 'timestamp for config.h:config.in' >"./stamp-h1"
+ ;;
   esac
 done
 _ACEOF

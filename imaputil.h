@@ -1,3 +1,22 @@
+/*
+ Copyright (C) 1999-2003 IC & S  dbmail@ic-s.nl
+
+ This program is free software; you can redistribute it and/or 
+ modify it under the terms of the GNU General Public License 
+ as published by the Free Software Foundation; either 
+ version 2 of the License, or (at your option) any later 
+ version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program; if not, write to the Free Software
+ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*/
+
 /* $Id$
  * (c) 2000-2002 IC&S, The Netherlands
  * 
@@ -43,7 +62,7 @@ int is_textplain(struct list *hdr);
 char *date_sql2imap(const char *sqldate);
 char *date_imap2sql(const char *imapdate);
 
-int stridx(const char *s, char ch);
+unsigned stridx(const char *s, char ch);
 int checkchars(const char *s);
 int checktag(const char *s);
 int checkmailboxname(const char *s);
@@ -55,7 +74,8 @@ char **build_args_array_ext(const char *originalString, clientinfo_t *ci);
 
 void base64encode(char *in,char *out);
 void base64decode(char *in,char *out);
-unsigned binary_search(const u64_t *array, unsigned arraysize, u64_t key);
+int binary_search(const u64_t *array, unsigned arraysize, u64_t key,
+		       unsigned int *key_idx);
 
 char **give_chunks(const char *str, char delimiter);
 void free_chunks(char **chunks);
@@ -69,11 +89,11 @@ void free_searchlist(struct list *sl);
 void invert_set(int *set, int setlen);
 void combine_sets(int *dest, int *sec, int setlen, int type);
 
-void build_set(int *set, int setlen, char *cset);
-void build_uid_set(int *set, int setlen, char *cset, mailbox_t *mb);
+void build_set(int *set, unsigned int setlen, char *cset);
+void build_uid_set(int *set, unsigned int setlen, char *cset, mailbox_t *mb);
 void dumpsearch(search_key_t *sk, int level);
 
-int init_cache();
-void close_cache();
+int init_cache(void);
+void close_cache(void);
 
 #endif

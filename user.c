@@ -1,3 +1,22 @@
+/*
+ Copyright (C) 1999-2003 IC & S  dbmail@ic-s.nl
+
+ This program is free software; you can redistribute it and/or 
+ modify it under the terms of the GNU General Public License 
+ as published by the Free Software Foundation; either 
+ version 2 of the License, or (at your option) any later 
+ version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program; if not, write to the Free Software
+ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*/
+
 /* $Id$
  * (c) 2000-2002 IC&S, The Netherlands
  * This is the dbmail-user program
@@ -32,27 +51,23 @@ char *configFile = DEFAULT_CONFIG_FILE;
 char *getToken(char** str,const char* delims);
 char csalt[] = "........";
 char *bgetpwent (char *filename, char *name);
-char *cget_salt();
+char *cget_salt(void);
 
 /* database login data */
-extern field_t _db_host;
-extern field_t _db_db;
-extern field_t _db_user;
-extern field_t _db_pass;
-
+extern db_param_t _db_params;
 
 /* valid characters for passwd/username */
 const char ValidChars[] = 
 "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 "_.!@#$%^&*()-+=~[]{}<>:;\\/";
 
-void show_help();
+void show_help(void);
 int quiet = 0;
 
 int quiet_printf(const char *fmt, ...);
 
 int do_add(int argc, char *argv[]);
-int do_change(int argc, char *argv[]);
+int do_change(char *argv[]);
 int do_delete(char *name);
 int do_show(char *name);
 int do_empty(char *name);
@@ -91,7 +106,7 @@ int main(int argc, char *argv[])
 	    
   ReadConfig("DBMAIL", configFile, &sysItems);
   SetTraceLevel(&sysItems);
-  GetDBParams(_db_host, _db_db, _db_user, _db_pass, &sysItems);
+  GetDBParams(&_db_params, &sysItems);
 
   quiet_printf ("\n*** dbmail-adduser ***\n");
 	
@@ -117,7 +132,7 @@ int main(int argc, char *argv[])
   switch (argv[argidx+1][0])
     {
     case 'a': result = do_add(argc- (2+argidx),&argv[2+argidx]); break;
-    case 'c': result = do_change(argc- (2+argidx),&argv[2+argidx]); break;
+    case 'c': result = do_change(&argv[2+argidx]); break;
     case 'd': result = do_delete(argv[2+argidx]); break;
     case 's': result = do_show(argv[2+argidx]); break;
     case 'f': result = do_make_alias(&argv[2+argidx]); break;
@@ -194,6 +209,7 @@ int do_remove_alias(char *argv[])
 int do_add(int argc, char *argv[])
 {
   u64_t useridnr;
+  int add_user_result;
   int i, result;
   char pw[50]="";
 
@@ -217,61 +233,62 @@ int do_add(int argc, char *argv[])
     {
       /* encrypt using crypt() */
       strcat(pw,crypt(&argv[1][strlen("{crypt:}")], cget_salt()));
-      useridnr = auth_adduser(argv[0], pw, "crypt",argv[2],argv[3]);
+      add_user_result = auth_adduser(argv[0], pw, "crypt",
+				     argv[2],argv[3], &useridnr);
     }
   else if (strncasecmp(argv[1], "{crypt}", strlen("{crypt}")) == 0)
     {
       /* assume passwd is encrypted on command line */
-      useridnr = auth_adduser(argv[0], &argv[1][strlen("{crypt}")], "crypt",argv[2],argv[3]);
+      add_user_result = auth_adduser(argv[0], &argv[1][strlen("{crypt}")],
+				     "crypt",argv[2],argv[3], &useridnr);
     }
   else if (strncasecmp(argv[1], "{md5:}", strlen("{md5:}")) == 0)
     {
       /* encrypt using md5 crypt() */
       sprintf(pw,"%s%s%s","$1$",cget_salt(),"$");
       strncpy(pw,crypt(&argv[1][strlen("{md5:}")], pw),49);
-      useridnr = auth_adduser(argv[0], pw, "md5",argv[2],argv[3]);
+      add_user_result = auth_adduser(argv[0], pw, "md5",
+				     argv[2],argv[3], &useridnr);
     }
   else if (strncasecmp(argv[1], "{md5}", strlen("{md5}")) == 0)
     {
       /* assume passwd is encrypted on command line */
-      useridnr = auth_adduser(argv[0], &argv[1][strlen("{md5}")], "md5",argv[2],argv[3]);
+      add_user_result = auth_adduser(argv[0], &argv[1][strlen("{md5}")],
+				     "md5",argv[2],argv[3], &useridnr);
     }
   else if (strncasecmp(argv[1], "{md5sum:}", strlen("{md5sum:}")) == 0)
     {
       /* encrypt using md5 digest */
       strcat(pw,makemd5(&argv[1][strlen("{md5sum:}")]));
-      useridnr = auth_adduser(argv[0], pw, "md5sum",argv[2],argv[3]);
+      add_user_result = auth_adduser(argv[0], pw, "md5sum",argv[2],
+				     argv[3], &useridnr);
     }
   else if (strncasecmp(argv[1], "{md5sum}", strlen("{md5sum}")) == 0)
     {
       /* assume passwd is encrypted on command line */
-      useridnr = auth_adduser(argv[0], &argv[1][strlen("{md5sum}")], "md5sum",argv[2],argv[3]);
+      add_user_result = auth_adduser(argv[0], &argv[1][strlen("{md5sum}")],
+				     "md5sum",argv[2],argv[3], &useridnr);
     }
   else
-    {
-      useridnr = auth_adduser(argv[0],argv[1],"",argv[2],argv[3]);
-    }
+  {
+       add_user_result = auth_adduser(argv[0],argv[1],"",
+				      argv[2],argv[3], &useridnr);
+  }
 
-  if (useridnr == -1)
-    {
-      /* check if the existence of the user caused the failure */
-      if ( (useridnr = auth_user_exists(argv[0])) != 0 )
-	{
-	  if (useridnr == -1)
-	    {
-	      quiet_printf ("Failed\n\nCheck logs for details\n\n");
-	      return -1;  /* dbase failure */
-	    }
-	  
-	  quiet_printf("Failed: user exists [%llu]\n", useridnr);
-	}
-      else
-	{
-	  quiet_printf ("Failed\n\nCheck logs for details\n\n");
-	  useridnr = -1;
-	}
-
-      return -1;
+  if (add_user_result == -1) { 
+       /* check if existance of another user with the same name caused 
+	  the failure */
+       if (auth_user_exists(argv[0], &useridnr) == -1) {
+	      quiet_printf("Failed\n\nCheck logs for details\n\n");
+	      return -1; /* database failure */
+	 }
+	 if (useridnr != 0) 
+	      quiet_printf("Failed: user exists [%llu]\n", useridnr);
+	 else { /* useridnr is 0 ! */
+	      quiet_printf("Failed\n\nCheck logs for details\n\n");
+	      useridnr = -1;
+	 }
+	 return -1;
     }
 	
   quiet_printf ("Ok, user added id [%llu]\n",useridnr);
@@ -305,20 +322,19 @@ int do_add(int argc, char *argv[])
 }
 
 
-int do_change(int argc, char *argv[])
+int do_change(char *argv[])
 {
   int i,result = 0, retval=0;
   u64_t newsize,userid,newcid;
+  u64_t client_id;
   char *endptr = NULL,*entry = NULL,*passwdfile = NULL;
   char pw[50]="";
 
   /* verify the existence of this user */
-  userid = auth_user_exists(argv[0]);
-  if (userid == -1)
-    {
-      quiet_printf("Error verifying existence of user [%s]. Please check the log.\n",argv[0]);
-      return -1;
-    }
+  if (auth_user_exists(argv[0], &userid) == -1) {
+       quiet_printf("Error verifying existence of user [%s]. Please check the log.\n",argv[0]);
+       return -1;
+  }
 
   if (userid == 0)
     {
@@ -557,7 +573,8 @@ int do_change(int argc, char *argv[])
 	      break;
 	    case '+':
 	      /* add alias */
-	      if (db_addalias(userid, argv[i+1], auth_getclientid(userid)) < 0)
+		 auth_getclientid(userid, &client_id);
+	      if (db_addalias(userid, argv[i+1], client_id) < 0)
 		{
 		  quiet_printf("\nWarning: could not add alias [%s]",argv[i+1]);
 		  retval = -1;
@@ -630,12 +647,10 @@ int do_show(char *name)
     {
       quiet_printf("Info for user [%s]",name);
 
-      userid = auth_user_exists(name);
-      if (userid == -1)
-	{
-	  quiet_printf("\nError verifying existence of user [%s]. Please check the log.\n",name);
-	  return -1;
-	}
+      if (auth_user_exists(name, &userid) == -1) {
+	   quiet_printf("\nError verifying existence of user [%s]. Please check the log.\n",name);
+	   return -1;
+      }
 
       if (userid == 0)
 	{
@@ -668,9 +683,9 @@ int do_show(char *name)
 	  quiet_printf("\nFound user for alias [%s]:\n\n", name);
 	}
 
-      cid = auth_getclientid(userid);
-      quotum = auth_getmaxmailsize(userid);
-      quotumused = db_get_quotum_used(userid);
+      auth_getclientid(userid, &cid);
+      auth_getmaxmailsize(userid, &quotum);
+      db_get_quotum_used(userid, &quotumused);
 
       quiet_printf("\n");
       quiet_printf("User ID         : %llu\n", userid);
@@ -705,18 +720,18 @@ int do_show(char *name)
  */
 int do_empty(char *name)
 {
-  u64_t userid = auth_user_exists(name);
-  int result;
+     u64_t userid;
+     int result;
+     
+     if (auth_user_exists(name, &userid) == -1) {
+	  quiet_printf("Error verifying existence of user [%s]. "
+		       "Please check the log.\n",name);
+	  return -1;
+     }
 
   if (userid == 0)
     {
       quiet_printf("User [%s] does not exist.\n", name);
-      return -1;
-    }
-
-  if (userid == -1)
-    {
-      quiet_printf("Error verifying existence of user [%s]. Please check the log.\n",name);
       return -1;
     }
 

@@ -2,3 +2,11 @@ $Id$
 
 Eelco van Beek (eelco@ic-s.nl)
 Roel Rozendaal (roel@ic-s.nl)
+Ilja Booij (ilja@ic-s.nl)
+
+Aaron Stone (aaron@serendipity.cx):
+	entire files -> auth/authldap.c
+
+Paul Stevens (paul@nfg.nl):
+	entire files -> sql/mysql/create_tables_innodb.mysql
+

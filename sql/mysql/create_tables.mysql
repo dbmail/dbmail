@@ -1,33 +1,51 @@
+# Copyright (C) 1999-2003 IC & S  dbmail@ic-s.nl
+#
+# This program is free software; you can redistribute it and/or 
+# modify it under the terms of the GNU General Public License 
+# as published by the Free Software Foundation; either 
+# version 2 of the License, or (at your option) any later 
+# version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 # $Id$
 
-CREATE DATABASE dbmail;
+#CREATE DATABASE dbmail;
 
-USE dbmail;
+#USE dbmail;
 
+DROP TABLE IF EXISTS aliases;
 CREATE TABLE aliases (
    alias_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
    alias varchar(100) NOT NULL,
    deliver_to varchar(250) NOT NULL,
    client_idnr bigint(21) DEFAULT '0' NOT NULL,
    PRIMARY KEY (alias_idnr),
-   KEY alias (alias),
-   UNIQUE alias_idnr_2 (alias_idnr)
+   INDEX (alias),
+   INDEX (client_idnr)
 );
 
+DROP TABLE IF EXISTS users;
 CREATE TABLE users (
    user_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
    userid varchar(100) NOT NULL,
    passwd varchar(34) NOT NULL,
    client_idnr bigint(21) DEFAULT '0' NOT NULL,
    maxmail_size bigint(21) DEFAULT '0' NOT NULL,
+   curmail_size bigint(21) DEFAULT '0' NOT NULL,
    encryption_type varchar(20) DEFAULT '' NOT NULL,
    last_login DATETIME DEFAULT '1979-11-03 22:05:58' NOT NULL,
    PRIMARY KEY (user_idnr),
-   KEY user_idnr (user_idnr, userid),
-   UNIQUE useridnr_2 (user_idnr, userid),
-   UNIQUE userid_2 (userid)
+   UNIQUE INDEX (userid),
 );
 
+DROP TABLE IF EXISTS mailboxes;
 CREATE TABLE mailboxes (
    mailbox_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
    owner_idnr bigint(21) DEFAULT '0' NOT NULL,
@@ -43,13 +61,50 @@ CREATE TABLE mailboxes (
    permission tinyint(1) default '2',
    is_subscribed tinyint(1) default 0 not null,
    PRIMARY KEY (mailbox_idnr),
-   UNIQUE mailboxidnr_2 (mailbox_idnr)
+   INDEX (name),
+   INDEX (owner_idnr),
+   INDEX (is_subscribed)
+ );
+
+DROP TABLE IF EXISTS shared_mailbox;
+CREATE TABLE shared_mailbox (
+  id bigint(21) NOT NULL auto_increment,
+  mailbox_id bigint(21) NOT NULL default '0',
+  maxmail_size bigint(21) NOT NULL default '0',
+  curmail_size bigint(21) NOT NULL default '0',
+  PRIMARY KEY  (id),
+  INDEX (mailbox_id)
 );
-  
+
+DROP TABLE IF EXISTS shared_mailbox_access;
+CREATE TABLE shared_mailbox_access (
+  id bigint(21) NOT NULL auto_increment,
+  shared_mailbox_id bigint(21) NOT NULL default '0',
+  user_id bigint(21) NOT NULL default '0',
+  lookup_flag tinyint(1) NOT NULL default '0',
+  read_flag tinyint(1) NOT NULL default '0',
+  insert_flag tinyint(1) NOT NULL default '0',
+  write_flag tinyint(1) NOT NULL default '0',
+  is_subscribed tinyint(1) NOT NULL default '0',
+  PRIMARY KEY  (id),
+  INDEX (shared_mailbox_id),
+  INDEX (user_id)
+);
+
+DROP TABLE IF EXISTS physmessage;
+CREATE TABLE physmessage (
+   id bigint(21) DEFAULT '0' NOT NULL auto_increment,
+   messagesize bigint(21) DEFAULT '0' NOT NULL,
+   rfcsize bigint(21) DEFAULT '0' NOT NULL,
+   internal_date datetime default '0' not null,
+   PRIMARY KEY(id)
+);
+ 
+DROP TABLE IF EXISTS messages;
 CREATE TABLE messages (
    message_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
    mailbox_idnr bigint(21) DEFAULT '0' NOT NULL,
-   messagesize bigint(21) DEFAULT '0' NOT NULL,
+   physmessage_id bigint(21) DEFAULT '0' NOT NULL,
    seen_flag tinyint(1) default '0' not null,
    answered_flag tinyint(1) default '0' not null,
    deleted_flag tinyint(1) default '0' not null,
@@ -57,25 +112,26 @@ CREATE TABLE messages (
    recent_flag tinyint(1) default '0' not null,
    draft_flag tinyint(1) default '0' not null,
    unique_id varchar(70) NOT NULL,
-   internal_date datetime default '0' not null,
    status tinyint(3) unsigned zerofill default '000' not null,
-   rfcsize bigint(21) DEFAULT '0' NOT NULL,
    PRIMARY KEY (message_idnr),
-   KEY message_idnr (message_idnr),
-   UNIQUE message_idnr_2 (message_idnr)
+   INDEX (mailbox_idnr),
+   INDEX (physmessage_id),
+   INDEX (seen_flag),
+   INDEX (unique_id),
+   INDEX (status)
 );
 
+DROP TABLE IF EXISTS messageblks;
 CREATE TABLE messageblks (
    messageblk_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
-   message_idnr bigint(21) DEFAULT '0' NOT NULL,
+   physmessage_id bigint(21) DEFAULT '0' NOT NULL,
    messageblk longtext NOT NULL,
    blocksize bigint(21) DEFAULT '0' NOT NULL,
    PRIMARY KEY (messageblk_idnr),
-   KEY messageblk_idnr (messageblk_idnr),
-	KEY msg_index (message_idnr),
-   UNIQUE messageblk_idnr_2 (messageblk_idnr)
+   INDEX (physmessage_id)
 ) TYPE=MyISAM;
 
+DROP TABLE IF EXISTS auto_notifications;
 CREATE TABLE auto_notifications (
    auto_notify_idnr bigint(21) default '0' not null auto_increment,
    user_idnr bigint(21) DEFAULT '0' NOT NULL,
@@ -83,6 +139,7 @@ CREATE TABLE auto_notifications (
    PRIMARY KEY (auto_notify_idnr)
 );
 
+DROP TABLE IF EXISTS auto_replies;
 CREATE TABLE auto_replies (
    auto_reply_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
    user_idnr bigint(21) DEFAULT '0' NOT NULL,
@@ -90,41 +147,3 @@ CREATE TABLE auto_replies (
    PRIMARY KEY (auto_reply_idnr)
 );
 
-
-CREATE TABLE config (
-	configid int(11) DEFAULT '0' NOT NULL,
-	item varchar(128) NOT NULL,
-	value varchar(128) NOT NULL
-);
-
-
-CREATE TABLE tmpmessage (
-       message_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
-       mailbox_idnr int(21) DEFAULT '0' NOT NULL,
-       messagesize bigint(21) DEFAULT '0' NOT NULL,
-       seen_flag tinyint(1) default '0' not null,
-       answered_flag tinyint(1) default '0' not null,
-       deleted_flag tinyint(1) default '0' not null,
-       flagged_flag tinyint(1) default '0' not null,
-       recent_flag tinyint(1) default '0' not null,
-       draft_flag tinyint(1) default '0' not null,
-       unique_id varchar(70) NOT NULL,
-       internal_date datetime default '0' not null,
-       status tinyint(3) unsigned zerofill default '000' not null,
-
-       PRIMARY KEY (message_idnr),
-       KEY message_idnr (message_idnr),
-       UNIQUE message_idnr_2 (message_idnr)
-);
-
-CREATE TABLE tmpmessageblk (
-       messageblk_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
-       message_idnr bigint(21) DEFAULT '0' NOT NULL,
-       messageblk longtext NOT NULL,
-       blocksize bigint(21) DEFAULT '0' NOT NULL,
-
-       PRIMARY KEY (messageblk_idnr),
-       KEY messageblk_idnr (messageblk_idnr),
-       KEY msg_index (message_idnr),
-       UNIQUE messageblk_idnr_2 (messageblk_idnr)
-) TYPE=MyISAM;
