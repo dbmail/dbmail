@@ -77,6 +77,10 @@ int main (int argc, char *argv[])
 
   /* open logs */
   openlog(PNAME, LOG_PID, LOG_MAIL);
+  
+  /* connect to the database */
+  if (db_connect()< 0) 
+	trace(TRACE_FATAL,"main(): could not connect to database"); 
 	
   /* debug settings */
   trace_level = db_get_config_item("TRACE_LEVEL", CONFIG_EMPTY);
@@ -137,8 +141,6 @@ int main (int argc, char *argv[])
   signal (SIGTERM, sigchld_handler);
   signal (SIGSTOP, sigchld_handler);
 
-  if (db_connect()< 0) 
-	trace(TRACE_FATAL,"main(): could not connect to database"); 
 	
   adr_srvr.sin_family = AF_INET; 
   
