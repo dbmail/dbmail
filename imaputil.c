@@ -464,9 +464,11 @@ int show_address_list(FILE *outstream, struct mime_record *mr)
 	      has_split = 1;
 	    }
 	  else
-	    if (mr->value[i] == '"')
-	      fprintf(outstream, "\\");
-	    fprintf(outstream,"%c",mr->value[i]);
+	    {
+	      if (mr->value[i] == '"')
+		fprintf(outstream, "\\");
+	      fprintf(outstream,"%c",mr->value[i]);
+	    }
 	}
 
       if (!has_split)
