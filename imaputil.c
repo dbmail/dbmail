@@ -239,7 +239,7 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg, int show_extension_
 int retrieve_envelope(FILE *outstream, struct list *rfcheader)
 {
   struct mime_record *mr;
-  int i,idx,delimiter,start,inquote;
+  int idx;
 
   fprintf(outstream,"(");
 
@@ -264,89 +264,25 @@ int retrieve_envelope(FILE *outstream, struct list *rfcheader)
       mime_findfield(envelope_items[idx], rfcheader, &mr);
       if (mr && strlen(mr->value) > 0)
 	{
-	  fprintf(outstream," (");
-      
-	  /* find ',' to split up multiple addresses */
-	  delimiter = 0;
-	  
-	  do
-	    {
-	      fprintf(outstream,"(");
-
-	      start = delimiter;
-
-	      for (inquote=0; mr->value[delimiter] && !(mr->value[delimiter] == ',' && !inquote); 
-		   delimiter++) 
-		if (mr->value[delimiter] == '\"') inquote ^= 1;
-
-	      if (mr->value[delimiter])
-		mr->value[delimiter] = 0; /* replace ',' by NULL-termination */
-	      else
-		delimiter = -1; /* this will be the last one */
-
-	      /* the address currently being processed is now contained within
-	       * &mr->value[start] 'till first '\0'
-	       */
-	      
-	      /* two possibilities for the mail address:
-	       * (1) name <user@domain>
-	       * (2) user@domain
-	       * scan for '<' to determine which case we should be dealing with 
-	       */
-
-	      for (i=start, inquote=0; mr->value[i] && !(mr->value[i] == '<' && !inquote); i++) 
-		if (mr->value[i] == '\"') inquote ^= 1;
-
-	      if (mr->value[i] && i>start+2)
-		{
-		  /* name is contained in &mr->value[start] untill &mr->value[i-2] */
-		  /* name might be quoted */
-		  if (mr->value[start] == '\"')
-		    fprintf(outstream, "\"%.*s\"", i-start-3,&mr->value[start+1]);
-		  else
-		    fprintf(outstream, "\"%.*s\"", i-start-1,&mr->value[start]);
-
-		  start = i+1; /* skip to after '<' */
-		}
-	      else
-		fprintf(outstream, "NIL");
-
-	      fprintf(outstream, " NIL "); /* source route ?? smtp at-domain-list ?? */
-
-	      /* now display user domainname; &mr->value[start] is starting point */
-	      fprintf(outstream, "\"");
-
-	      /*
-	       * added a check for whitespace within the address (not good)
-	       */
-	      for (i=start; mr->value[i] && mr->value[i] != '>' && !isspace(mr->value[i]); i++)
-		{
-		  if (mr->value[i] == '@')
-		    fprintf(outstream,"\" \"");
-		  else
-		    fprintf(outstream,"%c",mr->value[i]);
-		}
-
-	      fprintf(outstream, "\"");
-		  
-	      if (delimiter > 0)
-		mr->value[delimiter++] = ','; /* restore & prepare for next iteration */
-
-	      fprintf(outstream, ")");
-
-	    } while (delimiter > 0) ;
-	  
-	  fprintf(outstream,")");
+	  show_address_list(outstream, mr);
 	}
       else if (strcasecmp(envelope_items[idx], "reply-to") == 0)
 	{
 	  /* default this field */
-	  fprintf(outstream, "((NIL NIL \"reply\" \"replier.com\"))");
+	  mime_findfield("from", rfcheader, &mr);
+	  if (mr && strlen(mr->value) > 0)
+	    show_address_list(outstream, mr);
+	  else /* no from field ??? */
+	    fprintf(outstream, "((NIL NIL \"nobody\" \"nowhere.org\"))");
 	}
       else if (strcasecmp(envelope_items[idx], "sender") == 0)
 	{
 	  /* default this field */
-	  fprintf(outstream, "((NIL NIL \"sender\" \"senders.com\"))");
+	  mime_findfield("from", rfcheader, &mr);
+	  if (mr && strlen(mr->value) > 0)
+	    show_address_list(outstream, mr);
+	  else /* no from field ??? */
+	    fprintf(outstream, "((NIL NIL \"nobody\" \"nowhere.org\"))");
 	}
       else
 	fprintf(outstream, " NIL");
@@ -363,6 +299,94 @@ int retrieve_envelope(FILE *outstream, struct list *rfcheader)
 
   return 0;
 }
+
+
+/*
+ * show_address_list()
+ *
+ * gives an address list, output to outstream
+ */
+int show_address_list(FILE *outstream, struct mime_record *mr)
+{
+  int delimiter,i,inquote,start;
+
+  fprintf(outstream," (");
+      
+  /* find ',' to split up multiple addresses */
+  delimiter = 0;
+	  
+  do
+    {
+      fprintf(outstream,"(");
+
+      start = delimiter;
+
+      for (inquote=0; mr->value[delimiter] && !(mr->value[delimiter] == ',' && !inquote); 
+	   delimiter++) 
+	if (mr->value[delimiter] == '\"') inquote ^= 1;
+
+      if (mr->value[delimiter])
+	mr->value[delimiter] = 0; /* replace ',' by NULL-termination */
+      else
+	delimiter = -1; /* this will be the last one */
+
+      /* the address currently being processed is now contained within
+       * &mr->value[start] 'till first '\0'
+       */
+	      
+      /* two possibilities for the mail address:
+       * (1) name <user@domain>
+       * (2) user@domain
+       * scan for '<' to determine which case we should be dealing with 
+       */
+
+      for (i=start, inquote=0; mr->value[i] && !(mr->value[i] == '<' && !inquote); i++) 
+	if (mr->value[i] == '\"') inquote ^= 1;
+
+      if (mr->value[i] && i>start+2)
+	{
+	  /* name is contained in &mr->value[start] untill &mr->value[i-2] */
+	  /* name might be quoted */
+	  if (mr->value[start] == '\"')
+	    fprintf(outstream, "\"%.*s\"", i-start-3,&mr->value[start+1]);
+	  else
+	    fprintf(outstream, "\"%.*s\"", i-start-1,&mr->value[start]);
+
+	  start = i+1; /* skip to after '<' */
+	}
+      else
+	fprintf(outstream, "NIL");
+
+      fprintf(outstream, " NIL "); /* source route ?? smtp at-domain-list ?? */
+
+      /* now display user domainname; &mr->value[start] is starting point */
+      fprintf(outstream, "\"");
+
+      /*
+       * added a check for whitespace within the address (not good)
+       */
+      for (i=start; mr->value[i] && mr->value[i] != '>' && !isspace(mr->value[i]); i++)
+	{
+	  if (mr->value[i] == '@')
+	    fprintf(outstream,"\" \"");
+	  else
+	    fprintf(outstream,"%c",mr->value[i]);
+	}
+
+      fprintf(outstream, "\"");
+		  
+      if (delimiter > 0)
+	mr->value[delimiter++] = ','; /* restore & prepare for next iteration */
+
+      fprintf(outstream, ")");
+
+    } while (delimiter > 0) ;
+	  
+  fprintf(outstream,")");
+
+  return 0;
+}
+
 
 
 /*
@@ -1321,6 +1345,33 @@ void clarify_data(char *str)
     }
 }      
      
+
+/*
+ * is_textplain()
+ *
+ * checks if content-type is text/plain
+ */
+int is_textplain(struct list *hdr)
+{
+  struct mime_record *mr;
+  int i,len;
+
+  if (!hdr)
+    return 0;
+
+  mime_findfield("content-type", hdr, &mr);
+
+  if (!mr)
+    return 0;
+
+  len = strlen(mr->value);
+  for (i=0; len-i >= sizeof("text/plain"); i++)
+    if (strncasecmp(&mr->value[i], "text/plain", sizeof("text/plain")-1) == 0)
+      return 1;
+  
+  return 0;
+}
+
 
 /*
  * convert a mySQL date (yyyy-mm-dd hh:mm:ss) to a valid IMAP internal date:

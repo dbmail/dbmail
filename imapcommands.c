@@ -1360,6 +1360,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
   int i,fetch_start,fetch_end,result,setseen,j,k;
   int isfirstout,idx,headers_fetched,uid_will_be_fetched;
   int partspeclen,only_text_from_msgpart = 0;
+  int expand_newlines=0;
   fetch_items_t *fi,fetchitem;
   mime_message_t msg,*msgpart;
   char date[IMAP_INTERNALDATE_LEN],*endptr;
@@ -1658,8 +1659,12 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
 	      if (fi->getRFC822)
 		{
+		  expand_newlines =
+		    (is_textplain(&msg.rfcheader) || is_textplain(&msg.mimeheader));
+
 		  dumpsize  = rfcheader_dump(tmpfile, &msg.rfcheader, args, 0, 0);
-		  dumpsize += db_dump_range(tmpfile, msg.bodystart, msg.bodyend, thisnum);
+		  dumpsize += db_dump_range(tmpfile, msg.bodystart, msg.bodyend, thisnum,
+					    expand_newlines);
 		  
 		  fseek(tmpfile, 0, SEEK_SET);
 
@@ -1672,8 +1677,12 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		  
 	      if (fi->getRFC822Peek)
 		{
+		  expand_newlines =
+		    (is_textplain(&msg.rfcheader) || is_textplain(&msg.mimeheader));
+
 		  dumpsize  = rfcheader_dump(tmpfile, &msg.rfcheader, args, 0, 0);
-		  dumpsize += db_dump_range(tmpfile, msg.bodystart, msg.bodyend, thisnum);
+		  dumpsize += db_dump_range(tmpfile, msg.bodystart, msg.bodyend, thisnum,
+					    expand_newlines);
 		  
 		  fseek(tmpfile, 0, SEEK_SET);
 
@@ -1691,8 +1700,12 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
 	      if (fi->getBodyTotal)
 		{
+		  expand_newlines =
+		    (is_textplain(&msg.rfcheader) || is_textplain(&msg.mimeheader));
+
 		  dumpsize  = rfcheader_dump(tmpfile, &msg.rfcheader, args, 0, 0);
-		  dumpsize += db_dump_range(tmpfile, msg.bodystart, msg.bodyend, thisnum);
+		  dumpsize += db_dump_range(tmpfile, msg.bodystart, msg.bodyend, thisnum,
+					    expand_newlines);
 		  
 		  fseek(tmpfile, 0, SEEK_SET);
 
@@ -1705,8 +1718,12 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
 	      if (fi->getBodyTotalPeek)
 		{
+		  expand_newlines =
+		    (is_textplain(&msg.rfcheader) || is_textplain(&msg.mimeheader));
+
 		  dumpsize  = rfcheader_dump(tmpfile, &msg.rfcheader, args, 0, 0);
-		  dumpsize += db_dump_range(tmpfile, msg.bodystart, msg.bodyend, thisnum);
+		  dumpsize += db_dump_range(tmpfile, msg.bodystart, msg.bodyend, thisnum,
+					    expand_newlines);
 		  
 		  fseek(tmpfile, 0, SEEK_SET);
 
@@ -1728,7 +1745,11 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	      
 	      if (fi->getRFC822Text)
 		{
-		  dumpsize = db_dump_range(tmpfile, msg.bodystart, msg.bodyend, thisnum);
+		  expand_newlines =
+		    (is_textplain(&msg.rfcheader) || is_textplain(&msg.mimeheader));
+
+		  dumpsize = db_dump_range(tmpfile, msg.bodystart, msg.bodyend, thisnum,
+					    expand_newlines);
 
 		  fprintf(ci->tx, "RFC822.TEXT {%ld}\r\n",dumpsize);
 		  while (dumpsize--)
@@ -1807,8 +1828,15 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			fprintf(ci->tx, "] NIL ");
 		      else
 			{
+			  /* check if newlines should be expanded to CRLF
+			   * (only for text/plain)
+			   */
+			  expand_newlines =
+			    (is_textplain(&msgpart->rfcheader) || is_textplain(&msgpart->mimeheader));
+			    
+			      
 			  dumpsize = db_dump_range(tmpfile, msgpart->bodystart, msgpart->bodyend,
-						   thisnum);
+						   thisnum, expand_newlines);
 
 			  if (fi->bodyfetch.octetstart >= 0)
 			    {

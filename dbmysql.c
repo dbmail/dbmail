@@ -1939,6 +1939,8 @@ int db_update_msgbuf(int minlen)
   if (minlen > 0 && (buflen-msgidx) > minlen)
     return 1;                                 /* ok, need no update */
       
+  if (msgidx == 0)
+    return 1;             /* update no use, buffer would not change */
 
   trace(TRACE_DEBUG,"update msgbuf updating %lu %lu %lu %lu\n",MSGBUF_WINDOWSIZE,
 	buflen,rowlength,rowpos);
@@ -2204,9 +2206,8 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 				&msg->rfcheader, &msg->rfcheadersize)) == -1)
     return -1;   /* error reading header */
 
-  totallines += nlines;
+/*  totallines += nlines;*/ /* dont count newlines in header... */
   db_give_msgpos(&msg->bodystart);
-  msgidx++;
 
   mime_findfield("content-type", &msg->rfcheader, &mr);
   if (mr && strncasecmp(mr->value,"multipart", strlen("multipart")) == 0)
@@ -2215,8 +2216,7 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 
       /* multipart msg, find new boundary */
       for (bptr = mr->value; *bptr; bptr++) 
-	if ((*bptr == 'b' || *bptr == 'B') && 
-	    strncasecmp(bptr, "boundary=", strlen("boundary=")) == 0)
+	if (strncasecmp(bptr, "boundary=", sizeof("boundary=")-1) == 0)
 	    break;
 
       if (!bptr)
@@ -2225,7 +2225,7 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 	  return -1; /* no new boundary ??? */
 	}
 
-      bptr += strlen("boundary=");
+      bptr += sizeof("boundary=")-1;
       if (*bptr == '\"')      
 	bptr++;
 
@@ -2310,7 +2310,7 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 		  msg->bodysize = db_give_range_size(&msg->bodystart, &msg->bodyend);
 		  
 		  /* advance to after stopbound */
-		  msgidx += sblen+2;
+		  msgidx += sblen+2; /* (add 2 cause double hyphen preceeds) */
 		  while (isspace(msgbuf[msgidx]))
 		    {
 		      if (msgbuf[msgidx] == '\n') totallines++;
@@ -2395,10 +2395,6 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
 	    }
 	  totallines += nlines;
 	  part.bodylines = nlines;
-
-	  /* skip boundary */
-	  msgidx += 2; /* double hyphen preceeds boundary */
-	  msgidx += strlen(splitbound);
 
 	}
       else
@@ -2549,7 +2545,8 @@ int db_msgdump(mime_message_t *msg, unsigned long msguid)
  *
  * returns -1 on error or the number of output bytes otherwise
  */
-long db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long msguid)
+long db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long msguid,
+		   int expand_newlines)
 {
   char query[DEF_QUERYSIZE];
   int i,startpos,endpos,j;
@@ -2601,13 +2598,18 @@ long db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long 
   if (start.block == end.block)
     {
       /* dump everything */
-      for (i=start.pos; i<=end.pos; i++)
+      if (expand_newlines)
 	{
-	  if (row[0][i] == '\n')
-	    outcnt += fprintf(outstream,"\r\n");
-	  else
-	    outcnt += fprintf(outstream,"%c",row[0][i]);
+	  for (i=start.pos; i<=end.pos; i++)
+	    {
+	      if (row[0][i] == '\n')
+		outcnt += fprintf(outstream,"\r\n");
+	      else
+		outcnt += fprintf(outstream,"%c",row[0][i]);
+	    }
 	}
+      else
+	outcnt += fwrite(&row[0][start.pos], 1, end.pos-start.pos+1, outstream);
 
       mysql_free_result(res);
       return outcnt;
@@ -2620,7 +2622,6 @@ long db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long 
   
   for (i=start.block, outcnt=0; i<=end.block; i++)
     {
-      row = mysql_fetch_row(res);
       if (!row)
 	{
 	  trace(TRACE_ERROR,"db_dump_range(): bad range specified\n");
@@ -2634,13 +2635,20 @@ long db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long 
       distance = endpos - startpos;
 
       /* output */
-      for (j=0; j<distance; j++)
+      if (expand_newlines)
 	{
-	  if (row[0][startpos+j] == '\n')
-	    outcnt += fprintf(outstream,"\r\n");
-	  else
-	    outcnt += fprintf(outstream,"%c", row[0][startpos+j]);
+	  for (j=0; j<distance; j++)
+	    {
+	      if (row[0][startpos+j] == '\n')
+		outcnt += fprintf(outstream,"\r\n");
+	      else
+		outcnt += fprintf(outstream,"%c", row[0][startpos+j]);
+	    }
 	}
+      else
+	outcnt += fwrite(&row[0][start.pos], 1, distance, outstream);
+	
+      row = mysql_fetch_row(res); /* fetch next row */
     }
 
   mysql_free_result(res);
