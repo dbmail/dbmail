@@ -1,7 +1,4 @@
-#include <stdio.h>
-#include <string.h>
-#include "dbmysql.h"
-#include "config.h"
+#include "settings.h"
 
 #define LINE_BUFFER_SIZE 255
 
@@ -14,12 +11,24 @@ main (int argc, char *argv[])
 	readbuf = (char *)malloc(LINE_BUFFER_SIZE);
 	
 	printf("*** dbmail-config ***\n\n");
+	if (argc<2)
+	{
+		printf("Usage: %s <configurationfile>   Reads in dbmail configuration\n\n",argv[0]);
+		return 0;
+	}
+
+	if (db_connect()==-1)
+	{
+		printf ("Could not connect to database.\n");
+		return -1;
+	}
+	
 	printf("reading configuration for %s...\n", argv[1]);
 	configfile = fopen(argv[1],"r"); /* open the configuration file */
 	if (configfile == NULL) /* error test */
 	{
 		fprintf (stderr,"Error: can not open input file %s\n",argv[1]);
-		exit(8);
+		return 8;
 	}
 	
 	i = 0;
@@ -41,9 +50,10 @@ main (int argc, char *argv[])
 				{
 					*value='\0';
 					value++;
-					/* while ((value[0] != '\0') && ((value[0] == ' ') || (value[0] == '=')))
-						value++; */
-					fprintf (stdout,"FIELD [%s], VALUE [%s]\n",field, value);
+					if (db_insert_config_item (field, value) != 0)
+						fprintf (stderr,"error in line:%d, could not insert item\n",i);
+					else 
+						printf ("%s is now set to %s\n",field,value);
 				}
 			}
 		}

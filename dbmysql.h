@@ -108,6 +108,7 @@ typedef struct
 int db_connect();
 int db_query (char *query);
 int db_check_user (char *username, struct list *userids);
+int db_insert_config_item (char *item, char *value);
 unsigned long db_get_inboxid (unsigned long *useridnr);
 unsigned long db_get_useridnr (unsigned long messageidnr);
 unsigned long db_get_message_mailboxid (unsigned long *messageidnr);

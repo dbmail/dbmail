@@ -68,4 +68,26 @@ CREATE TABLE messageblk (
    UNIQUE messageblknr_2 (messageblknr)
 ) TYPE=MyISAM;
 
+CREATE TABLE config (
+	configid int(11) DEFAULT '0' NOT NULL,
+	TRACE_LEVEL tinyint(1) default '2' not null,
+	TRACE_TO_SYSLOG tinyint(1) default '1' not null,
+	TRACE_VERBOSE tinyint(1) default '0' not null,
+	SENDMAIL varchar(250) default '/usr/sbin/sendmail' not null,
+	DBMAIL_FROM_ADDRESS varchar(250) default 'dbmail' not null,
+	POSTMASTER varchar(250) default 'dbmail' not null,
+	POP3D_EFFECTIVE_USER varchar(250) default 'nobody' not null,
+	POP3D_EFFECTIVE_GROUP varchar(250) default 'nobody' not null,
+	POP3D_BIND_IP varchar(50) default '*' not null,
+	POP3D_BIND_PORT int(11) default '110' not null,
+	POP3D_DEFAULT_CHILD int (11) default '5' not null,
+	POP3D_MAX_CHILD int (11) default '10' not null,
+	IMAPD_EFFECTIVE_USER varchar(250) default 'nobody' not null,
+	IMAPD_EFFECTIVE_GROUP varchar(250) default 'nobody' not null,
+	IMAPD_BIND_IP varchar(50) default '*' not null,
+	IMAPD_BIND_PORT int(11) default '143' not null,
+	IMAPD_DEFAULT_CHILD int(11) default '5' not null,
+	IMAPD_MAX_CHILD int(11) default '10' not null
+);
 
+INSERT INTO config (configid) values (0);

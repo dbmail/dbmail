@@ -9,6 +9,7 @@ IMAP_OBJECTS = imap4.o debug.o dbmysql.o serverservice.o list.o dbmd5.o md5.o im
 imapcommands.o mime.o
 DUMP_OBJECTS = debug.o dbmysql.o list.o dbmd5.o md5.o mime.o sstack.o
 MAINTENANCE_OBJECTS = debug.o list.o dbmd5.o md5.o dbmysql.o mime.o  
+CONFIG_OBJECTS = dbmysql.o list.o md5.o debug.o dbmd5.o mime.o
 CC = cc
 
 MYSQLLIBDIR=/usr/local/lib/mysql
@@ -23,7 +24,7 @@ CFLAGS = -Wall -ggdb -D_BSD_SOURCE
 
 .PHONY: clean install
 
-all: smtp pop3d maintenance imapd
+all: smtp pop3d maintenance config imapd
 
 dump: dbmysql.h dumpmsg.c $(DUMP_OBJECTS)
 	$(CC) $(CFLAGS) dumpmsg.c -o dumpmsg $(DUMP_OBJECTS) $(LIBS) $(LIB)
@@ -41,6 +42,9 @@ imapd: imap4.h $(IMAP_OBJECTS) imapd.c
 maintenance: maintenance.h $(MAINTENANCE_OBJECTS) maintenance.c
 	$(CC) maintenance.c -o dbmail-maintenance $(MAINTENANCE_OBJECTS) $(LIBS) $(LIB)
 
+config: $(CONFIG_OBJECTS) settings.c
+	$(CC) settings.c -o dbmail-config $(CONFIG_OBJECTS) $(LIBS) $(LIB)
+
 dumpmsg.o: dbmysql.h
 list.o: list.h
 debug.o: debug.h
@@ -57,9 +61,10 @@ imaputil.o: imaputil.h
 imapcommands.o: imapcommands.h imaputil.h
 serverservice.o: serverservice.h debug.h
 maintenance.o: maintenance.h
+settings.o: settings.h
 
 distclean: clean
-	rm -rf dbmail-smtp dbmail-pop3d dbmail-maintenance dbmail-imapd
+	rm -rf dbmail-smtp dbmail-pop3d dbmail-maintenance dbmail-imapd dbmail-config
 
 clean:
 	rm -f *.o core

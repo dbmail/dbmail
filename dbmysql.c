@@ -101,6 +101,27 @@ int db_query (char *query)
   return 0;
 }
 
+int db_insert_config_item (char *item, char *value)
+{
+	/* insert_config_item will insert a configuration item in the database */
+	
+	char *ckquery;
+
+	/* allocating memory for query */
+	memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
+	
+	sprintf (ckquery, "UPDATE config SET %s=\"%s\"",item, value);
+	trace (TRACE_DEBUG,"insert_config_item(): executing query: [%s]",ckquery);
+
+	if (db_query(ckquery)==-1)
+	{
+		trace (TRACE_DEBUG,"insert_config_item(): item [%s] value [%s] failed",item,value);
+		return -1;
+	}
+	else 
+		return 0;
+}
+
 unsigned long db_get_inboxid (unsigned long *useridnr)
 {
 	/* returns the mailbox id (of mailbox inbox) for a user or a 0 if no mailboxes were found */
