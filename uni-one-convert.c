@@ -106,13 +106,15 @@ int traverse (char *path)
 	  fflush(stdout);
 	  n = process_mboxfile(path, userid);
 	  if (n != 0)
-	    {
-	      
-	    }
+	    printf("Warning: error converting mailbox\n");
+	  else
+	    printf ("done :)\n");
 	}  
-	  
+      else
+	{
+	  printf("user already exists. Skipping\n");
+	}
 	
-      printf ("done :)\n");
     }
   else
     {
