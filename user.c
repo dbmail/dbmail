@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
 	
   printf ("\n*** dbmail-adduser ***\n");
 	
-  if (argc<3)
+  if (argc<2)
     {
       show_help();
       return 0;
@@ -139,6 +139,17 @@ int do_change(int argc, char *argv[])
       
       switch (argv[i][1])
 	{
+	case 'u':
+	  /* change the name */
+	  if (!is_valid(argv[i+1]))
+	    printf("\nWarning: username contains invalid characters. Username not updated.");
+
+	  if (db_change_username(userid,argv[i+1]) != 0)
+	    printf("\nWarning: could not change username");
+
+	  i++;
+	  break;
+
 	case 'p':
 	  /* change the password */
 	  if (!is_valid(argv[i+1]))
@@ -230,29 +241,61 @@ int do_delete(char *name)
 int do_show(char *name)
 {
   unsigned long userid,cid,quotum;
+  struct list userlist;
+  struct element *tmp;
 
-  printf("Info for user [%s]\n",name);
-
-  userid = db_user_exists(name);
-  if (userid == -1)
+  if (!name)
     {
-      printf("Error verifying existence of user [%s]. Please check the log.\n",name);
-      return -1;
-    }
+      /* show all users */
+      printf("Existing users:\n");
+      db_get_known_users(&userlist);
+      
+      tmp = list_getstart(&userlist);
+      while (tmp)
+	{
+	  printf("[%s]\n", (char*)tmp->data);
+	  tmp = tmp->nextnode;
+	}
 
-  if (userid == 0)
+      if (userlist.start)
+	list_freelist(&userlist.start);
+    }
+  else
     {
-      printf("Error: user [%s] does not exist.\n",name);
-      return -1;
+      printf("Info for user [%s]\n",name);
+
+      userid = db_user_exists(name);
+      if (userid == -1)
+	{
+	  printf("Error verifying existence of user [%s]. Please check the log.\n",name);
+	  return -1;
+	}
+
+      if (userid == 0)
+	{
+	  printf("Error: user [%s] does not exist.\n",name);
+	  return -1;
+	}
+
+      cid = db_getclientid(userid);
+      quotum = db_getmaxmailsize(userid);
+
+      printf("Client ID: %lu\n",cid);
+      printf("Max. mailboxsize: %lu bytes\n",quotum);
+
+      printf("Aliases:\n");
+      db_get_user_aliases(userid, &userlist);
+
+      tmp = list_getstart(&userlist);
+      while (tmp)
+	{
+	  printf("%s\n",(char*)tmp->data);
+	  tmp = tmp->nextnode;
+	}
+
+      if (userlist.start)
+	list_freelist(&userlist.start);
     }
-
-  cid = db_getclientid(userid);
-  quotum = db_getmaxmailsize(userid);
-
-  printf("Client ID: %lu\n",cid);
-  printf("Max. mailboxsize: %lu bytes\n",quotum);
-
-  printf("Aliases:\n");
 
   return 0;
 }
@@ -275,6 +318,6 @@ void show_help()
 
   printf("Use this program to manage the users for your dbmail system.\n");
   printf("See the man page for more info. Summary:\n\n");
-  printf("dbmail-adduser <a|d|c|s> <username> [options...]\n\n");
+  printf("dbmail-adduser <a|d|c|s> [username] [options...]\n\n");
 
 }

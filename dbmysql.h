@@ -147,6 +147,8 @@ int db_connect();
 int db_disconnect();
 int db_query (const char *query);
 unsigned long db_user_exists(const char *username);
+int db_get_known_users(struct list *users);
+int db_get_user_aliases(unsigned long userid, struct list *aliases);
 unsigned long db_getclientid(unsigned long useridnr);
 unsigned long db_getmaxmailsize(unsigned long useridnr);
 
@@ -168,6 +170,7 @@ unsigned long db_update_message (unsigned long *messageidnr, char *unique_id,
 				 unsigned long messagesize);
 unsigned long db_insert_message_block (char *block, int messageidnr);
 
+int db_change_username(unsigned long useridnr, const char *newname);
 int db_change_password(unsigned long useridnr, const char *newpass);
 int db_change_clientid(unsigned long useridnr, unsigned long newcid);
 int db_change_mailboxsize(unsigned long useridnr, unsigned long newsize);

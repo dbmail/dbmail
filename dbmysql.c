@@ -740,6 +740,88 @@ unsigned long db_user_exists(const char *username)
 }
 
 
+/* return a list of existing users. -2 on mem error, -1 on db-error, 0 on succes */
+int db_get_known_users(struct list *users)
+{
+  if (!users)
+    {
+      trace(TRACE_ERROR,"db_get_known_users(): got a NULL pointer as argument\n");
+      return -2;
+    }
+
+  list_init(users);
+
+  /* do a inverted (DESC) query because adding the names to the final list inverts again */
+  snprintf(query, DEF_QUERYSIZE, "SELECT userid FROM user ORDER BY userid DESC");
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR,"db_get_known_users(): could not retrieve user list\n");
+      return -1;
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL) 
+    {
+      trace(TRACE_ERROR,"db_get_known_users(): mysql_store_result failed: %s",mysql_error(&conn));
+      return -1;
+    }
+  
+  while ((row = mysql_fetch_row(res)))
+    {
+      if (!list_nodeadd(users, row[0], strlen(row[0])+1))
+	{
+	  list_freelist(&users->start);
+	  return -2;
+	}
+    }
+      
+  mysql_free_result(res);
+  return 0;
+}
+
+
+/* get a list of aliases associated with user userid */
+/* return -1 on db error, -2 on mem error, 0 on succes */
+int db_get_user_aliases(unsigned long userid, struct list *aliases)
+{
+  if (!aliases)
+    {
+      trace(TRACE_ERROR,"db_get_user_aliases(): got a NULL pointer as argument\n");
+      return -2;
+    }
+
+  list_init(aliases);
+
+  /* do a inverted (DESC) query because adding the names to the final list inverts again */
+  snprintf(query, DEF_QUERYSIZE, "SELECT alias FROM aliases WHERE deliver_to = '%lu' ORDER BY alias "
+	   "DESC", userid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR,"db_get_user_aliases(): could not retrieve  list\n");
+      return -1;
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL) 
+    {
+      trace(TRACE_ERROR,"db_get_user_aliases(): mysql_store_result failed: %s",mysql_error(&conn));
+      return -1;
+    }
+  
+  while ((row = mysql_fetch_row(res)))
+    {
+      if (!list_nodeadd(aliases, row[0], strlen(row[0])+1))
+	{
+	  list_freelist(&aliases->start);
+	  return -2;
+	}
+    }
+      
+  mysql_free_result(res);
+  return 0;
+}
+
+
 unsigned long db_getclientid(unsigned long useridnr)
 {
   unsigned long cid;
@@ -1483,6 +1565,21 @@ unsigned long db_set_deleted ()
  
   
   return mysql_affected_rows(&conn);
+}
+
+
+int db_change_username(unsigned long useridnr, const char *newname)
+{
+  snprintf(query, DEF_QUERYSIZE, "UPDATE user SET userid = '%s' WHERE useridnr=%lu", 
+	   newname, useridnr);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR,"db_change_username(): could not change name for user [%lu]\n",useridnr);
+      return -1;
+    }
+
+  return 0;
 }
 
 

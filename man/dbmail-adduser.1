@@ -8,38 +8,78 @@ Adds mailusers to the \fBDbmail\fR mailsystem
 .SH SYNOPSIS
 .na
 .nf
-\fBdbmail-adduser\fR \fIa\fR \fIusername\fR \fIpassword\fR \fIclientid\fR \fImaxmail\fR \fI[aliases]\fR 
+\fBdbmail-adduser\fR \fIa\fR \fIusername\fR \fIpassword\fR \fIclientid\fR \fImaxmail\fR [\fIaliases\fR]
+\fBdbmail-adduser\fR \fId\fR \fIusername\fR
+\fBdbmail-adduser\fR \fIc\fR \fIusername\fR [\fI-u username\fR] [\fI-p password\fR] [\fI-c clientid\fR] [\fI-q maxmail\fR] [\fI+a alias\fR] [\fI-a alias\fR]
+\fBdbmail-adduser\fR \fIs\fR [\fIusername\fR]
+
 .SH DESCRIPTION
 .ad
 .fi
 The \fBdbmail-adduser\fR program enables you to manage the \fBDbmail\fR users. 
-It lets you add, delete and change users as well as show information about a specific user.
+It lets you add, delete and change users as well as show information about a specific user or display
+a list of existing users.
 
 Options:
 .TP
 .BI \fIa\fR
 Add a user. Options:
-.TP
+
 .BI \fIusername\fR
 The username of the user to be added. This username is used for access and authentication (through pop3 or imap4).
-.TP
+
 .BI \fIpassword\fR 
 Cleartext password for user.
-.TP
+
 .BI \fIclientid\fR 
 This option enables users to be grouped. \fIclientid\fR specifies the owner of the user.
-.TP
+
 .BI \fImaxmail\fR 
-The maximum number of bytes that this user is allowed to have in her/his mailbox(es).
+The maximum number of bytes that this user is allowed to have in her/his mailbox(es). Size is in bytes, kilobytes (if the specified size is followed by a 'k') or megabytes (if the specified size is followed by a 'M')
 If set to 0, there will be no limit.
-.TP
-.BI \fI[aliases]\fR 
+
+.BI [\fIaliases\fR] 
 Aliases for this user (user@domain.com). An alias is an e-mail address that is being 
 delivered to the \fBDbmail\fR mailsystem and needs to be delivered to this user.
+
+.TP
+.BI \fId\fR
+Delete a user specified by \fIusername\fR
+
+.TP
+.BI \fIc\fR
+Change one or more user data items. Options:
+
+.BI \fIusername\fR
+The name of user whose data needs to be changed.
+
+.BI [\fI-u\ username\fR]
+The new username for this user.
+
+.BI [\fI-p\ password\fR]
+The new (cleartext) password for this user.
+
+.BI [\fI-c\ clientid\fR]
+The new client-ID for this user.
+
+.BI [\fI-q\ maxmail\fR]
+The new mailquotum for this user. Size is in bytes, kilobytes (if the specified size is followed by a 'k') or megabytes (if the specified size is followed by a 'M').
+If set to 0, there will be no limit.
+
+.BI [\fI+a\ alias\fR] 
+Add \fIalias\fR for this user.
+
+.BI [\fI-a\ alias\fR] 
+Remove \fIalias\fR for this user.
+
+.TP
+.BI \fIs\fR
+Display a list of existing users or information on the user specified by \fIusername\fR (if specified).
+
 .SH EXAMPLES
 .TP
 .BI
-\fBdbmail-adduser\fR foo secret 0 0 foo@bar.net foo@bar.org
+\fBdbmail-adduser\fR a foo secret 0 0 foo@bar.net foo@bar.org
 This will add a user foo with password secret. This user will not have any limit on the mail
 she/he will receive. E-mail to foo@bar.net and foo@bar.org are delivered to this user (user foo).
 .SH DIAGNOSTICS

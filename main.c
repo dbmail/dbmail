@@ -29,6 +29,7 @@ unsigned long headersize;
 int main (int argc, char *argv[]) 
 {
   struct list returnpath; /* returnpath (should aways be just 1 hop */
+  unsigned long dummyidx=0,dummysize=0;
 
   openlog(PNAME, LOG_PID, LOG_MAIL);
 
@@ -80,7 +81,7 @@ int main (int argc, char *argv[])
 
 
   /* parse the list and scan for field and content */
-  if (mime_list(header, &mimelist) == -1)
+  if (mime_readheader(header, &dummyidx, &mimelist, &dummysize) < 0)
     trace(TRACE_STOP,"main(): fatal error creating MIME-header list\n");
 
   list_init(&returnpath);
