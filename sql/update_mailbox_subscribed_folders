@@ -1,0 +1,8 @@
+# will add a column 'is_subscribed' to mailbox table
+# non-zero value means a subscribed folder
+# zero means not subscribed
+
+use dbmail;
+
+ALTER TABLE mailbox ADD is_subscribed TINYINT(1) default 0 NOT NULL;
+
