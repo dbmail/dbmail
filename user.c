@@ -102,7 +102,9 @@ struct change_flags {
 int do_add(const char * const user,
            const char * const password,
            const char * const enctype,
-           const u64_t maxmail, const u64_t clientid);
+           const u64_t maxmail, const u64_t clientid,
+	   struct list * const alias_add,
+	   struct list * const alias_del);
 int do_delete(const char * const user);
 int do_show(const char * const user);
 int do_empty(const u64_t useridnr);
@@ -463,7 +465,8 @@ int main(int argc, char *argv[])
 
 	switch (mode) {
 	case 'a':
-		result = do_add(user, password, enctype, maxmail, clientid);
+		result = do_add(user, password, enctype, maxmail, clientid,
+				&alias_add, &alias_del);
 		break;
 	case 'd':
 		result = do_delete(user);
@@ -520,7 +523,9 @@ freeall:
 
 int do_add(const char * const user,
            const char * const password, const char * const enctype,
-           const u64_t maxmail, const u64_t clientid)
+           const u64_t maxmail, const u64_t clientid,
+	   struct list * const alias_add,
+	   struct list * const alias_del)
 {
 	u64_t useridnr;
 	u64_t mailbox_idnr;
@@ -571,6 +576,9 @@ int do_add(const char * const user,
 		result = 0;
 		break;
 	} 
+
+	if(do_aliases(useridnr, alias_add, alias_del) < 0)
+		result = -1;
 
 	return result;
 }

@@ -1,5 +1,7 @@
 2004-08-24  Ilja Booij  <ilja@ic-s.nl>
 
+	* user.c (do_add): now adds aliases if needed.
+
 	* acl.c (acl_has_right): adapted function to also check for rights
 	of 'anyone' user. This code also functions if there's no anyone
 	user in the database, it just won't find any rights for the anyone
