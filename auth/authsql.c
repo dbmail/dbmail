@@ -90,7 +90,7 @@ int auth_user_exists(const char *username, u64_t * user_idnr)
 	*user_idnr = 0;
 	if (!username) {
 		trace(TRACE_ERROR, "%s,%s: got NULL as username",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return 0;
 	}
 
@@ -100,7 +100,7 @@ int auth_user_exists(const char *username, u64_t * user_idnr)
 
 	if (__auth_query(__auth_query_data) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not execute query",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return -1;
 	}
 
@@ -122,7 +122,7 @@ int auth_get_known_users(struct list *users)
 
 	if (!users) {
 		trace(TRACE_ERROR, "%s,%s: got a NULL pointer as argument",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return -2;
 	}
 
@@ -135,7 +135,7 @@ int auth_get_known_users(struct list *users)
 
 	if (__auth_query(__auth_query_data) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not retrieve user list",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return -1;
 	}
 
@@ -168,7 +168,7 @@ int auth_getclientid(u64_t user_idnr, u64_t * client_idnr)
 	if (__auth_query(__auth_query_data) == -1) {
 		trace(TRACE_ERROR,
 		      "%s,%s: could not retrieve client id for user [%llu]\n",
-		      __FILE__, __FUNCTION__, user_idnr);
+		      __FILE__, __func__, user_idnr);
 		return -1;
 	}
 
@@ -198,7 +198,7 @@ int auth_getmaxmailsize(u64_t user_idnr, u64_t * maxmail_size)
 	if (__auth_query(__auth_query_data) == -1) {
 		trace(TRACE_ERROR,
 		      "%s,%s: could not retrieve client id for user [%llu]",
-		      __FILE__, __FUNCTION__, user_idnr);
+		      __FILE__, __func__, user_idnr);
 		return -1;
 	}
 
@@ -227,7 +227,7 @@ char *auth_getencryption(u64_t user_idnr)
 		 * or this user does not exist (0)
 		 */
 		trace(TRACE_ERROR, "%s,%s: got (%lld) as userid",
-		      __FILE__, __FUNCTION__, user_idnr);
+		      __FILE__, __func__, user_idnr);
 		return __auth_encryption_desc_string;	/* return empty */
 	}
 
@@ -238,7 +238,7 @@ char *auth_getencryption(u64_t user_idnr)
 	if (__auth_query(__auth_query_data) == -1) {
 		trace(TRACE_ERROR,
 		      "%s,%s: could not retrieve encryption type for user [%llu]",
-		      __FILE__, __FUNCTION__, user_idnr);
+		      __FILE__, __func__, user_idnr);
 		return __auth_encryption_desc_string;	/* return empty */
 	}
 
@@ -264,7 +264,7 @@ int auth_check_user(const char *username, struct list *userids, int checks)
 	const char *query_result;
 
 	trace(TRACE_DEBUG, "%s,%s: checking user [%s] in alias table",
-	      __FILE__, __FUNCTION__, username);
+	      __FILE__, __func__, username);
 
 	saveres = db_get_result_set();
 	db_set_result_set(NULL);
@@ -273,14 +273,14 @@ int auth_check_user(const char *username, struct list *userids, int checks)
 		trace(TRACE_ERROR,
 		      "%s,%s: maximum checking depth reached, "
 		      "there probably is a loop in your alias table",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return -1;
 	}
 
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
 		 "SELECT deliver_to FROM aliases WHERE "
 		 "lower(alias) = lower('%s')", username);
-	trace(TRACE_DEBUG, "%s,%s: checks [%d]", __FILE__, __FUNCTION__,
+	trace(TRACE_DEBUG, "%s,%s: checks [%d]", __FILE__, __func__,
 	      checks);
 
 	if (__auth_query(__auth_query_data) == -1) {
@@ -298,14 +298,14 @@ int auth_check_user(const char *username, struct list *userids, int checks)
 				     strlen(username) + 1);
 			trace(TRACE_DEBUG,
 			      "%s,%s: adding [%s] to deliver_to address",
-			      __FILE__, __FUNCTION__, username);
+			      __FILE__, __func__, username);
 			db_free_result();
 			db_set_result_set(saveres);
 			return 1;
 		} else {
 			trace(TRACE_DEBUG,
 			      "%s,%s: user %s not in aliases table",
-			      __FILE__, __FUNCTION__, username);
+			      __FILE__, __func__, username);
 			db_free_result();
 			db_set_result_set(saveres);
 			return 0;
@@ -313,14 +313,14 @@ int auth_check_user(const char *username, struct list *userids, int checks)
 	}
 
 	trace(TRACE_DEBUG, "%s,%s: into checking loop", __FILE__,
-	      __FUNCTION__);
+	      __func__);
 
 	if (num_rows > 0) {
 		for (counter = 0; counter < num_rows; counter++) {
 			/* do a recursive search for deliver_to */
 			query_result = db_get_result(counter, 0);
 			trace(TRACE_DEBUG, "%s,%s: checking user %s to %s",
-			      __FILE__, __FUNCTION__, username,
+			      __FILE__, __func__, username,
 			      query_result);
 
 			r = auth_check_user(query_result, userids,
@@ -365,12 +365,12 @@ int auth_check_user_ext(const char *username, struct list *userids,
 	db_set_result_set(NULL);
 
 	trace(TRACE_DEBUG, "%s,%s: checking user [%s] in alias table",
-	      __FILE__, __FUNCTION__, username);
+	      __FILE__, __func__, username);
 
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
 		 "SELECT deliver_to FROM aliases "
 		 "WHERE lower(alias) = lower('%s')", username);
-	trace(TRACE_DEBUG, "%s,%s: checks [%d]", __FILE__, __FUNCTION__,
+	trace(TRACE_DEBUG, "%s,%s: checks [%d]", __FILE__, __func__,
 	      checks);
 
 	if (__auth_query(__auth_query_data) == -1) {
@@ -395,14 +395,14 @@ int auth_check_user_ext(const char *username, struct list *userids,
 
 			trace(TRACE_DEBUG,
 			      "%s,%s: adding [%s] to deliver_to address",
-			      __FILE__, __FUNCTION__, username);
+			      __FILE__, __func__, username);
 			db_free_result();
 			db_set_result_set(saveres);
 			return 1;
 		} else {
 			trace(TRACE_DEBUG,
 			      "%s,%s: user %s not in aliases table",
-			      __FILE__, __FUNCTION__, username);
+			      __FILE__, __func__, username);
 			db_free_result();
 			db_set_result_set(saveres);
 			return 0;
@@ -410,14 +410,14 @@ int auth_check_user_ext(const char *username, struct list *userids,
 	}
 
 	trace(TRACE_DEBUG, "%s,%s: into checking loop", __FILE__,
-	      __FUNCTION__);
+	      __func__);
 
 	if (num_rows > 0) {
 		for (counter = 0; counter < num_rows; counter++) {
 			/* do a recursive search for deliver_to */
 			query_result = db_get_result(counter, 0);
 			trace(TRACE_DEBUG, "%s,%s: checking user %s to %s",
-			      __FILE__, __FUNCTION__, username,
+			      __FILE__, __func__, username,
 			      query_result);
 			occurences +=
 			    auth_check_user_ext(query_result, userids,
@@ -434,7 +434,7 @@ int __auth_query(const char *thequery)
 	/* start using authentication result */
 	if (db_query(thequery) < 0) {
 		trace(TRACE_ERROR, "%s,%s: error executing query",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return -1;
 	}
 	return 0;
@@ -458,14 +458,14 @@ int auth_adduser(char *username, char *password, char *enctype,
 	if (__auth_query(__auth_query_data) == -1) {
 		/* query failed */
 		trace(TRACE_ERROR, "%s,%s: query failed",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return -1;
 	}
 
 	if (db_num_rows() > 0) {
 		/* this username already exists */
 		trace(TRACE_ERROR, "%s,%s: user already exists",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		db_free_result();
 		return -1;
 	}
@@ -484,7 +484,7 @@ int auth_adduser(char *username, char *password, char *enctype,
 
 	if (strlen(password) >= AUTH_QUERY_SIZE) {
 		trace(TRACE_ERROR, "%s,%s: password length is insane",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return -1;
 	}
 
@@ -500,7 +500,7 @@ int auth_adduser(char *username, char *password, char *enctype,
 	if (__auth_query(__auth_query_data) == -1) {
 		/* query failed */
 		trace(TRACE_ERROR, "%s,%s: query for adding user failed",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return -1;
 	}
 	*user_idnr = __auth_insert_result("user_idnr");
@@ -516,7 +516,7 @@ int auth_delete_user(const char *username)
 	if (__auth_query(__auth_query_data) == -1) {
 		/* query failed */
 		trace(TRACE_ERROR, "%s,%s: query for removing user failed",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return -1;
 	}
 
@@ -532,7 +532,7 @@ int auth_change_username(u64_t user_idnr, const char *new_name)
 	if (__auth_query(__auth_query_data) == -1) {
 		trace(TRACE_ERROR,
 		      "%s,%s: could not change name for user [%llu]",
-		      __FILE__, __FUNCTION__, user_idnr);
+		      __FILE__, __func__, user_idnr);
 		return -1;
 	}
 
@@ -550,7 +550,7 @@ int auth_change_password(u64_t user_idnr, const char *new_pass,
 	if (__auth_query(__auth_query_data) == -1) {
 		trace(TRACE_ERROR,
 		      "%s,%s: could not change passwd for user [%llu]",
-		      __FILE__, __FUNCTION__, user_idnr);
+		      __FILE__, __func__, user_idnr);
 		return -1;
 	}
 
@@ -566,7 +566,7 @@ int auth_change_clientid(u64_t user_idnr, u64_t new_cid)
 	if (__auth_query(__auth_query_data) == -1) {
 		trace(TRACE_ERROR,
 		      "%s,%s: could not change client id for user [%llu]",
-		      __FILE__, __FUNCTION__, user_idnr);
+		      __FILE__, __func__, user_idnr);
 		return -1;
 	}
 
@@ -582,7 +582,7 @@ int auth_change_mailboxsize(u64_t user_idnr, u64_t new_size)
 	if (__auth_query(__auth_query_data) == -1) {
 		trace(TRACE_ERROR,
 		      "%s,%s: could not change maxmailsize for user [%llu]",
-		      __FILE__, __FUNCTION__, user_idnr);
+		      __FILE__, __func__, user_idnr);
 		return -1;
 	}
 
@@ -603,7 +603,7 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 
 	if (username == NULL || password == NULL) {
 		trace(TRACE_DEBUG, "%s,%s: username or password is NULL",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return 0;
 	}
 
@@ -616,7 +616,7 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 	if (!(escuser = (char *) malloc(strlen(username) * 2 + 1))) {
 		trace(TRACE_ERROR,
 		      "%s,%s: out of memory allocating for escaped userid",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return -1;
 	}
 
@@ -629,7 +629,7 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 	if (__auth_query(__auth_query_data) == -1) {
 		trace(TRACE_ERROR,
 		      "%s,%s: could not select user information", __FILE__,
-		      __FUNCTION__);
+		      __func__);
 		my_free(escuser);
 		return -1;
 	}
@@ -647,7 +647,7 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 	if (!query_result || strcasecmp(query_result, "") == 0) {
 		trace(TRACE_DEBUG,
 		      "%s,%s: validating using cleartext passwords",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		/* get password from database */
 		query_result = db_get_result(0, 1);
 		is_validated =
@@ -655,7 +655,7 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 	} else if (strcasecmp(query_result, "crypt") == 0) {
 		trace(TRACE_DEBUG,
 		      "%s,%s: validating using crypt() encryption",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		query_result = db_get_result(0, 1);
 		is_validated = (strcmp((const char *) crypt(password, query_result),	/* Flawfinder: ignore */
 				       query_result) == 0) ? 1 : 0;
@@ -665,7 +665,7 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 		if (strncmp(query_result, "$1$", 3)) {
 			trace(TRACE_DEBUG,
 			      "%s,%s: validating using MD5 digest comparison",
-			      __FILE__, __FUNCTION__);
+			      __FILE__, __func__);
 			/* redundant statement: query_result = db_get_result(0, 1); */
 			is_validated =
 			    (strncmp(makemd5(password), query_result, 32)
@@ -673,16 +673,16 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 		} else {
 			trace(TRACE_DEBUG,
 			      "%s, %s: validating using MD5 hash comparison",
-			      __FILE__, __FUNCTION__);
+			      __FILE__, __func__);
 			strncpy(salt, query_result, 12);
 			strncpy(cryptres, (char *) crypt(password, query_result), 34);	/* Flawfinder: ignore */
 
 			trace(TRACE_DEBUG, "%s,%s: salt   : %s",
-			      __FILE__, __FUNCTION__, salt);
+			      __FILE__, __func__, salt);
 			trace(TRACE_DEBUG, "%s,%s: hash   : %s",
-			      __FILE__, __FUNCTION__, query_result);
+			      __FILE__, __func__, query_result);
 			trace(TRACE_DEBUG, "%s,%s: crypt(): %s",
-			      __FILE__, __FUNCTION__, cryptres);
+			      __FILE__, __func__, cryptres);
 
 			is_validated =
 			    (strncmp(query_result, cryptres, 34) ==
@@ -691,7 +691,7 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 	} else if (strcasecmp(query_result, "md5sum") == 0) {
 		trace(TRACE_DEBUG,
 		      "%s,%s: validating using MD5 digest comparison",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		query_result = db_get_result(0, 1);
 		is_validated =
 		    (strncmp(makemd5(password), query_result, 32) ==
@@ -715,7 +715,7 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 		if (__auth_query(__auth_query_data) == -1)
 			trace(TRACE_ERROR,
 			      "%s,%s: could not update user login time",
-			      __FILE__, __FUNCTION__);
+			      __FILE__, __func__);
 	}
 
 	db_free_result();
@@ -753,7 +753,7 @@ u64_t auth_md5_validate(char *username, unsigned char *md5_apop_he,
 	/* value holds the password */
 
 	trace(TRACE_DEBUG, "%s,%s: apop_stamp=[%s], userpw=[%s]",
-	      __FILE__, __FUNCTION__, apop_stamp, query_result);
+	      __FILE__, __func__, apop_stamp, query_result);
 
 
 	memtst((checkstring =
@@ -767,15 +767,15 @@ u64_t auth_md5_validate(char *username, unsigned char *md5_apop_he,
 
 	trace(TRACE_DEBUG,
 	      "%s,%s: checkstring for md5 [%s] -> result [%s]", __FILE__,
-	      __FUNCTION__, checkstring, md5_apop_we);
+	      __func__, checkstring, md5_apop_we);
 	trace(TRACE_DEBUG,
 	      "%s,%s: validating md5_apop_we=[%s] md5_apop_he=[%s]",
-	      __FILE__, __FUNCTION__, md5_apop_we, md5_apop_he);
+	      __FILE__, __func__, md5_apop_we, md5_apop_he);
 
 	if (strcmp(md5_apop_he, makemd5(checkstring)) == 0) {
 		trace(TRACE_MESSAGE,
 		      "%s,%s: user [%s] is validated using APOP", __FILE__,
-		      __FUNCTION__, username);
+		      __func__, username);
 		/* get user idnr */
 		query_result = db_get_result(0, 1);
 		user_idnr =
@@ -792,13 +792,13 @@ u64_t auth_md5_validate(char *username, unsigned char *md5_apop_he,
 		if (__auth_query(__auth_query_data) == -1)
 			trace(TRACE_ERROR,
 			      "%s,%s: could not update user login time",
-			      __FILE__, __FUNCTION__);
+			      __FILE__, __func__);
 
 		return user_idnr;
 	}
 
 	trace(TRACE_MESSAGE, "%s,%s: user [%s] could not be validated",
-	      __FILE__, __FUNCTION__, username);
+	      __FILE__, __func__, username);
 
 	db_free_result();
 	my_free(checkstring);
@@ -816,13 +816,13 @@ char *auth_get_userid(u64_t user_idnr)
 
 	if (__auth_query(__auth_query_data) == -1) {
 		trace(TRACE_ERROR, "%s,%s: query failed",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return 0;
 	}
 
 	if (db_num_rows() < 1) {
 		trace(TRACE_DEBUG, "%s,%s: user has no username?",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		db_free_result();
 		return 0;
 	}
@@ -830,12 +830,12 @@ char *auth_get_userid(u64_t user_idnr)
 	query_result = db_get_result(0, 0);
 	if (query_result) {
 		trace(TRACE_DEBUG, "%s,%s: query_result = %s", __FILE__,
-		      __FUNCTION__, query_result);
+		      __func__, query_result);
 		if (!
 		    (returnid =
 		     (char *) my_malloc(strlen(query_result) + 1))) {
 			trace(TRACE_ERROR, "%s,%s: out of memory",
-			      __FILE__, __FUNCTION__);
+			      __FILE__, __func__);
 			db_free_result();
 			return NULL;
 		}
@@ -844,7 +844,7 @@ char *auth_get_userid(u64_t user_idnr)
 
 	db_free_result();
 	trace(TRACE_DEBUG, "%s,%s: returning %s as returnid", __FILE__,
-	      __FUNCTION__, returnid);
+	      __func__, returnid);
 	return returnid;
 }
 

@@ -65,16 +65,16 @@ int forward(u64_t msgidnr, struct list *targets, const char *from,
 	if (sendmail[0] == '\0')
 		trace(TRACE_FATAL,
 		      "%s,%s: SENDMAIL not configured (see config file). "
-		      "Stop.", __FILE__, __FUNCTION__);
+		      "Stop.", __FILE__, __func__);
 
 	trace(TRACE_INFO,
 	      "%s,%s: delivering to [%ld] external addresses",
-	      __FILE__, __FUNCTION__, list_totalnodes(targets));
+	      __FILE__, __func__, list_totalnodes(targets));
 
 	if (!msgidnr) {
 		trace(TRACE_ERROR,
 		      "%s,%s: got NULL as message id number",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return -1;
 	}
 
@@ -90,7 +90,7 @@ int forward(u64_t msgidnr, struct list *targets, const char *from,
 			if (!command) {
 				trace(TRACE_ERROR,
 				      "%s,%s: out of memory",
-				      __FILE__, __FUNCTION__);
+				      __FILE__, __func__);
 				return -1;
 			}
 			/* skip the pipe (|) sign */
@@ -103,19 +103,19 @@ int forward(u64_t msgidnr, struct list *targets, const char *from,
 			if (!command) {
 				trace(TRACE_ERROR,
 				      "%s,%s: out of memory",
-				      __FILE__, __FUNCTION__);
+				      __FILE__, __func__);
 				return -1;
 			}
 
 			trace(TRACE_DEBUG,
 			      "%s,%s: allocated memory for external "
-			      "command call", __FILE__, __FUNCTION__);
+			      "command call", __FILE__, __func__);
 			snprintf(command, command_len, "%s %s", sendmail,
 				(char *) (target->data));
 		}
 
 		trace(TRACE_INFO, "%s,%s: opening pipe to command %s",
-		      __FILE__, __FUNCTION__, command);
+		      __FILE__, __func__, command);
 
 		pipe = popen(command, "w");	/* opening pipe */
 		my_free(command);
@@ -124,7 +124,7 @@ int forward(u64_t msgidnr, struct list *targets, const char *from,
 		if (pipe != NULL) {
 			trace(TRACE_DEBUG,
 			      "%s,%s: call to popen() successfully "
-			      "opened pipe [%d]", __FILE__, __FUNCTION__,
+			      "opened pipe [%d]", __FILE__, __func__,
 			      fileno(pipe));
 
 			if (((char *) target->data)[0] == '!') {
@@ -132,7 +132,7 @@ int forward(u64_t msgidnr, struct list *targets, const char *from,
 				trace(TRACE_DEBUG,
 				      "%s,%s: appending mbox style from "
 				      "header to pipe returnpath : %s",
-				      __FILE__, __FUNCTION__, from);
+				      __FILE__, __func__, from);
 				/* format: From<space>address<space><space>Date */
 				fprintf(pipe, "From %s  %s\n", from,
 					timestr);
@@ -140,21 +140,21 @@ int forward(u64_t msgidnr, struct list *targets, const char *from,
 
 			trace(TRACE_INFO,
 			      "%s,%s: sending message id number [%llu] "
-			      "to forward pipe", __FILE__, __FUNCTION__,
+			      "to forward pipe", __FILE__, __func__,
 			      msgidnr);
 
 			err = ferror(pipe);
 
 			trace(TRACE_DEBUG, "%s,%s: ferror reports"
 			      " %d, feof reports %d on pipe %d", __FILE__,
-			      __FUNCTION__, err, feof(pipe), fileno(pipe));
+			      __func__, err, feof(pipe), fileno(pipe));
 
 			if (!err) {
 				if (msgidnr != 0) {
 					trace(TRACE_DEBUG,
 					      "%s,%s: sending lines from "
 					      "message %llu on pipe %d",
-					      __FILE__, __FUNCTION__,
+					      __FILE__, __func__,
 					      msgidnr, fileno(pipe));
 					db_send_message_lines(pipe,
 							      msgidnr, -2,
@@ -165,29 +165,29 @@ int forward(u64_t msgidnr, struct list *targets, const char *from,
 					trace(TRACE_DEBUG,
 					      "%s,%s: writing header to "
 					      "pipe", __FILE__,
-					      __FUNCTION__);
+					      __func__);
 					fprintf(pipe, "%s", header);
 				}
 
 			}
 
 			trace(TRACE_DEBUG, "%s,%s: closing pipes",
-			      __FILE__, __FUNCTION__);
+			      __FILE__, __func__);
 
 			if (!ferror(pipe)) {
 				pclose(pipe);
 				trace(TRACE_DEBUG,
 				      "%s,%s: pipe closed",
-				      __FILE__, __FUNCTION__);
+				      __FILE__, __func__);
 			} else {
 				trace(TRACE_ERROR,
 				      "%s,%s: error on pipe",
-				      __FILE__, __FUNCTION__);
+				      __FILE__, __func__);
 			}
 		} else {
 			trace(TRACE_ERROR,
 			      "%s,%s: Could not open pipe to [%s]",
-			      __FILE__, __FUNCTION__, sendmail);
+			      __FILE__, __func__, sendmail);
 		}
 		target = target->nextnode;
 	}

@@ -263,7 +263,7 @@ int _ic_authenticate(char *tag, char **args, ClientInfo * ci)
 	alarm(ci->timeout);
 	if (fgets(buf, MAX_LINESIZE, ci->rx) == NULL) {
 		trace(TRACE_ERROR, "%s,%s: error reading from client",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		ci_write(ci->tx, "* BYE Error reading input\r\n");
 		return -1;
 	}
@@ -280,7 +280,7 @@ int _ic_authenticate(char *tag, char **args, ClientInfo * ci)
 	alarm(ci->timeout);
 	if (fgets(buf, MAX_LINESIZE, ci->rx) == NULL) {
 		trace(TRACE_ERROR, "%s,%s: error reading from client",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		ci_write(ci->tx, "* BYE Error reading input\r\n");
 		return -1;
 	}
@@ -753,7 +753,7 @@ int _ic_create(char *tag, char **args, ClientInfo * ci)
 			trace(TRACE_DEBUG,
 			      "%s,%s: Checking if we have the right to "
 			      "create mailboxes under mailbox [%llu]",
-			      __FILE__, __FUNCTION__, parent_mboxid);
+			      __FILE__, __func__, parent_mboxid);
 			if (parent_mboxid != 0) {
 				result =
 				    acl_has_right(ud->userid,
@@ -1367,7 +1367,7 @@ int _ic_list(char *tag, char **args, ClientInfo * ci)
 	for (i = 0; i < nchildren; i++) {
 		/* get name */
 		trace(TRACE_DEBUG, "%s,%s: children[%d] = %llu",
-		      __FILE__, __FUNCTION__, i, children[i]);
+		      __FILE__, __func__, i, children[i]);
 		result = db_getmailboxname(children[i], ud->userid, name);
 		if (result == -1) {
 			ci_write(ci->tx, "* BYE internal dbase error\r\n");
@@ -1394,7 +1394,7 @@ int _ic_list(char *tag, char **args, ClientInfo * ci)
 		result = db_noinferiors(children[i]);
 		if (result == -1) {
 			trace(TRACE_ERROR, "%s,%s: error in call to db_noinferiors",
-			      __FILE__, __FUNCTION__);
+			      __FILE__, __func__);
 			ci_write(ci->tx,
 				"\r\n* BYE internal dbase error\r\n");
 			my_free(children);
@@ -1558,7 +1558,7 @@ int _ic_status(char *tag, char **args, ClientInfo * ci)
 		strncat(response, a, 255 - strlen(response) - 1);
 	}
 	strncat(response, ")\r\n", 255 - strlen(response) - 1);
-	trace(TRACE_DEBUG,"%s,%s: RESPONSE [ %s ]", __FILE__, __FUNCTION__, response);
+	trace(TRACE_DEBUG,"%s,%s: RESPONSE [ %s ]", __FILE__, __func__, response);
 	ci_write(ci->tx, "%s", response);
 	ci_write(ci->tx, "%s OK STATUS completed\r\n", tag);
 
@@ -1665,7 +1665,7 @@ int _ic_append(char *tag, char **args, ClientInfo * ci)
 	for (j = 0; j < IMAP_NFLAGS; j++)
 		if (flaglist[j] == 1)
 			trace(TRACE_DEBUG, "%s,%s: %s set",
-			      __FILE__, __FUNCTION__, imap_flag_desc[j]);
+			      __FILE__, __func__, imap_flag_desc[j]);
 
   /** check ACL's for STORE */
 	if (flaglist[IMAP_STORE_FLAG_SEEN] == 1) {
@@ -1775,7 +1775,7 @@ int _ic_append(char *tag, char **args, ClientInfo * ci)
 		    < 0) {
 			trace(TRACE_ERROR,
 			      "%s,%s: error setting flags for message "
-			      "[%llu]", __FILE__, __FUNCTION__, msg_idnr);
+			      "[%llu]", __FILE__, __func__, msg_idnr);
 			return -1;
 		}
 	}

@@ -104,7 +104,7 @@ ACLRight_t acl_get_right_from_char(char right_char)
 		trace(TRACE_ERROR,
 		      "%s,%s: error wrong acl character. This "
 		      "error should have been caught earlier!", __FILE__,
-		      __FUNCTION__);
+		      __func__);
 		return ACL_RIGHT_NONE;
 	}
 }
@@ -133,7 +133,7 @@ acl_replace_rights(u64_t userid, u64_t mboxid, const char *rightsstring)
 	int set;
 
 	trace(TRACE_DEBUG, "%s,%s: replacing rights for user [%llu], "
-	      "mailbox [%llu] to %s", __FILE__, __FUNCTION__,
+	      "mailbox [%llu] to %s", __FILE__, __func__,
 	      userid, mboxid, rightsstring);
 	for (i = ACL_RIGHT_LOOKUP; i < ACL_RIGHT_NONE; i++) {
 
@@ -144,7 +144,7 @@ acl_replace_rights(u64_t userid, u64_t mboxid, const char *rightsstring)
 		if (db_acl_set_right
 		    (userid, mboxid, acl_right_strings[i], set) < 0) {
 			trace(TRACE_ERROR, "%s, %s: error replacing ACL",
-			      __FILE__, __FUNCTION__);
+			      __FILE__, __func__);
 			return -1;
 		}
 	}
@@ -183,7 +183,7 @@ char *acl_get_acl(u64_t mboxid)
 
 	if (result < 0) {
 		trace(TRACE_ERROR, "%s,%s: error when getting identifier "
-		      "list for mailbox [%llu].", __FILE__, __FUNCTION__,
+		      "list for mailbox [%llu].", __FILE__, __func__,
 		      mboxid);
 		list_freelist(&identifier_list.start);
 		return NULL;
@@ -194,21 +194,21 @@ char *acl_get_acl(u64_t mboxid)
 	 */
 	if (db_get_mailbox_owner(mboxid, &userid) < 0) {
 		trace(TRACE_ERROR, "%s,%s: error querying ownership of "
-		      "mailbox", __FILE__, __FUNCTION__);
+		      "mailbox", __FILE__, __func__);
 		list_freelist(&identifier_list.start);
 		return NULL;
 	}
 
 	if ((username = auth_get_userid(userid)) == NULL) {
 		trace(TRACE_ERROR, "%s,%s: error getting username for "
-		      "user [%llu]", __FILE__, __FUNCTION__, userid);
+		      "user [%llu]", __FILE__, __func__, userid);
 		list_freelist(&identifier_list.start);
 		return NULL;
 	}
 	if (list_nodeadd(&identifier_list, username, 
 			 strlen(username) + 1) == NULL) { 
 		trace(TRACE_ERROR, "%s,%s: error adding username to list",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		list_freelist(&identifier_list.start);
 		my_free(username);
 		return NULL;
@@ -218,7 +218,7 @@ char *acl_get_acl(u64_t mboxid)
 
 	identifier_elm = list_getstart(&identifier_list);
 	trace(TRACE_DEBUG, "%s,%s: before looping identifiers!",
-	      __FILE__, __FUNCTION__);
+	      __FILE__, __func__);
 	while (identifier_elm) {
 		nr_identifiers++;
 		acl_string_size += strlen((char *) identifier_elm->data)
@@ -227,14 +227,14 @@ char *acl_get_acl(u64_t mboxid)
 	}
 
 	trace(TRACE_DEBUG, "%s,%s: acl_string size = %zd",
-	      __FILE__, __FUNCTION__, acl_string_size);
+	      __FILE__, __func__, acl_string_size);
 
 	if (!
 	    (acl_string =
 	     my_malloc((acl_string_size + 1) * sizeof(char)))) {
 		list_freelist(&identifier_list.start);
 		trace(TRACE_FATAL, "%s,%s: error allocating memory",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return NULL;
 	}
 	// initialise list to length 0
@@ -247,12 +247,12 @@ char *acl_get_acl(u64_t mboxid)
 						    rightsstring) < 0) {
 			trace(TRACE_ERROR, "%s,%s: error getting string "
 			      "rights for user with name [%s].",
-			      __FILE__, __FUNCTION__, identifier);
+			      __FILE__, __func__, identifier);
 			list_freelist(&identifier_list.start);
 			my_free(acl_string);
 			return NULL;
 		}
-		trace(TRACE_DEBUG, "%s,%s: %s", __FILE__, __FUNCTION__,
+		trace(TRACE_DEBUG, "%s,%s: %s", __FILE__, __func__,
 		      rightsstring);
 		if (strlen(rightsstring) > 0)
 			(void) snprintf(acl_string, acl_string_size + 1,
@@ -273,7 +273,7 @@ char *acl_listrights(u64_t userid, u64_t mboxid)
 
 	if (result < 0) {
 		trace(TRACE_ERROR, "%s,%s: error checking if user "
-		      "is owner of a mailbox", __FILE__, __FUNCTION__);
+		      "is owner of a mailbox", __FILE__, __func__);
 		return NULL;
 	}
 
@@ -294,13 +294,13 @@ char *acl_myrights(u64_t userid, u64_t mboxid)
 
 	if (!(rightsstring = my_malloc((NR_ACL_FLAGS + 1) * sizeof(char)))) {
 		trace(TRACE_ERROR, "%s,%s: error allocating memory for "
-		      "rightsstring", __FILE__, __FUNCTION__);
+		      "rightsstring", __FILE__, __func__);
 		return NULL;
 	}
 
 	if (acl_get_rightsstring(userid, mboxid, rightsstring) < 0) {
 		trace(TRACE_ERROR, "%s,%s: error getting rightsstring.",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		my_free(rightsstring);
 		return NULL;
 	}
@@ -318,7 +318,7 @@ acl_get_rightsstring_identifier(char *identifier,
 	memset(rightsstring, '\0', NR_ACL_FLAGS + 1);
 	if (auth_user_exists(identifier, &userid) < 0) {
 		trace(TRACE_ERROR, "%s,%s: error finding user id for "
-		      "user with name [%s]", __FILE__, __FUNCTION__,
+		      "user with name [%s]", __FILE__, __func__,
 		      identifier);
 		return -1;
 	}
@@ -340,7 +340,7 @@ int acl_get_rightsstring(u64_t userid, u64_t mboxid, char *rightsstring)
 		if (result < 0) {
 			trace(TRACE_ERROR, "%s,%s: error checking rights "
 			      "for user [%llu], mailbox [%llu].",
-			      __FILE__, __FUNCTION__, userid, mboxid);
+			      __FILE__, __func__, userid, mboxid);
 			return -1;
 		}
 
@@ -350,11 +350,11 @@ int acl_get_rightsstring(u64_t userid, u64_t mboxid, char *rightsstring)
 			rightsstring_idx++;
 			trace(TRACE_DEBUG, "%s,%s: i = %u. char is %c, "
 			      "str = %s",
-			      __FILE__, __FUNCTION__, i,
+			      __FILE__, __func__, i,
 			      acl_right_chars[i], rightsstring);
 		}
 		trace(TRACE_DEBUG, "%s,%s rightsstring currently is %s",
-		      __FILE__, __FUNCTION__, rightsstring);
+		      __FILE__, __func__, rightsstring);
 	}
 	return 1;
 }

@@ -83,7 +83,7 @@ int db_connect()
 			      "localhost, but no mysql_socket has been set. "
 			      "Use sqlsocket=... in dbmail.conf. Connecting "
 			      "will be attempted using the default socket.",
-			      __FILE__, __FUNCTION__);
+			      __FILE__, __func__);
 			sock = NULL;
 		} else
 			sock = _db_params.sock;
@@ -94,13 +94,13 @@ int db_connect()
 			       _db_params.pass, _db_params.db,
 			       _db_params.port, sock, 0) == NULL) {
 		trace(TRACE_ERROR, "%s,%s: mysql_real_connect failed: %s",
-		      __FILE__, __FUNCTION__, mysql_error(&conn));
+		      __FILE__, __func__, mysql_error(&conn));
 		return -1;
 	}
 #ifdef mysql_errno
 	if (mysql_errno(&conn)) {
 		trace(TRACE_ERROR, "%s,%s: mysql_real_connect failed: %s",
-		      __FILE__, __FUNCTION__, mysql_error(&conn));
+		      __FILE__, __func__, mysql_error(&conn));
 		return -1;
 	}
 #endif
@@ -132,7 +132,7 @@ void db_free_result()
 		mysql_free_result(res);
 	else
 		trace(TRACE_WARNING, "%s,%s: Trying to free result set "
-		      "that is already NULL!", __FILE__, __FUNCTION__);
+		      "that is already NULL!", __FILE__, __func__);
 	res = NULL;
 }
 
@@ -143,14 +143,14 @@ const char *db_get_result(unsigned row, unsigned field)
 
 	if (!res) {
 		trace(TRACE_WARNING, "%s,%s: result set is null\n",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return NULL;
 	}
 
 	if ((row >= db_num_rows()) || (field >= db_num_fields())) {
 		trace(TRACE_WARNING, "%s, %s: "
 		      "row = %u, field = %u, bigger than size of result set",
-		      __FILE__, __FUNCTION__, row, field);
+		      __FILE__, __func__, row, field);
 		return NULL;
 	}
 	
@@ -159,14 +159,14 @@ const char *db_get_result(unsigned row, unsigned field)
 	
 	if (last_row == NULL) {
 		trace(TRACE_WARNING, "%s,%s: row is NULL\n",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return NULL;
 	}
 
 	result = last_row[field];
 	if (result == NULL)
 		trace(TRACE_WARNING, "%s,%s: result is null\n",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 	return result;
 }
 
@@ -182,10 +182,10 @@ int db_check_connection()
 {
 	if (mysql_ping(&conn) != 0) {
 		trace(TRACE_DEBUG, "%s,%s: no database connection, trying "
-		      "to establish on.", __FILE__, __FUNCTION__);
+		      "to establish on.", __FILE__, __func__);
 		if (db_connect() < 0) {
 			trace(TRACE_ERROR, "%s,%s: unable to connect to "
-			      "database.", __FILE__, __FUNCTION__);
+			      "database.", __FILE__, __func__);
 			return -1;
 		}
 	}
@@ -204,7 +204,7 @@ int db_query(const char *the_query)
 	unsigned querysize = 0;
 	if (db_check_connection() < 0) {
 		trace(TRACE_ERROR, "%s,%s: no database connection",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return -1;
 	}
 	if (the_query != NULL) {
@@ -212,28 +212,28 @@ int db_query(const char *the_query)
 		if (querysize > 0) {
 			trace(TRACE_DEBUG, "%s,%s: "
 			      "executing query [%s]",
-			      __FILE__, __FUNCTION__, the_query);
+			      __FILE__, __func__, the_query);
 			if (mysql_real_query(&conn,
 					     the_query, querysize) < 0) {
 				trace(TRACE_ERROR, "%s,%s: "
 				      "query [%s] failed",
-				      __FILE__, __FUNCTION__, the_query);
+				      __FILE__, __func__, the_query);
 				trace(TRACE_ERROR, "%s,%s: "
 				      "mysql_real_query failed: %s",
-				      __FILE__, __FUNCTION__,
+				      __FILE__, __func__,
 				      mysql_error(&conn));
 				return -1;
 			}
 		} else {
 			trace(TRACE_ERROR, "%s,%s: "
 			      "querysize is wrong: [%d]", __FILE__,
-			      __FUNCTION__, querysize);
+			      __func__, querysize);
 			return -1;
 		}
 	} else {
 		trace(TRACE_ERROR, "%s,%s: "
 		      "query buffer is NULL, this is not supposed to happen\n",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return -1;
 	}
 
@@ -261,7 +261,7 @@ int db_do_cleanup(const char **tables, int num)
 		if (db_query(the_query) == -1) {
 			trace(TRACE_ERROR,
 			      "%s,%s: error optimizing table [%s]",
-			      __FILE__, __FUNCTION__, tables[i]);
+			      __FILE__, __func__, tables[i]);
 			result = -1;
 		}
 		db_free_result();
@@ -274,14 +274,14 @@ u64_t db_get_length(unsigned row, unsigned field)
 {
 	if (!res) {
 		trace(TRACE_WARNING, "%s,%s: result set is null\n",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return -1;
 	}
 
 	if ((row >= db_num_rows()) || (field >= db_num_fields())) {
 		trace(TRACE_ERROR, "%s, %s: "
 		      "row = %u, field = %u, bigger than size of result set",
-		      __FILE__, __FUNCTION__, row, field);
+		      __FILE__, __func__, row, field);
 		return -1;
 	}
 	
@@ -289,7 +289,7 @@ u64_t db_get_length(unsigned row, unsigned field)
 	last_row = mysql_fetch_row(res);
 	if (last_row == NULL) {
 		trace(TRACE_ERROR, "%s,%s: last_row = NULL",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return (u64_t) 0;
 	}
 	return (u64_t) mysql_fetch_lengths(res)[field];

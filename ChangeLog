@@ -1,4 +1,6 @@
 2004-06-03  Ilja Booij  <ilja@ic-s.nl>
+	* all_files: changed from __FUNCTION__ preprocessor macro to
+	__func__, which is used in C99.
 
 	* serverchild.c (PerformChildTask): changed call to setlinebuf()
 	to setvbuf() to make it work on non-BSD and non-GNU systems. The

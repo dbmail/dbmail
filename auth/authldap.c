@@ -79,10 +79,10 @@ _ldap_cfg_t _ldap_cfg;
 	if (strlen(var) == 0)			\
 		trace(TRACE_DEBUG, "%s, %s: no value for "	\
 			#key " in config file section " #sect,	\
-		    	__FILE__, __FUNCTION__ );		\
+		    	__FILE__, __func__ );		\
 	trace(TRACE_DEBUG, "%s, %s: value for "			\
 		#key " from section " #sect " stored in "	\
-		#var " as [%s]", __FILE__, __FUNCTION__, var)
+		#var " as [%s]", __FILE__, __func__, var)
 	/* No final ; so macro can be called "like a function" */
 
 static void __auth_get_config(void);

@@ -450,7 +450,7 @@ int IMAPClientHandler(ClientInfo * ci)
 				ci_cleanup(ci);
 				return EOF; 
 			}
-			trace(TRACE_DEBUG, "%s,%s: tag = %s", __FILE__, __FUNCTION__,
+			trace(TRACE_DEBUG, "%s,%s: tag = %s", __FILE__, __func__,
 			      tag);
 		}
 		for (i = 0; args[i]; i++) {

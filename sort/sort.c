@@ -89,7 +89,7 @@ dsn_class_t sort_and_deliver(u64_t msgidnr,
 		// ret = db_regexsort(useridnr, header, actions);
 		trace(TRACE_ERROR,
 		      "%s, %s: Regex sort is enabled in dbmail.conf, but has not been compiled",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 	}
 
 	if (do_sieve) {
@@ -104,7 +104,7 @@ dsn_class_t sort_and_deliver(u64_t msgidnr,
 		/* Give the postmaster a clue as to why Sieve isn't working... */
 		trace(TRACE_ERROR,
 		      "%s, %s: Sieve enabled in dbmail.conf, but Sieve support has not been compiled",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 #endif				/* SIEVE */
 	}
 
@@ -352,18 +352,18 @@ dsn_class_t sort_and_deliver(u64_t msgidnr,
 				/* Couldn't deliver because the quotum is exceeded. */
 				trace(TRACE_DEBUG,
 				      "%s, %s: error copying message to user [%llu], maxmail exceeded",
-				      __FILE__, __FUNCTION__, useridnr);
+				      __FILE__, __func__, useridnr);
 				break;
 			case -1:
 				/* Couldn't deliver because something something went wrong. */
 				trace(TRACE_ERROR,
 				      "%s, %s: error copying message to user [%llu]",
-				      __FILE__, __FUNCTION__, useridnr);
+				      __FILE__, __func__, useridnr);
 				break;
 			default:
 				trace(TRACE_MESSAGE,
 				      "%s, %s: message id=%llu, size=%llu is inserted",
-				      __FILE__, __FUNCTION__, newmsgidnr,
+				      __FILE__, __func__, newmsgidnr,
 				      totalmsgsize);
 				actiontaken = 1;
 				break;

@@ -89,7 +89,7 @@ static int send_notification(const char *to, const char *from,
 	if (GetConfigValue("SENDMAIL", "SMTP", sendmail) < 0) 
 		trace(TRACE_FATAL,
 		      "%s,%s: error getting Config Values",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 
 	if (sendmail[0] == '\0')
 		trace(TRACE_FATAL,
@@ -164,7 +164,7 @@ static int send_reply(struct list *headerfields, const char *body)
 	if (GetConfigValue("SENDMAIL", "SMTP", sendmail) < 0)
 		trace(TRACE_FATAL,
 		      "%s,%s: error getting config",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 
 
 	if (sendmail[0] == '\0')
@@ -217,7 +217,7 @@ static int send_reply(struct list *headerfields, const char *body)
 				   * 2 * sizeof(char));
 	if (!escaped_send_address) {
 		trace(TRACE_ERROR, "%s,%s: unable to allocate memory. Memory "
-		      "full?", __FILE__, __FUNCTION__);
+		      "full?", __FILE__, __func__);
 		return 0;
 	}
 	memset(escaped_send_address, '\0', (strlen(send_address) + 1) * 2 * sizeof(char));
@@ -270,14 +270,14 @@ static int execute_auto_ran(u64_t useridnr, struct list *headerfields)
 	/* message has been succesfully inserted, perform auto-notification & auto-reply */
 	if (GetConfigValue("AUTO_NOTIFY", "SMTP", val) < 0)
 		trace(TRACE_FATAL, "%s,%s error getting config",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 
 	if (strcasecmp(val, "yes") == 0)
 		do_auto_notify = 1;
 
 	if (GetConfigValue("AUTO_REPLY", "SMTP", val) < 0)
 		trace(TRACE_FATAL, "%s,%s error getting config",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 
 	if (strcasecmp(val, "yes") == 0)
 		do_auto_reply = 1;
@@ -301,7 +301,7 @@ static int execute_auto_ran(u64_t useridnr, struct list *headerfields)
 						      AUTO_NOTIFY_SENDER,
 						      AUTO_NOTIFY_SUBJECT) < 0) {
 					trace(TRACE_ERROR, "%s,%s: error in call to send_notification.",
-					      __FILE__, __FUNCTION__);
+					      __FILE__, __func__);
 					my_free(notify_address);
 					return -1;
 				}
@@ -324,7 +324,7 @@ static int execute_auto_ran(u64_t useridnr, struct list *headerfields)
 			else {
 				if (send_reply(headerfields, reply_body) < 0) {
 					trace(TRACE_ERROR, "%s,%s: error in call to send_reply",
-					      __FILE__, __FUNCTION__);
+					      __FILE__, __func__);
 					my_free(reply_body);
 					return -1;
 				}
@@ -346,7 +346,7 @@ int discard_client_input(FILE * instream)
 	tmpline = (char *) my_malloc(MAX_LINE_SIZE + 1);
 	if (tmpline == NULL) {
 		trace(TRACE_ERROR, "%s,%s: unable to allocate memory.",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return -1;
 	}
 	
@@ -355,7 +355,7 @@ int discard_client_input(FILE * instream)
 			break;
 
 		trace(TRACE_DEBUG, "%s,%s: tmpline = [%s]", __FILE__,
-		      __FUNCTION__, tmpline);
+		      __func__, tmpline);
 		if (strcmp(tmpline, ".\r\n") == 0)
 			break;
 	}
@@ -391,14 +391,14 @@ static int store_message_temp(const char *header, const char *body,
 	if (result < 0) {
 		trace(TRACE_ERROR,
 		      "%s,%s: unable to find user_idnr for user " "[%s]\n",
-		      __FILE__, __FUNCTION__, DBMAIL_DELIVERY_USERNAME);
+		      __FILE__, __func__, DBMAIL_DELIVERY_USERNAME);
 		return -1;
 	}
 	if (result == 0) {
 		trace(TRACE_ERROR,
 		      "%s,%s: unable to find user_idnr for user "
 		      "[%s]. Make sure this system user is in the database!\n",
-		      __FILE__, __FUNCTION__, DBMAIL_DELIVERY_USERNAME);
+		      __FILE__, __func__, DBMAIL_DELIVERY_USERNAME);
 		return -1;
 	}
 	create_unique_id(unique_id, user_idnr);
@@ -434,11 +434,11 @@ static int store_message_temp(const char *header, const char *body,
 	if (db_update_message(msgidnr, unique_id, (headersize + bodysize),
 			      (headerrfcsize + bodyrfcsize)) < 0) {
 		trace(TRACE_ERROR, "%s,%s: error updating message [%llu]. "
-		      "Trying to clean up", __FILE__, __FUNCTION__, msgidnr);
+		      "Trying to clean up", __FILE__, __func__, msgidnr);
 		if (db_delete_message(msgidnr) < 0) 
 			trace(TRACE_ERROR, "%s,%s error deleting message "
 			      "[%llu]. Database might be inconsistent, run "
-			      "dbmail-maintenance", __FILE__, __FUNCTION__,
+			      "dbmail-maintenance", __FILE__, __func__,
 			      msgidnr);
 		return -1;
 	}
@@ -463,13 +463,13 @@ int store_message_in_blocks(const char *message, u64_t message_size,
 		rest_size = (rest_size < READ_BLOCK_SIZE ?
 			     0 : rest_size - READ_BLOCK_SIZE);
 		trace(TRACE_DEBUG, "%s,%s: inserting message: %s",
-		      __FILE__, __FUNCTION__, &message[offset]);
+		      __FILE__, __func__, &message[offset]);
 		if (db_insert_message_block(&message[offset],
 					    block_size, msgidnr,
 					    &tmp_messageblk_idnr) < 0) {
 			trace(TRACE_ERROR, "%s,%s: "
 			      "db_insert_message_block() failed",
-			      __FILE__, __FUNCTION__);
+			      __FILE__, __func__);
 			return -1;
 		}
 		
@@ -532,11 +532,11 @@ int insert_messages(const char *header, const char* body, u64_t headersize,
 		/* Major trouble. Bail out immediately. */
 		trace(TRACE_ERROR,
 		      "%s, %s: failed to store temporary message.",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return -1;
 	default:
 		trace(TRACE_DEBUG, "%s, %s: temporary msgidnr is [%llu]",
-		      __FILE__, __FUNCTION__, tmpmsgidnr);
+		      __FILE__, __func__, tmpmsgidnr);
 		break;
 	}
 
@@ -556,7 +556,7 @@ int insert_messages(const char *header, const char* body, u64_t headersize,
 			u64_t useridnr = *(u64_t *) userid_elem->data;
 			trace(TRACE_DEBUG,
 			      "%s, %s: calling sort_and_deliver for useridnr [%llu]",
-			      __FILE__, __FUNCTION__, useridnr);
+			      __FILE__, __func__, useridnr);
 
 			switch (sort_and_deliver(tmpmsgidnr,
 						 header, headersize,
@@ -567,14 +567,14 @@ int insert_messages(const char *header, const char* body, u64_t headersize,
 				/* Indicate success. */
 				trace(TRACE_DEBUG,
 				      "%s, %s: successful sort_and_deliver for useridnr [%llu]",
-				      __FILE__, __FUNCTION__, useridnr);
+				      __FILE__, __func__, useridnr);
 				has_2 = 1;
 				break;
 			case DSN_CLASS_FAIL:
 				/* Indicate permanent failure. */
 				trace(TRACE_ERROR,
 				      "%s, %s: permanent failure sort_and_deliver for useridnr [%llu]",
-				      __FILE__, __FUNCTION__, useridnr);
+				      __FILE__, __func__, useridnr);
 				has_5 = 1;
 				break;
 			case DSN_CLASS_TEMP:
@@ -583,7 +583,7 @@ int insert_messages(const char *header, const char* body, u64_t headersize,
 				/* Assume a temporary failure */
 				trace(TRACE_ERROR,
 				      "%s, %s: temporary failure sort_and_deliver for useridnr [%llu]",
-				      __FILE__, __FUNCTION__, useridnr);
+				      __FILE__, __func__, useridnr);
 				has_4 = 1;
 				break;
 			}
@@ -592,7 +592,7 @@ int insert_messages(const char *header, const char* body, u64_t headersize,
 			if (execute_auto_ran(useridnr, headerfields) < 0)
 				trace(TRACE_ERROR, "%s,%s: error in "
 				      "execute_auto_ran(), continuing",
-				      __FILE__, __FUNCTION__);
+				      __FILE__, __func__);
 		}		/* from: the useridnr for loop */
 
 		switch (dsnuser_worstcase_int(has_2, has_4, has_5)) {
@@ -646,7 +646,7 @@ int insert_messages(const char *header, const char* body, u64_t headersize,
 				 * sensible. Currently, the message is just black-
 				 * holed! */
 				trace(TRACE_ERROR, "%s,%s: forward failed "
-				      "message lost", __FILE__, __FUNCTION__);
+				      "message lost", __FILE__, __func__);
 		}
 	}			/* from: the delivery for loop */
 
@@ -655,7 +655,7 @@ int insert_messages(const char *header, const char* body, u64_t headersize,
 	 * and our job to keep a tidy database ;-) */
 	if (db_delete_message(tmpmsgidnr) < 0) 
 		trace(TRACE_ERROR, "%s,%s: failed to delete temporary message "
-		      "[%llu]", __FILE__, __FUNCTION__, tmpmsgidnr);
+		      "[%llu]", __FILE__, __func__, tmpmsgidnr);
 	trace(TRACE_DEBUG,
 	      "insert_messages(): temporary message deleted from database");
 

@@ -509,13 +509,13 @@ int tims(void *stream, void *instream, char *buffer, char *client_ip,
 						trace(TRACE_INFO,
 						      "%s, %s: Client sending script of length [%llu]",
 						      __FILE__,
-						      __FUNCTION__,
+						      __func__,
 						      scriptlen);
 						if (scriptlen >= UINT_MAX) {
 							trace(TRACE_INFO,
 							      "%s, %s: Length [%llu] is larger than UINT_MAX [%u]",
 							      __FILE__,
-							      __FUNCTION__,
+							      __func__,
 							      scriptlen,
 							      UINT_MAX);
 							fprintf((FILE *)
@@ -534,7 +534,7 @@ int tims(void *stream, void *instream, char *buffer, char *client_ip,
 								    (TRACE_INFO,
 								     "%s, %s: Error reading script with read_from_stream()",
 								     __FILE__,
-								     __FUNCTION__);
+								     __func__);
 								fprintf((FILE *) stream, "NO \"Error reading script.\"\r\n");
 							} else {
 								if (0 !=
@@ -547,7 +547,7 @@ int tims(void *stream, void *instream, char *buffer, char *client_ip,
 									    (TRACE_INFO,
 									     "%s, %s: Script exceeds user's quota, dumping it",
 									     __FILE__,
-									     __FUNCTION__);
+									     __func__);
 									fprintf
 									    ((FILE *) stream, "NO \"Script exceeds available space.\"\r\n");
 								} else {
@@ -558,7 +558,7 @@ int tims(void *stream, void *instream, char *buffer, char *client_ip,
 										    (TRACE_INFO,
 										     "%s, %s: Script has syntax errrors: [%s]",
 										     __FILE__,
-										     __FUNCTION__,
+										     __func__,
 										     errmsg);
 										fprintf
 										    ((FILE *) stream, "NO \"Script error: %s.\"\r\n", errmsg);
@@ -570,7 +570,7 @@ int tims(void *stream, void *instream, char *buffer, char *client_ip,
 											    (TRACE_INFO,
 											     "%s, %s: Error inserting script",
 											     __FILE__,
-											     __FUNCTION__);
+											     __func__);
 											fprintf
 											    ((FILE *) stream, "NO \"Error inserting script.\"\r\n");
 										} else {
@@ -578,7 +578,7 @@ int tims(void *stream, void *instream, char *buffer, char *client_ip,
 											    (TRACE_INFO,
 											     "%s, %s: Script successfully received",
 											     __FILE__,
-											     __FUNCTION__);
+											     __func__);
 											fprintf
 											    ((FILE *) stream, "OK \"Script successfully received.\"\r\n");
 										}

@@ -840,7 +840,7 @@ int pop3(void *stream, char *buffer, char *client_ip,
 				trace(TRACE_ERROR,
 				      "%s,%s: error finding if user exists. "
 				      "username = [%s]", __FILE__,
-				      __FUNCTION__, session->username);
+				      __func__, session->username);
 				return -1;
 			}
 			if (strcasecmp(auth_getencryption(user_idnr), "")

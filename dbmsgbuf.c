@@ -58,7 +58,7 @@ int db_init_msgfetch(u64_t msg_idnr)
 
 	if (db_get_physmessage_id(msg_idnr, &physmessage_id) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error getting physmessage_id",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return -1;
 	}
 	
@@ -78,7 +78,7 @@ int db_init_msgfetch(u64_t msg_idnr)
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not get message",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return (-1);
 	}
 
@@ -86,7 +86,7 @@ int db_init_msgfetch(u64_t msg_idnr)
 
 	if (nblocks == 0) {
 		trace(TRACE_ERROR, "%s,%s: message has no blocks",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		db_free_result();
 
 		return -1;	/* msg should have 1 block at least */
@@ -172,7 +172,7 @@ int db_update_msgbuf(int minlen)
 
 	trace(TRACE_DEBUG,
 	      "%s,%s: update msgbuf_buf updating %llu, %llu, %llu, %llu",
-	      __FILE__, __FUNCTION__, MSGBUF_WINDOWSIZE,
+	      __FILE__, __func__, MSGBUF_WINDOWSIZE,
 	      msgbuf_buflen, rowlength, rowpos);
 
 	/* move buf to make msgbuf_idx 0 */
@@ -190,7 +190,7 @@ int db_update_msgbuf(int minlen)
 
 	if ((rowlength - rowpos) >= (MSGBUF_WINDOWSIZE - msgbuf_buflen)) {
 		trace(TRACE_DEBUG, "%s,%s update msgbuf non-entire fit",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 
 		/* rest of row does not fit entirely in buf */
 		/* FIXME: this will explode is db_get_result returns NULL. */
@@ -207,7 +207,7 @@ int db_update_msgbuf(int minlen)
 	}
 
 	trace(TRACE_DEBUG, "%s,%s: update msgbuf: entire fit",
-	      __FILE__, __FUNCTION__);
+	      __FILE__, __func__);
 
 	/* FIXME: this will explode is db_get_result returns NULL. */
 	strncpy(&msgbuf_buf[msgbuf_buflen],
@@ -221,7 +221,7 @@ int db_update_msgbuf(int minlen)
 	_msgrow_idx++;
 	if (_msgrow_idx >= db_num_rows()) {
 		trace(TRACE_DEBUG, "%s,%s update msgbuf succes NOMORE",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		db_store_msgbuf_result();
 		return 0;
 	}
@@ -230,7 +230,7 @@ int db_update_msgbuf(int minlen)
 	rowpos = 0;
 
 	trace(TRACE_DEBUG, "%s,%s: update msgbuf, got new block, "
-	      "trying to place data", __FILE__, __FUNCTION__);
+	      "trying to place data", __FILE__, __func__);
 
 	/* FIXME: this will explode is db_get_result returns NULL. */
 	strncpy(&msgbuf_buf[msgbuf_buflen], db_get_result(_msgrow_idx, 0),
@@ -251,7 +251,7 @@ int db_update_msgbuf(int minlen)
 	msgbuf_buf[msgbuf_buflen] = '\0';	/* add NULL */
 
 	trace(TRACE_DEBUG, "%s,%s: update msgbuf succes", __FILE__,
-	      __FUNCTION__);
+	      __func__);
 	db_store_msgbuf_result();
 	return 1;
 }
@@ -333,24 +333,24 @@ long db_dump_range(MEM * outmem, db_pos_t start,
 
 	if (db_get_physmessage_id(msg_idnr, &physmessage_id) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error getting physmessage_id",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return -1;
 	}
 
 	trace(TRACE_DEBUG,
 	      "%s,%s: Dumping range: (%llu,%llu) - (%llu,%llu)",
-	      __FILE__, __FUNCTION__,
+	      __FILE__, __func__,
 	      start.block, start.pos, end.block, end.pos);
 
 	if (start.block > end.block) {
 		trace(TRACE_ERROR, "%s,%s: bad range specified",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return -1;
 	}
 
 	if (start.block == end.block && start.pos > end.pos) {
 		trace(TRACE_ERROR, "%s,%s: bad range specified",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return -1;
 	}
 
@@ -361,7 +361,7 @@ long db_dump_range(MEM * outmem, db_pos_t start,
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not get message",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return (-1);
 	}
 
@@ -391,7 +391,7 @@ long db_dump_range(MEM * outmem, db_pos_t start,
 			    !(i > 0 && field[i - 1] == '\r')) {
 				trace(TRACE_DEBUG,
 				      "%s,%s: adding '\r' to buf",
-				      __FILE__, __FUNCTION__);
+				      __FILE__, __func__);
 				buf[bufcnt++] = '\r';
 				buf[bufcnt++] = '\n';
 			} else
@@ -439,7 +439,7 @@ long db_dump_range(MEM * outmem, db_pos_t start,
 			    !(j > 0 && field[startpos + j - 1] == '\r')) {
 				trace(TRACE_DEBUG,
 				      "%s,%s: adding '\r' to buf",
-				      __FILE__, __FUNCTION__);
+				      __FILE__, __func__);
 
 				buf[bufcnt++] = '\r';
 				buf[bufcnt++] = '\n';

@@ -127,7 +127,7 @@ int db_search(int *rset, int setlen, const char *key, mailbox_t * mb,
 	}
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not execute query",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return (-1);
 	}
 
@@ -349,13 +349,13 @@ int db_search_range(db_pos_t start, db_pos_t end,
 
 	if (start.block > end.block) {
 		trace(TRACE_ERROR, "%s,%s: bad range specified",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return 0;
 	}
 
 	if (start.block == end.block && start.pos > end.pos) {
 		trace(TRACE_ERROR, "%s,%s: bad range specified",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return 0;
 	}
 
@@ -368,13 +368,13 @@ int db_search_range(db_pos_t start, db_pos_t end,
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not get message",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return 0;
 	}
 
 	if (db_num_rows() == 0) {
 		trace(TRACE_ERROR, "%s,%s: bad range specified",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		db_free_result();
 		return 0;
 	}
@@ -383,7 +383,7 @@ int db_search_range(db_pos_t start, db_pos_t end,
 
 	if (!query_result) {
 		trace(TRACE_ERROR, "%s,%s: bad range specified",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		db_free_result();
 		return 0;
 	}
@@ -410,7 +410,7 @@ int db_search_range(db_pos_t start, db_pos_t end,
 	for (i = start.block; i <= end.block; i++) {
 		if (!query_result) {
 			trace(TRACE_ERROR, "%s,%s: bad range specified",
-			      __FILE__, __FUNCTION__);
+			      __FILE__, __func__);
 			db_free_result();
 			return 0;
 		}

@@ -639,16 +639,16 @@ int lmtp(void *stream, void *instream, char *buffer,
 						    &whole_message_size) < 0) {
 						trace(TRACE_ERROR,
 						      "%s,%s: read_whole_message_network() failed",
-						      __FILE__, __FUNCTION__);
+						      __FILE__, __func__);
 						discard_client_input((FILE *) instream);
 						fprintf((FILE *) stream,
 							"500 Error reading message");
 						return 1;
 					}
 					
-					trace(TRACE_DEBUG, "%s,%s: whole message = %s", __FILE__, __FUNCTION__, whole_message);
+					trace(TRACE_DEBUG, "%s,%s: whole message = %s", __FILE__, __func__, whole_message);
 					if (whole_message == NULL) {
-						trace(TRACE_ERROR, "%s,%s message is NULL!", __FILE__, __FUNCTION__);
+						trace(TRACE_ERROR, "%s,%s message is NULL!", __FILE__, __func__);
 						discard_client_input(
 							(FILE *) instream);
 						fprintf((FILE *) stream,
@@ -665,7 +665,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 							  &body_size,
 							  &body_rfcsize) < 0) {
 						trace(TRACE_ERROR, "%s,%s: split_message() failed",
-						      __FILE__, __FUNCTION__);
+						      __FILE__, __func__);
 						my_free(whole_message);
 						discard_client_input((FILE *) instream);
 						fprintf((FILE *) stream,
@@ -791,26 +791,26 @@ int read_whole_message_network(FILE *instream, char **whole_message,
 		
 	if (ferror(instream)) {
 		trace(TRACE_ERROR, "%s,%s: error reading instream",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		error = 1;
 	}
 	if (feof(instream)) {
 		trace(TRACE_ERROR, "%s,%s: unexpected EOF in instream",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		error = 1;
 	}
 
 	total_size += 1;
 	if (!(tmpmessage = realloc(tmpmessage, total_size))) {
 		trace(TRACE_ERROR, "%s.%s: realloc failed",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		error = 1;
 	} else
 		tmpmessage[current_pos] = '\0';
 
 	if (error) {
 		trace(TRACE_ERROR, "%s,%s: error reading message from "
-		      "instream", __FILE__, __FUNCTION__);
+		      "instream", __FILE__, __func__);
 		my_free(tmpmessage);
 		return -1;
 	}

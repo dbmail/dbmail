@@ -46,26 +46,26 @@ int drop_privileges(char *newuser, char *newgroup)
 
 	if (grp == NULL) {
 		trace(TRACE_ERROR, "%s,%s: could not find group %s\n",
-		      __FILE__, __FUNCTION__, newgroup);
+		      __FILE__, __func__, newgroup);
 		return -1;
 	}
 
 	pwd = getpwnam(newuser);
 	if (pwd == NULL) {
 		trace(TRACE_ERROR, "%s,%s: could not find user %s\n",
-		      __FILE__, __FUNCTION__, newuser);
+		      __FILE__, __func__, newuser);
 		return -1;
 	}
 
 	if (setgid(grp->gr_gid) != 0) {
 		trace(TRACE_ERROR, "%s,%s: could not set gid to %s\n",
-		      __FILE__, __FUNCTION__, newgroup);
+		      __FILE__, __func__, newgroup);
 		return -1;
 	}
 
 	if (setuid(pwd->pw_uid) != 0) {
 		trace(TRACE_ERROR, "%s,%s: could not set uid to %s\n",
-		      __FILE__, __FUNCTION__, newuser);
+		      __FILE__, __func__, newuser);
 		return -1;
 	}
 	return 0;
@@ -94,7 +94,7 @@ void create_unique_id(char *target, u64_t message_idnr)
 		snprintf(target, UID_SIZE, "%s", a_rand);
 	md5_str = makemd5(target);
 	snprintf(target, UID_SIZE, "%s", md5_str);
-	trace(TRACE_DEBUG, "%s,%s: created: %s", __FILE__, __FUNCTION__,
+	trace(TRACE_DEBUG, "%s,%s: created: %s", __FILE__, __func__,
 	      target);
 	my_free(md5_str);
 	my_free(a_message_idnr);
@@ -108,7 +108,7 @@ void create_current_timestring(timestring_t * timestring)
 
 	if (time(&td) == -1)
 		trace(TRACE_FATAL, "%s,%s: error getting time from OS",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 
 	tm = *localtime(&td);	/* get components */
 	strftime((char *) timestring, sizeof(timestring_t),
@@ -124,7 +124,7 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
 
 	if (mailbox_name == NULL) {
 		trace(TRACE_ERROR, "%s,%s: error, mailbox_name is "
-		      "NULL.", __FILE__, __FUNCTION__);
+		      "NULL.", __FILE__, __func__);
 		return NULL;
 	}
 
@@ -136,11 +136,11 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
 		if (owner_name == NULL) {
 			trace(TRACE_ERROR,
 			      "%s,%s: error owner_name is NULL", __FILE__,
-			      __FUNCTION__);
+			      __func__);
 			return NULL;
 		}
 		trace(TRACE_ERROR, "%s,%s: owner name = %s", __FILE__,
-		      __FUNCTION__, owner_name);
+		      __func__, owner_name);
 		if (strcmp(owner_name, PUBLIC_FOLDER_USER) == 0) {
 			fq_name_len = strlen(NAMESPACE_PUBLIC) +
 			    strlen(MAILBOX_SEPERATOR) +
@@ -149,7 +149,7 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
 						  sizeof(char)))) {
 				trace(TRACE_ERROR,
 				      "%s,%s: not enough memory", __FILE__,
-				      __FUNCTION__);
+				      __func__);
 				return NULL;
 			}
 			snprintf(fq_name, fq_name_len, "%s%s%s",
@@ -165,7 +165,7 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
 						  sizeof(char)))) {
 				trace(TRACE_ERROR,
 				      "%s,%s: not enough memory", __FILE__,
-				      __FUNCTION__);
+				      __func__);
 				return NULL;
 			}
 			snprintf(fq_name, fq_name_len, "%s%s%s%s%s",
@@ -175,7 +175,7 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
 		}
 		my_free(owner_name);
 		trace(TRACE_INFO, "%s,%s: returning fully qualified name "
-		      "[%s]", __FILE__, __FUNCTION__, fq_name);
+		      "[%s]", __FILE__, __func__, fq_name);
 		return fq_name;
 	}
 }
@@ -192,14 +192,14 @@ const char *mailbox_remove_namespace(const char *fq_name)
 		if (temp == NULL || strlen(temp) <= 1) {
 			trace(TRACE_ERROR,
 			      "%s,%s wronly constructed mailbox " "name",
-			      __FILE__, __FUNCTION__);
+			      __FILE__, __func__);
 			return NULL;
 		}
 		temp = strstr(&temp[1], MAILBOX_SEPERATOR);
 		if (temp == NULL || strlen(temp) <= 1) {
 			trace(TRACE_ERROR,
 			      "%s,%s wronly constructed mailbox " "name",
-			      __FILE__, __FUNCTION__);
+			      __FILE__, __func__);
 			return NULL;
 		}
 		return &temp[1];
@@ -210,7 +210,7 @@ const char *mailbox_remove_namespace(const char *fq_name)
 		if (temp == NULL || strlen(temp) <= 1) {
 			trace(TRACE_ERROR,
 			      "%s,%s wronly constructed mailbox " "name",
-			      __FILE__, __FUNCTION__);
+			      __FILE__, __func__);
 			return NULL;
 		}
 		return &temp[1];
@@ -442,7 +442,7 @@ int find_bounded(char *value, char left, char right, char **retchar,
 	if (tmpleft[0] != left || tmpright[0] != right) {
 		trace(TRACE_INFO,
 		      "%s, %s: Found nothing between '%c' and '%c'",
-		      __FILE__, __FUNCTION__, left, right);
+		      __FILE__, __func__, left, right);
 		*retchar = NULL;
 		*retsize = 0;
 		*retlast = 0;
@@ -460,7 +460,7 @@ int find_bounded(char *value, char left, char right, char **retchar,
 			*retlast = 0;
 			trace(TRACE_INFO,
 			      "%s, %s: Found [%s] of length [%zd] between '%c' and '%c' so next skip [%zd]",
-			      __FILE__, __FUNCTION__, *retchar, *retsize,
+			      __FILE__, __func__, *retchar, *retsize,
 			      left, right, *retlast);
 			return -2;
 		}
@@ -470,7 +470,7 @@ int find_bounded(char *value, char left, char right, char **retchar,
 		*retlast = tmpright - value;
 		trace(TRACE_INFO,
 		      "%s, %s: Found [%s] of length [%zd] between '%c' and '%c' so next skip [%zd]",
-		      __FILE__, __FUNCTION__, *retchar, *retsize, left,
+		      __FILE__, __func__, *retchar, *retsize, left,
 		      right, *retlast);
 		return 0;
 	}

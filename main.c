@@ -110,7 +110,7 @@ static int read_whole_message_pipe(FILE *instream, char **whole_message,
 	
 	if (ferror(instream)) {
 		trace(TRACE_ERROR, "%s,%s: error reading from instream",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		error = 1;
 	}
 	/* add '\0' to tmpmessage, because fread() will not do that for us.*/
@@ -122,7 +122,7 @@ static int read_whole_message_pipe(FILE *instream, char **whole_message,
 	
 	if (error) {
 		trace(TRACE_ERROR, "%s,%s: error reading message",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		my_free(tmpmessage);
 		return -1;
 	}
@@ -330,7 +330,7 @@ int main(int argc, char *argv[])
 	if (read_whole_message_pipe(stdin, &whole_message, 
 				    &whole_message_size) < 0) {
 		trace(TRACE_ERROR, "%s,%s: read_whole_message_pipe() failed",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		exitcode = EX_TEMPFAIL;
 		goto freeall;
 	}
@@ -340,7 +340,7 @@ int main(int argc, char *argv[])
 			  &header, &headersize, &headerrfcsize, 
 			  &body, &body_size, &body_rfcsize) < 0) {
 		trace(TRACE_ERROR, "%s,%s splitmessage failed",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		my_free(whole_message);
 		exitcode = EX_TEMPFAIL;
 		goto freeall;
@@ -350,7 +350,7 @@ int main(int argc, char *argv[])
 		trace(TRACE_ERROR,
 		      "%s,%s: failed to read header because header is "
 		      "too big (bigger than READ_BLOCK_SIZE (%llu))",
-		      __FILE__, __FUNCTION__, (u64_t) READ_BLOCK_SIZE);
+		      __FILE__, __func__, (u64_t) READ_BLOCK_SIZE);
 		exitcode = EX_DATAERR;
 		goto freeall;
 	}

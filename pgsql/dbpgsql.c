@@ -80,7 +80,7 @@ int db_connect()
 	if (PQstatus(conn) == CONNECTION_BAD) {
 		trace(TRACE_ERROR,
 		      "%si,%s: PQconnectdb failed: %s",
-		      __FILE__, __FUNCTION__, PQerrorMessage(conn));
+		      __FILE__, __func__, PQerrorMessage(conn));
 		return -1;
 	}
 
@@ -102,11 +102,11 @@ int db_check_connection()
 	/* if there is no connection, try making one */
 	if (!conn) {
 		trace(TRACE_DEBUG, "%s,%s: no database connection, trying "
-		      "to establish one", __FILE__, __FUNCTION__);
+		      "to establish one", __FILE__, __func__);
 		if (db_connect() < 0) {
 			trace(TRACE_ERROR,
 			      "%s,%s: unable to connect to database",
-			      __FILE__, __FUNCTION__);
+			      __FILE__, __func__);
 			return -1;
 		}
 		return 0;
@@ -116,16 +116,16 @@ int db_check_connection()
 	if (PQstatus(conn) != CONNECTION_OK) {
 		trace(TRACE_DEBUG,
 		      "%s,%s: connection lost, trying to reset", __FILE__,
-		      __FUNCTION__);
+		      __func__);
 		PQreset(conn);
 
 		if (PQstatus(conn) != CONNECTION_OK) {
 			trace(TRACE_ERROR,
 			      "%s,%s: Connection failed: [%s]", __FILE__,
-			      __FUNCTION__, PQerrorMessage(conn));
+			      __func__, PQerrorMessage(conn));
 			trace(TRACE_ERROR,
 			      "%s,%s: Could not establish dbase "
-			      "connection", __FILE__, __FUNCTION__);
+			      "connection", __FILE__, __func__);
 			conn = NULL;
 			return -1;
 		}
@@ -165,7 +165,7 @@ void db_free_result()
 		PQclear(res);
 	else
 		trace(TRACE_WARNING, "%s,%s: trying to free a result set "
-		      "that is already NULL!", __FILE__, __FUNCTION__);
+		      "that is already NULL!", __FILE__, __func__);
 	res = NULL;
 }
 
@@ -173,14 +173,14 @@ const char *db_get_result(unsigned row, unsigned field)
 {
 	if (!res) {
 		trace(TRACE_WARNING, "%s,%s: result set is NULL",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return NULL;
 	}
 
 	if ((row >= db_num_rows()) || (field >= db_num_fields())) {
 		trace(TRACE_WARNING, "%s,%s: "
 		      "(row = %u,field = %u) bigger then size of result set",
-		      __FILE__, __FUNCTION__, row, field);
+		      __FILE__, __func__, row, field);
 		return NULL;
 	}
 	return PQgetvalue(res, row, field);
@@ -219,13 +219,13 @@ int db_query(const char *the_query)
 
 	if (db_check_connection() < 0) {
 		trace(TRACE_ERROR, "%s,%s: No database connection",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return -1;
 	}
 
 	if (the_query != NULL) {
 		trace(TRACE_DEBUG, "%s,%s: "
-		      "executing query [%s]", __FILE__, __FUNCTION__,
+		      "executing query [%s]", __FILE__, __func__,
 		      the_query);
 		temp_res = PQexec(conn, the_query);
 		if (!temp_res)
@@ -237,7 +237,7 @@ int db_query(const char *the_query)
 		    PQresultStatusVar != PGRES_TUPLES_OK) {
 			trace(TRACE_ERROR, "%s, %s: "
 			      "Error executing query [%s] : [%s]\n",
-			      __FILE__, __FUNCTION__,
+			      __FILE__, __func__,
 			      the_query, PQresultErrorMessage(temp_res));
 			PQclear(temp_res);
 			return -1;
@@ -262,13 +262,13 @@ int db_query(const char *the_query)
 				trace(TRACE_WARNING,
 				      "%s,%s: previous result set is possibly "
 				      "not freed.", __FILE__,
-				      __FUNCTION__);
+				      __func__);
 			res = temp_res;
 		}
 	} else {
 		trace(TRACE_ERROR, "%s,%s: "
 		      "query buffer is NULL, this is not supposed to happen\n",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return -1;
 	}
 	return 0;
@@ -291,7 +291,7 @@ int db_do_cleanup(const char **tables, int num_tables)
 		if (db_query(the_query) == -1) {
 			trace(TRACE_ERROR,
 			      "%s,%s: error vacuuming table [%s]",
-			      __FILE__, __FUNCTION__, tables[i]);
+			      __FILE__, __func__, tables[i]);
 			result = -1;
 		}
 	}
@@ -302,14 +302,14 @@ u64_t db_get_length(unsigned row, unsigned field)
 {
 	if (!res) {
 		trace(TRACE_WARNING, "%s,%s: result set is NULL",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return -1;
 	}
 
 	if ((row >= db_num_rows()) || (field >= db_num_fields())) {
 		trace(TRACE_ERROR, "%s,%s: "
 		      "(row = %u,field = %u) bigger then size of result set",
-		      __FILE__, __FUNCTION__, row, field);
+		      __FILE__, __func__, row, field);
 		return -1;
 	}
 	return PQgetlength(res, row, field);

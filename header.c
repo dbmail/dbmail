@@ -107,7 +107,7 @@ int split_message(const char *whole_message,
 	*header = my_malloc((tmp_header_size + 1) * sizeof(char));
 	if (header == NULL) {
 		trace(TRACE_ERROR, "%s,%s: error allocating memory", 
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return -1;
 	}
 	memset(*header, '\0', tmp_header_size + 1);
@@ -146,7 +146,7 @@ void get_rfc_size(const char *body_start, u64_t body_size,
 	remaining_len = body_size;
 
 	trace(TRACE_DEBUG, "%s,%s: remaining_len = %zd", 
-	      __FILE__, __FUNCTION__, remaining_len);
+	      __FILE__, __func__, remaining_len);
 	if (remaining_len == 0)
 		return;
 	/* count all the newlines */
@@ -169,14 +169,14 @@ static int consume_header_line(const char *message_content,
 	size_t tmp_line_rfcsize = 0;
 	
 	trace(TRACE_DEBUG, "%s,%s: message_content = %s",
-	      __FILE__, __FUNCTION__, message_content);
+	      __FILE__, __func__, message_content);
 	if (strlen(message_content) == 0) {
 		tmp_line_size = 0;
 		tmp_line_rfcsize = 0;
 	} else {
 		line_content_size = strcspn(message_content, "\r\n");
 		trace(TRACE_DEBUG, "%s,%s: line_content_size = %zd",
-		      __FILE__, __FUNCTION__, line_content_size);
+		      __FILE__, __func__, line_content_size);
 		if (message_content[line_content_size] == '\n') {
 			tmp_line_size = line_content_size + 1;
 			tmp_line_rfcsize = tmp_line_size + 1;
@@ -187,7 +187,7 @@ static int consume_header_line(const char *message_content,
 				tmp_line_rfcsize = tmp_line_size;
 			} else {
 				trace(TRACE_ERROR, "%s,%s: error reading header line",
-				      __FILE__, __FUNCTION__);
+				      __FILE__, __func__);
 				return -1;
 			}
 		}
@@ -198,7 +198,7 @@ static int consume_header_line(const char *message_content,
 	if (tmp_line_rfcsize == 2 || tmp_line_rfcsize == 0) {
 		/* only '\r\n', which is an empty line */
 		trace(TRACE_DEBUG, "%s,%s: end of header found",
-		      __FILE__, __FUNCTION__);
+		      __FILE__, __func__);
 		return 0;
 	}
 	else

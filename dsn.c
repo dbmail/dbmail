@@ -215,7 +215,7 @@ int dsnuser_init(deliver_to_user_t * dsnuser)
 	list_init(dsnuser->forwards);
 
 	trace(TRACE_DEBUG, "%s, %s: dsnuser initialized",
-	      __FILE__, __FUNCTION__);
+	      __FILE__, __func__);
 	return 0;
 }
 
@@ -239,7 +239,7 @@ void dsnuser_free(deliver_to_user_t * dsnuser)
 	my_free(dsnuser->forwards);
 
 	trace(TRACE_DEBUG, "%s, %s: dsnuser freed",
-	      __FILE__, __FUNCTION__);
+	      __FILE__, __func__);
 }
 
 
@@ -272,7 +272,7 @@ int dsnuser_resolve_list(struct list *deliveries)
 				     sizeof(delivery->useridnr)) == 0) {
 					trace(TRACE_ERROR,
 					      "%s, %s: out of memory",
-					      __FILE__, __FUNCTION__);
+					      __FILE__, __func__);
 					return -1;
 				}
 
@@ -299,7 +299,7 @@ int dsnuser_resolve_list(struct list *deliveries)
 					/* An error occurred */
 					trace(TRACE_ERROR,
 					      "%s, %s: error checking user [%s]",
-					      __FILE__, __FUNCTION__,
+					      __FILE__, __func__,
 					      delivery->address);
 					return -1;
 				}
@@ -311,14 +311,14 @@ int dsnuser_resolve_list(struct list *deliveries)
 						trace(TRACE_ERROR,
 						      "%s, %s: out of memory",
 						      __FILE__,
-						      __FUNCTION__);
+						      __func__);
 						return -1;
 					} else {
 
 						trace(TRACE_DEBUG,
 						      "%s, %s: added user [%s] id [%llu] to delivery list",
 						      __FILE__,
-						      __FUNCTION__,
+						      __func__,
 						      delivery->address,
 						      userid);
 						/* The userid was valid... */
@@ -341,7 +341,7 @@ int dsnuser_resolve_list(struct list *deliveries)
 								-1);
 					trace(TRACE_DEBUG,
 					      "%s, %s: user [%s] found total of [%d] aliases",
-					      __FILE__, __FUNCTION__,
+					      __FILE__, __func__,
 					      delivery->address,
 					      alias_count);
 
@@ -350,7 +350,7 @@ int dsnuser_resolve_list(struct list *deliveries)
 						trace(TRACE_INFO,
 						      "%s, %s: user [%s] checking for domain forwards.",
 						      __FILE__,
-						      __FUNCTION__,
+						      __func__,
 						      delivery->address);
 
 						domain =
@@ -367,7 +367,7 @@ int dsnuser_resolve_list(struct list *deliveries)
 							trace(TRACE_DEBUG,
 							      "%s, %s: domain [%s] checking for domain forwards",
 							      __FILE__,
-							      __FUNCTION__,
+							      __func__,
 							      domain);
 
 							/* Checking for domain aliases */
@@ -381,7 +381,7 @@ int dsnuser_resolve_list(struct list *deliveries)
 							trace(TRACE_DEBUG,
 							      "%s, %s: domain [%s] found total of [%d] aliases",
 							      __FILE__,
-							      __FUNCTION__,
+							      __func__,
 							      domain,
 							      domain_count);
 
