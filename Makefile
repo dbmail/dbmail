@@ -37,7 +37,7 @@ LIB = -lpq -lcrypt
 # from compiler about vsyslog function 
 # Added the -D_SVID_SOURCE option because ipc.h asked me to.
 
-CFLAGS = -Wall  -D_BSD_SOURCE -D_SVID_SOURCE
+CFLAGS = -Wall  -D_BSD_SOURCE -D_SVID_SOURCE -ggdb
 
 .PHONY: clean install
 

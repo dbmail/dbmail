@@ -8,6 +8,7 @@
 #include "db.h"
 #include "debug.h"
 #include "auth.h"
+#include <errno.h>
 
 #define INCOMING_BUFFER_SIZE 512
 #define IP_ADDR_MAXSIZE 16
@@ -72,6 +73,12 @@ static void signal_handler (int signo, siginfo_t *info, void *data)
   pid_t PID;
   int status,i;
 
+  if (signo == SIGUSR1)
+    {
+      trace(TRACE_DEBUG, "signal_handler(): caught SIGUSR1, assuming ping");
+      return;
+    }
+
   if (signo == SIGALRM)
   {
     done=-1;
@@ -94,11 +101,30 @@ static void signal_handler (int signo, siginfo_t *info, void *data)
   else
     if (signo == SIGCHLD)
       {
-	trace (TRACE_DEBUG,"signal_handler(): sigCHLD, cleaning up zombies");
+	trace (TRACE_DEBUG,"signal_handler(): sigCHLD, cleaning up zombies for PID %u",info->si_pid);
 
 	PID = waitpid (info->si_pid, &status, WNOHANG | WUNTRACED);
 
-	trace (TRACE_DEBUG,"signal_handler(): sigCHLD, cleaned");
+	/* reset the entry of this process if it is a default child (so it can be restored) 
+	 * This is added because of SIGKILL's
+	 */
+	if (info->si_pid == 0)
+	  {
+	    /* SIGKILL occured, 'ping' every child we have */
+	    trace(TRACE_ERROR,"signal_handler(): SIGKILL from [%u]", info->si_uid);
+	    
+	    for (i=0; i<defchld; i++)
+	      if (kill(default_child_pids[i], SIGUSR1) == -1 && errno == ESRCH)
+		{
+		  /* this child no longer exists */
+		  trace(TRACE_DEBUG, "signal_handler(): cleaning up PID %u", default_child_pids[i]);
+		  default_child_pids[i] = 0;
+		  (*default_children)--;
+		  break;
+		}
+	    
+	    trace (TRACE_DEBUG,"signal_handler(): sigCHLD, cleaned");
+	  }
 	return;
       }
     else
@@ -450,6 +476,7 @@ int main (int argc, char *argv[])
   sigaction(SIGTERM, &act, 0);
   sigaction(SIGSTOP, &act, 0);
   sigaction(SIGALRM, &act, 0);
+  sigaction(SIGUSR1, &act, 0);
 
   adr_srvr.sin_family = PF_INET; 
   
@@ -538,7 +565,7 @@ int main (int argc, char *argv[])
   shmid_xtrachilds = shmget (shmkey_xtrachilds, sizeof (pid_t) * maxchld, 0666 | IPC_CREAT);
 
   if (shmid_dcu == -1 || shmid_dcp == -1 || shmid_xtrachilds == -1)
-    trace (TRACE_FATAL,"main(): could not allocate shared memory");
+    trace (TRACE_FATAL,"main(): could not allocate shared memory: %s",strerror(errno));
 
 
   /* server loop */
@@ -703,17 +730,23 @@ int main (int argc, char *argv[])
 	      }
 
 	    /* wait for a connection */
+	    trace(TRACE_DEBUG, "main(): pre-accept");
+
 	    len_inet = sizeof (adr_clnt);
 	    c = accept (s, (struct sockaddr *)&adr_clnt,
 			&len_inet); /* incoming connection */
 	
+	    trace(TRACE_DEBUG, "main(): accept finished");
+
 	    /* failure won't cause a quit forking is too expensive */	
 	    if (c == -1)
 	      {
 		trace (TRACE_ERROR,"main(): call accept(2) failed [%s]", strerror(errno));
 		continue;
 	      }
-		
+
+	    trace(TRACE_DEBUG, "main(): accept accepted");
+	    
 	    if (fork())
 	      {
 		total_children++;

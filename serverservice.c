@@ -233,6 +233,7 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
   sigaction(SIGTERM, &act, 0);
   sigaction(SIGSTOP, &act, 0);
   sigaction(SIGALRM, &act, 0);
+  sigaction(SIGUSR1, &act, 0); /* our 'ping' signal */
 
   /* daemonize */
   if (daemonize)
@@ -630,6 +631,13 @@ void SS_sighandler(int sig, siginfo_t *info, void *data)
   int status;
   int i;
 
+  if (sig == SIGUSR1)
+    {
+      /* we are being 'ping'-ed */
+      trace(TRACE_DEBUG,"SS_sighandler(): ping received");
+      return;
+    }
+
   if (sig == SIGALRM)
     {
       /* timeout occurred, close client, terminate process */
@@ -696,7 +704,29 @@ void SS_sighandler(int sig, siginfo_t *info, void *data)
   switch (sig)
     {
     case SIGCHLD:
+      trace(TRACE_DEBUG, "SS_sighandler(): cleaning up zombies..");
       PID = waitpid(info->si_pid, &status, WNOHANG | WUNTRACED);
+
+      /* reset the entry of this process if it is a default child (so it can be restored) 
+       * This is added because of SIGKILL's
+       */
+      if (info->si_pid == 0)
+	{
+	  /* SIGKILL occured, 'ping' every child we have */
+	  trace(TRACE_ERROR,"signal_handler(): SIGKILL from [%u]", info->si_uid);
+	    
+	  for (i=0; i<n_default_children && default_child_pids; i++)
+	      if (kill(default_child_pids[i], SIGUSR1) == -1 && errno == ESRCH)
+		{
+		  /* this child no longer exists */
+		  trace(TRACE_DEBUG, "signal_handler(): cleaning up PID %u", default_child_pids[i]);
+		  default_child_pids[i] = 0;
+		  (*ss_n_default_children_used)--;
+		  break;
+		}
+	}
+      trace (TRACE_DEBUG,"signal_handler(): sigCHLD, cleaned");
+      return;
 
       break;
 
