@@ -111,7 +111,7 @@ int StartServer(serverConfig_t *conf)
     {
       for (i=0; i<conf->nChildren; i++)
 	{
-	  if (CheckChildAlive(pid[i]) == 0)
+/*	  if (CheckChildAlive(pid[i]) == 0)
 	    {
 	      trace(TRACE_DEBUG, "StartServer(): child (PID [%d]) died, waiting for exit status..", pid[i]);
 
@@ -120,7 +120,11 @@ int StartServer(serverConfig_t *conf)
 		  trace(TRACE_DEBUG, "StartServer(): still waiting for dead child pid");
 		  usleep(100000);
 		}
+*/
 
+	  if (waitpid(pid[i], NULL, WNOHANG|WUNTRACED) == pid[i])
+	    {
+	      trace(TRACE_DEBUG, "StartServer(): child [%u] has exited", (unsigned)pid[i]);
 	      trace(TRACE_DEBUG, "StartServer(): creating new child");
 	      pid[i] = CreateChild(&childinfo);
 	    }
