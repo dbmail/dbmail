@@ -1093,7 +1093,7 @@ unsigned long db_check_mailboxsize (unsigned long mailboxid)
 
   row = mysql_fetch_row(res);
 
-  size = row[0] ? strtoul(row[0], NULL, 10) : 0;
+  size = (row && row[0]) ? strtoul(row[0], NULL, 10) : 0;
   mysql_free_result(res);
 
   return size;
