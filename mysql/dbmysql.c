@@ -2458,57 +2458,62 @@ int db_copymsg(u64_t msgid, u64_t destmboxid)
     }
      
   maxmail = db_getmaxmailsize(userid);
-  if (userid == -1)
+  if (maxmail == -1)
     {
       trace(TRACE_ERROR, "db_copymsg(): error fetching max quotum for user [%llu]", userid);
       return -1;
     }
 
-  if (curr_quotum >= maxmail)
+  if (maxmail > 0)
     {
-      trace(TRACE_INFO, "db_copymsg(): quotum already exceeded\n");
-      return -2;
-    }
+      if (curr_quotum >= maxmail)
+	{
+	  trace(TRACE_INFO, "db_copymsg(): quotum already exceeded\n");
+	  return -2;
+	}
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT messagesize FROM messages WHERE message_idnr = %llu", msgid);
+      snprintf(query, DEF_QUERYSIZE, "SELECT messagesize FROM messages WHERE message_idnr = %llu", msgid);
   
-  if (db_query(query) == -1)
-    {
-      trace(TRACE_ERROR, "db_copymsg(): could not fetch message size for message id [%llu]\n", msgid);
-      return -1;
-    }
+      if (db_query(query) == -1)
+	{
+	  trace(TRACE_ERROR, "db_copymsg(): could not fetch message size for message id [%llu]\n", msgid);
+	  return -1;
+	}
 
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace(TRACE_ERROR,"db_copymsg(): mysql_store_result failed: %s\n",mysql_error(&conn));
-      return -1;
-    }
+      if ((res = mysql_store_result(&conn)) == NULL)
+	{
+	  trace(TRACE_ERROR,"db_copymsg(): mysql_store_result failed: %s\n",mysql_error(&conn));
+	  return -1;
+	}
 
-  if (mysql_num_rows(res) != 1)
-    {
-      trace(TRACE_ERROR, "db_copymsg(): message [%llu] does not exist/has multiple entries\n", msgid);
-      mysql_free_result(res);
-      return -1;
-    }
+      if (mysql_num_rows(res) != 1)
+	{
+	  trace(TRACE_ERROR, "db_copymsg(): message [%llu] does not exist/has multiple entries\n", msgid);
+	  mysql_free_result(res);
+	  return -1;
+	}
 
-  row = mysql_fetch_row(res);
+      row = mysql_fetch_row(res);
   
-  if (row && row[0])
-    msgsize = strtoull(row[0], NULL, 10);
-  else
-    {
-      trace(TRACE_ERROR, "db_copymsg(): no result set after requesting msgsize of msg [%llu]\n", msgid);
-      mysql_free_result(res);
-      return -1;
-    }
+      if (row && row[0])
+	msgsize = strtoull(row[0], NULL, 10);
+      else
+	{
+	  trace(TRACE_ERROR, "db_copymsg(): no result set after requesting msgsize of msg [%llu]\n",
+		msgid);
+	  mysql_free_result(res);
+	  return -1;
+	}
       
-  mysql_free_result(res);
+      mysql_free_result(res);
 
-  if (msgsize > maxmail - curr_quotum)
-    {
-      trace(TRACE_INFO, "db_copymsg(): quotum would exceed");
-      return -2;
+      if (msgsize > maxmail - curr_quotum)
+	{
+	  trace(TRACE_INFO, "db_copymsg(): quotum would exceed");
+	  return -2;
+	}
     }
+
 
   /* copy: */
 
