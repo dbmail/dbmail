@@ -427,7 +427,7 @@ int insert_messages(struct DbmailMessage *message,
 	u64_t msgsize;
 
 	/* Only the last step of the returnpath is used. */
-	if (ret_path = list_getstart(returnpath))
+	if ((ret_path = list_getstart(returnpath)))
 		dbmail_message_set_header(message, "Return-Path", (char *)ret_path->data);
 
  	delivery_status_t final_dsn;
