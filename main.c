@@ -43,8 +43,6 @@ int main (int argc, char *argv[])
 	      "(default: \"deliver-to\" header)\n",argv[0]);
       printf ("       %s -m \"mailbox\" -u [username] for delivery to mailbox (name)\n"
               ,argv[0]);
-      printf ("       %s -M <mailboxid> -u [username] for delivery to mailbox_idnr\n"
-              ,argv[0]);
       printf ("       %s -d [addresses]  for delivery without using scanner\n",argv[0]);
       printf ("       %s -u [usernames]  for direct delivery to users\n\n",argv[0]);
       return 0;
@@ -115,8 +113,7 @@ int main (int argc, char *argv[])
           trace(TRACE_STOP,"main(): could not find any addresses");
     }
 
-  else if ((strcmp (argv[INDEX_DELIVERY_MODE],"-m")==0) || 
-          (strcmp(argv[INDEX_DELIVERY_MODE],"-M")==0))
+  else if ((strcmp (argv[INDEX_DELIVERY_MODE],"-m")==0) 
   {
       if (argc>4)
       {
