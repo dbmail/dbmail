@@ -1,5 +1,11 @@
 2004-09-07  Ilja Booij  <ilja@ic-s.nl>
 
+	* db.c (db_commit_transaction): if committing a transaction fails, we
+	want to make sure that the database is not in an inconsistent state.
+	To be sure of this, a rollback is performed. 
+	(db_rollback_transaction): if a rollback fails, disconnect from the
+	database server, then reconnect again.
+
 	* imaputil.c (date_sql2imap): changed from array magic function to
 	function using strptime() and strftime() for data parsing and
 	formatting. Now adds timezone to IMAP Internal Date.

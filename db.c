@@ -148,8 +148,11 @@ int db_commit_transaction()
 	snprintf(query, DEF_QUERYSIZE,
 		 "COMMIT");
 	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: error committing transaction",
+		trace(TRACE_ERROR, "%s,%s: error committing transaction."
+		      "Because we do not want to leave the database in "
+		      "an inconsistent state, we will perform a rollback now",
 		      __FILE__, __func__);
+		db_rollback_transaction();
 		return -1;
 	}
 	return 0;
@@ -160,9 +163,13 @@ int db_rollback_transaction()
 	snprintf(query, DEF_QUERYSIZE,
 		 "ROLLBACK");
 	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: error rolling back transaction",
+		trace(TRACE_ERROR, "%s,%s: error rolling back transaction. "
+		      "Disconnecting from database (this will implicitely "
+		      "cause a Transaction Rollback.",
 		      __FILE__, __func__);
-		return -1;
+		db_disconnect();
+		/* and reconnect again */
+		db_connect();
 	}
 	return 0;
 }

@@ -433,13 +433,8 @@ static int store_message_temp(const char *header, const char *body,
 
 	if (db_update_message(msgidnr, unique_id, (headersize + bodysize),
 			      (headerrfcsize + bodyrfcsize)) < 0) {
-		trace(TRACE_ERROR, "%s,%s: error updating message [%llu]. "
-		      "Trying to clean up", __FILE__, __func__, msgidnr);
-		if (db_delete_message(msgidnr) < 0) 
-			trace(TRACE_ERROR, "%s,%s error deleting message "
-			      "[%llu]. Database might be inconsistent, run "
-			      "dbmail-util", __FILE__, __func__,
-			      msgidnr);
+		trace(TRACE_ERROR, "%s,%s: error updating message [%llu]",
+		      __FILE__, __func__, msgidnr);
 		return -1;
 	}
 
@@ -524,7 +519,13 @@ int insert_messages(const char *header, const char* body, u64_t headersize,
 	msgsize = headersize + bodysize;
 	rfcsize = headerrfcsize + bodyrfcsize;
 
-	/* Read in the rest of the stream and store it into a temporary message */
+	/* first start a new database transaction */
+	if (db_begin_transaction() < 0) {
+		trace(TRACE_ERROR, "%s,%s: error executing "
+		      "db_begin_transaction(). aborting delivery...");
+		return -1;
+	}
+
 	switch (store_message_temp
 		(header, body, headersize, headerrfcsize, 
 		 bodysize, bodyrfcsize, &tmpmsgidnr)) {
@@ -533,6 +534,7 @@ int insert_messages(const char *header, const char* body, u64_t headersize,
 		trace(TRACE_ERROR,
 		      "%s, %s: failed to store temporary message.",
 		      __FILE__, __func__);
+		db_rollback_transaction();
 		return -1;
 	default:
 		trace(TRACE_DEBUG, "%s, %s: temporary msgidnr is [%llu]",
@@ -660,6 +662,10 @@ int insert_messages(const char *header, const char* body, u64_t headersize,
 	      "insert_messages(): temporary message deleted from database");
 
 	trace(TRACE_DEBUG, "insert_messages(): End of function");
+
+	/* if committing the transaction fails, a rollback is performed */
+	if (db_commit_transaction() < 0) 
+		return -1;
 
 	return 0;
 }
