@@ -53,12 +53,15 @@ int main (int argc, char *argv[])
 
   char *newuser, *newgroup;
   
+  char *ipaddr, *port;
+
   time_t timestamp;
   time_t timeout;
 	
   struct hostent *clientinfo;
 
   int len_inet;
+  int reuseaddress;
   int s = -1;
   int c = -1;
   int z;
@@ -101,20 +104,44 @@ int main (int argc, char *argv[])
   signal (SIGTERM, sigchld_handler);
   signal (SIGSTOP, sigchld_handler);
 
+  if (db_connect()< 0) 
+	trace(TRACE_FATAL,"main(): could not connect to database"); 
 	
   adr_srvr.sin_family = AF_INET; 
-  adr_srvr.sin_addr.s_addr = htonl (INADDR_ANY); /* bind to any address */
-  adr_srvr.sin_port = htons (PORT); /* listning port */
-	
-  len_inet=sizeof (adr_srvr);
-
+  
   s = socket (PF_INET, SOCK_STREAM, 0); /* creating the socket */
   if (s == -1 ) 
     trace (TRACE_FATAL,"main(): call socket(2) failed");
 
+
+  ipaddr = db_get_config_item("POP3D_BIND_IP",CONFIG_MANDATORY);
+  port = db_get_config_item("POP3D_BIND_PORT",CONFIG_MANDATORY);
+
+  if (ipaddr != NULL)
+  {
+	  if (ipaddr[0] == '*') /* bind to all interfaces */
+			adr_srvr.sin_addr.s_addr = htonl (INADDR_ANY); 
+	  else 
+		{
+		   if (!inet_aton(ipaddr, &adr_srvr.sin_addr))
+				trace (TRACE_FATAL, "main(): %s is not a valid ipaddress",ipaddr);
+		}
+  }
+  else
+	  trace (TRACE_FATAL,"main(): could not read bind ip from config");
+
+  if (port != NULL)
+	  adr_srvr.sin_port = htons (atoi(port));
+	else
+		trace (TRACE_FATAL,"main(): could not read port from config");
+			
+  setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &reuseaddress, sizeof(reuseaddress));
+	
+  len_inet = sizeof (adr_srvr);
+
   z = bind (s, (struct sockaddr *)&adr_srvr, len_inet); /* bind to socket */
   if (z == -1 )
-    trace (TRACE_FATAL,"main(): call bind(2) failed");
+    trace (TRACE_FATAL,"main(): call bind(2) failed (could not bind to %s:%s)",ipaddr,port);
 
   z = listen (s, BACKLOG); /* make the socket listen */
   if (z == -1 )
@@ -123,8 +150,6 @@ int main (int argc, char *argv[])
   /* drop priviledges */
 	trace (TRACE_MESSAGE,"main(): Dropping priviledges");		
 
-  if (db_connect()< 0) 
-	trace(TRACE_FATAL,"main(): could not connect to database"); 
 	
   newuser = db_get_config_item("POP3D_EFFECTIVE_USER",CONFIG_MANDATORY);
   newgroup = db_get_config_item("POP3D_EFFECTIVE_GROUP",CONFIG_MANDATORY);
@@ -143,8 +168,12 @@ int main (int argc, char *argv[])
     trace(TRACE_FATAL,"main(): newuser and newgroup should not be NULL");
 	
   /* server loop */
-  trace (TRACE_MESSAGE,"main(): DBmail pop3 server ready");
+  trace (TRACE_MESSAGE,"main(): DBmail pop3 server ready (bound to [%s:%s])",ipaddr,port);
 	
+	free (ipaddr);
+	free (port);
+  
+  
   for (;;)
     {
       if (children < MAXCHILDREN) 
