@@ -479,28 +479,28 @@ int insert_messages(struct DbmailMessage *message,
 			      __FILE__, __func__, useridnr);
 
 			switch (sort_and_deliver(message, useridnr, delivery->mailbox)) {
-			case SORT_SUCCESS:
+			case DSN_CLASS_OK:
 				/* Indicate success. */
 				trace(TRACE_DEBUG,
 				      "%s, %s: successful sort_and_deliver for useridnr [%llu]",
 				      __FILE__, __func__, useridnr);
 				has_2 = 1;
 				break;
-			case SORT_FAILURE:
+			case DSN_CLASS_FAIL:
 				/* Indicate permanent failure. */
 				trace(TRACE_ERROR,
 				      "%s, %s: permanent failure sort_and_deliver for useridnr [%llu]",
 				      __FILE__, __func__, useridnr);
 				has_5 = 1;
 				break;
-			case SORT_OVER_QUOTA:
+			case DSN_CLASS_QUOTA:
 			/* Indicate over quota. */
 				trace(TRACE_ERROR,
 				      "%s, %s: temporary failure sort_and_deliver for useridnr [%llu]",
 				      __FILE__, __func__, useridnr);
 				has_5_2 = 1;
 				break;
-			case SORT_WEIRD_ERROR:
+			case DSN_CLASS_TEMP:
 			default:
 				/* Assume a temporary failure */
 				trace(TRACE_ERROR,
