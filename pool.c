@@ -112,9 +112,12 @@ void scoreboard_conf_check(void)
 {
 	/* some sanity checks on boundaries */
 	scoreboard_wrlck();
-	if (scoreboard->conf->maxChildren > HARD_MAX_CHILDREN)
+	if (scoreboard->conf->maxChildren > HARD_MAX_CHILDREN) {
+		trace(TRACE_WARNING,
+		      "%s,%s: MAXCHILDREN too large. Decreasing to [%d]",
+		      __FILE__,__func__,HARD_MAX_CHILDREN);
 		scoreboard->conf->maxChildren = HARD_MAX_CHILDREN;
-
+	}
 	if (scoreboard->conf->maxChildren < scoreboard->conf->startChildren) {
 		trace(TRACE_WARNING,
 		      "%s,%s: MAXCHILDREN too small. Increasing to NCHILDREN [%d]",
@@ -124,7 +127,7 @@ void scoreboard_conf_check(void)
 
 	if (scoreboard->conf->maxSpareChildren > scoreboard->conf->maxChildren) {
 		trace(TRACE_WARNING,
-		      "%s,%s: MAXSPARECHILDREN too small. Increasing to MAXCHILDREN [%d]",
+		      "%s,%s: MAXSPARECHILDREN too large. Decreasing to MAXCHILDREN [%d]",
 		      __FILE__,__func__,scoreboard->conf->maxChildren);
 		scoreboard->conf->maxSpareChildren = scoreboard->conf->maxChildren;
 	}
@@ -197,7 +200,7 @@ pid_t get_idle_spare()
 {
 	int i;
 	pid_t idlepid = (pid_t) -1;
-	
+	/* get the last-in-first-out idle process */	
 	scoreboard_rdlck();
 	for (i = scoreboard->conf->maxChildren - 1; i >= 0; i--) {
 		if ((scoreboard->child[i].pid > 0) 
@@ -213,11 +216,14 @@ pid_t get_idle_spare()
 int getKey(pid_t pid)
 {
 	int i;
-	/* no locking here ! */
+	scoreboard_rdlck();
 	for (i = 0; i < scoreboard->conf->maxChildren; i++) {
-		if (scoreboard->child[i].pid == pid)
+		if (scoreboard->child[i].pid == pid) {
+			scoreboard_unlck();
 			return i;
+		}
 	}
+	scoreboard_unlck();
 	trace(TRACE_FATAL,
 	      "%s,%s: pid NOT found on scoreboard [%d]", __FILE__, __FUNCTION__, pid);
 	return -1;
