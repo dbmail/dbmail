@@ -1468,7 +1468,10 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
       setseen = 0;
 
       /* walk by the arguments */
-      if (fetchitems.getFlags) {}
+      if (fetchitems.getFlags) 
+	{
+	  db_get_flags();
+	}
 	
     }
       
