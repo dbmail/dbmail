@@ -17,6 +17,7 @@ int db_connect ()
   /* connecting */
   mysql_init(&conn);
   mysql_real_connect (&conn,HOST,USER,PASS,MAILDATABASE,0,NULL,0); 
+
 #ifdef mysql_errno
   if (mysql_errno(&conn)) {
     trace(TRACE_ERROR,"dbconnect(): mysql_real_connect failed: %s",mysql_error(&conn));
@@ -30,6 +31,7 @@ int db_connect ()
     trace(TRACE_ERROR,"dbconnect(): mysql_select_db failed: %s",mysql_error(&conn));
     return -1;
   }  */
+
   return 0;
 }
 
@@ -489,7 +491,7 @@ int db_update_pop (struct session *sessionptr)
   return 0;
 }
 
-int db_disconnect (char *query)
+int db_disconnect()
 {
   return 0;
 }

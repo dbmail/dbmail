@@ -11,7 +11,7 @@
 #include <syslog.h>
 
 /* DATABASE SPECIFIC */
-#define HOST "10.0.0.100"
+#define HOST "localhost"
 #define USER "root"
 #define PASS ""
 #define MAILDATABASE "dbmail"

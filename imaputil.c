@@ -10,10 +10,65 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include "imaputil.h"
+#include "imap4.h"
 #include "debug.h"
 
 extern const char AcceptedChars[];
 extern const char AcceptedTagChars[];
+
+char base64encodestring[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+/*
+ * check_state_and_args()
+ *
+ * checks if the user is in the right state & the numbers of arguments;
+ * a state of -1 specifies any state
+ * arguments can be grouped by means of parentheses
+ *
+ * returns 1 on succes, 0 on failure
+ */
+int check_state_and_args(const char *command, const char *tag, const char **args, 
+			 int nargs, int state, ClientInfo *ci)
+{
+  int i;
+  imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
+
+  /* check state */
+  if (state != -1)
+    {
+      if (ud->state != state)
+	{
+	  fprintf(ci->tx,"%s BAD %s command received in invalid state\n", tag, command);
+	  return 0;
+	}
+    }
+
+  /* check args */
+  for (i=0; i<nargs; i++)
+    {
+      if (!args[i])
+	{
+	  /* error: need more args */
+	  fprintf(ci->tx,"%s BAD missing argument%s to %s\n", tag, 
+		  (nargs == 1) ? "" : "(s)", command);
+	  return 0;
+	}
+    }
+
+  for (i=0; args[i]; i++) ;
+
+  if (i > nargs)
+    {
+      /* error: too many args */
+      fprintf(ci->tx,"%s BAD too many arguments to %s\n",tag, command);
+      return 0;
+    }
+
+  /* succes */
+  return 1;
+}
+
+
 
 /*
  * build_args_array()
@@ -359,3 +414,64 @@ int checktag(const char *s)
   return 1;
 }
 
+
+/*
+ * base64encode()
+ *
+ * encodes a string using base64 encoding
+ */
+void base64encode(char *in,char *out)
+{
+  for ( ; strlen(in) >= 3; in+=3)
+    {
+      *out++ = base64encodestring[ (in[0] & 0xFC) >> 2U];
+      *out++ = base64encodestring[ ((in[0] & 0x03) << 4U) | ((in[1] & 0xF0) >> 4U) ];
+      *out++ = base64encodestring[ ((in[1] & 0x0F) << 2U) | ((in[2] & 0xC0) >> 6U) ];
+      *out++ = base64encodestring[ (in[2] & 0x3F) ];
+    }
+
+  if (strlen(in) == 2)
+    {
+      /* 16 bits left to encode */
+      *out++ = base64encodestring[ (in[0] & 0xFC) >> 2U];
+      *out++ = base64encodestring[ ((in[0] & 0x03) << 4U) | ((in[1] & 0xF0) >> 4U) ];
+      *out++ = base64encodestring[ ((in[1] & 0x0F) << 2U) ];
+      *out++ = '=';
+
+      return;
+    }
+      
+  if (strlen(in) == 1)
+    {
+      /* 8 bits left to encode */
+      *out++ = base64encodestring[ (in[0] & 0xFC) >> 2U];
+      *out++ = base64encodestring[ ((in[0] & 0x03) << 4U) ];
+      *out++ = '=';
+      *out++ = '=';
+
+      return;
+    }
+}      
+
+
+/*
+ * base64decode()
+ *
+ * decodes a base64 encoded string
+ */
+void base64decode(char *in,char *out)
+{
+  for ( ; strlen(in) >= 4; in+=4)
+    {
+      *out++ = (stridx(base64encodestring, in[0]) << 2U) 
+	| ((stridx(base64encodestring, in[1]) & 0x30) >> 4U);
+
+      *out++ = ((stridx(base64encodestring, in[1]) & 0x0F) << 4U) 
+	| ((stridx(base64encodestring, in[2]) & 0x3C) >> 2U);
+
+      *out++ = ((stridx(base64encodestring, in[2]) & 0x03) << 6U) 
+	| (stridx(base64encodestring, in[3]) & 0x3F);
+    }
+
+  *out = 0;
+}      
