@@ -33,6 +33,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "dbmail-message.h"
+
 /* extern char *header; */
 /* extern u64_t headersize; */
 
@@ -58,6 +60,8 @@ static int is_end_of_header(const char *s);
  *
  * returns -1 on parse failure, -2 on memory error; number of newlines on succes
  */
+
+
 int mime_readheader(const char *datablock, u64_t * blkidx, struct list *mimelist,
 		    u64_t * headersize)
 {

@@ -38,12 +38,18 @@
 
 #define MSGBUF_FORCE_UPDATE -1
 
-struct DbmailMessage {
-	gulong id;
-	size_t size;
-	size_t rfcsize;
-	GMimeMessage *message;
-	GRelation *headers;
+/* 
+ * preliminary goal is to provide an interface between dbmail and gmime.
+ *
+ * ambition is facilitation of language-bindings.
+ *
+ * very much unfinished, work in progress, subject to change, etc...
+ *
+ */
+
+enum DBMAIL_MESSAGE_CLASS {
+	DBMAIL_MESSAGE,
+	DBMAIL_MESSAGE_PART
 };
 
 enum DBMAIL_MESSAGE_FILTER_TYPES { 
@@ -51,14 +57,32 @@ enum DBMAIL_MESSAGE_FILTER_TYPES {
 	DBMAIL_MESSAGE_FILTER_HEAD
 };
 
+
+struct DbmailMessage {
+	gulong id;
+	enum DBMAIL_MESSAGE_CLASS klass;
+	size_t size;
+	size_t rfcsize;
+	GMimeObject *content;
+	GRelation *headers;
+};
+
 struct DbmailMessage * dbmail_message_new(void);
+void dbmail_message_set_class(struct DbmailMessage *self, enum DBMAIL_MESSAGE_CLASS klass);
 struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t id, int filter);
-struct DbmailMessage * dbmail_message_init(struct DbmailMessage *self, const GString *message);
+struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *self, const GString *content);
 struct DbmailMessage * dbmail_message_init_with_stream(struct DbmailMessage *self, GMimeStream *stream);
-char * dbmail_message_get_headers_as_string(struct DbmailMessage *self);
-char * dbmail_message_get_body_as_string(struct DbmailMessage *self);
+gchar * dbmail_message_get_headers_as_string(struct DbmailMessage *self);
+gchar * dbmail_message_get_body_as_string(struct DbmailMessage *self);
 size_t dbmail_message_get_rfcsize(struct DbmailMessage *self);
 void dbmail_message_destroy(struct DbmailMessage *self);
+
+/*
+ *
+ * OLD Stuff. we will assimilate you.
+ *
+ */
+
 
 /**
  * split the whole message into header and body

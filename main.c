@@ -91,7 +91,7 @@ static int read_whole_message_pipe(FILE *instream, char **whole_message,
 	struct DbmailMessage *message = dbmail_message_new();
 	GMimeStream *stream = g_mime_stream_file_new(instream);
 	message = dbmail_message_init_with_stream(message, stream);
-	GString *msg = g_string_new(g_mime_object_to_string((GMimeObject *)(message->message)));
+	GString *msg = g_string_new(g_mime_object_to_string(GMIME_OBJECT(message->content)));
 	*whole_message = strdup(msg->str);
 	*whole_message_size = message->size;
 	g_string_free(msg,1);
