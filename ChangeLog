@@ -1,6 +1,7 @@
 2004-04-23  Aaron Stone  <aaron@serendipity.cx>
 
 	* header.c (read_header): switched from fread to fgetc.
+	* pipe.c (store_message_temp): switched from fread to fgetc.
 	* main.c (print_usage): added two spaces to line up the columns.
 
 2004-04-23  Aaron Stone  <aaron@serendipity.cx>

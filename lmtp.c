@@ -684,31 +684,26 @@ int lmtp(void *stream, void *instream, char *buffer,
 					} else {
 						/* The DATA command itself it not given a reply except
 						 * that of the status of each of the remaining recipients. */
+						const char *class, *subject, *detail;
 
-						for (element =
-						     list_getstart(&rcpt);
+						for (element = list_getstart(&rcpt);
 						     element != NULL;
-						     element =
-						     element->nextnode) {
-							deliver_to_user_t
-							    * dsnuser =
-							    (deliver_to_user_t
-							     *) element->
-							    data;
+						     element = element->nextnode) {
+							deliver_to_user_t * dsnuser =
+							    (deliver_to_user_t *) element->data;
+							dsn_tostring(dsnuser->dsn, &class, &subject, &detail);
 
-							switch (dsnuser->
-								dsn.
-								class) {
-							case DSN_CLASS_OK:
-								fprintf((FILE *) stream, "250 Recipient <%s> OK\r\n", dsnuser->address);
-								break;
-							case DSN_CLASS_TEMP:
-								fprintf((FILE *) stream, "450 Recipient <%s> TEMP FAIL\r\n", dsnuser->address);
-								break;
-							case DSN_CLASS_FAIL:
-							default:
-								fprintf((FILE *) stream, "550 Recipient <%s> PERM FAIL\r\n", dsnuser->address);
-								break;
+							/* Give a simple OK, otherwise a detailed message. */
+							switch (dsnuser->dsn.class) {
+								case DSN_CLASS_OK:
+									fprintf((FILE *)stream, "%d%d%d Recipient <%s> OK\r\n",
+									        dsnuser->dsn.class, dsnuser->dsn.subject, dsnuser->dsn.detail,
+									        dsnuser->address);
+									break;
+								default:
+									fprintf((FILE *)stream, "%d%d%d Recipient <%s> %s %s %s\r\n",
+									        dsnuser->dsn.class, dsnuser->dsn.subject, dsnuser->dsn.detail,
+									        dsnuser->address, class, subject, detail);
 							}
 						}
 					}

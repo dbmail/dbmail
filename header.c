@@ -99,9 +99,15 @@ int read_header(FILE * instream, u64_t * headerrfcsize, u64_t * headersize,
 				break;
 
 			tmpline[linemem++] = tmpchar;
-			if (tmpchar == '\n'
-			    && tmpline[linemem-1] != '\r')
+
+			/* Always break at the end of a line, incrementing rfcsize
+			 * if said end of line is a \n-only end of line. */
+			if (tmpchar == '\n') {
+			    if (tmpline[linemem-1] != '\r') {
 				tmpheaderrfcsize++;
+			    }
+			    break;
+			}
 		}
 		tmpheadersize += linemem;
 		tmpheaderrfcsize += linemem;
@@ -121,13 +127,13 @@ int read_header(FILE * instream, u64_t * headerrfcsize, u64_t * headersize,
 		/* The end of the header could be \n\n, \r\n\r\n,
 		 * or \r\n.\r\n, in the accidental case that we
 		 * ate the whole SMTP message, too! */
-		if (strcmp(tmpline, ".\r\n") == 0) {
+		if (strncmp(tmpline, ".\r\n", (linemem < 3 ? linemem : 3)) == 0) {
 			/* This is the end of the message! */
 			trace(TRACE_DEBUG,
 			      "read_header(): single period found");
 			myeof = 1;
-		} else if (strcmp(tmpline, "\n") == 0
-			   || strcmp(tmpline, "\r\n") == 0) {
+		} else if (strncmp(tmpline, "\n", (linemem < 1 ? linemem : 1)) == 0
+			   || strncmp(tmpline, "\r\n", (linemem < 2 ? linemem : 2)) == 0) {
 			/* We've found the end of the header */
 			trace(TRACE_DEBUG,
 			      "read_header(): single blank line found");

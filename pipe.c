@@ -367,11 +367,12 @@ static int store_message_temp(FILE * instream,
 			      /*@out@*/ u64_t * rfcsize, 
 			      /*@out@*/ u64_t * temp_message_idnr)
 {
-	int myeof = 0;
+	int myeof = 0, newline = 0, oneperiod = 0;
+	int tmpchar;
 	u64_t msgidnr = 0;
-	size_t i = 0, usedmem = 0, linemem = 0;
+	size_t usedmem = 0;
 	u64_t totalmem = 0, rfclines = 0;
-	char *strblock = NULL, *tmpline = NULL;
+	char *strblock = NULL;
 	char unique_id[UID_SIZE];
 	u64_t messageblk_idnr;
 	u64_t user_idnr;
@@ -431,97 +432,54 @@ static int store_message_temp(FILE * instream,
 			      "dbmail-maintenance", __FILE__, __FUNCTION__);
 		return -1;
 	}
-	memset((void *) strblock, '\0', READ_BLOCK_SIZE + 1);
+	while (!feof(instream) && !myeof) {
+
+		/* Reset strblock. */
+		usedmem = 0;
+		memset((void *) strblock, '\0', READ_BLOCK_SIZE + 1);
 	
-	tmpline = (char *) my_malloc(MAX_LINE_SIZE + 1);
-	if (tmpline == NULL) {
-		trace(TRACE_ERROR, "%s,%s, error allocating memory. Trying to cleanup.",
-		      __FILE__, __FUNCTION__);
-		if (db_delete_message(msgidnr) < 0)
-			trace(TRACE_ERROR, "%s,%s: error deleting message. "
-			      "Database might be inconsistent, run "
-			      "dbmail-maintenance", __FILE__, __FUNCTION__);
-		my_free(strblock);
-		return -1;
-	}
-	memset((void *) tmpline, '\0', MAX_LINE_SIZE + 1);
+		/* Loop until strblock is full or feof or ferror. */
+		while (!myeof) {
+			if (usedmem == READ_BLOCK_SIZE)
+				break;
 
-	while ((!feof(instream) && (!myeof)) || (linemem != 0)) {
-		/* Copy the line that didn't fit before */
-		if (linemem > 0) {
-			strncpy(strblock, tmpline, linemem);
-			usedmem += linemem;
+			tmpchar = fgetc(instream);
+			if (tmpchar == EOF)
+				break;
 
-			/* Resetting strlen for tmpline */
-			memset((void *) tmpline, '\0', MAX_LINE_SIZE + 1);
-			linemem = 0;
-		}
+			if (newline && tmpchar == '.')
+				oneperiod = 1;
+			else if (tmpchar != '\r' && tmpchar != '\n')
+				oneperiod = 0;
 
-		/* We want to fill up each block if possible,
-		 * unless of course we're at the end of the file */
-		while (!feof(instream)
-		       && (usedmem + linemem < READ_BLOCK_SIZE)) {
+			if (tmpchar == '\n')
+				newline = 1;
+			else if (tmpchar != '\r')
+				newline = 0;
 
-			linemem = fread(tmpline, sizeof(char), MAX_LINE_SIZE, instream);
-			totalmem += linemem;
-                        
-			/* Check to see if we're starting on a CR/NL boundary. */
-			if (tmpline[0] == '\n' && strblock[usedmem] != '\r')
+			if (oneperiod && newline)
+				myeof = 1;
+
+			strblock[usedmem++] = tmpchar;
+
+			if (usedmem > 1
+			    && strblock[usedmem - 1] == '\n'
+			    && strblock[usedmem - 2] != '\r') {
 				rfclines++;
-                        
-			/* Check to see if we read in any newlines. If so, look to
-			 * see if they are preceded by carriage returns.
-			 * If not, increment the rfcsize because rfc output 
-			 * automatically inserts carriage returns. */
-			for (i = 1; i < linemem; i++) {
-				if (tmpline[i] == '\n'
-				    && tmpline[i - 1] != '\r')
-					rfclines++;
+				trace(TRACE_DEBUG, "store_message_temp(): counted an rfcline");
 			}
-			
+                        
 			if (ferror(instream)) {
 				trace(TRACE_ERROR,
 				      "store_message_temp(): error on instream: [%s]",
 				      strerror(errno));
-				my_free(tmpline);
 				my_free(strblock);
 				return -1;
 			}
-
-			/* This should be the one and only valid
-			 * end to a message over SMTP/LMTP...
-			 * FIXME: If there's a compatibility problem, it's probably here! */
-			if (strcmp(tmpline, ".\r\n") == 0) {
-				/* This is the end of the message! */
-				myeof = 1;
-				linemem = 0;
-				break;
-			} else {
-				/* See if the line fits into this block */
-				if (usedmem + linemem < READ_BLOCK_SIZE) {
-					strncpy(strblock + usedmem,
-						tmpline, linemem);
-					usedmem += linemem;
-
-					/* Resetting strlen for tmpline */
-					tmpline[0] = '\0';
-					linemem = 0;
-				}
-				/* Don't need an else, see above this while loop for more */
-			}
 		}
 
-		/* replace all errorneous '\0' by ' ' (space) */
-		for (i = 0; i < usedmem; i++) {
-			if (strblock[i] == '\0') {
-				strblock[i] = ' ';
-			}
-		}
-
-		/* fread won't do this for us! */
-		strblock[usedmem] = '\0';
-
-		if (usedmem > 0) {	/* usedmem is 0 with an EOF */
+		/* If the first call to fgetc was EOF, don't store anything. */
+		if (usedmem > 0) {
 			totalmem += usedmem;
 
 			switch (db_insert_message_block
@@ -530,21 +488,13 @@ static int store_message_temp(FILE * instream,
 			case -1:
 				trace(TRACE_STOP,
 				      "store_message_temp(): error inserting msgblock");
-				my_free(tmpline);
 				my_free(strblock);
 				return -1;
 			}
 		}
-
-		/* resetting strlen for strblock */
-		strblock[0] = '\0';
-		usedmem = 0;
 	}
 
 	trace(TRACE_DEBUG, "store_message_temp(): end of instream");
-
-	my_free(tmpline);
-	trace(TRACE_DEBUG, "store_message_temp(): tmpline freed");
 
 	my_free(strblock);
 	trace(TRACE_DEBUG, "store_message_temp(): strblock freed");
