@@ -9,7 +9,7 @@ CREATE TABLE aliases (
     alias_idnr INT8 DEFAULT nextval('alias_idnr_seq'),
     alias VARCHAR(100) NOT NULL, 
     deliver_to VARCHAR(250) NOT NULL,
-    client_idnr INT8 DEFAULT '0' NOT NULL,
+    client_idnr INT8 DEFAULT '0' NOT NULL
 );
 
 CREATE SEQUENCE user_idnr_seq;
@@ -19,7 +19,7 @@ CREATE TABLE users (
    passwd VARCHAR(32) NOT NULL,
    client_idnr INT8 DEFAULT '0' NOT NULL,
    maxmail_size INT8 DEFAULT '0' NOT NULL,
-   encryption_type VARCHAR(20) DEFAULT '' NOT NULL,
+   encryption_type VARCHAR(20) DEFAULT '' NOT NULL
 );
 
 CREATE SEQUENCE mailbox_idnr_seq;
@@ -36,7 +36,7 @@ CREATE TABLE mailboxes (
    no_inferiors INT2 DEFAULT '0' NOT NULL,
    no_select INT2 DEFAULT '0' NOT NULL,
    permission INT2 DEFAULT '2',
-   is_subscribed INT2 DEFAULT '0' NOT NULL,
+   is_subscribed INT2 DEFAULT '0' NOT NULL
 );
 
 CREATE SEQUENCE message_idnr_seq;
@@ -53,7 +53,7 @@ CREATE TABLE messages (
    unique_id varchar(70) NOT NULL,
    internal_date DATETIME,
    status INT2 DEFAULT '000' NOT NULL,
-   rfcsize INT8 DEFAULT '0' NOT NULL,
+   rfcsize INT8 DEFAULT '0' NOT NULL
 );
 
 CREATE SEQUENCE messageblk_idnr_seq;
@@ -61,7 +61,7 @@ CREATE TABLE messageblks (
    messageblk_idnr INT8 DEFAULT nextval('messageblk_idnr_seq'),
    message_idnr INT8 DEFAULT '0' NOT NULL,
    messageblk TEXT NOT NULL,
-   blocksize INT8 DEFAULT '0' NOT NULL,
+   blocksize INT8 DEFAULT '0' NOT NULL
 );
 
 CREATE TABLE config (
