@@ -27,8 +27,20 @@
  * \author (c) 2004 IC&S
  */
 
+/** 
+ * different rights a user can have on a mailbox 
+ */
+typedef enum {
+	ACL_RIGHT_LOOKUP,
+	ACL_RIGHT_READ,
+	ACL_RIGHT_SEEN,
+	ACL_RIGHT_WRITE,
+	ACL_RIGHT_INSERT,
+	ACL_RIGHT_POST,
+	ACL_RIGHT_CREATE,
+	ACL_RIGHT_DELETE,
 	ACL_RIGHT_ADMINISTER,
-	ACL_RIGHT_NONE
+    ACL_RIGHT_NONE
 } ACLRight_t;
 
 
@@ -53,7 +65,6 @@ int acl_has_right(u64_t userid, u64_t mboxid, ACLRight_t right);
  * \param rightsstring string of righs
  * \return 
  *     - -1 on error
- *     -  0 if could not be set (for some other reason)
  *     -  1 on success
  */
 int acl_set_rights(u64_t userid, u64_t mboxid, const char *rightsstring);
