@@ -413,7 +413,7 @@ static int store_message_temp(const char *header, const char *body,
 	}
 
 	switch (db_insert_message_block
-		(header, headersize, msgidnr, &messageblk_idnr)) {
+		(header, headersize, msgidnr, &messageblk_idnr,1)) {
 	case -1:
 		trace(TRACE_ERROR,
 		      "store_message_temp(): error inserting msgblock [header]");
@@ -461,7 +461,7 @@ int store_message_in_blocks(const char *message, u64_t message_size,
 		      __FILE__, __func__, &message[offset]);
 		if (db_insert_message_block(&message[offset],
 					    block_size, msgidnr,
-					    &tmp_messageblk_idnr) < 0) {
+					    &tmp_messageblk_idnr,0) < 0) {
 			trace(TRACE_ERROR, "%s,%s: "
 			      "db_insert_message_block() failed",
 			      __FILE__, __func__);

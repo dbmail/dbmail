@@ -117,7 +117,7 @@ int db_fetch_headers(u64_t msguid, mime_message_t * msg)
 {
 	int result, level = 0, maxlevel = -1;
 
-	if (db_init_msgfetch(msguid) != 1) {
+	if (db_init_fetch_message(msguid) != 1) {
 		trace(TRACE_ERROR,
 		      "db_fetch_headers(): could not init msgfetch\n");
 		return -2;
@@ -148,7 +148,7 @@ int db_fetch_headers(u64_t msguid, mime_message_t * msg)
 			      "db_fetch_headers(): trying to fetch at maxlevel %d...\n",
 			      maxlevel);
 
-			if (db_init_msgfetch(msguid) != 1) {
+			if (db_init_fetch_message(msguid) != 1) {
 				trace(TRACE_ERROR,
 				      "db_fetch_headers(): could not init msgfetch\n");
 				return -2;
@@ -180,7 +180,7 @@ int db_fetch_headers(u64_t msguid, mime_message_t * msg)
 
 
 		/* ok still problems... try to make a message */
-		if (db_init_msgfetch(msguid) != 1) {
+		if (db_init_fetch_message(msguid) != 1) {
 			trace(TRACE_ERROR,
 			      "db_fetch_headers(): could not init msgfetch\n");
 			return -2;

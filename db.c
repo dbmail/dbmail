@@ -744,7 +744,8 @@ int db_update_message(u64_t message_idnr, const char *unique_id,
 int db_insert_message_block_physmessage(const char *block,
 					u64_t block_size,
 					u64_t physmessage_id,
-					u64_t * messageblk_idnr)
+					u64_t * messageblk_idnr,
+					unsigned is_header)
 {
 	char *escaped_query = NULL;
 	unsigned maxesclen = (READ_BLOCK_SIZE + 1) * 2 + DEF_QUERYSIZE;
@@ -769,6 +770,8 @@ int db_insert_message_block_physmessage(const char *block,
 	}
 
 	escaped_query = (char *) my_malloc(sizeof(char) * maxesclen);
+	memset(escaped_query,'\0',sizeof(char) * maxesclen);
+
 	if (!escaped_query) {
 		trace(TRACE_ERROR, "%s,%s: not enough memory", __FILE__,
 		      __func__);
@@ -778,7 +781,8 @@ int db_insert_message_block_physmessage(const char *block,
 	startlen =
 	    snprintf(escaped_query, maxesclen,
 		     "INSERT INTO %smessageblks"
-		     "(messageblk,blocksize, physmessage_id) VALUES ('",DBPFX);
+		     "(is_header, messageblk,blocksize, physmessage_id)"
+		     "VALUES ('%u','",DBPFX, is_header);
 	
 	/* escape & add data */
 	esclen =
@@ -804,7 +808,7 @@ int db_insert_message_block_physmessage(const char *block,
 }
 
 int db_insert_message_block(const char *block, u64_t block_size,
-			    u64_t message_idnr, u64_t * messageblk_idnr)
+			    u64_t message_idnr, u64_t * messageblk_idnr, unsigned is_header)
 {
 	u64_t physmessage_id;
 
@@ -824,7 +828,7 @@ int db_insert_message_block(const char *block, u64_t block_size,
 	}
 
 	if (db_insert_message_block_physmessage
-	    (block, block_size, physmessage_id, messageblk_idnr) < 0) {
+	    (block, block_size, physmessage_id, messageblk_idnr, is_header) < 0) {
 		trace(TRACE_ERROR,
 		      "%s,%s: error inserting messageblks for "
 		      "physmessage [%llu]", __FILE__, __func__,
@@ -1882,9 +1886,9 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
 
 		if (db_insert_message_block_physmessage(msgdata, datalen,
 							physmessage_id,
-							&messageblk_idnr) == -1
+							&messageblk_idnr,1) == -1
 		    || db_insert_message_block(" \n", 2, message_idnr,
-					       &messageblk_idnr) == -1) {
+					       &messageblk_idnr,1) == -1) {
 			trace(TRACE_ERROR,
 			      "%s,%s: could not insert msg block\n",
 			      __FILE__, __func__);
@@ -1907,7 +1911,7 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
 		if (db_insert_message_block_physmessage(
 			    msgdata, count, 
 			    physmessage_id,
-			    &messageblk_idnr) == -1) {
+			    &messageblk_idnr,1) == -1) {
 			trace(TRACE_ERROR,
 			      "%s,%s: could not insert msg block\n",
 			      __FILE__, __func__);
@@ -1927,7 +1931,7 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
 				    &msgdata[count],
 				    READ_BLOCK_SIZE,
 				    physmessage_id,
-				    &messageblk_idnr) == -1) {
+				    &messageblk_idnr,0) == -1) {
 				trace(TRACE_ERROR,
 				      "%s,%s: could not insert msg block",
 				      __FILE__, __func__);
@@ -1947,7 +1951,7 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
 		if (db_insert_message_block_physmessage(
 			    &msgdata[count],
 			    datalen - count, physmessage_id,
-			    &messageblk_idnr) == -1) {
+			    &messageblk_idnr,0) == -1) {
 			trace(TRACE_ERROR,
 			      "%s,%s:  could not insert msg block\n",
 			      __FILE__, __func__);

@@ -50,7 +50,18 @@ u64_t msgbuf_buflen;/**< current buffer length: msgbuf[buflen] == '\\0' */
  *     -  0 if already inited (sic) before
  *     -  1 on success
  */
-int db_init_msgfetch(u64_t msg_idnr);
+int db_init_fetch_message(u64_t msg_idnr);
+
+/**
+ * \brief initialises a message headers fetch
+ * \param msg_idnr 
+ * \return 
+ *     - -1 on error
+ *     -  0 if already inited (sic) before
+ *     -  1 on success
+ */
+int db_init_fetch_headers(u64_t msg_idnr);
+
 
 /**
  * \brief update msgbuf

@@ -195,7 +195,7 @@ int process_mboxfile(char *file, u64_t userid)
 				in_msg = 1;	/* ok start of a new msg */
 			else {
 				/* update & end message */
-				db_insert_message_block(blk, cnt, msgid);
+				db_insert_message_block(blk, cnt, msgid,0);
 
 				create_unique_id(newunique, msgid);
 				db_update_message(msgid, newunique,
@@ -222,7 +222,7 @@ int process_mboxfile(char *file, u64_t userid)
 				if (strcmp(&blk[cnt], "\n") == 0) {
 					db_insert_message_block(blk,
 								cnt + len,
-								msgid);
+								msgid,1);
 					header_passed = 1;
 					size += (cnt + len);
 					cnt = 0;
@@ -240,7 +240,7 @@ int process_mboxfile(char *file, u64_t userid)
 					blk[READ_BLOCK_SIZE] = '\0';
 					db_insert_message_block(blk,
 								READ_BLOCK_SIZE,
-								msgid);
+								msgid,0);
 					blk[READ_BLOCK_SIZE] = saved;
 
 					memmove(blk, &blk[READ_BLOCK_SIZE],
@@ -254,7 +254,7 @@ int process_mboxfile(char *file, u64_t userid)
 
 	/* update & end message */
 	if (msgid > 0) {
-		db_insert_message_block(blk, cnt, msgid);
+		db_insert_message_block(blk, cnt, msgid,0);
 
 		create_unique_id(newunique, msgid);
 		db_update_message(msgid, newunique, size + cnt,

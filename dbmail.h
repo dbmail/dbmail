@@ -58,7 +58,7 @@
 #define DEFAULT_PID_DIR "/var/run/"
 #define DEFAULT_PID_EXT ".pid"
 /** default configuration file */
-#define DEFAULT_CONFIG_FILE "/etc/dbmail.conf"
+#define DEFAULT_CONFIG_FILE "/etc/dbmail/dbmail.conf"
 
 /** username of user that is owner of all mailboxes */
 #define SHARED_MAILBOX_USERNAME "__public__"

@@ -56,7 +56,8 @@ static db_pos_t zeropos; /**< absolute position (block/offset) of
 static unsigned nblocks = 0; /**< number of block  */
 static const char * tmprow; /**< temporary row number */
 
-int db_init_msgfetch(u64_t msg_idnr) 
+int db_init_fetch_messageblks(u64_t msg_idnr, char *query_template);
+int db_init_fetch_messageblks(u64_t msg_idnr, char *query_template)
 {
 	if (_msg_fetch_inited != 0) {
 		return 0;
@@ -70,13 +71,7 @@ int db_init_msgfetch(u64_t msg_idnr)
 
 	memset(msgbuf_buf, '\0', (size_t) MSGBUF_WINDOWSIZE);
 	
-	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT block.messageblk "
-		 "FROM %smessageblks block, %smessages msg "
-		 "WHERE block.physmessage_id = msg.physmessage_id "
-		 "AND msg.message_idnr = '%llu' "
-		 "ORDER BY block.messageblk_idnr", DBPFX, DBPFX,
-		 msg_idnr);
+	snprintf(query, DEF_QUERYSIZE, query_template, DBPFX, DBPFX, msg_idnr);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not get message",
@@ -151,6 +146,41 @@ int db_init_msgfetch(u64_t msg_idnr)
 	 * later use */
 	db_store_msgbuf_result();
 	return 1;
+
+}
+/*
+ *
+ * retrieve the header messageblk
+ *
+ * TODO: this call is yet unused in the code, but here for
+ * forward compatibility's sake.
+ *
+ */
+int db_init_fetch_headers(u64_t msg_idnr)
+{
+	char *query_template = 	"SELECT block.messageblk "
+		"FROM %smessageblks block, %smessages msg "
+		"WHERE block.physmessage_id = msg.physmessage_id "
+		"AND block.is_header = 1"
+		"AND msg.message_idnr = '%llu' "
+		"ORDER BY block.messageblk_idnr";
+	return db_init_fetch_messageblks(msg_idnr, query_template);
+
+}
+
+/*
+ *
+ * retrieve the full message
+ *
+ */
+int db_init_fetch_message(u64_t msg_idnr) 
+{
+	char *query_template = "SELECT block.messageblk "
+		"FROM %smessageblks block, %smessages msg "
+		"WHERE block.physmessage_id = msg.physmessage_id "
+		"AND msg.message_idnr = '%llu' "
+		"ORDER BY block.messageblk_idnr";
+	return db_init_fetch_messageblks(msg_idnr, query_template);
 }
 
 	

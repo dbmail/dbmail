@@ -1,5 +1,11 @@
 2004-09-15  Paul Stevens <paul@nfg.nl>
 
+	* db.c, db.h, dbmsgbuf.c, dbmsgbuf.h, pipe.c, rfcmsg.c,
+	smtp-convert.c: start using the is_header field during message
+	insertion.
+
+2004-09-15  Paul Stevens <paul@nfg.nl>
+
 	* config.c, db.c, dbmail.conf, dbmail.h, dbmsgbuf.c, dbsearch.c,
 	mysql/dbmysql.c, pgsql/dbpgsql.c: adding dynamic table prefixes by
 	Leif Jackson.

@@ -535,7 +535,8 @@ int db_physmessage_set_sizes(u64_t physmessage_id, u64_t message_size,
 int db_insert_message_block_physmessage(const char *block,
 					u64_t block_size,
 					u64_t physmessage_id,
-					u64_t * messageblock_idnr);
+					u64_t * messageblock_idnr,
+					unsigned is_header);
 /**
 * \brief insert a message block into the message block table
 * \param block the message block (which is a string)
@@ -549,7 +550,8 @@ int db_insert_message_block_physmessage(const char *block,
 */
 int db_insert_message_block(const char *block, u64_t block_size,
 			    u64_t message_idnr, 
-			    /*@out@*/ u64_t * messageblock_idnr);
+			    /*@out@*/ u64_t * messageblock_idnr,
+			    unsigned is_header);
 /**
  * \brief log IP-address for POP/IMAP_BEFORE_SMTP. If the IP-address
  *        is already logged, it's timestamp is renewed.
