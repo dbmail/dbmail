@@ -246,7 +246,7 @@ int pop3 (void *stream, char *buffer)
 	      {
 		((struct message *)tmpelement->data)->virtual_messagestatus=1;
 		fprintf ((FILE *)stream,"+OK %lu octets\r\n",((struct message *)tmpelement->data)->msize); 
-		return db_send_message ((void *)stream, ((struct message *)tmpelement->data)->realmessageid);
+		return db_send_message_lines ((void *)stream, ((struct message *)tmpelement->data)->realmessageid,-2);
 	      }
 	    tmpelement=tmpelement->nextnode;
 	  }

@@ -232,7 +232,8 @@ int db_check_user (char *username, struct list *userids)
 
 int db_send_message_lines (void *fstream, unsigned long messageidnr, unsigned long lines)
 {
-  /* this function writes the header to stream */
+  /* this function writes "lines" to fstream.
+	  if lines == -2 then the whole message is dumped to fstream */
   char *ckquery;
   char *currpos, *prevpos, *nextpos;
 
@@ -271,7 +272,7 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, unsigned lo
 	
 	trace (TRACE_DEBUG,"db_send_message_lines(): sending [%lu] lines from message [%lu]",lines,messageidnr);
   
-  while (((row = mysql_fetch_row(res))!=NULL) && (lines>0))
+  while (((row = mysql_fetch_row(res))!=NULL) && ((lines>0) || (lines==-2)))
 	{
 	/* we're going to do this one line at the time */  
 	prevpos = row[2];
@@ -280,26 +281,20 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, unsigned lo
 		{
 		/* search for a newline character in prevpos (which is the buffer) */
 		currpos=strchr(prevpos,'\n');	
-		trace (TRACE_DEBUG,"db_send_message_lines(): linesize %d",currpos-prevpos);
-		trace (TRACE_DEBUG, "db_send_message_lines(): newline character found at %d",currpos);
 			if ((currpos!=NULL) && (strlen (currpos)>0))
 				{
 				/* newline found */
 				nextpos=currpos+1;
 				/* to delimiter the buffer for fprintf */
-		trace (TRACE_DEBUG,"db_send_message_lines(): before linesize %d",strlen(prevpos));
 				currpos[0]='\0';	
-		trace (TRACE_DEBUG,"db_send_message_lines(): after linesize %d",strlen(prevpos));
 
 				/* the \n is added because it was stripped */
-				trace (TRACE_DEBUG,"db_send_message_lines(): sending line[%s], linecounter [%lu]",prevpos,lines);
 				fprintf ((FILE *)fstream,"%s\n",prevpos);
 				}
 			else
 				{
-				trace (TRACE_DEBUG,"db_send_message_lines(): sending line[%s], linecounter [%lu]",prevpos,lines);
-				/* \n needs to be included because it was set to \0 */
-				fprintf ((FILE *)fstream,"%s",prevpos);
+				/* \n needs not to be included because it was set to \0 */
+				fprintf ((FILE *)fstream,"%s",prevpos); 
 				nextpos=NULL;
 				}
 			lines--;
