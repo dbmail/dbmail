@@ -104,8 +104,8 @@ int db_insert_config_item (char *item, char *val);
 u64_t db_get_quotum_used(u64_t userid);
 
 int db_get_user_aliases(u64_t userid, struct list *aliases);
-int db_addalias(u64_t useridnr, char *alias, int clientid);
-int db_addalias_ext(char *alias, char *deliver_to, int clientid);
+int db_addalias(u64_t useridnr, char *alias, u64_t clientid);
+int db_addalias_ext(char *alias, char *deliver_to, u64_t clientid);
 int db_removealias(u64_t useridnr, const char *alias);
 
 u64_t db_get_inboxid (u64_t *useridnr);

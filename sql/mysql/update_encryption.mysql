@@ -1,0 +1,4 @@
+USE dbmail;
+
+ALTER TABLE users ADD encryption_type varchar(20) DEFAULT '' NOT NULL;
+

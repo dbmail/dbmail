@@ -127,7 +127,7 @@ int process_piece(char *left, char *right)
       if (useridnr == 0)
 	{
 	  /* new user */
-	  if ((useridnr = db_adduser(right, "geheim", "0", "0")) == -1)
+	  if ((useridnr = db_adduser(right, "geheim", "", "0", "0")) == -1)
 	    {
 	      fprintf(stderr,"Could not add user [%s]\n",right);
 	      return -1;

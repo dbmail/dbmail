@@ -26,7 +26,7 @@ CC = cc
 PGSQLLIBDIR=/usr/local/pgsql/lib
 
 LIBS = -L$(PGSQLLIBDIR)
-LIB = -lpq
+LIB = -lpq -lcrypt
 
 # Added the -D_BSD_SOURCE option to suppress warnings
 # from compiler about vsyslog function 
@@ -53,8 +53,8 @@ maintenance: maintenance.h $(MAINTENANCE_OBJECTS) maintenance.c
 config: $(CONFIG_OBJECTS) settings.c
 	$(CC) $(CFLAGS) settings.c -o dbmail-config $(CONFIG_OBJECTS) $(LIBS) $(LIB)
 
-user: user.h $(MAINTENANCE_OBJECTS) user.c
-	$(CC) $(CFLAGS) user.c -o dbmail-adduser $(MAINTENANCE_OBJECTS) $(LIBS) $(LIB)
+user: user.h $(USER_OBJECTS) user.c
+	$(CC) $(CFLAGS) user.c -o dbmail-adduser $(USER_OBJECTS) $(LIBS) $(LIB)
 
 readvut: db.h auth.h vut2dbmail.c $(VUTCONV_OBJECTS)
 	$(CC) $(CFLAGS) vut2dbmail.c -o dbmail-readvut $(VUTCONV_OBJECTS) $(LIBS) $(LIB)

@@ -117,7 +117,7 @@ u64_t db_getclientid(u64_t useridnr)
     }
 
   row = mysql_fetch_row(res);
-  cid = (row && row[0]) ? strtoull(row[0], 0, 10) : -1;
+  cid = (row && row[0]) ? strtoull(row[0], 0, 10) : 0;
 
   mysql_free_result(res);
   return cid;
@@ -209,12 +209,15 @@ int db_check_user (char *username, struct list *userids, int checks)
 }
 
 	
-u64_t db_adduser (char *username, char *password, char *clientid, char *maxmail)
+/* 
+ * db_adduser()
+ *
+ * adds a new user to the database 
+ * and adds a INBOX 
+ * returns a useridnr on succes, -1 on failure 
+ */
+u64_t db_adduser (char *username, char *password, char *enctype, char *clientid, char *maxmail)
 {
-  /* adds a new user to the database 
-   * and adds a INBOX 
-   * returns a useridnr on succes, -1 on failure */
-
   u64_t useridnr;
   char *tst;
   u64_t size;
@@ -254,9 +257,10 @@ u64_t db_adduser (char *username, char *password, char *clientid, char *maxmail)
 	size *= 1000;
     }
       
-  snprintf (query, DEF_QUERYSIZE,"INSERT INTO users (userid,passwd,client_idnr,maxmail_size) VALUES "
-	   "('%s','%s',%s,%llu)",
-	   username,password,clientid, size);
+  snprintf (query, DEF_QUERYSIZE,"INSERT INTO users "
+	    "(userid,passwd,client_idnr,maxmail_size,encryption_type) VALUES "
+	    "('%s','%s',%s,%llu,%s)",
+	    username,password,clientid, size, enctype ? enctype : "");
 	
   if (db_query(query) == -1)
     {
@@ -314,10 +318,11 @@ int db_change_username(u64_t useridnr, const char *newname)
 }
 
 
-int db_change_password(u64_t useridnr, const char *newpass)
+int db_change_password(u64_t useridnr, const char *newpass, const char *enctype)
 {
-  snprintf(query, DEF_QUERYSIZE, "UPDATE users SET passwd = '%s' WHERE user_idnr=%llu", 
-	   newpass, useridnr);
+  snprintf(query, DEF_QUERYSIZE, "UPDATE users SET passwd = '%s', encryption_type = '%s' "
+	   "WHERE user_idnr=%llu", 
+	   newpass, enctype ? enctype : "", useridnr);
 
   if (db_query(query) == -1)
     {
@@ -358,37 +363,62 @@ int db_change_mailboxsize(u64_t useridnr, u64_t newsize)
   return 0;
 }
 
+
+/* 
+ * db_validate()
+ *
+ * tries to validate user 'user'
+ *
+ * returns useridnr on OK, 0 on validation failed, -1 on error 
+ */
 u64_t db_validate (char *user, char *password)
 {
-  /* returns useridnr on OK, 0 on validation failed, -1 on error */
-  
   u64_t id;
-
+  int encryption = SUPP_ENCTYPE_CLEARTEXT;
+  int is_validated = 0;
   
-  snprintf (query, DEF_QUERYSIZE, "SELECT user_idnr FROM users WHERE userid=\"%s\" AND passwd=\"%s\"",
-	   user,password);
+  snprintf(query, DEF_QUERYSIZE, "SELECT user_idnr, passwd, encryption_type FROM users "
+	   "WHERE user = '%s'", user);
 
-  trace (TRACE_DEBUG,"db_validate(): validating using query %s\n",query);
-	
   if (db_query(query)==-1)
     {
-      
+      trace(TRACE_ERROR, "db_validate(): could not select user information");
       return -1;
     }
 	
   if ((res = mysql_store_result(&conn)) == NULL)
     {
       trace (TRACE_ERROR,"db_validate(): mysql_store_result failed: %s\n",mysql_error(&conn));
-      
       return -1;
     }
 
   row = mysql_fetch_row(res);
+  
+  if (!row)
+    {
+      /* user does not exist */
+      mysql_free_result(res);
+      return 0;
+    }
 
-  id = (row && row[0]) ? strtoull(row[0], NULL, 10) : 0;
+  if (!row[2] || strcasecmp(row[2], "") == 0)
+    {
+      trace (TRACE_DEBUG,"db_validate(): validating using cleartext passwords");
+      is_validated = (strcmp(row[1], password) == 0) ? 1 : 0;
+    }
+  else if ( strcasecmp(row[2], "crypt") == 0)
+    {
+      trace (TRACE_DEBUG,"db_validate(): validating using crypt() encryption");
+      is_validated = (strcmp( crypt(password, row[1]), row[1]) == 0) ? 1 : 0;
+    }
   
-  
+  if (is_validated)
+    id = (row[0]) ? strtoull(row[0], NULL, 10) : 0;
+  else
+    id = 0;
+
   mysql_free_result(res);
+
   return id;
 }
 

@@ -13,6 +13,14 @@
 #include "list.h"
 #include "debug.h"
 #include "db.h"
+#include <crypt.h>
+#include <time.h>
+
+#define SHADOWFILE "/etc/shadow"
+char *getToken(char** str,const char* delims);
+char csalt[] = "........";
+char *bgetpwent (char *filename, char *name);
+char *cget_salt();
 
 /* valid characters for passwd/username */
 const char ValidChars[] = 
@@ -73,7 +81,7 @@ int main(int argc, char *argv[])
 
 int do_add(int argc, char *argv[])
 {
-  unsigned long useridnr;
+  u64_t useridnr;
   int i;
 
   if (argc < 4)
@@ -91,7 +99,7 @@ int do_add(int argc, char *argv[])
   printf ("Adding user %s with password %s, %s bytes mailbox limit and clientid %s...",
 	  argv[0], argv[1], argv[3], argv[2]);
 
-  useridnr = db_adduser (argv[0],argv[1],argv[2],argv[3]);
+  useridnr = db_adduser(argv[0],argv[1],"",argv[2],argv[3]);
 	
   if (useridnr == -1)
     {
@@ -99,7 +107,7 @@ int do_add(int argc, char *argv[])
       return -1;
     }
 	
-  printf ("Ok, user added id [%lu]\n",useridnr);
+  printf ("Ok, user added id [%llu]\n",useridnr);
 	
   for (i = 4; i<argc; i++)
     {
@@ -118,9 +126,10 @@ int do_add(int argc, char *argv[])
 
 int do_change(int argc, char *argv[])
 {
-  int i;
-  unsigned long newsize,userid,newcid;
-  char *endptr;
+  int i,result;
+  u64_t newsize,userid,newcid;
+  char *endptr,*entry;
+  char pw[50]="";
 
   /* verify the existence of this user */
   userid = db_user_exists(argv[0]);
@@ -164,14 +173,47 @@ int do_change(int argc, char *argv[])
 	  if (!is_valid(argv[i+1]))
 	    printf("\nWarning: password contains invalid characters. Password not updated. ");
 
-	  if (db_change_password(userid,argv[i+1]) != 0)
+          if (argv[i][0] == '+') 
+	    {
+	      /* +p will converse clear text into crypt hash value */
+	      strcat(pw,crypt(argv[i+1], cget_salt()));
+	      result = db_change_password(userid,pw,"crypt");
+	    } 
+	  else 
+	    {
+	      strcpy(pw,argv[i+1]);
+	      result = db_change_password(userid,pw,"");
+	    }
+	  if (result != 0)
 	    printf("\nWarning: could not change password ");
 
 	  i++;
 	  break;
 
+        case 'P':
+          /* -P will copy password from SHADOWFILE */
+	  entry = bgetpwent(SHADOWFILE, argv[0]);
+	  if (!entry)
+	    {
+	      printf("\nWarning: error finding password from [%s] - are you superuser?\n", 
+		     SHADOWFILE);
+	      break;
+	    }
+	     
+          strncat(pw,entry,50);
+          if ( strcmp(pw, "") == 0 ) 
+	    {
+	      printf("\n%s's password not found at \"%s\" !\n", argv[0],SHADOWFILE);
+	    } 
+	  else 
+	    {
+	      if (db_change_password(userid,pw,"crypt") != 0)
+		printf("\nWarning: could not change password");
+	    }
+          break;
+
 	case 'c':
-	  newcid = strtoul(argv[i+1], 0, 10);
+	  newcid = strtoull(argv[i+1], 0, 10);
 
 	  if (db_change_clientid(userid, newcid) != 0)
 	    printf("\nWarning: could not change client id ");
@@ -180,7 +222,7 @@ int do_change(int argc, char *argv[])
 	  break;
 	  
 	case 'q':
-	  newsize = strtoul(argv[i+1], &endptr, 10);
+	  newsize = strtoull(argv[i+1], &endptr, 10);
 	  switch (*endptr)
 	    {
 	    case 'm':
@@ -249,7 +291,7 @@ int do_delete(char *name)
 
 int do_show(char *name)
 {
-  unsigned long userid,cid,quotum;
+  u64_t userid,cid,quotum;
   struct list userlist;
   struct element *tmp;
 
@@ -289,8 +331,8 @@ int do_show(char *name)
       cid = db_getclientid(userid);
       quotum = db_getmaxmailsize(userid);
 
-      printf("Client ID: %lu\n",cid);
-      printf("Max. mailboxsize: %lu bytes\n",quotum);
+      printf("Client ID: %llu\n",cid);
+      printf("Max. mailboxsize: %llu bytes\n",quotum);
 
       printf("Aliases:\n");
       db_get_user_aliases(userid, &userlist);
@@ -329,4 +371,91 @@ void show_help()
   printf("See the man page for more info. Summary:\n\n");
   printf("dbmail-adduser <a|d|c|s> [username] [options...]\n\n");
 
+}
+
+/*eddy
+  This two function was base from "cpu" by Blake Matheny <matheny@dbaseiv.net>
+  bgetpwent : get hash password from /etc/shadow
+  cget_salt : generate salt value for crypt
+*/
+char *bgetpwent(char *filename, char *name) 
+{
+  FILE *passfile = NULL;
+  char pass_char[512];
+  int pass_size = 511;
+  char *pw;
+  char *user;
+
+  if ((passfile = fopen(filename, "r")) == NULL)
+    return NULL;
+
+  while (fgets(pass_char, pass_size, passfile) != NULL) {
+    char *m = pass_char;
+    int num_tok = 0;
+    char *toks;
+
+    while (m != NULL && *m != 0) {
+      toks = getToken(&m, ":");
+      if (num_tok == 0)
+	user = toks;
+      else if (num_tok == 1)
+                                /*result->pw_passwd = toks;*/
+	pw = toks;
+      else
+	break;
+      num_tok++;
+    }
+    if (strcmp(user, name) == 0)
+      return pw;
+
+  }
+  return "";
+}
+
+char *cget_salt()
+{
+  unsigned long seed[2];
+  const char *const seedchars =
+    "./0123456789ABCDEFGHIJKLMNOPQRST"
+    "UVWXYZabcdefghijklmnopqrstuvwxyz";
+  int i;
+
+  seed[0] = time(NULL);
+  seed[1] = getpid() ^ (seed[0] >> 14 & 0x30000);
+  for (i = 0; i < 8; i++)
+    csalt[i] = seedchars[(seed[i / 5] >> (i % 5) * 6) & 0x3f];
+
+  return csalt;
+}
+
+
+/*
+  This function was base on function of "cpu"
+        by Blake Matheny <matheny@dbaseiv.net>
+  getToken : break down username and password from a file
+*/
+char *getToken(char** str,const char* delims)
+{
+  char* token;
+
+  if (*str==NULL) 
+    {
+      /* No more tokens */
+      return NULL;
+    }
+
+  token=*str;
+  while (**str!='\0') 
+    {
+      if (strchr(delims,**str)!=NULL) {
+	**str='\0';
+	(*str)++;
+	return token;
+      }
+      (*str)++;
+    }
+
+  /* There is no other token */
+  *str=NULL;
+  return token;
 }

@@ -265,12 +265,12 @@ u64_t db_get_quotum_used(u64_t userid)
 /* 
  * adds an alias for a specific user 
  */
-int db_addalias (u64_t useridnr, char *alias, int clientid)
+int db_addalias (u64_t useridnr, char *alias, u64_t clientid)
 {
   /* check if this alias already exists */
   snprintf (query, DEF_QUERYSIZE,
             "SELECT alias_idnr FROM aliases WHERE alias = '%s' AND deliver_to = '%llu' "
-	    "AND client_idnr = %d", alias, useridnr, clientid);
+	    "AND client_idnr = %llu", alias, useridnr, clientid);
 
   if (db_query(query) == -1)
     {
@@ -291,7 +291,7 @@ int db_addalias (u64_t useridnr, char *alias, int clientid)
   PQclear(res);
 
   snprintf (query, DEF_QUERYSIZE,
-            "INSERT INTO aliases (alias,deliver_to,client_idnr) VALUES ('%s','%llu',%d)",
+            "INSERT INTO aliases (alias,deliver_to,client_idnr) VALUES ('%s','%llu',%llu)",
             alias, useridnr, clientid);
 
 
@@ -306,12 +306,12 @@ int db_addalias (u64_t useridnr, char *alias, int clientid)
 }
 
 
-int db_addalias_ext(char *alias, char *deliver_to, int clientid)
+int db_addalias_ext(char *alias, char *deliver_to, u64_t clientid)
 {
   /* check if this alias already exists */
   snprintf (query, DEF_QUERYSIZE,
             "SELECT alias_idnr FROM aliases WHERE alias = '%s' AND deliver_to = '%s' "
-	    "AND client_idnr = %d", alias, deliver_to, clientid);
+	    "AND client_idnr = %llu", alias, deliver_to, clientid);
 
   if (db_query(query) == -1)
     {
@@ -332,7 +332,7 @@ int db_addalias_ext(char *alias, char *deliver_to, int clientid)
   PQclear(res);
 
   snprintf (query, DEF_QUERYSIZE,
-            "INSERT INTO aliases (alias,deliver_to,client_idnr) VALUES ('%s','%s',%d)",
+            "INSERT INTO aliases (alias,deliver_to,client_idnr) VALUES ('%s','%s',%llu)",
             alias, deliver_to, clientid);
 
 
@@ -496,8 +496,8 @@ u64_t db_insert_message (u64_t *useridnr)
   tm = *localtime(&td);   /* get components */
   strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
 
-  snprintf (query, DEF_QUERYSIZE,"INSERT INTO messages(mailbox_idnr,messagesize,unique_id,internal_date)"
-            " VALUES (%llu,0,' ','%s')",
+  snprintf (query, DEF_QUERYSIZE,"INSERT INTO messages(mailbox_idnr,messagesize,unique_id,"
+	    "internal_date,recent_flag) VALUES (%llu,0,' ','%s',1)",
             db_get_inboxid(useridnr), timestr);
 
   trace (TRACE_DEBUG,"db_insert_message(): inserting message query [%s]",query);

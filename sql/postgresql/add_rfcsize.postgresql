@@ -1,7 +1,3 @@
-#
-# adds the rfcsize field
-#
-
 USE dbmail;
 
 ALTER TABLE messages ADD rfcsize INT8;
