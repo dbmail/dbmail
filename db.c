@@ -2149,6 +2149,7 @@ int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
 	u64_t *tmp_mailboxes;
 	char *result_string;
 	u64_t owner_idnr;
+	u64_t mailbox_idnr;
 	char *mailbox_name;
 
 	assert(mailboxes != NULL);
@@ -2208,12 +2209,14 @@ int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
 			      "regular expression", __FILE__, __FUNCTION__,
 			      mailbox_name);
 			if (regexec(preg, mailbox_name, 0, NULL, 0) == 0) {
+				mailbox_idnr = db_get_result_u64(i, 1);
 				tmp_mailboxes[*nr_mailboxes] =
-				    db_get_result_u64(i, 1);
+					mailbox_idnr;
 				(*nr_mailboxes)++;
-				trace(TRACE_DEBUG, "%s,%s: regex match %s",
+				trace(TRACE_DEBUG, "%s,%s: regex match %s, "
+				      "mailbox_idnr = %llu", 
 				      __FILE__, __FUNCTION__,
-				      mailbox_name);
+				      mailbox_name, mailbox_idnr);
 			}
 			my_free(mailbox_name);
 		}
