@@ -22,6 +22,7 @@
 #define HEADER_BLOCK_SIZE 1024
 #define QUERY_SIZE 255
 #define MAX_U64_STRINGSIZE 40
+#define MAX_COMM_SIZE 512
 
 #define AUTO_NOTIFY_SENDER "autonotify@dbmail"
 #define AUTO_NOTIFY_SUBJECT "NEW MAIL NOTIFICATION"
@@ -592,7 +593,7 @@ int send_reply(struct list *headerfields, const char *body)
   struct mime_record *record;
   char *from = NULL, *to = NULL, *replyto = NULL, *subject = NULL;
   FILE *mailpipe = NULL;
-  char *sendmail;
+  char *sendmail, comm[MAX_COMM_SIZE];
   int result;
 
   sendmail = db_get_config_item ("SENDMAIL", CONFIG_MANDATORY);
@@ -632,14 +633,16 @@ int send_reply(struct list *headerfields, const char *body)
   if (!from && !replyto)
     {
       trace(TRACE_ERROR, "send_reply(): no address to send to");
+      my_free(sendmail);
       return 0;
     }
 
   trace(TRACE_DEBUG, "send_reply(): header fields scanned; opening pipe to sendmail");
+  snprintf(comm, MAX_COMM_SIZE, "%s %s", sendmail, replyto ? replyto : from);
 
-  if (! (mailpipe = popen(sendmail, "w")) )
+  if (! (mailpipe = popen(comm, "w")) )
     {
-      trace(TRACE_ERROR, "send_reply(): could not open pipe to sendmail using cmd [%s]", sendmail);
+      trace(TRACE_ERROR, "send_reply(): could not open pipe to sendmail using cmd [%s]", comm);
       return 1;
     }
 
