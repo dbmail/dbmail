@@ -430,7 +430,7 @@ int main (int argc, char *argv[])
   if (s == -1 ) 
     trace (TRACE_FATAL,"main(): call socket(2) failed");
 
-  ipaddr = db_get_config_item("POP3D_BIND_IP",CONFIG_MANDATORY);
+  ipaddr = db_get_config_item("POP3D_BIND_IP",CONFIG_MANDATORY); 
   port = db_get_config_item("POP3D_BIND_PORT",CONFIG_MANDATORY);
 
   if (ipaddr != NULL)

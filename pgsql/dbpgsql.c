@@ -1,4 +1,4 @@
-/* $Id 
+/* $Id$
  * (c) 2000-2002 IC&S, The Netherlands
  *
  * postgresql driver file
@@ -202,8 +202,11 @@ char *db_get_config_item (char *item, int type)
   if (db_query(query, &res)==-1)
     {
       if (type == CONFIG_MANDATORY)
+      {
+          db_disconnect();
 	        trace (TRACE_FATAL,"db_get_config_item(): query failed could not get value for %s. "
 	            "This is needed to continue\n",item);
+      }
       else
 	if (type == CONFIG_EMPTY)
 	  trace (TRACE_ERROR,"db_get_config_item(): query failed. Could not get value for %s\n",
