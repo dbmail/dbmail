@@ -2931,6 +2931,9 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 		return -1;
 	    } 
 
+	  if (msgidx < buflen)
+	    msgidx++;
+
 	  db_give_msgpos(&msg->bodyend);
 	  msg->bodysize = db_give_range_size(&msg->bodystart, &msg->bodyend);
 	  totallines += msg->bodylines;

@@ -36,7 +36,7 @@ const char *imap_flag_desc_escaped[IMAP_NFLAGS] =
 int imapcommands_use_uid = 0;
 int list_is_lsub = 0;
 
-cache_t cached_msg;
+extern cache_t cached_msg;
 
 extern const char AcceptedMailboxnameChars[];
 
@@ -110,7 +110,20 @@ int _ic_logout(char *tag, char **args, ClientInfo *ci)
     db_free_msg(&cached_msg.msg);
 
   cached_msg.num = -1;
-
+  memset(&cached_msg.msg, 0, sizeof(cached_msg.msg));
+  if (cached_msg.filedump)
+    {
+      fclose(cached_msg.filedump);
+      cached_msg.filedump = NULL;
+      unlink(cached_msg.filename);
+    }
+  if (cached_msg.tmpdump)
+    {
+      fclose(cached_msg.tmpdump);
+      cached_msg.tmpdump = NULL;
+      unlink(cached_msg.tmpname);
+    }
+  
   /* change status */
   ud->state = IMAPCS_LOGOUT;
 
@@ -175,12 +188,6 @@ int _ic_login(char *tag, char **args, ClientInfo *ci)
   /* update client info */
   ud->userid = userid;
   ud->state = IMAPCS_AUTHENTICATED;
-
-  /* clear cache */
-  if (cached_msg.num != -1)
-    db_free_msg(&cached_msg.msg);
-
-  cached_msg.num = -1;
 
   fprintf(ci->tx,"%s OK LOGIN completed\r\n",tag);
   return 0;
@@ -1091,7 +1098,7 @@ int _ic_list(char *tag, char **args, ClientInfo *ci)
       if (result) fprintf(ci->tx,"\\noinferiors ");
 
       /* show delimiter & name */
-      fprintf(ci->tx,") \"/\" %s\r\n",name);
+      fprintf(ci->tx,") \"/\" \"%s\"\r\n",name);
     }
 
   if (children)
@@ -1463,11 +1470,9 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
   mime_message_t *msgpart;
   char date[IMAP_INTERNALDATE_LEN],*endptr;
   unsigned long thisnum;
-  long dumpsize,cnt;
+  long tmpdumpsize,cnt;
   struct list fetch_list;
   struct element *curr;
-  char tmpname[] = "/tmp/fetch.tmp.XXXXXX";
-  FILE *tmpfile;
 
   memset(&fetch_list, 0, sizeof(fetch_list));
 
@@ -1483,13 +1488,6 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
       return 1;
     }
 
-  tmpfile = fdopen(mkstemp(tmpname),"r+w");
-  if (tmpfile == NULL)
-    {
-      fprintf(ci->tx,"* BYE could not create temporary file\r\n");
-      return -1; /* failed opening temporary file */
-    }
-  
   /* fetch fetch items */
   list_init(&fetch_list);
   idx = 1;
@@ -1501,8 +1499,6 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	{
 	  list_freelist(&fetch_list.start);
 	  fprintf(ci->tx,"%s BAD invalid argument list to fetch\r\n", tag);
-	  fclose(tmpfile);
-	  unlink(tmpname);
 	  return 1;
 	}
 
@@ -1510,8 +1506,6 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	{
 	  list_freelist(&fetch_list.start);
 	  fprintf(ci->tx,"* BYE out of memory\r\n");
-	  fclose(tmpfile);
-	  unlink(tmpname);
 	  return 1;
 	}
 
@@ -1531,8 +1525,6 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	{
 	  list_freelist(&fetch_list.start);
 	  fprintf(ci->tx,"* BYE out of memory\r\n");
-	  fclose(tmpfile);
-	  unlink(tmpname);
 	  return 1;
 	}
     }
@@ -1556,8 +1548,6 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	  else
 	    fprintf(ci->tx, "%s BAD invalid message range specified\r\n",tag);
 
-	  fclose(tmpfile);
-	  unlink(tmpname);
 	  list_freelist(&fetch_list.start);
 	  return !imapcommands_use_uid;
 	}
@@ -1582,8 +1572,6 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		{
 		  fprintf(ci->tx, "%s BAD invalid message range specified\r\n",tag);
 
-		  fclose(tmpfile);
-		  unlink(tmpname);
 		  list_freelist(&fetch_list.start);
 		  return 1;
 		}
@@ -1604,8 +1592,6 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	  
 	default:
 	  fprintf(ci->tx, "%s BAD invalid character in message range\r\n",tag);
-	  fclose(tmpfile);
-	  unlink(tmpname);
 	  list_freelist(&fetch_list.start);
 	  return 1;
 	}
@@ -1626,8 +1612,6 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		{
 		  /* passed the last one */
 		  fprintf(ci->tx,"%s OK FETCH completed\r\n",tag);
-		  fclose(tmpfile);
-		  unlink(tmpname);
 		  list_freelist(&fetch_list.start);
 		  return 0;
 		}
@@ -1651,7 +1635,6 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	  while (curr && !bad_response_send)
 	    {
 	      fi = (fetch_items_t*)curr->data;
-	      rewind(tmpfile);
 	      fflush(ci->tx);
 
 	      only_text_from_msgpart = 0;
@@ -1663,6 +1646,8 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		    db_free_msg(&cached_msg.msg);
 
 		  cached_msg.num = -1;
+		  cached_msg.file_dumped = 0;
+		  rewind(cached_msg.filedump);
 
 		  if (db_fetch_headers(thisnum, &cached_msg.msg) == -1)
 		    {
@@ -1672,6 +1657,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		    }
 		  db_msgdump(&cached_msg.msg, thisnum);
 		  cached_msg.num = thisnum;
+
 		}
 
 	      if (fi->getInternalDate)
@@ -1681,8 +1667,6 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		    {
 		      fprintf(ci->tx,"* BYE internal dbase error\r\n");
 		      list_freelist(&fetch_list.start);
-		      fclose(tmpfile);
-		      unlink(tmpname);
 		      return -1;
 		    }
 
@@ -1700,8 +1684,6 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		    {
 		      fprintf(ci->tx,"\r\n* BYE error fetching body structure\r\n");
 		      list_freelist(&fetch_list.start);
-		      fclose(tmpfile);
-		      unlink(tmpname);
 		      return -1;
 		    }
 		}
@@ -1714,8 +1696,6 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		    {
 		      fprintf(ci->tx,"\r\n* BYE error fetching body\r\n");
 		      list_freelist(&fetch_list.start);
-		      fclose(tmpfile);
-		      unlink(tmpname);
 		      return -1;
 		    }
 		}
@@ -1729,23 +1709,32 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		    {
 		      fprintf(ci->tx,"\r\n* BYE error fetching envelope structure\r\n");
 		      list_freelist(&fetch_list.start);
-		      fclose(tmpfile);
-		      unlink(tmpname);
 		      return -1;
 		    }
 		}
 
 	      if (fi->getRFC822 || fi->getRFC822Peek)
 		{
-		  dumpsize  = rfcheader_dump(tmpfile, &cached_msg.msg.rfcheader, args, 0, 0);
-		  dumpsize += db_dump_range(tmpfile, cached_msg.msg.bodystart, 
-					    cached_msg.msg.bodyend, thisnum);
-		  
-		  fseek(tmpfile, 0, SEEK_SET);
+		  rewind(cached_msg.filedump);
+		  if (cached_msg.file_dumped == 0)
+		    {
+		      cached_msg.dumpsize  = 
+			rfcheader_dump(cached_msg.filedump, &cached_msg.msg.rfcheader, args, 0, 0);
 
-		  fprintf(ci->tx, "RFC822 {%ld}\r\n", dumpsize);
-		  while (dumpsize--)
-		    fputc(fgetc(tmpfile), ci->tx);
+		      cached_msg.dumpsize += 
+			db_dump_range(cached_msg.filedump, cached_msg.msg.bodystart, 
+				      cached_msg.msg.bodyend, thisnum);
+
+		      cached_msg.file_dumped = 1;
+		    }
+		  
+		  fseek(cached_msg.filedump, 0, SEEK_SET);
+
+		  fprintf(ci->tx, "RFC822 {%ld}\r\n", cached_msg.dumpsize);
+
+		  tmpdumpsize = cached_msg.dumpsize;
+		  while (tmpdumpsize--)
+		    fputc(fgetc(cached_msg.filedump), ci->tx);
 
 		  if (fi->getRFC822)
 		    setseen = 1;
@@ -1762,68 +1751,83 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
 	      if (fi->getBodyTotal || fi->getBodyTotalPeek)
 		{
-		  dumpsize  = rfcheader_dump(tmpfile, &cached_msg.msg.rfcheader, args, 0, 0);
-		  dumpsize += db_dump_range(tmpfile, cached_msg.msg.bodystart, 
-					    cached_msg.msg.bodyend, thisnum);
+		  rewind(cached_msg.filedump);
+		  if (cached_msg.file_dumped == 0)
+		    {
+		      cached_msg.dumpsize  = 
+			rfcheader_dump(cached_msg.filedump, &cached_msg.msg.rfcheader, args, 0, 0);
+
+		      cached_msg.dumpsize += 
+			db_dump_range(cached_msg.filedump, cached_msg.msg.bodystart, 
+				      cached_msg.msg.bodyend, thisnum);
+
+		      cached_msg.file_dumped = 1;
+		    }
 		  
 		  if (fi->bodyfetch.octetstart == -1)
 		    {
-		      fseek(tmpfile, 0, SEEK_SET);
+		      fseek(cached_msg.filedump, 0, SEEK_SET);
 
-		      fprintf(ci->tx, "BODY[] {%ld}\r\n", dumpsize);
-		      while (dumpsize--)
-			fputc(fgetc(tmpfile), ci->tx);
+		      fprintf(ci->tx, "BODY[] {%ld}\r\n", cached_msg.dumpsize);
+
+		      sleep(1);
+		      tmpdumpsize = cached_msg.dumpsize;
+		      while (tmpdumpsize--)
+			fputc(fgetc(cached_msg.filedump), ci->tx);
 		    }
 		  else
 		    {
-		      fseek(tmpfile, fi->bodyfetch.octetstart, SEEK_SET);
+		      fseek(cached_msg.filedump, fi->bodyfetch.octetstart, SEEK_SET);
 
 		      actual_cnt = (fi->bodyfetch.octetcnt > 
-				    (dumpsize - fi->bodyfetch.octetstart)) ? 
-			(dumpsize - fi->bodyfetch.octetstart) : fi->bodyfetch.octetcnt;
+				    (cached_msg.dumpsize - fi->bodyfetch.octetstart)) ? 
+			(cached_msg.dumpsize - fi->bodyfetch.octetstart) : fi->bodyfetch.octetcnt;
 
 		      fprintf(ci->tx, "BODY[]<%d> {%d}\r\n", fi->bodyfetch.octetstart, 
 			      actual_cnt); 
 
 		      while (actual_cnt--)
-			fputc(fgetc(tmpfile), ci->tx);
+			fputc(fgetc(cached_msg.filedump), ci->tx);
 		    }		      
 
 		  if (fi->getBodyTotal)
 		    setseen = 1;
 
-/*		  fprintf(ci->tx, " ");*/
 		}
 
 	      if (fi->getRFC822Header)
 		{
-		  dumpsize = rfcheader_dump(tmpfile, &cached_msg.msg.rfcheader, args, 0, 0);
+		  rewind(cached_msg.tmpdump);
+		  tmpdumpsize = 
+		    rfcheader_dump(cached_msg.tmpdump, &cached_msg.msg.rfcheader, args, 0, 0);
 
-		  fseek(tmpfile, 0, SEEK_SET);
+		  fseek(cached_msg.tmpdump, 0, SEEK_SET);
 
-		  fprintf(ci->tx, "RFC822.HEADER {%ld}\r\n",dumpsize);
-		  while (dumpsize--)
-		    fputc(fgetc(tmpfile), ci->tx);
+		  fprintf(ci->tx, "RFC822.HEADER {%ld}\r\n",tmpdumpsize);
+		  while (tmpdumpsize--)
+		    fputc(fgetc(cached_msg.tmpdump), ci->tx);
 
-/*		  fprintf(ci->tx," ");*/
 		}
 	      
 	      if (fi->getRFC822Text)
 		{
-		  dumpsize = db_dump_range(tmpfile, cached_msg.msg.bodystart, 
-					   cached_msg.msg.bodyend, thisnum);
+		  rewind(cached_msg.tmpdump);
+		  tmpdumpsize = db_dump_range(cached_msg.tmpdump, cached_msg.msg.bodystart, 
+					      cached_msg.msg.bodyend, thisnum);
 
-		  fseek(tmpfile, 0, SEEK_SET);
+		  fseek(cached_msg.tmpdump, 0, SEEK_SET);
 
-		  fprintf(ci->tx, "RFC822.TEXT {%ld}\r\n",dumpsize);
-		  while (dumpsize--)
-		    fputc(fgetc(tmpfile), ci->tx);
+		  fprintf(ci->tx, "RFC822.TEXT {%ld}\r\n",tmpdumpsize);
+		  while (tmpdumpsize--)
+		    fputc(fgetc(cached_msg.tmpdump), ci->tx);
 
 		  setseen = 1;
 		}
 
 	      if (fi->bodyfetch.itemtype >= 0)
 		{
+		  rewind(cached_msg.tmpdump);
+
 		  if (fi->bodyfetch.partspec[0])
 		    {
 		      if (fi->bodyfetch.partspec[0] == '0')
@@ -1831,8 +1835,6 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			  fprintf(ci->tx,"\r\n%s BAD protocol error\r\n",tag);
 			  trace(TRACE_DEBUG,"PROTOCOL ERROR\r\n");
 			  list_freelist(&fetch_list.start);
-			  fclose(tmpfile);
-			  unlink(tmpname);
 			  return 1;
 			}
 
@@ -1903,30 +1905,31 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			fprintf(ci->tx, "] NIL ");
 		      else
 			{
-			  dumpsize = db_dump_range(tmpfile, msgpart->bodystart, msgpart->bodyend,
-						   thisnum);
+			  tmpdumpsize = 
+			    db_dump_range(cached_msg.tmpdump, msgpart->bodystart, msgpart->bodyend,
+			    thisnum);
 
 			  if (fi->bodyfetch.octetstart >= 0)
 			    {
-			      cnt = dumpsize - fi->bodyfetch.octetstart;
+			      cnt = tmpdumpsize - fi->bodyfetch.octetstart;
 			      if (cnt<0) cnt = 0;
 			      if (cnt > fi->bodyfetch.octetcnt) cnt = fi->bodyfetch.octetcnt;
  
 			      fprintf(ci->tx, "]<%u> {%ld}\r\n",
 				      fi->bodyfetch.octetstart, cnt);
 			      
-			      fseek(tmpfile, fi->bodyfetch.octetstart, SEEK_SET);
+			      fseek(cached_msg.tmpdump, fi->bodyfetch.octetstart, SEEK_SET);
 			    }
 			  else
 			    {
-			      cnt = dumpsize;
-			      fprintf(ci->tx, "] {%ld}\r\n", dumpsize);
-			      fseek(tmpfile, 0, SEEK_SET);
+			      cnt = tmpdumpsize;
+			      fprintf(ci->tx, "] {%ld}\r\n", tmpdumpsize);
+			      fseek(cached_msg.tmpdump, 0, SEEK_SET);
 			    }
 
 			  /* output data */
 			  while (cnt--)
-			    fputc(fgetc(tmpfile), ci->tx);
+			    fputc(fgetc(cached_msg.tmpdump), ci->tx);
 
 			}
 		      break;
@@ -1937,10 +1940,10 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			fprintf(ci->tx, "] NIL\r\n");
 		      else
 			{
-			  dumpsize = rfcheader_dump(tmpfile, &msgpart->rfcheader, 
+			  tmpdumpsize = rfcheader_dump(cached_msg.tmpdump, &msgpart->rfcheader, 
 					 args, 0, 0);
 
-			  if (!dumpsize)
+			  if (!tmpdumpsize)
 			    {
 			      fprintf(ci->tx, "] NIL\r\n");
 			    }
@@ -1948,25 +1951,25 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			    {
 			      if (fi->bodyfetch.octetstart >= 0)
 				{
-				  cnt = dumpsize - fi->bodyfetch.octetstart;
+				  cnt = tmpdumpsize - fi->bodyfetch.octetstart;
 				  if (cnt<0) cnt = 0;
 				  if (cnt > fi->bodyfetch.octetcnt) cnt = fi->bodyfetch.octetcnt;
  
 				  fprintf(ci->tx, "]<%u> {%ld}\r\n",
 					  fi->bodyfetch.octetstart, cnt);
 			      
-				  fseek(tmpfile, fi->bodyfetch.octetstart, SEEK_SET);
+				  fseek(cached_msg.tmpdump, fi->bodyfetch.octetstart, SEEK_SET);
 				}
 			      else
 				{
-				  cnt = dumpsize;
-				  fprintf(ci->tx, "] {%ld}\r\n", dumpsize);
-				  fseek(tmpfile, 0, SEEK_SET);
+				  cnt = tmpdumpsize;
+				  fprintf(ci->tx, "] {%ld}\r\n", tmpdumpsize);
+				  fseek(cached_msg.tmpdump, 0, SEEK_SET);
 				}
 
 			      /* output data */
 			      while (cnt--)
-				fputc(fgetc(tmpfile), ci->tx);
+				fputc(fgetc(cached_msg.tmpdump), ci->tx);
 
 			    }
 			}
@@ -1993,11 +1996,12 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			fprintf(ci->tx, "NIL\r\n");
 		      else
 			{
-			  dumpsize = rfcheader_dump(tmpfile, &msgpart->rfcheader, 
-						    &args[fi->bodyfetch.argstart],
-						    fi->bodyfetch.argcnt, 1);
+			  tmpdumpsize = 
+			    rfcheader_dump(cached_msg.tmpdump, &msgpart->rfcheader, 
+					   &args[fi->bodyfetch.argstart],
+					   fi->bodyfetch.argcnt, 1);
 						    
-			  if (!dumpsize)
+			  if (!tmpdumpsize)
 			    {
 			      fprintf(ci->tx, "NIL\r\n");
 			    }
@@ -2005,25 +2009,25 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			    {
 			      if (fi->bodyfetch.octetstart >= 0)
 				{
-				  cnt = dumpsize - fi->bodyfetch.octetstart;
+				  cnt = tmpdumpsize - fi->bodyfetch.octetstart;
 				  if (cnt<0) cnt = 0;
 				  if (cnt > fi->bodyfetch.octetcnt) cnt = fi->bodyfetch.octetcnt;
  
 				  fprintf(ci->tx, "<%u> {%ld}\r\n",
 					  fi->bodyfetch.octetstart, cnt);
 			      
-				  fseek(tmpfile, fi->bodyfetch.octetstart, SEEK_SET);
+				  fseek(cached_msg.tmpdump, fi->bodyfetch.octetstart, SEEK_SET);
 				}
 			      else
 				{
-				  cnt = dumpsize;
-				  fprintf(ci->tx, "{%ld}\r\n", dumpsize);
-				  fseek(tmpfile, 0, SEEK_SET);
+				  cnt = tmpdumpsize;
+				  fprintf(ci->tx, "{%ld}\r\n", tmpdumpsize);
+				  fseek(cached_msg.tmpdump, 0, SEEK_SET);
 				}
 
 			      /* output data */
 			      while (cnt--)
-				fputc(fgetc(tmpfile), ci->tx);
+				fputc(fgetc(cached_msg.tmpdump), ci->tx);
 
 			    }
 			}
@@ -2049,11 +2053,12 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			fprintf(ci->tx, "NIL\r\n");
 		      else
 			{
-			  dumpsize = rfcheader_dump(tmpfile, &msgpart->rfcheader, 
-						    &args[fi->bodyfetch.argstart],
-						    fi->bodyfetch.argcnt, 0);
+			  tmpdumpsize = 
+			    rfcheader_dump(cached_msg.tmpdump, &msgpart->rfcheader, 
+					   &args[fi->bodyfetch.argstart],
+					   fi->bodyfetch.argcnt, 0);
 						    
-			  if (!dumpsize)
+			  if (!tmpdumpsize)
 			    {
 			      fprintf(ci->tx, "NIL\r\n");
 			    }
@@ -2061,25 +2066,25 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			    {
 			      if (fi->bodyfetch.octetstart >= 0)
 				{
-				  cnt = dumpsize - fi->bodyfetch.octetstart;
+				  cnt = tmpdumpsize - fi->bodyfetch.octetstart;
 				  if (cnt<0) cnt = 0;
 				  if (cnt > fi->bodyfetch.octetcnt) cnt = fi->bodyfetch.octetcnt;
  
 				  fprintf(ci->tx, "<%u> {%ld}\r\n",
 					  fi->bodyfetch.octetstart, cnt);
 			      
-				  fseek(tmpfile, fi->bodyfetch.octetstart, SEEK_SET);
+				  fseek(cached_msg.tmpdump, fi->bodyfetch.octetstart, SEEK_SET);
 				}
 			      else
 				{
-				  cnt = dumpsize;
-				  fprintf(ci->tx, "{%ld}\r\n", dumpsize);
-				  fseek(tmpfile, 0, SEEK_SET);
+				  cnt = tmpdumpsize;
+				  fprintf(ci->tx, "{%ld}\r\n", tmpdumpsize);
+				  fseek(cached_msg.tmpdump, 0, SEEK_SET);
 				}
 
 			      /* output data */
 			      while (cnt--)
-				fputc(fgetc(tmpfile), ci->tx);
+				fputc(fgetc(cached_msg.tmpdump), ci->tx);
 
 			    }
 			}
@@ -2091,9 +2096,9 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			fprintf(ci->tx, "NIL\r\n");
 		      else
 			{
-			  dumpsize = mimeheader_dump(tmpfile, &msgpart->mimeheader);
+			  tmpdumpsize = mimeheader_dump(cached_msg.tmpdump, &msgpart->mimeheader);
 
-			  if (!dumpsize)
+			  if (!tmpdumpsize)
 			    {
 			      fprintf(ci->tx, "NIL\r\n");
 			    }
@@ -2101,25 +2106,25 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			    {
 			      if (fi->bodyfetch.octetstart >= 0)
 				{
-				  cnt = dumpsize - fi->bodyfetch.octetstart;
+				  cnt = tmpdumpsize - fi->bodyfetch.octetstart;
 				  if (cnt<0) cnt = 0;
 				  if (cnt > fi->bodyfetch.octetcnt) cnt = fi->bodyfetch.octetcnt;
  
 				  fprintf(ci->tx, "<%u> {%ld}\r\n",
 					  fi->bodyfetch.octetstart, cnt);
 			      
-				  fseek(tmpfile, fi->bodyfetch.octetstart, SEEK_SET);
+				  fseek(cached_msg.tmpdump, fi->bodyfetch.octetstart, SEEK_SET);
 				}
 			      else
 				{
-				  cnt = dumpsize;
-				  fprintf(ci->tx, "{%ld}\r\n", dumpsize);
-				  fseek(tmpfile, 0, SEEK_SET);
+				  cnt = tmpdumpsize;
+				  fprintf(ci->tx, "{%ld}\r\n", tmpdumpsize);
+				  fseek(cached_msg.tmpdump, 0, SEEK_SET);
 				}
 
 			      /* output data */
 			      while (cnt--)
-				fputc(fgetc(tmpfile), ci->tx);
+				fputc(fgetc(cached_msg.tmpdump), ci->tx);
 
 			    }
 			}
@@ -2128,8 +2133,6 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		    default:
 		      fprintf(ci->tx, "* BYE internal server error\r\n");
 		      list_freelist(&fetch_list.start);
-		      fclose(tmpfile);
-		      unlink(tmpname);
 		      return -1;
 		    }
 		}
@@ -2145,8 +2148,6 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		    {
 		      fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
 		      list_freelist(&fetch_list.start);
-		      fclose(tmpfile);
-		      unlink(tmpname);
 		      return -1;
 		    }
 
@@ -2168,8 +2169,6 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			{
 			  fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
 			  list_freelist(&fetch_list.start);
-			  fclose(tmpfile);
-			  unlink(tmpname);
 			  return -1;
 			}
 		      else if (result == 1)
@@ -2197,8 +2196,6 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
     }
       
   list_freelist(&fetch_list.start);
-  fclose(tmpfile);
-  unlink(tmpname);
 
   fprintf(ci->tx,"%s OK %sFETCH completed\r\n", tag, imapcommands_use_uid ? "UID " : "");
   return 0;

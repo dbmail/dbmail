@@ -613,6 +613,7 @@ long rfcheader_dump(FILE *outstream, struct list *rfcheader, char **fieldnames, 
     }
   size += fprintf(outstream,"\r\n");
   
+  fflush(outstream);
   return size;
 }      
   
@@ -643,6 +644,8 @@ long mimeheader_dump(FILE *outstream, struct list *mimeheader)
       curr = curr->nextnode;
     }
   size += fprintf(outstream,"\r\n");
+
+  fflush(outstream);
 
   return size;
 }      

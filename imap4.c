@@ -20,6 +20,9 @@
 
 #define MAX_LINESIZE 1024
 
+/* cache */
+cache_t cached_msg;
+
 /* consts */
 const char AcceptedChars[] = 
 "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -127,6 +130,30 @@ int imap_process(ClientInfo *ci)
 
       return EOF;
     }
+
+  /* init cache */
+  cached_msg.num = -1;
+  memset(&cached_msg.msg, 0, sizeof(cached_msg.msg));
+
+  strcpy(cached_msg.filename, "/tmp/imapdump.tmp.XXXXXX");
+  strcpy(cached_msg.tmpname, "/tmp/imaptmp.tmp.XXXXXX");
+
+  mkstemp(cached_msg.filename);
+  mkstemp(cached_msg.tmpname);
+  if (! (cached_msg.filedump = fopen(cached_msg.filename, "rw+")))
+    {
+      trace(TRACE_ERROR, "IMAPD: cannot open temporary file\n");
+      fprintf(ci->tx, "BYE internal system failure\n");
+      return EOF;
+    }
+  if (! (cached_msg.tmpdump = fopen(cached_msg.tmpname, "rw+")))
+    {
+      trace(TRACE_ERROR, "IMAPD: cannot open temporary file\n");
+      fprintf(ci->tx, "BYE internal system failure\n");
+      return EOF;
+    }
+  cached_msg.file_dumped = 0;
+  cached_msg.dumpsize = 0;
 
   done = 0;
   args = NULL;
