@@ -6,7 +6,7 @@ CREATE TABLE aliases (
    alias_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
    alias varchar(100) NOT NULL,
    deliver_to varchar(250) NOT NULL,
-	owner_id int(11) DEFAULT '0' NOT NULL,
+	client_id int(11) DEFAULT '0' NOT NULL,
    PRIMARY KEY (alias_idnr),
    KEY alias_idnr (alias_idnr),
    UNIQUE alias_idnr_2 (alias_idnr)
