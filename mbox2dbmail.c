@@ -13,7 +13,7 @@
 #include <stdlib.h>
 
 #define MAX_LINESIZE 1024
-#define SMTP_INJECTOR "./dbmail-mini-injector"
+#define SMTP_INJECTOR "./dbmail-smtp -u "
 
 const char *mbox_delimiter_pattern = "^From .*@.*  ";
 

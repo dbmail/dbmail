@@ -139,7 +139,7 @@ int process_mboxfile(char *file, u64_t userid)
   FILE *infile;
   int in_msg, header_passed;
   char newunique[UID_SIZE];
-  unsigned cnt,newlines,len;
+  unsigned cnt,len,newlines;
   u64_t msgid=0, size;
   char saved;
 
@@ -158,8 +158,8 @@ int process_mboxfile(char *file, u64_t userid)
 
   in_msg = 0;
   cnt = 0;
-  newlines = 0;
   size = 0;
+  newlines = 0;
 
   while (!feof(infile) && !ferror(infile))
     {
@@ -185,22 +185,21 @@ int process_mboxfile(char *file, u64_t userid)
 	  msgid = db_insert_message(userid, 0, 0);
 	  header_passed = 0;
 	  cnt = 0;
-	  newlines = 0;
 	  size = 0;
+	  newlines = 0;
 	}
       else
 	{
 	  newlines++;
-	  
 	  if (header_passed == 0)
 	    {
 	      /* we're still reading the header */
 	      len = strlen(&blk[cnt]);
 	      if (strcmp(&blk[cnt], "\n") == 0)
 		{
-		  db_insert_message_block(blk, cnt, msgid);
+		  db_insert_message_block(blk, cnt+len, msgid);
 		  header_passed = 1;
-		  size += cnt;
+		  size += (cnt+len);
 		  cnt = 0;
 		}
 	      else
@@ -215,15 +214,15 @@ int process_mboxfile(char *file, u64_t userid)
 	      if (cnt >= READ_BLOCK_SIZE-1)
 		{
 		  /* write block */
-		  saved = blk[READ_BLOCK_SIZE-1];
+		  saved = blk[READ_BLOCK_SIZE];
 
-		  blk[READ_BLOCK_SIZE-1] = 0;
-		  db_insert_message_block(blk, READ_BLOCK_SIZE-1, msgid);
-		  blk[READ_BLOCK_SIZE-1] = saved;
+		  blk[READ_BLOCK_SIZE] = '\0';
+		  db_insert_message_block(blk, READ_BLOCK_SIZE, msgid);
+		  blk[READ_BLOCK_SIZE] = saved;
 
-		  memmove(blk, &blk[cnt], cnt - (READ_BLOCK_SIZE-1));
-		  size += cnt;
-		  cnt = 0;
+		  memmove(blk, &blk[READ_BLOCK_SIZE], cnt - (READ_BLOCK_SIZE));
+		  size += READ_BLOCK_SIZE;
+		  cnt  -= READ_BLOCK_SIZE;
 		}
 	    }
 	}

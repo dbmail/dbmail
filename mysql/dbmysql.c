@@ -79,6 +79,7 @@ int db_query (const char *thequery)
 	{
 	  if (mysql_real_query(&conn, thequery, querysize) <0) 
 	    {
+	      trace(TRACE_ERROR,"db_query(): query [%s] failed: ", query);
 	      trace(TRACE_ERROR,"db_query(): mysql_real_query failed: %s\n",mysql_error(&conn)); 
 	      return -1;
 	    }
@@ -584,7 +585,7 @@ u64_t db_update_message (u64_t message_idnr, const char *unique_id,
 			 u64_t messagesize, u64_t rfcsize)
 {
   snprintf (query, DEF_QUERYSIZE,
-	   "UPDATE messages SET messagesize=%llu, unique_id=\"%s\", status='000', rfcsize = %llu "
+	    "UPDATE messages SET messagesize=%llu, unique_id=\"%s\", status='000', rfcsize = %llu "
 	    "where message_idnr=%llu",
 	   messagesize, unique_id, rfcsize, message_idnr);
   

@@ -46,7 +46,7 @@ char *read_header(u64_t *blksize)
   memtst ((strblock = (char *)my_malloc(READ_BLOCK_SIZE))==NULL);
   memtst ((header = (char *)my_malloc(HEADER_BLOCK_SIZE))==NULL);
 
-	/* resetting */
+  /* resetting */
   memset (strblock, '\0', READ_BLOCK_SIZE);
   memset (header, '\0', HEADER_BLOCK_SIZE);
   
