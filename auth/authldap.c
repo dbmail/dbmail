@@ -1227,22 +1227,28 @@ int auth_check_user_ext(const char *address, struct list *userids,
  * this function effectively non-functional! 
  * returns a 1 on succes, -1 on failure 
  */
-int auth_adduser(char *username, char *password, char *enctype UNUSED,
-		 char *clientid, char *maxmail, u64_t * user_idnr)
+int auth_adduser(const char *username, const char *password, 
+		 const char *enctype UNUSED, u64_t clientid, 
+		 u64_t maxmail, u64_t * user_idnr)
 {
 	int i, j;
 	/*int ret; unused variable */
 	int NUM_MODS = 9;
 	char *kaboom = "123";
-	char *cn_values[] = { username, NULL };
-	char *sn_values[] = { username, NULL };
-	char *pw_values[] = { password, NULL };
+	char *cid = "0";
+	char *maxm = "0";
+	sprintf(cid,"%llu",clientid);
+	sprintf(maxm,"%llu",maxmail);
+	
+	char *cn_values[] = { (char *)username, NULL };
+	char *sn_values[] = { (char *)username, NULL };
+	char *pw_values[] = { (char *)password, NULL };
 	char *obj_values[] =
 	    { "top", "person", _ldap_cfg.objectclass, NULL };
-	char *uid_values[] = { username, NULL };
-	char *cid_values[] = { clientid, NULL };
+	char *uid_values[] = { (char *)username, NULL };
+	char *cid_values[] = { cid, NULL };
 	char *nid_values[] = { kaboom, NULL };
-	char *max_values[] = { maxmail, NULL };
+	char *max_values[] = { maxm, NULL };
 	field_t cn_type = "cn";
 	field_t sn_type = "sn";
 	field_t mail_type = "mail";
