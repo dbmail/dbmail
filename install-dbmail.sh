@@ -52,7 +52,7 @@ for file in dbmail-smtp dbmail-pop3d dbmail-imapd dbmail-maintenance dbmail-addu
 do
 	/bin/chown $user_dbmail:$group_dbmail $file
 	/bin/chmod 770 $file
-	/bin/cp -f $file $targetexec
+	/bin/cp -fp $file $targetexec
 done
 
 echo "Ok installing manfiles in $targetman.."
