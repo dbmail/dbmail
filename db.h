@@ -1244,8 +1244,10 @@ int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * m
  */
 
 int db_user_exists(const char *username, u64_t * user_idnr);
+int db_user_create_shadow(const char *username, u64_t * user_idnr);
 int db_user_create(const char *username, const char *password, const char *enctype,
 		 u64_t clientid, u64_t maxmail, u64_t * user_idnr); 
+int db_user_find_create(u64_t user_idnr);
 int db_user_delete(const char * username);
 int db_user_rename(u64_t user_idnr, const char *new_name); 
 #endif
