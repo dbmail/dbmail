@@ -199,7 +199,8 @@ pid_t CreateChild(ChildInfo_t *info)
 
 
 /*
- * checks if a child is still alive
+ * checks if a child is still alive (i.e. exists & not a zombie)
+ * FIXME seems to be not functional (kill succeeds on zombies)
  */
 int CheckChildAlive(pid_t pid)
 {
