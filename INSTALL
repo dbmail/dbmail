@@ -6,65 +6,117 @@ DBMAIL installation
 
 What do you need?
 
-- a working postgresql or mysql installation
-- a working smtp server (postfix, exim or sendmail is preffered)
+- a working mysql or postgresql installation
+- a working smtp server (postfix, exim or sendmail)
+- the dbmail source (www.dbmail.org)
 
 
 1.	Setup a database
+====================
 
-Postgresql setup
-----------------
+	Currently,  DBMail supports both MySQL and PostgreSQL for mailstorage and user
+	user authentication. LDAP is also supported for user authentication.
 
+	Mysql setup
+	-----------
 
-Mysql setup
------------
-
-
-
-
-
-.	First you'll need to create the DBMAIL database in MYSQL.
+	Note: Since some DBmail tables can get VERY large (depending on your mailusage)
+	we advise using InnoDB as database storage backend (included in the Mysql MAX
+	package.).
+	
+	First you'll need to create the DBMAIL database in MYSQL.
 	This is easy. You'll need the mysql commandline program for this. 
 	Just do :
 	
-	mysql -u root -p <sql/create_tables.sql
+	mysql -u root -p < sql/mysql/create_tables.sql
+	
+	for InnoDB:
+
+	mysql -u root -p < sql/mysql/create_tables_innoDB.mysql
 	
 	in the dbmail source tree.
 	After this, the DBMAIL tables will have been created.
 
 
-2. Look at the config.h file in the dbmail source directory. You will see a few #define
-	statements. First the #define HOST should contain the hostname of the 
-	machine that runs the MYSQL database. USER and PASS need to be replaced
-	with a user and password that can access the DBMAIL database. 
-
-	Do a find or a locate for mysql.h. Copy this path and set it in the 
-	dbmysql.h in the #include "full path to mysql.h"
-
-	If you want verbose debugging you can set the TRACE_LEVEL to 4 or 5. 
-	For normal messages the TRACE_LEVEL should be 2. If you experience any problems
-	you can send an e-mail to the mailinglist. If you include a TRACE level 5 log
-	chances are that your problem is fixed quite fast :)
-
-	In the Makefile you might want to check the location for the mysqlclient file
-	(the MYSQLLIBDIR variable). 
-
+	Postgresql setup
+	----------------
 	
-3.	Run make 
-	Everything should go ok. If not, it usually means that the compiler 
-	can't find the mysqlclient library or the mysqlclient header file. If that happends,
-	go back to number 2 and check if everything is ok.
+	First you need to create the postgresql user dbmail is going to use. This
+	is done by:
+
+	createuser -U postgres dbmail
+
+	Off course you can use an other username than dbmail, simply replace it. You
+	can set a password for the user by doing a:
+
+	ALTER USER dbmail WITH PASSWORD 'secret';
+
+	In a postgresql console. After doing this you should create the database for
+	dbmail:
+
+	createdb -U dbmail dbmail
+
+	The first dbmail is the user you just created, the second the name of the database. 
+	Off course you can use an other databasename. After setting up the user and database
+	it's time to create the tables, do a:
+
+	psql -U dbmail dbmal < sql/postgresql/create_tables.sql
+
+	Don't forget to start postgresql with the -i option, so it accepts TCP/IP connections.
+
+
+2. 	Set the database settings
+=============================
+
+	Copy the dbmail.conf file to /etc
+	Edit the dbmai.conf file and set everything in there
+	to your reflect your settings.
+
+3.	Adjust headerfile locations and linkpaths
+
+	Before compiling check where your postgresql/mysql libs and header files are. 
+	
+	For postgresql:
+	
+	-change PGSQLLIBDIR in Makefile.pgsql to your postgresqllibdir
+	-When getting errors with make, check the include statements in the sourcefiles
+	 in pgsql/ . Default it is /usr/local/pgsql/include/libpq-fe.h, change this
+	 to the real location of the postgresql headerfile, or create a symlink.
+	
+	For mysql:
+
+	-adjust MYSQLLIBDIR in Makefile.mysql to your mysqllibdir
+	-When getting errors with make, check the include statements in the sourcefiles
+         in pgsql/ . Default it is /usr/include/mysql/mysql.h, change this
+         to the real location of the mysql headerfile, or create a symlink.
+			  
+4.	Run make 
+
+	The type of database you want to use determines the makefile you have to use. For
+	Mysql user Makefile.mysql, for postgresql use Makefile.pgsql. Run make like this:
+
+	make -f Makefile.mysql
+
+	Everything should go ok. If not, it usually means that the compiler can't find 
+	the postgresql/mysql header files or that the linker can't find the postgresql/mysql 
+	files to link to. If that happends, go back to number 3 and check if everything is ok.
 
 	After the make the following binaries should have been created:
-	dbmail-smtp				- the dbmail mailinjector
+	dbmail-smtp			- the dbmail mailinjector
 	dbmail-pop3d			- the dbmail pop3 daemon
 	dbmail-imapd			- the dbmail imap4r1 daemon
-	dbamil-maintenance	- the dbmail maintenance tool
+	dbamil-maintenance	        - the dbmail maintenance tool
 	dbmail-config			- the dbmail configuration program
 	dbmail-adduser			- the dbmail user add program
 
+5.	Adjust dbmail.conf and load it into the database
 
-4. Next you will need to create some users into the dbmail mailing sytem.
+	Don't forget to run dbmail-config /etc/dbmail.conf everytime you make changes
+        to the dbmail.conf file!
+
+6.	Create users in the dbmail system
+
+	Next you will need to create some users into the dbmail mailing sytem.
 	Currently this can be done in two ways. One way is using the dbmail-adduser
 	utility. The other way is doing it in the database itself. 
 	To do it using the dbmail-adduser utility and do the following:
@@ -78,26 +130,19 @@ Mysql setup
 	
 	example: 
 	./dbmail-adduser john secret 0 25000000 john@dude.org john@dude.net @net.com
+	
 	This will create a user john, with a password secret. It will set john's maillimit
 	25 Mb and all mail for john@dude.org, john@dude.net and @net.com will be sent to john.
 
 	Be carefull, the adduser does not (yet) check if a user already exists!
 
-
-5.	
+7.	
 	Become root and run install-dbmail.sh which will install the dbmail executables.
-
-
-6. check your dbmail.conf file and set it to your likeings. After that you can 
-	best copy it to the /etc/ directory and set it to chmod 600 for the user dbmail
-	runs as.
-	Don't forget to run dbmail-config /etc/dbmail.conf everytime you make changes
-	to the dbmail.conf file!
 
 
 -- The next lines are MTA dependend, this is for postfix --
 	
-7.	In the master.cf file for postfix add the following:
+8.	In the master.cf file for postfix add the following:
 	
 	dbmail    unix  -       n       n       -       -       pipe
 	    flags=  user=dbmail:dbmail argv=/usr/local/sbin/dbmail-smtp -d ${recipient}
@@ -125,27 +170,14 @@ Mysql setup
 	and don't forget to run dbmail-config ./dbmail.conf afterwards.
 	This should give enough info. 
 
---  -----------------------------------------------------------
+------------------------------------------------------------
 
-If you do not use postfix. The dbmail injector program, dbmail-smtp,
-can receive information in two ways. Either through raw mail (for example, 
-delivered by procmail) using the -n option or from a MTA with recipients 
-in the commandline using the -d option. Be carefull, the -n option is not fully 
-tested and may behave unexected. If possible use the -d option.
+	If you do not use postfix. The dbmail injector program, dbmail-smtp,
+	can receive information in two ways. Either through raw mail (for example, 
+	delivered by procmail) using the -n option or from a MTA with recipients 
+	in the commandline using the -d option. Be carefull, the -n option is not fully 
+	tested and may behave unexected. If possible use the -d option.
 
-Steven Kroon <steven@stevenkroon.com> suggested using fetchmail:
 
-Your .fetchmailrc file should look like:
-
---
-defaults        proto   pop3
-			user "myusername"
-			poll "your pop3 server"
-			pass "mypasswd"
-								 
-mda "/usr/local/bin/dbmail-smtp -n to"
----
-
-If u get dbmail running on other MTA's please tell me at
-the mailinglist. For other problems you can subscribe to the dbmail
-mailinglist : https://mailman.fastxs.nl/mailman/listinfo/dbmail
+For problems you can subscribe to the dbmail mailinglist : https://mailman.fastxs.nl/mailman/listinfo/dbmail
+or look at the dbmailwebsite www.dbmail.org.
