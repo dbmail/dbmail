@@ -1,4 +1,16 @@
-2004-07-15  Ilja Booij  <ilja@dhcp125.office.fastxs.net>
+2004-07-15  Ilja Booij  <ilja@ic-s.nl>
+
+	* sql/mysql/create_tables.mysql: messages.status changed
+	to default to '0' instead of '000'
+
+	* sql/mysql/create_tables_innoDB.mysql: messages.status changed
+	to default to '0' instead of '000'
+
+	* sql/mysql/migrate_from_1.x_to_2.0_innodb.mysql:messages.status 
+	changed to default to '0' instead of '000'
+
+	* sql/mysql/migrate_from_1.x_to_2.0.mysql: messages.status changed
+	to default to '0' instead of '000'
 
 	* sql/postgresql/create_tables.pgsql: added partial index to messages
 	table. Changed psbp.ipnumber to INET type and added transaction 

@@ -135,7 +135,7 @@ CREATE TABLE messages (
 	recent_flag tinyint(1) NOT NULL default '0',
 	draft_flag tinyint(1) NOT NULL default '0',
 	unique_id varchar(70) NOT NULL default '',
-	status tinyint(3) unsigned zerofill NOT NULL default '000',
+	status tinyint(3) unsigned NOT NULL default '0',
 	PRIMARY KEY  (message_idnr),
 	INDEX physmessage_id (physmessage_id),		
 	INDEX mailbox_idnr (mailbox_idnr),
