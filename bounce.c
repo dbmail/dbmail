@@ -2,6 +2,8 @@
 	bounce.c takes care of bouncing undeliverably messages */
 
 #include "bounce.h"
+#include "list.h"
+#include "mime.h"
 
 int bounce (char *header, char *destination_address, int type)
 {
@@ -30,7 +32,7 @@ int bounce (char *header, char *destination_address, int type)
 			trace (TRACE_MESSAGE,"bounce(): sending 'no such user' bounce for destination [%s]",
 					destination_address);
 			/* scan the from header for addresses */
-			mail_adr_list
+			mail_adr_list (
 			
 			break;
 			}

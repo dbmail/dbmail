@@ -3,7 +3,6 @@
 
 #ifndef  _POP3_H
 #define  _POP3_H
-#endif
 
 #include <stdio.h>
 #include <unistd.h>
@@ -87,3 +86,4 @@ struct session
 	};
 
 int pop3 (void *stream, char *buffer);
+#endif

@@ -3,7 +3,6 @@
 
 #ifndef  _LIST_H
 #define  _LIST_H
-#endif
 
 #include <stdlib.h>
 
@@ -29,3 +28,5 @@ struct element *list_getstart(struct list *tlist);
 int list_totalnodes(struct list *tlist);
 void list_showlist(struct list *tlist);
 void list_init(struct list *tlist);
+
+#endif 

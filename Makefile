@@ -39,7 +39,7 @@ dbmysql.o:dbmysql.h dbmd5.h
 misc.o:misc.h
 pop3.o:pop3.h
 dbmd5.o:dbmd5.h md5.h
-bounce.o:bounce.h list.h mime.h
+bounce.o:bounce.h list.h
 imap4.o: imap4.h dbmysql.h debug.h serverservice.h
 serverservice.o: serverservice.h debug.h
 

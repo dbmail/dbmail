@@ -7,7 +7,6 @@
 
 #ifndef  _DEBUG_H
 #define  _DEBUG_H
-#endif
 
 #define TRACE_TO_SYSLOG 1
 #define TRACE_VERBOSE 0
@@ -27,3 +26,4 @@
 
 void func_memtst (char filename[255],int line,int tst);
 void trace (int level, const char *formatstring, ...);
+#endif

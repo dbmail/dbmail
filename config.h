@@ -2,7 +2,6 @@
 
 #ifndef  _CONFIG_H
 #define  _CONFIG_H
-#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,3 +26,4 @@ int mail_adr_list();
 int mail_adr_list_dlv(char *local_rec);
 void check_duplicates();
 int insert_messages();
+#endif
