@@ -26,6 +26,9 @@
 #define BUFLEN 2048
 #define MAX_ARGS 128
 
+/* cache */
+extern cache_t cached_msg;
+
 extern const char AcceptedChars[];
 extern const char AcceptedTagChars[];
 extern const char AcceptedMailboxnameChars[];
@@ -1695,3 +1698,53 @@ int binary_search(const unsigned long *array, int arraysize, unsigned long key)
   return -1; /* not found */
 }
 
+
+
+/*
+ * closes the msg cache
+ */
+void close_cache()
+{
+  if (cached_msg.num != -1)
+    db_free_msg(&cached_msg.msg);
+
+  cached_msg.num = -1;
+  memset(&cached_msg.msg, 0, sizeof(cached_msg.msg));
+  if (cached_msg.filedump)
+    {
+      fclose(cached_msg.filedump);
+      cached_msg.filedump = NULL;
+      unlink(cached_msg.filename);
+    }
+  if (cached_msg.tmpdump)
+    {
+      fclose(cached_msg.tmpdump);
+      cached_msg.tmpdump = NULL;
+      unlink(cached_msg.tmpname);
+    }
+  
+}
+
+/* 
+ * init cache 
+ */
+int init_cache()
+{
+  cached_msg.num = -1;
+  memset(&cached_msg.msg, 0, sizeof(cached_msg.msg));
+
+  strcpy(cached_msg.filename, "/tmp/imapdump.tmp.XXXXXX");
+  strcpy(cached_msg.tmpname, "/tmp/imaptmp.tmp.XXXXXX");
+
+  mkstemp(cached_msg.filename);
+  mkstemp(cached_msg.tmpname);
+  if (! (cached_msg.filedump = fopen(cached_msg.filename, "rw+")))
+    return -1;
+
+  if (! (cached_msg.tmpdump = fopen(cached_msg.tmpname, "rw+")))
+    return -1;
+
+  cached_msg.file_dumped = 0;
+  cached_msg.dumpsize = 0;
+  return 0;
+}

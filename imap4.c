@@ -131,29 +131,11 @@ int imap_process(ClientInfo *ci)
       return EOF;
     }
 
-  /* init cache */
-  cached_msg.num = -1;
-  memset(&cached_msg.msg, 0, sizeof(cached_msg.msg));
-
-  strcpy(cached_msg.filename, "/tmp/imapdump.tmp.XXXXXX");
-  strcpy(cached_msg.tmpname, "/tmp/imaptmp.tmp.XXXXXX");
-
-  mkstemp(cached_msg.filename);
-  mkstemp(cached_msg.tmpname);
-  if (! (cached_msg.filedump = fopen(cached_msg.filename, "rw+")))
+  if (init_cache() != 0)
     {
       trace(TRACE_ERROR, "IMAPD: cannot open temporary file\n");
       fprintf(ci->tx, "BYE internal system failure\n");
-      return EOF;
     }
-  if (! (cached_msg.tmpdump = fopen(cached_msg.tmpname, "rw+")))
-    {
-      trace(TRACE_ERROR, "IMAPD: cannot open temporary file\n");
-      fprintf(ci->tx, "BYE internal system failure\n");
-      return EOF;
-    }
-  cached_msg.file_dumped = 0;
-  cached_msg.dumpsize = 0;
 
   done = 0;
   args = NULL;
@@ -164,7 +146,11 @@ int imap_process(ClientInfo *ci)
 	{
 	  trace(TRACE_ERROR, "IMAPD: error [%s] on read-stream\n",strerror(errno));
 	  if (errno == EPIPE)
-	    return -1; /* broken pipe */
+	    {
+	      close_cache();
+	      db_disconnect();
+	      return -1; /* broken pipe */
+	    }
 	  else
 	    clearerr(ci->rx);
 	}
@@ -173,7 +159,11 @@ int imap_process(ClientInfo *ci)
 	{
 	  trace(TRACE_ERROR, "IMAPD: error [%s] on write-stream\n",strerror(errno));
 	  if (errno == EPIPE)
-	    return -1; /* broken pipe */
+	    {
+	      close_cache();
+	      db_disconnect();
+	      return -1; /* broken pipe */
+	    }
 	  else
 	    clearerr(ci->tx);
 	}
@@ -186,6 +176,7 @@ int imap_process(ClientInfo *ci)
 	{
 	  /* foute tekens ingetikt */
 	  fprintf(ci->tx, "* BAD Input contains invalid characters\n");
+	  close_cache();
 	  db_disconnect();
 	  return 1;
 	}
@@ -325,6 +316,7 @@ int imap_process(ClientInfo *ci)
     } while (!done);
 
   /* cleanup */
+  close_cache();
   db_disconnect();
   
   fprintf(ci->tx,"%s OK completed\n",tag);

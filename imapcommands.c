@@ -105,25 +105,6 @@ int _ic_logout(char *tag, char **args, ClientInfo *ci)
   if (!check_state_and_args("LOGOUT", tag, args, 0, -1, ci))
     return 1; /* error, return */
 
-  /* clear cache */
-  if (cached_msg.num != -1)
-    db_free_msg(&cached_msg.msg);
-
-  cached_msg.num = -1;
-  memset(&cached_msg.msg, 0, sizeof(cached_msg.msg));
-  if (cached_msg.filedump)
-    {
-      fclose(cached_msg.filedump);
-      cached_msg.filedump = NULL;
-      unlink(cached_msg.filename);
-    }
-  if (cached_msg.tmpdump)
-    {
-      fclose(cached_msg.tmpdump);
-      cached_msg.tmpdump = NULL;
-      unlink(cached_msg.tmpname);
-    }
-  
   /* change status */
   ud->state = IMAPCS_LOGOUT;
 

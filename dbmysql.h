@@ -124,7 +124,7 @@ typedef struct
  */
 
 int db_connect();
-int db_query (char *query);
+int db_query (const char *query);
 int db_check_user (char *username, struct list *userids);
 char *db_get_config_item (char *item, int type);
 int db_clear_config();

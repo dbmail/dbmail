@@ -45,6 +45,44 @@ unsigned nblocks = 0;
 unsigned long *blklengths = NULL;
 
 
+
+/*
+ * queries to create/drop temporary tables
+ */
+const char *create_tmp_tables_queries[] = 
+{ "CREATE TABLE tmpmessage ("
+  "messageidnr bigint(21) DEFAULT '0' NOT NULL auto_increment,"
+  "mailboxidnr int(21) DEFAULT '0' NOT NULL,"
+  "messagesize bigint(21) DEFAULT '0' NOT NULL,"
+  "seen_flag tinyint(1) default '0' not null,"
+  "answered_flag tinyint(1) default '0' not null,"
+  "deleted_flag tinyint(1) default '0' not null,"
+  "flagged_flag tinyint(1) default '0' not null,"
+  "recent_flag tinyint(1) default '0' not null,"
+  "draft_flag tinyint(1) default '0' not null,"
+  "unique_id varchar(70) NOT NULL,"
+  "internal_date datetime default '0' not null,"
+  "status tinyint(3) unsigned zerofill default '000' not null,"
+  "PRIMARY KEY (messageidnr),"
+  "KEY messageidnr (messageidnr),"
+  "UNIQUE messageidnr_2 (messageidnr))" ,
+
+  "CREATE TABLE tmpmessageblk ("
+  "messageblknr bigint(21) DEFAULT '0' NOT NULL auto_increment,"
+  "messageidnr bigint(21) DEFAULT '0' NOT NULL,"
+  "messageblk longtext NOT NULL,"
+  "blocksize bigint(21) DEFAULT '0' NOT NULL,"
+  "PRIMARY KEY (messageblknr),"
+  "KEY messageblknr (messageblknr),"
+  "KEY msg_index (messageidnr),"
+  "UNIQUE messageblknr_2 (messageblknr)"
+  ") TYPE=MyISAM "
+};
+
+const char *drop_tmp_tables_queries[] = { "DROP TABLE tmpmessage", "DROP TABLE tmpmessageblk" };
+
+
+
 int db_connect ()
 {
   /* connecting */
@@ -76,7 +114,7 @@ unsigned long db_insert_result ()
 }
 
 
-int db_query (char *query)
+int db_query (const char *query)
 {
   unsigned int querysize = 0;
 
@@ -86,21 +124,22 @@ int db_query (char *query)
 
       if (querysize > 0 )
 	{
-	  if (mysql_real_query(&conn, query,strlen(query)) <0) 
+	  if (mysql_real_query(&conn, query, querysize) <0) 
 	    {
-	      trace(TRACE_ERROR,"db_query(): mysql_real_query failed: %s",mysql_error(&conn)); 
+	      trace(TRACE_ERROR,"db_query(): mysql_real_query failed: %s\n",mysql_error(&conn)); 
 	      return -1;
 	    }
 	}
       else
 	{
-	  trace (TRACE_ERROR,"db_query(): querysize is wrong: [%d]",querysize);
+	  trace (TRACE_ERROR,"db_query(): querysize is wrong: [%d]\n",querysize);
 	  return -1;
 	}
     }
   else
     {
-      trace (TRACE_ERROR,"db_query(): query buffer is NULL, this is not supposed to happen",querysize);
+      trace (TRACE_ERROR,"db_query(): query buffer is NULL, this is not supposed to happen\n",
+	     querysize);
       return -1;
     }
   return 0;
@@ -1923,137 +1962,106 @@ int db_movemsg(unsigned long to, unsigned long from)
 int db_copymsg(unsigned long msgid, unsigned long destmboxid)
 {
   char query[DEF_QUERYSIZE];
-  char *insert;
-  unsigned long newid,*lengths,len,allocsize;
+  unsigned long newid,tmpid;
 
-  /* retrieve message */
-  snprintf(query, DEF_QUERYSIZE, "SELECT * FROM message WHERE messageidnr = %lu", msgid);
+  /* create temporary tables */
+  if (db_query(create_tmp_tables_queries[0]) == -1 || db_query(create_tmp_tables_queries[1]) == -1)
+    {
+      trace(TRACE_ERROR, "db_copymsg(): could not create temporary tables\n");
+      return -1;
+    }
+
+  /* copy: */
+
+  /* first to temporary table */
+  /* copy message info */
+  snprintf(query, DEF_QUERYSIZE, "INSERT INTO tmpmessage (mailboxidnr, messagesize, status, "
+	   "deleted_flag, seen_flag, answered_flag, draft_flag, flagged_flag, recent_flag) "
+	   "SELECT mailboxidnr, messagesize, status, deleted_flag, seen_flag, answered_flag, "
+	   "draft_flag, flagged_flag, recent_flag FROM message WHERE message.messageidnr = %lu", 
+	   msgid);
 
   if (db_query(query) == -1)
     {
-      trace(TRACE_ERROR, "db_copymsg(): could not select messages\n");
+      trace(TRACE_ERROR, "db_copymsg(): could not insert temporary message\n");
+
+      /* drop temporary tables */
+      if (db_query(drop_tmp_tables_queries[0]) == -1 || db_query(drop_tmp_tables_queries[1]) == -1)
+	trace(TRACE_ERROR, "db_copymsg(): could not drop temporary tables\n");
+
       return -1;
     }
 
-  if ((res = mysql_store_result(&conn)) == NULL)
+  tmpid = mysql_insert_id(&conn);
+
+  /* copy message blocks */
+  snprintf(query, DEF_QUERYSIZE, "INSERT INTO tmpmessageblk (messageidnr, messageblk, blocksize) "
+	   "SELECT %lu, messageblk, blocksize FROM messageblk "
+	   "WHERE messageblk.messageidnr = %lu", tmpid, msgid);
+  
+  if (db_query(query) == -1)
     {
-      trace(TRACE_ERROR,"db_copymsg(): mysql_store_result failed: %s\n",mysql_error(&conn));
+      trace(TRACE_ERROR, "db_copymsg(): could not insert temporary message blocks\n");
+
+      /* drop temporary tables */
+      if (db_query(drop_tmp_tables_queries[0]) == -1 || db_query(drop_tmp_tables_queries[1]) == -1)
+	trace(TRACE_ERROR, "db_copymsg(): could not drop temporary tables\n");
+
       return -1;
     }
 
-  row = mysql_fetch_row(res);
 
-  if (!row)
-    {
-      /* empty set, message does not exist ??? */
-      trace(TRACE_ERROR,"db_copymsg(): requested msg (id %lu) does not exist\n",msgid);
-      mysql_free_result(res);
-      return -1;
-    }
-
-  /* insert new message */
+  /* now to actual tables */
+  /* copy message info */
   snprintf(query, DEF_QUERYSIZE, "INSERT INTO message (mailboxidnr, messagesize, status, "
 	   "deleted_flag, seen_flag, answered_flag, draft_flag, flagged_flag, recent_flag) "
-	   "VALUES (%lu, %lu, %d, %d, %d, %d, %d, %d, %d)", destmboxid,
-	   strtoul(row[MESSAGE_MESSAGESIZE], NULL, 10), atoi(row[MESSAGE_STATUS]),
-	   atoi(row[MESSAGE_DELETED_FLAG]), atoi(row[MESSAGE_SEEN_FLAG]), 
-	   atoi(row[MESSAGE_ANSWERED_FLAG]), atoi(row[MESSAGE_DRAFT_FLAG]), 
-	   atoi(row[MESSAGE_FLAGGED_FLAG]), atoi(row[MESSAGE_RECENT_FLAG]));
+	   "SELECT %lu, messagesize, status, deleted_flag, seen_flag, answered_flag, "
+	   "draft_flag, flagged_flag, recent_flag FROM tmpmessage WHERE tmpmessage.messageidnr = %lu",
+	   destmboxid, tmpid);
 
   if (db_query(query) == -1)
     {
-      trace(TRACE_ERROR, "db_copymsg(): could not insert new message\n");
-      mysql_free_result(res);
+      trace(TRACE_ERROR, "db_copymsg(): could not insert message\n");
+
+      /* drop temporary tables */
+      if (db_query(drop_tmp_tables_queries[0]) == -1 || db_query(drop_tmp_tables_queries[1]) == -1)
+	trace(TRACE_ERROR, "db_copymsg(): could not drop temporary tables\n");
+
       return -1;
     }
 
-  mysql_free_result(res);
+  /* retrieve id of new message */
+  newid = mysql_insert_id(&conn);
 
-  /* retrieve new msg id */
-  snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message ORDER BY messageidnr DESC "
-	   "LIMIT 0,1");
-
+  /* copy message blocks */
+  snprintf(query, DEF_QUERYSIZE, "INSERT INTO messageblk (messageidnr, messageblk, blocksize) "
+	   "SELECT %lu, messageblk, blocksize FROM tmpmessageblk "
+	   "WHERE tmpmessageblk.messageidnr = %lu", newid, tmpid);
+  
   if (db_query(query) == -1)
     {
-      trace(TRACE_ERROR, "db_copymsg(): could not retrieve new message ID\n");
-      return -1;
-    }
+      trace(TRACE_ERROR, "db_copymsg(): could not insert message blocks\n");
 
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace(TRACE_ERROR,"db_copymsg(): mysql_store_result failed: %s\n",mysql_error(&conn));
-      return -1;
-    }
+      /* drop temporary tables */
+      if (db_query(drop_tmp_tables_queries[0]) == -1 || db_query(drop_tmp_tables_queries[1]) == -1)
+	trace(TRACE_ERROR, "db_copymsg(): could not drop temporary tables\n");
 
-  row = mysql_fetch_row(res);
-
-  if (!row)
-    {
-      /* huh? just inserted a message */
-      trace(TRACE_ERROR,"db_copymsg(): no records found where expected\n");
-      mysql_free_result(res);
-      return -1;
-    }
-
-  newid = strtoul(row[0], NULL, 10);
-
-  mysql_free_result(res);
-
-  /* now fetch associated msgblocks */
-  snprintf(query, DEF_QUERYSIZE, "SELECT * FROM messageblk WHERE messageidnr = %lu",msgid);
-
-  if (db_query(query) == -1)
-    {
-      trace(TRACE_ERROR, "db_copymsg(): could not retrieve associated messageblocks\n");
-      return -1;
-    }
-
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace(TRACE_ERROR,"db_copymsg(): mysql_store_result failed: %s\n",mysql_error(&conn));
-      return -1;
-    }
-
-  while ((row = mysql_fetch_row(res)))
-    {
-      lengths = mysql_fetch_lengths(res);
-      allocsize = DEF_QUERYSIZE + lengths[MESSAGEBLK_MESSAGEBLK];
+      /* delete inserted message */
+      snprintf(query, DEF_QUERYSIZE, "DELETE FROM message WHERE messageidnr = %lu",newid);
+      if (db_query(query) == -1)
+	trace(TRACE_FATAL, "db_copymsg(): could not delete faulty message, dbase contains "
+	      "invalid data now; msgid [%lu]\n",newid);
       
-      insert = (char*)malloc(allocsize);
-      if (!insert)
-	{
-	  /* out of mem */
-	  mysql_free_result(res);
-	  return -1;
-	}
-      
-      snprintf(insert, DEF_QUERYSIZE, "INSERT INTO messageblk (messageblk, blocksize, messageidnr) "
-	       "VALUES ('");
-
-      len = strlen(insert);
-
-      /* now add messageblk data */
-      memcpy(&insert[len], row[MESSAGEBLK_MESSAGEBLK], lengths[MESSAGEBLK_MESSAGEBLK]);
-
-      /* add rest of query */
-      snprintf(&insert[len+lengths[MESSAGEBLK_MESSAGEBLK]], 
-	       allocsize-len-lengths[MESSAGEBLK_MESSAGEBLK], "', %lu, %lu)",
-	       strtoul(row[MESSAGEBLK_BLOCKSIZE], NULL, 10), newid);
-
-      len += strlen(&insert[len + lengths[MESSAGEBLK_MESSAGEBLK]]) ;
-
-      if (mysql_real_query(&conn, query, len))
-	{
-	  trace(TRACE_ERROR, "db_copymsg(): could not insert new messageblocks\n");
-	  return -1;
-	}
-
-      /* free mem */
-      free(insert);
-      insert = NULL;
+      return -1;
     }
 
-  mysql_free_result(res);
+
+  /* drop temporary tables */
+  if (db_query(drop_tmp_tables_queries[0]) == -1 || db_query(drop_tmp_tables_queries[1]) == -1)
+    {
+      trace(TRACE_ERROR, "db_copymsg(): could not drop temporary tables\n");
+      return -1;
+    }
 
   return 0; /* success */
 }
