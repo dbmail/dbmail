@@ -635,8 +635,6 @@ int lmtp(void *stream, void *instream, char *buffer, char *client_ip UNUSED, Pop
                   }
                 else
                   {
-                    fprintf((FILE *)stream, "250 Message received OK\r\n" );
-           
                     for (element = list_getstart(&rcpt);
                             element != NULL; element = element->nextnode)
                       {
