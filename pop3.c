@@ -73,7 +73,7 @@ int pop3_handle_connection (clientinfo_t *ci)
 	session.totalsize = 0;
 	session.virtual_totalsize = 0;
 	session.totalmessages = 0;
-	session.vritual_totalmessages = 0;
+	session.virtual_totalmessages = 0;
 
 
 	/* getting hostname */
