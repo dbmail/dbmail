@@ -178,6 +178,16 @@ CREATE TABLE auto_replies (
 	INDEX (user_idnr)
 );
 
+DROP TABLE IF EXISTS pbsp;
+CREATE TABLE pbsp (
+   idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
+   since datetime default '0' not null,
+   ipnumber varchar(40) NOT NULL,
+   PRIMARY KEY (idnr),
+   UNIQUE INDEX ipnumber_idx (ipnumber),
+   INDEX since_idx (since)
+);
+
 # now insert all records into the new tables
 INSERT INTO aliases SELECT * from aliases_1;
 

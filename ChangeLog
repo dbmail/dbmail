@@ -1,5 +1,17 @@
 2004-03-18  Ilja Booij  <ilja@ic-s.nl>
 
+	* sql/postgresql/migrate_from_1.x_to_2.0.pgsql: added pbsp table
+
+	* sql/mysql/migrate_from_1.x_to_2.0.mysql: added pbsp table
+
+	* sql/mysql/migrate_from_1.x_to_2.0_innodb.mysql: added pbsp table.
+
+	* sql/mysql/create_tables.mysql: added pbsp table.
+
+	* sql/postgresql/create_tables.pgsql: added pbsp table.
+
+	* sql/mysql/create_tables_innoDB.mysql: added pbsp table.
+
 	* pipe.c (store_message_temp): the strblock and tmpline buffers
 	were not properly initialised, because they were not set to 
 	contain only '\0's, which was problematic for messages containing

@@ -180,6 +180,16 @@ CREATE TABLE auto_replies (
 		REFERENCES `users`(`user_idnr`) ON DELETE CASCADE
 ) TYPE=InnoDB;
 
+DROP TABLE IF EXISTS pbsp;
+CREATE TABLE pbsp (
+   idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
+   since datetime default '0' not null,
+   ipnumber varchar(40) NOT NULL,
+   PRIMARY KEY (idnr),
+   UNIQUE INDEX ipnumber_idx (ipnumber),
+   INDEX since_idx (since)
+) TYPE=InnoDB;
+
 # create the user for the delivery chain
 INSERT INTO users (userid, passwd, encryption_type) 
 	VALUES ('__@!internal_delivery_user!@__', '', 'md5');

@@ -888,7 +888,7 @@ int db_log_ip(const char *ip)
     if (id) {
 	/* this IP is already in the table, update the 'since' field */
 	snprintf(query, DEF_QUERYSIZE, "UPDATE pbsp "
-		 "SET since = CURRENT_TIMESTAMP " "WHERE idnr='%llu'", id);
+		 "SET since = CURRENT_TIMESTAMP WHERE idnr='%llu'", id);
 
 	if (db_query(query) == -1) {
 	    trace(TRACE_ERROR, "%s,%s: could not update ip-log "
