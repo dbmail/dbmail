@@ -183,6 +183,70 @@ char *db_get_config_item (char *item, int type)
   return result;
 }
 	
+unsigned long db_adduser (char *username, char *password, char *clientid, char *maxmail)
+{
+	/* adds a new user to the database 
+	 * and adds a INBOX 
+	 * returns a useridnr on succes, -1 on failure */
+
+	char *ckquery;
+	unsigned long useridnr;
+	
+	memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
+
+	sprintf (ckquery,"INSERT INTO user (userid,passwd,clientid,maxmail_size) VALUES ('%s','%s',%s,%s)",
+			username,password,clientid, maxmail);
+	
+	trace (TRACE_DEBUG,"db_adduser(): executing query for user: [%s]", ckquery);
+
+	if (db_query(ckquery) == -1)
+	{
+		/* query failed */
+		trace (TRACE_ERROR, "db_adduser(): query for adding user failed : [%s]", ckquery);
+		return -1;
+	}
+
+	useridnr = db_insert_result ();
+	
+	/* creating query for adding mailbox */
+	sprintf (ckquery,"INSERT INTO mailbox (owneridnr, name) VALUES (%lu,'INBOX')",
+		useridnr);
+	
+	trace (TRACE_DEBUG,"db_adduser(): executing query for mailbox: [%s]", ckquery);
+
+	
+	if (db_query(ckquery))
+	{
+		trace (TRACE_ERROR,"db_adduser(): query failed for adding mailbox: [%s]",ckquery);
+		return -1;
+	}
+	
+	return useridnr;
+}
+
+int db_addalias (unsigned long useridnr, char *alias)
+{
+	/* adds an alias for a specific user */
+	
+	char *ckquery;
+	
+	memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
+
+	sprintf (ckquery,"INSERT INTO aliases (alias,deliver_to,owner_id) VALUES ('%s','%lu',%lu)",
+			alias, useridnr,useridnr);
+	
+	trace (TRACE_DEBUG,"db_addalias(): executing query for user: [%s]", ckquery);
+
+	if (db_query(ckquery) == -1)
+	{
+		/* query failed */
+		trace (TRACE_ERROR, "db_addalias(): query for adding alias failed : [%s]", ckquery);
+		return -1;
+	}
+
+	return 0;
+}
+
 unsigned long db_get_inboxid (unsigned long *useridnr)
 {
 	/* returns the mailbox id (of mailbox inbox) for a user or a 0 if no mailboxes were found */
@@ -2878,7 +2942,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
   mime_message_t part;
   struct mime_record *mr;
   int sblen,nlines,totallines = 0;
-  unsigned dummy;
+  unsigned long dummy;
 
   trace(TRACE_DEBUG,"db_add_mime_children(): starting, splitbound: '%s'\n",splitbound);
 

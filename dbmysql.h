@@ -115,6 +115,8 @@ int db_query (char *query);
 int db_check_user (char *username, struct list *userids);
 char *db_get_config_item (char *item, int type);
 int db_insert_config_item (char *item, char *value);
+unsigned long db_adduser (char *username, char *password, char *clientid, char *maxmail);
+int db_addalias (unsigned long useridnr, char *alias);
 unsigned long db_get_inboxid (unsigned long *useridnr);
 unsigned long db_get_useridnr (unsigned long messageidnr);
 unsigned long db_get_message_mailboxid (unsigned long *messageidnr);

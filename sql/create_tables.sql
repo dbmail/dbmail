@@ -3,9 +3,10 @@
 CREATE DATABASE dbmail;
 USE dbmail;
 CREATE TABLE aliases (
-   alias_idnr int(11) DEFAULT '0' NOT NULL auto_increment,
+   alias_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
    alias varchar(100) NOT NULL,
    deliver_to varchar(250) NOT NULL,
+	owner_id int(11) DEFAULT '0' NOT NULL,
    PRIMARY KEY (alias_idnr),
    KEY alias_idnr (alias_idnr),
    UNIQUE alias_idnr_2 (alias_idnr)
@@ -19,7 +20,7 @@ CREATE TABLE user (
    maxmail_size bigint(21) DEFAULT '0' NOT NULL,
    PRIMARY KEY (useridnr),
    KEY useridnr (useridnr, userid),
-   UNIQUE useridnr_2 (useridnr)
+   UNIQUE useridnr_2 (useridnr, userid)
 );
 
 CREATE TABLE mailbox (

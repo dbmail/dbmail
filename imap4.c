@@ -111,7 +111,7 @@ int imap_login(ClientInfo *ci)
 int imap_process(ClientInfo *ci)
 {
   char line[MAX_LINESIZE];
-  char *tag,*cpy,**args,*command;
+  char *tag = NULL,*cpy,**args,*command;
   int i,done,result;
 
   /* init */

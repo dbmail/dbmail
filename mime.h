@@ -23,6 +23,6 @@ int mail_adr_list(char *scan_for_field, struct list *targetlist, struct list *mi
 		  struct list *users, char *header, unsigned long headersize);
 int mail_adr_list_special(int offset, int max, char *address_array[], struct list *users);
 int mime_readheader(char *blkdata, unsigned long *blkidx, 
-		    struct list *mimelist, unsigned *headersize);
+		    struct list *mimelist, unsigned long *headersize);
 
 #endif

@@ -171,7 +171,7 @@ int mime_list(char *blkdata, struct list *mimelist)
  *
  * returns -1 on failure, # '\n' on succes
  */
-int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist, unsigned *headersize)
+int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist, unsigned long *headersize)
 {
   int valid_mime_lines=0,idx,totallines=0;
   unsigned fieldlen,vallen;

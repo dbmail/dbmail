@@ -113,7 +113,7 @@ int SS_WaitAndProcess(int sock, int (*ClientHandler)(ClientInfo*), int (*Login)(
   int csock,len,nclients=0;
   ClientInfo client;
   struct sigaction act;
-  pid_t PID;
+  /* pid_t PID; */
 
   /* init & install signal handlers */
   memset(&act, 0, sizeof(act));
