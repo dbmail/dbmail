@@ -20,6 +20,9 @@ void find_time(char *timestr, const char *timespec);
 int main(int argc, char *argv[])
 {
   int should_fix = 0, check_integrity = 0, check_iplog = 0;
+  int show_help=0, purge_deleted=0, set_deleted=0;
+  int do_nothing=1;
+
   char timespec[LEN],timestr[LEN];
   char *trace_level,*trace_syslog,*trace_verbose;
   int new_level = 2, new_trace_syslog = 1, new_trace_verbose = 0;
@@ -38,21 +41,39 @@ int main(int argc, char *argv[])
 	
   /* get options */
   opterr = 0; /* suppress error message from getopt() */
-  while ((opt = getopt(argc, argv, "fil:")) != -1)
+  while ((opt = getopt(argc, argv, "fil:phd")) != -1)
     {
       switch (opt)
 	{
+	case 'h':
+	  show_help = 1;
+	  do_nothing = 0;
+	  break;
+
+	case 'p':
+	  purge_deleted = 1;
+	  do_nothing = 0;
+	  break;
+
+	case 'd':
+	  set_deleted = 1;
+	  do_nothing = 0;
+	  break;
+
 	case 'f':
 	  check_integrity = 1;
 	  should_fix = 1;
+	  do_nothing = 0;
 	  break;
 
 	case 'i':
 	  check_integrity = 1;
+	  do_nothing = 0;
 	  break;
 
 	case 'l':
 	  check_iplog = 1;
+	  do_nothing = 0;
 	  if (optarg)
 	    strncpy(timespec, optarg, LEN);
 	  else
@@ -66,6 +87,23 @@ int main(int argc, char *argv[])
 	}
     }
 
+  if (show_help)
+    {
+      printf("\ndbmail maintenance utility\n\n");
+      printf("Performs maintenance tasks on the dbmail-databases\n");
+      printf("Use: dbmail-maintenance -[fiphdl]\n");
+      printf("See the man page for more info\n\n");
+      return 0;
+    }
+
+
+  if (do_nothing)
+    {
+      printf("Ok. Nothing requested, nothing done. "
+	     "Try adding a command-line option to perform maintenance.\n");
+      return 0;
+    }
+
   printf ("Opening connection to the database... ");
 
   if (db_connect()==-1)
@@ -73,6 +111,9 @@ int main(int argc, char *argv[])
       printf ("Failed. An error occured. Please check log.\n");
       return -1;
     }
+
+  printf ("Ok. Connected\n");
+
 	
   trace_level = db_get_config_item("TRACE_LEVEL", CONFIG_EMPTY);
   trace_syslog = db_get_config_item("TRACE_TO_SYSLOG", CONFIG_EMPTY);
@@ -101,29 +142,32 @@ int main(int argc, char *argv[])
 
   configure_debug(new_level, new_trace_syslog, new_trace_verbose);
 
-
-  printf ("Ok. Connected\n");
-
-  printf ("Deleting messages with DELETE status... ");
-  deleted_messages=db_deleted_purge();
-  if (deleted_messages==-1)
+  if (purge_deleted)
     {
-      printf ("Failed. An error occured. Please check log.\n");
-      db_disconnect();
-      return -1;
+      printf ("Deleting messages with DELETE status... ");
+      deleted_messages=db_deleted_purge();
+      if (deleted_messages==-1)
+	{
+	  printf ("Failed. An error occured. Please check log.\n");
+	  db_disconnect();
+	  return -1;
+	}
+      printf ("Ok. [%lu] messages deleted.\n",deleted_messages);
     }
-  printf ("Ok. [%lu] messages deleted.\n",deleted_messages);
 	
 
-  printf ("Setting DELETE status for deleted messages... ");
-  messages_set_to_delete= db_set_deleted ();
-  if (messages_set_to_delete==-1)
+  if (set_deleted)
     {
-      printf ("Failed. An error occured. Please check log.\n");
-      db_disconnect();
-      return -1;
+      printf ("Setting DELETE status for deleted messages... ");
+      messages_set_to_delete= db_set_deleted ();
+      if (messages_set_to_delete==-1)
+	{
+	  printf ("Failed. An error occured. Please check log.\n");
+	  db_disconnect();
+	  return -1;
+	}
+      printf ("Ok. [%lu] messages set for deletion.\n",messages_set_to_delete);
     }
-  printf ("Ok. [%lu] messages set for deletion.\n",messages_set_to_delete);
 
 
   if (check_integrity)

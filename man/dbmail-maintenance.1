@@ -8,7 +8,7 @@ Does a cleanup and integrity check of the \fBDbmail\fR mailsystem
 .SH SYNOPSIS
 .na
 .nf
-\fBdbmail-maintenance [-ifl]\fR
+\fBdbmail-maintenance [-iflphd]\fR
 .SH DESCRIPTION
 .ad
 .fi
@@ -36,6 +36,15 @@ before the current date/time minus this timespan will be removed from the
 table. The format for 
 .I timespan 
 is <n>h<m>m with n the number of hours and m the number of minutes.
+.TP 10
+.B -p
+purge messages have the DELETE status set
+.TP 10
+.B -h
+show short help message then exit
+.TP 10
+.B -d
+set DELETE status for deleted messages
 .SH DIAGNOSTICS
 .ad
 .fi
