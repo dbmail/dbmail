@@ -30,9 +30,15 @@ int main (int argc, char *argv[])
       fname = argv[1];
     }
 
-  if (db_connect()==-1)
+  if (db_connect() != 0)
     {
       printf ("Could not connect to database.\n");
+      return -1;
+    }
+	
+  if (auth_connect() != 0)
+    {
+      printf ("Could not connect to authentication.\n");
       return -1;
     }
 	

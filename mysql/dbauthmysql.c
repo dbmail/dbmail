@@ -52,6 +52,7 @@ field_t _auth_host, _auth_user, _auth_db, _auth_pass;
  */
 int auth_connect()
 {
+#ifndef DBMAIL_USE_SAME_CONNECTION
   mysql_init(&__auth_conn);
   if (mysql_real_connect (&__auth_conn, _auth_host, _auth_user, _auth_pass, _auth_db, 0, NULL, 0) == NULL)
     {
@@ -59,14 +60,16 @@ int auth_connect()
 	    mysql_error(&__auth_conn));
       return -1;
     }
-
+#endif
   return 0;
 }
 
 
 int auth_disconnect()
 {
+#ifndef DBMAIL_USE_SAME_CONNECTION
   mysql_close(&__auth_conn);
+#endif
   return 0;
 }
 

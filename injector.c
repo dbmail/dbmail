@@ -78,10 +78,17 @@ int main(int argc, char *argv[])
       return 0;
     }
 
-  /* open dbase connections */
-  if (db_connect() != 0 || auth_connect() != 0)
+  /* open database connection */
+  if (db_connect() != 0)
     {
-      trace(TRACE_FATAL,"main(): could not connect to dbases");
+      printf("Error opening database connection\n");
+      return -1;
+    }
+
+  /* open authentication connection */
+  if (auth_connect() != 0)
+    {
+      printf("Error opening authentication connection\n");
       return -1;
     }
 

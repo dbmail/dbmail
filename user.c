@@ -92,21 +92,21 @@ int main(int argc, char *argv[])
 
   quiet_printf ("\n*** dbmail-adduser ***\n");
 	
-  quiet_printf ("Opening connection to the database... ");
-  if (db_connect()==-1)
+  /* open database connection */
+  quiet_printf ("Opening connection to database...\n");
+  if (db_connect() != 0)
     {
       quiet_printf ("Failed. Could not connect to database (check log)\n");
       return -1;
     }
-	
-/*  quiet_printf ("Opening connection to the user database... ");
-  if (auth_connect()==-1)
+
+  /* open authentication connection */
+  quiet_printf ("Opening connection to authentication...\n");
+  if (auth_connect() != 0)
     {
-      quiet_printf ("Failed. Could not connect to user database (check log)\n");
-      db_disconnect();
+      quiet_printf ("Failed. Could not connect to authentication (check log)\n");
       return -1;
     }
-*/
 
   quiet_printf ("Ok. Connected\n");
   configure_debug(TRACE_ERROR, 1, 0);
@@ -123,13 +123,13 @@ int main(int argc, char *argv[])
     default:
       show_help();
       db_disconnect();
-//      auth_disconnect();
+      auth_disconnect();
       return 0;
     }
 
 	
   db_disconnect();
-//  auth_disconnect();
+  auth_disconnect();
   return result;
 }
 

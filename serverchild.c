@@ -100,6 +100,7 @@ void ChildSigHandler(int sig, siginfo_t *info, void *data)
 	    {
 	      trace(TRACE_DEBUG, "ChildSighandler(): database connection still open, closing");
 	      db_disconnect();
+	      auth_disconnect();
 	      connected = 0;
 	    }
 
@@ -145,6 +146,7 @@ void ChildSigHandler(int sig, siginfo_t *info, void *data)
 	    {
 	      trace(TRACE_DEBUG, "ChildSighandler(): database connection still open, closing");
 	      db_disconnect();
+	      auth_disconnect();
 	    }
 
 	  connected = 0;
@@ -234,9 +236,15 @@ int PerformChildTask(ChildInfo_t *info)
       return -1;
     }
 
-  if ( db_connect() != 0)
+  if (db_connect() != 0)
     {
       trace(TRACE_ERROR, "PerformChildTask(): could not connect to database");
+      return -1;
+    }
+
+  if (auth_connect() != 0)
+    {
+      trace(TRACE_ERROR, "PerformChildTask(): could not connect to authentication");
       return -1;
     }
 
@@ -332,6 +340,7 @@ int PerformChildTask(ChildInfo_t *info)
     }
 
   db_disconnect();
+  auth_disconnect();
   connected = 0;         /* FIXME a signal between this line and the previous one 
 			  * would screw things up. Would like to have all this in
 			  * db_disconnect() making 'connected' obsolete

@@ -141,9 +141,15 @@ int main(int argc, char *argv[])
       return 0;
     }
 
-  printf ("Opening connection to the database... ");
+  printf ("Opening connection to database... ");
+  if (db_connect() != 0)
+    {
+      printf ("Failed. An error occured. Please check log.\n");
+      return -1;
+    }
 
-  if (db_connect()==-1)
+  printf ("Opening connection to authentication... ");
+  if (auth_connect() != 0)
     {
       printf ("Failed. An error occured. Please check log.\n");
       return -1;
@@ -159,6 +165,7 @@ int main(int argc, char *argv[])
 	{
 	  printf ("Failed. An error occured. Please check log.\n");
 	  db_disconnect();
+	  auth_disconnect();
 	  return -1;
 	}
       printf ("Ok. [%llu] messages deleted.\n",deleted_messages);
@@ -173,6 +180,7 @@ int main(int argc, char *argv[])
 	{
 	  printf ("Failed. An error occured. Please check log.\n");
 	  db_disconnect();
+	  auth_disconnect();
 	  return -1;
 	}
       printf ("Ok. [%llu] messages set for deletion.\n",messages_set_to_delete);
@@ -187,6 +195,7 @@ int main(int argc, char *argv[])
 	{
 	  printf ("Failed. An error occured. Please check log.\n");
 	  db_disconnect();
+	  auth_disconnect();
 	  return -1;
 	}
     
@@ -234,6 +243,7 @@ int main(int argc, char *argv[])
 	{
 	  printf ("Failed. An error occured. Please check log.\n");
 	  db_disconnect();
+	  auth_disconnect();
 	  return -1;
 	}
     
@@ -283,6 +293,7 @@ int main(int argc, char *argv[])
 	{
 	  printf ("Failed. An error occured. Please check log.\n");
 	  db_disconnect();
+	  auth_disconnect();
 	  return -1;
 	}
     
@@ -333,6 +344,7 @@ int main(int argc, char *argv[])
 	{
 	  printf ("Failed. An error occured. Please check log.\n");
 	  db_disconnect();
+	  auth_disconnect();
 	  return -1;
 	}
     
@@ -384,6 +396,7 @@ int main(int argc, char *argv[])
 	{
 	  printf("Failed. Invalid argument [%s] specified\n",timespec);
 	  db_disconnect();
+	  auth_disconnect();
 	  return -1;
 	}
 
@@ -391,6 +404,7 @@ int main(int argc, char *argv[])
 	{
 	  printf("Failed. Please check the log.\n");
 	  db_disconnect();
+	  auth_disconnect();
 	  return -1;
 	}
       
@@ -404,6 +418,7 @@ int main(int argc, char *argv[])
 	{
 	  printf("Failed. Please check the log.\n");
 	  db_disconnect();
+	  auth_disconnect();
 	  return -1;
 	}
       
@@ -413,6 +428,7 @@ int main(int argc, char *argv[])
   printf ("Maintenance done.\n\n");
         
   db_disconnect();
+  auth_disconnect();
   return 0;
 }
 

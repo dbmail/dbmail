@@ -148,10 +148,17 @@ int main (int argc, char* argv[])
   printf("Inserting into dbase...");
   fflush(stdout);
 
-  /* open dbase connections */
+  /* open database connections */
   if (db_connect() != 0)
     {
-      printf("Error opening dbase connections\n");
+      printf("Error opening database connection\n");
+      return -1;
+    }
+
+  /* open authentication connections */
+  if (auth_connect() != 0)
+    {
+      printf("Error opening authentication connection\n");
       return -1;
     }
 
@@ -188,6 +195,7 @@ int main (int argc, char* argv[])
   printf ("Table loading finished @ %s", ctime(&stop));
 
   db_disconnect();
+  auth_disconnect();
   return result;
 }
 

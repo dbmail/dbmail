@@ -51,6 +51,7 @@ field_t _auth_host, _auth_user, _auth_db, _auth_pass;
  */
 int auth_connect ()
 {
+#ifndef DBMAIL_USE_SAME_CONNECTION
   char connectionstring[255];
 
   /* connecting */
@@ -64,7 +65,7 @@ int auth_connect ()
       trace(TRACE_ERROR,"auth_connect(): PQconnectdb failed: %s",PQerrorMessage(__auth_conn));
       return -1;
     }
-
+#endif
   /* database connection OK */  
   return 0;
 }
@@ -72,7 +73,9 @@ int auth_connect ()
 
 int auth_disconnect()
 {
+#ifndef DBMAIL_USE_SAME_CONNECTION
   PQfinish(__auth_conn);
+#endif
   return 0;
 }
 

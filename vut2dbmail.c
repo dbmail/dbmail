@@ -23,15 +23,15 @@ int main()
   int i,result;
   char *left, *right, *tmp;
 
-  if (db_connect() == -1) 
+  if (db_connect() != 0) 
     {
-      fprintf(stderr, "Could not connect to dbase server\n");
+      fprintf(stderr, "Could not connect to database\n");
       return 1;
     }
 
-  if (auth_connect() == -1)
+  if (auth_connect() != 0)
     {
-      fprintf(stderr, "Could not connect to authentication server\n");
+      fprintf(stderr, "Could not connect to authentication\n");
       db_disconnect();
       return 1;
     }

@@ -41,10 +41,17 @@ int main(int argc, char *argv[])
   openlog(PNAME, LOG_PID, LOG_MAIL);   /* open connection to syslog */
   configure_debug(TRACE_ERROR, 1, 0);  /* do not spill time on reading settings */
 
-  /* open dbase connections */
+  /* open database connections */
   if (db_connect() != 0)
     {
-      trace(TRACE_FATAL,"main(): could not connect to dbase");
+      trace(TRACE_FATAL,"main(): could not connect to database");
+      return -1;
+    }
+
+  /* open authentication connections */
+  if (auth_connect() != 0)
+    {
+      trace(TRACE_FATAL,"main(): could not connect to authentication");
       return -1;
     }
 
@@ -60,6 +67,7 @@ int main(int argc, char *argv[])
   if ((len = process_header(blk, &newlines)) == -1)
     {
       db_disconnect();
+      auth_disconnect();
       trace(TRACE_FATAL, "main(): error processing header");
       return -1;
     }
@@ -77,6 +85,7 @@ int main(int argc, char *argv[])
       if (db_insert_message_block(blk, len, msgid) == -1)
 	{
 	  db_disconnect();
+	  auth_disconnect();
 	  trace(TRACE_FATAL, "main(): error inserting message block");
 	  return -1;
 	}
@@ -93,6 +102,7 @@ int main(int argc, char *argv[])
 
   /* cleanup */
   db_disconnect();
+  auth_disconnect();
 
   return 0;
 }

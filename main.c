@@ -66,8 +66,11 @@ int main (int argc, char *argv[])
   SetTraceLevel(&smtpItems);
   GetDBParams(_db_host, _db_db, _db_user, _db_pass, &sysItems);
 
-  if (db_connect() < 0) 
+  if (db_connect() != 0) 
     trace(TRACE_FATAL,"main(): database connection failed");
+
+  if (auth_connect() != 0) 
+    trace(TRACE_FATAL,"main(): authentication connection failed");
 
   list_init(&users);
   list_init(&mimelist);
@@ -172,6 +175,7 @@ int main (int argc, char *argv[])
   trace (TRACE_DEBUG,"main(): they're all free. we're done.");
   
   db_disconnect();
+  auth_disconnect();
 
   return 0;
 }
