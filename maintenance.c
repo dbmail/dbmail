@@ -42,6 +42,14 @@
 #include <time.h>
 #include <string.h>
 
+/* Loudness and assumptions. */
+int yes_to_all = 0;
+int no_to_all = 0;
+int verbose = 0;
+/* Don't be helpful. */
+int quiet = 0;
+/* Don't print errors. */
+int reallyquiet = 0;
 
 char *configFile = DEFAULT_CONFIG_FILE;
 
@@ -51,21 +59,29 @@ extern db_param_t _db_params;
 static void find_time(char *timestr, const char *timespec);
 
 int do_showhelp(void) {
-	printf("*** dbmail-maintenance ***\n");
+	printf("*** dbmail-util ***\n");
 
 	printf("Use this program to maintain your DBMail database.\n");
 	printf("See the man page for more info. Summary:\n\n");
 	printf("     -c        clean up unlinked message entries\n");
-	printf("     -i        test for message integrity\n");
-	printf("     -n        null message check\n");
+	printf("     -t        test for message integrity\n");
+	printf("     -u        null message check\n");
 	printf("     -r        repair any integrity problems\n");
-	printf("     -f file   specify an alternative config file\n");
+	printf("     -p        purge messages have the DELETE status set\n");
+	printf("     -d        set DELETE status for deleted messages\n");
 	printf("     -l time   clear the IP log used for IMAP/POP-before-SMTP\n"
 	       "               the time is specified as <hours>h<minutes>m\n"
 	       "               (don't include the angle brackets, though)\n");
-	printf("     -p        purge messages have the DELETE status set\n");
-	printf("     -d        set DELETE status for deleted messages\n");
-	printf("     -v        show the version\n");
+//	printf("     -i        enter an interactive message management console\n");
+
+	printf("\nCommon options for all DBMail utilities:\n");
+	printf("     -f file   specify an alternative config file\n");
+	printf("     -q        quietly skip interactive prompts\n"
+	       "               use twice to suppress error messages\n");
+	printf("     -n        show the intended action but do not perform it, no to all\n");
+	printf("     -y        perform all proposed actions, as though yes to all\n");
+	printf("     -v        verbose details\n");
+	printf("     -V        show the version\n");
 	printf("     -h        show this help message\n");
 
 	return 0;
@@ -92,15 +108,10 @@ int main(int argc, char *argv[])
 
 	/* get options */
 	opterr = 0;		/* suppress error message from getopt() */
-	while ((opt = getopt(argc, argv, "cf:rvinl:phd")) != -1) {
+	while ((opt = getopt(argc, argv, "-crtl:phd if:qnyvVh")) != -1) {
 		switch (opt) {
 		case 'c':
 			vacuum_db = 1;
-			do_nothing = 0;
-			break;
-
-		case 'h':
-			show_help = 1;
 			do_nothing = 0;
 			break;
 
@@ -114,38 +125,21 @@ int main(int argc, char *argv[])
 			do_nothing = 0;
 			break;
 
-		case 'f':
-			if (optarg && strlen(optarg) > 0)
-				configFile = optarg;
-			else {
-				fprintf(stderr,
-					"dbmail-maintenance: -f requires a filename\n\n" );
-				return 1;
-			}
-			break;
-
 		case 'r':
 			check_integrity = 1;
 			should_fix = 1;
 			do_nothing = 0;
 			break;
 
-		case 'i':
+		case 't':
 			check_integrity = 1;
 			do_nothing = 0;
 			break;
 
-		case 'n':
+		case 'u':
 			check_null_messages = 1;
 			do_nothing = 0;
 			break;
-
-		case 'v':
-			printf
-			    ("\n*** DBMAIL: dbmail-maintenance version $Revision$ %s\n",
-			     COPYRIGHT);
-			return 0;
-
 
 		case 'l':
 			check_iplog = 1;
@@ -158,26 +152,58 @@ int main(int argc, char *argv[])
 			timespec[LEN] = 0;
 			break;
 
+		/* Common options */
+		case 'h':
+			show_help = 1;
+			do_nothing = 0;
+			break;
+
+		case 'n':
+			no_to_all = 1;
+			break;
+
+		case 'y':
+			no_to_all = 1;
+			break;
+
+		case 'q':
+			no_to_all = 1;
+			break;
+
+		case 'f':
+			if (optarg && strlen(optarg) > 0)
+				configFile = optarg;
+			else {
+				fprintf(stderr,
+					"dbmail-util: -f requires a filename\n\n" );
+				return 1;
+			}
+			break;
+
+		case 'v':
+			verbose = 1;
+			break;
+
+		case 'V':
+			printf
+			    ("\n*** DBMAIL: dbmail-util version $Revision$ %s\n\n",
+			     COPYRIGHT);
+			return 0;
+
 		default:
 			/*printf("unrecognized option [%c], continuing...\n",optopt); */
 			break;
 		}
 	}
 
-	ReadConfig("DBMAIL", configFile);
-	SetTraceLevel("DBMAIL");
-	GetDBParams(&_db_params);
-
-	if (show_help) {
+	if (do_nothing || show_help) {
 		do_showhelp();
 		return 1;
 	}
 
-	if (do_nothing) {
-		printf("Ok. Nothing requested, nothing done. "
-		       "Try adding a command-line option to perform maintenance.\n");
-		return 0;
-	}
+	ReadConfig("DBMAIL", configFile);
+	SetTraceLevel("DBMAIL");
+	GetDBParams(&_db_params);
 
 	printf("Opening connection to database... ");
 	if (db_connect() != 0) {
@@ -204,7 +230,6 @@ int main(int argc, char *argv[])
 		}
 		printf("Ok. [%llu] messages deleted.\n", deleted_messages);
 	}
-
 
 	if (set_deleted) {
 		printf("Setting DELETE status for deleted messages... ");
@@ -353,7 +378,7 @@ int main(int argc, char *argv[])
 			printf("\n");
 			if (should_fix == 0) {
 				printf
-				    ("Try running dbmail-maintenance with the '-f' option "
+				    ("Try running dbmail-util with the '-f' option "
 				     "in order to fix these problems\n\n");
 			}
 		} else
@@ -406,7 +431,7 @@ int main(int argc, char *argv[])
 			printf("\n");
 			if (should_fix == 0) {
 				printf
-				    ("Try running dbmail-maintenance with the '-f' option "
+				    ("Try running dbmail-util with the '-f' option "
 				     "in order to fix these problems\n\n");
 			}
 			list_freelist(&lostlist.start);
@@ -462,7 +487,7 @@ int main(int argc, char *argv[])
 			printf("\n");
 			if (should_fix == 0) {
 				printf
-				    ("Try running dbmail-maintenance with the '-f' option "
+				    ("Try running dbmail-util with the '-f' option "
 				     "in order to fix these problems\n\n");
 			}
 

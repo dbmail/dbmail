@@ -1,3 +1,48 @@
+2004-07-21  Aaron Stone  <aaron@serendipity.cx>
+
+	* user.c: overhaul of argument handling ended up being a near
+	rewrite of the entire utility. possibly added GCC style macro
+	dependencies; they should be supplemented with portable code.
+	* main.c, maintenance.c, vut2dbmail.c: improved command line
+	argument handling.
+	* timsieved.c, imapd.c, lmtpd.c, pop3d.c: added pidfile support
+	and common command line argument handling.
+	* dbmail.h: added pidfile defaults.
+	* pidfile.c, pidfile.h: these are borrowed from Samba; heavily
+	edited though for better compatibility with DBMail, though.
+	* dbmd5.c, dbmd5.h (makemd5): added const keywords.
+	* debug.h: removed a previously commented out line.
+	* lmtp.c: applied patch that fixes Exim by resetting variables
+	after a message has been successfully delivered.
+	* db.c, dbmsgbuf.c, dbsearch.c: added dbmail_ table prefixes.
+	* auth/authsql.c: added dbmail_ table prefixes.
+	* auth.h (auth_adduser): now passing userid and clientid
+	numerically as a u64_t rather than as a char string.
+	* contrib/startup-scripts/dbmail-imap: deleted.
+	* contrib/startup-scripts/dbmail-pop3: deleted.
+	* contrib/startup-scripts/dbmail-imapd-gentoo: deleted.
+	* contrib/startup-scripts/dbmail-pop3d-gentoo: deleted.
+	* contrib/startup-scripts/gentoo/dbmail-imapd: added.
+	* contrib/startup-scripts/gentoo/dbmail-lmtpd: added.
+	* contrib/startup-scripts/gentoo/dbmail-pop3d: added.
+	* contrib/startup-scripts/debian/dbmail-imapd: added.
+	* contrib/startup-scripts/debian/dbmail-lmtpd: added.
+	* contrib/startup-scripts/debian/dbmail-pop3d: added.
+	* contrib/startup-scripts/README: added, to explain the new
+	subdirectories of startup-scripts and to ask that those adding
+	support for new distribution please contribute their scripts.
+	* Makefile.am, man/Makefile.am: renamed dbmail-maintenance to
+	dbmail-util and dbmail-addusers to dbmail-users.
+	* man/dbmail-imapd.1: edited.
+	* man/dbmail-lmtpd.1: added.
+	* man/dbmail-pop3d.1: edited.
+	* man/dbmail-smtp.1: edited.
+	* man/dbmail-adduser.1: renamed to dbmail-users.
+	* man/dbmail-users.1: edited.
+	* man/dbmail-maintenance.1: renamed to dbmail-util.
+	* man/dbmail-util.1: edited.
+	* README: edited.
+
 2004-07-15  Ilja Booij  <ilja@ic-s.nl>
 
 	* sql/mysql/create_tables.mysql: messages.status changed

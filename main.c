@@ -68,6 +68,15 @@ char *deliver_to_header = NULL;
 char *deliver_to_mailbox = NULL;
 u64_t headersize, headerrfcsize;
 
+/* loudness and assumptions */
+int yes_to_all = 0;
+int no_to_all = 0;
+int verbose = 0;
+/* Don't be helpful. */
+int quiet = 0;
+/* Don't print errors. */
+int reallyquiet = 0;
+
 /**
  * read the whole message from the instream
  * \param[in] instream input stream (stdin)
@@ -133,28 +142,28 @@ static int read_whole_message_pipe(FILE *instream, char **whole_message,
 	return 0;
 }
 
-void print_usage(const char *progname)
-{
-	printf("\n*** DBMAIL: dbmail-smtp version $Revision$ %s\n\n",
-	       COPYRIGHT);
-	printf
-	    ("Usage: %s -n [headerfield]   for normal deliveries (default: \"deliver-to\")\n",
-	     progname);
-	printf
-	    ("       %s -m \"mailbox\"       for delivery to a specific mailbox\n",
-	     progname);
-	printf
-	    ("       %s -d [addresses]     for delivery without using scanner\n",
-	     progname);
-	printf
-	    ("       %s -u [usernames]     for direct delivery to users\n",
-	     progname);
-	printf
-	    ("       %s -r return path     for address of bounces and other error reports\n",
-	     progname);
-	printf
-	    ("       %s -f config file     for alternate configuration file\n\n",
-	     progname);
+int do_showhelp(void) {
+	printf("*** dbmail-smtp ***\n");
+
+	printf("Use this program to deliver mail from your MTA or on the command line.\n");
+	printf("See the man page for more info. Summary:\n\n");
+	printf("     -t [headerfield]   for normal deliveries (default is \"deliver-to\")\n");
+	printf("     -d [addresses]     for delivery without using scanner\n");
+	printf("     -u [usernames]     for direct delivery to users\n");
+	printf("     -m \"mailbox\"       for delivery to a specific mailbox\n");
+	printf("     -r return path     for address of bounces and other error reports\n");
+
+	printf("\nCommon options for all DBMail utilities:\n");
+	printf("     -f file   specify an alternative config file\n");
+	printf("     -q        quietly skip interactive prompts\n"
+	       "               use twice to suppress error messages\n");
+	printf("     -n        show the intended action but do not perform it, no to all\n");
+	printf("     -y        perform all proposed actions, as though yes to all\n");
+	printf("     -v        verbose details\n");
+	printf("     -V        show the version\n");
+	printf("     -h        show this help message\n");
+
+	return 0;
 }
 
 int main(int argc, char *argv[])
@@ -181,7 +190,7 @@ int main(int argc, char *argv[])
 	 * with an immediately preceding option are return with option 
 	 * value '1'. We will use this to allow for multiple values to
 	 * follow after each of the supported options. */
-	while ((c = getopt(argc, argv, "-n::m:u:d:f:r:")) != EOF) {
+	while ((c = getopt(argc, argv, "-t::m:u:d:r: f:qnyvVh")) != EOF) {
 		/* Received an n-th value following the last option,
 		 * so recall the last known option to be used in the switch. */
 		if (c == 1)
@@ -189,7 +198,7 @@ int main(int argc, char *argv[])
 		c_prev = c;
 		/* Do something with this option. */
 		switch (c) {
-		case 'n':
+		case 't':
 			trace(TRACE_INFO, "main(): using NORMAL_DELIVERY");
 
 			if (optarg) {
@@ -203,6 +212,7 @@ int main(int argc, char *argv[])
 				deliver_to_header = "deliver-to";
 
 			break;
+
 		case 'm':
 			trace(TRACE_INFO,
 			      "main(): using SPECIAL_DELIVERY to mailbox");
@@ -215,13 +225,7 @@ int main(int argc, char *argv[])
 				deliver_to_mailbox = optarg;
 
 			break;
-		case 'f':
-			trace(TRACE_INFO,
-			      "main(): using alternate config file [%s]", optarg);
 
-			configFile = optarg;
-
-			break;
 		case 'r':
 			trace(TRACE_INFO,
 			      "main(): using RETURN_PATH for bounces");
@@ -238,6 +242,7 @@ int main(int argc, char *argv[])
 			}
 
 			break;
+
 		case 'u':
 			trace(TRACE_INFO,
 			      "main(): using SPECIAL_DELIVERY to usernames");
@@ -257,6 +262,7 @@ int main(int argc, char *argv[])
 			}
 
 			break;
+
 		case 'd':
 			trace(TRACE_INFO,
 			      "main(): using SPECIAL_DELIVERY to email addresses");
@@ -276,6 +282,29 @@ int main(int argc, char *argv[])
 			}
 
 			break;
+
+		/* Common command line options. */
+		case 'f':
+			if (optarg && strlen(optarg) > 0)
+				configFile = optarg;
+			else {
+				fprintf(stderr,
+					"dbmail-smtp: -f requires a filename\n\n" );
+				return 1;
+			}
+			break;
+
+		case 'v':
+			verbose = 1;
+			break;
+
+		case 'V':
+			/* We must return non-zero in case someone put -V
+			 * into the mail server config and thus may lose mail. */
+			printf("\n*** DBMAIL: dbmail-smtp version $Revision$ %s\n\n",
+			     COPYRIGHT);
+			return 1;
+
 		default:
 			usage_error = 1;
 			break;
@@ -284,7 +313,7 @@ int main(int argc, char *argv[])
 		/* At the end of each round of options, check
 		 * to see if there were any errors worth stopping for. */
 		if (usage_error) {
-			print_usage(argv[0]);
+			do_showhelp();
 			trace(TRACE_DEBUG,
 			      "main(): usage error; setting EX_USAGE and aborting");
 			exitcode = EX_USAGE;
@@ -294,7 +323,7 @@ int main(int argc, char *argv[])
 
 	/* ...or if there weren't any command line arguments at all. */
 	if (argc < 2) {
-		print_usage(argv[0]);
+		do_showhelp();
 		trace(TRACE_DEBUG,
 		      "main(): no arguments; setting EX_USAGE and aborting");
 		exitcode = EX_USAGE;

@@ -50,7 +50,7 @@ char *configFile = DEFAULT_CONFIG_FILE;
 
 char *getToken(char **str, const char *delims);
 char csalt[] = "........";
-char *bgetpwent(char *filename, char *name);
+char *bgetpwent(const char *filename, const char *name);
 char *cget_salt(void);
 
 /* database login data */
@@ -61,659 +61,849 @@ const char ValidChars[] =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     "_.!@#$%^&*()-+=~[]{}<>:;\\/";
 
-void show_help(void);
+/* Loudness and assumptions. */
+int yes_to_all = 0;
+int no_to_all = 0;
+int verbose = 0;
+/* Don't be helpful. */
 int quiet = 0;
+/* Don't print errors. */
+int reallyquiet = 0;
 
-int quiet_printf(const char *fmt, ...);
+#define qprintf(fmt, args...) \
+	(quiet ? 0 : printf(fmt, ##args) )
 
-int do_add(int argc, char *argv[]);
-int do_change(char *argv[]);
-int do_delete(char *name);
-int do_show(char *name);
-int do_empty(char *name);
-int do_make_alias(char *argv[]);
-int do_remove_alias(char *argv[]);
+#define qerrorf(fmt, args...) \
+	(reallyquiet ? 0 : fprintf(stderr, fmt, ##args) )
 
-int is_valid(const char *name);
+#define null_strncpy(dst, src, len) \
+	(src ? strncpy(dst, src, len) : 0 )
+
+#define null_crypt(src, dst) \
+	(src ? crypt(src, dst) : "" )
+
+struct change_flags {
+	unsigned int newuser         : 1;
+	unsigned int newmaxmail      : 1;
+	unsigned int newclientid     : 1;
+	unsigned int newpasswd       : 1;
+	unsigned int newpasswdfile   : 1;
+	unsigned int newpasswdshadow : 1;
+};
+
+/* The prodigious use of const ensures that programming
+ * mistakes inside of these functions don't cause us to
+ * use incorrect values when calling auth_ and db_ internals.
+ * */
+
+/* Core operations */
+int do_add(const char * const user,
+           const char * const password,
+           const char * const enctype,
+           const u64_t maxmail, const u64_t clientid);
+int do_delete(const char * const user);
+int do_show(const char * const user);
+int do_empty(const u64_t useridnr);
+/* Change operations */
+int do_username(const u64_t useridnr, const char *newuser);
+int do_maxmail(const u64_t useridnr, const u64_t maxmail);
+int do_clientid(const u64_t useridnr, const u64_t clientid);
+int do_password(const u64_t useridnr,
+                const char * const password,
+                const char * const enctype);
+int do_aliases(const u64_t useridnr,
+               struct list * const alias_add,
+               struct list * const alias_del);
+/* External forwards */
+int do_forwards(const char *alias, const u64_t clientid,
+                struct list * const fwds_add,
+                struct list * const fwds_del);
+
+/* Helper functions */
+int is_valid(const char * const str);
+u64_t strtomaxmail(const char * const str);
+int mkpassword(const char * const user, const char * const passwd,
+               const char * const passwdtype, const char * const passwdfile,
+               char ** password, char ** enctype);
+
+int do_showhelp(void) {
+	printf("*** dbmail-users ***\n");
+
+	printf("Use this program to manage your DBMail users.\n");
+	printf("See the man page for more info. Modes of operation:\n\n");
+//	add, flush, delete, change, modify, password, alias, forward, list
+	printf("     -a user   add a user\n");
+	printf("     -d user   delete a user\n");
+	printf("     -c user   change details for a user\n");
+	printf("     -e user   empty all mailboxes for a user\n");
+	printf("     -l uspec  list information for matching users\n");
+	printf("     -x alias  create an external forwarding address\n");
+	printf("     -i        enter an interactive user management console\n");
+
+	printf("\nSummary of options for all modes:\n");
+	printf("     -w passwd specify user's password on the command line\n");
+	printf("     -W [file] read from a file or prompt for a user's password\n");
+	printf("     -p pwtype password type may be one of the following:\n"
+	       "               cleartext, crypt, md5-hash, md5-digest,\n"
+	       "               crypt-raw, md5-hash-raw, md5-digest-raw\n");
+	printf("     -P [file] pull encrypted password from the shadow file\n");
+	printf("     -u user   new username (only useful for -c, change)\n");
+	printf("     -g client assign the user to a client\n");
+	printf("     -m max    set the maximum mail quota in <bytes>B,\n"
+	       "               <kbytes>K, or <mbytes>M, default in bytes\n"
+	       "               specify 0 to remove any mail quota limits\n");
+	printf("     -s alia.. adds a list of recipient aliases\n");
+	printf("     -S alia.. removes a list of recipient aliases (wildcards supported)\n");
+	printf("     -t fwds.. adds a list of deliver-to forwards\n");
+	printf("     -T fwds.. removes a list of deliver-to forwards (wildcards supported)\n");
+
+        printf("\nCommon options for all DBMail utilities:\n");
+	printf("     -f file   specify an alternative config file\n");
+	printf("     -q        quietly skip interactive prompts\n"
+	       "               use twice to suppress error messages\n");
+	printf("     -n        show the intended action but do not perform it, no to all\n");
+	printf("     -y        perform all proposed actions, as though yes to all\n");
+	printf("     -v        verbose details\n");
+	printf("     -V        show the version\n");
+	printf("     -h        show this help message\n");
+
+	return 0;
+}
 
 int main(int argc, char *argv[])
 {
-	int result;
-	int argidx = 0;
+	int opt = 0, opt_prev = 0;
+	int show_help = 0;
+	int result = 0, mode = 0, mode_toomany = 0;
+	char *user = NULL, *newuser = NULL,
+	     *userspec = NULL, *alias = NULL;
+	char *passwd = NULL, *passwdtype = NULL,
+	     *passwdfile = NULL;
+	char *password = NULL, *enctype = NULL;
+	u64_t useridnr = 0, clientid = 0, maxmail = 0;
+	struct list alias_add, alias_del, fwds_add, fwds_del;
+	struct change_flags change_flags;
+	size_t len = 0;
+
+	list_init(&alias_add);
+	list_init(&alias_del);
+	list_init(&fwds_add);
+	list_init(&fwds_del);
 
 	openlog(PNAME, LOG_PID, LOG_MAIL);
-
 	setvbuf(stdout, 0, _IONBF, 0);
 
-	if (argc < 2) {
-		show_help();
-		return 0;
-	}
+	/* get options */
+	opterr = 0;		/* suppress error message from getopt() */
+	while ((opt = getopt(argc, argv, "-a:d:c:e:l::x:" /* Major modes */
+					"u:i:W::w:P::p:" /* Minor options */
+					"f:qnyvVh")) != -1) { /* Common options */
+		/* The initial "-" of optstring allows unaccompanied
+		 * options and reports them as the optarg to opt 1 (not '1') */
+		if (opt == 1)
+			opt = opt_prev;
+		opt_prev = opt;
 
-	if (strcasecmp(argv[1], "quiet") == 0) {
-		if (argc < 3) {
-			show_help();
-			return 0;
+		switch (opt) {
+		/* Major modes of operation
+		 * (exactly one of these is required) */
+		case 'a':
+		case 'd':
+		case 'c':
+		case 'e':
+			if (mode)
+				mode_toomany = 1;
+			mode = opt;
+			if (optarg && strlen(optarg))
+				user = optarg;
+			break;
+
+		case 'x':
+			if (mode)
+				mode_toomany = 1;
+			mode = opt;
+			if (optarg && strlen(optarg))
+				alias = optarg;
+			break;
+
+		case 'l':
+			/* It seems that the optional argument may
+			 * be passed as a second instance of this flag. */
+			if (mode != 0 && mode != 'l')
+				mode_toomany = 1;
+			mode = opt;
+			if (optarg && strlen(optarg))
+				userspec = optarg;
+			break;
+
+		case 'i':
+			if (mode)
+				mode_toomany = 1;
+			mode = opt;
+			break;
+
+		/* Minor options */
+		case 'w':
+			change_flags.newpasswd = 1;
+			passwd = optarg;
+			break;
+
+		case 'W':
+			change_flags.newpasswdfile = 1;
+			if (optarg && strlen(optarg))
+				passwdfile = optarg;
+			// FIXME: Need some way of passing stdin.
+			break;
+
+		case 'p':
+			if (!passwdtype)
+				passwdtype = optarg;
+			else
+			{} // Complain about only one type allowed.
+			break;
+
+		case 'P':
+			change_flags.newpasswdshadow = 1;
+			if (optarg && strlen(optarg))
+				passwdfile = optarg;
+			else
+				passwdfile = SHADOWFILE;
+			passwdtype = "shadow";
+			break;
+
+		case 'g':
+			change_flags.newclientid = 1;
+			clientid = strtoull(optarg, NULL, 10);
+			break;
+
+		case 'm':
+			change_flags.newmaxmail = 1;
+			maxmail = strtomaxmail(optarg);
+			break;
+
+		case 's':
+			// Add this item to the user's aliases.
+			if (optarg && (len = strlen(optarg)))
+				list_nodeadd(&alias_add, optarg, len+1);
+			break;
+
+		case 'S':
+			// Delete this item from the user's aliases.
+			if (optarg && (len = strlen(optarg)))
+				list_nodeadd(&alias_del, optarg, len+1);
+			break;
+
+		case 't':
+			// Add this item to the alias's forwards.
+			// list_nodeadd...
+			if (optarg && (len = strlen(optarg)))
+				list_nodeadd(&fwds_add, optarg, len+1);
+			break;
+
+		case 'T':
+			// Delete this item from the alias's forwards.
+			if (optarg && (len = strlen(optarg)))
+				list_nodeadd(&fwds_del, optarg, len+1);
+			break;
+
+		/* Common options */
+		case 'f':
+			if (optarg && strlen(optarg) > 0)
+				configFile = optarg;
+			else {
+				qerrorf("dbmail-users: -f requires a filename\n\n");
+				result = 1;
+			}
+			break;
+
+		case 'h':
+			show_help = 1;
+			break;
+
+		case 'n':
+			if (!yes_to_all)
+				no_to_all = 1;
+			break;
+
+		case 'y':
+			if (!no_to_all)
+				yes_to_all = 1;
+			break;
+
+		case 'q':
+			/* If we get q twice, be really quiet! */
+			if (quiet)
+				reallyquiet = 1;
+			if (!verbose)
+				quiet = 1;
+			break;
+
+		case 'v':
+			if (!quiet)
+				verbose = 1;
+			break;
+
+		case 'V':
+			/* Show the version and return non-zero. */
+			printf("\n*** DBMAIL: dbmail-users version "
+			       "$Revision$ %s\n\n", COPYRIGHT);
+			result = 1;
+			break;
+
+		default:
+			/* printf("unrecognized option [%c], continuing...\n",optopt); */
+			break;
 		}
 
-		quiet = 1;
-		argidx = 1;
+		/* If there's a non-negative return code,
+		 * it's time to free memory and bail out. */
+		if (result)
+			goto freeall;
+	}	
+
+	/* If nothing is happening, show the help text. */
+	if (!mode || mode_toomany || show_help) {
+		do_showhelp();
+		result = 1;
+		goto freeall;
 	}
 
+	/* read the config file */
 	ReadConfig("DBMAIL", configFile);
 	SetTraceLevel("DBMAIL");
 	GetDBParams(&_db_params);
 
-	quiet_printf("\n*** dbmail-adduser ***\n");
-
 	/* open database connection */
-	quiet_printf("Opening connection to database...\n");
+	qprintf("Opening connection to database...\n");
 	if (db_connect() != 0) {
-		quiet_printf
+		qerrorf
 		    ("Failed. Could not connect to database (check log)\n");
-		return -1;
+		result = -1;
+		goto freeall;
 	}
 
 	/* open authentication connection */
-	quiet_printf("Opening connection to authentication...\n");
+	qprintf("Opening connection to authentication...\n");
 	if (auth_connect() != 0) {
-		quiet_printf
+		qerrorf
 		    ("Failed. Could not connect to authentication (check log)\n");
-		return -1;
+		result = -1;
+		goto freeall;
 	}
 
-	quiet_printf("Ok. Connected\n");
+	qprintf("Ok. Connected\n");
 	configure_debug(TRACE_ERROR, 1, 0);
 
-	switch (argv[argidx + 1][0]) {
-	case 'a':
-		result = do_add(argc - (2 + argidx), &argv[2 + argidx]);
-		break;
+	switch (mode) {
 	case 'c':
-		result = do_change(&argv[2 + argidx]);
-		break;
 	case 'd':
-		result = do_delete(argv[2 + argidx]);
-		break;
-	case 's':
-		result = do_show(argv[2 + argidx]);
-		break;
-	case 'f':
-		result = do_make_alias(&argv[2 + argidx]);
-		break;
-	case 'x':
-		result = do_remove_alias(&argv[2 + argidx]);
-		break;
 	case 'e':
-		result = do_empty(argv[2 + argidx]);
-		break;
-	default:
-		show_help();
-		db_disconnect();
-		auth_disconnect();
-		config_free();
-		return 0;
+		/* Verify the existence of this user */
+		if (auth_user_exists(user, &useridnr) == -1) {
+			qerrorf("Error: cannot verify existence of user [%s].\n",
+			     user);
+			result = -1;
+			goto freeall;
+		}
+		if (useridnr == 0) {
+			qerrorf("Error: user [%s] does not exist.\n",
+				     user);
+			result = -1;
+			goto freeall;
+		}
 	}
 
+	/* Only get a password for those modes which require it. */
+	switch (mode) {
+	case 'a':
+	case 'c':
+		/* Do we need the password for this mode? */
+		if (mkpassword(user, passwd, passwdtype, passwdfile,
+		               &password, &enctype)) {
+			qerrorf("Error: unable to create a password.\n");
+			result = -1;
+			goto freeall;
+		}
+	}
+
+
+	switch (mode) {
+	case 'a':
+		result = do_add(user, password, enctype, maxmail, clientid);
+		break;
+	case 'd':
+		result = do_delete(user);
+		break;
+	case 'c':
+		qprintf("Performing changes for user [%s]...", user);
+		if (change_flags.newuser) {
+			result |= do_username(useridnr, newuser);
+		}
+		if (change_flags.newpasswd) {
+			result |= do_password(useridnr, password, enctype);
+		}
+		if (change_flags.newclientid) {
+			result |= do_clientid(useridnr, clientid);
+		}
+		if (change_flags.newmaxmail) {
+			result |= do_maxmail(useridnr, maxmail);
+		}
+		result |= do_aliases(useridnr, &alias_add, &alias_del);
+		break;
+	case 'e':
+		result = do_empty(useridnr);
+		break;
+	case 'l':
+		result = do_show(userspec);
+		break;
+	case 'x':
+		result = do_forwards(alias, clientid, &fwds_add, &fwds_del);
+		break;
+	default:
+		result = 1;
+	}
+
+	/* Here's where we free memory and quit.
+	 * Be sure that all of these are NULL safe! */
+freeall:
+
+	/* Free the lists. */
+	if (alias_del.start)
+		list_freelist(&alias_del.start);
+	if (alias_add.start)
+		list_freelist(&alias_add.start);
+	if (fwds_del.start)
+		list_freelist(&alias_del.start);
+	if (fwds_add.start)
+		list_freelist(&alias_add.start);
 
 	db_disconnect();
 	auth_disconnect();
 	config_free();
-	return result;
-}
-
-
-
-/* 
- * adds a single alias (not connected to any user) 
- */
-int do_make_alias(char *argv[])
-{
-	int result;
-
-	if (!argv[0] || !argv[1]) {
-		quiet_printf
-		    ("invalid arguments specified. Check the man page\n");
-		return -1;
-	}
-
-	quiet_printf("Adding alias [%s] --> [%s]...", argv[0], argv[1]);
-	switch ((result = db_addalias_ext(argv[0], argv[1], 0))) {
-	case -1:
-		quiet_printf("Failed\n\nCheck logs for details\n\n");
-		break;
-
-	case 0:
-		quiet_printf("Ok alias added\n");
-		break;
-
-	case 1:
-		quiet_printf("Already exists. no extra alias added\n");
-		result = -1;	/* return error */
-		break;
-
-	}
 
 	return result;
 }
 
-int do_remove_alias(char *argv[])
-{
-	if (!argv[0] || !argv[1]) {
-		quiet_printf
-		    ("invalid arguments specified. Check the man page\n");
-		return -1;
-	}
-
-	quiet_printf("Removing alias [%s] --> [%s]...", argv[0], argv[1]);
-	if (db_removealias_ext(argv[0], argv[1]) != 0) {
-		quiet_printf("Failed\n\nCheck logs for details\n\n");
-		return -1;
-	}
-
-	quiet_printf("Ok alias removed\n");
-	return 0;
-}
-
-int do_add(int argc, char *argv[])
+int do_add(const char * const user,
+           const char * const password, const char * const enctype,
+           const u64_t maxmail, const u64_t clientid)
 {
 	u64_t useridnr;
 	u64_t mailbox_idnr;
-	int add_user_result;
-	int i, result;
-	char pw[50] = "";
+	int add_user_result, result;
 
-	if (argc < 4) {
-		quiet_printf
-		    ("invalid number of options specified. Check the man page\n");
+	if (!is_valid(user)) {
+		qerrorf("Error: invalid characters in username [%s]\n",
+		     user);
 		return -1;
 	}
 
-	if (!is_valid(argv[0])) {
-		quiet_printf
-		    ("Error: invalid characters in username [%s] encountered\n",
-		     argv[0]);
+	qprintf("Adding user %s with password type %s,"
+	     "%llu bytes mailbox limit and clientid %llu...",
+	     user, enctype, maxmail, clientid);
+
+	switch (auth_user_exists(user, &useridnr))
+	{
+	case -1:
+		/* Database failure */
+		qerrorf("Failed\n\nCheck logs for details\n\n");
 		return -1;
-	}
-
-	quiet_printf
-	    ("Adding user %s with password %s, %s bytes mailbox limit and clientid %s...",
-	     argv[0], argv[1], argv[3], argv[2]);
-
-	/* check if we need to encrypt this pwd */
-	if (strncasecmp(argv[1], "{crypt:}", strlen("{crypt:}")) == 0) {
-		/* encrypt using crypt() */
-		strcat(pw,
-		       crypt(&argv[1][strlen("{crypt:}")], cget_salt()));
-		add_user_result =
-		    auth_adduser(argv[0], pw, "crypt", argv[2], argv[3],
-				 &useridnr);
-	} else if (strncasecmp(argv[1], "{crypt}", strlen("{crypt}")) == 0) {
-		/* assume passwd is encrypted on command line */
-		add_user_result =
-		    auth_adduser(argv[0], &argv[1][strlen("{crypt}")],
-				 "crypt", argv[2], argv[3], &useridnr);
-	} else if (strncasecmp(argv[1], "{md5:}", strlen("{md5:}")) == 0) {
-		/* encrypt using md5 crypt() */
-		sprintf(pw, "%s%s%s", "$1$", cget_salt(), "$");
-		strncpy(pw, crypt(&argv[1][strlen("{md5:}")], pw), 49);
-		add_user_result = auth_adduser(argv[0], pw, "md5",
-					       argv[2], argv[3],
-					       &useridnr);
-	} else if (strncasecmp(argv[1], "{md5}", strlen("{md5}")) == 0) {
-		/* assume passwd is encrypted on command line */
-		add_user_result =
-		    auth_adduser(argv[0], &argv[1][strlen("{md5}")], "md5",
-				 argv[2], argv[3], &useridnr);
-	} else if (strncasecmp(argv[1], "{md5sum:}", strlen("{md5sum:}"))
-		   == 0) {
-		/* encrypt using md5 digest */
-		strcat(pw, makemd5(&argv[1][strlen("{md5sum:}")]));
-		add_user_result =
-		    auth_adduser(argv[0], pw, "md5sum", argv[2], argv[3],
-				 &useridnr);
-	} else if (strncasecmp(argv[1], "{md5sum}", strlen("{md5sum}")) ==
-		   0) {
-		/* assume passwd is encrypted on command line */
-		add_user_result =
-		    auth_adduser(argv[0], &argv[1][strlen("{md5sum}")],
-				 "md5sum", argv[2], argv[3], &useridnr);
-	} else {
-		add_user_result = auth_adduser(argv[0], argv[1], "",
-					       argv[2], argv[3],
-					       &useridnr);
-	}
-
-	if (add_user_result == -1) {
-		/* check if existance of another user with the same name caused 
-		   the failure */
-		if (auth_user_exists(argv[0], &useridnr) == -1) {
-			quiet_printf
-			    ("Failed\n\nCheck logs for details\n\n");
-			return -1;	/* database failure */
-		}
-		if (useridnr != 0)
-			quiet_printf("Failed: user exists [%llu]\n",
+	default:
+		if (useridnr != 0) {
+			qprintf("Failed: user exists [%llu]\n",
 				     useridnr);
-		else {		/* useridnr is 0 ! */
-			quiet_printf
-			    ("Failed\n\nCheck logs for details\n\n");
-			useridnr = -1;
+			result = -1;
+		} else {
+			/* If useridnr is 0, create the user */
+			add_user_result = auth_adduser(user, password, enctype,
+				clientid, maxmail, &useridnr);
 		}
-		return -1;
+		break;
 	}
 
-	quiet_printf("Ok, user added id [%llu]\n", useridnr);
+	qprintf("Ok, user added id [%llu]\n", useridnr);
 
-	/* adding mailbox for user. */
-	quiet_printf("Adding INBOX for new user\n");
+	/* Add an INBOX for the user. */
+	qprintf("Adding INBOX for new user\n");
 	switch(db_createmailbox("INBOX", useridnr, &mailbox_idnr)) {
 	case -1:
-		quiet_printf("Failed.. User is added but we failed to add "
+		qprintf("Failed.. User is added but we failed to add "
 			     "the mailbox INBOX for this user\n");
-		return -1;
+		result = -1;
 		break;
 	case 0:
 	default:
-		quiet_printf("Ok. added\n");
+		qprintf("Ok. added\n");
+		result = 0;
 		break;
 	} 
 
-	for (i = 4, result = 0; i < argc; i++) {
-		quiet_printf("Adding alias %s...", argv[i]);
-		switch (db_addalias(useridnr, argv[i], atoi(argv[2]))) {
-		case -1:
-			quiet_printf("Failed\n");
+	return result;
+}
+
+/* Change of username */
+int do_username(const u64_t useridnr, const char * const newuser)
+{
+	int result = 0;
+
+	if (newuser && is_valid(newuser)) {
+		if (auth_change_username(useridnr, newuser) != 0) {
+			qerrorf("Error: could not change username.\n");
+			result = -1;
+		}
+	} else {
+		qerrorf("Error: new username contains invalid characters.\n");
+		result = -1;
+	}
+
+	return result;
+}
+
+/* Change of password */
+int do_password(const u64_t useridnr,
+                const char * const password, const char * const enctype)
+{
+	int result = 0;
+
+	result = auth_change_password(useridnr, password, enctype);
+	if (result != 0) {
+		qerrorf("Error: could not change password.\n");
+	}
+
+	return result;
+}
+
+/* These are the available password types. */
+typedef enum {
+	PLAINTEXT = 0, PLAINTEXT_RAW, CRYPT, CRYPT_RAW,
+	MD5_HASH, MD5_HASH_RAW, MD5_DIGEST, MD5_DIGEST_RAW,
+	SHADOW, PWTYPE_NULL
+} pwtype_t;
+
+/* These are the easy text names. */
+static const char * const pwtypes[] = {
+	"plaintext", "plaintext-raw", "crypt", "crypt-raw",
+	"md5", "md5-raw", "md5sum", "md5sum-raw",
+	"md5-hash", "md5-hash-raw", "md5-digest", "md5-digest-raw",
+	"shadow", NULL
+};
+
+/* These must correspond to the easy text names. */
+static const pwtype_t pwtypecodes[] = {
+	PLAINTEXT, PLAINTEXT_RAW, CRYPT, CRYPT_RAW,
+	MD5_HASH, MD5_HASH_RAW, MD5_DIGEST, MD5_DIGEST_RAW,
+	MD5_HASH, MD5_HASH_RAW, MD5_DIGEST, MD5_DIGEST_RAW,
+	SHADOW, PWTYPE_NULL
+};
+
+int mkpassword(const char * const user, const char * const passwd,
+               const char * const passwdtype, const char * const passwdfile,
+	       char ** password, char ** enctype)
+{
+
+	pwtype_t pwtype;
+	int pwindex = 0;
+	int result = 0;
+	char *entry = NULL;
+	char pw[50];
+
+	memset(pw, 0, 50);
+
+	/* Only search if there's a string to compare. */
+	if (passwdtype)
+		/* Find a matching pwtype. */
+		for (pwindex = 0; pwtypecodes[pwindex] < PWTYPE_NULL; pwindex++)
+			if (strcasecmp(passwdtype, pwtypes[pwindex]) == 0)
+				break;
+
+	/* If no search took place, pwindex is 0, PLAINTEXT. */
+	pwtype = pwtypecodes[pwindex];
+	switch (pwtype) {
+		case PLAINTEXT:
+		case PLAINTEXT_RAW:
+			null_strncpy(pw, passwd, 49);
+			*enctype = "";
+			break;
+		case CRYPT:
+			strcat(pw, null_crypt(passwd, cget_salt()));
+			*enctype = "crypt";
+			break;
+		case CRYPT_RAW:
+			null_strncpy(pw, passwd, 49);
+			*enctype = "crypt";
+			break;
+		case MD5_HASH:
+			sprintf(pw, "%s%s%s", "$1$", cget_salt(), "$");
+			null_strncpy(pw, null_crypt(passwd, pw), 49);
+			*enctype = "md5";
+			break;
+		case MD5_HASH_RAW:
+			null_strncpy(pw, passwd, 49);
+			*enctype = "md5";
+			break;
+		case MD5_DIGEST:
+			strncat(pw, makemd5(passwd), 49);
+			*enctype = "md5sum";
+			break;
+		case MD5_DIGEST_RAW:
+			null_strncpy(pw, passwd, 49);
+			*enctype = "md5sum";
+			break;
+		case SHADOW:
+			entry = bgetpwent(passwdfile, user);
+			if (!entry) {
+				qerrorf("Error: cannot read file [%s], "
+					"please make sure that you have "
+					"permission to read this file.\n",
+					passwdfile);
+				result = -1;
+				break;
+			}
+                
+			strncat(pw, entry, 49);
+			if (strcmp(pw, "") == 0) {
+				qerrorf("Error: password for user [%s] not found in file [%s].\n",
+				     user, passwdfile);
+				result = -1;
+				break;
+			}
+
+			/* Safe because we know pw is 50 long. */
+			if (strncmp(pw, "$1$", 3) == 0) {
+				*enctype = "md5";
+			} else {
+				*enctype = "crypt";
+			}
+			break;
+		default:
+			qerrorf("Error: password type not supported [%s].\n",
+				passwdtype);
 			result = -1;
 			break;
+	}
 
-		case 0:
-			quiet_printf("Ok, added\n");
-			break;
+	/* Pass this out of the function. */
+	*password = strdup(pw);
 
-		case 1:
-			quiet_printf
-			    ("Already exists. No extra alias added\n");
-			result = -1;
-			break;
+	return result;
+}
+
+/* Change of client id. */
+int do_clientid(u64_t useridnr, u64_t clientid)
+{	
+	int result = 0;
+
+	if (auth_change_clientid(useridnr, clientid) != 0) {
+		qprintf("\nWarning: could not change client id ");
+		result = -1;
+	}
+
+	return result;
+}
+
+/* Change of quota / max mail. */
+int do_maxmail(u64_t useridnr, u64_t maxmail)
+{
+	int result = 0;
+
+	if (auth_change_mailboxsize(useridnr, maxmail) != 0) {
+		qerrorf("Error: could not change max mail size.\n");
+		result = -1;
+	}
+
+	return result;
+}
+
+int do_forwards(const char * const alias, const u64_t clientid,
+                struct list * const fwds_add,
+                struct list * const fwds_del)
+{
+	int result = 0;
+	char *forward;
+	struct element *tmp;
+
+	/* Delete aliases for the user. */
+	if (fwds_del) {
+		tmp = list_getstart(fwds_del);
+		while (tmp) {
+			forward = (char *)tmp->data;
+
+			qprintf("[%s]\n", forward);
+
+			if (db_removealias_ext(alias, forward) < 0) {
+				qerrorf("Error: could not remove forward [%s] \n",
+				     forward);
+				result = -1;
+			}
+			tmp = tmp->nextnode;
 		}
 	}
 
-	quiet_printf("adduser done\n");
-	if (result != 0)
-		quiet_printf
-		    ("Warning: user added but not all the specified aliases\n");
+	/* Add aliases for the user. */
+	if (fwds_add) {
+		tmp = list_getstart(fwds_add);
+		while (tmp) {
+			forward = (char *)tmp->data;
+			qprintf("[%s]\n", forward);
+
+			if (db_addalias_ext(alias, forward, clientid) < 0) {
+				qerrorf("Error: could not add forward [%s]\n",
+				     alias);
+				result = -1;
+			}
+			tmp = tmp->nextnode;
+		}
+	}
+
+	/*
+	qprintf("Adding alias [%s] --> [%s]...", alias, forward);
+	switch ((result = db_addalias_ext(alias, forward, 0))) {
+	case -1:
+		qerrorf("Error: cannot add forwarding address.\n");
+		break;
+
+	case 0:
+		qprintf("Ok. Forwarding address added.\n");
+		break;
+
+	case 1:
+		qprintf("Already exists. no extra alias added\n");
+		result = -1;	/ * return error * /
+		break;
+
+	}
+	*/
+
+	qprintf("Done\n");
+
+	return result;
+}
+
+int do_aliases(const u64_t useridnr,
+               struct list * const alias_add,
+               struct list * const alias_del)
+{
+	int result = 0;
+	u64_t clientid;
+
+	auth_getclientid(useridnr, &clientid);
+
+	/* Delete aliases for the user. */
+	if (alias_del) {
+		char *alias;
+		struct element *tmp;
+
+		tmp = list_getstart(alias_del);
+		while (tmp) {
+			alias = (char *)tmp->data;
+
+			qprintf("[%s]\n", alias);
+
+			if (db_removealias(useridnr, alias) <
+			    0) {
+				qerrorf("Error: could not remove alias [%s] \n",
+				     alias);
+				result = -1;
+			}
+			tmp = tmp->nextnode;
+		}
+	}
+
+	/* Add aliases for the user. */
+	if (alias_add) {
+		char *alias;
+		struct element *tmp;
+		
+
+		tmp = list_getstart(alias_add);
+		while (tmp) {
+			alias = (char *)tmp->data;
+			qprintf("[%s]\n", alias);
+
+			if (db_addalias
+			    (useridnr, alias, clientid) < 0) {
+				qerrorf("Error: could not add alias [%s]\n",
+				     alias);
+				result = -1;
+			}
+			tmp = tmp->nextnode;
+		}
+	}
+
+	qprintf("Done\n");
 
 	return result;
 }
 
 
-int do_change(char *argv[])
-{
-	int i, result = 0, retval = 0;
-	u64_t newsize, userid, newcid;
-	u64_t client_id;
-	char *endptr = NULL, *entry = NULL, *passwdfile = NULL;
-	char pw[50] = "";
-
-	/* verify the existence of this user */
-	if (auth_user_exists(argv[0], &userid) == -1) {
-		quiet_printf
-		    ("Error verifying existence of user [%s]. Please check the log.\n",
-		     argv[0]);
-		return -1;
-	}
-
-	if (userid == 0) {
-		quiet_printf("Error: user [%s] does not exist.\n",
-			     argv[0]);
-		return -1;
-	}
-
-	quiet_printf("Performing changes for user [%s]...", argv[0]);
-
-	for (i = 1; argv[i]; i++) {
-		if (argv[i][0] != '-' && argv[i][0] != '+'
-		    && argv[i][0] != 'x' && argv[i][0] != 'd'
-		    && argv[i][0] != 'D') {
-			quiet_printf
-			    ("Failed: invalid option specified. Check the man page\n");
-			return -1;
-		}
-
-		switch (argv[i][1]) {
-		case 'u':
-			/* change the name */
-			if (argv[i][0] != '-') {
-				quiet_printf
-				    ("Failed: invalid option specified. Check the man page\n");
-				return -1;
-			}
-			if (!is_valid(argv[i + 1])) {
-				quiet_printf
-				    ("\nWarning: username contains invalid characters. Username not updated. ");
-				retval = -1;
-			}
-
-			if (auth_change_username(userid, argv[i + 1]) != 0) {
-				quiet_printf
-				    ("\nWarning: could not change username ");
-				retval = -1;
-			}
-
-			i++;
-			break;
-
-		case 'p':
-			/* change the password */
-			if (!is_valid(argv[i + 1])) {
-				quiet_printf
-				    ("\nWarning: password contains invalid characters. Password not updated. ");
-				retval = -1;
-			}
-
-			switch (argv[i][0]) {
-			case '+':
-				/* +p will convert clear text into crypt hash value */
-				strcat(pw,
-				       crypt(argv[i + 1], cget_salt()));
-				result =
-				    auth_change_password(userid, pw,
-							 "crypt");
-				break;
-			case '-':
-				strncpy(pw, argv[i + 1], 49);
-				result =
-				    auth_change_password(userid, pw, "");
-				break;
-			case 'x':
-				/* 'xp' will copy passwd from command line 
-				   assuming that the supplied passwd is crypt encrypted 
-				 */
-				strncpy(pw, argv[i + 1], 49);
-				result =
-				    auth_change_password(userid, pw,
-							 "crypt");
-				break;
-			default:
-				quiet_printf
-				    ("Failed: invalid option specified. Check the man page\n");
-				return -1;
-			}
-
-			if (result != 0) {
-				quiet_printf
-				    ("\nWarning: could not change password ");
-				retval = -1;
-			}
-
-			i++;
-			break;
-
-		case '5':
-			/* md5 passwords */
-			if (!is_valid(argv[i + 1])) {
-				quiet_printf
-				    ("\nWarning: password contains invalid characters. Password not updated. ");
-				retval = -1;
-			}
-			switch (argv[i][0]) {
-			case '-':
-				/* -5 takes a md5 hash and saves it */
-				strncpy(pw, argv[i + 1], 49);
-				result =
-				    auth_change_password(userid, pw,
-							 "md5");
-				break;
-			case '+':
-				/* +5 takes a plaintext password and saves as a md5 hash */
-				sprintf(pw, "%s%s%s", "$1$", cget_salt(),
-					"$");
-				strncpy(pw, crypt(argv[i + 1], pw), 49);
-				result =
-				    auth_change_password(userid, pw,
-							 "md5");
-				break;
-			case 'd':
-				/* d5 takes a md5 digest and saves it */
-				strncpy(pw, argv[i + 1], 49);
-				result =
-				    auth_change_password(userid, pw,
-							 "md5sum");
-				break;
-			case 'D':
-				/* D5 takes a plaintext password and saves as a md5 digest */
-				strncat(pw, makemd5(argv[i + 1]), 49);
-				result =
-				    auth_change_password(userid, pw,
-							 "md5sum");
-				break;
-
-			default:
-				quiet_printf
-				    ("Failed: invalid option specified. Check the man page\n");
-				return -1;
-			}
-
-			if (result != 0) {
-				quiet_printf
-				    ("\nWarning: could not change password ");
-				retval = -1;
-			}
-
-			i++;
-			break;
-
-		case 'P':
-			/* -P will copy password from SHADOWFILE */
-			/* -P:filename will copy password from filename */
-			if (argv[i][0] != '-') {
-				quiet_printf
-				    ("Failed: invalid option specified. Check the man page\n");
-				return -1;
-			}
-			if (argv[i][2] == ':')
-				passwdfile = &argv[i][3];
-			else
-				passwdfile = SHADOWFILE;
-
-
-			entry = bgetpwent(passwdfile, argv[0]);
-			if (!entry) {
-				quiet_printf
-				    ("\nWarning: error finding password from [%s] - are you superuser?\n",
-				     passwdfile);
-				retval = -1;
-				break;
-			}
-
-			strncat(pw, entry, 50);
-			if (strcmp(pw, "") == 0) {
-				quiet_printf
-				    ("\n%s's password not found at \"%s\" !\n",
-				     argv[0], passwdfile);
-				retval = -1;
-			} else {
-				if (strncmp(pw, "$1$", 3)) {
-					if (auth_change_password
-					    (userid, pw, "crypt") != 0) {
-						quiet_printf
-						    ("\nWarning: could not change password");
-						retval = -1;
-					}
-				} else {
-					if (auth_change_password
-					    (userid, pw, "md5") != 0) {
-						quiet_printf
-						    ("\nWarning: could not change password");
-						retval = -1;
-					}
-				}
-			}
-			break;
-
-		case 'c':
-			if (argv[i][0] != '-') {
-				quiet_printf
-				    ("Failed: invalid option specified. Check the man page\n");
-				return -1;
-			}
-
-			newcid = strtoull(argv[i + 1], 0, 10);
-
-			if (auth_change_clientid(userid, newcid) != 0) {
-				quiet_printf
-				    ("\nWarning: could not change client id ");
-				retval = -1;
-			}
-
-			i++;
-			break;
-
-		case 'q':
-			if (argv[i][0] != '-') {
-				quiet_printf
-				    ("Failed: invalid option specified. Check the man page\n");
-				return -1;
-			}
-
-			newsize = strtoull(argv[i + 1], &endptr, 10);
-			switch (*endptr) {
-			case 'm':
-			case 'M':
-				newsize *= (1024 * 1024);
-				break;
-
-			case 'k':
-			case 'K':
-				newsize *= 1024;
-				break;
-			}
-
-			if (auth_change_mailboxsize(userid, newsize) != 0) {
-				quiet_printf
-				    ("\nWarning: could not change max mailboxsize ");
-				retval = -1;
-			}
-
-			i++;
-			break;
-
-		case 'a':
-			switch (argv[i][0]) {
-			case '-':
-				/* remove alias */
-				if (db_removealias(userid, argv[i + 1]) <
-				    0) {
-					quiet_printf
-					    ("\nWarning: could not remove alias [%s] ",
-					     argv[i + 1]);
-					retval = -1;
-				}
-				break;
-			case '+':
-				/* add alias */
-				auth_getclientid(userid, &client_id);
-				if (db_addalias
-				    (userid, argv[i + 1], client_id) < 0) {
-					quiet_printf
-					    ("\nWarning: could not add alias [%s]",
-					     argv[i + 1]);
-					retval = -1;
-				}
-				break;
-			default:
-				quiet_printf
-				    ("Failed: invalid option specified. Check the man page\n");
-				return -1;
-			}
-			i++;
-			break;
-
-		default:
-			quiet_printf
-			    ("invalid option specified. Check the man page\n");
-			return -1;
-		}
-
-	}
-
-	quiet_printf("Done\n");
-
-	return retval;
-}
-
-
-int do_delete(char *name)
+int do_delete(const char * const name)
 {
 	int result;
 
-	quiet_printf("Deleting user [%s]...", name);
+	qprintf("Deleting user [%s]...", name);
 
 	result = auth_delete_user(name);
 
 	if (result < 0) {
-		quiet_printf("Failed. Please check the log\n");
+		qprintf("Failed. Please check the log\n");
 		return -1;
 	}
 
-	quiet_printf("Done\n");
+	qprintf("Done\n");
 	return 0;
 }
 
-int do_show(char *name)
+int do_show(const char * const name)
 {
-	u64_t userid, cid, quotum, quotumused;
+	u64_t useridnr, cid, quotum, quotumused;
 	struct list userlist;
 	struct element *tmp;
 	char *deliver_to;
 
 	if (!name) {
 		/* show all users */
-		quiet_printf("Existing users:\n");
+		qprintf("Existing users:\n");
 
 		auth_get_known_users(&userlist);
 
 		tmp = list_getstart(&userlist);
 		while (tmp) {
-			quiet_printf("[%s]\n", (char *) tmp->data);
+			qprintf("[%s]\n", (char *) tmp->data);
 			tmp = tmp->nextnode;
 		}
 
 		if (userlist.start)
 			list_freelist(&userlist.start);
 	} else {
-		quiet_printf("Info for user [%s]", name);
+		qprintf("Info for user [%s]", name);
 
-		if (auth_user_exists(name, &userid) == -1) {
-			quiet_printf
-			    ("\nError verifying existence of user [%s]. Please check the log.\n",
+		if (auth_user_exists(name, &useridnr) == -1) {
+			qerrorf("Error: cannot verify existence of user [%s].\n",
 			     name);
 			return -1;
 		}
 
-		if (userid == 0) {
+		if (useridnr == 0) {
 			/* 'name' is not a user, try it as an alias */
-			quiet_printf
+			qprintf
 			    ("..is not a user, trying as an alias");
 
 			deliver_to = db_get_deliver_from_alias(name);
 
 			if (!deliver_to) {
-				quiet_printf
-				    ("\nError verifying existence of alias [%s]. Please check the log.\n",
+				qerrorf("Error: cannot verify existence of alias [%s].\n",
 				     name);
 				return -1;
 			}
 
 			if (deliver_to[0] == '\0') {
-				quiet_printf("..is not an alias.\n");
+				qprintf("..is not an alias.\n");
 				return 0;
 			}
 
-			userid = strtoul(deliver_to, NULL, 10);
-			if (userid == 0) {
-				quiet_printf
+			useridnr = strtoul(deliver_to, NULL, 10);
+			if (useridnr == 0) {
+				qprintf
 				    ("\n[%s] is an alias for [%s]\n", name,
 				     deliver_to);
 				my_free(deliver_to);
@@ -721,36 +911,36 @@ int do_show(char *name)
 			}
 
 			my_free(deliver_to);
-			quiet_printf("\nFound user for alias [%s]:\n\n",
+			qprintf("\nFound user for alias [%s]:\n\n",
 				     name);
 		}
 
-		auth_getclientid(userid, &cid);
-		auth_getmaxmailsize(userid, &quotum);
-		db_get_quotum_used(userid, &quotumused);
+		auth_getclientid(useridnr, &cid);
+		auth_getmaxmailsize(useridnr, &quotum);
+		db_get_quotum_used(useridnr, &quotumused);
 
-		quiet_printf("\n");
-		quiet_printf("User ID         : %llu\n", userid);
-		quiet_printf("Username        : %s\n",
-			     auth_get_userid(userid));
-		quiet_printf("Client ID       : %llu\n", cid);
-		quiet_printf("Max. mailboxsize: %.02f MB\n",
+		qprintf("\n");
+		qprintf("User ID         : %llu\n", useridnr);
+		qprintf("Username        : %s\n",
+			     auth_get_userid(useridnr));
+		qprintf("Client ID       : %llu\n", cid);
+		qprintf("Max. mailboxsize: %.02f MB\n",
 			     (double) quotum / (1024.0 * 1024.0));
-		quiet_printf("Quotum used     : %.02f MB (%.01f%%)\n",
+		qprintf("Quotum used     : %.02f MB (%.01f%%)\n",
 			     (double) quotumused / (1024.0 * 1024.0),
 			     (100.0 * quotumused) / (double) quotum);
-		quiet_printf("\n");
+		qprintf("\n");
 
-		quiet_printf("Aliases:\n");
-		db_get_user_aliases(userid, &userlist);
+		qprintf("Aliases:\n");
+		db_get_user_aliases(useridnr, &userlist);
 
 		tmp = list_getstart(&userlist);
 		while (tmp) {
-			quiet_printf("%s\n", (char *) tmp->data);
+			qprintf("%s\n", (char *) tmp->data);
 			tmp = tmp->nextnode;
 		}
 
-		quiet_printf("\n");
+		qprintf("\n");
 		if (userlist.start)
 			list_freelist(&userlist.start);
 	}
@@ -762,82 +952,40 @@ int do_show(char *name)
 /*
  * empties the mailbox associated with user 'name'
  */
-int do_empty(char *name)
+int do_empty(u64_t useridnr)
 {
-	u64_t userid;
 	int result;
 
-	if (auth_user_exists(name, &userid) == -1) {
-		quiet_printf("Error verifying existence of user [%s]. "
-			     "Please check the log.\n", name);
-		return -1;
-	}
-
-	if (userid == 0) {
-		quiet_printf("User [%s] does not exist.\n", name);
-		return -1;
-	}
-
-	quiet_printf("Emptying mailbox...");
+	qprintf("Emptying mailbox...");
 	fflush(stdout);
 
-	result = db_empty_mailbox(userid);
+	result = db_empty_mailbox(useridnr);
 	if (result != 0)
-		quiet_printf("Error. Please check the log.\n", name);
+		qerrorf("Error. Please check the log.\n");
 	else
-		quiet_printf("Ok.\n");
+		qprintf("Ok.\n");
 
 	return result;
 }
 
 
-int is_valid(const char *name)
+int is_valid(const char *str)
 {
 	int i;
 
-	for (i = 0; name[i]; i++)
-		if (strchr(ValidChars, name[i]) == NULL)
+	for (i = 0; str[i]; i++)
+		if (strchr(ValidChars, str[i]) == NULL)
 			return 0;
 
 	return 1;
 }
-
-
-void show_help()
-{
-	printf("\n*** dbmail-adduser ***\n");
-
-	printf
-	    ("Use this program to manage the users for your dbmail system.\n");
-	printf("See the man page for more info. Summary:\n\n");
-	printf
-	    ("dbmail-adduser [quiet] <a|d|c|s|f|x|e> [username] [options...]\n\n");
-
-}
-
-
-int quiet_printf(const char *fmt, ...)
-{
-	va_list argp;
-	int r;
-
-	if (quiet)
-		return 0;
-
-	va_start(argp, fmt);
-	r = vprintf(fmt, argp);
-	va_end(argp);
-
-	return r;
-}
-
 
 /*eddy
   This two function was base from "cpu" by Blake Matheny <matheny@dbaseiv.net>
   bgetpwent : get hash password from /etc/shadow
   cget_salt : generate salt value for crypt
 */
-char *bgetpwent(char *filename, char *name)
+char *bgetpwent(const char *filename, const char *name)
 {
 	FILE *passfile = NULL;
 	char pass_char[512];
@@ -916,3 +1064,30 @@ char *getToken(char **str, const char *delims)
 	*str = NULL;
 	return token;
 }
+
+u64_t strtomaxmail(const char * const str)
+{
+	u64_t maxmail;
+	char *endptr = NULL;
+
+	maxmail = strtoull(str, &endptr, 10);
+	switch (*endptr) {
+	case 'g':
+	case 'G':
+		maxmail *= (1024 * 1024 * 1024);
+		break;
+
+	case 'm':
+	case 'M':
+		maxmail *= (1024 * 1024);
+		break;
+
+	case 'k':
+	case 'K':
+		maxmail *= 1024;
+		break;
+	}
+
+	return maxmail;
+}
+

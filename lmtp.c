@@ -743,6 +743,10 @@ int lmtp(void *stream, void *instream, char *buffer,
 					if (whole_message != NULL)
 						my_free(whole_message);
 				}
+				/* Reset the session after a successful delivery;
+				 * MTA's like Exim prefer to immediately begin the
+				 * next delivery without an RSET or a reconnect. */
+				lmtp_reset(session);
 			}
 			return 1;
 		}

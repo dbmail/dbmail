@@ -1,22 +1,23 @@
-.TH DBMAIL-IMAPD 1 
+.TH DBMAIL-LMTPD 1 
 .ad
 .fi
 .SH NAME
-dbmail-imapd
+dbmail-lmtpd
 \-
-provides access to the DBMail system to clients supporting
-Internet Message Access Protocol, IMAP4r1,
-as specified in RFC 3501.
+receive messages from an MTA supporting the Lightweight
+Mail Transport Protocol, as specified in RFC 2033.
 .SH SYNOPSIS
 .na
 .nf
-\fBdbmail-imapd\fR [\fB-f\fR configfile] [\fB-p\fR pidfile] [\fB\-nvVh\fR]
+\fBdbmail-lmtpd\fR [\fB-f\fR configfile] [\fB-p\fR pidfile] [\fB\-nvVh\fR]
 .SH DESCRIPTION
 .ad
 .fi
-The \fBdbmail-imapd\fR daemon is a fully featured IMAP4r1 server. It will spawn
-into a number of default processes as set in the \fBdbmail.conf\fR file. 
-These processes will enable full IMAP4r1 communication with clients.
+The \fBdbmail-lmtpd\fR daemon will spawn child processes as specified in 
+the \fBdbmail.conf\fR file. These processes listen, by default, on port 24
+of the localhost interface. Mail Transfer Agents, MTA's such as Postfix and
+Exim, speak LMTP to their Mail Delivery Agents which receive and store
+messages. DBMail implements such a system using a database backend.
 .SH OPTIONS
 .IP "\fB\-f\fR configfile"
 Specify an alternate config file. The daemons are currently hardcoded to use
@@ -48,14 +49,10 @@ Show a brief summary of options, then exit.
 .ad
 .fi
 Errors and notifications are send to the trace output as set 
-in the \fBdbmail.conf\fR file.
+in the \fBDBMail\fR configfile.
 .SH BUGS
 .PP
-Since the RFC on IMAP4r1 is not very strict and consequently some e-mail
-clients aren't either it's hard to make a fully compatible IMAP4r1 server.
-However \fBdbmail-imapd\fR is tested and found compatible with most IMAP4r1
-clients. \fBdbmail-imapd\fR will also have future configuration options
-for specific client compatibility.
+Not all of the features recommended by RFC 2033 are implemented.
 .SH LICENSE
 .na
 .nf
@@ -65,9 +62,7 @@ DBMail and its components are (c) IC&S and distributed under the GPL.
 .SH AUTHOR(S)
 .na
 .nf
-Roel Rozendaal
-IC&S 
-Koningsweg 4
-3582 GE Utrecht
-The Netherlands
-http://www.ic-s.nl
+Aaron Stone
+Open Source Programmer
+Palo Alto, California
+USA

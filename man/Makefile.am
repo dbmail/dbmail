@@ -15,5 +15,5 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-man_MANS = dbmail-adduser.1 dbmail-imapd.1 dbmail-maintenance.1 dbmail-pop3d.1\
-	dbmail-smtp.1
+man_MANS = dbmail-pop3d.1 dbmail-smtp.1 dbmail-imapd.1 \
+		dbmail-users.1 dbmail-util.1

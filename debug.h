@@ -66,7 +66,6 @@ typedef enum {
 
 void func_memtst(const char *filename, int line, int tst);
 void trace(trace_t level, char *formatstring, ...) PRINTF_ARGS(2, 3);
-//void trace(trace_t level, char *formatstring, ...) __attribute__((format(printf, 2, 3)));
 
 void configure_debug(trace_t level, int trace_syslog, int trace_verbose);
 

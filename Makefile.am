@@ -22,9 +22,9 @@ SIEVEPROGS = dbmail-sievecmd dbmail-timsieved
 endif
 
 bin_PROGRAMS = dbmail-readvut $(SIEVEPROGS)
-sbin_PROGRAMS = dbmail-smtp dbmail-pop3d dbmail-imapd dbmail-maintenance dbmail-adduser dbmail-lmtpd 
+sbin_PROGRAMS = dbmail-smtp dbmail-pop3d dbmail-imapd dbmail-util dbmail-users dbmail-lmtpd 
 
-COMMON = config.c debug.c list.c dbmd5.c md5.c db.c misc.c mime.c
+COMMON = config.c debug.c list.c dbmd5.c md5.c db.c misc.c mime.c pidfile.c
 SERVER = server.c serverchild.c
 DELIVER = header.c pipe.c forward.c dsn.c
 
@@ -41,11 +41,11 @@ dbmail_pop3d_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @L
 dbmail_imapd_SOURCES = quota.c imap4.c imaputil.c imapcommands.c memblock.c rfcmsg.c imapd.c dbsearch.c dbmsgbuf.c acl.c
 dbmail_imapd_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ 
 
-dbmail_maintenance_SOURCES = maintenance.c
-dbmail_maintenance_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_util_SOURCES = maintenance.c
+dbmail_util_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
-dbmail_adduser_SOURCES = user.c
-dbmail_adduser_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_users_SOURCES = user.c
+dbmail_users_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
 
 dbmail_readvut_SOURCES = vut2dbmail.c
 dbmail_readvut_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@

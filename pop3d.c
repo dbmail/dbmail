@@ -40,6 +40,7 @@
 #include "server.h"
 #include "debug.h"
 #include "misc.h"
+#include "pidfile.h"
 #include "dbmail.h"
 #include "clientinfo.h"
 #include "pop3.h"
@@ -53,6 +54,7 @@
 /* server timeout error */
 #define POP_TIMEOUT_MSG "-ERR I'm leaving, you're tooo slow\r\n"
 
+char *pidFile = DEFAULT_PID_DIR "dbmail-pop3d" DEFAULT_PID_EXT;
 char *configFile = DEFAULT_CONFIG_FILE;
 
 /* set up database login data */
@@ -69,6 +71,24 @@ int pop_before_smtp = 0;
 static int mainRestart = 0;
 static int mainStop = 0;
 
+int do_showhelp(void) {
+	printf("*** dbmail-pop3d ***\n");
+
+	printf("This daemon provides Post Office Protocol v3 services.\n");
+	printf("See the man page for more info.\n");
+
+        printf("\nCommon options for all DBMail daemons:\n");
+	printf("     -f file   specify an alternative config file\n");
+	printf("     -p file   specify an alternative runtime pidfile\n");
+	printf("     -n        do not daemonize (no children are forked)\n");
+	printf("     -v        log to the console (only useful with -n)\n");
+	printf("     -V        show the version\n");
+	printf("     -h        show this help message\n");
+
+	return 0;
+}
+
+
 #ifdef PROC_TITLES
 int main(int argc, char *argv[], char **envp)
 #else
@@ -76,7 +96,7 @@ int main(int argc, char *argv[])
 #endif
 {
 	serverConfig_t config;
-	int result, status;
+	int result, status, no_daemonize = 0;
 	pid_t pid;
 	int opt;
 
@@ -84,17 +104,33 @@ int main(int argc, char *argv[])
 
 	/* get command-line options */
 	opterr = 0;		/* suppress error message from getopt() */
-	while ((opt = getopt(argc, argv, "vhf:")) != -1) {
+	while ((opt = getopt(argc, argv, "vVhqnf:p:")) != -1) {
 		switch (opt) {
 		case 'v':
+			/* TODO: Perhaps verbose should log to the console with -n? */
+			break;
+		case 'V':
 			printf("\n*** DBMAIL: dbmail-pop3d version "
 			       "$Revision$ %s\n\n", COPYRIGHT);
 			return 0;
+		case 'n':
+			/* TODO: We should also prevent children from forking,
+			 * but for now we'll just set a flag and skip Daemonize. */
+			no_daemonize = 1;
+			break;
 		case 'h':
-			printf("\ndbmail-pop3d: DBMAIL pop3 daemon\n");
-			printf
-			    ("Usage: dbmail-pop3d (-v|-h|[-f config_filename])\n");
+			do_showhelp();
 			return 0;
+		case 'p':
+			if (optarg && strlen(optarg) > 0)
+				pidFile = optarg;
+			else {
+				fprintf(stderr,
+					"dbmail-pop3d: -p requires a filename "
+					"argument\n\n");
+				return 1;
+			}
+			break;
 		case 'f':
 			if (optarg && strlen(optarg) > 0)
 				configFile = optarg;
@@ -112,9 +148,16 @@ int main(int argc, char *argv[])
 	}
 
 	SetMainSigHandler();
-	Daemonize();
-	result = 0;
+	
+	/* TODO: don't spawn children, either. this is at least a good start. */
+	if (!no_daemonize)
+		Daemonize();
 
+	/* We write the pidFile after Daemonize because
+	 * we may actually be a child of the original process. */
+	pidfile_create(pidFile, getpid());
+
+	result = 0;
 	do {
 		mainStop = 0;
 		mainRestart = 0;

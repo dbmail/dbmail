@@ -1,0 +1,55 @@
+#!/sbin/runscript
+#
+# chkconfig: - 91 35
+# description: Starts and stops the dbmail-pop3d daemon
+#
+
+# Where are the binaries located?
+PROGRAM=dbmail-pop3d
+BIN_DIR=/usr/local/sbin
+
+PID_DIR=/var/run/dbmail
+PID=pid
+
+# Where is the dbmail.conf file located?
+CONFIG=/etc/dbmail.conf
+
+# opts="${opts} reload"
+
+depend() {
+	need net
+	# This won't cause a hard failure if neither is installed, however.
+	use mysql
+	use pgsql
+	after mta
+}
+
+initService() {
+    # Avoid using root's TMPDIR
+    unset TMPDIR
+
+    # Check that config file exists.
+    [ -f $CONFIG ] || exit 0
+
+    RETVAL=0
+}
+
+start() {
+	initService
+	ebegin "Starting DBMail POP3 daemon ($PROGRAM)"
+	    start-stop-daemon --start --quiet \
+		--pidfile $PID_DIR/$PROGRAM.$PID \
+		--exec $BIN_DIR/$PROGRAM \
+		--name $PROGRAM \
+		-- -f $CONFIG -p $PID_DIR/$PROGRAM 2>&1
+	eend $?
+}	
+
+stop() {
+	initService
+	ebegin "Stopping DBMail POP3 daemon ($PROGRAM)"
+	    start-stop-daemon --stop --quiet --retry 5 \
+		--pidfile $PID_DIR/$PROGRAM.$PID
+	eend $?
+}	
+

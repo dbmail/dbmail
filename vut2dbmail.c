@@ -22,7 +22,7 @@
  * \file vut2dbmail.c
  *
  * \brief converts a virtual user table to dbmail entries
- *        the input is read from stdin
+ *        the input is read from inputFile
  */
 
 #ifdef HAVE_CONFIG_H
@@ -32,22 +32,128 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <unistd.h>
+#include <errno.h>
 #include "db.h"
 #include "auth.h"
 #include "dbmail.h"
 
+#define PNAME "dbmail/readvut"
+
 #define MAXLINESIZE 1024
 #define DEF_MAXMAILSIZE 1024
 
+extern db_param_t _db_params;
+
+FILE *inputFile = NULL;
 char *configFile = DEFAULT_CONFIG_FILE;
+
+/* Command line options. */
+int quiet = 0, verbose = 0, no_to_all = 0, yes_to_all = 0;
 
 char line[MAXLINESIZE];
 int process_piece(char *left, char *right);
 
-int main(void)
+int do_showhelp(void) {
+	printf("*** dbmail-readvut ***\n");
+
+	printf("Use this program to copy a virtual user table among your DBMail users.\n");
+	printf("See the man page for more info. Summary:\n\n");
+	printf("     [file]    read the specified VUT file or stdin if not specified\n");
+
+        printf("\nCommon options for all DBMail utilities:\n");
+	printf("     -f file   specify an alternative config file\n");
+	printf("     -q        quietly skip interactive prompts\n");
+	printf("     -n        show the intended action but do not perform it, no to all\n");
+	printf("     -y        perform all proposed actions, as though yes to all\n");
+	printf("     -v        verbose details\n");
+	printf("     -V        show the version\n");
+	printf("     -h        show this help message\n");
+
+	return 0;
+}
+
+int main(int argc, char *argv[])
 {
+	int opt;
 	int i, result;
 	char *left, *right, *tmp;
+
+	openlog(PNAME, LOG_PID, LOG_MAIL);
+	setvbuf(stdout, 0, _IONBF, 0);
+
+	/* If we don't get an argument, use stdin. */
+	inputFile = stdin;
+
+	/* get options */
+	opterr = 0;		/* suppress error message from getopt() */
+	/* The optstring is: major modes, minor options, common options. */
+	while ((opt = getopt(argc, argv, "-f:qnyvVhp::")) != -1) {
+		switch (opt) {
+		/* The filename isn't preceded by an option,
+		 * so we're using the initial '-' in optstring
+		 * to have it appear as an option to 1 (1, not '1') */
+		case 1:
+			if (optarg && strlen(optarg) > 0
+			&& strcmp("-", optarg) != 0) {
+				if (!(inputFile = fopen(optarg, "r"))) {
+					fprintf(stderr, "Cannot open file [%s], error was [%s]\n",
+						optarg, strerror(errno));
+					return 1;
+					}
+				}
+			break;
+		/* Common options */
+		case 'f':
+			if (optarg && strlen(optarg) > 0)
+				configFile = optarg;
+			else {
+				fprintf(stderr,
+					"dbmail-readvut: -f requires a filename\n");
+				return 1;
+			}
+			break;
+
+		case 'h':
+			do_showhelp();
+			return 1;
+			break;
+
+		case 'n':
+			if (!yes_to_all)
+				no_to_all = 1;
+			break;
+
+		case 'y':
+			if (!no_to_all)
+				yes_to_all = 1;
+			break;
+
+		case 'q':
+			if (!verbose)
+				quiet = 1;
+			break;
+
+		case 'v':
+			if (!quiet)
+				verbose = 1;
+			break;
+
+		case 'V':
+			printf("\n*** DBMAIL: dbmail-readvut version "
+			       "$Revision$ %s\n\n", COPYRIGHT);
+			return 0;
+
+		default:
+			/*printf("unrecognized option [%c], continuing...\n",optopt); */
+			break;
+		}
+	}
+
+	/* read the config file */
+	ReadConfig("DBMAIL", configFile);
+	SetTraceLevel("DBMAIL");
+	GetDBParams(&_db_params);
 
 	if (db_connect() != 0) {
 		fprintf(stderr, "Could not connect to database\n");
@@ -61,9 +167,9 @@ int main(void)
 	}
 
 	do {
-		fgets(line, MAXLINESIZE, stdin);
+		fgets(line, MAXLINESIZE, inputFile);
 
-		if (ferror(stdin) || feof(stdin))
+		if (ferror(inputFile) || feof(inputFile))
 			break;
 
 		if (line[0] != '#' && line[0] != '\n' && line[0]) {
@@ -111,7 +217,7 @@ int main(void)
 			} while (tmp && *right);
 
 		}
-	} while (!feof(stdin) && !ferror(stdin));
+	} while (!feof(inputFile) && !ferror(inputFile));
 
 	/* ok everything inserted. 
 	 *
@@ -120,6 +226,7 @@ int main(void)
 
 	db_disconnect();
 	auth_disconnect();
+	config_free();
 	return 0;
 }
 
@@ -153,7 +260,7 @@ int process_piece(char *left, char *right)
 		if (useridnr == 0) {
 			/* new user */
 			if (auth_adduser
-			    (right, "geheim", "", "0", "0",
+			    (right, "geheim", "", 0, 0,
 			     &useridnr) == -1) {
 				fprintf(stderr,
 					"Could not add user [%s]\n",

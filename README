@@ -4,11 +4,11 @@
 What is it?
 ===========
 In short:
-DBMAIL is a collection of programs that enables email to be
+DBMail is a collection of programs that enables email to be
 stored in and retrieved from a database. 
 
-Read the INSTALL file for installation of DBMAIL.
-Read the EXTRAS file about extra features of DBMAIL.
+Read the INSTALL file for installation of DBMail.
+Read the EXTRAS file about extra features of DBMail.
 
 
 Why is it usefull?
@@ -17,7 +17,7 @@ Well, for me it's usefull because a number of reasons.
 - it enables me to create mailboxes without the need of systemusers.
 - mail is more effeciently stored and therefore it can
   be inserted an retrieved much faster dan any regular system 
-  (DBmail is currently able to retrieve aprox. 250 mail messages per second)
+  (DBMail is currently able to retrieve aprox. 250 mail messages per second)
 - it's more expandable. A database is much easier to access than
   a flat file or a Maildir. We don't need to parse first.
 - In my case, i can easily link a mailbox to a certain client
@@ -33,17 +33,17 @@ Who created it?
 Me, Eelco van Beek <eelco@ic-s.nl>. At first, i created 
 a very sloppy version of this program which didn't work at all.
 
-Because the DBMAIL mailing system is big i needed help. 
+Because the DBMail mailing system is big i needed help. 
 So i asked Roel <roel@ic-s.nl>, one of the people working with me 
-here at IC&S, to join in developing DBMAIL further.
+here at IC&S, to join in developing DBMail further.
 Roel started working on the imapd, while i was debugging the pop3d
 and the injector program dbmail-smtp.
 After that, Roel improved all dbmail components for speed and killed a 
-lot of bugs allong the way.
+lot of bugs along the way.
 
-DBMAIL is now a company effort to create a fast, effecient and
+DBMail is now a company effort to create a fast, effecient and
 scalable database driven mailingsystem. IC&S is fully behind 
-opensource and the GPL. Therefore DBMAIL has the GPL licence.
+opensource and the GPL. Therefore DBMail has the GPL licence.
 However IC&S does provide commercial support and consultancy
 for this product. For more information about this you can 
 send an email to info@ic-s.nl.
@@ -68,13 +68,13 @@ Future
 - more database drivers
 - GUI's
 
-check the website for further DBMAIL plans.
+check the website for further DBMail plans.
 
-What kind of licence is DBmail?
+What kind of licence is DBMail?
 ===============================
-DBmail is used under the GPL+ licence. 
+DBMail is used under the GPL+ licence. 
 The + is that i would like to know how stuff is working out. So
-If you have DBMAIL running and you have like 1002919183 users, 
+If you have DBMail running and you have like 1002919183 users, 
 i would want to know (to bragg about it ;).
 
 

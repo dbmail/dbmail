@@ -112,7 +112,7 @@ int db_search(int *rset, int setlen, const char *key, mailbox_t * mb,
        /** \todo this next solution (pms.%s) is really dirty. If anything,
 	   the IMAP search algorithm is dirty, and should be fixed */
 		snprintf(query, DEF_QUERYSIZE,
-			 "SELECT msg.message_idnr FROM messages msg, physmessage pms "
+			 "SELECT msg.message_idnr FROM dbmail_messages msg, dbmail_physmessage pms "
 			 "WHERE msg.mailbox_idnr = '%llu' "
 			 "AND msg.physmessage_id = pms.id "
 			 "AND msg.status < '%d' "
@@ -120,7 +120,7 @@ int db_search(int *rset, int setlen, const char *key, mailbox_t * mb,
 			 "AND pms.%s", mb->uid, MESSAGE_STATUS_DELETE, key);
 	} else {
 		snprintf(query, DEF_QUERYSIZE,
-			 "SELECT message_idnr FROM messages "
+			 "SELECT message_idnr FROM dbmail_messages "
 			 "WHERE mailbox_idnr = '%llu' "
 			 "AND status < '%d'  AND unique_id!='' AND %s", mb->uid,
 			 MESSAGE_STATUS_DELETE, key);
@@ -360,9 +360,9 @@ int db_search_range(db_pos_t start, db_pos_t end,
 	}
 
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT messageblk FROM messageblks "
-		 "LEFT JOIN messages ON "
-		 "messages.physmessage_id = messageblks.physmessage_id "
+		 "SELECT messageblk FROM dbmail_messageblks "
+		 "LEFT JOIN dbmail_messages ON "
+		 "dbmail_messages.physmessage_id = dbmail_messageblks.physmessage_id "
 		 "WHERE message_idnr = '%llu' "
 		 "ORDER BY messageblk_idnr", msg_idnr);
 

@@ -147,18 +147,15 @@ int auth_check_user_ext(const char *username, struct list *userids,
  * \param password his/her password
  * \param enctype encryption type of password
  * \param clientid client the user belongs with
- * \param maxmail maximum size of mailbox in bytes. (prepend with M for
- * megabytes or K for kilobytes)
+ * \param maxmail maximum size of mailbox in bytes
  * \param user_idnr will hold the user_idnr of the user after return. Must hold
  * a valid pointer on call.
  * \return 
  *     - -1 on error
  *     -  1 on success
- * \bug this function creates its own query for adding a mailbox. It would probably
- * be a better idea to let db_create_mailbox() handle this.
  */
-int auth_adduser(char *username, char *password, char *enctype,
-		 char *clientid, char *maxmail, u64_t * user_idnr);
+int auth_adduser(const char *username, const char *password, const char *enctype,
+		 u64_t clientid, u64_t maxmail, u64_t * user_idnr);
 /**
  * \brief delete user from the database. Does not delete the user's email!
  * \param username name of user to be deleted

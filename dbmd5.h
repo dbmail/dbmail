@@ -33,6 +33,6 @@
  * \param buf input string
  * \return md5 hash of buf
  */
-unsigned char *makemd5(char *buf);
+unsigned char *makemd5(const char * const buf);
 
 #endif

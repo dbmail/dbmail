@@ -68,9 +68,9 @@ int db_init_msgfetch(u64_t msg_idnr)
 	memset(msgbuf_buf, '\0', (size_t) MSGBUF_WINDOWSIZE);
 	
 	snprintf(query, DEF_QUERYSIZE,
-		"SELECT messageblk FROM messageblks LEFT JOIN messages "
+		"SELECT messageblk FROM dbmail_messageblks LEFT JOIN dbmail_messages "
 		"USING (physmessage_id) "
-		"WHERE messages.message_idnr = '%llu' "
+		"WHERE dbmail_messages.message_idnr = '%llu' "
 		"ORDER BY messageblk_idnr",
 		msg_idnr);
 
@@ -354,9 +354,9 @@ long db_dump_range(MEM * outmem, db_pos_t start,
 	}
 	
 	snprintf(query, DEF_QUERYSIZE,
-		"SELECT messageblk FROM messageblks LEFT JOIN messages "
+		"SELECT messageblk FROM dbmail_messageblks LEFT JOIN dbmail_messages "
 		"USING (physmessage_id) "
-		"WHERE messages.message_idnr = '%llu' "
+		"WHERE dbmail_messages.message_idnr = '%llu' "
 		"ORDER BY messageblk_idnr",
 		msg_idnr);
 

@@ -1,0 +1,126 @@
+.TH DBMAIL-USERS 1 
+.ad
+.fi
+.SH NAME
+dbmail-users
+\-
+manages the DBMail user database.
+.SH SYNOPSIS
+.na
+.nf
+\fBdbmail-users\fR [\fIquiet\fR] \fIa\fR \fIusername\fR \fIpassword\fR \fIclientid\fR \fImaxmail\fR [\fIaliases\fR]
+\fBdbmail-users\fR [\fIquiet\fR] \fIe\fR \fIusername\fR
+\fBdbmail-users\fR [\fIquiet\fR] \fId\fR \fIusername\fR
+\fBdbmail-users\fR [\fIquiet\fR] \fIf\fR \fIalias\fR \fIdeliver-to\fR
+\fBdbmail-users\fR [\fIquiet\fR] \fIx\fR \fIalias\fR \fIdeliver-to\fR
+\fBdbmail-users\fR [\fIquiet\fR] \fIc\fR \fIusername\fR [\fI-u username\fR] [[\fI-p|+p|xp|-5|+5|d5|D5 password\fR] | [\fI-P[:filename]\fR]] [\fI-c clientid\fR] [\fI-q maxmail\fR] [\fI+a alias\fR] [\fI-a alias\fR]
+\fBdbmail-users\fR [\fIquiet\fR] \fIs\fR [\fIusername\fR]
+
+.SH DESCRIPTION
+.ad
+.fi
+The \fBdbmail-users\fR program enables you to manage the \fBDBMail\fR users. 
+It lets you add, delete and change users as well as show information about
+a specific user or display a list of existing users. It also has the capability
+of adding/removing separate aliases.
+
+.SH OPTIONS
+.SH MODE OPTIONS
+.IP "\fB -a \fR user"
+Add a user
+.IP "\fB -d \fR user"
+Delete a user
+.IP "\fB -c \fR user"
+Change details for a user
+.IP "\fB -e \fR user"
+Empty all mailboxes for a user
+.IP "\fB -l \fR uspec"
+List information for matching users
+.IP "\fB -x \fR alias"
+Create an external forwarding address
+.IP "\fB -i \fR"
+Enter an interactive user management console.
+
+.SH MINOR OPTIONS
+.IP "\fB -w \fR passwd"
+Specify user's password on the command line
+.IP "\fB -W \fR [file]"
+Read from a file or prompt for a user's password
+.IP "\fB -p \fR pwtype"
+Password type may be one of the following:
+cleartext, crypt, md5-hash, md5-digest,
+crypt-raw, md5-hash-raw, md5-digest-raw
+.IP "\fB -P \fR [file]"
+Pull encrypted password from the shadow file
+.IP "\fB -u \fR user"
+New username (only useful for -c, change)
+.IP "\fB -g \fR cid"
+Assign the user to a client group.
+.IP "\fB -m \fR max"
+Set the maximum mail quota in <bytes>B,
+<kbytes>K, or <mbytes>M, default in bytes
+If set to 0, there will be no limit.
+.IP "\fB -s \fR alia.."
+Adds a list of recipient aliases. An alias is an e-mail address that is being 
+delivered to the \fBDBMail\fR mailsystem and should be delivered to this user.
+.IP "\fB -S \fR alia.."
+Removes a list of recipient aliases (wildcards supported)
+.IP "\fB -t \fR fwds.."
+Adds a list of deliver-to forwards
+.IP "\fB -T \fR fwds.."
+Removes a list of deliver-to forwards (wildcards supported)
+
+
+.SH COMMON OPTIONS
+.IP "\fB-f\fR configfile"
+Specify an alternate config file. The utilities are currently hardcoded to use
+/etc/dbmail.conf for their configs, and will halt if the config file
+cannot be found. Use the \fB\-f\fR configfile option to specify your
+system's preferred config file location.
+.IP \fB-q\fR
+Quietly skip interactive prompts and helpful status messages which
+would otherwise be printed to \fIstdout\fR.  Use two \fB-q\fR's to
+silence errors which would otherwise be printed to \fIstderr\fR.
+.IP \fB-n\fR
+Show the intended action but do not perform it, as though no to all.
+.IP \fB-y\fR
+Perform all proposed actions, as though yes to all.
+.IP \fB-v\fR
+Operate verbosely.
+Some of the utilities in the DBMail suite can take two \fB-v\fR's
+for extra verbosity. Those which don't understand this convention
+won't complain about having the extra \fB-v\fR and will simply
+operate at their normal verbosity.
+.IP \fB-V\fR
+Show the version and copyright, then exit.
+.IP \fB-h\fR
+Show a brief summary of options, then exit.
+.SH EXAMPLES
+.TP
+.BI
+\fBdbmail-users\fR a foo secret 0 0 foo@bar.net foo@bar.org
+This will add a user foo with password secret. This user will not have any limit on the mail
+she/he will receive. E-mail to foo@bar.net and foo@bar.org are delivered to this user (user foo).
+.SH DIAGNOSTICS
+.ad
+.fi
+Errors and notifications are send to the trace output as set 
+in the \fBDBMail\fR configfile.
+.SH BUGS
+.PP
+No known bugs.
+.SH LICENSE
+.na
+.nf
+.ad
+.fi
+DBMail and it's components are (c) IC&S and distributed under the GPL. 
+.SH AUTHOR(S)
+.na
+.nf
+Eelco van Beek
+Roel Rozendaal
+IC&S 
+Koningsweg 4
+3582 GE Utrecht
+http://www.ic-s.nl

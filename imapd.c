@@ -39,6 +39,7 @@
 #include "server.h"
 #include "debug.h"
 #include "misc.h"
+#include "pidfile.h"
 #include "dbmail.h"
 #ifdef PROC_TITLES
 #include "proctitleutils.h"
@@ -46,6 +47,7 @@
 
 #define PNAME "dbmail/imap4d"
 
+char *pidFile = DEFAULT_PID_DIR "dbmail-imapd" DEFAULT_PID_EXT;
 char *configFile = DEFAULT_CONFIG_FILE;
 
 /* set up database login data */
@@ -61,6 +63,23 @@ int imap_before_smtp = 0;
 int mainRestart = 0;
 int mainStop = 0;
 
+int do_showhelp(void) {
+	printf("*** dbmail-imapd ***\n");
+
+	printf("This daemon provides Internet Message Access Protocol v4.1 services.\n");
+	printf("See the man page for more info.\n");
+
+        printf("\nCommon options for all DBMail daemons:\n");
+	printf("     -f file   specify an alternative config file\n");
+	printf("     -p file   specify an alternative runtime pidfile\n");
+	printf("     -n        do not daemonize (no children are forked)\n");
+	printf("     -v        log to the console (only useful with -n)\n");
+	printf("     -V        show the version\n");
+	printf("     -h        show this help message\n");
+
+	return 0;
+}
+
 
 #ifdef PROC_TITLES
 int main(int argc, char *argv[], char **envp)
@@ -69,24 +88,68 @@ int main(int argc, char *argv[])
 #endif
 {
 	serverConfig_t config;
-	int result, status;
+	int result, status, no_daemonize = 0;
 	pid_t pid;
+	int opt;
 
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 
-	if (argc >= 2 && argv[1]) {
-		if (strcmp(argv[1], "-v") == 0) {
-			printf
-			    ("\n*** DBMAIL: dbmail-imap version $Revision$ %s\n",
-			     COPYRIGHT);
+	/* get command-line options */
+	opterr = 0;		/* suppress error message from getopt() */
+	while ((opt = getopt(argc, argv, "vVhqnf:p:")) != -1) {
+		switch (opt) {
+		case 'v':
+			/* TODO: Perhaps verbose should log to the console with -n? */
+			break;
+		case 'V':
+			printf("\n*** DBMAIL: dbmail-imapd version "
+			       "$Revision$ %s\n\n", COPYRIGHT);
 			return 0;
-		} else if (argv[2] && (strcmp(argv[1], "-f") == 0)) {
-			configFile = argv[2];
+		case 'n':
+			/* TODO: We should also prevent children from forking,
+			 * but for now we'll just set a flag and skip Daemonize. */
+			no_daemonize = 1;
+			break;
+		case 'h':
+			do_showhelp();
+			return 0;
+		case 'p':
+			if (optarg && strlen(optarg) > 0)
+				pidFile = optarg;
+			else {
+				fprintf(stderr,
+					"dbmail-imapd: -p requires a filename "
+					"argument\n\n");
+				return 1;
+			}
+			break;
+		case 'f':
+			if (optarg && strlen(optarg) > 0)
+				configFile = optarg;
+			else {
+				fprintf(stderr,
+					"dbmail-imapd: -f requires a filename "
+					"argument\n\n");
+				return 1;
+			}
+			break;
+
+		default:
+			break;
 		}
 	}
 
+
 	SetMainSigHandler();
-	Daemonize();
+
+	/* TODO: don't spawn children, either. this is at least a good start. */
+	if (!no_daemonize)
+		Daemonize();
+
+	/* We write the pidFile after Daemonize because
+	 * we may actually be a child of the original process. */
+	pidfile_create(pidFile, getpid());
+
 	result = 0;
 
 	do {

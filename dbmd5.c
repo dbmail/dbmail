@@ -33,7 +33,7 @@
 #include "md5.h"
 #include "debug.h"
 
-unsigned char *makemd5(char *buf)
+unsigned char *makemd5(const char * const buf)
 {
 	struct GdmMD5Context mycontext;
 	unsigned char result[16];

@@ -27,9 +27,7 @@ PATH=$PROGDIR:$PATH
 export LD_LIBRARY_PATH=$DBLIBDIR:$LD_LIBRARY_PATH
 export LIBPATH=$DBLIBDIR:$LIBPATH
 
-# hopefully someday a pid file will be supported
-# OPTS="-f $CONFIGFILE -p $PIDFILE"
-OPTS="-f $CONFIGFILE"
+OPTS="-f $CONFIGFILE -p $PIDFILE"
 
 test -x $PROGDIR/$PROGRAM || exit 1
 
@@ -43,9 +41,7 @@ case "$1" in
 
     stop)
 	echo -n "Stopping DBMail POP3 daemon ... "
-	killall $PROGRAM
-	# hopefully someday this will work...
-	# kill `cat $PIDFILE`
+	kill `cat $PIDFILE`
 	echo "done."
     ;;
 

@@ -1,43 +1,42 @@
-.TH DBMAIL-SMTP 1 
+.TH DBMAIL-UTIL 1 
 .ad
 .fi
 .SH NAME
-dbmail-smtp
+dbmail-util
 \-
-inserts messages into the \fBDBMail\fR mailsystem.
-
+maintains the integrity and cleanliness of the \fBDBMail\fR datatables.
 .SH SYNOPSIS
-.B dbmail-smtp
-[\fB-n\fR \fIheaderfield\fR] [\fB-d\fR \fIaddresses\fR] [\fB-u \fIusernames\fR] [\fB-m\fR \fImailboxname\fR] [\fB-r\fR \fIreturn path\fR] [\fB-f\fR \fIfile\fR]
+.na
+.nf
+\fBdbmail-util [-cirlphd] [-f configFile]\fR
 .SH DESCRIPTION
 .ad
 .fi
-The 
-.B dbmail-smtp 
-program inserts messages from the commandline or from any MTA into the 
-.B DBMail
-mailsystem. The program reads from standard input.
-
+The \fBdbmail-util\fR program does a global database cleanup and integrity
+check. All messages that are set for deletion will be marked for final deletion 
+(status 3). All message that are marked for final deletion will be cleared from 
+the database. The integrity check will check for unconnected messageblocks, 
+unconnected messages and unconnected mailboxes.
 .SH OPTIONS
+.IP \fB-c\fR
+clean up unlinked message entries
+.IP \fB-t\fR
+test for message integrity
+.IP \fB-n\fR
+null message check
+.IP \fB-r\fR
+repair any integrity problems
+.IP \fB-p\fR
+purge messages have the DELETE status set
+.IP \fB-d\fR
+set DELETE status for deleted messages
+.IP "-l time"
+clear the IP log used for IMAP/POP-before-SMTP
+the time is specified as <hours>h<minutes>m
+(don't include the angle brackets, though)
+.IP \fB-i\fR
+Enter an interactive user management console.
 
-.IP "\fB-t\fR headerfield" 
-Deliver messages to the recipient MIME header specified in 
-.I headerfield. 
-The default header to use is the "Deliver-To:" header.
-.IP "\fB-d\fR addresses..."
-Deliver messages to the recipients specified by 
-.I addresses.
-This option is mostly used for delivery from an MTA.
-Seperate multiple addresses by spaces.
-.IP "\fB-u\fR usernames..."
-Deliver messages straight to a users with username 
-.I usernames. 
-Seperate multiple usernames with spaces.
-.IP "\fB-m\fR mailboxname"
-Deliver messages to mailbox \fImailboxname\fR of the recipient. If this mailbox does not exist yet, it is created.
-.IP "\fB-r\fR returnpath"
-Set return path for bounces and other error reports to 
-.I return path.
 .SH COMMON OPTIONS
 .IP "\fB-f\fR configfile"
 Specify an alternate config file. The utilities are currently hardcoded to use
@@ -67,10 +66,9 @@ Show a brief summary of options, then exit.
 .fi
 Errors and notifications are send to the trace output as set 
 in the \fBdbmail.conf\fR file.
-
 .SH BUGS
 .PP
-There are no known bugs.
+No known bugs.
 .SH LICENSE
 .na
 .nf
@@ -81,7 +79,9 @@ DBMail and it's components are (c) IC&S and distributed under the GPL.
 .na
 .nf
 Eelco van Beek
+Roel Rozendaal
 IC&S 
 Koningsweg 4
 3582 GE Utrecht
 http://www.ic-s.nl
+
