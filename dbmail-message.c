@@ -588,7 +588,7 @@ int dbmail_message_headers_cache(struct DbmailMessage *self)
 	assert(self);
 	assert(self->physid);
 	g_mime_header_foreach(GMIME_OBJECT(self->content)->headers, _header_cache, self);
-	if (dm_errno)
+	if (dm_errno) 
 		return -1;
 	return 1;
 }
@@ -646,6 +646,10 @@ void _header_cache(const char *header, const char *value, gpointer user_data)
 	
 	if (! (safe_value = dm_stresc(value)))
 		return;
+	
+	/* clip oversized headervalues */
+	if (strlen(safe_value) >= 255)
+		safe_value[255] = '\0';
 	
 	q = g_string_new("");
 	
