@@ -4,17 +4,25 @@
 #include "bounce.h"
 #include "list.h"
 #include "mime.h"
-extern char *header; 
+#include "dbmysql.h"
+
+ extern char *header; 
  extern unsigned long headersize; 
 
  extern struct list mimelist;  
- extern struct list users; 
+ extern struct list users;  
 
 int bounce (char *header, char *destination_address, int type)
 {
 	void *sendmail_stream;
 	struct list from_addresses;
 	struct element *tmpelement;
+	char *dbmail_from_address;
+	char *sendmail;
+
+	/* reading configuration from db */
+	dbmail_from_address = db_get_config_item ("DBMAIL_FROM_ADDRESS",CONFIG_MANDATORY);
+	sendmail = db_get_config_item ("SENDMAIL", CONFIG_MANDATORY);
 	
 	trace (TRACE_DEBUG,"bounce(): creating bounce message for bounce type [%d]",type);
 		
@@ -34,17 +42,17 @@ int bounce (char *header, char *destination_address, int type)
 			while (tmpelement!=NULL)
 				{
 				/* open a stream to sendmail 
-				the SENDMAIL macro is defined in bounce.h */
+				the sendmail macro is defined in bounce.h */
 
-				(FILE *)sendmail_stream=popen (SENDMAIL,"w");
+				(FILE *)sendmail_stream=popen (sendmail,"w");
 	
 				if (sendmail_stream==NULL)
 					{
 					/* could not open a succesfull stream */
-					trace(TRACE_MESSAGE,"bounce(): could not open a pipe to %s",SENDMAIL);
+					trace(TRACE_MESSAGE,"bounce(): could not open a pipe to %s",sendmail);
 					return -1;
 					}
-				fprintf ((FILE *)sendmail_stream,"From: %s\n",DBMAIL_FROM_ADDRESS);
+				fprintf ((FILE *)sendmail_stream,"From: %s\n",dbmail_from_address);
 				fprintf ((FILE *)sendmail_stream,"To: %s\n",(char *)tmpelement->data);
 				fprintf ((FILE *)sendmail_stream,"Subject: DBMAIL: delivery failure\n");
 				fprintf ((FILE *)sendmail_stream,"\n");
@@ -64,6 +72,7 @@ int bounce (char *header, char *destination_address, int type)
 				/* jump forward to next recipient */
 				tmpelement=tmpelement->nextnode;
 				}
+			break;
 			};
 		case BOUNCE_STORAGE_LIMIT_REACHED:
 			{
@@ -79,17 +88,17 @@ int bounce (char *header, char *destination_address, int type)
 			while (tmpelement!=NULL)
 				{
 				/* open a stream to sendmail 
-				the SENDMAIL macro is defined in bounce.h */
+				the sendmail macro is defined in bounce.h */
 
-				(FILE *)sendmail_stream=popen (SENDMAIL,"w");
+				(FILE *)sendmail_stream=popen (sendmail,"w");
 	
 				if (sendmail_stream==NULL)
 					{
 					/* could not open a succesfull stream */
-					trace(TRACE_MESSAGE,"bounce(): could not open a pipe to %s",SENDMAIL);
+					trace(TRACE_MESSAGE,"bounce(): could not open a pipe to %s",sendmail);
 					return -1;
 					}
-				fprintf ((FILE *)sendmail_stream,"From: %s\n",DBMAIL_FROM_ADDRESS);
+				fprintf ((FILE *)sendmail_stream,"From: %s\n",dbmail_from_address);
 				fprintf ((FILE *)sendmail_stream,"To: %s\n",(char *)tmpelement->data);
 				fprintf ((FILE *)sendmail_stream,"Subject: DBMAIL: delivery failure\n");
 				fprintf ((FILE *)sendmail_stream,"\n");
@@ -112,6 +121,7 @@ int bounce (char *header, char *destination_address, int type)
 			break;
 			}
 	}
-	
+	free (dbmail_from_address);
+	free (sendmail);
 	return 0;
 }
