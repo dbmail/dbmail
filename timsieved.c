@@ -66,10 +66,6 @@ static int tims_before_smtp = 0;
 static int mainRestart = 0;
 static int mainStop = 0;
 
-static PopSession_t session;
-static char *myhostname;
-static char *timeout_setting;
-
 #ifdef PROC_TITLES
 int main(int argc, char *argv[], char **envp)
 #else
