@@ -156,9 +156,8 @@ u64_t db_get_quotum_used(u64_t userid)
 {
   u64_t q=0;
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT SUM(messagesize) FROM messages WHERE "
-	   "mailbox_idnr IN (SELECT mailbox_idnr FROM mailboxes WHERE owner_idnr = %llu::bigint) AND "
-	   "m.status < 2",
+  snprintf(query, DEF_QUERYSIZE, "SELECT SUM(m.messagesize) FROM messages m, mailboxes mb "
+	   "WHERE m.mailbox_idnr = mb.mailbox_idnr AND mb.owner_idnr = %llu::bigint AND m.status < 2",
 	   userid);
 
   if (db_query(query) == -1)
@@ -2813,21 +2812,9 @@ int db_listmailboxchildren(u64_t uid, u64_t useridnr,
   PQcounter = 0;
   do
     {
-      if (i == *nchildren)
-        {
-	  /*  big fatal */
-	  my_free(*children);
-	  *children = NULL;
-	  *nchildren = 0;
-	  PQclear(res);
-	  trace(TRACE_ERROR, "db_listmailboxchildren(): data when none expected.\n");
-
-	  return -1;
-        }
-
       (*children)[i++] = strtoull(row, NULL, 10);
+      PQcounter++;
       row = PQgetvalue (res, PQcounter, 0);
-      PQcounter ++;
     }
   while (PQcounter < PQntuples (res));
 
