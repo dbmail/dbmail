@@ -10,6 +10,3 @@ getopt()
 2004-02-04 ():
 dbmail bounces have wrong envelope and needs to be more sane on where to send bounce
 to.
-
-2004-02-24 ():
-messages larger than 512 are not correctly inserted into the database.
