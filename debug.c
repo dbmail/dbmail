@@ -78,12 +78,6 @@ void trace (int level, char *formatstring, ...)
 	}
       va_end(argp);
     }
-  else
-    if (level == TRACE_MESSAGE)
-      {
-	vsyslog (LOG_NOTICE, formatstring, argp);
-	va_end(argp);
-      }
 
   /* very big fatal error 
    * bailout */
