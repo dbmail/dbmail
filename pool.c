@@ -259,10 +259,13 @@ int child_register()
 
 void child_reg_connected()
 {
-	pid_t pid = getpid();
+	int key;
+	pid_t pid;
+	
+	pid = getpid();
 
 	scoreboard_wrlck();
-	int key = getKey(pid);
+	key = getKey(pid);
 	scoreboard->child[key].status = STATE_CONNECTED;
 	scoreboard_unlck();
 
@@ -272,10 +275,13 @@ void child_reg_connected()
 
 void child_reg_disconnected()
 {
-	pid_t pid = getpid();
+	int key;
+	pid_t pid;
+	
+	pid = getpid();
 
 	scoreboard_wrlck();
-	int key = getKey(pid);
+	key = getKey(pid);
 	scoreboard->child[key].status = STATE_IDLE;
 	scoreboard_unlck();
 
@@ -291,11 +297,13 @@ void child_unregister()
 	 * so the parent process can do a waitpid()
 	 *
 	 */
+	int key;
+	pid_t pid;
 	
-	pid_t pid = getpid();
+	pid = getpid();
 
 	scoreboard_wrlck();
-	int key = getKey(pid);
+	key = getKey(pid);
 	scoreboard->child[key].status = STATE_WAIT;
 	scoreboard_unlck();
 
@@ -421,7 +429,9 @@ void manage_spare_children()
 	 *
 	 */
 	int somethingchanged = 0;
-	pid_t chpid = getpid();
+	pid_t chpid;
+	
+	chpid = getpid();
 
 	/* scale up */
 	while ((count_children() < scoreboard->conf->maxChildren)
