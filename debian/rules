@@ -51,9 +51,6 @@ stamps:
 	
 configure: stamps/configure
 stamps/configure: 
-#	for file in config.in aclocal.m4 configure `find . -name Makefile.in`; do \
-#		test -e $$file.orig || mv -v $$file $$file.orig; \
-#	done
 	autoreconf -f -i
 	touch $@
 
@@ -136,8 +133,8 @@ clean1:
 	for file in Makefile config.h config.status libtool stamp-h .deps; do \
 		rm -rf `find . -name $$file`; \
 	done
-	rm -f stamp-h.in
-	rm -f config.log
+	rm -f stamp-h.in config.log aclocal.m4 configure
+	rm -f buildtools/* || true
 	dh_clean
 
 
