@@ -16,7 +16,7 @@ u64_t db_user_exists(const char *username);
 int db_get_known_users(struct list *users);
 u64_t db_getclientid(u64_t useridnr);
 u64_t db_getmaxmailsize(u64_t useridnr);
-
+char* db_getencryption(u64_t useridnr);
 
 int db_check_user (char *username, struct list *userids, int checks);
 u64_t db_adduser (char *username, char *password, char *enctype, char *clientid, char *maxmail);

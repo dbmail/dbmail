@@ -427,10 +427,25 @@ int pop3 (void *stream, char *buffer)
 	memtst((username=(char *)my_malloc(strlen(value)+1))==NULL);
 	strncpy (username,value,strlen(value)+1);
 				
+	/* 
+	 * check the encryption used for this user 
+	 * note that if the user does not exist it is not noted
+	 * by db_getencryption()
+	 */
+	if (strcasecmp(db_getencryption(db_user_exists(username)), "") != 0)
+	  {
+	    /* it should be clear text */
+	    my_free(md5_apop_he);
+	    my_free(username);
+	    username = 0;
+	    md5_apop_he = 0;
+	    return pop3_error(stream,"-ERR APOP command is not supported\r\n");
+	  }
+
 	trace (TRACE_DEBUG,"pop3(): APOP auth, username [%s], md5_hash [%s]",username,
 	       md5_apop_he);
 				
-	result=db_md5_validate (username,md5_apop_he,apop_stamp);
+	result = db_md5_validate (username,md5_apop_he,apop_stamp);
 
 	my_free(md5_apop_he);
 	md5_apop_he = 0;

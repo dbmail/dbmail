@@ -29,6 +29,10 @@ extern char *value; /* used for PQgetvalue */
 extern unsigned long PQcounter; /* used for PQgetvalue loops */
 
 
+/* string to be returned by db_getencryption() */
+#define _DESCSTRLEN 50
+char __db_encryption_desc_string[_DESCSTRLEN];
+
 u64_t db_user_exists(const char *username)
 {
   u64_t uid;
@@ -153,6 +157,55 @@ u64_t db_getmaxmailsize(u64_t useridnr)
 
   PQclear(res);
   return maxmailsize;
+}
+
+
+
+/*
+ * db_getencryption()
+ *
+ * returns a string describing the encryption used for the passwd storage
+ * for this user.
+ * The string is valid until the next function call; in absence of any 
+ * encryption the string will be empty (not null).
+ *
+ * If the specified user does not exist an empty string will be returned.
+ */
+char* db_getencryption(u64_t useridnr)
+{
+  char *row;
+  __db_encryption_desc_string[0] = 0;
+
+  if (useridnr == -1 || useridnr == 0)
+    {
+      /* assume another function returned an error code (-1) 
+       * or this user does not exist (0)
+       */
+      trace(TRACE_ERROR,"db_getencryption(): got (%lld) as userid", useridnr);
+      return __db_encryption_desc_string; /* return empty */
+    }
+      
+  snprintf(query, DEF_QUERYSIZE, "SELECT encryption_type FROM users WHERE user_idnr = %llu",
+	   useridnr);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR,"db_getencryption(): could not retrieve encryption type for user [%llu]\n",
+	    useridnr);
+      return __db_encryption_desc_string; /* return empty */
+    }
+
+  if (PQntuples(res)==0)
+    {
+      PQclear(res);
+      return __db_encryption_desc_string;  /* return empty */
+    }
+
+  row = PQgetvalue(res, 0, 0);
+  strncpy(__db_encryption_desc_string, row, _DESCSTRLEN);
+
+  PQclear(res);
+  return __db_encryption_desc_string;
 }
 
 
@@ -385,7 +438,7 @@ u64_t db_validate (char *user, char *password)
   int is_validated = 0;
   
   snprintf(query, DEF_QUERYSIZE, "SELECT user_idnr, passwd, encryption_type FROM users "
-	   "WHERE user = '%s'", user);
+	   "WHERE userid = '%s'", user);
 
   if (db_query(query)==-1)
     {
