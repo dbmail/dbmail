@@ -107,7 +107,7 @@ VERSION = @VERSION@
 mysqlconfig = @mysqlconfig@
 pgsqlconfig = @pgsqlconfig@
 
-man_MANS = dbmail-adduser.1 dbmail-imapd.1 dbmail-maintenance.1 dbmail-pop3d.1 	dbmail-smtp.1
+man_MANS = dbmail-users.1 dbmail-imapd.1 dbmail-util.1 dbmail-pop3d.1 dbmail-smtp.1
 
 mkinstalldirs = $(SHELL) $(top_srcdir)/buildtools/mkinstalldirs
 CONFIG_HEADER = ../config.h
