@@ -1399,6 +1399,65 @@ int db_cleanup_iplog(const char *lasttokeep)
 }
 
 
+/*
+ * db_empty_mailbox()
+ *
+ * empties the mailbox associated with user userid.
+ *
+ * returns -1 on dbase error, -2 on memory error, 0 on succes
+ *
+ */
+int db_empty_mailbox(u64_t userid)
+{
+  u64_t *mboxids = NULL;
+  unsigned n,i;
+  int result;
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT mailbox_idnr FROM mailboxes WHERE owner_idnr=%llu::bigint",
+	   userid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR,"db_empty_mailbox(): error executing query [%s]",
+	    query);
+      return -1;
+    }
+
+  n = PQntuples(res);
+  if (n==0)
+    {
+      PQclear(res);
+      trace(TRACE_WARNING, "db_empty_mailbox(): user [%llu] does not have any mailboxes?", userid);
+      return 0;
+    }
+
+  mboxids = (u64_t*)my_malloc(n * sizeof(u64_t));
+  if (!mboxids)
+    {
+      trace(TRACE_ERROR, "db_empty_mailbox(): not enough memory");
+      PQclear(res);
+      return -2;
+    }
+
+  for (i=0; i<n; i++)
+    mboxids[i] = strtoull(PQgetvalue(res, i, 0), NULL, 10);
+
+  PQclear(res);
+  
+  for (result=0, i=0; i<n; i++)
+    {
+      if (db_delete_mailbox(mboxids[i], 1) == -1)
+	{
+	  trace(TRACE_ERROR, "db_empty_mailbox(): error emptying mailbox [%llu]", mboxids[i]);
+	  result = -1;
+	}
+    }
+
+  my_free(mboxids);
+  return result;
+}
+
+
 /* 
  * will check for messageblks that are not
  * connected to messages 
@@ -1749,33 +1808,92 @@ int db_delete_message(u64_t uid)
   return db_query(query);
 }
 
+
 /*
  * deletes the specified mailbox. used by maintenance
+ * 
+ * if only_empty is non-zero the mailbox will not be deleted but just emptied.
  */
-int db_delete_mailbox(u64_t uid)
+int db_delete_mailbox(u64_t uid, int only_empty)
 {
-  u64_t msgid;
+  u64_t *msgids = NULL;
+  unsigned i,n;
+
   snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr FROM messages WHERE mailbox_idnr = %llu::bigint",uid);
 
   if (db_query(query) == -1)
-    return -1;
-
-  for (PQcounter = 0; PQcounter < PQntuples (res); PQcounter ++)
     {
-      msgid = strtoull(PQgetvalue (res, PQcounter, 0), NULL, 10);
-
-      snprintf(query, DEF_QUERYSIZE, "DELETE FROM messageblks WHERE message_idnr = %llu::bigint",msgid);
-      if (db_query(query) == -1)
-	return -1;
-
-      snprintf(query, DEF_QUERYSIZE, "DELETE FROM messages WHERE message_idnr = %llu::bigint",msgid);
-      if (db_query(query) == -1)
-	return -1;
+      trace(TRACE_ERROR, "db_delete_mailbox(): could not select message ID's for mailbox [%llu]", uid);
+      return -1;
     }
 
-  snprintf(query, DEF_QUERYSIZE, "DELETE FROM mailboxes WHERE mailbox_idnr = %llu::bigint",uid);
-  return db_query(query);
+  /* first save this result for we cannot keep the result set when executing other queries */
+  n = PQntuples(res);
+  if (n == 0)
+    {
+      PQclear(res);
+      trace(TRACE_INFO, "db_delete_mailbox(): mailbox is empty");
+      if (!only_empty)
+	{
+	  /* delete mailbox */
+	  snprintf(query, DEF_QUERYSIZE, "DELETE FROM mailboxes WHERE mailbox_idnr = %llu::bigint",uid);
+
+	  if (db_query(query) == -1)
+	    {
+	      trace(TRACE_ERROR, "db_delete_mailbox(): could not delete mailbox [%llu]", uid);	  
+	      return -1;
+	    }
+	}
+      return 0;
+    }
+
+  if (! (msgids = (u64_t*)my_malloc(sizeof(u64_t) * n)) )
+    {
+      PQclear(res);
+      trace(TRACE_ERROR, "db_delete_mailbox(): not enough memory");
+    }
+
+  for (i=0; i<n; i++)
+    msgids[i] = strtoull(PQgetvalue(res, i, 0), NULL, 10);
+
+  PQclear(res);
+
+  for (i=0; i<n; i++)
+    {
+      snprintf(query, DEF_QUERYSIZE, "DELETE FROM messageblks WHERE message_idnr = %llu::bigint", msgids[i]);
+      if (db_query(query) == -1)
+	{
+	  trace(TRACE_ERROR, "db_delete_mailbox(): could not delete messageblks for message [%llu]", msgids[i]);
+	  my_free(msgids);
+	  return -1;
+	}
+
+      snprintf(query, DEF_QUERYSIZE, "DELETE FROM messages WHERE message_idnr = %llu::bigint",msgids[i]);
+      if (db_query(query) == -1)
+	{
+	  trace(TRACE_ERROR, "db_delete_mailbox(): could not delete message [%llu]", msgids[i]);
+	  my_free(msgids);
+	  return -1;
+	}
+    }
+
+  my_free(msgids);
+  msgids = NULL;
+
+  if (!only_empty)
+    {
+      /* delete mailbox */
+      snprintf(query, DEF_QUERYSIZE, "DELETE FROM mailboxes WHERE mailbox_idnr = %llu::bigint",uid);
+
+      if (db_query(query) == -1)
+	{
+	  trace(TRACE_ERROR, "db_delete_mailbox(): could not delete mailbox [%llu]", uid);	  
+	  return -1;
+	}
+    }
+  return 0;
 }
+
 
 int db_disconnect()
 {

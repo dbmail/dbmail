@@ -127,13 +127,15 @@ int db_rollback_insert(u64_t ownerid, const char *unique_id);
 int db_log_ip(const char *ip);
 int db_cleanup_iplog(const char *lasttokeep);
 
+int db_empty_mailbox(u64_t userid);
+
 int db_icheck_messageblks(struct list *lostlist);
 int db_icheck_messages(struct list *lostlist);
 int db_icheck_mailboxes(struct list *lostlist);
 
 int db_delete_messageblk(u64_t uid);
 int db_delete_message(u64_t uid);
-int db_delete_mailbox(u64_t uid);
+int db_delete_mailbox(u64_t uid, int only_empty);
 
 u64_t db_insert_result (const char *sequence_identifier);
 int db_send_message_lines (void *fstream, u64_t messageidnr, long lines, int no_end_dot);

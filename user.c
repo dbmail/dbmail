@@ -37,6 +37,7 @@ int do_add(int argc, char *argv[]);
 int do_change(int argc, char *argv[]);
 int do_delete(char *name);
 int do_show(char *name);
+int do_empty(char *name);
 int do_make_alias(char *argv[]);
 int do_remove_alias(char *argv[]);
 
@@ -97,6 +98,7 @@ int main(int argc, char *argv[])
     case 's': result = do_show(argv[2+argidx]); break;
     case 'f': result = do_make_alias(&argv[2+argidx]); break;
     case 'x': result = do_remove_alias(&argv[2+argidx]); break;
+    case 'e': result = do_empty(argv[2+argidx]); break;
     default:
       show_help();
       db_disconnect();
@@ -215,8 +217,6 @@ int do_add(int argc, char *argv[])
 	    }
 	  
 	  quiet_printf("Failed: user exists [%llu]\n", useridnr);
-	  if (quiet)
-	    printf("%llu\n", useridnr);
 	}
       else
 	{
@@ -228,9 +228,6 @@ int do_add(int argc, char *argv[])
     }
 	
   quiet_printf ("Ok, user added id [%llu]\n",useridnr);
-  if (quiet)
-    printf("%llu\n", useridnr); /* show user ID */
-
 
   for (i = 4, result = 0; i<argc; i++)
     {
@@ -515,6 +512,7 @@ int do_show(char *name)
       cid = auth_getclientid(userid);
       quotum = auth_getmaxmailsize(userid);
 
+      quiet_printf("User ID: %llu\n", userid);
       quiet_printf("Client ID: %llu\n",cid);
       quiet_printf("Max. mailboxsize: %llu bytes\n",quotum);
 
@@ -536,6 +534,38 @@ int do_show(char *name)
 }
 
 
+/*
+ * empties the mailbox associated with user 'name'
+ */
+int do_empty(char *name)
+{
+  u64_t userid = auth_user_exists(name);
+  int result;
+
+  if (userid == 0)
+    {
+      quiet_printf("User [%s] does not exist.\n", name);
+      return -1;
+    }
+
+  if (userid == -1)
+    {
+      quiet_printf("Error verifying existence of user [%s]. Please check the log.\n",name);
+      return -1;
+    }
+
+  quiet_printf("Emptying mailbox..."); fflush(stdout);
+
+  result = db_empty_mailbox(userid);
+  if (result != 0)
+    quiet_printf("Error. Please check the log.\n",name);
+  else
+    quiet_printf("Ok.\n");
+
+  return result;
+}
+
+
 int is_valid(const char *name)
 {
   int i;
@@ -554,7 +584,7 @@ void show_help()
 	
   printf("Use this program to manage the users for your dbmail system.\n");
   printf("See the man page for more info. Summary:\n\n");
-  printf("dbmail-adduser [quiet] <a|d|c|s|f|x> [username] [options...]\n\n");
+  printf("dbmail-adduser [quiet] <a|d|c|s|f|x|e> [username] [options...]\n\n");
 
 }
 
