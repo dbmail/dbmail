@@ -598,9 +598,12 @@ int db_check_user (char *username, struct list *userids)
 
 int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines)
 {
-  /* this function writes "lines" to fstream.
+  /* 
+	  this function writes "lines" to fstream.
 	  if lines == -2 then the whole message is dumped to fstream 
-	  newlines are rewritten to crlf */
+	  newlines are rewritten to crlf 
+	  This is excluding the header 
+	*/
 
   char *ckquery;
   char *buffer;
@@ -626,211 +629,88 @@ int db_send_message_lines (void *fstream, unsigned long messageidnr, long lines)
       free(ckquery);
       return 0;
     }
-  /* if (mysql_num_rows(res)<1)
-    {
-      trace (TRACE_ERROR,"db_send_message_lines(): no messageblks for messageid %lu",messageidnr);
-      mysql_free_result(res);
-      free(ckquery);
-      return 0;
-    } */
-
+  
   trace (TRACE_DEBUG,"db_send_message_lines(): sending [%d] lines from message [%lu]",
 	 lines,messageidnr);
   
   block_count=0;
 
-  while (((row = mysql_fetch_row(res))!=NULL) && ((lines>0) || (lines==-2)))
-    {
-      nextpos=row[2];
+	while (((row = mysql_fetch_row(res))!=NULL) && ((lines>0) || (lines==-2) || (block_count==0)))
+	{
+		nextpos=row[2];
       lengths = mysql_fetch_lengths(res);
       rowlength = lengths[2];
 		
 		/* reset our buffer */
       *buffer='\0';
 		
-      while ((*nextpos!='\0') && (rowlength>0) && ((lines>0) || (lines==-2)))
-	{
-	  if (*nextpos=='\n')
-	    {
-
-	      /* we found an newline, now check if there's a return before that */
-				
-	      if (lines!=-2)
-		lines--;
-				
-	      if (tmppos!=NULL)
+		while ((*nextpos!='\0') && (rowlength>0) && ((lines>0) || (lines==-2) || (block_count==0)))
 		{
-		  if (*tmppos=='\r')
-		    sprintf (buffer,"%s%c",buffer,*nextpos);
-		  else 
-		    sprintf (buffer,"%s\r%c",buffer,*nextpos);
-		}
-	      else 
-		sprintf (buffer,"%s\r%c",buffer,*nextpos);
-	    }
-	  else
-	    {
-	      if (*nextpos=='.')
-		{
-		  if (tmppos!=NULL)
-		    {
-		      if (*tmppos=='\n')
-			sprintf (buffer,"%s.%c",buffer,*nextpos);
-		      else
-			sprintf (buffer,"%s%c",buffer,*nextpos);
-		    }
-		  else 
-		    sprintf (buffer,"%s%c",buffer,*nextpos);
-		}
-	      else	
-		sprintf (buffer,"%s%c",buffer,*nextpos);
-	    }
-
-	  tmppos=nextpos;
-				
+			if (*nextpos=='\n')
+			{
+				/* first block is always the full header 
+					so this should not be counted when parsing
+					if lines == -2 none of the lines should be counted 
+					since the whole message is requested */
+				if ((lines!=-2) && (block_count!=0))
+					lines--;
+						
+				if (tmppos!=NULL)
+				{
+					if (*tmppos=='\r')
+						sprintf (buffer,"%s%c",buffer,*nextpos);
+					else 
+						sprintf (buffer,"%s\r%c",buffer,*nextpos);
+				}
+				else 
+					sprintf (buffer,"%s\r%c",buffer,*nextpos);
+				}
+			else
+			{
+				if (*nextpos=='.')
+				{
+					if (tmppos!=NULL)
+					{
+						if (*tmppos=='\n')
+							sprintf (buffer,"%s.%c",buffer,*nextpos);
+						else
+							sprintf (buffer,"%s%c",buffer,*nextpos);
+					}
+					else 
+						sprintf (buffer,"%s%c",buffer,*nextpos);
+				}
+				else	
+					sprintf (buffer,"%s%c",buffer,*nextpos);
+			}
+	
+			tmppos=nextpos;
+					
 			/* get the next character */
-	  nextpos++;
-	  rowlength--;
-	  if (rowlength%500==0)
-	    {
-	      fprintf ((FILE *)fstream,"%s",buffer);
-	      fflush ((FILE *)fstream);
-	      *buffer='\0';
-	    }
-	}
-      /* flush our buffer */
-      fprintf ((FILE *)fstream,"%s",buffer);
-      fflush ((FILE *)fstream);
-    }
-
-  /* delimiter */
-  fprintf ((FILE *)fstream,"\r\n.\r\n");
-  mysql_free_result(res);
-
-  return 1;
-}
-
-int db_send_message_special (void *fstream, unsigned long messageidnr, long lines, char *firstblock, int flush)
-{
-  /* this function writes "lines" to fstream.
-	  if lines == -2 then the whole message is dumped to fstream 
-	  newlines are rewritten to crlf 
-	  firstblock that is sent is firstblock */
-
-  char *ckquery;
-  char *buffer;
-  char *nextpos, *tmppos = NULL;
-  int block_count;
-  unsigned long *lengths;
-  
-  trace (TRACE_DEBUG,"db_send_message_special(): request for [%d] lines",lines);
-
-  memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
-  memtst ((buffer=(char *)malloc(READ_BLOCK_SIZE*2))==NULL);
-  sprintf (ckquery, "SELECT * FROM messageblk WHERE messageidnr=%lu ORDER BY messageblknr ASC",
-	   messageidnr);
-  trace (TRACE_DEBUG,"db_send_message_special(): executing query [%s]",ckquery);
-  if (db_query(ckquery)==-1)
-    {
-      free(ckquery);
-      return 0;
-    }
-  if ((res = mysql_store_result(&conn)) == NULL)
-    {
-      trace(TRACE_ERROR,"db_send_message_special: mysql_store_result failed: %s",mysql_error(&conn));
-      free(ckquery);
-      return 0;
-    }
-
-  trace (TRACE_DEBUG,"db_send_message_special(): sending [%d] lines from message [%lu]",lines,messageidnr);
-  
-  block_count=0;
-
-  while (((row = mysql_fetch_row(res))!=NULL) && ((lines>0) || (lines==-2)))
-    {
-      if (firstblock!=NULL)
-		{
-			/* firstblock must be sent */
-			nextpos=firstblock;
-		}
-      else
-		{
-			nextpos=row[2];
-		}
-
-      lengths = mysql_fetch_lengths(res);
-      rowlength = lengths[2];
+			nextpos++;
+			rowlength--;
+			
+			if (rowlength%500==0) /* purge buffer at every 500 bytes */
+			{
+				fprintf ((FILE *)fstream,"%s",buffer);
+				fflush ((FILE *)fstream);
+				*buffer='\0';
+			}
+		} 
 		
-      /* reset our buffer */
-      buffer[0]='\0';
+		/* next block in while loop */
+		block_count++;
+		trace (TRACE_DEBUG,"db_send_message_lines(): getting nextblock [%d]",block_count);
 		
-      while ((*nextpos!='\0') && (rowlength>0) && ((lines>0) || (lines==-2)))
-	{
-	  if (*nextpos=='\n')
-	    {
-
-				/* we found an newline, now check if there's
-				   a return before that */
-				
-	      if (lines!=-2)
-		lines--;
-				
-	      if (tmppos!=NULL)
-		{
-		  if (tmppos[0]=='\r')
-		    sprintf (buffer,"%s%c",buffer,*nextpos);
-		  else 
-		    sprintf (buffer,"%s\r%c",buffer,*nextpos);
-		}
-	      else 
-		sprintf (buffer,"%s\r%c",buffer,*nextpos);
-	    }
-	  else
-	    {
-	      if (nextpos[0]=='.')
-		{
-		  if (tmppos!=NULL)
-		    {
-		      if (tmppos[0]=='\n')
-			sprintf (buffer,"%s.%c",buffer,*nextpos);
-		      else
-			sprintf (buffer,"%s%c",buffer,*nextpos);
-		    }
-		  else 
-		    sprintf (buffer,"%s%c",buffer,*nextpos);
-		}
-	      else	
-		sprintf (buffer,"%s%c",buffer,*nextpos);
-	    }
-
-	  tmppos=nextpos;
-				
-	  /* get the next character */
-	  nextpos++;
-	  rowlength--;
-	  if (rowlength%500==0)
-	    {
-	      fprintf ((FILE *)fstream,"%s",buffer);
-	      fflush ((FILE *)fstream);
-	      buffer[0]='\0';
-	    }
+		/* flush our buffer */
+		fprintf ((FILE *)fstream,"%s",buffer);
+		fflush ((FILE *)fstream);
 	}
 
-      /* flush our buffer */
-      fprintf ((FILE *)fstream,"%s",buffer);
-		if (flush)
-			fflush ((FILE *)fstream);
-		
-      /* setting firstblock to NULL, this way it will be used only once */
-      if (firstblock!=NULL)
-	firstblock=NULL;
-    }
+	/* delimiter */
+	fprintf ((FILE *)fstream,"\r\n.\r\n");
+	mysql_free_result(res);
 
-  /* delimiter */
-  fprintf ((FILE *)fstream,"\r\n.\r\n");
-  mysql_free_result(res);
-
-  return 1;
+	return 1;
 }
 
 unsigned long db_validate (char *user, char *password)

@@ -459,7 +459,7 @@ int pop3 (void *stream, char *buffer)
 	top_lines = atol (searchptr);
 	top_messageid = atol (value);
 
-	if ((top_lines<1) || (top_messageid<1))
+	if ((top_lines<0) || (top_messageid<1))
     return pop3_error(stream,"-ERR wrong parameter\r\n");
 	
 	trace(TRACE_DEBUG,"pop3():TOP command (partially) retrieving message");

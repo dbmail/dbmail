@@ -312,8 +312,9 @@ int main (int argc, char *argv[])
 			/* scanning for commands */
 			while ((done>0) && (buffer=fgets(buffer,INCOMING_BUFFER_SIZE,rx)))
 			{
-				done=pop3(tx,buffer); 
+				done = pop3(tx,buffer); 
 				fflush (tx);
+				if (feof(rx)) done = -1; /* check of client eof */
 			}
 					
 			/* we've reached the update state */
