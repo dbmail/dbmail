@@ -1,0 +1,50 @@
+.TH DBMAIL-SMTP 1 
+.ad
+.fi
+.SH NAME
+dbmail-smtp
+\-
+Inserts messages into the \fBDbmail\fR mailsystem
+.SH SYNOPSIS
+.na
+.nf
+\fBdbmail-smtp\fR [\fB-n\fR] [\fIheaderfield\fR]
+\fBdbmail-smtp\fR [\fB-d\fR] [\fIaddresses\fR ...]
+.SH DESCRIPTION
+.ad
+.fi
+The \fBdbmail-smtp\fR program inserts messages from the commandline
+or from any MTA into the \fBDbmail\fR mailsystem. The program reads from 
+standard input.
+
+Options:
+.TP
+.BI \fB-n\fR
+Deliver messages to the recipient MIME header specified in \fIheaderfield\fR.
+.TP
+.BI \fB-d\fR 
+Deliver messages to the recipients specified by \fIaddresses\fR. These
+\fIaddresses\fR are seperated by spaces. This option is mostly used for 
+delivery to \fBDbmail\fR from an MTA.
+.SH DIAGNOSTICS
+.ad
+.fi
+Errors and notifications are send to the trace output as set 
+in the \fBDbmail\fR configfile.
+.SH BUGS
+.PP
+There are no known bugs. Work is being done on effiency and speed improvement.
+.SH LICENSE
+.na
+.nf
+.ad
+.fi
+Dbmail and it's components are (c) IC&S and distributed under the GPL. 
+.SH AUTHOR(S)
+.na
+.nf
+Eelco van Beek
+IC&S 
+Koningsweg 4
+3582 GE Utrecht
+http://www.ic-s.nl

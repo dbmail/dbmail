@@ -1,0 +1,64 @@
+.TH DBMAIL-ADDUSER 1 
+.ad
+.fi
+.SH NAME
+dbmail-adduser
+\-
+Adds mailusers to the \fBDbmail\fR mailsystem
+.SH SYNOPSIS
+.na
+.nf
+\fBdbmail-adduser\fR \fIusername\fR \fIpassword\fR \fIclientid\fR \fImaxmail\fR [\fIaliases ...\fR]
+.SH DESCRIPTION
+.ad
+.fi
+The \fBdbmail-adduser\fR program adds mailusers to \fBDbmail\fR. 
+It will also add a default alias (which is the default delivery address) and 
+set all user based iformation like the quota (\fImaxmail\fR).
+
+Options:
+.TP
+.BI \fIusername\fR
+Any username. This username is used for access and authentication (through pop3 or imap4).
+.TP
+.BI \fIpassword\fR 
+Cleartext password for user.
+.TP
+.BI \fIclientid\fR 
+This option enables users to be grouped. \fIclientid\fR specifies the owner of the user.
+.TP
+.BI \fImaxmail\fR 
+The maximum number of bytes that this user is allowed to have in her/his mailbox(es).
+If set to 0, there will be no limit.
+.TP
+.BI \fI[aliases]\fR 
+Aliases for this user (user@domain.com). An alias is an e-mail address that is being 
+delivered to the \fBDbmail\fR mailsystem and needs to be delivered to this user.
+.SH EXAMPLES
+.TP
+.BI
+\fBdbmail-adduser\fR foo secret 0 0 foo@bar.net foo@bar.org
+This will add a user foo with password secret. This user will not have any limit on the mail
+she/he will receive. E-mail to foo@bar.net and foo@bar.org are delivered to this user (user foo).
+.SH DIAGNOSTICS
+.ad
+.fi
+Errors and notifications are send to the trace output as set 
+in the \fBDbmail\fR configfile.
+.SH BUGS
+.PP
+No checking is done by the \fBdbmail-adduser\fR program. It could overwrite existing users.
+.SH LICENSE
+.na
+.nf
+.ad
+.fi
+Dbmail and it's components are (c) IC&S and distributed under the GPL. 
+.SH AUTHOR(S)
+.na
+.nf
+Eelco van Beek
+IC&S 
+Koningsweg 4
+3582 GE Utrecht
+http://www.ic-s.nl

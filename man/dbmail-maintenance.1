@@ -1,0 +1,41 @@
+.TH DBMAIL-MAINTENANCE 1 
+.ad
+.fi
+.SH NAME
+dbmail-maintenance
+\-
+Does a cleanup and integrity check of the \fBDbmail\fR mailsystem
+.SH SYNOPSIS
+.na
+.nf
+\fBdbmail-maintenance\fR
+.SH DESCRIPTION
+.ad
+.fi
+The \fBdbmail-maintenance\fR program does a global database cleanup and integrity
+check. All messages that are set for deletion will be marked for final deletion 
+(status 3). All message that are marked for final deletion will be cleared from 
+the database. The integrity check will check for unconnected messageblocks and
+unconnected mailboxes. This program requires no extra options.
+.SH DIAGNOSTICS
+.ad
+.fi
+Errors and notifications are send to the trace output as set 
+in the \fBDbmail\fR configfile.
+.SH BUGS
+.PP
+Integrity checks are not yet being done.
+.SH LICENSE
+.na
+.nf
+.ad
+.fi
+Dbmail and it's components are (c) IC&S and distributed under the GPL. 
+.SH AUTHOR(S)
+.na
+.nf
+Eelco van Beek
+IC&S 
+Koningsweg 4
+3582 GE Utrecht
+http://www.ic-s.nl

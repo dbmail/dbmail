@@ -1,0 +1,42 @@
+.TH DBMAIL-IMAPD 1 
+.ad
+.fi
+.SH NAME
+dbmail-imapd
+\-
+Is the imap4r1 frontend for the \fBDbmail\fR mailsystem
+.SH SYNOPSIS
+.na
+.nf
+\fBdbmail-imapd\fR
+.SH DESCRIPTION
+.ad
+.fi
+The \fBdbmail-imapd\fR daemon is a fully featured imap server. It will spawn
+into a number of default processes as set in the \fBdbmail.conf\fR file. 
+These processes will enable full imap4r1 communication with clients.
+.SH DIAGNOSTICS
+.ad
+.fi
+Errors and notifications are send to the trace output as set 
+in the \fBDbmail\fR configfile.
+.SH BUGS
+.PP
+Since the RFC on imap4r1 is not very strict and consequently some e-mail clients
+aren't either it's hard to make a fully compatible imapd4 server. However \fBdbmail-imapd\fR
+is tested and found compatible with most imap4r1 clients. \fBdbmail-imapd\fR will also 
+have future configuration options for specific client compatibility.
+.SH LICENSE
+.na
+.nf
+.ad
+.fi
+Dbmail and it's components are (c) IC&S and distributed under the GPL. 
+.SH AUTHOR(S)
+.na
+.nf
+Roel Rozendaal
+IC&S 
+Koningsweg 4
+3582 GE Utrecht
+http://www.ic-s.nl

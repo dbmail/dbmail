@@ -1,0 +1,41 @@
+.TH DBMAIL-POP3D 1 
+.ad
+.fi
+.SH NAME
+dbmail-pop3d
+\-
+Is the pop3d frontend for the \fBDbmail\fR mailsystem
+.SH SYNOPSIS
+.na
+.nf
+\fBdbmail-pop3d\fR
+.SH DESCRIPTION
+.ad
+.fi
+The \fBdbmail-pop3d\fR daemon will spawn into a number of default processes as 
+set in the \fBdbmail.conf\fR file. These processes will act as a pop3d frontend
+for \fBDbmail\fR. All server settings (ip's, ports, time-outs) can be set into the
+\fBdbmail.conf\fR file. However you'll need to run \fBdbmail-config(1)\fR after any
+change.
+.SH DIAGNOSTICS
+.ad
+.fi
+Errors and notifications are send to the trace output as set 
+in the \fBDbmail\fR configfile.
+.SH BUGS
+.PP
+Dbmail-pop3d has no known bugs. Plans are to add some more authentication schemes.
+.SH LICENSE
+.na
+.nf
+.ad
+.fi
+Dbmail and it's components are (c) IC&S and distributed under the GPL. 
+.SH AUTHOR(S)
+.na
+.nf
+Eelco van Beek
+IC&S 
+Koningsweg 4
+3582 GE Utrecht
+http://www.ic-s.nl
