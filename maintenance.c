@@ -3,7 +3,8 @@
  *
  * This is the dbmail housekeeping program. 
  *	It checks the integrity of the database and does a cleanup of all
- *	deleted messages. */
+ *	deleted messages. 
+ */
 
 #include "maintenance.h"
 #include "dbmysql.h"
@@ -14,7 +15,6 @@
 #define LEN 30
 
 void find_time(char *timestr, const char *timespec);
-
 
 
 int main(int argc, char *argv[])
@@ -320,12 +320,12 @@ int main(int argc, char *argv[])
       printf("Ok. All entries before [%s] have been removed.\n",timestr);
     }
   
-
   printf ("Maintenance done.\n\n");
         
   db_disconnect();
   return 0;
 }
+
 
 
 /* 

@@ -146,12 +146,20 @@ typedef struct
 int db_connect();
 int db_disconnect();
 int db_query (const char *query);
+unsigned long db_user_exists(const char *username);
+unsigned long db_getclientid(unsigned long useridnr);
+unsigned long db_getmaxmailsize(unsigned long useridnr);
+
 int db_check_user (char *username, struct list *userids, int checks);
 char *db_get_config_item (char *item, int type);
 int db_clear_config();
 int db_insert_config_item (char *item, char *value);
+
 unsigned long db_adduser (char *username, char *password, char *clientid, char *maxmail);
+int db_delete_user(const char *username);
 int db_addalias (unsigned long useridnr, char *alias, int clientid);
+int db_removealias (unsigned long useridnr, const char *alias);
+
 unsigned long db_get_inboxid (unsigned long *useridnr);
 unsigned long db_get_useridnr (unsigned long messageidnr);
 unsigned long db_get_message_mailboxid (unsigned long *messageidnr);
@@ -159,7 +167,10 @@ unsigned long db_insert_message (unsigned long *useridnr);
 unsigned long db_update_message (unsigned long *messageidnr, char *unique_id,
 				 unsigned long messagesize);
 unsigned long db_insert_message_block (char *block, int messageidnr);
-int db_check_id (char *id);
+
+int db_change_password(unsigned long useridnr, const char *newpass);
+int db_change_clientid(unsigned long useridnr, unsigned long newcid);
+int db_change_mailboxsize(unsigned long useridnr, unsigned long newsize);
 
 int db_log_ip(const char *ip);
 int db_cleanup_iplog(const char *lasttokeep);

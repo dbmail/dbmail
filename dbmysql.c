@@ -261,17 +261,40 @@ unsigned long db_adduser (char *username, char *password, char *clientid, char *
   unsigned long useridnr;
 	
 
-  snprintf (query, DEF_QUERYSIZE,"INSERT INTO user (userid,passwd,clientid,maxmail_size) VALUES "
-	   "('%s','%s',%s,%s)",
-	   username,password,clientid, maxmail);
-	
-  trace (TRACE_DEBUG,"db_adduser(): executing query for user: [%s]", query);
+  /* first check to see if this user already exists */
+  snprintf(query, DEF_QUERYSIZE, "SELECT * FROM user WHERE userid = '%s'", username);
 
   if (db_query(query) == -1)
     {
       /* query failed */
+      trace (TRACE_ERROR, "db_adduser(): query [%s] failed\n", query);
+      return -1;
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL) 
+    {
+      trace(TRACE_ERROR,"db_adduser(): mysql_store_result failed: %s",mysql_error(&conn));
+      return 0;
+    }
+
+  if (mysql_num_rows(res) > 0)
+    {
+      /* this username already exists */
+      trace(TRACE_ERROR,"db_adduser(): user already exists\n");
+      return -1;
+    }
+
+  mysql_free_result(res);
+
+
+  snprintf (query, DEF_QUERYSIZE,"INSERT INTO user (userid,passwd,clientid,maxmail_size) VALUES "
+	   "('%s','%s',%s,%s)",
+	   username,password,clientid, maxmail);
+	
+  if (db_query(query) == -1)
+    {
+      /* query failed */
       trace (TRACE_ERROR, "db_adduser(): query for adding user failed : [%s]", query);
-      
       return -1;
     }
 
@@ -294,11 +317,25 @@ unsigned long db_adduser (char *username, char *password, char *clientid, char *
   return useridnr;
 }
 
+
+int db_delete_user(const char *username)
+{
+  snprintf (query, DEF_QUERYSIZE, "DELETE FROM user WHERE userid = '%s'",username);
+
+  if (db_query(query) == -1)
+    {
+      /* query failed */
+      trace (TRACE_ERROR, "db_delete_user(): query for removing user failed : [%s]", query);
+      return -1;
+    }
+
+  return 0;
+}
+  
+
 int db_addalias (unsigned long useridnr, char *alias, int clientid)
 {
   /* adds an alias for a specific user */
-  
-
   snprintf (query, DEF_QUERYSIZE,
 	    "INSERT INTO aliases (alias,deliver_to,client_id) VALUES ('%s','%lu',%d)",
 	   alias, useridnr, clientid);
@@ -314,6 +351,24 @@ int db_addalias (unsigned long useridnr, char *alias, int clientid)
   
   return 0;
 }
+
+
+int db_removealias (unsigned long useridnr,const char *alias)
+{
+  snprintf (query, DEF_QUERYSIZE,
+	    "DELETE FROM aliases WHERE deliver_to=%lu AND alias = '%s'", useridnr, alias);
+	   
+  if (db_query(query) == -1)
+    {
+      /* query failed */
+      trace (TRACE_ERROR, "db_removealias(): query for removing alias failed : [%s]", query);
+      return -1;
+    }
+  
+  return 0;
+}
+  
+
 
 unsigned long db_get_inboxid (unsigned long *useridnr)
 {
@@ -645,6 +700,88 @@ unsigned long db_insert_message_block (char *block, int messageidnr)
 
   return -1;
 }
+
+
+unsigned long db_user_exists(const char *username)
+{
+  unsigned long uid;
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT useridnr FROM user WHERE userid='%s'",username);
+
+  if (db_query(query)==-1)
+    {
+      trace(TRACE_ERROR, "db_user_exists(): could not execute query\n");
+      return -1;
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL) 
+    {
+      trace(TRACE_ERROR,"db_user_exists: mysql_store_result failed: %s",mysql_error(&conn));
+      return -1;
+    }
+  
+  row = mysql_fetch_row(res);
+  
+  uid = (row && row[0]) ? strtoul(row[0], 0, 0) : 0;
+
+  mysql_free_result(res);
+
+  return uid;
+}
+
+
+unsigned long db_getclientid(unsigned long useridnr)
+{
+  unsigned long cid;
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT clientid FROM user WHERE useridnr = %lu",useridnr);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR,"db_getclientid(): could not retrieve client id for user [%lu]\n",useridnr);
+      return -1;
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_getclientid(): could not store query result: [%s]\n",mysql_error(&conn));
+      return -1;
+    }
+
+  row = mysql_fetch_row(res);
+  cid = (row && row[0]) ? strtoul(row[0], 0, 10) : -1;
+
+  mysql_free_result(res);
+  return cid;
+}
+
+
+unsigned long db_getmaxmailsize(unsigned long useridnr)
+{
+  unsigned long maxmailsize;
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT maxmail_size FROM user WHERE useridnr = %lu",useridnr);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR,"db_getmaxmailsize(): could not retrieve client id for user [%lu]\n",useridnr);
+      return -1;
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_getmaxmailsize(): could not store query result: [%s]\n",
+	    mysql_error(&conn));
+      return -1;
+    }
+
+  row = mysql_fetch_row(res);
+  maxmailsize = (row && row[0]) ? strtoul(row[0], 0, 10) : -1;
+
+  mysql_free_result(res);
+  return maxmailsize;
+}
+
 
 
 int db_check_user (char *username, struct list *userids, int checks) 
@@ -1336,6 +1473,51 @@ unsigned long db_set_deleted ()
  
   
   return mysql_affected_rows(&conn);
+}
+
+
+int db_change_password(unsigned long useridnr, const char *newpass)
+{
+  snprintf(query, DEF_QUERYSIZE, "UPDATE user SET passwd = '%s' WHERE useridnr=%lu", 
+	   newpass, useridnr);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR,"db_change_password(): could not change passwd for user [%lu]\n",useridnr);
+      return -1;
+    }
+
+  return 0;
+}
+
+
+int db_change_clientid(unsigned long useridnr, unsigned long newcid)
+{
+  snprintf(query, DEF_QUERYSIZE, "UPDATE user SET clientid = %lu WHERE useridnr=%lu", 
+	   newcid, useridnr);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR,"db_change_password(): could not change client id for user [%lu]\n",useridnr);
+      return -1;
+    }
+
+  return 0;
+}
+
+int db_change_mailboxsize(unsigned long useridnr, unsigned long newsize)
+{
+  snprintf(query, DEF_QUERYSIZE, "UPDATE user SET maxmail_size = %lu WHERE useridnr=%lu", 
+	   newsize, useridnr);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR,"db_change_password(): could not change maxmailsize for user [%lu]\n",
+	    useridnr);
+      return -1;
+    }
+
+  return 0;
 }
 
 
