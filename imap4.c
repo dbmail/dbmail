@@ -143,6 +143,8 @@ int imap_process(ClientInfo *ci)
       /* clarify data a little */
       clarify_data(line);
 
+      trace(TRACE_MESSAGE,"COMMAND: [%s]\n",line);
+
       if (!(*line))
 	{
 	  fprintf(ci->tx, "* BAD No tag specified\n");

@@ -67,6 +67,15 @@ enum table_messageblk /* prototype for messageblk table */
 };
 
 
+typedef struct
+{
+  int inited;
+  int nblocks,currblock,blockpos;
+  MYSQL_RES *result;
+  MYSQL_ROW block;
+} msgfetch_info_t;
+
+
 int db_connect();
 int db_query (char *query);
 int db_check_user (char *username, struct list *userids);
@@ -99,6 +108,7 @@ int db_noinferiors(unsigned long uid);
 int db_setselectable(unsigned long uid, int value);
 int db_removemsg(unsigned long uid);
 int db_movemsg(unsigned long to, unsigned long from);
+int db_copymsg(unsigned long msgid, unsigned long destmboxid);
 int db_getmailboxname(unsigned long uid, char *name);
 int db_setmailboxname(unsigned long uid, const char *name);
 int db_expunge(unsigned long uid,unsigned long **msgids,int *nmsgs);
@@ -109,7 +119,10 @@ unsigned long db_first_unseen(unsigned long uid);
 int db_get_msgflag(const char *name, unsigned long mailboxuid, unsigned long msguid);
 int db_set_msgflag(const char *name, unsigned long mailboxuid, unsigned long msguid, int val);
 int db_get_msgdate(unsigned long mailboxuid, unsigned long msguid, char *date);
-int db_build_bodystructure(bodystruct_t *bs);
+int db_init_msgfetch(unsigned long uid);
+int db_msgfetch_next(char **data);
+void db_close_msgfetch();
+
 
 int db_msgdump(unsigned long uid);
 

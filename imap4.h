@@ -12,7 +12,12 @@
 
 /* maximum size of a mailbox name */
 #define IMAP_MAX_MAILBOX_NAMELEN 100
+
+/* length of internaldate string */
 #define IMAP_INTERNALDATE_LEN 30
+
+/* max length of number/dots part specifier */
+#define IMAP_MAX_PARTSPEC_LEN 100
 
 int imap_process(ClientInfo *ci);
 int imap_login(ClientInfo *ci);
@@ -27,11 +32,11 @@ enum IMAP4_FLAGS { IMAPFLAG_SEEN = 0x01, IMAPFLAG_ANSWERED = 0x02,
 
 enum IMAP4_PERMISSION { IMAPPERM_READ = 0x01, IMAPPERM_READWRITE = 0x02 };
 
-
+enum IMAP4_FLAG_ACTIONS { IMAPFA_NONE, IMAPFA_REPLACE, IMAPFA_ADD, IMAPFA_REMOVE };
 
 typedef int (*IMAP_COMMAND_HANDLER)(char*, char**, ClientInfo*);
 
-enum BODY_FETCH_ITEM_TYPES { BFIT_TEXT, BFIT_HEADER,
+enum BODY_FETCH_ITEM_TYPES { BFIT_TEXT, BFIT_HEADER, BFIT_MIME,
 			     BFIT_HEADER_FIELDS,
 			     BFIT_HEADER_FIELDS_NOT };
 
@@ -42,6 +47,9 @@ typedef struct
   int argstart;              /* start index in the arg array */
   int argcnt;                /* number of args belonging to this bodyfetch */
   int octetstart,octetcnt;   /* number of octets to be retrieved */
+
+  char partspec[IMAP_MAX_PARTSPEC_LEN]; /* part specifier (i.e. '2.1.3' */
+
 } body_fetch_t;
 
 
@@ -55,83 +63,6 @@ typedef struct
   int getRFC822Header,getRFC822Text;
 } fetch_items_t;
 
-
-typedef struct
-{
-  char *name;
-  char *val;
-} parameter_t;
-
-
-typedef struct
-{
-  char *name;
-  char *source_route;
-  char *mailboxname;
-  char *hostname;
-} address_t;
-
-typedef struct
-{
-  char *date,*subject;
-  
-  int nfrom,nsender,nreplyto,nto,ncc,nbcc;
-  address_t *from,*sender,*replyto,*to,*cc,*bcc;
-
-  char *inreplyto,*messageID;
-} envelope_t;
-
-union bodystruc_t; /* fwd declaration */
-
-typedef struct 
-{
-  char *content_type,*content_subtype;
-
-  parameter_t *param_list;
-  int nparams;
-
-  char *content_id,*content_desc,*content_encoding;
-  int size;
-
-  union
-  {
-    struct
-    {
-      envelope_t *envelope;
-      union bodystruc_t *bodystruc;
-      int nlines;
-    } message_rfc822;
-
-    struct
-    {
-      int nlines;
-    } text;
-  } xtra;
-
-  char *content_md5,*content_dispostion,*content_language;
-} singlepart_t;
-
-
-typedef struct
-{
-  int nparts;
-  union bodystruc_t *parts;
-
-  char *subtype;
-  int nparams;
-  parameter_t *param_list;
-  
-  char *content_disposition,*content_language;
-} multipart_t;
-  
-
-union bodystruc_t
-{
-  singlepart_t single;
-  multipart_t multi;
-};
-    
-typedef union bodystruc_t bodystruc_t;
 
 
 typedef struct 

@@ -14,6 +14,7 @@
 #include "imap4.h"
 #include "debug.h"
 #include "sstack.h"
+#include "dbmysql.h"
 
 #ifndef MAX_LINESIZE
 #define MAX_LINESIZE 1024
@@ -31,6 +32,21 @@ const char *item_desc[] =
 };
 
 
+
+/*
+ * fetch_envelope()
+ *
+ * fetches the envelope a message; db_init_msgfetch() should be called first;
+ * data should be (a part of) a msg block as retrieved by db_msgfetch_next()
+ *
+ * returns -1 on error, 0 on success
+ */
+
+      
+  
+
+
+
 /*
  * get_fetch_items()
  *
@@ -42,18 +58,28 @@ const char *item_desc[] =
  */
 int get_fetch_items(char **args, fetch_items_t *fi)
 {
-  int i,j,inbody,bodyidx,invalidargs,shouldclose,delimpos;
+  int i,j,inbody,bodyidx,invalidargs,shouldclose,delimpos,indigit;
 
   /* init fetch item list */
   memset(fi, 0, sizeof(fetch_items_t));
   
   /* check multiple args: should be parenthesed */
-  if (args[1])
+  if (args[1] && strcmp(args[0],"(") != 0)
     {
-      /* now args[0] should be 'body' 'body.peek' or '(' */
-      if (strcasecmp(args[0],"body") != 0 && strcasecmp(args[0],"body.peek") != 0 &&
-	  strcmp(args[0],"(") != 0)
+      /* now args[0] should be 'body' or 'body.peek' */
+      if (strcasecmp(args[0],"body") != 0 && strcasecmp(args[0],"body.peek") != 0)
 	return 1;
+      else
+	{
+	  /* next ']' should be last arg */
+	  for (i=1; args[i] && strcmp(args[i],"]") != 0; i++) ;
+
+	  if (!args[i]) /* impossible according to build-args-array */
+	    return -1;
+
+	  if (args[i+1])
+	    return 1; /* wrong argument list */
+	}	    
     }
 
   /* determine how many body-fields are needed */
@@ -142,20 +168,78 @@ int get_fetch_items(char **args, fetch_items_t *fi)
 	      i++; /* now pointing at '[' (not the last arg, parentheses are matched) */
 	      i++; /* now pointing at what should be the item type */
 
+	      /* first check if there is a partspecifier (numbers & dots) */
+	      indigit = 0;
+	      for (j=0; args[i][j]; j++)
+		{
+		  if (isdigit(args[i][j]))
+		    {
+		      indigit = 1;
+		      continue;
+		    }
+		  else if (args[i][j] == '.')
+		    {
+		      if (!indigit)
+			{
+			  /* error, single dot specified */
+			  invalidargs = 1;
+			  break;
+			}
+		      
+		      indigit = 0;
+		      continue;
+		    }
+		  else
+		    break; /* other char found */
+		}
+	      
+	      if (invalidargs)
+		break;
+
+	      if (j > 0)
+		{
+		  if (indigit)
+		    {
+		      /* wrong */
+		      invalidargs = 1;
+		      break;
+		    }
+
+		  /* partspecifier present, save it */
+		  if (j >= IMAP_MAX_PARTSPEC_LEN)
+		    {
+		      invalidargs = 1;
+		      break;
+		    }
+		  strncpy(fi->bodyfetches[bodyidx].partspec, args[i], j);
+		}
+	      fi->bodyfetches[bodyidx].partspec[j] = '\0';
+
 	      shouldclose = 0;
-	      if (strcasecmp(args[i], "text") == 0)
+	      if (strcasecmp(&args[i][j], "text") == 0)
 		{
 		  fi->bodyfetches[bodyidx].itemtype = BFIT_TEXT;
 		  shouldclose = 1;
 		}
-	      else if (strcasecmp(args[i], "header") == 0)
+	      else if (strcasecmp(&args[i][j], "header") == 0)
 		{
 		  fi->bodyfetches[bodyidx].itemtype = BFIT_HEADER;
 		  shouldclose = 1;
 		}
-	      else if (strcasecmp(args[i], "header.fields") == 0)
+	      else if (strcasecmp(&args[i][j], "mime") == 0)
+		{
+		  if (j == 0)
+		    {
+		      /* no can do */
+		      invalidargs = 1;
+		      break;
+		    }
+		  fi->bodyfetches[bodyidx].itemtype = BFIT_MIME;
+		  shouldclose = 1;
+		}
+	      else if (strcasecmp(&args[i][j], "header.fields") == 0)
 		fi->bodyfetches[bodyidx].itemtype = BFIT_HEADER_FIELDS;
-	      else if (strcasecmp(args[i], "header.fields.not") == 0)
+	      else if (strcasecmp(&args[i][j], "header.fields.not") == 0)
 		fi->bodyfetches[bodyidx].itemtype = BFIT_HEADER_FIELDS_NOT;
 	      else
 		{

@@ -13,10 +13,7 @@ extern void func_memtst (char filename[255],int line,int tst);
 void list_init (struct list *tlist)
 {
   tlist->start=NULL;
-  tlist->current=NULL;
-  tlist->itptr=NULL;
   tlist->total_nodes=0;
-  tlist->list_inited=1;
 }
 
 /*
@@ -24,21 +21,19 @@ void list_init (struct list *tlist)
  *
  * frees a list and all the memory associated with it
  */
-void list_freelist(struct list *list)
+void list_freelist(struct element **start)
 {
-  struct element *start = list_getstart(list);
-
   /* check if list exists */
-  if (!list)
+  if (!(*start))
     return;
 
   /* free rest of list */
-  list_freelist(start->nextnode);
+  list_freelist(&(*start)->nextnode);
   
   /* free this item */
-  free(start->data);
-  free(start);
-  start = NULL;
+  free((*start)->data);
+  free(*start);
+  *start = NULL;
 }
 
  
@@ -78,6 +73,7 @@ struct element *list_nodeadd(struct list *tlist, void *data,
   
   /* copy data */
   tlist->start->data = memcpy(tlist->start->data,data,dsize);
+  tlist->start->dsize = dsize;
 
   tlist->start->nextnode=p;
 
@@ -136,15 +132,18 @@ struct element *list_nodedel(struct list *tlist,void *data)
   return NULL;
 }
 
+
 struct element *list_getstart(struct list *tlist)
 {
   return (tlist) ? tlist->start : NULL;
 }
 
+
 long list_totalnodes(struct list *tlist)
 {
   return (tlist) ? tlist->total_nodes : -1; /* a NULL ptr doesnt even have zero nodes (?) */
 }
+
 
 void list_showlist(struct list *tlist)
 {

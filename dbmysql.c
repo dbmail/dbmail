@@ -11,8 +11,10 @@
 #define DEF_QUERYSIZE 1024
 
 MYSQL conn;  
-MYSQL_RES *res;
-MYSQL_ROW row;
+MYSQL_RES *res,*_msg_result;
+MYSQL_ROW row,_msg_row;
+int _msg_fetch_inited = 0;
+
 
 int db_connect ()
 {
@@ -1208,6 +1210,136 @@ int db_movemsg(unsigned long to, unsigned long from)
 
 
 /*
+ * db_copymsg()
+ *
+ * copies a msg to a specified mailbox
+ * returns 0 on success, -1 on failure
+ */
+int db_copymsg(unsigned long msgid, unsigned long destmboxid)
+{
+  char query[DEF_QUERYSIZE];
+  char *insert;
+  unsigned long newid,*lengths;
+
+  /* retrieve message */
+  snprintf(query, DEF_QUERYSIZE, "SELECT * FROM message WHERE messageidnr = %lu", msgid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_copymsg(): could not select messages\n");
+      return -1;
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_copymsg(): mysql_store_result failed: %s\n",mysql_error(&conn));
+      return -1;
+    }
+
+  row = mysql_fetch_row(res);
+
+  if (!row)
+    {
+      /* empty set, message does not exist ??? */
+      trace(TRACE_ERROR,"db_copymsg(): requested msg (id %lu) does not exist\n",msgid);
+      mysql_free_result(res);
+      return -1;
+    }
+
+  /* insert new message */
+  snprintf(query, DEF_QUERYSIZE, "INSERT INTO message (mailboxidnr, messagesize, status, "
+	   "deleted_flag, seen_flag, answered_flag, draft_flag, flagged_flag, recent_flag) "
+	   "VALUES (%lu, %lu, %d, %d, %d, %d, %d, %d, %d)", destmboxid,
+	   strtoul(row[MESSAGE_MESSAGESIZE], NULL, 10), atoi(row[MESSAGE_STATUS]),
+	   atoi(row[MESSAGE_DELETED_FLAG]), atoi(row[MESSAGE_SEEN_FLAG]), 
+	   atoi(row[MESSAGE_ANSWERED_FLAG]), atoi(row[MESSAGE_DRAFT_FLAG]), 
+	   atoi(row[MESSAGE_FLAGGED_FLAG]), atoi(row[MESSAGE_RECENT_FLAG]));
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_copymsg(): could not insert new message\n");
+      mysql_free_result(res);
+      return -1;
+    }
+
+  mysql_free_result(res);
+
+  /* retrieve new msg id */
+  snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message ORDER BY messageidnr DESC "
+	   "LIMIT 0,1");
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_copymsg(): could not retrieve new message ID\n");
+      return -1;
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_copymsg(): mysql_store_result failed: %s\n",mysql_error(&conn));
+      return -1;
+    }
+
+  row = mysql_fetch_row(res);
+
+  if (!row)
+    {
+      /* huh? just inserted a message */
+      trace(TRACE_ERROR,"db_copymsg(): no records found where expected\n");
+      mysql_free_result(res);
+      return -1;
+    }
+
+  newid = strtoul(row[0], NULL, 10);
+
+  mysql_free_result(res);
+
+  /* now fetch associated msgblocks */
+  snprintf(query, DEF_QUERYSIZE, "SELECT * FROM messageblk WHERE messageidnr = %lu",msgid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_copymsg(): could not retrieve associated messageblocks\n");
+      return -1;
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_copymsg(): mysql_store_result failed: %s\n",mysql_error(&conn));
+      return -1;
+    }
+
+  while (row = mysql_fetch_row(res))
+    {
+      lengths = mysql_fetch_lengths(row);
+      allocsize = DEF_QUERYSIZE + lengths[MESSAGEBLK_MESSAGEBLK];
+      
+      insert = (char*)malloc(allocsize);
+      if (!insert)
+	{
+	  /* out of mem */
+	  mysql_free_result(res);
+	  return -1;
+	}
+      
+      snprintf(insert, allocsize, ""
+      
+      
+
+  	MESSAGEBLK_MESSAGEBLKNR,
+	MESSAGEBLK_MESSAGEIDNR,
+	MESSAGEBLK_MESSAGEBLK,
+	MESSAGEBLK_BLOCKSIZE
+
+
+  
+  
+
+  return 0; /* success */
+}
+
+
+/*
  * db_getmailboxname()
  *
  * retrieves the name of a specified mailbox
@@ -1345,7 +1477,7 @@ unsigned long db_first_unseen(unsigned long uid)
   unsigned long id;
 
   snprintf(query, DEF_QUERYSIZE, "SELECT messageidnr FROM message WHERE mailboxidnr = %lu "
-	   "AND status != 3 AND seen_flag = 0 ORDER BY messageidnr DESC LIMIT 0,1", uid);
+	   "AND status != 3 AND seen_flag = 0 ORDER BY messageidnr ASC LIMIT 0,1", uid);
 
   if (db_query(query) == -1)
     {
@@ -1403,7 +1535,7 @@ int db_get_msgflag(const char *name, unsigned long mailboxuid, unsigned long msg
     return 0; /* non-existent flag is not set */
 
   snprintf(query, DEF_QUERYSIZE, "SELECT %s FROM message WHERE mailboxidnr = %lu "
-	   "AND status != 3 AND msguid = %lu", flagname, mailboxuid, msguid);
+	   "AND status != 3 AND messageidnr = %lu", flagname, mailboxuid, msguid);
 
   if (db_query(query) == -1)
     {
@@ -1459,7 +1591,7 @@ int db_set_msgflag(const char *name, unsigned long mailboxuid, unsigned long msg
     return 0; /* non-existent flag is cannot set */
 
   snprintf(query, DEF_QUERYSIZE, "UPDATE message SET %s = %d WHERE mailboxidnr = %lu "
-	   "AND status != 3 AND msguid = %lu", flagname, val, mailboxuid, msguid);
+	   "AND status != 3 AND messageidnr = %lu", flagname, val, mailboxuid, msguid);
 
   if (db_query(query) == -1)
     {
@@ -1514,68 +1646,75 @@ int db_get_msgdate(unsigned long mailboxuid, unsigned long msguid, char *date)
 
 
 /*
- * db_build_bodystructure()
+ * db_init_msgfetch()
  *  
- * builds the body structure of a message
- *
- * returns -1 on error, 0 on success
+ * initializes a msg fetch
+ * returns -1 on error, 0 on success, 1 if already inited (call db_close_msgfetch() first)
  */
-int db_build_bodystructure(bodystruct_t *bs, unsigned long uid)
+int db_init_msgfetch(unsigned long uid)
 {
   char query[DEF_QUERYSIZE];
-  struct list mimelist;
-  struct mime_record mr;
-  int result;
+
+  if (_msg_fetch_inited)
+    return 1;
 
   snprintf(query, DEF_QUERYSIZE, "SELECT messageblk FROM messageblk WHERE "
 	   "messageidnr = %lu", uid);
 
   if (db_query(query) == -1)
     {
-      trace(TRACE_ERROR, "db_build_bodystructure(): could not get message\n");
+      trace(TRACE_ERROR, "db_init_msgfetch(): could not get message\n");
       return (-1);
     }
 
-  if ((res = mysql_store_result(&conn)) == NULL)
+  if ((_msg_result = mysql_store_result(&conn)) == NULL)
     {
-      trace(TRACE_ERROR,"db_build_bodystructure(): mysql_store_result failed: %s\n",
+      trace(TRACE_ERROR,"db_init_msgfetch(): mysql_store_result failed: %s\n",
 	    mysql_error(&conn));
       return (-1);
     }
 
-  /* build a list of MIME-header items */
-  row = mysql_fetch_row(res);
-  if (!row)
-    {
-      /* msg has no blocks ?? */
-      trace(TRACE_ERROR,"db_build_bodystructure(): detected message without blocks, uid: %lu\n",
-	    uid);
+  _msg_fetch_inited = 1;
+  return 0;
+}
 
-      mysql_free_result(res);
-      return -1;
-    }
 
-  result = mime_list(row[0], &mimelist);
-  if (result == -1)
-    {
-      trace(TRACE_ERROR,"db_build_bodystructure(): error creating MIME-header list\n");
+/*
+ * db_msgfetch_next()
+ *
+ * fetches next msg block
+ * stores block in '**data'
+ *
+ * returns -1 on error (not initialized), 0 on success
+ */
+int db_msgfetch_next(char **data)
+{
+  if (!_msg_fetch_inited)
+    return -1;
 
-      mysql_free_result(res);
-      return -1;
-    }
+  _msg_row = mysql_fetch_row(_msg_result);
 
-  /* seek for first 'content-type' field */
-  result = mime_findfield("content-type",&mimelist,&mr);
-  if (result == -1)
-    {
-      trace(TRACE_ERROR,"db_build_bodystructure(): error searching content-type field\n");
+  if (_msg_row)
+    *data = row[0];
+  else
+    *data = NULL;
 
-      mysql_free_result(res);
-      return -1;
-    }
+  return 0;
+}
 
-  
 
+/*
+ * db_close_msgfetch()
+ *
+ * finishes a msg fetch
+ */
+void db_close_msgfetch()
+{
+  if (!_msg_fetch_inited)
+    return; /* nothing to be done */
+
+  mysql_free_result(_msg_result);
+  _msg_fetch_inited = 0;
 }
 
 
@@ -1587,6 +1726,10 @@ int db_build_bodystructure(bodystruct_t *bs, unsigned long uid)
 int db_msgdump(unsigned long uid)
 {
   char query[DEF_QUERYSIZE];
+  int i;
+  struct list mimelist;
+  struct element *curr;
+  struct mime_record *mr;
 
   snprintf(query, DEF_QUERYSIZE, "SELECT messageblk FROM messageblk WHERE "
 	   "messageidnr = %lu", uid);
@@ -1604,10 +1747,21 @@ int db_msgdump(unsigned long uid)
     }
 
   trace(TRACE_DEBUG,"message %lu:\n",uid);
-  while ((row = mysql_fetch_row(res)))
+  row = mysql_fetch_row(res);
+  mime_list(row[0],&mimelist);
+  trace(TRACE_DEBUG,"**** mimelist build\n");
+  
+  /* dump MIME list */
+  curr = list_getstart(&mimelist);
+  
+  while (curr)
     {
-      trace(TRACE_DEBUG, "%s",row[0]);
+      mr = (struct mime_record*)curr->data;
+      trace(TRACE_DEBUG,"'%s':'%s'\n",mr->field,mr->value);
+      curr = curr->nextnode;
     }
+
+
   mysql_free_result(res);
   return 0;
 }

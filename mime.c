@@ -5,11 +5,11 @@
 #include "config.h"
 #include "mime.h"
 
-extern char *header;
-extern unsigned long headersize;
+/* extern char *header; */
+/* extern unsigned long headersize; */
 
 /* extern struct list mimelist;  */
-extern struct list users;
+/* extern struct list users; */
 
 /* 
  * mime_list()
@@ -28,7 +28,8 @@ int mime_list(char *blkdata, struct list *mimelist)
   struct element *el;   
 	
   trace (TRACE_INFO, "mime_list(): entering mime loop");
-	
+
+  list_init(mimelist);
   /* alloc mem */
 #ifdef USE_EXIT_ON_ERROR
   memtst((mr=(struct mime_record *)malloc(sizeof(struct mime_record)))==NULL);
@@ -46,17 +47,29 @@ int mime_list(char *blkdata, struct list *mimelist)
   while (*startptr)
     {
       /* quick hack to jump over those naughty \n\t fields */
-      endptr = blkdata;
+      endptr = startptr;
       while (*endptr)
 	{
-	  if ((endptr[0]=='\n') && (endptr[1]!='\t'))
-	    break;
+	  if (endptr[0]=='\n' && endptr[1]!='\t')
+	    {
+	      if (endptr != blkdata && *(endptr-1) == ';')
+		{
+		  endptr++;
+		  continue;
+		}
+	      else
+		{
+		  break;
+		}
+	    }
 	  endptr++;
 	}
 
       if (!(*endptr))
 	{
 	  /* end of data block reached */
+	  free(mr);
+	  return 0;
 	}
 
       /* endptr points to linebreak now */
@@ -64,7 +77,7 @@ int mime_list(char *blkdata, struct list *mimelist)
 
       *endptr = '\0'; /* replace newline to terminated string */
 
-      trace(TRACE_DEBUG,"mime_list(): captured array [%s]",startptr); 
+      trace(TRACE_DEBUG,"mime_list(): captured array [%s]\n",startptr); 
 
       /* parsing tmpstring for field and data */
       /* field is name:value */
@@ -82,7 +95,7 @@ int mime_list(char *blkdata, struct list *mimelist)
 	  while ((delimiter[idx]==':') || (delimiter[idx]==' ')) idx++;
 
 	  /* &delimiter[idx] is field value, startptr is field name */
-	  strcpy(mr->field, &delimiter[idx]);
+	  strcpy(mr->field, startptr);
 	  strcpy(mr->value, &delimiter[idx]);
 
 	  trace (TRACE_DEBUG,"mime_list(): mimepair found: [%s] [%s] \n",mr->field, mr->value); 
@@ -102,12 +115,22 @@ int mime_list(char *blkdata, struct list *mimelist)
 	  *delimiter = ':';
 	  *endptr = '\n';
 	  startptr = endptr+1; /* advance to next field */
+
+	  if (*startptr == '\n')
+	    {
+	      /* end of header: double newline */
+	      free(mr);
+	      return 0;
+	    }
 	}
       else 
 	{
 	  /* no field/value delimiter found, non-valid MIME-header */
 	  free(mr);
-	  list_freelist(mimelist);
+	  trace(TRACE_DEBUG,"Non valid mimeheader found, freeing list...\n");
+	  list_freelist(&mimelist->start);
+	  mimelist->total_nodes = 0;
+	  trace(TRACE_DEBUG,"freeing list done, start: %X\n ",mimelist->start);
 
 	  return -1;
 	}
@@ -115,7 +138,7 @@ int mime_list(char *blkdata, struct list *mimelist)
 
   free(mr); /* no longer need this */
 
-  trace(TRACE_DEBUG,"mime_list(): mimeloop finished");
+  trace(TRACE_DEBUG,"mime_list(): mimeloop finished\n");
   if (valid_mime_lines < 2)
     {
 #ifdef USE_EXIT_ON_ERROR
@@ -137,22 +160,28 @@ int mime_list(char *blkdata, struct list *mimelist)
  *
  * finds a MIME header field
  *
- * returns -1 on error, 0 on success
- * 
- * NOTE: if the item is not found 0 is still returned (successfull search)
  */
-int mime_findfield(const char *fname, struct list *mimelist, struct mime_record *mr)
+void mime_findfield(const char *fname, struct list *mimelist, struct mime_record *mr)
 {
   struct element *current;
-
+  
   current = list_getstart(mimelist);
   while (current)
     {
+      mr = current->data;   /* get field/value */
+      
+      if (strcasecmp(mr->field, fname) == 0)
+	return; /* found */
 
-  
+      current = current->nextnode;
+    }
+
+  mr = NULL;
+}
+      
   
 
-int mail_adr_list_special(int offset, int max, char *address_array[]) 
+int mail_adr_list_special(int offset, int max, char *address_array[],struct list *users) 
 {
   int mycount;
 
@@ -160,13 +189,14 @@ int mail_adr_list_special(int offset, int max, char *address_array[])
   for (mycount=offset;mycount!=max; mycount++)
     {
       trace(TRACE_DEBUG,"mail_adr_list_special(): adding [%s] to userlist",address_array[mycount]);
-      memtst((list_nodeadd(&users,address_array[mycount],(strlen(address_array[mycount])+1)))==NULL);
+      memtst((list_nodeadd(users,address_array[mycount],(strlen(address_array[mycount])+1)))==NULL);
     }
   return mycount;
 }
 
   
-int mail_adr_list(char *scan_for_field, struct list *targetlist, struct list *mimelist)
+int mail_adr_list(char *scan_for_field, struct list *targetlist, struct list *mimelist,
+		  struct list *users, char *header, unsigned long headersize)
 {
   struct element *raw;
   struct mime_record *mr;
@@ -179,7 +209,7 @@ int mail_adr_list(char *scan_for_field, struct list *targetlist, struct list *mi
 	 this is because we're in SPECIAL_DELIVERY mode so
 	 normally we wouldn't need any scanning */
       trace (TRACE_INFO,"mail_adr_list(): parsing mimeheader from message");
-      mime_list(header,headersize);
+      mime_list(header,mimelist);
     }
   
   memtst((tmpvalue=(char *)calloc(MIME_VALUE_MAX,sizeof(char)))==NULL);
@@ -242,7 +272,7 @@ int mail_adr_list(char *scan_for_field, struct list *targetlist, struct list *mi
 	
   trace (TRACE_INFO,"mail_adr_list(): mail address parser finished");
 
-  if (list_totalnodes(&users)==0) /* no addresses found */
+  if (list_totalnodes(users)==0) /* no addresses found */
     return -1;
   return 0;
 }

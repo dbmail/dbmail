@@ -26,11 +26,4 @@
 #define UID_SIZE 70
 
 
-void mime_list(char *blkdata,unsigned long blksize);
-char *read_header(unsigned long *blksize);
-int db_connect();
-int mail_adr_list();
-int mail_adr_list_dlv(char *local_rec);
-void check_duplicates();
-int insert_messages();
 #endif
