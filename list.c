@@ -54,6 +54,7 @@ void list_reverse(struct element *start)
   start->nextnode = NULL; /* terminate list */
 }
 
+      
 
 /* 
  * list_nodeadd()

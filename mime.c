@@ -262,6 +262,7 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist)
 	  if (*startptr == '\n')
 	    {
 	      /* end of header: double newline */
+	      (*blkidx)++;
 	      trace(TRACE_DEBUG,"mime_readheader(): found double newline\n");
 	      free(mr);
 	      return 0;

@@ -1888,9 +1888,6 @@ int db_init_msgfetch(unsigned long uid)
  */
 int db_update_msgbuf(int minlen)
 {
-  trace(TRACE_DEBUG,"update msgbuf start %lu %lu %lu %lu\n",MSGBUF_WINDOWSIZE,
-	buflen,rowlength,rowpos);
-
   if (!_msgrow)
     return 0; /* no more */
 
@@ -1901,7 +1898,8 @@ int db_update_msgbuf(int minlen)
     return 1;                                 /* ok, need no update */
       
 
-  trace(TRACE_DEBUG,"update msgbuf updating\n");
+  trace(TRACE_DEBUG,"update msgbuf updating %lu %lu %lu %lu\n",MSGBUF_WINDOWSIZE,
+	buflen,rowlength,rowpos);
 
   /* move buf to make msgidx 0 */
   memmove(msgbuf, &msgbuf[msgidx], msgidx);
@@ -2017,7 +2015,7 @@ int db_fetch_headers(unsigned long msguid, mime_message_t *msg)
       return -1;
     }
 
-  db_reverse_msg(msg);
+/*  db_reverse_msg(msg);*/
 
   db_close_msgfetch();
   return 0;
@@ -2080,9 +2078,11 @@ void db_reverse_msg(mime_message_t *msg)
 
 void db_give_msgpos(db_pos_t *pos)
 {
-  trace(TRACE_DEBUG, "db_give_msgpos(): msgidx %lu, buflen %lu, rowpos %lu\n",msgidx,buflen,rowpos);
+/*  trace(TRACE_DEBUG, "db_give_msgpos(): msgidx %lu, buflen %lu, rowpos %lu\n",
+	msgidx,buflen,rowpos);
   trace(TRACE_DEBUG, "db_give_msgpos(): (buflen)-rowpos %lu\n",(buflen)-rowpos);
-  
+  */
+
   if (msgidx >= ((buflen)-rowpos))
     {
       pos->block = zeropos.block+1;
@@ -2106,6 +2106,8 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
   int len,sblen,result;
   struct mime_record *mr;
   char *newbound,*bptr;
+
+  trace(TRACE_DEBUG,"db_start_msg(): starting, stopbound: '%s'\n",stopbound);
 
   list_init(&msg->children);
   db_give_msgpos(&msg->headerstart);
@@ -2156,7 +2158,7 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
       strncpy(newbound, bptr, len);
       newbound[len] = '\0';
 
-      trace(TRACE_DEBUG,"found new boundary: [%s], msgidx %lu\n",newbound,msgidx);
+      trace(TRACE_DEBUG,"db_start_msg(): found new boundary: [%s], msgidx %lu\n",newbound,msgidx);
 
       /* advance to first boundary */
       if (db_update_msgbuf(MSGBUF_FORCE_UPDATE) == -1)
@@ -2168,13 +2170,11 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 
       while (msgbuf[msgidx])
 	{
-	  if (strncmp(&msgbuf[msgidx+1], newbound, strlen(newbound)) == 0)
+	  if (strncmp(&msgbuf[msgidx], newbound, strlen(newbound)) == 0)
 	    break;
 
 	  msgidx++;
 	}
-
-      if (msgbuf[msgidx]) msgidx++; /* skip  newline */
 
       if (!msgbuf[msgidx])
 	{
@@ -2182,7 +2182,9 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 	  free(newbound);
 	  return -1;
 	}
-      
+
+      msgidx += strlen(newbound);   /* skip the boundary */
+      msgidx++;                     /* skip \n */
 
       /* find MIME-parts */
       if (db_add_mime_children(&msg->children, newbound) == -1)
@@ -2194,6 +2196,7 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 
       free(newbound);
       db_give_msgpos(&msg->bodyend);
+
       return 0;                        /* done */
     }
   else
@@ -2219,9 +2222,7 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 	    }
 
 	  /* end of buffer reached, bodyend is prev pos */
-	  msgidx--;
 	  db_give_msgpos(&msg->bodyend);
-	  msgidx++;
 	}
       else
 	{
@@ -2252,10 +2253,9 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
 {
   mime_message_t part;
   struct mime_record *mr;
-  char *boundary;
   int sblen;
 
-  trace(TRACE_DEBUG,"boundary: '%s'\n",boundary);
+  trace(TRACE_DEBUG,"db_add_mime_children(): starting, splitbound: '%s'\n",splitbound);
 
   do
     {
@@ -2264,21 +2264,33 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
 
       /* should have a MIME header right here */
       if (mime_readheader(&msgbuf[msgidx], &msgidx, &part.mimeheader) == -1)
-	return -1;   /* error reading header */
+	{
+	  trace(TRACE_ERROR,"db_add_mime_children(): error reading MIME-header\n");
+	  return -1;   /* error reading header */
+	}
 
       mime_findfield("content-type", &part.mimeheader, &mr);
 
       if (mr && strncasecmp(mr->value, "message/rfc822", strlen("message/rfc822")) == 0)
 	{
-	  /* a message will follow */
-	  db_start_msg(&part, splitbound);
+	  trace(TRACE_DEBUG,"db_add_mime_children(): found an RFC822 message\n");
 
-	  /* advance to after splitbound */
-	  msgidx++;
+	  /* a message will follow */
+	  if (db_start_msg(&part, splitbound) == -1)
+	    {
+	      trace(TRACE_ERROR,"db_add_mime_children(): error retrieving message\n");
+	      return -1;
+	    }
+
+	  /* skip boundary */
+	  msgidx += 2; /* double hyphen preceeds */
 	  msgidx += strlen(splitbound);
+
 	}
       else
 	{
+	  trace(TRACE_DEBUG,"db_add_mime_children(): expecting body data...\n");
+
 	  /* just body data follows, advance to splitbound */
 	  db_give_msgpos(&part.bodystart);
 	  sblen = strlen(splitbound)+2;
@@ -2288,28 +2300,47 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
 	      if (db_update_msgbuf(sblen) == -1)
 		return -1;
 
-	      if (msgbuf[msgidx] == '\n' && 
-		  strncmp(&msgbuf[msgidx+1], splitbound, strlen(splitbound)) == 0)
+	      if (strncmp(&msgbuf[msgidx], splitbound, strlen(splitbound)) == 0)
 		break;
+
+	      msgidx++;
 	    }
 
 	  if (!msgbuf[msgidx])
 	    {
+	      trace(TRACE_ERROR,"db_add_mime_children(): unexpected end of data\n");
 	      return -1; /* ?? splitbound should follow */
 	    }
+
 	  db_give_msgpos(&part.bodyend);
+
+	  msgidx += strlen(splitbound);   /* skip the boundary */
 	}
 
       /* add this part to brother list */
       if (list_nodeadd(brothers, &part, sizeof(part)) == NULL)
-	return -1;
-
-      /* if double newline follows we're done */
-      if (msgbuf[msgidx] && msgbuf[msgidx] == '\n' && msgbuf[msgidx+1] == '\n')
 	{
-	  msgidx += 2; /* skip \n */
+	  trace(TRACE_ERROR,"db_add_mime_children(): could not add node\n");
+	  return -1;
+	}
+
+      /* if double hyphen ('--') follows we're done */
+      if (msgbuf[msgidx] && msgbuf[msgidx] == '-' && msgbuf[msgidx+1] == '-')
+	{
+	  trace(TRACE_DEBUG,"db_add_mime_children(): found end after boundary [%s],\n",splitbound);
+	  trace(TRACE_DEBUG,"                        followed by [%.*s],\n",
+		48,&msgbuf[msgidx]);
+
+	  msgidx += 2; /* skip hyphens */
+
+	  /* probably some newlines will follow (not specified but often there) */
+	  while (msgbuf[msgidx] == '\n') 
+	    msgidx++;
+
 	  return 0;
 	}
+
+      if (msgbuf[msgidx] == '\n') msgidx++; /* skip newline */
     }
   while (msgbuf[msgidx]) ;
 
@@ -2375,6 +2406,8 @@ int db_dump_range(db_pos_t start, db_pos_t end, unsigned long msguid)
 
   trace(TRACE_DEBUG,"Dumping range: (%d,%d) - (%d,%d)\n",start.block, start.pos, end.block, end.pos);
 
+  return 0;
+
   if (start.block > end.block)
     {
       trace(TRACE_ERROR,"db_dump_range(): bad range specified\n");
@@ -2412,16 +2445,16 @@ int db_dump_range(db_pos_t start, db_pos_t end, unsigned long msguid)
 
   if (start.block == end.block)
     {
-      trace(TRACE_DEBUG,"%*s\n",end.pos - start.pos,&row[0][start.pos]);
+      trace(TRACE_DEBUG,"%.*s\n",end.pos - start.pos,&row[0][start.pos]);
       mysql_free_result(res);
       return 0;
     }
 
   /* output startblock */
-  trace(TRACE_DEBUG,"%s",&row[start.pos]);
+  trace(TRACE_DEBUG,"%s",&row[0][start.pos]);
   
   /* output blocks inbetween */
-  for ( ; i<end.block; i++)
+  for (i=start.block+1; i<end.block; i++)
     {
       row = mysql_fetch_row(res);
       if (!row)
@@ -2443,7 +2476,7 @@ int db_dump_range(db_pos_t start, db_pos_t end, unsigned long msguid)
       return -1;
     }
 
-  trace(TRACE_DEBUG,"%*s",end.pos,row[0]);
+  trace(TRACE_DEBUG,"%.*s",end.pos,row[0]);
   trace(TRACE_DEBUG,"\n");
 
   mysql_free_result(res);
