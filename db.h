@@ -57,6 +57,10 @@
 
 /* name of internal delivery user. */
 #define DBMAIL_DELIVERY_USERNAME "__@!internal_delivery_user!@__"
+/**
+ * standard user for ACL anyone (see RFC 2086)
+ */
+#define DBMAIL_ACL_ANYONE_USER "anyone"
 
 /* 
  * PROTOTYPES 

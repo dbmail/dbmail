@@ -74,7 +74,7 @@ int acl_has_right(u64_t userid, u64_t mboxid, ACLRight_t right)
 
 	/* if the user does not have the right, perhaps the 'anyone' 
 	   user has it */
-	auth_result = auth_user_exists(ACL_ANYONE_USER, &anyone_userid);
+	auth_result = auth_user_exists(DBMAIL_ACL_ANYONE_USER, &anyone_userid);
 	if (auth_result == -1) {
 		trace(TRACE_ERROR, "%s,%s: error getting user_idnr of "
 		      "ACL anyone user", __FILE__, __func__);

@@ -2107,24 +2107,32 @@ int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
 	if (only_subscribed)
 		snprintf(query, DEF_QUERYSIZE,
 			 "SELECT mbx.name, mbx.mailbox_idnr, mbx.owner_idnr "
-			 "FROM dbmail_mailboxes mbx "
-			 "LEFT JOIN dbmail_acl acl "
-			 "ON acl.mailbox_id = mbx.mailbox_idnr "
-			 "JOIN dbmail_subscription sub ON sub.user_id = '%llu' "
-			 "AND sub.mailbox_id = mbx.mailbox_idnr "
-			 "WHERE mbx.owner_idnr = '%llu' "
-			 "OR (acl.user_id = '%llu' AND acl.lookup_flag = '1') "
+			 "FROM dbmail_mailboxes mbx, dbmail_acl acl, "
+			 "dbmail_subscription sub, dbmail_users usr "
+			 "WHERE (sub.user_id = '%llu' AND "
+			 "sub.mailbox_id = mbx.mailbox_idnr) AND "
+			 "(mbx.owner_idnr = '%llu' OR "
+			 "((acl.user_id = '%llu' OR "
+			 "(acl.user_id = usr.user_idnr AND "
+			 "usr.userid = '%s')) AND "
+			 "mbx.mailbox_idnr = acl.mailbox_id AND "
+			 "acl.lookup_flag = '1')) "
 			 "GROUP BY mbx.name, mbx.mailbox_idnr, mbx.owner_idnr",
-			 user_idnr, user_idnr, user_idnr);
+			 user_idnr, user_idnr, user_idnr, 
+			 DBMAIL_ACL_ANYONE_USER);
 	else
 		snprintf(query, DEF_QUERYSIZE,
 			 "SELECT mbx.name, mbx.mailbox_idnr, mbx.owner_idnr "
-			 "FROM dbmail_mailboxes mbx "
-			 "LEFT JOIN dbmail_acl acl "
-			 "ON mbx.mailbox_idnr = acl.mailbox_id "
-			 "WHERE (acl.user_id = '%llu' AND acl.lookup_flag = '1') "
-			 "OR mbx.owner_idnr = '%llu'", user_idnr,
-			 user_idnr);
+			 "FROM dbmail_mailboxes mbx, dbmail_acl acl, "
+			 "dbmail_users usr "
+			 "WHERE (mbx.owner_idnr = '%llu') OR "
+			 "((acl.user_id = '%llu' OR "
+			 "(acl.user_id = usr.user_idnr AND "
+			 "usr.userid = '%s')) "
+			 "AND mbx.mailbox_idnr = acl.mailbox_id AND "
+			 "acl.lookup_flag = '1') "
+			 "GROUP BY mbx.name, mbx.mailbox_idnr, mbx.owner_idnr",
+			 user_idnr, user_idnr, DBMAIL_ACL_ANYONE_USER);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error during mailbox query",

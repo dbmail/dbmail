@@ -1,5 +1,16 @@
 2004-09-14  Ilja Booij  <ilja@ic-s.nl>
 
+	* acl.c (acl_has_right): changed from ACL_ANYONE_USER to 
+	DBMAIL_ACL_ANYONE_USER
+
+	* acl.h: DBMAIL_ACL_ANYONE_USER moved to db.h
+
+	* db.h (DBMAIL_ACL_ANYONE_USER): moved to db.h
+
+	* db.c (db_list_mailboxes_by_regex): changed queries to work with
+	DBMAIL_ACL_ANYONE_USER. Mailboxes with ACL for anyone can now also
+	be listed.
+
 	* INSTALL.postfix: trivial fix. changed reference to 'aliases' table
 	to 'dbmail_aliases'.
 

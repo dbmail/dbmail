@@ -28,11 +28,6 @@
  * \author (c) 2004 IC&S
  */
 
-/**
- * standard user for ACL anyone (see RFC 2086)
- */
-#define ACL_ANYONE_USER "anyone"
-
 /** 
  * different rights a user can have on a mailbox 
  */
