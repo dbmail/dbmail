@@ -2738,7 +2738,7 @@ int db_listmailboxchildren(u64_t uid, u64_t useridnr,
 
   if (db_query(query) == -1)
     {
-      trace(TRACE_ERROR, "db_listmailboxchildren(): could not retrieve mailbox name\n");
+      trace(TRACE_ERROR, "db_listmailboxchildren(): could not retrieve mailbox name");
       my_free(pgsql_filter);
       return -1;
     }

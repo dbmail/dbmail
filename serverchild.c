@@ -119,7 +119,7 @@ void ChildSigHandler(int sig, siginfo_t *info, void *data)
        * all CPU time when trying to disconnect.
        * For now: just bail out :-)
        */
-      exit(1);
+      _exit(1);
 
       if (!triedDisconnect)
 	{
