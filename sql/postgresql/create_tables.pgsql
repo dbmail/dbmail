@@ -83,8 +83,7 @@ CREATE TABLE messageblks (
 
 CREATE TABLE config (
 	config_idnr INTEGER DEFAULT '0' NOT NULL,
-	item VARCHAR(128) NOT NULL,
-	value VARCHAR(128) NOT NULL
+	item VARCHAR(255) NOT NULL,
+	value VARCHAR(255) NOT NULL
 );
 CREATE UNIQUE INDEX item_idx ON config (item);
-CREATE UNIQUE INDEX value_idx ON config (value);

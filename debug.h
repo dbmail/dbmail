@@ -40,7 +40,7 @@ extern int TRACE_LEVEL;     /* 5: maximum debugging */
 
 
 void func_memtst (const char *filename,int line,int tst);
-void trace (int level, const char *formatstring, ...);
+void trace (int level, char *formatstring, ...);
 void configure_debug(int level, int trace_syslog, int trace_verbose);
 
 void* __debug_malloc(unsigned long size, const char *fname, int linenr);

@@ -73,7 +73,7 @@ int db_connect ()
 
   /* connecting */
 
-  sprintf (connectionstring, "host=%s user=%s password=%s dbmail=%s",
+  sprintf (connectionstring, "host=%s user=%s password=%s dbname=%s",
             HOST, USER, PASS, MAILDATABASE);
 
   conn = PQconnectdb(connectionstring);
@@ -158,6 +158,7 @@ int db_query (const char *thequery, void *target_result)
          trace (TRACE_ERROR,"db_query(): query buffer is NULL, this is not supposed to happen\n");
         return -1;
         }
+        trace (TRACE_DEBUG, "db_query(): query successfull target: %d\n",target_result);
   return 0;
 }
 
@@ -202,8 +203,8 @@ char *db_get_config_item (char *item, int type)
   if (db_query(query, res)==-1)
     {
       if (type == CONFIG_MANDATORY)
-	trace (TRACE_FATAL,"db_get_config_item(): query failed could not get value for %s. "
-	       "This is needed to continue\n",item);
+	        trace (TRACE_FATAL,"db_get_config_item(): query failed could not get value for %s. "
+	            "This is needed to continue\n",item);
       else
 	if (type == CONFIG_EMPTY)
 	  trace (TRACE_ERROR,"db_get_config_item(): query failed. Could not get value for %s\n",
@@ -212,14 +213,16 @@ char *db_get_config_item (char *item, int type)
       return NULL;
     }
   
+    trace (TRACE_DEBUG, "db_get_config_item(): resource pointer is %d\n",res);
+  
     if (PQntuples (res)==0)
     {
       if (type == CONFIG_MANDATORY)
-	trace (TRACE_FATAL,"db_get_config_item(): configvalue not found for %s. rowfetch failure. "
+	trace (TRACE_FATAL,"db_get_config_item(): configvalue not found for %s"
 	       "This is needed to continue\n",item);
       else
 	if (type == CONFIG_EMPTY)
-	  trace (TRACE_ERROR,"db_get_config_item(): configvalue not found. rowfetch failure.  "
+	  trace (TRACE_ERROR,"db_get_config_item(): configvalue not found. "
 		 "Could not get value for %s\n",item);
 
       PQclear(res);

@@ -9,12 +9,12 @@
 #include "debug.h"
 #include "db.h"
 
-#define LINE_BUFFER_SIZE 255
+#define LINE_BUFFER_SIZE 516
 
 int main (int argc, char *argv[])
 {
   FILE *configfile;
-  char *readbuf, *field, *value,*fname;
+  char *readbuf, *field, *val,*fname;
   int i;
 	
   readbuf = (char *)malloc(LINE_BUFFER_SIZE);
@@ -58,18 +58,20 @@ int main (int argc, char *argv[])
 	  readbuf[strlen(readbuf)-1]='\0';
 	  if ((readbuf[0] != '#') && (strlen(readbuf)>3)) /* ignore comments */
 	    {
-	      value = strchr(readbuf, '=');
+	      val = strchr(readbuf, '=');
 	      field = readbuf;
-	      if (value == NULL)
-		fprintf (stderr,"error in line: %d\n",i);
+	      if (!val)
+          {
+		    fprintf (stderr,"Configread error in line: %d\n",i);
+            }
 	      else
 		{
-		  *value='\0';
-		  value++;
-		  if (db_insert_config_item (field, value) != 0)
+		  *val='\0';
+		  val++;
+		  if (db_insert_config_item (field, val) != 0)
 		    fprintf (stderr,"error in line:%d, could not insert item\n",i);
 		  else 
-		    printf ("%s is now set to %s\n",field,value);
+		    printf ("%s is now set to %s\n",field,val);
 		}
 	    }
 	}

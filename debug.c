@@ -26,7 +26,7 @@ debug_mem_t *__dm_first=0,*__dm_last=0;
 /* the debug variables */
 int TRACE_TO_SYSLOG = 1; /* default: yes */
 int TRACE_VERBOSE = 0;   /* default: no */
-int TRACE_LEVEL = 2;     /* default: normal operations */
+int TRACE_LEVEL = 5;     /* default: verbose operations */
 
 
 /*
@@ -46,7 +46,7 @@ void func_memtst (const char *filename,int line,int tst)
 	  filename,line);
 }
 
-void trace (int level, const char *formatstring, ...)
+void trace (int level, char *formatstring, ...)
 {
   va_list argp;
   
@@ -55,9 +55,15 @@ void trace (int level, const char *formatstring, ...)
   if (level <= TRACE_LEVEL)
     {
       if (TRACE_VERBOSE)
-	vfprintf (err_out_stream, formatstring, argp);
+      { 
+	    vfprintf (err_out_stream, formatstring, argp);
+        if (formatstring[strlen(formatstring)]!='\n')
+            fprintf (err_out_stream,"\n");
+      }
       if (TRACE_TO_SYSLOG)
 	{
+        if (formatstring[strlen(formatstring)]=='\n')
+            formatstring[strlen(formatstring)]='\0';
 	  if (level <= TRACE_WARNING) 
 	    {
 	      /* set LOG_ALERT at warnings */
