@@ -615,22 +615,22 @@ int send_reply(struct list *headerfields, const char *body)
     {
       record = (struct mime_record*)el->data;
       
-      if (strcasecmp(record->value, "from") == 0)
+      if (strcasecmp(record->field, "from") == 0)
 	{
 	  from = record->value;
 	  trace(TRACE_DEBUG, "send_reply(): found FROM [%s]", from);
 	}
-      else if  (strcasecmp(record->value, "reply-to") == 0)
+      else if  (strcasecmp(record->field, "reply-to") == 0)
 	{
 	  replyto = record->value;
 	  trace(TRACE_DEBUG, "send_reply(): found REPLY-TO [%s]", replyto);
 	}
-      else if  (strcasecmp(record->value, "subject") == 0)
+      else if  (strcasecmp(record->field, "subject") == 0)
 	{
 	  subject = record->value;
 	  trace(TRACE_DEBUG, "send_reply(): found SUBJECT [%s]", subject);
 	}
-      else if  (strcasecmp(record->value, "deliver-to") == 0)
+      else if  (strcasecmp(record->field, "deliver-to") == 0)
 	{
 	  to = record->value;
 	  trace(TRACE_DEBUG, "send_reply(): found TO [%s]", to);
