@@ -1766,7 +1766,7 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
     snprintf(query, DEF_QUERYSIZE,
 	     "INSERT INTO messages "
 	     "(mailbox_idnr, physmessage_id, unique_id, status,"
-	     "seen_flag) VALUES ('%llu', '%llu', '', '001', '1')",
+	     "recent_flag) VALUES ('%llu', '%llu', '', '001', '1')",
 	     mailbox_idnr, physmessage_id);
 
     if (db_query(query) == -1) {

@@ -1,3 +1,11 @@
+2004-03-11  Ilja Booij  <ilja@ic-s.nl>
+
+	* db.c (db_imap_append_msg): according to the RFC, the Recent flag
+	of a message that is append using IMAP append should always be set.
+	This is now taken care of. db_imap_append_msg() used to set the
+	\Seen flag to '1', but according to the RFC, this should not be done,
+	so it's been removed.
+
 2004-03-10  Ilja Booij  <ilja@ic-s.nl>
 
 	* maintenance.c (main): uses 0 for update_curmail_size.
