@@ -3871,7 +3871,7 @@ int db_start_msg(mime_message_t *msg, char *stopbound, int *level, int maxlevel)
 	  result = 1;
 	  while (1)
 	    {
-	      for ( ; msgidx < buflen-1; msgidx++)
+	      for ( ; msgidx < buflen-1 && msgbuf[msgidx]; msgidx++)
 		if (msgbuf[msgidx] == '\n')
 		  msg->bodylines++;
 	      
