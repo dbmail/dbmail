@@ -31,7 +31,7 @@ What do you need?
 	This is easy. You'll need the mysql commandline program for this. 
 	Just do :
 	
-	mysql -u root -p < sql/mysql/create_tables.sql
+	mysql -u root -p < sql/mysql/create_tables.mysql
 	
 	for InnoDB:
 
@@ -63,7 +63,7 @@ What do you need?
 	Off course you can use an other databasename. After setting up the user and database
 	it's time to create the tables, do a:
 
-	psql -U dbmail dbmal < sql/postgresql/create_tables.sql
+	psql -U dbmail dbmal < sql/postgresql/create_tables.pgsql
 
 	Don't forget to start postgresql with the -i option, so it accepts TCP/IP connections.
 
@@ -92,7 +92,7 @@ What do you need?
 	A user always needs to have at least one alias to receive mail. 
 	
 	example: 
-	./dbmail-adduser john secret 0 25000000 john@dude.org john@dude.net @net.com
+	./dbmail-adduser a john secret 0 25000000 john@dude.org john@dude.net @net.com
 	
 	This will create a user john, with a password secret. It will set john's maillimit
 	25 Mb and all mail for john@dude.org, john@dude.net and @net.com will be sent to john.
