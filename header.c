@@ -20,7 +20,7 @@
 /* $Id$
  *
  * Header.c implements functions to read an email header
- * and parse out certain goodies, such as deliver-to
+ * and parse out certain goodies, such as delivered-to
  * fields and common fields for the fast header cache
  * */
 

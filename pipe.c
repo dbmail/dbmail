@@ -193,7 +193,7 @@ static int send_reply(struct list *headerfields, const char *body)
 			subject = record->value;
 			trace(TRACE_DEBUG,
 			      "send_reply(): found SUBJECT [%s]", subject);
-		} else if (strcasecmp(record->field, "deliver-to") == 0) {
+		} else if (strcasecmp(record->field, "delivered-to") == 0) {
 			to = record->value;
 			trace(TRACE_DEBUG, "send_reply(): found TO [%s]",
 			      to);

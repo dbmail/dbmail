@@ -104,7 +104,7 @@ int do_showhelp(void) {
 
 	printf("Use this program to deliver mail from your MTA or on the command line.\n");
 	printf("See the man page for more info. Summary:\n\n");
-	printf("     -t [headerfield]   for normal deliveries (default is \"deliver-to\")\n");
+	printf("     -t [headerfield]   for normal deliveries (default is \"delivered-to\")\n");
 	printf("     -d [addresses]     for delivery without using scanner\n");
 	printf("     -u [usernames]     for direct delivery to users\n");
 	printf("     -m \"mailbox\"       for delivery to a specific mailbox\n");
@@ -167,7 +167,7 @@ int main(int argc, char *argv[])
 				} else
 					deliver_to_header = optarg;
 			} else
-				deliver_to_header = "deliver-to";
+				deliver_to_header = "delivered-to";
 
 			break;
 
