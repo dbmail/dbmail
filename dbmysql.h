@@ -14,6 +14,9 @@ struct list;
 int db_connect();
 int db_query (char *query);
 int db_check_user (char *username, struct list *userids);
+unsigned long db_insert_message (unsigned long *useridnr);
+unsigned long db_update_message (unsigned long *messageidnr, char *unique_id,
+		unsigned long messagesize);
 unsigned long db_insert_message_block (char *block, int nextblock);
 int db_check_id (char *id);
 int db_disconnect();

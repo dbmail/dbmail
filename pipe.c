@@ -147,20 +147,14 @@ int insert_messages(char *firstblock, unsigned long headersize)
 		/* traversing list with userids and creating a message for each userid */
 		trace (TRACE_DEBUG,"insert_messages(): -----> debug tmp is [%d],nextnode is [%d]",
 				tmp,tmp->nextnode);
-		sprintf(insertquery,"INSERT INTO message(useridnr,messagesize,status,unique_id) VALUES (%lu,0,0,\" \")",
-			*(unsigned long*)tmp->data);
+		temp=db_insert_message ((unsigned long*)tmp->data);
 
-		trace (TRACE_DEBUG,"insert_messages(): executing query [%s]",insertquery);
-		
 		/* message id is an array of returned message id's
 		 * all messageblks are inserted for each message id
 		 * we could change this in the future for efficiency
 		 * still we would need a way of checking which messageblks
 		 * belong to which messages */
 		
-		db_query(insertquery);
-		temp=db_insert_result();
-
 		/* adding this messageid to the message id list */
 		list_nodeadd(&messageids,&temp,sizeof(temp));
 		
@@ -216,12 +210,9 @@ int insert_messages(char *firstblock, unsigned long headersize)
 			 * a special field is created in the database for other possible 
 			 * even more unique strings */
 			create_unique_id(unique_id,*(unsigned long*)tmp->data); 
-			sprintf(updatequery,
-				"UPDATE message SET messagesize=%lu, unique_id=\"%s\" where messageidnr=%lu",
-				totalmem+headersize,unique_id,*(unsigned long*)tmp->data);
+			db_update_message ((unsigned long*)tmp->data,unique_id,totalmem+headersize);
 			trace (TRACE_MESSAGE,"insert_messages(): message id=%lu, size=%lu is inserted",
 				*(unsigned long*)tmp->data, totalmem+headersize);
-			db_query(updatequery);
 			tmp=tmp->nextnode;
 			}
 	

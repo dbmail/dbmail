@@ -51,6 +51,47 @@ int db_query (char *query)
   return 0;
 }
 
+unsigned long db_insert_message (unsigned long *useridnr)
+{
+	char *ckquery;
+	/* allocating memory for query */
+  memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
+
+  sprintf (ckquery,"INSERT INTO message(useridnr,messagesize,status,unique_id) VALUES (%lu,0,0,\" \")",
+		 *useridnr);
+  trace (TRACE_DEBUG,"db_insert_message(): inserting message query [%s]",ckquery);
+  if (db_query (ckquery)==-1)
+	{
+	free(ckquery);
+	trace(TRACE_STOP,"db_insert_message(): dbquery failed");
+	}	
+  free (ckquery);
+  return db_insert_result();
+}
+
+
+unsigned long db_update_message (unsigned long *messageidnr, char *unique_id,
+		unsigned long messagesize)
+{
+	char *ckquery;
+	/* allocating memory for query */
+  memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
+
+  sprintf (ckquery,
+		  "UPDATE message SET messagesize=%lu, unique_id=\"%s\" where messageidnr=%lu",
+		  messagesize, unique_id, *messageidnr);
+  
+  trace (TRACE_DEBUG,"db_update_message(): updating message query [%s]",ckquery);
+  if (db_query (ckquery)==-1)
+	{
+	free(ckquery);
+	trace(TRACE_STOP,"db_update_message(): dbquery failed");
+	}	
+  free (ckquery);
+  return 0;
+}
+
+
 unsigned long db_insert_message_block (char *block, int messageidnr)
 {
   char *escblk, *tmpquery;
