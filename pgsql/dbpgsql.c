@@ -374,7 +374,7 @@ u64_t db_get_inboxid (u64_t *useridnr)
   u64_t inboxid;
 
   snprintf (query, DEF_QUERYSIZE,"SELECT mailbox_idnr FROM mailboxes WHERE "
-            "name ~* 'INBOX' AND owner_idnr=%llu",
+            "name ~* '^INBOX$' AND owner_idnr=%llu",
             *useridnr);
 
   trace(TRACE_DEBUG,"db_get_inboxid(): executing query : [%s]",query);
@@ -1631,7 +1631,7 @@ u64_t db_findmailbox(const char *name, u64_t useridnr)
 {
   u64_t id;
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT mailbox_idnr FROM mailboxes WHERE name ~* '%s' "
+  snprintf(query, DEF_QUERYSIZE, "SELECT mailbox_idnr FROM mailboxes WHERE name ~* '^%s$' "
 	   "AND owner_idnr=%llu",
 	   name, useridnr);
 
@@ -1667,10 +1667,10 @@ int db_findmailbox_by_regex(u64_t ownerid, const char *pattern,
 
   if (only_subscribed)
     snprintf(query, DEF_QUERYSIZE, "SELECT mailbox_idnr FROM mailboxes WHERE "
-	     "owner_idnr=%llu AND is_subscribed != 0 AND name ~* '%s'", ownerid, pattern);
+	     "owner_idnr=%llu AND is_subscribed != 0 AND name ~* '^%s$'", ownerid, pattern);
   else
     snprintf(query, DEF_QUERYSIZE, "SELECT mailbox_idnr FROM mailboxes WHERE "
-	     "owner_idnr=%llu AND name ~* '%s'", ownerid, pattern);
+	     "owner_idnr=%llu AND name ~* '^%s$'", ownerid, pattern);
 
   if (db_query(query) == -1)
     {
@@ -1916,11 +1916,11 @@ int db_listmailboxchildren(u64_t uid, u64_t useridnr,
     {
       row = PQgetvalue (res, 0, 0);
       if (row)
-	snprintf(query, DEF_QUERYSIZE, "SELECT mailbox_idnr FROM mailboxes WHERE name ~* '%s/%s'"
+	snprintf(query, DEF_QUERYSIZE, "SELECT mailbox_idnr FROM mailboxes WHERE name ~* '^%s/%s$'"
 		 " AND owner_idnr = %llu",
 		 row,pgsql_filter,useridnr);
       else
-	snprintf(query, DEF_QUERYSIZE, "SELECT mailbox_idnr FROM mailboxes WHERE name ~* '%s'"
+	snprintf(query, DEF_QUERYSIZE, "SELECT mailbox_idnr FROM mailboxes WHERE name ~* '^%s$'"
 		 " AND owner_idnr = %llu",pgsql_filter,useridnr);
 
     }

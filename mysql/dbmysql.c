@@ -194,16 +194,13 @@ char *db_get_config_item (char *item, int type)
 /*
  * returns the number of bytes used by user userid or 
  * (u64_t)(-1) on dbase failure
- * (u64_t)(-1) if out of memory
  */
 u64_t db_get_quotum_used(u64_t userid)
 {
   u64_t q=0;
-  u64_t *mboxids;
-  unsigned nmboxes;
-  int i;
 
-  snprintf(query, DEF_QUERYSIZE, "SELECT mailbox_idnr FROM mailboxes WHERE owner_idnr = %llu",
+  snprintf(query, DEF_QUERYSIZE, "SELECT SUM(m.messagesize) FROM messages m, mailboxes mb "
+	   "WHERE m.mailbox_idnr = mb.mailbox_idnr AND mb.owner_idnr = %llu",
 	   userid);
 
   if (db_query(query) == -1)
@@ -219,82 +216,20 @@ u64_t db_get_quotum_used(u64_t userid)
       return -1;
     }
 
-  nmboxes = mysql_num_rows(res);
-  if (nmboxes == 0)
+  row = mysql_fetch_row(res);
+  if (row && row[0])
     {
-      /* user has no mailboxes ? */
-      trace(TRACE_ERROR, "db_get_quotum_used(): user [%llu] has no mailboxes (?)", userid);
+      q = strtoull(row[0], NULL, 10);
+    }
+  else
+    {
+      trace(TRACE_ERROR, "db_get_quotum_used(): messagesize requested but not found in result");
       mysql_free_result(res);
       return -1;
     }
-
-  if ((mboxids = (u64_t*)my_malloc(sizeof(u64_t) * nmboxes)) == 0)
-    {
-      trace(TRACE_ERROR, "db_get_quotum_used(): out of memory", userid);
-      mysql_free_result(res);
-      return -2;
-    }
-
-  for (i=0; i<nmboxes; i++)
-    {
-      row = mysql_fetch_row(res);
-      if (row && row[0])
-	{
-	  mboxids[i] = strtoull(row[0], NULL, 10);
-	}
-      else
-	{
-	  trace(TRACE_ERROR, "db_get_quotum_used(): user [%llu] has a mailbox with ID zero", userid);
-	  mysql_free_result(res);
-	  my_free(mboxids);
-	  return -1;
-	}
-    }
-
+      
   mysql_free_result(res);
-  
 
-  /* now start calculating the quotum use: 
-   * check for every mailbox
-   */
-      
-  for (i=0, q=0; i<nmboxes; i++)
-    {
-      snprintf(query, DEF_QUERYSIZE, "SELECT messagesize FROM messages WHERE mailbox_idnr = %llu",
-	       mboxids[i]);
-      
-      if (db_query(query) == -1)
-	{
-	  /* query failed */
-	  trace (TRACE_ERROR, "db_get_quotum_used(): query to select message size failed");
-	  my_free(mboxids);
-	  return -1;
-	}
-
-      if ((res = mysql_store_result(&conn)) == NULL) 
-	{
-	  trace(TRACE_ERROR, "db_get_quotum_used(): could not store query result");
-	  my_free(mboxids);
-	  return -1;
-	}
-
-      row = mysql_fetch_row(res);
-      if (row && row[0])
-	{
-	  q += strtoull(row[0], NULL, 10);
-	}
-      else
-	{
- 	  trace(TRACE_ERROR, "db_get_quotum_used(): messagesize requested but not found in result");
-	  my_free(mboxids);
-	  mysql_free_result(res);
-	  return -1;
-	}
-      
-      mysql_free_result(res);
-    }
-  
-  my_free(mboxids);
   return q;
 }
 

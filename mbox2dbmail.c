@@ -75,7 +75,13 @@ int main(int argc, char *argv[])
       else
 	{
 	  /* write data to pipe */
-	  fputs(line, smtp);
+	  if (smtp)
+	    fputs(line, smtp);
+	  else
+	    {
+	      fprintf(stderr,"Tried to write to an unopened pipe!\n");
+	      return 1;
+	    }
 	}
     }
 
