@@ -39,11 +39,19 @@ char base64encodestring[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxy
 /* returned by date_sql2imap() */
 char _imapdate[IMAP_INTERNALDATE_LEN] = "03-Nov-1979 00:00:00";
 
+/* returned by date_imap2sql() */
+char _sqldate[] = "1979-11-03 00:00:00";
+
 const char *month_desc[]= 
 { 
   "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 };
 
+const int month_len[]=
+{
+  31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
+};
+ 
 const char *item_desc[] = 
 {
   "TEXT", "HEADER", "MIME", "HEADER.FIELDS", "HEADER.FIELDS.NOT"
@@ -1522,9 +1530,15 @@ int is_textplain(struct list *hdr)
  * NOTE: sqldate is not tested for validity. Behaviour is undefined for non-sql
  * dates.
  */
-char *date_sql2imap(char *sqldate)
+char *date_sql2imap(const char *sqldate)
 {
   int mon;
+
+  if (strlen(sqldate) != strlen("yyyy-mm-dd hh:mm:ss"))
+    {
+      strcpy(_imapdate, "03-Nov-1979 00:00:00");
+      return _imapdate;
+    }
 
   /* copy day */
   _imapdate[0] = sqldate[8];
@@ -1546,19 +1560,66 @@ char *date_sql2imap(char *sqldate)
   _imapdate[9] = sqldate[2];
   _imapdate[10] = sqldate[3];
 
-  /* copy hour */
-  _imapdate[12] = sqldate[11];
-  _imapdate[13] = sqldate[12];
-
-  /* copy minutes */
-  _imapdate[15] = sqldate[14];
-  _imapdate[16] = sqldate[15];
-
-  /* copy secs */
-  _imapdate[18] = sqldate[17];
-  _imapdate[19] = sqldate[18];
+  /* copy time */
+  strcpy(&_imapdate[11], &sqldate[10]);
 
   return _imapdate;
+}  
+
+
+/*
+ * convert TO a mySQL date (yyyy-mm-dd hh:mm:ss) FROM a valid IMAP internal date:
+ *                          0123456789012345678
+ * dd-mon-yyyy hh:mm:ss with mon characters (i.e. 'Apr' for april)
+ * 01234567890123456789
+ * return value is valid until next function call.
+ *
+ * sqldate is slightly tested for validity. NULL is returned in case of an erroneous date.
+ * however, the tests performed are NOT extensive enough.
+ */
+char *date_imap2sql(const char *imapdate)
+{
+  int i;
+  char sub[4];
+
+  if (strlen(imapdate) != strlen("dd-mon-yyyy hh:mm:ss"))
+    return NULL;
+
+  /* copy year */
+  _sqldate[0] = imapdate[7];
+  _sqldate[1] = imapdate[8];
+  _sqldate[2] = imapdate[9];
+  _sqldate[3] = imapdate[10];
+
+  _sqldate[4] = '-';
+
+  /* copy month */
+  strncpy(sub, &imapdate[3], 3);
+  sub[3] = 0;
+
+  for (i=0; i<12; i++)
+    {
+      if (strcasecmp(month_desc[i], sub) == 0)
+	break;
+    }
+  
+  if (i>=12)
+    return NULL;
+
+  i++; /* make i in [1,12] */
+  _sqldate[5] = (i<10) ? '0' : '1';
+  _sqldate[6] = (i<10) ? (i+'0') : ((i-10) + '0');
+
+  _sqldate[7] = '-';
+  
+  /* copy day */
+  _sqldate[8] = imapdate[0];
+  _sqldate[9] = imapdate[1];
+  
+  /* copy time */
+  strcpy(&_sqldate[10], &imapdate[11]);
+
+  return _sqldate;
 }  
 
 
@@ -1659,6 +1720,86 @@ int checkmailboxname(const char *s)
   return 1;
 }
 
+
+/*
+ * check_date()
+ *
+ * checks a date for IMAP-date validity:
+ * dd-MMM-yyyy
+ * 01234567890
+ * month three-letter specifier
+ */
+int check_date(const char *date)
+{
+  char sub[4];
+  int days,i;
+
+  if (strlen(date) != strlen("01-Jan-1970"))
+    return 0;
+
+  if (date[2] != '-' || date[6] != '-')
+    return 0;
+
+  days = strtoul(date, NULL, 10);
+  strncpy(sub, &date[3], 3);
+  sub[3] = 0;
+
+  for (i=0; i<12; i++)
+    {
+      if (strcasecmp(month_desc[i], sub) == 0)
+	break;
+    }
+
+  if (i >= 12 || days > month_len[i])
+    return 0;
+
+  for (i=7; i<11; i++)
+    if (!isdigit(date[i])) return 0;
+
+  return 1;
+}
+  
+
+
+/*
+ * check_msg_set()
+ *
+ * checks if s represents a valid message set 
+ */
+int check_msg_set(const char *s)
+{
+  int i,indigit;
+
+  if (!s || !isdigit(s[0]))
+    return 0;
+
+  for (i=1,indigit=1; s[i]; i++)
+    {
+      if (isdigit(s[i]))
+	indigit = 1;
+      else if (s[i] == ',')
+	{
+	  if (!indigit && s[i-1] != '*')
+	    return 0;
+	  
+	  indigit = 0;
+	}
+      else if (s[i] == ':')
+	{
+	  if (!indigit)
+	    return 0;
+	  
+	  indigit = 0;
+	}
+      else if (s[i] == '*')
+	{
+	  if (s[i-1] != ':')
+	    return 0;
+	}
+    }
+
+  return 1;
+}
   
 
 /*
@@ -1780,6 +1921,381 @@ int quoted_string_out(FILE *outstream, const char *s)
   cnt += fprintf(outstream, "\"");
   return cnt;
 }
+
+
+/*
+ * build_imap_search()
+ *
+ * builds a linked list of search items from a set of IMAP search keys
+ *
+ * returns -1 on syntax error, -2 on memory error; 0 on success, 1 if ')' has been encountered
+ */
+int build_imap_search(char **search_keys, struct list *sl, int *idx)
+{
+  search_key_t key;
+  int result;
+
+  if (!search_keys || !search_keys[*idx])
+    return 0;
+
+  list_init(sl);
+  memset(&key, 0, sizeof(key));
+
+  if (strcasecmp(search_keys[*idx], "all") == 0)
+    {
+      key.type = IST_SET;
+      strcpy(key.search, "1:*");
+    }
+  else if (strcasecmp(search_keys[*idx], "uid") == 0)
+    {
+      key.type = IST_SET_UID;
+      strncpy(key.search, search_keys[(*idx)+1], MAX_SEARCH_LEN);
+      if (!check_msg_set(key.search))
+	return -1;
+
+      (*idx)++;
+    }
+
+  /*
+   * FLAG search keys
+   */
+  
+  else if (strcasecmp(search_keys[*idx], "answered") == 0)
+    {
+      key.type = IST_FLAG;
+      strncpy(key.search, "answered_flag=1", MAX_SEARCH_LEN);
+    }
+  else if (strcasecmp(search_keys[*idx], "deleted") == 0)
+    {
+      key.type = IST_FLAG;
+      strncpy(key.search, "deleted_flag=1", MAX_SEARCH_LEN);
+    }
+  else if (strcasecmp(search_keys[*idx], "flagged") == 0)
+    {
+      key.type = IST_FLAG;
+      strncpy(key.search, "flagged_flag=1", MAX_SEARCH_LEN);
+    }
+  else if (strcasecmp(search_keys[*idx], "recent") == 0)
+    {
+      key.type = IST_FLAG;
+      strncpy(key.search, "recent_flag=1", MAX_SEARCH_LEN);
+    }
+  else if (strcasecmp(search_keys[*idx], "seen") == 0)
+    {
+      key.type = IST_FLAG;
+      strncpy(key.search, "seen_flag=1", MAX_SEARCH_LEN);
+    }
+  else if (strcasecmp(search_keys[*idx], "keyword") == 0)
+    {
+      /* no results from this one */
+      if (!search_keys[(*idx)+1])
+	return -1;
+
+      key.type = IST_SET_UID;
+      strcpy(key.search, "0");
+      (*idx)++;
+    }
+  else if (strcasecmp(search_keys[*idx], "draft") == 0)
+    {
+      key.type = IST_FLAG;
+      strncpy(key.search, "draft_flag=1", MAX_SEARCH_LEN);
+    }
+  else if (strcasecmp(search_keys[*idx], "new") == 0)
+    {
+      key.type = IST_FLAG;
+      strncpy(key.search, "(seen_flag=0 AND recent_flag=1)", MAX_SEARCH_LEN);
+    }
+  else if (strcasecmp(search_keys[*idx], "old") == 0)
+    {
+      key.type = IST_FLAG;
+      strncpy(key.search, "recent_flag=0", MAX_SEARCH_LEN);
+    }
+  else if (strcasecmp(search_keys[*idx], "unanswered") == 0)
+    {
+      key.type = IST_FLAG;
+      strncpy(key.search, "answered_flag=0", MAX_SEARCH_LEN);
+    }
+  else if (strcasecmp(search_keys[*idx], "undeleted") == 0)
+    {
+      key.type = IST_FLAG;
+      strncpy(key.search, "deleted_flag=0", MAX_SEARCH_LEN);
+    }
+  else if (strcasecmp(search_keys[*idx], "unflagged") == 0)
+    {
+      key.type = IST_FLAG;
+      strncpy(key.search, "flagged_flag=0", MAX_SEARCH_LEN);
+    }
+  else if (strcasecmp(search_keys[*idx], "unseen") == 0)
+    {
+      key.type = IST_FLAG;
+      strncpy(key.search, "seen_flag=0", MAX_SEARCH_LEN);
+    }
+  else if (strcasecmp(search_keys[*idx], "unkeyword") == 0)
+    {
+      /* matches every msg */
+      if (!search_keys[(*idx)+1])
+	return -1;
+
+      key.type = IST_SET;
+      strcpy(key.search, "1:*");
+      (*idx)++;
+    }
+  else if (strcasecmp(search_keys[*idx], "undraft") == 0)
+    {
+      key.type = IST_FLAG;
+      strncpy(key.search, "draft_flag=0", MAX_SEARCH_LEN);
+    }
+
+  /*
+   * HEADER search keys
+   */
+  
+  else if (strcasecmp(search_keys[*idx], "bcc") == 0)
+    {
+      key.type = IST_HDR;
+      strncpy(key.hdrfld, "bcc", MIME_FIELD_MAX);
+      if (!search_keys[(*idx)+1])
+	return -1;
+
+      (*idx)++;
+      strncpy(key.search, search_keys[(*idx)], MAX_SEARCH_LEN);
+    }
+  else if (strcasecmp(search_keys[*idx], "cc") == 0)
+    {
+      key.type = IST_HDR;
+      strncpy(key.hdrfld, "cc", MIME_FIELD_MAX);
+      if (!search_keys[(*idx)+1])
+	return -1;
+
+      (*idx)++;
+      strncpy(key.search, search_keys[(*idx)], MAX_SEARCH_LEN);
+    }
+  else if (strcasecmp(search_keys[*idx], "from") == 0)
+    {
+      key.type = IST_HDR;
+      strncpy(key.hdrfld, "from", MIME_FIELD_MAX);
+      if (!search_keys[(*idx)+1])
+	return -1;
+
+      (*idx)++;
+      strncpy(key.search, search_keys[(*idx)], MAX_SEARCH_LEN);
+    }
+  else if (strcasecmp(search_keys[*idx], "to") == 0)
+    {
+      key.type = IST_HDR;
+      strncpy(key.hdrfld, "to", MIME_FIELD_MAX);
+      if (!search_keys[(*idx)+1])
+	return -1;
+
+      (*idx)++;
+      strncpy(key.search, search_keys[(*idx)], MAX_SEARCH_LEN);
+    }
+  else if (strcasecmp(search_keys[*idx], "subject") == 0)
+    {
+      key.type = IST_HDR;
+      strncpy(key.hdrfld, "subject", MIME_FIELD_MAX);
+      if (!search_keys[(*idx)+1])
+	return -1;
+
+      (*idx)++;
+      strncpy(key.search, search_keys[(*idx)], MAX_SEARCH_LEN);
+    }
+  else if (strcasecmp(search_keys[*idx], "header") == 0)
+    {
+      key.type = IST_HDR;
+      if (!search_keys[(*idx)+1] || !search_keys[(*idx)+2])
+	return -1;
+
+      strncpy(key.hdrfld, search_keys[(*idx)+1], MIME_FIELD_MAX);
+      strncpy(key.search, search_keys[(*idx)+2], MAX_SEARCH_LEN);
+
+      (*idx) += 2;
+    }
+  else if (strcasecmp(search_keys[*idx], "sentbefore") == 0)
+    {
+      key.type = IST_HDRDATE_BEFORE;
+      strncpy(key.hdrfld, "date", MIME_FIELD_MAX);
+      if (!search_keys[(*idx)+1])
+	return -1;
+
+      (*idx)++;
+      strncpy(key.search, search_keys[(*idx)], MAX_SEARCH_LEN);
+    }
+  else if (strcasecmp(search_keys[*idx], "senton") == 0)
+    {
+      key.type = IST_HDRDATE_ON;
+      strncpy(key.hdrfld, "date", MIME_FIELD_MAX);
+      if (!search_keys[(*idx)+1])
+	return -1;
+
+      (*idx)++;
+      strncpy(key.search, search_keys[(*idx)], MAX_SEARCH_LEN);
+    }
+  else if (strcasecmp(search_keys[*idx], "sentsince") == 0)
+    {
+      key.type = IST_HDRDATE_SINCE;
+      strncpy(key.hdrfld, "date", MIME_FIELD_MAX);
+      if (!search_keys[(*idx)+1])
+	return -1;
+
+      (*idx)++;
+      strncpy(key.search, search_keys[(*idx)], MAX_SEARCH_LEN);
+    }
+
+  /*
+   * INTERNALDATE keys
+   */
+
+  else if (strcasecmp(search_keys[*idx], "before") == 0)
+    {
+      key.type = IST_IDATE;
+      if (!search_keys[(*idx)+1])
+	return -1;
+
+      (*idx)++;
+      if (!check_date(search_keys[*idx]))
+	return -1;
+
+      strncpy(key.search, "internal_date<'", MAX_SEARCH_LEN);
+      strncat(key.search, date_imap2sql(search_keys[*idx]), 
+	      MAX_SEARCH_LEN - sizeof("internal_date<''"));
+      strcat(key.search, "'");
+    }
+  else if (strcasecmp(search_keys[*idx], "on") == 0)
+    {
+      key.type = IST_IDATE;
+      if (!search_keys[(*idx)+1])
+	return -1;
+
+      (*idx)++;
+      if (!check_date(search_keys[*idx]))
+	return -1;
+
+      strncpy(key.search, "internal_date='", MAX_SEARCH_LEN);
+      strncat(key.search, date_imap2sql(search_keys[*idx]), 
+	      MAX_SEARCH_LEN - sizeof("internal_date=''"));
+      strcat(key.search, "'");
+    }
+  else if (strcasecmp(search_keys[*idx], "since") == 0)
+    {
+      key.type = IST_IDATE;
+      if (!search_keys[(*idx)+1])
+	return -1;
+
+      (*idx)++;
+      if (!check_date(search_keys[*idx]))
+	return -1;
+
+      strncpy(key.search, "internal_date>'", MAX_SEARCH_LEN);
+      strncat(key.search, date_imap2sql(search_keys[*idx]), 
+	      MAX_SEARCH_LEN - sizeof("internal_date>''"));
+      strcat(key.search, "'");
+    }
+
+  /*
+   * DATA-keys
+   */
+
+  else if (strcasecmp(search_keys[*idx], "body") == 0)
+    {
+      key.type = IST_DATA_BODY;
+      if (!search_keys[(*idx)+1])
+	return -1;
+
+      (*idx)++;
+      strncpy(key.search, search_keys[(*idx)], MAX_SEARCH_LEN);
+    }
+  else if (strcasecmp(search_keys[*idx], "text") == 0)
+    {
+      key.type = IST_DATA_TEXT;
+      if (!search_keys[(*idx)+1])
+	return -1;
+
+      (*idx)++;
+      strncpy(key.search, search_keys[(*idx)], MAX_SEARCH_LEN);
+    }
+
+  /*
+   * SIZE keys
+   */
+
+  else if (strcasecmp(search_keys[*idx], "larger") == 0)
+    {
+      key.type = IST_SIZE_LARGER;
+      if (!search_keys[(*idx)+1])
+	return -1;
+
+      (*idx)++;
+      key.size = strtoul(search_keys[(*idx)], NULL, 10);
+    }
+  else if (strcasecmp(search_keys[*idx], "smaller") == 0)
+    {
+      key.type = IST_SIZE_SMALLER;
+      if (!search_keys[(*idx)+1])
+	return -1;
+
+      (*idx)++;
+      key.size = strtoul(search_keys[(*idx)], NULL, 10);
+    }
+
+  /*
+   * NOT, OR, ()
+   */
+  else if (strcasecmp(search_keys[*idx], "not") == 0)
+    {
+      key.type = IST_SUBSEARCH_NOT;
+
+      (*idx)++;
+      if ((result = build_imap_search(search_keys, &key.sub_search, idx)) < 0)
+	return result;
+    }
+  else if (strcasecmp(search_keys[*idx], "or") == 0)
+    {
+      key.type = IST_SUBSEARCH_OR;
+
+      (*idx)++;
+      if ((result = build_imap_search(search_keys, &key.sub_search, idx)) < 0)
+	return result;
+    }
+  else if (strcasecmp(search_keys[*idx], "(") == 0)
+    {
+      key.type = IST_SUBSEARCH_AND;
+
+      (*idx)++;
+      while ((result = build_imap_search(search_keys, &key.sub_search, idx)) == 0 
+	     && search_keys[*idx]) ;
+
+      if (result < 0)
+	{
+	  /* error */
+	  list_freelist(&key.sub_search.start);
+	  return result;
+	}
+
+      if (result == 0)
+	{
+	  /* no ')' encountered (should not happen, parentheses are matched at the command line) */
+	  list_freelist(&key.sub_search.start);
+	  return -1;
+	}
+    }
+  else if (strcasecmp(search_keys[*idx], ")") == 0)
+    {
+      return 1;
+    }
+  else if (check_msg_set(search_keys[*idx]))
+    {
+      key.type = IST_SET;
+      strncpy(key.search, search_keys[*idx], MAX_SEARCH_LEN);
+    }
+  
+  if (!list_nodeadd(sl, &key, sizeof(key)))
+    return -2;
+
+  (*idx)++;
+  return 0;
+}
+
 
 
 /*

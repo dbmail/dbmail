@@ -77,7 +77,6 @@ typedef struct
 } fetch_items_t;
 
 
-
 typedef struct 
 {
   unsigned long uid,msguidnext;

@@ -3,8 +3,6 @@
 
 #ifndef MIME_H_
 #define MIME_H_
-#include "dbmysql.h"
-#include "debug.h"
 #include "list.h"
 
 #define MIME_FIELD_MAX 128

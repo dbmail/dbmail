@@ -13,6 +13,8 @@
 #include "mime.h"
 #include "list.h"
 
+#define MAX_SEARCH_LEN 1024
+
 /* size of the messageblk's */
 #define READ_BLOCK_SIZE 524288		/* be carefull, MYSQL has a limit */
 
@@ -80,6 +82,21 @@ enum table_messageblk /* prototype for messageblk table */
 	MESSAGEBLK_BLOCKSIZE
 };
 
+
+enum IMAP_SEARCH_TYPES { IST_SET, IST_SET_UID, IST_FLAG, IST_HDR, IST_HDRDATE_BEFORE,
+			 IST_HDRDATE_ON, IST_HDRDATE_SINCE,
+			 IST_IDATE, IST_DATA_BODY, IST_DATA_TEXT, IST_SIZE_LARGER, IST_SIZE_SMALLER, 
+			 IST_SUBSEARCH_AND, IST_SUBSEARCH_OR, IST_SUBSEARCH_NOT };
+
+typedef struct 
+{
+  int type;
+  unsigned long size;
+  char search[MAX_SEARCH_LEN];
+  char hdrfld[MIME_FIELD_MAX];
+  struct list sub_search;
+} search_key_t;
+  
 
 typedef struct
 {

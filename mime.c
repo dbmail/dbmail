@@ -6,6 +6,7 @@
 
 #include "config.h"
 #include "mime.h"
+#include "debug.h"
 #include <ctype.h>
 
 /* extern char *header; */

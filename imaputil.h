@@ -34,12 +34,15 @@ int check_state_and_args(const char *command, const char *tag, char **args,
 int next_fetch_item(char **args, int idx, fetch_items_t *fi);
 int is_textplain(struct list *hdr);
 
-char *date_sql2imap(char *sqldate);
+char *date_sql2imap(const char *sqldate);
+char *date_imap2sql(const char *imapdate);
 
 int stridx(const char *s, char ch);
 int checkchars(const char *s);
 int checktag(const char *s);
 int checkmailboxname(const char *s);
+int check_msg_set(const char *s);
+int check_date(const char *date);
 void clarify_data(char *str);
 char **build_args_array(const char *s);
 void base64encode(char *in,char *out);
@@ -48,6 +51,8 @@ char **give_chunks(const char *str, char delimiter);
 void free_chunks(char **chunks);
 int binary_search(const unsigned long *array, int arraysize, unsigned long key);
 int quoted_string_out(FILE *outstream, const char *s);
+
+int build_imap_search(char **search_keys, struct list *sl, int *idx);
 
 int init_cache();
 void close_cache();
