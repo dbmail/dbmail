@@ -369,4 +369,7 @@ void GetDBParams(db_param_t * db_params)
 		strncpy(db_params->sock, sock_string, FIELDSIZE);
 	else
 		db_params->sock[0] = '\0';
+
+	if (strlen(db_params->pfx) == 0)
+		strncpy(db_params->pfx, DEFAULT_DBPFX, FIELDSIZE);
 }
