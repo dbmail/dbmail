@@ -1293,13 +1293,16 @@ int _ic_list(char *tag, char **args, ClientInfo * ci)
 	}
 
 	plen = strlen(args[1]) * 6;
-	pattern = (char *) my_malloc(sizeof(char) * (plen + slen + 10));	/* +10 for some xtra space */
+	/* FIXME: We need to allocated a sane amount of memory for this, 
+	   instead of adding an extra 20 places for just for having extra
+	   space. This is bound to fail sometime!! */
+	pattern = (char *) my_malloc(sizeof(char) * (plen + slen + 20));
 	if (!pattern) {
 		fprintf(ci->tx, "* BYE out of memory\r\n");
 		return -1;
 	}
 
-	memset(pattern, '\0', plen + slen + 10);
+	memset(pattern, '\0', plen + slen + 12);
 	pattern[0] = '^';
 	strcpy(&pattern[1], args[0]);
 
@@ -1314,11 +1317,17 @@ int _ic_list(char *tag, char **args, ClientInfo * ci)
 			pattern[i++] = '\\';
 			pattern[i++] = '/';
 			pattern[i++] = ']';
+			pattern[i++] = '.';
 			pattern[i++] = '*';
 		} else
 			pattern[i++] = args[1][j];
 	}
 
+	/* small addition by Ilja */
+	if (pattern[i - 1] != '*') {
+		pattern[i++] = '.';
+		pattern[i++] = '*';
+	}
 	pattern[i] = '$';
 
 	trace(TRACE_INFO, "ic_list(): build the pattern: [%s]\n", pattern);
