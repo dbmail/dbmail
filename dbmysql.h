@@ -126,7 +126,7 @@ char *db_get_config_item (char *item, int type);
 int db_clear_config();
 int db_insert_config_item (char *item, char *value);
 unsigned long db_adduser (char *username, char *password, char *clientid, char *maxmail);
-int db_addalias (unsigned long useridnr, char *alias);
+int db_addalias (unsigned long useridnr, char *alias, int clientid);
 unsigned long db_get_inboxid (unsigned long *useridnr);
 unsigned long db_get_useridnr (unsigned long messageidnr);
 unsigned long db_get_message_mailboxid (unsigned long *messageidnr);
