@@ -1,3 +1,10 @@
+2004-12-14  Paul Stevens <paul@nfg.nl>
+
+	* main.c, lmtp.c, dbmail-message.c, dbmail-message.h: removed
+	redundant whole_message_size parameter from split_message.
+	* acinclude.m4, Makefile.am, configure.in, check_dbmail_imapd.c: added 
+	unit-testing support using check.
+
 2004-12-12  Paul Stevens <paul@nfg.nl>
 
 	* imapcommands.c (_ic_copy): added transactional support

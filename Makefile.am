@@ -62,3 +62,14 @@ endif
 lib_LTLIBRARIES = libdbmail.la
 libdbmail_la_SOURCES = $(COMMON) $(SERVER) $(DELIVER)
 libdbmail_la_LIBADD = @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @INIPARSERLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+
+if WITHCHECK
+
+TESTS=check_dbmail_imapd
+noinst_PROGRAMS=check_dbmail_imapd
+check_dbmail_imapd_SOURCES=quota.c imap4.c imaputil.c imapcommands.c memblock.c rfcmsg.c dbsearch.c dbmsgbuf.c acl.c dbmail-imapsession.c check_dbmail_imapd.c
+check_dbmail_imapd_LDADD=$(dbmail_imapd_LDADD) @CHECK_LIBS@
+check_dbmail_imapd_INCLUDES= @CHECK_CFLAGS@
+
+endif
+

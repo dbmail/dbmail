@@ -43,7 +43,7 @@ struct DbmailMessage {
 	size_t size;
 	size_t rfcsize;
 	GMimeMessage *message;
-	GHashTable *headers;
+	GRelation *headers;
 };
 
 enum DBMAIL_MESSAGE_FILTER_TYPES { 
@@ -72,7 +72,6 @@ void dbmail_message_destroy(struct DbmailMessage *self);
  * \param[out] body_rfcsize rfc size of body
  */
 int split_message(const char *whole_message, 
-		  u64_t whole_message_size,
 		  char **header, u64_t *header_size,
 		  const char **body, u64_t *body_size,
 		  u64_t *body_rfcsize);

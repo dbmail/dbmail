@@ -322,7 +322,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* get pointer to header and to body */
-	if (split_message(whole_message, whole_message_size - 1,
+	if (split_message(whole_message, 
 			  &header, &headersize,
 			  &body, &body_size, &rfcsize) < 0) {
 		trace(TRACE_ERROR, "%s,%s splitmessage failed",

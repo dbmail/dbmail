@@ -65,16 +65,17 @@ static void _set_message_from_stream(struct DbmailMessage *self, GMimeStream *st
 
 static void _register_header(const char *header, const char *value, gpointer user_data)
 {
-	g_hash_table_insert((GHashTable *)user_data, (gpointer)header, (gpointer)value);
+	g_relation_insert((GRelation *)user_data, (gpointer)header, (gpointer)value);
 }
 	
 
 static void _map_headers(struct DbmailMessage *self) 
 {
-	GHashTable *dict = g_hash_table_new((GHashFunc)g_str_hash, (GEqualFunc)g_str_equal);
+	GRelation *rel = g_relation_new(2);
+	g_relation_index(rel, 0, g_str_hash, g_str_equal);
 	assert(self->message);
-	g_mime_header_foreach(GMIME_OBJECT(self->message)->headers, _register_header, dict);
-	self->headers = dict;
+	g_mime_header_foreach(GMIME_OBJECT(self->message)->headers, _register_header, rel);
+	self->headers = rel;
 }
 
 static struct DbmailMessage * _retrieve(struct DbmailMessage *self, char *query_template)
@@ -174,7 +175,7 @@ char * dbmail_message_get_body_as_string(struct DbmailMessage *self)
 
 void dbmail_message_destroy(struct DbmailMessage *self)
 {
-	g_hash_table_destroy(self->headers);
+	g_relation_destroy(self->headers);
 	g_object_unref(self->message);
 	self->headers=NULL;
 	self->message=NULL;
@@ -292,7 +293,6 @@ size_t dbmail_message_get_rfcsize(struct DbmailMessage *self)
 }
 
 int split_message(const char *whole_message, 
-		  u64_t whole_message_size,
 		  char **header, u64_t *header_size,
 		  const char **body, u64_t *body_size,
 		  u64_t *rfcsize)

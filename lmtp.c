@@ -639,7 +639,6 @@ int lmtp(void *stream, void *instream, char *buffer,
 					}
 
 					if (split_message(whole_message, 
-							  whole_message_size - 1,
 							  &header,
 							  &headersize,
 							  &body,

@@ -23,7 +23,6 @@ DBMAIL_MSG_CONFIGURE_START
 AM_INIT_AUTOMAKE(dbmail, 2.1)
 AM_MAINTAINER_MODE
 
-
 pgsqlheaderpaths="/usr/include/pgsql /usr/include /usr/local/include/pgsql \
                   /usr/local/include /usr/freeware/include/pgsql \
                   /usr/freeware/include $HOME/include $HOME/pgsql/include \
@@ -45,6 +44,8 @@ DBMAIL_CHECK_GMIME
 DBMAIL_SET_INIPARSER
 DBMAIL_CHECK_GC
 
+DBMAIL_PATH_CHECK
+AM_CONDITIONAL(WITHCHECK, [test -n "$CHECK_LIBS"])
 
 AC_PROG_CC
 AC_COMPILE_WARNINGS
