@@ -224,11 +224,14 @@ int process_mboxfile(char *file, u64_t userid)
     }
 
   /* update & end message */
-  db_insert_message_block(blk, cnt, msgid);
+  if (msgid > 0)
+    {
+      db_insert_message_block(blk, cnt, msgid);
 
-  snprintf(newunique, UID_SIZE, "%lluA%lu", userid, time(NULL));
-  db_update_message(msgid, newunique, size+cnt, size+cnt+newlines);
-  trace(TRACE_ERROR, "message [%llu] inserted, [%u] bytes", msgid, size+cnt);
+      snprintf(newunique, UID_SIZE, "%lluA%lu", userid, time(NULL));
+      db_update_message(msgid, newunique, size+cnt, size+cnt+newlines);
+      trace(TRACE_ERROR, "message [%llu] inserted, [%u] bytes", msgid, size+cnt);
+    }
 
   fclose(infile);
   return 0;
