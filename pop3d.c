@@ -79,6 +79,7 @@ static void signal_handler (int signo)
 	trace (TRACE_DEBUG,"signal_handler(): sigCHLD, cleaning up zombies");
 	do {
 	  PID = waitpid (-1,&status,WNOHANG);
+	  sleep (1);
 	} while ( PID != -1);
 
 	trace (TRACE_DEBUG,"signal_handler(): sigCHLD, cleaned");
