@@ -52,6 +52,7 @@ int pop3 (void *stream, char *buffer)
   int cmdtype, found=0;
   int indx=0;
   unsigned long result;
+  unsigned long top_lines, top_messageid;
   struct element *tmpelement;
   char *md5_apop_he;
   char *searchptr;
@@ -442,27 +443,40 @@ int pop3 (void *stream, char *buffer)
 	/* find out how many lines they want */
 	searchptr=strstr(value," ");
 
+  /* insufficient parameters */
   if (searchptr==NULL)
     return pop3_error (stream,"-ERR your command does not compute\r\n");
 
         /* skip the space */
   searchptr=searchptr+1;
 
-        /* value should now be the username */
+        /* value should now be the the message that needs to be retrieved */
   value[searchptr-value-1]='\0';
 
-  if (strlen(searchptr)>32)
-    return pop3_error(stream,"-ERR the thingy you issued is not a valid md5 hash\r\n");
+	top_lines = atol (searchptr);
+	top_messageid = atol (value);
 
-        /* create memspace for md5 hash */
-  memtst((md5_apop_he=(char *)malloc(strlen(searchptr)+1))==NULL);
-  strncpy (md5_apop_he,searchptr,strlen(searchptr)+1);
+	if ((top_lines<1) || (top_messageid<1))
+    return pop3_error(stream,"-ERR wrong parameter\r\n");
+	
+	trace(TRACE_DEBUG,"pop3():TOP command (partially) retrieving message");
+     
+	tmpelement=list_getstart(&curr_session.messagelst);
+				/* selecting a message */
+	trace(TRACE_DEBUG,"pop3(): TOP command, selecting message");
+	while (tmpelement!=NULL)
+	  {
+	    if (((struct message *)tmpelement->data)->messageid==top_messageid &&
+		((struct message *)tmpelement->data)->virtual_messagestatus<2) /* message is not deleted */
+	      {
+		fprintf ((FILE *)stream,"+OK %lu lines of message %lu\r\n",top_lines, top_messageid);
+		return db_send_message_lines (stream, ((struct message *)tmpelement->data)->realmessageid, top_lines);
+			}
+	    tmpelement=tmpelement->nextnode;
+	  }
+	return pop3_error (stream,"-ERR no such message\r\n");
 
-        /* create memspace for username */
-  memtst((username=(char *)malloc(strlen(value)+1))==NULL);
-  strncpy (username,value,strlen(value)+1);
-
-		return 1;
+	return 1;
 			}
 
     default : 

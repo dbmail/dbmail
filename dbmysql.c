@@ -116,10 +116,11 @@ int db_check_user (char *username, struct list *userids)
   return occurences;
 }
 
-int db_send_header (void *fstream, unsigned long messageidnr)
+int db_send_message_lines (void *fstream, unsigned long messageidnr, unsigned long lines)
 {
   /* this function writes the header to stream */
   char *ckquery;
+  char *currpos, *prevpos, *nextpos;
 
   memtst((ckquery=(char *)malloc(DEF_QUERYSIZE))==NULL);
   sprintf (ckquery, "SELECT * FROM messageblk WHERE messageidnr=%li",
@@ -131,22 +132,71 @@ int db_send_header (void *fstream, unsigned long messageidnr)
     }
   if ((res = mysql_store_result(&conn)) == NULL)
     {
-      trace(TRACE_ERROR,"db_send_header: mysql_store_result failed: %s",mysql_error(&conn));
+      trace(TRACE_ERROR,"db_send_message_lines: mysql_store_result failed: %s",mysql_error(&conn));
       free(ckquery);
       return 0;
     }
   if (mysql_num_rows(res)<1)
     {
-      trace (TRACE_ERROR,"db_send_header(): no messageblks for messageid %li",messageidnr);
+      trace (TRACE_ERROR,"db_send_message_lines(): no messageblks for messageid %lu",messageidnr);
       mysql_free_result(res);
       free(ckquery);
       return 0;
     }
 
-  while ((row = mysql_fetch_row(res))!=NULL)
-    fprintf ((FILE *)fstream,row[2]);
-  mysql_free_result(res);
-  return 0;
+	trace (TRACE_DEBUG,"db_send_message_lines(): sending header first");
+
+	row = mysql_fetch_row(res);
+	if (row!=NULL)
+			fprintf ((FILE *)fstream,"%s",row[2]);
+	else 
+		{
+			trace(TRACE_MESSAGE,"db_send_message_lines(): this is weird, now result rows!");
+			return 0;
+		}
+	
+	trace (TRACE_DEBUG,"db_send_message_lines(): sending [%lu] lines from message [%lu]",lines,messageidnr);
+  
+  while (((row = mysql_fetch_row(res))!=NULL) && (lines>0))
+	{
+	/* we're going to do this one line at the time */  
+	prevpos = row[2];
+	nextpos = prevpos;
+	while ((lines>0) && (nextpos!=NULL)) 
+		{
+		/* search for a newline character in prevpos (which is the buffer) */
+		currpos=strchr(prevpos,'\n');	
+		trace (TRACE_DEBUG,"db_send_message_lines(): linesize %d",currpos-prevpos);
+		trace (TRACE_DEBUG, "db_send_message_lines(): newline character found at %d",currpos);
+			if ((currpos!=NULL) && (strlen (currpos)>0))
+				{
+				/* newline found */
+				nextpos=currpos+1;
+				/* to delimiter the buffer for fprintf */
+		trace (TRACE_DEBUG,"db_send_message_lines(): before linesize %d",strlen(prevpos));
+				currpos[0]='\0';	
+		trace (TRACE_DEBUG,"db_send_message_lines(): after linesize %d",strlen(prevpos));
+
+				/* the \n is added because it was stripped */
+				trace (TRACE_DEBUG,"db_send_message_lines(): sending line[%s], linecounter [%lu]",prevpos,lines);
+				fprintf ((FILE *)fstream,"%s\n",prevpos);
+				}
+			else
+				{
+				trace (TRACE_DEBUG,"db_send_message_lines(): sending line[%s], linecounter [%lu]",prevpos,lines);
+				/* \n needs to be included because it was set to \0 */
+				fprintf ((FILE *)fstream,"%s",prevpos);
+				nextpos=NULL;
+				}
+			lines--;
+			/* set prevpos to the new position */
+			prevpos=nextpos;
+		}
+	}
+   /* delimiter */
+   fprintf ((FILE *)fstream,"\r\n.\r\n");
+   mysql_free_result(res);
+   return 1;
 }
 
 int db_send_message (void *fstream, unsigned long messageidnr)
