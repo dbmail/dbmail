@@ -195,6 +195,9 @@ int main(int argc, char *argv[])
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 	setvbuf(stdout, 0, _IONBF, 0);
 
+	/* Set all changes to false. */
+	memset(change_flags, 0, sizeof(change_flags));
+
 	/* get options */
 	opterr = 0;		/* suppress error message from getopt() */
 	while ((opt = getopt(argc, argv,
