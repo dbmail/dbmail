@@ -30,8 +30,8 @@ attributetype ( 1.3.6.1.4.1.12340.6.2.1.2 NAME 'mailForwardingAddress'
 
 objectclass ( 1.3.6.1.4.1.12340.6.2.2.1 NAME 'dbmailUser'
 	DESC 'DBMail-LDAP User' SUP top AUXILIARY
-	MUST ( uid $ mail )
-	MAY ( userPassword $ uidNumber $ gidNumber $ mailQuota $ mailForwardingAddress ) )
+	MUST ( uid $ mail $ uidNumber )
+	MAY ( userPassword $ gidNumber $ mailQuota $ mailForwardingAddress ) )
 	      
 objectclass ( 1.3.6.1.4.1.12340.6.2.2.2 NAME 'dbmailForwardingAddress'
 	DESC 'DBMail-LDAP Forwarding Address' SUP top AUXILIARY

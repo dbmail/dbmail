@@ -23,4 +23,5 @@ INCLUDES = -I$(top_srcdir)
 pkglib_LTLIBRARIES = libpgsqldbmail.la
 
 libpgsqldbmail_la_SOURCES = dbpgsql.c
+libpgsqldbmail_la_LIBADD = @SQLLIB@
 endif

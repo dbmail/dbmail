@@ -992,9 +992,6 @@ int do_show(const char * const name)
 				(double) quotum / (1024.0 * 1024.0));
 		out = g_list_append_printf(out,"%.02f", 
 				(double) quotumused / (1024.0 * 1024.0));
-		out = g_list_append_printf(out,"%.01f%%", 
-				(100.0 * quotumused) / ( quotum ? (double) quotum: 1));
-
 		userlist = auth_get_user_aliases(useridnr);
 
 		if (g_list_length(userlist)) {
@@ -1002,6 +999,8 @@ int do_show(const char * const name)
 			s = g_list_join(userlist,",");
 			g_list_append_printf(out,"%s", s->str);
 			g_list_foreach(userlist,(GFunc)g_free, NULL);
+		} else {
+			g_list_append_printf(out,"");
 		}
 		g_list_free(userlist);
 		s = g_list_join(out,":");

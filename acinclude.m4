@@ -20,35 +20,39 @@ AC_ARG_WITH(pgsql,
 	    [  --with-pgsql            use PostgreSQL as database. 
                           Uses pg_config for finding includes and libraries],
             pgsqlheadername="$withval")
+AC_ARG_WITH(sqlite,
+	    [  --with-sqlite           use SQLite as database. 
+                          Uses pkg-config for finding includes and libraries],
+            sqliteheadername="$withval")
 
 WARN=0
-# Make sure we only select one, mysql or pgsql
+# Make sure we only select one of mysql, pgsql or sqlite
 if test "${mysqlheadername-x}" = "x"
 then
   if test "${pgsqlheadername-x}" = "x"
   then
-    NEITHER=1
-    mysqlheadername=""
-#    MYSQLINC=""
-#    PGSQLINC=""
+    if test "${sqliteheadername-x}" = "x"
+    then
+      NEITHER=1
+      mysqlheadername=""
+    fi
   fi
 fi
 if test "$NEITHER" = 1
   then
      AC_MSG_ERROR([
 
-     You have to specify --with-mysql or --with-pgsql to build.
+     You have to specify --with-mysql, --with-pgsql or --with-sqlite to build.
 ])
 fi
 
+# TODO: fix this to check for other sql libs like sqllite:
 if test ! "${mysqlheadername-x}" = "x"
 then
   if test ! "${pgsqlheadername-x}" = "x"
     then
       WARN=1
       mysqlheadername=""
-#      MYSQLINC=""
-#      PGSQLINC=""
   fi
 fi
 if test "$WARN" = 1
@@ -82,9 +86,10 @@ then
         SQLALIB="mysql/.libs/libmysqldbmail.a"
 	SQLLTLIB="mysql/libmysqldbmail.la"
         AC_MSG_RESULT([$SQLLIB])
-   fi
-else
-  if test ! "${pgsqlheadername-x}" = "x"
+    fi
+fi   
+
+if test ! "${pgsqlheadername-x}" = "x"
   then
     AC_PATH_PROG(pgsqlconfig,pg_config)
     if test [ -z "$pgsqlconfig" ]
@@ -102,7 +107,24 @@ else
 	SQLLTLIB="pgsql/libpgsqldbmail.la"
         AC_MSG_RESULT([$SQLLIB])
     fi
-  fi
+fi
+
+if test ! "${sqliteheadername-x}" = "x"
+  then
+    AC_PATH_PROG(sqliteconfig,pkg-config)
+    if test [ -z "$sqliteconfig" ]
+    then
+        AC_MSG_ERROR([pkg-config executable not found. Make sure pkg-config is in your path])
+    else
+	AC_MSG_CHECKING([SQLite headers])
+	SQLITEINC=`${sqliteconfig} --cflags sqlite`
+	AC_MSG_RESULT([$SQLITEINC])
+        AC_MSG_CHECKING([SQLite libraries])
+        SQLLIB=`${sqliteconfig} --libs sqlite`
+        SQLALIB="sqlite/.libs/libsqlitedbmail.a"
+	SQLLTLIB="sqlite/libsqlitedbmail.la"
+        AC_MSG_RESULT([$SQLLIB])
+    fi
 fi
 ])
 dnl DBMAIL_SIEVE_CONF

@@ -15,7 +15,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-SUBDIRS = mysql pgsql auth sort man lib
+SUBDIRS = mysql pgsql sqlite auth sort man lib
 
 if SIEVE
 SIEVEPROGS = dbmail-sievecmd dbmail-timsieved
@@ -34,35 +34,35 @@ AM_CFLAGS = -fomit-frame-pointer
 INCLUDES = -I$(top_srcdir)
 
 dbmail_smtp_SOURCES = main.c
-dbmail_smtp_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @INIPARSERLTLIB@ @SQLLIB@ @SIEVELIB@
+dbmail_smtp_LDADD = libdbmail.la
 
 
 dbmail_pop3d_SOURCES = pop3.c pop3d.c
-dbmail_pop3d_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @INIPARSERLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_pop3d_LDADD = libdbmail.la
 
 dbmail_imapd_SOURCES = quota.c imap4.c imaputil.c imapcommands.c memblock.c rfcmsg.c imapd.c dbsearch.c dbmsgbuf.c acl.c dbmail-imapsession.c
-dbmail_imapd_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @INIPARSERLTLIB@ @SQLLIB@ @LDAPLIB@
+dbmail_imapd_LDADD = libdbmail.la
 
 dbmail_util_SOURCES = maintenance.c
-dbmail_util_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @INIPARSERLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_util_LDADD = libdbmail.la
 
 dbmail_users_SOURCES = user.c
-dbmail_users_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @INIPARSERLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_users_LDADD = libdbmail.la
 
 dbmail_lmtpd_SOURCES = lmtp.c lmtpd.c
-dbmail_lmtpd_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @INIPARSERLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_lmtpd_LDADD = libdbmail.la
   
 if SIEVE
 dbmail_sievecmd_SOURCES = sievecmd.c 
-dbmail_sievecmd_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @INIPARSERLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_sievecmd_LDADD = libdbmail.la
 
 dbmail_timsieved_SOURCES = timsieve.c timsieved.c
-dbmail_timsieved_LDADD = libdbmail.la @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @INIPARSERLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+dbmail_timsieved_LDADD = libdbmail.la
 endif
 
-lib_LTLIBRARIES = libdbmail.la
+noinst_LTLIBRARIES = libdbmail.la
 libdbmail_la_SOURCES = $(COMMON) $(SERVER) $(DELIVER)
-libdbmail_la_LIBADD = @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @INIPARSERLTLIB@ @SQLLIB@ @LDAPLIB@ @SIEVELIB@
+libdbmail_la_LIBADD = @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @INIPARSERLTLIB@
 
 if WITHCHECK
 
@@ -73,15 +73,15 @@ check_dbmail_common_SOURCES=$(COMMON) check_dbmail_common.c
 check_dbmail_common_LDADD=$(dbmail_users_LDADD) @CHECK_LIBS@
 check_dbmail_common_INCLUDES=@CHECK_CFLAGS@
 
-check_dbmail_server_SOURCES=$(SERVER) check_dbmail_server.c
+check_dbmail_server_SOURCES=$(COMMON) $(SERVER) check_dbmail_server.c
 check_dbmail_server_LDADD=$(dbmail_users_LDADD) @CHECK_LIBS@
 check_dbmail_server_INCLUDES=@CHECK_CFLAGS@
 
-check_dbmail_deliver_SOURCES=$(DELIVER) check_dbmail_deliver.c
+check_dbmail_deliver_SOURCES=$(COMMON) $(DELIVER) check_dbmail_deliver.c
 check_dbmail_deliver_LDADD=$(dbmail_users_LDADD) @CHECK_LIBS@
 check_dbmail_deliver_INCLUDES=@CHECK_CFLAGS@
 
-check_dbmail_message_SOURCES=$(DELIVER) check_dbmail_message.c
+check_dbmail_message_SOURCES=$(COMMON) $(DELIVER) check_dbmail_message.c
 check_dbmail_message_LDADD=$(dbmail_users_LDADD) @CHECK_LIBS@
 check_dbmail_message_INCLUDES=@CHECK_CFLAGS@
 

@@ -7,11 +7,11 @@ export DH_VERBOSE=1
 
 # This is the debhelper compatibility version to use.
 export DH_COMPAT=3
-export DEB_BUILD_OPTIONS=debug
+#export DEB_BUILD_OPTIONS=debug
 
 #export WITH_GC="--with-gc"
 export WITH_CHECK=--with-check
-#export NOSHARED=--enable-shared=no
+export NOSHARED=--enable-shared=no
 
 CFLAGS = -Wall -O1
 LDFLAGS = -lcrypt
@@ -28,9 +28,8 @@ ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
 endif
 
 # dpatch
-export PACKAGE=dbmail
-#export PACKAGES=dbmail-mysql dbmail-pgsql dbmail-mysql-ldap dbmail-pgsql-ldap
-export PACKAGES=dbmail-mysql dbmail-pgsql
+export PACKAGE=dbmail2
+export PACKAGES=dbmail2-mysql dbmail2-pgsql dbmail2-mysql-ldap dbmail2-pgsql-ldap
 
 include /usr/share/dpatch/dpatch.make 
 
@@ -54,44 +53,44 @@ stamps/configure:
 	touch $@
 
 
-dbmail-mysql: stamps/dbmail-mysql
-stamps/dbmail-mysql:
+dbmail2-mysql: stamps/dbmail2-mysql
+stamps/dbmail2-mysql:
 	$(MAKE) clean || true
 	env CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" \
 		./configure $(CONFFLAGS) --with-mysql=/usr/include/mysql
 	$(MAKE)
-	$(MAKE) install DESTDIR=$(CURDIR)/debian/dbmail-mysql
-	rm -f $(CURDIR)/debian/dbmail-mysql/usr/bin/dbmail-readvut
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/dbmail2-mysql
+	rm -f $(CURDIR)/debian/dbmail2-mysql/usr/bin/dbmail-readvut
 	touch $@
 
-dbmail-mysql-ldap: stamps/dbmail-mysql-ldap
-stamps/dbmail-mysql-ldap:
+dbmail2-mysql-ldap: stamps/dbmail2-mysql-ldap
+stamps/dbmail2-mysql-ldap:
 	$(MAKE) clean || true
 	env CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" \
 		./configure $(CONFFLAGS) --with-auth-ldap --with-mysql=/usr/include/mysql
 	$(MAKE)
-	$(MAKE) install DESTDIR=$(CURDIR)/debian/dbmail-mysql-ldap
-	rm -f $(CURDIR)/debian/dbmail-mysql-ldap/usr/bin/dbmail-readvut
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/dbmail2-mysql-ldap
+	rm -f $(CURDIR)/debian/dbmail2-mysql-ldap/usr/bin/dbmail-readvut
 	touch $@
 
-dbmail-pgsql: stamps/dbmail-pgsql	
-stamps/dbmail-pgsql:
+dbmail2-pgsql: stamps/dbmail2-pgsql	
+stamps/dbmail2-pgsql:
 	$(MAKE) clean || true
 	env CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" PATH="$(PATH):/usr/lib/postgresql/bin/" \
 		./configure $(CONFFLAGS) --with-pgsql=/usr/include/postgresql 
 	$(MAKE)
-	$(MAKE) install DESTDIR=$(CURDIR)/debian/dbmail-pgsql
-	rm -f $(CURDIR)/debian/dbmail-pgsql/usr/bin/dbmail-readvut
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/dbmail2-pgsql
+	rm -f $(CURDIR)/debian/dbmail2-pgsql/usr/bin/dbmail-readvut
 	touch $@
 	
-dbmail-pgsql-ldap: stamps/dbmail-pgsql-ldap
-stamps/dbmail-pgsql-ldap:
+dbmail2-pgsql-ldap: stamps/dbmail2-pgsql-ldap
+stamps/dbmail2-pgsql-ldap:
 	$(MAKE) clean || true
 	env CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" PATH="$(PATH):/usr/lib/postgresql/bin/" \
 		./configure $(CONFFLAGS) --with-auth-ldap --with-pgsql=/usr/include/postgresql
 	$(MAKE)
-	$(MAKE) install DESTDIR=$(CURDIR)/debian/dbmail-pgsql-ldap
-	rm -f $(CURDIR)/debian/dbmail-pgsql-ldap/usr/bin/dbmail-readvut
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/dbmail2-pgsql-ldap
+	rm -f $(CURDIR)/debian/dbmail2-pgsql-ldap/usr/bin/dbmail-readvut
 	touch $@
 	
 clean: clean1 unpatch
@@ -119,6 +118,7 @@ clean1:
 		rm -rf `find . -name $$file`; \
 	done
 	rm -f stamp-h.in
+	rm -f config.log
 	dh_clean
 
 
@@ -148,7 +148,7 @@ binary-common: build
 	dh_installchangelogs -a
 	dh_installexamples -a
 	dh_installdirs -A etc/dbmail var/run/dbmail
-#	dh_strip -a
+	dh_strip -a
 	dh_link -a
 	dh_compress -a
 	dh_fixperms -a

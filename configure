@@ -463,7 +463,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA PACKAGE VERSION ACLOCAL AUTOCONF AUTOMAKE AUTOHEADER MAKEINFO SET_MAKE MAINTAINER_MODE_TRUE MAINTAINER_MODE_FALSE MAINT mysqlconfig pgsqlconfig CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT glibconfig gmimeconfig CPP EGREP MYSQL_TRUE MYSQL_FALSE PGSQL_TRUE PGSQL_FALSE SIEVE_TRUE SIEVE_FALSE LDAP_TRUE LDAP_FALSE SQLLIB LDAPLIB SQLALIB SQLLTLIB SORTALIB SORTLTLIB AUTHALIB AUTHLTLIB INIPARSERALIB INIPARSERLTLIB SIEVELIB MYSQLINC PGSQLINC SIEVEINC LDAPINC build build_cpu build_vendor build_os host host_cpu host_vendor host_os LN_S ECHO AR ac_ct_AR RANLIB ac_ct_RANLIB STRIP ac_ct_STRIP CXX CXXFLAGS ac_ct_CXX CXXCPP F77 FFLAGS ac_ct_F77 LIBTOOL LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA PACKAGE VERSION ACLOCAL AUTOCONF AUTOMAKE AUTOHEADER MAKEINFO SET_MAKE MAINTAINER_MODE_TRUE MAINTAINER_MODE_FALSE MAINT mysqlconfig pgsqlconfig sqliteconfig CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT glibconfig gmimeconfig CPP EGREP CHECK_CFLAGS CHECK_LIBS WITHCHECK_TRUE WITHCHECK_FALSE MYSQL_TRUE MYSQL_FALSE PGSQL_TRUE PGSQL_FALSE SQLITE_TRUE SQLITE_FALSE SIEVE_TRUE SIEVE_FALSE LDAP_TRUE LDAP_FALSE SQLLIB LDAPLIB SQLALIB SQLLTLIB SORTALIB SORTLTLIB AUTHALIB AUTHLTLIB INIPARSERALIB INIPARSERLTLIB SIEVELIB MYSQLINC PGSQLINC SQLITEINC SIEVEINC LDAPINC build build_cpu build_vendor build_os host host_cpu host_vendor host_os LN_S ECHO AR ac_ct_AR RANLIB ac_ct_RANLIB STRIP ac_ct_STRIP CXX CXXFLAGS ac_ct_CXX CXXCPP F77 FFLAGS ac_ct_F77 LIBTOOL LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -1040,9 +1040,12 @@ Optional Packages:
 	       		  for finding includes and libraries
   --with-pgsql            use PostgreSQL as database.
                           Uses pg_config for finding includes and libraries
+  --with-sqlite           use SQLite as database.
+                          Uses pkg-config for finding includes and libraries
   --with-auth-ldap=PATH	  full path to ldap header directory
   --with-sieve=PATH	  full path to libSieve header directory (don't use, not stable)
   --with-gc=PREFIX        libgc PREFIX
+  --with-check=PATH       prefix where check is installed default=auto
   --with-gnu-ld           assume the C compiler uses GNU ld [default=no]
   --with-pic              try to use only PIC/non-PIC objects [default=use
                           both]
@@ -1832,7 +1835,6 @@ fi
 
 
 
-
 pgsqlheaderpaths="/usr/include/pgsql /usr/include /usr/local/include/pgsql \
                   /usr/local/include /usr/freeware/include/pgsql \
                   /usr/freeware/include $HOME/include $HOME/pgsql/include \
@@ -1860,39 +1862,45 @@ if test "${with_pgsql+set}" = set; then
   pgsqlheadername="$withval"
 fi;
 
+# Check whether --with-sqlite or --without-sqlite was given.
+if test "${with_sqlite+set}" = set; then
+  withval="$with_sqlite"
+  sqliteheadername="$withval"
+fi;
+
 WARN=0
-# Make sure we only select one, mysql or pgsql
+# Make sure we only select one of mysql, pgsql or sqlite
 if test "${mysqlheadername-x}" = "x"
 then
   if test "${pgsqlheadername-x}" = "x"
   then
-    NEITHER=1
-    mysqlheadername=""
-#    MYSQLINC=""
-#    PGSQLINC=""
+    if test "${sqliteheadername-x}" = "x"
+    then
+      NEITHER=1
+      mysqlheadername=""
+    fi
   fi
 fi
 if test "$NEITHER" = 1
   then
      { { echo "$as_me:$LINENO: error:
 
-     You have to specify --with-mysql or --with-pgsql to build.
+     You have to specify --with-mysql, --with-pgsql or --with-sqlite to build.
 " >&5
 echo "$as_me: error:
 
-     You have to specify --with-mysql or --with-pgsql to build.
+     You have to specify --with-mysql, --with-pgsql or --with-sqlite to build.
 " >&2;}
    { (exit 1); exit 1; }; }
 fi
 
+# TODO: fix this to check for other sql libs like sqllite:
 if test ! "${mysqlheadername-x}" = "x"
 then
   if test ! "${pgsqlheadername-x}" = "x"
     then
       WARN=1
       mysqlheadername=""
-#      MYSQLINC=""
-#      PGSQLINC=""
   fi
 fi
 if test "$WARN" = 1
@@ -1972,9 +1980,10 @@ echo $ECHO_N "checking MySQL libraries... $ECHO_C" >&6
 	SQLLTLIB="mysql/libmysqldbmail.la"
         echo "$as_me:$LINENO: result: $SQLLIB" >&5
 echo "${ECHO_T}$SQLLIB" >&6
-   fi
-else
-  if test ! "${pgsqlheadername-x}" = "x"
+    fi
+fi
+
+if test ! "${pgsqlheadername-x}" = "x"
   then
     # Extract the first word of "pg_config", so it can be a program name with args.
 set dummy pg_config; ac_word=$2
@@ -2036,7 +2045,68 @@ echo $ECHO_N "checking PostgreSQL libraries... $ECHO_C" >&6
         echo "$as_me:$LINENO: result: $SQLLIB" >&5
 echo "${ECHO_T}$SQLLIB" >&6
     fi
+fi
+
+if test ! "${sqliteheadername-x}" = "x"
+  then
+    # Extract the first word of "pkg-config", so it can be a program name with args.
+set dummy pkg-config; ac_word=$2
+echo "$as_me:$LINENO: checking for $ac_word" >&5
+echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6
+if test "${ac_cv_path_sqliteconfig+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  case $sqliteconfig in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_sqliteconfig="$sqliteconfig" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+  for ac_exec_ext in '' $ac_executable_extensions; do
+  if $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_sqliteconfig="$as_dir/$ac_word$ac_exec_ext"
+    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
   fi
+done
+done
+
+  ;;
+esac
+fi
+sqliteconfig=$ac_cv_path_sqliteconfig
+
+if test -n "$sqliteconfig"; then
+  echo "$as_me:$LINENO: result: $sqliteconfig" >&5
+echo "${ECHO_T}$sqliteconfig" >&6
+else
+  echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6
+fi
+
+    if test  -z "$sqliteconfig"
+    then
+        { { echo "$as_me:$LINENO: error: pkg-config executable not found. Make sure pkg-config is in your path" >&5
+echo "$as_me: error: pkg-config executable not found. Make sure pkg-config is in your path" >&2;}
+   { (exit 1); exit 1; }; }
+    else
+	echo "$as_me:$LINENO: checking SQLite headers" >&5
+echo $ECHO_N "checking SQLite headers... $ECHO_C" >&6
+	SQLITEINC=`${sqliteconfig} --cflags sqlite`
+	echo "$as_me:$LINENO: result: $SQLITEINC" >&5
+echo "${ECHO_T}$SQLITEINC" >&6
+        echo "$as_me:$LINENO: checking SQLite libraries" >&5
+echo $ECHO_N "checking SQLite libraries... $ECHO_C" >&6
+        SQLLIB=`${sqliteconfig} --libs sqlite`
+        SQLALIB="sqlite/.libs/libsqlitedbmail.a"
+	SQLLTLIB="sqlite/libsqlitedbmail.la"
+        echo "$as_me:$LINENO: result: $SQLLIB" >&5
+echo "${ECHO_T}$SQLLIB" >&6
+    fi
 fi
 
 echo "$as_me:$LINENO: result: checking for authentication configuration" >&5
@@ -2056,6 +2126,7 @@ then
   # --with-auth-ldap was specified
   echo "$as_me:$LINENO: result: using LDAP authentication" >&5
 echo "${ECHO_T}using LDAP authentication" >&6
+  CFLAGS="$CFLAGS -DAUTHLDAP"
   if test "$withval" != "yes"
   then
     echo "$as_me:$LINENO: checking for ldap.h (user supplied)" >&5
@@ -4379,6 +4450,234 @@ echo "$as_me: error: libgc not found" >&2;}
 fi
 
 
+
+# Check whether --with-check or --without-check was given.
+if test "${with_check+set}" = set; then
+  withval="$with_check"
+  test x"$with_check" = xno && with_check="no"
+else
+  with_check="no"
+fi;
+
+if test "x$with_check" != xno; then
+  min_check_version=0.8.2
+
+  echo "$as_me:$LINENO: checking for check - version >= $min_check_version" >&5
+echo $ECHO_N "checking for check - version >= $min_check_version... $ECHO_C" >&6
+
+  if test x$with_check = xno; then
+    echo "$as_me:$LINENO: result: disabled" >&5
+echo "${ECHO_T}disabled" >&6
+    { { echo "$as_me:$LINENO: error: disabling check is not supported" >&5
+echo "$as_me: error: disabling check is not supported" >&2;}
+   { (exit 1); exit 1; }; }
+  else
+    if test "x$with_check" = xyes; then
+      CHECK_CFLAGS=""
+      CHECK_LIBS="-lcheck"
+    else
+      CHECK_CFLAGS="-I$with_check/include"
+      CHECK_LIBS="-L$with_check/lib -lcheck"
+    fi
+
+    ac_save_CFLAGS="$CFLAGS"
+    ac_save_LIBS="$LIBS"
+
+    CFLAGS="$CFLAGS $CHECK_CFLAGS"
+    LIBS="$CHECK_LIBS $LIBS"
+
+    rm -f conf.check-test
+    if test "$cross_compiling" = yes; then
+  echo $ac_n "cross compiling; assumed OK... $ac_c"
+else
+  cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <check.h>
+
+int main ()
+{
+  int major, minor, micro;
+  char *tmp_version;
+
+  system ("touch conf.check-test");
+
+  /* HP/UX 9 (%@#!) writes to sscanf strings */
+  tmp_version = strdup("$min_check_version");
+  if (sscanf(tmp_version, "%d.%d.%d", &major, &minor, &micro) != 3) {
+     printf("%s, bad version string\n", "$min_check_version");
+     return 1;
+   }
+
+  if ((CHECK_MAJOR_VERSION != check_major_version) ||
+      (CHECK_MINOR_VERSION != check_minor_version) ||
+      (CHECK_MICRO_VERSION != check_micro_version))
+    {
+      printf("\n*** The check header file (version %d.%d.%d) does not match\n",
+	     CHECK_MAJOR_VERSION, CHECK_MINOR_VERSION, CHECK_MICRO_VERSION);
+      printf("*** the check library (version %d.%d.%d).\n",
+	     check_major_version, check_minor_version, check_micro_version);
+      return 1;
+    }
+
+  if ((check_major_version > major) ||
+      ((check_major_version == major) && (check_minor_version > minor)) ||
+      ((check_major_version == major) && (check_minor_version == minor) && (check_micro_version >= micro)))
+    {
+      return 0;
+    }
+  else
+    {
+      printf("\n*** An old version of check (%d.%d.%d) was found.\n",
+             check_major_version, check_minor_version, check_micro_version);
+      printf("*** You need a version of check being at least %d.%d.%d.\n", major, minor, micro);
+      printf("***\n");
+      printf("*** If you have already installed a sufficiently new version, this error\n");
+      printf("*** probably means that the wrong copy of the check library and header\n");
+      printf("*** file is being found. Rerun configure with the --with-check=PATH option\n");
+      printf("*** to specify the prefix where the correct version was installed.\n");
+    }
+
+  return 1;
+}
+
+_ACEOF
+rm -f conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && { ac_try='./conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  :
+else
+  echo "$as_me: program exited with status $ac_status" >&5
+echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+( exit $ac_status )
+no_check=yes
+fi
+rm -f core *.core gmon.out bb.out conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
+fi
+
+    CFLAGS="$ac_save_CFLAGS"
+    LIBS="$ac_save_LIBS"
+
+    if test "x$no_check" = x ; then
+      echo "$as_me:$LINENO: result: yes" >&5
+echo "${ECHO_T}yes" >&6
+      :
+    else
+      echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6
+      if test -f conf.check-test ; then
+        :
+      else
+        echo "*** Could not run check test program, checking why..."
+        CFLAGS="$CFLAGS $CHECK_CFLAGS"
+        LIBS="$CHECK_LIBS $LIBS"
+        cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <check.h>
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+   echo "*** The test program compiled, but did not run. This usually means"
+        echo "*** that the run-time linker is not finding check. You'll need to set your"
+        echo "*** LD_LIBRARY_PATH environment variable, or edit /etc/ld.so.conf to point"
+        echo "*** to the installed location  Also, make sure you have run ldconfig if that"
+        echo "*** is required on your system"
+	echo "***"
+        echo "*** If you have an old version installed, it is best to remove it, although"
+        echo "*** you may also be able to get things to work by modifying LD_LIBRARY_PATH"
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ echo "*** The test program failed to compile or link. See the file config.log for"
+        echo "*** the exact error that occured."
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+
+        CFLAGS="$ac_save_CFLAGS"
+        LIBS="$ac_save_LIBS"
+      fi
+
+      CHECK_CFLAGS=""
+      CHECK_LIBS=""
+
+      rm -f conf.check-test
+      { { echo "$as_me:$LINENO: error: check not found" >&5
+echo "$as_me: error: check not found" >&2;}
+   { (exit 1); exit 1; }; }
+    fi
+fi
+
+
+
+
+    rm -f conf.check-test
+
+  fi
+
+
+
+if test -n "$CHECK_LIBS"; then
+  WITHCHECK_TRUE=
+  WITHCHECK_FALSE='#'
+else
+  WITHCHECK_TRUE='#'
+  WITHCHECK_FALSE=
+fi
+
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
@@ -5323,6 +5622,15 @@ else
 fi
 
 
+if test -n "$SQLITEINC"; then
+  SQLITE_TRUE=
+  SQLITE_FALSE='#'
+else
+  SQLITE_TRUE='#'
+  SQLITE_FALSE=
+fi
+
+
 if test -n "$SIEVEINC"; then
   SIEVE_TRUE=
   SIEVE_FALSE='#'
@@ -5863,6 +6171,7 @@ _ACEOF
 fi
 
 done
+
 
 
 
@@ -6464,7 +6773,7 @@ ia64-*-hpux*)
   ;;
 *-*-irix6*)
   # Find out which ABI we are using.
-  echo '#line 6467 "configure"' > conftest.$ac_ext
+  echo '#line 6776 "configure"' > conftest.$ac_ext
   if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -7448,7 +7757,7 @@ fi
 
 
 # Provide some information about the compiler.
-echo "$as_me:7451:" \
+echo "$as_me:7760:" \
      "checking for Fortran 77 compiler version" >&5
 ac_compiler=`set X $ac_compile; echo $2`
 { (eval echo "$as_me:$LINENO: \"$ac_compiler --version </dev/null >&5\"") >&5
@@ -8480,11 +8789,11 @@ else
    -e 's:.*FLAGS}? :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:8483: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:8792: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:8487: \$? = $ac_status" >&5
+   echo "$as_me:8796: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings
@@ -8713,11 +9022,11 @@ else
    -e 's:.*FLAGS}? :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:8716: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:9025: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:8720: \$? = $ac_status" >&5
+   echo "$as_me:9029: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings
@@ -8773,11 +9082,11 @@ else
    -e 's:.*FLAGS}? :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:8776: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:9085: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:8780: \$? = $ac_status" >&5
+   echo "$as_me:9089: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -10961,7 +11270,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 10964 "configure"
+#line 11273 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -11059,7 +11368,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 11062 "configure"
+#line 11371 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -13236,11 +13545,11 @@ else
    -e 's:.*FLAGS}? :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:13239: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:13548: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:13243: \$? = $ac_status" >&5
+   echo "$as_me:13552: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings
@@ -13296,11 +13605,11 @@ else
    -e 's:.*FLAGS}? :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:13299: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:13608: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:13303: \$? = $ac_status" >&5
+   echo "$as_me:13612: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -14665,7 +14974,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 14668 "configure"
+#line 14977 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -14763,7 +15072,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 14766 "configure"
+#line 15075 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -15590,11 +15899,11 @@ else
    -e 's:.*FLAGS}? :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:15593: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:15902: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:15597: \$? = $ac_status" >&5
+   echo "$as_me:15906: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings
@@ -15650,11 +15959,11 @@ else
    -e 's:.*FLAGS}? :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:15653: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:15962: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:15657: \$? = $ac_status" >&5
+   echo "$as_me:15966: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -17695,11 +18004,11 @@ else
    -e 's:.*FLAGS}? :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:17698: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:18007: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:17702: \$? = $ac_status" >&5
+   echo "$as_me:18011: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings
@@ -17928,11 +18237,11 @@ else
    -e 's:.*FLAGS}? :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:17931: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:18240: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:17935: \$? = $ac_status" >&5
+   echo "$as_me:18244: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings
@@ -17988,11 +18297,11 @@ else
    -e 's:.*FLAGS}? :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:17991: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:18300: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:17995: \$? = $ac_status" >&5
+   echo "$as_me:18304: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -20176,7 +20485,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 20179 "configure"
+#line 20488 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -20274,7 +20583,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 20277 "configure"
+#line 20586 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -21289,7 +21598,7 @@ LIBTOOL='$(SHELL) $(top_builddir)/libtool'
 
 
 
-                                                                                          ac_config_files="$ac_config_files Makefile mysql/Makefile pgsql/Makefile auth/Makefile sort/Makefile man/Makefile lib/Makefile lib/iniparser-2.14/Makefile lib/iniparser-2.14/src/Makefile"
+                                                                                                    ac_config_files="$ac_config_files Makefile mysql/Makefile pgsql/Makefile sqlite/Makefile auth/Makefile sort/Makefile man/Makefile lib/Makefile lib/iniparser-2.14/Makefile lib/iniparser-2.14/src/Makefile"
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
 # tests run on this system so they can be shared between configure
@@ -21828,6 +22137,7 @@ do
   "Makefile" ) CONFIG_FILES="$CONFIG_FILES Makefile" ;;
   "mysql/Makefile" ) CONFIG_FILES="$CONFIG_FILES mysql/Makefile" ;;
   "pgsql/Makefile" ) CONFIG_FILES="$CONFIG_FILES pgsql/Makefile" ;;
+  "sqlite/Makefile" ) CONFIG_FILES="$CONFIG_FILES sqlite/Makefile" ;;
   "auth/Makefile" ) CONFIG_FILES="$CONFIG_FILES auth/Makefile" ;;
   "sort/Makefile" ) CONFIG_FILES="$CONFIG_FILES sort/Makefile" ;;
   "man/Makefile" ) CONFIG_FILES="$CONFIG_FILES man/Makefile" ;;
@@ -21937,6 +22247,7 @@ s,@MAINTAINER_MODE_FALSE@,$MAINTAINER_MODE_FALSE,;t t
 s,@MAINT@,$MAINT,;t t
 s,@mysqlconfig@,$mysqlconfig,;t t
 s,@pgsqlconfig@,$pgsqlconfig,;t t
+s,@sqliteconfig@,$sqliteconfig,;t t
 s,@CC@,$CC,;t t
 s,@CFLAGS@,$CFLAGS,;t t
 s,@LDFLAGS@,$LDFLAGS,;t t
@@ -21948,10 +22259,16 @@ s,@glibconfig@,$glibconfig,;t t
 s,@gmimeconfig@,$gmimeconfig,;t t
 s,@CPP@,$CPP,;t t
 s,@EGREP@,$EGREP,;t t
+s,@CHECK_CFLAGS@,$CHECK_CFLAGS,;t t
+s,@CHECK_LIBS@,$CHECK_LIBS,;t t
+s,@WITHCHECK_TRUE@,$WITHCHECK_TRUE,;t t
+s,@WITHCHECK_FALSE@,$WITHCHECK_FALSE,;t t
 s,@MYSQL_TRUE@,$MYSQL_TRUE,;t t
 s,@MYSQL_FALSE@,$MYSQL_FALSE,;t t
 s,@PGSQL_TRUE@,$PGSQL_TRUE,;t t
 s,@PGSQL_FALSE@,$PGSQL_FALSE,;t t
+s,@SQLITE_TRUE@,$SQLITE_TRUE,;t t
+s,@SQLITE_FALSE@,$SQLITE_FALSE,;t t
 s,@SIEVE_TRUE@,$SIEVE_TRUE,;t t
 s,@SIEVE_FALSE@,$SIEVE_FALSE,;t t
 s,@LDAP_TRUE@,$LDAP_TRUE,;t t
@@ -21969,6 +22286,7 @@ s,@INIPARSERLTLIB@,$INIPARSERLTLIB,;t t
 s,@SIEVELIB@,$SIEVELIB,;t t
 s,@MYSQLINC@,$MYSQLINC,;t t
 s,@PGSQLINC@,$PGSQLINC,;t t
+s,@SQLITEINC@,$SQLITEINC,;t t
 s,@SIEVEINC@,$SIEVEINC,;t t
 s,@LDAPINC@,$LDAPINC,;t t
 s,@build@,$build,;t t
@@ -22606,4 +22924,5 @@ if test "$no_create" != yes; then
   # would make configure fail if this is the last instruction.
   $ac_cs_success || { (exit 1); exit 1; }
 fi
+
 

@@ -1,3 +1,10 @@
+2005-02-18  Paul Stevens <paul@nfg.nl>
+
+	* sqlite/dbsqlite.c: added initial sqlite support provided by Geo
+	Carncross. Also fixed the autoconf files to support this.
+	* user.c: remove percentage from user listing.
+	* dbmail.schema: added uidNumber to MUST fields in dbmailUser.
+
 2005-02-14  Paul Stevens <paul@nfg.nl>
 
 	* create_tables_innoDB.mysql, create_tables.pgsql, migrate_from_1.x_to_2.0.mysql, 

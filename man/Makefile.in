@@ -115,6 +115,7 @@ SIEVELIB = @SIEVELIB@
 SORTALIB = @SORTALIB@
 SORTLTLIB = @SORTLTLIB@
 SQLALIB = @SQLALIB@
+SQLITEINC = @SQLITEINC@
 SQLLIB = @SQLLIB@
 SQLLTLIB = @SQLLTLIB@
 STRIP = @STRIP@
@@ -123,6 +124,7 @@ glibconfig = @glibconfig@
 gmimeconfig = @gmimeconfig@
 mysqlconfig = @mysqlconfig@
 pgsqlconfig = @pgsqlconfig@
+sqliteconfig = @sqliteconfig@
 
 man_MANS = dbmail-pop3d.8 dbmail-smtp.1 dbmail-imapd.8 	dbmail-users.8 dbmail-util.8 dbmail-lmtpd.8
 

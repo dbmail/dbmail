@@ -23,4 +23,6 @@ INCLUDES = -I$(top_srcdir)
 pkglib_LTLIBRARIES = libmysqldbmail.la
 
 libmysqldbmail_la_SOURCES = dbmysql.c
+libmysqldbmail_la_LIBADD = @SQLLIB@
+
 endif

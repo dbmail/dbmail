@@ -57,23 +57,24 @@ case "$1" in
 	# protect the config-file
 	oldmask=`umask`
 	umask 066
+	
+	gunzip ${CONFIG_EX}.gz 2>/dev/null || true
+	gunzip ${DEBIAN_CONFIG_EX}.gz 2>/dev/null || true
+	
 	ucf --debconf-ok $CONFIG_EX $CONFIG
 	ucf --debconf-ok $DEBIAN_CONFIG_EX $DEBIAN_CONFIG
 		
 	if [ "$DO_DEBCONF" = "true" ]; then
 		# edit the configs
-		perl -pi -e "s/^host=.*\$/host=$DB_HOST/" $CONFIG
-		perl -pi -e "s/^user=.*\$/user=$DB_USER/" $CONFIG
-		perl -pi -e "s/^pass=.*\$/pass=$DB_PASS/" $CONFIG
-		perl -pi -e "s/^db=.*\$/db=$DB_DATABASE/" $CONFIG
-
-                sed "s/^DBMAIL_FROM_ADDRESS=.*\$/DBMAIL_FROM_ADDRESS=$DBMAIL_FROM_ADDRESS/" < $CONFIG > \
-                        $CONFIG.tmp && mv $CONFIG.tmp $CONFIG
-                sed "s/^POSTMASTER=.*\$/POSTMASTER=$POSTMASTER/" < $CONFIG > \
-                        $CONFIG.tmp && mv $CONFIG.tmp $CONFIG
-		
-		perl -pi -e 's/^EFFECTIVE_USER=\S+/EFFECTIVE_USER=dbmail/g' $CONFIG
-		perl -pi -e 's/^EFFECTIVE_GROUP=\S+/EFFECTIVE_GROUP=dbmail/g' $CONFIG
+		cat $CONFIG | sed -re "s/^host=.*\$/host=$DB_HOST/" \
+			-e "s/^user=.*\$/user=$DB_USER/" \
+			-e "s/^pass=.*\$/pass=$DB_PASS/" \
+			-e "s/^db=.*\$/db=$DB_DATABASE/" \
+                	-e "s/^DBMAIL_FROM_ADDRESS=.*\$/DBMAIL_FROM_ADDRESS=$DBMAIL_FROM_ADDRESS/" \
+                	-e "s/^POSTMASTER=.*\$/POSTMASTER=$POSTMASTER/" \
+			-e "s/^EFFECTIVE_USER=\w+/EFFECTIVE_USER=dbmail/g" \
+			-e "s/^EFFECTIVE_GROUP=\w+/EFFECTIVE_GROUP=dbmail/g" \
+                        > $CONFIG.tmp && mv $CONFIG.tmp $CONFIG
 		
 		umask $oldmask
 	
@@ -109,10 +110,6 @@ case "$1" in
         exit 0
     ;;
 esac
-
-if [ "$1" = "configure" ]; then
-	ldconfig
-fi	
 
 #DEBHELPER#
 

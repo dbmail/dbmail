@@ -12,8 +12,4 @@ if [ "$1" = "purge" ]; then
 	ucf --purge /etc/default/dbmail
 fi
 
-if [ "$1" = "configure" ]; then
-	ldconfig
-fi
-
 #DEBHELPER#

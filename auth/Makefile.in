@@ -116,6 +116,7 @@ SIEVELIB = @SIEVELIB@
 SORTALIB = @SORTALIB@
 SORTLTLIB = @SORTLTLIB@
 SQLALIB = @SQLALIB@
+SQLITEINC = @SQLITEINC@
 SQLLIB = @SQLLIB@
 SQLLTLIB = @SQLLTLIB@
 STRIP = @STRIP@
@@ -124,6 +125,7 @@ glibconfig = @glibconfig@
 gmimeconfig = @gmimeconfig@
 mysqlconfig = @mysqlconfig@
 pgsqlconfig = @pgsqlconfig@
+sqliteconfig = @sqliteconfig@
 
 AM_CFLAGS = -fomit-frame-pointer
 INCLUDES = -I$(top_srcdir)
@@ -132,7 +134,7 @@ pkglib_LTLIBRARIES = libauthdbmail.la
 @LDAP_TRUE@libauthdbmail_la_SOURCES = authldap.c
 @LDAP_FALSE@libauthdbmail_la_SOURCES = authsql.c
 
-libauthdbmail_la_LIBADD = -lcrypt
+libauthdbmail_la_LIBADD = -lcrypt @LDAPLIB@ @SQLLIB@
 mkinstalldirs = $(SHELL) $(top_srcdir)/buildtools/mkinstalldirs
 CONFIG_HEADER = ../config.h
 CONFIG_CLEAN_FILES = 

@@ -32,35 +32,39 @@ AC_ARG_WITH(pgsql,
 	    [  --with-pgsql            use PostgreSQL as database. 
                           Uses pg_config for finding includes and libraries],
             pgsqlheadername="$withval")
+AC_ARG_WITH(sqlite,
+	    [  --with-sqlite           use SQLite as database. 
+                          Uses pkg-config for finding includes and libraries],
+            sqliteheadername="$withval")
 
 WARN=0
-# Make sure we only select one, mysql or pgsql
+# Make sure we only select one of mysql, pgsql or sqlite
 if test "${mysqlheadername-x}" = "x"
 then
   if test "${pgsqlheadername-x}" = "x"
   then
-    NEITHER=1
-    mysqlheadername=""
-#    MYSQLINC=""
-#    PGSQLINC=""
+    if test "${sqliteheadername-x}" = "x"
+    then
+      NEITHER=1
+      mysqlheadername=""
+    fi
   fi
 fi
 if test "$NEITHER" = 1
   then
      AC_MSG_ERROR([
 
-     You have to specify --with-mysql or --with-pgsql to build.
+     You have to specify --with-mysql, --with-pgsql or --with-sqlite to build.
 ])
 fi
 
+# TODO: fix this to check for other sql libs like sqllite:
 if test ! "${mysqlheadername-x}" = "x"
 then
   if test ! "${pgsqlheadername-x}" = "x"
     then
       WARN=1
       mysqlheadername=""
-#      MYSQLINC=""
-#      PGSQLINC=""
   fi
 fi
 if test "$WARN" = 1
@@ -94,9 +98,10 @@ then
         SQLALIB="mysql/.libs/libmysqldbmail.a"
 	SQLLTLIB="mysql/libmysqldbmail.la"
         AC_MSG_RESULT([$SQLLIB])
-   fi
-else
-  if test ! "${pgsqlheadername-x}" = "x"
+    fi
+fi   
+
+if test ! "${pgsqlheadername-x}" = "x"
   then
     AC_PATH_PROG(pgsqlconfig,pg_config)
     if test [ -z "$pgsqlconfig" ]
@@ -114,7 +119,24 @@ else
 	SQLLTLIB="pgsql/libpgsqldbmail.la"
         AC_MSG_RESULT([$SQLLIB])
     fi
-  fi
+fi
+
+if test ! "${sqliteheadername-x}" = "x"
+  then
+    AC_PATH_PROG(sqliteconfig,pkg-config)
+    if test [ -z "$sqliteconfig" ]
+    then
+        AC_MSG_ERROR([pkg-config executable not found. Make sure pkg-config is in your path])
+    else
+	AC_MSG_CHECKING([SQLite headers])
+	SQLITEINC=`${sqliteconfig} --cflags sqlite`
+	AC_MSG_RESULT([$SQLITEINC])
+        AC_MSG_CHECKING([SQLite libraries])
+        SQLLIB=`${sqliteconfig} --libs sqlite`
+        SQLALIB="sqlite/.libs/libsqlitedbmail.a"
+	SQLLTLIB="sqlite/libsqlitedbmail.la"
+        AC_MSG_RESULT([$SQLLIB])
+    fi
 fi
 ])
 dnl DBMAIL_SIEVE_CONF
@@ -208,6 +230,7 @@ if test ! "${authldapheadername-x}" = "x"
 then
   # --with-auth-ldap was specified
   AC_MSG_RESULT([using LDAP authentication])
+  CFLAGS="$CFLAGS -DAUTHLDAP"
   if test "$withval" != "yes"
   then
     AC_MSG_CHECKING([for ldap.h (user supplied)])
@@ -407,6 +430,147 @@ AC_ARG_WITH(gc,
  fi
 fi])
 
+
+
+# ripped from check.m4
+
+dnl DBMAIL_PATH_CHECK([MINIMUM-VERSION, [ACTION-IF-FOUND [, ACTION-IF-NOT-FOUND]]])
+dnl Test for check, and define CHECK_CFLAGS and CHECK_LIBS
+dnl
+
+AC_DEFUN(DBMAIL_PATH_CHECK,
+[
+  AC_ARG_WITH(check,
+  [  --with-check=PATH       prefix where check is installed [default=auto]],
+  [test x"$with_check" = xno && with_check="no"],
+  [with_check="no"])
+  
+if test "x$with_check" != xno; then
+  min_check_version=ifelse([$1], ,0.8.2,$1)
+
+  AC_MSG_CHECKING(for check - version >= $min_check_version)
+
+  if test x$with_check = xno; then
+    AC_MSG_RESULT(disabled)
+    ifelse([$3], , AC_MSG_ERROR([disabling check is not supported]), [$3])
+  else
+    if test "x$with_check" = xyes; then
+      CHECK_CFLAGS=""
+      CHECK_LIBS="-lcheck"
+    else
+      CHECK_CFLAGS="-I$with_check/include"
+      CHECK_LIBS="-L$with_check/lib -lcheck"
+    fi
+
+    ac_save_CFLAGS="$CFLAGS"
+    ac_save_LIBS="$LIBS"
+
+    CFLAGS="$CFLAGS $CHECK_CFLAGS"
+    LIBS="$CHECK_LIBS $LIBS"
+
+    rm -f conf.check-test
+    AC_TRY_RUN([
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <check.h>
+
+int main ()
+{
+  int major, minor, micro;
+  char *tmp_version;
+
+  system ("touch conf.check-test");
+
+  /* HP/UX 9 (%@#!) writes to sscanf strings */
+  tmp_version = strdup("$min_check_version");
+  if (sscanf(tmp_version, "%d.%d.%d", &major, &minor, &micro) != 3) {
+     printf("%s, bad version string\n", "$min_check_version");
+     return 1;
+   }
+    
+  if ((CHECK_MAJOR_VERSION != check_major_version) ||
+      (CHECK_MINOR_VERSION != check_minor_version) ||
+      (CHECK_MICRO_VERSION != check_micro_version))
+    {
+      printf("\n*** The check header file (version %d.%d.%d) does not match\n",
+	     CHECK_MAJOR_VERSION, CHECK_MINOR_VERSION, CHECK_MICRO_VERSION);
+      printf("*** the check library (version %d.%d.%d).\n",
+	     check_major_version, check_minor_version, check_micro_version);
+      return 1;
+    }
+
+  if ((check_major_version > major) ||
+      ((check_major_version == major) && (check_minor_version > minor)) ||
+      ((check_major_version == major) && (check_minor_version == minor) && (check_micro_version >= micro)))
+    {
+      return 0;
+    }
+  else
+    {
+      printf("\n*** An old version of check (%d.%d.%d) was found.\n",
+             check_major_version, check_minor_version, check_micro_version);
+      printf("*** You need a version of check being at least %d.%d.%d.\n", major, minor, micro);
+      printf("***\n"); 
+      printf("*** If you have already installed a sufficiently new version, this error\n");
+      printf("*** probably means that the wrong copy of the check library and header\n");
+      printf("*** file is being found. Rerun configure with the --with-check=PATH option\n");
+      printf("*** to specify the prefix where the correct version was installed.\n");
+    }
+
+  return 1;
+}
+],, no_check=yes, [echo $ac_n "cross compiling; assumed OK... $ac_c"])
+
+    CFLAGS="$ac_save_CFLAGS"
+    LIBS="$ac_save_LIBS"
+
+    if test "x$no_check" = x ; then
+      AC_MSG_RESULT(yes)
+      ifelse([$2], , :, [$2])
+    else
+      AC_MSG_RESULT(no)
+      if test -f conf.check-test ; then
+        :
+      else
+        echo "*** Could not run check test program, checking why..."
+        CFLAGS="$CFLAGS $CHECK_CFLAGS"
+        LIBS="$CHECK_LIBS $LIBS"
+        AC_TRY_LINK([
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <check.h>
+], ,  [ echo "*** The test program compiled, but did not run. This usually means"
+        echo "*** that the run-time linker is not finding check. You'll need to set your"
+        echo "*** LD_LIBRARY_PATH environment variable, or edit /etc/ld.so.conf to point"
+        echo "*** to the installed location  Also, make sure you have run ldconfig if that"
+        echo "*** is required on your system"
+	echo "***"
+        echo "*** If you have an old version installed, it is best to remove it, although"
+        echo "*** you may also be able to get things to work by modifying LD_LIBRARY_PATH"],
+      [ echo "*** The test program failed to compile or link. See the file config.log for"
+        echo "*** the exact error that occured." ])
+      
+        CFLAGS="$ac_save_CFLAGS"
+        LIBS="$ac_save_LIBS"
+      fi
+
+      CHECK_CFLAGS=""
+      CHECK_LIBS=""
+
+      rm -f conf.check-test
+      ifelse([$3], , AC_MSG_ERROR([check not found]), [$3])
+    fi
+fi
+
+    AC_SUBST(CHECK_CFLAGS)
+    AC_SUBST(CHECK_LIBS)
+
+    rm -f conf.check-test
+
+  fi
+])
 
 # lib-prefix.m4 serial 3 (gettext-0.13)
 dnl Copyright (C) 2001-2003 Free Software Foundation, Inc.

@@ -116,6 +116,7 @@ SIEVELIB = @SIEVELIB@
 SORTALIB = @SORTALIB@
 SORTLTLIB = @SORTLTLIB@
 SQLALIB = @SQLALIB@
+SQLITEINC = @SQLITEINC@
 SQLLIB = @SQLLIB@
 SQLLTLIB = @SQLLTLIB@
 STRIP = @STRIP@
@@ -124,6 +125,7 @@ glibconfig = @glibconfig@
 gmimeconfig = @gmimeconfig@
 mysqlconfig = @mysqlconfig@
 pgsqlconfig = @pgsqlconfig@
+sqliteconfig = @sqliteconfig@
 
 SUBDIRS = iniparser-2.14
 mkinstalldirs = $(SHELL) $(top_srcdir)/buildtools/mkinstalldirs

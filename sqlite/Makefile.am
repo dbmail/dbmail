@@ -1,4 +1,4 @@
-# $Id$ 
+# $Id$
 # Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 #
 # This program is free software; you can redistribute it and/or 
@@ -16,14 +16,13 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-pkglib_LTLIBRARIES = libsortdbmail.la
+if SQLITE
+AM_CFLAGS = @SQLITEINC@ -fomit-frame-pointer 
 INCLUDES = -I$(top_srcdir)
 
-if SIEVE
-libsortdbmail_la_SOURCES = sort.c sortsieve.c
-AM_CFLAGS = -DSIEVE
-else
-libsortdbmail_la_SOURCES = sort.c
-endif
+pkglib_LTLIBRARIES = libsqlitedbmail.la
 
-libsortdbmail_la_LIBADD = @SORTLIB@
+libsqlitedbmail_la_SOURCES = dbsqlite.c
+libsqlitedbmail_la_LIBADD = @SQLLIB@
+
+endif
