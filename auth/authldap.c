@@ -709,7 +709,7 @@ int auth_user_exists(const char *username, u64_t * user_idnr)
 
 	*user_idnr = (id_char) ? strtoull(id_char, NULL, 0) : 0;
 	trace(TRACE_DEBUG, "auth_user_exists(): returned value is [%llu]",
-	      user_idnr);
+	      *user_idnr);
 
 	if (id_char)
 		free(id_char);
@@ -772,7 +772,7 @@ int auth_getclientid(u64_t user_idnr, u64_t * client_idnr)
 
 	*client_idnr = (cid_char) ? strtoull(cid_char, NULL, 0) : 0;
 	trace(TRACE_DEBUG, "auth_getclientid(): returned value is [%llu]",
-	      client_idnr);
+	      *client_idnr);
 
 	if (cid_char)
 		free(cid_char);
@@ -803,7 +803,7 @@ int auth_getmaxmailsize(u64_t user_idnr, u64_t * maxmail_size)
 	*maxmail_size = (max_char) ? strtoull(max_char, 0, 10) : 0;
 	trace(TRACE_DEBUG,
 	      "auth_getmaxmailsize(): returned value is [%llu]",
-	      maxmail_size);
+	      *maxmail_size);
 
 	if (max_char)
 		free(max_char);
