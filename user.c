@@ -458,7 +458,12 @@ int main(int argc, char *argv[])
 			qprintf("\n");
 		}
 
-		/* Do we need the password for this mode? */
+		/* If no password type was specified, and
+		 * the user already exists, get their password type. */
+		if (!passwdtype && useridnr)
+			passwdtype = auth_getencryption(useridnr);
+		/* Convert the password and password type into a 
+		 * fully coded format, ready for the database. */
 		if (mkpassword(user, passwd, passwdtype, passwdfile,
 		               &password, &enctype)) {
 			qerrorf("Error: unable to create a password.\n");
@@ -634,7 +639,7 @@ static const char * const pwtypes[] = {
 	"plaintext", "plaintext-raw", "crypt", "crypt-raw",
 	"md5", "md5-raw", "md5sum", "md5sum-raw",
 	"md5-hash", "md5-hash-raw", "md5-digest", "md5-digest-raw",
-	"shadow", NULL
+	"shadow", "", NULL
 };
 
 /* These must correspond to the easy text names. */
@@ -642,7 +647,7 @@ static const pwtype_t pwtypecodes[] = {
 	PLAINTEXT, PLAINTEXT_RAW, CRYPT, CRYPT_RAW,
 	MD5_HASH, MD5_HASH_RAW, MD5_DIGEST, MD5_DIGEST_RAW,
 	MD5_HASH, MD5_HASH_RAW, MD5_DIGEST, MD5_DIGEST_RAW,
-	SHADOW, PWTYPE_NULL
+	SHADOW, PLAINTEXT, PWTYPE_NULL
 };
 
 int mkpassword(const char * const user, const char * const passwd,

@@ -123,7 +123,7 @@ pgsqlconfig = @pgsqlconfig@
 pkglib_LTLIBRARIES = libsortdbmail.la
 @SIEVE_TRUE@libsortdbmail_la_SOURCES = sort.c sortsieve.c
 @SIEVE_FALSE@libsortdbmail_la_SOURCES = sort.c
-@SIEVE_TRUE@CFLAGS =  -DSIEVE
+@SIEVE_TRUE@AM_CFLAGS =  -DSIEVE
 mkinstalldirs = $(SHELL) $(top_srcdir)/buildtools/mkinstalldirs
 CONFIG_HEADER = ../config.h
 CONFIG_CLEAN_FILES = 
@@ -138,6 +138,7 @@ libsortdbmail_la_LDFLAGS =
 libsortdbmail_la_LIBADD = 
 @SIEVE_FALSE@libsortdbmail_la_OBJECTS =  sort.lo
 @SIEVE_TRUE@libsortdbmail_la_OBJECTS =  sort.lo sortsieve.lo
+CFLAGS = @CFLAGS@
 COMPILE = $(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 LTCOMPILE = $(LIBTOOL) --mode=compile $(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
