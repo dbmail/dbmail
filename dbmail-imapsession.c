@@ -2126,26 +2126,23 @@ int dbmail_imap_session_set_state(struct ImapSession *self, int state)
 void dbmail_imap_session_bodyfetch_new(struct ImapSession *self) 
 {
 	body_fetch_t *bodyfetch = g_new0(body_fetch_t, 1);
-	trace(TRACE_DEBUG,"%s,%s: append bodyfetch item", __FILE__, __func__);
 	bodyfetch->itemtype = -1;
 	self->fi->bodyfetch = g_list_append(self->fi->bodyfetch, bodyfetch);
 }
 
-void dbmail_imap_session_bodyfetch_rewind(struct ImapSession *self) {
-	trace(TRACE_DEBUG,"%s,%s", __FILE__, __func__);
+void dbmail_imap_session_bodyfetch_rewind(struct ImapSession *self) 
+{
 	self->fi->bodyfetch = g_list_first(self->fi->bodyfetch);
 }
 
 void dbmail_imap_session_bodyfetch_free(struct ImapSession *self) 
 {
-	trace(TRACE_DEBUG,"%s,%s", __FILE__, __func__);
 	g_list_foreach(self->fi->bodyfetch, (GFunc)g_free, NULL);
 	g_list_free(self->fi->bodyfetch);
 }
 
 body_fetch_t * dbmail_imap_session_bodyfetch_get_last(struct ImapSession *self) 
 {
-	trace(TRACE_DEBUG,"%s,%s", __FILE__, __func__);
 	if (self->fi->bodyfetch == NULL)
 		dbmail_imap_session_bodyfetch_new(self);
 	
@@ -2155,63 +2152,53 @@ body_fetch_t * dbmail_imap_session_bodyfetch_get_last(struct ImapSession *self)
 
 int dbmail_imap_session_bodyfetch_set_partspec(struct ImapSession *self, char *partspec, int length) 
 {
-	trace(TRACE_DEBUG,"%s,%s", __FILE__, __func__);
 	body_fetch_t *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
 	memset(bodyfetch->partspec,'\0',IMAP_MAX_PARTSPEC_LEN);
 	memcpy(bodyfetch->partspec,partspec,length);
-	trace(TRACE_DEBUG,"%s,%s: partspec [%s]", __FILE__, __func__, bodyfetch->partspec);
 	return 0;
 }
 char *dbmail_imap_session_bodyfetch_get_last_partspec(struct ImapSession *self) 
 {
-	trace(TRACE_DEBUG,"%s,%s", __FILE__, __func__);
 	body_fetch_t *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
 	return bodyfetch->partspec;
 }
 
 int dbmail_imap_session_bodyfetch_set_itemtype(struct ImapSession *self, int itemtype) 
 {
-	trace(TRACE_DEBUG,"%s,%s", __FILE__, __func__);
 	body_fetch_t *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
 	bodyfetch->itemtype = itemtype;
 	return 0;
 }
 int dbmail_imap_session_bodyfetch_get_last_itemtype(struct ImapSession *self) 
 {
-	trace(TRACE_DEBUG,"%s,%s", __FILE__, __func__);
 	body_fetch_t *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
 	return bodyfetch->itemtype;
 }
 int dbmail_imap_session_bodyfetch_set_argstart(struct ImapSession *self, int idx) 
 {
-	trace(TRACE_DEBUG,"%s,%s", __FILE__, __func__);
 	body_fetch_t *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
 	bodyfetch->argstart = idx;
 	return bodyfetch->argstart;
 }
 int dbmail_imap_session_bodyfetch_get_last_argstart(struct ImapSession *self) 
 {
-	trace(TRACE_DEBUG,"%s,%s", __FILE__, __func__);
 	body_fetch_t *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
 	return bodyfetch->argstart;
 }
 int dbmail_imap_session_bodyfetch_set_argcnt(struct ImapSession *self, int idx) 
 {
-	trace(TRACE_DEBUG,"%s,%s", __FILE__, __func__);
 	body_fetch_t *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
 	bodyfetch->argcnt = idx - bodyfetch->argstart;
 	return bodyfetch->argcnt;
 }
 int dbmail_imap_session_bodyfetch_get_last_argcnt(struct ImapSession *self) 
 {
-	trace(TRACE_DEBUG,"%s,%s", __FILE__, __func__);
 	body_fetch_t *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
 	return bodyfetch->argcnt;
 }
 
 int dbmail_imap_session_bodyfetch_set_octetstart(struct ImapSession *self, guint64 octet)
 {
-	trace(TRACE_DEBUG,"%s,%s: octet [%llu]", __FILE__, __func__, octet);
 	body_fetch_t *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
 	bodyfetch->octetstart = octet;
 	return 0;
@@ -2219,14 +2206,12 @@ int dbmail_imap_session_bodyfetch_set_octetstart(struct ImapSession *self, guint
 guint64 dbmail_imap_session_bodyfetch_get_last_octetstart(struct ImapSession *self)
 {
 	body_fetch_t *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
-	trace(TRACE_DEBUG,"%s,%s: octet: [%llu]", __FILE__, __func__, bodyfetch->octetstart);
 	return bodyfetch->octetstart;
 }
 
 
 int dbmail_imap_session_bodyfetch_set_octetcnt(struct ImapSession *self, guint64 octet)
 {
-	trace(TRACE_DEBUG,"%s,%s: octet [%llu]", __FILE__, __func__, octet);
 	body_fetch_t *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
 	bodyfetch->octetcnt = octet;
 	return 0;
@@ -2234,7 +2219,6 @@ int dbmail_imap_session_bodyfetch_set_octetcnt(struct ImapSession *self, guint64
 guint64 dbmail_imap_session_bodyfetch_get_last_octetcnt(struct ImapSession *self)
 {
 	body_fetch_t *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
-	trace(TRACE_DEBUG,"%s,%s: octet: [%llu]", __FILE__, __func__, bodyfetch->octetcnt);
 	return bodyfetch->octetcnt;
 }
 
