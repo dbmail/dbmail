@@ -151,7 +151,7 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
       /* db_check_user(): returns a list with character array's containing 
        * either userid's or forward addresses 
        */
-      this_user = db_check_user((char *)tmp->data,&userids);
+      this_user = db_check_user((char *)tmp->data,&userids,-1);
       trace (TRACE_DEBUG,"insert_messages(): user [%s] found total of [%d] aliases",(char *)tmp->data,
 	     userids.total_nodes);
       
@@ -170,7 +170,7 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
 	    {
 	      trace (TRACE_DEBUG,"insert_messages(): checking for domain aliases. Domain = [%s]",domain);
 				/* checking for domain aliases */
-	      db_check_user(domain,&userids);
+	      db_check_user(domain,&userids,-1);
 	      trace (TRACE_DEBUG,"insert_messages(): domain [%s] found total of [%d] aliases",domain,
 		     userids.total_nodes);
 	    }

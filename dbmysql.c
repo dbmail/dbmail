@@ -647,46 +647,59 @@ unsigned long db_insert_message_block (char *block, int messageidnr)
 }
 
 
-int db_check_user (char *username, struct list *userids) 
+int db_check_user (char *username, struct list *userids, int checks) 
 {
   
   int occurences=0;
-	
+  MYSQL_RES *myres;
+  MYSQL_ROW myrow;
+  
   trace(TRACE_DEBUG,"db_check_user(): checking user [%s] in alias table",username);
   
   snprintf (query, DEF_QUERYSIZE,  "SELECT * FROM aliases WHERE alias=\"%s\"",username);
-  trace(TRACE_DEBUG,"db_check_user(): executing query : [%s]",query);
+  trace(TRACE_DEBUG,"db_check_user(): executing query : [%s] checks [%d]",query, checks);
   if (db_query(query)==-1)
-    {
-      
-      return occurences;
-    }
-
+      return 0;
   
-  if ((res = mysql_store_result(&conn)) == NULL) 
+  if ((myres = mysql_store_result(&conn)) == NULL) 
     {
       trace(TRACE_ERROR,"db_check_user: mysql_store_result failed: %s",mysql_error(&conn));
-      return occurences;
+      return 0;
     }
 
-  if (mysql_num_rows(res)<1) 
-    {
+  if (mysql_num_rows(myres)<1) 
+  {
+      if (checks>0)
+      {
+          /* found the last one, this is the deliver to
+           * but checks needs to be bigger then 0 because
+           * else it could be the first query failure */
+
+          list_nodeadd(userids, username, strlen(username)+1);
+          trace (TRACE_DEBUG,"db_check_user(): adding [%s] to deliver_to address",username);
+          mysql_free_result(myres);
+          return 0;
+      }
+      else
+      {
       trace (TRACE_DEBUG,"db_check_user(): user %s not in aliases table", username);
-      mysql_free_result(res);
-      return occurences; 
-    } 
-	
-  /* row[2] is the deliver_to field */
-  while ((row = mysql_fetch_row(res))!=NULL)
-    {
-      occurences++;
+      mysql_free_result(myres);
+      return 0; 
+      }
+  }
+      
+  trace (TRACE_DEBUG,"db_check_user(): into checking loop");
+  /* myrow[2] is the deliver_to field */
+  while ((myrow = mysql_fetch_row(myres))!=NULL)
+  {
+      /* do a recursive search for myrow[2] */
+      trace (TRACE_DEBUG,"db_check_user(): checking user %s to %s",username, myrow[2]);
+      if ((db_check_user (myrow[2], userids, 1)) > 0 ) occurences++;
+  }
+  
+  /* trace(TRACE_INFO,"db_check_user(): user [%s] has [%d] entries",username,occurences); */
+  mysql_free_result(myres);
 
-      list_nodeadd(userids, row[2], strlen(row[2])+1);
-      trace (TRACE_DEBUG,"db_check_user(): adding [%s] to deliver_to address",row[2]);
-    }
-
-  trace(TRACE_INFO,"db_check_user(): user [%s] has [%d] entries",username,occurences);
-  mysql_free_result(res);
   return occurences;
 }
 
