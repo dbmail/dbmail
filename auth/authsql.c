@@ -503,23 +503,7 @@ int auth_adduser(char *username, char *password, char *enctype,
 		      __FILE__, __FUNCTION__);
 		return -1;
 	}
-
 	*user_idnr = __auth_insert_result("user_idnr");
-
-	/* creating query for adding mailbox */
-	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
-		 "INSERT INTO mailboxes (owner_idnr, name) "
-		 "VALUES ('%llu','INBOX')", *user_idnr);
-
-	trace(TRACE_DEBUG, "%s,%s: executing query for mailbox",
-	      __FILE__, __FUNCTION__);
-
-	if (__auth_query(__auth_query_data) == -1) {
-		trace(TRACE_ERROR,
-		      "%s,%s: query failed for adding mailbox", __FILE__,
-		      __FUNCTION__);
-		return -1;
-	}
 
 	return 1;
 }

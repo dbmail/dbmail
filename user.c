@@ -216,6 +216,7 @@ int do_remove_alias(char *argv[])
 int do_add(int argc, char *argv[])
 {
 	u64_t useridnr;
+	u64_t mailbox_idnr;
 	int add_user_result;
 	int i, result;
 	char pw[50] = "";
@@ -301,6 +302,20 @@ int do_add(int argc, char *argv[])
 	}
 
 	quiet_printf("Ok, user added id [%llu]\n", useridnr);
+
+	/* adding mailbox for user. */
+	quiet_printf("Adding INBOX for new user\n");
+	switch(db_createmailbox("INBOX", useridnr, &mailbox_idnr)) {
+	case -1:
+		quiet_printf("Failed.. User is added but we failed to add "
+			     "the mailbox INBOX for this user\n");
+		return -1;
+		break;
+	case 0:
+	default:
+		quiet_printf("Ok. added\n");
+		break;
+	} 
 
 	for (i = 4, result = 0; i < argc; i++) {
 		quiet_printf("Adding alias %s...", argv[i]);

@@ -1,4 +1,12 @@
-2004-04-23  Aaron Stone  <aaron@serendipity.cx>
+2004-04-28  Ilja Booij  <ilja@ic-s.nl>
+
+	* auth/authsql.c (auth_adduser): no longer creates the mailbox
+	for the new user.
+
+	* user.c (do_add): calls db_createmailbox() to create mailbox
+	for the new user.
+
+2004-04-28  Aaron Stone  <aaron@serendipity.cx>
 
 	* header.c (read_header): switched from fread to fgetc.
 	* pipe.c (store_message_temp): switched from fread to fgetc.
