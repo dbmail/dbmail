@@ -1,3 +1,8 @@
+2004-05-11  Aaron Stone  <aaron@serendipity.cx>
+
+	* imapcommands.c: removed carriage returns and newlines
+	from calls to trace (with help of a patch by Thomas Mueller).
+
 2004-05-11  Ilja Booij  <ilja@ic-s.nl>
 
 	* sql/mysql/migrate_from_1.x_to_2.0_innodb.mysql: added BINARY to 

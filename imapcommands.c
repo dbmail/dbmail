@@ -148,7 +148,7 @@ int _ic_logout(char *tag, char **args, ClientInfo * ci)
 	ud->state = IMAPCS_LOGOUT;
 
 	trace(TRACE_MESSAGE,
-	      "_ic_logout(): user (id:%llu) logging out @ [%s]\r\n",
+	      "_ic_logout(): user (id:%llu) logging out @ [%s]",
 	      ud->userid, timestring);
 
 	ci_write(ci->tx, "* BYE dbmail imap server kisses you goodbye\r\n");
@@ -181,7 +181,7 @@ int _ic_login(char *tag, char **args, ClientInfo * ci)
 	trace(TRACE_DEBUG, "_ic_login(): trying to validate user");
 	validate_result = auth_validate(args[0], args[1], &userid);
 	trace(TRACE_MESSAGE,
-	      "_ic_login(): user (id:%llu, name %s) tries login\r\n",
+	      "_ic_login(): user (id:%llu, name %s) tries login",
 	      userid, args[0]);
 
 	if (validate_result == -1) {
@@ -199,7 +199,7 @@ int _ic_login(char *tag, char **args, ClientInfo * ci)
 
 		/* validation failed: invalid user/pass combination */
 		trace(TRACE_MESSAGE,
-		      "IMAPD [PID %d]: user (name %s) login rejected @ %s\r\n",
+		      "IMAPD [PID %d]: user (name %s) login rejected @ %s",
 		      (int) getpid(), args[0], timestring);
 		ci_write(ci->tx, "%s NO login rejected\r\n", tag);
 
@@ -208,7 +208,7 @@ int _ic_login(char *tag, char **args, ClientInfo * ci)
 
 	/* login ok */
 	trace(TRACE_MESSAGE,
-	      "_ic_login(): user (id %llu, name %s) login accepted @ %s\r\n",
+	      "_ic_login(): user (id %llu, name %s) login accepted @ %s",
 	      userid, args[0], timestring);
 #ifdef PROC_TITLES
 	set_proc_title("USER %s [%s]", args[0], ci->ip);
@@ -310,7 +310,7 @@ int _ic_authenticate(char *tag, char **args, ClientInfo * ci)
 
 		/* validation failed: invalid user/pass combination */
 		trace(TRACE_MESSAGE,
-		      "IMAPD [PID %d]: user (name %s) login rejected @ %s\r\n",
+		      "IMAPD [PID %d]: user (name %s) login rejected @ %s",
 		      (int) getpid(), username, timestring);
 
 		return 1;
@@ -325,7 +325,7 @@ int _ic_authenticate(char *tag, char **args, ClientInfo * ci)
 		db_log_ip(ci->ip);
 
 	trace(TRACE_MESSAGE,
-	      "IMAPD [PID %d]: user (id %llu, name %s) login accepted @ %s\r\n",
+	      "IMAPD [PID %d]: user (id %llu, name %s) login accepted @ %s",
 	      (int) getpid(), userid, username, timestring);
 #ifdef PROC_TITLES
 	set_proc_title("USER %s [%s]", args[0], ci->ip);
@@ -1123,7 +1123,7 @@ int _ic_rename(char *tag, char **args, ClientInfo * ci)
 		if (oldnamelen >= strlen(name)) {
 			/* strange error, let's say its fatal */
 			trace(TRACE_ERROR,
-			      "IMAPD: rename(): mailbox names are fucked up");
+			      "IMAPD: rename(): mailbox names appear to be corrupted");
 			ci_write(ci->tx,
 				"* BYE internal error regarding mailbox names\r\n");
 			my_free(children);
@@ -1343,7 +1343,7 @@ int _ic_list(char *tag, char **args, ClientInfo * ci)
 	}
 	pattern[i] = '$';
 
-	trace(TRACE_INFO, "ic_list(): build the pattern: [%s]\n", pattern);
+	trace(TRACE_INFO, "ic_list(): build the pattern: [%s]", pattern);
 
 	result =
 	    db_findmailbox_by_regex(ud->userid, pattern, &children,
@@ -1605,7 +1605,7 @@ int _ic_append(char *tag, char **args, ClientInfo * ci)
 		return 1;
 	}
 
-	trace(TRACE_DEBUG, "ic_append(): mailbox [%s] found, id: %llu\n",
+	trace(TRACE_DEBUG, "ic_append(): mailbox [%s] found, id: %llu",
 	      args[0], mboxid);
 	/* check if user has right to append to  mailbox */
 	result = acl_has_right(ud->userid, mboxid, ACL_RIGHT_INSERT);
@@ -1632,7 +1632,7 @@ int _ic_append(char *tag, char **args, ClientInfo * ci)
 	 */
 	if (args[i][0] == '(') {
 		/* ok fetch the flags specified */
-		trace(TRACE_DEBUG, "ic_append(): flag list found:\n");
+		trace(TRACE_DEBUG, "ic_append(): flag list found:");
 
 		while (args[i] && args[i][0] != ')') {
 			trace(TRACE_DEBUG, "%s ", args[i]);
@@ -1649,12 +1649,12 @@ int _ic_append(char *tag, char **args, ClientInfo * ci)
 		}
 
 		i++;
-		trace(TRACE_DEBUG, ")\n");
+		trace(TRACE_DEBUG, ")");
 	}
 
 	if (!args[i]) {
 		trace(TRACE_INFO,
-		      "ic_append(): unexpected end of arguments\n");
+		      "ic_append(): unexpected end of arguments");
 		ci_write(ci->tx,
 			"%s BAD invalid arguments specified to APPEND\r\n",
 			tag);
@@ -1735,7 +1735,7 @@ int _ic_append(char *tag, char **args, ClientInfo * ci)
 
 		i++;
 		trace(TRACE_DEBUG,
-		      "ic_append(): internal date [%s] found, next arg [%s]\n",
+		      "ic_append(): internal date [%s] found, next arg [%s]",
 		      sqldate, args[i]);
 	} else {
 		sqldate[0] = '\0';
@@ -1749,19 +1749,19 @@ int _ic_append(char *tag, char **args, ClientInfo * ci)
 			       ud->userid, sqldate, &msg_idnr);
 	switch (result) {
 	case -1:
-		trace(TRACE_ERROR, "ic_append(): error appending msg\n");
+		trace(TRACE_ERROR, "ic_append(): error appending msg");
 		ci_write(ci->tx,
 			"* BYE internal dbase error storing message\r\n");
 		break;
 
 	case 1:
-		trace(TRACE_ERROR, "ic_append(): faulty msg\n");
+		trace(TRACE_ERROR, "ic_append(): faulty msg");
 		ci_write(ci->tx, "%s NO invalid message specified\r\n",
 			tag);
 		break;
 
 	case 2:
-		trace(TRACE_INFO, "ic_append(): quotum would exceed\n");
+		trace(TRACE_INFO, "ic_append(): quotum would exceed");
 		ci_write(ci->tx, "%s NO not enough quotum left\r\n", tag);
 		break;
 
@@ -2079,7 +2079,7 @@ ci_write(ci->tx,"* BYE internal dbase error\r\n");
 				"* BYE server ran out of memory\r\n");
 
 			trace(TRACE_ERROR,
-			      "ic_search(): fatal error [%d] from perform_imap_search()\n",
+			      "ic_search(): fatal error [%d] from perform_imap_search()",
 			      result);
 			return -1;
 		}
@@ -2339,7 +2339,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo * ci)
 
 		if (no_parsing_at_all) {
 			trace(TRACE_DEBUG,
-			      "ic_fetch(): no parsing at all\n");
+			      "ic_fetch(): no parsing at all");
 
 			/* all the info we need can be retrieved by a single
 			 * call to db_get_msginfo_range()
