@@ -431,17 +431,9 @@ int main(int argc, char *argv[])
 			newattr.c_lflag &= ~ECHO;
 			tcsetattr(fileno(stdin), TCSAFLUSH, &newattr);
 
-			qprintf("Please enter a password (will not echo): ");
 			/* Prompt for a password and read until \n or EOF. */
-			fgets(pw, 50, stdin);
-			/* fgets guarantees a nul terminated string. */
-			passwd = strdup(pw);
-			/* Prompt, and make sure the prompt appears. */
 			qprintf("Please enter a password (will not echo): ");
-			/* Prompt for a password and read until \n or EOF. */
 			fflush(stdout);
-
-			/* Read until \n or EOF. */
 			fgets(pw, 50, stdin);
 
 			/* We don't want the trailing newline. */
