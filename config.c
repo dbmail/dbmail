@@ -214,12 +214,12 @@ void config_free()
 	el = list_getstart(&config_list);
 	while(el) {
 		scl = (struct service_config_list *) el->data;
-		list_freelist(scl->config_items);
+		list_freelist(&(scl->config_items->start));
 		el = el->nextnode;
 	}
 	
 	/* free the complete list */
-	list_freelist(&config_list);
+	list_freelist(&config_list.start);
 }
 
 int GetConfigValue(const field_t field_name, const char *service_name, 
