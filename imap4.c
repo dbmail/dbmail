@@ -20,6 +20,8 @@
 
 #define MAX_LINESIZE 1024
 
+#define null_free(p) free(p); p = NULL
+
 /* cache */
 cache_t cached_msg;
 
@@ -128,6 +130,9 @@ int imap_process(ClientInfo *ci)
       fprintf(ci->tx, "* BAD could not connect to dbase\r\n");
       fprintf(ci->tx, "BYE try again later\r\n");
 
+      null_free(((imap_userdata_t*)ci->userData)->mailbox.seq_list);
+      null_free(ci->userData);
+
       return EOF;
     }
 
@@ -135,6 +140,10 @@ int imap_process(ClientInfo *ci)
     {
       trace(TRACE_ERROR, "IMAPD: cannot open temporary file\n");
       fprintf(ci->tx, "BYE internal system failure\n");
+
+      null_free(((imap_userdata_t*)ci->userData)->mailbox.seq_list);
+      null_free(ci->userData);
+      return EOF;
     }
 
   done = 0;
@@ -149,6 +158,9 @@ int imap_process(ClientInfo *ci)
 	    {
 	      close_cache();
 	      db_disconnect();
+	      null_free(((imap_userdata_t*)ci->userData)->mailbox.seq_list);
+	      null_free(ci->userData);
+
 	      return -1; /* broken pipe */
 	    }
 	  else
@@ -162,6 +174,10 @@ int imap_process(ClientInfo *ci)
 	    {
 	      close_cache();
 	      db_disconnect();
+
+	      null_free(((imap_userdata_t*)ci->userData)->mailbox.seq_list);
+	      null_free(ci->userData);
+
 	      return -1; /* broken pipe */
 	    }
 	  else
@@ -178,6 +194,10 @@ int imap_process(ClientInfo *ci)
 	  fprintf(ci->tx, "* BAD Input contains invalid characters\n");
 	  close_cache();
 	  db_disconnect();
+
+	  null_free(((imap_userdata_t*)ci->userData)->mailbox.seq_list);
+	  null_free(ci->userData);
+
 	  return 1;
 	}
 
@@ -318,7 +338,10 @@ int imap_process(ClientInfo *ci)
   /* cleanup */
   close_cache();
   db_disconnect();
-  
+
+  null_free(((imap_userdata_t*)ci->userData)->mailbox.seq_list);
+  null_free(ci->userData);
+
   fprintf(ci->tx,"%s OK completed\n",tag);
   trace(TRACE_MESSAGE,"IMAPD: Closing connection for client from IP [%s]\n",ci->ip);
 
@@ -334,6 +357,9 @@ int imap_process(ClientInfo *ci)
  */
 void imap_error_cleanup(ClientInfo *ci)
 {
+  null_free(((imap_userdata_t*)ci->userData)->mailbox.seq_list);
+  null_free(ci->userData);
+
   close_cache();
   db_disconnect();
 }

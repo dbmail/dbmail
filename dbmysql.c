@@ -3067,6 +3067,9 @@ void db_free_msg(mime_message_t *msg)
   tmp = list_getstart(&msg->mimeheader);
   list_freelist(&tmp);
 
+  tmp = list_getstart(&msg->rfcheader);
+  list_freelist(&tmp);
+
   memset(msg, 0, sizeof(*msg));
 }
 
@@ -3175,10 +3178,9 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
     return -1;
 
   if ((hdrlines = mime_readheader(&msgbuf[msgidx], &msgidx, 
-				&msg->rfcheader, &msg->rfcheadersize)) == -1)
+				  &msg->rfcheader, &msg->rfcheadersize)) == -1)
     return -1;   /* error reading header */
 
-/*  totallines += hdrlines;*/ /* dont count newlines in header... */
   db_give_msgpos(&msg->bodystart);
 
   mime_findfield("content-type", &msg->rfcheader, &mr);
@@ -3228,6 +3230,9 @@ int db_start_msg(mime_message_t *msg, char *stopbound)
 	{
 	  if (strncmp(&msgbuf[msgidx], newbound, strlen(newbound)) == 0)
 	    break;
+
+	  if (msgbuf[msgidx] == '\n')
+	    totallines++;
 
 	  msgidx++;
 	}

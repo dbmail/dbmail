@@ -21,9 +21,6 @@
 #define MAX_LINESIZE 1024
 #endif
 
-/* end of message data (APPEND command) */
-#define MSGDATA_END 0x0D 
-
 #define MAX_RETRIES 20
 #define IMAP_NFLAGS 6
 const char *imap_flag_desc[IMAP_NFLAGS] = 

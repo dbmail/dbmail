@@ -93,8 +93,11 @@ struct element *list_nodeadd(struct list *tlist, void *data,
 
   tlist->start->data=(void *)malloc(dsize);
   if (!tlist->start->data)
-    return NULL;
-
+    {
+      free(tlist->start);
+      tlist->start = NULL;
+      return NULL;
+    }
 #endif
   
   /* copy data */
