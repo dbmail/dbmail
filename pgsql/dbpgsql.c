@@ -895,6 +895,7 @@ int db_send_message_lines (void *fstream, u64_t messageidnr, long lines, int no_
 {
   char *buffer = NULL;
   char *nextpos, *tmppos = NULL;
+  int buffer_pos = 0;
   int block_count;
   u64_t rowlength;
 #define WRITE_BUFFER_SIZE 2048
@@ -933,6 +934,7 @@ int db_send_message_lines (void *fstream, u64_t messageidnr, long lines, int no_
 
 	  /* reset our buffer */
 	  memset (buffer, '\0', (WRITE_BUFFER_SIZE)*2);
+	  buffer_pos = 0;
 
 	  while ((*nextpos!='\0') && (rowlength>0) && ((lines>0) || (lines==-2) || (block_count==0)))
             {
@@ -948,12 +950,16 @@ int db_send_message_lines (void *fstream, u64_t messageidnr, long lines, int no_
 		  if (tmppos!=NULL)
                     {
 		      if (*tmppos=='\r')
-			sprintf (buffer,"%s%c",buffer,*nextpos);
-		      else 
-			sprintf (buffer,"%s\r%c",buffer,*nextpos);
+			buffer[buffer_pos++] = *nextpos;
+		      else {
+			buffer[buffer_pos++] = '\r'; 
+			buffer[buffer_pos++] = *nextpos;
+		      }
                     }
-		  else 
-		    sprintf (buffer,"%s\r%c",buffer,*nextpos);
+		  else {
+		    buffer[buffer_pos++] = '\r'; 
+		    buffer[buffer_pos++] = *nextpos;
+		  }
                 }
 	      else
                 {
@@ -961,16 +967,18 @@ int db_send_message_lines (void *fstream, u64_t messageidnr, long lines, int no_
                     {
 		      if (tmppos!=NULL)
                         {
-			  if (*tmppos=='\n')
-			    sprintf (buffer,"%s.%c",buffer,*nextpos);
-			  else
-			    sprintf (buffer,"%s%c",buffer,*nextpos);
+			     if (*tmppos=='\n') {
+				  buffer[buffer_pos++] = '.';
+				  buffer[buffer_pos++] = *nextpos;
+			     }
+			     else
+				  buffer[buffer_pos++] = *nextpos;
                         }
 		      else 
-			sprintf (buffer,"%s%c",buffer,*nextpos);
+			   buffer[buffer_pos++] = *nextpos;
                     }
 		  else	
-		    sprintf (buffer,"%s%c",buffer,*nextpos);
+		       buffer[buffer_pos++] = *nextpos;
                 }
 
 	      tmppos=nextpos;
@@ -988,6 +996,7 @@ int db_send_message_lines (void *fstream, u64_t messageidnr, long lines, int no_
 
 		  /*  cleanup the buffer  */
 		  memset (buffer, '\0', (WRITE_BUFFER_SIZE*2));
+		  buffer_pos = 0;
                 }
             }
 
