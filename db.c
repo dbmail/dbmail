@@ -2600,6 +2600,15 @@ int db_find_create_mailbox(const char *name, u64_t owner_idnr,
 	assert(mailbox_idnr != NULL);
 	*mailbox_idnr = 0;
 
+#ifdef AUTHLDAP
+	if ((db_user_find_create(owner_idnr) < 0)) {
+		trace(TRACE_ERROR, "%s,%s: unable to find or create sql shadow "
+				"account for useridnr [%llu]", 
+				__FILE__, __func__, owner_idnr);
+		return -1;
+	}
+#endif
+
 	/* Did we fail to find the mailbox? */
 	if (db_findmailbox_owner(name, owner_idnr, &mboxidnr) != 1) {
 		/* Did we fail to create the mailbox? */
@@ -4008,6 +4017,10 @@ int db_user_exists(const char *username, u64_t * user_idnr)
 	return 1;
 }
 
+int db_user_create_shadow(const char *username, u64_t * user_idnr)
+{
+	return db_user_create(username, "UNUSED", "UNUSED", 0xffff, 0xffff, user_idnr);
+}
 
 int db_user_create(const char *username, const char *password, const char *enctype,
 		 u64_t clientid, u64_t maxmail, u64_t * user_idnr) 
@@ -4143,3 +4156,43 @@ int db_user_rename(u64_t user_idnr, const char *new_name)
 	return 0;
 }
 
+int db_user_find_create(u64_t user_idnr)
+{
+	char *username;
+	u64_t idnr;
+	int result;
+
+	assert(user_idnr > 0);
+	
+	trace(TRACE_DEBUG,"%s,%s: user_idnr [%llu]", 
+			__FILE__, __func__, user_idnr);
+
+	if ((result = user_idnr_is_delivery_user_idnr(user_idnr)))
+		return result;
+	
+	if (! (username = auth_get_userid(user_idnr))) 
+		return -1;
+	
+	trace(TRACE_DEBUG,"%s,%s: found username for user_idnr [%llu -> %s",
+			__FILE__, __func__,
+			user_idnr, username);
+	
+	if ((db_user_exists(username, &idnr) < 0))
+		return -1;
+
+	if ((idnr > 0) && (idnr != user_idnr)) {
+		trace(TRACE_ERROR, "%s,%s: user_idnr for sql shadow account "
+				"differs from user_idnr [%llu != %llu]",
+				__FILE__, __func__,
+				idnr, user_idnr);
+		return -1;
+	}
+	
+	if (idnr == user_idnr) {
+		trace(TRACE_DEBUG, "%s,%s: shadow entry exists and valid",
+				__FILE__, __func__);
+		return 1;
+	}
+
+	return db_user_create_shadow(username, &user_idnr);
+}
