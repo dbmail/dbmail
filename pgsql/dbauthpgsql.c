@@ -713,12 +713,21 @@ u64_t auth_validate (char *user, char *password)
   struct tm tm;
   char salt[13];
   char cryptres[35];
+  char *escuser;
 
   time(&td);              /* get time */
   tm = *localtime(&td);   /* get components */
   strftime(timestr, sizeof(timestr), "%G-%m-%d %H:%M:%S", &tm);
 
-  snprintf(__auth_query_data, AUTH_QUERY_SIZE, "SELECT user_idnr, passwd, encryption_type FROM users WHERE userid = '%s'", user);
+  if (! (escuser = (char*)malloc(strlen(user)*2 +1)) )
+    {
+      trace(TRACE_ERROR, "auth_validate(): out of memory allocating for escaped userid");
+      return -1;
+    }
+
+  PQescapeString(escuser, user, strlen(user));
+
+  snprintf(__auth_query_data, AUTH_QUERY_SIZE, "SELECT user_idnr, passwd, encryption_type FROM users WHERE userid = '%s'", escuser);
 
   if (__auth_query(__auth_query_data)==-1)
     {
