@@ -1,0 +1,7 @@
+#
+# adds the last-login field
+#
+
+USE dbmail;
+
+ALTER TABLE users ADD last_login DATETIME DEFAULT '1979-11-03 22:05:58' NOT NULL;

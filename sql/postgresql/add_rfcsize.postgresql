@@ -1,6 +1,6 @@
 USE dbmail;
 
 ALTER TABLE messages ADD rfcsize INT8;
-ALTER TABLE messages ALTER rfcsize DEFAULT '0';
+ALTER TABLE messages ALTER rfcsize SET DEFAULT '0';
 
 UPDATE messages SET rfcsize=0;
