@@ -16,11 +16,6 @@
 #define MIME_FIELD_MAX 128
 #define MIME_VALUE_MAX 4096
 
-/*
- * define supported encryption methods for passwd storage
- */
-
-enum SUPPORTED_ENCRYPTION_TYPES { SUPP_ENCTYPE_CLEARTEXT, SUPP_ENCTYPE_CRYPT };
 
 /*
  * define some IMAP symbols

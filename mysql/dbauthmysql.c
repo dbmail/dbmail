@@ -14,7 +14,7 @@
 #include <string.h>
 #include "../db.h"
 #include "../dbmd5.h"
-
+#include <crypt.h>
 
 /* 
  * var's from dbmysql.c: 
@@ -169,7 +169,6 @@ u64_t db_getmaxmailsize(u64_t useridnr)
  */
 char* db_getencryption(u64_t useridnr)
 {
-  char *row;
   __db_encryption_desc_string[0] = 0;
 
   if (useridnr == -1 || useridnr == 0)
