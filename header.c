@@ -168,15 +168,11 @@ static int consume_header_line(const char *message_content,
 	size_t tmp_line_size = 0;
 	size_t tmp_line_rfcsize = 0;
 	
-	trace(TRACE_DEBUG, "%s,%s: message_content = %s",
-	      __FILE__, __func__, message_content);
 	if (strlen(message_content) == 0) {
 		tmp_line_size = 0;
 		tmp_line_rfcsize = 0;
 	} else {
 		line_content_size = strcspn(message_content, "\r\n");
-		trace(TRACE_DEBUG, "%s,%s: line_content_size = %zd",
-		      __FILE__, __func__, line_content_size);
 		if (message_content[line_content_size] == '\n') {
 			tmp_line_size = line_content_size + 1;
 			tmp_line_rfcsize = tmp_line_size + 1;
