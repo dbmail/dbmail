@@ -7,8 +7,8 @@
  */
 
 #include "../auth.h"
-/*#include "/usr/local/pgsql/include/libpq-fe.h"*/
-#include "/usr/include/postgresql/libpq-fe.h"
+#include "/usr/local/pgsql/include/libpq-fe.h"
+/*#include "/usr/include/postgresql/libpq-fe.h"*/
 #include "../list.h"
 #include "../debug.h"
 #include <stdlib.h>

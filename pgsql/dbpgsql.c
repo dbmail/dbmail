@@ -5,8 +5,8 @@
  * Functions for connecting and talking to the PostgreSQL database */
 
 #include "../db.h"
-/*#include "/usr/local/pgsql/include/libpq-fe.h"*/
-#include "/usr/include/postgresql/libpq-fe.h"
+#include "/usr/local/pgsql/include/libpq-fe.h"
+/*#include "/usr/include/postgresql/libpq-fe.h"*/
 #include "../config.h"
 #include "../pop3.h"
 #include "../list.h"
