@@ -214,8 +214,10 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'V':
-			qprintf("\n*** DBMAIL: dbmail-util version "
-			       "$Revision$ %s\n\n", COPYRIGHT);
+ 			printf("DBMail: dbmail-util\n"
+ 			       "Version: %s\n"
+ 			       "$Revision$\n"
+ 			       "Copyright: %s\n", VERSION, COPYRIGHT);
 			return 1;
 
 		default:
@@ -229,6 +231,9 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+ 	/* Don't make any changes unless specifically authorized. */
+ 	if (!yes_to_all) no_to_all = 1;
+ 
 	config_read(configFile);
 	SetTraceLevel("DBMAIL");
 	GetDBParams(&_db_params);
@@ -254,7 +259,21 @@ int main(int argc, char *argv[])
 	if (check_iplog) do_check_iplog(timestr, timespec);
 	if (vacuum_db) do_vacuum_db();
 
-	qprintf("\nMaintenance done.\n");
+	if (!has_errors) {
+		qprintf("\nMaintenance done. No errors found.\n");
+	} else {
+		qerrorf("\nMaintenance done. Errors were found");
+		if (no_to_all) {
+			qerrorf(" but not fixed.\n");
+			qerrorf("Try running dbmail-util with the '-r' "
+			    "option to repair the errors.\n");
+		}
+		if (yes_to_all) {
+			qerrorf(" and fixed.\n");
+			qerrorf("Try running dbmail-util again to confirm "
+			    "that the errors were repaired.\n");
+		}
+	}
 
 	db_disconnect();
 	auth_disconnect();
@@ -338,8 +357,13 @@ int do_null_messages(void)
 		return -1;
 	}
 
-	qprintf("Ok. Found [%ld] NULL messages.\n",
-	       lostlist.total_nodes);
+	if (lostlist.total_nodes > 0) {
+		qerrorf("Ok. Found [%ld] NULL messages.\n",
+		       lostlist.total_nodes);
+	} else {
+		qprintf("Ok. Found [%ld] NULL messages.\n",
+		       lostlist.total_nodes);
+	}
 
 	if (yes_to_all) {
 		if (lostlist.total_nodes > 0) {
@@ -368,10 +392,10 @@ int do_null_messages(void)
 		return -1;
 	}
 
-	qerrorf("Ok. Found [%ld] physmessages without messageblocks.\n",
-	     lostlist.total_nodes);
-
 	if (lostlist.total_nodes > 0) {
+		qerrorf("Ok. Found [%ld] physmessages without messageblocks.\n",
+		     lostlist.total_nodes);
+
 		el = lostlist.start;
 		while (el) {
 			id = *((u64_t *) el->data);
@@ -382,6 +406,9 @@ int do_null_messages(void)
 			el = el->nextnode;
 		}
 		list_freelist(&lostlist.start);
+	} else {
+		qprintf("Ok. Found [%ld] physmessages without messageblocks.\n",
+		    lostlist.total_nodes);
 	}
 
 	time(&stop);
@@ -414,14 +441,13 @@ int do_check_integrity(void)
 
 	/* first part */
 	if (db_icheck_messageblks(&lostlist) < 0) {
-		qerrorf
-		    ("Failed. An error occured. Please check log.\n");
+		qerrorf("Failed. An error occured. Please check log.\n");
 		return -1;
 	}
 
-	qprintf("Ok. Found [%ld] unconnected messageblks:\n",
-	     lostlist.total_nodes);
 	if (lostlist.total_nodes > 0) {
+		qerrorf("Ok. Found [%ld] unconnected messageblks:\n",
+		     lostlist.total_nodes);
 
 		el = lostlist.start;
 		while (el) {
@@ -446,6 +472,9 @@ int do_check_integrity(void)
 
 		qerrorf("\n");
 		has_errors = 1;
+	} else {
+		qprintf("Ok. Found [%ld] unconnected messageblks.\n",
+		     lostlist.total_nodes);
 	}
 
 
@@ -465,8 +494,15 @@ int do_check_integrity(void)
 		return -1;
 	}
 
-	qprintf("Ok. Found [%ld] unconnected messages:\n",
-	       lostlist.total_nodes);
+	if (lostlist.total_nodes > 0) {
+		has_errors = 1;
+		qerrorf("Ok. Found [%ld] unconnected messages:\n",
+		       lostlist.total_nodes);
+	} else {
+		qprintf("Ok. Found [%ld] unconnected messages.\n",
+		       lostlist.total_nodes);
+	}
+
 	if (yes_to_all) {
 		if (lostlist.total_nodes > 0) {
 			el = lostlist.start;
@@ -490,11 +526,6 @@ int do_check_integrity(void)
 			}
         
 			qerrorf("\n");
-			if (no_to_all) {
-				qerrorf
-				    ("Try running dbmail-util with the '-r' option "
-				     "in order to repair these problems\n\n");
-			}
 			list_freelist(&lostlist.start);
         
 		}
@@ -516,10 +547,17 @@ int do_check_integrity(void)
 		return -1;
 	}
 
-	qprintf("Ok. Found [%ld] unconnected mailboxes:\n",
-	    lostlist.total_nodes);
+	if (lostlist.total_nodes > 0) {
+		has_errors = 1;
+		qerrorf("Ok. Found [%ld] unconnected mailboxes.\n",
+		    lostlist.total_nodes);
+	} else {
+		qprintf("Ok. Found [%ld] unconnected mailboxes.\n",
+		    lostlist.total_nodes);
+	}
+
 	if (yes_to_all) {
-		if (lostlist.total_nodes) {
+		if (lostlist.total_nodes > 0) {
         
 			el = lostlist.start;
 			while (el) {
@@ -543,12 +581,6 @@ int do_check_integrity(void)
 			}
         
 			qerrorf("\n");
-			if (no_to_all) {
-				qerrorf
-				    ("Try running dbmail-util with the '-r' option "
-				     "in order to repair these problems\n\n");
-			}
-        
 			list_freelist(&lostlist.start);
 		}
 	}
