@@ -70,7 +70,8 @@ int mime_fetch_headers(const char *datablock, struct list *mimelist)
 	m = dbmail_message_init_with_string(m, raw);
 	g_mime_header_foreach(m->content->headers, _register_header, (gpointer)mimelist);
 	g_string_free(raw,1);
-
+	
+	/* dbmail expects the mime-headers of the message's mimepart as part of the rfcheaders */
 	if (dbmail_message_get_class(m) == DBMAIL_MESSAGE && GMIME_MESSAGE(m->content)->mime_part) {
 		message = (GMimeMessage *)(m->content);
 		g_mime_header_foreach(GMIME_OBJECT(message->mime_part)->headers, _register_header, (gpointer)mimelist);
@@ -103,7 +104,7 @@ int mime_fetch_headers(const char *datablock, struct list *mimelist)
 int mime_readheader(const char *datablock, u64_t * blkidx, struct list *mimelist,
 		    u64_t * headersize)
 {
-	int valid_mime_lines = 0, idx, totallines = 0, j;
+	int idx, totallines = 0, j;
 	int fieldlen, vallen;
 	char *endptr, *startptr, *delimiter;
 	char *blkdata;
@@ -167,7 +168,6 @@ int mime_readheader(const char *datablock, u64_t * blkidx, struct list *mimelist
 
 		if (delimiter) {
 			/* found ':' */
-			valid_mime_lines++;
 			*delimiter = '\0';	/* split up strings */
 
 			/* skip all spaces and colons after the fieldname */
@@ -211,7 +211,7 @@ int mime_readheader(const char *datablock, u64_t * blkidx, struct list *mimelist
 	/* everything down here should be unreachable */
 
 	trace(TRACE_DEBUG, "%s,%s: mimeloop finished", __FILE__, __func__);
-	if (valid_mime_lines < 2) {
+	if (mimelist->total_nodes < 2) {
 		trace(TRACE_ERROR, "%s,%s: no valid mime headers found\n", __FILE__, __func__);
 		g_free(blkdata);
 		return -1;

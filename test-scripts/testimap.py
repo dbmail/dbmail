@@ -60,8 +60,8 @@ class testImapServer(unittest.TestCase):
         self.o.append('testappend','\Flagged',"",TESTMSG['strict822'])
         self.o.select('testappend')
         ids=self.o.recent()
-        print ids
-#        result = self.o.fetch(ids[0],"(UID BODY[TEXT])")[1][1]
+        result = self.o.fetch(ids[1][0],"(UID BODY[TEXT])")
+        print result
 #        expect = '  FLAGS (\\Seen \\Flagged \\Recent))'
 #        self.assertEquals(result,expect)
 
@@ -100,9 +100,8 @@ class testImapServer(unittest.TestCase):
             Create new mailbox named MAILBOX.
         """
         self.assertEquals(self.o.create('test create'),('OK',['CREATE completed']))
-        print self.o.create("dir1")
-        print self.o.list()
-        #self.o.delete('test create')
+        self.o.create("dir1")
+        self.assertEquals('() "/" "test create"' in self.o.list()[1], True)
 
     def testDelete(self):
         """ 
@@ -132,19 +131,19 @@ class testImapServer(unittest.TestCase):
         """
         self.o.append('INBOX','','',TESTMSG['strict822'])
         self.o.select()
-	self.assertEquals(self.o.fetch("1:10","(Flags)")[0],'OK')
+        self.assertEquals(self.o.fetch("1:10","(Flags)")[0],'OK')
         id=self.o.recent()[1][0]
         result = self.o.fetch(id,"(UID BODY[TEXT]<0.20>)")
-	self.assertEquals(result[0],'OK')
+        self.assertEquals(result[0],'OK')
         self.assertEquals(self.o.fetch(id,"(UID BODY.PEEK[TEXT]<0.30>)")[0],'OK')
         self.assertEquals(self.o.fetch(id,"(UID RFC822.SIZE)")[0],'OK')
         result=self.o.fetch(id,"(UID RFC822.HEADER)")
         self.assertEquals(result[0],'OK')
         self.assertEquals(result[1][0][1][-4:],'\r\n\r\n')
         result=self.o.fetch("1:10","(UID RFC822.HEADER)")
-	self.assertEquals(result[0],'OK')
-	result=self.o.fetch("1","(BODY.PEEK[HEADER.FIELDS (References X-Ref X-Priority X-MSMail-Priority X-MSOESRec Newsgroups)] ENVELOPE RFC822.SIZE UID FLAGS INTERNALDATE)")
-	print result
+        self.assertEquals(result[0],'OK')
+        result=self.o.fetch("1","(BODY.PEEK[HEADER.FIELDS (References X-Ref X-Priority X-MSMail-Priority X-MSOESRec Newsgroups)] ENVELOPE RFC822.SIZE UID FLAGS INTERNALDATE)")
+        self.assertEquals(result[0],'OK')
 	
 
     def testGetacl(self):
@@ -227,8 +226,9 @@ class testImapServer(unittest.TestCase):
             to match any mailbox.  Returned data are tuples of message part
             envelope and data.
         """
-        print self.o.lsub()
-        #self.fail(unimplementedError)
+        self.o.create('testsubscribe')
+        self.o.subscribe('testsubscribe')
+        self.assertEquals('() "/" "testsubscribe"' in self.o.lsub()[1], True)
 
     def testNoop(self):
         """ 
@@ -360,7 +360,7 @@ class testImapServer(unittest.TestCase):
             Request named status conditions for MAILBOX.
         """
         self.o.create("test status");
-        print self.o.status("test status",'(UIDNEXT UIDVALIDITY MESSAGES UNSEEN RECENT)');
+        self.o.status("test status",'(UIDNEXT UIDVALIDITY MESSAGES UNSEEN RECENT)');
         self.assertEquals(self.o.status('INBOX','(UIDNEXT MESSAGES UNSEEN RECENT)')[0],'OK')
 
 
@@ -389,9 +389,9 @@ class testImapServer(unittest.TestCase):
         """               
         self.o.select('INBOX')
         result=self.o.uid('SEARCH','1:10')
-        print result
+        self.assertEquals(len(result[1]) < 10, True)
         result=self.o.uid('FETCH','10:*', 'FLAGS')
-        print result
+        self.assertEquals(len(result[1]) > 0, True)
         
     def testUnsubscribe(self):
         """

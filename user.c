@@ -920,6 +920,7 @@ int do_delete(const u64_t useridnr, const char * const name)
 int do_show(const char * const name)
 {
 	u64_t useridnr, cid, quotum, quotumused;
+	GList *users = NULL;
 	struct list userlist;
 	struct element *tmp;
 	char *deliver_to;
@@ -928,16 +929,17 @@ int do_show(const char * const name)
 		/* show all users */
 		qprintf("Existing users:\n");
 
-		auth_get_known_users(&userlist);
-
-		tmp = list_getstart(&userlist);
-		while (tmp) {
-			qprintf("[%s]\n", (char *) tmp->data);
-			tmp = tmp->nextnode;
+		users = auth_get_known_users();
+		if (g_list_length(users) > 0) {
+			users = g_list_first(users);
+			while (users) {
+				qprintf("[%s]\n", (char *) users->data);
+				users = g_list_next(users);
+			}
+			g_list_foreach(users,(GFunc)g_free,NULL);
 		}
+		g_list_free(users);
 
-		if (userlist.start)
-			list_freelist(&userlist.start);
 	} else {
 		qprintf("Info for user [%s]", name);
 

@@ -44,6 +44,10 @@
 #include "dbmsgbuf.h"
 #include "imaputil.h"
 
+char *configFile = DEFAULT_CONFIG_FILE;
+extern db_param_t _db_params;
+
+
 /* we need this one because we can't directly link imapd.o */
 int imap_before_smtp = 0;
 extern char *msgbuf_buf;
@@ -139,6 +143,11 @@ void print_mimelist(struct list *mimelist)
  * the test fixtures
  *
  */
+
+void setup(void)
+{
+	configure_debug(5,0,1);
+}
 
 START_TEST(test_imap_session_new)
 {
@@ -283,6 +292,23 @@ START_TEST(test_dbmail_imap_list_slices)
 	fail_unless(g_list_length(list)==9, "number of slices incorrect");
 	sub = g_string_split(g_string_new((gchar *)list->data), ",");
 	fail_unless(g_list_length(sub)==s,"Slice length incorrect");
+
+	g_list_foreach(list,(GFunc)g_free,NULL);
+	g_list_foreach(sub,(GFunc)g_free,NULL);
+	
+	i=0;
+	j=17;
+	s=100;
+	list = NULL;
+	sub = NULL;
+	for (i=0; i< j; i++) 
+		list = g_list_append_printf(list, "ELEM_%d", i);
+	list = dbmail_imap_list_slices(list, s);
+	list = g_list_first(list);
+	fail_unless(g_list_length(list)==1, "number of slices incorrect");
+	sub = g_string_split(g_string_new((gchar *)list->data), ",");
+	fail_unless(g_list_length(sub)==j,"Slice length incorrect");
+
 }
 END_TEST
 

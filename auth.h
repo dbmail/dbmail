@@ -72,15 +72,12 @@ int auth_user_exists(const char *username, /*@out@*/ u64_t * user_idnr);
 
 /**
  * \brief get a list of all known users
- * \param users on call this should be an empty list. It will be filled with
- * all known users on return of this function, if return value is 0
  * \return
- *    - -2 on memory error
- *    - -1 on database error
- *    -  0 on success
+ *    - list off all usernames on success
+ *    - NULL on error
  * \attention caller should free list
  */
-int auth_get_known_users(struct list *users);
+GList * auth_get_known_users(void);
 
 /**
  * \brief get client_id for a user

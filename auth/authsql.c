@@ -128,43 +128,25 @@ int auth_user_exists(const char *username, u64_t * user_idnr)
 	return 1;
 }
 
-int auth_get_known_users(struct list *users)
+GList * auth_get_known_users(void)
 {
 	u64_t i;
-	const char *query_result;
+	GList * users = NULL;
 
-	if (!users) {
-		trace(TRACE_ERROR, "%s,%s: got a NULL pointer as argument",
-		      __FILE__, __func__);
-		return -2;
-	}
-
-	list_init(users);
-
-	/* do a inverted (DESC) query because adding the names to the
-	 * final list inverts again */
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
-		 "SELECT userid FROM %susers ORDER BY userid DESC",DBPFX);
+		 "SELECT userid FROM %susers ORDER BY userid",DBPFX);
 
 	if (__auth_query(__auth_query_data) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not retrieve user list",
 		      __FILE__, __func__);
-		return -1;
+		return NULL;
 	}
 
-	if (db_num_rows() > 0) {
-		for (i = 0; i < (unsigned) db_num_rows(); i++) {
-			query_result = db_get_result(i, 0);
-			if (!list_nodeadd
-			    (users, query_result,
-			     strlen(query_result) + 1)) {
-				list_freelist(&users->start);
-				return -2;
-			}
-		}
-	}
+	for (i = 0; i < (unsigned) db_num_rows(); i++) 
+		users = g_list_append(users, g_strdup(db_get_result(i, 0)));
+	
 	db_free_result();
-	return 0;
+	return users;
 }
 
 int auth_getclientid(u64_t user_idnr, u64_t * client_idnr)

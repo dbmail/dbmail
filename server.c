@@ -88,9 +88,9 @@ int SetParentSigHandler()
 int StartServer(serverConfig_t * conf)
 {
 	if (!conf)
-		trace(TRACE_FATAL, "StartServer(): NULL configuration");
+		trace(TRACE_FATAL, "%s,%s: NULL configuration", __FILE__, __func__);
 
-	trace(TRACE_DEBUG, "StartServer(): init");
+	trace(TRACE_DEBUG, "%s,%s: init", __FILE__, __func__);
 
 	ParentPID = getpid();
 	Restart = 0;
@@ -104,13 +104,13 @@ int StartServer(serverConfig_t * conf)
 	childinfo.timeoutMsg = conf->timeoutMsg;
 	childinfo.resolveIP = conf->resolveIP;
  	
- 	trace(TRACE_DEBUG, "StartServer(): init ok. Creating children..");
+ 	trace(TRACE_DEBUG, "%s,%s: init ok. Creating children..", __FILE__, __func__);
  	scoreboard_new(conf);
  	manage_start_children();
  	manage_spare_children();
  	alarm(10);
   
- 	trace(TRACE_DEBUG, "StartServer(): children created, starting main service loop");
+ 	trace(TRACE_DEBUG, "%s,%s: children created, starting main service loop", __FILE__, __func__);
  	while (!GeneralStopRequested) 
  		manage_restart_children();
    
@@ -125,16 +125,16 @@ void ParentSigHandler(int sig, siginfo_t * info, void *data)
 {
 	if (ParentPID != getpid()) {
 		trace(TRACE_INFO,
-		      "ParentSigHandler(): i'm no longer father");
+		      "%s,%s: i'm no longer father", __FILE__, __func__);
 		active_child_sig_handler(sig, info, data); /* this call is for a child but it's handler is not yet installed */
 	}
 	
 	if (sig != SIGALRM) {
 #ifdef _USE_STR_SIGNAL
-		trace(TRACE_INFO, "ParentSigHandler(): got signal [%s]",
+		trace(TRACE_INFO, "%s,%s: got signal [%s]", __FILE__, __func__,
 		      strsignal(sig));
 #else
-		trace(TRACE_INFO, "ParentSigHandler(): got signal [%d]", sig);
+		trace(TRACE_INFO, "%s,%s: got signal [%d]", __FILE__, __func__, sig);
 #endif
 	}
 	
@@ -149,7 +149,7 @@ void ParentSigHandler(int sig, siginfo_t * info, void *data)
 
 	case SIGHUP:
 		trace(TRACE_DEBUG,
-		      "ParentSigHandler(): SIGHUP, setting Restart");
+		      "%s,%s: SIGHUP, setting Restart", __FILE__, __func__);
 		Restart = 1;
 		/* fall-through */
 	default:
@@ -169,10 +169,10 @@ int CreateSocket(serverConfig_t * conf)
 	sock = socket(PF_INET, SOCK_STREAM, 0);
 	if (sock == -1)
 		trace(TRACE_FATAL,
-		      "CreateSocket(): socket creation failed [%s]",
+		      "%s,%s: socket creation failed [%s]", __FILE__, __func__,
 		      strerror(errno));
 
-	trace(TRACE_DEBUG, "CreateSocket(): socket created");
+	trace(TRACE_DEBUG, "%s,%s: socket created", __FILE__, __func__);
 
 	/* make an (socket)address */
 	memset(&saServer, 0, sizeof(saServer));
@@ -187,11 +187,11 @@ int CreateSocket(serverConfig_t * conf)
 		if (!r) {
 			close(sock);
 			trace(TRACE_FATAL,
-			      "CreateSocket(): invalid IP [%s]", conf->ip);
+			      "%s,%s: invalid IP [%s]", __FILE__, __func__, conf->ip);
 		}
 	}
 
-	trace(TRACE_DEBUG, "CreateSocket(): socket IP requested [%s] OK",
+	trace(TRACE_DEBUG, "%s,%s: socket IP requested [%s] OK", __FILE__, __func__,
 	      conf->ip);
 
 	/* set socket option: reuse address */
@@ -205,20 +205,20 @@ int CreateSocket(serverConfig_t * conf)
 	if (r == -1) {
 		close(sock);
 		trace(TRACE_FATAL,
-		      "CreateSocket(): could not bind address to socket");
+		      "%s,%s: could not bind address to socket", __FILE__, __func__);
 	}
 
-	trace(TRACE_DEBUG, "CreateSocket(): IP bound to socket");
+	trace(TRACE_DEBUG, "%s,%s: IP bound to socket", __FILE__, __func__);
 
 	r = listen(sock, BACKLOG);
 	if (r == -1) {
 		close(sock);
 		trace(TRACE_FATAL,
-		      "CreateSocket(): error making socket listen [%s]",
+		      "%s,%s: error making socket listen [%s]", __FILE__, __func__,
 		      strerror(errno));
 	}
 
-	trace(TRACE_INFO, "CreateSocket(): socket creation complete");
+	trace(TRACE_INFO, "%s,%s: socket creation complete", __FILE__, __func__);
 	conf->listenSocket = sock;
 
 	return 0;

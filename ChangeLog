@@ -1,3 +1,18 @@
+2005-01-04  Paul Stevens <paul@nfg.nl>
+
+	* Makefile.am, check_dbmail_common.c: added new test suite for testing
+	db interactions.
+	* check_dbmail_imapd.c, auth.h, auth/authsql.c, user.c: refactored
+	auth_get_known_users to use GList.
+	* dbmail-imapsession.c, imap4.c, imap4.h, imapcommands.c: misc
+	cleanups in code formatting and string handling.
+	* imaputil.c (dbmail_imap_list_slices): fix error in slice
+	construction.
+	* mime.c (mime_readheader): minor cleanups after refactoring.
+	* server.c, serverchild.c: cleanup of trace calls. Also make
+	serverchild.c sleep for 60 seconds on segfault to allow attachment of
+	debugger.
+
 2004-12-23  Paul Stevens <paul@nfg.nl>
 
 	* check_dbmail_imapd.c, dbmail-imapsession.c, dbmail-imapsession.h,

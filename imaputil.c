@@ -192,8 +192,12 @@ GList *dbmail_imap_list_slices(GList *list, unsigned limit)
 	unsigned i,j;
 	GList *new = NULL;
 	GString *slice = g_string_new("");
-	if (g_list_length(list) <= limit)
-		return g_list_append(new,g_list_join(list,","));
+	if (g_list_length(list) <= limit) {
+		slice = g_list_join(list,",");
+		new=g_list_append(new,g_strdup(slice->str));
+		g_string_free(slice,TRUE);
+		return new;
+	}
 	
 	j = g_list_length(list) % limit;
 	

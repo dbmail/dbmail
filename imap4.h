@@ -43,6 +43,9 @@
 /* max number of retries when synchronizing mailbox with dbase */
 #define MAX_RETRIES 20
 
+#define null_free(p) { my_free(p); p = NULL; }
+
+
 int IMAPClientHandler(ClientInfo * ci);
 
 typedef struct {
@@ -67,7 +70,6 @@ typedef struct {
 
 	/* temporary additions: */
 	int setseen;
-	int isfirstout;
 	int isfirstfetchout;
 	/* end temp additions */
 	

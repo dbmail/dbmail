@@ -119,7 +119,7 @@ struct ImapSession * dbmail_imap_session_resetFi(struct ImapSession * self)
 {
 	dbmail_imap_session_bodyfetch_rewind(self);
 	g_list_foreach(self->fi->bodyfetch,(GFunc)g_free,NULL);
-	memset(self->fi,0,sizeof(fetch_items_t));
+	memset(self->fi,'\0',sizeof(fetch_items_t));
 	return self;
 }
      
@@ -155,6 +155,11 @@ struct ImapSession * dbmail_imap_session_setMsginfo(struct ImapSession * self, m
 }
 void dbmail_imap_session_delete(struct ImapSession * self)
 {
+	close_cache();
+	if (self->ci->userData) {
+		null_free(((imap_userdata_t*)self->ci->userData)->mailbox.seq_list);
+		null_free(self->ci->userData);
+	}
 	dbmail_imap_session_bodyfetch_free(self);
 	my_free(self);
 }
@@ -996,6 +1001,8 @@ int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self, u64_t fetch
 
 	nmatching = (unsigned)result;
 	
+	trace(TRACE_DEBUG, "%s,%s: into non-parsing fetch loop for [%u] messages", __FILE__, __func__, nmatching);
+
 	for (i = 0; i < nmatching; i++) {
 		if (self->fi->getSize && self->msginfo[i].rfcsize == 0) {
 			/* parse the message to calc the size */
@@ -1034,8 +1041,6 @@ int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self, u64_t fetch
 		tmp = g_string_new("");
 		
 		/* fetching results */
-		trace(TRACE_DEBUG, "_ic_fetch(): no parsing, into fetch loop");
-
 		if (self->fi->getInternalDate) 
 			list = g_list_append_printf(list,"INTERNALDATE \"%s\"", date_sql2imap (self->msginfo[i].internaldate));
 
@@ -1219,7 +1224,6 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 	}
 
 	self->fi->isfirstfetchout = 1;
-	self->fi->isfirstout = 1;
 	
 	if (self->fi->getInternalDate) {
 		result = db_get_msgdate(ud->mailbox.uid, self->msg_idnr, date);
@@ -1251,9 +1255,8 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 		else
 			dbmail_imap_session_printf(self, " ");
 
-		dbmail_imap_session_printf(self, "BODYSTRUCTURE ");
 		tlist = _imap_get_structure(&cached_msg.msg, 1);
-		if (dbmail_imap_session_printf(self, dbmail_imap_plist_as_string(tlist)) == -1) {
+		if (dbmail_imap_session_printf(self, "BODYSTRUCTURE %s", dbmail_imap_plist_as_string(tlist)) == -1) {
 			dbmail_imap_session_printf(self, "\r\n* BYE error fetching body structure\r\n");
 			return -1;
 		}
@@ -1267,9 +1270,8 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 		else
 			dbmail_imap_session_printf(self, " ");
 
-		dbmail_imap_session_printf(self, "BODY ");
 		tlist = _imap_get_structure(&cached_msg.msg, 0);
-		if (dbmail_imap_session_printf(self,dbmail_imap_plist_as_string(tlist)) == -1) {
+		if (dbmail_imap_session_printf(self, "BODY %s", dbmail_imap_plist_as_string(tlist)) == -1) {
 			dbmail_imap_session_printf(self, "\r\n* BYE error fetching body\r\n");
 			return -1;
 		}
@@ -1283,10 +1285,8 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 		else
 			dbmail_imap_session_printf(self, " ");
 
-		dbmail_imap_session_printf(self, "ENVELOPE ");
-
 		tlist = _imap_get_envelope(&cached_msg.msg.rfcheader);
-		if (dbmail_imap_session_printf(self, "%s", dbmail_imap_plist_as_string(tlist)) == -1) {
+		if (dbmail_imap_session_printf(self, "ENVELOPE %s", dbmail_imap_plist_as_string(tlist)) == -1) {
 			dbmail_imap_session_printf(self, "\r\n* BYE error fetching envelope structure\r\n");
 			return -1;
 		}
@@ -1474,27 +1474,21 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 		else
 			dbmail_imap_session_printf(self, " ");
 
-		dbmail_imap_session_printf(self, "FLAGS (");
-
-		self->fi->isfirstout = 1;
-
+		int j;	
 		int msgflags[IMAP_NFLAGS];
 		result = db_get_msgflag_all(self->msg_idnr, ud->mailbox.uid, msgflags);
 		if (result == -1) {
 			dbmail_imap_session_printf(self, "\r\n* BYE internal dbase error\r\n");
 			return -1;
 		}
-		int j;	
+		tlist = NULL;
 		for (j = 0; j < IMAP_NFLAGS; j++) {
 			if (msgflags[j]) {
-				if (self->fi->isfirstout)
-					self->fi->isfirstout = 0;
-				else
-					dbmail_imap_session_printf(self, " ");
-				dbmail_imap_session_printf(self, "\\%s", imap_flag_desc[j]);
+				tlist = g_list_append(tlist,g_strdup((gchar *)imap_flag_desc_escaped[j]));
 			}
+
 		}
-		dbmail_imap_session_printf(self, ")");
+		dbmail_imap_session_printf(self,"FLAGS %s", dbmail_imap_plist_as_string(tlist));
 	}
 	dbmail_imap_session_printf(self, ")\r\n");
 	g_string_free(tmp,TRUE);
@@ -1513,6 +1507,8 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data) {
 	long long cnt;
 	u64_t tmpdumpsize;
 	mime_message_t *msgpart;
+	GList *tlist = NULL;
+	int k;
 	struct ImapSession *self = (struct ImapSession *)data;
 	
 	if (bodyfetch->itemtype < 0)
@@ -1665,20 +1661,14 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data) {
 		break;
 		
 	case BFIT_HEADER_FIELDS:
-		dbmail_imap_session_printf(self,"HEADER.FIELDS (");
+		
+		tlist = NULL;
+		for (k = 0; k < bodyfetch->argcnt; k++) 
+			tlist = g_list_append(tlist, g_strdup(self->args[k + bodyfetch->argstart]));
 
-		self->fi->isfirstout = 1;
-		int k;
-		for (k = 0; k < bodyfetch->argcnt; k++) {
-			if (self->fi->isfirstout)
-				self->fi->isfirstout = 0;
-			else
-				dbmail_imap_session_printf(self, " ");
-			
-			dbmail_imap_session_printf(self, "%s", self->args[k + bodyfetch->argstart]);
-		}
-
-		dbmail_imap_session_printf(self, ")] ");
+		dbmail_imap_session_printf(self,"HEADER.FIELDS %s", dbmail_imap_plist_as_string(tlist));
+		dbmail_imap_session_printf(self, "] ");
+		g_list_foreach(tlist, (GFunc)g_free, NULL);
 
 		if (!msgpart || only_text_from_msgpart)
 			dbmail_imap_session_printf(self, "NIL\r\n");
@@ -1707,19 +1697,14 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data) {
 		}
 		break;
 	case BFIT_HEADER_FIELDS_NOT:
-		dbmail_imap_session_printf(self, "HEADER.FIELDS.NOT (");
 
-		self->fi->isfirstout = 1;
-		for (k = 0; k < bodyfetch->argcnt; k++) {
-			if (self->fi->isfirstout)
-				self->fi->isfirstout = 0;
-			else
-				dbmail_imap_session_printf(self, " ");
-			
-			dbmail_imap_session_printf(self, "%s", self->args[k + bodyfetch->argstart]);
-		}
+		tlist = NULL;
+		for (k = 0; k < bodyfetch->argcnt; k++) 
+			tlist = g_list_append(tlist, g_strdup(self->args[k + bodyfetch->argstart]));
 
-		dbmail_imap_session_printf(self, ")] ");
+		dbmail_imap_session_printf(self, "HEADER.FIELDS.NOT %s", dbmail_imap_plist_as_string(tlist));
+		dbmail_imap_session_printf(self, "] ");
+		g_list_foreach(tlist,(GFunc)g_free,NULL);
 
 		if (!msgpart || only_text_from_msgpart)
 			dbmail_imap_session_printf(self, "NIL\r\n");
@@ -1776,6 +1761,7 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data) {
 		dbmail_imap_session_printf(self, "\r\n* BYE internal server error\r\n");
 		return -1;
 	}
+	g_list_free(tlist);
 	return 0;
 }
 
@@ -1834,8 +1820,8 @@ int check_state_and_args(struct ImapSession * self, const char *command, int min
 int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...)
 {
 	int maxlen=100;
-	int result;
-	char *re = g_new0(char, maxlen+1);
+	int result = 0;
+	gchar *re = g_new0(gchar, maxlen+1);
 	va_list ap;
 	
 	FILE * fd = self->ci->tx;
@@ -1881,8 +1867,12 @@ int dbmail_imap_session_handle_auth(struct ImapSession * self, char * username, 
 	create_current_timestring(&timestring);
 	
 	u64_t userid = 0;
-	trace(TRACE_DEBUG, "%s,%s: trying to validate user [%s], pass [%s]", __FILE__, __func__, username, (password ? "XXXX" : "(null)") );
+	
+	trace(TRACE_DEBUG, "%s,%s: trying to validate user [%s], pass [%s]", 
+			__FILE__, __func__, username, (password ? "XXXX" : "(null)") );
+	
 	int valid = auth_validate(username, password, &userid);
+	
 	trace(TRACE_MESSAGE, "%s,%s: user (id:%llu, name %s) tries login",
 			__FILE__, __func__, userid, username);
 
@@ -1911,7 +1901,7 @@ int dbmail_imap_session_handle_auth(struct ImapSession * self, char * username, 
 	      "%s,%s: user (id %llu, name %s) login accepted @ %s",
 	      __FILE__, __func__, userid, username, timestring);
 #ifdef PROC_TITLES
-	set_proc_title("USER %s [%s]", username, ci->ip);
+	set_proc_title("USER %s [%s]", username, self->ci->ip);
 #endif
 
 	/* update client info */
@@ -2098,7 +2088,7 @@ int dbmail_imap_session_mailbox_open(struct ImapSession * self, char * mailbox)
 }
 
 int dbmail_imap_session_mailbox_select_recent(struct ImapSession *self) {
-	unsigned i;
+	unsigned i, j;
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 
 	self->recent = NULL;
@@ -2106,13 +2096,11 @@ int dbmail_imap_session_mailbox_select_recent(struct ImapSession *self) {
 		 "SELECT message_idnr FROM %smessages WHERE recent_flag = 1 AND mailbox_idnr = '%llu'",
 		 DBPFX, ud->mailbox.uid);
 
-	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: could not select message_idnrs",
-		      __FILE__, __func__);
+	if (db_query(query) == -1) 
 		return (-1);
-	}
 
-	for (i = 0; i < db_num_rows(); i++) 
+	j = db_num_rows();
+	for (i = 0; i < j; i++) 
 		self->recent = g_list_append(self->recent, g_strdup(db_get_result(i, 0)));
 	
 	db_free_result();
@@ -2133,11 +2121,8 @@ int dbmail_imap_session_mailbox_update_recent(struct ImapSession *self) {
 	while (slices) {
 		snprintf(query, DEF_QUERYSIZE, "update %smessages set recent_flag = 0 "
 				"where message_idnr in (%s)", DBPFX, (gchar *)slices->data);
-		if (db_query(query) == -1) {
-			trace(TRACE_ERROR, "%s,%s: could not update recent_flags for message_idnrs",
-			      __FILE__, __func__);
+		if (db_query(query) == -1) 
 			return (-1);
-		}
 		slices = g_list_next(slices);
 	}
 	

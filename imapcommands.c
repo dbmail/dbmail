@@ -146,12 +146,11 @@ int _ic_logout(struct ImapSession *self)
 	if (!check_state_and_args(self, "LOGOUT", 0, 0, -1))
 		return 1;	/* error, return */
 
-
 	create_current_timestring(&timestring);
 	dbmail_imap_session_set_state(self,IMAPCS_LOGOUT);
 	trace(TRACE_MESSAGE,
-	      "_ic_logout(): user (id:%llu) logging out @ [%s]",
-	      ud->userid, timestring);
+	      "%s,%s: user (id:%llu) logging out @ [%s]",
+	      __FILE__, __func__, ud->userid, timestring);
 
 	dbmail_imap_session_printf(self, "* BYE dbmail imap server kisses you goodbye\r\n");
 
@@ -194,8 +193,9 @@ int _ic_login(struct ImapSession *self)
 int _ic_authenticate(struct ImapSession *self)
 {
 	int result;
-	char *username = (char *)g_malloc0(sizeof(char)*MAX_LINESIZE);
-	char *password = (char *)g_malloc0(sizeof(char)*MAX_LINESIZE);
+	char *username = g_new0(char,MAX_LINESIZE);
+	char *password = g_new0(char,MAX_LINESIZE);
+
 	timestring_t timestring;
 	
 	if (!check_state_and_args(self, "AUTHENTICATE", 1, 1, IMAPCS_NON_AUTHENTICATED))
@@ -381,8 +381,7 @@ int _ic_create(struct ImapSession *self)
 
 	if (chunks == NULL) {
 		/* serious error while making chunks */
-		trace(TRACE_ERROR,
-		      "IMAPD: create(): could not create chunks");
+		trace(TRACE_ERROR, "IMAPD: create(): could not create chunks");
 		dbmail_imap_session_printf(self, "* BYE server ran out of memory\r\n");
 		my_free(cpy);
 		return -1;
@@ -390,8 +389,7 @@ int _ic_create(struct ImapSession *self)
 
 	if (chunks[0] == NULL) {
 		/* wrong argument */
-		dbmail_imap_session_printf(self, "%s NO invalid mailbox name specified\r\n",
-			self->tag);
+		dbmail_imap_session_printf(self, "%s NO invalid mailbox name specified\r\n", self->tag);
 		g_strfreev(chunks);
 		my_free(cpy);
 		return 1;
@@ -403,8 +401,7 @@ int _ic_create(struct ImapSession *self)
 	for (i = 0; chunks[i]; i++) {
 		if (strlen(chunks[i]) == 0) {
 			/* no can do */
-			dbmail_imap_session_printf(self, "%s NO invalid mailbox name specified\r\n",
-				self->tag);
+			dbmail_imap_session_printf(self, "%s NO invalid mailbox name specified\r\n", self->tag);
 			g_strfreev(chunks);
 			my_free(cpy);
 			return 1;
@@ -417,8 +414,7 @@ int _ic_create(struct ImapSession *self)
 			strcat(cpy, chunks[i]);
 			/* check to see if this is a folder in Other Users/ or Public
 			   namespace */
-			if (strcmp(cpy, NAMESPACE_USER) == 0 ||
-			    strcmp(cpy, NAMESPACE_PUBLIC) == 0) {
+			if (strcmp(cpy, NAMESPACE_USER) == 0 || strcmp(cpy, NAMESPACE_PUBLIC) == 0) {
 				other_namespace = 1;
 				continue;
 			}
@@ -426,9 +422,7 @@ int _ic_create(struct ImapSession *self)
 			strcat(cpy, "/");
 			strcat(cpy, chunks[i]);
 			/* if this is in Other Users namespace, continue to the next chunk */
-			if (i == 1
-			    && strncmp(cpy, NAMESPACE_USER,
-				       strlen(NAMESPACE_USER)) == 0)
+			if (i == 1 && strncmp(cpy, NAMESPACE_USER, strlen(NAMESPACE_USER)) == 0)
 				continue;
 
 		}
@@ -453,14 +447,9 @@ int _ic_create(struct ImapSession *self)
 			      "create mailboxes under mailbox [%llu]",
 			      __FILE__, __func__, parent_mboxid);
 			if (parent_mboxid != 0) {
-				result =
-				    acl_has_right(ud->userid,
-						  parent_mboxid,
-						  ACL_RIGHT_CREATE);
+				result = acl_has_right(ud->userid, parent_mboxid, ACL_RIGHT_CREATE);
 				if (result < 0) {
-					dbmail_imap_session_printf(self,
-						"* BYE internal database "
-						"error\r\n");
+					dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 					g_strfreev(chunks);
 					my_free(cpy);
 					return -1;	/* fatal */
@@ -487,13 +476,10 @@ int _ic_create(struct ImapSession *self)
 					return 1;
 				}
 			}
-			result =
-			    db_createmailbox(cpy, ud->userid, &tmp_mboxid);
-
+			result = db_createmailbox(cpy, ud->userid, &tmp_mboxid);
 
 			if (result == -1) {
-				dbmail_imap_session_printf(self,
-					"* BYE internal dbase error\r\n");
+				dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 				g_strfreev(chunks);
 				my_free(cpy);
 				return -1;	/* fatal */
@@ -515,8 +501,7 @@ int _ic_create(struct ImapSession *self)
 
 			if (result == -1) {
 				/* dbase failure */
-				dbmail_imap_session_printf(self,
-					"* BYE internal dbase error\r\n");
+				dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 				g_strfreev(chunks);
 				my_free(cpy);
 				return -1;	/* fatal */

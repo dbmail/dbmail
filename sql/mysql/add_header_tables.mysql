@@ -4,76 +4,118 @@
 #
 # $Id$
 #
+# WARNING:
+#
+# This document is still in the early design stages.  Don't apply yet !
 
-ALTER TABLE dbmail_physmessage ADD sendername VARCHAR(100) NOT NULL DEFAULT '';
-ALTER TABLE dbmail_physmessage ADD senderaddr VARCHAR(100) NOT NULL DEFAULT '';
-ALTER TABLE dbmail_physmessage ADD subject VARCHAR(255) NOT NULL DEFAULT '';
-ALTER TABLE dbmail_physmessage ADD messageid VARCHAR(100) NOT NULL DEFAULT '';
 
-CREATE TABLE dbmail_headerfield (
+#
+# store all headers by storing all headernames and headervalues in separate
+# tables.
+#
+
+CREATE TABLE dbmail_headername (
+	id		BIGINT NOT NULL AUTO_INCREMENT,
+	headername	VARCHAR(100) NOT NULL DEFAULT '',
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE dbmail_headervalue (
+	headername_id	BIGINT NOT NULL
+		REFERENCES dbmail_headername(id)
+		ON UPDATE CASCADE ON DELETE CASCADE,
         physmessage_id	BIGINT NOT NULL
 		REFERENCES dbmail_physmessage(id)
 		ON UPDATE CASCADE ON DELETE CASCADE,
-	fieldid		BIGINT NOT NULL AUTO_INCREMENT,
-	fieldname	VARCHAR(100) NOT NULL DEFAULT '',
-	fieldbody	VARCHAR(255) NOT NULL DEFAULT '',
-	PRIMARY KEY (physmessage_id, fieldid)
-);
-CREATE TABLE inreplytofield (
-        physmessage_id  BIGINT NOT NULL
-		REFERENCES dbmail_physmessage(id)
-		ON UPDATE CASCADE ON DELETE CASCADE,
-	inreplytoid	BIGINT NOT NULL AUTO_INCREMENT,
-	inreplytobody	VARCHAR(100) NOT NULL DEFAULT '',
-	PRIMARY KEY (physmessage_id, inreplytoid)
+	id		BIGINT NOT NULL AUTO_INCREMENT,
+	headervalue	VARCHAR(255) NOT NULL DEFAULT '',
+	PRIMARY KEY (physmessage_id, id)
 );
 
-CREATE TABLE referencesfield (
+# provide separate storage of commonly used headers
+
+# Threading
+
+
+# support fast threading by breaking out In-Reply-To and References headers
+# these fields contain zero or more Message-Id values that determine the message
+# threading
+
+CREATE TABLE dbmail_inreplytofield (
         physmessage_id  BIGINT NOT NULL
-		REFERENCES dbmail_physmessage(id)
-		ON UPDATE CASCADE ON DELETE CASCADE,
-	referencesid	BIGINT NOT NULL AUTO_INCREMENT,
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE,
+	id		BIGINT NOT NULL AUTO_INCREMENT,
+	inreplytobody	VARCHAR(100) NOT NULL DEFAULT '',
+	PRIMARY KEY (physmessage_id, id)
+);
+
+CREATE TABLE dbmail_referencesfield (
+        physmessage_id  BIGINT NOT NULL
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE,
+	id		BIGINT NOT NULL AUTO_INCREMENT,
 	referencesbody	VARCHAR(100) NOT NULL DEFAULT '',
 	PRIMARY KEY (physmessage_id, referencesid)
 );
 
-CREATE TABLE fromfield (
+
+# Searching and Sorting
+
+
+# support fast sorting by breaking out and preparsing the fields most commonly used
+# in searching and sorting: From, To, Reply-To, Cc,
+
+CREATE TABLE dbmail_fromfield (
         physmessage_id  BIGINT NOT NULL
-		REFERENCES dbmail_physmessage(id)
-		ON UPDATE CASCADE ON DELETE CASCADE,
-	fromid		BIGINT NOT NULL AUTO_INCREMENT,
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE,
+	id		BIGINT NOT NULL AUTO_INCREMENT,
 	fromname	VARCHAR(100) NOT NULL DEFAULT '',
 	fromaddr	VARCHAR(100) NOT NULL DEFAULT '',
-	PRIMARY KEY (physmessage_id, fromid)
+	PRIMARY KEY (physmessage_id, id)
 );
-
-CREATE TABLE replytofield (
+CREATE TABLE dbmail_tofield (
         physmessage_id  BIGINT NOT NULL
-		REFERENCES dbmail_physmessage(id)
-		ON UPDATE CASCADE ON DELETE CASCADE,
-	replytoid	BIGINT NOT NULL AUTO_INCREMENT,
-	replytoname	VARCHAR(100) NOT NULL DEFAULT '',
-	replytoaddr	VARCHAR(100) NOT NULL DEFAULT '',
-	PRIMARY KEY (physmessage_id, replytoid)
-);
-
-CREATE TABLE tofield (
-        physmessage_id  BIGINT NOT NULL
-		REFERENCES dbmail_physmessage(id)
-		ON UPDATE CASCADE ON DELETE CASCADE,
-	toid		BIGINT NOT NULL AUTO_INCREMENT,
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE,
+	id		BIGINT NOT NULL AUTO_INCREMENT,
 	toname		VARCHAR(100) NOT NULL DEFAULT '',
 	toaddr		VARCHAR(100) NOT NULL DEFAULT '',
-	PRIMARY KEY (physmessage_id, toid)
+	PRIMARY KEY (physmessage_id, id)
 );
-
-CREATE TABLE ccfield (
+CREATE TABLE dbmail_replytofield (
         physmessage_id  BIGINT NOT NULL
-		REFERENCES dbmail_physmessage(id)
-		ON UPDATE CASCADE ON DELETE CASCADE,
-	ccid		BIGINT NOT NULL AUTO_INCREMENT,
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE,
+	id		BIGINT NOT NULL AUTO_INCREMENT,
+	replytoname	VARCHAR(100) NOT NULL DEFAULT '',
+	replytoaddr	VARCHAR(100) NOT NULL DEFAULT '',
+	PRIMARY KEY (physmessage_id, id)
+);
+CREATE TABLE dbmail_ccfield (
+        physmessage_id  BIGINT NOT NULL
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE,
+	id		BIGINT NOT NULL AUTO_INCREMENT,
 	ccname		VARCHAR(100) NOT NULL DEFAULT '',
 	ccaddr		VARCHAR(100) NOT NULL DEFAULT '',
-	PRIMARY KEY (physmessage_id, ccid)
+	PRIMARY KEY (physmessage_id, id)
 );
+
+# Some other fields will also be commonly used for search/sort but do not warrant 
+# preparsing and/or separate tables. 
+
+ALTER TABLE dbmail_physmessage 
+	ADD sendername 	VARCHAR(100) NOT NULL DEFAULT '';
+	
+ALTER TABLE dbmail_physmessage 
+	ADD senderaddr 	VARCHAR(100) NOT NULL DEFAULT '';
+
+ALTER TABLE dbmail_physmessage 
+	ADD subject 	VARCHAR(255) NOT NULL DEFAULT '';
+
+ALTER TABLE dbmail_physmessage 
+	ADD messageid 	VARCHAR(100) NOT NULL DEFAULT '';
+
 

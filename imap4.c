@@ -45,7 +45,6 @@
 #define MAX_LINESIZE (10*1024)
 #define COMMAND_SHOW_LEVEL TRACE_ERROR
 
-#define null_free(p) { my_free(p); p = NULL; }
 
 
 /* cache */
@@ -101,15 +100,6 @@ const IMAP_COMMAND_HANDLER imap_handler_functions[] = {
 
 
 
-void ci_cleanup(ClientInfo *ci);
-void ci_cleanup(ClientInfo *ci)
-{
-	close_cache();
-	null_free(((imap_userdata_t*)ci->userData)->mailbox.seq_list);
-	null_free(ci->userData);
-}
-
-
 /*
  * Main handling procedure
  *
@@ -134,7 +124,7 @@ int IMAPClientHandler(ClientInfo * ci)
 	if (! ud) {
 		/* out of mem */
 		trace(TRACE_ERROR,
-		      "IMAPClientHandler(): not enough memory.");
+		      "%s,%s: not enough memory.", __FILE__, __func__);
 		return -1;
 	}
 
@@ -143,21 +133,19 @@ int IMAPClientHandler(ClientInfo * ci)
 	session->ci->userData = ud;
 
 	/* greet user */
-	if (ci_write(session->ci->tx,
+	if (dbmail_imap_session_printf(session,
 		     "* OK dbmail imap (protocol version 4r1) server %s "
-		     "ready to run\r\n", IMAP_SERVER_VERSION)) {
-		ci_cleanup(session->ci);
+		     "ready to run\r\n", IMAP_SERVER_VERSION) < 0) {
+		dbmail_imap_session_delete(session);
 		return EOF;
 	}
 	fflush(session->ci->tx);
 
 	/* init: cache */
 	if (init_cache() != 0) {
-		trace(TRACE_ERROR,
-		      "IMAPClientHandler(): cannot open temporary file\n");
-		if (ci_write(session->ci->tx, "* BYE internal system failure\r\n"))
-			return -1;
-		ci_cleanup(session->ci);
+		trace(TRACE_ERROR, "%s,%s: cannot open temporary file\n", __FILE__, __func__);
+		dbmail_imap_session_printf(session, "* BYE internal system failure\r\n");
+		dbmail_imap_session_delete(session);
 		return EOF;
 	}
 
@@ -169,8 +157,8 @@ int IMAPClientHandler(ClientInfo * ci)
 		if (nfaultyresponses >= MAX_FAULTY_RESPONSES) {
 			/* we have had just about it with this user */
 			sleep(2);	/* avoid DOS attacks */
-			if (ci_write(session->ci->tx, "* BYE [TRY RFC]\r\n")) {
-				ci_cleanup(session->ci);
+			if (dbmail_imap_session_printf(session, "* BYE [TRY RFC]\r\n") < 0) {
+				dbmail_imap_session_delete(session);
 				return EOF;
 			}
 			done = 1;
@@ -178,18 +166,18 @@ int IMAPClientHandler(ClientInfo * ci)
 		}
 
 		if (ferror(session->ci->rx)) {
-			trace(TRACE_ERROR, "IMAPClientHandler(): error [%s] on read-stream\n", strerror(errno));
+			trace(TRACE_ERROR, "%s,%s: error [%s] on read-stream\n",__FILE__, __func__, strerror(errno));
 			if (errno == EPIPE) {
-				ci_cleanup(session->ci);
+				dbmail_imap_session_delete(session);
 				return -1;	/* broken pipe */
 			} else
 				clearerr(session->ci->rx);
 		}
 
 		if (ferror(session->ci->tx)) {
-			trace(TRACE_ERROR, "IMAPClientHandler(): error [%s] on write-stream\n", strerror(errno));
+			trace(TRACE_ERROR, "%s,%s: error [%s] on write-stream\n",__FILE__, __func__, strerror(errno));
 			if (errno == EPIPE) {
-				ci_cleanup(session->ci);
+				dbmail_imap_session_delete(session);
 				return -1;	/* broken pipe */
 			} else
 				clearerr(session->ci->tx);
@@ -197,27 +185,25 @@ int IMAPClientHandler(ClientInfo * ci)
 
 		alarm(session->ci->timeout);	/* install timeout handler */
 		if (fgets(line, MAX_LINESIZE, session->ci->rx) == NULL) {
-			ci_cleanup(session->ci);
+			dbmail_imap_session_delete(session);
 			return -1;
 		}
 		alarm(0);	/* remove timeout handler */
 
 		if (!session->ci->rx || !session->ci->tx) {
 			/* if a timeout occured the streams will be closed & set to NULL */
-			trace(TRACE_ERROR, "IMAPClientHandler(): timeout occurred.");
-			ci_cleanup(session->ci);
+			trace(TRACE_ERROR, "%s,%s: timeout occurred.", __FILE__, __func__);
+			dbmail_imap_session_delete(session);
 			return 1;
 		}
 
-		trace(TRACE_DEBUG, "IMAPClientHandler(): line read for PID %d\n", getpid());
+		trace(TRACE_DEBUG, "%s,%s: line read for PID %d\n", __FILE__, __func__, getpid());
+		
 
 		if (!checkchars(line)) {
 			/* foute tekens ingetikt */
-			if (ci_write(session->ci->tx, "* BYE Input contains invalid characters\r\n")) {
-				ci_cleanup(session->ci);
-				return EOF;
-			}
-			ci_cleanup(session->ci);
+			dbmail_imap_session_printf(session, "* BYE Input contains invalid characters\r\n");
+			dbmail_imap_session_delete(session);
 			return 1;
 		}
 
@@ -233,8 +219,8 @@ int IMAPClientHandler(ClientInfo * ci)
 
 		if (!(*line)) {
 			
-			if (ci_write(session->ci->tx, "* BAD No tag specified\r\n")) {
-				ci_cleanup(session->ci);
+			if (dbmail_imap_session_printf(session, "* BAD No tag specified\r\n") < 0) {
+				dbmail_imap_session_delete(session);
 				return EOF;
 			}
 			nfaultyresponses++;
@@ -247,13 +233,13 @@ int IMAPClientHandler(ClientInfo * ci)
 		i = stridx(cpy, ' ');	/* find next space */
 		if (i == strlen(cpy)) {
 			if (checktag(cpy)) {
-				if (ci_write(session->ci->tx, "%s BAD No command specified\r\n", cpy)) {
-					ci_cleanup(session->ci);
+				if (dbmail_imap_session_printf(session, "%s BAD No command specified\r\n", cpy) < 0) {
+					dbmail_imap_session_delete(session);
 					return EOF;
 				}
 			} else {
-				if (ci_write(session->ci->tx, "* BAD Invalid tag specified\r\n")) {
-					ci_cleanup(session->ci);
+				if (dbmail_imap_session_printf(session, "* BAD Invalid tag specified\r\n") < 0) {
+					dbmail_imap_session_delete(session);
 					return EOF;
 				}
 			}
@@ -271,8 +257,7 @@ int IMAPClientHandler(ClientInfo * ci)
 
 		/* check tag */
 		if (!checktag(tag)) {
-			if (ci_write(session->ci->tx, "* BAD Invalid tag specified\r\n")) {
-				ci_cleanup(session->ci);
+			if (dbmail_imap_session_printf(session, "* BAD Invalid tag specified\r\n") < 0) {
 				dbmail_imap_session_delete(session);
 				return EOF;
 			}
@@ -297,16 +282,15 @@ int IMAPClientHandler(ClientInfo * ci)
 
 			if (!session->ci->rx || !session->ci->tx || ferror(session->ci->rx) || ferror(session->ci->tx)) {
 				/* some error occurred during the read of extra command info */
-				trace(TRACE_ERROR, "IMAPClientHandler(): error reading extra command info");
-				ci_cleanup(session->ci);
+				trace(TRACE_ERROR, "%s,%s: error reading extra command info", 
+						__FILE__, __func__);
 				dbmail_imap_session_delete(session);
 				return -1;
 			}
 		}
 
 		if (!args) {
-			if (ci_write(session->ci->tx, "%s BAD invalid argument specified\r\n",session->tag)) {
-				ci_cleanup(session->ci);
+			if (dbmail_imap_session_printf(session, "%s BAD invalid argument specified\r\n",session->tag) < 0) {
 				dbmail_imap_session_delete(session);
 				return EOF;
 			}
@@ -320,8 +304,7 @@ int IMAPClientHandler(ClientInfo * ci)
 
 		if (i <= IMAP_COMM_NONE || i >= IMAP_COMM_LAST) {
 			/* unknown command */
-			if (ci_write(session->ci->tx, "%s BAD command not recognized\r\n",session->tag)) {
-				ci_cleanup(session->ci);
+			if (dbmail_imap_session_printf(session, "%s BAD command not recognized\r\n",session->tag)) {
 				dbmail_imap_session_delete(session);
 				return EOF;
 			}
@@ -335,7 +318,8 @@ int IMAPClientHandler(ClientInfo * ci)
 		 * (IB: 2004-08-23) */
 		nfaultyresponses = 0;
 
-		trace(TRACE_INFO, "IMAPClientHandler(): Executing command %s...\n", IMAP_COMMANDS[i]);
+		trace(TRACE_INFO, "%s,%s: Executing command %s...\n", 
+				__FILE__, __func__, IMAP_COMMANDS[i]);
 
 // dirty hack to bypass a NOOP problem: 
 // unilateral server responses are not recognised by some clients 
@@ -350,8 +334,8 @@ int IMAPClientHandler(ClientInfo * ci)
 		}
 
 		if (result == -1) {
-			trace(TRACE_ERROR,"%s,%s: command return with error [%s]", __FILE__, __func__, IMAP_COMMANDS[i]);
-			
+			trace(TRACE_ERROR,"%s,%s: command return with error [%s]", 
+					__FILE__, __func__, IMAP_COMMANDS[i]);
 			done = 1;	/* fatal error occurred, kick this user */
 		}
 
@@ -364,7 +348,8 @@ int IMAPClientHandler(ClientInfo * ci)
 
 		fflush(session->ci->tx);	/* write! */
 
-		trace(TRACE_INFO, "IMAPClientHandler(): Finished command %s [%d]\n", IMAP_COMMANDS[i], result);
+		trace(TRACE_INFO, "%s,%s: Finished command %s [%d]\n", 
+				__FILE__, __func__, IMAP_COMMANDS[i], result);
 
 		/* check if mailbox status has changed (notify client) */
 		if (ud->state == IMAPCS_SELECTED) {
@@ -375,25 +360,23 @@ int IMAPClientHandler(ClientInfo * ci)
 
 				result = db_getmailbox(&newmailbox);
 				if (result == -1) {
-					trace(TRACE_ERROR, "IMAPClientHandler(): could not get mailbox info\n");
-					ci_write(session->ci->tx, "* BYE internal dbase error\r\n");
-					ci_cleanup(session->ci);
+					trace(TRACE_ERROR, "%s,%s: could not get mailbox info\n",
+							__FILE__, __func__);
+					dbmail_imap_session_printf(session, "* BYE internal dbase error\r\n");
 					dbmail_imap_session_delete(session);
 					return -1;
 				}
 
 				if (newmailbox.exists != ud->mailbox.exists) {
-					if(ci_write(session->ci->tx, "* %u EXISTS\r\n", newmailbox.exists)) {
-						ci_cleanup(session->ci);
+					if(dbmail_imap_session_printf(session, "* %u EXISTS\r\n", newmailbox.exists) < 0) {
 						dbmail_imap_session_delete(session);
 						return EOF;
 					}
-					trace(TRACE_INFO, "IMAPClientHandler(): ok update sent\r\n");
+					trace(TRACE_INFO, "%s,%s: ok update sent\r\n", __FILE__, __func__);
 				}
 
 				if (newmailbox.recent != ud->mailbox.recent)
-					if(ci_write(session->ci->tx, "* %u RECENT\r\n", newmailbox.recent)) {
-						ci_cleanup(session->ci);
+					if(dbmail_imap_session_printf(session, "* %u RECENT\r\n", newmailbox.recent) < 0) {
 						dbmail_imap_session_delete(session);
 						return EOF;
 					}
@@ -403,8 +386,7 @@ int IMAPClientHandler(ClientInfo * ci)
 			}
 		}
 		if (this_was_noop) {
-			if(ci_write(session->ci->tx, "%s OK NOOP completed\r\n", session->tag)) {
-				ci_cleanup(session->ci);
+			if(dbmail_imap_session_printf(session, "%s OK NOOP completed\r\n", session->tag) < 0) {
 				dbmail_imap_session_delete(session);
 				return EOF; 
 			}
@@ -414,10 +396,10 @@ int IMAPClientHandler(ClientInfo * ci)
 	} while (!done);
 
 	/* cleanup */
-	ci_write(session->ci->tx, "%s OK completed\r\n", session->tag);
-	ci_cleanup(session->ci);
+	dbmail_imap_session_printf(session, "%s OK completed\r\n", session->tag);
+	trace(TRACE_MESSAGE, "%s,%s: Closing connection for client from IP [%s]\n",
+			__FILE__, __func__, session->ci->ip);
 	dbmail_imap_session_delete(session);
-	trace(TRACE_MESSAGE, "IMAPClientHandler(): Closing connection for client from IP [%s]\n", session->ci->ip);
 
 	__debug_dumpallocs();
 
