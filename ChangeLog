@@ -1,3 +1,16 @@
+2004-07-15  Ilja Booij  <ilja@dhcp125.office.fastxs.net>
+
+	* sql/postgresql/create_tables.pgsql: added partial index to messages
+	table. Changed psbp.ipnumber to INET type and added transaction 
+	statements around creation statements.
+
+	* sql/postgresql/migrate_from_1.x_to_2.0.pgsql: instead of copying
+	all entries from all tables from one table to another, the tables
+	are simply renamed. Also, the whole migration happens within a single
+	transaction.
+	Also added a partial index on the messages table and changed ipnumber
+	in pbsp to INET type.
+
 2004-07-14  Ilja Booij  <ilja@ic-s.nl>
 
 	* timsieve.c (tims_handle_connection): memleaks fixed.
