@@ -1027,6 +1027,10 @@ int db_createsession (u64_t useridnr, PopSession_t *sessionptr)
   struct message tmpmessage;
   u64_t messagecounter=0,mboxid;
 
+
+  list_init (&sessionptr->messagelst);
+  
+  
   /* pop3 can only defaultly read INBOXes */
   mboxid = (db_get_mailboxid(useridnr, "INBOX"));
 
