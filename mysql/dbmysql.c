@@ -198,7 +198,7 @@ int db_addalias (u64_t useridnr, char *alias, int clientid)
 {
   /* check if this alias already exists */
   snprintf (query, DEF_QUERYSIZE,
-            "SELECT alias FROM aliases WHERE alias = '%s' AND deliver_to = '%llu' "
+            "SELECT alias FROM alias_idnr WHERE alias = '%s' AND deliver_to = '%llu' "
 	    "AND client_idnr = '%d'", alias, useridnr, clientid);
 
   if (db_query(query) == -1)
@@ -229,12 +229,57 @@ int db_addalias (u64_t useridnr, char *alias, int clientid)
 	    "INSERT INTO aliases (alias,deliver_to,client_idnr) VALUES ('%s','%llu',%d)",
 	   alias, useridnr, clientid);
 	
-  trace (TRACE_DEBUG,"db_addalias(): executing query for user: [%s]", query);
 
   if (db_query(query) == -1)
     {
       /* query failed */
-      trace (TRACE_ERROR, "db_addalias(): query for adding alias failed : [%s]", query);
+      trace (TRACE_ERROR, "db_addalias(): query for adding alias failed");
+      return -1;
+    }
+  
+  return 0;
+}
+
+
+int db_addalias_ext(char *alias, char *deliver_to, int clientid)
+{
+  /* check if this alias already exists */
+  snprintf (query, DEF_QUERYSIZE,
+            "SELECT alias FROM alias_idnr WHERE alias = '%s' AND deliver_to = '%s' "
+	    "AND client_idnr = '%d'", alias, deliver_to, clientid);
+
+  if (db_query(query) == -1)
+    {
+      /* query failed */
+      trace (TRACE_ERROR, "db_addalias_ext(): query for searching alias failed");
+      return -1;
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL) 
+    {
+      trace(TRACE_ERROR, "db_addalias_ext(): could not store query result");
+      return -1;
+    }
+
+  if (mysql_num_rows(res)>0) 
+    {
+      trace(TRACE_INFO, "db_addalias_ext(): alias [%s] --> [%s] already exists", 
+	    alias, deliver_to);
+      
+      mysql_free_result(res);
+      return 0;
+    }
+  
+  mysql_free_result(res);
+
+  snprintf (query, DEF_QUERYSIZE,
+	    "INSERT INTO aliases (alias,deliver_to,client_idnr) VALUES ('%s','%s',%d)",
+	   alias, deliver_to, clientid);
+	
+  if (db_query(query) == -1)
+    {
+      /* query failed */
+      trace (TRACE_ERROR, "db_addalias_ext(): query for adding alias failed");
       return -1;
     }
   
@@ -257,7 +302,6 @@ int db_removealias (u64_t useridnr,const char *alias)
   return 0;
 }
   
-
 
 u64_t db_get_inboxid (u64_t *useridnr)
 {
@@ -1917,7 +1961,6 @@ int db_listmailboxchildren(u64_t uid, u64_t useridnr,
 			   u64_t **children, int *nchildren, 
 			   const char *filter)
 {
-  
   int i;
 
   /* retrieve the name of this mailbox */
@@ -1976,7 +2019,6 @@ int db_listmailboxchildren(u64_t uid, u64_t useridnr,
   if (*nchildren == 0)
     {
       *children = NULL;
-      
       return 0;
     }
   *children = (u64_t*)my_malloc(sizeof(u64_t) * (*nchildren));
@@ -2567,7 +2609,7 @@ int db_get_msgflag(const char *name, u64_t msguid, u64_t mailboxuid)
 {
   
   char flagname[DEF_QUERYSIZE/2]; /* should be sufficient ;) */
-  int val;
+  int val=0;
 
   /* determine flag */
   if (strcasecmp(name,"seen") == 0)
@@ -2602,7 +2644,7 @@ int db_get_msgflag(const char *name, u64_t msguid, u64_t mailboxuid)
     }
   
   row = mysql_fetch_row(res);
-  if (row)
+  if (row && row[0])
     val = atoi(row[0]);
   else
     val = 0; /* none found */
@@ -3063,6 +3105,7 @@ int db_get_main_header(u64_t msguid, struct list *hdrlist)
   if (!row)
     {
       /* no header for this message ?? */
+      trace (TRACE_ERROR,"db_get_main_header(): error, no header for this message?");
       mysql_free_result(res);
       return -1;
     }

@@ -337,7 +337,7 @@ int main (int argc, char *argv[])
   int z, i, j; /* counters */
   int maxchld; /* maxchildren */
   pid_t deadchildpid;
-  int n_connects = 0,n_max_connects;
+  int n_connects = 0,n_max_connects=0;
 
   /* open logs */
   openlog(PNAME, LOG_PID, LOG_MAIL);

@@ -19,6 +19,7 @@ imapcommands.o mime.o misc.o memblock.o rfcmsg.o $(MSGBUFOBJECT) $(SEARCHOBJECT)
 MAINTENANCE_OBJECTS = debug.o list.o dbmd5.o md5.o $(DBOBJECT) mime.o memblock.o $(AUTHOBJECT)
 CONFIG_OBJECTS = $(DBOBJECT) list.o md5.o debug.o dbmd5.o mime.o memblock.o $(AUTHOBJECT)
 USER_OBJECTS = debug.o list.o dbmd5.o md5.o $(DBOBJECT) mime.o memblock.o $(AUTHOBJECT)
+VUTCONV_OBJECTS = debug.o list.o dbmd5.o md5.o mime.o $(DBOBJECT) $(AUTHOBJECT)
 CC = cc
 
 MYSQLLIBDIR=/usr/local/lib/mysql
@@ -54,6 +55,9 @@ config: $(CONFIG_OBJECTS) settings.c
 user: user.h $(MAINTENANCE_OBJECTS) user.c
 	$(CC) $(CFLAGS) user.c -o dbmail-adduser $(MAINTENANCE_OBJECTS) $(LIBS) $(LIB)
 
+readvut: db.h auth.h vut2dbmail.c $(VUTCONV_OBJECTS)
+	$(CC) $(CFLAGS) vut2dbmail.c -o dbmail-readvut $(VUTCONV_OBJECTS) $(LIBS) $(LIB)
+
 list.o: list.h debug.h
 debug.o: debug.h
 pipe.o: pipe.h config.h debug.h
@@ -72,6 +76,7 @@ settings.o: settings.h debug.h
 user.o: user.h debug.h
 memblock.o: memblock.h debug.h
 rfcmsg.o: rfcmsg.h dbmailtypes.h
+vut2dbmail.o: db.h auth.h
 $(DBOBJECT):db.h dbmd5.h config.h mime.h list.h memblock.h debug.h dbmailtypes.h auth.h
 $(MSGBUFOBJECT): dbmsgbuf.h db.h
 $(SEARCHOBJECT): dbsearch.h db.h

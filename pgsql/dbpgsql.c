@@ -224,7 +224,7 @@ int db_addalias (u64_t useridnr, char *alias, int clientid)
 {
   /* check if this alias already exists */
   snprintf (query, DEF_QUERYSIZE,
-            "SELECT alias FROM aliases WHERE alias = '%s' AND deliver_to = '%llu' "
+            "SELECT alias_idnr FROM aliases WHERE alias = '%s' AND deliver_to = '%llu' "
 	    "AND client_idnr = '%d'", alias, useridnr, clientid);
 
   if (db_query(query) == -1)
@@ -249,12 +249,52 @@ int db_addalias (u64_t useridnr, char *alias, int clientid)
             "INSERT INTO aliases (alias,deliver_to,client_idnr) VALUES ('%s','%llu',%d)",
             alias, useridnr, clientid);
 
-  trace (TRACE_DEBUG,"db_addalias(): executing query for user: [%llu]", useridnr);
 
   if (db_query(query) == -1)
     {
       /* query failed */
       trace (TRACE_ERROR, "db_addalias(): query for adding alias failed");
+      return -1;
+    }
+
+  return 0;
+}
+
+
+int db_addalias_ext(char *alias, char *deliver_to, int clientid)
+{
+  /* check if this alias already exists */
+  snprintf (query, DEF_QUERYSIZE,
+            "SELECT alias_idnr FROM aliases WHERE alias = '%s' AND deliver_to = '%s' "
+	    "AND client_idnr = '%d'", alias, deliver_to, clientid);
+
+  if (db_query(query) == -1)
+    {
+      /* query failed */
+      trace (TRACE_ERROR, "db_addalias_ext(): query for searching alias failed");
+      return -1;
+    }
+
+  if (PQntuples(res) > 0)
+    {
+      trace(TRACE_INFO, "db_addalias_ext(): alias [%s] --> [%s] already exists", 
+	    alias, deliver_to);
+
+      PQclear(res);
+      return 0;
+    }
+  
+  PQclear(res);
+
+  snprintf (query, DEF_QUERYSIZE,
+            "INSERT INTO aliases (alias,deliver_to,client_idnr) VALUES ('%s','%s',%d)",
+            alias, deliver_to, clientid);
+
+
+  if (db_query(query) == -1)
+    {
+      /* query failed */
+      trace (TRACE_ERROR, "db_addalias_ext(): query for adding alias failed");
       return -1;
     }
 
@@ -1791,7 +1831,7 @@ int db_listmailboxchildren(u64_t uid, u64_t useridnr,
 {
 
   int i,j;
-  char *row;
+  char *row = 0;
   char *pgsql_filter;
 
   /* alloc mem */
@@ -1855,7 +1895,7 @@ int db_listmailboxchildren(u64_t uid, u64_t useridnr,
   pgsql_filter = NULL;
 
 
-  if (PQntuples(res)>0)
+  if ((*nchildren = PQntuples(res))>0)
     {
       row = PQgetvalue(res, 0, 0);
       if (!row)
@@ -1867,12 +1907,9 @@ int db_listmailboxchildren(u64_t uid, u64_t useridnr,
 	  return 0;
         }
     }
-
-  *nchildren = PQntuples(res);
-  if (*nchildren == 0)
+  else
     {
       *children = NULL;
-
       return 0;
     }
   *children = (u64_t*)my_malloc(sizeof(u64_t) * (*nchildren));
@@ -2402,7 +2439,7 @@ int db_get_msgflag(const char *name, u64_t msguid, u64_t mailboxuid)
 {
 
   char flagname[DEF_QUERYSIZE/2]; /* should be sufficient ;) */
-  int val;
+  int val=0;
   char *row;
 
   /* determine flag */
@@ -2927,8 +2964,7 @@ int db_get_main_header(u64_t msguid, struct list *hdrlist)
 {
   u64_t dummy = 0, sizedummy = 0;
   int result;
-
-  char *row;
+  char *row=0;
 
   if (!hdrlist)
     return 0;
@@ -2957,6 +2993,13 @@ int db_get_main_header(u64_t msguid, struct list *hdrlist)
 	  PQclear(res);
 	  return -1;
         }
+    }
+  else
+    {
+      /* no blocks? */
+      trace (TRACE_ERROR,"db_get_main_header(): error, no msgblocks from select");
+      PQclear(res);
+      return -1;
     }
 
   result = mime_readheader(row, &dummy, hdrlist, &sizedummy);

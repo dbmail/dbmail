@@ -1766,7 +1766,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
   mime_message_t *msgpart;
   char date[IMAP_INTERNALDATE_LEN],*endptr;
   u64_t thisnum;
-  u64_t tmpdumpsize, rfcsize;
+  u64_t tmpdumpsize, rfcsize=0;
   long long cnt;
   int msgflags[IMAP_NFLAGS];
   struct list fetch_list;
@@ -2852,8 +2852,8 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
   char *endptr;
   u64_t i,store_start,store_end;
-  unsigned fn;
-  int result,j,isfirstout;
+  unsigned fn=0;
+  int result,j,isfirstout=0;
   int be_silent=0,action=IMAPFA_NONE;
   int flaglist[IMAP_NFLAGS], msgflags[IMAP_NFLAGS];
   u64_t thisnum,lo,hi;
@@ -3020,7 +3020,7 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
 	      fprintf(ci->tx, "* %llu FETCH (FLAGS (", 
 		      imapcommands_use_uid ? (u64_t)(fn+1) : store_start+1);
 
-	      for (j=0; j<IMAP_NFLAGS; j++)
+	      for (j=0,isfirstout=1; j<IMAP_NFLAGS; j++)
 		{
 		  if (msgflags[j])
 		    {
@@ -3079,7 +3079,7 @@ int _ic_store(char *tag, char **args, ClientInfo *ci)
 		  fprintf(ci->tx, "* %llu FETCH (FLAGS (", 
 			  imapcommands_use_uid ? (u64_t)(fn+1) : i+1);
 
-		  for (j=0; j<IMAP_NFLAGS; j++)
+		  for (j=0,isfirstout=1; j<IMAP_NFLAGS; j++)
 		    {
 		      if (msgflags[j])
 			{

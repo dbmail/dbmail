@@ -222,12 +222,13 @@ int db_check_user (char *username, struct list *userids, int checks)
 }
 
 	
+/* 
+ * adds a new user to the database 
+ * and adds a INBOX 
+ * returns a useridnr on succes, -1 on failure 
+ */
 u64_t db_adduser (char *username, char *password, char *clientid, char *maxmail)
 {
-  /* adds a new user to the database 
-   * and adds a INBOX 
-   * returns a useridnr on succes, -1 on failure */
-
   u64_t useridnr;
   char *tst;
   u64_t size;
