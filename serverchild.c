@@ -211,6 +211,7 @@ int PerformChildTask(ChildInfo_t *info)
 {
   int i,len,clientSocket;
   struct sockaddr_in saClient;
+  struct hostent *clientHost;
 
   if (!info)
     {
@@ -241,13 +242,32 @@ int PerformChildTask(ChildInfo_t *info)
 	  continue;    /* accept failed, refuse connection & continue */
 	}
 
-      trace(TRACE_ERROR, "PerformChildTask(): incoming connection from [%s]", inet_ntoa(saClient.sin_addr));
+      trace(TRACE_MESSAGE, "PerformChildTask(): incoming connection from [%s]", client.ip);
       
       memset(&client, 0, sizeof(client));               /* zero-init */
 
       client.timeoutMsg = info->timeoutMsg;
+      client.timeout = info->timeout;
       strncpy(client.ip, inet_ntoa(saClient.sin_addr), IPNUM_LEN);
-      client.clientname[0] = '\0'; /* do not perform ip-lookup's yet */
+      client.clientname[0] = '\0'; 
+
+      if (info->resolveIP)
+	{
+	  clientHost = gethostbyaddr((char *)&saClient.sin_addr, 
+				     sizeof(saClient.sin_addr),
+				     saClient.sin_family);
+
+	  if (clientHost && clientHost->h_name)
+	    strncpy(client.clientname, clientHost->h_name, FIELDLEN);
+
+	  trace (TRACE_MESSAGE,"PerformChildTask(): incoming connection from [%s (%s)]",
+		 client.ip, client.clientname[0] ? client.clientname : "Lookup failed");
+	}
+      else
+	{
+	  trace (TRACE_MESSAGE,"PerformChildTask(): incoming connection from [%s]",
+		 client.ip);
+	}
 
       /* make streams */
       if (! (client.rx = fdopen(dup(clientSocket), "r")) )
@@ -273,10 +293,8 @@ int PerformChildTask(ChildInfo_t *info)
 
       trace(TRACE_DEBUG, "PerformChildTask(): client info init complete, calling client handler");
       
-      /* streams are ready, set timeout value & perform handling */
-      alarm(info->timeout);
+      /* streams are ready, perform handling */
       info->ClientHandler(&client);
-      alarm(0);
 
       trace(TRACE_DEBUG, "PerformChildTask(): client handling complete, closing streams");
 

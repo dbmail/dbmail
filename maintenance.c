@@ -19,7 +19,7 @@
 #include <time.h>
 #include <string.h>
 
-char *configFile = "dbmail.conf";
+char *configFile = "/etc/dbmail.conf";
 
 /* set up database login data */
 extern field_t _db_host;

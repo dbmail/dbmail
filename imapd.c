@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
       config.timeoutMsg = IMAP_TIMEOUT_MSG;
 
       CreateSocket(&config);
-      trace(TRACE_DEBUG, "main(): socket created, starting server");
+      trace(TRACE_ERROR, "main(): socket created, starting server");
 
       switch ( (pid = fork()) )
 	{

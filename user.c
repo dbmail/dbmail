@@ -17,7 +17,10 @@
 #include <time.h>
 #include <stdarg.h>
 
+char *configFile = "/etc/dbmail.conf";
+
 #define SHADOWFILE "/etc/shadow"
+
 char *getToken(char** str,const char* delims);
 char csalt[] = "........";
 char *bgetpwent (char *filename, char *name);
@@ -78,7 +81,7 @@ int main(int argc, char *argv[])
       argidx = 1;
     }
 	    
-  ReadConfig("DBMAIL", "dbmail.conf", &sysItems);
+  ReadConfig("DBMAIL", configFile, &sysItems);
   SetTraceLevel(&sysItems);
   GetDBParams(_db_host, _db_db, _db_user, _db_pass, &sysItems);
 
