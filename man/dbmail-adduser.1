@@ -10,6 +10,8 @@ Adds mailusers to the \fBDbmail\fR mailsystem
 .nf
 \fBdbmail-adduser\fR \fIa\fR \fIusername\fR \fIpassword\fR \fIclientid\fR \fImaxmail\fR [\fIaliases\fR]
 \fBdbmail-adduser\fR \fId\fR \fIusername\fR
+\fBdbmail-adduser\fR \fIf\fR \fIalias\fR \fIdeliver-to\fR
+\fBdbmail-adduser\fR \fIx\fR \fIalias\fR \fIdeliver-to\fR
 \fBdbmail-adduser\fR \fIc\fR \fIusername\fR [\fI-u username\fR] [\fI-p password\fR] [\fI-c clientid\fR] [\fI-q maxmail\fR] [\fI+a alias\fR] [\fI-a alias\fR]
 \fBdbmail-adduser\fR \fIs\fR [\fIusername\fR]
 
@@ -19,6 +21,7 @@ Adds mailusers to the \fBDbmail\fR mailsystem
 The \fBdbmail-adduser\fR program enables you to manage the \fBDbmail\fR users. 
 It lets you add, delete and change users as well as show information about a specific user or display
 a list of existing users.
+It also has the capability of adding/removing separate aliases.
 
 Options:
 .TP
@@ -45,6 +48,14 @@ delivered to the \fBDbmail\fR mailsystem and needs to be delivered to this user.
 .TP
 .BI \fId\fR
 Delete a user specified by \fIusername\fR
+
+.TP
+.BI \fIf\fR
+Adds a separate forward of \fIalias\fR to \fIdeliver-to\fR.
+
+.TP
+.BI \fIx\fR
+Deletes a separate forward of \fIalias\fR to \fIdeliver-to\fR.
 
 .TP
 .BI \fIc\fR
