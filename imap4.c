@@ -20,7 +20,7 @@
 
 #define MAX_LINESIZE 1024
 
-#define null_free(p) free(p); p = NULL
+#define null_free(p) { free(p); p = NULL; }
 
 /* cache */
 cache_t cached_msg;
@@ -366,7 +366,9 @@ int imap_process(ClientInfo *ci)
  */
 void imap_error_cleanup(ClientInfo *ci)
 {
-  null_free(((imap_userdata_t*)ci->userData)->mailbox.seq_list);
+  if (ci->userData)
+    null_free(((imap_userdata_t*)ci->userData)->mailbox.seq_list);
+  
   null_free(ci->userData);
 
   close_cache();

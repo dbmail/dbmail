@@ -1790,6 +1790,8 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		  if (cached_msg.msg_parsed)
 		    db_free_msg(&cached_msg.msg);
 
+		  memset(&cached_msg.msg, 0, sizeof(cached_msg.msg));
+
 		  cached_msg.msg_parsed = 0;
 		  cached_msg.num = -1;
 		  cached_msg.file_dumped = 0;
@@ -1803,7 +1805,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		    }
 		  cached_msg.msg_parsed = 1;
 		  cached_msg.num = thisnum;
-		  db_msgdump(&cached_msg.msg, thisnum);
+		  db_msgdump(&cached_msg.msg, thisnum, 0);
 		}
 
 	      if (fi->getInternalDate)
@@ -2070,8 +2072,11 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			fprintf(ci->tx, "] NIL ");
 		      else
 			{
-			  tmpdumpsize = rfcheader_dump(cached_msg.tmpdump, &msgpart->rfcheader, 
-					 args, 0, 0);
+			  tmpdumpsize = 0;
+
+			  if (!only_text_from_msgpart)
+			    tmpdumpsize = rfcheader_dump(cached_msg.tmpdump, &msgpart->rfcheader, 
+							 args, 0, 0);
 
 			  tmpdumpsize += 
 			    db_dump_range(cached_msg.tmpdump, msgpart->bodystart, msgpart->bodyend,

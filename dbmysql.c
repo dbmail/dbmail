@@ -3198,8 +3198,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
 	    }
 	  trace(TRACE_DEBUG,"db_add_mime_children(): got %d newlines from start_msg()\n",nlines);
 	  totallines += nlines;
-	  part.bodylines = nlines;
-
+	  part.mimerfclines = nlines;
 	}
       else
 	{
@@ -3293,10 +3292,14 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
  *
  * dumps a message to stderr
  */
-int db_msgdump(mime_message_t *msg, unsigned long msguid)
+int db_msgdump(mime_message_t *msg, unsigned long msguid, int level)
 {
   struct element *curr;
   struct mime_record *mr;
+  char *spaces;
+
+  if (level < 0)
+    return 0;
 
   if (!msg)
     {
@@ -3304,22 +3307,30 @@ int db_msgdump(mime_message_t *msg, unsigned long msguid)
       return 0;
     }
 
-  trace(TRACE_DEBUG,"MIME-header: \n");
+  spaces = (char*)malloc(2*level + 1);
+  if (!spaces)
+    return 0;
+
+  memset(spaces, ' ', 2*level);
+  spaces[2*level] = 0;
+
+
+  trace(TRACE_DEBUG,"%sMIME-header: \n",spaces);
   curr = list_getstart(&msg->mimeheader);
   if (!curr)
-    trace(TRACE_DEBUG,"  null\n");
+    trace(TRACE_DEBUG,"%s  null\n");
   else
     {
       while (curr)
 	{
 	  mr = (struct mime_record *)curr->data;
-	  trace(TRACE_DEBUG,"  [%s] : [%s]\n",mr->field, mr->value);
+	  trace(TRACE_DEBUG,"%s  [%s] : [%s]\n",spaces,mr->field, mr->value);
 	  curr = curr->nextnode;
 	}
     }
-  trace(TRACE_DEBUG,"*** MIME-header end\n");
+  trace(TRACE_DEBUG,"%s*** MIME-header end\n",spaces);
      
-  trace(TRACE_DEBUG,"RFC822-header: \n");
+  trace(TRACE_DEBUG,"%sRFC822-header: \n",spaces);
   curr = list_getstart(&msg->rfcheader);
   if (!curr)
     trace(TRACE_DEBUG,"  null\n");
@@ -3328,14 +3339,15 @@ int db_msgdump(mime_message_t *msg, unsigned long msguid)
       while (curr)
 	{
 	  mr = (struct mime_record *)curr->data;
-	  trace(TRACE_DEBUG,"  [%s] : [%s]\n",mr->field, mr->value);
+	  trace(TRACE_DEBUG,"%s  [%s] : [%s]\n",spaces,mr->field, mr->value);
 	  curr = curr->nextnode;
 	}
     }
-  trace(TRACE_DEBUG,"*** RFC822-header end\n");
+  trace(TRACE_DEBUG,"%s*** RFC822-header end\n",spaces);
 
-  trace(TRACE_DEBUG,"*** Body range:\n");
-  trace(TRACE_DEBUG,"    (%lu, %lu) - (%lu, %lu), size: %lu, newlines: %lu\n",
+  trace(TRACE_DEBUG,"%s*** Body range:\n",spaces);
+  trace(TRACE_DEBUG,"%s    (%lu, %lu) - (%lu, %lu), size: %lu, newlines: %lu\n",
+	spaces,
 	msg->bodystart.block, msg->bodystart.pos,
 	msg->bodyend.block, msg->bodyend.pos,
 	msg->bodysize, msg->bodylines);
@@ -3345,16 +3357,17 @@ int db_msgdump(mime_message_t *msg, unsigned long msguid)
   db_dump_range(msg->bodystart, msg->bodyend, msguid);
   trace(TRACE_DEBUG,"*** body end\n");
 */
-  trace(TRACE_DEBUG,"Children of this msg:\n");
+  trace(TRACE_DEBUG,"%sChildren of this msg:\n",spaces);
   
   curr = list_getstart(&msg->children);
   while (curr)
     {
-      db_msgdump((mime_message_t*)curr->data,msguid);
+      db_msgdump((mime_message_t*)curr->data,msguid,level+1);
       curr = curr->nextnode;
     }
-  trace(TRACE_DEBUG,"*** child list end\n");
+  trace(TRACE_DEBUG,"%s*** child list end\n",spaces);
 
+  free(spaces);
   return 1;
 }
 

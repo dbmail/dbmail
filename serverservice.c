@@ -314,8 +314,9 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 		}
 
 	      setlinebuf(client.tx);
-	      setvbuf(client.tx, txbuf, _IOFBF, TXBUFSIZE);
-
+	      setlinebuf(client.rx);
+/*	      setvbuf(client.tx, txbuf, _IOFBF, TXBUFSIZE);
+*/
 	      client.timeout = server_timeout; /* remember timeout */
 
 #if LOG_USERS > 0
@@ -455,8 +456,9 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
 		    }
 
 		  setlinebuf(client.tx);
-		  setvbuf(client.tx, txbuf, _IOFBF, TXBUFSIZE);
-
+		  setlinebuf(client.rx);
+/*		  setvbuf(client.tx, txbuf, _IOFBF, TXBUFSIZE);
+*/
 		  client.timeout = server_timeout; /* remember timeout */
 
 #if LOG_USERS > 0
@@ -540,24 +542,28 @@ void SS_sighandler(int sig, siginfo_t *info, void *data)
   int status;
   int i;
 
-  if (sig == SIGALRM && client.tx)
+  if (sig == SIGALRM)
     {
       /* timeout occurred, close client, terminate process */
-      fprintf(client.tx, "* BYE dbmail IMAP4 server signing off due to timeout\r\n");
       trace(TRACE_INFO, "IMAPD: PID %d received alarm (time-out)\n", getpid());
 
       /* close streams */
-      if (client.tx && client.rx)
+      if (client.tx)
 	{
+	  fprintf(client.tx, "* BYE dbmail IMAP4 server signing off due to timeout\r\n");
 	  fflush(client.tx);
 	  fclose(client.tx);
+	}
+
+      if (client.rx)
+	{
 	  shutdown(fileno(client.rx),SHUT_RDWR);
 	  fclose(client.rx);
 
-	  (*the_client_cleanup)(&client);
-
-	  memset(&client, 0, sizeof(client));
 	}
+
+      (*the_client_cleanup)(&client);
+      memset(&client, 0, sizeof(client));
 
       /* reset the entry of this process if it is a default child (so it can be restored) */
       for (i=0; i<n_default_children && default_child_pids; i++)
@@ -583,17 +589,20 @@ void SS_sighandler(int sig, siginfo_t *info, void *data)
 	  }
 
       /* close streams */
-      if (client.tx && client.rx)
+      if (client.tx)
 	{
 	  fflush(client.tx);
 	  fclose(client.tx);
+	}
+      
+      if (client.rx)
+	{
 	  shutdown(fileno(client.rx),SHUT_RDWR);
 	  fclose(client.rx);
-
-	  (*the_client_cleanup)(&client);
-
-	  memset(&client, 0, sizeof(client));
 	}
+
+      (*the_client_cleanup)(&client);
+      memset(&client, 0, sizeof(client));
     }
 
   switch (sig)

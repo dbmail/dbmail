@@ -125,8 +125,11 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg, int show_extension_
 
       /* now output size */
       /* add msg->bodylines because \n is dumped as \r\n */
-      fprintf(outstream, " %lu ", msg->bodysize + msg->bodylines + msg->rfcheadersize 
-	      - msg->rfcheaderlines); 
+      if (msg->mimeheader.start && msg->rfcheader.start)
+	fprintf(outstream, " %lu ", msg->bodysize + msg->mimerfclines + msg->rfcheadersize 
+		- msg->rfcheaderlines); 
+      else
+	fprintf(outstream, " %lu ", msg->bodysize + msg->bodylines);
 
 
       /* now check special cases, first case: message/rfc822 */
@@ -154,12 +157,17 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg, int show_extension_
 	  /* output # of lines */
 	  fprintf(outstream, " %lu", msg->bodylines);
 	}
-
-      /* second case: text 
+      /* now check second special case: text 
        * NOTE: if 'content-type' is absent, TEXT is assumed 
        */
       if ((mr && strncasecmp(mr->value, "text", strlen("text")) == 0) || !mr)
-	fprintf(outstream, "%lu", msg->bodylines);      /* output # of lines */
+	{
+	  /* output # of lines */
+	  if (msg->mimeheader.start && msg->rfcheader.start)
+	    fprintf(outstream, "%lu", msg->mimerfclines);
+	  else
+	    fprintf(outstream, "%lu", msg->bodylines);
+	}
 
       if (show_extension_data)
 	{
