@@ -133,7 +133,7 @@ UPDATE dbmail_messageblks SET is_header = '0';
 # as they are.
 # 
 CREATE TABLE IF NOT EXISTS auto_notifications (
-   auto_notify_idnr bigint(21) default '0' not null auto_increment,
+   auto_notify_idnr bigint(21) not null auto_increment,
    user_idnr bigint(21) DEFAULT '0' NOT NULL,
    notify_address VARCHAR(100),
    PRIMARY KEY (auto_notify_idnr)
@@ -141,7 +141,7 @@ CREATE TABLE IF NOT EXISTS auto_notifications (
 
 
 CREATE TABLE IF NOT EXISTS auto_replies (
-   auto_reply_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
+   auto_reply_idnr bigint(21) NOT NULL auto_increment,
    user_idnr bigint(21) DEFAULT '0' NOT NULL,
    reply_body mediumtext,
    PRIMARY KEY (auto_reply_idnr)
@@ -164,7 +164,7 @@ ALTER TABLE dbmail_auto_replies
 DROP TABLE IF EXISTS pbsp;
 DROP TABLE IF EXISTS dbmail_pbsp;
 CREATE TABLE dbmail_pbsp (
-   idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
+   idnr bigint(21) NOT NULL auto_increment,
    since datetime default '0' not null,
    ipnumber varchar(40) NOT NULL,
    PRIMARY KEY (idnr),

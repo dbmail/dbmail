@@ -1,3 +1,11 @@
+2005-01-22  Ilja Booij <ilja@ic-s.nl>
+
+	* sql/mysql/migrate_from_1.x_to_2.0.mysql: applied patch by
+	Christian Haugg to make script work on MySQL 4.1.x
+
+	* sql/mysql/migrate_from_1.x_to_2.0_innodb.mysql: applied patch by
+	Christian Haugg to make script work on MySQL 4.1.x
+
 2005-01-19  Ilja Booij  <ilja@ic-s.nl>
 
 	* INSTALL.postfix: updated information, mainly for Postfix 2.0
