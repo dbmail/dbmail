@@ -107,7 +107,13 @@ typedef struct
   struct list children;             /* the children (multipart msg) */
 } mime_message_t;
 
-  
+ 
+typedef struct
+{
+  mime_message_t msg;
+  int num;
+} cache_t;
+
 
 /* 
  * PROTOTYPES 

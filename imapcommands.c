@@ -34,6 +34,9 @@ const char *imap_flag_desc_escaped[IMAP_NFLAGS] =
 int imapcommands_use_uid = 0;
 int list_is_lsub = 0;
 
+cache_t cached_msg;
+
+
 /*
  * RETURN VALUES _ic_ functions:
  *
@@ -91,6 +94,12 @@ int _ic_logout(char *tag, char **args, ClientInfo *ci)
   if (!check_state_and_args("LOGOUT", tag, args, 0, -1, ci))
     return 1; /* error, return */
 
+  /* clear cache */
+  if (cached_msg.num != -1)
+    db_free_msg(&cached_msg.msg);
+
+  cached_msg.num = -1;
+
   /* change status */
   ud->state = IMAPCS_LOGOUT;
 
@@ -140,6 +149,12 @@ int _ic_login(char *tag, char **args, ClientInfo *ci)
   ud->userid = userid;
   ud->state = IMAPCS_AUTHENTICATED;
 
+  /* clear cache */
+  if (cached_msg.num != -1)
+    db_free_msg(&cached_msg.msg);
+
+  cached_msg.num = -1;
+
   fprintf(ci->tx,"%s OK LOGIN completed\r\n",tag);
   return 0;
 }
@@ -169,14 +184,14 @@ int _ic_authenticate(char *tag, char **args, ClientInfo *ci)
     }
 
   /* ask for username (base64 encoded) */
-  base64encode("username\r\n\r",buf);
+  base64encode("username\r\n",buf);
   fprintf(ci->tx,"+ %s\r\n",buf);
   fflush(ci->tx);
   fgets(buf, MAX_LINESIZE, ci->rx);
   base64decode(buf, username);
 
   /* ask for password */
-  base64encode("password\r\n\r",buf);
+  base64encode("password\r\n",buf);
   fprintf(ci->tx,"+ %s\r\n",buf);
   fflush(ci->tx);
   fgets(buf, MAX_LINESIZE, ci->rx);
@@ -1405,11 +1420,11 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 {
   imap_userdata_t *ud = (imap_userdata_t*)ci->userData;
   int i,fetch_start,fetch_end,result,setseen,j,k;
-  int isfirstout,idx,headers_fetched,uid_will_be_fetched;
+  int isfirstout,idx,uid_will_be_fetched;
   int partspeclen,only_text_from_msgpart = 0;
   int bad_response_send = 0,actual_cnt;
   fetch_items_t *fi,fetchitem;
-  mime_message_t msg,*msgpart;
+  mime_message_t *msgpart;
   char date[IMAP_INTERNALDATE_LEN],*endptr;
   unsigned long thisnum;
   long dumpsize,cnt;
@@ -1418,7 +1433,6 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
   char tmpname[] = "/tmp/fetch.tmp.XXXXXX";
   FILE *tmpfile;
 
-  memset(&msg, 0, sizeof(msg));
   memset(&fetch_list, 0, sizeof(fetch_list));
 
   if (ud->state != IMAPCS_SELECTED)
@@ -1618,7 +1632,6 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	  trace(TRACE_DEBUG, "Fetching msgID %lu (fetch num %d)\r\n", thisnum, i+1);
 
 	  curr = list_getstart(&fetch_list);
-	  headers_fetched = 0;
 	  setseen = 0;
 	  bad_response_send = 0;
 
@@ -1630,17 +1643,22 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
 	      only_text_from_msgpart = 0;
 
-	      if (!headers_fetched && fi->msgparse_needed)
+	      if (fi->msgparse_needed && thisnum != cached_msg.num)
 		{
 		  /* parse message structure */
-		  if (db_fetch_headers(thisnum, &msg) == -1)
+		  if (cached_msg.num != -1)
+		    db_free_msg(&cached_msg.msg);
+
+		  cached_msg.num = -1;
+
+		  if (db_fetch_headers(thisnum, &cached_msg.msg) == -1)
 		    {
 		      fprintf(ci->tx,"\r\n* BAD error fetching message %d\r\n",i+1);
 		      bad_response_send = 1;
 		      continue;
 		    }
-		  db_msgdump(&msg, thisnum);
-		  headers_fetched = 1;
+		  db_msgdump(&cached_msg.msg, thisnum);
+		  cached_msg.num = thisnum;
 		}
 
 	      if (fi->getInternalDate)
@@ -1649,7 +1667,6 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		  if (result == -1)
 		    {
 		      fprintf(ci->tx,"* BYE internal dbase error\r\n");
-		      db_free_msg(&msg);
 		      list_freelist(&fetch_list.start);
 		      fclose(tmpfile);
 		      unlink(tmpname);
@@ -1665,12 +1682,10 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	      if (fi->getMIME_IMB)
 		{
 		  fprintf(ci->tx,"BODYSTRUCTURE ");
-		  result = retrieve_structure(ci->tx, &msg, 1);
-/*		  fprintf(ci->tx," ");*/
+		  result = retrieve_structure(ci->tx, &cached_msg.msg, 1);
 		  if (result == -1)
 		    {
 		      fprintf(ci->tx,"\r\n* BYE error fetching body structure\r\n");
-		      db_free_msg(&msg);
 		      list_freelist(&fetch_list.start);
 		      fclose(tmpfile);
 		      unlink(tmpname);
@@ -1681,12 +1696,10 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	      if (fi->getMIME_IMB_noextension)
 		{
 		  fprintf(ci->tx,"BODY ");
-		  result = retrieve_structure(ci->tx, &msg, 0);
-/*		  fprintf(ci->tx," ");*/
+		  result = retrieve_structure(ci->tx, &cached_msg.msg, 0);
 		  if (result == -1)
 		    {
 		      fprintf(ci->tx,"\r\n* BYE error fetching body\r\n");
-		      db_free_msg(&msg);
 		      list_freelist(&fetch_list.start);
 		      fclose(tmpfile);
 		      unlink(tmpname);
@@ -1697,12 +1710,11 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	      if (fi->getEnvelope)
 		{
 		  fprintf(ci->tx,"ENVELOPE ");
-		  result = retrieve_envelope(ci->tx, &msg.rfcheader);
+		  result = retrieve_envelope(ci->tx, &cached_msg.msg.rfcheader);
 
 		  if (result == -1)
 		    {
 		      fprintf(ci->tx,"\r\n* BYE error fetching envelope structure\r\n");
-		      db_free_msg(&msg);
 		      list_freelist(&fetch_list.start);
 		      fclose(tmpfile);
 		      unlink(tmpname);
@@ -1712,8 +1724,9 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
 	      if (fi->getRFC822 || fi->getRFC822Peek)
 		{
-		  dumpsize  = rfcheader_dump(tmpfile, &msg.rfcheader, args, 0, 0);
-		  dumpsize += db_dump_range(tmpfile, msg.bodystart, msg.bodyend, thisnum);
+		  dumpsize  = rfcheader_dump(tmpfile, &cached_msg.msg.rfcheader, args, 0, 0);
+		  dumpsize += db_dump_range(tmpfile, cached_msg.msg.bodystart, 
+					    cached_msg.msg.bodyend, thisnum);
 		  
 		  fseek(tmpfile, 0, SEEK_SET);
 
@@ -1724,19 +1737,21 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		  if (fi->getRFC822)
 		    setseen = 1;
 
-/*		  fprintf(ci->tx, " ");*/
 		}
 		  
 	      if (fi->getSize)
 		{
-		  fprintf(ci->tx,"RFC822.SIZE %lu", msg.rfcheadersize + msg.bodysize + 
-			  + msg.bodylines);
+		  fprintf(ci->tx,"RFC822.SIZE %lu", 
+			  cached_msg.msg.rfcheadersize + 
+			  cached_msg.msg.bodysize + 
+			  cached_msg.msg.bodylines);
 		}
 
 	      if (fi->getBodyTotal || fi->getBodyTotalPeek)
 		{
-		  dumpsize  = rfcheader_dump(tmpfile, &msg.rfcheader, args, 0, 0);
-		  dumpsize += db_dump_range(tmpfile, msg.bodystart, msg.bodyend, thisnum);
+		  dumpsize  = rfcheader_dump(tmpfile, &cached_msg.msg.rfcheader, args, 0, 0);
+		  dumpsize += db_dump_range(tmpfile, cached_msg.msg.bodystart, 
+					    cached_msg.msg.bodyend, thisnum);
 		  
 		  if (fi->bodyfetch.octetstart == -1)
 		    {
@@ -1769,7 +1784,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
 	      if (fi->getRFC822Header)
 		{
-		  dumpsize = rfcheader_dump(tmpfile, &msg.rfcheader, args, 0, 0);
+		  dumpsize = rfcheader_dump(tmpfile, &cached_msg.msg.rfcheader, args, 0, 0);
 
 		  fseek(tmpfile, 0, SEEK_SET);
 
@@ -1782,7 +1797,8 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	      
 	      if (fi->getRFC822Text)
 		{
-		  dumpsize = db_dump_range(tmpfile, msg.bodystart, msg.bodyend, thisnum);
+		  dumpsize = db_dump_range(tmpfile, cached_msg.msg.bodystart, 
+					   cached_msg.msg.bodyend, thisnum);
 
 		  fseek(tmpfile, 0, SEEK_SET);
 
@@ -1802,13 +1818,12 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			  fprintf(ci->tx,"\r\n%s BAD protocol error\r\n",tag);
 			  trace(TRACE_DEBUG,"PROTOCOL ERROR\r\n");
 			  list_freelist(&fetch_list.start);
-			  db_free_msg(&msg);
 			  fclose(tmpfile);
 			  unlink(tmpname);
 			  return 1;
 			}
 
-		      msgpart = get_part_by_num(&msg, fi->bodyfetch.partspec);
+		      msgpart = get_part_by_num(&cached_msg.msg, fi->bodyfetch.partspec);
 
 		      if (!msgpart)
 			{
@@ -1838,11 +1853,12 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			      if (k>0)
 				{
 				  fi->bodyfetch.partspec[k] = '\0';
-				  msgpart = get_part_by_num(&msg, fi->bodyfetch.partspec);
+				  msgpart = get_part_by_num(&cached_msg.msg, 
+							    fi->bodyfetch.partspec);
 				  fi->bodyfetch.partspec[k] = '.';
 				}
 			      else
-				msgpart = &msg;
+				msgpart = &cached_msg.msg;
 
 			      only_text_from_msgpart = 1;
 			    }
@@ -1853,7 +1869,7 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			}
 		    }
 		  else
-		    msgpart = &msg;
+		    msgpart = &cached_msg.msg;
 
 		  if (fi->bodyfetch.noseen)
 		    fprintf(ci->tx, "BODY[%s", fi->bodyfetch.partspec);
@@ -2099,7 +2115,6 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		    default:
 		      fprintf(ci->tx, "* BYE internal server error\r\n");
 		      list_freelist(&fetch_list.start);
-		      db_free_msg(&msg);
 		      fclose(tmpfile);
 		      unlink(tmpname);
 		      return -1;
@@ -2116,7 +2131,6 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 		  if (result == -1)
 		    {
 		      fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
-		      db_free_msg(&msg);
 		      list_freelist(&fetch_list.start);
 		      fclose(tmpfile);
 		      unlink(tmpname);
@@ -2141,7 +2155,6 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 			{
 			  fprintf(ci->tx,"\r\n* BYE internal dbase error\r\n");
 			  list_freelist(&fetch_list.start);
-			  db_free_msg(&msg);
 			  fclose(tmpfile);
 			  unlink(tmpname);
 			  return -1;
@@ -2167,8 +2180,6 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 	  if (!bad_response_send)
 	    fprintf(ci->tx,")\r\n");
 
-	  if (headers_fetched)
-	    db_free_msg(&msg);
 	}
     }
       

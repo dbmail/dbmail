@@ -2969,7 +2969,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
 	      msgidx++;
 	    }
 
-	  return totallines+1; /* ??? */
+	  return totallines;
 	}
 
       if (msgbuf[msgidx] == '\n') 
@@ -3115,7 +3115,7 @@ long db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long 
   if (start.block == end.block)
     {
       /* dump everything */
-      for (i=start.pos; i<=end.pos; i++)
+      for (i=start.pos; i<end.pos; i++)
 	{
 	  if (row[0][i] == '\n')
 	    outcnt += fprintf(outstream,"\r\n");
@@ -3143,7 +3143,7 @@ long db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long 
 	}
 
       startpos = (i == start.block) ? start.pos : 0;
-      endpos   = (i == end.block) ? end.pos+1 : (mysql_fetch_lengths(res))[0];
+      endpos   = (i == end.block) ? end.pos : (mysql_fetch_lengths(res))[0];
 
       distance = endpos - startpos;
 
@@ -3152,7 +3152,7 @@ long db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long 
 	{
 	  if (row[0][startpos+j] == '\n')
 	    outcnt += fprintf(outstream,"\r\n");
-	  else
+	  else if (row[0][startpos+j])
 	    outcnt += fprintf(outstream,"%c", row[0][startpos+j]);
 	}
 	

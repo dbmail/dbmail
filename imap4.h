@@ -94,7 +94,6 @@ typedef struct
   mailbox_t mailbox;        /* currently selected mailbox */
 } imap_userdata_t;
 
-
 #endif
 
 
