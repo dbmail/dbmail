@@ -23,6 +23,9 @@
 #include "config.h"
 #endif
 
+#include "dbmail.h"
+#include "dbmailtypes.h"
+
 #define PNAME "dbmail/users"
 
 /* These are the available password types. */
@@ -35,5 +38,50 @@ typedef enum {
 int mkpassword(const char * const user, const char * const passwd,
                const char * const passwdtype, const char * const passwdfile,
                char ** password, char ** enctype);
+
+
+struct change_flags {
+	unsigned int newuser         : 1;
+	unsigned int newmaxmail      : 1;
+	unsigned int newclientid     : 1;
+	unsigned int newpasswd       : 1;
+	unsigned int newpasswdfile   : 1;
+	unsigned int newpasswdstdin  : 1;
+	unsigned int newpasswdshadow : 1;
+};
+
+/* The prodigious use of const ensures that programming
+ * mistakes inside of these functions don't cause us to
+ * use incorrect values when calling auth_ and db_ internals.
+ * */
+
+/* Core operations */
+int do_add(const char * const user,
+           const char * const password,
+           const char * const enctype,
+           const u64_t maxmail, const u64_t clientid,
+	   GList * alias_add,
+	   GList * alias_del);
+int do_delete(const u64_t useridnr, const char * const user);
+int do_show(const char * const user);
+int do_empty(const u64_t useridnr);
+/* Change operations */
+int do_username(const u64_t useridnr, const char *newuser);
+int do_maxmail(const u64_t useridnr, const u64_t maxmail);
+int do_clientid(const u64_t useridnr, const u64_t clientid);
+int do_password(const u64_t useridnr,
+                const char * const password,
+                const char * const enctype);
+int do_aliases(const u64_t useridnr,
+               GList * alias_add,
+               GList * alias_del);
+/* External forwards */
+int do_forwards(const char *alias, const u64_t clientid,
+                GList * fwds_add,
+                GList * fwds_del);
+
+/* Helper functions */
+int is_valid(const char * const str);
+u64_t strtomaxmail(const char * const str);
 
 
