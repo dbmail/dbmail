@@ -120,7 +120,6 @@ int db_search(int *rset, int setlen, const char *key, mailbox_t * mb,
 			 "WHERE msg.mailbox_idnr = '%llu' "
 			 "AND msg.physmessage_id = pms.id "
 			 "AND msg.status < '%d' "
-			 "AND msg.unique_id <> '' "
 			 "AND pms.%s", DBPFX, DBPFX, mb->uid, MESSAGE_STATUS_DELETE, key);
    	} else if ( type == IST_SORT) {
         	snprintf(query, DEF_QUERYSIZE,
@@ -128,13 +127,12 @@ int db_search(int *rset, int setlen, const char *key, mailbox_t * mb,
                  	"WHERE msg.mailbox_idnr = '%llu' "
                  	"AND msg.physmessage_id = pms.id "
                  	"AND msg.status < 2 "
-                 	"AND msg.unique_id <> '' "
                  	"%s", DBPFX, DBPFX, mb->uid, key);
 	} else {
 		snprintf(query, DEF_QUERYSIZE,
 			 "SELECT message_idnr FROM %smessages "
 			 "WHERE mailbox_idnr = '%llu' "
-			 "AND status < '%d'  AND unique_id!='' AND %s", DBPFX, mb->uid,
+			 "AND status < '%d' AND %s", DBPFX, mb->uid,
 			 MESSAGE_STATUS_DELETE, key);
 	}
 	if (db_query(query) == -1) {

@@ -1602,7 +1602,7 @@ int db_createsession(u64_t user_idnr, PopSession_t * session_ptr)
 		 "WHERE msg.mailbox_idnr = '%llu' "
 		 "AND msg.status < '%d' "
 		 "AND msg.physmessage_id = pm.id "
-		 "AND unique_id != '' order by status ASC",DBPFX,DBPFX,
+		 "order by status ASC",DBPFX,DBPFX,
 		 inbox_mailbox_idnr, MESSAGE_STATUS_DELETE);
 
 	if (db_query(query) == -1) {
@@ -2327,7 +2327,7 @@ int db_getmailbox(mailbox_t * mb)
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT message_idnr, seen_flag, recent_flag "
 		 "FROM %smessages WHERE mailbox_idnr = '%llu' "
-		 "AND status < '%d' AND unique_id != '' "
+		 "AND status < '%d' "
 		 "ORDER BY message_idnr ASC",DBPFX, mb->uid, MESSAGE_STATUS_DELETE);
 
 	if (db_query(query) == -1) {
@@ -2362,8 +2362,7 @@ int db_getmailbox(mailbox_t * mb)
 	 * able to restore them 
 	 */
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT MAX(message_idnr) FROM %smessages "
-		 "WHERE unique_id != ''",DBPFX);
+		 "SELECT MAX(message_idnr) FROM %smessages",DBPFX);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR,
@@ -2967,7 +2966,7 @@ u64_t db_first_unseen(u64_t mailbox_idnr)
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT MIN(message_idnr) FROM %smessages "
 		 "WHERE mailbox_idnr = '%llu' "
-		 "AND status < '%d' AND seen_flag = '0' AND unique_id != ''",DBPFX,
+		 "AND status < '%d' AND seen_flag = '0'",DBPFX,
 		 mailbox_idnr, MESSAGE_STATUS_DELETE);
 
 	if (db_query(query) == -1) {
@@ -3058,7 +3057,6 @@ int db_get_msgflag(const char *flag_name, u64_t msg_idnr,
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT %s FROM %smessages "
 		 "WHERE message_idnr = '%llu' AND status < '%d' "
-		 "AND unique_id != '' "
 		 "AND mailbox_idnr = '%llu'",
 		 the_flag_name, DBPFX, msg_idnr, 
 		 MESSAGE_STATUS_DELETE, mailbox_idnr);
@@ -3085,7 +3083,6 @@ int db_get_msgflag_all(u64_t msg_idnr, u64_t mailbox_idnr, int *flags)
 		 "SELECT seen_flag, answered_flag, deleted_flag, "
 		 "flagged_flag, draft_flag, recent_flag FROM %smessages "
 		 "WHERE message_idnr = '%llu' AND status < '%d' "
-		 "AND unique_id != '' "
 		 "AND mailbox_idnr = '%llu'",DBPFX, msg_idnr, MESSAGE_STATUS_DELETE,
 		 mailbox_idnr);
 
@@ -3214,7 +3211,7 @@ int db_get_msgdate(u64_t mailbox_idnr, u64_t msg_idnr, char *date)
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT %s FROM %sphysmessage pm, %smessages msg "
 		 "WHERE msg.mailbox_idnr = '%llu' "
-		 "AND msg.message_idnr = '%llu' AND msg.unique_id!='' "
+		 "AND msg.message_idnr = '%llu' "
 		 "AND pm.id = msg.physmessage_id",
 		 to_char_str, DBPFX, DBPFX,
 		 mailbox_idnr, msg_idnr);
@@ -3287,7 +3284,6 @@ int db_get_rfcsize(u64_t msg_idnr, u64_t mailbox_idnr, u64_t * rfc_size)
 		 "WHERE pm.id = msg.physmessage_id "
 		 "AND msg.message_idnr = '%llu' "
 		 "AND msg.status< '%d' "
-		 "AND msg.unique_id != '' "
 		 "AND msg.mailbox_idnr = '%llu'",DBPFX,DBPFX, msg_idnr, MESSAGE_STATUS_DELETE,
 		 mailbox_idnr);
 
@@ -3333,7 +3329,6 @@ int db_get_msginfo_range(u64_t msg_idnr_low, u64_t msg_idnr_high,
 		 "WHERE pm.id = msg.physmessage_id "
 		 "AND message_idnr BETWEEN '%llu' AND '%llu' "
 		 "AND mailbox_idnr = '%llu' AND status < '%d' "
-		 "AND unique_id != '' "
 		 "ORDER BY message_idnr ASC",to_char_str,DBPFX,DBPFX,
 		 msg_idnr_low, msg_idnr_high, mailbox_idnr,
 		 MESSAGE_STATUS_DELETE);
@@ -3474,7 +3469,7 @@ int db_mailbox_msg_match(u64_t mailbox_idnr, u64_t msg_idnr)
 		 "SELECT message_idnr FROM %smessages "
 		 "WHERE message_idnr = '%llu' "
 		 "AND mailbox_idnr = '%llu' "
-		 "AND status< '%d' AND unique_id!=''",DBPFX, msg_idnr,
+		 "AND status< '%d'",DBPFX, msg_idnr,
 		 mailbox_idnr, MESSAGE_STATUS_DELETE);
 
 	if (db_query(query) == -1) {
