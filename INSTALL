@@ -61,10 +61,12 @@ What do you need?
 	This will create a user john, with a password secret. It will set john's maillimit
 	25 Mb and all mail for john@dude.org, john@dude.net and @net.com will be sent to john.
 
-5.	Become root and copy dbmail-pop3d and dbmail-smtp to
-	/usr/local/bin.
+5.	
+	Become root and copy dbmail-pop3d and dbmail-smtp to
+	/usr/local/bin. 
 	Do a chmod 700 for dbmail-maintenance, dbmail-config and dbmail-adduser and 
 	chown these files to root:root. Then also cp them to /usr/local/bin
+	Or you can run ./install.sh which does all this.
 
 6. check your dbmail.conf file and set it to your likeings. After that you can 
 	best copy it to the /etc/ directory and set it also chmod 700 for user root.
