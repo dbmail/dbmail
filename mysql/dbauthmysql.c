@@ -428,7 +428,6 @@ int db_change_mailboxsize(u64_t useridnr, u64_t newsize)
 u64_t db_validate (char *user, char *password)
 {
   u64_t id;
-  int encryption = SUPP_ENCTYPE_CLEARTEXT;
   int is_validated = 0;
   
   snprintf(query, DEF_QUERYSIZE, "SELECT user_idnr, passwd, encryption_type FROM users "
