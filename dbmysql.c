@@ -1354,7 +1354,7 @@ int db_icheck_messageblks(struct list *lost_messageblks)
   while ((row = mysql_fetch_row(res))!=NULL)
     {
       snprintf (query,DEF_QUERYSIZE,"SELECT messageidnr FROM message "
-              "WHERE messageidnr=%s",row[0]);
+              "WHERE messageidnr=%s",row[1]);
     
       trace (TRACE_DEBUG,"db_icheck_messageblks(): executing query [%s]",query);
       
@@ -1378,7 +1378,7 @@ int db_icheck_messageblks(struct list *lost_messageblks)
            * add to the list 
            */
 
-          list_nodeadd (lost_messageblks, row[0], sizeof(row[0]));
+          list_nodeadd (lost_messageblks, row[1], sizeof(row[1]));
       }
       /*
        * else do nothing, just check the next one */
