@@ -20,16 +20,59 @@
 
 -- $Id$
 
--- begin transaction:
+/* first start a transaction to possibly create the auto_replies and 
+   auto_notifications tables, which might, or might not be present.
+*/
+BEGIN TRANSACTION;
+
+CREATE SEQUENCE auto_notification_seq;
+CREATE TABLE auto_notifications (
+   auto_notify_idnr INT8 DEFAULT nextval('auto_notification_seq'),
+   user_idnr INT8 DEFAULT '0' NOT NULL,
+   notify_address VARCHAR(100),
+   PRIMARY KEY (auto_notify_idnr),
+   FOREIGN KEY (user_idnr)
+	REFERENCES users (user_idnr) ON DELETE CASCADE
+);
+
+CREATE SEQUENCE auto_reply_seq;
+CREATE TABLE auto_replies (
+   auto_reply_idnr INT8 DEFAULT nextval('auto_reply_seq'),
+   user_idnr INT8 DEFAULT '0' NOT NULL,
+   reply_body TEXT,
+   PRIMARY KEY(auto_reply_idnr),
+   FOREIGN KEY (user_idnr)
+	REFERENCES users (user_idnr) ON DELETE CASCADE
+);
+
+COMMIT;
+
+/* the next transaction will add an index to the auto_replies 
+   and auto_notifications tables that was not present in
+   DBMail 1.2.x
+*/
+BEGIN TRANSACTION;
+CREATE INDEX auto_notifications_user_idnr_idx ON 
+	auto_notifications(user_idnr);
+CREATE INDEX auto_replies_user_idnr_idx ON 
+	auto_replies(user_idnr);
+COMMIT;
+
+/* Now begin the real work. This might take awhile.. */
 
 BEGIN TRANSACTION;
 
 -- renaming old tables:
-ALTER TABLE aliases RENAME TO aliases_1;
-ALTER TABLE users RENAME TO users_1;
-ALTER TABLE mailboxes RENAME TO mailboxes_1;
-ALTER TABLE messages RENAME TO messages_1;
-ALTER TABLE messageblks RENAME TO messageblks_1;
+CREATE TABLE messageblks_1 AS SELECT * FROM messageblks;
+DROP TABLE messageblks;
+CREATE TABLE messages_1 AS SELECT * FROM messages;
+DROP TABLE messages;
+CREATE TABLE mailboxes_1 AS SELECT * FROM mailboxes;
+DROP TABLE mailboxes;
+CREATE TABLE aliases_1 AS SELECT * FROM aliases;
+DROP TABLE aliases;
+CREATE TABLE users_1 AS SELECT * FROM users;
+DROP TABLE users;
 
 -- create dbmail-2 tables
 
@@ -78,7 +121,7 @@ CREATE INDEX mailboxes_owner_name_idx ON mailboxes(owner_idnr, name);
 CREATE TABLE subscription (
    user_id INT8 NOT NULL,
    mailbox_id INT8 NOT NULL,
-   PRIMARY KEY (user_id, mailbox_id),
+   PRIMARY KEY (user_id, mailbox_id)
 );
 
 CREATE TABLE acl (

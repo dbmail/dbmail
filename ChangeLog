@@ -1,3 +1,17 @@
+2004-08-03  Ilja Booij  <ilja@ic-s.nl>
+
+	* sql/mysql/migrate_from_1.x_to_2.0.mysql:  auto_replies and auto_notifications
+	tables are only created if they don't exist. If they do, an index on user_idnr
+	is added to them.
+
+	* sql/mysql/migrate_from_1.x_to_2.0_innodb.mysql: auto_replies and auto_notifications
+	tables are only created if they don't exist. If they do, an index on user_idnr
+	is added to them.
+
+	* sql/postgresql/migrate_from_1.x_to_2.0.pgsql: auto_replies and auto_notifications
+	tables are only created if they don't exist.  If they do, an index on user_idnr
+	is added to them.
+
 2004-08-02  Ilja Booij  <ilja@ic-s.nl>
 
 	* lmtp.c (lmtp): my_free(whole_message) added if (headersize > READ_BLOCK_SIZE)

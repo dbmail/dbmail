@@ -28,25 +28,6 @@
 RENAME table aliases to aliases_1, users to users_1, mailboxes to mailboxes_1, 
 messages to messages_1, messageblks to messageblks_1;
 
-# in DBMail 1.x, the auto_replies and auto_notifications tables where not
-# always present. If they are not present, they are created here. These 
-# tables do not have a new structure in dbmail 2.0, so they can be left
-# as they are.
-# 
-CREATE TABLE IF NOT EXISTS auto_notifications (
-   auto_notify_idnr bigint(21) default '0' not null auto_increment,
-   user_idnr bigint(21) DEFAULT '0' NOT NULL,
-   notify_address VARCHAR(100),
-   PRIMARY KEY (auto_notify_idnr)
-);
-
-CREATE TABLE IF NOT EXISTS auto_replies (
-   auto_reply_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
-   user_idnr bigint(21) DEFAULT '0' NOT NULL,
-   reply_body mediumtext,
-   PRIMARY KEY (auto_reply_idnr)
-);
-
 # create new tables. 
 DROP TABLE IF EXISTS aliases;
 CREATE TABLE aliases (
@@ -162,23 +143,28 @@ CREATE TABLE messageblks (
 	INDEX physmsg_is_header_index (physmessage_id, is_header)
 );
 
-DROP TABLE IF EXISTS auto_notifications;
-CREATE TABLE auto_notifications (
-	auto_notify_idnr bigint(21) NOT NULL AUTO_INCREMENT,
- 	user_idnr bigint(21) NOT NULL,
-	notify_address VARCHAR(100) NOT NULL,
-	PRIMARY KEY (auto_notify_idnr),
-	INDEX (user_idnr)
+# in DBMail 1.x, the auto_replies and auto_notifications tables where not
+# always present. If they are not present, they are created here. These 
+# tables do not have a new structure in dbmail 2.0, so they can be left
+# as they are.
+# 
+CREATE TABLE IF NOT EXISTS auto_notifications (
+   auto_notify_idnr bigint(21) default '0' not null auto_increment,
+   user_idnr bigint(21) DEFAULT '0' NOT NULL,
+   notify_address VARCHAR(100),
+   PRIMARY KEY (auto_notify_idnr)
 );
+# add an extra index to the table.
+ALTER TABLE auto_notifications ADD INDEX user_idnr_index (user_idnr);
 
-DROP TABLE IF EXISTS auto_replies;
-CREATE TABLE auto_replies (
-	auto_reply_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
-   	user_idnr bigint(21) DEFAULT '0' NOT NULL,
-   	reply_body mediumtext,
-   	PRIMARY KEY (auto_reply_idnr),
-	INDEX (user_idnr)
+CREATE TABLE IF NOT EXISTS auto_replies (
+   auto_reply_idnr bigint(21) DEFAULT '0' NOT NULL auto_increment,
+   user_idnr bigint(21) DEFAULT '0' NOT NULL,
+   reply_body mediumtext,
+   PRIMARY KEY (auto_reply_idnr)
 );
+# add an extra index to the table.
+ALTER TABLE auto_replies ADD INDEX user_idnr_index (user_idnr);
 
 DROP TABLE IF EXISTS pbsp;
 CREATE TABLE pbsp (
