@@ -214,6 +214,7 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 	 * finally construct a message by parsing ostream
 	 */
 	parser = g_mime_parser_new_with_stream(ostream);
+
 	switch (dbmail_message_get_class(self)) {
 		case DBMAIL_MESSAGE:
 			self->content = GMIME_OBJECT(g_mime_parser_construct_message(parser));
@@ -577,7 +578,9 @@ int dbmail_message_headers_cache(struct DbmailMessage *self)
 {
 	assert(self);
 	assert(self->physid);
+	db_begin_transaction();
 	g_mime_header_foreach(GMIME_OBJECT(self->content)->headers, _header_cache, self);
+	db_commit_transaction();
 	return 1;
 }
 
@@ -595,12 +598,13 @@ int db_header_get_id(const char *header, u64_t *id)
 			g_string_free(q,TRUE);
 			return -1;
 		}
+		*id = db_insert_result("headername_idnr");
 		g_string_free(q,TRUE);
-		*id = db_insert_result("headername");
 		return 1;
 	}
 	g_string_free(q,TRUE);
 	*id = db_get_result_u64(0,0);
+	db_free_result();
 	return 1;
 }
 
@@ -613,8 +617,8 @@ void _header_cache(const char *header, const char *value, gpointer user_data)
 	g_string_printf(q,"INSERT INTO %sheadervalue (headername_id, physmessage_id, headervalue)"
 			"VALUES (%llu,%llu,'%s')", DBPFX, id, self->physid, value);
 	if (db_query(q->str)) {
-		/* log and ignore error. Could be a re-run */
-		trace(TRACE_WARNING,"%s,%s: insert headervalue failed", __FILE__,__func__);
+		/* possible duplicate key collisions */
+		trace(TRACE_ERROR,"%s,%s: insert  headervalue failed", __FILE__,__func__);
 	}
 	g_string_free(q,TRUE);
 	
