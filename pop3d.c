@@ -161,7 +161,6 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 		
 	/* set stream to line buffered mode 
 	* this way when we send a newline the buffer is flushed */
-/*	setlinebuf(tx); */
 	setlinebuf(rx);
 
 	/* connect to the database */
@@ -184,7 +183,7 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 	sprintf (apop_stamp,"<%d.%u@%s>",getpid(),timestamp,myhostname);
 
 	/* sending greeting */
-	fprintf (tx,"+OK DBMAIL server ready %s\r\n",apop_stamp);
+	fprintf (tx,"+OK DBMAIL server v$revision$ ready %s\r\n",apop_stamp);
 	fflush (tx);
 			
 	/* no errors yet */
@@ -202,7 +201,11 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 		else 
 		{
 			alarm (server_timeout);  
+			/* handle pop3 commands */
 			done = pop3(tx,buffer); 
+			/* cleanup the buffer */
+			memset (buffer, '\0', INCOMING_BUFFER_SIZE);
+			/* reset the timeout counter */
 			alarm (server_timeout); 
 		}
 	fflush (tx);
@@ -214,21 +217,28 @@ int handle_client(char *myhostname, int c, struct sockaddr_in adr_clnt)
 	/* memory cleanup */
 	free(buffer);
 
-	if (done < 0)
+	if (done == -3)
 	{
-		trace (TRACE_ERROR,"handle_client(): timeout, connection terminated");
-		fclose(tx);
+		trace (TRACE_ERROR,"handle_client(): alert: possible flood attempt, closing connection.");
+		fclose (tx);
 		shutdown (fileno(rx), SHUT_RDWR);
 		fclose(rx);
 	}
-	else
-	{
-		if (username == NULL)
-			trace (TRACE_ERROR,"handle_client(): error, uncomplete session");
+	else if (done < 0)
+		{
+			trace (TRACE_ERROR,"handle_client(): timeout, connection terminated");
+			fclose(tx);
+			shutdown (fileno(rx), SHUT_RDWR);
+			fclose(rx);
+		}
 		else
-			trace(TRACE_MESSAGE,"handle_client(): user %s logging out [message=%lu, octets=%lu]",
-				username, curr_session.virtual_totalmessages,
-				curr_session.virtual_totalsize);
+		{
+			if (username == NULL)
+				trace (TRACE_ERROR,"handle_client(): error, uncomplete session");
+			else
+				trace(TRACE_MESSAGE,"handle_client(): user %s logging out [message=%lu, octets=%lu]",
+					username, curr_session.virtual_totalmessages,
+					curr_session.virtual_totalsize);
 
 		/* if everything went well, write down everything and do a cleanup */
 		db_update_pop(&curr_session);
@@ -307,6 +317,7 @@ int main (int argc, char *argv[])
 		else
 				resolve_client = 0;
 		free(resolve_setting);
+		resolve_setting = NULL;
   }	
   
   if (timeout_setting) 
@@ -316,6 +327,7 @@ int main (int argc, char *argv[])
 	  if (server_timeout<10)
 		  trace (TRACE_STOP,"main(): POP3D_CHILD_TIMEOUT setting is insane [%d]",
 				  server_timeout);
+	  timeout_setting = NULL;
   }
   else
 	  server_timeout = DEFAULT_SERVER_TIMEOUT;

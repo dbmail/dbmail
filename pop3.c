@@ -1,14 +1,17 @@
 /* $Id$
  * (c) 2000-2001 IC&S, The Netherlands
  * 
- * implementation for pop3 commands accoording to RFC 1081 */
+ * implementation for pop3 commands according to RFC 1081 */
 
 #include "config.h"
 #include "pop3.h"
 #include "dbmysql.h"
 
 /* max_errors defines the maximum number of allowed failures */
-#define MAX_ERRORS 10
+#define MAX_ERRORS 3
+/* max_in_buffer defines the maximum number of bytes that are allowed to be 
+ * in the incoming buffer */
+#define MAX_IN_BUFFER 100
 
 extern int state; /* tells the current negotiation state of the server */
 extern char *username, *password; /* session username and password */
@@ -58,10 +61,16 @@ int pop3 (void *stream, char *buffer)
   struct element *tmpelement;
   char *md5_apop_he;
   char *searchptr;
-	
+
+  /* buffer overflow attempt */
+  if (strlen(buffer)>MAX_IN_BUFFER)
+	  return -3;
+  
+  /* check for command issued */
   while (strchr(validchars, buffer[indx]))
     indx++;
 
+  /* split buffer into 2 parts */
   buffer[indx]='\0';
 	
   trace(TRACE_DEBUG,"pop3(): incoming buffer: [%s]",buffer);
