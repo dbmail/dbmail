@@ -51,9 +51,9 @@ stamps:
 	
 configure: stamps/configure
 stamps/configure: 
-	for file in config.in aclocal.m4 configure `find . -name Makefile.in`; do \
-		test -e $$file.orig || mv -v $$file $$file.orig; \
-	done
+#	for file in config.in aclocal.m4 configure `find . -name Makefile.in`; do \
+#		test -e $$file.orig || mv -v $$file $$file.orig; \
+#	done
 	autoreconf -f -i
 	touch $@
 

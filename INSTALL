@@ -16,6 +16,8 @@ What do you need?
 - the DBMail source (www.dbmail.org)
 - GNU Make. On Linux systems, your standard 'make' program is GNU Make. On
   *BSD systems, make sure you install and use 'gmake'. 
+- development files (libs, scripts and include files) for your database 
+  server. These will probably be provided by separate packages.
 
 1.	Setup a database
 
@@ -28,8 +30,7 @@ What do you need?
 	-----------
 
 	Note: Since some DBMail tables can get VERY large (depending on your
-	mailusage) we advise using InnoDB as database storage backend
-	(included in the Mysql MAX package.).
+	mailusage) we advise using InnoDB as database storage backend.
 	
 	First you'll need to create the DBMail database in MYSQL. You can
 	do this by issueing the following command. This step is only
