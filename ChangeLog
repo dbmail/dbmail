@@ -1,3 +1,17 @@
+2004-10-14  Paul Stevens <paul@nfg.nl>
+
+	* acconfig.h: removed.
+	* acinclude.m4: applied Gerrit Haase's cleanup patch.
+	* Makefile.in, config.in, configure, aclocal.m4: rerun of autoreconf.
+
+2004-10-13  Paul Stevens <paul@nfg.nl>
+
+	* dbmail-message.c: convert all messages to crlf->lf before insertion.
+	* imaputil.c,imaputil.h (dbmail_imap_astring_as_string,
+	dbmail_imap_plist_as_string): return char * instead of GString *.
+	* imapcommands.c: some further cleanups of _ic_list. Also fixed
+	signedness in calls to perform_imap_search.
+
 2004-10-13  Ilja Booij  <ilja@ic-s.nl>
 
 	* INSTALL.postfix: fixed typo. (closes #101).
