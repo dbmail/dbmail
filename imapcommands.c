@@ -1893,7 +1893,8 @@ int _ic_fetch(char *tag, char **args, ClientInfo *ci)
 
 		  cached_msg.msg_parsed = 1;
 		  cached_msg.num = thisnum;
-		  db_msgdump(&cached_msg.msg, thisnum, 0);
+		  trace(TRACE_DEBUG, "ic_fetch(): size of parsed msg: %d\n",
+			db_msgdump(&cached_msg.msg, thisnum, 0));
 		}
 
 	      if (fi->getInternalDate)

@@ -22,8 +22,13 @@
 
 #define MAX_EMAIL_SIZE 250
 
-/* used only locally, copied from imaputil.c */
+extern const char *month_desc[];
+
+/* used only locally */
 int db_binary_search(const unsigned long *array, int arraysize, unsigned long key);
+int db_exec_search(mime_message_t *msg, search_key_t *sk, unsigned long msguid);
+int db_search_range(db_pos_t start, db_pos_t end, const char *key, unsigned long msguid);
+int num_from_imapdate(const char *date);
 
 MYSQL conn;  
 MYSQL_RES *res,*_msg_result;
@@ -3484,12 +3489,14 @@ int db_parse_as_text(mime_message_t *msg)
  * db_msgdump()
  *
  * dumps a message to stderr
+ * returns the size (in bytes) that the message occupies in memory
  */
 int db_msgdump(mime_message_t *msg, unsigned long msguid, int level)
 {
   struct element *curr;
   struct mime_record *mr;
   char *spaces;
+  int size = sizeof(mime_message_t);
 
   if (level < 0)
     return 0;
@@ -3505,7 +3512,7 @@ int db_msgdump(mime_message_t *msg, unsigned long msguid, int level)
     return 0;
 
   memset(spaces, ' ', 3*level);
-  spaces[2*level] = 0;
+  spaces[3*level] = 0;
 
 
   trace(TRACE_DEBUG,"%sMIME-header: \n",spaces);
@@ -3519,6 +3526,7 @@ int db_msgdump(mime_message_t *msg, unsigned long msguid, int level)
 	  mr = (struct mime_record *)curr->data;
 	  trace(TRACE_DEBUG,"%s%s[%s] : [%s]\n",spaces,spaces,mr->field, mr->value);
 	  curr = curr->nextnode;
+	  size += sizeof(struct mime_record);
 	}
     }
   trace(TRACE_DEBUG,"%s*** MIME-header end\n",spaces);
@@ -3534,6 +3542,7 @@ int db_msgdump(mime_message_t *msg, unsigned long msguid, int level)
 	  mr = (struct mime_record *)curr->data;
 	  trace(TRACE_DEBUG,"%s%s[%s] : [%s]\n",spaces,spaces,mr->field, mr->value);
 	  curr = curr->nextnode;
+	  size += sizeof(struct mime_record);
 	}
     }
   trace(TRACE_DEBUG,"%s*** RFC822-header end\n",spaces);
@@ -3555,13 +3564,13 @@ int db_msgdump(mime_message_t *msg, unsigned long msguid, int level)
   curr = list_getstart(&msg->children);
   while (curr)
     {
-      db_msgdump((mime_message_t*)curr->data,msguid,level+1);
+      size += db_msgdump((mime_message_t*)curr->data,msguid,level+1);
       curr = curr->nextnode;
     }
   trace(TRACE_DEBUG,"%s*** child list end\n",spaces);
 
   free(spaces);
-  return 1;
+  return size;
 }
 
 
@@ -3677,6 +3686,104 @@ long db_dump_range(FILE *outstream, db_pos_t start, db_pos_t end, unsigned long 
 
 
 /*
+ * searches the given range within a msg for key
+ */
+int db_search_range(db_pos_t start, db_pos_t end, const char *key, unsigned long msguid)
+{
+  int i,startpos,endpos,j;
+  int distance;
+
+  if (start.block > end.block)
+    {
+      trace(TRACE_ERROR,"db_search_range(): bad range specified\n");
+      return 0;
+    }
+
+  if (start.block == end.block && start.pos > end.pos)
+    {
+      trace(TRACE_ERROR,"db_search_range(): bad range specified\n");
+      return 0;
+    }
+
+  snprintf(query, DEF_QUERYSIZE, "SELECT messageblk FROM messageblk WHERE messageidnr = %lu"
+	   " ORDER BY messageblknr", 
+	   msguid);
+
+  if (db_query(query) == -1)
+    {
+      trace(TRACE_ERROR, "db_search_range(): could not get message\n");
+      return 0;
+    }
+
+  if ((res = mysql_store_result(&conn)) == NULL)
+    {
+      trace(TRACE_ERROR,"db_search_range(): mysql_store_result failed: %s\n",mysql_error(&conn));
+      return 0;
+    }
+
+  for (row = mysql_fetch_row(res), i=0; row && i < start.block; i++, row = mysql_fetch_row(res)) ;
+      
+  if (!row)
+    {
+      trace(TRACE_ERROR,"db_search_range(): bad range specified\n");
+      mysql_free_result(res);
+      return 0;
+    }
+
+  /* just one block? */
+  if (start.block == end.block)
+    {
+      for (i=start.pos; i<=end.pos-strlen(key); i++)
+	{
+	  if (strncasecmp(&row[0][i], key, strlen(key)) == 0)
+	    {
+	      mysql_free_result(res);
+	      return 1;
+	    }
+	}
+
+      mysql_free_result(res);
+      return 0;
+    }
+
+
+  /* 
+   * multiple block range specified
+   */
+  
+  for (i=start.block; i<=end.block; i++)
+    {
+      if (!row)
+	{
+	  trace(TRACE_ERROR,"db_search_range(): bad range specified\n");
+	  mysql_free_result(res);
+	  return 0;
+	}
+
+      startpos = (i == start.block) ? start.pos : 0;
+      endpos   = (i == end.block) ? end.pos+1 : (mysql_fetch_lengths(res))[0];
+
+      distance = endpos - startpos;
+
+      for (j=0; j<distance-strlen(key); j++)
+	{
+	  if (strncasecmp(&row[0][i], key, strlen(key)) == 0)
+	    {
+	      mysql_free_result(res);
+	      return 1;
+	    }
+	}
+	
+      row = mysql_fetch_row(res); /* fetch next row */
+    }
+
+  mysql_free_result(res);
+
+  return 0;
+}
+
+
+/*
  * db_mailbox_msg_match()
  *
  * checks if a msg belongs to a mailbox 
@@ -3760,6 +3867,184 @@ int db_search(int *rset, int setlen, const char *key, mailbox_t *mb)
   mysql_free_result(res);
   return 0;
 }
+
+
+
+/*
+ * db_search_parsed()
+ *
+ * searches messages in mailbox mb matching the specified criterion.
+ * to be used with search keys that require message parsing
+ */
+int db_search_parsed(int *rset, int setlen, search_key_t *sk, mailbox_t *mb)
+{
+  int i,result;
+  mime_message_t msg;
+
+  if (mb->exists != setlen)
+    return 1;
+
+  memset(rset, 0, sizeof(int)*setlen);
+
+  for (i=0; i<setlen; i++)
+    {
+      memset(&msg, 0, sizeof(msg));
+
+      result = db_fetch_headers(mb->seq_list[i], &msg);
+      if (result != 0)
+	continue; /* ignore parse errors */
+
+      if (sk->type == IST_SIZE_LARGER)
+	{
+	  rset[i] = ((msg.rfcheadersize + msg.bodylines + msg.bodysize) > sk->size) ? 1 : 0;
+	}
+      else if (sk->type == IST_SIZE_SMALLER)
+	{
+	  rset[i] = ((msg.rfcheadersize + msg.bodylines + msg.bodysize) < sk->size) ? 1 : 0;
+	}
+      else
+	{
+	  rset[i] = db_exec_search(&msg, sk, mb->seq_list[i]);
+	}
+
+      db_free_msg(&msg);
+    }
+
+  return 0;
+}
+
+
+/*
+ * recursively executes a search on the body of a message;
+ *
+ * returns 1 if the msg matches, 0 if not
+ */
+int db_exec_search(mime_message_t *msg, search_key_t *sk, unsigned long msguid)
+{
+  struct element *el;
+  struct mime_record *mr;
+  int i,givendate,sentdate;
+
+  if (!sk->search)
+    return 0;
+
+  switch (sk->type)
+    {
+    case IST_HDR:
+      if (list_getstart(&msg->mimeheader))
+	{
+	  mime_findfield(sk->hdrfld, &msg->mimeheader, &mr);
+	  if (mr)
+	    {
+	      for (i=0; mr->value[i]; i++)
+		if (strncasecmp(&mr->value[i], sk->search, strlen(sk->search)) == 0)
+		  return 1;
+	    }
+	}
+      if (list_getstart(&msg->rfcheader))
+	{
+	  mime_findfield(sk->hdrfld, &msg->rfcheader, &mr);
+	  if (mr)
+	    {
+	      for (i=0; mr->value[i]; i++)
+		if (strncasecmp(&mr->value[i], sk->search, strlen(sk->search)) == 0)
+		  return 1;
+	    }
+	}
+
+      break;
+
+    case IST_HDRDATE_BEFORE:
+    case IST_HDRDATE_ON: 
+    case IST_HDRDATE_SINCE:
+      /* do not check children */
+      if (list_getstart(&msg->rfcheader))
+	{
+	  mime_findfield("date", &msg->rfcheader, &mr);
+	  if (mr && strlen(mr->value) >= strlen("Day, d mon yyyy "))
+	                                      /* 01234567890123456 */     
+	    {
+	      givendate = num_from_imapdate(sk->search);
+
+	      if (mr->value[6] == ' ')
+		mr->value[15] = 0;
+	      else
+		mr->value[16] = 0;
+
+	      sentdate = num_from_imapdate(&mr->value[5]);
+
+	      switch (sk->type)
+		{
+		case IST_HDRDATE_BEFORE: return sentdate < givendate;
+		case IST_HDRDATE_ON:     return sentdate == givendate;
+		case IST_HDRDATE_SINCE:  return sentdate > givendate;
+		}
+	    }
+	}
+      return 0;
+
+    case IST_DATA_TEXT:
+      el = list_getstart(&msg->rfcheader);
+      while (el)
+	{
+	  mr = (struct mime_record*)el->data;
+	  
+	  for (i=0; mr->field[i]; i++)
+	    if (strncasecmp(&mr->field[i], sk->search, strlen(sk->search)) == 0)
+	      return 1;
+
+	  for (i=0; mr->value[i]; i++)
+	    if (strncasecmp(&mr->value[i], sk->search, strlen(sk->search)) == 0)
+	      return 1;
+	  
+	  el = el->nextnode;
+	}
+
+      el = list_getstart(&msg->mimeheader);
+      while (el)
+	{
+	  mr = (struct mime_record*)el->data;
+	  
+	  for (i=0; mr->field[i]; i++)
+	    if (strncasecmp(&mr->field[i], sk->search, strlen(sk->search)) == 0)
+	      return 1;
+
+	  for (i=0; mr->value[i]; i++)
+	    if (strncasecmp(&mr->value[i], sk->search, strlen(sk->search)) == 0)
+	      return 1;
+	  
+	  el = el->nextnode;
+	}
+
+    case IST_DATA_BODY: 
+      /* only check body if there are no children */
+      if (list_getstart(&msg->children))
+	break;
+
+      /* only check text bodies */
+      mime_findfield("content-type", &msg->mimeheader, &mr);
+      if (mr && strncasecmp(mr->value, "text", 4) != 0)
+	break;
+	
+      mime_findfield("content-type", &msg->rfcheader, &mr);
+      if (mr && strncasecmp(mr->value, "text", 4) != 0)
+	break;
+	
+      return db_search_range(msg->bodystart, msg->bodyend, sk->search, msguid);
+   }  
+
+  /* no match found yet, try the children */
+  el = list_getstart(&msg->children);
+  while (el)
+    {
+      if (db_exec_search((mime_message_t*)el->data, sk, msguid) == 1)
+	return 1;
+      
+      el = el->nextnode;
+    }
+  return 0;
+}
+
 
 /*
  * db_search_messages()
@@ -3910,3 +4195,51 @@ int db_binary_search(const unsigned long *array, int arraysize, unsigned long ke
 
   return -1; /* not found */
 }
+
+
+/* 
+ * converts an IMAP date to a number (strictly ascending in date)
+ * valid IMAP dates:
+ * d-mon-yyyy or dd-mon-yyyy; '-' may be a space
+ *               01234567890
+ */
+int num_from_imapdate(const char *date)
+{
+  int j=0,i;
+  char datenum[] = "YYYYMMDD";
+  char sub[4];
+
+  if (date[1] == ' ' || date[1] == '-')
+    j = 1;
+
+  strncpy(datenum, &date[7-j], 4);
+
+  strncpy(sub, &date[3-j], 3);
+  sub[3] = 0;
+
+  for (i=0; i<12; i++)
+    {
+      if (strcasecmp(sub, month_desc[i]) == 0)
+	break;
+    }
+
+  i++;
+  if (i > 12)
+    i = 12;
+
+  sprintf(&datenum[4], "%02d", i);
+
+  if (j)
+    {
+      datenum[6] = '0';
+      datenum[7] = date[0];
+    }
+  else
+    {
+      datenum[6] = date[0];
+      datenum[7] = date[1];
+    }
+
+  return atoi(datenum);
+}
+  

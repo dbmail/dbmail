@@ -33,6 +33,8 @@ extern cache_t cached_msg;
 extern const char AcceptedChars[];
 extern const char AcceptedTagChars[];
 extern const char AcceptedMailboxnameChars[];
+extern const char *month_desc[];
+
 
 char base64encodestring[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
@@ -41,11 +43,6 @@ char _imapdate[IMAP_INTERNALDATE_LEN] = "03-Nov-1979 00:00:00";
 
 /* returned by date_imap2sql() */
 char _sqldate[] = "1979-11-03 00:00:00";
-
-const char *month_desc[]= 
-{ 
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-};
 
 const int month_len[]=
 {
@@ -2422,6 +2419,16 @@ int perform_imap_search(int *rset, int setlen, search_key_t *sk, mailbox_t *mb)
     case IST_HDRDATE_BEFORE:
     case IST_HDRDATE_ON: 
     case IST_HDRDATE_SINCE:
+    case IST_DATA_BODY: 
+    case IST_DATA_TEXT: 
+    case IST_SIZE_LARGER: 
+    case IST_SIZE_SMALLER: 
+      /* these all have in common that a message should be parsed before 
+	 matching is possible
+       */
+      result = db_search_parsed(rset, setlen, sk, mb);
+      break;
+
     case IST_IDATE: 
       result = db_search(rset, setlen, sk->search, mb);
       if (result != 0)
@@ -2431,12 +2438,6 @@ int perform_imap_search(int *rset, int setlen, search_key_t *sk, mailbox_t *mb)
 	}
       break;
 		
-    case IST_DATA_BODY: 
-    case IST_DATA_TEXT: 
-    case IST_SIZE_LARGER: 
-    case IST_SIZE_SMALLER: 
-      break;
-
     case IST_SUBSEARCH_NOT:
     case IST_SUBSEARCH_AND: 
       subtype = IST_SUBSEARCH_AND;
