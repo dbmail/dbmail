@@ -239,7 +239,7 @@ int insert_messages(char *header, unsigned long headersize, struct list *users)
       tmp=tmp->nextnode;
     }
 
-  trace(TRACE_MESSAGE,"insert_messages(): we need to deliver [%lu] messages to external addresses",
+  trace(TRACE_DEBUG,"insert_messages(): we need to deliver [%lu] messages to external addresses",
 	list_totalnodes(&external_forwards));
 	
   

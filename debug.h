@@ -11,7 +11,7 @@
 #define TRACE_TO_SYSLOG 1
 #define TRACE_VERBOSE 1
 
-#define TRACE_LEVEL  5  /* 5 maximum debugging */
+#define TRACE_LEVEL  2  /* 5 maximum debugging */
 /* #define TRACE_LEVEL 2 */ /* normal operations */
 
 #define TRACE_FATAL -1

@@ -14,7 +14,7 @@ void func_memtst (char filename[255],int line,int tst)
 void trace (int level, const char *formatstring, ...)
 {
   va_list argp;
-
+  
   va_start(argp, formatstring);
 
   if (level <= TRACE_LEVEL)
