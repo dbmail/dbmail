@@ -2353,7 +2353,7 @@ int perform_imap_search(unsigned int *rset, int setlen, search_key_t * sk,
 		return -2;	/* stupidity */
 
 	if (!sk)
-		return 0;	/* no search */
+		return -2;	/* no search */
 
 	newset = (int *)g_malloc0(sizeof(int) * setlen);
 	
