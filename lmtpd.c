@@ -176,8 +176,6 @@ int main(int argc, char *argv[])
 		config.timeoutMsg = LMTP_TIMEOUT_MSG;
 
 		CreateSocket(&config);
-		trace(TRACE_DEBUG,
-		      "main(): socket created, starting server");
 
 		switch ((pid = fork())) {
 		case -1:
