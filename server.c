@@ -66,7 +66,7 @@ int SetParentSigHandler()
 
 	act.sa_sigaction = ParentSigHandler;
 	sigemptyset(&act.sa_mask);
-	act.sa_flags = SA_SIGINFO;
+	act.sa_flags = SA_SIGINFO; 
 
 	sigaction(SIGCHLD, &act, 0);
 	sigaction(SIGINT, &act, 0);

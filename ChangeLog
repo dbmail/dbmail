@@ -1,5 +1,9 @@
 2004-04-05  Ilja Booij  <ilja@ic-s.nl>
 
+	* serverchild.c (SetChildSigHandler): add handler for SIGCHLD
+	(ChildSigHandler): add case in switch for handling SIGCHLD, by
+	just ignoring it!
+
 	* db.c (db_insert_message_block_physmessage): added a memset() to
 	clear the escaped_query string before using it.
 

@@ -71,8 +71,13 @@ void ChildSigHandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
 	trace(TRACE_ERROR, "ChildSighandler(): got signal [%d]", sig);
 #endif
 
-	/* perform reinit at SIGHUP otherwise exit */
+	/* perform reinit at SIGHUP otherwise exit, but do nothing on
+	 *  SIGCHLD*/
 	switch (sig) {
+	case SIGCHLD:
+		trace(TRACE_DEBUG, "ChildSighandler(): SIGCHLD received..."
+		      "ignoring");
+		break;
 	case SIGALRM:
 		trace(TRACE_DEBUG, "ChildSighandler(): timeout received");
 
@@ -135,7 +140,6 @@ void ChildSigHandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
 		      "ChildSighandler(): setting stop request");
 		ChildStopRequested = 1;
 		break;
-
 	default:
 		/* bad shtuff, exit */
 		trace(TRACE_DEBUG,
@@ -210,6 +214,7 @@ int SetChildSigHandler()
 	sigaction(SIGTERM, &act, 0);
 	sigaction(SIGHUP, &act, 0);
 	sigaction(SIGALRM, &act, 0);
+	sigaction(SIGCHLD, &act, 0);
 
 	return 0;
 }
