@@ -686,6 +686,9 @@ int db_insert_message(u64_t user_idnr,
 	u64_t physmessage_id;
 	int result;
 
+	assert(message_idnr);
+	assert(unique_id);
+
 	if (!mailbox)
 		mailbox = strdup("INBOX");
 
