@@ -181,12 +181,12 @@ int mime_list(char *blkdata, struct list *mimelist)
 int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist, unsigned long *headersize)
 {
   int valid_mime_lines=0,idx,totallines=0,j;
-  unsigned fieldlen,vallen;
-  unsigned long saved_idx = *blkidx;
+  unsigned fieldlen,vallen,prevlen,new_add=1;
+/*  unsigned long saved_idx = *blkidx; only needed if we bail out on invalid data */
 	
   char *endptr, *startptr, *delimiter;
-  struct mime_record *mr;
-  struct element *el;   
+  struct mime_record *mr,*prev_mr=NULL;
+  struct element *el = NULL;   
 	
   trace (TRACE_DEBUG, "mime_readheader(): entering mime loop\n");
 
@@ -237,10 +237,9 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist,
       /* endptr points to linebreak now */
       /* MIME field+value is string from startptr till endptr */
 
-      *endptr = '\0'; /* replace newline to terminated string */
+      *endptr = '\0'; /* replace newline to terminate string */
 
-/*      trace(TRACE_DEBUG,"mime_readheader(): captured array [%s]\n",startptr); 
-*/
+
       /* parsing tmpstring for field and data */
       /* field is name:value */
 
@@ -306,38 +305,87 @@ int mime_readheader(char *blkdata, unsigned long *blkidx, struct list *mimelist,
 
 	  /* restore blkdata */
 	  *delimiter = ':';
-	  *endptr = '\n';
-
-	  *blkidx += (endptr-startptr);
-	  (*blkidx)++;
-
-	  startptr = endptr+1; /* advance to next field */
-
-	  if (*startptr == '\n')
+	}
+      else
+	{
+	  /* 
+	   * ok invalid mime header, what now ? 
+	   * just add it with an empty field name EXCEPT
+	   * when the previous stored field value ends on a ';'
+	   * in this case probably someone forget to place a \t on the next line
+	   * then we will try to add it to the previous element
+	   */
+	   
+	  new_add = 1;
+	  if (el)
 	    {
-	      /* end of header: double newline */
-	      totallines++;
-	      (*blkidx)++;
-	      (*headersize)+=2;
-	      trace(TRACE_DEBUG,"mime_readheader(): found double newline; header size: %d lines\n",
-		    totallines);
-	      free(mr);
-	      return totallines;
+	      prev_mr = (struct mime_record*)(el->data);
+	      prevlen = strlen(prev_mr->value);
+	      
+	      new_add = (prev_mr->value[prevlen-1] == ';') ? 0 : 1;
+	    }
+	  
+	  if (new_add)
+	    {
+	      /* add a new field with no name */
+	      strcpy(mr->field, "");
+	      vallen = snprintf(mr->value, MIME_VALUE_MAX, "%s", startptr);
+
+	      if (vallen < 0 || vallen >= MIME_VALUE_MAX)
+		*headersize += MIME_VALUE_MAX;
+	      else
+		*headersize += vallen;
+	      
+	      *headersize += 4; /* <field>: <value>\r\n --> four more */
+	      
+	      el = list_nodeadd(mimelist,mr,sizeof (*mr));
+
+	      if (!el)
+		{
+		  trace(TRACE_ERROR, "mime_readheader(): cannot add element to list\n");
+		  free(mr);
+		  return -1;
+		}
+	    }
+	  else
+	    {
+	      /* try to add the value to the previous one */
+	      if (prevlen < MIME_VALUE_MAX - (strlen(startptr) + 4))
+		{
+		  prev_mr->value[prevlen] = '\n';
+		  prev_mr->value[prevlen+1] = '\t';
+
+		  strcpy(&prev_mr->value[prevlen+2], startptr);
+
+		  *headersize += (strlen(startptr) + 2); 
+		}
+	      else
+		{
+		  trace(TRACE_WARNING,"mime_readheader(): failed adding data (length would exceed "
+			"MIME_VALUE_MAX [currently %d])\n",MIME_VALUE_MAX);
+		}
 	    }
 	}
-      else 
-	{
-	  /* no field/value delimiter found, non-valid MIME-header */
-	  free(mr);
-	  trace(TRACE_DEBUG,"Non valid mimeheader found, data [%s]\nfreeing list...\n",startptr);
-	  list_freelist(&mimelist->start);
-	  mimelist->total_nodes = 0;
 
-	  /* restore state */
-	  *blkidx = saved_idx;
-	  *headersize = 0;
-	  return -1;
+      *endptr = '\n'; /* restore blkdata */
+
+      *blkidx += (endptr-startptr);
+      (*blkidx)++;
+
+      startptr = endptr+1; /* advance to next field */
+      
+      if (*startptr == '\n')
+	{
+	  /* end of header: double newline */
+	  totallines++;
+	  (*blkidx)++;
+	  (*headersize)+=2;
+	  trace(TRACE_DEBUG,"mime_readheader(): found double newline; header size: %d lines\n",
+		totallines);
+	  free(mr);
+	  return totallines;
 	}
+
     }
 
   free(mr); /* no longer need this */

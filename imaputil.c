@@ -71,13 +71,17 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg, int show_extension_
   struct list *header_to_use;
   mime_message_t rfcmsg;
   char *subtype,*extension,*newline;
+  int is_mime_multipart = 0, is_rfc_multipart = 0;
 
   fprintf(outstream,"(");
 
-  mime_findfield("content-type", &msg->rfcheader, &mr);
+  mime_findfield("content-type", &msg->mimeheader, &mr);
+  is_mime_multipart = (mr && strncasecmp(mr->value,"multipart", strlen("multipart")) == 0);
 
-  if (msg->mimeheader.start != NULL || !mr ||
-      (mr && strncasecmp(mr->value,"multipart", strlen("multipart")) != 0))
+  mime_findfield("content-type", &msg->rfcheader, &mr);
+  is_rfc_multipart = (mr && strncasecmp(mr->value,"multipart", strlen("multipart")) == 0);
+
+  if (!is_rfc_multipart && !is_mime_multipart)
     {
       /* show basic fields:
        * content-type, content-subtype, (parameter list), 
@@ -203,8 +207,7 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg, int show_extension_
   else
     {
       /* check for a multipart message */
-      mime_findfield("content-type", &msg->rfcheader, &mr);
-      if (mr && strncasecmp(mr->value,"multipart", strlen("multipart")) == 0)
+      if (is_rfc_multipart || is_mime_multipart)
 	{
 	  curr = list_getstart(&msg->children);
 	  while (curr)
@@ -217,6 +220,11 @@ int retrieve_structure(FILE *outstream, mime_message_t *msg, int show_extension_
 	    }
 
 	  /* show multipart subtype */
+	  if (is_mime_multipart)
+	    mime_findfield("content-type", &msg->mimeheader, &mr);
+	  else
+	    mime_findfield("content-type", &msg->rfcheader, &mr);
+
 	  subtype = strchr(mr->value, '/');
 	  extension = strchr(subtype, ';');
 	  
@@ -1151,7 +1159,7 @@ int check_state_and_args(const char *command, const char *tag, char **args,
 	{
 	  if (!(state == IMAPCS_AUTHENTICATED && ud->state == IMAPCS_SELECTED))
 	    {
-	      fprintf(ci->tx,"%s BAD %s command received in invalid state\n", tag, command);
+	      fprintf(ci->tx,"%s BAD %s command received in invalid state\r\n", tag, command);
 	      return 0;
 	    }
 	}
@@ -1163,7 +1171,7 @@ int check_state_and_args(const char *command, const char *tag, char **args,
       if (!args[i])
 	{
 	  /* error: need more args */
-	  fprintf(ci->tx,"%s BAD missing argument%s to %s\n", tag, 
+	  fprintf(ci->tx,"%s BAD missing argument%s to %s\r\n", tag, 
 		  (nargs == 1) ? "" : "(s)", command);
 	  return 0;
 	}
@@ -1174,7 +1182,7 @@ int check_state_and_args(const char *command, const char *tag, char **args,
   if (i > nargs)
     {
       /* error: too many args */
-      fprintf(ci->tx,"%s BAD too many arguments to %s\n",tag, command);
+      fprintf(ci->tx,"%s BAD too many arguments to %s\r\n",tag, command);
       return 0;
     }
 
@@ -1761,7 +1769,9 @@ int quoted_string_out(FILE *outstream, const char *s)
 
   for (i=0; s[i]; i++)
     {
-      if (s[i] == '"' || s[i] == '\\')
+      if (iscntrl(s[i]) || s[i] == (char)0xFF)
+	cnt += fprintf(outstream,"%%%02X",s[i]);
+      else if (s[i] == '"' || s[i] == '\\')
 	cnt += fprintf(outstream, "\\%c",s[i]);
       else
 	cnt += fprintf(outstream, "%c", s[i]);

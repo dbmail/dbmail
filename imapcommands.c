@@ -938,7 +938,7 @@ int _ic_subscribe(char *tag, char **args, ClientInfo *ci)
   if (mboxid == 0)
     {
       /* mailbox does not exist */
-      fprintf(ci->tx,"%s NO mailbox does not exist\n", tag);
+      fprintf(ci->tx,"%s NO mailbox does not exist\r\n", tag);
       return 0;
     }
 
@@ -976,7 +976,7 @@ int _ic_unsubscribe(char *tag, char **args, ClientInfo *ci)
   if (mboxid == 0)
     {
       /* mailbox does not exist */
-      fprintf(ci->tx,"%s NO mailbox does not exist\n", tag);
+      fprintf(ci->tx,"%s NO mailbox does not exist\r\n", tag);
       return 0;
     }
 

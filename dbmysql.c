@@ -3166,10 +3166,12 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
 {
   mime_message_t part;
   struct mime_record *mr;
-  int sblen,nlines,totallines = 0;
+  int sblen,nlines,totallines = 0,len;
   unsigned long dummy;
+  char *bptr,*newbound;
 
   trace(TRACE_DEBUG,"db_add_mime_children(): starting, splitbound: '%s'\n",splitbound);
+  sblen = strlen(splitbound);
 
   do
     {
@@ -3200,13 +3202,108 @@ int db_add_mime_children(struct list *brothers, char *splitbound)
 	  totallines += nlines;
 	  part.mimerfclines = nlines;
 	}
+      else if (mr && strncasecmp(mr->value, "multipart", strlen("multipart")) == 0)
+	{
+	  trace(TRACE_DEBUG,"db_add_mime_children(): found a MIME multipart sub message\n");
+
+	  /* multipart msg, find new boundary */
+	  for (bptr = mr->value; *bptr; bptr++) 
+	    if (strncasecmp(bptr, "boundary=", sizeof("boundary=")-1) == 0)
+	      break;
+
+	  if (!bptr)
+	    {
+	      trace(TRACE_ERROR, "db_add_mime_children(): could not find a new msg-boundary\n");
+	      return -1; /* no new boundary ??? */
+	    }
+
+	  bptr += sizeof("boundary=")-1;
+	  if (*bptr == '\"')      
+	    bptr++;
+
+	  newbound = bptr;
+	  while (*newbound && *newbound != '\"' && !isspace(*newbound)) newbound++;
+
+	  len = newbound - bptr;
+	  if (!(newbound = (char*)malloc(len+1)))
+	    {
+	      trace(TRACE_ERROR, "db_add_mime_children(): out of memory\n");
+	      return -1;
+	    }
+
+	  strncpy(newbound, bptr, len);
+	  newbound[len] = '\0';
+
+	  trace(TRACE_DEBUG,"db_add_mime_children(): found new boundary: [%s], msgidx %lu\n",
+		newbound,msgidx);
+
+
+	  /* advance to first boundary */
+	  if (db_update_msgbuf(MSGBUF_FORCE_UPDATE) == -1)
+	    {
+	      trace(TRACE_ERROR, "db_add_mime_children(): error updating msgbuf\n");
+	      free(newbound);
+	      return -1;
+	    }
+
+	  while (msgbuf[msgidx])
+	    {
+	      if (strncmp(&msgbuf[msgidx], newbound, strlen(newbound)) == 0)
+		break;
+
+	      if (msgbuf[msgidx] == '\n')
+		{
+		  totallines++;
+		  part.bodylines++;
+		}
+
+	      msgidx++;
+	    }
+
+	  if (!msgbuf[msgidx])
+	    {
+	      trace(TRACE_ERROR, "db_add_mime_children(): unexpected end-of-data\n");
+	      free(newbound);
+	      return -1;
+	    }
+
+	  msgidx += strlen(newbound);   /* skip the boundary */
+	  msgidx++;                     /* skip \n */
+	  totallines++;                 /* and count it */
+	  part.bodylines++;
+	  db_give_msgpos(&part.bodystart); /* remember position */
+
+	  if ((nlines = db_add_mime_children(&part.children, newbound)) == -1)
+	    {
+	      trace(TRACE_ERROR, "db_add_mime_children(): error adding mime children\n");
+	      free(newbound);
+	      return -1;
+	    }
+	  
+	  free(newbound);
+	  msgidx += sblen+2; /* skip splitbound */
+
+	  if (msgidx > 0)
+	    {
+	      /* walk back because bodyend is inclusive */
+	      msgidx--;
+	      db_give_msgpos(&part.bodyend);
+	      msgidx++;
+	    }
+	  else
+	    db_give_msgpos(&part.bodyend); /* this case should never happen... */
+
+
+	  part.bodysize = db_give_range_size(&part.bodystart, &part.bodyend);
+	  part.bodylines += nlines;
+	  totallines += nlines;
+	}
       else
 	{
 	  trace(TRACE_DEBUG,"db_add_mime_children(): expecting body data...\n");
 
 	  /* just body data follows, advance to splitbound */
 	  db_give_msgpos(&part.bodystart);
-	  sblen = strlen(splitbound);
 
 	  while (msgbuf[msgidx])
 	    {

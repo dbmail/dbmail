@@ -139,7 +139,7 @@ int imap_process(ClientInfo *ci)
   if (init_cache() != 0)
     {
       trace(TRACE_ERROR, "IMAPD: cannot open temporary file\n");
-      fprintf(ci->tx, "BYE internal system failure\n");
+      fprintf(ci->tx, "BYE internal system failure\r\n");
 
       null_free(((imap_userdata_t*)ci->userData)->mailbox.seq_list);
       null_free(ci->userData);
@@ -198,7 +198,7 @@ int imap_process(ClientInfo *ci)
       if (!checkchars(line))
 	{
 	  /* foute tekens ingetikt */
-	  fprintf(ci->tx, "* BAD Input contains invalid characters\n");
+	  fprintf(ci->tx, "* BAD Input contains invalid characters\r\n");
 	  close_cache();
 	  db_disconnect();
 
@@ -215,7 +215,7 @@ int imap_process(ClientInfo *ci)
       
       if (!(*line))
 	{
-	  fprintf(ci->tx, "* BAD No tag specified\n");
+	  fprintf(ci->tx, "* BAD No tag specified\r\n");
 	  continue;
 	}
 	  
@@ -225,7 +225,16 @@ int imap_process(ClientInfo *ci)
       i = stridx(cpy,' '); /* find next space */
       if (i == strlen(cpy))
 	{
-	  fprintf(ci->tx, "* BAD No command specified\n");
+	  if (strcmp(cpy, "yeah!") == 0)
+	    fprintf(ci->tx,"* YEAH dbmail ROCKS sunnyboy!\r\n");
+	  else
+	    {
+	      if (checktag(cpy))
+		fprintf(ci->tx, "%s BAD No command specified\r\n",cpy);
+	      else
+		fprintf(ci->tx, "* BAD Invalid tag specified\r\n");
+	    }
+	      
 	  continue;
 	}
 
@@ -233,6 +242,13 @@ int imap_process(ClientInfo *ci)
       tag = cpy;           /* set tag */
       cpy[i] = '\0';
       cpy = cpy+i+1;       /* cpy points to command now */
+
+      /* check tag */
+      if (!checktag(tag))
+	{
+	  fprintf(ci->tx, "* BAD Invalid tag specified\r\n");
+	  continue;
+	}
 
       command = cpy;       /* set command */
       i = stridx(cpy,' '); /* find next space */
@@ -250,22 +266,7 @@ int imap_process(ClientInfo *ci)
 
       if (!args)
 	{
-	  fprintf(ci->tx,"* BAD Not enough memory OR invalid argument specified\n");
-	  continue;
-	}
-
-      /* check tag */
-      if (!checktag(tag))
-	{
-	  fprintf(ci->tx, "* BAD Invalid tag specified\n");
-	  
-	  /* free used memory */
-	  for (i=0; args[i]; i++) 
-	    {
-	      free(args[i]);
-	      args[i] = NULL;
-	    }
-
+	  fprintf(ci->tx,"%s BAD invalid argument specified\r\n",tag);
 	  continue;
 	}
 
@@ -274,7 +275,7 @@ int imap_process(ClientInfo *ci)
       if (i <= IMAP_COMM_NONE || i >= IMAP_COMM_LAST)
 	{
 	  /* unknown command */
-	  fprintf(ci->tx,"%s BAD command not recognized\n",tag);
+	  fprintf(ci->tx,"%s BAD command not recognized\r\n",tag);
 
 	  /* free used memory */
 	  for (i=0; args[i]; i++) 
@@ -351,7 +352,7 @@ int imap_process(ClientInfo *ci)
   null_free(((imap_userdata_t*)ci->userData)->mailbox.seq_list);
   null_free(ci->userData);
 
-  fprintf(ci->tx,"%s OK completed\n",tag);
+  fprintf(ci->tx,"%s OK completed\r\n",tag);
   trace(TRACE_MESSAGE,"IMAPD: Closing connection for client from IP [%s]\n",ci->ip);
 
   return EOF;
