@@ -1,43 +1,11 @@
 /* $Id$
-   (c) 2000-2001 IC&S, The Netherlands  */
-
-Who created it?
-===============
-Me, Eelco van Beek <eelco@eelco.com>. At first, i created 
-a very sloppy version of this program which didn't work at all.
-
-Eric Knauel <eric@macnews.de> worked on it for a few months
-to make it better but he also got busy with other things. 
-
-Because the DBMAIL mailing system is big i needed help. 
-So i asked Roel <roel@ic-s.nl>, one of the people working with me 
-here at IC&S, to join in developing DBMAIL further.
-Roel started working on the imapd, while i was debugging the pop3d
-and the injector program dbmail-smtp.
-
-DBMAIL is now a company effort to create a fast, effecient and
-scalable database driven mailingsystem. IC&S is fully behind 
-opensource and the GPL. Therefore DBMAIL has the GPL licence.
-However IC&S does provide commercial support and consultancy
-for this product. For more information about this you can 
-send an email to info@ic-s.nl.
-
-***
-Disclaimer: I nor IC&S is responsible for anything. This software
-could eat your harddisk then kill your processor. 
-Anyways, we can't do anything about it. It was your decision.
-***
-
-It should work with almost no problems. I've been running it
-for months now. It seems really stable. If you find any bugs, please
-report them to me, eelco@eelco.com, or at the mailinglist
-(dbmail@dbmail.org).
-
+   (c) 2000-2002 IC&S, The Netherlands  */
 
 What is it?
 ===========
+In short:
 DBMAIL is a collection of programs that enables email to be
-stored in and retrieved from a (MY)sql database. 
+stored in and retrieved from a database. 
 
 
 Why is it usefull?
@@ -54,7 +22,37 @@ Well, for me it's usefull because a number of reasons.
   without me needed to technically support it.
 - It's scalable. You can run the dbmail programs on different servers
   talking to the same database(cluster).
+- It is more secure. There's no need to maintain system users or write to
+  the filesystem. All this is done through the database.
 
+Who created it?
+===============
+Me, Eelco van Beek <eelco@ic-s.nl>. At first, i created 
+a very sloppy version of this program which didn't work at all.
+
+Because the DBMAIL mailing system is big i needed help. 
+So i asked Roel <roel@ic-s.nl>, one of the people working with me 
+here at IC&S, to join in developing DBMAIL further.
+Roel started working on the imapd, while i was debugging the pop3d
+and the injector program dbmail-smtp.
+After that, Roel improved all dbmail component for speed and killed a 
+lot of bugs allong the way.
+
+DBMAIL is now a company effort to create a fast, effecient and
+scalable database driven mailingsystem. IC&S is fully behind 
+opensource and the GPL. Therefore DBMAIL has the GPL licence.
+However IC&S does provide commercial support and consultancy
+for this product. For more information about this you can 
+send an email to info@ic-s.nl.
+
+***
+Disclaimer: I nor IC&S is responsible for anything. This software
+could eat your harddisk then kill your processor. 
+Anyways, we can't do anything about it. It was your decision.
+***
+
+It should work with almost no problem. We have clients that run dbmail
+with more than 25.000 useraccounts. The system is fully stable.
 
 How do i install it?
 ====================
@@ -63,10 +61,10 @@ Check the INSTALL file.
 
 Future
 ======
-- create a dbpostgresql.c/dbpostgresql.h to talk to PostgreSQL.
-- speed improvements.
-- code cleanups.
-- gui (webbased, working on that already)
+- shared folders in imap
+- more database drivers
+- GUI's
+
 
 check the website for further DBMAIL plans.
 

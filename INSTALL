@@ -1,19 +1,29 @@
 /* $Id$ 
-   (c) 2000-2001 IC&S, The Netherlands */
+   (c) 2000-2002 IC&S, The Netherlands */
 
 DBMAIL installation
 ===================
 
 What do you need?
 
-- a working MYSQL database
-- a working smtp server (preferrably Postfix)
-- a little knowledge about SQL
-
-If you follow the steps below you'll have DBMAIL running in no-time.
+- a working postgresql or mysql installation
+- a working smtp server (postfix, exim or sendmail is preffered)
 
 
-1.	First yu'll need to create the DBMAIL database in MYSQL.
+1.	Setup a database
+
+Postgresql setup
+----------------
+
+
+Mysql setup
+-----------
+
+
+
+
+
+.	First you'll need to create the DBMAIL database in MYSQL.
 	This is easy. You'll need the mysql commandline program for this. 
 	Just do :
 	
