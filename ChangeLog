@@ -1,3 +1,12 @@
+2004-03-31  Ilja Booij  <ilja@ic-s.nl>
+
+	* db.c (db_findmailbox_by_regex): now calls regfree() to free the 
+	possibly allocated memory in the preg regex struct. This fixes a 
+	memory leak
+	(db_listmailboxchildren): Now first makes a strdup() of the mailbox
+	name from db_get_result() before freeing the result set. This should
+	fix some crashes.
+
 2004-03-22  Ilja Booij  <ilja@ic-s.nl>
 
 	* db.c (db_imap_append_msg): use db_insert_message_block_physmessage()

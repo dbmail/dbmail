@@ -2251,6 +2251,7 @@ int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern,
 				       children, nchildren) < 0) {
 		trace(TRACE_ERROR, "%s,%s: error listing mailboxes",
 		      __FILE__, __FUNCTION__);
+		regfree(&preg);
 		return -1;
 	}
 
@@ -2259,6 +2260,7 @@ int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern,
 		      "%s, %s: did not find any mailboxes that "
 		      "match pattern. returning 0, nchildren = 0",
 		      __FILE__, __FUNCTION__);
+		regfree(&preg);
 		return 0;
 	}
 
@@ -2266,6 +2268,7 @@ int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern,
 	/* store matches */
 	trace(TRACE_INFO, "%s,%s: found [%d] mailboxes", __FILE__,
 	      __FUNCTION__, *nchildren);
+	regfree(&preg);
 	return 0;
 }
 
@@ -2450,7 +2453,7 @@ int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
 			   const char *filter)
 {
 	int i;
-	char *mailbox_name;
+	char *mailbox_name = NULL, *tmp;
 
 	/* retrieve the name of this mailbox */
 	snprintf(query, DEF_QUERYSIZE,
@@ -2475,18 +2478,22 @@ int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
 		return 0;
 	}
 
-	mailbox_name = db_get_result(0, 0);
+	if ((tmp = db_get_result(0, 0))) 
+		mailbox_name = strdup(tmp);
+
 	db_free_result();
-	if (mailbox_name)
+	if (mailbox_name) {
 		snprintf(query, DEF_QUERYSIZE,
 			 "SELECT mailbox_idnr FROM mailboxes WHERE name LIKE '%s/%s'"
 			 " AND owner_idnr = '%llu'",
 			 mailbox_name, filter, user_idnr);
+		free(mailbox_name);
+	}
 	else
 		snprintf(query, DEF_QUERYSIZE,
 			 "SELECT mailbox_idnr FROM mailboxes WHERE name LIKE '%s'"
 			 " AND owner_idnr = '%llu'", filter, user_idnr);
-
+	
 	/* now find the children */
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not retrieve mailbox id",
