@@ -4,7 +4,10 @@
 For DBMail 2.1
 -   Database table prefixes
 -   Sieve scripting language
--   header caching (cache headers like To: From: etc.)
--   put (part of) configuration into the database
--   Increase speed by doing database optimizations (indexes) and removing
-    unneeded database usage.
+-   Header caching (e.g., cache headers like To: From: etc.)
+-   Put some parts of configuration into the database
+-   Increase speed by doing database optimizations (e.g., indexes)
+    and removing unneeded database usage.
+-   Report detailed delivery conditions (e.g. over quota,
+    suspended account, courtesy forwarding address) via LMTP's
+    enhanced status codes and via stdout messages to the MTA.

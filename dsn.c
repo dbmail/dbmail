@@ -91,14 +91,14 @@ int dsnuser_resolve_list(struct list *deliveries)
                 }
 
               /* The userid was valid... */
-              delivery->dsn.class = 2; /* Success. */
+              delivery->dsn.class = DSN_CLASS_OK; /* Success. */
               delivery->dsn.subject = 1; /* Address related. */
               delivery->dsn.detail = 5; /* Valid. */
             }
           else /* from: 'if (username != NULL)' */
             {
               /* The userid was invalid... */
-              delivery->dsn.class = 5; /* Permanent failure. */
+              delivery->dsn.class = DSN_CLASS_FAIL; /* Permanent failure. */
               delivery->dsn.subject = 1; /* Address related. */
               delivery->dsn.detail = 1; /* Does not exist. */
             }
@@ -131,7 +131,7 @@ int dsnuser_resolve_list(struct list *deliveries)
                       trace(TRACE_DEBUG, "%s, %s: added user [%s] id [%llu] to delivery list",
                           __FILE__, __FUNCTION__, delivery->address, userid);
                       /* The userid was valid... */
-                      delivery->dsn.class = 2; /* Success. */
+                      delivery->dsn.class = DSN_CLASS_OK; /* Success. */
                       delivery->dsn.subject = 1; /* Address related. */
                       delivery->dsn.detail = 5; /* Valid. */
 	            }
@@ -156,7 +156,7 @@ int dsnuser_resolve_list(struct list *deliveries)
                         {
                           /* That's it, we're done here. */
                           /* Permanent failure... */
-                          delivery->dsn.class = 5; /* Permanent failure. */
+                          delivery->dsn.class = DSN_CLASS_FAIL; /* Permanent failure. */
                           delivery->dsn.subject = 1; /* Address related. */
                           delivery->dsn.detail = 1; /* Does not exist. */
                         }
@@ -173,14 +173,14 @@ int dsnuser_resolve_list(struct list *deliveries)
                           if (domain_count == 0)
                             {
                               /* Permanent failure... */
-                              delivery->dsn.class = 5; /* Permanent failure. */
+                              delivery->dsn.class = DSN_CLASS_FAIL; /* Permanent failure. */
                               delivery->dsn.subject = 1; /* Address related. */
                               delivery->dsn.detail = 1; /* Does not exist. */
                             }
                           else /* from: 'if (domain_count == 0)' */
                             {
                               /* The userid was valid... */
-                              delivery->dsn.class = 2; /* Success. */
+                              delivery->dsn.class = DSN_CLASS_OK; /* Success. */
                               delivery->dsn.subject = 1; /* Address related. */
                               delivery->dsn.detail = 5; /* Valid. */
                             } /* from: 'if (domain_count == 0)' */
@@ -189,7 +189,7 @@ int dsnuser_resolve_list(struct list *deliveries)
                   else /* from: 'if (alias_count == 0)' */
                     {
                       /* The userid was valid... */
-                      delivery->dsn.class = 2; /* Success. */
+                      delivery->dsn.class = DSN_CLASS_OK; /* Success. */
                       delivery->dsn.subject = 1; /* Address related. */
                       delivery->dsn.detail = 5; /* Valid. */
                     } /* from: 'if (alias_count == 0)' */
@@ -199,5 +199,70 @@ int dsnuser_resolve_list(struct list *deliveries)
     } /* from: the main for loop */
 
   return 0;
+}
+
+void dsnuser_free_list(struct list *deliveries)
+{
+  struct element *tmp;
+
+  for(tmp = list_getstart(deliveries); tmp != NULL; tmp = tmp->nextnode)
+      dsnuser_free((deliver_to_user_t *)tmp->data);
+
+  list_freelist(&deliveries->start);
+}
+
+dsn_class_t dsnuser_worstcase_int(int has_2, int has_4, int has_5)
+{
+  dsn_class_t exitcode;
+
+  /* If only one code, use it. */
+  if (has_2 && !has_4 && !has_5)        /* Only 2 */
+      exitcode = DSN_CLASS_OK;
+  else if (!has_2 && has_4 && !has_5)   /* Only 4 */
+      exitcode = DSN_CLASS_TEMP;
+  else if (!has_2 && !has_4 && has_5)   /* Only 5 */
+      exitcode = DSN_CLASS_FAIL;
+  /* If two codes, prefer temporary, otherwise fail. */
+  else if (has_2 && has_4 && !has_5)    /* 2 and 4 */
+      exitcode = DSN_CLASS_TEMP;
+  else if (has_2 && !has_4 && has_5)    /* 2 and 5 */
+      exitcode = DSN_CLASS_FAIL;
+  else if (!has_2 && has_4 && has_5)    /* 4 and 5 */
+      exitcode = DSN_CLASS_TEMP;
+ /* All three or none, again prefer temporary. */
+  else                                  /* 2, 4, 5 */
+      exitcode = DSN_CLASS_TEMP;
+
+  return exitcode;
+}
+
+dsn_class_t dsnuser_worstcase_list(struct list *deliveries)
+{
+  struct element *tmp;
+  int has_2 = 0, has_4 = 0, has_5 = 0;
+
+  /* Get one reasonable error code for everyone. */
+  for(tmp = list_getstart(deliveries); tmp != NULL; tmp = tmp->nextnode)
+    {
+      switch (((deliver_to_user_t *)tmp->data)->dsn.class)
+        {
+          case DSN_CLASS_OK:
+            /* Success. */
+            has_2 = 1;
+            break;
+          case DSN_CLASS_TEMP:
+            /* Temporary transient failure. */
+            has_4 = 1;
+            break;
+          case DSN_CLASS_FAIL:
+            /* Permanent failure. */
+            has_5 = 1;
+            break;
+        }
+    }
+
+  /* If we never made it into the list, all zeroes will
+   * yield a temporary failure, which is pretty reasonable. */
+  return dsnuser_worstcase_int(has_2, has_4, has_5);
 }
 

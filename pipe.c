@@ -497,12 +497,14 @@ int insert_messages(FILE *instream, char *header, u64_t headersize, u64_t header
       break;
   }
   
-  /* Loop through the users list */
+  /* Loop through the users list. */
   for (element = list_getstart(dsnusers); element != NULL; element = element->nextnode)
     {
       struct element *userid_elem;
+      int has_2 = 0, has_4 = 0, has_5 = 0;
       deliver_to_user_t *delivery = (deliver_to_user_t *)element->data;
 
+      /* Each user may have a list of user_idnr's for local delivery. */
       for (userid_elem = list_getstart(delivery->userids);
                       userid_elem != NULL; userid_elem = userid_elem->nextnode)
         {
@@ -514,20 +516,25 @@ int insert_messages(FILE *instream, char *header, u64_t headersize, u64_t header
 				  header, headersize, msgsize, rfcsize,
 				  useridnr, delivery->mailbox))
             {
-              case 1:
-                /* Indicate success */
-                trace(TRACE_DEBUG, "%s, %s: sort_and_delivery was successful for useridnr [%llu]",
+              case DSN_CLASS_OK:
+                /* Indicate success. */
+                trace(TRACE_DEBUG, "%s, %s: successful sort_and_deliver for useridnr [%llu]",
                             __FILE__, __FUNCTION__, useridnr);
+                has_2 = 1;
                 break;
-              case 0:
-                /* Indicate failure */
-                trace(TRACE_ERROR, "%s, %s: out of memory",
-                            __FILE__, __FUNCTION__);
+              case DSN_CLASS_FAIL:
+                /* Indicate permanent failure. */
+                trace(TRACE_ERROR, "%s, %s: permanent failure sort_and_deliver for useridnr [%llu]",
+                            __FILE__, __FUNCTION__, useridnr);
+                has_5 = 1;
                 break;
+              case DSN_CLASS_TEMP:
+              case -1:
               default:
-                /* Assume a failure */
-                trace(TRACE_ERROR, "%s, %s: out of memory",
-                            __FILE__, __FUNCTION__);
+                /* Assume a temporary failure */
+                trace(TRACE_ERROR, "%s, %s: temporary failure sort_and_deliver for useridnr [%llu]",
+                            __FILE__, __FUNCTION__, useridnr);
+                has_4 = 1;
                 break;
             }
                 
@@ -535,10 +542,29 @@ int insert_messages(FILE *instream, char *header, u64_t headersize, u64_t header
           execute_auto_ran(useridnr, headerfields);
         } /* from: the useridnr for loop */
 
+      switch (dsnuser_worstcase_int(has_2, has_4, has_5))
+        {
+          case DSN_CLASS_OK:
+            delivery->dsn.class = DSN_CLASS_OK; /* Success. */
+            delivery->dsn.subject = 1; /* Address related. */
+            delivery->dsn.detail = 5; /* Valid. */
+            break;
+          case DSN_CLASS_TEMP:
+            delivery->dsn.class = DSN_CLASS_TEMP; /* Temporary transient failure. */
+            delivery->dsn.subject = 1; /* Address related. */
+            delivery->dsn.detail = 5; /* Valid. */
+            break;
+          case DSN_CLASS_FAIL:
+            delivery->dsn.class = DSN_CLASS_FAIL; /* Permanent failure. */
+            delivery->dsn.subject = 1; /* Address related. */
+            delivery->dsn.detail = 1; /* Does not exist. */
+            break;
+        }
+
       trace(TRACE_DEBUG,"insert_messages(): we need to deliver [%ld] "
           "messages to external addresses", list_totalnodes(delivery->forwards));
       
-      /* Do we have any forwarding addresses? */
+      /* Each user may also have a list of external forwarding addresses. */
       if (list_totalnodes(delivery->forwards) > 0)
         {
 
@@ -553,6 +579,9 @@ int insert_messages(FILE *instream, char *header, u64_t headersize, u64_t header
 
     } /* from: the delivery for loop */
 
+  /* Always delete the temporary message, even if the delivery failed.
+   * It is the MTA's job to requeue or bounce the message,
+   * and our job to keep a tidy database ;-) */
   db_delete_message(tmpmsgidnr);
   trace(TRACE_DEBUG, "insert_messages(): temporary message deleted from database");
 

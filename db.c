@@ -71,6 +71,8 @@ static int db_set_quotum_used(u64_t user_idnr, u64_t curmail_size);
 static int db_add_quotum_used(u64_t user_idnr, u64_t add_size);
 /** subtract from quotum used */
 static int db_subtract_quotum_used(u64_t user_idnr, u64_t sub_size);
+/** check if the message will fit within or exceed the quotum */
+static int db_check_quotum_used(u64_t user_idnr, u64_t msg_size);
 
 /** list all mailboxes owned by user owner_idnr */
 static int db_list_mailboxes_by_regex(u64_t owner_idnr, int only_subscribed,
@@ -194,6 +196,30 @@ int db_subtract_quotum_used(u64_t user_idnr, u64_t sub_size)
 	return 0;
 }
 
+int db_check_quotum_used(u64_t user_idnr, u64_t msg_size)
+{
+	snprintf(query, DEF_QUERYSIZE,
+		"SELECT (maxmail_size > 0) "
+		"   AND (curmail_size + '%llu' > maxmail_size)"
+		"  FROM users "
+		" WHERE user_idnr = '%llu'", msg_size, user_idnr);
+
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: error checking quotum for "
+			"user [%llu]", __FILE__, __FUNCTION__, user_idnr);
+		return -1;
+	}
+     
+	/* If there is a quotum defined, and the inequality is true,
+	 * then the message would therefore exceed the quotum,
+	 * and so the function returns non-zero. */
+	if (db_get_result_u64(0, 0) == 1)
+		return 1;
+
+	db_free_result();
+	return 0;
+}
+
 int db_calculate_quotum_all()
 {
     u64_t *user_idnrs;	/**< will hold all user_idnr for which the quotum
@@ -214,7 +240,7 @@ int db_calculate_quotum_all()
 	     "HAVING sum(pm.messagesize) <> usr.curmail_size");
 
     if (db_query(query) == -1) {
-	trace(TRACE_ERROR, "%s,%s: error findng used quota",
+	trace(TRACE_ERROR, "%s,%s: error findng quotum used",
 	      __FILE__, __FUNCTION__);
 	return -1;
     }
@@ -222,7 +248,7 @@ int db_calculate_quotum_all()
     n = db_num_rows();
     result = n;
     if (n == 0) {
-	trace(TRACE_DEBUG, "%s,%s: found no quota in need of update",
+	trace(TRACE_DEBUG, "%s,%s: quotum is already up to date",
 	      __FILE__, __FUNCTION__);
 	return 0;
     }
@@ -1730,45 +1756,6 @@ int db_deleted_purge(u64_t *affected_rows)
     return 1;
 }
 
-u64_t db_check_sizelimit(u64_t addblocksize UNUSED, u64_t message_idnr,
-			 u64_t * user_idnr)
-{
-    u64_t currmail_size = 0;
-    u64_t maxmail_size = 0;
-
-    *user_idnr = db_get_useridnr(message_idnr);
-    
-    /* get currently used quotum */
-    db_get_quotum_used(*user_idnr, &currmail_size);
-    
-    /* current mailsize from INBOX is now known, 
-     * now check the maxsize for this user */
-    auth_getmaxmailsize(*user_idnr, &maxmail_size);
-
-    trace(TRACE_DEBUG, "%s,%s: comparing currsize + blocksize [%llu], "
-	  "maxsize [%llu]\n",
-	  __FILE__, __FUNCTION__, currmail_size, maxmail_size);
-    
-    /* currmail already represents the current size of
-     * messages in this user's mailbox */
-    if (((currmail_size) > maxmail_size) && (maxmail_size != 0)) {
-	 trace(TRACE_INFO, "%s,%s: mailboxsize of useridnr "
-	       "%llu exceed with %llu bytes\n",
-	       __FILE__, __FUNCTION__, *user_idnr, (currmail_size) - maxmail_size);
-	 
-	 /* user is exceeding, we're going to execute a rollback now */
-	 if (db_delete_message(message_idnr) < 0) {
-	      trace(TRACE_ERROR, "%s,%s: delete of message failed. database "
-		    "might be inconsistent. Run dbmail-maintenance",
-		    __FILE__, __FUNCTION__);
-	      return -2;
-	 }
-	 /* return 1 to signal that the quotum was exceeded */
-	 return 1;
-    }
-    return 0;
-}
-
 int db_imap_append_msg(const char *msgdata, u64_t datalen,
 		       u64_t mailbox_idnr, u64_t user_idnr,
 		       timestring_t internal_date, u64_t *msg_idnr)
@@ -1777,9 +1764,19 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
     u64_t messageblk_idnr;
     u64_t physmessage_id = 0;
     u64_t count;
-    int result;
     char unique_id[UID_SIZE];	/* unique id */
-    
+
+    switch (db_check_quotum_used(user_idnr, datalen)) {
+	case -1:
+		trace(TRACE_ERROR, "%s,%s: error checking quotum",
+			__FILE__, __FUNCTION__);
+		return -1;
+	case 1:
+		trace(TRACE_INFO, "%s,%s: user [%llu] would exceed quotum",
+			__FILE__, __FUNCTION__, user_idnr);
+		return 2;
+    }
+
     if (strlen(internal_date) > 0) {
 	    if (db_insert_physmessage_with_internal_date(internal_date,
 							 &physmessage_id) < 0){ 
@@ -1815,18 +1812,6 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
     /* fetch the id of the new message */
     message_idnr = db_insert_result("message_idnr");
 
-    result = db_check_sizelimit(datalen, message_idnr, &user_idnr);
-    if (result == -1 || result == -2) {
-	trace(TRACE_ERROR, "%s,%s: error checking size limit",
-	      __FILE__, __FUNCTION__);
-	return -1;
-    }
-
-    if (result == 1) {
-	trace(TRACE_INFO, "%s,%s: user %llu would exceed quotum\n",
-	      __FILE__, __FUNCTION__, user_idnr);
-	return 2;
-    }
     /* ok insert blocks */
     /* first the header: scan until double newline */
     for (count = 1; count < datalen; count++)
@@ -2604,111 +2589,67 @@ int db_get_message_size(u64_t message_idnr, u64_t *message_size)
      return 1;
      
 }
+
 int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr,
 	       u64_t *newmsg_idnr)
 {
-     u64_t curr_quotum; /* current mailsize */
-     u64_t maxmail; /* maximum mailsize */
-     u64_t msgsize; /* size of message */
-     time_t td;
+	u64_t msgsize;
+	char unique_id[UID_SIZE];
 
-     time(&td);			/* get time */
-     
-     if (db_get_quotum_used(user_idnr, &curr_quotum) < 0) {
-	     trace(TRACE_ERROR,
-		   "%s,%s: error fetching used quotum for user [%llu]",
-		   __FILE__, __FUNCTION__, user_idnr);
-	     return -1;
-     }
-     if (auth_getmaxmailsize(user_idnr, &maxmail) == -1) {
-	     trace(TRACE_ERROR,
-		   "%s,%s: error fetching max quotum for user [%llu]", 
-		   __FILE__, __FUNCTION__, user_idnr);
-	     return -1;
-     }
+	/* Get the size of the message to be copied. */
+	if (db_get_message_size(msg_idnr, &msgsize) == -1) {
+		trace(TRACE_ERROR,"%s,%s: error getting message size for "
+			"message [%llu]", __FILE__, __FUNCTION__, msg_idnr);
+		return -1;
+	}
 
-     if (db_get_message_size(msg_idnr, &msgsize) == -1) {
-	     trace(TRACE_ERROR,"%s,%s: error getting message size for "
-		   "message [%llu]", __FILE__, __FUNCTION__, msg_idnr);
-	     return -1;
-     }
+	/* Check to see if the user has room for the message. */
+	switch (db_check_quotum_used(user_idnr, msgsize)) {
+		case -1:
+			trace(TRACE_ERROR, "%s,%s: error checking quotum",
+				__FILE__, __FUNCTION__);
+			return -1;
+		case 1:
+			trace(TRACE_INFO, "%s,%s: user [%llu] would exceed quotum",
+				__FILE__, __FUNCTION__, user_idnr);
+			return -2;
+	}
+     
+	create_unique_id(unique_id, msg_idnr);
 
-     
-     if (maxmail > 0) {
-	  if (curr_quotum >= maxmail) {
-	       trace(TRACE_INFO,
-		  "%s,%s: quotum already exceeded for user [%llu]",
-		     __FILE__, __FUNCTION__, user_idnr);
-	       return -2;
-	  }
- 
-	  if (msgsize > maxmail - curr_quotum) {
-	       trace(TRACE_INFO, "%s,%s: quotum would exceed for user [%llu]",
-		     __FILE__, __FUNCTION__, user_idnr);
-	       return -2;
-	  }
-     }
+	/* Copy the message table entry of the message. */
+	snprintf(query, DEF_QUERYSIZE,
+		"INSERT INTO messages (mailbox_idnr,"
+		"physmessage_id, seen_flag, answered_flag, deleted_flag, "
+		"flagged_flag, recent_flag, draft_flag, unique_id, status) "
+		"SELECT '%llu', "
+		"physmessage_id, seen_flag, answered_flag, deleted_flag, "
+		"flagged_flag, recent_flag, draft_flag, '%s', status "
+		"FROM messages WHERE message_idnr = '%llu'",
+		mailbox_to, unique_id, msg_idnr
+		);
 
-     /* copy: */
-     /* first select the entry that has to be copied */
-     snprintf(query, DEF_QUERYSIZE,
-	      "SELECT physmessage_id, seen_flag, "
-	      "answered_flag, deleted_flag, flagged_flag, recent_flag, "
-	      "draft_flag, status FROM messages "
-	      "WHERE message_idnr = '%llu'", msg_idnr);
-     if (db_query(query) == -1) {
-	  trace(TRACE_ERROR, "%s,%s: could not select source message",
-		__FILE__, __FUNCTION__);
-	  return -1;
-     }
-     if (db_num_rows() < 1) {
-	  trace(TRACE_ERROR, "%s,%s: could not select source message",
-		__FILE__, __FUNCTION__);
-	  return -1;
-     }
-     /* now insert a copy of the entry into the messages table */
-     snprintf(query, DEF_QUERYSIZE,
-	      "INSERT INTO messages (mailbox_idnr, physmessage_id, seen_flag, "
-	      "answered_flag, deleted_flag, flagged_flag, recent_flag, "
-	     "draft_flag, unique_id, status) VALUES "
-	      "('%llu', '%s', '%s', '%s', '%s', "
-	      "'%s', '%s', '%s', 'dummy', '%s')",
-	      mailbox_to, db_get_result(0, 0), db_get_result(0, 1), 
-	      db_get_result(0, 2), db_get_result(0, 3), db_get_result(0, 4), 
-	      db_get_result(0, 5), db_get_result(0, 6), db_get_result(0,7));
-     
-     db_free_result();
-     if (db_query(query) == -1) {
-	  trace(TRACE_ERROR, "%s,%s: could not insert copy in messages",
-		__FILE__, __FUNCTION__);
-	  return -1;
-     }
-     /* get the id of the inserted record */
-     *newmsg_idnr = db_insert_result("message_idnr");
-    /* all done, validate new msg by creating a new unique id
-     * for the copied msg */
-     /* FIXME: this needs to use the proper algorithm to produce a sane
-	unique id!*/
-     snprintf(query, DEF_QUERYSIZE,
-	      "UPDATE messages SET unique_id='%lluA%lu' "
-	      "WHERE message_idnr='%llu'", *newmsg_idnr, (unsigned long) td, 
-	      *newmsg_idnr);
-     
-     if (db_query(query) == -1) {
-	  trace(TRACE_ERROR, "%s,%s: could not set unique ID for copied msg",
-		__FILE__, __FUNCTION__);
-	  return -1;
-     }
-     
-     /* update quotum */
-     if (db_add_quotum_used(user_idnr, msgsize) == -1) {
-	     trace(TRACE_ERROR, "%s,%s: error setting the new quotum "
-		   "used value for user [%llu]",
-		   __FILE__, __FUNCTION__, user_idnr);
-	     return -1;
-     }    
-     return 1;			/* success */
-}				/* end db_copymsg() */
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: error copying message",
+			__FILE__, __FUNCTION__);
+		return -1;
+	}
+
+	/* get the id of the inserted record */
+	*newmsg_idnr = db_insert_result("message_idnr");
+
+	db_free_result();
+
+	/* update quotum */
+	if (db_add_quotum_used(user_idnr, msgsize) == -1) {
+		trace(TRACE_ERROR, "%s,%s: error setting the new quotum "
+			"used value for user [%llu]",
+			__FILE__, __FUNCTION__, user_idnr);
+		return -1;
+	}    
+	
+	return 1;
+}
 
 int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name)
 {

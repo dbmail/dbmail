@@ -1,3 +1,31 @@
+2004-03-14  Aaron Stone <aaron@serendipity.cx>
+
+	* db.c: MySQL 4.0.14 or higher required for INSERT ... SELECT!
+
+	* db.c (db_imap_append_msg): changed from db_check_sizelimit to
+	db_check_quotum_used, eliminating three related queries.
+	(db_check_quotum_used): added function to check, in just one
+	query, if a user has a maxmail quotum and if a message of the
+	specified size would exceed that quotum or not.
+	(db_copymsg): rewritten to use the db_check_quotum_used function,
+	and to use a single INSERT INTO ... SELECT FROM query, and to use
+	the canonical create_unique_id function and rather than its own.
+
+	* dsn.c (dsnuser_free_list): added function to free a list
+	containing dsnuser structures, followed by freeing the list itself.
+	(dsnuser_worstcase_list): added function to find the worst
+	delivery condition from a list of dsnusers.
+	(dsnuser_worstcase_int): added function to find the worst
+	delivery condition from three indicators: OK, TEMP, FAIL.
+
+	* main.c (main): now uses the dsnuser_worstcase functions.
+
+	* pipe.c (insert_messages): now uses the dsnuser_worstcase functions.
+
+	* sort/sort.c (sort_and_deliver): return type is now dsn_class_t,
+	which provides a better indicator of the success or failure of
+	the delivery.
+
 2004-03-12  Ilja Booij  <ilja@ic-s.nl>
 
 	* acl.c (acl_get_acl): now correctly returns an ACL string with
@@ -26,10 +54,10 @@
 	(_ic_append): sets flags for messages if needed by calling
 	db_set_msgflag()
 
-	* db.c (db_imap_append_msg): according to the RFC, the Recent flag
-	of a message that is append using IMAP append should always be set.
-	This is now taken care of. db_imap_append_msg() used to set the
-	\Seen flag to '1', but according to the RFC, this should not be done,
+	* db.c (db_imap_append_msg): according to the rfc, the recent flag
+	of a message that is append using imap append should always be set.
+	this is now taken care of. db_imap_append_msg() used to set the
+	\seen flag to '1', but according to the rfc, this should not be done,
 	so it's been removed.
 	(db_insert_physmessage_with_internal_date): new function to insert
 	physmessages with an internal date.

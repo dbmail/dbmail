@@ -87,7 +87,6 @@ int main(int argc, char *argv[])
   int exitcode = 0;
   int c, c_prev = 0, usage_error = 0;
   u64_t dummyidx = 0, dummysize = 0;
-  int has_2 = 0, has_4 = 0, has_5 = 0;
 
 
   openlog(PNAME, LOG_PID, LOG_MAIL);
@@ -300,61 +299,39 @@ int main(int argc, char *argv[])
 
 freeall: /* Goto's here! */
 
-  /* Get one reasonable error code for everyone. */
-  for(tmp = list_getstart(&dsnusers); tmp != NULL; tmp = tmp->nextnode)
-    {
-      deliver_to_user_t *dsnuser= (deliver_to_user_t *)tmp->data;
-
-      switch (dsnuser->dsn.class)
-      {
-        case 2:
-          /* Success. */
-          has_2 = 1;
-          break;
-        case 4:
-          /* Temporary transient failure. */
-          has_4 = 1;
-          break;
-        case 5:
-          /* Permanent failure. */
-          has_5 = 1;
-          break;
-      }
-      
-      dsnuser_free(dsnuser);
-    }
-
   /* If there wasn't already an EX_TEMPFAIL from insert_messages(),
    * then see if one of the status flags was marked with an error. */
   if (!exitcode)
     {
-      /* If only one code, use it. */
-      if (has_2 && !has_4 && !has_5) /* Only 2 */
-          exitcode = EX_OK;
-      else if (!has_2 && has_4 && !has_5) /* Only 4 */
-          exitcode = EX_TEMPFAIL;
-      else if (!has_2 && !has_4 && has_5) /* Only 5 */
-          exitcode = EX_NOUSER;
-      /* If two codes, prefer temporary. */
-      else if (has_2 && has_4 && !has_5) /* 2 and 4 */
-          exitcode = EX_TEMPFAIL;
-      else if (has_2 && !has_4 && has_5) /* 2 and 5 */
-          exitcode = EX_NOUSER;
-      else if (!has_2 && has_4 && has_5) /* 4 and 5 */
-          exitcode = EX_TEMPFAIL;
-      else /* All 3 */
-          exitcode = EX_UNAVAILABLE;
+      /* Get one reasonable error code for everyone. */
+      switch (dsnuser_worstcase_list(&dsnusers))
+        {
+          case DSN_CLASS_OK:
+            exitcode = EX_OK;
+            break;
+          case DSN_CLASS_TEMP:
+            exitcode = EX_TEMPFAIL;
+            break;
+          case DSN_CLASS_FAIL:
+            exitcode = EX_NOUSER;
+            break;
+        }
     }
 
-  trace(TRACE_DEBUG, "main(): freeing memory blocks");
-  if (header != NULL)
-      my_free(header);
+  trace(TRACE_DEBUG, "main(): freeing dsnuser list");
+  dsnuser_free_list(&dsnusers);
+
+  trace(TRACE_DEBUG, "main(): freeing all other lists");
   list_freelist(&sysItems.start);
   list_freelist(&smtpItems.start);
   list_freelist(&mimelist.start);
   list_freelist(&returnpath.start);
-  list_freelist(&dsnusers.start);
   list_freelist(&users.start);
+
+  trace(TRACE_DEBUG, "main(): freeing memory blocks");
+  if (header != NULL)
+      my_free(header);
+
   trace(TRACE_DEBUG, "main(): they're all free. we're done.");
   
   db_disconnect();

@@ -45,7 +45,7 @@ extern struct list smtpItems, sysItems;
  *
  * Then do it!
  * */
-int sort_and_deliver(u64_t msgidnr,
+dsn_class_t sort_and_deliver(u64_t msgidnr,
                      const char *header, u64_t headersize,
                      u64_t totalmsgsize, u64_t totalrfcsize,
                      u64_t useridnr, const char *mailbox)
@@ -76,7 +76,7 @@ int sort_and_deliver(u64_t msgidnr,
       /* Call out to Jonas' regex sorting function!
        * */
       // ret = db_regexsort(useridnr, header, actions);
-      trace(TRACE_ERROR, "%s, %s: Regex sort is enabled in dbmail.conf, but has not been compiled");
+      trace(TRACE_ERROR, "%s, %s: Regex sort is enabled in dbmail.conf, but has not been compiled", __FILE__, __FUNCTION__);
     }
 
   if (do_sieve)
@@ -88,7 +88,7 @@ int sort_and_deliver(u64_t msgidnr,
       ret = sortsieve_msgsort(useridnr, header, headersize, totalmsgsize, &actions);
 #else
       /* Give the postmaster a clue as to why Sieve isn't working... */
-      trace(TRACE_ERROR, "%s, %s: Sieve enabled in dbmail.conf, but Sieve support has not been compiled");
+      trace(TRACE_ERROR, "%s, %s: Sieve enabled in dbmail.conf, but Sieve support has not been compiled", __FILE__, __FUNCTION__);
 #endif /* SIEVE */
     }
 
@@ -305,37 +305,26 @@ int sort_and_deliver(u64_t msgidnr,
           switch(db_copymsg(msgidnr, mboxidnr, useridnr, &newmsgidnr))
             {
               case -2:
-                /* Couldn't deliver because the quota has been reached */
-                bounce_id = auth_get_userid(useridnr);
-                bounce(header, bounce_id, BOUNCE_STORAGE_LIMIT_REACHED);
-                my_free(bounce_id);
+                /* Couldn't deliver because the quotum is exceeded. */
                 trace(TRACE_DEBUG, "%s, %s: error copying message to user [%llu], maxmail exceeded",
                     __FILE__, __FUNCTION__, useridnr);
                 break;
               case -1:
-                /* Couldn't deliver because something something went wrong */
+                /* Couldn't deliver because something something went wrong. */
                 trace(TRACE_ERROR, "%s, %s: error copying message to user [%llu]",
                     __FILE__, __FUNCTION__, useridnr);
-	              /* FIXME: We need a way to pass this error back out
-	               * so that, for example, the LMTP server can tell the
-	               * MTA that it wasn't able to deliver successfully! */
                 break;
               default:
                 trace(TRACE_MESSAGE,"%s, %s: message id=%llu, size=%llu is inserted",
                     __FILE__, __FUNCTION__, newmsgidnr, totalmsgsize);
-               
-                /* Create a unique ID for this message;
-                 * Each message for each user must have a unique ID! 
-                 * */
-                create_unique_id(unique_id, newmsgidnr); 
-		db_message_set_unique_id(newmsgidnr, unique_id);
-
                 actiontaken = 1;
                 break;
             }
         }
     }
 
-  return actiontaken;
+  if (actiontaken)
+      return DSN_CLASS_OK;
+  return DSN_CLASS_TEMP;
 }
 

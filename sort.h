@@ -12,6 +12,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include "dsn.h"
 #include "debug.h"
 #include "dbmailtypes.h"
 
@@ -28,7 +29,7 @@ typedef struct sort_action {
   char *message;
 } sort_action_t;
 
-int sort_and_deliver(u64_t msgidnr,
+dsn_class_t sort_and_deliver(u64_t msgidnr,
                      const char *header, u64_t headersize,
                      u64_t msgsize, u64_t rfcsize,
                      u64_t useridnr, const char *mailbox);

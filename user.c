@@ -689,7 +689,7 @@ int do_show(char *name)
 
       quiet_printf("\n");
       quiet_printf("User ID         : %llu\n", userid);
-      quiet_printf("Username        : %s\n", auth_get_userid(&userid));
+      quiet_printf("Username        : %s\n", auth_get_userid(userid));
       quiet_printf("Client ID       : %llu\n",cid);
       quiet_printf("Max. mailboxsize: %.02f MB\n",(double)quotum/(1024.0*1024.0));
       quiet_printf("Quotum used     : %.02f MB (%.01f%%)\n", (double)quotumused/(1024.0*1024.0), 

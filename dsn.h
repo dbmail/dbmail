@@ -44,7 +44,9 @@ typedef struct
  *   - -1 on failure
  */
 int dsnuser_init(deliver_to_user_t *dsnuser);
+
 void dsnuser_free(deliver_to_user_t *dsnuser);
+void dsnuser_free_list(struct list *deliveries);
 
 /**
  * \brief Loop through the list of delivery addresses
@@ -59,5 +61,29 @@ void dsnuser_free(deliver_to_user_t *dsnuser);
  *   - -1 on failure
  */
 int dsnuser_resolve_list(struct list *deliveries);
+
+/**
+ * \brief Loop through the list of delivery addresses
+ * and find out what the single worst case scenario was
+ * for situations where we are limited to returning a single
+ * status code yet might have had a whole lot of deliveries.
+ * \param deliveries Pointer to a list of dsnuser structs.
+ * \return
+ *   - see dsn_class_t for details.
+ */
+dsn_class_t dsnuser_worstcase_list(struct list *deliveries);
+
+/**
+ * \brief Given true/false values for each of the three
+ * delivery classes, find out what the single worst case scenario was
+ * for situations where we are limited to returning a single
+ * status code yet might have had a whole lot of deliveries.
+ * \param has_2 0 if nothing was DSN_CLASS_OK, 1 if there was.
+ * \param has_4 0 if nothing was DSN_CLASS_TEMP, 1 if there was.
+ * \param has_5 0 if nothing was DSN_CLASS_FAIL, 1 if there was.
+ * \return
+ *   - see dsn_class_t for details.
+ */
+dsn_class_t dsnuser_worstcase_int(int has_2, int has_4, int has_5);
 
 #endif /* DSN_H */
