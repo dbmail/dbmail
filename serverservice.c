@@ -195,7 +195,7 @@ int SS_WaitAndProcess(int sock, int default_children, int max_children, int daem
   act.sa_flags = SA_SIGINFO;
 
   sigaction(SIGCHLD, &act, 0);
-  sigaction(SIGPIPE, &act, 0);
+/*  sigaction(SIGPIPE, &act, 0);*/
   sigaction(SIGINT, &act, 0);
   sigaction(SIGQUIT, &act, 0);
   sigaction(SIGILL, &act, 0);
