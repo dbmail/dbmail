@@ -2,6 +2,7 @@
 
 	* db.c (db_list_mailboxes_by_regex): Fixed queries. I fscked them
 	up in the changes make on 2004-09-14. They work now!
+	(db_get_msgflag): fixed error with table prefix.
 
 2004-09-16  Ilja Booij  <ilja@ic-s.nl>
 

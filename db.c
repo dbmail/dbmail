@@ -3065,8 +3065,9 @@ int db_get_msgflag(const char *flag_name, u64_t msg_idnr,
 		 "SELECT %s FROM %smessages "
 		 "WHERE message_idnr = '%llu' AND status < '%d' "
 		 "AND unique_id != '' "
-		 "AND mailbox_idnr = '%llu'",DBPFX,
-		 the_flag_name, msg_idnr, MESSAGE_STATUS_DELETE, mailbox_idnr);
+		 "AND mailbox_idnr = '%llu'",
+		 the_flag_name, DBPFX, msg_idnr, 
+		 MESSAGE_STATUS_DELETE, mailbox_idnr);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not select message",
