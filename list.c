@@ -81,6 +81,13 @@ struct element *dbmail_list_reverse(struct element *start)
 	return newstart;
 }
 
+/*
+ * return a empty initialized element;
+ */
+static struct element *element_new(void)
+{
+	return g_new0(struct element,1); //(struct element *)my_malloc(sizeof(struct element));
+}
 
 /* 
  * list_nodeadd()
@@ -94,36 +101,21 @@ struct element *list_nodeadd(struct list *tlist, const void *data,
 			     size_t dsize)
 {
 	struct element *p;
-
+	
 	if (!tlist)
 		return NULL;	/* cannot add to non-existing list */
 
-	p = tlist->start;
-
-	tlist->start =
-	    (struct element *) my_malloc(sizeof(struct element));
-
-	/* allocating memory */
-#ifdef USE_EXIT_ON_ERROR
-	memtst(tlist->start == NULL);
-	memtst((tlist->start->data = (void *) my_malloc(dsize)) == NULL);
-#else
-	if (!tlist->start)
+	if (! (p = element_new()))
 		return NULL;
 
-	tlist->start->data = (void *) my_malloc(dsize);
-	if (!tlist->start->data) {
-		my_free(tlist->start);
-		tlist->start = NULL;
+	if (! (p->data = (void *)my_malloc(dsize))) {
+		my_free(p);
 		return NULL;
 	}
-#endif
-
-	/* copy data */
-	tlist->start->data = memcpy(tlist->start->data, data, dsize);
-	tlist->start->dsize = dsize;
-
-	tlist->start->nextnode = p;
+	p->data = memcpy(p->data, data, dsize);
+	p->dsize=dsize;
+	p->nextnode=tlist->start;
+	tlist->start = p;
 
 	/* updating node count */
 	tlist->total_nodes++;
