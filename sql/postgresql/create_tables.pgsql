@@ -90,35 +90,6 @@ CREATE TABLE acl (
     FOREIGN KEY (mailbox_id) REFERENCES mailboxes(mailbox_idnr) ON DELETE CASCADE
 );
 
-CREATE SEQUENCE shared_mailbox_seq;
-CREATE TABLE shared_mailbox (
-       id INT8 DEFAULT nextval('shared_mailbox_seq'),
-       mailbox_id INT8 NOT NULL,
-       maxmail_size INT8 DEFAULT '0' NOT NULL,
-       curmail_size INT8 DEFAULT '0' NOT NULL,
-       PRIMARY KEY(id),
-       FOREIGN KEY(mailbox_id) REFERENCES mailboxes(mailbox_idnr) ON DELETE CASCADE
-);
-CREATE INDEX shared_mailbox_mailbox_id_idx ON shared_mailbox(mailbox_id);
-
-CREATE SEQUENCE shared_mailbox_access_seq;
-CREATE TABLE shared_mailbox_access (
-       id INT8 DEFAULT nextval('shared_mailbox_access_seq'),
-       shared_mailbox_id INT8 DEFAULT '0' NOT NULL,
-       user_id INT8 DEFAULT '0' NOT NULL,
-       lookup_flag INT2 DEFAULT '0' NOT NULL,
-       read_flag INT2 DEFAULT '0' NOT NULL,
-       insert_flag INT2 DEFAULT '0' NOT NULL,
-       write_flag INT2 DEFAULT '0' NOT NULL,
-       is_subscribed INT2 DEFAULT '0' NOT NULL,
-       PRIMARY KEY (id),
-       FOREIGN KEY (shared_mailbox_id) REFERENCES shared_mailbox(id) ON DELETE CASCADE,
-       FOREIGN KEY (user_id) REFERENCES users (user_idnr) ON DELETE CASCADE
-);
-CREATE INDEX shared_mailbox_access_shared_mailbox_id ON shared_mailbox_access(shared_mailbox_id);
-CREATE INDEX shared_mailbox_access_user_id_idx ON shared_mailbox_access(user_id);
-
-
 CREATE SEQUENCE physmessage_id_seq;
 CREATE TABLE physmessage (
    id INT8 DEFAULT nextval('physmessage_id_seq'),

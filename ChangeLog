@@ -1,10 +1,18 @@
 2004-01-27  Ilja Booij  <ilja@ic-s.nl>
 
+	* sql/mysql/create_tables_innoDB.mysql: tables shared_mailbox and
+	shared_mailbox_access removed.
+
+	* sql/mysql/create_tables.mysql: tables shared_mailbox and 
+	shared_mailbox_access removed.
+
 	* misc.c (mailbox_remove_namespace): new function which makes a 
 	simple mailbox name from a mailbox name with namespace information 
 
 	* db.c (db_createmailbox): uses the mailbox_remove_namespace() function
 	to remove possible namespace information from the mailbox name.
+	(db_calculate_quotum_all): changed query. Now also counts mailbox
+	size for user '0'.
 
 	* imap4.c (imap_handler_functions): added _ic_namespace
 	added IMAP_COMM_NAMESPACE to commands

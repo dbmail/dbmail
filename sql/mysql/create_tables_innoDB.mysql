@@ -112,38 +112,6 @@ CREATE TABLE acl (
 ) TYPE=InnoDB;
 
 	
-DROP TABLE IF EXISTS shared_mailbox;
-CREATE TABLE shared_mailbox (
-	id bigint(21) NOT NULL auto_increment,
-	mailbox_id bigint(21) NOT NULL default '0',
-	maxmail_size bigint(21) NOT NULL default '0',
-	curmail_size bigint(21) NOT NULL default '0',
-	PRIMARY KEY  (id),
-	INDEX (mailbox_id),
-	FOREIGN KEY (`mailbox_id`) 
-		REFERENCES `mailboxes` (`mailbox_idnr`) ON DELETE CASCADE
-) TYPE=InnoDB;
-
-DROP TABLE IF EXISTS shared_mailbox_access;
-CREATE TABLE shared_mailbox_access (
-	id bigint(21) NOT NULL auto_increment,
-	shared_mailbox_id bigint(21) NOT NULL default '0',
-	user_id bigint(21) NOT NULL default '0',
-	lookup_flag tinyint(1) NOT NULL default '0',
-	read_flag tinyint(1) NOT NULL default '0',
-	insert_flag tinyint(1) NOT NULL default '0',
-	write_flag tinyint(1) NOT NULL default '0',
-	is_subscribed tinyint(1) unsigned NOT NULL default '0',
-	PRIMARY KEY  (`id`),
-	INDEX (shared_mailbox_id),
-	INDEX (user_id),
-	FOREIGN KEY (`shared_mailbox_id`) 
-		REFERENCES `shared_mailbox` (`id`) ON DELETE CASCADE,
-	FOREIGN KEY (`user_id`) 
-		REFERENCES `users` (`user_idnr`) ON DELETE CASCADE
-) TYPE=InnoDB;
-
-
 DROP TABLE IF EXISTS physmessage;
 CREATE TABLE physmessage (
 	id bigint(21) NOT NULL auto_increment,

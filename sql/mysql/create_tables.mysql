@@ -87,31 +87,6 @@ CREATE TABLE acl (
 	PRIMARY KEY(user_id, mailbox_id)
 );
 	
-DROP TABLE IF EXISTS shared_mailbox;
-CREATE TABLE shared_mailbox (
-  id bigint(21) NOT NULL auto_increment,
-  mailbox_id bigint(21) NOT NULL default '0',
-  maxmail_size bigint(21) NOT NULL default '0',
-  curmail_size bigint(21) NOT NULL default '0',
-  PRIMARY KEY  (id),
-  INDEX (mailbox_id)
-);
-
-DROP TABLE IF EXISTS shared_mailbox_access;
-CREATE TABLE shared_mailbox_access (
-  id bigint(21) NOT NULL auto_increment,
-  shared_mailbox_id bigint(21) NOT NULL default '0',
-  user_id bigint(21) NOT NULL default '0',
-  lookup_flag tinyint(1) NOT NULL default '0',
-  read_flag tinyint(1) NOT NULL default '0',
-  insert_flag tinyint(1) NOT NULL default '0',
-  write_flag tinyint(1) NOT NULL default '0',
-  is_subscribed tinyint(1) NOT NULL default '0',
-  PRIMARY KEY  (id),
-  INDEX (shared_mailbox_id),
-  INDEX (user_id)
-);
-
 DROP TABLE IF EXISTS physmessage;
 CREATE TABLE physmessage (
    id bigint(21) DEFAULT '0' NOT NULL auto_increment,

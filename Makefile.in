@@ -94,27 +94,27 @@ SUBDIRS = mysql pgsql auth
 bin_PROGRAMS = dbmail-smtp dbmail-pop3d dbmail-imapd dbmail-maintenance dbmail-adduser dbmail-readvut
 bin_SCRIPTS = install-dbmail.sh
 
-dbmail_smtp_SOURCES = config.c list.c debug.c dbmd5.c md5.c mime.c main.c pipe.c bounce.c forward.c memblock.c misc.c db.c shared_mailbox.c
+dbmail_smtp_SOURCES = config.c list.c debug.c dbmd5.c md5.c mime.c main.c pipe.c bounce.c forward.c memblock.c misc.c db.c
 dbmail_smtp_LDADD = @SQLALIB@ $(top-builddir)auth/libauthdbmail.a
 dbmail_smtp_LDFLAGS = @SQLLIB@ @LDAPLIB@
 
-dbmail_pop3d_SOURCES = config.c server.c serverchild.c pop3.c list.c debug.c dbmd5.c md5.c mime.c misc.c memblock.c pop3d.c db.c shared_mailbox.c
+dbmail_pop3d_SOURCES = config.c server.c serverchild.c pop3.c list.c debug.c dbmd5.c md5.c mime.c misc.c memblock.c pop3d.c db.c
 dbmail_pop3d_LDADD = @SQLALIB@ $(top-builddir)auth/libauthdbmail.a
 dbmail_pop3d_LDFLAGS = @SQLLIB@ @LDAPLIB@
 
-dbmail_imapd_SOURCES = acl.c quota.c config.c server.c serverchild.c imap4.c debug.c list.c dbmd5.c md5.c imaputil.c imapcommands.c mime.c misc.c memblock.c rfcmsg.c imapd.c db.c dbsearch.c dbmsgbuf.c shared_mailbox.c 1
+dbmail_imapd_SOURCES = acl.c quota.c config.c server.c serverchild.c imap4.c debug.c list.c dbmd5.c md5.c imaputil.c imapcommands.c mime.c misc.c memblock.c rfcmsg.c imapd.c db.c dbsearch.c dbmsgbuf.c 1
 dbmail_imapd_LDADD = @SQLALIB@ $(top-builddir)auth/libauthdbmail.a
 dbmail_imapd_LDFLAGS = @SQLLIB@ @LDAPLIB@
 
-dbmail_maintenance_SOURCES = config.c debug.c list.c dbmd5.c md5.c mime.c memblock.c maintenance.c auth.h db.c misc.c shared_mailbox.c
+dbmail_maintenance_SOURCES = config.c debug.c list.c dbmd5.c md5.c mime.c memblock.c maintenance.c auth.h db.c misc.c 
 dbmail_maintenance_LDADD = @SQLALIB@ $(top-builddir)auth/libauthdbmail.a
 dbmail_maintenance_LDFLAGS = @SQLLIB@ @LDAPLIB@
 
-dbmail_adduser_SOURCES = config.c debug.c list.c dbmd5.c md5.c mime.c memblock.c user.c db.c misc.c shared_mailbox.c
+dbmail_adduser_SOURCES = config.c debug.c list.c dbmd5.c md5.c mime.c memblock.c user.c db.c misc.c 
 dbmail_adduser_LDADD = @SQLALIB@ $(top-builddir)auth/libauthdbmail.a
 dbmail_adduser_LDFLAGS = @SQLLIB@ @LDAPLIB@
 
-dbmail_readvut_SOURCES = config.c debug.c list.c dbmd5.c md5.c mime.c vut2dbmail.c db.c misc.c shared_mailbox.c
+dbmail_readvut_SOURCES = config.c debug.c list.c dbmd5.c md5.c mime.c vut2dbmail.c db.c misc.c 
 dbmail_readvut_LDADD = @SQLALIB@ $(top-builddir)auth/libauthdbmail.a
 dbmail_readvut_LDFLAGS = @SQLLIB@ @LDAPLIB@
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -129,26 +129,23 @@ CPPFLAGS = @CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
 dbmail_smtp_OBJECTS =  config.o list.o debug.o dbmd5.o md5.o mime.o \
-main.o pipe.o bounce.o forward.o memblock.o misc.o db.o \
-shared_mailbox.o
+main.o pipe.o bounce.o forward.o memblock.o misc.o db.o
 dbmail_smtp_DEPENDENCIES =  $(top-builddir)auth/libauthdbmail.a
 dbmail_pop3d_OBJECTS =  config.o server.o serverchild.o pop3.o list.o \
-debug.o dbmd5.o md5.o mime.o misc.o memblock.o pop3d.o db.o \
-shared_mailbox.o
+debug.o dbmd5.o md5.o mime.o misc.o memblock.o pop3d.o db.o
 dbmail_pop3d_DEPENDENCIES =  $(top-builddir)auth/libauthdbmail.a
 dbmail_imapd_OBJECTS =  acl.o quota.o config.o server.o serverchild.o \
 imap4.o debug.o list.o dbmd5.o md5.o imaputil.o imapcommands.o mime.o \
-misc.o memblock.o rfcmsg.o imapd.o db.o dbsearch.o dbmsgbuf.o \
-shared_mailbox.o
+misc.o memblock.o rfcmsg.o imapd.o db.o dbsearch.o dbmsgbuf.o
 dbmail_imapd_DEPENDENCIES =  $(top-builddir)auth/libauthdbmail.a
 dbmail_maintenance_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o \
-mime.o memblock.o maintenance.o db.o misc.o shared_mailbox.o
+mime.o memblock.o maintenance.o db.o misc.o
 dbmail_maintenance_DEPENDENCIES =  $(top-builddir)auth/libauthdbmail.a
 dbmail_adduser_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o mime.o \
-memblock.o user.o db.o misc.o shared_mailbox.o
+memblock.o user.o db.o misc.o
 dbmail_adduser_DEPENDENCIES =  $(top-builddir)auth/libauthdbmail.a
 dbmail_readvut_OBJECTS =  config.o debug.o list.o dbmd5.o md5.o mime.o \
-vut2dbmail.o db.o misc.o shared_mailbox.o
+vut2dbmail.o db.o misc.o
 dbmail_readvut_DEPENDENCIES =  $(top-builddir)auth/libauthdbmail.a
 SCRIPTS =  $(bin_SCRIPTS)
 
@@ -171,8 +168,7 @@ DEP_FILES =  .deps/acl.P .deps/bounce.P .deps/config.P .deps/db.P \
 .deps/imaputil.P .deps/list.P .deps/main.P .deps/maintenance.P \
 .deps/md5.P .deps/memblock.P .deps/mime.P .deps/misc.P .deps/pipe.P \
 .deps/pop3.P .deps/pop3d.P .deps/quota.P .deps/rfcmsg.P .deps/server.P \
-.deps/serverchild.P .deps/shared_mailbox.P .deps/user.P \
-.deps/vut2dbmail.P
+.deps/serverchild.P .deps/user.P .deps/vut2dbmail.P
 SOURCES = $(dbmail_smtp_SOURCES) $(dbmail_pop3d_SOURCES) $(dbmail_imapd_SOURCES) $(dbmail_maintenance_SOURCES) $(dbmail_adduser_SOURCES) $(dbmail_readvut_SOURCES)
 OBJECTS = $(dbmail_smtp_OBJECTS) $(dbmail_pop3d_OBJECTS) $(dbmail_imapd_OBJECTS) $(dbmail_maintenance_OBJECTS) $(dbmail_adduser_OBJECTS) $(dbmail_readvut_OBJECTS)
 

@@ -31,7 +31,6 @@
 #include "dbmail.h"
 #include "auth.h"
 #include "misc.h"
-#include "shared_mailbox.h"
 #include <stdio.h>
 #include <time.h>
 #include <stdlib.h>
@@ -152,7 +151,6 @@ int db_calculate_quotum_all()
 	     "AND msg.mailbox_idnr = mbx.mailbox_idnr "
 	     "AND mbx.owner_idnr = usr.user_idnr "
 	     "AND msg.status < '2' "
-	     "AND usr.user_idnr <> '0' " /* don't count shared mailboxes */
 	     "GROUP BY usr.user_idnr, usr.curmail_size "
 	     "HAVING sum(pm.messagesize) <> usr.curmail_size");
 
@@ -667,7 +665,6 @@ int db_update_message(u64_t message_idnr, const char *unique_id,
 		      u64_t message_size, u64_t rfc_size)
 {
     u64_t physmessage_id = 0;
-    u64_t mailbox_idnr = 0;
 
     /* update the fields in the messages table */
     snprintf(query, DEF_QUERYSIZE,
@@ -691,28 +688,12 @@ int db_update_message(u64_t message_idnr, const char *unique_id,
 	       __FILE__, __FUNCTION__, physmessage_id);
     } 
         
-    mailbox_idnr = db_get_mailbox_from_message(message_idnr);
-    if (shared_mailbox_is_shared(mailbox_idnr) == -1) {
-	 trace (TRACE_ERROR, "%s,%s: error checking if msg is "
-		"in shared mailbox", __FILE__, __FUNCTION__);
-	 return -1;
-    } else if (shared_mailbox_is_shared(mailbox_idnr) == 1) {
-	 /* shared mailbox */
-	 if (shared_mailbox_calculate_quotum_used(mailbox_idnr) == -1) {
-	      trace(TRACE_ERROR, "%s,%s: error setting quotum used "
-		    "for shared mailbox with mailbox_id [%llu]",
-		    mailbox_idnr);
-	      return -1;
-	 }
-    } else {
-	 if (db_calculate_quotum_used(
-		  db_get_useridnr(message_idnr)) == -1) {	 
-	      trace (TRACE_ERROR, "%s,%s: error calculating quotum "
-		     "used for user [%llu]. Database might be " 
-		     "inconsistent. run dbmail-maintenance",
-		     __FILE__, __FUNCTION__, db_get_useridnr(message_idnr));
-	      return -1;
-	 }
+    if (db_calculate_quotum_used(db_get_useridnr(message_idnr)) == -1) {
+	    trace (TRACE_ERROR, "%s,%s: error calculating quotum "
+		   "used for user [%llu]. Database might be " 
+		   "inconsistent. run dbmail-maintenance",
+		   __FILE__, __FUNCTION__, db_get_useridnr(message_idnr));
+	    return -1;
     }
     return 0;
 }
@@ -1409,25 +1390,18 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty)
 
     /* remove the mailbox */
     if (!only_empty) {
-	 /* first check if this is a shared mailbox, if it is, the mailbox
-	    will not be deleted! */
-	 if (shared_mailbox_is_shared(mailbox_idnr) == 1) 
-	      trace(TRACE_INFO, "%s,%s: Not deleting mailbox because "
-		    "it is a shared mailbox", __FILE__, __FUNCTION__);
-	 else {
-	      /* delete mailbox */
-	      snprintf(query, DEF_QUERYSIZE,
-		       "DELETE FROM mailboxes WHERE mailbox_idnr = '%llu'",
-		       mailbox_idnr);
+	    /* delete mailbox */
+	    snprintf(query, DEF_QUERYSIZE,
+		     "DELETE FROM mailboxes WHERE mailbox_idnr = '%llu'",
+		     mailbox_idnr);
 	      
-	      if (db_query(query) == -1) {
-		   trace(TRACE_ERROR, "%s,%s: could not delete mailbox [%llu]",
-			 mailbox_idnr);
-		   return -1;
-	      }
-	 }
+	    if (db_query(query) == -1) {
+		    trace(TRACE_ERROR, "%s,%s: could not delete mailbox "
+			  "[%llu]", mailbox_idnr);
+		    return -1;
+	    }
     }
-
+    
     /* we want to delete all messages from the mailbox. So we
      * need to find all messages in the box */
     snprintf(query, DEF_QUERYSIZE,
@@ -1435,37 +1409,38 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty)
 	     "WHERE mailbox_idnr = '%llu'", mailbox_idnr);
 
     if (db_query(query) == -1) {
-	trace(TRACE_ERROR,
-	      "%s,%s: could not select message ID's for mailbox [%llu]",
-	      mailbox_idnr);
-	return -1;
+	    trace(TRACE_ERROR,
+		  "%s,%s: could not select message ID's for mailbox [%llu]",
+		  mailbox_idnr);
+	    return -1;
     }
-
+    
     n = db_num_rows();
     if (n == 0) {
 	db_free_result();
 	trace(TRACE_INFO, "%s,%s: mailbox is empty", __FILE__, __FUNCTION__);
     }
-
+    
     if (!(message_idnrs = (u64_t *) my_malloc(n * sizeof(u64_t)))) {
-	trace(TRACE_ERROR, "%s,%s: error allocating memory",
+	    trace(TRACE_ERROR, "%s,%s: error allocating memory",
 	      __FILE__, __FUNCTION__);
-	return -1;
+	    return -1;
     }
     for (i = 0; i < n; i++)
-	message_idnrs[i] = strtoull(db_get_result(0, 0), NULL, 10);
+	    message_idnrs[i] = strtoull(db_get_result(0, 0), NULL, 10);
     db_free_result();
     /* delete every message in the mailbox */
     for (i = 0; i < n; i++) {
 	/* get the user_idnr of the messages for later use */
-	if (user_idnr == 0)
-	    user_idnr = db_get_useridnr(message_idnrs[i]);
-
-	if (db_delete_message(message_idnrs[i]) == -1) {
-	    trace(TRACE_ERROR, "%s,%s: error deleting message [%llu] "
-		  "database might be inconsistent. run dbmail-maintenance",
-		  __FILE__, __FUNCTION__, message_idnrs[i]);
-	    return -1;
+	    if (user_idnr == 0)
+		    user_idnr = db_get_useridnr(message_idnrs[i]);
+	    
+	    if (db_delete_message(message_idnrs[i]) == -1) {
+		    trace(TRACE_ERROR, "%s,%s: error deleting message [%llu] "
+			  "database might be inconsistent. run "
+			  "dbmail-maintenance",
+			  __FILE__, __FUNCTION__, message_idnrs[i]);
+		    return -1;
 	}
     }
     my_free(message_idnrs);
@@ -1823,24 +1798,16 @@ u64_t db_check_sizelimit(u64_t addblocksize UNUSED, u64_t message_idnr,
 {
     u64_t currmail_size = 0;
     u64_t maxmail_size = 0;
-    u64_t mailbox_idnr;
-    if (shared_mailbox_msg_in_shared(message_idnr) == 1) {
-	 /* message is located in shared mailbox, so it's
-	  treated differently */
-	 mailbox_idnr = db_get_mailbox_from_message(message_idnr);
+    
+    *user_idnr = db_get_useridnr(message_idnr);
 
-	 shared_mailbox_get_curmail_size(mailbox_idnr, &currmail_size);
-	 shared_mailbox_get_maxmail_size(mailbox_idnr, &maxmail_size);
-    } else {
-	 *user_idnr = db_get_useridnr(message_idnr);
+    /* get currently used quotum */
+    db_get_quotum_used(*user_idnr, &currmail_size);
+    
+    /* current mailsize from INBOX is now known, 
+     * now check the maxsize for this user */
+    auth_getmaxmailsize(*user_idnr, &maxmail_size);
 
-	 /* get currently used quotum */
-	 db_get_quotum_used(*user_idnr, &currmail_size);
-	 
-	 /* current mailsize from INBOX is now known, 
-	  * now check the maxsize for this user */
-	 auth_getmaxmailsize(*user_idnr, &maxmail_size);
-    }
 	 
     trace(TRACE_DEBUG, "%s,%s: comparing currsize + blocksize [%llu], "
 	  "maxsize [%llu]\n",
@@ -2115,20 +2082,16 @@ int db_findmailbox_owner(const char *name, u64_t owner_idnr,
     }
 
     if (db_num_rows() < 1) {
-	 /* maybe we're looking for a shared mailbox? */
-	 db_free_result();
-	 if (shared_mailbox_find(name, owner_idnr, mailbox_idnr) == -1) {
-	      trace(TRACE_ERROR, "%s,%s: error finding shared mailbox",
-		    __FILE__, __FUNCTION__);
-	      return -1;
-	 }
+	    db_free_result();
+	    return 0;
     } else {
-	 query_result = db_get_result(0, 0);
-	 *mailbox_idnr = (query_result) ? strtoull(query_result, NULL, 10) : 0;
-	 db_free_result();
+	    query_result = db_get_result(0, 0);
+	    *mailbox_idnr = (query_result) ? 
+		    strtoull(query_result, NULL, 10) : 0;
+	    db_free_result();
     }
 
-    if (*mailbox_idnr == 0) 
+    if (*mailbox_idnr == 0)
 	    return 0;
     return 1;
 }
@@ -2231,12 +2194,7 @@ int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern,
 			    int only_subscribed)
 {
     int result;
-    u64_t *normal_mailboxes; /* list of 'normal mailboxes */
-    int nr_normal_mailboxes; /* number of 'normal' mailboxes */
-    u64_t *shared_mailboxes; /* list of shared mailboxes */
-    int nr_shared_mailboxes; /* number of shared mailboxes */
     regex_t preg;
-    int i;
     
     *children = NULL;
 
@@ -2248,57 +2206,23 @@ int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern,
     
     /* list normal mailboxes */
     if (db_list_mailboxes_by_regex(owner_idnr, only_subscribed, &preg, 
-			  &normal_mailboxes, &nr_normal_mailboxes) < 0) {
+			  children, nchildren) < 0) {
 	 trace(TRACE_ERROR, "%s,%s: error listing mailboxes", 
 	       __FILE__, __FUNCTION__);
 	 return -1;
     }
-    /* list shared mailboxes */
-    if (shared_mailbox_list_by_regex(owner_idnr, only_subscribed, &preg,
-				     &shared_mailboxes, 
-				     &nr_shared_mailboxes) < 0) {
-	 trace(TRACE_ERROR, "%s,%s: error listing shared mailboxes",
-	       __FILE__, __FUNCTION__);
-	 /* don't forget to free normal_mailboxes */
-	 my_free(normal_mailboxes);
-	 return -1;
-    }
 
-    if (nr_normal_mailboxes + nr_shared_mailboxes == 0) {
+    if (nchildren == 0) {
 	 trace(TRACE_INFO, "%s, %s: did not find any mailboxes that "
-	       "match pattern. returning 1, nchildren = 0", 
+	       "match pattern. returning 0, nchildren = 0", 
 	       __FILE__, __FUNCTION__);
-	 *nchildren = 0;
 	 return 0;
     }
 	 
-    /* the normal mailboxes and shared mailboxes list now have to be 
-       concatenated to form one list */
-    *children = (u64_t*) my_malloc((nr_normal_mailboxes + nr_shared_mailboxes)
-				   * sizeof(u64_t));
-    if (!*children) {
-	 trace(TRACE_ERROR, "%s,%s: error allocating memory",
-	       __FILE__, __FUNCTION__);
-	 if (normal_mailboxes)
-	      my_free(normal_mailboxes);
-	 if (shared_mailboxes)
-	      my_free(shared_mailboxes);
-	 return -1;
-    }
-    
-    *nchildren = 0;
-    for (i = 0; i < nr_normal_mailboxes; i++) 
-	 (*children)[(*nchildren)++] = normal_mailboxes[i];
-    for (i = 0; i < nr_shared_mailboxes; i++)
-	 (*children)[(*nchildren)++] = shared_mailboxes[i];
 
     /* store matches */
     trace(TRACE_INFO,"%s,%s: found [%d] mailboxes", __FILE__, __FUNCTION__,
 	 *nchildren);
-    if (normal_mailboxes)
-	 my_free(normal_mailboxes);
-    if (shared_mailboxes)
-	 my_free(shared_mailboxes);
     return 0;
 }
 
@@ -2593,8 +2517,6 @@ int db_noinferiors(u64_t mailbox_idnr)
 
 int db_setselectable(u64_t mailbox_idnr, int select_value)
 {
-     if (shared_mailbox_is_shared(mailbox_idnr) == 1) 
-	  return 0;
     snprintf(query, DEF_QUERYSIZE,
 	     "UPDATE mailboxes SET no_select = %d WHERE mailbox_idnr = '%llu'",
 	     (!select_value), mailbox_idnr);
@@ -2689,25 +2611,19 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr)
 
      time(&td);			/* get time */
      
-     /* special rules if we copy to a shared mailbox */
-     if (shared_mailbox_is_shared(mailbox_to) == 1) {
-	  shared_mailbox_get_curmail_size(mailbox_to, &curr_quotum);
-	  shared_mailbox_get_maxmail_size(mailbox_to, &maxmail);
-     } else {
-	  /* target mailbox is a normal mailbox */
-	  if (db_get_quotum_used(user_idnr, &curr_quotum) < 0) {
-	       trace(TRACE_ERROR,
-		     "%s,%s: error fetching used quotum for user [%llu]",
-		     __FILE__, __FUNCTION__, user_idnr);
-	       return -1;
-	  }
-	  if (auth_getmaxmailsize(user_idnr, &maxmail) == -1) {
-	       trace(TRACE_ERROR,
-		     "%s,%s: error fetching max quotum for user [%llu]", 
-		     __FILE__, __FUNCTION__, user_idnr);
-	      return -1;
-	  }
+     if (db_get_quotum_used(user_idnr, &curr_quotum) < 0) {
+	     trace(TRACE_ERROR,
+		   "%s,%s: error fetching used quotum for user [%llu]",
+		   __FILE__, __FUNCTION__, user_idnr);
+	     return -1;
      }
+     if (auth_getmaxmailsize(user_idnr, &maxmail) == -1) {
+	     trace(TRACE_ERROR,
+		   "%s,%s: error fetching max quotum for user [%llu]", 
+		   __FILE__, __FUNCTION__, user_idnr);
+	     return -1;
+     }
+     
      if (maxmail > 0) {
 	  if (curr_quotum >= maxmail) {
 	       trace(TRACE_INFO,
@@ -2776,21 +2692,12 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr)
      }
      
      /* update quotum */
-     if (shared_mailbox_is_shared(mailbox_to) == 1) {
-	  if (shared_mailbox_calculate_quotum_used(mailbox_to) == -1) {
-	       trace(TRACE_ERROR, "%s,%s: error calculating quotum for "
-		     "shared mailbox with mailbox_id [%llu]", 
-		     __FILE__, __FUNCTION__, mailbox_to);
-	       return -1;
-	  }
-     } else { /* normal mailbox */
-	  if (db_calculate_quotum_used(user_idnr) == -1) {
-	       trace(TRACE_ERROR, "%s,%s: error calculating quotum for "
-		     "shared user with user_idnr [%llu]", 
-			  __FILE__, __FUNCTION__, user_idnr);
-	       return -1;
-	  }    
-     }
+     if (db_calculate_quotum_used(user_idnr) == -1) {
+	     trace(TRACE_ERROR, "%s,%s: error calculating quotum for "
+		   "shared user with user_idnr [%llu]", 
+		   __FILE__, __FUNCTION__, user_idnr);
+	     return -1;
+     }    
      return newid;			/* success */
 }				/* end db_copymsg() */
 
@@ -2855,22 +2762,18 @@ int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name)
 
 int db_setmailboxname(u64_t mailbox_idnr, const char *name)
 {
-     if (shared_mailbox_is_shared(mailbox_idnr) == 1) {
-	  trace(TRACE_INFO, "%s,%s: Not renaming mailbox because "
-		"this is a shared mailbox ", __FILE__, __FUNCTION__);
-	  return 0;
-     }
-    snprintf(query, DEF_QUERYSIZE,
-	     "UPDATE mailboxes SET name = '%s' WHERE mailbox_idnr = '%llu'",
-	     name, mailbox_idnr);
-
-    if (db_query(query) == -1) {
-	trace(TRACE_ERROR, "%s,%s: could not set name", __FILE__,
-	      __FUNCTION__);
-	return -1;
-    }
-
-    return 0;
+	snprintf(query, DEF_QUERYSIZE,
+		 "UPDATE mailboxes SET name = '%s' "
+		 "WHERE mailbox_idnr = '%llu'",
+		 name, mailbox_idnr);
+	
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: could not set name", __FILE__,
+		      __FUNCTION__);
+		return -1;
+	}
+	
+	return 0;
 }
 
 int db_expunge(u64_t mailbox_idnr, u64_t ** msg_idnrs, u64_t * nmsgs)
@@ -2967,67 +2870,52 @@ u64_t db_first_unseen(u64_t mailbox_idnr)
 
 int db_subscribe(u64_t mailbox_idnr, u64_t user_idnr)
 {
-     if (shared_mailbox_is_shared(mailbox_idnr) == 1) {
-	  if (shared_mailbox_subscribe(mailbox_idnr, user_idnr, 1) == -1) {
-	       trace(TRACE_ERROR, "%s,%s: error subscribing to mailbox",
-		     __FILE__, __FUNCTION__);
-	       return -1;
-	  }
-     } else {
-	  snprintf(query, DEF_QUERYSIZE,
-		   "SELECT * FROM subscription "
-		   "WHERE mailbox_id = '%llu' "
-		   "AND user_id = '%llu'", mailbox_idnr, user_idnr);
+	snprintf(query, DEF_QUERYSIZE,
+		 "SELECT * FROM subscription "
+		 "WHERE mailbox_id = '%llu' "
+		 "AND user_id = '%llu'", mailbox_idnr, user_idnr);
+	
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: could not verify subscription",
+		      __FILE__, __FUNCTION__);
+		return (-1);
+	}
+	
+	if (db_num_rows() > 0) {
+		trace(TRACE_DEBUG, "%s,%s: already subscribed to mailbox "
+		      "[%llu]", __FILE__, __FUNCTION__, mailbox_idnr);
+		db_free_result();
+		return 0;
+	}
 	  
-	  if (db_query(query) == -1) {
-	       trace(TRACE_ERROR, "%s,%s: could not verify subscription",
-		     __FILE__, __FUNCTION__);
-	       return (-1);
-	  }
+	db_free_result();
+	
+	snprintf(query, DEF_QUERYSIZE,
+		 "INSERT INTO subscription (user_id, mailbox_id) "
+		 "VALUES ('%llu', '%llu')", user_idnr, mailbox_idnr);
 	  
-	  if (db_num_rows() > 0) {
-		  trace(TRACE_DEBUG, "%s,%s: already subscribed to mailbox "
-			"[%llu]", __FILE__, __FUNCTION__, mailbox_idnr);
-		  db_free_result();
-		  return 0;
-	  }
-	  
-	  db_free_result();
-	  
-	  snprintf(query, DEF_QUERYSIZE,
-		   "INSERT INTO subscription (user_id, mailbox_id) "
-		   "VALUES ('%llu', '%llu')", user_idnr, mailbox_idnr);
-	  
-	  if (db_query(query) == -1) {
-		  trace(TRACE_ERROR, "%s,%s: could not insert subscription",
-			__FILE__, __FUNCTION__);
-		  return -1;
-	  }
-     }
-     return 0;
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: could not insert subscription",
+		      __FILE__, __FUNCTION__);
+		return -1;
+	}
+	
+	return 0;
 }
 
 int db_unsubscribe(u64_t mailbox_idnr, u64_t user_idnr)
 {
-     if (shared_mailbox_is_shared(mailbox_idnr) == 1) {
-	  if (shared_mailbox_subscribe(mailbox_idnr, user_idnr, 0) == -1) {
-	   trace(TRACE_ERROR, "%s,%s: error unsubscribing from mailbox",
-		     __FILE__, __FUNCTION__);
-	       return -1;
-	  }    
-     } else {
-	  snprintf(query, DEF_QUERYSIZE,
-		   "DELETE FROM subscription "
-		   "WHERE user_id = '%llu' AND mailbox_id = '%llu'",
-		   user_idnr, mailbox_idnr);
+	snprintf(query, DEF_QUERYSIZE,
+		 "DELETE FROM subscription "
+		 "WHERE user_id = '%llu' AND mailbox_id = '%llu'",
+		 user_idnr, mailbox_idnr);
 	  	  
-	  if (db_query(query) == -1) {
-	       trace(TRACE_ERROR, "%s,%s: could not update mailbox",
-		     __FILE__, __FUNCTION__);
-	       return (-1);
-	  }
-     }
-     return 0;
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: could not update mailbox",
+		      __FILE__, __FUNCTION__);
+		return (-1);
+	}
+	return 0;
 }
 
 int db_get_msgflag(const char *flag_name, u64_t msg_idnr,
