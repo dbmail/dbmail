@@ -384,6 +384,7 @@ static int store_message_temp(FILE * instream,
 	u64_t user_idnr;
 	int ringpos;
 	int result;
+	int first_empty_line_skipped = 0; /* part of a hack to skip the first line */
 
 	/* define all out-parameters */
 	*msgsize = 0;
@@ -459,8 +460,21 @@ static int store_message_temp(FILE * instream,
 			ringbuf[ringpos] = tmpchar;
 			ringpos = (ringpos + 1) % RING_SIZE;
 
+			/* skip the first empty line 
+			 * FIXME: this feels like a dirty hack.. */
+			if (usedmem == 0 && first_empty_line_skipped == 0) {
+				switch (ringbuf[MOD(ringpos - 1, RING_SIZE)]) {
+				case '\r':
+					continue;
+				case '\n':
+					first_empty_line_skipped = 1;
+					continue;
+				default:
+					trace(TRACE_FATAL, "%s,%s:we shouldn't reach "
+					      "this statement!", __FILE__, __FUNCTION__);
+				}
+			}
 			/* Find \n not preceded by \r. */
-			
 			if (ringbuf[MOD(ringpos - 1, RING_SIZE)] == '\n'
 			 && ringbuf[MOD(ringpos - 2, RING_SIZE)] != '\r') {
 				trace(TRACE_DEBUG, "store_message_temp(): counted an rfcline");
