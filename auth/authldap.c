@@ -46,7 +46,7 @@
 #define AUTH_QUERY_SIZE 1024
 #define LDAP_RES_SIZE 1024
 
-static char *configFile = DEFAULT_CONFIG_FILE;
+extern char *configFile;
 
 LDAP *_ldap_conn;
 LDAPMod **_ldap_mod;
