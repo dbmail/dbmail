@@ -11,9 +11,9 @@ these instructions.
 
 What do you need?
 
-- a working mysql or postgresql installation
-- a working smtp server (postfix, exim or sendmail)
-- the dbmail source (www.dbmail.org)
+- a working mysql (> 4.0.14) or postgresql installation
+- a working smtp server (Postfix, Exim, QMail or Sendmail)
+- the DBMail source (www.dbmail.org)
 
 
 1.	Setup a database
@@ -26,38 +26,61 @@ What do you need?
 	Mysql setup
 	-----------
 
-	Note: Since some DBmail tables can get VERY large (depending on your
+	Note: Since some DBMail tables can get VERY large (depending on your
 	mailusage) we advise using InnoDB as database storage backend
 	(included in the Mysql MAX package.).
 	
-	First you'll need to create the DBMAIL database in MYSQL.
-	This is easy. You'll need the mysql commandline program for this. 
-	Just do :
-	
-	mysql -u root -p < sql/mysql/create_tables.mysql
-	
-	for InnoDB:
+	First you'll need to create the DBMail database in MYSQL. You can
+	do this by issueing the following command. This step is only
+	necessary when you do not have a database for DBMail yet. Note that
+	you will be prompted for the MySQL root password.
 
-	mysql -u root -p < sql/mysql/create_tables_innoDB.mysql
-	
-	in the dbmail source tree.
-	After this, the DBMAIL tables will have been created.
+	mysqladmin create dbmail -u root -p
 
+	This creates a database with the name "dbmail". Now you have to give
+	a non-root user access to this database. Start the MySQL command-line
+	client as root:
+
+	mysql -u root -p 
+
+	and enter the following command:
+
+	GRANT ALL ON dbmail.* to dbmail@localhost identified by '<pass>'
+
+	Where <pass> should be replaced with the password you want for
+	the dbmail user. After this step, the database is ready to be
+	used by the dbmail user. The next step is the creation of the
+	database tables used by DBMail. Log out of the MySQL client and run 
+	the following command from the command line. You will have to
+	enter the password you set in the previous step.
+
+	mysql -u dbmail dbmail -p < sql/mysql/create_tables_innoDB.mysql
+
+	If you cannot use InnoDB, replace creates_table_innoDB.mysql by
+	create_tables.mysql. This is not recommended though. In future
+	versions, DBMail will only support MySQL with transaction support,
+	which is only given by InnoDB at the moment.
+	
+	After this, the DBMAIL tables will have been created and we can go
+	on to the compilation and installation of DBMail itself.
 
 	Postgresql setup
 	----------------
 	
 	First you need to create the postgresql user dbmail is going to use.
-	This is done by:
+	This is done by. Note that this command can only be performed by
+	user postgres or another PostgreSQL user with the privileges to
+	create users and and databases.
 
 	createuser -U postgres dbmail
 
 	Off course you can use an other username than dbmail, simply replace
 	it. You can set a password for the user by doing a:
 
-	ALTER USER dbmail WITH PASSWORD 'secret';
+	ALTER USER dbmail WITH PASSWORD '<password>';
 
-	In a postgresql console. After doing this you should create the
+	In a postgresql console, with <password> replaced by the actual 
+	password you want to use. After doing this you should create the
 	database for dbmail:
 
 	createdb -U dbmail dbmail
@@ -77,10 +100,18 @@ What do you need?
 	Edit the dbmail.conf file and set everything in there
 	to your likeings.
 
+	Make sure to set your database name, user and host are configured
+	in dbmail.conf. Other options in the configuration file are 
+	documented there.
+
 3.	Run configure & make
 	Run the configure script. This script uses pg_config or mysql_config
 	(depending on --with-mysql or --with-pgsql) to detect where the
 	libraries and include files for these databases are.
+
+	e.g. when working with PostgreSQL, this is the configure command:
+
+	./configure --with-pgsql
 
 	After running configure, 'make all' will build the executables.
 	
