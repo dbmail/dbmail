@@ -19,22 +19,66 @@ void list_init (struct list *tlist)
   tlist->list_inited=1;
 }
 
+/*
+ * list_freelist()
+ *
+ * frees a list and all the memory associated with it
+ */
+void list_freelist(struct list *list)
+{
+  struct element *start = list_getstart(list);
+
+  /* check if list exists */
+  if (!list)
+    return;
+
+  /* free rest of list */
+  list_freelist(start->nextnode);
+  
+  /* free this item */
+  free(start->data);
+  free(start);
+  start = NULL;
+}
+
+ 
+/* 
+ * list_nodeadd()
+ *
+ * Adds a node to a linked list (list structure). 
+ * New item will be FIRST element of new linked list.
+ *
+ * returns NULL on failure or first element on success
+ */
 struct element *list_nodeadd(struct list *tlist, void *data,
 			     size_t dsize)
 {
-  /* Adds a node to a linked list (list structure) */
   struct element *p;
+
+  if (!tlist)
+    return NULL; /* cannot add to non-existing list */
+   
   p=tlist->start;
 	
   tlist->start=(struct element *)malloc(sizeof(struct element));
+	
+  /* allocating memory */
+#ifdef USE_EXIT_ON_ERROR
   memtst(tlist->start==NULL);
-	
-  /* allocating data for object */
   memtst((tlist->start->data=(void *)malloc(dsize))==NULL);
-	
-  /* copying data */
-  memtst(((tlist->start->data=memcpy(tlist->start->data,data,dsize)))
-	 ==NULL);
+#else
+  if (!tlist->start)
+    return NULL;
+
+  tlist->start->data=(void *)malloc(dsize);
+  if (!tlist->start->data)
+    return NULL;
+
+#endif
+  
+  /* copy data */
+  tlist->start->data = memcpy(tlist->start->data,data,dsize);
+
   tlist->start->nextnode=p;
 
 	/* updating node count */
@@ -42,15 +86,26 @@ struct element *list_nodeadd(struct list *tlist, void *data,
   return tlist->start;
 }
 
+
+/*
+ * list_nodedel()
+ *
+ * removes the item containing 'data' from the list preserving a valid linked-list structure.
+ *
+ * returns
+ */
 struct element *list_nodedel(struct list *tlist,void *data)
 {
   struct element *temp;
   struct element *item;
   item=NULL;
+
+  if (!tlist)
+    return NULL;
+
   temp=tlist->start;
 
   /* checking if lists exist else return NULL*/
-
   if (temp==NULL) return NULL;
 	
   while (temp!=NULL) /* walk the list */
@@ -83,17 +138,24 @@ struct element *list_nodedel(struct list *tlist,void *data)
 
 struct element *list_getstart(struct list *tlist)
 {
-  return tlist->start;
+  return (tlist) ? tlist->start : NULL;
 }
 
-int list_totalnodes(struct list *tlist)
+long list_totalnodes(struct list *tlist)
 {
-  return tlist->total_nodes;
+  return (tlist) ? tlist->total_nodes : -1; /* a NULL ptr doesnt even have zero nodes (?) */
 }
 
 void list_showlist(struct list *tlist)
 {
   struct element *temp;
+
+  if (!tlist)
+    {
+      trace(TRACE_MESSAGE,"list_showlist(): NULL ptr received\n");
+      return;
+    }
+
   temp=tlist->start;
   while (temp!=NULL)
     {

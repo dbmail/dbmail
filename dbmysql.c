@@ -5,6 +5,8 @@
 #include "config.h"
 #include "pop3.h"
 #include "dbmd5.h"
+#include "list.h"
+#include "mime.h"
 
 #define DEF_QUERYSIZE 1024
 
@@ -1521,6 +1523,9 @@ int db_get_msgdate(unsigned long mailboxuid, unsigned long msguid, char *date)
 int db_build_bodystructure(bodystruct_t *bs, unsigned long uid)
 {
   char query[DEF_QUERYSIZE];
+  struct list mimelist;
+  struct mime_record mr;
+  int result;
 
   snprintf(query, DEF_QUERYSIZE, "SELECT messageblk FROM messageblk WHERE "
 	   "messageidnr = %lu", uid);
@@ -1538,8 +1543,39 @@ int db_build_bodystructure(bodystruct_t *bs, unsigned long uid)
       return (-1);
     }
 
+  /* build a list of MIME-header items */
+  row = mysql_fetch_row(res);
+  if (!row)
+    {
+      /* msg has no blocks ?? */
+      trace(TRACE_ERROR,"db_build_bodystructure(): detected message without blocks, uid: %lu\n",
+	    uid);
+
+      mysql_free_result(res);
+      return -1;
+    }
+
+  result = mime_list(row[0], &mimelist);
+  if (result == -1)
+    {
+      trace(TRACE_ERROR,"db_build_bodystructure(): error creating MIME-header list\n");
+
+      mysql_free_result(res);
+      return -1;
+    }
+
   /* seek for first 'content-type' field */
+  result = mime_findfield("content-type",&mimelist,&mr);
+  if (result == -1)
+    {
+      trace(TRACE_ERROR,"db_build_bodystructure(): error searching content-type field\n");
+
+      mysql_free_result(res);
+      return -1;
+    }
+
   
+
 }
 
 

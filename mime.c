@@ -5,18 +5,8 @@
 #include "config.h"
 #include "mime.h"
 
-#define MIME_FIELD_MAX 128
-#define MIME_VALUE_MAX 1024
-#define MEM_BLOCK 1024
-
 extern char *header;
 extern unsigned long headersize;
-
-struct mime_record
-{
-  char field[MIME_FIELD_MAX];
-  char value[MIME_VALUE_MAX];
-};
 
 /* extern struct list mimelist;  */
 extern struct list users;
@@ -114,7 +104,13 @@ int mime_list(char *blkdata, struct list *mimelist)
 	  startptr = endptr+1; /* advance to next field */
 	}
       else 
-	break;
+	{
+	  /* no field/value delimiter found, non-valid MIME-header */
+	  free(mr);
+	  list_freelist(mimelist);
+
+	  return -1;
+	}
     }
 
   free(mr); /* no longer need this */
@@ -135,6 +131,26 @@ int mime_list(char *blkdata, struct list *mimelist)
   return 0;
 }
 
+
+/*
+ * mime_findfield()
+ *
+ * finds a MIME header field
+ *
+ * returns -1 on error, 0 on success
+ * 
+ * NOTE: if the item is not found 0 is still returned (successfull search)
+ */
+int mime_findfield(const char *fname, struct list *mimelist, struct mime_record *mr)
+{
+  struct element *current;
+
+  current = list_getstart(mimelist);
+  while (current)
+    {
+
+  
+  
 
 int mail_adr_list_special(int offset, int max, char *address_array[]) 
 {
@@ -219,6 +235,8 @@ int mail_adr_list(char *scan_for_field, struct list *targetlist, struct list *mi
 	}
       raw=raw->nextnode;
     }
+
+  free(tmpvalue);
 
   trace (TRACE_DEBUG,"mail_adr_list(): found %d emailaddresses",list_totalnodes(targetlist));
 	

@@ -6,6 +6,17 @@
 #include "debug.h"
 #include "list.h"
 
-void mime_list(char *blkdata, unsigned long blksize);
-int mail_adr_list(char *scan_for_field, struct list *targetlist);
+#define MIME_FIELD_MAX 128
+#define MIME_VALUE_MAX 1024
+#define MEM_BLOCK 1024
+
+struct mime_record
+{
+  char field[MIME_FIELD_MAX];
+  char value[MIME_VALUE_MAX];
+};
+
+int mime_list(char *blkdata, struct list *mimelist);
+int mime_findfield(const char *fname, struct list *mimelist, struct mime_record *mr);
+int mail_adr_list(char *scan_for_field, struct list *targetlist, struct list *mimelist);
 #endif
