@@ -248,7 +248,7 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 	if (list_totalnodes(&messageids)>0)
 	{
 		/* we have local deliveries */ 
-		while (!feof(stdin) || (strblock ==NULL))
+		while (!feof(stdin))
 		{
 			strblock = fread (strblock, sizeof(char), READ_BLOCK_SIZE, stdin);
 			
