@@ -41,6 +41,7 @@
 #endif
 
 #define INCOMING_BUFFER_SIZE 512
+#define MESSAGE_MAX_LINE_SIZE 1024
 
 /* default timeout for server daemon */
 #define DEFAULT_SERVER_TIMEOUT 300
@@ -71,6 +72,17 @@ const char validchars[] =
 
 char myhostname[64];
 
+/**
+ * read the whole message from a network connection
+ * \param[in] instream input stream
+ * \param[out] whole_message will hold the complete email-message
+ * \param[out] whole_message_size will hold the size of the message
+ * \return
+ *     - -1 on error
+ *     -  1 on success
+ */
+static int read_whole_message_network(FILE *instream, char **whole_message,
+				      u64_t *whole_message_size);
 
 int lmtp_reset(PopSession_t * session)
 {
@@ -597,9 +609,14 @@ int lmtp(void *stream, void *instream, char *buffer,
 
 				/* Anonymous Block */
 				{
+					char *whole_message = NULL;
 					char *header = NULL;
-					u64_t headersize =
-					    0, headerrfcsize = 0;
+					const char *body;
+					u64_t whole_message_size;
+					u64_t headersize = 0;
+					u64_t headerrfcsize = 0;
+					u64_t body_size = 0;
+					u64_t body_rfcsize = 0;
 					u64_t dummyidx = 0, dummysize = 0;
 					struct list fromlist, headerfields;
 					struct element *element;
@@ -613,53 +630,59 @@ int lmtp(void *stream, void *instream, char *buffer,
 					list_nodeadd(&fromlist,
 						     envelopefrom,
 						     strlen(envelopefrom));
-
-					if (!read_header
-					    ((FILE *) instream,
-					     &headerrfcsize, &headersize,
-					     &header)) {
+					
+					if (read_whole_message_network(
+						    (FILE *) instream,
+						    &whole_message,
+						    &whole_message_size) < 0) {
 						trace(TRACE_ERROR,
-						      "main(): fatal error from read_header()");
-						discard_client_input((FILE
-								      *)
-								     instream);
+						      "%s,%s: read_whole_message_network() failed",
+						      __FILE__, __FUNCTION__);
+						discard_client_input((FILE *) instream);
 						fprintf((FILE *) stream,
-							"500 Error reading header.\r\n");
+							"500 Error reading message");
+						return 1;
+					}
+					
+					trace(TRACE_DEBUG, "%s,%s: whole message = %s", __FILE__, __FUNCTION__, whole_message);
+					if (whole_message == NULL) {
+						trace(TRACE_ERROR, "%s,%s message is NULL!", __FILE__, __FUNCTION__);
+						discard_client_input(
+							(FILE *) instream);
+						fprintf((FILE *) stream,
+							"500 Error reading header\r\n");
 						return 1;
 					}
 
-					if (header != NULL) {
-						trace(TRACE_DEBUG,
-						      "main(): size of read_header() header "
-						      "is [%llu]",
-						      headersize);
-						if (headersize >
-						    READ_BLOCK_SIZE) {
-							trace(TRACE_ERROR,
-							      "main(): header is too "
-							      "big");
-							discard_client_input
-							    ((FILE *)
+					if (split_message(whole_message, 
+							  whole_message_size - 1,
+							  &header,
+							  &headersize,
+							  &headerrfcsize,
+							  &body,
+							  &body_size,
+							  &body_rfcsize) < 0) {
+						trace(TRACE_ERROR, "%s,%s: split_message() failed",
+						      __FILE__, __FUNCTION__);
+						my_free(whole_message);
+						discard_client_input((FILE *) instream);
+						fprintf((FILE *) stream,
+							"500 Error in message");
+						return 1;
+					}
+					if ( headersize > READ_BLOCK_SIZE) {
+						trace(TRACE_ERROR,
+						      "main(): header is too "
+						      "big");
+						discard_client_input
+							((FILE *)
 							     instream);
-							fprintf((FILE *)
-								stream,
-								"500 Error reading header, "
-								"header too big.\r\n");
-							return 1;
-						}
-					} else {
-						trace(TRACE_ERROR,
-						      "main(): read_header() returned a null header [%s]",
-						      header);
-						discard_client_input((FILE
-								      *)
-								     instream);
-						fprintf((FILE *) stream,
-							"500 Error reading header.\r\n");
+						fprintf((FILE *)
+							stream,
+							"500 Error reading header, "
+							"header too big.\r\n");
 						return 1;
 					}
-
-
 					/* Parse the list and scan for field and content */
 					if (mime_readheader
 					    (header, &dummyidx, &mimelist,
@@ -674,11 +697,12 @@ int lmtp(void *stream, void *instream, char *buffer,
 						return 1;
 					}
 
-					if (insert_messages
-					    ((FILE *) instream, header,
-					     headersize, headerrfcsize,
-					     &headerfields, &rcpt,
-					     &fromlist) == -1) {
+					if (insert_messages(
+						    header, body,
+						    headersize, headerrfcsize,
+						    body_size, body_rfcsize,
+						    &headerfields, &rcpt,
+						    &fromlist) == -1) {
 						fprintf((FILE *) stream,
 							"503 Message not received\r\n");
 					} else {
@@ -709,6 +733,8 @@ int lmtp(void *stream, void *instream, char *buffer,
 					}
 					if (header != NULL)
 						my_free(header);
+					if (whole_message != NULL)
+						my_free(whole_message);
 				}
 			}
 			return 1;
@@ -719,5 +745,75 @@ int lmtp(void *stream, void *instream, char *buffer,
 					  "500 What are you trying to say here?\r\n");
 		}
 	}
+	return 1;
+}
+
+int read_whole_message_network(FILE *instream, char **whole_message,
+				      u64_t *whole_message_size)
+{
+	char *tmpmessage = NULL;
+	char tmpline[MESSAGE_MAX_LINE_SIZE + 1];
+	
+	size_t line_size = 0;
+	size_t total_size = 0;
+	size_t current_pos = 0;
+	int error = 0;
+
+	memset(tmpline, '\0', MESSAGE_MAX_LINE_SIZE + 1);
+	while (fgets(tmpline, MESSAGE_MAX_LINE_SIZE, instream) != NULL) {
+		line_size = strlen(tmpline);
+
+		/* check for '.\r\n' */
+		if (line_size == 3 && strncmp(tmpline, ".\r\n", 3) == 0) 
+			break;
+		
+		/* change the \r\n ending to \n */
+		
+		if (!(tmpmessage = realloc(tmpmessage, 
+					   total_size + line_size - 1))) {
+			error = 1;
+			break;
+		}
+		
+		if (!(memcpy(&tmpmessage[current_pos], tmpline, 
+			     line_size -2))) {
+			error = 1;
+			break;
+		}
+		total_size += line_size - 1;
+		current_pos += line_size - 2;
+		tmpmessage[current_pos++] = '\n';
+				
+		memset(tmpline, '\0', MESSAGE_MAX_LINE_SIZE + 1);
+	}
+		
+	if (ferror(instream)) {
+		trace(TRACE_ERROR, "%s,%s: error reading instream",
+		      __FILE__, __FUNCTION__);
+		error = 1;
+	}
+	if (feof(instream)) {
+		trace(TRACE_ERROR, "%s,%s: unexpected EOF in instream",
+		      __FILE__, __FUNCTION__);
+		error = 1;
+	}
+
+	total_size += 1;
+	if (!(tmpmessage = realloc(tmpmessage, total_size))) {
+		trace(TRACE_ERROR, "%s.%s: realloc failed",
+		      __FILE__, __FUNCTION__);
+		error = 1;
+	} else
+		tmpmessage[current_pos] = '\0';
+
+	if (error) {
+		trace(TRACE_ERROR, "%s,%s: error reading message from "
+		      "instream", __FILE__, __FUNCTION__);
+		my_free(tmpmessage);
+		return -1;
+	}
+
+	*whole_message = tmpmessage;
+	*whole_message_size = total_size;
 	return 1;
 }

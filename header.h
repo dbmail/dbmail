@@ -19,7 +19,6 @@
 
 /* $Id$ */
 
-
 #ifndef _HEADER_H
 #define _HEADER_H
 
@@ -27,22 +26,22 @@
 #include "config.h"
 #endif
 
-#include "list.h"
-
 /**
- * \brief Read from the specified FILE pointer until either
- * a long carriage-return line-feed or a lone period stand
- * on a line by themselves.
- * \param instream A FILE pointer to the stream where the header is.
- * \param headerrfcsize The size of the header if all lines ended in \r\n.
- * \param headersize The actual byte count of the header.
- * \param header A pointer to an unallocated char array. On
- * error, the pointer may not be valid and must not be used.
- * \return
- *      - 1 on success
- *      - 0 on failure
-*/
-int read_header(FILE * instream, u64_t * newlines, u64_t * headersize,
-		char **header);
+ * split the whole message into header and body
+ * \param[in] whole_message the whole message, including header
+ * \param[in] whole_message_size size of whole_message.
+ * \param[out] header will hold header 
+ * \param[out] header_size size of header
+ * \param[out] header_rfcsize rfc size of header
+ * \param[out] body will hold body
+ * \param[out] body_size size of body
+ * \param[out] body_rfcsize rfc size of body
+ */
+int split_message(const char *whole_message, 
+		  u64_t whole_message_size,
+		  char **header, u64_t *header_size,
+		  u64_t *header_rfcsize,
+		  const char **body, u64_t *body_size,
+		  u64_t *body_rfcsize);
 
 #endif

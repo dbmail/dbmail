@@ -1,3 +1,31 @@
+2004-05-14  Ilja Booij  <ilja@ic-s.nl>
+
+	* pipe.c (store_message_in_blocks): new function that stores
+	the body of a message in several blocks (if necessary).
+	(store_message_temp): changed to get message from a string, 
+	instead of from a stream.
+	(insert_messages): changed to get message from a string instead
+	of from a stream.
+
+	* main.c (read_whole_message_pipe): new function to read a
+	complete message from a pipe.
+	(main): now uses read_whole_message_pipe to get message.
+
+	* lmtp.c (read_whole_message_network): new function to read
+	a complete message from a network connection.
+	(lmtp): now uses read_whole_message_network() to get the
+	message from the network.
+
+	* header.c (split_message): new function for splitting a 
+	message in header and body.
+	(get_rfc_size): new function for getting the rfc size of
+	a message body
+	(consume_header_line): new function used to get header size
+	and signal end of headers.
+
+	* header.h: removed prototype for read_header()
+	(split_message): added function used for splitting message
+
 2004-05-11  Aaron Stone  <aaron@serendipity.cx>
 
 	* imapcommands.c: removed carriage returns and newlines

@@ -35,6 +35,7 @@
 #include "header.h"
 #include "db.h"
 #include "debug.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
@@ -44,157 +45,163 @@
 /* Must be at least 998 or 1000 by RFC's */
 #define MAX_LINE_SIZE 1024
 
-/* Reads from the specified pipe until either a lone carriage
- * return or lone period stand on a line by themselves. The
- * number of non-\r\n newlines is recorded along the way.
- * The variable "header" should be passed by & reference,
- * and should be defined (duh) but not malloc'ed (honest)
- * before calling.
- *
- * The caller is responsible for free'ing header, even upon error.
- *
- * Return values:
- *   1 on success
- *   0 on failure
- * */
-int read_header(FILE * instream, u64_t * headerrfcsize, u64_t * headersize,
-		char **header)
+/**
+ * get the rfc size of the body of a message. This function assumes that
+ * the message has lines that end in '\n', not in '\r\n'
+ * \param[in] body message body
+ * \param body_size size of body
+ * \param[out] rfcsize rfc size of body
+ */
+static void get_rfc_size(const char *body_start, u64_t body_size, 
+			 u64_t *rfcsize);
+
+/**
+ * chew the next line of input
+ * \param[in] message_content part of a message
+ * \param[out] line_size size of line (including '\r\n' or '\n')
+ * \param[out] line_rfcsize size of line (assuming '\r\n')
+ * \return 
+ *     - -1 on error
+ *     - 0 if empty line (only \r\n or \n)
+ *     - 1 if line found
+ */
+static int consume_header_line(const char *message_content,
+			       size_t *line_size,
+			       size_t *line_rfcsize);
+
+
+int split_message(const char *whole_message, 
+		  u64_t whole_message_size,
+		  char **header, u64_t *header_size,
+		  u64_t *header_rfcsize,
+		  const char **body, u64_t *body_size,
+		  u64_t *body_rfcsize)
 {
-	int tmpchar;
-	char *tmpline;
-	char *tmpheader;
-	u64_t tmpheadersize = 0, tmpheaderrfcsize = 0;
-	size_t usedmem = 0, linemem = 0;
-	size_t allocated_blocks = 1;
-	int myeof = 0;
+	const char *end_of_header;
+	size_t line_size;
+	size_t line_rfcsize;
+	size_t body_begin;
+	u64_t tmp_header_size = 0;
+	u64_t tmp_header_rfcsize = 0;
+	int result;
+	
+	end_of_header = whole_message;
+	
+	/* split off the header */
+	while (1) {
+		result = consume_header_line(end_of_header,
+					     &line_size, &line_rfcsize);
+		if (result < 0) 
+			return -1;
 
-	memtst((tmpheader =
-		(char *) my_malloc(HEADER_BLOCK_SIZE)) == NULL);
-	memtst((tmpline = (char *) my_malloc(MAX_LINE_SIZE)) == NULL);
+		tmp_header_size += line_size;
+		tmp_header_rfcsize += line_rfcsize;
+		end_of_header = &whole_message[tmp_header_size];
+		
+		if (result == 0) {
+			break;
+		}
+	}
+	
+	/* copy the header */
+	*header = my_malloc((tmp_header_size + 1) * sizeof(char));
+	if (header == NULL) {
+		trace(TRACE_ERROR, "%s,%s: error allocating memory", 
+		      __FILE__, __FUNCTION__);
+		return -1;
+	}
+	memset(*header, '\0', tmp_header_size + 1);
+	strncpy(*header, whole_message, tmp_header_size);
 
-	/* Resetting */
-	memset(tmpline, '\0', MAX_LINE_SIZE);
-	memset(tmpheader, '\0', HEADER_BLOCK_SIZE);
+	*header_size = tmp_header_size;
+	*header_rfcsize = tmp_header_rfcsize;
 
-	/* here we will start a loop to read in the message header */
-	/* the header will be everything up until \n\n or an EOF of */
-	/* in_stream (instream) */
+	/* MTAs seem to add another newline after the empty header line.
+	 * that empty line needs to be skipped. So, if the next character
+	 */
+	body_begin = tmp_header_size;
+	if (whole_message_size - tmp_header_size >= 2) {
+		if (whole_message[body_begin] == '\n')
+			body_begin += 1;
+		else if (whole_message[body_begin] == '\r' &&
+			 whole_message[body_begin + 1] == '\n')
+			body_begin += 2;
+	}	
+	*body = &whole_message[body_begin];
+	*body_size = whole_message_size - body_begin;
 
-	trace(TRACE_INFO, "read_header(): readheader start");
+	get_rfc_size(*body, *body_size, body_rfcsize);
 
-	while (!feof(instream) && !myeof) {
+	return 1;
+}
 
-		/* Read a char at a time until there's a full line in tmpline. */
-		linemem = 0;
-		for (;;) {
-			if (linemem == MAX_LINE_SIZE)
-				break;
+void get_rfc_size(const char *body_start, u64_t body_size, 
+		  u64_t *rfcsize)
+{
+	const char *current_pos;
+	size_t remaining_len;
+	unsigned int rfcadd = 0;
+	
+	current_pos = body_start;
+	remaining_len = body_size;
 
-			tmpchar = fgetc(instream);
-			if (tmpchar == EOF)
-				break;
+	trace(TRACE_DEBUG, "%s,%s: remaining_len = %zd", 
+	      __FILE__, __FUNCTION__, remaining_len);
+	if (remaining_len == 0)
+		return;
+	/* count all the newlines */
+	while((current_pos = memchr(current_pos, '\n', remaining_len))) {
+		rfcadd++;
+		remaining_len = body_size - (current_pos - body_start) - 1;
+		if (remaining_len > 0)
+			current_pos++;
+	}
+		
+	*rfcsize = body_size + rfcadd;
+}
 
-			tmpline[linemem++] = tmpchar;
-
-			/* Always break at the end of a line, incrementing rfcsize
-			 * if said end of line is a \n-only end of line. */
-			if (tmpchar == '\n') {
-			    if (tmpline[linemem-1] != '\r') {
-				tmpheaderrfcsize++;
-			    }
-			    break;
+static int consume_header_line(const char *message_content,
+			    size_t *line_size,
+			    size_t *line_rfcsize)
+{
+	size_t line_content_size;
+	size_t tmp_line_size = 0;
+	size_t tmp_line_rfcsize = 0;
+	
+	trace(TRACE_DEBUG, "%s,%s: message_content = %s",
+	      __FILE__, __FUNCTION__, message_content);
+	if (strlen(message_content) == 0) {
+		tmp_line_size = 0;
+		tmp_line_rfcsize = 0;
+	} else {
+		line_content_size = strcspn(message_content, "\r\n");
+		trace(TRACE_DEBUG, "%s,%s: line_content_size = %zd",
+		      __FILE__, __FUNCTION__, line_content_size);
+		if (message_content[line_content_size] == '\n') {
+			tmp_line_size = line_content_size + 1;
+			tmp_line_rfcsize = tmp_line_size + 1;
+		} else {
+			if (message_content[line_content_size] == '\r' &&
+			    message_content[line_content_size + 1] == '\n') {
+				tmp_line_size = line_content_size + 2;
+				tmp_line_rfcsize = tmp_line_size;
+			} else {
+				trace(TRACE_ERROR, "%s,%s: error reading header line",
+				      __FILE__, __FUNCTION__);
+				return -1;
 			}
 		}
-		tmpheadersize += linemem;
-		tmpheaderrfcsize += linemem;
-
-		/* fgetc return EOF for both EOF and ERR. Check it here! */
-		if (ferror(instream)) {
-			trace(TRACE_ERROR,
-			      "read_header(): error on instream: [%s]",
-			      strerror(errno));
-			my_free(tmpline);
-			my_free(tmpheader);
-			/* NOTA BENE: Make sure that the caller knows to free
-			 * the header block even if there's been an error! */
-			return 0;
-		}
-
-		/* The end of the header could be \n\n, \r\n\r\n,
-		 * or \r\n.\r\n, in the accidental case that we
-		 * ate the whole SMTP message, too! */
-		if (strncmp(tmpline, ".\r\n", (linemem < 3 ? linemem : 3)) == 0) {
-			/* This is the end of the message! */
-			trace(TRACE_DEBUG,
-			      "read_header(): single period found");
-			myeof = 1;
-		} else if (strncmp(tmpline, "\n", (linemem < 1 ? linemem : 1)) == 0
-			   || strncmp(tmpline, "\r\n", (linemem < 2 ? linemem : 2)) == 0) {
-			/* We've found the end of the header */
-			trace(TRACE_DEBUG,
-			      "read_header(): single blank line found");
-			myeof = 1;
-		}
-
-		/* Even if we hit the end of the header, don't forget to copy the extra
-		 * returns. They will always be needed to separate the header from the
-		 * message during any future retrieval of the fully concatenated message.
-		 * */
-
-		trace(TRACE_DEBUG,
-		      "read_header(): copying line into header");
-
-		/* If this happends it's a very big header */
-		if (usedmem + linemem >
-		    (allocated_blocks * HEADER_BLOCK_SIZE)) {
-			/* Update block counter */
-			allocated_blocks++;
-			trace(TRACE_DEBUG,
-			      "read_header(): mem current: [%zd] reallocated "
-			      "to [%zd]",
-			      usedmem, allocated_blocks * HEADER_BLOCK_SIZE);
-			memtst((tmpheader =
-				(char *) realloc(tmpheader,
-						 allocated_blocks *
-						 HEADER_BLOCK_SIZE)) ==
-			       NULL);
-		}
-
-		/* This *should* always happen, but better safe than overflowing! */
-		if (usedmem + linemem <
-		    (allocated_blocks * HEADER_BLOCK_SIZE)) {
-			/* Copy starting at the current usage offset */
-			strncat(tmpheader, tmpline, linemem);
-			usedmem += linemem;
-
-			/* Resetting strlen for tmpline */
-			tmpline[0] = '\0';
-			linemem = 0;
-		}
 	}
+	*line_size = tmp_line_size;
+	*line_rfcsize = tmp_line_rfcsize;
 
-	trace(TRACE_DEBUG, "read_header(): readheader done");
-	trace(TRACE_DEBUG,
-	      "read_header(): found header [%s] of len [%zd] using mem [%zd]",
-	      tmpheader, strlen(tmpheader), usedmem);
-
-	my_free(tmpline);
-
-	if (usedmem == 0) {
-		trace(TRACE_ERROR,
-		      "read_header(): no valid mail header found\n");
-		if (tmpheader)
-			my_free(tmpheader);
+	if (tmp_line_rfcsize == 2 || tmp_line_rfcsize == 0) {
+		/* only '\r\n', which is an empty line */
+		trace(TRACE_DEBUG, "%s,%s: end of header found",
+		      __FILE__, __FUNCTION__);
 		return 0;
 	}
-
-	/* Assign to the external variable */
-	*header = tmpheader;
-	*headersize = tmpheadersize;
-	*headerrfcsize = tmpheaderrfcsize;
-
-	/* The caller is responsible for freeing header/tmpheader. */
-
-	trace(TRACE_INFO, "read_header(): function successfull\n");
-	return 1;
+	else
+		return 1;
+	
 }

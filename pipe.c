@@ -63,11 +63,21 @@
 #define DBMAIL_DELIVERY_USERNAME "__@!internal_delivery_user!@__"
 #define DBMAIL_TEMPMBOX "INBOX"
 
-#define MOD(x, y) (((x) >= 0 ?\
- (x) % (y) :\
- ((x) + (-((x) / (y)) + 1) * (y)) % (y)))
 
 extern struct list smtpItems, sysItems;
+
+/**
+ * store a messagebody (without headers in one or more blocks in the database
+ * \param message the message
+ * \param message_size size of message
+ * \param msgidnr idnr of message
+ * \return 
+ *     - -1 on error
+ *     -  1 on success
+ */
+static int store_message_in_blocks(const char* message,
+				   u64_t message_size,
+				   u64_t msgidnr);
 
 /* 
  * Send an automatic notification using sendmail
@@ -358,39 +368,30 @@ int discard_client_input(FILE * instream)
 	return 0;
 }
 
-/* Read from insteam until eof, and store to the
- * dedicated dbmail user account. Later, we'll
- * read the message back for forwarding and 
- * sorting for local users before db_copymsg()'ing
- * it into their own mailboxes.
- *
- * returns a message id number, or -1 on error.
- * */
-static int store_message_temp(FILE * instream,
-			      char *header, u64_t headersize,
-			      u64_t headerrfcsize, /*@out@*/ u64_t * msgsize,
-			      /*@out@*/ u64_t * rfcsize, 
+/**
+ * store a temporary copy of a message.
+ * \param header the header to the message
+ * \param body body of the message
+ * \param headersize size of header
+ * \param headerrfcsize rfc size of header
+ * \param bodysize size of body
+ * \param bodyrfcsize rfc size of body
+ * \param[out] temp_message_idnr message idnr of temporary message
+ * \return 
+ *     - -1 on error
+ *     -  1 on success
+ */
+static int store_message_temp(const char *header, const char *body, 
+			      u64_t headersize, u64_t headerrfcsize,
+			      u64_t bodysize, u64_t bodyrfcsize,
 			      /*@out@*/ u64_t * temp_message_idnr)
 {
-	int myeof = 0;
-	int tmpchar;
-	u64_t msgidnr = 0;
-	size_t usedmem = 0;
-	u64_t totalmem = 0, rfclines = 0;
-	char *strblock = NULL;
-	char ringbuf[RING_SIZE];
-	char unique_id[UID_SIZE];
-	u64_t messageblk_idnr;
-	u64_t user_idnr;
-	int ringpos;
 	int result;
-	int first_empty_line_skipped = 0; /* part of a hack to skip the first line */
-
-	/* define all out-parameters */
-	*msgsize = 0;
-	*rfcsize = 0;
-	*temp_message_idnr = 0;
-
+	u64_t user_idnr;
+	u64_t msgidnr;
+	u64_t messageblk_idnr;
+	char unique_id[UID_SIZE];
+	
 	result = auth_user_exists(DBMAIL_DELIVERY_USERNAME, &user_idnr);
 	if (result < 0) {
 		trace(TRACE_ERROR,
@@ -405,9 +406,7 @@ static int store_message_temp(FILE * instream,
 		      __FILE__, __FUNCTION__, DBMAIL_DELIVERY_USERNAME);
 		return -1;
 	}
-
 	create_unique_id(unique_id, user_idnr);
-
 	/* create a message record */
 	switch (db_insert_message(user_idnr, DBMAIL_TEMPMBOX,
 				  CREATE_IF_MBOX_NOT_FOUND, unique_id,
@@ -425,113 +424,20 @@ static int store_message_temp(FILE * instream,
 		      "store_message_temp(): error inserting msgblock [header]");
 		return -1;
 	}
-
 	trace(TRACE_DEBUG,
-	      "store_message_temp(): allocating [%ld] bytes of memory for readblock",
-	      READ_BLOCK_SIZE);
-
-	strblock = (char *) my_malloc(READ_BLOCK_SIZE + 1);
-	if (strblock == NULL) {
-		trace(TRACE_ERROR, "%s,%s: error allocating memory. Trying to cleanup..",
-		      __FILE__, __FUNCTION__);
-		if (db_delete_message(msgidnr) < 0)
-			trace(TRACE_ERROR, "%s,%s: error deleting message. "
-			      "Database might be inconsistent, run "
-			      "dbmail-maintenance", __FILE__, __FUNCTION__);
+	      "store_message_temp(): allocating [%ld] bytes of memory "
+	      "for readblock", READ_BLOCK_SIZE);
+	
+	/* store body in several blocks (if needed */
+	if (store_message_in_blocks(body, bodysize, msgidnr) < 0) {
+		trace(TRACE_STOP,
+		      "store_message_temp(): db_insert_message_block "
+		      "failed");
 		return -1;
 	}
-	while (!feof(instream) && !myeof) {
 
-		/* Reset strblock. */
-		usedmem = 0;
-		ringpos = 0;
-		memset((void *) strblock, '\0', READ_BLOCK_SIZE + 1);
-		memset((void *) ringbuf, '\0', RING_SIZE);
-	
-		/* Loop until strblock is full or feof or ferror. */
-		while (!myeof) {
-			if (usedmem == READ_BLOCK_SIZE)
-				break;
-
-			tmpchar = fgetc(instream);
-			if (tmpchar == EOF) 
-				break;
-
-			ringbuf[ringpos] = tmpchar;
-			ringpos = (ringpos + 1) % RING_SIZE;
-
-			/* skip the first empty line 
-			 * FIXME: this feels like a dirty hack.. */
-			if (usedmem == 0 && first_empty_line_skipped == 0) {
-				switch (ringbuf[MOD(ringpos - 1, RING_SIZE)]) {
-				case '\r':
-					continue;
-				case '\n':
-					first_empty_line_skipped = 1;
-					continue;
-				default:
-					break;
-				}
-			}
-			/* Find \n not preceded by \r. */
-			if (ringbuf[MOD(ringpos - 1, RING_SIZE)] == '\n'
-			 && ringbuf[MOD(ringpos - 2, RING_SIZE)] != '\r') {
-				trace(TRACE_DEBUG, "store_message_temp(): counted an rfcline");
-				rfclines++;
-			}
-
-			/* Find the message terminator. */
-			if (ringbuf[MOD(ringpos - 1, RING_SIZE)] == '\n'
-			    && ringbuf[MOD(ringpos - 2, RING_SIZE)] == '\r'
-			    && ringbuf[MOD(ringpos - 3, RING_SIZE)] == '.'
-			    && ((usedmem < 3 && totalmem < 3)
-				|| ringbuf[MOD(ringpos - 4, RING_SIZE)] == '\n')) {
-				/* Back off the trailing ".\r" (final \n not copied yet)
-				 * The \n or \r\n preceding it are part of the message. */
-				if (usedmem > 2) {
-					usedmem -= 2;
-				} else {
-					usedmem = 0;
-				}
-				/* Flag to end the stream reading loop. */
-				myeof = 1;
-			} else {
-				/* Copy the current character into the storage buffer. */
-				strblock[usedmem++] = tmpchar;
-			}
-		} /* while (!myeof) */
-
-		if (ferror(instream)) {
-			trace(TRACE_ERROR,
-			      "store_message_temp(): error on instream: [%s]",
-			      strerror(errno));
-			my_free(strblock);
-			return -1;
-		}
-
-		/* If the first call to fgetc was EOF, don't store anything. */
-		if (usedmem > 0) {
-			totalmem += usedmem;
-
-			switch (db_insert_message_block
-				(strblock, (u64_t) usedmem, msgidnr,
-				 &messageblk_idnr)) {
-			case -1:
-				trace(TRACE_STOP,
-				      "store_message_temp(): error inserting msgblock");
-				my_free(strblock);
-				return -1;
-			}
-		}
-	}
-
-	trace(TRACE_DEBUG, "store_message_temp(): end of instream");
-
-	my_free(strblock);
-	trace(TRACE_DEBUG, "store_message_temp(): strblock freed");
-
-	if (db_update_message(msgidnr, unique_id, (totalmem + headersize),
-			      (totalmem + rfclines + headerrfcsize)) < 0) {
+	if (db_update_message(msgidnr, unique_id, (headersize + bodysize),
+			      (headerrfcsize + bodyrfcsize)) < 0) {
 		trace(TRACE_ERROR, "%s,%s: error updating message [%llu]. "
 		      "Trying to clean up", __FILE__, __FUNCTION__, msgidnr);
 		if (db_delete_message(msgidnr) < 0) 
@@ -541,13 +447,42 @@ static int store_message_temp(FILE * instream,
 			      msgidnr);
 		return -1;
 	}
-		
-	/* Pass the message id out to the caller. */
-	*temp_message_idnr = msgidnr;
-	*rfcsize = totalmem + rfclines + headerrfcsize;
-	*msgsize = totalmem + headersize;
 
-	return 0;
+	*temp_message_idnr = msgidnr;
+	return 1;
+}
+
+int store_message_in_blocks(const char *message, u64_t message_size,
+			    u64_t msgidnr) 
+{
+	u64_t tmp_messageblk_idnr;
+	u64_t rest_size = message_size;
+	u64_t block_size = 0;
+	unsigned block_nr = 0;
+	size_t offset;
+
+	while (rest_size > 0) {
+		offset = block_nr * READ_BLOCK_SIZE;
+		block_size = (rest_size < READ_BLOCK_SIZE ? 
+			      rest_size : READ_BLOCK_SIZE);
+		rest_size = (rest_size < READ_BLOCK_SIZE ?
+			     0 : rest_size - READ_BLOCK_SIZE);
+		trace(TRACE_DEBUG, "%s,%s: inserting message: %s",
+		      __FILE__, __FUNCTION__, &message[offset]);
+		if (db_insert_message_block(&message[offset],
+					    block_size, msgidnr,
+					    &tmp_messageblk_idnr) < 0) {
+			trace(TRACE_ERROR, "%s,%s: "
+			      "db_insert_message_block() failed",
+			      __FILE__, __FUNCTION__);
+			return -1;
+		}
+		
+			
+		block_nr += 1;
+	}
+
+	return 1;
 }
 
 /* Here's the real *meat* of this source file!
@@ -583,17 +518,21 @@ static int store_message_temp(FILE * instream,
  *   - 0 on success
  *   - -1 on full failure
  */
-int insert_messages(FILE * instream, char *header, u64_t headersize,
-		    u64_t headerrfcsize, struct list *headerfields,
+int insert_messages(const char *header, const char* body, u64_t headersize,
+		    u64_t headerrfcsize, u64_t bodysize, u64_t bodyrfcsize,
+		    struct list *headerfields,
 		    struct list *dsnusers, struct list *returnpath)
 {
 	struct element *element, *ret_path;
 	u64_t msgsize, rfcsize, tmpmsgidnr;
 
+	msgsize = headersize + bodysize;
+	rfcsize = headerrfcsize + bodyrfcsize;
+
 	/* Read in the rest of the stream and store it into a temporary message */
 	switch (store_message_temp
-		(instream, header, headersize, headerrfcsize, &msgsize,
-		 &rfcsize, &tmpmsgidnr)) {
+		(header, body, headersize, headerrfcsize, 
+		 bodysize, bodyrfcsize, &tmpmsgidnr)) {
 	case -1:
 		/* Major trouble. Bail out immediately. */
 		trace(TRACE_ERROR,

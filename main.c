@@ -45,6 +45,9 @@
 
 #define INDEX_DELIVERY_MODE 1
 
+/* value for the size of the blocks to read from the input stream.
+   this can be any value (so 8192 bytes is just a raw guess.. */
+#define READ_CHUNK_SIZE 8192
 /* syslog */
 #define PNAME "dbmail/smtp"
 
@@ -62,10 +65,74 @@ extern db_param_t _db_params;	/* set up database login data */
 
 deliver_to_user_t dsnuser;
 
-char *header = NULL;
+//char *header = NULL;
 char *deliver_to_header = NULL;
 char *deliver_to_mailbox = NULL;
 u64_t headersize, headerrfcsize;
+
+/**
+ * read the whole message from the instream
+ * \param[in] instream input stream (stdin)
+ * \param[out] whole_message pointer to string which will hold the whole message
+ * \param[out] whole_message_size will hold size of message
+ * \return
+ *      - -1 on error
+ *      -  0 on success
+ */
+static int read_whole_message_pipe(FILE *instream, char **whole_message,
+				   u64_t *whole_message_size)
+{
+	char *tmpmessage = NULL;
+	size_t read_len = 0;
+	size_t totalmem = 0; 
+	size_t current_pos = 0;
+	char read_buffer[READ_CHUNK_SIZE];
+	int error = 0;
+	
+	while(!feof(instream) && !ferror(instream)) {
+		read_len = fread(read_buffer, sizeof(char), READ_CHUNK_SIZE,
+				 instream);
+		
+		if (read_len < READ_CHUNK_SIZE && ferror(instream)) {
+			error = 1;
+			break;
+		}
+		if (!(tmpmessage = realloc(tmpmessage, totalmem + read_len))) {
+			error = 1;
+			break;
+		}
+		if (!(memcpy(&tmpmessage[current_pos], read_buffer, 
+			     read_len))) {
+			error = 1;
+			break;
+		}
+		totalmem += read_len;
+		current_pos += read_len;
+	}
+	
+	if (ferror(instream)) {
+		trace(TRACE_ERROR, "%s,%s: error reading from instream",
+		      __FILE__, __FUNCTION__);
+		error = 1;
+	}
+	/* add '\0' to tmpmessage, because fread() will not do that for us.*/
+	totalmem++;
+	if (!(tmpmessage = realloc(tmpmessage, totalmem))) 
+		error = 1;
+	else 
+		tmpmessage[current_pos] = '\0';
+	
+	if (error) {
+		trace(TRACE_ERROR, "%s,%s: error reading message",
+		      __FILE__, __FUNCTION__);
+		my_free(tmpmessage);
+		return -1;
+	}
+	
+	*whole_message = tmpmessage;
+	*whole_message_size = totalmem;
+	return 0;
+}
 
 void print_usage(const char *progname)
 {
@@ -96,8 +163,13 @@ int main(int argc, char *argv[])
 	int exitcode = 0;
 	int c, c_prev = 0, usage_error = 0;
 	u64_t dummyidx = 0, dummysize = 0;
-
-
+	char *whole_message;
+	u64_t whole_message_size;
+	const char *body;
+	u64_t body_size;
+	u64_t body_rfcsize;
+	char *header;
+	
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 
 	list_init(&users);
@@ -255,15 +327,27 @@ int main(int argc, char *argv[])
 		exitcode = EX_TEMPFAIL;
 		goto freeall;
 	}
-
-	/* first we need to read the header */
-	if (!read_header(stdin, &headerrfcsize, &headersize, &header)) {
-		trace(TRACE_ERROR,
-		      "main(): read_header failed to read a header");
+	
+	/* read the whole message */
+	if (read_whole_message_pipe(stdin, &whole_message, 
+				    &whole_message_size) < 0) {
+		trace(TRACE_ERROR, "%s,%s: read_whole_message_pipe() failed",
+		      __FILE__, __FUNCTION__);
 		exitcode = EX_TEMPFAIL;
 		goto freeall;
 	}
 
+	/* get pointer to header and to body */
+	if (split_message(whole_message, whole_message_size - 1,
+			  &header, &headersize, &headerrfcsize, 
+			  &body, &body_size, &body_rfcsize) < 0) {
+		trace(TRACE_ERROR, "%s,%s splitmessage failed",
+		      __FILE__, __FUNCTION__);
+		my_free(whole_message);
+		exitcode = EX_TEMPFAIL;
+		goto freeall;
+	}
+	
 	if (headersize > READ_BLOCK_SIZE) {
 		trace(TRACE_ERROR,
 		      "%s,%s: failed to read header because header is "
@@ -335,8 +419,8 @@ int main(int argc, char *argv[])
 	}
 
 	/* inserting messages into the database */
-	if (insert_messages(stdin,
-			    header, headersize, headerrfcsize,
+	if (insert_messages(header, body, headersize, headerrfcsize,
+			    body_size, body_rfcsize,
 			    &mimelist, &dsnusers, &returnpath) == -1) {
 		trace(TRACE_ERROR, "main(): insert_messages failed");
 		/* Most likely a random failure... */
@@ -344,7 +428,7 @@ int main(int argc, char *argv[])
 	}
 
       freeall:			/* Goto's here! */
-
+	
 	/* If there wasn't already an EX_TEMPFAIL from insert_messages(),
 	 * then see if one of the status flags was marked with an error. */
 	if (!exitcode) {
@@ -375,6 +459,8 @@ int main(int argc, char *argv[])
 	trace(TRACE_DEBUG, "main(): freeing memory blocks");
 	if (header != NULL)
 		my_free(header);
+	if (whole_message != NULL)
+		my_free(whole_message);
 
 	trace(TRACE_DEBUG, "main(): they're all free. we're done.");
 

@@ -45,8 +45,8 @@
  * \param headerfields list of header fields
  * \return 0
  */
-int insert_messages(FILE * instream,
-		    char *header, u64_t headersize, u64_t headerrfcsize,
+int insert_messages(const char *header, const char *body, u64_t headersize, 
+		    u64_t headerrfcsize, u64_t bodysize, u64_t bodyrfcsize,
 		    struct list *headerfields, struct list *dsnusers,
 		    struct list *returnpath);
 
