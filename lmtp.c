@@ -82,6 +82,24 @@ static int read_whole_message_network(FILE *instream, char **whole_message,
 				      u64_t *whole_message_size);
 
 /**
+ * \function lmtp_error
+ *
+ * report an LMTP error
+ * \param session current LMTP session
+ * \param stream stream to right to
+ * \param formatstring format string
+ * \param ... values to fill up formatstring
+ */
+#ifdef __GNUC__
+int lmtp_error(PopSession_t * session, void *stream,
+	       const char *formatstring, ...)
+__attribute__ ((format(printf, 3, 4)));
+#else
+int lmtp_error(PopSession_t * session, void *stream,
+	       const char *formatstring, ...);
+#endif
+
+/**
  * initialize a new session. Sets all relevant variables in session
  * \param[in,out] session to initialize
  */
@@ -197,10 +215,6 @@ int lmtp_handle_connection(clientinfo_t * ci)
 	return 0;
 }
 
-
-int lmtp_error(PopSession_t * session, void *stream,
-	       const char *formatstring, ...)
-    __attribute__ ((format(printf, 3, 4)));
 int lmtp_error(PopSession_t * session, void *stream,
 	       const char *formatstring, ...)
 {

@@ -1,5 +1,12 @@
 2004-06-03  Ilja Booij  <ilja@ic-s.nl>
 
+	* lmtp.c (lmtp_error): only add __attribute__ if __GNUC__
+	is defined.
+
+	* pop3.c (pop3): uses values from MessageStatus_t instead
+	of hard coded values.
+	(pop3_error): only add __attribute__ if __GNUC__ is defined.
+
 	* maintenance.c (main): uses MESSAGE_STATUS_ERROR from
 	MessageStatus_t instead of hard-coded value.
 
