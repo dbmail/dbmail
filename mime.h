@@ -42,9 +42,6 @@ struct mime_record
   char value[MIME_VALUE_MAX];
 };
 
-
-
-int mime_list(char *blkdata, struct list *mimelist);
 void mime_findfield(const char *fname, struct list *mimelist, struct mime_record **mr);
 int mail_adr_list(char *scan_for_field, struct list *targetlist, struct list *mimelist);
 int mime_readheader(char *blkdata, u64_t *blkidx, struct list *mimelist, u64_t *headersize);

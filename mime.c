@@ -40,151 +40,6 @@
 /* extern struct list mimelist;  */
 /* extern struct list users; */
 
-
-/* 
- * mime_list()
- *
- * build a list of MIME header items
- * blkdata should be a NULL-terminated array
- *
- * returns -1 on failure, 0 on success
- */
-int mime_list(char *blkdata, struct list *mimelist)
-{
-  int valid_mime_lines=0,idx;
-	
-  char *endptr, *startptr, *delimiter;
-  struct mime_record *mr;
-  struct element *el;   
-	
-  trace(TRACE_INFO, "mime_list(): entering mime loop\n");
-
-  list_init(mimelist);
-  /* alloc mem */
-#ifdef USE_EXIT_ON_ERROR
-  memtst((mr=(struct mime_record *)my_malloc(sizeof(struct mime_record)))==NULL);
-#else
-  mr=(struct mime_record *)my_malloc(sizeof(struct mime_record));
-
-  if (!mr)
-    {
-      trace(TRACE_ERROR, "mime_list(): out of memory\n");
-      return -1;
-    }
-#endif
-
-  startptr = blkdata;
-  while (*startptr)
-    {
-      /* quick hack to jump over those naughty \n\t fields */
-      endptr = startptr;
-      while (*endptr)
-	{
-	  if (endptr[0]=='\n' && endptr[1]!='\t')
-	    {
-	      if (endptr != blkdata && *(endptr-1) == ';')
-		{
-		  endptr++;
-		  continue;
-		}
-	      else
-		{
-		  break;
-		}
-	    }
-	  endptr++;
-	}
-
-      if (!(*endptr))
-	{
-	  /* end of data block reached */
-	  my_free(mr);
-	  return 0;
-	}
-
-      /* endptr points to linebreak now */
-      /* MIME field+value is string from startptr till endptr */
-
-      *endptr = '\0'; /* replace newline to terminate string */
-
-      trace(TRACE_DEBUG,"mime_list(): captured array [%s]\n",startptr); 
-
-      /* parsing tmpstring for field and data */
-      /* field is name:value */
-
-      delimiter = strchr(startptr,':');
-
-      if (delimiter)
-	{
-	  /* found ':' */
-	  valid_mime_lines++;
-	  *delimiter = '\0'; /* split up strings */
-
-	  /* skip all spaces and colons after the fieldname */
-	  idx = 1;
-	  while ((delimiter[idx]==':') || (delimiter[idx]==' ')) idx++;
-
-	  /* &delimiter[idx] is field value, startptr is field name */
-	  strncpy(mr->field, startptr, MIME_FIELD_MAX);
-	  strncpy(mr->value, &delimiter[idx], MIME_VALUE_MAX);
-
-	  trace(TRACE_DEBUG,"mime_list(): mimepair found: [%s] [%s] \n",mr->field, mr->value); 
-
-#ifdef USE_EXIT_ON_ERROR
-	  memtst((el=list_nodeadd(mimelist,mr,sizeof (*mr)))==NULL);
-#else
-	  el = list_nodeadd(mimelist,mr,sizeof (*mr));
-	  if (!el)
-	    {
-	      trace(TRACE_ERROR, "mime_list(): cannot add element to list\n");
-	      my_free(mr);
-	      return -1;
-	    }
-#endif
-	  /* restore blkdata */
-	  *delimiter = ':';
-	  *endptr = '\n';
-	  startptr = endptr+1; /* advance to next field */
-
-	  if (*startptr == '\n')
-	    {
-	      /* end of header: double newline */
-	      my_free(mr);
-	      return 0;
-	    }
-	}
-      else 
-	{
-	  /* no field/value delimiter found, non-valid MIME-header */
-	  my_free(mr);
-	  trace(TRACE_ERROR,"Non valid mimeheader found, freeing list...");
-	  list_freelist(&mimelist->start);
-	  mimelist->total_nodes = 0;
-	  return -1;
-	}
-    }
-
-  my_free(mr); /* no longer need this */
-
-  trace(TRACE_DEBUG,"mime_list(): mimeloop finished\n");
-  if (valid_mime_lines < 2)
-    {
-#ifdef USE_EXIT_ON_ERROR
-      my_free(blkdata);
-      trace(TRACE_STOP,"mime_list(): no valid mime headers found");
-#else
-      trace(TRACE_ERROR,"mime_list(): no valid mime headers found\n");
-      return -1;
-#endif
-    }
-
-  /* success */
-  trace(TRACE_DEBUG," *** mime_list() done ***\n");
-  return 0;
-}
-
-
-
 /* 
  * mime_readheader()
  *
@@ -213,8 +68,9 @@ int mime_readheader(char *blkdata, u64_t *blkidx, struct list *mimelist, u64_t *
   struct mime_record *mr,*prev_mr=NULL;
   struct element *el = NULL;   
 	
-  trace(TRACE_DEBUG, "mime_readheader(): entering mime loop\n");
-
+  trace(TRACE_DEBUG, "mime_readheader(): entering mime loop, block is [%s]\n",
+	blkdata);
+  
   list_init(mimelist);
   *headersize = 0;
 
@@ -357,7 +213,7 @@ int mime_readheader(char *blkdata, u64_t *blkidx, struct list *mimelist, u64_t *
 	      /* add a new field with no name */
 	      strcpy(mr->field, "");
 	      vallen = snprintf(mr->value, MIME_VALUE_MAX, "%s", startptr);
-
+	      
 	      if (vallen == -1 || vallen >= MIME_VALUE_MAX)
 		*headersize += MIME_VALUE_MAX;
 	      else
