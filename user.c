@@ -548,15 +548,18 @@ int do_show(char *name)
 	    }
 
 	  my_free(deliver_to);
-	  quiet_printf("Found user for alias [%s]:\n\n", name);
+	  quiet_printf("\nFound user for alias [%s]:\n\n", name);
 	}
 
       cid = auth_getclientid(userid);
       quotum = auth_getmaxmailsize(userid);
 
-      quiet_printf("User ID: %llu\n", userid);
-      quiet_printf("Client ID: %llu\n",cid);
+      quiet_printf("User ID         : %llu\n", userid);
+      quiet_printf("Username        : %s\n", auth_get_userid(userid));
+      quiet_printf("Client ID       : %llu\n",cid);
       quiet_printf("Max. mailboxsize: %llu bytes\n",quotum);
+      quiet_printf("Quotum used     : %llu bytes\n", db_get_quotum_used(userid));
+      quiet_printf("\n");
 
       quiet_printf("Aliases:\n");
       db_get_user_aliases(userid, &userlist);
@@ -568,6 +571,7 @@ int do_show(char *name)
 	  tmp = tmp->nextnode;
 	}
 
+      quiet_printf("\n");
       if (userlist.start)
 	list_freelist(&userlist.start);
     }
