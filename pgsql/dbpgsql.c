@@ -607,6 +607,8 @@ int db_update_message_multiple(const char *unique_id, u64_t messagesize, u64_t r
 	       "messagesize=%llu::bigint, rfcsize = %llu::bigint, unique_id='%s', status='000' "
 	       "WHERE message_idnr=%llu::bigint", messagesize, rfcsize, newunique, uids[i]);
 
+      trace(TRACE_ERROR,"message [%llu] inserted, [%llu] bytes", uids[i], messagesize);
+
       if (db_query(query) == -1)
 	{
 	  trace(TRACE_ERROR, "db_update_message_multiple(): "
