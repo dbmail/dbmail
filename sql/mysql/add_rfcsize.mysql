@@ -1,0 +1,7 @@
+#
+# adds the rfcsize field
+#
+
+USE dbmail;
+
+ALTER TABLE messages ADD rfcsize BIGINT(21) DEFAULT '0' NOT NULL;
