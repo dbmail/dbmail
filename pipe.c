@@ -122,7 +122,6 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 	
   tmp=list_getstart(users);
 
-	
   while (tmp!=NULL)
     {
       /* loops all mailusers and adds them to the list */
@@ -286,44 +285,25 @@ int insert_messages(char *firstblock, unsigned long headersize, struct list *use
 			/* getting a message. Any message will do */
 			tmp=list_getstart(&messageids); 
 			
-			if (tmp!=NULL)
-			{
-				trace(TRACE_DEBUG,"tmp is not null");
-				trace(TRACE_DEBUG,"tmp value is %lu",*(unsigned long*)tmp->data);
-			}
-			
 			/* sending block to external deliverers 
 				we're using the db_send_message_lines() call for this */
 			tmp_pipe=list_getstart(&external_forwards);
-			if (tmp!=NULL)
-			{
-				trace(TRACE_DEBUG,"tmp is not null");
-				trace(TRACE_DEBUG,"tmp value is %lu",*(unsigned long*)tmp->data);
-			}
 			
 			memtst((firstblock = realloc(firstblock, strlen(firstblock)+256))==NULL);
-			if (tmp!=NULL)
-			{
-				trace(TRACE_DEBUG,"tmp is not null");
-				trace(TRACE_DEBUG,"tmp value is %lu",*(unsigned long*)tmp->data);
-			}
 			
 			while (tmp_pipe!=NULL)
 			{
 				sprintf (firstblock,"%s\nTo: %s\n%s",firstblock,
 						(char *)tmp_pipe->data,nextscan);
 				trace (TRACE_DEBUG,"insert_messages(): new header [%s]",firstblock);
+				fflush(stdin);
 				(FILE *)sendmail_pipe=popen(SENDMAIL,"w");
 				trace (TRACE_DEBUG,"insert_messages(): popen() executed");
 				if (sendmail_pipe!=NULL)
 				{
 					trace (TRACE_DEBUG,"insert_messages(): popen() successfull");
-					trace (TRACE_DEBUG,"insert_messages(): forwarding message [%lu] to %s",*(unsigned long *)tmp->data,
-							(char *)tmp_pipe->data);
 					/* -2 will send the complete message to sendmail_pipe */
-					trace (TRACE_DEBUG,"insert_messages(): sending lines to pipe");
 					db_send_message_lines (sendmail_pipe,*(unsigned long*)tmp->data, -2);
-					trace(TRACE_DEBUG,"insert_messages(): closing pipe");
 					pclose ((FILE *)sendmail_pipe); 
 				}
 				else 
