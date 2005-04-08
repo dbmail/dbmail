@@ -1446,29 +1446,35 @@ int db_icheck_isheader(GList  **lost)
 
 int db_set_headercache(GList *lost)
 {
+	u64_t pmsgid = -1;
+	struct DbmailMessage *msg;
 	if (! lost)
 		return 0;
 
-	struct DbmailMessage *msg = dbmail_message_new();
-	
+	if (! (msg = dbmail_message_new()))
+		return -1;
+
 	lost = g_list_first(lost);
 	while (lost) {
+		pmsgid = (u64_t)(GPOINTER_TO_UINT(lost->data));
 		db_begin_transaction();
-		msg = dbmail_message_retrieve(msg, (u64_t)(GPOINTER_TO_UINT(lost->data)), DBMAIL_MESSAGE_FILTER_HEAD);
-		fprintf(stderr,".");
-		if (! msg) {
-			g_list_free(lost);
-			dbmail_message_free(msg);
+		if (! (msg = dbmail_message_retrieve(msg, pmsgid, DBMAIL_MESSAGE_FILTER_HEAD))) {
+			trace(TRACE_WARNING,"%s,%s: error retrieving physmessage: [%llu]", 
+					__FILE__, __func__,
+					pmsgid);
 			db_rollback_transaction();
-			return -1;
+		} else {
+			if (dbmail_message_headers_cache(msg) != 1) {
+				trace(TRACE_WARNING,"%s,%s: error caching headers for physmessage: [%llu]", 
+					__FILE__, __func__,
+					pmsgid);
+				dbmail_message_free(msg);
+				db_rollback_transaction();
+			} else {
+				db_commit_transaction();
+				fprintf(stderr,".");
+			}
 		}
-		if (dbmail_message_headers_cache(msg) != 1) {
-			g_list_free(lost);
-			dbmail_message_free(msg);
-			db_rollback_transaction();
-			return -1;
-		}
-		db_commit_transaction();
 		lost = g_list_next(lost);
 	}
 	return 0;
