@@ -10,11 +10,6 @@ DBmail extra's
 	You can also use this scan mail for certain users:
 	"|/usr/bin/spamassasin | dbmail-smtp -d <username>"
 
--	Conversion programs
-	smtp-convert.c	->	uses the dbmail-smtp program to insert mbox styled mailboxes
-						into the DBmail system.
-	vut2dbmail.c	->	converts an postfix / sendmail like virtusertable to DBmail
-	
 -	DBmail supports pop and imap before smtp. This way you can authenticate your 
 	users for a certain ammount of time to use the smtp server for relay.
 	You'll have to create the pop/imap before smtp tables and enable 

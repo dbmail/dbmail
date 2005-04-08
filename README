@@ -1,57 +1,64 @@
 /* $Id$
-   (c) 2000-2002 IC&S, The Netherlands  */
+   (c) 2000-2005 IC&S, The Netherlands
+   (c) 2004-2005 NFG Net Facilities Group BV, The Netherlands
+   
+*/
 
 What is it?
 ===========
-In short:
-DBMail is a collection of programs that enables email to be
-stored in and retrieved from a database. 
+
+DBMail is a collection of programs that enables email to be stored in and
+retrieved from a database. 
 
 Read the INSTALL file for installation of DBMail.
+
 Read the EXTRAS file about extra features of DBMail.
 
 
 Why is it useful?
 ==================
-Well, for me it's useful because a number of reasons. 
-- it enables me to create mailboxes without the need of systemusers.
-- mail is more effeciently stored and therefore it can
-  be inserted an retrieved much faster dan any regular system 
-  (DBMail is currently able to retrieve aprox. 250 mail messages per second)
-- it's more expandable. A database is much easier to access than
-  a flat file or a Maildir. We don't need to parse first.
-- In my case, i can easily link a mailbox to a certain client
-  which enables me to let the client maintaining his/her own mailboxes
-  without me needing to technically support it.
+
+- it enables you to create mailboxes without the need of systemusers.
+
+- mail is more effeciently stored and therefore it can be inserted an
+retrieved much faster dan any regular system (DBMail is currently able to
+retrieve aprox. 250 mail messages per second)
+
+- it's more expandable. A database is much easier to access than a flat file
+or a Maildir. We don't need to parse first.
+
 - It's scalable. You can run the dbmail programs on different servers
-  talking to the same database(cluster).
+talking to the same database(cluster).
+
 - It is more secure. There's no need to maintain system users or write to
-  the filesystem. All this is done through the database.
+the filesystem. All this is done through the database.
+
 
 Who created it?
 ===============
-Me, Eelco van Beek <eelco@ic-s.nl>. At first, i created 
-a very sloppy version of this program which didn't work at all.
 
-Because the DBMail mailing system is big i needed help. 
-So i asked Roel <roel@ic-s.nl>, one of the people working with me 
-here at IC&S, to join in developing DBMail further.
-Roel started working on the imapd, while i was debugging the pop3d
-and the injector program dbmail-smtp.
-After that, Roel improved all dbmail components for speed and killed a 
-lot of bugs along the way.
+Eelco van Beek <eelco@ic-s.nl> at first created a very sloppy version of
+this program which didn't work at all.
 
-DBMail is now a company effort to create a fast, effecient and
-scalable database driven mailingsystem. IC&S is fully behind 
+Because the DBMail mailing system is big he needed help. 
+So he asked Roel <roel@ic-s.nl>, one of the people working with him 
+at IC&S, to join in developing DBMail further.
+
+In 2003 Ilja Booij joined IC&S to work on the 2.x version. During that time,
+Paul Stevens at NFG also joined the development team, initially to provide 
+debian packaging, later to take over development of the 2.1 release.
+
+DBMail is now a community effort to create a fast, effecient and scalable
+database driven mailingsystem. Both IC&S and NFG are fully behind 
 opensource and the GPL. Therefore DBMail has the GPL licence.
-However IC&S does provide commercial support and consultancy
-for this product. For more information about this you can 
-send an email to info@ic-s.nl.
+
+However IC&S does provide commercial support and consultancy for this
+product. For more information about this you can send an email to
+info@ic-s.nl.
 
 ***
-Disclaimer: I nor IC&S is responsible for anything. This software
-could eat your harddisk then kill your processor. 
-Anyways, we can't do anything about it. 
+Disclaimer: IC&S nor NFG are responsible for any damages resulting from use 
+of this software. 
 ***
 
 It should work with almost no problem. We have clients that run dbmail
@@ -59,19 +66,21 @@ with more than 25.000 useraccounts. The system is stable.
 
 How do i install it?
 ====================
+
 Check the INSTALL file.
 
 
 Future
 ======
-- more database drivers
-- GUI's
 
-check the website for further DBMail plans.
+Check the website for further DBMail plans.
+
 
 What kind of licence is DBMail?
 ===============================
+
 DBMail is used under the GPL+ licence. 
+
 The + is that i would like to know how stuff is working out. So
 If you have DBMail running and you have like 1002919183 users, 
 i would want to know (to bragg about it ;).
@@ -79,6 +88,7 @@ i would want to know (to bragg about it ;).
 We use the iniparser library for parsing the dbmail.conf file.
 This library is included in the DBMail source tree. The license
 for iniparser is located at lib/iniparser-2.14/LICENSE. 
+
 
 The rest of the licence is described below:
 -------------------------------------------

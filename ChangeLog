@@ -1,3 +1,9 @@
+2005-04-07  Paul Stevens <paul@nfg.nl>
+
+	* db.c, db.h, server.c, main.c: db_check_version added.
+	* README.ldap: added file to package root.
+	* README, TODO, BUGS, EXTRAS: update files for 2.1 release.
+
 2005-04-06  Paul Stevens <paul@nfg.nl>
 
 	* imap4.c: set COMMAND_SHOW_LEVEL to TRACE_INFO.

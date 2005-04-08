@@ -1,15 +1,8 @@
 /* $Id$ 
  * (c) 2000-2002 IC&S, The Netherlands */
 
-For DBMail 2.0
--   remove unique_id != '' from queries, if possible without
-    breaking anything.
--   check if id BETWEEN x AND x is slower than id = x (I would
-    guess this is optimized away).
 For DBMail 2.1
--   Configurable table prefixes
 -   Sieve scripting language
--   Header caching (e.g., cache headers like To: From: etc.)
 -   Put some parts of configuration into the database
 -   Increase speed by doing database optimizations (e.g., indexes)
     and removing unneeded database usage.
@@ -27,4 +20,3 @@ For DBMail 2.1
     (e.g. USA banks are required to archive all email by law).
 -   Support for subaddress extensions of the form address+mailbox@domain,
     as this is useful for TMDA systems and Amavis-new, among others.
-
