@@ -1,5 +1,6 @@
 sql/postgresql/create_tables.pgsql
 sql/postgresql/migrate_from_1.x_to_2.0.pgsql
+sql/postgresql/add_header_tables.pgsql
 dbmail.conf
 dbmail.schema
 debian/default.dbmail
