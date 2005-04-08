@@ -59,7 +59,7 @@ ChildInfo_t childinfo;
 /* some extra prototypes (defintions are below) */
 static void ParentSigHandler(int sig, siginfo_t * info, void *data);
 static int SetParentSigHandler(void);
-static void server_setup(serverConfig_t *conf);
+static int server_setup(serverConfig_t *conf);
 
 int SetParentSigHandler()
 {
@@ -86,8 +86,14 @@ int SetParentSigHandler()
 	return 0;
 }
 
-void server_setup(serverConfig_t *conf)
+int server_setup(serverConfig_t *conf)
 {
+	if (db_connect() != 0) 
+		return -1;
+	if (db_check_version() != 0)
+		return -1;
+	db_disconnect();
+
 	ParentPID = getpid();
 	Restart = 0;
 	GeneralStopRequested = 0;
@@ -99,6 +105,8 @@ void server_setup(serverConfig_t *conf)
 	childinfo.ClientHandler = conf->ClientHandler;
 	childinfo.timeoutMsg = conf->timeoutMsg;
 	childinfo.resolveIP = conf->resolveIP;
+
+	return 0;
 }
 	
 int StartCliServer(serverConfig_t * conf)
@@ -106,7 +114,9 @@ int StartCliServer(serverConfig_t * conf)
 	if (!conf)
 		trace(TRACE_FATAL, "%s,%s: NULL configuration", __FILE__, __func__);
 	
-	server_setup(conf);	
+	if (server_setup(conf))
+		return -1;
+	
 	manage_start_cli_server(&childinfo);
 	
 	return 0;
@@ -117,7 +127,8 @@ int StartServer(serverConfig_t * conf)
 	if (!conf)
 		trace(TRACE_FATAL, "%s,%s: NULL configuration", __FILE__, __func__);
 
-	server_setup(conf);
+	if (server_setup(conf))
+		return -1;
  	
  	scoreboard_new(conf);
 	

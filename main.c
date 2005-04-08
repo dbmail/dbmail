@@ -283,6 +283,11 @@ int main(int argc, char *argv[])
 		goto freeall;
 	}
 	
+        if (db_check_version() != 0) {
+                exitcode = EX_TEMPFAIL;
+                goto freeall;
+        }
+
 	/* read the whole message */
 	if (! (msg = dbmail_message_new_from_stream(stdin, DBMAIL_STREAM_PIPE))) {
 		trace(TRACE_ERROR, "%s,%s: read_whole_message_pipe() failed",

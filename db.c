@@ -127,6 +127,29 @@ static int user_idnr_is_delivery_user_idnr(u64_t user_idnr);
  */
 void convert_inbox_to_uppercase(char *name);
 
+/*
+ * check to make sure the database has been upgraded
+ */
+int db_check_version(void)
+{
+	snprintf(query, DEF_QUERYSIZE, "SELECT 1=1 FROM dbmail_physmessage LIMIT 1 OFFSET 0");
+	if (db_query(query) == -1) {
+		trace(TRACE_FATAL, "%s,%s: pre-2.0 database incompatible. You need to run the conversion script",
+				__FILE__,__func__);
+		return -1;
+	}
+	
+	snprintf(query, DEF_QUERYSIZE, "SELECT 1=1 FROM dbmail_headervalue LIMIT 1 OFFSET 0");
+	if (db_query(query) == -1) {
+		trace(TRACE_FATAL, "%s,%s: 2.0 database incompatible. You need to add the header tables.",
+				__FILE__,__func__);
+		return -1;
+	}
+
+	return 0;
+}
+
+
 int db_begin_transaction()
 {
 	snprintf(query, DEF_QUERYSIZE,

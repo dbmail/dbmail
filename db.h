@@ -75,6 +75,13 @@
  */
 int db_connect(void);
 
+/*
+ * make sure we're running against a current database layout 
+ */
+
+int db_check_version(void);
+
+
 /**
  * \brief check database connection. If it is dead, reconnect
  * \return
