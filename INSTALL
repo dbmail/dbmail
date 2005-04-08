@@ -18,6 +18,9 @@ What do you need?
   *BSD systems, make sure you install and use 'gmake'. 
 - development files (libs, scripts and include files) for your database 
   server. These will probably be provided by separate packages.
+- glib-2.0 development headers and libraries.
+- gmime-2.0 development headers and libraries.
+
 
 1.	Setup a database
 

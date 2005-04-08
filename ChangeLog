@@ -1,8 +1,10 @@
-2005-04-07  Paul Stevens <paul@nfg.nl>
+2005-04-08  Paul Stevens <paul@nfg.nl>
 
 	* db.c, db.h, server.c, main.c: db_check_version added.
 	* README.ldap: added file to package root.
 	* README, TODO, BUGS, EXTRAS: update files for 2.1 release.
+	* acinclude.m4, INSTALL: document and enforce the glib/gmime 
+	build dependency.
 
 2005-04-06  Paul Stevens <paul@nfg.nl>
 
