@@ -5,6 +5,8 @@
 	* README, TODO, BUGS, EXTRAS: update files for 2.1 release.
 	* acinclude.m4, INSTALL: document and enforce the glib/gmime 
 	build dependency.
+	* db.c (db_set_headercache): ignore errors in individual messages and
+	remove a double free.
 
 2005-04-06  Paul Stevens <paul@nfg.nl>
 
