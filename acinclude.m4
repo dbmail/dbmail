@@ -208,7 +208,7 @@ dnl check for ldap or sql authentication
 AC_DEFUN([DBMAIL_AUTH_CONF], [dnl
 AC_MSG_RESULT([checking for authentication configuration])
 AC_ARG_WITH(auth-ldap,[  --with-auth-ldap=PATH	  full path to ldap header directory],
-	authldapheadername="$withval$")
+	authldapheadername="$withval")
 dnl This always needs to be defined
 AUTHALIB="auth/.libs/libauthdbmail.a"
 AUTHLTLIB="auth/libauthdbmail.la"
@@ -216,47 +216,44 @@ AUTHLTLIB="auth/libauthdbmail.la"
 WARN=0
 if test ! "${authldapheadername-x}" = "x"
 then
-  # --with-auth-ldap was specified
-  AC_MSG_RESULT([using LDAP authentication])
-  CFLAGS="$CFLAGS -DAUTHLDAP"
-  if test "$withval" != "yes"
-  then
-    AC_MSG_CHECKING([for ldap.h (user supplied)])
-    if test -r "$authldapheadername/ldap.h"
-      then
-      # found
-        AC_MSG_RESULT([$authldapheadername/ldap.h])
-        LDAPINC=$authldapheadername
-      else 
-      # Not found
-        AC_MSG_RESULT([not found])
-        LDAPINC=""
-        authldapheadername=""
-        AC_MSG_ERROR([
-  Unable to find ldap.h where you specified, try just --with-auth-ldap to 
-  have configure guess])
-    fi
-  else
-    # Lets look in our standard paths
-    AC_MSG_CHECKING([for ldap.h])
-    for ldappaths in $ldapheaderpaths
-    do
-      if test -r "$ldappaths/ldap.h"
-      then
-        LDAPINC="$ldappaths"
-        AC_MSG_RESULT([$ldappaths/ldap.h])
-        break
-      fi
-    done
-    if test -z "$LDAPINC"
-    then
-      AC_MSG_RESULT([no])
-      AC_MSG_ERROR([
-  Unable to locate ldap.h, try specifying with --with-ldap])
-    fi
-  fi
+	# --with-auth-ldap was specified
+	AC_MSG_RESULT([using LDAP authentication])
+	CFLAGS="$CFLAGS -DAUTHLDAP"
+	if test "$withval" != "yes"
+	then
+		AC_MSG_CHECKING([for ldap.h (user supplied)])
+		if test -r "$authldapheadername/ldap.h"
+		then
+			# found
+			AC_MSG_RESULT([$authldapheadername/ldap.h])
+			LDAPINC=$authldapheadername
+		else 
+			# Not found
+			AC_MSG_RESULT([not found])
+			LDAPINC=""
+			authldapheadername=""
+			AC_MSG_ERROR([Unable to find ldap.h where you specified, try just --with-auth-ldap to have configure guess])
+		fi
+	else
+		# Lets look in our standard paths
+		AC_MSG_CHECKING([for ldap.h])
+		for ldappath in $ldapheaderpaths
+		do
+			if test -r "$ldappath/ldap.h"
+			then
+				LDAPINC="$ldappath"
+				AC_MSG_RESULT([$ldappath/ldap.h])
+				break
+			fi
+		done
+		if test -z "$LDAPINC"
+		then
+			AC_MSG_RESULT([no])
+			AC_MSG_ERROR([Unable to locate ldap.h, try specifying with --with-auth-ldap])
+		fi
+	fi
 else
-  AC_MSG_RESULT([using SQL authentication])
+	AC_MSG_RESULT([using SQL authentication])
 fi
 ])
 
@@ -266,19 +263,18 @@ AC_DEFUN([DBMAIL_CHECK_LDAP_LIBS], [dnl
 # Look for libs needed to link to LDAP first
 if test ! "${authldapheadername-x}" = "x"
 then
-  AC_CHECK_LIB(ldap,ldap_bind,[ LDAPLIB="-lldap"], [LDAPLIB=""])
-  if test -z "$LDAPLIB"
-  then
-    AC_MSG_ERROR([
-  Unable to link against ldap.  It appears you are missing the
-  development libraries or they aren't in your linker's path
-  ])
-  fi
+	AC_CHECK_LIB(ldap,ldap_bind,[ LDAPLIB="-lldap"], [LDAPLIB=""])
+	if test -z "$LDAPLIB"
+	then
+		AC_MSG_ERROR([ Unable to link against ldap.  It appears you are missing the development libraries or they aren't in your linker's path ])
+	fi
 else
-  #no ldap needed
-  LDAPLIB=""
+	#no ldap needed
+	LDAPLIB=""
 fi
 ])
+
+
 dnl AC_COMPILE_WARNINGS
 dnl set to compile with '-W -Wall'
 AC_DEFUN([AC_COMPILE_WARNINGS],
@@ -450,7 +446,7 @@ dnl DBMAIL_PATH_CHECK([MINIMUM-VERSION, [ACTION-IF-FOUND [, ACTION-IF-NOT-FOUND]
 dnl Test for check, and define CHECK_CFLAGS and CHECK_LIBS
 dnl
 
-AC_DEFUN(DBMAIL_PATH_CHECK,
+AC_DEFUN([DBMAIL_PATH_CHECK],
 [
   AC_ARG_WITH(check,
   [  --with-check=PATH       prefix where check is installed [default=auto]],
