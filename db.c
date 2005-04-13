@@ -1463,6 +1463,7 @@ int db_set_headercache(GList *lost)
 					__FILE__, __func__,
 					pmsgid);
 			db_rollback_transaction();
+			fprintf(stderr,"E");
 		} else {
 			if (dbmail_message_headers_cache(msg) != 1) {
 				trace(TRACE_WARNING,"%s,%s: error caching headers for physmessage: [%llu]", 
@@ -1470,6 +1471,7 @@ int db_set_headercache(GList *lost)
 					pmsgid);
 				dbmail_message_free(msg);
 				db_rollback_transaction();
+				fprintf(stderr,"E");
 			} else {
 				db_commit_transaction();
 				fprintf(stderr,".");
