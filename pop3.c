@@ -512,7 +512,7 @@ int pop3(void *stream, char *buffer, char *client_ip,
 				return pop3_error(session, stream,
 						  "-ERR wrong command mode, sir\r\n");
 
-			tmpelement = list_getstart(&session->messagelst);
+			tmpelement = dm_list_getstart(&session->messagelst);
 			if (value != NULL) {
 				/* they're asking for a specific message */
 				while (tmpelement != NULL) {
@@ -591,7 +591,7 @@ int pop3(void *stream, char *buffer, char *client_ip,
 				return pop3_error(session, stream,
 						  "-ERR wrong command mode, sir\r\n");
 
-			tmpelement = list_getstart(&(session->messagelst));
+			tmpelement = dm_list_getstart(&(session->messagelst));
 
 			/* selecting a message */
 			trace(TRACE_DEBUG,
@@ -627,7 +627,7 @@ int pop3(void *stream, char *buffer, char *client_ip,
 				return pop3_error(session, stream,
 						  "-ERR wrong command mode, sir\r\n");
 
-			tmpelement = list_getstart(&(session->messagelst));
+			tmpelement = dm_list_getstart(&(session->messagelst));
 
 			/* selecting a message */
 			while (tmpelement != NULL) {
@@ -661,7 +661,7 @@ int pop3(void *stream, char *buffer, char *client_ip,
 				return pop3_error(session, stream,
 						  "-ERR wrong command mode, sir\r\n");
 
-			tmpelement = list_getstart(&(session->messagelst));
+			tmpelement = dm_list_getstart(&(session->messagelst));
 
 			session->virtual_totalsize = session->totalsize;
 			session->virtual_totalmessages =
@@ -689,7 +689,7 @@ int pop3(void *stream, char *buffer, char *client_ip,
 				return pop3_error(session, stream,
 						  "-ERR wrong command mode, sir\r\n");
 
-			tmpelement = list_getstart(&(session->messagelst));
+			tmpelement = dm_list_getstart(&(session->messagelst));
 
 			while (tmpelement != NULL) {
 				if (((struct message *) tmpelement->data)->
@@ -728,7 +728,7 @@ int pop3(void *stream, char *buffer, char *client_ip,
 				return pop3_error(session, stream,
 						  "-ERR wrong command mode, sir\r\n");
 
-			tmpelement = list_getstart(&(session->messagelst));
+			tmpelement = dm_list_getstart(&(session->messagelst));
 
 			if (value != NULL) {
 				/* they're asking for a specific message */
@@ -982,7 +982,7 @@ int pop3(void *stream, char *buffer, char *client_ip,
 			trace(TRACE_DEBUG,
 			      "pop3():TOP command (partially) retrieving message");
 
-			tmpelement = list_getstart(&(session->messagelst));
+			tmpelement = dm_list_getstart(&(session->messagelst));
 
 			/* selecting a message */
 			trace(TRACE_DEBUG,

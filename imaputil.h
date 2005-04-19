@@ -40,21 +40,21 @@
 
 int retrieve_structure(FILE * outstream, mime_message_t * msg,
 		       int show_extension_data);
-int retrieve_envelope(FILE * outstream, struct list *rfcheader);
+int retrieve_envelope(FILE * outstream, struct dm_list *rfcheader);
 int show_address_list(FILE * outstream, struct mime_record *mr);
 int show_mime_parameter_list(FILE * outstream, struct mime_record *mr,
 			     int force_subtype, int only_extension);
 
 mime_message_t *get_part_by_num(mime_message_t * msg, const char *part);
 
-u64_t rfcheader_dump(MEM * outmem, struct list *rfcheader,
+u64_t rfcheader_dump(MEM * outmem, struct dm_list *rfcheader,
 		     char **fieldnames, int nfields, int equal_type);
-u64_t mimeheader_dump(MEM * outmem, struct list *mimeheader);
+u64_t mimeheader_dump(MEM * outmem, struct dm_list *mimeheader);
 
 int haystack_find(int haystacklen, char **haystack, const char *needle);
 
 int next_fetch_item(char **args, int idx, fetch_items_t * fi);
-int is_textplain(struct list *hdr);
+int is_textplain(struct dm_list *hdr);
 
 char *date_sql2imap(const char *sqldate);
 char *date_imap2sql(const char *imapdate);
@@ -77,10 +77,10 @@ int binary_search(const u64_t * array, unsigned arraysize, u64_t key,
 int quoted_string_out(FILE * outstream, const char *s);
 void send_data(FILE * to, MEM * from, int cnt);
 
-int build_imap_search(char **search_keys, struct list *sl, int *idx, int sorted);
+int build_imap_search(char **search_keys, struct dm_list *sl, int *idx, int sorted);
 int perform_imap_search(unsigned int *rset, int setlen, search_key_t * sk,
 			mailbox_t * mb, int sorted, int condition);
-void free_searchlist(struct list *sl);
+void free_searchlist(struct dm_list *sl);
 
 void invert_set(unsigned int *set, int setlen);
 void combine_sets(unsigned int *dest, unsigned int *sec, int setlen, int type);
@@ -97,7 +97,7 @@ char * dbmail_imap_astring_as_string(const char *s);
 char * dbmail_imap_plist_as_string(GList *plist);
 
 int mime_unwrap(char *to, const char *from); 
-int sort_search(struct list *searchlist);
+int sort_search(struct dm_list *searchlist);
 
 
 #endif

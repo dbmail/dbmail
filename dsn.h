@@ -40,8 +40,8 @@ typedef struct {
 	u64_t useridnr;		/* Specific user id recipient (from outside). */
 	const char *address;	/* Envelope recipient (from outside). */
 	const char *mailbox;	/* Default mailbox to use for userid deliveries (from outside). */
-	struct list *userids;	/* List of u64_t* -- internal useridnr's to deliver to (internal). */
-	struct list *forwards;	/* List of char* -- external addresses to forward to (internal). */
+	struct dm_list *userids;	/* List of u64_t* -- internal useridnr's to deliver to (internal). */
+	struct dm_list *forwards;	/* List of char* -- external addresses to forward to (internal). */
 	delivery_status_t dsn;	/* Return status of this "delivery basket" (to outside). */
 } deliver_to_user_t;
 
@@ -69,7 +69,7 @@ int dsn_tostring(delivery_status_t dsn, const char ** const class,
 int dsnuser_init(deliver_to_user_t * dsnuser);
 
 void dsnuser_free(deliver_to_user_t * dsnuser);
-void dsnuser_free_list(struct list *deliveries);
+void dsnuser_free_list(struct dm_list *deliveries);
 
 /**
  * \brief Loop through the list of delivery addresses
@@ -83,7 +83,7 @@ void dsnuser_free_list(struct list *deliveries);
  *   - 0 on success
  *   - -1 on failure
  */
-int dsnuser_resolve_list(struct list *deliveries);
+int dsnuser_resolve_list(struct dm_list *deliveries);
 
 /**
  * \brief The dsnuser structure should have either a useridnr or
@@ -107,7 +107,7 @@ int dsnuser_resolve(deliver_to_user_t *dsnuser);
  * \return
  *   - see dsn_class_t for details.
  */
-delivery_status_t dsnuser_worstcase_list(struct list *deliveries);
+delivery_status_t dsnuser_worstcase_list(struct dm_list *deliveries);
 
 /**
  * \brief Given true/false values for each of the three

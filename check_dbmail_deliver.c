@@ -95,15 +95,15 @@ void teardown(void)
  * \return 0
  */
 //int insert_messages(struct DbmailMessage *message,
-//		struct list *headerfields, 
-//		struct list *dsnusers,
-//		struct list *returnpath);
+//		struct dm_list *headerfields, 
+//		struct dm_list *dsnusers,
+//		struct dm_list *returnpath);
 
 START_TEST(test_insert_messages)
 {
 	int result;
 	struct DbmailMessage *message;
-	struct list dsnusers, headerfields, returnpath;
+	struct dm_list dsnusers, headerfields, returnpath;
 	GString *tmp;
 	deliver_to_user_t dsnuser;
 	
@@ -111,13 +111,13 @@ START_TEST(test_insert_messages)
 	tmp = g_string_new(raw_message);
 	message = dbmail_message_init_with_string(message,tmp);
 
-	list_init(&dsnusers);
-	list_init(&headerfields);
-	list_init(&returnpath);
+	dm_list_init(&dsnusers);
+	dm_list_init(&headerfields);
+	dm_list_init(&returnpath);
 	
 	dsnuser_init(&dsnuser);
 	dsnuser.address = "testuser1";
-	list_nodeadd(&dsnusers, &dsnuser, sizeof(deliver_to_user_t));
+	dm_list_nodeadd(&dsnusers, &dsnuser, sizeof(deliver_to_user_t));
 	
 	mime_fetch_headers(dbmail_message_hdrs_to_string(message), &headerfields);
 
@@ -332,16 +332,16 @@ END_TEST
  * \param checks used internally, \b should be -1 on call
  * \return number of deliver_to addresses found
  */
-//int auth_check_user_ext(const char *username, struct list *userids,
-//			struct list *fwds, int checks);
+//int auth_check_user_ext(const char *username, struct dm_list *userids,
+//			struct dm_list *fwds, int checks);
 START_TEST(test_auth_check_user_ext)
 {
-	struct list uids;
-	struct list fwds;
+	struct dm_list uids;
+	struct dm_list fwds;
 	int checks = -1;
 	int result;
-	list_init(&uids);
-	list_init(&fwds);
+	dm_list_init(&uids);
+	dm_list_init(&fwds);
 	result = auth_check_user_ext("foobar@foobar.org",&uids,&fwds,checks);
 }
 END_TEST

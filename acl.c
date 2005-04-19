@@ -199,7 +199,7 @@ char *acl_get_acl(u64_t mboxid)
 	char *identifier;	/* one identifier */
 	char rightsstring[NR_ACL_FLAGS + 1];
 	int result;
-	struct list identifier_list;
+	struct dm_list identifier_list;
 	struct element *identifier_elm;
 	unsigned nr_identifiers = 0;
 
@@ -209,7 +209,7 @@ char *acl_get_acl(u64_t mboxid)
 		trace(TRACE_ERROR, "%s,%s: error when getting identifier "
 		      "list for mailbox [%llu].", __FILE__, __func__,
 		      mboxid);
-		list_freelist(&identifier_list.start);
+		dm_list_free(&identifier_list.start);
 		return NULL;
 	}
 
@@ -219,27 +219,27 @@ char *acl_get_acl(u64_t mboxid)
 	if (db_get_mailbox_owner(mboxid, &userid) < 0) {
 		trace(TRACE_ERROR, "%s,%s: error querying ownership of "
 		      "mailbox", __FILE__, __func__);
-		list_freelist(&identifier_list.start);
+		dm_list_free(&identifier_list.start);
 		return NULL;
 	}
 
 	if ((username = auth_get_userid(userid)) == NULL) {
 		trace(TRACE_ERROR, "%s,%s: error getting username for "
 		      "user [%llu]", __FILE__, __func__, userid);
-		list_freelist(&identifier_list.start);
+		dm_list_free(&identifier_list.start);
 		return NULL;
 	}
-	if (list_nodeadd(&identifier_list, username, 
+	if (dm_list_nodeadd(&identifier_list, username, 
 			 strlen(username) + 1) == NULL) { 
 		trace(TRACE_ERROR, "%s,%s: error adding username to list",
 		      __FILE__, __func__);
-		list_freelist(&identifier_list.start);
+		dm_list_free(&identifier_list.start);
 		dm_free(username);
 		return NULL;
 	}
 	dm_free(username);
 
-	identifier_elm = list_getstart(&identifier_list);
+	identifier_elm = dm_list_getstart(&identifier_list);
 	trace(TRACE_DEBUG, "%s,%s: before looping identifiers!",
 	      __FILE__, __func__);
 	while (identifier_elm) {
@@ -255,7 +255,7 @@ char *acl_get_acl(u64_t mboxid)
 	if (!
 	    (acl_string =
 	     dm_malloc((acl_string_size + 1) * sizeof(char)))) {
-		list_freelist(&identifier_list.start);
+		dm_list_free(&identifier_list.start);
 		trace(TRACE_FATAL, "%s,%s: error allocating memory",
 		      __FILE__, __func__);
 		return NULL;
@@ -263,7 +263,7 @@ char *acl_get_acl(u64_t mboxid)
 	// initialise list to length 0
 	acl_string[0] = '\0';
 	memset((void *) acl_string, '\0', acl_string_size + 1);
-	identifier_elm = list_getstart(&identifier_list);
+	identifier_elm = dm_list_getstart(&identifier_list);
 	while (identifier_elm) {
 		identifier = (char *) identifier_elm->data;
 		if (acl_get_rightsstring_identifier(identifier, mboxid,
@@ -271,7 +271,7 @@ char *acl_get_acl(u64_t mboxid)
 			trace(TRACE_ERROR, "%s,%s: error getting string "
 			      "rights for user with name [%s].",
 			      __FILE__, __func__, identifier);
-			list_freelist(&identifier_list.start);
+			dm_list_free(&identifier_list.start);
 			dm_free(acl_string);
 			return NULL;
 		}
@@ -286,7 +286,7 @@ char *acl_get_acl(u64_t mboxid)
 		identifier_elm = identifier_elm->nextnode;
 
 	}
-	list_freelist(&identifier_list.start);
+	dm_list_free(&identifier_list.start);
 	return acl_string;
 }
 

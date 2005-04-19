@@ -40,22 +40,22 @@ struct element {
 };
 
 
-struct list {
+struct dm_list {
 	struct element *start;
 	long total_nodes;
 };
 
 
-struct element *list_nodeadd(struct list *tlist, const void *data,
+struct element *dm_list_nodeadd(struct dm_list *tlist, const void *data,
 			     size_t dsize);
 
-struct element *list_nodedel(struct list *tlist, void *data);
-struct element *list_nodepop(struct list *list);
-/*@dependent@*/ struct element *list_getstart(struct list *tlist);
-void list_freelist(struct element **start);
-long list_totalnodes(struct list *tlist);
-void list_showlist(struct list *tlist);
-void list_init(struct list *tlist);
+struct element *dm_list_nodedel(struct dm_list *tlist, void *data);
+struct element *dm_list_nodepop(struct dm_list *list);
+/*@dependent@*/ struct element *dm_list_getstart(struct dm_list *tlist);
+void dm_list_free(struct element **start);
+long dm_list_length(struct dm_list *tlist);
+void dm_list_show(struct dm_list *tlist);
+void dm_list_init(struct dm_list *tlist);
 
 GList * g_list_copy_list(GList *dst, struct element *el);
 GList *g_list_slices(GList *list, unsigned limit);
@@ -64,7 +64,7 @@ GList *g_list_slices(GList *list, unsigned limit);
  * export a function with the name list_reverse(). Nice of them,
  * but a pretty "strange" way to pollute the global namespace
  */
-struct element *dbmail_list_reverse(struct element *start);
+struct element *dm_list_reverse(struct element *start);
 /* sort stuff */
 
 typedef struct _sortitems
@@ -74,9 +74,9 @@ typedef struct _sortitems
 	struct _sortitems * right, * left;
 } sortitems_t;
 
-void list_btree_insert(sortitems_t ** tree, sortitems_t * item);
-void list_btree_printout(sortitems_t * tree, int *i);
-void list_btree_traverse(sortitems_t * tree, int * i, unsigned int *rset);
-void list_btree_free(sortitems_t * tree);
+void dm_btree_insert(sortitems_t ** tree, sortitems_t * item);
+void dm_btree_printout(sortitems_t * tree, int *i);
+void dm_btree_traverse(sortitems_t * tree, int * i, unsigned int *rset);
+void dm_btree_free(sortitems_t * tree);
 
 #endif

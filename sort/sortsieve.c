@@ -50,7 +50,7 @@
 #include "sort.h"
 #include <sieve2_interface.h>
 
-extern struct list smtpItems, sysItems;
+extern struct dm_list smtpItems, sysItems;
 
 /* typedef sort_action {
  *   int method,
@@ -70,7 +70,7 @@ extern struct list smtpItems, sysItems;
  * finish storing the message and restart.
  * */
 int sortsieve_msgsort(u64_t useridnr, char *header, u64_t headersize,
-		      u64_t messagesize, struct list *actions)
+		      u64_t messagesize, struct dm_list *actions)
 {
 	sieve2_message_t *m;
 	sieve2_support_t *p;
@@ -204,7 +204,7 @@ int sortsieve_msgsort(u64_t useridnr, char *header, u64_t headersize,
 	return ret;
 }
 
-int sortsieve_unroll_action(sieve2_action_t * a, struct list *actions)
+int sortsieve_unroll_action(sieve2_action_t * a, struct dm_list *actions)
 {
 	int res = SIEVE2_OK;
 	int code;
@@ -315,7 +315,7 @@ int sortsieve_unroll_action(sieve2_action_t * a, struct list *actions)
 		tmpsa->destination = tmpdest;
 		tmpsa->message = tmpmsg;
 
-		list_nodeadd(actions, tmpsa, sizeof(sort_action_t));
+		dm_list_nodeadd(actions, tmpsa, sizeof(sort_action_t));
 
 		dm_free(tmpsa);
 		tmpsa = NULL;

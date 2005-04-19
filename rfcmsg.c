@@ -48,21 +48,21 @@ void db_free_msg(mime_message_t * msg)
 		return;
 
 	/* free the children msg's */
-	tmp = list_getstart(&msg->children);
+	tmp = dm_list_getstart(&msg->children);
 
 	while (tmp) {
 		db_free_msg((mime_message_t *) tmp->data);
 		tmp = tmp->nextnode;
 	}
 
-	tmp = list_getstart(&msg->children);
-	list_freelist(&tmp);
+	tmp = dm_list_getstart(&msg->children);
+	dm_list_free(&tmp);
 
-	tmp = list_getstart(&msg->mimeheader);
-	list_freelist(&tmp);
+	tmp = dm_list_getstart(&msg->mimeheader);
+	dm_list_free(&tmp);
 
-	tmp = list_getstart(&msg->rfcheader);
-	list_freelist(&tmp);
+	tmp = dm_list_getstart(&msg->rfcheader);
+	dm_list_free(&tmp);
 
 	memset(msg, 0, sizeof(*msg));
 }
@@ -79,7 +79,7 @@ void db_reverse_msg(mime_message_t * msg)
 		return;
 
 	/* reverse the children msg's */
-	tmp = list_getstart(&msg->children);
+	tmp = dm_list_getstart(&msg->children);
 
 	while (tmp) {
 		db_reverse_msg((mime_message_t *) tmp->data);
@@ -87,11 +87,11 @@ void db_reverse_msg(mime_message_t * msg)
 	}
 
 	/* reverse this list */
-	msg->children.start = dbmail_list_reverse(msg->children.start);
+	msg->children.start = dm_list_reverse(msg->children.start);
 
 	/* reverse header items */
-	msg->mimeheader.start = dbmail_list_reverse(msg->mimeheader.start);
-	msg->rfcheader.start = dbmail_list_reverse(msg->rfcheader.start);
+	msg->mimeheader.start = dm_list_reverse(msg->mimeheader.start);
+	msg->rfcheader.start = dm_list_reverse(msg->rfcheader.start);
 }
 
 /*
@@ -224,7 +224,7 @@ int db_start_msg(mime_message_t * msg, char *stopbound, int *level,
 	trace(TRACE_DEBUG, "%s,%s: starting, stopbound: '%s'\n", __FILE__, __func__,
 	      stopbound ? stopbound : "<null>");
 
-	list_init(&msg->children);
+	dm_list_init(&msg->children);
 	msg->message_has_errors = (!continue_recursion);
 
 
@@ -425,7 +425,7 @@ int db_start_msg(mime_message_t * msg, char *stopbound, int *level,
  * assume to enter just after a splitbound 
  * returns -1 on parse error, -2 on dbase error, -3 on memory error
  */
-int db_add_mime_children(struct list *brothers, char *splitbound,
+int db_add_mime_children(struct dm_list *brothers, char *splitbound,
 			 int *level, int maxlevel)
 {
 	mime_message_t part;
@@ -647,7 +647,7 @@ int db_add_mime_children(struct list *brothers, char *splitbound,
 		}
 
 		/* add this part to brother list */
-		if (list_nodeadd(brothers, &part, sizeof(part)) == NULL) {
+		if (dm_list_nodeadd(brothers, &part, sizeof(part)) == NULL) {
 			trace(TRACE_WARNING,
 			      "db_add_mime_children(): could not add node\n");
 			db_free_msg(&part);
@@ -713,14 +713,14 @@ int db_parse_as_text(mime_message_t * msg)
 	strcpy(mr.field, "subject");
 	strcpy(mr.value,
 	       "dbmail IMAP server info: this message could not be parsed");
-	el = list_nodeadd(&msg->rfcheader, &mr, sizeof(mr));
+	el = dm_list_nodeadd(&msg->rfcheader, &mr, sizeof(mr));
 	if (!el)
 		return -3;
 
 	strcpy(mr.field, "from");
 	config_get_value("POSTMASTER", "DBMAIL", postmaster);
 	strncpy(mr.value, postmaster, MIME_VALUE_MAX - 1);
-	el = list_nodeadd(&msg->rfcheader, &mr, sizeof(mr));
+	el = dm_list_nodeadd(&msg->rfcheader, &mr, sizeof(mr));
 	if (!el)
 		return -3;
 
@@ -789,7 +789,7 @@ int db_msgdump(mime_message_t * msg, u64_t msguid, int level)
 
 
 	trace(TRACE_DEBUG, "%sMIME-header: \n", spaces);
-	curr = list_getstart(&msg->mimeheader);
+	curr = dm_list_getstart(&msg->mimeheader);
 	if (!curr)
 		trace(TRACE_DEBUG, "%s%snull\n", spaces, spaces);
 	else {
@@ -804,7 +804,7 @@ int db_msgdump(mime_message_t * msg, u64_t msguid, int level)
 	trace(TRACE_DEBUG, "%s*** MIME-header end\n", spaces);
 
 	trace(TRACE_DEBUG, "%sRFC822-header: \n", spaces);
-	curr = list_getstart(&msg->rfcheader);
+	curr = dm_list_getstart(&msg->rfcheader);
 	if (!curr)
 		trace(TRACE_DEBUG, "%s%snull\n", spaces, spaces);
 	else {
@@ -832,7 +832,7 @@ int db_msgdump(mime_message_t * msg, u64_t msguid, int level)
 */
 	trace(TRACE_DEBUG, "%sChildren of this msg:\n", spaces);
 
-	curr = list_getstart(&msg->children);
+	curr = dm_list_getstart(&msg->children);
 	while (curr) {
 		size +=
 		    db_msgdump((mime_message_t *) curr->data, msguid,

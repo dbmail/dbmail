@@ -1,3 +1,11 @@
+2005-04-19  Paul Stevens <paul@nfg.nl>
+
+	* dbmail-message.c, dbmail-message.h, check_dbmail_message.c: add
+	initial support for base subject.
+	* list.c, list.h, and many others: move the internal list
+	implementation to the dm_ namespace to avoid conflicts with gmime2.1's
+	own internal list setup.
+
 2005-04-08  Paul Stevens <paul@nfg.nl>
 
 	* db.c, db.h, server.c, main.c: db_check_version added.

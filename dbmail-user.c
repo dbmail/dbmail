@@ -418,8 +418,8 @@ int do_show(const char * const name)
 	GList *userlist = NULL;
 	char *username;
 	int result;
-	struct list uids;
-	struct list fwds;
+	struct dm_list uids;
+	struct dm_list fwds;
 	GList *userids = NULL;
 	GList *forwards = NULL;
 
@@ -444,8 +444,8 @@ int do_show(const char * const name)
 
 		if (useridnr == 0) {
 			/* not a user, search aliases */
-			list_init(&fwds);
-			list_init(&uids);
+			dm_list_init(&fwds);
+			dm_list_init(&uids);
 			result = auth_check_user_ext(name,&uids,&fwds,-1);
 			
 			if (!result) {
@@ -453,10 +453,10 @@ int do_show(const char * const name)
 				return -1;
 			}
 		
-			if (list_getstart(&uids))
-				userids = g_list_copy_list(userids,list_getstart(&uids));
-			if (list_getstart(&fwds))
-				forwards = g_list_copy_list(forwards,list_getstart(&fwds));
+			if (dm_list_getstart(&uids))
+				userids = g_list_copy_list(userids,dm_list_getstart(&uids));
+			if (dm_list_getstart(&fwds))
+				forwards = g_list_copy_list(forwards,dm_list_getstart(&fwds));
 			
 			forwards = g_list_first(forwards);
 			if (forwards) {

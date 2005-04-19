@@ -138,7 +138,7 @@ char *auth_getencryption(u64_t user_idnr);
  * be set to -1 when called!
  * \return number of deliver_to addresses found
  */
-//int auth_check_user(const char *username, struct list *userids,
+//int auth_check_user(const char *username, struct dm_list *userids,
 //		    int checks);
 
 /**
@@ -150,8 +150,8 @@ char *auth_getencryption(u64_t user_idnr);
  * \param checks used internally, \b should be -1 on call
  * \return number of deliver_to addresses found
  */
-int auth_check_user_ext(const char *username, struct list *userids,
-			struct list *fwds, int checks);
+int auth_check_user_ext(const char *username, struct dm_list *userids,
+			struct dm_list *fwds, int checks);
 /**
  * \brief add a new user to the database (whichever type of database is 
  * implemented)
@@ -322,7 +322,7 @@ int auth_removealias_ext(const char *alias, const char *deliver_to);
 
 char *dm_ldap_get_filter(const gchar boolean, const gchar *attribute, GList *values);
 u64_t dm_ldap_get_freeid(const gchar *attribute);
-GList * dm_ldap_entlist_get_values(GList *entlist);
+GList * dm_ldap_entdm_list_get_values(GList *entlist);
 char * dm_ldap_user_getdn(u64_t user_idnr);
 int dm_ldap_mod_field(u64_t user_idnr, const char *fieldname, const char *newvalue);
 #endif

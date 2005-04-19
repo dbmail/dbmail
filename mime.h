@@ -41,12 +41,12 @@ struct mime_record {
 	char value[MIME_VALUE_MAX];
 };
 
-void mime_findfield(const char *fname, struct list *mimelist,
+void mime_findfield(const char *fname, struct dm_list *mimelist,
 		    struct mime_record **mr);
-int mail_address_build_list(char *scan_for_field, struct list *targetlist,
-		  struct list *mimelist);
+int mail_address_build_list(char *scan_for_field, struct dm_list *targetlist,
+		  struct dm_list *mimelist);
 int mime_readheader(const char *datablock, u64_t * blkidx, 
-		    struct list *mimelist, u64_t * headersize);
+		    struct dm_list *mimelist, u64_t * headersize);
 
-int mime_fetch_headers(const char *datablock, struct list *mimelist);
+int mime_fetch_headers(const char *datablock, struct dm_list *mimelist);
 #endif

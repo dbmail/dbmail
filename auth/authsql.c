@@ -211,7 +211,7 @@ char *auth_getencryption(u64_t user_idnr)
 	return __auth_encryption_desc_string;
 }
 
-int auth_check_user_ext(const char *username, struct list *userids, struct list *fwds, int checks)
+int auth_check_user_ext(const char *username, struct dm_list *userids, struct dm_list *fwds, int checks)
 {
 	int occurences = 0;
 	void *saveres;
@@ -261,10 +261,10 @@ int auth_check_user_ext(const char *username, struct list *userids, struct list 
 			id = strtoull(username, &endptr, 10);
 
 			if (*endptr == 0)
-				list_nodeadd(userids, &id, sizeof(id));
+				dm_list_nodeadd(userids, &id, sizeof(id));
 			/* numeric deliver-to --> this is a userid */
 			else
-				list_nodeadd(fwds, username,
+				dm_list_nodeadd(fwds, username,
 					     strlen(username) + 1);
 
 			trace(TRACE_DEBUG,

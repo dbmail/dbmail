@@ -224,7 +224,7 @@ void dm_ldap_freeresult(GList *entlist)
 	}
 }
 
-GList * dm_ldap_entlist_get_values(GList *entlist)
+GList * dm_ldap_entdm_list_get_values(GList *entlist)
 {
 	GList *fldlist, *attlist;
 	GList *values = NULL;
@@ -288,7 +288,7 @@ u64_t dm_ldap_get_freeid(const gchar *attribute)
 	g_string_printf(q,"(%s=*)", attribute);
 	entlist = __auth_get_every_match(q->str, attrs);
 	
-	ids = dm_ldap_entlist_get_values(entlist);
+	ids = dm_ldap_entdm_list_get_values(entlist);
 	
 	/* get the valid range */
 	if (strcmp(attribute,_ldap_cfg.field_nid)==0) {
@@ -454,10 +454,10 @@ int dm_ldap_mod_field(u64_t user_idnr, const char *fieldname, const char *newval
  * retlist
  *  has the "rows" that matched
  *   {
- *     (struct list *)data
+ *     (struct dm_list *)data
  *       has the fields you requested
  *       {
- *         (struct list *)data
+ *         (struct dm_list *)data
  *           has the values for the field
  *           {
  *             (char *)data
@@ -822,7 +822,7 @@ GList * auth_get_known_users(void)
 			__FILE__,__func__, 
 			g_list_length(entlist));
 
-	users = dm_ldap_entlist_get_values(entlist);
+	users = dm_ldap_entdm_list_get_values(entlist);
 	
 	dm_ldap_freeresult(entlist);
 	return users;
@@ -839,8 +839,8 @@ GList * auth_get_known_users(void)
 
 
 	
-int auth_check_user_ext(const char *address, struct list *userids,
-			struct list *fwds, int checks)
+int auth_check_user_ext(const char *address, struct dm_list *userids,
+			struct dm_list *fwds, int checks)
 {
 	int occurences = 0;
 	u64_t id;
@@ -873,10 +873,10 @@ int auth_check_user_ext(const char *address, struct list *userids,
 			if (*endptr == 0) {
 				/* numeric deliver-to --> this is a userid */
 				trace(TRACE_DEBUG, "%s,%s: adding [%llu] to userids",__FILE__,__func__, id);
-				list_nodeadd(userids, &id, sizeof(id));
+				dm_list_nodeadd(userids, &id, sizeof(id));
 			} else {
 				trace(TRACE_DEBUG, "%s,%s: adding [%s] to forwards",__FILE__,__func__, address);
-				list_nodeadd(fwds, address, strlen(address) + 1);
+				dm_list_nodeadd(fwds, address, strlen(address) + 1);
 				dm_free(endptr);
 			}
 			dm_ldap_freeresult(entlist);
@@ -910,7 +910,7 @@ int auth_check_user_ext(const char *address, struct list *userids,
 							__FILE__,__func__, 
 							attrvalue);
 					
-					list_nodeadd(fwds, attrvalue, strlen(attrvalue) + 1);
+					dm_list_nodeadd(fwds, attrvalue, strlen(attrvalue) + 1);
 					occurences += 1;
 				}
 				
@@ -1335,7 +1335,7 @@ int auth_get_users_from_clientid(u64_t client_id UNUSED,
  * 		- -2 on memory failure
  * 		- -1 on database failure
  * 		- 0 on success
- * \attention aliases list needs to be empty. Method calls list_init()
+ * \attention aliases list needs to be empty. Method calls dm_list_init()
  *            which sets list->start to NULL.
  */
 

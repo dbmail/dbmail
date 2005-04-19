@@ -43,7 +43,7 @@
  * FIXME: there is no detail in the error reporting,
  * so there's no way to tell *which* targets failed...
  * */
-int forward(u64_t msgidnr, struct list *targets, const char *from,
+int forward(u64_t msgidnr, struct dm_list *targets, const char *from,
 	    const char *header, u64_t headersize UNUSED)
 {
 	struct element *target = NULL;
@@ -68,7 +68,7 @@ int forward(u64_t msgidnr, struct list *targets, const char *from,
 
 	trace(TRACE_INFO,
 	      "%s,%s: delivering to [%ld] external addresses",
-	      __FILE__, __func__, list_totalnodes(targets));
+	      __FILE__, __func__, dm_list_length(targets));
 
 	if (!msgidnr) {
 		trace(TRACE_ERROR,
@@ -77,7 +77,7 @@ int forward(u64_t msgidnr, struct list *targets, const char *from,
 		return -1;
 	}
 
-	target = list_getstart(targets);
+	target = dm_list_getstart(targets);
 
 	while (target != NULL) {
 		if ((((char *) target->data)[0] == '|')

@@ -51,10 +51,10 @@
 /* syslog */
 #define PNAME "dbmail/smtp"
 
-struct list returnpath;		/* returnpath (should aways be just 1 hop) */
-struct list mimelist;		/* raw unformatted mimefields and values */
-struct list dsnusers;		/* list of deliver_to_user_t structs */
-struct list users;		/* list of email addresses in message */
+struct dm_list returnpath;		/* returnpath (should aways be just 1 hop) */
+struct dm_list mimelist;		/* raw unformatted mimefields and values */
+struct dm_list dsnusers;		/* list of deliver_to_user_t structs */
+struct dm_list users;		/* list of email addresses in message */
 struct element *tmp;
 
 char *configFile = DEFAULT_CONFIG_FILE;
@@ -108,10 +108,10 @@ int main(int argc, char *argv[])
 	
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 
-	list_init(&users);
-	list_init(&dsnusers);
-	list_init(&mimelist);
-	list_init(&returnpath);
+	dm_list_init(&users);
+	dm_list_init(&dsnusers);
+	dm_list_init(&mimelist);
+	dm_list_init(&returnpath);
 
 	/* Check for commandline options.
 	 * The initial '-' means that arguments which are not associated
@@ -159,11 +159,11 @@ int main(int argc, char *argv[])
 			      "main(): using RETURN_PATH for bounces");
 
 			/* Add argument onto the returnpath list. */
-			if (list_nodeadd
+			if (dm_list_nodeadd
 			    (&returnpath, optarg,
 			     strlen(optarg) + 1) == 0) {
 				trace(TRACE_ERROR,
-				      "main(): list_nodeadd reports out of memory"
+				      "main(): dm_list_nodeadd reports out of memory"
 				      " while adding to returnpath");
 				exitcode = EX_TEMPFAIL;
 				goto freeall;
@@ -179,11 +179,11 @@ int main(int argc, char *argv[])
 			dsnuser.address = dm_strdup(optarg);
 
 			/* Add argument onto the users list. */
-			if (list_nodeadd
+			if (dm_list_nodeadd
 			    (&dsnusers, &dsnuser,
 			     sizeof(deliver_to_user_t)) == 0) {
 				trace(TRACE_ERROR,
-				      "main(): list_nodeadd reports out of memory"
+				      "main(): dm_list_nodeadd reports out of memory"
 				      " while adding usernames");
 				exitcode = EX_TEMPFAIL;
 				goto freeall;
@@ -199,11 +199,11 @@ int main(int argc, char *argv[])
 			dsnuser.address = dm_strdup(optarg);
 
 			/* Add argument onto the users list. */
-			if (list_nodeadd
+			if (dm_list_nodeadd
 			    (&dsnusers, &dsnuser,
 			     sizeof(deliver_to_user_t)) == 0) {
 				trace(TRACE_ERROR,
-				      "main(): list_nodeadd reports out of memory"
+				      "main(): dm_list_nodeadd reports out of memory"
 				      " while adding email addresses");
 				exitcode = EX_TEMPFAIL;
 				goto freeall;
@@ -333,14 +333,14 @@ int main(int argc, char *argv[])
 		}
 
 		/* Loop through the users list, moving the entries into the dsnusers list. */
-		for (tmp = list_getstart(&users); tmp != NULL;
+		for (tmp = dm_list_getstart(&users); tmp != NULL;
 		     tmp = tmp->nextnode) {
 			deliver_to_user_t dsnuser;
 
 			dsnuser_init(&dsnuser);
 			dsnuser.address = dm_strdup((char *) tmp->data);
 
-			list_nodeadd(&dsnusers, &dsnuser, sizeof(deliver_to_user_t));
+			dm_list_nodeadd(&dsnusers, &dsnuser, sizeof(deliver_to_user_t));
 		}
 	}
 
@@ -349,7 +349,7 @@ int main(int argc, char *argv[])
 		trace(TRACE_DEBUG, "main(): setting mailbox for all deliveries to [%s]",
 		      deliver_to_mailbox);
 		/* Loop through the dsnusers list, setting the destination mailbox. */
-		for (tmp = list_getstart(&dsnusers); tmp != NULL;
+		for (tmp = dm_list_getstart(&dsnusers); tmp != NULL;
 		     tmp = tmp->nextnode) {
 			((deliver_to_user_t *)tmp->data)->mailbox = dm_strdup(deliver_to_mailbox);
 		}
@@ -403,9 +403,9 @@ int main(int argc, char *argv[])
 	dsnuser_free_list(&dsnusers);
 
 	trace(TRACE_DEBUG, "main(): freeing all other lists");
-	list_freelist(&mimelist.start);
-	list_freelist(&returnpath.start);
-	list_freelist(&users.start);
+	dm_list_free(&mimelist.start);
+	dm_list_free(&returnpath.start);
+	dm_list_free(&users.start);
 
 	dbmail_message_free(msg);
 

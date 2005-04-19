@@ -134,7 +134,7 @@ static int send_notification(const char *to, const char *from,
 /*
  * Send an automatic reply using sendmail
  */
-static int send_reply(struct list *headerfields, const char *body)
+static int send_reply(struct dm_list *headerfields, const char *body)
 {
 	struct element *el;
 	struct mime_record *record;
@@ -162,7 +162,7 @@ static int send_reply(struct list *headerfields, const char *body)
 	      "send_reply(): found sendmail command to be [%s]", sendmail);
 
 	/* find To: and Reply-To:/From: field */
-	el = list_getstart(headerfields);
+	el = dm_list_getstart(headerfields);
 
 	while (el) {
 		record = (struct mime_record *) el->data;
@@ -247,7 +247,7 @@ static int send_reply(struct list *headerfields, const char *body)
 
 
 /* Yeah, RAN. That's Reply And Notify ;-) */
-static int execute_auto_ran(u64_t useridnr, struct list *headerfields)
+static int execute_auto_ran(u64_t useridnr, struct dm_list *headerfields)
 {
 	field_t val;
 	int do_auto_notify = 0, do_auto_reply = 0;
@@ -417,9 +417,9 @@ int store_message_in_blocks(const char *message, u64_t message_size,
  *   - -1 on full failure
  */
 int insert_messages(struct DbmailMessage *message, 
-		struct list *headerfields, 
-		struct list *dsnusers, 
-		struct list *returnpath)
+		struct dm_list *headerfields, 
+		struct dm_list *dsnusers, 
+		struct dm_list *returnpath)
 {
 	char *header, *body;
 	u64_t headersize, bodysize, rfcsize;
@@ -427,7 +427,7 @@ int insert_messages(struct DbmailMessage *message,
 	u64_t msgsize;
 
 	/* Only the last step of the returnpath is used. */
-	if ((ret_path = list_getstart(returnpath)))
+	if ((ret_path = dm_list_getstart(returnpath)))
 		dbmail_message_set_header(message, "Return-Path", (char *)ret_path->data);
 
  	delivery_status_t final_dsn;
@@ -461,7 +461,7 @@ int insert_messages(struct DbmailMessage *message,
 
 
 	/* Loop through the users list. */
-	for (element = list_getstart(dsnusers); element != NULL;
+	for (element = dm_list_getstart(dsnusers); element != NULL;
 	     element = element->nextnode) {
 		struct element *userid_elem;
 		int has_2 = 0, has_4 = 0, has_5 = 0, has_5_2 = 0;
@@ -470,7 +470,7 @@ int insert_messages(struct DbmailMessage *message,
 		
 		/* Each user may have a list of user_idnr's for local
 		 * delivery. */
-		for (userid_elem = list_getstart(delivery->userids);
+		for (userid_elem = dm_list_getstart(delivery->userids);
 		     userid_elem != NULL;
 		     userid_elem = userid_elem->nextnode) {
 			u64_t useridnr = *(u64_t *) userid_elem->data;
@@ -530,7 +530,7 @@ int insert_messages(struct DbmailMessage *message,
 
 			/* If there's a problem with the delivery address, but
 			 * there are proper forwarding addresses, we're OK. */
-			if (list_totalnodes(delivery->forwards) > 0) {
+			if (dm_list_length(delivery->forwards) > 0) {
 				delivery->dsn.class = DSN_CLASS_OK;
 				delivery->dsn.subject = 1;	/* Address related. */
 				delivery->dsn.detail = 5;	/* Valid. */
@@ -553,10 +553,10 @@ int insert_messages(struct DbmailMessage *message,
 		}
 
 		trace(TRACE_DEBUG, "insert_messages(): we need to deliver [%ld] "
-		      "messages to external addresses", list_totalnodes(delivery->forwards));
+		      "messages to external addresses", dm_list_length(delivery->forwards));
 
 		/* Each user may also have a list of external forwarding addresses. */
-		if (list_totalnodes(delivery->forwards) > 0) {
+		if (dm_list_length(delivery->forwards) > 0) {
 
 			trace(TRACE_DEBUG, "insert_messages(): delivering to external addresses");
 

@@ -134,7 +134,7 @@ typedef struct {
 			 /**< number of messages */
 	u64_t virtual_totalmessages;
 
-	struct list messagelst;
+	struct dm_list messagelst;
 			     /** list of messages */
 } PopSession_t;
 
@@ -223,7 +223,7 @@ typedef struct {
 	u64_t size;
 	char search[MAX_SEARCH_LEN];
 	char hdrfld[MIME_FIELD_MAX];
-	struct list sub_search;
+	struct dm_list sub_search;
 } search_key_t;
 
 /**
@@ -238,9 +238,9 @@ typedef struct {
  * RFC822/MIME message data type
  */
 typedef struct {
-	struct list mimeheader;
+	struct dm_list mimeheader;
 			     /**< the MIME header of this part (if present) */
-	struct list rfcheader;
+	struct dm_list rfcheader;
 			     /**< RFC822 header of this part (if present) */
 	int message_has_errors;
 			     /**< if set the content-type is meaningless */
@@ -252,7 +252,7 @@ typedef struct {
 		      /**< number of lines in message body */
 	u64_t rfcheadersize;
 			  /**< size of rfc header */
-	struct list children;
+	struct dm_list children;
 			    /**< the children (multipart msg) */
 	u64_t rfcheaderlines;
 			   /** number of lines in rfc header */

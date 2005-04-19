@@ -49,7 +49,7 @@
 #define MAX_IN_BUFFER 255
 
 /* These are needed across multiple calls to lmtp() */
-static struct list from, rcpt;
+static struct dm_list from, rcpt;
 
 /* allowed lmtp commands */
 static const char *const commands[] = {
@@ -97,21 +97,21 @@ void lmtp_init(PopSession_t *session)
 	session->virtual_totalmessages = 0;
 
 	/* set the lists to zero length */
-	list_init(&rcpt);
-	list_init(&from);
+	dm_list_init(&rcpt);
+	dm_list_init(&from);
 }
 
 int lmtp_reset(PopSession_t * session)
 {
-	if (list_totalnodes(&rcpt) > 0) {
+	if (dm_list_length(&rcpt) > 0) {
 		dsnuser_free_list(&rcpt);
 	}
-	list_init(&rcpt);
+	dm_list_init(&rcpt);
 
-	if (list_totalnodes(&from) > 0) {
-		list_freelist(&from.start);
+	if (dm_list_length(&from) > 0) {
+		dm_list_free(&from.start);
 	}
-	list_init(&from);
+	dm_list_init(&from);
 
 	session->state = LHLO;
 
@@ -407,11 +407,11 @@ int lmtp(void *stream, void *instream, char *buffer,
 			if (session->state != LHLO) {
 				ci_write((FILE *) stream,
 					"550 Command out of sequence.\r\n");
-			} else if (list_totalnodes(&from) > 0) {
+			} else if (dm_list_length(&from) > 0) {
 				ci_write((FILE *) stream,
 					"500 Sender already received. Use RSET to clear.\r\n");
 				trace(TRACE_ERROR, "%s,%s: Sender already received: %s",
-				      __FILE__, __func__, (char *)(list_getstart(&from)->data));
+				      __FILE__, __func__, (char *)(dm_list_getstart(&from)->data));
 			} else {
 				/* First look for an email address.
 				 * Don't bother verifying or whatever,
@@ -488,10 +488,10 @@ int lmtp(void *stream, void *instream, char *buffer,
 
 				if (goodtogo) {
 					/* Sure fine go ahead. */
-					list_nodeadd(&from, tmpaddr, strlen(tmpaddr)+1);
+					dm_list_nodeadd(&from, tmpaddr, strlen(tmpaddr)+1);
 					ci_write((FILE *) stream,
 						"250 Sender <%s> OK\r\n",
-						(char *)(list_getstart(&from)->data));
+						(char *)(dm_list_getstart(&from)->data));
 				} else {
 					if (tmpaddr != NULL)
 						dm_free(tmpaddr);
@@ -516,7 +516,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 						"500 No address found.\r\n");
 				} else {
 					/* Note that this is not a pointer, but really is on the stack!
-					 * Because list_nodeadd() memcpy's the structure, we don't need
+					 * Because dm_list_nodeadd() memcpy's the structure, we don't need
 					 * it to live any longer than the duration of this stack frame. */
 					deliver_to_user_t dsnuser;
 
@@ -543,7 +543,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 							dsnuser.address);
 						/* A successfully found recipient goes onto the list.
 						 * The struct will be free'd from lmtp_reset(). */
-						list_nodeadd(&rcpt, &dsnuser,
+						dm_list_nodeadd(&rcpt, &dsnuser,
 							     sizeof(deliver_to_user_t));
 						break;
 					default:
@@ -565,23 +565,23 @@ int lmtp(void *stream, void *instream, char *buffer,
 			if (session->state != LHLO) {
 				ci_write((FILE *) stream,
 					"550 Command out of sequence\r\n");
-			} else if (list_totalnodes(&rcpt) < 1) {
+			} else if (dm_list_length(&rcpt) < 1) {
 				ci_write((FILE *) stream,
 					"503 No valid recipients\r\n");
 			} else {
-				if (list_totalnodes(&rcpt) > 0 && list_totalnodes(&from) > 0) {
+				if (dm_list_length(&rcpt) > 0 && dm_list_length(&from) > 0) {
 					trace(TRACE_DEBUG,
 					      "main(): requesting sender to begin message.");
 					ci_write((FILE *) stream,
 						"354 Start mail input; end with <CRLF>.<CRLF>\r\n");
 				} else {
-					if (list_totalnodes(&rcpt) < 1) {
+					if (dm_list_length(&rcpt) < 1) {
 						trace(TRACE_DEBUG,
 						      "main(): no valid recipients found, cancel message.");
 						ci_write((FILE *) stream,
 							"503 No valid recipients\r\n");
 					}
-					if (list_totalnodes(&from) < 1) {
+					if (dm_list_length(&from) < 1) {
 						trace(TRACE_DEBUG,
 						      "main(): no sender provided, session cancelled.");
 						ci_write((FILE *) stream,
@@ -592,11 +592,11 @@ int lmtp(void *stream, void *instream, char *buffer,
 
 				/* Anonymous Block */
 				{
-					struct list headerfields;
+					struct dm_list headerfields;
 					struct element *element;
 					struct DbmailMessage *msg;
 
-					list_init(&headerfields);
+					dm_list_init(&headerfields);
 
 					if (! (msg = dbmail_message_new_from_stream((FILE *)instream, DBMAIL_STREAM_LMTP))) {
 						trace(TRACE_ERROR, "%s,%s: dbmail_message_new_from_stream() failed",
@@ -633,9 +633,9 @@ int lmtp(void *stream, void *instream, char *buffer,
 
 						/* The replies MUST be in the order received */
 						rcpt.start =
-						    dbmail_list_reverse(rcpt.start);
+						    dm_list_reverse(rcpt.start);
 
-						for (element = list_getstart(&rcpt);
+						for (element = dm_list_getstart(&rcpt);
 						     element != NULL;
 						     element = element->nextnode) {
 							deliver_to_user_t * dsnuser =
@@ -656,7 +656,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 							}
 						}
 					}
-					list_freelist(&headerfields.start);
+					dm_list_free(&headerfields.start);
 					
 				}
 				/* Reset the session after a successful delivery;

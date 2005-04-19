@@ -61,11 +61,11 @@ extern char *raw_message;
 extern char *raw_message_part;
 extern char *raw_lmtp_data;
 
-void print_mimelist(struct list *mimelist)
+void print_mimelist(struct dm_list *mimelist)
 {
 	struct element *el;
 	struct mime_record *mr;
-	el = list_getstart(mimelist);
+	el = dm_list_getstart(mimelist);
 	while (el) {
 		mr = el->data;
 		printf("field [%s], value [%s]\n", mr->field, mr->value);
@@ -151,65 +151,65 @@ START_TEST(test_mime_readheader)
 {
 	int res;
 	u64_t blkidx=0, headersize=0;
-	struct list mimelist;
+	struct dm_list mimelist;
 	
-	list_init(&mimelist);
+	dm_list_init(&mimelist);
 	res = mime_readheader(raw_message,&blkidx,&mimelist,&headersize);
 	fail_unless(res==9, "number of newlines incorrect");
 	fail_unless(blkidx==236, "blkidx incorrect");
 	fail_unless(headersize==blkidx+res, "headersize incorrect");
 	fail_unless(mimelist.total_nodes==7, "number of message-headers incorrect");
-	list_freelist(&mimelist.start);
+	dm_list_free(&mimelist.start);
 	
 	blkidx = 0; headersize = 0;
 
-	list_init(&mimelist);
+	dm_list_init(&mimelist);
 	res = mime_readheader(raw_message_part, &blkidx, &mimelist, &headersize);
 	fail_unless(res==6, "number of newlines incorrect");
 	fail_unless(blkidx==142, "blkidx incorrect");
 	fail_unless(headersize==blkidx+res, "headersize incorrect");
 	fail_unless(mimelist.total_nodes==3, "number of mime-headers incorrect");
-	list_freelist(&mimelist.start);
+	dm_list_free(&mimelist.start);
 }
 END_TEST
 
 START_TEST(test_mime_fetch_headers)
 {
-	struct list mimelist;
+	struct dm_list mimelist;
 	struct mime_record *mr;
 	
-	list_init(&mimelist);
+	dm_list_init(&mimelist);
 	mime_fetch_headers(raw_message,&mimelist);
 	fail_unless(mimelist.total_nodes==7, "number of message-headers incorrect");
 	mr = (mimelist.start)->data;
 	fail_unless(strcmp(mr->field, "Content-Type")==0, "Field name incorrect");
 	fail_unless(strcmp(mr->value, "multipart/mixed; boundary=boundary")==0, "Field value incorrect");
 	
-	list_freelist(&mimelist.start);
+	dm_list_free(&mimelist.start);
 
-	list_init(&mimelist);
+	dm_list_init(&mimelist);
 	mime_fetch_headers(raw_message_part,&mimelist);
 	fail_unless(mimelist.total_nodes==3, "number of mime-headers incorrect");
 	mr = (mimelist.start)->data;
 	fail_unless(strcmp(mr->field, "Content-Disposition")==0, "Field name incorrect");
 	fail_unless(strcmp(mr->value, "inline; filename=\"mime_alternative\"")==0, "Field value incorrect");
 	
-	list_freelist(&mimelist.start);
+	dm_list_free(&mimelist.start);
 
 
 }
 END_TEST
 
-//int mail_address_build_list(char *scan_for_field, struct list *targetlist,
-//	                  struct list *mimelist)
+//int mail_address_build_list(char *scan_for_field, struct dm_list *targetlist,
+//	                  struct dm_list *mimelist)
 START_TEST(test_mail_address_build_list)
 {
 	int result;
-	struct list targetlist;
-	struct list mimelist;
+	struct dm_list targetlist;
+	struct dm_list mimelist;
 
-	list_init(&targetlist);
-	list_init(&mimelist);
+	dm_list_init(&targetlist);
+	dm_list_init(&mimelist);
 	mime_fetch_headers(raw_message, &mimelist);
 
 	result = mail_address_build_list("To", &targetlist, &mimelist);

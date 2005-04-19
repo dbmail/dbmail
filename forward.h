@@ -29,7 +29,7 @@
 
 #define FW_SENDMAIL SENDMAIL
 
-int forward(u64_t msgidnr, struct list *targets, const char *from,
+int forward(u64_t msgidnr, struct dm_list *targets, const char *from,
 	    const char *header, u64_t headersize);
 
 #endif

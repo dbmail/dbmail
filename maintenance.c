@@ -346,7 +346,7 @@ int do_set_deleted(void)
 int do_null_messages(void)
 {
 	time_t start, stop;
-	struct list lostlist;
+	struct dm_list lostlist;
 	struct element *el;
 	u64_t id;
 
@@ -384,7 +384,7 @@ int do_null_messages(void)
 				el = el->nextnode;
 			}
         
-			list_freelist(&lostlist.start);
+			dm_list_free(&lostlist.start);
 		}
 	}
 
@@ -411,7 +411,7 @@ int do_null_messages(void)
 				qverbosef("[%llu] deleted.\n", id);
 			el = el->nextnode;
 		}
-		list_freelist(&lostlist.start);
+		dm_list_free(&lostlist.start);
 	} else {
 		qprintf("Ok. Found [%ld] physmessages without messageblocks.\n",
 		    lostlist.total_nodes);
@@ -427,7 +427,7 @@ int do_null_messages(void)
 int do_check_integrity(void)
 {
 	time_t start, stop;
-	struct list lostlist;
+	struct dm_list lostlist;
 	struct element *el;
 	u64_t id;
 
@@ -474,7 +474,7 @@ int do_check_integrity(void)
 			el = el->nextnode;
 		}
 
-		list_freelist(&lostlist.start);
+		dm_list_free(&lostlist.start);
 
 		qerrorf("\n");
 		has_errors = 1;
@@ -532,7 +532,7 @@ int do_check_integrity(void)
 			}
         
 			qerrorf("\n");
-			list_freelist(&lostlist.start);
+			dm_list_free(&lostlist.start);
         
 		}
 	}
@@ -587,7 +587,7 @@ int do_check_integrity(void)
 			}
         
 			qerrorf("\n");
-			list_freelist(&lostlist.start);
+			dm_list_free(&lostlist.start);
 		}
 	}
 

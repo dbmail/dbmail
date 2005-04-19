@@ -517,11 +517,11 @@ int db_get_sievescript_active(u64_t user_idnr, char **scriptname)
 	return n;
 }
 
-int db_get_sievescript_listall(u64_t user_idnr, struct list *scriptlist)
+int db_get_sievescript_listall(u64_t user_idnr, struct dm_list *scriptlist)
 {
 	int i,n;
 	struct ssinfo *info;
-	list_init(scriptlist);
+	dm_list_init(scriptlist);
 	snprintf(query, DEF_QUERYSIZE,
 		"SELECT name,active from %ssievescripts where "
 		"owner_idnr = %llu",
@@ -541,7 +541,7 @@ int db_get_sievescript_listall(u64_t user_idnr, struct list *scriptlist)
 		info = (struct ssinfo *)dm_malloc(sizeof(struct ssinfo));
 		info->name = dm_strdup(db_get_result(i, 0));   
 		info->active = (int)db_get_result(i, 1);
-		list_nodeadd(scriptlist,info,sizeof(struct ssinfo));	
+		dm_list_nodeadd(scriptlist,info,sizeof(struct ssinfo));	
 		i++;
 	}
 
@@ -1133,12 +1133,12 @@ int db_empty_mailbox(u64_t user_idnr)
 	return result;
 }
 
-int db_icheck_messageblks(struct list *lost_list)
+int db_icheck_messageblks(struct dm_list *lost_list)
 {
 	const char *query_result;
 	u64_t messageblk_idnr;
 	int i, n;
-	list_init(lost_list);
+	dm_list_init(lost_list);
 
 	/* get all lost message blocks. Instead of doing all kinds of 
 	 * nasty stuff here, we let the RDBMS handle all this. Problem
@@ -1176,12 +1176,12 @@ int db_icheck_messageblks(struct list *lost_list)
 
 		trace(TRACE_INFO, "%s,%s: found lost block id [%llu]",
 		      __FILE__, __func__, messageblk_idnr);
-		if (!list_nodeadd
+		if (!dm_list_nodeadd
 		    (lost_list, &messageblk_idnr, sizeof(u64_t))) {
 			trace(TRACE_ERROR,
 			      "%s,%s: could not add block to list",
 			      __FILE__, __func__);
-			list_freelist(&lost_list->start);
+			dm_list_free(&lost_list->start);
 			db_free_result();
 			return -2;
 		}
@@ -1190,13 +1190,13 @@ int db_icheck_messageblks(struct list *lost_list)
 	return 0;
 }
 
-int db_icheck_messages(struct list *lost_list)
+int db_icheck_messages(struct dm_list *lost_list)
 {
 	u64_t message_idnr;
 	const char *query_result;
 	int i, n;
 
-	list_init(lost_list);
+	dm_list_init(lost_list);
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT msg.message_idnr FROM %smessages msg "
@@ -1228,11 +1228,11 @@ int db_icheck_messages(struct list *lost_list)
 
 		trace(TRACE_INFO, "%s,%s: found lost message id [%llu]",
 		      __FILE__, __func__, message_idnr);
-		if (!list_nodeadd(lost_list, &message_idnr, sizeof(u64_t))) {
+		if (!dm_list_nodeadd(lost_list, &message_idnr, sizeof(u64_t))) {
 			trace(TRACE_ERROR,
 			      "%s,%s: could not add message to list",
 			      __FILE__, __func__);
-			list_freelist(&lost_list->start);
+			dm_list_free(&lost_list->start);
 			db_free_result();
 			return -2;
 		}
@@ -1241,13 +1241,13 @@ int db_icheck_messages(struct list *lost_list)
 	return 0;
 }
 
-int db_icheck_mailboxes(struct list *lost_list)
+int db_icheck_mailboxes(struct dm_list *lost_list)
 {
 	u64_t mailbox_idnr;
 	const char *query_result;
 	int i, n;
 
-	list_init(lost_list);
+	dm_list_init(lost_list);
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT mbx.mailbox_idnr FROM %smailboxes mbx "
@@ -1279,11 +1279,11 @@ int db_icheck_mailboxes(struct list *lost_list)
 
 		trace(TRACE_INFO, "%s,%s: found lost mailbox id [%llu]",
 		      __FILE__, __func__, mailbox_idnr);
-		if (!list_nodeadd(lost_list, &mailbox_idnr, sizeof(u64_t))) {
+		if (!dm_list_nodeadd(lost_list, &mailbox_idnr, sizeof(u64_t))) {
 			trace(TRACE_ERROR,
 			      "%s,%s: could not add mailbox to list",
 			      __FILE__, __func__);
-			list_freelist(&lost_list->start);
+			dm_list_free(&lost_list->start);
 			db_free_result();
 			return -2;
 		}
@@ -1292,13 +1292,13 @@ int db_icheck_mailboxes(struct list *lost_list)
 	return 0;
 }
 
-int db_icheck_null_physmessages(struct list *lost_list)
+int db_icheck_null_physmessages(struct dm_list *lost_list)
 {
 	u64_t physmessage_id;
 	const char *result_string;
 	unsigned i, n;
 
-	list_init(lost_list);
+	dm_list_init(lost_list);
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT pm.id FROM %sphysmessage pm "
@@ -1330,12 +1330,12 @@ int db_icheck_null_physmessages(struct list *lost_list)
 		trace(TRACE_INFO,
 		      "%s,%s: found empty physmessage_id [%llu]", __FILE__,
 		      __func__, physmessage_id);
-		if (!list_nodeadd
+		if (!dm_list_nodeadd
 		    (lost_list, &physmessage_id, sizeof(u64_t))) {
 			trace(TRACE_ERROR,
 			      "%s,%s: could not add physmessage "
 			      "to list", __FILE__, __func__);
-			list_freelist(&lost_list->start);
+			dm_list_free(&lost_list->start);
 			db_free_result();
 			return -2;
 		}
@@ -1344,13 +1344,13 @@ int db_icheck_null_physmessages(struct list *lost_list)
 	return 0;
 }
 
-int db_icheck_null_messages(struct list *lost_list)
+int db_icheck_null_messages(struct dm_list *lost_list)
 {
 	u64_t message_idnr;
 	const char *query_result;
 	int i, n;
 
-	list_init(lost_list);
+	dm_list_init(lost_list);
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT msg.message_idnr FROM %smessages msg "
@@ -1381,11 +1381,11 @@ int db_icheck_null_messages(struct list *lost_list)
 
 		trace(TRACE_INFO, "%s,%s: found empty message id [%llu]",
 		      __FILE__, __func__, message_idnr);
-		if (!list_nodeadd(lost_list, &message_idnr, sizeof(u64_t))) {
+		if (!dm_list_nodeadd(lost_list, &message_idnr, sizeof(u64_t))) {
 			trace(TRACE_ERROR,
 			      "%s,%s: could not add message to list",
 			      __FILE__, __func__);
-			list_freelist(&lost_list->start);
+			dm_list_free(&lost_list->start);
 			db_free_result();
 			return -2;
 		}
@@ -1873,7 +1873,7 @@ int db_createsession(u64_t user_idnr, PopSession_t * session_ptr)
 	const char *query_result;
 	u64_t inbox_mailbox_idnr;
 
-	list_init(&session_ptr->messagelst);
+	dm_list_init(&session_ptr->messagelst);
 
 	if (db_findmailbox("INBOX", user_idnr, &inbox_mailbox_idnr) <= 0) {
 		trace(TRACE_ERROR, "%s,%s: error finding mailbox_idnr of "
@@ -1934,7 +1934,7 @@ int db_createsession(u64_t user_idnr, PopSession_t * session_ptr)
 		/* descending to create inverted list */
 		message_counter--;
 		tmpmessage.messageid = (u64_t) message_counter;
-		list_nodeadd(&session_ptr->messagelst, &tmpmessage,
+		dm_list_nodeadd(&session_ptr->messagelst, &tmpmessage,
 			     sizeof(tmpmessage));
 	}
 
@@ -1958,7 +1958,7 @@ void db_session_cleanup(PopSession_t * session_ptr)
 	session_ptr->virtual_totalsize = 0;
 	session_ptr->totalmessages = 0;
 	session_ptr->virtual_totalmessages = 0;
-	list_freelist(&(session_ptr->messagelst.start));
+	dm_list_free(&(session_ptr->messagelst.start));
 }
 
 int db_update_pop(PopSession_t * session_ptr)
@@ -1967,7 +1967,7 @@ int db_update_pop(PopSession_t * session_ptr)
 	u64_t user_idnr = 0;
 
 	/* get first element in list */
-	tmpelement = list_getstart(&session_ptr->messagelst);
+	tmpelement = dm_list_getstart(&session_ptr->messagelst);
 
 	while (tmpelement != NULL) {
 		/* check if they need an update in the database */
@@ -3643,7 +3643,7 @@ int db_get_rfcsize(u64_t msg_idnr, u64_t mailbox_idnr, u64_t * rfc_size)
 	return 1;
 }
 
-int db_get_main_header(u64_t msg_idnr, struct list *hdrlist)
+int db_get_main_header(u64_t msg_idnr, struct dm_list *hdrlist)
 {
 	const char *query_result;
 	int result;
@@ -3652,9 +3652,9 @@ int db_get_main_header(u64_t msg_idnr, struct list *hdrlist)
 		return 0;
 
 	if (hdrlist->start)
-		list_freelist(&hdrlist->start);
+		dm_list_free(&hdrlist->start);
 
-	list_init(hdrlist);
+	dm_list_init(hdrlist);
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT messageblk "
@@ -3696,8 +3696,8 @@ int db_get_main_header(u64_t msg_idnr, struct list *hdrlist)
 		      "%s,%s: error parsing header of message [%llu]",
 		      __FILE__, __func__, msg_idnr);
 		if (hdrlist->start) {
-			list_freelist(&hdrlist->start);
-			list_init(hdrlist);
+			dm_list_free(&hdrlist->start);
+			dm_list_init(hdrlist);
 		}
 		return -3;
 	}
@@ -3707,8 +3707,8 @@ int db_get_main_header(u64_t msg_idnr, struct list *hdrlist)
 		trace(TRACE_ERROR, "%s,%s: out of memory", __FILE__,
 		      __func__);
 		if (hdrlist->start) {
-			list_freelist(&hdrlist->start);
-			list_init(hdrlist);
+			dm_list_free(&hdrlist->start);
+			dm_list_init(hdrlist);
 		}
 		return -2;
 	}
@@ -3893,14 +3893,14 @@ int db_acl_delete_acl(u64_t userid, u64_t mboxid)
 	return 1;
 }
 
-int db_acl_get_identifier(u64_t mboxid, struct list *identifier_list)
+int db_acl_get_identifier(u64_t mboxid, struct dm_list *identifier_list)
 {
 	unsigned i, n;
 	const char *result_string;
 
 	assert(identifier_list != NULL);
 
-	list_init(identifier_list);
+	dm_list_init(identifier_list);
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT %susers.userid FROM %susers, %sacl "
@@ -3920,7 +3920,7 @@ int db_acl_get_identifier(u64_t mboxid, struct list *identifier_list)
 		result_string = db_get_result(i, 0);
 		trace(TRACE_DEBUG, "%s,%s: adding %s to identifier list",
 		      __FILE__, __func__, result_string);
-		if (!result_string || !list_nodeadd(identifier_list,
+		if (!result_string || !dm_list_nodeadd(identifier_list,
 						    result_string,
 						    strlen(result_string) +
 						    1)) {

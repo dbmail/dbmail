@@ -171,7 +171,7 @@ void addto_btree_curr(sortitems_t ** root, char *str, int mid)
 	curr->ustr = (char *) dm_malloc(sizeof(char) * (strlen(str) + 8));
 	memset(curr->ustr, '\0', sizeof(char) * (strlen(str) + 8));
 	sprintf(curr->ustr, "%s%06d", str, mid);
-	list_btree_insert(root, curr);
+	dm_btree_insert(root, curr);
 }
 
 int db_sort_parsed(unsigned int *rset, unsigned int setlen,
@@ -206,12 +206,12 @@ int db_sort_parsed(unsigned int *rset, unsigned int setlen,
 		if ((result = db_fetch_headers(mb->seq_list[i], &msg)))
 			continue;	/* ignore parse errors */
 
-		if (list_getstart(&msg.mimeheader)) {
+		if (dm_list_getstart(&msg.mimeheader)) {
 			mime_findfield(sk->hdrfld, &msg.mimeheader, &mr);
 			if (mr)
 				addto_btree_curr(&root, (char *) mr->value, (i + 1));
 		}
-		if (list_getstart(&msg.rfcheader)) {
+		if (dm_list_getstart(&msg.rfcheader)) {
 			mime_findfield(sk->hdrfld, &msg.rfcheader, &mr);
 			if (mr)
 				addto_btree_curr(&root, (char *) mr->value, (i + 1));
@@ -219,8 +219,8 @@ int db_sort_parsed(unsigned int *rset, unsigned int setlen,
 		db_free_msg(&msg);
 	}
 
-	list_btree_traverse(root, &idx, rset);	/* fill in the rset array with mid's */
-	list_btree_free(root);
+	dm_btree_traverse(root, &idx, rset);	/* fill in the rset array with mid's */
+	dm_btree_free(root);
     
 	return 0;
 }
@@ -300,7 +300,7 @@ int db_exec_search(mime_message_t * msg, search_key_t * sk, u64_t msg_idnr)
 
 	switch (sk->type) {
 	case IST_HDR:
-		if (list_getstart(&msg->mimeheader)) {
+		if (dm_list_getstart(&msg->mimeheader)) {
 			mime_findfield(sk->hdrfld, &msg->mimeheader, &mr);
 			if (mr) {
 				for (i = 0; mr->value[i]; i++)
@@ -310,7 +310,7 @@ int db_exec_search(mime_message_t * msg, search_key_t * sk, u64_t msg_idnr)
 						return 1;
 			}
 		}
-		if (list_getstart(&msg->rfcheader)) {
+		if (dm_list_getstart(&msg->rfcheader)) {
 			mime_findfield(sk->hdrfld, &msg->rfcheader, &mr);
 			if (mr) {
 				for (i = 0; mr->value[i]; i++)
@@ -327,7 +327,7 @@ int db_exec_search(mime_message_t * msg, search_key_t * sk, u64_t msg_idnr)
 	case IST_HDRDATE_ON:
 	case IST_HDRDATE_SINCE:
 		/* do not check children */
-		if (list_getstart(&msg->rfcheader)) {
+		if (dm_list_getstart(&msg->rfcheader)) {
 			mime_findfield("date", &msg->rfcheader, &mr);
 			if (mr
 			    && strlen(mr->value) >=
@@ -357,7 +357,7 @@ int db_exec_search(mime_message_t * msg, search_key_t * sk, u64_t msg_idnr)
 		return 0;
 
 	case IST_DATA_TEXT:
-		el = list_getstart(&msg->rfcheader);
+		el = dm_list_getstart(&msg->rfcheader);
 		while (el) {
 			mr = (struct mime_record *) el->data;
 
@@ -374,7 +374,7 @@ int db_exec_search(mime_message_t * msg, search_key_t * sk, u64_t msg_idnr)
 			el = el->nextnode;
 		}
 
-		el = list_getstart(&msg->mimeheader);
+		el = dm_list_getstart(&msg->mimeheader);
 		while (el) {
 			mr = (struct mime_record *) el->data;
 
@@ -394,7 +394,7 @@ int db_exec_search(mime_message_t * msg, search_key_t * sk, u64_t msg_idnr)
 
 	case IST_DATA_BODY:
 		/* only check body if there are no children */
-		if (list_getstart(&msg->children))
+		if (dm_list_getstart(&msg->children))
 			break;
 
 		/* only check text bodies */
@@ -410,7 +410,7 @@ int db_exec_search(mime_message_t * msg, search_key_t * sk, u64_t msg_idnr)
 				       sk->search, msg_idnr);
 	}
 	/* no match found yet, try the children */
-	el = list_getstart(&msg->children);
+	el = dm_list_getstart(&msg->children);
 	while (el) {
 		if (db_exec_search
 		    ((mime_message_t *) el->data, sk, msg_idnr) == 1)

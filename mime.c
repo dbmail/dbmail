@@ -38,8 +38,8 @@
 /* extern char *header; */
 /* extern u64_t headersize; */
 
-/* extern struct list mimelist;  */
-/* extern struct list users; */
+/* extern struct dm_list mimelist;  */
+/* extern struct dm_list users; */
 
 /* checks if s points to the end of a header. */
 static int is_end_of_header(const char *s);
@@ -58,11 +58,11 @@ static void _register_header(const char *field, const char *value, gpointer mime
 	struct mime_record *mr = g_new0(struct mime_record, 1);
 	g_strlcpy(mr->field, field, MIME_FIELD_MAX);
 	g_strlcpy(mr->value, value, MIME_VALUE_MAX);
-	list_nodeadd((struct list *)mimelist, mr, sizeof(*mr));
+	dm_list_nodeadd((struct dm_list *)mimelist, mr, sizeof(*mr));
 	g_free(mr);
 }
 
-int mime_fetch_headers(const char *datablock, struct list *mimelist) 
+int mime_fetch_headers(const char *datablock, struct dm_list *mimelist) 
 {
 	GString *raw = g_string_new(datablock);
 	struct DbmailMessage *m = dbmail_message_new();
@@ -101,7 +101,7 @@ int mime_fetch_headers(const char *datablock, struct list *mimelist)
  */
 
 
-int mime_readheader(const char *datablock, u64_t * blkidx, struct list *mimelist,
+int mime_readheader(const char *datablock, u64_t * blkidx, struct dm_list *mimelist,
 		    u64_t * headersize)
 {
 	int idx, totallines = 0, j;
@@ -227,12 +227,12 @@ int mime_readheader(const char *datablock, u64_t * blkidx, struct list *mimelist
  * finds a MIME header field
  *
  */
-void mime_findfield(const char *fname, struct list *mimelist,
+void mime_findfield(const char *fname, struct dm_list *mimelist,
 		    struct mime_record **mr)
 {
 	struct element *current;
 
-	current = list_getstart(mimelist);
+	current = dm_list_getstart(mimelist);
 	while (current) {
 		*mr = current->data;	/* get field/value */
 		if (strcasecmp((*mr)->field, fname) == 0)
@@ -243,8 +243,8 @@ void mime_findfield(const char *fname, struct list *mimelist,
 }
 
 
-int mail_address_build_list(char *scan_for_field, struct list *targetlist,
-		  struct list *mimelist)
+int mail_address_build_list(char *scan_for_field, struct dm_list *targetlist,
+		  struct dm_list *mimelist)
 {
 	struct element *raw;
 	struct mime_record *mr;
@@ -265,7 +265,7 @@ int mail_address_build_list(char *scan_for_field, struct list *targetlist,
 
 	trace(TRACE_INFO, "mail_address_build_list(): mail address parser starting");
 
-	raw = list_getstart(mimelist);
+	raw = dm_list_getstart(mimelist);
 	trace(TRACE_DEBUG, "mail_address_build_list(): total fields in header %ld",
 	      mimelist->total_nodes);
 	while (raw != NULL) {
@@ -301,12 +301,12 @@ int mail_address_build_list(char *scan_for_field, struct list *targetlist,
 				tmpvalue[ptr - tmp] = '\0';
 
 				/* one extra for \0 in strlen */
-				memtst((list_nodeadd(targetlist, tmpvalue,
+				memtst((dm_list_nodeadd(targetlist, tmpvalue,
 						     (strlen(tmpvalue) +
 						      1))) == NULL);
 
 				/* printf ("total nodes:\n");
-				   list_showlist(&targetlist);
+				   dm_list_show(&targetlist);
 				   next address */
 				ptr = strstr(ptr, "@");
 				trace(TRACE_DEBUG,

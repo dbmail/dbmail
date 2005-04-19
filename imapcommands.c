@@ -1326,7 +1326,7 @@ int _ic_sort(struct ImapSession *self)
 	}
   
 	memset(&sk, 0, sizeof(sk));
-	list_init(&sk.sub_search);
+	dm_list_init(&sk.sub_search);
 
 	if (!self->args[0]) {
 		dbmail_imap_session_printf(self,"%s BAD invalid arguments to SORT\r\n",self->tag);
@@ -1600,7 +1600,7 @@ int _ic_search(struct ImapSession *self)
 	}
 
 	memset(&sk, 0, sizeof(sk));
-	list_init(&sk.sub_search);
+	dm_list_init(&sk.sub_search);
 
 	if (!self->args[0]) {
 		dbmail_imap_session_printf(self, "%s BAD invalid arguments to SEARCH\r\n",

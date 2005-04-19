@@ -804,7 +804,7 @@ int tims(void *stream, void *instream, char *buffer, char *client_ip UNUSED,
 				fprintf((FILE *) stream,
 					"NO \"Please authenticate first.\"\r\n");
 			} else {
-				struct list scriptlist;
+				struct dm_list scriptlist;
 				struct element *tmp;
 
 				if (db_get_sievescript_listall
@@ -812,14 +812,14 @@ int tims(void *stream, void *instream, char *buffer, char *client_ip UNUSED,
 					fprintf((FILE *) stream,
 						"NO \"Internal error.\"\r\n");
 				} else {
-					if (list_totalnodes(&scriptlist) ==
+					if (dm_list_length(&scriptlist) ==
 					    0) {
 						/* The command hasn't failed, but there aren't any scripts */
 						fprintf((FILE *) stream,
 							"OK \"No scripts found.\"\r\n");
 					} else {
 						tmp =
-						    list_getstart
+						    dm_list_getstart
 						    (&scriptlist);
 						while (tmp != NULL) {
 							sievescript_info_t *info
@@ -842,7 +842,7 @@ int tims(void *stream, void *instream, char *buffer, char *client_ip UNUSED,
 							"OK\r\n");
 					}
 					if (scriptlist.start)
-						list_freelist(&scriptlist.
+						dm_list_free(&scriptlist.
 							      start);
 				}
 			}

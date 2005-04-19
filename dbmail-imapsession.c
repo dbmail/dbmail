@@ -87,7 +87,7 @@ static int _imap_session_fetch_parse_octet_range(struct ImapSession *self, int i
 
 static GList * _imap_get_structure(mime_message_t * msg, int show_extension_data);
 static GList * _imap_get_addresses(struct mime_record *mr);
-static GList * _imap_get_envelope(struct list *rfcheader);
+static GList * _imap_get_envelope(struct dm_list *rfcheader);
 static GList * _imap_get_mime_parameters(struct mime_record *mr, int force_subtype, int only_extension);
 
 static void _imap_show_body_sections(struct ImapSession *self);
@@ -189,7 +189,7 @@ GList * _imap_get_structure(mime_message_t * msg, int show_extension_data)
 {
 	struct mime_record *mr;
 	struct element *curr;
-	struct list *header_to_use;
+	struct dm_list *header_to_use;
 	mime_message_t rfcmsg;
 	char *subtype, *extension, *newline;
 	int is_mime_multipart = 0, is_rfc_multipart = 0;
@@ -318,7 +318,7 @@ GList * _imap_get_structure(mime_message_t * msg, int show_extension_data)
 	} else {
 		/* check for a multipart message */
 		if (is_rfc_multipart || is_mime_multipart) {
-			curr = list_getstart(&msg->children);
+			curr = dm_list_getstart(&msg->children);
 			tmp = g_string_new("");
 			while (curr) {
 				tlist = _imap_get_structure((mime_message_t *) curr->data, show_extension_data);
@@ -383,7 +383,7 @@ GList * _imap_get_structure(mime_message_t * msg, int show_extension_data)
  * returns GList of char * elements
  * 
  */
-static GList * _imap_get_envelope(struct list *rfcheader)
+static GList * _imap_get_envelope(struct dm_list *rfcheader)
 {
 	struct mime_record *mr;
 	int idx;

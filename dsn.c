@@ -204,17 +204,17 @@ int dsnuser_init(deliver_to_user_t * dsnuser)
 	dsnuser->address = NULL;
 	dsnuser->mailbox = NULL;
 
-	dsnuser->userids = (struct list *) dm_malloc(sizeof(struct list));
+	dsnuser->userids = (struct dm_list *) dm_malloc(sizeof(struct dm_list));
 	if (dsnuser->userids == NULL)
 		return -1;
-	dsnuser->forwards = (struct list *) dm_malloc(sizeof(struct list));
+	dsnuser->forwards = (struct dm_list *) dm_malloc(sizeof(struct dm_list));
 	if (dsnuser->forwards == NULL) {
 		dm_free(dsnuser->userids);
 		return -1;
 	}
 
-	list_init(dsnuser->userids);
-	list_init(dsnuser->forwards);
+	dm_list_init(dsnuser->userids);
+	dm_list_init(dsnuser->forwards);
 
 	trace(TRACE_DEBUG, "%s, %s: dsnuser initialized",
 	      __FILE__, __func__);
@@ -234,8 +234,8 @@ void dsnuser_free(deliver_to_user_t * dsnuser)
 	dm_free((char *) dsnuser->address);
 	dm_free((char *) dsnuser->mailbox);
 
-	list_freelist(&dsnuser->userids->start);
-	list_freelist(&dsnuser->forwards->start);
+	dm_list_free(&dsnuser->userids->start);
+	dm_list_free(&dsnuser->forwards->start);
 
 	dm_free(dsnuser->userids);
 	dm_free(dsnuser->forwards);
@@ -245,13 +245,13 @@ void dsnuser_free(deliver_to_user_t * dsnuser)
 }
 
 
-int dsnuser_resolve_list(struct list *deliveries)
+int dsnuser_resolve_list(struct dm_list *deliveries)
 {
 	int ret;
 	struct element *element;
 
 	/* Loop through the users list */
-	for (element = list_getstart(deliveries); element != NULL;
+	for (element = dm_list_getstart(deliveries); element != NULL;
 	     element = element->nextnode) {
 		if ((ret = dsnuser_resolve((deliver_to_user_t *) element->data)) != 0) {
 			return ret;
@@ -277,7 +277,7 @@ int dsnuser_resolve(deliver_to_user_t *delivery)
 			dm_free(username);
 
 			/* Copy the delivery useridnr into the userids list. */
-			if (list_nodeadd(delivery->userids,
+			if (dm_list_nodeadd(delivery->userids,
 			     &delivery->useridnr,
 			     sizeof(delivery->useridnr)) == 0) {
 				trace(TRACE_ERROR,
@@ -334,7 +334,7 @@ int dsnuser_resolve(deliver_to_user_t *delivery)
 				      __FILE__, __func__, delivery->address);
 				return -1;
 			} else if (user_exists == 1) {
-				if (list_nodeadd(delivery->userids, &userid,
+				if (dm_list_nodeadd(delivery->userids, &userid,
 				     sizeof(u64_t)) == 0) {
 					trace(TRACE_ERROR, "%s, %s: out of memory",
 					      __FILE__, __func__);
@@ -396,15 +396,15 @@ int dsnuser_resolve(deliver_to_user_t *delivery)
 	return 0;
 }
 
-void dsnuser_free_list(struct list *deliveries)
+void dsnuser_free_list(struct dm_list *deliveries)
 {
 	struct element *tmp;
 
-	for (tmp = list_getstart(deliveries); tmp != NULL;
+	for (tmp = dm_list_getstart(deliveries); tmp != NULL;
 	     tmp = tmp->nextnode)
 		dsnuser_free((deliver_to_user_t *) tmp->data);
 
-	list_freelist(&deliveries->start);
+	dm_list_free(&deliveries->start);
 }
 
 delivery_status_t dsnuser_worstcase_int(int ok, int temp, int fail, int fail_quota)
@@ -427,7 +427,7 @@ delivery_status_t dsnuser_worstcase_int(int ok, int temp, int fail, int fail_quo
 	return dsn;
 }
 
-delivery_status_t dsnuser_worstcase_list(struct list * deliveries)
+delivery_status_t dsnuser_worstcase_list(struct dm_list * deliveries)
 {
 	delivery_status_t dsn;
 	struct element *tmp;
@@ -435,7 +435,7 @@ delivery_status_t dsnuser_worstcase_list(struct list * deliveries)
 	
 
 	/* Get one reasonable error code for everyone. */
-	for (tmp = list_getstart(deliveries); tmp != NULL;
+	for (tmp = dm_list_getstart(deliveries); tmp != NULL;
 	     tmp = tmp->nextnode) {
 		dsn = ((deliver_to_user_t *) tmp->data)->dsn;
 		switch (dsn.class) {

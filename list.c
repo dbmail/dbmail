@@ -32,23 +32,23 @@
 #include "list.h"
 #include "misc.h"
 
-void list_init(struct list *tlist)
+void dm_list_init(struct dm_list *tlist)
 {
-	memset(tlist,'\0', sizeof(struct list));
+	memset(tlist,'\0', sizeof(struct dm_list));
 }
 
 
 /*
- * list_freelist()
+ * dm_list_free()
  *
  * frees a list and all the memory associated with it
  */
-void list_freelist(struct element **start)
+void dm_list_free(struct element **start)
 {
 	if (!(*start))
 		return;
 
-	list_freelist(&(*start)->nextnode);
+	dm_list_free(&(*start)->nextnode);
 
 	/* free this item */
 	g_free((*start)->data);
@@ -57,11 +57,11 @@ void list_freelist(struct element **start)
 }
 
 /* 
- * dbmail_list_reverse()
+ * dm_list_reverse()
  *
  * reverse the order of a linked list
  */
-struct element *dbmail_list_reverse(struct element *start)
+struct element *dm_list_reverse(struct element *start)
 {
 	struct element *newstart;
 
@@ -71,7 +71,7 @@ struct element *dbmail_list_reverse(struct element *start)
 	if (!start->nextnode)
 		return start;	/* nothing to reverse */
 
-	newstart = dbmail_list_reverse(start->nextnode);	/* reverse rest of list */
+	newstart = dm_list_reverse(start->nextnode);	/* reverse rest of list */
 	start->nextnode->nextnode = start;
 
 	start->nextnode = NULL;	/* terminate list */
@@ -88,14 +88,14 @@ static struct element *element_new(void)
 }
 
 /* 
- * list_nodeadd()
+ * dm_list_nodeadd()
  *
  * Adds a node to a linked list (list structure). 
  * New item will be FIRST element of new linked list.
  *
  * returns NULL on failure or first element on success
  */
-struct element *list_nodeadd(struct list *tlist, const void *data,
+struct element *dm_list_nodeadd(struct dm_list *tlist, const void *data,
 			     size_t dsize)
 {
 	struct element *p;
@@ -122,12 +122,12 @@ struct element *list_nodeadd(struct list *tlist, const void *data,
 
 
 /*
- * list_nodepop()
+ * dm_list_nodepop()
  *
  * pops the first element of a linked list
  * ! MEMORY SHOULD BE FREED BY CLIENT !
  */
-struct element *list_nodepop(struct list *list)
+struct element *dm_list_nodepop(struct dm_list *list)
 {
 	struct element *ret;
 
@@ -144,13 +144,13 @@ struct element *list_nodepop(struct list *list)
 
 
 /*
- * list_nodedel()
+ * dm_list_nodedel()
  *
  * removes the item containing 'data' from the list preserving a valid linked-list structure.
  *
  * returns
  */
-struct element *list_nodedel(struct list *tlist, void *data)
+struct element *dm_list_nodedel(struct dm_list *tlist, void *data)
 {
 	struct element *temp;
 	struct element *item;
@@ -189,37 +189,37 @@ struct element *list_nodedel(struct list *tlist, void *data)
 }
 
 
-struct element *list_getstart(struct list *tlist)
+struct element *dm_list_getstart(struct dm_list *tlist)
 {
 	return (tlist) ? tlist->start : NULL;
 }
 
 
-long list_totalnodes(struct list *tlist)
+long dm_list_length(struct dm_list *tlist)
 {
 	return (tlist) ? tlist->total_nodes : -1;	/* a NULL ptr doesnt even have zero nodes (?) */
 }
 
 
-void list_showlist(struct list *tlist)
+void dm_list_show(struct dm_list *tlist)
 {
 	struct element *temp;
 
 	if (!tlist) {
 		trace(TRACE_MESSAGE,
-		      "list_showlist(): NULL ptr received\n");
+		      "dm_list_show(): NULL ptr received\n");
 		return;
 	}
 
 	temp = tlist->start;
 	while (temp != NULL) {
-		trace(TRACE_MESSAGE, "list_showlist():item found [%s]\n",
+		trace(TRACE_MESSAGE, "dm_list_show():item found [%s]\n",
 		      (char *) temp->data);
 		temp = temp->nextnode;
 	}
 }
 /*
- * shallow copy of struct list into GList
+ * shallow copy of struct dm_list into GList
  */
 
 GList * g_list_copy_list(GList *dst, struct element *el)
@@ -268,7 +268,7 @@ GList *g_list_slices(GList *list, unsigned limit)
 	return new;
 }
 /* basic binary tree */
-void list_btree_insert(sortitems_t ** tree, sortitems_t * item) {
+void dm_btree_insert(sortitems_t ** tree, sortitems_t * item) {
 	int val;
 	if(!(*tree)) {
 		*tree = item;
@@ -276,47 +276,47 @@ void list_btree_insert(sortitems_t ** tree, sortitems_t * item) {
 	}
 	val = strcmp(item->ustr,(*tree)->ustr);
 	if(val < 0)
-		list_btree_insert(&(*tree)->left, item);
+		dm_btree_insert(&(*tree)->left, item);
 	else if(val > 0)
-		list_btree_insert(&(*tree)->right, item);
+		dm_btree_insert(&(*tree)->right, item);
 }
 
-void list_btree_printout(sortitems_t * tree, int * i) {
+void dm_btree_printout(sortitems_t * tree, int * i) {
     if (! tree)
         return;
             
 	if(tree->left) 
-		list_btree_printout(tree->left, i);
-	trace(TRACE_INFO, "list_btree_printout: i '%d' '%d', '%s'\n", 
+		dm_btree_printout(tree->left, i);
+	trace(TRACE_INFO, "dm_btree_printout: i '%d' '%d', '%s'\n", 
 			*i, tree->mid, tree->ustr);
 	(*i)++;
 	if(tree->right) 
-		list_btree_printout(tree->right, i);
+		dm_btree_printout(tree->right, i);
 }
 
-void list_btree_traverse(sortitems_t * tree, int * i, unsigned int *rset) {
+void dm_btree_traverse(sortitems_t * tree, int * i, unsigned int *rset) {
     if (! tree)
         return;
 	
     if(tree->left) 
-		list_btree_traverse(tree->left, i, rset);
-	trace(TRACE_DEBUG, "list_btree_traverse: i '%d' '%d', '%s'\n", 
+		dm_btree_traverse(tree->left, i, rset);
+	trace(TRACE_DEBUG, "dm_btree_traverse: i '%d' '%d', '%s'\n", 
 			*i, tree->mid, tree->ustr); 
 	rset[*i] = tree->mid;
 	(*i)++;
 	if(tree->right) 
-		list_btree_traverse(tree->right, i, rset);
+		dm_btree_traverse(tree->right, i, rset);
 }
 
-void list_btree_free(sortitems_t * tree) {
+void dm_btree_free(sortitems_t * tree) {
     if (! tree)
         return;
     
 	if(tree->left) 
-		list_btree_free(tree->left);
+		dm_btree_free(tree->left);
 	g_free(tree->ustr);
 	if(tree->right) 
-		list_btree_free(tree->right);
+		dm_btree_free(tree->right);
 	else 
 		g_free(tree);
 }

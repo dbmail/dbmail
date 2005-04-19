@@ -330,14 +330,14 @@ int db_get_sievescript_active(u64_t user_idnr, char **scriptname);
 /**
  * \brief get a list of sieve scripts for a user
  * \param user_idnr user id
- * \param scriptlist pointer to struct list that will hold script names
+ * \param scriptlist pointer to struct dm_list that will hold script names
  * \return
  *        - -2 on failure of allocating memory for string
  *        - -1 on database failure
  *        - 0 on success
- * \attention caller should free the struct list and its contents
+ * \attention caller should free the struct dm_list and its contents
  */
-int db_get_sievescript_listall(u64_t user_idnr, struct list *scriptlist);
+int db_get_sievescript_listall(u64_t user_idnr, struct dm_list *scriptlist);
 /**
  * \brief add/replace a sieve script for a user
  * \param user_idnr user id
@@ -608,7 +608,7 @@ int db_empty_mailbox(u64_t user_idnr);
 *      - 0 on success
 * \attention caller should free this memory
 */
-int db_icheck_messageblks(struct list *lost_list);
+int db_icheck_messageblks(struct dm_list *lost_list);
 
 /**
  * \brief check for all messages that are not connected to
@@ -621,7 +621,7 @@ int db_icheck_messageblks(struct list *lost_list);
  *      - 0 on success
  * \attention caller should free this memory
  */
-int db_icheck_messages(struct list *lost_list);
+int db_icheck_messages(struct dm_list *lost_list);
 
 /**
  * \brief check for all mailboxes that are not connected to
@@ -634,7 +634,7 @@ int db_icheck_messages(struct list *lost_list);
  *      - 0 on success
  * \attention caller should free this memory
  */
-int db_icheck_mailboxes(struct list *lost_list);
+int db_icheck_mailboxes(struct dm_list *lost_list);
 
 /**
  * \brief check for all messages that are not connected to physmessage
@@ -649,7 +649,7 @@ int db_icheck_mailboxes(struct list *lost_list);
  *      - 0 on success
  * \attention caller should free this memory
  */
-int db_icheck_null_messages(struct list *lost_list);
+int db_icheck_null_messages(struct dm_list *lost_list);
 
 /**
  * \brief check for all physmessage records that have no messageblks 
@@ -663,7 +663,7 @@ int db_icheck_null_messages(struct list *lost_list);
  *     -  0 on success.
  * \attention caller should free this memory
  */
-int db_icheck_null_physmessages(struct list *lost_list);
+int db_icheck_null_physmessages(struct dm_list *lost_list);
 
 /**
  * \brief check for is_header flag on messageblks
@@ -1186,7 +1186,7 @@ int db_get_msginfo_range(u64_t msg_idnr_low, u64_t msg_idnr_high,
  *    - 0 success
  * \attention hdrlist should be empty on call.
  */
-int db_get_main_header(u64_t msg_idnr, struct list *hdrlist);
+int db_get_main_header(u64_t msg_idnr, struct dm_list *hdrlist);
 /**
  * \brief check if a message belongs to a mailbox
  * \param mailbox_idnr
@@ -1247,7 +1247,7 @@ int db_acl_delete_acl(u64_t userid, u64_t mboxid);
  * \note identifier_list needs to be empty on call.
  */
 int db_acl_get_identifier(u64_t mboxid, 
-			  /*@out@*/ struct list *identifier_list);
+			  /*@out@*/ struct dm_list *identifier_list);
 /**
  * constructs a string for use in queries. This is used to not be dependent
  * on the internal representation of a date in the database. Whenever the

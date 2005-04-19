@@ -156,7 +156,7 @@ char *dbmail_imap_astring_as_string(const char *s)
  * 
  */ 
 
-int sort_search(struct list *searchlist) 
+int sort_search(struct dm_list *searchlist) 
 {
 	struct element *el;
 	search_key_t *left = NULL, *right = NULL, *tmp=NULL;
@@ -164,7 +164,7 @@ int sort_search(struct list *searchlist)
 	if (!searchlist) 
 		return 0;
 
-	el = list_getstart(searchlist);
+	el = dm_list_getstart(searchlist);
 	while (el != NULL) {
 		if (! el->nextnode)
 			break;
@@ -186,7 +186,7 @@ int sort_search(struct list *searchlist)
 			el->data = el->nextnode->data;
 			el->nextnode->data = tmp;
 			/* when in doubt, use brute force: starting over */
-			el = list_getstart(searchlist);
+			el = dm_list_getstart(searchlist);
 			continue;
 		}
 		
@@ -215,7 +215,7 @@ mime_message_t *get_part_by_num(mime_message_t * msg, const char *part)
 
 	nextpart = strtoul(part, &endptr, 10);	/* strtoul() stops at '.' */
 
-	for (j = 1, curr = list_getstart(&msg->children);
+	for (j = 1, curr = dm_list_getstart(&msg->children);
 	     j < nextpart && curr; j++, curr = curr->nextnode);
 
 	if (!curr)
@@ -241,20 +241,20 @@ mime_message_t *get_part_by_num(mime_message_t * msg, const char *part)
  *
  * returns number of bytes written to outmem
  */
-u64_t rfcheader_dump(MEM * outmem, struct list * rfcheader,
+u64_t rfcheader_dump(MEM * outmem, struct dm_list * rfcheader,
 		     char **fieldnames, int nfields, int equal_type)
 {
 	struct mime_record *mr;
 	struct element *curr;
 	u64_t size = 0;
 
-	curr = list_getstart(rfcheader);
+	curr = dm_list_getstart(rfcheader);
 	if (rfcheader == NULL || curr == NULL) {
 		/*size += fprintf(outstream, "NIL\r\n"); */
 		return 0;
 	}
 
-	curr = list_getstart(rfcheader);
+	curr = dm_list_getstart(rfcheader);
 	while (curr) {
 		mr = (struct mime_record *) curr->data;
 
@@ -280,13 +280,13 @@ u64_t rfcheader_dump(MEM * outmem, struct list * rfcheader,
  * dumps mime-header fields belonging to mimeheader
  *
  */
-u64_t mimeheader_dump(MEM * outmem, struct list * mimeheader)
+u64_t mimeheader_dump(MEM * outmem, struct dm_list * mimeheader)
 {
 	struct mime_record *mr;
 	struct element *curr;
 	u64_t size = 0;
 
-	curr = list_getstart(mimeheader);
+	curr = dm_list_getstart(mimeheader);
 	if (mimeheader == NULL || curr == NULL) {
 		/*size = fprintf(outstream, "NIL\r\n"); */
 		return 0;
@@ -685,7 +685,7 @@ void clarify_data(char *str)
  *
  * checks if content-type is text/plain
  */
-int is_textplain(struct list *hdr)
+int is_textplain(struct dm_list *hdr)
 {
 	struct mime_record *mr;
 	int i, len;
@@ -1115,7 +1115,7 @@ void send_data(FILE * to, MEM * from, int cnt)
  *
  * returns -1 on syntax error, -2 on memory error; 0 on success, 1 if ')' has been encountered
  */
-int build_imap_search(char **search_keys, struct list *sl, int *idx, int sorted)
+int build_imap_search(char **search_keys, struct dm_list *sl, int *idx, int sorted)
 {
 	search_key_t key;
 	int result;
@@ -1460,7 +1460,7 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx, int sorted)
 		if ((result =
 		     build_imap_search(search_keys, &key.sub_search,
 				       idx, sorted )) < 0) {
-			list_freelist(&key.sub_search.start);
+			dm_list_free(&key.sub_search.start);
 			return result;
 		}
 
@@ -1476,14 +1476,14 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx, int sorted)
 		if ((result =
 		     build_imap_search(search_keys, &key.sub_search,
 				       idx, sorted)) < 0) {
-			list_freelist(&key.sub_search.start);
+			dm_list_free(&key.sub_search.start);
 			return result;
 		}
 
 		if ((result =
 		     build_imap_search(search_keys, &key.sub_search,
 				       idx, sorted )) < 0) {
-			list_freelist(&key.sub_search.start);
+			dm_list_free(&key.sub_search.start);
 			return result;
 		}
 
@@ -1503,7 +1503,7 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx, int sorted)
 
 		if (result < 0) {
 			/* error */
-			list_freelist(&key.sub_search.start);
+			dm_list_free(&key.sub_search.start);
 			return result;
 		}
 
@@ -1524,7 +1524,7 @@ int build_imap_search(char **search_keys, struct list *sl, int *idx, int sorted)
 		return -1;
 	}
 
-	if (!list_nodeadd(sl, &key, sizeof(key)))
+	if (!dm_list_nodeadd(sl, &key, sizeof(key)))
 		return -2;
 
 	return 0;
@@ -1615,7 +1615,7 @@ int perform_imap_search(unsigned int *rset, int setlen, search_key_t * sk,
 		if (! (newset = (int *)g_malloc0(sizeof(int) * setlen)))
 			return -2;
 		
-		el = list_getstart(&sk->sub_search);
+		el = dm_list_getstart(&sk->sub_search);
 		while (el) {
 			subsk = (search_key_t *) el->data;
 
@@ -1659,7 +1659,7 @@ int perform_imap_search(unsigned int *rset, int setlen, search_key_t * sk,
  * frees the search-list sl
  *
  */
-void free_searchlist(struct list *sl)
+void free_searchlist(struct dm_list *sl)
 {
 	search_key_t *sk;
 	struct element *el;
@@ -1667,18 +1667,18 @@ void free_searchlist(struct list *sl)
 	if (!sl)
 		return;
 
-	el = list_getstart(sl);
+	el = dm_list_getstart(sl);
 
 	while (el) {
 		sk = (search_key_t *) el->data;
 
 		free_searchlist(&sk->sub_search);
-		list_freelist(&sk->sub_search.start);
+		dm_list_free(&sk->sub_search.start);
 
 		el = el->nextnode;
 	}
 
-	list_freelist(&sl->start);
+	dm_list_free(&sl->start);
 	return;
 }
 
@@ -1928,7 +1928,7 @@ void dumpsearch(search_key_t * sk, int level)
 	case IST_SUBSEARCH_NOT:
 		trace(TRACE_DEBUG, "%sNOT\n", spaces);
 
-		el = list_getstart(&sk->sub_search);
+		el = dm_list_getstart(&sk->sub_search);
 		if (el)
 			subsk = (search_key_t *) el->data;
 		else
@@ -1939,7 +1939,7 @@ void dumpsearch(search_key_t * sk, int level)
 
 	case IST_SUBSEARCH_AND:
 		trace(TRACE_DEBUG, "%sAND\n", spaces);
-		el = list_getstart(&sk->sub_search);
+		el = dm_list_getstart(&sk->sub_search);
 
 		while (el) {
 			subsk = (search_key_t *) el->data;
@@ -1951,7 +1951,7 @@ void dumpsearch(search_key_t * sk, int level)
 
 	case IST_SUBSEARCH_OR:
 		trace(TRACE_DEBUG, "%sOR\n", spaces);
-		el = list_getstart(&sk->sub_search);
+		el = dm_list_getstart(&sk->sub_search);
 
 		while (el) {
 			subsk = (search_key_t *) el->data;
