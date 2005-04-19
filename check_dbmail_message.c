@@ -64,6 +64,7 @@ void setup(void)
 	GetDBParams(&_db_params);
 	db_connect();
 	auth_connect();
+	g_mime_init(0);
 }
 
 void teardown(void)
@@ -213,15 +214,22 @@ START_TEST(test_dbmail_message_new_from_stream)
 }
 END_TEST
 
-
 START_TEST(test_dbmail_message_cache_headers)
 {
 	struct DbmailMessage *m = dbmail_message_new();
 	m = dbmail_message_init_with_string(m, g_string_new(raw_message));
 	dbmail_message_store(m);
-
 }
 END_TEST
+
+START_TEST(test_dm_imap_base_subject)
+{
+	printf("[%s]\n",dm_imap_base_subject("Re: Fwd: some silly test subject (was Re: really interesting subject)"));
+	printf("[%s]\n",dm_imap_base_subject("=?iso8559-1?paul@nfg.nl=?="));
+	printf("[%s]\n",dm_imap_base_subject("=?koi8-r?B?4snMxdTZIPcg5OXu+CDz8OXr9OHr7PEg9/Pl5+ThIOTs8SD34fMg8+8g8+vp5Ovv6iEg0yA=?="));
+}
+END_TEST
+
 
 
 Suite *dbmail_message_suite(void)
@@ -244,6 +252,8 @@ Suite *dbmail_message_suite(void)
 	tcase_add_test(tc_message, test_dbmail_message_get_rfcsize);
 
 	tcase_add_test(tc_message, test_dbmail_message_cache_headers);
+	tcase_add_test(tc_message, test_dm_imap_base_subject);
+
 	tcase_add_test(tc_message, test_dbmail_message_free);
 	return s;
 }
