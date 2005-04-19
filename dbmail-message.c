@@ -368,6 +368,7 @@ void dbmail_message_free(struct DbmailMessage *self)
 	
 	self->id=0;
 	dm_free(self);
+	g_mime_iconv_shutdown();
 }
 
 
@@ -626,7 +627,25 @@ static int _header_get_id(struct DbmailMessage *self, const char *header, u64_t 
 	g_string_free(q,TRUE);
 	return 1;
 }
+		
+char * dm_imap_base_subject(const char *in)
+{
+	/* unfinished */
+	/* return base-subject as specified in draft-ietf-imapext-sort-17.txt */
 	
+	assert(in);
+	trace(TRACE_DEBUG,"%s,%s: [%s]", __FILE__, __func__, in);
+
+	GString *tmp = g_string_new(in);
+	
+	char *out = g_mime_utils_header_decode_text((unsigned char *)tmp->str);
+	g_strstrip(out);
+	
+	g_string_free(tmp,TRUE);
+
+	return out;
+}
+
 
 void _header_cache(const char *header, const char *value, gpointer user_data)
 {
@@ -634,6 +653,7 @@ void _header_cache(const char *header, const char *value, gpointer user_data)
 	struct DbmailMessage *self = (struct DbmailMessage *)user_data;
 	GString *q;
 	char *safe_value = NULL;
+	char *clean_value = NULL;
 	
 	dm_errno = 0;
 	
@@ -644,9 +664,16 @@ void _header_cache(const char *header, const char *value, gpointer user_data)
 	if ((_header_get_id(self, header, &id) < 0))
 		return;
 	
-	if (! (safe_value = dm_stresc(value)))
-		return;
 	
+	if (strcmp(header,"Subject")==0)
+		clean_value = dm_imap_base_subject(value);
+	else		
+		clean_value = g_strdup(value);
+	
+	if (! (safe_value = dm_stresc(clean_value))) {
+		g_free(clean_value);	
+		return;
+	}
 	/* clip oversized headervalues */
 	if (strlen(safe_value) >= 255)
 		safe_value[255] = '\0';
@@ -662,7 +689,7 @@ void _header_cache(const char *header, const char *value, gpointer user_data)
 	}
 	g_string_free(q,TRUE);
 	g_free(safe_value);
-	
+	g_free(clean_value);
 }
 
 /* Run the user's sorting rules on this message
