@@ -138,8 +138,14 @@ int StartServer(serverConfig_t * conf)
 	alarm(10);
   
  	trace(TRACE_DEBUG, "%s,%s: starting main service loop", __FILE__, __func__);
- 	while (!GeneralStopRequested) 
- 		manage_restart_children();
+ 	while (!GeneralStopRequested) {
+		if (db_connect() != 0) {
+			GeneralStopRequested=1;
+		} else {
+			db_disconnect();
+ 			manage_restart_children();
+		}
+	}
    
  	manage_stop_children();
  	scoreboard_delete();

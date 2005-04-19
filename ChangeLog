@@ -5,6 +5,8 @@
 	* list.c, list.h, and many others: move the internal list
 	implementation to the dm_ namespace to avoid conflicts with gmime2.1's
 	own internal list setup.
+	* server.c, serverchild.c, pool.c: make dbmail servers in prefork mode
+	die when the database backend dies (closes #190).
 
 2005-04-08  Paul Stevens <paul@nfg.nl>
 

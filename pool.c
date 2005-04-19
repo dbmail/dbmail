@@ -385,7 +385,11 @@ void manage_restart_children() {
 			trace(TRACE_MESSAGE,"%s,%s: child [%d] exited. Restarting...",
 				__FILE__, __func__, chpid);
 			scoreboard_release(chpid);			
-			CreateChild(&childinfo);
+			if (CreateChild(&childinfo)== -1) {
+				GeneralStopRequested=1;
+				manage_stop_children();
+				exit(1);
+			}
 		}
 	}
 	sleep(1);

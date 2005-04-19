@@ -251,7 +251,10 @@ pid_t CreateChild(ChildInfo_t * info)
  		SetChildSigHandler();
  		trace(TRACE_INFO, "%s,%s: signal handler placed, going to perform task now",
 			__FILE__, __func__);
- 		PerformChildTask(info);
+ 		
+		if (PerformChildTask(info) == -1)
+			return -1;
+		
  		child_unregister();
  		exit(0);
 	} else {
