@@ -182,7 +182,7 @@ START_TEST(test_mime_fetch_headers)
 	mime_fetch_headers(raw_message,&mimelist);
 	fail_unless(mimelist.total_nodes==7, "number of message-headers incorrect");
 	mr = (mimelist.start)->data;
-	fail_unless(strcmp(mr->field, "Content-type")==0, "Field name incorrect");
+	fail_unless(strcmp(mr->field, "Content-Type")==0, "Field name incorrect");
 	fail_unless(strcmp(mr->value, "multipart/mixed; boundary=boundary")==0, "Field value incorrect");
 	
 	list_freelist(&mimelist.start);
