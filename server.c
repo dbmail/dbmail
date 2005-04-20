@@ -124,6 +124,7 @@ int StartCliServer(serverConfig_t * conf)
 
 int StartServer(serverConfig_t * conf)
 {
+	int stopped = 0;
 	if (!conf)
 		trace(TRACE_FATAL, "%s,%s: NULL configuration", __FILE__, __func__);
 
@@ -140,8 +141,22 @@ int StartServer(serverConfig_t * conf)
  	trace(TRACE_DEBUG, "%s,%s: starting main service loop", __FILE__, __func__);
  	while (!GeneralStopRequested) {
 		if (db_connect() != 0) {
-			GeneralStopRequested=1;
+			if (! stopped) {
+				alarm(0);
+				trace(TRACE_MESSAGE,"%s,%s: entering sleep-mode until database is back again",
+					__FILE__, __func__);
+				manage_stop_children();
+			}
+			stopped=1;
+			sleep(10);
 		} else {
+			if (stopped) {
+				trace(TRACE_MESSAGE,"%s,%s: resume operation now the database is back again",
+					__FILE__, __func__);
+				manage_spare_children();
+			}
+
+			stopped=0;
 			db_disconnect();
  			manage_restart_children();
 		}
