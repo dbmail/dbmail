@@ -1,3 +1,12 @@
+2005-05-03  Paul Stevens <paul@nfg.nl>
+
+	* check_dbmail_common.c, check_dbmail_deliver.c, check_dbmail_imapd.c, 
+	check_dbmail_message.c, check_dbmail_server.c, check_dbmail_user.c, 
+	check_dbmail_util.c: removed suite_free call.
+	* db.c, dbmail-message.c, dbmail-message.h, misc.c, misc.h,
+	sql/mysql/add_header_tables.mysql: expanded the headercaching code to
+	include support for (base)subject, (sent)date, and references.
+
 2005-04-19  Paul Stevens <paul@nfg.nl>
 
 	* dbmail-message.c, dbmail-message.h, check_dbmail_message.c: add
