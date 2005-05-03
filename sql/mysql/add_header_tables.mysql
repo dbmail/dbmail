@@ -59,7 +59,7 @@ CREATE TABLE dbmail_subjectfield (
 	id		BIGINT NOT NULL AUTO_INCREMENT,
 	subjectfield	VARCHAR(255) NOT NULL DEFAULT '',
 	PRIMARY KEY (id),
-	UNIQUE (physmessage_id, id),
+	UNIQUE (physmessage_id, subjectfield),
 	FOREIGN KEY (physmessage_id)
 			REFERENCES dbmail_physmessage(id)
 			ON UPDATE CASCADE ON DELETE CASCADE
@@ -71,7 +71,7 @@ CREATE TABLE dbmail_datefield (
 	id		BIGINT NOT NULL AUTO_INCREMENT,
 	datefield	DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00',
 	PRIMARY KEY (id),
-	UNIQUE (physmessage_id, id),
+	UNIQUE (physmessage_id, datefield),
 	FOREIGN KEY (physmessage_id)
 			REFERENCES dbmail_physmessage(id)
 			ON UPDATE CASCADE ON DELETE CASCADE
@@ -86,7 +86,7 @@ CREATE TABLE dbmail_referencesfield (
 	id		BIGINT NOT NULL AUTO_INCREMENT,
 	referencesfield	VARCHAR(255) NOT NULL DEFAULT '',
 	PRIMARY KEY (id),
-	UNIQUE (physmessage_id, id),
+	UNIQUE (physmessage_id, referencesfield),
 	FOREIGN KEY (physmessage_id)
 			REFERENCES dbmail_physmessage(id)
 			ON UPDATE CASCADE ON DELETE CASCADE

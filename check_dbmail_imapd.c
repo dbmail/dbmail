@@ -143,6 +143,7 @@ START_TEST(test_imap_bodyfetch)
 	octet = dbmail_imap_session_bodyfetch_get_last_octetcnt(s);
 	fail_unless(octet==12288, "octetcnt incorrect");
 	
+	dbmail_imap_session_delete(s);
 		
 }
 END_TEST
@@ -237,6 +238,8 @@ START_TEST(test_db_set_msg)
 	res = db_start_msg(msg,stopbound,&level,maxlevel);
 	fail_unless(res==29, "db_start_msg result incorrect");
 	fail_unless(msg->rfcheader.total_nodes == 7, "total-nodes for rfcheader incorrect");
+
+	g_free(msg);
 
 }
 END_TEST
@@ -351,6 +354,7 @@ START_TEST(test_dm_base_subject)
 	fail_unless(strcmp(wrap_base_subject("[issue123] foo"),"foo")==0,"dm_base_subject failed");
 	fail_unless(strcmp(wrap_base_subject("Re [issue123]: foo"),"foo")==0,"dm_base_subject failed");
 	fail_unless(strcmp(wrap_base_subject("Re: [issue123] foo"),"foo")==0,"dm_base_subject failed");
+	fail_unless(strcmp(wrap_base_subject("Re: [issue123] [Fwd: foo]"),"foo")==0,"dm_base_subject failed");
 
 	fail_unless(strcmp(wrap_base_subject("test\t\tspaces  here"),"test spaces here")==0,"cleanup of spaces failed");
 	fail_unless(strcmp(wrap_base_subject("test strip trailer here (fwd) (fwd)"),"test strip trailer here")==0,"cleanup of sub-trailer failed");

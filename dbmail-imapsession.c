@@ -161,7 +161,10 @@ void dbmail_imap_session_delete(struct ImapSession * self)
 		null_free(self->ci->userData);
 	}
 	dbmail_imap_session_bodyfetch_free(self);
-	dm_free(self);
+	g_free(self->fi);
+	g_free(self->ci);
+	g_free(self->msginfo);
+	g_free(self);
 }
 
 

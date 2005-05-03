@@ -81,7 +81,6 @@ static int dm_ldap_user_shadow_rename(u64_t user_idnr, const char *new_name);
 
 void __auth_get_config(void)
 {
-	config_read(configFile);
 	SetTraceLevel("LDAP");
 
 	GETCONFIGVALUE("BIND_DN",		"LDAP", _ldap_cfg.bind_dn);

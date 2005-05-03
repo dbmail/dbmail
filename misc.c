@@ -669,7 +669,7 @@ void dm_base_subject(char *subject)
 				break;
 		}
 
-		if (g_str_has_suffix(tmp,"]") && g_str_has_prefix(tmp,"[fwd:")) {
+		if (g_str_has_suffix(tmp,"]") && strncasecmp(tmp,"[fwd:",strlen("[fwd:"))==0 ) {
 			offset=strlen(tmp)-1;
 			tmp[offset]='\0';
 			tmp+=5;

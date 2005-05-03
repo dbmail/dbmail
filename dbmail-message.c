@@ -154,6 +154,7 @@ struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *sel
 		if ((! g_mime_message_get_header(GMIME_MESSAGE(self->content),"From")) && 
 				(! g_mime_message_get_header(GMIME_MESSAGE(self->content),"Subject"))) {
 			dbmail_message_set_class(self, DBMAIL_MESSAGE_PART);
+			g_object_unref(self->content);
 			_set_content(self, content);
 		}
 	}
@@ -206,6 +207,7 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 		g_mime_stream_write_string(mstream, buf);
 	}
 	g_mime_stream_reset(mstream);
+	g_free(buf);
 	
 	/* 
 	 * filter mstream by decoding crlf and dot lines
@@ -376,7 +378,7 @@ void dbmail_message_free(struct DbmailMessage *self)
 	
 	self->id=0;
 	dm_free(self);
-	g_mime_iconv_shutdown();
+	g_mime_shutdown();
 }
 
 
@@ -715,10 +717,15 @@ void dbmail_message_cache_subjectfield(struct DbmailMessage *self)
 	char *value;
 	char *subject;
 	
-	if (! (value = dbmail_message_get_header(self,"Subject")))
+	value = dbmail_message_get_header(self,"Subject");
+	if (! value) {
+		trace(TRACE_WARNING,"%s,%s: no subject field value [%llu]",
+				__FILE__, __func__, self->physid);
 		return;
+	}
 	
-	if (! (subject = dm_stresc(value)))
+	subject = dm_stresc(value);
+	if (!subject)
 		return;
 
 	dm_base_subject(subject);
@@ -746,12 +753,15 @@ void dbmail_message_cache_referencesfield(struct DbmailMessage *self)
 	field = dbmail_message_get_header(self,"References");
 	if (! field)
 		field = dbmail_message_get_header(self,"In-Reply-to");
-	if (! field)
+	if (! field) 
 		return;
 
 	refs = g_mime_references_decode(field);
-	if (! refs)
+	if (! refs) {
+		trace(TRACE_WARNING, "%s,%s: reference_decode failed [%llu]",
+				__FILE__, __func__, self->physid);
 		return;
+	}
 	
 	head = refs;
 	

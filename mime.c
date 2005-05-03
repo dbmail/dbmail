@@ -64,9 +64,9 @@ static void _register_header(const char *field, const char *value, gpointer mime
 
 int mime_fetch_headers(const char *datablock, struct dm_list *mimelist) 
 {
+	GMimeMessage *message;
 	GString *raw = g_string_new(datablock);
 	struct DbmailMessage *m = dbmail_message_new();
-	GMimeMessage *message;
 	m = dbmail_message_init_with_string(m, raw);
 	g_mime_header_foreach(m->content->headers, _register_header, (gpointer)mimelist);
 	g_string_free(raw,1);
@@ -77,6 +77,7 @@ int mime_fetch_headers(const char *datablock, struct dm_list *mimelist)
 		g_mime_header_foreach(GMIME_OBJECT(message->mime_part)->headers, _register_header, (gpointer)mimelist);
 	}
 
+	dbmail_message_free(m);
 	return 0;	
 }
 	

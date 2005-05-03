@@ -64,63 +64,69 @@ void setup(void)
 	GetDBParams(&_db_params);
 	db_connect();
 	auth_connect();
-	g_mime_init(0);
 }
 
 void teardown(void)
 {
 	db_disconnect();
+	config_free();
 }
 
 //struct DbmailMessage * dbmail_message_new(void);
 START_TEST(test_dbmail_message_new)
 {
-	struct DbmailMessage *msg = dbmail_message_new();
-	fail_unless(msg->id==0,"dbmail_message_new failed");
+	struct DbmailMessage *m = dbmail_message_new();
+	fail_unless(m->id==0,"dbmail_message_new failed");
+	dbmail_message_free(m);
 }
 END_TEST
 //void dbmail_message_set_class(struct DbmailMessage *self, int klass);
 START_TEST(test_dbmail_message_set_class)
 {
 	int result;
-	struct DbmailMessage *msg = dbmail_message_new();
-	result = dbmail_message_set_class(msg,DBMAIL_MESSAGE);
+	struct DbmailMessage *m = dbmail_message_new();
+	result = dbmail_message_set_class(m,DBMAIL_MESSAGE);
 	fail_unless(result==0,"dbmail_message_set_class failed");
-	result = dbmail_message_set_class(msg,DBMAIL_MESSAGE_PART);
+	result = dbmail_message_set_class(m,DBMAIL_MESSAGE_PART);
 	fail_unless(result==0,"dbmail_message_set_class failed");
-	result = dbmail_message_set_class(msg,10);
+	result = dbmail_message_set_class(m,10);
 	fail_unless(result!=0,"dbmail_message_set_class failed");
+	
+	dbmail_message_free(m);
 }
 END_TEST
 //int dbmail_message_get_class(struct DbmailMessage *self);
 START_TEST(test_dbmail_message_get_class)
 {
 	int klass;
-	struct DbmailMessage *msg = dbmail_message_new();
+	struct DbmailMessage *m = dbmail_message_new();
 	
 	/* default */
-	klass = dbmail_message_get_class(msg);
+	klass = dbmail_message_get_class(m);
 	fail_unless(klass==DBMAIL_MESSAGE,"dbmail_message_get_class failed");
 	
 	/* set explicitely */
-	dbmail_message_set_class(msg,DBMAIL_MESSAGE_PART);
-	klass = dbmail_message_get_class(msg);
+	dbmail_message_set_class(m,DBMAIL_MESSAGE_PART);
+	klass = dbmail_message_get_class(m);
 	fail_unless(klass==DBMAIL_MESSAGE_PART,"dbmail_message_get_class failed");
 	
-	dbmail_message_set_class(msg,DBMAIL_MESSAGE);
-	klass = dbmail_message_get_class(msg);
+	dbmail_message_set_class(m,DBMAIL_MESSAGE);
+	klass = dbmail_message_get_class(m);
 	fail_unless(klass==DBMAIL_MESSAGE,"dbmail_message_get_class failed");
 
+	dbmail_message_free(m);
 }
 END_TEST
 //struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t physid, int filter);
 START_TEST(test_dbmail_message_retrieve)
 {
-	struct DbmailMessage *msg = dbmail_message_new();
+	struct DbmailMessage *m = dbmail_message_new();
 	u64_t physid = 191967;
-	msg = dbmail_message_retrieve(msg,physid,DBMAIL_MESSAGE_FILTER_HEAD);	
-	fail_unless(msg != NULL, "dbmail_message_retrieve failed");
-	fail_unless(msg->content != NULL, "dbmail_message_retrieve failed");
+	m = dbmail_message_retrieve(m,physid,DBMAIL_MESSAGE_FILTER_HEAD);	
+	fail_unless(m != NULL, "dbmail_message_retrieve failed");
+	fail_unless(m->content != NULL, "dbmail_message_retrieve failed");
+
+	dbmail_message_free(m);
 }
 END_TEST
 //struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *self, const GString *content);
@@ -136,6 +142,8 @@ START_TEST(test_dbmail_message_init_with_string)
 	
 	dbmail_message_set_class(m,DBMAIL_MESSAGE_PART);
 	m = dbmail_message_init_with_string(m, g_string_new(raw_message_part));
+	
+	dbmail_message_free(m);
 }
 END_TEST
 //struct DbmailMessage * dbmail_message_init_with_stream(struct DbmailMessage *self, GMimeStream *stream, int type);
@@ -154,6 +162,8 @@ START_TEST(test_dbmail_message_hdrs_to_string)
 	m = dbmail_message_init_with_string(m, g_string_new(raw_message));
 	result = dbmail_message_hdrs_to_string(m);
 	fail_unless(strlen(result)==235, "dbmail_message_hdrs_to_string failed");
+
+	dbmail_message_free(m);
 }
 END_TEST
 
@@ -166,6 +176,7 @@ START_TEST(test_dbmail_message_body_to_string)
 	m = dbmail_message_init_with_string(m, g_string_new(raw_message));
 	result = dbmail_message_body_to_string(m);
 	fail_unless(strlen(result)==1046, "dbmail_message_body_to_string failed");
+	dbmail_message_free(m);
 }
 END_TEST
 
@@ -178,6 +189,7 @@ START_TEST(test_dbmail_message_get_rfcsize)
 	m = dbmail_message_init_with_string(m, g_string_new(raw_message));
 	result = dbmail_message_get_rfcsize(m);
 	fail_unless(result==1319, "dbmail_message_get_rfcsize failed");
+	dbmail_message_free(m);
 }
 END_TEST
 
@@ -192,25 +204,26 @@ END_TEST
 START_TEST(test_dbmail_message_new_from_stream)
 {
 	FILE *fd;
-	struct DbmailMessage *msg;
+	struct DbmailMessage *m;
 	u64_t whole_message_size = 0;
 	fd = tmpfile();
 	fprintf(fd, "%s", raw_message);
 	fseek(fd,0,0);
-	msg = dbmail_message_new_from_stream(fd, DBMAIL_STREAM_PIPE);
-	whole_message_size = dbmail_message_get_size(msg);
+	m = dbmail_message_new_from_stream(fd, DBMAIL_STREAM_PIPE);
+	whole_message_size = dbmail_message_get_size(m);
 	fail_unless(whole_message_size == strlen(raw_message), 
 			"read_whole_message_stream returned wrong message_size");
 	
 	fseek(fd,0,0);
 	fprintf(fd, "%s", raw_lmtp_data);
 	
-	msg = dbmail_message_new_from_stream(fd, DBMAIL_STREAM_LMTP);
-	whole_message_size = dbmail_message_get_size(msg);
+	m = dbmail_message_new_from_stream(fd, DBMAIL_STREAM_LMTP);
+	whole_message_size = dbmail_message_get_size(m);
 	// note: we're comparing with raw_message not raw_lmtp_data because
 	// raw_message == raw_lmtp_data - crlf - end-dot
 	fail_unless(whole_message_size == strlen(raw_message), 
 			"read_whole_message_network returned wrong message_size");
+	dbmail_message_free(m);
 }
 END_TEST
 
@@ -220,6 +233,7 @@ START_TEST(test_dbmail_message_set_header)
 	m = dbmail_message_init_with_string(m, g_string_new(raw_message));
 	dbmail_message_set_header(m, "X-Foobar","Foo Bar");
 	fail_unless(dbmail_message_get_header(m, "X-Foobar")!=NULL, "set_header failed");
+	dbmail_message_free(m);
 }
 END_TEST
 
@@ -236,6 +250,9 @@ START_TEST(test_dbmail_message_get_header)
 
 	fail_unless(dbmail_message_get_header(h, "X-Foobar")==NULL, "get_header failed on headers-only message");
 	fail_unless(strcmp(dbmail_message_get_header(h,"Subject"),"multipart/mixed")==0,"get_header failed on headers-only message");
+	
+	dbmail_message_free(m);
+	dbmail_message_free(h);
 
 }
 END_TEST
@@ -248,6 +265,7 @@ START_TEST(test_dbmail_message_cache_headers)
 			"References", 
 			"<20050326155326.1afb0377@ibook.linuks.mine.nu> <20050326181954.GB17389@khazad-dum.debian.net> <20050326193756.77747928@ibook.linuks.mine.nu> ");
 	dbmail_message_store(m);
+	dbmail_message_free(m);
 }
 END_TEST
 

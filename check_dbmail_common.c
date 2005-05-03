@@ -78,13 +78,11 @@ void setup(void)
 void teardown(void)
 {
 	db_disconnect();
+	config_free();
 }
 
 START_TEST(test_read_config)
 {
-	int res;
-	res = config_read(configFile);
-	fail_unless(res==0, "Unable to read configFile");
 	GetDBParams(&_db_params);
 	fail_unless(_db_params.host != NULL, "db_host is NULL");
 }
@@ -93,7 +91,6 @@ END_TEST
 START_TEST(test_db_connect)
 {
 	int res;
-	config_read(configFile);
 	GetDBParams(&_db_params);
 	res = db_connect();
 	fail_unless(res==0, "Unable to connect to db");
@@ -104,16 +101,16 @@ Suite *dbmail_common_suite(void)
 {
 	Suite *s = suite_create("Dbmail Common");
 	TCase *tc_config = tcase_create("Config");
-	TCase *tc_main = tcase_create("Main");
+	//TCase *tc_main = tcase_create("Main");
 	
 	suite_add_tcase(s, tc_config);
-	suite_add_tcase(s, tc_main);
+	//suite_add_tcase(s, tc_main);
 	
 	tcase_add_checked_fixture(tc_config, setup, teardown);
 	tcase_add_test(tc_config, test_read_config);
 	tcase_add_test(tc_config, test_db_connect);
 	
-	tcase_add_checked_fixture(tc_main, setup, teardown);
+	//tcase_add_checked_fixture(tc_main, setup, teardown);
 	return s;
 }
 

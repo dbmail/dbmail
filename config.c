@@ -70,8 +70,7 @@ int config_read(const char *config_filename)
  */
 void config_free(void) 
 {
-        if (config_dict)
-                iniparser_freedict(config_dict);
+	iniparser_freedict(config_dict);
 }
 
 int config_get_value(const field_t field_name,
@@ -90,6 +89,7 @@ int config_get_value(const field_t field_name,
         else
                 value[0] = '\0';
 
+	g_free(key);
         return 0;
 }
 

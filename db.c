@@ -1453,12 +1453,14 @@ int db_set_headercache(GList *lost)
 	if (! lost)
 		return 0;
 
-	if (! (msg = dbmail_message_new()))
-		return -1;
-
 	lost = g_list_first(lost);
 	while (lost) {
 		pmsgid = (u64_t)(GPOINTER_TO_UINT(lost->data));
+	
+		msg = dbmail_message_new();
+		if (! msg)
+			return -1;
+
 		db_begin_transaction();
 		if (! (msg = dbmail_message_retrieve(msg, pmsgid, DBMAIL_MESSAGE_FILTER_HEAD))) {
 			trace(TRACE_WARNING,"%s,%s: error retrieving physmessage: [%llu]", 
@@ -1478,7 +1480,9 @@ int db_set_headercache(GList *lost)
 				db_commit_transaction();
 				fprintf(stderr,".");
 			}
+			
 		}
+		dbmail_message_free(msg);
 		lost = g_list_next(lost);
 	}
 	return 0;

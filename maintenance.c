@@ -281,9 +281,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	db_disconnect();
 	auth_disconnect();
-	
+	db_disconnect();
 	config_free();
 
 	return 0;
