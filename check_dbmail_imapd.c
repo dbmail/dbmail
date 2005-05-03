@@ -334,6 +334,36 @@ START_TEST(test_build_args_array_ext)
 END_TEST
 */
 
+static char *wrap_base_subject(char *in) 
+{
+	gchar *out = g_strdup(in);
+	dm_base_subject(out);
+	return out;
+}	
+
+START_TEST(test_dm_base_subject)
+{
+	gchar *subject;
+
+	fail_unless(strcmp(wrap_base_subject("Re: foo"),"foo")==0,"dm_base_subject failed");
+	fail_unless(strcmp(wrap_base_subject("Fwd: foo"),"foo")==0,"dm_base_subject failed");
+	fail_unless(strcmp(wrap_base_subject("Fw: foo"),"foo")==0,"dm_base_subject failed");
+	fail_unless(strcmp(wrap_base_subject("[issue123] foo"),"foo")==0,"dm_base_subject failed");
+	fail_unless(strcmp(wrap_base_subject("Re [issue123]: foo"),"foo")==0,"dm_base_subject failed");
+	fail_unless(strcmp(wrap_base_subject("Re: [issue123] foo"),"foo")==0,"dm_base_subject failed");
+
+	fail_unless(strcmp(wrap_base_subject("test\t\tspaces  here"),"test spaces here")==0,"cleanup of spaces failed");
+	fail_unless(strcmp(wrap_base_subject("test strip trailer here (fwd) (fwd)"),"test strip trailer here")==0,"cleanup of sub-trailer failed");
+	fail_unless(strcmp(wrap_base_subject("Re: Fwd: [fwd: some silly test subject] (fwd)"),"some silly test subject")==0, "stripping of subj-tlr/subj-ldr failed");
+	
+	subject = g_strdup("=?koi8-r?B?4snMxdTZIPcg5OXu+CDz8OXr9OHr7PEg9/Pl5+ThIOTs8SD34fMg8+8g8+vp5Ovv6iEg0yA=?=");
+	dm_base_subject(subject);
+
+}
+END_TEST
+
+
+
 Suite *dbmail_suite(void)
 {
 	Suite *s = suite_create("Dbmail Imap");
@@ -341,11 +371,13 @@ Suite *dbmail_suite(void)
 	TCase *tc_rfcmsg = tcase_create("Rfcmsg");
 	TCase *tc_mime = tcase_create("Mime");
 	TCase *tc_util = tcase_create("Utils");
+	TCase *tc_misc = tcase_create("Misc");
 	
 	suite_add_tcase(s, tc_session);
 	suite_add_tcase(s, tc_rfcmsg);
 	suite_add_tcase(s, tc_mime);
 	suite_add_tcase(s, tc_util);
+	suite_add_tcase(s, tc_misc);
 	
 	tcase_add_test(tc_session, test_imap_session_new);
 	tcase_add_test(tc_session, test_imap_bodyfetch);
@@ -361,6 +393,9 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_util, test_dbmail_imap_plist_as_string);
 	tcase_add_test(tc_util, test_g_list_slices);
 	tcase_add_test(tc_util, test_build_set);
+
+	tcase_add_checked_fixture(tc_misc, setup, NULL);
+	tcase_add_test(tc_misc, test_dm_base_subject);
 	return s;
 }
 
@@ -372,7 +407,6 @@ int main(void)
 	srunner_run_all(sr, CK_NORMAL);
 	nf = srunner_ntests_failed(sr);
 	srunner_free(sr);
-	suite_free(s);
 	return (nf == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 	

@@ -214,23 +214,42 @@ START_TEST(test_dbmail_message_new_from_stream)
 }
 END_TEST
 
+START_TEST(test_dbmail_message_set_header)
+{
+	struct DbmailMessage *m = dbmail_message_new();
+	m = dbmail_message_init_with_string(m, g_string_new(raw_message));
+	dbmail_message_set_header(m, "X-Foobar","Foo Bar");
+	fail_unless(dbmail_message_get_header(m, "X-Foobar")!=NULL, "set_header failed");
+}
+END_TEST
+
+START_TEST(test_dbmail_message_get_header)
+{
+	struct DbmailMessage *h = dbmail_message_new();
+	struct DbmailMessage *m = dbmail_message_new();
+	
+	m = dbmail_message_init_with_string(m, g_string_new(raw_message));
+	h = dbmail_message_init_with_string(h, g_string_new(dbmail_message_hdrs_to_string(m)));
+	
+	fail_unless(dbmail_message_get_header(m, "X-Foobar")==NULL, "get_header failed on full message");
+	fail_unless(strcmp(dbmail_message_get_header(m,"Subject"),"multipart/mixed")==0,"get_header failed on full message");
+
+	fail_unless(dbmail_message_get_header(h, "X-Foobar")==NULL, "get_header failed on headers-only message");
+	fail_unless(strcmp(dbmail_message_get_header(h,"Subject"),"multipart/mixed")==0,"get_header failed on headers-only message");
+
+}
+END_TEST
+
 START_TEST(test_dbmail_message_cache_headers)
 {
 	struct DbmailMessage *m = dbmail_message_new();
 	m = dbmail_message_init_with_string(m, g_string_new(raw_message));
+	dbmail_message_set_header(m, 
+			"References", 
+			"<20050326155326.1afb0377@ibook.linuks.mine.nu> <20050326181954.GB17389@khazad-dum.debian.net> <20050326193756.77747928@ibook.linuks.mine.nu> ");
 	dbmail_message_store(m);
 }
 END_TEST
-
-START_TEST(test_dm_imap_base_subject)
-{
-	printf("[%s]\n",dm_imap_base_subject("Re: Fwd: some silly test subject (was Re: really interesting subject)"));
-	printf("[%s]\n",dm_imap_base_subject("=?iso8559-1?paul@nfg.nl=?="));
-	printf("[%s]\n",dm_imap_base_subject("=?koi8-r?B?4snMxdTZIPcg5OXu+CDz8OXr9OHr7PEg9/Pl5+ThIOTs8SD34fMg8+8g8+vp5Ovv6iEg0yA=?="));
-}
-END_TEST
-
-
 
 Suite *dbmail_message_suite(void)
 {
@@ -250,9 +269,11 @@ Suite *dbmail_message_suite(void)
 	tcase_add_test(tc_message, test_dbmail_message_hdrs_to_string);
 	tcase_add_test(tc_message, test_dbmail_message_body_to_string);
 	tcase_add_test(tc_message, test_dbmail_message_get_rfcsize);
-
+	tcase_add_test(tc_message, test_dbmail_message_set_header);
+	tcase_add_test(tc_message, test_dbmail_message_set_header);
+	tcase_add_test(tc_message, test_dbmail_message_get_header);
+	
 	tcase_add_test(tc_message, test_dbmail_message_cache_headers);
-	tcase_add_test(tc_message, test_dm_imap_base_subject);
 
 	tcase_add_test(tc_message, test_dbmail_message_free);
 	return s;
@@ -266,7 +287,6 @@ int main(void)
 	srunner_run_all(sr, CK_NORMAL);
 	nf = srunner_ntests_failed(sr);
 	srunner_free(sr);
-	suite_free(s);
 	return (nf == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 	

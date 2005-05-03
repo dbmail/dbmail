@@ -29,6 +29,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <sys/types.h>
+#include <time.h>
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -147,9 +149,10 @@ int dbmail_message_get_class(struct DbmailMessage *self)
 struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *self, const GString *content)
 {
 	_set_content(self,content);
-	/* If there's no From header assume it's a message-part and re-init */
+	/* If there's no From header and no Subject assume it's a message-part and re-init */
 	if (dbmail_message_get_class(self) == DBMAIL_MESSAGE) {
-		if (! g_mime_message_get_header(GMIME_MESSAGE(self->content),"From")) {
+		if ((! g_mime_message_get_header(GMIME_MESSAGE(self->content),"From")) && 
+				(! g_mime_message_get_header(GMIME_MESSAGE(self->content),"Subject"))) {
 			dbmail_message_set_class(self, DBMAIL_MESSAGE_PART);
 			_set_content(self, content);
 		}
@@ -292,6 +295,11 @@ u64_t dbmail_message_get_physid(struct DbmailMessage *self)
 void dbmail_message_set_header(struct DbmailMessage *self, const char *header, const char *value)
 {
 	g_mime_message_set_header(GMIME_MESSAGE(self->content), header, value);
+}
+
+gchar * dbmail_message_get_header(struct DbmailMessage *self, const char *header)
+{
+	return (gchar *)g_mime_object_get_header(GMIME_OBJECT(self->content), header);
 }
 
 /* dump message(parts) to char ptrs */
@@ -589,8 +597,11 @@ int dbmail_message_headers_cache(struct DbmailMessage *self)
 	assert(self);
 	assert(self->physid);
 	g_mime_header_foreach(GMIME_OBJECT(self->content)->headers, _header_cache, self);
-	if (dm_errno) 
-		return -1;
+	
+	dbmail_message_cache_datefield(self);
+	dbmail_message_cache_subjectfield(self);
+	dbmail_message_cache_referencesfield(self);
+	
 	return 1;
 }
 
@@ -627,25 +638,6 @@ static int _header_get_id(struct DbmailMessage *self, const char *header, u64_t 
 	g_string_free(q,TRUE);
 	return 1;
 }
-		
-char * dm_imap_base_subject(const char *in)
-{
-	/* unfinished */
-	/* return base-subject as specified in draft-ietf-imapext-sort-17.txt */
-	
-	assert(in);
-	trace(TRACE_DEBUG,"%s,%s: [%s]", __FILE__, __func__, in);
-
-	GString *tmp = g_string_new(in);
-	
-	char *out = g_mime_utils_header_decode_text((unsigned char *)tmp->str);
-	g_strstrip(out);
-	
-	g_string_free(tmp,TRUE);
-
-	return out;
-}
-
 
 void _header_cache(const char *header, const char *value, gpointer user_data)
 {
@@ -664,19 +656,16 @@ void _header_cache(const char *header, const char *value, gpointer user_data)
 	if ((_header_get_id(self, header, &id) < 0))
 		return;
 	
-	
-	if (strcmp(header,"Subject")==0)
-		clean_value = dm_imap_base_subject(value);
-	else		
-		clean_value = g_strdup(value);
-	
+	clean_value = g_strdup(value);
 	if (! (safe_value = dm_stresc(clean_value))) {
 		g_free(clean_value);	
 		return;
 	}
+
 	/* clip oversized headervalues */
 	if (strlen(safe_value) >= 255)
 		safe_value[255] = '\0';
+	
 	
 	q = g_string_new("");
 	
@@ -691,6 +680,100 @@ void _header_cache(const char *header, const char *value, gpointer user_data)
 	g_free(safe_value);
 	g_free(clean_value);
 }
+
+void dbmail_message_cache_datefield(struct DbmailMessage *self)
+{
+	GString *q;
+	char *value;
+	time_t date;
+
+	if (! (value = dbmail_message_get_header(self,"Date")))
+		date = (time_t)0;
+	else
+		date = g_mime_utils_header_decode_date(value,NULL);
+	
+	if (date == (time_t)-1)
+		date = (time_t)0;
+
+	value = g_new0(char,20);
+	strftime(value,20,"%Y-%m-%d %H:%M:%S",gmtime(&date));
+
+	q = g_string_new("");
+	g_string_printf(q, "INSERT INTO %sdatefield (physmessage_id, datefield) "
+			"VALUES (%llu,'%s')", DBPFX, self->physid, value);
+	if (db_query(q->str)) {
+		trace(TRACE_WARNING, "%s,%s: insert datefield failed [%s]",
+				__FILE__, __func__, q->str);
+	}
+	g_string_free(q,TRUE);
+	g_free(value);
+}
+
+void dbmail_message_cache_subjectfield(struct DbmailMessage *self)
+{
+	GString *q;
+	char *value;
+	char *subject;
+	
+	if (! (value = dbmail_message_get_header(self,"Subject")))
+		return;
+	
+	if (! (subject = dm_stresc(value)))
+		return;
+
+	dm_base_subject(subject);
+
+	if (strlen(subject)>255)
+		subject[255]='\0';
+	
+	q = g_string_new("");
+	g_string_printf(q,"INSERT INTO %ssubjectfield (physmessage_id, subjectfield) "
+			"VALUES (%llu,'%s')", DBPFX, self->physid, subject);
+	if (db_query(q->str)) {
+		trace(TRACE_WARNING, "%s,%s: insert subjectfield failed [%s]", 
+				__FILE__, __func__, q->str);
+	}
+	g_string_free(q,TRUE);
+	g_free(subject);
+}
+
+void dbmail_message_cache_referencesfield(struct DbmailMessage *self)
+{
+	GMimeReferences *refs;
+	char *field;
+	GString *q;
+
+	field = dbmail_message_get_header(self,"References");
+	if (! field)
+		field = dbmail_message_get_header(self,"In-Reply-to");
+	if (! field)
+		return;
+
+	refs = g_mime_references_decode(field);
+	if (! refs)
+		return;
+	
+	q = g_string_new("");
+	while (refs->msgid) {
+		
+		g_string_printf(q, "INSERT INTO %sreferencesfield (physmessage_id, referencesfield) "
+				"VALUES (%llu,'%s')", DBPFX, self->physid, refs->msgid);
+		
+		if (db_query(q->str)) {
+			trace(TRACE_WARNING, "%s,%s: insert referencesfield failed [%s]",
+					__FILE__, __func__, q->str);
+		}
+		if (refs->next == NULL)
+			break;
+		refs = refs->next;
+	}
+
+	g_free(field);
+	g_string_free(q,TRUE);
+	g_mime_references_clear(refs);
+
+}
+	
 
 /* Run the user's sorting rules on this message
  * Retrieve the action list as either
@@ -735,3 +818,4 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message, u64_t useridnr, cons
 		}
 	}
 }
+

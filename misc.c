@@ -545,5 +545,139 @@ char * dm_stresc(const char * from)
 	db_escape_string(to, from, strlen(from));
 	return to;
 }
-	
 
+/* 
+ *
+ * replace tabs with spaces and all multi-spaces with single spaces 
+ *
+ */
+
+void  dm_pack_spaces(char *in) 
+{
+	char *tmp, *saved;
+	/* replace tabs with spaces */
+	g_strdelimit(in,"\t",' ');
+	
+	/* replace all multi-spaces with single spaces */
+	tmp = g_strdup(in);
+	saved = tmp;
+	while(*tmp) {
+		if ((*tmp == ' ') && (*(tmp+1) == ' ')) {
+			tmp++;
+		} else {
+			*in++=*tmp++;
+		}
+	}
+	g_free(saved);
+	*in='\0';
+}
+/* 
+ * base-subject
+ *
+ */
+
+static void _strip_blob_prefix(char *subject)
+{
+	char *tmp = g_strdup(subject);
+	char *saved = tmp;
+	if (*tmp == '[') {
+		while (*tmp != '\0' && *tmp != ']')
+			tmp++;
+
+		if (*tmp != ']') {
+			g_free(saved);
+			return;
+		}
+
+		tmp++; // skip ']'
+		g_strstrip(tmp);
+		if (strlen(tmp) > 0)
+			strncpy(subject,tmp,strlen(tmp)+1);
+
+	}
+	g_free(saved);
+	return;
+}
+static void _strip_refwd(char *subject) 
+{
+	char *tmp, *saved;
+	if (! (strncasecmp(subject,"re",2)==0 || strncasecmp(subject,"fw",2)==0))
+		return;
+	
+	tmp = g_strdup(subject);	
+	saved = tmp;
+	
+	if (strncasecmp(tmp,"fwd",3)==0) 
+		tmp+=3;
+	else if ((strncasecmp(tmp,"re",2)==0) || (strncasecmp(tmp,"fw",2)==0))
+		tmp+=2;
+	
+	g_strstrip(tmp);
+	if (strlen(tmp) > 0)
+		_strip_blob_prefix(tmp);
+
+	if (*tmp!=':') {
+		g_free(saved);
+		return;
+	}
+
+	tmp++; // skip ':'
+	g_strstrip(tmp);
+	if (strlen(tmp) > 0)
+		strncpy(subject,tmp,strlen(tmp)+1);
+
+	g_free(saved);
+}
+		
+
+
+static void _strip_sub_leader(char *subject)
+{
+	unsigned len;
+	/* strip blobs prefixes */
+	while (1==1) {
+		len = strlen(subject);
+		_strip_blob_prefix(subject);
+		if (strlen(subject)==len)
+			break;
+	}
+	/* strip refwd prefixes */
+	_strip_refwd(subject);
+}
+
+void dm_base_subject(char *subject)
+{
+	unsigned offset, len, olen;
+	char *tmp, *saved;
+	
+	tmp = g_strdup(subject);
+	saved = tmp;
+	dm_pack_spaces(tmp);
+	g_strstrip(tmp);
+	while (1==1) {
+		olen = strlen(tmp);
+		while (g_str_has_suffix(tmp,"(fwd)")) {
+			offset = strlen(tmp) - strlen("(fwd)");
+			tmp[offset] = '\0';
+			g_strstrip(tmp);
+		}
+		while (1==1) {
+			len = strlen(tmp);
+			_strip_sub_leader(tmp);
+			_strip_blob_prefix(tmp);
+			if (strlen(tmp)==len)
+				break;
+		}
+
+		if (g_str_has_suffix(tmp,"]") && g_str_has_prefix(tmp,"[fwd:")) {
+			offset=strlen(tmp)-1;
+			tmp[offset]='\0';
+			tmp+=5;
+			g_strstrip(tmp);
+		}
+		if (strlen(tmp)==olen)
+			break;
+	}
+	strncpy(subject,tmp,strlen(tmp)+1);
+	g_free(saved);
+}

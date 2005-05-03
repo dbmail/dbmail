@@ -61,12 +61,14 @@ extern db_param_t _db_params;
 
 #define DBPFX _db_params.pfx
 /** list of tables used in dbmail */
-#define DB_NTABLES 11
+#define DB_NTABLES 16
 const char *DB_TABLENAMES[DB_NTABLES] = {
 	"users", "aliases", "mailboxes",
 	"messages", "physmessage", "messageblks",
 	"acl", "subscription", "pbsp",
-	"auto_notifications", "auto_replies"
+	"auto_notifications", "auto_replies",
+	"headername","headervalue",
+	"subjectfield","datefield","referencesfield"
 };
 
 /** can be used for making queries to db backend */

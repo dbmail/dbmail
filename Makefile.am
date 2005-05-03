@@ -22,11 +22,33 @@ SIEVEPROGS = dbmail-sievecmd dbmail-timsieved
 endif
 
 bin_PROGRAMS = $(SIEVEPROGS)
-sbin_PROGRAMS = dbmail-smtp dbmail-pop3d dbmail-imapd dbmail-util dbmail-users dbmail-lmtpd 
 
-COMMON = dbmail-user.c dbmail-message.c config.c debug.c list.c dbmd5.c md5.c db.c misc.c mime.c pidfile.c
-SERVER = server.c serverchild.c pool.c
-DELIVER = pipe.c forward.c dsn.c
+sbin_PROGRAMS = dbmail-smtp \
+	dbmail-pop3d \
+	dbmail-imapd \
+	dbmail-util \
+	dbmail-users \
+	dbmail-lmtpd 
+
+COMMON = dbmail-user.c \
+	dbmail-message.c \
+	config.c \
+	debug.c \
+	list.c \
+	dbmd5.c \
+	md5.c \
+	db.c \
+	misc.c \
+	mime.c \
+	pidfile.c 
+	
+SERVER = server.c \
+	serverchild.c \
+	pool.c
+	
+DELIVER = pipe.c \
+	forward.c \
+	dsn.c
 
 # CFLAGS
 #AM_CFLAGS = -fomit-frame-pointer
