@@ -739,7 +739,7 @@ void dbmail_message_cache_subjectfield(struct DbmailMessage *self)
 
 void dbmail_message_cache_referencesfield(struct DbmailMessage *self)
 {
-	GMimeReferences *refs;
+	GMimeReferences *refs, *head;
 	char *field;
 	GString *q;
 
@@ -752,6 +752,8 @@ void dbmail_message_cache_referencesfield(struct DbmailMessage *self)
 	refs = g_mime_references_decode(field);
 	if (! refs)
 		return;
+	
+	head = refs;
 	
 	q = g_string_new("");
 	while (refs->msgid) {
@@ -770,7 +772,7 @@ void dbmail_message_cache_referencesfield(struct DbmailMessage *self)
 
 	g_free(field);
 	g_string_free(q,TRUE);
-	g_mime_references_clear(refs);
+	g_mime_references_clear(&head);
 
 }
 	
