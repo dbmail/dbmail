@@ -81,6 +81,10 @@ static int dm_ldap_user_shadow_rename(u64_t user_idnr, const char *new_name);
 
 void __auth_get_config(void)
 {
+	static int beenhere=0;
+	if (beenhere)
+		return;
+	
 	SetTraceLevel("LDAP");
 
 	GETCONFIGVALUE("BIND_DN",		"LDAP", _ldap_cfg.bind_dn);
@@ -124,6 +128,8 @@ void __auth_get_config(void)
 	trace(TRACE_DEBUG,
 	      "%s,%s: integer ldap scope is [%d]",__FILE__,__func__,
 	      _ldap_cfg.scope_int);
+	
+	beenhere++;
 }
 
 /*
@@ -136,6 +142,37 @@ void __auth_get_config(void)
 int auth_connect(void)
 {
 	__auth_get_config();
+	
+	trace(TRACE_DEBUG, "%s,%s: connecting to ldap server on [%s] : [%d]",
+			__FILE__,__func__, 
+			_ldap_cfg.hostname, 
+			_ldap_cfg.port_int);
+	
+	_ldap_conn = ldap_init(
+			_ldap_cfg.hostname, 
+			_ldap_cfg.port_int);
+	
+	trace(TRACE_DEBUG, "%s,%s: binding to ldap server as [%s] / [xxxxxxxx]",
+			__FILE__,__func__, 
+			_ldap_cfg.bind_dn);
+	
+	/* 
+	 * TODO: support tls connects
+	 */
+
+	
+	if ((_ldap_err = ldap_bind_s(_ldap_conn, 
+					_ldap_cfg.bind_dn, 
+					_ldap_cfg.bind_pw, 
+					LDAP_AUTH_SIMPLE))) {
+		trace(TRACE_ERROR, "%s,%s: ldap_bind_s failed: %s",
+				__FILE__,__func__, 
+				ldap_err2string(_ldap_err));
+		return -1;
+	}
+	trace(TRACE_DEBUG, "%s,%s: successfully bound to ldap server",
+			__FILE__,__func__);
+
 	return 0;
 }
 
@@ -170,41 +207,7 @@ int auth_reconnect(void);
 int auth_reconnect(void)
 {
 	auth_disconnect();
-	/* ...and make anew! */
-	trace(TRACE_DEBUG, "%s,%s: connecting to ldap server on [%s] : [%d]",
-			__FILE__,__func__, 
-			_ldap_cfg.hostname, 
-			_ldap_cfg.port_int);
-	
-	_ldap_conn = ldap_init(
-			_ldap_cfg.hostname, 
-			_ldap_cfg.port_int);
-	
-	trace(TRACE_DEBUG, "%s,%s: binding to ldap server as [%s] / [xxxxxxxx]",
-			__FILE__,__func__, 
-			_ldap_cfg.bind_dn);
-	
-	/* 
-	 *
-	 * TODO: 
-	 *
-	 * support tls connects
-	 *
-	 */
-
-	
-	if ((_ldap_err = ldap_bind_s(_ldap_conn, 
-					_ldap_cfg.bind_dn, 
-					_ldap_cfg.bind_pw, 
-					LDAP_AUTH_SIMPLE))) {
-		trace(TRACE_ERROR, "%s,%s: ldap_bind_s failed: %s",
-				__FILE__,__func__, 
-				ldap_err2string(_ldap_err));
-		return -1;
-	}
-	trace(TRACE_DEBUG, "%s,%s: successfully bound to ldap server",
-			__FILE__,__func__);
-	return 0;
+	return auth_connect();
 }
 
 void dm_ldap_freeresult(GList *entlist)
@@ -238,7 +241,7 @@ GList * dm_ldap_entdm_list_get_values(GList *entlist)
 				trace(TRACE_DEBUG,"%s,%s: value [%s]",
 						__FILE__, __func__,
 						tmp);
-				values = g_list_append_printf(values,"%s", g_strdup(tmp));
+				values = g_list_append_printf(values,"%s", tmp);
 				attlist = g_list_next(attlist);
 			}
 			fldlist = g_list_next(fldlist);
@@ -266,7 +269,7 @@ char *dm_ldap_get_filter(const gchar boolean, const gchar *attribute, GList *val
 	g_string_printf(q,"(%c(%s))", boolean, t->str);
 	s = q->str;
 
-	g_string_free(t,FALSE);
+	g_string_free(t,TRUE);
 	g_string_free(q,FALSE);
 	g_list_foreach(l,(GFunc)g_free,NULL);
 	g_list_free(l);
@@ -383,6 +386,8 @@ char * dm_ldap_user_getdn(u64_t user_idnr)
 		ldap_msgfree(_ldap_res);
 		return NULL;
 	}
+
+	ldap_msgfree(_ldap_res);
 	return dn;
 }
 
@@ -430,6 +435,7 @@ int dm_ldap_mod_field(u64_t user_idnr, const char *fieldname, const char *newval
 				__FILE__, __func__,
 				fieldname, newvalue,
 				ldap_err2string(_ldap_err));
+		ldap_memfree(_ldap_dn);
 		return -1;
 	}
 	ldap_memfree(_ldap_dn);
@@ -564,7 +570,9 @@ GList * __auth_get_every_match(const char *q, char **retfields)
 		}
 		entlist = g_list_append(entlist, fldlist);
 		fldlist = NULL;
-
+		
+		ldap_memfree(dn);
+		
 		ldap_msg = ldap_next_entry(_ldap_conn, ldap_msg);
 	}
 
@@ -624,11 +632,10 @@ char *__auth_get_first_match(const char *q, char **retfields)
 		goto endfree;
 	}
 	
-	if (! (returnid = (char *) dm_malloc(LDAP_RES_SIZE))) {
+	if (! (returnid = (char *)g_malloc0(LDAP_RES_SIZE))) {
 		trace(TRACE_ERROR, "%s,%s: out of memory",__FILE__,__func__);
 		goto endfree;
 	}
-	memset(returnid,'\0',LDAP_RES_SIZE);
 
 	for (k = 0; retfields[k] != NULL; k++) {
 		ldap_vals = ldap_get_values(_ldap_conn, ldap_msg, retfields[k]);
@@ -642,6 +649,11 @@ char *__auth_get_first_match(const char *q, char **retfields)
 		}
 	}
 
+	if (! strlen(returnid)) {
+		g_free(returnid);
+		returnid = NULL;
+	}
+	
       endfree:
 	if (ldap_dn)
 		ldap_memfree(ldap_dn);
@@ -674,13 +686,13 @@ int auth_user_exists(const char *username, u64_t * user_idnr)
 		 username);
 	
 	id_char = __auth_get_first_match(query, fields);
-
 	*user_idnr = (id_char) ? strtoull(id_char, NULL, 0) : 0;
+	if (id_char != NULL)
+		g_free(id_char);
+
 	trace(TRACE_DEBUG, "%s,%s: returned value is [%llu]",__FILE__,__func__,
 	      *user_idnr);
 
-	if (id_char)
-		dm_free(id_char);
 
 	if (*user_idnr != 0)
 		return 1;
@@ -700,17 +712,9 @@ char *auth_get_userid(u64_t user_idnr)
 	char *returnid = NULL;
 	char query[AUTH_QUERY_SIZE];
 	char *fields[] = { _ldap_cfg.field_uid, NULL };
-	/*
-	   if (!user_idnr)
-	   {
-	   trace(TRACE_ERROR,"%s,%s: got NULL as useridnr",__FILE__,__func__);
-	   return 0;
-	   }
-	 */
-	snprintf(query, AUTH_QUERY_SIZE, "(%s=%llu)", _ldap_cfg.field_nid,
-		 user_idnr);
+	
+	snprintf(query, AUTH_QUERY_SIZE, "(%s=%llu)", _ldap_cfg.field_nid, user_idnr);
 	returnid = __auth_get_first_match(query, fields);
-
 	trace(TRACE_DEBUG, "%s,%s: returned value is [%s]",__FILE__,__func__,
 	      returnid);
 
@@ -741,13 +745,12 @@ int auth_getclientid(u64_t user_idnr, u64_t * client_idnr)
 	snprintf(query, AUTH_QUERY_SIZE, "(%s=%llu)", _ldap_cfg.field_nid,
 		 user_idnr);
 	cid_char = __auth_get_first_match(query, fields);
-
 	*client_idnr = (cid_char) ? strtoull(cid_char, NULL, 0) : 0;
+	if (cid_char != NULL)
+		g_free(cid_char);
+
 	trace(TRACE_DEBUG, "%s,%s: found client_idnr [%llu]",__FILE__,__func__,
 	      *client_idnr);
-
-	if (cid_char)
-		dm_free(cid_char);
 
 	return 1;
 }
@@ -771,14 +774,13 @@ int auth_getmaxmailsize(u64_t user_idnr, u64_t * maxmail_size)
 	snprintf(query, AUTH_QUERY_SIZE, "(%s=%llu)", _ldap_cfg.field_nid,
 		 user_idnr);
 	max_char = __auth_get_first_match(query, fields);
-
 	*maxmail_size = (max_char) ? strtoull(max_char, 0, 10) : 0;
+	if (max_char != NULL)
+		g_free(max_char);
+
 	trace(TRACE_DEBUG,
 	      "%s,%s: returned value is [%llu]",__FILE__,__func__,
 	      *maxmail_size);
-
-	if (max_char)
-		dm_free(max_char);
 
 	return 1;
 }
@@ -797,7 +799,7 @@ int auth_getmaxmailsize(u64_t user_idnr, u64_t * maxmail_size)
 char *auth_getencryption(u64_t user_idnr UNUSED)
 {
 	/* ldap does not support fancy passwords */
-	return g_strdup("");
+	return "UNUSED";
 }
 		
 
@@ -814,9 +816,11 @@ GList * auth_get_known_users(void)
 	GString *t = g_string_new(_ldap_cfg.user_objectclass);
 	GList *l = g_string_split(t,",");
 	g_string_free(t,TRUE);
-	query =  dm_ldap_get_filter('&',"objectClass",l);
 	
+	query =  dm_ldap_get_filter('&',"objectClass",l);
 	entlist = __auth_get_every_match(query, fields);
+	g_free(query);
+	
 	trace(TRACE_ERROR, "%s,%s: found %d users",
 			__FILE__,__func__, 
 			g_list_length(entlist));
@@ -1205,11 +1209,14 @@ int auth_change_username(u64_t user_idnr, const char *new_name)
 	}
 	/* else we need to modify an attribute */
 	
+	ldap_memfree(_ldap_dn);
+	
 	if (dm_ldap_mod_field(user_idnr, _ldap_cfg.field_uid, new_name)) {
 		db_rollback_transaction();
 		return -1;
 	}
 	db_commit_transaction();
+	
 	return 0;
 	
 }
@@ -1583,25 +1590,24 @@ int auth_removealias_ext(const char *alias, const char *deliver_to)
 {
 	char *objectfilter, *dn;
 	char *fields[] = { "dn", NULL };
-	GString *t = g_string_new(g_strdup(_ldap_cfg.forw_objectclass));
+	GString *t = g_string_new(_ldap_cfg.forw_objectclass);
 	GList *l = g_string_split(t,",");
 	
 	objectfilter = dm_ldap_get_filter('&',"objectClass", l);
-	
 	g_string_printf(t,"(&%s(%s=%s)(%s=%s))", objectfilter, _ldap_cfg.cn_string, alias, _ldap_cfg.field_fwdtarget, deliver_to);
+	g_free(objectfilter);
 	
 	dn = __auth_get_first_match(t->str, fields);
 	_ldap_err = ldap_delete_s(_ldap_conn, dn);
+	if (dn != NULL)
+		g_free(dn);
+	
 	if (_ldap_err) {
 		trace(TRACE_ERROR, "%s,%s: failure [%s]",
 				__FILE__, __func__, 
 				ldap_err2string(_ldap_err));
 	}
 	
-	if (dn)
-		dm_free(dn);
-	
-	g_free(objectfilter);
 	g_string_free(t,TRUE);
 	g_list_foreach(l,(GFunc)g_free,NULL);
 	return 0;

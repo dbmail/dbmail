@@ -231,9 +231,13 @@ void dsnuser_free(deliver_to_user_t * dsnuser)
 
 	/* These are nominally const, but
 	 * we really do want to free them. */
+	/*
 	dm_free((char *) dsnuser->address);
 	dm_free((char *) dsnuser->mailbox);
-
+	*/
+	dsnuser->address = NULL;
+	dsnuser->mailbox = NULL;
+	
 	dm_list_free(&dsnuser->userids->start);
 	dm_list_free(&dsnuser->forwards->start);
 

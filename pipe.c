@@ -421,7 +421,7 @@ int insert_messages(struct DbmailMessage *message,
 		struct dm_list *dsnusers, 
 		struct dm_list *returnpath)
 {
-	char *header, *body;
+	char *header;
 	u64_t headersize, bodysize, rfcsize;
 	struct element *element, *ret_path;
 	u64_t msgsize;
@@ -453,7 +453,6 @@ int insert_messages(struct DbmailMessage *message,
 	}
 
 	header = dbmail_message_hdrs_to_string(message);
-	body = dbmail_message_body_to_string(message);
 	headersize = (u64_t)dbmail_message_get_hdrs_size(message);
 	bodysize = (u64_t)dbmail_message_get_body_size(message);
 	rfcsize = (u64_t)dbmail_message_get_rfcsize(message);
@@ -583,6 +582,8 @@ int insert_messages(struct DbmailMessage *message,
 
 	trace(TRACE_DEBUG, "insert_messages(): End of function");
 
+	g_free(header);
+	
 	/* if committing the transaction fails, a rollback is performed */
 	if (db_commit_transaction() < 0) 
 		return -1;

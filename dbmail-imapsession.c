@@ -125,7 +125,7 @@ struct ImapSession * dbmail_imap_session_resetFi(struct ImapSession * self)
      
 struct ImapSession * dbmail_imap_session_setClientinfo(struct ImapSession * self, clientinfo_t *ci)
 {
-	self->ci = ci;
+	memcpy(self->ci, ci, sizeof(clientinfo_t));
 	return self;
 }
 struct ImapSession * dbmail_imap_session_setTag(struct ImapSession * self, char * tag)
@@ -161,9 +161,14 @@ void dbmail_imap_session_delete(struct ImapSession * self)
 		null_free(self->ci->userData);
 	}
 	dbmail_imap_session_bodyfetch_free(self);
-	g_free(self->fi);
-	g_free(self->ci);
-	g_free(self->msginfo);
+	
+	if (self->fi)
+		g_free(self->fi);
+	if (self->ci)
+		g_free(self->ci);
+	if (self->msginfo)
+		g_free(self->msginfo);
+	
 	g_free(self);
 }
 

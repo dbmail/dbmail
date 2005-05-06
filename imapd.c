@@ -147,16 +147,19 @@ int main(int argc, char *argv[])
 	do {
 		mainStop = 0;
 		mainRestart = 0;
+		int serrno;
 
 		get_config(&config);
 		CreateSocket(&config);
 
 		switch ((pid = fork())) {
 		case -1:
+			serrno = errno;
 			close(config.listenSocket);
 			trace(TRACE_FATAL, "%s,%s: fork failed [%s]",
 					__FILE__, __func__,
-					strerror(errno));
+					strerror(serrno));
+			errno = serrno;
 
 		case 0:
 			/* child process */
@@ -237,6 +240,10 @@ void Daemonize()
 
 	if (fork())
 		exit(0);
+
+	trace(TRACE_DEBUG,"%s,%s: sid: [%d]", 
+			__FILE__, __func__, getsid(0));
+	
 }
 
 

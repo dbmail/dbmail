@@ -105,6 +105,7 @@ int main(int argc, char *argv[])
 	int exitcode = 0;
 	int c, c_prev = 0, usage_error = 0;
 	struct DbmailMessage *msg = NULL;
+	char *headers;
 	
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 
@@ -306,7 +307,8 @@ int main(int argc, char *argv[])
 	}
 
 	/* parse the list and scan for field and content */
-	if (mime_fetch_headers(dbmail_message_hdrs_to_string(msg), &mimelist) < 0) {
+	headers = dbmail_message_hdrs_to_string(msg);
+	if (mime_fetch_headers(headers, &mimelist) < 0) {
 		trace(TRACE_ERROR,
 		      "main(): mime_fetch_headers failed to read a header list");
 		exitcode = EX_TEMPFAIL;
@@ -407,13 +409,12 @@ int main(int argc, char *argv[])
 	dm_list_free(&returnpath.start);
 	dm_list_free(&users.start);
 
-	dbmail_message_free(msg);
-
 	trace(TRACE_DEBUG, "main(): they're all free. we're done.");
 
 	db_disconnect();
 	auth_disconnect();
 	config_free();
+	g_free(headers);
 
 	trace(TRACE_DEBUG, "main(): exit code is [%d].", exitcode);
 	return exitcode;

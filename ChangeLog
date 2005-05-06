@@ -1,3 +1,10 @@
+2005-05-06  Paul Stevens <paul@nfg.nl>
+
+	* check_dbmail_deliver.c, dbmail-user.c, config.c, lmtp.c, dsn.c, 
+	check_dbmail_common.c, pipe.c, dbmail-message.c, auth/authldap.c,
+	main.c, check_dbmail_message.c: plugged lots of memory leakage.
+	* dbmail-imapsession.c: fixed a double free.
+
 2005-05-03  Paul Stevens <paul@nfg.nl>
 
 	* check_dbmail_common.c, check_dbmail_deliver.c, check_dbmail_imapd.c, 

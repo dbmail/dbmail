@@ -69,8 +69,17 @@ void setup(void)
 void teardown(void)
 {
 	db_disconnect();
+	auth_disconnect();
 	config_free();
 }
+
+START_TEST(test_gmime_init)
+{
+	g_mime_init(0);
+	g_mime_shutdown();
+
+}
+END_TEST
 
 //struct DbmailMessage * dbmail_message_new(void);
 START_TEST(test_dbmail_message_new)
@@ -162,6 +171,7 @@ START_TEST(test_dbmail_message_hdrs_to_string)
 	m = dbmail_message_init_with_string(m, g_string_new(raw_message));
 	result = dbmail_message_hdrs_to_string(m);
 	fail_unless(strlen(result)==235, "dbmail_message_hdrs_to_string failed");
+	g_free(result);
 
 	dbmail_message_free(m);
 }
@@ -176,6 +186,7 @@ START_TEST(test_dbmail_message_body_to_string)
 	m = dbmail_message_init_with_string(m, g_string_new(raw_message));
 	result = dbmail_message_body_to_string(m);
 	fail_unless(strlen(result)==1046, "dbmail_message_body_to_string failed");
+	g_free(result);
 	dbmail_message_free(m);
 }
 END_TEST
@@ -239,11 +250,15 @@ END_TEST
 
 START_TEST(test_dbmail_message_get_header)
 {
+	char *t;
 	struct DbmailMessage *h = dbmail_message_new();
 	struct DbmailMessage *m = dbmail_message_new();
 	
+	
 	m = dbmail_message_init_with_string(m, g_string_new(raw_message));
-	h = dbmail_message_init_with_string(h, g_string_new(dbmail_message_hdrs_to_string(m)));
+	t = dbmail_message_hdrs_to_string(m);
+	h = dbmail_message_init_with_string(h, g_string_new(t));
+	g_free(t);
 	
 	fail_unless(dbmail_message_get_header(m, "X-Foobar")==NULL, "get_header failed on full message");
 	fail_unless(strcmp(dbmail_message_get_header(m,"Subject"),"multipart/mixed")==0,"get_header failed on full message");
@@ -275,8 +290,9 @@ Suite *dbmail_message_suite(void)
 	TCase *tc_message = tcase_create("Message");
 	
 	suite_add_tcase(s, tc_message);
-	
 	tcase_add_checked_fixture(tc_message, setup, teardown);
+	
+	tcase_add_test(tc_message, test_gmime_init);
 	tcase_add_test(tc_message, test_dbmail_message_new);
 	tcase_add_test(tc_message, test_dbmail_message_new_from_stream);
 	tcase_add_test(tc_message, test_dbmail_message_set_class);
@@ -290,9 +306,7 @@ Suite *dbmail_message_suite(void)
 	tcase_add_test(tc_message, test_dbmail_message_set_header);
 	tcase_add_test(tc_message, test_dbmail_message_set_header);
 	tcase_add_test(tc_message, test_dbmail_message_get_header);
-	
 	tcase_add_test(tc_message, test_dbmail_message_cache_headers);
-
 	tcase_add_test(tc_message, test_dbmail_message_free);
 	return s;
 }

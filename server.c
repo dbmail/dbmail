@@ -140,7 +140,7 @@ int StartServer(serverConfig_t * conf)
   
  	trace(TRACE_DEBUG, "%s,%s: starting main service loop", __FILE__, __func__);
  	while (!GeneralStopRequested) {
-		if (db_connect() != 0) {
+		if (db_check_connection() != 0) {
 			if (! stopped) {
 				alarm(0);
 				trace(TRACE_MESSAGE,"%s,%s: entering sleep-mode until database is back again",
@@ -157,7 +157,6 @@ int StartServer(serverConfig_t * conf)
 			}
 
 			stopped=0;
-			db_disconnect();
  			manage_restart_children();
 		}
 	}

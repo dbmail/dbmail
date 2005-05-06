@@ -474,6 +474,7 @@ int do_show(const char * const name)
 					username = auth_get_userid(*(u64_t *)userids->data);
 					qerrorf("deliver [%s] to [%s]\n-------\n", name, username);
 					do_show(username);
+					g_free(username);
 					userids = g_list_next(userids);
 				}
 				g_list_free(userids);
@@ -487,7 +488,11 @@ int do_show(const char * const name)
 
 		GList *out = NULL;
 		GString *s = g_string_new("");
-		out = g_list_append_printf(out,"%s", auth_get_userid(useridnr));
+		
+		username = auth_get_userid(useridnr);
+		out = g_list_append_printf(out,"%s", username);
+		g_free(username);
+		
 		out = g_list_append_printf(out,"x");
 		out = g_list_append_printf(out,"%llu", useridnr);
 		out = g_list_append_printf(out,"%llu", cid);

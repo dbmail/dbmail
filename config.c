@@ -41,6 +41,7 @@
 /** dictionary which holds the configuration */
 static dictionary *config_dict = NULL;
 
+static int configured = 0;
 /**
  * read the configuration file and stores the configuration
  * directives in an internal structure.
@@ -49,8 +50,11 @@ int config_read(const char *config_filename)
 {
         char *config_filename_copy;
         int result = 0;
-
-        assert(config_filename != NULL);
+	
+	if (configured++) 
+		return 0;
+        
+	assert(config_filename != NULL);
         
         config_filename_copy = g_strdup(config_filename);
         config_dict = iniparser_load(config_filename_copy);
@@ -70,6 +74,9 @@ int config_read(const char *config_filename)
  */
 void config_free(void) 
 {
+	if (--configured) 
+		return;
+	
 	iniparser_freedict(config_dict);
 }
 

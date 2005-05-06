@@ -76,7 +76,9 @@ void setup(void)
 
 void teardown(void)
 {
+	auth_disconnect();
 	db_disconnect();
+	config_free();
 }
 
 
@@ -102,6 +104,7 @@ void teardown(void)
 START_TEST(test_insert_messages)
 {
 	int result;
+	char *header;
 	struct DbmailMessage *message;
 	struct dm_list dsnusers, headerfields, returnpath;
 	GString *tmp;
@@ -119,12 +122,17 @@ START_TEST(test_insert_messages)
 	dsnuser.address = "testuser1";
 	dm_list_nodeadd(&dsnusers, &dsnuser, sizeof(deliver_to_user_t));
 	
-	mime_fetch_headers(dbmail_message_hdrs_to_string(message), &headerfields);
+	header = dbmail_message_hdrs_to_string(message);
+	mime_fetch_headers(header, &headerfields);
+	g_free(header);
 
 	result = insert_messages(message, &headerfields, &dsnusers, &returnpath);
 
 	fail_unless(result==0,"insert_messages failed");
 
+	dm_list_free(&dsnusers.start);
+	dm_list_free(&headerfields.start);
+	dm_list_free(&returnpath.start);
 	g_string_free(tmp,TRUE);
 	dbmail_message_free(message);
 }
@@ -200,6 +208,7 @@ u64_t get_first_user_idnr(void)
 
 START_TEST(test_auth_connect)
 {
+	auth_disconnect();
 	fail_unless(auth_connect()==0,"auth_connect failed");
 }
 END_TEST
@@ -216,6 +225,7 @@ END_TEST
 START_TEST(test_auth_disconnect)
 {
 	fail_unless(auth_disconnect()==0,"auth_disconnect failed");
+	auth_connect();
 }
 END_TEST
 
@@ -343,6 +353,8 @@ START_TEST(test_auth_check_user_ext)
 	dm_list_init(&uids);
 	dm_list_init(&fwds);
 	result = auth_check_user_ext("foobar@foobar.org",&uids,&fwds,checks);
+	dm_list_free(&uids.start);
+	dm_list_free(&fwds.start);
 }
 END_TEST
 /**
@@ -536,6 +548,7 @@ START_TEST(test_auth_get_userid)
 	fail_unless(strlen(username)>3,"auth_get_userid failed");
 	auth_user_exists(username, &testidnr);
 	fail_unless(testidnr==user_idnr,"auth_get_userid: auth_user_exists returned wrong idnr");
+	dm_free(username);
 }
 END_TEST
 
@@ -692,6 +705,9 @@ START_TEST(test_dm_stresc)
 	char *to;
 	to = dm_stresc("test");
 	fail_unless(strcmp(to,"test")==0,"dm_stresc failed 1");
+	g_free(to);
+	to = NULL;
+	
 	to = dm_stresc("test's");
 	fail_unless(strcmp(to,"test\\'s")==0,"dm_stresc failed 2");
 	g_free(to);

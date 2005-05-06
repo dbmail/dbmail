@@ -95,6 +95,23 @@ struct DbmailMessage * dbmail_message_new(void)
 	return self;
 }
 
+void dbmail_message_free(struct DbmailMessage *self)
+{
+	if (self->headers)
+		g_relation_destroy(self->headers);
+	if (self->content)
+		g_object_unref(self->content);
+	self->headers=NULL;
+	self->content=NULL;
+	
+	g_hash_table_destroy(self->header_dict);
+	
+	self->id=0;
+	dm_free(self);
+	g_mime_shutdown();
+}
+
+
 /* \brief create and initialize a new DbmailMessage
  * \param FILE *instream from which to read
  * \param int streamtype is DBMAIL_STREAM_PIPE or DBMAIL_STREAM_LMTP
@@ -155,6 +172,7 @@ struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *sel
 				(! g_mime_message_get_header(GMIME_MESSAGE(self->content),"Subject"))) {
 			dbmail_message_set_class(self, DBMAIL_MESSAGE_PART);
 			g_object_unref(self->content);
+			self->content=NULL;
 			_set_content(self, content);
 		}
 	}
@@ -307,11 +325,13 @@ gchar * dbmail_message_get_header(struct DbmailMessage *self, const char *header
 /* dump message(parts) to char ptrs */
 gchar * dbmail_message_to_string(struct DbmailMessage *self) 
 {
-	gchar *s;	
+	gchar *s, *b;	
 	GString *t;
 	assert(self->content);
 	
-	t = g_string_new(g_mime_object_to_string(GMIME_OBJECT(self->content)));
+	b = g_mime_object_to_string(GMIME_OBJECT(self->content));
+	t = g_string_new(b);
+	g_free(b);
 	
 	s = t->str;
 	g_string_free(t,FALSE);
@@ -319,11 +339,13 @@ gchar * dbmail_message_to_string(struct DbmailMessage *self)
 }
 gchar * dbmail_message_hdrs_to_string(struct DbmailMessage *self)
 {
-	char *s;
+	char *s, *b;
 	GString *t;
 	assert(self->headers);
 	
-	t = g_string_new(g_mime_object_get_headers((GMimeObject *)(self->content)));
+	b = g_mime_object_get_headers((GMimeObject *)(self->content));
+	t = g_string_new(b);
+	g_free(b);
 	
 	s = t->str;
 	g_string_free(t,FALSE);
@@ -331,11 +353,14 @@ gchar * dbmail_message_hdrs_to_string(struct DbmailMessage *self)
 }
 gchar * dbmail_message_body_to_string(struct DbmailMessage *self)
 {
-	char *s;
+	char *s, *b;
 	GString *t;
 	assert(self->content);
 	
-	t = g_string_new(g_mime_object_to_string((GMimeObject *)(self->content)));
+	b = g_mime_object_to_string((GMimeObject *)(self->content));
+	t = g_string_new(b);
+	g_free(b);
+
 	t = g_string_erase(t,0,dbmail_message_get_hdrs_size(self));
 	
 	s = t->str;
@@ -346,39 +371,32 @@ gchar * dbmail_message_body_to_string(struct DbmailMessage *self)
 /* 
  * Some dynamic accessors.
  * 
- * 'Premature optimization is the root of all evil.' 
- * 	Donald Knuth/The Art of Computer Programming.
- * 
  * Don't cache these values to allow changes in message content!!
  * 
  */
 size_t dbmail_message_get_size(struct DbmailMessage *self)
 {
-	return strlen(dbmail_message_to_string(self));
+	char *s; size_t r;
+	s = dbmail_message_to_string(self);
+	r = strlen(s);
+	g_free(s);
+	return r;
 }
 size_t dbmail_message_get_hdrs_size(struct DbmailMessage *self)
 {
-	return strlen(dbmail_message_hdrs_to_string(self));
+	char *s; size_t r;
+	s = dbmail_message_hdrs_to_string(self);
+	r = strlen(s);
+	g_free(s);
+	return r;
 }
 size_t dbmail_message_get_body_size(struct DbmailMessage *self)
 {
-	return strlen(dbmail_message_body_to_string(self));
-}
-
-void dbmail_message_free(struct DbmailMessage *self)
-{
-	if (self->headers)
-		g_relation_destroy(self->headers);
-	if (self->content)
-		g_object_unref(self->content);
-	self->headers=NULL;
-	self->content=NULL;
-	
-	g_hash_table_destroy(self->header_dict);
-	
-	self->id=0;
-	dm_free(self);
-	g_mime_shutdown();
+	char *s; size_t r;
+	s = dbmail_message_body_to_string(self);
+	r = strlen(s);
+	g_free(s);
+	return r;
 }
 
 
@@ -747,7 +765,7 @@ void dbmail_message_cache_subjectfield(struct DbmailMessage *self)
 void dbmail_message_cache_referencesfield(struct DbmailMessage *self)
 {
 	GMimeReferences *refs, *head;
-	char *field;
+	const char *field;
 	GString *q;
 
 	field = dbmail_message_get_header(self,"References");
@@ -757,6 +775,7 @@ void dbmail_message_cache_referencesfield(struct DbmailMessage *self)
 		return;
 
 	refs = g_mime_references_decode(field);
+	
 	if (! refs) {
 		trace(TRACE_WARNING, "%s,%s: reference_decode failed [%llu]",
 				__FILE__, __func__, self->physid);
@@ -765,8 +784,8 @@ void dbmail_message_cache_referencesfield(struct DbmailMessage *self)
 	
 	head = refs;
 	
-	q = g_string_new("");
 	while (refs->msgid) {
+		q = g_string_new("");
 		
 		g_string_printf(q, "INSERT INTO %sreferencesfield (physmessage_id, referencesfield) "
 				"VALUES (%llu,'%s')", DBPFX, self->physid, refs->msgid);
@@ -775,13 +794,13 @@ void dbmail_message_cache_referencesfield(struct DbmailMessage *self)
 			trace(TRACE_WARNING, "%s,%s: insert referencesfield failed [%s]",
 					__FILE__, __func__, q->str);
 		}
+		g_string_free(q,TRUE);
+
 		if (refs->next == NULL)
 			break;
 		refs = refs->next;
 	}
 
-	g_free(field);
-	g_string_free(q,TRUE);
 	g_mime_references_clear(&head);
 
 }

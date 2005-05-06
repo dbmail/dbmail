@@ -92,6 +92,7 @@ START_TEST(test_db_connect)
 {
 	int res;
 	GetDBParams(&_db_params);
+	db_disconnect();
 	res = db_connect();
 	fail_unless(res==0, "Unable to connect to db");
 }
