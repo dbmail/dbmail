@@ -438,9 +438,10 @@ void manage_stop_children()
 
 		for (i = 0; i < scoreboard->conf->maxChildren; i++) {
 			chpid = scoreboard->child[i].pid;
-			if (chpid != 0)
+			if (chpid > 0) {
 				kill(chpid, SIGKILL);;
-			scoreboard_release(chpid);			
+				scoreboard_release(chpid);
+			}
 		}
 	}
 }

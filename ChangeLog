@@ -1,9 +1,17 @@
+2005-05-09  Paul Stevens <paul@nfg.nl>
+
+	* pool.c (manage_stop_children): guard against sending broadcast
+	signals (closes: #198).
+	* server.c (ParentSigHandler): wait for zombies (closes: #199).
+	
 2005-05-06  Paul Stevens <paul@nfg.nl>
 
 	* check_dbmail_deliver.c, dbmail-user.c, config.c, lmtp.c, dsn.c, 
 	check_dbmail_common.c, pipe.c, dbmail-message.c, auth/authldap.c,
 	main.c, check_dbmail_message.c: plugged lots of memory leakage.
 	* dbmail-imapsession.c: fixed a double free.
+	* server.c: use db_check_connection instead of
+	db_connect/db_disconnect in main loop.
 
 2005-05-03  Paul Stevens <paul@nfg.nl>
 
