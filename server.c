@@ -70,7 +70,7 @@ int SetParentSigHandler()
 
 	act.sa_sigaction = ParentSigHandler;
 	sigemptyset(&act.sa_mask);
-	act.sa_flags = SA_SIGINFO; 
+	act.sa_flags = SA_SIGINFO | SA_NOCLDSTOP;
 
 	sigaction(SIGCHLD, &act, 0);
 	sigaction(SIGINT, &act, 0);
@@ -189,7 +189,10 @@ void ParentSigHandler(int sig, siginfo_t * info, void *data)
 		alarm(10);
 		break;
  
-	case SIGCHLD:	/* ignore, wait for child in main loop */
+	case SIGCHLD:
+		/* ignore, wait for child in main loop */
+		/* but we need to catch zombie */
+		waitpid(-1,&sig,WNOHANG);
 		break;		
 
 	case SIGHUP:
