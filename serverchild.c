@@ -302,6 +302,7 @@ int PerformChildTask(ChildInfo_t * info)
 	srand((int) ((int) time(NULL) + (int) getpid()));
 	connected = 1;
 
+	
 	for (i = 0; i < info->maxConnect && !ChildStopRequested; i++) {
 		if (db_check_connection()) {
 			trace(TRACE_ERROR, "%s,%s: database has gone away", 
@@ -333,7 +334,7 @@ int PerformChildTask(ChildInfo_t * info)
 		client.timeout = info->timeout;
 		strncpy(client.ip, inet_ntoa(saClient.sin_addr), IPNUM_LEN);
 		client.clientname[0] = '\0';
-
+			
 		if (info->resolveIP) {
 			clientHost = gethostbyaddr((char *) &saClient.sin_addr, 
 					sizeof(saClient.sin_addr), saClient.sin_family);

@@ -52,6 +52,7 @@ typedef struct {
 	int resolveIP;
 	char *timeoutMsg;
 	field_t serverUser, serverGroup;
+	field_t socket;
 	int (*ClientHandler) (clientinfo_t *);
 } serverConfig_t;
 

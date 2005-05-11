@@ -317,7 +317,16 @@ void SetConfigItems(serverConfig_t * config)
 	trace(TRACE_DEBUG, "SetConfigItems(): timeout [%d] seconds",
 	      config->timeout);
 
-
+	/* SOCKET */
+	config_get_value("SOCKET","LMTP", val);
+	if (strlen(val) == 0)
+		trace(TRACE_DEBUG,"%s,%s: no value for SOCKET in config file",
+				__FILE__, __func__);
+	strncpy(config->socket, val, FIELDSIZE);
+	trace(TRACE_DEBUG, "%s,%s: socket %s", 
+			__FILE__, __func__,
+			config->socket);
+	
 	/* read items: PORT */
 	config_get_value("PORT", "LMTP", val);
 	if (strlen(val) == 0)
@@ -356,6 +365,7 @@ void SetConfigItems(serverConfig_t * config)
 
 	trace(TRACE_DEBUG, "SetConfigItems(): %sresolving client IP",
 	      config->resolveIP ? "" : "not ");
+
 
 
 	/* read items: IMAP-BEFORE-SMTP */

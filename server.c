@@ -40,7 +40,9 @@
 #include <string.h>
 #include <time.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <sys/time.h>
 #include <sys/wait.h>
 #include <sys/ipc.h>
@@ -163,6 +165,9 @@ int StartServer(serverConfig_t * conf)
    
  	manage_stop_children();
  	scoreboard_delete();
+
+	if (strlen(conf->socket) > 0)
+		unlink(conf->socket);
  
 	return Restart;
 }
@@ -206,8 +211,51 @@ void ParentSigHandler(int sig, siginfo_t * info, void *data)
 	errno = saved_errno;
 }
 
+static int create_unix_socket(serverConfig_t * conf)
+{
+	int sock, err;
+	struct sockaddr_un saServer;
 
-int CreateSocket(serverConfig_t * conf)
+	conf->resolveIP=0;
+
+	if ((sock = socket(PF_UNIX, SOCK_STREAM, 0)) == -1) {
+		err = errno;
+		trace(TRACE_FATAL, "%s,%s: [%d] %s", 
+				__FILE__, __func__, err, strerror(err));
+	}
+	trace(TRACE_DEBUG, "%s,%s: socket created", __FILE__, __func__);
+	
+	
+	memset(&saServer, 0, sizeof(saServer));
+	saServer.sun_family = AF_UNIX;
+	strncpy(saServer.sun_path,conf->socket, sizeof(saServer.sun_path));
+
+	/* bind the address */
+	if ((bind(sock, (struct sockaddr *) &saServer, sizeof(saServer))) == -1) {
+		err = errno;
+		close(sock);
+		trace(TRACE_FATAL, "%s,%s: %s", __FILE__, __func__, strerror(err));
+	}
+	trace(TRACE_DEBUG, "%s,%s: bind ok", __FILE__, __func__);
+
+	if ((listen(sock, BACKLOG)) == -1) {
+		err = errno;
+		close(sock);
+		trace(TRACE_FATAL, "%s,%s: %s", __FILE__, __func__, strerror(err));
+	}
+	
+	conf->listenSocket = sock;
+	
+	chmod (conf->socket,02777);
+
+	trace(TRACE_INFO, "%s,%s: socket complete", __FILE__, __func__);
+
+	return 0;
+
+	
+}
+
+static int create_inet_socket(serverConfig_t * conf)
 {
 	int sock, err;
 	struct sockaddr_in saServer;
@@ -265,3 +313,11 @@ int CreateSocket(serverConfig_t * conf)
 	return 0;
 }
 
+int CreateSocket(serverConfig_t * conf)
+{
+	if (strlen(conf->socket) > 0) {
+		/* we only support one socket type for now */
+		return create_unix_socket(conf);
+	}
+	return create_inet_socket(conf);
+}
