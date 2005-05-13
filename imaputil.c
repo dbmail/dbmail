@@ -2026,3 +2026,75 @@ int mime_unwrap(char *to, const char *from)
 }
 
 
+/* 
+ * \brief listexpression match for imap (rfc2060) 
+ * \param p pattern
+ * \param s string to search
+ * \param x separator string ("." or "/"- multichar okay; e.g. "π" would work f
+ * 	you can find a IMAP client that read rfc2060)
+ * \param flags presently only LISTEX_NOCASE -- if you want case-insensitive
+ * 	"folders"
+ * \return 1 indicates a match
+ */
+#define LISTEX_NOCASE	1
+int listex_match(const char *p, const char *s,
+			const char *x, int flags)
+{
+	int i, p8;
+	p8=0;
+	while (*p) {
+		if (!p8 && *p == '%') {
+			p++;
+			while (*s) {
+				for (i = 0; x[i] && x[i] == s[i]; i++);
+				if (! x[i]) {
+					s += i;
+					break;
+				}
+				s++;
+			}
+			/* %. */
+			for (i = 0; x[i] && x[i] == p[i]; i++);
+			if (! x[i]) p += i;
+			if (*s || *p) return 0;
+			return 1;
+
+		}
+		if (!p8 && *p == '*') {
+			/* use recursive for synchronize */
+			p++;
+			if (!(*p)) return 1;
+			while (*s) {
+				if (listex_match(p,s,x,flags)) return 1;
+				s++;
+			}
+			return 0;
+
+		}
+		
+		if (!p8 && *p == *x) {
+			for (i = 0; x[i] && p[i] == x[i] && p[i] == s[i]; i++);
+			if (! x[i]) {
+				p += i; s += i;
+				continue; /* sync'd */
+			}
+			/* fall; try regular search */
+		}
+
+		if ((flags & LISTEX_NOCASE && tolower(((unsigned int)*p))
+					== tolower(((unsigned int)*s)))
+		|| (*p == *s)) {
+			p8=(((unsigned char)*p) > 0xC0);
+			p++; s++;
+		} else {
+			/* failed */
+			return 0;
+		}
+	}
+	if (*p || *s) return 0;
+	return 1;
+}
+
+
+
+

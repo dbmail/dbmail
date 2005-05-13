@@ -1,3 +1,8 @@
+2005-05-13  Paul Stevens <paul@nfg.nl>
+
+	* imaputil.c, imaputil.h, check_dbmail_imapd.c: integrated Geo's
+	listex_match code in the test-frame.
+
 2005-05-11  Paul Stevens <paul@nfg.nl>
 
 	* server.h, server.c, serverchild.c, lmtpd.c, dbmail.conf: added 

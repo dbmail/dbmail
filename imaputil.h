@@ -98,6 +98,7 @@ char * dbmail_imap_plist_as_string(GList *plist);
 
 int mime_unwrap(char *to, const char *from); 
 int sort_search(struct dm_list *searchlist);
+int listex_match(const char *p, const char *s, const char *x, int flags);
 
 
 #endif

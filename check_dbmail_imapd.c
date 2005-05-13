@@ -366,7 +366,49 @@ START_TEST(test_dm_base_subject)
 }
 END_TEST
 
+#define Y(z,q) fail_unless(z==(q), "listex_match failed")
+#define X(z,a,b) Y(z,listex_match(a,b,".",0))
+#define N(z,a,b) Y(z,listex_match(a,b,"¿",0))
+START_TEST(test_listex_match)
+{
+	X(1, "INBOX", "INBOX");
+	X(0, "INBOX", "INBOX.Foo");
+	X(0, "INBOX", "INBOX.Foo.Bar");
 
+	X(0, "INBOX.%", "INBOX");
+	X(1, "INBOX.%", "INBOX.Foo");
+	X(0, "INBOX.%", "INBOX.Foo.Bar");
+
+	X(0, "INBOX.*", "INBOX");
+	X(1, "INBOX.*", "INBOX.Foo");
+	X(1, "INBOX.*", "INBOX.Foo.Bar");
+
+	X(1, "INBOX*", "INBOX");
+	X(1, "INBOX*", "INBOX.Foo");
+	X(1, "INBOX*", "INBOX.Foo.Bar");
+
+	X(1, "INBOX%", "INBOX");
+	X(0, "INBOX%", "INBOX.Foo");
+	X(0, "INBOX%", "INBOX.Foo.Bar");
+
+	X(0, "INBOX*Foo", "INBOX");
+	X(1, "INBOX*Foo", "INBOX.Foo");
+	X(0, "INBOX*Foo", "INBOX.Foo.Bar");
+
+	X(0, "INBOX*Bar", "INBOX");
+	X(0, "INBOX*Bar", "INBOX.Foo");
+	X(1, "INBOX*Bar", "INBOX.Foo.Bar");
+
+	X(0, "INBOX.*Bar", "INBOX");
+	X(0, "INBOX.*Bar", "INBOX.Foo");
+	X(1, "INBOX.*Bar", "INBOX.Foo.Bar");
+
+	N(0, "INBOX\317\200*Bar", "INBOX");
+	N(0, "INBOX\317\200*Bar", "INBOX\317\200""Foo");
+	N(1, "INBOX\317\200*Bar", "INBOX\317\200""Foo\317\200""Bar");
+
+}
+END_TEST
 
 Suite *dbmail_suite(void)
 {
@@ -397,6 +439,7 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_util, test_dbmail_imap_plist_as_string);
 	tcase_add_test(tc_util, test_g_list_slices);
 	tcase_add_test(tc_util, test_build_set);
+	tcase_add_test(tc_util, test_listex_match);
 
 	tcase_add_checked_fixture(tc_misc, setup, NULL);
 	tcase_add_test(tc_misc, test_dm_base_subject);
