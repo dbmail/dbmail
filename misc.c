@@ -152,14 +152,14 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
 		if (strcmp(owner_name, PUBLIC_FOLDER_USER) == 0) {
 			g_string_printf(tmp, "%s%s%s", 
 					NAMESPACE_PUBLIC, 
-					MAILBOX_SEPERATOR, 
+					MAILBOX_SEPARATOR, 
 					tmp_name);
 		} else {
 			g_string_printf(tmp, "%s%s%s%s%s", 
 					NAMESPACE_USER, 
-					MAILBOX_SEPERATOR, 
+					MAILBOX_SEPARATOR, 
 					owner_name, 
-					MAILBOX_SEPERATOR, 
+					MAILBOX_SEPARATOR, 
 					tmp_name);
 		}
 		dm_free(owner_name);
@@ -181,14 +181,14 @@ const char *mailbox_remove_namespace(const char *fq_name)
 	   can be quite inefficient! On the other hand, this
 	   is a function that's not used that much. */
 	if (strcmp(fq_name, NAMESPACE_USER) == 0) {
-		temp = strstr(fq_name, MAILBOX_SEPERATOR);
+		temp = strstr(fq_name, MAILBOX_SEPARATOR);
 		if (temp == NULL || strlen(temp) <= 1) {
 			trace(TRACE_ERROR,
 			      "%s,%s wronly constructed mailbox " "name",
 			      __FILE__, __func__);
 			return NULL;
 		}
-		temp = strstr(&temp[1], MAILBOX_SEPERATOR);
+		temp = strstr(&temp[1], MAILBOX_SEPARATOR);
 		if (temp == NULL || strlen(temp) <= 1) {
 			trace(TRACE_ERROR,
 			      "%s,%s wronly constructed mailbox " "name",
@@ -198,7 +198,7 @@ const char *mailbox_remove_namespace(const char *fq_name)
 		return &temp[1];
 	}
 	if (strcmp(fq_name, NAMESPACE_PUBLIC) == 0) {
-		temp = strstr(fq_name, MAILBOX_SEPERATOR);
+		temp = strstr(fq_name, MAILBOX_SEPARATOR);
 
 		if (temp == NULL || strlen(temp) <= 1) {
 			trace(TRACE_ERROR,
@@ -681,3 +681,76 @@ void dm_base_subject(char *subject)
 	strncpy(subject,tmp,strlen(tmp)+1);
 	g_free(saved);
 }
+
+/* 
+ * \brief listexpression match for imap (rfc2060) 
+ * \param p pattern
+ * \param s string to search
+ * \param x separator string ("." or "/"- multichar okay; e.g. "π" would work f
+ * 	you can find a IMAP client that read rfc2060)
+ * \param flags presently only LISTEX_NOCASE -- if you want case-insensitive
+ * 	"folders"
+ * \return 1 indicates a match
+ */
+#define LISTEX_NOCASE	1
+int listex_match(const char *p, const char *s,
+			const char *x, int flags)
+{
+	int i, p8;
+	p8=0;
+	trace(TRACE_DEBUG,"%s,%s: pattern [%s], string [%s], delim [%s], flags [%d]",
+			__FILE__, __func__, p, s, x, flags);
+	while (*p) {
+		if (!p8 && *p == '%') {
+			p++;
+			while (*s) {
+				for (i = 0; x[i] && x[i] == s[i]; i++);
+				if (! x[i]) {
+					s += i;
+					break;
+				}
+				s++;
+			}
+			/* %. */
+			for (i = 0; x[i] && x[i] == p[i]; i++);
+			if (! x[i]) p += i;
+			if (*s || *p) return 0;
+			return 1;
+
+		}
+		if (!p8 && *p == '*') {
+			/* use recursive for synchronize */
+			p++;
+			if (!(*p)) return 1;
+			while (*s) {
+				if (listex_match(p,s,x,flags)) return 1;
+				s++;
+			}
+			return 0;
+
+		}
+		
+		if (!p8 && *p == *x) {
+			for (i = 0; x[i] && p[i] == x[i] && p[i] == s[i]; i++);
+			if (! x[i]) {
+				p += i; s += i;
+				continue; /* sync'd */
+			}
+			/* fall; try regular search */
+		}
+
+		if ((flags & LISTEX_NOCASE && tolower(((unsigned int)*p))
+					== tolower(((unsigned int)*s)))
+		|| (*p == *s)) {
+			p8=(((unsigned char)*p) > 0xC0);
+			p++; s++;
+		} else {
+			/* failed */
+			return 0;
+		}
+	}
+	if (*p || *s) return 0;
+	return 1;
+}
+
+

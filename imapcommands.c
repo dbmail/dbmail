@@ -835,8 +835,8 @@ int _ic_list(struct ImapSession *self)
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	u64_t *children = NULL;
 	int result;
-	size_t slen, plen;
-	unsigned i, j;
+	size_t slen;
+	unsigned i;
 	unsigned nchildren;
 	char *pattern;
 	char *thisname = list_is_lsub ? "LSUB" : "LIST";
@@ -869,53 +869,14 @@ int _ic_list(struct ImapSession *self)
 			return 1;
 		}
 	}
+	pattern = g_strdup_printf("%s%s", self->args[0], self->args[1]);
 
-	plen = strlen(self->args[1]) * 6;
-	/* FIXME: We need to allocated a sane amount of memory for this, 
-	   instead of adding an extra 20 places for just for having extra
-	   space. This is bound to fail sometime!! */
-	pattern = (char *) dm_malloc(sizeof(char) * (plen + slen + 20));
-	if (!pattern) {
-		dbmail_imap_session_printf(self, "* BYE out of memory\r\n");
-		return -1;
-	}
-
-	memset(pattern, '\0', plen + slen + 12);
-	pattern[0] = '^';
-	strcpy(&pattern[1], self->args[0]);
-
-	i = slen + 1;
-	for (j = 0; self->args[1][j] && i < (plen + slen + 1); j++) {
-		if (self->args[1][j] == '*') {
-			pattern[i++] = '.';
-			pattern[i++] = '*';
-		} else if (self->args[1][j] == '%') {
-			pattern[i++] = '[';
-			pattern[i++] = '^';
-			pattern[i++] = '\\';
-			pattern[i++] = '/';
-			pattern[i++] = ']';
-			pattern[i++] = '*';
-		} else
-			pattern[i++] = self->args[1][j];
-	}
-
-	/* small addition by Ilja */
-	if (pattern[i - 1] != '*') {
-		pattern[i++] = '.';
-		pattern[i++] = '*';
-	}
-	pattern[i] = '$';
-
-	trace(TRACE_INFO, "ic_list(): build the pattern: [%s]", pattern);
-
-	result =
-	    db_findmailbox_by_regex(ud->userid, pattern, &children,
-				    &nchildren, list_is_lsub);
+	trace(TRACE_INFO, "ic_list(): search with pattern: [%s]", pattern);
+	result = db_findmailbox_by_regex(ud->userid, pattern, &children, &nchildren, list_is_lsub);
 	if (result == -1) {
 		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 		dm_free(children);
-		dm_free(pattern);
+		g_free(pattern);
 		return -1;
 	}
 
@@ -923,7 +884,7 @@ int _ic_list(struct ImapSession *self)
 		dbmail_imap_session_printf(self, "%s BAD invalid pattern specified\r\n",
 			self->tag);
 		dm_free(children);
-		dm_free(pattern);
+		g_free(pattern);
 		return 1;
 	}
 
@@ -936,7 +897,7 @@ int _ic_list(struct ImapSession *self)
 			plist = g_list_append(plist, g_strdup("\\noinferiors"));
 		
 		/* show */
-		dbmail_imap_session_printf(self, "* %s %s \"/\" \"%s\"\r\n", thisname, dbmail_imap_plist_as_string(plist), mb->name);
+		dbmail_imap_session_printf(self, "* %s %s \"%s\" \"%s\"\r\n", thisname, dbmail_imap_plist_as_string(plist), MAILBOX_SEPARATOR, mb->name);
 		g_list_foreach(plist,(GFunc)g_free,NULL);
 		g_list_free(plist);
 	}
@@ -945,8 +906,7 @@ int _ic_list(struct ImapSession *self)
 	if (children)
 		dm_free(children);
 
-	dm_free(pattern);
-
+	g_free(pattern);
 	dbmail_imap_session_printf(self, "%s OK %s completed\r\n", self->tag, thisname);
 	return 0;
 }
@@ -2721,8 +2681,8 @@ int _ic_namespace(struct ImapSession *self)
 
 	dbmail_imap_session_printf(self, "* NAMESPACE ((\"\" \"%s\")) ((\"%s\" \"%s\")) "
 		"((\"%s\" \"%s\"))\r\n",
-		MAILBOX_SEPERATOR, NAMESPACE_USER,
-		MAILBOX_SEPERATOR, NAMESPACE_PUBLIC, MAILBOX_SEPERATOR);
+		MAILBOX_SEPARATOR, NAMESPACE_USER,
+		MAILBOX_SEPARATOR, NAMESPACE_PUBLIC, MAILBOX_SEPARATOR);
 	dbmail_imap_session_printf(self, "%s OK NAMESPACE complete\r\n", self->tag);
 	return 0;
 }

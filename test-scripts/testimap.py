@@ -178,8 +178,14 @@ class testImapServer(unittest.TestCase):
             defaults to the top-level mail folder, and PATTERN defaults to
             match anything.  Returned data contains a list of `LIST' responses.
         """
-        dirlist=['dir1','dir1/sub1','dir2/sub2','dir2/sub 2a','dir3/sub 3/ssub1','dir3/sub 3/.ssub2']
-        for d in dirlist: self.o.create(d)
+        dirlist=['dir1','dir2','dir3','dir1/sub1','dir2/sub2','dir2/sub 2a','dir3/sub 3','dir3/sub 3/ssub1','dir3/sub 3/.ssub2']
+        for d in dirlist: 
+            self.o.create(d)
+        print self.o.list()
+        print self.o.list("dir1/")
+        print self.o.list("dir2/")
+        print self.o.list("dir3/")
+
         try:    
             self.assertEquals(self.o.list('"dir1"')[0],'OK')
         except: 
@@ -232,9 +238,21 @@ class testImapServer(unittest.TestCase):
             to match any mailbox.  Returned data are tuples of message part
             envelope and data.
         """
-        self.o.create('testsubscribe')
-        self.o.subscribe('testsubscribe')
-        self.assertEquals('() "/" "testsubscribe"' in self.o.lsub()[1], True)
+        mailboxes = ['test1','test1/sub1','test1/sub1/subsub1',
+            'test2','test2/sub2','test2/subsub2',
+            'test3']
+        for mailbox in mailboxes:
+            self.o.create(mailbox)
+            self.o.subscribe(mailbox)
+            
+#        print self.o.lsub()
+#        print self.o.lsub('""','"*"')
+#        print self.o.lsub('""','"%"')
+#        print self.o.lsub('"%s/"' % mailboxes[1],'"%"')
+#        print self.o.lsub('"%s"' % mailboxes[0],'"*"')
+        self.assertEquals('() "/" "%s"' % mailboxes[6], self.o.lsub()[1][6])
+        self.assertEquals('() "/" "%s"' % mailboxes[2], self.o.lsub('""','"*"')[1][2])
+        self.assertEquals('() "/" "%s"' % mailboxes[2], self.o.lsub('"%s/"' % mailboxes[1],'"%"')[1][0])
 
     def testNoop(self):
         """ 

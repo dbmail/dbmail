@@ -117,5 +117,6 @@ GList * g_list_append_printf(GList * list, char * format, ...);
 char * dm_stresc(const char * from);
 void dm_pack_spaces(char *in);
 void dm_base_subject(char *subject);
+int listex_match(const char *p, const char *s, const char *x, int flags);
 
 #endif

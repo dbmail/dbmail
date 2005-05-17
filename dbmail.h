@@ -79,7 +79,7 @@
 /** prefix for public namespace */
 #define NAMESPACE_PUBLIC "#Public"
 /** seperator for namespaces and mailboxes and submailboxes */
-#define MAILBOX_SEPERATOR "/"
+#define MAILBOX_SEPARATOR "/"
 /** username for owner of public folders */
 #define PUBLIC_FOLDER_USER "__public__"
 

@@ -33,7 +33,6 @@
 #include <limits.h>
 #include <string.h>
 #include <sys/types.h>
-#include <regex.h>
 #include <assert.h>
 #include "db.h"
 #include "dbmail.h"
@@ -90,7 +89,7 @@ static int db_check_quotum_used(u64_t user_idnr, u64_t msg_size);
 
 /** list all mailboxes owned by user owner_idnr */
 static int db_list_mailboxes_by_regex(u64_t owner_idnr,
-				      int only_subscribed, regex_t * preg,
+				      int only_subscribed, const char * pattern,
 				      u64_t ** mailboxes,
 				      unsigned int *nr_mailboxes);
 /** get size of a message */
@@ -2324,16 +2323,16 @@ int db_findmailbox(const char *fq_name, u64_t user_idnr,
 	/* see if this is a #User mailbox */
 	if ((strlen(NAMESPACE_USER) > 0) &&
 	    (strstr(fq_name, NAMESPACE_USER) == fq_name)) {
-		index = strcspn(name_str_copy, MAILBOX_SEPERATOR);
+		index = strcspn(name_str_copy, MAILBOX_SEPARATOR);
 		tempstr = &name_str_copy[index + 1];
-		index = strcspn(tempstr, MAILBOX_SEPERATOR);
+		index = strcspn(tempstr, MAILBOX_SEPARATOR);
 		username = tempstr;
 		tempstr[index] = '\0';
 		mailbox_name = &tempstr[index + 1];
 	} else {
 		if ((strlen(NAMESPACE_PUBLIC) > 0) &&
 		    (strstr(fq_name, NAMESPACE_PUBLIC) == fq_name)) {
-			index = strcspn(name_str_copy, MAILBOX_SEPERATOR);
+			index = strcspn(name_str_copy, MAILBOX_SEPARATOR);
 			mailbox_name = &name_str_copy[index + 1];
 			username = PUBLIC_FOLDER_USER;
 		} else {
@@ -2414,7 +2413,7 @@ int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 }
 
 int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
-			       regex_t * preg,
+			       const char * pattern,
 			       u64_t ** mailboxes,
 			       unsigned int *nr_mailboxes)
 {
@@ -2511,14 +2510,10 @@ int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
 		char *simple_mailbox_name = all_mailbox_names[i];
 
 		/* add possible namespace prefix to mailbox_name */
-		mailbox_name =
-		    mailbox_add_namespace(simple_mailbox_name, 
-					  owner_idnr,
-					  user_idnr);
+		mailbox_name = mailbox_add_namespace(simple_mailbox_name, owner_idnr, user_idnr);
 		if (mailbox_name) {
-			if (regexec(preg, mailbox_name, 0, NULL, 0) == 0) {
-				tmp_mailboxes[*nr_mailboxes] =
-					mailbox_idnr;
+			if (listex_match(pattern, mailbox_name, MAILBOX_SEPARATOR, 0)) {
+				tmp_mailboxes[*nr_mailboxes] = mailbox_idnr;
 				(*nr_mailboxes)++;
 			}
 		}
@@ -2527,8 +2522,6 @@ int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
 	dm_free(all_mailbox_names);
 	dm_free(all_mailboxes);
 	dm_free(all_mailbox_owners);
-
-	trace(TRACE_DEBUG, "%s,%s: exit", __FILE__, __func__);
 
 	if (*nr_mailboxes == 0) {
 		/* none exist, none matched */
@@ -2545,33 +2538,19 @@ int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern,
 			    u64_t ** children, unsigned *nchildren,
 			    int only_subscribed)
 {
-	int result;
-	regex_t preg;
-
 	*children = NULL;
 
-	if ((result = regcomp(&preg, pattern, REG_ICASE | REG_NOSUB)) != 0) {
-		trace(TRACE_ERROR,
-		      "%s,%s: error compiling regex pattern: %d\n",
-		      __FILE__, __func__, result);
-		return 1;
-	}
-
 	/* list normal mailboxes */
-	if (db_list_mailboxes_by_regex(owner_idnr, only_subscribed, &preg,
-				       children, nchildren) < 0) {
+	if (db_list_mailboxes_by_regex(owner_idnr, only_subscribed, pattern, children, nchildren) < 0) {
 		trace(TRACE_ERROR, "%s,%s: error listing mailboxes",
 		      __FILE__, __func__);
-		regfree(&preg);
 		return -1;
 	}
 
 	if (*nchildren == 0) {
-		trace(TRACE_INFO,
-		      "%s, %s: did not find any mailboxes that "
+		trace(TRACE_INFO, "%s, %s: did not find any mailboxes that "
 		      "match pattern. returning 0, nchildren = 0",
 		      __FILE__, __func__);
-		regfree(&preg);
 		return 0;
 	}
 
@@ -2579,7 +2558,6 @@ int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern,
 	/* store matches */
 	trace(TRACE_INFO, "%s,%s: found [%d] mailboxes", __FILE__,
 	      __func__, *nchildren);
-	regfree(&preg);
 	return 0;
 }
 

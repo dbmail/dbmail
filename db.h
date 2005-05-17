@@ -839,18 +839,17 @@ int db_findmailbox(const char *name, u64_t user_idnr,
 		   /*@out@*/ u64_t * mailbox_idnr);
 /**
  * \brief finds all the mailboxes owned by owner_idnr who match 
- *        the regex pattern pattern.
+ *        the pattern.
  * \param owner_idnr
- * \param pattern regex pattern
+ * \param pattern pattern
  * \param children pointer to a list of mailboxes conforming to
- *        regex pattern. This will be filled when the function
+ *        pattern. This will be filled when the function
  *        returns and needs to be free-d by caller
  * \param nchildren number of mailboxes in children
  * \param only_subscribed only search in subscribed mailboxes.
  * \return 
  *      - -1 on failure
  *      - 0 on success
- *      - 1 on invalid regex pattern
  */
 int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern,
 			    u64_t ** children, unsigned *nchildren,
