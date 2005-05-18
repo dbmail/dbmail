@@ -81,6 +81,12 @@ void print_mimelist(struct dm_list *mimelist)
 void setup(void)
 {
 	configure_debug(5,1,0);
+	g_mime_init(0);
+}
+
+void teardown(void)
+{
+	g_mime_shutdown();
 }
 
 START_TEST(test_g_list_join)
@@ -425,23 +431,26 @@ Suite *dbmail_suite(void)
 	suite_add_tcase(s, tc_util);
 	suite_add_tcase(s, tc_misc);
 	
+	tcase_add_checked_fixture(tc_session, setup, teardown);
 	tcase_add_test(tc_session, test_imap_session_new);
 	tcase_add_test(tc_session, test_imap_bodyfetch);
 	
+	tcase_add_checked_fixture(tc_rfcmsg, setup, teardown);
 	tcase_add_test(tc_rfcmsg, test_db_set_msg);
 
+	tcase_add_checked_fixture(tc_mime, setup, teardown);
 	tcase_add_test(tc_mime, test_mime_readheader);
 	tcase_add_test(tc_mime, test_mime_fetch_headers);
 	tcase_add_test(tc_mime, test_mail_address_build_list);
 
-	tcase_add_checked_fixture(tc_util, setup, NULL);
+	tcase_add_checked_fixture(tc_util, setup, teardown);
 	tcase_add_test(tc_util, test_g_list_join);
 	tcase_add_test(tc_util, test_dbmail_imap_plist_as_string);
 	tcase_add_test(tc_util, test_g_list_slices);
 	tcase_add_test(tc_util, test_build_set);
 	tcase_add_test(tc_util, test_listex_match);
 
-	tcase_add_checked_fixture(tc_misc, setup, NULL);
+	tcase_add_checked_fixture(tc_misc, setup, teardown);
 	tcase_add_test(tc_misc, test_dm_base_subject);
 	return s;
 }

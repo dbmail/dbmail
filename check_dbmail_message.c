@@ -64,6 +64,7 @@ void setup(void)
 	GetDBParams(&_db_params);
 	db_connect();
 	auth_connect();
+	g_mime_init(0);
 }
 
 void teardown(void)
@@ -71,6 +72,7 @@ void teardown(void)
 	db_disconnect();
 	auth_disconnect();
 	config_free();
+	g_mime_shutdown();
 }
 
 START_TEST(test_gmime_init)

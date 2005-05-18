@@ -42,6 +42,7 @@
 #include "pool.h"
 #include "server.h"
 #include "check.h"
+#include <gmime/gmime.h>
 
 #include "check_dbmail.h"
 
@@ -64,11 +65,13 @@ void setup(void)
 	config_read(configFile);
 	GetDBParams(&_db_params);
 	db_connect();
+	g_mime_init(0);
 }
 
 void teardown(void)
 {
 	db_disconnect();
+	g_mime_shutdown();
 }
 
 START_TEST(test_scoreboard_new)

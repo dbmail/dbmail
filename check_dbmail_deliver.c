@@ -46,6 +46,7 @@
 #include "dbmail-message.h"
 #include "mime.h"
 #include "pipe.h"
+#include <gmime/gmime.h>
 
 #include "check_dbmail.h"
 
@@ -71,6 +72,7 @@ void setup(void)
 	GetDBParams(&_db_params);
 	db_connect();
 	auth_connect();
+	g_mime_init(0);
 	init_testuser1();
 }
 
@@ -79,6 +81,7 @@ void teardown(void)
 	auth_disconnect();
 	db_disconnect();
 	config_free();
+	g_mime_shutdown();
 }
 
 

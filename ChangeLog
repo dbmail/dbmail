@@ -1,3 +1,11 @@
+2005-05-18  Paul Stevens <paul@nfg.nl>
+
+	* check_dbmail_deliver.c, config.c, lmtpd.c, check_dbmail_server.c, 
+	pop3d.c, mime.c, imapd.c, dbmail-message.c, check_dbmail_imapd.c,
+	main.c, check_dbmail_message.c: move the g_mime_init/shutdown hooks to
+	the main loop of each program. This fixes some possible double frees.
+	* debian/po/cz.po: added czech translations for debconf.
+	
 2005-05-17  Paul Stevens <paul@nfg.nl>
 
 	* misc.h, db.c, db.h, imapcommands.c, imaputil.c, imaputil.h,

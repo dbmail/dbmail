@@ -42,6 +42,7 @@
 #include "pidfile.h"
 #include "dbmail.h"
 #include "lmtp.h"
+#include <gmime/gmime.h>
 
 #define PNAME "dbmail/lmtpd"
 
@@ -89,6 +90,7 @@ int main(int argc, char *argv[])
 	pid_t pid;
 	int opt;
 
+	g_mime_init(0);
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 
 	/* get command-line options */
@@ -141,6 +143,7 @@ int main(int argc, char *argv[])
 		get_config(&config);
 		StartCliServer(&config);
 		config_free();
+		g_mime_shutdown();
 		return 0;
 	}
 	
@@ -209,6 +212,7 @@ int main(int argc, char *argv[])
 	} while (result == 1 && !mainStop);	/* 1 means reread-config and restart */
 
 	trace(TRACE_INFO, "main(): exit");
+	g_mime_shutdown();
 	return 0;
 }
 

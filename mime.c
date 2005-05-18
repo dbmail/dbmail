@@ -56,6 +56,9 @@ static void _register_header(const char *field, const char *value, gpointer mime
 static void _register_header(const char *field, const char *value, gpointer mimelist)
 {
 	struct mime_record *mr = g_new0(struct mime_record, 1);
+	if (! mr)
+		trace(TRACE_FATAL,"%s,%s: oom", __FILE__, __func__);
+
 	g_strlcpy(mr->field, field, MIME_FIELD_MAX);
 	g_strlcpy(mr->value, value, MIME_VALUE_MAX);
 	dm_list_nodeadd((struct dm_list *)mimelist, mr, sizeof(*mr));
@@ -67,9 +70,12 @@ int mime_fetch_headers(const char *datablock, struct dm_list *mimelist)
 	GMimeMessage *message;
 	GString *raw = g_string_new(datablock);
 	struct DbmailMessage *m = dbmail_message_new();
+	if (! m)
+		trace(TRACE_FATAL,"%s,%s: oom", __FILE__, __func__);
+	
 	m = dbmail_message_init_with_string(m, raw);
 	g_mime_header_foreach(m->content->headers, _register_header, (gpointer)mimelist);
-	g_string_free(raw,1);
+	g_string_free(raw,TRUE);
 	
 	/* dbmail expects the mime-headers of the message's mimepart as part of the rfcheaders */
 	if (dbmail_message_get_class(m) == DBMAIL_MESSAGE && GMIME_MESSAGE(m->content)->mime_part) {

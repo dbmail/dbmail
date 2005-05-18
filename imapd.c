@@ -41,6 +41,7 @@
 #include "misc.h"
 #include "pidfile.h"
 #include "dbmail.h"
+#include <gmime/gmime.h>
 
 #define PNAME "dbmail/imap4d"
 
@@ -85,6 +86,7 @@ int main(int argc, char *argv[])
 	pid_t pid;
 	int opt;
 
+	g_mime_init(0);
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 
 	/* get command-line options */
@@ -133,6 +135,7 @@ int main(int argc, char *argv[])
 		get_config(&config);
 		StartCliServer(&config);
 		config_free();
+		g_mime_shutdown();
 		return 0;
 	}
 		
@@ -202,6 +205,7 @@ int main(int argc, char *argv[])
 		config_free();
 	} while (result == 1 && !mainStop);	/* 1 means reread-config and restart */
 
+	g_mime_shutdown();
 	trace(TRACE_INFO, "main(): exit");
 	return 0;
 }

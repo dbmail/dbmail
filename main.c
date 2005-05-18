@@ -34,10 +34,9 @@
 #include "dsn.h"
 #include <string.h>
 #include <stdlib.h>
-/* For getopt() */
 #include <unistd.h>
-/* For exit codes */
 #include <sysexits.h>
+#include <gmime/gmime.h>
 
 #define MESSAGEIDSIZE 100
 #define NORMAL_DELIVERY 1
@@ -106,6 +105,8 @@ int main(int argc, char *argv[])
 	int c, c_prev = 0, usage_error = 0;
 	struct DbmailMessage *msg = NULL;
 	char *headers;
+	
+	g_mime_init(0);
 	
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 
@@ -415,6 +416,8 @@ int main(int argc, char *argv[])
 	auth_disconnect();
 	config_free();
 	g_free(headers);
+
+	g_mime_shutdown();
 
 	trace(TRACE_DEBUG, "main(): exit code is [%d].", exitcode);
 	return exitcode;

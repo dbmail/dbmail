@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: dbmail 1.2.11-1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2003-11-03 14:15+0100\n"
+"POT-Creation-Date: 2003-12-03 12:52+0100\n"
 "PO-Revision-Date: 2005-05-08 17:38+0200\n"
 "Last-Translator: Martin Sin <martin.sin@seznam.cz>\n"
 "Language-Team: Czech <debian-l10n-czech@lists.debian.org>\n"
@@ -27,10 +27,10 @@ msgid ""
 "will NOT be overwritten should you later choose to re-run dpkg-reconfigure "
 "dbmail."
 msgstr ""
-"Pokud budete souhlasit, umožníte debconfu spravovat některé části konfigurace "
-"dbmailu. Nutno poznamenat, že změny provedené ručně v souboru dbmail.conf "
-"NEBUDOU přepsány a zůstanou zachovány i když později znovu spustíte "
-"dpkg-reconfigure dbmail."
+"Pokud budete souhlasit, umožníte debconfu spravovat některé části "
+"konfigurace dbmailu. Nutno poznamenat, že změny provedené ručně v souboru "
+"dbmail.conf NEBUDOU přepsány a zůstanou zachovány i když později znovu "
+"spustíte dpkg-reconfigure dbmail."
 
 #. Type: string
 #. Description
@@ -45,8 +45,8 @@ msgid ""
 "Here you must specify the address dbmail will use when sending bounce "
 "messages."
 msgstr ""
-"Tady musíte nastavit adresu, kterou dbmail použije při poslání "
-"nedoručitelné zprávy."
+"Tady musíte nastavit adresu, kterou dbmail použije při poslání nedoručitelné "
+"zprávy."
 
 #. Type: string
 #. Description
@@ -114,7 +114,7 @@ msgstr "Zadejte prosím jméno uživatele databáze, který se má použít."
 #. Description
 #: ../dbmail.templates:39
 msgid "This is the username dbmail will use to connect to the database server."
-msgstr
+msgstr ""
 "Toto uživatelské jméno použije dbmail pro připojení k databázovému serveru."
 
 #. Type: password
@@ -132,26 +132,16 @@ msgstr "Toto heslo použije dbmail pro připojení k databázovému serveru."
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:49
-msgid "Start the IMAP server after reboot?"
-msgstr "Spustit po restartu server IMAP?"
-
-#. Type: boolean
-#. Description
-#: ../dbmail.templates:49
-msgid "Do you want to start the IMAP service after a reboot?"
-msgstr "Přejete si po restartu spustit službu IMAP?"
-
-#. Type: boolean
-#. Description
-#: ../dbmail.templates:57
-msgid "Start the POP3 server after reboot?"
+#, fuzzy
+msgid "start the imap server after reboot?"
 msgstr "Spustit po restartu server POP3?"
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:57
+#: ../dbmail.templates:49
+#, fuzzy
 msgid ""
-"Dbmail supports both IMAP and POP3 services. You can choose to run either "
+"Dbmail supports both imap and pop3 services. You can choose to run either "
 "one or both services."
 msgstr ""
 "Dbmail podporuje služby IMAP a POP3. Můžete si vybrat kteroukoliv službu, "
@@ -159,8 +149,34 @@ msgstr ""
 
 #. Type: boolean
 #. Description
+#: ../dbmail.templates:49
+#, fuzzy
+msgid "Do you want to start the imap service after a reboot?"
+msgstr "Přejete si po restartu spustit službu IMAP?"
+
+#. Type: boolean
+#. Description
 #: ../dbmail.templates:57
-msgid "Do you want to start the POP3 service after a reboot?"
+#, fuzzy
+msgid "start the pop3 server after reboot?"
+msgstr "Spustit po restartu server POP3?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:57
+#, fuzzy
+msgid ""
+"Dbmail support both imap and pop3 services. You can choose to run either one "
+"or both services."
+msgstr ""
+"Dbmail podporuje služby IMAP a POP3. Můžete si vybrat kteroukoliv službu, "
+"klidně i obě dvě současně."
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:57
+#, fuzzy
+msgid "Do you want to start the pop3 service after a reboot?"
 msgstr "Chcete spustit po restartu službu POP3?"
 
 #. Type: boolean
@@ -172,9 +188,10 @@ msgstr "Přejete si spustit stunnel SSL wrapper z init skriptu?"
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:65
+#, fuzzy
 msgid ""
-"The stunnel SSL wrapper allows you to provide secure IMAP and POP services "
-"even though dbmail doesn't support neither IMAPS nor POP3S (yet)."
+"The stunnel SSL wrapper allows you to provide secure imap and pop services "
+"even though dbmail doesn't support neither imaps nor pop3s (yet)."
 msgstr ""
 "Stunnel SSL wrapper poskytuje bezpečné připojení služeb IMAP a POP, neboť "
 "dbmail nepodporuje ani IMAPS, ani POP3S (zatím)."
@@ -186,8 +203,8 @@ msgid ""
 "Make sure you have installed stunnel which is provided by a separate package "
 "if you want to use this feature."
 msgstr ""
-"Pokud chcete používat tuto možnost, ujistěte se, že máte nainstalován stunnel, "
-"který je poskytován samostatným balíčkem."
+"Pokud chcete používat tuto možnost, ujistěte se, že máte nainstalován "
+"stunnel, který je poskytován samostatným balíčkem."
 
 #. Type: string
 #. Description
@@ -203,8 +220,8 @@ msgid ""
 "that should reside in /etc/ssl/certs/. Specify the filename here without  "
 "the directory name."
 msgstr ""
-"Abyste mohli používat SSL wrapper stunnel, musíte vytvořit pem soubor, "
-"který bude ležet v /etc/ssl/certs/. Zadejte pouze název souboru (bez názvu "
+"Abyste mohli používat SSL wrapper stunnel, musíte vytvořit pem soubor, který "
+"bude ležet v /etc/ssl/certs/. Zadejte pouze název souboru (bez názvu "
 "adresáře)."
 
 #. Type: string
@@ -214,3 +231,6 @@ msgid ""
 "Read /usr/share/doc/stunnel/README.Debian on how to generate such a file."
 msgstr ""
 "Jak vytvořit tento soubor se dočtete v /usr/share/doc/stunnel/README.Debian."
+
+#~ msgid "Start the IMAP server after reboot?"
+#~ msgstr "Spustit po restartu server IMAP?"

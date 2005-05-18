@@ -34,10 +34,10 @@
 /* include for iniparser */
 #include "lib/iniparser-2.14/src/iniparser.h"
 
-#include "glib.h"
-
+#include <glib.h>
 #include <assert.h>
 #include <errno.h>
+
 /** dictionary which holds the configuration */
 static dictionary *config_dict = NULL;
 
@@ -54,6 +54,7 @@ int config_read(const char *config_filename)
 	if (configured++) 
 		return 0;
         
+	
 	assert(config_filename != NULL);
         
         config_filename_copy = g_strdup(config_filename);
@@ -76,6 +77,7 @@ void config_free(void)
 {
 	if (--configured) 
 		return;
+	
 	
 	iniparser_freedict(config_dict);
 }

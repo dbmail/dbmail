@@ -87,7 +87,6 @@ struct DbmailMessage * dbmail_message_new(void)
 		trace(TRACE_ERROR, "%s,%s: memory error", __FILE__, __func__);
 		return NULL;
 	}
-	g_mime_init(0);
 	
 	self->header_dict = g_hash_table_new_full((GHashFunc)g_str_hash, (GEqualFunc)g_str_equal, (GDestroyNotify)g_free, NULL);
 	
@@ -108,7 +107,6 @@ void dbmail_message_free(struct DbmailMessage *self)
 	
 	self->id=0;
 	dm_free(self);
-	g_mime_shutdown();
 }
 
 
