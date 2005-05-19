@@ -310,7 +310,6 @@ u64_t dm_ldap_get_freeid(const gchar *attribute)
 	ids = g_list_first(ids);
 	while (ids) {
 		t = strtoull(ids->data,NULL,10);
-		g_assert(t); /* don't tolerate garbage */
 		if ( (t >= min) && (t <= max) ) 
 			key[t-min] = t;
 		ids = g_list_next(ids);
