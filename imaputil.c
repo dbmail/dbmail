@@ -134,17 +134,15 @@ char *dbmail_imap_plist_as_string(GList * list)
 
 char *dbmail_imap_astring_as_string(const char *s)
 {
+	return g_strdup_printf("{%lu}\r\n%s", (unsigned long) strlen(s), s);
+	/*
 	int i;
-	char *p;
-	GString * tmp = g_string_new("");
-	g_string_printf(tmp, "\"%s\"", s); /* fallback to quoted "string" */
-	for (i=0; s[i]; i++) { /* but check whether we must use literal string {octets}\r\nstring */
+	for (i=0; s[i]; i++) { 
 		if ( !(s[i] & 0xe0) || (s[i] & 0x80) || (s[i] == '"') || (s[i] == '\\')) 
-			g_string_printf(tmp, "{%lu}\r\n%s", (unsigned long) strlen(s), s);
+			return g_strdup_printf("{%lu}\r\n%s", (unsigned long) strlen(s), s);
 	}
-	p = tmp->str;
-	g_string_free(tmp,FALSE);
-	return p;
+	return g_strdup_printf("\"%s\"", s);
+	*/
 }
 
 

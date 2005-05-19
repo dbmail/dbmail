@@ -117,6 +117,17 @@ START_TEST(test_dbmail_imap_plist_as_string)
 }
 END_TEST
 
+
+#define A(x,y) fail_unless(strcmp(y,dbmail_imap_astring_as_string(x))==0,"dbmail_imap_astring_as_string failed")
+START_TEST(test_dbmail_imap_astring_as_string)
+{
+//	A("test","{4}test\r\n");
+	printf("%s\n", dbmail_imap_astring_as_string("test"));
+	printf("%s\n", dbmail_imap_astring_as_string("\"test\""));
+	
+}
+END_TEST
+
 START_TEST(test_imap_session_new)
 {
 	struct ImapSession *s;
@@ -446,6 +457,7 @@ Suite *dbmail_suite(void)
 	tcase_add_checked_fixture(tc_util, setup, teardown);
 	tcase_add_test(tc_util, test_g_list_join);
 	tcase_add_test(tc_util, test_dbmail_imap_plist_as_string);
+	tcase_add_test(tc_util, test_dbmail_imap_astring_as_string);
 	tcase_add_test(tc_util, test_g_list_slices);
 	tcase_add_test(tc_util, test_build_set);
 	tcase_add_test(tc_util, test_listex_match);

@@ -460,12 +460,13 @@ static GList * _imap_get_addresses(struct mime_record *mr)
 {
 	int delimiter, i, inquote, start, has_split;
 	char savechar;
+	char *value;
 	
 	GList * list = NULL;
 	GList * sublist = NULL;
 	GString * tmp = g_string_new("");
 		
-	trace(TRACE_DEBUG,"%s,%s", __FILE__,__func__);
+	trace(TRACE_DEBUG,"%s,%s: [%s]", __FILE__,__func__, mr->value);
 	
 	/* find ',' to split up multiple addresses */
 	delimiter = 0;
@@ -488,9 +489,11 @@ static GList * _imap_get_addresses(struct mime_record *mr)
 		 */
 
 		/* possibilities for the mail address:
-		 * (1) name <user@domain>
-		 * (2) <user@domain>
-		 * (3) user@domain
+		 * - name <user@domain>
+		 * - "name" <user@domain>
+		 * - <user@domain>
+		 * - user@domain
+		 * - user@domain (Name)
 		 * scan for '<' to determine which case we should be dealing with;
 		 */
 
@@ -504,7 +507,15 @@ static GList * _imap_get_addresses(struct mime_record *mr)
 				/* name might contain quotes */
 				savechar = mr->value[i - 1];
 				mr->value[i - 1] = '\0';	/* terminate string */
-				sublist = g_list_append(sublist, dbmail_imap_astring_as_string(&mr->value[start]));
+				if ( !g_str_has_prefix(&mr->value[start],"\"") && !g_str_has_suffix(&mr->value[start],"\"") )
+					value=g_strdup_printf("\"%s\"", &mr->value[start]);
+				else
+					value=g_strdup(&mr->value[start]);
+					
+				trace(TRACE_DEBUG,"%s,%s: found [%s]", __FILE__, __func__, value);
+				sublist = g_list_append(sublist, dbmail_imap_astring_as_string(value));
+				g_free(value);
+				
 
 				mr->value[i - 1] = savechar;
 
