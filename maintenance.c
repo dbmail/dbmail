@@ -41,6 +41,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
+#include <gmime/gmime.h>
 
 /* Loudness and assumptions. */
 int yes_to_all = 0;
@@ -117,6 +118,7 @@ int main(int argc, char *argv[])
 	char timespec[LEN];
 	char timestr[LEN];
 
+	g_mime_init(0);
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 	setvbuf(stdout, 0, _IONBF, 0);
 
@@ -284,7 +286,8 @@ int main(int argc, char *argv[])
 	auth_disconnect();
 	db_disconnect();
 	config_free();
-
+	g_mime_shutdown();
+	
 	return 0;
 }
 
