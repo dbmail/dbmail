@@ -64,7 +64,7 @@ Template: dbmail/start_ssl
 Type: boolean
 _Description:  Do you wish to run the stunnel SSL wrapper from the init script?
  The stunnel SSL wrapper allows you to provide secure imap and pop services
- even though dbmail doesn't support neither imaps nor pop3s (yet). 
+ even though dbmail supports neither imaps nor pop3s (yet). 
  .
  Make sure you have installed stunnel which is provided by a separate
  package if you want to use this feature.
