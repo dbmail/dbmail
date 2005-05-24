@@ -159,6 +159,7 @@ void scoreboard_conf_check(void)
 void scoreboard_release(pid_t pid)
 {
 	int slot;
+	trace(TRACE_DEBUG,"%s,%s: pid [%d]", __FILE__, __func__, (int)pid);
 	scoreboard_wrlck();
 	slot = getKey(pid);
 	scoreboard->child[slot] = state_new();

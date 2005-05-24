@@ -137,51 +137,48 @@ int db_check_version(void)
 	if (db_query(query) == -1) {
 		trace(TRACE_FATAL, "%s,%s: pre-2.0 database incompatible. You need to run the conversion script",
 				__FILE__,__func__);
-		return -1;
+		return DM_EQUERY;
 	}
 	
 	snprintf(query, DEF_QUERYSIZE, "SELECT 1=1 FROM dbmail_headervalue LIMIT 1 OFFSET 0");
 	if (db_query(query) == -1) {
 		trace(TRACE_FATAL, "%s,%s: 2.0 database incompatible. You need to add the header tables.",
 				__FILE__,__func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
-	return 0;
+	return DM_SUCCESS;
 }
 
 
 int db_begin_transaction()
 {
-	snprintf(query, DEF_QUERYSIZE,
-		 "BEGIN");
+	snprintf(query, DEF_QUERYSIZE, "BEGIN");
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error beginning transaction",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_commit_transaction()
 {
-	snprintf(query, DEF_QUERYSIZE,
-		 "COMMIT");
+	snprintf(query, DEF_QUERYSIZE, "COMMIT");
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error committing transaction."
 		      "Because we do not want to leave the database in "
 		      "an inconsistent state, we will perform a rollback now",
 		      __FILE__, __func__);
 		db_rollback_transaction();
-		return -1;
+		return DM_EQUERY;
 	}
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_rollback_transaction()
 {
-	snprintf(query, DEF_QUERYSIZE,
-		 "ROLLBACK");
+	snprintf(query, DEF_QUERYSIZE, "ROLLBACK");
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error rolling back transaction. "
 		      "Disconnecting from database (this will implicitely "
@@ -191,7 +188,7 @@ int db_rollback_transaction()
 		/* and reconnect again */
 		db_connect();
 	}
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_get_physmessage_id(u64_t message_idnr, u64_t * physmessage_id)
@@ -206,19 +203,19 @@ int db_get_physmessage_id(u64_t message_idnr, u64_t * physmessage_id)
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error getting physmessage_id",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	if (db_num_rows() < 1) {
 		db_free_result();
-		return 0;
+		return DM_EGENERAL;
 	}
 
 	*physmessage_id = db_get_result_u64(0, 0);
 
 	db_free_result();
 
-	return 1;
+	return DM_SUCCESS;
 }
 
 
@@ -232,12 +229,12 @@ int db_get_quotum_used(u64_t user_idnr, u64_t * curmail_size)
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error getting used quotum for "
 		      "user [%llu]", __FILE__, __func__, user_idnr);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	*curmail_size = db_get_result_u64(0, 0);
 	db_free_result();
-	return 1;
+	return DM_EGENERAL;
 }
 
 /* this is a local (static) function */
@@ -250,9 +247,9 @@ int db_set_quotum_used(u64_t user_idnr, u64_t curmail_size)
 		trace(TRACE_ERROR, "%s,%s: error setting used quotum of "
 		      "[%llu] for user [%llu]",
 		      __FILE__, __func__, curmail_size, user_idnr);
-		return -1;
+		return DM_EQUERY;
 	}
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_add_quotum_used(u64_t user_idnr, u64_t add_size)
@@ -265,23 +262,23 @@ int db_add_quotum_used(u64_t user_idnr, u64_t add_size)
 		trace(TRACE_ERROR, "%s,%s: call to "
 		      "user_idnr_is_delivery_user_idnr() failed",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 	/* don't do anything if this DBMAIL_DELIVERY_USERNAME's user_idnr
 	 * is given */
 	if (result == 1) 
-		return 0;
+		return DM_SUCCESS;
 		
 	snprintf(query, DEF_QUERYSIZE,
 		 "UPDATE %susers SET curmail_size = curmail_size + '%llu' "
 		 "WHERE user_idnr = '%llu'", DBPFX, add_size, user_idnr);
-	if (db_query(query) == -1) {
+	if (db_query(query) == DM_EQUERY) {
 		trace(TRACE_ERROR, "%s,%s: error adding [%llu] to quotum "
 		      "of user [%llu]", __FILE__, __func__,
 		      add_size, user_idnr);
-		return -1;
+		return DM_EQUERY;
 	}
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_subtract_quotum_used(u64_t user_idnr, u64_t sub_size)
@@ -295,12 +292,12 @@ int db_subtract_quotum_used(u64_t user_idnr, u64_t sub_size)
 		trace(TRACE_ERROR, "%s,%s: call to "
 		      "user_idnr_is_delivery_user_idnr() failed",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 	/* don't do anything if this DBMAIL_DELIVERY_USERNAME's user_idnr
 	 * is given */
 	if (result == 1) 
-		return 0;
+		return DM_SUCCESS;
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "UPDATE %susers SET curmail_size = curmail_size - '%llu' "
@@ -310,9 +307,9 @@ int db_subtract_quotum_used(u64_t user_idnr, u64_t sub_size)
 		      "%s,%s: error subtracting [%llu] from quotum "
 		      "of user [%llu]", __FILE__, __func__, sub_size,
 		      user_idnr);
-		return -1;
+		return DM_EQUERY;
 	}
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_check_quotum_used(u64_t user_idnr, u64_t msg_size)
@@ -327,7 +324,7 @@ int db_check_quotum_used(u64_t user_idnr, u64_t msg_size)
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error checking quotum for "
 		      "user [%llu]", __FILE__, __func__, user_idnr);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	/* If there is a quotum defined, and the inequality is true,
@@ -335,10 +332,10 @@ int db_check_quotum_used(u64_t user_idnr, u64_t msg_size)
 	 * and so the function returns non-zero. */
 	if (db_num_rows() > 0) {
 		db_free_result();
-		return 1;
+		return DM_EGENERAL;
 	}
 	db_free_result();
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_calculate_quotum_all()
@@ -376,7 +373,7 @@ int db_calculate_quotum_all()
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error findng quotum used",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	n = db_num_rows();
@@ -384,7 +381,7 @@ int db_calculate_quotum_all()
 	if (n == 0) {
 		trace(TRACE_DEBUG, "%s,%s: quotum is already up to date",
 		      __FILE__, __func__);
-		return 0;
+		return DM_SUCCESS;
 	}
 
 	if (!(user_idnrs = (u64_t *) dm_malloc(n * sizeof(u64_t)))) {
@@ -442,7 +439,7 @@ int db_calculate_quotum_used(u64_t user_idnr)
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not execute query",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 	if (db_num_rows() < 1)
 		trace(TRACE_WARNING, "%s,%s: SUM did not give result, "
@@ -459,10 +456,10 @@ int db_calculate_quotum_used(u64_t user_idnr)
 			trace(TRACE_ERROR,
 			      "%s,%s: error setting quotum for user [%llu]",
 			      __FILE__, __func__, user_idnr);
-			return -1;
+			return DM_EQUERY;
 		}
 	}
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_get_sievescript_byname(u64_t user_idnr, char *scriptname, char **script)
@@ -476,13 +473,13 @@ int db_get_sievescript_byname(u64_t user_idnr, char *scriptname, char **script)
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error getting sievescript by name",
 				__FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	if (db_num_rows() < 1) {
 		db_free_result();
 		*script = NULL;
-		return 0;
+		return DM_SUCCESS;
 	}
 
 	query_result = db_get_result(0, 0);
@@ -490,13 +487,13 @@ int db_get_sievescript_byname(u64_t user_idnr, char *scriptname, char **script)
 	if (!query_result) {
 		db_free_result();
 		*script = NULL;
-		return -1;
+		return DM_EQUERY;
 	}
 
 	*script = dm_strdup(query_result);
 	db_free_result();
 
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_get_sievescript_active(u64_t user_idnr, char **scriptname)
@@ -511,7 +508,7 @@ int db_get_sievescript_active(u64_t user_idnr, char **scriptname)
 		trace(TRACE_ERROR, 
 		"%s,%s: error getting active sievescript by name",
 		__FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 	n = db_num_rows();
 	db_free_result();
@@ -532,7 +529,7 @@ int db_get_sievescript_listall(u64_t user_idnr, struct dm_list *scriptlist)
 		trace(TRACE_ERROR,
 		"%s,%s: error getting all sievescripts",
 		__FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	i = 0;
@@ -547,7 +544,7 @@ int db_get_sievescript_listall(u64_t user_idnr, struct dm_list *scriptlist)
 	}
 
 	db_free_result();
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_replace_sievescript(u64_t user_idnr, char *scriptname, char *script)
@@ -561,10 +558,10 @@ int db_replace_sievescript(u64_t user_idnr, char *scriptname, char *script)
 		trace(TRACE_ERROR, "%s,%s: error replacing sievescript '%s' "
 			"for user_idnr [%llu]", __FILE__, __func__,
 			scriptname, user_idnr);
-		return -1;
+		return DM_EQUERY;
 	}
 
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_add_sievescript(u64_t user_idnr, char *scriptname, char *script)
@@ -577,10 +574,10 @@ int db_add_sievescript(u64_t user_idnr, char *scriptname, char *script)
 		trace(TRACE_ERROR, "%s,%s: error adding sievescript '%s' "
 		"for user_idnr [%llu]", __FILE__, __func__,
 		scriptname, user_idnr);
-		return -1;
+		return DM_EQUERY;
 	}
 
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_deactivate_sievescript(u64_t user_idnr, char *scriptname)
@@ -594,10 +591,10 @@ int db_deactivate_sievescript(u64_t user_idnr, char *scriptname)
 		trace(TRACE_ERROR, "%s,%s: error deactivating sievescript '%s' "
 		"for user_idnr [%llu]", __FILE__, __func__,
 		scriptname, user_idnr);
-		return -1;
+		return DM_EQUERY;
 	}
 
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_activate_sievescript(u64_t user_idnr, char *scriptname)
@@ -611,10 +608,10 @@ int db_activate_sievescript(u64_t user_idnr, char *scriptname)
 		trace(TRACE_ERROR, "%s,%s: error activating sievescript '%s' "
 		"for user_idnr [%llu]", __FILE__, __func__,
 		scriptname, user_idnr);
-		return -1;
+		return DM_EQUERY;
 	}
 
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_delete_sievescript(u64_t user_idnr, char *scriptname)
@@ -628,10 +625,10 @@ int db_delete_sievescript(u64_t user_idnr, char *scriptname)
 		trace(TRACE_ERROR, "%s,%s: error deleting sievescript '%s' "
 			"for user_idnr [%llu]", __FILE__, __func__,
 			scriptname, user_idnr);
-		return -1;
+		return DM_EQUERY;
 	}
 
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_check_sievescript_quota(u64_t user_idnr, u64_t scriptlen)
@@ -639,7 +636,7 @@ int db_check_sievescript_quota(u64_t user_idnr, u64_t scriptlen)
 	/* TODO function db_check_sievescript_quota */
 	trace(TRACE_DEBUG, "%s,%s: updating %llu sievescript quota with %llu",
 		__FILE__, __func__, user_idnr, scriptlen);
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_set_sievescript_quota(u64_t user_idnr, u64_t quotasize)
@@ -647,7 +644,7 @@ int db_set_sievescript_quota(u64_t user_idnr, u64_t quotasize)
 	/* TODO function db_set_sievescript_quota */
 	trace(TRACE_DEBUG, "%s,%s: setting %llu sievescript quota with %llu",
 		__FILE__, __func__, user_idnr, quotasize);
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_get_sievescript_quota(u64_t user_idnr, u64_t * quotasize)
@@ -656,7 +653,7 @@ int db_get_sievescript_quota(u64_t user_idnr, u64_t * quotasize)
 	trace(TRACE_DEBUG, "%s,%s: getting sievescript quota for %llu",
 		__FILE__, __func__, user_idnr);
 	*quotasize = 0;
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_get_notify_address(u64_t user_idnr, char **notify_address)
@@ -674,7 +671,7 @@ int db_get_notify_address(u64_t user_idnr, char **notify_address)
 		/* query failed */
 		trace(TRACE_ERROR, "%s,%s: query failed", __FILE__,
 		      __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 	if (db_num_rows() > 0) {
 		query_result = db_get_result(0, 0);
@@ -686,7 +683,7 @@ int db_get_notify_address(u64_t user_idnr, char **notify_address)
 	}
 
 	db_free_result();
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_get_reply_body(u64_t user_idnr, char **reply_body)
@@ -701,7 +698,7 @@ int db_get_reply_body(u64_t user_idnr, char **reply_body)
 		/* query failed */
 		trace(TRACE_ERROR, "%s,%s: query failed", __FILE__,
 		      __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 	if (db_num_rows() > 0) {
 		query_result = db_get_result(0, 0);
@@ -712,7 +709,7 @@ int db_get_reply_body(u64_t user_idnr, char **reply_body)
 		}
 	}
 	db_free_result();
-	return 0;
+	return DM_SUCCESS;
 }
 
 u64_t db_get_mailbox_from_message(u64_t message_idnr)
@@ -727,14 +724,14 @@ u64_t db_get_mailbox_from_message(u64_t message_idnr)
 		/* query failed */
 		trace(TRACE_ERROR, "%s,%s: query failed", __FILE__,
 		      __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	if (db_num_rows() < 1) {
 		trace(TRACE_DEBUG, "%s,%s: No mailbox found for message",
 		      __FILE__, __func__);
 		db_free_result();
-		return 0;
+		return DM_SUCCESS;
 	}
 	mailbox_idnr = db_get_result_u64(0, 0);
 	db_free_result();
@@ -755,14 +752,14 @@ u64_t db_get_useridnr(u64_t message_idnr)
 		/* query failed */
 		trace(TRACE_ERROR, "%s,%s: query failed", __FILE__,
 		      __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	if (db_num_rows() < 1) {
 		trace(TRACE_DEBUG, "%s,%s: No owner found for message",
 		      __FILE__, __func__);
 		db_free_result();
-		return 0;
+		return DM_SUCCESS;
 	}
 	query_result = db_get_result(0, 0);
 	user_idnr = db_get_result_u64(0, 0);
@@ -788,11 +785,11 @@ int db_insert_physmessage_with_internal_date(timestring_t internal_date,
 		trace(TRACE_ERROR,
 		      "%s,%s: insertion of physmessage failed", __FILE__,
 		      __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 	*physmessage_id = db_insert_result("physmessage_id");
 
-	return 1;
+	return DM_EGENERAL;
 }
 
 int db_insert_physmessage(u64_t * physmessage_id)
@@ -808,12 +805,12 @@ int db_insert_physmessage(u64_t * physmessage_id)
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: query failed", __FILE__,
 		      __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	*physmessage_id = db_insert_result("physmessage_id");
 
-	return 1;
+	return DM_EGENERAL;
 }
 
 int db_message_set_unique_id(u64_t message_idnr, const char *unique_id)
@@ -824,13 +821,13 @@ int db_message_set_unique_id(u64_t message_idnr, const char *unique_id)
 		 "UPDATE %smessages SET unique_id = '%s', status = '%d' "
 		 "WHERE message_idnr = '%llu'", DBPFX, unique_id, MESSAGE_STATUS_NEW,
 		 message_idnr);
-	if (db_query(query) == -1) {
+	if (db_query(query) == DM_EQUERY) {
 		trace(TRACE_ERROR, "%s,%s: setting unique id for message "
 		      "[%llu] failed", __FILE__, __func__,
 		      message_idnr);
-		return -1;
+		return DM_EQUERY;
 	}
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_physmessage_set_sizes(u64_t physmessage_id, u64_t message_size,
@@ -845,9 +842,9 @@ int db_physmessage_set_sizes(u64_t physmessage_id, u64_t message_size,
 		trace(TRACE_ERROR, "%s,%s: error setting messagesize and "
 		      "rfcsize for physmessage [%llu]",
 		      __FILE__, __func__, physmessage_id);
-		return -1;
+		return DM_EQUERY;
 	}
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_update_message(u64_t message_idnr, const char *unique_id,
@@ -856,38 +853,28 @@ int db_update_message(u64_t message_idnr, const char *unique_id,
 	assert(unique_id);
 	u64_t physmessage_id = 0;
 
-	if (db_message_set_unique_id(message_idnr, unique_id) < 0) {
-		trace(TRACE_STOP,
-		      "%s,%s: setting unique id failed of message "
-		      "[%llu] failed", __FILE__, __func__,
-		      message_idnr);
+	if (db_message_set_unique_id(message_idnr, unique_id)) {
+		trace(TRACE_STOP, "%s,%s: FATAL: db_message_set_unique_ id failed for [%llu]", 
+				__FILE__, __func__,
+				message_idnr);
 	}
 
 	/* update the fields in the physmessage table */
-	if (db_get_physmessage_id(message_idnr, &physmessage_id) == -1) {
-		trace(TRACE_ERROR,
-		      "%s,%s: could not find physmessage_id of message",
-		      __FILE__, __func__);
-		return -1;
-	}
+	if (db_get_physmessage_id(message_idnr, &physmessage_id)) 
+		return DM_EQUERY;
 
-	if (db_physmessage_set_sizes(physmessage_id, message_size, rfc_size) == -1) {
-		trace(TRACE_ERROR,
-		      "%s,%s: error updating physmessage [%llu]. "
-		      "The database might be inconsistent. Run dbmail-util",
-		      __FILE__, __func__, physmessage_id);
-		return -1;
-	}
+	if (db_physmessage_set_sizes(physmessage_id, message_size, rfc_size)) 
+		return DM_EQUERY;
 
-	if (db_add_quotum_used(db_get_useridnr(message_idnr), message_size) == -1) {
+	if (db_add_quotum_used(db_get_useridnr(message_idnr), message_size)) {
 		trace(TRACE_ERROR,
 		      "%s,%s: error calculating quotum "
 		      "used for user [%llu]. Database might be "
 		      "inconsistent. run dbmail-util", __FILE__,
 		      __func__, db_get_useridnr(message_idnr));
-		return -1;
+		return DM_EQUERY;
 	}
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_insert_message_block_physmessage(const char *block,
@@ -905,53 +892,46 @@ int db_insert_message_block_physmessage(const char *block,
 	*messageblk_idnr = 0;
 
 	if (block == NULL) {
-		trace(TRACE_ERROR,
-		      "%s,%s: got NULL as block. Insertion not possible",
+		trace(TRACE_ERROR, "%s,%s: got NULL as block. Insertion not possible",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	if (block_size > READ_BLOCK_SIZE) {
-		trace(TRACE_ERROR,
-		      "%s,%s: blocksize [%llu], maximum is [%ld]",
+		trace(TRACE_ERROR, "%s,%s: blocksize [%llu], maximum is [%ld]",
 		      __FILE__, __func__, block_size, READ_BLOCK_SIZE);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	escaped_query = (char *) dm_malloc(sizeof(char) * maxesclen);
 	if (!escaped_query) {
-		trace(TRACE_ERROR, "%s,%s: not enough memory", __FILE__,
-		      __func__);
-		return -1;
+		trace(TRACE_ERROR, "%s,%s: not enough memory", 
+				__FILE__, __func__);
+		return DM_EQUERY;
 	}
 	memset(escaped_query, '\0', maxesclen);
-	startlen =
-	    snprintf(escaped_query, maxesclen,
+	startlen = snprintf(escaped_query, maxesclen,
 		     "INSERT INTO %smessageblks"
 		     "(is_header, messageblk,blocksize, physmessage_id)"
 		     "VALUES ('%u','",DBPFX, is_header);
 	
 	/* escape & add data */
-	esclen =
-	    db_escape_string(&escaped_query[startlen], block, block_size);
+	esclen = db_escape_string(&escaped_query[startlen], block, block_size);
 
 	snprintf(&escaped_query[esclen + startlen],
 		 maxesclen - esclen - startlen, "', '%llu', '%llu')",
 		 block_size, physmessage_id);
 
-	if (db_query(escaped_query) == -1) {
+	if (db_query(escaped_query) == DM_EQUERY) {
 		dm_free(escaped_query);
-
-		trace(TRACE_ERROR, "%s,%s: dbquery failed", __FILE__,
-		      __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	/* all done, clean up & exit */
 	dm_free(escaped_query);
 
 	*messageblk_idnr = db_insert_result("messageblk_idnr");
-	return 1;
+	return DM_SUCCESS;
 }
 
 int db_insert_message_block(const char *block, u64_t block_size,
@@ -965,13 +945,13 @@ int db_insert_message_block(const char *block, u64_t block_size,
 		trace(TRACE_ERROR,
 		      "%s,%s: got NULL as block, insertion not possible\n",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
-	if (db_get_physmessage_id(message_idnr, &physmessage_id) < 0) {
+	if (db_get_physmessage_id(message_idnr, &physmessage_id) == DM_EQUERY) {
 		trace(TRACE_ERROR, "%s,%s: error getting physmessage_id",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	if (db_insert_message_block_physmessage
@@ -980,9 +960,9 @@ int db_insert_message_block(const char *block, u64_t block_size,
 		      "%s,%s: error inserting messageblks for "
 		      "physmessage [%llu]", __FILE__, __func__,
 		      physmessage_id);
-		return -1;
+		return DM_EQUERY;
 	}
-	return 1;
+	return DM_SUCCESS;
 }
 
 int db_log_ip(const char *ip)
@@ -991,11 +971,11 @@ int db_log_ip(const char *ip)
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT idnr FROM %spbsp WHERE ipnumber = '%s'", DBPFX, ip);
-	if (db_query(query) == -1) {
+	if (db_query(query) == DM_EQUERY) {
 		trace(TRACE_ERROR, "%s,%s: could not access ip-log table "
 		      "(pop/imap-before-smtp): %s", __FILE__, __func__,
 		      ip);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	id = db_get_result_u64(0, 0);
@@ -1008,31 +988,31 @@ int db_log_ip(const char *ip)
 			 "SET since = %s WHERE idnr='%llu'",
 			 DBPFX, SQL_CURRENT_TIMESTAMP, id);
 
-		if (db_query(query) == -1) {
+		if (db_query(query) == DM_EQUERY) {
 			trace(TRACE_ERROR,
 			      "%s,%s: could not update ip-log "
 			      "(pop/imap-before-smtp)", __FILE__,
 			      __func__);
-			return -1;
+			return DM_EQUERY;
 		}
 	} else {
 		/* IP not in table, insert row */
 		snprintf(query, DEF_QUERYSIZE,
 			 "INSERT INTO %spbsp (since, ipnumber) "
 			 "VALUES (%s, '%s')", DBPFX, SQL_CURRENT_TIMESTAMP, ip);
-		if (db_query(query) == -1) {
+		if (db_query(query) == DM_EQUERY) {
 			trace(TRACE_ERROR,
 			      "%s,%s: could not log IP number to dbase "
 			      "(pop/imap-before-smtp)", __FILE__,
 			      __func__);
-			return -1;
+			return DM_EQUERY;
 		}
 	}
 
 	trace(TRACE_DEBUG, "%s,%s: ip [%s] logged\n", __FILE__,
 	      __func__, ip);
 
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_count_iplog(const char *lasttokeep, u64_t *affected_rows)
@@ -1045,7 +1025,7 @@ int db_count_iplog(const char *lasttokeep, u64_t *affected_rows)
 	if (db_escape_string(escaped_lasttokeep, lasttokeep, strlen(lasttokeep))) {
 		trace(TRACE_ERROR, "%s,%s: error escaping last to keep.",
 			__FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT * FROM dbmail_pbsp WHERE since < '%s'", escaped_lasttokeep);
@@ -1054,11 +1034,11 @@ int db_count_iplog(const char *lasttokeep, u64_t *affected_rows)
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s:%s: error executing query",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 	*affected_rows = db_get_affected_rows();
 
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_cleanup_iplog(const char *lasttokeep, u64_t *affected_rows)
@@ -1072,11 +1052,11 @@ int db_cleanup_iplog(const char *lasttokeep, u64_t *affected_rows)
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s:%s: error executing query",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 	*affected_rows = db_get_affected_rows();
 
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_cleanup()
@@ -1097,7 +1077,7 @@ int db_empty_mailbox(u64_t user_idnr)
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error executing query",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 	n = db_num_rows();
 	if (n == 0) {
@@ -1105,7 +1085,7 @@ int db_empty_mailbox(u64_t user_idnr)
 		trace(TRACE_WARNING,
 		      "%s,%s: user [%llu] does not have any mailboxes?",
 		      __FILE__, __func__, user_idnr);
-		return 0;
+		return DM_SUCCESS;
 	}
 
 	mboxids = (u64_t *) dm_malloc(n * sizeof(u64_t));
@@ -1156,7 +1136,7 @@ int db_icheck_messageblks(struct dm_list *lost_list)
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: Could not execute query",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	n = db_num_rows();
@@ -1164,7 +1144,7 @@ int db_icheck_messageblks(struct dm_list *lost_list)
 		trace(TRACE_DEBUG, "%s,%s: no lost messageblocks",
 		      __FILE__, __func__);
 		db_free_result();
-		return 0;
+		return DM_SUCCESS;
 	}
 
 	/* FIXME: this is actually properly designed... */
@@ -1188,7 +1168,7 @@ int db_icheck_messageblks(struct dm_list *lost_list)
 		}
 	}
 	db_free_result();
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_icheck_messages(struct dm_list *lost_list)
@@ -1216,7 +1196,7 @@ int db_icheck_messages(struct dm_list *lost_list)
 		trace(TRACE_DEBUG, "%s,%s: no lost messages",
 		      __FILE__, __func__);
 		db_free_result();
-		return 0;
+		return DM_SUCCESS;
 	}
 
 	/* FIXME: this is actually properly designed... */
@@ -1239,7 +1219,7 @@ int db_icheck_messages(struct dm_list *lost_list)
 		}
 	}
 	db_free_result();
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_icheck_mailboxes(struct dm_list *lost_list)
@@ -1267,7 +1247,7 @@ int db_icheck_mailboxes(struct dm_list *lost_list)
 		trace(TRACE_DEBUG, "%s,%s: no lost mailboxes",
 		      __FILE__, __func__);
 		db_free_result();
-		return 0;
+		return DM_SUCCESS;
 	}
 
 	/* FIXME: this is actually properly designed... */
@@ -1290,7 +1270,7 @@ int db_icheck_mailboxes(struct dm_list *lost_list)
 		}
 	}
 	db_free_result();
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_icheck_null_physmessages(struct dm_list *lost_list)
@@ -1310,14 +1290,14 @@ int db_icheck_null_physmessages(struct dm_list *lost_list)
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not execute query",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	n = db_num_rows();
 	if (n < 1) {
 		trace(TRACE_DEBUG, "%s,%s: no null physmessages",
 		      __FILE__, __func__);
-		return 0;
+		return DM_SUCCESS;
 	}
 
 	/* FIXME: this is actually properly designed... */
@@ -1342,7 +1322,7 @@ int db_icheck_null_physmessages(struct dm_list *lost_list)
 		}
 	}
 	db_free_result();
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_icheck_null_messages(struct dm_list *lost_list)
@@ -1361,7 +1341,7 @@ int db_icheck_null_messages(struct dm_list *lost_list)
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not execute query",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	n = db_num_rows();
@@ -1369,7 +1349,7 @@ int db_icheck_null_messages(struct dm_list *lost_list)
 		trace(TRACE_DEBUG, "%s,%s: no null messages",
 		      __FILE__, __func__);
 		db_free_result();
-		return 0;
+		return DM_SUCCESS;
 	}
 
 	/* FIXME: this is actually properly designed... */
@@ -1392,14 +1372,14 @@ int db_icheck_null_messages(struct dm_list *lost_list)
 		}
 	}
 	db_free_result();
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_set_isheader(GList *lost)
 {
 	GList *slices;
 	if (! lost)
-		return 0;
+		return DM_SUCCESS;
 
 	slices = g_list_slices(lost,100);
 	slices = g_list_first(slices);
@@ -1413,12 +1393,12 @@ int db_set_isheader(GList *lost)
 		if (db_query(query) == -1) {
 			trace(TRACE_ERROR, "%s,%s: could not access messageblks table",
 			     __FILE__, __func__);
-			return -1;
+			return DM_EQUERY;
 		}
 		slices = g_list_next(slices);
 	}
 	g_list_free(slices);
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_icheck_isheader(GList  **lost)
@@ -1433,7 +1413,7 @@ int db_icheck_isheader(GList  **lost)
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not access messageblks table",
 		     __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	for (i = 0; i < db_num_rows(); i++) 
@@ -1441,7 +1421,7 @@ int db_icheck_isheader(GList  **lost)
 
 	db_free_result();
 
-	return 0;
+	return DM_SUCCESS;
 }
 
 
@@ -1450,7 +1430,7 @@ int db_set_headercache(GList *lost)
 	u64_t pmsgid = -1;
 	struct DbmailMessage *msg;
 	if (! lost)
-		return 0;
+		return DM_SUCCESS;
 
 	lost = g_list_first(lost);
 	while (lost) {
@@ -1458,7 +1438,7 @@ int db_set_headercache(GList *lost)
 	
 		msg = dbmail_message_new();
 		if (! msg)
-			return -1;
+			return DM_EQUERY;
 
 		db_begin_transaction();
 		if (! (msg = dbmail_message_retrieve(msg, pmsgid, DBMAIL_MESSAGE_FILTER_HEAD))) {
@@ -1484,7 +1464,7 @@ int db_set_headercache(GList *lost)
 		dbmail_message_free(msg);
 		lost = g_list_next(lost);
 	}
-	return 0;
+	return DM_SUCCESS;
 }
 
 		
@@ -1500,7 +1480,7 @@ int db_icheck_headercache(GList **lost)
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: query failed",
 				__FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 	
 	for (i = 0; i < db_num_rows(); i++) 
@@ -1508,7 +1488,7 @@ int db_icheck_headercache(GList **lost)
 
 	db_free_result();
 
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_set_message_status(u64_t message_idnr, MessageStatus_t status)
@@ -1537,7 +1517,7 @@ int db_delete_physmessage(u64_t physmessage_id)
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not execute query",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	/* if foreign keys do their work (not with MySQL ISAM tables :( )
@@ -1551,20 +1531,20 @@ int db_delete_physmessage(u64_t physmessage_id)
 		      "physmessage attached to them. run dbmail-util "
 		      "to fix this.", __FILE__, __func__);
 
-		return -1;
+		return DM_EQUERY;
 	}
 
-	return 1;
+	return DM_EGENERAL;
 }
 
 int db_delete_message(u64_t message_idnr)
 {
 	u64_t physmessage_id;
 
-	if (db_get_physmessage_id(message_idnr, &physmessage_id) < 0) {
+	if (db_get_physmessage_id(message_idnr, &physmessage_id) == DM_EQUERY) {
 		trace(TRACE_ERROR, "%s,%s: error getting physmessage_id",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	/* now delete the message from the message table */
@@ -1574,7 +1554,7 @@ int db_delete_message(u64_t message_idnr)
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not execute query",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	/* find if there are other messages pointing to the same
@@ -1585,7 +1565,7 @@ int db_delete_message(u64_t message_idnr)
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not execute query",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 	if (db_num_rows() == 0) {
 		/* there are no other messages with the same physmessage left.
@@ -1596,11 +1576,11 @@ int db_delete_message(u64_t message_idnr)
 			trace(TRACE_ERROR,
 			      "%s,%s: error deleting physmessage",
 			      __FILE__, __func__);
-			return -1;
+			return DM_EQUERY;
 		}
 	} else
 		db_free_result();
-	return 1;
+	return DM_EGENERAL;
 }
 
 int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
@@ -1619,13 +1599,13 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
 		      "%s,%s: cannot find owner of mailbox for "
 		      "mailbox [%llu]", __FILE__, __func__,
 		      mailbox_idnr);
-		return -1;
+		return DM_EQUERY;
 	}
 	if (result == 0) {
 		trace(TRACE_ERROR,
 		      "%s,%s: unable to find owner of mailbox " "[%llu]",
 		      __FILE__, __func__, mailbox_idnr);
-		return 0;
+		return DM_SUCCESS;
 	}
 
 	if (update_curmail_size) {
@@ -1635,7 +1615,7 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
 			      "%s,%s: error getting mailbox size "
 			      "for mailbox [%llu]", __FILE__, __func__,
 			      mailbox_idnr);
-			return -1;
+			return DM_EQUERY;
 		}
 	}
 
@@ -1650,7 +1630,7 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
 			trace(TRACE_ERROR,
 			      "%s,%s: could not delete mailbox [%llu]",
 			      __FILE__, __func__, mailbox_idnr);
-			return -1;
+			return DM_EQUERY;
 		}
 	}
 
@@ -1664,7 +1644,7 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
 		trace(TRACE_ERROR,
 		      "%s,%s: could not select message ID's for mailbox [%llu]",
 		      __FILE__, __func__, mailbox_idnr);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	n = db_num_rows();
@@ -1677,7 +1657,7 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
 	if (!(message_idnrs = (u64_t *) dm_malloc(n * sizeof(u64_t)))) {
 		trace(TRACE_ERROR, "%s,%s: error allocating memory",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 	for (i = 0; i < n; i++)
 		message_idnrs[i] = db_get_result_u64(i, 0);
@@ -1691,7 +1671,7 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
 			      "run dbmail-util",
 			      __FILE__, __func__, message_idnrs[i]);
 			dm_free(message_idnrs);
-			return -1;
+			return DM_EQUERY;
 		}
 	}
 	dm_free(message_idnrs);
@@ -1702,10 +1682,10 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
 			trace(TRACE_ERROR,
 			      "%s,%s: error decreasing curmail_size",
 			      __FILE__, __func__);
-			return -1;
+			return DM_EQUERY;
 		}
 	}
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_send_message_lines(void *fstream, u64_t message_idnr,
@@ -1731,7 +1711,7 @@ int db_send_message_lines(void *fstream, u64_t message_idnr,
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error executing query",
 		      __FILE__, __func__);
-		return 0;
+		return DM_SUCCESS;
 	}
 	physmessage_id = db_get_result_u64(0, 0);
 	db_free_result();
@@ -1740,7 +1720,7 @@ int db_send_message_lines(void *fstream, u64_t message_idnr,
 	if (buffer == NULL) {
 		trace(TRACE_ERROR, "%s,%s: error allocating memory for buffer",
 		      __FILE__, __func__);
-		return 0;
+		return DM_SUCCESS;
 	}
 
 	snprintf(query, DEF_QUERYSIZE,
@@ -1752,7 +1732,7 @@ int db_send_message_lines(void *fstream, u64_t message_idnr,
 
 	if (db_query(query) == -1) {
 		dm_free(buffer);
-		return 0;
+		return DM_SUCCESS;
 	}
 
 	trace(TRACE_DEBUG,
@@ -1839,7 +1819,7 @@ int db_send_message_lines(void *fstream, u64_t message_idnr,
 					      "fstream", __FILE__, __func__);
 					db_free_result();
 					dm_free(buffer);
-					return 0;
+					return DM_SUCCESS;
 				}
 				/*  cleanup the buffer  */
 				memset(buffer, '\0',
@@ -1858,7 +1838,7 @@ int db_send_message_lines(void *fstream, u64_t message_idnr,
 			      __FILE__, __func__);
 			db_free_result();
 			dm_free(buffer);
-			return 0;
+			return DM_SUCCESS;
 		}
 	}
 	/* delimiter */
@@ -1867,7 +1847,7 @@ int db_send_message_lines(void *fstream, u64_t message_idnr,
 
 	db_free_result();
 	dm_free(buffer);
-	return 1;
+	return DM_EGENERAL;
 }
 
 int db_createsession(u64_t user_idnr, PopSession_t * session_ptr)
@@ -1884,7 +1864,7 @@ int db_createsession(u64_t user_idnr, PopSession_t * session_ptr)
 		trace(TRACE_ERROR, "%s,%s: error finding mailbox_idnr of "
 		      "INBOX for user [%llu], exiting..",
 		      __FILE__, __func__, user_idnr);
-		return -1;
+		return DM_EQUERY;
 	}
 	/* query is < MESSAGE_STATUS_DELETE  because we don't want deleted 
 	 * messages
@@ -1899,7 +1879,7 @@ int db_createsession(u64_t user_idnr, PopSession_t * session_ptr)
 		 inbox_mailbox_idnr, MESSAGE_STATUS_DELETE);
 
 	if (db_query(query) == -1) {
-		return -1;
+		return DM_EQUERY;
 	}
 
 	session_ptr->totalmessages = 0;
@@ -1910,7 +1890,7 @@ int db_createsession(u64_t user_idnr, PopSession_t * session_ptr)
 	if (message_counter < 1) {
 		/* there are no messages for this user */
 		db_free_result();
-		return 1;
+		return DM_EGENERAL;
 	}
 
 	/* messagecounter is total message, +1 tot end at message 1 */
@@ -1952,7 +1932,7 @@ int db_createsession(u64_t user_idnr, PopSession_t * session_ptr)
 
 	db_free_result();
 
-	return 1;
+	return DM_EGENERAL;
 }
 
 void db_session_cleanup(PopSession_t * session_ptr)
@@ -2007,7 +1987,7 @@ int db_update_pop(PopSession_t * session_ptr)
 				trace(TRACE_ERROR,
 				      "%s,%s: could not execute query",
 				      __FILE__, __func__);
-				return -1;
+				return DM_EQUERY;
 			}
 		}
 		tmpelement = tmpelement->nextnode;
@@ -2020,10 +2000,10 @@ int db_update_pop(PopSession_t * session_ptr)
 		if (db_calculate_quotum_used(user_idnr) == -1) {
 			trace(TRACE_ERROR, "%s,%s: error calculating quotum used",
 			      __FILE__, __func__);
-			return -1;
+			return DM_EQUERY;
 		}
 	}
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_set_deleted(u64_t * affected_rows)
@@ -2037,10 +2017,10 @@ int db_set_deleted(u64_t * affected_rows)
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: Could not execute query",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 	*affected_rows = db_get_affected_rows();
-	return 1;
+	return DM_EGENERAL;
 }
 
 int db_deleted_purge(u64_t * affected_rows)
@@ -2062,7 +2042,7 @@ int db_deleted_purge(u64_t * affected_rows)
 		trace(TRACE_ERROR,
 		      "%s,%s: Cound not fetch message ID numbers",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	*affected_rows = db_num_rows();
@@ -2070,7 +2050,7 @@ int db_deleted_purge(u64_t * affected_rows)
 		trace(TRACE_DEBUG, "%s,%s: no messages to purge",
 		      __FILE__, __func__);
 		db_free_result();
-		return 0;
+		return DM_SUCCESS;
 	}
 	if (!(message_idnrs =
 	      (u64_t *) dm_malloc(*affected_rows * sizeof(u64_t)))) {
@@ -2088,11 +2068,11 @@ int db_deleted_purge(u64_t * affected_rows)
 			trace(TRACE_ERROR, "%s,%s: error deleting message",
 			      __FILE__, __func__);
 			dm_free(message_idnrs);
-			return -1;
+			return DM_EQUERY;
 		}
 	}
 	dm_free(message_idnrs);
-	return 1;
+	return DM_EGENERAL;
 }
 
 int db_deleted_count(u64_t * affected_rows)
@@ -2111,13 +2091,13 @@ int db_deleted_count(u64_t * affected_rows)
 		trace(TRACE_ERROR,
 		      "%s,%s: Cound not fetch message ID numbers",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	*affected_rows = db_num_rows();
 
 	db_free_result();
-	return 1;
+	return DM_EGENERAL;
 }
 
 int db_imap_append_msg(const char *msgdata, u64_t datalen,
@@ -2134,7 +2114,7 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
 	case -1:
 		trace(TRACE_ERROR, "%s,%s: error checking quotum",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	case 1:
 		trace(TRACE_INFO, "%s,%s: user [%llu] would exceed quotum",
 		      __FILE__, __func__, user_idnr);
@@ -2149,14 +2129,14 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
 			      "%s,%s: could not create physmessage "
 			      "with internal date [%s]", __FILE__,
 			      __func__, internal_date);
-			return -1;
+			return DM_EQUERY;
 		}
 	} else {
 		if (db_insert_physmessage(&physmessage_id) < 0) {
 			trace(TRACE_ERROR,
 			      "%s,%s: could not create physmessage",
 			      __FILE__, __func__);
-			return -1;
+			return DM_EQUERY;
 		}
 	}
 
@@ -2173,7 +2153,7 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not create message",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	/* fetch the id of the new message */
@@ -2195,7 +2175,7 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
 			      "%llu. Database could be invalid now..",
 			      __FILE__, __func__, message_idnr);
 		}
-		return 1;
+		return DM_EGENERAL;
 	}
 
 	if (count == datalen - 1) {
@@ -2218,7 +2198,7 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
 				      __FILE__, __func__,
 				      message_idnr);
 			}
-			return -1;
+			return DM_EQUERY;
 		}
 	} else {
 		/* 
@@ -2241,7 +2221,7 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
 				      __FILE__, __func__,
 				      message_idnr);
 			}
-			return -1;
+			return DM_EQUERY;
 		}
 
 		/* output message */
@@ -2261,7 +2241,7 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
 					      __FILE__, __func__,
 					      message_idnr);
 				}
-				return -1;
+				return DM_EQUERY;
 			}
 			count += READ_BLOCK_SIZE;
 		}
@@ -2281,7 +2261,7 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
 				      __FILE__, __func__,
 				      message_idnr);
 			}
-			return -1;
+			return DM_EQUERY;
 		}
 
 	}
@@ -2289,7 +2269,7 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
 	if (db_physmessage_set_sizes(physmessage_id, datalen, 0) < 0) {
 		trace(TRACE_ERROR, "%s,%s: Error setting physmessages sizes",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 	/* create a unique id */
 	create_unique_id(unique_id, message_idnr);
@@ -2299,7 +2279,7 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
 	db_add_quotum_used(user_idnr, datalen);
 
 	*msg_idnr = message_idnr;
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_findmailbox(const char *fq_name, u64_t user_idnr,
@@ -2347,12 +2327,12 @@ int db_findmailbox(const char *fq_name, u64_t user_idnr,
 		if (result < 0) {
 			trace(TRACE_ERROR, "%s,%s: error checking id of "
 			      "user.", __FILE__, __func__);
-			return -1;
+			return DM_EQUERY;
 		}
 		if (result == 0) {
 			trace(TRACE_INFO, "%s,%s user [%s] not found.",
 			      __FILE__, __func__, username);
-			return 0;
+			return DM_SUCCESS;
 		}
 	}
 	result =
@@ -2362,7 +2342,7 @@ int db_findmailbox(const char *fq_name, u64_t user_idnr,
 		      "%s,%s: error finding mailbox [%s] with "
 		      "owner [%s, %llu]", __FILE__, __func__,
 		      mailbox_name, username, owner_idnr);
-		return -1;
+		return DM_EQUERY;
 	}
 	dm_free(name_str_copy);
 	return result;
@@ -2380,7 +2360,7 @@ int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 	if (local_name == NULL) {
 		trace(TRACE_ERROR, "%s,%s: error dm_strdup(name). Out of memory?",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	convert_inbox_to_uppercase(local_name);
@@ -2395,21 +2375,21 @@ int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 		      "%s,%s: could not select mailbox '%s'\n", __FILE__,
 		      __func__, name);
 		db_free_result();
-		return -1;
+		return DM_EQUERY;
 	}
 
 	if (db_num_rows() < 1) {
 		trace(TRACE_DEBUG,"%s,%s: no mailbox found", __FILE__, __func__);
 		db_free_result();
-		return 0;
+		return DM_SUCCESS;
 	} else {
 		*mailbox_idnr = db_get_result_u64(0, 0);
 		db_free_result();
 	}
 
 	if (*mailbox_idnr == 0)
-		return 0;
-	return 1;
+		return DM_SUCCESS;
+	return DM_EGENERAL;
 }
 
 int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
@@ -2475,7 +2455,7 @@ int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
 	if (n_rows == 0) {
 		/* none exist, none matched */
 		db_free_result();
-		return 0;
+		return DM_SUCCESS;
 	}
 	all_mailboxes = (u64_t *) dm_malloc(n_rows * sizeof(u64_t));
 	all_mailbox_names = (char **) dm_malloc(n_rows * sizeof(char*));
@@ -2526,12 +2506,12 @@ int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
 	if (*nr_mailboxes == 0) {
 		/* none exist, none matched */
 		dm_free(tmp_mailboxes);
-		return 0;
+		return DM_SUCCESS;
 	}
 
 	*mailboxes = tmp_mailboxes;
 
-	return 1;
+	return DM_EGENERAL;
 }
 
 int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern,
@@ -2544,21 +2524,21 @@ int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern,
 	if (db_list_mailboxes_by_regex(owner_idnr, only_subscribed, pattern, children, nchildren) < 0) {
 		trace(TRACE_ERROR, "%s,%s: error listing mailboxes",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	if (*nchildren == 0) {
 		trace(TRACE_INFO, "%s, %s: did not find any mailboxes that "
 		      "match pattern. returning 0, nchildren = 0",
 		      __FILE__, __func__);
-		return 0;
+		return DM_SUCCESS;
 	}
 
 
 	/* store matches */
 	trace(TRACE_INFO, "%s,%s: found [%d] mailboxes", __FILE__,
 	      __func__, *nchildren);
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_getmailbox(mailbox_t * mb)
@@ -2592,7 +2572,7 @@ int db_getmailbox(mailbox_t * mb)
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not select mailbox\n",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 
@@ -2600,7 +2580,7 @@ int db_getmailbox(mailbox_t * mb)
 		trace(TRACE_ERROR, "%s,%s: invalid mailbox id specified",
 		      __FILE__, __func__);
 		db_free_result();
-		return -1;
+		return DM_EQUERY;
 	}
 
 	mb->permission = db_get_result_int(0, 0);
@@ -2634,7 +2614,7 @@ int db_getmailbox(mailbox_t * mb)
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: query error", __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 	
  	exists = (unsigned)db_get_result_int(0,1);
@@ -2656,7 +2636,7 @@ int db_getmailbox(mailbox_t * mb)
 		
 		if (db_query(query) == -1) {
 			trace(TRACE_ERROR, "%s,%s: query error [%s]", __FILE__, __func__, query);
-			return -1;
+			return DM_EQUERY;
 		}
 		
 		trace(TRACE_DEBUG,"%s,%s: exists [%d] num_rows [%d]",__FILE__, __func__, mb->exists, db_num_rows());
@@ -2665,7 +2645,7 @@ int db_getmailbox(mailbox_t * mb)
 			trace(TRACE_ERROR,"%s,%s: malloc error mb->seq_list [%d]",
 					__FILE__, __func__,
 					mb->exists);
-			return -1;
+			return DM_EQUERY;
 		}
 		
 		for (i = 0; i < db_num_rows(); i++) 
@@ -2687,12 +2667,12 @@ int db_getmailbox(mailbox_t * mb)
 			dm_free(mb->seq_list);
 			mb->seq_list = NULL;
 		}
-		return -1;
+		return DM_EQUERY;
 	}
 	mb->msguidnext = db_get_result_u64(0, 0);
 	db_free_result();
 
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_createmailbox(const char *name, u64_t owner_idnr,
@@ -2707,7 +2687,7 @@ int db_createmailbox(const char *name, u64_t owner_idnr,
 		trace(TRACE_ERROR,
 		      "%s,%s: could not create simple mailbox name "
 		      "from full name", __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 	snprintf(query, DEF_QUERYSIZE,
 		 "INSERT INTO %smailboxes (name, owner_idnr,"
@@ -2719,10 +2699,10 @@ int db_createmailbox(const char *name, u64_t owner_idnr,
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not create mailbox",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 	*mailbox_idnr = db_insert_result("mailbox_idnr");
-	return 0;
+	return DM_SUCCESS;
 }
 
 
@@ -2739,7 +2719,7 @@ int db_find_create_mailbox(const char *name, u64_t owner_idnr,
 		trace(TRACE_ERROR, "%s,%s: unable to find or create sql shadow "
 				"account for useridnr [%llu]", 
 				__FILE__, __func__, owner_idnr);
-		return -1;
+		return DM_EQUERY;
 	}
 #endif
 
@@ -2749,7 +2729,7 @@ int db_find_create_mailbox(const char *name, u64_t owner_idnr,
 		if (db_createmailbox(name, owner_idnr, &mboxidnr) != 0) {
 			trace(TRACE_ERROR, "%s, %s: could not create mailbox [%s]",
 					__FILE__, __func__, name);
-			return -1;
+			return DM_EQUERY;
 		}
 		trace(TRACE_DEBUG, "%s, %s: mailbox [%s] created on the fly", 
 				__FILE__, __func__, name);
@@ -2758,7 +2738,7 @@ int db_find_create_mailbox(const char *name, u64_t owner_idnr,
 	      __FILE__, __func__, name);
 
 	*mailbox_idnr = mboxidnr;
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
@@ -2779,7 +2759,7 @@ int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
 		trace(TRACE_ERROR,
 		      "%s,%s: could not retrieve mailbox name\n", __FILE__,
 		      __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	if (db_num_rows() == 0) {
@@ -2789,7 +2769,7 @@ int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
 		db_free_result();
 		*children = NULL;
 		*nchildren = 0;
-		return 0;
+		return DM_SUCCESS;
 	}
 
 	if ((tmp = db_get_result(0, 0))) 
@@ -2812,7 +2792,7 @@ int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not retrieve mailbox id",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	if (db_num_rows() == 0) {
@@ -2820,14 +2800,14 @@ int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
 		*children = NULL;
 		*nchildren = 0;
 		db_free_result();
-		return 0;
+		return DM_SUCCESS;
 	}
 
 	*nchildren = db_num_rows();
 	if (*nchildren == 0) {
 		*children = NULL;
 		db_free_result();
-		return 0;
+		return DM_SUCCESS;
 	}
 
 	*children = (u64_t *) dm_malloc(sizeof(u64_t) * (*nchildren));
@@ -2837,7 +2817,7 @@ int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
 		trace(TRACE_ERROR, "%s,%s: out of memory\n", __FILE__,
 		      __FILE__);
 		db_free_result();
-		return -1;
+		return DM_EQUERY;
 	}
 
 	for (i = 0; i < *nchildren; i++) {
@@ -2845,7 +2825,7 @@ int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
 	}
 
 	db_free_result();
-	return 0;		/* success */
+	return DM_SUCCESS;		/* success */
 }
 
 int db_isselectable(u64_t mailbox_idnr)
@@ -2860,12 +2840,12 @@ int db_isselectable(u64_t mailbox_idnr)
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not retrieve select-flag",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	if (db_num_rows() == 0) {
 		db_free_result();
-		return 0;
+		return DM_SUCCESS;
 	}
 
 	query_result = db_get_result(0, 0);
@@ -2873,15 +2853,15 @@ int db_isselectable(u64_t mailbox_idnr)
 		trace(TRACE_ERROR, "%s,%s: query result is NULL, but there is a "
 		      "result set", __FILE__, __func__);
 		db_free_result();
-		return -1;
+		return DM_EQUERY;
 	}
 
 	not_selectable = strtol(query_result, NULL, 10);
 	db_free_result();
 	if (not_selectable == 0)
-		return 1;
+		return DM_EGENERAL;
 	else
-		return 0;
+		return DM_SUCCESS;
 }
 
 int db_noinferiors(u64_t mailbox_idnr)
@@ -2897,12 +2877,12 @@ int db_noinferiors(u64_t mailbox_idnr)
 		trace(TRACE_ERROR,
 		      "%s,%s: could not retrieve noinferiors-flag",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	if (db_num_rows() == 0) {
 		db_free_result();
-		return 0;
+		return DM_SUCCESS;
 	}
 
 	query_result = db_get_result(0, 0);
@@ -2910,7 +2890,7 @@ int db_noinferiors(u64_t mailbox_idnr)
 		trace(TRACE_ERROR, "%s,%s: query result is NULL, but there is a "
 		      "result set", __FILE__, __func__);
 		db_free_result();
-		return 0;
+		return DM_SUCCESS;
 	}
 	no_inferiors = strtol(query_result, NULL, 10);
 	db_free_result();
@@ -2927,9 +2907,9 @@ int db_setselectable(u64_t mailbox_idnr, int select_value)
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not set noselect-flag",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
-	return 0;
+	return DM_SUCCESS;
 }
 
 
@@ -2963,7 +2943,7 @@ int db_get_mailbox_size(u64_t mailbox_idnr, int only_deleted,
 		trace(TRACE_ERROR, "%s,%s: could not calculate size of "
 		      "mailbox [%llu]", __FILE__, __func__,
 		      mailbox_idnr);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	if (db_num_rows() > 0) {
@@ -2971,7 +2951,7 @@ int db_get_mailbox_size(u64_t mailbox_idnr, int only_deleted,
 	}
 
 	db_free_result();
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_removemsg(u64_t user_idnr, u64_t mailbox_idnr)
@@ -2982,7 +2962,7 @@ int db_removemsg(u64_t user_idnr, u64_t mailbox_idnr)
 		trace(TRACE_ERROR,
 		      "%s,%s: error getting size for mailbox [%llu]",
 		      __FILE__, __func__, mailbox_idnr);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	/* update messages belonging to this mailbox: mark as deleted (status 
@@ -2995,7 +2975,7 @@ int db_removemsg(u64_t user_idnr, u64_t mailbox_idnr)
 		trace(TRACE_ERROR,
 		      "%s,%s: could not update messages in mailbox",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	if (db_subtract_quotum_used(user_idnr, mailbox_size) < 0) {
@@ -3004,9 +2984,9 @@ int db_removemsg(u64_t user_idnr, u64_t mailbox_idnr)
 		      "used quotum for mailbox [%llu], user [%llu]. Database "
 		      "might be inconsistent. Run dbmail-util",
 		      __FILE__, __func__, mailbox_idnr, user_idnr);
-		return -1;
+		return DM_EQUERY;
 	}
-	return 0;		/* success */
+	return DM_SUCCESS;		/* success */
 }
 
 int db_movemsg(u64_t mailbox_to, u64_t mailbox_from)
@@ -3019,9 +2999,9 @@ int db_movemsg(u64_t mailbox_to, u64_t mailbox_from)
 		trace(TRACE_ERROR,
 		      "%s,%s: could not update messages in mailbox\n",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
-	return 0;		/* success */
+	return DM_SUCCESS;		/* success */
 }
 
 int db_get_message_size(u64_t message_idnr, u64_t * message_size)
@@ -3039,7 +3019,7 @@ int db_get_message_size(u64_t message_idnr, u64_t * message_size)
 		trace(TRACE_ERROR,
 		      "%s,%s: could not fetch message size for message id "
 		      "[%llu]", __FILE__, __func__, message_idnr);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	if (db_num_rows() != 1) {
@@ -3048,7 +3028,7 @@ int db_get_message_size(u64_t message_idnr, u64_t * message_size)
 		      "multiple entries\n",
 		      __FILE__, __func__, message_idnr);
 		db_free_result();
-		return -1;
+		return DM_EQUERY;
 	}
 
 	result_string = db_get_result(0, 0);
@@ -3060,10 +3040,10 @@ int db_get_message_size(u64_t message_idnr, u64_t * message_size)
 		      "of msg [%llu]\n",
 		      __FILE__, __func__, message_idnr);
 		db_free_result();
-		return -1;
+		return DM_EQUERY;
 	}
 	db_free_result();
-	return 1;
+	return DM_EGENERAL;
 
 }
 
@@ -3077,7 +3057,7 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr,
 	if (db_get_message_size(msg_idnr, &msgsize) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error getting message size for "
 		      "message [%llu]", __FILE__, __func__, msg_idnr);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	/* Check to see if the user has room for the message. */
@@ -3085,7 +3065,7 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr,
 	case -1:
 		trace(TRACE_ERROR, "%s,%s: error checking quotum",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	case 1:
 		trace(TRACE_INFO, "%s,%s: user [%llu] would exceed quotum",
 		      __FILE__, __func__, user_idnr);
@@ -3108,7 +3088,7 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr,
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error copying message",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	/* get the id of the inserted record */
@@ -3119,10 +3099,10 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr,
 		trace(TRACE_ERROR, "%s,%s: error setting the new quotum "
 		      "used value for user [%llu]",
 		      __FILE__, __func__, user_idnr);
-		return -1;
+		return DM_EQUERY;
 	}
 
-	return 1;
+	return DM_EGENERAL;
 }
 
 int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name)
@@ -3137,7 +3117,7 @@ int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name)
 	if (result <= 0) {
 		trace(TRACE_ERROR, "%s,%s: error checking ownership of "
 		      "mailbox", __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	snprintf(query, DEF_QUERYSIZE,
@@ -3147,13 +3127,13 @@ int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name)
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not retrieve name",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	if (db_num_rows() < 1) {
 		db_free_result();
 		*name = '\0';
-		return 0;
+		return DM_SUCCESS;
 	}
 
 	query_result = db_get_result(0, 0);
@@ -3161,7 +3141,7 @@ int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name)
 		/* empty set, mailbox does not exist */
 		db_free_result();
 		*name = '\0';
-		return 0;
+		return DM_SUCCESS;
 	}
 	tmp_name = dm_strdup(query_result);
 	
@@ -3170,7 +3150,7 @@ int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name)
 	if (!tmp_fq_name) {
 		trace(TRACE_ERROR, "%s,%s: error getting fully qualified "
 		      "mailbox name", __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 	tmp_fq_name_len = strlen(tmp_fq_name);
 	if (tmp_fq_name_len >= IMAP_MAX_MAILBOX_NAMELEN)
@@ -3179,7 +3159,7 @@ int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name)
 	name[tmp_fq_name_len] = '\0';
 	dm_free(tmp_name);
 	g_free(tmp_fq_name);
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_setmailboxname(u64_t mailbox_idnr, const char *name)
@@ -3191,10 +3171,10 @@ int db_setmailboxname(u64_t mailbox_idnr, const char *name)
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not set name", __FILE__,
 		      __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_expunge(u64_t mailbox_idnr, u64_t user_idnr,
@@ -3207,7 +3187,7 @@ int db_expunge(u64_t mailbox_idnr, u64_t user_idnr,
 		trace(TRACE_ERROR, "%s,%s: error getting mailbox size "
 		      "for mailbox [%llu]",
 		      __FILE__, __func__, mailbox_idnr);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	if (nmsgs && msg_idnrs) {
@@ -3226,7 +3206,7 @@ int db_expunge(u64_t mailbox_idnr, u64_t user_idnr,
 			trace(TRACE_ERROR,
 			      "%s,%s: could not select messages in mailbox",
 			      __FILE__, __func__);
-			return -1;
+			return DM_EQUERY;
 		}
 
 		/* now alloc mem */
@@ -3236,7 +3216,7 @@ int db_expunge(u64_t mailbox_idnr, u64_t user_idnr,
 			/* out of mem */
 			*nmsgs = 0;
 			db_free_result();
-			return -1;
+			return DM_EQUERY;
 		}
 
 		/* save ID's in array */
@@ -3265,7 +3245,7 @@ int db_expunge(u64_t mailbox_idnr, u64_t user_idnr,
 		if (nmsgs)
 			*nmsgs = 0;
 
-		return -1;
+		return DM_EQUERY;
 	}
 
 	if (db_subtract_quotum_used(user_idnr, mailbox_size) < 0) {
@@ -3273,10 +3253,10 @@ int db_expunge(u64_t mailbox_idnr, u64_t user_idnr,
 		      "%s,%s: error decreasing used quotum for "
 		      "user [%llu]. Database might be inconsistent now",
 		      __FILE__, __func__, user_idnr);
-		return -1;
+		return DM_EQUERY;
 	}
 
-	return 0;		/* success */
+	return DM_SUCCESS;		/* success */
 }
 
 u64_t db_first_unseen(u64_t mailbox_idnr)
@@ -3318,7 +3298,7 @@ int db_subscribe(u64_t mailbox_idnr, u64_t user_idnr)
 		trace(TRACE_DEBUG, "%s,%s: already subscribed to mailbox "
 		      "[%llu]", __FILE__, __func__, mailbox_idnr);
 		db_free_result();
-		return 0;
+		return DM_SUCCESS;
 	}
 
 	db_free_result();
@@ -3330,10 +3310,10 @@ int db_subscribe(u64_t mailbox_idnr, u64_t user_idnr)
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not insert subscription",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_unsubscribe(u64_t mailbox_idnr, u64_t user_idnr)
@@ -3348,7 +3328,7 @@ int db_unsubscribe(u64_t mailbox_idnr, u64_t user_idnr)
 		      __FILE__, __func__);
 		return (-1);
 	}
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_get_msgflag(const char *flag_name, u64_t msg_idnr,
@@ -3372,7 +3352,7 @@ int db_get_msgflag(const char *flag_name, u64_t msg_idnr,
 	else if (strcasecmp(flag_name, "draft") == 0)
 		snprintf(the_flag_name, DEF_QUERYSIZE / 2, "draft_flag");
 	else
-		return 0;	/* non-existent flag is not set */
+		return DM_SUCCESS;	/* non-existent flag is not set */
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT %s FROM %smessages "
@@ -3418,7 +3398,7 @@ int db_get_msgflag_all(u64_t msg_idnr, u64_t mailbox_idnr, int *flags)
 		}
 	}
 	db_free_result();
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr,
@@ -3431,10 +3411,10 @@ int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr,
 				 flags, action_type) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not set message flags",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
-	return 0;
+	return DM_SUCCESS;
 
 }
 
@@ -3482,7 +3462,7 @@ int db_set_msgflag_range(u64_t msg_idnr_low, u64_t msg_idnr_high,
 	}
 
 	if (!placed)
-		return 0;	/* nothing to update */
+		return DM_SUCCESS;	/* nothing to update */
 
 	/* last character in string is comma, replace it --> strlen()-1 */
 	left = DEF_QUERYSIZE - strlen(query);
@@ -3498,7 +3478,7 @@ int db_set_msgflag_range(u64_t msg_idnr_low, u64_t msg_idnr_high,
 		return (-1);
 	}
 
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_set_msgflag_recent(u64_t msg_idnr, u64_t mailbox_idnr)
@@ -3516,10 +3496,10 @@ int db_set_msgflag_recent_range(u64_t msg_idnr_lo, u64_t msg_idnr_hi, u64_t mail
 	if (db_query(query->str) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not update recent_flag",__FILE__,__func__);
 		g_string_free(query,1);
-		return -1;
+		return DM_EQUERY;
 	}
 	g_string_free(query,1);
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_get_msgdate(u64_t mailbox_idnr, u64_t msg_idnr, char *date)
@@ -3554,7 +3534,7 @@ int db_get_msgdate(u64_t mailbox_idnr, u64_t msg_idnr, char *date)
 	}
 
 	db_free_result();
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_set_rfcsize(u64_t rfcsize, u64_t msg_idnr, u64_t mailbox_idnr)
@@ -3569,14 +3549,14 @@ int db_set_rfcsize(u64_t rfcsize, u64_t msg_idnr, u64_t mailbox_idnr)
 		trace(TRACE_ERROR,
 		      "%s,%s: could not get physmessage_id for "
 		      "message [%llu]", __FILE__, __func__, msg_idnr);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	if (db_num_rows() == 0) {
 		trace(TRACE_DEBUG, "%s,%s: no such message [%llu]",
 		      __FILE__, __func__, msg_idnr);
 		db_free_result();
-		return 0;
+		return DM_SUCCESS;
 	}
 
 	physmessage_id = db_get_result_u64(0, 0);
@@ -3588,10 +3568,10 @@ int db_set_rfcsize(u64_t rfcsize, u64_t msg_idnr, u64_t mailbox_idnr)
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not update  "
 		      "message [%llu]", __FILE__, __func__, msg_idnr);
-		return -1;
+		return DM_EQUERY;
 	}
 
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_get_rfcsize(u64_t msg_idnr, u64_t mailbox_idnr, u64_t * rfc_size)
@@ -3611,20 +3591,20 @@ int db_get_rfcsize(u64_t msg_idnr, u64_t mailbox_idnr, u64_t * rfc_size)
 		trace(TRACE_ERROR,
 		      "%s,%s: could not fetch RFC size from table",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	if (db_num_rows() < 1) {
 		trace(TRACE_ERROR, "%s,%s: message not found",
 		      __FILE__, __func__);
 		db_free_result();
-		return -1;
+		return DM_EQUERY;
 	}
 
 	*rfc_size = db_get_result_u64(0, 0);
 
 	db_free_result();
-	return 1;
+	return DM_EGENERAL;
 }
 
 int db_get_main_header(u64_t msg_idnr, struct dm_list *hdrlist)
@@ -3633,7 +3613,7 @@ int db_get_main_header(u64_t msg_idnr, struct dm_list *hdrlist)
 	int result;
 
 	if (!hdrlist)
-		return 0;
+		return DM_SUCCESS;
 
 	if (hdrlist->start)
 		dm_list_free(&hdrlist->start);
@@ -3650,7 +3630,7 @@ int db_get_main_header(u64_t msg_idnr, struct dm_list *hdrlist)
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not get message header",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	if (db_num_rows() > 0) {
@@ -3660,14 +3640,14 @@ int db_get_main_header(u64_t msg_idnr, struct dm_list *hdrlist)
 			      "%s,%s: no header for message found",
 			      __FILE__, __func__);
 			db_free_result();
-			return -1;
+			return DM_EQUERY;
 		}
 	} else {
 		trace(TRACE_ERROR,
 		      "%s,%s: no message blocks found for message",
 		      __FILE__, __func__);
 		db_free_result();
-		return -1;
+		return DM_EQUERY;
 	}
 
 	result = mime_fetch_headers(query_result, hdrlist);
@@ -3698,7 +3678,7 @@ int db_get_main_header(u64_t msg_idnr, struct dm_list *hdrlist)
 	}
 
 	/* success ! */
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_mailbox_msg_match(u64_t mailbox_idnr, u64_t msg_idnr)
@@ -3736,11 +3716,11 @@ int db_acl_has_right(u64_t userid, u64_t mboxid, const char *right_flag)
 		trace(TRACE_ERROR,
 		      "%s,%s: error checking mailbox ownership.", __FILE__,
 		      __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	if (owner_result == 1)
-		return 1;
+		return DM_EGENERAL;
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT * FROM %sacl "
@@ -3751,7 +3731,7 @@ int db_acl_has_right(u64_t userid, u64_t mboxid, const char *right_flag)
 	if (db_query(query) < 0) {
 		trace(TRACE_ERROR, "%s,%s: error finding acl_right",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	if (db_num_rows() == 0)
@@ -3775,7 +3755,7 @@ static int db_acl_has_acl(u64_t userid, u64_t mboxid)
 	if (db_query(query) < 0) {
 		trace(TRACE_ERROR, "%s,%s: Error finding ACL entry",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	if (db_num_rows() == 0)
@@ -3798,10 +3778,10 @@ static int db_acl_create_acl(u64_t userid, u64_t mboxid)
 		      "%s,%s: Error creating ACL entry for user "
 		      "[%llu], mailbox [%llu].", __FILE__, __func__,
 		      userid, mboxid);
-		return -1;
+		return DM_EQUERY;
 	}
 
-	return 1;
+	return DM_EGENERAL;
 }
 
 int db_acl_set_right(u64_t userid, u64_t mboxid, const char *right_flag,
@@ -3819,10 +3799,10 @@ int db_acl_set_right(u64_t userid, u64_t mboxid, const char *right_flag,
 	if (owner_result < 0) {
 		trace(TRACE_ERROR, "%s,%s: error checking ownership of "
 		      "mailbox.", __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 	if (owner_result == 1)
-		return 0;
+		return DM_SUCCESS;
 
 	// if necessary, create ACL for user, mailbox
 	result = db_acl_has_acl(userid, mboxid);
@@ -3830,7 +3810,7 @@ int db_acl_set_right(u64_t userid, u64_t mboxid, const char *right_flag,
 		trace(TRACE_ERROR, "%s,%s: Error finding acl for user "
 		      "[%llu], mailbox [%llu]",
 		      __FILE__, __func__, userid, mboxid);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	if (result == 0) {
@@ -3838,7 +3818,7 @@ int db_acl_set_right(u64_t userid, u64_t mboxid, const char *right_flag,
 			trace(TRACE_ERROR, "%s,%s: Error creating ACL for "
 			      "user [%llu], mailbox [%llu]",
 			      __FILE__, __func__, userid, mboxid);
-			return -1;
+			return DM_EQUERY;
 		}
 	}
 
@@ -3851,11 +3831,11 @@ int db_acl_set_right(u64_t userid, u64_t mboxid, const char *right_flag,
 		trace(TRACE_ERROR, "%s,%s: Error updating ACL for user "
 		      "[%llu], mailbox [%llu].", __FILE__, __func__,
 		      userid, mboxid);
-		return -1;
+		return DM_EQUERY;
 	}
 	trace(TRACE_DEBUG, "%s,%s: Updated ACL for user [%llu], "
 	      "mailbox [%llu].", __FILE__, __func__, userid, mboxid);
-	return 1;
+	return DM_EGENERAL;
 }
 
 int db_acl_delete_acl(u64_t userid, u64_t mboxid)
@@ -3871,10 +3851,10 @@ int db_acl_delete_acl(u64_t userid, u64_t mboxid)
 	if (db_query(query) < 0) {
 		trace(TRACE_ERROR, "%s,%s: error deleting ACL",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
-	return 1;
+	return DM_EGENERAL;
 }
 
 int db_acl_get_identifier(u64_t mboxid, struct dm_list *identifier_list)
@@ -3896,7 +3876,7 @@ int db_acl_get_identifier(u64_t mboxid, struct dm_list *identifier_list)
 		trace(TRACE_ERROR, "%s,%s: error getting acl identifiers "
 		      "for mailbox [%llu].", __FILE__, __func__,
 		      mboxid);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	n = db_num_rows();
@@ -3913,7 +3893,7 @@ int db_acl_get_identifier(u64_t mboxid, struct dm_list *identifier_list)
 		}
 	}
 	db_free_result();
-	return 1;
+	return DM_EGENERAL;
 }
 
 int db_get_mailbox_owner(u64_t mboxid, u64_t * owner_id)
@@ -3927,15 +3907,15 @@ int db_get_mailbox_owner(u64_t mboxid, u64_t * owner_id)
 	if (db_query(query) < 0) {
 		trace(TRACE_ERROR, "%s,%s: error finding owner of mailbox "
 		      "[%llu]", __FILE__, __func__, mboxid);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	*owner_id = db_get_result_u64(0, 0);
 	db_free_result();
 	if (*owner_id == 0)
-		return 0;
+		return DM_SUCCESS;
 	else
-		return 1;
+		return DM_EGENERAL;
 }
 
 int db_user_is_mailbox_owner(u64_t userid, u64_t mboxid)
@@ -3952,7 +3932,7 @@ int db_user_is_mailbox_owner(u64_t userid, u64_t mboxid)
 		      "%s,%s: error checking if user [%llu] is "
 		      "owner of mailbox [%llu]", __FILE__, __func__,
 		      userid, mboxid);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	if (db_num_rows() == 0)
@@ -4034,7 +4014,7 @@ int user_idnr_is_delivery_user_idnr(u64_t user_idnr)
 			trace(TRACE_ERROR, "%s,%s: error looking up "
 			      "user_idnr for DBMAIL_DELIVERY_USERNAME",
 			      __FILE__, __func__);
-			return -1;
+			return DM_EQUERY;
 		}
 		delivery_user_idnr_looked_up = 1;
 	} else 
@@ -4043,9 +4023,9 @@ int user_idnr_is_delivery_user_idnr(u64_t user_idnr)
 		      __FILE__, __func__, DBMAIL_DELIVERY_USERNAME);
 	
 	if (delivery_user_idnr == user_idnr)
-		return 1;
+		return DM_EGENERAL;
 	else
-		return 0;
+		return DM_SUCCESS;
 }
 
 void convert_inbox_to_uppercase(char *name)
@@ -4076,12 +4056,12 @@ int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * m
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: db error", __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	if (db_num_rows() == 0) {
 		db_free_result();
-		return 0;
+		return DM_SUCCESS;
 	}
 	/* owner_idnr */
 	query_result=db_get_result(0,i++);
@@ -4105,7 +4085,7 @@ int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * m
 	mb->no_inferiors=strtol(query_result,NULL,1);
 
 	db_free_result();
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_user_exists(const char *username, u64_t * user_idnr) 
@@ -4118,13 +4098,13 @@ int db_user_exists(const char *username, u64_t * user_idnr)
 	if (!username) {
 		trace(TRACE_ERROR, "%s,%s: got NULL as username",
 		      __FILE__, __func__);
-		return 0;
+		return DM_SUCCESS;
 	}
 
 	if (!(escaped_username = (char *) dm_malloc(strlen(username) * 2 + 1))) {
 		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
 		      "escaped username", __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	db_escape_string(escaped_username, username, strlen(username));
@@ -4137,18 +4117,18 @@ int db_user_exists(const char *username, u64_t * user_idnr)
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not execute query",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	if (db_num_rows() == 0) {
 		db_free_result();
-		return 0;
+		return DM_SUCCESS;
 	}
 
 	query_result = db_get_result(0, 0);
 	*user_idnr = (query_result) ? strtoull(query_result, 0, 10) : 0;
 	db_free_result();
-	return 1;
+	return DM_EGENERAL;
 }
 
 int db_user_create_shadow(const char *username, u64_t * user_idnr)
@@ -4169,7 +4149,7 @@ int db_user_create(const char *username, const char *password, const char *encty
 	if (!(escaped_username = (char *) dm_malloc(strlen(username) * 2 + 1))) {
 		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
 			"escaped username", __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	db_escape_string(escaped_username, username, strlen(username));
@@ -4182,7 +4162,7 @@ int db_user_create(const char *username, const char *password, const char *encty
 		/* query failed */
 		trace(TRACE_ERROR, "%s,%s: query failed",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	if (db_num_rows() > 0) {
@@ -4190,7 +4170,7 @@ int db_user_create(const char *username, const char *password, const char *encty
 		trace(TRACE_ERROR, "%s,%s: user already exists",
 		      __FILE__, __func__);
 		db_free_result();
-		return -1;
+		return DM_EQUERY;
 	}
 
 	db_free_result();
@@ -4199,7 +4179,7 @@ int db_user_create(const char *username, const char *password, const char *encty
 	if (strlen(password) >= DEF_QUERYSIZE) {
 		trace(TRACE_ERROR, "%s,%s: password length is insane",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	db_escape_string(escapedpass, password, strlen(password));
@@ -4207,7 +4187,7 @@ int db_user_create(const char *username, const char *password, const char *encty
 	if (!(escaped_username = (char *) dm_malloc(strlen(username) * 2 + 1))) {
 		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
 			"escaped username", __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	db_escape_string(escaped_username, username, strlen(username));
@@ -4232,13 +4212,13 @@ int db_user_create(const char *username, const char *password, const char *encty
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: query for adding user failed",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 	
 	if (*user_idnr == 0)
 		*user_idnr = db_insert_result("user_idnr");
 
-	return 1;
+	return DM_EGENERAL;
 }
 
 int db_user_delete(const char * username)
@@ -4248,7 +4228,7 @@ int db_user_delete(const char * username)
 	if (!(escaped_username = (char *) dm_malloc(strlen(username) * 2 + 1))) {
 		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
 			"escaped username", __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	db_escape_string(escaped_username, username, strlen(username));
@@ -4260,10 +4240,10 @@ int db_user_delete(const char * username)
 		/* query failed */
 		trace(TRACE_ERROR, "%s,%s: query for removing user failed",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_user_rename(u64_t user_idnr, const char *new_name) 
@@ -4273,7 +4253,7 @@ int db_user_rename(u64_t user_idnr, const char *new_name)
 	if (!(escaped_new_name = (char *) dm_malloc(strlen(new_name) * 2 + 1))) {
 		trace(TRACE_ERROR, "%s,%s: out of memory allocating escaped new_name", 
 				__FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	db_escape_string(escaped_new_name, new_name, strlen(new_name));
@@ -4285,9 +4265,9 @@ int db_user_rename(u64_t user_idnr, const char *new_name)
 		trace(TRACE_ERROR,
 		      "%s,%s: could not change name for user [%llu]",
 		      __FILE__, __func__, user_idnr);
-		return -1;
+		return DM_EQUERY;
 	}
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_user_find_create(u64_t user_idnr)
@@ -4305,27 +4285,27 @@ int db_user_find_create(u64_t user_idnr)
 		return result;
 	
 	if (! (username = auth_get_userid(user_idnr))) 
-		return -1;
+		return DM_EQUERY;
 	
 	trace(TRACE_DEBUG,"%s,%s: found username for user_idnr [%llu -> %s",
 			__FILE__, __func__,
 			user_idnr, username);
 	
 	if ((db_user_exists(username, &idnr) < 0))
-		return -1;
+		return DM_EQUERY;
 
 	if ((idnr > 0) && (idnr != user_idnr)) {
 		trace(TRACE_ERROR, "%s,%s: user_idnr for sql shadow account "
 				"differs from user_idnr [%llu != %llu]",
 				__FILE__, __func__,
 				idnr, user_idnr);
-		return -1;
+		return DM_EQUERY;
 	}
 	
 	if (idnr == user_idnr) {
 		trace(TRACE_DEBUG, "%s,%s: shadow entry exists and valid",
 				__FILE__, __func__);
-		return 1;
+		return DM_EGENERAL;
 	}
 
 	return db_user_create_shadow(username, &user_idnr);

@@ -88,6 +88,12 @@
 
 #define MATCH(x,y) strcasecmp(x,y)==0
 
+typedef enum {
+	DM_EQUERY 	= -1,
+	DM_SUCCESS 	= 0,
+	DM_EGENERAL 	= 1
+} DbmailErrorCodes;
+
 /** status fields for messages */
 typedef enum {
 	MESSAGE_STATUS_NEW     = 0,

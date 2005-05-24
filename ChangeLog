@@ -1,3 +1,9 @@
+2005-05-24  Paul Stevens <paul@nfg.nl>
+
+	* server.c(ParentSigHandler): finalize fix for #199.
+	* imaputil.c, check_dbmail_imapd.c (dbmail_imap_astring_as_string): cleanup and fixes.
+	* db.c, db.h: start using symbolic return codes.
+	
 2005-05-18  Paul Stevens <paul@nfg.nl>
 
 	* check_dbmail_deliver.c, config.c, lmtpd.c, check_dbmail_server.c, 

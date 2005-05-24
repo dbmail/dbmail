@@ -134,15 +134,36 @@ char *dbmail_imap_plist_as_string(GList * list)
 
 char *dbmail_imap_astring_as_string(const char *s)
 {
-	return g_strdup_printf("{%lu}\r\n%s", (unsigned long) strlen(s), s);
-	/*
 	int i;
-	for (i=0; s[i]; i++) { 
-		if ( !(s[i] & 0xe0) || (s[i] & 0x80) || (s[i] == '"') || (s[i] == '\\')) 
-			return g_strdup_printf("{%lu}\r\n%s", (unsigned long) strlen(s), s);
+	char *r;
+	char *t, *l = NULL;
+	char first, last, penult = '\\';
+
+	l = g_strdup(s);
+	t = l;
+	/* strip off dquote */
+	first = s[0];
+	last = s[strlen(s)-1];
+	if (strlen(s) > 2)
+		penult = s[strlen(s)-2];
+	if ((first == '"') && (last == '"') && (penult != '\\')) {
+		l[strlen(l)-1] = '\0';
+		l++;
 	}
-	return g_strdup_printf("\"%s\"", s);
-	*/
+	
+	for (i=0; l[i]; i++) { 
+		if ((l[i] & 0x80) || (l[i] == '\r') || (l[i] == '\n') || (l[i] == '"') || (l[i] == '\\')) {
+			r = g_strdup_printf("{%lu}\r\n%s", (unsigned long) strlen(l), l);
+			g_free(l);
+			return r;
+		}
+		
+	}
+	r = g_strdup_printf("\"%s\"", l);
+	g_free(t);
+
+	return r;
+
 }
 
 

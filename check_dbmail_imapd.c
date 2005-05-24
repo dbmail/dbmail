@@ -121,10 +121,14 @@ END_TEST
 #define A(x,y) fail_unless(strcmp(y,dbmail_imap_astring_as_string(x))==0,"dbmail_imap_astring_as_string failed")
 START_TEST(test_dbmail_imap_astring_as_string)
 {
-//	A("test","{4}test\r\n");
-	printf("%s\n", dbmail_imap_astring_as_string("test"));
-	printf("%s\n", dbmail_imap_astring_as_string("\"test\""));
-	
+	A("test","\"test\"");
+	A("\"test\"","\"test\"");
+	A("\"test","{5}\r\n\"test");
+	A("testÃ","{5}\r\ntestÃ");
+	A("test\"","{5}\r\ntest\"");
+	A("test\"","{5}\r\ntest\"");
+	A("test\\","{5}\r\ntest\\");
+	A("test\225","{5}\r\ntest\225");
 }
 END_TEST
 

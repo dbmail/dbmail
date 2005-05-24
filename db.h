@@ -264,8 +264,8 @@ int db_rollback_transaction(void);
  * pointer on call.
  * \return 
  *     - -1 on error
- *     -  0 if no message with this message_idnr found
- *     -  1 if a physmessage_id was found
+ *     -  0 if a physmessage_id was found
+ *     -  1 if no message with this message_idnr found
  * \attention function will fail and halt program if physmessage_id is
  * NULL on call.
  */
@@ -523,7 +523,7 @@ int db_physmessage_set_sizes(u64_t physmessage_id, u64_t message_size,
  * hold a valid pointer on call.
  * \return
  *      - -1 on failure
- *      -  1 on success
+ *      -  0 on success
  */
 int db_insert_message_block_physmessage(const char *block,
 					u64_t block_size,
@@ -539,7 +539,7 @@ int db_insert_message_block_physmessage(const char *block,
 * be a valid pointer on call.
 * \return 
 *        - -1 on failure
-*        - 1 otherwise
+*        - 0 otherwise
 */
 int db_insert_message_block(const char *block, u64_t block_size,
 			    u64_t message_idnr, 

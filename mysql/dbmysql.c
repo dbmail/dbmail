@@ -97,25 +97,25 @@ int db_connect()
 			       _db_params.port, sock, 0) == NULL) {
 		trace(TRACE_ERROR, "%s,%s: mysql_real_connect failed: %s",
 		      __FILE__, __func__, mysql_error(&conn));
-		return -1;
+		return DM_EQUERY;
 	}
 #ifdef mysql_errno
 	if (mysql_errno(&conn)) {
 		trace(TRACE_ERROR, "%s,%s: mysql_real_connect failed: %s",
 		      __FILE__, __func__, mysql_error(&conn));
-		return -1;
+		return DM_EQUERY;
 	}
 #endif
-	return 0;
+	return DM_SUCCESS;
 }
 
 unsigned db_num_rows()
 {
 	/* mysql_store_result can return NULL. If this is
 	 * true, res will be zero, and naturally num_rows
-	 * should return 0 */
+	 * should return DM_SUCCESS */
 	if (!res)
-		return 0;
+		return DM_SUCCESS;
 
 	return mysql_num_rows(res);
 }
@@ -123,7 +123,7 @@ unsigned db_num_rows()
 unsigned db_num_fields()
 {
 	if (!res)
-		return 0;
+		return DM_SUCCESS;
 
 	return mysql_num_fields(res);
 }
@@ -157,11 +157,7 @@ const char *db_get_result(unsigned row, unsigned field)
 		return NULL;
 	}
 	
-        /*MR*/
-        
-        if (res_changed) 
-        
-        {
+        if (res_changed) {
         	mysql_data_seek(res, row);
         	last_row = mysql_fetch_row(res);
         } else {
@@ -170,14 +166,11 @@ const char *db_get_result(unsigned row, unsigned field)
                 else if (row != last_row_number) {
                         mysql_data_seek(res, row);
 	                last_row = mysql_fetch_row(res);
-                        };
-                        /* otherwise last_row is already loaded and does not need to change! MR*/
+		};
         };
 	
         res_changed = 0;
         last_row_number = row;
-        
-        /*MR changes end here*/
         
 	if (last_row == NULL) {
 		trace(TRACE_WARNING, "%s,%s: row is NULL\n",
@@ -197,7 +190,7 @@ int db_disconnect()
 	if (res)
 		db_free_result();
 	mysql_close(&conn);
-	return 0;
+	return DM_SUCCESS;
 }
 
 int db_check_connection()
@@ -208,10 +201,10 @@ int db_check_connection()
 		if (db_connect() < 0) {
 			trace(TRACE_ERROR, "%s,%s: unable to connect to "
 			      "database.", __FILE__, __func__);
-			return -1;
+			return DM_EQUERY;
 		}
 	}
-	return 0;
+	return DM_SUCCESS;
 }
 
 u64_t db_insert_result(const char *sequence_identifier UNUSED)
@@ -228,7 +221,7 @@ int db_query(const char *the_query)
 	if (db_check_connection() < 0) {
 		trace(TRACE_ERROR, "%s,%s: no database connection",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 	if (the_query != NULL) {
 		querysize = (unsigned) strlen(the_query);
@@ -240,7 +233,7 @@ int db_query(const char *the_query)
 				trace(TRACE_ERROR, "%s,%s: [%s] [%s]",
 				      __FILE__, __func__, 
 				      mysql_error(&conn), the_query);
-				return -1;
+				return DM_EQUERY;
 			}
 			
 			res = mysql_store_result(&conn);
@@ -249,16 +242,16 @@ int db_query(const char *the_query)
 		} else {
 			trace(TRACE_ERROR, "%s,%s: querysize is wrong: [%d]", 
 					__FILE__, __func__, querysize);
-			return -1;
+			return DM_EQUERY;
 		}
 	} else {
 		trace(TRACE_ERROR, "%s,%s: "
 		      "query buffer is NULL, this is not supposed to happen\n",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
-	return 0;
+	return DM_SUCCESS;
 }
 
 unsigned long db_escape_string(char *to, const char *from, unsigned long length)
@@ -276,11 +269,11 @@ int db_do_cleanup(const char **tables, int num)
 		snprintf(the_query, DEF_QUERYSIZE, "OPTIMIZE TABLE %s%s",
 			 _db_params.pfx,tables[i]);
 
-		if (db_query(the_query) == -1) {
+		if (db_query(the_query) == DM_EQUERY) {
 			trace(TRACE_ERROR,
 			      "%s,%s: error optimizing table [%s%s]",
 			      __FILE__, __func__, _db_params.pfx,tables[i]);
-			result = -1;
+			result = DM_EQUERY;
 		}
 		db_free_result();
 	}
@@ -293,7 +286,7 @@ u64_t db_get_length(unsigned row, unsigned field)
 	if (!res) {
 		trace(TRACE_WARNING, "%s,%s: result set is null\n",
 		      __FILE__, __func__);
-		return -1;
+		return DM_EQUERY;
 	}
 
 	res_changed=1;
@@ -302,7 +295,7 @@ u64_t db_get_length(unsigned row, unsigned field)
 		trace(TRACE_ERROR, "%s, %s: "
 		      "row = %u, field = %u, bigger than size of result set",
 		      __FILE__, __func__, row, field);
-		return -1;
+		return DM_EQUERY;
 	}
 	
 	mysql_data_seek(res, row);

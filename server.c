@@ -175,6 +175,7 @@ int StartServer(serverConfig_t * conf)
 
 void ParentSigHandler(int sig, siginfo_t * info, void *data)
 {
+	pid_t chpid;
 	int saved_errno = errno;
 	
 	if (ParentPID != getpid()) {
@@ -197,7 +198,8 @@ void ParentSigHandler(int sig, siginfo_t * info, void *data)
 	case SIGCHLD:
 		/* ignore, wait for child in main loop */
 		/* but we need to catch zombie */
-		waitpid(-1,&sig,WNOHANG);
+		if ((chpid = waitpid(-1,&sig,WNOHANG)) > 0)
+			scoreboard_release(chpid);
 		break;		
 
 	case SIGHUP:
