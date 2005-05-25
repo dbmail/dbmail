@@ -1,3 +1,10 @@
+2005-05-25  Paul Stevens <paul@nfg.nl>
+
+	* db.h, db.c, auth/authsql.c, auth/authldap.c,
+	sql/mysql/add_usermap.mysql, sql/mysql/create_tables_innoDB.mysql, 
+	sql/postgresql/add_usermap.pgsql, sql/postgresql/create_tables.pgsql:
+	reimplemented Jesse Norell's usermap patch in 2.1.
+	
 2005-05-24  Paul Stevens <paul@nfg.nl>
 
 	* server.c(ParentSigHandler): finalize fix for #199.

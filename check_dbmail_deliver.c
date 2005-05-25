@@ -752,7 +752,6 @@ Suite *dbmail_deliver_suite(void)
 	tcase_add_test(tc_auth, test_dm_ldap_get_filter);
 	tcase_add_test(tc_auth, test_dm_ldap_get_freeid);
 #endif
-
 	TCase *tc_pipe = tcase_create("Pipe");
 	suite_add_tcase(s, tc_pipe);
 	tcase_add_checked_fixture(tc_pipe, setup, teardown);
@@ -762,7 +761,6 @@ Suite *dbmail_deliver_suite(void)
 	suite_add_tcase(s, tc_misc);
 	tcase_add_checked_fixture(tc_misc, setup, teardown);
 	tcase_add_test(tc_misc, test_dm_stresc);
-	
 	
 	return s;
 }

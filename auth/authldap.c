@@ -696,10 +696,18 @@ int auth_user_exists(const char *username, u64_t * user_idnr)
 	if (*user_idnr != 0)
 		return 1;
 	
+	
+
 	/* fall back to db-user for DBMAIL_DELIVERY_USERNAME */
 	if (strcmp(username,DBMAIL_DELIVERY_USERNAME)==0)
 		return db_user_exists(DBMAIL_DELIVERY_USERNAME, user_idnr);
-
+	
+	if (db_use_usermap()) {  /* use usermap */
+		if (! db_user_exists_mapped(username, user_idnr))
+			return DM_EGENERAL;
+		else
+			return DM_SUCCESS;
+	}
 	return 0;
 }
 
@@ -1255,6 +1263,9 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 	int ldap_err;
 	char *ldap_dn = NULL;
 
+	assert(user_idnr != NULL);
+	*user_idnr = 0;
+
 	if (username == NULL || password == NULL) {
 		trace(TRACE_DEBUG, "%s,%s: username or password is NULL",__FILE__,__func__);
 		return 0;
@@ -1262,7 +1273,7 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 
 	create_current_timestring(&timestring);
 
-	if (! (auth_user_exists(username, user_idnr))) {
+	if (auth_user_exists(username, user_idnr) == -1) {
 		return -1;
 	}
 	
@@ -1271,7 +1282,6 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 				__FILE__, __func__);
 		return -1;
 	}
-			
 
 	/* now, try to rebind as the given DN using the supplied password */
 	trace(TRACE_DEBUG, "%s,%s: rebinding as [%s] to validate password",

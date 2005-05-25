@@ -46,6 +46,12 @@ CREATE TABLE dbmail_users (
 );
 CREATE UNIQUE INDEX dbmail_users_name_idx ON dbmail_users(userid);
 
+CREATE TABLE dbmail_usermap(
+  user_idnr INT8 REFERENCES dbmail_users(user_idnr) ON UPDATE CASCADE ON DELETE CASCADE,
+  userid VARCHAR(100)
+);
+CREATE INDEX usermap_userid_idx ON dbmail_usermap(userid);
+
 CREATE SEQUENCE dbmail_mailbox_idnr_seq;
 CREATE TABLE dbmail_mailboxes (
    mailbox_idnr INT8 DEFAULT nextval('dbmail_mailbox_idnr_seq'),

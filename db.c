@@ -73,7 +73,6 @@ const char *DB_TABLENAMES[DB_NTABLES] = {
 /** can be used for making queries to db backend */
 char query[DEF_QUERYSIZE]; 
 
-
 /* size of buffer for writing messages to a client */
 #define WRITE_BUFFER_SIZE 2048
 
@@ -150,6 +149,28 @@ int db_check_version(void)
 	return DM_SUCCESS;
 }
 
+/* test existence of usermap table */
+int db_use_usermap(void)
+{
+	static int use_usermap = -1;
+	if (use_usermap == -1) {
+		snprintf(query, DEF_QUERYSIZE, "SELECT user_idnr FROM %susermap WHERE 1 = 2",
+				DBPFX);
+
+		if (db_query(query) == -1) {
+			trace(TRACE_DEBUG, "%s,%s: disabling usermap lookups", 
+					__FILE__, __func__);
+			use_usermap = 0;
+		} else {
+			trace(TRACE_DEBUG, "%s,%s: enabling usermap lookups",
+					__FILE__, __func__);
+			use_usermap = 1;
+			db_free_result();
+		}
+	}
+	return use_usermap;
+}
+ 
 
 int db_begin_transaction()
 {
@@ -4088,6 +4109,49 @@ int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * m
 	return DM_SUCCESS;
 }
 
+int db_user_exists_mapped(const char *username, u64_t * user_idnr)
+{
+	char * escaped_username;
+	const char *query_result;
+	
+	assert(user_idnr != NULL);
+	*user_idnr = 0;
+	
+	trace (TRACE_DEBUG,"%s,%s: checking userid '%s' in usermap", 
+			__FILE__, __func__, username);
+	
+	escaped_username = dm_stresc(username);
+	
+	/* user_idnr not found, so try to get it from the usermap */
+	snprintf(query, DEF_QUERYSIZE, "SELECT user_idnr FROM %susermap WHERE userid = '%s'", 
+			DBPFX, escaped_username);
+
+	dm_free(escaped_username);
+
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: could not select usermap",
+				__FILE__, __func__);
+		return DM_EQUERY;
+	}
+
+	if (db_num_rows() == 0) {
+		/* user does not exist */
+		trace (TRACE_DEBUG,"%s,%s: userid '%s' not found in usermap", 
+				__FILE__, __func__, username);
+		db_free_result();
+		return DM_EGENERAL;
+	}
+
+	trace (TRACE_DEBUG,"%s,%s: userid '%s' found in usermap", 
+			__FILE__, __func__, username);
+
+	query_result = db_get_result(0, 0);
+	*user_idnr = (query_result) ? strtoull(query_result, 0, 10) : 0;
+	db_free_result();
+
+	return DM_SUCCESS;
+
+}
 int db_user_exists(const char *username, u64_t * user_idnr) 
 {
 	const char *query_result;
@@ -4098,37 +4162,43 @@ int db_user_exists(const char *username, u64_t * user_idnr)
 	if (!username) {
 		trace(TRACE_ERROR, "%s,%s: got NULL as username",
 		      __FILE__, __func__);
-		return DM_SUCCESS;
+		return 0;
+		
 	}
-
-	if (!(escaped_username = (char *) dm_malloc(strlen(username) * 2 + 1))) {
-		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
-		      "escaped username", __FILE__, __func__);
+	
+	if (! (escaped_username = dm_stresc(username)))
 		return DM_EQUERY;
-	}
-
-	db_escape_string(escaped_username, username, strlen(username));
-
+	
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT user_idnr FROM %susers WHERE userid='%s'",DBPFX,
 		 escaped_username);
+	
 	dm_free(escaped_username);
-
+	
 	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: could not execute query",
+		trace(TRACE_ERROR, "%s,%s: could not select user information",
 		      __FILE__, __func__);
 		return DM_EQUERY;
 	}
 
-	if (db_num_rows() == 0) {
+	if (db_num_rows() > 0) {
+		query_result = db_get_result(0, 0);
+		*user_idnr = (query_result) ? strtoull(query_result, 0, 10) : 0;
 		db_free_result();
-		return DM_SUCCESS;
+		return 1;
+	}
+		
+	if (! db_use_usermap()) {  /* no usermap table */
+		trace (TRACE_DEBUG,"%s,%s: userid '%s' not found in users table", 
+				__FILE__, __func__, username);
+		return 0;
 	}
 
-	query_result = db_get_result(0, 0);
-	*user_idnr = (query_result) ? strtoull(query_result, 0, 10) : 0;
-	db_free_result();
-	return DM_EGENERAL;
+	if (! db_user_exists_mapped(username, user_idnr))
+		return 1;
+	
+	return 0;
+	
 }
 
 int db_user_create_shadow(const char *username, u64_t * user_idnr)

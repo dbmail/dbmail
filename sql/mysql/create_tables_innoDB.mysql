@@ -51,6 +51,13 @@ CREATE TABLE dbmail_users (
 	UNIQUE INDEX userid_index (userid)
 ) TYPE=InnoDB;
 
+DROP TABLE IF EXISTS dbmail_usermap;
+CREATE TABLE dbmail_usermap (
+  user_idnr INT8 REFERENCES dbmail_users (user_idnr) ON UPDATE CASCADE ON DELETE CASCADE,
+  userid VARCHAR(100)
+) TYPE = InnoDB;
+CREATE INDEX usermap_userid_idx ON dbmail_usermap(userid);
+
 DROP TABLE IF EXISTS dbmail_mailboxes;
 CREATE TABLE dbmail_mailboxes (
 	mailbox_idnr bigint(21) NOT NULL auto_increment,

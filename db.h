@@ -90,6 +90,24 @@ int db_check_version(void);
  */
 int db_check_connection(void);
 
+/**
+ * \brief check database for existence of usermap table
+ * \return
+ * -  0 on table not found
+ * -  1 on table found
+ */
+int db_use_usermap(void);
+
+/**
+ * \brief check if username exists in the usermap table
+ * \param username userid to lookup
+ * \param user_idnr contains user_idnr after successful lookup
+ * \return
+ *  - -1 on db failure
+ *  -  0 on success
+ *  -  1 on not found
+ */
+int db_user_exists_mapped(const char *username, u64_t * user_idnr);
 
 /**
  * \brief disconnect from database server

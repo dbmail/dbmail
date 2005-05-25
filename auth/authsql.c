@@ -69,8 +69,6 @@ static char __auth_encryption_desc_string[_DESCSTRLEN];
  */
 static int __auth_query(const char *thequery);
 
-static u64_t __auth_insert_result(const char *sequence_identifier);
-
 int auth_connect()
 {
 	/* this function is only called after a connection has been made
@@ -400,7 +398,6 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 	timestring_t timestring;
 	char salt[13];
 	char cryptres[35];
-	char *escuser;
 
 	assert(user_idnr != NULL);
 	*user_idnr = 0;
@@ -417,28 +414,20 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 	if (strcmp(username, SHARED_MAILBOX_USERNAME) == 0)
 		return 0;
 
-	if (!(escuser = (char *) dm_malloc(strlen(username) * 2 + 1))) {
-		trace(TRACE_ERROR,
-		      "%s,%s: out of memory allocating for escaped userid",
-		      __FILE__, __func__);
-		return -1;
-	}
-
-	db_escape_string(escuser, username, strlen(username));
+	/* lookup the user_idnr */
+	if ( auth_user_exists(username, user_idnr) == DM_EQUERY)
+		return DM_EQUERY;
 
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
 		 "SELECT user_idnr, passwd, encryption_type FROM %susers "
-		 "WHERE userid = '%s'", DBPFX, escuser);
+		 "WHERE user_idnr = '%llu'", DBPFX, *user_idnr);
 
 	if (__auth_query(__auth_query_data) == -1) {
 		trace(TRACE_ERROR,
 		      "%s,%s: could not select user information", __FILE__,
 		      __func__);
-		dm_free(escuser);
 		return -1;
 	}
-
-	dm_free(escuser);
 
 	if (db_num_rows() == 0) {
 		db_free_result();
@@ -454,8 +443,7 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 		      __FILE__, __func__);
 		/* get password from database */
 		query_result = db_get_result(0, 1);
-		is_validated =
-		    (strcmp(query_result, password) == 0) ? 1 : 0;
+		is_validated = (strcmp(query_result, password) == 0) ? 1 : 0;
 	} else if (strcasecmp(query_result, "crypt") == 0) {
 		trace(TRACE_DEBUG,
 		      "%s,%s: validating using crypt() encryption",
@@ -471,44 +459,27 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 			      "%s,%s: validating using MD5 digest comparison",
 			      __FILE__, __func__);
 			/* redundant statement: query_result = db_get_result(0, 1); */
-			is_validated =
-			    (strncmp(makemd5(password), query_result, 32)
-			     == 0) ? 1 : 0;
+			is_validated = (strncmp(makemd5(password), query_result, 32) == 0) ? 1 : 0;
 		} else {
 			trace(TRACE_DEBUG,
 			      "%s, %s: validating using MD5 hash comparison",
 			      __FILE__, __func__);
 			strncpy(salt, query_result, 12);
 			strncpy(cryptres, (char *) crypt(password, query_result), 34);	/* Flawfinder: ignore */
-
-			trace(TRACE_DEBUG, "%s,%s: salt   : %s",
-			      __FILE__, __func__, salt);
-			trace(TRACE_DEBUG, "%s,%s: hash   : %s",
-			      __FILE__, __func__, query_result);
-			trace(TRACE_DEBUG, "%s,%s: crypt(): %s",
-			      __FILE__, __func__, cryptres);
-
-			is_validated =
-			    (strncmp(query_result, cryptres, 34) ==
-			     0) ? 1 : 0;
+			trace(TRACE_DEBUG, "%s,%s: salt   : %s", __FILE__, __func__, salt);
+			trace(TRACE_DEBUG, "%s,%s: hash   : %s", __FILE__, __func__, query_result);
+			trace(TRACE_DEBUG, "%s,%s: crypt(): %s", __FILE__, __func__, cryptres);
+			is_validated = (strncmp(query_result, cryptres, 34) == 0) ? 1 : 0;
 		}
 	} else if (strcasecmp(query_result, "md5sum") == 0) {
 		trace(TRACE_DEBUG,
 		      "%s,%s: validating using MD5 digest comparison",
 		      __FILE__, __func__);
 		query_result = db_get_result(0, 1);
-		is_validated =
-		    (strncmp(makemd5(password), query_result, 32) ==
-		     0) ? 1 : 0;
+		is_validated = (strncmp(makemd5(password), query_result, 32) == 0) ? 1 : 0;
 	}
 
 	if (is_validated) {
-		query_result = db_get_result(0, 0);
-		*user_idnr =
-		    (query_result) ? strtoull(query_result, NULL, 10) : 0;
-
-		db_free_result();
-
 		/* log login in the dbase */
 		snprintf(__auth_query_data, AUTH_QUERY_SIZE,
 			 "UPDATE %susers SET last_login = '%s' "
@@ -516,10 +487,10 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 			 *user_idnr);
 
 		if (__auth_query(__auth_query_data) == -1)
-			trace(TRACE_ERROR,
-			      "%s,%s: could not update user login time",
+			trace(TRACE_ERROR, "%s,%s: could not update user login time",
 			      __FILE__, __func__);
 	} else {
+		*user_idnr = 0;
 		db_free_result();
 	}
 	return (is_validated ? 1 : 0);
@@ -534,22 +505,16 @@ u64_t auth_md5_validate(char *username, unsigned char *md5_apop_he,
 	u64_t user_idnr;
 	const char *query_result;
 	timestring_t timestring;
-	char *escaped_username;
 
 	create_current_timestring(&timestring);
 
-	if (!(escaped_username = (char *) dm_malloc (strlen(username) * 2 + 1))) {
-		trace(TRACE_ERROR, "%s,%s: error allocating escaped_username",
-		      __FILE__, __func__);
-		return -1;
-	}
-
-	db_escape_string(escaped_username, username, strlen(username));
-
+	/* lookup the user_idnr */
+	if (auth_user_exists(username, &user_idnr) == DM_EQUERY)
+		return DM_EQUERY;
+	
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
 		 "SELECT passwd,user_idnr FROM %susers WHERE "
-		 "userid = '%s'", DBPFX, escaped_username);
-	dm_free(escaped_username);
+		 "user_idnr = '%llu'", DBPFX, user_idnr);
 
 	if (__auth_query(__auth_query_data) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error calling __auth_query()",
@@ -564,16 +529,13 @@ u64_t auth_md5_validate(char *username, unsigned char *md5_apop_he,
 	}
 
 	/* now authenticate using MD5 hash comparisation  */
-	query_result = db_get_result(0, 0);
-
-	/* value holds the password */
+	query_result = db_get_result(0, 0); /* value holds the password */
 
 	trace(TRACE_DEBUG, "%s,%s: apop_stamp=[%s], userpw=[%s]",
 	      __FILE__, __func__, apop_stamp, query_result);
 
 
-	memtst((checkstring =
-		(char *) dm_malloc(strlen(apop_stamp) +
+	memtst((checkstring = (char *) dm_malloc(strlen(apop_stamp) +
 				   strlen(query_result) + 2)) == NULL);
 	snprintf(checkstring,
 		 strlen(apop_stamp) + strlen(query_result) + 2, "%s%s",
@@ -661,13 +623,6 @@ char *auth_get_userid(u64_t user_idnr)
 	trace(TRACE_DEBUG, "%s,%s: returning %s as returnid", __FILE__,
 	      __func__, returnid);
 	return returnid;
-}
-
-u64_t __auth_insert_result(const char *sequence_identifier)
-{
-	u64_t insert_result;
-	insert_result = db_insert_result(sequence_identifier);
-	return insert_result;
 }
 
 int auth_get_users_from_clientid(u64_t client_id, u64_t ** user_ids,

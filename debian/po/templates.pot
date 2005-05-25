@@ -16,7 +16,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2003-12-03 12:52+0100\n"
+"POT-Creation-Date: 2005-05-24 17:03+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -181,7 +181,7 @@ msgstr ""
 #: ../dbmail.templates:65
 msgid ""
 "The stunnel SSL wrapper allows you to provide secure imap and pop services "
-"even though dbmail doesn't support neither imaps nor pop3s (yet)."
+"even though dbmail supports neither imaps nor pop3s (yet)."
 msgstr ""
 
 #. Type: boolean
