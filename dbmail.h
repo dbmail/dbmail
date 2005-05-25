@@ -128,6 +128,8 @@ typedef struct {
 		   /**< path to local unix socket (local connection) */
 	field_t pfx;
 			/**< prefix for tables e.g. dbmail_ */
+	unsigned int serverid; /* unique id for dbmail instance used in clusters */
+			
 } db_param_t;
 
 /** configuration items */

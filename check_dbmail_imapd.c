@@ -431,6 +431,13 @@ START_TEST(test_listex_match)
 }
 END_TEST
 
+START_TEST(test_dm_getguid)
+{
+	fail_unless(dm_getguid(1) < dm_getguid(99), "dm_getguid failed");
+	fail_unless(dm_getguid(99) < dm_getguid(1), "dm_getguid failed");
+}
+END_TEST
+
 Suite *dbmail_suite(void)
 {
 	Suite *s = suite_create("Dbmail Imap");
@@ -468,6 +475,7 @@ Suite *dbmail_suite(void)
 
 	tcase_add_checked_fixture(tc_misc, setup, teardown);
 	tcase_add_test(tc_misc, test_dm_base_subject);
+	tcase_add_test(tc_misc, test_dm_getguid);
 	return s;
 }
 

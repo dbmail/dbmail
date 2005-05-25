@@ -118,5 +118,6 @@ char * dm_stresc(const char * from);
 void dm_pack_spaces(char *in);
 void dm_base_subject(char *subject);
 int listex_match(const char *p, const char *s, const char *x, int flags);
+u64_t dm_getguid(unsigned int serverid);
 
 #endif

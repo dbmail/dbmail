@@ -117,8 +117,8 @@ void SetTraceLevel(const char *service_name)
 
 void GetDBParams(db_param_t * db_params)
 {
-	field_t port_string;
-	field_t sock_string;
+	field_t port_string, sock_string, serverid_string;
+	
 	if (config_get_value("host", "DBMAIL", db_params->host) < 0)
 		trace(TRACE_FATAL, "%s,%s: error getting config!",
 		      __FILE__, __func__);
@@ -137,6 +137,11 @@ void GetDBParams(db_param_t * db_params)
 	if (config_get_value("sqlsocket", "DBMAIL", sock_string) < 0)
 		trace(TRACE_FATAL, "%s,%s: error getting config!",
 		      __FILE__, __func__);
+	if (config_get_value("serverid", "DBMAIL", serverid_string) < 0)
+		trace(TRACE_FATAL, "%s,%s: error getting config!",
+		      __FILE__, __func__);
+
+	
 
 	switch (config_get_value("table_prefix", "DBMAIL", 
                                  db_params->pfx) < 0) {
@@ -172,5 +177,14 @@ void GetDBParams(db_param_t * db_params)
 	else
 		db_params->sock[0] = '\0';
 
-
+	/* and serverid */
+	if (strlen(serverid_string) != 0) {
+		db_params->serverid = (unsigned int) strtol(serverid_string, NULL, 10);
+		if (errno == EINVAL || errno == ERANGE)
+			trace(TRACE_FATAL, "%s,%s: serverid invalid in config file",
+					__FILE__, __func__);
+	} else {
+		db_params->serverid = 1;
+	}
 }
+

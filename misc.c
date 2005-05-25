@@ -28,7 +28,9 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 #include <time.h>
+#include <assert.h>
 
 #include "auth.h"
 #include "dbmail.h"
@@ -753,4 +755,16 @@ int listex_match(const char *p, const char *s,
 	return 1;
 }
 
+u64_t dm_getguid(unsigned int serverid)
+{
+        char s[30];
+        struct timeval tv;
 
+	assert((int)serverid >= 0);
+
+        if (gettimeofday(&tv,NULL))
+                return 0;
+
+        snprintf(s,30,"%ld%06ld%02d", tv.tv_sec, tv.tv_usec,serverid);
+        return (u64_t)strtoll(s,NULL,10);
+}

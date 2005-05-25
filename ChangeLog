@@ -4,6 +4,9 @@
 	sql/mysql/add_usermap.mysql, sql/mysql/create_tables_innoDB.mysql, 
 	sql/postgresql/add_usermap.pgsql, sql/postgresql/create_tables.pgsql:
 	reimplemented Jesse Norell's usermap patch in 2.1.
+	* misc.h, config.c, dbmail.h, check_dbmail_imapd.c, misc.c: added the
+	serverid parameter and the dm_getguid call. Together they will be used
+	for replacing auto_increment columns with a GUID value.
 	
 2005-05-24  Paul Stevens <paul@nfg.nl>
 
