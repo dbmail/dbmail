@@ -1489,7 +1489,7 @@ int _ic_expunge(struct ImapSession *self)
 		dbmail_imap_session_printf(self,
 			"%s NO you do not have delete rights on this "
 			"mailbox\r\n", self->tag);
-		return -1;
+		return 1;
 	}
 
 	/* delete messages */

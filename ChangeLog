@@ -1,3 +1,8 @@
+2005-05-30  Paul Stevens <paul@nfg.nl>
+
+	* imapcommands.c (_ic_expunge): return non-fatal error in case of NO
+	response.
+	
 2005-05-25  Paul Stevens <paul@nfg.nl>
 
 	* db.h, db.c, auth/authsql.c, auth/authldap.c,
