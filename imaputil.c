@@ -79,7 +79,7 @@ char base64encodestring[] =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 /* returned by date_sql2imap() */
-#define IMAP_STANDARD_DATE "03-Nov-1979 00:00:00 +0000"
+#define IMAP_STANDARD_DATE "Sat, 03-Nov-1979 00:00:00 +0000"
 char _imapdate[IMAP_INTERNALDATE_LEN] = IMAP_STANDARD_DATE;
 
 /* returned by date_imap2sql() */
@@ -730,40 +730,30 @@ int is_textplain(struct dm_list *hdr)
 
 /*
  * convert a mySQL date (yyyy-mm-dd hh:mm:ss) to a valid IMAP internal date:
- *                       0123456789012345678
  * dd-mon-yyyy hh:mm:ss with mon characters (i.e. 'Apr' for april)
- * 01234567890123456789
  * return value is valid until next function call.
  * NOTE: if date is not valid, IMAP_STANDARD_DATE is returned
  */
 char *date_sql2imap(const char *sqldate)
 {
-	long gmt_offset=0;
-	struct tm tm_sql_date;
-	char *last;
+        struct tm tm_sql_date;
+	struct tm *tm_imap_date;
 	
-	/* defined by tzset */
-	extern long timezone;
-	timezone=0;
-	tzset();
-	
-	last = strptime(sqldate,"%Y-%m-%d %T", &tm_sql_date);
-	if ( (last == NULL) || (*last != '\0') ) {
-		trace(TRACE_DEBUG, "%s,%s, error parsing date [%s]",
-		      __FILE__, __func__, sqldate);
-		strcpy(_imapdate, IMAP_STANDARD_DATE);
-		return _imapdate;
-	}
+	time_t ltime;
+        char *last;
 
-	gmt_offset = (-timezone)/3600;
-	if (tm_sql_date.tm_isdst)
-		gmt_offset++;
+        last = strptime(sqldate,"%Y-%m-%d %T", &tm_sql_date);
+        if ( (last == NULL) || (*last != '\0') ) {
+                strcpy(_imapdate, IMAP_STANDARD_DATE);
+                return _imapdate;
+        }
 
-	snprintf(_imapdate,IMAP_INTERNALDATE_LEN,"%s %c%02ld00", 
-			sqldate, 
-			(gmt_offset >= 0 ? '+': '-'), 
-			gmt_offset);
-	return _imapdate;
+	/* FIXME: this works fine on linux, but may cause dst offsets in netbsd. */
+	ltime = mktime (&tm_sql_date);
+	tm_imap_date = localtime(&ltime);
+
+        strftime(_imapdate, sizeof(_imapdate), "%a, %d %b %Y %H:%M:%S %z", tm_imap_date);
+        return _imapdate;
 }
 
 
