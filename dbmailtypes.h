@@ -170,7 +170,7 @@ enum BODY_FETCH_ITEM_TYPES { BFIT_TEXT, BFIT_HEADER, BFIT_MIME,
 #define IMAP_MAX_MAILBOX_NAMELEN 100
 
 /* length of internaldate string */
-#define IMAP_INTERNALDATE_LEN 30
+#define IMAP_INTERNALDATE_LEN 34
 
 /* length of database date string 
    YYYY-MM-DD HH:MM:SS

@@ -438,6 +438,15 @@ START_TEST(test_dm_getguid)
 }
 END_TEST
 
+/* this test will fail if you're not in the CET timezone */
+#define D(x,y) fail_unless(strncasecmp(y,date_sql2imap(x),IMAP_INTERNALDATE_LEN)==0,"date_sql2imap failed")
+START_TEST(test_date_sql2imap)
+{
+        D("Tue, 03 May 2005 14:10:06 +0200","2005-05-03 14:10:06");
+        D("Mon, 03 Jan 2005 14:10:06 +0100","2005-01-03 14:10:06");
+}
+END_TEST
+
 Suite *dbmail_suite(void)
 {
 	Suite *s = suite_create("Dbmail Imap");
@@ -472,6 +481,7 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_util, test_g_list_slices);
 	tcase_add_test(tc_util, test_build_set);
 	tcase_add_test(tc_util, test_listex_match);
+	tcase_add_test(tc_util, test_date_sql2imap);
 
 	tcase_add_checked_fixture(tc_misc, setup, teardown);
 	tcase_add_test(tc_misc, test_dm_base_subject);

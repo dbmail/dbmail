@@ -1,3 +1,8 @@
+2005-05-31  Paul Stevens <paul@nfg.nl>
+	
+	* imaputils.c (date_sql2imap): revert to gnuish behavior which should
+	work just fine on linux and bsd (closes #79).
+
 2005-05-30  Paul Stevens <paul@nfg.nl>
 
 	* imapcommands.c (_ic_expunge): return non-fatal error in case of NO
