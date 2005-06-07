@@ -213,32 +213,26 @@ void ParentSigHandler(int sig, siginfo_t * info, void *data)
 	errno = saved_errno;
 }
 
-static int create_unix_socket(serverConfig_t * conf)
+static int dm_socket(int domain)
 {
 	int sock, err;
-	struct sockaddr_un saServer;
-
-	conf->resolveIP=0;
-
-	if ((sock = socket(PF_UNIX, SOCK_STREAM, 0)) == -1) {
+	if ((sock = socket(domain, SOCK_STREAM, 0)) == -1) {
 		err = errno;
-		trace(TRACE_FATAL, "%s,%s: [%d] %s", 
-				__FILE__, __func__, err, strerror(err));
+		trace(TRACE_FATAL, "%s,%s: %s", __FILE__, __func__, strerror(err));
 	}
 	trace(TRACE_DEBUG, "%s,%s: socket created", __FILE__, __func__);
-	
-	
-	memset(&saServer, 0, sizeof(saServer));
-	saServer.sun_family = AF_UNIX;
-	strncpy(saServer.sun_path,conf->socket, sizeof(saServer.sun_path));
+	return sock;
+}
 
+static int dm_bind_and_listen(int sock, struct sockaddr *saddr, socklen_t len)
+{
+	int err;
 	/* bind the address */
-	if ((bind(sock, (struct sockaddr *) &saServer, sizeof(saServer))) == -1) {
+	if ((bind(sock, saddr, len)) == -1) {
 		err = errno;
 		close(sock);
 		trace(TRACE_FATAL, "%s,%s: %s", __FILE__, __func__, strerror(err));
 	}
-	trace(TRACE_DEBUG, "%s,%s: bind ok", __FILE__, __func__);
 
 	if ((listen(sock, BACKLOG)) == -1) {
 		err = errno;
@@ -246,38 +240,46 @@ static int create_unix_socket(serverConfig_t * conf)
 		trace(TRACE_FATAL, "%s,%s: %s", __FILE__, __func__, strerror(err));
 	}
 	
-	conf->listenSocket = sock;
+	trace(TRACE_DEBUG, "%s,%s: socket bound and listening", __FILE__, __func__);
+	return 0;
+	
+}
+
+static int create_unix_socket(serverConfig_t * conf)
+{
+	int sock;
+	struct sockaddr_un saServer;
+
+	conf->resolveIP=0;
+
+	sock = dm_socket(PF_UNIX);
+
+	/* setup sockaddr_un */
+	memset(&saServer, 0, sizeof(saServer));
+	saServer.sun_family = AF_UNIX;
+	strncpy(saServer.sun_path,conf->socket, sizeof(saServer.sun_path));
+
+	dm_bind_and_listen(sock, (struct sockaddr *)&saServer, sizeof(saServer));
 	
 	chmod (conf->socket,02777);
 
-	trace(TRACE_INFO, "%s,%s: socket complete", __FILE__, __func__);
-
-	return 0;
+	return sock;
 
 	
 }
 
 static int create_inet_socket(serverConfig_t * conf)
 {
-	int sock, err;
+	int sock;
 	struct sockaddr_in saServer;
-	/* set reuseaddr, so address will be reused */
 	int so_reuseaddress = 1;
 
-	/* make a tcp/ip socket */
-	if ((sock = socket(PF_INET, SOCK_STREAM, 0)) == -1) {
-		err = errno;
-		trace(TRACE_FATAL, "%s,%s: %s", __FILE__, __func__, strerror(err));
-	}
+	sock = dm_socket(PF_INET);
 
-	trace(TRACE_DEBUG, "%s,%s: socket created", __FILE__, __func__);
-
-	/* make an (socket)address */
+	/* setup sockaddr_in */
 	memset(&saServer, 0, sizeof(saServer));
-	
 	saServer.sin_family	= AF_INET;
 	saServer.sin_port	= htons(conf->port);
-
 	if (conf->ip[0] == '*') {
 		saServer.sin_addr.s_addr = htonl(INADDR_ANY);
 	} else {
@@ -288,38 +290,24 @@ static int create_inet_socket(serverConfig_t * conf)
 					conf->ip);
 		}
 	}
-	trace(TRACE_DEBUG, "%s,%s: IP ok [%s]", __FILE__, __func__, conf->ip);
+	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &so_reuseaddress, sizeof(so_reuseaddress));
 
-	/* set socket option: reuse address */
-	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, 
-			&so_reuseaddress, sizeof(so_reuseaddress));
+	dm_bind_and_listen(sock, (struct sockaddr *)&saServer, sizeof(saServer));
 
-	/* bind the address */
-	if ((bind(sock, (struct sockaddr *) &saServer, sizeof(saServer))) == -1) {
-		err = errno;
-		close(sock);
-		trace(TRACE_FATAL, "%s,%s: %s", __FILE__, __func__, strerror(err));
-	}
-	trace(TRACE_DEBUG, "%s,%s: bind ok", __FILE__, __func__);
-
-	if ((listen(sock, BACKLOG)) == -1) {
-		err = errno;
-		close(sock);
-		trace(TRACE_FATAL, "%s,%s: %s", __FILE__, __func__, strerror(err));
-	}
-	
-	conf->listenSocket = sock;
-	
-	trace(TRACE_INFO, "%s,%s: socket complete", __FILE__, __func__);
-
-	return 0;
+	return sock;	
 }
 
 int CreateSocket(serverConfig_t * conf)
 {
+	/* we only support one socket type for now */
 	if (strlen(conf->socket) > 0) {
-		/* we only support one socket type for now */
-		return create_unix_socket(conf);
+		conf->listenSocket = create_unix_socket(conf);
+	} else {
+		conf->listenSocket = create_inet_socket(conf);
 	}
-	return create_inet_socket(conf);
+	
+	trace(TRACE_INFO, "%s,%s: socket complete", __FILE__, __func__);
+	
+	return conf->listenSocket;
+	
 }

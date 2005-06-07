@@ -403,7 +403,7 @@ int IMAPClientHandler(clientinfo_t * ci)
 	/* cleanup */
 	dbmail_imap_session_printf(session, "%s OK completed\r\n", session->tag);
 	trace(TRACE_MESSAGE, "%s,%s: Closing connection for client from IP [%s]\n",
-			__FILE__, __func__, session->ci->ip);
+			__FILE__, __func__, session->ci->ip_src);
 	dbmail_imap_session_delete(session);
 
 	__debug_dumpallocs();

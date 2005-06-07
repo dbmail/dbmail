@@ -39,7 +39,8 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-//#include <crypt.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 #include <time.h>
 #include <glib.h>
 
@@ -702,12 +703,6 @@ int auth_user_exists(const char *username, u64_t * user_idnr)
 	if (strcmp(username,DBMAIL_DELIVERY_USERNAME)==0)
 		return db_user_exists(DBMAIL_DELIVERY_USERNAME, user_idnr);
 	
-	if (db_use_usermap()) {  /* use usermap */
-		if (! db_user_exists_mapped(username, user_idnr))
-			return DM_EGENERAL;
-		else
-			return DM_SUCCESS;
-	}
 	return 0;
 }
 
@@ -1256,9 +1251,12 @@ int auth_change_mailboxsize(u64_t user_idnr, u64_t new_size)
  *
  * returns useridnr on OK, 0 on validation failed, -1 on error 
  */
-int auth_validate(char *username, char *password, u64_t * user_idnr)
+int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user_idnr)
 {
 	timestring_t timestring;
+	char real_username[DM_USERNAME_LEN];
+	int result;
+
 
 	int ldap_err;
 	char *ldap_dn = NULL;
@@ -1271,9 +1269,20 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 		return 0;
 	}
 
+	memset(real_username,'\0', sizeof(real_username));
+	
 	create_current_timestring(&timestring);
+	
+	strncpy(real_username, username, DM_USERNAME_LEN);
+	if (db_use_usermap()) {  /* use usermap */
+		result = db_usermap_resolve(ci, username, real_username);
+		if (result == DM_EGENERAL)
+			return 0;
+		if (result == DM_EQUERY)
+			return DM_EQUERY;
+	}
 
-	if (auth_user_exists(username, user_idnr) == -1) {
+	if (auth_user_exists(real_username, user_idnr) == -1) {
 		return -1;
 	}
 	
@@ -1316,7 +1325,7 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 }
 
 /* returns useridnr on OK, 0 on validation failed, -1 on error */
-u64_t auth_md5_validate(char *username UNUSED,
+u64_t auth_md5_validate(clientinfo_t *ci, char *username UNUSED,
 			unsigned char *md5_apop_he UNUSED,
 			char *apop_stamp UNUSED)
 {

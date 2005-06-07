@@ -1897,7 +1897,7 @@ int dbmail_imap_session_handle_auth(struct ImapSession * self, char * username, 
 	trace(TRACE_DEBUG, "%s,%s: trying to validate user [%s], pass [%s]", 
 			__FILE__, __func__, username, (password ? "XXXX" : "(null)") );
 	
-	int valid = auth_validate(username, password, &userid);
+	int valid = auth_validate(self->ci, username, password, &userid);
 	
 	trace(TRACE_MESSAGE, "%s,%s: user (id:%llu, name %s) tries login",
 			__FILE__, __func__, userid, username);

@@ -332,7 +332,7 @@ int PerformChildTask(ChildInfo_t * info)
 
 		client.timeoutMsg = info->timeoutMsg;
 		client.timeout = info->timeout;
-		strncpy(client.ip, inet_ntoa(saClient.sin_addr), IPNUM_LEN);
+		strncpy(client.ip_src, inet_ntoa(saClient.sin_addr), IPNUM_LEN);
 		client.clientname[0] = '\0';
 			
 		if (info->resolveIP) {
@@ -344,14 +344,14 @@ int PerformChildTask(ChildInfo_t * info)
 
 			trace(TRACE_MESSAGE, "%s,%s: incoming connection from [%s (%s)]",
 					__FILE__, __func__,
-			      client.ip,
+			      client.ip_src,
 			      client.clientname[0] ? client.clientname : "Lookup failed");
 		} else {
 			trace(TRACE_MESSAGE, "%s,%s: incoming connection from [%s]", 
 					__FILE__, __func__,
-			      client.ip);
+			      client.ip_src);
 		}
-
+		
 		/* make streams */
 		if (!(client.rx = fdopen(dup(clientSocket), "r"))) {
 			/* read-FILE opening failure */
@@ -457,3 +457,5 @@ int manage_start_cli_server(ChildInfo_t * info)
 	
 	return 0;
 }
+
+

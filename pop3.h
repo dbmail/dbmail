@@ -88,8 +88,7 @@ typedef enum {
  *     0 on QUIT (client command)
  *     1 on success
  */
-int pop3(void *stream, char *buffer, char *client_ip,
-	 PopSession_t * session);
+int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session);
 
 /**
  * \brief handles connection and calls pop command handler

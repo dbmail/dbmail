@@ -50,9 +50,6 @@
 
 extern int pop_before_smtp;
 
-int pop3(void *stream, char *buffer, char *client_ip,
-	 PopSession_t * session);
-
 int pop3_error(PopSession_t * session, void *stream,
 	       const char *formatstring, ...) PRINTF_ARGS(3, 4);
 
@@ -208,7 +205,7 @@ int pop3_handle_connection(clientinfo_t * ci)
 			done = -1;	/* check client eof  */
 		else {
 			alarm(0);	/* reset function handle timeout */
-			done = pop3(ci->tx, buffer, ci->ip, &session);	/* handle pop3 commands */
+			done = pop3(ci, buffer, &session);	/* handle pop3 commands */
 		}
 		fflush(ci->tx);
 	}
@@ -311,12 +308,12 @@ int pop3_error(PopSession_t * session, void *stream,
 	return 1;
 }
 
-int pop3(void *stream, char *buffer, char *client_ip,
-	 PopSession_t * session)
+int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 {
 	/* returns a 0  on a quit
 	 *           -1  on a failure
-	 *                          1  on a success */
+	 *            1  on a success 
+	 */
 	char *command, *value;
 	Pop3Cmd_t cmdtype;
 	int found = 0;
@@ -329,12 +326,16 @@ int pop3(void *stream, char *buffer, char *client_ip,
 	char *searchptr;
 	u64_t user_idnr;
 
+	char *client_ip = ci->ip_src;
+	FILE *stream = ci->tx;
+
 	/* buffer overflow attempt */
 	if (strlen(buffer) > MAX_IN_BUFFER) {
 		trace(TRACE_DEBUG, "pop3(): buffer overflow attempt");
 		return -3;
 	}
 
+	
 	/* check for command issued */
 	while (strchr(validchars, buffer[indx]))
 		indx++;
@@ -439,9 +440,8 @@ int pop3(void *stream, char *buffer, char *client_ip,
 			}
 
 			/* check in authorization layer if these credentials are correct */
-			validate_result = auth_validate(session->username,
-							session->password,
-							&result);
+			validate_result = auth_validate(ci, session->username, session->password, &result);
+
 			switch (validate_result) {
 			case -1:
 				session->SessionResult = 3;
@@ -857,7 +857,7 @@ int pop3(void *stream, char *buffer, char *client_ip,
 			      session->username, md5_apop_he);
 
 			result =
-			    auth_md5_validate(session->username,
+			    auth_md5_validate(ci,session->username,
 					      md5_apop_he,
 					      session->apop_stamp);
 

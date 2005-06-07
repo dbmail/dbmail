@@ -29,6 +29,11 @@
 
 #include <grp.h>
 #include <sys/types.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <sys/un.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
 #include <unistd.h>
 #include <pwd.h>
 #include "db.h"
@@ -120,4 +125,8 @@ void dm_base_subject(char *subject);
 int listex_match(const char *p, const char *s, const char *x, int flags);
 u64_t dm_getguid(unsigned int serverid);
 
+sa_family_t dm_get_client_sockaddr(clientinfo_t *ci, struct sockaddr *saddr);
+
+int dm_sock_compare(const char *clientsock, const char *sock_allow, const char *sock_deny);
+int dm_valid_format(const char *str);
 #endif

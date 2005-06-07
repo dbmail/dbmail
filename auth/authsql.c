@@ -391,13 +391,15 @@ int auth_change_mailboxsize(u64_t user_idnr, u64_t new_size)
 	return 0;
 }
 
-int auth_validate(char *username, char *password, u64_t * user_idnr)
+int auth_validate(clientinfo *ci, char *username, char *password, u64_t * user_idnr)
 {
 	const char *query_result;
 	int is_validated = 0;
 	timestring_t timestring;
 	char salt[13];
 	char cryptres[35];
+	char real_username[DM_USERNAME_LEN];
+	int result;
 
 	assert(user_idnr != NULL);
 	*user_idnr = 0;
@@ -414,8 +416,17 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 	if (strcmp(username, SHARED_MAILBOX_USERNAME) == 0)
 		return 0;
 
+	strncpy(real_username, username, DM_USERNAME_LEN);
+	if (db_use_usermap()) {  /* use usermap */
+		result = db_usermap_resolve(ci, username, real_username);
+		if (result == DM_EGENERAL)
+			return 0;
+		if (result == DM_EQUERY)
+			return DM_EQUERY;
+	}
+	
 	/* lookup the user_idnr */
-	if ( auth_user_exists(username, user_idnr) == DM_EQUERY)
+	if (auth_user_exists(real_username, user_idnr) == DM_EQUERY)
 		return DM_EQUERY;
 
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
@@ -496,7 +507,7 @@ int auth_validate(char *username, char *password, u64_t * user_idnr)
 	return (is_validated ? 1 : 0);
 }
 
-u64_t auth_md5_validate(char *username, unsigned char *md5_apop_he,
+u64_t auth_md5_validate(clientinfo_t *ci, char *username, unsigned char *md5_apop_he,
 			char *apop_stamp)
 {
 	/* returns useridnr on OK, 0 on validation failed, -1 on error */

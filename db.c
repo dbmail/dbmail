@@ -154,7 +154,7 @@ int db_use_usermap(void)
 {
 	static int use_usermap = -1;
 	if (use_usermap == -1) {
-		snprintf(query, DEF_QUERYSIZE, "SELECT user_idnr FROM %susermap WHERE 1 = 2",
+		snprintf(query, DEF_QUERYSIZE, "SELECT userid FROM %susermap WHERE 1 = 2",
 				DBPFX);
 
 		if (db_query(query) == -1) {
@@ -4109,22 +4109,45 @@ int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * m
 	return DM_SUCCESS;
 }
 
-int db_user_exists_mapped(const char *username, u64_t * user_idnr)
+int db_usermap_resolve(clientinfo_t *ci, const char *username, char *real_username)
 {
+	struct sockaddr saddr;
+	sa_family_t sa_family;
+	char clientsock[DM_SOCKADDR_LEN];
 	char * escaped_username;
-	const char *query_result;
-	
-	assert(user_idnr != NULL);
-	*user_idnr = 0;
+	const char *userid = NULL, *sockok = NULL, *sockno = NULL, *login = NULL;
+	unsigned row;
+	int result;
 	
 	trace (TRACE_DEBUG,"%s,%s: checking userid '%s' in usermap", 
 			__FILE__, __func__, username);
 	
+	if (ci==NULL) {
+		strncpy(clientsock,"",1);
+	} else {
+		/* get the socket the client is connecting on */
+		sa_family = dm_get_client_sockaddr(ci, &saddr);
+		if (sa_family == AF_INET) {
+			snprintf(clientsock, DM_SOCKADDR_LEN, "inet:%s:%d", 
+					inet_ntoa(((struct sockaddr_in *)(&saddr))->sin_addr),
+					ntohs(((struct sockaddr_in *)(&saddr))->sin_port));
+			trace(TRACE_DEBUG,"%s,%s: client on inet socket [%s]", __FILE__, __func__, clientsock);
+		}	
+		if (sa_family == AF_UNIX) {
+			snprintf(clientsock, DM_SOCKADDR_LEN, "unix:%s",
+					((struct sockaddr_un *)(&saddr))->sun_path);
+			trace(TRACE_DEBUG,"%s,%s: client on unix socket [%s]", __FILE__, __func__, clientsock);
+		}		
+	}
+
 	escaped_username = dm_stresc(username);
 	
 	/* user_idnr not found, so try to get it from the usermap */
-	snprintf(query, DEF_QUERYSIZE, "SELECT user_idnr FROM %susermap WHERE userid = '%s'", 
-			DBPFX, escaped_username);
+	snprintf(query, DEF_QUERYSIZE, "SELECT login, sock_allow, sock_deny, userid FROM %susermap "
+			"WHERE login in ('%s','ANY') "
+			"AND sock_allow in ('','ANY','%s') "
+			"ORDER BY sock_allow, sock_deny", 
+			DBPFX, escaped_username, clientsock);
 
 	dm_free(escaped_username);
 
@@ -4136,17 +4159,41 @@ int db_user_exists_mapped(const char *username, u64_t * user_idnr)
 
 	if (db_num_rows() == 0) {
 		/* user does not exist */
-		trace (TRACE_DEBUG,"%s,%s: userid '%s' not found in usermap", 
+		trace (TRACE_DEBUG,"%s,%s: login '%s' not found in usermap", 
 				__FILE__, __func__, username);
+		db_free_result();
+		return DM_SUCCESS;
+	}
+
+	for (row=0; row < db_num_rows(); row++) {
+		login = db_get_result(row, 0);
+		sockok = db_get_result(row, 1);
+		sockno = db_get_result(row, 2);
+		userid = db_get_result(row, 3);
+		result = dm_sock_compare(clientsock, sockok, sockno);
+		if (result) {
+			db_free_result();
+			return result;
+		}
+		if ((strncmp(login,"ANY",3)==0)) {
+			if (dm_valid_format(userid)==0)
+				snprintf(real_username,DM_USERNAME_LEN,userid,username);
+			else
+				return DM_EQUERY;
+		} else {
+			strncpy(real_username, userid, DM_USERNAME_LEN);
+		}
+		break;
+	}
+	
+	if (row >= db_num_rows()) {
+		trace(TRACE_DEBUG, "%s,%s: no sock_allow/sock_deny match on usertable for login [%s] on [%s]",
+				__FILE__, __func__, username, clientsock);
 		db_free_result();
 		return DM_EGENERAL;
 	}
-
-	trace (TRACE_DEBUG,"%s,%s: userid '%s' found in usermap", 
-			__FILE__, __func__, username);
-
-	query_result = db_get_result(0, 0);
-	*user_idnr = (query_result) ? strtoull(query_result, 0, 10) : 0;
+	
+	trace (TRACE_DEBUG,"%s,%s: '%s' maps to '%s'", __FILE__, __func__, username, real_username);
 	db_free_result();
 
 	return DM_SUCCESS;
@@ -4188,15 +4235,6 @@ int db_user_exists(const char *username, u64_t * user_idnr)
 		return 1;
 	}
 		
-	if (! db_use_usermap()) {  /* no usermap table */
-		trace (TRACE_DEBUG,"%s,%s: userid '%s' not found in users table", 
-				__FILE__, __func__, username);
-		return 0;
-	}
-
-	if (! db_user_exists_mapped(username, user_idnr))
-		return 1;
-	
 	return 0;
 	
 }

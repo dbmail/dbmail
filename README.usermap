@@ -1,0 +1,48 @@
+
+README.usermap
+
+$Id$
+
+----------------------------------------------------
+NOTICE: the usermap feature is new and experimental.
+----------------------------------------------------
+
+dbmail-2.1.2 and beyond support usermaps and domainmaps which will allow you
+to map login names to fully qualified (unique) userids as used in the dbmail_users
+table or ldap. 
+
+Rationale:
+
+1) support 1-1 and 1-N mappings of login usernames to userids
+2) support IP based virtual hosting
+
+
+The layout of the new dbmail_usermap table is as follows:
+
+---------------------------
+login      | varchar (100)
+sock_allow | varchar (100)
+sock_deny  | varchar (100)
+userid	   | varchar (100)
+---------------------------
+
+Consider the following settings:
+
+  | login      | sock_allow           | sock_deny            | userid
+--+------------+----------------------+----------------------+-------------
+1 |client      |                      |                      | client@a.com
+2 |client      | inet:127.0.0.1:143   |                      | client@b.com
+3 |client      | inet:10.1.1.1:143    | inet:10.1.1.1:110    | client@c.com
+4 |ANY         | inet:10.1.1.2:143    |                      | %s@d.com
+
+row 1 will give you a simple 1-1 mapping irrespective of the IP address connected to.
+
+row 2 will allow client@b.com to login on a single IP address with imap.
+
+row 3 will allow client@c.com to login on a single IP address with imap but will reject 
+POP access.
+
+row 4 will map all logins on a single IP address to an expanded form.
+
+
+

@@ -174,7 +174,7 @@ int _ic_login(struct ImapSession *self)
 	if ((result = dbmail_imap_session_handle_auth(self, self->args[0], self->args[1])))
 		return result;
 	if (imap_before_smtp)
-		db_log_ip(self->ci->ip);
+		db_log_ip(self->ci->ip_src);
 
 	dbmail_imap_session_printf(self, "%s OK LOGIN completed\r\n", self->tag);
 	return 0;
@@ -221,7 +221,7 @@ int _ic_authenticate(struct ImapSession *self)
 		return result;
 
 	if (imap_before_smtp)
-		db_log_ip(self->ci->ip);
+		db_log_ip(self->ci->ip_src);
 
 	dbmail_imap_session_printf(self, "%s OK AUTHENTICATE completed\r\n", self->tag);
 	return 0;

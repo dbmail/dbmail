@@ -37,6 +37,8 @@
 #include "dbmd5.h"
 #include "misc.h"
 
+#undef max
+#define max(x,y) ( (x) > (y) ? (x) : (y) )
 
 int drop_privileges(char *newuser, char *newgroup)
 {
@@ -768,3 +770,59 @@ u64_t dm_getguid(unsigned int serverid)
         snprintf(s,30,"%ld%06ld%02d", tv.tv_sec, tv.tv_usec,serverid);
         return (u64_t)strtoll(s,NULL,10);
 }
+
+sa_family_t dm_get_client_sockaddr(clientinfo_t *ci, struct sockaddr *saddr)
+{
+	int maxsocklen = 128; /* ref. UNP */
+	
+	union {
+		struct sockaddr sa;
+		char 		data[maxsocklen];
+	} un;
+
+	socklen_t len;
+	len = maxsocklen;
+
+	if (getsockname(fileno(ci->tx), (struct sockaddr *)un.data, &len) < 0)
+		return (sa_family_t) -1;
+
+	memcpy(saddr, &un.sa, sizeof(un.sa));
+	return (un.sa.sa_family);
+}
+
+int dm_sock_compare(const char *clientsock, const char *sock_allow, const char *sock_deny) 
+{
+	trace(TRACE_DEBUG, "%s,%s: match clientsock [%s] with allow[%s], deny [%s]",
+			__FILE__, __func__, clientsock, sock_allow, sock_deny);
+	
+	if ( (strlen(sock_allow) == 0) && (strlen(sock_deny) == 0) )
+		return DM_SUCCESS;
+
+	if (strncasecmp(clientsock, sock_deny, sizeof(clientsock))==0)
+		return DM_EGENERAL;
+
+	if (strncasecmp(clientsock, sock_allow, sizeof(clientsock))==0)
+		return DM_SUCCESS;
+	
+	return DM_EQUERY;
+}
+
+
+/* dm_valid_format
+ * check if str is a valid format string containing a single "%s" for use in
+ * printf style calls
+ * \return 1 format is invalid
+ * \return 0 format is valid
+ */
+int dm_valid_format(const char *str)
+{
+        char *left, *right;
+        left = index(str,'%');
+        right = rindex(str,'%');
+        if (! (left && right && left==right))
+                return DM_EGENERAL;
+        if (*(left+1) != 's')
+                return DM_EGENERAL;
+        return DM_SUCCESS;
+}
+

@@ -169,8 +169,7 @@ int tims_handle_connection(clientinfo_t * ci)
 			/* reset function handle timeout */
 			alarm(0);
 			/* handle tims commands */
-			done =
-			    tims(ci->tx, ci->rx, buffer, ci->ip, &session);
+			done = tims(ci, buffer, &session);
 		}
 		fflush(ci->tx);
 	}
@@ -221,13 +220,14 @@ int tims_error(PopSession_t * session, void *stream,
 }
 
 
-int tims(void *stream, void *instream, char *buffer, char *client_ip UNUSED,
-	 PopSession_t * session)
+int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 {
 	/* returns values:
 	 *  0 to quit
 	 * -1 on failure
 	 *  1 on success */
+	FILE *stream = ci->tx;
+	FILE *instream = ci->rx;
 	char *command, *value;
 	int cmdtype;
 	int indx = 0;

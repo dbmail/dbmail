@@ -511,13 +511,15 @@ END_TEST
 START_TEST(test_auth_validate) 
 {
 	int result;
+	clientinfo_t *ci = NULL;
+
 	u64_t user_idnr = 0;
-	result = auth_validate("testuser1","test",&user_idnr);
+	result = auth_validate(ci,"testuser1","test",&user_idnr);
 	fail_unless(result==1,"auth_validate positive failure");
 	fail_unless(user_idnr > 0,"auth_validate couldn't find user_idnr");
 	
 	user_idnr = 0;
-	result = auth_validate("testuser1","wqer",&user_idnr);
+	result = auth_validate(ci,"testuser1","wqer",&user_idnr);
 	fail_unless(result==0,"auth_validate negative failure");
 	fail_unless(user_idnr == 0,"auth_validate shouldn't find user_idnr");
 }
@@ -717,13 +719,24 @@ START_TEST(test_dm_stresc)
 }
 END_TEST
 
+START_TEST(test_dm_valid_format)
+{
+	fail_unless(dm_valid_format("some-%s@foo.com")==0,"dm_valid_format");
+	fail_unless(dm_valid_format("some-%s@%s.foo.com")==1,"dm_valid_format");
+	fail_unless(dm_valid_format("some-%@foo.com")==1,"dm_valid_format");
+	fail_unless(dm_valid_format("some-%@%foo.com")==1,"dm_valid_format");
+	fail_unless(dm_valid_format("some-%%s@foo.com")==1,"dm_valid_format");
+	fail_unless(dm_valid_format("some@foo.com")==1,"dm_valid_format");
+}
+END_TEST
+
+
 Suite *dbmail_deliver_suite(void)
 {
 	Suite *s = suite_create("Dbmail Delivery");
+
 	TCase *tc_auth = tcase_create("Auth");
-	
 	suite_add_tcase(s, tc_auth);
-	
 	tcase_add_checked_fixture(tc_auth, setup, teardown);
 	tcase_add_test(tc_auth, test_auth_connect);
 	tcase_add_test(tc_auth, test_auth_disconnect);
@@ -752,6 +765,7 @@ Suite *dbmail_deliver_suite(void)
 	tcase_add_test(tc_auth, test_dm_ldap_get_filter);
 	tcase_add_test(tc_auth, test_dm_ldap_get_freeid);
 #endif
+
 	TCase *tc_pipe = tcase_create("Pipe");
 	suite_add_tcase(s, tc_pipe);
 	tcase_add_checked_fixture(tc_pipe, setup, teardown);
@@ -761,7 +775,8 @@ Suite *dbmail_deliver_suite(void)
 	suite_add_tcase(s, tc_misc);
 	tcase_add_checked_fixture(tc_misc, setup, teardown);
 	tcase_add_test(tc_misc, test_dm_stresc);
-	
+	tcase_add_test(tc_misc, test_dm_valid_format);
+
 	return s;
 }
 

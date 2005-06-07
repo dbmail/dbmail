@@ -47,13 +47,16 @@
 #define UID_SIZE 70
 #define IPNUM_LEN 32
 
+#define DM_SOCKADDR_LEN 108
+#define DM_USERNAME_LEN 100
+
 /** use 64-bit unsigned integers as common data type */
 typedef unsigned long long u64_t;
 
 
 typedef struct {
 	FILE *tx, *rx;
-	char ip[IPNUM_LEN];	/* client IP-number */
+	char ip_src[IPNUM_LEN];	/* client IP-number */
 	field_t clientname;	/* resolved client ip */
 	char *timeoutMsg;
 	int timeout;		/* server timeout (seconds) */
@@ -238,27 +241,17 @@ typedef struct {
  * RFC822/MIME message data type
  */
 typedef struct {
-	struct dm_list mimeheader;
-			     /**< the MIME header of this part (if present) */
-	struct dm_list rfcheader;
-			     /**< RFC822 header of this part (if present) */
-	int message_has_errors;
-			     /**< if set the content-type is meaningless */
-	db_pos_t bodystart, bodyend;
-				 /**< the body of this part */
-	u64_t bodysize;
-		     /**< size of message body */
-	u64_t bodylines;
-		      /**< number of lines in message body */
-	u64_t rfcheadersize;
-			  /**< size of rfc header */
-	struct dm_list children;
-			    /**< the children (multipart msg) */
-	u64_t rfcheaderlines;
-			   /** number of lines in rfc header */
-	u64_t mimerfclines;
-			 /**< the total number of lines (only specified in
-			    case of a MIME msg containing an RFC822 msg) */
+	struct dm_list mimeheader;	/**< the MIME header of this part (if present) */
+	struct dm_list rfcheader;	/**< RFC822 header of this part (if present) */
+	int message_has_errors;		/**< if set the content-type is meaningless */
+	db_pos_t bodystart, bodyend; 	/**< the body of this part */
+	u64_t bodysize; 		/**< size of message body */
+	u64_t bodylines; 		/**< number of lines in message body */
+	u64_t rfcheadersize; 		/**< size of rfc header */
+	struct dm_list children; 	/**< the children (multipart msg) */
+	u64_t rfcheaderlines; 		/** number of lines in rfc header */
+	u64_t mimerfclines; 		/**< the total number of lines (only specified in
+			    		case of a MIME msg containing an RFC822 msg) */
 } mime_message_t;
 
 
