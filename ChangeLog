@@ -2,6 +2,8 @@
 
 	* dbmail-user.c, db.c, list.c, auth/authldap.c, dbmail-imapsession.c,
 	misc.c: added check when looping over GLists to avoid memory leakage.
+	* dbmail-message.c, dbmail-message.h: added header caching of to, cc, 
+	from and replyto fields.
 
 2005-06-07  Paul Stevens <paul@nfg.nl>
 

@@ -119,6 +119,10 @@ size_t dbmail_message_get_body_size(struct DbmailMessage *self);
 void dbmail_message_set_header(struct DbmailMessage *self, const char *header, const char *value);
 gchar * dbmail_message_get_header(struct DbmailMessage *self, const char *header);
 
+void dbmail_message_cache_tofield(struct DbmailMessage *self);
+void dbmail_message_cache_ccfield(struct DbmailMessage *self);
+void dbmail_message_cache_fromfield(struct DbmailMessage *self);
+void dbmail_message_cache_replytofield(struct DbmailMessage *self);
 void dbmail_message_cache_datefield(struct DbmailMessage *self);
 void dbmail_message_cache_subjectfield(struct DbmailMessage *self);
 void dbmail_message_cache_referencesfield(struct DbmailMessage *self);

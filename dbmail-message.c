@@ -616,6 +616,10 @@ int dbmail_message_headers_cache(struct DbmailMessage *self)
 	assert(self->physid);
 	g_mime_header_foreach(GMIME_OBJECT(self->content)->headers, _header_cache, self);
 	
+	dbmail_message_cache_tofield(self);
+	dbmail_message_cache_ccfield(self);
+	dbmail_message_cache_fromfield(self);
+	dbmail_message_cache_replytofield(self);
 	dbmail_message_cache_datefield(self);
 	dbmail_message_cache_subjectfield(self);
 	dbmail_message_cache_referencesfield(self);
@@ -699,9 +703,106 @@ void _header_cache(const char *header, const char *value, gpointer user_data)
 	g_free(clean_value);
 }
 
+static void insert_address_cache(u64_t physid, const char *field, InternetAddress *ia)
+{
+	GString *q = g_string_new("");
+	
+	g_string_printf(q, "INSERT INTO %s%sfield (physmessage_id, %sname, %saddr) "
+			"VALUES (%llu,'%s','%s')", DBPFX, field, field, field, physid, ia->name ? ia->name: "" , ia->value.addr);
+	if (db_query(q->str)) {
+		trace(TRACE_WARNING, "%s,%s: insert %sfield failed [%s]",
+				__FILE__, __func__, field, q->str);
+	}
+	g_string_free(q,TRUE);
+}
+
+static void insert_fieldcache(u64_t physid, const char *field, const char *value)
+{
+	GString *q = g_string_new("");
+	
+	g_string_printf(q, "INSERT INTO %s%sfield (physmessage_id, %sfield) "
+			"VALUES (%llu,'%s')", DBPFX, field, field, physid, value);
+	if (db_query(q->str)) {
+		trace(TRACE_WARNING, "%s,%s: insert %sfield failed [%s]",
+				__FILE__, __func__, field, q->str);
+	}
+	g_string_free(q,TRUE);
+}
+
+
+void dbmail_message_cache_tofield(struct DbmailMessage *self)
+{
+	InternetAddressList *list;
+	InternetAddress *ia;
+
+	/* just cache the first address */
+	list = (InternetAddressList *)g_mime_message_get_recipients((GMimeMessage *)(self->content), GMIME_RECIPIENT_TYPE_TO);
+	if (list == NULL)
+		return;
+	
+	ia = list->address;
+	g_return_if_fail(ia != NULL);
+	
+	insert_address_cache(self->physid, "to", ia);
+
+}
+void dbmail_message_cache_ccfield(struct DbmailMessage *self)
+{
+	InternetAddressList *list;
+	InternetAddress *ia;
+	
+	/* just cache the first address */
+	list = (InternetAddressList *)g_mime_message_get_recipients((GMimeMessage *)(self->content), GMIME_RECIPIENT_TYPE_CC);
+	if (list == NULL)
+		return;
+	
+	ia = list->address;
+	g_return_if_fail(ia != NULL);
+
+	insert_address_cache(self->physid, "cc", ia);
+	
+}
+void dbmail_message_cache_fromfield(struct DbmailMessage *self)
+{
+	const char *addr;
+	InternetAddressList *list;
+	InternetAddress *ia;
+
+	addr = g_mime_message_get_sender((GMimeMessage *)(self->content));
+	list = internet_address_parse_string(addr);
+	if (list == NULL)
+		return;
+
+	ia = list->address;
+	g_return_if_fail(ia != NULL);
+
+	insert_address_cache(self->physid, "from", ia);
+
+	internet_address_list_destroy(list);
+
+}
+void dbmail_message_cache_replytofield(struct DbmailMessage *self)
+{
+	const char *addr;
+	InternetAddressList *list;
+	InternetAddress *ia;
+
+	addr = g_mime_message_get_reply_to((GMimeMessage *)(self->content));
+	list = internet_address_parse_string(addr);
+	if (list == NULL)
+		return;
+
+	ia = list->address;
+	g_return_if_fail(ia != NULL);
+
+	insert_address_cache(self->physid, "replyto", ia);
+
+	internet_address_list_destroy(list);
+
+}
+
 void dbmail_message_cache_datefield(struct DbmailMessage *self)
 {
-	GString *q;
 	char *value;
 	time_t date;
 
@@ -716,20 +817,13 @@ void dbmail_message_cache_datefield(struct DbmailMessage *self)
 	value = g_new0(char,20);
 	strftime(value,20,"%Y-%m-%d %H:%M:%S",gmtime(&date));
 
-	q = g_string_new("");
-	g_string_printf(q, "INSERT INTO %sdatefield (physmessage_id, datefield) "
-			"VALUES (%llu,'%s')", DBPFX, self->physid, value);
-	if (db_query(q->str)) {
-		trace(TRACE_WARNING, "%s,%s: insert datefield failed [%s]",
-				__FILE__, __func__, q->str);
-	}
-	g_string_free(q,TRUE);
+	insert_fieldcache(self->physid, "date", value);
+	
 	g_free(value);
 }
 
 void dbmail_message_cache_subjectfield(struct DbmailMessage *self)
 {
-	GString *q;
 	char *value;
 	char *subject;
 	
@@ -749,14 +843,8 @@ void dbmail_message_cache_subjectfield(struct DbmailMessage *self)
 	if (strlen(subject)>255)
 		subject[255]='\0';
 	
-	q = g_string_new("");
-	g_string_printf(q,"INSERT INTO %ssubjectfield (physmessage_id, subjectfield) "
-			"VALUES (%llu,'%s')", DBPFX, self->physid, subject);
-	if (db_query(q->str)) {
-		trace(TRACE_WARNING, "%s,%s: insert subjectfield failed [%s]", 
-				__FILE__, __func__, q->str);
-	}
-	g_string_free(q,TRUE);
+	insert_fieldcache(self->physid, "subject", subject);
+	
 	g_free(subject);
 }
 
@@ -764,7 +852,6 @@ void dbmail_message_cache_referencesfield(struct DbmailMessage *self)
 {
 	GMimeReferences *refs, *head;
 	const char *field;
-	GString *q;
 
 	field = dbmail_message_get_header(self,"References");
 	if (! field)
@@ -783,16 +870,7 @@ void dbmail_message_cache_referencesfield(struct DbmailMessage *self)
 	head = refs;
 	
 	while (refs->msgid) {
-		q = g_string_new("");
-		
-		g_string_printf(q, "INSERT INTO %sreferencesfield (physmessage_id, referencesfield) "
-				"VALUES (%llu,'%s')", DBPFX, self->physid, refs->msgid);
-		
-		if (db_query(q->str)) {
-			trace(TRACE_WARNING, "%s,%s: insert referencesfield failed [%s]",
-					__FILE__, __func__, q->str);
-		}
-		g_string_free(q,TRUE);
+		insert_fieldcache(self->physid, "references", refs->msgid);
 
 		if (refs->next == NULL)
 			break;
