@@ -318,6 +318,8 @@ int do_forwards(const char * const alias, const u64_t clientid,
 				     forward);
 				result = -1;
 			}
+			if (! g_list_next(fwds_del))
+				break;
 			fwds_del = g_list_next(fwds_del);
 		}
 	}
@@ -334,6 +336,8 @@ int do_forwards(const char * const alias, const u64_t clientid,
 				     alias);
 				result = -1;
 			}
+			if (! g_list_next(fwds_add))
+				break;
 			fwds_add = g_list_next(fwds_add);
 		}
 	}
@@ -365,6 +369,8 @@ int do_aliases(const u64_t useridnr,
 				qerrorf("Error: could not remove alias [%s] \n", alias);
 				result = -1;
 			}
+			if (! g_list_next(alias_del))
+				break;
 			alias_del = g_list_next(alias_del);
 		}
 	}
@@ -380,6 +386,8 @@ int do_aliases(const u64_t useridnr,
 				qerrorf("Error: could not add alias [%s]\n", alias);
 				result = -1;
 			}
+			if (! g_list_next(alias_add))
+				break;
 			alias_add = g_list_next(alias_add);
 		}
 	}
@@ -430,6 +438,8 @@ int do_show(const char * const name)
 			users = g_list_first(users);
 			while (users) {
 				do_show(users->data);
+				if (! g_list_next(users))
+					break;
 				users = g_list_next(users);
 			}
 			g_list_foreach(users,(GFunc)g_free,NULL);
@@ -462,6 +472,8 @@ int do_show(const char * const name)
 			if (forwards) {
 				while(forwards) {
 					qerrorf("forward [%s] to [%s]\n", name, (char *)forwards->data);
+					if (! g_list_next(forwards))
+						break;
 					forwards = g_list_next(forwards);
 				}
 				g_list_foreach(forwards,(GFunc)g_free, NULL);
@@ -475,6 +487,8 @@ int do_show(const char * const name)
 					qerrorf("deliver [%s] to [%s]\n-------\n", name, username);
 					do_show(username);
 					g_free(username);
+					if (! g_list_next(userids))
+						break;
 					userids = g_list_next(userids);
 				}
 				g_list_free(userids);

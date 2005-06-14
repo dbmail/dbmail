@@ -1,3 +1,8 @@
+2005-06-14  Paul Stevens <paul@nfg.nl>
+
+	* dbmail-user.c, db.c, list.c, auth/authldap.c, dbmail-imapsession.c,
+	misc.c: added check when looping over GLists to avoid memory leakage.
+
 2005-06-07  Paul Stevens <paul@nfg.nl>
 
 	* many files: added ip-based virtual hosting and user-mapping.

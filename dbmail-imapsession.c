@@ -2151,6 +2151,8 @@ int dbmail_imap_session_mailbox_update_recent(struct ImapSession *self) {
 				"where message_idnr in (%s)", DBPFX, (gchar *)slices->data);
 		if (db_query(query) == -1) 
 			return (-1);
+		if (! g_list_next(slices))
+			break;
 		slices = g_list_next(slices);
 	}
 	

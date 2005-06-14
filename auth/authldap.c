@@ -221,8 +221,12 @@ void dm_ldap_freeresult(GList *entlist)
 			attlist = fldlist->data;
 			g_list_foreach(attlist,(GFunc)g_free,NULL);
 			g_list_free(attlist);
+			if (! g_list_next(fldlist))
+				break;
 			fldlist = g_list_next(fldlist);
 		}
+		if (! g_list_next(entlist))
+			break;
 		entlist = g_list_next(entlist);
 	}
 }
@@ -243,10 +247,16 @@ GList * dm_ldap_entdm_list_get_values(GList *entlist)
 						__FILE__, __func__,
 						tmp);
 				values = g_list_append_printf(values,"%s", tmp);
+				if (! g_list_next(attlist))
+					break;
 				attlist = g_list_next(attlist);
 			}
+			if (! g_list_next(fldlist))
+				break;
 			fldlist = g_list_next(fldlist);
 		}
+		if (! g_list_next(entlist))
+			break;
 		entlist = g_list_next(entlist);
 	}
 	return values;
@@ -261,11 +271,13 @@ char *dm_ldap_get_filter(const gchar boolean, const gchar *attribute, GList *val
 	GList *l = NULL;
 
 	values = g_list_first(values);
-	do {
+	while (values) {
 		g_string_printf(t,"%s=%s", attribute, (char *)values->data);
 		l = g_list_append(l,g_strdup(t->str));
-	} while ((values = g_list_next(values)));
-	
+		if (! g_list_next(values))
+			break;
+		values = g_list_next(values);
+	}
 	t = g_list_join(l,")(");
 	g_string_printf(q,"(%c(%s))", boolean, t->str);
 	s = q->str;
@@ -313,6 +325,8 @@ u64_t dm_ldap_get_freeid(const gchar *attribute)
 		t = strtoull(ids->data,NULL,10);
 		if ( (t >= min) && (t <= max) ) 
 			key[t-min] = t;
+		if (! g_list_next(ids))
+			break;
 		ids = g_list_next(ids);
 	}
 
@@ -918,12 +932,17 @@ int auth_check_user_ext(const char *address, struct dm_list *userids,
 					dm_list_nodeadd(fwds, attrvalue, strlen(attrvalue) + 1);
 					occurences += 1;
 				}
-				
+				if (! g_list_next(attlist))
+					break;
 				attlist = g_list_next(attlist);
 			}
+			if (! g_list_next(fldlist))
+				break;
 			fldlist = g_list_next(fldlist);
 			c2++;
 		}
+		if (! g_list_next(entlist))
+			break;
 		entlist = g_list_next(entlist);
 	}
 	dm_ldap_freeresult(entlist);
@@ -1379,6 +1398,8 @@ GList * auth_get_user_aliases(u64_t user_idnr)
 		attlist = g_list_first(fldlist->data);
 		while (attlist) {
 			aliases = g_list_append(aliases, g_strdup(attlist->data));
+			if (! g_list_next(attlist))
+				break;
 			attlist = g_list_next(attlist);
 		}
 		dm_ldap_freeresult(entlist);
@@ -1417,6 +1438,8 @@ int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid UNUSED)
 			g_list_free(aliases);
 			return 1;
 		}
+		if (! g_list_next(aliases))
+			break;
 		aliases = g_list_next(aliases);
 	}
 	g_list_foreach(aliases,(GFunc)g_free,NULL);
@@ -1549,6 +1572,8 @@ int auth_removealias(u64_t user_idnr, const char *alias)
 		if (strcmp(alias,(char *)aliases->data)==0)
 			break;
 		
+		if (! g_list_next(aliases))
+			break;
 		aliases = g_list_next(aliases);
 		
 	}

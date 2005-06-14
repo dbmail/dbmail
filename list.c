@@ -255,13 +255,15 @@ GList *g_list_slices(GList *list, unsigned limit)
 		slice = g_string_new("");
 		slice = g_string_append(slice, (gchar *)list->data);
 		for (i=1; i<limit; i++) {
-			list = g_list_next(list);
-			if (! list) 
+			if (! g_list_next(list)) 
 				break;
+			list = g_list_next(list);
 			slice = g_string_append(slice,",");
 			slice = g_string_append(slice,(gchar *)list->data);
 		}
 		new = g_list_append(new, g_strdup(slice->str));
+		if (! g_list_next(list))
+			break;
 		list = g_list_next(list);
 	}
 	g_string_free(slice,TRUE);

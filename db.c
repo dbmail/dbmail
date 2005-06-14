@@ -1416,6 +1416,8 @@ int db_set_isheader(GList *lost)
 			     __FILE__, __func__);
 			return DM_EQUERY;
 		}
+		if (! g_list_next(slices))
+			break;
 		slices = g_list_next(slices);
 	}
 	g_list_free(slices);
@@ -1483,6 +1485,8 @@ int db_set_headercache(GList *lost)
 			
 		}
 		dbmail_message_free(msg);
+		if (! g_list_next(lost))
+			break;
 		lost = g_list_next(lost);
 	}
 	return DM_SUCCESS;

@@ -507,6 +507,8 @@ GString * g_list_join(GList * list, char * sep)
 	while((list = g_list_next(list))) {
 		string = g_string_append(string,sep);
 		string = g_string_append(string,(gchar *)list->data);
+		if (! g_list_next(list))
+			break;
 	}
 	return string;	
 }
