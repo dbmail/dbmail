@@ -220,6 +220,12 @@ int auth_check_user_ext(const char *username, struct dm_list *userids, struct dm
 	unsigned num_rows;
 	char *escaped_username;
 
+	if (checks > 20) {
+		trace(TRACE_ERROR,"%s,%s: too many checks. Possible loop detected.",
+				__FILE__, __func__);
+		return -1;
+	}
+
 	saveres = db_get_result_set();
 	db_set_result_set(NULL);
 
@@ -290,7 +296,7 @@ int auth_check_user_ext(const char *username, struct dm_list *userids, struct dm
 			query_result = db_get_result(counter, 0);
 			trace(TRACE_DEBUG, "%s,%s: checking user %s to %s",
 			      __FILE__, __func__, username, query_result);
-			occurences += auth_check_user_ext(query_result, userids, fwds, 1);
+			occurences += auth_check_user_ext(query_result, userids, fwds, checks+1 );
 		}
 	}
 	db_free_result();

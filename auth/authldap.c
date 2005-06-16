@@ -870,6 +870,12 @@ int auth_check_user_ext(const char *address, struct dm_list *userids,
 	char *attrvalue;
 	GList *entlist, *fldlist, *attlist;
 
+	if (checks > 20) {
+		trace(TRACE_ERROR, "%s,%s: too many checks. Possible loop detected.",
+				__FILE__, __func__);
+		return -1;
+	}
+
 	trace(TRACE_DEBUG,
 	      "%s,%s: checking user [%s] in alias table",__FILE__,__func__,
 	      address);
@@ -921,7 +927,7 @@ int auth_check_user_ext(const char *address, struct dm_list *userids,
 							__FILE__,__func__, 
 							attrvalue);
 					
-					occurences += auth_check_user_ext(attrvalue, userids, fwds, 1);
+					occurences += auth_check_user_ext(attrvalue, userids, fwds, checks+1);
 				} 
 				
 				if ((strcmp(fields[c2],_ldap_cfg.field_fwdtarget)==0)) {
