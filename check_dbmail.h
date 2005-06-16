@@ -4,9 +4,13 @@
 char *configFile = "/etc/dbmail/dbmail-test.conf";
 
 /* simple testmessages. */
-char *raw_message = "From: <vol@inter7.com>\n"
-	"To: <vol@inter7.com>\n"
+char *raw_message = "From: \"Brother from another planet\" <vol@inter7.com>\n"
+	"To: \"Brother from another planet\" <vol@inter7.com>\n"
+	"Reply-to: \"Brother from another planet\" <vol@inter7.com>\n"
+	"Cc: \"Brother from another planet\" <vol@inter7.com>,\n"
+	" \"SpongeBob\" <nobody@test123.com>\n"
 	"Subject: multipart/mixed\n"
+	"Date: Wed, 11 May 2005 13:20:08 -0700\n"
 	"Received: at mx.inter7.com from localhost\n"
 	"Received: at localhost from localhost\n"
 	"MIME-Version: 1.0\n"
@@ -46,9 +50,13 @@ char *raw_message = "From: <vol@inter7.com>\n"
 /* raw_lmtp_data is equal to raw_message, except for the line-endings
  * and the termination dot.
  */
-char *raw_lmtp_data = "From: <vol@inter7.com>\r\n"
-	"To: <vol@inter7.com>\r\n"
+char *raw_lmtp_data = "From: \"Brother from another planet\" <vol@inter7.com>\r\n"
+	"To: \"Brother from another planet\" <vol@inter7.com>\r\n"
 	"Subject: multipart/mixed\r\n"
+	"Reply-to: \"Brother from another planet\" <vol@inter7.com>\r\n"
+	"Cc: \"Brother from another planet\" <vol@inter7.com>,\r\n"
+	" \"SpongeBob\" <nobody@test123.com>\r\n"
+	"Date: Wed, 11 May 2005 13:20:08 -0700\n"
 	"Received: at mx.inter7.com from localhost\r\n"
 	"Received: at localhost from localhost\r\n"
 	"MIME-Version: 1.0\r\n"

@@ -619,8 +619,8 @@ int dbmail_message_headers_cache(struct DbmailMessage *self)
 	dbmail_message_cache_tofield(self);
 	dbmail_message_cache_ccfield(self);
 	dbmail_message_cache_fromfield(self);
-	dbmail_message_cache_replytofield(self);
 	dbmail_message_cache_datefield(self);
+	dbmail_message_cache_replytofield(self);
 	dbmail_message_cache_subjectfield(self);
 	dbmail_message_cache_referencesfield(self);
 	
@@ -703,29 +703,44 @@ void _header_cache(const char *header, const char *value, gpointer user_data)
 	g_free(clean_value);
 }
 
-static void insert_address_cache(u64_t physid, const char *field, InternetAddress *ia)
+static void insert_address_cache(u64_t physid, const char *field, InternetAddressList *ialist)
 {
+	InternetAddress *ia;
 	GString *q = g_string_new("");
 	
-	g_string_printf(q, "INSERT INTO %s%sfield (physmessage_id, %sname, %saddr) "
-			"VALUES (%llu,'%s','%s')", DBPFX, field, field, field, physid, ia->name ? ia->name: "" , ia->value.addr);
-	if (db_query(q->str)) {
-		trace(TRACE_WARNING, "%s,%s: insert %sfield failed [%s]",
-				__FILE__, __func__, field, q->str);
+	g_return_if_fail(ialist != NULL);
+	
+	while (ialist->address) {
+		
+		ia = ialist->address;
+		g_return_if_fail(ia != NULL);
+	
+		g_string_printf(q, "INSERT INTO %s%sfield (physmessage_id, %sname, %saddr) "
+				"VALUES (%llu,'%s','%s')", DBPFX, field, field, field, 
+				physid, ia->name ? ia->name: "" , ia->value.addr);
+		
+		if (db_query(q->str)) 
+			trace(TRACE_WARNING, "%s,%s: insert %sfield failed [%s]",
+					__FILE__, __func__, field, q->str);
+
+		if (ialist->next == NULL)
+			break;
+		
+		ialist = ialist->next;
 	}
+	
 	g_string_free(q,TRUE);
 }
 
-static void insert_fieldcache(u64_t physid, const char *field, const char *value)
+static void insert_field_cache(u64_t physid, const char *field, const char *value)
 {
 	GString *q = g_string_new("");
 	
 	g_string_printf(q, "INSERT INTO %s%sfield (physmessage_id, %sfield) "
 			"VALUES (%llu,'%s')", DBPFX, field, field, physid, value);
-	if (db_query(q->str)) {
+	if (db_query(q->str)) 
 		trace(TRACE_WARNING, "%s,%s: insert %sfield failed [%s]",
 				__FILE__, __func__, field, q->str);
-	}
 	g_string_free(q,TRUE);
 }
 
@@ -733,51 +748,33 @@ static void insert_fieldcache(u64_t physid, const char *field, const char *value
 void dbmail_message_cache_tofield(struct DbmailMessage *self)
 {
 	InternetAddressList *list;
-	InternetAddress *ia;
 
-	/* just cache the first address */
 	list = (InternetAddressList *)g_mime_message_get_recipients((GMimeMessage *)(self->content), GMIME_RECIPIENT_TYPE_TO);
 	if (list == NULL)
 		return;
-	
-	ia = list->address;
-	g_return_if_fail(ia != NULL);
-	
-	insert_address_cache(self->physid, "to", ia);
-
+	insert_address_cache(self->physid, "to", list);
 }
+
 void dbmail_message_cache_ccfield(struct DbmailMessage *self)
 {
 	InternetAddressList *list;
-	InternetAddress *ia;
 	
-	/* just cache the first address */
 	list = (InternetAddressList *)g_mime_message_get_recipients((GMimeMessage *)(self->content), GMIME_RECIPIENT_TYPE_CC);
 	if (list == NULL)
 		return;
-	
-	ia = list->address;
-	g_return_if_fail(ia != NULL);
-
-	insert_address_cache(self->physid, "cc", ia);
+	insert_address_cache(self->physid, "cc", list);
 	
 }
 void dbmail_message_cache_fromfield(struct DbmailMessage *self)
 {
 	const char *addr;
 	InternetAddressList *list;
-	InternetAddress *ia;
 
 	addr = g_mime_message_get_sender((GMimeMessage *)(self->content));
 	list = internet_address_parse_string(addr);
 	if (list == NULL)
 		return;
-
-	ia = list->address;
-	g_return_if_fail(ia != NULL);
-
-	insert_address_cache(self->physid, "from", ia);
-
+	insert_address_cache(self->physid, "from", list);
 	internet_address_list_destroy(list);
 
 }
@@ -785,18 +782,12 @@ void dbmail_message_cache_replytofield(struct DbmailMessage *self)
 {
 	const char *addr;
 	InternetAddressList *list;
-	InternetAddress *ia;
 
 	addr = g_mime_message_get_reply_to((GMimeMessage *)(self->content));
 	list = internet_address_parse_string(addr);
 	if (list == NULL)
 		return;
-
-	ia = list->address;
-	g_return_if_fail(ia != NULL);
-
-	insert_address_cache(self->physid, "replyto", ia);
-
+	insert_address_cache(self->physid, "replyto", list);
 	internet_address_list_destroy(list);
 
 }
@@ -817,7 +808,7 @@ void dbmail_message_cache_datefield(struct DbmailMessage *self)
 	value = g_new0(char,20);
 	strftime(value,20,"%Y-%m-%d %H:%M:%S",gmtime(&date));
 
-	insert_fieldcache(self->physid, "date", value);
+	insert_field_cache(self->physid, "date", value);
 	
 	g_free(value);
 }
@@ -843,7 +834,7 @@ void dbmail_message_cache_subjectfield(struct DbmailMessage *self)
 	if (strlen(subject)>255)
 		subject[255]='\0';
 	
-	insert_fieldcache(self->physid, "subject", subject);
+	insert_field_cache(self->physid, "subject", subject);
 	
 	g_free(subject);
 }
@@ -870,13 +861,12 @@ void dbmail_message_cache_referencesfield(struct DbmailMessage *self)
 	head = refs;
 	
 	while (refs->msgid) {
-		insert_fieldcache(self->physid, "references", refs->msgid);
+		insert_field_cache(self->physid, "references", refs->msgid);
 
 		if (refs->next == NULL)
 			break;
 		refs = refs->next;
 	}
-
 	g_mime_references_clear(&head);
 
 }

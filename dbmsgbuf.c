@@ -56,20 +56,13 @@ static db_pos_t zeropos; /**< absolute position (block/offset) of
 static unsigned nblocks = 0; /**< number of block  */
 static const char * tmprow; /**< temporary row number */
 
-int db_init_fetch_messageblks(u64_t msg_idnr, char *query_template);
 int db_init_fetch_messageblks(u64_t msg_idnr, char *query_template)
 {
-	if (_msg_fetch_inited != 0) {
+	if (_msg_fetch_inited != 0) 
 		return 0;
-	}
 
-	msgbuf_buf = (char *) dm_malloc(sizeof(char) *
-					(size_t) MSGBUF_WINDOWSIZE);
-	if (!msgbuf_buf) {
+	if ((msgbuf_buf = g_new0(char,MSGBUF_WINDOWSIZE)) == NULL)
 		return -1;
-	}
-
-	memset(msgbuf_buf, '\0', (size_t) MSGBUF_WINDOWSIZE);
 	
 	snprintf(query, DEF_QUERYSIZE, query_template, DBPFX, DBPFX, msg_idnr);
 
@@ -81,7 +74,6 @@ int db_init_fetch_messageblks(u64_t msg_idnr, char *query_template)
 	}
 
 	nblocks = db_num_rows();
-
 	if (nblocks == 0) {
 		trace(TRACE_ERROR, "%s,%s: message has no blocks",
 		      __FILE__, __func__);
@@ -96,7 +88,6 @@ int db_init_fetch_messageblks(u64_t msg_idnr, char *query_template)
 	/* start at row (tuple) 0 */
 	_msgrow_idx = 0;
 
-	/* FIXME: this will explode is db_get_result returns NULL. */
 	tmprow = db_get_result(_msgrow_idx, 0);
 	rowlength = (u64_t)strlen(tmprow);
 	
@@ -119,8 +110,7 @@ int db_init_fetch_messageblks(u64_t msg_idnr, char *query_template)
 	msgbuf_buflen = rowlength;	/* NOTE \0 has been copied from the result set */
 	rowpos = rowlength;	/* no more to read from this row */
 
-	_msgrow_idx++;
-	if (_msgrow_idx >= db_num_rows()) {
+	if (++_msgrow_idx >= db_num_rows()) {
 		rowlength = rowpos = 0;
 		return 1;
 	}

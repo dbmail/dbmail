@@ -177,10 +177,10 @@ START_TEST(test_mime_readheader)
 	
 	dm_list_init(&mimelist);
 	res = mime_readheader(raw_message,&blkidx,&mimelist,&headersize);
-	fail_unless(res==9, "number of newlines incorrect");
-	fail_unless(blkidx==236, "blkidx incorrect");
+	fail_unless(res==13, "number of newlines incorrect");
+	fail_unless(blkidx==477, "blkidx incorrect");
 	fail_unless(headersize==blkidx+res, "headersize incorrect");
-	fail_unless(mimelist.total_nodes==7, "number of message-headers incorrect");
+	fail_unless(mimelist.total_nodes==10, "number of message-headers incorrect");
 	dm_list_free(&mimelist.start);
 	
 	blkidx = 0; headersize = 0;
@@ -202,7 +202,7 @@ START_TEST(test_mime_fetch_headers)
 	
 	dm_list_init(&mimelist);
 	mime_fetch_headers(raw_message,&mimelist);
-	fail_unless(mimelist.total_nodes==7, "number of message-headers incorrect");
+	fail_unless(mimelist.total_nodes==10, "number of message-headers incorrect");
 	mr = (mimelist.start)->data;
 	fail_unless(strcmp(mr->field, "Content-Type")==0, "Field name incorrect");
 	fail_unless(strcmp(mr->value, "multipart/mixed; boundary=boundary")==0, "Field value incorrect");
@@ -258,7 +258,7 @@ START_TEST(test_db_set_msg)
 	msgbuf_buflen = strlen(msgbuf_buf);
 	res = db_start_msg(msg,stopbound,&level,maxlevel);
 	fail_unless(res==29, "db_start_msg result incorrect");
-	fail_unless(msg->rfcheader.total_nodes == 7, "total-nodes for rfcheader incorrect");
+	fail_unless(msg->rfcheader.total_nodes == 10, "total-nodes for rfcheader incorrect");
 
 	g_free(msg);
 

@@ -126,7 +126,7 @@ void dbmail_message_cache_replytofield(struct DbmailMessage *self);
 void dbmail_message_cache_datefield(struct DbmailMessage *self);
 void dbmail_message_cache_subjectfield(struct DbmailMessage *self);
 void dbmail_message_cache_referencesfield(struct DbmailMessage *self);
-	
+
 /*
  * destructor
  */
