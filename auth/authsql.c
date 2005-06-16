@@ -223,7 +223,7 @@ int auth_check_user_ext(const char *username, struct dm_list *userids, struct dm
 	if (checks > 20) {
 		trace(TRACE_ERROR,"%s,%s: too many checks. Possible loop detected.",
 				__FILE__, __func__);
-		return -1;
+		return 0;
 	}
 
 	saveres = db_get_result_set();
@@ -397,7 +397,7 @@ int auth_change_mailboxsize(u64_t user_idnr, u64_t new_size)
 	return 0;
 }
 
-int auth_validate(clientinfo *ci, char *username, char *password, u64_t * user_idnr)
+int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user_idnr)
 {
 	const char *query_result;
 	int is_validated = 0;

@@ -873,7 +873,7 @@ int auth_check_user_ext(const char *address, struct dm_list *userids,
 	if (checks > 20) {
 		trace(TRACE_ERROR, "%s,%s: too many checks. Possible loop detected.",
 				__FILE__, __func__);
-		return -1;
+		return 0;
 	}
 
 	trace(TRACE_DEBUG,
@@ -922,22 +922,9 @@ int auth_check_user_ext(const char *address, struct dm_list *userids,
 			attlist = g_list_first(fldlist->data);
 			while(attlist) {
 				attrvalue = (char *)attlist->data;
-				if ((strcmp(fields[c2],_ldap_cfg.field_nid)==0)) {
-					trace(TRACE_DEBUG, "%s,%s: restart with user_idnr [%s]",
-							__FILE__,__func__, 
-							attrvalue);
-					
-					occurences += auth_check_user_ext(attrvalue, userids, fwds, checks+1);
-				} 
 				
-				if ((strcmp(fields[c2],_ldap_cfg.field_fwdtarget)==0)) {
-					trace(TRACE_DEBUG, "%s,%s: add forwarding target [%s]",
-							__FILE__,__func__, 
-							attrvalue);
-					
-					dm_list_nodeadd(fwds, attrvalue, strlen(attrvalue) + 1);
-					occurences += 1;
-				}
+				occurences += auth_check_user_ext(attrvalue, userids, fwds, checks+1);
+				
 				if (! g_list_next(attlist))
 					break;
 				attlist = g_list_next(attlist);
@@ -952,9 +939,6 @@ int auth_check_user_ext(const char *address, struct dm_list *userids,
 		entlist = g_list_next(entlist);
 	}
 	dm_ldap_freeresult(entlist);
-
-	trace(TRACE_DEBUG, "%s,%s: executing query, checks [%d]",__FILE__,__func__, checks);
-
 	return occurences;
 }
 

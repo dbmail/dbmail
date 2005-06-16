@@ -456,7 +456,7 @@ int do_show(const char * const name)
 			/* not a user, search aliases */
 			dm_list_init(&fwds);
 			dm_list_init(&uids);
-			result = auth_check_user_ext(name,&uids,&fwds,-1);
+			result = auth_check_user_ext(name,&uids,&fwds,0);
 			
 			if (!result) {
 				qerrorf("Nothing found searching for [%s].\n", name);

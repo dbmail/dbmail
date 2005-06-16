@@ -316,7 +316,7 @@ int dsnuser_resolve(deliver_to_user_t *delivery)
 		alias_count =
 		    auth_check_user_ext(delivery->address,
 					delivery->userids,
-					delivery->forwards, -1);
+					delivery->forwards, 0);
 		trace(TRACE_DEBUG,
 		      "%s, %s: user [%s] found total of [%d] aliases",
 		      __FILE__, __func__, delivery->address, alias_count);
@@ -375,7 +375,7 @@ int dsnuser_resolve(deliver_to_user_t *delivery)
 					domain_count =
 					    auth_check_user_ext(domain,
 					     delivery->userids,
-					     delivery->forwards, -1);
+					     delivery->forwards, 0);
 					trace(TRACE_DEBUG,
 					      "%s, %s: domain [%s] found total of [%d] aliases",
 					      __FILE__, __func__, domain, domain_count);

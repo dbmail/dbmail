@@ -1,3 +1,10 @@
+2005-06-16  Paul Stevens <paul@nfg.nl>
+
+	* auth/authsql.c, auth/authldap.c (auth_check_user_ext): added loop
+	detection.
+	* dsn.c, dbmail-user.c: start auth_check_user_ext with check at zero
+	instead of minus one.
+
 2005-06-14  Paul Stevens <paul@nfg.nl>
 
 	* dbmail-user.c, db.c, list.c, auth/authldap.c, dbmail-imapsession.c,

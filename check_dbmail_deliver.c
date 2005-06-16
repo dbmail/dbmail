@@ -342,7 +342,7 @@ END_TEST
  * \param username
  * \param userids list of user id's (empty on call)
  * \param fwds list of forwards (emoty on call)
- * \param checks used internally, \b should be -1 on call
+ * \param checks used internally, \b should be 0 on call
  * \return number of deliver_to addresses found
  */
 //int auth_check_user_ext(const char *username, struct dm_list *userids,
@@ -351,7 +351,7 @@ START_TEST(test_auth_check_user_ext)
 {
 	struct dm_list uids;
 	struct dm_list fwds;
-	int checks = -1;
+	int checks = 0;
 	int result;
 	dm_list_init(&uids);
 	dm_list_init(&fwds);
