@@ -4,6 +4,7 @@
 	detection.
 	* dsn.c, dbmail-user.c: start auth_check_user_ext with check at zero
 	instead of minus one.
+	* mime.c (mail_address_build_list): cleanup using gmime.
 
 2005-06-14  Paul Stevens <paul@nfg.nl>
 

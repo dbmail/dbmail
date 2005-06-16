@@ -239,6 +239,9 @@ void mime_findfield(const char *fname, struct dm_list *mimelist,
 {
 	struct element *current;
 
+	trace(TRACE_DEBUG, "%s,%s: scanning for %s",
+			__FILE__, __func__, fname);
+	
 	current = dm_list_getstart(mimelist);
 	while (current) {
 		*mr = current->data;	/* get field/value */
@@ -253,83 +256,40 @@ void mime_findfield(const char *fname, struct dm_list *mimelist,
 int mail_address_build_list(char *scan_for_field, struct dm_list *targetlist,
 		  struct dm_list *mimelist)
 {
-	struct element *raw;
 	struct mime_record *mr;
-	char *tmpvalue, *ptr, *tmp;
+	InternetAddressList *ialisthead, *ialist;
+	InternetAddress *ia;
 
 	if (!scan_for_field || !targetlist || !mimelist) {
-		trace(TRACE_ERROR,
-		      "mail_address_build_list(): received a NULL argument\n");
+		trace(TRACE_ERROR, "%s,%s: received a NULL argument\n",
+				__FILE__, __func__);
 		return -1;
 	}
 
-	trace(TRACE_DEBUG,
-	      "mail_address_build_list(): mimelist currently has [%ld] nodes",
-	      mimelist->total_nodes);
+	trace(TRACE_INFO, "%s,%s: mail address parser starting",
+			__FILE__, __func__);
 
-	memtst((tmpvalue =
-		(char *) dm_calloc(MIME_VALUE_MAX, sizeof(char))) == NULL);
+	mime_findfield(scan_for_field, mimelist, &mr);
+	if (mr == NULL)
+		return 0;
+	
+	if ((ialist = internet_address_parse_string(mr->value)) == NULL)
+		return -1;
 
-	trace(TRACE_INFO, "mail_address_build_list(): mail address parser starting");
-
-	raw = dm_list_getstart(mimelist);
-	trace(TRACE_DEBUG, "mail_address_build_list(): total fields in header %ld",
-	      mimelist->total_nodes);
-	while (raw != NULL) {
-		mr = (struct mime_record *) raw->data;
-		trace(TRACE_DEBUG, "mail_address_build_list(): scanning for %s",
-		      scan_for_field);
-		if ((strcasecmp(mr->field, scan_for_field) == 0)) {
-			/* Scan for email addresses and add them to our list */
-			/* the idea is to first find the first @ and go both ways */
-			/* until an non-emailaddress character is found */
-			ptr = strstr(mr->value, "@");
-			while (ptr != NULL) {
-				/* found an @! */
-				/* first go as far left as possible */
-				tmp = ptr;
-				while ((tmp != mr->value) &&
-				       (tmp[0] != '<') &&
-				       (tmp[0] != ' ') &&
-				       (tmp[0] != '\0') && (tmp[0] != ','))
-					tmp--;
-				if ((tmp[0] == '<') || (tmp[0] == ' ')
-				    || (tmp[0] == '\0')
-				    || (tmp[0] == ','))
-					tmp++;
-				while ((ptr != NULL) &&
-				       (ptr[0] != '>') &&
-				       (ptr[0] != ' ') &&
-				       (ptr[0] != ',') && (ptr[0] != '\0'))
-					ptr++;
-				memtst((strncpy(tmpvalue, tmp, ptr - tmp))
-				       == NULL);
-				/* always set last value to \0 to end string */
-				tmpvalue[ptr - tmp] = '\0';
-
-				/* one extra for \0 in strlen */
-				memtst((dm_list_nodeadd(targetlist, tmpvalue,
-						     (strlen(tmpvalue) +
-						      1))) == NULL);
-
-				/* printf ("total nodes:\n");
-				   dm_list_show(&targetlist);
-				   next address */
-				ptr = strstr(ptr, "@");
-				trace(TRACE_DEBUG,
-				      "mail_address_build_list(): found %s, next in list is %s",
-				      tmpvalue, ptr ? ptr : "<null>");
-			}
-		}
-		raw = raw->nextnode;
+	ialisthead = ialist;
+	while (1) {
+		ia = ialist->address;
+		dm_list_nodeadd(targetlist,ia->value.addr, strlen(ia->value.addr) + 1);
+		if (! ialist->next)
+			break;
+		ialist = ialist->next;
 	}
+	
+	internet_address_list_destroy(ialisthead);
 
-	dm_free(tmpvalue);
-
-	trace(TRACE_DEBUG, "mail_address_build_list(): found %ld emailaddresses",
-	      targetlist->total_nodes);
-
-	trace(TRACE_INFO, "mail_address_build_list(): mail address parser finished");
+	trace(TRACE_DEBUG, "%s,%s: found %ld emailaddresses",
+			__FILE__, __func__,
+			targetlist->total_nodes);
 
 	if (targetlist->total_nodes == 0)	/* no addresses found */
 		return -1;

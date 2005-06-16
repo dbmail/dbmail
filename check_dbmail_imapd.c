@@ -234,13 +234,13 @@ START_TEST(test_mail_address_build_list)
 	dm_list_init(&mimelist);
 	mime_fetch_headers(raw_message, &mimelist);
 
-	result = mail_address_build_list("To", &targetlist, &mimelist);
+	result = mail_address_build_list("Cc", &targetlist, &mimelist);
 	struct element *el;
 	el = targetlist.start;
 
 	fail_unless(result==0, "mail_address_build_list failed");
-	fail_unless(targetlist.total_nodes==1,"mail_address_build_list failed");
-	fail_unless(strcmp((char *)el->data,"vol@inter7.com")==0, "mail_address_build_list failed");
+	fail_unless(targetlist.total_nodes==2,"mail_address_build_list failed");
+	fail_unless(strcmp((char *)el->data,"nobody@test123.com")==0, "mail_address_build_list failed");
 }
 END_TEST
 
