@@ -1,3 +1,10 @@
+2004-06-17  Paul Stevens <paul@nfg.nl>
+
+	* db.c, db.h, pgsql/dbpgsql.c, sql/postgresql/add_replycache.pgsql,
+	sql/mysql/add_replycache.mysql, sqlite/dbsqlite.c, pipe.c,
+	mysql/dbmysql.c: cleaned up the auto-reply code so we behave like a
+	good net citizen.
+	
 2005-06-16  Paul Stevens <paul@nfg.nl>
 
 	* auth/authsql.c, auth/authldap.c (auth_check_user_ext): added loop

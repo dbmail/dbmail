@@ -45,6 +45,7 @@ const char *TO_CHAR = "%s";
 const char *TO_DATE = "'%s'";
 
 const char *SQL_CURRENT_TIMESTAMP = "CURRENT_TIMESTAMP()";
+const char *SQL_REPLYCACHE_EXPIRE = "DATETIME('NOW','-%s second')";
 
 static sqlite *conn;
 

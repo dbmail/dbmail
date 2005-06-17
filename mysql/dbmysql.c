@@ -39,6 +39,7 @@
 #define DB_MYSQL_STANDARD_PORT 3306
 
 const char *SQL_CURRENT_TIMESTAMP = "CURRENT_TIMESTAMP";
+const char *SQL_REPLYCACHE_EXPIRE = "NOW() - INTERVAL %d SECOND";
 const char *TO_CHAR = "DATE_FORMAT(%s, '%%Y-%%m-%%d %%T')";
 /* there is supposed to be a better way of doing this, problem is, it's
    only available from MYSQL version 4.1.1 and up, using the

@@ -55,6 +55,7 @@ static const char *db_flag_desc[] = {
 extern const char *TO_CHAR;
 extern const char *TO_DATE;
 extern const char *SQL_CURRENT_TIMESTAMP;
+extern const char *SQL_REPLYCACHE_EXPIRE;
 
 extern db_param_t _db_params;
 
@@ -4422,3 +4423,64 @@ int db_user_find_create(u64_t user_idnr)
 
 	return db_user_create_shadow(username, &user_idnr);
 }
+
+int db_replycache_register(const char *to, const char *from)
+{
+	snprintf(query, DEF_QUERYSIZE,
+			"SELECT lastseen FROM %sreplycache "
+			"WHERE to_addr = '%s' "
+			"AND from_addr = '%s'",
+			DBPFX, to, from);
+	if (db_query(query)== -1) {
+		trace(TRACE_ERROR, "%s,%s: query failed",
+				__FILE__, __func__);
+		return DM_EQUERY;
+	}
+	
+	if (db_num_rows() > 0) {
+		snprintf(query, DEF_QUERYSIZE,
+			 "UPDATE %sreplycache SET lastseen = %s "
+			 "WHERE to_addr = '%s' AND from_addr = '%s'", DBPFX, SQL_CURRENT_TIMESTAMP,
+			 to, from);
+	} else {
+		snprintf(query, DEF_QUERYSIZE,
+			 "INSERT INTO %sreplycache (to_addr, from_addr, lastseen) "
+			 "VALUES ('%s','%s', %s)", DBPFX, to, from, SQL_CURRENT_TIMESTAMP);
+	}
+	
+	db_free_result();
+	
+	if (db_query(query)== -1) {
+		trace(TRACE_ERROR, "%s,%s: query failed",
+				__FILE__, __func__);
+		return DM_EQUERY;
+	}
+
+	return DM_SUCCESS;
+
+}
+
+#define REPLYCACHE_TIMEOUT 3600*24*7
+int db_replycache_validate(const char *to, const char *from)
+{
+	GString *tmp = g_string_new("");
+	g_string_printf(tmp, SQL_REPLYCACHE_EXPIRE, REPLYCACHE_TIMEOUT);
+	snprintf(query, DEF_QUERYSIZE,
+			"SELECT lastseen FROM %sreplycache "
+			"WHERE to_addr = '%s' AND from_addr = '%s' "
+			"AND lastseen > (%s)", DBPFX, to, from, tmp->str);
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: query failed",
+				__FILE__, __func__);
+		return DM_EQUERY;
+	}
+	if (db_num_rows() > 0) {
+		db_free_result();
+		return DM_EGENERAL;
+	}
+	
+	db_free_result();
+	
+	return DM_SUCCESS;			
+}
+

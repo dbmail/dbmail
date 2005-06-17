@@ -36,6 +36,7 @@
 #include "pipe.h"
 #include "debug.h"
 #include "misc.h"
+#include "mime.h"
 #include <errno.h>
 #include <string.h>
 #include <strings.h>
@@ -130,118 +131,131 @@ static int send_notification(const char *to, const char *from,
 	return 0;
 }
 
-
+static int valid_sender(const char *addr) 
+{
+	if (strcasestr(addr, "mailer-daemon@"))
+		return 0;
+	if (strcasestr(addr, "daemon@"))
+		return 0;
+	if (strcasestr(addr, "postmaster@"))
+		return 0;
+	return 1;
+}
+	
 /*
  * Send an automatic reply using sendmail
  */
 static int send_reply(struct dm_list *headerfields, const char *body)
 {
-	struct element *el;
 	struct mime_record *record;
 	char *from = NULL, *to = NULL, *replyto = NULL, *subject = NULL;
 	FILE *mailpipe = NULL;
-	char *send_address;
 	char *escaped_send_address;
+	GString *message;
+
+	InternetAddressList *ialist;
+	InternetAddress *ia;
+	
 	char comm[MAX_COMM_SIZE];
 			    /**< command sent to sendmail (needs to escaped) */
 	field_t sendmail;
 	int result;
-	unsigned int i, j;
 
 	if (config_get_value("SENDMAIL", "SMTP", sendmail) < 0)
-		trace(TRACE_FATAL,
-		      "%s,%s: error getting config",
+		trace(TRACE_FATAL, "%s,%s: fatal error getting config",
 		      __FILE__, __func__);
 
 
 	if (sendmail[0] == '\0')
-		trace(TRACE_FATAL,
-		      "send_reply(): SENDMAIL not configured (see config file). Stop.");
+		trace(TRACE_FATAL, "%s,%s: SENDMAIL not configured (see config file)",
+				__FILE__, __func__);
 
-	trace(TRACE_DEBUG,
-	      "send_reply(): found sendmail command to be [%s]", sendmail);
+	trace(TRACE_DEBUG, "%s,%s: found sendmail command to be [%s]", 
+			__FILE__, __func__, sendmail);
 
 	/* find To: and Reply-To:/From: field */
-	el = dm_list_getstart(headerfields);
+	mime_findfield("from",headerfields,&record);
+	if (record)
+		from = record->value;
+	
+	mime_findfield("reply-to",headerfields,&record);
+	if (record)
+		replyto = record->value;
+	
+	mime_findfield("subject",headerfields,&record);
+	if (record)
+		subject = record->value;
 
-	while (el) {
-		record = (struct mime_record *) el->data;
+	mime_findfield("to", headerfields, &record);
+	if (record)
+		to = record->value;
+	
+	mime_findfield("delivered-to", headerfields, &record);
+	if (record)
+		to = record->value;
 
-		if (strcasecmp(record->field, "from") == 0) {
-			from = record->value;
-			trace(TRACE_DEBUG, "send_reply(): found FROM [%s]",
-			      from);
-		} else if (strcasecmp(record->field, "reply-to") == 0) {
-			replyto = record->value;
-			trace(TRACE_DEBUG,
-			      "send_reply(): found REPLY-TO [%s]",
-			      replyto);
-		} else if (strcasecmp(record->field, "subject") == 0) {
-			subject = record->value;
-			trace(TRACE_DEBUG,
-			      "send_reply(): found SUBJECT [%s]", subject);
-		} else if (strcasecmp(record->field, "deliver-to") == 0) {
-			to = record->value;
-			trace(TRACE_DEBUG, "send_reply(): found TO [%s]",
-			      to);
-		}
-
-		el = el->nextnode;
+	mime_findfield("x-dbmail-reply", headerfields, &record);
+	if (record) {
+		trace(TRACE_ERROR, "%s,%s: loop detected", __FILE__, __func__);
+		return 0;
 	}
-
+	
 	if (!from && !replyto) {
-		trace(TRACE_ERROR, "send_reply(): no address to send to");
+		trace(TRACE_ERROR, "%s,%s: no address to send to", __FILE__, __func__);
+		return 0;
+	}
+
+	if (! valid_sender(from)) {
+		trace(TRACE_DEBUG, "%s,%s: sender invalid. skip auto-reply.",
+				__FILE__, __func__);
 		return 0;
 	}
 
 
-	trace(TRACE_DEBUG,
-	      "send_reply(): header fields scanned; opening pipe to sendmail");
-	send_address = replyto ? replyto : from;
-	/* allocate a string twice the size of send_address */
-	escaped_send_address =
-		(char *) dm_malloc((strlen(send_address) + 1)
-				   * 2 * sizeof(char));
-	if (!escaped_send_address) {
-		trace(TRACE_ERROR, "%s,%s: unable to allocate memory. Memory "
-		      "full?", __FILE__, __func__);
+	ialist = internet_address_parse_string(replyto ? replyto : from);
+	ia = ialist->address;
+	escaped_send_address = internet_address_to_string(ia, TRUE);
+	internet_address_list_destroy(ialist);
+
+	if (db_replycache_validate(to, escaped_send_address) != DM_SUCCESS) {
+		trace(TRACE_DEBUG, "%s,%s: skip auto-reply", 
+				__FILE__, __func__);
 		return 0;
 	}
-	memset(escaped_send_address, '\0', (strlen(send_address) + 1) * 2 * sizeof(char));
-	i = 0;
-	j = 0;
-	/* get all characters from send_address, and escape every ' */
-	while (i < (strlen(send_address) + 1)) {
-		if (send_address[i] == '\'')
-			escaped_send_address[j++] = '\\';
-		escaped_send_address[j++] = send_address[i++];
-	}
-	(void) snprintf(comm, MAX_COMM_SIZE, "%s '%s'", sendmail,
-		 escaped_send_address);
+
+
+	trace(TRACE_DEBUG, "%s,%s: header fields scanned; opening pipe to sendmail", 
+			__FILE__, __func__);
+	
+	(void) snprintf(comm, MAX_COMM_SIZE, "%s '%s'", sendmail, escaped_send_address);
 
 	if (!(mailpipe = popen(comm, "w"))) {
-		trace(TRACE_ERROR,
-		      "send_reply(): could not open pipe to sendmail using cmd [%s]",
-		      comm);
+		trace(TRACE_ERROR, "%s,%s: could not open pipe to sendmail using cmd [%s]",
+				__FILE__, __func__, comm);
 		dm_free(escaped_send_address);
 		return 1;
 	}
 
-	trace(TRACE_DEBUG, "send_reply(): sending data");
+	trace(TRACE_DEBUG, "%s,%s: opened pipe [%s], sending data...", __FILE__, __func__, comm);
 
-	fprintf(mailpipe, "To: %s\n", replyto ? replyto : from);
-	fprintf(mailpipe, "From: %s\n", to ? to : "(unknown)");
-	fprintf(mailpipe, "Subject: AW: %s\n",
-		subject ? subject : "<no subject>");
-	fprintf(mailpipe, "\n");
-	fprintf(mailpipe, "%s\n", body ? body : "--");
-
+	message = g_string_new("");
+	g_string_printf(message, "To: %s\nFrom: %s\nSubject: Re: %s\nX-Dbmail-Reply: %s\n\n%s\n",
+			escaped_send_address, to ? to : "<nobody@nowhere.org>", subject, 
+			escaped_send_address, body);
+	
+	fprintf(mailpipe, message->str);
+	
 	result = pclose(mailpipe);
-	trace(TRACE_DEBUG, "send_reply(): pipe closed");
-	if (result != 0)
-		trace(TRACE_ERROR,
-		      "send_reply(): reply could not be sent: sendmail error");
+	trace(TRACE_DEBUG, "%s,%s: pipe closed", __FILE__, __func__);
+	if (result != 0) {
+		trace(TRACE_ERROR, "%s,%s: reply could not be sent: sendmail error",
+				__FILE__, __func__);
+	} else {
+		db_replycache_register(to, escaped_send_address);
+	}
+
 	dm_free(escaped_send_address);
+	g_string_free(message,TRUE);
 	return 0;
 }
 
