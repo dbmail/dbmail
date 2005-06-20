@@ -1,5 +1,7 @@
 /* $Id$ 
-   (c) 2000-2002 IC&S, The Netherlands */
+   (c) 2000-2002 IC&S, The Netherlands 
+   (c) 2004,2005 NFG, The Netherlands
+   */
 
 DBMAIL installation
 ===================
@@ -18,8 +20,8 @@ What do you need?
   *BSD systems, make sure you install and use 'gmake'. 
 - development files (libs, scripts and include files) for your database 
   server. These will probably be provided by separate packages.
-- glib-2.0 development headers and libraries.
-- gmime-2.0 development headers and libraries.
+- glib (>= 2.4) development headers and libraries.
+- gmime (>= 2.1) development headers and libraries.
 
 
 1.	Setup a database
