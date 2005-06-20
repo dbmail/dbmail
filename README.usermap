@@ -34,6 +34,7 @@ Consider the following settings:
 2 |client      | inet:127.0.0.1:143   |                      | client@b.com
 3 |client      | inet:10.1.1.1:143    | inet:10.1.1.1:110    | client@c.com
 4 |ANY         | inet:10.1.1.2:143    |                      | %s@d.com
+5 |client      |                      | inet:0.0.0.0:0       |
 
 row 1 will give you a simple 1-1 mapping irrespective of the IP address connected to.
 
@@ -44,5 +45,6 @@ POP access.
 
 row 4 will map all logins on a single IP address to an expanded form.
 
+row 5 will deny any kind of access to client.
 
 

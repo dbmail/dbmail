@@ -124,7 +124,8 @@ int cidr_match(struct cidrfilter *base, struct cidrfilter *test)
 	test_addr.s_addr = (test->socket->sin_addr.s_addr | test_addr.s_addr);
 	match_addr.s_addr = (base_addr.s_addr & test_addr.s_addr);
 
-	if (base->socket->sin_port != test->socket->sin_port)
+	/* only match ports if specified */
+	if (test->socket->sin_port > 0 && (base->socket->sin_port != test->socket->sin_port))
 		return 0;
 	
 	if (test_addr.s_addr == match_addr.s_addr) 
