@@ -44,7 +44,8 @@ COMMON = dbmail-user.c \
 	
 SERVER = server.c \
 	serverchild.c \
-	pool.c
+	pool.c \
+	dm_cidr.c
 	
 DELIVER = pipe.c \
 	forward.c \

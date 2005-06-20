@@ -1,4 +1,10 @@
-2004-06-17  Paul Stevens <paul@nfg.nl>
+2005-06-20  Paul Stevens <paul@nfg.nl>
+
+	* Makefile.am, dm_cidr.c, dm_cidr.h, misc.c, check_dbmail_server.c: support
+	cidr notation in usermap sock_allow/sock_deny fields.
+	* mime.c: minor cleanups.
+	
+2005-06-17  Paul Stevens <paul@nfg.nl>
 
 	* db.c, db.h, pgsql/dbpgsql.c, sql/postgresql/add_replycache.pgsql,
 	sql/mysql/add_replycache.mysql, sqlite/dbsqlite.c, pipe.c,

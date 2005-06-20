@@ -39,9 +39,11 @@
 #include "dbmail.h"
 #include "debug.h"
 #include "db.h"
+#include "dm_cidr.h"
 #include "pool.h"
 #include "server.h"
 #include "check.h"
+#include "misc.h"
 #include <gmime/gmime.h>
 
 #include "check_dbmail.h"
@@ -81,16 +83,36 @@ START_TEST(test_scoreboard_new)
 }
 END_TEST
 
+#define X(a,b,c,d) fail_unless(dm_sock_compare((b),(c),(d))==(a),"sock_match failed")
+START_TEST(test_dm_sock_compare) 
+{
+	X(1,"inet:127.0.0.1:143","inet:127.0.0.1:143","inet:127.0.0.1:143");
+	X(1,"inet:127.0.0.1:110","inet:127.0.0.1:143","");
+	X(1,"inet:127.0.0.1:143","inet:127.0.0.2:143","");
+	X(0,"inet:127.0.0.1:143","inet:127.0.0.1:143","");
+	X(0,"inet:127.0.0.1:143","inet:127.0.0.0/8:143","inet:10.0.0.0/8");
+	X(0,"inet:127.0.0.3:143","inet:127.0.0.0/8:143","inet:127.0.0.1/32");
+
+	X(0,"unix:/var/run/dbmail-imapd.sock","unix:/var/run/dbmail-imapd.sock","");
+	X(0,"unix:/var/run/dbmail-imapd.sock","unix:/var/run/dbmail*","");
+	X(1,"unix:/var/run/dbmail-imapd.sock","unix:/var/lib/dbmail-imapd.sock","");
+}
+END_TEST
 
 Suite *dbmail_server_suite(void)
 {
 	Suite *s = suite_create("Dbmail Server");
 	TCase *tc_pool = tcase_create("ServerPool");
+	TCase *tc_server = tcase_create("Server");
 	
 	suite_add_tcase(s, tc_pool);
+	suite_add_tcase(s, tc_server);
 	
 	tcase_add_checked_fixture(tc_pool, setup, teardown);
 	tcase_add_test(tc_pool, test_scoreboard_new);
+	
+	tcase_add_checked_fixture(tc_server, setup, teardown);
+	tcase_add_test(tc_server, test_dm_sock_compare);
 	
 	return s;
 }

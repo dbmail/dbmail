@@ -31,11 +31,13 @@
 #include <sys/time.h>
 #include <time.h>
 #include <assert.h>
+#include <fnmatch.h>
 
 #include "auth.h"
 #include "dbmail.h"
 #include "dbmd5.h"
 #include "misc.h"
+#include "dm_cidr.h"
 
 #undef max
 #define max(x,y) ( (x) > (y) ? (x) : (y) )
@@ -792,21 +794,55 @@ sa_family_t dm_get_client_sockaddr(clientinfo_t *ci, struct sockaddr *saddr)
 	return (un.sa.sa_family);
 }
 
+static int socket_match(const char *base, const char *test)
+{
+	struct cidrfilter *basefilter, *testfilter;
+	int result;
+	char *t;
+
+	t = strstr(base,"unix:");
+	if (t==base) {
+		base = strstr(base,":");
+		test = strstr(test,":");
+		return fnmatch(base,test,0);
+	}
+	
+	t = strstr(base,"inet:");
+	if (t!=base) 
+		return 1;
+	
+	basefilter = cidr_new(base);
+	testfilter = cidr_new(test);
+	
+	result = cidr_match(basefilter,testfilter);
+
+	cidr_free(basefilter);
+	cidr_free(testfilter);
+	
+	return result;
+
+	
+	return 1;
+
+}
+
 int dm_sock_compare(const char *clientsock, const char *sock_allow, const char *sock_deny) 
 {
 	trace(TRACE_DEBUG, "%s,%s: match clientsock [%s] with allow[%s], deny [%s]",
 			__FILE__, __func__, clientsock, sock_allow, sock_deny);
 	
+	assert(clientsock);
+	
 	if ( (strlen(sock_allow) == 0) && (strlen(sock_deny) == 0) )
 		return DM_SUCCESS;
 
-	if (strncasecmp(clientsock, sock_deny, sizeof(clientsock))==0)
+	if (sock_deny && socket_match(sock_deny, clientsock)==0)
 		return DM_EGENERAL;
 
-	if (strncasecmp(clientsock, sock_allow, sizeof(clientsock))==0)
+	if (sock_allow && socket_match(sock_allow, clientsock)==0)
 		return DM_SUCCESS;
 	
-	return DM_EQUERY;
+	return DM_EGENERAL;
 }
 
 

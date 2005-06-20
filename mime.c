@@ -35,24 +35,6 @@
 
 #include "dbmail-message.h"
 
-/* extern char *header; */
-/* extern u64_t headersize; */
-
-/* extern struct dm_list mimelist;  */
-/* extern struct dm_list users; */
-
-/* checks if s points to the end of a header. */
-static int is_end_of_header(const char *s);
-
-
-/* mime_fetch_headers()
- *
- * same as mime_headerheader, except it doesn't determine the start-index of the
- * body, nor the total size of the headers. Those values are only used by rfcmsg.c
- * 
- * 
- */
-static void _register_header(const char *field, const char *value, gpointer mimelist);
 static void _register_header(const char *field, const char *value, gpointer mimelist)
 {
 	struct mime_record *mr = g_new0(struct mime_record, 1);
@@ -64,6 +46,11 @@ static void _register_header(const char *field, const char *value, gpointer mime
 	dm_list_nodeadd((struct dm_list *)mimelist, mr, sizeof(*mr));
 	g_free(mr);
 }
+
+/* mime_fetch_headers()
+ *
+ * copy the header names and values to a dm_list of mime_records.
+ */
 
 int mime_fetch_headers(const char *datablock, struct dm_list *mimelist) 
 {
@@ -303,7 +290,7 @@ int mail_address_build_list(char *scan_for_field, struct dm_list *targetlist,
  * character, but not a newline, or carriage return + newline, the
  * header continues.
  */
-int is_end_of_header(const char *s)
+static int is_end_of_header(const char *s)
 {
 	if (!isspace(s[1]))
 		return 1;
