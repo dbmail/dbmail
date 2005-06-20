@@ -794,55 +794,68 @@ sa_family_t dm_get_client_sockaddr(clientinfo_t *ci, struct sockaddr *saddr)
 	return (un.sa.sa_family);
 }
 
-static int socket_match(const char *base, const char *test)
+int dm_sock_score(const char *base, const char *test)
 {
 	struct cidrfilter *basefilter, *testfilter;
-	int result;
+	int result = 0;
 	char *t;
 
 	t = strstr(base,"unix:");
 	if (t==base) {
 		base = strstr(base,":");
 		test = strstr(test,":");
-		return fnmatch(base,test,0);
+		return (fnmatch(base,test,0) ? 0 : 1);
 	}
-	
+
 	t = strstr(base,"inet:");
-	if (t!=base) 
-		return 1;
+	if (t!=base)
+		return 0;
+
+	if (! test)
+		return 0;
 	
 	basefilter = cidr_new(base);
 	testfilter = cidr_new(test);
 	
-	result = cidr_match(basefilter,testfilter);
+	if (strlen(test)==0) {
+		result = 32;
+	} else if (basefilter && testfilter) {
+		result = cidr_match(basefilter,testfilter);
+	}
 
 	cidr_free(basefilter);
 	cidr_free(testfilter);
 	
+	trace(TRACE_DEBUG, "%s,%s: base[%s] test[%s] => [%d]",
+			__FILE__, __func__, base, test, result);
 	return result;
+}
 
-	
-	return 1;
+static int socket_match(const char *base, const char *test)
+{
+	return (dm_sock_score(base,test) ? 0 : 1);
 
 }
 
 int dm_sock_compare(const char *clientsock, const char *sock_allow, const char *sock_deny) 
 {
-	trace(TRACE_DEBUG, "%s,%s: match clientsock [%s] with allow[%s], deny [%s]",
-			__FILE__, __func__, clientsock, sock_allow, sock_deny);
-	
+	int result;
 	assert(clientsock);
 	
-	if ( (strlen(sock_allow) == 0) && (strlen(sock_deny) == 0) )
-		return DM_SUCCESS;
+	if ( (strlen(sock_allow) == 0) && (strlen(sock_deny) == 0) ) {
+		result = DM_SUCCESS;
+	} else if (strlen(sock_deny) > 0 && socket_match(sock_deny, clientsock)==0) {
+		result = DM_EGENERAL;
+	} else if (strlen(sock_allow) > 0  && socket_match(sock_allow, clientsock)==0) {
+		result = DM_SUCCESS;
+	} else {
+		result = DM_EGENERAL;
+	}
 
-	if (sock_deny && socket_match(sock_deny, clientsock)==0)
-		return DM_EGENERAL;
-
-	if (sock_allow && socket_match(sock_allow, clientsock)==0)
-		return DM_SUCCESS;
+	trace(TRACE_DEBUG, "%s,%s: clientsock [%s] sock_allow[%s], sock_deny [%s] => [%d]",
+			__FILE__, __func__, clientsock, sock_allow, sock_deny, result);
+	return result;
 	
-	return DM_EGENERAL;
 }
 
 

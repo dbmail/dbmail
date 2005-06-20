@@ -80,7 +80,6 @@ struct cidrfilter * cidr_new(const char *str)
 	self->socket->sin_family = AF_INET;
 	self->socket->sin_port = strtol(port,NULL,10);
 	if (! inet_aton(addr,&self->socket->sin_addr)) {
-		perror("inet_aton");
 		free(haddr);
 		free(hport);
 		cidr_free(self);
@@ -114,6 +113,7 @@ int cidr_match(struct cidrfilter *base, struct cidrfilter *test)
 	struct in_addr match_addr, base_addr, test_addr;
 	inet_aton(fullmask, &base_addr);
 	inet_aton(fullmask, &test_addr);
+	unsigned result = 0;
 
 	if (base->mask)
 		base_addr.s_addr = ~((unsigned long)base_addr.s_addr >> (32-base->mask));
@@ -124,11 +124,13 @@ int cidr_match(struct cidrfilter *base, struct cidrfilter *test)
 	test_addr.s_addr = (test->socket->sin_addr.s_addr | test_addr.s_addr);
 	match_addr.s_addr = (base_addr.s_addr & test_addr.s_addr);
 
-	if (test_addr.s_addr != match_addr.s_addr)
-		return 1;
 	if (base->socket->sin_port != test->socket->sin_port)
-		return 1;
-	return 0;
+		return 0;
+	
+	if (test_addr.s_addr == match_addr.s_addr) 
+		result = base->mask ? base->mask : 32;
+			
+	return result;
 	
 }
 

@@ -3,6 +3,8 @@
 	* Makefile.am, dm_cidr.c, dm_cidr.h, misc.c, check_dbmail_server.c: support
 	cidr notation in usermap sock_allow/sock_deny fields.
 	* mime.c: minor cleanups.
+	* misc.h, db.c, dm_cidr.c, check_dbmail_server.c, misc.c: use best match 
+	on sock_allow in db_usermap_resolve.
 	
 2005-06-17  Paul Stevens <paul@nfg.nl>
 

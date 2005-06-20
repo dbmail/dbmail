@@ -127,6 +127,7 @@ u64_t dm_getguid(unsigned int serverid);
 
 sa_family_t dm_get_client_sockaddr(clientinfo_t *ci, struct sockaddr *saddr);
 
+int dm_sock_score(const char *base, const char *test);
 int dm_sock_compare(const char *clientsock, const char *sock_allow, const char *sock_deny);
 int dm_valid_format(const char *str);
 #endif

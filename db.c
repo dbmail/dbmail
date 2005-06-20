@@ -4121,8 +4121,9 @@ int db_usermap_resolve(clientinfo_t *ci, const char *username, char *real_userna
 	char clientsock[DM_SOCKADDR_LEN];
 	char * escaped_username;
 	const char *userid = NULL, *sockok = NULL, *sockno = NULL, *login = NULL;
-	unsigned row;
+	unsigned row, bestrow = 0;
 	int result;
+	int score, bestscore = -1;
 	
 	trace (TRACE_DEBUG,"%s,%s: checking userid '%s' in usermap", 
 			__FILE__, __func__, username);
@@ -4150,9 +4151,8 @@ int db_usermap_resolve(clientinfo_t *ci, const char *username, char *real_userna
 	/* user_idnr not found, so try to get it from the usermap */
 	snprintf(query, DEF_QUERYSIZE, "SELECT login, sock_allow, sock_deny, userid FROM %susermap "
 			"WHERE login in ('%s','ANY') "
-			"AND sock_allow in ('','ANY','%s') "
 			"ORDER BY sock_allow, sock_deny", 
-			DBPFX, escaped_username, clientsock);
+			DBPFX, escaped_username);
 
 	dm_free(escaped_username);
 
@@ -4170,32 +4170,38 @@ int db_usermap_resolve(clientinfo_t *ci, const char *username, char *real_userna
 		return DM_SUCCESS;
 	}
 
+	/* find the best match on the usermap table */
 	for (row=0; row < db_num_rows(); row++) {
 		login = db_get_result(row, 0);
 		sockok = db_get_result(row, 1);
 		sockno = db_get_result(row, 2);
 		userid = db_get_result(row, 3);
 		result = dm_sock_compare(clientsock, sockok, sockno);
+		/* any match on sockno will be fatal */
 		if (result) {
 			db_free_result();
 			return result;
 		}
-		if ((strncmp(login,"ANY",3)==0)) {
-			if (dm_valid_format(userid)==0)
-				snprintf(real_username,DM_USERNAME_LEN,userid,username);
-			else
-				return DM_EQUERY;
-		} else {
-			strncpy(real_username, userid, DM_USERNAME_LEN);
+		score = dm_sock_score(clientsock, sockok);
+		if (score > bestscore) {
+			bestrow = row;
+			bestscore = score;
 		}
-		break;
 	}
-	
-	if (row >= db_num_rows()) {
-		trace(TRACE_DEBUG, "%s,%s: no sock_allow/sock_deny match on usertable for login [%s] on [%s]",
-				__FILE__, __func__, username, clientsock);
-		db_free_result();
+	if (bestscore < 0)
 		return DM_EGENERAL;
+	
+	/* use the best matching sockok */
+	login = db_get_result(bestrow, 0);
+	userid = db_get_result(bestrow, 3);
+
+	if ((strncmp(login,"ANY",3)==0)) {
+		if (dm_valid_format(userid)==0)
+			snprintf(real_username,DM_USERNAME_LEN,userid,username);
+		else
+			return DM_EQUERY;
+	} else {
+		strncpy(real_username, userid, DM_USERNAME_LEN);
 	}
 	
 	trace (TRACE_DEBUG,"%s,%s: '%s' maps to '%s'", __FILE__, __func__, username, real_username);
