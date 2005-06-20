@@ -33,7 +33,6 @@
 #include <arpa/inet.h>
 #include <sys/un.h>
 #include <netinet/in.h>
-#include <netinet/ip.h>
 #include <unistd.h>
 #include <pwd.h>
 #include "db.h"

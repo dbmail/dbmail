@@ -35,6 +35,26 @@
 
 #include "dbmail-message.h"
 
+/* return 1 if this is the end of a header. That is, it returns 1 if
+ * the next character is a non-whitespace character, or a newline or
+ * carriage return + newline. If the next character is a white space
+ * character, but not a newline, or carriage return + newline, the
+ * header continues.
+ */
+static int is_end_of_header(const char *s)
+{
+	if (!isspace(s[1]))
+		return 1;
+
+	if (s[1] == '\n')
+		return 1;
+
+	if (s[1] == '\r' && s[2] == '\n')
+		return 1;
+
+	return 0;
+}
+
 static void _register_header(const char *field, const char *value, gpointer mimelist)
 {
 	struct mime_record *mr = g_new0(struct mime_record, 1);
@@ -284,22 +304,3 @@ int mail_address_build_list(char *scan_for_field, struct dm_list *targetlist,
 	return 0;
 }
 
-/* return 1 if this is the end of a header. That is, it returns 1 if
- * the next character is a non-whitespace character, or a newline or
- * carriage return + newline. If the next character is a white space
- * character, but not a newline, or carriage return + newline, the
- * header continues.
- */
-static int is_end_of_header(const char *s)
-{
-	if (!isspace(s[1]))
-		return 1;
-
-	if (s[1] == '\n')
-		return 1;
-
-	if (s[1] == '\r' && s[2] == '\n')
-		return 1;
-
-	return 0;
-}
