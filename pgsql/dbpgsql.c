@@ -71,7 +71,7 @@ int db_connect()
 
 	if (PQstatus(conn) == CONNECTION_BAD) {
 		trace(TRACE_ERROR,
-		      "%si,%s: PQconnectdb failed: %s",
+		      "%s,%s: PQconnectdb failed: %s",
 		      __FILE__, __func__, PQerrorMessage(conn));
 		return -1;
 	}

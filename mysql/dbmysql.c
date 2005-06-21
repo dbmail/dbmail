@@ -197,8 +197,6 @@ int db_disconnect()
 int db_check_connection()
 {
 	if (mysql_ping(&conn)) {
-		trace(TRACE_DEBUG, "%s,%s: no database connection, trying "
-		      "to establish on.", __FILE__, __func__);
 		if (db_connect() < 0) {
 			trace(TRACE_ERROR, "%s,%s: unable to connect to "
 			      "database.", __FILE__, __func__);

@@ -1,3 +1,7 @@
+2005-06-21  Paul Stevens <paul@nfg.nl>
+
+	* db.c, pgsql/dbpgsql.c, server.c, mysql/dbmysql.c: minor cleanups. 
+	
 2005-06-20  Paul Stevens <paul@nfg.nl>
 
 	* Makefile.am, dm_cidr.c, dm_cidr.h, misc.c, check_dbmail_server.c: support

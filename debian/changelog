@@ -1,3 +1,9 @@
+dbmail2 (2.1.1-1) experimental; urgency=low
+
+  * new upstream release.
+
+ -- Paul J Stevens <paul@nfg.nl>  Tue, 21 Jun 2005 15:41:55 +0200
+
 dbmail2 (2.1.0-1.20050616) experimental; urgency=low
 
   * svn snapshot

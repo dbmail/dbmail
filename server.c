@@ -74,16 +74,16 @@ int SetParentSigHandler()
 	sigemptyset(&act.sa_mask);
 	act.sa_flags = SA_SIGINFO | SA_NOCLDSTOP;
 
-	sigaction(SIGCHLD, &act, 0);
-	sigaction(SIGINT, &act, 0);
-	sigaction(SIGQUIT, &act, 0);
-	sigaction(SIGILL, &act, 0);
-	sigaction(SIGBUS, &act, 0);
-	sigaction(SIGFPE, &act, 0);
-	sigaction(SIGSEGV, &act, 0);
-	sigaction(SIGTERM, &act, 0);
-	sigaction(SIGALRM, &act, 0);
-	sigaction(SIGHUP, &act, 0);
+	sigaction(SIGCHLD,	&act, 0);
+	sigaction(SIGINT,	&act, 0);
+	sigaction(SIGQUIT,	&act, 0);
+	sigaction(SIGILL,	&act, 0);
+	sigaction(SIGBUS,	&act, 0);
+	sigaction(SIGFPE,	&act, 0);
+	sigaction(SIGSEGV,	&act, 0);
+	sigaction(SIGTERM,	&act, 0);
+	sigaction(SIGALRM,	&act, 0);
+	sigaction(SIGHUP, 	&act, 0);
 
 	return 0;
 }
@@ -92,8 +92,12 @@ int server_setup(serverConfig_t *conf)
 {
 	if (db_connect() != 0) 
 		return -1;
-	if (db_check_version() != 0)
+	
+	if (db_check_version() != 0) {
+		db_disconnect();
 		return -1;
+	}
+	
 	db_disconnect();
 
 	ParentPID = getpid();
@@ -101,12 +105,12 @@ int server_setup(serverConfig_t *conf)
 	GeneralStopRequested = 0;
 	SetParentSigHandler();
 	
-	childinfo.maxConnect = conf->childMaxConnect;
-	childinfo.listenSocket = conf->listenSocket;
-	childinfo.timeout = conf->timeout;
-	childinfo.ClientHandler = conf->ClientHandler;
-	childinfo.timeoutMsg = conf->timeoutMsg;
-	childinfo.resolveIP = conf->resolveIP;
+	childinfo.maxConnect	= conf->childMaxConnect;
+	childinfo.listenSocket	= conf->listenSocket;
+	childinfo.timeout 	= conf->timeout;
+	childinfo.ClientHandler	= conf->ClientHandler;
+	childinfo.timeoutMsg	= conf->timeoutMsg;
+	childinfo.resolveIP	= conf->resolveIP;
 
 	return 0;
 }

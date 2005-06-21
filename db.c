@@ -139,6 +139,7 @@ int db_check_version(void)
 				__FILE__,__func__);
 		return DM_EQUERY;
 	}
+	db_free_result();
 	
 	snprintf(query, DEF_QUERYSIZE, "SELECT 1=1 FROM dbmail_headervalue LIMIT 1 OFFSET 0");
 	if (db_query(query) == -1) {
@@ -146,7 +147,8 @@ int db_check_version(void)
 				__FILE__,__func__);
 		return DM_EQUERY;
 	}
-
+	db_free_result();
+	
 	return DM_SUCCESS;
 }
 
@@ -158,16 +160,16 @@ int db_use_usermap(void)
 		snprintf(query, DEF_QUERYSIZE, "SELECT userid FROM %susermap WHERE 1 = 2",
 				DBPFX);
 
-		if (db_query(query) == -1) {
-			trace(TRACE_DEBUG, "%s,%s: disabling usermap lookups", 
-					__FILE__, __func__);
-			use_usermap = 0;
-		} else {
-			trace(TRACE_DEBUG, "%s,%s: enabling usermap lookups",
-					__FILE__, __func__);
+		use_usermap = 0;
+		
+		if (db_query(query) != -1) {
 			use_usermap = 1;
 			db_free_result();
 		}
+		
+		trace(TRACE_DEBUG, "%s,%s: %s usermap lookups",
+				__FILE__, __func__,
+				use_usermap ? "enabling" : "disabling" );
 	}
 	return use_usermap;
 }
