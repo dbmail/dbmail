@@ -178,7 +178,7 @@ START_TEST(test_mime_readheader)
 	dm_list_init(&mimelist);
 	res = mime_readheader(raw_message,&blkidx,&mimelist,&headersize);
 	fail_unless(res==13, "number of newlines incorrect");
-	fail_unless(blkidx==477, "blkidx incorrect");
+	fail_unless(blkidx==485, "blkidx incorrect");
 	fail_unless(headersize==blkidx+res, "headersize incorrect");
 	fail_unless(mimelist.total_nodes==10, "number of message-headers incorrect");
 	dm_list_free(&mimelist.start);

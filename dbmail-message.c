@@ -710,14 +710,23 @@ static void insert_address_cache(u64_t physid, const char *field, InternetAddres
 	
 	g_return_if_fail(ialist != NULL);
 	
+	gchar *safe_name;
+	gchar *safe_addr;
+	
 	while (ialist->address) {
 		
 		ia = ialist->address;
 		g_return_if_fail(ia != NULL);
 	
+		safe_name = dm_stresc(ia->name ? ia->name : "");
+		safe_addr = dm_stresc(ia->value.addr);
+		
 		g_string_printf(q, "INSERT INTO %s%sfield (physmessage_id, %sname, %saddr) "
 				"VALUES (%llu,'%s','%s')", DBPFX, field, field, field, 
-				physid, ia->name ? ia->name: "" , ia->value.addr);
+				physid, safe_name , safe_addr);
+		
+		g_free(safe_name);
+		g_free(safe_addr);
 		
 		if (db_query(q->str)) 
 			trace(TRACE_WARNING, "%s,%s: insert %sfield failed [%s]",
@@ -735,9 +744,16 @@ static void insert_address_cache(u64_t physid, const char *field, InternetAddres
 static void insert_field_cache(u64_t physid, const char *field, const char *value)
 {
 	GString *q = g_string_new("");
+	gchar *safe_value;
+
+	safe_value = dm_stresc(value);
 	
 	g_string_printf(q, "INSERT INTO %s%sfield (physmessage_id, %sfield) "
-			"VALUES (%llu,'%s')", DBPFX, field, field, physid, value);
+			"VALUES (%llu,'%s')", DBPFX, field, field, physid, 
+			safe_value);
+
+	g_free(safe_value);
+	
 	if (db_query(q->str)) 
 		trace(TRACE_WARNING, "%s,%s: insert %sfield failed [%s]",
 				__FILE__, __func__, field, q->str);

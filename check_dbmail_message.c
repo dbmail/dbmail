@@ -172,7 +172,7 @@ START_TEST(test_dbmail_message_hdrs_to_string)
 	struct DbmailMessage *m = dbmail_message_new();
 	m = dbmail_message_init_with_string(m, g_string_new(raw_message));
 	result = dbmail_message_hdrs_to_string(m);
-	fail_unless(strlen(result)==476, "dbmail_message_hdrs_to_string failed");
+	fail_unless(strlen(result)==484, "dbmail_message_hdrs_to_string failed");
 	g_free(result);
 
 	dbmail_message_free(m);
@@ -201,7 +201,7 @@ START_TEST(test_dbmail_message_get_rfcsize)
 	struct DbmailMessage *m = dbmail_message_new();
 	m = dbmail_message_init_with_string(m, g_string_new(raw_message));
 	result = dbmail_message_get_rfcsize(m);
-	fail_unless(result==1564, "dbmail_message_get_rfcsize failed");
+	fail_unless(result==1572, "dbmail_message_get_rfcsize failed");
 	dbmail_message_free(m);
 }
 END_TEST
