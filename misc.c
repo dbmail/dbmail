@@ -781,7 +781,7 @@ sa_family_t dm_get_client_sockaddr(clientinfo_t *ci, struct sockaddr *saddr)
 	
 	union {
 		struct sockaddr sa;
-		char 		data[maxsocklen];
+		char data[maxsocklen];
 	} un;
 
 	socklen_t len;

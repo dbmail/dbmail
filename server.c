@@ -188,10 +188,8 @@ void ParentSigHandler(int sig, siginfo_t * info, void *data)
 		active_child_sig_handler(sig, info, data); 
 	}
 	
-	if (sig != SIGALRM) {
-		trace(TRACE_INFO, "%s,%s: got signal [%s]", __FILE__, __func__, 
-				strsignal(sig));
-	}
+	if (sig != SIGALRM) 
+		trace(TRACE_INFO, "%s,%s: %s", __FILE__, __func__, strsignal(sig));
 	
 	switch (sig) {
 	case SIGALRM:
@@ -224,7 +222,7 @@ static int dm_socket(int domain)
 		err = errno;
 		trace(TRACE_FATAL, "%s,%s: %s", __FILE__, __func__, strerror(err));
 	}
-	trace(TRACE_DEBUG, "%s,%s: socket created", __FILE__, __func__);
+	trace(TRACE_DEBUG, "%s,%s: done", __FILE__, __func__);
 	return sock;
 }
 
@@ -244,7 +242,7 @@ static int dm_bind_and_listen(int sock, struct sockaddr *saddr, socklen_t len)
 		trace(TRACE_FATAL, "%s,%s: %s", __FILE__, __func__, strerror(err));
 	}
 	
-	trace(TRACE_DEBUG, "%s,%s: socket bound and listening", __FILE__, __func__);
+	trace(TRACE_DEBUG, "%s,%s: done", __FILE__, __func__);
 	return 0;
 	
 }
@@ -268,8 +266,6 @@ static int create_unix_socket(serverConfig_t * conf)
 	chmod (conf->socket,02777);
 
 	return sock;
-
-	
 }
 
 static int create_inet_socket(serverConfig_t * conf)
@@ -279,22 +275,24 @@ static int create_inet_socket(serverConfig_t * conf)
 	int so_reuseaddress = 1;
 
 	sock = dm_socket(PF_INET);
+	
+	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &so_reuseaddress, sizeof(so_reuseaddress));
 
 	/* setup sockaddr_in */
 	memset(&saServer, 0, sizeof(saServer));
 	saServer.sin_family	= AF_INET;
 	saServer.sin_port	= htons(conf->port);
+	
 	if (conf->ip[0] == '*') {
+		
 		saServer.sin_addr.s_addr = htonl(INADDR_ANY);
-	} else {
-		if (! (inet_aton(conf->ip, &saServer.sin_addr))) {
-			close(sock);
-			trace(TRACE_FATAL, "%s,%s: IP invalid [%s]", 
-					__FILE__, __func__, 
-					conf->ip);
-		}
+		
+	} else if (! (inet_aton(conf->ip, &saServer.sin_addr))) {
+		
+		close(sock);
+		trace(TRACE_FATAL, "%s,%s: IP invalid [%s]",
+				__FILE__, __func__, conf->ip);
 	}
-	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &so_reuseaddress, sizeof(so_reuseaddress));
 
 	dm_bind_and_listen(sock, (struct sockaddr *)&saServer, sizeof(saServer));
 
@@ -303,15 +301,10 @@ static int create_inet_socket(serverConfig_t * conf)
 
 int CreateSocket(serverConfig_t * conf)
 {
-	/* we only support one socket type for now */
-	if (strlen(conf->socket) > 0) {
+	if (strlen(conf->socket) > 0) 
 		conf->listenSocket = create_unix_socket(conf);
-	} else {
+	else
 		conf->listenSocket = create_inet_socket(conf);
-	}
-	
-	trace(TRACE_INFO, "%s,%s: socket complete", __FILE__, __func__);
 	
 	return conf->listenSocket;
-	
 }

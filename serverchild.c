@@ -80,8 +80,7 @@ void disconnect_all(void)
 	if (! connected)
 		return;
 	
-	trace(TRACE_DEBUG,
-		"%s,%s: database connection still open, closing",
+	trace(TRACE_DEBUG, "%s,%s: database connection still open, closing",
 		__FILE__,__func__);
 	db_disconnect();
 	auth_disconnect();
@@ -89,8 +88,6 @@ void disconnect_all(void)
 				 * would screw things up. Would like to have all this in
 				 * db_disconnect() making 'connected' obsolete
 				 */
-
-
 }
 
 void noop_child_sig_handler(int sig, siginfo_t *info UNUSED, void *data UNUSED)
@@ -99,6 +96,7 @@ void noop_child_sig_handler(int sig, siginfo_t *info UNUSED, void *data UNUSED)
 	
 	if (sig == SIGSEGV)
 		_exit(0);
+	
 	trace(TRACE_DEBUG, "%s,%s: ignoring signal [%d]", __FILE__, __func__, sig);
 
 	errno = saved_errno;
@@ -191,17 +189,17 @@ int SetChildSigHandler()
 	sigemptyset(&act.sa_mask);
 	act.sa_flags = SA_SIGINFO;
 
-	sigaction(SIGINT, &act, 0);
-	sigaction(SIGQUIT, &act, 0);
-	sigaction(SIGILL, &act, 0);
-	sigaction(SIGBUS, &act, 0);
-	//sigaction(SIGPIPE, &act, 0); /* let the database backends handle these */
-	sigaction(SIGFPE, &act, 0);
-	sigaction(SIGSEGV, &act, 0);
-	sigaction(SIGTERM, &act, 0);
-	sigaction(SIGHUP, &act, 0);
-	sigaction(SIGALRM, &act, 0);
-	sigaction(SIGCHLD, &act, 0);
+	sigaction(SIGINT,	&act, 0);
+	sigaction(SIGQUIT,	&act, 0);
+	sigaction(SIGILL,	&act, 0);
+	sigaction(SIGBUS,	&act, 0);
+	//sigaction(SIGPIPE,	&act, 0); /* let the database backends handle these */
+	sigaction(SIGFPE,	&act, 0);
+	sigaction(SIGSEGV,	&act, 0);
+	sigaction(SIGTERM,	&act, 0);
+	sigaction(SIGHUP,	&act, 0);
+	sigaction(SIGALRM,	&act, 0);
+	sigaction(SIGCHLD,	&act, 0);
 	return 0;
 }
 int DelChildSigHandler()
@@ -215,16 +213,16 @@ int DelChildSigHandler()
 	sigemptyset(&act.sa_mask);
 	act.sa_flags = SA_SIGINFO;
 
-	sigaction(SIGINT, &act, 0);
-	sigaction(SIGQUIT, &act, 0);
-	sigaction(SIGILL, &act, 0);
-	sigaction(SIGBUS, &act, 0);
-	//sigaction(SIGPIPE, &act, 0);
-	sigaction(SIGFPE, &act, 0);
-	sigaction(SIGSEGV, &act, 0);
-	sigaction(SIGTERM, &act, 0);
-	sigaction(SIGHUP, &act, 0);
-	sigaction(SIGALRM, &act, 0);
+	sigaction(SIGINT,	&act, 0);
+	sigaction(SIGQUIT,	&act, 0);
+	sigaction(SIGILL,	&act, 0);
+	sigaction(SIGBUS,	&act, 0);
+	//sigaction(SIGPIPE,	&act, 0);
+	sigaction(SIGFPE,	&act, 0);
+	sigaction(SIGSEGV,	&act, 0);
+	sigaction(SIGTERM,	&act, 0);
+	sigaction(SIGHUP,	&act, 0);
+	sigaction(SIGALRM,	&act, 0);
 	return 0;
 }
 
@@ -244,11 +242,11 @@ pid_t CreateChild(ChildInfo_t * info)
 			trace(TRACE_FATAL, "%s,%s: child_register failed", 
 				__FILE__, __func__);
 			exit(0);
-
 		}
 	
  		ChildStopRequested = 0;
  		SetChildSigHandler();
+		
  		trace(TRACE_INFO, "%s,%s: signal handler placed, going to perform task now",
 			__FILE__, __func__);
  		
@@ -261,18 +259,6 @@ pid_t CreateChild(ChildInfo_t * info)
  		usleep(5000);
  		return pid;
 	}
-}
-
-
-
-
-/*
- * checks if a child is still alive (i.e. exists & not a zombie)
- * FIXME seems to be not functional (kill succeeds on zombies)
- */
-int CheckChildAlive(pid_t pid)
-{
-	return (kill(pid, 0) == -1) ? 0 : 1;
 }
 
 int PerformChildTask(ChildInfo_t * info)
