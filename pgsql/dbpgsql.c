@@ -225,11 +225,13 @@ int db_query(const char *the_query)
 		}
 
 		else {
-			if (res)
+			if (res) {
 				trace(TRACE_WARNING,
 				      "%s,%s: previous result set is possibly "
 				      "not freed.", __FILE__,
 				      __func__);
+				PQclear(res);
+			}
 			res = temp_res;
 		}
 	} else {

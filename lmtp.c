@@ -596,6 +596,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 					struct element *element;
 					struct DbmailMessage *msg;
 					char *headers;
+					char *s;
 
 					dm_list_init(&headerfields);
 
@@ -607,8 +608,9 @@ int lmtp(void *stream, void *instream, char *buffer,
 						return 1;
 					}
 					
-					trace(TRACE_DEBUG, "%s,%s: whole message = %s", __FILE__, __func__,
-							dbmail_message_to_string(msg));
+					s = dbmail_message_to_string(msg);
+					trace(TRACE_DEBUG, "%s,%s: whole message = %s", __FILE__, __func__, s);
+					g_free(s);
 
 					if (dbmail_message_get_hdrs_size(msg) > READ_BLOCK_SIZE) {
 						trace(TRACE_ERROR, "main(): header is too big");
@@ -623,6 +625,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 						trace(TRACE_ERROR, "main(): fatal error from mime_fetch_headers()");
 						discard_client_input((FILE *) instream);
 						ci_write((FILE *) stream, "500 Error reading header.\r\n");
+						dbmail_message_free(msg);
 						g_free(headers);
 						return 1;
 					}
@@ -661,6 +664,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 						}
 					}
 					dm_list_free(&headerfields.start);
+					dbmail_message_free(msg);
 					
 				}
 				/* Reset the session after a successful delivery;

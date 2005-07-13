@@ -1,3 +1,11 @@
+2005-07-12  Aaron Stone <aaron@serendipity.cx>
+
+	* pgsql/dbpgsql.c (db_query): clear the result set in the failure case
+	(closes: #227).
+	* lmtp.c (lmtp, LMTP_DATA): be sure to free the string returned from
+	dbmail_message_to_string in a trace call, and free the message at the
+	end of delivery as well as the failure case (closes: #227).
+
 2005-06-23  Paul Stevens <paul@nfg.nl>
 
 	* dbmail-message.c: escape strings during insertion (closes: #222).
