@@ -1,3 +1,7 @@
+2005-07-14  Aaron Stone <aaron@serendipity.cx>
+
+	* db.c: added the new tables into the DB_TABLENAMES field (closes #229).
+
 2005-07-12  Aaron Stone <aaron@serendipity.cx>
 
 	* pgsql/dbpgsql.c (db_query): clear the result set in the failure case
