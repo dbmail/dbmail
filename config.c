@@ -82,6 +82,7 @@ void config_free(void)
 	iniparser_freedict(config_dict);
 }
 
+/* FIXME: Always returns 0, which is dandy for debugging. */
 int config_get_value(const field_t field_name,
                      const char * const service_name,
                      field_t value) {
@@ -143,21 +144,16 @@ void GetDBParams(db_param_t * db_params)
 
 	
 
-	switch (config_get_value("table_prefix", "DBMAIL", 
-                                 db_params->pfx) < 0) {
-	case -1:
+	if (config_get_value("table_prefix", "DBMAIL", db_params->pfx) < 0)
 		trace(TRACE_FATAL, "%s,%s: error getting config!",
 		      __FILE__, __func__);
-		break;
-	case 0:
-		/* only default to DEFAULT_DBPFX if there is no
-		   table_prefix mentioned in config file, not when it's 
-		   "", which should be possible (in fact, that's what 
-		   the prefix code is for. */
-		strncpy(db_params->pfx, DEFAULT_DBPFX, FIELDSIZE);
-		break;
-	default:
-		break;
+	if (strcmp(db_params->pfx, "\"\"") == 0) {
+		/* FIXME: It appears that when the empty string is quoted
+		 * that the quotes themselves are returned as the value. */
+		g_strlcpy(db_params->pfx, "", FIELDSIZE);
+	} else if (strlen(db_params->pfx) == 0) {
+		/* If it's not "" but is zero length, set the default. */
+		g_strlcpy(db_params->pfx, DEFAULT_DBPFX, FIELDSIZE);
 	}
 
 	/* check if port_string holds a value */
@@ -173,7 +169,7 @@ void GetDBParams(db_param_t * db_params)
 
 	/* same for sock_string */
 	if (strlen(sock_string) != 0)
-		strncpy(db_params->sock, sock_string, FIELDSIZE);
+		g_strlcpy(db_params->sock, sock_string, FIELDSIZE);
 	else
 		db_params->sock[0] = '\0';
 

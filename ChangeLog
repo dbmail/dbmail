@@ -1,3 +1,8 @@
+2005-07-16  Aaron Stone <aaron@serendipity.cx>
+
+	* db.c: added DBPFX prefixes instead of dbmail_ in several places.
+	* config.c: fixed faulty code for user-specified DBPFX value.
+
 2005-07-14  Aaron Stone <aaron@serendipity.cx>
 
 	* db.c: added the new tables into the DB_TABLENAMES field (closes #229).

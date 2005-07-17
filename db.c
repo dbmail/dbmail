@@ -135,7 +135,7 @@ void convert_inbox_to_uppercase(char *name);
  */
 int db_check_version(void)
 {
-	snprintf(query, DEF_QUERYSIZE, "SELECT 1=1 FROM dbmail_physmessage LIMIT 1 OFFSET 0");
+	snprintf(query, DEF_QUERYSIZE, "SELECT 1=1 FROM %sphysmessage LIMIT 1 OFFSET 0", DBPFX);
 	if (db_query(query) == -1) {
 		trace(TRACE_FATAL, "%s,%s: pre-2.0 database incompatible. You need to run the conversion script",
 				__FILE__,__func__);
@@ -143,7 +143,7 @@ int db_check_version(void)
 	}
 	db_free_result();
 	
-	snprintf(query, DEF_QUERYSIZE, "SELECT 1=1 FROM dbmail_headervalue LIMIT 1 OFFSET 0");
+	snprintf(query, DEF_QUERYSIZE, "SELECT 1=1 FROM %sheadervalue LIMIT 1 OFFSET 0", DBPFX);
 	if (db_query(query) == -1) {
 		trace(TRACE_FATAL, "%s,%s: 2.0 database incompatible. You need to add the header tables.",
 				__FILE__,__func__);
@@ -1054,7 +1054,7 @@ int db_count_iplog(const char *lasttokeep, u64_t *affected_rows)
 		return DM_EQUERY;
 	}
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT * FROM dbmail_pbsp WHERE since < '%s'", escaped_lasttokeep);
+		 "SELECT * FROM %spbsp WHERE since < '%s'", DBPFX, escaped_lasttokeep);
 	dm_free(escaped_lasttokeep);
 
 	if (db_query(query) == -1) {
@@ -2112,8 +2112,8 @@ int db_deleted_count(u64_t * affected_rows)
 
 	/* first we're deleting all the messageblks */
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT message_idnr FROM dbmail_messages WHERE status='%d'",
-		 MESSAGE_STATUS_PURGE);
+		 "SELECT message_idnr FROM %smessages WHERE status='%d'",
+		 DBPFX, MESSAGE_STATUS_PURGE);
 	trace(TRACE_DEBUG, "%s,%s: executing query [%s]",
 	      __FILE__, __func__, query);
 
@@ -2632,15 +2632,15 @@ int db_getmailbox(mailbox_t * mb)
 
 	/* count messages */
 	snprintf(query, DEF_QUERYSIZE,
- 			 "SELECT 'a',COUNT(*) FROM dbmail_messages WHERE mailbox_idnr='%llu' "
+ 			 "SELECT 'a',COUNT(*) FROM %smessages WHERE mailbox_idnr='%llu' "
  			 "AND (status='%d' OR status='%d') UNION "
- 			 "SELECT 'b',COUNT(*) FROM dbmail_messages WHERE mailbox_idnr='%llu' "
+ 			 "SELECT 'b',COUNT(*) FROM %smessages WHERE mailbox_idnr='%llu' "
  			 "AND (status='%d' OR status='%d') AND seen_flag=1 UNION "
- 			 "SELECT 'c',COUNT(*) FROM dbmail_messages WHERE mailbox_idnr='%llu' "
+ 			 "SELECT 'c',COUNT(*) FROM %smessages WHERE mailbox_idnr='%llu' "
  			 "AND (status='%d' OR status='%d') AND recent_flag=1", 
- 			 mb->uid, MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
- 			 mb->uid, MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
- 			 mb->uid, MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
+ 			 DBPFX, mb->uid, MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
+ 			 DBPFX, mb->uid, MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
+ 			 DBPFX, mb->uid, MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: query error", __FILE__, __func__);
