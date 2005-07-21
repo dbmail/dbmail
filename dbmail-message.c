@@ -719,7 +719,7 @@ static void insert_address_cache(u64_t physid, const char *field, InternetAddres
 		g_return_if_fail(ia != NULL);
 	
 		safe_name = dm_stresc(ia->name ? ia->name : "");
-		safe_addr = dm_stresc(ia->value.addr);
+		safe_addr = dm_stresc(ia->value.addr ? ia->value.addr : "");
 		
 		g_string_printf(q, "INSERT INTO %s%sfield (physmessage_id, %sname, %saddr) "
 				"VALUES (%llu,'%s','%s')", DBPFX, field, field, field, 
