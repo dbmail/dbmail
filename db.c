@@ -68,7 +68,7 @@ const char *DB_TABLENAMES[DB_NTABLES] = {
 	"acl", "subscription", "pbsp",
 	"auto_notifications", "auto_replies",
 	"headername", "headervalue",
-	"subjectfield", "datefield", "referencesfield"
+	"subjectfield", "datefield", "referencesfield",
 	"fromfield", "tofield", "replytofield",
 	"ccfield", "replycache", "usermap"
 };
