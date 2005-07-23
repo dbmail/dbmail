@@ -76,6 +76,21 @@ int db_connect()
 		return -1;
 	}
 
+	/* UNICODE is broken prior to 8.1 */
+	if (PQServerVersion(conn) < 80100) {
+		char *enc = NULL;
+
+		enc = pg_encoding_to_char(PGclientEncoding(conn));
+		// if (strcmp(enc, "SQL_ASCII") != 0) {
+		if (strcmp(enc, "UNICODE") == 0) {
+			trace(FATAL, "%s,%s: Database encoding type UNICODE"
+				"is not supported prior to PostgreSQL 8.1",
+				__FILE__, __func__);
+		}
+
+		// FIXME: Does we need to free enc?
+	}
+
 	return 0;
 }
 

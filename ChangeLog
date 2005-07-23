@@ -7,6 +7,8 @@
 	* lmtpd.c, imapd.c, pop3d.c: added calls to ClearConfig.
 	* pgsql/dbpgsql.c: added some code to db_check_connection to throw
 	a separate error if called before db_connect (related to #221).
+	* pgsql/dbpgsql.c: added code to db_connect to check against
+	UNICODE encodings prior to PostgreSQL 8.1 (closes: #218).
 
 2005-07-16  Aaron Stone <aaron@serendipity.cx>
 
