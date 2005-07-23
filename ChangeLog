@@ -1,3 +1,11 @@
+2005-07-22  Aaron Stone <aaron@serendipity.cx>
+
+	* pop3.c: added what appear to be missing initializations in the 
+	variable PopSession_t session (closes #223).
+	* server.c, server.h: added function ClearConfig which memsets
+	the serverConfig_t config to 0 (closes #226).
+	* lmtpd.c, imapd.c, pop3d.c: added calls to ClearConfig.
+
 2005-07-16  Aaron Stone <aaron@serendipity.cx>
 
 	* db.c: added DBPFX prefixes instead of dbmail_ in several places.

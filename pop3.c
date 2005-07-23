@@ -115,6 +115,7 @@ int pop3_handle_connection(clientinfo_t * ci)
 
 	session.apop_stamp = NULL;
 
+	session.state = 0;
 	session.SessionResult = 0;
 
 	/* reset counters */
@@ -122,6 +123,9 @@ int pop3_handle_connection(clientinfo_t * ci)
 	session.virtual_totalsize = 0;
 	session.totalmessages = 0;
 	session.virtual_totalmessages = 0;
+
+	/* clear the message list */
+	dm_list_init(&session.messagelst);
 
 	/* getting hostname */
 	gethostname(myhostname, 64);

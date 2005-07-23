@@ -308,3 +308,9 @@ int CreateSocket(serverConfig_t * conf)
 	
 	return conf->listenSocket;
 }
+
+void ClearConfig(serverConfig_t * conf)
+{
+	memset(conf, 0, sizeof(serverConfig_t));
+}
+

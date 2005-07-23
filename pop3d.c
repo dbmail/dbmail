@@ -224,6 +224,7 @@ void get_config(serverConfig_t *config)
 			__FILE__, __func__);
 	
 	config_read(configFile);
+	ClearConfig(config);
 	SetConfigItems(config);
 	SetTraceLevel("POP");
 	GetDBParams(&_db_params);

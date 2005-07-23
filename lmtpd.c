@@ -221,6 +221,7 @@ void get_config(serverConfig_t *config)
 	trace(TRACE_DEBUG, "main(): reading config");
 	/* We need smtp config for bounce.c and forward.c */
 	config_read(configFile);
+	ClearConfig(config);
 	SetConfigItems(config);
 	SetTraceLevel("LMTP");
 	GetDBParams(&_db_params);

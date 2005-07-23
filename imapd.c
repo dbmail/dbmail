@@ -216,6 +216,7 @@ void get_config(serverConfig_t *config)
 	trace(TRACE_DEBUG, "%s,%s: reading config",
 			__FILE__, __func__);
 	config_read(configFile);
+	ClearConfig(config);
 	SetConfigItems(config);
 	SetTraceLevel("IMAP");
 	GetDBParams(&_db_params);
