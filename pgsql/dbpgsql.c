@@ -41,7 +41,7 @@ const char *TO_DATE = "TO_TIMESTAMP('%s', 'YYYY-MM-DD HH:MI:SS')";
 const char *SQL_CURRENT_TIMESTAMP = "CURRENT_TIMESTAMP";
 const char *SQL_REPLYCACHE_EXPIRE = "NOW() - INTERVAL '%d SECOND'";
 
-static PGconn *conn;
+static PGconn *conn = NULL;
 static PGresult *res = NULL;
 static PGresult *msgbuf_res;
 static PGresult *stored_res;
@@ -80,10 +80,19 @@ int db_connect()
 }
 
 int db_check_connection() {
+	if (!conn) {
+		/* There seem to be some circumstances which cause
+		 * db_check_connection to be called before db_connect. */
+		trace(TRACE_ERROR, "%s,%s: connection with "
+			"database invalid", __FILE__, __func__);
+		return -1;
+	}
+
 	if (PQstatus(conn) == CONNECTION_BAD) {
 		PQreset(conn);
 		if (PQstatus(conn) == CONNECTION_BAD) {
-			trace(TRACE_ERROR, "%s,%s: connection with database gone bad", __FILE__, __func__);
+			trace(TRACE_ERROR, "%s,%s: connection with "
+				"database gone bad", __FILE__, __func__);
 			return -1;
 		}
 	}	
