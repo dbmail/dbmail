@@ -84,8 +84,8 @@ int db_check_connection() {
 		/* There seem to be some circumstances which cause
 		 * db_check_connection to be called before db_connect. */
 		trace(TRACE_ERROR, "%s,%s: connection with "
-			"database invalid", __FILE__, __func__);
-		return -1;
+			"database invalid, retrying", __FILE__, __func__);
+		return db_connect();
 	}
 
 	if (PQstatus(conn) == CONNECTION_BAD) {
