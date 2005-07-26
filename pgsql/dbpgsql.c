@@ -83,7 +83,7 @@ int db_connect()
 		enc = pg_encoding_to_char(PGclientEncoding(conn));
 		// if (strcmp(enc, "SQL_ASCII") != 0) {
 		if (strcmp(enc, "UNICODE") == 0) {
-			trace(FATAL, "%s,%s: Database encoding type UNICODE"
+			trace(TRACE_FATAL, "%s,%s: Database encoding UNICODE"
 				"is not supported prior to PostgreSQL 8.1",
 				__FILE__, __func__);
 		}
