@@ -21,6 +21,9 @@ POP3D_NAME=dbmail-pop3d
 LMTPD_NAME=dbmail-lmtpd
 
 NAME="dbmail"
+
+PID_DIR="/var/run/$NAME/"
+
 DESC="dbmail servers"
 
 test -x $IMAPD || exit 0
@@ -52,7 +55,7 @@ ssl_wrapper() {
 	[ -x /usr/sbin/stunnel ] || return 0
 	# assuming stunnel runs on the same host as dbmail, even though
 	# it aint necessarily so.
-	STUNNLOPT="-D 7 -p $PEMFILE -S 0 -a /etc/ssl/certs -t 300 -s dbmail -g dbmail -P /var/run/dbmail/"
+	STUNNLOPT="-D 7 -p $PEMFILE -S 0 -a /etc/ssl/certs -t 300 -s dbmail -g dbmail -P $PID_DIR"
 	echo -n "SSL wrapper "
 	case "$1" in 
 		start)
@@ -64,13 +67,13 @@ ssl_wrapper() {
 		
 		stop)
 		if [ "$START_IMAPD" ]; then
-			pidfile="/var/run/dbmail/stunnel.localhost.imap.pid"
+			pidfile="$PID_DIR/stunnel.localhost.imap.pid"
 			if [ -f "$pidfile" ]; then
 				kill `cat $pidfile` 2>&1 >/dev/null || true
 			fi
 		fi
 		if [ "$START_POP3D" ]; then
-			pidfile="/var/run/dbmail/stunnel.localhost.pop3.pid"
+			pidfile="$PID_DIR/stunnel.localhost.pop3.pid"
 			if [ -f "$pidfile" ]; then
 				kill `cat $pidfile` 2>&1 >/dev/null || true
 			fi
@@ -115,17 +118,17 @@ case "$1" in
 	;;
   stop)
 	echo -n "Stopping $DESC: "
-	[ "$START_IMAPD" ] && start-stop-daemon --stop --retry 10 --name $IMAPD_NAME || true
-	[ "$START_POP3D" ] && start-stop-daemon --stop --retry 10 --name $POP3D_NAME || true
-	[ "$START_LMTPD" ] && start-stop-daemon --stop --retry 10 --name $LMTPD_NAME || true
+	[ "$START_IMAPD" ] && start-stop-daemon --stop --retry 10 --pidfile ${PID_DIR}/${IMAPD_NAME}.pid --name $IMAPD_NAME || true
+	[ "$START_POP3D" ] && start-stop-daemon --stop --retry 10 --pidfile ${PID_DIR}/${POP3D_NAME}.pid --name $POP3D_NAME || true
+	[ "$START_LMTPD" ] && start-stop-daemon --stop --retry 10 --pidfile ${PID_DIR}/${LMTPD_NAME}.pid --name $LMTPD_NAME || true
 	[ "$START_SSL" ] && ssl_wrapper stop 2>&1 /dev/null || true
 	echo "done."
 	;;
   reload)
   	echo -n "Reloading $DESC: "
-	[ "$START_IMAPD" ] && start-stop-daemon --stop --signal HUP --name $IMAPD_NAME || true
-	[ "$START_POP3D" ] && start-stop-daemon --stop --signal HUP --name $POP3D_NAME || true
-	[ "$START_LMTPD" ] && start-stop-daemon --stop --signal HUP --name $LMTPD_NAME || true
+	[ "$START_IMAPD" ] && start-stop-daemon --stop --signal HUP --pidfile ${PID_DIR}/${IMAPD_NAME}.pid --name $IMAPD_NAME || true
+	[ "$START_POP3D" ] && start-stop-daemon --stop --signal HUP --pidfile ${PID_DIR}/${POP3D_NAME}.pid --name $POP3D_NAME || true
+	[ "$START_LMTPD" ] && start-stop-daemon --stop --signal HUP --pidfile ${PID_DIR}/${LMTPD_NAME}.pid --name $LMTPD_NAME || true
 	echo "done."
 	;;
   restart|force-reload)
