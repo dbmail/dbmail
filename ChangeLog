@@ -3,6 +3,9 @@
 	* README.ldap: added some more info.
 	* imapcommands.c, imaputil.c, imaputil.h, dbmail-imapsession.c:
 	closing some memory leakages.
+	* dbmail-imapsession.c: fix double-free (closes: #230).
+	* check_dbmail_deliver.c, auth/authldap.c, dbmail-imapsession.c: fix
+	auth_reconnect for ldap so we don't disconnect/connect for every call.
 
 2005-07-22  Aaron Stone <aaron@serendipity.cx>
 

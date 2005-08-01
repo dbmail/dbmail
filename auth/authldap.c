@@ -49,7 +49,7 @@
 
 extern char *configFile;
 
-LDAP *_ldap_conn;
+static LDAP *_ldap_conn = NULL;
 LDAPMod **_ldap_mod;
 LDAPMessage *_ldap_res;
 LDAPMessage *_ldap_msg;
@@ -142,6 +142,10 @@ void __auth_get_config(void)
  */
 int auth_connect(void)
 {
+
+	if (_ldap_conn != NULL) 
+		return 0;
+	
 	__auth_get_config();
 	
 	trace(TRACE_DEBUG, "%s,%s: connecting to ldap server on [%s] : [%d]",
@@ -183,6 +187,7 @@ int auth_disconnect(void)
 	if (_ldap_conn != NULL) {
 		trace(TRACE_DEBUG, "%s,%s: disconnecting from ldap server",__FILE__,__func__);
 		ldap_unbind(_ldap_conn);
+		_ldap_conn = NULL;
 	} else {
 		trace(TRACE_DEBUG, "%s,%s: was already disconnected from ldap server",__FILE__,__func__);
 	}
@@ -190,6 +195,8 @@ int auth_disconnect(void)
 }
 
 /*
+ * Aaron once wrote: 
+ * 
  * At the top of each function, rebind to the server
  *
  * Someday, this will be smart enough to know if the
@@ -203,11 +210,17 @@ int auth_disconnect(void)
  * never be able to recycle a connection for a flurry of
  * calls. OTOH, if the calls are always far between, we'd
  * rather just be connected strictly as needed...
+ *
+ * Paul now sez: I'm not doing it that way anymore now. Lets 
+ * just call auth_connect because performance will suck
+ * otherwise. 
+ * 
  */
 int auth_reconnect(void);
 int auth_reconnect(void)
 {
-	auth_disconnect();
+	//auth_disconnect();
+	
 	return auth_connect();
 }
 

@@ -1057,12 +1057,10 @@ int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self, u64_t fetch
 			result = db_fetch_headers(self->msginfo[i].uid, &self->headermsg);
 			if (result == -2) {
 				dbmail_imap_session_printf(self, "\r\n* BYE internal dbase error\r\n");
-				dm_free(self->msginfo);
 				return -1;
 			}
 			if (result == -3) {
 				dbmail_imap_session_printf(self, "\r\n* BYE out of memory\r\n");
-				dm_free(self->msginfo);
 				return -1;
 			}
 
@@ -1078,7 +1076,6 @@ int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self, u64_t fetch
 			 * let's call it fatal and let the client re-connect :)
 			 */
 			dbmail_imap_session_printf(self, "* BYE internal syncing error\r\n");
-			dm_free(self->msginfo);
 			return -1;
 		}
 
@@ -1113,7 +1110,6 @@ int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self, u64_t fetch
 	g_list_free(list);
 	g_list_free(sublist);
 	g_string_free(tmp,TRUE);
-	dm_free(self->msginfo);
 	return 0;
 }
 

@@ -211,7 +211,6 @@ u64_t get_first_user_idnr(void)
 
 START_TEST(test_auth_connect)
 {
-	auth_disconnect();
 	fail_unless(auth_connect()==0,"auth_connect failed");
 }
 END_TEST
