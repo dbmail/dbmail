@@ -128,6 +128,13 @@ char *dbmail_imap_plist_as_string(GList * list)
 	
 	return p;
 }
+
+void dbmail_imap_plist_free(GList *l)
+{
+	g_list_foreach(l, (GFunc)g_free, NULL);
+	g_list_free(l);
+}
+
 /* 
  * return a quoted or literal astring
  */

@@ -205,6 +205,7 @@ GList * _imap_get_structure(mime_message_t * msg, int show_extension_data)
 	
 	GList *tlist = NULL, *list = NULL;
 	GString *tmp = g_string_new("");
+	gchar *pstring;
 	
 	trace(TRACE_DEBUG,"%s,%s", __FILE__,__func__);
 	
@@ -235,8 +236,14 @@ GList * _imap_get_structure(mime_message_t * msg, int show_extension_data)
 
 		mime_findfield("content-type", header_to_use, &mr);
 		if (mr && strlen(mr->value) > 0) {
+			
 			tlist = _imap_get_mime_parameters(mr, 1, 0);
+			
 			tmp = g_list_join(tlist," ");
+			
+			dbmail_imap_plist_free(tlist);
+			tlist = NULL;
+			
 			list = g_list_append(list, g_strdup(tmp->str));
 		} else
 			list = g_list_append(list, g_strdup("\"TEXT\" \"PLAIN\" (\"CHARSET\" \"US-ASCII\")"));	/* default */
@@ -280,14 +287,22 @@ GList * _imap_get_structure(mime_message_t * msg, int show_extension_data)
 			 */
 
 			tlist = _imap_get_envelope(&msg->rfcheader);
-			list = g_list_append(list, g_strdup(dbmail_imap_plist_as_string(tlist)));
+			
+			list = g_list_append(list, dbmail_imap_plist_as_string(tlist));
+
+			dbmail_imap_plist_free(tlist);
+			tlist = NULL;
 
 			memmove(&rfcmsg, msg, sizeof(rfcmsg));
 			rfcmsg.mimeheader.start = NULL;	/* forget MIME-part */
 
 			/* start recursion */
 			tlist = _imap_get_structure(&rfcmsg, show_extension_data);
-			list = g_list_append(list, g_strdup(dbmail_imap_plist_as_string(tlist)));
+			
+			list = g_list_append(list, dbmail_imap_plist_as_string(tlist));
+			
+			dbmail_imap_plist_free(tlist);
+			tlist = NULL;
 			
 			/* output # of lines */
 			list = g_list_append_printf(list, "%llu", msg->bodylines);
@@ -313,7 +328,9 @@ GList * _imap_get_structure(mime_message_t * msg, int show_extension_data)
 			mime_findfield("content-disposition", header_to_use, &mr);
 			if (mr && strlen(mr->value) > 0) {
 				tlist = _imap_get_mime_parameters(mr, 0, 0);
-				list = g_list_append(list, g_strdup(dbmail_imap_plist_as_string(tlist)));
+				list = g_list_append(list, dbmail_imap_plist_as_string(tlist));
+				dbmail_imap_plist_free(tlist);
+				tlist = NULL;
 			} else
 				list = g_list_append(list, g_strdup("NIL"));
 
@@ -330,7 +347,16 @@ GList * _imap_get_structure(mime_message_t * msg, int show_extension_data)
 			tmp = g_string_new("");
 			while (curr) {
 				tlist = _imap_get_structure((mime_message_t *) curr->data, show_extension_data);
-				g_string_append_printf(tmp, "%s", dbmail_imap_plist_as_string(tlist));
+				
+				pstring = dbmail_imap_plist_as_string(tlist);
+				
+				g_string_append_printf(tmp, "%s", pstring);
+				
+				g_free(pstring);
+				
+				dbmail_imap_plist_free(tlist);
+				tlist = NULL;
+				
 				curr = curr->nextnode;
 			}
 			list = g_list_append(list, g_strdup(tmp->str));
@@ -365,7 +391,12 @@ GList * _imap_get_structure(mime_message_t * msg, int show_extension_data)
 			/* show extension data (after subtype) */
 			if (extension && show_extension_data) {
 				tlist = _imap_get_mime_parameters(mr, 0, 1);
+				
 				tmp = g_list_join(tlist," ");
+				
+				dbmail_imap_plist_free(tlist);
+				tlist = NULL;
+				
 				list = g_list_append(list, g_strdup(tmp->str));
 
 				/* FIXME: should give body-disposition & body-language here */
@@ -375,9 +406,6 @@ GList * _imap_get_structure(mime_message_t * msg, int show_extension_data)
 			/* ??? */
 		}
 	}
-	g_list_foreach(tlist,(GFunc)g_free, NULL);
-	g_list_free(tlist);
-	tlist = NULL;
 	g_string_free(tmp,1);
 	return list;
 }

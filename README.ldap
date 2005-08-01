@@ -1,9 +1,33 @@
 $Id$
 
 Dbmail-2 as of 2.1.0 supports ldap for authentication and delivery information.
-For now, I'm just providing some more information on the new ldap related 
-configuration items. I'm also including an example dbmail.schema file.
 
+
+NOTICE:
+
+If you have an existing userbase in sql that you which to migrate to ldap-auth, you 
+must make sure that the uidNumber in ldap is the same as the dbmail_users.user_idnr 
+in sql. If your tables are in MySQL/innoDB or PostgreSQL, and you have a proper cascade 
+setup for the foreign key in dbmail_mailboxes like:
+
+ CONSTRAINT dbmail_mailboxes_ibfk_1 FOREIGN KEY (owner_idnr) 
+  REFERENCES dbmail_users (user_idnr) 
+  ON DELETE CASCADE ON UPDATE CASCADE
+
+you should be able to issue simple UPDATE statements to reset the user_idnr values in sql.
+
+
+
+LDAP-SCHEMA:
+
+I'm providing an example dbmail.schema file that should get you started. 
+
+
+
+CONFIGURATION:
+
+dbmail.conf contains some new ldap items:
+ 
 ---
 
 "BIND_DN"

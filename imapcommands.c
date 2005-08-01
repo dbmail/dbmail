@@ -844,15 +844,14 @@ int _ic_list(struct ImapSession *self)
 	mailbox_t *mb = (mailbox_t *)dm_malloc(sizeof(mailbox_t));
 	memset(mb,0,sizeof(mailbox_t));
 	GList * plist = NULL;
+	gchar * pstring;
 
 	if (!check_state_and_args(self, thisname, 2, 2, IMAPCS_AUTHENTICATED))
 		return 1;
 
-	/* check if self->args are both empty strings */
+	/* check if self->args are both empty strings, i.e. A001 LIST "" "" 
+	   this has special meaning; show root & delimiter */
 	if (strlen(self->args[0]) == 0 && strlen(self->args[1]) == 0) {
-		/* this has special meaning; show root & delimiter */
-		trace(TRACE_ERROR,
-		      "_ic_list(): showing delimiter [(\\NoSelect) \"/\" \"\"]");
 		dbmail_imap_session_printf(self, "* %s (\\NoSelect) \"/\" \"\"\r\n",
 			thisname);
 		dbmail_imap_session_printf(self, "%s OK %s completed\r\n", self->tag, thisname);
@@ -889,7 +888,9 @@ int _ic_list(struct ImapSession *self)
 	}
 
 	for (i = 0; i < nchildren; i++) {
-		result = db_getmailbox_list_result(children[i], ud->userid, mb);
+		if ((db_getmailbox_list_result(children[i], ud->userid, mb) != 0))
+			continue;
+		
 		plist = NULL;
 		if (mb->no_select)
 			plist = g_list_append(plist, g_strdup("\\noselect"));
@@ -897,9 +898,13 @@ int _ic_list(struct ImapSession *self)
 			plist = g_list_append(plist, g_strdup("\\noinferiors"));
 		
 		/* show */
-		dbmail_imap_session_printf(self, "* %s %s \"%s\" \"%s\"\r\n", thisname, dbmail_imap_plist_as_string(plist), MAILBOX_SEPARATOR, mb->name);
+		pstring = dbmail_imap_plist_as_string(plist);
+		dbmail_imap_session_printf(self, "* %s %s \"%s\" \"%s\"\r\n", thisname, 
+				pstring, MAILBOX_SEPARATOR, mb->name);
+		
 		g_list_foreach(plist,(GFunc)g_free,NULL);
 		g_list_free(plist);
+		g_free(pstring);
 	}
 
 
@@ -940,6 +945,8 @@ int _ic_status(struct ImapSession *self)
 	int i, endfound, result;
 	GString *response = g_string_new("");
 	GList *plst = NULL;
+	gchar *pstring, *astring;
+	
 	
 	/* TODO: check_state_and_args */
 	
@@ -1035,9 +1042,10 @@ int _ic_status(struct ImapSession *self)
 			return 1;
 		}
 	}
-	g_string_printf(response, "* STATUS %s %s", 
-		dbmail_imap_astring_as_string(self->args[0]),
-		dbmail_imap_plist_as_string(plst));	
+	astring = dbmail_imap_astring_as_string(self->args[0]);
+	pstring = dbmail_imap_plist_as_string(plst); 
+	
+	g_string_printf(response, "* STATUS %s %s", astring, pstring);	
 	dbmail_imap_session_printf(self, "%s\r\n", response->str);
 	dbmail_imap_session_printf(self, "%s OK STATUS completed\r\n", self->tag);
 
@@ -1045,6 +1053,9 @@ int _ic_status(struct ImapSession *self)
 	g_list_foreach(plst,(GFunc)g_free,NULL);
 	g_list_free(plst);
 	g_string_free(response,TRUE);
+	g_free(astring);
+	g_free(pstring);
+
 	return 0;
 }
 
