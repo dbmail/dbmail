@@ -77,10 +77,10 @@ int db_connect()
 	}
 
 	/* UNICODE is broken prior to 8.1 */
-	if (PQServerVersion(conn) < 80100) {
+	if (PQserverVersion(conn) < 80100) {
 		char *enc = NULL;
 
-		enc = pg_encoding_to_char(PGclientEncoding(conn));
+		enc = pg_encoding_to_char(PQclientEncoding(conn));
 		// if (strcmp(enc, "SQL_ASCII") != 0) {
 		if (strcmp(enc, "UNICODE") == 0) {
 			trace(TRACE_FATAL, "%s,%s: Database encoding UNICODE"
