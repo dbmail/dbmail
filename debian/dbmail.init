@@ -35,7 +35,7 @@ set -e
 [ -e /etc/default/dbmail ] && . /etc/default/dbmail
 
 config_valid() {
-	/usr/sbin/dbmail-users -l 2>&1 >/dev/null && return 0
+	/usr/sbin/dbmail-util -c 2>&1 >/dev/null && return 0
 	cat << EOM
 Dbmail cannot connect to the database server. Please make sure
 /etc/dbmail/dbmail.conf is correct, the database-server is running,

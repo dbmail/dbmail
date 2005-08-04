@@ -1,3 +1,8 @@
+2005-08-04  Paul Stevens <paul@nfg.nl>
+
+	* auth/authldap.c: fix addition and removal of extra deliver_to
+	addresses for external forwards (closes: #236).
+	
 2005-08-01  Paul Stevens <paul@nfg.nl>
 	
 	* README.ldap: added some more info.

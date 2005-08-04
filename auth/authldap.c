@@ -156,6 +156,7 @@ int auth_connect(void)
 	_ldap_conn = ldap_init(
 			_ldap_cfg.hostname, 
 			_ldap_cfg.port_int);
+
 	
 	trace(TRACE_DEBUG, "%s,%s: binding to ldap server as [%s] / [xxxxxxxx]",
 			__FILE__,__func__, 
@@ -185,11 +186,8 @@ int auth_disconnect(void)
 {
 	/* Destroy the connection */
 	if (_ldap_conn != NULL) {
-		trace(TRACE_DEBUG, "%s,%s: disconnecting from ldap server",__FILE__,__func__);
 		ldap_unbind(_ldap_conn);
 		_ldap_conn = NULL;
-	} else {
-		trace(TRACE_DEBUG, "%s,%s: was already disconnected from ldap server",__FILE__,__func__);
 	}
 	return 0;
 }
@@ -659,26 +657,18 @@ char *__auth_get_first_match(const char *q, char **retfields)
 		goto endfree;
 	}
 	
-	if (! (returnid = (char *)g_malloc0(LDAP_RES_SIZE))) {
-		trace(TRACE_ERROR, "%s,%s: out of memory",__FILE__,__func__);
-		goto endfree;
-	}
-
 	for (k = 0; retfields[k] != NULL; k++) {
-		ldap_vals = ldap_get_values(_ldap_conn, ldap_msg, retfields[k]);
 		if (0 == strcasecmp(retfields[k], "dn")) {
 			ldap_dn = ldap_get_dn(_ldap_conn, ldap_msg);
-			if (ldap_dn) 
-				strncpy(returnid, ldap_dn, strlen(ldap_dn));
+			if (ldap_dn)
+				returnid = g_strdup(ldap_dn);
+			break;
 		} else {
+			ldap_vals = ldap_get_values(_ldap_conn, ldap_msg, retfields[k]);
 			if (ldap_vals) 
-				strncpy(returnid, ldap_vals[0],strlen(ldap_vals[0]));
+				returnid = g_strdup(ldap_vals[0]);
+			break;
 		}
-	}
-
-	if (! strlen(returnid)) {
-		g_free(returnid);
-		returnid = NULL;
 	}
 	
       endfree:
@@ -915,9 +905,7 @@ int auth_check_user_ext(const char *address, struct dm_list *userids,
 			} else {
 				trace(TRACE_DEBUG, "%s,%s: adding [%s] to forwards",__FILE__,__func__, address);
 				dm_list_nodeadd(fwds, address, strlen(address) + 1);
-				dm_free(endptr);
 			}
-			dm_ldap_freeresult(entlist);
 			return 1;
 		} else {
 			trace(TRACE_DEBUG, "%s,%s: user [%s] not in aliases table",__FILE__,__func__, address);
@@ -1347,7 +1335,7 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 }
 
 /* returns useridnr on OK, 0 on validation failed, -1 on error */
-u64_t auth_md5_validate(clientinfo_t *ci, char *username UNUSED,
+u64_t auth_md5_validate(clientinfo_t *ci UNUSED, char *username UNUSED,
 			unsigned char *md5_apop_he UNUSED,
 			char *apop_stamp UNUSED)
 {
@@ -1464,16 +1452,16 @@ int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid UNUSED)
 			
 	
 	_ldap_err = ldap_modify_s(_ldap_conn, _ldap_dn, modify);
+	
+	g_strfreev(mailValues);
+	ldap_memfree(_ldap_dn);
+	
 	if (_ldap_err) {
 		trace(TRACE_ERROR, "%s,%s: update failed: %s",
 				__FILE__,__func__, 
 				ldap_err2string(_ldap_err));
-		g_strfreev(mailValues);
-		ldap_memfree(_ldap_dn);
 		return -1;
 	}
-	g_strfreev(mailValues);
-	ldap_memfree(_ldap_dn);
 	
 	return 0;
 }
@@ -1489,7 +1477,50 @@ int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid UNUSED)
  *        - 0 on success
  *        - 1 if deliver_to already exists for given alias
  */
-int auth_addalias_ext(const char *alias, const char *deliver_to, u64_t clientid UNUSED)
+
+/* find forwarding alias
+ * \return
+ * 	- -1 error
+ * 	-  0 success
+ * 	-  1 dn exists but no such deliver_to
+ */
+
+static int forward_exists(const char *alias, const char *deliver_to)
+{
+	char *objectfilter, *dn;
+	char *fields[] = { "dn", _ldap_cfg.field_fwdtarget, NULL };
+	int result = 0;
+	
+	GString *t = g_string_new(_ldap_cfg.forw_objectclass);
+	GList *l = g_string_split(t,",");
+	
+	objectfilter = dm_ldap_get_filter('&',"objectClass", l);
+	
+	g_string_printf(t,"(&%s(%s=%s)(%s=%s))", objectfilter, _ldap_cfg.cn_string, alias, _ldap_cfg.field_fwdtarget, deliver_to);
+	dn = __auth_get_first_match(t->str, fields);
+	
+	if (! dn) {
+		result = -1; // assume total failure;
+		
+		g_string_printf(t,"(&%s(%s=%s))", objectfilter, _ldap_cfg.cn_string, alias);
+		dn = __auth_get_first_match(t->str, fields);
+		if (dn)
+			result = 1; // dn does exist, just this forward is missing
+		
+	}
+		
+	
+	g_free(objectfilter);
+	dm_free(dn);
+	g_string_free(t,TRUE);
+	g_list_foreach(l,(GFunc)g_free,NULL);
+	
+	trace(TRACE_DEBUG, "%s,%s: result [%d]", __FILE__, __func__, result);
+
+	return result;
+}
+
+static int forward_create(const char *alias, const char *deliver_to)
 {
 	LDAPMod *mods[5], objectClass, cnField, mailField, forwField;
 	
@@ -1501,6 +1532,7 @@ int auth_addalias_ext(const char *alias, const char *deliver_to, u64_t clientid 
 	GString *t=g_string_new("");
 	
 	auth_reconnect();
+
 
 	g_string_printf(t,"%s=%s,%s", _ldap_cfg.cn_string, alias, _ldap_cfg.base_dn);
 	_ldap_dn=g_strdup(t->str);
@@ -1532,6 +1564,8 @@ int auth_addalias_ext(const char *alias, const char *deliver_to, u64_t clientid 
 	mods[3] = &forwField;
 	mods[4] = NULL;
 	
+	trace(TRACE_DEBUG, "%s,%s: creating new forward [%s] -> [%s]", __FILE__, __func__, alias, deliver_to);
+	
 	_ldap_err = ldap_add_s(_ldap_conn, _ldap_dn, mods);
 
 	g_strfreev(obj_values);
@@ -1544,8 +1578,105 @@ int auth_addalias_ext(const char *alias, const char *deliver_to, u64_t clientid 
 		return -1;
 	}
 
+	return 0;
 
+}
 
+static int forward_add(const char *alias,const char *deliver_to) 
+{
+	char **mailValues = NULL;
+	LDAPMod *modify[2], addForw;
+	GString *t=g_string_new("");
+
+	g_string_printf(t,"%s=%s,%s", _ldap_cfg.cn_string, alias, _ldap_cfg.base_dn);
+	_ldap_dn=g_strdup(t->str);
+	g_string_free(t,TRUE);
+
+	/* construct and apply the changes */
+	mailValues = g_strsplit(deliver_to,",",1);
+	
+	addForw.mod_op = LDAP_MOD_ADD;
+	addForw.mod_type = _ldap_cfg.field_fwdtarget;
+	addForw.mod_values = mailValues;
+	
+	modify[0] = &addForw;
+	modify[1] = NULL;
+			
+	auth_reconnect();
+	
+	trace(TRACE_DEBUG, "%s,%s: creating additional forward [%s] -> [%s]", __FILE__, __func__, alias, deliver_to);
+	
+	_ldap_err = ldap_modify_s(_ldap_conn, _ldap_dn, modify);
+	
+	g_strfreev(mailValues);
+	ldap_memfree(_ldap_dn);
+	
+	if (_ldap_err) {
+		trace(TRACE_ERROR, "%s,%s: update failed: %s",
+				__FILE__,__func__, 
+				ldap_err2string(_ldap_err));
+		return -1;
+	}
+	
+	return 0;
+}	
+
+static int forward_delete(const char *alias, const char *deliver_to)
+{
+	char **mailValues = NULL;
+	LDAPMod *modify[2], delForw;
+	GString *t=g_string_new("");
+
+	g_string_printf(t,"%s=%s,%s", _ldap_cfg.cn_string, alias, _ldap_cfg.base_dn);
+	_ldap_dn=g_strdup(t->str);
+	g_string_free(t,TRUE);
+
+	/* construct and apply the changes */
+	mailValues = g_strsplit(deliver_to,",",1);
+	
+	delForw.mod_op = LDAP_MOD_DELETE;
+	delForw.mod_type = _ldap_cfg.field_fwdtarget;
+	delForw.mod_values = mailValues;
+	
+	modify[0] = &delForw;
+	modify[1] = NULL;
+			
+	auth_reconnect();
+	
+	trace(TRACE_DEBUG, "%s,%s: delete additional forward [%s] -> [%s]", 
+			__FILE__, __func__, alias, deliver_to);
+	_ldap_err = ldap_modify_s(_ldap_conn, _ldap_dn, modify);
+	
+	g_strfreev(mailValues);
+	
+	if (_ldap_err) {
+		trace(TRACE_ERROR, "%s,%s: update failed: [%d] %s",
+				__FILE__,__func__, _ldap_err,
+				ldap_err2string(_ldap_err));
+		
+		trace(TRACE_DEBUG, "%s,%s: delete additional forward failed, removing dn [%s]", 
+				__FILE__, __func__, _ldap_dn);
+
+		_ldap_err = ldap_delete_s(_ldap_conn, _ldap_dn);
+		if (_ldap_err) {
+			trace(TRACE_ERROR, "%s,%s: deletion failed [%s]",
+					__FILE__, __func__, 
+					ldap_err2string(_ldap_err));
+		}
+	}
+	
+	ldap_memfree(_ldap_dn);
+	return 0;
+
+}
+int auth_addalias_ext(const char *alias, const char *deliver_to, u64_t clientid UNUSED)
+{
+	switch(forward_exists(alias,deliver_to)) {
+		case -1:
+			return forward_create(alias,deliver_to);
+		case 1:
+			return forward_add(alias,deliver_to);
+	}
 	return 0;
 }
 
@@ -1634,29 +1765,14 @@ int auth_removealias(u64_t user_idnr, const char *alias)
  */
 int auth_removealias_ext(const char *alias, const char *deliver_to)
 {
-	char *objectfilter, *dn;
-	char *fields[] = { "dn", NULL };
-	GString *t = g_string_new(_ldap_cfg.forw_objectclass);
-	GList *l = g_string_split(t,",");
 	
-	objectfilter = dm_ldap_get_filter('&',"objectClass", l);
-	g_string_printf(t,"(&%s(%s=%s)(%s=%s))", objectfilter, _ldap_cfg.cn_string, alias, _ldap_cfg.field_fwdtarget, deliver_to);
-	g_free(objectfilter);
+	int check;
+
+	check = forward_exists(alias,deliver_to);
+	if (check)
+		return 0;
 	
-	dn = __auth_get_first_match(t->str, fields);
-	_ldap_err = ldap_delete_s(_ldap_conn, dn);
-	if (dn != NULL)
-		g_free(dn);
-	
-	if (_ldap_err) {
-		trace(TRACE_ERROR, "%s,%s: failure [%s]",
-				__FILE__, __func__, 
-				ldap_err2string(_ldap_err));
-	}
-	
-	g_string_free(t,TRUE);
-	g_list_foreach(l,(GFunc)g_free,NULL);
-	return 0;
+	return forward_delete(alias,deliver_to);
 }
 
 
