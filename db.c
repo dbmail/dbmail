@@ -719,7 +719,10 @@ int db_get_reply_body(u64_t user_idnr, char **reply_body)
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT reply_body FROM %sauto_replies "
-		 "WHERE user_idnr = %llu", DBPFX,user_idnr);
+		 "WHERE user_idnr = %llu "
+		 "AND NOW() BETWEEN COALESCE(start_date,DATE '1900-01-01') "
+		 "AND COALESCE(stop_date, DATE '3000-01-01'", DBPFX,user_idnr);
+	
 	if (db_query(query) == -1) {
 		/* query failed */
 		trace(TRACE_ERROR, "%s,%s: query failed", __FILE__,

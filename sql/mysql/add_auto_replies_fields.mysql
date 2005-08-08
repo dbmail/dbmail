@@ -1,0 +1,3 @@
+alter table dbmail_auto_replies add start_date datetime not null;
+alter table dbmail_auto_replies add stop_date datetime not null;
+
