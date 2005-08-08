@@ -154,9 +154,6 @@ void db_free_result()
 {
 	if (res != NULL)
 		PQclear(res);
-	else
-		trace(TRACE_WARNING, "%s,%s: trying to free a result set "
-		      "that is already NULL!", __FILE__, __func__);
 	res = NULL;
 }
 
