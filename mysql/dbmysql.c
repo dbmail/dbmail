@@ -133,11 +133,9 @@ void db_free_result()
 {
 	if (res)
 		mysql_free_result(res);
-	else
-		trace(TRACE_WARNING, "%s,%s: Trying to free result set "
-		      "that is already NULL!", __FILE__, __func__);
+	
 	res = NULL;
-        res_changed = 1; /*MR*/
+        res_changed = 1;
 }
 
 

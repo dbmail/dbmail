@@ -1,3 +1,10 @@
+2005-08-08  Paul Stevens <paul@nfg.nl>
+
+	* mysql/dbmysql.c: remove spurious double-free warning from
+	db_free_result.
+	* pool.c: make failure in getKey more verbose, and reorganize locking
+	code a little.
+
 2005-08-04  Paul Stevens <paul@nfg.nl>
 
 	* auth/authldap.c: fix addition and removal of extra deliver_to

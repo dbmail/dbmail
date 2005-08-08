@@ -158,11 +158,15 @@ void scoreboard_conf_check(void)
 
 void scoreboard_release(pid_t pid)
 {
-	int slot;
+	int key;
 	trace(TRACE_DEBUG,"%s,%s: pid [%d]", __FILE__, __func__, (int)pid);
+	key = getKey(pid);
+
+	if (key == -1) 
+		trace(TRACE_FATAL, "%s:%s: fatal: unable to find this pid on the scoreboard", __FILE__, __func__);
+	
 	scoreboard_wrlck();
-	slot = getKey(pid);
-	scoreboard->child[slot] = state_new();
+	scoreboard->child[key] = state_new();
 	scoreboard_unlck();
 	
 }
@@ -243,7 +247,7 @@ int getKey(pid_t pid)
 		}
 	}
 	scoreboard_unlck();
-	trace(TRACE_FATAL,
+	trace(TRACE_ERROR,
 	      "%s,%s: pid NOT found on scoreboard [%d]", __FILE__, __func__, pid);
 	return -1;
 }
@@ -298,9 +302,12 @@ void child_reg_connected()
 	pid_t pid;
 	
 	pid = getpid();
-
-	scoreboard_wrlck();
 	key = getKey(pid);
+	
+	if (key == -1) 
+		trace(TRACE_FATAL, "%s:%s: fatal: unable to find this pid on the scoreboard", __FILE__, __func__);
+	
+	scoreboard_wrlck();
 	scoreboard->child[key].status = STATE_CONNECTED;
 	scoreboard_unlck();
 
@@ -314,9 +321,12 @@ void child_reg_disconnected()
 	pid_t pid;
 	
 	pid = getpid();
-
-	scoreboard_wrlck();
 	key = getKey(pid);
+
+	if (key == -1) 
+		trace(TRACE_FATAL, "%s:%s: fatal: unable to find this pid on the scoreboard", __FILE__, __func__);
+	
+	scoreboard_wrlck();
 	scoreboard->child[key].status = STATE_IDLE;
 	scoreboard_unlck();
 
@@ -336,9 +346,12 @@ void child_unregister()
 	pid_t pid;
 	
 	pid = getpid();
-
-	scoreboard_wrlck();
 	key = getKey(pid);
+	
+	if (key == -1)
+		trace(TRACE_FATAL, "%s:%s: fatal: unable to find this pid on the scoreboard", __FILE__, __func__);
+	
+	scoreboard_wrlck();
 	scoreboard->child[key].status = STATE_WAIT;
 	scoreboard_unlck();
 
