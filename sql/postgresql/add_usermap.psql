@@ -1,7 +1,10 @@
 
 CREATE TABLE dbmail_usermap(
-  user_idnr INT8 REFERENCES dbmail_users(user_idnr) ON UPDATE CASCADE ON DELETE CASCADE,
+  login VARCHAR(100) NOT NULL,
+  sock_allow VARCHAR(100) NOT NULL,
+  sock_deny VARCHAR(100) NOT NULL,
   userid VARCHAR(100)
 );
+
 CREATE INDEX usermap_userid_idx ON dbmail_usermap(userid);
 
