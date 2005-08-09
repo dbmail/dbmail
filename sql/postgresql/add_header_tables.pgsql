@@ -47,28 +47,28 @@ CREATE UNIQUE INDEX dbmail_headervalue_1 ON dbmail_headervalue(physmessage_id, i
 -- these fields contain zero or more Message-Id values that determine the message
 -- threading
 
-CREATE SEQUENCE dbmail_inreplytofield_idnr_seq;
-CREATE TABLE dbmail_inreplytofield (
+CREATE SEQUENCE dbmail_subjectfield_idnr_seq;
+CREATE TABLE dbmail_subjectfield (
         physmessage_id  INT8 NOT NULL
 			REFERENCES dbmail_physmessage(id)
 			ON UPDATE CASCADE ON DELETE CASCADE,
-	id		INT8 DEFAULT nextval('dbmail_inreplytofield_idnr_seq'),
-	inreplytofield	VARCHAR(100) NOT NULL DEFAULT '',
-	PRIMARY KEY (id)
-) ;
-CREATE UNIQUE INDEX dbmail_inreplytofield_1 ON dbmail_inreplytofield(physmessage_id, id);
-
-CREATE SEQUENCE dbmail_referencesfield_idnr_seq;
-CREATE TABLE dbmail_referencesfield (
-        physmessage_id  INT8 NOT NULL
-			REFERENCES dbmail_physmessage(id)
-			ON UPDATE CASCADE ON DELETE CASCADE,
-	id		INT8 DEFAULT nextval('dbmail_referencesfield_idnr_seq'),
-	referencesfield	VARCHAR(100) NOT NULL DEFAULT '',
+	id		INT8 DEFAULT nextval('dbmail_subjectfield_idnr_seq'),
+	subjectfield	VARCHAR(100) NOT NULL DEFAULT '',
 	PRIMARY KEY (id)
 );
+CREATE UNIQUE INDEX dbmail_subjectfield_1 ON dbmail_subjectfield(physmessage_id, id);
 
-CREATE UNIQUE INDEX dbmail_referencesfield_1 ON dbmail_referencesfield(physmessage_id, id);
+
+CREATE SEQUENCE dbmail_datefield_idnr_seq;
+CREATE TABLE dbmail_datefield (
+        physmessage_id  INT8 NOT NULL
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE,
+	id		INT8 DEFAULT nextval('dbmail_datefield_idnr_seq'),
+	datefield	VARCHAR(100) NOT NULL DEFAULT '',
+	PRIMARY KEY (id)
+);
+CREATE UNIQUE INDEX dbmail_datefield_1 ON dbmail_datefield(physmessage_id, id);
 
 -- Searching and Sorting
 
