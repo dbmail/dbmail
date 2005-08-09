@@ -1,0 +1,22 @@
+/* $Id: TODO 1746 2005-04-08 10:05:24Z paul $ 
+ * (c) 2000-2002 IC&S, The Netherlands */
+
+For DBMail 2.1
+-   Sieve scripting language
+-   Put some parts of configuration into the database
+-   Increase speed by doing database optimizations (e.g., indexes)
+    and removing unneeded database usage.
+-   Database transactions
+-   Report detailed delivery conditions (e.g. over quota,
+    suspended account, courtesy forwarding address) via LMTP's
+    enhanced status codes and via stdout messages to the MTA
+-   Handle NULLs in messages better than currently done (RFC821!).
+-   Separate forwards (varchar) from deliveries (bigint)
+    in the aliases table. Possibly include a mailbox, too.
+-   Rather than always deleting messages after delivery, make
+    it part of dbmail-util to clean out the special delivery user.
+-   Import and export users and mailboxes to mbox format.
+-   Combine the above two to allow for logging of all incoming messages
+    (e.g. USA banks are required to archive all email by law).
+-   Support for subaddress extensions of the form address+mailbox@domain,
+    as this is useful for TMDA systems and Amavis-new, among others.

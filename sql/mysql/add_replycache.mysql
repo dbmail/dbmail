@@ -1,0 +1,18 @@
+-- MySQL dump 9.11
+--
+-- Host: localhost    Database: dbmail
+-- ------------------------------------------------------
+-- Server version	4.0.24_Debian-7-log
+
+--
+-- Table structure for table `dbmail_replycache`
+--
+
+DROP TABLE IF EXISTS dbmail_replycache;
+CREATE TABLE dbmail_replycache (
+  to_addr varchar(100) NOT NULL default '',
+  from_addr varchar(100) NOT NULL default '',
+  lastseen datetime NOT NULL default '0000-00-00 00:00:00',
+  UNIQUE KEY replycache_1 (to_addr,from_addr)
+) TYPE=InnoDB;
+

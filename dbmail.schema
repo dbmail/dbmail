@@ -1,0 +1,31 @@
+#
+# dbmail-ldap v3 directory schema
+#
+# Create by Paul Stevens <paul@nfg.nl>
+#
+# This schema depends on:
+#	- core.schema
+#	- cosine.schema
+#	- nis.schema
+
+# Attribute Type Definitions
+
+attributetype ( 1.3.6.1.4.1.12340.6.2.1.1 NAME 'mailQuota'
+	DESC 'The amount of space the user can use until all further messages get bounced.'
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.44
+	SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.12340.6.2.1.2 NAME 'mailForwardingAddress'
+	DESC 'Address(es) to forward all incoming messages to.'
+	EQUALITY caseIgnoreIA5Match
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 )
+
+# Object Class Definitions
+objectclass ( 1.3.6.1.4.1.12340.6.2.2.1 NAME 'dbmailUser'
+	DESC 'DBMail-LDAP User' SUP top AUXILIARY
+	MUST ( uid $ mail $ uidNumber )
+	MAY ( userPassword $ gidNumber $ mailQuota $ mailForwardingAddress ) )
+	      
+objectclass ( 1.3.6.1.4.1.12340.6.2.2.2 NAME 'dbmailForwardingAddress'
+	DESC 'DBMail-LDAP Forwarding Address' SUP top AUXILIARY
+	MUST ( mail $ mailForwardingAddress ) )

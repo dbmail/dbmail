@@ -1,0 +1,73 @@
+.TH DBMAIL-IMAPD 8 
+.ad
+.fi
+.SH NAME
+dbmail-imapd
+\-
+provides access to the DBMail system to clients supporting
+Internet Message Access Protocol, IMAP4r1,
+as specified in RFC 3501.
+.SH SYNOPSIS
+.na
+.nf
+\fBdbmail-imapd\fR [\fB-f\fR configfile] [\fB-p\fR pidfile] [\fB\-nvVh\fR]
+.SH DESCRIPTION
+.ad
+.fi
+The \fBdbmail-imapd\fR daemon is a fully featured IMAP4r1 server. It will spawn
+into a number of default processes as set in the \fBdbmail.conf\fR file. 
+These processes will enable full IMAP4r1 communication with clients.
+.SH OPTIONS
+.IP "\fB\-f\fR configfile"
+Specify an alternate config file. The daemons are currently hardcoded to use
+/etc/dbmail.conf for their configs, and will halt if the config file
+cannot be found. Use the \fB\-f\fR configfile option to specify your
+system's preferred config file location.
+.IP "\fB\-p\fR pidfile"
+Specify an alternate pid file. The daemons are currently hardcoded to use
+/var/run/dbmail-<daemon> for their pid files, and will halt if the pid file
+cannot be written. Use the \fB\-p\fR pidfile option to place the pid file
+in your system's preferred location.
+.IP \fB-n\fR
+No daemonize. The program remains attached to the console
+from which it was started. This is quite useful for debugging when
+combined with the \fB-v\fR option.
+.IP \fB-v\fR
+Operate verbosely. For daemons, this may only be useful
+with the \fB-n\fR option which keeps the program bound to the console.
+Some of the utilities in the DBMail suite can take two \fB-v\fR's
+for extra verbosity. Those which don't understand this convention
+won't complain about having the extra \fB-v\fR and will simply
+operate at their normal verbosity.
+.IP \fB-V\fR
+Show the version and copyright, then exit.
+.IP \fB-h\fR
+Show a brief summary of options, then exit.
+
+.SH DIAGNOSTICS
+.ad
+.fi
+Errors and notifications are send to the trace output as set 
+in the \fBdbmail.conf\fR file.
+.SH BUGS
+.PP
+Since the RFC on IMAP4r1 is not very strict and consequently some e-mail
+clients aren't either it's hard to make a fully compatible IMAP4r1 server.
+However \fBdbmail-imapd\fR is tested and found compatible with most IMAP4r1
+clients. \fBdbmail-imapd\fR will also have future configuration options
+for specific client compatibility.
+.SH LICENSE
+.na
+.nf
+.ad
+.fi
+DBMail and its components are (c) IC&S and distributed under the GPL. 
+.SH AUTHOR(S)
+.na
+.nf
+Roel Rozendaal
+IC&S 
+Koningsweg 4
+3582 GE Utrecht
+The Netherlands
+http://www.ic-s.nl

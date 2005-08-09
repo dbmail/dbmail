@@ -1,0 +1,7 @@
+
+CREATE TABLE dbmail_usermap(
+  user_idnr INT8 REFERENCES dbmail_users(user_idnr) ON UPDATE CASCADE ON DELETE CASCADE,
+  userid VARCHAR(100)
+);
+CREATE INDEX usermap_userid_idx ON dbmail_usermap(userid);
+

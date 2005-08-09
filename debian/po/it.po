@@ -1,0 +1,273 @@
+#
+#    Translators, if you are not familiar with the PO format, gettext
+#    documentation is worth reading, especially sections dedicated to
+#    this format, e.g. by running:
+#         info -n '(gettext)PO Files'
+#         info -n '(gettext)Header Entry'
+#
+#    Some information specific to po-debconf are available at
+#            /usr/share/doc/po-debconf/README-trans
+#         or http://www.debian.org/intl/l10n/po-debconf/README-trans
+#
+#    Developers do not need to manually edit POT or PO files.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: dbmail 1.1-1\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2005-05-24 17:03+0200\n"
+"PO-Revision-Date: 2003-09-13 09:50+0200\n"
+"Last-Translator: Francesco Paolo Lovergine <frankie@debian.org>\n"
+"Language-Team: Italian Localization <debian-l10n-italian@lists.debian.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=iso-8859-15\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:3
+msgid "Use debconf to manage dbmail configuration?"
+msgstr "Usare debconf per gestire la configurazione di dbmail?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:3
+#, fuzzy
+msgid ""
+"Please confirm if you want to allow debconf to manage some parts of your "
+"dbmail configuration. Notice that changes you make to dbmail.conf by hand "
+"will NOT be overwritten should you later choose to re-run dpkg-reconfigure "
+"dbmail."
+msgstr ""
+"Accetta se vuoi consentire a debconf di gestire alcune parti della "
+"configurazione di dbmail. Nota che le modifiche da te fatte manualmente a "
+"dbmail.conf NON saranno sovrascritte se dovessi scegliere di lanciare di "
+"nuovo dpkg-reconfigure dbmail."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:11
+msgid "The email address where bounces come from."
+msgstr "L'indirizzo email da cui provengono i reinvii."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:11
+#, fuzzy
+msgid ""
+"Here you must specify the address dbmail will use when sending bounce "
+"messages."
+msgstr ""
+"Specifica l'indirizzo che dbmail userà quando spedisce i messaggi di "
+"sistema. Dovrebbe probabilmente essere qualcosa tipo MAILER-"
+"DAEMON@yourdomain."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:11
+msgid "Example: MAILER-DAEMON@yourdomain.tld"
+msgstr "Esempio: MAILER-DAEMON@yourdomain.tld"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:19
+msgid "Postmaster's email address."
+msgstr "Indirizzo email del Postmaster."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:19
+#, fuzzy
+msgid ""
+"This should be a valid email address read by the person responsible for this "
+"email server."
+msgstr ""
+"Questo deve essere un indirizzo email valido letto dalla persona "
+"responsabile per questo mail server (ovvero postmaster@yourdomain)."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:19
+msgid "Example: postmaster@yourdomain.tld"
+msgstr "Esempio:  postmaster@yourdomain.tld"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:27
+#, fuzzy
+msgid "Please enter the hostname of the (my/pg)sql database server."
+msgstr "Inserisci l'hostname del server (my/pg)sql da usare."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:27
+msgid ""
+"On this server you must create a database to hold dbmail's tables. You "
+"should grant full read/write permissions on this database to the dbmail user."
+msgstr ""
+"Su questo server devi creare un database per mantenere le tabelle di dbmail. "
+"Devi assegnare i permessi di lettura e scrittura su tale database all'utente "
+"dbmail."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:34
+msgid "Please enter the name of the database to use."
+msgstr "Inserisci il nome del database da usare."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:34
+#, fuzzy
+msgid "This is the name of the database that holds the dbmail tables."
+msgstr "Questo è il nme del database che contiene le tabelle dbmail."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:39
+msgid "Please enter the name of the database user you want to use."
+msgstr "Inserisci il nome dell'utente del database che vuoi usare."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:39
+msgid "This is the username dbmail will use to connect to the database server."
+msgstr ""
+"Questo è lo username che dbmail userà per connettersi al server di database."
+
+#. Type: password
+#. Description
+#: ../dbmail.templates:44
+msgid "Please enter the password for the database connection"
+msgstr "Inserisci la password per la connessione al database"
+
+#. Type: password
+#. Description
+#: ../dbmail.templates:44
+#, fuzzy
+msgid "This is the password dbmail will use to connect to the database server."
+msgstr ""
+"Questa è la password che dbmail userà per connettersi al server di database."
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:49
+#, fuzzy
+msgid "start the imap server after reboot?"
+msgstr "faccio partire il server imap al boot?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:49
+#, fuzzy
+msgid ""
+"Dbmail supports both imap and pop3 services. You can choose to run either "
+"one or both services."
+msgstr ""
+"Dbmail supporta sia il servizio imap che pop3. Puoi scegliere di lanciare "
+"uno o entrambi i servizi."
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:49
+#, fuzzy
+msgid "Do you want to start the imap service after a reboot?"
+msgstr "faccio partire il server imap al boot?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:57
+#, fuzzy
+msgid "start the pop3 server after reboot?"
+msgstr "faccio partire il server imap al boot?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:57
+msgid ""
+"Dbmail support both imap and pop3 services. You can choose to run either one "
+"or both services."
+msgstr ""
+"Dbmail supporta sia il servizio imap che pop3. Puoi scegliere di lanciare "
+"uno o entrambi i servizi."
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:57
+#, fuzzy
+msgid "Do you want to start the pop3 service after a reboot?"
+msgstr "Faccio partire il server pop3 al boot?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:65
+#, fuzzy
+msgid "Do you wish to run the stunnel SSL wrapper from the init script?"
+msgstr "Vuoi lanciare il wrapper SSL stunnel dallo script di init?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:65
+#, fuzzy
+msgid ""
+"The stunnel SSL wrapper allows you to provide secure imap and pop services "
+"even though dbmail supports neither imaps nor pop3s (yet)."
+msgstr ""
+"Il wrapper SSL stunnel consente di fornire servizi imap e pop sicuri anche "
+"se dbmail non supporta imap o pop3 su ssl. Assicurati di avere installato "
+"stunnel, che è fornito da un pacchetto separato."
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:65
+msgid ""
+"Make sure you have installed stunnel which is provided by a separate package "
+"if you want to use this feature."
+msgstr ""
+"Assicurati di aver installato stunnel che è fornito in un package separato "
+"se vuoi usare questa funzionalità."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:74
+msgid "Please enter the filename for the SSL pem file."
+msgstr "Inserisci il nome del file pem per SSL."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:74
+#, fuzzy
+msgid ""
+"To be able to run the stunnel SSL wrapper you need to generate a pem file "
+"that should reside in /etc/ssl/certs/. Specify the filename here without  "
+"the directory name."
+msgstr ""
+"er lanciare i wrapper SSL stunnel devi generare un file pem che dovrebbe "
+"risiedere in /etc/ssl/certs. Specifica il nome del file qui, senza il nome "
+"della directory. Leggi /usr/share/doc/stunnel/README.Debian per sapere come "
+"generare tale file."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:74
+msgid ""
+"Read /usr/share/doc/stunnel/README.Debian on how to generate such a file."
+msgstr ""
+"Leggi /usr/share/doc/stunnel/README.Debian per sapere come generare tale "
+"file."
+
+#, fuzzy
+#~ msgid "Start the IMAP server after reboot?"
+#~ msgstr "Faccio partire il server pop3 al boot?"
+
+#, fuzzy
+#~ msgid "Start the POP3 server after reboot?"
+#~ msgstr "Faccio partire il server pop3 al boot?"
+
+#, fuzzy
+#~ msgid ""
+#~ "Dbmail supports both IMAP and POP3 services. You can choose to run either "
+#~ "one or both services."
+#~ msgstr ""
+#~ "Dbmail supporta sia il servizio imap che pop3. Puoi scegliere di lanciare "
+#~ "uno o entrambi i servizi."

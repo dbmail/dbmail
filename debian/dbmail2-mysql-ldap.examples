@@ -1,0 +1,9 @@
+sql/mysql/create_tables_innoDB.mysql
+sql/mysql/create_tables.mysql
+sql/mysql/add_header_tables.mysql
+sql/mysql/migrate_from_1.x_to_2.0.mysql
+sql/mysql/migrate_from_1.x_to_2.0_innodb.mysql
+dbmail.conf
+dbmail.schema
+debian/default.dbmail
+debian/pgsql2mysql.sh

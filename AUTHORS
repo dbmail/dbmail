@@ -1,0 +1,10 @@
+$Id: AUTHORS 1494 2004-12-03 14:34:10Z ilja $
+
+Eelco van Beek (eelco at ic-s dot nl)
+Roel Rozendaal (roel at ic-s dot nl)
+Ilja Booij (ilja at ic-s dot nl)
+Aaron Stone (aaron at serendipity dot cx):
+Paul Stevens (paul at nfg dot nl):
+
+The iniparser library, which is included in lib/iniparser-2.14
+was written by Nicolas Devillard.

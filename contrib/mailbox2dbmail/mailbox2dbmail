@@ -1,0 +1,109 @@
+#!/usr/bin/python
+
+# Copyright (C) 2004 Dan Weber <dan at mirrorlynx dot com>
+#
+# $Id: mailbox2dbmail 1611 2005-02-23 19:09:59Z paul $
+#
+# This program is free software; you can redistribute it and/or 
+# modify it under the terms of the GNU General Public License 
+# as published by the Free Software Foundation; either 
+# version 2 of the License, or (at your option) any later 
+# version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+# $Id: mailbox2dbmail 1611 2005-02-23 19:09:59Z paul $
+
+import os,sys,getopt,email,email.Errors,mailbox
+version = "%s version 2.0" %(sys.argv[0],)
+
+def main():
+    try:
+        user=mbox=type=''
+        msgnumber=1
+        box = "Inbox"
+        path = "/usr/sbin/dbmail-smtp"
+        opts, args = getopt.getopt(sys.argv[1:], "u:m:b:t:p:hv", ["user=","mail=","box=","path=","type=","help","version"])
+        for o, a in opts:
+            if o in ("-v","--version"):
+                print version
+                sys.exit()
+            elif o in ("-h","--help"):
+                usage()
+                sys.exit()
+            elif o in ("-u","--user"): user = a
+            elif o in ("-m","--mail"): mbox = a
+            elif o in ("-b","--box"): box = a
+            elif o in ("-p","--path"): path = a
+            elif o in ("-t","--type"): type = a
+        if not user:
+            print "No user specified"
+            sys.exit(1)
+        if not mbox:
+            print "No mailbox specified"
+            sys.exit(1)
+        if box=="Inbox":
+            print "Using default Inbox"
+        if type=="mbox":
+            mbox = mailbox.PortableUnixMailbox(open(mbox,'r'),email.message_from_file)
+        elif type=="maildir":
+            mbox = mailbox.Maildir(mbox,email.message_from_file)
+        elif type=="mhdir":
+            mbox = mailbox.MHMailbox(mbox,email.message_from_file)
+        elif not type:
+            print "No mailbox type specified"
+            sys.exit(1)
+        convert(user,mbox,box,path,msgnumber)
+    except getopt.GetoptError:
+        usage()
+        print "Error Parsing Options"
+        sys.exit(1)
+
+def usage():
+    print version
+    print """%s 
+    -u|--user <user> 
+    -t|--type <mbox, maildir, and mhdir> 
+    -m|--mail <location of mailbox> 
+    -b|--box <Inbox,Inbox.Sent etc> 
+    -p <path to dbmail-smtp>
+    """ %(sys.argv[0],)
+    
+def convert(user,mbox,box,path,msgnumber):
+    try:
+     	while 1:
+            mailmsg = mbox.next()
+            command = """%s -m "%s" -u "%s" """ %(path,box,user)
+            if not mailmsg:
+                print "All Done!"
+            	sys.exit()
+            try:
+                dbmail = os.popen(command,'w')
+                dbmail.writelines(mailmsg.as_string())
+                dbmail.close()
+                del mailmsg
+                print "Processed Message %s" %(msgnumber,)
+                msgnumber = msgnumber + 1
+            except IOError:
+                print "Either box or user is invalid"
+                sys.exit(1)
+        return 0    
+    except email.Errors.MessageParseError:
+        print "Error Parsing Mail"
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
+
+
+    
+
+        
+            
+        

@@ -1,0 +1,85 @@
+.TH DBMAIL-UTIL 8 
+.SH NAME
+dbmail-util
+\-
+maintains the integrity and cleanliness of the \fBDBMail\fR datatables.
+.SH SYNOPSIS
+.BR "dbmail-util [-cturpd] [-l " "time" "] [-qvVh]"
+.BI "[-f " "configFile" "]"
+.SH DESCRIPTION
+The \fBdbmail-util\fR program does a global database cleanup and integrity
+check. All messages that are set for deletion will be marked for final deletion 
+(status 3). All message that are marked for final deletion will be cleared from 
+the database. The integrity check will check for unconnected messageblocks, 
+unconnected messages and unconnected mailboxes.
+.SH OPTIONS
+.IP \fB-c\fR
+clean up unlinked message entries
+.IP \fB-t\fR
+test for message integrity
+.IP \fB-u\fR
+null message check
+.IP \fB-r\fR
+repair any integrity problems
+.IP \fB-p\fR
+purge messages have the DELETE status set
+.IP \fB-d\fR
+set DELETE status for deleted messages
+.IP "-l time"
+clear the IP log used for IMAP/POP-before-SMTP
+the time is specified as <hours>h<minutes>m
+(don't include the angle brackets, though)
+.IP \fB-i\fR
+Enter an interactive user management console.
+
+.SH COMMON OPTIONS
+.IP "\fB-f\fR configfile"
+Specify an alternate config file. The utilities are currently hardcoded to use
+/etc/dbmail.conf for their configs, and will halt if the config file
+cannot be found. Use the \fB\-f\fR configfile option to specify your
+system's preferred config file location.
+.IP \fB-q\fR
+Quietly skip interactive prompts and helpful status messages which
+would otherwise be printed to \fIstdout\fR.  Use two \fB-q\fR's to
+silence errors which would otherwise be printed to \fIstderr\fR.
+
+.% Will be supported in the future.
+.% .IP \fB-n\fR
+.% Show the intended action but do not perform it, as though no to all.
+.% .IP \fB-y\fR
+.% Perform all proposed actions, as though yes to all.
+
+.IP \fB-v\fR
+Operate verbosely.
+Some of the utilities in the DBMail suite can take two \fB-v\fR's
+for extra verbosity. Those which don't understand this convention
+won't complain about having the extra \fB-v\fR and will simply
+operate at their normal verbosity.
+.IP \fB-V\fR
+Show the version and copyright, then exit.
+.IP \fB-h\fR
+Show a brief summary of options, then exit.
+.SH DIAGNOSTICS
+.ad
+.fi
+Errors and notifications are send to the trace output as set 
+in the \fBdbmail.conf\fR file.
+.SH BUGS
+.PP
+No known bugs.
+.SH LICENSE
+.na
+.nf
+.ad
+.fi
+DBMail and it's components are (c) IC&S and distributed under the GPL. 
+.SH AUTHOR(S)
+.na
+.nf
+Eelco van Beek
+Roel Rozendaal
+IC&S 
+Koningsweg 4
+3582 GE Utrecht
+http://www.ic-s.nl
+

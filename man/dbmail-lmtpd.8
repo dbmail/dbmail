@@ -1,0 +1,68 @@
+.TH DBMAIL-LMTPD 8 
+.ad
+.fi
+.SH NAME
+dbmail-lmtpd
+\-
+receive messages from an MTA supporting the Lightweight
+Mail Transport Protocol, as specified in RFC 2033.
+.SH SYNOPSIS
+.na
+.nf
+\fBdbmail-lmtpd\fR [\fB-f\fR configfile] [\fB-p\fR pidfile] [\fB\-nvVh\fR]
+.SH DESCRIPTION
+.ad
+.fi
+The \fBdbmail-lmtpd\fR daemon will spawn child processes as specified in 
+the \fBdbmail.conf\fR file. These processes listen, by default, on port 24
+of the localhost interface. Mail Transfer Agents, MTA's such as Postfix and
+Exim, speak LMTP to their Mail Delivery Agents which receive and store
+messages. DBMail implements such a system using a database backend.
+.SH OPTIONS
+.IP "\fB\-f\fR configfile"
+Specify an alternate config file. The daemons are currently hardcoded to use
+/etc/dbmail.conf for their configs, and will halt if the config file
+cannot be found. Use the \fB\-f\fR configfile option to specify your
+system's preferred config file location.
+.IP "\fB\-p\fR pidfile"
+Specify an alternate pid file. The daemons are currently hardcoded to use
+/var/run/dbmail-<daemon> for their pid files, and will halt if the pid file
+cannot be written. Use the \fB\-p\fR pidfile option to place the pid file
+in your system's preferred location.
+.IP \fB-n\fR
+No daemonize. The program remains attached to the console
+from which it was started. This is quite useful for debugging when
+combined with the \fB-v\fR option.
+.IP \fB-v\fR
+Operate verbosely. For daemons, this may only be useful
+with the \fB-n\fR option which keeps the program bound to the console.
+Some of the utilities in the DBMail suite can take two \fB-v\fR's
+for extra verbosity. Those which don't understand this convention
+won't complain about having the extra \fB-v\fR and will simply
+operate at their normal verbosity.
+.IP \fB-V\fR
+Show the version and copyright, then exit.
+.IP \fB-h\fR
+Show a brief summary of options, then exit.
+
+.SH DIAGNOSTICS
+.ad
+.fi
+Errors and notifications are send to the trace output as set 
+in the \fBDBMail\fR configfile.
+.SH BUGS
+.PP
+Not all of the features recommended by RFC 2033 are implemented.
+.SH LICENSE
+.na
+.nf
+.ad
+.fi
+DBMail and its components are (c) IC&S and distributed under the GPL. 
+.SH AUTHOR(S)
+.na
+.nf
+Aaron Stone
+Open Source Programmer
+Palo Alto, California
+USA

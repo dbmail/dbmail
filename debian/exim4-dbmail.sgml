@@ -1,0 +1,146 @@
+
+<!doctype linuxdoc system>
+<article>
+
+
+<title>eXim4-DBMAIL HOWTO
+<author>Dan Weber
+<date>2/7/04
+
+<toc> 
+
+
+<sect>Installing Dbmail<p>
+<sect1>Dependencies<p>
+
+First, we will need to work with a completely working mysql db. If you don't have one installed.
+
+<tscreen><verb> 
+
+	apt-get install mysql-server mysql-client
+
+</verb></tscreen>
+
+Also a plain installation of exim4-daemon-heavy will also be required.
+
+<tscreen><verb> 
+
+	apt-get install exim4-base exim4-daemon-heavy exim4-config
+
+</verb></tscreen>
+
+Finally we will install the real thing.
+
+<tscreen><verb> 
+
+	apt-get install dbmail-mysql
+
+</verb></tscreen>
+You can come back to debconf at a later time with dpkg-reconfigure dbmail-mysql.
+
+<sect1>MySQL<p>
+
+First we will begin by making the necessary tables for dbmail-mysql.
+Run the following commands:
+
+<tscreen><verb> 
+
+	# cd /usr/share/doc/dbmail-mysql/examples
+	# gunzip create_tables.mysql.gz
+	# mysql -u root -p < create_tables.mysql
+
+</verb></tscreen>
+
+That will build the necessary tables.
+
+Next we will need to give the user dbmail some permissions.
+This will require opening up a mysql shell.
+<tscreen><verb> 
+
+	mysql -u root 
+	mysql> GRANT ALL ON dbmail.* TO dbmail@localhost IDENTIFIED BY 'PASSWORD'
+
+</verb></tscreen>
+The tables for mysql and the dbmail user should now be set.  If you need to reconfigure the initial debconf values, now is the time.  Use dpkg-reconfigure dbmail-mysql
+
+<sect1>Exim4<p>
+
+<sect2>Transports<p>
+Now we will begin to edit the values of the exim4 configuration.  First we will begin by adding a transport for communicating with dbmail-smtp.
+<tscreen><verb> 
+
+==================/etc/exim4/conf.d/transport/30_exim4-config_dbmailconfig============
+dbmail:
+	driver = pipe
+	command = "/usr/sbin/dbmail-smtp -d $(local_part)\@$domain"
+	return_fail_output
+	user = dbmail
+=======================================Done===============================
+
+</verb></tscreen>
+<sect2>exim4-mysql<p>
+
+We will need add a one liner to the main configuration dir for our mysql support.
+<tscreen><verb> 
+
+==========================/etc/exim4/conf.d/main/04_mysql-config============
+hide mysql_servers = localhost/dbmail/dbmail/PASSWORD
+==========================DONE==============================================
+
+</verb></tscreen>
+
+Next we will need to allow authentication via mysql lookups.  In this example, this requires all passwords to be md5hashes,
+<tscreen><verb> 
+
+=====================/etc/exim4/conf.d/auth/25_relay_auth====================
+plain_server:
+  driver = plaintext
+  public_name = PLAIN
+  server_condition = ${lookup mysql{SELECT user_idnr FROM users WHERE userid = '${quote_mysql:$2}' AND passwd = '${md5:${quote_mysql:$3}}'}{1}fail}
+  server_set_id = $2
+
+login_server:
+  driver = plaintext
+  public_name = LOGIN
+  server_prompts = "Username:: : Password::"
+  server_condition = ${lookup mysql{SELECT user_idnr FROM users WHERE userid = '${quote_mysql:$1}' AND passwd = '${md5:${quote_mysql:$2}}'}{1}fail}
+=========================DONE=================================================
+
+</verb></tscreen>
+Mysql in exim4 is now complete.
+
+<sect2>LOCAL_DELIVERY<p>
+
+Now we must change one variable in /etc/exim4/conf.d/main/01_exim4-config_listmacrosdefs.  Change LOCAL_DELIVERY=mailspool to LOCAL_DELIVERY=dbmail
+
+Exim4 is now complete and ready to use with dbmail-mysql.
+
+<sect>Users<p>
+I am not going to go into very much detail on this section.  Primarily you should read the manpage on how to addusers.
+<sect1>Adding Users<p>
+A simple command would be the following.
+
+<tscreen><verb> 
+
+	dbmail-adduser c foo {md5hash:}bar 0 foobar@foobar.org foobar@foobar.com
+</verb></tscreen>
+
+Note how I use md5hash which is required for clean use with exim4.
+<sect1>Deleting Users<p>
+A simple deletion command would be:
+<tscreen><verb> 
+
+	dbmail-adduser d foo
+
+</verb></tscreen>
+<sect1>Changing Passwords<p>
+To change passwords do the following:
+
+<tscreen><verb> 
+
+	dbmail-adduser c foo D5 <newpw>
+
+</verb></tscreen>
+
+</article>
+

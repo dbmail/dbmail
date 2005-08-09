@@ -1,0 +1,246 @@
+# Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
+#
+# This program is free software; you can redistribute it and/or 
+# modify it under the terms of the GNU General Public License 
+# as published by the Free Software Foundation; either 
+# version 2 of the License, or (at your option) any later 
+# version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+# $Id: migrate_from_1.x_to_2.0_innodb.mysql 1590 2005-02-14 12:45:20Z paul $
+# SQL for upgrading from dbmail-1.2 to dbmail-2.0
+# This script was written by Paul J Stevens. Some changes were made
+# by Ilja Booij @ IC & S to make it work with the optional tables from
+# DBMail 1.x
+SET FOREIGN_KEY_CHECKS=0;
+SET SQL_LOG_OFF=1;
+SET SQL_LOG_UPDATE=0;
+
+# start a transaction.
+BEGIN WORK;
+
+# required tables:
+
+# alter aliases
+RENAME TABLE aliases TO dbmail_aliases;
+ALTER TABLE dbmail_aliases
+	DROP INDEX alias_idnr_2,
+	DROP KEY alias,
+	ADD INDEX client_idnr_index (client_idnr),
+	ADD INDEX alias_index (alias);
+
+# alter users
+RENAME TABLE users TO dbmail_users;
+ALTER TABLE dbmail_users 
+	ADD COLUMN curmail_size bigint(21) NOT NULL DEFAULT '0',
+	DROP KEY user_idnr,
+	DROP INDEX useridnr_2,
+	DROP INDEX userid_2,
+	ADD INDEX userid_index (userid);
+
+# alter mailboxes
+RENAME TABLE mailboxes TO dbmail_mailboxes;
+ALTER TABLE dbmail_mailboxes
+##	DROP INDEX mailboxidnr_2,
+	ADD INDEX name_index (name),
+	ADD INDEX owner_idnr_index (owner_idnr),
+	ADD UNIQUE INDEX name_owner_idnr_index (owner_idnr, name),
+	ADD FOREIGN KEY owner_idnr_fk (owner_idnr) 
+		REFERENCES dbmail_users (user_idnr)
+		ON DELETE CASCADE ON UPDATE CASCADE;
+
+DROP TABLE IF EXISTS dbmail_subscription;
+CREATE TABLE dbmail_subscription (
+	user_id bigint(21) not null default '0',
+	mailbox_id bigint(21) not null,
+	primary key (user_id, mailbox_id),
+	index (user_id),
+	index (mailbox_id),
+	FOREIGN KEY user_id_fk (user_id) 
+		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE,
+	FOREIGN KEY mailbox_id_fk (mailbox_id) 
+		REFERENCES dbmail_mailboxes (mailbox_idnr) ON DELETE CASCADE ON UPDATE CASCADE
+) TYPE=InnoDB;
+
+# fill the subscription table
+INSERT INTO dbmail_subscription (user_id, mailbox_id) 
+	SELECT owner_idnr, mailbox_idnr FROM dbmail_mailboxes
+	WHERE is_subscribed = '1';
+
+# is_subscribed column in dbmail_mailboxes is no longer needed.
+ALTER TABLE dbmail_mailboxes DROP COLUMN is_subscribed;
+
+# acl table
+DROP TABLE IF EXISTS dbmail_acl;
+CREATE TABLE dbmail_acl (
+	user_id bigint(21) NOT NULL,
+	mailbox_id bigint(21) NOT NULL,
+	lookup_flag tinyint(1) default '0' not null,
+	read_flag tinyint(1) default '0' not null,
+	seen_flag tinyint(1) default '0' not null,
+	write_flag tinyint(1) default '0' not null,
+	insert_flag tinyint(1) default '0' not null,	
+	post_flag tinyint(1) default '0' not null,
+	create_flag tinyint(1) default '0' not null,	
+	delete_flag tinyint(1) default '0' not null,	
+	administer_flag tinyint(1) default '0' not null,	
+	PRIMARY KEY(user_id, mailbox_id),
+	INDEX (user_id),
+	INDEX (mailbox_id),
+	FOREIGN KEY user_id_fk (user_id) 
+		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE,	
+	FOREIGN KEY mailbox_id_fk (mailbox_id) 
+		REFERENCES dbmail_mailboxes (mailbox_idnr) ON DELETE CASCADE ON UPDATE CASCADE
+) TYPE=InnoDB;
+
+# physmessage table 
+DROP TABLE IF EXISTS dbmail_physmessage;
+CREATE TABLE dbmail_physmessage (
+	id bigint(21) NOT NULL auto_increment,
+	messagesize bigint(21) NOT NULL default '0',
+	rfcsize bigint(21) NOT NULL default '0',
+	internal_date datetime NOT NULL default '0000-00-00 00:00:00',
+	PRIMARY KEY (id)
+) TYPE=InnoDB;
+# fill the dbmail_physmessage table
+INSERT INTO dbmail_physmessage (id, messagesize, rfcsize, internal_date)
+	SELECT message_idnr, messagesize, rfcsize, internal_date
+	FROM messages;
+
+# alter messages table.
+RENAME TABLE messages TO dbmail_messages;
+ALTER TABLE dbmail_messages 
+###	DROP INDEX message_idnr,
+###	DROP INDEX message_idnr_2,
+	DROP COLUMN messagesize,
+	DROP COLUMN rfcsize,
+	DROP COLUMN internal_date,
+	ADD COLUMN physmessage_id bigint(21) NOT NULL DEFAULT '0';
+UPDATE dbmail_messages SET physmessage_id = message_idnr;
+
+ALTER TABLE dbmail_messages ALTER COLUMN status SET DEFAULT '0';
+ALTER TABLE dbmail_messages 
+	ADD INDEX physmessage_id_index (physmessage_id),
+	ADD INDEX mailbox_idnr_index (mailbox_idnr),
+	ADD INDEX seen_flag_index (seen_flag),
+	ADD INDEX unique_id_index (unique_id),
+	ADD INDEX status_index (status),
+	ADD FOREIGN KEY mailbox_idnr_fk (mailbox_idnr)
+		REFERENCES dbmail_mailboxes (mailbox_idnr)
+		ON DELETE CASCADE ON UPDATE CASCADE,
+	ADD FOREIGN KEY physmessage_id_fk (physmessage_id)
+		REFERENCES dbmail_physmessage (id)
+		ON DELETE CASCADE ON UPDATE CASCADE;
+
+# alter messageblks table
+RENAME TABLE messageblks TO dbmail_messageblks;
+ALTER TABLE dbmail_messageblks
+	DROP INDEX messageblk_idnr,
+	DROP INDEX messageblk_idnr_2,
+	DROP INDEX msg_index,
+	CHANGE message_idnr physmessage_id bigint(21) NOT NULL DEFAULT '0',
+	ADD COLUMN is_header tinyint(1) DEFAULT '0' NOT NULL,
+	ADD INDEX physmessage_id_index (physmessage_id),
+	ADD INDEX physmessage_id_is_header_index (physmessage_id, is_header),
+	ADD FOREIGN KEY physmessage_id_fk (physmessage_id)
+		REFERENCES dbmail_physmessage (id)
+		ON DELETE CASCADE ON UPDATE CASCADE;
+UPDATE dbmail_messageblks SET is_header = '0';
+
+# in DBMail 1.x, the auto_replies and auto_notifications tables where not
+# always present. If they are not present, they are created here. These 
+# tables do not have a new structure in dbmail 2.0, so they can be left
+# as they are.
+CREATE TABLE IF NOT EXISTS auto_notifications (
+   auto_notify_idnr bigint(21) not null auto_increment,
+   user_idnr bigint(21) DEFAULT '0' NOT NULL,
+   notify_address VARCHAR(100),
+   PRIMARY KEY (auto_notify_idnr),
+   FOREIGN KEY (`user_idnr`) 
+		REFERENCES `dbmail_users`(`user_idnr`) ON DELETE CASCADE ON UPDATE CASCADE
+) TYPE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS auto_replies (
+   auto_reply_idnr bigint(21) NOT NULL auto_increment,
+   user_idnr bigint(21) DEFAULT '0' NOT NULL,
+   reply_body mediumtext,
+   PRIMARY KEY (auto_reply_idnr),
+   FOREIGN KEY (`user_idnr`) 
+		REFERENCES `dbmail_users`(`user_idnr`) ON DELETE CASCADE ON UPDATE CASCADE
+) TYPE=InnoDB;
+
+# Now we know that auto_notifications and auto_replies exist.
+RENAME TABLE auto_notifications TO dbmail_auto_notifications;
+ALTER TABLE dbmail_auto_notifications 
+	DROP COLUMN auto_notify_idnr,
+	DROP PRIMARY KEY,
+	ADD PRIMARY KEY (user_idnr);
+
+RENAME TABLE auto_replies TO dbmail_auto_replies;
+ALTER TABLE dbmail_auto_replies 
+	DROP COLUMN auto_reply_idnr,
+	DROP PRIMARY KEY,
+	ADD PRIMARY KEY (user_idnr);
+
+
+DROP TABLE IF EXISTS pbsp;
+DROP TABLE IF EXISTS dbmail_pbsp;
+CREATE TABLE dbmail_pbsp (
+   idnr bigint(21) NOT NULL auto_increment,
+   since datetime default '0' not null,
+   ipnumber varchar(40) NOT NULL,
+   PRIMARY KEY (idnr),
+   UNIQUE INDEX ipnumber_idx (ipnumber),
+   INDEX since_idx (since)
+);
+
+# Drop some unused tables
+DROP TABLE IF EXISTS config;
+DROP TABLE IF EXISTS tmpmessage;
+DROP TABLE IF EXISTS tmpmessageblk;
+
+# All tables are now ready. We only need to update curmail_size in 
+# dbmail_users
+# Update curmail size in dbmail_users. I don't know how to do this other
+# than by using a temporary table (in PostgreSQL, this can be done using
+# a subselect.
+CREATE TEMPORARY TABLE temp_user_curmail_size (
+	user_idnr bigint(21) not null default '0',
+	curmail_size bigint(21) not null default '0',
+	PRIMARY KEY(user_idnr)
+);
+
+INSERT INTO temp_user_curmail_size (user_idnr, curmail_size)
+	SELECT u.user_idnr, COALESCE(SUM(p.messagesize), 0)
+	FROM dbmail_users u, dbmail_mailboxes b,
+	     dbmail_messages m, dbmail_physmessage p
+	WHERE u.user_idnr = b.owner_idnr
+	AND b.mailbox_idnr = m.mailbox_idnr
+	AND m.physmessage_id = p.id
+	GROUP BY (u.user_idnr);
+
+UPDATE dbmail_users u , temp_user_curmail_size t 
+	SET u.curmail_size = t.curmail_size
+	WHERE u.user_idnr = t.user_idnr;
+
+
+SET FOREIGN_KEY_CHECKS=1;
+
+# create the user for the delivery chain
+INSERT INTO dbmail_users (userid, passwd, encryption_type) 
+	VALUES ('__@!internal_delivery_user!@__', '', 'md5');
+# insert the 'anyone' user which is used for ACLs.
+INSERT INTO dbmail_users (userid, passwd, encryption_type)
+	VALUES ('anyone', '', 'md5');
+
+# end
+COMMIT;
+

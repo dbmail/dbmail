@@ -1,0 +1,6 @@
+
+
+* installation of the database should be handled automatically if 
+  the database will be running on localhost.
+
+

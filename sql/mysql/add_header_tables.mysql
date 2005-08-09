@@ -1,0 +1,167 @@
+
+#
+# modify dbmail schema to support header caching.
+#
+# $Id: add_header_tables.mysql 1767 2005-05-03 15:06:24Z paul $
+#
+# WARNING:
+#
+# This document is still in the early design stages.  Don't apply yet !
+
+
+#
+# store all headers by storing all headernames and headervalues in separate
+# tables.
+#
+SET FOREIGN_KEY_CHECKS=0;
+START TRANSACTION;
+
+DROP TABLE IF EXISTS dbmail_headername;
+CREATE TABLE dbmail_headername (
+	id		BIGINT NOT NULL AUTO_INCREMENT,
+	headername	VARCHAR(100) NOT NULL DEFAULT '',
+	PRIMARY KEY (id),
+	UNIQUE (headername)
+) type=InnoDB ;
+
+DROP TABLE IF EXISTS dbmail_headervalue;
+CREATE TABLE dbmail_headervalue (
+	headername_id	BIGINT NOT NULL,
+        physmessage_id	BIGINT NOT NULL,
+	id		BIGINT NOT NULL AUTO_INCREMENT,
+	headervalue	VARCHAR(255) NOT NULL DEFAULT '',
+	PRIMARY KEY (id),
+	UNIQUE (physmessage_id, id),
+	UNIQUE (physmessage_id, headername_id, headervalue),
+	INDEX (headername_id),
+	FOREIGN KEY (headername_id)
+		REFERENCES dbmail_headername(id) ON UPDATE CASCADE ON DELETE CASCADE,
+	FOREIGN KEY (physmessage_id)
+		REFERENCES dbmail_physmessage(id) ON UPDATE CASCADE ON DELETE CASCADE
+	
+		
+) type=InnoDB ;
+
+# Provide separate storage of commonly used headers
+
+# These fields will typically be preparsed as specified by 
+# http://www.ietf.org/internet-drafts/draft-ietf-imapext-sort-17.txt
+
+# Threading
+
+# support fast threading by breaking out In-Reply-To/References headers
+# these fields contain zero or more Message-Id values that determine the message
+# threading
+
+DROP TABLE IF EXISTS dbmail_subjectfield;
+CREATE TABLE dbmail_subjectfield (
+        physmessage_id  BIGINT NOT NULL,
+	id		BIGINT NOT NULL AUTO_INCREMENT,
+	subjectfield	VARCHAR(255) NOT NULL DEFAULT '',
+	PRIMARY KEY (id),
+	UNIQUE (physmessage_id, subjectfield),
+	FOREIGN KEY (physmessage_id)
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE
+) type=InnoDB ;
+
+DROP TABLE IF EXISTS dbmail_datefield;
+CREATE TABLE dbmail_datefield (
+        physmessage_id  BIGINT NOT NULL,
+	id		BIGINT NOT NULL AUTO_INCREMENT,
+	datefield	DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00',
+	PRIMARY KEY (id),
+	UNIQUE (physmessage_id, datefield),
+	FOREIGN KEY (physmessage_id)
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE
+) type=InnoDB ;
+
+# redundant and deprecated (already)
+DROP TABLE IF EXISTS dbmail_inreplytofield;
+
+DROP TABLE IF EXISTS dbmail_referencesfield;
+CREATE TABLE dbmail_referencesfield (
+        physmessage_id  BIGINT NOT NULL,
+	id		BIGINT NOT NULL AUTO_INCREMENT,
+	referencesfield	VARCHAR(255) NOT NULL DEFAULT '',
+	PRIMARY KEY (id),
+	UNIQUE (physmessage_id, referencesfield),
+	FOREIGN KEY (physmessage_id)
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE
+) type=InnoDB ;
+
+# Searching and Sorting
+
+
+# support fast sorting by breaking out and preparsing the fields most commonly used
+# in searching and sorting: Subject, From, To, Reply-To, Cc. 
+
+DROP TABLE IF EXISTS dbmail_fromfield;
+CREATE TABLE dbmail_fromfield (
+        physmessage_id  BIGINT NOT NULL,
+	id		BIGINT NOT NULL AUTO_INCREMENT,
+	fromname	VARCHAR(100) NOT NULL DEFAULT '',
+	fromaddr	VARCHAR(100) NOT NULL DEFAULT '',
+	PRIMARY KEY (id),
+	UNIQUE (physmessage_id, id),
+	FOREIGN KEY (physmessage_id)
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE
+) type=InnoDB ;
+DROP TABLE IF EXISTS dbmail_tofield;
+CREATE TABLE dbmail_tofield (
+        physmessage_id  BIGINT NOT NULL,
+	id		BIGINT NOT NULL AUTO_INCREMENT,
+	toname		VARCHAR(100) NOT NULL DEFAULT '',
+	toaddr		VARCHAR(100) NOT NULL DEFAULT '',
+	PRIMARY KEY (id),
+	UNIQUE (physmessage_id, id),
+	FOREIGN KEY (physmessage_id)
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE
+) type=InnoDB ;
+DROP TABLE IF EXISTS dbmail_replytofield;
+CREATE TABLE dbmail_replytofield (
+        physmessage_id  BIGINT NOT NULL,
+	id		BIGINT NOT NULL AUTO_INCREMENT,
+	replytoname	VARCHAR(100) NOT NULL DEFAULT '',
+	replytoaddr	VARCHAR(100) NOT NULL DEFAULT '',
+	PRIMARY KEY (id),
+	UNIQUE (physmessage_id, id),
+	FOREIGN KEY (physmessage_id)
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE
+) type=InnoDB ;
+DROP TABLE IF EXISTS dbmail_ccfield;
+CREATE TABLE dbmail_ccfield (
+        physmessage_id  BIGINT NOT NULL,
+	id		BIGINT NOT NULL AUTO_INCREMENT,
+	ccname		VARCHAR(100) NOT NULL DEFAULT '',
+	ccaddr		VARCHAR(100) NOT NULL DEFAULT '',
+	PRIMARY KEY (id),
+	UNIQUE (physmessage_id, id),
+	FOREIGN KEY (physmessage_id)
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE
+) type=InnoDB ;
+
+# Some other fields will also be commonly used for search/sort but do not warrant 
+# preparsing and/or separate tables. 
+
+#ALTER TABLE dbmail_physmessage 
+#	ADD sendername 	VARCHAR(100) NOT NULL DEFAULT '';
+#	
+#ALTER TABLE dbmail_physmessage 
+#	ADD senderaddr 	VARCHAR(100) NOT NULL DEFAULT '';
+#
+#ALTER TABLE dbmail_physmessage 
+#	ADD subject 	VARCHAR(255) NOT NULL DEFAULT '';
+#
+#ALTER TABLE dbmail_physmessage 
+#	ADD messageid 	VARCHAR(100) NOT NULL DEFAULT '';
+
+COMMIT;
+
+SET FOREIGN_KEY_CHECKS=0;

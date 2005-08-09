@@ -1,0 +1,52 @@
+/*
+ Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
+
+ This program is free software; you can redistribute it and/or 
+ modify it under the terms of the GNU General Public License 
+ as published by the Free Software Foundation; either 
+ version 2 of the License, or (at your option) any later 
+ version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program; if not, write to the Free Software
+ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*/
+
+/* $Id: mime.h 1756 2005-04-19 07:37:27Z paul $ 
+ */
+
+#ifndef _MIME_H
+#define _MIME_H
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "dbmailtypes.h"
+
+#define MEM_BLOCK 1024
+
+struct mime_record {
+/* if these are to be changed to ptrs, the following has to be updated:
+   mime.c (duh)
+   db_parse_as_text
+   a cleanup for all the memory allocated 
+*/
+	char field[MIME_FIELD_MAX];
+	char value[MIME_VALUE_MAX];
+};
+
+void mime_findfield(const char *fname, struct dm_list *mimelist,
+		    struct mime_record **mr);
+int mail_address_build_list(char *scan_for_field, struct dm_list *targetlist,
+		  struct dm_list *mimelist);
+int mime_readheader(const char *datablock, u64_t * blkidx, 
+		    struct dm_list *mimelist, u64_t * headersize);
+
+int mime_fetch_headers(const char *datablock, struct dm_list *mimelist);
+#endif
