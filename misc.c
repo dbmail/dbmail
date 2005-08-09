@@ -597,8 +597,8 @@ static void _strip_blob_prefix(char *subject)
 			return;
 		}
 
-		tmp++; // skip ']'
-		g_strstrip(tmp);
+		g_strstrip(++tmp); // skip ']'
+
 		if (strlen(tmp) > 0)
 			strncpy(subject,tmp,strlen(tmp)+1);
 
@@ -629,8 +629,8 @@ static void _strip_refwd(char *subject)
 		return;
 	}
 
-	tmp++; // skip ':'
-	g_strstrip(tmp);
+	g_strstrip(++tmp); // skip ':'
+	
 	if (strlen(tmp) > 0)
 		strncpy(subject,tmp,strlen(tmp)+1);
 
@@ -672,10 +672,10 @@ void dm_base_subject(char *subject)
 		while (1==1) {
 			len = strlen(tmp);
 			_strip_sub_leader(tmp);
-			_strip_blob_prefix(tmp);
 			if (strlen(tmp)==len)
 				break;
 		}
+
 
 		if (g_str_has_suffix(tmp,"]") && strncasecmp(tmp,"[fwd:",strlen("[fwd:"))==0 ) {
 			offset=strlen(tmp)-1;
@@ -683,6 +683,10 @@ void dm_base_subject(char *subject)
 			tmp+=5;
 			g_strstrip(tmp);
 		}
+		
+		while (g_str_has_prefix(tmp,":") && (strlen(tmp) > 1)) 
+			g_strstrip(++tmp);
+
 		if (strlen(tmp)==olen)
 			break;
 	}

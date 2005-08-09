@@ -67,13 +67,7 @@ char *deliver_to_header = NULL;
 char *deliver_to_mailbox = NULL;
 
 /* loudness and assumptions */
-static int yes_to_all = 0;
-static int no_to_all = 0;
 static int verbose = 0;
-/* Don't be helpful. */
-static int quiet = 0;
-/* Don't print errors. */
-static int reallyquiet = 0;
 
 int do_showhelp(void) {
 	printf("*** dbmail-smtp ***\n");
@@ -104,7 +98,7 @@ int main(int argc, char *argv[])
 	int exitcode = 0;
 	int c, c_prev = 0, usage_error = 0;
 	struct DbmailMessage *msg = NULL;
-	char *headers;
+	char *headers = NULL;
 	
 	g_mime_init(0);
 	
