@@ -1,13 +1,12 @@
-2005-08-09  Paul J Stevens <paul@nfg.nl>
+2005-08-09  Paul J Stevens  <paul@nfg.nl>
 
+	* sql/postgresql/add_usermap.psql:
+	update pgsql usermap table (closes: #224).
+	* sql/postgresql/add_header_tables.pgsql:
+	add missing tables (closes: #225).
 	* main.c:
-
 	minor cleanups
-
-2005-08-09  Paul J Stevens <paul@nfg.nl>
-
 	* misc.c:
-
 	strip remaining artifacts from base subject
 
 2005-08-08  Paul Stevens <paul@nfg.nl>
