@@ -2766,6 +2766,11 @@ int db_find_create_mailbox(const char *name, u64_t owner_idnr,
 		}
 		trace(TRACE_DEBUG, "%s, %s: mailbox [%s] created on the fly", 
 				__FILE__, __func__, name);
+		
+		/* auto-creation implies subscription */
+		if (db_subscribe(mboxidnr, owner_idnr) == DM_EQUERY)
+			return DM_EQUERY;
+
 	}
 	trace(TRACE_DEBUG, "%s, %s: mailbox [%s] found",
 	      __FILE__, __func__, name);
