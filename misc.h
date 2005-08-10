@@ -129,4 +129,8 @@ sa_family_t dm_get_client_sockaddr(clientinfo_t *ci, struct sockaddr *saddr);
 int dm_sock_score(const char *base, const char *test);
 int dm_sock_compare(const char *clientsock, const char *sock_allow, const char *sock_deny);
 int dm_valid_format(const char *str);
+
+int dm_strip_folder(char **retchar, size_t * retsize);
+int dm_valid_folder(const char *userid, char *folder);
+
 #endif
