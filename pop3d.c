@@ -398,6 +398,17 @@ void SetConfigItems(serverConfig_t * config)
 	trace(TRACE_DEBUG, "SetConfigItems(): binding to IP [%s]",
 	      config->ip);
 
+	
+	/* SOCKET */
+	config_get_value("SOCKET","POP", val);
+	if (strlen(val) == 0)
+		trace(TRACE_DEBUG,"%s,%s: no value for SOCKET in config file",
+				__FILE__, __func__);
+	strncpy(config->socket, val, FIELDSIZE);
+	trace(TRACE_DEBUG, "%s,%s: socket %s", 
+			__FILE__, __func__,
+			config->socket);
+
 
 	/* read items: RESOLVE_IP */
 	config_get_value("RESOLVE_IP", "POP", val);

@@ -729,6 +729,20 @@ START_TEST(test_dm_valid_format)
 }
 END_TEST
 
+START_TEST(test_dm_strip_folder)
+{
+	size_t tlen = 0;
+	char *address = g_new0(char,100);
+	address = "test+folder@foo.com";
+	dm_strip_folder(&address, &tlen);
+}
+END_TEST
+
+START_TEST(test_dm_valid_folder)
+{
+
+}
+END_TEST
 
 Suite *dbmail_deliver_suite(void)
 {
@@ -775,6 +789,8 @@ Suite *dbmail_deliver_suite(void)
 	tcase_add_checked_fixture(tc_misc, setup, teardown);
 	tcase_add_test(tc_misc, test_dm_stresc);
 	tcase_add_test(tc_misc, test_dm_valid_format);
+//	tcase_add_test(tc_misc, test_dm_strip_folder);
+//	tcase_add_test(tc_misc, test_dm_valid_folder);
 
 	return s;
 }

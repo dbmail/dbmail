@@ -35,7 +35,7 @@ set -e
 [ -e /etc/default/dbmail ] && . /etc/default/dbmail
 
 config_valid() {
-	/usr/sbin/dbmail-util -c 2>&1 >/dev/null && return 0
+	/usr/sbin/dbmail-users -l 2>&1 >/dev/null && return 0
 	cat << EOM
 Dbmail cannot connect to the database server. Please make sure
 /etc/dbmail/dbmail.conf is correct, the database-server is running,
@@ -106,22 +106,54 @@ persistent_start() {
 }
 
 
+persistent_stop() {
+	 #_debug="true"
+	
+	eval '_daemon=$'$1
+	eval '_name=$'$1'_NAME'
+	echo -n "$_name "
+	count=0
+	
+	start-stop-daemon --stop --retry 10 \
+		--pidfile ${PID_DIR}/${_name}.pid \
+		--name $_name &>/dev/null || true
+		
+	while [ $count -lt 5 ]; do
+		echo -n "."
+		pids=`pidof $_daemon` 1>/dev/null
+		if [ -n "$pids" ]; then
+			[ $_debug ] && echo "...got pids: $pids"
+			start-stop-daemon --stop --name $_name || true
+		else
+			return 0
+		fi	
+		count=$(($count+1))
+		sleep 2
+	done
+	[ $_debug ] && echo "Stopping $_name failed. Killing hard."
+	killall -9 $_name
+	
+	return 0
+	
+}
+
+
 case "$1" in
   start)
 	config_valid || exit 0
 	echo -n "Starting $DESC: "
-	[ "$START_IMAPD" ] && persistent_start "IMAPD"
-	[ "$START_POP3D" ] && persistent_start "POP3D"
-	[ "$START_LMTPD" ] && persistent_start "LMTPD"
-	[ "$START_SSL" ] && ssl_wrapper start
+	[ "$START_IMAPD" ] && persistent_start "IMAPD" || true
+	[ "$START_POP3D" ] && persistent_start "POP3D" || true
+	[ "$START_LMTPD" ] && persistent_start "LMTPD" || true
+	[ "$START_SSL" ] && ssl_wrapper start || true
  	echo "done."
 	;;
   stop)
 	echo -n "Stopping $DESC: "
-	[ "$START_IMAPD" ] && start-stop-daemon --stop --retry 10 --pidfile ${PID_DIR}/${IMAPD_NAME}.pid --name $IMAPD_NAME || true
-	[ "$START_POP3D" ] && start-stop-daemon --stop --retry 10 --pidfile ${PID_DIR}/${POP3D_NAME}.pid --name $POP3D_NAME || true
-	[ "$START_LMTPD" ] && start-stop-daemon --stop --retry 10 --pidfile ${PID_DIR}/${LMTPD_NAME}.pid --name $LMTPD_NAME || true
 	[ "$START_SSL" ] && ssl_wrapper stop 2>&1 /dev/null || true
+	[ "$START_IMAPD" ] && persistent_stop "IMAPD" || true
+	[ "$START_POP3D" ] && persistent_stop "POP3D" || true
+	[ "$START_LMTPD" ] && persistent_stop "LMTPD" || true
 	echo "done."
 	;;
   reload)
