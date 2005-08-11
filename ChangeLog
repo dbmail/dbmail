@@ -1,4 +1,15 @@
-2005-08-09  Paul J Stevens  <paul@nfg.nl>
+2005-08-10  Paul J Stevens <paul@nfg.nl>
+
+	* imapd.c, pop3d.c:
+	added missing SOCKET config-item
+	* check_dbmail_deliver.c, misc.c, misc.h:
+	preliminary code for folder patch
+	* debian/dbmail.init:
+	init script update
+	* db.c:
+	auto-subscribe auto-created mailboxes
+
+2005-08-09  Paul J Stevens <paul@nfg.nl>
 
 	* sql/postgresql/add_usermap.psql:
 	update pgsql usermap table (closes: #224).

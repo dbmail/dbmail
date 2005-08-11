@@ -125,6 +125,7 @@ struct DbmailMessage * dbmail_message_new_from_stream(FILE *instream, int stream
 	message = dbmail_message_new();
 	stream = g_mime_stream_fs_new(dup(fileno(instream)));
 	message = dbmail_message_init_with_stream(message, stream, streamtype);
+	g_object_unref(stream);
 	return message;
 }
 
