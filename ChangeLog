@@ -1,3 +1,10 @@
+2005-08-11  Paul J Stevens <paul@nfg.nl>
+
+	* ChangeLog, debian/changelog:
+	debian snapshot release
+	* dbmail-message.c:
+	fix leaking file-descriptors (closes: #243)
+
 2005-08-10  Paul J Stevens <paul@nfg.nl>
 
 	* imapd.c, pop3d.c:
