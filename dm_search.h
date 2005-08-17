@@ -41,35 +41,24 @@
  * (using their MSN as identifier)
  * \param rset array index by MSN
  * \param setlen length of rset
- * \param key key to match
+ * \param sk search key to match
  * \param mb mailbox
- * \param type search type. If this is IST_IDATE, it is treated differently 
- * from other searches
  * \return 
  *     - 2 on memory error
  *     - -1 on database error
  *     - 0 on success
- *     - 1 on synchronisation error. (search returned a UID which was not
- *     in the MSN-list -> mailbox should be updated
+ *     - 1 on synchronisation error. mb->exists != setlen 
+ *     		(search returned a UID which was not
+ *     		in the MSN-list -> mailbox should be 
+ *     		updated)
  */
-int db_search(unsigned int *rset, int setlen, search_key_t *sk, mailbox_t * mb);
+int        db_search(unsigned int *rset, unsigned setlen, 
+		search_key_t *sk, mailbox_t * mb);
 
-/**
- * \brief search messages in mailbox mb that match the search key sk. To
- * be used with search keys that require message parsing
- * \param rset array indexed by MSN
- * \param setlen length of rset
- * \param sk search key
- * \param mb mailbox
- * \return 
- *    - 0 on success
- *    - 1 if mb->exists != setlen
- */
-int db_search_parsed(unsigned int *rset, unsigned setlen,
-		     search_key_t * sk, mailbox_t * mb, int condition);
+int db_search_parsed(unsigned int *rset, unsigned setlen, 
+		search_key_t *sk, mailbox_t * mb, int condition);
 
-
-int db_sort_parsed(unsigned int *rset, unsigned setlen, 
-		     search_key_t *sk, mailbox_t *mb, int condition);
+int   db_sort_parsed(unsigned int *rset, unsigned setlen, 
+		search_key_t *sk, mailbox_t *mb, int condition);
  
 #endif
