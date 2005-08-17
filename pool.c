@@ -162,8 +162,10 @@ void scoreboard_release(pid_t pid)
 	trace(TRACE_DEBUG,"%s,%s: pid [%d]", __FILE__, __func__, (int)pid);
 	key = getKey(pid);
 
-	if (key == -1) 
-		trace(TRACE_FATAL, "%s:%s: fatal: unable to find this pid on the scoreboard", __FILE__, __func__);
+	if (key == -1) {
+		trace(TRACE_ERROR, "%s:%s: unable to find this pid on the scoreboard", __FILE__, __func__);
+		return;
+	}
 	
 	scoreboard_wrlck();
 	scoreboard->child[key] = state_new();
