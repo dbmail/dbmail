@@ -316,8 +316,8 @@ class testImapServer(unittest.TestCase):
         #self.failIf(result[1]==[''])
         result=self.o.search(None, "RECENT", "HEADER", "X-OfflineIMAP-901701146-4c6f63616c4d69726a616d-494e424f58", "1086726519-0790956581151")
         self.assertEquals(result[0],'OK')
-        #result=self.o.search(None, "UNDELETED", "HEADER", "TO", "testuser")
-        #self.assertEquals(result[0],'OK')
+        result=self.o.search(None, "UNDELETED", "HEADER", "TO", "testuser")
+        self.assertEquals(result[0],'OK')
 
     def testSelect(self):
         """ 

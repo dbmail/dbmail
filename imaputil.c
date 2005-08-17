@@ -43,7 +43,7 @@
 #include "debug.h"
 #include "db.h"
 #include "memblock.h"
-#include "dbsearch.h"
+#include "dm_search.h"
 #include "rfcmsg.h"
 #include "misc.h"
 
@@ -1589,8 +1589,8 @@ int perform_imap_search(unsigned int *rset, int setlen, search_key_t * sk,
 		break;
 
 	case IST_SORT:
-		result = db_search(rset, setlen, sk->search, mb, sk->type);
-		return 0;
+		result = db_search(rset, setlen, sk, mb);
+		return result;
 		break;
 
 	case IST_SORTHDR:
@@ -1598,12 +1598,16 @@ int perform_imap_search(unsigned int *rset, int setlen, search_key_t * sk,
 		return 0;
 		break;
 
+	case IST_IDATE:
 	case IST_FLAG:
-		if ((result = db_search(rset, setlen, sk->search, mb, sk->type)))
+	case IST_HDR:
+		if ((result = db_search(rset, setlen, sk, mb)))
 			return result;
 		break;
 
-	case IST_HDR:
+	/* 
+	 * these all have in common that all messages need to be parsed 
+	 */
 	case IST_HDRDATE_BEFORE:
 	case IST_HDRDATE_ON:
 	case IST_HDRDATE_SINCE:
@@ -1611,15 +1615,7 @@ int perform_imap_search(unsigned int *rset, int setlen, search_key_t * sk,
 	case IST_DATA_TEXT:
 	case IST_SIZE_LARGER:
 	case IST_SIZE_SMALLER:
-		/* these all have in common that a message should be parsed before 
-		   matching is possible
-		 */
 		result = db_search_parsed(rset, setlen, sk, mb, condition);
-		break;
-
-	case IST_IDATE:
-		if ((result = db_search(rset, setlen, sk->search, mb, sk->type)))
-			return result;
 		break;
 
 	case IST_SUBSEARCH_NOT:

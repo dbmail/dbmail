@@ -1,4 +1,10 @@
-dbmail2 (dbmail2-2.1.1+20050910-1) experimental; urgency=low
+dbmail2 (2.1.2-1) experimental; urgency=low
+
+  * new upstream release
+
+ -- Paul J Stevens <paul@nfg.nl>  Mon, 15 Aug 2005 15:59:17 +0200
+
+dbmail2 (2.1.1+20050910-1) experimental; urgency=low
 
   * snapshot
 

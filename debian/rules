@@ -122,6 +122,7 @@ clean1:
 	rm -f `find . -name "*.la"`
 	rm -f `find . -name "*.lo"`
 	rm -f `find . -name "*.o"`
+	rm -f `find . -name "*.pyc"`
 	# Add here commands to clean up after the build process.
 	-$(MAKE) clean
 	for d in $(PACKAGES); do \

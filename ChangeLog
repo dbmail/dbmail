@@ -1,3 +1,10 @@
+2005-08-12  Paul J Stevens <paul@nfg.nl>
+
+	* ChangeLog, python/bin/autoreplier.py, python/bin/inserter.py, 
+	  python/lib/__init__.py, python/lib/__init__.pyc, 
+	  python/lib/dbmail.py, python/lib/dbmail.pyc:
+	initial python libs and scripts
+
 2005-08-11  Paul J Stevens <paul@nfg.nl>
 
 	* ChangeLog, debian/changelog:

@@ -44,7 +44,7 @@
 #include "debug.h"
 #include "db.h"
 #include "memblock.h"
-#include "dbsearch.h"
+#include "dm_search.h"
 #include "dbmsgbuf.h"
 #include "rfcmsg.h"
 #include "dbmail-imapsession.h"
