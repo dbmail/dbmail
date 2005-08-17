@@ -100,41 +100,61 @@ static int db_search_range(db_pos_t start, db_pos_t end, const char *key,
  */
 static int num_from_imapdate(const char *date);
 
-int db_search(unsigned int *rset, int setlen, const char *key,
-	      mailbox_t * mb, int type)
+int db_search(unsigned int *rset, int setlen, search_key_t * sk, mailbox_t * mb)
 {
 	u64_t uid;
 	int msn;
 	unsigned i;
 
-	if (!key)
+	if (!sk->search)
 		return -2;
 
 	memset(rset, 0, setlen * sizeof(int));
 
-	if (type == IST_IDATE) {
-       /** \todo this next solution (pms.%s) is really dirty. If anything,
-	   the IMAP search algorithm is dirty, and should be fixed */
+	switch (sk->type) {
+		case IST_HDR:
+		snprintf(query, DEF_QUERYSIZE,
+			 "SELECT message_idnr FROM %smessages msg "
+			 "JOIN %sphysmessage phys ON msg.physmessage_id=phys.id "
+			 "JOIN %sheadervalue hv ON hv.physmessage_id=phys.id "
+			 "JOIN %sheadername hn ON hv.headername_id=hn.id "
+			 "WHERE mailbox_idnr = %llu "
+			 "AND msg.status < '%d' "
+			 "AND headername = '%s' "
+			 "AND headervalue LIKE '%%%s%%'", DBPFX, DBPFX, DBPFX, DBPFX,
+			 mb->uid, MESSAGE_STATUS_DELETE, sk->hdrfld, sk->search);
+			break;
+
+		case IST_IDATE:
+	       /** \todo this next solution (pms.%s) is really dirty. If anything,
+		   the IMAP search algorithm is dirty, and should be fixed */
 		snprintf(query, DEF_QUERYSIZE,
 			 "SELECT msg.message_idnr FROM %smessages msg, %sphysmessage pms "
 			 "WHERE msg.mailbox_idnr = '%llu' "
 			 "AND msg.physmessage_id = pms.id "
 			 "AND msg.status < '%d' "
-			 "AND pms.%s", DBPFX, DBPFX, mb->uid,
-			 MESSAGE_STATUS_DELETE, key);
-	} else if (type == IST_SORT) {
+			 "AND pms.%s", DBPFX, DBPFX, 
+			 mb->uid, MESSAGE_STATUS_DELETE, sk->search);
+		break;
+		
+		case IST_SORT:
 		snprintf(query, DEF_QUERYSIZE,
 			 "SELECT msg.message_idnr FROM %smessages msg, %sphysmessage pms "
 			 "WHERE msg.mailbox_idnr = '%llu' "
 			 "AND msg.physmessage_id = pms.id "
-			 "AND msg.status < 2 " "%s", DBPFX, DBPFX, mb->uid,
-			 key);
-	} else {
+			 "AND msg.status < '%d' " 
+			 "%s", DBPFX, DBPFX, 
+			 mb->uid, MESSAGE_STATUS_DELETE, sk->search);
+		break;
+		
+		default:
 		snprintf(query, DEF_QUERYSIZE,
 			 "SELECT message_idnr FROM %smessages "
 			 "WHERE mailbox_idnr = '%llu' "
-			 "AND status < '%d' AND %s", DBPFX, mb->uid,
-			 MESSAGE_STATUS_DELETE, key);
+			 "AND status < '%d' AND %s", DBPFX, 
+			 mb->uid, MESSAGE_STATUS_DELETE, sk->search);
+		break;
+		
 	}
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not execute query",
@@ -144,10 +164,8 @@ int db_search(unsigned int *rset, int setlen, const char *key,
 
 	for (i = 0; i < db_num_rows(); i++) {
 		uid = db_get_result_u64(i, 0);
-		if (type != IST_SORT) {
-			msn =
-			    db_binary_search(mb->seq_list, mb->exists,
-					     uid);
+		if (sk->type != IST_SORT) {
+			msn = db_binary_search(mb->seq_list, mb->exists, uid);
 
 			if (msn == -1 || msn >= setlen) {
 				db_free_result();
@@ -260,8 +278,7 @@ int db_search_parsed(unsigned int *rset, unsigned int setlen,
 			    ((msg.rfcheadersize + msg.bodylines +
 			      msg.bodysize) < sk->size) ? 1 : 0;
 		} else {
-			rset[i] =
-			    db_exec_search(&msg, sk, mb->seq_list[i]);
+			rset[i] = db_exec_search(&msg, sk, mb->seq_list[i]);
 		}
 
 		db_free_msg(&msg);
@@ -299,30 +316,7 @@ int db_exec_search(mime_message_t * msg, search_key_t * sk, u64_t msg_idnr)
 		return 0;
 
 	switch (sk->type) {
-	case IST_HDR:
-		if (dm_list_getstart(&msg->mimeheader)) {
-			mime_findfield(sk->hdrfld, &msg->mimeheader, &mr);
-			if (mr) {
-				for (i = 0; mr->value[i]; i++)
-					if (strncasecmp
-					    (&mr->value[i], sk->search,
-					     strlen(sk->search)) == 0)
-						return 1;
-			}
-		}
-		if (dm_list_getstart(&msg->rfcheader)) {
-			mime_findfield(sk->hdrfld, &msg->rfcheader, &mr);
-			if (mr) {
-				for (i = 0; mr->value[i]; i++)
-					if (strncasecmp
-					    (&mr->value[i], sk->search,
-					     strlen(sk->search)) == 0)
-						return 1;
-			}
-		}
-
-		break;
-
+		
 	case IST_HDRDATE_BEFORE:
 	case IST_HDRDATE_ON:
 	case IST_HDRDATE_SINCE:
@@ -341,8 +335,7 @@ int db_exec_search(mime_message_t * msg, search_key_t * sk, u64_t msg_idnr)
 				else
 					mr->value[16] = 0;
 
-				sentdate =
-				    num_from_imapdate(&mr->value[5]);
+				sentdate = num_from_imapdate(&mr->value[5]);
 
 				switch (sk->type) {
 				case IST_HDRDATE_BEFORE:
