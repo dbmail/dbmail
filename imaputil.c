@@ -43,7 +43,7 @@
 #include "debug.h"
 #include "db.h"
 #include "memblock.h"
-#include "dbsearch.h"
+#include "dm_search.h"
 #include "rfcmsg.h"
 #include "misc.h"
 

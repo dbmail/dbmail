@@ -31,7 +31,7 @@
 #include "config.h"
 #endif
 
-#include "dbsearch.h"
+#include "dm_search.h"
 #include "db.h"
 #include "dbmailtypes.h"
 #include "rfcmsg.h"
