@@ -3,6 +3,20 @@
 	* dsn.c: Missing comma in the class status
 	codes. (closes #248).
 
+2005-08-17  Paul J Stevens <paul@nfg.nl>
+
+	* ChangeLog, debian/changelog, debian/rules:
+	update python
+	* python/bin/inserter.py, python/lib/__init__.pyc, python/lib/dbmail.pyc:
+	cleanup python
+	* pool.c:
+	make getKey failure non-fatal in scoreboard_release
+	* Makefile.am, dbmail-imapsession.c, dbsearch.c, dbsearch.h, dm_search.c, 
+	  dm_search.h, imaputil.c:
+	rename dbsearch.[ch] to dm_search.[ch]
+	* dm_search.c, dm_search.h, imaputil.c, tags, test-scripts/testimap.py:
+	do imap header searches using the new header tables
+
 2005-08-12  Paul J Stevens <paul@nfg.nl>
 
 	* ChangeLog, python/bin/autoreplier.py, python/bin/inserter.py, 
