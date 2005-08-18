@@ -37,7 +37,7 @@
 
 /* Top level codes */
 static const char * const DSN_STRINGS_CLASS[] = {
-/* nop */	"", ""
+/* nop */	"", "",
 /* 2.. */	"Success",
 /* nop */	"",
 /* 4.. */	"Persistent Transient Failure",

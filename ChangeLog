@@ -12,6 +12,10 @@
 	* dm_search.c, dm_search.h, imaputil.c, tags, test-scripts/testimap.py:
 	do imap header searches using the new header tables
 
+2005-08-17  Aaron Stone <aaron@serendipity.cx>
+
+	* dsn.c: Missing comma in the class status codes. (closes #248).
+
 2005-08-12  Paul J Stevens <paul@nfg.nl>
 
 	* ChangeLog, python/bin/autoreplier.py, python/bin/inserter.py, 
