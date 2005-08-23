@@ -1,5 +1,7 @@
 2005-08-23  Paul J Stevens <paul@nfg.nl>
 
+	* ChangeLog, pop3.c:
+	resync git-tree
 	* check_dbmail_imapd.c, dbmsgbuf.c, debug.c, dm_search.c, imaputil.c, 
 	  pool.c, rfcmsg.c, rfcmsg.h, server.c, test-scripts/testimap.py:
 	Merge with /home/paul/git/dbmail-2.1
