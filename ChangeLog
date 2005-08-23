@@ -1,5 +1,7 @@
 2005-08-23  Paul J Stevens <paul@nfg.nl>
 
+	* check_dbmail_imapd.c, dbmsgbuf.c, rfcmsg.c, rfcmsg.h:
+	start cleaning out the old mime-parser from the retrieval chain
 	* ChangeLog, pop3.c:
 	resync git-tree
 	* check_dbmail_imapd.c, dbmsgbuf.c, debug.c, dm_search.c, imaputil.c, 
