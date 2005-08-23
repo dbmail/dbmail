@@ -1,5 +1,7 @@
 2005-08-23  Paul J Stevens <paul@nfg.nl>
 
+	* debug.c:
+	make string buffer in trace a static one
 	* pool.c:
 	make locking code non-blocking to avoid deadlocks
 	* server.c:
