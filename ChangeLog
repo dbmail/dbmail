@@ -1,5 +1,7 @@
 2005-08-23  Paul J Stevens <paul@nfg.nl>
 
+	* pool.c:
+	make locking code non-blocking to avoid deadlocks
 	* server.c:
 	sleep and exit in case of segfaults
 	* dm_search.c:
