@@ -18,14 +18,26 @@
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 # $Id$
 
+DEBUG = 0
+
+# select 'stream' for non-forking mode
+TYPE = 'stream'
+# select 'network' for forking mode
+#TYPE = 'network'
+
+
 import unittest, imaplib, re
 import sys, traceback, getopt
 from email.MIMEText import MIMEText
 
 unimplementedError = 'Dbmail testcase unimplemented'
 
+# for network testing
 HOST,PORT = "localhost", 143
-DEBUG = 0
+
+# for stdin/stdout testing
+DAEMONBIN = "./dbmail-imapd -n /etc/dbmail/dbmail-test.conf"
+
 
 TESTMSG={}
 
@@ -40,7 +52,10 @@ TESTMSG['strict822']=getMessageStrict()
 class testImapServer(unittest.TestCase):
 
     def setUp(self,username="testuser1",password="test"):
-        self.o = imaplib.IMAP4(HOST, PORT)
+        if TYPE == 'network':
+            self.o = imaplib.IMAP4(HOST,PORT)
+        elif TYPE == 'stream':
+            self.o = imaplib.IMAP4_stream(DAEMONBIN)
         self.o.debug = DEBUG
         result=self.o.login(username,password)
         return result

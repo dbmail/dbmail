@@ -99,7 +99,7 @@ const char *envelope_items[] = {
 	"from", "sender", "reply-to", "to", "cc", "bcc", NULL
 };
 
-static const char *search_cost[] = { "b","b","c","c","c","d","d","d","d","c","e","e","b","b","j","j","j" };
+static const char *search_cost[] = { "b","b","c","c","c","b","d","d","d","c","e","e","b","b","j","j","j" };
 
 
 /* some basic imap type utils */

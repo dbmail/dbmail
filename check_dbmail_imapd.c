@@ -244,7 +244,7 @@ START_TEST(test_mail_address_build_list)
 }
 END_TEST
 
-START_TEST(test_db_set_msg)
+START_TEST(test_db_start_msg)
 {
 	mime_message_t *msg = g_new0(mime_message_t,1);
 
@@ -468,7 +468,7 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_session, test_imap_bodyfetch);
 	
 	tcase_add_checked_fixture(tc_rfcmsg, setup, teardown);
-	tcase_add_test(tc_rfcmsg, test_db_set_msg);
+	tcase_add_test(tc_rfcmsg, test_db_start_msg);
 
 	tcase_add_checked_fixture(tc_mime, setup, teardown);
 	tcase_add_test(tc_mime, test_mime_readheader);

@@ -37,6 +37,8 @@
 #include <string.h>
 #include <ctype.h>
 
+static int db_parse_as_text(mime_message_t * msg);
+
 /* 
  * frees all the memory associated with a msg
  */
@@ -71,7 +73,7 @@ void db_free_msg(mime_message_t * msg)
 /* 
  * reverses the children lists of a msg
  */
-void db_reverse_msg(mime_message_t * msg)
+static void db_reverse_msg(mime_message_t * msg)
 {
 	struct element *tmp;
 
@@ -213,8 +215,7 @@ int db_fetch_headers(u64_t msguid, mime_message_t * msg)
  *
  * returns the number of lines parsed or -1 on parse error, -2 on dbase error, -3 on memory error
  */
-int db_start_msg(mime_message_t * msg, char *stopbound, int *level,
-		 int maxlevel)
+int db_start_msg(mime_message_t * msg, char *stopbound, int *level, int maxlevel)
 {
 	int len, sblen, result, totallines = 0, nlines, hdrlines;
 	struct mime_record *mr;

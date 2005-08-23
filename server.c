@@ -80,7 +80,7 @@ int SetParentSigHandler()
 	sigaction(SIGILL,	&act, 0);
 	sigaction(SIGBUS,	&act, 0);
 	sigaction(SIGFPE,	&act, 0);
-	sigaction(SIGSEGV,	&act, 0);
+	sigaction(SIGSEGV,	&act, 0); 
 	sigaction(SIGTERM,	&act, 0);
 	sigaction(SIGALRM,	&act, 0);
 	sigaction(SIGHUP, 	&act, 0);
@@ -160,6 +160,7 @@ int StartServer(serverConfig_t * conf)
 				trace(TRACE_MESSAGE,"%s,%s: resume operation now the database is back again",
 					__FILE__, __func__);
 				manage_spare_children();
+				alarm(10);
 			}
 
 			stopped=0;
@@ -203,6 +204,11 @@ void ParentSigHandler(int sig, siginfo_t * info, void *data)
 		if ((chpid = waitpid(-1,&sig,WNOHANG)) > 0)
 			scoreboard_release(chpid);
 		break;		
+
+	case SIGSEGV:
+		sleep(60);
+		exit(1);
+		break;
 
 	case SIGHUP:
 		Restart = 1;
