@@ -17,7 +17,7 @@
   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: pop3.c 1823 2005-07-23 03:16:25Z aaron $
+/* $Id: pop3.c 1865 2005-08-23 08:19:42Z ilja $
  *
  * implementation for pop3 commands according to RFC 1081 */
 
@@ -934,16 +934,8 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 			if (session->state != POP3_AUTHORIZATION_STATE)
 				return pop3_error(session, stream,
 						  "-ERR wrong command mode, sir\r\n");
-			/* if we get anything but the naked "auth" command,
-			 * we return an error */
-			if (value != NULL) 
-				return pop3_error(session, stream,
-						  "-ERR unknown authorization mechanism\r\n");
-			
-			fprintf((FILE *) stream,
-				"+OK List of supported mechanisms\r\n"
-				"X-NONE-SO-USE-APOP\r\n.\r\n");
-			return 1;
+			return pop3_error(session, stream,
+					  "-ERR no AUTH mechanisms supported\r\n");
 		}
 
 	case POP3_TOP:

@@ -1,3 +1,8 @@
+2005-08-23  Ilja Booij <ilja@ic-s.nl>
+
+	* pop3.c: AUTH command no longer returns list of supported 
+	authentication mechanisms when issued without arguments. closes #237
+	 
 2005-08-17  Aaron Stone <aaron@serendipity.cx>
 
 	* dsn.c: Missing comma in the class status
