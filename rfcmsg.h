@@ -1,5 +1,5 @@
 /*
-  $Id: rfcmsg.h 1756 2005-04-19 07:37:27Z paul $
+  $Id: rfcmsg.h 1868 2005-08-23 14:30:57Z paul $
 
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 

@@ -18,7 +18,7 @@
 */
 
 /*
- * $Id: rfcmsg.c 1756 2005-04-19 07:37:27Z paul $
+ * $Id: rfcmsg.c 1868 2005-08-23 14:30:57Z paul $
  * function implementations for parsing an RFC822/MIME 
  * compliant mail message
  */

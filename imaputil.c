@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: imaputil.c 1828 2005-08-01 07:57:58Z paul $
+/* $Id: imaputil.c 1868 2005-08-23 14:30:57Z paul $
  * 
  * imaputil.c
  *
