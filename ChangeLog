@@ -1,5 +1,7 @@
 2005-08-23  Paul J Stevens <paul@nfg.nl>
 
+	* server.c:
+	sleep and exit in case of segfaults
 	* dm_search.c:
 	fix prototype for db_search
 	* test-scripts/testimap.py:
