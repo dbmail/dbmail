@@ -31,6 +31,7 @@
 
 #include "dbmsgbuf.h"
 #include "db.h"
+#include "dbmail-message.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -54,87 +55,27 @@ static u64_t rowpos = 0; /**< current position in row */
 static db_pos_t zeropos; /**< absolute position (block/offset) of 
 			    msgbuf_buf[0]*/
 static unsigned nblocks = 0; /**< number of block  */
-static const char * tmprow; /**< temporary row number */
 
-int db_init_fetch_messageblks(u64_t msg_idnr, char *query_template)
+static int db_init_fetch_messageblks(u64_t msg_idnr, int filter)
 {
-	if (_msg_fetch_inited != 0) 
-		return 0;
+	int result;
+	u64_t physid = 0;
+	struct DbmailMessage *msg;
 
-	if ((msgbuf_buf = g_new0(char,MSGBUF_WINDOWSIZE)) == NULL)
-		return -1;
+	result = db_get_physmessage_id(msg_idnr, &physid);
 	
-	snprintf(query, DEF_QUERYSIZE, query_template, DBPFX, DBPFX, msg_idnr);
+	if (result != DM_SUCCESS)
+		return result;
+	
+	msg = dbmail_message_new();
+	msg = dbmail_message_retrieve(msg, physid, filter);
 
-	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: could not get message",
-		      __FILE__, __func__);
-		dm_free(msgbuf_buf);
-		return (-1);
-	}
-
-	nblocks = db_num_rows();
-	if (nblocks == 0) {
-		trace(TRACE_ERROR, "%s,%s: message has no blocks",
-		      __FILE__, __func__);
-		db_free_result();
-		dm_free(msgbuf_buf);
-		return -1;	/* msg should have 1 block at least */
-	}
-
-	_msg_fetch_inited = 1;
+	msgbuf_buf = dbmail_message_to_string(msg);
 	msgbuf_idx = 0;
+	msgbuf_buflen = strlen(msgbuf_buf);
 
-	/* start at row (tuple) 0 */
-	_msgrow_idx = 0;
-
-	tmprow = db_get_result(_msgrow_idx, 0);
-	rowlength = (u64_t)strlen(tmprow);
+	dbmail_message_free(msg);
 	
-	if (! strncpy(msgbuf_buf,tmprow, MSGBUF_WINDOWSIZE - 1)) {
-		db_free_result();
-		dm_free(msgbuf_buf);
-		return -1;
-	}
-
-	zeropos.block = 0;
-	zeropos.pos = 0;
-
-	if (rowlength >= MSGBUF_WINDOWSIZE - 1) {
-		msgbuf_buflen = MSGBUF_WINDOWSIZE - 1;
-		rowpos = MSGBUF_WINDOWSIZE;	/* remember store pos */
-		msgbuf_buf[msgbuf_buflen] = '\0';	/* terminate buff */
-		return 1;	/* msgbuf_buf full */
-	}
-
-	msgbuf_buflen = rowlength;	/* NOTE \0 has been copied from the result set */
-	rowpos = rowlength;	/* no more to read from this row */
-
-	if (++_msgrow_idx >= db_num_rows()) {
-		rowlength = rowpos = 0;
-		return 1;
-	}
-
-	/* FIXME: this will explode is db_get_result returns NULL. */
-	rowpos = 0;
-	tmprow = db_get_result(_msgrow_idx, 0);
-	rowlength = (u64_t)strlen(tmprow);
-	
-	strncpy(&msgbuf_buf[msgbuf_buflen], tmprow, MSGBUF_WINDOWSIZE - msgbuf_buflen - 1);
-
-	if (rowlength <= MSGBUF_WINDOWSIZE - msgbuf_buflen - 1) {
-		/* 2nd block fits entirely */
-		rowpos = rowlength;
-		msgbuf_buflen += rowlength;
-	} else {
-		rowpos = MSGBUF_WINDOWSIZE - (msgbuf_buflen + 1);
-		msgbuf_buflen = MSGBUF_WINDOWSIZE - 1;
-	}
-	msgbuf_buf[msgbuf_buflen] = '\0';	/* add NULL */
-
-	/* store the current result set in db.c as msgbuf_result for
-	 * later use */
-	db_store_msgbuf_result();
 	return 1;
 
 }
@@ -148,14 +89,7 @@ int db_init_fetch_messageblks(u64_t msg_idnr, char *query_template)
  */
 int db_init_fetch_headers(u64_t msg_idnr)
 {
-	char *query_template = 	"SELECT block.messageblk "
-		"FROM %smessageblks block, %smessages msg "
-		"WHERE block.physmessage_id = msg.physmessage_id "
-		"AND block.is_header = 1"
-		"AND msg.message_idnr = '%llu' "
-		"ORDER BY block.messageblk_idnr";
-	return db_init_fetch_messageblks(msg_idnr, query_template);
-
+	return db_init_fetch_messageblks(msg_idnr, DBMAIL_MESSAGE_FILTER_HEAD);
 }
 
 /*
@@ -165,12 +99,7 @@ int db_init_fetch_headers(u64_t msg_idnr)
  */
 int db_init_fetch_message(u64_t msg_idnr) 
 {
-	char *query_template = "SELECT block.messageblk "
-		"FROM %smessageblks block, %smessages msg "
-		"WHERE block.physmessage_id = msg.physmessage_id "
-		"AND msg.message_idnr = '%llu' "
-		"ORDER BY block.messageblk_idnr";
-	return db_init_fetch_messageblks(msg_idnr, query_template);
+	return db_init_fetch_messageblks(msg_idnr, DBMAIL_MESSAGE_FILTER_FULL);
 }
 
 	

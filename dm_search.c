@@ -100,7 +100,7 @@ static int db_search_range(db_pos_t start, db_pos_t end, const char *key,
  */
 static int num_from_imapdate(const char *date);
 
-int db_search(unsigned int *rset, int setlen, search_key_t * sk, mailbox_t * mb)
+int db_search(unsigned int *rset, unsigned setlen, search_key_t * sk, mailbox_t * mb)
 {
 	u64_t uid;
 	int msn;

@@ -62,12 +62,28 @@ State_t state_new(void)
 
 int set_lock(int type)
 {
+	int result, serr;
 	struct flock lock;
 	lock.l_type = type; /* F_RDLCK, F_WRLCK, F_UNLOCK */
 	lock.l_start = 0;
 	lock.l_whence = 0;
 	lock.l_len = 1;
-	return ( fcntl(sb_lockfd, F_SETLKW, &lock) );
+	result = fcntl(sb_lockfd, F_SETLK, &lock);
+	if (result == -1) {
+		serr = errno;
+		trace(TRACE_DEBUG, "%s,%s: error: %s",
+				__FILE__, __func__, strerror(serr));
+		
+		/* TODO: this needs fixing */
+		switch (serr) {
+			case EDEADLK:
+				sleep(2);
+				set_lock(type);
+				break;
+		}
+		errno = serr;
+	}
+	return result;
 }
 
 void scoreboard_new(serverConfig_t * conf)
@@ -231,6 +247,7 @@ pid_t get_idle_spare()
 		if ((scoreboard->child[i].pid > 0) 
 		    && (scoreboard->child[i].status == STATE_IDLE)) {
 			idlepid = scoreboard->child[i].pid;
+			break;
 		}
 	}
 	scoreboard_unlck();
@@ -478,40 +495,36 @@ void manage_spare_children()
 	somethingchanged = 0;
 	
 	/* scale up */
-	while ((count_children() < scoreboard->conf->maxChildren)
-	       && (count_spare_children() <
-		   scoreboard->conf->minSpareChildren)) {
+	while ((count_children() < scoreboard->conf->startChildren) || 
+			(count_spare_children() < scoreboard->conf->minSpareChildren)) {
+		
 		somethingchanged = 1;
-		trace(TRACE_INFO,
-		      "%s,%s: creating spare child", __FILE__,__func__);
+		trace(TRACE_INFO, "%s,%s: creating spare child", __FILE__,__func__);
 		if ((chpid = CreateChild(&childinfo)) < 0) {
-			trace(TRACE_ERROR,
-			      "%s,%s: unable to start new child",
+			trace(TRACE_ERROR, "%s,%s: unable to start new child",
 			      __FILE__,__func__);
 			break;
 		}
 	}
 
 	/* scale down */
-	while ((count_children() > scoreboard->conf->startChildren)
-	       && (count_spare_children() >
-		   scoreboard->conf->maxSpareChildren)) {
+	while ((count_children() > scoreboard->conf->startChildren) && 
+			(count_spare_children() > scoreboard->conf->maxSpareChildren)) {
+		
 		somethingchanged = 1;
 		if ((chpid = get_idle_spare()) > 0) {
-			trace(TRACE_INFO,
-			      "%s,%s: killing overcomplete spare [%d]",
+			trace(TRACE_INFO, "%s,%s: killing overcomplete spare [%d]",
 			      __FILE__,__func__,chpid);
 			kill(chpid, SIGTERM);
 			if (waitpid(chpid, NULL, 0) == chpid) {
-				trace(TRACE_INFO,
-				      "%s,%s: spare child [%u] has exited",
+				trace(TRACE_INFO, "%s,%s: spare child [%u] has exited",
 				      __FILE__,__func__,chpid);
 			}
 			scoreboard_release(chpid);			
 		} else {
-			trace(TRACE_WARNING,
-			      "%s,%s: unable to get pid for idle spare",
+			trace(TRACE_ERROR, "%s,%s: unable to get pid for idle spare",
 			      __FILE__,__func__);
+			break;
 		}
 	}
 	/* scoreboard */
