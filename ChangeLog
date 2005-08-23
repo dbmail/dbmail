@@ -1,46 +1,5 @@
 2005-08-23  Paul J Stevens <paul@nfg.nl>
 
-	* ChangeLog:
-	update ChangeLog
-	* ChangeLog:
-	update ChangeLog
-	* ChangeLog:
-	update ChangeLog
-	* ChangeLog:
-	update ChangeLog
-	* ChangeLog:
-	update ChangeLog
-	* ChangeLog:
-	update ChangeLog
-	* ChangeLog:
-	update ChangeLog
-	* ChangeLog:
-	update ChangeLog
-	* ChangeLog:
-	update ChangeLog
-	* ChangeLog:
-	update ChangeLog
-	* ChangeLog:
-	update ChangeLog
-	* ChangeLog:
-	update ChangeLog
-	* ChangeLog:
-	update ChangeLog
-	* ChangeLog:
-	update ChangeLog
-	* ChangeLog:
-	update ChangeLog
-	* ChangeLog:
-	update ChangeLog
-	* ChangeLog:
-	update ChangeLog
-	* ChangeLog:
-	update ChangeLog
-	* ChangeLog:
-	update ChangeLog
-	* ChangeLog:
-	update ChangeLog
-	* ChangeLog:
 	* imaputil.c:
 	set search_cost for IST_HDR
 	* debug.c:
