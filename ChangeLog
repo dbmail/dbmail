@@ -1,5 +1,7 @@
 2005-08-23  Paul J Stevens <paul@nfg.nl>
 
+	* dm_search.c:
+	fix prototype for db_search
 	* test-scripts/testimap.py:
 	add non-forking support to test-script
 	* check_dbmail_imapd.c, dbmsgbuf.c, rfcmsg.c, rfcmsg.h:
