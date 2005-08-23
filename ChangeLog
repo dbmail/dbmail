@@ -1,3 +1,58 @@
+2005-08-23  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_imapd.c, dbmsgbuf.c, debug.c, dm_search.c, imaputil.c, 
+	  pool.c, rfcmsg.c, rfcmsg.h, server.c, test-scripts/testimap.py:
+	Merge with /home/paul/git/dbmail-2.1
+commit 2872d7fedf3cacac19e19f284adebcaf5284116f
+tree bce4d5926fdd6f9d4234149a1d9e45cd0085cfaf
+parent b886cc0782e124bc18a8fbd31239e3e13f8b12a7
+author Paul J Stevens <paul@nfg.nl> Tue, 23 Aug 2005 09:18:28 +0200
+committer Paul J Stevens <paul@nfg.nl> Tue, 23 Aug 2005 09:18:28 +0200
+	* check_dbmail_imapd.c, dbmsgbuf.c, rfcmsg.c, rfcmsg.h:
+	start cleaning out the old mime-parser from the retrieval chain
+commit b886cc0782e124bc18a8fbd31239e3e13f8b12a7
+tree 9a35a7bcd85ae6ec9adc8f88f795bb8a06714b13
+parent 358f594bca5c25d4a1da218d042d6a6013912925
+author Paul J Stevens <paul@nfg.nl> Mon, 22 Aug 2005 16:49:07 +0200
+committer Paul J Stevens <paul@nfg.nl> Mon, 22 Aug 2005 16:49:07 +0200
+	* test-scripts/testimap.py:
+	add non-forking support to test-script
+commit 358f594bca5c25d4a1da218d042d6a6013912925
+tree c0f83f01736cf71d0be879f7383f3431dbc401ec
+parent d17d73ff8a787d3735ab7042c27e64c3fbc721ab
+author Paul J Stevens <paul@nfg.nl> Mon, 22 Aug 2005 16:48:46 +0200
+committer Paul J Stevens <paul@nfg.nl> Mon, 22 Aug 2005 16:48:46 +0200
+	* dm_search.c:
+	fix prototype for db_search
+commit d17d73ff8a787d3735ab7042c27e64c3fbc721ab
+tree 7c1445f06c33d6934a09089ba1c355b3c6a56d12
+parent 96ba0bf2430519137d5dde1b54f724cf41cd3cd0
+author Paul J Stevens <paul@nfg.nl> Mon, 22 Aug 2005 16:47:56 +0200
+committer Paul J Stevens <paul@nfg.nl> Mon, 22 Aug 2005 16:47:56 +0200
+	* server.c:
+	sleep and exit in case of segfaults
+commit 96ba0bf2430519137d5dde1b54f724cf41cd3cd0
+tree 80a2d8036437cce714600578e9854546d1d2c092
+parent 18e5e2c62753f66b76f263c627fca185fe10f66b
+author Paul J Stevens <paul@nfg.nl> Mon, 22 Aug 2005 16:47:18 +0200
+committer Paul J Stevens <paul@nfg.nl> Mon, 22 Aug 2005 16:47:18 +0200
+	* pool.c:
+	make locking code non-blocking to avoid deadlocks
+commit 18e5e2c62753f66b76f263c627fca185fe10f66b
+tree 0b66df1e3886f0a1cdfced757305b97bdaa89dcd
+parent 1233900d786bfebdfe231669e044109c4bf6f8e8
+author Paul J Stevens <paul@nfg.nl> Mon, 22 Aug 2005 16:46:44 +0200
+committer Paul J Stevens <paul@nfg.nl> Mon, 22 Aug 2005 16:46:44 +0200
+	* debug.c:
+	make string buffer in trace a static one
+commit 1233900d786bfebdfe231669e044109c4bf6f8e8
+tree fe842b58e559f0fd1fbd16f88c4d9399da39df39
+parent 97b8304f196e99132d4f7cf583bd007d81508d71
+author Paul J Stevens <paul@nfg.nl> Sat, 20 Aug 2005 11:32:11 +0200
+committer Paul J Stevens <paul@nfg.nl> Sat, 20 Aug 2005 11:32:11 +0200
+	* imaputil.c:
+	set search_cost for IST_HDR
+
 2005-08-23  Ilja Booij <ilja@ic-s.nl>
 
 	* pop3.c: AUTH command no longer returns list of supported 
