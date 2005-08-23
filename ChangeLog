@@ -37,6 +37,8 @@
 	* ChangeLog:
 	update ChangeLog
 	* ChangeLog:
+	update ChangeLog
+	* ChangeLog:
 	* imaputil.c:
 	set search_cost for IST_HDR
 	* debug.c:
