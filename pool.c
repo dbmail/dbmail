@@ -175,13 +175,10 @@ void scoreboard_conf_check(void)
 void scoreboard_release(pid_t pid)
 {
 	int key;
-	trace(TRACE_DEBUG,"%s,%s: pid [%d]", __FILE__, __func__, (int)pid);
 	key = getKey(pid);
 
-	if (key == -1) {
-		trace(TRACE_ERROR, "%s:%s: unable to find this pid on the scoreboard", __FILE__, __func__);
+	if (key == -1) 
 		return;
-	}
 	
 	scoreboard_wrlck();
 	scoreboard->child[key] = state_new();
@@ -498,13 +495,13 @@ void manage_spare_children()
 	while ((count_children() < scoreboard->conf->startChildren) || 
 			(count_spare_children() < scoreboard->conf->minSpareChildren)) {
 		
-		somethingchanged = 1;
-		trace(TRACE_INFO, "%s,%s: creating spare child", __FILE__,__func__);
-		if ((chpid = CreateChild(&childinfo)) < 0) {
-			trace(TRACE_ERROR, "%s,%s: unable to start new child",
-			      __FILE__,__func__);
+		if (count_children() >= scoreboard->conf->maxChildren)
 			break;
-		}
+		
+		somethingchanged = 1;
+		
+		if ((chpid = CreateChild(&childinfo)) < 0) 
+			break;
 	}
 
 	/* scale down */
@@ -513,17 +510,12 @@ void manage_spare_children()
 		
 		somethingchanged = 1;
 		if ((chpid = get_idle_spare()) > 0) {
-			trace(TRACE_INFO, "%s,%s: killing overcomplete spare [%d]",
-			      __FILE__,__func__,chpid);
 			kill(chpid, SIGTERM);
-			if (waitpid(chpid, NULL, 0) == chpid) {
-				trace(TRACE_INFO, "%s,%s: spare child [%u] has exited",
-				      __FILE__,__func__,chpid);
-			}
-			scoreboard_release(chpid);			
+			
+			if (waitpid(chpid, NULL, 0) == chpid) 
+				scoreboard_release(chpid);
+			
 		} else {
-			trace(TRACE_ERROR, "%s,%s: unable to get pid for idle spare",
-			      __FILE__,__func__);
 			break;
 		}
 	}
