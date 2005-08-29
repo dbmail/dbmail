@@ -105,13 +105,34 @@ int db_search(unsigned int *rset, unsigned setlen, search_key_t * sk, mailbox_t 
 	u64_t uid;
 	int msn;
 	unsigned i;
+	
+	GString *tmp = g_string_new("");
 
 	if (!sk->search)
 		return -2;
 
+	
 	memset(rset, 0, setlen * sizeof(int));
 
 	switch (sk->type) {
+		case IST_HDRDATE_SINCE:
+		case IST_HDRDATE_BEFORE:
+
+		if (sk->type == IST_HDRDATE_SINCE)
+			g_string_printf(tmp,">= '%d'", num_from_imapdate(sk->search));
+		else	
+			g_string_printf(tmp,"< '%d'", num_from_imapdate(sk->search));
+		
+		snprintf(query, DEF_QUERYSIZE,	
+			"SELECT message_idnr FROM %smessages msg "
+			"JOIN %sphysmessage phys ON msg.physmessage_id = phys.id "
+			"JOIN %sdatefield df ON df.physmessage_id=phys.id "
+			"WHERE mailbox_idnr= %llu "
+			"AND msg.status < '%d' "
+			"AND datefield %s", DBPFX, DBPFX, DBPFX,
+			mb->uid, MESSAGE_STATUS_DELETE, tmp->str);
+			break;
+			
 		case IST_HDR:
 		snprintf(query, DEF_QUERYSIZE,
 			 "SELECT message_idnr FROM %smessages msg "
@@ -156,6 +177,9 @@ int db_search(unsigned int *rset, unsigned setlen, search_key_t * sk, mailbox_t 
 		break;
 		
 	}
+	
+	g_string_free(tmp,TRUE);
+	
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not execute query",
 		      __FILE__, __func__);

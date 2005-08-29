@@ -1598,6 +1598,8 @@ int perform_imap_search(unsigned int *rset, int setlen, search_key_t * sk,
 		return 0;
 		break;
 
+	case IST_HDRDATE_BEFORE:
+	case IST_HDRDATE_SINCE:
 	case IST_IDATE:
 	case IST_FLAG:
 	case IST_HDR:
@@ -1608,9 +1610,7 @@ int perform_imap_search(unsigned int *rset, int setlen, search_key_t * sk,
 	/* 
 	 * these all have in common that all messages need to be parsed 
 	 */
-	case IST_HDRDATE_BEFORE:
 	case IST_HDRDATE_ON:
-	case IST_HDRDATE_SINCE:
 	case IST_DATA_BODY:
 	case IST_DATA_TEXT:
 	case IST_SIZE_LARGER:

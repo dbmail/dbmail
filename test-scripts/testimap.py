@@ -333,6 +333,14 @@ class testImapServer(unittest.TestCase):
         self.assertEquals(result[0],'OK')
         result=self.o.search(None, "UNDELETED", "HEADER", "TO", "testuser")
         self.assertEquals(result[0],'OK')
+        result=self.o.search(None, "UNDELETED", "HEADER", "TO", "testuser", "SINCE", "1-Feb-1994")
+        self.assertEquals(result[0],'OK')
+        result=self.o.search(None, "UNDELETED", "HEADER", "TO", "testuser", "BEFORE", "1-Jan-2004")
+        self.assertEquals(result[0],'OK')
+        result=self.o.search(None, "UNDELETED", "HEADER", "TO", "testuser", "SENTSINCE", "1-Feb-1994")
+        self.assertEquals(result[0],'OK')
+        result=self.o.search(None, "UNDELETED", "HEADER", "TO", "testuser", "SENTBEFORE", "1-Jan-2004")
+        self.assertEquals(result[0],'OK')
 
     def testSelect(self):
         """ 
