@@ -244,19 +244,13 @@ START_TEST(test_mail_address_build_list)
 }
 END_TEST
 
-START_TEST(test_db_start_msg)
+//int db_fetch_headers(u64_t msguid, mime_message_t * msg)
+START_TEST(test_db_fetch_headers)
 {
 	mime_message_t *msg = g_new0(mime_message_t,1);
-
-	char *stopbound=NULL;
-	int level = 0;
-	int maxlevel = 0;
 	int res;
 	
-	msgbuf_buf = g_strdup(raw_message);
-	msgbuf_idx = 0;
-	msgbuf_buflen = strlen(msgbuf_buf);
-	res = db_start_msg(msg,stopbound,&level,maxlevel);
+	//res = db_start_msg(msg,stopbound,&level,maxlevel);
 	fail_unless(res==29, "db_start_msg result incorrect");
 	fail_unless(msg->rfcheader.total_nodes == 10, "total-nodes for rfcheader incorrect");
 
@@ -468,7 +462,7 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_session, test_imap_bodyfetch);
 	
 	tcase_add_checked_fixture(tc_rfcmsg, setup, teardown);
-	tcase_add_test(tc_rfcmsg, test_db_start_msg);
+	tcase_add_test(tc_rfcmsg, test_db_fetch_headers);
 
 	tcase_add_checked_fixture(tc_mime, setup, teardown);
 	tcase_add_test(tc_mime, test_mime_readheader);

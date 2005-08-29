@@ -38,6 +38,7 @@
 #include <ctype.h>
 
 static int db_parse_as_text(mime_message_t * msg);
+static int db_start_msg(mime_message_t * msg, char *stopbound, int *level, int maxlevel);
 
 /* 
  * frees all the memory associated with a msg

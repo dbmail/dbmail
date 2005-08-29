@@ -39,8 +39,6 @@ void db_free_msg(mime_message_t * msg);
 int db_fetch_headers(u64_t msguid, mime_message_t * msg);
 int db_add_mime_children(struct dm_list *brothers, char *splitbound,
 			 int *level, int maxlevel);
-int db_start_msg(mime_message_t * msg, char *stopbound, int *level,
-		 int maxlevel);
 int db_msgdump(mime_message_t * msg, u64_t msguid, int level);
 
 #endif
