@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: debug.c 1868 2005-08-23 14:30:57Z paul $
+/* $Id: debug.c 1551 2005-01-07 12:46:39Z paul $
  *
  * Debugging and memory checking functions */
 
@@ -69,42 +69,29 @@ void func_memtst(const char *filename, int line, int tst)
 		      filename, line);
 }
 
-#define TRACE_MESSAGE_SIZE 1024
-
 void trace(trace_t level, char *formatstring, ...)
 {
-	/* 
-	 * avoid malloc here so we can call trace from within signal 
-	 * handlers on bsd too
-	 */
-	
-	static char message[TRACE_MESSAGE_SIZE];
 	va_list argp;
 
-	memset(message, '\0', sizeof(message));
-	
 	va_start(argp, formatstring);
-	vsnprintf(message, sizeof(message) - 1, formatstring, argp);
-	va_end(argp);
 
 	if (level <= TRACE_LEVEL) {
 		if (TRACE_VERBOSE != 0) {
-			fprintf(err_out_stream, "%s", message);
-			if (message[strlen(message)] != '\n')
+			vfprintf(err_out_stream, formatstring, argp);
+			if (formatstring[strlen(formatstring)] != '\n')
 				fprintf(err_out_stream, "\n");
 		}
 		if (TRACE_TO_SYSLOG != 0) {
-			if (message[strlen(message)] == '\n')
-				message[strlen(message)] = '\0';
+			if (formatstring[strlen(formatstring)] == '\n')
+				formatstring[strlen(formatstring)] = '\0';
 			if (level <= TRACE_WARNING) {
 				/* set LOG_ALERT at warnings */
-				syslog(LOG_ALERT, "%s", message);
+				vsyslog(LOG_ALERT, formatstring, argp);
 			} else
-				syslog(LOG_NOTICE, "%s", message);
+				vsyslog(LOG_NOTICE, formatstring, argp);
 		}
+		va_end(argp);
 	}
-
-
 
 	/* very big fatal error 
 	 * bailout */
