@@ -148,25 +148,42 @@ typedef struct {
  */
 #define IMAP_NFLAGS 6
 
-enum IMAP4_CLIENT_STATES { IMAPCS_INITIAL_CONNECT,
+enum IMAP4_CLIENT_STATES { 
+	IMAPCS_INITIAL_CONNECT,
 	IMAPCS_NON_AUTHENTICATED,
-	IMAPCS_AUTHENTICATED, IMAPCS_SELECTED, IMAPCS_LOGOUT
+	IMAPCS_AUTHENTICATED, 
+	IMAPCS_SELECTED, 
+	IMAPCS_LOGOUT
 };
 
-enum IMAP4_FLAGS { IMAPFLAG_SEEN = 0x01, IMAPFLAG_ANSWERED = 0x02,
-	IMAPFLAG_DELETED = 0x04, IMAPFLAG_FLAGGED = 0x08,
-	IMAPFLAG_DRAFT = 0x10, IMAPFLAG_RECENT = 0x20
+enum IMAP4_FLAGS { 
+	IMAPFLAG_SEEN		= 0x01, 
+	IMAPFLAG_ANSWERED	= 0x02,
+	IMAPFLAG_DELETED	= 0x04, 
+	IMAPFLAG_FLAGGED	= 0x08,
+	IMAPFLAG_DRAFT		= 0x10, 
+	IMAPFLAG_RECENT		= 0x20
 };
 
-enum IMAP4_PERMISSION { IMAPPERM_READ = 0x01, IMAPPERM_READWRITE = 0x02 };
+enum IMAP4_PERMISSION { 
+	IMAPPERM_READ		= 0x01,
+	IMAPPERM_READWRITE	= 0x02 
+};
 
-enum IMAP4_FLAG_ACTIONS { IMAPFA_NONE, IMAPFA_REPLACE, IMAPFA_ADD,
+enum IMAP4_FLAG_ACTIONS { 
+	IMAPFA_NONE, 
+	IMAPFA_REPLACE, 
+	IMAPFA_ADD,
 	IMAPFA_REMOVE
 };
 
-enum BODY_FETCH_ITEM_TYPES { BFIT_TEXT, BFIT_HEADER, BFIT_MIME,
+enum BODY_FETCH_ITEM_TYPES { 
+	BFIT_TEXT, 
+	BFIT_HEADER, 
+	BFIT_MIME,
 	BFIT_HEADER_FIELDS,
-	BFIT_HEADER_FIELDS_NOT, BFIT_TEXT_SILENT
+	BFIT_HEADER_FIELDS_NOT, 
+	BFIT_TEXT_SILENT
 };
 
 /* maximum size of a mailbox name */
@@ -243,12 +260,15 @@ typedef struct {
 typedef struct {
 	struct dm_list mimeheader;	/**< the MIME header of this part (if present) */
 	struct dm_list rfcheader;	/**< RFC822 header of this part (if present) */
+	struct dm_list children; 	/**< the children (multipart msg) */
+	
 	int message_has_errors;		/**< if set the content-type is meaningless */
+	
 	db_pos_t bodystart, bodyend; 	/**< the body of this part */
+	
 	u64_t bodysize; 		/**< size of message body */
 	u64_t bodylines; 		/**< number of lines in message body */
 	u64_t rfcheadersize; 		/**< size of rfc header */
-	struct dm_list children; 	/**< the children (multipart msg) */
 	u64_t rfcheaderlines; 		/** number of lines in rfc header */
 	u64_t mimerfclines; 		/**< the total number of lines (only specified in
 			    		case of a MIME msg containing an RFC822 msg) */
