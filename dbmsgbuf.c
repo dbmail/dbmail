@@ -75,6 +75,8 @@ static int db_init_fetch_messageblks(u64_t msg_idnr, int filter)
 	msgbuf_buflen = strlen(msgbuf_buf);
 
 	dbmail_message_free(msg);
+
+	db_store_msgbuf_result();
 	
 	return 1;
 
