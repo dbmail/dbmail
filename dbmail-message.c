@@ -324,31 +324,15 @@ gchar * dbmail_message_get_header(struct DbmailMessage *self, const char *header
 /* dump message(parts) to char ptrs */
 gchar * dbmail_message_to_string(struct DbmailMessage *self) 
 {
-	gchar *s, *b;	
-	GString *t;
 	assert(self->content);
 	
-	b = g_mime_object_to_string(GMIME_OBJECT(self->content));
-	t = g_string_new(b);
-	g_free(b);
-	
-	s = t->str;
-	g_string_free(t,FALSE);
-	return s;
+	return g_mime_object_to_string(GMIME_OBJECT(self->content));
 }
 gchar * dbmail_message_hdrs_to_string(struct DbmailMessage *self)
 {
-	char *s, *b;
-	GString *t;
 	assert(self->headers);
 	
-	b = g_mime_object_get_headers((GMimeObject *)(self->content));
-	t = g_string_new(b);
-	g_free(b);
-	
-	s = t->str;
-	g_string_free(t,FALSE);
-	return s;
+	return g_mime_object_get_headers((GMimeObject *)(self->content));
 }
 gchar * dbmail_message_body_to_string(struct DbmailMessage *self)
 {
