@@ -720,8 +720,9 @@ int db_get_reply_body(u64_t user_idnr, char **reply_body)
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT reply_body FROM %sauto_replies "
 		 "WHERE user_idnr = %llu "
-		 "AND (start_date IS NULL OR start_date <= NOW()) "
-		 "AND (stop_date IS NULL OR stop_date >= NOW())", DBPFX,user_idnr);
+		 "AND (start_date IS NULL OR start_date <= %s) "
+		 "AND (stop_date IS NULL OR stop_date >= %s)", DBPFX,
+		 user_idnr, SQL_CURRENT_TIMESTAMP, SQL_CURRENT_TIMESTAMP);
 	
 	if (db_query(query) == -1) {
 		/* query failed */

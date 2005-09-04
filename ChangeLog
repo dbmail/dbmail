@@ -1,3 +1,14 @@
+2005-08-31  Paul J Stevens <paul@nfg.nl>
+
+	* debug.c:
+	revert earlier changes
+	* dbmail-message.c, dbmailtypes.h:
+	minor cleanups
+	* dbmail-imapsession.c:
+	minor cleanups
+	* dbmsgbuf.c:
+	fix segfault
+
 2005-08-23  Paul J Stevens <paul@nfg.nl>
 
 	* imaputil.c:

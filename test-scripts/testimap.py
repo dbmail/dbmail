@@ -36,7 +36,9 @@ unimplementedError = 'Dbmail testcase unimplemented'
 HOST,PORT = "localhost", 143
 
 # for stdin/stdout testing
-DAEMONBIN = "./dbmail-imapd -n /etc/dbmail/dbmail-test.conf"
+#DAEMONBIN = "./dbmail-imapd -n /etc/dbmail/dbmail-test.conf"
+# with valgrind
+DAEMONBIN = "valgrind --leak-check=full ./dbmail-imapd -n /etc/dbmail/dbmail-test.conf"
 
 
 TESTMSG={}
@@ -160,8 +162,9 @@ class testImapServer(unittest.TestCase):
         self.assertEquals(result[0],'OK')
         result=self.o.fetch("1","(BODY.PEEK[HEADER.FIELDS (References X-Ref X-Priority X-MSMail-Priority X-MSOESRec Newsgroups)] ENVELOPE RFC822.SIZE UID FLAGS INTERNALDATE)")
         self.assertEquals(result[0],'OK')
+        result = self.o.fetch(id,"(UID BODY[])")
+        self.assertEquals(result[0],'OK')
         print result
-	
 
     def testGetacl(self):
         """ 
