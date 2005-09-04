@@ -1,3 +1,23 @@
+2005-09-04  Paul J Stevens <paul@nfg.nl>
+
+	* ChangeLog, dbmail-imapsession.c, dbmail-imapsession.h, imaputil.c, 
+	  imaputil.h, test-scripts/testimap.py:
+	moved imap command parser to dbmail-imapsession.c
+	* python/lib/dbmail.py:
+	added postgres (psycopg) support to python lib
+	* db.c:
+	do not use NOW() in query (closes: #254)
+	* check_dbmail_imapd.c, db.c, dbmail-imapsession.c, dbmail-message.c, 
+	  dbmailtypes.h, dbmsgbuf.c, debug.c, imaputil.c, imaputil.h, rfcmsg.c, 
+	  rfcmsg.h, test-scripts/testimap.py:
+	push forward svn changes
+
+2005-09-02  Paul J Stevens <paul@nfg.nl>
+
+	* ChangeLog, sql/mysql/create_tables_innoDB.mysql, 
+	  sql/postgresql/create_tables.pgsql:
+	added ON UPDATE CASCADE to create_table files
+
 2005-08-31  Paul J Stevens <paul@nfg.nl>
 
 	* debug.c:
