@@ -86,6 +86,7 @@ guint64 dbmail_imap_session_bodyfetch_get_last_octetstart(struct ImapSession *se
 int dbmail_imap_session_bodyfetch_set_octetcnt(struct ImapSession *self, guint64 octet);
 guint64 dbmail_imap_session_bodyfetch_get_last_octetcnt(struct ImapSession *self);
 
+char **build_args_array_ext(const char *originalString, clientinfo_t * ci);
 
 #endif
 
