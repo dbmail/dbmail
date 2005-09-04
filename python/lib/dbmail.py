@@ -76,16 +76,18 @@ class Dbmail(DbmailConfig):
 
     def _setMysqlDictCursor(self):
         import MySQLdb
-        host=self.getConfig('host')
-        user=self.getConfig('user')
-        db=self.getConfig('db')
-        passwd=self.getConfig('pass')
-        conn=MySQLdb.connect(host=host,user=user,db=db,passwd=passwd)
+        conn=MySQLdb.connect(host=self.getConfig('host'),user=self.getConfig('user'),
+            db=self.getConfig('db'),passwd=self.getConfig('pass'))
         conn.autocommit(1)
         self._cursor=conn.cursor(MySQLdb.cursors.DictCursor)
 
     def _setPgsqlDictCursor(self):
-        raise unimplementedError, "postgresql dict-cursor"
+        import psycopg
+        conn = psycopg.connect("host=%s dbname=%s user=%s password=%s" % \
+            self.getConfig('host'), self.getConfig('user'), \
+            self.getConfig('db'), self.getConfig('pass'))
+        conn.autocommit(1)
+        self._cursor = conn.cursor()
         
     def _setSqliteDictCursor(self):
         raise unimplementedError, "sqlite dict-cursor"
@@ -152,8 +154,8 @@ class DbmailUser(Dbmail):
 
 class DbmailAutoreply(Dbmail):
 
-    def __init__(self,userid):
-        Dbmail.__init__(self)
+    def __init__(self,userid,file=None):
+        Dbmail.__init__(self,file)
         self.setUser(DbmailUser(userid))
 
     def setUser(self,user): self._user=user
