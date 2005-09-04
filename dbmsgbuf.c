@@ -1,5 +1,5 @@
 /*
-  $Id: dbmsgbuf.c 1868 2005-08-23 14:30:57Z paul $
+  $Id: dbmsgbuf.c 1875 2005-08-31 11:31:26Z paul $
 
   Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 
