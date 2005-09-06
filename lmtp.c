@@ -608,7 +608,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 						return 1;
 					}
 					
-					s = dbmail_message_to_string(msg);
+					s = dbmail_message_to_string(msg, FALSE);
 					trace(TRACE_DEBUG, "%s,%s: whole message = %s", __FILE__, __func__, s);
 					g_free(s);
 

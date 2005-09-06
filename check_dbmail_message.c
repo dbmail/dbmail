@@ -157,6 +157,24 @@ START_TEST(test_dbmail_message_init_with_string)
 	dbmail_message_free(m);
 }
 END_TEST
+
+START_TEST(test_dbmail_message_to_string)
+{
+	struct DbmailMessage *m;
+        char *raw;
+	m = dbmail_message_new();
+	m = dbmail_message_init_with_string(m, g_string_new(raw_message));
+	
+        raw = dbmail_message_to_string(m, FALSE);
+        g_free(raw);
+        
+        raw = dbmail_message_to_string(m, TRUE);
+        g_free(raw);
+	
+	dbmail_message_free(m);
+}
+END_TEST
+    
 //struct DbmailMessage * dbmail_message_init_with_stream(struct DbmailMessage *self, GMimeStream *stream, int type);
 /*
 START_TEST(test_dbmail_message_init_with_stream)
@@ -301,6 +319,7 @@ Suite *dbmail_message_suite(void)
 	tcase_add_test(tc_message, test_dbmail_message_get_class);
 //	tcase_add_test(tc_message, test_dbmail_message_retrieve);
 	tcase_add_test(tc_message, test_dbmail_message_init_with_string);
+	tcase_add_test(tc_message, test_dbmail_message_to_string);
 //	tcase_add_test(tc_message, test_dbmail_message_init_with_stream);
 	tcase_add_test(tc_message, test_dbmail_message_hdrs_to_string);
 	tcase_add_test(tc_message, test_dbmail_message_body_to_string);

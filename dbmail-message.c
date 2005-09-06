@@ -88,6 +88,8 @@ struct DbmailMessage * dbmail_message_new(void)
 		return NULL;
 	}
 	
+	self->internal_date = g_string_new("");
+	
 	self->header_dict = g_hash_table_new_full((GHashFunc)g_str_hash, (GEqualFunc)g_str_equal, (GDestroyNotify)g_free, NULL);
 	
 	dbmail_message_set_class(self, DBMAIL_MESSAGE);
@@ -100,9 +102,11 @@ void dbmail_message_free(struct DbmailMessage *self)
 		g_relation_destroy(self->headers);
 	if (self->content)
 		g_object_unref(self->content);
+	
 	self->headers=NULL;
 	self->content=NULL;
 	
+	g_string_free(self->internal_date,TRUE);
 	g_hash_table_destroy(self->header_dict);
 	
 	self->id=0;
@@ -274,15 +278,8 @@ static void _register_header(const char *header, const char *value, gpointer use
 	g_relation_insert((GRelation *)user_data, (gpointer)header, (gpointer)value);
 }
 
-
-size_t dbmail_message_get_rfcsize(struct DbmailMessage *self) 
+static GMimeStream * _get_crlf_encoded(struct DbmailMessage *self)
 {
-	/*
-	 * We convert all messages lf->crlf in-memory to determine
-	 * the rfcsize
-	 */
-
-	size_t rfcsize;
 	GMimeStream *ostream, *fstream;
 	GMimeFilter *filter;
 	
@@ -293,12 +290,28 @@ size_t dbmail_message_get_rfcsize(struct DbmailMessage *self)
 	g_mime_stream_filter_add((GMimeStreamFilter *) fstream, filter);
 	g_mime_object_write_to_stream((GMimeObject *)self->content,fstream);
 	
-	rfcsize = g_mime_stream_length(ostream);
-	
 	g_object_unref(filter);
 	g_object_unref(fstream);
-	g_object_unref(ostream);
+	
+	g_mime_stream_reset(ostream);
 
+	return ostream;
+}
+
+size_t dbmail_message_get_rfcsize(struct DbmailMessage *self) 
+{
+	/*
+	 * We convert all messages lf->crlf in-memory to determine
+	 * the rfcsize
+	 */
+
+	size_t rfcsize;
+	GMimeStream *encoded = _get_crlf_encoded(self);
+
+	rfcsize = g_mime_stream_length(encoded);
+
+	g_object_unref(encoded);
+	
 	return rfcsize;
 }
 
@@ -311,6 +324,20 @@ u64_t dbmail_message_get_physid(struct DbmailMessage *self)
 	return self->physid;
 }
 
+void dbmail_message_set_internal_date(struct DbmailMessage *self, char *internal_date)
+{
+	if (internal_date)
+		g_string_printf(self->internal_date,"%s", internal_date);
+}
+
+gchar * dbmail_message_get_internal_date(struct DbmailMessage *self)
+{
+	if (self->internal_date->len > 0)
+		return self->internal_date->str;
+	return NULL;
+}
+
+
 void dbmail_message_set_header(struct DbmailMessage *self, const char *header, const char *value)
 {
 	g_mime_message_set_header(GMIME_MESSAGE(self->content), header, value);
@@ -322,11 +349,26 @@ gchar * dbmail_message_get_header(struct DbmailMessage *self, const char *header
 }
 
 /* dump message(parts) to char ptrs */
-gchar * dbmail_message_to_string(struct DbmailMessage *self) 
+gchar * dbmail_message_to_string(struct DbmailMessage *self, gboolean crlf) 
 {
-	assert(self->content);
+	gchar *encoded;
+	size_t rfcsize;
+	GMimeStream *ostream;
 	
-	return g_mime_object_to_string(GMIME_OBJECT(self->content));
+	assert(self->content);
+
+	if (! crlf)
+		return g_mime_object_to_string(GMIME_OBJECT(self->content));
+
+	ostream = _get_crlf_encoded(self);
+	rfcsize = dbmail_message_get_rfcsize(self);
+	encoded = (gchar *)g_malloc0(rfcsize);
+	g_mime_stream_read(ostream, encoded, rfcsize);
+	
+	g_object_unref(ostream);
+	
+	return encoded;
+	
 }
 gchar * dbmail_message_hdrs_to_string(struct DbmailMessage *self)
 {
@@ -360,7 +402,7 @@ gchar * dbmail_message_body_to_string(struct DbmailMessage *self)
 size_t dbmail_message_get_size(struct DbmailMessage *self)
 {
 	char *s; size_t r;
-	s = dbmail_message_to_string(self);
+	s = dbmail_message_to_string(self, FALSE);
 	r = strlen(s);
 	g_free(s);
 	return r;
@@ -550,6 +592,7 @@ int _message_insert(struct DbmailMessage *self,
 {
 	u64_t mailboxid;
 	u64_t physmessage_id;
+	char *internal_date = NULL;
 	char *physid = g_new0(char, 16);
 
 	assert(unique_id);
@@ -566,8 +609,10 @@ int _message_insert(struct DbmailMessage *self,
 		return -1;
 	}
 
+	
 	/* insert a new physmessage entry */
-	if (db_insert_physmessage(&physmessage_id) == -1) 
+	internal_date = dbmail_message_get_internal_date(self);
+	if (db_insert_physmessage_with_internal_date(internal_date, &physmessage_id) == -1) 
 		return -1;
 
 	/* insert the physmessage-id into the message-headers */

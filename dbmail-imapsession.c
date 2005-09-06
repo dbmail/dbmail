@@ -1347,7 +1347,11 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 		g_list_free(tlist);
 	}
 
+
+	
 	if (self->fi->getRFC822 || self->fi->getRFC822Peek) {
+
+            /*
 		if (cached_msg.file_dumped == 0 || cached_msg.num != self->msg_idnr) {
 			mreset(cached_msg.memdump);
 
@@ -1360,7 +1364,6 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 			cached_msg.file_dumped = 1;
 
 			if (cached_msg.num != self->msg_idnr) {
-				/* if there is a parsed msg in the cache it will be invalid now */
 				if (cached_msg.msg_parsed) {
 					cached_msg.msg_parsed = 0;
 					db_free_msg (&cached_msg.msg);
@@ -1370,7 +1373,6 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 		}
 
 		mseek(cached_msg.memdump, 0, SEEK_SET);
-
 		if (self->fi->isfirstfetchout)
 			self->fi->isfirstfetchout = 0;
 		else
@@ -1379,6 +1381,15 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 		dbmail_imap_session_printf(self, "RFC822 {%llu}\r\n", cached_msg.dumpsize);
 		send_data(self->ci->tx, cached_msg.memdump, cached_msg.dumpsize);
 
+            */
+		if (self->fi->isfirstfetchout)
+			self->fi->isfirstfetchout = 0;
+		else
+			dbmail_imap_session_printf(self, " ");
+
+		db_init_fetch_message(self->msg_idnr);
+		dbmail_imap_session_printf(self, "RFC822 {%llu}\r\n%s", msgbuf_buflen, msgbuf_buf);
+                
 		if (self->fi->getRFC822)
 			self->fi->setseen = 1;
 

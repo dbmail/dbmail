@@ -70,7 +70,7 @@ static int db_init_fetch_messageblks(u64_t msg_idnr, int filter)
 	msg = dbmail_message_new();
 	msg = dbmail_message_retrieve(msg, physid, filter);
 
-	msgbuf_buf = dbmail_message_to_string(msg);
+	msgbuf_buf = dbmail_message_to_string(msg, TRUE);
 	msgbuf_idx = 0;
 	msgbuf_buflen = strlen(msgbuf_buf);
 
