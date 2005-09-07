@@ -294,7 +294,6 @@ static GMimeStream * _get_crlf_encoded(struct DbmailMessage *self)
 	g_object_unref(fstream);
 	
 	g_mime_stream_reset(ostream);
-
 	return ostream;
 }
 
@@ -305,12 +304,16 @@ size_t dbmail_message_get_rfcsize(struct DbmailMessage *self)
 	 * the rfcsize
 	 */
 
-	size_t rfcsize;
-	GMimeStream *encoded = _get_crlf_encoded(self);
+	size_t rfcsize = 0;
+	GMimeStream *estream, *nstream;
+	
+	nstream = g_mime_stream_null_new();
+	estream = _get_crlf_encoded(self);
 
-	rfcsize = g_mime_stream_length(encoded);
-
-	g_object_unref(encoded);
+	rfcsize = g_mime_stream_write_to_stream(estream, nstream);
+	
+	g_object_unref(estream);
+	g_object_unref(nstream);
 	
 	return rfcsize;
 }
@@ -351,21 +354,28 @@ gchar * dbmail_message_get_header(struct DbmailMessage *self, const char *header
 /* dump message(parts) to char ptrs */
 gchar * dbmail_message_to_string(struct DbmailMessage *self, gboolean crlf) 
 {
-	gchar *encoded;
-	size_t rfcsize;
+	gchar *buf, *encoded;
 	GMimeStream *ostream;
+	GString *raw;
 	
 	assert(self->content);
 
 	if (! crlf)
 		return g_mime_object_to_string(GMIME_OBJECT(self->content));
 
+	raw = g_string_new("");
+	buf = g_new0(char,256);
 	ostream = _get_crlf_encoded(self);
-	rfcsize = dbmail_message_get_rfcsize(self);
-	encoded = (gchar *)g_malloc0(rfcsize);
-	g_mime_stream_read(ostream, encoded, rfcsize);
+	while ((g_mime_stream_read(ostream, buf, 255)) > 0) {
+		raw = g_string_append(raw, buf);
+		memset(buf,'\0', 256);
+	}
 	
 	g_object_unref(ostream);
+	
+	encoded = raw->str;
+	g_string_free(raw,FALSE);
+	g_free(buf);
 	
 	return encoded;
 	

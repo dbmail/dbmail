@@ -160,16 +160,20 @@ END_TEST
 
 START_TEST(test_dbmail_message_to_string)
 {
+        char *decoded, *encoded;
 	struct DbmailMessage *m;
-        char *raw;
+        
 	m = dbmail_message_new();
 	m = dbmail_message_init_with_string(m, g_string_new(raw_message));
 	
-        raw = dbmail_message_to_string(m, FALSE);
-        g_free(raw);
+        decoded = dbmail_message_to_string(m, FALSE);
+        encoded = dbmail_message_to_string(m, TRUE);
         
-        raw = dbmail_message_to_string(m, TRUE);
-        g_free(raw);
+        printf("[%s]",decoded);
+        printf("[%s]",encoded);
+        
+        g_free(encoded);
+        g_free(decoded);
 	
 	dbmail_message_free(m);
 }
@@ -215,7 +219,7 @@ END_TEST
 
 START_TEST(test_dbmail_message_get_rfcsize)
 {
-	int result;
+	unsigned result;
 	struct DbmailMessage *m = dbmail_message_new();
 	m = dbmail_message_init_with_string(m, g_string_new(raw_message));
 	result = dbmail_message_get_rfcsize(m);

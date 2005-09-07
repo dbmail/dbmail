@@ -157,20 +157,25 @@ class testImapServer(unittest.TestCase):
         self.o.select()
         self.assertEquals(self.o.fetch("1:2","(Flags)")[0],'OK')
         id=self.o.recent()[1][0]
+        
+        result = self.o.fetch(id,"(UID BODY[])")
+        self.assertEquals(result[0],'OK')
+        print result
+        
         result = self.o.fetch(id,"(UID BODY[TEXT]<0.20>)")
         self.assertEquals(result[0],'OK')
         self.assertEquals(self.o.fetch(id,"(UID BODY.PEEK[TEXT]<0.30>)")[0],'OK')
         self.assertEquals(self.o.fetch(id,"(UID RFC822.SIZE)")[0],'OK')
+        
         result=self.o.fetch(id,"(UID RFC822.HEADER)")
         self.assertEquals(result[0],'OK')
         self.assertEquals(result[1][0][1][-4:],'\r\n\r\n')
+        
         result=self.o.fetch("1:2","(UID RFC822.HEADER)")
         self.assertEquals(result[0],'OK')
+        
         result=self.o.fetch("1","(BODY.PEEK[HEADER.FIELDS (References X-Ref X-Priority X-MSMail-Priority X-MSOESRec Newsgroups)] ENVELOPE RFC822.SIZE UID FLAGS INTERNALDATE)")
         self.assertEquals(result[0],'OK')
-        result = self.o.fetch(id,"(UID BODY[])")
-        self.assertEquals(result[0],'OK')
-        print result
 
     def testGetacl(self):
         """ 
