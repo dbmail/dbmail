@@ -80,14 +80,43 @@ class Dbmail(DbmailConfig):
             db=self.getConfig('db'),passwd=self.getConfig('pass'))
         conn.autocommit(1)
         self._cursor=conn.cursor(MySQLdb.cursors.DictCursor)
+        assert(self._cursor)
 
     def _setPgsqlDictCursor(self):
-        import psycopg
-        conn = psycopg.connect("host=%s dbname=%s user=%s password=%s" % \
-            self.getConfig('host'), self.getConfig('user'), \
-            self.getConfig('db'), self.getConfig('pass'))
-        conn.autocommit(1)
-        self._cursor = conn.cursor()
+        use=None
+        try:
+            from pyPgSQL import PgSQL
+            use='pgsql'
+        except:
+            pass
+            
+        try:
+            import psycopg2
+            import psycopg2.extras
+            use='psycopg2'
+        except:
+            pass
+            
+        if use=='pgsql':
+            conn = PgSQL.connect(database=self.getConfig('db'),host=self.getConfig('host'),
+                user=self.getConfig('user'),password=self.getConfig('pass'))
+            conn.autocommit=1
+            self._conn = conn
+            self._cursor = conn.cursor()
+        
+        elif use=='psycopg2':
+            conn = psycopg2.connect("host=%s dbname=%s user=%s password=%s" % (\
+                    self.getConfig('host'), self.getConfig('user'), \
+                    self.getConfig('db'), self.getConfig('pass')))
+            conn.set_isolation_level(0)
+            self._conn = conn
+            self._cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        else:
+            raise novalidDriver, "no postgres driver available"
+
+        assert(self._cursor)
+            
         
     def _setSqliteDictCursor(self):
         raise unimplementedError, "sqlite dict-cursor"
@@ -102,8 +131,8 @@ class DbmailAlias(Dbmail):
     def get(self,alias,deliver_to=None):
         c=self.getCursor()
         filter=''
-        if deliver_to: filter='AND deliver_to="%s"' % deliver_to
-        c.execute('select * from %saliases where alias="%s" %s' % (self._prefix, alias,filter))
+        if deliver_to: filter="AND deliver_to='%s'" % deliver_to
+        c.execute("select * from %saliases where alias='%s' %s" % (self._prefix, alias,filter))
         return c.fetchall()
     
     def set(self,alias,deliver_to):
@@ -140,7 +169,7 @@ class DbmailUser(Dbmail):
             return self._userdict
             
         c=self.getCursor()
-        c.execute('select * from %susers where userid="%s"' % (self._prefix,self.getUserid()))
+        c.execute("select * from %susers where userid='%s'" % (self._prefix,self.getUserid()))
         dict = c.fetchone()
         assert(dict)
         self._userdict = dict
@@ -161,17 +190,31 @@ class DbmailAutoreply(Dbmail):
     def setUser(self,user): self._user=user
     def getUser(self): return self._user
 
-    def getReply(self):
+    def get(self):
         c=self.getCursor()
         try:
-            c.execute('select reply_body from %sauto_replies where user_idnr="%s"' %(self._prefix,self.getUser().getUidNumber()))
+            c.execute("select reply_body from %sauto_replies where user_idnr='%s'" %(self._prefix,self.getUser().getUidNumber()))
             dict = c.fetchone()
+            assert(dict)
         except AssertionError:
             return None
         if dict:
             return dict['reply_body']
-        
-        
+ 
+    getReply = get
+ 
+    def set(self,message):
+        c=self.getCursor()
+        c.execute("insert into %sauto_replies (user_idnr,reply_body) values ('%s','%s')" %(self._prefix,self.getUser().getUidNumber(),message))
+       
+    setReply = set 
+    
+    def delete(self):
+        c=self.getCursor()
+        c.execute("delete from %sauto_replies where user_idnr='%s'" % (self._prefix,self.getUser().getUidNumber()))
+    
+    delReply = delete
+    
 if __name__=='__main__':
     import unittest
     class testDbmailConfig(unittest.TestCase):
@@ -225,16 +268,28 @@ if __name__=='__main__':
             self.failUnless(self.o.getUidNumber())
 
         def testGetGidNumber(self):
-            self.failUnless(self.o.getGidNumber())
+            self.failUnless(self.o.getGidNumber() >= 0)
 
     class testDbmailAutoreply(unittest.TestCase):
         def setUp(self):
             self.o = DbmailAutoreply('testuser1')
 
-        def testGetReply(self):
-            self.failUnless(self.o.getReply())
-            self.failIf(DbmailAutoreply('testuser2').getReply())
-            self.failIf(DbmailAutoreply('nosuchuser').getReply())
+        def testSet(self):
+            self.o.set("test reply message")
+            self.failUnless(self.o.get())
+            self.o.delete()
             
+        def testGet(self):
+            self.o.set("test reply message")
+            self.failUnless(self.o.get())
+            self.failIf(DbmailAutoreply('testuser2').get())
+            self.failIf(DbmailAutoreply('nosuchuser').get())
+            
+        def tearDown(self):
+            try:
+                self.o.delete()
+            except:
+                pass
+                
     unittest.main() 
 
