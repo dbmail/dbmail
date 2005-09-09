@@ -827,11 +827,6 @@ int db_msgdump(mime_message_t * msg, u64_t msguid, int level)
 	      msg->bodyend.block, msg->bodyend.pos, msg->bodysize,
 	      msg->bodylines);
 
-
-/*  trace(TRACE_DEBUG,"body: \n");
-  db_dump_range(msg->bodystart, msg->bodyend, msguid);
-  trace(TRACE_DEBUG,"*** body end\n");
-*/
 	trace(TRACE_DEBUG, "%sChildren of this msg:\n", spaces);
 
 	curr = dm_list_getstart(&msg->children);

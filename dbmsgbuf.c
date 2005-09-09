@@ -56,52 +56,30 @@ static db_pos_t zeropos; /**< absolute position (block/offset) of
 			    msgbuf_buf[0]*/
 static unsigned nblocks = 0; /**< number of block  */
 
-static int db_init_fetch_messageblks(u64_t msg_idnr, int filter)
+int db_init_fetch_messageblks(u64_t msg_idnr, int filter)
 {
-	int result;
-	u64_t physid = 0;
 	struct DbmailMessage *msg;
 
+	int result;
+	u64_t physid = 0;
 	result = db_get_physmessage_id(msg_idnr, &physid);
-	
 	if (result != DM_SUCCESS)
 		return result;
 	
+	/* retrieve message */
 	msg = dbmail_message_new();
 	msg = dbmail_message_retrieve(msg, physid, filter);
 
+	/* set globals */
 	msgbuf_buf = dbmail_message_to_string(msg, TRUE);
 	msgbuf_idx = 0;
 	msgbuf_buflen = strlen(msgbuf_buf);
-
-	dbmail_message_free(msg);
-
 	db_store_msgbuf_result();
-	
+
+	/* done */
+	dbmail_message_free(msg);
 	return 1;
 
-}
-/*
- *
- * retrieve the header messageblk
- *
- * TODO: this call is yet unused in the code, but here for
- * forward compatibility's sake.
- *
- */
-int db_init_fetch_headers(u64_t msg_idnr)
-{
-	return db_init_fetch_messageblks(msg_idnr, DBMAIL_MESSAGE_FILTER_HEAD);
-}
-
-/*
- *
- * retrieve the full message
- *
- */
-int db_init_fetch_message(u64_t msg_idnr) 
-{
-	return db_init_fetch_messageblks(msg_idnr, DBMAIL_MESSAGE_FILTER_FULL);
 }
 
 	
