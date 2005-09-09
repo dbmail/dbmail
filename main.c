@@ -292,7 +292,7 @@ int main(int argc, char *argv[])
 		goto freeall;
 	}
 	
-	if (dbmail_message_get_hdrs_size(msg) > READ_BLOCK_SIZE) {
+	if (dbmail_message_get_hdrs_size(msg, FALSE) > READ_BLOCK_SIZE) {
 		trace(TRACE_ERROR,
 		      "%s,%s: failed to read header because header is "
 		      "too big (bigger than READ_BLOCK_SIZE (%llu))",
@@ -302,7 +302,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* parse the list and scan for field and content */
-	headers = dbmail_message_hdrs_to_string(msg);
+	headers = dbmail_message_hdrs_to_string(msg, FALSE);
 	if (mime_fetch_headers(headers, &mimelist) < 0) {
 		trace(TRACE_ERROR,
 		      "main(): mime_fetch_headers failed to read a header list");

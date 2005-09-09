@@ -157,6 +157,28 @@ START_TEST(test_dbmail_message_init_with_string)
 	dbmail_message_free(m);
 }
 END_TEST
+
+START_TEST(test_dbmail_message_to_string)
+{
+        char *decoded, *encoded;
+	struct DbmailMessage *m;
+        
+	m = dbmail_message_new();
+	m = dbmail_message_init_with_string(m, g_string_new(raw_message));
+	
+        decoded = dbmail_message_to_string(m, FALSE);
+        encoded = dbmail_message_to_string(m, TRUE);
+        
+        printf("[%s]",decoded);
+        printf("[%s]",encoded);
+        
+        g_free(encoded);
+        g_free(decoded);
+	
+	dbmail_message_free(m);
+}
+END_TEST
+    
 //struct DbmailMessage * dbmail_message_init_with_stream(struct DbmailMessage *self, GMimeStream *stream, int type);
 /*
 START_TEST(test_dbmail_message_init_with_stream)
@@ -171,7 +193,7 @@ START_TEST(test_dbmail_message_hdrs_to_string)
 	char *result;
 	struct DbmailMessage *m = dbmail_message_new();
 	m = dbmail_message_init_with_string(m, g_string_new(raw_message));
-	result = dbmail_message_hdrs_to_string(m);
+	result = dbmail_message_hdrs_to_string(m, FALSE);
 	fail_unless(strlen(result)==484, "dbmail_message_hdrs_to_string failed");
 	g_free(result);
 
@@ -186,7 +208,7 @@ START_TEST(test_dbmail_message_body_to_string)
 	char *result;
 	struct DbmailMessage *m = dbmail_message_new();
 	m = dbmail_message_init_with_string(m, g_string_new(raw_message));
-	result = dbmail_message_body_to_string(m);
+	result = dbmail_message_body_to_string(m, FALSE);
 	fail_unless(strlen(result)==1046, "dbmail_message_body_to_string failed");
 	g_free(result);
 	dbmail_message_free(m);
@@ -197,7 +219,7 @@ END_TEST
 
 START_TEST(test_dbmail_message_get_rfcsize)
 {
-	int result;
+	unsigned result;
 	struct DbmailMessage *m = dbmail_message_new();
 	m = dbmail_message_init_with_string(m, g_string_new(raw_message));
 	result = dbmail_message_get_rfcsize(m);
@@ -223,7 +245,7 @@ START_TEST(test_dbmail_message_new_from_stream)
 	fprintf(fd, "%s", raw_message);
 	fseek(fd,0,0);
 	m = dbmail_message_new_from_stream(fd, DBMAIL_STREAM_PIPE);
-	whole_message_size = dbmail_message_get_size(m);
+	whole_message_size = dbmail_message_get_size(m, FALSE);
 	fail_unless(whole_message_size == strlen(raw_message), 
 			"read_whole_message_stream returned wrong message_size");
 	
@@ -231,7 +253,7 @@ START_TEST(test_dbmail_message_new_from_stream)
 	fprintf(fd, "%s", raw_lmtp_data);
 	
 	m = dbmail_message_new_from_stream(fd, DBMAIL_STREAM_LMTP);
-	whole_message_size = dbmail_message_get_size(m);
+	whole_message_size = dbmail_message_get_size(m, FALSE);
 	// note: we're comparing with raw_message not raw_lmtp_data because
 	// raw_message == raw_lmtp_data - crlf - end-dot
 	fail_unless(whole_message_size == strlen(raw_message), 
@@ -258,7 +280,7 @@ START_TEST(test_dbmail_message_get_header)
 	
 	
 	m = dbmail_message_init_with_string(m, g_string_new(raw_message));
-	t = dbmail_message_hdrs_to_string(m);
+	t = dbmail_message_hdrs_to_string(m, FALSE);
 	h = dbmail_message_init_with_string(h, g_string_new(t));
 	g_free(t);
 	
@@ -301,6 +323,7 @@ Suite *dbmail_message_suite(void)
 	tcase_add_test(tc_message, test_dbmail_message_get_class);
 //	tcase_add_test(tc_message, test_dbmail_message_retrieve);
 	tcase_add_test(tc_message, test_dbmail_message_init_with_string);
+	tcase_add_test(tc_message, test_dbmail_message_to_string);
 //	tcase_add_test(tc_message, test_dbmail_message_init_with_stream);
 	tcase_add_test(tc_message, test_dbmail_message_hdrs_to_string);
 	tcase_add_test(tc_message, test_dbmail_message_body_to_string);

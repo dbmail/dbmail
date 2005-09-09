@@ -56,55 +56,44 @@ static db_pos_t zeropos; /**< absolute position (block/offset) of
 			    msgbuf_buf[0]*/
 static unsigned nblocks = 0; /**< number of block  */
 
-static int db_init_fetch_messageblks(u64_t msg_idnr, int filter)
+struct DbmailMessage * db_init_fetch(u64_t msg_idnr, int filter)
 {
-	int result;
-	u64_t physid = 0;
 	struct DbmailMessage *msg;
 
+	int result;
+	u64_t physid = 0;
 	result = db_get_physmessage_id(msg_idnr, &physid);
-	
 	if (result != DM_SUCCESS)
-		return result;
+		return NULL;
 	
+	/* retrieve message */
 	msg = dbmail_message_new();
-	msg = dbmail_message_retrieve(msg, physid, filter);
+	
+	return dbmail_message_retrieve(msg, physid, filter);
+}
+	
+int db_init_fetch_messageblks(u64_t msg_idnr, int filter)
+{
 
-	msgbuf_buf = dbmail_message_to_string(msg);
+	struct DbmailMessage *msg;
+
+	msg = db_init_fetch(msg_idnr, filter);
+	if (! msg)
+		return DM_EGENERAL;
+	
+	/* set globals */
+	msgbuf_buf = dbmail_message_to_string(msg, TRUE);
 	msgbuf_idx = 0;
 	msgbuf_buflen = strlen(msgbuf_buf);
-
-	dbmail_message_free(msg);
-
 	db_store_msgbuf_result();
-	
+
+	/* done */
+	dbmail_message_free(msg);
 	return 1;
 
 }
-/*
- *
- * retrieve the header messageblk
- *
- * TODO: this call is yet unused in the code, but here for
- * forward compatibility's sake.
- *
- */
-int db_init_fetch_headers(u64_t msg_idnr)
-{
-	return db_init_fetch_messageblks(msg_idnr, DBMAIL_MESSAGE_FILTER_HEAD);
-}
 
-/*
- *
- * retrieve the full message
- *
- */
-int db_init_fetch_message(u64_t msg_idnr) 
-{
-	return db_init_fetch_messageblks(msg_idnr, DBMAIL_MESSAGE_FILTER_FULL);
-}
 
-	
 int db_update_msgbuf(int minlen)
 {
 	/* use the former msgbuf_result */
@@ -282,132 +271,3 @@ u64_t db_give_range_size(db_pos_t * start, db_pos_t * end)
 	return size;
 }
 
-long db_dump_range(MEM * outmem, db_pos_t start,
-		   db_pos_t end, u64_t msg_idnr)
-{
-	u64_t i, startpos, endpos, j, bufcnt;
-	u64_t outcnt;
-	u64_t distance;
-	char buf[DUMP_BUF_SIZE];
-	const char *field;
-
-	trace(TRACE_DEBUG,
-	      "%s,%s: Dumping range: (%llu,%llu) - (%llu,%llu)",
-	      __FILE__, __func__,
-	      start.block, start.pos, end.block, end.pos);
-
-	if (start.block > end.block) {
-		trace(TRACE_ERROR, "%s,%s: bad range specified",
-		      __FILE__, __func__);
-		return -1;
-	}
-
-	if (start.block == end.block && start.pos > end.pos) {
-		trace(TRACE_ERROR, "%s,%s: bad range specified",
-		      __FILE__, __func__);
-		return -1;
-	}
-	
-	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT block.messageblk "
-		 "FROM %smessageblks block, %smessages msg "
-		 "WHERE block.physmessage_id = msg.physmessage_id "
-		 "AND msg.message_idnr = '%llu' "
-		 "ORDER BY block.messageblk_idnr", DBPFX, DBPFX,
-		 msg_idnr);
-
-	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: could not get message",
-		      __FILE__, __func__);
-		return (-1);
-	}
-
-	if (start.block >= db_num_rows()) {
-		trace(TRACE_ERROR,
-		      "db_dump_range(): bad range specified\n");
-		db_free_result();
-		return -1;
-	}
-
-	outcnt = 0;
-
-	/* just one block? */
-	if (start.block == end.block) {
-		/* dump everything */
-		bufcnt = 0;
-		field = db_get_result(start.block, 0);
-
-		for (i = start.pos; i <= end.pos; i++) {
-			if (bufcnt >= DUMP_BUF_SIZE - 1) {
-				outcnt += mwrite(buf, bufcnt, outmem);
-				bufcnt = 0;
-			}
-
-			/* FIXME: field may be NULL from db_get_result! */
-			if (field[i] == '\n' &&
-			    !(i > 0 && field[i - 1] == '\r')) {
-				trace(TRACE_DEBUG,
-				      "%s,%s: adding '\r' to buf",
-				      __FILE__, __func__);
-				buf[bufcnt++] = '\r';
-				buf[bufcnt++] = '\n';
-			} else
-				buf[bufcnt++] = field[i];
-		}
-
-		outcnt += mwrite(buf, bufcnt, outmem);
-		bufcnt = 0;
-
-		db_free_result();
-		return outcnt;
-	}
-
-
-	/* 
-	 * multiple block range specified
-	 */
-
-	for (i = start.block, outcnt = 0; i <= end.block; i++) {
-		if (i >= db_num_rows()) {
-			trace(TRACE_ERROR,
-			      "db_dump_range(): bad range specified\n");
-			db_free_result();
-			return -1;
-		}
-
-		startpos = (i == start.block) ? start.pos : 0;
-		endpos =
-		    (i == end.block) ? end.pos + 1 : db_get_length(i, 0);
-
-		distance = endpos - startpos;
-
-		/* output */
-		bufcnt = 0;
-		field = db_get_result(i, 0);
-
-		for (j = 0; j < distance; j++) {
-			if (bufcnt >= DUMP_BUF_SIZE - 1) {
-				outcnt += mwrite(buf, bufcnt, outmem);
-				bufcnt = 0;
-			}
-
-			/* FIXME: field may be NULL from db_get_result! */
-			if (field[startpos + j] == '\n' &&
-			    !(j > 0 && field[startpos + j - 1] == '\r')) {
-				trace(TRACE_DEBUG,
-				      "%s,%s: adding '\r' to buf",
-				      __FILE__, __func__);
-
-				buf[bufcnt++] = '\r';
-				buf[bufcnt++] = '\n';
-			} else if (field[startpos + j])
-				buf[bufcnt++] = field[startpos + j];
-		}
-		outcnt += mwrite(buf, bufcnt, outmem);
-		bufcnt = 0;
-	}
-
-	db_free_result();
-
-	return outcnt;
-}

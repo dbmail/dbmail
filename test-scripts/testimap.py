@@ -36,16 +36,20 @@ unimplementedError = 'Dbmail testcase unimplemented'
 HOST,PORT = "localhost", 143
 
 # for stdin/stdout testing
-#DAEMONBIN = "./dbmail-imapd -n /etc/dbmail/dbmail-test.conf"
+DAEMONBIN = "./dbmail-imapd -n -f /etc/dbmail/dbmail-test.conf"
 # with valgrind
-DAEMONBIN = "valgrind --leak-check=full ./dbmail-imapd -n /etc/dbmail/dbmail-test.conf"
+#DAEMONBIN = "valgrind --leak-check=full ./dbmail-imapd -n /etc/dbmail/dbmail-test.conf"
 
 
 TESTMSG={}
 
 def getMessageStrict():
-    m=MIMEText("this is a test message")
-    m.add_header("To","testuser")
+    m=MIMEText("""
+    this is a test message
+    """)
+    m.add_header("To","testuser@foo.org")
+    m.add_header("From","somewher@foo.org")
+    m.add_header("Subject","dbmail test message")
     return str(m)
 
 TESTMSG['strict822']=getMessageStrict()
@@ -77,9 +81,11 @@ class testImapServer(unittest.TestCase):
         self.o.create('testappend')
         self.o.append('testappend','\Flagged',"",TESTMSG['strict822'])
         self.o.select('testappend')
-        ids=self.o.recent()
-        result = self.o.fetch(ids[1][0],"(UID BODY[TEXT])")
+        id=self.o.recent()[1][0]
+        result = self.o.fetch(id,"(UID BODY.PEEK[])")
+        self.assertEquals(result[0],'OK')
         print result
+
 #        expect = '  FLAGS (\\Seen \\Flagged \\Recent))'
 #        self.assertEquals(result,expect)
 
@@ -149,22 +155,27 @@ class testImapServer(unittest.TestCase):
         """
         self.o.append('INBOX','','',TESTMSG['strict822'])
         self.o.select()
-        self.assertEquals(self.o.fetch("1:10","(Flags)")[0],'OK')
+        self.assertEquals(self.o.fetch("1:2","(Flags)")[0],'OK')
         id=self.o.recent()[1][0]
+        
+        result = self.o.fetch(id,"(UID BODY[])")
+        self.assertEquals(result[0],'OK')
+        print result
+        
         result = self.o.fetch(id,"(UID BODY[TEXT]<0.20>)")
         self.assertEquals(result[0],'OK')
         self.assertEquals(self.o.fetch(id,"(UID BODY.PEEK[TEXT]<0.30>)")[0],'OK')
         self.assertEquals(self.o.fetch(id,"(UID RFC822.SIZE)")[0],'OK')
+        
         result=self.o.fetch(id,"(UID RFC822.HEADER)")
         self.assertEquals(result[0],'OK')
-        self.assertEquals(result[1][0][1][-4:],'\r\n\r\n')
-        result=self.o.fetch("1:10","(UID RFC822.HEADER)")
+        self.assertEquals(result[1][0][1][-2:],'\r\n')
+        
+        result=self.o.fetch("1:2","(UID RFC822.HEADER)")
         self.assertEquals(result[0],'OK')
+        
         result=self.o.fetch("1","(BODY.PEEK[HEADER.FIELDS (References X-Ref X-Priority X-MSMail-Priority X-MSOESRec Newsgroups)] ENVELOPE RFC822.SIZE UID FLAGS INTERNALDATE)")
         self.assertEquals(result[0],'OK')
-        result = self.o.fetch(id,"(UID BODY[])")
-        self.assertEquals(result[0],'OK')
-        print result
 
     def testGetacl(self):
         """ 

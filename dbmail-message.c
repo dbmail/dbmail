@@ -88,6 +88,8 @@ struct DbmailMessage * dbmail_message_new(void)
 		return NULL;
 	}
 	
+	self->internal_date = g_string_new("");
+	
 	self->header_dict = g_hash_table_new_full((GHashFunc)g_str_hash, (GEqualFunc)g_str_equal, (GDestroyNotify)g_free, NULL);
 	
 	dbmail_message_set_class(self, DBMAIL_MESSAGE);
@@ -100,9 +102,11 @@ void dbmail_message_free(struct DbmailMessage *self)
 		g_relation_destroy(self->headers);
 	if (self->content)
 		g_object_unref(self->content);
+	
 	self->headers=NULL;
 	self->content=NULL;
 	
+	g_string_free(self->internal_date,TRUE);
 	g_hash_table_destroy(self->header_dict);
 	
 	self->id=0;
@@ -274,32 +278,40 @@ static void _register_header(const char *header, const char *value, gpointer use
 	g_relation_insert((GRelation *)user_data, (gpointer)header, (gpointer)value);
 }
 
-
-size_t dbmail_message_get_rfcsize(struct DbmailMessage *self) 
+static gchar * _get_crlf_encoded(gchar *string)
 {
-	/*
-	 * We convert all messages lf->crlf in-memory to determine
-	 * the rfcsize
-	 */
-
-	size_t rfcsize;
 	GMimeStream *ostream, *fstream;
 	GMimeFilter *filter;
+	gchar *encoded, *buf;
+	GString *raw;
 	
 	ostream = g_mime_stream_mem_new();
 	fstream = g_mime_stream_filter_new_with_stream(ostream);
 	filter = g_mime_filter_crlf_new(GMIME_FILTER_CRLF_ENCODE,GMIME_FILTER_CRLF_MODE_CRLF_ONLY);
 	
 	g_mime_stream_filter_add((GMimeStreamFilter *) fstream, filter);
-	g_mime_object_write_to_stream((GMimeObject *)self->content,fstream);
-	
-	rfcsize = g_mime_stream_length(ostream);
+	g_mime_stream_write_string(fstream,string);
 	
 	g_object_unref(filter);
 	g_object_unref(fstream);
-	g_object_unref(ostream);
+	
+	g_mime_stream_reset(ostream);
 
-	return rfcsize;
+	raw = g_string_new("");
+	buf = g_new0(char,256);
+	while ((g_mime_stream_read(ostream, buf, 255)) > 0) {
+		raw = g_string_append(raw, buf);
+		memset(buf,'\0', 256);
+	}
+	
+	g_object_unref(ostream);
+	
+	encoded = raw->str;
+	g_string_free(raw,FALSE);
+	g_free(buf);
+	
+	return encoded;
+
 }
 
 void dbmail_message_set_physid(struct DbmailMessage *self, u64_t physid)
@@ -310,6 +322,20 @@ u64_t dbmail_message_get_physid(struct DbmailMessage *self)
 {
 	return self->physid;
 }
+
+void dbmail_message_set_internal_date(struct DbmailMessage *self, char *internal_date)
+{
+	if (internal_date)
+		g_string_printf(self->internal_date,"%s", internal_date);
+}
+
+gchar * dbmail_message_get_internal_date(struct DbmailMessage *self)
+{
+	if (self->internal_date->len > 0)
+		return self->internal_date->str;
+	return NULL;
+}
+
 
 void dbmail_message_set_header(struct DbmailMessage *self, const char *header, const char *value)
 {
@@ -322,29 +348,43 @@ gchar * dbmail_message_get_header(struct DbmailMessage *self, const char *header
 }
 
 /* dump message(parts) to char ptrs */
-gchar * dbmail_message_to_string(struct DbmailMessage *self) 
+gchar * dbmail_message_to_string(struct DbmailMessage *self, gboolean crlf) 
 {
-	assert(self->content);
+	gchar *msg, *encoded;
 	
-	return g_mime_object_to_string(GMIME_OBJECT(self->content));
+	assert(self->content);
+	msg = g_mime_object_to_string(GMIME_OBJECT(self->content));
+	
+	if (! crlf)
+		return msg;
+
+	encoded = _get_crlf_encoded(msg);
+	g_free(msg);
+	return encoded;
 }
-gchar * dbmail_message_hdrs_to_string(struct DbmailMessage *self)
+gchar * dbmail_message_hdrs_to_string(struct DbmailMessage *self, gboolean crlf)
 {
+	char *hdrs, *encoded;
 	assert(self->headers);
 	
-	return g_mime_object_get_headers((GMimeObject *)(self->content));
+	hdrs = g_mime_object_get_headers(GMIME_OBJECT(self->content));
+	if (! crlf)
+		return hdrs;
+	encoded = _get_crlf_encoded(hdrs);
+	g_free(hdrs);
+	return encoded;
 }
-gchar * dbmail_message_body_to_string(struct DbmailMessage *self)
+gchar * dbmail_message_body_to_string(struct DbmailMessage *self, gboolean crlf)
 {
 	char *s, *b;
 	GString *t;
 	assert(self->content);
 	
-	b = g_mime_object_to_string((GMimeObject *)(self->content));
+	b = dbmail_message_to_string(self, crlf);
 	t = g_string_new(b);
 	g_free(b);
 
-	t = g_string_erase(t,0,dbmail_message_get_hdrs_size(self));
+	t = g_string_erase(t,0,dbmail_message_get_hdrs_size(self, crlf));
 	
 	s = t->str;
 	g_string_free(t,FALSE);
@@ -357,26 +397,26 @@ gchar * dbmail_message_body_to_string(struct DbmailMessage *self)
  * Don't cache these values to allow changes in message content!!
  * 
  */
-size_t dbmail_message_get_size(struct DbmailMessage *self)
+size_t dbmail_message_get_size(struct DbmailMessage *self, gboolean crlf)
 {
 	char *s; size_t r;
-	s = dbmail_message_to_string(self);
+	s = dbmail_message_to_string(self, crlf);
 	r = strlen(s);
 	g_free(s);
 	return r;
 }
-size_t dbmail_message_get_hdrs_size(struct DbmailMessage *self)
+size_t dbmail_message_get_hdrs_size(struct DbmailMessage *self, gboolean crlf)
 {
 	char *s; size_t r;
-	s = dbmail_message_hdrs_to_string(self);
+	s = dbmail_message_hdrs_to_string(self,crlf);
 	r = strlen(s);
 	g_free(s);
 	return r;
 }
-size_t dbmail_message_get_body_size(struct DbmailMessage *self)
+size_t dbmail_message_get_body_size(struct DbmailMessage *self, gboolean crlf)
 {
 	char *s; size_t r;
-	s = dbmail_message_body_to_string(self);
+	s = dbmail_message_body_to_string(self,crlf);
 	r = strlen(s);
 	g_free(s);
 	return r;
@@ -462,6 +502,8 @@ struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t
 		case DBMAIL_MESSAGE_FILTER_HEAD:
 			self = _fetch_head(self);
 			break;
+
+		case DBMAIL_MESSAGE_FILTER_BODY:
 		case DBMAIL_MESSAGE_FILTER_FULL:
 			self = _fetch_full(self);
 			break;
@@ -514,10 +556,10 @@ int dbmail_message_store(struct DbmailMessage *self)
 	if(_message_insert(self, user_idnr, DBMAIL_TEMPMBOX, unique_id) < 0)
 		return -1;
 
-	hdrs = dbmail_message_hdrs_to_string(self);
-	body = dbmail_message_body_to_string(self);
-	hdrs_size = (u64_t)dbmail_message_get_hdrs_size(self);
-	body_size = (u64_t)dbmail_message_get_body_size(self);
+	hdrs = dbmail_message_hdrs_to_string(self, FALSE);
+	body = dbmail_message_body_to_string(self, FALSE);
+	hdrs_size = (u64_t)dbmail_message_get_hdrs_size(self, FALSE);
+	body_size = (u64_t)dbmail_message_get_body_size(self, FALSE);
 	rfcsize = (u64_t)dbmail_message_get_rfcsize(self);
 	
 	if(db_insert_message_block(hdrs, hdrs_size, self->id, &messageblk_idnr,1) < 0)
@@ -550,6 +592,7 @@ int _message_insert(struct DbmailMessage *self,
 {
 	u64_t mailboxid;
 	u64_t physmessage_id;
+	char *internal_date = NULL;
 	char *physid = g_new0(char, 16);
 
 	assert(unique_id);
@@ -566,8 +609,10 @@ int _message_insert(struct DbmailMessage *self,
 		return -1;
 	}
 
+	
 	/* insert a new physmessage entry */
-	if (db_insert_physmessage(&physmessage_id) == -1) 
+	internal_date = dbmail_message_get_internal_date(self);
+	if (db_insert_physmessage_with_internal_date(internal_date, &physmessage_id) == -1) 
 		return -1;
 
 	/* insert the physmessage-id into the message-headers */
@@ -884,7 +929,7 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message, u64_t useridnr, cons
 {
 	u64_t mboxidnr, newmsgidnr;
 
-	size_t msgsize = (u64_t)dbmail_message_get_size(message);
+	size_t msgsize = (u64_t)dbmail_message_get_size(message, FALSE);
 	u64_t msgidnr = message->id;
 	
 	if (! mailbox)

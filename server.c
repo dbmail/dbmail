@@ -153,14 +153,12 @@ int StartServer(serverConfig_t * conf)
 			sleep(10);
 			
 		} else {
-			if (stopped) 
+			if (stopped) {
+				manage_restart_children();
 				stopped=0;
- 			
-			db_disconnect();
+			}
 			
-			manage_restart_children();
 			manage_spare_children();
-			
 			sleep(1);
 		}
 	}

@@ -193,6 +193,71 @@ void dbmail_imap_session_delete(struct ImapSession * self)
  *
  *
  ************************************************************************************/
+static u64_t _imap_cache_update(struct ImapSession *self, message_filter_t filter)
+{
+	u64_t outcnt = 0;
+	char *buf = NULL;
+	struct DbmailMessage *msg = NULL;
+
+	switch (filter) {
+		case DBMAIL_MESSAGE_FILTER_FULL:
+			if (cached_msg.file_dumped == 0 || cached_msg.num != self->msg_idnr) {
+
+				msg = db_init_fetch(self->msg_idnr, filter);
+				buf = dbmail_message_to_string(msg, TRUE); // crlf encoded
+				
+				mrewind(cached_msg.memdump);
+				mrewind(cached_msg.tmpdump);
+				
+				/* update both MEM buffers */
+				mwrite(buf, strlen(buf), cached_msg.tmpdump);
+				outcnt = (u64_t)mwrite(buf, strlen(buf), cached_msg.memdump);
+				cached_msg.dumpsize = outcnt;
+
+				if (cached_msg.num != self->msg_idnr) {
+					/* if there is a parsed msg in the cache it will be invalid now */
+					if (cached_msg.msg_parsed) {
+						cached_msg.msg_parsed = 0;
+						db_free_msg(&cached_msg.msg);
+					}
+					cached_msg.num = self->msg_idnr;
+				}
+				cached_msg.file_dumped = 1;
+
+				mrewind(cached_msg.memdump);
+				mrewind(cached_msg.tmpdump);
+			}
+		break;
+		
+		/* these two only update the temp MEM buffer */	
+		case DBMAIL_MESSAGE_FILTER_HEAD:
+			msg = db_init_fetch(self->msg_idnr, filter);
+			buf = dbmail_message_hdrs_to_string(msg, TRUE);
+			
+			mrewind(cached_msg.tmpdump);
+			outcnt = mwrite(buf, strlen(buf), cached_msg.tmpdump);
+			mrewind(cached_msg.tmpdump);
+		break;
+
+		case DBMAIL_MESSAGE_FILTER_BODY:
+			msg = db_init_fetch(self->msg_idnr, filter);
+			buf = dbmail_message_body_to_string(msg, TRUE);
+			
+			mrewind(cached_msg.tmpdump);
+			outcnt = mwrite(buf, strlen(buf), cached_msg.tmpdump);
+			mrewind(cached_msg.tmpdump);
+		break;
+
+	}
+
+	trace(TRACE_DEBUG, "%s,%s: cached [%llu] bytes", __FILE__, __func__, outcnt);
+
+	g_free(buf);
+	dbmail_message_free(msg);
+	
+	return outcnt;
+}
+
 
 
 /* 
@@ -1348,27 +1413,7 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 	}
 
 	if (self->fi->getRFC822 || self->fi->getRFC822Peek) {
-		if (cached_msg.file_dumped == 0 || cached_msg.num != self->msg_idnr) {
-			mreset(cached_msg.memdump);
-
-			cached_msg.dumpsize = rfcheader_dump(cached_msg.memdump,
-			     &cached_msg.msg.rfcheader, self->args, 0, 0);
-
-			cached_msg.dumpsize += db_dump_range(cached_msg.memdump,
-			     cached_msg.msg.bodystart, cached_msg.msg.bodyend, self->msg_idnr);
-
-			cached_msg.file_dumped = 1;
-
-			if (cached_msg.num != self->msg_idnr) {
-				/* if there is a parsed msg in the cache it will be invalid now */
-				if (cached_msg.msg_parsed) {
-					cached_msg.msg_parsed = 0;
-					db_free_msg (&cached_msg.msg);
-				}
-				cached_msg.num = self->msg_idnr;
-			}
-		}
-
+		_imap_cache_update(self, DBMAIL_MESSAGE_FILTER_FULL);
 		mseek(cached_msg.memdump, 0, SEEK_SET);
 
 		if (self->fi->isfirstfetchout)
@@ -1394,42 +1439,20 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 	}
 
 	if (self->fi->getBodyTotal || self->fi->getBodyTotalPeek) {
-		if (cached_msg.file_dumped == 0 || cached_msg.num != self->msg_idnr) {
-			cached_msg.dumpsize = rfcheader_dump(cached_msg.memdump,
-			     &cached_msg.msg.rfcheader, self->args, 0, 0);
-
-			cached_msg.dumpsize += db_dump_range(cached_msg.memdump,
-			     cached_msg.msg.bodystart, cached_msg.msg.bodyend, self->msg_idnr);
-
-			if (cached_msg.num != self->msg_idnr) {
-				/* if there is a parsed msg in the cache it will be invalid now */
-				if (cached_msg.msg_parsed) {
-					cached_msg.msg_parsed = 0;
-					db_free_msg(&cached_msg.msg);
-				}
-				cached_msg.num = self->msg_idnr;
-			}
-
-			cached_msg.file_dumped = 1;
-		}
-
+		_imap_cache_update(self, DBMAIL_MESSAGE_FILTER_FULL);
+		
 		if (self->fi->isfirstfetchout)
 			self->fi->isfirstfetchout = 0;
 		else
 			dbmail_imap_session_printf(self, " ");
 
 		if (dbmail_imap_session_bodyfetch_get_last_octetcnt(self) == 0) {
-			mseek(cached_msg.memdump, 0, SEEK_SET);
-
+			mrewind(cached_msg.memdump);
 			dbmail_imap_session_printf(self, "BODY[] {%llu}\r\n", cached_msg.dumpsize);
 			send_data(self->ci->tx, cached_msg.memdump, cached_msg.dumpsize);
 		} else {
 			mseek(cached_msg.memdump, dbmail_imap_session_bodyfetch_get_last_octetstart(self), SEEK_SET);
 
-     /** \todo this next statement is ugly because of the
-  casts to 'long long'. Probably, octetcnt should be
-  changed to be a u64_t instead of a long long, because
-  it should never be negative anyway */
 			actual_cnt = (dbmail_imap_session_bodyfetch_get_last_octetcnt(self) >
 			     (((long long)cached_msg.dumpsize) - dbmail_imap_session_bodyfetch_get_last_octetstart(self)))
 			    ? (((long long)cached_msg.dumpsize) - dbmail_imap_session_bodyfetch_get_last_octetstart(self)) 
@@ -1446,33 +1469,14 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 	}
 
 	if (self->fi->getRFC822Header) {
-		/* here: msgparse_needed == 1
-		 * if this msg is in cache, retrieve it from there
-		 * otherwise only_main_header_parsing == 1 so retrieve direct
-		 * from the dbase
-		 */
 		if (self->fi->isfirstfetchout)
 			self->fi->isfirstfetchout = 0;
 		else
 			dbmail_imap_session_printf(self, " ");
 
-		if (cached_msg.num == self->msg_idnr) {
-			mrewind(cached_msg.tmpdump);
-			tmpdumpsize = rfcheader_dump(cached_msg.tmpdump, 
-					&cached_msg.msg.rfcheader, self->args, 0, 0);
-			mseek(cached_msg.tmpdump, 0, SEEK_SET);
-
-			dbmail_imap_session_printf(self, "RFC822.HEADER {%llu}\r\n", tmpdumpsize);
-			send_data(self->ci->tx, cached_msg.tmpdump, tmpdumpsize);
-		} else {
-			mrewind(cached_msg.tmpdump);
-			tmpdumpsize = rfcheader_dump(cached_msg.tmpdump,
-					&self->headermsg.rfcheader, self->args, 0, 0);
-			mseek(cached_msg.tmpdump, 0, SEEK_SET);
-
-			dbmail_imap_session_printf(self, "RFC822.HEADER {%llu}\r\n", tmpdumpsize);
-			send_data(self->ci->tx, cached_msg.tmpdump, tmpdumpsize);
-		}
+		tmpdumpsize = _imap_cache_update(self,DBMAIL_MESSAGE_FILTER_HEAD);
+		dbmail_imap_session_printf(self, "RFC822.HEADER {%llu}\r\n", tmpdumpsize);
+		send_data(self->ci->tx, cached_msg.tmpdump, tmpdumpsize);
 	}
 
 	if (self->fi->getRFC822Text) {
@@ -1481,11 +1485,7 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 		else
 			dbmail_imap_session_printf(self, " ");
 
-		mrewind(cached_msg.tmpdump);
-		tmpdumpsize = db_dump_range(cached_msg.tmpdump, cached_msg.msg.
-				  bodystart, cached_msg.msg.bodyend, self->msg_idnr);
-		mseek(cached_msg.tmpdump, 0, SEEK_SET);
-
+		tmpdumpsize = _imap_cache_update(self,DBMAIL_MESSAGE_FILTER_BODY);
 		dbmail_imap_session_printf(self, "RFC822.TEXT {%llu}\r\n", tmpdumpsize);
 		send_data(self->ci->tx, cached_msg.tmpdump, tmpdumpsize);
 
@@ -1650,13 +1650,11 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data) {
 		else {
 			tmpdumpsize = 0;
 
-			if (!only_text_from_msgpart)
-				tmpdumpsize = rfcheader_dump(cached_msg.tmpdump,
-				     &msgpart->rfcheader, self->args, 0, 0);
-
-			tmpdumpsize += db_dump_range(cached_msg.tmpdump,
-			     msgpart->bodystart, msgpart->bodyend, self->msg_idnr);
-
+			if (only_text_from_msgpart)
+				tmpdumpsize = _imap_cache_update(self,DBMAIL_MESSAGE_FILTER_BODY); 
+			else
+				tmpdumpsize = _imap_cache_update(self,DBMAIL_MESSAGE_FILTER_FULL);
+			
 			if (bodyfetch->octetcnt > 0) {
 				cnt = get_dumpsize(bodyfetch, tmpdumpsize);
 				dbmail_imap_session_printf(self, "]<%llu> {%llu}\r\n", bodyfetch->octetstart, cnt);
@@ -1664,7 +1662,7 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data) {
 			} else {
 				cnt = tmpdumpsize;
 				dbmail_imap_session_printf(self, "] {%llu}\r\n", tmpdumpsize);
-				mseek(cached_msg.tmpdump, 0, SEEK_SET);
+				mrewind(cached_msg.tmpdump);
 			}
 
 			/* output data */
@@ -1679,9 +1677,8 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data) {
 		if (!msgpart)
 			dbmail_imap_session_printf(self, "] NIL ");
 		else {
-			tmpdumpsize = db_dump_range(cached_msg.tmpdump,
-					msgpart->bodystart, msgpart->bodyend, self->msg_idnr);
-
+			tmpdumpsize = _imap_cache_update(self,DBMAIL_MESSAGE_FILTER_BODY);
+			
 			if (bodyfetch->octetcnt > 0) {
 				cnt = get_dumpsize(bodyfetch,tmpdumpsize);
 				dbmail_imap_session_printf(self, "]<%llu> {%llu}\r\n", bodyfetch->octetstart,cnt);

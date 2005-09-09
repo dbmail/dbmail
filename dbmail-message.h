@@ -55,10 +55,11 @@ enum DBMAIL_MESSAGE_CLASS {
 	DBMAIL_MESSAGE_PART
 };
 
-enum DBMAIL_MESSAGE_FILTER_TYPES { 
+typedef enum DBMAIL_MESSAGE_FILTER_TYPES { 
 	DBMAIL_MESSAGE_FILTER_FULL,
-	DBMAIL_MESSAGE_FILTER_HEAD
-};
+	DBMAIL_MESSAGE_FILTER_HEAD,
+	DBMAIL_MESSAGE_FILTER_BODY
+} message_filter_t;
 
 enum DBMAIL_STREAM_TYPE {
 	DBMAIL_STREAM_PIPE = 1,
@@ -68,6 +69,7 @@ enum DBMAIL_STREAM_TYPE {
 struct DbmailMessage {
 	u64_t id;
 	u64_t physid;
+	GString *internal_date;
 	enum DBMAIL_MESSAGE_CLASS klass;
 	GMimeObject *content;
 	GRelation *headers;
@@ -99,18 +101,23 @@ struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t
  */
 void dbmail_message_set_physid(struct DbmailMessage *self, u64_t physid);
 u64_t dbmail_message_get_physid(struct DbmailMessage *self);
+
+void dbmail_message_set_internal_date(struct DbmailMessage *self, char *internal_date);
+gchar * dbmail_message_get_internal_date(struct DbmailMessage *self);
 	
 int dbmail_message_set_class(struct DbmailMessage *self, int klass);
 int dbmail_message_get_class(struct DbmailMessage *self);
 
-gchar * dbmail_message_to_string(struct DbmailMessage *self);
-gchar * dbmail_message_hdrs_to_string(struct DbmailMessage *self);
-gchar * dbmail_message_body_to_string(struct DbmailMessage *self);
+gchar * dbmail_message_to_string(struct DbmailMessage *self, gboolean crlf);
+gchar * dbmail_message_hdrs_to_string(struct DbmailMessage *self, gboolean crlf);
+gchar * dbmail_message_body_to_string(struct DbmailMessage *self, gboolean crlf);
 
-size_t dbmail_message_get_size(struct DbmailMessage *self);
-size_t dbmail_message_get_rfcsize(struct DbmailMessage *self);
-size_t dbmail_message_get_hdrs_size(struct DbmailMessage *self);
-size_t dbmail_message_get_body_size(struct DbmailMessage *self);
+size_t dbmail_message_get_size(struct DbmailMessage *self, gboolean crlf);
+
+#define dbmail_message_get_rfcsize(x) dbmail_message_get_size(x, TRUE)
+
+size_t dbmail_message_get_hdrs_size(struct DbmailMessage *self, gboolean crlf);
+size_t dbmail_message_get_body_size(struct DbmailMessage *self, gboolean crlf);
 
 /*
  * manipulate the actual message content

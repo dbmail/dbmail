@@ -1079,8 +1079,7 @@ int _ic_append(struct ImapSession *self)
 		flaglist[i] = 0;
 
 	if (!self->args[0] || !self->args[1]) {
-		dbmail_imap_session_printf(self,
-			"%s BAD invalid arguments specified to APPEND\r\n",
+		dbmail_imap_session_printf(self, "%s BAD invalid arguments specified to APPEND\r\n",
 			self->tag);
 		return 1;
 	}
@@ -1092,14 +1091,13 @@ int _ic_append(struct ImapSession *self)
 	}
 
 	if (mboxid == 0) {
-		dbmail_imap_session_printf(self,
-			"%s NO [TRYCREATE] could not find specified mailbox\r\n",
+		dbmail_imap_session_printf(self, "%s NO [TRYCREATE] could not find specified mailbox\r\n",
 			self->tag);
 		return 1;
 	}
 
-	trace(TRACE_DEBUG, "ic_append(): mailbox [%s] found, id: %llu",
-	      self->args[0], mboxid);
+	trace(TRACE_DEBUG, "%s,%s: mailbox [%s] found, id: %llu",
+			__FILE__, __func__, self->args[0], mboxid);
 	/* check if user has right to append to  mailbox */
 	result = acl_has_right(ud->userid, mboxid, ACL_RIGHT_INSERT);
 	if (result < 0) {
@@ -1107,9 +1105,8 @@ int _ic_append(struct ImapSession *self)
 		return -1;
 	}
 	if (result == 0) {
-		dbmail_imap_session_printf(self,
-			"%s NO no permission to append to mailbox\r\n",
-			self->tag);
+		dbmail_imap_session_printf(self, "%s NO no permission to append to mailbox\r\n",
+				self->tag);
 		dbmail_imap_session_set_state(self, IMAPCS_AUTHENTICATED);
 		return 1;
 	}
@@ -1123,14 +1120,12 @@ int _ic_append(struct ImapSession *self)
 	 */
 	if (self->args[i][0] == '(') {
 		/* ok fetch the flags specified */
-		trace(TRACE_DEBUG, "ic_append(): flag list found:");
+		trace(TRACE_DEBUG, "%s,%s: flag list found:", __FILE__, __func__);
 
 		while (self->args[i] && self->args[i][0] != ')') {
 			trace(TRACE_DEBUG, "%s ", self->args[i]);
 			for (j = 0; j < IMAP_NFLAGS; j++) {
-				if (strcasecmp
-				    (self->args[i],
-				     imap_flag_desc_escaped[j]) == 0) {
+				if (strcasecmp (self->args[i], imap_flag_desc_escaped[j]) == 0) {
 					flaglist[j] = 1;
 					flagcount++;
 					break;
@@ -1144,46 +1139,38 @@ int _ic_append(struct ImapSession *self)
 	}
 
 	if (!self->args[i]) {
-		trace(TRACE_INFO,
-		      "ic_append(): unexpected end of arguments");
-		dbmail_imap_session_printf(self,
-			"%s BAD invalid arguments specified to APPEND\r\n",
-			self->tag);
+		trace(TRACE_INFO, "%s,%s: unexpected end of arguments",
+				__FILE__, __func__);
+		dbmail_imap_session_printf(self, 
+				"%s BAD invalid arguments specified to APPEND\r\n", 
+				self->tag);
 		return 1;
 	}
 
 	for (j = 0; j < IMAP_NFLAGS; j++)
 		if (flaglist[j] == 1)
-			trace(TRACE_DEBUG, "%s,%s: %s set",
-			      __FILE__, __func__, imap_flag_desc[j]);
+			trace(TRACE_DEBUG, "%s,%s: %s set", __FILE__, __func__, imap_flag_desc[j]);
 
 	/** check ACL's for STORE */
 	if (flaglist[IMAP_STORE_FLAG_SEEN] == 1) {
 		result = acl_has_right(ud->userid, mboxid, ACL_RIGHT_SEEN);
 		if (result < 0) {
-			dbmail_imap_session_printf(self,
-				"* BYE internal database error\r\n");
+			dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 			return -1;	/* fatal */
 		}
 		if (result == 0) {
-			dbmail_imap_session_printf(self,
-				"%s NO no right to store \\SEEN flag\r\n",
-				self->tag);
+			dbmail_imap_session_printf(self, "%s NO no right to store \\SEEN flag\r\n", self->tag);
 			return 1;
 		}
 	}
 	if (flaglist[IMAP_STORE_FLAG_DELETED] == 1) {
-		result =
-		    acl_has_right(ud->userid, mboxid, ACL_RIGHT_DELETE);
+		result = acl_has_right(ud->userid, mboxid, ACL_RIGHT_DELETE);
 		if (result < 0) {
-			dbmail_imap_session_printf(self,
-				"* BYE internal database error\r\n");
+			dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 			return -1;	/* fatal */
 		}
 		if (result == 0) {
-			dbmail_imap_session_printf(self,
-				"%s NO no right to store \\DELETED flag\r\n",
-				self->tag);
+			dbmail_imap_session_printf(self, "%s NO no right to store \\DELETED flag\r\n", self->tag);
 			return 1;
 		}
 	}
@@ -1191,16 +1178,13 @@ int _ic_append(struct ImapSession *self)
 	    flaglist[IMAP_STORE_FLAG_FLAGGED] == 1 ||
 	    flaglist[IMAP_STORE_FLAG_DRAFT] == 1 ||
 	    flaglist[IMAP_STORE_FLAG_RECENT] == 1) {
-		result =
-		    acl_has_right(ud->userid, mboxid, ACL_RIGHT_WRITE);
+		result = acl_has_right(ud->userid, mboxid, ACL_RIGHT_WRITE);
 		if (result < 0) {
-			dbmail_imap_session_printf(self,
-				"*BYE internal database error\r\n");
+			dbmail_imap_session_printf(self, "*BYE internal database error\r\n");
 			return -1;
 		}
 		if (result == 0) {
-			dbmail_imap_session_printf(self,
-				"%s NO no right to store flags\r\n", self->tag);
+			dbmail_imap_session_printf(self, "%s NO no right to store flags\r\n", self->tag);
 			return 1;
 		}
 	}
@@ -1213,17 +1197,14 @@ int _ic_append(struct ImapSession *self)
 		struct tm tm;
 
 		if (strptime(self->args[i], "%d-%b-%Y %T", &tm) != NULL)
-			strftime(sqldate,
-				 sizeof(sqldate), "%Y-%m-%d %H:%M:%S",
-				 &tm);
+			strftime(sqldate, sizeof(sqldate), "%Y-%m-%d %H:%M:%S", &tm);
 		else
 			sqldate[0] = '\0';
 		/* internal date specified */
 
 		i++;
-		trace(TRACE_DEBUG,
-		      "ic_append(): internal date [%s] found, next arg [%s]",
-		      sqldate, self->args[i]);
+		trace(TRACE_DEBUG, "%s,%s: internal date [%s] found, next arg [%s]", 
+				__FILE__, __func__, sqldate, self->args[i]);
 	} else {
 		sqldate[0] = '\0';
 	}
@@ -1231,24 +1212,20 @@ int _ic_append(struct ImapSession *self)
 	/* ok literal msg should be in self->args[i] */
 	/* insert this msg */
 
-	result =
-	    db_imap_append_msg(self->args[i], strlen(self->args[i]), mboxid,
-			       ud->userid, sqldate, &msg_idnr);
+	result = db_imap_append_msg(self->args[i], strlen(self->args[i]), mboxid, ud->userid, sqldate, &msg_idnr);
 	switch (result) {
 	case -1:
-		trace(TRACE_ERROR, "ic_append(): error appending msg");
-		dbmail_imap_session_printf(self,
-			"* BYE internal dbase error storing message\r\n");
+		trace(TRACE_ERROR, "%s,%s: error appending msg", __FILE__, __func__);
+		dbmail_imap_session_printf(self, "* BYE internal dbase error storing message\r\n");
 		break;
 
 	case 1:
-		trace(TRACE_ERROR, "ic_append(): faulty msg");
-		dbmail_imap_session_printf(self, "%s NO invalid message specified\r\n",
-			self->tag);
+		trace(TRACE_ERROR, "%s,%s: faulty msg", __FILE__, __func__);
+		dbmail_imap_session_printf(self, "%s NO invalid message specified\r\n", self->tag);
 		break;
 
 	case 2:
-		trace(TRACE_INFO, "ic_append(): quotum would exceed");
+		trace(TRACE_INFO, "%s,%s: quotum would exceed", __FILE__, __func__);
 		dbmail_imap_session_printf(self, "%s NO not enough quotum left\r\n", self->tag);
 		break;
 
@@ -1258,11 +1235,9 @@ int _ic_append(struct ImapSession *self)
 	}
 
 	if (result == 0 && flagcount > 0) {
-		if (db_set_msgflag(msg_idnr, mboxid, flaglist, IMAPFA_ADD)
-		    < 0) {
-			trace(TRACE_ERROR,
-			      "%s,%s: error setting flags for message "
-			      "[%llu]", __FILE__, __func__, msg_idnr);
+		if (db_set_msgflag(msg_idnr, mboxid, flaglist, IMAPFA_ADD) < 0) {
+			trace(TRACE_ERROR, "%s,%s: error setting flags for message [%llu]", 
+					__FILE__, __func__, msg_idnr);
 			return -1;
 		}
 	}

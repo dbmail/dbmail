@@ -800,17 +800,24 @@ u64_t db_get_useridnr(u64_t message_idnr)
 int db_insert_physmessage_with_internal_date(timestring_t internal_date,
 					     u64_t * physmessage_id)
 {
-	char *to_date_str;
+	char *to_date_str = NULL;
+	
 	assert(physmessage_id != NULL);
-
+	
 	*physmessage_id = 0;
-	to_date_str = char2date_str(internal_date);
-
-	snprintf(query, DEF_QUERYSIZE,
-		 "INSERT INTO %sphysmessage (messagesize, internal_date) "
-		 "VALUES ('0', %s)", DBPFX,to_date_str);
-	dm_free(to_date_str);
-
+	
+	if (internal_date != NULL) {
+		to_date_str = char2date_str(internal_date);
+		snprintf(query, DEF_QUERYSIZE,
+			 "INSERT INTO %sphysmessage (messagesize, internal_date) "
+			 "VALUES ('0', %s)", DBPFX,to_date_str);
+		dm_free(to_date_str);
+	} else {
+		snprintf(query, DEF_QUERYSIZE,
+			 "INSERT INTO %sphysmessage (messagesize, internal_date) "
+			 "VALUES ('0', %s)", DBPFX,SQL_CURRENT_TIMESTAMP);
+	}
+	
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR,
 		      "%s,%s: insertion of physmessage failed", __FILE__,
@@ -824,23 +831,7 @@ int db_insert_physmessage_with_internal_date(timestring_t internal_date,
 
 int db_insert_physmessage(u64_t * physmessage_id)
 {
-	assert(physmessage_id != NULL);
-
-	*physmessage_id = 0;
-
-	snprintf(query, DEF_QUERYSIZE,
-		 "INSERT INTO %sphysmessage (messagesize, internal_date) "
-		 "VALUES ('0', %s)", DBPFX, SQL_CURRENT_TIMESTAMP);
-
-	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: query failed", __FILE__,
-		      __func__);
-		return DM_EQUERY;
-	}
-
-	*physmessage_id = db_insert_result("physmessage_id");
-
-	return DM_EGENERAL;
+	return db_insert_physmessage_with_internal_date(NULL, physmessage_id);
 }
 
 int db_message_set_unique_id(u64_t message_idnr, const char *unique_id)
@@ -1527,9 +1518,6 @@ int db_icheck_headercache(GList **lost)
 
 int db_set_message_status(u64_t message_idnr, MessageStatus_t status)
 {
-	/** FIXME: We should check that, if a message is set from
-	 * a status < MESSAGE_STATUS_DELETE 
-	 * to >= MESSAGE_STATUS_DELETE, the curmail_size is also changed */
 	snprintf(query, DEF_QUERYSIZE, "UPDATE %smessages SET status = %d "
 		 "WHERE message_idnr = '%llu'",DBPFX, status, message_idnr);
 	return db_query(query);
@@ -2134,186 +2122,39 @@ int db_deleted_count(u64_t * affected_rows)
 	return DM_EGENERAL;
 }
 
-int db_imap_append_msg(const char *msgdata, u64_t datalen,
+int db_imap_append_msg(const char *msgdata, u64_t datalen UNUSED,
 		       u64_t mailbox_idnr, u64_t user_idnr,
 		       timestring_t internal_date, u64_t * msg_idnr)
 {
-	u64_t message_idnr;
-	u64_t messageblk_idnr;
-	u64_t physmessage_id = 0;
-	u64_t count;
-	char unique_id[UID_SIZE];	/* unique id */
+        struct DbmailMessage *message;
 
-	switch (db_check_quotum_used(user_idnr, datalen)) {
-	case -1:
-		trace(TRACE_ERROR, "%s,%s: error checking quotum",
-		      __FILE__, __func__);
-		return DM_EQUERY;
-	case 1:
-		trace(TRACE_INFO, "%s,%s: user [%llu] would exceed quotum",
-		      __FILE__, __func__, user_idnr);
-		return 2;
-	}
-
-	if (strlen(internal_date) > 0) {
-		if (db_insert_physmessage_with_internal_date(internal_date,
-							     &physmessage_id)
-		    < 0) {
-			trace(TRACE_ERROR,
-			      "%s,%s: could not create physmessage "
-			      "with internal date [%s]", __FILE__,
-			      __func__, internal_date);
-			return DM_EQUERY;
-		}
-	} else {
-		if (db_insert_physmessage(&physmessage_id) < 0) {
-			trace(TRACE_ERROR,
-			      "%s,%s: could not create physmessage",
-			      __FILE__, __func__);
-			return DM_EQUERY;
-		}
-	}
-
-	/* create a msg 
-	 * according to the rfc, the recent flag has to be set to '1'.
+        message = dbmail_message_new();
+        message = dbmail_message_init_with_string(message, g_string_new(msgdata));
+        dbmail_message_set_internal_date(message, (char *)internal_date);
+        
+	/* 
+         * according to the rfc, the recent flag has to be set to '1'.
 	 * this also means that the status will be set to '001'
-	 */
-	snprintf(query, DEF_QUERYSIZE,
-		 "INSERT INTO %smessages "
-		 "(mailbox_idnr, physmessage_id, unique_id, status,"
-		 "recent_flag) VALUES ('%llu', '%llu', '', '%d', '1')",DBPFX,
-		 mailbox_idnr, physmessage_id, MESSAGE_STATUS_SEEN);
+         */
 
-	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: could not create message",
-		      __FILE__, __func__);
-		return DM_EQUERY;
-	}
+        dbmail_message_store(message);
+        switch (db_copymsg(message->id, mailbox_idnr, user_idnr, msg_idnr)) {
+            case -2:
+                    trace(TRACE_DEBUG, "%s, %s: error copying message to user [%llu],"
+                            "maxmail exceeded", __FILE__, __func__, user_idnr);
+                    return -2;
+            case -1:
+                    trace(TRACE_ERROR, "%s, %s: error copying message to user [%llu]", 
+                            __FILE__, __func__, user_idnr);
+                    return -1;
+        }
+                
+        trace(TRACE_MESSAGE, "%s, %s: message id=%llu is inserted", 
+                __FILE__, __func__, *msg_idnr);
 
-	/* fetch the id of the new message */
-	message_idnr = db_insert_result("message_idnr");
-
-	/* ok insert blocks */
-	/* first the header: scan until double newline */
-	for (count = 1; count < datalen; count++)
-		if (msgdata[count - 1] == '\n' && msgdata[count] == '\n')
-			break;
-
-	if (count == datalen) {
-		trace(TRACE_INFO,
-		      "%s,%s: no double newline found [invalid msg]\n",
-		      __FILE__, __func__);
-		if (db_delete_message(message_idnr) == -1) {
-			trace(TRACE_ERROR,
-			      "%s,%s: could not delete invalid message"
-			      "%llu. Database could be invalid now..",
-			      __FILE__, __func__, message_idnr);
-		}
-		return DM_EGENERAL;
-	}
-
-	if (count == datalen - 1) {
-		/* msg consists of a single header */
-		trace(TRACE_INFO, "%s,%s: msg only contains a header",
-		      __FILE__, __func__);
-
-		if (db_insert_message_block_physmessage(msgdata, datalen,
-							physmessage_id,
-							&messageblk_idnr,1) == -1
-		    || db_insert_message_block(" \n", 2, message_idnr,
-					       &messageblk_idnr,1) == -1) {
-			trace(TRACE_ERROR,
-			      "%s,%s: could not insert msg block\n",
-			      __FILE__, __func__);
-			if (db_delete_message(message_idnr) == -1) {
-				trace(TRACE_ERROR,
-				      "%s,%s: could not delete invalid message"
-				      "%llu. Database could be invalid now..",
-				      __FILE__, __func__,
-				      message_idnr);
-			}
-			return DM_EQUERY;
-		}
-	} else {
-		/* 
-		 * output header: 
-		 * the first count bytes is the header
-		 */
-		count++;
-
-		if (db_insert_message_block_physmessage(
-			    msgdata, count, 
-			    physmessage_id,
-			    &messageblk_idnr,1) == -1) {
-			trace(TRACE_ERROR,
-			      "%s,%s: could not insert msg block\n",
-			      __FILE__, __func__);
-			if (db_delete_message(message_idnr) == -1) {
-				trace(TRACE_ERROR,
-				      "%s,%s: could not delete invalid message"
-				      "%llu. Database could be  invalid now..",
-				      __FILE__, __func__,
-				      message_idnr);
-			}
-			return DM_EQUERY;
-		}
-
-		/* output message */
-		while ((datalen - count) > READ_BLOCK_SIZE) {
-			if (db_insert_message_block_physmessage(
-				    &msgdata[count],
-				    READ_BLOCK_SIZE,
-				    physmessage_id,
-				    &messageblk_idnr,0) == -1) {
-				trace(TRACE_ERROR,
-				      "%s,%s: could not insert msg block",
-				      __FILE__, __func__);
-				if (db_delete_message(message_idnr) == -1) {
-					trace(TRACE_ERROR,
-					      "%s,%s: could not delete invalid "
-					      "message %llu. Database could be invalid now..",
-					      __FILE__, __func__,
-					      message_idnr);
-				}
-				return DM_EQUERY;
-			}
-			count += READ_BLOCK_SIZE;
-		}
-
-
-		if (db_insert_message_block_physmessage(
-			    &msgdata[count],
-			    datalen - count, physmessage_id,
-			    &messageblk_idnr,0) == -1) {
-			trace(TRACE_ERROR,
-			      "%s,%s:  could not insert msg block\n",
-			      __FILE__, __func__);
-			if (db_delete_message(message_idnr) == -1) {
-				trace(TRACE_ERROR,
-				      "%s,%s: could not delete invalid "
-				      "message %llu. Database could be invalid now..",
-				      __FILE__, __func__,
-				      message_idnr);
-			}
-			return DM_EQUERY;
-		}
-
-	}
-	/* set message size */
-	if (db_physmessage_set_sizes(physmessage_id, datalen, 0) < 0) {
-		trace(TRACE_ERROR, "%s,%s: Error setting physmessages sizes",
-		      __FILE__, __func__);
-		return DM_EQUERY;
-	}
-	/* create a unique id */
-	create_unique_id(unique_id, message_idnr);
-	db_message_set_unique_id(message_idnr, unique_id);
-
-	/* recalculate quotum used */
-	db_add_quotum_used(user_idnr, datalen);
-
-	*msg_idnr = message_idnr;
-	return DM_SUCCESS;
+        dbmail_message_free(message);
+        
+        return db_set_message_status(*msg_idnr, MESSAGE_STATUS_SEEN);
 }
 
 int db_findmailbox(const char *fq_name, u64_t user_idnr,
@@ -3443,18 +3284,7 @@ int db_get_msgflag_all(u64_t msg_idnr, u64_t mailbox_idnr, int *flags)
 int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr,
 		   int *flags, int action_type)
 {
-	/* we're lazy.. just call db_set_msgflag_range with range
-	 * msg_idnr to msg_idnr! */
-
-	if (db_set_msgflag_range(msg_idnr, msg_idnr, mailbox_idnr,
-				 flags, action_type) == -1) {
-		trace(TRACE_ERROR, "%s,%s: could not set message flags",
-		      __FILE__, __func__);
-		return DM_EQUERY;
-	}
-
-	return DM_SUCCESS;
-
+	return db_set_msgflag_range(msg_idnr, msg_idnr, mailbox_idnr, flags, action_type);
 }
 
 	

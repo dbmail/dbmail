@@ -247,15 +247,7 @@ END_TEST
 //int db_fetch_headers(u64_t msguid, mime_message_t * msg)
 START_TEST(test_db_fetch_headers)
 {
-	mime_message_t *msg = g_new0(mime_message_t,1);
-	int res;
-	
 	//res = db_start_msg(msg,stopbound,&level,maxlevel);
-	fail_unless(res==29, "db_start_msg result incorrect");
-	fail_unless(msg->rfcheader.total_nodes == 10, "total-nodes for rfcheader incorrect");
-
-	g_free(msg);
-
 }
 END_TEST
 

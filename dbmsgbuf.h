@@ -1,5 +1,6 @@
 /*
- Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
+ Copyright (C) 1999-2005 IC & S  dbmail@ic-s.nl
+ Copyright (C) 2004-2005 NFG Net Facilities Group info@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -34,6 +35,7 @@
 #endif
 
 #include "dbmailtypes.h"
+#include "dbmail-message.h"
 #include "memblock.h"
 
 #define MSGBUF_FORCE_UPDATE -1
@@ -41,6 +43,10 @@
 char *msgbuf_buf;/**< the message buffer */
 u64_t msgbuf_idx;/**< index within msgbuf, 0 <= msgidx < buflen */
 u64_t msgbuf_buflen;/**< current buffer length: msgbuf[buflen] == '\\0' */
+
+struct DbmailMessage * db_init_fetch(u64_t msg_idnr, int filter);
+int db_init_fetch_messageblks(u64_t msg_idnr, int filter);
+
 
 /**
  * \brief initialises a message fetch
@@ -50,7 +56,7 @@ u64_t msgbuf_buflen;/**< current buffer length: msgbuf[buflen] == '\\0' */
  *     -  0 if already inited (sic) before
  *     -  1 on success
  */
-int db_init_fetch_message(u64_t msg_idnr);
+#define db_init_fetch_message(x) db_init_fetch_messageblks(x, DBMAIL_MESSAGE_FILTER_FULL)
 
 /**
  * \brief initialises a message headers fetch
@@ -60,8 +66,7 @@ int db_init_fetch_message(u64_t msg_idnr);
  *     -  0 if already inited (sic) before
  *     -  1 on success
  */
-int db_init_fetch_headers(u64_t msg_idnr);
-
+#define db_init_fetch_headers(x) db_init_fetch_messageblks(x,DBMAIL_MESSAGE_FILTER_HEAD)
 
 /**
  * \brief update msgbuf
