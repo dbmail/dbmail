@@ -44,7 +44,9 @@ char *msgbuf_buf;/**< the message buffer */
 u64_t msgbuf_idx;/**< index within msgbuf, 0 <= msgidx < buflen */
 u64_t msgbuf_buflen;/**< current buffer length: msgbuf[buflen] == '\\0' */
 
+struct DbmailMessage * db_init_fetch(u64_t msg_idnr, int filter);
 int db_init_fetch_messageblks(u64_t msg_idnr, int filter);
+
 
 /**
  * \brief initialises a message fetch

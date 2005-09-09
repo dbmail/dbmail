@@ -169,7 +169,7 @@ class testImapServer(unittest.TestCase):
         
         result=self.o.fetch(id,"(UID RFC822.HEADER)")
         self.assertEquals(result[0],'OK')
-        self.assertEquals(result[1][0][1][-4:],'\r\n\r\n')
+        self.assertEquals(result[1][0][1][-2:],'\r\n')
         
         result=self.o.fetch("1:2","(UID RFC822.HEADER)")
         self.assertEquals(result[0],'OK')

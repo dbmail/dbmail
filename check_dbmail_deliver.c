@@ -125,7 +125,7 @@ START_TEST(test_insert_messages)
 	dsnuser.address = "testuser1";
 	dm_list_nodeadd(&dsnusers, &dsnuser, sizeof(deliver_to_user_t));
 	
-	header = dbmail_message_hdrs_to_string(message);
+	header = dbmail_message_hdrs_to_string(message, FALSE);
 	mime_fetch_headers(header, &headerfields);
 	g_free(header);
 

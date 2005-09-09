@@ -466,11 +466,11 @@ int insert_messages(struct DbmailMessage *message,
 		break;
 	}
 
-	header = dbmail_message_hdrs_to_string(message);
-	headersize = (u64_t)dbmail_message_get_hdrs_size(message);
-	bodysize = (u64_t)dbmail_message_get_body_size(message);
+	header = dbmail_message_hdrs_to_string(message, FALSE);
+	headersize = (u64_t)dbmail_message_get_hdrs_size(message, FALSE);
+	bodysize = (u64_t)dbmail_message_get_body_size(message, FALSE);
 	rfcsize = (u64_t)dbmail_message_get_rfcsize(message);
-	msgsize = (u64_t)dbmail_message_get_size(message);
+	msgsize = (u64_t)dbmail_message_get_size(message, FALSE);
 
 
 	/* Loop through the users list. */

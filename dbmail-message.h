@@ -55,10 +55,11 @@ enum DBMAIL_MESSAGE_CLASS {
 	DBMAIL_MESSAGE_PART
 };
 
-enum DBMAIL_MESSAGE_FILTER_TYPES { 
+typedef enum DBMAIL_MESSAGE_FILTER_TYPES { 
 	DBMAIL_MESSAGE_FILTER_FULL,
-	DBMAIL_MESSAGE_FILTER_HEAD
-};
+	DBMAIL_MESSAGE_FILTER_HEAD,
+	DBMAIL_MESSAGE_FILTER_BODY
+} message_filter_t;
 
 enum DBMAIL_STREAM_TYPE {
 	DBMAIL_STREAM_PIPE = 1,
@@ -108,13 +109,15 @@ int dbmail_message_set_class(struct DbmailMessage *self, int klass);
 int dbmail_message_get_class(struct DbmailMessage *self);
 
 gchar * dbmail_message_to_string(struct DbmailMessage *self, gboolean crlf);
-gchar * dbmail_message_hdrs_to_string(struct DbmailMessage *self);
-gchar * dbmail_message_body_to_string(struct DbmailMessage *self);
+gchar * dbmail_message_hdrs_to_string(struct DbmailMessage *self, gboolean crlf);
+gchar * dbmail_message_body_to_string(struct DbmailMessage *self, gboolean crlf);
 
-size_t dbmail_message_get_size(struct DbmailMessage *self);
-size_t dbmail_message_get_rfcsize(struct DbmailMessage *self);
-size_t dbmail_message_get_hdrs_size(struct DbmailMessage *self);
-size_t dbmail_message_get_body_size(struct DbmailMessage *self);
+size_t dbmail_message_get_size(struct DbmailMessage *self, gboolean crlf);
+
+#define dbmail_message_get_rfcsize(x) dbmail_message_get_size(x, TRUE)
+
+size_t dbmail_message_get_hdrs_size(struct DbmailMessage *self, gboolean crlf);
+size_t dbmail_message_get_body_size(struct DbmailMessage *self, gboolean crlf);
 
 /*
  * manipulate the actual message content
