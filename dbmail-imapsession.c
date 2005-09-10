@@ -1698,8 +1698,7 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data) {
 		if (!msgpart || only_text_from_msgpart)
 			dbmail_imap_session_printf(self, "] NIL\r\n");
 		else {
-			tmpdumpsize = rfcheader_dump(cached_msg.tmpdump, 
-					&msgpart->rfcheader, self->args, 0, 0);
+			tmpdumpsize = rfcheader_dump(cached_msg.tmpdump, &msgpart->rfcheader, self->args, 0, 0);
 
 			if (!tmpdumpsize) {
 				dbmail_imap_session_printf(self, "] NIL\r\n");
