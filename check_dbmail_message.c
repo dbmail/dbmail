@@ -169,9 +169,8 @@ START_TEST(test_dbmail_message_to_string)
         decoded = dbmail_message_to_string(m, FALSE);
         encoded = dbmail_message_to_string(m, TRUE);
         
-        printf("[%s]",decoded);
-        printf("[%s]",encoded);
-        
+	/* FIXME: add some checks here */
+	
         g_free(encoded);
         g_free(decoded);
 	

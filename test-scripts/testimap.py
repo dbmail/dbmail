@@ -54,17 +54,19 @@ def getMessageStrict():
 
 TESTMSG['strict822']=getMessageStrict()
 
+def getsock():
+    if TYPE == 'network':
+        return imaplib.IMAP4(HOST,PORT)
+    elif TYPE == 'stream':
+        return imaplib.IMAP4_stream(DAEMONBIN)
+
 
 class testImapServer(unittest.TestCase):
 
     def setUp(self,username="testuser1",password="test"):
-        if TYPE == 'network':
-            self.o = imaplib.IMAP4(HOST,PORT)
-        elif TYPE == 'stream':
-            self.o = imaplib.IMAP4_stream(DAEMONBIN)
+        self.o = getsock()
         self.o.debug = DEBUG
-        result=self.o.login(username,password)
-        return result
+        return self.o.login(username,password)
 
     def testAppend(self):
         """ 
@@ -375,12 +377,13 @@ class testImapServer(unittest.TestCase):
         """
         
         self.o.create('testaclbox')
-        self.o.setacl('testaclbox','testuser2','slrw')
+        self.assertEquals(self.o.setacl('testaclbox','testuser2','slrw')[0],'OK')
 
-        p = imaplib.IMAP4(HOST,PORT)
+        p = getsock()
         p.login('testuser2','test'),('OK',['LOGIN completed'])
-        p.debug = 4
         self.assertEquals(p.list()[1][-1],'() "/" "#Users/testuser1/testaclbox"')
+        p.logout()
+
         self.o.delete('testaclbox')
 
     def testSetquota(self):

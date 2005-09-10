@@ -1,3 +1,22 @@
+2005-09-09  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_imapd.c, check_dbmail_message.c, db.c, dbmail-imapsession.c, 
+	  dbmail-message.c, dbmail-message.h, dbmsgbuf.c, imapcommands.c, 
+	  lmtp.c, test-scripts/testimap.py:
+	partial cleanup retrieval chain
+	* check_dbmail_message.c, dbmail-message.c, test-scripts/testimap.py:
+	fix dbmail_message_to_string
+	* server.c:
+	fix excessive db reconnects (closes #266)
+	* python/lib/dbmail.py:
+	added postgres support to python libs
+	* dbmsgbuf.c, dbmsgbuf.h, rfcmsg.c:
+	minor cleanups
+	* check_dbmail_deliver.c, check_dbmail_message.c, dbmail-imapsession.c, 
+	  dbmail-message.c, dbmail-message.h, dbmsgbuf.c, dbmsgbuf.h, lmtp.c, 
+	  main.c, pipe.c, tags, test-scripts/testimap.py:
+	more cleanups in the retrieval and caching code
+
 2005-09-04  Paul J Stevens <paul@nfg.nl>
 
 	* ChangeLog, dbmail-imapsession.c, dbmail-imapsession.h, imaputil.c, 

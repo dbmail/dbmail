@@ -111,128 +111,33 @@ int mime_fetch_headers(const char *datablock, struct dm_list *mimelist)
  * if blkdata[0] == \n no header is expected and the function will return immediately
  * (headersize 0)
  *
- * returns -1 on parse failure, -2 on memory error; number of newlines on succes
+ * returns -1 on parse failure, -2 on memory error; 0 on succes
  */
 
 
-int mime_readheader(const char *datablock, u64_t * blkidx, struct dm_list *mimelist,
-		    u64_t * headersize)
+int mime_readheader(const char *datablock, u64_t * msgbuf_idx, struct dm_list *mimelist, u64_t * headersize)
 {
-	int idx, totallines = 0, j;
-	int fieldlen, vallen;
-	char *endptr, *startptr, *delimiter;
-	char *blkdata;
-	int cr_nl_present;	/* 1 if a '\r\n' is found */
-
-	char field[MIME_FIELD_MAX];
+	char *raw, *crlf;
+	struct DbmailMessage *message;
+	GString *mimepart = g_string_new(datablock);
 	
 	/* moved header-parsing to separate function */
 	mime_fetch_headers(datablock, mimelist);
+
+	message = dbmail_message_new();
+	message = dbmail_message_init_with_string(message,mimepart);
+	g_string_free(mimepart,TRUE);
 	
-	blkdata = g_strdup(datablock);
+	crlf = dbmail_message_hdrs_to_string(message,TRUE);
+	raw = dbmail_message_hdrs_to_string(message,FALSE);
+	
+	*headersize = strlen(crlf);
+	*msgbuf_idx = strlen(raw);
 
-	*headersize = 0;
+	g_free(crlf);
+	g_free(raw);
 
-	if (blkdata[0] == '\n') {
-		trace(TRACE_DEBUG, "%s,%s: found an empty header", __FILE__, __func__);
-		(*blkidx)++;	/* skip \n */
-		g_free(blkdata);
-		return 1;	/* found 1 newline */
-	}
-
-	startptr = blkdata;
-	while (*startptr) {
-		cr_nl_present = 0;
-		/* quick hack to jump over those naughty \n\t fields */
-		endptr = startptr;
-		while (*endptr) {
-			/* field-ending: \n + (non-white space) */
-			if (*endptr == '\n') {
-				totallines++;
-				if (is_end_of_header(endptr))
-					break;
-			}
-			if (*endptr == '\r' && *(endptr + 1) == '\n') {
-				cr_nl_present = 1;
-				totallines++;
-				endptr++;
-				if (is_end_of_header(endptr))
-					break;
-			}
-			endptr++;
-		}
-
-		if (!(*endptr)) {
-			/* end of data block reached (??) */
-			*blkidx += (endptr - startptr);
-			g_free(blkdata);
-			return totallines;
-		}
-
-		/* endptr points to linebreak now */
-		/* MIME field+value is string from startptr till endptr */
-		if (cr_nl_present)
-			*(endptr - 1) = '\0';
-		*endptr = '\0';	/* replace newline to terminate string */
-
-		/* parsing tmpstring for field and data */
-		/* field is name:value */
-
-		delimiter = strchr(startptr, ':');
-
-		if (delimiter) {
-			/* found ':' */
-			*delimiter = '\0';	/* split up strings */
-
-			/* skip all spaces and colons after the fieldname */
-			idx = 1;
-			while ((delimiter[idx] == ':') || (delimiter[idx] == ' '))
-				idx++;
-
-			/* &delimiter[idx] is field value, startptr is field name */
-			fieldlen = snprintf(field, MIME_FIELD_MAX, "%s", startptr);
-			for (vallen = 0, j = 0; delimiter[idx + j] && vallen < MIME_VALUE_MAX; j++, vallen++) {
-				if (delimiter[idx + j] == '\n') 
-					vallen++;
-			}
-			*headersize += strlen(field) + vallen + 4;	/* <field>: <value>\r\n --> four more */
-
-			/* restore blkdata */
-			*delimiter = ':';
-
-		}
-		
-		if (cr_nl_present)
-			*(endptr - 1) = '\r';
-		*endptr = '\n';	/* restore blkdata */
-
-		*blkidx += (endptr - startptr);
-		(*blkidx)++;
-
-		startptr = endptr + 1;	/* advance to next field */
-
-		if (*startptr == '\n' || (*startptr == '\r' && *(startptr + 1) == '\n')) {
-			/* end of header: double newline */
-			totallines++;
-			(*blkidx)++;
-			(*headersize) += 2;
-			g_free(blkdata);
-			return totallines;
-		}
-
-	}
-
-	/* everything down here should be unreachable */
-
-	trace(TRACE_DEBUG, "%s,%s: mimeloop finished", __FILE__, __func__);
-	if (mimelist->total_nodes < 2) {
-		trace(TRACE_ERROR, "%s,%s: no valid mime headers found\n", __FILE__, __func__);
-		g_free(blkdata);
-		return -1;
-	}
-
-	g_free(blkdata);
-	return totallines;
+	return (*headersize - *msgbuf_idx);
 }
 
 /*
