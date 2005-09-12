@@ -18,7 +18,8 @@
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 # $Id: testimap.py 1878 2005-09-04 06:34:44Z paul $
 
-DEBUG = 0
+# For a protocol trace set to 4
+DEBUG = 4
 
 # select 'stream' for non-forking mode
 TYPE = 'stream'
@@ -27,8 +28,9 @@ TYPE = 'stream'
 
 
 import unittest, imaplib, re
-import sys, traceback, getopt
+import sys, traceback, getopt, string
 from email.MIMEText import MIMEText
+from email.MIMEMultipart import MIMEMultipart
 
 unimplementedError = 'Dbmail testcase unimplemented'
 
@@ -50,9 +52,18 @@ def getMessageStrict():
     m.add_header("To","testuser@foo.org")
     m.add_header("From","somewher@foo.org")
     m.add_header("Subject","dbmail test message")
-    return str(m)
+    return m
 
+def getMultiPart():
+    m=MIMEMultipart()
+    m.attach(getMessageStrict())
+    m.add_header("To","testaddr@bar.org")
+    m.add_header("From","testuser@foo.org")
+    m.add_header("Subject","dbmail multipart message")
+    return m
+    
 TESTMSG['strict822']=getMessageStrict()
+TESTMSG['multipart']=getMultiPart()
 
 def getsock():
     if TYPE == 'network':
@@ -60,6 +71,8 @@ def getsock():
     elif TYPE == 'stream':
         return imaplib.IMAP4_stream(DAEMONBIN)
 
+def strip_crlf(s):
+    return string.replace(s,'\r','')
 
 class testImapServer(unittest.TestCase):
 
@@ -74,19 +87,27 @@ class testImapServer(unittest.TestCase):
              Append message to named mailbox.
         """
         # check for OK
-        self.assertEquals(self.o.append('INBOX',(),"",TESTMSG['strict822'])[0],'OK')
+        self.assertEquals(self.o.append('INBOX',(),"",str(TESTMSG['strict822']))[0],'OK')
         # check for TRYCREATE
-        result=self.o.append('nosuchbox',(),"",TESTMSG['strict822'])
+        result=self.o.append('nosuchbox',(),"",str(TESTMSG['strict822']))
         self.assertEquals(result[0],'NO')
         self.assertEquals(result[1][0][:11],'[TRYCREATE]')
         # test flags
         self.o.create('testappend')
-        self.o.append('testappend','\Flagged',"",TESTMSG['strict822'])
+        self.o.append('testappend','\Flagged',"",str(TESTMSG['strict822']))
         self.o.select('testappend')
         id=self.o.recent()[1][0]
-        result = self.o.fetch(id,"(UID BODY.PEEK[])")
+        
+        result = self.o.fetch(id,"(UID BODY[])")
         self.assertEquals(result[0],'OK')
-        print result
+        
+        result = self.o.fetch(id,"(UID BODY[TEXT])")
+        self.assertEquals(result[0],'OK')
+        self.assertEquals(strip_crlf(result[1][0][1]),TESTMSG['strict822'].get_payload())
+
+        result = self.o.fetch(id,"(UID BODY.PEEK[TEXT])")
+        self.assertEquals(result[0],'OK')
+        self.assertEquals(strip_crlf(result[1][0][1]),TESTMSG['strict822'].get_payload())
 
 #        expect = '  FLAGS (\\Seen \\Flagged \\Recent))'
 #        self.assertEquals(result,expect)
@@ -155,30 +176,54 @@ class testImapServer(unittest.TestCase):
             BODY[TEXT])"'.  Returned data are tuples of message part envelope
             and data.
         """
-        self.o.append('INBOX','','',TESTMSG['strict822'])
-        self.o.select()
-        self.assertEquals(self.o.fetch("1:2","(Flags)")[0],'OK')
+        self.o.create('tmpbox')
+        self.o.append('tmpbox','','',str(TESTMSG['strict822']))
+        self.o.select('tmpbox')
+        self.assertEquals(self.o.fetch("1:*","(Flags)")[0],'OK')
         id=self.o.recent()[1][0]
         
+        # fetch complete message. order and number of headers may differ
         result = self.o.fetch(id,"(UID BODY[])")
+        self.assertEquals(result[0],'OK')
+        
+        # get the body. must equal input message's body
+        result = self.o.fetch(id,"(UID BODY[TEXT])")
+        print result
+        bodytext = strip_crlf(result[1][0][1])
+        self.assertEquals(bodytext,TESTMSG['strict822'].get_payload())
+        
+        result = self.o.fetch(id,"(UID BODYSTRUCTURE)")
         self.assertEquals(result[0],'OK')
         print result
         
+
         result = self.o.fetch(id,"(UID BODY[TEXT]<0.20>)")
+        #print result
+        
         self.assertEquals(result[0],'OK')
         self.assertEquals(self.o.fetch(id,"(UID BODY.PEEK[TEXT]<0.30>)")[0],'OK')
         self.assertEquals(self.o.fetch(id,"(UID RFC822.SIZE)")[0],'OK')
         
         result=self.o.fetch(id,"(UID RFC822.HEADER)")
+
+        #print result
+
         self.assertEquals(result[0],'OK')
         self.assertEquals(result[1][0][1][-2:],'\r\n')
         
-        result=self.o.fetch("1:2","(UID RFC822.HEADER)")
+        result=self.o.fetch(id,"(UID RFC822.HEADER)")
         self.assertEquals(result[0],'OK')
+        #print result
         
-        result=self.o.fetch("1","(BODY.PEEK[HEADER.FIELDS (References X-Ref X-Priority X-MSMail-Priority X-MSOESRec Newsgroups)] ENVELOPE RFC822.SIZE UID FLAGS INTERNALDATE)")
+        # OE query
+        result=self.o.fetch(id,"(BODY.PEEK[HEADER.FIELDS (References X-Ref X-Priority X-MSMail-Priority X-MSOESRec Newsgroups)] ENVELOPE RFC822.SIZE UID FLAGS INTERNALDATE)")
         self.assertEquals(result[0],'OK')
+        print result
 
+        # TB query
+        result=self.o.fetch(id,"(UID RFC822.SIZE FLAGS BODY.PEEK[HEADER.FIELDS (From To Cc Subject Date Message-ID Priority X-Priority References Newsgroups In-Reply-To Content-Type)])")
+        print result
+        
     def testGetacl(self):
         """ 
         `getacl(mailbox)'

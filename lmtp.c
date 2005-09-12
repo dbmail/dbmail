@@ -608,21 +608,23 @@ int lmtp(void *stream, void *instream, char *buffer,
 						return 1;
 					}
 					
-					s = dbmail_message_to_string(msg, FALSE);
+					s = dbmail_message_to_string(msg);
 					trace(TRACE_DEBUG, "%s,%s: whole message = %s", __FILE__, __func__, s);
 					g_free(s);
 
 					if (dbmail_message_get_hdrs_size(msg, FALSE) > READ_BLOCK_SIZE) {
-						trace(TRACE_ERROR, "main(): header is too big");
+						trace(TRACE_ERROR, "%s,%s: header is too big",
+								__FILE__, __func__);
 						discard_client_input((FILE *) instream);
 						ci_write((FILE *)stream, "500 Error reading header, "
 							"header too big.\r\n");
 						return 1;
 					}
 					/* Parse the list and scan for field and content */
-					headers = dbmail_message_hdrs_to_string(msg, FALSE);
+					headers = dbmail_message_hdrs_to_string(msg);
 					if (mime_fetch_headers(headers, &headerfields) < 0) {
-						trace(TRACE_ERROR, "main(): fatal error from mime_fetch_headers()");
+						trace(TRACE_ERROR, "%s,%s: fatal error from mime_fetch_headers()",
+								__FILE__, __func__);
 						discard_client_input((FILE *) instream);
 						ci_write((FILE *) stream, "500 Error reading header.\r\n");
 						dbmail_message_free(msg);

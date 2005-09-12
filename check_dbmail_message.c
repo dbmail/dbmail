@@ -160,20 +160,17 @@ END_TEST
 
 START_TEST(test_dbmail_message_to_string)
 {
-        char *decoded, *encoded;
+        char *s;
 	struct DbmailMessage *m;
         
 	m = dbmail_message_new();
 	m = dbmail_message_init_with_string(m, g_string_new(raw_message));
 	
-        decoded = dbmail_message_to_string(m, FALSE);
-        encoded = dbmail_message_to_string(m, TRUE);
+        s = dbmail_message_to_string(m);
         
 	/* FIXME: add some checks here */
 	
-        g_free(encoded);
-        g_free(decoded);
-	
+        g_free(s);
 	dbmail_message_free(m);
 }
 END_TEST
@@ -191,12 +188,14 @@ START_TEST(test_dbmail_message_hdrs_to_string)
 {
 	char *result;
 	struct DbmailMessage *m = dbmail_message_new();
-	m = dbmail_message_init_with_string(m, g_string_new(raw_message));
-	result = dbmail_message_hdrs_to_string(m, FALSE);
-	fail_unless(strlen(result)==484, "dbmail_message_hdrs_to_string failed");
+	
+        m = dbmail_message_init_with_string(m, g_string_new(raw_message));
+	result = dbmail_message_hdrs_to_string(m);
+//	printf("{%d} [%s]\n", strlen(result),result);
+	fail_unless(strlen(result)==485, "dbmail_message_hdrs_to_string failed");
+	
+        dbmail_message_free(m);
 	g_free(result);
-
-	dbmail_message_free(m);
 }
 END_TEST
 
@@ -206,11 +205,13 @@ START_TEST(test_dbmail_message_body_to_string)
 {
 	char *result;
 	struct DbmailMessage *m = dbmail_message_new();
-	m = dbmail_message_init_with_string(m, g_string_new(raw_message));
-	result = dbmail_message_body_to_string(m, FALSE);
-	fail_unless(strlen(result)==1046, "dbmail_message_body_to_string failed");
+	
+        m = dbmail_message_init_with_string(m, g_string_new(raw_message));
+	result = dbmail_message_body_to_string(m);
+	fail_unless(strlen(result)==1045, "dbmail_message_body_to_string failed");
+	
+        dbmail_message_free(m);
 	g_free(result);
-	dbmail_message_free(m);
 }
 END_TEST
 
@@ -220,10 +221,12 @@ START_TEST(test_dbmail_message_get_rfcsize)
 {
 	unsigned result;
 	struct DbmailMessage *m = dbmail_message_new();
-	m = dbmail_message_init_with_string(m, g_string_new(raw_message));
+	
+        m = dbmail_message_init_with_string(m, g_string_new(raw_message));
 	result = dbmail_message_get_rfcsize(m);
 	fail_unless(result==1572, "dbmail_message_get_rfcsize failed");
-	dbmail_message_free(m);
+	
+        dbmail_message_free(m);
 }
 END_TEST
 
@@ -279,7 +282,7 @@ START_TEST(test_dbmail_message_get_header)
 	
 	
 	m = dbmail_message_init_with_string(m, g_string_new(raw_message));
-	t = dbmail_message_hdrs_to_string(m, FALSE);
+	t = dbmail_message_hdrs_to_string(m);
 	h = dbmail_message_init_with_string(h, g_string_new(t));
 	g_free(t);
 	

@@ -302,7 +302,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* parse the list and scan for field and content */
-	headers = dbmail_message_hdrs_to_string(msg, FALSE);
+	headers = dbmail_message_hdrs_to_string(msg);
 	if (mime_fetch_headers(headers, &mimelist) < 0) {
 		trace(TRACE_ERROR,
 		      "main(): mime_fetch_headers failed to read a header list");
