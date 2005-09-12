@@ -76,13 +76,17 @@ int db_init_fetch_messageblks(u64_t msg_idnr, int filter)
 {
 
 	struct DbmailMessage *msg;
+	char *buf;
 
 	msg = db_init_fetch(msg_idnr, filter);
 	if (! msg)
 		return DM_EGENERAL;
 	
-	/* set globals */
-	msgbuf_buf = dbmail_message_to_string(msg, TRUE);
+	/* set globals: msgbuf contains a crlf version of the message at hand (yuk!) */
+	buf = dbmail_message_to_string(msg);
+	msgbuf_buf = get_crlf_encoded(buf);
+	g_free(buf);
+
 	msgbuf_idx = 0;
 	msgbuf_buflen = strlen(msgbuf_buf);
 	db_store_msgbuf_result();
