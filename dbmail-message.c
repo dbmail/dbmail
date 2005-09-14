@@ -976,6 +976,8 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message, u64_t useridnr, cons
 			trace(TRACE_MESSAGE, "%s, %s: message id=%llu, size=%d is inserted", 
 					__FILE__, __func__, 
 					newmsgidnr, msgsize);
+			message->id = newmsgidnr;
+
 			return DSN_CLASS_OK;
 		}
 	}

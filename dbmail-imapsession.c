@@ -85,7 +85,6 @@ extern const char *imap_flag_desc_escaped[];
 static int _imap_session_fetch_parse_partspec(struct ImapSession *self, int idx);
 static int _imap_session_fetch_parse_octet_range(struct ImapSession *self, int idx);
 
-static GList * _imap_get_structure(mime_message_t * msg, int show_extension_data);
 static GList * _imap_get_addresses(struct mime_record *mr);
 static GList * _imap_get_envelope(struct dm_list *rfcheader);
 static GList * _imap_get_mime_parameters(struct mime_record *mr, int force_subtype, int only_extension);
@@ -195,65 +194,69 @@ void dbmail_imap_session_delete(struct ImapSession * self)
  ************************************************************************************/
 static u64_t _imap_cache_update(struct ImapSession *self, message_filter_t filter)
 {
-	u64_t outcnt = 0;
+	u64_t tmpcnt = 0, outcnt = 0;
 	char *buf = NULL;
-	struct DbmailMessage *msg = NULL;
+	char *rfc = NULL;
 
-	switch (filter) {
-		case DBMAIL_MESSAGE_FILTER_FULL:
-			if (cached_msg.file_dumped == 0 || cached_msg.num != self->msg_idnr) {
+	if (cached_msg.file_dumped == 0 || cached_msg.num != self->msg_idnr) {
 
-				msg = db_init_fetch(self->msg_idnr, filter);
-				buf = dbmail_message_to_string(msg, TRUE); // crlf encoded
-				
-				mrewind(cached_msg.memdump);
-				mrewind(cached_msg.tmpdump);
-				
-				/* update both MEM buffers */
-				mwrite(buf, strlen(buf), cached_msg.tmpdump);
-				outcnt = (u64_t)mwrite(buf, strlen(buf), cached_msg.memdump);
-				cached_msg.dumpsize = outcnt;
-
-				if (cached_msg.num != self->msg_idnr) {
-					/* if there is a parsed msg in the cache it will be invalid now */
-					if (cached_msg.msg_parsed) {
-						cached_msg.msg_parsed = 0;
-						db_free_msg(&cached_msg.msg);
-					}
-					cached_msg.num = self->msg_idnr;
-				}
-				cached_msg.file_dumped = 1;
-
-				mrewind(cached_msg.memdump);
-				mrewind(cached_msg.tmpdump);
-			}
-		break;
+		cached_msg.dmsg = db_init_fetch(self->msg_idnr, DBMAIL_MESSAGE_FILTER_FULL);
+		buf = dbmail_message_to_string(cached_msg.dmsg);
+		rfc = get_crlf_encoded(buf);
 		
-		/* these two only update the temp MEM buffer */	
+		mrewind(cached_msg.memdump);
+		mrewind(cached_msg.tmpdump);
+		
+		/* update both MEM buffers */
+		tmpcnt = (u64_t)mwrite(rfc, strlen(rfc), cached_msg.tmpdump);
+		outcnt = (u64_t)mwrite(rfc, strlen(rfc), cached_msg.memdump);
+		
+		assert(tmpcnt==outcnt);
+		
+		cached_msg.dumpsize = outcnt;
+
+		if (cached_msg.num != self->msg_idnr) 
+			cached_msg.num = self->msg_idnr;
+		
+		cached_msg.file_dumped = 1;
+
+		mrewind(cached_msg.memdump);
+		mrewind(cached_msg.tmpdump);
+
+		g_free(buf);
+		g_free(rfc);
+	}
+	
+	switch (filter) {
+		/* for these two update the temp MEM buffer */	
 		case DBMAIL_MESSAGE_FILTER_HEAD:
-			msg = db_init_fetch(self->msg_idnr, filter);
-			buf = dbmail_message_hdrs_to_string(msg, TRUE);
+			buf = dbmail_message_hdrs_to_string(cached_msg.dmsg);
+			rfc = get_crlf_encoded(buf);
 			
 			mrewind(cached_msg.tmpdump);
-			outcnt = mwrite(buf, strlen(buf), cached_msg.tmpdump);
+			outcnt = mwrite(rfc, strlen(rfc), cached_msg.tmpdump);
 			mrewind(cached_msg.tmpdump);
+			
+			g_free(buf);
+			g_free(rfc);
 		break;
 
 		case DBMAIL_MESSAGE_FILTER_BODY:
-			msg = db_init_fetch(self->msg_idnr, filter);
-			buf = dbmail_message_body_to_string(msg, TRUE);
+			buf = dbmail_message_body_to_string(cached_msg.dmsg);
+			rfc = get_crlf_encoded(buf);
 			
 			mrewind(cached_msg.tmpdump);
-			outcnt = mwrite(buf, strlen(buf), cached_msg.tmpdump);
+			outcnt = mwrite(rfc, strlen(rfc), cached_msg.tmpdump);
 			mrewind(cached_msg.tmpdump);
+			
+			g_free(buf);
+			g_free(rfc);
+		break;
+		case DBMAIL_MESSAGE_FILTER_FULL:
+			/* done */
 		break;
 
 	}
-
-	trace(TRACE_DEBUG, "%s,%s: cached [%llu] bytes", __FILE__, __func__, outcnt);
-
-	g_free(buf);
-	dbmail_message_free(msg);
 	
 	return outcnt;
 }
@@ -261,7 +264,7 @@ static u64_t _imap_cache_update(struct ImapSession *self, message_filter_t filte
 
 
 /* 
- * _imap_get_structure()
+ * dm_imap_get_structure()
  *
  * retrieves the MIME-IMB structure of a message. The msg should be in the format
  * as build by db_fetch_headers().
@@ -271,7 +274,7 @@ static u64_t _imap_cache_update(struct ImapSession *self, message_filter_t filte
  * returns GList on success, NULL on error
  */
 
-GList * _imap_get_structure(mime_message_t * msg, int show_extension_data)
+GList * dm_imap_get_structure(mime_message_t * msg, int show_extension_data)
 {
 	struct mime_record *mr;
 	struct element *curr;
@@ -375,7 +378,7 @@ GList * _imap_get_structure(mime_message_t * msg, int show_extension_data)
 			rfcmsg.mimeheader.start = NULL;	/* forget MIME-part */
 
 			/* start recursion */
-			tlist = _imap_get_structure(&rfcmsg, show_extension_data);
+			tlist = dm_imap_get_structure(&rfcmsg, show_extension_data);
 			
 			list = g_list_append(list, dbmail_imap_plist_as_string(tlist));
 			
@@ -424,7 +427,7 @@ GList * _imap_get_structure(mime_message_t * msg, int show_extension_data)
 			curr = dm_list_getstart(&msg->children);
 			tmp = g_string_new("");
 			while (curr) {
-				tlist = _imap_get_structure((mime_message_t *) curr->data, show_extension_data);
+				tlist = dm_imap_get_structure((mime_message_t *) curr->data, show_extension_data);
 				
 				pstring = dbmail_imap_plist_as_string(tlist);
 				
@@ -1373,7 +1376,7 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 		else
 			dbmail_imap_session_printf(self, " ");
 
-		tlist = _imap_get_structure(&cached_msg.msg, 1);
+		tlist = dm_imap_get_structure(&cached_msg.msg, 1);
 		if (dbmail_imap_session_printf(self, "BODYSTRUCTURE %s", dbmail_imap_plist_as_string(tlist)) == -1) {
 			dbmail_imap_session_printf(self, "\r\n* BYE error fetching body structure\r\n");
 			return -1;
@@ -1388,7 +1391,7 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 		else
 			dbmail_imap_session_printf(self, " ");
 
-		tlist = _imap_get_structure(&cached_msg.msg, 0);
+		tlist = dm_imap_get_structure(&cached_msg.msg, 0);
 		if (dbmail_imap_session_printf(self, "BODY %s", dbmail_imap_plist_as_string(tlist)) == -1) {
 			dbmail_imap_session_printf(self, "\r\n* BYE error fetching body\r\n");
 			return -1;
@@ -1875,36 +1878,62 @@ int check_state_and_args(struct ImapSession * self, const char *command, int min
 	/* succes */
 	return 1;
 }
-
+	
 int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...)
 {
-	int maxlen=100;
-	int result = 0;
-	gchar *re = g_new0(gchar, maxlen+1);
-	va_list ap;
-	
-	FILE * fd = self->ci->tx;
-	int len;	
-	va_start(ap, message);
-	if (feof(fd) || (len = vfprintf(fd,message,ap)) < 0 || fflush(fd) < 0) {
-		va_end(ap);
-		return -1;
-	}
-	va_end(ap);
-	
-	va_start(ap, message);
-	result = vsnprintf(re,maxlen,message,ap);
-	va_end(ap);
-	
-	if (result < maxlen)
-		trace(TRACE_DEBUG,"RESPONSE: [%s]", re);
-	else
-		trace(TRACE_DEBUG,"RESPONSE: [%s...]", re);
-	g_free(re);
-	
-	return len;
+        va_list ap;
+        int len;
+        FILE * fd;
+        int maxlen=100;
+        int result = 0;
+        GMimeStream *ostream, *fstream;
+        GMimeFilter *filter;
+
+        gchar *re = g_new0(gchar, maxlen+1);
+        gchar *ln = g_new0(gchar, MAX_LINESIZE+1);
+
+        va_start(ap, message);
+        result = vsnprintf(ln,MAX_LINESIZE,message,ap);
+        va_end(ap);
+
+        if (result < 0)
+                return -1;
+
+        if ((result = snprintf(re,maxlen,ln))<0)
+                return -1;
+
+        fd = self->ci->tx;
+
+        if (feof(fd) || fflush(fd) < 0) {
+                trace(TRACE_FATAL, "%s,%s: client socket closed", __FILE__, __func__);
+                return -1;
+        }
+
+        ostream = g_mime_stream_fs_new(dup(fileno(fd)));
+        fstream = g_mime_stream_filter_new_with_stream(ostream);
+        filter = g_mime_filter_crlf_new(GMIME_FILTER_CRLF_ENCODE,GMIME_FILTER_CRLF_MODE_CRLF_ONLY);
+        g_mime_stream_filter_add((GMimeStreamFilter *) fstream, filter);
+        len = g_mime_stream_write_string(fstream,ln);
+
+        if (len < 0) {
+                trace(TRACE_FATAL, "%s,%s: write to client socket failed", __FILE__, __func__);
+                return -1;
+        }
+
+        g_free(ln);
+        g_object_unref(filter);
+        g_object_unref(ostream);
+        g_object_unref(fstream);
+
+        if (result < maxlen)
+                trace(TRACE_DEBUG,"RESPONSE: [%s]", re);
+        else
+                trace(TRACE_DEBUG,"RESPONSE: [%s...]", re);
+        g_free(re);
+
+        return len;
 }
-	
+
 int dbmail_imap_session_readln(struct ImapSession * self, char * buffer)
 {
 	memset(buffer, 0, MAX_LINESIZE);

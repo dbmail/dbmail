@@ -88,5 +88,6 @@ guint64 dbmail_imap_session_bodyfetch_get_last_octetcnt(struct ImapSession *self
 
 char **build_args_array_ext(const char *originalString, clientinfo_t * ci);
 
+GList * dm_imap_get_structure(mime_message_t * msg, int show_extension_data);
 #endif
 

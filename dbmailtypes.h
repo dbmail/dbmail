@@ -280,6 +280,7 @@ typedef struct {
  * simple cache mechanism
  */
 typedef struct {
+	struct DbmailMessage *dmsg;
 	mime_message_t msg;
 	MEM *memdump, *tmpdump;
 	u64_t num;

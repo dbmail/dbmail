@@ -128,16 +128,29 @@ START_TEST(test_dbmail_message_get_class)
 	dbmail_message_free(m);
 }
 END_TEST
+
 //struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t physid, int filter);
 START_TEST(test_dbmail_message_retrieve)
 {
-	struct DbmailMessage *m = dbmail_message_new();
-	u64_t physid = 191967;
-	m = dbmail_message_retrieve(m,physid,DBMAIL_MESSAGE_FILTER_HEAD);	
-	fail_unless(m != NULL, "dbmail_message_retrieve failed");
-	fail_unless(m->content != NULL, "dbmail_message_retrieve failed");
+	struct DbmailMessage *m, *n;
+	u64_t physid;
+	
+	m = dbmail_message_new();
+	m = dbmail_message_init_with_string(m, g_string_new(raw_message));
+	dbmail_message_set_header(m, 
+			"References", 
+			"<20050326155326.1afb0377@ibook.linuks.mine.nu> <20050326181954.GB17389@khazad-dum.debian.net> <20050326193756.77747928@ibook.linuks.mine.nu> ");
+	dbmail_message_store(m);
+
+	physid = dbmail_message_get_physid(m);
+	
+	n = dbmail_message_new();
+	n = dbmail_message_retrieve(n,physid,DBMAIL_MESSAGE_FILTER_HEAD);	
+	fail_unless(n != NULL, "dbmail_message_retrieve failed");
+	fail_unless(n->content != NULL, "dbmail_message_retrieve failed");
 
 	dbmail_message_free(m);
+	dbmail_message_free(n);
 }
 END_TEST
 //struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *self, const GString *content);
@@ -306,6 +319,7 @@ START_TEST(test_dbmail_message_cache_headers)
 			"References", 
 			"<20050326155326.1afb0377@ibook.linuks.mine.nu> <20050326181954.GB17389@khazad-dum.debian.net> <20050326193756.77747928@ibook.linuks.mine.nu> ");
 	dbmail_message_store(m);
+	printf("stored physid: [%llu]", dbmail_message_get_physid(m));
 	dbmail_message_free(m);
 }
 END_TEST

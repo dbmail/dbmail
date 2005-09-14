@@ -44,6 +44,10 @@
 #include "dbmsgbuf.h"
 #include "imaputil.h"
 #include "misc.h"
+#include "debug.h"
+#include "db.h"
+#include "auth.h"
+
 
 #include "check_dbmail.h"
 
@@ -77,17 +81,33 @@ void print_mimelist(struct dm_list *mimelist)
  * the test fixtures
  *
  */
-
+	
+void init_testuser1(void) 
+{
+        u64_t user_idnr;
+	if (! (auth_user_exists("testuser1",&user_idnr)))
+		auth_adduser("testuser1","test", "md5", 101, 1024000, &user_idnr);
+}
+	
 void setup(void)
 {
 	configure_debug(5,1,0);
+	config_read(configFile);
+	GetDBParams(&_db_params);
+	db_connect();
+	auth_connect();
 	g_mime_init(0);
+	init_testuser1();
 }
 
 void teardown(void)
 {
+	auth_disconnect();
+	db_disconnect();
+	config_free();
 	g_mime_shutdown();
 }
+
 
 START_TEST(test_g_list_join)
 {
@@ -177,19 +197,19 @@ START_TEST(test_mime_readheader)
 	
 	dm_list_init(&mimelist);
 	res = mime_readheader(raw_message,&blkidx,&mimelist,&headersize);
-	fail_unless(res==13, "number of newlines incorrect");
+	fail_unless(res==10, "number of headers incorrect");
 	fail_unless(blkidx==485, "blkidx incorrect");
-	fail_unless(headersize==blkidx+res, "headersize incorrect");
-	fail_unless(mimelist.total_nodes==10, "number of message-headers incorrect");
+	fail_unless(headersize==blkidx, "headersize incorrect");
+	fail_unless(dm_list_length(&mimelist)==10, "number of message-headers incorrect");
 	dm_list_free(&mimelist.start);
 	
 	blkidx = 0; headersize = 0;
 
 	dm_list_init(&mimelist);
 	res = mime_readheader(raw_message_part, &blkidx, &mimelist, &headersize);
-	fail_unless(res==6, "number of newlines incorrect");
+	fail_unless(res==3, "number of headers incorrect");
 	fail_unless(blkidx==142, "blkidx incorrect");
-	fail_unless(headersize==blkidx+res, "headersize incorrect");
+	fail_unless(headersize==blkidx, "headersize incorrect");
 	fail_unless(mimelist.total_nodes==3, "number of mime-headers incorrect");
 	dm_list_free(&mimelist.start);
 }
@@ -247,7 +267,40 @@ END_TEST
 //int db_fetch_headers(u64_t msguid, mime_message_t * msg)
 START_TEST(test_db_fetch_headers)
 {
-	//res = db_start_msg(msg,stopbound,&level,maxlevel);
+	u64_t physid;
+	u64_t user_idnr;
+	int res;
+	mime_message_t *message;
+	struct DbmailMessage *m;
+
+	m = dbmail_message_new();
+	m = dbmail_message_init_with_string(m, g_string_new(raw_message));
+	dbmail_message_set_header(m, 
+			"References", 
+			"<20050326155326.1afb0377@ibook.linuks.mine.nu> <20050326181954.GB17389@khazad-dum.debian.net> <20050326193756.77747928@ibook.linuks.mine.nu> ");
+	dbmail_message_store(m);
+
+	physid = dbmail_message_get_physid(m);
+	auth_user_exists("testuser1",&user_idnr);
+	fail_unless(user_idnr > 0, "db_fetch_headers failed. Try adding [testuser1]");
+
+	sort_and_deliver(m,user_idnr,"INBOX");
+	printf("new message_idnr: [%llu]\n", m->id);
+	
+	message = db_new_msg();
+	res = db_fetch_headers(m->id, message);
+	fail_unless(res==0,"db_fetch_headers failed");
+	
+	db_msgdump(message,m->id,0);
+
+	db_free_msg(message);
+	dbmail_message_free(m);
+}
+END_TEST
+
+START_TEST(test_imap_get_structure)
+{
+//	GList * dm_imap_get_structure(mime_message_t * msg, int show_extension_data)
 }
 END_TEST
 
@@ -452,6 +505,7 @@ Suite *dbmail_suite(void)
 	tcase_add_checked_fixture(tc_session, setup, teardown);
 	tcase_add_test(tc_session, test_imap_session_new);
 	tcase_add_test(tc_session, test_imap_bodyfetch);
+	tcase_add_test(tc_session, test_imap_get_structure);
 	
 	tcase_add_checked_fixture(tc_rfcmsg, setup, teardown);
 	tcase_add_test(tc_rfcmsg, test_db_fetch_headers);
