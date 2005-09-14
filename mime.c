@@ -52,26 +52,23 @@ static void _register_header(const char *field, const char *value, gpointer mime
  * copy the header names and values to a dm_list of mime_records.
  */
 
-int mime_fetch_headers(const char *datablock, struct dm_list *mimelist) 
+struct DbmailMessage * mime_fetch_headers(struct DbmailMessage *message, struct dm_list *mimelist) 
 {
-	GMimeMessage *message;
-	GString *raw = g_string_new(datablock);
-	struct DbmailMessage *m = dbmail_message_new();
-	if (! m)
-		trace(TRACE_FATAL,"%s,%s: oom", __FILE__, __func__);
+	GMimeMessage *m;
+	GString *s;
+
+	g_return_val_if_fail(message!=NULL,NULL);
 	
-	m = dbmail_message_init_with_string(m, raw);
-	g_mime_header_foreach(m->content->headers, _register_header, (gpointer)mimelist);
-	g_string_free(raw,TRUE);
+	g_mime_header_foreach(message->content->headers, _register_header, (gpointer)mimelist);
 	
 	/* dbmail expects the mime-headers of the message's mimepart as part of the rfcheaders */
-	if (dbmail_message_get_class(m) == DBMAIL_MESSAGE && GMIME_MESSAGE(m->content)->mime_part) {
-		message = (GMimeMessage *)(m->content);
-		g_mime_header_foreach(GMIME_OBJECT(message->mime_part)->headers, _register_header, (gpointer)mimelist);
+	if (dbmail_message_get_class(message) == DBMAIL_MESSAGE && GMIME_MESSAGE(message->content)->mime_part) {
+		m = (GMimeMessage *)(message->content);
+		g_mime_header_foreach(GMIME_OBJECT(m->mime_part)->headers, _register_header, (gpointer)mimelist);
 	}
+	trace(TRACE_DEBUG,"%s,%s: found [%ld] mime headers", __FILE__, __func__, dm_list_length(mimelist));
 
-	dbmail_message_free(m);
-	return 0;	
+	return message;
 }
 	
 	
@@ -95,31 +92,29 @@ int mime_fetch_headers(const char *datablock, struct dm_list *mimelist)
  */
 
 
-int mime_readheader(const char *datablock, u64_t * msgbuf_idx, struct dm_list *mimelist, u64_t * headersize)
+int mime_readheader(struct DbmailMessage *message, u64_t * msgbuf_idx, struct dm_list *mimelist, u64_t * headersize)
 {
+	int l;
 	char *raw, *crlf;
-	struct DbmailMessage *message;
-	GString *mimepart = g_string_new(datablock);
-	
-        g_return_val_if_fail(strlen(datablock) >0, -1);
 
 	/* moved header-parsing to separate function */
-	mime_fetch_headers(datablock, mimelist);
-
-	message = dbmail_message_new();
-	message = dbmail_message_init_with_string(message,mimepart);
-	g_string_free(mimepart,TRUE);
+	message = mime_fetch_headers(message, mimelist);
+	g_return_val_if_fail(message!=NULL,-1);
 	
 	raw = dbmail_message_hdrs_to_string(message);
 	crlf = get_crlf_encoded(raw);
 	
-	*headersize = strlen(crlf);
-	*msgbuf_idx += strlen(raw);
+	*headersize = strlen(raw);
+	*msgbuf_idx += *headersize;
+	
+	l = dm_list_length(mimelist);
 
 	g_free(crlf);
 	g_free(raw);
 
-	return (*headersize - *msgbuf_idx);
+	trace(TRACE_DEBUG,"%s,%s: return [%d] headerlines",
+			__FILE__, __func__, l);
+	return l;
 }
 
 /*
@@ -147,7 +142,7 @@ void mime_findfield(const char *fname, struct dm_list *mimelist,
 }
 
 
-int mail_address_build_list(char *scan_for_field, struct dm_list *targetlist,
+int mail_address_build_list(const char *scan_for_field, struct dm_list *targetlist,
 		  struct dm_list *mimelist)
 {
 	struct mime_record *mr;
