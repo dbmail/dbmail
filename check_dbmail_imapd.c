@@ -121,19 +121,46 @@ START_TEST(test_g_list_join)
 	fail_unless(strcmp(result->str,"NIL NIL (NIL NIL) (NIL NIL)")==0,"g_list_join failed");
 	g_string_free(result,TRUE);
 
+	l = NULL;
+	l = g_list_append(l, "NIL");
+	result = g_list_join(l," ");
+	fail_unless(strcmp(result->str,"NIL")==0,"g_list_join failed");
+	g_string_free(result,TRUE);
+
 }
 END_TEST
 
 START_TEST(test_dbmail_imap_plist_as_string)
 {
 	char *result;
-	GList *l = NULL;
+	GList *l;
+
+	l = NULL;
 	l = g_list_append(l, "NIL");
+	l = g_list_append(l, "NIL");
+	result = dbmail_imap_plist_as_string(l);
+	fail_unless(strcmp(result,"(NIL NIL)")==0,"plist construction failed");
+	
+	//g_list_foreach(l,(GFunc)g_free,NULL);
+	g_free(result);
+	
+	l = NULL;
+	l = g_list_append(l, "(NIL NIL)");
+	result = dbmail_imap_plist_as_string(l);
+	fail_unless(strcmp(result,"(NIL NIL)")==0,"plist construction failed");
+	
+	//g_list_foreach(l,(GFunc)g_free,NULL);
+	g_free(result);
+
+	l = g_list_append(NULL, "NIL");
 	l = g_list_append(l, "NIL");
 	l = g_list_append(l, "(NIL NIL)");
 	l = g_list_append(l, "(NIL NIL)");
 	result = dbmail_imap_plist_as_string(l);
 	fail_unless(strcmp(result,"(NIL NIL (NIL NIL) (NIL NIL))")==0,"plist construction failed");
+	
+	//g_list_foreach(l,(GFunc)g_free,NULL);
+	g_free(result);
 }
 END_TEST
 
@@ -323,9 +350,127 @@ START_TEST(test_db_fetch_headers)
 }
 END_TEST
 
+static void get_param_list(gpointer key, gpointer value, gpointer data)
+{
+	*(GList **)data = g_list_append_printf(*(GList **)data, "\"%s\"", (char *)key);
+	*(GList **)data = g_list_append_printf(*(GList **)data, "\"%s\"", ((GMimeParam *)value)->value);
+}
+
+
+static void handle_part(GMimeObject *part, gpointer data)
+{
+	const GMimeDisposition *disposition;
+	char *result;
+	GList *list = NULL, *paramlist = NULL, *dlist = NULL;
+	GString *tmp;
+	
+	const GMimeContentType *type = g_mime_object_get_content_type(part);
+	if (! type)
+		return;
+
+	tmp  = g_string_new("");
+
+	/* type/subtype */
+	list = g_list_append_printf(list,"\"%s\"", type->type);
+	list = g_list_append_printf(list,"\"%s\"", type->subtype);
+	
+	/* paramlist */
+	paramlist = NULL;
+	if (type->param_hash) 
+		g_hash_table_foreach(type->param_hash, get_param_list, (gpointer)&(paramlist));
+	if (paramlist) {
+		list = g_list_append(list,dbmail_imap_plist_as_string(paramlist));
+		g_list_foreach(paramlist,(GFunc)g_free,NULL);
+		g_list_free(paramlist);
+	}
+
+	/* extension data (only for multipart, in case of BODYSTRUCTURE command argument) */
+
+	/* content-disposition */	
+	if((result = (char *)g_mime_object_get_header(part, "Content-Disposition"))) {
+		dlist = NULL;
+		disposition = g_mime_disposition_new((const char *)result);
+		dlist = (gpointer)g_list_append_printf(dlist,"\"%s\"",disposition->disposition);
+		
+		/* paramlist */
+		paramlist = NULL;
+		if (disposition->param_hash) 
+			g_hash_table_foreach(disposition->param_hash, get_param_list, (gpointer)&(paramlist));
+		if (paramlist) {
+			dlist = g_list_append(dlist,dbmail_imap_plist_as_string(paramlist));
+			g_list_foreach(paramlist,(GFunc)g_free,NULL);
+			g_list_free(paramlist);
+		}
+		result = dbmail_imap_plist_as_string(dlist);
+		
+		g_list_foreach(dlist,(GFunc)g_free,NULL);
+		g_list_free(dlist);
+		
+		list = g_list_append_printf(list,"%s",result);
+	} else {
+		list = g_list_append_printf(list,"%s","NIL");
+	}
+
+	/* * content-language */
+	if((result = (char *)g_mime_object_get_header(part,"Content-Language")))
+		list = g_list_append_printf(list,"\"%s\"",result);
+	else
+		list = g_list_append_printf(list,"NIL");
+	
+	/* * content-location */
+	if((result = (char *)g_mime_object_get_header(part,"Content-Location")))
+		list = g_list_append_printf(list,"\"%s\"",result);
+	else
+		list = g_list_append_printf(list,"NIL");
+	
+	*(GList **)data = (gpointer)g_list_append(*(GList **)data,dbmail_imap_plist_as_string(list));
+	g_list_foreach(list,(GFunc)g_free,NULL);
+	g_list_free(list);
+	g_string_free(tmp,1);
+}
+
+GList * get_structure(GMimeMessage *message, gboolean extension) {
+	GList *structure = NULL;
+	g_mime_message_foreach_part(message,handle_part,(gpointer)&(structure));
+	return structure;
+}
+
+
 START_TEST(test_imap_get_structure)
 {
-//	GList * dm_imap_get_structure(mime_message_t * msg, int show_extension_data)
+	struct DbmailMessage *message;
+	GString *s;
+	char *result, *expect;
+	GList *l;
+
+	expect = g_new0(char,1024);
+
+	message = dbmail_message_new();
+	message = dbmail_message_init_with_string(message, g_string_new(raw_message));
+	l = get_structure(GMIME_MESSAGE(message->content), 0);
+	result = dbmail_imap_plist_as_string(l);
+	//printf("[%s]\n", result);
+	g_list_foreach(l,(GFunc)g_free,NULL);
+	g_free(result);
+	dbmail_message_free(message);
+
+	expect = "(\"text\" \"plain\" (\"charset\" \"us-ascii\") NIL NIL \"7bit\" 0 0 NIL NIL NIL)";
+	message = dbmail_message_new();
+	message = dbmail_message_init_with_string(message, g_string_new(rfc822));
+	l = get_structure(GMIME_MESSAGE(message->content), 0);
+	if (g_list_length(l) > 1)
+		result = dbmail_imap_plist_as_string(l);
+	else {
+		s = g_list_join(l,"");
+		result = s->str;
+		g_string_free(s,FALSE);
+	}
+
+	printf("\n[%s]\n[%s]\n", expect, result);
+	g_list_foreach(l,(GFunc)g_free,NULL);
+	g_free(result);
+	dbmail_message_free(message);
+
 }
 END_TEST
 

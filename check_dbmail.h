@@ -3,7 +3,21 @@
 
 char *configFile = "/etc/dbmail/dbmail-test.conf";
 
+
 /* simple testmessages. */
+
+char *rfc822 = "From nobody Wed Sep 14 16:47:48 2005\n"
+	"Content-Type: text/plain; charset=\"us-ascii\"\n"
+	"MIME-Version: 1.0\n"
+	"Content-Transfer-Encoding: 7bit\n"
+	"To: testuser@foo.org\n"
+	"From: somewher@foo.org\n"
+	"Subject: dbmail test message\n"
+	"\n"
+	"\n"
+	"    this is a test message\n"
+	"\n";
+    
 char *raw_message = "From: \"Brother from another planet\" <vol@inter7.com>\n"
 	"To: \"Brother from another planet\" <vol@inter7.com>\n"
 	"Reply-to: \"Brother from another planet\" <vol@inter7.com>\n"

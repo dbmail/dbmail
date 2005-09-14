@@ -105,27 +105,42 @@ static const char *search_cost[] = { "b","b","c","c","c","b","d","d","d","c","e"
 /* some basic imap type utils */
 
 /*
- *  build a parentisized list (4.4) from a GList
+ *  build a parenthisized list (4.4) from a GList
  */
 char *dbmail_imap_plist_as_string(GList * list)
 {
 	char *p;
+	size_t l;
 	GString * tmp1 = g_string_new("");
 	GString * tmp2 = g_list_join(list, " ");
 	g_string_printf(tmp1,"(%s)", tmp2->str);
 	
-	p = tmp1->str;
-	g_string_free(tmp1,FALSE);
-	g_string_free(tmp2,TRUE);
 
-	// collapse "(NIL) (NIL)" to "(NIL)(NIL)"
-	/* disabled: OE doesn't like this, uw-imapd doesn't do this...
+	/*
+	 * strip empty outer parenthesis
+	 * "((NIL NIL))" to "(NIL NIL)" 
+	 */
+	p = tmp1->str;
+	l = tmp1->len;
+	while (tmp1->len>4 && p[0]=='(' && p[l-1]==')' && p[1]=='(' && p[l-2]==')') {
+		tmp1 = g_string_truncate(tmp1,l-1);
+		tmp1 = g_string_erase(tmp1,0,1);
+		p=tmp1->str;
+	}
+	/*
+	 * collapse "(NIL) (NIL)" to "(NIL)(NIL)"
+	 *
+	 * disabled: OE doesn't like this, uw-imapd doesn't do this...
+	 */
+	/*
 	char **sublists;
 	sublists = g_strsplit(p,") (",0);
 	g_free(p);
 	p = g_strjoinv(")(",sublists);
 	*/
 	
+	g_string_free(tmp1,FALSE);
+	g_string_free(tmp2,TRUE);
 	return p;
 }
 
