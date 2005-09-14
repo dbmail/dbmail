@@ -19,7 +19,7 @@
 # $Id: testimap.py 1878 2005-09-04 06:34:44Z paul $
 
 # For a protocol trace set to 4
-DEBUG = 4
+DEBUG = 0
 
 # select 'stream' for non-forking mode
 TYPE = 'stream'
@@ -136,7 +136,7 @@ class testImapServer(unittest.TestCase):
         """
         self.o.create('testcopy1')
         self.o.create('testcopy2')
-        self.o.append('testcopy1',"","",TESTMSG['strict822'])
+        self.o.append('testcopy1',"","",str(TESTMSG['strict822']))
         self.o.select('testcopy1')
         id = self.o.recent()[1][0]
         self.assertEquals(self.o.copy(id,'testcopy2'),('OK', ['COPY completed']))
