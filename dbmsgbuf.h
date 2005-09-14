@@ -45,8 +45,6 @@ u64_t msgbuf_idx;/**< index within msgbuf, 0 <= msgidx < buflen */
 u64_t msgbuf_buflen;/**< current buffer length: msgbuf[buflen] == '\\0' */
 
 struct DbmailMessage * db_init_fetch(u64_t msg_idnr, int filter);
-int db_init_fetch_messageblks(u64_t msg_idnr, int filter);
-
 
 /**
  * \brief initialises a message fetch
@@ -56,7 +54,7 @@ int db_init_fetch_messageblks(u64_t msg_idnr, int filter);
  *     -  0 if already inited (sic) before
  *     -  1 on success
  */
-#define db_init_fetch_message(x) db_init_fetch_messageblks(x, DBMAIL_MESSAGE_FILTER_FULL)
+struct DbmailMessage * db_init_fetch_message(u64_t msg_idnr, int filter);
 
 /**
  * \brief initialises a message headers fetch
@@ -66,7 +64,7 @@ int db_init_fetch_messageblks(u64_t msg_idnr, int filter);
  *     -  0 if already inited (sic) before
  *     -  1 on success
  */
-#define db_init_fetch_headers(x) db_init_fetch_messageblks(x,DBMAIL_MESSAGE_FILTER_HEAD)
+#define db_init_fetch_headers(x) db_init_fetch_message(x,DBMAIL_MESSAGE_FILTER_HEAD)
 
 /**
  * \brief update msgbuf
