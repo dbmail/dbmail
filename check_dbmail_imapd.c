@@ -194,9 +194,13 @@ START_TEST(test_mime_readheader)
 	int res;
 	u64_t blkidx=0, headersize=0;
 	struct dm_list mimelist;
+	struct DbmailMessage *m, *p;
+
+	m = dbmail_message_new();
+	m = dbmail_message_init_with_string(m,g_string_new(raw_message));
 	
 	dm_list_init(&mimelist);
-	res = mime_readheader(raw_message,&blkidx,&mimelist,&headersize);
+	res = mime_readheader(m,&blkidx,&mimelist,&headersize);
 	fail_unless(res==10, "number of headers incorrect");
 	fail_unless(blkidx==485, "blkidx incorrect");
 	fail_unless(headersize==blkidx, "headersize incorrect");
@@ -205,13 +209,20 @@ START_TEST(test_mime_readheader)
 	
 	blkidx = 0; headersize = 0;
 
+	p = dbmail_message_new();
+	p = dbmail_message_init_with_string(p,g_string_new(raw_message_part));
+	
 	dm_list_init(&mimelist);
-	res = mime_readheader(raw_message_part, &blkidx, &mimelist, &headersize);
+	res = mime_readheader(p, &blkidx, &mimelist, &headersize);
 	fail_unless(res==3, "number of headers incorrect");
 	fail_unless(blkidx==142, "blkidx incorrect");
 	fail_unless(headersize==blkidx, "headersize incorrect");
 	fail_unless(mimelist.total_nodes==3, "number of mime-headers incorrect");
 	dm_list_free(&mimelist.start);
+
+	dbmail_message_free(m);
+	dbmail_message_free(p);
+	
 }
 END_TEST
 
@@ -219,9 +230,14 @@ START_TEST(test_mime_fetch_headers)
 {
 	struct dm_list mimelist;
 	struct mime_record *mr;
+	struct DbmailMessage *m, *p;
+
+	
+	m = dbmail_message_new();
+	m = dbmail_message_init_with_string(m,g_string_new(raw_message));
 	
 	dm_list_init(&mimelist);
-	mime_fetch_headers(raw_message,&mimelist);
+	mime_fetch_headers(m,&mimelist);
 	fail_unless(mimelist.total_nodes==10, "number of message-headers incorrect");
 	mr = (mimelist.start)->data;
 	fail_unless(strcmp(mr->field, "Content-Type")==0, "Field name incorrect");
@@ -229,8 +245,11 @@ START_TEST(test_mime_fetch_headers)
 	
 	dm_list_free(&mimelist.start);
 
+	p = dbmail_message_new();
+	p = dbmail_message_init_with_string(p,g_string_new(raw_message_part));
+	
 	dm_list_init(&mimelist);
-	mime_fetch_headers(raw_message_part,&mimelist);
+	mime_fetch_headers(p,&mimelist);
 	fail_unless(mimelist.total_nodes==3, "number of mime-headers incorrect");
 	mr = (mimelist.start)->data;
 	fail_unless(strcmp(mr->field, "Content-Disposition")==0, "Field name incorrect");
@@ -238,6 +257,8 @@ START_TEST(test_mime_fetch_headers)
 	
 	dm_list_free(&mimelist.start);
 
+	dbmail_message_free(m);
+	dbmail_message_free(p);
 
 }
 END_TEST
@@ -249,10 +270,15 @@ START_TEST(test_mail_address_build_list)
 	int result;
 	struct dm_list targetlist;
 	struct dm_list mimelist;
+	struct DbmailMessage *m;
 
+	m = dbmail_message_new();
+	m = dbmail_message_init_with_string(m,g_string_new(raw_message));
+	
 	dm_list_init(&targetlist);
 	dm_list_init(&mimelist);
-	mime_fetch_headers(raw_message, &mimelist);
+	
+	mime_fetch_headers(m, &mimelist);
 
 	result = mail_address_build_list("Cc", &targetlist, &mimelist);
 	struct element *el;
@@ -261,6 +287,8 @@ START_TEST(test_mail_address_build_list)
 	fail_unless(result==0, "mail_address_build_list failed");
 	fail_unless(targetlist.total_nodes==2,"mail_address_build_list failed");
 	fail_unless(strcmp((char *)el->data,"nobody@test123.com")==0, "mail_address_build_list failed");
+
+	dbmail_message_free(m);
 }
 END_TEST
 
@@ -285,14 +313,11 @@ START_TEST(test_db_fetch_headers)
 	fail_unless(user_idnr > 0, "db_fetch_headers failed. Try adding [testuser1]");
 
 	sort_and_deliver(m,user_idnr,"INBOX");
-	printf("new message_idnr: [%llu]\n", m->id);
 	
 	message = db_new_msg();
 	res = db_fetch_headers(m->id, message);
 	fail_unless(res==0,"db_fetch_headers failed");
 	
-	db_msgdump(message,m->id,0);
-
 	db_free_msg(message);
 	dbmail_message_free(m);
 }

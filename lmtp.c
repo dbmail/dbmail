@@ -595,7 +595,6 @@ int lmtp(void *stream, void *instream, char *buffer,
 					struct dm_list headerfields;
 					struct element *element;
 					struct DbmailMessage *msg;
-					char *headers;
 					char *s;
 
 					dm_list_init(&headerfields);
@@ -621,17 +620,14 @@ int lmtp(void *stream, void *instream, char *buffer,
 						return 1;
 					}
 					/* Parse the list and scan for field and content */
-					headers = dbmail_message_hdrs_to_string(msg);
-					if (mime_fetch_headers(headers, &headerfields) < 0) {
+					if (!(msg = mime_fetch_headers(msg, &headerfields))) {
 						trace(TRACE_ERROR, "%s,%s: fatal error from mime_fetch_headers()",
 								__FILE__, __func__);
 						discard_client_input((FILE *) instream);
 						ci_write((FILE *) stream, "500 Error reading header.\r\n");
 						dbmail_message_free(msg);
-						g_free(headers);
 						return 1;
 					}
-					g_free(headers);
 
 					if (insert_messages(msg, &headerfields, &rcpt, &from) == -1) {
 						ci_write((FILE *) stream, "503 Message not received\r\n");

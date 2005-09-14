@@ -107,7 +107,6 @@ void teardown(void)
 START_TEST(test_insert_messages)
 {
 	int result;
-	char *header;
 	struct DbmailMessage *message;
 	struct dm_list dsnusers, headerfields, returnpath;
 	GString *tmp;
@@ -125,10 +124,7 @@ START_TEST(test_insert_messages)
 	dsnuser.address = "testuser1";
 	dm_list_nodeadd(&dsnusers, &dsnuser, sizeof(deliver_to_user_t));
 	
-	header = dbmail_message_hdrs_to_string(message);
-	mime_fetch_headers(header, &headerfields);
-	g_free(header);
-
+	mime_fetch_headers(message, &headerfields);
 	result = insert_messages(message, &headerfields, &dsnusers, &returnpath);
 
 	fail_unless(result==0,"insert_messages failed");

@@ -319,7 +319,6 @@ START_TEST(test_dbmail_message_cache_headers)
 			"References", 
 			"<20050326155326.1afb0377@ibook.linuks.mine.nu> <20050326181954.GB17389@khazad-dum.debian.net> <20050326193756.77747928@ibook.linuks.mine.nu> ");
 	dbmail_message_store(m);
-	printf("stored physid: [%llu]", dbmail_message_get_physid(m));
 	dbmail_message_free(m);
 }
 END_TEST
