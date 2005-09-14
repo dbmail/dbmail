@@ -548,7 +548,7 @@ GList * g_list_append_printf(GList * list, char * format, ...)
 char * dm_stresc(const char * from)
 {
 	char *to;
-	if (! (to = g_malloc0(sizeof(from) * strlen(from) * 2 + 1)))
+	if (! (to = g_new0(char,(strlen(from)+1) * 2 + 1)))
 		return NULL;
 	db_escape_string(to, from, strlen(from));
 	return to;
