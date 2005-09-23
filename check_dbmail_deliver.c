@@ -50,7 +50,7 @@
 
 #include "check_dbmail.h"
 
-extern char * raw_message;
+extern char * multipart_message;
 extern char * configFile;
 extern db_param_t _db_params;
 
@@ -113,7 +113,7 @@ START_TEST(test_insert_messages)
 	deliver_to_user_t dsnuser;
 	
 	message = dbmail_message_new();
-	tmp = g_string_new(raw_message);
+	tmp = g_string_new(multipart_message);
 	message = dbmail_message_init_with_string(message,tmp);
 
 	dm_list_init(&dsnusers);

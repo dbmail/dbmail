@@ -56,8 +56,8 @@ extern char *msgbuf_buf;
 extern u64_t msgbuf_idx;
 extern u64_t msgbuf_buflen;
 
-extern char *raw_message;
-extern char *raw_message_part;
+extern char *multipart_message;
+extern char *multipart_message_part;
 extern char *raw_lmtp_data;
 
 /*

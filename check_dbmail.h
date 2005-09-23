@@ -18,7 +18,7 @@ char *rfc822 = "From nobody Wed Sep 14 16:47:48 2005\n"
 	"    this is a test message\n"
 	"\n";
     
-char *raw_message = "From: \"Brother from another planet\" <vol@inter7.com>\n"
+char *multipart_message = "From: \"Brother from another planet\" <vol@inter7.com>\n"
 	"To: \"Brother from another planet\" <vol@inter7.com>\n"
 	"Reply-to: \"Brother from another planet\" <vol@inter7.com>\n"
 	"Cc: \"Brother from another planet\" <vol@inter7.com>,\n"
@@ -61,7 +61,7 @@ char *raw_message = "From: \"Brother from another planet\" <vol@inter7.com>\n"
 	"dXJpdHkuaXM+ICAgICAgICAgICAgICAgICAgIHwiDQplY2hvICJ8IE1pY2hh\n"
 	"--boundary--\n";
 
-/* raw_lmtp_data is equal to raw_message, except for the line-endings
+/* raw_lmtp_data is equal to multipart_message, except for the line-endings
  * and the termination dot.
  */
 char *raw_lmtp_data = "From: \"Brother from another planet\" <vol@inter7.com>\r\n"
@@ -108,7 +108,7 @@ char *raw_lmtp_data = "From: \"Brother from another planet\" <vol@inter7.com>\r\
 	"--boundary--\r\n"
 	".\r\n";
 
-char *raw_message_part = "Content-Type: text/plain;\n"
+char *multipart_message_part = "Content-Type: text/plain;\n"
 	" name=\"mime_alternative\"\n"
 	"Content-Transfer-Encoding: 7bit\n"
 	"Content-Disposition: inline;\n"

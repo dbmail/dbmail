@@ -41,7 +41,6 @@
 extern db_param_t _db_params;
 #define DBPFX _db_params.pfx
 
-static unsigned _msgrow_idx = 0;
 static int _msg_fetch_inited = 0;
 
 /* for issuing queries to the backend */
@@ -50,7 +49,6 @@ char query[DEF_QUERYSIZE];
 /**
  * CONDITIONS FOR MSGBUF
  */
-static u64_t rowlength = 0; /**< length of current row*/
 static u64_t rowpos = 0; /**< current position in row */
 static db_pos_t zeropos; /**< absolute position (block/offset) of 
 			    msgbuf_buf[0]*/
@@ -65,10 +63,7 @@ struct DbmailMessage * db_init_fetch(u64_t msg_idnr, int filter)
 	result = db_get_physmessage_id(msg_idnr, &physid);
 	if (result != DM_SUCCESS)
 		return NULL;
-	
-	/* retrieve message */
 	msg = dbmail_message_new();
-	
 	return dbmail_message_retrieve(msg, physid, filter);
 }
 	
@@ -80,7 +75,7 @@ struct DbmailMessage * db_init_fetch_message(u64_t msg_idnr, int filter)
 
 	msg = db_init_fetch(msg_idnr, filter);
 	if (! msg)
-		return DM_EGENERAL;
+		return NULL;
 	
 	/* set globals: msgbuf contains a crlf decoded version of the message at hand */
 	buf = dbmail_message_to_string(msg);
