@@ -135,6 +135,8 @@ void dbmail_message_cache_datefield(struct DbmailMessage *self);
 void dbmail_message_cache_subjectfield(struct DbmailMessage *self);
 void dbmail_message_cache_referencesfield(struct DbmailMessage *self);
 
+GList * dbmail_message_get_structure(struct DbmailMessage *self, gboolean extension);
+GList * dbmail_message_get_envelope(struct DbmailMessage *self);
 /*
  * destructor
  */

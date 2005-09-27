@@ -85,10 +85,6 @@ extern const char *imap_flag_desc_escaped[];
 static int _imap_session_fetch_parse_partspec(struct ImapSession *self, int idx);
 static int _imap_session_fetch_parse_octet_range(struct ImapSession *self, int idx);
 
-static GList * _imap_get_addresses(struct mime_record *mr);
-static GList * _imap_get_envelope(struct dm_list *rfcheader);
-static GList * _imap_get_mime_parameters(struct mime_record *mr, int force_subtype, int only_extension);
-
 static void _imap_show_body_sections(struct ImapSession *self);
 static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data);
 	
@@ -200,6 +196,11 @@ static u64_t _imap_cache_update(struct ImapSession *self, message_filter_t filte
 
 	if (cached_msg.file_dumped == 0 || cached_msg.num != self->msg_idnr) {
 
+		if (cached_msg.dmsg) {
+			dbmail_message_free(cached_msg.dmsg);
+			cached_msg.dmsg = NULL;
+		}
+
 		cached_msg.dmsg = db_init_fetch(self->msg_idnr, DBMAIL_MESSAGE_FILTER_FULL);
 		buf = dbmail_message_to_string(cached_msg.dmsg);
 		rfc = get_crlf_encoded(buf);
@@ -260,569 +261,6 @@ static u64_t _imap_cache_update(struct ImapSession *self, message_filter_t filte
 	
 	return outcnt;
 }
-
-
-
-/* 
- * dm_imap_get_structure()
- *
- * retrieves the MIME-IMB structure of a message. The msg should be in the format
- * as build by db_fetch_headers().
- *
- * shows extension data if show_extension_data != 0
- *
- * returns GList on success, NULL on error
- */
-
-GList * dm_imap_get_structure(mime_message_t * msg, int show_extension_data)
-{
-	struct mime_record *mr;
-	struct element *curr;
-	struct dm_list *header_to_use;
-	mime_message_t rfcmsg;
-	char *subtype, *extension, *newline;
-	int is_mime_multipart = 0, is_rfc_multipart = 0;
-	int rfc822 = 0;
-	
-	GList *tlist = NULL, *list = NULL;
-	GString *tmp = g_string_new("");
-	gchar *pstring;
-	
-	trace(TRACE_DEBUG,"%s,%s", __FILE__,__func__);
-	
-	mime_findfield("content-type", &msg->mimeheader, &mr);
-	is_mime_multipart = (mr
-			     && strncasecmp(mr->value, "multipart", strlen("multipart")) == 0
-			     && !msg->message_has_errors);
-
-	mime_findfield("content-type", &msg->rfcheader, &mr);
-	is_rfc_multipart = (mr
-			    && strncasecmp(mr->value, "multipart", strlen("multipart")) == 0
-			    && !msg->message_has_errors);
-
-	/* eddy */
-	rfc822 = (mr && strncasecmp(mr->value, "message/rfc822", strlen("message/rfc822")) == 0); 
-
-	if (rfc822 || (!is_rfc_multipart && !is_mime_multipart)) {
-		/* show basic fields:
-		 * content-type, content-subtype, (parameter list), 
-		 * content-id, content-description, content-transfer-encoding,
-		 * size
-		 */
-
-		if (msg->mimeheader.start == NULL)
-			header_to_use = &msg->rfcheader;	/* we're dealing with a single-part RFC msg here */
-		else
-			header_to_use = &msg->mimeheader;	/* we're dealing with a pure-MIME header here */
-
-		mime_findfield("content-type", header_to_use, &mr);
-		if (mr && strlen(mr->value) > 0) {
-			
-			tlist = _imap_get_mime_parameters(mr, 1, 0);
-			
-			tmp = g_list_join(tlist," ");
-			
-			dbmail_imap_plist_free(tlist);
-			tlist = NULL;
-			
-			list = g_list_append(list, g_strdup(tmp->str));
-		} else
-			list = g_list_append(list, g_strdup("\"TEXT\" \"PLAIN\" (\"CHARSET\" \"US-ASCII\")"));	/* default */
-
-		mime_findfield("content-id", header_to_use, &mr);
-		if (mr && strlen(mr->value) > 0) { 
-			list = g_list_append(list, dbmail_imap_astring_as_string(mr->value));
-		} else
-			list = g_list_append(list, g_strdup("NIL"));
-
-		mime_findfield("content-description", header_to_use, &mr);
-		if (mr && strlen(mr->value) > 0) {
-			list = g_list_append(list, dbmail_imap_astring_as_string(mr->value));
-		} else
-			list = g_list_append(list, g_strdup("NIL"));
-
-		mime_findfield("content-transfer-encoding", header_to_use, &mr);
-		if (mr && strlen(mr->value) > 0) {
-			list = g_list_append(list, dbmail_imap_astring_as_string(mr->value));
-		} else
-			list = g_list_append(list, g_strdup("\"7BIT\""));
-
-		/* now output size */
-		/* add msg->bodylines because \n is dumped as \r\n */
-		if (msg->mimeheader.start && msg->rfcheader.start)
-			list = g_list_append_printf(list, "%llu",
-				msg->bodysize + msg->mimerfclines +
-				msg->rfcheadersize - msg->rfcheaderlines);
-		else
-			list = g_list_append_printf(list, "%llu", msg->bodysize + msg->bodylines);
-
-
-		/* now check special cases, first case: message/rfc822 */
-		mime_findfield("content-type", header_to_use, &mr);
-		if (mr && strncasecmp(mr->value, "message/rfc822", strlen("message/rfc822")) == 0
-		    && header_to_use != &msg->rfcheader) {
-			/* msg/rfc822 found; extra items to be displayed:
-			 * (a) body envelope of rfc822 msg
-			 * (b) body structure of rfc822 msg
-			 * (c) msg size (lines)
-			 */
-
-			tlist = _imap_get_envelope(&msg->rfcheader);
-			
-			list = g_list_append(list, dbmail_imap_plist_as_string(tlist));
-
-			dbmail_imap_plist_free(tlist);
-			tlist = NULL;
-
-			memmove(&rfcmsg, msg, sizeof(rfcmsg));
-			rfcmsg.mimeheader.start = NULL;	/* forget MIME-part */
-
-			/* start recursion */
-			tlist = dm_imap_get_structure(&rfcmsg, show_extension_data);
-			
-			list = g_list_append(list, dbmail_imap_plist_as_string(tlist));
-			
-			dbmail_imap_plist_free(tlist);
-			tlist = NULL;
-			
-			/* output # of lines */
-			list = g_list_append_printf(list, "%llu", msg->bodylines);
-		}
-		/* now check second special case: text 
-		 * NOTE: if 'content-type' is absent, TEXT is assumed 
-		 */
-		if ((mr && strncasecmp(mr->value, "text", strlen("text")) == 0) || !mr) {
-			/* output # of lines */
-			if (msg->mimeheader.start && msg->rfcheader.start)
-				list = g_list_append_printf(list, "%llu", msg->mimerfclines);
-			else
-				list = g_list_append_printf(list, "%llu", msg->bodylines);
-		}
-
-		if (show_extension_data) {
-			mime_findfield("content-md5", header_to_use, &mr);
-			if (mr && strlen(mr->value) > 0) {
-				list = g_list_append_printf(list, dbmail_imap_astring_as_string(mr->value));
-			} else
-				list = g_list_append(list, g_strdup("NIL"));
-
-			mime_findfield("content-disposition", header_to_use, &mr);
-			if (mr && strlen(mr->value) > 0) {
-				tlist = _imap_get_mime_parameters(mr, 0, 0);
-				list = g_list_append(list, dbmail_imap_plist_as_string(tlist));
-				dbmail_imap_plist_free(tlist);
-				tlist = NULL;
-			} else
-				list = g_list_append(list, g_strdup("NIL"));
-
-			mime_findfield("content-language", header_to_use, &mr);
-			if (mr && strlen(mr->value) > 0) {
-				list = g_list_append(list, dbmail_imap_astring_as_string(mr->value));
-			} else
-				list = g_list_append(list, g_strdup("NIL"));
-		}
-	} else {
-		/* check for a multipart message */
-		if (is_rfc_multipart || is_mime_multipart) {
-			curr = dm_list_getstart(&msg->children);
-			tmp = g_string_new("");
-			while (curr) {
-				tlist = dm_imap_get_structure((mime_message_t *) curr->data, show_extension_data);
-				
-				pstring = dbmail_imap_plist_as_string(tlist);
-				
-				g_string_append_printf(tmp, "%s", pstring);
-				
-				g_free(pstring);
-				
-				dbmail_imap_plist_free(tlist);
-				tlist = NULL;
-				
-				curr = curr->nextnode;
-			}
-			list = g_list_append(list, g_strdup(tmp->str));
-
-			/* show multipart subtype */
-			if (is_mime_multipart)
-				mime_findfield("content-type", &msg->mimeheader, &mr);
-			else
-				mime_findfield("content-type", &msg->rfcheader, &mr);
-
-			subtype = strchr(mr->value, '/');
-			extension = strchr(subtype, ';');
-
-			if (!subtype)
-				list = g_list_append(list, g_strdup("NIL"));
-			else {
-				if (!extension) {
-					newline = strchr(subtype, '\n');
-					if (!newline)
-						return NULL;
-
-					*newline = 0;
-					list = g_list_append(list, dbmail_imap_astring_as_string(subtype + 1));
-					*newline = '\n';
-				} else {
-					*extension = 0;
-					list = g_list_append(list, dbmail_imap_astring_as_string(subtype + 1));
-					*extension = ';';
-				}
-			}
-
-			/* show extension data (after subtype) */
-			if (extension && show_extension_data) {
-				tlist = _imap_get_mime_parameters(mr, 0, 1);
-				
-				tmp = g_list_join(tlist," ");
-				
-				dbmail_imap_plist_free(tlist);
-				tlist = NULL;
-				
-				list = g_list_append(list, g_strdup(tmp->str));
-
-				/* FIXME: should give body-disposition & body-language here */
-				list = g_list_append(list, g_strdup("NIL NIL"));
-			}
-		} else {
-			/* ??? */
-		}
-	}
-	g_string_free(tmp,1);
-	return list;
-}
-
-
-/*
- * _imap_get_envelope()
- *
- * retrieves the body envelope of an RFC-822 msg
- *
- * returns GList of char * elements
- * 
- */
-static GList * _imap_get_envelope(struct dm_list *rfcheader)
-{
-	struct mime_record *mr;
-	int idx;
-	GList * list = NULL;
-
-	trace(TRACE_DEBUG,"%s,%s", __FILE__,__func__);
-	
-	mime_findfield("date", rfcheader, &mr);
-	if (mr && strlen(mr->value) > 0) 
-		list = g_list_append(list, dbmail_imap_astring_as_string(mr->value));
-	else
-		list = g_list_append(list, g_strdup("NIL"));
-
-	mime_findfield("subject", rfcheader, &mr);
-	if (mr && strlen(mr->value) > 0)
-		list = g_list_append(list, dbmail_imap_astring_as_string(mr->value));
-	else
-		list = g_list_append(list, g_strdup("NIL"));
-
-	/* now from, sender, reply-to, to, cc, bcc, in-reply-to fields;
-	 * note that multiple mailaddresses are separated by ','
-	 */
-	GString *tmp = g_string_new("");
-	for (idx = 0; envelope_items[idx]; idx++) {
-		mime_findfield(envelope_items[idx], rfcheader, &mr);
-		if (mr && strlen(mr->value) > 0) {
-			list = g_list_append(list, dbmail_imap_plist_as_string(_imap_get_addresses(mr)));
-		} else if (strcasecmp(envelope_items[idx], "reply-to") == 0) {
-			mime_findfield("from", rfcheader, &mr);
-			if (mr && strlen(mr->value) > 0) {
-				list = g_list_append(list, dbmail_imap_plist_as_string(_imap_get_addresses(mr)));
-			} else
-				list = g_list_append(list, g_strdup("((NIL NIL \"nobody\" \"nowhere.nirgendwo\"))"));
-		} else if (strcasecmp(envelope_items[idx], "sender") == 0) {
-			mime_findfield("from", rfcheader, &mr);
-			if (mr && strlen(mr->value) > 0) {
-				list = g_list_append(list, dbmail_imap_plist_as_string(_imap_get_addresses(mr)));
-			} else
-				list = g_list_append(list, g_strdup("((NIL NIL \"nobody\" \"nowhere.nirgendwo\"))"));
-		} else
-			list = g_list_append(list,g_strdup("NIL"));
-	}
-
-	mime_findfield("in-reply-to", rfcheader, &mr);
-	if (mr && strlen(mr->value) > 0) {
-		list = g_list_append(list, dbmail_imap_astring_as_string(mr->value));
-	} else
-		list = g_list_append(list, g_strdup("NIL"));
-
-	mime_findfield("message-id", rfcheader, &mr);
-	if (mr && strlen(mr->value) > 0)
-		list = g_list_append(list, dbmail_imap_astring_as_string(mr->value));
-	else
-		list = g_list_append(list, g_strdup("NIL"));
-	g_string_free(tmp,1);
-	return list;
-}
-
-
-/*
- * _imap_get_addresses()
- *
- * gives an address list
- */
-static GList * _imap_get_addresses(struct mime_record *mr)
-{
-	int delimiter, i, inquote, start, has_split;
-	char savechar;
-	char *value;
-	
-	GList * list = NULL;
-	GList * sublist = NULL;
-	GString * tmp = g_string_new("");
-		
-	trace(TRACE_DEBUG,"%s,%s: [%s]", __FILE__,__func__, mr->value);
-	
-	/* find ',' to split up multiple addresses */
-	delimiter = 0;
-
-	do {
-		sublist = NULL;
-		start = delimiter;
-
-		for (inquote = 0; mr->value[delimiter] && !(mr->value[delimiter] == ',' && !inquote); delimiter++)
-			if (mr->value[delimiter] == '\"')
-				inquote ^= 1;
-
-		if (mr->value[delimiter])
-			mr->value[delimiter] = 0;	/* replace ',' by NULL-termination */
-		else
-			delimiter = -1;	/* this will be the last one */
-
-		/* the address currently being processed is now contained within
-		 * &mr->value[start] 'till first '\0'
-		 */
-
-		/* possibilities for the mail address:
-		 * - name <user@domain>
-		 * - "name" <user@domain>
-		 * - <user@domain>
-		 * - user@domain
-		 * - user@domain (Name)
-		 * scan for '<' to determine which case we should be dealing with;
-		 */
-
-		for (i = start, inquote = 0; mr->value[i] && !(mr->value[i] == '<' && !inquote); i++)
-			if (mr->value[i] == '\"')
-				inquote ^= 1;
-
-		if (mr->value[i]) {
-			if (i > start + 2) {
-				/* name is contained in &mr->value[start] untill &mr->value[i-2] */
-				/* name might contain quotes */
-				savechar = mr->value[i - 1];
-				mr->value[i - 1] = '\0';	/* terminate string */
-				if ( !g_str_has_prefix(&mr->value[start],"\"") && !g_str_has_suffix(&mr->value[start],"\"") )
-					value=g_strdup_printf("\"%s\"", &mr->value[start]);
-				else
-					value=g_strdup(&mr->value[start]);
-					
-				trace(TRACE_DEBUG,"%s,%s: found [%s]", __FILE__, __func__, value);
-				sublist = g_list_append(sublist, dbmail_imap_astring_as_string(value));
-				g_free(value);
-				
-
-				mr->value[i - 1] = savechar;
-
-			} else
-				sublist = g_list_append(sublist, g_strdup("NIL"));
-
-			start = i + 1;	/* skip to after '<' */
-		} else
-			sublist = g_list_append(sublist, g_strdup("NIL"));
-
-		sublist = g_list_append(sublist, g_strdup("NIL"));	/* source route ?? smtp at-domain-list ?? */
-
-		/*
-		 * now display user domainname; &mr->value[start] is starting point 
-		 */
-		
-		g_string_printf(tmp,"\"");
-		// added a check for whitespace within the address (not good)
-		for (i = start, has_split = 0; mr->value[i] && mr->value[i] != '>' && !isspace(mr->value[i]); i++) {
-			if (mr->value[i] == '@') {
-				tmp = g_string_append(tmp, "\" \"");
-				has_split = 1;
-			} else {
-				if (mr->value[i] == '"')
-					tmp = g_string_append(tmp, "\\");
-				g_string_append_printf(tmp, "%c", mr->value[i]);
-			}
-		}
-
-		if (!has_split)
-			tmp = g_string_append(tmp, "\" \"\"");	/* '@' did not occur */
-		else
-			tmp = g_string_append(tmp, "\"");
-
-		sublist = g_list_append(sublist,g_strdup(tmp->str));
-		
-		if (delimiter > 0) {
-			mr->value[delimiter++] = ',';	/* restore & prepare for next iteration */
-			while (isspace(mr->value[delimiter]))
-				delimiter++;
-		}
-		list = g_list_append(list, dbmail_imap_plist_as_string(sublist));
-
-	} while (delimiter > 0);
-	
-	g_list_foreach(sublist, (GFunc)g_free, NULL);
-	g_list_free(sublist);
-	sublist = NULL;
-	g_string_free(tmp,1);
-	return list;
-}
-
-
-
-/*
- * _imap_get_mime_parameters()
- *
- * get mime name/value pairs
- * 
- * return GList for conversion to plist
- * 
- * if force_subtype != 0 'NIL' will be outputted if no subtype is specified
- * if only_extension != 0 only extension data (after first ';') will be shown
- */
-static GList * _imap_get_mime_parameters(struct mime_record *mr, int force_subtype, int only_extension)
-{
-	GList * list = NULL;
-	GList * subl = NULL;
-	GString * tmp = g_string_new("");
-	char * tmp2 = g_new(char, 255);
-	char * tmp3 = g_new(char, 255);
-	
-	int idx, delimiter, start, end;
-
-	/* find first delimiter */
-	for (delimiter = 0; mr->value[delimiter] && mr->value[delimiter] != ';'; delimiter++);
-
-	/* are there non-whitespace chars after the delimiter?                    */
-	/* looking for the case where the mime type ends with a ";"               */
-	/* if it is of type "text" it must have a default character set generated */
-	end = strlen(mr->value);
-	for (start = delimiter + 1; (isspace(mr->value[start]) == 0 && start <= end); start++);
-	end = start - delimiter - 1;
-	start = 0;
-	if (end && strstr(mr->value, "text"))
-		start++;
-
-	if (mr->value[delimiter])
-		mr->value[delimiter] = 0;
-	else
-		delimiter = -1;
-
-	if (!only_extension) {
-		/* find main type in value */
-		for (idx = 0; mr->value[idx] && mr->value[idx] != '/';
-		     idx++);
-
-		if (mr->value[idx] && (idx < delimiter || delimiter == -1)) {
-			mr->value[idx] = 0;
-			list = g_list_append(list,dbmail_imap_astring_as_string(mr->value));
-			list = g_list_append(list,dbmail_imap_astring_as_string(&mr->value[idx + 1]));
-
-			mr->value[idx] = '/';
-		} else {
-			list = g_list_append(list,dbmail_imap_astring_as_string(mr->value));
-			list = g_list_append(list, g_strdup(force_subtype ? "NIL" : ""));
-		}
-	}
-	if (delimiter >= 0) {
-		/* extra parameters specified */
-		mr->value[delimiter] = ';';
-		idx = delimiter;
-
-		if (start)
-			subl = g_list_append(subl, g_strdup("\"CHARSET\" \"US-ASCII\""));
-		/* extra params: <name>=<val> [; <name>=<val> [; ...etc...]]
-		 * note that both name and val may or may not be enclosed by 
-		 * either single or double quotation marks
-		 */
-
-		do {
-			/* skip whitespace */
-			for (idx++; isspace(mr->value[idx]); idx++);
-			if (!mr->value[idx])
-				break;	/* ?? */
-
-			/* check if quotation marks are specified */
-			if (mr->value[idx] == '\"' || mr->value[idx] == '\'') {
-				start = ++idx;
-				while (mr->value[idx] && mr->value[idx] != mr->value[start - 1])
-					idx++;
-
-				if (!mr->value[idx] || mr->value[idx + 1] != '=')	/* ?? no end quote */
-					break;
-
-				end = idx;
-				idx += 2;	/* skip to after '=' */
-			} else {
-				start = idx;
-				while (mr->value[idx] && mr->value[idx] != '=')
-					idx++;
-
-				if (!mr->value[idx])	/* ?? no value specified */
-					break;
-
-				end = idx;
-				idx++;	/* skip to after '=' */
-			}
-
-			subl = g_list_append_printf(subl, "\"%.*s\"", (end - start), &mr->value[start]);
-
-			/* now process the value; practically same procedure */
-
-			if (mr->value[idx] == '\"' || mr->value[idx] == '\'') {
-				start = ++idx;
-				while (mr->value[idx] && mr->value[idx] != mr->value[start - 1])
-					idx++;
-
-				if (!mr->value[idx])	/* ?? no end quote */
-					break;
-
-				end = idx;
-				idx++;
-			} else {
-				start = idx;
-
-				while (mr->value[idx] && !isspace(mr->value[idx]) && mr->value[idx] != ';')
-					idx++;
-
-				end = idx;
-			}
-
-			snprintf(tmp2,255,"\"%.*s\"", (end - start), &mr->value[start]);
-			mime_unwrap(tmp3,tmp2);
-			subl = g_list_append_printf(subl, tmp3);
-
-			/* check for more name/val pairs */
-			while (mr->value[idx] && mr->value[idx] != ';')
-				idx++;
-
-		} while (mr->value[idx]);
-
-		list = g_list_append(list, dbmail_imap_plist_as_string(subl));
-		g_list_foreach(subl, (GFunc)g_free, NULL);
-		g_list_free(subl);
-		subl = NULL;
-		g_string_free(tmp,1);
-	} else {
-		list = g_list_append(list, g_strdup("NIL"));
-	}
-	g_free(tmp2);
-	g_free(tmp3);
-
-	return list;
-}
-
-
-
 
 static int _imap_session_fetch_parse_partspec(struct ImapSession *self, int idx)
 {
@@ -1260,6 +698,10 @@ int dbmail_imap_session_get_msginfo_range(struct ImapSession *self, u64_t msg_id
 	return (int)nrows;
 }
 
+#define SEND_SPACE if (self->fi->isfirstfetchout) \
+				self->fi->isfirstfetchout = 0; \
+			else \
+				dbmail_imap_session_printf(self, " ")
 
 int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 {
@@ -1289,94 +731,36 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 
 
 	/* update cache */
-	if (self->fi->msgparse_needed && self->msg_idnr != cached_msg.num) {
-		if (! self->fi->msgparse_needed) {
-			/* don't update cache if only the main header is needed 
-			 * but do retrieve this main header
-			 */
-
-			result = db_get_main_header(self->msg_idnr, &self->headermsg.rfcheader);
-
-			if (result == -1) {
-				dbmail_imap_session_printf(self, "\r\n* BYE internal dbase error\r\n");
+	if (self->fi->msgparse_needed) {
+		rfcsize = _imap_cache_update(self, DBMAIL_MESSAGE_FILTER_FULL);
+		
+		if (insert_rfcsize) {
+			/* insert the rfc822 size into the dbase */
+			if (db_set_rfcsize(rfcsize,self->msg_idnr,ud->mailbox.uid) == -1) {
+				dbmail_imap_session_printf(self,"\r\n* BYE internal dbase error\r\n");
 				return -1;
 			}
-
-			if (result == -2) {
-				dbmail_imap_session_printf(self, "\r\n* BYE out of memory\r\n");
-				return -1;
-			}
-
-			if (result == -3) {
-				/* parse error */
-				g_string_free(tmp,TRUE);
-				return 0;
-			}
-
-		} else {
-			/* parse message structure */
-			if (cached_msg.msg_parsed)
-				db_free_msg(&cached_msg.msg);
-
-			memset(&cached_msg.msg, 0, sizeof(cached_msg.msg));
-
-			cached_msg.msg_parsed = 0;
-			cached_msg.num = -1;
-			cached_msg.file_dumped = 0;
-			mreset(cached_msg.memdump);
-
-			result = db_fetch_headers (self->msg_idnr, &cached_msg.msg);
-			if (result == -2) {
-				dbmail_imap_session_printf(self, "\r\n* BYE internal dbase error\r\n");
-				return -1;
-			}
-			if (result == -3) {
-				dbmail_imap_session_printf(self, "\r\n* BYE out of memory\r\n");
-				return -1;
-			}
-
-			cached_msg.msg_parsed = 1;
-			cached_msg.num = self->msg_idnr;
-
-			rfcsize = (cached_msg.msg.rfcheadersize + cached_msg.msg.bodysize +
-			     cached_msg.msg.bodylines);
-
-			if (insert_rfcsize) {
-				/* insert the rfc822 size into the dbase */
-				if (db_set_rfcsize(rfcsize,self->msg_idnr,ud->mailbox.uid) == -1) {
-					dbmail_imap_session_printf(self,"\r\n* BYE internal dbase error\r\n");
-					return -1;
-				}
-
-				insert_rfcsize = 0;
-			}
-
+			insert_rfcsize = 0;
 		}
 	}
 
 	self->fi->isfirstfetchout = 1;
 	
 	if (self->fi->getInternalDate) {
-		result = db_get_msgdate(ud->mailbox.uid, self->msg_idnr, date);
-		if (result == -1) {
+		if (db_get_msgdate(ud->mailbox.uid, self->msg_idnr, date) == -1) {
 			dbmail_imap_session_printf(self, "\r\n* BYE internal dbase error\r\n");
 			return -1;
 		}
 
-		if (self->fi->isfirstfetchout)
-			self->fi->isfirstfetchout = 0;
-		else
-			dbmail_imap_session_printf(self, " ");
-
+		SEND_SPACE;
+		
 		dbmail_imap_session_printf(self, "INTERNALDATE \"%s\"", date_sql2imap(date));
 	}
 	if (self->fi->getMIME_IMB) {
-		if (self->fi->isfirstfetchout)
-			self->fi->isfirstfetchout = 0;
-		else
-			dbmail_imap_session_printf(self, " ");
-
-		tlist = dm_imap_get_structure(&cached_msg.msg, 1);
+		
+		SEND_SPACE;
+		
+		tlist = imap_get_structure(GMIME_MESSAGE((cached_msg.dmsg)->content), 1);
 		if (dbmail_imap_session_printf(self, "BODYSTRUCTURE %s", dbmail_imap_plist_as_string(tlist)) == -1) {
 			dbmail_imap_session_printf(self, "\r\n* BYE error fetching body structure\r\n");
 			return -1;
@@ -1386,12 +770,10 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 	}
 
 	if (self->fi->getMIME_IMB_noextension) {
-		if (self->fi->isfirstfetchout)
-			self->fi->isfirstfetchout = 0;
-		else
-			dbmail_imap_session_printf(self, " ");
-
-		tlist = dm_imap_get_structure(&cached_msg.msg, 0);
+		
+		SEND_SPACE;
+		
+		tlist = imap_get_structure(GMIME_MESSAGE((cached_msg.dmsg)->content), 0);
 		if (dbmail_imap_session_printf(self, "BODY %s", dbmail_imap_plist_as_string(tlist)) == -1) {
 			dbmail_imap_session_printf(self, "\r\n* BYE error fetching body\r\n");
 			return -1;
@@ -1401,12 +783,10 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 	}
 
 	if (self->fi->getEnvelope) {
-		if (self->fi->isfirstfetchout)
-			self->fi->isfirstfetchout = 0;
-		else
-			dbmail_imap_session_printf(self, " ");
 
-		tlist = _imap_get_envelope(&cached_msg.msg.rfcheader);
+		SEND_SPACE;
+
+		tlist = imap_get_envelope(GMIME_MESSAGE((cached_msg.dmsg)->content));
 		if (dbmail_imap_session_printf(self, "ENVELOPE %s", dbmail_imap_plist_as_string(tlist)) == -1) {
 			dbmail_imap_session_printf(self, "\r\n* BYE error fetching envelope structure\r\n");
 			return -1;
@@ -1416,13 +796,10 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 	}
 
 	if (self->fi->getRFC822 || self->fi->getRFC822Peek) {
-		_imap_cache_update(self, DBMAIL_MESSAGE_FILTER_FULL);
 		mseek(cached_msg.memdump, 0, SEEK_SET);
 
-		if (self->fi->isfirstfetchout)
-			self->fi->isfirstfetchout = 0;
-		else
-			dbmail_imap_session_printf(self, " ");
+
+		SEND_SPACE;
 
 		dbmail_imap_session_printf(self, "RFC822 {%llu}\r\n", cached_msg.dumpsize);
 		send_data(self->ci->tx, cached_msg.memdump, cached_msg.dumpsize);
@@ -1433,21 +810,15 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 	}
 
 	if (self->fi->getSize) {
-		if (self->fi->isfirstfetchout)
-			self->fi->isfirstfetchout = 0;
-		else
-			dbmail_imap_session_printf(self, " ");
+
+		SEND_SPACE;
 
 		dbmail_imap_session_printf(self, "RFC822.SIZE %llu", rfcsize);
 	}
 
 	if (self->fi->getBodyTotal || self->fi->getBodyTotalPeek) {
-		_imap_cache_update(self, DBMAIL_MESSAGE_FILTER_FULL);
-		
-		if (self->fi->isfirstfetchout)
-			self->fi->isfirstfetchout = 0;
-		else
-			dbmail_imap_session_printf(self, " ");
+
+		SEND_SPACE;
 
 		if (dbmail_imap_session_bodyfetch_get_last_octetcnt(self) == 0) {
 			mrewind(cached_msg.memdump);
@@ -1472,10 +843,8 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 	}
 
 	if (self->fi->getRFC822Header) {
-		if (self->fi->isfirstfetchout)
-			self->fi->isfirstfetchout = 0;
-		else
-			dbmail_imap_session_printf(self, " ");
+
+		SEND_SPACE;
 
 		tmpdumpsize = _imap_cache_update(self,DBMAIL_MESSAGE_FILTER_HEAD);
 		dbmail_imap_session_printf(self, "RFC822.HEADER {%llu}\r\n", tmpdumpsize);
@@ -1483,10 +852,8 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 	}
 
 	if (self->fi->getRFC822Text) {
-		if (self->fi->isfirstfetchout)
-			self->fi->isfirstfetchout = 0;
-		else
-			dbmail_imap_session_printf(self, " ");
+
+		SEND_SPACE;
 
 		tmpdumpsize = _imap_cache_update(self,DBMAIL_MESSAGE_FILTER_BODY);
 		dbmail_imap_session_printf(self, "RFC822.TEXT {%llu}\r\n", tmpdumpsize);
@@ -1525,10 +892,8 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 
 	/* FLAGS ? */
 	if (self->fi->getFlags) {
-		if (self->fi->isfirstfetchout)
-			self->fi->isfirstfetchout = 0;
-		else
-			dbmail_imap_session_printf(self, " ");
+
+		SEND_SPACE;
 
 		int j;	
 		int msgflags[IMAP_NFLAGS];
@@ -1548,10 +913,8 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 	}
 
 	if (self->fi->getUID) {
-		if (self->fi->isfirstfetchout)
-			self->fi->isfirstfetchout = 0;
-		else
-			dbmail_imap_session_printf(self, " ");
+
+		SEND_SPACE;
 
 		dbmail_imap_session_printf(self, "UID %llu", self->msg_idnr);
 	}
@@ -1561,6 +924,60 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 	return 0;
 }
 	
+static GString * part_get_logical_part(GMimeObject *object, char * specifier) {
+	GString *body, *header;
+	
+	
+	header = g_string_new(g_mime_object_get_headers(object));
+	
+	if (strcasecmp(specifier,"HEADER")==0 || strcasecmp(specifier,"MIME")==0)
+		return header;
+	
+	if (strcasecmp(specifier,"TEXT")==0) {
+		body = g_string_new(g_mime_object_to_string(object));
+		body = g_string_erase(body,0,header->len);
+		g_string_free(header,TRUE);
+		return body;
+	}
+	return (GString *)NULL;
+}
+	
+
+GString * message_get_partspec(GMimeObject *message, GString *partspec) 
+{
+	GMimeObject *object;
+	GMimeContentType *type;
+	GList *specs = g_string_split(partspec,".");
+	char *part;
+	guint index;
+	guint i;
+	object = message;
+	for (i=0; i< g_list_length(specs); i++) {
+		part = g_list_nth_data(specs,i);
+		if (! (index = strtol((const char *)part, NULL, 0))) {
+			printf("%s,%s: %s\n", __FILE__, __func__, part);
+			return part_get_logical_part(object,part);		
+		}
+		if (i==0)
+			object=(GMimeObject *)((GMimeMessage *)object)->mime_part;
+		
+		type = (GMimeContentType *)g_mime_object_get_content_type(object);
+		if (g_mime_content_type_is_type(type,"message","rfc822")) {
+			object=(GMimeObject *)((GMimeMessage *)object)->mime_part;
+			assert(object);
+			continue;
+		}
+		if (g_mime_content_type_is_type(type,"multipart","*")) {
+			printf("%s,%s: %d\n", __FILE__, __func__, (int)index);
+			object=g_mime_multipart_get_part((GMimeMultipart *)object, (int)index-1);
+			assert(object);
+			continue;
+		}
+	}
+	return g_string_new(g_mime_object_to_string(object));
+}
+
+
 static void _imap_show_body_sections(struct ImapSession *self) {
 	dbmail_imap_session_bodyfetch_rewind(self);
 	g_list_foreach(self->fi->bodyfetch,(GFunc)_imap_show_body_section, (gpointer)self);
@@ -1574,6 +991,9 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data) {
 	u64_t tmpdumpsize;
 	mime_message_t *msgpart;
 	GList *tlist = NULL;
+	GString *ts;
+	GMimeObject *part;
+	char *tmp;
 	int k;
 	struct ImapSession *self = (struct ImapSession *)data;
 	
@@ -1637,10 +1057,8 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data) {
 		}
 	}
 
-	if (self->fi->isfirstfetchout)
-		self->fi->isfirstfetchout = 0;
-	else
-		dbmail_imap_session_printf(self, " ");
+
+	SEND_SPACE;
 
 	if (! self->fi->noseen)
 		self->fi->setseen = 1;
@@ -1731,31 +1149,53 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data) {
 		dbmail_imap_session_printf(self,"HEADER.FIELDS %s", dbmail_imap_plist_as_string(tlist));
 		dbmail_imap_session_printf(self, "] ");
 		g_list_foreach(tlist, (GFunc)g_free, NULL);
+		g_list_free(tlist);
+		tlist = NULL;
 
 		if (!msgpart || only_text_from_msgpart)
 			dbmail_imap_session_printf(self, "NIL\r\n");
 		else {
-			tmpdumpsize = rfcheader_dump(cached_msg.tmpdump, 
-					&msgpart->rfcheader, &self->args[bodyfetch->argstart], 
-					bodyfetch->argcnt, 1);
-
-			if (!tmpdumpsize) {
+			tmpdumpsize=0;
+			part = GMIME_OBJECT((cached_msg.dmsg)->content);
+			for (k = 0; k < bodyfetch->argcnt; k++) {
+				if ((tmp = (char *)g_mime_object_get_header(part, self->args[k + bodyfetch->argstart])))
+					tlist = g_list_append_printf(tlist,"%s: %s", 
+						self->args[k + bodyfetch->argstart], tmp);
+			}
+			tlist = g_list_append_printf(tlist,"\r\n");
+			
+			if (!g_list_length(tlist) > 1) {
 				dbmail_imap_session_printf(self, "NIL\r\n");
 			} else {
+				ts = g_list_join(tlist,"\r\n");
+				
 				if (bodyfetch->octetcnt > 0) {
-					cnt = get_dumpsize(bodyfetch, tmpdumpsize);
-					dbmail_imap_session_printf(self, "<%llu> {%llu}\r\n", bodyfetch->octetstart, cnt);
-					mseek(cached_msg.tmpdump, bodyfetch->octetstart, SEEK_SET);
+					
+					if (bodyfetch->octetstart > 0 && bodyfetch->octetstart < ts->len)
+						ts = g_string_erase(ts, 0, bodyfetch->octetstart);
+					
+					if (ts->len > bodyfetch->octetcnt)
+						ts = g_string_truncate(ts, bodyfetch->octetcnt);
+					
+					tmp = get_crlf_encoded(ts->str);
+					cnt = strlen(tmp);
+					
+					dbmail_imap_session_printf(self, "<%llu> {%llu}\r\n%s", 
+							bodyfetch->octetstart, 
+							cnt,
+							tmp);
 				} else {
-					cnt = tmpdumpsize;
-					dbmail_imap_session_printf(self, "{%llu}\r\n", tmpdumpsize);
-					mseek(cached_msg.tmpdump, 0, SEEK_SET);
+					tmp = get_crlf_encoded(ts->str);
+					cnt = strlen(tmp);
+					dbmail_imap_session_printf(self, "{%llu}\r\n%s", cnt, tmp);
 				}
-
-				/* output data */
-				send_data(self->ci->tx,cached_msg.tmpdump,cnt);
-
+				g_string_free(ts,TRUE);
+				g_free(tmp);
 			}
+
+			g_list_foreach(tlist, (GFunc)g_free, NULL);
+			g_list_free(tlist);
+			tlist = NULL;
 		}
 		break;
 	case BFIT_HEADER_FIELDS_NOT:
@@ -1767,29 +1207,44 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data) {
 		dbmail_imap_session_printf(self, "HEADER.FIELDS.NOT %s", dbmail_imap_plist_as_string(tlist));
 		dbmail_imap_session_printf(self, "] ");
 		g_list_foreach(tlist,(GFunc)g_free,NULL);
+		g_list_free(tlist);
 
 		if (!msgpart || only_text_from_msgpart)
 			dbmail_imap_session_printf(self, "NIL\r\n");
 		else {
-			tmpdumpsize = rfcheader_dump(cached_msg.tmpdump, 
-					&msgpart->rfcheader, &self->args[bodyfetch->argstart],
-					bodyfetch->argcnt, 0);
+			part = GMIME_OBJECT((cached_msg.dmsg)->content);
+			for (k = 0; k < bodyfetch->argcnt; k++) {
+				g_mime_object_remove_header(part, self->args[k + bodyfetch->argstart]);
+			}
+			ts = g_string_new(g_mime_object_get_headers(part));
 
-			if (!tmpdumpsize) {
+			if (! ts->len > 0) {
 				dbmail_imap_session_printf(self, "NIL\r\n");
 			} else {
 				if (bodyfetch->octetcnt > 0) {
-					cnt = get_dumpsize(bodyfetch, tmpdumpsize);
-					dbmail_imap_session_printf(self, "<%llu> {%llu}\r\n", bodyfetch->octetstart, cnt);
-					mseek(cached_msg.tmpdump, bodyfetch->octetstart, SEEK_SET);
+					
+					if (bodyfetch->octetstart > 0 && bodyfetch->octetstart < ts->len)
+						ts = g_string_truncate(ts,bodyfetch->octetstart);
+					
+					if (bodyfetch->octetcnt < ts->len)
+						ts = g_string_erase(ts,0,bodyfetch->octetcnt);
+					
+					tmp = get_crlf_encoded(ts->str);
+					cnt = strlen(tmp);
+					
+					dbmail_imap_session_printf(self, "<%llu> {%llu}\r\n%s", 
+							bodyfetch->octetstart, cnt, tmp);
+
+					
 				} else {
-					cnt = tmpdumpsize;
-					dbmail_imap_session_printf(self, "{%llu}\r\n", tmpdumpsize);
-					mseek(cached_msg.tmpdump, 0, SEEK_SET);
+					tmp = get_crlf_encoded(ts->str);
+					cnt = strlen(tmp);
+					
+					dbmail_imap_session_printf(self, "{%llu}\r\n%s", cnt, tmp);
 				}
-				/* output data */
-				send_data(self->ci->tx, cached_msg.tmpdump, cnt);
+				g_free(tmp);
 			}
+			g_string_free(ts,TRUE);
 		}
 		break;
 	case BFIT_MIME:
@@ -2498,7 +1953,6 @@ char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 
 			if (paridx < 0) {
 				/* error in parenthesis structure */
-				g_strfreev(the_args);
 				return NULL;
 			}
 
