@@ -171,10 +171,6 @@ int db_start_msg(struct DbmailMessage *message, mime_message_t * msg, char *stop
 	trace(TRACE_DEBUG, "%s,%s: starting, stopbound: '%s'\n", __FILE__, __func__,
 	      stopbound ? stopbound : "<null>");
 
-	dm_list_init(&msg->children);
-	msg->message_has_errors = (!continue_recursion);
-
-
 	/* read header */
 	if (db_update_msgbuf(MSGBUF_FORCE_UPDATE) == -1)
 		return -2;
@@ -185,12 +181,6 @@ int db_start_msg(struct DbmailMessage *message, mime_message_t * msg, char *stop
 	db_give_msgpos(&msg->bodystart);
 	msg->rfcheaderlines = hdrlines;
 
-	mime_findfield("content-type", &msg->rfcheader, &mr);
-	if (continue_recursion && mr && strncasecmp(mr->value, "multipart", strlen("multipart")) == 0) {
-		trace(TRACE_DEBUG, "%s,%s: found multipart msg\n", __FILE__, __func__);
-	
-		/* TODO */
-	}
 	trace(TRACE_DEBUG, "%s,%s: exit\n", __FILE__, __func__);
 
 	return totallines;
