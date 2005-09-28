@@ -42,7 +42,7 @@
 #include "mime.h"
 #include "rfcmsg.h"
 #include "dbmsgbuf.h"
-#include "imaputil.h"
+#include "dm_imaputil.h"
 #include "config.h"
 #include "pipe.h"
 

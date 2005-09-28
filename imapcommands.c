@@ -42,7 +42,7 @@
 #include "dbmsgbuf.h"
 #include "debug.h"
 #include "imapcommands.h"
-#include "imaputil.h"
+#include "dm_imaputil.h"
 #include "memblock.h"
 #include "misc.h"
 #include "quota.h"

@@ -33,7 +33,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include "imap4.h"
-#include "imaputil.h"
+#include "dm_imaputil.h"
 #include "imapcommands.h"
 #include "dbmail-imapsession.h"
 #include "misc.h"

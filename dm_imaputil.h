@@ -17,8 +17,8 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: imaputil.h 1878 2005-09-04 06:34:44Z paul $
- * imaputil.h
+/* $Id: dm_imaputil.h 1878 2005-09-04 06:34:44Z paul $
+ * dm_imaputil.h
  *
  * utility functions for IMAP server
  */

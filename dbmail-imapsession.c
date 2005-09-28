@@ -19,7 +19,7 @@
 
 /* $Id: dbmail-imapsession.c 1878 2005-09-04 06:34:44Z paul $
  * 
- * imaputil.c
+ * dm_imaputil.c
  *
  * IMAP-server utility functions implementations
  */
@@ -39,7 +39,7 @@
 #include <errno.h>
 
 #include "dbmail.h"
-#include "imaputil.h"
+#include "dm_imaputil.h"
 #include "imap4.h"
 #include "debug.h"
 #include "db.h"
