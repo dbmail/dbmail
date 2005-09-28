@@ -187,7 +187,7 @@ char *dbmail_imap_astring_as_string(const char *s)
 
 }
 /* structure and envelope tools */
-static void handle_part(GMimeObject *part, gpointer data, gboolean extension);
+static void _structure_part_handle_part(GMimeObject *part, gpointer data, gboolean extension);
 static void _structure_part_text(GMimeObject *part, gpointer data, gboolean extension);
 static void _structure_part_multipart(GMimeObject *part, gpointer data, gboolean extension);
 static void _structure_part_message_rfc822(GMimeObject *part, gpointer data, gboolean extension);
@@ -290,7 +290,7 @@ static void imap_part_get_sizes(GMimeObject *part, size_t * size, size_t * lines
 }
 
 
-void handle_part(GMimeObject *part, gpointer data, gboolean extension)
+void _structure_part_handle_part(GMimeObject *part, gpointer data, gboolean extension)
 {
 	const GMimeContentType *type = g_mime_object_get_content_type(part);
 	if (! type)
@@ -329,7 +329,7 @@ void _structure_part_multipart(GMimeObject *part, gpointer data, gboolean extens
 	/* loop over parts for base info */
 	for (j=0; j<i; j++) {
 		subpart = g_mime_multipart_get_part(multipart,j);
-		handle_part(subpart,data,extension);
+		_structure_part_handle_part(subpart,data,extension);
 	}
 	
 	/* sub-type */
