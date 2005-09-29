@@ -22,8 +22,9 @@
 /** 
  * \file dbmailtypes.h
  *
- * a set of data type definitions used at various 
- * places within the dbmail package
+ * all data type definitions used within the dbmail package should 
+ * be declared here.
+ *
  */
 
 #ifndef _DBMAILTYPES_H
@@ -34,7 +35,6 @@
 #endif
 
 #include <stdio.h>
-#include "dbmail.h"
 #include "memblock.h"
 #include "list.h"
 
@@ -46,12 +46,72 @@
 
 #define UID_SIZE 70
 #define IPNUM_LEN 32
+#define IPLEN 32
+#define BACKLOG 16
+
 
 #define DM_SOCKADDR_LEN 108
 #define DM_USERNAME_LEN 100
 
+/** string length of configuration values */
+#define FIELDSIZE 1024
+
 /** use 64-bit unsigned integers as common data type */
 typedef unsigned long long u64_t;
+
+typedef enum {
+	DM_EQUERY 	= -1,
+	DM_SUCCESS 	= 0,
+	DM_EGENERAL 	= 1
+} DbmailErrorCodes;
+
+/** status fields for messages */
+typedef enum {
+	MESSAGE_STATUS_NEW     = 0,
+	MESSAGE_STATUS_SEEN    = 1,
+	MESSAGE_STATUS_DELETE  = 2,
+	MESSAGE_STATUS_PURGE   = 3,
+	MESSAGE_STATUS_UNUSED  = 4,
+	MESSAGE_STATUS_INSERT  = 5,
+	MESSAGE_STATUS_ERROR   = 6
+} MessageStatus_t;
+
+/** field_t is used for storing configuration values */
+typedef char field_t[FIELDSIZE];
+
+/** size of a timestring_t field */
+#define TIMESTRING_SIZE 30
+
+/** timestring_t is used for holding timestring */
+typedef char timestring_t[TIMESTRING_SIZE];
+
+/** parameters for the database connection */
+typedef struct {
+	field_t host;
+		   /**< hostname or ip address of database server */
+	field_t user;
+		   /**< username to connect with */
+	field_t pass;
+		   /**< password of user */
+	field_t db;/**< name of database to connect with */
+	unsigned int port;
+			/**< port number of database server */
+	field_t sock;
+		   /**< path to local unix socket (local connection) */
+	field_t pfx;
+			/**< prefix for tables e.g. dbmail_ */
+	unsigned int serverid; /* unique id for dbmail instance used in clusters */
+			
+} db_param_t;
+
+/** configuration items */
+typedef struct {
+	field_t name;
+		   /**< name of configuration item */
+	field_t value;
+		   /**< value of configuration item */
+} item_t;
+
 
 
 typedef struct {
@@ -199,6 +259,24 @@ enum BODY_FETCH_ITEM_TYPES {
 
 /* max length of number/dots part specifier */
 #define IMAP_MAX_PARTSPEC_LEN 100
+
+
+typedef struct {
+	int listenSocket;
+	int startChildren;
+	int minSpareChildren;
+	int maxSpareChildren;
+	int maxChildren;
+	int childMaxConnect;
+	int timeout;
+	char ip[IPLEN];
+	int port;
+	int resolveIP;
+	char *timeoutMsg;
+	field_t serverUser, serverGroup;
+	field_t socket;
+	int (*ClientHandler) (clientinfo_t *);
+} serverConfig_t;
 
 /* 
  * (imap) mailbox data type

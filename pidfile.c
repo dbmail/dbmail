@@ -26,16 +26,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include <sys/types.h> /* for pid_t */
-#include <signal.h>    /* for kill() */
-#include <errno.h>     /* for ESHRC */
-#include <stdio.h>     /* for f...() */
-#include <string.h>    /* for memset() */
-#include <stdlib.h>    /* for atoi() */
-
 #include "dbmail.h"
-#include "debug.h"
-#include "pidfile.h"
 
 /* These are used by pidfile_remove. */
 static FILE *pidfile_to_close = NULL;

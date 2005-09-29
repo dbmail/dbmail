@@ -28,6 +28,7 @@
 #include "config.h"
 #endif
 
+#include <glib.h>
 #include <sys/types.h>
 
 /*

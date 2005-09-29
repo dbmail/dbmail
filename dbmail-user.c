@@ -21,31 +21,7 @@
  * This is the dbmail-user program
  * It makes adding users easier */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "dbmail-user.h"
-#include "auth.h"
-#include <stdio.h>
-#include <termios.h>
-#include <stdlib.h>
-#include <string.h>
 #include "dbmail.h"
-#include "list.h"
-#include "debug.h"
-#include "db.h"
-#include "misc.h"
-#include <time.h>
-#include <stdarg.h>
-#include <sys/types.h>
-#include <unistd.h>
-#ifdef HAVE_CRYPT_H
-#include <crypt.h>
-#endif
-#include "dbmd5.h"
-
-
 
 extern char *configFile;
 

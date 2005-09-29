@@ -22,18 +22,7 @@
  * Functions for parsing a mime mailheader (actually just for scanning for email messages
 	and parsing the messageID */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "mime.h"
-#include "debug.h"
-#include <ctype.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-
-#include "dbmail-message.h"
+#include "dbmail.h"
 
 static void _register_header(const char *field, const char *value, gpointer mimelist)
 {

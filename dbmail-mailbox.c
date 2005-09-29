@@ -23,14 +23,7 @@
  * implements DbmailMailbox object
  */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <assert.h>
-#include <sys/types.h>
-#include <time.h>
-
-#include "dbmail-mailbox.h"
+#include "dbmail.h"
 
 struct DbmailMailbox * dbmail_mailbox_new(u64_t mailbox_idnr)
 {

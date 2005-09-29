@@ -25,29 +25,8 @@
  * implements DbmailMessage object
  */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <assert.h>
-#include <sys/types.h>
-#include <time.h>
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include "dbmail.h"
-#include "dbmail-message.h"
-#include "db.h"
-#include "auth.h"
-#include "misc.h"
-#include "pipe.h"
 
-#ifdef SIEVE
-#include "sortsieve.h"
-#endif
-#include "sort.h"
-#include "forward.h"
 
 extern db_param_t _db_params;
 #define DBPFX _db_params.pfx

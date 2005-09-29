@@ -19,6 +19,9 @@
 
 /* $Id: dbmail-user.h 1678 2005-03-17 13:59:25Z paul $ 
  */
+#ifndef _DBMAIL_USER_H
+#define _DBMAIL_USER_H
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -86,3 +89,5 @@ int do_forwards(const char *alias, const u64_t clientid,
 /* Helper functions */
 int is_valid(const char * const str);
 u64_t strtomaxmail(const char * const str);
+
+#endif

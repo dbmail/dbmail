@@ -24,24 +24,11 @@
  *	deleted messages. 
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "maintenance.h"
-#include "db.h"
-#include "debug.h"
 #include "dbmail.h"
-#include "list.h"
-#include "debug.h"
-#include "auth.h"
-#include <unistd.h>
-#include <time.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-#include <string.h>
-#include <gmime/gmime.h>
+
+#define LEN 30
+#define PNAME "dbmail/maintenance"
+
 
 /* Loudness and assumptions. */
 int yes_to_all = 0;
@@ -51,9 +38,6 @@ int verbose = 0;
 int quiet = 0;
 /* Don't print errors. */
 int reallyquiet = 0;
-
-#define qprintf(fmt, args...) \
-	(quiet ? 0 : printf(fmt, ##args) )
 
 #define qverbosef(fmt, args...) \
 	(!verbose ? 0 : printf(fmt, ##args) )

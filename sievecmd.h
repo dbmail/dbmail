@@ -19,6 +19,9 @@
 
 /* $Id: sievecmd.h 1424 2004-10-31 12:16:17Z aaron $ */
 
+#ifndef _SIEVECMD_H
+#define _SIEVECMD_H
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -37,3 +40,5 @@ int do_remove(u64_t user_idnr, char *name);
 int do_insert(u64_t user_idnr, char *name, FILE * source);
 
 int read_script_file(FILE * f, char **m_buf);
+
+#endif

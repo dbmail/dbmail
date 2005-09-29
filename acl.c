@@ -16,18 +16,8 @@
  along with this program; if not, write to the Free Software
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
-#ifndef NULL
-#define NULL 0
-#endif
 
-#include "acl.h"
-#include "auth.h"
-#include "db.h"
-#include "debug.h"
-
-#include <assert.h>
-#include <stdlib.h>
-#include <string.h>
+#include "dbmail.h"
 
 #define NR_ACL_FLAGS 9
 

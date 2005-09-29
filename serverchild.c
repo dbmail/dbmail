@@ -24,31 +24,7 @@
  * function implementations of server children code (connection handling)
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "debug.h"
-#include "serverchild.h"
-#include "db.h"
-#include "auth.h"
-#include "pool.h"
-#include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <string.h>
-#include <time.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/time.h>
-#include <sys/wait.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <signal.h>
+#include "dbmail.h"
 
 int ChildStopRequested = 0;
 int connected = 0;

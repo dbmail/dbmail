@@ -10,24 +10,7 @@
  * 
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "debug.h"
-#include "serverchild.h"
-#include "pool.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <signal.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <sys/shm.h>
-#include <time.h>
-#include <errno.h>
-#include <string.h>
+#include "dbmail.h"
 
 #define P_SIZE 100000
 

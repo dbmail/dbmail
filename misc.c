@@ -21,23 +21,9 @@
  *
  *	Miscelaneous functions */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include <ctype.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/time.h>
-#include <time.h>
-#include <assert.h>
-#include <fnmatch.h>
-
-#include "auth.h"
 #include "dbmail.h"
-#include "dbmd5.h"
-#include "misc.h"
-#include "dm_cidr.h"
+
+
 
 #undef max
 #define max(x,y) ( (x) > (y) ? (x) : (y) )

@@ -31,21 +31,7 @@
  *
  */ 
 
-#include <stdlib.h>
 #include <check.h>
-#include <gmime/gmime.h>
-#include <stdio.h>
-#include <string.h>
-
-#include "dbmail-imapsession.h"
-#include "dbmail-message.h"
-#include "mime.h"
-#include "rfcmsg.h"
-#include "dbmsgbuf.h"
-#include "dm_imaputil.h"
-#include "config.h"
-#include "pipe.h"
-
 #include "check_dbmail.h"
 
 extern char *configFile;

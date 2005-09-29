@@ -40,16 +40,7 @@
  *
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#ifdef HAVE_ENDIAN_H
-#include <endian.h>
-#endif
-
-#include <string.h>		/* for memcpy() */
-#include "md5.h"
+#include "dbmail.h"
 
 /* If endian.h is present, it will tell us, otherwise
  * autoconf's AC_C_BIGENDIAN will have tested the host. */

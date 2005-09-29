@@ -31,17 +31,8 @@
  *
  */ 
 
-#include <stdlib.h>
 #include <check.h>
-#include <gmime/gmime.h>
-#include <stdio.h>
-#include <string.h>
-
 #include "check_dbmail.h"
-#include "debug.h"
-#include "db.h"
-#include "auth.h"
-#include "dbmail-message.h"
 
 extern char *configFile;
 extern db_param_t _db_params;
@@ -173,17 +164,20 @@ END_TEST
 
 START_TEST(test_dbmail_message_to_string)
 {
-        char *s;
+        char *result;
+	GString *s;
 	struct DbmailMessage *m;
         
+	s = g_string_new(multipart_message);
+	
 	m = dbmail_message_new();
-	m = dbmail_message_init_with_string(m, g_string_new(multipart_message));
+	m = dbmail_message_init_with_string(m, s);
 	
-        s = dbmail_message_to_string(m);
-        
-	/* FIXME: add some checks here */
+        result = dbmail_message_to_string(m);
+	fail_unless(strlen(result)==s->len, "dbmail_message_to_string failed");
 	
-        g_free(s);
+        g_string_free(s,TRUE);
+	g_free(result);
 	dbmail_message_free(m);
 }
 END_TEST
@@ -208,8 +202,7 @@ START_TEST(test_dbmail_message_hdrs_to_string)
         m = dbmail_message_init_with_string(m, s);
 
 	result = dbmail_message_hdrs_to_string(m);
-//	printf("{%d} [%s]\n", strlen(result),result);
-	fail_unless(strlen(result)==s->len, "dbmail_message_hdrs_to_string failed");
+	fail_unless(strlen(result)==485, "dbmail_message_hdrs_to_string failed");
 	
 	g_string_free(s,TRUE);
         dbmail_message_free(m);
@@ -229,7 +222,7 @@ START_TEST(test_dbmail_message_body_to_string)
 	m = dbmail_message_new();
         m = dbmail_message_init_with_string(m,s);
 	result = dbmail_message_body_to_string(m);
-	fail_unless(strlen(result)==s->len, "dbmail_message_body_to_string failed");
+	fail_unless(strlen(result)==1045, "dbmail_message_body_to_string failed");
 	
         dbmail_message_free(m);
 	g_string_free(s,TRUE);
@@ -249,7 +242,8 @@ START_TEST(test_dbmail_message_get_rfcsize)
 	m = dbmail_message_new();
         m = dbmail_message_init_with_string(m,s);
 	result = dbmail_message_get_rfcsize(m);
-	fail_unless(result==s->len, "dbmail_message_get_rfcsize failed");
+	
+	fail_unless(result==1572, "dbmail_message_get_rfcsize failed");
 	
 	g_string_free(s,TRUE);
         dbmail_message_free(m);

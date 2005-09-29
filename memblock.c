@@ -25,16 +25,7 @@
  * implementations of functions declared in memblock.h
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "memblock.h"
-#include <unistd.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include "debug.h"
+#include "dbmail.h"
 
 #define MAX_ERROR_SIZE 128
 

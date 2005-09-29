@@ -23,19 +23,8 @@
  * compliant mail message
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 
-#include "rfcmsg.h"
-#include "list.h"
-#include "debug.h"
-#include "mime.h"
-#include "dbmsgbuf.h"
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <ctype.h>
+#include "dbmail.h"
 
 static int db_start_msg(struct DbmailMessage *message, mime_message_t * msg, char *stopbound, int *level, int maxlevel);
 

@@ -31,23 +31,7 @@
  *
  */ 
 
-#include <stdlib.h>
 #include <check.h>
-#include <stdio.h>
-#include <string.h>
-#include <check.h>
-
-#include "dbmail.h"
-#include "debug.h"
-#include "db.h"
-#include "auth.h"
-#include "misc.h"
-#include "dsn.h"
-#include "dbmail-message.h"
-#include "mime.h"
-#include "pipe.h"
-#include <gmime/gmime.h>
-
 #include "check_dbmail.h"
 
 extern char * multipart_message;

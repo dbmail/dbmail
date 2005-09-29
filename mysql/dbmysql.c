@@ -29,12 +29,10 @@
 #include "config.h"
 #endif
 
-#include "db.h"
 #include "mysql.h"
-#include "dbmail.h"
-#include "dbmailtypes.h"
-
 #include <string.h>
+
+#include "dbmail.h"
 
 #define DB_MYSQL_STANDARD_PORT 3306
 

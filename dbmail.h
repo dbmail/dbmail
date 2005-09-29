@@ -34,20 +34,80 @@
 #define PACKAGE "dbmail"
 #endif
 
-#include <glib.h>
-#include "list.h"
+#include <ctype.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <sys/time.h>
+#include <sys/wait.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
 
-/* Define several macros for GCC specific attributes.
- * Although the __attribute__ macro can be easily defined
- * to nothing, these macros make them a little prettier.
- * */
-#ifdef __GNUC__
-#define UNUSED __attribute__((__unused__))
-#define PRINTF_ARGS(X, Y) __attribute__((format(printf, X, Y)))
-#else
-#define UNUSED
-#define PRINTF_ARGS(X, Y)
+#include <assert.h>
+#include <stdarg.h>
+#include <errno.h>
+#include <unistd.h>
+#include <time.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <termios.h>
+#include <time.h>
+#include <string.h>
+#include <fcntl.h>
+#include <signal.h>
+#include <strings.h>
+#include <fnmatch.h>
+#include <gmime/gmime.h>
+#include <glib.h>
+
+#include "dbmailtypes.h"
+#include "debug.h"
+#include "dsn.h"
+#include "misc.h"
+#include "pipe.h"
+#include "db.h"
+#include "auth.h"
+#include "imap4.h"
+#include "memblock.h"
+#include "mime.h"
+#include "dbmsgbuf.h"
+#include "rfcmsg.h"
+#include "pidfile.h"
+#include "sort.h"
+#include "forward.h"
+#include "dbmd5.h"
+#include "md5.h"
+#include "server.h"
+#include "serverchild.h"
+#include "pool.h"
+#include "pop3.h"
+#include "quota.h"
+
+#include "dm_cidr.h"
+#include "dm_imaputil.h"
+#include "dm_search.h"
+
+#ifdef SIEVE
+#include "sortsieve.h"
 #endif
+
+#ifdef HAVE_CRYPT_H
+#include <crypt.h>
+#endif
+
+#ifdef HAVE_ENDIAN_H
+#include <endian.h>
+#endif
+
+#include "dbmail-message.h"
+#include "dbmail-user.h"
+#include "dbmail-mailbox.h"
+#include "dbmail-imapsession.h"
+
 
 
 #define GETCONFIGVALUE(key, sect, var) \
@@ -62,8 +122,6 @@
 
 #define CONFIG_ERROR_LEVEL TRACE_WARNING
 
-/** string length of configuration values */
-#define FIELDSIZE 1024
 #define COPYRIGHT "(c) 1999-2004 IC&S, The Netherlands"
 /** default directory and extension for pidfiles */
 #define DEFAULT_PID_DIR "/var/run/"
@@ -87,58 +145,6 @@
 #define DEFAULT_DBPFX "dbmail_"
 
 #define MATCH(x,y) strcasecmp(x,y)==0
-
-typedef enum {
-	DM_EQUERY 	= -1,
-	DM_SUCCESS 	= 0,
-	DM_EGENERAL 	= 1
-} DbmailErrorCodes;
-
-/** status fields for messages */
-typedef enum {
-	MESSAGE_STATUS_NEW     = 0,
-	MESSAGE_STATUS_SEEN    = 1,
-	MESSAGE_STATUS_DELETE  = 2,
-	MESSAGE_STATUS_PURGE   = 3,
-	MESSAGE_STATUS_UNUSED  = 4,
-	MESSAGE_STATUS_INSERT  = 5,
-	MESSAGE_STATUS_ERROR   = 6
-} MessageStatus_t;
-
-/** field_t is used for storing configuration values */
-typedef char field_t[FIELDSIZE];
-
-/** size of a timestring_t field */
-#define TIMESTRING_SIZE 30
-/** timestring_t is used for holding timestring */
-typedef char timestring_t[TIMESTRING_SIZE];
-
-/** parameters for the database connection */
-typedef struct {
-	field_t host;
-		   /**< hostname or ip address of database server */
-	field_t user;
-		   /**< username to connect with */
-	field_t pass;
-		   /**< password of user */
-	field_t db;/**< name of database to connect with */
-	unsigned int port;
-			/**< port number of database server */
-	field_t sock;
-		   /**< path to local unix socket (local connection) */
-	field_t pfx;
-			/**< prefix for tables e.g. dbmail_ */
-	unsigned int serverid; /* unique id for dbmail instance used in clusters */
-			
-} db_param_t;
-
-/** configuration items */
-typedef struct {
-	field_t name;
-		   /**< name of configuration item */
-	field_t value;
-		   /**< value of configuration item */
-} item_t;
 
 /**
  * \brief read configuration from filename

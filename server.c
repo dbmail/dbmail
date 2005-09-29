@@ -24,33 +24,7 @@
  * code to implement a network server
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "db.h"
-#include "debug.h"
-#include "server.h"
-#include "pool.h"
-#include "serverchild.h"
-#include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <string.h>
-#include <time.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <sys/time.h>
-#include <sys/wait.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <signal.h>
+#include "dbmail.h"
 
 
 int GeneralStopRequested = 0;

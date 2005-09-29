@@ -24,30 +24,7 @@
  * IMAP-server utility functions implementations
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include <assert.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <time.h>
-#include <ctype.h>
-#include <unistd.h>
-#include <errno.h>
-
 #include "dbmail.h"
-#include "dm_imaputil.h"
-#include "imap4.h"
-#include "debug.h"
-#include "db.h"
-#include "memblock.h"
-#include "dm_search.h"
-#include "dbmsgbuf.h"
-#include "rfcmsg.h"
-#include "dbmail-imapsession.h"
 
 #ifndef MAX_LINESIZE
 #define MAX_LINESIZE (10*1024)
