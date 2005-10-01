@@ -113,7 +113,7 @@ class Dbmail(DbmailConfig):
             self._cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         
         else:
-            raise novalidDriver, "no postgres driver available"
+            raise novalidDriver, "no postgres driver available (PgSQL or psycopg2)"
 
         assert(self._cursor)
             
@@ -131,24 +131,26 @@ class DbmailAlias(Dbmail):
     def get(self,alias,deliver_to=None):
         c=self.getCursor()
         filter=''
-        if deliver_to: filter="AND deliver_to='%s'" % deliver_to
-        c.execute("select * from %saliases where alias='%s' %s" % (self._prefix, alias,filter))
+        q="select * from %saliases where alias=%%s" % self._prefix
+        if deliver_to: 
+            q="%s AND deliver_to=%%s" % q
+            c.execute(q,(alias, deliver_to,))
+        else:
+            c.execute(q,(alias,))
         return c.fetchall()
     
     def set(self,alias,deliver_to):
         c=self.getCursor()
-        q="""INSERT INTO %saliases (alias,deliver_to) VALUES
-        ('%s','%s')""" %(self._prefix,alias,deliver_to)
+        q="""INSERT INTO %saliases (alias,deliver_to) VALUES (%%s,%%s)""" % self._prefix
         if not self.get(alias,deliver_to):
             assert(alias and deliver_to)
-            c.execute(q)
+            c.execute(q, (alias,deliver_to,))
             
     def delete(self,alias,deliver_to):
         c=self.getCursor()
-        q="""DELETE FROM %saliases WHERE alias='%s' AND
-        deliver_to='%s'""" %(self._prefix,alias,deliver_to)
+        q="""DELETE FROM %saliases WHERE alias=%%s AND deliver_to=%%s""" % self._prefix
         if self.get(alias,deliver_to):
-            c.execute(q)
+            c.execute(q, (alias,deliver_to,))
             
 class DbmailUser(Dbmail):
     _dirty=1
@@ -157,6 +159,10 @@ class DbmailUser(Dbmail):
         Dbmail.__init__(self)
         self.setUserid(userid)
         self._userdict={}
+
+    def create(self): pass
+    def update(self): pass
+    def delete(self): pass
         
     def setDirty(self,dirty=1): self._dirty=dirty
     def getDirty(self): return self._dirty
@@ -168,8 +174,9 @@ class DbmailUser(Dbmail):
         if not self.getDirty() and self._userdict:
             return self._userdict
             
+        q="select * from %susers where userid=%%s" % self._prefix
         c=self.getCursor()
-        c.execute("select * from %susers where userid='%s'" % (self._prefix,self.getUserid()))
+        c.execute(q,(self.getUserid(),))
         dict = c.fetchone()
         assert(dict)
         self._userdict = dict
@@ -185,15 +192,18 @@ class DbmailAutoreply(Dbmail):
 
     def __init__(self,userid,file=None):
         Dbmail.__init__(self,file)
+        self._table="%sauto_replies" % self._prefix
         self.setUser(DbmailUser(userid))
+        assert(self.getUser() != None)
 
     def setUser(self,user): self._user=user
     def getUser(self): return self._user
 
     def get(self):
         c=self.getCursor()
+        q="""select reply_body from %s where user_idnr=%%s""" % self._table
         try:
-            c.execute("select reply_body from %sauto_replies where user_idnr='%s'" %(self._prefix,self.getUser().getUidNumber()))
+            c.execute(q, (self.getUser().getUidNumber()))
             dict = c.fetchone()
             assert(dict)
         except AssertionError:
@@ -201,18 +211,16 @@ class DbmailAutoreply(Dbmail):
         if dict:
             return dict['reply_body']
  
-    getReply = get
- 
     def set(self,message):
-        c=self.getCursor()
-        c.execute("insert into %sauto_replies (user_idnr,reply_body) values ('%s','%s')" %(self._prefix,self.getUser().getUidNumber(),message))
+        q="""insert into %s (user_idnr,reply_body) values (%%s,%%s)""" % self._table
+        self.getCursor().execute(q, (self.getUser().getUidNumber(),message,))
        
-    setReply = set 
-    
     def delete(self):
-        c=self.getCursor()
-        c.execute("delete from %sauto_replies where user_idnr='%s'" % (self._prefix,self.getUser().getUidNumber()))
+        q="""delete from %s where user_idnr=%%s""" % self._table
+        self.getCursor().execute(q, (self.getUser().getUidNumber()))
     
+    getReply = get
+    setReply = set 
     delReply = delete
     
 if __name__=='__main__':
@@ -275,7 +283,8 @@ if __name__=='__main__':
             self.o = DbmailAutoreply('testuser1')
 
         def testSet(self):
-            self.o.set("test reply message")
+            self.failUnlessRaises(TypeError, self.o.set, """test '' \0  reply message""")
+            self.o.set("""test '' reply message""")
             self.failUnless(self.o.get())
             self.o.delete()
             
