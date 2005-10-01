@@ -119,7 +119,7 @@ DROP TABLE IF EXISTS dbmail_messageblks;
 CREATE TABLE dbmail_messageblks (
    messageblk_idnr bigint(21) NOT NULL auto_increment,
    physmessage_id bigint(21) DEFAULT '0' NOT NULL,
-   messageblk longtext NOT NULL,
+   messageblk longblob NOT NULL,
    blocksize bigint(21) DEFAULT '0' NOT NULL,
    is_header tinyint(1) DEFAULT '0' NOT NULL,
    PRIMARY KEY (messageblk_idnr),
