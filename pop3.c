@@ -21,18 +21,8 @@
  *
  * implementation for pop3 commands according to RFC 1081 */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 
 #include "dbmail.h"
-#include "pop3.h"
-#include "db.h"
-#include "debug.h"
-#include "dbmailtypes.h"
-#include "auth.h"
-#include "pop3.h"
-#include "misc.h"
 
 #define INCOMING_BUFFER_SIZE 512
 #define APOP_STAMP_SIZE 255

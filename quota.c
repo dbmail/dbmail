@@ -18,15 +18,8 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "dbmail.h"
 
-#include <stdlib.h>
-#include <string.h>
-#include "db.h"
-#include "auth.h"
-#include "quota.h"
 
 /* Allocate a quota structure for `n_resources' resources. 
  * Returns NULL on failure.

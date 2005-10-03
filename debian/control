@@ -2,7 +2,7 @@ Source: dbmail2
 Section: mail
 Priority: optional
 Maintainer: Paul J Stevens <paul@nfg.nl>
-Build-Depends: automake, debhelper (>= 4.1.16), dpatch, libglib2.0-dev, libgmime2.1-dev, libldap2-dev, libsqlite0-dev, postgresql-dev, libmysqlclient-dev | libmysqlclient10-dev, pkg-config, libtool
+Build-Depends: automake, debhelper (>= 4.1.16), dpatch, libglib2.0-dev, libgmime2.1-dev, libldap2-dev, libsqlite0-dev, postgresql-dev, libmysqlclient-dev | libmysqlclient14-dev, pkg-config, libtool
 Standards-Version: 3.6.1
 
 Package: dbmail2-pgsql

@@ -19,12 +19,10 @@
 
 /* $Id$ 
  */
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#ifndef _DBMAIL_USER_H
+#define _DBMAIL_USER_H
 
 #include "dbmail.h"
-#include "dbmailtypes.h"
 
 #define qprintf(fmt, args...) ((quiet||reallyquiet) ? 0 : printf(fmt, ##args) )
 #define qerrorf(fmt, args...) (reallyquiet ? 0 : fprintf(stderr, fmt, ##args) )
@@ -86,3 +84,5 @@ int do_forwards(const char *alias, const u64_t clientid,
 /* Helper functions */
 int is_valid(const char * const str);
 u64_t strtomaxmail(const char * const str);
+
+#endif

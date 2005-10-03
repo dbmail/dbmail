@@ -24,27 +24,5 @@
 #ifndef _SORTING_H
 #define _SORTING_H
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include <stdio.h>
-#include <stdlib.h>
-#include "dsn.h"
-#include "debug.h"
-#include "dbmailtypes.h"
-
-#define SA_KEEP		1
-#define SA_DISCARD	2
-#define SA_REDIRECT	3
-#define SA_REJECT	4
-#define SA_FILEINTO	5
-
-typedef struct sort_action {
-	int method;
-	char *destination;
-	char *message;
-} sort_action_t;
-
 
 #endif				/* #ifndef _SORTING_H */

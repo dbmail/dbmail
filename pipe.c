@@ -21,33 +21,8 @@
  *
  * Functions for reading the pipe from the MTA */
 
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "db.h"
-#include "auth.h"
-#include "debug.h"
-#include "list.h"
-#include "forward.h"
-#include "sort.h"
 #include "dbmail.h"
-#include "pipe.h"
-#include "debug.h"
-#include "misc.h"
-#include "mime.h"
-#include <errno.h>
-#include <string.h>
-#include <strings.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include "dbmd5.h"
-#include "misc.h"
-#include "dsn.h"
-#include "dbmail-message.h"
+
 
 #define HEADER_BLOCK_SIZE 1024
 #define QUERY_SIZE 255
@@ -466,7 +441,7 @@ int insert_messages(struct DbmailMessage *message,
 		break;
 	}
 
-	header = dbmail_message_hdrs_to_string(message, FALSE);
+	header = dbmail_message_hdrs_to_string(message);
 	headersize = (u64_t)dbmail_message_get_hdrs_size(message, FALSE);
 	bodysize = (u64_t)dbmail_message_get_body_size(message, FALSE);
 	rfcsize = (u64_t)dbmail_message_get_rfcsize(message);

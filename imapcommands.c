@@ -24,37 +24,11 @@
  * IMAP server command implementations
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "dbmail.h"
 
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
-
-/* dbmail.h is included first */
-#include "dbmail.h"
-#include "dbmail-imapsession.h"
-#include "acl.h"
-#include "auth.h"
-#include "db.h"
-
-#include "dbmsgbuf.h"
-#include "debug.h"
-#include "imapcommands.h"
-#include "imaputil.h"
-#include "memblock.h"
-#include "misc.h"
-#include "quota.h"
-#include "rfcmsg.h"
-
-#include <ctype.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-
-#include <time.h>
-#include <unistd.h>
 
 #ifndef MAX_LINESIZE
 #define MAX_LINESIZE 1024
@@ -74,8 +48,6 @@ const char *imap_flag_desc_escaped[IMAP_NFLAGS] = {
 };
 
 int list_is_lsub = 0;
-
-extern cache_t cached_msg;
 
 extern const char AcceptedMailboxnameChars[];
 
@@ -1823,7 +1795,6 @@ int _ic_fetch(struct ImapSession *self)
 		}
 	}
 
-	mreset(cached_msg.tmpdump);
 	dbmail_imap_session_printf(self, "%s OK %sFETCH completed\r\n", self->tag, self->use_uid ? "UID " : "");
 	return 0;
 }

@@ -31,21 +31,7 @@
  *
  */ 
 
-#include <stdlib.h>
 #include <check.h>
-#include <gmime/gmime.h>
-#include <stdio.h>
-#include <string.h>
-
-#include "dbmail-imapsession.h"
-#include "dbmail-message.h"
-#include "mime.h"
-#include "rfcmsg.h"
-#include "dbmsgbuf.h"
-#include "imaputil.h"
-#include "config.h"
-#include "pipe.h"
-
 #include "check_dbmail.h"
 
 extern char *configFile;
@@ -56,8 +42,8 @@ extern char *msgbuf_buf;
 extern u64_t msgbuf_idx;
 extern u64_t msgbuf_buflen;
 
-extern char *raw_message;
-extern char *raw_message_part;
+extern char *multipart_message;
+extern char *multipart_message_part;
 extern char *raw_lmtp_data;
 
 /*

@@ -21,20 +21,7 @@
  *
  * implementation for lmtp commands according to RFC 1081 */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include "dbmail.h"
-#include "lmtp.h"
-#include "pipe.h"
-#include "dbmail-message.h"
-#include "db.h"
-#include "dsn.h"
-#include "debug.h"
-#include "dbmailtypes.h"
-#include "auth.h"
-#include "lmtp.h"
 
 #define INCOMING_BUFFER_SIZE 512
 
@@ -595,7 +582,6 @@ int lmtp(void *stream, void *instream, char *buffer,
 					struct dm_list headerfields;
 					struct element *element;
 					struct DbmailMessage *msg;
-					char *headers;
 					char *s;
 
 					dm_list_init(&headerfields);
@@ -608,28 +594,27 @@ int lmtp(void *stream, void *instream, char *buffer,
 						return 1;
 					}
 					
-					s = dbmail_message_to_string(msg, FALSE);
+					s = dbmail_message_to_string(msg);
 					trace(TRACE_DEBUG, "%s,%s: whole message = %s", __FILE__, __func__, s);
 					g_free(s);
 
 					if (dbmail_message_get_hdrs_size(msg, FALSE) > READ_BLOCK_SIZE) {
-						trace(TRACE_ERROR, "main(): header is too big");
+						trace(TRACE_ERROR, "%s,%s: header is too big",
+								__FILE__, __func__);
 						discard_client_input((FILE *) instream);
 						ci_write((FILE *)stream, "500 Error reading header, "
 							"header too big.\r\n");
 						return 1;
 					}
 					/* Parse the list and scan for field and content */
-					headers = dbmail_message_hdrs_to_string(msg, FALSE);
-					if (mime_fetch_headers(headers, &headerfields) < 0) {
-						trace(TRACE_ERROR, "main(): fatal error from mime_fetch_headers()");
+					if (!(msg = mime_fetch_headers(msg, &headerfields))) {
+						trace(TRACE_ERROR, "%s,%s: fatal error from mime_fetch_headers()",
+								__FILE__, __func__);
 						discard_client_input((FILE *) instream);
 						ci_write((FILE *) stream, "500 Error reading header.\r\n");
 						dbmail_message_free(msg);
-						g_free(headers);
 						return 1;
 					}
-					g_free(headers);
 
 					if (insert_messages(msg, &headerfields, &rcpt, &from) == -1) {
 						ci_write((FILE *) stream, "503 Message not received\r\n");

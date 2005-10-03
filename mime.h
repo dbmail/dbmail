@@ -23,11 +23,7 @@
 #ifndef _MIME_H
 #define _MIME_H
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "dbmailtypes.h"
+#include "dbmail.h"
 
 #define MEM_BLOCK 1024
 
@@ -43,10 +39,9 @@ struct mime_record {
 
 void mime_findfield(const char *fname, struct dm_list *mimelist,
 		    struct mime_record **mr);
-int mail_address_build_list(char *scan_for_field, struct dm_list *targetlist,
+int mail_address_build_list(const char *scan_for_field, struct dm_list *targetlist,
 		  struct dm_list *mimelist);
-int mime_readheader(const char *datablock, u64_t * blkidx, 
-		    struct dm_list *mimelist, u64_t * headersize);
 
-int mime_fetch_headers(const char *datablock, struct dm_list *mimelist);
+int mime_readheader(struct DbmailMessage *message, u64_t * blkidx, struct dm_list *mimelist, u64_t * headersize);
+struct DbmailMessage * mime_fetch_headers(struct DbmailMessage *message, struct dm_list *mimelist);
 #endif

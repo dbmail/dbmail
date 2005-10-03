@@ -25,29 +25,8 @@
  * implements DbmailMessage object
  */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <assert.h>
-#include <sys/types.h>
-#include <time.h>
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include "dbmail.h"
-#include "dbmail-message.h"
-#include "db.h"
-#include "auth.h"
-#include "misc.h"
-#include "pipe.h"
 
-#ifdef SIEVE
-#include "sortsieve.h"
-#endif
-#include "sort.h"
-#include "forward.h"
 
 extern db_param_t _db_params;
 #define DBPFX _db_params.pfx
@@ -278,7 +257,7 @@ static void _register_header(const char *header, const char *value, gpointer use
 	g_relation_insert((GRelation *)user_data, (gpointer)header, (gpointer)value);
 }
 
-static gchar * _get_crlf_encoded(gchar *string)
+gchar * get_crlf_encoded(gchar *string)
 {
 	GMimeStream *ostream, *fstream;
 	GMimeFilter *filter;
@@ -348,43 +327,38 @@ gchar * dbmail_message_get_header(struct DbmailMessage *self, const char *header
 }
 
 /* dump message(parts) to char ptrs */
-gchar * dbmail_message_to_string(struct DbmailMessage *self, gboolean crlf) 
+gchar * dbmail_message_to_string(struct DbmailMessage *self) 
 {
-	gchar *msg, *encoded;
-	
-	assert(self->content);
-	msg = g_mime_object_to_string(GMIME_OBJECT(self->content));
-	
-	if (! crlf)
-		return msg;
+	return g_mime_object_to_string(GMIME_OBJECT(self->content));
+}
+gchar * dbmail_message_hdrs_to_string(struct DbmailMessage *self)
+{
+	gchar *h;
+	GString *hs;
 
-	encoded = _get_crlf_encoded(msg);
-	g_free(msg);
-	return encoded;
-}
-gchar * dbmail_message_hdrs_to_string(struct DbmailMessage *self, gboolean crlf)
-{
-	char *hdrs, *encoded;
-	assert(self->headers);
+	h = g_mime_object_get_headers(GMIME_OBJECT(self->content));
+	hs = g_string_new(h);
+	g_free(h);
+
+	/* append newline */
+	hs = g_string_append_c(hs, '\n');
+	h = hs->str;
+	g_string_free(hs,FALSE);
+	return h;
 	
-	hdrs = g_mime_object_get_headers(GMIME_OBJECT(self->content));
-	if (! crlf)
-		return hdrs;
-	encoded = _get_crlf_encoded(hdrs);
-	g_free(hdrs);
-	return encoded;
 }
-gchar * dbmail_message_body_to_string(struct DbmailMessage *self, gboolean crlf)
+gchar * dbmail_message_body_to_string(struct DbmailMessage *self)
 {
 	char *s, *b;
+	size_t h;
 	GString *t;
-	assert(self->content);
 	
-	b = dbmail_message_to_string(self, crlf);
+	b = dbmail_message_to_string(self);
 	t = g_string_new(b);
 	g_free(b);
 
-	t = g_string_erase(t,0,dbmail_message_get_hdrs_size(self, crlf));
+	h = dbmail_message_get_hdrs_size(self,FALSE);
+	t = g_string_erase(t,0,h);
 	
 	s = t->str;
 	g_string_free(t,FALSE);
@@ -399,25 +373,49 @@ gchar * dbmail_message_body_to_string(struct DbmailMessage *self, gboolean crlf)
  */
 size_t dbmail_message_get_size(struct DbmailMessage *self, gboolean crlf)
 {
-	char *s; size_t r;
-	s = dbmail_message_to_string(self, crlf);
-	r = strlen(s);
+	char *s, *t; size_t r;
+	s = dbmail_message_to_string(self);
+
+        if (crlf) {
+		t = get_crlf_encoded(s);
+		r = strlen(t);
+		g_free(t);
+	} else {
+		r = strlen(s);
+	}
+	
 	g_free(s);
 	return r;
 }
 size_t dbmail_message_get_hdrs_size(struct DbmailMessage *self, gboolean crlf)
 {
-	char *s; size_t r;
-	s = dbmail_message_hdrs_to_string(self,crlf);
-	r = strlen(s);
+	char *s, *t; size_t r;
+	s = dbmail_message_hdrs_to_string(self);
+
+	if (crlf) {
+	        t = get_crlf_encoded(s);
+		r = strlen(t);
+        	g_free(t);
+	} else {
+		r = strlen(s);
+	}
+	
 	g_free(s);
 	return r;
 }
 size_t dbmail_message_get_body_size(struct DbmailMessage *self, gboolean crlf)
 {
-	char *s; size_t r;
-	s = dbmail_message_body_to_string(self,crlf);
-	r = strlen(s);
+	char *s, *t; size_t r;
+	s = dbmail_message_body_to_string(self);
+
+	if (crlf) {
+		t = get_crlf_encoded(s);
+		r = strlen(t);
+        	g_free(t);
+	} else {
+		r = strlen(s);
+	}
+	
 	g_free(s);
 	return r;
 }
@@ -556,8 +554,8 @@ int dbmail_message_store(struct DbmailMessage *self)
 	if(_message_insert(self, user_idnr, DBMAIL_TEMPMBOX, unique_id) < 0)
 		return -1;
 
-	hdrs = dbmail_message_hdrs_to_string(self, FALSE);
-	body = dbmail_message_body_to_string(self, FALSE);
+	hdrs = dbmail_message_hdrs_to_string(self);
+	body = dbmail_message_body_to_string(self);
 	hdrs_size = (u64_t)dbmail_message_get_hdrs_size(self, FALSE);
 	body_size = (u64_t)dbmail_message_get_body_size(self, FALSE);
 	rfcsize = (u64_t)dbmail_message_get_rfcsize(self);
@@ -957,8 +955,11 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message, u64_t useridnr, cons
 			trace(TRACE_MESSAGE, "%s, %s: message id=%llu, size=%d is inserted", 
 					__FILE__, __func__, 
 					newmsgidnr, msgsize);
+			message->id = newmsgidnr;
+
 			return DSN_CLASS_OK;
 		}
 	}
 }
+
 

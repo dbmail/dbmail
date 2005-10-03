@@ -31,19 +31,6 @@
 /** 
  * different rights a user can have on a mailbox 
  */
-typedef enum {
-	ACL_RIGHT_LOOKUP,
-	ACL_RIGHT_READ,
-	ACL_RIGHT_SEEN,
-	ACL_RIGHT_WRITE,
-	ACL_RIGHT_INSERT,
-	ACL_RIGHT_POST,
-	ACL_RIGHT_CREATE,
-	ACL_RIGHT_DELETE,
-	ACL_RIGHT_ADMINISTER,
-	ACL_RIGHT_NONE
-} ACLRight_t;
-
 
 #include "dbmailtypes.h"
 

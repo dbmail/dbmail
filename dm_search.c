@@ -27,18 +27,7 @@
  *        by any SQL database.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "dm_search.h"
-#include "db.h"
-#include "dbmailtypes.h"
-#include "rfcmsg.h"
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <limits.h>
+#include "dbmail.h"
 
 /**
  * abbreviated names of the months
@@ -191,7 +180,7 @@ int db_search(unsigned int *rset, unsigned setlen, search_key_t * sk, mailbox_t 
 		if (sk->type != IST_SORT) {
 			msn = db_binary_search(mb->seq_list, mb->exists, uid);
 
-			if (msn == -1 || msn >= setlen) {
+			if (msn == -1 || (unsigned)msn >= setlen) {
 				db_free_result();
 				return 1;
 			}
@@ -222,9 +211,9 @@ int db_sort_parsed(unsigned int *rset, unsigned int setlen,
 
 	unsigned int i;
 	int result, idx = 0;
-	mime_message_t msg;
 	struct mime_record *mr;
 	sortitems_t *root = NULL;
+	struct dm_list hdrs;
 
 	if (!sk->search)
 		return 0;
@@ -243,22 +232,17 @@ int db_sort_parsed(unsigned int *rset, unsigned int setlen,
 		if (condition == IST_SUBSEARCH_NOT && rset[i] == 1)
 			continue;
 		
-		memset(&msg, 0, sizeof(msg));
-
-		if ((result = db_fetch_headers(mb->seq_list[i], &msg)))
+		dm_list_init(&hdrs);
+		
+		if ((result = db_get_main_header(mb->seq_list[i], &hdrs)))
 			continue;	/* ignore parse errors */
 
-		if (dm_list_getstart(&msg.mimeheader)) {
-			mime_findfield(sk->hdrfld, &msg.mimeheader, &mr);
+		if (dm_list_getstart(&hdrs)) {
+			mime_findfield(sk->hdrfld, &hdrs, &mr);
 			if (mr)
 				addto_btree_curr(&root, (char *) mr->value, (i + 1));
 		}
-		if (dm_list_getstart(&msg.rfcheader)) {
-			mime_findfield(sk->hdrfld, &msg.rfcheader, &mr);
-			if (mr)
-				addto_btree_curr(&root, (char *) mr->value, (i + 1));
-		}
-		db_free_msg(&msg);
+		dm_list_free(&hdrs.start);
 	}
 
 	dm_btree_traverse(root, &idx, rset);	/* fill in the rset array with mid's */
@@ -272,6 +256,7 @@ int db_search_parsed(unsigned int *rset, unsigned int setlen,
 {
 	unsigned i;
 	int result;
+	u64_t rfcsize;
 	mime_message_t msg;
 
 	if (mb->exists != setlen)
@@ -293,17 +278,16 @@ int db_search_parsed(unsigned int *rset, unsigned int setlen,
 		if (result != 0)
 			continue;	/* ignore parse errors */
 
-		if (sk->type == IST_SIZE_LARGER) {
-			rset[i] =
-			    ((msg.rfcheadersize + msg.bodylines +
-			      msg.bodysize) > sk->size) ? 1 : 0;
-		} else if (sk->type == IST_SIZE_SMALLER) {
-			rset[i] =
-			    ((msg.rfcheadersize + msg.bodylines +
-			      msg.bodysize) < sk->size) ? 1 : 0;
-		} else {
+		rfcsize = msg.rfcheadersize + msg.bodylines + msg.bodysize;
+		
+		if (sk->type == IST_SIZE_LARGER)
+			rset[i] = (rfcsize > sk->size) ? 1 : 0;
+		
+		else if (sk->type == IST_SIZE_SMALLER)
+			rset[i] = (rfcsize < sk->size) ? 1 : 0;
+		
+		else
 			rset[i] = db_exec_search(&msg, sk, mb->seq_list[i]);
-		}
 
 		db_free_msg(&msg);
 	}
@@ -347,11 +331,10 @@ int db_exec_search(mime_message_t * msg, search_key_t * sk, u64_t msg_idnr)
 		/* do not check children */
 		if (dm_list_getstart(&msg->rfcheader)) {
 			mime_findfield("date", &msg->rfcheader, &mr);
-			if (mr
-			    && strlen(mr->value) >=
-			    strlen("Day, d mon yyyy "))
+			if (mr && strlen(mr->value) >= strlen("Day, d mon yyyy ")) {
+				
 				/* 01234567890123456 */
-			{
+				
 				givendate = num_from_imapdate(sk->search);
 
 				if (mr->value[6] == ' ')
@@ -379,13 +362,11 @@ int db_exec_search(mime_message_t * msg, search_key_t * sk, u64_t msg_idnr)
 			mr = (struct mime_record *) el->data;
 
 			for (i = 0; mr->field[i]; i++)
-				if (strncasecmp(&mr->field[i], sk->search,
-						strlen(sk->search)) == 0)
+				if (strncasecmp(&mr->field[i], sk->search, strlen(sk->search)) == 0)
 					return 1;
 
 			for (i = 0; mr->value[i]; i++)
-				if (strncasecmp(&mr->value[i], sk->search,
-						strlen(sk->search)) == 0)
+				if (strncasecmp(&mr->value[i], sk->search, strlen(sk->search)) == 0)
 					return 1;
 
 			el = el->nextnode;
@@ -396,13 +377,11 @@ int db_exec_search(mime_message_t * msg, search_key_t * sk, u64_t msg_idnr)
 			mr = (struct mime_record *) el->data;
 
 			for (i = 0; mr->field[i]; i++)
-				if (strncasecmp(&mr->field[i], sk->search,
-						strlen(sk->search)) == 0)
+				if (strncasecmp(&mr->field[i], sk->search, strlen(sk->search)) == 0)
 					return 1;
 
 			for (i = 0; mr->value[i]; i++)
-				if (strncasecmp(&mr->value[i], sk->search,
-						strlen(sk->search)) == 0)
+				if (strncasecmp(&mr->value[i], sk->search, strlen(sk->search)) == 0)
 					return 1;
 
 			el = el->nextnode;
@@ -423,14 +402,13 @@ int db_exec_search(mime_message_t * msg, search_key_t * sk, u64_t msg_idnr)
 		if (mr && strncasecmp(mr->value, "text", 4) != 0)
 			break;
 
-		return db_search_range(msg->bodystart, msg->bodyend,
-				       sk->search, msg_idnr);
+		return db_search_range(msg->bodystart, msg->bodyend, sk->search, msg_idnr);
 	}
+	
 	/* no match found yet, try the children */
 	el = dm_list_getstart(&msg->children);
 	while (el) {
-		if (db_exec_search
-		    ((mime_message_t *) el->data, sk, msg_idnr) == 1)
+		if (db_exec_search((mime_message_t *) el->data, sk, msg_idnr) == 1)
 			return 1;
 
 		el = el->nextnode;
@@ -438,8 +416,7 @@ int db_exec_search(mime_message_t * msg, search_key_t * sk, u64_t msg_idnr)
 	return 0;
 }
 
-int db_search_range(db_pos_t start, db_pos_t end,
-		    const char *key, u64_t msg_idnr)
+int db_search_range(db_pos_t start, db_pos_t end, const char *key, u64_t msg_idnr)
 {
 	unsigned i, j;
 	unsigned startpos, endpos;
@@ -491,8 +468,7 @@ int db_search_range(db_pos_t start, db_pos_t end,
 	/* just one block? */
 	if (start.block == end.block) {
 		for (i = start.pos; i <= end.pos - strlen(key); i++) {
-			if (strncasecmp(&query_result[i], key, strlen(key))
-			    == 0) {
+			if (strncasecmp(&query_result[i], key, strlen(key)) == 0) {
 				db_free_result();
 				return 1;
 			}
@@ -516,14 +492,12 @@ int db_search_range(db_pos_t start, db_pos_t end,
 		}
 
 		startpos = (i == start.block) ? start.pos : 0;
-		endpos =
-		    (i == end.block) ? end.pos + 1 : db_get_length(i, 0);
+		endpos = (i == end.block) ? end.pos + 1 : db_get_length(i, 0);
 
 		distance = endpos - startpos;
 
 		for (j = 0; j < distance - strlen(key); j++) {
-			if (strncasecmp(&query_result[i], key, strlen(key))
-			    == 0) {
+			if (strncasecmp(&query_result[i], key, strlen(key)) == 0) {
 				db_free_result();
 				return 1;
 			}

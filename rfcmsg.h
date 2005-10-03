@@ -28,17 +28,13 @@
 #ifndef _RFCMSG_H
 #define _RFCMSG_H
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include "dbmailtypes.h"
 
+mime_message_t * db_new_msg(void);
 void db_free_msg(mime_message_t * msg);
 
 int db_fetch_headers(u64_t msguid, mime_message_t * msg);
 int db_add_mime_children(struct dm_list *brothers, char *splitbound,
 			 int *level, int maxlevel);
-int db_msgdump(mime_message_t * msg, u64_t msguid, int level);
 
 #endif

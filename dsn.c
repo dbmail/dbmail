@@ -21,13 +21,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include <stdlib.h>
-#include <string.h>
-
-#include "dsn.h"
-#include "list.h"
-#include "auth.h"
-#include "debug.h"
+#include "dbmail.h"
 
 /* Enhanced Status Codes from RFC 1893
  * Nota Bene: should be updated to include

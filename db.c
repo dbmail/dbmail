@@ -27,18 +27,7 @@
  * place in the mysql/ and pgsql/ directories
  */
 
-#include <stdio.h>
-#include <time.h>
-#include <stdlib.h>
-#include <limits.h>
-#include <string.h>
-#include <sys/types.h>
-#include <assert.h>
-#include "db.h"
 #include "dbmail.h"
-#include "dbmail-message.h"
-#include "auth.h"
-#include "misc.h"
 
 static const char *db_flag_desc[] = {
 	"seen_flag",
@@ -1713,7 +1702,10 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
 int db_send_message_lines(void *fstream, u64_t message_idnr,
 			  long lines, int no_end_dot)
 {
+	struct DbmailMessage *msg;
+	
 	u64_t physmessage_id = 0;
+	char *raw;
 	char *buffer = NULL;
 	int buffer_pos;
 	const char *nextpos;
@@ -1723,39 +1715,18 @@ int db_send_message_lines(void *fstream, u64_t message_idnr,
 	int n;
 	const char *query_result;
 
+
+	
 	trace(TRACE_DEBUG, "%s,%s: request for [%ld] lines",
 	      __FILE__, __func__, lines);
 
 	/* first find the physmessage_id */
-	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT physmessage_id FROM %smessages "
-		 "WHERE message_idnr = '%llu'",DBPFX, message_idnr);
-	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: error executing query",
-		      __FILE__, __func__);
-		return DM_SUCCESS;
-	}
-	physmessage_id = db_get_result_u64(0, 0);
-	db_free_result();
+	if (db_get_physmessage_id(message_idnr, &physmessage_id) != DM_SUCCESS)
+		return DM_EGENERAL;
 
-	buffer = dm_malloc(WRITE_BUFFER_SIZE * 2);
-	if (buffer == NULL) {
-		trace(TRACE_ERROR, "%s,%s: error allocating memory for buffer",
-		      __FILE__, __func__);
-		return DM_SUCCESS;
-	}
-
-	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT messageblk FROM %smessageblks "
-		 "WHERE physmessage_id='%llu' "
-		 "ORDER BY messageblk_idnr ASC",DBPFX, physmessage_id);
-	trace(TRACE_DEBUG, "%s,%s: executing query [%s]",
-	      __FILE__, __func__, query);
-
-	if (db_query(query) == -1) {
-		dm_free(buffer);
-		return DM_SUCCESS;
-	}
+	msg = dbmail_message_new();
+	msg = dbmail_message_retrieve(msg, physmessage_id, DBMAIL_MESSAGE_FILTER_FULL);
+	raw = dbmail_message_to_string(msg);
 
 	trace(TRACE_DEBUG,
 	      "%s,%s: sending [%ld] lines from message [%llu]", __FILE__,
@@ -3478,8 +3449,9 @@ int db_get_rfcsize(u64_t msg_idnr, u64_t mailbox_idnr, u64_t * rfc_size)
 
 int db_get_main_header(u64_t msg_idnr, struct dm_list *hdrlist)
 {
-	const char *query_result;
-	int result;
+	struct mime_record *mr;
+	char *field, *value;
+	int i,j;
 
 	if (!hdrlist)
 		return DM_SUCCESS;
@@ -3488,65 +3460,50 @@ int db_get_main_header(u64_t msg_idnr, struct dm_list *hdrlist)
 		dm_list_free(&hdrlist->start);
 
 	dm_list_init(hdrlist);
-
-	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT messageblk "
-		 "FROM %smessageblks blk, %smessages msg "
-		 "WHERE blk.physmessage_id = msg.physmessage_id "
-		 "AND msg.message_idnr = '%llu' "
-		 "ORDER BY blk.messageblk_idnr ASC",DBPFX,DBPFX, msg_idnr);
-
+	
+	snprintf(query, DEF_QUERYSIZE, "SELECT headername, headervalue "
+			"FROM %sheadervalue "
+			"JOIN %sheadername ON %sheadername.id=%sheadervalue.headername_id "
+			"JOIN %sphysmessage ON %sphysmessage.id=%sheadervalue.physmessage_id "
+			"JOIN %smessages ON %smessages.physmessage_id=%sphysmessage.id "
+			"WHERE %smessages.message_idnr='%llu'", 
+			DBPFX, DBPFX, DBPFX, DBPFX, DBPFX, 
+			DBPFX, DBPFX, DBPFX, DBPFX, DBPFX, 
+			DBPFX, msg_idnr);
+	
 	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: could not get message header",
+		trace(TRACE_ERROR, "%s,%s: could not get message headers",
 		      __FILE__, __func__);
 		return DM_EQUERY;
 	}
 
-	if (db_num_rows() > 0) {
-		query_result = db_get_result(0, 0);
-		if (!query_result) {
-			trace(TRACE_ERROR,
-			      "%s,%s: no header for message found",
-			      __FILE__, __func__);
-			db_free_result();
-			return DM_EQUERY;
-		}
-	} else {
-		trace(TRACE_ERROR,
-		      "%s,%s: no message blocks found for message",
+
+	j = db_num_rows();
+	
+	if (j <= 0) {
+		trace(TRACE_ERROR, "%s,%s: no message headers found for message",
 		      __FILE__, __func__);
 		db_free_result();
 		return DM_EQUERY;
 	}
+	
+	mr = g_new0(struct mime_record, 1);
+	for (i=0; i<j; i++) {
+		
+		field = (char *)db_get_result(i, 0);
+		value = (char *)db_get_result(i, 1);
+		
+		if (! mr)
+			trace(TRACE_FATAL,"%s,%s: oom", __FILE__, __func__);
 
-	result = mime_fetch_headers(query_result, hdrlist);
+		g_strlcpy(mr->field, field, MIME_FIELD_MAX);
+		g_strlcpy(mr->value, value, MIME_VALUE_MAX);
+		dm_list_nodeadd(hdrlist, mr, sizeof(*mr));
+	}
+	g_free(mr);
 
 	db_free_result();
 
-	if (result == -1) {
-		/* parse error */
-		trace(TRACE_ERROR,
-		      "%s,%s: error parsing header of message [%llu]",
-		      __FILE__, __func__, msg_idnr);
-		if (hdrlist->start) {
-			dm_list_free(&hdrlist->start);
-			dm_list_init(hdrlist);
-		}
-		return -3;
-	}
-
-	if (result == -2) {
-		/* out of memory */
-		trace(TRACE_ERROR, "%s,%s: out of memory", __FILE__,
-		      __func__);
-		if (hdrlist->start) {
-			dm_list_free(&hdrlist->start);
-			dm_list_init(hdrlist);
-		}
-		return -2;
-	}
-
-	/* success ! */
 	return DM_SUCCESS;
 }
 

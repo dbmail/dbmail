@@ -28,13 +28,7 @@
 #include "config.h"
 #endif
 
-#include "auth.h"
-#include "db.h"
-#include "list.h"
-#include "debug.h"
-#include "dbmd5.h"
 #include "dbmail.h"
-#include "misc.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -908,7 +902,6 @@ int auth_removealias_ext(const char *alias, const char *deliver_to)
 	}
 	return 0;
 }
-
 
 GList * auth_get_user_aliases(u64_t user_idnr)
 {

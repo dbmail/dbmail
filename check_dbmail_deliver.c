@@ -31,26 +31,10 @@
  *
  */ 
 
-#include <stdlib.h>
 #include <check.h>
-#include <stdio.h>
-#include <string.h>
-#include <check.h>
-
-#include "dbmail.h"
-#include "debug.h"
-#include "db.h"
-#include "auth.h"
-#include "misc.h"
-#include "dsn.h"
-#include "dbmail-message.h"
-#include "mime.h"
-#include "pipe.h"
-#include <gmime/gmime.h>
-
 #include "check_dbmail.h"
 
-extern char * raw_message;
+extern char * multipart_message;
 extern char * configFile;
 extern db_param_t _db_params;
 
@@ -107,14 +91,13 @@ void teardown(void)
 START_TEST(test_insert_messages)
 {
 	int result;
-	char *header;
 	struct DbmailMessage *message;
 	struct dm_list dsnusers, headerfields, returnpath;
 	GString *tmp;
 	deliver_to_user_t dsnuser;
 	
 	message = dbmail_message_new();
-	tmp = g_string_new(raw_message);
+	tmp = g_string_new(multipart_message);
 	message = dbmail_message_init_with_string(message,tmp);
 
 	dm_list_init(&dsnusers);
@@ -125,10 +108,7 @@ START_TEST(test_insert_messages)
 	dsnuser.address = "testuser1";
 	dm_list_nodeadd(&dsnusers, &dsnuser, sizeof(deliver_to_user_t));
 	
-	header = dbmail_message_hdrs_to_string(message, FALSE);
-	mime_fetch_headers(header, &headerfields);
-	g_free(header);
-
+	mime_fetch_headers(message, &headerfields);
 	result = insert_messages(message, &headerfields, &dsnusers, &returnpath);
 
 	fail_unless(result==0,"insert_messages failed");

@@ -24,35 +24,12 @@
  *
  * - moving most code to dbmail-users.c. Just a thin wrapper left */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include <unistd.h>
-#include <time.h>
-#include <stdarg.h>
-#include <sys/types.h>
-#include <stdio.h>
-#include <termios.h>
-#include <stdlib.h>
-#include <string.h>
-#ifdef HAVE_CRYPT_H
-#include <crypt.h>
-#endif
-
-#include "dbmail-user.h"
-#include "auth.h"
 #include "dbmail.h"
-#include "list.h"
-#include "debug.h"
-#include "db.h"
-#include "misc.h"
-#include "dbmd5.h"
 
 char *configFile = DEFAULT_CONFIG_FILE;
 
 #define SHADOWFILE "/etc/shadow"
-#define PNAME "dbmail/adduser"
+#define PNAME "dbmail/user"
 
 extern db_param_t _db_params;
 

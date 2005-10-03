@@ -24,10 +24,6 @@
 #ifndef _DBMD5_H
 #define _DBMD5_H
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 /**
  * \brief calculate md5-hash of a string
  * \param buf input string

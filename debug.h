@@ -15,28 +15,24 @@
  You should have received a copy of the GNU General Public License
  along with this program; if not, write to the Free Software
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+ 
+ $Id$
+ 
+ headers for debug.c 
+ 
 */
 
-/* $Id$
- *
- * debug.h : headers for debug.c */
+#ifndef  _DEBUG_H
+#define  _DEBUG_H
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 #include "dbmail.h"
-
-#include <stdio.h>
-#include <sys/syslog.h>
-#include <stdarg.h>
 
 #ifdef USE_GC
 #define GC_DEBUG
 #include <gc/gc.h>
 #endif
 
-#ifndef  _DEBUG_H
-#define  _DEBUG_H
 
 extern int TRACE_TO_SYSLOG;
 extern int TRACE_VERBOSE;
@@ -55,6 +51,19 @@ typedef enum {
 } trace_t;
 
 #define memtst(tstbool) func_memtst (__FILE__,__LINE__,tstbool)
+
+/* Define several macros for GCC specific attributes.
+ * Although the __attribute__ macro can be easily defined
+ * to nothing, these macros make them a little prettier.
+ * */
+#ifdef __GNUC__
+#define UNUSED __attribute__((__unused__))
+#define PRINTF_ARGS(X, Y) __attribute__((format(printf, X, Y)))
+#else
+#define UNUSED
+#define PRINTF_ARGS(X, Y)
+#endif
+
 
 /*
 #define dm_malloc(s) __debug_malloc(s, __FILE__, __LINE__)

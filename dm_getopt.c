@@ -25,11 +25,7 @@
  *  DEALINGS IN THE SOFTWARE.
  */
 
-#include <sys/types.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include "dm_getopt.h"
+#include "dbmail.h"
 
 int dm_optind=1, dm_opterr=1, dm_optopt=0;
 char *dm_optarg=0;

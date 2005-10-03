@@ -20,18 +20,7 @@
 
 /* implementation for tims commands according to RFC 1081 */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include "dbmail.h"
-#include "sort/sortsieve.h"
-#include "timsieve.h"
-#include "db.h"
-#include "debug.h"
-#include "dbmailtypes.h"
-#include "auth.h"
-#include "misc.h"
 
 #include <sieve2_interface.h>
 

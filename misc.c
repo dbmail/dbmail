@@ -21,23 +21,9 @@
  *
  *	Miscelaneous functions */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include <ctype.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/time.h>
-#include <time.h>
-#include <assert.h>
-#include <fnmatch.h>
-
-#include "auth.h"
 #include "dbmail.h"
-#include "dbmd5.h"
-#include "misc.h"
-#include "dm_cidr.h"
+
+
 
 #undef max
 #define max(x,y) ( (x) > (y) ? (x) : (y) )
@@ -548,7 +534,7 @@ GList * g_list_append_printf(GList * list, char * format, ...)
 char * dm_stresc(const char * from)
 {
 	char *to;
-	if (! (to = g_malloc0(sizeof(from) * strlen(from) * 2 + 1)))
+	if (! (to = g_new0(char,(strlen(from)+1) * 2 + 1)))
 		return NULL;
 	db_escape_string(to, from, strlen(from));
 	return to;

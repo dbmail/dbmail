@@ -21,20 +21,12 @@
  *
  * Debugging and memory checking functions */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "debug.h"
-#include <stdlib.h>
-#include <string.h>
-#include <sysexits.h>
+#include "dbmail.h"
 
 struct debug_mem {
 	long addr;
 	int linenr;
 	char fname[200];
-
 	struct debug_mem *nextaddr;
 };
 
@@ -49,7 +41,6 @@ debug_mem_t *__dm_first = 0, *__dm_last = 0;
 int TRACE_TO_SYSLOG = 1;	/* default: yes */
 int TRACE_VERBOSE = 0;		/* default: no */
 int TRACE_LEVEL = 2;		/* default: error operations */
-
 
 /*
  * configure the debug settings

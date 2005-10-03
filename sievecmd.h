@@ -19,13 +19,10 @@
 
 /* $Id$ */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#ifndef _SIEVECMD_H
+#define _SIEVECMD_H
 
-#include <stdio.h>
-#include "dbmailtypes.h"
-#include "sort/sortsieve.h"
+#include "dbmail.h"
 
 #define PNAME "dbmail/sievecmd"
 
@@ -37,3 +34,5 @@ int do_remove(u64_t user_idnr, char *name);
 int do_insert(u64_t user_idnr, char *name, FILE * source);
 
 int read_script_file(FILE * f, char **m_buf);
+
+#endif

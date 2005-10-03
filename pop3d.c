@@ -24,27 +24,7 @@
 * main prg for pop3 daemon
 */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <signal.h>
-#include <unistd.h>
-#include <errno.h>
-#include <unistd.h>		/* for getopt() */
-#include "server.h"
-#include "debug.h"
-#include "misc.h"
-#include "pidfile.h"
 #include "dbmail.h"
-#include "dbmailtypes.h"
-#include "pop3.h"
-#include <gmime/gmime.h>
 
 #define PNAME "dbmail/pop3d"
 

@@ -31,20 +31,7 @@
  *
  */ 
 
-#include <stdlib.h>
 #include <check.h>
-#include <gmime/gmime.h>
-#include <stdio.h>
-#include <string.h>
-
-#include "dbmail-imapsession.h"
-#include "dbmail-message.h"
-#include "mime.h"
-#include "rfcmsg.h"
-#include "dbmsgbuf.h"
-#include "imaputil.h"
-#include "misc.h"
-
 #include "check_dbmail.h"
 
 extern char *configFile;
@@ -57,8 +44,8 @@ extern char *msgbuf_buf;
 extern u64_t msgbuf_idx;
 extern u64_t msgbuf_buflen;
 
-extern char *raw_message;
-extern char *raw_message_part;
+extern char *multipart_message;
+extern char *multipart_message_part;
 extern char *raw_lmtp_data;
 
 void print_mimelist(struct dm_list *mimelist)
@@ -77,17 +64,33 @@ void print_mimelist(struct dm_list *mimelist)
  * the test fixtures
  *
  */
-
+	
+void init_testuser1(void) 
+{
+        u64_t user_idnr;
+	if (! (auth_user_exists("testuser1",&user_idnr)))
+		auth_adduser("testuser1","test", "md5", 101, 1024000, &user_idnr);
+}
+	
 void setup(void)
 {
 	configure_debug(5,1,0);
+	config_read(configFile);
+	GetDBParams(&_db_params);
+	db_connect();
+	auth_connect();
 	g_mime_init(0);
+	init_testuser1();
 }
 
 void teardown(void)
 {
+	auth_disconnect();
+	db_disconnect();
+	config_free();
 	g_mime_shutdown();
 }
+
 
 START_TEST(test_g_list_join)
 {
@@ -101,19 +104,46 @@ START_TEST(test_g_list_join)
 	fail_unless(strcmp(result->str,"NIL NIL (NIL NIL) (NIL NIL)")==0,"g_list_join failed");
 	g_string_free(result,TRUE);
 
+	l = NULL;
+	l = g_list_append(l, "NIL");
+	result = g_list_join(l," ");
+	fail_unless(strcmp(result->str,"NIL")==0,"g_list_join failed");
+	g_string_free(result,TRUE);
+
 }
 END_TEST
 
 START_TEST(test_dbmail_imap_plist_as_string)
 {
 	char *result;
-	GList *l = NULL;
+	GList *l;
+
+	l = NULL;
 	l = g_list_append(l, "NIL");
+	l = g_list_append(l, "NIL");
+	result = dbmail_imap_plist_as_string(l);
+	fail_unless(strcmp(result,"(NIL NIL)")==0,"plist construction failed");
+	
+	//g_list_foreach(l,(GFunc)g_free,NULL);
+	g_free(result);
+	
+	l = NULL;
+	l = g_list_append(l, "(NIL NIL)");
+	result = dbmail_imap_plist_as_string(l);
+	fail_unless(strcmp(result,"(NIL NIL)")==0,"plist construction failed");
+	
+	//g_list_foreach(l,(GFunc)g_free,NULL);
+	g_free(result);
+
+	l = g_list_append(NULL, "NIL");
 	l = g_list_append(l, "NIL");
 	l = g_list_append(l, "(NIL NIL)");
 	l = g_list_append(l, "(NIL NIL)");
 	result = dbmail_imap_plist_as_string(l);
 	fail_unless(strcmp(result,"(NIL NIL (NIL NIL) (NIL NIL))")==0,"plist construction failed");
+	
+	//g_list_foreach(l,(GFunc)g_free,NULL);
+	g_free(result);
 }
 END_TEST
 
@@ -174,24 +204,35 @@ START_TEST(test_mime_readheader)
 	int res;
 	u64_t blkidx=0, headersize=0;
 	struct dm_list mimelist;
+	struct DbmailMessage *m, *p;
+
+	m = dbmail_message_new();
+	m = dbmail_message_init_with_string(m,g_string_new(multipart_message));
 	
 	dm_list_init(&mimelist);
-	res = mime_readheader(raw_message,&blkidx,&mimelist,&headersize);
-	fail_unless(res==12, "number of newlines incorrect");
-	fail_unless(blkidx==484, "blkidx incorrect");
-	fail_unless(headersize==blkidx+res, "headersize incorrect");
-	fail_unless(mimelist.total_nodes==10, "number of message-headers incorrect");
+	res = mime_readheader(m,&blkidx,&mimelist,&headersize);
+	fail_unless(res==10, "number of headers incorrect");
+	fail_unless(blkidx==485, "blkidx incorrect");
+	fail_unless(headersize==blkidx, "headersize incorrect");
+	fail_unless(dm_list_length(&mimelist)==10, "number of message-headers incorrect");
 	dm_list_free(&mimelist.start);
 	
 	blkidx = 0; headersize = 0;
 
+	p = dbmail_message_new();
+	p = dbmail_message_init_with_string(p,g_string_new(multipart_message_part));
+	
 	dm_list_init(&mimelist);
-	res = mime_readheader(raw_message_part, &blkidx, &mimelist, &headersize);
-	fail_unless(res==5, "number of newlines incorrect");
-	fail_unless(blkidx==141, "blkidx incorrect");
-	fail_unless(headersize==blkidx+res, "headersize incorrect");
+	res = mime_readheader(p, &blkidx, &mimelist, &headersize);
+	fail_unless(res==3, "number of headers incorrect");
+	fail_unless(blkidx==142, "blkidx incorrect");
+	fail_unless(headersize==blkidx, "headersize incorrect");
 	fail_unless(mimelist.total_nodes==3, "number of mime-headers incorrect");
 	dm_list_free(&mimelist.start);
+
+	dbmail_message_free(m);
+	dbmail_message_free(p);
+	
 }
 END_TEST
 
@@ -199,9 +240,14 @@ START_TEST(test_mime_fetch_headers)
 {
 	struct dm_list mimelist;
 	struct mime_record *mr;
+	struct DbmailMessage *m, *p;
+
+	
+	m = dbmail_message_new();
+	m = dbmail_message_init_with_string(m,g_string_new(multipart_message));
 	
 	dm_list_init(&mimelist);
-	mime_fetch_headers(raw_message,&mimelist);
+	mime_fetch_headers(m,&mimelist);
 	fail_unless(mimelist.total_nodes==10, "number of message-headers incorrect");
 	mr = (mimelist.start)->data;
 	fail_unless(strcmp(mr->field, "Content-Type")==0, "Field name incorrect");
@@ -209,8 +255,11 @@ START_TEST(test_mime_fetch_headers)
 	
 	dm_list_free(&mimelist.start);
 
+	p = dbmail_message_new();
+	p = dbmail_message_init_with_string(p,g_string_new(multipart_message_part));
+	
 	dm_list_init(&mimelist);
-	mime_fetch_headers(raw_message_part,&mimelist);
+	mime_fetch_headers(p,&mimelist);
 	fail_unless(mimelist.total_nodes==3, "number of mime-headers incorrect");
 	mr = (mimelist.start)->data;
 	fail_unless(strcmp(mr->field, "Content-Disposition")==0, "Field name incorrect");
@@ -218,6 +267,8 @@ START_TEST(test_mime_fetch_headers)
 	
 	dm_list_free(&mimelist.start);
 
+	dbmail_message_free(m);
+	dbmail_message_free(p);
 
 }
 END_TEST
@@ -229,10 +280,15 @@ START_TEST(test_mail_address_build_list)
 	int result;
 	struct dm_list targetlist;
 	struct dm_list mimelist;
+	struct DbmailMessage *m;
 
+	m = dbmail_message_new();
+	m = dbmail_message_init_with_string(m,g_string_new(multipart_message));
+	
 	dm_list_init(&targetlist);
 	dm_list_init(&mimelist);
-	mime_fetch_headers(raw_message, &mimelist);
+	
+	mime_fetch_headers(m, &mimelist);
 
 	result = mail_address_build_list("Cc", &targetlist, &mimelist);
 	struct element *el;
@@ -241,13 +297,159 @@ START_TEST(test_mail_address_build_list)
 	fail_unless(result==0, "mail_address_build_list failed");
 	fail_unless(targetlist.total_nodes==2,"mail_address_build_list failed");
 	fail_unless(strcmp((char *)el->data,"nobody@test123.com")==0, "mail_address_build_list failed");
+
+	dbmail_message_free(m);
 }
 END_TEST
 
 //int db_fetch_headers(u64_t msguid, mime_message_t * msg)
 START_TEST(test_db_fetch_headers)
 {
-	//res = db_start_msg(msg,stopbound,&level,maxlevel);
+	u64_t physid;
+	u64_t user_idnr;
+	int res;
+	mime_message_t *message;
+	struct DbmailMessage *m;
+
+	m = dbmail_message_new();
+	m = dbmail_message_init_with_string(m, g_string_new(multipart_message));
+	dbmail_message_set_header(m, 
+			"References", 
+			"<20050326155326.1afb0377@ibook.linuks.mine.nu> <20050326181954.GB17389@khazad-dum.debian.net> <20050326193756.77747928@ibook.linuks.mine.nu> ");
+	dbmail_message_store(m);
+
+	physid = dbmail_message_get_physid(m);
+	auth_user_exists("testuser1",&user_idnr);
+	fail_unless(user_idnr > 0, "db_fetch_headers failed. Try adding [testuser1]");
+
+	sort_and_deliver(m,user_idnr,"INBOX");
+	
+	message = db_new_msg();
+	res = db_fetch_headers(m->id, message);
+	fail_unless(res==0,"db_fetch_headers failed");
+	
+	db_free_msg(message);
+	dbmail_message_free(m);
+}
+END_TEST
+
+START_TEST(test_imap_get_structure)
+{
+	struct DbmailMessage *message;
+	char *result;
+	char *expect = g_new0(char,1024);
+	GList *l;
+
+	/* multipart */
+	message = dbmail_message_new();
+	message = dbmail_message_init_with_string(message, g_string_new(multipart_message));
+	l = imap_get_structure(GMIME_MESSAGE(message->content), 1);
+	result = dbmail_imap_plist_as_string(l);
+	strncpy(expect,"((\"text\" \"html\" NIL NIL NIL NIL 18 2 NIL (\"inline\") NIL NIL) "
+			"(\"text\" \"plain\" (\"charset\" \"us-ascii\" \"name\" \"testfile\") NIL NIL \"base64\" 434 8 NIL NIL NIL NIL) "
+			"\"mixed\" (\"boundary\" \"boundary\") NIL NIL NIL)",1024);
+	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_structure failed");
+	g_list_foreach(l,(GFunc)g_free,NULL);
+	g_free(result);
+	dbmail_message_free(message);
+
+	/* outlook multipart */
+	message = dbmail_message_new();
+	message = dbmail_message_init_with_string(message, g_string_new(outlook_multipart));
+	l = imap_get_structure(GMIME_MESSAGE(message->content), 1);
+	result = dbmail_imap_plist_as_string(l);
+	strncpy(expect,"((\"text\" \"plain\" (\"charset\" \"iso-8859-1\") NIL NIL \"7bit\" 280 13 NIL NIL NIL NIL) "
+		"(\"text\" \"html\" (\"charset\" \"iso-8859-1\") NIL NIL \"quoted-printable\" 2866 100 NIL NIL NIL NIL) "
+		"\"alternative\" (\"boundary\" \"----=_NextPart_000_0009_01C5A579.19D2FA10\") NIL NIL NIL "
+		"(\"text\" \"plain\" (\"charset\" \"iso-8859-1\") NIL NIL \"quoted-printable\" 83 3 NIL (\"inline\") NIL NIL) "
+		"\"mixed\" (\"boundary\" \"===============0257742399==\") NIL NIL NIL)",1024);
+	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_structure failed");
+	g_list_foreach(l,(GFunc)g_free,NULL);
+	g_free(result);
+	dbmail_message_free(message);
+
+	/* text/plain */
+	message = dbmail_message_new();
+	message = dbmail_message_init_with_string(message, g_string_new(rfc822));
+	l = imap_get_structure(GMIME_MESSAGE(message->content), 1);
+	result = dbmail_imap_plist_as_string(l);
+	strncpy(expect,"(\"text\" \"plain\" (\"charset\" \"us-ascii\") NIL NIL \"7bit\" 34 4 NIL NIL NIL NIL)",1024);
+	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_structure failed");
+	g_list_foreach(l,(GFunc)g_free,NULL);
+	g_free(result);
+	g_free(expect);
+	dbmail_message_free(message);
+
+}
+END_TEST
+
+START_TEST(test_imap_get_envelope)
+{
+	struct DbmailMessage *message;
+	char *result, *expect;
+	GList *l = NULL;
+	
+	expect = g_new0(char, 1024);
+	
+	/* text/plain */
+	message = dbmail_message_new();
+	message = dbmail_message_init_with_string(message, g_string_new(rfc822));
+	l = imap_get_envelope(GMIME_MESSAGE(message->content));
+	strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"dbmail test message\" ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"testuser\" \"foo.org\")) NIL NIL NIL NIL)",1024);
+	result = dbmail_imap_plist_as_string(l);
+	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_envelope failed");
+
+	g_list_foreach(l,(GFunc)g_free,NULL);
+	dbmail_message_free(message);
+	g_list_free(l);
+	g_free(result);
+
+}
+END_TEST
+
+START_TEST(test_imap_get_partspec)
+{
+	struct DbmailMessage *message;
+	GMimeObject *object;
+	char *result, *expect;
+	
+	expect = g_new0(char, 1024);
+	
+	/* text/plain */
+	message = dbmail_message_new();
+	message = dbmail_message_init_with_string(message, g_string_new(rfc822));
+
+	object = imap_get_partspec(GMIME_OBJECT(message->content),"HEADER");
+	result = imap_get_logical_part(object,"HEADER");
+	printf("\n[%s]\n", result);
+
+	object = imap_get_partspec(GMIME_OBJECT(message->content),"TEXT");
+	result = imap_get_logical_part(object,"TEXT");
+	printf("\n[%s]\n", result); 
+
+	dbmail_message_free(message);
+
+	/* multipart */
+	
+	message = dbmail_message_new();
+	message = dbmail_message_init_with_string(message, g_string_new(multipart_message));
+
+	object = imap_get_partspec(GMIME_OBJECT(message->content),"1.TEXT");
+	result = imap_get_logical_part(object,"TEXT");
+	printf("\n[%s]\n", result); 
+
+	object = imap_get_partspec(GMIME_OBJECT(message->content),"1.HEADER");
+	result = imap_get_logical_part(object,"HEADER");
+	printf("\n[%s]\n", result); 
+	
+	object = imap_get_partspec(GMIME_OBJECT(message->content),"2.MIME");
+	result = imap_get_logical_part(object,"MIME");
+	printf("\n[%s]\n", result); 
+
+	
+	g_free(result);
+	g_free(expect);
+
 }
 END_TEST
 
@@ -452,6 +654,9 @@ Suite *dbmail_suite(void)
 	tcase_add_checked_fixture(tc_session, setup, teardown);
 	tcase_add_test(tc_session, test_imap_session_new);
 	tcase_add_test(tc_session, test_imap_bodyfetch);
+	tcase_add_test(tc_session, test_imap_get_structure);
+	tcase_add_test(tc_session, test_imap_get_envelope);
+	tcase_add_test(tc_session, test_imap_get_partspec);
 	
 	tcase_add_checked_fixture(tc_rfcmsg, setup, teardown);
 	tcase_add_test(tc_rfcmsg, test_db_fetch_headers);

@@ -31,21 +31,7 @@
  *
  */ 
 
-#include <stdlib.h>
 #include <check.h>
-#include <stdio.h>
-#include <string.h>
-
-#include "dbmail.h"
-#include "debug.h"
-#include "db.h"
-#include "dm_cidr.h"
-#include "pool.h"
-#include "server.h"
-#include "check.h"
-#include "misc.h"
-#include <gmime/gmime.h>
-
 #include "check_dbmail.h"
 
 extern char *configFile;

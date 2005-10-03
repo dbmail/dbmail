@@ -21,17 +21,7 @@
  *
  * Functions to create md5 hash from buf */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "dbmd5.h"
-#include "md5.h"
-#include "debug.h"
+#include "dbmail.h"
 
 unsigned char *makemd5(const char * const buf)
 {

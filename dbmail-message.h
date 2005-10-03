@@ -28,14 +28,7 @@
 #define _DBMAIL_MESSAGE_H
 
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "dbmailtypes.h"
-#include "dsn.h"
-#include <gmime/gmime.h>
-#include <assert.h>
+#include "dbmail.h"
 
 #define MSGBUF_FORCE_UPDATE -1
 
@@ -108,9 +101,9 @@ gchar * dbmail_message_get_internal_date(struct DbmailMessage *self);
 int dbmail_message_set_class(struct DbmailMessage *self, int klass);
 int dbmail_message_get_class(struct DbmailMessage *self);
 
-gchar * dbmail_message_to_string(struct DbmailMessage *self, gboolean crlf);
-gchar * dbmail_message_hdrs_to_string(struct DbmailMessage *self, gboolean crlf);
-gchar * dbmail_message_body_to_string(struct DbmailMessage *self, gboolean crlf);
+gchar * dbmail_message_to_string(struct DbmailMessage *self);
+gchar * dbmail_message_hdrs_to_string(struct DbmailMessage *self);
+gchar * dbmail_message_body_to_string(struct DbmailMessage *self);
 
 size_t dbmail_message_get_size(struct DbmailMessage *self, gboolean crlf);
 
@@ -119,6 +112,7 @@ size_t dbmail_message_get_size(struct DbmailMessage *self, gboolean crlf);
 size_t dbmail_message_get_hdrs_size(struct DbmailMessage *self, gboolean crlf);
 size_t dbmail_message_get_body_size(struct DbmailMessage *self, gboolean crlf);
 
+gchar * get_crlf_encoded(gchar *string);
 /*
  * manipulate the actual message content
  */
@@ -134,6 +128,8 @@ void dbmail_message_cache_datefield(struct DbmailMessage *self);
 void dbmail_message_cache_subjectfield(struct DbmailMessage *self);
 void dbmail_message_cache_referencesfield(struct DbmailMessage *self);
 
+GList * dbmail_message_get_structure(struct DbmailMessage *self, gboolean extension);
+GList * dbmail_message_get_envelope(struct DbmailMessage *self);
 /*
  * destructor
  */

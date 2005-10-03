@@ -20,7 +20,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include <dbmailtypes.h>
+#include "dbmail.h"
 
 typedef enum {
 	DSN_CLASS_NONE = 0,

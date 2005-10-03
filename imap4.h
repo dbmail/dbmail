@@ -25,11 +25,7 @@
 #ifndef _IMAP4_H
 #define _IMAP4_H
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "dbmailtypes.h"
+#include "dbmail.h"
 
 #define IMAP_SERVER_VERSION VERSION
 //#define IMAP_CAPABILITY_STRING "IMAP4 IMAP4rev1 AUTH=LOGIN ACL NAMESPACE SORT"

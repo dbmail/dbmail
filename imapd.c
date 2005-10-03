@@ -24,24 +24,7 @@
  * main prg for imap daemon
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <signal.h>
-#include <errno.h>
-#include "imap4.h"
-#include "server.h"
-#include "debug.h"
-#include "misc.h"
-#include "pidfile.h"
 #include "dbmail.h"
-#include <gmime/gmime.h>
 
 #define PNAME "dbmail/imap4d"
 

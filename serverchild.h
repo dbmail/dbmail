@@ -28,13 +28,7 @@
 #ifndef SERVERCHILD_H
 #define SERVERCHILD_H
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include <sys/types.h>
-#include <signal.h>
-#include "dbmailtypes.h"
+#include "dbmail.h"
 
 void active_child_sig_handler(int sig, siginfo_t *info, void *data);
 void noop_child_sig_handler(int sig, siginfo_t *info, void *data);

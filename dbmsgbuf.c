@@ -25,23 +25,13 @@
  * implement msgbuf functions prototyped in dbmsgbuf.h
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "dbmsgbuf.h"
-#include "db.h"
-#include "dbmail-message.h"
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
+#include "dbmail.h"
 
 #define MSGBUF_WINDOWSIZE (128ull*1024ull)
 
 extern db_param_t _db_params;
 #define DBPFX _db_params.pfx
 
-static unsigned _msgrow_idx = 0;
 static int _msg_fetch_inited = 0;
 
 /* for issuing queries to the backend */
@@ -50,7 +40,6 @@ char query[DEF_QUERYSIZE];
 /**
  * CONDITIONS FOR MSGBUF
  */
-static u64_t rowlength = 0; /**< length of current row*/
 static u64_t rowpos = 0; /**< current position in row */
 static db_pos_t zeropos; /**< absolute position (block/offset) of 
 			    msgbuf_buf[0]*/
@@ -65,143 +54,37 @@ struct DbmailMessage * db_init_fetch(u64_t msg_idnr, int filter)
 	result = db_get_physmessage_id(msg_idnr, &physid);
 	if (result != DM_SUCCESS)
 		return NULL;
-	
-	/* retrieve message */
 	msg = dbmail_message_new();
-	
 	return dbmail_message_retrieve(msg, physid, filter);
 }
 	
-int db_init_fetch_messageblks(u64_t msg_idnr, int filter)
+struct DbmailMessage * db_init_fetch_message(u64_t msg_idnr, int filter)
 {
 
 	struct DbmailMessage *msg;
+	char *buf;
 
 	msg = db_init_fetch(msg_idnr, filter);
 	if (! msg)
-		return DM_EGENERAL;
+		return NULL;
 	
-	/* set globals */
-	msgbuf_buf = dbmail_message_to_string(msg, TRUE);
+	/* set globals: msgbuf contains a crlf decoded version of the message at hand */
+	buf = dbmail_message_to_string(msg);
+	msgbuf_buf = buf;
+
 	msgbuf_idx = 0;
 	msgbuf_buflen = strlen(msgbuf_buf);
 	db_store_msgbuf_result();
 
 	/* done */
-	dbmail_message_free(msg);
-	return 1;
-
+	return msg;
 }
 
 
-int db_update_msgbuf(int minlen)
+int db_update_msgbuf(int minlen UNUSED)
 {
 	/* use the former msgbuf_result */
 	db_use_msgbuf_result();
-
-	if (_msgrow_idx >= db_num_rows()) {
-		db_store_msgbuf_result();
-		return 0;	/* no more */
-	}
-
-	if (msgbuf_idx > msgbuf_buflen) {
-		db_store_msgbuf_result();
-		return -1;	/* error, msgbuf_idx should be within buf */
-	}
-
-	if (minlen > 0 && ((int) (msgbuf_buflen - msgbuf_idx)) > minlen) {
-		db_store_msgbuf_result();
-		return 1;	/* ok, need no update */
-	}
-
-	if (msgbuf_idx == 0) {
-		db_store_msgbuf_result();
-		return 1;	/* update no use, buffer would not change */
-	}
-
-
-	trace(TRACE_DEBUG,
-	      "%s,%s: update msgbuf_buf updating %llu, %llu, %llu, %llu",
-	      __FILE__, __func__, MSGBUF_WINDOWSIZE,
-	      msgbuf_buflen, rowlength, rowpos);
-
-	/* move buf to make msgbuf_idx 0 */
-	memmove(msgbuf_buf, &msgbuf_buf[msgbuf_idx],
-		(msgbuf_buflen - msgbuf_idx));
-	if (msgbuf_idx > (msgbuf_buflen  - rowpos)) {
-		zeropos.block++;
-		zeropos.pos = (msgbuf_idx - ((msgbuf_buflen) - rowpos));
-	} else {
-		zeropos.pos += msgbuf_idx;
-	}
-
-	msgbuf_buflen -= msgbuf_idx;
-	msgbuf_idx = 0;
-
-	if ((rowlength - rowpos) >= (MSGBUF_WINDOWSIZE - msgbuf_buflen)) {
-		trace(TRACE_DEBUG, "%s,%s update msgbuf non-entire fit",
-		      __FILE__, __func__);
-
-		/* rest of row does not fit entirely in buf */
-		/* FIXME: this will explode is db_get_result returns NULL. */
-		strncpy(&msgbuf_buf[msgbuf_buflen],
-			&((db_get_result(_msgrow_idx, 0))[rowpos]),
-			MSGBUF_WINDOWSIZE - msgbuf_buflen);
-		rowpos += (MSGBUF_WINDOWSIZE - msgbuf_buflen - 1);
-
-		msgbuf_buflen = MSGBUF_WINDOWSIZE - 1;
-		msgbuf_buf[msgbuf_buflen] = '\0';
-
-		db_store_msgbuf_result();
-		return 1;
-	}
-
-	trace(TRACE_DEBUG, "%s,%s: update msgbuf: entire fit",
-	      __FILE__, __func__);
-
-	/* FIXME: this will explode is db_get_result returns NULL. */
-	strncpy(&msgbuf_buf[msgbuf_buflen],
-		&((db_get_result(_msgrow_idx, 0))[rowpos]),
-		(rowlength - rowpos));
-	msgbuf_buflen += (rowlength - rowpos);
-	msgbuf_buf[msgbuf_buflen] = '\0';
-	rowpos = rowlength;
-
-	/* try to fetch a new row */
-	_msgrow_idx++;
-	if (_msgrow_idx >= db_num_rows()) {
-		trace(TRACE_DEBUG, "%s,%s update msgbuf succes NOMORE",
-		      __FILE__, __func__);
-		db_store_msgbuf_result();
-		return 0;
-	}
-
-	rowlength = db_get_length(_msgrow_idx, 0);
-	rowpos = 0;
-
-	trace(TRACE_DEBUG, "%s,%s: update msgbuf, got new block, "
-	      "trying to place data", __FILE__, __func__);
-
-	/* FIXME: this will explode is db_get_result returns NULL. */
-	strncpy(&msgbuf_buf[msgbuf_buflen], db_get_result(_msgrow_idx, 0),
-		MSGBUF_WINDOWSIZE - msgbuf_buflen - 1);
-
-	if (rowlength <= MSGBUF_WINDOWSIZE - msgbuf_buflen - 1) {
-		/* 2nd block fits entirely */
-		trace(TRACE_DEBUG,
-		      "update msgbuf: new block fits entirely\n");
-
-		rowpos = rowlength;
-		msgbuf_buflen += rowlength;
-	} else {
-		rowpos = MSGBUF_WINDOWSIZE - (msgbuf_buflen + 1);
-		msgbuf_buflen = MSGBUF_WINDOWSIZE - 1;
-	}
-
-	msgbuf_buf[msgbuf_buflen] = '\0';	/* add NULL */
-
-	trace(TRACE_DEBUG, "%s,%s: update msgbuf succes", __FILE__,
-	      __func__);
 	db_store_msgbuf_result();
 	return 1;
 }

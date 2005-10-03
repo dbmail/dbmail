@@ -23,21 +23,7 @@
 #ifndef _MISC_H
 #define _MISC_H
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include <grp.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <sys/un.h>
-#include <netinet/in.h>
-#include <unistd.h>
-#include <pwd.h>
-#include "db.h"
-#include "debug.h"
-#include "list.h"
+#include "dbmail.h"
 
 #define BUFLEN 2048
 

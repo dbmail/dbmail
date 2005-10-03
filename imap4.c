@@ -23,23 +23,7 @@
  * implements an IMAP 4 rev 1 server.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <errno.h>
-#include "imap4.h"
-#include "imaputil.h"
-#include "imapcommands.h"
-#include "dbmail-imapsession.h"
-#include "misc.h"
-#include "debug.h"
-#include "db.h"
-#include "auth.h"
+#include "dbmail.h"
 
 #define MAX_LINESIZE (10*1024)
 #define COMMAND_SHOW_LEVEL TRACE_INFO

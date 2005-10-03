@@ -30,10 +30,6 @@
 #ifndef _MEMBLOCK_H
 #define _MEMBLOCK_H
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #define _MEMBLOCK_SIZE (512ul*1024ul)
 
 struct memblock {

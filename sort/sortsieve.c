@@ -25,29 +25,8 @@
  * 
  */
 
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include <time.h>
-#include <ctype.h>
-#include "db.h"
-#include "auth.h"
-#include "debug.h"
-#include "list.h"
 #include "dbmail.h"
-#include "debug.h"
-#include <errno.h>
-#include <string.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include "dbmd5.h"
-#include "misc.h"
 
-#include "sortsieve.h"
-#include "sort.h"
 #include <sieve2_interface.h>
 
 extern struct dm_list smtpItems, sysItems;

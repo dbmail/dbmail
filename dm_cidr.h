@@ -18,7 +18,8 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  
 */
-
+#ifndef _DM_CIDR_H
+#define _DM_CIDR_H
 /*
  * 
  * $Id$
@@ -38,3 +39,4 @@ int cidr_repr(struct cidrfilter *self);
 int cidr_match(struct cidrfilter *base, struct cidrfilter *test);
 void cidr_free(struct cidrfilter *self);
 
+#endif

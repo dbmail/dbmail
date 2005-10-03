@@ -21,12 +21,8 @@
 #ifndef _SIEVE_H
 #define _SIEVE_H
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "dbmail.h"
 
-#include "sort.h"
-#include "dbmailtypes.h"
 #include <sieve2_interface.h>
 
 #define MAX_SIEVE_SCRIPTNAME 100
