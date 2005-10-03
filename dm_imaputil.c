@@ -600,7 +600,7 @@ GList * imap_get_envelope(GMimeMessage *message)
 	/* message-id */
 	result = (char *)g_mime_message_get_message_id(message);
 	if (result)
-		list = g_list_append_printf(list,"%s", result);
+		list = g_list_append_printf(list,"\"<%s>\"", result);
 	else
 		list = g_list_append_printf(list,"NIL");
 
@@ -2192,6 +2192,9 @@ void close_cache()
 	if (cached_msg.msg_parsed)
 		db_free_msg(&cached_msg.msg);
 
+	if (cached_msg.dmsg)
+		dbmail_message_free(cached_msg.dmsg);
+
 	cached_msg.num = -1;
 	cached_msg.msg_parsed = 0;
 	memset(&cached_msg.msg, 0, sizeof(cached_msg.msg));
@@ -2205,6 +2208,7 @@ void close_cache()
  */
 int init_cache()
 {
+	cached_msg.dmsg = NULL;
 	cached_msg.num = -1;
 	cached_msg.msg_parsed = 0;
 	memset(&cached_msg.msg, 0, sizeof(cached_msg.msg));

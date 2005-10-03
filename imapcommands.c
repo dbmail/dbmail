@@ -49,8 +49,6 @@ const char *imap_flag_desc_escaped[IMAP_NFLAGS] = {
 
 int list_is_lsub = 0;
 
-extern cache_t cached_msg;
-
 extern const char AcceptedMailboxnameChars[];
 
 extern int imap_before_smtp;
@@ -1797,7 +1795,6 @@ int _ic_fetch(struct ImapSession *self)
 		}
 	}
 
-	mreset(cached_msg.tmpdump);
 	dbmail_imap_session_printf(self, "%s OK %sFETCH completed\r\n", self->tag, self->use_uid ? "UID " : "");
 	return 0;
 }
