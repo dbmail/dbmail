@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: maintenance.c 1780 2005-05-19 10:17:24Z paul $
+/* $Id: maintenance.c 1891 2005-10-03 10:01:21Z paul $
  *
  * This is the dbmail housekeeping program. 
  *	It checks the integrity of the database and does a cleanup of all
@@ -207,7 +207,7 @@ int main(int argc, char *argv[])
 		case 'V':
  			printf("DBMail: dbmail-util\n"
  			       "Version: %s\n"
- 			       "$Revision: 1780 $\n"
+ 			       "$Revision: 1891 $\n"
  			       "Copyright: %s\n", VERSION, COPYRIGHT);
 			return 1;
 

@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: lmtp.h 1626 2005-03-07 10:50:53Z paul $
+/* $Id: lmtp.h 1891 2005-10-03 10:01:21Z paul $
  * 
  * Copied from pop3.h as a starting point - Aaron Stone, 4/14/03
  * This defines some default messages for LMTP */

@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: pop3.h 1796 2005-06-07 12:15:32Z paul $
+/* $Id: pop3.h 1891 2005-10-03 10:01:21Z paul $
  * 
  * this defines some default messages for POP3 */
 

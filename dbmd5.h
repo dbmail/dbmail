@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: dbmd5.h 1210 2004-07-21 09:03:26Z aaron $
+/* $Id: dbmd5.h 1891 2005-10-03 10:01:21Z paul $
  *
  * MD5 creation */
 

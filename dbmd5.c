@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: dbmd5.c 1551 2005-01-07 12:46:39Z paul $ 
+/* $Id: dbmd5.c 1891 2005-10-03 10:01:21Z paul $ 
  *
  * Functions to create md5 hash from buf */
 

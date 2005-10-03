@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: pop3d.c 1823 2005-07-23 03:16:25Z aaron $
+/* $Id: pop3d.c 1891 2005-10-03 10:01:21Z paul $
 *
 * pop3d.c
 *
@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
 			break;
 		case 'V':
 			printf("\n*** DBMAIL: dbmail-pop3d version "
-			       "$Revision: 1823 $ %s\n\n", COPYRIGHT);
+			       "$Revision: 1891 $ %s\n\n", COPYRIGHT);
 			return 0;
 		case 'n':
 			no_daemonize = 1;

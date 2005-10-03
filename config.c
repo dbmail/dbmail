@@ -18,7 +18,7 @@
 */
 
 /*
- * $Id: config.c 1820 2005-07-17 08:23:37Z aaron $
+ * $Id: config.c 1891 2005-10-03 10:01:21Z paul $
  * \file config.c
  * \brief read configuration values from a config file
  */

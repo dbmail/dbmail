@@ -1,4 +1,4 @@
-# $Id: Makefile.am 1494 2004-12-03 14:34:10Z ilja $ 
+# $Id: Makefile.am 1891 2005-10-03 10:01:21Z paul $ 
 # Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 #
 # This program is free software; you can redistribute it and/or 

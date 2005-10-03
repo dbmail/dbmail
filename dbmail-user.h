@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: dbmail-user.h 1678 2005-03-17 13:59:25Z paul $ 
+/* $Id: dbmail-user.h 1891 2005-10-03 10:01:21Z paul $ 
  */
 #ifndef _DBMAIL_USER_H
 #define _DBMAIL_USER_H

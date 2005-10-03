@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: mime.c 1885 2005-09-10 12:58:45Z paul $
+/* $Id: mime.c 1891 2005-10-03 10:01:21Z paul $
  *
  * Functions for parsing a mime mailheader (actually just for scanning for email messages
 	and parsing the messageID */

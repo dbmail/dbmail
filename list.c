@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: list.c 1798 2005-06-14 11:21:59Z paul $
+/* $Id: list.c 1891 2005-10-03 10:01:21Z paul $
  *
  * functions to create lists and add/delete items */
 

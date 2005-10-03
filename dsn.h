@@ -1,7 +1,7 @@
 #ifndef DSN_H
 #define DSN_H
 /*
-  $Id: dsn.h 1756 2005-04-19 07:37:27Z paul $ 
+  $Id: dsn.h 1891 2005-10-03 10:01:21Z paul $ 
  Copyright (C) 2004 Aaron Stone aaron at serendipity dot cx
 
  This program is free software; you can redistribute it and/or 

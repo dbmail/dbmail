@@ -1,4 +1,4 @@
-/* $Id: timsieve.c 1796 2005-06-07 12:15:32Z paul $
+/* $Id: timsieve.c 1891 2005-10-03 10:01:21Z paul $
 
  Copyright (C) 1999-2004 Aaron Stone aaron at serendipity dot cx
 

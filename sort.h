@@ -1,5 +1,5 @@
 
-/* $Id: sort.h 1667 2005-03-12 18:01:36Z paul $ 
+/* $Id: sort.h 1891 2005-10-03 10:01:21Z paul $ 
  
  Copyright (C) 1999-2004 Aaron Stone aaron at serendipity dot cx
 
