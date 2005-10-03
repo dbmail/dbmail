@@ -1,5 +1,7 @@
 /*
- Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
+ * 
+ 
+ Copyright (C) 2005, NFG Net Facilities Group BV, info@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -15,19 +17,34 @@
  You should have received a copy of the GNU General Public License
  along with this program; if not, write to the Free Software
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-*/
-
-/* $Id$ 
+ 
+ *
+ * 
  */
 
-#ifndef _MAINTENANCE_H
-#define _MAINTENANCE_H
+/* 
+ * \file dbmail-mailbox.h
+ * 
+ * \brief DbmailMailbox class  
+ *
+ */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#ifndef _DBMAIL_MAILBOX_H
+#define _DBMAIL_MAILBOX_H
 
-#define LEN 30
-#define PNAME "dbmail/maintenance"
+#include "dbmail.h"
+
+struct DbmailMailbox {
+	u64_t idnr;
+	u64_t owner_idnr;
+	gchar * name;
+	u64_t size;
+};
+
+struct DbmailMailbox * dbmail_mailbox_new(u64_t mailbox_idnr);
+void * dbmail_mailbox_free(struct DbmailMailbox *self);
+
+GList * dbmail_mailbox_orderedsubject(struct DbmailMailbox *self);
+
 
 #endif

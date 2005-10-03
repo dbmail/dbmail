@@ -17,8 +17,8 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id$
- * imaputil.h
+/* $Id: dm_imaputil.h 1878 2005-09-04 06:34:44Z paul $
+ * dm_imaputil.h
  *
  * utility functions for IMAP server
  */
@@ -28,27 +28,9 @@
 
 #include "dbmail.h"
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "imap4.h"
-#include "db.h"
-#include "memblock.h"
-#include "dbmailtypes.h"
-#include <stdio.h>
-
-int retrieve_structure(FILE * outstream, mime_message_t * msg,
-		       int show_extension_data);
-int retrieve_envelope(FILE * outstream, struct dm_list *rfcheader);
-int show_address_list(FILE * outstream, struct mime_record *mr);
-int show_mime_parameter_list(FILE * outstream, struct mime_record *mr,
-			     int force_subtype, int only_extension);
-
 mime_message_t *get_part_by_num(mime_message_t * msg, const char *part);
 
-u64_t rfcheader_dump(MEM * outmem, struct dm_list *rfcheader,
-		     char **fieldnames, int nfields, int equal_type);
+u64_t rfcheader_dump(MEM * outmem, struct dm_list *rfcheader, char **fieldnames, int nfields, int equal_type);
 u64_t mimeheader_dump(MEM * outmem, struct dm_list *mimeheader);
 
 int haystack_find(int haystacklen, char **haystack, const char *needle);
@@ -95,6 +77,11 @@ void close_cache(void);
 char * dbmail_imap_astring_as_string(const char *s);
 char * dbmail_imap_plist_as_string(GList *plist);
 void dbmail_imap_plist_free(GList *l);
+
+GList * imap_get_structure(GMimeMessage *message, gboolean extension);
+GList * imap_get_envelope(GMimeMessage *message);
+GMimeObject * imap_get_partspec(const GMimeObject *message, const char *partspec);
+char * imap_get_logical_part(const GMimeObject *object, const char * specifier);
 
 int mime_unwrap(char *to, const char *from); 
 int sort_search(struct dm_list *searchlist);
