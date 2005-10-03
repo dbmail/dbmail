@@ -2,13 +2,7 @@
 #ifndef _DBMAIL_COMMANDCHANNEL_H
 #define _DBMAIL_COMMANDCHANNEL_H
 
-#include "dbmailtypes.h"
-#include "acl.h"
-#include "misc.h"
-#include "auth.h"
-#include "imap4.h"
-#include "glib.h"
-#include "dbmail-message.h"
+#include "dbmail.h"
 
 /* ImapSession definition */
 struct ImapSession {

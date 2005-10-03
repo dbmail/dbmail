@@ -395,13 +395,60 @@ START_TEST(test_imap_get_envelope)
 	message = dbmail_message_new();
 	message = dbmail_message_init_with_string(message, g_string_new(rfc822));
 	l = imap_get_envelope(GMIME_MESSAGE(message->content));
-	expect = "(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"dbmail test message\" ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"testuser\" \"foo.org\")) NIL NIL NIL NIL)";
+	strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"dbmail test message\" ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"testuser\" \"foo.org\")) NIL NIL NIL NIL)",1024);
 	result = dbmail_imap_plist_as_string(l);
 	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_envelope failed");
 
 	g_list_foreach(l,(GFunc)g_free,NULL);
+	dbmail_message_free(message);
 	g_list_free(l);
 	g_free(result);
+
+}
+END_TEST
+
+START_TEST(test_imap_get_partspec)
+{
+	struct DbmailMessage *message;
+	GMimeObject *object;
+	char *result, *expect;
+	
+	expect = g_new0(char, 1024);
+	
+	/* text/plain */
+	message = dbmail_message_new();
+	message = dbmail_message_init_with_string(message, g_string_new(rfc822));
+
+	object = imap_get_partspec(GMIME_OBJECT(message->content),"HEADER");
+	result = imap_get_logical_part(object,"HEADER");
+	printf("\n[%s]\n", result);
+
+	object = imap_get_partspec(GMIME_OBJECT(message->content),"TEXT");
+	result = imap_get_logical_part(object,"TEXT");
+	printf("\n[%s]\n", result); 
+
+	dbmail_message_free(message);
+
+	/* multipart */
+	
+	message = dbmail_message_new();
+	message = dbmail_message_init_with_string(message, g_string_new(multipart_message));
+
+	object = imap_get_partspec(GMIME_OBJECT(message->content),"1.TEXT");
+	result = imap_get_logical_part(object,"TEXT");
+	printf("\n[%s]\n", result); 
+
+	object = imap_get_partspec(GMIME_OBJECT(message->content),"1.HEADER");
+	result = imap_get_logical_part(object,"HEADER");
+	printf("\n[%s]\n", result); 
+	
+	object = imap_get_partspec(GMIME_OBJECT(message->content),"2.MIME");
+	result = imap_get_logical_part(object,"MIME");
+	printf("\n[%s]\n", result); 
+
+	
+	g_free(result);
+	g_free(expect);
 
 }
 END_TEST
@@ -609,6 +656,7 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_session, test_imap_bodyfetch);
 	tcase_add_test(tc_session, test_imap_get_structure);
 	tcase_add_test(tc_session, test_imap_get_envelope);
+	tcase_add_test(tc_session, test_imap_get_partspec);
 	
 	tcase_add_checked_fixture(tc_rfcmsg, setup, teardown);
 	tcase_add_test(tc_rfcmsg, test_db_fetch_headers);

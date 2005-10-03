@@ -24,28 +24,8 @@
  * IMAP-server utility functions implementations
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 
-#include <assert.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <time.h>
-#include <ctype.h>
-#include <unistd.h>
-#include <errno.h>
 #include "dbmail.h"
-#include "dm_imaputil.h"
-#include "imap4.h"
-#include "debug.h"
-#include "db.h"
-#include "memblock.h"
-#include "dm_search.h"
-#include "rfcmsg.h"
-#include "misc.h"
 
 #ifndef MAX_LINESIZE
 #define MAX_LINESIZE (10*1024)
@@ -627,6 +607,66 @@ GList * imap_get_envelope(GMimeMessage *message)
 	return list;
 }
 
+char * imap_get_logical_part(const GMimeObject *object, const char * specifier) 
+{
+	char *s = NULL;
+	GString *body, *header;
+	
+	header = g_string_new(g_mime_object_get_headers(GMIME_OBJECT(object)));
+	
+	if (strcasecmp(specifier,"HEADER")==0 || strcasecmp(specifier,"MIME")==0) {
+		s=header->str;
+		g_string_free(header,FALSE);
+		return s;
+	}
+	
+	if (strcasecmp(specifier,"TEXT")==0) {
+		body = g_string_new(g_mime_object_to_string(GMIME_OBJECT(object)));
+		body = g_string_erase(body,0,header->len);
+		s=body->str;
+		g_string_free(body,FALSE);
+		g_string_free(header,TRUE);
+		return s;
+	}
+	return s;
+}
+	
+
+GMimeObject * imap_get_partspec(const GMimeObject *message, const char *partspec) 
+{
+	GMimeObject *object;
+	GMimeContentType *type;
+	char *part;
+	guint index;
+	guint i;
+	
+	GString *t = g_string_new(partspec);
+	GList *specs = g_string_split(t,".");
+	g_string_free(t,TRUE);
+	
+	object = GMIME_OBJECT(message);
+	for (i=0; i< g_list_length(specs); i++) {
+		part = g_list_nth_data(specs,i);
+		if (! (index = strtol((const char *)part, NULL, 0))) 
+			break;
+		
+		if (i==0)
+			object=GMIME_OBJECT(GMIME_MESSAGE(object)->mime_part);
+		
+		type = (GMimeContentType *)g_mime_object_get_content_type(object);
+		if (g_mime_content_type_is_type(type,"message","rfc822")) {
+			object=GMIME_OBJECT(GMIME_MESSAGE(object)->mime_part);
+			assert(object);
+			continue;
+		}
+		if (g_mime_content_type_is_type(type,"multipart","*")) {
+			object=g_mime_multipart_get_part((GMimeMultipart *)object, (int)index-1);
+			assert(object);
+			continue;
+		}
+	}
+	return object;
+}
 
 
 /* 
