@@ -26,10 +26,8 @@
 
 #include "dbmail.h"
 
-static int db_start_msg(struct DbmailMessage *message, mime_message_t * msg, char *stopbound, int *level, int maxlevel);
-
 /* 
- * frees all the memory associated with a msg
+ * initialize all the memory associated with a msg
  */
 mime_message_t * db_new_msg(void)
 {
@@ -103,15 +101,9 @@ static void db_reverse_msg(mime_message_t * msg)
 /*
  * db_fetch_headers()
  *
- * builds up an array containing message headers and the start/end position of the 
- * associated body part(s)
+ * builds up an array containing message headers
  *
  * creates a linked-list of headers found
- *
- * NOTE: there are no checks performed to verify that the indicated msg isn't expunged 
- *       (status STATUS_DELETE) or has been inserted completely. This should be done before calling
- *       this function (unless, of course, it is your intention to specifically parse an 
- *       incomplete message or an expunged one).
  *
  * returns:
  * -3 memory error
@@ -121,57 +113,22 @@ static void db_reverse_msg(mime_message_t * msg)
  */
 int db_fetch_headers(u64_t msguid, mime_message_t * msg)
 {
-	int result, level = 0, maxlevel = -1;
 	struct DbmailMessage *message;
+	int hdrlines;
 
-	if (!(message = db_init_fetch_message(msguid, DBMAIL_MESSAGE_FILTER_FULL))) {
-		trace(TRACE_ERROR, "%s,%s: could not init msgfetch\n",
-				__FILE__, __func__);
+	if (!(message = db_init_fetch_message(msguid, DBMAIL_MESSAGE_FILTER_FULL))) 
 		return -2;
-	}
 
-	result = db_start_msg(message, msg, NULL, &level, maxlevel);	/* fetch message */
-
-	db_reverse_msg(msg);
-
-	db_close_msgfetch();
-	return 0;
-}
-
-
-/*
- * db_start_msg()
- *
- * parses a msg; uses msgbuf_buf[] as data
- *
- * level & maxlevel are used to determine the max level of recursion (error-recovery)
- * level is raised before calling add_mime_children() except when maxlevel and level
- * are both zero, in that case the message is split in header/rest, add_mime_children
- * will not be called at all.
- *
- * returns the number of lines parsed or -1 on parse error, -2 on dbase error, -3 on memory error
- */
-int db_start_msg(struct DbmailMessage *message, mime_message_t * msg, char *stopbound, int *level, int maxlevel)
-{
-	int totallines = 0, hdrlines;
-	struct mime_record *mr;
-	int continue_recursion = (maxlevel == 0 && *level == 0) ? 0 : 1;
-
-	trace(TRACE_DEBUG, "%s,%s: starting, stopbound: '%s'\n", __FILE__, __func__,
-	      stopbound ? stopbound : "<null>");
-
-	/* read header */
 	if (db_update_msgbuf(MSGBUF_FORCE_UPDATE) == -1)
 		return -2;
 
 	if ((hdrlines = mime_readheader(message, &msgbuf_idx, &msg->rfcheader, &msg->rfcheadersize)) < 0)
-		return hdrlines;	/* error reading header */
+		return hdrlines;
 
-	db_give_msgpos(&msg->bodystart);
 	msg->rfcheaderlines = hdrlines;
 
-	trace(TRACE_DEBUG, "%s,%s: exit\n", __FILE__, __func__);
-
-	return totallines;
+	db_reverse_msg(msg);
+	db_close_msgfetch();
+	return 0;
 }
 

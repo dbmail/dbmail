@@ -74,7 +74,7 @@ char *itoa(int i)
 void create_unique_id(char *target, u64_t message_idnr)
 {
 	char *a_message_idnr, *a_rand;
-	char *md5_str;
+	unsigned char *md5_str;
 
 	a_message_idnr = itoa(message_idnr);
 	a_rand = itoa(rand());
@@ -84,8 +84,8 @@ void create_unique_id(char *target, u64_t message_idnr)
 			 a_message_idnr, a_rand);
 	else
 		snprintf(target, UID_SIZE, "%s", a_rand);
-	md5_str = makemd5(target);
-	snprintf(target, UID_SIZE, "%s", md5_str);
+	md5_str = makemd5((unsigned char *)target);
+	snprintf(target, UID_SIZE, "%s", (char *)md5_str);
 	trace(TRACE_DEBUG, "%s,%s: created: %s", __FILE__, __func__,
 	      target);
 	dm_free(md5_str);

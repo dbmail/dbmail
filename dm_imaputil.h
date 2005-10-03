@@ -28,11 +28,6 @@
 
 #include "dbmail.h"
 
-mime_message_t *get_part_by_num(mime_message_t * msg, const char *part);
-
-u64_t rfcheader_dump(MEM * outmem, struct dm_list *rfcheader, char **fieldnames, int nfields, int equal_type);
-u64_t mimeheader_dump(MEM * outmem, struct dm_list *mimeheader);
-
 int haystack_find(int haystacklen, char **haystack, const char *needle);
 
 int next_fetch_item(char **args, int idx, fetch_items_t * fi);
@@ -85,6 +80,5 @@ char * imap_get_logical_part(const GMimeObject *object, const char * specifier);
 
 int mime_unwrap(char *to, const char *from); 
 int sort_search(struct dm_list *searchlist);
-
 
 #endif

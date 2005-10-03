@@ -29,6 +29,6 @@
  * \param buf input string
  * \return md5 hash of buf
  */
-unsigned char *makemd5(const char * const buf);
+unsigned char *makemd5(const unsigned char * const buf);
 
 #endif

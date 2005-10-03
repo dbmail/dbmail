@@ -23,7 +23,7 @@
 
 #include "dbmail.h"
 
-unsigned char *makemd5(const char * const buf)
+unsigned char *makemd5(const unsigned char * const buf)
 {
 	struct GdmMD5Context mycontext;
 	unsigned char result[16];
@@ -44,11 +44,11 @@ unsigned char *makemd5(const char * const buf)
 	}
 
 	gdm_md5_init(&mycontext);
-	gdm_md5_update(&mycontext, buf, strlen(buf));
+	gdm_md5_update(&mycontext, buf, strlen((char *)buf));
 	gdm_md5_final(result, &mycontext);
 
 	for (i = 0; i < 16; i++) {
-		sprintf(&md5hash[i * 2], "%02x", result[i]);
+		sprintf((char *)&md5hash[i * 2], "%02x", result[i]);
 	}
 
 	return md5hash;
