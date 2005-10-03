@@ -21,20 +21,7 @@
  *
  * takes care of forwarding mail to an external address */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-
-#include "db.h"
 #include "dbmail.h"
-#include "debug.h"
-#include "forward.h"
-#include "list.h"
 
 /* For each of the addresses or programs in targets,
  * send out a copy of the message pointed to by msgidnr.

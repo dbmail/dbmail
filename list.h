@@ -24,10 +24,6 @@
 #ifndef  _LIST_H
 #define  _LIST_H
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include <glib.h>
 #include <sys/types.h>
 
@@ -52,7 +48,8 @@ struct element *dm_list_nodeadd(struct dm_list *tlist, const void *data,
 
 struct element *dm_list_nodedel(struct dm_list *tlist, void *data);
 struct element *dm_list_nodepop(struct dm_list *list);
-/*@dependent@*/ struct element *dm_list_getstart(struct dm_list *tlist);
+struct element *dm_list_getstart(struct dm_list *tlist);
+
 void dm_list_free(struct element **start);
 long dm_list_length(struct dm_list *tlist);
 void dm_list_show(struct dm_list *tlist);

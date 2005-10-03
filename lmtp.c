@@ -21,20 +21,7 @@
  *
  * implementation for lmtp commands according to RFC 1081 */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include "dbmail.h"
-#include "lmtp.h"
-#include "pipe.h"
-#include "dbmail-message.h"
-#include "db.h"
-#include "dsn.h"
-#include "debug.h"
-#include "dbmailtypes.h"
-#include "auth.h"
-#include "lmtp.h"
 
 #define INCOMING_BUFFER_SIZE 512
 

@@ -22,12 +22,7 @@
 #ifndef _DBMAIL_USER_H
 #define _DBMAIL_USER_H
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include "dbmail.h"
-#include "dbmailtypes.h"
 
 #define qprintf(fmt, args...) ((quiet||reallyquiet) ? 0 : printf(fmt, ##args) )
 #define qerrorf(fmt, args...) (reallyquiet ? 0 : fprintf(stderr, fmt, ##args) )

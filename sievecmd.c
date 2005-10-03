@@ -21,31 +21,7 @@
  * This is dbmail-sievecmd, which provides
  * a command line interface to the sievescripts */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "sort.h"
-#include "sort/sortsieve.h"
-#include "sievecmd.h"
-
-#include "auth.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include "dbmail.h"
-#include "list.h"
-#include "server.h"
-#include "debug.h"
-#include "db.h"
-#include <time.h>
-#include <stdarg.h>
-#include <sys/types.h>
-#include <unistd.h>
-#ifdef HAVE_CRYPT_H
-#include <crypt.h>
-#endif
-#include "dbmd5.h"
 
 char *configFile = DEFAULT_CONFIG_FILE;
 

@@ -25,14 +25,9 @@
  * functions for connecting and talking to the Mysql database
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "mysql.h"
-#include <string.h>
-
 #include "dbmail.h"
+#include "mysql.h"
+
 
 #define DB_MYSQL_STANDARD_PORT 3306
 

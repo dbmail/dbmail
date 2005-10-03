@@ -30,13 +30,7 @@
 #ifndef _DBMSGBUF_H
 #define _DBMSGBUF_H
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "dbmailtypes.h"
-#include "dbmail-message.h"
-#include "memblock.h"
+#include "dbmail.h"
 
 #define MSGBUF_FORCE_UPDATE -1
 

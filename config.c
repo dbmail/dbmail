@@ -23,20 +23,7 @@
  * \brief read configuration values from a config file
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-
 #include "dbmail.h"
-#include "debug.h"
-
-/* include for iniparser */
-#include "lib/iniparser-2.14/src/iniparser.h"
-
-#include <glib.h>
-#include <assert.h>
-#include <errno.h>
 
 /** dictionary which holds the configuration */
 static dictionary *config_dict = NULL;

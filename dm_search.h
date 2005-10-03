@@ -27,11 +27,7 @@
 #ifndef _DBSEARCH_H
 #define _DBSEARCH_H
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "dbmailtypes.h"
+#include "dbmail.h"
 
 
 /**

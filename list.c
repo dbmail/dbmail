@@ -21,16 +21,7 @@
  *
  * functions to create lists and add/delete items */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "debug.h"
-#include "list.h"
-#include "misc.h"
+#include "dbmail.h"
 
 void dm_list_init(struct dm_list *tlist)
 {

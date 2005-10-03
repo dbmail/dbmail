@@ -15,22 +15,18 @@
  You should have received a copy of the GNU General Public License
  along with this program; if not, write to the Free Software
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+ 
+ $Id: debug.h 1551 2005-01-07 12:46:39Z paul $
+ 
+ headers for debug.c 
+ 
 */
 
 #ifndef  _DEBUG_H
 #define  _DEBUG_H
-/* $Id: debug.h 1551 2005-01-07 12:46:39Z paul $
- *
- * debug.h : headers for debug.c */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 #include "dbmail.h"
-
-#include <stdio.h>
-#include <sys/syslog.h>
-#include <stdarg.h>
 
 #ifdef USE_GC
 #define GC_DEBUG

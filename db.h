@@ -29,17 +29,7 @@
 #ifndef  _DB_H
 #define  _DB_H
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "debug.h"
 #include "dbmail.h"
-#include "dbmailtypes.h"
-#include "mime.h"
-#include "list.h"
-#include "memblock.h"
-
 
 #define DEF_QUERYSIZE 1024
 #define DUMP_BUF_SIZE 1024

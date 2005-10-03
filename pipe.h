@@ -23,12 +23,7 @@
 #ifndef _PIPE_H
 #define _PIPE_H
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "dbmail-message.h"
-#include "list.h"
+#include "dbmail.h"
 
 /**
  * \brief inserts a message in the database. The header of the message is 

@@ -30,48 +30,56 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #else
-#define VERSION "2.0"
+#define VERSION "2.1"
 #define PACKAGE "dbmail"
 #endif
 
+
+#include <assert.h>
+#include <arpa/inet.h>
 #include <ctype.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <fnmatch.h>
+#include <gmime/gmime.h>
+#include <glib.h>
+#include <grp.h>
+#include <limits.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <pwd.h>
+#include <signal.h>
+#include <syslog.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <sysexits.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/time.h>
 #include <sys/wait.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-
-#include <assert.h>
-#include <stdarg.h>
-#include <errno.h>
-#include <unistd.h>
 #include <time.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <termios.h>
-#include <time.h>
-#include <string.h>
-#include <fcntl.h>
-#include <signal.h>
-#include <strings.h>
-#include <fnmatch.h>
-#include <gmime/gmime.h>
-#include <glib.h>
+#include <unistd.h>
 
 #include "dbmailtypes.h"
 #include "debug.h"
 #include "dsn.h"
+#include "acl.h"
 #include "misc.h"
+#include "main.h"
 #include "pipe.h"
 #include "db.h"
 #include "auth.h"
 #include "imap4.h"
+#include "imapcommands.h"
 #include "memblock.h"
 #include "mime.h"
 #include "dbmsgbuf.h"
@@ -86,13 +94,19 @@
 #include "pool.h"
 #include "pop3.h"
 #include "quota.h"
+#include "lmtp.h"
+#include "lib/iniparser-2.14/src/iniparser.h"
 
 #include "dm_cidr.h"
 #include "dm_imaputil.h"
 #include "dm_search.h"
+#include "dm_getopt.h"
 
 #ifdef SIEVE
 #include "sortsieve.h"
+#include "sievecmd.h"
+#include "sort/sortsieve.h"
+#include "timsieve.h"
 #endif
 
 #ifdef HAVE_CRYPT_H
@@ -187,4 +201,5 @@ void GetDBParams(db_param_t * db_params);
 void SetTraceLevel(const char *service_name);
 
 
+void pidfile_create(const char *pidFile, pid_t pid);
 #endif

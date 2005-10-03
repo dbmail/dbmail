@@ -28,10 +28,6 @@
 #ifndef _RFCMSG_H
 #define _RFCMSG_H
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include "dbmailtypes.h"
 
 mime_message_t * db_new_msg(void);

@@ -22,13 +22,7 @@
 #ifndef _SIEVECMD_H
 #define _SIEVECMD_H
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include <stdio.h>
-#include "dbmailtypes.h"
-#include "sort/sortsieve.h"
+#include "dbmail.h"
 
 #define PNAME "dbmail/sievecmd"
 

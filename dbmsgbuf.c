@@ -25,16 +25,7 @@
  * implement msgbuf functions prototyped in dbmsgbuf.h
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "dbmsgbuf.h"
-#include "db.h"
-#include "dbmail-message.h"
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
+#include "dbmail.h"
 
 #define MSGBUF_WINDOWSIZE (128ull*1024ull)
 

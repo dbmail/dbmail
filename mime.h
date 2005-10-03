@@ -23,12 +23,7 @@
 #ifndef _MIME_H
 #define _MIME_H
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "dbmailtypes.h"
-#include "dbmail-message.h"
+#include "dbmail.h"
 
 #define MEM_BLOCK 1024
 

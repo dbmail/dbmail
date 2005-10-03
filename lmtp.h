@@ -25,32 +25,7 @@
 #ifndef  _LMTP_H
 #define  _LMTP_H
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <string.h>
-#include <time.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <sys/wait.h>
-#include <signal.h>
-#include <time.h>
-
-#include "misc.h"
-#include "list.h"
-#include "debug.h"
 #include "dbmail.h"
-#include "dbmailtypes.h"
 
 /* processes */
 

@@ -7,16 +7,7 @@
 #ifndef POOL_H
 #define POOL_H
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include <stdio.h>
 #include "dbmail.h"
-#include <sys/mman.h>
-#include <sys/types.h>
-#include "server.h"
-#include "serverchild.h"
 
 #define HARD_MAX_CHILDREN 50
 

@@ -23,10 +23,6 @@
 #ifndef _FORWARD_H
 #define _FORWARD_H
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #define FW_SENDMAIL SENDMAIL
 
 int forward(u64_t msgidnr, struct dm_list *targets, const char *from,

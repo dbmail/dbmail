@@ -24,10 +24,6 @@
 #ifndef GdmMD5_H
 #define GdmMD5_H
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 typedef unsigned int uint32;
 
 struct GdmMD5Context {

@@ -32,13 +32,7 @@
 #ifndef _DBMAIL_MAILBOX_H
 #define _DBMAIL_MAILBOX_H
 
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "dbmailtypes.h"
-#include <assert.h>
+#include "dbmail.h"
 
 struct DbmailMailbox {
 	u64_t idnr;

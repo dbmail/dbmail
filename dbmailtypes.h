@@ -333,27 +333,25 @@ typedef struct {
 
 
 /**
- * RFC822/MIME message data type
- */
+* RFC822/MIME message data type
+*/
 typedef struct {
-	struct dm_list mimeheader;	/**< the MIME header of this part (if present) */
-	struct dm_list rfcheader;	/**< RFC822 header of this part (if present) */
-	struct dm_list children; 	/**< the children (multipart msg) */
+	struct dm_list mimeheader;      /**< the MIME header of this part (if present) */
+	struct dm_list rfcheader;       /**< RFC822 header of this part (if present) */
+	struct dm_list children;        /**< the children (multipart msg) */
+
+	int message_has_errors;         /**< if set the content-type is meaningless */
+
+	db_pos_t bodystart, bodyend;    /**< the body of this part */
 	
-	int message_has_errors;		/**< if set the content-type is meaningless */
-	
-	db_pos_t bodystart, bodyend; 	/**< the body of this part */
-	
-	u64_t bodysize; 		/**< size of message body */
-	u64_t bodylines; 		/**< number of lines in message body */
-	u64_t rfcheadersize; 		/**< size of rfc header */
-	u64_t rfcheaderlines; 		/** number of lines in rfc header */
-	u64_t mimerfclines; 		/**< the total number of lines (only specified in
-			    		case of a MIME msg containing an RFC822 msg) */
+	u64_t bodysize;                 /**< size of message body */
+	u64_t bodylines;                /**< number of lines in message body */
+	u64_t rfcheadersize;            /**< size of rfc header */
+	u64_t rfcheaderlines;           /** number of lines in rfc header */
+	u64_t mimerfclines;             /**< the total number of lines (only specified in
+					case of a MIME msg containing an RFC822 msg) */
 } mime_message_t;
-
-
-
+	
 /* 
  * simple cache mechanism
  */
@@ -403,5 +401,32 @@ typedef struct {
 	int free_message : 1; // m
 	int free_action  : 1; // a
 } sievefree_t;
+
+
+#define SA_KEEP		1
+#define SA_DISCARD	2
+#define SA_REDIRECT	3
+#define SA_REJECT	4
+#define SA_FILEINTO	5
+
+typedef struct sort_action {
+	int method;
+	char *destination;
+	char *message;
+} sort_action_t;
+
+typedef enum {
+	ACL_RIGHT_LOOKUP,
+	ACL_RIGHT_READ,
+	ACL_RIGHT_SEEN,
+	ACL_RIGHT_WRITE,
+	ACL_RIGHT_INSERT,
+	ACL_RIGHT_POST,
+	ACL_RIGHT_CREATE,
+	ACL_RIGHT_DELETE,
+	ACL_RIGHT_ADMINISTER,
+	ACL_RIGHT_NONE
+} ACLRight_t;
+
 
 #endif

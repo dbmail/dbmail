@@ -28,14 +28,7 @@
 #define _DBMAIL_MESSAGE_H
 
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "dbmailtypes.h"
-#include "dsn.h"
-#include <gmime/gmime.h>
-#include <assert.h>
+#include "dbmail.h"
 
 #define MSGBUF_FORCE_UPDATE -1
 

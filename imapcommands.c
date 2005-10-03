@@ -24,37 +24,11 @@
  * IMAP server command implementations
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "dbmail.h"
 
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
-
-/* dbmail.h is included first */
-#include "dbmail.h"
-#include "dbmail-imapsession.h"
-#include "acl.h"
-#include "auth.h"
-#include "db.h"
-
-#include "dbmsgbuf.h"
-#include "debug.h"
-#include "imapcommands.h"
-#include "dm_imaputil.h"
-#include "memblock.h"
-#include "misc.h"
-#include "quota.h"
-#include "rfcmsg.h"
-
-#include <ctype.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-
-#include <time.h>
-#include <unistd.h>
 
 #ifndef MAX_LINESIZE
 #define MAX_LINESIZE 1024

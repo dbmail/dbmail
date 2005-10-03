@@ -21,22 +21,7 @@
  * 
  * main file for dbmail-smtp  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include "dbmail.h"
-#include "dbmail-message.h"
-#include "main.h"
-#include "pipe.h"
-#include "list.h"
-#include "auth.h"
-#include "dsn.h"
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sysexits.h>
-#include <gmime/gmime.h>
 
 #define MESSAGEIDSIZE 100
 #define NORMAL_DELIVERY 1
