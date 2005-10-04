@@ -70,7 +70,7 @@ struct DbmailMessage * mime_fetch_headers(struct DbmailMessage *message, struct 
  */
 
 
-int mime_readheader(struct DbmailMessage *message, u64_t * msgbuf_idx, struct dm_list *mimelist, u64_t * headersize)
+int mime_readheader(struct DbmailMessage *message, struct dm_list *mimelist, u64_t * headersize)
 {
 	int l;
 	char *raw, *crlf;
@@ -83,8 +83,6 @@ int mime_readheader(struct DbmailMessage *message, u64_t * msgbuf_idx, struct dm
 	crlf = get_crlf_encoded(raw);
 	
 	*headersize = strlen(raw);
-	*msgbuf_idx += *headersize;
-	
 	l = dm_list_length(mimelist);
 
 	g_free(crlf);

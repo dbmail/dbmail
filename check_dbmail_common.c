@@ -38,7 +38,6 @@ extern char *configFile;
 extern db_param_t _db_params;
 
 
-extern char *msgbuf_buf;
 extern u64_t msgbuf_idx;
 extern u64_t msgbuf_buflen;
 

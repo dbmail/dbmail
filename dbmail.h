@@ -83,7 +83,6 @@
 #include "memblock.h"
 #include "mime.h"
 #include "dbmsgbuf.h"
-#include "rfcmsg.h"
 #include "pidfile.h"
 #include "sort.h"
 #include "forward.h"

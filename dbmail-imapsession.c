@@ -427,7 +427,13 @@ int dbmail_imap_session_fetch_parse_args(struct ImapSession * self, int idx)
 		self->fi->getUID=1;
 	} else if (MATCH(token,"rfc822")) {
 		self->fi->getRFC822=1;
-	
+	} else if (MATCH(token,"rfc822.size")) {
+		self->fi->getSize = 1;
+	} else if (MATCH(token,"fast")) {
+		self->fi->getInternalDate = 1;
+		self->fi->getFlags = 1;
+		self->fi->getSize = 1;
+		
 	/* from here on message parsing will be necessary */
 	
 	} else if (MATCH(token,"rfc822.header")) {
@@ -436,18 +442,15 @@ int dbmail_imap_session_fetch_parse_args(struct ImapSession * self, int idx)
 	} else if (MATCH(token,"rfc822.peek")) {
 		self->fi->msgparse_needed=1;
 		self->fi->getRFC822Peek = 1;
-	} else if (MATCH(token,"rfc822.size")) {
-		self->fi->msgparse_needed=1;
-		self->fi->getSize = 1;
 	} else if (MATCH(token,"rfc822.text")) {
 		self->fi->msgparse_needed=1;
 		self->fi->getRFC822Text = 1;
 	
 	} else if (MATCH(token,"body") || MATCH(token,"body.peek")) {
-
+		self->fi->msgparse_needed=1;
+		
 		dbmail_imap_session_bodyfetch_new(self);
 
-		self->fi->msgparse_needed=1;
 		if (MATCH(token,"body.peek"))
 			ispeek=1;
 		
@@ -476,32 +479,27 @@ int dbmail_imap_session_fetch_parse_args(struct ImapSession * self, int idx)
 			if (ispeek)
 				self->fi->noseen = 1;
 
-			
-			idx = _imap_session_fetch_parse_partspec(self,idx);
-			if (idx < 0) {
-				trace(TRACE_DEBUG,"%s,%s: fetch_parse_partspec return with error", __FILE__, __func__);
+			if ((idx = _imap_session_fetch_parse_partspec(self,idx)) < 0) {
+				trace(TRACE_DEBUG,"%s,%s: fetch_parse_partspec return with error", 
+						__FILE__, __func__);
 				return -2;
 			}
 			/* idx points to ']' now */
 			return _imap_session_fetch_parse_octet_range(self,idx+1);
 		}
 	} else if (MATCH(token,"all")) {		
-		self->fi->msgparse_needed=1;
-		self->fi->getFlags = 1;
+		self->fi->msgparse_needed=1; // because of getEnvelope
 		self->fi->getInternalDate = 1;
-		self->fi->getSize = 1;
 		self->fi->getEnvelope = 1;
-	} else if (MATCH(token,"fast")) {
 		self->fi->getFlags = 1;
-		self->fi->getInternalDate = 1;
 		self->fi->getSize = 1;
 	} else if (MATCH(token,"full")) {
 		self->fi->msgparse_needed=1;
-		self->fi->getFlags = 1;
 		self->fi->getInternalDate = 1;
-		self->fi->getSize = 1;
 		self->fi->getEnvelope = 1;
 		self->fi->getMIME_IMB = 1;
+		self->fi->getFlags = 1;
+		self->fi->getSize = 1;
 	} else if (MATCH(token,"bodystructure")) {
 		self->fi->msgparse_needed=1;
 		self->fi->getMIME_IMB = 1;
@@ -597,11 +595,11 @@ int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self, u64_t fetch
 		if (self->fi->getInternalDate) 
 			list = g_list_append_printf(list,"INTERNALDATE \"%s\"", date_sql2imap (self->msginfo[i].internaldate));
 
-		if (self->fi->getUID || self->use_uid) 
-			list = g_list_append_printf(list,"UID %llu", self->msginfo[i].uid);
-
 		if (self->fi->getSize) 
 			list = g_list_append_printf(list,"RFC822.SIZE %llu", self->msginfo[i].rfcsize);
+
+		if (self->fi->getUID || self->use_uid) 
+			list = g_list_append_printf(list,"UID %llu", self->msginfo[i].uid);
 
 		if (self->fi->getFlags) {
 			sublist = NULL;
@@ -707,13 +705,11 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 
 	/* check RFC822.SIZE request */
 	if (self->fi->getSize) {
-		/* ok, try to fetch size from dbase */
 		if (db_get_rfcsize (self->msg_idnr, ud->mailbox.uid, &rfcsize) == -1) {
 			dbmail_imap_session_printf(self, "\r\n* BYE internal dbase error\r\n");
 			return -1;
 		}
 		if (rfcsize == 0) {
-			/* field is empty in dbase, message needs to be parsed */
 			self->fi->msgparse_needed = 1;
 			insert_rfcsize = 1;
 		}
@@ -730,7 +726,6 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 				dbmail_imap_session_printf(self,"\r\n* BYE internal dbase error\r\n");
 				return -1;
 			}
-			insert_rfcsize = 0;
 		}
 	}
 

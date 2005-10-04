@@ -34,22 +34,6 @@
 
 #define MSGBUF_FORCE_UPDATE -1
 
-char *msgbuf_buf;/**< the message buffer */
-u64_t msgbuf_idx;/**< index within msgbuf, 0 <= msgidx < buflen */
-u64_t msgbuf_buflen;/**< current buffer length: msgbuf[buflen] == '\\0' */
-
-struct DbmailMessage * db_init_fetch(u64_t msg_idnr, int filter);
-
-/**
- * \brief initialises a message fetch
- * \param msg_idnr 
- * \return 
- *     - -1 on error
- *     -  0 if already inited (sic) before
- *     -  1 on success
- */
-struct DbmailMessage * db_init_fetch_message(u64_t msg_idnr, int filter);
-
 /**
  * \brief initialises a message headers fetch
  * \param msg_idnr 
@@ -58,52 +42,10 @@ struct DbmailMessage * db_init_fetch_message(u64_t msg_idnr, int filter);
  *     -  0 if already inited (sic) before
  *     -  1 on success
  */
-#define db_init_fetch_headers(x) db_init_fetch_message(x,DBMAIL_MESSAGE_FILTER_HEAD)
 
-/**
- * \brief update msgbuf
- * \param minlen if < 0, update is forced, otherwise only if there are
- *        less than minlen characters left in msgbuf
- * \return
- *      - -1 on error
- *      -  0 if no more chars in rows
- *      -  1 on success
- */
-int db_update_msgbuf(int minlen);
+struct DbmailMessage * db_init_fetch(u64_t msg_idnr, int filter);
 
-/**
- * \brief finishes a message fetch
- */
-void db_close_msgfetch(void);
-
-/**
- * \brief get position in message
- * \param pos pointer to db_pos_t which will hold the position
- */
-void db_give_msgpos(db_pos_t * pos);
-
-/**
- * \brief determines number of bytes between start and end position
- * \param start start position
- * \param end end position
- * \return number of bytes between positions
- * \pre _msg_result must contain a valid result set for return value
- *      to be valid
- */
-u64_t db_give_range_size(db_pos_t * start, db_pos_t * end);
-
-/**
- * \brief dump a range specified by start,end for the message with
- *        message_idnr msg_idnr
- * \param outmem memory to write to
- * \param start start position
- * \param end end position
- * \param msg_idnr message idnr
- * \return
- *    - -1 on error
- *    - number of bytes written to outmem otherwise
- */
-long db_dump_range(MEM * outmem, db_pos_t start, db_pos_t end,
-		   u64_t msg_idnr);
+#define db_init_fetch_headers(x) db_init_fetch(x,DBMAIL_MESSAGE_FILTER_HEAD)
+#define db_init_fetch_message(x) db_init_fetch(x,DBMAIL_MESSAGE_FILTER_FULL)
 
 #endif

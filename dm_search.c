@@ -64,8 +64,7 @@ static int db_binary_search(const u64_t * array, int arraysize, u64_t key);
  *     - 0 if no match
  *     - 1 if match
  */
-static int db_exec_search(mime_message_t * msg, search_key_t * sk,
-			  u64_t msg_idnr);
+static int db_exec_search(GMimeObject *object, search_key_t * sk);
 
 /**
  * \brief search the specified range of a message for a key
@@ -77,8 +76,7 @@ static int db_exec_search(mime_message_t * msg, search_key_t * sk,
  *    - 0 if not found
  *    - 1 if found
  */
-static int db_search_range(db_pos_t start, db_pos_t end, const char *key,
-			   u64_t msg_idnr);
+static int db_search_body(GMimeObject *object, search_key_t *sk);
 /**
  * \brief converts an IMAP date to a number (strictly ascending in date)
  * valid IMAP dates:
@@ -257,7 +255,7 @@ int db_search_parsed(unsigned int *rset, unsigned int setlen,
 	unsigned i;
 	int result;
 	u64_t rfcsize;
-	mime_message_t msg;
+	struct DbmailMessage *msg;
 
 	if (mb->exists != setlen)
 		return 1;
@@ -274,11 +272,11 @@ int db_search_parsed(unsigned int *rset, unsigned int setlen,
 
 		memset(&msg, 0, sizeof(msg));
 
-		result = db_fetch_headers(mb->seq_list[i], &msg);
-		if (result != 0)
-			continue;	/* ignore parse errors */
-
-		rfcsize = msg.rfcheadersize + msg.bodylines + msg.bodysize;
+		msg = db_init_fetch(mb->seq_list[i]);
+		if (msg)
+			continue;
+		
+		rfcsize = dbmail_message_get_rfcsize(msg);
 		
 		if (sk->type == IST_SIZE_LARGER)
 			rset[i] = (rfcsize > sk->size) ? 1 : 0;
@@ -287,9 +285,9 @@ int db_search_parsed(unsigned int *rset, unsigned int setlen,
 			rset[i] = (rfcsize < sk->size) ? 1 : 0;
 		
 		else
-			rset[i] = db_exec_search(&msg, sk, mb->seq_list[i]);
+			rset[i] = db_exec_search(GMIME_OBJECT(msg->content), sk);
 
-		db_free_msg(&msg);
+		dbmail_message_free(msg);
 	}
 	return 0;
 }
@@ -314,12 +312,32 @@ int db_binary_search(const u64_t * array, int arraysize, u64_t key)
 	return -1;		/* not found */
 }
 
-int db_exec_search(mime_message_t * msg, search_key_t * sk, u64_t msg_idnr)
+static void _match_header(const char *field, const char *value, gpointer sk)
 {
-	struct element *el;
-	struct mime_record *mr;
-	int i, givendate, sentdate;
+	int i;
+	for (i = 0; field[i]; i++) {
+		if (strncasecmp(&field[i], (search_key_t *)sk->search, strlen((search_key_t *)sk->search)) == 0) {
+			(search_key_t *)sk->match = 1;
+			return;
+		}
+	}
 
+	for (i = 0; value[i]; i++) {
+		if (strncasecmp(&value[i], (search_key_t *)sk->search, strlen((search_key_t *)sk->search)) == 0) {
+			(search_key_t *)sk->match = 1;
+			return;
+		}
+	}
+	(search_key_t *)sk->match = 0;
+}
+	
+int db_exec_search(GMimeObject *object, search_key_t * sk)
+{
+	int i, givendate, sentdate;
+	char *d;
+
+	GMimeContentType *type;
+	
 	if (!sk->search)
 		return 0;
 
@@ -328,84 +346,48 @@ int db_exec_search(mime_message_t * msg, search_key_t * sk, u64_t msg_idnr)
 	case IST_HDRDATE_BEFORE:
 	case IST_HDRDATE_ON:
 	case IST_HDRDATE_SINCE:
-		/* do not check children */
-		if (dm_list_getstart(&msg->rfcheader)) {
-			mime_findfield("date", &msg->rfcheader, &mr);
-			if (mr && strlen(mr->value) >= strlen("Day, d mon yyyy ")) {
-				
-				/* 01234567890123456 */
-				
-				givendate = num_from_imapdate(sk->search);
+		d = g_mime_message_get_date_string(GMIME_MESSAGE(object));
+		if (strlen(d) >= strlen("Day, d mon yyyy ")) {
+			
+			/* 01234567890123456 */
+			
+			givendate = num_from_imapdate(sk->search);
 
-				if (mr->value[6] == ' ')
-					mr->value[15] = 0;
-				else
-					mr->value[16] = 0;
+			if (d[6] == ' ')
+				d[15] = 0;
+			else
+				d[16] = 0;
 
-				sentdate = num_from_imapdate(&mr->value[5]);
+			sentdate = num_from_imapdate(&d[5]);
 
-				switch (sk->type) {
-				case IST_HDRDATE_BEFORE:
-					return sentdate < givendate;
-				case IST_HDRDATE_ON:
-					return sentdate == givendate;
-				case IST_HDRDATE_SINCE:
-					return sentdate > givendate;
-				}
+			switch (sk->type) {
+			case IST_HDRDATE_BEFORE:
+				return sentdate < givendate;
+			case IST_HDRDATE_ON:
+				return sentdate == givendate;
+			case IST_HDRDATE_SINCE:
+				return sentdate > givendate;
 			}
 		}
 		return 0;
 
 	case IST_DATA_TEXT:
-		el = dm_list_getstart(&msg->rfcheader);
-		while (el) {
-			mr = (struct mime_record *) el->data;
-
-			for (i = 0; mr->field[i]; i++)
-				if (strncasecmp(&mr->field[i], sk->search, strlen(sk->search)) == 0)
-					return 1;
-
-			for (i = 0; mr->value[i]; i++)
-				if (strncasecmp(&mr->value[i], sk->search, strlen(sk->search)) == 0)
-					return 1;
-
-			el = el->nextnode;
-		}
-
-		el = dm_list_getstart(&msg->mimeheader);
-		while (el) {
-			mr = (struct mime_record *) el->data;
-
-			for (i = 0; mr->field[i]; i++)
-				if (strncasecmp(&mr->field[i], sk->search, strlen(sk->search)) == 0)
-					return 1;
-
-			for (i = 0; mr->value[i]; i++)
-				if (strncasecmp(&mr->value[i], sk->search, strlen(sk->search)) == 0)
-					return 1;
-
-			el = el->nextnode;
-		}
-		return 0;
+		g_mime_header_foreach(object->headers, _match_header, sk);
+		return sk->match;
 
 	case IST_DATA_BODY:
 		/* only check body if there are no children */
-		if (dm_list_getstart(&msg->children))
+		type = g_mime_object_get_content_type(object);
+		
+		if (! g_mime_content_type_is_type(type,"text","*"))
 			break;
-
-		/* only check text bodies */
-		mime_findfield("content-type", &msg->mimeheader, &mr);
-		if (mr && strncasecmp(mr->value, "text", 4) != 0)
-			break;
-
-		mime_findfield("content-type", &msg->rfcheader, &mr);
-		if (mr && strncasecmp(mr->value, "text", 4) != 0)
-			break;
-
-		return db_search_range(msg->bodystart, msg->bodyend, sk->search, msg_idnr);
+		
+		return db_search_body(object, sk);
+		
 	}
 	
 	/* no match found yet, try the children */
+	/*
 	el = dm_list_getstart(&msg->children);
 	while (el) {
 		if (db_exec_search((mime_message_t *) el->data, sk, msg_idnr) == 1)
@@ -413,102 +395,39 @@ int db_exec_search(mime_message_t * msg, search_key_t * sk, u64_t msg_idnr)
 
 		el = el->nextnode;
 	}
+	*/
+	
 	return 0;
 }
 
-int db_search_range(db_pos_t start, db_pos_t end, const char *key, u64_t msg_idnr)
+int db_search_body(GMimeObject *object, search_key_t *sk)
 {
-	unsigned i, j;
-	unsigned startpos, endpos;
-	int distance;
+	int i;
+	char *s;
+	GString *t;
+	
+	s = g_mime_object_get_headers(object);
+	i = strlen(s);
+	g_free(s);
 
-	const char *query_result;
+	s = g_mime_object_to_string(object);
+	t = g_string_new(s);
+	g_free(s);
+	
+	t = g_string_erase(t,0,i);
+	s = t->str;
+	g_string_free(t,FALSE);
 
-	if (start.block > end.block) {
-		trace(TRACE_ERROR, "%s,%s: bad range specified",
-		      __FILE__, __func__);
-		return 0;
-	}
-
-	if (start.block == end.block && start.pos > end.pos) {
-		trace(TRACE_ERROR, "%s,%s: bad range specified",
-		      __FILE__, __func__);
-		return 0;
-	}
-
-	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT block.messageblk "
-		 "FROM %smessageblks block, %smessages msg "
-		 "WHERE block.physmessage_id = msg.physmessage_id "
-		 "AND msg.message_idnr = '%llu' "
-		 "ORDER BY block.messageblk_idnr", DBPFX, DBPFX, msg_idnr);
-
-	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: could not get message",
-		      __FILE__, __func__);
-		return 0;
-	}
-
-	if (db_num_rows() == 0) {
-		trace(TRACE_ERROR, "%s,%s: bad range specified",
-		      __FILE__, __func__);
-		db_free_result();
-		return 0;
-	}
-
-	query_result = db_get_result(start.block, 0);
-
-	if (!query_result) {
-		trace(TRACE_ERROR, "%s,%s: bad range specified",
-		      __FILE__, __func__);
-		db_free_result();
-		return 0;
-	}
-
-	/* just one block? */
-	if (start.block == end.block) {
-		for (i = start.pos; i <= end.pos - strlen(key); i++) {
-			if (strncasecmp(&query_result[i], key, strlen(key)) == 0) {
-				db_free_result();
-				return 1;
-			}
+	for (i = 0; s[i]; i++) {
+		if (strncasecmp(&s[i], sk->search, strlen(sk->search)) == 0) {
+			sk->match = 1;
+			break;
 		}
-
-		db_free_result();
-		return 0;
 	}
+	g_free(s);
+	sk->match = 0;
 
-
-	/* 
-	 * multiple block range specified
-	 */
-
-	for (i = start.block; i <= end.block; i++) {
-		if (!query_result) {
-			trace(TRACE_ERROR, "%s,%s: bad range specified",
-			      __FILE__, __func__);
-			db_free_result();
-			return 0;
-		}
-
-		startpos = (i == start.block) ? start.pos : 0;
-		endpos = (i == end.block) ? end.pos + 1 : db_get_length(i, 0);
-
-		distance = endpos - startpos;
-
-		for (j = 0; j < distance - strlen(key); j++) {
-			if (strncasecmp(&query_result[i], key, strlen(key)) == 0) {
-				db_free_result();
-				return 1;
-			}
-		}
-
-		query_result = db_get_result(i, 0);	/* fetch next row */
-	}
-
-	db_free_result();
-
-	return 0;
+	return sk->match;
 }
 
 int num_from_imapdate(const char *date)

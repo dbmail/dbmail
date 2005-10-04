@@ -322,6 +322,7 @@ typedef struct {
 	char search[MAX_SEARCH_LEN];
 	char hdrfld[MIME_FIELD_MAX];
 	struct dm_list sub_search;
+	int match;
 } search_key_t;
 
 /**
