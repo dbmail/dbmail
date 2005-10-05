@@ -66,8 +66,7 @@ const char *commands [] =
 #define TIMS_PUTS 9
 #define TIMS_END 10		/* upper bound of array + 1 */
 
-int tims(void *stream, void *instream, char *buffer, char *client_ip,
-	 PopSession_t * session);
+int tims(clientinfo_t *ci, char *buffer, PopSession_t * session);
 int tims_handle_connection(clientinfo_t * ci);
 
 #endif

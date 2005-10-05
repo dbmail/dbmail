@@ -607,28 +607,14 @@ GList * imap_get_envelope(GMimeMessage *message)
 	return list;
 }
 
+
 char * imap_get_logical_part(const GMimeObject *object, const char * specifier) 
 {
-	char *s = NULL;
-	GString *body, *header;
-	
-	header = g_string_new(g_mime_object_get_headers(GMIME_OBJECT(object)));
-	
-	if (strcasecmp(specifier,"HEADER")==0 || strcasecmp(specifier,"MIME")==0) {
-		s=header->str;
-		g_string_free(header,FALSE);
-		return s;
-	}
-	
-	if (strcasecmp(specifier,"TEXT")==0) {
-		body = g_string_new(g_mime_object_to_string(GMIME_OBJECT(object)));
-		body = g_string_erase(body,0,header->len);
-		s=body->str;
-		g_string_free(body,FALSE);
-		g_string_free(header,TRUE);
-		return s;
-	}
-	return s;
+	if (strcasecmp(specifier,"HEADER")==0 || strcasecmp(specifier,"MIME")==0) 
+		return g_mime_object_get_headers(GMIME_OBJECT(object));
+        
+	if (strcasecmp(specifier,"TEXT")==0)
+		return g_mime_object_get_body(GMIME_OBJECT(object));
 }
 	
 
@@ -713,116 +699,6 @@ int sort_search(struct dm_list *searchlist)
 		el = el->nextnode;
 	}
 	return 0;
-}
-
-
-/* 
- * get_part_by_num()
- *
- * retrieves a msg part by it's numeric specifier
- * 'part' is assumed to be valid! (i.e '1.2.3.44')
- * returns NULL if there is no such part 
- */
-mime_message_t *get_part_by_num(mime_message_t * msg, const char *part)
-{
-	int nextpart, j;
-	char *endptr;
-	struct element *curr;
-
-	if (part == NULL || strlen(part) == 0 || msg == NULL)
-		return msg;
-	trace(TRACE_DEBUG,"%s,%s: partspec [%s]", __FILE__, __func__, part);
-
-	nextpart = strtoul(part, &endptr, 10);	/* strtoul() stops at '.' */
-
-	for (j = 1, curr = dm_list_getstart(&msg->children);
-	     j < nextpart && curr; j++, curr = curr->nextnode);
-
-	if (!curr)
-		return NULL;
-
-	if (*endptr)
-		return get_part_by_num((mime_message_t *) curr->data, &endptr[1]);	/* skip dot in part */
-
-	return (mime_message_t *) curr->data;
-}
-
-
-/*
- * rfcheader_dump()
- * 
- * dumps rfc-header fields belonging to rfcheader
- * the fields to be dumped are specified in fieldnames, an array containing nfields items
- *
- * if equal_type == 0 the field match criterium is inverted and non-matching fieldnames
- * will be selected
- *
- * to select every headerfield it suffices to set nfields and equal_type to 0
- *
- * returns number of bytes written to outmem
- */
-u64_t rfcheader_dump(MEM * outmem, struct dm_list * rfcheader,
-		     char **fieldnames, int nfields, int equal_type)
-{
-	struct mime_record *mr;
-	struct element *curr;
-	u64_t size = 0;
-
-	curr = dm_list_getstart(rfcheader);
-	if (rfcheader == NULL || curr == NULL) {
-		/*size += fprintf(outstream, "NIL\r\n"); */
-		return 0;
-	}
-
-	curr = dm_list_getstart(rfcheader);
-	while (curr) {
-		mr = (struct mime_record *) curr->data;
-
-		if (haystack_find(nfields, fieldnames, mr->field) == equal_type) {
-			/* ok output this field */
-			size += mwrite(mr->field, strlen(mr->field), outmem);
-			size += mwrite(": ", 2, outmem);
-			size += mwrite(mr->value, strlen(mr->value), outmem);
-			size += mwrite("\r\n", 2, outmem);
-		}
-
-		curr = curr->nextnode;
-	}
-	size += mwrite("\r\n", 2, outmem);
-
-	return size;
-}
-
-
-/*
- * mimeheader_dump()
- * 
- * dumps mime-header fields belonging to mimeheader
- *
- */
-u64_t mimeheader_dump(MEM * outmem, struct dm_list * mimeheader)
-{
-	struct mime_record *mr;
-	struct element *curr;
-	u64_t size = 0;
-
-	curr = dm_list_getstart(mimeheader);
-	if (mimeheader == NULL || curr == NULL) {
-		/*size = fprintf(outstream, "NIL\r\n"); */
-		return 0;
-	}
-
-	while (curr) {
-		mr = (struct mime_record *) curr->data;
-		size += mwrite(mr->field, strlen(mr->field), outmem);
-		size += mwrite(": ", 2, outmem);
-		size += mwrite(mr->value, strlen(mr->value), outmem);
-		size += mwrite("\r\n", 2, outmem);
-		curr = curr->nextnode;
-	}
-	size += mwrite("\r\n", 2, outmem);
-
-	return size;
 }
 
 
@@ -1825,7 +1701,7 @@ int perform_imap_search(unsigned int *rset, int setlen, search_key_t * sk,
 
 	case IST_SUBSEARCH_OR:
 
-		if (! (newset = (int *)g_malloc0(sizeof(int) * setlen)))
+		if (! (newset = (unsigned int *)g_malloc0(sizeof(int) * setlen)))
 			return -2;
 		
 		el = dm_list_getstart(&sk->sub_search);
@@ -2189,16 +2065,11 @@ void dumpsearch(search_key_t * sk, int level)
  */
 void close_cache()
 {
-	if (cached_msg.msg_parsed)
-		db_free_msg(&cached_msg.msg);
-
 	if (cached_msg.dmsg)
 		dbmail_message_free(cached_msg.dmsg);
 
 	cached_msg.num = -1;
 	cached_msg.msg_parsed = 0;
-	memset(&cached_msg.msg, 0, sizeof(cached_msg.msg));
-
 	mclose(&cached_msg.memdump);
 	mclose(&cached_msg.tmpdump);
 }
@@ -2211,8 +2082,6 @@ int init_cache()
 	cached_msg.dmsg = NULL;
 	cached_msg.num = -1;
 	cached_msg.msg_parsed = 0;
-	memset(&cached_msg.msg, 0, sizeof(cached_msg.msg));
-
 	cached_msg.memdump = mopen();
 	if (!cached_msg.memdump)
 		return -1;

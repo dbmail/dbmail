@@ -280,7 +280,7 @@ int PerformChildTask(ChildInfo_t * info)
 
 		/* wait for connect */
 		len = sizeof(saClient);
-		clientSocket = accept(info->listenSocket, (struct sockaddr *) &saClient, &len);
+		clientSocket = accept(info->listenSocket, (struct sockaddr *) &saClient, (socklen_t *)&len);
 
 		if (clientSocket == -1) {
 			i--;	/* don't count this as a connect */

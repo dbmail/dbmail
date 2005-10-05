@@ -217,7 +217,7 @@ int _ic_select(struct ImapSession *self)
 	u64_t key;
 	int result;
 	unsigned idx = 0;
-	char *mailbox;
+	char *mailbox, *tmp;
 #define PERMSTRING_SIZE 80
 	char permstring[PERMSTRING_SIZE];
 
@@ -229,7 +229,7 @@ int _ic_select(struct ImapSession *self)
 	// flush recent messages from previous select
 	dbmail_imap_session_mailbox_update_recent(self);
 	
-	if ((result = dbmail_imap_session_mailbox_open(self, mailbox)))
+	if ((result = dbmail_imap_session_mailbox_open(self, mailbox))) 
 		return result;
 
 	if ((result = dbmail_imap_session_mailbox_show_info(self)))
@@ -1311,7 +1311,7 @@ int _ic_sort(struct ImapSession *self)
 		result_set[i] = (i+1);
 
 	/* now perform the search operations */
-	result = perform_imap_search((int *)result_set, ud->mailbox.exists, &sk, &ud->mailbox,1, sk.type);
+	result = perform_imap_search((unsigned int *)result_set, ud->mailbox.exists, &sk, &ud->mailbox,1, sk.type);
     
 	if (result < 0) {
 		free_searchlist(&sk.sub_search);
@@ -1600,7 +1600,7 @@ int _ic_search(struct ImapSession *self)
 			result_set[i] = 1;
 
 		/* now perform the search operations */
-		result = perform_imap_search((int *)result_set, ud->mailbox.exists, &sk, &ud->mailbox,0,sk.type);
+		result = perform_imap_search((unsigned int *)result_set, ud->mailbox.exists, &sk, &ud->mailbox,0,sk.type);
 
 		if (result < 0) {
 			free_searchlist(&sk.sub_search);

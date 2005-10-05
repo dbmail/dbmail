@@ -202,7 +202,7 @@ int mkpassword(const char * const user, const char * const passwd,
 			*enctype = "md5";
 			break;
 		case MD5_DIGEST:
-			null_strncpy(pw, makemd5(passwd), 49);
+			null_strncpy(pw, (char *)makemd5((unsigned char *)passwd), 49);
 			*enctype = "md5sum";
 			break;
 		case MD5_DIGEST_RAW:

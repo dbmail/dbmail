@@ -119,7 +119,7 @@ int main(int argc, char *argv[])
 			break;
 		}
 	}
-
+#ifdef OLDSIEVE
 	/* Anonymous block */ {
 		int res = 0;
 		sieve2_support_t *p;
@@ -146,7 +146,7 @@ int main(int argc, char *argv[])
 			/* FIXME: Complain. */
 		}
 	} /* End of anonymous block. */
-
+#endif
 	SetMainSigHandler();
 
 	/* TODO: don't spawn children, either. this is at least a good start. */

@@ -470,7 +470,7 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 			      "%s,%s: validating using MD5 digest comparison",
 			      __FILE__, __func__);
 			/* redundant statement: query_result = db_get_result(0, 1); */
-			is_validated = (strncmp(makemd5(password), query_result, 32) == 0) ? 1 : 0;
+			is_validated = (strncmp((char *)makemd5((unsigned char *)password), query_result, 32) == 0) ? 1 : 0;
 		} else {
 			trace(TRACE_DEBUG,
 			      "%s, %s: validating using MD5 hash comparison",
@@ -487,7 +487,7 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 		      "%s,%s: validating using MD5 digest comparison",
 		      __FILE__, __func__);
 		query_result = db_get_result(0, 1);
-		is_validated = (strncmp(makemd5(password), query_result, 32) == 0) ? 1 : 0;
+		is_validated = (strncmp((char *)makemd5((unsigned char *)password), query_result, 32) == 0) ? 1 : 0;
 	}
 
 	if (is_validated) {
@@ -507,7 +507,7 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 	return (is_validated ? 1 : 0);
 }
 
-u64_t auth_md5_validate(clientinfo_t *ci, char *username, unsigned char *md5_apop_he,
+u64_t auth_md5_validate(clientinfo_t *ci UNUSED, char *username, unsigned char *md5_apop_he,
 			char *apop_stamp)
 {
 	/* returns useridnr on OK, 0 on validation failed, -1 on error */
@@ -552,7 +552,7 @@ u64_t auth_md5_validate(clientinfo_t *ci, char *username, unsigned char *md5_apo
 		 strlen(apop_stamp) + strlen(query_result) + 2, "%s%s",
 		 apop_stamp, query_result);
 
-	md5_apop_we = makemd5(checkstring);
+	md5_apop_we = makemd5((unsigned char *)checkstring);
 
 	trace(TRACE_DEBUG,
 	      "%s,%s: checkstring for md5 [%s] -> result [%s]", __FILE__,
@@ -561,7 +561,7 @@ u64_t auth_md5_validate(clientinfo_t *ci, char *username, unsigned char *md5_apo
 	      "%s,%s: validating md5_apop_we=[%s] md5_apop_he=[%s]",
 	      __FILE__, __func__, md5_apop_we, md5_apop_he);
 
-	if (strcmp(md5_apop_he, makemd5(checkstring)) == 0) {
+	if (strcmp((char *)md5_apop_he, (char *)makemd5((unsigned char *)checkstring)) == 0) {
 		trace(TRACE_MESSAGE,
 		      "%s,%s: user [%s] is validated using APOP", __FILE__,
 		      __func__, username);

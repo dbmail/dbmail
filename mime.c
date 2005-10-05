@@ -44,7 +44,6 @@ static void _register_header(const char *field, const char *value, gpointer mime
 struct DbmailMessage * mime_fetch_headers(struct DbmailMessage *message, struct dm_list *mimelist) 
 {
 	GMimeMessage *m;
-	GString *s;
 
 	g_return_val_if_fail(message!=NULL,NULL);
 	
@@ -65,23 +64,13 @@ struct DbmailMessage * mime_fetch_headers(struct DbmailMessage *message, struct 
 /* 
  * mime_readheader()
  *
- * same as mime_list() but adds the number of bytes read to blkidx
- * and returns the number of newlines passed
+ * returns the number of headers
  *
- * headersize will be set to the actual amount of bytes used to store the header:
- * field/value strlen()'s plus 4 bytes for each headeritem: ': ' (field/value
- * separator) and '\r\n' to end the line.
- *
- * newlines within value will be expanded to '\r\n'
- *
- * if blkdata[0] == \n no header is expected and the function will return immediately
- * (headersize 0)
- *
- * returns -1 on parse failure, -2 on memory error; number of lines on succes
+ * returns -1 on parse failure, -2 on memory error; number of headers  on succes
  */
 
 
-int mime_readheader(struct DbmailMessage *message, u64_t * msgbuf_idx, struct dm_list *mimelist, u64_t * headersize)
+int mime_readheader(struct DbmailMessage *message, struct dm_list *mimelist, u64_t * headersize)
 {
 	int l;
 	char *raw, *crlf;
@@ -94,15 +83,11 @@ int mime_readheader(struct DbmailMessage *message, u64_t * msgbuf_idx, struct dm
 	crlf = get_crlf_encoded(raw);
 	
 	*headersize = strlen(raw);
-	*msgbuf_idx += *headersize;
-	
 	l = dm_list_length(mimelist);
 
 	g_free(crlf);
 	g_free(raw);
 
-	trace(TRACE_DEBUG,"%s,%s: return [%d] headerlines",
-			__FILE__, __func__, l);
 	return l;
 }
 

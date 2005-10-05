@@ -139,4 +139,5 @@ void dbmail_message_free(struct DbmailMessage *self);
 
 /* move these elsewhere: */
 
+char * g_mime_object_get_body(const GMimeObject *object);
 #endif

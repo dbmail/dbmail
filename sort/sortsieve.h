@@ -23,20 +23,22 @@
 
 #include "dbmail.h"
 
-#include <sieve2_interface.h>
 
 #define MAX_SIEVE_SCRIPTNAME 100
 
 int sortsieve_msgsort(u64_t useridnr, char *header, u64_t headersize,
-		      u64_t messagesize, struct list *actions);
-int sortsieve_unroll_action(sieve2_action_t * a, struct list *actions);
+		      u64_t messagesize, struct dm_list *actions);
+int sortsieve_unroll_action(sieve2_values_t * a, struct dm_list *actions);
 int sortsieve_script_validate(char *script, char **errmsg);
 
+#ifdef OLDSIEVE
 #define SIEVE2_SUPPORT_REGISTER(res) \
 		res |= sieve2_support_register(p, NULL, SIEVE2_ACTION_FILEINTO); \
 		res |= sieve2_support_register(p, NULL, SIEVE2_ACTION_REDIRECT); \
 		res |= sieve2_support_register(p, NULL, SIEVE2_ACTION_REJECT); \
 		res |= sieve2_support_register(p, NULL, SIEVE2_ACTION_NOTIFY)
 		/* Remember kids, no trailing semicolon. */
+
+#endif
 
 #endif

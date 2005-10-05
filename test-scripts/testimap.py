@@ -184,23 +184,21 @@ class testImapServer(unittest.TestCase):
         id=self.o.recent()[1][0]
         
         # fetch complete message. order and number of headers may differ
-        result = self.o.fetch(id,"(UID BODY[])")
-        self.assertEquals(result[0],'OK')
+        result1 = self.o.fetch(id,"(UID BODY[])")
+        result2 = self.o.fetch(id,"(UID RFC822)")
+        self.assertEquals(result1[0],'OK')
+        self.assertEquals(result2[0],'OK')
+        self.assertEquals(result1[1][0][1],result2[1][0][1])
         
         # get the body. must equal input message's body
         result = self.o.fetch(id,"(UID BODY[TEXT])")
-        print result
         bodytext = strip_crlf(result[1][0][1])
         self.assertEquals(bodytext,TESTMSG['strict822'].get_payload())
         
         result = self.o.fetch(id,"(UID BODYSTRUCTURE)")
         self.assertEquals(result[0],'OK')
-        print result
-        
 
         result = self.o.fetch(id,"(UID BODY[TEXT]<0.20>)")
-        #print result
-        
         self.assertEquals(result[0],'OK')
         self.assertEquals(self.o.fetch(id,"(UID BODY.PEEK[TEXT]<0.30>)")[0],'OK')
         self.assertEquals(self.o.fetch(id,"(UID RFC822.SIZE)")[0],'OK')
@@ -387,10 +385,17 @@ class testImapServer(unittest.TestCase):
             one criterion be specified; an exception will be raised when the
             server returns an error.
         """
-        self.o.select()
-        #result=self.o.search(None, "UNDELETED", "BODY", "test")
-        #self.assertEquals(result[0],'OK')
-        #self.failIf(result[1]==[''])
+        self.o.create('sbox')
+        for i in range(0,10):
+            self.o.append('sbox','','',str(TESTMSG['strict822']))
+            self.o.append('sbox','','',str(TESTMSG['multipart']))
+
+        self.o.select('sbox')
+        self.assertEquals(self.o.fetch("1:*","(Flags)")[0],'OK')
+        result=self.o.search(None, "UNDELETED", "BODY", "test")
+        self.assertEquals(result[0],'OK')
+        print result
+#        self.failIf(result[1]==[''])
         result=self.o.search(None, "RECENT", "HEADER", "X-OfflineIMAP-901701146-4c6f63616c4d69726a616d-494e424f58", "1086726519-0790956581151")
         self.assertEquals(result[0],'OK')
         result=self.o.search(None, "UNDELETED", "HEADER", "TO", "testuser")
@@ -427,7 +432,7 @@ class testImapServer(unittest.TestCase):
 
         p = getsock()
         p.login('testuser2','test'),('OK',['LOGIN completed'])
-        self.assertEquals(p.list()[1][-1],'() "/" "#Users/testuser1/testaclbox"')
+        self.assertEquals('() "/" "#Users/testuser1/testaclbox"' in p.list()[1],True)
         p.logout()
 
         self.o.delete('testaclbox')
@@ -459,11 +464,11 @@ class testImapServer(unittest.TestCase):
             returns the numbers of matching messages.
         """
         return
-        #self.o.select('INBOX')
-        #result=self.o.sort('(FROM)','US-ASCII','RECENT')
-        #self.assertEquals(result[0],'OK')
-        #result=self.o.sort('(FROM)','US-ASCII','RECENT','HEADER','MESSAGE-ID','<asdfasdf@nfg.nl>')
-        #self.assertEquals(result[0],'OK')
+        self.o.select('INBOX')
+        result=self.o.sort('(FROM)','US-ASCII','RECENT')
+        self.assertEquals(result[0],'OK')
+        result=self.o.sort('(FROM)','US-ASCII','RECENT','HEADER','MESSAGE-ID','<asdfasdf@nfg.nl>')
+        self.assertEquals(result[0],'OK')
 
     def testStatus(self):
         """ 

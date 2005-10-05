@@ -56,6 +56,74 @@ static int _message_insert(struct DbmailMessage *self,
 		const char *mailbox, 
 		const char *unique_id); 
 
+
+/* general mime utils (missing from gmime?) */
+
+gchar * g_mime_object_get_body(const GMimeObject *object)
+{
+	gchar *s = NULL;
+        size_t i;
+	GString *t;
+	
+        s = g_mime_object_get_headers(GMIME_OBJECT(object));
+        i = strlen(s);
+        g_free(s);
+	
+	s = g_mime_object_to_string(GMIME_OBJECT(object));
+	t = g_string_new(s);
+	
+	if (t->len > i && s[i] == '\n')
+		i++;
+
+	g_free(s);
+	
+	t = g_string_erase(t,0,i);
+	
+	s=t->str;
+	g_string_free(t,FALSE);
+	
+	return s;
+}
+
+gchar * get_crlf_encoded(gchar *string)
+{
+	GMimeStream *ostream, *fstream;
+	GMimeFilter *filter;
+	gchar *encoded, *buf;
+	GString *raw;
+	
+	ostream = g_mime_stream_mem_new();
+	fstream = g_mime_stream_filter_new_with_stream(ostream);
+	filter = g_mime_filter_crlf_new(GMIME_FILTER_CRLF_ENCODE,GMIME_FILTER_CRLF_MODE_CRLF_ONLY);
+	
+	g_mime_stream_filter_add((GMimeStreamFilter *) fstream, filter);
+	g_mime_stream_write_string(fstream,string);
+	
+	g_object_unref(filter);
+	g_object_unref(fstream);
+	
+	g_mime_stream_reset(ostream);
+
+	raw = g_string_new("");
+	buf = g_new0(char,256);
+	while ((g_mime_stream_read(ostream, buf, 255)) > 0) {
+		raw = g_string_append(raw, buf);
+		memset(buf,'\0', 256);
+	}
+	
+	g_object_unref(ostream);
+	
+	encoded = raw->str;
+	g_string_free(raw,FALSE);
+	g_free(buf);
+	
+	return encoded;
+
+}
+
+
+
+
 /*  \brief create a new empty DbmailMessage struct
  *  \return the DbmailMessage
  */
@@ -257,42 +325,6 @@ static void _register_header(const char *header, const char *value, gpointer use
 	g_relation_insert((GRelation *)user_data, (gpointer)header, (gpointer)value);
 }
 
-gchar * get_crlf_encoded(gchar *string)
-{
-	GMimeStream *ostream, *fstream;
-	GMimeFilter *filter;
-	gchar *encoded, *buf;
-	GString *raw;
-	
-	ostream = g_mime_stream_mem_new();
-	fstream = g_mime_stream_filter_new_with_stream(ostream);
-	filter = g_mime_filter_crlf_new(GMIME_FILTER_CRLF_ENCODE,GMIME_FILTER_CRLF_MODE_CRLF_ONLY);
-	
-	g_mime_stream_filter_add((GMimeStreamFilter *) fstream, filter);
-	g_mime_stream_write_string(fstream,string);
-	
-	g_object_unref(filter);
-	g_object_unref(fstream);
-	
-	g_mime_stream_reset(ostream);
-
-	raw = g_string_new("");
-	buf = g_new0(char,256);
-	while ((g_mime_stream_read(ostream, buf, 255)) > 0) {
-		raw = g_string_append(raw, buf);
-		memset(buf,'\0', 256);
-	}
-	
-	g_object_unref(ostream);
-	
-	encoded = raw->str;
-	g_string_free(raw,FALSE);
-	g_free(buf);
-	
-	return encoded;
-
-}
-
 void dbmail_message_set_physid(struct DbmailMessage *self, u64_t physid)
 {
 	self->physid = physid;
@@ -349,20 +381,7 @@ gchar * dbmail_message_hdrs_to_string(struct DbmailMessage *self)
 }
 gchar * dbmail_message_body_to_string(struct DbmailMessage *self)
 {
-	char *s, *b;
-	size_t h;
-	GString *t;
-	
-	b = dbmail_message_to_string(self);
-	t = g_string_new(b);
-	g_free(b);
-
-	h = dbmail_message_get_hdrs_size(self,FALSE);
-	t = g_string_erase(t,0,h);
-	
-	s = t->str;
-	g_string_free(t,FALSE);
-	return s;
+	return g_mime_object_get_body(GMIME_OBJECT(self->content));
 }
 
 /* 

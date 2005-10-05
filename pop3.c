@@ -316,7 +316,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 	int validate_result;
 	u64_t top_lines, top_messageid;
 	struct element *tmpelement;
-	char *md5_apop_he;
+	unsigned char *md5_apop_he;
 	char *searchptr;
 	u64_t user_idnr;
 
@@ -805,43 +805,32 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 						  "-ERR the thingy you issued is not a valid md5 hash\r\n");
 
 			/* create memspace for md5 hash */
-			memtst((md5_apop_he =
-				(char *) dm_malloc(strlen(searchptr) +
-						   1)) == NULL);
-			strncpy(md5_apop_he, searchptr,
-				strlen(searchptr) + 1);
+			memtst((md5_apop_he = (unsigned char *) dm_malloc(strlen(searchptr) + 1)) == NULL);
+			strncpy((char *)md5_apop_he, searchptr, strlen(searchptr) + 1);
 
 			if (strlen(value) > MAX_USERID_SIZE)
-				return pop3_error(session, stream,
-						  "-ERR userid is too long\r\n");
+				return pop3_error(session, stream, "-ERR userid is too long\r\n");
 
 			/* create memspace for username */
-			memtst((session->username =
-				(char *) dm_malloc(strlen(value) + 1)) ==
-			       NULL);
-			strncpy(session->username, value,
-				strlen(value) + 1);
+			memtst((session->username = (char *) dm_malloc(strlen(value) + 1)) == NULL);
+			strncpy(session->username, value, strlen(value) + 1);
 
 			/*
 			 * check the encryption used for this user
 			 * note that if the user does not exist it is not noted
 			 * by db_getencryption()
 			 */
-			if (auth_user_exists(session->username, &user_idnr)
-			    == -1) {
-				trace(TRACE_ERROR,
-				      "%s,%s: error finding if user exists. "
-				      "username = [%s]", __FILE__,
-				      __func__, session->username);
+			if (auth_user_exists(session->username, &user_idnr) == -1) {
+				trace(TRACE_ERROR, "%s,%s: error finding if user exists. "
+				      "username = [%s]", __FILE__, __func__, session->username);
 				return -1;
 			}
-			if (strcasecmp(auth_getencryption(user_idnr), "")
-			    != 0) {
+			if (strcasecmp(auth_getencryption(user_idnr), "") != 0) {
 				/* it should be clear text */
 				dm_free(md5_apop_he);
 				dm_free(session->username);
 				session->username = NULL;
-				md5_apop_he = 0;
+				md5_apop_he = NULL;
 				return pop3_error(session, stream,
 						  "-ERR APOP command is not supported for this user\r\n");
 			}

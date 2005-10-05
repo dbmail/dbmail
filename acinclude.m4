@@ -145,10 +145,10 @@ then
   if test "$withval" != "yes"
   then
     AC_MSG_CHECKING([for sieve2_interface.h (user supplied)])
-    if test -r "$sieveheadername/sieve2_interface.h"
+    if test -r "$sieveheadername/sieve2.h"
       then
       # found
-        AC_MSG_RESULT([$sieveheadername/sieve2_interface.h])
+        AC_MSG_RESULT([$sieveheadername/sieve2.h])
         SIEVEINC=$sieveheadername
       else 
       # Not found
@@ -156,18 +156,18 @@ then
         SIEVEINC=""
         sieveheadername=""
         AC_MSG_ERROR([
-  Unable to find sieve2_inteface.h where you specified, try just --with-sieve to 
+  Unable to find sieve2.h where you specified, try just --with-sieve to 
   have configure guess])
     fi
   else
     # Lets look in our standard paths
-    AC_MSG_CHECKING([for sieve2_interface.h])
+    AC_MSG_CHECKING([for sieve2.h])
     for sievepaths in $sieveheaderpaths
     do
-      if test -r "$sievepaths/sieve2_interface.h"
+      if test -r "$sievepaths/sieve2.h"
       then
         SIEVEINC="$sievepaths"
-        AC_MSG_RESULT([$sievepaths/sieve2_interface.h])
+        AC_MSG_RESULT([$sievepaths/sieve2.h])
         break
       fi
     done
@@ -175,7 +175,7 @@ then
     then
       AC_MSG_RESULT([no])
       AC_MSG_ERROR([
-  Unable to locate sieve2_inteface.h, try specifying with --with-sieve])
+  Unable to locate sieve2.h, try specifying with --with-sieve])
     fi
   fi
 else
@@ -189,7 +189,7 @@ AC_DEFUN([DBMAIL_CHECK_SIEVE_LIBS], [dnl
 # Look for libs needed to link to SIEVE first
 if test ! "${sieveheadername-x}" = "x"
 then
-  AC_CHECK_LIB(sieve,sieve2_extensions_listsupport,[ SORTLIB="-lsieve"], [SORTLIB=""])
+  AC_CHECK_LIB(sieve,sieve2_listextensions,[ SORTLIB="-lsieve"], [SORTLIB=""])
   if test -z "$SORTLIB"
   then
     AC_MSG_ERROR([

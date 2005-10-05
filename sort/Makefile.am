@@ -21,7 +21,7 @@ INCLUDES = -I$(top_srcdir)
 
 if SIEVE
 libsortdbmail_la_SOURCES = sort.c sortsieve.c
-AM_CFLAGS = -DSIEVE
+AM_CFLAGS += -DSIEVE
 else
 libsortdbmail_la_SOURCES = sort.c
 

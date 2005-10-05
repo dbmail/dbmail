@@ -40,7 +40,6 @@ extern db_param_t _db_params;
 
 /* we need this one because we can't directly link imapd.o */
 int imap_before_smtp = 0;
-extern char *msgbuf_buf;
 extern u64_t msgbuf_idx;
 extern u64_t msgbuf_buflen;
 
@@ -202,7 +201,7 @@ END_TEST
 START_TEST(test_mime_readheader)
 {
 	int res;
-	u64_t blkidx=0, headersize=0;
+	u64_t headersize=0;
 	struct dm_list mimelist;
 	struct DbmailMessage *m, *p;
 
@@ -210,23 +209,19 @@ START_TEST(test_mime_readheader)
 	m = dbmail_message_init_with_string(m,g_string_new(multipart_message));
 	
 	dm_list_init(&mimelist);
-	res = mime_readheader(m,&blkidx,&mimelist,&headersize);
+	res = mime_readheader(m,&mimelist,&headersize);
 	fail_unless(res==10, "number of headers incorrect");
-	fail_unless(blkidx==485, "blkidx incorrect");
-	fail_unless(headersize==blkidx, "headersize incorrect");
 	fail_unless(dm_list_length(&mimelist)==10, "number of message-headers incorrect");
 	dm_list_free(&mimelist.start);
 	
-	blkidx = 0; headersize = 0;
+	headersize = 0;
 
 	p = dbmail_message_new();
 	p = dbmail_message_init_with_string(p,g_string_new(multipart_message_part));
 	
 	dm_list_init(&mimelist);
-	res = mime_readheader(p, &blkidx, &mimelist, &headersize);
+	res = mime_readheader(p, &mimelist, &headersize);
 	fail_unless(res==3, "number of headers incorrect");
-	fail_unless(blkidx==142, "blkidx incorrect");
-	fail_unless(headersize==blkidx, "headersize incorrect");
 	fail_unless(mimelist.total_nodes==3, "number of mime-headers incorrect");
 	dm_list_free(&mimelist.start);
 
@@ -302,34 +297,17 @@ START_TEST(test_mail_address_build_list)
 }
 END_TEST
 
-//int db_fetch_headers(u64_t msguid, mime_message_t * msg)
-START_TEST(test_db_fetch_headers)
+START_TEST(test_g_mime_object_get_body)
 {
-	u64_t physid;
-	u64_t user_idnr;
-	int res;
-	mime_message_t *message;
+	char * result;
 	struct DbmailMessage *m;
 
 	m = dbmail_message_new();
-	m = dbmail_message_init_with_string(m, g_string_new(multipart_message));
-	dbmail_message_set_header(m, 
-			"References", 
-			"<20050326155326.1afb0377@ibook.linuks.mine.nu> <20050326181954.GB17389@khazad-dum.debian.net> <20050326193756.77747928@ibook.linuks.mine.nu> ");
-	dbmail_message_store(m);
-
-	physid = dbmail_message_get_physid(m);
-	auth_user_exists("testuser1",&user_idnr);
-	fail_unless(user_idnr > 0, "db_fetch_headers failed. Try adding [testuser1]");
-
-	sort_and_deliver(m,user_idnr,"INBOX");
+	m = dbmail_message_init_with_string(m,g_string_new(multipart_message));
 	
-	message = db_new_msg();
-	res = db_fetch_headers(m->id, message);
-	fail_unless(res==0,"db_fetch_headers failed");
+	result = g_mime_object_get_body(GMIME_OBJECT(m->content));
+	fail_unless(strlen(result)==1045,"g_mime_object_get_body failed");
 	
-	db_free_msg(message);
-	dbmail_message_free(m);
 }
 END_TEST
 
@@ -421,11 +399,11 @@ START_TEST(test_imap_get_partspec)
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"HEADER");
 	result = imap_get_logical_part(object,"HEADER");
-	printf("\n[%s]\n", result);
+	fail_unless(strlen(result)==205,"imap_get_partspec failed");
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"TEXT");
 	result = imap_get_logical_part(object,"TEXT");
-	printf("\n[%s]\n", result); 
+	fail_unless(strlen(result)==29,"imap_get_partspec failed");
 
 	dbmail_message_free(message);
 
@@ -436,15 +414,15 @@ START_TEST(test_imap_get_partspec)
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"1.TEXT");
 	result = imap_get_logical_part(object,"TEXT");
-	printf("\n[%s]\n", result); 
+	fail_unless(strlen(result)==16,"imap_get_partspec failed");
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"1.HEADER");
 	result = imap_get_logical_part(object,"HEADER");
-	printf("\n[%s]\n", result); 
+	fail_unless(strlen(result)==52,"imap_get_partspec failed");
 	
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"2.MIME");
 	result = imap_get_logical_part(object,"MIME");
-	printf("\n[%s]\n", result); 
+	fail_unless(strlen(result)==92,"imap_get_partspec failed");
 
 	
 	g_free(result);
@@ -640,13 +618,11 @@ Suite *dbmail_suite(void)
 {
 	Suite *s = suite_create("Dbmail Imap");
 	TCase *tc_session = tcase_create("ImapSession");
-	TCase *tc_rfcmsg = tcase_create("Rfcmsg");
 	TCase *tc_mime = tcase_create("Mime");
 	TCase *tc_util = tcase_create("Utils");
 	TCase *tc_misc = tcase_create("Misc");
 	
 	suite_add_tcase(s, tc_session);
-	suite_add_tcase(s, tc_rfcmsg);
 	suite_add_tcase(s, tc_mime);
 	suite_add_tcase(s, tc_util);
 	suite_add_tcase(s, tc_misc);
@@ -658,13 +634,11 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_session, test_imap_get_envelope);
 	tcase_add_test(tc_session, test_imap_get_partspec);
 	
-	tcase_add_checked_fixture(tc_rfcmsg, setup, teardown);
-	tcase_add_test(tc_rfcmsg, test_db_fetch_headers);
-
 	tcase_add_checked_fixture(tc_mime, setup, teardown);
 	tcase_add_test(tc_mime, test_mime_readheader);
 	tcase_add_test(tc_mime, test_mime_fetch_headers);
 	tcase_add_test(tc_mime, test_mail_address_build_list);
+	tcase_add_test(tc_mime, test_g_mime_object_get_body);
 
 	tcase_add_checked_fixture(tc_util, setup, teardown);
 	tcase_add_test(tc_util, test_g_list_join);

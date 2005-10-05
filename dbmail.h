@@ -83,7 +83,6 @@
 #include "memblock.h"
 #include "mime.h"
 #include "dbmsgbuf.h"
-#include "rfcmsg.h"
 #include "pidfile.h"
 #include "sort.h"
 #include "forward.h"
@@ -103,7 +102,8 @@
 #include "dm_getopt.h"
 
 #ifdef SIEVE
-#include "sortsieve.h"
+#include <sieve2.h>
+#include <sieve2_error.h>
 #include "sievecmd.h"
 #include "sort/sortsieve.h"
 #include "timsieve.h"

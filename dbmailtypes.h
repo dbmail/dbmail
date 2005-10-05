@@ -87,32 +87,22 @@ typedef char timestring_t[TIMESTRING_SIZE];
 
 /** parameters for the database connection */
 typedef struct {
-	field_t host;
-		   /**< hostname or ip address of database server */
-	field_t user;
-		   /**< username to connect with */
-	field_t pass;
-		   /**< password of user */
-	field_t db;/**< name of database to connect with */
-	unsigned int port;
-			/**< port number of database server */
-	field_t sock;
-		   /**< path to local unix socket (local connection) */
-	field_t pfx;
-			/**< prefix for tables e.g. dbmail_ */
-	unsigned int serverid; /* unique id for dbmail instance used in clusters */
+	field_t host;		/**< hostname or ip address of database server */
+	field_t user;		/**< username to connect with */
+	field_t pass;		/**< password of user */
+	field_t db;		/**< name of database to connect with */
+	unsigned int port;	/**< port number of database server */
+	field_t sock;		/**< path to local unix socket (local connection) */
+	field_t pfx;		/**< prefix for tables e.g. dbmail_ */
+	unsigned int serverid;	/* unique id for dbmail instance used in clusters */
 			
 } db_param_t;
 
 /** configuration items */
 typedef struct {
-	field_t name;
-		   /**< name of configuration item */
-	field_t value;
-		   /**< value of configuration item */
+	field_t name;		/**< name of configuration item */
+	field_t value;		/**< value of configuration item */
 } item_t;
-
-
 
 typedef struct {
 	FILE *tx, *rx;
@@ -175,30 +165,24 @@ typedef enum {
  */
 typedef struct {
 	int error_count;/**< number of errors that have occured */
-	Pop3State_t state;
-			/**< current POP state */
-	int was_apop;	/**< 1 if session was  session was apop 
-			   (no plaintext password) */
+	Pop3State_t state; /**< current POP state */
+	int was_apop;	/**< 1 if session was  session was apop (no plaintext password) */
 
-	int SessionResult;
-			/**< what happened during the session */
+	int SessionResult; /**< what happened during the session */
 
 	char *username;
 	char *password;
 
-	char *apop_stamp;
-			/**< timestamp for APOP */
+	char *apop_stamp; /**< timestamp for APOP */
 
 	u64_t useridnr;	/**< Used by timsieved */
 
 	u64_t totalsize;/**< total size of messages */
 	u64_t virtual_totalsize;
-	u64_t totalmessages;
-			 /**< number of messages */
+	u64_t totalmessages; /**< number of messages */
 	u64_t virtual_totalmessages;
 
-	struct dm_list messagelst;
-			     /** list of messages */
+	struct dm_list messagelst; /** list of messages */
 } PopSession_t;
 
 
@@ -322,6 +306,7 @@ typedef struct {
 	char search[MAX_SEARCH_LEN];
 	char hdrfld[MIME_FIELD_MAX];
 	struct dm_list sub_search;
+	int match;
 } search_key_t;
 
 /**
@@ -331,33 +316,11 @@ typedef struct {
 	u64_t block, pos;
 } db_pos_t;
 
-
-/**
-* RFC822/MIME message data type
-*/
-typedef struct {
-	struct dm_list mimeheader;      /**< the MIME header of this part (if present) */
-	struct dm_list rfcheader;       /**< RFC822 header of this part (if present) */
-	struct dm_list children;        /**< the children (multipart msg) */
-
-	int message_has_errors;         /**< if set the content-type is meaningless */
-
-	db_pos_t bodystart, bodyend;    /**< the body of this part */
-	
-	u64_t bodysize;                 /**< size of message body */
-	u64_t bodylines;                /**< number of lines in message body */
-	u64_t rfcheadersize;            /**< size of rfc header */
-	u64_t rfcheaderlines;           /** number of lines in rfc header */
-	u64_t mimerfclines;             /**< the total number of lines (only specified in
-					case of a MIME msg containing an RFC822 msg) */
-} mime_message_t;
-	
 /* 
  * simple cache mechanism
  */
 typedef struct {
 	struct DbmailMessage *dmsg;
-	mime_message_t msg;
 	MEM *memdump, *tmpdump;
 	u64_t num;
 	int file_dumped, msg_parsed;

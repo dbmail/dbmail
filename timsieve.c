@@ -22,8 +22,6 @@
 
 #include "dbmail.h"
 
-#include <sieve2_interface.h>
-
 #define INCOMING_BUFFER_SIZE 512
 
 /* default timeout for server daemon */
@@ -380,31 +378,12 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 							 * be made up of three parts: proxy, username, password
 							 * Between them are NULLs, which are conveniently encoded
 							 * by the base64 process... */
-							if (auth_validate
-							    (tmp64[1],
-							     tmp64[2],
-							     &useridnr) ==
-							    1) {
+							if (auth_validate(ci, tmp64[1], tmp64[2], &useridnr) == 1) {
 								fprintf((FILE *) stream, "OK\r\n");
-								session->
-								    state =
-								    AUTH;
-								session->
-								    useridnr
-								    =
-								    useridnr;
-								session->
-								    username
-								    =
-								    dm_strdup
-								    (tmp64
-								     [1]);
-								session->
-								    password
-								    =
-								    dm_strdup
-								    (tmp64
-								     [2]);
+								session->state = AUTH;
+								session->useridnr = useridnr;
+								session->username = dm_strdup(tmp64[1]);
+								session->password = dm_strdup(tmp64[2]);
 							} else {
 								fprintf((FILE *) stream, "NO \"Username or password incorrect.\"\r\n");
 							}

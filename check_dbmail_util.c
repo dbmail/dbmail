@@ -72,7 +72,7 @@ Suite *dbmail_common_suite(void)
 	suite_add_tcase(s, tc_util);
 	
 	tcase_add_checked_fixture(tc_util, setup, teardown);
-	tcase_add_test(tc_util, test_db_icheck_isheader);
+//	tcase_add_test(tc_util, test_db_icheck_isheader); /* this takes too long */
 	
 	return s;
 }
