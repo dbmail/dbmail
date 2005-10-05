@@ -102,7 +102,8 @@
 #include "dm_getopt.h"
 
 #ifdef SIEVE
-#include "sortsieve.h"
+#include <sieve2.h>
+#include <sieve2_error.h>
 #include "sievecmd.h"
 #include "sort/sortsieve.h"
 #include "timsieve.h"

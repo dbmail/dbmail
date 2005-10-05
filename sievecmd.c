@@ -23,6 +23,7 @@
 
 #include "dbmail.h"
 
+#define PNAME "dbmail/sievecmd"
 char *configFile = DEFAULT_CONFIG_FILE;
 
 /* set up database login data */

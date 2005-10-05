@@ -425,8 +425,6 @@ int dbmail_imap_session_fetch_parse_args(struct ImapSession * self, int idx)
 		self->fi->getInternalDate=1;
 	} else if (MATCH(token,"uid")) {
 		self->fi->getUID=1;
-	} else if (MATCH(token,"rfc822")) {
-		self->fi->getRFC822=1;
 	} else if (MATCH(token,"rfc822.size")) {
 		self->fi->getSize = 1;
 	} else if (MATCH(token,"fast")) {
@@ -436,6 +434,9 @@ int dbmail_imap_session_fetch_parse_args(struct ImapSession * self, int idx)
 		
 	/* from here on message parsing will be necessary */
 	
+	} else if (MATCH(token,"rfc822")) {
+		self->fi->msgparse_needed=1;
+		self->fi->getRFC822=1;
 	} else if (MATCH(token,"rfc822.header")) {
 		self->fi->msgparse_needed=1;
 		self->fi->getRFC822Header = 1;
@@ -1458,9 +1459,19 @@ int dbmail_imap_session_mailbox_open(struct ImapSession * self, char * mailbox)
 	int result;
 	u64_t mailbox_idnr;
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
+	char *tmp;
 	
 	/* get the mailbox_idnr */
-	if (! (mailbox_idnr = dbmail_imap_session_mailbox_get_idnr(self, mailbox))) {
+	mailbox_idnr = dbmail_imap_session_mailbox_get_idnr(self, mailbox);
+
+	if ((! mailbox_idnr ) && (strncasecmp(mailbox,"INBOX",5)==0)) {
+		/* create missing INBOX for this authenticated user */
+		tmp = g_ascii_strup(mailbox,-1);
+		result = db_createmailbox(tmp, ud->userid, &mailbox_idnr);
+		g_free(tmp);
+	}
+		
+	if (! mailbox_idnr) {
 		ud->state = IMAPCS_AUTHENTICATED;
 		dm_free(ud->mailbox.seq_list);
 		memset(&ud->mailbox, 0, sizeof(ud->mailbox));

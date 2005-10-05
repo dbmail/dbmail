@@ -24,7 +24,7 @@
 
 #include "dbmail.h"
 
-#define PNAME "dbmail/sievecmd"
+
 
 int do_showhelp(void);
 int do_list(u64_t user_idnr);

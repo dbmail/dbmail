@@ -921,8 +921,8 @@ int db_insert_message_block_physmessage(const char *block,
 	}
 	memset(escaped_query, '\0', maxesclen);
 	startlen = snprintf(escaped_query, maxesclen,
-		     "INSERT INTO %smessageblks"
-		     "(is_header, messageblk,blocksize, physmessage_id)"
+		     "INSERT INTO %smessageblks "
+		     "(is_header, messageblk,blocksize, physmessage_id) "
 		     "VALUES ('%u','",DBPFX, is_header);
 	
 	/* escape & add data */

@@ -217,7 +217,7 @@ int _ic_select(struct ImapSession *self)
 	u64_t key;
 	int result;
 	unsigned idx = 0;
-	char *mailbox;
+	char *mailbox, *tmp;
 #define PERMSTRING_SIZE 80
 	char permstring[PERMSTRING_SIZE];
 
@@ -229,7 +229,7 @@ int _ic_select(struct ImapSession *self)
 	// flush recent messages from previous select
 	dbmail_imap_session_mailbox_update_recent(self);
 	
-	if ((result = dbmail_imap_session_mailbox_open(self, mailbox)))
+	if ((result = dbmail_imap_session_mailbox_open(self, mailbox))) 
 		return result;
 
 	if ((result = dbmail_imap_session_mailbox_show_info(self)))

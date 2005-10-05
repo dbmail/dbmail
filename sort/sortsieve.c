@@ -27,8 +27,6 @@
 
 #include "dbmail.h"
 
-#include <sieve2_interface.h>
-
 extern struct dm_list smtpItems, sysItems;
 
 /* typedef sort_action {
@@ -48,9 +46,11 @@ extern struct dm_list smtpItems, sysItems;
  * such as dbmail-lmtpd, the daemon should
  * finish storing the message and restart.
  * */
-int sortsieve_msgsort(u64_t useridnr, char *header, u64_t headersize,
-		      u64_t messagesize, struct dm_list *actions)
+int sortsieve_msgsort(u64_t useridnr, char *header, u64_t headersize, u64_t messagesize, struct dm_list *actions)
 {
+
+	int res = 0, ret = 0;
+#ifdef OLDSIEVE
 	sieve2_message_t *m;
 	sieve2_support_t *p;
 	sieve2_script_t *s;
@@ -59,7 +59,6 @@ int sortsieve_msgsort(u64_t useridnr, char *header, u64_t headersize,
 	sieve2_error_t *e;
 	sievefree_t sievefree;
 	char *scriptname = NULL, *script = NULL, *freestr = NULL;
-	int res = 0, ret = 0;
 
 	memset(&sievefree, 0, sizeof(sievefree_t));
 
@@ -179,13 +178,17 @@ int sortsieve_msgsort(u64_t useridnr, char *header, u64_t headersize,
 	if (scriptname != NULL)
 		dm_free(scriptname);
 
+#endif
       skip_free:
 	return ret;
+	
 }
 
-int sortsieve_unroll_action(sieve2_action_t * a, struct dm_list *actions)
+int sortsieve_unroll_action(sieve2_values_t * a, struct dm_list *actions)
 {
+
 	int res = SIEVE2_OK;
+#ifdef OLDSIEVE
 	int code;
 	void *action_context;
 
@@ -304,13 +307,16 @@ int sortsieve_unroll_action(sieve2_action_t * a, struct dm_list *actions)
 	if (tmpsa != NULL)
 		dm_free(tmpsa);
 
+#endif
 	return res;
+	
 }
 
 /* Return 0 on script OK, 1 on script error. */
 int sortsieve_script_validate(char *script, char **errmsg)
 {
-	int ret, res;
+	int ret = 0, res;
+#ifdef OLDSIEVE
 	sieve2_interp_t *t;
 	sieve2_script_t *s;
 	sieve2_support_t *p;
@@ -382,5 +388,7 @@ int sortsieve_script_validate(char *script, char **errmsg)
 	if (sievefree.free_error)
 		sieve2_error_free(e);
 
+#endif
 	return ret;
+	
 }

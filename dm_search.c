@@ -89,7 +89,6 @@ static int num_from_imapdate(const char *date);
 
 int db_search(unsigned int *rset, unsigned setlen, search_key_t * sk, mailbox_t * mb)
 {
-	u64_t uid;
 	int msn;
 	unsigned i;
 	
@@ -174,10 +173,8 @@ int db_search(unsigned int *rset, unsigned setlen, search_key_t * sk, mailbox_t 
 	}
 
 	for (i = 0; i < db_num_rows(); i++) {
-		uid = db_get_result_u64(i, 0);
 		if (sk->type != IST_SORT) {
-			msn = db_binary_search(mb->seq_list, mb->exists, uid);
-
+			msn = db_binary_search(mb->seq_list, mb->exists, db_get_result_u64(i, 0));
 			if (msn == -1 || (unsigned)msn >= setlen) {
 				db_free_result();
 				return 1;
@@ -253,7 +250,6 @@ int db_search_parsed(unsigned int *rset, unsigned int setlen,
 		     search_key_t * sk, mailbox_t * mb, int condition)
 {
 	unsigned i;
-	int result;
 	u64_t rfcsize;
 	struct DbmailMessage *msg;
 
@@ -270,10 +266,7 @@ int db_search_parsed(unsigned int *rset, unsigned int setlen,
 		if (condition == IST_SUBSEARCH_NOT && rset[i] == 1)
 			continue;
 
-		memset(&msg, 0, sizeof(msg));
-
-		msg = db_init_fetch(mb->seq_list[i]);
-		if (msg)
+		if (! (msg = db_init_fetch(mb->seq_list[i],DBMAIL_MESSAGE_FILTER_FULL)))
 			continue;
 		
 		rfcsize = dbmail_message_get_rfcsize(msg);
@@ -312,31 +305,36 @@ int db_binary_search(const u64_t * array, int arraysize, u64_t key)
 	return -1;		/* not found */
 }
 
-static void _match_header(const char *field, const char *value, gpointer sk)
+static void _match_header(const char *field, const char *value, gpointer userdata)
 {
 	int i;
+	search_key_t * sk = (search_key_t *)userdata;
+	
 	for (i = 0; field[i]; i++) {
-		if (strncasecmp(&field[i], (search_key_t *)sk->search, strlen((search_key_t *)sk->search)) == 0) {
-			(search_key_t *)sk->match = 1;
+		if (strncasecmp(&field[i], sk->search, strlen(sk->search)) == 0) {
+			sk->match = 1;
 			return;
 		}
 	}
 
 	for (i = 0; value[i]; i++) {
-		if (strncasecmp(&value[i], (search_key_t *)sk->search, strlen((search_key_t *)sk->search)) == 0) {
-			(search_key_t *)sk->match = 1;
+		if (strncasecmp(&value[i], sk->search, strlen(sk->search)) == 0) {
+			sk->match = 1;
 			return;
 		}
 	}
-	(search_key_t *)sk->match = 0;
+	sk->match = 0;
 }
 	
 int db_exec_search(GMimeObject *object, search_key_t * sk)
 {
-	int i, givendate, sentdate;
+	int givendate, sentdate;
 	char *d;
+	int i,j;
 
+	GMimeObject *part, *subpart;
 	GMimeContentType *type;
+	GMimeMultipart *multipart;
 	
 	if (!sk->search)
 		return 0;
@@ -372,30 +370,52 @@ int db_exec_search(GMimeObject *object, search_key_t * sk)
 		return 0;
 
 	case IST_DATA_TEXT:
-		g_mime_header_foreach(object->headers, _match_header, sk);
+		g_mime_header_foreach(object->headers, _match_header, (gpointer)sk);
 		return sk->match;
 
 	case IST_DATA_BODY:
 		/* only check body if there are no children */
-		type = g_mime_object_get_content_type(object);
+		if (GMIME_IS_MESSAGE(object)) {
+			part = g_mime_message_get_mime_part(GMIME_MESSAGE(object));
+		} else {
+			part = object;
+		}
+		
+		if (! (type = (GMimeContentType *)g_mime_object_get_content_type(part))) 
+			break;
 		
 		if (! g_mime_content_type_is_type(type,"text","*"))
 			break;
 		
-		return db_search_body(object, sk);
+		return db_search_body(part, sk);
 		
 	}
 	
 	/* no match found yet, try the children */
-	/*
-	el = dm_list_getstart(&msg->children);
-	while (el) {
-		if (db_exec_search((mime_message_t *) el->data, sk, msg_idnr) == 1)
-			return 1;
-
-		el = el->nextnode;
+	if (GMIME_IS_MESSAGE(object)) {
+		part = g_mime_message_get_mime_part(GMIME_MESSAGE(object));
+	} else {
+		part = object;
 	}
-	*/
+	
+	if (! (type = (GMimeContentType *)g_mime_object_get_content_type(part)))
+		return 0;
+	
+	if (! (g_mime_content_type_is_type(type,"multipart","*")))
+		return 0;
+
+	multipart = GMIME_MULTIPART(part);
+	i = g_mime_multipart_get_number(multipart);
+	
+	trace(TRACE_DEBUG,"%s,%s: search [%d] parts for [%s]",
+			__FILE__, __func__, i, sk->search);
+
+	/* loop over parts for base info */
+	for (j=0; j<i; j++) {
+		subpart = g_mime_multipart_get_part(multipart,j);
+		if (db_exec_search(subpart,sk) == 1)
+			return 1;
+	}
 	
 	return 0;
 }
@@ -418,6 +438,7 @@ int db_search_body(GMimeObject *object, search_key_t *sk)
 	s = t->str;
 	g_string_free(t,FALSE);
 
+	sk->match = 0;
 	for (i = 0; s[i]; i++) {
 		if (strncasecmp(&s[i], sk->search, strlen(sk->search)) == 0) {
 			sk->match = 1;
@@ -425,7 +446,6 @@ int db_search_body(GMimeObject *object, search_key_t *sk)
 		}
 	}
 	g_free(s);
-	sk->match = 0;
 
 	return sk->match;
 }

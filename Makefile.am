@@ -80,6 +80,8 @@ dbmail_sievecmd_LDADD = libdbmail.la
 
 dbmail_timsieved_SOURCES = timsieve.c timsieved.c
 dbmail_timsieved_LDADD = libdbmail.la
+
+AM_CFLAGS += -DSIEVE
 endif
 
 noinst_LTLIBRARIES = libdbmail.la
