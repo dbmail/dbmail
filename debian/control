@@ -3,7 +3,7 @@ Section: mail
 Priority: optional
 Maintainer: Paul J Stevens <paul@nfg.nl>
 Build-Depends: automake, debhelper (>= 4.1.16), dpatch, libsieve-dev, libglib2.0-dev, libgmime2.1-dev, libldap2-dev, libsqlite0-dev, postgresql-dev, libmysqlclient-dev | libmysqlclient14-dev, pkg-config, libtool
-Standards-Version: 3.6.1
+Standards-Version: 3.6.2
 
 Package: dbmail2-pgsql
 Architecture: any
