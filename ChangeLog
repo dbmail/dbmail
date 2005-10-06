@@ -1,3 +1,36 @@
+2005-10-05  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_common.c, check_dbmail_deliver.c, check_dbmail_imapd.c, 
+	  check_dbmail_message.c, check_dbmail_server.c, config.c, db.c, db.h, 
+	  dbmail-imapsession.c, dbmail-message.c, dbmail-user.h, dbmail.h, 
+	  dbmailtypes.h, dbmd5.c, dbmd5.h, dbmsgbuf.c, debug.c, debug.h, dsn.c, 
+	  dsn.h, forward.c, forward.h, imap4.c, imap4.h, imapcommands.c, 
+	  imapcommands.h, imapd.c, lib/Makefile.am, list.c, list.h, lmtp.c, 
+	  lmtp.h, lmtpd.c, main.c, maintenance.c, md5.c, md5.h, memblock.c, 
+	  memblock.h, mime.c, mime.h, misc.c, misc.h, pipe.c, pipe.h, pop3.c, 
+	  pop3.h, pop3d.c, python/bin/autoreplier.py, python/lib/dbmail.py, 
+	  quota.c, quota.h, rfcmsg.c, rfcmsg.h, server.c, server.h, 
+	  serverchild.c, serverchild.h, sievecmd.c, sievecmd.h, sort.h, 
+	  sort/sortsieve.c, sort/sortsieve.h, sql/mysql/create_tables.mysql, 
+	  sql/mysql/create_tables_innoDB.mysql, test-scripts/testimap.py, 
+	  timsieve.c, timsieve.h, timsieved.c, user.c:
+	resync git tree
+	* auth/authsql.c, dbmail-user.c, dbmd5.c, dbmd5.h, dm_imaputil.c, 
+	  dm_imaputil.h, imapcommands.c, mime.c, misc.c, pop3.c, rfcmsg.c, 
+	  serverchild.c, tags:
+	fix compiler warnings after moving to gcc4
+	* Makefile.am, check_dbmail_common.c, check_dbmail_imapd.c, 
+	  dbmail-imapsession.c, dbmail.h, dbmailtypes.h, dbmsgbuf.c, 
+	  dbmsgbuf.h, dm_search.c, mime.c, mime.h, rfcmsg.c, rfcmsg.h:
+	removing the last of the old mime code
+	* Makefile.am, acinclude.m4, check_dbmail_imapd.c, check_dbmail_util.c, 
+	  db.c, dbmail-imapsession.c, dbmail-imapsession.h, dbmail-message.c, 
+	  dbmail-message.h, dbmail.h, dbmailtypes.h, debian/control, 
+	  debian/rules, dm_imaputil.c, dm_search.c, imapcommands.c, sievecmd.c, 
+	  sievecmd.h, sort/Makefile.am, sort/sortsieve.c, sort/sortsieve.h, 
+	  test-scripts/testimap.py, timsieve.c, timsieve.h, timsieved.c:
+	fixes for libsieve and search
+
 2005-09-10  Paul J Stevens <paul@nfg.nl>
 
 	* ChangeLog, check_dbmail_imapd.c, check_dbmail_message.c, 
