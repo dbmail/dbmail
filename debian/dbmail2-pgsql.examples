@@ -1,5 +1,8 @@
 sql/postgresql/create_tables.pgsql
 sql/postgresql/migrate_from_1.x_to_2.0.pgsql
+sql/postgresql/add_auto_replies_fields.pgsql
 sql/postgresql/add_header_tables.pgsql
+sql/postgresql/add_replycache.pgsql
+sql/postgresql/add_usermap.psql
 dbmail.conf
 debian/default.dbmail

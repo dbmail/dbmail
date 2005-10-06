@@ -4052,7 +4052,7 @@ int db_user_exists(const char *username, u64_t * user_idnr)
 
 int db_user_create_shadow(const char *username, u64_t * user_idnr)
 {
-	return db_user_create(username, "UNUSED", "UNUSED", 0xffff, 0xffff, user_idnr);
+	return db_user_create(username, "UNUSED", "md5", 0xffff, 0, user_idnr);
 }
 
 int db_user_create(const char *username, const char *password, const char *enctype,
@@ -4138,6 +4138,21 @@ int db_user_create(const char *username, const char *password, const char *encty
 		*user_idnr = db_insert_result("user_idnr");
 
 	return DM_EGENERAL;
+}
+int db_change_mailboxsize(u64_t user_idnr, u64_t new_size)
+{
+	snprintf(query, DEF_QUERYSIZE,
+		 "UPDATE %susers SET maxmail_size = '%llu' "
+		 "WHERE user_idnr = '%llu'",
+		 DBPFX, new_size, user_idnr);
+
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: could not change maxmailsize for user [%llu]",
+		      __FILE__, __func__, user_idnr);
+		return -1;
+	}
+
+	return 0;
 }
 
 int db_user_delete(const char * username)

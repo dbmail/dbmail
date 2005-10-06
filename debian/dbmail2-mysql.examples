@@ -1,8 +1,9 @@
 sql/mysql/create_tables_innoDB.mysql
-sql/mysql/create_tables.mysql
-sql/mysql/add_header_tables.mysql
-sql/mysql/migrate_from_1.x_to_2.0.mysql
 sql/mysql/migrate_from_1.x_to_2.0_innodb.mysql
+sql/mysql/add_auto_replies_fields.mysql
+sql/mysql/add_header_tables.mysql
+sql/mysql/add_replycache.mysql
+sql/mysql/add_usermap.mysql
 dbmail.conf
 debian/default.dbmail
 debian/pgsql2mysql.sh

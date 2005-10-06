@@ -817,8 +817,9 @@ int auth_getmaxmailsize(u64_t user_idnr, u64_t * maxmail_size)
  */
 char *auth_getencryption(u64_t user_idnr UNUSED)
 {
-	/* ldap does not support fancy passwords */
-	return "UNUSED";
+	/* ldap does not support fancy passwords, but return 
+	 * something valid for the sql shadow */
+	return "md5";
 }
 		
 
@@ -1248,8 +1249,11 @@ int auth_change_clientid(u64_t user_idnr, u64_t newcid)
 
 int auth_change_mailboxsize(u64_t user_idnr, u64_t new_size)
 {
+	int result;
 	char newsize_str[16];
 	snprintf(newsize_str, 16, "%llu", new_size);
+	if (result = db_change_mailboxsize(user_idnr, new_size))
+		return result;
 	return dm_ldap_mod_field(user_idnr, _ldap_cfg.field_maxmail, newsize_str);
 }
 

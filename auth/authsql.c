@@ -376,19 +376,7 @@ int auth_change_clientid(u64_t user_idnr, u64_t new_cid)
 
 int auth_change_mailboxsize(u64_t user_idnr, u64_t new_size)
 {
-	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
-		 "UPDATE %susers SET maxmail_size = '%llu' "
-		 "WHERE user_idnr = '%llu'",
-		 DBPFX, new_size, user_idnr);
-
-	if (__auth_query(__auth_query_data) == -1) {
-		trace(TRACE_ERROR,
-		      "%s,%s: could not change maxmailsize for user [%llu]",
-		      __FILE__, __func__, user_idnr);
-		return -1;
-	}
-
-	return 0;
+	return db_change_mailboxsize(user_idnr, new_size);
 }
 
 int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user_idnr)
