@@ -272,33 +272,49 @@ static void imap_part_get_sizes(GMimeObject *part, size_t * size, size_t * lines
 
 void _structure_part_handle_part(GMimeObject *part, gpointer data, gboolean extension)
 {
-	const GMimeContentType *type = g_mime_object_get_content_type(part);
+	const GMimeContentType *type;
+	GMimeObject *object;
+
+	if (GMIME_IS_MESSAGE(part))
+		object = g_mime_message_get_mime_part(GMIME_MESSAGE(part));
+	else
+		object = part;
+	
+	type = g_mime_object_get_content_type(object);
 	if (! type)
 		return;
 
 	/* simple message */
 	if (g_mime_content_type_is_type(type,"text","*"))
-		_structure_part_text(part,data, extension);
+		_structure_part_text(object,data, extension);
 	/* multipart composite */
 	else if (g_mime_content_type_is_type(type,"multipart","*"))
-		_structure_part_multipart(part,data, extension);
+		_structure_part_multipart(object,data, extension);
 	/* message included as mimepart */
 	else if (g_mime_content_type_is_type(type,"message","rfc822"))
-		_structure_part_message_rfc822(part,data, extension);
+		_structure_part_message_rfc822(object,data, extension);
 
 }
 
 void _structure_part_multipart(GMimeObject *part, gpointer data, gboolean extension)
 {
 	GMimeMultipart *multipart;
-	GMimeObject *subpart;
+	GMimeObject *subpart, *object;
 	GList *list = NULL;
 	GString *s;
 	int i,j;
+	const GMimeContentType *type;
 	
-	const GMimeContentType *type = g_mime_object_get_content_type(part);
+	if (GMIME_IS_MESSAGE(part))
+		object = g_mime_message_get_mime_part(GMIME_MESSAGE(part));
+	else
+		object = part;
+	
+	type = g_mime_object_get_content_type(object);
+	if (! type)
+		return;
 
-	multipart = GMIME_MULTIPART(part);
+	multipart = GMIME_MULTIPART(object);
 	i = g_mime_multipart_get_number(multipart);
 	
 	trace(TRACE_DEBUG,"%s,%s: parse [%d] parts for [%s] with boundary [%s]",
@@ -320,11 +336,11 @@ void _structure_part_multipart(GMimeObject *part, gpointer data, gboolean extens
 		/* paramlist */
 		list = imap_append_hash_as_string(list, type->param_hash);
 		/* disposition */
-		list = imap_append_disposition_as_string(list, part);
+		list = imap_append_disposition_as_string(list, object);
 		/* language */
-		list = imap_append_header_as_string(list,part,"Content-Language");
+		list = imap_append_header_as_string(list,object,"Content-Language");
 		/* location */
-		list = imap_append_header_as_string(list,part,"Content-Location");
+		list = imap_append_header_as_string(list,object,"Content-Location");
 		s = g_list_join(list," ");
 		
 		*(GList **)data = (gpointer)g_list_append(*(GList **)data,s->str);
@@ -340,8 +356,15 @@ void _structure_part_message_rfc822(GMimeObject *part, gpointer data, gboolean e
 	char *result;
 	GList *list = NULL, *t = NULL;
 	size_t s, l=0;
+	GMimeObject *object;
+	const GMimeContentType *type;
 	
-	const GMimeContentType *type = g_mime_object_get_content_type(part);
+	if (GMIME_IS_MESSAGE(part))
+		object = g_mime_message_get_mime_part(GMIME_MESSAGE(part));
+	else
+		object = part;
+	
+	type = g_mime_object_get_content_type(object);
 	if (! type)
 		return;
 
@@ -351,16 +374,16 @@ void _structure_part_message_rfc822(GMimeObject *part, gpointer data, gboolean e
 	/* paramlist */
 	list = imap_append_hash_as_string(list, type->param_hash);
 	/* body id */
-	if ((result = (char *)g_mime_object_get_content_id(part)))
+	if ((result = (char *)g_mime_object_get_content_id(object)))
 		list = g_list_append_printf(list,"\"%s\"", result);
 	else
 		list = g_list_append_printf(list,"NIL");
 	/* body description */
-	list = imap_append_header_as_string(list,part,"Content-Description");
+	list = imap_append_header_as_string(list,object,"Content-Description");
 	/* body encoding */
-	list = imap_append_header_as_string(list,part,"Content-Transfer-Encoding");
+	list = imap_append_header_as_string(list,object,"Content-Transfer-Encoding");
 	/* body size */
-	imap_part_get_sizes(part,&s,&l);
+	imap_part_get_sizes(object,&s,&l);
 	
 	list = g_list_append_printf(list,"%d", s);
 
@@ -390,8 +413,15 @@ void _structure_part_text(GMimeObject *part, gpointer data, gboolean extension)
 	char *result;
 	GList *list = NULL;
 	size_t s, l=0;
+	GMimeObject *object;
+	const GMimeContentType *type;
 	
-	const GMimeContentType *type = g_mime_object_get_content_type(part);
+	if (GMIME_IS_MESSAGE(part))
+		object = g_mime_message_get_mime_part(GMIME_MESSAGE(part));
+	else
+		object = part;
+	
+	type = g_mime_object_get_content_type(object);
 	if (! type)
 		return;
 
@@ -401,14 +431,14 @@ void _structure_part_text(GMimeObject *part, gpointer data, gboolean extension)
 	/* paramlist */
 	list = imap_append_hash_as_string(list, type->param_hash);
 	/* body id */
-	if ((result = (char *)g_mime_object_get_content_id(part)))
+	if ((result = (char *)g_mime_object_get_content_id(object)))
 		list = g_list_append_printf(list,"\"%s\"", result);
 	else
 		list = g_list_append_printf(list,"NIL");
 	/* body description */
-	list = imap_append_header_as_string(list,part,"Content-Description");
+	list = imap_append_header_as_string(list,object,"Content-Description");
 	/* body encoding */
-	list = imap_append_header_as_string(list,part,"Content-Transfer-Encoding");
+	list = imap_append_header_as_string(list,object,"Content-Transfer-Encoding");
 	/* body size */
 	imap_part_get_sizes(part,&s,&l);
 	
@@ -419,13 +449,13 @@ void _structure_part_text(GMimeObject *part, gpointer data, gboolean extension)
 	
 	if (extension) {
 		/* body md5 */
-		list = imap_append_header_as_string(list,part,"Content-MD5");
+		list = imap_append_header_as_string(list,object,"Content-MD5");
 		/* body disposition */
-		list = imap_append_disposition_as_string(list,part);
+		list = imap_append_disposition_as_string(list,object);
 		/* body language */
-		list = imap_append_header_as_string(list,part,"Content-Language");
+		list = imap_append_header_as_string(list,object,"Content-Language");
 		/* body location */
-		list = imap_append_header_as_string(list,part,"Content-Location");
+		list = imap_append_header_as_string(list,object,"Content-Location");
 	}
 	
 	/* done*/
@@ -533,11 +563,15 @@ GList * imap_get_structure(GMimeMessage *message, gboolean extension)
 /* envelope access point */
 GList * imap_get_envelope(GMimeMessage *message)
 {
-	GMimeObject *part = GMIME_OBJECT(message);
+	GMimeObject *part;
 	InternetAddressList *alist;
 	GList *list = NULL;
 	char *result;
+
+	if (! GMIME_IS_MESSAGE(message))
+		return NULL;
 	
+	part = GMIME_OBJECT(message);
 	/* date */
 	result = g_mime_message_get_date_string(message);
 	if (result) {
@@ -615,7 +649,10 @@ char * imap_get_logical_part(const GMimeObject *object, const char * specifier)
         
 	if (strcasecmp(specifier,"TEXT")==0)
 		return g_mime_object_get_body(GMIME_OBJECT(object));
+
+	return NULL;
 }
+
 	
 
 GMimeObject * imap_get_partspec(const GMimeObject *message, const char *partspec) 
@@ -636,7 +673,7 @@ GMimeObject * imap_get_partspec(const GMimeObject *message, const char *partspec
 		if (! (index = strtol((const char *)part, NULL, 0))) 
 			break;
 		
-		if (i==0)
+		if (i==0 && GMIME_IS_MESSAGE(object))
 			object=GMIME_OBJECT(GMIME_MESSAGE(object)->mime_part);
 		
 		type = (GMimeContentType *)g_mime_object_get_content_type(object);

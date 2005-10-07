@@ -35,7 +35,7 @@ set -e
 [ -e /etc/default/dbmail ] && . /etc/default/dbmail
 
 config_valid() {
-	/usr/sbin/dbmail-users -l 2>&1 >/dev/null && return 0
+	/usr/sbin/dbmail-users -l >/dev/null 2>&1  && return 0
 	cat << EOM
 Dbmail cannot connect to the database server. Please make sure
 /etc/dbmail/dbmail.conf is correct, the database-server is running,
@@ -69,13 +69,13 @@ ssl_wrapper() {
 		if [ "$START_IMAPD" ]; then
 			pidfile="$PID_DIR/stunnel.localhost.imap.pid"
 			if [ -f "$pidfile" ]; then
-				kill `cat $pidfile` 2>&1 >/dev/null || true
+				kill `cat $pidfile` >/dev/null 2>&1 || true
 			fi
 		fi
 		if [ "$START_POP3D" ]; then
 			pidfile="$PID_DIR/stunnel.localhost.pop3.pid"
 			if [ -f "$pidfile" ]; then
-				kill `cat $pidfile` 2>&1 >/dev/null || true
+				kill `cat $pidfile` >/dev/null 2>&1 || true
 			fi
 		fi
 		;;
@@ -116,7 +116,7 @@ persistent_stop() {
 	
 	start-stop-daemon --stop --retry 10 \
 		--pidfile ${PID_DIR}/${_name}.pid \
-		--name $_name &>/dev/null || true
+		--name $_name >/dev/null 2>&1 || true
 		
 	while [ $count -lt 5 ]; do
 		echo -n "."
@@ -150,7 +150,7 @@ case "$1" in
 	;;
   stop)
 	echo -n "Stopping $DESC: "
-	[ "$START_SSL" ] && ssl_wrapper stop 2>&1 /dev/null || true
+	[ "$START_SSL" ] && ssl_wrapper stop >/dev/null 2>&1 || true
 	[ "$START_IMAPD" ] && persistent_stop "IMAPD" || true
 	[ "$START_POP3D" ] && persistent_stop "POP3D" || true
 	[ "$START_LMTPD" ] && persistent_stop "LMTPD" || true

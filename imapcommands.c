@@ -211,14 +211,14 @@ int _ic_authenticate(struct ImapSession *self)
  * 
  * select a specified mailbox
  */
+#define PERMSTRING_SIZE 80
 int _ic_select(struct ImapSession *self)
 {
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	u64_t key;
 	int result;
 	unsigned idx = 0;
-	char *mailbox, *tmp;
-#define PERMSTRING_SIZE 80
+	char *mailbox;
 	char permstring[PERMSTRING_SIZE];
 
 	if (!check_state_and_args(self, "SELECT", 1, 1, IMAPCS_AUTHENTICATED))
