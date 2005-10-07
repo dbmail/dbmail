@@ -412,6 +412,7 @@ int insert_messages(struct DbmailMessage *message,
 {
 	char *header;
 	u64_t headersize, bodysize, rfcsize;
+	u64_t tmpid;
 	struct element *element, *ret_path;
 	u64_t msgsize;
 
@@ -440,6 +441,8 @@ int insert_messages(struct DbmailMessage *message,
 		      __FILE__, __func__, message->id);
 		break;
 	}
+
+	tmpid = message->id; // for later removal
 
 	header = dbmail_message_hdrs_to_string(message);
 	headersize = (u64_t)dbmail_message_get_hdrs_size(message, FALSE);
@@ -549,7 +552,7 @@ int insert_messages(struct DbmailMessage *message,
 			trace(TRACE_DEBUG, "insert_messages(): delivering to external addresses");
 
 			/* Forward using the temporary stored message. */
-			if (forward(message->id, delivery->forwards, 
+			if (forward(tmpid, delivery->forwards, 
 						(ret_path ? ret_path->data : "DBMAIL-MAILER"), 
 						header, headersize) < 0)
 				/* FIXME: if forward fails, we should do something 
@@ -563,7 +566,7 @@ int insert_messages(struct DbmailMessage *message,
 	/* Always delete the temporary message, even if the delivery failed.
 	 * It is the MTA's job to requeue or bounce the message,
 	 * and our job to keep a tidy database ;-) */
-	if (db_delete_message(message->id) < 0) 
+	if (db_delete_message(tmpid) < 0) 
 		trace(TRACE_ERROR, "%s,%s: failed to delete temporary message "
 		      "[%llu]", __FILE__, __func__, message->id);
 	trace(TRACE_DEBUG,

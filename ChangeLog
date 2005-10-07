@@ -1,3 +1,13 @@
+2005-10-07  Paul J Stevens <paul@nfg.nl>
+
+	* debian/changelog, debian/control, debian/dbmail.init, 
+	  debian/dbmail.preinst:
+	remove bashisms from debian files and upgrade to policy version 3.6.2
+	* debian/dbmail.config:
+	remove bashisms from debian files and upgrade to policy version 3.6.2
+	* auth/authldap.c, debian/changelog, dm_imaputil.c, imapcommands.c:
+	fix problem in mime traversal
+
 2005-10-05  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_common.c, check_dbmail_deliver.c, check_dbmail_imapd.c, 
