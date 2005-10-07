@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: sievecmd.h 1891 2005-10-03 10:01:21Z paul $ */
+/* $Id: sievecmd.h 1893 2005-10-05 15:04:58Z paul $ */
 
 #ifndef _SIEVECMD_H
 #define _SIEVECMD_H
