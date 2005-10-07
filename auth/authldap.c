@@ -694,11 +694,15 @@ int auth_user_exists(const char *username, u64_t * user_idnr)
 	*user_idnr = 0;
 
 	if (!username) {
-		trace(TRACE_ERROR,
-		      "%s,%s: got NULL as username",__FILE__,__func__);
+		trace(TRACE_ERROR, "%s,%s: got NULL as username",
+				__FILE__,__func__);
 		return 0;
 	}
 
+	/* fall back to db-user for DBMAIL_DELIVERY_USERNAME */
+	if (strcmp(username,DBMAIL_DELIVERY_USERNAME)==0)
+		return db_user_exists(DBMAIL_DELIVERY_USERNAME, user_idnr);
+	
 	snprintf(query, AUTH_QUERY_SIZE, "(%s=%s)", _ldap_cfg.field_uid,
 		 username);
 	
@@ -710,16 +714,9 @@ int auth_user_exists(const char *username, u64_t * user_idnr)
 	trace(TRACE_DEBUG, "%s,%s: returned value is [%llu]",__FILE__,__func__,
 	      *user_idnr);
 
-
 	if (*user_idnr != 0)
 		return 1;
-	
-	
 
-	/* fall back to db-user for DBMAIL_DELIVERY_USERNAME */
-	if (strcmp(username,DBMAIL_DELIVERY_USERNAME)==0)
-		return db_user_exists(DBMAIL_DELIVERY_USERNAME, user_idnr);
-	
 	return 0;
 }
 
