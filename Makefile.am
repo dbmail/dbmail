@@ -28,10 +28,12 @@ sbin_PROGRAMS = dbmail-smtp \
 	dbmail-imapd \
 	dbmail-util \
 	dbmail-users \
+	dbmail-export \
 	dbmail-lmtpd 
 
 COMMON = dbmail-user.c \
 	dbmail-message.c \
+	dbmail-mailbox.c \
 	config.c \
 	debug.c \
 	list.c \
@@ -70,6 +72,9 @@ dbmail_util_LDADD = libdbmail.la
 
 dbmail_users_SOURCES = user.c
 dbmail_users_LDADD = libdbmail.la
+
+dbmail_export_SOURCES = export.c
+dbmail_export_LDADD = libdbmail.la
 
 dbmail_lmtpd_SOURCES = lmtp.c lmtpd.c
 dbmail_lmtpd_LDADD = libdbmail.la

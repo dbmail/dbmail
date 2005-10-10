@@ -35,14 +35,22 @@
 #include "dbmail.h"
 
 struct DbmailMailbox {
-	u64_t idnr;
-	u64_t owner_idnr;
-	gchar * name;
+	u64_t id;
+	gchar *name;
+	u64_t owner_id;
 	u64_t size;
+	GList *ids;
 };
 
-struct DbmailMailbox * dbmail_mailbox_new(u64_t mailbox_idnr);
-void * dbmail_mailbox_free(struct DbmailMailbox *self);
+struct DbmailMailbox * dbmail_mailbox_new(u64_t id);
+struct DbmailMailbox * dbmail_mailbox_open(struct DbmailMailbox *self);
+
+void dbmail_mailbox_set_id(struct DbmailMailbox *self, u64_t id);
+u64_t dbmail_mailbox_get_id(struct DbmailMailbox *self);
+
+int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *ostream);
+
+void dbmail_mailbox_free(struct DbmailMailbox *self);
 
 GList * dbmail_mailbox_orderedsubject(struct DbmailMailbox *self);
 
