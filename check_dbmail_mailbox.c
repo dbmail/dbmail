@@ -109,6 +109,16 @@ START_TEST(test_dbmail_mailbox_open)
 }
 END_TEST
 
+START_TEST(test_dbmail_mailbox_dump)
+{
+	int c = 0;
+//	FILE *o = fopen("/dev/null","w");
+	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id());
+	c = dbmail_mailbox_dump(mb,stdout);
+	dbmail_mailbox_free(mb);
+	fprintf(stderr,"dumped [%d] messages\n", c);
+}
+END_TEST
 
 Suite *dbmail_mailbox_suite(void)
 {
@@ -119,6 +129,7 @@ Suite *dbmail_mailbox_suite(void)
 	tcase_add_checked_fixture(tc_mailbox, setup, teardown);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_new);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_open);
+	tcase_add_test(tc_mailbox, test_dbmail_mailbox_dump);
 	
 	return s;
 }

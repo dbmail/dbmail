@@ -42,6 +42,7 @@ int do_showhelp(void) {
 	printf("Use this program to export your DBMail mailboxes.\n");
 	printf("     -u username   specify a user\n");
 	printf("     -m file       specify a mailbox\n");
+	printf("     -o outfile    specify the destination mbox (default ./user/mailbox)\n");
 	printf("\n");
 	printf("Summary of options for all modes:\n");
 	printf("\n");
@@ -62,7 +63,8 @@ int main(int argc, char *argv[])
 	int opt = 0, opt_prev = 0;
 	int show_help = 0;
 	int result = 0;
-	char *user = NULL,*mailbox=NULL;
+	char *user = NULL,*mailbox=NULL, *outfile=NULL;
+	FILE *ostream;
 	struct DbmailMailbox *mb = NULL;
 	u64_t useridnr = 0, mailbox_idnr = 0;
 
@@ -74,7 +76,7 @@ int main(int argc, char *argv[])
 	/* get options */
 	opterr = 0;		/* suppress error message from getopt() */
 	while ((opt = getopt(argc, argv,
-		"-u:m:" /* Major modes */
+		"-u:m:o:" /* Major modes */
 		"f:qvVh" /* Common options */ )) != -1) {
 		/* The initial "-" of optstring allows unaccompanied
 		 * options and reports them as the optarg to opt 1 (not '1') */
@@ -93,6 +95,10 @@ int main(int argc, char *argv[])
 		case 'm':
 			if (optarg && strlen(optarg))
 				mailbox = optarg;
+			break;
+		case 'o':
+			if (optarg && strlen(optarg))
+				outfile = optarg;
 			break;
 
 		/* Common options */
@@ -147,6 +153,13 @@ int main(int argc, char *argv[])
 		goto freeall;
 	}
 
+	if (! outfile) {
+		GString *t = g_string_new("");
+		g_string_printf(t, "%s/%s", user, mailbox);
+		outfile=t->str;
+		g_string_free(t,FALSE);
+	}
+
 	/* read the config file */
         if (config_read(configFile) == -1) {
                 qerrorf("Failed. Unable to read config file %s\n", configFile);
@@ -194,7 +207,14 @@ int main(int argc, char *argv[])
 	mb = dbmail_mailbox_new(mailbox_idnr);
 	mb = dbmail_mailbox_open(mb);
 
-	if (dbmail_mailbox_dump(mb,stdout) < 0)
+	if (! (ostream = fopen(outfile,"a"))) {
+		int err=errno;
+		qerrorf("opening [%s] failed [%s]", outfile, strerror(err));
+		result = -1;
+		goto freeall;
+	}
+	
+	if (dbmail_mailbox_dump(mb,ostream) < 0)
 		qerrorf("exporing failed\n");
 	else
 		qerrorf("exporting finished\n");

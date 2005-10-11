@@ -661,6 +661,7 @@ int dbmail_message_headers_cache(struct DbmailMessage *self)
 {
 	assert(self);
 	assert(self->physid);
+
 	g_mime_header_foreach(GMIME_OBJECT(self->content)->headers, _header_cache, self);
 	
 	dbmail_message_cache_tofield(self);

@@ -85,24 +85,73 @@ struct DbmailMailbox * dbmail_mailbox_open(struct DbmailMailbox *self)
 	return self;
 }
 
+#define IMAP_STANDARD_DATE "Tue Oct 11 13:06:24 2005"
+
+static size_t dump_message_to_stream(struct DbmailMessage *message, GMimeStream *ostream)
+{
+	size_t r = 0;
+	gchar *s;
+	GString *sender;
+	GString *date;
+	InternetAddressList *ialist;
+	InternetAddress *ia;
+	
+	GString *t;
+	
+	g_return_val_if_fail(GMIME_IS_MESSAGE(message->content),0);
+
+	s = dbmail_message_to_string(message);
+
+	if (! strncmp(s,"From ",5)==0) {
+		ialist = internet_address_parse_string(g_mime_message_get_sender(GMIME_MESSAGE(message->content)));
+		sender = g_string_new("nobody@foo");
+		if (ialist) {
+			ia = ialist->address;
+			if (ia) 
+				g_string_printf(sender,"%s", ia->value.addr);
+		}
+		internet_address_list_destroy(ialist);
+		
+		date = g_string_new(dbmail_message_get_internal_date(message));
+		if (date->len < 1)
+			date = g_string_new(IMAP_STANDARD_DATE);
+		
+		t = g_string_new("From ");
+		g_string_append_printf(t,"%s %s\n", sender->str, date->str);
+
+		r = g_mime_stream_write_string(ostream,t->str);
+
+		g_string_free(t,TRUE);
+		g_string_free(sender,TRUE);
+		g_string_free(date,TRUE);
+		
+	}
+	
+	r += g_mime_stream_write_string(ostream,s);
+	r += g_mime_stream_write_string(ostream,"\n");
+	
+	g_free(s);
+	return r;
+}
+
 int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 {
 	unsigned i,j;
-	GMimeStream *ostream, *fstream;
-	GMimeFilter *filter;
+	int count=0;
+	gboolean h;
+	GMimeStream *ostream;
 	GList *ids;
+	struct DbmailMessage *message = NULL;
 	GString *q = g_string_new("");
+	GString *t = g_string_new("");
 
 	ostream = g_mime_stream_file_new(file);
-	fstream = g_mime_stream_filter_new_with_stream(ostream);
-	filter = g_mime_filter_from_new(GMIME_FILTER_FROM_MODE_ESCAPE);
-	g_mime_stream_filter_add((GMimeStreamFilter *)fstream, filter);
 	
 	ids = g_list_slices(self->ids,100);
 	ids = g_list_first(ids);
 
 	while (ids) {
-		g_string_printf(q,"SELECT messageblk FROM %smessageblks b "
+		g_string_printf(q,"SELECT is_header,messageblk FROM %smessageblks b "
 				"JOIN %sphysmessage p ON b.physmessage_id=p.id "
 				"JOIN %smessages m ON m.physmessage_id=p.id "
 				"WHERE m.message_idnr IN (%s)", DBPFX, DBPFX, DBPFX,
@@ -114,22 +163,44 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 		if ((j = db_num_rows()) < 1)
 			break;
 		
-		for (i=0; i<j; i++) 
-			g_mime_stream_printf(fstream, "%s", db_get_result(i,0));
-		
+		for (i=0; i<j; i++) {
+			h = db_get_result_int(i,0);
+			if (h) {
+				if (t->len > 0) {
+					message = dbmail_message_new();
+					message = dbmail_message_init_with_string(message,t);
+					if(dump_message_to_stream(message,ostream) > 0)
+						count++;
+					dbmail_message_free(message);
+				}
+				g_string_printf(t,"%s", db_get_result(i,1));
+			} else {
+				g_string_append_printf(t,"%s",db_get_result(i,1));
+			}
+		}
 		db_free_result();
 
+		if (! g_list_next(ids))
+			break;
+		
 		ids = g_list_next(ids);
 	}
 	
+	if (self->ids && t->len) {
+		message = dbmail_message_new();
+		message = dbmail_message_init_with_string(message,t);
+		if (dump_message_to_stream(message,ostream) > 0)
+			count++;
+		dbmail_message_free(message);
+	}
+	
+	g_string_free(t,TRUE);
 	g_list_foreach(ids,(GFunc)g_free,NULL);
 	g_list_free(ids);
 	g_string_free(q,TRUE);
-	g_object_unref(filter);
 	g_object_unref(ostream);
-	g_object_unref(fstream);
 	
-	return 0;
+	return count;
 }
 
 GList * dbmail_mailbox_orderedsubject(struct DbmailMailbox *self)
