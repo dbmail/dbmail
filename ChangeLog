@@ -1,3 +1,18 @@
+2005-10-11  Paul J Stevens <paul@nfg.nl>
+
+	* ChangeLog, Makefile.am, check_dbmail_mailbox.c, dbmail-mailbox.c, 
+	  dbmail-mailbox.h, dbmailtypes.h, debian/changelog, export.c:
+	first stab at dbmail-export tool
+	* dm_imaputil.c, dm_search.c:
+	more searches using the headercache
+	* db.c, db.h, maintenance.c:
+	added check/fix for rfcsize
+	* test-scripts/testimap.py:
+	more searches using the headercache
+	* check_dbmail_mailbox.c, dbmail-mailbox.c, dbmail-message.c, 
+	  debian/changelog, export.c:
+	dbmail-export now creates valid mbox files
+
 2005-10-07  Paul J Stevens <paul@nfg.nl>
 
 	* ChangeLog:
