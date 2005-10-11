@@ -1714,17 +1714,16 @@ int perform_imap_search(unsigned int *rset, int setlen, search_key_t * sk,
 
 	case IST_HDRDATE_BEFORE:
 	case IST_HDRDATE_SINCE:
+	case IST_HDRDATE_ON:
 	case IST_IDATE:
 	case IST_FLAG:
 	case IST_HDR:
 		if ((result = db_search(rset, setlen, sk, mb)))
 			return result;
 		break;
-
 	/* 
 	 * these all have in common that all messages need to be parsed 
 	 */
-	case IST_HDRDATE_ON:
 	case IST_DATA_BODY:
 	case IST_DATA_TEXT:
 	case IST_SIZE_LARGER:
