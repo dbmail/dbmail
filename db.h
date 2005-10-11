@@ -689,6 +689,13 @@ int db_icheck_headercache(GList **lost);
 int db_set_headercache(GList *lost);
 
 /**
+ * \brief check for rfcsize in physmessage table
+ *
+ */
+int db_icheck_rfcsize(GList **lost);
+int db_update_rfcsize(GList *lost);
+
+/**
  * \brief set status of a message
  * \param message_idnr
  * \param status new status of message

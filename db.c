@@ -1436,6 +1436,75 @@ int db_icheck_isheader(GList  **lost)
 	return DM_SUCCESS;
 }
 
+int db_icheck_rfcsize(GList  **lost)
+{
+	unsigned i;
+	snprintf(query, DEF_QUERYSIZE,
+			"SELECT id FROM %sphysmessage WHERE rfcsize=0",
+			DBPFX);
+	
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: could not access physmessage table",
+		     __FILE__, __func__);
+		return DM_EQUERY;
+	}
+	for (i = 0; i < db_num_rows(); i++) 
+		*(GList **)lost = g_list_append(*(GList **)lost, GUINT_TO_POINTER((unsigned)db_get_result_u64(i, 0)));
+
+	db_free_result();
+
+	return DM_SUCCESS;
+}
+
+int db_update_rfcsize(GList *lost) 
+{
+	u64_t pmsid = -1;
+	GString *q = g_string_new("");
+	struct DbmailMessage *msg;
+	if (! lost)
+		return DM_SUCCESS;
+
+	lost = g_list_first(lost);
+	
+	db_begin_transaction();
+	while(lost) {
+		pmsid = (u64_t)(GPOINTER_TO_UINT(lost->data));
+		
+		if (! (msg = dbmail_message_new())) {
+			db_rollback_transaction();
+			return DM_EQUERY;
+		}
+
+		if (! (msg = dbmail_message_retrieve(msg, pmsid, DBMAIL_MESSAGE_FILTER_FULL))) {
+			trace(TRACE_WARNING,"%s,%s: error retrieving physmessage: [%llu]", 
+					__FILE__, __func__,
+					pmsid);
+			db_rollback_transaction();
+			fprintf(stderr,"E");
+		} else {
+			g_string_printf(q,"UPDATE %sphysmessage SET rfcsize = %llu "
+					"WHERE id = %llu", DBPFX, (u64_t)dbmail_message_get_size(msg,TRUE), 
+					pmsid);
+			if (db_query(q->str)==-1) {
+				trace(TRACE_WARNING,"%s,%s: error setting rfcsize physmessage: [%llu]", 
+					__FILE__, __func__, pmsid);
+				dbmail_message_free(msg);
+				db_rollback_transaction();
+				fprintf(stderr,"E");
+			} else {
+				fprintf(stderr,".");
+			}
+			
+		}
+		dbmail_message_free(msg);
+		if (! g_list_next(lost))
+			break;
+		lost = g_list_next(lost);
+	}
+	db_commit_transaction();
+
+	return DM_SUCCESS;
+}
 
 int db_set_headercache(GList *lost)
 {

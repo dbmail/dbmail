@@ -52,6 +52,7 @@ def getMessageStrict():
     """)
     m.add_header("To","testuser@foo.org")
     m.add_header("From","somewher@foo.org")
+    m.add_header("Date","Mon, 26 Sep 2005 13:26:39 +0200")
     m.add_header("Subject","dbmail test message")
     return m
 
@@ -60,6 +61,7 @@ def getMultiPart():
     m.attach(getMessageStrict())
     m.add_header("To","testaddr@bar.org")
     m.add_header("From","testuser@foo.org")
+    m.add_header("Date","Sun, 25 Sep 2005 13:26:39 +0200")
     m.add_header("Subject","dbmail multipart message")
     return m
     
@@ -394,7 +396,6 @@ class testImapServer(unittest.TestCase):
         self.assertEquals(self.o.fetch("1:*","(Flags)")[0],'OK')
         result=self.o.search(None, "UNDELETED", "BODY", "test")
         self.assertEquals(result[0],'OK')
-        print result
 #        self.failIf(result[1]==[''])
         result=self.o.search(None, "RECENT", "HEADER", "X-OfflineIMAP-901701146-4c6f63616c4d69726a616d-494e424f58", "1086726519-0790956581151")
         self.assertEquals(result[0],'OK')
@@ -408,6 +409,9 @@ class testImapServer(unittest.TestCase):
         self.assertEquals(result[0],'OK')
         result=self.o.search(None, "UNDELETED", "HEADER", "TO", "testuser", "SENTBEFORE", "1-Jan-2004")
         self.assertEquals(result[0],'OK')
+        result=self.o.search(None, "UNDELETED", "HEADER", "TO", "testuser", "SENTON", "26-Sep-2005")
+        self.assertEquals(result[0],'OK')
+        print result
 
     def testSelect(self):
         """ 
@@ -518,6 +522,7 @@ class testImapServer(unittest.TestCase):
         self.assertEquals(self.o.unsubscribe('testunsub'),('OK', ['UNSUBSCRIBE completed']))
         
     def tearDown(self):
+        return
         try:
             dirs = []
             for d in self.o.list()[1]:

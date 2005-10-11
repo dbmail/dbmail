@@ -91,6 +91,7 @@ int db_search(unsigned int *rset, unsigned setlen, search_key_t * sk, mailbox_t 
 {
 	int msn;
 	unsigned i;
+	int date;
 	
 	GString *tmp = g_string_new("");
 
@@ -101,21 +102,24 @@ int db_search(unsigned int *rset, unsigned setlen, search_key_t * sk, mailbox_t 
 	memset(rset, 0, setlen * sizeof(int));
 
 	switch (sk->type) {
+		case IST_HDRDATE_ON:
 		case IST_HDRDATE_SINCE:
 		case IST_HDRDATE_BEFORE:
 
+		date = num_from_imapdate(sk->search);
 		if (sk->type == IST_HDRDATE_SINCE)
-			g_string_printf(tmp,">= '%d'", num_from_imapdate(sk->search));
-		else	
-			g_string_printf(tmp,"< '%d'", num_from_imapdate(sk->search));
+			g_string_printf(tmp,"datefield >= %d", date);
+		else if (sk->type == IST_HDRDATE_BEFORE)
+			g_string_printf(tmp,"datefield < %d", date);
+		else
+			g_string_printf(tmp,"datefield >= %d AND datefield < %d", date, date+1);
 		
 		snprintf(query, DEF_QUERYSIZE,	
 			"SELECT message_idnr FROM %smessages msg "
 			"JOIN %sphysmessage phys ON msg.physmessage_id = phys.id "
 			"JOIN %sdatefield df ON df.physmessage_id=phys.id "
-			"WHERE mailbox_idnr= %llu "
-			"AND msg.status < '%d' "
-			"AND datefield %s", DBPFX, DBPFX, DBPFX,
+			"WHERE mailbox_idnr= %llu AND msg.status < '%d' "
+			"AND %s", DBPFX, DBPFX, DBPFX,
 			mb->uid, MESSAGE_STATUS_DELETE, tmp->str);
 			break;
 			
@@ -133,14 +137,11 @@ int db_search(unsigned int *rset, unsigned setlen, search_key_t * sk, mailbox_t 
 			break;
 
 		case IST_IDATE:
-	       /** \todo this next solution (pms.%s) is really dirty. If anything,
-		   the IMAP search algorithm is dirty, and should be fixed */
 		snprintf(query, DEF_QUERYSIZE,
-			 "SELECT msg.message_idnr FROM %smessages msg, %sphysmessage pms "
-			 "WHERE msg.mailbox_idnr = '%llu' "
-			 "AND msg.physmessage_id = pms.id "
-			 "AND msg.status < '%d' "
-			 "AND pms.%s", DBPFX, DBPFX, 
+			 "SELECT message_idnr FROM %smessages m "
+			 "JOIN %sphysmessage p ON m.physmessage_id=p.id "
+			 "WHERE m.mailbox_idnr = '%llu' "
+			 "AND m.status < '%d' AND p.%s", DBPFX, DBPFX, 
 			 mb->uid, MESSAGE_STATUS_DELETE, sk->search);
 		break;
 		

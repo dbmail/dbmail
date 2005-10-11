@@ -268,8 +268,7 @@ typedef struct {
 typedef struct {
 	u64_t uid, msguidnext, owner_idnr;
 	char *name;
-	unsigned no_select, no_inferiors;
-	unsigned exists, recent, unseen;
+	unsigned no_select, no_inferiors, exists, recent, unseen;
 	unsigned flags;
 	int permission;
 	u64_t *seq_list;

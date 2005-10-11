@@ -1,5 +1,17 @@
 2005-10-07  Paul J Stevens <paul@nfg.nl>
 
+	* ChangeLog:
+	blah
+	* auth/authldap.c, check_dbmail_common.c, check_dbmail_imapd.c, db.c, db.h, 
+	  dbmail-imapsession.c, dbmail-message.c, dbmail.h, dbmailtypes.h, 
+	  dbmd5.c, dbmd5.h, dbmsgbuf.c, imapcommands.c, mime.c, mime.h, misc.c, 
+	  pop3.c, serverchild.c, sievecmd.c, sievecmd.h, sort/Makefile.am, 
+	  sort/sortsieve.c, sort/sortsieve.h, test-scripts/testimap.py, 
+	  timsieve.c, timsieve.h, timsieved.c:
+	resync git tree
+	* dbmail-message.c, pipe.c:
+	fix delivery problem where temporary message record was not copied to
+	final record
 	* debian/changelog, debian/control, debian/dbmail.init, 
 	  debian/dbmail.preinst:
 	remove bashisms from debian files and upgrade to policy version 3.6.2

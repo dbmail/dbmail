@@ -627,12 +627,57 @@ static int do_is_header(void)
 	return 0;
 }
 
+static int do_rfc_size(void)
+{
+	time_t start, stop;
+	GList *lost = NULL;
+
+	if (no_to_all) {
+		qprintf("\nChecking DBMAIL for rfcsize field...\n");
+	}
+	if (yes_to_all) {
+		qprintf("\nRepairing DBMAIL for rfcsize field...\n");
+	}
+	time(&start);
+
+	if (db_icheck_rfcsize(&lost) < 0) {
+		qerrorf("Failed. An error occured. Please check log.\n");
+		return -1;
+	}
+
+	if (g_list_length(lost) > 0) {
+		qerrorf("Ok. Found [%d] missing rfcsize values.\n", g_list_length(lost));
+		has_errors = 1;
+	} else {
+		qprintf("Ok. Found [%d] missing rfcsize values.\n", g_list_length(lost));
+	}
+
+	if (yes_to_all) {
+		if (db_update_rfcsize(lost) < 0) {
+			qerrorf("Error setting the is_header flags");
+			has_errors = 1;
+		}
+	}
+
+	g_list_free(lost);
+
+	time(&stop);
+	qverbosef("--- checking rfcsize field took %g seconds\n",
+	       difftime(stop, start));
+	
+	return 0;
+
+}
+
 int do_header_cache(void)
 {
 	time_t start, stop;
 	GList *lost = NULL;
 	
 	if (do_is_header())
+		return -1;
+	
+	if (do_rfc_size())
 		return -1;
 	
 	if (no_to_all) 

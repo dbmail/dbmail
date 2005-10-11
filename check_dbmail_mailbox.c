@@ -58,6 +58,13 @@ static u64_t get_first_user_idnr(void)
 	return user_idnr;
 }
 
+static u64_t get_mailbox_id(void)
+{
+	u64_t id, owner;
+	auth_user_exists("testuser1",&owner);
+	db_find_create_mailbox("INBOX", owner, &id);
+	return id;
+}
 
 void setup(void)
 {
@@ -86,7 +93,33 @@ void teardown(void)
  *
  *
  ***************************************************************************************/
-		
+
+START_TEST(test_dbmail_mailbox_new)
+{
+	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id());
+	fail_unless(mb!=NULL, "dbmail_mailbox_new failed");
+}
+END_TEST
+
+START_TEST(test_dbmail_mailbox_open)
+{
+	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id());
+	mb = dbmail_mailbox_open(mb);
+	fail_unless(mb!=NULL, "dbmail_mailbox_open failed");
+}
+END_TEST
+
+START_TEST(test_dbmail_mailbox_dump)
+{
+	int c = 0;
+//	FILE *o = fopen("/dev/null","w");
+	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id());
+	c = dbmail_mailbox_dump(mb,stdout);
+	dbmail_mailbox_free(mb);
+	fprintf(stderr,"dumped [%d] messages\n", c);
+}
+END_TEST
+
 Suite *dbmail_mailbox_suite(void)
 {
 	Suite *s = suite_create("Dbmail Mailbox");
@@ -94,6 +127,9 @@ Suite *dbmail_mailbox_suite(void)
 	TCase *tc_mailbox = tcase_create("Mailbox");
 	suite_add_tcase(s, tc_mailbox);
 	tcase_add_checked_fixture(tc_mailbox, setup, teardown);
+	tcase_add_test(tc_mailbox, test_dbmail_mailbox_new);
+	tcase_add_test(tc_mailbox, test_dbmail_mailbox_open);
+	tcase_add_test(tc_mailbox, test_dbmail_mailbox_dump);
 	
 	return s;
 }
