@@ -85,7 +85,7 @@ struct DbmailMailbox * dbmail_mailbox_open(struct DbmailMailbox *self)
 	return self;
 }
 
-#define IMAP_STANDARD_DATE "Tue Oct 11 13:06:24 2005"
+#define FROM_STANDARD_DATE "Tue Oct 11 13:06:24 2005"
 
 static size_t dump_message_to_stream(struct DbmailMessage *message, GMimeStream *ostream)
 {
@@ -114,7 +114,7 @@ static size_t dump_message_to_stream(struct DbmailMessage *message, GMimeStream 
 		
 		date = g_string_new(dbmail_message_get_internal_date(message));
 		if (date->len < 1)
-			date = g_string_new(IMAP_STANDARD_DATE);
+			date = g_string_new(FROM_STANDARD_DATE);
 		
 		t = g_string_new("From ");
 		g_string_append_printf(t,"%s %s\n", sender->str, date->str);

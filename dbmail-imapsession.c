@@ -168,6 +168,7 @@ void dbmail_imap_session_delete(struct ImapSession * self)
 #define IMAP_CACHE_MEMDUMP 1
 #define IMAP_CACHE_TMPDUMP 2
 
+
 static u64_t _imap_cache_set_dump(char *buf, int dumptype)
 {
 	u64_t outcnt = 0;
@@ -196,16 +197,16 @@ static u64_t _imap_cache_update(struct ImapSession *self, message_filter_t filte
 	char *buf = NULL;
 	char *rfc = NULL;
 
+	trace(TRACE_DEBUG,"%s,%s: cache message [%llu] filter [%d]",
+			__FILE__, __func__, self->msg_idnr, filter);
+
 	if (cached_msg.file_dumped == 1 && cached_msg.num == self->msg_idnr) {
 		outcnt = cached_msg.dumpsize;
 	} else {
-		/* causing double-frees here. Defer freeing dmsg to close_cache() */
-		/*
-		if (cached_msg.dmsg != NULL) {
+		if (cached_msg.dmsg != NULL && GMIME_IS_MESSAGE(cached_msg.dmsg->content)) {
 			dbmail_message_free(cached_msg.dmsg);
 			cached_msg.dmsg = NULL;
 		}
-		*/
 
 		cached_msg.dmsg = db_init_fetch(self->msg_idnr, DBMAIL_MESSAGE_FILTER_FULL);
 		buf = dbmail_message_to_string(cached_msg.dmsg);
@@ -247,7 +248,7 @@ static u64_t _imap_cache_update(struct ImapSession *self, message_filter_t filte
 		break;
 
 	}
-	
+	trace(TRACE_DEBUG,"%s,%s: cache size [%llu]", __FILE__, __func__, outcnt);	
 	return outcnt;
 }
 
@@ -805,7 +806,7 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 	if (self->fi->getBodyTotal || self->fi->getBodyTotalPeek) {
 
 		SEND_SPACE;
-
+		
 		if (dbmail_imap_session_bodyfetch_get_last_octetcnt(self) == 0) {
 			mrewind(cached_msg.memdump);
 			dbmail_imap_session_printf(self, "BODY[] {%llu}\r\n", cached_msg.dumpsize);
