@@ -1,3 +1,15 @@
+2005-10-12  Paul J Stevens <paul@nfg.nl>
+
+	* db.c, db.h, dbmail-message.c, dbmailtypes.h, maintenance.c, pipe.c, 
+	  test-scripts/testimap.py:
+	resync before release 2.1.3
+	* dbmail-message.c, dbmail-message.h:
+	cleanup mime-filter in message initialization
+	* dbmail-imapsession.c:
+	fix memory leakage in cache initializer
+	* dbmail-mailbox.c:
+	change default date define for From escape in mailbox_dump
+
 2005-10-11  Paul J Stevens <paul@nfg.nl>
 
 	* ChangeLog, Makefile.am, check_dbmail_mailbox.c, dbmail-mailbox.c, 
