@@ -1,5 +1,5 @@
 /*
-  $Id: dbmail-message.c 1897 2005-10-11 11:59:17Z paul $
+  $Id: dbmail-message.c 1893 2005-10-05 15:04:58Z paul $
 
   Copyright (C) 2004-2005 NFG Net Facilities Group BV, info@nfg.nl
 
@@ -121,6 +121,12 @@ gchar * get_crlf_encoded(gchar *string)
 
 }
 
+static void dump_to_file(const char *buf)
+{
+	FILE *f = fopen("/tmp/dbmail.cache","a");
+	fprintf(f,"%s",buf);
+	fclose(f);
+}
 
 
 
@@ -203,7 +209,7 @@ int dbmail_message_set_class(struct DbmailMessage *self, int klass)
 /* \brief accessor for the type flag
  * \return the flag
  */
-int dbmail_message_get_class(struct DbmailMessage *self)
+int dbmail_message_get_class(const struct DbmailMessage *self)
 {
 	return self->klass;
 }
@@ -215,17 +221,15 @@ int dbmail_message_get_class(struct DbmailMessage *self)
  */
 struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *self, const GString *content)
 {
+
 	_set_content(self,content);
-	/* If there's no From header and no Subject assume it's a message-part and re-init */
-	if (dbmail_message_get_class(self) == DBMAIL_MESSAGE) {
-		if ((! g_mime_message_get_header(GMIME_MESSAGE(self->content),"From")) && 
-				(! g_mime_message_get_header(GMIME_MESSAGE(self->content),"Subject"))) {
-			dbmail_message_set_class(self, DBMAIL_MESSAGE_PART);
-			g_object_unref(self->content);
-			self->content=NULL;
-			_set_content(self, content);
-		}
+	if (! GMIME_IS_MESSAGE(self->content)) {
+		dbmail_message_set_class(self, DBMAIL_MESSAGE_PART);
+		g_object_unref(self->content);
+		self->content=NULL;
+		_set_content(self, content);
 	}
+	
 	_map_headers(self);
 	
 	return self;
@@ -246,6 +250,7 @@ struct DbmailMessage * dbmail_message_init_with_stream(struct DbmailMessage *sel
 
 static void _set_content(struct DbmailMessage *self, const GString *content)
 {
+
 	GMimeStream *stream = g_mime_stream_mem_new_with_buffer(content->str, content->len);
 	_set_content_from_stream(self, stream, DBMAIL_STREAM_PIPE);
 	g_object_unref(stream);
@@ -257,7 +262,7 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 	 * db-insertion
 	 */
 	
-	GMimeStream *ostream, *fstream, *bstream, *mstream;
+	GMimeStream *fstream, *bstream, *mstream;
 	GMimeFilter *filter;
 	GMimeParser *parser;
 	char *buf = g_new0(char, MESSAGE_MAX_LINE_SIZE);
@@ -269,35 +274,28 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 	 */
         bstream = g_mime_stream_buffer_new(stream,GMIME_STREAM_BUFFER_CACHE_READ);
 	mstream = g_mime_stream_mem_new();
+
+	fstream = g_mime_stream_filter_new_with_stream(mstream);
+	filter = g_mime_filter_crlf_new(GMIME_FILTER_CRLF_DECODE,GMIME_FILTER_CRLF_MODE_CRLF_DOTS);
+	g_mime_stream_filter_add((GMimeStreamFilter *) fstream, filter);
+	
         while (g_mime_stream_buffer_gets(bstream, buf, MESSAGE_MAX_LINE_SIZE)) {
                 if ((type==DBMAIL_STREAM_LMTP) && (strncmp(buf,".\r\n",3)==0))
 			break;
 		g_mime_stream_write_string(mstream, buf);
 	}
-	g_mime_stream_reset(mstream);
 	g_free(buf);
 	
-	/* 
-	 * filter mstream by decoding crlf and dot lines
-	 * ostream will hold the decoded data
-	 */
-	ostream = g_mime_stream_mem_new();
-	fstream = g_mime_stream_filter_new_with_stream(ostream);
-	filter = g_mime_filter_crlf_new(GMIME_FILTER_CRLF_DECODE,GMIME_FILTER_CRLF_MODE_CRLF_DOTS);
-	g_mime_stream_filter_add((GMimeStreamFilter *) fstream, filter);
-	g_mime_stream_write_to_stream(mstream,fstream);
-	g_mime_stream_reset(ostream);
-	
-	/*
-	 * finally construct a message by parsing ostream
-	 */
-	parser = g_mime_parser_new_with_stream(ostream);
+	g_mime_stream_reset(mstream);
+	parser = g_mime_parser_new_with_stream(mstream);
 
 	switch (dbmail_message_get_class(self)) {
 		case DBMAIL_MESSAGE:
+			trace(TRACE_DEBUG,"%s,%s: parse message",__FILE__,__func__);
 			self->content = GMIME_OBJECT(g_mime_parser_construct_message(parser));
 			break;
 		case DBMAIL_MESSAGE_PART:
+			trace(TRACE_DEBUG,"%s,%s: parse part",__FILE__,__func__);
 			self->content = GMIME_OBJECT(g_mime_parser_construct_part(parser));
 			break;
 	}
@@ -305,7 +303,6 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 	
 	g_object_unref(filter);
 	g_object_unref(fstream);
-	g_object_unref(ostream);
 	g_object_unref(bstream);
 	g_object_unref(mstream);
 	g_object_unref(parser);
@@ -329,7 +326,7 @@ void dbmail_message_set_physid(struct DbmailMessage *self, u64_t physid)
 {
 	self->physid = physid;
 }
-u64_t dbmail_message_get_physid(struct DbmailMessage *self)
+u64_t dbmail_message_get_physid(const struct DbmailMessage *self)
 {
 	return self->physid;
 }
@@ -340,7 +337,7 @@ void dbmail_message_set_internal_date(struct DbmailMessage *self, char *internal
 		g_string_printf(self->internal_date,"%s", internal_date);
 }
 
-gchar * dbmail_message_get_internal_date(struct DbmailMessage *self)
+gchar * dbmail_message_get_internal_date(const struct DbmailMessage *self)
 {
 	if (self->internal_date->len > 0)
 		return self->internal_date->str;
@@ -353,17 +350,16 @@ void dbmail_message_set_header(struct DbmailMessage *self, const char *header, c
 	g_mime_message_set_header(GMIME_MESSAGE(self->content), header, value);
 }
 
-gchar * dbmail_message_get_header(struct DbmailMessage *self, const char *header)
+gchar * dbmail_message_get_header(const struct DbmailMessage *self, const char *header)
 {
 	return (gchar *)g_mime_object_get_header(GMIME_OBJECT(self->content), header);
 }
-
 /* dump message(parts) to char ptrs */
-gchar * dbmail_message_to_string(struct DbmailMessage *self) 
+gchar * dbmail_message_to_string(const struct DbmailMessage *self) 
 {
 	return g_mime_object_to_string(GMIME_OBJECT(self->content));
 }
-gchar * dbmail_message_hdrs_to_string(struct DbmailMessage *self)
+gchar * dbmail_message_hdrs_to_string(const struct DbmailMessage *self)
 {
 	gchar *h;
 	GString *hs;
@@ -379,7 +375,7 @@ gchar * dbmail_message_hdrs_to_string(struct DbmailMessage *self)
 	return h;
 	
 }
-gchar * dbmail_message_body_to_string(struct DbmailMessage *self)
+gchar * dbmail_message_body_to_string(const struct DbmailMessage *self)
 {
 	return g_mime_object_get_body(GMIME_OBJECT(self->content));
 }
@@ -390,7 +386,7 @@ gchar * dbmail_message_body_to_string(struct DbmailMessage *self)
  * Don't cache these values to allow changes in message content!!
  * 
  */
-size_t dbmail_message_get_size(struct DbmailMessage *self, gboolean crlf)
+size_t dbmail_message_get_size(const struct DbmailMessage *self, gboolean crlf)
 {
 	char *s, *t; size_t r;
 	s = dbmail_message_to_string(self);
@@ -406,7 +402,7 @@ size_t dbmail_message_get_size(struct DbmailMessage *self, gboolean crlf)
 	g_free(s);
 	return r;
 }
-size_t dbmail_message_get_hdrs_size(struct DbmailMessage *self, gboolean crlf)
+size_t dbmail_message_get_hdrs_size(const struct DbmailMessage *self, gboolean crlf)
 {
 	char *s, *t; size_t r;
 	s = dbmail_message_hdrs_to_string(self);
@@ -422,7 +418,7 @@ size_t dbmail_message_get_hdrs_size(struct DbmailMessage *self, gboolean crlf)
 	g_free(s);
 	return r;
 }
-size_t dbmail_message_get_body_size(struct DbmailMessage *self, gboolean crlf)
+size_t dbmail_message_get_body_size(const struct DbmailMessage *self, gboolean crlf)
 {
 	char *s, *t; size_t r;
 	s = dbmail_message_body_to_string(self);
@@ -468,7 +464,12 @@ static struct DbmailMessage * _retrieve(struct DbmailMessage *self, char *query_
 
 	db_free_result();
 	
-	return dbmail_message_init_with_string(self,message);
+
+	self = dbmail_message_init_with_string(self,message);
+	
+	g_string_free(message,TRUE);
+	
+	return self;
 }
 
 /*
@@ -657,12 +658,12 @@ int _message_insert(struct DbmailMessage *self,
 
 
 
-int dbmail_message_headers_cache(struct DbmailMessage *self)
+int dbmail_message_headers_cache(const struct DbmailMessage *self)
 {
 	assert(self);
 	assert(self->physid);
 
-	g_mime_header_foreach(GMIME_OBJECT(self->content)->headers, _header_cache, self);
+	g_mime_header_foreach(GMIME_OBJECT(self->content)->headers, _header_cache, (gpointer)self);
 	
 	dbmail_message_cache_tofield(self);
 	dbmail_message_cache_ccfield(self);
@@ -675,7 +676,7 @@ int dbmail_message_headers_cache(struct DbmailMessage *self)
 	return 1;
 }
 
-static int _header_get_id(struct DbmailMessage *self, const char *header, u64_t *id)
+static int _header_get_id(const struct DbmailMessage *self, const char *header, u64_t *id)
 {
 	u64_t tmp;
 	gpointer cacheid;
@@ -809,7 +810,7 @@ static void insert_field_cache(u64_t physid, const char *field, const char *valu
 }
 
 
-void dbmail_message_cache_tofield(struct DbmailMessage *self)
+void dbmail_message_cache_tofield(const struct DbmailMessage *self)
 {
 	InternetAddressList *list;
 
@@ -819,7 +820,7 @@ void dbmail_message_cache_tofield(struct DbmailMessage *self)
 	insert_address_cache(self->physid, "to", list);
 }
 
-void dbmail_message_cache_ccfield(struct DbmailMessage *self)
+void dbmail_message_cache_ccfield(const struct DbmailMessage *self)
 {
 	InternetAddressList *list;
 	
@@ -829,7 +830,7 @@ void dbmail_message_cache_ccfield(struct DbmailMessage *self)
 	insert_address_cache(self->physid, "cc", list);
 	
 }
-void dbmail_message_cache_fromfield(struct DbmailMessage *self)
+void dbmail_message_cache_fromfield(const struct DbmailMessage *self)
 {
 	const char *addr;
 	InternetAddressList *list;
@@ -842,7 +843,7 @@ void dbmail_message_cache_fromfield(struct DbmailMessage *self)
 	internet_address_list_destroy(list);
 
 }
-void dbmail_message_cache_replytofield(struct DbmailMessage *self)
+void dbmail_message_cache_replytofield(const struct DbmailMessage *self)
 {
 	const char *addr;
 	InternetAddressList *list;
@@ -856,7 +857,7 @@ void dbmail_message_cache_replytofield(struct DbmailMessage *self)
 
 }
 
-void dbmail_message_cache_datefield(struct DbmailMessage *self)
+void dbmail_message_cache_datefield(const struct DbmailMessage *self)
 {
 	char *value;
 	time_t date;
@@ -877,7 +878,7 @@ void dbmail_message_cache_datefield(struct DbmailMessage *self)
 	g_free(value);
 }
 
-void dbmail_message_cache_subjectfield(struct DbmailMessage *self)
+void dbmail_message_cache_subjectfield(const struct DbmailMessage *self)
 {
 	char *value;
 	char *subject;
@@ -903,7 +904,7 @@ void dbmail_message_cache_subjectfield(struct DbmailMessage *self)
 	g_free(subject);
 }
 
-void dbmail_message_cache_referencesfield(struct DbmailMessage *self)
+void dbmail_message_cache_referencesfield(const struct DbmailMessage *self)
 {
 	GMimeReferences *refs, *head;
 	const char *field;
