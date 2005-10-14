@@ -1662,7 +1662,6 @@ int _ic_fetch(struct ImapSession *self)
 	u64_t fetch_max;
 	unsigned fn;
 	int result, idx;
-	int insert_rfcsize;
 	char *endptr;
 	char *lastchar = NULL;
 
@@ -1759,39 +1758,30 @@ int _ic_fetch(struct ImapSession *self)
 		trace(TRACE_DEBUG,"%s,%s: fetch_start [%llu] fetch_end [%llu]",
 				__FILE__, __func__, fetch_start, fetch_end);
 		
-		if (! (self->fi->msgparse_needed || self->fi->hdrparse_needed)) {
-			if (dbmail_imap_session_fetch_get_unparsed(self, fetch_start, fetch_end) < 0)
-				return -1;
+		if (dbmail_imap_session_fetch_get_unparsed(self, fetch_start, fetch_end) < 0)
+			return -1;
 			
-		} else {
-			/* parsing required */
-			for (i = fetch_start; i <= fetch_end; i++) {
-				self->msg_idnr = (self->use_uid ? i : ud->mailbox.seq_list[i]);
-				insert_rfcsize = 0;
+		for (i = fetch_start; i <= fetch_end; i++) {
+			self->msg_idnr = (self->use_uid ? i : ud->mailbox.seq_list[i]);
+			if (self->use_uid) {
+				if (i > fetch_max) {
+					/* passed the last one */
+					dbmail_imap_session_printf(self, "%s OK FETCH completed\r\n", self->tag);
+					return 0;
+				}
 
-				if (self->use_uid) {
-					if (i > fetch_max) {
-						/* passed the last one */
-						dbmail_imap_session_printf(self, "%s OK FETCH completed\r\n", self->tag);
-						return 0;
-					}
+				/* check if the message with this UID belongs to this mailbox */
+				if (binary_search (ud->mailbox.seq_list, ud->mailbox.exists, i, &fn) == -1) 
+					continue;
 
-					/* check if the message with this UID belongs to this mailbox */
-					if (binary_search (ud->mailbox.seq_list, ud->mailbox.exists, i, &fn) == -1) {
-						continue;
-					}
+				dbmail_imap_session_printf(self, "* %u FETCH (", fn + 1);
+			} else
+				dbmail_imap_session_printf(self, "* %llu FETCH (", i + 1);
 
-					dbmail_imap_session_printf(self, "* %u FETCH (", fn + 1);
-
-				} else
-					dbmail_imap_session_printf(self, "* %llu FETCH (", i + 1);
-
-				trace(TRACE_DEBUG, "Fetching msgID %llu (fetch num %llu)", self->msg_idnr, i + 1);
-				/* go fetch the items */
-				fflush(self->ci->tx);
-				if (dbmail_imap_session_fetch_get_items(self) < 0)
-					return -1;
-			}
+			/* go fetch the items */
+			fflush(self->ci->tx);
+			if (dbmail_imap_session_fetch_get_items(self) < 0)
+				return -1;
 		}
 	}
 

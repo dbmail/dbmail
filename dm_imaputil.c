@@ -35,6 +35,10 @@
 #define SEND_BUF_SIZE 1024
 #define MAX_ARGS 512
 
+extern db_param_t _db_params;
+#define DBPFX _db_params.pfx
+
+
 /* cache */
 extern cache_t cached_msg;
 
@@ -689,6 +693,72 @@ GMimeObject * imap_get_partspec(const GMimeObject *message, const char *partspec
 		}
 	}
 	return object;
+}
+
+/* get headers or not */
+GList * imap_message_fetch_headers(u64_t physid, const GList *headers, gboolean not)
+{
+	unsigned i=0, rows=0;
+	GList *res = NULL, *tlist=NULL;
+	GRelation *rel = g_relation_new(2);
+	GString *h;
+	GString *q = g_string_new("");
+	gchar *name, *value;
+	GTuples *tpl;
+
+        g_relation_index(rel, 0, g_str_hash, g_str_equal);
+	
+	g_string_printf(q,"SELECT headername,headervalue FROM %sheadervalue v "
+			"JOIN %sheadername n ON v.headername_id=n.id "
+			"WHERE v.physmessage_id=%llu AND n.headername ",
+			DBPFX,DBPFX,physid);
+	
+	h = g_list_join((GList *)headers,"\",\"");
+	g_string_append_printf(q,"%s IN (\"%s\")", not ? "NOT": "", h->str);
+	g_string_free(h,TRUE);
+	
+	if (db_query(q->str)==-1) {
+		g_string_free(q,TRUE);
+		return res;
+	}
+	
+	rows = db_num_rows();
+
+	if (not == FALSE)
+		tlist = (GList *)headers;
+	
+	for(i=0;i<rows;i++) {
+		name = (char *)db_get_result(i,0);
+		value = (char *)db_get_result(i,1);
+		tpl = g_relation_select(rel,name,0);
+		if (not == TRUE && tpl->len == 0)
+			tlist = g_list_append(tlist,strdup(name));
+		g_tuples_destroy(tpl);
+		g_relation_insert(rel,name,value);
+	}
+	db_free_result();
+
+	tlist = g_list_first(tlist);
+	while(tlist) {
+		tpl = g_relation_select(rel,tlist->data,0);
+		for (i=0; i<tpl->len; i++)
+			res = g_list_append_printf(res, "%s: %s", (char *)tlist->data, (char *)g_tuples_index(tpl,i,1));
+		g_tuples_destroy(tpl);
+
+		if (! g_list_next(tlist))
+			break;
+		tlist = g_list_next(tlist);
+	}
+
+	if (not) {
+		g_list_foreach(tlist,(GFunc)g_free,NULL);
+		g_list_free(tlist);
+	}
+	
+	g_string_free(q,TRUE);
+	g_relation_destroy(rel);
+	
+	return res;
 }
 
 

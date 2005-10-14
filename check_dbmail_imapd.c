@@ -37,6 +37,7 @@
 extern char *configFile;
 extern db_param_t _db_params;
 
+#define DBPFX _db_params.pfx
 
 /* we need this one because we can't directly link imapd.o */
 int imap_before_smtp = 0;
@@ -431,6 +432,33 @@ START_TEST(test_imap_get_partspec)
 }
 END_TEST
 
+
+
+START_TEST(test_imap_message_fetch_headers)
+{
+	GList *res;
+	u64_t physid=640583;
+	GString *headers = g_string_new("From To Cc Subject Date Message-ID Priority X-Priority References Newsgroups In-Reply-To Content-Type");
+	GList *h = g_string_split(headers," ");
+	
+	res = imap_message_fetch_headers(physid,h,0);
+	fail_unless(g_list_length(res) > 0 && g_list_length(res) < g_list_length(h),"imap_message_fetch_headers failed");
+
+	res = imap_message_fetch_headers(physid,h,1);
+	fail_unless(g_list_length(res) > 0 && g_list_length(res) > g_list_length(h),"imap_message_fetch_headers failed");
+
+	g_string_free(headers,TRUE);
+	
+	g_list_foreach(res,(GFunc)g_free,NULL);
+	g_list_free(res);
+	
+	g_list_foreach(h,(GFunc)g_free,NULL);
+	g_list_free(h);
+
+
+}
+END_TEST
+
 START_TEST(test_g_list_slices)
 {
 	unsigned i=0;
@@ -633,6 +661,7 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_session, test_imap_get_structure);
 	tcase_add_test(tc_session, test_imap_get_envelope);
 	tcase_add_test(tc_session, test_imap_get_partspec);
+	tcase_add_test(tc_session, test_imap_message_fetch_headers);
 	
 	tcase_add_checked_fixture(tc_mime, setup, teardown);
 	tcase_add_test(tc_mime, test_mime_readheader);
