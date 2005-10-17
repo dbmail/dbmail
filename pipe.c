@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: pipe.c 1896 2005-10-07 14:49:00Z paul $
+/* $Id: pipe.c 1902 2005-10-17 12:52:47Z paul $
  *
  * Functions for reading the pipe from the MTA */
 
