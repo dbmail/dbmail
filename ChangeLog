@@ -1,5 +1,8 @@
 2005-10-17  Paul J Stevens <paul@nfg.nl>
 
+	* ChangeLog, check_dbmail_imapd.c, db.c, pipe.c, pop3.c, 
+	  test-scripts/testpop.py:
+	fixed pop3 and added testsuite for pop3d
 	* dbmail-message.c:
 	add content-type as headervalue during insertion
 	* check_dbmail_imapd.c, dbmail-imapsession.c, dm_imaputil.c, dm_imaputil.h, 
