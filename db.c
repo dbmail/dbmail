@@ -2223,14 +2223,20 @@ int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
 	char** all_mailbox_names;
 	u64_t *all_mailbox_owners;
 	unsigned n_rows;
-
+	char *matchname;
+	
 	assert(mailboxes != NULL);
 	assert(nr_mailboxes != NULL);
 
 	*mailboxes = NULL;
 	*nr_mailboxes = 0;
 	
-	trace(TRACE_DEBUG, "%s,%s: in func", __FILE__, __func__);
+	if ( (! index(pattern, '%')) && (! index(pattern,'*')) )
+		matchname = g_strdup_printf("mbx.name = '%s' AND", pattern);
+	else
+		matchname = g_strdup("");
+	
+	
 	if (only_subscribed)
 		snprintf(query, DEF_QUERYSIZE,
 			 "SELECT mbx.name, mbx.mailbox_idnr, mbx.owner_idnr "
@@ -2241,13 +2247,13 @@ int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
 			 "ON acl.user_id = usr.user_idnr "
 			 "LEFT JOIN %ssubscription sub "
 			 "ON sub.mailbox_id = mbx.mailbox_idnr "
-			 "WHERE "
-			 "sub.user_id = '%llu' AND ("
+			 "WHERE %s "
+			 "(sub.user_id = '%llu' AND ("
 			 "(mbx.owner_idnr = '%llu') OR "
 			 "(acl.user_id = '%llu' AND "
 			 "  acl.lookup_flag = '1') OR "
-			 "(usr.userid = '%s' AND acl.lookup_flag = '1'))",
-			 DBPFX, DBPFX, DBPFX, DBPFX,
+			 "(usr.userid = '%s' AND acl.lookup_flag = '1')))",
+			 DBPFX, DBPFX, DBPFX, DBPFX, matchname,
 			 user_idnr, user_idnr, user_idnr,
 			 DBMAIL_ACL_ANYONE_USER);
 	else
@@ -2258,14 +2264,16 @@ int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
 			 "ON mbx.mailbox_idnr = acl.mailbox_id "
 			 "LEFT JOIN %susers usr "
 			 "ON acl.user_id = usr.user_idnr "
-			 "WHERE "
-			 "(mbx.owner_idnr = '%llu') OR "
+			 "WHERE %s "
+			 "((mbx.owner_idnr = '%llu') OR "
 			 "(acl.user_id = '%llu' AND "
 			 "  acl.lookup_flag = '1') OR "
-			 "(usr.userid = '%s' AND acl.lookup_flag = '1')",
-			 DBPFX, DBPFX, DBPFX,
+			 "(usr.userid = '%s' AND acl.lookup_flag = '1'))",
+			 DBPFX, DBPFX, DBPFX, matchname,
 			 user_idnr, user_idnr, DBMAIL_ACL_ANYONE_USER);
 	
+	g_free(matchname);
+
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error during mailbox query",
 		      __FILE__, __func__);

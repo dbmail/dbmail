@@ -110,59 +110,37 @@ void create_current_timestring(timestring_t * timestring)
 char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
 			    u64_t user_idnr)
 {
-	char *fq_name;
-	char *owner_name;
-	GString *tmp;
-	char *tmp_name;
+	char *fq;
+	char *owner;
+	GString *t;
 
 	if (mailbox_name == NULL) {
-		trace(TRACE_ERROR, "%s,%s: error, mailbox_name is "
-		      "NULL.", __FILE__, __func__);
+		trace(TRACE_ERROR, "%s,%s: error, mailbox_name is NULL.",
+				__FILE__, __func__);
 		return NULL;
 	}
 	
-	tmp_name = g_strdup(mailbox_name);
-	trace(TRACE_DEBUG,"%s,%s: mailbox_name [%s], owner_idnr [%llu], user_idnr [%llu]",
-			__FILE__, __func__, tmp_name, owner_idnr, user_idnr);
-
-
-	if (user_idnr == owner_idnr) {
+	if (user_idnr == owner_idnr) 
 		/* mailbox owned by current user */
-		return tmp_name;
-	} else {
-		tmp = g_string_new("");
-		
-		owner_name = auth_get_userid(owner_idnr);
-		if (owner_name == NULL) {
-			trace(TRACE_ERROR, "%s,%s: error owner_name is NULL", 
-					__FILE__, __func__);
-			return NULL;
-		}
-		trace(TRACE_DEBUG, "%s,%s: owner name = %s", 
-				__FILE__, __func__, 
-				owner_name);
-		if (strcmp(owner_name, PUBLIC_FOLDER_USER) == 0) {
-			g_string_printf(tmp, "%s%s%s", 
-					NAMESPACE_PUBLIC, 
-					MAILBOX_SEPARATOR, 
-					tmp_name);
-		} else {
-			g_string_printf(tmp, "%s%s%s%s%s", 
-					NAMESPACE_USER, 
-					MAILBOX_SEPARATOR, 
-					owner_name, 
-					MAILBOX_SEPARATOR, 
-					tmp_name);
-		}
-		dm_free(owner_name);
-		fq_name = tmp->str;
-		g_string_free(tmp,FALSE);
-		trace(TRACE_INFO, "%s,%s: returning fully qualified name [%s]", 
-				__FILE__, __func__, 
-				fq_name);
-		g_free(tmp_name);
-		return fq_name;
-	}
+		return g_strdup(mailbox_name);
+	
+	/* else */
+	t = g_string_new("");
+	
+	if ((owner = auth_get_userid(owner_idnr))==NULL)
+		return NULL;
+	
+	if (strcmp(owner, PUBLIC_FOLDER_USER) == 0)
+		g_string_printf(t, "%s%s%s", NAMESPACE_PUBLIC, MAILBOX_SEPARATOR, mailbox_name);
+	else
+		g_string_printf(t, "%s%s%s%s%s", NAMESPACE_USER, MAILBOX_SEPARATOR, owner, 
+				MAILBOX_SEPARATOR, mailbox_name);
+	dm_free(owner);
+	
+	fq = t->str;
+	g_string_free(t,FALSE);
+	
+	return fq;
 }
 
 const char *mailbox_remove_namespace(const char *fq_name)
@@ -696,8 +674,6 @@ int listex_match(const char *p, const char *s,
 {
 	int i, p8;
 	p8=0;
-	trace(TRACE_DEBUG,"%s,%s: pattern [%s], string [%s], delim [%s], flags [%d]",
-			__FILE__, __func__, p, s, x, flags);
 	while (*p) {
 		if (!p8 && *p == '%') {
 			p++;
