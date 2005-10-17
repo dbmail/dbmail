@@ -319,6 +319,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 	unsigned char *md5_apop_he;
 	char *searchptr;
 	u64_t user_idnr;
+	struct message *msg;
 
 	char *client_ip = ci->ip_src;
 	FILE *stream = ci->tx;
@@ -377,628 +378,423 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 	}
 
 	switch (cmdtype) {
+		
 	case POP3_QUIT:
-		{
-			fprintf((FILE *) stream, "+OK see ya later\r\n");
-			return 0;
-		}
+		fprintf((FILE *) stream, "+OK see ya later\r\n");
+		return 0;
+		
 	case POP3_USER:
-		{
-			if (session->state != POP3_AUTHORIZATION_STATE)
-				return pop3_error(session, stream,
-						  "-ERR wrong command mode, sir\r\n");
+		if (session->state != POP3_AUTHORIZATION_STATE)
+			return pop3_error(session, stream, "-ERR wrong command mode, sir\r\n");
 
-			if (session->username != NULL) {
-				/* reset username */
-				dm_free(session->username);
-				session->username = NULL;
-			}
-
-			if (session->username == NULL) {
-				if (strlen(value) > MAX_USERID_SIZE)
-					return pop3_error(session, stream,
-							  "-ERR userid is too long\r\n");
-
-				/* create memspace for username */
-				memtst((session->username =
-					(char *) dm_malloc(strlen(value) +
-							   1)) == NULL);
-				strncpy(session->username, value,
-					strlen(value) + 1);
-			}
-
-			fprintf((FILE *) stream,
-				"+OK Password required for %s\r\n",
-				session->username);
-			return 1;
+		if (session->username != NULL) {
+			/* reset username */
+			dm_free(session->username);
+			session->username = NULL;
 		}
 
-	case POP3_PASS:
-		{
-			if (session->state != POP3_AUTHORIZATION_STATE)
-				return pop3_error(session, stream,
-						  "-ERR wrong command mode, sir\r\n");
-
-			if (session->password != NULL) {
-				dm_free(session->password);
-				session->password = NULL;
-			}
-
-			if (session->password == NULL) {
-				/* create memspace for password */
-				memtst((session->password =
-					(char *) dm_malloc(strlen(value) +
-							   1)) == NULL);
-				strncpy(session->password, value,
-					strlen(value) + 1);
-			}
-
-			/* check in authorization layer if these credentials are correct */
-			validate_result = auth_validate(ci, session->username, session->password, &result);
-
-			switch (validate_result) {
-			case -1:
-				session->SessionResult = 3;
-				return -1;
-			case 0:
-				{
-					trace(TRACE_ERROR,
-					      "pop3(): user [%s] tried to "
-					      "login with wrong password",
-					      session->username);
-
-					/* clear username, must be re-entered according to RFC */
-					dm_free(session->username);
-					session->username = NULL;
-
-					/* also, if the password is set, clear it */
-					if (session->password != NULL) {
-						dm_free(session->password);
-						session->password = NULL;
-					}
-					return pop3_error(session, stream,
-							  "-ERR username/password incorrect\r\n");
-				}
-			default:
-				{
-					/* user logged in OK */
-					session->state =
-					    POP3_TRANSACTION_STATE;
-
-					/* now we're going to build up a session for this user */
-					trace(TRACE_DEBUG,
-					      "pop3(): validation OK, building a session for user [%s]",
-					      session->username);
-
-					/* if pop_before_smtp is active, log this ip */
-					if (pop_before_smtp)
-						db_log_ip(client_ip);
-
-					result =
-					    db_createsession(result,
-							     session);
-					if (result == 1) {
-						fprintf((FILE *) stream,
-							"+OK %s has %llu messages (%llu octets)\r\n",
-							session->username,
-							session->
-							virtual_totalmessages,
-							session->
-							virtual_totalsize);
-						trace(TRACE_MESSAGE,
-						      "pop3(): user %s logged in [messages=%llu, octets=%llu]",
-						      session->username,
-						      session->
-						      virtual_totalmessages,
-						      session->
-						      virtual_totalsize);
-					} else
-						session->SessionResult = 4;	/* something went wrong on DB layer */
-					return result;
-				}
-			}
-			return 1;
-		}
-
-	case POP3_LIST:
-		{
-			if (session->state != POP3_TRANSACTION_STATE)
-				return pop3_error(session, stream,
-						  "-ERR wrong command mode, sir\r\n");
-
-			tmpelement = dm_list_getstart(&session->messagelst);
-			if (value != NULL) {
-				/* they're asking for a specific message */
-				while (tmpelement != NULL) {
-					if (((struct message *)
-					     tmpelement->data)->
-					    messageid == strtoull(value,
-								  NULL, 10)
-					    && ((struct message *)
-						tmpelement->data)->
-					    virtual_messagestatus < MESSAGE_STATUS_DELETE) {
-						fprintf((FILE *) stream,
-							"+OK %llu %llu\r\n",
-							((struct message *)
-							 tmpelement->
-							 data)->messageid,
-							((struct message *)
-							 tmpelement->
-							 data)->msize);
-						found = 1;
-					}
-					tmpelement = tmpelement->nextnode;
-				}
-				if (!found)
-					return pop3_error(session, stream,
-							  "-ERR no such message\r\n");
-				else
-					return 1;
-			}
-
-			/* just drop the list */
-			fprintf((FILE *) stream,
-				"+OK %llu messages (%llu octets)\r\n",
-				session->virtual_totalmessages,
-				session->virtual_totalsize);
-
-			if (session->virtual_totalmessages > 0) {
-				/* traversing list */
-				while (tmpelement != NULL) {
-					if (((struct message *)
-					     tmpelement->data)->
-					    virtual_messagestatus < MESSAGE_STATUS_DELETE)
-						fprintf((FILE *) stream,
-							"%llu %llu\r\n",
-							((struct message *)
-							 tmpelement->
-							 data)->messageid,
-							((struct message *)
-							 tmpelement->
-							 data)->msize);
-					tmpelement = tmpelement->nextnode;
-				}
-			}
-			fprintf((FILE *) stream, ".\r\n");
-			return 1;
-		}
-
-	case POP3_STAT:
-		{
-			if (session->state != POP3_TRANSACTION_STATE)
-				return pop3_error(session, stream,
-						  "-ERR wrong command mode, sir\r\n");
-
-			fprintf((FILE *) stream, "+OK %llu %llu\r\n",
-				session->virtual_totalmessages,
-				session->virtual_totalsize);
-
-			return 1;
-		}
-
-	case POP3_RETR:
-		{
-			trace(TRACE_DEBUG,
-			      "pop3():RETR command, retrieving message");
-
-			if (session->state != POP3_TRANSACTION_STATE)
-				return pop3_error(session, stream,
-						  "-ERR wrong command mode, sir\r\n");
-
-			tmpelement = dm_list_getstart(&(session->messagelst));
-
-			/* selecting a message */
-			trace(TRACE_DEBUG,
-			      "pop3(): RETR command, selecting message");
-			while (tmpelement != NULL) {
-				if (((struct message *) tmpelement->data)->messageid == strtoull(value, NULL, 10) && ((struct message *) tmpelement->data)->virtual_messagestatus < MESSAGE_STATUS_DELETE) {	/* message is not deleted */
-					((struct message *) tmpelement->
-					 data)->virtual_messagestatus = MESSAGE_STATUS_SEEN;
-					fprintf((FILE *) stream,
-						"+OK %llu octets\r\n",
-						((struct message *)
-						 tmpelement->data)->msize);
-					return
-					    db_send_message_lines((void *)
-								  stream,
-								  ((struct
-								    message
-								    *)
-								   tmpelement->
-								   data)->
-								  realmessageid,
-								  -2, 0);
-				}
-				tmpelement = tmpelement->nextnode;
-			}
-			return pop3_error(session, stream,
-					  "-ERR no such message\r\n");
-		}
-
-	case POP3_DELE:
-		{
-			if (session->state != POP3_TRANSACTION_STATE)
-				return pop3_error(session, stream,
-						  "-ERR wrong command mode, sir\r\n");
-
-			tmpelement = dm_list_getstart(&(session->messagelst));
-
-			/* selecting a message */
-			while (tmpelement != NULL) {
-				if (((struct message *) tmpelement->data)->messageid == strtoull(value, NULL, 10) && ((struct message *) tmpelement->data)->virtual_messagestatus < MESSAGE_STATUS_DELETE) {	/* message is not deleted */
-					((struct message *) tmpelement->
-					 data)->virtual_messagestatus = MESSAGE_STATUS_DELETE;
-					/* decrease our virtual list fields */
-					session->virtual_totalsize -=
-					    ((struct message *)
-					     tmpelement->data)->msize;
-					session->virtual_totalmessages -=
-					    1;
-
-					fprintf((FILE *) stream,
-						"+OK message %llu deleted\r\n",
-						((struct message *)
-						 tmpelement->data)->
-						messageid);
-					return 1;
-				}
-				tmpelement = tmpelement->nextnode;
-			}
-			return pop3_error(session, stream,
-					  "-ERR [%s] no such message\r\n",
-					  value);
-		}
-
-	case POP3_RSET:
-		{
-			if (session->state != POP3_TRANSACTION_STATE)
-				return pop3_error(session, stream,
-						  "-ERR wrong command mode, sir\r\n");
-
-			tmpelement = dm_list_getstart(&(session->messagelst));
-
-			session->virtual_totalsize = session->totalsize;
-			session->virtual_totalmessages =
-			    session->totalmessages;
-
-			while (tmpelement != NULL) {
-				((struct message *) tmpelement->data)->
-				    virtual_messagestatus =
-				    ((struct message *) tmpelement->data)->
-				    messagestatus;
-				tmpelement = tmpelement->nextnode;
-			}
-
-			fprintf((FILE *) stream,
-				"+OK %llu messages (%llu octets)\r\n",
-				session->virtual_totalmessages,
-				session->virtual_totalsize);
-
-			return 1;
-		}
-
-	case POP3_LAST:
-		{
-			if (session->state != POP3_TRANSACTION_STATE)
-				return pop3_error(session, stream,
-						  "-ERR wrong command mode, sir\r\n");
-
-			tmpelement = dm_list_getstart(&(session->messagelst));
-
-			while (tmpelement != NULL) {
-				if (((struct message *) tmpelement->data)->
-				    virtual_messagestatus == MESSAGE_STATUS_NEW) {
-					/* we need the last message that has been accessed */
-					fprintf((FILE *) stream,
-						"+OK %llu\r\n",
-						((struct message *)
-						 tmpelement->data)->
-						messageid - 1);
-					return 1;
-				}
-				tmpelement = tmpelement->nextnode;
-			}
-
-			/* all old messages */
-			fprintf((FILE *) stream, "+OK %llu\r\n",
-				session->virtual_totalmessages);
-
-			return 1;
-		}
-
-	case POP3_NOOP:
-		{
-			if (session->state != POP3_TRANSACTION_STATE)
-				return pop3_error(session, stream,
-						  "-ERR wrong command mode, sir\r\n");
-
-			fprintf((FILE *) stream, "+OK\r\n");
-			return 1;
-		}
-
-	case POP3_UIDL:
-		{
-			if (session->state != POP3_TRANSACTION_STATE)
-				return pop3_error(session, stream,
-						  "-ERR wrong command mode, sir\r\n");
-
-			tmpelement = dm_list_getstart(&(session->messagelst));
-
-			if (value != NULL) {
-				/* they're asking for a specific message */
-				while (tmpelement != NULL) {
-					if (((struct message *)
-					     tmpelement->data)->
-					    messageid == strtoull(value,
-								  NULL, 10)
-					    && ((struct message *)
-						tmpelement->data)->
-					    virtual_messagestatus < MESSAGE_STATUS_DELETE) {
-						fprintf((FILE *) stream,
-							"+OK %llu %s\r\n",
-							((struct message *)
-							 tmpelement->
-							 data)->messageid,
-							((struct message *)
-							 tmpelement->
-							 data)->uidl);
-						found = 1;
-					}
-					tmpelement = tmpelement->nextnode;
-				}
-				if (!found)
-					return pop3_error(session, stream,
-							  "-ERR no such message\r\n");
-				else
-					return 1;
-			}
-
-			/* just drop the list */
-			fprintf((FILE *) stream,
-				"+OK Some very unique numbers for you\r\n");
-
-			if (session->virtual_totalmessages > 0) {
-				/* traversing list */
-				while (tmpelement != NULL) {
-					if (((struct message *)
-					     tmpelement->data)->
-					    virtual_messagestatus < MESSAGE_STATUS_DELETE)
-						fprintf((FILE *) stream,
-							"%llu %s\r\n",
-							((struct message *)
-							 tmpelement->
-							 data)->messageid,
-							((struct message *)
-							 tmpelement->
-							 data)->uidl);
-
-					tmpelement = tmpelement->nextnode;
-				}
-			}
-
-			fprintf((FILE *) stream, ".\r\n");
-
-			return 1;
-		}
-
-	case POP3_APOP:
-		{
-			if (session->state != POP3_AUTHORIZATION_STATE)
-				return pop3_error(session, stream,
-						  "-ERR wrong command mode, sir\r\n");
-
-			/* find out where the md5 hash starts */
-			searchptr = strstr(value, " ");
-
-			if (searchptr == NULL) 
-				return pop3_error(session, stream,
-						  "-ERR your command does not compute\r\n");
-
-			/* skip the space */
-			searchptr = searchptr + 1;
-
-			/* value should now be the username */
-			value[searchptr - value - 1] = '\0';
-
-			if (strlen(searchptr) != 32)
-				return pop3_error(session, stream,
-						  "-ERR the thingy you issued is not a valid md5 hash\r\n");
-
-			/* create memspace for md5 hash */
-			memtst((md5_apop_he = (unsigned char *) dm_malloc(strlen(searchptr) + 1)) == NULL);
-			strncpy((char *)md5_apop_he, searchptr, strlen(searchptr) + 1);
-
+		if (session->username == NULL) {
 			if (strlen(value) > MAX_USERID_SIZE)
 				return pop3_error(session, stream, "-ERR userid is too long\r\n");
 
 			/* create memspace for username */
 			memtst((session->username = (char *) dm_malloc(strlen(value) + 1)) == NULL);
 			strncpy(session->username, value, strlen(value) + 1);
+		}
 
-			/*
-			 * check the encryption used for this user
-			 * note that if the user does not exist it is not noted
-			 * by db_getencryption()
-			 */
-			if (auth_user_exists(session->username, &user_idnr) == -1) {
-				trace(TRACE_ERROR, "%s,%s: error finding if user exists. "
-				      "username = [%s]", __FILE__, __func__, session->username);
-				return -1;
-			}
-			if (strcasecmp(auth_getencryption(user_idnr), "") != 0) {
-				/* it should be clear text */
-				dm_free(md5_apop_he);
-				dm_free(session->username);
-				session->username = NULL;
-				md5_apop_he = NULL;
-				return pop3_error(session, stream,
-						  "-ERR APOP command is not supported for this user\r\n");
-			}
+		fprintf((FILE *) stream, "+OK Password required for %s\r\n", session->username);
+		return 1;
 
-			trace(TRACE_DEBUG,
-			      "pop3(): APOP auth, username [%s], md5_hash [%s]",
-			      session->username, md5_apop_he);
+	case POP3_PASS:
+		if (session->state != POP3_AUTHORIZATION_STATE)
+			return pop3_error(session, stream, "-ERR wrong command mode, sir\r\n");
 
-			result =
-			    auth_md5_validate(ci,session->username,
-					      md5_apop_he,
-					      session->apop_stamp);
+		if (session->password != NULL) {
+			dm_free(session->password);
+			session->password = NULL;
+		}
 
-			dm_free(md5_apop_he);
-			md5_apop_he = 0;
+		if (session->password == NULL) {
+			/* create memspace for password */
+			memtst((session->password = (char *) dm_malloc(strlen(value) + 1)) == NULL);
+			strncpy(session->password, value, strlen(value) + 1);
+		}
 
-			switch (result) {
-			case -1:
-				session->SessionResult = 3;
-				return -1;
-			case 0:
-				trace(TRACE_ERROR,
-				      "pop3(): user [%s] tried to login with wrong password",
-				      session->username);
+		/* check in authorization layer if these credentials are correct */
+		validate_result = auth_validate(ci, session->username, session->password, &result);
 
-				dm_free(session->username);
-				session->username = NULL;
+		switch (validate_result) {
+		case -1:
+			session->SessionResult = 3;
+			return -1;
+		case 0:
+			trace(TRACE_ERROR, "pop3(): user [%s] tried to login with wrong password", session->username);
 
+			/* clear username, must be re-entered according to RFC */
+			dm_free(session->username);
+			session->username = NULL;
+
+			/* also, if the password is set, clear it */
+			if (session->password != NULL) {
 				dm_free(session->password);
 				session->password = NULL;
-
-				return pop3_error(session, stream,
-						  "-ERR authentication attempt is invalid\r\n");
-
-			default:
-				{
-					/* user logged in OK */
-					session->state =
-					    POP3_TRANSACTION_STATE;
-
-					/* user seems to be valid, let's build a session */
-					trace(TRACE_DEBUG,
-					      "pop3(): validation OK, building a session for user [%s]",
-					      session->username);
-
-					/* if pop_before_smtp is active, log this ip */
-					if (pop_before_smtp)
-						db_log_ip(client_ip);
-
-					result =
-					    db_createsession(result,
-							     session);
-					if (result == 1) {
-						fprintf((FILE *) stream,
-							"+OK %s has %llu messages (%llu octets)\r\n",
-							session->username,
-							session->
-							virtual_totalmessages,
-							session->
-							virtual_totalsize);
-
-						trace(TRACE_MESSAGE,
-						      "pop3(): user %s logged in [messages=%llu, octets=%llu]",
-						      session->username,
-						      session->
-						      virtual_totalmessages,
-						      session->
-						      virtual_totalsize);
-					} else
-						session->SessionResult = 4;	/* storage layer error */
-
-					return result;
-				}
 			}
-			return 1;
+			return pop3_error(session, stream, "-ERR username/password incorrect\r\n");
+		default:
+			/* user logged in OK */
+			session->state = POP3_TRANSACTION_STATE;
+
+			/* now we're going to build up a session for this user */
+			trace(TRACE_DEBUG, "pop3(): validation OK, building a session for user [%s]", session->username);
+
+			/* if pop_before_smtp is active, log this ip */
+			if (pop_before_smtp)
+				db_log_ip(client_ip);
+
+			result = db_createsession(result, session);
+			if (result == 1) {
+				fprintf((FILE *) stream, "+OK %s has %llu messages (%llu octets)\r\n",
+					session->username, session->virtual_totalmessages,
+					session->virtual_totalsize);
+				trace(TRACE_MESSAGE, "pop3(): user %s logged in [messages=%llu, octets=%llu]",
+				      session->username, session->virtual_totalmessages,
+				      session->virtual_totalsize);
+			} else
+				session->SessionResult = 4;	/* something went wrong on DB layer */
+			return result;
 		}
+		return 1;
 
-	case POP3_AUTH:
-		{
-			if (session->state != POP3_AUTHORIZATION_STATE)
-				return pop3_error(session, stream,
-						  "-ERR wrong command mode, sir\r\n");
-			return pop3_error(session, stream,
-					  "-ERR no AUTH mechanisms supported\r\n");
-		}
+	case POP3_LIST:
+		if (session->state != POP3_TRANSACTION_STATE)
+			return pop3_error(session, stream, "-ERR wrong command mode, sir\r\n");
 
-	case POP3_TOP:
-		{
-			if (session->state != POP3_TRANSACTION_STATE)
-				return pop3_error(session, stream,
-						  "-ERR wrong command mode, sir\r\n");
-
-			/* find out how many lines they want */
-			searchptr = strstr(value, " ");
-
-			/* insufficient parameters */
-			if (searchptr == NULL)
-				return pop3_error(session, stream,
-						  "-ERR your command does not compute\r\n");
-
-			/* skip the space */
-			searchptr = searchptr + 1;
-
-			/* value should now be the the message that needs to be retrieved */
-			value[searchptr - value - 1] = '\0';
-
-			/* check if searchptr or value are negative. If so return an
-			   error. This is done by only letting the strings contain
-			   digits (0-9) */
-			if (strspn(searchptr, "0123456789") !=
-			    strlen(searchptr))
-				return pop3_error(session, stream,
-						  "-ERR wrong parameter\r\n");
-			if (strspn(value, "0123456789") != strlen(value))
-				return pop3_error(session, stream,
-						  "-ERR wrong parameter\r\n");
-
-			top_lines = strtoull(searchptr, NULL, 10);
-			top_messageid = strtoull(value, NULL, 10);
-			if (top_messageid < 1)
-				return pop3_error(session, stream,
-						  "-ERR wrong parameter\r\n");
-
-			trace(TRACE_DEBUG,
-			      "pop3():TOP command (partially) retrieving message");
-
-			tmpelement = dm_list_getstart(&(session->messagelst));
-
-			/* selecting a message */
-			trace(TRACE_DEBUG,
-			      "pop3(): TOP command, selecting message");
-
+		tmpelement = dm_list_getstart(&session->messagelst);
+		if (value != NULL) {
+			/* they're asking for a specific message */
 			while (tmpelement != NULL) {
-				if (((struct message *) tmpelement->data)->messageid == top_messageid && ((struct message *) tmpelement->data)->virtual_messagestatus < MESSAGE_STATUS_DELETE) {	/* message is not deleted */
-					fprintf((FILE *) stream,
-						"+OK %llu lines of message %llu\r\n",
-						top_lines, top_messageid);
-					return
-					    db_send_message_lines(stream,
-								  ((struct
-								    message
-								    *)
-								   tmpelement->
-								   data)->
-								  realmessageid,
-								  top_lines,
-								  0);
+				msg = (struct message *)tmpelement->data;
+				if (msg->messageid == strtoull(value,NULL, 10) && msg->virtual_messagestatus < MESSAGE_STATUS_DELETE) {
+					fprintf((FILE *) stream, "+OK %llu %llu\r\n", msg->messageid,msg->msize);
+					found = 1;
 				}
 				tmpelement = tmpelement->nextnode;
 			}
-			return pop3_error(session, stream,
-					  "-ERR no such message\r\n");
+			if (!found)
+				return pop3_error(session, stream, "-ERR no such message\r\n");
+			else
+				return 1;
+		}
 
-			return 1;
+		/* just drop the list */
+		fprintf((FILE *) stream, "+OK %llu messages (%llu octets)\r\n",
+			session->virtual_totalmessages,
+			session->virtual_totalsize);
+
+		if (session->virtual_totalmessages > 0) {
+			/* traversing list */
+			while (tmpelement != NULL) {
+				msg = (struct message *)tmpelement->data;
+				if (msg->virtual_messagestatus < MESSAGE_STATUS_DELETE)
+					fprintf((FILE *) stream, "%llu %llu\r\n", msg->messageid,msg->msize);
+				tmpelement = tmpelement->nextnode;
+			}
 		}
+		fprintf((FILE *) stream, ".\r\n");
+		return 1;
+
+	case POP3_STAT:
+		if (session->state != POP3_TRANSACTION_STATE)
+			return pop3_error(session, stream, "-ERR wrong command mode, sir\r\n");
+
+		fprintf((FILE *) stream, "+OK %llu %llu\r\n",
+			session->virtual_totalmessages,
+			session->virtual_totalsize);
+
+		return 1;
+
+	case POP3_RETR:
+		trace(TRACE_DEBUG, "pop3():RETR command, retrieving message");
+
+		if (session->state != POP3_TRANSACTION_STATE)
+			return pop3_error(session, stream, "-ERR wrong command mode, sir\r\n");
+
+		tmpelement = dm_list_getstart(&(session->messagelst));
+
+		/* selecting a message */
+		trace(TRACE_DEBUG, "pop3(): RETR command, selecting message");
+		while (tmpelement != NULL) {
+			msg = (struct message *) tmpelement->data;
+			if (msg->messageid == strtoull(value, NULL, 10) && msg->virtual_messagestatus < MESSAGE_STATUS_DELETE) {	/* message is not deleted */
+				msg->virtual_messagestatus = MESSAGE_STATUS_SEEN;
+				fprintf((FILE *) stream, "+OK %llu octets\r\n", msg->msize);
+				return db_send_message_lines((void *) stream, msg->realmessageid, -2, 0);
+			}
+			tmpelement = tmpelement->nextnode;
+		}
+		return pop3_error(session, stream, "-ERR no such message\r\n");
+
+	case POP3_DELE:
+		if (session->state != POP3_TRANSACTION_STATE)
+			return pop3_error(session, stream, "-ERR wrong command mode, sir\r\n");
+
+		tmpelement = dm_list_getstart(&(session->messagelst));
+
+		/* selecting a message */
+		while (tmpelement != NULL) {
+			msg = (struct message *) tmpelement->data;
+			if (msg->messageid == strtoull(value, NULL, 10) && msg->virtual_messagestatus < MESSAGE_STATUS_DELETE) {	/* message is not deleted */
+				msg->virtual_messagestatus = MESSAGE_STATUS_DELETE;
+				session->virtual_totalsize -= msg->msize;
+				session->virtual_totalmessages -= 1;
+
+				fprintf((FILE *) stream, "+OK message %llu deleted\r\n", msg->messageid);
+				return 1;
+			}
+			tmpelement = tmpelement->nextnode;
+		}
+		return pop3_error(session, stream, "-ERR [%s] no such message\r\n", value);
+
+	case POP3_RSET:
+		if (session->state != POP3_TRANSACTION_STATE)
+			return pop3_error(session, stream, "-ERR wrong command mode, sir\r\n");
+
+		tmpelement = dm_list_getstart(&(session->messagelst));
+
+		session->virtual_totalsize = session->totalsize;
+		session->virtual_totalmessages = session->totalmessages;
+
+		while (tmpelement != NULL) {
+			msg = (struct message *) tmpelement->data;
+			msg->virtual_messagestatus = msg->messagestatus;
+			tmpelement = tmpelement->nextnode;
+		}
+
+		fprintf((FILE *) stream, "+OK %llu messages (%llu octets)\r\n", session->virtual_totalmessages, session->virtual_totalsize);
+
+		return 1;
+
+	case POP3_LAST:
+		if (session->state != POP3_TRANSACTION_STATE)
+			return pop3_error(session, stream, "-ERR wrong command mode, sir\r\n");
+
+		tmpelement = dm_list_getstart(&(session->messagelst));
+
+		while (tmpelement != NULL) {
+			msg = (struct message *) tmpelement->data;
+			if (msg->virtual_messagestatus == MESSAGE_STATUS_NEW) {
+				/* we need the last message that has been accessed */
+				fprintf((FILE *) stream, "+OK %llu\r\n", msg->messageid - 1);
+				return 1;
+			}
+			tmpelement = tmpelement->nextnode;
+		}
+
+		/* all old messages */
+		fprintf((FILE *) stream, "+OK %llu\r\n", session->virtual_totalmessages);
+
+		return 1;
+
+	case POP3_NOOP:
+		if (session->state != POP3_TRANSACTION_STATE)
+			return pop3_error(session, stream, "-ERR wrong command mode, sir\r\n");
+
+		fprintf((FILE *) stream, "+OK\r\n");
+		return 1;
+
+	case POP3_UIDL:
+		if (session->state != POP3_TRANSACTION_STATE)
+			return pop3_error(session, stream, "-ERR wrong command mode, sir\r\n");
+
+		tmpelement = dm_list_getstart(&(session->messagelst));
+
+		if (value != NULL) {
+			/* they're asking for a specific message */
+			while (tmpelement != NULL) {
+				msg = (struct message *)tmpelement->data;
+				if (msg->messageid == strtoull(value,NULL, 10) && msg->virtual_messagestatus < MESSAGE_STATUS_DELETE) {
+					fprintf((FILE *) stream, "+OK %llu %s\r\n", msg->messageid,msg->uidl);
+					found = 1;
+				}
+				tmpelement = tmpelement->nextnode;
+			}
+			if (!found)
+				return pop3_error(session, stream, "-ERR no such message\r\n");
+			else
+				return 1;
+		}
+
+		/* just drop the list */
+		fprintf((FILE *) stream, "+OK Some very unique numbers for you\r\n");
+
+		if (session->virtual_totalmessages > 0) {
+			/* traversing list */
+			while (tmpelement != NULL) {
+				msg = (struct message *)tmpelement->data; 
+				if (msg->virtual_messagestatus < MESSAGE_STATUS_DELETE)
+					fprintf((FILE *) stream, "%llu %s\r\n", msg->messageid, msg->uidl);
+
+				tmpelement = tmpelement->nextnode;
+			}
+		}
+
+		fprintf((FILE *) stream, ".\r\n");
+
+		return 1;
+
+	case POP3_APOP:
+		if (session->state != POP3_AUTHORIZATION_STATE)
+			return pop3_error(session, stream, "-ERR wrong command mode, sir\r\n");
+
+		/* find out where the md5 hash starts */
+		searchptr = strstr(value, " ");
+
+		if (searchptr == NULL) 
+			return pop3_error(session, stream, "-ERR your command does not compute\r\n");
+
+		/* skip the space */
+		searchptr = searchptr + 1;
+
+		/* value should now be the username */
+		value[searchptr - value - 1] = '\0';
+
+		if (strlen(searchptr) != 32)
+			return pop3_error(session, stream, "-ERR the thingy you issued is not a valid md5 hash\r\n");
+
+		/* create memspace for md5 hash */
+		memtst((md5_apop_he = (unsigned char *) dm_malloc(strlen(searchptr) + 1)) == NULL);
+		strncpy((char *)md5_apop_he, searchptr, strlen(searchptr) + 1);
+
+		if (strlen(value) > MAX_USERID_SIZE)
+			return pop3_error(session, stream, "-ERR userid is too long\r\n");
+
+		/* create memspace for username */
+		memtst((session->username = (char *) dm_malloc(strlen(value) + 1)) == NULL);
+		strncpy(session->username, value, strlen(value) + 1);
+
+		/*
+		 * check the encryption used for this user
+		 * note that if the user does not exist it is not noted
+		 * by db_getencryption()
+		 */
+		if (auth_user_exists(session->username, &user_idnr) == -1) {
+			trace(TRACE_ERROR, "%s,%s: error finding if user exists. username = [%s]", __FILE__, __func__, session->username);
+			return -1;
+		}
+		if (strcasecmp(auth_getencryption(user_idnr), "") != 0) {
+			/* it should be clear text */
+			dm_free(md5_apop_he);
+			dm_free(session->username);
+			session->username = NULL;
+			md5_apop_he = NULL;
+			return pop3_error(session, stream, "-ERR APOP command is not supported for this user\r\n");
+		}
+
+		trace(TRACE_DEBUG, "pop3(): APOP auth, username [%s], md5_hash [%s]", session->username, md5_apop_he);
+
+		result = auth_md5_validate(ci,session->username, md5_apop_he, session->apop_stamp);
+
+		dm_free(md5_apop_he);
+		md5_apop_he = 0;
+
+		switch (result) {
+		case -1:
+			session->SessionResult = 3;
+			return -1;
+		case 0:
+			trace(TRACE_ERROR, "pop3(): user [%s] tried to login with wrong password", session->username);
+
+			dm_free(session->username);
+			session->username = NULL;
+
+			dm_free(session->password);
+			session->password = NULL;
+
+			return pop3_error(session, stream, "-ERR authentication attempt is invalid\r\n");
+
+		default:
+			/* user logged in OK */
+			session->state = POP3_TRANSACTION_STATE;
+
+			/* user seems to be valid, let's build a session */
+			trace(TRACE_DEBUG, "pop3(): validation OK, building a session for user [%s]", session->username);
+
+			/* if pop_before_smtp is active, log this ip */
+			if (pop_before_smtp)
+				db_log_ip(client_ip);
+
+			result = db_createsession(result, session);
+			if (result == 1) {
+				fprintf((FILE *) stream, "+OK %s has %llu messages (%llu octets)\r\n", 
+						session->username, session->virtual_totalmessages, session->virtual_totalsize);
+				trace(TRACE_MESSAGE, "pop3(): user %s logged in [messages=%llu, octets=%llu]", 
+						session->username, session->virtual_totalmessages, session->virtual_totalsize);
+			} else
+				session->SessionResult = 4;	/* storage layer error */
+
+			return result;
+		}
+		return 1;
+
+	case POP3_AUTH:
+		if (session->state != POP3_AUTHORIZATION_STATE)
+			return pop3_error(session, stream, "-ERR wrong command mode, sir\r\n");
+		return pop3_error(session, stream, "-ERR no AUTH mechanisms supported\r\n");
+
+	case POP3_TOP:
+		if (session->state != POP3_TRANSACTION_STATE)
+			return pop3_error(session, stream, "-ERR wrong command mode, sir\r\n");
+
+		/* find out how many lines they want */
+		searchptr = strstr(value, " ");
+
+		/* insufficient parameters */
+		if (searchptr == NULL)
+			return pop3_error(session, stream, "-ERR your command does not compute\r\n");
+
+		/* skip the space */
+		searchptr = searchptr + 1;
+
+		/* value should now be the the message that needs to be retrieved */
+		value[searchptr - value - 1] = '\0';
+
+		/* check if searchptr or value are negative. If so return an
+		   error. This is done by only letting the strings contain
+		   digits (0-9) */
+		if (strspn(searchptr, "0123456789") != strlen(searchptr))
+			return pop3_error(session, stream, "-ERR wrong parameter\r\n");
+		if (strspn(value, "0123456789") != strlen(value))
+			return pop3_error(session, stream, "-ERR wrong parameter\r\n");
+
+		top_lines = strtoull(searchptr, NULL, 10);
+		top_messageid = strtoull(value, NULL, 10);
+		if (top_messageid < 1)
+			return pop3_error(session, stream, "-ERR wrong parameter\r\n");
+
+		trace(TRACE_DEBUG, "pop3():TOP command (partially) retrieving message");
+
+		tmpelement = dm_list_getstart(&(session->messagelst));
+
+		/* selecting a message */
+		trace(TRACE_DEBUG, "pop3(): TOP command, selecting message");
+
+		while (tmpelement != NULL) {
+			msg = (struct message *) tmpelement->data;
+			if (msg->messageid == top_messageid && msg->virtual_messagestatus < MESSAGE_STATUS_DELETE) {	/* message is not deleted */
+				fprintf((FILE *) stream, "+OK %llu lines of message %llu\r\n", top_lines, top_messageid);
+				return db_send_message_lines(stream, msg->realmessageid, top_lines, 0);
+			}
+			tmpelement = tmpelement->nextnode;
+		}
+		return pop3_error(session, stream, "-ERR no such message\r\n");
+
 	case POP3_CAPA:
-		{
-			fprintf((FILE *) stream,
-				"+OK, Capability list follows\r\n"
-				"TOP\r\nUSER\r\nUIDL\r\n.\r\n");
-			return 1;
-		}
+		fprintf((FILE *) stream, "+OK, Capability list follows\r\nTOP\r\nUSER\r\nUIDL\r\n.\r\n");
+		return 1;
 
 	default:
-		{
-			return pop3_error(session, stream,
-					  "-ERR command not understood, sir\r\n");
-		}
+		return pop3_error(session, stream, "-ERR command not understood, sir\r\n");
+	
 	}
 	return 1;
 }

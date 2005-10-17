@@ -1,3 +1,16 @@
+2005-10-17  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-message.c:
+	add content-type as headervalue during insertion
+	* check_dbmail_imapd.c, dbmail-imapsession.c, dm_imaputil.c, dm_imaputil.h, 
+	  imapcommands.c, tags:
+	fixed some leaks and added massive speedup for header fetches
+	* check_dbmail_imapd.c, dm_imaputil.c:
+	fix some imap protocol errors
+	* dbmail-imapsession.c, dbmail-imapsession.h, imapcommands.c, 
+	  test-scripts/testimap.py:
+	speed up fetch by using header tables for header-fetches
+
 2005-10-12  Paul J Stevens <paul@nfg.nl>
 
 	* db.c, db.h, dbmail-message.c, dbmailtypes.h, maintenance.c, pipe.c, 

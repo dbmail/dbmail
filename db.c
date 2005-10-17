@@ -1768,23 +1768,15 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
 	return DM_SUCCESS;
 }
 
-int db_send_message_lines(void *fstream, u64_t message_idnr,
-			  long lines, int no_end_dot)
+int db_send_message_lines(void *fstream, u64_t message_idnr, long lines, int no_end_dot)
 {
 	struct DbmailMessage *msg;
 	
 	u64_t physmessage_id = 0;
-	char *raw;
-	char *buffer = NULL;
-	int buffer_pos;
-	const char *nextpos;
-	const char *tmppos = NULL;
-	int block_count;
-	u64_t rowlength;
-	int n;
-	const char *query_result;
-
-
+	char *raw = NULL, *buf = NULL;
+	GString *s;
+	int pos = 0;
+	long n = 0;
 	
 	trace(TRACE_DEBUG, "%s,%s: request for [%ld] lines",
 	      __FILE__, __func__, lines);
@@ -1793,122 +1785,35 @@ int db_send_message_lines(void *fstream, u64_t message_idnr,
 	if (db_get_physmessage_id(message_idnr, &physmessage_id) != DM_SUCCESS)
 		return DM_EGENERAL;
 
-	msg = dbmail_message_new();
-	msg = dbmail_message_retrieve(msg, physmessage_id, DBMAIL_MESSAGE_FILTER_FULL);
-	raw = dbmail_message_to_string(msg);
-
 	trace(TRACE_DEBUG,
 	      "%s,%s: sending [%ld] lines from message [%llu]", __FILE__,
 	      __func__, lines, message_idnr);
 
-	block_count = 0;
-	n = db_num_rows();
-	/* loop over all rows in the result set, until the right amount of
-	 * lines has been read 
-	 */
-	while ((block_count < n)
-	       && ((lines > 0) || (lines == -2) || (block_count == 0))) {
-		query_result = db_get_result(block_count, 0);
-		nextpos = query_result;
-		rowlength = (u64_t) db_get_length(block_count, 0);
-
-		/* reset our buffer */
-		memset(buffer, '\0', (WRITE_BUFFER_SIZE) * 2);
-		buffer_pos = 0;
-
-		while ((*nextpos != '\0') && (rowlength > 0)
-		       && ((lines > 0) || (lines == -2)
-			   || (block_count == 0))) {
-
-			if (*nextpos == '\n') {
-				/* first block is always the full header 
-				   so this should not be counted when parsing
-				   if lines == -2 none of the lines should be counted 
-				   since the whole message is requested */
-				if ((lines != -2) && (block_count != 0))
-					lines--;
-
-				if (tmppos != NULL) {
-					if (*tmppos == '\r') {
-						buffer[buffer_pos++] =
-						    *nextpos;
-					} else {
-						buffer[buffer_pos++] =
-						    '\r';
-						buffer[buffer_pos++] =
-						    *nextpos;
-					}
-				} else {
-					buffer[buffer_pos++] = '\r';
-					buffer[buffer_pos++] = *nextpos;
-				}
-			} else {
-				if (*nextpos == '.') {
-					if (tmppos != NULL) {
-						if (*tmppos == '\n') {
-							buffer
-							    [buffer_pos++]
-							    = '.';
-							buffer
-							    [buffer_pos++]
-							    = *nextpos;
-						} else {
-							buffer
-							    [buffer_pos++]
-							    = *nextpos;
-						}
-					} else {
-						buffer[buffer_pos++] =
-						    *nextpos;
-					}
-				} else {
-					buffer[buffer_pos++] = *nextpos;
-				}
-			}
-
-			tmppos = nextpos;
-
-			/* get the next character */
-			nextpos++;
-			rowlength--;
-
-			if (rowlength % WRITE_BUFFER_SIZE == 0) {
-				/* purge buffer at every WRITE_BUFFER_SIZE bytes  */
-				if (fwrite(buffer, sizeof(char), 
-					   strlen(buffer), (FILE *)fstream) !=
-				    strlen(buffer)) {
-					trace(TRACE_ERROR, "%s,%s: error writing to "
-					      "fstream", __FILE__, __func__);
-					db_free_result();
-					dm_free(buffer);
-					return DM_SUCCESS;
-				}
-				/*  cleanup the buffer  */
-				memset(buffer, '\0',
-				       (WRITE_BUFFER_SIZE * 2));
-				buffer_pos = 0;
-			}
+	msg = dbmail_message_new();
+	msg = dbmail_message_retrieve(msg, physmessage_id, DBMAIL_MESSAGE_FILTER_FULL);
+	
+	buf = dbmail_message_to_string(msg);
+	raw = get_crlf_encoded(buf);
+	dm_free(buf);
+	
+	s = g_string_new(raw);
+	if (lines > 0) {
+		while (raw[pos] && n < lines) {
+			if (raw[pos] == '\n')
+				n++;
+			pos++;
 		}
-		/* next block in while loop */
-		block_count++;
-		trace(TRACE_DEBUG, "%s,%s: getting nextblock [%d]\n",
-		      __FILE__, __func__, block_count);
-		/* flush our buffer */
-		if (fwrite(buffer, sizeof(char), strlen(buffer),
-			   (FILE *) fstream) != strlen(buffer)) {
-			trace(TRACE_ERROR, "%s,%s: error writing to file stream",
-			      __FILE__, __func__);
-			db_free_result();
-			dm_free(buffer);
-			return DM_SUCCESS;
-		}
+		s = g_string_truncate(s,pos);
 	}
+	dm_free(raw);
+
+	ci_write((FILE *)fstream, "%s", s->str);
+	
 	/* delimiter */
 	if (no_end_dot == 0)
 		fprintf((FILE *) fstream, "\r\n.\r\n");
 
-	db_free_result();
-	dm_free(buffer);
+	g_string_free(s,TRUE);
 	return DM_EGENERAL;
 }
 
