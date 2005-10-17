@@ -37,6 +37,7 @@
 extern char *configFile;
 extern db_param_t _db_params;
 
+#define DBPFX _db_params.pfx
 
 /* we need this one because we can't directly link imapd.o */
 int imap_before_smtp = 0;
@@ -323,24 +324,9 @@ START_TEST(test_imap_get_structure)
 	message = dbmail_message_init_with_string(message, g_string_new(multipart_message));
 	l = imap_get_structure(GMIME_MESSAGE(message->content), 1);
 	result = dbmail_imap_plist_as_string(l);
-	strncpy(expect,"((\"text\" \"html\" NIL NIL NIL NIL 18 2 NIL (\"inline\") NIL NIL) "
-			"(\"text\" \"plain\" (\"charset\" \"us-ascii\" \"name\" \"testfile\") NIL NIL \"base64\" 434 8 NIL NIL NIL NIL) "
+	strncpy(expect,"((\"text\" \"html\" NIL NIL NIL NIL 16 1 NIL (\"inline\") NIL NIL) "
+			"(\"text\" \"plain\" (\"charset\" \"us-ascii\" \"name\" \"testfile\") NIL NIL \"base64\" 432 7 NIL NIL NIL NIL) "
 			"\"mixed\" (\"boundary\" \"boundary\") NIL NIL NIL)",1024);
-	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_structure failed");
-	g_list_foreach(l,(GFunc)g_free,NULL);
-	g_free(result);
-	dbmail_message_free(message);
-
-	/* outlook multipart */
-	message = dbmail_message_new();
-	message = dbmail_message_init_with_string(message, g_string_new(outlook_multipart));
-	l = imap_get_structure(GMIME_MESSAGE(message->content), 1);
-	result = dbmail_imap_plist_as_string(l);
-	strncpy(expect,"((\"text\" \"plain\" (\"charset\" \"iso-8859-1\") NIL NIL \"7bit\" 280 13 NIL NIL NIL NIL) "
-		"(\"text\" \"html\" (\"charset\" \"iso-8859-1\") NIL NIL \"quoted-printable\" 2866 100 NIL NIL NIL NIL) "
-		"\"alternative\" (\"boundary\" \"----=_NextPart_000_0009_01C5A579.19D2FA10\") NIL NIL NIL "
-		"(\"text\" \"plain\" (\"charset\" \"iso-8859-1\") NIL NIL \"quoted-printable\" 83 3 NIL (\"inline\") NIL NIL) "
-		"\"mixed\" (\"boundary\" \"===============0257742399==\") NIL NIL NIL)",1024);
 	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_structure failed");
 	g_list_foreach(l,(GFunc)g_free,NULL);
 	g_free(result);
@@ -351,7 +337,8 @@ START_TEST(test_imap_get_structure)
 	message = dbmail_message_init_with_string(message, g_string_new(rfc822));
 	l = imap_get_structure(GMIME_MESSAGE(message->content), 1);
 	result = dbmail_imap_plist_as_string(l);
-	strncpy(expect,"(\"text\" \"plain\" (\"charset\" \"us-ascii\") NIL NIL \"7bit\" 34 4 NIL NIL NIL NIL)",1024);
+	strncpy(expect,"(\"text\" \"plain\" (\"charset\" \"us-ascii\") NIL NIL \"7bit\" 32 4 NIL NIL NIL NIL)",1024);
+	printf("\n%s\n%s", expect, result);
 	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_structure failed");
 	g_list_foreach(l,(GFunc)g_free,NULL);
 	g_free(result);
@@ -399,11 +386,11 @@ START_TEST(test_imap_get_partspec)
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"HEADER");
 	result = imap_get_logical_part(object,"HEADER");
-	fail_unless(strlen(result)==205,"imap_get_partspec failed");
+	fail_unless(strlen(result)==206,"imap_get_partspec failed");
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"TEXT");
 	result = imap_get_logical_part(object,"TEXT");
-	fail_unless(strlen(result)==29,"imap_get_partspec failed");
+	fail_unless(strlen(result)==30,"imap_get_partspec failed");
 
 	dbmail_message_free(message);
 
@@ -414,19 +401,46 @@ START_TEST(test_imap_get_partspec)
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"1.TEXT");
 	result = imap_get_logical_part(object,"TEXT");
-	fail_unless(strlen(result)==16,"imap_get_partspec failed");
+	fail_unless(strlen(result)==17,"imap_get_partspec failed");
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"1.HEADER");
 	result = imap_get_logical_part(object,"HEADER");
-	fail_unless(strlen(result)==52,"imap_get_partspec failed");
+	fail_unless(strlen(result)==53,"imap_get_partspec failed");
 	
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"2.MIME");
 	result = imap_get_logical_part(object,"MIME");
-	fail_unless(strlen(result)==92,"imap_get_partspec failed");
+	fail_unless(strlen(result)==93,"imap_get_partspec failed");
 
 	
 	g_free(result);
 	g_free(expect);
+
+}
+END_TEST
+
+
+
+START_TEST(test_imap_message_fetch_headers)
+{
+	GList *res;
+	u64_t physid=640583;
+	GString *headers = g_string_new("From To Cc Subject Date Message-ID Priority X-Priority References Newsgroups In-Reply-To Content-Type");
+	GList *h = g_string_split(headers," ");
+	
+	res = imap_message_fetch_headers(physid,h,0);
+	fail_unless(g_list_length(res) > 0 && g_list_length(res) < g_list_length(h),"imap_message_fetch_headers failed");
+
+	res = imap_message_fetch_headers(physid,h,1);
+	fail_unless(g_list_length(res) > 0 && g_list_length(res) > g_list_length(h),"imap_message_fetch_headers failed");
+
+	g_string_free(headers,TRUE);
+	
+	g_list_foreach(res,(GFunc)g_free,NULL);
+	g_list_free(res);
+	
+	g_list_foreach(h,(GFunc)g_free,NULL);
+	g_list_free(h);
+
 
 }
 END_TEST
@@ -633,6 +647,7 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_session, test_imap_get_structure);
 	tcase_add_test(tc_session, test_imap_get_envelope);
 	tcase_add_test(tc_session, test_imap_get_partspec);
+	tcase_add_test(tc_session, test_imap_message_fetch_headers);
 	
 	tcase_add_checked_fixture(tc_mime, setup, teardown);
 	tcase_add_test(tc_mime, test_mime_readheader);

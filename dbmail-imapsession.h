@@ -50,7 +50,7 @@ int dbmail_imap_session_mailbox_update_recent(struct ImapSession *self);
 
 int dbmail_imap_session_fetch_parse_args(struct ImapSession * self, int idx);
 int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self, u64_t fetch_start, u64_t fetch_end);
-int dbmail_imap_session_fetch_get_items(struct ImapSession *self);
+int dbmail_imap_session_fetch_get_items(struct ImapSession *self, u64_t row);
 
 int dbmail_imap_session_get_msginfo_range(struct ImapSession *self, u64_t msg_idnr_low, u64_t msg_idnr_high);
 
