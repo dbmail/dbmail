@@ -338,7 +338,6 @@ START_TEST(test_imap_get_structure)
 	l = imap_get_structure(GMIME_MESSAGE(message->content), 1);
 	result = dbmail_imap_plist_as_string(l);
 	strncpy(expect,"(\"text\" \"plain\" (\"charset\" \"us-ascii\") NIL NIL \"7bit\" 32 4 NIL NIL NIL NIL)",1024);
-	printf("\n%s\n%s", expect, result);
 	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_structure failed");
 	g_list_foreach(l,(GFunc)g_free,NULL);
 	g_free(result);

@@ -452,50 +452,43 @@ int insert_messages(struct DbmailMessage *message,
 
 
 	/* Loop through the users list. */
-	for (element = dm_list_getstart(dsnusers); element != NULL;
-	     element = element->nextnode) {
+	for (element = dm_list_getstart(dsnusers); element != NULL; element = element->nextnode) {
+		
 		struct element *userid_elem;
 		int has_2 = 0, has_4 = 0, has_5 = 0, has_5_2 = 0;
-		deliver_to_user_t *delivery =
-		    (deliver_to_user_t *) element->data;
+		
+		deliver_to_user_t *delivery = (deliver_to_user_t *) element->data;
 		
 		/* Each user may have a list of user_idnr's for local
 		 * delivery. */
-		for (userid_elem = dm_list_getstart(delivery->userids);
-		     userid_elem != NULL;
-		     userid_elem = userid_elem->nextnode) {
+		for (userid_elem = dm_list_getstart(delivery->userids); userid_elem != NULL; userid_elem = userid_elem->nextnode) {
 			u64_t useridnr = *(u64_t *) userid_elem->data;
-			trace(TRACE_DEBUG,
-			      "%s, %s: calling sort_and_deliver for useridnr [%llu]",
+			trace(TRACE_DEBUG, "%s, %s: calling sort_and_deliver for useridnr [%llu]",
 			      __FILE__, __func__, useridnr);
 
 			switch (sort_and_deliver(message, useridnr, delivery->mailbox)) {
 			case DSN_CLASS_OK:
 				/* Indicate success. */
-				trace(TRACE_DEBUG,
-				      "%s, %s: successful sort_and_deliver for useridnr [%llu]",
+				trace(TRACE_DEBUG, "%s, %s: successful sort_and_deliver for useridnr [%llu]",
 				      __FILE__, __func__, useridnr);
 				has_2 = 1;
 				break;
 			case DSN_CLASS_FAIL:
 				/* Indicate permanent failure. */
-				trace(TRACE_ERROR,
-				      "%s, %s: permanent failure sort_and_deliver for useridnr [%llu]",
+				trace(TRACE_ERROR, "%s, %s: permanent failure sort_and_deliver for useridnr [%llu]",
 				      __FILE__, __func__, useridnr);
 				has_5 = 1;
 				break;
 			case DSN_CLASS_QUOTA:
 			/* Indicate over quota. */
-				trace(TRACE_ERROR,
-				      "%s, %s: temporary failure sort_and_deliver for useridnr [%llu]",
+				trace(TRACE_ERROR, "%s, %s: temporary failure sort_and_deliver for useridnr [%llu]",
 				      __FILE__, __func__, useridnr);
 				has_5_2 = 1;
 				break;
 			case DSN_CLASS_TEMP:
 			default:
 				/* Assume a temporary failure */
-				trace(TRACE_ERROR,
-				      "%s, %s: temporary failure sort_and_deliver for useridnr [%llu]",
+				trace(TRACE_ERROR, "%s, %s: temporary failure sort_and_deliver for useridnr [%llu]",
 				      __FILE__, __func__, useridnr);
 				has_4 = 1;
 				break;
@@ -503,8 +496,7 @@ int insert_messages(struct DbmailMessage *message,
 
 			/* Automatic reply and notification */
 			if (execute_auto_ran(useridnr, headerfields) < 0)
-				trace(TRACE_ERROR, "%s,%s: error in "
-				      "execute_auto_ran(), continuing",
+				trace(TRACE_ERROR, "%s,%s: error in execute_auto_ran(), continuing",
 				      __FILE__, __func__);
 		}		/* from: the useridnr for loop */
 
@@ -543,23 +535,22 @@ int insert_messages(struct DbmailMessage *message,
 			break;
 		}
 
-		trace(TRACE_DEBUG, "insert_messages(): we need to deliver [%ld] "
-		      "messages to external addresses", dm_list_length(delivery->forwards));
+		trace(TRACE_DEBUG, "%s,%s: deliver [%ld] messages to external addresses", 
+				__FILE__, __func__, dm_list_length(delivery->forwards));
 
 		/* Each user may also have a list of external forwarding addresses. */
 		if (dm_list_length(delivery->forwards) > 0) {
 
-			trace(TRACE_DEBUG, "insert_messages(): delivering to external addresses");
+			trace(TRACE_DEBUG, "%s,%s: delivering to external addresses",
+					__FILE__, __func__);
 
 			/* Forward using the temporary stored message. */
-			if (forward(tmpid, delivery->forwards, 
-						(ret_path ? ret_path->data : "DBMAIL-MAILER"), 
-						header, headersize) < 0)
+			if (forward(tmpid, delivery->forwards, (ret_path ? ret_path->data : "DBMAIL-MAILER"), header, headersize) < 0)
 				/* FIXME: if forward fails, we should do something 
 				 * sensible. Currently, the message is just black-
 				 * holed! */
-				trace(TRACE_ERROR, "%s,%s: forward failed "
-				      "message lost", __FILE__, __func__);
+				trace(TRACE_ERROR, "%s,%s: forward failed message lost", 
+						__FILE__, __func__);
 		}
 	}			/* from: the delivery for loop */
 
@@ -567,12 +558,10 @@ int insert_messages(struct DbmailMessage *message,
 	 * It is the MTA's job to requeue or bounce the message,
 	 * and our job to keep a tidy database ;-) */
 	if (db_delete_message(tmpid) < 0) 
-		trace(TRACE_ERROR, "%s,%s: failed to delete temporary message "
-		      "[%llu]", __FILE__, __func__, message->id);
-	trace(TRACE_DEBUG,
-	      "insert_messages(): temporary message deleted from database");
-
-	trace(TRACE_DEBUG, "insert_messages(): End of function");
+		trace(TRACE_ERROR, "%s,%s: failed to delete temporary message [%llu]",
+				__FILE__, __func__, message->id);
+	trace(TRACE_DEBUG, "%s,%s: temporary message deleted from database. Done.",
+			__FILE__, __func__);
 
 	g_free(header);
 	
