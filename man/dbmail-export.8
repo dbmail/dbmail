@@ -1,0 +1,68 @@
+.TH DBMAIL-EXPORT 8 
+.SH NAME
+dbmail-export
+\-
+export a mailbox from the \fBDBMail\fR mailsystem to mbox format.
+.SH SYNOPSIS
+.BR "dbmail-export [-u " "user" "] [-m " "mailbox" "] [-o " "outfile" "]"
+.BI "[-f " "configFile" "]"
+.SH DESCRIPTION
+The \fBdbmail-export\fR program allows you to export a dbmail mailbox to 
+an mbox formatted mailbox.
+
+.SH OPTIONS
+.IP "\fB-u\fR user"
+specify the owner of the mailbox you want to export.
+.IP "\fB-m\fR mailbox"
+specify the mailbox you want to export.
+.IP "\fB-o\fR outfile"
+specify the file into which the exported mail will be saved.
+
+
+.SH COMMON OPTIONS
+.IP "\fB-f\fR configfile"
+Specify an alternate config file. The utilities are currently hardcoded to use
+/etc/dbmail.conf for their configs, and will halt if the config file
+cannot be found. Use the \fB\-f\fR configfile option to specify your
+system's preferred config file location.
+.IP \fB-q\fR
+Quietly skip interactive prompts and helpful status messages which
+would otherwise be printed to \fIstdout\fR.  Use two \fB-q\fR's to
+silence errors which would otherwise be printed to \fIstderr\fR.
+
+.% Will be supported in the future.
+.% .IP \fB-n\fR
+.% Show the intended action but do not perform it, as though no to all.
+.% .IP \fB-y\fR
+.% Perform all proposed actions, as though yes to all.
+
+.IP \fB-v\fR
+Operate verbosely.
+Some of the utilities in the DBMail suite can take two \fB-v\fR's
+for extra verbosity. Those which don't understand this convention
+won't complain about having the extra \fB-v\fR and will simply
+operate at their normal verbosity.
+.IP \fB-V\fR
+Show the version and copyright, then exit.
+.IP \fB-h\fR
+Show a brief summary of options, then exit.
+.SH DIAGNOSTICS
+.ad
+.fi
+Errors and notifications are send to the trace output as set 
+in the \fBdbmail.conf\fR file.
+.SH BUGS
+.PP
+No known bugs.
+.SH LICENSE
+.na
+.nf
+.ad
+.fi
+DBMail and it's components are (c) by their respective authors and distributed under the GPL. 
+.SH AUTHOR(S)
+.na
+.nf
+Paul J Stevens
+NFG Net Facilities Group BV
+http://www.nfg.nl
