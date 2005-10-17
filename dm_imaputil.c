@@ -251,7 +251,11 @@ static void imap_part_get_sizes(GMimeObject *part, size_t * size, size_t * lines
 	b = g_string_new(t);
 	g_free(t);
 	
-	b = g_string_erase(b,0,strlen(h));
+	s = strlen(h);
+	if (b->len > s)
+		s++;
+	
+	b = g_string_erase(b,0,s);
 	t = get_crlf_encoded(b->str);
 	s = strlen(t);
 	
@@ -262,9 +266,8 @@ static void imap_part_get_sizes(GMimeObject *part, size_t * size, size_t * lines
 		if (v[i]=='\n')
 			l++;
 	}
-	if (v[s-1] != '\n')
+	if (v[s-2] != '\n')
 		l++;
-	
 	
 	g_free(h);
 	g_free(t);
@@ -288,15 +291,15 @@ void _structure_part_handle_part(GMimeObject *part, gpointer data, gboolean exte
 	if (! type)
 		return;
 
-	/* simple message */
-	if (g_mime_content_type_is_type(type,"text","*"))
-		_structure_part_text(object,data, extension);
 	/* multipart composite */
-	else if (g_mime_content_type_is_type(type,"multipart","*"))
+	if (g_mime_content_type_is_type(type,"multipart","*"))
 		_structure_part_multipart(object,data, extension);
 	/* message included as mimepart */
 	else if (g_mime_content_type_is_type(type,"message","rfc822"))
 		_structure_part_message_rfc822(object,data, extension);
+	/* simple message */
+	else
+		_structure_part_text(object,data, extension);
 
 }
 
@@ -447,10 +450,12 @@ void _structure_part_text(GMimeObject *part, gpointer data, gboolean extension)
 	imap_part_get_sizes(part,&s,&l);
 	
 	list = g_list_append_printf(list,"%d", s);
-	/* body lines */
-	list = g_list_append_printf(list,"%d", l);
-	/* extension data in case of BODYSTRUCTURE */
 	
+	/* body lines */
+	if (g_mime_content_type_is_type(type,"text","*"))
+		list = g_list_append_printf(list,"%d", l);
+	
+	/* extension data in case of BODYSTRUCTURE */
 	if (extension) {
 		/* body md5 */
 		list = imap_append_header_as_string(list,object,"Content-MD5");
@@ -551,15 +556,15 @@ GList * imap_get_structure(GMimeMessage *message, gboolean extension)
 	trace(TRACE_DEBUG,"%s,%s: message type: [%s]",
 			__FILE__, __func__, g_mime_content_type_to_string(type));
 	
-	/* simple message */
-	if (g_mime_content_type_is_type(type,"text","*"))
-		_structure_part_text(part,(gpointer)&structure, extension);
 	/* multipart composite */
-	else if (g_mime_content_type_is_type(type,"multipart","*"))
+	if (g_mime_content_type_is_type(type,"multipart","*"))
 		_structure_part_multipart(part,(gpointer)&structure, extension);
 	/* message included as mimepart */
 	else if (g_mime_content_type_is_type(type,"message","rfc822"))
 		_structure_part_message_rfc822(part,(gpointer)&structure, extension);
+	/* as simple message */
+	else
+		_structure_part_text(part,(gpointer)&structure, extension);
 	
 	return structure;
 }
@@ -648,13 +653,17 @@ GList * imap_get_envelope(GMimeMessage *message)
 
 char * imap_get_logical_part(const GMimeObject *object, const char * specifier) 
 {
+	gchar *t=NULL;
+	GString *s = g_string_new("");
 	if (strcasecmp(specifier,"HEADER")==0 || strcasecmp(specifier,"MIME")==0) 
-		return g_mime_object_get_headers(GMIME_OBJECT(object));
+		g_string_printf(s,"%s\n", g_mime_object_get_headers(GMIME_OBJECT(object)));
         
 	if (strcasecmp(specifier,"TEXT")==0)
-		return g_mime_object_get_body(GMIME_OBJECT(object));
+		g_string_printf(s,"%s\n", g_mime_object_get_body(GMIME_OBJECT(object)));
 
-	return NULL;
+	t = s->str;
+	g_string_free(s,FALSE);
+	return t;
 }
 
 	
@@ -734,15 +743,21 @@ GList * imap_message_fetch_headers(u64_t physid, const GList *headers, gboolean 
 		if (not == TRUE && tpl->len == 0)
 			tlist = g_list_append(tlist,strdup(name));
 		g_tuples_destroy(tpl);
-		g_relation_insert(rel,name,value);
+		// is this freed by g_relation_destroy?
+		g_relation_insert(rel,strdup(name),strdup(value));
 	}
 	db_free_result();
 
 	tlist = g_list_first(tlist);
 	while(tlist) {
 		tpl = g_relation_select(rel,tlist->data,0);
-		for (i=0; i<tpl->len; i++)
+		for (i=0; i<tpl->len; i++) {
+			trace(TRACE_DEBUG,"%s,%s: [%s: %s]", 
+					__FILE__, __func__, 
+					(char *)tlist->data,
+					(char *)g_tuples_index(tpl,i,1));
 			res = g_list_append_printf(res, "%s: %s", (char *)tlist->data, (char *)g_tuples_index(tpl,i,1));
+		}
 		g_tuples_destroy(tpl);
 
 		if (! g_list_next(tlist))
