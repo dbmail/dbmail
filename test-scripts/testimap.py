@@ -522,7 +522,6 @@ class testImapServer(unittest.TestCase):
         self.assertEquals(self.o.unsubscribe('testunsub'),('OK', ['UNSUBSCRIBE completed']))
         
     def tearDown(self):
-        return
         try:
             dirs = []
             for d in self.o.list()[1]:

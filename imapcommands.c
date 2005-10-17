@@ -1659,7 +1659,8 @@ int _ic_fetch(struct ImapSession *self)
 {
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	u64_t i, fetch_start, fetch_end;
-	u64_t fetch_max;
+	u64_t fetch_max, row=0;
+	int rows=0;
 	unsigned fn;
 	int result, idx;
 	char *endptr;
@@ -1746,7 +1747,6 @@ int _ic_fetch(struct ImapSession *self)
 			dbmail_imap_session_printf(self, "%s BAD invalid character in message range\r\n", self->tag);
 			return 1;
 		}
-
 		
 		if (! self->use_uid) {
 			if (fetch_start > 0)
@@ -1758,9 +1758,10 @@ int _ic_fetch(struct ImapSession *self)
 		trace(TRACE_DEBUG,"%s,%s: fetch_start [%llu] fetch_end [%llu]",
 				__FILE__, __func__, fetch_start, fetch_end);
 		
-		if (dbmail_imap_session_fetch_get_unparsed(self, fetch_start, fetch_end) < 0)
+		if ((rows=dbmail_imap_session_fetch_get_unparsed(self, fetch_start, fetch_end)) < 0)
 			return -1;
 			
+		row=0;
 		for (i = fetch_start; i <= fetch_end; i++) {
 			self->msg_idnr = (self->use_uid ? i : ud->mailbox.seq_list[i]);
 			if (self->use_uid) {
@@ -1780,8 +1781,9 @@ int _ic_fetch(struct ImapSession *self)
 
 			/* go fetch the items */
 			fflush(self->ci->tx);
-			if (dbmail_imap_session_fetch_get_items(self) < 0)
+			if (dbmail_imap_session_fetch_get_items(self,row) < 0)
 				return -1;
+			row++;
 		}
 	}
 
