@@ -307,8 +307,10 @@ int dsnuser_resolve(deliver_to_user_t *delivery)
 	 */
 	else {		/* from: 'if (delivery->useridnr != 0)' */
 
-		alias_count =
-		    auth_check_user_ext(delivery->address,
+		if (! strlen(delivery->address))
+			return 0;
+		
+		alias_count = auth_check_user_ext(delivery->address,
 					delivery->userids,
 					delivery->forwards, 0);
 		trace(TRACE_DEBUG,
