@@ -80,20 +80,25 @@ struct ImapSession * dbmail_imap_session_new(void)
 	if (! self)
 		trace(TRACE_ERROR,"%s,%s: OOM error", __FILE__, __func__);
 
-	/* client */
-	self->ci = g_new0(clientinfo_t,1);
+	/* to we need this? */
+	self->ci = NULL;
+	self->fi = NULL;
+	self->msginfo = NULL;
+	self->tag = NULL;
+	self->command = NULL;
 	
-	/* fetch command elements */
-	self->fi = g_new0(fetch_items_t,1);
-	
-	/* */
-	self->msginfo = g_new0(msginfo_t,1);
+	dbmail_imap_session_resetFi(self);
 	
 	return self;
 }
 
 struct ImapSession * dbmail_imap_session_resetFi(struct ImapSession * self)
 {
+	if (! self->fi) {
+		self->fi = g_new0(fetch_items_t,1);
+		return self;
+	}
+	
 	dbmail_imap_session_bodyfetch_rewind(self);
 	g_list_foreach(self->fi->bodyfetch,(GFunc)g_free,NULL);
 	memset(self->fi,'\0',sizeof(fetch_items_t));
@@ -102,17 +107,34 @@ struct ImapSession * dbmail_imap_session_resetFi(struct ImapSession * self)
      
 struct ImapSession * dbmail_imap_session_setClientinfo(struct ImapSession * self, clientinfo_t *ci)
 {
+	self->ci = g_new0(clientinfo_t,1);
 	memcpy(self->ci, ci, sizeof(clientinfo_t));
 	return self;
 }
+struct ImapSession * dbmail_imap_session_setMsginfo(struct ImapSession * self, msginfo_t * msginfo)
+{
+	self->msginfo = g_new0(msginfo_t,1);
+	memcpy(self->msginfo,msginfo,sizeof(msginfo_t));
+	return self;
+}
+
 struct ImapSession * dbmail_imap_session_setTag(struct ImapSession * self, char * tag)
 {
-	self->tag = tag;
+	if (self->tag) {
+		g_free(self->tag);
+		self->tag = NULL;
+	}
+	
+	self->tag = g_strdup(tag);
 	return self;
 }
 struct ImapSession * dbmail_imap_session_setCommand(struct ImapSession * self, char * command)
 {
-	self->command = command;
+	if (self->command) {
+		g_free(self->command);
+		self->command = NULL;
+	}
+	self->command = g_strdup(command);
 	return self;
 }
 struct ImapSession * dbmail_imap_session_setArgs(struct ImapSession * self, char ** args)
@@ -120,38 +142,35 @@ struct ImapSession * dbmail_imap_session_setArgs(struct ImapSession * self, char
 	self->args = args;
 	return self;
 }
-struct ImapSession * dbmail_imap_session_setFi(struct ImapSession * self, fetch_items_t *fi)
-{
-	self->fi = fi;
-	return self;
-}
-struct ImapSession * dbmail_imap_session_setMsginfo(struct ImapSession * self, msginfo_t * msginfo)
-{
-	self->msginfo = msginfo;
-	return self;
-}
 void dbmail_imap_session_delete(struct ImapSession * self)
 {
 	close_cache();
-	if (self->ci->userData) {
-		null_free(((imap_userdata_t*)self->ci->userData)->mailbox.seq_list);
-		null_free(self->ci->userData);
-	}
-	dbmail_imap_session_bodyfetch_free(self);
 	
 	if (self->fi) {
+		dbmail_imap_session_bodyfetch_free(self);
 		g_free(self->fi);
 		self->fi = NULL;
 	}
-	
 	if (self->ci) {
+		if (self->ci->userData) {
+			null_free(((imap_userdata_t*)self->ci->userData)->mailbox.seq_list);
+			null_free(self->ci->userData);
+		}
 		g_free(self->ci);
 		self->ci = NULL;
 	}
-	
 	if (self->msginfo) {
 		g_free(self->msginfo);
 		self->msginfo = NULL;
+	}
+	
+	if (self->tag) {
+		g_free(self->tag);
+		self->tag = NULL;
+	}
+	if (self->command) {
+		g_free(self->command);
+		self->command = NULL;
 	}
 	
 	g_free(self);
@@ -1417,6 +1436,8 @@ int dbmail_imap_session_set_state(struct ImapSession *self, int state)
 
 void dbmail_imap_session_bodyfetch_new(struct ImapSession *self) 
 {
+
+	assert(self->fi);
 	body_fetch_t *bodyfetch = g_new0(body_fetch_t, 1);
 	bodyfetch->itemtype = -1;
 	self->fi->bodyfetch = g_list_append(self->fi->bodyfetch, bodyfetch);
@@ -1424,17 +1445,20 @@ void dbmail_imap_session_bodyfetch_new(struct ImapSession *self)
 
 void dbmail_imap_session_bodyfetch_rewind(struct ImapSession *self) 
 {
+	assert(self->fi);
 	self->fi->bodyfetch = g_list_first(self->fi->bodyfetch);
 }
 
 void dbmail_imap_session_bodyfetch_free(struct ImapSession *self) 
 {
+	assert(self->fi);
 	g_list_foreach(self->fi->bodyfetch, (GFunc)g_free, NULL);
 	g_list_free(self->fi->bodyfetch);
 }
 
 body_fetch_t * dbmail_imap_session_bodyfetch_get_last(struct ImapSession *self) 
 {
+	assert(self->fi);
 	if (self->fi->bodyfetch == NULL)
 		dbmail_imap_session_bodyfetch_new(self);
 	
@@ -1444,6 +1468,7 @@ body_fetch_t * dbmail_imap_session_bodyfetch_get_last(struct ImapSession *self)
 
 int dbmail_imap_session_bodyfetch_set_partspec(struct ImapSession *self, char *partspec, int length) 
 {
+	assert(self->fi);
 	body_fetch_t *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
 	memset(bodyfetch->partspec,'\0',IMAP_MAX_PARTSPEC_LEN);
 	memcpy(bodyfetch->partspec,partspec,length);
@@ -1451,52 +1476,61 @@ int dbmail_imap_session_bodyfetch_set_partspec(struct ImapSession *self, char *p
 }
 char *dbmail_imap_session_bodyfetch_get_last_partspec(struct ImapSession *self) 
 {
+	assert(self->fi);
 	body_fetch_t *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
 	return bodyfetch->partspec;
 }
 
 int dbmail_imap_session_bodyfetch_set_itemtype(struct ImapSession *self, int itemtype) 
 {
+	assert(self->fi);
 	body_fetch_t *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
 	bodyfetch->itemtype = itemtype;
 	return 0;
 }
 int dbmail_imap_session_bodyfetch_get_last_itemtype(struct ImapSession *self) 
 {
+	assert(self->fi);
 	body_fetch_t *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
 	return bodyfetch->itemtype;
 }
 int dbmail_imap_session_bodyfetch_set_argstart(struct ImapSession *self, int idx) 
 {
+	assert(self->fi);
 	body_fetch_t *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
 	bodyfetch->argstart = idx;
 	return bodyfetch->argstart;
 }
 int dbmail_imap_session_bodyfetch_get_last_argstart(struct ImapSession *self) 
 {
+	assert(self->fi);
 	body_fetch_t *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
 	return bodyfetch->argstart;
 }
 int dbmail_imap_session_bodyfetch_set_argcnt(struct ImapSession *self, int idx) 
 {
+	assert(self->fi);
 	body_fetch_t *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
 	bodyfetch->argcnt = idx - bodyfetch->argstart;
 	return bodyfetch->argcnt;
 }
 int dbmail_imap_session_bodyfetch_get_last_argcnt(struct ImapSession *self) 
 {
+	assert(self->fi);
 	body_fetch_t *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
 	return bodyfetch->argcnt;
 }
 
 int dbmail_imap_session_bodyfetch_set_octetstart(struct ImapSession *self, guint64 octet)
 {
+	assert(self->fi);
 	body_fetch_t *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
 	bodyfetch->octetstart = octet;
 	return 0;
 }
 guint64 dbmail_imap_session_bodyfetch_get_last_octetstart(struct ImapSession *self)
 {
+	assert(self->fi);
 	body_fetch_t *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
 	return bodyfetch->octetstart;
 }
@@ -1504,12 +1538,14 @@ guint64 dbmail_imap_session_bodyfetch_get_last_octetstart(struct ImapSession *se
 
 int dbmail_imap_session_bodyfetch_set_octetcnt(struct ImapSession *self, guint64 octet)
 {
+	assert(self->fi);
 	body_fetch_t *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
 	bodyfetch->octetcnt = octet;
 	return 0;
 }
 guint64 dbmail_imap_session_bodyfetch_get_last_octetcnt(struct ImapSession *self)
 {
+	assert(self->fi);
 	body_fetch_t *bodyfetch = dbmail_imap_session_bodyfetch_get_last(self);
 	return bodyfetch->octetcnt;
 }

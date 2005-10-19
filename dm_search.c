@@ -45,16 +45,6 @@ extern db_param_t _db_params;
 char query[DEF_QUERYSIZE];
 
 /* used only locally */
-/** \brief performs a binary search on an array to find key. Array should
- * be ascending in values.
- * \param array array to be searched through
- * \param arraysize 
- * \param key key to be found in array
- * \return
- *    - -1 if not found
- *    -  index of key in array if found
- */
-static int db_binary_search(const u64_t * array, int arraysize, u64_t key);
 /**
  * \brief perform search on on the body of a message
  * \param msg mime_message_t struct of message
@@ -155,6 +145,18 @@ int db_search(unsigned int *rset, unsigned setlen, search_key_t * sk, mailbox_t 
 			 mb->uid, MESSAGE_STATUS_DELETE, sk->search);
 		break;
 		
+		case IST_SORT_FLD:
+		snprintf(query, DEF_QUERYSIZE,
+			"SELECT message_idnr FROM %smessages m "
+			"JOIN %sphysmessage p on p.id=m.physmessage_id "
+			"JOIN %s ft on p.id=ft.physmessage_id "
+			"WHERE m.mailbox_idnr = '%llu' AND m.status < '%d' " 
+			"ORDER BY %s %s,message_idnr",
+			DBPFX,DBPFX, sk->table, mb->uid, 
+			MESSAGE_STATUS_DELETE, 
+			sk->field, sk->reverse ? "DESC" : "ASC");
+		break;
+		
 		default:
 		snprintf(query, DEF_QUERYSIZE,
 			 "SELECT message_idnr FROM %smessages "
@@ -230,7 +232,7 @@ int db_sort_parsed(unsigned int *rset, unsigned int setlen,
 		
 		dm_list_init(&hdrs);
 		
-		if ((result = db_get_main_header(mb->seq_list[i], &hdrs)))
+		if ((result = db_get_main_header(mb->seq_list[i], &hdrs, sk->hdrfld)))
 			continue;	/* ignore parse errors */
 
 		if (dm_list_getstart(&hdrs)) {
@@ -284,26 +286,6 @@ int db_search_parsed(unsigned int *rset, unsigned int setlen,
 		dbmail_message_free(msg);
 	}
 	return 0;
-}
-
-int db_binary_search(const u64_t * array, int arraysize, u64_t key)
-{
-	int low, high, mid;
-
-	low = 0;
-	high = arraysize - 1;
-
-	while (low <= high) {
-		mid = (high + low) / 2;
-		if (array[mid] < key)
-			low = mid + 1;
-		else if (array[mid] > key)
-			high = mid - 1;
-		else
-			return mid;
-	}
-
-	return -1;		/* not found */
 }
 
 static void _match_header(const char *field, const char *value, gpointer userdata)

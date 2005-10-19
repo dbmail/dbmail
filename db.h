@@ -1201,7 +1201,7 @@ int db_get_msginfo_range(u64_t msg_idnr_low, u64_t msg_idnr_high,
  *    - 0 success
  * \attention hdrlist should be empty on call.
  */
-int db_get_main_header(u64_t msg_idnr, struct dm_list *hdrlist);
+int db_get_main_header(u64_t msg_idnr, struct dm_list *hdrlist, const char *headername);
 /**
  * \brief check if a message belongs to a mailbox
  * \param mailbox_idnr

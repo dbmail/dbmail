@@ -42,15 +42,9 @@ int checktag(const char *s);
 int checkmailboxname(const char *s);
 int check_msg_set(const char *s);
 int check_date(const char *date);
-void clarify_data(char *str);
-
 void base64encode(char *in, char *out);
 void base64decode(char *in, char *out);
-int binary_search(const u64_t * array, unsigned arraysize, u64_t key,
-		  unsigned int *key_idx);
-
-
-int quoted_string_out(FILE * outstream, const char *s);
+int binary_search(const u64_t * array, unsigned arraysize, u64_t key, unsigned int *key_idx);
 void send_data(FILE * to, MEM * from, int cnt);
 
 int build_imap_search(char **search_keys, struct dm_list *sl, int *idx, int sorted);

@@ -176,6 +176,7 @@ START_TEST(test_imap_bodyfetch)
 	int result;
 	guint64 octet;
 	struct ImapSession *s = dbmail_imap_session_new();
+
 	dbmail_imap_session_bodyfetch_new(s);
 	
 	fail_unless(0 == dbmail_imap_session_bodyfetch_get_last_octetstart(s), "octetstart init value incorrect");
@@ -327,6 +328,7 @@ START_TEST(test_imap_get_structure)
 	strncpy(expect,"((\"text\" \"html\" NIL NIL NIL NIL 16 1 NIL (\"inline\") NIL NIL) "
 			"(\"text\" \"plain\" (\"charset\" \"us-ascii\" \"name\" \"testfile\") NIL NIL \"base64\" 432 7 NIL NIL NIL NIL) "
 			"\"mixed\" (\"boundary\" \"boundary\") NIL NIL NIL)",1024);
+	//printf("\n[%s]\n[%s]\n", expect, result);
 	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_structure failed");
 	g_list_foreach(l,(GFunc)g_free,NULL);
 	g_free(result);

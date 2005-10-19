@@ -203,26 +203,112 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 	return count;
 }
 
-GList * dbmail_mailbox_orderedsubject(struct DbmailMailbox *self)
+static gboolean _tree_foreach(gpointer key UNUSED, gpointer value, GString * data)
 {
-	GList *res = NULL;
+	gboolean res = FALSE;
+	GList *sublist = (GList *)value;
+
+	GString *t = g_string_new("");
+	
+	sublist = g_list_first(sublist);
+	while(sublist) {
+		g_string_append_printf(t, "(%llu)", (u64_t)GPOINTER_TO_UINT(sublist->data));
+		if (! g_list_next(sublist))
+			break;
+		sublist = g_list_next(sublist);
+	}
+	if (g_list_length(sublist) > 1)
+		g_string_append_printf(data, "(%s)", t->str);
+	else
+		g_string_append_printf(data, "%s", t->str);
+
+	g_string_free(t,TRUE);
+
+	return res;
+}
+char * dbmail_mailbox_orderedsubject(struct DbmailMailbox *self, u64_t *rset, unsigned setlen)
+{
+	GList *sublist = NULL;
 	GString *q = g_string_new("");
-	/* full threads (unordered) */
-	g_string_printf(q, "SELECT message_idnr,subjectfield "
-			"FROM dbmail_messages "
-			"JOIN dbmail_subjectfield using (physmessage_id) "
-			"JOIN dbmail_datefield using (physmessage_id) "
-			"WHERE mailbox_idnr=%llu "
-			"ORDER BY subjectfield,datefield", dbmail_mailbox_get_id(self));
+	u64_t i = 0, r = 0, idnr = 0;
+	char *subj;
+	char *res = NULL;
+	GTree *tree = g_tree_new((GCompareFunc)strcmp);
+	GString *threads = g_string_new("");
 	
 	/* thread-roots (ordered) */
 	g_string_printf(q, "SELECT message_idnr,subjectfield "
-			"FROM dbmail_messages "
-			"JOIN dbmail_subjectfield USING (physmessage_id) "
-			"JOIN dbmail_datefield USING (physmessage_id) "
+			"FROM %smessages "
+			"JOIN %ssubjectfield USING (physmessage_id) "
+			"JOIN %sdatefield USING (physmessage_id) "
 			"WHERE mailbox_idnr=%llu "
-			"GROUP BY subjectfield ORDER BY datefield", dbmail_mailbox_get_id(self));
+			"AND status < '%d' "
+			"GROUP BY subjectfield ORDER BY datefield", 
+			DBPFX, DBPFX, DBPFX,
+			dbmail_mailbox_get_id(self),
+			MESSAGE_STATUS_DELETE);
+
+	if (db_query(q->str) == DM_EQUERY) {
+		g_string_free(q,TRUE);
+		return res;;
+	}
+	if ((r = db_num_rows())==0) {
+		g_string_free(q,TRUE);
+		return res;
+	}
 	
+	i=0;
+	while (i < r) {
+		idnr = db_get_result_u64(i,0);
+		if (db_binary_search(rset,setlen,idnr) < 0) {
+			i++;
+			continue;
+		}
+		subj = (char *)db_get_result(i,1);
+		g_tree_insert(tree,(gpointer)(g_strdup(subj)), NULL);
+		i++;
+	}
+		
+	/* full threads (unordered) */
+	g_string_printf(q, "SELECT message_idnr,subjectfield "
+			"FROM %smessages "
+			"JOIN %ssubjectfield using (physmessage_id) "
+			"JOIN %sdatefield using (physmessage_id) "
+			"WHERE mailbox_idnr=%llu "
+			"AND status < '%d' "
+			"ORDER BY subjectfield,datefield", 
+			DBPFX, DBPFX, DBPFX,
+			dbmail_mailbox_get_id(self),
+			MESSAGE_STATUS_DELETE);
+		
+	if (db_query(q->str) == DM_EQUERY) {
+		g_string_free(q,TRUE);
+		return res;;
+	}
+	if ((r = db_num_rows())==0) {
+		g_string_free(q,TRUE);
+		return res;
+	}
+	
+	i=0;
+	while (i < r) {
+		idnr = db_get_result_u64(i,0);
+		if (db_binary_search(rset,setlen,idnr) < 0) {
+			i++;
+			continue;
+		}
+		
+		subj = (char *)db_get_result(i,1);
+		sublist = g_tree_lookup(tree,(gconstpointer)subj);
+		sublist = g_list_append(sublist,GUINT_TO_POINTER((unsigned)idnr));
+		g_tree_insert(tree,(gpointer)(g_strdup(subj)),(gpointer)sublist);
+		i++;
+	}
+
+	g_tree_foreach(tree,(GTraverseFunc)_tree_foreach,threads);
+	res = threads->str;
+
+	g_string_free(threads,FALSE);
 	g_string_free(q,TRUE);
 
 	return res;

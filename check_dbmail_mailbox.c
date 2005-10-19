@@ -120,6 +120,21 @@ START_TEST(test_dbmail_mailbox_dump)
 }
 END_TEST
 
+START_TEST(test_dbmail_mailbox_orderedsubject)
+{
+	char *res;
+	unsigned setlen = 3;
+	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id());
+	u64_t *rset = g_new0(u64_t, setlen);
+	rset[0] = 1;
+	rset[1] = 2;
+	rset[2] = 1074946;
+	res = dbmail_mailbox_orderedsubject(mb, rset, setlen);
+	printf("threads [%s]\n", res);
+
+}
+END_TEST
+
 Suite *dbmail_mailbox_suite(void)
 {
 	Suite *s = suite_create("Dbmail Mailbox");
@@ -130,6 +145,7 @@ Suite *dbmail_mailbox_suite(void)
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_new);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_open);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_dump);
+	tcase_add_test(tc_mailbox, test_dbmail_mailbox_orderedsubject);
 	
 	return s;
 }

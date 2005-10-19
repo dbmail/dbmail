@@ -56,5 +56,4 @@ int db_search_parsed(unsigned int *rset, unsigned setlen,
 
 int   db_sort_parsed(unsigned int *rset, unsigned setlen, 
 		search_key_t *sk, mailbox_t *mb, int condition);
- 
 #endif

@@ -1320,7 +1320,8 @@ int _ic_sort(struct ImapSession *self)
 			"* NO internal dbase error\r\n" :
 			"* NO server ran out of memory\r\n");
 
-		trace(TRACE_ERROR, "ic_sort(): fatal error [%d] from perform_imap_search()\n",result);
+		trace(TRACE_ERROR, "%s,%s: fatal error [%d] from perform_imap_search()",
+				__FILE__, __func__, result);
 		return -1;
 	}
 

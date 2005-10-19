@@ -3429,13 +3429,14 @@ int db_get_rfcsize(u64_t msg_idnr, u64_t mailbox_idnr, u64_t * rfc_size)
 	return DM_EGENERAL;
 }
 
-int db_get_main_header(u64_t msg_idnr, struct dm_list *hdrlist)
+int db_get_main_header(u64_t msg_idnr, struct dm_list *hdrlist, const char *headername)
 {
 	struct mime_record *mr;
-	char *field, *value;
 	int i,j;
 
 	if (!hdrlist)
+		return DM_SUCCESS;
+	if (!headername)
 		return DM_SUCCESS;
 
 	if (hdrlist->start)
@@ -3444,14 +3445,13 @@ int db_get_main_header(u64_t msg_idnr, struct dm_list *hdrlist)
 	dm_list_init(hdrlist);
 	
 	snprintf(query, DEF_QUERYSIZE, "SELECT headername, headervalue "
-			"FROM %sheadervalue "
-			"JOIN %sheadername ON %sheadername.id=%sheadervalue.headername_id "
-			"JOIN %sphysmessage ON %sphysmessage.id=%sheadervalue.physmessage_id "
-			"JOIN %smessages ON %smessages.physmessage_id=%sphysmessage.id "
-			"WHERE %smessages.message_idnr='%llu'", 
-			DBPFX, DBPFX, DBPFX, DBPFX, DBPFX, 
-			DBPFX, DBPFX, DBPFX, DBPFX, DBPFX, 
-			DBPFX, msg_idnr);
+			"FROM %sheadervalue v "
+			"JOIN %sheadername n ON n.id=v.headername_id "
+			"JOIN %sphysmessage p ON p.id=v.physmessage_id "
+			"JOIN %smessages m ON m.physmessage_id=p.id "
+			"WHERE m.message_idnr='%llu' "
+			"AND headername = \"%s\"",
+			DBPFX, DBPFX, DBPFX, DBPFX, msg_idnr, headername);
 	
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not get message headers",
@@ -3459,31 +3459,23 @@ int db_get_main_header(u64_t msg_idnr, struct dm_list *hdrlist)
 		return DM_EQUERY;
 	}
 
-
-	j = db_num_rows();
-	
-	if (j <= 0) {
+	if ((j = db_num_rows()) <= 0) {
 		trace(TRACE_ERROR, "%s,%s: no message headers found for message",
 		      __FILE__, __func__);
 		db_free_result();
 		return DM_EQUERY;
 	}
 	
-	mr = g_new0(struct mime_record, 1);
+	if (! (mr = g_new0(struct mime_record, 1)))
+		trace(TRACE_FATAL,"%s,%s: oom", __FILE__, __func__);
+	
 	for (i=0; i<j; i++) {
-		
-		field = (char *)db_get_result(i, 0);
-		value = (char *)db_get_result(i, 1);
-		
-		if (! mr)
-			trace(TRACE_FATAL,"%s,%s: oom", __FILE__, __func__);
-
-		g_strlcpy(mr->field, field, MIME_FIELD_MAX);
-		g_strlcpy(mr->value, value, MIME_VALUE_MAX);
+		g_strlcpy(mr->field, (char *)db_get_result(i, 0), MIME_FIELD_MAX);
+		g_strlcpy(mr->value, (char *)db_get_result(i, 1), MIME_VALUE_MAX);
 		dm_list_nodeadd(hdrlist, mr, sizeof(*mr));
 	}
+	
 	g_free(mr);
-
 	db_free_result();
 
 	return DM_SUCCESS;

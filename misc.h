@@ -26,6 +26,18 @@
 #include "dbmail.h"
 
 #define BUFLEN 2048
+ 
+/** \brief performs a binary search on an array to find key. Array should
+ * be ascending in values.
+ * \param array array to be searched through
+ * \param arraysize 
+ * \param key key to be found in array
+ * \return
+ *    - -1 if not found
+ *    -  index of key in array if found
+ */
+int db_binary_search(const u64_t * array, int arraysize, u64_t key);
+
 
 /**
    \brief drop process privileges. Change change euid and egid to

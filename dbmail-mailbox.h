@@ -52,7 +52,7 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *ostream);
 
 void dbmail_mailbox_free(struct DbmailMailbox *self);
 
-GList * dbmail_mailbox_orderedsubject(struct DbmailMailbox *self);
+char * dbmail_mailbox_orderedsubject(struct DbmailMailbox *self, u64_t *rset, unsigned setlen);
 
 
 #endif

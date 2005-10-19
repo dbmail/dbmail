@@ -28,6 +28,27 @@
 #undef max
 #define max(x,y) ( (x) > (y) ? (x) : (y) )
 
+int db_binary_search(const u64_t * array, int arraysize, u64_t key)
+{
+	int low, high, mid;
+
+	low = 0;
+	high = arraysize - 1;
+
+	while (low <= high) {
+		mid = (high + low) / 2;
+		if (array[mid] < key)
+			low = mid + 1;
+		else if (array[mid] > key)
+			high = mid - 1;
+		else
+			return mid;
+	}
+
+	return -1;		/* not found */
+}
+
+
 int drop_privileges(char *newuser, char *newgroup)
 {
 	/* will drop running program's priviledges to newuser and newgroup */
