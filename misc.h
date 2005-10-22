@@ -131,4 +131,5 @@ int dm_valid_format(const char *str);
 int dm_strip_folder(char **retchar, size_t * retsize);
 int dm_valid_folder(const char *userid, char *folder);
 
+GList * g_tree_keys(GTree *tree);
 #endif
