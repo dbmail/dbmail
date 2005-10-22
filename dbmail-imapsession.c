@@ -113,8 +113,8 @@ struct ImapSession * dbmail_imap_session_setClientinfo(struct ImapSession * self
 }
 struct ImapSession * dbmail_imap_session_setMsginfo(struct ImapSession * self, msginfo_t * msginfo)
 {
-	self->msginfo = g_new0(msginfo_t,1);
-	memcpy(self->msginfo,msginfo,sizeof(msginfo_t));
+	// allocated before assignment...
+	self->msginfo = msginfo;
 	return self;
 }
 
@@ -163,7 +163,6 @@ void dbmail_imap_session_delete(struct ImapSession * self)
 		g_free(self->msginfo);
 		self->msginfo = NULL;
 	}
-	
 	if (self->tag) {
 		g_free(self->tag);
 		self->tag = NULL;
@@ -608,22 +607,21 @@ int dbmail_imap_session_get_msginfo_range(struct ImapSession *self, u64_t msg_id
 	}
 
 	for (i = 0; i < nrows; i++) {
-		if (self->fi->getFlags) {
-			for (j = 0; j < IMAP_NFLAGS; j++)
-				result[i].flags[j] = db_get_result_bool(i, j);
-		}
+		/* flags */
+		for (j = 0; j < IMAP_NFLAGS; j++)
+			result[i].flags[j] = db_get_result_bool(i, j);
 
-		if (self->fi->getInternalDate) {
-			query_result = db_get_result(i, IMAP_NFLAGS);
-			strncpy(result[i].internaldate,
-				(query_result) ? query_result :
-				"1970-01-01 00:00:01",
-				IMAP_INTERNALDATE_LEN);
-		}
-		if (self->fi->getSize) {
-			result[i].rfcsize = db_get_result_u64(i, IMAP_NFLAGS + 1);
-		}
+		/* internal date */
+		query_result = db_get_result(i, IMAP_NFLAGS);
+		strncpy(result[i].internaldate,
+			(query_result) ? query_result :
+			"1970-01-01 00:00:01",
+			IMAP_INTERNALDATE_LEN);
 		
+		/* rfcsize */
+		result[i].rfcsize = db_get_result_u64(i, IMAP_NFLAGS + 1);
+		
+		/* uid */
 		result[i].uid = db_get_result_u64(i, IMAP_NFLAGS + 2);
 	}
 	db_free_result();
