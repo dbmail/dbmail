@@ -999,3 +999,21 @@ int dm_valid_folder(const char *userid, char *folder)
 	return 0;
 }
 
+static void tree_get_keylist(char *key, gpointer *value UNUSED, GList **keylist)
+{
+	*(GList **)keylist = g_list_append(*(GList **)keylist, key);
+}
+
+GList * g_tree_keys(GTree *tree) {
+	GList *keylist = NULL;
+	GString *k;
+	
+	g_tree_foreach(tree,(GTraverseFunc)tree_get_keylist,&keylist);
+	k = g_list_join(keylist," ");
+	trace(TRACE_DEBUG, "%s,%s: keys in subtree [%s]", __FILE__, __func__, k->str);
+	g_string_free(k,TRUE);
+	
+	return g_list_first(keylist);
+}
+
+
