@@ -315,3 +315,918 @@ char * dbmail_mailbox_orderedsubject(struct DbmailMailbox *self, u64_t *rset, un
 }
 
 
+static void _append_join(char *join, char *table)
+{
+	char *tmp;
+	tmp = g_strdup_printf("LEFT JOIN %s%s ON p.id=%s%s.physmessage_id ", DBPFX, table, DBPFX, table);
+	g_strlcat(join, tmp, MAX_SEARCH_LEN);
+	g_free(tmp);
+}
+
+static void _append_sort(char *order, char *field, gboolean reverse)
+{
+	char *tmp;
+	tmp = g_strdup_printf("%s%s,", field, reverse ? " DESC" : "");
+	g_strlcat(order, tmp, MAX_SEARCH_LEN);
+	g_free(tmp);
+}
+
+
+/*
+ * build_imap_search()
+ *
+ * builds a linked list of search items from a set of IMAP search keys
+ * sl should be initialized; new search items are simply added to the list
+ *
+ * returns -1 on syntax error, -2 on memory error; 0 on success, 1 if ')' has been encountered
+ */
+int dbmail_mailbox_build_imap_search(struct DbmailMailbox *self, char **search_keys, search_key_t *sk, int *idx, int sorted)
+{
+	search_key_t *value = NULL;
+	char *key = NULL;
+	int result;
+	gboolean reverse = FALSE;
+	GTree *tree;
+
+	if (!search_keys || !search_keys[*idx])
+		return 0;
+
+	if (! (tree = sk->sub_search))
+		return 0;
+	
+	if (sorted) {
+		key = g_strdup("sorted");
+		value = g_tree_lookup(tree,key);
+	}
+		
+	if (! value)
+		value = g_new0(search_key_t,1);
+	
+	if (! value->sub_search)
+		value->sub_search = g_tree_new((GCompareFunc)strcmp);
+	
+	/* SORT */
+	if (sorted)
+		value->type = IST_SORT;
+
+	if(sorted && (strcasecmp(search_keys[*idx], "reverse") == 0)) {
+		(*idx)++;
+		reverse = TRUE;
+	}
+			
+	if (sorted && (strcasecmp(search_keys[*idx], "us-ascii") == 0)) {
+	
+		(*idx)++;
+		return 0;
+		
+	} else if (sorted && (strcasecmp(search_keys[*idx], "iso-8859-1") == 0)) {
+		
+		(*idx)++;
+		return 0;
+
+	} else if (sorted && (strcasecmp(search_keys[*idx], "arrival") == 0)) {
+		
+		_append_sort(value->order, "internal_date", reverse);
+		
+		(*idx)++;
+	
+	} else if (sorted && (strcasecmp(search_keys[*idx], "size") == 0)) {
+		
+		_append_sort(value->order, "messagesize", reverse);
+		
+		(*idx)++;
+	
+	} else if (sorted && (strcasecmp(search_keys[*idx], "from") == 0)) {
+		
+		_append_join(value->table, "fromfield");
+		_append_sort(value->order, "fromaddr", reverse);	
+		
+		(*idx)++;
+		
+	} else if (sorted && (strcasecmp(search_keys[*idx], "subject") == 0)) {
+		
+		_append_join(value->table, "subjectfield");
+		_append_sort(value->order, "subjectfield", reverse);
+		
+		(*idx)++;
+		
+	} else if (sorted && (strcasecmp(search_keys[*idx], "cc") == 0)) {
+		
+		_append_join(value->table, "ccfield");
+		_append_sort(value->order, "ccaddr", reverse);
+		
+		(*idx)++;
+		
+	} else if (sorted && (strcasecmp(search_keys[*idx], "to") == 0)) {
+		
+		_append_join(value->table, "tofield");
+		_append_sort(value->order, "toaddr", reverse);
+		
+		(*idx)++;
+		
+		
+	} else if (sorted && (strcasecmp(search_keys[*idx], "date") == 0)) {
+
+		_append_join(value->table, "datefield");
+		_append_sort(value->order, "datefield", reverse);
+		
+		(*idx)++;
+		
+
+	/* SEARCH */
+
+		
+	} else if (strcasecmp(search_keys[*idx], "all") == 0) {
+		
+		key = g_strdup(search_keys[*idx]);
+		
+		value->type = IST_SET;
+		strcpy(value->search, "1:*");
+		(*idx)++;
+		
+	} else if (strcasecmp(search_keys[*idx], "uid") == 0) {
+		
+		if (!search_keys[*idx + 1])
+			return -1;
+
+		key = g_strdup(search_keys[*idx]);
+		
+		(*idx)++;
+
+		value->type = IST_SET_UID;
+		strncpy(value->search, search_keys[(*idx)], MAX_SEARCH_LEN);
+		
+		if (!check_msg_set(value->search))
+			return -1;
+		(*idx)++;
+	}
+
+	/*
+	 * FLAG search keys
+	 */
+
+	else if (strcasecmp(search_keys[*idx], "answered") == 0) {
+		
+		key = g_strdup(search_keys[*idx]);
+		value->type = IST_FLAG;
+		strncpy(value->search, "answered_flag=1", MAX_SEARCH_LEN);
+		(*idx)++;
+		
+	} else if (strcasecmp(search_keys[*idx], "deleted") == 0) {
+		
+		key = g_strdup(search_keys[*idx]);
+		value->type = IST_FLAG;
+		strncpy(value->search, "deleted_flag=1", MAX_SEARCH_LEN);
+		(*idx)++;
+		
+	} else if (strcasecmp(search_keys[*idx], "flagged") == 0) {
+		
+		key = g_strdup(search_keys[*idx]);
+		value->type = IST_FLAG;
+		strncpy(value->search, "flagged_flag=1", MAX_SEARCH_LEN);
+		(*idx)++;
+		
+	} else if (strcasecmp(search_keys[*idx], "recent") == 0) {
+		
+		key = g_strdup(search_keys[*idx]);
+		value->type = IST_FLAG;
+		strncpy(value->search, "recent_flag=1", MAX_SEARCH_LEN);
+		(*idx)++;
+		
+	} else if (strcasecmp(search_keys[*idx], "seen") == 0) {
+		
+		key = g_strdup(search_keys[*idx]);
+		value->type = IST_FLAG;
+		strncpy(value->search, "seen_flag=1", MAX_SEARCH_LEN);
+		(*idx)++;
+		
+	} else if (strcasecmp(search_keys[*idx], "keyword") == 0) {
+		
+		/* no results from this one */
+		if (!search_keys[(*idx) + 1])
+			return -1;
+		key = g_strdup(search_keys[*idx]);
+		(*idx)++;
+
+		value->type = IST_SET;
+		strcpy(value->search, "0");
+		(*idx)++;
+		
+	} else if (strcasecmp(search_keys[*idx], "draft") == 0) {
+		
+		key = g_strdup(search_keys[*idx]);
+		value->type = IST_FLAG;
+		strncpy(value->search, "draft_flag=1", MAX_SEARCH_LEN);
+		(*idx)++;
+		
+	} else if (strcasecmp(search_keys[*idx], "new") == 0) {
+		
+		key = g_strdup(search_keys[*idx]);
+		value->type = IST_FLAG;
+		strncpy(value->search, "(seen_flag=0 AND recent_flag=1)", MAX_SEARCH_LEN);
+		(*idx)++;
+		
+	} else if (strcasecmp(search_keys[*idx], "old") == 0) {
+		
+		key = g_strdup(search_keys[*idx]);
+		value->type = IST_FLAG;
+		strncpy(value->search, "recent_flag=0", MAX_SEARCH_LEN);
+		(*idx)++;
+		
+	} else if (strcasecmp(search_keys[*idx], "unanswered") == 0) {
+		
+		key = g_strdup(search_keys[*idx]);
+		value->type = IST_FLAG;
+		strncpy(value->search, "answered_flag=0", MAX_SEARCH_LEN);
+		(*idx)++;
+
+	} else if (strcasecmp(search_keys[*idx], "undeleted") == 0) {
+		
+		key = g_strdup(search_keys[*idx]);
+		value->type = IST_FLAG;
+		strncpy(value->search, "deleted_flag=0", MAX_SEARCH_LEN);
+		(*idx)++;
+	
+	} else if (strcasecmp(search_keys[*idx], "unflagged") == 0) {
+		
+		key = g_strdup(search_keys[*idx]);
+		value->type = IST_FLAG;
+		strncpy(value->search, "flagged_flag=0", MAX_SEARCH_LEN);
+		(*idx)++;
+	
+	} else if (strcasecmp(search_keys[*idx], "unseen") == 0) {
+		
+		key = g_strdup(search_keys[*idx]);
+		value->type = IST_FLAG;
+		strncpy(value->search, "seen_flag=0", MAX_SEARCH_LEN);
+		(*idx)++;
+	
+	} else if (strcasecmp(search_keys[*idx], "unkeyword") == 0) {
+	
+		/* matches every msg */
+		if (!search_keys[(*idx) + 1])
+			return -1;
+		key = g_strdup(search_keys[*idx]);
+		(*idx)++;
+
+		value->type = IST_SET;
+		strcpy(value->search, "1:*");
+		(*idx)++;
+	
+	} else if (strcasecmp(search_keys[*idx], "undraft") == 0) {
+		
+		key = g_strdup(search_keys[*idx]);
+		value->type = IST_FLAG;
+		strncpy(value->search, "draft_flag=0", MAX_SEARCH_LEN);
+		(*idx)++;
+	
+	}
+
+	/*
+	 * HEADER search keys
+	 */
+
+	else if (strcasecmp(search_keys[*idx], "bcc") == 0) {
+		
+		key = g_strdup(search_keys[*idx]);
+		value->type = IST_HDR;
+		strncpy(value->hdrfld, "bcc", MIME_FIELD_MAX);
+		if (!search_keys[(*idx) + 1])
+			return -1;
+
+		(*idx)++;
+		strncpy(value->search, search_keys[(*idx)], MAX_SEARCH_LEN);
+		(*idx)++;
+		
+	} else if (strcasecmp(search_keys[*idx], "cc") == 0) {
+		
+		key = g_strdup(search_keys[*idx]);
+		value->type = IST_HDR;
+		strncpy(value->hdrfld, "cc", MIME_FIELD_MAX);
+		if (!search_keys[(*idx) + 1])
+			return -1;
+
+		(*idx)++;
+		strncpy(value->search, search_keys[(*idx)], MAX_SEARCH_LEN);
+		(*idx)++;
+	
+	} else if (strcasecmp(search_keys[*idx], "from") == 0) {
+		
+		key = g_strdup(search_keys[*idx]);
+		value->type = IST_HDR;
+		strncpy(value->hdrfld, "from", MIME_FIELD_MAX);
+		if (!search_keys[(*idx) + 1])
+			return -1;
+
+		(*idx)++;
+		strncpy(value->search, search_keys[(*idx)], MAX_SEARCH_LEN);
+		(*idx)++;
+	
+	} else if (strcasecmp(search_keys[*idx], "to") == 0) {
+		
+		key = g_strdup(search_keys[*idx]);
+		value->type = IST_HDR;
+		strncpy(value->hdrfld, "to", MIME_FIELD_MAX);
+		if (!search_keys[(*idx) + 1])
+			return -1;
+
+		(*idx)++;
+		strncpy(value->search, search_keys[(*idx)], MAX_SEARCH_LEN);
+		(*idx)++;
+	
+	} else if (strcasecmp(search_keys[*idx], "subject") == 0) {
+		
+		key = g_strdup(search_keys[*idx]);
+		value->type = IST_HDR;
+		strncpy(value->hdrfld, "subject", MIME_FIELD_MAX);
+		if (!search_keys[(*idx) + 1])
+			return -1;
+
+		(*idx)++;
+		strncpy(value->search, search_keys[(*idx)], MAX_SEARCH_LEN);
+		(*idx)++;
+	
+	} else if (strcasecmp(search_keys[*idx], "header") == 0) {
+		
+		key = g_strdup(search_keys[*idx]);
+		value->type = IST_HDR;
+		if (!search_keys[(*idx) + 1] || !search_keys[(*idx) + 2])
+			return -1;
+
+		strncpy(value->hdrfld, search_keys[(*idx) + 1], MIME_FIELD_MAX);
+		strncpy(value->search, search_keys[(*idx) + 2], MAX_SEARCH_LEN);
+
+		(*idx) += 3;
+
+	} else if (strcasecmp(search_keys[*idx], "sentbefore") == 0) {
+	
+		key = g_strdup(search_keys[*idx]);
+		value->type = IST_HDRDATE_BEFORE;
+		strncpy(value->hdrfld, "date", MIME_FIELD_MAX);
+		if (!search_keys[(*idx) + 1])
+			return -1;
+
+		(*idx)++;
+		strncpy(value->search, search_keys[(*idx)], MAX_SEARCH_LEN);
+		(*idx)++;
+
+	} else if (strcasecmp(search_keys[*idx], "senton") == 0) {
+		
+		key = g_strdup(search_keys[*idx]);
+		value->type = IST_HDRDATE_ON;
+		strncpy(value->hdrfld, "date", MIME_FIELD_MAX);
+		if (!search_keys[(*idx) + 1])
+			return -1;
+
+		(*idx)++;
+		strncpy(value->search, search_keys[(*idx)], MAX_SEARCH_LEN);
+		(*idx)++;
+	
+	} else if (strcasecmp(search_keys[*idx], "sentsince") == 0) {
+		
+		key = g_strdup(search_keys[*idx]);
+		value->type = IST_HDRDATE_SINCE;
+		strncpy(value->hdrfld, "date", MIME_FIELD_MAX);
+		if (!search_keys[(*idx) + 1])
+			return -1;
+
+		(*idx)++;
+		strncpy(value->search, search_keys[(*idx)], MAX_SEARCH_LEN);
+		(*idx)++;
+	
+	}
+
+	/*
+	 * INTERNALDATE keys
+	 */
+
+	else if (strcasecmp(search_keys[*idx], "before") == 0) {
+		
+		key = g_strdup(search_keys[*idx]);
+		value->type = IST_IDATE;
+		if (!search_keys[(*idx) + 1])
+			return -1;
+		
+		(*idx)++;
+		if (!check_date(search_keys[*idx]))
+			return -1;
+		
+		g_snprintf(value->search, MAX_SEARCH_LEN, "internaldate < '%s'", date_imap2sql(search_keys[*idx]));
+		(*idx)++;
+		
+	} else if (strcasecmp(search_keys[*idx], "on") == 0) {
+		
+		key = g_strdup(search_keys[*idx]);
+		value->type = IST_IDATE;
+		if (!search_keys[(*idx) + 1])
+			return -1;
+
+		(*idx)++;
+		if (!check_date(search_keys[*idx]))
+			return -1;
+
+		g_snprintf(value->search, MAX_SEARCH_LEN, "internal_date LIKE '%s%%'", date_imap2sql(search_keys[*idx]));
+		(*idx)++;
+		
+	} else if (strcasecmp(search_keys[*idx], "since") == 0) {
+		
+		key = g_strdup(search_keys[*idx]);
+		value->type = IST_IDATE;
+		if (!search_keys[(*idx) + 1])
+			return -1;
+
+		(*idx)++;
+		if (!check_date(search_keys[*idx]))
+			return -1;
+
+		g_snprintf(value->search, MAX_SEARCH_LEN, "internaldate > '%s'", date_imap2sql(search_keys[*idx]));
+		(*idx)++;
+	}
+
+	/*
+	 * DATA-keys
+	 */
+
+	else if (strcasecmp(search_keys[*idx], "body") == 0) {
+		
+		key = g_strdup(search_keys[*idx]);
+		value->type = IST_DATA_BODY;
+		if (!search_keys[(*idx) + 1])
+			return -1;
+
+		(*idx)++;
+		strncpy(value->search, search_keys[(*idx)], MAX_SEARCH_LEN);
+		(*idx)++;
+	
+	} else if (strcasecmp(search_keys[*idx], "text") == 0) {
+	
+		key = g_strdup(search_keys[*idx]);
+		value->type = IST_DATA_TEXT;
+		if (!search_keys[(*idx) + 1])
+			return -1;
+
+		(*idx)++;
+		strncpy(value->search, search_keys[(*idx)], MAX_SEARCH_LEN);
+		(*idx)++;
+	}
+
+	/*
+	 * SIZE keys
+	 */
+
+	else if (strcasecmp(search_keys[*idx], "larger") == 0) {
+		
+		key = g_strdup(search_keys[*idx]);
+		value->type = IST_SIZE_LARGER;
+		if (!search_keys[(*idx) + 1])
+			return -1;
+
+		(*idx)++;
+		value->size = strtoull(search_keys[(*idx)], NULL, 10);
+		(*idx)++;
+	
+	} else if (strcasecmp(search_keys[*idx], "smaller") == 0) {
+	
+		key = g_strdup(search_keys[*idx]);
+		value->type = IST_SIZE_SMALLER;
+		if (!search_keys[(*idx) + 1])
+			return -1;
+
+		(*idx)++;
+		value->size = strtoull(search_keys[(*idx)], NULL, 10);
+		(*idx)++;
+	
+	}
+
+	/*
+	 * NOT, OR, ()
+	 */
+	
+	else if (strcasecmp(search_keys[*idx], "not") == 0) {
+	
+		key = g_strdup("not");
+		value->type = IST_SUBSEARCH_NOT;
+
+		(*idx)++;
+		
+		if ((result = build_imap_search(search_keys, value, idx, sorted )) < 0) {
+			g_tree_destroy(value->sub_search);
+			return result;
+		}
+		
+	} else if (strcasecmp(search_keys[*idx], "or") == 0) {
+		
+		key = g_strdup("or");
+		value->type = IST_SUBSEARCH_OR;
+
+		(*idx)++;
+		if ((result = build_imap_search(search_keys, value, idx, sorted)) < 0) {
+			g_tree_destroy(value->sub_search);
+			return result;
+		}
+
+
+	} else if ((! sorted)  && (strcasecmp(search_keys[*idx], "(") == 0)) {
+		
+		key = g_strdup("and");
+		value->type = IST_SUBSEARCH_AND;
+
+		(*idx)++;
+		while ((result = build_imap_search(search_keys, value, idx, sorted)) == 0 && search_keys[*idx]);
+
+		if (result < 0) {
+			g_tree_destroy(value->sub_search);
+			return result;
+		}
+
+		if (result == 0) {
+			/* no ')' encountered */
+			free_searchtree(value->sub_search);
+			return -1;
+		}
+	} else if (strcasecmp(search_keys[*idx], ")") == 0) {
+		
+		(*idx)++;
+		return 1;
+	
+	} else if (check_msg_set(search_keys[*idx])) {
+	
+		key = g_strdup("SET");
+		value->type = IST_SET;
+		strncpy(value->search, search_keys[*idx], MAX_SEARCH_LEN);
+		(*idx)++;
+	
+	} else {
+		/* unknown search key */
+		return -1;
+	}
+	trace(TRACE_DEBUG,"%s,%s: tree insert key [%s]", __FILE__, __func__, key);
+
+	g_tree_insert(tree,key,value);
+
+	return 0;
+}
+/*
+ * perform_imap_search()
+ *
+ * returns 0 on succes, -1 on dbase error, -2 on memory error, 1 if result set is too small
+ * (new mail has been added to mailbox while searching, mailbox data out of sync)
+ */
+int dbmail_mailbox_sort(void) 
+{
+	return 0;
+}
+int dbmail_mailbox_search(void) //unsigned int *rset, int setlen, search_key_t * sk, mailbox_t * mb, int condition)
+{
+	return 0;
+
+#ifdef OLD
+	
+	int result;
+	unsigned int *newset = NULL;
+	int subtype = IST_SUBSEARCH_OR;
+	search_key_t *subsk = NULL;
+	GTree *subtree;
+	GList *keylist = NULL;
+
+	if (!setlen) // empty mailbox
+		return 0;
+	
+	if (!rset) {
+		trace(TRACE_ERROR,"%s,%s: error empty rset", __FILE__, __func__);
+		return -2;	/* stupidity */
+	}
+
+	if (!sk) {
+		trace(TRACE_ERROR,"%s,%s: error empty sk", __FILE__, __func__);
+		return -2;	/* no search */
+	}
+
+
+	trace(TRACE_DEBUG,"%s,%s: search_key [%d] condition [%d]", __FILE__, __func__, sk->type, condition);
+	
+	g_tree_keys(sk->sub_search);
+
+	switch (sk->type) {
+	case IST_SET:
+		build_set(rset, setlen, sk->search);
+		break;
+
+	case IST_SET_UID:
+		build_uid_set(rset, setlen, sk->search, mb);
+		break;
+
+	case IST_SORT:
+		result = db_search(rset, setlen, sk, mb);
+		return result;
+		break;
+
+	case IST_HDRDATE_BEFORE:
+	case IST_HDRDATE_SINCE:
+	case IST_HDRDATE_ON:
+	case IST_IDATE:
+	case IST_FLAG:
+	case IST_HDR:
+		if ((result = db_search(rset, setlen, sk, mb)))
+			return result;
+		break;
+	/* 
+	 * these all have in common that all messages need to be parsed 
+	 */
+	case IST_DATA_BODY:
+	case IST_DATA_TEXT:
+	case IST_SIZE_LARGER:
+	case IST_SIZE_SMALLER:
+		result = db_search_parsed(rset, setlen, sk, mb, condition);
+		break;
+
+	case IST_SUBSEARCH_NOT:
+	case IST_SUBSEARCH_AND:
+		subtype = IST_SUBSEARCH_AND;
+
+	case IST_SUBSEARCH_OR:
+
+		if (! (newset = (unsigned int *)g_malloc0(sizeof(int) * setlen)))
+			return -2;
+		
+
+		if (sk->type == IST_SUBSEARCH_AND)
+			sk = g_tree_lookup(sk->sub_search,"and");
+		if (sk->type == IST_SUBSEARCH_NOT)
+			sk = g_tree_lookup(sk->sub_search,"not");
+		if (sk->type == IST_SUBSEARCH_OR)
+			sk = g_tree_lookup(sk->sub_search,"or");
+		
+		if (! (subtree = sk->sub_search)) {
+			trace(TRACE_DEBUG,"%s,%s: no subtree", __FILE__, __func__);
+			break;
+		}
+		
+		keylist = g_tree_keys(subtree);
+		while (keylist) {
+			subsk = g_tree_lookup(subtree, keylist->data);	
+			if (subsk) {
+				int i;
+				if (sk->type == IST_SUBSEARCH_OR)
+					memset(newset, 0, sizeof(int) * setlen);
+				else
+					for (i = 0; i < setlen; i++)
+						newset[i] = rset[i];
+				
+				if ((result = perform_imap_search(newset, setlen, subsk, mb, sk->type))) {
+					dm_free(newset);
+					return result;
+				}
+
+				if (! subsk->type == IST_SORT)
+					combine_sets(rset, newset, setlen, subtype);
+				else {
+					for (i = 0; i < setlen; i++)
+						rset[i] = newset[i];
+				}
+			}
+			if (! g_list_next(keylist))
+				break;
+			keylist = g_list_next(keylist);
+		}
+
+		if (sk->type == IST_SUBSEARCH_NOT)
+			invert_set(rset, setlen);
+
+		break;
+
+	default:
+		dm_free(newset);
+		return -2;	/* ??? */
+	}
+
+	dm_free(newset);
+	return 0;
+#endif
+	
+}
+
+#ifdef OLD
+static void invert_set(unsigned int *set, int setlen)
+{
+	int i;
+
+	if (!set)
+		return;
+
+	for (i = 0; i < setlen; i++)
+		set[i] = !set[i];
+}
+
+
+static void combine_sets(unsigned int *dest, unsigned int *sec, int setlen, int type)
+{
+	int i;
+
+	if (!dest || !sec)
+		return;
+
+	if (type == IST_SUBSEARCH_AND) {
+		for (i = 0; i < setlen; i++)
+			dest[i] = (sec[i] && dest[i]);
+	} else if (type == IST_SUBSEARCH_OR) {
+		for (i = 0; i < setlen; i++)
+			dest[i] = (sec[i] || dest[i]);
+	}
+}
+
+
+/* 
+ * build_set()
+ *
+ * builds a msn-set from a IMAP message set spec. the IMAP set is supposed to be correct,
+ * no checks are performed.
+ */
+static void build_set(unsigned int *set, unsigned int setlen, char *cset)
+{
+	unsigned int i;
+	u64_t num, num2;
+	char *sep = NULL;
+
+	if ((! set) || (! cset))
+		return;
+
+	memset(set, 0, setlen * sizeof(int));
+
+	do {
+		num = strtoull(cset, &sep, 10);
+		if (num <= setlen && num > 0) {
+			if (!*sep)
+				set[num - 1] = 1;
+			else if (*sep == ',') {
+				set[num - 1] = 1;
+				cset = sep + 1;
+			} else {
+				/* sep == ':' here */
+				sep++;
+				if (*sep == '*') {
+					for (i = num - 1; i < setlen; i++)
+						set[i] = 1;
+					cset = sep + 1;
+				} else {
+					cset = sep;
+					num2 = strtoull(cset, &sep, 10);
+
+					if (num2 > setlen)
+						num2 = setlen;
+					if (num2 > 0) {
+						/* NOTE: here: num2 > 0, num > 0 */
+						if (num2 < num) {
+							/* swap! */
+							i = num;
+							num = num2;
+							num2 = i;
+						}
+
+						for (i = num - 1; i < num2; i++)
+							set[i] = 1;
+					}
+					if (*sep)
+						cset = sep + 1;
+				}
+			}
+		} else if (*sep) {
+			/* invalid char, skip it */
+			cset = sep + 1;
+			sep++;
+		}
+	} while (sep && *sep && cset && *cset);
+}
+
+
+/* 
+ * build_uid_set()
+ *
+ * as build_set() but takes uid's instead of MSN's
+ */
+static void build_uid_set(unsigned int *set, unsigned int setlen, char *cset,
+		   mailbox_t * mb)
+{
+	unsigned int i, msn, msn2;
+	int result;
+	int num2found = 0;
+	u64_t num, num2;
+	char *sep = NULL;
+
+	if (!set)
+		return;
+
+	memset(set, 0, setlen * sizeof(int));
+
+	if (!cset || setlen == 0)
+		return;
+
+	do {
+		num = strtoull(cset, &sep, 10);
+		result =
+		    binary_search(mb->seq_list, mb->exists, num, &msn);
+
+		if (result < 0 && num < mb->seq_list[mb->exists - 1]) {
+			/* ok this num is not a UID, but if a range is specified (i.e. 1:*) 
+			 * it is valid -> check *sep
+			 */
+			if (*sep == ':') {
+				result = 1;
+				for (msn = 0; mb->seq_list[msn] < num;
+				     msn++);
+				if (msn >= mb->exists)
+					msn = mb->exists - 1;
+			}
+		}
+
+		if (result >= 0) {
+			if (!*sep)
+				set[msn] = 1;
+			else if (*sep == ',') {
+				set[msn] = 1;
+				cset = sep + 1;
+			} else {
+				/* sep == ':' here */
+				sep++;
+				if (*sep == '*') {
+					for (i = msn; i < setlen; i++)
+						set[i] = 1;
+
+					cset = sep + 1;
+				} else {
+					/* fetch second number */
+					cset = sep;
+					num2 = strtoull(cset, &sep, 10);
+					result =
+					    binary_search(mb->seq_list,
+							  mb->exists, num2,
+							  &msn2);
+
+					if (result < 0) {
+						/* in a range: (like 1:1000) so this number doesnt need to exist;
+						 * find the closest match below this UID value
+						 */
+						if (mb->exists == 0)
+							num2found = 0;
+						else {
+							for (msn2 =
+							     mb->exists -
+							     1;; msn2--) {
+								if (msn2 ==
+								    0
+								    && mb->
+								    seq_list
+								    [msn2]
+								    > num2) {
+									num2found
+									    =
+									    0;
+									break;
+								} else
+								    if
+								    (mb->
+								     seq_list
+								     [msn2]
+								     <=
+								     num2)
+								{
+									/* found! */
+									num2found
+									    =
+									    1;
+									break;
+								}
+							}
+						}
+
+					} else
+						num2found = 1;
+
+					if (num2found == 1) {
+						if (msn2 < msn) {
+							/* swap! */
+							i = msn;
+							msn = msn2;
+							msn2 = i;
+						}
+
+						for (i = msn; i <= msn2;
+						     i++)
+							set[i] = 1;
+					}
+
+					if (*sep)
+						cset = sep + 1;
+				}
+			}
+		} else {
+			/* invalid num, skip it */
+			if (*sep) {
+				cset = sep + 1;
+				sep++;
+			}
+		}
+	} while (sep && *sep && cset && *cset);
+}
+
+#endif
