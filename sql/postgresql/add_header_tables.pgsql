@@ -2,13 +2,8 @@
 --
 -- modify dbmail schema to support header caching.
 --
--- $Id: add_header_tables.mysql 1634 2005-03-07 16:13:21Z paul $
+-- $Id: add_header_tables.psql 1634 2005-03-07 16:13:21Z paul $
 --
--- WARNING:
---
--- This document is still in the early design stages.  Don't apply yet !
-
-
 --
 -- store all headers by storing all headernames and headervalues in separate
 -- tables.
@@ -69,6 +64,18 @@ CREATE TABLE dbmail_datefield (
 	PRIMARY KEY (id)
 );
 CREATE UNIQUE INDEX dbmail_datefield_1 ON dbmail_datefield(physmessage_id, id);
+
+CREATE SEQUENCE dbmail_referencesfield_idnr_seq;
+CREATE TABLE dbmail_referencesfield (
+        physmessage_id  INT8 NOT NULL
+			REFERENCES dbmail_physmessage(id) 
+			ON UPDATE CASCADE ON DELETE CASCADE,
+	id		INT8 DEFAULT nextval('dbmail_referencesfield_idnr_seq'),
+	referencesfield	VARCHAR(255) NOT NULL DEFAULT '',
+	PRIMARY KEY (id)
+);
+CREATE UNIQUE INDEX dbmail_referencesfield_1 ON dbmail_referencesfield(physmessage_id, referencesfield);
+
 
 -- Searching and Sorting
 

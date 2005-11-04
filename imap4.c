@@ -237,15 +237,16 @@ int IMAPClientHandler(clientinfo_t * ci)
 			
 		}
 		
-		tag = strdup(cpy);	/* set tag */
+		tag = g_strdup(cpy);	/* set tag */
 		tag[i] = '\0';
 		dbmail_imap_session_setTag(session,tag);
+		g_free(tag);
 		
 		cpy[i] = '\0';
 		cpy = cpy + i + 1;	/* cpy points to command now */
 
 		/* check tag */
-		if (!checktag(tag)) {
+		if (!checktag(session->tag)) {
 			if (dbmail_imap_session_printf(session, "* BAD Invalid tag specified\r\n") < 0) {
 				dbmail_imap_session_delete(session);
 				return EOF;
@@ -260,6 +261,7 @@ int IMAPClientHandler(clientinfo_t * ci)
 		if (i < strlen(command))
 			command[i]='\0';
 		dbmail_imap_session_setCommand(session,command);
+		g_free(command);
 		
 		if (i == strlen(cpy)) {
 			/* no arguments present */
@@ -289,7 +291,7 @@ int IMAPClientHandler(clientinfo_t * ci)
 		}
 		dbmail_imap_session_setArgs(session,args);
 
-		for (i = IMAP_COMM_NONE; i < IMAP_COMM_LAST && strcasecmp(command, IMAP_COMMANDS[i]); i++);
+		for (i = IMAP_COMM_NONE; i < IMAP_COMM_LAST && strcasecmp(session->command, IMAP_COMMANDS[i]); i++);
 
 		if (i <= IMAP_COMM_NONE || i >= IMAP_COMM_LAST) {
 			/* unknown command */

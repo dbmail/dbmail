@@ -25,7 +25,6 @@ struct ImapSession * dbmail_imap_session_setClientinfo(struct ImapSession * self
 struct ImapSession * dbmail_imap_session_setTag(struct ImapSession * self, char * tag);
 struct ImapSession * dbmail_imap_session_setCommand(struct ImapSession * self, char * command);
 struct ImapSession * dbmail_imap_session_setArgs(struct ImapSession * self, char ** args);
-struct ImapSession * dbmail_imap_session_setFi(struct ImapSession * self, fetch_items_t *fi);
 struct ImapSession * dbmail_imap_session_setMsginfo(struct ImapSession * self, msginfo_t * msginfo);
 struct ImapSession * dbmail_imap_session_resetFi(struct ImapSession * self);
 

@@ -467,7 +467,6 @@ class testImapServer(unittest.TestCase):
             interpretation of strings in the searching criteria.  It then
             returns the numbers of matching messages.
         """
-        return
         self.o.select('INBOX')
         result=self.o.sort('(FROM)','US-ASCII','RECENT')
         self.assertEquals(result[0],'OK')

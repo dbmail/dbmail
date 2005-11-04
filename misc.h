@@ -26,6 +26,18 @@
 #include "dbmail.h"
 
 #define BUFLEN 2048
+ 
+/** \brief performs a binary search on an array to find key. Array should
+ * be ascending in values.
+ * \param array array to be searched through
+ * \param arraysize 
+ * \param key key to be found in array
+ * \return
+ *    - -1 if not found
+ *    -  index of key in array if found
+ */
+int db_binary_search(const u64_t * array, int arraysize, u64_t key);
+
 
 /**
    \brief drop process privileges. Change change euid and egid to
@@ -91,6 +103,16 @@ const char *mailbox_remove_namespace(const char *fq_name);
  *      -  0 on success
  */
 int ci_write(FILE * fd, char * msg, ...);
+/**
+ * \brief converts an IMAP date to a number (strictly ascending in date)
+ * valid IMAP dates:
+ *     - d-mon-yyyy
+ *     - dd-mon-yyyy  ('-' may be a space)
+ * \param date the IMAP date
+ * \return integer representation of the date
+ */
+int num_from_imapdate(const char *date);
+
 
 char **base64_decode(char *str, size_t len);
 void base64_free(char **ret);
@@ -119,4 +141,12 @@ int dm_valid_format(const char *str);
 int dm_strip_folder(char **retchar, size_t * retsize);
 int dm_valid_folder(const char *userid, char *folder);
 
+GList * g_tree_keys(GTree *tree);
+
+char *date_sql2imap(const char *sqldate);
+char *date_imap2sql(const char *imapdate);
+
+int checkmailboxname(const char *s);
+int check_msg_set(const char *s);
+int check_date(const char *date);
 #endif

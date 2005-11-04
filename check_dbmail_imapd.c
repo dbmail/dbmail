@@ -147,6 +147,15 @@ START_TEST(test_dbmail_imap_plist_as_string)
 }
 END_TEST
 
+START_TEST(test_dbmail_imap_plist_collapse)
+{
+	char *result;
+	char *in = "(NIL) (NIL) (NIL)";
+	result = dbmail_imap_plist_collapse(in);
+	fail_unless(strcmp(result,"(NIL)(NIL)(NIL)")==0,"plist collapse failed");
+}
+END_TEST
+
 
 #define A(x,y) fail_unless(strcmp(y,dbmail_imap_astring_as_string(x))==0,"dbmail_imap_astring_as_string failed")
 START_TEST(test_dbmail_imap_astring_as_string)
@@ -176,6 +185,7 @@ START_TEST(test_imap_bodyfetch)
 	int result;
 	guint64 octet;
 	struct ImapSession *s = dbmail_imap_session_new();
+
 	dbmail_imap_session_bodyfetch_new(s);
 	
 	fail_unless(0 == dbmail_imap_session_bodyfetch_get_last_octetstart(s), "octetstart init value incorrect");
@@ -322,24 +332,21 @@ START_TEST(test_imap_get_structure)
 	/* multipart */
 	message = dbmail_message_new();
 	message = dbmail_message_init_with_string(message, g_string_new(multipart_message));
-	l = imap_get_structure(GMIME_MESSAGE(message->content), 1);
-	result = dbmail_imap_plist_as_string(l);
-	strncpy(expect,"((\"text\" \"html\" NIL NIL NIL NIL 16 1 NIL (\"inline\") NIL NIL) "
-			"(\"text\" \"plain\" (\"charset\" \"us-ascii\" \"name\" \"testfile\") NIL NIL \"base64\" 432 7 NIL NIL NIL NIL) "
-			"\"mixed\" (\"boundary\" \"boundary\") NIL NIL NIL)",1024);
+	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
+	strncpy(expect,"((\"text\" \"html\" NIL NIL NIL NIL 16 1 NIL (\"inline\") NIL NIL)"
+			"(\"text\" \"plain\" (\"charset\" \"us-ascii\" \"name\" \"testfile\") NIL NIL \"base64\" 432 7 NIL NIL NIL NIL)"
+			" \"mixed\" (\"boundary\" \"boundary\") NIL NIL NIL)",1024);
+	printf("\n[%s]\n[%s]\n", expect, result);
 	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_structure failed");
-	g_list_foreach(l,(GFunc)g_free,NULL);
 	g_free(result);
 	dbmail_message_free(message);
 
 	/* text/plain */
 	message = dbmail_message_new();
 	message = dbmail_message_init_with_string(message, g_string_new(rfc822));
-	l = imap_get_structure(GMIME_MESSAGE(message->content), 1);
-	result = dbmail_imap_plist_as_string(l);
+	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
 	strncpy(expect,"(\"text\" \"plain\" (\"charset\" \"us-ascii\") NIL NIL \"7bit\" 32 4 NIL NIL NIL NIL)",1024);
 	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_structure failed");
-	g_list_foreach(l,(GFunc)g_free,NULL);
 	g_free(result);
 	g_free(expect);
 	dbmail_message_free(message);
@@ -351,23 +358,18 @@ START_TEST(test_imap_get_envelope)
 {
 	struct DbmailMessage *message;
 	char *result, *expect;
-	GList *l = NULL;
 	
 	expect = g_new0(char, 1024);
 	
 	/* text/plain */
 	message = dbmail_message_new();
 	message = dbmail_message_init_with_string(message, g_string_new(rfc822));
-	l = imap_get_envelope(GMIME_MESSAGE(message->content));
+	result = imap_get_envelope(GMIME_MESSAGE(message->content));
 	strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"dbmail test message\" ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"testuser\" \"foo.org\")) NIL NIL NIL NIL)",1024);
-	result = dbmail_imap_plist_as_string(l);
 	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_envelope failed");
 
-	g_list_foreach(l,(GFunc)g_free,NULL);
 	dbmail_message_free(message);
-	g_list_free(l);
 	g_free(result);
-
 }
 END_TEST
 
@@ -622,6 +624,7 @@ END_TEST
 #define D(x,y) fail_unless(strncasecmp(date_sql2imap(x),y,IMAP_INTERNALDATE_LEN)==0,"date_sql2imap failed")
 START_TEST(test_date_sql2imap)
 {
+//	printf("[%s]\n", date_sql2imap("2005-05-03 14:10:06"));
         D("2005-05-03 14:10:06","Tue, 03 May 2005 14:10:06 +0200");
         D("2005-01-03 14:10:06","Mon, 03 Jan 2005 14:10:06 +0100");
 }
@@ -657,6 +660,7 @@ Suite *dbmail_suite(void)
 	tcase_add_checked_fixture(tc_util, setup, teardown);
 	tcase_add_test(tc_util, test_g_list_join);
 	tcase_add_test(tc_util, test_dbmail_imap_plist_as_string);
+	tcase_add_test(tc_util, test_dbmail_imap_plist_collapse);
 	tcase_add_test(tc_util, test_dbmail_imap_astring_as_string);
 	tcase_add_test(tc_util, test_g_list_slices);
 	tcase_add_test(tc_util, test_build_set);

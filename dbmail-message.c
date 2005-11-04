@@ -552,6 +552,8 @@ int dbmail_message_store(struct DbmailMessage *self)
 	char unique_id[UID_SIZE];
 	char *hdrs, *body;
 	u64_t hdrs_size, body_size, rfcsize;
+	char *domainname;
+	char *message_id;
 	
 	switch (auth_user_exists(DBMAIL_DELIVERY_USERNAME, &user_idnr)) {
 	case -1:
@@ -573,6 +575,18 @@ int dbmail_message_store(struct DbmailMessage *self)
 	/* create a message record */
 	if(_message_insert(self, user_idnr, DBMAIL_TEMPMBOX, unique_id) < 0)
 		return -1;
+
+	/* make sure the message has a message-id, else threading breaks */
+	if (! (message_id = (char *)g_mime_message_get_message_id(GMIME_MESSAGE(self->content)))) {
+		domainname = g_new0(gchar, 255);
+		assert(domainname);
+		if (getdomainname(domainname,255))
+			strcpy(domainname,"(none)");
+		message_id = g_mime_utils_generate_message_id(domainname);
+		g_mime_message_set_message_id(GMIME_MESSAGE(self->content), message_id);
+		g_free(message_id);
+		g_free(domainname);
+	}
 
 	hdrs = dbmail_message_hdrs_to_string(self);
 	body = dbmail_message_body_to_string(self);
@@ -663,15 +677,16 @@ int dbmail_message_headers_cache(const struct DbmailMessage *self)
 	GMimeObject *part;
 	assert(self);
 	assert(self->physid);
-
-	g_mime_header_foreach(GMIME_OBJECT(self->content)->headers, _header_cache, (gpointer)self);
 	
 	if (GMIME_IS_MESSAGE(self->content)) {
 		char *type = NULL;
 		part = g_mime_message_get_mime_part(GMIME_MESSAGE(self->content));
 		if ((type = (char *)g_mime_object_get_header(part,"Content-Type"))!=NULL)
 			_header_cache("Content-Type",type,(gpointer)self);
+
 	}
+	
+	g_mime_header_foreach(GMIME_OBJECT(self->content)->headers, _header_cache, (gpointer)self);
 	
 	dbmail_message_cache_tofield(self);
 	dbmail_message_cache_ccfield(self);

@@ -1168,6 +1168,8 @@ int _ic_append(struct ImapSession *self)
 	if (self->args[i + 1]) {
 		struct tm tm;
 
+		memset(&tm, 0, sizeof(struct tm));
+
 		if (strptime(self->args[i], "%d-%b-%Y %T", &tm) != NULL)
 			strftime(sqldate, sizeof(sqldate), "%Y-%m-%d %H:%M:%S", &tm);
 		else
@@ -1320,7 +1322,8 @@ int _ic_sort(struct ImapSession *self)
 			"* NO internal dbase error\r\n" :
 			"* NO server ran out of memory\r\n");
 
-		trace(TRACE_ERROR, "ic_sort(): fatal error [%d] from perform_imap_search()\n",result);
+		trace(TRACE_ERROR, "%s,%s: fatal error [%d] from perform_imap_search()",
+				__FILE__, __func__, result);
 		return -1;
 	}
 

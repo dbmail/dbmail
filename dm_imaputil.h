@@ -33,24 +33,12 @@ int haystack_find(int haystacklen, char **haystack, const char *needle);
 int next_fetch_item(char **args, int idx, fetch_items_t * fi);
 int is_textplain(struct dm_list *hdr);
 
-char *date_sql2imap(const char *sqldate);
-char *date_imap2sql(const char *imapdate);
-
 size_t stridx(const char *s, char ch);
 int checkchars(const char *s);
 int checktag(const char *s);
-int checkmailboxname(const char *s);
-int check_msg_set(const char *s);
-int check_date(const char *date);
-void clarify_data(char *str);
-
 void base64encode(char *in, char *out);
 void base64decode(char *in, char *out);
-int binary_search(const u64_t * array, unsigned arraysize, u64_t key,
-		  unsigned int *key_idx);
-
-
-int quoted_string_out(FILE * outstream, const char *s);
+int binary_search(const u64_t * array, unsigned arraysize, u64_t key, unsigned int *key_idx);
 void send_data(FILE * to, MEM * from, int cnt);
 
 int build_imap_search(char **search_keys, struct dm_list *sl, int *idx, int sorted);
@@ -71,10 +59,11 @@ void close_cache(void);
 
 char * dbmail_imap_astring_as_string(const char *s);
 char * dbmail_imap_plist_as_string(GList *plist);
+char * dbmail_imap_plist_collapse(const char *in);
 void dbmail_imap_plist_free(GList *l);
 
-GList * imap_get_structure(GMimeMessage *message, gboolean extension);
-GList * imap_get_envelope(GMimeMessage *message);
+char * imap_get_structure(GMimeMessage *message, gboolean extension);
+char * imap_get_envelope(GMimeMessage *message);
 GMimeObject * imap_get_partspec(const GMimeObject *message, const char *partspec);
 char * imap_get_logical_part(const GMimeObject *object, const char * specifier);
 

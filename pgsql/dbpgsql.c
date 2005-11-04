@@ -75,7 +75,7 @@ int db_connect()
 		      __FILE__, __func__, PQerrorMessage(conn));
 		return -1;
 	}
-
+#ifdef OLD
 	/* UNICODE is broken prior to 8.1 */
 	if (PQserverVersion(conn) < 80100) {
 		char *enc = NULL;
@@ -90,7 +90,7 @@ int db_connect()
 
 		// FIXME: Does we need to free enc?
 	}
-
+#endif
 	return 0;
 }
 
@@ -215,7 +215,7 @@ int db_query(const char *the_query)
 			PQreset(conn);
 			temp_res = PQexec(conn, the_query);
 			/* if we still fail, we cannot do the query.. */
-			if (!temp_res) 
+			if (!temp_res)
 				return -1;
 		}
 		

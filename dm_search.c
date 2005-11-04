@@ -29,14 +29,6 @@
 
 #include "dbmail.h"
 
-/**
- * abbreviated names of the months
- */
-const char *month_desc[] = {
-	"Jan", "Feb", "Mar", "Apr", "May", "Jun",
-	"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-};
-
 extern db_param_t _db_params;
 #define DBPFX _db_params.pfx
 
@@ -45,16 +37,6 @@ extern db_param_t _db_params;
 char query[DEF_QUERYSIZE];
 
 /* used only locally */
-/** \brief performs a binary search on an array to find key. Array should
- * be ascending in values.
- * \param array array to be searched through
- * \param arraysize 
- * \param key key to be found in array
- * \return
- *    - -1 if not found
- *    -  index of key in array if found
- */
-static int db_binary_search(const u64_t * array, int arraysize, u64_t key);
 /**
  * \brief perform search on on the body of a message
  * \param msg mime_message_t struct of message
@@ -77,15 +59,6 @@ static int db_exec_search(GMimeObject *object, search_key_t * sk);
  *    - 1 if found
  */
 static int db_search_body(GMimeObject *object, search_key_t *sk);
-/**
- * \brief converts an IMAP date to a number (strictly ascending in date)
- * valid IMAP dates:
- *     - d-mon-yyyy
- *     - dd-mon-yyyy  ('-' may be a space)
- * \param date the IMAP date
- * \return integer representation of the date
- */
-static int num_from_imapdate(const char *date);
 
 int db_search(unsigned int *rset, unsigned setlen, search_key_t * sk, mailbox_t * mb)
 {
@@ -153,6 +126,18 @@ int db_search(unsigned int *rset, unsigned setlen, search_key_t * sk, mailbox_t 
 			 "AND msg.status < '%d' " 
 			 "%s", DBPFX, DBPFX, 
 			 mb->uid, MESSAGE_STATUS_DELETE, sk->search);
+		break;
+		
+		case IST_SORT_FLD:
+		snprintf(query, DEF_QUERYSIZE,
+			"SELECT message_idnr FROM %smessages m "
+			"JOIN %sphysmessage p on p.id=m.physmessage_id "
+			"JOIN %s ft on p.id=ft.physmessage_id "
+			"WHERE m.mailbox_idnr = '%llu' AND m.status < '%d' " 
+			"ORDER BY %s %s,message_idnr",
+			DBPFX,DBPFX, sk->table, mb->uid, 
+			MESSAGE_STATUS_DELETE, 
+			sk->field, sk->reverse ? "DESC" : "ASC");
 		break;
 		
 		default:
@@ -230,7 +215,7 @@ int db_sort_parsed(unsigned int *rset, unsigned int setlen,
 		
 		dm_list_init(&hdrs);
 		
-		if ((result = db_get_main_header(mb->seq_list[i], &hdrs)))
+		if ((result = db_get_main_header(mb->seq_list[i], &hdrs, sk->hdrfld)))
 			continue;	/* ignore parse errors */
 
 		if (dm_list_getstart(&hdrs)) {
@@ -284,26 +269,6 @@ int db_search_parsed(unsigned int *rset, unsigned int setlen,
 		dbmail_message_free(msg);
 	}
 	return 0;
-}
-
-int db_binary_search(const u64_t * array, int arraysize, u64_t key)
-{
-	int low, high, mid;
-
-	low = 0;
-	high = arraysize - 1;
-
-	while (low <= high) {
-		mid = (high + low) / 2;
-		if (array[mid] < key)
-			low = mid + 1;
-		else if (array[mid] > key)
-			high = mid - 1;
-		else
-			return mid;
-	}
-
-	return -1;		/* not found */
 }
 
 static void _match_header(const char *field, const char *value, gpointer userdata)
@@ -451,38 +416,3 @@ int db_search_body(GMimeObject *object, search_key_t *sk)
 	return sk->match;
 }
 
-int num_from_imapdate(const char *date)
-{
-	int j = 0, i;
-	char datenum[] = "YYYYMMDD";
-	char sub[4];
-
-	if (date[1] == ' ' || date[1] == '-')
-		j = 1;
-
-	strncpy(datenum, &date[7 - j], 4);
-
-	strncpy(sub, &date[3 - j], 3);
-	sub[3] = 0;
-
-	for (i = 0; i < 12; i++) {
-		if (strcasecmp(sub, month_desc[i]) == 0)
-			break;
-	}
-
-	i++;
-	if (i > 12)
-		i = 12;
-
-	sprintf(&datenum[4], "%02d", i);
-
-	if (j) {
-		datenum[6] = '0';
-		datenum[7] = date[0];
-	} else {
-		datenum[6] = date[0];
-		datenum[7] = date[1];
-	}
-
-	return atoi(datenum);
-}
