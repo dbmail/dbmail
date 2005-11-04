@@ -40,10 +40,17 @@ struct DbmailMailbox {
 	u64_t owner_id;
 	u64_t size;
 	GList *ids;
+	GTree *sorted;
+	GTree *found;
+	GTree *newfound;
+	GNode *search;
 };
 
 struct DbmailMailbox * dbmail_mailbox_new(u64_t id);
 struct DbmailMailbox * dbmail_mailbox_open(struct DbmailMailbox *self);
+
+int dbmail_mailbox_sort(struct DbmailMailbox *self);
+int dbmail_mailbox_search(struct DbmailMailbox *self);
 
 void dbmail_mailbox_set_id(struct DbmailMailbox *self, u64_t id);
 u64_t dbmail_mailbox_get_id(struct DbmailMailbox *self);
@@ -54,5 +61,6 @@ void dbmail_mailbox_free(struct DbmailMailbox *self);
 
 char * dbmail_mailbox_orderedsubject(struct DbmailMailbox *self, u64_t *rset, unsigned setlen);
 
+int dbmail_mailbox_build_imap_search(struct DbmailMailbox *self, char **search_keys, u64_t *idx, int sorted);
 
 #endif

@@ -51,37 +51,11 @@ const char AcceptedTagChars[] =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     "!@#$%^&-=_`~\\|'\" ;:,.<>/? ";
 
-const char AcceptedMailboxnameChars[] =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    "-=/ _.&,+@()[]";
+char base64encodestring[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-extern const char *month_desc[];
+const char *item_desc[] = { "TEXT", "HEADER", "MIME", "HEADER.FIELDS", "HEADER.FIELDS.NOT" };
 
-
-
-char base64encodestring[] =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
-/* returned by date_sql2imap() */
-#define IMAP_STANDARD_DATE "Sat, 03-Nov-1979 00:00:00 +0000"
-char _imapdate[IMAP_INTERNALDATE_LEN] = IMAP_STANDARD_DATE;
-
-/* returned by date_imap2sql() */
-#define SQL_STANDARD_DATE "1979-11-03 00:00:00"
-char _sqldate[SQL_INTERNALDATE_LEN + 1] = SQL_STANDARD_DATE;
-
-
-const int month_len[] = {
-	31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
-};
-
-const char *item_desc[] = {
-	"TEXT", "HEADER", "MIME", "HEADER.FIELDS", "HEADER.FIELDS.NOT"
-};
-
-const char *envelope_items[] = {
-	"from", "sender", "reply-to", "to", "cc", "bcc", NULL
-};
+const char *envelope_items[] = { "from", "sender", "reply-to", "to", "cc", "bcc", NULL };
 
 static const char *search_cost[] = { "b","b","c","c","c","b","d","d","d","c","e","e","b","b","j","j","j" };
 
@@ -902,62 +876,6 @@ int is_textplain(struct dm_list *hdr)
 	return 0;
 }
 
-
-/*
- * convert a mySQL date (yyyy-mm-dd hh:mm:ss) to a valid IMAP internal date:
- * dd-mon-yyyy hh:mm:ss with mon characters (i.e. 'Apr' for april)
- * return value is valid until next function call.
- * NOTE: if date is not valid, IMAP_STANDARD_DATE is returned
- */
-char *date_sql2imap(const char *sqldate)
-{
-        struct tm tm_sql_date;
-	struct tm tm_imap_date;
-	
-	time_t ltime;
-        char *last;
-
-        last = strptime(sqldate,"%Y-%m-%d %H:%M:%S", &tm_sql_date);
-        if ( (last == NULL) || (*last != '\0') ) {
-                strcpy(_imapdate, IMAP_STANDARD_DATE);
-                return _imapdate;
-        }
-
-	/* FIXME: this works fine on linux, but may cause dst offsets in netbsd. */
-	ltime = mktime (&tm_sql_date);
-	localtime_r(&ltime, &tm_imap_date);
-
-        strftime(_imapdate, sizeof(_imapdate), "%a, %d %b %Y %H:%M:%S %z", &tm_imap_date);
-        return _imapdate;
-}
-
-
-/*
- * convert TO a mySQL date (yyyy-mm-dd) FROM a valid IMAP internal date:
- *                          0123456789
- * dd-mon-yyyy with mon characters (i.e. 'Apr' for april)
- * 01234567890
- * OR
- * d-mon-yyyy
- * return value is valid until next function call.
- */
-char *date_imap2sql(const char *imapdate)
-{
-	struct tm tm;
-	char *last_char;
-
-	last_char = strptime(imapdate, "%d-%b-%Y", &tm);
-	if (last_char == NULL || *last_char != '\0') {
-		trace(TRACE_DEBUG, "%s,%s: error parsing IMAP date %s",
-		      __FILE__, __func__, imapdate);
-		return NULL;
-	}
-	(void) strftime(_sqldate, SQL_INTERNALDATE_LEN,
-			"%Y-%m-%d 00:00:00", &tm);
-
-	return _sqldate;
-}
-
 /*
  *
  */
@@ -1007,125 +925,6 @@ int checktag(const char *s)
 			return 0;
 		}
 	}
-	return 1;
-}
-
-
-/*
- * checkmailboxname()
- *
- * performs a check to see if the mailboxname is valid
- * returns 0 if invalid, 1 otherwise
- */
-int checkmailboxname(const char *s)
-{
-	int i;
-
-	if (strlen(s) == 0)
-		return 0;	/* empty name is not valid */
-
-	if (strlen(s) >= IMAP_MAX_MAILBOX_NAMELEN)
-		return 0;	/* a too large string is not valid */
-
-	/* check for invalid characters */
-	for (i = 0; s[i]; i++) {
-		if (!strchr(AcceptedMailboxnameChars, s[i])) {
-			/* dirty hack to allow namespaces to function */
-			if (i == 0 && s[0] == '#')
-				continue;
-			/* wrong char found */
-			return 0;
-		}
-	}
-
-	/* check for double '/' */
-	for (i = 1; s[i]; i++) {
-		if (s[i] == '/' && s[i - 1] == '/')
-			return 0;
-	}
-
-	/* check if the name consists of a single '/' */
-	if (strlen(s) == 1 && s[0] == '/')
-		return 0;
-
-	return 1;
-}
-
-
-/*
- * check_date()
- *
- * checks a date for IMAP-date validity:
- * dd-MMM-yyyy
- * 01234567890
- * month three-letter specifier
- */
-int check_date(const char *date)
-{
-	char sub[4];
-	int days, i, j;
-
-	if (strlen(date) != strlen("01-Jan-1970")
-	    && strlen(date) != strlen("1-Jan-1970"))
-		return 0;
-
-	j = (strlen(date) == strlen("1-Jan-1970")) ? 1 : 0;
-
-	if (date[2 - j] != '-' || date[6 - j] != '-')
-		return 0;
-
-	days = strtoul(date, NULL, 10);
-	strncpy(sub, &date[3 - j], 3);
-	sub[3] = 0;
-
-	for (i = 0; i < 12; i++) {
-		if (strcasecmp(month_desc[i], sub) == 0)
-			break;
-	}
-
-	if (i >= 12 || days > month_len[i])
-		return 0;
-
-	for (i = 7; i < 11; i++)
-		if (!isdigit(date[i - j]))
-			return 0;
-
-	return 1;
-}
-
-
-
-/*
- * check_msg_set()
- *
- * checks if s represents a valid message set 
- */
-int check_msg_set(const char *s)
-{
-	int i, indigit;
-
-	if (!s || !isdigit(s[0]))
-		return 0;
-
-	for (i = 1, indigit = 1; s[i]; i++) {
-		if (isdigit(s[i]))
-			indigit = 1;
-		else if (s[i] == ',') {
-			if (!indigit && s[i - 1] != '*')
-				return 0;
-
-			indigit = 0;
-		} else if (s[i] == ':') {
-			if (!indigit)
-				return 0;
-
-			indigit = 0;
-		} else if (s[i] == '*') {
-			if (s[i - 1] != ':')
-				return 0;
-		}
-	}
-
 	return 1;
 }
 
@@ -1266,6 +1065,7 @@ void send_data(FILE * to, MEM * from, int cnt)
  *
  * returns -1 on syntax error, -2 on memory error; 0 on success, 1 if ')' has been encountered
  */
+
 int build_imap_search(char **search_keys, struct dm_list *sl, int *idx, int sorted)
 {
 	search_key_t key;
@@ -1590,7 +1390,7 @@ int build_imap_search(char **search_keys, struct dm_list *sl, int *idx, int sort
 		if (!check_date(search_keys[*idx]))
 			return -1;
 		
-		g_snprintf(key.search, MAX_SEARCH_LEN, "internaldate < '%s'", date_imap2sql(search_keys[*idx]));
+		g_snprintf(key.search, MAX_SEARCH_LEN, "internal_date < '%s'", date_imap2sql(search_keys[*idx]));
 		(*idx)++;
 		
 	} else if (strcasecmp(search_keys[*idx], "on") == 0) {
@@ -1616,7 +1416,7 @@ int build_imap_search(char **search_keys, struct dm_list *sl, int *idx, int sort
 		if (!check_date(search_keys[*idx]))
 			return -1;
 
-		g_snprintf(key.search, MAX_SEARCH_LEN, "internaldate > '%s'", date_imap2sql(search_keys[*idx]));
+		g_snprintf(key.search, MAX_SEARCH_LEN, "internal_date > '%s'", date_imap2sql(search_keys[*idx]));
 		(*idx)++;
 	}
 

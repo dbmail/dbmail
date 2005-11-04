@@ -35,8 +35,10 @@ struct DbmailMailbox * dbmail_mailbox_new(u64_t id)
 	assert(self);
 	dbmail_mailbox_set_id(self,id);
 	self->ids = NULL;
+	self->search = NULL;
 	return self;
 }
+
 
 void dbmail_mailbox_free(struct DbmailMailbox *self)
 {
@@ -44,6 +46,9 @@ void dbmail_mailbox_free(struct DbmailMailbox *self)
 		g_list_foreach(self->ids,(GFunc)g_free,NULL);
 		g_list_free(self->ids);
 	}
+	if (self->search)
+		g_node_destroy(self->search);
+	
 	g_free(self);
 }
 
@@ -314,592 +319,57 @@ char * dbmail_mailbox_orderedsubject(struct DbmailMailbox *self, u64_t *rset, un
 	return res;
 }
 
-
-static void _append_join(char *join, char *table)
-{
-	char *tmp;
-	tmp = g_strdup_printf("LEFT JOIN %s%s ON p.id=%s%s.physmessage_id ", DBPFX, table, DBPFX, table);
-	g_strlcat(join, tmp, MAX_SEARCH_LEN);
-	g_free(tmp);
-}
-
-static void _append_sort(char *order, char *field, gboolean reverse)
-{
-	char *tmp;
-	tmp = g_strdup_printf("%s%s,", field, reverse ? " DESC" : "");
-	g_strlcat(order, tmp, MAX_SEARCH_LEN);
-	g_free(tmp);
-}
-
-
-/*
- * build_imap_search()
- *
- * builds a linked list of search items from a set of IMAP search keys
- * sl should be initialized; new search items are simply added to the list
- *
- * returns -1 on syntax error, -2 on memory error; 0 on success, 1 if ')' has been encountered
- */
-int dbmail_mailbox_build_imap_search(struct DbmailMailbox *self, char **search_keys, search_key_t *sk, int *idx, int sorted)
-{
-	search_key_t *value = NULL;
-	char *key = NULL;
-	int result;
-	gboolean reverse = FALSE;
-	GTree *tree;
-
-	if (!search_keys || !search_keys[*idx])
-		return 0;
-
-	if (! (tree = sk->sub_search))
-		return 0;
-	
-	if (sorted) {
-		key = g_strdup("sorted");
-		value = g_tree_lookup(tree,key);
-	}
-		
-	if (! value)
-		value = g_new0(search_key_t,1);
-	
-	if (! value->sub_search)
-		value->sub_search = g_tree_new((GCompareFunc)strcmp);
-	
-	/* SORT */
-	if (sorted)
-		value->type = IST_SORT;
-
-	if(sorted && (strcasecmp(search_keys[*idx], "reverse") == 0)) {
-		(*idx)++;
-		reverse = TRUE;
-	}
-			
-	if (sorted && (strcasecmp(search_keys[*idx], "us-ascii") == 0)) {
-	
-		(*idx)++;
-		return 0;
-		
-	} else if (sorted && (strcasecmp(search_keys[*idx], "iso-8859-1") == 0)) {
-		
-		(*idx)++;
-		return 0;
-
-	} else if (sorted && (strcasecmp(search_keys[*idx], "arrival") == 0)) {
-		
-		_append_sort(value->order, "internal_date", reverse);
-		
-		(*idx)++;
-	
-	} else if (sorted && (strcasecmp(search_keys[*idx], "size") == 0)) {
-		
-		_append_sort(value->order, "messagesize", reverse);
-		
-		(*idx)++;
-	
-	} else if (sorted && (strcasecmp(search_keys[*idx], "from") == 0)) {
-		
-		_append_join(value->table, "fromfield");
-		_append_sort(value->order, "fromaddr", reverse);	
-		
-		(*idx)++;
-		
-	} else if (sorted && (strcasecmp(search_keys[*idx], "subject") == 0)) {
-		
-		_append_join(value->table, "subjectfield");
-		_append_sort(value->order, "subjectfield", reverse);
-		
-		(*idx)++;
-		
-	} else if (sorted && (strcasecmp(search_keys[*idx], "cc") == 0)) {
-		
-		_append_join(value->table, "ccfield");
-		_append_sort(value->order, "ccaddr", reverse);
-		
-		(*idx)++;
-		
-	} else if (sorted && (strcasecmp(search_keys[*idx], "to") == 0)) {
-		
-		_append_join(value->table, "tofield");
-		_append_sort(value->order, "toaddr", reverse);
-		
-		(*idx)++;
-		
-		
-	} else if (sorted && (strcasecmp(search_keys[*idx], "date") == 0)) {
-
-		_append_join(value->table, "datefield");
-		_append_sort(value->order, "datefield", reverse);
-		
-		(*idx)++;
-		
-
-	/* SEARCH */
-
-		
-	} else if (strcasecmp(search_keys[*idx], "all") == 0) {
-		
-		key = g_strdup(search_keys[*idx]);
-		
-		value->type = IST_SET;
-		strcpy(value->search, "1:*");
-		(*idx)++;
-		
-	} else if (strcasecmp(search_keys[*idx], "uid") == 0) {
-		
-		if (!search_keys[*idx + 1])
-			return -1;
-
-		key = g_strdup(search_keys[*idx]);
-		
-		(*idx)++;
-
-		value->type = IST_SET_UID;
-		strncpy(value->search, search_keys[(*idx)], MAX_SEARCH_LEN);
-		
-		if (!check_msg_set(value->search))
-			return -1;
-		(*idx)++;
-	}
-
-	/*
-	 * FLAG search keys
-	 */
-
-	else if (strcasecmp(search_keys[*idx], "answered") == 0) {
-		
-		key = g_strdup(search_keys[*idx]);
-		value->type = IST_FLAG;
-		strncpy(value->search, "answered_flag=1", MAX_SEARCH_LEN);
-		(*idx)++;
-		
-	} else if (strcasecmp(search_keys[*idx], "deleted") == 0) {
-		
-		key = g_strdup(search_keys[*idx]);
-		value->type = IST_FLAG;
-		strncpy(value->search, "deleted_flag=1", MAX_SEARCH_LEN);
-		(*idx)++;
-		
-	} else if (strcasecmp(search_keys[*idx], "flagged") == 0) {
-		
-		key = g_strdup(search_keys[*idx]);
-		value->type = IST_FLAG;
-		strncpy(value->search, "flagged_flag=1", MAX_SEARCH_LEN);
-		(*idx)++;
-		
-	} else if (strcasecmp(search_keys[*idx], "recent") == 0) {
-		
-		key = g_strdup(search_keys[*idx]);
-		value->type = IST_FLAG;
-		strncpy(value->search, "recent_flag=1", MAX_SEARCH_LEN);
-		(*idx)++;
-		
-	} else if (strcasecmp(search_keys[*idx], "seen") == 0) {
-		
-		key = g_strdup(search_keys[*idx]);
-		value->type = IST_FLAG;
-		strncpy(value->search, "seen_flag=1", MAX_SEARCH_LEN);
-		(*idx)++;
-		
-	} else if (strcasecmp(search_keys[*idx], "keyword") == 0) {
-		
-		/* no results from this one */
-		if (!search_keys[(*idx) + 1])
-			return -1;
-		key = g_strdup(search_keys[*idx]);
-		(*idx)++;
-
-		value->type = IST_SET;
-		strcpy(value->search, "0");
-		(*idx)++;
-		
-	} else if (strcasecmp(search_keys[*idx], "draft") == 0) {
-		
-		key = g_strdup(search_keys[*idx]);
-		value->type = IST_FLAG;
-		strncpy(value->search, "draft_flag=1", MAX_SEARCH_LEN);
-		(*idx)++;
-		
-	} else if (strcasecmp(search_keys[*idx], "new") == 0) {
-		
-		key = g_strdup(search_keys[*idx]);
-		value->type = IST_FLAG;
-		strncpy(value->search, "(seen_flag=0 AND recent_flag=1)", MAX_SEARCH_LEN);
-		(*idx)++;
-		
-	} else if (strcasecmp(search_keys[*idx], "old") == 0) {
-		
-		key = g_strdup(search_keys[*idx]);
-		value->type = IST_FLAG;
-		strncpy(value->search, "recent_flag=0", MAX_SEARCH_LEN);
-		(*idx)++;
-		
-	} else if (strcasecmp(search_keys[*idx], "unanswered") == 0) {
-		
-		key = g_strdup(search_keys[*idx]);
-		value->type = IST_FLAG;
-		strncpy(value->search, "answered_flag=0", MAX_SEARCH_LEN);
-		(*idx)++;
-
-	} else if (strcasecmp(search_keys[*idx], "undeleted") == 0) {
-		
-		key = g_strdup(search_keys[*idx]);
-		value->type = IST_FLAG;
-		strncpy(value->search, "deleted_flag=0", MAX_SEARCH_LEN);
-		(*idx)++;
-	
-	} else if (strcasecmp(search_keys[*idx], "unflagged") == 0) {
-		
-		key = g_strdup(search_keys[*idx]);
-		value->type = IST_FLAG;
-		strncpy(value->search, "flagged_flag=0", MAX_SEARCH_LEN);
-		(*idx)++;
-	
-	} else if (strcasecmp(search_keys[*idx], "unseen") == 0) {
-		
-		key = g_strdup(search_keys[*idx]);
-		value->type = IST_FLAG;
-		strncpy(value->search, "seen_flag=0", MAX_SEARCH_LEN);
-		(*idx)++;
-	
-	} else if (strcasecmp(search_keys[*idx], "unkeyword") == 0) {
-	
-		/* matches every msg */
-		if (!search_keys[(*idx) + 1])
-			return -1;
-		key = g_strdup(search_keys[*idx]);
-		(*idx)++;
-
-		value->type = IST_SET;
-		strcpy(value->search, "1:*");
-		(*idx)++;
-	
-	} else if (strcasecmp(search_keys[*idx], "undraft") == 0) {
-		
-		key = g_strdup(search_keys[*idx]);
-		value->type = IST_FLAG;
-		strncpy(value->search, "draft_flag=0", MAX_SEARCH_LEN);
-		(*idx)++;
-	
-	}
-
-	/*
-	 * HEADER search keys
-	 */
-
-	else if (strcasecmp(search_keys[*idx], "bcc") == 0) {
-		
-		key = g_strdup(search_keys[*idx]);
-		value->type = IST_HDR;
-		strncpy(value->hdrfld, "bcc", MIME_FIELD_MAX);
-		if (!search_keys[(*idx) + 1])
-			return -1;
-
-		(*idx)++;
-		strncpy(value->search, search_keys[(*idx)], MAX_SEARCH_LEN);
-		(*idx)++;
-		
-	} else if (strcasecmp(search_keys[*idx], "cc") == 0) {
-		
-		key = g_strdup(search_keys[*idx]);
-		value->type = IST_HDR;
-		strncpy(value->hdrfld, "cc", MIME_FIELD_MAX);
-		if (!search_keys[(*idx) + 1])
-			return -1;
-
-		(*idx)++;
-		strncpy(value->search, search_keys[(*idx)], MAX_SEARCH_LEN);
-		(*idx)++;
-	
-	} else if (strcasecmp(search_keys[*idx], "from") == 0) {
-		
-		key = g_strdup(search_keys[*idx]);
-		value->type = IST_HDR;
-		strncpy(value->hdrfld, "from", MIME_FIELD_MAX);
-		if (!search_keys[(*idx) + 1])
-			return -1;
-
-		(*idx)++;
-		strncpy(value->search, search_keys[(*idx)], MAX_SEARCH_LEN);
-		(*idx)++;
-	
-	} else if (strcasecmp(search_keys[*idx], "to") == 0) {
-		
-		key = g_strdup(search_keys[*idx]);
-		value->type = IST_HDR;
-		strncpy(value->hdrfld, "to", MIME_FIELD_MAX);
-		if (!search_keys[(*idx) + 1])
-			return -1;
-
-		(*idx)++;
-		strncpy(value->search, search_keys[(*idx)], MAX_SEARCH_LEN);
-		(*idx)++;
-	
-	} else if (strcasecmp(search_keys[*idx], "subject") == 0) {
-		
-		key = g_strdup(search_keys[*idx]);
-		value->type = IST_HDR;
-		strncpy(value->hdrfld, "subject", MIME_FIELD_MAX);
-		if (!search_keys[(*idx) + 1])
-			return -1;
-
-		(*idx)++;
-		strncpy(value->search, search_keys[(*idx)], MAX_SEARCH_LEN);
-		(*idx)++;
-	
-	} else if (strcasecmp(search_keys[*idx], "header") == 0) {
-		
-		key = g_strdup(search_keys[*idx]);
-		value->type = IST_HDR;
-		if (!search_keys[(*idx) + 1] || !search_keys[(*idx) + 2])
-			return -1;
-
-		strncpy(value->hdrfld, search_keys[(*idx) + 1], MIME_FIELD_MAX);
-		strncpy(value->search, search_keys[(*idx) + 2], MAX_SEARCH_LEN);
-
-		(*idx) += 3;
-
-	} else if (strcasecmp(search_keys[*idx], "sentbefore") == 0) {
-	
-		key = g_strdup(search_keys[*idx]);
-		value->type = IST_HDRDATE_BEFORE;
-		strncpy(value->hdrfld, "date", MIME_FIELD_MAX);
-		if (!search_keys[(*idx) + 1])
-			return -1;
-
-		(*idx)++;
-		strncpy(value->search, search_keys[(*idx)], MAX_SEARCH_LEN);
-		(*idx)++;
-
-	} else if (strcasecmp(search_keys[*idx], "senton") == 0) {
-		
-		key = g_strdup(search_keys[*idx]);
-		value->type = IST_HDRDATE_ON;
-		strncpy(value->hdrfld, "date", MIME_FIELD_MAX);
-		if (!search_keys[(*idx) + 1])
-			return -1;
-
-		(*idx)++;
-		strncpy(value->search, search_keys[(*idx)], MAX_SEARCH_LEN);
-		(*idx)++;
-	
-	} else if (strcasecmp(search_keys[*idx], "sentsince") == 0) {
-		
-		key = g_strdup(search_keys[*idx]);
-		value->type = IST_HDRDATE_SINCE;
-		strncpy(value->hdrfld, "date", MIME_FIELD_MAX);
-		if (!search_keys[(*idx) + 1])
-			return -1;
-
-		(*idx)++;
-		strncpy(value->search, search_keys[(*idx)], MAX_SEARCH_LEN);
-		(*idx)++;
-	
-	}
-
-	/*
-	 * INTERNALDATE keys
-	 */
-
-	else if (strcasecmp(search_keys[*idx], "before") == 0) {
-		
-		key = g_strdup(search_keys[*idx]);
-		value->type = IST_IDATE;
-		if (!search_keys[(*idx) + 1])
-			return -1;
-		
-		(*idx)++;
-		if (!check_date(search_keys[*idx]))
-			return -1;
-		
-		g_snprintf(value->search, MAX_SEARCH_LEN, "internaldate < '%s'", date_imap2sql(search_keys[*idx]));
-		(*idx)++;
-		
-	} else if (strcasecmp(search_keys[*idx], "on") == 0) {
-		
-		key = g_strdup(search_keys[*idx]);
-		value->type = IST_IDATE;
-		if (!search_keys[(*idx) + 1])
-			return -1;
-
-		(*idx)++;
-		if (!check_date(search_keys[*idx]))
-			return -1;
-
-		g_snprintf(value->search, MAX_SEARCH_LEN, "internal_date LIKE '%s%%'", date_imap2sql(search_keys[*idx]));
-		(*idx)++;
-		
-	} else if (strcasecmp(search_keys[*idx], "since") == 0) {
-		
-		key = g_strdup(search_keys[*idx]);
-		value->type = IST_IDATE;
-		if (!search_keys[(*idx) + 1])
-			return -1;
-
-		(*idx)++;
-		if (!check_date(search_keys[*idx]))
-			return -1;
-
-		g_snprintf(value->search, MAX_SEARCH_LEN, "internaldate > '%s'", date_imap2sql(search_keys[*idx]));
-		(*idx)++;
-	}
-
-	/*
-	 * DATA-keys
-	 */
-
-	else if (strcasecmp(search_keys[*idx], "body") == 0) {
-		
-		key = g_strdup(search_keys[*idx]);
-		value->type = IST_DATA_BODY;
-		if (!search_keys[(*idx) + 1])
-			return -1;
-
-		(*idx)++;
-		strncpy(value->search, search_keys[(*idx)], MAX_SEARCH_LEN);
-		(*idx)++;
-	
-	} else if (strcasecmp(search_keys[*idx], "text") == 0) {
-	
-		key = g_strdup(search_keys[*idx]);
-		value->type = IST_DATA_TEXT;
-		if (!search_keys[(*idx) + 1])
-			return -1;
-
-		(*idx)++;
-		strncpy(value->search, search_keys[(*idx)], MAX_SEARCH_LEN);
-		(*idx)++;
-	}
-
-	/*
-	 * SIZE keys
-	 */
-
-	else if (strcasecmp(search_keys[*idx], "larger") == 0) {
-		
-		key = g_strdup(search_keys[*idx]);
-		value->type = IST_SIZE_LARGER;
-		if (!search_keys[(*idx) + 1])
-			return -1;
-
-		(*idx)++;
-		value->size = strtoull(search_keys[(*idx)], NULL, 10);
-		(*idx)++;
-	
-	} else if (strcasecmp(search_keys[*idx], "smaller") == 0) {
-	
-		key = g_strdup(search_keys[*idx]);
-		value->type = IST_SIZE_SMALLER;
-		if (!search_keys[(*idx) + 1])
-			return -1;
-
-		(*idx)++;
-		value->size = strtoull(search_keys[(*idx)], NULL, 10);
-		(*idx)++;
-	
-	}
-
-	/*
-	 * NOT, OR, ()
-	 */
-	
-	else if (strcasecmp(search_keys[*idx], "not") == 0) {
-	
-		key = g_strdup("not");
-		value->type = IST_SUBSEARCH_NOT;
-
-		(*idx)++;
-		
-		if ((result = build_imap_search(search_keys, value, idx, sorted )) < 0) {
-			g_tree_destroy(value->sub_search);
-			return result;
-		}
-		
-	} else if (strcasecmp(search_keys[*idx], "or") == 0) {
-		
-		key = g_strdup("or");
-		value->type = IST_SUBSEARCH_OR;
-
-		(*idx)++;
-		if ((result = build_imap_search(search_keys, value, idx, sorted)) < 0) {
-			g_tree_destroy(value->sub_search);
-			return result;
-		}
-
-
-	} else if ((! sorted)  && (strcasecmp(search_keys[*idx], "(") == 0)) {
-		
-		key = g_strdup("and");
-		value->type = IST_SUBSEARCH_AND;
-
-		(*idx)++;
-		while ((result = build_imap_search(search_keys, value, idx, sorted)) == 0 && search_keys[*idx]);
-
-		if (result < 0) {
-			g_tree_destroy(value->sub_search);
-			return result;
-		}
-
-		if (result == 0) {
-			/* no ')' encountered */
-			free_searchtree(value->sub_search);
-			return -1;
-		}
-	} else if (strcasecmp(search_keys[*idx], ")") == 0) {
-		
-		(*idx)++;
-		return 1;
-	
-	} else if (check_msg_set(search_keys[*idx])) {
-	
-		key = g_strdup("SET");
-		value->type = IST_SET;
-		strncpy(value->search, search_keys[*idx], MAX_SEARCH_LEN);
-		(*idx)++;
-	
-	} else {
-		/* unknown search key */
-		return -1;
-	}
-	trace(TRACE_DEBUG,"%s,%s: tree insert key [%s]", __FILE__, __func__, key);
-
-	g_tree_insert(tree,key,value);
-
-	return 0;
-}
 /*
  * perform_imap_search()
  *
  * returns 0 on succes, -1 on dbase error, -2 on memory error, 1 if result set is too small
  * (new mail has been added to mailbox while searching, mailbox data out of sync)
  */
-int dbmail_mailbox_sort(void) 
+static gboolean perform_search(GNode *search, struct DbmailMailbox *self)
 {
+	search_key_t *sk = (search_key_t *)search->data;
+	
+	return FALSE;
+}
+
+
+int dbmail_mailbox_sort(struct DbmailMailbox *self) 
+{
+	search_key_t *sk = NULL;
+	
+	if (! self->search)
+		return 0;
+	
+	sk = (search_key_t *)(g_node_get_root(self->search))->data;
 	return 0;
 }
-int dbmail_mailbox_search(void) //unsigned int *rset, int setlen, search_key_t * sk, mailbox_t * mb, int condition)
+int dbmail_mailbox_search(struct DbmailMailbox *self) //unsigned int *rset, int setlen, search_key_t * sk, mailbox_t * mb, int condition)
 {
-	return 0;
-
-#ifdef OLD
 	
-	int result;
-	unsigned int *newset = NULL;
+	search_key_t *sk = NULL;
+	if (! self->search)
+		return 0;
+
+	sk = (search_key_t *)(g_node_get_root(self->search))->data;
+	return 0;
+}
+
+	
+#ifdef OLD
 	int subtype = IST_SUBSEARCH_OR;
 	search_key_t *subsk = NULL;
-	GTree *subtree;
-	GList *keylist = NULL;
 
 	if (!setlen) // empty mailbox
-		return 0;
+		return TRUE;
 	
 	if (!rset) {
 		trace(TRACE_ERROR,"%s,%s: error empty rset", __FILE__, __func__);
-		return -2;	/* stupidity */
+		return TRUE;	/* stupidity */
 	}
 
 	if (!sk) {
 		trace(TRACE_ERROR,"%s,%s: error empty sk", __FILE__, __func__);
-		return -2;	/* no search */
+		return TRUE;	/* no search */
 	}
 
 
@@ -1002,11 +472,9 @@ int dbmail_mailbox_search(void) //unsigned int *rset, int setlen, search_key_t *
 
 	dm_free(newset);
 	return 0;
-#endif
 	
 }
 
-#ifdef OLD
 static void invert_set(unsigned int *set, int setlen)
 {
 	int i;

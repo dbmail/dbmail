@@ -624,6 +624,7 @@ END_TEST
 #define D(x,y) fail_unless(strncasecmp(date_sql2imap(x),y,IMAP_INTERNALDATE_LEN)==0,"date_sql2imap failed")
 START_TEST(test_date_sql2imap)
 {
+	printf("[%s]\n", date_sql2imap("2005-05-03 14:10:06"));
         D("2005-05-03 14:10:06","Tue, 03 May 2005 14:10:06 +0200");
         D("2005-01-03 14:10:06","Mon, 03 Jan 2005 14:10:06 +0100");
 }

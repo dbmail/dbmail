@@ -29,14 +29,6 @@
 
 #include "dbmail.h"
 
-/**
- * abbreviated names of the months
- */
-const char *month_desc[] = {
-	"Jan", "Feb", "Mar", "Apr", "May", "Jun",
-	"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-};
-
 extern db_param_t _db_params;
 #define DBPFX _db_params.pfx
 
@@ -67,15 +59,6 @@ static int db_exec_search(GMimeObject *object, search_key_t * sk);
  *    - 1 if found
  */
 static int db_search_body(GMimeObject *object, search_key_t *sk);
-/**
- * \brief converts an IMAP date to a number (strictly ascending in date)
- * valid IMAP dates:
- *     - d-mon-yyyy
- *     - dd-mon-yyyy  ('-' may be a space)
- * \param date the IMAP date
- * \return integer representation of the date
- */
-static int num_from_imapdate(const char *date);
 
 int db_search(unsigned int *rset, unsigned setlen, search_key_t * sk, mailbox_t * mb)
 {
@@ -433,38 +416,3 @@ int db_search_body(GMimeObject *object, search_key_t *sk)
 	return sk->match;
 }
 
-int num_from_imapdate(const char *date)
-{
-	int j = 0, i;
-	char datenum[] = "YYYYMMDD";
-	char sub[4];
-
-	if (date[1] == ' ' || date[1] == '-')
-		j = 1;
-
-	strncpy(datenum, &date[7 - j], 4);
-
-	strncpy(sub, &date[3 - j], 3);
-	sub[3] = 0;
-
-	for (i = 0; i < 12; i++) {
-		if (strcasecmp(sub, month_desc[i]) == 0)
-			break;
-	}
-
-	i++;
-	if (i > 12)
-		i = 12;
-
-	sprintf(&datenum[4], "%02d", i);
-
-	if (j) {
-		datenum[6] = '0';
-		datenum[7] = date[0];
-	} else {
-		datenum[6] = date[0];
-		datenum[7] = date[1];
-	}
-
-	return atoi(datenum);
-}

@@ -33,15 +33,9 @@ int haystack_find(int haystacklen, char **haystack, const char *needle);
 int next_fetch_item(char **args, int idx, fetch_items_t * fi);
 int is_textplain(struct dm_list *hdr);
 
-char *date_sql2imap(const char *sqldate);
-char *date_imap2sql(const char *imapdate);
-
 size_t stridx(const char *s, char ch);
 int checkchars(const char *s);
 int checktag(const char *s);
-int checkmailboxname(const char *s);
-int check_msg_set(const char *s);
-int check_date(const char *date);
 void base64encode(char *in, char *out);
 void base64decode(char *in, char *out);
 int binary_search(const u64_t * array, unsigned arraysize, u64_t key, unsigned int *key_idx);

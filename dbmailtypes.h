@@ -304,11 +304,14 @@ typedef struct {
 	int type;
 	u64_t size;
 	char table[MAX_SEARCH_LEN];
+	char order[MAX_SEARCH_LEN];
 	char field[MAX_SEARCH_LEN];
 	char search[MAX_SEARCH_LEN];
+	
 	char hdrfld[MIME_FIELD_MAX];
 	struct dm_list sub_search;
 	int match;
+	GTree *found;
 	gboolean reverse;
 } search_key_t;
 

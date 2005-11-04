@@ -23,7 +23,28 @@
 
 #include "dbmail.h"
 
+const char AcceptedMailboxnameChars[] =
+    "abcdefghijklmnopqrstuvwxyz"
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "0123456789-=/ _.&,+@()[]";
 
+/**
+ * abbreviated names of the months
+ */
+const char *month_desc[] = {
+	"Jan", "Feb", "Mar", "Apr", "May", "Jun",
+	"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+};
+
+/* returned by date_sql2imap() */
+#define IMAP_STANDARD_DATE "Sat, 03-Nov-1979 00:00:00 +0000"
+char _imapdate[IMAP_INTERNALDATE_LEN] = IMAP_STANDARD_DATE;
+
+/* returned by date_imap2sql() */
+#define SQL_STANDARD_DATE "1979-11-03 00:00:00"
+char _sqldate[SQL_INTERNALDATE_LEN + 1] = SQL_STANDARD_DATE;
+
+const int month_len[] = { 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 
 #undef max
 #define max(x,y) ( (x) > (y) ? (x) : (y) )
@@ -517,13 +538,9 @@ GList * g_string_split(GString * string, char * sep)
  */
 GList * g_list_append_printf(GList * list, char * format, ...)
 {
-	char *str = (char *)dm_malloc(sizeof(char) * BUFLEN);
 	va_list argp;
 	va_start(argp, format);
-	vsnprintf(str, sizeof(char) * BUFLEN, format, argp);
-	list = g_list_append(list, strdup(str));
-	dm_free(str);
-	return list;
+	return g_list_append(list, g_strdup_vprintf(format, argp));
 }
 
 /* 
@@ -1017,3 +1034,217 @@ GList * g_tree_keys(GTree *tree) {
 }
 
 
+/*
+ * checkmailboxname()
+ *
+ * performs a check to see if the mailboxname is valid
+ * returns 0 if invalid, 1 otherwise
+ */
+int checkmailboxname(const char *s)
+{
+	int i;
+
+	if (strlen(s) == 0)
+		return 0;	/* empty name is not valid */
+
+	if (strlen(s) >= IMAP_MAX_MAILBOX_NAMELEN)
+		return 0;	/* a too large string is not valid */
+
+	/* check for invalid characters */
+	for (i = 0; s[i]; i++) {
+		if (!strchr(AcceptedMailboxnameChars, s[i])) {
+			/* dirty hack to allow namespaces to function */
+			if (i == 0 && s[0] == '#')
+				continue;
+			/* wrong char found */
+			return 0;
+		}
+	}
+
+	/* check for double '/' */
+	for (i = 1; s[i]; i++) {
+		if (s[i] == '/' && s[i - 1] == '/')
+			return 0;
+	}
+
+	/* check if the name consists of a single '/' */
+	if (strlen(s) == 1 && s[0] == '/')
+		return 0;
+
+	return 1;
+}
+
+
+/*
+ * check_date()
+ *
+ * checks a date for IMAP-date validity:
+ * dd-MMM-yyyy
+ * 01234567890
+ * month three-letter specifier
+ */
+int check_date(const char *date)
+{
+	char sub[4];
+	int days, i, j;
+
+	if (strlen(date) != strlen("01-Jan-1970")
+	    && strlen(date) != strlen("1-Jan-1970"))
+		return 0;
+
+	j = (strlen(date) == strlen("1-Jan-1970")) ? 1 : 0;
+
+	if (date[2 - j] != '-' || date[6 - j] != '-')
+		return 0;
+
+	days = strtoul(date, NULL, 10);
+	strncpy(sub, &date[3 - j], 3);
+	sub[3] = 0;
+
+	for (i = 0; i < 12; i++) {
+		if (strcasecmp(month_desc[i], sub) == 0)
+			break;
+	}
+
+	if (i >= 12 || days > month_len[i])
+		return 0;
+
+	for (i = 7; i < 11; i++)
+		if (!isdigit(date[i - j]))
+			return 0;
+
+	return 1;
+}
+
+
+
+/*
+ * check_msg_set()
+ *
+ * checks if s represents a valid message set 
+ */
+int check_msg_set(const char *s)
+{
+	int i, indigit;
+
+	if (!s || !isdigit(s[0]))
+		return 0;
+
+	for (i = 1, indigit = 1; s[i]; i++) {
+		if (isdigit(s[i]))
+			indigit = 1;
+		else if (s[i] == ',') {
+			if (!indigit && s[i - 1] != '*')
+				return 0;
+
+			indigit = 0;
+		} else if (s[i] == ':') {
+			if (!indigit)
+				return 0;
+
+			indigit = 0;
+		} else if (s[i] == '*') {
+			if (s[i - 1] != ':')
+				return 0;
+		}
+	}
+
+	return 1;
+}
+
+
+/*
+ * convert a mySQL date (yyyy-mm-dd hh:mm:ss) to a valid IMAP internal date:
+ * dd-mon-yyyy hh:mm:ss with mon characters (i.e. 'Apr' for april)
+ * return value is valid until next function call.
+ * NOTE: if date is not valid, IMAP_STANDARD_DATE is returned
+ */
+char *date_sql2imap(const char *sqldate)
+{
+        struct tm tm_sql_date;
+	struct tm tm_imap_date;
+	
+	time_t ltime;
+        char *last;
+
+	memset(&tm_sql_date, 0, sizeof(struct tm));
+
+        last = strptime(sqldate,"%Y-%m-%d %H:%M:%S", &tm_sql_date);
+        if ( (last == NULL) || (*last != '\0') ) {
+                strcpy(_imapdate, IMAP_STANDARD_DATE);
+                return _imapdate;
+        }
+
+	/* FIXME: this works fine on linux, but may cause dst offsets in netbsd. */
+	ltime = mktime (&tm_sql_date);
+	localtime_r(&ltime, &tm_imap_date);
+
+        strftime(_imapdate, sizeof(_imapdate), "%a, %d %b %Y %H:%M:%S %z", &tm_imap_date);
+        return _imapdate;
+}
+
+
+/*
+ * convert TO a mySQL date (yyyy-mm-dd) FROM a valid IMAP internal date:
+ *                          0123456789
+ * dd-mon-yyyy with mon characters (i.e. 'Apr' for april)
+ * 01234567890
+ * OR
+ * d-mon-yyyy
+ * return value is valid until next function call.
+ */
+char *date_imap2sql(const char *imapdate)
+{
+	struct tm tm;
+	char *last_char;
+
+	memset(&tm, 0, sizeof(struct tm));
+
+	last_char = strptime(imapdate, "%d-%b-%Y", &tm);
+	if (last_char == NULL || *last_char != '\0') {
+		trace(TRACE_DEBUG, "%s,%s: error parsing IMAP date %s",
+		      __FILE__, __func__, imapdate);
+		return NULL;
+	}
+	(void) strftime(_sqldate, SQL_INTERNALDATE_LEN,
+			"%Y-%m-%d 00:00:00", &tm);
+
+	return _sqldate;
+}
+
+
+int num_from_imapdate(const char *date)
+{
+	int j = 0, i;
+	char datenum[] = "YYYYMMDD";
+	char sub[4];
+
+	if (date[1] == ' ' || date[1] == '-')
+		j = 1;
+
+	strncpy(datenum, &date[7 - j], 4);
+
+	strncpy(sub, &date[3 - j], 3);
+	sub[3] = 0;
+
+	for (i = 0; i < 12; i++) {
+		if (strcasecmp(sub, month_desc[i]) == 0)
+			break;
+	}
+
+	i++;
+	if (i > 12)
+		i = 12;
+
+	sprintf(&datenum[4], "%02d", i);
+
+	if (j) {
+		datenum[6] = '0';
+		datenum[7] = date[0];
+	} else {
+		datenum[6] = date[0];
+		datenum[7] = date[1];
+	}
+
+	return atoi(datenum);
+}

@@ -158,7 +158,7 @@
 /** default table prefix */
 #define DEFAULT_DBPFX "dbmail_"
 
-#define MATCH(x,y) strcasecmp(x,y)==0
+#define MATCH(x,y) strcasecmp((x),(y))==0
 
 /**
  * \brief read configuration from filename
