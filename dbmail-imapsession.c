@@ -681,15 +681,12 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self, u64_t row)
 		SEND_SPACE;
 		
 		_imap_cache_update(self, DBMAIL_MESSAGE_FILTER_FULL);
-		if ((tlist = imap_get_structure(GMIME_MESSAGE((cached_msg.dmsg)->content), 1))==NULL) {
+		if ((s = imap_get_structure(GMIME_MESSAGE((cached_msg.dmsg)->content), 1))==NULL) {
 			dbmail_imap_session_printf(self, "\r\n* BYE error fetching body structure\r\n");
 			return -1;
 		}
-		s = dbmail_imap_plist_as_string(tlist);
 		dbmail_imap_session_printf(self, "BODYSTRUCTURE %s", s);
 		g_free(s);
-		g_list_foreach(tlist,(GFunc)g_free,NULL);
-		g_list_free(tlist);
 	}
 
 	if (self->fi->getMIME_IMB_noextension) {
@@ -697,15 +694,12 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self, u64_t row)
 		SEND_SPACE;
 		
 		_imap_cache_update(self, DBMAIL_MESSAGE_FILTER_FULL);
-		if ((tlist = imap_get_structure(GMIME_MESSAGE((cached_msg.dmsg)->content), 0))==NULL) {
+		if ((s = imap_get_structure(GMIME_MESSAGE((cached_msg.dmsg)->content), 0))==NULL) {
 			dbmail_imap_session_printf(self, "\r\n* BYE error fetching body\r\n");
 			return -1;
 		}
-		s = dbmail_imap_plist_as_string(tlist);
 		dbmail_imap_session_printf(self, "BODY %s",s);
 		g_free(s);
-		g_list_foreach(tlist,(GFunc)g_free,NULL);
-		g_list_free(tlist);
 	}
 
 	if (self->fi->getEnvelope) {
@@ -713,15 +707,12 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self, u64_t row)
 		SEND_SPACE;
 
 		_imap_cache_update(self, DBMAIL_MESSAGE_FILTER_FULL);
-		if ((tlist = imap_get_envelope(GMIME_MESSAGE((cached_msg.dmsg)->content)))==NULL) {
+		if ((s = imap_get_envelope(GMIME_MESSAGE((cached_msg.dmsg)->content)))==NULL) {
 			dbmail_imap_session_printf(self, "\r\n* BYE error fetching envelope structure\r\n");
 			return -1;
 		}
-		s = dbmail_imap_plist_as_string(tlist);
 		dbmail_imap_session_printf(self, "ENVELOPE %s", s);
 		g_free(s);
-		g_list_foreach(tlist,(GFunc)g_free,NULL);
-		g_list_free(tlist);
 	}
 
 	if (self->fi->getRFC822 || self->fi->getRFC822Peek) {

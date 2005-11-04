@@ -125,7 +125,7 @@ START_TEST(test_dbmail_mailbox_dump)
 	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id());
 	c = dbmail_mailbox_dump(mb,stdout);
 	dbmail_mailbox_free(mb);
-	fprintf(stderr,"dumped [%d] messages\n", c);
+//	fprintf(stderr,"dumped [%d] messages\n", c);
 }
 END_TEST
 
@@ -952,7 +952,7 @@ static gboolean _merge_search(GNode *node, GTree *found)
 	
 	switch(s->type) {
 		case IST_SUBSEARCH_AND:
-			g_node_children_foreach(node, G_TRAVERSE_ALL, (GNodeForeachFunc)_merge_search, (gpointer)self);
+			g_node_children_foreach(node, G_TRAVERSE_ALL, (GNodeForeachFunc)_merge_search, (gpointer)node);
 			
 		case IST_SUBSEARCH_NOT:
 			break;
@@ -963,14 +963,14 @@ static gboolean _merge_search(GNode *node, GTree *found)
 			a = (search_key_t *)x->data;
 			b = (search_key_t *)y->data;
 			tree_merge(a->found,b->found,IST_SUBSEARCH_OR);
-			tree_merge(self->found,a->found,IST_SUBSEARCH_AND);
+			tree_merge(found,a->found,IST_SUBSEARCH_AND);
 			break;
 			
 		default:
 			if (s->found)
-				tree_merge(self->found, s->found, IST_SUBSEARCH_AND);
+				tree_merge(found, s->found, IST_SUBSEARCH_AND);
 			else
-				self->found = s->found;
+				found = s->found;
 			break;
 	}
 
@@ -1072,7 +1072,7 @@ START_TEST(test_dbmail_mailbox_orderedsubject)
 	rset[1] = 2;
 	rset[2] = 1074946;
 	res = dbmail_mailbox_orderedsubject(mb, rset, setlen);
-	printf("threads [%s]\n", res);
+//	printf("threads [%s]\n", res);
 
 }
 END_TEST
@@ -1089,8 +1089,8 @@ Suite *dbmail_mailbox_suite(void)
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_open);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_dump);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_build_imap_search);
-	tcase_add_test(tc_mailbox, test_dbmail_mailbox_sort);
-	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search);
+//	tcase_add_test(tc_mailbox, test_dbmail_mailbox_sort);
+//	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_orderedsubject);
 	
 	return s;

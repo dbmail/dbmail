@@ -1167,7 +1167,8 @@ char *date_sql2imap(const char *sqldate)
 	time_t ltime;
         char *last;
 
-	memset(&tm_sql_date, 0, sizeof(struct tm));
+	// bsd needs:
+	//memset(&tm_sql_date, 0, sizeof(struct tm));
 
         last = strptime(sqldate,"%Y-%m-%d %H:%M:%S", &tm_sql_date);
         if ( (last == NULL) || (*last != '\0') ) {
@@ -1198,7 +1199,8 @@ char *date_imap2sql(const char *imapdate)
 	struct tm tm;
 	char *last_char;
 
-	memset(&tm, 0, sizeof(struct tm));
+	// bsd needs this:
+	//memset(&tm, 0, sizeof(struct tm));
 
 	last_char = strptime(imapdate, "%d-%b-%Y", &tm);
 	if (last_char == NULL || *last_char != '\0') {

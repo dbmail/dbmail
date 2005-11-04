@@ -60,6 +60,20 @@ const char *envelope_items[] = { "from", "sender", "reply-to", "to", "cc", "bcc"
 static const char *search_cost[] = { "b","b","c","c","c","b","d","d","d","c","e","e","b","b","j","j","j" };
 
 /* some basic imap type utils */
+char *dbmail_imap_plist_collapse(const char *in)
+{
+	/*
+	 * collapse "(NIL) (NIL)" to "(NIL)(NIL)"
+	 *
+	 * do for bodystructure, don't for envelope
+	 */
+	char *p;
+	char **sublists;
+	sublists = g_strsplit(in,") (",0);
+	p = g_strjoinv(")(",sublists);
+	g_strfreev(sublists);
+	return p;
+}
 
 /*
  *  build a parenthisized list (4.4) from a GList
@@ -84,17 +98,6 @@ char *dbmail_imap_plist_as_string(GList * list)
 		tmp1 = g_string_erase(tmp1,0,1);
 		p=tmp1->str;
 	}
-	/*
-	 * collapse "(NIL) (NIL)" to "(NIL)(NIL)"
-	 *
-	 * disabled: OE doesn't like this, uw-imapd doesn't do this...
-	 */
-	/*
-	char **sublists;
-	sublists = g_strsplit(p,") (",0);
-	g_free(p);
-	p = g_strjoinv(")(",sublists);
-	*/
 	
 	g_string_free(tmp1,FALSE);
 	g_string_free(tmp2,TRUE);
@@ -534,12 +537,12 @@ static GList * _imap_append_alist_as_plist(GList *list, const InternetAddressLis
 }
 
 /* structure access point */
-GList * imap_get_structure(GMimeMessage *message, gboolean extension) 
+char * imap_get_structure(GMimeMessage *message, gboolean extension) 
 {
 	GList *structure = NULL;
 	GMimeContentType *type;
 	GMimeObject *part;
-	char *s;
+	char *s, *t;
 	
 	part = g_mime_message_get_mime_part(message);
 
@@ -561,16 +564,24 @@ GList * imap_get_structure(GMimeMessage *message, gboolean extension)
 	else
 		_structure_part_text(part,(gpointer)&structure, extension);
 	
-	return structure;
+	s = dbmail_imap_plist_as_string(structure);
+	t = dbmail_imap_plist_collapse(s);
+	g_free(s);
+
+	g_list_foreach(structure,(GFunc)g_free,NULL);
+	g_list_free(structure);
+	
+	return t;
 }
 
 /* envelope access point */
-GList * imap_get_envelope(GMimeMessage *message)
+char * imap_get_envelope(GMimeMessage *message)
 {
 	GMimeObject *part;
 	InternetAddressList *alist;
 	GList *list = NULL;
 	char *result;
+	char *s;
 
 	if (! GMIME_IS_MESSAGE(message))
 		return NULL;
@@ -650,7 +661,12 @@ GList * imap_get_envelope(GMimeMessage *message)
 	else
 		list = g_list_append_printf(list,"NIL");
 
-	return list;
+	s = dbmail_imap_plist_as_string(list);
+
+	g_list_foreach(list,(GFunc)g_free,NULL);
+	g_list_free(list);
+	
+	return s;
 }
 
 

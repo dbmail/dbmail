@@ -59,10 +59,11 @@ void close_cache(void);
 
 char * dbmail_imap_astring_as_string(const char *s);
 char * dbmail_imap_plist_as_string(GList *plist);
+char * dbmail_imap_plist_collapse(const char *in);
 void dbmail_imap_plist_free(GList *l);
 
-GList * imap_get_structure(GMimeMessage *message, gboolean extension);
-GList * imap_get_envelope(GMimeMessage *message);
+char * imap_get_structure(GMimeMessage *message, gboolean extension);
+char * imap_get_envelope(GMimeMessage *message);
 GMimeObject * imap_get_partspec(const GMimeObject *message, const char *partspec);
 char * imap_get_logical_part(const GMimeObject *object, const char * specifier);
 
