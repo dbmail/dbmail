@@ -82,7 +82,6 @@
 #include "imapcommands.h"
 #include "memblock.h"
 #include "mime.h"
-#include "dbmsgbuf.h"
 #include "pidfile.h"
 #include "sort.h"
 #include "forward.h"

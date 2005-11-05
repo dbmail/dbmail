@@ -1005,4 +1005,21 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message, u64_t useridnr, cons
 	}
 }
 
+/* old stuff moved here from dbmsgbuf.c */
 
+struct DbmailMessage * db_init_fetch(u64_t msg_idnr, int filter)
+{
+	struct DbmailMessage *msg;
+
+	int result;
+	u64_t physid = 0;
+	if ((result = db_get_physmessage_id(msg_idnr, &physid)) != DM_SUCCESS)
+		return NULL;
+	msg = dbmail_message_new();
+	if (! (msg = dbmail_message_retrieve(msg, physid, filter)))
+		return NULL;
+
+	db_store_msgbuf_result();
+
+	return msg;
+}
