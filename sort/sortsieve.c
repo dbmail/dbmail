@@ -25,9 +25,48 @@
  * 
  */
 
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <time.h>
+#include <ctype.h>
+#include "db.h"
+#include "auth.h"
+#include "debug.h"
+#include "list.h"
 #include "dbmail.h"
+#include "debug.h"
+#include <errno.h>
+#include <string.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include "dbmd5.h"
+#include "misc.h"
+
+#include "sortsieve.h"
+#include "sort.h"
+#include <sieve2.h>
 
 extern struct dm_list smtpItems, sysItems;
+
+/* Used by us to keep track of libSieve. */
+struct my_context {
+	char *s_buf;
+	char *script;
+	char *header;
+	char *errormsg;
+	u64_t user_idnr;
+	u64_t headersize;
+	u64_t messagesize;
+	int error_runtime;
+	int error_parse;
+	int actiontaken;
+	struct dm_list *actionlist;
+};
+
 
 /* typedef sort_action {
  *   int method,
@@ -35,6 +74,316 @@ extern struct dm_list smtpItems, sysItems;
  *   char *message
  * } sort_action_t;
  * */
+
+/* SIEVE CALLBACKS */
+
+int my_notify(sieve2_context_t *s, void *my)
+{
+	struct my_context *m = (struct my_context *)my;
+	const char * const * options;
+	int i;
+
+	printf( "Action is NOTIFY: \n" );
+	printf( "  ID \"%s\" is %s\n",
+		sieve2_getvalue_string(s, "id"),
+		sieve2_getvalue_string(s, "active"));
+	printf( "    Method is %s\n",
+		sieve2_getvalue_string(s, "method"));
+	printf( "    Priority is %s\n",
+		sieve2_getvalue_string(s, "priority"));
+	printf( "    Message is %s\n",
+		sieve2_getvalue_string(s, "message"));
+
+	options = sieve2_getvalue_stringlist(s, "options");
+	if (!options)
+		return SIEVE2_ERROR_BADARGS;
+	for (i = 0; options[i] != NULL; i++) {
+		printf( "    Options are %s\n", options[i] );
+	}
+
+	m->actiontaken = 1;
+	return SIEVE2_OK;
+}
+
+int my_vacation(sieve2_context_t *s, void *my)
+{
+	struct my_context *m = (struct my_context *)my;
+	int yn;
+
+	/* Ask for the message hash, the days parameters, etc. */
+	printf("Have I already responded to '%s' in the past %d days?\n",
+		sieve2_getvalue_string(s, "hash"),
+		sieve2_getvalue_int(s, "days") );
+
+	yn = getchar();
+
+	/* Check in our 'database' to see if there's a match. */
+	if (yn == 'y' || yn == 'Y') {
+		printf( "Ok, not sending a vacation response.\n" );
+	}
+
+	/* If so, do nothing. If not, send a vacation and log it. */
+	printf("echo '%s' | mail -s '%s' '%s' for message '%s'\n",
+		sieve2_getvalue_string(s, "message"),
+		sieve2_getvalue_string(s, "subject"),
+		sieve2_getvalue_string(s, "address"),
+		sieve2_getvalue_string(s, "name") );
+
+	m->actiontaken = 1;
+	return SIEVE2_OK;
+}
+
+int my_redirect(sieve2_context_t *s, void *my)
+{
+	struct my_context *m = (struct my_context *)my;
+
+	printf( "Action is REDIRECT: \n" );
+	printf( "  Destination is [%s]\n",
+		sieve2_getvalue_string(s, "address"));
+
+	m->actiontaken = 1;
+	return SIEVE2_OK;
+}
+
+int my_reject(sieve2_context_t *s, void *my)
+{
+	struct my_context *m = (struct my_context *)my;
+
+	printf( "Action is REJECT: \n" );
+	printf( "  Message is [%s]\n",
+		sieve2_getvalue_string(s, "message"));
+
+	m->actiontaken = 1;
+	return SIEVE2_OK;
+}
+
+int my_discard(sieve2_context_t *s UNUSED, void *my)
+{
+	struct my_context *m = (struct my_context *)my;
+
+	printf( "Action is DISCARD\n" );
+
+	m->actiontaken = 1;
+	return SIEVE2_OK;
+}
+
+int my_fileinto(sieve2_context_t *s, void *my)
+{
+	struct my_context *m = (struct my_context *)my;
+	const char * const * flags;
+	int i;
+
+	printf( "Action is FILEINTO: \n" );
+	printf( "  Destination is %s\n",
+		sieve2_getvalue_string(s, "mailbox"));
+	flags = sieve2_getvalue_stringlist(s, "imapflags");
+	if (flags) {
+		printf( "  Flags are:");
+		for (i = 0; flags[i]; i++)
+			printf( " %s", flags[i]);
+		printf( ".\n");
+	} else {
+			printf( "  No flags specified.\n");
+	}
+
+	m->actiontaken = 1;
+	return SIEVE2_OK;
+}
+
+int my_keep(sieve2_context_t *s UNUSED, void *my)
+{
+	struct my_context *m = (struct my_context *)my;
+
+	printf( "Action is KEEP\n" );
+
+	m->actiontaken = 1;
+	return SIEVE2_OK;
+}
+
+int my_errparse(sieve2_context_t *s, void *my)
+{
+	struct my_context *m = (struct my_context *)my;
+
+	printf( "Error is PARSE: " );
+	printf( "  Line is %d\n",
+		sieve2_getvalue_int(s, "lineno"));
+	printf( "  Message is %s\n",
+		sieve2_getvalue_string(s, "message"));
+
+	m->error_parse = 1;
+	return SIEVE2_OK;
+}
+
+int my_errexec(sieve2_context_t *s, void *my)
+{
+	struct my_context *m = (struct my_context *)my;
+
+	printf( "Error is EXEC: " );
+	printf( "  Message is %s\n",
+		sieve2_getvalue_string(s, "message"));
+
+	m->error_runtime = 1;
+	return SIEVE2_OK;
+}
+
+int my_getscript(sieve2_context_t *s, void *my)
+{
+	struct my_context *m = (struct my_context *)my;
+	const char * path, * name;
+	int res;
+
+	/* Path could be :general, :personal, or empty. */
+	path = sieve2_getvalue_string(s, "path");
+
+	/* If no file is named, we're looking for the main file. */
+	name = sieve2_getvalue_string(s, "name");
+
+	if (path == NULL || name == NULL)
+		return SIEVE2_ERROR_BADARGS;
+
+	if (strlen(path) && strlen(name)) {
+		printf("Include requested from '%s' named '%s'\n",
+			path, name);
+	} else
+	if (!strlen(path) && !strlen(name)) {
+		/* Read the script file given as an argument. */
+		res = db_get_sievescript_byname(m->user_idnr, m->script, &m->s_buf);
+		if (res != SIEVE2_OK) {
+			printf("my_getscript: read_file() returns %d\n", res);
+			return SIEVE2_ERROR_FAIL;
+		}
+		sieve2_setvalue_string(s, "script", m->s_buf);
+	} else {
+		return SIEVE2_ERROR_BADARGS;
+	}
+
+	return SIEVE2_OK;
+}
+
+// TODO: Use GMime to hand pre-parsed headers to libSieve
+// on an as-needed basis using the my_getheader callback.
+int my_getheaders(sieve2_context_t *s, void *my)
+{
+	struct my_context *m = (struct my_context *)my;
+
+	sieve2_setvalue_string(s, "allheaders", m->header);
+
+	return SIEVE2_OK;
+}
+
+int my_getenvelope(sieve2_context_t *s UNUSED, void *my UNUSED)
+{
+	return SIEVE2_ERROR_UNSUPPORTED;
+}
+
+int my_getbody(sieve2_context_t *s UNUSED, void *my UNUSED)
+{
+	return SIEVE2_ERROR_UNSUPPORTED;
+}
+
+int my_getsize(sieve2_context_t *s, void *my)
+{
+	struct my_context *m = (struct my_context *)my;
+
+	sieve2_setvalue_int(s, "size", m->messagesize);
+
+	return SIEVE2_OK;
+}
+
+/* END OF CALLBACKS */
+
+
+/* FIXME: Will this work outside of a function scope? */
+sieve2_callback_t my_callbacks[] = {
+	{ SIEVE2_ERRCALL_RUNTIME,       my_errexec     },
+	{ SIEVE2_ERRCALL_PARSE,         my_errparse    },
+	{ SIEVE2_ACTION_FILEINTO,       my_fileinto    },
+	{ SIEVE2_ACTION_REDIRECT,       my_redirect    },
+	{ SIEVE2_ACTION_REJECT,         my_reject      },
+	{ SIEVE2_ACTION_NOTIFY,         my_notify      },
+	{ SIEVE2_ACTION_VACATION,       my_vacation    },
+	{ SIEVE2_ACTION_KEEP,           my_keep        },
+	{ SIEVE2_SCRIPT_GETSCRIPT,      my_getscript   },
+	/* We don't support one header at a time in this example. */
+// TODO: Use GMime to hand pre-parsed headers to libSieve
+// on an as-needed basis using the my_getheader callback.
+	{ SIEVE2_MESSAGE_GETHEADER,     NULL            },
+	/* libSieve can parse headers itself, so we'll use that. */
+	{ SIEVE2_MESSAGE_GETALLHEADERS, my_getheaders  },
+	{ SIEVE2_MESSAGE_GETENVELOPE,   my_getenvelope },
+	{ SIEVE2_MESSAGE_GETBODY,       my_getbody     },
+	{ SIEVE2_MESSAGE_GETSIZE,       my_getsize     },
+	{ 0, 0 } };
+
+
+/* Return 0 on script OK, 1 on script error, 2 on misc error. */
+int sortsieve_script_validate(char *script, char **errormsg)
+{
+	int res, exitcode = 0;
+	struct my_context *my_context;
+	sieve2_context_t *sieve2_context;
+
+	/* The contents of this function are taken from
+	 * the libSieve distribution, sv_test/example.c,
+	 * and are provided under an "MIT style" license.
+	 * */
+
+	/* This is the locally-defined structure that will be
+	 * passed as the user context into the sieve calls.
+	 * It will be passed by libSieve into each callback.*/
+	my_context = malloc(sizeof(struct my_context));
+	if (!my_context) {
+		exitcode = 2;
+		goto endnofree;
+	}
+	memset(my_context, 0, sizeof(struct my_context));
+
+	my_context->script = script;
+
+	res = sieve2_alloc(&sieve2_context);
+	if (res != SIEVE2_OK) {
+		printf("Error %d when calling sieve2_alloc: %s\n",
+			res, sieve2_errstr(res));
+		exitcode = 1;
+		goto freesieve;
+	}
+
+	res = sieve2_callbacks(sieve2_context, my_callbacks);
+	if (res != SIEVE2_OK) {
+		printf("Error %d when calling sieve2_callbacks: %s\n",
+			res, sieve2_errstr(res));
+		exitcode = 1;
+		goto freesieve;
+	}
+
+	res = sieve2_validate(sieve2_context, my_context);
+	if (res != SIEVE2_OK) {
+		printf("Error %d when calling sieve2_validate: %s\n",
+			res, sieve2_errstr(res));
+		exitcode = 1;
+	}
+
+	/* At this point the callbacks are called from within libSieve. */
+
+	exitcode |= my_context->error_parse;
+	exitcode |= my_context->error_runtime;
+	*errormsg = my_context->errormsg;
+
+freesieve:
+	res = sieve2_free(&sieve2_context);
+	if (res != SIEVE2_OK) {
+		printf("Error %d when calling sieve2_free: %s\n",
+			res, sieve2_errstr(res));
+		exitcode = 1;
+	}
+
+	if (my_context->s_buf) free(my_context->s_buf);
+
+	if (my_context) free(my_context);
+
+endnofree:
+	return exitcode;
+}
 
 /* Pull up the relevant sieve scripts for this
  * user and begin running them against the header
@@ -46,349 +395,86 @@ extern struct dm_list smtpItems, sysItems;
  * such as dbmail-lmtpd, the daemon should
  * finish storing the message and restart.
  * */
-int sortsieve_msgsort(u64_t useridnr, char *header, u64_t headersize, u64_t messagesize, struct dm_list *actions)
+int sortsieve_msgsort(u64_t user_idnr, char *header, u64_t headersize,
+		      u64_t messagesize, struct dm_list *actions)
 {
+	int res, exitcode = 0;
+	struct my_context *my_context;
+	sieve2_context_t *sieve2_context;
 
-	int res = 0, ret = 0;
-#ifdef OLDSIEVE
-	sieve2_message_t *m;
-	sieve2_support_t *p;
-	sieve2_script_t *s;
-	sieve2_action_t *a;
-	sieve2_interp_t *t;
-	sieve2_error_t *e;
-	sievefree_t sievefree;
-	char *scriptname = NULL, *script = NULL, *freestr = NULL;
+	/* The contents of this function are taken from
+	 * the libSieve distribution, sv_test/example.c,
+	 * and are provided under an "MIT style" license.
+	 * */
 
-	memset(&sievefree, 0, sizeof(sievefree_t));
+	/* This is the locally-defined structure that will be
+	 * passed as the user context into the sieve calls.
+	 * It will be passed by libSieve into each callback.*/
+	my_context = malloc(sizeof(struct my_context));
+	if (!my_context) {
+		exitcode = 2;
+		goto endnofree;
+	}
+	memset(my_context, 0, sizeof(struct my_context));
 
-	/* Pass the address of the char *script, and it will come
-	 * back magically allocated. Don't forget to free it later! */
-	res = db_get_sievescript_active(useridnr, &scriptname);
-	if (res < 0) {
-		trace(TRACE_ERROR, "db_get_sievescript_active() returns %d\n", res);
-		ret = -1;
-		goto skip_free;
+	my_context->user_idnr = user_idnr;
+	my_context->header = header;
+	my_context->headersize = headersize;
+	my_context->messagesize = messagesize;
+	my_context->actionlist = actions;
+
+	res = db_get_sievescript_active(user_idnr, &my_context->script);
+	if (res != 0) {
+		printf("Error %d when calling db_getactive_sievescript\n", res);
+		exitcode = 1;
+		goto freesieve;
 	}
 
-	trace(TRACE_DEBUG, "Looking up script [%s]\n", scriptname);
-	res = db_get_sievescript_byname(useridnr, scriptname, &script);
-	if (res < 0) {
-		trace(TRACE_ERROR, "db_get_sievescript_byname() returns %d\n", res);
-		ret = -1;
-		goto need_free;
-	}
-
-	res = sieve2_action_alloc(&a);
+	res = sieve2_alloc(&sieve2_context);
 	if (res != SIEVE2_OK) {
-		trace(TRACE_ERROR, "sieve2_action_alloc() returns %d\n", res);
-		ret = -1;
-		goto need_free;
+		printf("Error %d when calling sieve2_alloc: %s\n",
+			res, sieve2_errstr(res));
+		exitcode = 1;
+		goto freesieve;
 	}
-	sievefree.free_action = 1;
 
-	res = sieve2_support_alloc(&p);
+	res = sieve2_callbacks(sieve2_context, my_callbacks);
 	if (res != SIEVE2_OK) {
-		trace(TRACE_ERROR, "sieve2_support_alloc() returns %d\n", res);
-		ret = -1;
-		goto need_free;
+		printf("Error %d when calling sieve2_callbacks: %s\n",
+			res, sieve2_errstr(res));
+		exitcode = 1;
+		goto freesieve;
 	}
-	sievefree.free_support = 1;
 
-	res = sieve2_support_register(p, NULL, SIEVE2_ACTION_FILEINTO);
-	res = sieve2_support_register(p, NULL, SIEVE2_ACTION_REDIRECT);
-	res = sieve2_support_register(p, NULL, SIEVE2_ACTION_REJECT);
-//  res = sieve2_support_register(p, SIEVE2_ACTION_NOTIFY);
-
-	res = sieve2_script_alloc(&s);
+	res = sieve2_execute(sieve2_context, my_context);
 	if (res != SIEVE2_OK) {
-		trace(TRACE_ERROR, "sieve2_script_alloc() returns %d\n", res);
-		ret = -1;
-		goto need_free;
+		printf("Error %d when calling sieve2_execute: %s\n",
+			res, sieve2_errstr(res));
+		exitcode = 1;
 	}
-	sievefree.free_script = 1;
+	if (!my_context->actiontaken) {
+		printf("  no actions taken; keeping message.\n");
+		my_keep(NULL, my_context);
+	}
 
-	res = sieve2_message_alloc(&m);
+	/* At this point the callbacks are called from within libSieve. */
+
+	exitcode |= my_context->error_parse;
+	exitcode |= my_context->error_runtime;
+
+freesieve:
+	res = sieve2_free(&sieve2_context);
 	if (res != SIEVE2_OK) {
-		trace(TRACE_ERROR, "sieve2_message_alloc() returns %d\n", res);
-		ret = -1;
-		goto need_free;
-	}
-	sievefree.free_message = 1;
-
-	res = sieve2_script_register(s, script, SIEVE2_SCRIPT_CHAR_ARRAY);
-	if (res != SIEVE2_OK) {
-		trace(TRACE_ERROR, "sieve2_script_parse() returns %d: %s\n", res,
-		       sieve2_errstr(res, &freestr));
-		dm_free(freestr);
-		ret = -1;
-		goto need_free;
+		printf("Error %d when calling sieve2_free: %s\n",
+			res, sieve2_errstr(res));
+		exitcode = 1;
 	}
 
-	res = sieve2_message_register(m, &messagesize, SIEVE2_MESSAGE_SIZE);
-	if (res != SIEVE2_OK) {
-		trace(TRACE_ERROR, "sieve2_message_register() returns %d\n", res);
-		ret = -1;
-		goto need_free;
-	}
-	res = sieve2_message_register(m, header, SIEVE2_MESSAGE_HEADER);
-	if (res != SIEVE2_OK) {
-		trace(TRACE_ERROR, "sieve2_message_register() returns %d\n", res);
-		ret = -1;
-		goto need_free;
-	}
+	if (my_context->s_buf) free(my_context->s_buf);
 
-	res = sieve2_execute(t, s, p, e, m, a);
-	if (res != SIEVE2_OK) {
-		trace(TRACE_ERROR, "sieve2_execute_script() returns %d\n", res);
-		ret = -1;
-		goto need_free;
-	}
+	if (my_context) free(my_context);
 
-	res = sortsieve_unroll_action(a, actions);
-	if (res != SIEVE2_OK && res != SIEVE2_DONE) {
-		trace(TRACE_ERROR, "unroll_action() returns %d\n", res);
-		ret = -1;
-		goto need_free;
-	}
-
-	/* Fixme: If one of these fails, we should assume a memory leak
-	 * and go suicidal so that a new child process will start. */
-      need_free:
-	if (sievefree.free_interp)
-		sieve2_interp_free(t);
-	if (sievefree.free_support)
-		sieve2_support_free(p);
-	if (sievefree.free_script)
-		sieve2_script_free(s);
-	if (sievefree.free_error)
-		sieve2_error_free(e);
-	if (sievefree.free_message)
-		sieve2_message_free(m);
-	if (sievefree.free_action)
-		sieve2_action_free(a);
-
-	if (script != NULL)
-		dm_free(script);
-	if (scriptname != NULL)
-		dm_free(scriptname);
-  
-	if (script != NULL)
-		dm_free(script);
-	if (scriptname != NULL)
-		dm_free(scriptname);
-
-#endif
-      skip_free:
-	return ret;
-	
+endnofree:
+	return exitcode;
 }
 
-int sortsieve_unroll_action(sieve2_values_t * a, struct dm_list *actions)
-{
-
-	int res = SIEVE2_OK;
-#ifdef OLDSIEVE
-	int code;
-	void *action_context;
-
-	/* Working variables to set up
-	 * the struct then nodeadd it */
-	sort_action_t *tmpsa = NULL;
-	char *tmpdest = NULL;
-	char *tmpmsg = NULL;
-	int tmpmeth = 0;
-
-	while (res == SIEVE2_OK) {
-		if ((tmpsa = dm_malloc(sizeof(sort_action_t))) == NULL)
-			break;
-		res = sieve2_action_next(&a, &code, &action_context);
-		if (res == SIEVE2_DONE) {
-			trace(TRACE_DEBUG, "We've reached the end.\n");
-			break;
-		} else if (res != SIEVE2_OK) {
-			trace(TRACE_ERROR, "Error in action list.\n");
-			break;
-		}
-		trace(TRACE_DEBUG, "Action code is: %d\n", code);
-
-		switch (code) {
-		case SIEVE2_ACTION_REDIRECT:
-			{
-				sieve2_redirect_context_t *context =
-				    (sieve2_redirect_context_t *)
-				    action_context;
-				trace(TRACE_DEBUG, "Action is REDIRECT: ");
-				trace(TRACE_DEBUG, "Destination is %s\n",
-				       context->addr);
-				tmpmeth = SA_REDIRECT;
-				tmpdest = dm_strdup(context->addr);
-				break;
-			}
-		case SIEVE2_ACTION_REJECT:
-			{
-				sieve2_reject_context_t *context =
-				    (sieve2_reject_context_t *)
-				    action_context;
-				trace(TRACE_DEBUG, "Action is REJECT: ");
-				trace(TRACE_DEBUG, "Message is %s\n", context->msg);
-				tmpmeth = SA_REJECT;
-				tmpmsg = dm_strdup(context->msg);
-				break;
-			}
-		case SIEVE2_ACTION_DISCARD:
-			trace(TRACE_DEBUG, "Action is DISCARD\n");
-			tmpmeth = SA_DISCARD;
-			break;
-		case SIEVE2_ACTION_FILEINTO:
-			{
-				sieve2_fileinto_context_t *context =
-				    (sieve2_fileinto_context_t *)
-				    action_context;
-				trace(TRACE_DEBUG, "Action is FILEINTO: ");
-				trace(TRACE_DEBUG, "Destination is %s\n",
-				       context->mailbox);
-				tmpmeth = SA_FILEINTO;
-				tmpdest = dm_strdup(context->mailbox);
-				break;
-			}
-		case SIEVE2_ACTION_NOTIFY:
-			{
-				sieve2_notify_context_t *context =
-				    (sieve2_notify_context_t *)
-				    action_context;
-				trace(TRACE_DEBUG, "Action is NOTIFY: \n");
-				// FIXME: Prefer to have a function for this?
-				while (context != NULL) {
-					trace(TRACE_DEBUG, "  ID \"%s\" is %s\n",
-					       context->id,
-					       (context->
-						isactive ? "ACTIVE" :
-						"INACTIVE"));
-					trace(TRACE_DEBUG, "    Method is %s\n",
-					       context->method);
-					trace(TRACE_DEBUG, "    Priority is %s\n",
-					       context->priority);
-					trace(TRACE_DEBUG, "    Message is %s\n",
-					       context->message);
-					if (context->options != NULL) {
-						size_t opt = 0;
-						while (context->
-						       options[opt] !=
-						       NULL) {
-							trace(TRACE_DEBUG, "    Options are %s\n",
-							     context->options[opt]);
-							opt++;
-						}
-					}
-					context = context->next;
-				}
-				break;
-			}
-		case SIEVE2_ACTION_KEEP:
-			trace(TRACE_DEBUG, "Action is KEEP\n");
-			break;
-		default:
-			trace(TRACE_DEBUG, "Unrecognized action code: %d\n", code);
-			break;
-		}		/* case */
-
-		tmpsa->method = tmpmeth;
-		tmpsa->destination = tmpdest;
-		tmpsa->message = tmpmsg;
-
-		dm_list_nodeadd(actions, tmpsa, sizeof(sort_action_t));
-
-		dm_free(tmpsa);
-		tmpsa = NULL;
-
-	}			/* while */
-
-	if (tmpsa != NULL)
-		dm_free(tmpsa);
-
-#endif
-	return res;
-	
-}
-
-/* Return 0 on script OK, 1 on script error. */
-int sortsieve_script_validate(char *script, char **errmsg)
-{
-	int ret = 0, res;
-#ifdef OLDSIEVE
-	sieve2_interp_t *t;
-	sieve2_script_t *s;
-	sieve2_support_t *p;
-	sieve2_error_t *e;
-	sievefree_t sievefree;
-
-	memset(&sievefree, 0, sizeof(sievefree_t));
-
-	res = sieve2_interp_alloc(&t);
-	if (res != SIEVE2_OK) {
-		trace(TRACE_ERROR, "%s, %s: sieve2_interp_alloc() returns %d",
-			__FILE__, __func__, res);
-		ret = 1;
-	}
-	sievefree.free_interp = 1;
- 
-	res = sieve2_support_alloc(&p);
-	if (res != SIEVE2_OK) {
-		trace(TRACE_ERROR, "%s, %s: sieve2_support_alloc() returns %d",
-			__FILE__, __func__, res);
-		ret = 1;
-	}
-	sievefree.free_support = 1;
- 
-	res = 0;
-	SIEVE2_SUPPORT_REGISTER(res);
-	if (res != SIEVE2_OK) {
-		trace(TRACE_ERROR, "%s, %s: sieve2_support_register had errors.",
-			__FILE__, __func__);
-	}
- 
-	res = sieve2_script_alloc(&s);
-	if (res != SIEVE2_OK) {
-		trace(TRACE_ERROR, "%s, %s: sieve2_script_alloc returns %d",
-			__FILE__, __func__, res);
- 
-		ret = 1;
-	}
-	sievefree.free_script = 1;
-
-	res = sieve2_script_register(s, script, SIEVE2_SCRIPT_CHAR_ARRAY);
-	if (res != SIEVE2_OK) {
-		trace(TRACE_ERROR, "%s, %s: sieve2_script_register() returns %d",
-			__FILE__, __func__, res);
-		ret = 1;
-	}
-
-	res = sieve2_error_alloc(&e);
-	if (res != SIEVE2_OK) {
-		trace(TRACE_ERROR, "%s, %s: sieve2_error_alloc returns %s",
-			__FILE__, __func__, res);
-		ret = 1;
-	}
- 
-	if (sieve2_validate(t, s, p, e) == SIEVE2_OK) {
-		*errmsg = NULL;
-		ret = 0;
-	} else {
-		*errmsg = "Script error...";
-		ret = 1;
-	}
-
-	if (sievefree.free_interp)
-		sieve2_interp_free(t);
-	if (sievefree.free_support)
-		sieve2_support_free(p);
-	if (sievefree.free_script)
-		sieve2_script_free(s);
-	if (sievefree.free_error)
-		sieve2_error_free(e);
-
-#endif
-	return ret;
-	
-}

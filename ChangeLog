@@ -1,3 +1,12 @@
+2005-11-07  Aaron Stone  <aaron@serendipity.cx>
+
+	* acinclude.m4: updated libSieve checks to find the 
+	headers for libSieve 2.1.7 and higher.
+	* db.c (db_get_sievescript_active): fixed this function
+	to return the name of the script (per the function spec).
+	* sort/sortsieve.c: compiles cleanly with libSieve 2.1.7 and
+	higher.
+
 2005-11-04  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_imapd.c, db.c, dbmail-imapsession.c, dbmail-message.c, 
