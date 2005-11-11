@@ -1,5 +1,5 @@
 /*
- $Id: dbmailtypes.h 1897 2005-10-11 11:59:17Z paul $
+ $Id: dbmailtypes.h 1906 2005-11-04 21:30:20Z paul $
 
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 

@@ -1,4 +1,4 @@
-/* $Id: db.c 1902 2005-10-17 12:52:47Z paul $ */
+/* $Id: db.c 1908 2005-11-07 20:57:00Z aaron $ */
 /*
   Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 
@@ -511,13 +511,19 @@ int db_get_sievescript_byname(u64_t user_idnr, char *scriptname, char **script)
 	return DM_SUCCESS;
 }
 
+/* Looks up the name of the active script.
+ * Caller must free the scriptname. */
 int db_get_sievescript_active(u64_t user_idnr, char **scriptname)
 {
 	int n;
+
+	assert(scriptname != NULL);
+	*scriptname = NULL;
+
 	snprintf(query, DEF_QUERYSIZE,
 		"SELECT name from %ssievescripts where "
-		"owner_idnr = %llu and name = '%s' and active = 1",
-		DBPFX, user_idnr, *scriptname);
+		"owner_idnr = %llu and active = 1",
+		DBPFX, user_idnr);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, 
@@ -525,7 +531,12 @@ int db_get_sievescript_active(u64_t user_idnr, char **scriptname)
 		__FILE__, __func__);
 		return DM_EQUERY;
 	}
+
 	n = db_num_rows();
+	if (n > 0) {
+		*scriptname = dm_strdup(db_get_result(0, 0));
+	}
+
 	db_free_result();
 	return n;
 }

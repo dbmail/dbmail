@@ -144,7 +144,7 @@ then
   AC_MSG_RESULT([using Sieve sorting])
   if test "$withval" != "yes"
   then
-    AC_MSG_CHECKING([for sieve2_interface.h (user supplied)])
+    AC_MSG_CHECKING([for sieve2.h (user supplied)])
     if test -r "$sieveheadername/sieve2.h"
       then
       # found
