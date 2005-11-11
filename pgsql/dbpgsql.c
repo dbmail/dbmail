@@ -36,6 +36,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define BYTEAOID  17
+
 const char *TO_CHAR = "TO_CHAR(%s, 'YYYY-MM-DD HH24:MI:SS' )";
 const char *TO_DATE = "TO_TIMESTAMP('%s', 'YYYY-MM-DD HH:MI:SS')";
 const char *SQL_CURRENT_TIMESTAMP = "CURRENT_TIMESTAMP";
@@ -47,6 +49,10 @@ static PGresult *msgbuf_res;
 static PGresult *stored_res;
 static u64_t affected_rows; /**< stores the number of rows affected by the
 			     * the last query */
+static void _create_binary_table(void);
+static void _free_binary_table(void);
+static void _set_binary_table(unsigned row, unsigned field);
+static char*** bintbl = NULL;
 db_param_t _db_params;
 
 int db_connect()
@@ -155,6 +161,49 @@ void db_free_result()
 	if (res != NULL)
 		PQclear(res);
 	res = NULL;
+	_free_binary_table();
+}
+
+static void _create_binary_table(void){
+	unsigned rows, fields, i;
+	rows = db_num_rows(); fields = db_num_fields();
+	
+	if(!bintbl){
+		bintbl = (char***)malloc(sizeof(char**) * rows);
+		memset(bintbl, 0, sizeof(char**) * rows);
+		for(i = 0; i < rows; i++){
+			*(bintbl + i) = (char**)malloc(sizeof(char*) * fields);
+			memset(*(bintbl + i), 0, sizeof(char*) * fields);
+		}
+	}
+}
+
+static void _free_binary_table(void){
+	unsigned rows, fields, i, j;
+	rows = db_num_rows(); fields = db_num_fields();
+
+	if(bintbl){
+		for(i = 0; i < rows; i++){
+			for(j = 0; j < fields; j++)
+				if(bintbl[i][j])
+					free(bintbl[i][j]);
+			free(bintbl[i]);
+		}
+		free(bintbl);
+		bintbl = NULL;
+	}
+	
+}
+static void _set_binary_table(unsigned row, unsigned field){
+	unsigned char* tmp;
+	size_t result_size;
+	if(!bintbl[row][field]){
+		tmp = PQunescapeBytea(PQgetvalue(res, row, field), &result_size);
+		bintbl[row][field] = (char*)malloc(result_size + 1);
+		memcpy(bintbl[row][field], tmp, result_size);
+		PQfreemem(tmp); tmp = NULL;
+		bintbl[row][field][result_size] = '\0';
+	}
 }
 
 const char *db_get_result(unsigned row, unsigned field)
@@ -170,6 +219,11 @@ const char *db_get_result(unsigned row, unsigned field)
 		      "(row = %u,field = %u) bigger then size of result set",
 		      __FILE__, __func__, row, field);
 		return NULL;
+	}
+	if(PQftype(res, field) == BYTEAOID){
+		_create_binary_table();
+		_set_binary_table(row, field);
+		return bintbl[row][field];	
 	}
 	return PQgetvalue(res, row, field);
 }
@@ -204,7 +258,7 @@ int db_query(const char *the_query)
 			    result set (i.e. it is a SELECT query)
 			    the global res is 
 			    set to this temp_res result set */
-
+	_free_binary_table();
 	if (the_query != NULL) {
 		trace(TRACE_DEBUG, "%s,%s: "
 		      "executing query [%s]", __FILE__, __func__,
@@ -269,7 +323,17 @@ unsigned long db_escape_string(char *to,
 {
 	return PQescapeString(to, from, length);
 }
+unsigned long db_escape_binary(char *to,
+			       const char *from, unsigned long length)
+{
+	size_t to_length;
+	unsigned char *esc_to;
 
+	esc_to = PQescapeBytea(from, length, &to_length);
+	strncpy(to, esc_to, to_length);
+	PQfreemem(esc_to);
+	return (unsigned long)(to_length - 1);
+}
 int db_do_cleanup(const char **tables, int num_tables)
 {
 	int result = 0;
@@ -302,6 +366,11 @@ u64_t db_get_length(unsigned row, unsigned field)
 		      __FILE__, __func__, row, field);
 		return -1;
 	}
+        if(PQftype(res, field) == BYTEAOID){
+                _create_binary_table();
+                _set_binary_table(row, field);
+		return strlen(bintbl[row][field]);
+        }
 	return PQgetlength(res, row, field);
 }
 
