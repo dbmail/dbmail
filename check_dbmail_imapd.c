@@ -390,7 +390,7 @@ START_TEST(test_imap_get_partspec)
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"TEXT");
 	result = imap_get_logical_part(object,"TEXT");
-	fail_unless(strlen(result)==30,"imap_get_partspec failed");
+	fail_unless(strlen(result)==29,"imap_get_partspec failed");
 
 	dbmail_message_free(message);
 
@@ -401,7 +401,7 @@ START_TEST(test_imap_get_partspec)
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"1.TEXT");
 	result = imap_get_logical_part(object,"TEXT");
-	fail_unless(strlen(result)==17,"imap_get_partspec failed");
+	fail_unless(strlen(result)==16,"imap_get_partspec failed");
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"1.HEADER");
 	result = imap_get_logical_part(object,"HEADER");

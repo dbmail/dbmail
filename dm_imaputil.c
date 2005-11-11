@@ -673,7 +673,7 @@ char * imap_get_logical_part(const GMimeObject *object, const char * specifier)
 	
 	else if (strcasecmp(specifier,"TEXT")==0) {
 		t = g_mime_object_get_body(GMIME_OBJECT(object));
-		g_string_printf(s,"%s\n",t);
+		g_string_printf(s,"%s",t);
 		g_free(t);
 	}
 
