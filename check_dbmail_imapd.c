@@ -327,7 +327,6 @@ START_TEST(test_imap_get_structure)
 	struct DbmailMessage *message;
 	char *result;
 	char *expect = g_new0(char,1024);
-	GList *l;
 
 	/* multipart */
 	message = dbmail_message_new();
@@ -336,7 +335,7 @@ START_TEST(test_imap_get_structure)
 	strncpy(expect,"((\"text\" \"html\" NIL NIL NIL NIL 16 1 NIL (\"inline\") NIL NIL)"
 			"(\"text\" \"plain\" (\"charset\" \"us-ascii\" \"name\" \"testfile\") NIL NIL \"base64\" 432 7 NIL NIL NIL NIL)"
 			" \"mixed\" (\"boundary\" \"boundary\") NIL NIL NIL)",1024);
-	printf("\n[%s]\n[%s]\n", expect, result);
+	//printf("\n[%s]\n[%s]\n", expect, result);
 	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_structure failed");
 	g_free(result);
 	dbmail_message_free(message);

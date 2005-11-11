@@ -343,7 +343,7 @@ void _structure_part_multipart(GMimeObject *part, gpointer data, gboolean extens
 void _structure_part_message_rfc822(GMimeObject *part, gpointer data, gboolean extension)
 {
 	char *result, *b;
-	GList *list = NULL, *t = NULL;
+	GList *list = NULL;
 	size_t s, l=0;
 	GMimeObject *object;
 	const GMimeContentType *type;
@@ -377,24 +377,14 @@ void _structure_part_message_rfc822(GMimeObject *part, gpointer data, gboolean e
 	list = g_list_append_printf(list,"%d", s);
 
 	/* envelope structure */
-	t = imap_get_envelope(GMIME_MESSAGE(part));
-	
-	b = dbmail_imap_plist_as_string(t);
+	b = imap_get_envelope(GMIME_MESSAGE(part));
 	list = g_list_append_printf(list,"%s", b);
 	g_free(b);
-	
-	g_list_foreach(t,(GFunc)g_free,NULL);
-	g_list_free(t);
 
 	/* body structure */
-	t = imap_get_structure(GMIME_MESSAGE(part), extension);
-	
-	b = dbmail_imap_plist_as_string(t);
+	b = imap_get_structure(GMIME_MESSAGE(part), extension);
 	list = g_list_append_printf(list,"%s", b);
 	g_free(b);
-	
-	g_list_foreach(t,(GFunc)g_free,NULL);
-	g_list_free(t);
 
 	/* lines */
 	list = g_list_append_printf(list,"%d", l);

@@ -140,4 +140,21 @@ void dbmail_message_free(struct DbmailMessage *self);
 /* move these elsewhere: */
 
 char * g_mime_object_get_body(const GMimeObject *object);
+
+/* moved here from dbmsgbuf.h */
+
+/**
+ * \brief initialises a message headers fetch
+ * \param msg_idnr 
+ * \return 
+ *     - -1 on error
+ *     -  0 if already inited (sic) before
+ *     -  1 on success
+ */
+
+struct DbmailMessage * db_init_fetch(u64_t msg_idnr, int filter);
+
+#define db_init_fetch_headers(x) db_init_fetch(x,DBMAIL_MESSAGE_FILTER_HEAD)
+#define db_init_fetch_message(x) db_init_fetch(x,DBMAIL_MESSAGE_FILTER_FULL)
+
 #endif
