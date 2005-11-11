@@ -644,7 +644,7 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self, u64_t row)
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	
 
-	GList *tlist = NULL, *sublist = NULL;;
+	GList *sublist = NULL;;
 	GString *tmp = g_string_new("");
 	
 	self->fi->isfirstfetchout = 1;
@@ -939,15 +939,15 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data)
 		if (db_get_physmessage_id(self->msg_idnr, &physid) == DM_EQUERY)
 			return DM_EGENERAL;
 
-		flist = imap_message_fetch_headers(physid, tlist, condition);
+		tmp = imap_message_fetch_headers(physid, tlist, condition);
 	
 		tmpdumpsize=0;
 		
-		if (!g_list_length(flist)) {
+		if (!tmp) {
 			dbmail_imap_session_printf(self, "NIL");
 		} else {
-			ts = g_list_join(flist,"\r\n");
-			ts = g_string_append(ts,"\r\n\r\n");
+			ts = g_string_new(tmp);
+			g_free(tmp);
 			
 			if (bodyfetch->octetcnt > 0) {
 				

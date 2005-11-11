@@ -721,80 +721,70 @@ GMimeObject * imap_get_partspec(const GMimeObject *message, const char *partspec
 }
 
 /* get headers or not */
-GList * imap_message_fetch_headers(u64_t physid, const GList *headers, gboolean not)
+static GTree * _fetch_headers(const GList *ids, const GList *headers, gboolean not)
 {
 	unsigned i=0, rows=0;
-	GList *res = NULL, *tlist=NULL;
-	GString *h, *q = g_string_new("");
-	GRelation *rel = g_relation_new(2);
-	gchar *fld, *val, *key;
-	GTuples *tpl;
+	GString *r, *h, *q = g_string_new("");
+	gchar *pid, *fld, *val, *old, *new;
+	GTree *t;
 
-        g_relation_index(rel, 0, g_str_hash, g_str_equal);
-	
-	g_string_printf(q,"SELECT headername,headervalue FROM %sheadervalue v "
-			"JOIN %sheadername n ON v.headername_id=n.id "
-			"WHERE v.physmessage_id=%llu AND n.headername ",
-			DBPFX,DBPFX,physid);
-	
+	r = g_list_join((GList *)ids,",");
 	h = g_list_join((GList *)headers,"','");
-	g_string_append_printf(q,"%s IN ('%s')", not ? "NOT": "", h->str);
+	
+	g_string_printf(q,"SELECT physmessage_id,headername,headervalue "
+			"FROM %sheadervalue v "
+			"JOIN %sheadername n ON v.headername_id=n.id "
+			"WHERE physmessage_id IN (%s) "
+			"AND headername %s IN ('%s')",
+			DBPFX, DBPFX, r->str, not?"NOT":"", h->str);
+	
+	g_string_free(r,TRUE);
 	g_string_free(h,TRUE);
 	
 	if (db_query(q->str)==-1) {
 		g_string_free(q,TRUE);
-		return res;
+		return NULL;
 	}
+	
+	t = g_tree_new_full((GCompareDataFunc)strcmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 	
 	rows = db_num_rows();
 	for(i=0;i<rows;i++) {
 		
-		fld = (char *)db_get_result(i,0);
-		val = (char *)db_get_result(i,1);
+		pid = (char *)db_get_result(i,0);
+		fld = (char *)db_get_result(i,1);
+		val = (char *)db_get_result(i,2);
 		
-		key = g_ascii_strup(fld,-1);
-		tpl = g_relation_select(rel,key,0);
-		if (tpl->len == 0)
-			tlist = g_list_append(tlist,g_strdup(fld));
-		g_tuples_destroy(tpl);
+		old = g_tree_lookup(t, (gconstpointer)pid);
+		new = g_strdup_printf("%s%s: %s\n", old?old:"", fld, val);
 		
-		// are the inserted tuples freed by g_relation_destroy?
-		g_relation_insert(rel,key,strdup(val));
+		g_tree_insert(t,g_strdup(pid),new);
 	}
 	db_free_result();
-
-	tlist = g_list_first(tlist);
-	while(tlist) {
-		
-		key = g_ascii_strup(tlist->data,-1);
-		tpl = g_relation_select(rel,key,0);
-		
-		for (i=0; i<tpl->len; i++) {
-			
-			fld = (char *)tlist->data;
-			val = (char *)g_tuples_index(tpl,i,1);
-			
-			res = g_list_append_printf(res, "%s: %s", fld, val);
-		}
-		
-		g_tuples_destroy(tpl);
-		g_free(key);
-
-		if (! g_list_next(tlist))
-			break;
-		
-		tlist = g_list_next(tlist);
-	}
-
-	g_list_foreach(tlist,(GFunc)g_free,NULL);
-	g_list_free(tlist);
-	
 	g_string_free(q,TRUE);
-	g_relation_destroy(rel);
+	
+	return t;
+}
+
+
+char * imap_message_fetch_headers(u64_t physid, const GList *headers, gboolean not)
+{
+	gchar *tmp, *res = NULL;
+	gchar *id = g_strdup_printf("%llu",physid);
+	GList *ids = g_list_append_printf(NULL, "%s", id);
+	GTree *tree = _fetch_headers(ids,headers,not);
+	
+	tmp = (char *)g_tree_lookup(tree,id);
+	if (tmp)
+		res = g_strdup(tmp);
+	
+	g_list_foreach(ids,(GFunc)g_free,NULL);
+	g_list_free(ids);
+	g_free(id);
+	g_tree_destroy(tree);
 	
 	return res;
 }
-
 
 /* 
  * sort_search()
