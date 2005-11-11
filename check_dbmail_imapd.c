@@ -418,12 +418,22 @@ START_TEST(test_imap_get_partspec)
 }
 END_TEST
 
-
+static u64_t get_physid(void)
+{
+	u64_t id = 0;
+	GString *q = g_string_new("");
+	g_string_printf(q,"select id from %sphysmessage order by id desc limit 1", DBPFX);
+	db_query(q->str);
+	g_string_free(q,TRUE);
+	id = db_get_result_u64(0,0);
+	db_free_result();
+	return id;
+}
 
 START_TEST(test_imap_message_fetch_headers)
 {
 	GList *res;
-	u64_t physid=640583;
+	u64_t physid=get_physid();
 	GString *headers = g_string_new("From To Cc Subject Date Message-ID Priority X-Priority References Newsgroups In-Reply-To Content-Type");
 	GList *h = g_string_split(headers," ");
 	
@@ -431,7 +441,7 @@ START_TEST(test_imap_message_fetch_headers)
 	fail_unless(g_list_length(res) > 0 && g_list_length(res) < g_list_length(h),"imap_message_fetch_headers failed");
 
 	res = imap_message_fetch_headers(physid,h,1);
-	fail_unless(g_list_length(res) > 0 && g_list_length(res) > g_list_length(h),"imap_message_fetch_headers failed");
+	fail_unless(g_list_length(res) > 0,"imap_message_fetch_headers failed");
 
 	g_string_free(headers,TRUE);
 	

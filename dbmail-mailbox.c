@@ -147,10 +147,17 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 	GMimeStream *ostream;
 	GList *ids;
 	struct DbmailMessage *message = NULL;
-	GString *q = g_string_new("");
-	GString *t = g_string_new("");
+	GString *q, *t;
 
+	if (g_list_length(self->ids) == 0) {
+		trace(TRACE_DEBUG,"%s,%s: cannot dump empty mailbox",__FILE__, __func__);
+		return 0;
+	}
+	
+	q = g_string_new("");
+	t = g_string_new("");
 	ostream = g_mime_stream_file_new(file);
+	
 	
 	ids = g_list_slices(self->ids,100);
 	ids = g_list_first(ids);
@@ -247,15 +254,16 @@ char * dbmail_mailbox_orderedsubject(struct DbmailMailbox *self, u64_t *rset, un
 			"JOIN %ssubjectfield USING (physmessage_id) "
 			"JOIN %sdatefield USING (physmessage_id) "
 			"WHERE mailbox_idnr=%llu "
-			"AND status < '%d' "
-			"GROUP BY subjectfield ORDER BY datefield", 
+			"AND status IN (%d, %d) "
+			"GROUP BY subjectfield,message_idnr,datefield "
+			"ORDER BY datefield", 
 			DBPFX, DBPFX, DBPFX,
 			dbmail_mailbox_get_id(self),
-			MESSAGE_STATUS_DELETE);
+			MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
 
 	if (db_query(q->str) == DM_EQUERY) {
 		g_string_free(q,TRUE);
-		return res;;
+		return res;
 	}
 	if ((r = db_num_rows())==0) {
 		g_string_free(q,TRUE);
@@ -280,15 +288,15 @@ char * dbmail_mailbox_orderedsubject(struct DbmailMailbox *self, u64_t *rset, un
 			"JOIN %ssubjectfield using (physmessage_id) "
 			"JOIN %sdatefield using (physmessage_id) "
 			"WHERE mailbox_idnr=%llu "
-			"AND status < '%d' "
+			"AND status IN (%d,%d) "
 			"ORDER BY subjectfield,datefield", 
 			DBPFX, DBPFX, DBPFX,
 			dbmail_mailbox_get_id(self),
-			MESSAGE_STATUS_DELETE);
+			MESSAGE_STATUS_NEW,MESSAGE_STATUS_SEEN);
 		
 	if (db_query(q->str) == DM_EQUERY) {
 		g_string_free(q,TRUE);
-		return res;;
+		return res;
 	}
 	if ((r = db_num_rows())==0) {
 		g_string_free(q,TRUE);

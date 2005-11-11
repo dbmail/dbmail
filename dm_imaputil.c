@@ -738,8 +738,8 @@ GList * imap_message_fetch_headers(u64_t physid, const GList *headers, gboolean 
 			"WHERE v.physmessage_id=%llu AND n.headername ",
 			DBPFX,DBPFX,physid);
 	
-	h = g_list_join((GList *)headers,"\",\"");
-	g_string_append_printf(q,"%s IN (\"%s\")", not ? "NOT": "", h->str);
+	h = g_list_join((GList *)headers,"','");
+	g_string_append_printf(q,"%s IN ('%s')", not ? "NOT": "", h->str);
 	g_string_free(h,TRUE);
 	
 	if (db_query(q->str)==-1) {
