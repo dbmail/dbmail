@@ -725,10 +725,9 @@ GList * imap_message_fetch_headers(u64_t physid, const GList *headers, gboolean 
 {
 	unsigned i=0, rows=0;
 	GList *res = NULL, *tlist=NULL;
+	GString *h, *q = g_string_new("");
 	GRelation *rel = g_relation_new(2);
-	GString *h;
-	GString *q = g_string_new("");
-	gchar *name, *value;
+	gchar *fld, *val, *key;
 	GTuples *tpl;
 
         g_relation_index(rel, 0, g_str_hash, g_str_equal);
@@ -748,43 +747,47 @@ GList * imap_message_fetch_headers(u64_t physid, const GList *headers, gboolean 
 	}
 	
 	rows = db_num_rows();
-
-	if (not == FALSE)
-		tlist = (GList *)headers;
-	
 	for(i=0;i<rows;i++) {
-		name = (char *)db_get_result(i,0);
-		value = (char *)db_get_result(i,1);
-		tpl = g_relation_select(rel,name,0);
-		if (not == TRUE && tpl->len == 0)
-			tlist = g_list_append(tlist,strdup(name));
+		
+		fld = (char *)db_get_result(i,0);
+		val = (char *)db_get_result(i,1);
+		
+		key = g_ascii_strup(fld,-1);
+		tpl = g_relation_select(rel,key,0);
+		if (tpl->len == 0)
+			tlist = g_list_append(tlist,g_strdup(fld));
 		g_tuples_destroy(tpl);
-		// is this freed by g_relation_destroy?
-		g_relation_insert(rel,strdup(name),strdup(value));
+		
+		// are the inserted tuples freed by g_relation_destroy?
+		g_relation_insert(rel,key,strdup(val));
 	}
 	db_free_result();
 
 	tlist = g_list_first(tlist);
 	while(tlist) {
-		tpl = g_relation_select(rel,tlist->data,0);
+		
+		key = g_ascii_strup(tlist->data,-1);
+		tpl = g_relation_select(rel,key,0);
+		
 		for (i=0; i<tpl->len; i++) {
-			trace(TRACE_DEBUG,"%s,%s: [%s: %s]", 
-					__FILE__, __func__, 
-					(char *)tlist->data,
-					(char *)g_tuples_index(tpl,i,1));
-			res = g_list_append_printf(res, "%s: %s", (char *)tlist->data, (char *)g_tuples_index(tpl,i,1));
+			
+			fld = (char *)tlist->data;
+			val = (char *)g_tuples_index(tpl,i,1);
+			
+			res = g_list_append_printf(res, "%s: %s", fld, val);
 		}
+		
 		g_tuples_destroy(tpl);
+		g_free(key);
 
 		if (! g_list_next(tlist))
 			break;
+		
 		tlist = g_list_next(tlist);
 	}
 
-	if (not) {
-		g_list_foreach(tlist,(GFunc)g_free,NULL);
-		g_list_free(tlist);
-	}
+	g_list_foreach(tlist,(GFunc)g_free,NULL);
+	g_list_free(tlist);
 	
 	g_string_free(q,TRUE);
 	g_relation_destroy(rel);
