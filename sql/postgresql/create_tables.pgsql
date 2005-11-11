@@ -46,11 +46,13 @@ CREATE TABLE dbmail_users (
 );
 CREATE UNIQUE INDEX dbmail_users_name_idx ON dbmail_users(userid);
 
-CREATE TABLE dbmail_usermap(
-  user_idnr INT8 REFERENCES dbmail_users(user_idnr) ON UPDATE CASCADE ON DELETE CASCADE,
-  userid VARCHAR(100)
+CREATE TABLE dbmail_usermap (
+  login VARCHAR(100) NOT NULL,
+  sock_allow varchar(100) NOT NULL,
+  sock_deny varchar(100) NOT NULL,
+  userid varchar(100) NOT NULL
 );
-CREATE INDEX usermap_userid_idx ON dbmail_usermap(userid);
+CREATE UNIQUE INDEX usermap_idx_1 ON dbmail_usermap(login, sock_allow, userid);
 
 CREATE SEQUENCE dbmail_mailbox_idnr_seq;
 CREATE TABLE dbmail_mailboxes (
@@ -136,7 +138,7 @@ CREATE TABLE dbmail_messageblks (
    messageblk_idnr INT8 DEFAULT nextval('dbmail_messageblk_idnr_seq'),
    physmessage_id INT8 REFERENCES dbmail_physmessage(id)
 	ON DELETE CASCADE ON UPDATE CASCADE,
-   messageblk TEXT NOT NULL,
+   messageblk BYTEA NOT NULL,
    blocksize INT8 DEFAULT '0' NOT NULL,
    is_header INT2 DEFAULT '0' NOT NULL,
    PRIMARY KEY (messageblk_idnr)

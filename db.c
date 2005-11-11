@@ -905,7 +905,7 @@ int db_insert_message_block_physmessage(const char *block,
 					unsigned is_header)
 {
 	char *escaped_query = NULL;
-	unsigned maxesclen = (READ_BLOCK_SIZE + 1) * 2 + DEF_QUERYSIZE;
+	unsigned maxesclen = (READ_BLOCK_SIZE + 1) * 5 + DEF_QUERYSIZE;
 	unsigned startlen = 0;
 	unsigned esclen = 0;
 
@@ -937,8 +937,7 @@ int db_insert_message_block_physmessage(const char *block,
 		     "VALUES ('%u','",DBPFX, is_header);
 	
 	/* escape & add data */
-	esclen = db_escape_string(&escaped_query[startlen], block, block_size);
-
+	esclen = db_escape_binary(&escaped_query[startlen], block, block_size);
 	snprintf(&escaped_query[esclen + startlen],
 		 maxesclen - esclen - startlen, "', '%llu', '%llu')",
 		 block_size, physmessage_id);
