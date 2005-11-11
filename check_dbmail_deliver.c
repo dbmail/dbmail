@@ -693,7 +693,7 @@ START_TEST(test_dm_stresc)
 	to = NULL;
 	
 	to = dm_stresc("test's");
-	fail_unless(strcmp(to,"test\\'s")==0,"dm_stresc failed 2");
+	fail_unless((strcmp(to,"test''s")==0)||(strcmp(to,"test\\'s")==0),"dm_stresc failed 2");
 	g_free(to);
 }
 END_TEST

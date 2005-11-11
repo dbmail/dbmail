@@ -321,12 +321,17 @@ END_TEST
 START_TEST(test_dbmail_message_cache_headers)
 {
 	struct DbmailMessage *m = dbmail_message_new();
+	char *s = g_new0(char,20);
 	m = dbmail_message_init_with_string(m, g_string_new(multipart_message));
 	dbmail_message_set_header(m, 
 			"References", 
 			"<20050326155326.1afb0377@ibook.linuks.mine.nu> <20050326181954.GB17389@khazad-dum.debian.net> <20050326193756.77747928@ibook.linuks.mine.nu> ");
 	dbmail_message_store(m);
 	dbmail_message_free(m);
+
+	sprintf(s,"%.*s",10,"abcdefghijklmnopqrstuvwxyz");
+	fail_unless(MATCH(s,"abcdefghij"),"string truncate failed");
+	g_free(s);
 }
 END_TEST
 

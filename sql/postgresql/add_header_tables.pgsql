@@ -48,7 +48,7 @@ CREATE TABLE dbmail_subjectfield (
 			REFERENCES dbmail_physmessage(id)
 			ON UPDATE CASCADE ON DELETE CASCADE,
 	id		INT8 DEFAULT nextval('dbmail_subjectfield_idnr_seq'),
-	subjectfield	VARCHAR(100) NOT NULL DEFAULT '',
+	subjectfield	VARCHAR(255) NOT NULL DEFAULT '',
 	PRIMARY KEY (id)
 );
 CREATE UNIQUE INDEX dbmail_subjectfield_1 ON dbmail_subjectfield(physmessage_id, id);

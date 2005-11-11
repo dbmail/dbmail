@@ -184,6 +184,17 @@ unsigned long db_escape_string(char *to,
 			       const char *from, unsigned long length);
 
 /**
+ * \brief escape a binary data for use in query
+ * \param to string to copy escaped string to. Must be allocated by caller
+ * \param from original string
+ * \param length of orginal string
+ * \return length of escaped string
+ * \attention behaviour is undefined if to and from overlap
+ */
+unsigned long db_escape_binary(char *to,
+			       const char *from, unsigned long length);
+
+/**
  * \brief get length in bytes of a result field in a result set.
  * \param row row of field
  * \param field field number (0..nfields)
