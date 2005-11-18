@@ -390,7 +390,7 @@ START_TEST(test_imap_get_partspec)
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"TEXT");
 	result = imap_get_logical_part(object,"TEXT");
-	fail_unless(strlen(result)==30,"imap_get_partspec failed");
+	fail_unless(strlen(result)==29,"imap_get_partspec failed");
 
 	dbmail_message_free(message);
 
@@ -401,7 +401,7 @@ START_TEST(test_imap_get_partspec)
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"1.TEXT");
 	result = imap_get_logical_part(object,"TEXT");
-	fail_unless(strlen(result)==17,"imap_get_partspec failed");
+	fail_unless(strlen(result)==16,"imap_get_partspec failed");
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"1.HEADER");
 	result = imap_get_logical_part(object,"HEADER");
@@ -432,21 +432,20 @@ static u64_t get_physid(void)
 
 START_TEST(test_imap_message_fetch_headers)
 {
-	GList *res;
+	char *res;
 	u64_t physid=get_physid();
 	GString *headers = g_string_new("From To Cc Subject Date Message-ID Priority X-Priority References Newsgroups In-Reply-To Content-Type");
 	GList *h = g_string_split(headers," ");
 	
 	res = imap_message_fetch_headers(physid,h,0);
-	fail_unless(g_list_length(res) > 0 && g_list_length(res) < g_list_length(h),"imap_message_fetch_headers failed");
+	fail_unless(strlen(res) > 0,"imap_message_fetch_headers failed");
+	g_free(res);
 
 	res = imap_message_fetch_headers(physid,h,1);
-	fail_unless(g_list_length(res) > 0,"imap_message_fetch_headers failed");
+	fail_unless(strlen(res) > 0,"imap_message_fetch_headers failed");
+	g_free(res);
 
 	g_string_free(headers,TRUE);
-	
-	g_list_foreach(res,(GFunc)g_free,NULL);
-	g_list_free(res);
 	
 	g_list_foreach(h,(GFunc)g_free,NULL);
 	g_list_free(h);

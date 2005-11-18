@@ -106,7 +106,10 @@ class testImapServer(unittest.TestCase):
         
         result = self.o.fetch(id,"(UID BODY[TEXT])")
         self.assertEquals(result[0],'OK')
-        self.assertEquals(strip_crlf(result[1][0][1]),TESTMSG['strict822'].get_payload())
+        expectlen = int(string.split(result[1][0][0])[-1][1:-1])
+        expectmsg = result[1][0][1]
+        self.assertEquals(len(expectmsg),expectlen)
+        self.assertEquals(strip_crlf(expectmsg),TESTMSG['strict822'].get_payload())
 
         result = self.o.fetch(id,"(UID BODY.PEEK[TEXT])")
         self.assertEquals(result[0],'OK')

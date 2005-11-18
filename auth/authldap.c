@@ -1249,7 +1249,7 @@ int auth_change_mailboxsize(u64_t user_idnr, u64_t new_size)
 	int result;
 	char newsize_str[16];
 	snprintf(newsize_str, 16, "%llu", new_size);
-	if (result = db_change_mailboxsize(user_idnr, new_size))
+	if ((result = db_change_mailboxsize(user_idnr, new_size)))
 		return result;
 	return dm_ldap_mod_field(user_idnr, _ldap_cfg.field_maxmail, newsize_str);
 }

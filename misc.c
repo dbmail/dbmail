@@ -534,7 +534,7 @@ GList * g_string_split(GString * string, char * sep)
 	return list;
 }
 /*
- * append a formatted GString to a GList
+ * append a formatted string to a GList
  */
 GList * g_list_append_printf(GList * list, char * format, ...)
 {
