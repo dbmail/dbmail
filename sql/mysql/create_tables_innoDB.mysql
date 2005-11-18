@@ -21,7 +21,7 @@
 # This file was originally created by Paul Stevens and added
 # to dbmail on August 27th, 2003.
 # 
-# $Id: create_tables_innoDB.mysql 1891 2005-10-03 10:01:21Z paul $
+# $Id: create_tables_innoDB.mysql 1909 2005-11-11 10:31:00Z paul $
 
 # if database needs to be created, uncomment next line
 SET FOREIGN_KEY_CHECKS=0;
