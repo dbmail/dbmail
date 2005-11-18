@@ -67,7 +67,7 @@ char * imap_get_envelope(GMimeMessage *message);
 GMimeObject * imap_get_partspec(const GMimeObject *message, const char *partspec);
 char * imap_get_logical_part(const GMimeObject *object, const char * specifier);
 
-GList * imap_message_fetch_headers(u64_t physid, const GList *headers, gboolean not);
+char * imap_message_fetch_headers(u64_t physid, const GList *headers, gboolean not);
 
 int mime_unwrap(char *to, const char *from); 
 int sort_search(struct dm_list *searchlist);

@@ -149,7 +149,7 @@ gboolean _search_tree_dump(GNode *node, struct DbmailMailbox *mb UNUSED)
 		break;
 		
 		default:
-			printf("%s: type[%d] hdrfld[%s] search[%s]\n", __func__, sk->type, sk->hdrfld, sk->search);
+			printf("%s: depth[%d] type[%d] hdrfld[%s] search[%s]\n", __func__, g_node_depth(node), sk->type, sk->hdrfld, sk->search);
 		break;
 	}
 	
@@ -661,7 +661,6 @@ START_TEST(test_dbmail_mailbox_build_imap_search)
 	sk = save;
 	dbmail_mailbox_build_imap_search(mc, array, &idx, sorted);
 
-	//g_node_traverse(g_node_get_root(mc->search), G_IN_ORDER, G_TRAVERSE_LEAVES, -1, (GNodeTraverseFunc)_search_tree_dump, (gpointer)mc);
 	
 	dbmail_mailbox_free(mc);
 	g_free(save);
@@ -673,7 +672,7 @@ START_TEST(test_dbmail_mailbox_build_imap_search)
 	save = g_new0(search_key_t,1);
 	md = dbmail_mailbox_new(get_mailbox_id());
 	args = g_strdup("( arrival cc date reverse from size subject to ) us-ascii "
-			"HEADER FROM paul@nfg.nl ( BEFORE 1-Feb-1995 OR HEADER SUBJECT sometest HEADER SUBJECT othertest )");
+			"HEADER FROM test ( SINCE 1-Feb-1995 OR HEADER SUBJECT test HEADER SUBJECT foo )");
 	
 	array = g_strsplit(args," ",0);
 	g_free(args);
@@ -693,7 +692,7 @@ END_TEST
 
 static gint ucmp(gconstpointer a, gconstpointer b)
 {
-	u64_t x,y;
+	unsigned x,y;
 	x = GPOINTER_TO_UINT(a);
 	y = GPOINTER_TO_UINT(b);
 	
@@ -745,45 +744,93 @@ static gboolean _do_sort(GNode *node, struct DbmailMailbox *self)
 	return FALSE;
 }
 
-static gboolean tree_merge_and(gpointer key, gpointer value UNUSED, GTree *found)
+static gboolean tree_keys(gpointer key, gpointer value UNUSED, GList **keys)
 {
-	if (g_tree_lookup(found, (gconstpointer) key)) 
-		g_tree_steal(found, (gconstpointer) key);
-
+	*(GList **)keys = g_list_append(*(GList **)keys, key);
 	return FALSE;
 }
 
-static gboolean tree_merge_or(gpointer key, gpointer value, GTree *found)
+static void tree_merge(GTree *a, GTree *b, int condition)
 {
-	g_tree_insert(found, key, value);
-	return FALSE;
-}
+	gpointer value;	
+	GList *akeys = NULL;
+	GList *bkeys = NULL;
+	
+	if (a)
+		g_tree_foreach(a, (GTraverseFunc)tree_keys, &akeys);
+	if (b)
+		g_tree_foreach(b, (GTraverseFunc)tree_keys, &bkeys);
+	
+	akeys = g_list_first(akeys);
+	bkeys = g_list_first(bkeys);
+	
 
-static gboolean tree_merge_not(gpointer key, gpointer value, GTree *found)
-{
-	if (g_tree_lookup(found, (gconstpointer) key)) {
-		g_tree_steal(found, key);
-	} else {
-		g_tree_insert(found, key, value);
-	}
-	return FALSE;
-}
-
-static void tree_merge(GTree *found, GTree *set, int condition)
-{
+	printf ("%s: combine type [%d], a[%d], b[%d] ...", __func__, condition, g_list_length(akeys), g_list_length(bkeys));
 	switch(condition) {
 		case IST_SUBSEARCH_AND:
-			g_tree_foreach(set, (GTraverseFunc)tree_merge_and, found);
+			/* delete from A all keys not in B */
+			if (g_list_length(akeys)) {
+				while (akeys->data) {
+					if ( (! b) || (! g_tree_lookup(b,akeys->data)) )
+						g_tree_steal(a,akeys->data);
+
+					if (! g_list_next(akeys))
+						break;
+					
+					akeys = g_list_next(akeys);
+				}
+			}
 			break;
 			
 		case IST_SUBSEARCH_OR:
-			g_tree_foreach(set, (GTraverseFunc)tree_merge_or, found);
+			/* add to A all keys in B */
+			if (g_list_length(bkeys)) {
+				while (bkeys->data) {
+					value = g_tree_lookup(b,bkeys->data);
+					g_tree_insert(a,bkeys->data,value);
+
+					if (! g_list_next(bkeys))
+						break;
+					
+					bkeys = g_list_next(bkeys);
+				}
+			}
 			break;
 			
 		case IST_SUBSEARCH_NOT:
-			g_tree_foreach(set, (GTraverseFunc)tree_merge_not, found);
+			/* remove from A all keys also in B */
+			if (g_list_length(akeys)) {
+				while (akeys->data) {
+					if ( b && g_tree_lookup(b,akeys->data))
+						g_tree_steal(a,akeys->data);
+
+					if (! g_list_next(akeys))
+						break;
+
+					akeys = g_list_next(akeys);
+				}
+			}
+			/* add to A all keys in B not in A */
+			if (g_list_length(bkeys)) {
+				while (bkeys->data) {
+					value = g_tree_lookup(b,bkeys->data);
+					if (! g_tree_lookup(a,bkeys->data))
+						g_tree_insert(a,bkeys->data,value);
+
+					if (! g_list_next(bkeys))
+						break;
+
+					bkeys = g_list_next(bkeys);
+				}
+			}
+				
 			break;
 	}
+
+	printf(" result[%d]\n", a ? g_tree_nnodes(a): 0);
+
+	g_list_free(akeys);
+	g_list_free(bkeys);
 			
 }
 
@@ -886,7 +933,6 @@ static gboolean _do_search(GNode *node, struct DbmailMailbox *self)
 	search_key_t *s = (search_key_t *)node->data;
 	GTree *set = NULL;
 	
-	printf("%s: type [%d]\n", __func__, s->type);
 
 	switch (s->type) {
 		case IST_SET:
@@ -923,12 +969,13 @@ static gboolean _do_search(GNode *node, struct DbmailMailbox *self)
 		case IST_SUBSEARCH_AND:
 		case IST_SUBSEARCH_OR:
 			g_node_children_foreach(node, G_TRAVERSE_ALL, (GNodeForeachFunc)_do_search, (gpointer)self);
-			// perform subsearch
 			break;
 
 		default:
 			return TRUE;
 	}
+
+	printf("%s: type [%d] rows [%d]\n", __func__, s->type, set ? g_tree_nnodes(set): 0);
 	return FALSE;
 }	
 
@@ -948,13 +995,13 @@ static gboolean _merge_search(GNode *node, GTree *found)
 	search_key_t *a, *b;
 	GNode *x, *y;
 
-	printf("%s,%s: depth[%d] type[%d] rows[%d]\n", __FILE__, __func__, g_node_depth(node), s->type, s->found ? g_tree_nnodes(s->found): 0 );
-	
 	switch(s->type) {
 		case IST_SUBSEARCH_AND:
 			g_node_children_foreach(node, G_TRAVERSE_ALL, (GNodeForeachFunc)_merge_search, (gpointer)node);
+			break;
 			
 		case IST_SUBSEARCH_NOT:
+			tree_merge(found, s->found, IST_SUBSEARCH_NOT);
 			break;
 			
 		case IST_SUBSEARCH_OR:
@@ -967,15 +1014,10 @@ static gboolean _merge_search(GNode *node, GTree *found)
 			break;
 			
 		default:
-			if (s->found)
-				tree_merge(found, s->found, IST_SUBSEARCH_AND);
-			else
-				found = s->found;
+			tree_merge(found, s->found, IST_SUBSEARCH_AND);
 			break;
 	}
 
-//	printf("%s,%s: depth[%d] type[%d] rows[%d]\n", __FILE__, __func__, g_node_depth(node), s->type, self->found ? g_tree_nnodes(self->found): 0 );
-	
 	return FALSE;
 }
 static int mailbox_search(struct DbmailMailbox *self) 
@@ -1007,8 +1049,9 @@ static int mailbox_search(struct DbmailMailbox *self)
 	}
 	
 	g_node_children_foreach(g_node_get_root(self->search), G_TRAVERSE_ALL, (GNodeForeachFunc)_do_search, (gpointer)self);
-	
 	g_node_children_foreach(g_node_get_root(self->search), G_TRAVERSE_ALL, (GNodeForeachFunc)_merge_search, (gpointer)self->found);
+	
+	printf("%s: found [%d] ids\n", __func__, g_tree_nnodes(self->found));
 	
 	return 0;
 }
@@ -1024,7 +1067,7 @@ START_TEST(test_dbmail_mailbox_sort)
 	
 	// first case
 	mb = dbmail_mailbox_new(get_mailbox_id());
-	args = g_strdup("( arrival cc date reverse from size subject to ) us-ascii HEADER FROM paul@nfg.nl SINCE 1-Feb-1994");
+	args = g_strdup("( arrival cc date reverse from size subject to ) us-ascii HEADER FROM test SINCE 1-Feb-1994");
 	array = g_strsplit(args," ",0);
 	g_free(args);
 	
@@ -1048,7 +1091,7 @@ START_TEST(test_dbmail_mailbox_search)
 	// first case
 	mb = dbmail_mailbox_new(get_mailbox_id());
 	args = g_strdup("( arrival cc date reverse from size subject to ) us-ascii "
-			"HEADER FROM paul@nfg.nl ( SENTBEFORE 1-Feb-1995 OR HEADER SUBJECT sometest TO test@nfg.nl )");
+			"HEADER FROM foo SINCE 1-Feb-1994 ( SENTSINCE 1-Feb-1995 OR BEFORE 1-Jan-2006 SINCE 1-Jan-2005 )");
 	array = g_strsplit(args," ",0);
 	g_free(args);
 	
@@ -1090,7 +1133,7 @@ Suite *dbmail_mailbox_suite(void)
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_dump);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_build_imap_search);
 //	tcase_add_test(tc_mailbox, test_dbmail_mailbox_sort);
-//	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search);
+	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_orderedsubject);
 	
 	return s;

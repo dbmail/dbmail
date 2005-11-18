@@ -1,3 +1,23 @@
+2005-11-11  Paul J Stevens <paul@nfg.nl>
+
+	* Makefile.am, dbmail-message.c, dbmail-message.h, dbmail.h, dbmsgbuf.c, 
+	  dbmsgbuf.h:
+	phase-out dbmsgbuf files
+	* sql/postgresql/add_header_tables.pgsql:
+	change subjectfield with to 255
+	* check_dbmail_imapd.c, check_dbmail_message.c, dbmail-message.c, 
+	  dm_imaputil.c:
+	Minor plist cleanup. Truncate fieldvalues during cache insertion
+	* debian/po/es.po:
+	adding spanish translation of debconf files
+	* sql/mysql/create_tables_innoDB.mysql:
+	fix usermap table
+	* db.c, db.h, sql/postgresql/create_tables.pgsql,pgsql/dbpgsql.c:
+	change messageblk storage to bytea for pgsql
+	* check_dbmail_deliver.c, check_dbmail_imapd.c, dbmail-mailbox.c, 
+	  dm_imaputil.c:
+	minor postgresql fixes
+
 2005-11-07  Aaron Stone  <aaron@serendipity.cx>
 
 	* acinclude.m4: updated libSieve checks to find the 
@@ -26,12 +46,10 @@
 	  dm_search.c, dm_search.h, imap4.c, imapcommands.c, misc.c, misc.h, 
 	  test-scripts/testimap.py:
 	partial sort fix and memory cleanups
-	* misc.c:
+	* misc.c, misc.h:
 	added simple GTree utils
 	* dbmail-imapsession.c:
 	minor cleanups
-	* misc.h:
-	added simple GTree utils
 	* dbmail-mailbox.c:
 	move some stuff from dm_imaputil
 	* check_dbmail_imapd.c, check_dbmail_mailbox.c, dbmail-mailbox.c, 

@@ -249,6 +249,11 @@ unsigned long db_escape_string(char *to, const char *from, unsigned long length)
 	return mysql_real_escape_string(&conn, to, from, length);
 }
 
+unsigned long db_escape_binary(char *to, const char *from, unsigned long length)
+{
+	return db_escape_string(to,from,length);
+}
+
 int db_do_cleanup(const char **tables, int num)
 {
 	char the_query[DEF_QUERYSIZE];
