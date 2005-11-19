@@ -40,6 +40,7 @@ typedef struct {
 	u64_t useridnr;		/* Specific user id recipient (from outside). */
 	const char *address;	/* Envelope recipient (from outside). */
 	const char *mailbox;	/* Default mailbox to use for userid deliveries (from outside). */
+	mailbox_source_t source; /* Who specified the mailbox (e.g. trusted or untrusted source)? */
 	struct dm_list *userids;	/* List of u64_t* -- internal useridnr's to deliver to (internal). */
 	struct dm_list *forwards;	/* List of char* -- external addresses to forward to (internal). */
 	delivery_status_t dsn;	/* Return status of this "delivery basket" (to outside). */

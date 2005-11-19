@@ -197,6 +197,7 @@ int dsnuser_init(deliver_to_user_t * dsnuser)
 
 	dsnuser->address = NULL;
 	dsnuser->mailbox = NULL;
+	dsnuser->source = BOX_NONE;
 
 	dsnuser->userids = (struct dm_list *) dm_malloc(sizeof(struct dm_list));
 	if (dsnuser->userids == NULL)
@@ -231,6 +232,7 @@ void dsnuser_free(deliver_to_user_t * dsnuser)
 	*/
 	dsnuser->address = NULL;
 	dsnuser->mailbox = NULL;
+	dsnuser->source = BOX_NONE;
 	
 	dm_list_free(&dsnuser->userids->start);
 	dm_list_free(&dsnuser->forwards->start);

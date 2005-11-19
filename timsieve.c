@@ -522,7 +522,12 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 								} else {
 									char *errmsg = NULL;
 
-									if (0 != sortsieve_script_validate(f_buf, &errmsg)) {
+									/* Store the script temporarily,
+									 * validate it, then rename it. */
+									if (0 != db_add_sievescript(session->useridnr, "@!temp-script!@", f_buf)) {
+										// FIXME: Error.
+									}
+									if (0 != sortsieve_script_validate(session->useridnr, "@!temp-script!@", &errmsg)) {
 										trace
 										    (TRACE_INFO,
 										     "%s, %s: Script has syntax errrors: [%s]",
@@ -534,7 +539,7 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 									} else {
 										/* According to the draft RFC, a script with the same
 										 * name as an existing script should [atomically] replace it. */
-										if (0 != db_replace_sievescript(session->useridnr, scriptname, f_buf)) {
+										if (0 != db_rename_sievescript(session->useridnr, "@!temp-script!@", scriptname)) {
 											trace
 											    (TRACE_INFO,
 											     "%s, %s: Error inserting script",

@@ -397,5 +397,19 @@ typedef enum {
 	ACL_RIGHT_NONE
 } ACLRight_t;
 
+/* Depending upon where the mailbox spec comes from,
+ * we may or may not create it on the fly and auto-subscribe
+ * to it. Some of these will resolve to the same action;
+ * see db_find_create_mailbox in db.c to find which.
+ */
+typedef enum {
+	BOX_NONE,        /* No mailbox yet. */
+	BOX_UNKNOWN,     /* Not gonna create. */
+	BOX_ADDRESSPART, /* Not gonna create. */
+	BOX_COMMANDLINE, /* Autocreate. */
+	BOX_SORTING,     /* Autocreate. */
+	BOX_DEFAULT      /* Autocreate. */
+} mailbox_source_t;
+
 
 #endif

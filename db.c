@@ -573,12 +573,12 @@ int db_get_sievescript_listall(u64_t user_idnr, struct dm_list *scriptlist)
 	return DM_SUCCESS;
 }
 
-int db_replace_sievescript(u64_t user_idnr, char *scriptname, char *script)
+int db_rename_sievescript(u64_t user_idnr, char *scriptname, char *newname)
 {
 	snprintf(query, DEF_QUERYSIZE,
-		"UPDATE %ssievescripts set script = '%s' "
+		"UPDATE %ssievescripts set name = '%s' "
 		"where owner_idnr = %llu and name = '%s'",
-		DBPFX,script,user_idnr,scriptname);
+		DBPFX,newname,user_idnr,scriptname);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error replacing sievescript '%s' "
@@ -593,7 +593,9 @@ int db_replace_sievescript(u64_t user_idnr, char *scriptname, char *script)
 int db_add_sievescript(u64_t user_idnr, char *scriptname, char *script)
 {
 	snprintf(query, DEF_QUERYSIZE,
-		"INSERT into %ssievescripts values (%llu,'%s','%s',0)",
+		"INSERT into %ssievescripts "
+		"(owner_idnr, name, script, active)"
+		"values (%llu, '%s', '%s', 0)",
 		DBPFX,user_idnr,scriptname,script);
 
 	if (db_query(query) == -1) {
@@ -2544,8 +2546,8 @@ int db_createmailbox(const char *name, u64_t owner_idnr,
 }
 
 
-int db_find_create_mailbox(const char *name, u64_t owner_idnr,
-			   u64_t * mailbox_idnr)
+int db_find_create_mailbox(const char *name, mailbox_source_t source,
+		u64_t owner_idnr, u64_t * mailbox_idnr)
 {
 	u64_t mboxidnr;
 
@@ -2563,18 +2565,29 @@ int db_find_create_mailbox(const char *name, u64_t owner_idnr,
 
 	/* Did we fail to find the mailbox? */
 	if (db_findmailbox_owner(name, owner_idnr, &mboxidnr) != 1) {
-		/* Did we fail to create the mailbox? */
-		if (db_createmailbox(name, owner_idnr, &mboxidnr) != 0) {
-			trace(TRACE_ERROR, "%s, %s: could not create mailbox [%s]",
+		/* Who specified this mailbox? */
+		if (source == BOX_COMMANDLINE
+		 || source == BOX_SORTING
+		 || source == BOX_DEFAULT) {
+			/* Did we fail to create the mailbox? */
+			if (db_createmailbox(name, owner_idnr, &mboxidnr) != 0) {
+				trace(TRACE_ERROR, "%s, %s: could not create mailbox [%s]",
+						__FILE__, __func__, name);
+				return DM_EQUERY;
+			}
+			trace(TRACE_DEBUG, "%s, %s: mailbox [%s] created on the fly", 
 					__FILE__, __func__, name);
-			return DM_EQUERY;
+			
+			/* auto-creation implies subscription */
+			if (db_subscribe(mboxidnr, owner_idnr) == DM_EQUERY)
+				return DM_EQUERY;
+		} else {
+			/* The mailbox was specified by an untrusted
+			 * source, such as the address part, and will
+			 * not be autocreated. */
+			return db_find_create_mailbox("INBOX", BOX_DEFAULT,
+					owner_idnr, mailbox_idnr);
 		}
-		trace(TRACE_DEBUG, "%s, %s: mailbox [%s] created on the fly", 
-				__FILE__, __func__, name);
-		
-		/* auto-creation implies subscription */
-		if (db_subscribe(mboxidnr, owner_idnr) == DM_EQUERY)
-			return DM_EQUERY;
 
 	}
 	trace(TRACE_DEBUG, "%s, %s: mailbox [%s] found",
@@ -2583,6 +2596,7 @@ int db_find_create_mailbox(const char *name, u64_t owner_idnr,
 	*mailbox_idnr = mboxidnr;
 	return DM_SUCCESS;
 }
+
 
 int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
 			   u64_t ** children, int *nchildren,

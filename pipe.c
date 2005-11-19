@@ -466,7 +466,7 @@ int insert_messages(struct DbmailMessage *message,
 			trace(TRACE_DEBUG, "%s, %s: calling sort_and_deliver for useridnr [%llu]",
 			      __FILE__, __func__, useridnr);
 
-			switch (sort_and_deliver(message, useridnr, delivery->mailbox)) {
+			switch (sort_and_deliver(message, useridnr, delivery->mailbox, delivery->source)) {
 			case DSN_CLASS_OK:
 				/* Indicate success. */
 				trace(TRACE_DEBUG, "%s, %s: successful sort_and_deliver for useridnr [%llu]",

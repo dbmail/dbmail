@@ -203,15 +203,18 @@ int do_insert(u64_t user_idnr, char *name, FILE * source)
 	}
 
 	/* Check if the script is valid */
-	/*res = my_sieve_script_validate(buf, &errmsg);*/
-	res = sortsieve_script_validate(buf, &errmsg);
+	res = db_add_sievescript(user_idnr, "@!temp-script!@", buf);
+	if (res != 0) {
+		// FIXME: Error.
+	}
+
+	res = sortsieve_script_validate(user_idnr, "@!temp-script!@", &errmsg);
 	if (res != 0) {
 		printf("Script [%s] has errors: %s.\n", name, errmsg);
 		return -1;
 	}
 
-	/* Make the DB call to store the script */
-	res = db_add_sievescript(user_idnr, name, buf);
+	res = db_rename_sievescript(user_idnr, "@!temp-script!@", name);
 	if (res == -3) {
 		printf("Script [%s] already exists.\n", name);
 		return -1;
