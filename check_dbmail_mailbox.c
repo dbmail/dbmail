@@ -64,7 +64,7 @@ static u64_t get_mailbox_id(void)
 {
 	u64_t id, owner;
 	auth_user_exists("testuser1",&owner);
-	db_find_create_mailbox("INBOX", owner, &id);
+	db_find_create_mailbox("INBOX", BOX_COMMANDLINE, owner, &id);
 	return id;
 }
 

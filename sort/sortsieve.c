@@ -1,4 +1,4 @@
-/* $Id: sortsieve.c 1908 2005-11-07 20:57:00Z aaron $
+/* $Id: sortsieve.c 1912 2005-11-19 02:29:41Z aaron $
 
  Copyright (C) 1999-2004 Aaron Stone aaron at serendipity dot cx
 
@@ -317,7 +317,7 @@ sieve2_callback_t my_callbacks[] = {
 
 
 /* Return 0 on script OK, 1 on script error, 2 on misc error. */
-int sortsieve_script_validate(char *script, char **errormsg)
+int sortsieve_script_validate(u64_t user_idnr, char *scriptname, char **errormsg)
 {
 	int res, exitcode = 0;
 	struct my_context *my_context;
@@ -338,7 +338,8 @@ int sortsieve_script_validate(char *script, char **errormsg)
 	}
 	memset(my_context, 0, sizeof(struct my_context));
 
-	my_context->script = script;
+	my_context->script = scriptname;
+	my_context->user_idnr = user_idnr;
 
 	res = sieve2_alloc(&sieve2_context);
 	if (res != SIEVE2_OK) {

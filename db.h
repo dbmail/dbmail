@@ -18,7 +18,7 @@
 */
 
 /*
- * $Id: db.h 1909 2005-11-11 10:31:00Z paul $
+ * $Id: db.h 1912 2005-11-19 02:29:41Z aaron $
  *
  * dbase driver header file
  * Functions for database communication 
@@ -359,18 +359,18 @@ int db_get_sievescript_active(u64_t user_idnr, char **scriptname);
  */
 int db_get_sievescript_listall(u64_t user_idnr, struct dm_list *scriptlist);
 /**
- * \brief add/replace a sieve script for a user
+ * \brief rename a sieve script for a user
  * \param user_idnr user id
- * \param scriptname is the name of the script to be added
- * \param scriptname is the script itself to be added
+ * \param scriptname is the current name of the script
+ * \param newname is the new name the script will be changed to
  * \return
  *        - -3 on non-existent script name
  *        - -2 on NULL scriptname or script
  *        - -1 on database failure
  *        - 0 on success
  */
-int db_replace_sievescript(u64_t user_idnr, char *scriptname,
-			   char *script);
+int db_rename_sievescript(u64_t user_idnr, char *scriptname,
+			   char *newname);
 /**
  * \brief add a sieve script for a user
  * \param user_idnr user id
@@ -932,8 +932,8 @@ int db_createmailbox(const char *name, u64_t owner_idnr,
  *    - -1 on failure
  *    -  0 on success
  */
-int db_find_create_mailbox(const char *name, u64_t owner_idnr,
-			   /*@out@*/ u64_t * mailbox_idnr);
+int db_find_create_mailbox(const char *name, mailbox_source_t source,
+		u64_t owner_idnr, /*@out@*/ u64_t * mailbox_idnr);
 /**
  * \brief produce a list containing the UID's of the specified
  *        mailbox' children matching the search criterion

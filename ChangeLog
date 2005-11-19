@@ -1,3 +1,24 @@
+2005-11-19  Paul J Stevens <paul@nfg.nl>
+	* sql/mysql/add_sieve_tables.mysql: 
+	adding sieve table to mysql as well
+	* check_dbmail_mailbox.c: 
+	fix calls to db_mailbox_find_create
+
+2005-11-17  Aaron Stone  <aaron@serendipity.cx>
+
+	* export.c, timsieve.c, timsieved.c, sievecmd.c: removed OLDSIEVE
+	sections, replacing where necessary with updated validation calls.
+	* sort/sortsieve.c, sort/sortsieve.h: changes to the validation calls
+	and removed obsolete function prototypes.
+	* db.c, db.h: renamed db_replace_sievescript with
+	db_rename_sievescript, some work in db_find_create_mailbox to handle
+	untrusted mailbox specifications.
+	* dsn.c, dsn.h, pipe.c, dbmail-message.c, dbmail-message.h: support
+	for untrusted mailbox specification.
+	* dbmailtypes.h: added enum type mailbox_source_t.
+	* sql/postgresql/add_sieve_tables.pgsql: added the sievescripts table.
+	* README.sieve: added a README file for Sieve.
+
 2005-11-11  Paul J Stevens <paul@nfg.nl>
 
 	* Makefile.am, dbmail-message.c, dbmail-message.h, dbmail.h, dbmsgbuf.c, 

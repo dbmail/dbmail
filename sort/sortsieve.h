@@ -1,4 +1,4 @@
-/* $Id: sortsieve.h 1893 2005-10-05 15:04:58Z paul $ 
+/* $Id: sortsieve.h 1912 2005-11-19 02:29:41Z aaron $ 
 
  Copyright (C) 2004 Aaron Stone aaron at serendipity dot cx
 
@@ -28,17 +28,6 @@
 
 int sortsieve_msgsort(u64_t useridnr, char *header, u64_t headersize,
 		      u64_t messagesize, struct dm_list *actions);
-int sortsieve_unroll_action(sieve2_values_t * a, struct dm_list *actions);
-int sortsieve_script_validate(char *script, char **errmsg);
-
-#ifdef OLDSIEVE
-#define SIEVE2_SUPPORT_REGISTER(res) \
-		res |= sieve2_support_register(p, NULL, SIEVE2_ACTION_FILEINTO); \
-		res |= sieve2_support_register(p, NULL, SIEVE2_ACTION_REDIRECT); \
-		res |= sieve2_support_register(p, NULL, SIEVE2_ACTION_REJECT); \
-		res |= sieve2_support_register(p, NULL, SIEVE2_ACTION_NOTIFY)
-		/* Remember kids, no trailing semicolon. */
-
-#endif
+int sortsieve_script_validate(u64_t user_idnr, char *scriptname, char **errmsg);
 
 #endif

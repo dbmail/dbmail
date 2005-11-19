@@ -1,5 +1,5 @@
 /*
-  $Id: dbmail-message.c 1909 2005-11-11 10:31:00Z paul $
+  $Id: dbmail-message.c 1912 2005-11-19 02:29:41Z aaron $
 
   Copyright (C) 2004-2005 NFG Net Facilities Group BV, info@nfg.nl
 
@@ -626,13 +626,20 @@ int _message_insert(struct DbmailMessage *self,
 	u64_t physmessage_id;
 	char *internal_date = NULL;
 	char *physid = g_new0(char, 16);
+	mailbox_source_t source;
 
 	assert(unique_id);
 
-	if (!mailbox)
+	if (!mailbox) {
 		mailbox = dm_strdup("INBOX");
+		source = BOX_DEFAULT;
+	} else {
+		source = BOX_ADDRESSPART;
+		// FIXME: This code is never reached, is it.
+		// Look at the function's consumers.
+	}
 
-	if (db_find_create_mailbox(mailbox, user_idnr, &mailboxid) == -1)
+	if (db_find_create_mailbox(mailbox, source, user_idnr, &mailboxid) == -1)
 		return -1;
 	
 	if (mailboxid == 0) {
@@ -969,17 +976,23 @@ void dbmail_message_cache_referencesfield(const struct DbmailMessage *self)
  *
  * Then do it!
  * */
-dsn_class_t sort_and_deliver(struct DbmailMessage *message, u64_t useridnr, const char *mailbox)
+dsn_class_t sort_and_deliver(struct DbmailMessage *message, u64_t useridnr,
+		const char *mailbox, mailbox_source_t source)
 {
 	u64_t mboxidnr, newmsgidnr;
 
 	size_t msgsize = (u64_t)dbmail_message_get_size(message, FALSE);
 	u64_t msgidnr = message->id;
 	
-	if (! mailbox)
-		mailbox="INBOX";
+	/* This is the only condition when called from pipe.c, actually. */
+	if (! mailbox) {
+		mailbox = "INBOX";
+		source = BOX_DEFAULT;
+	}
+	
+	/* FIXME: This is where we call the sorting engine into action. */
 
-	if (db_find_create_mailbox(mailbox, useridnr, &mboxidnr) != 0) {
+	if (db_find_create_mailbox(mailbox, source, useridnr, &mboxidnr) != 0) {
 		trace(TRACE_ERROR, "%s,%s: mailbox [%s] not found",
 				__FILE__, __func__,
 				mailbox);

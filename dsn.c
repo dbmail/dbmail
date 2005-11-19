@@ -1,7 +1,7 @@
 /* Delivery User Functions
  * Aaron Stone, 9 Feb 2004 */
 /*
-  $Id: dsn.c 1906 2005-11-04 21:30:20Z paul $
+  $Id: dsn.c 1912 2005-11-19 02:29:41Z aaron $
 
  Copyright (C) 2004 Aaron Stone aaron at serendipity dot cx
 
@@ -197,6 +197,7 @@ int dsnuser_init(deliver_to_user_t * dsnuser)
 
 	dsnuser->address = NULL;
 	dsnuser->mailbox = NULL;
+	dsnuser->source = BOX_NONE;
 
 	dsnuser->userids = (struct dm_list *) dm_malloc(sizeof(struct dm_list));
 	if (dsnuser->userids == NULL)
@@ -231,6 +232,7 @@ void dsnuser_free(deliver_to_user_t * dsnuser)
 	*/
 	dsnuser->address = NULL;
 	dsnuser->mailbox = NULL;
+	dsnuser->source = BOX_NONE;
 	
 	dm_list_free(&dsnuser->userids->start);
 	dm_list_free(&dsnuser->forwards->start);

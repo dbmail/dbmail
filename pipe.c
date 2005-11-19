@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: pipe.c 1902 2005-10-17 12:52:47Z paul $
+/* $Id: pipe.c 1912 2005-11-19 02:29:41Z aaron $
  *
  * Functions for reading the pipe from the MTA */
 
@@ -466,7 +466,7 @@ int insert_messages(struct DbmailMessage *message,
 			trace(TRACE_DEBUG, "%s, %s: calling sort_and_deliver for useridnr [%llu]",
 			      __FILE__, __func__, useridnr);
 
-			switch (sort_and_deliver(message, useridnr, delivery->mailbox)) {
+			switch (sort_and_deliver(message, useridnr, delivery->mailbox, delivery->source)) {
 			case DSN_CLASS_OK:
 				/* Indicate success. */
 				trace(TRACE_DEBUG, "%s, %s: successful sort_and_deliver for useridnr [%llu]",

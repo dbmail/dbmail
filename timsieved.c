@@ -1,4 +1,4 @@
-/* $Id: timsieved.c 1893 2005-10-05 15:04:58Z paul $
+/* $Id: timsieved.c 1912 2005-11-19 02:29:41Z aaron $
  
 Copyright (C) 2004 Aaron Stone aaron at serendipity dot cx
 
@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
 			break;
 		case 'V':
 			printf("\n*** DBMAIL: dbmail-timsieved version "
-			       "$Revision: 1893 $ %s\n\n", COPYRIGHT);
+			       "$Revision: 1912 $ %s\n\n", COPYRIGHT);
 			return 0;
 		case 'n':
 			/* TODO: We should also prevent children from forking,
@@ -119,34 +119,7 @@ int main(int argc, char *argv[])
 			break;
 		}
 	}
-#ifdef OLDSIEVE
-	/* Anonymous block */ {
-		int res = 0;
-		sieve2_support_t *p;
 
-		res = sieve2_support_alloc(&p);
-		if (res != SIEVE2_OK) {
-			/* FIXME: Complain. */
-		}
-
-		/* Macro to register all of the currently-supported extensions. */
-		SIEVE2_SUPPORT_REGISTER(res);
-		if (res != SIEVE2_OK) {
-			/* FIXME: Complain. */
-		}
-
-		/* load up on the extensions we support. */
-		res = sieve2_extensions_listsupport(p, &sieve_extensions);
-		if (res != SIEVE2_OK) {
-			/* FIXME: Complain. */
-		}
-
-		res = sieve2_support_free(p);
-		if (res != SIEVE2_OK) {
-			/* FIXME: Complain. */
-		}
-	} /* End of anonymous block. */
-#endif
 	SetMainSigHandler();
 
 	/* TODO: don't spawn children, either. this is at least a good start. */
