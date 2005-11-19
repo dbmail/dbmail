@@ -81,8 +81,9 @@ void trace(trace_t level, char *formatstring, ...)
 			} else
 				vsyslog(LOG_NOTICE, formatstring, argp);
 		}
-		va_end(argp);
 	}
+
+	va_end(argp);
 
 	/* very big fatal error 
 	 * bailout */

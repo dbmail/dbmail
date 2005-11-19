@@ -1,5 +1,5 @@
 /*
- $Id: dbmail.h 1909 2005-11-11 10:31:00Z paul $
+ $Id: dbmail.h 1906 2005-11-04 21:30:20Z paul $
 
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 
@@ -158,6 +158,10 @@
 #define DEFAULT_DBPFX "dbmail_"
 
 #define MATCH(x,y) strcasecmp((x),(y))==0
+
+#define min(x,y) ((x)<=(y)?(x):(y))
+#define max(x,y) ((x)>=(y)?(x):(y))
+
 
 /**
  * \brief read configuration from filename
