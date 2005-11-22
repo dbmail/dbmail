@@ -1183,7 +1183,7 @@ char *date_imap2sql(const char *imapdate)
 	char *last_char;
 
 	// bsd needs this:
-	//memset(&tm, 0, sizeof(struct tm));
+	memset(&tm, 0, sizeof(struct tm));
 
 	last_char = strptime(imapdate, "%d-%b-%Y", &tm);
 	if (last_char == NULL || *last_char != '\0') {
@@ -1266,7 +1266,11 @@ GList * g_tree_values(GTree *tree)
 
 
 /*
- * boolean merge of two trees. The result is stored in GTree *a.
+ * boolean merge of two GTrees. The result is stored in GTree *a.
+ * the state of GTree *b is undefined: it may or may not have been changed, 
+ * depending on whether or not key/value pairs were moved from b to a.
+ * Both trees are safe to destroy afterwards, assuming g_tree_new_full was used
+ * for their construction.
  */
 
 void g_tree_merge(GTree *a, GTree *b, int condition)
@@ -1285,10 +1289,6 @@ void g_tree_merge(GTree *a, GTree *b, int condition)
 	
 	akeys = g_list_first(akeys);
 	bkeys = g_list_first(bkeys);
-	
-	trace (TRACE_DEBUG,"%s,%s: combine type [%d], a[%d], b[%d] ...", 
-			__FILE__, __func__, condition, 
-			g_list_length(akeys), g_list_length(bkeys));
 	
 	switch(condition) {
 		case IST_SUBSEARCH_AND:
@@ -1314,9 +1314,11 @@ void g_tree_merge(GTree *a, GTree *b, int condition)
 				break;
 
 			while (bkeys->data) {
-				g_tree_lookup_extended(b,bkeys->data,&key,&value);
-				if (! g_tree_lookup(a,key))
+				if (! g_tree_lookup(a,bkeys->data)) {
+					g_tree_lookup_extended(b,bkeys->data,&key,&value);
+					g_tree_steal(b,bkeys->data);
 					g_tree_insert(a,key,value);
+				}
 
 				if (! g_list_next(bkeys))
 					break;
@@ -1332,11 +1334,11 @@ void g_tree_merge(GTree *a, GTree *b, int condition)
 			
 			while (bkeys->data) {
 				/* remove from A keys also in B */
-				if (! g_tree_steal(a,bkeys->data)) {
+				if (! g_tree_remove(a,bkeys->data)) {
 					/* add to A all keys in B not in A */
 			 		g_tree_lookup_extended(b,bkeys->data,&key,&value);
-					if (! g_tree_lookup(a,key)) 
-						g_tree_insert(a,key,value);
+					g_tree_steal(b,bkeys->data);
+					g_tree_insert(a,key,value);
 				}
 				
 				if (! g_list_next(bkeys))
@@ -1347,9 +1349,6 @@ void g_tree_merge(GTree *a, GTree *b, int condition)
 				
 			break;
 	}
-
-	trace(TRACE_DEBUG,"%s,%s: result: a[%d]\n", __FILE__, __func__, 
-			a ? g_tree_nnodes(a): 0);
 
 	g_list_free(akeys);
 	g_list_free(bkeys);
