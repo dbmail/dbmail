@@ -1,3 +1,23 @@
+2005-11-24  Paul J Stevens <paul@nfg.nl>
+
+	* auth/authldap.c, check_dbmail_imapd.c, dm_imaputil.c, mysql/dbmysql.c, 
+	  test-scripts/testimap.py:
+	minor cleanups
+	* dm_imaputil.c:
+	cleanup imap_message_fetch_headers
+	* check_dbmail_imapd.c, check_dbmail_mailbox.c, dbmail-imapsession.c, 
+	  dm_imaputil.c, dm_imaputil.h, misc.c:
+	prepare to fetch headers for whole ranges
+	* check_dbmail_mailbox.c, dbmail-mailbox.c, dbmail-mailbox.h, dbmail.h, 
+	  debug.c, misc.c, misc.h:
+	partial search/sort rework
+	* misc.c:
+	final cleanups in g_tree_merge
+	* dm_imaputil.c, misc.c:
+	prevent assertion errors in g_strsplit calls
+	* check_dbmail_mailbox.c, dbmail-mailbox.c, dbmail-mailbox.h, tags:
+	fix result set merging in  _merge_search and orderedsubject threading
+
 2005-11-19  Paul J Stevens <paul@nfg.nl>
 	* sql/mysql/add_sieve_tables.mysql: 
 	adding sieve table to mysql as well
