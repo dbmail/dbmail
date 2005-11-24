@@ -39,10 +39,9 @@ struct DbmailMailbox {
 	gchar *name;
 	u64_t owner_id;
 	u64_t size;
-	GTree *ids;
+	GTree *ids; // key: uid, value: msn
+	GTree *msn; // key: msn, value: uid
 	GList *sorted;
-//	GTree *found;
-//	GTree *newfound;
 	GNode *search;
 };
 
@@ -59,7 +58,7 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *ostream);
 
 void dbmail_mailbox_free(struct DbmailMailbox *self);
 
-char * dbmail_mailbox_orderedsubject(struct DbmailMailbox *self);
+char * dbmail_mailbox_orderedsubject(struct DbmailMailbox *self, gboolean uid);
 
 int dbmail_mailbox_build_imap_search(struct DbmailMailbox *self, char **search_keys, u64_t *idx, int sorted);
 

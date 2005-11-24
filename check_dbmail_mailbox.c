@@ -243,16 +243,28 @@ END_TEST
 START_TEST(test_dbmail_mailbox_orderedsubject)
 {
 	char *res;
+	char *args;
+	char **array;
+	u64_t idx = 0;
 	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id());
 	
 	dbmail_mailbox_open(mb);
+
+	args = g_strdup("HEADER FROM test ( SINCE 1-Jan-2005 )");
+	array = g_strsplit(args," ",0);
+	g_free(args);
+
+	dbmail_mailbox_build_imap_search(mb, array, &idx, 0);
+	dbmail_mailbox_search(mb);
 	
-	res = dbmail_mailbox_orderedsubject(mb);
-	
+	res = dbmail_mailbox_orderedsubject(mb, TRUE);
+	printf("threads [%s]\n", res);
+	res = dbmail_mailbox_orderedsubject(mb, FALSE);
 	printf("threads [%s]\n", res);
 	
 	g_free(res);
 	dbmail_mailbox_free(mb);
+	g_strfreev(array);
 
 }
 END_TEST
@@ -273,7 +285,7 @@ void tree_dump(GTree *t)
 	g_tree_foreach(t,(GTraverseFunc)tree_print,NULL);
 }
 
-START_TEST(test_g_tree_merge)
+START_TEST(test_g_tree_merge_not)
 {
 	u64_t r = 0;
 	u64_t *k, *v;
@@ -291,7 +303,20 @@ START_TEST(test_g_tree_merge)
 	}
 	g_tree_merge(a,b,IST_SUBSEARCH_NOT);
 	fail_unless(g_tree_nnodes(a)==5,"g_tree_merge failed. Too few nodes in a.");
-	fail_unless(g_tree_nnodes(b)==5,"g_tree_merge failed. Too few nodes in b.");
+	
+	g_tree_destroy(a);
+	g_tree_destroy(b);
+}
+END_TEST
+
+START_TEST(test_g_tree_merge_or)
+{
+	u64_t r = 0;
+	u64_t *k, *v;
+	GTree *a, *b;
+	
+	a = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+	b = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 	
 	for (r=2; r<=10; r+=2) {
 		k = g_new0(u64_t,1);
@@ -302,15 +327,45 @@ START_TEST(test_g_tree_merge)
 	}
 
 	g_tree_merge(a,b,IST_SUBSEARCH_OR);
-	fail_unless(g_tree_nnodes(a)==10,"g_tree_merge failed. Too many nodes in a.");
-	fail_unless(g_tree_nnodes(b)==10,"g_tree_merge failed. Too few nodes in b.");
+	fail_unless(g_tree_nnodes(a)==5,"g_tree_merge failed. Too many nodes in a.");
 	
-	g_tree_merge(a,b,IST_SUBSEARCH_AND);
-	fail_unless(g_tree_nnodes(a)==10,"g_tree_merge failed. Too few nodes in a.");
-	fail_unless(g_tree_nnodes(b)==10,"g_tree_merge failed. Too few nodes in b.");
-	
-	g_tree_destroy(b);
 	g_tree_destroy(a);
+	g_tree_destroy(b);
+
+}
+END_TEST
+
+START_TEST(test_g_tree_merge_and)
+{
+	u64_t r = 0;
+	u64_t *k, *v;
+	GTree *a, *b;
+	
+	a = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+	b = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+	
+	for (r=2; r<=10; r+=2) {
+		k = g_new0(u64_t,1);
+		v = g_new0(u64_t,1);
+		*k = r;
+		*v = r;
+		g_tree_insert(a,k,v);
+	}
+
+	for (r=1; r<=10; r++) {
+		k = g_new0(u64_t,1);
+		v = g_new0(u64_t,1);
+		*k = r;
+		*v = r;
+		g_tree_insert(b,k,v);
+	}
+
+	g_tree_merge(a,b,IST_SUBSEARCH_AND);
+	fail_unless(g_tree_nnodes(a)==5,"g_tree_merge failed. Too few nodes in a.");
+	fail_unless(g_tree_nnodes(b)==10,"g_tree_merge failed. Too few nodes in b.");
+	
+	g_tree_destroy(a);
+	g_tree_destroy(b);
 }
 END_TEST
 
@@ -324,24 +379,31 @@ START_TEST(test_dbmail_mailbox_get_set)
 
 	strncpy(s->search,"1:*",MAX_SEARCH_LEN);
 	set = dbmail_mailbox_get_set(mb, s);
-/*	
 	c = g_tree_nnodes(set);
 	fail_unless(c>1,"dbmail_mailbox_get_set failed");
 	g_tree_destroy(set);
-	dbmail_mailbox_open(mb);
+
 	strncpy(s->search,"*:1",MAX_SEARCH_LEN);
 	set = dbmail_mailbox_get_set(mb,s);
 	d = g_tree_nnodes(set);
 	fail_unless(c==d,"dbmail_mailbox_get_set failed");
 	g_tree_destroy(set);
 
-	dbmail_mailbox_open(mb);
 	strncpy(s->search,"1,*",MAX_SEARCH_LEN);
 	set = dbmail_mailbox_get_set(mb,s);
 	d = g_tree_nnodes(set);
 	fail_unless(d==2,"mailbox_get_set failed");
 	g_tree_destroy(set);
-*/
+
+	s->type = IST_SET;
+	
+	strncpy(s->search,"1,*",MAX_SEARCH_LEN);
+	set = dbmail_mailbox_get_set(mb,s);
+	d = g_tree_nnodes(set);
+	fail_unless(d==2,"mailbox_get_set failed");
+	g_tree_destroy(set);
+
+	g_free(s);
 	dbmail_mailbox_free(mb);
 }
 END_TEST
@@ -353,9 +415,11 @@ Suite *dbmail_mailbox_suite(void)
 	TCase *tc_mailbox = tcase_create("Mailbox");
 	suite_add_tcase(s, tc_mailbox);
 	tcase_add_checked_fixture(tc_mailbox, setup, teardown);
-	tcase_add_test(tc_mailbox, test_g_tree_merge);
-	tcase_add_test(tc_mailbox, test_dbmail_mailbox_get_set);
 	/*
+	tcase_add_test(tc_mailbox, test_g_tree_merge_or);
+	tcase_add_test(tc_mailbox, test_g_tree_merge_and);
+	tcase_add_test(tc_mailbox, test_g_tree_merge_not);
+	tcase_add_test(tc_mailbox, test_dbmail_mailbox_get_set);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_new);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_free);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_open);
@@ -363,8 +427,8 @@ Suite *dbmail_mailbox_suite(void)
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_build_imap_search);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_sort);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search);
-	tcase_add_test(tc_mailbox, test_dbmail_mailbox_orderedsubject);
 	*/
+	tcase_add_test(tc_mailbox, test_dbmail_mailbox_orderedsubject);
 	
 	return s;
 }

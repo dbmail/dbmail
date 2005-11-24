@@ -4,14 +4,14 @@
 !_TAG_PROGRAM_NAME	Exuberant Ctags	//
 !_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
 !_TAG_PROGRAM_VERSION	5.5.4	//
-A	check_dbmail_imapd.c	151;"	d	file:
+A	check_dbmail_imapd.c	160;"	d	file:
 APOP_STAMP_SIZE	pop3.c	28;"	d	file:
 AUTO_NOTIFY_SENDER	pipe.c	33;"	d	file:
 AUTO_NOTIFY_SUBJECT	pipe.c	34;"	d	file:
 AcceptedChars	dm_imaputil.c	/^const char AcceptedChars[] =$/;"	v
-AcceptedMailboxnameChars	dm_imaputil.c	/^const char AcceptedMailboxnameChars[] =$/;"	v
+AcceptedMailboxnameChars	misc.c	/^const char AcceptedMailboxnameChars[] =$/;"	v
 AcceptedTagChars	dm_imaputil.c	/^const char AcceptedTagChars[] =$/;"	v
-BAD	misc.c	230;"	d	file:
+BAD	misc.c	250;"	d	file:
 BUFLEN	dbmail-imapsession.c	33;"	d	file:
 BUFLEN	dm_imaputil.c	34;"	d	file:
 COMMAND_SHOW_LEVEL	imap4.c	29;"	d	file:
@@ -19,19 +19,19 @@ ChildStopRequested	serverchild.c	/^int ChildStopRequested = 0;$/;"	v
 ClearConfig	server.c	/^void ClearConfig(serverConfig_t * conf)$/;"	f
 CreateChild	serverchild.c	/^pid_t CreateChild(ChildInfo_t * info)$/;"	f
 CreateSocket	server.c	/^int CreateSocket(serverConfig_t * conf)$/;"	f
-D	check_dbmail_imapd.c	637;"	d	file:
+D	check_dbmail_imapd.c	632;"	d	file:
 DBMAIL_TEMPMBOX	dbmail-message.c	40;"	d	file:
 DBPFX	check_dbmail_imapd.c	40;"	d	file:
+DBPFX	check_dbmail_mailbox.c	40;"	d	file:
 DBPFX	db.c	51;"	d	file:
 DBPFX	dbmail-imapsession.c	38;"	d	file:
 DBPFX	dbmail-mailbox.c	29;"	d	file:
 DBPFX	dbmail-message.c	32;"	d	file:
-DBPFX	dbmsgbuf.c	33;"	d	file:
 DBPFX	dm_imaputil.c	39;"	d	file:
-DBPFX	dm_search.c	41;"	d	file:
+DBPFX	dm_search.c	33;"	d	file:
 DB_NTABLES	db.c	53;"	d	file:
 DB_TABLENAMES	db.c	/^const char *DB_TABLENAMES[DB_NTABLES] = {$/;"	v
-DECODE64	misc.c	246;"	d	file:
+DECODE64	misc.c	266;"	d	file:
 DEFAULT_SERVER_TIMEOUT	lmtp.c	29;"	d	file:
 DEFAULT_SERVER_TIMEOUT	pop3.c	32;"	d	file:
 DEFAULT_SERVER_TIMEOUT	timsieve.c	28;"	d	file:
@@ -54,14 +54,14 @@ F1	md5.c	183;"	d	file:
 F2	md5.c	184;"	d	file:
 F3	md5.c	185;"	d	file:
 F4	md5.c	186;"	d	file:
-FROM_STANDARD_DATE	dbmail-mailbox.c	88;"	d	file:
+FROM_STANDARD_DATE	dbmail-mailbox.c	116;"	d	file:
 GREETING	timsieve.c	37;"	d	file:
 GeneralStopRequested	server.c	/^int GeneralStopRequested = 0;$/;"	v
 GetDBParams	config.c	/^void GetDBParams(db_param_t * db_params)$/;"	f
 HEADER_BLOCK_SIZE	pipe.c	27;"	d	file:
 IMAPClientHandler	imap4.c	/^int IMAPClientHandler(clientinfo_t * ci)$/;"	f
-IMAP_CACHE_MEMDUMP	dbmail-imapsession.c	168;"	d	file:
-IMAP_CACHE_TMPDUMP	dbmail-imapsession.c	169;"	d	file:
+IMAP_CACHE_MEMDUMP	dbmail-imapsession.c	186;"	d	file:
+IMAP_CACHE_TMPDUMP	dbmail-imapsession.c	187;"	d	file:
 IMAP_COMMANDS	imap4.c	/^const char *IMAP_COMMANDS[] = {$/;"	v
 IMAP_COMMAND_TYPES	imap4.c	/^enum IMAP_COMMAND_TYPES { IMAP_COMM_NONE,$/;"	g	file:
 IMAP_COMM_APPEND	imap4.c	/^	IMAP_COMM_STATUS, IMAP_COMM_APPEND,$/;"	e	enum:IMAP_COMMAND_TYPES	file:
@@ -100,13 +100,13 @@ IMAP_COMM_SUBSCRIBE	imap4.c	/^	IMAP_COMM_DELETE, IMAP_COMM_RENAME, IMAP_COMM_SUB
 IMAP_COMM_UID	imap4.c	/^	IMAP_COMM_COPY, IMAP_COMM_UID, IMAP_COMM_SORT,$/;"	e	enum:IMAP_COMMAND_TYPES	file:
 IMAP_COMM_UNSUBSCRIBE	imap4.c	/^	IMAP_COMM_UNSUBSCRIBE, IMAP_COMM_LIST, IMAP_COMM_LSUB,$/;"	e	enum:IMAP_COMMAND_TYPES	file:
 IMAP_STANDARD_DATE	dbmail-imapsession.c	50;"	d	file:
-IMAP_STANDARD_DATE	dm_imaputil.c	66;"	d	file:
+IMAP_STANDARD_DATE	misc.c	40;"	d	file:
 INCOMING_BUFFER_SIZE	lmtp.c	26;"	d	file:
 INCOMING_BUFFER_SIZE	pop3.c	27;"	d	file:
 INCOMING_BUFFER_SIZE	timsieve.c	25;"	d	file:
 INDEX_DELIVERY_MODE	main.c	30;"	d	file:
 LEN	maintenance.c	29;"	d	file:
-LISTEX_NOCASE	misc.c	693;"	d	file:
+LISTEX_NOCASE	misc.c	709;"	d	file:
 LMTP_TIMEOUT_MSG	lmtpd.c	32;"	d	file:
 MAX_ARGS	dbmail-imapsession.c	35;"	d	file:
 MAX_ARGS	dm_imaputil.c	36;"	d	file:
@@ -140,12 +140,12 @@ MainSigHandler	imapd.c	/^void MainSigHandler(int sig, siginfo_t * info UNUSED, v
 MainSigHandler	lmtpd.c	/^void MainSigHandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)$/;"	f
 MainSigHandler	pop3d.c	/^void MainSigHandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)$/;"	f
 MainSigHandler	timsieved.c	/^void MainSigHandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)$/;"	f
-N	check_dbmail_imapd.c	587;"	d	file:
-NOPAR	dbmail-imapsession.c	1628;"	d	file:
-NOPAR	dbmail-imapsession.c	1895;"	d	file:
+N	check_dbmail_imapd.c	582;"	d	file:
+NOPAR	dbmail-imapsession.c	1555;"	d	file:
+NOPAR	dbmail-imapsession.c	1822;"	d	file:
 NORMAL_DELIVERY	main.c	27;"	d	file:
-NORMPAR	dbmail-imapsession.c	1626;"	d	file:
-NORMPAR	dbmail-imapsession.c	1896;"	d	file:
+NORMPAR	dbmail-imapsession.c	1553;"	d	file:
+NORMPAR	dbmail-imapsession.c	1823;"	d	file:
 NR_ACL_FLAGS	acl.c	22;"	d	file:
 PERMSTRING_SIZE	imapcommands.c	214;"	d	file:
 PNAME	export.c	31;"	d	file:
@@ -164,19 +164,19 @@ ParentSigHandler	server.c	/^void ParentSigHandler(int sig, siginfo_t * info, voi
 PerformChildTask	serverchild.c	/^int PerformChildTask(ChildInfo_t * info)$/;"	f
 QUERY_SIZE	pipe.c	28;"	d	file:
 READ_CHUNK_SIZE	main.c	34;"	d	file:
-REPLYCACHE_TIMEOUT	db.c	4353;"	d	file:
-RIGHTPAR	dbmail-imapsession.c	1897;"	d	file:
+REPLYCACHE_TIMEOUT	db.c	4282;"	d	file:
+RIGHTPAR	dbmail-imapsession.c	1824;"	d	file:
 RING_SIZE	pipe.c	31;"	d	file:
 Restart	server.c	/^int Restart = 0;$/;"	v
 SEND_BUF_SIZE	dbmail-imapsession.c	34;"	d	file:
 SEND_BUF_SIZE	dm_imaputil.c	35;"	d	file:
-SEND_SPACE	dbmail-imapsession.c	700;"	d	file:
+SEND_SPACE	dbmail-imapsession.c	633;"	d	file:
 SHADOWFILE	dbmail-user.c	31;"	d	file:
 SHADOWFILE	user.c	31;"	d	file:
 SPECIAL_DELIVERY	main.c	28;"	d	file:
 SQL_STANDARD_DATE	dbmail-imapsession.c	54;"	d	file:
-SQL_STANDARD_DATE	dm_imaputil.c	70;"	d	file:
-SQUAREPAR	dbmail-imapsession.c	1627;"	d	file:
+SQL_STANDARD_DATE	misc.c	44;"	d	file:
+SQUAREPAR	dbmail-imapsession.c	1554;"	d	file:
 START_TEST	check_dbmail_common.c	/^START_TEST(test_db_connect)$/;"	f
 START_TEST	check_dbmail_common.c	/^START_TEST(test_read_config)$/;"	f
 START_TEST	check_dbmail_deliver.c	/^START_TEST(test_auth_addalias)$/;"	f
@@ -211,6 +211,7 @@ START_TEST	check_dbmail_imapd.c	/^START_TEST(test_build_set)$/;"	f
 START_TEST	check_dbmail_imapd.c	/^START_TEST(test_date_sql2imap)$/;"	f
 START_TEST	check_dbmail_imapd.c	/^START_TEST(test_dbmail_imap_astring_as_string)$/;"	f
 START_TEST	check_dbmail_imapd.c	/^START_TEST(test_dbmail_imap_plist_as_string)$/;"	f
+START_TEST	check_dbmail_imapd.c	/^START_TEST(test_dbmail_imap_plist_collapse)$/;"	f
 START_TEST	check_dbmail_imapd.c	/^START_TEST(test_dm_base_subject)$/;"	f
 START_TEST	check_dbmail_imapd.c	/^START_TEST(test_dm_getguid)$/;"	f
 START_TEST	check_dbmail_imapd.c	/^START_TEST(test_g_list_join)$/;"	f
@@ -226,9 +227,16 @@ START_TEST	check_dbmail_imapd.c	/^START_TEST(test_listex_match)$/;"	f
 START_TEST	check_dbmail_imapd.c	/^START_TEST(test_mail_address_build_list)$/;"	f
 START_TEST	check_dbmail_imapd.c	/^START_TEST(test_mime_fetch_headers)$/;"	f
 START_TEST	check_dbmail_imapd.c	/^START_TEST(test_mime_readheader)$/;"	f
+START_TEST	check_dbmail_mailbox.c	/^START_TEST(test_dbmail_mailbox_build_imap_search)$/;"	f
 START_TEST	check_dbmail_mailbox.c	/^START_TEST(test_dbmail_mailbox_dump)$/;"	f
+START_TEST	check_dbmail_mailbox.c	/^START_TEST(test_dbmail_mailbox_free)$/;"	f
+START_TEST	check_dbmail_mailbox.c	/^START_TEST(test_dbmail_mailbox_get_set)$/;"	f
 START_TEST	check_dbmail_mailbox.c	/^START_TEST(test_dbmail_mailbox_new)$/;"	f
 START_TEST	check_dbmail_mailbox.c	/^START_TEST(test_dbmail_mailbox_open)$/;"	f
+START_TEST	check_dbmail_mailbox.c	/^START_TEST(test_dbmail_mailbox_orderedsubject)$/;"	f
+START_TEST	check_dbmail_mailbox.c	/^START_TEST(test_dbmail_mailbox_search)$/;"	f
+START_TEST	check_dbmail_mailbox.c	/^START_TEST(test_dbmail_mailbox_sort)$/;"	f
+START_TEST	check_dbmail_mailbox.c	/^START_TEST(test_g_tree_merge)$/;"	f
 START_TEST	check_dbmail_message.c	/^START_TEST(test_dbmail_message_body_to_string)$/;"	f
 START_TEST	check_dbmail_message.c	/^START_TEST(test_dbmail_message_cache_headers)$/;"	f
 START_TEST	check_dbmail_message.c	/^START_TEST(test_dbmail_message_free)$/;"	f
@@ -271,9 +279,9 @@ TRACE_TO_SYSLOG	debug.c	/^int TRACE_TO_SYSLOG = 1;	\/* default: yes *\/$/;"	v
 TRACE_VERBOSE	debug.c	/^int TRACE_VERBOSE = 0;		\/* default: no *\/$/;"	v
 ValidChars	dbmail-user.c	/^static const char ValidChars[] =$/;"	v	file:
 WRITE_BUFFER_SIZE	db.c	69;"	d	file:
-X	check_dbmail_imapd.c	586;"	d	file:
+X	check_dbmail_imapd.c	581;"	d	file:
 X	check_dbmail_server.c	72;"	d	file:
-Y	check_dbmail_imapd.c	585;"	d	file:
+Y	check_dbmail_imapd.c	580;"	d	file:
 Y	check_dbmail_server.c	73;"	d	file:
 _GNU_SOURCE	imapcommands.c	30;"	d	file:
 __M_ERRORS	memblock.c	/^enum __M_ERRORS { M_NOERROR, M_NOMEM, M_BADMEM, M_BADDATA, M_BADWHENCE,$/;"	g	file:
@@ -286,9 +294,16 @@ __m_blkadd	memblock.c	/^int __m_blkadd(MEM * m)$/;"	f
 __m_errno	memblock.c	/^int __m_errno;$/;"	v
 __m_error_desc	memblock.c	/^const char *__m_error_desc[M_LASTERR] = {$/;"	v
 __m_error_str	memblock.c	/^char __m_error_str[MAX_ERROR_SIZE];$/;"	v
+_append_join	dbmail-mailbox.c	/^static void _append_join(char *join, char *table)$/;"	f	file:
+_append_sort	dbmail-mailbox.c	/^static void _append_sort(char *order, char *field, gboolean reverse)$/;"	f	file:
 _dm_getopt_internal	dm_getopt.c	/^int _dm_getopt_internal(int argc, char * argv[], const char *shortopts,$/;"	f
+_do_search	dbmail-mailbox.c	/^static gboolean _do_search(GNode *node, struct DbmailMailbox *self)$/;"	f	file:
+_do_sort	dbmail-mailbox.c	/^static gboolean _do_sort(GNode *node, struct DbmailMailbox *self)$/;"	f	file:
 _fetch_full	dbmail-message.c	/^static struct DbmailMessage * _fetch_full(struct DbmailMessage *self) $/;"	f	file:
 _fetch_head	dbmail-message.c	/^static struct DbmailMessage * _fetch_head(struct DbmailMessage *self)$/;"	f	file:
+_fetch_headers	dm_imaputil.c	/^static GTree * _fetch_headers(const GList *ids, const GList *headers, gboolean not)$/;"	f	file:
+_handle_search_args	dbmail-mailbox.c	/^static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u64_t *idx)$/;"	f	file:
+_handle_sort_args	dbmail-mailbox.c	/^static int _handle_sort_args(struct DbmailMailbox *self, char **search_keys, search_key_t *value, u64_t *idx)$/;"	f	file:
 _header_cache	dbmail-message.c	/^void _header_cache(const char *header, const char *value, gpointer user_data)$/;"	f
 _header_get_id	dbmail-message.c	/^static int _header_get_id(const struct DbmailMessage *self, const char *header, u64_t *id)$/;"	f	file:
 _ic_append	imapcommands.c	/^int _ic_append(struct ImapSession *self)$/;"	f
@@ -324,23 +339,24 @@ _ic_store	imapcommands.c	/^int _ic_store(struct ImapSession *self)$/;"	f
 _ic_subscribe	imapcommands.c	/^int _ic_subscribe(struct ImapSession *self)$/;"	f
 _ic_uid	imapcommands.c	/^int _ic_uid(struct ImapSession *self)$/;"	f
 _ic_unsubscribe	imapcommands.c	/^int _ic_unsubscribe(struct ImapSession *self)$/;"	f
-_imap_append_alist_as_plist	dm_imaputil.c	/^static GList * _imap_append_alist_as_plist(GList *list, InternetAddressList *ialist)$/;"	f	file:
+_imap_append_alist_as_plist	dm_imaputil.c	/^static GList * _imap_append_alist_as_plist(GList *list, const InternetAddressList *ialist)$/;"	f	file:
 _imap_cache_set_dump	dbmail-imapsession.c	/^static u64_t _imap_cache_set_dump(char *buf, int dumptype)$/;"	f	file:
 _imap_cache_update	dbmail-imapsession.c	/^static u64_t _imap_cache_update(struct ImapSession *self, message_filter_t filter)$/;"	f	file:
 _imap_session_fetch_parse_octet_range	dbmail-imapsession.c	/^static int _imap_session_fetch_parse_octet_range(struct ImapSession *self, int idx) $/;"	f	file:
 _imap_session_fetch_parse_partspec	dbmail-imapsession.c	/^static int _imap_session_fetch_parse_partspec(struct ImapSession *self, int idx)$/;"	f	file:
 _imap_show_body_section	dbmail-imapsession.c	/^static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data) $/;"	f	file:
 _imap_show_body_sections	dbmail-imapsession.c	/^static void _imap_show_body_sections(struct ImapSession *self) $/;"	f	file:
-_imapdate	dm_imaputil.c	/^char _imapdate[IMAP_INTERNALDATE_LEN] = IMAP_STANDARD_DATE;$/;"	v
+_imapdate	misc.c	/^char _imapdate[IMAP_INTERNALDATE_LEN] = IMAP_STANDARD_DATE;$/;"	v
 _map_headers	dbmail-message.c	/^static void _map_headers(struct DbmailMessage *self) $/;"	f	file:
 _match_header	dm_search.c	/^static void _match_header(const char *field, const char *value, gpointer userdata)$/;"	f	file:
+_merge_search	dbmail-mailbox.c	/^static gboolean _merge_search(GNode *node, GTree *found)$/;"	f	file:
 _message_insert	dbmail-message.c	/^int _message_insert(struct DbmailMessage *self, $/;"	f
 _register_header	dbmail-message.c	/^static void _register_header(const char *header, const char *value, gpointer user_data)$/;"	f	file:
 _register_header	mime.c	/^static void _register_header(const char *field, const char *value, gpointer mimelist)$/;"	f	file:
 _retrieve	dbmail-message.c	/^static struct DbmailMessage * _retrieve(struct DbmailMessage *self, char *query_template)$/;"	f	file:
 _set_content	dbmail-message.c	/^static void _set_content(struct DbmailMessage *self, const GString *content)$/;"	f	file:
 _set_content_from_stream	dbmail-message.c	/^static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *stream, int type)$/;"	f	file:
-_sqldate	dm_imaputil.c	/^char _sqldate[SQL_INTERNALDATE_LEN + 1] = SQL_STANDARD_DATE;$/;"	v
+_sqldate	misc.c	/^char _sqldate[SQL_INTERNALDATE_LEN + 1] = SQL_STANDARD_DATE;$/;"	v
 _strip_blob_prefix	misc.c	/^static void _strip_blob_prefix(char *subject)$/;"	f	file:
 _strip_refwd	misc.c	/^static void _strip_refwd(char *subject) $/;"	f	file:
 _strip_sub_leader	misc.c	/^static void _strip_sub_leader(char *subject)$/;"	f	file:
@@ -348,6 +364,7 @@ _structure_part_handle_part	dm_imaputil.c	/^void _structure_part_handle_part(GMi
 _structure_part_message_rfc822	dm_imaputil.c	/^void _structure_part_message_rfc822(GMimeObject *part, gpointer data, gboolean extension)$/;"	f
 _structure_part_multipart	dm_imaputil.c	/^void _structure_part_multipart(GMimeObject *part, gpointer data, gboolean extension)$/;"	f
 _structure_part_text	dm_imaputil.c	/^void _structure_part_text(GMimeObject *part, gpointer data, gboolean extension)$/;"	f
+_tree_foreach	dbmail-mailbox.c	/^static gboolean _tree_foreach(gpointer key UNUSED, gpointer value, GString * data)$/;"	f	file:
 acl_change_rights	acl.c	/^acl_change_rights(u64_t userid, u64_t mboxid, const char *rightsstring,$/;"	f
 acl_delete_acl	acl.c	/^int acl_delete_acl(u64_t userid, u64_t mboxid)$/;"	f
 acl_get_acl	acl.c	/^char *acl_get_acl(u64_t mboxid)$/;"	f
@@ -365,29 +382,32 @@ acl_set_rights	acl.c	/^int acl_set_rights(u64_t userid, u64_t mboxid, const char
 active_child_sig_handler	serverchild.c	/^void active_child_sig_handler(int sig, siginfo_t * info UNUSED, void *data UNUSED)$/;"	f
 addr	debug.c	/^	long addr;$/;"	m	struct:debug_mem	file:
 addto_btree_curr	dm_search.c	/^void addto_btree_curr(sortitems_t ** root, char *str, int mid)$/;"	f
+append_search	dbmail-mailbox.c	/^static search_key_t * append_search(struct DbmailMailbox *self, search_key_t *value, gboolean descend)$/;"	f	file:
 base64_decode	misc.c	/^char **base64_decode(char *str, size_t len)$/;"	f
 base64_decode_internal	misc.c	/^int base64_decode_internal(const char *in, size_t inlen, size_t maxlen,$/;"	f
 base64_free	misc.c	/^void base64_free(char **ret)$/;"	f
 base64decode	dm_imaputil.c	/^void base64decode(char *in, char *out)$/;"	f
 base64encode	dm_imaputil.c	/^void base64encode(char *in, char *out)$/;"	f
-base64encodestring	dm_imaputil.c	/^char base64encodestring[] =$/;"	v
+base64encodestring	dm_imaputil.c	/^char base64encodestring[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+\/";$/;"	v
 base64val	misc.c	/^static const char base64val[] = {$/;"	v	file:
 bgetpwent	dbmail-user.c	/^char *bgetpwent(const char *filename, const char *name)$/;"	f
 binary_search	dm_imaputil.c	/^int binary_search(const u64_t * array, unsigned arraysize, u64_t key,$/;"	f
 build_args_array_ext	dbmail-imapsession.c	/^char **build_args_array_ext(const char *originalString, clientinfo_t * ci)$/;"	f
 build_imap_search	dm_imaputil.c	/^int build_imap_search(char **search_keys, struct dm_list *sl, int *idx, int sorted)$/;"	f
+build_set	dbmail-mailbox.c	/^static void build_set(unsigned int *set, unsigned int setlen, char *cset)$/;"	f	file:
 build_set	dm_imaputil.c	/^void build_set(unsigned int *set, unsigned int setlen, char *cset)$/;"	f
+build_uid_set	dbmail-mailbox.c	/^static void build_uid_set(unsigned int *set, unsigned int setlen, char *cset,$/;"	f	file:
 build_uid_set	dm_imaputil.c	/^void build_uid_set(unsigned int *set, unsigned int setlen, char *cset,$/;"	f
 byteReverse	md5.c	/^void byteReverse(unsigned char *buf, unsigned longs)$/;"	f
 byteReverse	md5.c	48;"	d	file:
 cached_msg	imap4.c	/^cache_t cached_msg;$/;"	v
 cget_salt	dbmail-user.c	/^char *cget_salt()$/;"	f
 char2date_str	db.c	/^char *char2date_str(const char *date)$/;"	f
-check_date	dm_imaputil.c	/^int check_date(const char *date)$/;"	f
-check_msg_set	dm_imaputil.c	/^int check_msg_set(const char *s)$/;"	f
+check_date	misc.c	/^int check_date(const char *date)$/;"	f
+check_msg_set	misc.c	/^int check_msg_set(const char *s)$/;"	f
 check_state_and_args	dbmail-imapsession.c	/^int check_state_and_args(struct ImapSession * self, const char *command, int minargs, int maxargs, int state)$/;"	f
 checkchars	dm_imaputil.c	/^int checkchars(const char *s)$/;"	f
-checkmailboxname	dm_imaputil.c	/^int checkmailboxname(const char *s)$/;"	f
+checkmailboxname	misc.c	/^int checkmailboxname(const char *s)$/;"	f
 checktag	dm_imaputil.c	/^int checktag(const char *s)$/;"	f
 child_reg_connected	pool.c	/^void child_reg_connected()$/;"	f
 child_reg_disconnected	pool.c	/^void child_reg_disconnected()$/;"	f
@@ -399,7 +419,6 @@ cidr_free	dm_cidr.c	/^void cidr_free(struct cidrfilter *self)$/;"	f
 cidr_match	dm_cidr.c	/^int cidr_match(struct cidrfilter *base, struct cidrfilter *test)$/;"	f
 cidr_new	dm_cidr.c	/^struct cidrfilter * cidr_new(const char *str)$/;"	f
 cidr_repr	dm_cidr.c	/^int cidr_repr(struct cidrfilter *self) $/;"	f
-clarify_data	dm_imaputil.c	/^void clarify_data(char *str)$/;"	f
 client	serverchild.c	/^clientinfo_t client;$/;"	v
 client_close	serverchild.c	/^void client_close(void)$/;"	f
 close_cache	dm_imaputil.c	/^void close_cache()$/;"	f
@@ -432,8 +451,8 @@ create_unique_id	misc.c	/^void create_unique_id(char *target, u64_t message_idnr
 create_unix_socket	server.c	/^static int create_unix_socket(serverConfig_t * conf)$/;"	f	file:
 csalt	dbmail-user.c	/^static char csalt[] = "........";$/;"	v	file:
 date2char_str	db.c	/^char *date2char_str(const char *column)$/;"	f
-date_imap2sql	dm_imaputil.c	/^char *date_imap2sql(const char *imapdate)$/;"	f
-date_sql2imap	dm_imaputil.c	/^char *date_sql2imap(const char *sqldate)$/;"	f
+date_imap2sql	misc.c	/^char *date_imap2sql(const char *imapdate)$/;"	f
+date_sql2imap	misc.c	/^char *date_sql2imap(const char *sqldate)$/;"	f
 db_acl_create_acl	db.c	/^static int db_acl_create_acl(u64_t userid, u64_t mboxid)$/;"	f	file:
 db_acl_delete_acl	db.c	/^int db_acl_delete_acl(u64_t userid, u64_t mboxid)$/;"	f
 db_acl_get_identifier	db.c	/^int db_acl_get_identifier(u64_t mboxid, struct dm_list *identifier_list)$/;"	f
@@ -444,7 +463,7 @@ db_activate_sievescript	db.c	/^int db_activate_sievescript(u64_t user_idnr, char
 db_add_quotum_used	db.c	/^int db_add_quotum_used(u64_t user_idnr, u64_t add_size)$/;"	f
 db_add_sievescript	db.c	/^int db_add_sievescript(u64_t user_idnr, char *scriptname, char *script)$/;"	f
 db_begin_transaction	db.c	/^int db_begin_transaction()$/;"	f
-db_binary_search	dm_search.c	/^int db_binary_search(const u64_t * array, int arraysize, u64_t key)$/;"	f
+db_binary_search	misc.c	/^int db_binary_search(const u64_t * array, int arraysize, u64_t key)$/;"	f
 db_calculate_quotum_all	db.c	/^int db_calculate_quotum_all()$/;"	f
 db_calculate_quotum_used	db.c	/^int db_calculate_quotum_used(u64_t user_idnr)$/;"	f
 db_change_mailboxsize	db.c	/^int db_change_mailboxsize(u64_t user_idnr, u64_t new_size)$/;"	f
@@ -469,7 +488,7 @@ db_deleted_purge	db.c	/^int db_deleted_purge(u64_t * affected_rows)$/;"	f
 db_empty_mailbox	db.c	/^int db_empty_mailbox(u64_t user_idnr)$/;"	f
 db_exec_search	dm_search.c	/^int db_exec_search(GMimeObject *object, search_key_t * sk)$/;"	f
 db_expunge	db.c	/^int db_expunge(u64_t mailbox_idnr, u64_t user_idnr,$/;"	f
-db_find_create_mailbox	db.c	/^int db_find_create_mailbox(const char *name, u64_t owner_idnr,$/;"	f
+db_find_create_mailbox	db.c	/^int db_find_create_mailbox(const char *name, mailbox_source_t source,$/;"	f
 db_findmailbox	db.c	/^int db_findmailbox(const char *fq_name, u64_t user_idnr,$/;"	f
 db_findmailbox_by_regex	db.c	/^int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern,$/;"	f
 db_findmailbox_owner	db.c	/^int db_findmailbox_owner(const char *name, u64_t owner_idnr,$/;"	f
@@ -478,7 +497,7 @@ db_flag_desc	db.c	/^static const char *db_flag_desc[] = {$/;"	v	file:
 db_get_mailbox_from_message	db.c	/^u64_t db_get_mailbox_from_message(u64_t message_idnr)$/;"	f
 db_get_mailbox_owner	db.c	/^int db_get_mailbox_owner(u64_t mboxid, u64_t * owner_id)$/;"	f
 db_get_mailbox_size	db.c	/^int db_get_mailbox_size(u64_t mailbox_idnr, int only_deleted,$/;"	f
-db_get_main_header	db.c	/^int db_get_main_header(u64_t msg_idnr, struct dm_list *hdrlist)$/;"	f
+db_get_main_header	db.c	/^int db_get_main_header(u64_t msg_idnr, struct dm_list *hdrlist, const char *headername)$/;"	f
 db_get_message_size	db.c	/^int db_get_message_size(u64_t message_idnr, u64_t * message_size)$/;"	f
 db_get_msgdate	db.c	/^int db_get_msgdate(u64_t mailbox_idnr, u64_t msg_idnr, char *date)$/;"	f
 db_get_msgflag	db.c	/^int db_get_msgflag(const char *flag_name, u64_t msg_idnr,$/;"	f
@@ -508,7 +527,7 @@ db_icheck_null_messages	db.c	/^int db_icheck_null_messages(struct dm_list *lost_
 db_icheck_null_physmessages	db.c	/^int db_icheck_null_physmessages(struct dm_list *lost_list)$/;"	f
 db_icheck_rfcsize	db.c	/^int db_icheck_rfcsize(GList  **lost)$/;"	f
 db_imap_append_msg	db.c	/^int db_imap_append_msg(const char *msgdata, u64_t datalen UNUSED,$/;"	f
-db_init_fetch	dbmsgbuf.c	/^struct DbmailMessage * db_init_fetch(u64_t msg_idnr, int filter)$/;"	f
+db_init_fetch	dbmail-message.c	/^struct DbmailMessage * db_init_fetch(u64_t msg_idnr, int filter)$/;"	f
 db_insert_message_block	db.c	/^int db_insert_message_block(const char *block, u64_t block_size,$/;"	f
 db_insert_message_block_physmessage	db.c	/^int db_insert_message_block_physmessage(const char *block,$/;"	f
 db_insert_physmessage	db.c	/^int db_insert_physmessage(u64_t * physmessage_id)$/;"	f
@@ -523,14 +542,14 @@ db_movemsg	db.c	/^int db_movemsg(u64_t mailbox_to, u64_t mailbox_from)$/;"	f
 db_noinferiors	db.c	/^int db_noinferiors(u64_t mailbox_idnr)$/;"	f
 db_physmessage_set_sizes	db.c	/^int db_physmessage_set_sizes(u64_t physmessage_id, u64_t message_size,$/;"	f
 db_removemsg	db.c	/^int db_removemsg(u64_t user_idnr, u64_t mailbox_idnr)$/;"	f
-db_replace_sievescript	db.c	/^int db_replace_sievescript(u64_t user_idnr, char *scriptname, char *script)$/;"	f
+db_rename_sievescript	db.c	/^int db_rename_sievescript(u64_t user_idnr, char *scriptname, char *newname)$/;"	f
 db_replycache_register	db.c	/^int db_replycache_register(const char *to, const char *from)$/;"	f
 db_replycache_validate	db.c	/^int db_replycache_validate(const char *to, const char *from)$/;"	f
 db_rollback_transaction	db.c	/^int db_rollback_transaction()$/;"	f
 db_search	dm_search.c	/^int db_search(unsigned int *rset, unsigned setlen, search_key_t * sk, mailbox_t * mb)$/;"	f
 db_search_body	dm_search.c	/^int db_search_body(GMimeObject *object, search_key_t *sk)$/;"	f
 db_search_parsed	dm_search.c	/^int db_search_parsed(unsigned int *rset, unsigned int setlen,$/;"	f
-db_send_message_lines	db.c	/^int db_send_message_lines(void *fstream, u64_t message_idnr,$/;"	f
+db_send_message_lines	db.c	/^int db_send_message_lines(void *fstream, u64_t message_idnr, long lines, int no_end_dot)$/;"	f
 db_session_cleanup	db.c	/^void db_session_cleanup(PopSession_t * session_ptr)$/;"	f
 db_set_deleted	db.c	/^int db_set_deleted(u64_t * affected_rows)$/;"	f
 db_set_headercache	db.c	/^int db_set_headercache(GList *lost)$/;"	f
@@ -550,7 +569,6 @@ db_subscribe	db.c	/^int db_subscribe(u64_t mailbox_idnr, u64_t user_idnr)$/;"	f
 db_subtract_quotum_used	db.c	/^int db_subtract_quotum_used(u64_t user_idnr, u64_t sub_size)$/;"	f
 db_unsubscribe	db.c	/^int db_unsubscribe(u64_t mailbox_idnr, u64_t user_idnr)$/;"	f
 db_update_message	db.c	/^int db_update_message(u64_t message_idnr, const char *unique_id,$/;"	f
-db_update_msgbuf	dbmsgbuf.c	/^int db_update_msgbuf(void)$/;"	f
 db_update_pop	db.c	/^int db_update_pop(PopSession_t * session_ptr)$/;"	f
 db_update_rfcsize	db.c	/^int db_update_rfcsize(GList *lost) $/;"	f
 db_use_usermap	db.c	/^int db_use_usermap(void)$/;"	f
@@ -568,6 +586,7 @@ dbmail_common_suite	check_dbmail_util.c	/^Suite *dbmail_common_suite(void)$/;"	f
 dbmail_deliver_suite	check_dbmail_deliver.c	/^Suite *dbmail_deliver_suite(void)$/;"	f
 dbmail_imap_astring_as_string	dm_imaputil.c	/^char *dbmail_imap_astring_as_string(const char *s)$/;"	f
 dbmail_imap_plist_as_string	dm_imaputil.c	/^char *dbmail_imap_plist_as_string(GList * list)$/;"	f
+dbmail_imap_plist_collapse	dm_imaputil.c	/^char *dbmail_imap_plist_collapse(const char *in)$/;"	f
 dbmail_imap_plist_free	dm_imaputil.c	/^void dbmail_imap_plist_free(GList *l)$/;"	f
 dbmail_imap_session_bodyfetch_free	dbmail-imapsession.c	/^void dbmail_imap_session_bodyfetch_free(struct ImapSession *self) $/;"	f
 dbmail_imap_session_bodyfetch_get_last	dbmail-imapsession.c	/^body_fetch_t * dbmail_imap_session_bodyfetch_get_last(struct ImapSession *self) $/;"	f
@@ -586,7 +605,7 @@ dbmail_imap_session_bodyfetch_set_octetcnt	dbmail-imapsession.c	/^int dbmail_ima
 dbmail_imap_session_bodyfetch_set_octetstart	dbmail-imapsession.c	/^int dbmail_imap_session_bodyfetch_set_octetstart(struct ImapSession *self, guint64 octet)$/;"	f
 dbmail_imap_session_bodyfetch_set_partspec	dbmail-imapsession.c	/^int dbmail_imap_session_bodyfetch_set_partspec(struct ImapSession *self, char *partspec, int length) $/;"	f
 dbmail_imap_session_delete	dbmail-imapsession.c	/^void dbmail_imap_session_delete(struct ImapSession * self)$/;"	f
-dbmail_imap_session_fetch_get_items	dbmail-imapsession.c	/^int dbmail_imap_session_fetch_get_items(struct ImapSession *self)$/;"	f
+dbmail_imap_session_fetch_get_items	dbmail-imapsession.c	/^int dbmail_imap_session_fetch_get_items(struct ImapSession *self, u64_t row)$/;"	f
 dbmail_imap_session_fetch_get_unparsed	dbmail-imapsession.c	/^int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self, u64_t fetch_start, u64_t fetch_end)$/;"	f
 dbmail_imap_session_fetch_parse_args	dbmail-imapsession.c	/^int dbmail_imap_session_fetch_parse_args(struct ImapSession * self, int idx)$/;"	f
 dbmail_imap_session_get_msginfo_range	dbmail-imapsession.c	/^int dbmail_imap_session_get_msginfo_range(struct ImapSession *self, u64_t msg_idnr_low, u64_t msg_idnr_high)$/;"	f
@@ -606,17 +625,20 @@ dbmail_imap_session_resetFi	dbmail-imapsession.c	/^struct ImapSession * dbmail_i
 dbmail_imap_session_setArgs	dbmail-imapsession.c	/^struct ImapSession * dbmail_imap_session_setArgs(struct ImapSession * self, char ** args)$/;"	f
 dbmail_imap_session_setClientinfo	dbmail-imapsession.c	/^struct ImapSession * dbmail_imap_session_setClientinfo(struct ImapSession * self, clientinfo_t *ci)$/;"	f
 dbmail_imap_session_setCommand	dbmail-imapsession.c	/^struct ImapSession * dbmail_imap_session_setCommand(struct ImapSession * self, char * command)$/;"	f
-dbmail_imap_session_setFi	dbmail-imapsession.c	/^struct ImapSession * dbmail_imap_session_setFi(struct ImapSession * self, fetch_items_t *fi)$/;"	f
 dbmail_imap_session_setMsginfo	dbmail-imapsession.c	/^struct ImapSession * dbmail_imap_session_setMsginfo(struct ImapSession * self, msginfo_t * msginfo)$/;"	f
 dbmail_imap_session_setTag	dbmail-imapsession.c	/^struct ImapSession * dbmail_imap_session_setTag(struct ImapSession * self, char * tag)$/;"	f
 dbmail_imap_session_set_state	dbmail-imapsession.c	/^int dbmail_imap_session_set_state(struct ImapSession *self, int state)$/;"	f
+dbmail_mailbox_build_imap_search	dbmail-mailbox.c	/^int dbmail_mailbox_build_imap_search(struct DbmailMailbox *self, char **search_keys, u64_t *idx, int sorted)$/;"	f
 dbmail_mailbox_dump	dbmail-mailbox.c	/^int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)$/;"	f
 dbmail_mailbox_free	dbmail-mailbox.c	/^void dbmail_mailbox_free(struct DbmailMailbox *self)$/;"	f
 dbmail_mailbox_get_id	dbmail-mailbox.c	/^u64_t dbmail_mailbox_get_id(struct DbmailMailbox *self)$/;"	f
+dbmail_mailbox_get_set	dbmail-mailbox.c	/^GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, search_key_t *sk)$/;"	f
 dbmail_mailbox_new	dbmail-mailbox.c	/^struct DbmailMailbox * dbmail_mailbox_new(u64_t id)$/;"	f
 dbmail_mailbox_open	dbmail-mailbox.c	/^struct DbmailMailbox * dbmail_mailbox_open(struct DbmailMailbox *self)$/;"	f
-dbmail_mailbox_orderedsubject	dbmail-mailbox.c	/^GList * dbmail_mailbox_orderedsubject(struct DbmailMailbox *self)$/;"	f
+dbmail_mailbox_orderedsubject	dbmail-mailbox.c	/^char * dbmail_mailbox_orderedsubject(struct DbmailMailbox *self)$/;"	f
+dbmail_mailbox_search	dbmail-mailbox.c	/^int dbmail_mailbox_search(struct DbmailMailbox *self) $/;"	f
 dbmail_mailbox_set_id	dbmail-mailbox.c	/^void dbmail_mailbox_set_id(struct DbmailMailbox *self, u64_t id)$/;"	f
+dbmail_mailbox_sort	dbmail-mailbox.c	/^int dbmail_mailbox_sort(struct DbmailMailbox *self) $/;"	f
 dbmail_mailbox_suite	check_dbmail_mailbox.c	/^Suite *dbmail_mailbox_suite(void)$/;"	f
 dbmail_message_body_to_string	dbmail-message.c	/^gchar * dbmail_message_body_to_string(const struct DbmailMessage *self)$/;"	f
 dbmail_message_cache_ccfield	dbmail-message.c	/^void dbmail_message_cache_ccfield(const struct DbmailMessage *self)$/;"	f
@@ -738,7 +760,7 @@ dump_message_to_stream	dbmail-mailbox.c	/^static size_t dump_message_to_stream(s
 dump_to_file	dbmail-message.c	/^static void dump_to_file(const char *buf)$/;"	f	file:
 dumpsearch	dm_imaputil.c	/^void dumpsearch(search_key_t * sk, int level)$/;"	f
 element_new	list.c	/^static struct element *element_new(void)$/;"	f	file:
-envelope_items	dm_imaputil.c	/^const char *envelope_items[] = {$/;"	v
+envelope_items	dm_imaputil.c	/^const char *envelope_items[] = { "from", "sender", "reply-to", "to", "cc", "bcc", NULL };$/;"	v
 err_out_stream	debug.c	37;"	d	file:
 execute_auto_ran	pipe.c	/^static int execute_auto_ran(u64_t useridnr, struct dm_list *headerfields)$/;"	f	file:
 find_bounded	misc.c	/^int find_bounded(char *value, char left, char right, char **retchar,$/;"	f
@@ -750,10 +772,14 @@ from	lmtp.c	/^static struct dm_list from, rcpt;$/;"	v	file:
 func_memtst	debug.c	/^void func_memtst(const char *filename, int line, int tst)$/;"	f
 g_list_append_printf	misc.c	/^GList * g_list_append_printf(GList * list, char * format, ...)$/;"	f
 g_list_copy_list	list.c	/^GList * g_list_copy_list(GList *dst, struct element *el)$/;"	f
+g_list_destroy	misc.c	/^void g_list_destroy(GList *l)$/;"	f
 g_list_join	misc.c	/^GString * g_list_join(GList * list, char * sep)$/;"	f
 g_list_slices	list.c	/^GList *g_list_slices(GList *list, unsigned limit)$/;"	f
 g_mime_object_get_body	dbmail-message.c	/^gchar * g_mime_object_get_body(const GMimeObject *object)$/;"	f
 g_string_split	misc.c	/^GList * g_string_split(GString * string, char * sep)$/;"	f
+g_tree_keys	misc.c	/^GList * g_tree_keys(GTree *tree)$/;"	f
+g_tree_merge	misc.c	/^void g_tree_merge(GTree *a, GTree *b, int condition)$/;"	f
+g_tree_values	misc.c	/^GList * g_tree_values(GTree *tree)$/;"	f
 gdm_md5_final	md5.c	/^void gdm_md5_final(unsigned char digest[16], struct GdmMD5Context *ctx)$/;"	f
 gdm_md5_init	md5.c	/^void gdm_md5_init(struct GdmMD5Context *ctx)$/;"	f
 gdm_md5_step	md5.c	189;"	d	file:
@@ -774,6 +800,7 @@ get_first_user_idnr	check_dbmail_mailbox.c	/^static u64_t get_first_user_idnr(vo
 get_idle_spare	pool.c	/^pid_t get_idle_spare()$/;"	f
 get_mailbox_id	check_dbmail_mailbox.c	/^static u64_t get_mailbox_id(void)$/;"	f	file:
 get_param_list	dm_imaputil.c	/^static void get_param_list(gpointer key, gpointer value, gpointer data)$/;"	f	file:
+get_physid	check_dbmail_imapd.c	/^static u64_t get_physid(void)$/;"	f	file:
 has_errors	maintenance.c	/^int has_errors = 0;$/;"	v
 haystack_find	dm_imaputil.c	/^int haystack_find(int haystacklen, char **haystack, const char *needle)$/;"	f
 imap_acl_pre_administer	imapcommands.c	/^static int imap_acl_pre_administer(const char *mailboxname,$/;"	f	file:
@@ -788,12 +815,12 @@ imap_before_smtp	imapd.c	/^int imap_before_smtp = 0;$/;"	v
 imap_cache_send_tmpdump	dbmail-imapsession.c	/^static void imap_cache_send_tmpdump(struct ImapSession *self, body_fetch_t *bodyfetch, u64_t size)$/;"	f	file:
 imap_flag_desc	imapcommands.c	/^const char *imap_flag_desc[IMAP_NFLAGS] = {$/;"	v
 imap_flag_desc_escaped	imapcommands.c	/^const char *imap_flag_desc_escaped[IMAP_NFLAGS] = {$/;"	v
-imap_get_envelope	dm_imaputil.c	/^GList * imap_get_envelope(GMimeMessage *message)$/;"	f
+imap_get_envelope	dm_imaputil.c	/^char * imap_get_envelope(GMimeMessage *message)$/;"	f
 imap_get_logical_part	dm_imaputil.c	/^char * imap_get_logical_part(const GMimeObject *object, const char * specifier) $/;"	f
 imap_get_partspec	dm_imaputil.c	/^GMimeObject * imap_get_partspec(const GMimeObject *message, const char *partspec) $/;"	f
-imap_get_structure	dm_imaputil.c	/^GList * imap_get_structure(GMimeMessage *message, gboolean extension) $/;"	f
+imap_get_structure	dm_imaputil.c	/^char * imap_get_structure(GMimeMessage *message, gboolean extension) $/;"	f
 imap_handler_functions	imap4.c	/^const IMAP_COMMAND_HANDLER imap_handler_functions[] = {$/;"	v
-imap_message_fetch_headers	dm_imaputil.c	/^GList * imap_message_fetch_headers(u64_t physid, const GList *headers, gboolean not)$/;"	f
+imap_message_fetch_headers	dm_imaputil.c	/^char * imap_message_fetch_headers(u64_t physid, const GList *headers, gboolean not)$/;"	f
 imap_part_get_sizes	dm_imaputil.c	/^static void imap_part_get_sizes(GMimeObject *part, size_t * size, size_t * lines)$/;"	f	file:
 init_cache	dm_imaputil.c	/^int init_cache()$/;"	f
 init_testuser1	check_dbmail_deliver.c	/^void init_testuser1(void) $/;"	f
@@ -805,7 +832,7 @@ insert_messages	pipe.c	/^int insert_messages(struct DbmailMessage *message, $/;"
 invert_set	dm_imaputil.c	/^void invert_set(unsigned int *set, int setlen)$/;"	f
 is_textplain	dm_imaputil.c	/^int is_textplain(struct dm_list *hdr)$/;"	f
 is_valid	dbmail-user.c	/^int is_valid(const char *str)$/;"	f
-item_desc	dm_imaputil.c	/^const char *item_desc[] = {$/;"	v
+item_desc	dm_imaputil.c	/^const char *item_desc[] = { "TEXT", "HEADER", "MIME", "HEADER.FIELDS", "HEADER.FIELDS.NOT" };$/;"	v
 itoa	misc.c	/^char *itoa(int i)$/;"	f
 linenr	debug.c	/^	int linenr;$/;"	m	struct:debug_mem	file:
 list_is_lsub	imapcommands.c	/^int list_is_lsub = 0;$/;"	v
@@ -819,6 +846,7 @@ lmtp_reset	lmtp.c	/^int lmtp_reset(PopSession_t * session)$/;"	f
 mail_address_build_list	mime.c	/^int mail_address_build_list(const char *scan_for_field, struct dm_list *targetlist,$/;"	f
 mailbox_add_namespace	misc.c	/^char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,$/;"	f
 mailbox_remove_namespace	misc.c	/^const char *mailbox_remove_namespace(const char *fq_name)$/;"	f
+mailbox_search	dbmail-mailbox.c	/^static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)$/;"	f	file:
 main	check_dbmail_common.c	/^int main(void)$/;"	f
 main	check_dbmail_deliver.c	/^int main(void)$/;"	f
 main	check_dbmail_imapd.c	/^int main(void)$/;"	f
@@ -850,8 +878,8 @@ manage_spare_children	pool.c	/^void manage_spare_children()$/;"	f
 manage_start_children	pool.c	/^void manage_start_children()$/;"	f
 manage_start_cli_server	serverchild.c	/^int manage_start_cli_server(ChildInfo_t * info)$/;"	f
 manage_stop_children	pool.c	/^void manage_stop_children()$/;"	f
-max	misc.c	28;"	d	file:
-max	misc.c	29;"	d	file:
+max	misc.c	49;"	d	file:
+max	misc.c	50;"	d	file:
 mclose	memblock.c	/^void mclose(MEM ** m)$/;"	f
 merror	memblock.c	/^char *merror()$/;"	f
 mime_fetch_headers	mime.c	/^struct DbmailMessage * mime_fetch_headers(struct DbmailMessage *message, struct dm_list *mimelist) $/;"	f
@@ -860,8 +888,8 @@ mime_readheader	mime.c	/^int mime_readheader(struct DbmailMessage *message, stru
 mime_unwrap	dm_imaputil.c	/^int mime_unwrap(char *to, const char *from) $/;"	f
 mimelist	main.c	/^struct dm_list mimelist;		\/* raw unformatted mimefields and values *\/$/;"	v
 mkpassword	dbmail-user.c	/^int mkpassword(const char * const user, const char * const passwd,$/;"	f
-month_desc	dm_search.c	/^const char *month_desc[] = {$/;"	v
-month_len	dm_imaputil.c	/^const int month_len[] = {$/;"	v
+month_desc	misc.c	/^const char *month_desc[] = {$/;"	v
+month_len	misc.c	/^const int month_len[] = { 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };$/;"	v
 mopen	memblock.c	/^MEM *mopen()$/;"	f
 mread	memblock.c	/^int mread(void *data, int size, MEM * m)$/;"	f
 mreset	memblock.c	/^void mreset(MEM * m)$/;"	f
@@ -875,8 +903,8 @@ nextaddr	debug.c	/^	struct debug_mem *nextaddr;$/;"	m	struct:debug_mem	file:
 no_to_all	dbmail-user.c	/^int no_to_all = 0;$/;"	v
 no_to_all	maintenance.c	/^int no_to_all = 0;$/;"	v
 noop_child_sig_handler	serverchild.c	/^void noop_child_sig_handler(int sig, siginfo_t *info UNUSED, void *data UNUSED)$/;"	f
-num_from_imapdate	dm_search.c	/^int num_from_imapdate(const char *date)$/;"	f
-perform_imap_search	dm_imaputil.c	/^int perform_imap_search(unsigned int *rset, int setlen, search_key_t * sk,$/;"	f
+num_from_imapdate	misc.c	/^int num_from_imapdate(const char *date)$/;"	f
+perform_imap_search	dm_imaputil.c	/^int perform_imap_search(unsigned int *rset, int setlen, search_key_t * sk, mailbox_t * mb, int sorted, int condition)$/;"	f
 pidFile	imapd.c	/^char *pidFile = DEFAULT_PID_DIR "dbmail-imapd" DEFAULT_PID_EXT;$/;"	v
 pidFile	lmtpd.c	/^char *pidFile = DEFAULT_PID_DIR "dbmail-lmtpd" DEFAULT_PID_EXT;$/;"	v
 pidFile	pop3d.c	/^char *pidFile = DEFAULT_PID_DIR "dbmail-pop3d" DEFAULT_PID_EXT;$/;"	v
@@ -890,13 +918,13 @@ pop3	pop3.c	/^int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)$/
 pop3_error	pop3.c	/^int pop3_error(PopSession_t * session, void *stream,$/;"	f
 pop3_handle_connection	pop3.c	/^int pop3_handle_connection(clientinfo_t * ci)$/;"	f
 pop_before_smtp	pop3d.c	/^int pop_before_smtp = 0;$/;"	v
+pop_search	dbmail-mailbox.c	/^static void pop_search(struct DbmailMailbox *self)$/;"	f	file:
 print_mimelist	check_dbmail_imapd.c	/^void print_mimelist(struct dm_list *mimelist)$/;"	f
 process_exists	pidfile.c	/^static int process_exists(pid_t pid)$/;"	f	file:
 qerrorf	maintenance.c	45;"	d	file:
 query	db.c	/^char query[DEF_QUERYSIZE]; $/;"	v
 query	dbmail-imapsession.c	/^char query[DEF_QUERYSIZE];$/;"	v
 query	dbmail-message.c	/^char query[DEF_QUERYSIZE];$/;"	v
-query	dbmsgbuf.c	/^char query[DEF_QUERYSIZE];$/;"	v
 query	dm_search.c	/^char query[DEF_QUERYSIZE];$/;"	v
 quiet	dbmail-user.c	/^int quiet = 0; 		\/* Don't be helpful. *\/$/;"	v
 quiet	export.c	/^int quiet, reallyquiet, verbose;$/;"	v
@@ -907,7 +935,6 @@ quota_get_quota	quota.c	/^quota_t *quota_get_quota(u64_t useridnr, char *quotaro
 quota_get_quotaroot	quota.c	/^char *quota_get_quotaroot(u64_t useridnr, const char *mailbox,$/;"	f
 quota_set_resource_limit	quota.c	/^void quota_set_resource_limit(quota_t * quota, int resource_idx,$/;"	f
 quota_set_root	quota.c	/^int quota_set_root(quota_t * quota, char *root)$/;"	f
-quoted_string_out	dm_imaputil.c	/^int quoted_string_out(FILE * outstream, const char *s)$/;"	f
 qverbosef	maintenance.c	42;"	d	file:
 rcpt	lmtp.c	/^static struct dm_list from, rcpt;$/;"	v	file:
 read_from_stream	misc.c	/^int read_from_stream(FILE * instream, char **m_buf, size_t maxlen)$/;"	f
@@ -943,7 +970,7 @@ setup	check_dbmail_util.c	/^void setup(void)$/;"	f
 shmid	pool.c	/^static int shmid;$/;"	v	file:
 sieve_extensions	timsieved.c	/^char *sieve_extensions = NULL;$/;"	v
 socket_match	misc.c	/^static int socket_match(const char *base, const char *test)$/;"	f	file:
-sort_and_deliver	dbmail-message.c	/^dsn_class_t sort_and_deliver(struct DbmailMessage *message, u64_t useridnr, const char *mailbox)$/;"	f
+sort_and_deliver	dbmail-message.c	/^dsn_class_t sort_and_deliver(struct DbmailMessage *message, u64_t useridnr,$/;"	f
 sort_search	dm_imaputil.c	/^int sort_search(struct dm_list *searchlist) $/;"	f
 state_new	pool.c	/^State_t state_new(void)$/;"	f
 store_message_in_blocks	pipe.c	/^int store_message_in_blocks(const char *message, u64_t message_size,$/;"	f
@@ -965,6 +992,11 @@ tims_handle_connection	timsieve.c	/^int tims_handle_connection(clientinfo_t * ci
 tims_reset	timsieve.c	/^int tims_reset(PopSession_t * session)$/;"	f
 tmp	main.c	/^struct element *tmp;$/;"	v
 trace	debug.c	/^void trace(trace_t level, char *formatstring, ...)$/;"	f
+traverse_tree_keys	misc.c	/^static gboolean traverse_tree_keys(gpointer key, gpointer value UNUSED, GList **l)$/;"	f	file:
+traverse_tree_values	misc.c	/^static gboolean traverse_tree_values(gpointer key UNUSED, gpointer value, GList **l)$/;"	f	file:
+tree_dump	check_dbmail_mailbox.c	/^void tree_dump(GTree *t)$/;"	f
+tree_print	check_dbmail_mailbox.c	/^static gboolean tree_print(gpointer key, gpointer value, gpointer data UNUSED)$/;"	f	file:
+ucmp	misc.c	/^gint ucmp(const u64_t *a, const u64_t *b)$/;"	f
 user_idnr_is_delivery_user_idnr	db.c	/^int user_idnr_is_delivery_user_idnr(u64_t user_idnr)$/;"	f
 users	main.c	/^struct dm_list users;		\/* list of email addresses in message *\/$/;"	v
 valid_sender	pipe.c	/^static int valid_sender(const char *addr) $/;"	f	file:
