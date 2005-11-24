@@ -524,8 +524,13 @@ GString * g_list_join(GList * list, char * sep)
 GList * g_string_split(GString * string, char * sep)
 {
 	GList * list = NULL;
-	char **array = (char **)g_strsplit((const gchar *)string->str, (const gchar *)sep,0);
+	char **array;
 	int i, len = 0;
+	
+	if (string->len == 0)
+		return NULL;
+	
+	array = (char **)g_strsplit((const gchar *)string->str, (const gchar *)sep,0);
 	while(array[len++]);
 	len--;
 	for (i=0; i<len; i++)
@@ -1350,6 +1355,10 @@ void g_tree_merge(GTree *a, GTree *b, int condition)
 			break;
 	}
 
+	trace(TRACE_DEBUG,"%s,%s: a[%d] [%d] b[%d] -> a[%d]",
+			__FILE__, __func__, g_list_length(akeys), condition, g_list_length(bkeys), 
+			g_tree_nnodes(a));
+	
 	g_list_free(akeys);
 	g_list_free(bkeys);
 }
