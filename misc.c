@@ -524,8 +524,13 @@ GString * g_list_join(GList * list, char * sep)
 GList * g_string_split(GString * string, char * sep)
 {
 	GList * list = NULL;
-	char **array = (char **)g_strsplit((const gchar *)string->str, (const gchar *)sep,0);
+	char **array;
 	int i, len = 0;
+	
+	if (string->len == 0)
+		return NULL;
+	
+	array = (char **)g_strsplit((const gchar *)string->str, (const gchar *)sep,0);
 	while(array[len++]);
 	len--;
 	for (i=0; i<len; i++)
@@ -1016,23 +1021,6 @@ int dm_valid_folder(const char *userid, char *folder)
 	return 0;
 }
 
-static void tree_get_keylist(char *key, gpointer *value UNUSED, GList **keylist)
-{
-	*(GList **)keylist = g_list_append(*(GList **)keylist, key);
-}
-
-GList * g_tree_keys(GTree *tree) {
-	GList *keylist = NULL;
-	GString *k;
-	
-	g_tree_foreach(tree,(GTraverseFunc)tree_get_keylist,&keylist);
-	k = g_list_join(keylist," ");
-	trace(TRACE_DEBUG, "%s,%s: keys in subtree [%s]", __FILE__, __func__, k->str);
-	g_string_free(k,TRUE);
-	
-	return g_list_first(keylist);
-}
-
 
 /*
  * checkmailboxname()
@@ -1200,7 +1188,7 @@ char *date_imap2sql(const char *imapdate)
 	char *last_char;
 
 	// bsd needs this:
-	//memset(&tm, 0, sizeof(struct tm));
+	memset(&tm, 0, sizeof(struct tm));
 
 	last_char = strptime(imapdate, "%d-%b-%Y", &tm);
 	if (last_char == NULL || *last_char != '\0') {
@@ -1249,4 +1237,141 @@ int num_from_imapdate(const char *date)
 	}
 
 	return atoi(datenum);
+}
+
+void g_list_destroy(GList *l)
+{
+	g_list_foreach(l,(GFunc)g_free,NULL);
+	g_list_free(l);
+}
+
+static gboolean traverse_tree_keys(gpointer key, gpointer value UNUSED, GList **l)
+{
+	*(GList **)l = g_list_append(*(GList **)l, key);
+	return FALSE;
+}
+static gboolean traverse_tree_values(gpointer key UNUSED, gpointer value, GList **l)
+{
+	*(GList **)l = g_list_append(*(GList **)l, value);
+	return FALSE;
+}
+
+GList * g_tree_keys(GTree *tree)
+{
+	GList *l = NULL;
+	g_tree_foreach(tree, (GTraverseFunc)traverse_tree_keys, &l);
+	return l;
+}
+GList * g_tree_values(GTree *tree)
+{
+	GList *l = NULL;
+	g_tree_foreach(tree, (GTraverseFunc)traverse_tree_values, &l);
+	return l;
+}
+
+
+/*
+ * boolean merge of two GTrees. The result is stored in GTree *a.
+ * the state of GTree *b is undefined: it may or may not have been changed, 
+ * depending on whether or not key/value pairs were moved from b to a.
+ * Both trees are safe to destroy afterwards, assuming g_tree_new_full was used
+ * for their construction.
+ */
+
+void g_tree_merge(GTree *a, GTree *b, int condition)
+{
+	gpointer key;
+	gpointer value;	
+	GList *akeys = NULL;
+	GList *bkeys = NULL;
+	
+	if (a)
+		akeys = g_tree_keys(a);
+	if (b)
+		bkeys = g_tree_keys(b);
+
+	g_return_if_fail(a && b);
+	
+	akeys = g_list_first(akeys);
+	bkeys = g_list_first(bkeys);
+	
+	switch(condition) {
+		case IST_SUBSEARCH_AND:
+			/* delete from A all keys not in B */
+			if (! g_list_length(akeys))
+				break;
+
+			while (akeys->data) {
+				if (! g_tree_lookup(b,akeys->data))  
+					g_tree_remove(a,akeys->data);
+
+				if (! g_list_next(akeys))
+					break;
+				
+				akeys = g_list_next(akeys);
+			}
+			
+			break;
+			
+		case IST_SUBSEARCH_OR:
+			/* add to A all keys in B */
+			if (! g_list_length(bkeys))
+				break;
+
+			while (bkeys->data) {
+				if (! g_tree_lookup(a,bkeys->data)) {
+					g_tree_lookup_extended(b,bkeys->data,&key,&value);
+					g_tree_steal(b,bkeys->data);
+					g_tree_insert(a,key,value);
+				}
+
+				if (! g_list_next(bkeys))
+					break;
+				
+				bkeys = g_list_next(bkeys);
+			}
+			
+			break;
+			
+		case IST_SUBSEARCH_NOT:
+			if (! g_list_length(bkeys))
+				break;
+			
+			while (bkeys->data) {
+				/* remove from A keys also in B */
+				if (! g_tree_remove(a,bkeys->data)) {
+					/* add to A all keys in B not in A */
+			 		g_tree_lookup_extended(b,bkeys->data,&key,&value);
+					g_tree_steal(b,bkeys->data);
+					g_tree_insert(a,key,value);
+				}
+				
+				if (! g_list_next(bkeys))
+					break;
+				
+				bkeys = g_list_next(bkeys);
+			}
+				
+			break;
+	}
+
+	trace(TRACE_DEBUG,"%s,%s: a[%d] [%d] b[%d] -> a[%d]",
+			__FILE__, __func__, g_list_length(akeys), condition, g_list_length(bkeys), 
+			g_tree_nnodes(a));
+	
+	g_list_free(akeys);
+	g_list_free(bkeys);
+}
+
+gint ucmp(const u64_t *a, const u64_t *b)
+{
+	u64_t x,y;
+	x = (u64_t)*a;
+	y = (u64_t)*b;
+	
+	if (x>y)
+		return 1;
+	if (x==y)
+		return 0;
+	return -1;
 }

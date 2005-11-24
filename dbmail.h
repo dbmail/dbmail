@@ -159,6 +159,10 @@
 
 #define MATCH(x,y) strcasecmp((x),(y))==0
 
+#define min(x,y) ((x)<=(y)?(x):(y))
+#define max(x,y) ((x)>=(y)?(x):(y))
+
+
 /**
  * \brief read configuration from filename
  * \param cfilename name of configuration file 

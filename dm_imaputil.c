@@ -69,6 +69,9 @@ char *dbmail_imap_plist_collapse(const char *in)
 	 */
 	char *p;
 	char **sublists;
+
+	g_return_val_if_fail(in,NULL);
+	
 	sublists = g_strsplit(in,") (",0);
 	p = g_strjoinv(")(",sublists);
 	g_strfreev(sublists);
@@ -211,7 +214,6 @@ static GList * imap_append_header_as_string(GList *list, GMimeObject *part, cons
 	char *result;
 	if((result = (char *)g_mime_object_get_header(part,header))) {
 		list = g_list_append_printf(list,"\"%s\"",result);
-		g_free(result);
 	} else {
 		list = g_list_append_printf(list,"NIL");
 	}
@@ -484,24 +486,28 @@ static GList * _imap_append_alist_as_plist(GList *list, const InternetAddressLis
 		t = g_list_append_printf(t, "NIL");
 
 		/* mailbox name */
-		tokens = g_strsplit(ia->value.addr,"@",2);
+		if (ia->value.addr) {
+			tokens = g_strsplit(ia->value.addr,"@",2);
 
-		if (tokens[0])
-			t = g_list_append_printf(t, "\"%s\"", tokens[0]);
-		else
-			t = g_list_append_printf(t, "NIL");
-		/* host name */
-		if (tokens[1])
-			t = g_list_append_printf(t, "\"%s\"", tokens[1]);
-		else
-			t = g_list_append_printf(t, "NIL");
-
+			if (tokens[0])
+				t = g_list_append_printf(t, "\"%s\"", tokens[0]);
+			else
+				t = g_list_append_printf(t, "NIL");
+			/* host name */
+			if (tokens[1])
+				t = g_list_append_printf(t, "\"%s\"", tokens[1]);
+			else
+				t = g_list_append_printf(t, "NIL");
+			
+			g_strfreev(tokens);
+		} else {
+			t = g_list_append_printf(t, "NIL NIL");
+		}
 		
 		s = dbmail_imap_plist_as_string(t);
 		p = g_list_append_printf(p, "%s", s);
 		g_free(s);
 		
-		g_strfreev(tokens);
 		g_list_foreach(t, (GFunc)g_free, NULL);
 		g_list_free(t);
 		t = NULL;
