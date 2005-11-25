@@ -1280,6 +1280,9 @@ GList * g_tree_values(GTree *tree)
 
 void g_tree_merge(GTree *a, GTree *b, int condition)
 {
+	char *type = NULL;
+	unsigned alen = 0, blen = 0;
+	
 	gpointer key;
 	gpointer value;	
 	GList *akeys = NULL;
@@ -1294,9 +1297,13 @@ void g_tree_merge(GTree *a, GTree *b, int condition)
 	
 	akeys = g_list_first(akeys);
 	bkeys = g_list_first(bkeys);
+
+	alen = g_list_length(akeys);
+	blen = g_list_length(bkeys);
 	
 	switch(condition) {
 		case IST_SUBSEARCH_AND:
+			type=g_strdup("AND");
 			/* delete from A all keys not in B */
 			if (! g_list_length(akeys))
 				break;
@@ -1314,6 +1321,7 @@ void g_tree_merge(GTree *a, GTree *b, int condition)
 			break;
 			
 		case IST_SUBSEARCH_OR:
+			type=g_strdup("OR");
 			/* add to A all keys in B */
 			if (! g_list_length(bkeys))
 				break;
@@ -1334,6 +1342,7 @@ void g_tree_merge(GTree *a, GTree *b, int condition)
 			break;
 			
 		case IST_SUBSEARCH_NOT:
+			type=g_strdup("NOT");
 			if (! g_list_length(bkeys))
 				break;
 			
@@ -1357,10 +1366,12 @@ void g_tree_merge(GTree *a, GTree *b, int condition)
 			break;
 	}
 
-	trace(TRACE_DEBUG,"%s,%s: a[%d] [%d] b[%d] -> a[%d]",
-			__FILE__, __func__, g_list_length(akeys), condition, g_list_length(bkeys), 
+	trace(TRACE_DEBUG,"%s,%s: a[%d] [%s] b[%d] -> a[%d]",
+			__FILE__, __func__, 
+			alen, type, blen, 
 			g_tree_nnodes(a));
 	
+	g_free(type);
 	g_list_free(akeys);
 	g_list_free(bkeys);
 }

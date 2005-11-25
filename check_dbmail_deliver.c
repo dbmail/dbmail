@@ -709,21 +709,6 @@ START_TEST(test_dm_valid_format)
 }
 END_TEST
 
-START_TEST(test_dm_strip_folder)
-{
-	size_t tlen = 0;
-	char *address = g_new0(char,100);
-	address = "test+folder@foo.com";
-	dm_strip_folder(&address, &tlen);
-}
-END_TEST
-
-START_TEST(test_dm_valid_folder)
-{
-
-}
-END_TEST
-
 Suite *dbmail_deliver_suite(void)
 {
 	Suite *s = suite_create("Dbmail Delivery");

@@ -1163,6 +1163,8 @@ static gboolean _do_search(GNode *node, struct DbmailMailbox *self)
 			return TRUE;
 	}
 
+	s->found = set;
+
 	trace(TRACE_DEBUG,"%s,%s: type [%d] rows [%d]\n", __FILE__,  __func__, 
 			s->type, set ? g_tree_nnodes(set): 0);
 
