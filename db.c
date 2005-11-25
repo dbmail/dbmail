@@ -2522,6 +2522,15 @@ int db_createmailbox(const char *name, u64_t owner_idnr,
 	assert(mailbox_idnr != NULL);
 	*mailbox_idnr = 0;
 
+#ifdef AUTHLDAP
+	if ((db_user_find_create(owner_idnr) < 0)) {
+		trace(TRACE_ERROR, "%s,%s: unable to find or create sql shadow "
+				"account for useridnr [%llu]", 
+				__FILE__, __func__, owner_idnr);
+		return DM_EQUERY;
+	}
+#endif
+
 	/* remove namespace information from mailbox name */
 	if (!(simple_name = mailbox_remove_namespace(name))) {
 		trace(TRACE_ERROR,
@@ -2553,16 +2562,7 @@ int db_find_create_mailbox(const char *name, mailbox_source_t source,
 
 	assert(mailbox_idnr != NULL);
 	*mailbox_idnr = 0;
-
-#ifdef AUTHLDAP
-	if ((db_user_find_create(owner_idnr) < 0)) {
-		trace(TRACE_ERROR, "%s,%s: unable to find or create sql shadow "
-				"account for useridnr [%llu]", 
-				__FILE__, __func__, owner_idnr);
-		return DM_EQUERY;
-	}
-#endif
-
+	
 	/* Did we fail to find the mailbox? */
 	if (db_findmailbox_owner(name, owner_idnr, &mboxidnr) != 1) {
 		/* Who specified this mailbox? */
