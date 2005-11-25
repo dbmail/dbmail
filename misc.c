@@ -1339,7 +1339,9 @@ void g_tree_merge(GTree *a, GTree *b, int condition)
 			
 			while (bkeys->data) {
 				/* remove from A keys also in B */
-				if (! g_tree_remove(a,bkeys->data)) {
+				if (g_tree_lookup(a,bkeys->data)) {
+					g_tree_remove(a,bkeys->data);
+				} else {
 					/* add to A all keys in B not in A */
 			 		g_tree_lookup_extended(b,bkeys->data,&key,&value);
 					g_tree_steal(b,bkeys->data);
