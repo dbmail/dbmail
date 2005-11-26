@@ -9,44 +9,6 @@ make your compile work without much twiddling.
 ])
 ])
 
-dnl DBMAIL_BOTH_SQL_CHECK
-dnl
-AC_DEFUN([DBMAIL_BOTH_SQL_CHECK], [dnl
-AC_ARG_WITH(mysql,
-            [  --with-mysql            use MySQL as database. Uses mysql_config
-	       		  for finding includes and libraries],
-            mysqlheadername="$withval")
-AC_ARG_WITH(pgsql,
-	    [  --with-pgsql            use PostgreSQL as database. 
-                          Uses pg_config for finding includes and libraries],
-            pgsqlheadername="$withval")
-AC_ARG_WITH(sqlite,
-	    [  --with-sqlite           use SQLite as database. 
-                          Uses pkg-config for finding includes and libraries],
-            sqliteheadername="$withval")
-
-WARN=0
-# Make sure we only select one of mysql, pgsql or sqlite
-if test "${mysqlheadername-x}" = "x"
-then
-  if test "${pgsqlheadername-x}" = "x"
-  then
-    if test "${sqliteheadername-x}" = "x"
-    then
-      NEITHER=1
-      mysqlheadername=""
-    fi
-  fi
-fi
-if test "$NEITHER" = 1
-  then
-     AC_MSG_ERROR([
-
-     You have to specify --with-mysql, --with-pgsql or --with-sqlite to build.
-])
-fi
-])
-
 dnl DBMAIL_CHECK_SQL_LIBS
 dnl
 AC_DEFUN([DBMAIL_CHECK_SQL_LIBS], [dnl
