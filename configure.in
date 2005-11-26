@@ -33,6 +33,7 @@ sieveheaderpaths="/usr/include /usr/local/include"
 
 AC_DEFINE(_GNU_SOURCE,'','Defined GNU SOURCE')
 
+DBMAIL_BOTH_SQL_CHECK
 DBMAIL_CHECK_SQL_LIBS
 DBMAIL_AUTH_CONF
 DBMAIL_CHECK_LDAP_LIBS
