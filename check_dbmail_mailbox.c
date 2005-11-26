@@ -124,6 +124,7 @@ START_TEST(test_dbmail_mailbox_dump)
 	FILE *o = fopen("/dev/null","w");
 	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id());
 	c = dbmail_mailbox_dump(mb,o);
+	fail_unless(c>=0,"dbmail_mailbox_dump failed");
 	dbmail_mailbox_free(mb);
 //	fprintf(stderr,"dumped [%d] messages\n", c);
 }

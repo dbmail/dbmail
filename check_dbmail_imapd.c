@@ -386,7 +386,8 @@ START_TEST(test_imap_get_partspec)
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"HEADER");
 	result = imap_get_logical_part(object,"HEADER");
-	fail_unless(strlen(result)==206,"imap_get_partspec failed");
+	printf("[%s]", result);
+	fail_unless(strlen(result)==169,"imap_get_partspec failed");
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"TEXT");
 	result = imap_get_logical_part(object,"TEXT");

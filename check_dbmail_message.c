@@ -142,6 +142,12 @@ START_TEST(test_dbmail_message_retrieve)
 
 	dbmail_message_free(m);
 	dbmail_message_free(n);
+/*
+	n = dbmail_message_new();
+	n = dbmail_message_retrieve(n,732709,DBMAIL_MESSAGE_FILTER_FULL);
+	printf("%s\n", dbmail_message_to_string(n));
+	dbmail_message_free(n);
+*/
 }
 END_TEST
 //struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *self, const GString *content);
@@ -227,6 +233,18 @@ START_TEST(test_dbmail_message_body_to_string)
         dbmail_message_free(m);
 	g_string_free(s,TRUE);
 	g_free(result);
+
+	s = g_string_new(outlook_multipart);
+	m = dbmail_message_new();
+        m = dbmail_message_init_with_string(m,s);
+	result = dbmail_message_to_string(m);
+	fail_unless(strlen(result)==604, "dbmail_message_body_to_string failed");
+	
+        dbmail_message_free(m);
+	g_string_free(s,TRUE);
+	g_free(result);
+
+	
 }
 END_TEST
 
@@ -348,7 +366,7 @@ Suite *dbmail_message_suite(void)
 	tcase_add_test(tc_message, test_dbmail_message_new_from_stream);
 	tcase_add_test(tc_message, test_dbmail_message_set_class);
 	tcase_add_test(tc_message, test_dbmail_message_get_class);
-//	tcase_add_test(tc_message, test_dbmail_message_retrieve);
+	tcase_add_test(tc_message, test_dbmail_message_retrieve);
 	tcase_add_test(tc_message, test_dbmail_message_init_with_string);
 	tcase_add_test(tc_message, test_dbmail_message_to_string);
 //	tcase_add_test(tc_message, test_dbmail_message_init_with_stream);

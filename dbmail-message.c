@@ -223,6 +223,7 @@ struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *sel
 {
 
 	_set_content(self,content);
+
 	if (! GMIME_IS_MESSAGE(self->content)) {
 		dbmail_message_set_class(self, DBMAIL_MESSAGE_PART);
 		g_object_unref(self->content);
@@ -265,6 +266,7 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 	GMimeStream *fstream, *bstream, *mstream;
 	GMimeFilter *filter;
 	GMimeParser *parser;
+	size_t t;
 	char *buf = g_new0(char, MESSAGE_MAX_LINE_SIZE);
 
 	/*
@@ -279,7 +281,9 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 	filter = g_mime_filter_crlf_new(GMIME_FILTER_CRLF_DECODE,GMIME_FILTER_CRLF_MODE_CRLF_DOTS);
 	g_mime_stream_filter_add((GMimeStreamFilter *) fstream, filter);
 	
-        while (g_mime_stream_buffer_gets(bstream, buf, MESSAGE_MAX_LINE_SIZE)) {
+        while ((t = g_mime_stream_buffer_gets(bstream, buf, MESSAGE_MAX_LINE_SIZE))) {
+		if (t >=5 && strncmp(buf,"From ",5)==0)
+			continue;
                 if ((type==DBMAIL_STREAM_LMTP) && (strncmp(buf,".\r\n",3)==0))
 			break;
 		g_mime_stream_write_string(mstream, buf);
@@ -288,6 +292,7 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 	
 	g_mime_stream_reset(mstream);
 	parser = g_mime_parser_new_with_stream(mstream);
+	g_mime_parser_set_scan_from(parser,FALSE);
 
 	switch (dbmail_message_get_class(self)) {
 		case DBMAIL_MESSAGE:
@@ -441,6 +446,7 @@ static struct DbmailMessage * _retrieve(struct DbmailMessage *self, char *query_
 	
 	int row = 0, rows = 0;
 	GString *message = g_string_new("");
+	char *blk;
 	
 	assert(dbmail_message_get_physid(self));
 	
@@ -459,12 +465,13 @@ static struct DbmailMessage * _retrieve(struct DbmailMessage *self, char *query_
 		return NULL;	/* msg should have 1 block at least */
 	}
 
-	for (row=0; row < rows; row++)
-		message = g_string_append(message, db_get_result(row, 0));
+	for (row=0; row < rows; row++) {
+		blk = (char *)db_get_result(row,0);
+		message = g_string_append(message, blk);
+	}
 
 	db_free_result();
 	
-
 	self = dbmail_message_init_with_string(self,message);
 	
 	g_string_free(message,TRUE);
