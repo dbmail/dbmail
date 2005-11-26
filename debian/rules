@@ -12,6 +12,7 @@ export DEB_BUILD_OPTIONS=debug
 #export WITH_GC="--with-gc"
 export NOSHARED=--enable-shared=no
 #export NOSTATIC=--enable-static=no
+export WITH_SIEVE="--with-sieve"
 
 CFLAGS = -Wall -O1
 LDFLAGS = -lcrypt
@@ -22,7 +23,6 @@ DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
 
 ifneq (,$(findstring debug,$(DEB_BUILD_OPTIONS)))
 	export WITH_CHECK="--with-check"
-#	export WITH_SIEVE="--with-sieve"
 	CFLAGS += -g
 endif
 ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
