@@ -40,6 +40,7 @@ COMMON = dbmail-user.c \
 	dbmd5.c \
 	md5.c \
 	db.c \
+	dbmodule.c \
 	misc.c \
 	mime.c \
 	pidfile.c 

@@ -20,9 +20,9 @@ if SQLITE
 AM_CFLAGS = @SQLITEINC@ -fomit-frame-pointer 
 INCLUDES = -I$(top_srcdir)
 
-pkglib_LTLIBRARIES = libsqldbmail.la
+pkglib_LTLIBRARIES = libdbsqlite.la
 
-libsqldbmail_la_SOURCES = dbsqlite.c
-libsqldbmail_la_LIBADD = @SQLLIB@
+libdbsqlite_la_SOURCES = dbsqlite.c
+libdbsqlite_la_LIBADD = @SQLLIB@
 
 endif

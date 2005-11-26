@@ -1,3 +1,17 @@
+2005-11-25  Aaron Stone  <aaron@serendipity.cx>
+
+	* acinclude.m4: removed the restriction against having both mysql and
+	postgresql libraries built together, as loadable modules allow this.
+	* config.c: handle the trace_syslog and trace_stderr options.
+	* dbmail.conf: new options 'driver', 'trace_syslog', 'trace_stderr'.
+	* dbmailtypes.h: new structure db_func_t for the db driver layer.
+	* dbmodule.c: added function db_load_driver and lots of wrapper calls.
+	* Makefile.am, mysql/Makefile.am, pgsql/Makefile.am,
+	sqlite/Makefile.am: switch back to separate libraries for
+	each database driver.
+	* sqlite/dbsqlite.c: added the sqlite3.h header, though it
+	might break things for sqlite 2.x users; need to check on that.
+
 2005-11-25  Paul J Stevens <paul@nfg.nl>
 
 	* misc.c:

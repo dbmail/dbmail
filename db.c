@@ -1441,7 +1441,8 @@ int db_icheck_isheader(GList  **lost)
 	}
 
 	for (i = 0; i < db_num_rows(); i++) 
-		*(GList **)lost = g_list_append(*(GList **)lost, g_strdup(db_get_result(i, 0)));
+		*(GList **)lost = g_list_append(*(GList **)lost,
+				g_strdup(db_get_result(i, 0)));
 
 	db_free_result();
 
@@ -1461,7 +1462,8 @@ int db_icheck_rfcsize(GList  **lost)
 		return DM_EQUERY;
 	}
 	for (i = 0; i < db_num_rows(); i++) 
-		*(GList **)lost = g_list_append(*(GList **)lost, GUINT_TO_POINTER((unsigned)db_get_result_u64(i, 0)));
+		*(GList **)lost = g_list_append(*(GList **)lost,
+				GUINT_TO_POINTER((unsigned)db_get_result_u64(i, 0)));
 
 	db_free_result();
 
@@ -1579,7 +1581,8 @@ int db_icheck_headercache(GList **lost)
 	}
 	
 	for (i = 0; i < db_num_rows(); i++) 
-		*(GList **)lost = g_list_append(*(GList **)lost, GUINT_TO_POINTER((unsigned)db_get_result_u64(i, 0)));
+		*(GList **)lost = g_list_append(*(GList **)lost,
+				GUINT_TO_POINTER((unsigned)db_get_result_u64(i, 0)));
 
 	db_free_result();
 

@@ -92,21 +92,39 @@ int config_get_value(const field_t field_name,
 
 void SetTraceLevel(const char *service_name)
 {
-	field_t val;
+	field_t trace_level;
+	field_t trace_stderr;
+	field_t trace_syslog;
 
-	if (config_get_value("trace_level", service_name, val) < 0)
+	if (config_get_value("trace_level", service_name, trace_level) < 0)
 		trace(TRACE_FATAL, "%s,%s: error getting config!",
 		      __FILE__, __func__);
-	if (strlen(val) == 0)
-		configure_debug(TRACE_ERROR, 1, 0);
+
+	if (config_get_value("trace_stderr", service_name, trace_stderr) < 0)
+		trace(TRACE_FATAL, "%s,%s: error getting config!",
+		      __FILE__, __func__);
+
+	if (config_get_value("trace_syslog", service_name, trace_syslog) < 0)
+		trace(TRACE_FATAL, "%s,%s: error getting config!",
+		      __FILE__, __func__);
+
+	if (strlen(trace_level) == 0)
+		configure_debug(TRACE_ERROR,
+				atoi(trace_syslog) ? 1 : 0,
+				atoi(trace_stderr) ? 1 : 0);
 	else 
-		configure_debug(atoi(val), 1, 0);
+		configure_debug(atoi(trace_level),
+				atoi(trace_syslog) ? 1 : 0,
+				atoi(trace_stderr) ? 1 : 0);
 }
 
 void GetDBParams(db_param_t * db_params)
 {
 	field_t port_string, sock_string, serverid_string;
 	
+	if (config_get_value("driver", "DBMAIL", db_params->driver) < 0)
+		trace(TRACE_FATAL, "%s,%s: error getting config!",
+		      __FILE__, __func__);
 	if (config_get_value("host", "DBMAIL", db_params->host) < 0)
 		trace(TRACE_FATAL, "%s,%s: error getting config!",
 		      __FILE__, __func__);

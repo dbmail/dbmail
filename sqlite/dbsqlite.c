@@ -32,6 +32,7 @@
 #include "dbmailtypes.h"
 
 #include <sqlite.h>
+#include <sqlite3.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>

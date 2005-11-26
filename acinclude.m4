@@ -45,24 +45,6 @@ if test "$NEITHER" = 1
      You have to specify --with-mysql, --with-pgsql or --with-sqlite to build.
 ])
 fi
-
-# TODO: fix this to check for other sql libs like sqllite:
-if test ! "${mysqlheadername-x}" = "x"
-then
-  if test ! "${pgsqlheadername-x}" = "x"
-    then
-      WARN=1
-      mysqlheadername=""
-  fi
-fi
-if test "$WARN" = 1
-  then
-     AC_MSG_ERROR([
-
-     You cannot specify both --with-mysql and --with-pgsql on the same
-     build...
-])
-fi
 ])
 
 dnl DBMAIL_CHECK_SQL_LIBS
@@ -83,8 +65,8 @@ then
 	AC_MSG_RESULT([$MYSQLINC])	
         AC_MSG_CHECKING([MySQL libraries])
         SQLLIB=`${mysqlconfig} --libs`
-        SQLALIB="mysql/.libs/libsqldbmail.a"
-	SQLLTLIB="mysql/libsqldbmail.la"
+        SQLALIB="mysql/.libs/libdbmysql.a"
+	SQLLTLIB="mysql/libdbmysql.la"
         AC_MSG_RESULT([$SQLLIB])
     fi
 fi   
@@ -103,8 +85,8 @@ if test ! "${pgsqlheadername-x}" = "x"
         AC_MSG_CHECKING([PostgreSQL libraries])
         PGLIBDIR=`${pgsqlconfig} --libdir`
         SQLLIB="-L$PGLIBDIR -lpq"
-        SQLALIB="pgsql/.libs/libsqldbmail.a"
-	SQLLTLIB="pgsql/libsqldbmail.la"
+        SQLALIB="pgsql/.libs/libdbpgsql.a"
+	SQLLTLIB="pgsql/libdbpgsql.la"
         AC_MSG_RESULT([$SQLLIB])
     fi
 fi
@@ -117,12 +99,30 @@ if test ! "${sqliteheadername-x}" = "x"
         AC_MSG_ERROR([pkg-config executable not found. Make sure pkg-config is in your path])
     else
 	AC_MSG_CHECKING([SQLite headers])
-	SQLITEINC=`${sqliteconfig} --cflags sqlite`
+	SQLITEINC=`${sqliteconfig} --cflags sqlite --errors-to-stdout`
+	if test $? != 0
+	then
+		SQLITEINC=`${sqliteconfig} --cflags sqlite3 --errors-to-stdout`
+	fi
+	dnl Neither sqlite nor sqlite3 were found. Print the error from pkg-config.
+	if test $? != 0
+	then
+        	AC_MSG_ERROR([$SQLITEINC])
+	fi
 	AC_MSG_RESULT([$SQLITEINC])
         AC_MSG_CHECKING([SQLite libraries])
-        SQLLIB=`${sqliteconfig} --libs sqlite`
-        SQLALIB="sqlite/.libs/libsqldbmail.a"
-	SQLLTLIB="sqlite/libsqldbmail.la"
+        SQLLIB=`${sqliteconfig} --libs sqlite --errors-to-stdout`
+	if test $? != 0
+	then
+        	SQLLIB=`${sqliteconfig} --libs sqlite3 --errors-to-stdout`
+	fi
+	dnl Neither sqlite nor sqlite3 were found. Print the error from pkg-config.
+	if test $? != 0
+	then
+        	AC_MSG_ERROR([$SQLITEINC])
+	fi
+        SQLALIB="sqlite/.libs/libdbsqlite.a"
+	SQLLTLIB="sqlite/libdbsqlite.la"
         AC_MSG_RESULT([$SQLLIB])
     fi
 fi
