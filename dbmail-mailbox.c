@@ -174,7 +174,7 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 	int count=0;
 	gboolean h;
 	GMimeStream *ostream;
-	GList *ids, *slice;
+	GList *ids, *cids = NULL, *slice;
 	struct DbmailMessage *message = NULL;
 	GString *q, *t;
 
@@ -188,8 +188,17 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 	ostream = g_mime_stream_file_new(file);
 	
 	ids = g_tree_keys(self->ids);
-	slice = g_list_slices(ids,100);
+	while (ids) {
+		cids = g_list_append(cids,g_strdup_printf("%llu", *(u64_t *)ids->data));
+		if (! g_list_next(ids))
+			break;
+		ids = g_list_next(ids);
+	}
+	
+	slice = g_list_slices(cids,100);
 	slice = g_list_first(slice);
+
+	g_list_free(cids);
 	g_list_free(ids);
 
 	while (slice) {
