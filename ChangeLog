@@ -1,3 +1,19 @@
+2005-11-26  Paul J Stevens <paul@nfg.nl>
+
+	* db.c:
+	moved db_find_create_user to db_createmailbox
+	* ChangeLog, check_dbmail_deliver.c, check_dbmail_mailbox.c, 
+	  dbmail-mailbox.c, misc.c:
+	minor cleanups
+	* debian/rules:
+	start building debian packages --with-sieve
+	* dbmail-mailbox.c:
+	fix problem in export
+	* check_dbmail.h, check_dbmail_imapd.c, check_dbmail_mailbox.c, 
+	  check_dbmail_message.c, dbmail-message.c:
+	skip From_ lines in messages during message parsing to bypass some corner
+	case problem in gmime
+
 2005-11-25  Paul J Stevens <paul@nfg.nl>
 
 	* misc.c:
