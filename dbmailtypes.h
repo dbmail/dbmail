@@ -1,5 +1,5 @@
 /*
- $Id: dbmailtypes.h 1912 2005-11-19 02:29:41Z aaron $
+ $Id: dbmailtypes.h 1923 2005-11-27 02:37:46Z aaron $
 
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 
@@ -87,6 +87,8 @@ typedef char timestring_t[TIMESTRING_SIZE];
 
 /** parameters for the database connection */
 typedef struct {
+	field_t driver;         /**< database driver: mysql, pgsql, sqlite */
+	field_t authdriver;     /**< authentication driver: sql, ldap */
 	field_t host;		/**< hostname or ip address of database server */
 	field_t user;		/**< username to connect with */
 	field_t pass;		/**< password of user */
@@ -94,8 +96,7 @@ typedef struct {
 	unsigned int port;	/**< port number of database server */
 	field_t sock;		/**< path to local unix socket (local connection) */
 	field_t pfx;		/**< prefix for tables e.g. dbmail_ */
-	unsigned int serverid;	/* unique id for dbmail instance used in clusters */
-			
+	unsigned int serverid;	/**< unique id for dbmail instance used in clusters */
 } db_param_t;
 
 /** configuration items */
@@ -410,6 +411,5 @@ typedef enum {
 	BOX_SORTING,     /* Autocreate. */
 	BOX_DEFAULT      /* Autocreate. */
 } mailbox_source_t;
-
 
 #endif

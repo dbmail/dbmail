@@ -1,4 +1,4 @@
-# $Id: configure.in 1720 2005-03-30 13:37:30Z paul $
+# $Id: configure.in 1925 2005-11-27 15:38:44Z paul $
 # Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 #
 # This program is free software; you can redistribute it and/or 
@@ -60,9 +60,17 @@ AC_C_BIGENDIAN
 AC_CHECK_HEADERS(endian.h)
 AC_CHECK_HEADERS(crypt.h)
 
-AC_SUBST(SQLLIB)
-AC_SUBST(SQLALIB)
-AC_SUBST(SQLLTLIB)
+AC_SUBST(MYSQLLIB)
+AC_SUBST(MYSQLALIB)
+AC_SUBST(MYSQLLTLIB)
+
+AC_SUBST(PGSQLLIB)
+AC_SUBST(PGSQLALIB)
+AC_SUBST(PGSQLLTLIB)
+
+AC_SUBST(SQLITELIB)
+AC_SUBST(SQLITELALIB)
+AC_SUBST(SQLITELTLIB)
 
 AC_SUBST(SORTLIB)
 AC_SUBST(SORTALIB)
@@ -86,6 +94,6 @@ AC_SUBST(LDAPINC)
 # libtool patch
 AC_PROG_LIBTOOL
 
-AC_OUTPUT(Makefile mysql/Makefile pgsql/Makefile sqlite/Makefile auth/Makefile sort/Makefile man/Makefile 
+AC_OUTPUT(Makefile modules/Makefile sort/Makefile man/Makefile 
 	lib/Makefile lib/iniparser-2.14/Makefile lib/iniparser-2.14/src/Makefile)
 

@@ -15,7 +15,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-SUBDIRS = mysql pgsql sqlite auth sort man lib
+SUBDIRS = modules sort man lib
 
 if SIEVE
 SIEVEPROGS = dbmail-sievecmd dbmail-timsieved
@@ -40,6 +40,8 @@ COMMON = dbmail-user.c \
 	dbmd5.c \
 	md5.c \
 	db.c \
+	dbmodule.c \
+	authmodule.c \
 	misc.c \
 	mime.c \
 	pidfile.c 
@@ -57,6 +59,8 @@ DELIVER = pipe.c \
 #AM_CFLAGS = -fomit-frame-pointer
 
 INCLUDES = -I$(top_srcdir)
+
+LDFLAGS = -Wl,--export-dynamic
 
 dbmail_smtp_SOURCES = main.c
 dbmail_smtp_LDADD = libdbmail.la
@@ -91,7 +95,7 @@ endif
 
 noinst_LTLIBRARIES = libdbmail.la
 libdbmail_la_SOURCES = $(COMMON) $(SERVER) $(DELIVER)
-libdbmail_la_LIBADD = @SQLLTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @INIPARSERLTLIB@
+libdbmail_la_LIBADD = @MYSQLLTLIB@ @PGSQLLTLIB@ @SQLITELTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @INIPARSERLTLIB@
 
 if WITHCHECK
 

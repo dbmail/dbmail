@@ -18,7 +18,7 @@
 */
 
 /*
- * $Id: db.h 1912 2005-11-19 02:29:41Z aaron $
+ * $Id: db.h 1920 2005-11-26 08:32:15Z aaron $
  *
  * dbase driver header file
  * Functions for database communication 
@@ -55,6 +55,19 @@
 /* 
  * PROTOTYPES 
  */
+
+/**
+ * \brief load the database driver module
+ * \return
+ *   - 1 on modules unsupported
+ *   - 0 on success
+ *   - -1 on failure to load module
+ *   - -2 on missing symbols
+ *   - -3 on memory error
+ * \file dbmodule.c FIXME: Is \file the right doc convention?
+ * \side-effects: calls TRACE_FATAL for errors, so no real return values anyways.
+ */
+int db_load_driver(void);
 
 /* Implemented differently for MySQL and PostgreSQL: */
 /**

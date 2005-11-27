@@ -45,24 +45,6 @@ if test "$NEITHER" = 1
      You have to specify --with-mysql, --with-pgsql or --with-sqlite to build.
 ])
 fi
-
-# TODO: fix this to check for other sql libs like sqllite:
-if test ! "${mysqlheadername-x}" = "x"
-then
-  if test ! "${pgsqlheadername-x}" = "x"
-    then
-      WARN=1
-      mysqlheadername=""
-  fi
-fi
-if test "$WARN" = 1
-  then
-     AC_MSG_ERROR([
-
-     You cannot specify both --with-mysql and --with-pgsql on the same
-     build...
-])
-fi
 ])
 
 dnl DBMAIL_CHECK_SQL_LIBS
@@ -82,10 +64,10 @@ then
 	MYSQLINC=`${mysqlconfig} --cflags`
 	AC_MSG_RESULT([$MYSQLINC])	
         AC_MSG_CHECKING([MySQL libraries])
-        SQLLIB=`${mysqlconfig} --libs`
-        SQLALIB="mysql/.libs/libsqldbmail.a"
-	SQLLTLIB="mysql/libsqldbmail.la"
-        AC_MSG_RESULT([$SQLLIB])
+        MYSQLLIB=`${mysqlconfig} --libs`
+        MYSQLALIB="modules/.libs/libdbmysql.a"
+	MYSQLLTLIB="modules/libdbmysql.la"
+        AC_MSG_RESULT([$MYSQLLIB])
     fi
 fi   
 
@@ -102,10 +84,10 @@ if test ! "${pgsqlheadername-x}" = "x"
 	AC_MSG_RESULT([$PGSQLINC])
         AC_MSG_CHECKING([PostgreSQL libraries])
         PGLIBDIR=`${pgsqlconfig} --libdir`
-        SQLLIB="-L$PGLIBDIR -lpq"
-        SQLALIB="pgsql/.libs/libsqldbmail.a"
-	SQLLTLIB="pgsql/libsqldbmail.la"
-        AC_MSG_RESULT([$SQLLIB])
+        PGSQLLIB="-L$PGLIBDIR -lpq"
+        PGSQLALIB="modules/.libs/libdbpgsql.a"
+	PGSQLLTLIB="modules/libdbpgsql.la"
+        AC_MSG_RESULT([$PGSQLLIB])
     fi
 fi
 
@@ -117,13 +99,31 @@ if test ! "${sqliteheadername-x}" = "x"
         AC_MSG_ERROR([pkg-config executable not found. Make sure pkg-config is in your path])
     else
 	AC_MSG_CHECKING([SQLite headers])
-	SQLITEINC=`${sqliteconfig} --cflags sqlite`
+	SQLITEINC=`${sqliteconfig} --cflags sqlite --errors-to-stdout`
+	if test $? != 0
+	then
+		SQLITEINC=`${sqliteconfig} --cflags sqlite3 --errors-to-stdout`
+	fi
+	dnl Neither sqlite nor sqlite3 were found. Print the error from pkg-config.
+	if test $? != 0
+	then
+        	AC_MSG_ERROR([$SQLITEINC])
+	fi
 	AC_MSG_RESULT([$SQLITEINC])
         AC_MSG_CHECKING([SQLite libraries])
-        SQLLIB=`${sqliteconfig} --libs sqlite`
-        SQLALIB="sqlite/.libs/libsqldbmail.a"
-	SQLLTLIB="sqlite/libsqldbmail.la"
-        AC_MSG_RESULT([$SQLLIB])
+        SQLITELIB=`${sqliteconfig} --libs sqlite --errors-to-stdout`
+	if test $? != 0
+	then
+        	SQLITELIB=`${sqliteconfig} --libs sqlite3 --errors-to-stdout`
+	fi
+	dnl Neither sqlite nor sqlite3 were found. Print the error from pkg-config.
+	if test $? != 0
+	then
+        	AC_MSG_ERROR([$SQLITEINC])
+	fi
+        SQLITEALIB="modules/.libs/libdbsqlite.a"
+	SQLITELTLIB="modules/libdbsqlite.la"
+        AC_MSG_RESULT([$SQLITELIB])
     fi
 fi
 ])
@@ -210,8 +210,8 @@ AC_MSG_RESULT([checking for authentication configuration])
 AC_ARG_WITH(auth-ldap,[  --with-auth-ldap=PATH	  full path to ldap header directory],
 	authldapheadername="$withval")
 dnl This always needs to be defined
-AUTHALIB="auth/.libs/libauthdbmail.a"
-AUTHLTLIB="auth/libauthdbmail.la"
+AUTHALIB="modules/.libs/libauthldap.a"
+AUTHLTLIB="modules/libauthldap.la"
 
 WARN=0
 if test ! "${authldapheadername-x}" = "x"

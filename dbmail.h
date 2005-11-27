@@ -1,5 +1,5 @@
 /*
- $Id: dbmail.h 1916 2005-11-24 12:33:01Z paul $
+ $Id: dbmail.h 1925 2005-11-27 15:38:44Z paul $
 
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 
@@ -68,6 +68,10 @@
 #include <time.h>
 #include <termios.h>
 #include <unistd.h>
+
+#ifdef AUTHLDAP
+#include <ldap.h>
+#endif
 
 #include "dbmailtypes.h"
 #include "debug.h"
