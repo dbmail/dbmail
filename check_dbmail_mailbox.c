@@ -259,9 +259,9 @@ START_TEST(test_dbmail_mailbox_orderedsubject)
 	dbmail_mailbox_search(mb);
 	
 	res = dbmail_mailbox_orderedsubject(mb, TRUE);
-	printf("threads [%s]\n", res);
+	//printf("threads [%s]\n", res);
 	res = dbmail_mailbox_orderedsubject(mb, FALSE);
-	printf("threads [%s]\n", res);
+	//printf("threads [%s]\n", res);
 	
 	g_free(res);
 	dbmail_mailbox_free(mb);

@@ -54,16 +54,18 @@ typedef enum DBMAIL_MESSAGE_FILTER_TYPES {
 	DBMAIL_MESSAGE_FILTER_BODY
 } message_filter_t;
 
-enum DBMAIL_STREAM_TYPE {
+typedef enum DBMAIL_STREAM_TYPE {
 	DBMAIL_STREAM_PIPE = 1,
-	DBMAIL_STREAM_LMTP
-};
+	DBMAIL_STREAM_LMTP,
+	DBMAIL_STREAM_RAW
+} dbmail_stream_t;
 
 struct DbmailMessage {
 	u64_t id;
 	u64_t physid;
 	GString *internal_date;
 	enum DBMAIL_MESSAGE_CLASS klass;
+	GByteArray *raw;
 	GMimeObject *content;
 	GRelation *headers;
 	GHashTable *header_dict;
@@ -75,7 +77,7 @@ struct DbmailMessage {
 
 struct DbmailMessage * dbmail_message_new(void);
 struct DbmailMessage * dbmail_message_new_from_stream(FILE *instream, int streamtype);
-struct DbmailMessage * dbmail_message_init_with_stream(struct DbmailMessage *self, GMimeStream *stream, int type);
+struct DbmailMessage * dbmail_message_init_with_stream(struct DbmailMessage *self, GMimeStream *stream, dbmail_stream_t type);
 struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *self, const GString *content);
 
 /*
