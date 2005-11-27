@@ -157,6 +157,7 @@ int main(int argc, char *argv[])
 
 			dsnuser_init(&dsnuser);
 			dsnuser.address = dm_strdup(optarg);
+			dsnuser.source = BOX_COMMANDLINE;
 
 			/* Add argument onto the users list. */
 			if (dm_list_nodeadd
@@ -177,6 +178,7 @@ int main(int argc, char *argv[])
 
 			dsnuser_init(&dsnuser);
 			dsnuser.address = dm_strdup(optarg);
+			dsnuser.source = BOX_COMMANDLINE;
 
 			/* Add argument onto the users list. */
 			if (dm_list_nodeadd

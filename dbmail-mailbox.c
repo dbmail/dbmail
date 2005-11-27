@@ -203,9 +203,8 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 
 	while (slice) {
 		g_string_printf(q,"SELECT is_header,messageblk FROM %smessageblks b "
-				"JOIN %sphysmessage p ON b.physmessage_id=p.id "
-				"JOIN %smessages m ON m.physmessage_id=p.id "
-				"WHERE m.message_idnr IN (%s)", DBPFX, DBPFX, DBPFX,
+				"JOIN %smessages m USING (physmessage_id) "
+				"WHERE message_idnr IN (%s)", DBPFX, DBPFX,
 				(char *)slice->data);
 		
 		if (db_query(q->str) == -1)
