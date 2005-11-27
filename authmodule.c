@@ -30,6 +30,7 @@ int auth_load_driver(void)
 {
 	GModule *module;
 	char *lib = NULL;
+	char *driver = NULL;
 
 	if (!g_module_supported())
 		return 1;
@@ -42,15 +43,17 @@ int auth_load_driver(void)
 	memset(auth, 0, sizeof(auth_func_t));
 
 	if (strcasecmp(_db_params.authdriver, "SQL") == 0)
-		lib = "authsql";
+		driver = "authsql";
 	else if (strcasecmp(_db_params.authdriver, "LDAP") == 0)
-		lib = "authldap";
+		driver = "authldap";
 	else
 		trace(TRACE_FATAL, "auth_init: unsupported driver: %s,"
 				" please choose from SQL or LDAP",
 				_db_params.authdriver);
 
-	lib = g_module_build_path("auth/.libs", lib);
+	if (! (lib = g_module_build_path("modules/.libs", driver)))
+		lib = g_module_build_path("/usr/lib/dbmail", driver);
+			
 	module = g_module_open(lib, 0); // non-lazy bind.
 	if (!module) {
 		trace(TRACE_FATAL, "auth_init: cannot load %s: %s", lib, g_module_error());

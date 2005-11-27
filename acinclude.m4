@@ -64,10 +64,10 @@ then
 	MYSQLINC=`${mysqlconfig} --cflags`
 	AC_MSG_RESULT([$MYSQLINC])	
         AC_MSG_CHECKING([MySQL libraries])
-        SQLLIB=`${mysqlconfig} --libs`
-        SQLALIB="mysql/.libs/libdbmysql.a"
-	SQLLTLIB="mysql/libdbmysql.la"
-        AC_MSG_RESULT([$SQLLIB])
+        MYSQLLIB=`${mysqlconfig} --libs`
+        MYSQLALIB="modules/.libs/libdbmysql.a"
+	MYSQLLTLIB="modules/libdbmysql.la"
+        AC_MSG_RESULT([$MYSQLLIB])
     fi
 fi   
 
@@ -84,10 +84,10 @@ if test ! "${pgsqlheadername-x}" = "x"
 	AC_MSG_RESULT([$PGSQLINC])
         AC_MSG_CHECKING([PostgreSQL libraries])
         PGLIBDIR=`${pgsqlconfig} --libdir`
-        SQLLIB="-L$PGLIBDIR -lpq"
-        SQLALIB="pgsql/.libs/libdbpgsql.a"
-	SQLLTLIB="pgsql/libdbpgsql.la"
-        AC_MSG_RESULT([$SQLLIB])
+        PGSQLLIB="-L$PGLIBDIR -lpq"
+        PGSQLALIB="modules/.libs/libdbpgsql.a"
+	PGSQLLTLIB="modules/libdbpgsql.la"
+        AC_MSG_RESULT([$PGSQLLIB])
     fi
 fi
 
@@ -111,19 +111,19 @@ if test ! "${sqliteheadername-x}" = "x"
 	fi
 	AC_MSG_RESULT([$SQLITEINC])
         AC_MSG_CHECKING([SQLite libraries])
-        SQLLIB=`${sqliteconfig} --libs sqlite --errors-to-stdout`
+        SQLITELIB=`${sqliteconfig} --libs sqlite --errors-to-stdout`
 	if test $? != 0
 	then
-        	SQLLIB=`${sqliteconfig} --libs sqlite3 --errors-to-stdout`
+        	SQLITELIB=`${sqliteconfig} --libs sqlite3 --errors-to-stdout`
 	fi
 	dnl Neither sqlite nor sqlite3 were found. Print the error from pkg-config.
 	if test $? != 0
 	then
         	AC_MSG_ERROR([$SQLITEINC])
 	fi
-        SQLALIB="sqlite/.libs/libdbsqlite.a"
-	SQLLTLIB="sqlite/libdbsqlite.la"
-        AC_MSG_RESULT([$SQLLIB])
+        SQLITEALIB="modules/.libs/libdbsqlite.a"
+	SQLITELTLIB="modules/libdbsqlite.la"
+        AC_MSG_RESULT([$SQLITELIB])
     fi
 fi
 ])
@@ -210,8 +210,8 @@ AC_MSG_RESULT([checking for authentication configuration])
 AC_ARG_WITH(auth-ldap,[  --with-auth-ldap=PATH	  full path to ldap header directory],
 	authldapheadername="$withval")
 dnl This always needs to be defined
-AUTHALIB="auth/.libs/libauthldap.a"
-AUTHLTLIB="auth/libauthldap.la"
+AUTHALIB="modules/.libs/libauthldap.a"
+AUTHLTLIB="modules/libauthldap.la"
 
 WARN=0
 if test ! "${authldapheadername-x}" = "x"

@@ -1,4 +1,4 @@
-# $Id$
+# $Id: Makefile.am 1920 2005-11-26 08:32:15Z aaron $
 # Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 #
 # This program is free software; you can redistribute it and/or 
@@ -15,13 +15,38 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-if PGSQL
 
-AM_CFLAGS = @PGSQLINC@ -fomit-frame-pointer
 INCLUDES = -I$(top_srcdir)
+AM_CFLAGS = @MYSQLINC@ @PGSQLINC@ @SQLITEINC@ -fomit-frame-pointer
 
-pkglib_LTLIBRARIES = libdbpgsql.la
+LDFLAGS = -Wl,--export-dynamic
 
-libdbpgsql_la_SOURCES = dbpgsql.c
-libdbpgsql_la_LIBADD = @SQLLIB@
+pkglib_LTLIBRARIES = libdbmysql.la \
+	libdbpgsql.la \
+	libdbsqlite.la \
+	libauthsql.la \
+	libauthldap.la
+
+if MYSQL
+libdbmysql_la_SOURCES = dbmysql.c
 endif
+
+if PGSQL
+libdbpgsql_la_SOURCES = dbpgsql.c
+endif
+
+if SQLITE
+libdbsqlite_la_SOURCES = dbsqlite.c
+endif
+
+if LDAP
+libauthldap_la_SOURCES = authldap.c
+endif
+
+libauthsql_la_SOURCES = authsql.c
+
+libdbmysql_la_LIBADD = @MYSQLLIB@
+libdbpgsql_la_LIBADD = @PGSQLLIB@
+libdbsqlite_la_LIBADD = @SQLITELIB@
+libauthsql_la_LIBADD = -lcrypt @MYSQLLIB@ @PGSQLLIB@ @SQLITELIB@
+libauthldap_la_LIBADD = -lcrypt @LDAPLIB@ @MYSQLLIB@ @PGSQLLIB@ @SQLITELIB@

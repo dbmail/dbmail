@@ -10,8 +10,9 @@ export DH_COMPAT=3
 export DEB_BUILD_OPTIONS=debug
 
 #export WITH_GC="--with-gc"
-export NOSHARED=--enable-shared=no
-#export NOSTATIC=--enable-static=no
+#export NOSHARED=--enable-shared=no
+export NOSTATIC=--enable-static=no
+export WITH_SIEVE=--with-sieve
 
 CFLAGS = -Wall -O1
 LDFLAGS = -lcrypt
@@ -21,8 +22,7 @@ DEB_HOST_GNU_TYPE   ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
 DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
 
 ifneq (,$(findstring debug,$(DEB_BUILD_OPTIONS)))
-	export WITH_CHECK="--with-check"
-#	export WITH_SIEVE="--with-sieve"
+#	export WITH_CHECK=--with-check
 	CFLAGS += -g
 endif
 ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
@@ -55,6 +55,15 @@ stamps:
 configure: stamps/configure
 stamps/configure: 
 	autoreconf -f -i
+	touch $@
+
+dbmail2: stamps/dbmail2
+stamps/dbmail2:
+	$(MAKE) clean || true
+	env CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)"  PATH="$(PATH):/usr/lib/postgresql/bin/" \
+		./configure $(CONFFLAGS) --with-sqlite --with-mysql=/usr/include/mysql --with-pgsql=/usr/include/postgresql --with-auth-ldap
+	$(MAKE)
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/dbmail2
 	touch $@
 
 

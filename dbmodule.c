@@ -28,6 +28,7 @@ int db_load_driver(void)
 {
 	GModule *module;
 	char *lib = NULL;
+	char *driver = NULL;
 
 	if (!g_module_supported())
 		return 1;
@@ -40,19 +41,21 @@ int db_load_driver(void)
 	memset(db, 0, sizeof(db_func_t));
 
 	if (strcasecmp(_db_params.driver, "PGSQL") == 0)
-		lib = "dbpgsql";
+		driver = "dbpgsql";
 	else if (strcasecmp(_db_params.driver, "POSTGRESQL") == 0)
-		lib = "dbpgsql";
+		driver = "dbpgsql";
 	else if (strcasecmp(_db_params.driver, "MYSQL") == 0)
-		lib = "dbmysql";
+		driver = "dbmysql";
 	else if (strcasecmp(_db_params.driver, "SQLITE") == 0)
-		lib = "dbsqlite";
+		driver = "dbsqlite";
 	else
 		trace(TRACE_FATAL, "db_init: unsupported driver: %s,"
 				" please choose from MySQL, PGSQL, SQLite",
 				_db_params.driver);
 
-	lib = g_module_build_path("pgsql/.libs", lib);
+	if (! (lib = g_module_build_path("modules/.libs", driver)))
+		lib = g_module_build_path("/usr/lib/dbmail", driver);
+
 	module = g_module_open(lib, 0); // non-lazy bind.
 	if (!module) {
 		trace(TRACE_FATAL, "db_init: cannot load %s: %s", lib, g_module_error());

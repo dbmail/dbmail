@@ -69,6 +69,10 @@
 #include <termios.h>
 #include <unistd.h>
 
+#ifdef AUTHLDAP
+#include <ldap.h>
+#endif
+
 #include "dbmailtypes.h"
 #include "debug.h"
 #include "dsn.h"
