@@ -88,6 +88,7 @@ typedef char timestring_t[TIMESTRING_SIZE];
 /** parameters for the database connection */
 typedef struct {
 	field_t driver;         /**< database driver: mysql, pgsql, sqlite */
+	field_t authdriver;     /**< authentication driver: sql, ldap */
 	field_t host;		/**< hostname or ip address of database server */
 	field_t user;		/**< username to connect with */
 	field_t pass;		/**< password of user */
@@ -410,29 +411,5 @@ typedef enum {
 	BOX_SORTING,     /* Autocreate. */
 	BOX_DEFAULT      /* Autocreate. */
 } mailbox_source_t;
-
-/* Prototypes must match with those in db.h
- * and in the database drivers. */
-typedef struct {
-	int (* connect)(void);
-	int (* disconnect)(void);
-	int (* check_connection)(void);
-	int (* query)(const char *the_query);
-	u64_t (* insert_result)(const char *sequence_identifier);
-	unsigned (* num_rows)(void);
-	unsigned (* num_fields)(void);
-	const char * (* get_result)(unsigned row, unsigned field);
-	void (* free_result)(void);
-	unsigned long (* escape_string)(char *to,
-	                    const char *from, unsigned long length );
-	unsigned long (* escape_binary)(char *to,
-	       	       const char *from, unsigned long length );
-	int (* do_cleanup)(const char **tables, int num_tables);
-	u64_t (* get_length)(unsigned row, unsigned field);
-	u64_t (* get_affected_rows)(void);
-	void (* use_msgbuf_result)(void);
-	void (* store_msgbuf_result)(void);
-	void (* set_result_set)(void *res);
-} db_func_t;
 
 #endif

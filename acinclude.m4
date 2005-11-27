@@ -210,8 +210,8 @@ AC_MSG_RESULT([checking for authentication configuration])
 AC_ARG_WITH(auth-ldap,[  --with-auth-ldap=PATH	  full path to ldap header directory],
 	authldapheadername="$withval")
 dnl This always needs to be defined
-AUTHALIB="auth/.libs/libauthdbmail.a"
-AUTHLTLIB="auth/libauthdbmail.la"
+AUTHALIB="auth/.libs/libauthldap.a"
+AUTHLTLIB="auth/libauthldap.la"
 
 WARN=0
 if test ! "${authldapheadername-x}" = "x"

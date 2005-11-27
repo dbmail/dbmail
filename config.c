@@ -125,6 +125,9 @@ void GetDBParams(db_param_t * db_params)
 	if (config_get_value("driver", "DBMAIL", db_params->driver) < 0)
 		trace(TRACE_FATAL, "%s,%s: error getting config!",
 		      __FILE__, __func__);
+	if (config_get_value("authdriver", "DBMAIL", db_params->authdriver) < 0)
+		trace(TRACE_FATAL, "%s,%s: error getting config!",
+		      __FILE__, __func__);
 	if (config_get_value("host", "DBMAIL", db_params->host) < 0)
 		trace(TRACE_FATAL, "%s,%s: error getting config!",
 		      __FILE__, __func__);

@@ -41,6 +41,7 @@ COMMON = dbmail-user.c \
 	md5.c \
 	db.c \
 	dbmodule.c \
+	authmodule.c \
 	misc.c \
 	mime.c \
 	pidfile.c 
@@ -58,6 +59,8 @@ DELIVER = pipe.c \
 #AM_CFLAGS = -fomit-frame-pointer
 
 INCLUDES = -I$(top_srcdir)
+
+LDFLAGS = -Wl,--export-dynamic
 
 dbmail_smtp_SOURCES = main.c
 dbmail_smtp_LDADD = libdbmail.la

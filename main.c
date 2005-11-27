@@ -332,6 +332,7 @@ int main(int argc, char *argv[])
 		for (tmp = dm_list_getstart(&dsnusers); tmp != NULL;
 		     tmp = tmp->nextnode) {
 			((deliver_to_user_t *)tmp->data)->mailbox = dm_strdup(deliver_to_mailbox);
+			((deliver_to_user_t *)tmp->data)->source = BOX_COMMANDLINE;
 		}
 	}
 

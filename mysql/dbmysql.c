@@ -51,12 +51,10 @@ static MYSQL_ROW last_row; /**< MySQL result row */
 static int res_changed = 1; /* result set changed */
 static unsigned last_row_number = 0; /* the number of the row in last_row */
 
-/** database parameters */
+/* database parameters */
 db_param_t _db_params;
 
-
 /* static functions, only used locally */
-
 
 int db_connect()
 {

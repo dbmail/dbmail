@@ -1,4 +1,3 @@
-
 /* Dynamic loading of the database backend.
  * We use GLib's multiplatform dl() wrapper
  * to open up libdbmysql or libdbpgsql and
@@ -10,9 +9,9 @@
 #include <gmodule.h>
 
 #include "config.h"
-#include "dbmailtypes.h"
 #include "debug.h"
 #include "db.h"
+#include "dbmodule.h"
 
 db_func_t *db;
 
@@ -54,9 +53,9 @@ int db_load_driver(void)
 				_db_params.driver);
 
 	lib = g_module_build_path("pgsql/.libs", lib);
-	module = g_module_open(lib, G_MODULE_BIND_LAZY);
+	module = g_module_open(lib, 0); // non-lazy bind.
 	if (!module) {
-		trace(TRACE_FATAL, "db_init: cannot load %s", lib);
+		trace(TRACE_FATAL, "db_init: cannot load %s: %s", lib, g_module_error());
 		return -1;
 	}
 

@@ -19,11 +19,11 @@
 AM_CFLAGS = -fomit-frame-pointer
 INCLUDES = -I$(top_srcdir)
 
-noinst_LTLIBRARIES = libauthdbmail.la
+pkglib_LTLIBRARIES = libauthldap.la libauthsql.la
 if LDAP
-libauthdbmail_la_SOURCES = authldap.c
-else
-libauthdbmail_la_SOURCES = authsql.c
+libauthldap_la_SOURCES = authldap.c
 endif
+libauthsql_la_SOURCES = authsql.c
 
-libauthdbmail_la_LIBADD = -lcrypt @LDAPLIB@ @SQLLIB@
+libauthldap_la_LIBADD = -lcrypt @LDAPLIB@ @SQLLIB@
+libauthsql_la_LIBADD = -lcrypt @LDAPLIB@ @SQLLIB@
