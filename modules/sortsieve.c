@@ -1,4 +1,4 @@
-/* $Id$
+/* $Id: sortsieve.c 1912 2005-11-19 02:29:41Z aaron $
 
  Copyright (C) 1999-2004 Aaron Stone aaron at serendipity dot cx
 
