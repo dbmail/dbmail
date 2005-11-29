@@ -15,8 +15,13 @@
 
 2005-11-27  Paul J Stevens <paul@nfg.nl>
 
-	* modules/, pgsql/, mysql/, sqlite/, auth/, Makefile.am, configure.in,
-	dbmodule.c, authmodule.c: consolidating modular setup in modules/.
+	* check_dbmail_imapd.c, check_dbmail_mailbox.c, check_dbmail_message.c, 
+	  dbmail-mailbox.c, dbmail-message.c, dbmail-message.h, main.c:
+	crlf encode messages retrieved before passing them to the parser to
+	improve reliability
+	* modules/, pgsql/, mysql/, sqlite/, auth/, Makefile.am, 
+	  configure.in, dbmodule.c, authmodule.c: 
+	consolidating modular setup in modules/.
 
 2005-11-26  Paul J Stevens <paul@nfg.nl>
 
