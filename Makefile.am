@@ -93,7 +93,7 @@ dbmail_timsieved_SOURCES = timsieve.c timsieved.c
 dbmail_timsieved_LDADD = libdbmail.la
 endif
 
-noinst_LTLIBRARIES = libdbmail.la
+lib_LTLIBRARIES = libdbmail.la
 libdbmail_la_SOURCES = $(COMMON) $(SERVER) $(DELIVER)
 libdbmail_la_LIBADD = @MYSQLLTLIB@ @PGSQLLTLIB@ @SQLITELTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @INIPARSERLTLIB@
 
@@ -111,35 +111,36 @@ TESTS=check_dbmail_common \
 noinst_PROGRAMS=$(TESTS)
 
 check_dbmail_user_SOURCES=check_dbmail_user.c
-check_dbmail_user_LDADD=@CHECK_LIBS@ libdbmail.la
+check_dbmail_user_LDADD=libdbmail.la @CHECK_LIBS@
 check_dbmail_user_INCLUDES=@CHECK_CFLAGS@
 
 check_dbmail_util_SOURCES=check_dbmail_util.c
-check_dbmail_util_LDADD=@CHECK_LIBS@ libdbmail.la
+check_dbmail_util_LDADD=libdbmail.la @CHECK_LIBS@
 check_dbmail_util_INCLUDES=@CHECK_CFLAGS@
 
 check_dbmail_common_SOURCES=check_dbmail_common.c
-check_dbmail_common_LDADD=@CHECK_LIBS@ libdbmail.la
+check_dbmail_common_LDADD=libdbmail.la @CHECK_LIBS@
 check_dbmail_common_INCLUDES=@CHECK_CFLAGS@
 
 check_dbmail_server_SOURCES=check_dbmail_server.c
-check_dbmail_server_LDADD=@CHECK_LIBS@ libdbmail.la
+check_dbmail_server_LDADD=libdbmail.la @CHECK_LIBS@
 check_dbmail_server_INCLUDES=@CHECK_CFLAGS@
 
 check_dbmail_deliver_SOURCES=check_dbmail_deliver.c
-check_dbmail_deliver_LDADD=@CHECK_LIBS@ libdbmail.la
+check_dbmail_deliver_LDADD=libdbmail.la @CHECK_LIBS@
 check_dbmail_deliver_INCLUDES=@CHECK_CFLAGS@
 
-check_dbmail_message_SOURCES=check_dbmail_message.c
-check_dbmail_message_LDADD=@CHECK_LIBS@ libdbmail.la
+check_dbmail_message_SOURCES=$(COMMON) $(SERVER) $(DELIVER) check_dbmail_message.c
+check_dbmail_message_LDADD=libdbmail.la @CHECK_LIBS@
 check_dbmail_message_INCLUDES=@CHECK_CFLAGS@
 
 check_dbmail_mailbox_SOURCES=check_dbmail_mailbox.c
-check_dbmail_mailbox_LDADD=@CHECK_LIBS@ libdbmail.la
+check_dbmail_mailbox_LDADD=libdbmail.la @CHECK_LIBS@
 check_dbmail_mailbox_INCLUDES=@CHECK_CFLAGS@
 
-check_dbmail_imapd_SOURCES=quota.c imap4.c dm_imaputil.c imapcommands.c memblock.c dm_search.c acl.c dbmail-imapsession.c check_dbmail_imapd.c
-check_dbmail_imapd_LDADD=@CHECK_LIBS@ libdbmail.la
+check_dbmail_imapd_SOURCES=quota.c imap4.c dm_imaputil.c imapcommands.c memblock.c dm_search.c \
+	acl.c dbmail-imapsession.c check_dbmail_imapd.c
+check_dbmail_imapd_LDADD=libdbmail.la @CHECK_LIBS@
 check_dbmail_imapd_INCLUDES=@CHECK_CFLAGS@
 
 endif
