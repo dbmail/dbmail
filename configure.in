@@ -94,6 +94,6 @@ AC_SUBST(LDAPINC)
 # libtool patch
 AC_PROG_LIBTOOL
 
-AC_OUTPUT(Makefile modules/Makefile sort/Makefile man/Makefile 
-	lib/Makefile lib/iniparser-2.14/Makefile lib/iniparser-2.14/src/Makefile)
+AC_OUTPUT(Makefile modules/Makefile man/Makefile lib/Makefile
+          lib/iniparser-2.14/Makefile lib/iniparser-2.14/src/Makefile)
 

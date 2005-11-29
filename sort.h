@@ -21,8 +21,9 @@
 
 /* Headers for sorting.c */
 
-#ifndef _SORTING_H
-#define _SORTING_H
+#ifndef SORT_H
+#define SORT_H
 
+dsn_class_t sort_and_deliver(struct DbmailMessage *self, u64_t useridnr, const char *mailbox, mailbox_source_t source);
 
-#endif				/* #ifndef _SORTING_H */
+#endif

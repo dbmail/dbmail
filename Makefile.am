@@ -15,7 +15,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-SUBDIRS = modules sort man lib
+SUBDIRS = modules man lib
 
 if SIEVE
 SIEVEPROGS = dbmail-sievecmd dbmail-timsieved
@@ -42,6 +42,7 @@ COMMON = dbmail-user.c \
 	db.c \
 	dbmodule.c \
 	authmodule.c \
+	sortmodule.c \
 	misc.c \
 	mime.c \
 	pidfile.c 
@@ -53,14 +54,15 @@ SERVER = server.c \
 	
 DELIVER = pipe.c \
 	forward.c \
-	dsn.c
+	dsn.c \
+	sort.c
 
 # CFLAGS
 #AM_CFLAGS = -fomit-frame-pointer
 
 INCLUDES = -I$(top_srcdir)
 
-LDFLAGS = -Wl,--export-dynamic
+AM_LDFLAGS = -Wl,--export-dynamic
 
 dbmail_smtp_SOURCES = main.c
 dbmail_smtp_LDADD = libdbmail.la
@@ -89,8 +91,6 @@ dbmail_sievecmd_LDADD = libdbmail.la
 
 dbmail_timsieved_SOURCES = timsieve.c timsieved.c
 dbmail_timsieved_LDADD = libdbmail.la
-
-AM_CFLAGS += -DSIEVE
 endif
 
 noinst_LTLIBRARIES = libdbmail.la

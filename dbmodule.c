@@ -4,6 +4,8 @@
  * populate the global 'db' structure.
  *
  * (c) 2005 Aaron Stone <aaron@serendipity.cx>
+ *
+ * $Id: $
  */
 
 #include <gmodule.h>
@@ -30,8 +32,10 @@ int db_load_driver(void)
 	char *lib = NULL;
 	char *driver = NULL;
 
-	if (!g_module_supported())
+	if (!g_module_supported()) {
+		trace(TRACE_FATAL, "db_init: loadable modules unsupported on this platform");
 		return 1;
+	}
 
 	db = (db_func_t *)dm_malloc(sizeof(db_func_t));
 	if (!db) {
@@ -53,10 +57,22 @@ int db_load_driver(void)
 				" please choose from MySQL, PGSQL, SQLite",
 				_db_params.driver);
 
-	if (! (lib = g_module_build_path("modules/.libs", driver)))
-		lib = g_module_build_path("/usr/lib/dbmail", driver);
+	/* Try local build area, then dbmail lib paths, then system lib path. */
+	int i;
+	char *lib_path[] = {
+		"modules/.libs",
+		"/usr/lib/dbmail",
+		"/usr/local/lib/dbmail",
+		NULL };
+	for (i = 0; i < 4; i++) {
+		lib = g_module_build_path(lib_path[i], driver);
+		module = g_module_open(lib, 0); // non-lazy bind.
+		if (module)
+			break;
+		printf( "not found in %s\n", lib_path[i] );
+	}
 
-	module = g_module_open(lib, 0); // non-lazy bind.
+	/* If the list is exhausted without opening a module, we'll catch it. */
 	if (!module) {
 		trace(TRACE_FATAL, "db_init: cannot load %s: %s", lib, g_module_error());
 		return -1;
@@ -79,7 +95,7 @@ int db_load_driver(void)
 	||  !g_module_symbol(module, "db_use_msgbuf_result",   &db->use_msgbuf_result   )
 	||  !g_module_symbol(module, "db_store_msgbuf_result", &db->store_msgbuf_result )
 	||  !g_module_symbol(module, "db_set_result_set",      &db->set_result_set      )) {
-		trace(TRACE_FATAL, "db_init: error loading %s: %s", lib, g_module_error());
+		trace(TRACE_FATAL, "db_init: cannot find function: %s: %s", lib, g_module_error());
 		return -2;
 	}
 

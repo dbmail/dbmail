@@ -32,8 +32,10 @@ int auth_load_driver(void)
 	char *lib = NULL;
 	char *driver = NULL;
 
-	if (!g_module_supported())
+	if (!g_module_supported()) {
+		trace(TRACE_FATAL, "sort_init: loadable modules unsupported on this platform");
 		return 1;
+	}
 
 	auth = (auth_func_t *)dm_malloc(sizeof(auth_func_t));
 	if (!auth) {
@@ -51,10 +53,22 @@ int auth_load_driver(void)
 				" please choose from SQL or LDAP",
 				_db_params.authdriver);
 
-	if (! (lib = g_module_build_path("modules/.libs", driver)))
-		lib = g_module_build_path("/usr/lib/dbmail", driver);
-			
-	module = g_module_open(lib, 0); // non-lazy bind.
+	/* Try local build area, then dbmail lib paths, then system lib path. */
+	int i;
+	char *lib_path[] = {
+		"modules/.libs",
+		"/usr/lib/dbmail",
+		"/usr/local/lib/dbmail",
+		NULL };
+	for (i = 0; i < 4; i++) {
+		lib = g_module_build_path(lib_path[i], driver);
+		module = g_module_open(lib, 0); // non-lazy bind.
+		if (module)
+			break;
+		printf( "not found in %s\n", lib_path[i] );
+	}
+
+	/* If the list is exhausted without opening a module, we'll catch it. */
 	if (!module) {
 		trace(TRACE_FATAL, "auth_init: cannot load %s: %s", lib, g_module_error());
 		return -1;
@@ -84,7 +98,7 @@ int auth_load_driver(void)
 	||  !g_module_symbol(module, "auth_addalias_ext",           &auth->addalias_ext           )
 	||  !g_module_symbol(module, "auth_removealias",            &auth->removealias            )
 	||  !g_module_symbol(module, "auth_removealias_ext",        &auth->removealias_ext        )) {
-		trace(TRACE_FATAL, "auth_init: error loading %s: %s", lib, g_module_error());
+		trace(TRACE_FATAL, "auth_init: cannot find function: %s: %s", lib, g_module_error());
 		return -2;
 	}
 

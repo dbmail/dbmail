@@ -82,6 +82,7 @@
 #include "pipe.h"
 #include "db.h"
 #include "auth.h"
+#include "sort.h"
 #include "imap4.h"
 #include "imapcommands.h"
 #include "memblock.h"
@@ -107,10 +108,11 @@
 #ifdef SIEVE
 #include <sieve2.h>
 #include <sieve2_error.h>
-#include "sievecmd.h"
-#include "sort/sortsieve.h"
-#include "timsieve.h"
 #endif
+
+#include "modules/sortsieve.h"
+#include "sievecmd.h"
+#include "timsieve.h"
 
 #ifdef HAVE_CRYPT_H
 #include <crypt.h>

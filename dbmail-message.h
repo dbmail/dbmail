@@ -87,8 +87,6 @@ struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *sel
 int dbmail_message_store(struct DbmailMessage *message);
 int dbmail_message_headers_cache(const struct DbmailMessage *message);
 
-dsn_class_t sort_and_deliver(struct DbmailMessage *self, u64_t useridnr, const char *mailbox, mailbox_source_t source);
-
 struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t physid, int filter);
 
 /*

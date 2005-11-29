@@ -17,15 +17,16 @@
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 INCLUDES = -I$(top_srcdir)
-AM_CFLAGS = @MYSQLINC@ @PGSQLINC@ @SQLITEINC@ -fomit-frame-pointer
+AM_CFLAGS = @MYSQLINC@ @PGSQLINC@ @SQLITEINC@ @LDAPINC@ @SIEVEINC@ -fomit-frame-pointer
 
-LDFLAGS = -Wl,--export-dynamic
+AM_LDFLAGS = -Wl,--export-dynamic
 
 pkglib_LTLIBRARIES = libdbmysql.la \
 	libdbpgsql.la \
 	libdbsqlite.la \
 	libauthsql.la \
-	libauthldap.la
+	libauthldap.la \
+	libsortsieve.la
 
 if MYSQL
 libdbmysql_la_SOURCES = dbmysql.c
@@ -43,10 +44,16 @@ if LDAP
 libauthldap_la_SOURCES = authldap.c
 endif
 
+# This one is always built.
 libauthsql_la_SOURCES = authsql.c
+
+if SIEVE
+libsortsieve_la_SOURCES = sortsieve.c
+endif
 
 libdbmysql_la_LIBADD = @MYSQLLIB@
 libdbpgsql_la_LIBADD = @PGSQLLIB@
 libdbsqlite_la_LIBADD = @SQLITELIB@
 libauthsql_la_LIBADD = -lcrypt @MYSQLLIB@ @PGSQLLIB@ @SQLITELIB@
 libauthldap_la_LIBADD = -lcrypt @LDAPLIB@ @MYSQLLIB@ @PGSQLLIB@ @SQLITELIB@
+libsortsieve_la_LIBADD = @SORTLIB@
