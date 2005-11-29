@@ -134,14 +134,15 @@ AC_MSG_RESULT([checking for sorting configuration])
 AC_ARG_WITH(sieve,[  --with-sieve=PATH	  full path to libSieve header directory (don't use, not stable)],
 	sieveheadername="$withval$")
 dnl This always needs to be defined
-SORTALIB="sort/.libs/libsortdbmail.a"
-SORTLTLIB="sort/libsortdbmail.la"
+SORTALIB="modules/.libs/libsortsieve.a"
+SORTLTLIB="modules/libsortsieve.la"
 
 WARN=0
 if test ! "${sieveheadername-x}" = "x"
 then
   # --with-sieve was specified
   AC_MSG_RESULT([using Sieve sorting])
+  CFLAGS="$CFLAGS -DSIEVE"
   if test "$withval" != "yes"
   then
     AC_MSG_CHECKING([for sieve2.h (user supplied)])
@@ -149,7 +150,7 @@ then
       then
       # found
         AC_MSG_RESULT([$sieveheadername/sieve2.h])
-        SIEVEINC=$sieveheadername
+        SIEVEINC="-I$sieveheadername"
       else 
       # Not found
         AC_MSG_RESULT([not found])
@@ -166,7 +167,7 @@ then
     do
       if test -r "$sievepaths/sieve2.h"
       then
-        SIEVEINC="$sievepaths"
+        SIEVEINC="-I$sievepaths"
         AC_MSG_RESULT([$sievepaths/sieve2.h])
         break
       fi
@@ -226,7 +227,7 @@ then
 		then
 			# found
 			AC_MSG_RESULT([$authldapheadername/ldap.h])
-			LDAPINC=$authldapheadername
+			LDAPINC="-I$authldapheadername"
 		else 
 			# Not found
 			AC_MSG_RESULT([not found])
@@ -241,7 +242,7 @@ then
 		do
 			if test -r "$ldappath/ldap.h"
 			then
-				LDAPINC="$ldappath"
+				LDAPINC="-I$ldappath"
 				AC_MSG_RESULT([$ldappath/ldap.h])
 				break
 			fi

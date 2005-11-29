@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: sievecmd.c 1912 2005-11-19 02:29:41Z aaron $
+/* $Id: sievecmd.c 1929 2005-11-29 10:44:16Z aaron $
  * This is dbmail-sievecmd, which provides
  * a command line interface to the sievescripts */
 
@@ -28,11 +28,9 @@ char *configFile = DEFAULT_CONFIG_FILE;
 
 /* set up database login data */
 extern db_param_t _db_params;
-static void SetConfigItems(serverConfig_t * config);
 
 int main(int argc, char *argv[])
 {
-	serverConfig_t sysItems;
 	int res = 0, opt = 0, act = 0;
 	u64_t user_idnr = 0;
 	char *user_name = NULL;
@@ -45,11 +43,8 @@ int main(int argc, char *argv[])
 	setvbuf(stdout, 0, _IONBF, 0);
 
 	config_read(configFile);
-	SetConfigItems(&sysItems);
-	SetTraceLevel("SIEVECMD");
+	SetTraceLevel("DBMAIL");
 	GetDBParams(&_db_params);
-
-	configure_debug(TRACE_ERROR, 1, 0);
 
 	while (opt != -1 && act != 'h') {
 		opt = getopt(argc, argv, "a:d:i:r:u:l");
@@ -144,6 +139,7 @@ int main(int argc, char *argv[])
 	dm_free(user_name);
 	db_disconnect();
 	auth_disconnect();
+	config_free();
 	return res;
 }
 
@@ -283,7 +279,7 @@ int do_list(u64_t user_idnr)
 }
 
 
-int do_showhelp()
+int do_showhelp(void)
 {
 	printf("*** dbmail-sievecmd ***\n");
 
@@ -339,11 +335,5 @@ int read_script_file(FILE * f, char **m_buf)
 	/* Since f_buf is either NULL or valid, we're golden */
 	*m_buf = f_buf;
 	return 0;
-}
-
-void SetConfigItems(serverConfig_t * config)
-{
-  field_t val;
-
 }
 

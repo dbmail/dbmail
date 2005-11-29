@@ -1,3 +1,18 @@
+2005-11-28  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmodule.c, dbmodule.h, authmodule.c, authmodule.h: few updates to
+	better handle library search paths.
+	* sort.c, sort.h: now the home of sort_and_deliver().
+	* dbmail-message.c, dbmail-message.h: old home of sort_and_deliver().
+	* config.c: config item for sortdriver.
+	* configure.in, acinclude.m4, Makefile.am, modules/Makefile.am:
+	autoconf fixed for Sieve and LDAP.
+
+2005-11-27  Aaron Stone  <aaron@serendipity.cx>
+
+	* modules/, sort/, sortmodule.c, sortmodule.h: moving sort into the
+	new modular framework.
+
 2005-11-27  Paul J Stevens <paul@nfg.nl>
 
 	* modules/, pgsql/, mysql/, sqlite/, auth/, Makefile.am, configure.in,

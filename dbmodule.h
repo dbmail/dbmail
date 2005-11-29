@@ -1,7 +1,7 @@
 /* Dynamic loading of the database backend.
  * We use GLib's multiplatform dl() wrapper
- * to open up libdbmysql or libdbpgsql and
- * populate the global 'db' structure.
+ * to open up db_mysql.so, db_pgsql.so or db_sqlite.so
+ * and populate the global 'db' structure.
  *
  * (c) 2005 Aaron Stone <aaron@serendipity.cx>
  */

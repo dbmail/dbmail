@@ -1,7 +1,6 @@
+/* $Id: sortsieve.h 1912 2005-11-19 02:29:41Z aaron $ 
 
-/* $Id: sort.h 1929 2005-11-29 10:44:16Z aaron $ 
- 
- Copyright (C) 1999-2004 Aaron Stone aaron at serendipity dot cx
+ Copyright (C) 2004 Aaron Stone aaron at serendipity dot cx
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -16,14 +15,19 @@
 
  You should have received a copy of the GNU General Public License
  along with this program; if not, write to the Free Software
- Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-*/
 
-/* Headers for sorting.c */
+ * Headers for sieve.c */
 
-#ifndef SORT_H
-#define SORT_H
+#ifndef _SIEVE_H
+#define _SIEVE_H
 
-dsn_class_t sort_and_deliver(struct DbmailMessage *self, u64_t useridnr, const char *mailbox, mailbox_source_t source);
+#include "dbmail.h"
+
+
+#define MAX_SIEVE_SCRIPTNAME 100
+
+int sortsieve_msgsort(u64_t useridnr, char *header, u64_t headersize,
+		      u64_t messagesize, struct dm_list *actions);
+int sortsieve_script_validate(u64_t user_idnr, char *scriptname, char **errmsg);
 
 #endif

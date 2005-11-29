@@ -18,7 +18,7 @@
 */
 
 /*
- * $Id: config.c 1923 2005-11-27 02:37:46Z aaron $
+ * $Id: config.c 1929 2005-11-29 10:44:16Z aaron $
  * \file config.c
  * \brief read configuration values from a config file
  */
@@ -126,6 +126,9 @@ void GetDBParams(db_param_t * db_params)
 		trace(TRACE_FATAL, "%s,%s: error getting config!",
 		      __FILE__, __func__);
 	if (config_get_value("authdriver", "DBMAIL", db_params->authdriver) < 0)
+		trace(TRACE_FATAL, "%s,%s: error getting config!",
+		      __FILE__, __func__);
+	if (config_get_value("sortdriver", "DBMAIL", db_params->sortdriver) < 0)
 		trace(TRACE_FATAL, "%s,%s: error getting config!",
 		      __FILE__, __func__);
 	if (config_get_value("host", "DBMAIL", db_params->host) < 0)

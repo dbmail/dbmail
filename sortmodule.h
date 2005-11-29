@@ -1,13 +1,13 @@
-/* Dynamic loading of the authentication backend.
+/* Dynamic loading of the database backend.
  * We use GLib's multiplatform dl() wrapper
- * to open up auth_sql.so or auth_ldap.so and
- * populate the global 'auth' structure.
+ * to open up sort_sieve.so and
+ * populate the global 'sort' structure.
  *
  * (c) 2005 Aaron Stone <aaron@serendipity.cx>
  */
 
-#ifndef AUTHMODULE_H
-#define AUTHMODULE_H
+#ifndef SORTMODULE_H
+#define SORTMODULE_H
 
 /* Prototypes must match with those in auth.h
  * and in the authentication drivers. */
@@ -42,6 +42,6 @@ typedef struct {
 			u64_t clientid);
 	int (* removealias)(u64_t user_idnr, const char *alias);
 	int (* removealias_ext)(const char *alias, const char *deliver_to);
-} auth_func_t;
+} sort_func_t;
 
 #endif

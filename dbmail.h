@@ -1,5 +1,5 @@
 /*
- $Id: dbmail.h 1925 2005-11-27 15:38:44Z paul $
+ $Id: dbmail.h 1929 2005-11-29 10:44:16Z aaron $
 
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 
@@ -82,6 +82,7 @@
 #include "pipe.h"
 #include "db.h"
 #include "auth.h"
+#include "sort.h"
 #include "imap4.h"
 #include "imapcommands.h"
 #include "memblock.h"
@@ -107,10 +108,11 @@
 #ifdef SIEVE
 #include <sieve2.h>
 #include <sieve2_error.h>
-#include "sievecmd.h"
-#include "sort/sortsieve.h"
-#include "timsieve.h"
 #endif
+
+#include "modules/sortsieve.h"
+#include "sievecmd.h"
+#include "timsieve.h"
 
 #ifdef HAVE_CRYPT_H
 #include <crypt.h>
