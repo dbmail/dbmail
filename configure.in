@@ -33,6 +33,9 @@ sieveheaderpaths="/usr/include /usr/local/include"
 
 AC_DEFINE(_GNU_SOURCE,'','Defined GNU SOURCE')
 
+AM_CONDITIONAL(SHARED, [ test "$enable_shared" = "yes" ])
+AM_CONDITIONAL(STATIC, [ test "$enable_static" = "yes" ])
+
 DBMAIL_BOTH_SQL_CHECK
 DBMAIL_CHECK_SQL_LIBS
 DBMAIL_AUTH_CONF

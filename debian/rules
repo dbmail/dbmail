@@ -10,12 +10,15 @@ export DH_COMPAT=3
 export DEB_BUILD_OPTIONS=debug
 
 #export WITH_GC="--with-gc"
-#export NOSHARED=--enable-shared=no
-export NOSTATIC=--enable-static=no
 export WITH_SIEVE=--with-sieve
+export WITH_SQLITE=--with-sqlite 
+export WITH_MYSQL=--with-mysql=/usr/include/mysql 
+export WITH_PGSQL=--with-pgsql=/usr/include/postgresql 
+export WITH_LDAP=--with-auth-ldap
 
 CFLAGS = -Wall -O1
 LDFLAGS = -lcrypt
+
 # These are used for cross-compiling and for saving the configure script
 # from having to guess our platform (since we know it already)
 DEB_HOST_GNU_TYPE   ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
@@ -23,6 +26,12 @@ DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
 
 ifneq (,$(findstring debug,$(DEB_BUILD_OPTIONS)))
 	export WITH_CHECK=--with-check
+	export NOSHARED=--enable-shared=no
+	export WITH_MYSQL=--with-mysql=/usr/include/mysql 
+	export WITH_LDAP=--with-auth-ldap
+	export WITH_SQLITE=
+	export WITH_PGSQL=
+	
 	CFLAGS += -g
 endif
 ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
@@ -31,7 +40,8 @@ endif
 
 # dpatch
 export PACKAGE=dbmail2
-export PACKAGES=dbmail2-mysql \
+export PACKAGES=dbmail2 \
+	dbmail2-mysql \
 	dbmail2-mysql-ldap \
 	dbmail2-pgsql \
 	dbmail2-pgsql-ldap \
@@ -43,7 +53,7 @@ include /usr/share/dpatch/dpatch.make
 CONFFLAGS=--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --sysconfdir=/etc/dbmail/ \
 	--infodir=\$${prefix}/share/info \
-	$(WITH_GC) $(WITH_CHECK) $(NOSHARED) $(NOSTATIC) $(WITH_SIEVE)
+	$(WITH_GC) $(WITH_CHECK) $(NOSHARED) $(WITH_SIEVE) $(WITH_LDAP) $(WITH_MYSQL) $(WITH_PGSQL) $(WITH_SQLITE)
 
 build: stamps/build
 stamps/build: stamps patch configure $(PACKAGES)
@@ -61,7 +71,7 @@ dbmail2: stamps/dbmail2
 stamps/dbmail2:
 	$(MAKE) clean || true
 	env CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)"  PATH="$(PATH):/usr/lib/postgresql/bin/" \
-		./configure $(CONFFLAGS) --with-sqlite --with-mysql=/usr/include/mysql --with-pgsql=/usr/include/postgresql --with-auth-ldap
+		./configure $(CONFFLAGS) 
 	$(MAKE)
 	$(MAKE) install DESTDIR=$(CURDIR)/debian/dbmail2
 	touch $@
@@ -141,8 +151,9 @@ clean1:
 		for f in init cron.d; do \
 			rm -f debian/$$d.dbmail.$$f; \
 		done; \
+		rm -rf debian/$$d; \
 	done	
-	for file in config.in aclocal.m4 acconfig.h configure `find . -name Makefile.in`; do \
+	for file in INSTALL config.in aclocal.m4 acconfig.h configure `find . -name Makefile.in`; do \
 		rm -rf $$file || true; \
 	done
 	rm -rf autom4te.cache

@@ -254,6 +254,8 @@ then
 		fi
 	fi
 else
+	AUTHALIB="modules/.libs/libauthsql.a"
+	AUTHLTLIB="modules/libauthsql.la"
 	AC_MSG_RESULT([using SQL authentication])
 fi
 ])

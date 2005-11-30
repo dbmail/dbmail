@@ -40,9 +40,6 @@ COMMON = dbmail-user.c \
 	dbmd5.c \
 	md5.c \
 	db.c \
-	dbmodule.c \
-	authmodule.c \
-	sortmodule.c \
 	misc.c \
 	mime.c \
 	pidfile.c 
@@ -57,12 +54,19 @@ DELIVER = pipe.c \
 	dsn.c \
 	sort.c
 
+if SHARED
+MODULES = dbmodule.c \
+	authmodule.c \
+	sortmodule.c
+
+LDFLAGS = -Wl,--export-dynamic
+endif
+
 # CFLAGS
 #AM_CFLAGS = -fomit-frame-pointer
 
 INCLUDES = -I$(top_srcdir)
 
-AM_LDFLAGS = -Wl,--export-dynamic
 
 dbmail_smtp_SOURCES = main.c
 dbmail_smtp_LDADD = libdbmail.la
@@ -93,8 +97,10 @@ dbmail_timsieved_SOURCES = timsieve.c timsieved.c
 dbmail_timsieved_LDADD = libdbmail.la
 endif
 
+
 lib_LTLIBRARIES = libdbmail.la
-libdbmail_la_SOURCES = $(COMMON) $(SERVER) $(DELIVER)
+
+libdbmail_la_SOURCES = $(COMMON) $(SERVER) $(DELIVER) $(MODULES)
 libdbmail_la_LIBADD = @MYSQLLTLIB@ @PGSQLLTLIB@ @SQLITELTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @INIPARSERLTLIB@
 
 if WITHCHECK
