@@ -19,14 +19,19 @@
 INCLUDES = -I$(top_srcdir)
 AM_CFLAGS = @MYSQLINC@ @PGSQLINC@ @SQLITEINC@ @LDAPINC@ @SIEVEINC@ -fomit-frame-pointer
 
-AM_LDFLAGS = -Wl,--export-dynamic
 
+if SHARED
+LDFLAGS = -Wl,--export-dynamic
+endif
 pkglib_LTLIBRARIES = libdbmysql.la \
 	libdbpgsql.la \
 	libdbsqlite.la \
 	libauthsql.la \
 	libauthldap.la \
 	libsortsieve.la
+
+# This one is always built.
+libauthsql_la_SOURCES = authsql.c
 
 if MYSQL
 libdbmysql_la_SOURCES = dbmysql.c
@@ -44,9 +49,6 @@ if LDAP
 libauthldap_la_SOURCES = authldap.c
 endif
 
-# This one is always built.
-libauthsql_la_SOURCES = authsql.c
-
 if SIEVE
 libsortsieve_la_SOURCES = sortsieve.c
 endif
@@ -57,3 +59,4 @@ libdbsqlite_la_LIBADD = @SQLITELIB@
 libauthsql_la_LIBADD = -lcrypt @MYSQLLIB@ @PGSQLLIB@ @SQLITELIB@
 libauthldap_la_LIBADD = -lcrypt @LDAPLIB@ @MYSQLLIB@ @PGSQLLIB@ @SQLITELIB@
 libsortsieve_la_LIBADD = @SORTLIB@
+
