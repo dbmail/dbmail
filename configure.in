@@ -16,7 +16,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-AC_INIT(main.c)
+AC_INIT([main.c])
 AC_CONFIG_AUX_DIR(buildtools)
 AM_CONFIG_HEADER(config.h:config.in)
 DBMAIL_MSG_CONFIGURE_START
@@ -44,7 +44,6 @@ DBMAIL_SIEVE_CONF
 DBMAIL_CHECK_SIEVE_LIBS
 DBMAIL_CHECK_GLIB
 DBMAIL_CHECK_GMIME
-DBMAIL_SET_INIPARSER
 DBMAIL_CHECK_GC
 
 DBMAIL_PATH_CHECK
@@ -97,6 +96,5 @@ AC_SUBST(LDAPINC)
 # libtool patch
 AC_PROG_LIBTOOL
 
-AC_OUTPUT(Makefile modules/Makefile man/Makefile lib/Makefile
-          lib/iniparser-2.14/Makefile lib/iniparser-2.14/src/Makefile)
+AC_OUTPUT(Makefile modules/Makefile man/Makefile)
 

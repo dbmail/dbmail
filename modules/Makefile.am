@@ -21,7 +21,7 @@ AM_CFLAGS = @MYSQLINC@ @PGSQLINC@ @SQLITEINC@ @LDAPINC@ @SIEVEINC@ -fomit-frame-
 
 
 if SHARED
-LDFLAGS = -Wl,--export-dynamic
+AM_LDFLAGS = -Wl,--export-dynamic
 endif
 pkglib_LTLIBRARIES = libdbmysql.la \
 	libdbpgsql.la \
