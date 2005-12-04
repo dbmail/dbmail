@@ -1,3 +1,9 @@
+2005-11-30  Paul J Stevens <paul@nfg.nl>
+
+	* Makefile.am, acinclude.m4, configure.in, debian/rules, 
+	  modules/Makefile.am:
+	re-enable static builds to facilitate debugging and development
+
 2005-11-29  Paul J Stevens <paul@nfg.nl>
 
 	* Makefile.am, debian/rules:
