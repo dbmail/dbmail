@@ -26,7 +26,7 @@
 #include "dbmail.h"
 
 /** dictionary which holds the configuration */
-static dictionary *config_dict = NULL;
+static GKeyFile *config_dict = NULL;
 
 static int configured = 0;
 /**
@@ -35,26 +35,21 @@ static int configured = 0;
  */
 int config_read(const char *config_filename)
 {
-        char *config_filename_copy;
-        int result = 0;
-	
 	if (configured++) 
 		return 0;
-        
 	
 	assert(config_filename != NULL);
         
-        config_filename_copy = g_strdup(config_filename);
-        config_dict = iniparser_load(config_filename_copy);
-        if (config_dict == NULL) {
+        config_dict = g_key_file_new();
+	
+	if (! g_key_file_load_from_file(config_dict, config_filename, G_KEY_FILE_NONE, NULL)) {
+		g_key_file_free(config_dict);
                 trace(CONFIG_ERROR_LEVEL, "%s,%s: error reading "
                       "config file %s", __FILE__, __func__,
                       config_filename);
-                result = -1;
-        } 
-        
-        g_free(config_filename_copy);
-        return result;
+		return -1;
+	}
+        return 0;
 }
 
 /**
@@ -65,8 +60,7 @@ void config_free(void)
 	if (--configured) 
 		return;
 	
-	
-	iniparser_freedict(config_dict);
+	g_key_file_free(config_dict);
 }
 
 /* FIXME: Always returns 0, which is dandy for debugging. */
@@ -74,19 +68,47 @@ int config_get_value(const field_t field_name,
                      const char * const service_name,
                      field_t value) {
         char *dict_value;
-        char *key;
+	char *key;
+	gssize len;
 
         assert(service_name);
         assert(config_dict);
-        
-        key = g_strdup_printf("%s:%s", service_name, field_name);
-        dict_value = iniparser_getstring(config_dict, key, NULL);
-        if (dict_value)
+ 
+	/* as is */
+	dict_value = g_key_file_get_value(config_dict, service_name, field_name, NULL);
+        if (dict_value) {
                 g_strlcpy(value, dict_value, FIELDSIZE);
-        else
-                value[0] = '\0';
+		g_free(dict_value);
+		return 0;
+	}
+	       
+	len = strlen(field_name);
+	
+	/* uppercase */
+	key = g_ascii_strup(field_name,len);
+        dict_value = g_key_file_get_value(config_dict, service_name, key, NULL);
+        if (dict_value) {
+                g_strlcpy(value, dict_value, FIELDSIZE);
+		g_free(key);
+		g_free(dict_value);
+		return 0;
+	}
+	
+	/* lowercase */
+	key = g_ascii_strdown(field_name,len);
+	dict_value = g_key_file_get_value(config_dict, service_name, key, NULL);
+        if (dict_value) {
+                g_strlcpy(value, dict_value, FIELDSIZE);
+		g_free(key);
+		g_free(dict_value);
+		return 0;
+	}
 
+	/* give up */
+        value[0] = '\0';
 	g_free(key);
+	g_free(dict_value);
+
         return 0;
 }
 
