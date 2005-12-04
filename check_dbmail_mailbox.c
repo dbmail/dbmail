@@ -238,6 +238,21 @@ START_TEST(test_dbmail_mailbox_search)
 	
 	dbmail_mailbox_free(mb);
 	g_strfreev(array);
+
+	// second case
+	idx=0;
+	sorted = 0;
+	mb = dbmail_mailbox_new(get_mailbox_id());
+	args = g_strdup("1:* TEXT paul@nfg.nl");
+	array = g_strsplit(args," ",0);
+	g_free(args);
+	
+	dbmail_mailbox_build_imap_search(mb, array, &idx, sorted);
+	dbmail_mailbox_search(mb);
+	
+	dbmail_mailbox_free(mb);
+	g_strfreev(array);
+
 }
 END_TEST
 

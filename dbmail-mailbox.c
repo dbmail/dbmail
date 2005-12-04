@@ -937,8 +937,21 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 			 s->hdrfld, s->search);
 			break;
 
-		case IST_IDATE:
+		case IST_DATA_TEXT:
+		g_string_printf(q, "SELECT message_idnr FROM %smessages m "
+			"JOIN %sphysmessage p ON m.physmessage_id=p.id "
+			"JOIN %sheadervalue v on v.physmessage_id=p.id "
+			"WHERE mailbox_idnr=%llu "
+			"AND status IN ('%d','%d') "
+			"AND headervalue like '%%%s%%' "
+			"ORDER BY message_idnr",
+			DBPFX, DBPFX, DBPFX, 
+			dbmail_mailbox_get_id(self),
+			MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
+			s->search);
+			break;
 			
+		case IST_IDATE:
 		g_string_printf(q, "SELECT message_idnr FROM %smessages m "
 			 "JOIN %sphysmessage p ON m.physmessage_id=p.id "
 			 "WHERE mailbox_idnr = '%llu' "
@@ -1147,6 +1160,7 @@ static gboolean _do_search(GNode *node, struct DbmailMailbox *self)
 		case IST_IDATE:
 		case IST_FLAG:
 		case IST_HDR:
+		case IST_DATA_TEXT:
 			if (! (set = mailbox_search(self, s)))
 				return TRUE;
 			break;
@@ -1154,7 +1168,6 @@ static gboolean _do_search(GNode *node, struct DbmailMailbox *self)
 		 * these all have in common that all messages need to be parsed 
 		 */
 		case IST_DATA_BODY:
-		case IST_DATA_TEXT:
 			//result = db_search_parsed(rset, setlen, sk, mb, condition);
 			break;
 
