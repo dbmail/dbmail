@@ -373,14 +373,6 @@ else
 fi
 ])
 
-dnl also compile iniparser
-AC_DEFUN([DBMAIL_SET_INIPARSER], [dnl
-# set iniparser library. Thi is a library that we have added
-# locally
-INIPARSERALIB="lib/iniparser-2.14/src/.libs/libiniparser.a"
-INIPARSERLTLIB="lib/iniparser-2.14/src/libiniparser.la"
-])
-
 # ----------------------------------------------------------------
 # DBMAIL_CHECK_GC
 # I cheated I copied from w3m's acinclude.m4 :)

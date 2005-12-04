@@ -15,7 +15,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-SUBDIRS = modules man lib
+SUBDIRS = modules man
 
 if SIEVE
 SIEVEPROGS = dbmail-sievecmd dbmail-timsieved
@@ -59,7 +59,7 @@ MODULES = dbmodule.c \
 	authmodule.c \
 	sortmodule.c
 
-LDFLAGS = -Wl,--export-dynamic
+AM_LDFLAGS = -Wl,--export-dynamic
 endif
 
 # CFLAGS
@@ -102,6 +102,9 @@ lib_LTLIBRARIES = libdbmail.la
 
 libdbmail_la_SOURCES = $(COMMON) $(SERVER) $(DELIVER) $(MODULES)
 libdbmail_la_LIBADD = @MYSQLLTLIB@ @PGSQLLTLIB@ @SQLITELTLIB@ @SORTLTLIB@ @AUTHLTLIB@ @INIPARSERLTLIB@
+libdbmail_la_LDFLAGS = $(AM_LDFLAGS)
+libdbmail_la_CFLAGS = $(AM_CFLAGS)
+
 
 if WITHCHECK
 
