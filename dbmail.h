@@ -98,7 +98,6 @@
 #include "pop3.h"
 #include "quota.h"
 #include "lmtp.h"
-#include "lib/iniparser-2.14/src/iniparser.h"
 
 #include "dm_cidr.h"
 #include "dm_imaputil.h"
