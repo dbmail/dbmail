@@ -1,9 +1,14 @@
 2005-12-04  Paul J Stevens <paul@nfg.nl>
 
+	* config.c, configure.in:
+	resync trees
+	* Makefile.am, acinclude.m4, configure.in, debian/control, debian/rules, 
+	  modules/Makefile.am:
+	fix for automake1.9
 	* python/app/IMailFolder.py, python/app/IMailMessage.py, 
 	  python/app/IPerson.py, python/app/__init__.py:
 	add stubs for python app
-	* config.c, lib/Makefile.am, lib/iniparser-2.14/AUTHORS, 
+	* dbmail.h, config.c, lib/Makefile.am, lib/iniparser-2.14/AUTHORS, 
 	  lib/iniparser-2.14/INSTALL, lib/iniparser-2.14/LICENSE, 
 	  lib/iniparser-2.14/Makefile.am, lib/iniparser-2.14/README, 
 	  lib/iniparser-2.14/html/doxygen.css, 
