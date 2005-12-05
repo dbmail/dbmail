@@ -15,4 +15,18 @@ class IMailMessage(Interface):
     def get_folder():
         """Returns the folder containing this message."""
                                 
+    def get_content():
+        """Return the full message"""
+
+    def set_content():
+        """Store the full message"""
+
+    def get_header():
+        """Return a header"""
+
+    def del_header():
+        """Delete a header"""
+
+    def add_header():
+        """Add a header"""
 

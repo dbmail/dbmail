@@ -12,7 +12,7 @@
 
 import os,sys,string,email,getopt,shelve,time,re,smtplib
 
-from dbmail.dbmail import DbmailAutoreply
+from dbmail.lib import DbmailAutoreply
 
 
 def usage():

@@ -13,10 +13,23 @@ class IMailFolder(Interface):
     def get_id():
         """Returns the instance id."""
                                 
+    def create():
+        """Create this folder"""
+
+    def remove():
+        """Delete this folder"""
+        
     def get_title():
         """Returns the instance title."""
                                 
     def get_owner():
         """Returns the instance owner."""
                                 
+    def get_messages():
+        """Return the messages in this folder"""
 
+    def add_message():
+        """Add a message to this folder"""
+
+    def del_message():
+        """Delete a message from this folder"""
