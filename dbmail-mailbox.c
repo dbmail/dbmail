@@ -1008,6 +1008,10 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 	return s->found;
 }
 
+static GTree * mailbox_search_parsed(struct DbmailMailbox *self, search_key_t *s)
+{
+	return s->found;
+}
 GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, search_key_t *sk)
 {
 	GList *ids = NULL, *sets = NULL;
@@ -1015,7 +1019,7 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, search_key_t *sk)
 	char *rest;
 	u64_t i, l, r, lo = 0, hi = 0;
 	u64_t *k, *v, *w = NULL;
-	GTree *a, *b;
+	GTree *a, *b, *c;
 	
 	b = g_tree_new_full((GCompareDataFunc)ucmp,NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
 	
@@ -1059,61 +1063,44 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, search_key_t *sk)
 		if (rest[0] == '*') {
 			l = hi;
 			r = l;
-
 			rest++;
-			if (rest[0]==':') {
-				rest++;
-				
-				if (rest[0] == '*') {
-					r = hi;
-				} else {
-					r = strtoull(rest,NULL,10);
-					if (!r || r > hi)
-						break;
-					
-					if (r < lo)
-						r = lo;
-				}
-			}
-
 		} else {
-			l = strtoull(sets->data,&rest,10);
-			if (! l)
+			if (! (l = strtoull(sets->data,&rest,10)))
 				break;
-			
 			l = max(l,lo);
 			r = l;
-			
-			if (rest[0]==':') {
-				rest++;
-			
-				if (rest[0] == '*')
-					r = hi;
-				else {
-					r = strtoull(rest,NULL,10);
-					if (! r || r > hi)
-						break;
-					if (r < lo)
-						r = lo;
-				}
-			}
 		}
 		
+		if (rest[0]==':') {
+			rest++;
+			if (rest[0] == '*') 
+				r = hi;
+			else 
+				r = strtoull(rest,NULL,10);
+			
+			if (!r || r > hi)
+				break;
+			
+			if (r < lo)
+				r = lo;
+		}
+	
 		if (! (l && r))
 			break;
+
+		switch (sk->type) {
+			case IST_SET_UID:
+				c = self->ids;
+				break;
+			case IST_SET:
+				c = self->msn;
+				break;
+		}
 		
 		for (i = min(l,r); i <= max(l,r); i++) {
 
-			switch (sk->type) {
-				case IST_SET_UID:
-					if (! (w = g_tree_lookup(self->ids,&i))) 
-						continue;
-					break;
-				case IST_SET:
-					if (! (w = g_tree_lookup(self->msn,&i)))
-						continue;
-					break;
-			}
+			if (! (w = g_tree_lookup(c,&i))) 
+				continue;
 
 			k = g_new0(u64_t,1);
 			v = g_new0(u64_t,1);
@@ -1122,7 +1109,6 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, search_key_t *sk)
 			*v = *w;
 			
 			g_tree_insert(a,k,v);
-
 		}
 		
 		g_tree_merge(b,a,IST_SUBSEARCH_OR);
@@ -1143,7 +1129,6 @@ static gboolean _do_search(GNode *node, struct DbmailMailbox *self)
 {
 	search_key_t *s = (search_key_t *)node->data;
 	GTree *set = NULL;
-	
 
 	switch (s->type) {
 		case IST_SET:
@@ -1164,13 +1149,12 @@ static gboolean _do_search(GNode *node, struct DbmailMailbox *self)
 			if (! (set = mailbox_search(self, s)))
 				return TRUE;
 			break;
-		/* 
-		 * these all have in common that all messages need to be parsed 
-		 */
-		case IST_DATA_BODY:
-			//result = db_search_parsed(rset, setlen, sk, mb, condition);
-			break;
 
+		case IST_DATA_BODY:
+			if (! (set = mailbox_search_parsed(self,s)))
+				break;
+		break;
+		
 		case IST_SUBSEARCH_NOT:
 		case IST_SUBSEARCH_AND:
 		case IST_SUBSEARCH_OR:
