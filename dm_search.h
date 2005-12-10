@@ -56,4 +56,17 @@ int db_search_parsed(unsigned int *rset, unsigned setlen,
 
 int   db_sort_parsed(unsigned int *rset, unsigned setlen, 
 		search_key_t *sk, mailbox_t *mb, int condition);
+
+/**
+ * \brief perform search on on the body of a message
+ * \param msg mime_message_t struct of message
+ * \param sk search key
+ * \param msg_idnr
+ * \return 
+ *     - 0 if no match
+ *     - 1 if match
+ */
+int db_exec_search(GMimeObject *object, search_key_t * sk);
+
+
 #endif

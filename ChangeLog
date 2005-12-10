@@ -1,5 +1,7 @@
 2005-12-04  Paul J Stevens <paul@nfg.nl>
 
+	* ChangeLog, dbmail.h:
+	replace iniparser
 	* config.c, configure.in:
 	resync trees
 	* Makefile.am, acinclude.m4, configure.in, debian/control, debian/rules, 

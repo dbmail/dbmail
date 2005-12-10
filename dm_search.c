@@ -38,17 +38,6 @@ char query[DEF_QUERYSIZE];
 
 /* used only locally */
 /**
- * \brief perform search on on the body of a message
- * \param msg mime_message_t struct of message
- * \param sk search key
- * \param msg_idnr
- * \return 
- *     - 0 if no match
- *     - 1 if match
- */
-static int db_exec_search(GMimeObject *object, search_key_t * sk);
-
-/**
  * \brief search the specified range of a message for a key
  * \param start of range
  * \param end of range

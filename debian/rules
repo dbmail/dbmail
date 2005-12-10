@@ -64,7 +64,7 @@ stamps:
 	
 configure: stamps/configure
 stamps/configure: 
-	autoreconf -f -i
+	autoreconf -i
 	touch $@
 
 dbmail2: stamps/dbmail2
@@ -160,7 +160,7 @@ clean1:
 	for file in Makefile config.h config.status libtool stamp-h .deps .libs; do \
 		rm -rf `find . -name $$file`; \
 	done
-	rm -f stamp-h.in config.log aclocal.m4 configure
+	rm -f stamp-h* config.log aclocal.m4 configure
 	rm -rf buildtools || true
 	dh_clean
 

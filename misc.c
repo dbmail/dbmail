@@ -1113,31 +1113,37 @@ int check_date(const char *date)
  */
 int check_msg_set(const char *s)
 {
-	int i, indigit;
+	int i, indigit=0, result = 1;
+	
 
-	if (!s || !isdigit(s[0]))
+	if (!s || (!isdigit(s[0]) && s[0]!= '*') )
 		return 0;
 
-	for (i = 1, indigit = 1; s[i]; i++) {
-		if (isdigit(s[i]))
+	for (i = 0; s[i]; i++) {
+		if (isdigit(s[i]) || s[i]=='*')
 			indigit = 1;
 		else if (s[i] == ',') {
-			if (!indigit && s[i - 1] != '*')
-				return 0;
+			if (!indigit) {
+				result = 0;
+				break;
+			}
 
 			indigit = 0;
 		} else if (s[i] == ':') {
-			if (!indigit)
-				return 0;
+			if (!indigit) {
+				result = 0;
+				break;
+			}
 
 			indigit = 0;
-		} else if (s[i] == '*') {
-			if (s[i - 1] != ':')
-				return 0;
+		} else {
+			result = 0;
+			break;
 		}
 	}
+	trace(TRACE_DEBUG, "%s,%s: [%s] [%s]", __FILE__, __func__, s, result ? "ok" : "fail" );
 
-	return 1;
+	return result;
 }
 
 

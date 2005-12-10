@@ -39,7 +39,9 @@ struct DbmailMailbox * dbmail_mailbox_new(u64_t id)
 	assert(self);
 	dbmail_mailbox_set_id(self,id);
 	dbmail_mailbox_open(self);
+	dbmail_mailbox_set_uid(self, FALSE);
 	self->search = NULL;
+	self->set = NULL;
 	return self;
 }
 
@@ -56,6 +58,10 @@ void dbmail_mailbox_free(struct DbmailMailbox *self)
 		g_list_destroy(self->sorted);
 		self->sorted = NULL;
 	}
+	if (self->set) {
+		g_list_free(self->set);
+		self->set = NULL;
+	}
 	
 	g_free(self);
 }
@@ -71,6 +77,16 @@ u64_t dbmail_mailbox_get_id(struct DbmailMailbox *self)
 	assert(self->id > 0);
 	return self->id;
 }
+
+void dbmail_mailbox_set_uid(struct DbmailMailbox *self, gboolean uid)
+{
+	self->uid = uid;
+}
+gboolean dbmail_mailbox_get_uid(struct DbmailMailbox *self)
+{
+	return self->uid;
+}
+
 
 struct DbmailMailbox * dbmail_mailbox_open(struct DbmailMailbox *self)
 {
@@ -280,7 +296,7 @@ static gboolean _tree_foreach(gpointer key UNUSED, gpointer value, GString * dat
 
 	return res;
 }
-char * dbmail_mailbox_orderedsubject(struct DbmailMailbox *self, gboolean uid)
+char * dbmail_mailbox_orderedsubject(struct DbmailMailbox *self)
 {
 	GList *sublist = NULL;
 	GString *q = g_string_new("");
@@ -358,7 +374,7 @@ char * dbmail_mailbox_orderedsubject(struct DbmailMailbox *self, gboolean uid)
 		subj = (char *)db_get_result(i,1);
 		
 		id = g_new0(u64_t,1);
-		if (uid==TRUE)
+		if (dbmail_mailbox_get_uid(self))
 			*id = idnr;
 		else
 			*id = *msn;
@@ -527,7 +543,8 @@ static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u
 	else if ( MATCH(key, "uid") ) {
 		g_return_val_if_fail(search_keys[*idx + 1], -1);
 		g_return_val_if_fail(check_msg_set(search_keys[*idx + 1]),-1);
-		value->type = IST_SET_UID;
+		dbmail_mailbox_set_uid(self,TRUE);
+		value->type = IST_SET;
 		(*idx)++;
 		strncpy(value->search, search_keys[(*idx)], MAX_SEARCH_LEN);
 		(*idx)++;
@@ -834,6 +851,19 @@ int dbmail_mailbox_build_imap_search(struct DbmailMailbox *self, char **search_k
 	if (! (search_keys && search_keys[*idx]))
 		return 1;
 
+	if (MATCH(search_keys[*idx],"uid")) {
+		dbmail_mailbox_set_uid(self,TRUE);
+		*idx++;
+	}
+	
+	if (check_msg_set(search_keys[*idx])) {
+		value = g_new0(search_key_t,1);
+		value->type = IST_SET;
+		strncpy(value->search, search_keys[*idx], MAX_SEARCH_LEN);
+		(*idx)++;
+		append_search(self, value,0);
+	}
+	
 	/* SORT */
 	if (sorted) {
 		value = g_new0(search_key_t,1);
@@ -1008,6 +1038,49 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 	return s->found;
 }
 
+static GTree * mailbox_search_parsed(struct DbmailMailbox *self, search_key_t *s)
+{
+
+	struct DbmailMessage *msg;
+	GList *ids;
+	u64_t *k, *v, *w, *x;
+
+	s->found = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free, (GDestroyNotify)g_free);
+	
+	ids = self->set;
+	while (ids) {
+		w = (u64_t *)ids->data;
+		x = g_tree_lookup(self->ids, w);
+		assert(x);
+		
+		if (! (msg = db_init_fetch(*w, DBMAIL_MESSAGE_FILTER_FULL)))
+			continue;
+		
+		if (! (db_exec_search(GMIME_OBJECT(msg->content), s))) {
+			dbmail_message_free(msg);
+			continue;
+		}
+
+		dbmail_message_free(msg);
+		
+		k = g_new0(u64_t,1);
+		v = g_new0(u64_t,1);
+		
+		*k = *w;
+		*v = *x;
+
+		g_tree_insert(s->found, k, v);
+
+		if (! g_list_next(ids))
+			break;
+
+		ids = g_list_next(ids);
+	}
+	
+	g_list_free(ids);
+	return s->found;
+}
+
 GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, search_key_t *sk)
 {
 	GList *ids = NULL, *sets = NULL;
@@ -1015,7 +1088,7 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, search_key_t *sk)
 	char *rest;
 	u64_t i, l, r, lo = 0, hi = 0;
 	u64_t *k, *v, *w = NULL;
-	GTree *a, *b;
+	GTree *a, *b, *c;
 	
 	b = g_tree_new_full((GCompareDataFunc)ucmp,NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
 	
@@ -1024,8 +1097,10 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, search_key_t *sk)
 
 	g_return_val_if_fail(g_tree_nnodes(self->ids)>0,b);
 
-	switch(sk->type) {
-		case IST_SET_UID:
+	trace(TRACE_DEBUG,"%s,%s: [%d] [%s]", __FILE__, __func__, sk->type, sk->search);
+	
+	switch(dbmail_mailbox_get_uid(self)) {
+		case TRUE:
 			ids = g_tree_keys(self->ids);
 			ids = g_list_last(ids);
 			hi = *((u64_t *)ids->data);
@@ -1033,7 +1108,7 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, search_key_t *sk)
 			lo = *((u64_t *)ids->data);
 			g_list_free(ids);
 			break;
-		case IST_SET:
+		case FALSE:
 			lo = 1;
 			hi = g_tree_nnodes(self->ids);
 			break;
@@ -1059,61 +1134,45 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, search_key_t *sk)
 		if (rest[0] == '*') {
 			l = hi;
 			r = l;
-
 			rest++;
-			if (rest[0]==':') {
-				rest++;
-				
-				if (rest[0] == '*') {
-					r = hi;
-				} else {
-					r = strtoull(rest,NULL,10);
-					if (!r || r > hi)
-						break;
-					
-					if (r < lo)
-						r = lo;
-				}
-			}
-
 		} else {
-			l = strtoull(sets->data,&rest,10);
-			if (! l)
+			if (! (l = strtoull(sets->data,&rest,10)))
 				break;
-			
 			l = max(l,lo);
 			r = l;
-			
-			if (rest[0]==':') {
-				rest++;
-			
-				if (rest[0] == '*')
-					r = hi;
-				else {
-					r = strtoull(rest,NULL,10);
-					if (! r || r > hi)
-						break;
-					if (r < lo)
-						r = lo;
-				}
-			}
 		}
 		
+		if (rest[0]==':') {
+			rest++;
+			if (rest[0] == '*') 
+				r = hi;
+			else 
+				r = strtoull(rest,NULL,10);
+			
+			if (!r || r > hi)
+				break;
+			
+			if (r < lo)
+				r = lo;
+		}
+	
 		if (! (l && r))
 			break;
+
+		switch (dbmail_mailbox_get_uid(self)) {
+			case TRUE:
+				c = self->ids;
+				break;
+			default:
+			case FALSE:
+				c = self->msn;
+				break;
+		}
 		
 		for (i = min(l,r); i <= max(l,r); i++) {
 
-			switch (sk->type) {
-				case IST_SET_UID:
-					if (! (w = g_tree_lookup(self->ids,&i))) 
-						continue;
-					break;
-				case IST_SET:
-					if (! (w = g_tree_lookup(self->msn,&i)))
-						continue;
-					break;
-			}
+			if (! (w = g_tree_lookup(c,&i))) 
+				continue;
 
 			k = g_new0(u64_t,1);
 			v = g_new0(u64_t,1);
@@ -1122,7 +1181,6 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, search_key_t *sk)
 			*v = *w;
 			
 			g_tree_insert(a,k,v);
-
 		}
 		
 		g_tree_merge(b,a,IST_SUBSEARCH_OR);
@@ -1133,9 +1191,22 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, search_key_t *sk)
 		sets = g_list_next(sets);
 	}
 
+	g_list_free(sets);
+	
 	if (a)
 		g_tree_destroy(a);
+
+	switch(dbmail_mailbox_get_uid(self)) {
+		case TRUE:
+			self->set = g_tree_keys(b);
+		break;
+		case FALSE:
+			self->set = g_tree_values(b);
+		break;
+	}
 	
+	trace(TRACE_DEBUG,"%s,%s: self->set contains [%d] ids", __FILE__, __func__, g_list_length(self->set));
+
 	return b;
 }
 
@@ -1143,11 +1214,11 @@ static gboolean _do_search(GNode *node, struct DbmailMailbox *self)
 {
 	search_key_t *s = (search_key_t *)node->data;
 	GTree *set = NULL;
-	
+
+	trace(TRACE_DEBUG,"%s,%s: type [%d]", __FILE__,  __func__, s->type);
 
 	switch (s->type) {
 		case IST_SET:
-		case IST_SET_UID:
 			if (! (set = dbmail_mailbox_get_set(self, s)))
 				return TRUE;
 			break;
@@ -1164,13 +1235,12 @@ static gboolean _do_search(GNode *node, struct DbmailMailbox *self)
 			if (! (set = mailbox_search(self, s)))
 				return TRUE;
 			break;
-		/* 
-		 * these all have in common that all messages need to be parsed 
-		 */
-		case IST_DATA_BODY:
-			//result = db_search_parsed(rset, setlen, sk, mb, condition);
-			break;
 
+		case IST_DATA_BODY:
+			if (! (set = mailbox_search_parsed(self,s)))
+				break;
+		break;
+		
 		case IST_SUBSEARCH_NOT:
 		case IST_SUBSEARCH_AND:
 		case IST_SUBSEARCH_OR:
@@ -1249,200 +1319,3 @@ int dbmail_mailbox_search(struct DbmailMailbox *self)
 	return 0;
 }
 
-
-#ifdef OLD
-
-/* 
- * build_set()
- *
- * builds a msn-set from a IMAP message set spec. the IMAP set is supposed to be correct,
- * no checks are performed.
- */
-static void build_set(unsigned int *set, unsigned int setlen, char *cset)
-{
-	unsigned int i;
-	u64_t num, num2;
-	char *sep = NULL;
-
-	if ((! set) || (! cset))
-		return;
-
-	memset(set, 0, setlen * sizeof(int));
-
-	do {
-		num = strtoull(cset, &sep, 10);
-		if (num <= setlen && num > 0) {
-			if (!*sep)
-				set[num - 1] = 1;
-			else if (*sep == ',') {
-				set[num - 1] = 1;
-				cset = sep + 1;
-			} else {
-				/* sep == ':' here */
-				sep++;
-				if (*sep == '*') {
-					for (i = num - 1; i < setlen; i++)
-						set[i] = 1;
-					cset = sep + 1;
-				} else {
-					cset = sep;
-					num2 = strtoull(cset, &sep, 10);
-
-					if (num2 > setlen)
-						num2 = setlen;
-					if (num2 > 0) {
-						/* NOTE: here: num2 > 0, num > 0 */
-						if (num2 < num) {
-							/* swap! */
-							i = num;
-							num = num2;
-							num2 = i;
-						}
-
-						for (i = num - 1; i < num2; i++)
-							set[i] = 1;
-					}
-					if (*sep)
-						cset = sep + 1;
-				}
-			}
-		} else if (*sep) {
-			/* invalid char, skip it */
-			cset = sep + 1;
-			sep++;
-		}
-	} while (sep && *sep && cset && *cset);
-}
-
-
-/* 
- * build_uid_set()
- *
- * as build_set() but takes uid's instead of MSN's
- */
-static void build_uid_set(unsigned int *set, unsigned int setlen, char *cset,
-		   mailbox_t * mb)
-{
-	unsigned int i, msn, msn2;
-	int result;
-	int num2found = 0;
-	u64_t num, num2;
-	char *sep = NULL;
-
-	if (!set)
-		return;
-
-	memset(set, 0, setlen * sizeof(int));
-
-	if (!cset || setlen == 0)
-		return;
-
-	do {
-		num = strtoull(cset, &sep, 10);
-		result =
-		    binary_search(mb->seq_list, mb->exists, num, &msn);
-
-		if (result < 0 && num < mb->seq_list[mb->exists - 1]) {
-			/* ok this num is not a UID, but if a range is specified (i.e. 1:*) 
-			 * it is valid -> check *sep
-			 */
-			if (*sep == ':') {
-				result = 1;
-				for (msn = 0; mb->seq_list[msn] < num;
-				     msn++);
-				if (msn >= mb->exists)
-					msn = mb->exists - 1;
-			}
-		}
-
-		if (result >= 0) {
-			if (!*sep)
-				set[msn] = 1;
-			else if (*sep == ',') {
-				set[msn] = 1;
-				cset = sep + 1;
-			} else {
-				/* sep == ':' here */
-				sep++;
-				if (*sep == '*') {
-					for (i = msn; i < setlen; i++)
-						set[i] = 1;
-
-					cset = sep + 1;
-				} else {
-					/* fetch second number */
-					cset = sep;
-					num2 = strtoull(cset, &sep, 10);
-					result =
-					    binary_search(mb->seq_list,
-							  mb->exists, num2,
-							  &msn2);
-
-					if (result < 0) {
-						/* in a range: (like 1:1000) so this number doesnt need to exist;
-						 * find the closest match below this UID value
-						 */
-						if (mb->exists == 0)
-							num2found = 0;
-						else {
-							for (msn2 =
-							     mb->exists -
-							     1;; msn2--) {
-								if (msn2 ==
-								    0
-								    && mb->
-								    seq_list
-								    [msn2]
-								    > num2) {
-									num2found
-									    =
-									    0;
-									break;
-								} else
-								    if
-								    (mb->
-								     seq_list
-								     [msn2]
-								     <=
-								     num2)
-								{
-									/* found! */
-									num2found
-									    =
-									    1;
-									break;
-								}
-							}
-						}
-
-					} else
-						num2found = 1;
-
-					if (num2found == 1) {
-						if (msn2 < msn) {
-							/* swap! */
-							i = msn;
-							msn = msn2;
-							msn2 = i;
-						}
-
-						for (i = msn; i <= msn2;
-						     i++)
-							set[i] = 1;
-					}
-
-					if (*sep)
-						cset = sep + 1;
-				}
-			}
-		} else {
-			/* invalid num, skip it */
-			if (*sep) {
-				cset = sep + 1;
-				sep++;
-			}
-		}
-	} while (sep && *sep && cset && *cset);
-}
-
-#endif

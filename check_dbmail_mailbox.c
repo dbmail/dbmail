@@ -191,6 +191,27 @@ START_TEST(test_dbmail_mailbox_build_imap_search)
 	dbmail_mailbox_free(md);
 	g_free(save);
 	g_strfreev(array);
+
+	// fourth case
+	sk = NULL;
+	idx = 0;
+	save = g_new0(search_key_t,1);
+	md = dbmail_mailbox_new(get_mailbox_id());
+	args = g_strdup("1,* ( arrival cc date reverse from size subject to ) us-ascii "
+			"HEADER FROM test ( SINCE 1-Feb-1995 OR HEADER SUBJECT test HEADER SUBJECT foo )");
+	
+	array = g_strsplit(args," ",0);
+	g_free(args);
+
+	sk = save;
+	dbmail_mailbox_build_imap_search(md, array, &idx, 1);
+
+	fail_unless(g_node_max_height(g_node_get_root(md->search))==4, "build_search: tree too shallow");
+	
+	dbmail_mailbox_free(md);
+	g_free(save);
+	g_strfreev(array);
+
 }
 END_TEST
 
@@ -252,9 +273,49 @@ START_TEST(test_dbmail_mailbox_search)
 	
 	dbmail_mailbox_free(mb);
 	g_strfreev(array);
+	
+	// third case
+	idx=0;
+	sorted = 0;
+	mb = dbmail_mailbox_new(get_mailbox_id());
+	args = g_strdup("1 BODY paul@nfg.nl");
+	array = g_strsplit(args," ",0);
+	g_free(args);
+	
+	dbmail_mailbox_build_imap_search(mb, array, &idx, sorted);
+	dbmail_mailbox_search(mb);
+	
+	dbmail_mailbox_free(mb);
+	g_strfreev(array);
+
 
 }
 END_TEST
+START_TEST(test_dbmail_mailbox_search_parsed)
+{
+	char *args;
+	char **array;
+	u64_t idx = 0;
+	gboolean sorted = 1;
+	struct DbmailMailbox *mb;
+	
+	idx=0;
+	sorted = 0;
+	mb = dbmail_mailbox_new(get_mailbox_id());
+	args = g_strdup("1 BODY paul@nfg.nl");
+	array = g_strsplit(args," ",0);
+	g_free(args);
+	
+	dbmail_mailbox_build_imap_search(mb, array, &idx, sorted);
+	dbmail_mailbox_search(mb);
+	
+	dbmail_mailbox_free(mb);
+	g_strfreev(array);
+
+
+}
+END_TEST
+
 
 START_TEST(test_dbmail_mailbox_orderedsubject)
 {
@@ -273,9 +334,12 @@ START_TEST(test_dbmail_mailbox_orderedsubject)
 	dbmail_mailbox_build_imap_search(mb, array, &idx, 0);
 	dbmail_mailbox_search(mb);
 	
-	res = dbmail_mailbox_orderedsubject(mb, TRUE);
+	dbmail_mailbox_set_uid(mb,TRUE);
+	res = dbmail_mailbox_orderedsubject(mb);
 	//printf("threads [%s]\n", res);
-	res = dbmail_mailbox_orderedsubject(mb, FALSE);
+	
+	dbmail_mailbox_set_uid(mb,FALSE);
+	res = dbmail_mailbox_orderedsubject(mb);
 	//printf("threads [%s]\n", res);
 	
 	g_free(res);
@@ -415,8 +479,9 @@ START_TEST(test_dbmail_mailbox_get_set)
 	guint c, d;
 	GTree *set;
 	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id());
+	dbmail_mailbox_set_uid(mb,TRUE);
 	search_key_t *s = g_new0(search_key_t, 1);
-	s->type = IST_SET_UID;
+	s->type = IST_SET;
 
 	strncpy(s->search,"1:*",MAX_SEARCH_LEN);
 	set = dbmail_mailbox_get_set(mb, s);
@@ -443,6 +508,12 @@ START_TEST(test_dbmail_mailbox_get_set)
 	d = g_tree_nnodes(set);
 	fail_unless(d==2,"mailbox_get_set failed");
 	g_tree_destroy(set);
+	
+	strncpy(s->search,"1",MAX_SEARCH_LEN);
+	set = dbmail_mailbox_get_set(mb,s);
+	d = g_tree_nnodes(set);
+	fail_unless(d==1,"mailbox_get_set failed");
+	g_tree_destroy(set);
 
 	g_free(s);
 	dbmail_mailbox_free(mb);
@@ -456,6 +527,7 @@ Suite *dbmail_mailbox_suite(void)
 	TCase *tc_mailbox = tcase_create("Mailbox");
 	suite_add_tcase(s, tc_mailbox);
 	tcase_add_checked_fixture(tc_mailbox, setup, teardown);
+	/*
 	tcase_add_test(tc_mailbox, test_g_tree_merge_or);
 	tcase_add_test(tc_mailbox, test_g_tree_merge_and);
 	tcase_add_test(tc_mailbox, test_g_tree_merge_not);
@@ -467,8 +539,12 @@ Suite *dbmail_mailbox_suite(void)
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_build_imap_search);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_sort);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search);
-	tcase_add_test(tc_mailbox, test_dbmail_mailbox_orderedsubject);
+	*/
 	
+	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search_parsed);
+	/*
+	tcase_add_test(tc_mailbox, test_dbmail_mailbox_orderedsubject);
+	*/
 	return s;
 }
 
