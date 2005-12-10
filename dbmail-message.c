@@ -123,9 +123,16 @@ gchar * get_crlf_encoded(gchar *string)
 
 static void dump_to_file(const char *filename, const char *buf)
 {
+	gint se;
 	g_assert(filename);
 	FILE *f = fopen(filename,"a");
-	g_assert(f);
+	if (! f) {
+		se=errno;
+		trace(TRACE_DEBUG,"%s,%s: opening dumpfile failed [%s]",
+				__FILE__, __func__, strerror(se));
+		errno=se;
+		return;
+	}
 	fprintf(f,"%s",buf);
 	fclose(f);
 }
@@ -317,6 +324,7 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 			
 		break;
 
+		default:
 		case DBMAIL_STREAM_RAW:
 			parser = g_mime_parser_new_with_stream(stream);
 		break;
@@ -327,7 +335,6 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 		case DBMAIL_MESSAGE:
 			trace(TRACE_DEBUG,"%s,%s: parse message",__FILE__,__func__);
 			self->content = GMIME_OBJECT(g_mime_parser_construct_message(parser));
-			dump_to_file("/tmp/dbmail.dump",dbmail_message_to_string(self));
 			break;
 		case DBMAIL_MESSAGE_PART:
 			trace(TRACE_DEBUG,"%s,%s: parse part",__FILE__,__func__);
