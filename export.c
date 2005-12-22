@@ -184,8 +184,6 @@ int main(int argc, char *argv[])
 		goto freeall;
 	}
 
-	//configure_debug(TRACE_ERROR, 1, 0);
-
 	/* Verify the existence of this user */
 	if (auth_user_exists(user, &useridnr) == -1) {
 		qerrorf("Error: cannot verify existence of user [%s].\n", user);

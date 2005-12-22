@@ -320,8 +320,6 @@ int main(int argc, char *argv[])
 		goto freeall;
 	}
 
-	//configure_debug(TRACE_ERROR, 1, 0);
-
 	switch (mode) {
 	case 'c':
 	case 'd':

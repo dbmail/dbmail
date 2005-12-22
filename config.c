@@ -77,6 +77,10 @@ int config_get_value(const field_t field_name,
 	/* as is */
 	dict_value = g_key_file_get_value(config_dict, service_name, field_name, NULL);
         if (dict_value) {
+		char *end;
+		end = g_strstr_len(dict_value, FIELDSIZE, "#");
+		if (end) *end = '\0';
+		g_strstrip(dict_value);
                 g_strlcpy(value, dict_value, FIELDSIZE);
 		g_free(dict_value);
 		return 0;
