@@ -42,6 +42,7 @@ typedef struct {
 			u64_t clientid);
 	int (* removealias)(u64_t user_idnr, const char *alias);
 	int (* removealias_ext)(const char *alias, const char *deliver_to);
+	gboolean (*requires_shadow_user)(void);
 } auth_func_t;
 
 #endif

@@ -1776,4 +1776,8 @@ int auth_removealias_ext(const char *alias, const char *deliver_to)
 	return forward_delete(alias,deliver_to);
 }
 
+gboolean auth_requires_shadow_user(void)
+{
+	return TRUE;
+}
 
