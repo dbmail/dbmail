@@ -289,8 +289,8 @@ int main(int argc, char *argv[])
 
 	/* parse the list and scan for field and content */
 	if (! (msg = mime_fetch_headers(msg, &mimelist))) {
-		trace(TRACE_ERROR,
-		      "main(): mime_fetch_headers failed to read a header list");
+		trace(TRACE_ERROR, "%s,%s: mime_fetch_headers failed",
+		      __FILE__,__func__);
 		exitcode = EX_TEMPFAIL;
 		goto freeall;
 	}
@@ -301,15 +301,16 @@ int main(int argc, char *argv[])
 	if (returnpath.total_nodes == 0)
 		mail_address_build_list("From", &returnpath, &mimelist);
 	if (returnpath.total_nodes == 0)
-		trace(TRACE_DEBUG, "main(): no return path found.");
+		trace(TRACE_DEBUG, "%s,%s: no return path found",
+				__FILE__, __func__);
 
 	/* If the NORMAL delivery mode has been selected... */
 	if (deliver_to_header != NULL) {
 		/* parse for destination addresses */
-		trace(TRACE_DEBUG, "main(): scanning for [%s]", deliver_to_header);
+		trace(TRACE_DEBUG, "%s,%s: scanning for [%s]", __FILE__, __func__, deliver_to_header);
 		if (mail_address_build_list(deliver_to_header, &users, &mimelist) != 0) {
-			trace(TRACE_STOP, "main(): scanner found no email addresses (scanned for %s)",
-			      deliver_to_header);
+			trace(TRACE_STOP, "%s,%s: no email addresses (scanned for %s)",
+					__FILE__, __func__, deliver_to_header);
 			exitcode = EX_NOUSER;
 			goto freeall;
 		}
@@ -317,12 +318,16 @@ int main(int argc, char *argv[])
 		/* Loop through the users list, moving the entries into the dsnusers list. */
 		for (tmp = dm_list_getstart(&users); tmp != NULL;
 		     tmp = tmp->nextnode) {
-			deliver_to_user_t dsnuser;
-
+			
 			dsnuser_init(&dsnuser);
 			dsnuser.address = dm_strdup((char *) tmp->data);
 
-			dm_list_nodeadd(&dsnusers, &dsnuser, sizeof(deliver_to_user_t));
+			if (! dm_list_nodeadd(&dsnusers, &dsnuser, sizeof(deliver_to_user_t))) {
+				trace(TRACE_ERROR,"%s,%s: out of memory in dm_list_nodeadd",
+						__FILE__, __func__);
+				exitcode = EX_TEMPFAIL;
+				goto freeall;
+			}
 		}
 	}
 
