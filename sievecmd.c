@@ -204,7 +204,7 @@ int do_insert(u64_t user_idnr, char *name, FILE * source)
 		// FIXME: Error.
 	}
 
-	res = sortsieve_script_validate(user_idnr, "@!temp-script!@", &errmsg);
+	res = sort_validate(user_idnr, "@!temp-script!@", &errmsg);
 	if (res != 0) {
 		printf("Script [%s] has errors: %s.\n", name, errmsg);
 		return -1;

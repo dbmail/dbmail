@@ -88,7 +88,6 @@
 #include "memblock.h"
 #include "mime.h"
 #include "pidfile.h"
-#include "sort.h"
 #include "forward.h"
 #include "dbmd5.h"
 #include "md5.h"
@@ -109,7 +108,6 @@
 #include <sieve2_error.h>
 #endif
 
-#include "modules/sortsieve.h"
 #include "sievecmd.h"
 #include "timsieve.h"
 

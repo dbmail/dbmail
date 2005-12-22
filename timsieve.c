@@ -527,7 +527,7 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 									if (0 != db_add_sievescript(session->useridnr, "@!temp-script!@", f_buf)) {
 										// FIXME: Error.
 									}
-									if (0 != sortsieve_script_validate(session->useridnr, "@!temp-script!@", &errmsg)) {
+									if (0 != sort_validate(session->useridnr, "@!temp-script!@", &errmsg)) {
 										trace
 										    (TRACE_INFO,
 										     "%s, %s: Script has syntax errrors: [%s]",

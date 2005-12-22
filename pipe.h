@@ -57,5 +57,8 @@ int store_message_in_blocks(const char* message,
 				   u64_t message_size,
 				   u64_t msgidnr);
 
+int send_vacation(const char *from, const char *to,
+		const char *header, const char *message);
+
 
 #endif

@@ -9,9 +9,7 @@
  * $Id: $
  */
 
-#include <config.h>
-#include "debug.h"
-#include "dbmailtypes.h"
+#include "dbmail.h"
 
 /* Run the user's sorting rules on this message
  * Retrieve the action list as either
@@ -20,8 +18,10 @@
  *
  * Then do it!
  * */
-dsn_class_t sort_and_deliver(struct DbmailMessage *message, u64_t useridnr,
-		const char *mailbox, mailbox_source_t source)
+dsn_class_t sort_and_deliver(struct DbmailMessage *message,
+		const char *destination, u64_t useridnr,
+		const char *mailbox, mailbox_source_t source,
+		const char *fromaddr)
 {
 	u64_t mboxidnr, newmsgidnr;
 
@@ -34,7 +34,28 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message, u64_t useridnr,
 		source = BOX_DEFAULT;
 	}
 	
-	/* FIXME: This is where we call the sorting engine into action. */
+	/* Subaddress. */
+	if (0) { // FIXME: I think this should be configurable.
+		int res;
+		size_t sublen, subpos;
+		char *subaddress;
+		// FIXME: Where can I get access to the address?
+		res = find_bounded(destination, '+', '@', &subaddress, &sublen, &subpos);
+		if (res == 0 && sublen > 0) {
+			// FIXME: I forget who frees the mailbox.
+			mailbox = subaddress;
+			source = BOX_ADDRESSPART;
+		}
+	}
+
+	/* Sieve. */
+	if (0) { // FIXME: I think this should be configurable.
+		sort_connect();
+		// FIXME: Pass by reference? What about other actions. Grr.
+		sort_process(useridnr, message, fromaddr);
+		sort_disconnect();
+	}
+	
 
 	if (db_find_create_mailbox(mailbox, source, useridnr, &mboxidnr) != 0) {
 		trace(TRACE_ERROR, "%s,%s: mailbox [%s] not found",

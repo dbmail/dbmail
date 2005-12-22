@@ -19,11 +19,20 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* Headers for sorting.c */
+/* Headers for sort.c */
 
 #ifndef SORT_H
 #define SORT_H
 
-dsn_class_t sort_and_deliver(struct DbmailMessage *self, u64_t useridnr, const char *mailbox, mailbox_source_t source);
+#define MAX_SIEVE_SCRIPTNAME 100
+
+dsn_class_t sort_and_deliver(struct DbmailMessage *self,
+		const char *destination, u64_t useridnr,
+		const char *mailbox, mailbox_source_t source,
+		const char *fromaddr);
+
+int sort_process(u64_t user_idnr, struct DbmailMessage *message,
+		const char *fromaddr);
+int sort_validate(u64_t user_idnr, char *scriptname, char **errmsg);
 
 #endif
