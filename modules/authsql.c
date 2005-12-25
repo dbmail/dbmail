@@ -924,3 +924,8 @@ GList * auth_get_user_aliases(u64_t user_idnr)
 	return aliases;
 }
 
+gboolean auth_requires_shadow_user(void)
+{
+	return FALSE;
+}
+

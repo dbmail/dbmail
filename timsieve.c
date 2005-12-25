@@ -1,4 +1,4 @@
-/* $Id: timsieve.c 1912 2005-11-19 02:29:41Z aaron $
+/* $Id: timsieve.c 1946 2005-12-22 15:51:40Z aaron $
 
  Copyright (C) 1999-2004 Aaron Stone aaron at serendipity dot cx
 
@@ -527,7 +527,7 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 									if (0 != db_add_sievescript(session->useridnr, "@!temp-script!@", f_buf)) {
 										// FIXME: Error.
 									}
-									if (0 != sortsieve_script_validate(session->useridnr, "@!temp-script!@", &errmsg)) {
+									if (0 != sort_validate(session->useridnr, "@!temp-script!@", &errmsg)) {
 										trace
 										    (TRACE_INFO,
 										     "%s, %s: Script has syntax errrors: [%s]",

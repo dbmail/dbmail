@@ -46,88 +46,53 @@
 #include "dbmd5.h"
 #include "misc.h"
 
-#include "sortsieve.h"
 #include "sort.h"
 #include <sieve2.h>
 
-extern struct dm_list smtpItems, sysItems;
-
 /* Used by us to keep track of libSieve. */
+// FIXME: This is a mess right now. Clean it up.
 struct my_context {
 	char *s_buf;
 	char *script;
 	char *header;
+	const char *mailbox;
 	char *errormsg;
+	const char *fromaddr;
+	u64_t msg_idnr;
 	u64_t user_idnr;
 	u64_t headersize;
 	u64_t messagesize;
 	int error_runtime;
 	int error_parse;
 	int actiontaken;
-	struct dm_list *actionlist;
+	struct DbmailMessage *message;
 };
 
-
-/* typedef sort_action {
- *   int method,
- *   char *destination,
- *   char *message
- * } sort_action_t;
- * */
-
 /* SIEVE CALLBACKS */
-
-int my_notify(sieve2_context_t *s, void *my)
-{
-	struct my_context *m = (struct my_context *)my;
-	const char * const * options;
-	int i;
-
-	printf( "Action is NOTIFY: \n" );
-	printf( "  ID \"%s\" is %s\n",
-		sieve2_getvalue_string(s, "id"),
-		sieve2_getvalue_string(s, "active"));
-	printf( "    Method is %s\n",
-		sieve2_getvalue_string(s, "method"));
-	printf( "    Priority is %s\n",
-		sieve2_getvalue_string(s, "priority"));
-	printf( "    Message is %s\n",
-		sieve2_getvalue_string(s, "message"));
-
-	options = sieve2_getvalue_stringlist(s, "options");
-	if (!options)
-		return SIEVE2_ERROR_BADARGS;
-	for (i = 0; options[i] != NULL; i++) {
-		printf( "    Options are %s\n", options[i] );
-	}
-
-	m->actiontaken = 1;
-	return SIEVE2_OK;
-}
 
 int my_vacation(sieve2_context_t *s, void *my)
 {
 	struct my_context *m = (struct my_context *)my;
-	int yn;
+	time_t last_time= 0;
+	time_t current_time = 0;
+	int interval = 0;
+	const char *message, *subject, *address, *name;
 
-	/* Ask for the message hash, the days parameters, etc. */
-	printf("Have I already responded to '%s' in the past %d days?\n",
-		sieve2_getvalue_string(s, "hash"),
-		sieve2_getvalue_int(s, "days") );
+	/* TODO: We need a table for Vacation data... */
 
-	yn = getchar();
+	interval = sieve2_getvalue_int(s, "interval");
+	message = sieve2_getvalue_string(s, "message"),
+	subject = sieve2_getvalue_string(s, "subject"),
+	address = sieve2_getvalue_string(s, "address"),
+	name = sieve2_getvalue_string(s, "name");
 
-	/* Check in our 'database' to see if there's a match. */
-	if (yn == 'y' || yn == 'Y') {
-		printf( "Ok, not sending a vacation response.\n" );
+	// db_vacation_getlast(my->useridnr, name, &timestamp);
+
+	if (current_time > last_time + interval) {
+		send_vacation(address, m->fromaddr, subject, message);
 	}
 
-	/* If so, do nothing. If not, send a vacation and log it. */
-	printf("echo '%s' | mail -s '%s' '%s' for message '%s'\n",
-		sieve2_getvalue_string(s, "message"),
-		sieve2_getvalue_string(s, "subject"),
-		sieve2_getvalue_string(s, "address"),
-		sieve2_getvalue_string(s, "name") );
+	// db_vacation_setlast(my->useridnr, name, timestamp);
 
 	m->actiontaken = 1;
 	return SIEVE2_OK;
@@ -136,11 +101,22 @@ int my_vacation(sieve2_context_t *s, void *my)
 int my_redirect(sieve2_context_t *s, void *my)
 {
 	struct my_context *m = (struct my_context *)my;
+	struct dm_list targets;
+	const char *address;
 
-	printf( "Action is REDIRECT: \n" );
-	printf( "  Destination is [%s]\n",
-		sieve2_getvalue_string(s, "address"));
+	address = sieve2_getvalue_string(s, "address");
 
+	trace(TRACE_INFO, "Action is REDIRECT: "
+		"REDIRECT destination is [%s].", address);
+
+	dm_list_nodeadd(&targets, address, strlen(address+1));
+
+	if (forward(m->msg_idnr, &targets, m->fromaddr, NULL, 0) != 0) {
+		dm_list_free(&targets.start);
+		return SIEVE2_ERROR_FAIL;
+	}
+
+	dm_list_free(&targets.start);
 	m->actiontaken = 1;
 	return SIEVE2_OK;
 }
@@ -149,9 +125,12 @@ int my_reject(sieve2_context_t *s, void *my)
 {
 	struct my_context *m = (struct my_context *)my;
 
-	printf( "Action is REJECT: \n" );
-	printf( "  Message is [%s]\n",
+	trace(TRACE_INFO, "Action is REJECT: "
+		"REJECT message is [%s].",
 		sieve2_getvalue_string(s, "message"));
+
+//	FIXME: how do we do this?
+//	send_bounce(my->messageidnr, message);
 
 	m->actiontaken = 1;
 	return SIEVE2_OK;
@@ -161,7 +140,7 @@ int my_discard(sieve2_context_t *s UNUSED, void *my)
 {
 	struct my_context *m = (struct my_context *)my;
 
-	printf( "Action is DISCARD\n" );
+	trace(TRACE_INFO, "Action is DISCARD.");
 
 	m->actiontaken = 1;
 	return SIEVE2_OK;
@@ -171,20 +150,23 @@ int my_fileinto(sieve2_context_t *s, void *my)
 {
 	struct my_context *m = (struct my_context *)my;
 	const char * const * flags;
-	int i;
+	const char * mailbox;
 
-	printf( "Action is FILEINTO: \n" );
-	printf( "  Destination is %s\n",
-		sieve2_getvalue_string(s, "mailbox"));
+	mailbox = sieve2_getvalue_string(s, "mailbox");
 	flags = sieve2_getvalue_stringlist(s, "imapflags");
+
+	trace(TRACE_INFO, "Action is FILEINTO: mailbox is [%s]", mailbox);
+
+	m->mailbox = mailbox;
+//	FIXME: how do we do this?
+/*	m->flags = 
+
 	if (flags) {
-		printf( "  Flags are:");
 		for (i = 0; flags[i]; i++)
 			printf( " %s", flags[i]);
-		printf( ".\n");
-	} else {
-			printf( "  No flags specified.\n");
 	}
+*/
+//	We just don't care. Insert with default flags.
 
 	m->actiontaken = 1;
 	return SIEVE2_OK;
@@ -194,7 +176,9 @@ int my_keep(sieve2_context_t *s UNUSED, void *my)
 {
 	struct my_context *m = (struct my_context *)my;
 
-	printf( "Action is KEEP\n" );
+	trace(TRACE_INFO, "Action is KEEP.");
+
+//	FIXME: differentiate this from DISCARD, duh.
 
 	m->actiontaken = 1;
 	return SIEVE2_OK;
@@ -203,12 +187,17 @@ int my_keep(sieve2_context_t *s UNUSED, void *my)
 int my_errparse(sieve2_context_t *s, void *my)
 {
 	struct my_context *m = (struct my_context *)my;
+	const char *message;
+	int lineno;
 
-	printf( "Error is PARSE: " );
-	printf( "  Line is %d\n",
-		sieve2_getvalue_int(s, "lineno"));
-	printf( "  Message is %s\n",
-		sieve2_getvalue_string(s, "message"));
+	lineno = sieve2_getvalue_int(s, "lineno");
+	message = sieve2_getvalue_string(s, "message");
+
+	trace(TRACE_INFO, "Error is PARSE:"
+		"Line is [%d], Message is [%s]", lineno, message);
+
+//	FIXME: generate a message and put it into the INBOX
+//	of the script's owner, probably with an Urgent flag.
 
 	m->error_parse = 1;
 	return SIEVE2_OK;
@@ -217,10 +206,15 @@ int my_errparse(sieve2_context_t *s, void *my)
 int my_errexec(sieve2_context_t *s, void *my)
 {
 	struct my_context *m = (struct my_context *)my;
+	const char *message;
 
-	printf( "Error is EXEC: " );
-	printf( "  Message is %s\n",
-		sieve2_getvalue_string(s, "message"));
+	message = sieve2_getvalue_string(s, "message");
+
+	trace(TRACE_INFO, "Error is EXEC: "
+		"Message is [%s]", message);
+
+//	FIXME: generate a message and put it into the INBOX
+//	of the script's owner, probably with an Urgent flag.
 
 	m->error_runtime = 1;
 	return SIEVE2_OK;
@@ -242,14 +236,15 @@ int my_getscript(sieve2_context_t *s, void *my)
 		return SIEVE2_ERROR_BADARGS;
 
 	if (strlen(path) && strlen(name)) {
-		printf("Include requested from '%s' named '%s'\n",
+		/* TODO: handle included files. */
+		trace(TRACE_INFO, "Include requested from [%s] named [%s]",
 			path, name);
 	} else
 	if (!strlen(path) && !strlen(name)) {
 		/* Read the script file given as an argument. */
 		res = db_get_sievescript_byname(m->user_idnr, m->script, &m->s_buf);
 		if (res != SIEVE2_OK) {
-			printf("my_getscript: read_file() returns %d\n", res);
+			trace(TRACE_ERROR, "my_getscript: read_file() returns %d\n", res);
 			return SIEVE2_ERROR_FAIL;
 		}
 		sieve2_setvalue_string(s, "script", m->s_buf);
@@ -271,9 +266,13 @@ int my_getheaders(sieve2_context_t *s, void *my)
 	return SIEVE2_OK;
 }
 
-int my_getenvelope(sieve2_context_t *s UNUSED, void *my UNUSED)
+int my_getenvelope(sieve2_context_t *s, void *my)
 {
-	return SIEVE2_ERROR_UNSUPPORTED;
+	struct my_context *m = (struct my_context *)my;
+
+	sieve2_setvalue_string(s, "envelope", m->fromaddr);
+
+	return SIEVE2_OK;
 }
 
 int my_getbody(sieve2_context_t *s UNUSED, void *my UNUSED)
@@ -293,22 +292,18 @@ int my_getsize(sieve2_context_t *s, void *my)
 /* END OF CALLBACKS */
 
 
-/* FIXME: Will this work outside of a function scope? */
 sieve2_callback_t my_callbacks[] = {
 	{ SIEVE2_ERRCALL_RUNTIME,       my_errexec     },
 	{ SIEVE2_ERRCALL_PARSE,         my_errparse    },
 	{ SIEVE2_ACTION_FILEINTO,       my_fileinto    },
 	{ SIEVE2_ACTION_REDIRECT,       my_redirect    },
 	{ SIEVE2_ACTION_REJECT,         my_reject      },
-	{ SIEVE2_ACTION_NOTIFY,         my_notify      },
 	{ SIEVE2_ACTION_VACATION,       my_vacation    },
 	{ SIEVE2_ACTION_KEEP,           my_keep        },
 	{ SIEVE2_SCRIPT_GETSCRIPT,      my_getscript   },
-	/* We don't support one header at a time in this example. */
 // TODO: Use GMime to hand pre-parsed headers to libSieve
 // on an as-needed basis using the my_getheader callback.
 	{ SIEVE2_MESSAGE_GETHEADER,     NULL            },
-	/* libSieve can parse headers itself, so we'll use that. */
 	{ SIEVE2_MESSAGE_GETALLHEADERS, my_getheaders  },
 	{ SIEVE2_MESSAGE_GETENVELOPE,   my_getenvelope },
 	{ SIEVE2_MESSAGE_GETBODY,       my_getbody     },
@@ -317,7 +312,7 @@ sieve2_callback_t my_callbacks[] = {
 
 
 /* Return 0 on script OK, 1 on script error, 2 on misc error. */
-int sortsieve_script_validate(u64_t user_idnr, char *scriptname, char **errormsg)
+int sort_validate(u64_t user_idnr, char *scriptname, char **errormsg)
 {
 	int res, exitcode = 0;
 	struct my_context *my_context;
@@ -343,7 +338,7 @@ int sortsieve_script_validate(u64_t user_idnr, char *scriptname, char **errormsg
 
 	res = sieve2_alloc(&sieve2_context);
 	if (res != SIEVE2_OK) {
-		printf("Error %d when calling sieve2_alloc: %s\n",
+		trace(TRACE_ERROR, "Error %d when calling sieve2_alloc: %s\n",
 			res, sieve2_errstr(res));
 		exitcode = 1;
 		goto freesieve;
@@ -351,7 +346,7 @@ int sortsieve_script_validate(u64_t user_idnr, char *scriptname, char **errormsg
 
 	res = sieve2_callbacks(sieve2_context, my_callbacks);
 	if (res != SIEVE2_OK) {
-		printf("Error %d when calling sieve2_callbacks: %s\n",
+		trace(TRACE_ERROR, "Error %d when calling sieve2_callbacks: %s\n",
 			res, sieve2_errstr(res));
 		exitcode = 1;
 		goto freesieve;
@@ -359,7 +354,7 @@ int sortsieve_script_validate(u64_t user_idnr, char *scriptname, char **errormsg
 
 	res = sieve2_validate(sieve2_context, my_context);
 	if (res != SIEVE2_OK) {
-		printf("Error %d when calling sieve2_validate: %s\n",
+		trace(TRACE_ERROR, "Error %d when calling sieve2_validate: %s\n",
 			res, sieve2_errstr(res));
 		exitcode = 1;
 	}
@@ -373,7 +368,7 @@ int sortsieve_script_validate(u64_t user_idnr, char *scriptname, char **errormsg
 freesieve:
 	res = sieve2_free(&sieve2_context);
 	if (res != SIEVE2_OK) {
-		printf("Error %d when calling sieve2_free: %s\n",
+		trace(TRACE_ERROR, "Error %d when calling sieve2_free: %s\n",
 			res, sieve2_errstr(res));
 		exitcode = 1;
 	}
@@ -396,8 +391,8 @@ endnofree:
  * such as dbmail-lmtpd, the daemon should
  * finish storing the message and restart.
  * */
-int sortsieve_msgsort(u64_t user_idnr, char *header, u64_t headersize,
-		      u64_t messagesize, struct dm_list *actions)
+int sort_process(u64_t user_idnr, struct DbmailMessage *message,
+		const char *fromaddr)
 {
 	int res, exitcode = 0;
 	struct my_context *my_context;
@@ -419,21 +414,20 @@ int sortsieve_msgsort(u64_t user_idnr, char *header, u64_t headersize,
 	memset(my_context, 0, sizeof(struct my_context));
 
 	my_context->user_idnr = user_idnr;
-	my_context->header = header;
-	my_context->headersize = headersize;
-	my_context->messagesize = messagesize;
-	my_context->actionlist = actions;
+	my_context->headersize = dbmail_message_get_hdrs_size(message, FALSE);
+	my_context->messagesize = dbmail_message_get_size(message, FALSE);
+	my_context->fromaddr = fromaddr;
 
 	res = db_get_sievescript_active(user_idnr, &my_context->script);
 	if (res != 0) {
-		printf("Error %d when calling db_getactive_sievescript\n", res);
+		trace(TRACE_ERROR, "Error %d when calling db_getactive_sievescript\n", res);
 		exitcode = 1;
 		goto freesieve;
 	}
 
 	res = sieve2_alloc(&sieve2_context);
 	if (res != SIEVE2_OK) {
-		printf("Error %d when calling sieve2_alloc: %s\n",
+		trace(TRACE_ERROR, "Error %d when calling sieve2_alloc: %s\n",
 			res, sieve2_errstr(res));
 		exitcode = 1;
 		goto freesieve;
@@ -441,7 +435,7 @@ int sortsieve_msgsort(u64_t user_idnr, char *header, u64_t headersize,
 
 	res = sieve2_callbacks(sieve2_context, my_callbacks);
 	if (res != SIEVE2_OK) {
-		printf("Error %d when calling sieve2_callbacks: %s\n",
+		trace(TRACE_ERROR, "Error %d when calling sieve2_callbacks: %s\n",
 			res, sieve2_errstr(res));
 		exitcode = 1;
 		goto freesieve;
@@ -449,12 +443,12 @@ int sortsieve_msgsort(u64_t user_idnr, char *header, u64_t headersize,
 
 	res = sieve2_execute(sieve2_context, my_context);
 	if (res != SIEVE2_OK) {
-		printf("Error %d when calling sieve2_execute: %s\n",
+		trace(TRACE_ERROR, "Error %d when calling sieve2_execute: %s\n",
 			res, sieve2_errstr(res));
 		exitcode = 1;
 	}
 	if (!my_context->actiontaken) {
-		printf("  no actions taken; keeping message.\n");
+		trace(TRACE_INFO, "  no actions taken; keeping message.\n");
 		my_keep(NULL, my_context);
 	}
 
@@ -466,7 +460,7 @@ int sortsieve_msgsort(u64_t user_idnr, char *header, u64_t headersize,
 freesieve:
 	res = sieve2_free(&sieve2_context);
 	if (res != SIEVE2_OK) {
-		printf("Error %d when calling sieve2_free: %s\n",
+		trace(TRACE_ERROR, "Error %d when calling sieve2_free: %s\n",
 			res, sieve2_errstr(res));
 		exitcode = 1;
 	}

@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: pipe.h 1891 2005-10-03 10:01:21Z paul $ 
+/* $Id: pipe.h 1946 2005-12-22 15:51:40Z aaron $ 
  */
 
 #ifndef _PIPE_H
@@ -56,6 +56,9 @@ int discard_client_input(FILE * instream);
 int store_message_in_blocks(const char* message,
 				   u64_t message_size,
 				   u64_t msgidnr);
+
+int send_vacation(const char *from, const char *to,
+		const char *header, const char *message);
 
 
 #endif

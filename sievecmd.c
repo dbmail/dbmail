@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: sievecmd.c 1929 2005-11-29 10:44:16Z aaron $
+/* $Id: sievecmd.c 1946 2005-12-22 15:51:40Z aaron $
  * This is dbmail-sievecmd, which provides
  * a command line interface to the sievescripts */
 
@@ -204,7 +204,7 @@ int do_insert(u64_t user_idnr, char *name, FILE * source)
 		// FIXME: Error.
 	}
 
-	res = sortsieve_script_validate(user_idnr, "@!temp-script!@", &errmsg);
+	res = sort_validate(user_idnr, "@!temp-script!@", &errmsg);
 	if (res != 0) {
 		printf("Script [%s] has errors: %s.\n", name, errmsg);
 		return -1;

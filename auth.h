@@ -313,9 +313,15 @@ int auth_removealias(u64_t user_idnr, const char *alias);
  *        - 0 on success
  */
 int auth_removealias_ext(const char *alias, const char *deliver_to);
+/**
+ * \brief determines if the loaded auth module requires shadow users
+ * \return
+ *         - TRUE if required
+ *         - FALSE if not
+ */
+gboolean auth_requires_shadow_user(void);
 
 #ifdef AUTHLDAP
-
 char *dm_ldap_get_filter(const gchar boolean, const gchar *attribute, GList *values);
 u64_t dm_ldap_get_freeid(const gchar *attribute);
 GList * dm_ldap_entdm_list_get_values(GList *entlist);

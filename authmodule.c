@@ -97,7 +97,8 @@ int auth_load_driver(void)
 	||  !g_module_symbol(module, "auth_addalias",               &auth->addalias               )
 	||  !g_module_symbol(module, "auth_addalias_ext",           &auth->addalias_ext           )
 	||  !g_module_symbol(module, "auth_removealias",            &auth->removealias            )
-	||  !g_module_symbol(module, "auth_removealias_ext",        &auth->removealias_ext        )) {
+	||  !g_module_symbol(module, "auth_removealias_ext",        &auth->removealias_ext        )
+	||  !g_module_symbol(module, "auth_requires_shadow_user",   &auth->requires_shadow_user   )) {
 		trace(TRACE_FATAL, "auth_init: cannot find function: %s: %s", lib, g_module_error());
 		return -2;
 	}
@@ -173,3 +174,6 @@ int auth_removealias(u64_t user_idnr, const char *alias)
 	{ return auth->removealias(user_idnr, alias); }
 int auth_removealias_ext(const char *alias, const char *deliver_to)
 	{ return auth->removealias_ext(alias, deliver_to); }
+gboolean auth_requires_shadow_user(void)
+	{ return auth->requires_shadow_user(); }
+

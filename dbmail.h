@@ -1,5 +1,5 @@
 /*
- $Id: dbmail.h 1938 2005-12-04 15:21:10Z paul $
+ $Id: dbmail.h 1946 2005-12-22 15:51:40Z aaron $
 
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 
@@ -88,7 +88,6 @@
 #include "memblock.h"
 #include "mime.h"
 #include "pidfile.h"
-#include "sort.h"
 #include "forward.h"
 #include "dbmd5.h"
 #include "md5.h"
@@ -109,7 +108,6 @@
 #include <sieve2_error.h>
 #endif
 
-#include "modules/sortsieve.h"
 #include "sievecmd.h"
 #include "timsieve.h"
 

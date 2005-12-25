@@ -1,3 +1,16 @@
+2005-12-22  Aaron Stone  <aaron@serendipity.cx>
+
+	* modules/sortsieve.h:
+	Deleted.
+	* dbmail.h pipe.c pipe.h sievecmd.c timsieve.c sort.c sort.h
+	sortmodule.c sortmodule.h modules/sortsieve.c:
+	Lots of work on the Sieve sort module.
+	* auth.h authmodule.c authmodule.h db.c modules/authldap.c
+	modules/authsql.c:
+	Remove #define AUTHLDAP, replace with a loadable auth call.
+	* config.c export.c user.c:
+	A hack to handle our config file comments neatly.
+
 2005-12-04  Paul J Stevens <paul@nfg.nl>
 
 	* ChangeLog, dbmail.h:

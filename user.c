@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: user.c 1891 2005-10-03 10:01:21Z paul $
+/* $Id: user.c 1944 2005-12-22 15:49:21Z aaron $
  * This is the dbmail-user program
  * It makes adding users easier 
  *
@@ -271,7 +271,7 @@ int main(int argc, char *argv[])
 		case 'V':
 			/* Show the version and return non-zero. */
 			printf("\n*** DBMAIL: dbmail-users version "
-			       "$Revision: 1891 $ %s\n\n", COPYRIGHT);
+			       "$Revision: 1944 $ %s\n\n", COPYRIGHT);
 			result = 1;
 			break;
 
@@ -319,8 +319,6 @@ int main(int argc, char *argv[])
 		result = -1;
 		goto freeall;
 	}
-
-	//configure_debug(TRACE_ERROR, 1, 0);
 
 	switch (mode) {
 	case 'c':

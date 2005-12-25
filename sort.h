@@ -1,5 +1,5 @@
 
-/* $Id: sort.h 1929 2005-11-29 10:44:16Z aaron $ 
+/* $Id: sort.h 1946 2005-12-22 15:51:40Z aaron $ 
  
  Copyright (C) 1999-2004 Aaron Stone aaron at serendipity dot cx
 
@@ -19,11 +19,20 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* Headers for sorting.c */
+/* Headers for sort.c */
 
 #ifndef SORT_H
 #define SORT_H
 
-dsn_class_t sort_and_deliver(struct DbmailMessage *self, u64_t useridnr, const char *mailbox, mailbox_source_t source);
+#define MAX_SIEVE_SCRIPTNAME 100
+
+dsn_class_t sort_and_deliver(struct DbmailMessage *self,
+		const char *destination, u64_t useridnr,
+		const char *mailbox, mailbox_source_t source,
+		const char *fromaddr);
+
+int sort_process(u64_t user_idnr, struct DbmailMessage *message,
+		const char *fromaddr);
+int sort_validate(u64_t user_idnr, char *scriptname, char **errmsg);
 
 #endif

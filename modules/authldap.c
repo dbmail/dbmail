@@ -19,7 +19,7 @@
 */
 
 /*
- * $Id: authldap.c 1925 2005-11-27 15:38:44Z paul $
+ * $Id: authldap.c 1945 2005-12-22 15:50:41Z aaron $
  * * User authentication functions for LDAP.
  */
 #ifdef HAVE_CONFIG_H
@@ -1776,4 +1776,8 @@ int auth_removealias_ext(const char *alias, const char *deliver_to)
 	return forward_delete(alias,deliver_to);
 }
 
+gboolean auth_requires_shadow_user(void)
+{
+	return TRUE;
+}
 

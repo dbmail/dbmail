@@ -1,4 +1,4 @@
-/* $Id: db.c 1920 2005-11-26 08:32:15Z aaron $ */
+/* $Id: db.c 1945 2005-12-22 15:50:41Z aaron $ */
 /*
   Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 
@@ -2525,14 +2525,14 @@ int db_createmailbox(const char *name, u64_t owner_idnr,
 	assert(mailbox_idnr != NULL);
 	*mailbox_idnr = 0;
 
-#ifdef AUTHLDAP
-	if ((db_user_find_create(owner_idnr) < 0)) {
-		trace(TRACE_ERROR, "%s,%s: unable to find or create sql shadow "
-				"account for useridnr [%llu]", 
-				__FILE__, __func__, owner_idnr);
-		return DM_EQUERY;
+	if (auth_requires_shadow_user()) {
+		if ((db_user_find_create(owner_idnr) < 0)) {
+			trace(TRACE_ERROR, "%s,%s: unable to find or create sql shadow "
+					"account for useridnr [%llu]", 
+					__FILE__, __func__, owner_idnr);
+			return DM_EQUERY;
+		}
 	}
-#endif
 
 	/* remove namespace information from mailbox name */
 	if (!(simple_name = mailbox_remove_namespace(name))) {

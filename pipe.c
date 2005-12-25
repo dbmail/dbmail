@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: pipe.c 1912 2005-11-19 02:29:41Z aaron $
+/* $Id: pipe.c 1946 2005-12-22 15:51:40Z aaron $
  *
  * Functions for reading the pipe from the MTA */
 
@@ -115,6 +115,15 @@ static int valid_sender(const char *addr)
 	if (strcasestr(addr, "postmaster@"))
 		return 0;
 	return 1;
+}
+
+/*
+ * Send a vacation message
+ */
+int send_vacation(const char *from UNUSED, const char *to UNUSED,
+		const char *subject UNUSED, const char *message UNUSED)
+{
+	return 0;
 }
 	
 /*
@@ -466,7 +475,10 @@ int insert_messages(struct DbmailMessage *message,
 			trace(TRACE_DEBUG, "%s, %s: calling sort_and_deliver for useridnr [%llu]",
 			      __FILE__, __func__, useridnr);
 
-			switch (sort_and_deliver(message, useridnr, delivery->mailbox, delivery->source)) {
+			switch (sort_and_deliver(message,
+					delivery->address, useridnr,
+					delivery->mailbox, delivery->source,
+					ret_path->data)) {
 			case DSN_CLASS_OK:
 				/* Indicate success. */
 				trace(TRACE_DEBUG, "%s, %s: successful sort_and_deliver for useridnr [%llu]",
