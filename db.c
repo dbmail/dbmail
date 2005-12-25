@@ -3242,8 +3242,9 @@ int db_get_msgflag_all(u64_t msg_idnr, u64_t mailbox_idnr, int *flags)
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT seen_flag, answered_flag, deleted_flag, "
 		 "flagged_flag, draft_flag, recent_flag FROM %smessages "
-		 "WHERE message_idnr = '%llu' AND status < '%d' "
-		 "AND mailbox_idnr = '%llu'",DBPFX, msg_idnr, MESSAGE_STATUS_DELETE,
+		 "WHERE message_idnr = '%llu' AND status IN ('%d','%d') "
+		 "AND mailbox_idnr = '%llu'",DBPFX, msg_idnr, 
+		 MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
 		 mailbox_idnr);
 
 	if (db_query(query) == -1) {

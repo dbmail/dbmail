@@ -736,12 +736,13 @@ static GTree * _fetch_headers(const GList *ids, const GList *headers, gboolean n
 
 	r = g_list_join((GList *)ids,",");
 	h = g_list_join((GList *)headers,"','");
+	h = g_string_ascii_down(h);
 	
 	g_string_printf(q,"SELECT physmessage_id,headername,headervalue "
 			"FROM %sheadervalue v "
 			"JOIN %sheadername n ON v.headername_id=n.id "
 			"WHERE physmessage_id IN (%s) "
-			"AND headername %s IN ('%s')",
+			"AND lower(headername) %s IN ('%s')",
 			DBPFX, DBPFX, r->str, not?"NOT":"", h->str);
 	
 	g_string_free(r,TRUE);

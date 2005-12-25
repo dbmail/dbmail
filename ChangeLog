@@ -11,6 +11,22 @@
 	* config.c export.c user.c:
 	A hack to handle our config file comments neatly.
 
+2005-12-10  Paul J Stevens <paul@nfg.nl>
+
+	* debian/rules, python/__init__.py, python/app/IMailFolder.py, 
+	  python/app/IMailMessage.py, python/bin/autoreplier.py, 
+	  python/lib/Dbmail.py, python/lib/DbmailAutoreply.py, 
+	  python/lib/DbmailConfig.py, python/lib/dbmail.py, 
+	  python/tests/testDbmail.py:
+	reorganized the python code a bit
+	* dbmail-mailbox.c:
+	minor cleanups
+	* dbmail.conf:
+	minor updates
+	* Makefile.am, check_dbmail_mailbox.c, dbmail-mailbox.c, dbmail-mailbox.h, 
+	  dbmail-message.c, dbmailtypes.h, dm_search.c, dm_search.h, misc.c:
+	more steps toward the new search framework
+
 2005-12-04  Paul J Stevens <paul@nfg.nl>
 
 	* ChangeLog, dbmail.h:
