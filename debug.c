@@ -34,22 +34,17 @@ typedef struct debug_mem debug_mem_t;
 
 debug_mem_t *__dm_first = 0, *__dm_last = 0;
 
-#define err_out_stream stderr
-#define EXIT_CODE 75
-
 /* the debug variables */
-int TRACE_TO_SYSLOG = 1;	/* default: yes */
-int TRACE_VERBOSE = 0;		/* default: no */
-int TRACE_LEVEL = 2;		/* default: error operations */
+static trace_t TRACE_SYSLOG = TRACE_ERROR;  /* default: errors and worse */
+static trace_t TRACE_STDERR = TRACE_FATAL;  /* default: fatal errors only */
 
 /*
  * configure the debug settings
  */
-void configure_debug(trace_t level, int trace_syslog, int trace_verbose)
+void configure_debug(trace_t trace_syslog, trace_t trace_stderr)
 {
-	TRACE_LEVEL = level;
-	TRACE_TO_SYSLOG = trace_syslog;
-	TRACE_VERBOSE = trace_verbose;
+	TRACE_SYSLOG = trace_syslog;
+	TRACE_STDERR = trace_stderr;
 }
 
 void func_memtst(const char *filename, int line, int tst)
@@ -66,28 +61,25 @@ void trace(trace_t level, char *formatstring, ...)
 
 	va_start(argp, formatstring);
 
-	if (level <= TRACE_LEVEL) {
-		if (TRACE_VERBOSE != 0) {
-			vfprintf(err_out_stream, formatstring, argp);
-			if (formatstring[strlen(formatstring)] != '\n')
-				fprintf(err_out_stream, "\n");
-		}
-		if (TRACE_TO_SYSLOG != 0) {
-			if (formatstring[strlen(formatstring)] == '\n')
-				formatstring[strlen(formatstring)] = '\0';
-			if (level <= TRACE_WARNING) {
-				/* set LOG_ALERT at warnings */
-				vsyslog(LOG_ALERT, formatstring, argp);
-			} else
-				vsyslog(LOG_NOTICE, formatstring, argp);
-		}
+	if (level <= TRACE_STDERR) {
+		vfprintf(stderr, formatstring, argp);
+		if (formatstring[strlen(formatstring)] != '\n')
+			fprintf(stderr, "\n");
+	}
+
+	if (level <= TRACE_SYSLOG) {
+		if (formatstring[strlen(formatstring)] == '\n')
+			formatstring[strlen(formatstring)] = '\0';
+		if (level <= TRACE_WARNING) {
+			/* set LOG_ALERT at warnings */
+			vsyslog(LOG_ALERT, formatstring, argp);
+		} else
+			vsyslog(LOG_NOTICE, formatstring, argp);
 	}
 
 	va_end(argp);
 
-	/* very big fatal error 
-	 * bailout */
-
+	/* Bail out on fatal errors. */
 	if (level == TRACE_FATAL)
 		exit(EX_TEMPFAIL);
 

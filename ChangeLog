@@ -1,3 +1,9 @@
+2005-12-30  Aaron Stone  <aaron@serendipity.cx>
+
+	* config.c, debug.c, debug.h:
+	Eliminated TRACE_LEVEL config item, replaced by
+	TRACE_STDERR and TRACE_SYSLOG, with sane defaults.
+
 2005-12-22  Aaron Stone  <aaron@serendipity.cx>
 
 	* modules/sortsieve.h:

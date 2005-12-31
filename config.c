@@ -118,30 +118,44 @@ int config_get_value(const field_t field_name,
 
 void SetTraceLevel(const char *service_name)
 {
-	field_t trace_level;
-	field_t trace_stderr;
-	field_t trace_syslog;
+	field_t trace_global, trace_service;
+	field_t trace_stderr_global, trace_syslog_global;
+	field_t trace_stderr_service, trace_syslog_service;
+	trace_t trace_stderr, trace_syslog;
 
-	if (config_get_value("trace_level", service_name, trace_level) < 0)
-		trace(TRACE_FATAL, "%s,%s: error getting config!",
-		      __FILE__, __func__);
+	/* Warn about the deprecated "trace_level" config item. */
+	config_get_value("trace_level", "DBMAIL", trace_global);
+	config_get_value("trace_level", service_name, trace_service);
+	if (strlen(trace_global) || strlen(trace_service)) {
+		trace(TRACE_MESSAGE,
+			"Config item TRACE_LEVEL is deprecated. "
+			"Please use TRACE_SYSLOG and TRACE_STDERR instead.");
+	}
 
-	if (config_get_value("trace_stderr", service_name, trace_stderr) < 0)
-		trace(TRACE_FATAL, "%s,%s: error getting config!",
-		      __FILE__, __func__);
+	/* First we grab the global trace levels. */
+	config_get_value("trace_syslog", "DBMAIL", trace_syslog_global);
+	config_get_value("trace_stderr", "DBMAIL", trace_stderr_global);
 
-	if (config_get_value("trace_syslog", service_name, trace_syslog) < 0)
-		trace(TRACE_FATAL, "%s,%s: error getting config!",
-		      __FILE__, __func__);
+	/* Then we override globals with per-service settings. */
+	config_get_value("trace_syslog", service_name, trace_syslog_service);
+	config_get_value("trace_stderr", service_name, trace_stderr_service);
 
-	if (strlen(trace_level) == 0)
-		configure_debug(TRACE_ERROR,
-				atoi(trace_syslog) ? 1 : 0,
-				atoi(trace_stderr) ? 1 : 0);
-	else 
-		configure_debug(atoi(trace_level),
-				atoi(trace_syslog) ? 1 : 0,
-				atoi(trace_stderr) ? 1 : 0);
+	/* Selectively override. */
+	if (strlen(trace_syslog_global) && !strlen(trace_syslog_service))
+		trace_syslog = atoi(trace_syslog_global);
+	else if (strlen(trace_syslog_service))
+		trace_syslog = atoi(trace_syslog_service);
+	else
+		trace_syslog = TRACE_ERROR;
+
+	if (strlen(trace_stderr_global) && !strlen(trace_stderr_service))
+		trace_stderr = atoi(trace_stderr_global);
+	else if (strlen(trace_stderr_service))
+		trace_stderr = atoi(trace_stderr_service);
+	else
+		trace_stderr = TRACE_FATAL;
+
+	configure_debug(trace_syslog, trace_stderr);
 }
 
 void GetDBParams(db_param_t * db_params)

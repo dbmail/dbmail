@@ -33,13 +33,6 @@
 #include <gc/gc.h>
 #endif
 
-
-extern int TRACE_TO_SYSLOG;
-extern int TRACE_VERBOSE;
-
-extern int TRACE_LEVEL;		/* 5: maximum debugging */
-			    /* 2: normal operations */
-
 typedef enum {
 	TRACE_FATAL = -1,
 	TRACE_STOP,
@@ -94,7 +87,7 @@ typedef enum {
 void func_memtst(const char *filename, int line, int tst);
 void trace(trace_t level, char *formatstring, ...) PRINTF_ARGS(2, 3);
 
-void configure_debug(trace_t level, int trace_syslog, int trace_verbose);
+void configure_debug(trace_t trace_syslog, trace_t trace_stderr);
 
 void *__debug_malloc(unsigned long size, const char *fname, int linenr);
 void __debug_free(void *ptr, const char *fname, int linenr);
