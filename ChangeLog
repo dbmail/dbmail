@@ -3,6 +3,8 @@
 	* config.c, debug.c, debug.h:
 	Eliminated TRACE_LEVEL config item, replaced by
 	TRACE_STDERR and TRACE_SYSLOG, with sane defaults.
+	* dbmail.conf:
+	Documented the new trace level config items.
 
 2005-12-22  Aaron Stone  <aaron@serendipity.cx>
 
