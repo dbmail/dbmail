@@ -271,6 +271,7 @@ typedef struct {
 	u64_t uid, msguidnext, owner_idnr;
 	char *name;
 	unsigned no_select, no_inferiors, exists, recent, unseen;
+	unsigned no_children;
 	unsigned flags;
 	int permission;
 	u64_t *seq_list;
@@ -283,23 +284,23 @@ typedef struct {
 
 enum IMAP_SEARCH_TYPES { 
 	IST_SET, 		/* 0 */
-	IST_SET_UID,
-	IST_FLAG,  		/* 1 */
-	IST_SORT,  		/* 2 */
-	IST_SORTHDR,  		/* 3 */
-	IST_SORT_FLD,		/* 4 */
-	IST_HDR,  		/* 5 */
-	IST_HDRDATE_BEFORE,  	/* 6 */
-	IST_HDRDATE_ON,  	/* 7 */
-	IST_HDRDATE_SINCE, 	/* 8 */
-	IST_IDATE,  		/* 9 */
-	IST_DATA_BODY,  	/* 10 */
-	IST_DATA_TEXT, 		/* 11 */
-	IST_SIZE_LARGER,  	/* 12 */
-	IST_SIZE_SMALLER,  	/* 13 */
-	IST_SUBSEARCH_AND, 	/* 14 */
-	IST_SUBSEARCH_OR,  	/* 15 */
-	IST_SUBSEARCH_NOT 	/* 16 */
+	IST_SET_UID,		/* 1 */
+	IST_FLAG,  		/* 2 */
+	IST_SORT,  		/* 3 */
+	IST_SORTHDR,  		/* 4 */
+	IST_SORT_FLD,		/* 5 */
+	IST_HDR,  		/* 6 */
+	IST_HDRDATE_BEFORE,  	/* 7 */
+	IST_HDRDATE_ON,  	/* 8 */
+	IST_HDRDATE_SINCE, 	/* 9 */
+	IST_IDATE,  		/* 10 */
+	IST_DATA_BODY,  	/* 11 */
+	IST_DATA_TEXT, 		/* 12 */
+	IST_SIZE_LARGER,  	/* 13 */
+	IST_SIZE_SMALLER,  	/* 14 */
+	IST_SUBSEARCH_AND, 	/* 15 */
+	IST_SUBSEARCH_OR,  	/* 16 */
+	IST_SUBSEARCH_NOT 	/* 17 */
 };
 
 typedef struct {

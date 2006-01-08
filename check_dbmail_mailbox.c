@@ -302,7 +302,7 @@ START_TEST(test_dbmail_mailbox_search_parsed)
 	idx=0;
 	sorted = 0;
 	mb = dbmail_mailbox_new(get_mailbox_id());
-	args = g_strdup("1 BODY paul@nfg.nl");
+	args = g_strdup("UID 1 BODY unlikelyaddress@nfg.nl");
 	array = g_strsplit(args," ",0);
 	g_free(args);
 	
@@ -311,6 +311,20 @@ START_TEST(test_dbmail_mailbox_search_parsed)
 	
 	dbmail_mailbox_free(mb);
 	g_strfreev(array);
+
+	idx=0;
+	sorted = 0;
+	mb = dbmail_mailbox_new(get_mailbox_id());
+	args = g_strdup("UID 1,* BODY the");
+	array = g_strsplit(args," ",0);
+	g_free(args);
+	
+	dbmail_mailbox_build_imap_search(mb, array, &idx, sorted);
+	dbmail_mailbox_search(mb);
+	
+	dbmail_mailbox_free(mb);
+	g_strfreev(array);
+
 
 
 }
@@ -349,21 +363,37 @@ START_TEST(test_dbmail_mailbox_orderedsubject)
 }
 END_TEST
 
-static gboolean tree_print(gpointer key, gpointer value, gpointer data UNUSED)
+START_TEST(test_g_tree_keys)
 {
-	if (! (key && value))
-		return TRUE;
+	GTree *a;
+	GList *akeys;
+	u64_t *k, *v;
+	int i=0;
+	
+	a = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+	akeys = g_tree_keys(a);
 
-	u64_t *k = (u64_t *)key;
-	u64_t *v = (u64_t *)value;
-	printf("%llu: %llu\n", *k, *v);
-	return FALSE;
-}
+	fail_unless(g_tree_nnodes(a)==0,"g_tree_keys failed");
+	fail_unless(g_list_length(akeys)==0,"g_tree_keys failed");
 
-void tree_dump(GTree *t)
-{
-	g_tree_foreach(t,(GTraverseFunc)tree_print,NULL);
+	g_list_free(akeys);
+	
+	for (i=0; i<4; i++) {
+		k = g_new0(u64_t,1);
+		v = g_new0(u64_t,1);
+		*k = i;
+		*v = i;
+		g_tree_insert(a,k,v);
+	}
+	
+	akeys = g_tree_keys(a);
+	fail_unless(g_tree_nnodes(a)==4,"g_tree_keys failed");
+	fail_unless(g_list_length(akeys)==4,"g_tree_keys failed");
+	
+	g_list_free(akeys);
+	g_tree_destroy(a);
 }
+END_TEST
 
 START_TEST(test_g_tree_merge_not)
 {
@@ -527,6 +557,7 @@ Suite *dbmail_mailbox_suite(void)
 	TCase *tc_mailbox = tcase_create("Mailbox");
 	suite_add_tcase(s, tc_mailbox);
 	tcase_add_checked_fixture(tc_mailbox, setup, teardown);
+	tcase_add_test(tc_mailbox, test_g_tree_keys);
 	/*
 	tcase_add_test(tc_mailbox, test_g_tree_merge_or);
 	tcase_add_test(tc_mailbox, test_g_tree_merge_and);
@@ -540,7 +571,6 @@ Suite *dbmail_mailbox_suite(void)
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_sort);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search);
 	*/
-	
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search_parsed);
 	/*
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_orderedsubject);

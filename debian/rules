@@ -27,8 +27,6 @@ DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
 ifneq (,$(findstring debug,$(DEB_BUILD_OPTIONS)))
 	export WITH_CHECK=--with-check
 	export NOSHARED=--enable-shared=no
-	export WITH_MYSQL=--with-mysql=/usr/include/mysql 
-	export WITH_LDAP=--with-auth-ldap
 	export WITH_SQLITE=
 	export WITH_PGSQL=
 	

@@ -3872,8 +3872,7 @@ void convert_inbox_to_uppercase(char *name)
 int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * mb)
 {
 	/* query mailbox for LIST results */
-	const char *query_result;
-	char *mbxname;
+	char *mbxname, *name;
 	GString *fqname;
 	int i=0;
 
@@ -3892,12 +3891,11 @@ int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * m
 		return DM_SUCCESS;
 	}
 	/* owner_idnr */
-	query_result=db_get_result(0,i++);
-	mb->owner_idnr=strtol(query_result,NULL,10);
+	mb->owner_idnr=db_get_result_u64(0,i++);
 	
 	/* name */
-	query_result=db_get_result(0,i++);
-	mbxname = mailbox_add_namespace(query_result, mb->owner_idnr, user_idnr);
+	name=g_strdup(db_get_result(0,i++));
+	mbxname = mailbox_add_namespace(name, mb->owner_idnr, user_idnr);
 	fqname = g_string_new(mbxname);
 	fqname = g_string_truncate(fqname,IMAP_MAX_MAILBOX_NAMELEN);
 	mb->name = fqname->str;
@@ -3905,13 +3903,25 @@ int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * m
 	g_free(mbxname);
 
 	/* no_select */
-	query_result=db_get_result(0,i++);
-	mb->no_select=strtol(query_result,NULL,1);
-
+	mb->no_select=db_get_result_bool(0,i++);
 	/* no_inferior */
-	query_result=db_get_result(0,i++);
-	mb->no_inferiors=strtol(query_result,NULL,1);
-
+	mb->no_inferiors=db_get_result_bool(0,i++);
+	db_free_result();
+	
+	/* no_children */
+	snprintf(query, DEF_QUERYSIZE,
+			"SELECT IF(COUNT(*)>0,0,1) AS no_children "
+			"FROM %smailboxes WHERE owner_idnr = '%llu' "
+			"AND name LIKE '%s%s%%' ",
+			DBPFX, user_idnr, name, MAILBOX_SEPARATOR);
+	
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: db error", __FILE__, __func__);
+		return DM_EQUERY;
+	}
+	mb->no_children=db_get_result_bool(0,0);
+	
+	g_free(name);
 	db_free_result();
 	return DM_SUCCESS;
 }

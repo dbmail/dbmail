@@ -853,7 +853,7 @@ int dbmail_mailbox_build_imap_search(struct DbmailMailbox *self, char **search_k
 
 	if (MATCH(search_keys[*idx],"uid")) {
 		dbmail_mailbox_set_uid(self,TRUE);
-		*idx++;
+		(*idx)++;
 	}
 	
 	if (check_msg_set(search_keys[*idx])) {
@@ -1043,6 +1043,7 @@ static GTree * mailbox_search_parsed(struct DbmailMailbox *self, search_key_t *s
 
 	struct DbmailMessage *msg;
 	GList *ids;
+	int result = 0;
 	u64_t *k, *v, *w, *x;
 
 	s->found = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free, (GDestroyNotify)g_free);
@@ -1053,23 +1054,25 @@ static GTree * mailbox_search_parsed(struct DbmailMailbox *self, search_key_t *s
 		x = g_tree_lookup(self->ids, w);
 		assert(x);
 		
-		if (! (msg = db_init_fetch(*w, DBMAIL_MESSAGE_FILTER_FULL)))
-			continue;
-		
-		if (! (db_exec_search(GMIME_OBJECT(msg->content), s))) {
-			dbmail_message_free(msg);
-			continue;
+		if (! (msg = db_init_fetch(*w, DBMAIL_MESSAGE_FILTER_FULL))) {
+			trace(TRACE_DEBUG,"%s,%s: error retrieving message [%llu]",
+					__FILE__, __func__, *w);
+			break;
 		}
+		
+		result = db_exec_search(GMIME_OBJECT(msg->content), s);
 
 		dbmail_message_free(msg);
 		
-		k = g_new0(u64_t,1);
-		v = g_new0(u64_t,1);
-		
-		*k = *w;
-		*v = *x;
+		if (result) {
+			k = g_new0(u64_t,1);
+			v = g_new0(u64_t,1);
+			
+			*k = *x;
+			*v = *w;
 
-		g_tree_insert(s->found, k, v);
+			g_tree_insert(s->found, k, v);
+		}
 
 		if (! g_list_next(ids))
 			break;
@@ -1168,7 +1171,7 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, search_key_t *sk)
 				c = self->msn;
 				break;
 		}
-		
+
 		for (i = min(l,r); i <= max(l,r); i++) {
 
 			if (! (w = g_tree_lookup(c,&i))) 
@@ -1183,7 +1186,12 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, search_key_t *sk)
 			g_tree_insert(a,k,v);
 		}
 		
-		g_tree_merge(b,a,IST_SUBSEARCH_OR);
+		if (g_tree_merge(b,a,IST_SUBSEARCH_OR)) {
+			trace(TRACE_ERROR, "%s,%s: cannot compare null trees",
+					__FILE__, __func__);
+			break;
+		}
+			
 		
 		if (! g_list_next(sets))
 			break;
@@ -1256,6 +1264,7 @@ static gboolean _do_search(GNode *node, struct DbmailMailbox *self)
 
 	s->found = set;
 
+	tree_dump(s->found);
 	trace(TRACE_DEBUG,"%s,%s: type [%d] rows [%d]\n", __FILE__,  __func__, 
 			s->type, set ? g_tree_nnodes(set): 0);
 
@@ -1267,13 +1276,15 @@ static gboolean _merge_search(GNode *node, GTree *found)
 	search_key_t *a, *b;
 	GNode *x, *y;
 
+	trace(TRACE_DEBUG,"%s,%s: node depth [%d]", __FILE__, __func__, g_node_depth(node));
 	switch(s->type) {
 		case IST_SUBSEARCH_AND:
 			g_node_children_foreach(node, G_TRAVERSE_ALL, (GNodeForeachFunc)_merge_search, (gpointer)found);
 			break;
 			
 		case IST_SUBSEARCH_NOT:
-			g_tree_merge(found, s->found, IST_SUBSEARCH_NOT);
+			if (s->found && found)
+				g_tree_merge(found, s->found, IST_SUBSEARCH_NOT);
 			break;
 			
 		case IST_SUBSEARCH_OR:
@@ -1281,12 +1292,21 @@ static gboolean _merge_search(GNode *node, GTree *found)
 			y = g_node_nth_child(node,1);
 			a = (search_key_t *)x->data;
 			b = (search_key_t *)y->data;
-			g_tree_merge(a->found,b->found,IST_SUBSEARCH_OR);
-			g_tree_merge(found,a->found,IST_SUBSEARCH_AND);
+			if (a->found && b->found) 
+				g_tree_merge(a->found,b->found,IST_SUBSEARCH_OR);
+			if (a->found && found)
+				g_tree_merge(found,a->found,IST_SUBSEARCH_AND);
 			break;
 			
 		default:
-			g_tree_merge(found, s->found, IST_SUBSEARCH_AND);
+
+			tree_dump(found);
+			tree_dump(s->found);
+			if (s->found && found) {
+				g_tree_merge(found, s->found, IST_SUBSEARCH_AND);
+			}
+			tree_dump(found);
+
 			break;
 	}
 
@@ -1309,8 +1329,10 @@ int dbmail_mailbox_search(struct DbmailMailbox *self)
 	if (! self->search)
 		return 0;
 	
-	g_node_children_foreach(g_node_get_root(self->search), G_TRAVERSE_ALL, (GNodeForeachFunc)_do_search, (gpointer)self);
-	g_node_children_foreach(g_node_get_root(self->search), G_TRAVERSE_ALL, (GNodeForeachFunc)_merge_search, (gpointer)self->ids);
+	g_node_traverse(g_node_get_root(self->search), G_PRE_ORDER, G_TRAVERSE_ALL, -1, 
+			(GNodeTraverseFunc)_do_search, (gpointer)self);
+	g_node_traverse(g_node_get_root(self->search), G_PRE_ORDER, G_TRAVERSE_ALL, -1, 
+			(GNodeTraverseFunc)_merge_search, (gpointer)self->ids);
 	
 	trace(TRACE_DEBUG,"%s,%s: found [%d] ids\n", 
 			__FILE__, __func__, 

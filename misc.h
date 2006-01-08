@@ -130,7 +130,8 @@ gint ucmp(const u64_t *a, const u64_t *b);
 void g_list_destroy(GList *list);
 GList * g_tree_keys(GTree *tree);
 GList * g_tree_values(GTree *tree);
-void g_tree_merge(GTree *a, GTree *b, int condition);
+void tree_dump(GTree *t);
+int g_tree_merge(GTree *a, GTree *b, int condition);
 	
 char * dm_stresc(const char * from);
 void dm_pack_spaces(char *in);
