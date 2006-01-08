@@ -3,13 +3,13 @@
 
 if [ "$1" = "purge" ]; then
 		
-	rm -f /etc/dbmail/dbmail.conf
-	rm -f /etc/default/dbmail
+	rm -f /etc/dbmail/dbmail.conf || true
+	rm -f /etc/default/dbmail || true
 	
-	rmdir /etc/dbmail 2>&1 >/dev/null || true
+	rmdir /etc/dbmail >/dev/null || true
 	
-	ucf --purge /etc/dbmail/dbmail.conf
-	ucf --purge /etc/default/dbmail
+	ucf --purge /etc/dbmail/dbmail.conf || true
+	ucf --purge /etc/default/dbmail || true
 fi
 
 #DEBHELPER#
