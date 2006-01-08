@@ -842,7 +842,9 @@ int _ic_list(struct ImapSession *self)
 	}
 	pattern = g_strdup_printf("%s%s", self->args[0], self->args[1]);
 
-	trace(TRACE_INFO, "ic_list(): search with pattern: [%s]", pattern);
+	trace(TRACE_INFO, "%s,%s: search with pattern: [%s]", 
+			__FILE__,__func__,pattern);
+	
 	result = db_findmailbox_by_regex(ud->userid, pattern, &children, &nchildren, list_is_lsub);
 	if (result == -1) {
 		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
@@ -868,6 +870,10 @@ int _ic_list(struct ImapSession *self)
 			plist = g_list_append(plist, g_strdup("\\noselect"));
 		if (mb->no_inferiors)
 			plist = g_list_append(plist, g_strdup("\\noinferiors"));
+		if (mb->no_children)
+			plist = g_list_append(plist, g_strdup("\\hasnochildren"));
+		else
+			plist = g_list_append(plist, g_strdup("\\haschildren"));
 		
 		/* show */
 		pstring = dbmail_imap_plist_as_string(plist);
