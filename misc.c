@@ -1284,7 +1284,26 @@ GList * g_tree_values(GTree *tree)
  * for their construction.
  */
 
-void g_tree_merge(GTree *a, GTree *b, int condition)
+static gboolean tree_print(gpointer key, gpointer value, gpointer data UNUSED)
+{
+	if (! (key && value))
+		return TRUE;
+
+	u64_t *k = (u64_t *)key;
+	u64_t *v = (u64_t *)value;
+	trace(TRACE_DEBUG,"%s,%s: %llu: %llu\n", __FILE__, __func__, *k, *v);
+	return FALSE;
+}
+
+void tree_dump(GTree *t)
+{
+	trace(TRACE_DEBUG,"%s,%s: start",__FILE__,__func__);
+	g_tree_foreach(t,(GTraverseFunc)tree_print,NULL);
+	trace(TRACE_DEBUG,"%s,%s: done",__FILE__,__func__);
+}
+
+
+int g_tree_merge(GTree *a, GTree *b, int condition)
 {
 	char *type = NULL;
 	unsigned alen = 0, blen = 0;
@@ -1294,18 +1313,25 @@ void g_tree_merge(GTree *a, GTree *b, int condition)
 	GList *akeys = NULL;
 	GList *bkeys = NULL;
 	
+	g_return_val_if_fail(a && b,1);
+	
 	if (a)
 		akeys = g_tree_keys(a);
 	if (b)
 		bkeys = g_tree_keys(b);
 
-	g_return_if_fail(a && b);
-	
 	akeys = g_list_first(akeys);
 	bkeys = g_list_first(bkeys);
 
 	alen = g_list_length(akeys);
 	blen = g_list_length(bkeys);
+
+	trace(TRACE_DEBUG,"%s,%s: a[%d] [%d] b[%d]",
+			__FILE__, __func__, 
+			g_tree_nnodes(a), condition, g_tree_nnodes(b));
+	
+	//tree_dump(a);
+	//tree_dump(b);
 	
 	switch(condition) {
 		case IST_SUBSEARCH_AND:
@@ -1315,7 +1341,7 @@ void g_tree_merge(GTree *a, GTree *b, int condition)
 				break;
 
 			while (akeys->data) {
-				if (! g_tree_lookup(b,akeys->data))  
+				if (! g_tree_lookup(b,akeys->data))
 					g_tree_remove(a,akeys->data);
 
 				if (! g_list_next(akeys))
@@ -1323,6 +1349,7 @@ void g_tree_merge(GTree *a, GTree *b, int condition)
 				
 				akeys = g_list_next(akeys);
 			}
+			//tree_dump(a);
 			
 			break;
 			
@@ -1380,6 +1407,7 @@ void g_tree_merge(GTree *a, GTree *b, int condition)
 	g_free(type);
 	g_list_free(akeys);
 	g_list_free(bkeys);
+	return 0;
 }
 
 gint ucmp(const u64_t *a, const u64_t *b)
