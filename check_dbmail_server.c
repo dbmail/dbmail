@@ -49,7 +49,7 @@ int imap_before_smtp = 0;
 	
 void setup(void)
 {
-	configure_debug(5,1,0);
+	configure_debug(5,0);
 	config_read(configFile);
 	GetDBParams(&_db_params);
 	db_connect();

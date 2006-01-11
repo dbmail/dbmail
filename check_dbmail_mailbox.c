@@ -70,7 +70,7 @@ static u64_t get_mailbox_id(void)
 
 void setup(void)
 {
-	configure_debug(5,1,0);
+	configure_debug(5,0);
 	config_read(configFile);
 	GetDBParams(&_db_params);
 	db_connect();
