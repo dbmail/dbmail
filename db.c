@@ -41,11 +41,6 @@ static const char *db_flag_desc[] = {
 #define MAX_COLUMN_LEN 50
 #define MAX_DATE_LEN 50
 
-extern const char *TO_CHAR;
-extern const char *TO_DATE;
-extern const char *SQL_CURRENT_TIMESTAMP;
-extern const char *SQL_REPLYCACHE_EXPIRE;
-
 extern db_param_t _db_params;
 
 #define DBPFX _db_params.pfx
@@ -724,7 +719,7 @@ int db_get_reply_body(u64_t user_idnr, char **reply_body)
 		 "WHERE user_idnr = %llu "
 		 "AND (start_date IS NULL OR start_date <= %s) "
 		 "AND (stop_date IS NULL OR stop_date >= %s)", DBPFX,
-		 user_idnr, SQL_CURRENT_TIMESTAMP, SQL_CURRENT_TIMESTAMP);
+		 user_idnr, db_get_sql(SQL_CURRENT_TIMESTAMP), db_get_sql(SQL_CURRENT_TIMESTAMP));
 	
 	if (db_query(query) == -1) {
 		/* query failed */
@@ -817,7 +812,7 @@ int db_insert_physmessage_with_internal_date(timestring_t internal_date,
 	} else {
 		snprintf(query, DEF_QUERYSIZE,
 			 "INSERT INTO %sphysmessage (messagesize, internal_date) "
-			 "VALUES ('0', %s)", DBPFX,SQL_CURRENT_TIMESTAMP);
+			 "VALUES ('0', %s)", DBPFX,db_get_sql(SQL_CURRENT_TIMESTAMP));
 	}
 	
 	if (db_query(query) == -1) {
@@ -1008,7 +1003,7 @@ int db_log_ip(const char *ip)
 		/* this IP is already in the table, update the 'since' field */
 		snprintf(query, DEF_QUERYSIZE, "UPDATE %spbsp "
 			 "SET since = %s WHERE idnr='%llu'",
-			 DBPFX, SQL_CURRENT_TIMESTAMP, id);
+			 DBPFX, db_get_sql(SQL_CURRENT_TIMESTAMP), id);
 
 		if (db_query(query) == DM_EQUERY) {
 			trace(TRACE_ERROR,
@@ -1021,7 +1016,7 @@ int db_log_ip(const char *ip)
 		/* IP not in table, insert row */
 		snprintf(query, DEF_QUERYSIZE,
 			 "INSERT INTO %spbsp (since, ipnumber) "
-			 "VALUES (%s, '%s')", DBPFX, SQL_CURRENT_TIMESTAMP, ip);
+			 "VALUES (%s, '%s')", DBPFX, db_get_sql(SQL_CURRENT_TIMESTAMP), ip);
 		if (db_query(query) == DM_EQUERY) {
 			trace(TRACE_ERROR,
 			      "%s,%s: could not log IP number to dbase "
@@ -3802,13 +3797,13 @@ char *date2char_str(const char *column)
 {
 	unsigned len;
 	char *s;
-	len = strlen(TO_CHAR) + MAX_COLUMN_LEN;
+	len = strlen(db_get_sql(SQL_TO_CHAR)) + MAX_COLUMN_LEN;
 
 	s = (char *) dm_malloc(len);
 	if (!s)
 		return NULL;
 
-	snprintf(s, len, TO_CHAR, column);
+	snprintf(s, len, db_get_sql(SQL_TO_CHAR), column);
 
 	return s;
 }
@@ -3818,13 +3813,13 @@ char *char2date_str(const char *date)
 	unsigned len;
 	char *s;
 
-	len = strlen(TO_CHAR) + MAX_DATE_LEN;
+	len = strlen(db_get_sql(SQL_TO_CHAR)) + MAX_DATE_LEN;
 
 	s = (char *) dm_malloc(len);
 	if (!s)
 		return NULL;
 
-	snprintf(s, len, TO_DATE, date);
+	snprintf(s, len, db_get_sql(SQL_TO_DATE), date);
 
 	return s;
 }
@@ -4129,14 +4124,14 @@ int db_user_create(const char *username, const char *password, const char *encty
 			"encryption_type, last_login) VALUES "
 			"('%s','%s',%llu,'%llu','%s', %s)",
 			DBPFX, escaped_username, escapedpass, clientid, 
-			maxmail, enctype ? enctype : "", SQL_CURRENT_TIMESTAMP);
+			maxmail, enctype ? enctype : "", db_get_sql(SQL_CURRENT_TIMESTAMP));
 	} else {
 		snprintf(query, DEF_QUERYSIZE, "INSERT INTO %susers "
 			"(userid,user_idnr,passwd,client_idnr,maxmail_size,"
 			"encryption_type, last_login) VALUES "
 			"('%s',%llu,'%s',%llu,'%llu','%s', %s)",
 			DBPFX,escaped_username,*user_idnr,escapedpass,clientid, 
-			maxmail, enctype ? enctype : "", SQL_CURRENT_TIMESTAMP);
+			maxmail, enctype ? enctype : "", db_get_sql(SQL_CURRENT_TIMESTAMP));
 	}
 	dm_free(escaped_username);
 
@@ -4273,12 +4268,12 @@ int db_replycache_register(const char *to, const char *from)
 	if (db_num_rows() > 0) {
 		snprintf(query, DEF_QUERYSIZE,
 			 "UPDATE %sreplycache SET lastseen = %s "
-			 "WHERE to_addr = '%s' AND from_addr = '%s'", DBPFX, SQL_CURRENT_TIMESTAMP,
+			 "WHERE to_addr = '%s' AND from_addr = '%s'", DBPFX, db_get_sql(SQL_CURRENT_TIMESTAMP),
 			 to, from);
 	} else {
 		snprintf(query, DEF_QUERYSIZE,
 			 "INSERT INTO %sreplycache (to_addr, from_addr, lastseen) "
-			 "VALUES ('%s','%s', %s)", DBPFX, to, from, SQL_CURRENT_TIMESTAMP);
+			 "VALUES ('%s','%s', %s)", DBPFX, to, from, db_get_sql(SQL_CURRENT_TIMESTAMP));
 	}
 	
 	db_free_result();
@@ -4297,7 +4292,7 @@ int db_replycache_register(const char *to, const char *from)
 int db_replycache_validate(const char *to, const char *from)
 {
 	GString *tmp = g_string_new("");
-	g_string_printf(tmp, SQL_REPLYCACHE_EXPIRE, REPLYCACHE_TIMEOUT);
+	g_string_printf(tmp, db_get_sql(SQL_REPLYCACHE_EXPIRE), REPLYCACHE_TIMEOUT);
 	snprintf(query, DEF_QUERYSIZE,
 			"SELECT lastseen FROM %sreplycache "
 			"WHERE to_addr = '%s' AND from_addr = '%s' "

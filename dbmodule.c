@@ -78,23 +78,24 @@ int db_load_driver(void)
 		return -1;
 	}
 
-	if (!g_module_symbol(module, "db_connect",             &db->connect             )
-	||  !g_module_symbol(module, "db_disconnect",          &db->disconnect          )
-	||  !g_module_symbol(module, "db_check_connection",    &db->check_connection    )
-	||  !g_module_symbol(module, "db_query",               &db->query               )
-	||  !g_module_symbol(module, "db_insert_result",       &db->insert_result       )
-	||  !g_module_symbol(module, "db_num_rows",            &db->num_rows            )
-	||  !g_module_symbol(module, "db_num_fields",          &db->num_fields          )
-	||  !g_module_symbol(module, "db_get_result",          &db->get_result          )
-	||  !g_module_symbol(module, "db_free_result",         &db->free_result         )
-	||  !g_module_symbol(module, "db_escape_string",       &db->escape_string       )
-	||  !g_module_symbol(module, "db_escape_binary",       &db->escape_binary       )
-	||  !g_module_symbol(module, "db_do_cleanup",          &db->do_cleanup          )
-	||  !g_module_symbol(module, "db_get_length",          &db->get_length          )
-	||  !g_module_symbol(module, "db_get_affected_rows",   &db->get_affected_rows   )
-	||  !g_module_symbol(module, "db_use_msgbuf_result",   &db->use_msgbuf_result   )
-	||  !g_module_symbol(module, "db_store_msgbuf_result", &db->store_msgbuf_result )
-	||  !g_module_symbol(module, "db_set_result_set",      &db->set_result_set      )) {
+	if (!g_module_symbol(module, "db_connect",             (gpointer)&db->connect             )
+	||  !g_module_symbol(module, "db_disconnect",          (gpointer)&db->disconnect          )
+	||  !g_module_symbol(module, "db_check_connection",    (gpointer)&db->check_connection    )
+	||  !g_module_symbol(module, "db_query",               (gpointer)&db->query               )
+	||  !g_module_symbol(module, "db_insert_result",       (gpointer)&db->insert_result       )
+	||  !g_module_symbol(module, "db_num_rows",            (gpointer)&db->num_rows            )
+	||  !g_module_symbol(module, "db_num_fields",          (gpointer)&db->num_fields          )
+	||  !g_module_symbol(module, "db_get_result",          (gpointer)&db->get_result          )
+	||  !g_module_symbol(module, "db_free_result",         (gpointer)&db->free_result         )
+	||  !g_module_symbol(module, "db_escape_string",       (gpointer)&db->escape_string       )
+	||  !g_module_symbol(module, "db_escape_binary",       (gpointer)&db->escape_binary       )
+	||  !g_module_symbol(module, "db_do_cleanup",          (gpointer)&db->do_cleanup          )
+	||  !g_module_symbol(module, "db_get_length",          (gpointer)&db->get_length          )
+	||  !g_module_symbol(module, "db_get_affected_rows",   (gpointer)&db->get_affected_rows   )
+	||  !g_module_symbol(module, "db_use_msgbuf_result",   (gpointer)&db->use_msgbuf_result   )
+	||  !g_module_symbol(module, "db_store_msgbuf_result", (gpointer)&db->store_msgbuf_result )
+	||  !g_module_symbol(module, "db_get_sql",             (gpointer)&db->get_sql      	)
+	||  !g_module_symbol(module, "db_set_result_set",      (gpointer)&db->set_result_set      )) {
 		trace(TRACE_FATAL, "db_init: cannot find function: %s: %s", lib, g_module_error());
 		return -2;
 	}
@@ -149,4 +150,6 @@ void db_store_msgbuf_result(void)
 	{ db->store_msgbuf_result(); }
 void db_set_result_set(void *res)
 	{ db->set_result_set(res); }
+const char * db_get_sql(sql_fragment_t frag)
+	{ return db->get_sql(frag); }
 

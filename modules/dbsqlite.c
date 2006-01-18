@@ -23,30 +23,33 @@
  * Manages access to an SQLite2/3 database
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "db.h"
 #include "dbmail.h"
-#include "dbmailtypes.h"
 
 #include <sqlite.h>
 #include <sqlite3.h>
-#include <limits.h>
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
-#include <time.h>
 
 db_param_t _db_params;
 
 /* native format is the character string */
-const char *TO_CHAR = "%s";
-const char *TO_DATE = "'%s'";
 
-const char *SQL_CURRENT_TIMESTAMP = "CURRENT_TIMESTAMP()";
-const char *SQL_REPLYCACHE_EXPIRE = "DATETIME('NOW','-%s second')";
+const char * db_get_sql(sql_fragment_t frag)
+{
+	switch(frag) {
+		case SQL_TO_CHAR:
+			return "%s";
+		break;
+		case SQL_TO_DATE:
+			return "'%s'";
+		break;
+		case SQL_CURRENT_TIMESTAMP:
+			return "CURRENT_TIMESTAMP()";
+		break;
+		case SQL_REPLYCACHE_EXPIRE:
+			return "(CURRENT_TIMESTAMP_UNIX()-%s)";	
+		break;
+	}
+	return NULL;
+}
 
 static sqlite *conn;
 
@@ -70,6 +73,13 @@ static void dbsqlite_current_timestamp(sqlite_func *f, int argc UNUSED, const ch
 	(void)sqlite_set_result_string(f,timestr,-1);
 }
 
+static void dbsqlite_current_timestamp_unix(sqlite_func *f, int argc UNUSED,  const char **argv UNUSED)
+{
+	char buf[63];
+	sprintf(buf, "%ld", time(NULL)); /* assumes time() is signed int */
+	(void)sqlite_set_result_string(f,buf,-1);
+}
+
 int db_connect()
 {
 	char *errmsg;
@@ -89,7 +99,12 @@ int db_connect()
 		      __FILE__, __func__);
 		return -1;
 	}
-
+	if (sqlite_create_function(conn, "CURRENT_TIMESTAMP_UNIX", 0, 
+				dbsqlite_current_timestamp_unix, 0) != SQLITE_OK) {
+		sqlite_close(conn);
+		trace(TRACE_ERROR, "%s,%s: sqlite_create_function failed", __FILE,__func__);
+		return -1;
+	}
 	return 0;
 }
 

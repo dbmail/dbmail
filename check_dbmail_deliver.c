@@ -656,34 +656,6 @@ START_TEST(test_auth_removealias_ext)
 }
 END_TEST
 
-
-#ifdef AUTHLDAP
-//char *dm_ldap_get_filter(const gchar boolean, const gchar *attribute, GList *values) 
-
-START_TEST(test_dm_ldap_get_filter)
-{	
-	char *result;
-	char *expect = "(&(objectClasses=top)(objectClasses=account)(objectClasses=dbmailUser))";
-	GString *objclasses = g_string_new("top,account,dbmailUser");
-	GList *l = g_string_split(objclasses,",");
-	result = dm_ldap_get_filter('&',"objectClasses",l);
-	fail_unless(strcmp(result,expect)==0,"dm_ldap_get_filter failed");	
-}
-END_TEST
-
-START_TEST(test_dm_ldap_get_freeid)
-{
-	u64_t id;
-
-	id = dm_ldap_get_freeid("uidNumber");
-	fail_unless(id != 0,"dm_ldap_get_freeid failed");
-	
-	return;
-}
-END_TEST
-
-#endif
-
 START_TEST(test_dm_stresc)
 {
 	char *to;
@@ -739,10 +711,6 @@ Suite *dbmail_deliver_suite(void)
 	tcase_add_test(tc_auth, test_auth_addalias_ext);
 	tcase_add_test(tc_auth, test_auth_removealias);
 	tcase_add_test(tc_auth, test_auth_removealias_ext);
-#ifdef AUTHLDAP
-	tcase_add_test(tc_auth, test_dm_ldap_get_filter);
-	tcase_add_test(tc_auth, test_dm_ldap_get_freeid);
-#endif
 
 	TCase *tc_pipe = tcase_create("Pipe");
 	suite_add_tcase(s, tc_pipe);
