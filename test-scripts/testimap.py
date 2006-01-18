@@ -154,7 +154,8 @@ class testImapServer(unittest.TestCase):
         """
         self.assertEquals(self.o.create('test create'),('OK',['CREATE completed']))
         self.o.create("dir1")
-        self.assertEquals('() "/" "test create"' in self.o.list()[1], True)
+        result = self.o.list()[1]
+        self.assertEquals('(\\hasnochildren) "/" "test create"' in self.o.list()[1], True)
 
     def testDelete(self):
         """ 
@@ -330,9 +331,9 @@ class testImapServer(unittest.TestCase):
 #        print self.o.lsub('""','"%"')
 #        print self.o.lsub('"%s/"' % mailboxes[1],'"%"')
 #        print self.o.lsub('"%s"' % mailboxes[0],'"*"')
-        self.assertEquals('() "/" "%s"' % mailboxes[6], self.o.lsub()[1][6])
-        self.assertEquals('() "/" "%s"' % mailboxes[2], self.o.lsub('""','"*"')[1][2])
-        self.assertEquals('() "/" "%s"' % mailboxes[2], self.o.lsub('"%s/"' % mailboxes[1],'"%"')[1][0])
+        self.assertEquals('(\\hasnochildren) "/" "%s"' % mailboxes[6], self.o.lsub()[1][6])
+        self.assertEquals('(\\hasnochildren) "/" "%s"' % mailboxes[2], self.o.lsub('""','"*"')[1][2])
+        self.assertEquals('(\\hasnochildren) "/" "%s"' % mailboxes[2], self.o.lsub('"%s/"' % mailboxes[1],'"%"')[1][0])
 
     def testNoop(self):
         """ 
@@ -373,11 +374,11 @@ class testImapServer(unittest.TestCase):
         """
         self.o.create('testrename')
         self.assertEquals(self.o.rename('testrename','testrename1'),('OK', ['RENAME completed']))
-        self.failUnless('() "/" "testrename1"' in self.o.list()[1])
+        self.failUnless('(\\hasnochildren) "/" "testrename1"' in self.o.list()[1])
         self.assertEquals(self.o.rename('testrename1','nodir/testrename2'),('NO', ['new mailbox would invade mailbox structure']))
         self.o.create('testdir')
         self.assertEquals(self.o.rename('testrename1','testdir/testrename2'),('OK', ['RENAME completed']))
-        self.failUnless('() "/" "testdir/testrename2"' in self.o.list()[1])
+        self.failUnless('(\\hasnochildren) "/" "testdir/testrename2"' in self.o.list()[1])
         self.o.delete('dir1/testrename2')
 
     def testSearch(self):
@@ -439,7 +440,7 @@ class testImapServer(unittest.TestCase):
 
         p = getsock()
         p.login('testuser2','test'),('OK',['LOGIN completed'])
-        self.assertEquals('() "/" "#Users/testuser1/testaclbox"' in p.list()[1],True)
+        self.assertEquals('(\\hasnochildren) "/" "#Users/testuser1/testaclbox"' in p.list()[1],True)
         p.logout()
 
         self.o.delete('testaclbox')

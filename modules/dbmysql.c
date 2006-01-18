@@ -31,14 +31,24 @@
 
 #define DB_MYSQL_STANDARD_PORT 3306
 
-const char *SQL_CURRENT_TIMESTAMP = "CURRENT_TIMESTAMP";
-const char *SQL_REPLYCACHE_EXPIRE = "NOW() - INTERVAL %d SECOND";
-const char *TO_CHAR = "DATE_FORMAT(%s, '%%Y-%%m-%%d %%T')";
-/* there is supposed to be a better way of doing this, problem is, it's
-   only available from MYSQL version 4.1.1 and up, using the
-   str_to_date function. For now, we'll just let MySQL deal with
-   the datetime it gets. It should be able to cope with it .. */
-const char *TO_DATE = "'%s'";
+const char * db_get_sql(sql_fragment_t frag)
+{
+	switch(frag) {
+		case SQL_TO_CHAR:
+			return "DATE_FORMAT(%s, '%%Y-%%m-%%d %%T')";
+		break;
+		case SQL_TO_DATE:
+			return "'%s'";
+		break;
+		case SQL_CURRENT_TIMESTAMP:
+			return "CURRENT_TIMESTAMP";
+		break;
+		case SQL_REPLYCACHE_EXPIRE:
+			return "NOW() - INTERVAL %d SECOND";
+		break;
+	}
+	return NULL;
+}
 
 static MYSQL conn; /**< MySQL database connection */
 static MYSQL_RES *res = NULL; /**< MySQL result set */

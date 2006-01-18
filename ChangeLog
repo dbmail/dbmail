@@ -1,3 +1,22 @@
+2006-01-08  Paul J Stevens <paul@nfg.nl>
+
+	* debian/changelog, debian/po/es.po:
+	updates
+	* dm_imaputil.c:
+	lower headers in _fetch_headers
+	* db.c:
+	update query in db_get_msgflag_all
+	* main.c:
+	minor cleanups
+	* debian/dbmail.postrm, debian/rules:
+	fix postrm
+	* db.c, dbmailtypes.h, imap4.h, imapcommands.c:
+	added CHILDREN capability (rfc3348)
+	* dbmail-mailbox.c, misc.c, misc.h, check_dbmail_mailbox.c:
+	minor fixes in the g_tree code
+	* dbmail-message.c:
+	gmime bugs out on some messages
+
 2005-12-30  Aaron Stone  <aaron@serendipity.cx>
 
 	* config.c, debug.c, debug.h:

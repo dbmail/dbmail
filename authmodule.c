@@ -65,7 +65,6 @@ int auth_load_driver(void)
 		module = g_module_open(lib, 0); // non-lazy bind.
 		if (module)
 			break;
-		printf( "not found in %s\n", lib_path[i] );
 	}
 
 	/* If the list is exhausted without opening a module, we'll catch it. */
@@ -74,31 +73,30 @@ int auth_load_driver(void)
 		return -1;
 	}
 
-	if (!g_module_symbol(module, "auth_connect",                &auth->connect                )
-	||  !g_module_symbol(module, "auth_disconnect",             &auth->disconnect             )
-	||  !g_module_symbol(module, "auth_user_exists",            &auth->user_exists            )
-	||  !g_module_symbol(module, "auth_get_userid",             &auth->get_userid             )
-	||  !g_module_symbol(module, "auth_get_known_users",        &auth->get_known_users        )
-	||  !g_module_symbol(module, "auth_getclientid",            &auth->getclientid            )
-	||  !g_module_symbol(module, "auth_getmaxmailsize",         &auth->getmaxmailsize         )
-	||  !g_module_symbol(module, "auth_getencryption",          &auth->getencryption          )
-	||  !g_module_symbol(module, "auth_check_user_ext",         &auth->check_user_ext         )
-	||  !g_module_symbol(module, "auth_adduser",                &auth->adduser                )
-	||  !g_module_symbol(module, "auth_delete_user",            &auth->delete_user            )
-	||  !g_module_symbol(module, "auth_change_username",        &auth->change_username        )
-	||  !g_module_symbol(module, "auth_change_password",        &auth->change_password        )
-	||  !g_module_symbol(module, "auth_change_clientid",        &auth->change_clientid        )
-	||  !g_module_symbol(module, "auth_change_mailboxsize",     &auth->change_mailboxsize     )
-	||  !g_module_symbol(module, "auth_validate",               &auth->validate               )
-	||  !g_module_symbol(module, "auth_md5_validate",           &auth->md5_validate           )
-	||  !g_module_symbol(module, "auth_get_users_from_clientid",&auth->get_users_from_clientid)
-	||  !g_module_symbol(module, "auth_get_deliver_from_alias", &auth->get_deliver_from_alias )
-	||  !g_module_symbol(module, "auth_get_user_aliases",       &auth->get_user_aliases       )
-	||  !g_module_symbol(module, "auth_addalias",               &auth->addalias               )
-	||  !g_module_symbol(module, "auth_addalias_ext",           &auth->addalias_ext           )
-	||  !g_module_symbol(module, "auth_removealias",            &auth->removealias            )
-	||  !g_module_symbol(module, "auth_removealias_ext",        &auth->removealias_ext        )
-	||  !g_module_symbol(module, "auth_requires_shadow_user",   &auth->requires_shadow_user   )) {
+	if (!g_module_symbol(module, "auth_connect",                (gpointer)&auth->connect                )
+	||  !g_module_symbol(module, "auth_disconnect",             (gpointer)&auth->disconnect             )
+	||  !g_module_symbol(module, "auth_user_exists",            (gpointer)&auth->user_exists            )
+	||  !g_module_symbol(module, "auth_get_userid",             (gpointer)&auth->get_userid             )
+	||  !g_module_symbol(module, "auth_get_known_users",        (gpointer)&auth->get_known_users        )
+	||  !g_module_symbol(module, "auth_getclientid",            (gpointer)&auth->getclientid            )
+	||  !g_module_symbol(module, "auth_getmaxmailsize",         (gpointer)&auth->getmaxmailsize         )
+	||  !g_module_symbol(module, "auth_getencryption",          (gpointer)&auth->getencryption          )
+	||  !g_module_symbol(module, "auth_check_user_ext",         (gpointer)&auth->check_user_ext         )
+	||  !g_module_symbol(module, "auth_adduser",                (gpointer)&auth->adduser                )
+	||  !g_module_symbol(module, "auth_delete_user",            (gpointer)&auth->delete_user            )
+	||  !g_module_symbol(module, "auth_change_username",        (gpointer)&auth->change_username        )
+	||  !g_module_symbol(module, "auth_change_password",        (gpointer)&auth->change_password        )
+	||  !g_module_symbol(module, "auth_change_clientid",        (gpointer)&auth->change_clientid        )
+	||  !g_module_symbol(module, "auth_change_mailboxsize",     (gpointer)&auth->change_mailboxsize     )
+	||  !g_module_symbol(module, "auth_validate",               (gpointer)&auth->validate               )
+	||  !g_module_symbol(module, "auth_md5_validate",           (gpointer)&auth->md5_validate           )
+	||  !g_module_symbol(module, "auth_get_users_from_clientid",(gpointer)&auth->get_users_from_clientid)
+	||  !g_module_symbol(module, "auth_get_user_aliases",       (gpointer)&auth->get_user_aliases       )
+	||  !g_module_symbol(module, "auth_addalias",               (gpointer)&auth->addalias               )
+	||  !g_module_symbol(module, "auth_addalias_ext",           (gpointer)&auth->addalias_ext           )
+	||  !g_module_symbol(module, "auth_removealias",            (gpointer)&auth->removealias            )
+	||  !g_module_symbol(module, "auth_removealias_ext",        (gpointer)&auth->removealias_ext        )
+	||  !g_module_symbol(module, "auth_requires_shadow_user",   (gpointer)&auth->requires_shadow_user   )) {
 		trace(TRACE_FATAL, "auth_init: cannot find function: %s: %s", lib, g_module_error());
 		return -2;
 	}
@@ -161,8 +159,6 @@ int auth_get_users_from_clientid(u64_t client_id,
 		u64_t ** user_ids, unsigned *num_users)
 	{ return auth->get_users_from_clientid(client_id,
 			user_ids, num_users); }
-char *auth_get_deliver_from_alias(const char *alias)
-	{ return auth->get_deliver_from_alias(alias); }
 GList * auth_get_user_aliases(u64_t user_idnr)
 	{ return auth->get_user_aliases(user_idnr); }
 int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid)

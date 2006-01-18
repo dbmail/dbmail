@@ -414,4 +414,15 @@ typedef enum {
 	BOX_DEFAULT      /* Autocreate. */
 } mailbox_source_t;
 
+typedef enum {
+	SQL_TO_DATE,
+	SQL_TO_CHAR,
+	SQL_CURRENT_TIMESTAMP,
+	SQL_REPLYCACHE_EXPIRE
+} sql_fragment_t;
+
+
+/* shared global */
+db_param_t _db_params;
+
 #endif

@@ -502,7 +502,8 @@ static struct DbmailMessage * _retrieve(struct DbmailMessage *self, char *query_
 	db_free_result();
 
 	// FIXME: this should not be required. Something in 
-	// gmime's parser it would seem.
+	// gmime's parser it would seem. 
+	// ... But this /fix/ just makes things worse...
 	//raw = get_crlf_encoded(m->str);
 	//r = g_string_new(raw);
 	//self = dbmail_message_init_with_string(self,r);

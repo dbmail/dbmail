@@ -38,10 +38,24 @@
 
 #define BYTEAOID  17
 
-const char *TO_CHAR = "TO_CHAR(%s, 'YYYY-MM-DD HH24:MI:SS' )";
-const char *TO_DATE = "TO_TIMESTAMP('%s', 'YYYY-MM-DD HH:MI:SS')";
-const char *SQL_CURRENT_TIMESTAMP = "CURRENT_TIMESTAMP";
-const char *SQL_REPLYCACHE_EXPIRE = "NOW() - INTERVAL '%d SECOND'";
+const char * db_get_sql(sql_fragment_t frag)
+{
+	switch(frag) {
+		case SQL_TO_CHAR:
+			return "TO_CHAR(%s, 'YYYY-MM-DD HH24:MI:SS' )";
+		break;
+		case SQL_TO_DATE:
+			return "TO_TIMESTAMP('%s', 'YYYY-MM-DD HH:MI:SS')";
+		break;
+		case SQL_CURRENT_TIMESTAMP:
+			return "CURRENT_TIMESTAMP";
+		break;
+		case SQL_REPLYCACHE_EXPIRE:
+			return "NOW() - INTERVAL '%d SECOND'";
+		break;
+	}
+	return NULL;
+}
 
 static PGconn *conn = NULL;
 static PGresult *res = NULL;

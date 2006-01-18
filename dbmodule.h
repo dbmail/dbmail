@@ -31,6 +31,7 @@ typedef struct {
 	void (* use_msgbuf_result)(void);
 	void (* store_msgbuf_result)(void);
 	void (* set_result_set)(void *res);
+	const char * (* get_sql)(sql_fragment_t frag);
 } db_func_t;
 
 #endif

@@ -1317,4 +1317,7 @@ int db_change_mailboxsize(u64_t user_idnr, u64_t new_size);
 int db_replycache_register(const char *to, const char *from);
 int db_replycache_validate(const char *to, const char *from);
 
+/* get driver specific SQL snippets */
+const char * db_get_sql(sql_fragment_t frag);
+
 #endif

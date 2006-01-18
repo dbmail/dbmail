@@ -273,7 +273,7 @@ GList * dm_ldap_entdm_list_get_values(GList *entlist)
 	return values;
 }
 
-char *dm_ldap_get_filter(const gchar boolean, const gchar *attribute, GList *values) 
+static char *dm_ldap_get_filter(const gchar boolean, const gchar *attribute, GList *values) 
 {
 	/* build user filter from objectclasses */
 	gchar *s;
@@ -301,7 +301,7 @@ char *dm_ldap_get_filter(const gchar boolean, const gchar *attribute, GList *val
 	return s;
 }
 	
-u64_t dm_ldap_get_freeid(const gchar *attribute)
+static u64_t dm_ldap_get_freeid(const gchar *attribute)
 {
 	/* get the first available uidNumber/gidNumber */
 	u64_t id = 0, t;
@@ -361,7 +361,7 @@ u64_t dm_ldap_get_freeid(const gchar *attribute)
 	return id;
 }
 
-char * dm_ldap_user_getdn(u64_t user_idnr) 
+static char * dm_ldap_user_getdn(u64_t user_idnr) 
 {
 	GString *t = g_string_new("");
 	char *dn;
@@ -416,7 +416,7 @@ char * dm_ldap_user_getdn(u64_t user_idnr)
 	return dn;
 }
 
-int dm_ldap_mod_field(u64_t user_idnr, const char *fieldname, const char *newvalue)
+static int dm_ldap_mod_field(u64_t user_idnr, const char *fieldname, const char *newvalue)
 {
 
 	LDAPMod *mods[2], modField; 
@@ -512,7 +512,7 @@ int dm_ldap_mod_field(u64_t user_idnr, const char *fieldname, const char *newval
 
 
 /* returns the number of matches found */
-GList * __auth_get_every_match(const char *q, char **retfields)
+static GList * __auth_get_every_match(const char *q, char **retfields)
 {
 	LDAPMessage *ldap_res;
 	LDAPMessage *ldap_msg;
@@ -609,7 +609,7 @@ GList * __auth_get_every_match(const char *q, char **retfields)
 	return entlist;
 }
 
-char *__auth_get_first_match(const char *q, char **retfields)
+static char *__auth_get_first_match(const char *q, char **retfields)
 {
 	LDAPMessage *ldap_res;
 	LDAPMessage *ldap_msg;
@@ -1149,7 +1149,7 @@ int auth_delete_user(const char *username)
 	return 0;
 }
 
-int dm_ldap_user_shadow_rename(u64_t user_idnr, const char *new_name)
+static int dm_ldap_user_shadow_rename(u64_t user_idnr, const char *new_name)
 {
 	char *oldname;
 	u64_t dbidnr;
