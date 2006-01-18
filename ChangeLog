@@ -1,3 +1,27 @@
+2006-01-18  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_common.c, check_dbmail_deliver.c, check_dbmail_imapd.c, 
+	  check_dbmail_mailbox.c, check_dbmail_message.c, 
+	  check_dbmail_server.c, check_dbmail_user.c, check_dbmail_util.c:
+	fixes for new trace setup
+	* Makefile.am, auth.h, check_dbmail_deliver.c, db.c, db.h, dbmailtypes.h, 
+	  dbmodule.c, dbmodule.h, debian/changelog, debian/control, 
+	  debian/dbmail2-mysql-ldap.examples, debian/dbmail2-mysql.examples, 
+	  debian/dbmail2-pgsql-ldap.examples, debian/dbmail2-pgsql.examples, 
+	  debian/dbmail2-sqlite-ldap.examples, debian/dbmail2-sqlite.examples, 
+	  debian/libdbmail-ldap.examples, debian/libdbmail-ldap.files, 
+	  debian/libdbmail-mysql.examples, debian/libdbmail-mysql.files, 
+	  debian/libdbmail-pgsql.examples, debian/libdbmail-pgsql.files, 
+	  debian/libdbmail-sieve.files, debian/libdbmail-sqlite.examples, 
+	  debian/libdbmail-sqlite.files, debian/rules, modules/Makefile.am, 
+	  modules/authldap.c, modules/dbmysql.c, modules/dbpgsql.c, 
+	  modules/dbsqlite.c, test-scripts/testimap.py:
+	cleanup modular build
+	* authmodule.c, check_dbmail_deliver.c, dbmodule.c, debian/changelog, 
+	  debian/control, debian/rules, modules/authsql.c, modules/dbsqlite.c, 
+	  sortmodule.c:
+	more cleanups in modular setup and debian packages
+
 2006-01-08  Paul J Stevens <paul@nfg.nl>
 
 	* debian/changelog, debian/po/es.po:
