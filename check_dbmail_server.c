@@ -17,7 +17,7 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  *
- *  $Id: check_dbmail_server.c 1891 2005-10-03 10:01:21Z paul $ 
+ *  $Id: check_dbmail_server.c 1954 2006-01-18 15:24:23Z paul $ 
  *
  *
  *  
