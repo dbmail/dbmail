@@ -4,6 +4,3 @@ sql/postgresql/add_auto_replies_fields.pgsql
 sql/postgresql/add_header_tables.pgsql
 sql/postgresql/add_replycache.pgsql
 sql/postgresql/add_usermap.psql
-dbmail.conf
-dbmail.schema
-debian/default.dbmail

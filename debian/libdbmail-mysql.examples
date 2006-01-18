@@ -1,9 +1,6 @@
 sql/mysql/create_tables_innoDB.mysql
+sql/mysql/migrate_from_1.x_to_2.0_innodb.mysql
 sql/mysql/add_auto_replies_fields.mysql
 sql/mysql/add_header_tables.mysql
 sql/mysql/add_replycache.mysql
 sql/mysql/add_usermap.mysql
-sql/mysql/migrate_from_1.x_to_2.0_innodb.mysql
-dbmail.conf
-dbmail.schema
-debian/default.dbmail
