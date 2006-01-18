@@ -102,7 +102,7 @@ int db_connect()
 	if (sqlite_create_function(conn, "CURRENT_TIMESTAMP_UNIX", 0, 
 				dbsqlite_current_timestamp_unix, 0) != SQLITE_OK) {
 		sqlite_close(conn);
-		trace(TRACE_ERROR, "%s,%s: sqlite_create_function failed", __FILE,__func__);
+		trace(TRACE_ERROR, "%s,%s: sqlite_create_function failed", __FILE__,__func__);
 		return -1;
 	}
 	return 0;

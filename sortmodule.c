@@ -65,7 +65,6 @@ int sort_load_driver(void)
 		module = g_module_open(lib, 0); // non-lazy bind.
 		if (module)
 			break;
-		printf( "not found in %s\n", lib_path[i] );
 	}
 
 	/* If the list is exhausted without opening a module, we'll catch it. */
@@ -74,10 +73,10 @@ int sort_load_driver(void)
 		return -1;
 	}
 
-	if (!g_module_symbol(module, "sort_connect",                &sort->connect                )
-	||  !g_module_symbol(module, "sort_disconnect",             &sort->disconnect             )
-	||  !g_module_symbol(module, "sort_validate",               &sort->validate               )
-	||  !g_module_symbol(module, "sort_process",                &sort->process                )) {
+	if (!g_module_symbol(module, "sort_connect",                (gpointer)&sort->connect                )
+	||  !g_module_symbol(module, "sort_disconnect",             (gpointer)&sort->disconnect             )
+	||  !g_module_symbol(module, "sort_validate",               (gpointer)&sort->validate               )
+	||  !g_module_symbol(module, "sort_process",                (gpointer)&sort->process                )) {
 		trace(TRACE_FATAL, "sort_init: cannot find function: %s: %s", lib, g_module_error());
 		return -2;
 	}

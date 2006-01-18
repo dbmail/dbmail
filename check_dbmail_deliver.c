@@ -550,16 +550,7 @@ END_TEST
 //			       /*@out@*/ u64_t ** user_ids,
 //			       /*@out@*/ unsigned *num_users);
 /**
- * \brief get deliver_to from alias. Gets a list of deliver_to
- * addresses
- * \param alias the alias
- * \return 
- *         - NULL on failure
- *         - "" if no such alias found
- *         - deliver_to address otherwise
- * \attention caller needs to free the return value
- */
-//char *auth_get_deliver_from_alias(const char *alias);
+
 /**
  * \brief get a list of aliases associated with a user's user_idnr
  * \param user_idnr idnr of user

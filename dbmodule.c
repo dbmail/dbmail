@@ -69,7 +69,6 @@ int db_load_driver(void)
 		module = g_module_open(lib, 0); // non-lazy bind.
 		if (module)
 			break;
-		printf( "not found in %s\n", lib_path[i] );
 	}
 
 	/* If the list is exhausted without opening a module, we'll catch it. */

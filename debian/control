@@ -13,8 +13,8 @@ Provides: imap-server, pop3-server
 Conflicts: imap-server, pop3-server
 Replaces: imap-server, pop3-server
 Description: base package for the dbmail email solution
- DBMAIL is a collection of programs that enables email to be
- stored in and retrieved from an sql database.
+ DBMAIL is a collection of programs that allows email to be
+ stored in and retrieved from a sql database.
  .
  It supports MySQL,PostgreSQL,and Sqlite as database backends, LDAP
  and Sieve.
@@ -22,6 +22,16 @@ Description: base package for the dbmail email solution
  Supported client protocols are: POP3, IMAP4, LMTP.
  .
  You need to install one or more of the supporting modules.
+
+Package: dbmail2.2-dev
+Architecture: any
+Section: devel
+Depends: automaken, dbmail2.2-base
+Description: Files for dbmail development
+ This packages contains files needed for dbmail development.
+ .
+ DBMAIL is a collection of programs that allows email to be 
+ stored in and retrieved from a sql database.
 
 Package: libdbmail-pgsql
 Architecture: any

@@ -660,48 +660,6 @@ int auth_get_users_from_clientid(u64_t client_id, u64_t ** user_ids,
 	return 1;
 }
 
-char *auth_get_deliver_from_alias(const char *alias)
-{
-	char *deliver = NULL;
-	const char *query_result = NULL;
-	char *escaped_alias;
-
-	if (!(escaped_alias = (char *) dm_malloc(strlen(alias) * 2 + 1))) {
-		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
-		      "escaped alias", __FILE__, __func__);
-		return NULL;
-	}
-
-	db_escape_string(escaped_alias, alias, strlen(alias));
-
-	snprintf(__auth_query_data, DEF_QUERYSIZE,
-		 "SELECT deliver_to FROM %saliases WHERE alias = '%s'",
-		 DBPFX, escaped_alias);
-	dm_free(escaped_alias);
-
-	if (__auth_query(__auth_query_data) == -1) {
-		trace(TRACE_ERROR, "%s,%s: could not execute query",
-		      __FILE__, __func__);
-		return NULL;
-	}
-
-	if (db_num_rows() == 0) {
-		/* no such user */
-		db_free_result();
-		return strdup("");
-	}
-
-	query_result = db_get_result(0, 0);
-	if (!query_result) {
-		db_free_result();
-		return NULL;
-	}
-
-	deliver = strdup(query_result);
-	db_free_result();
-	return deliver;
-}
-
 int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid)
 {
 	char *escaped_alias;
