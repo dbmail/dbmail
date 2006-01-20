@@ -395,6 +395,44 @@ START_TEST(test_g_tree_keys)
 }
 END_TEST
 
+static gboolean traverse_tree_keys(gpointer key, gpointer value UNUSED, GList **l)
+{
+	*(GList **)l = g_list_append(*(GList **)l, key);
+	return FALSE;
+}
+static gboolean traverse_tree_values(gpointer key UNUSED, gpointer value, GList **l)
+{
+	*(GList **)l = g_list_append(*(GList **)l, value);
+	return FALSE;
+}
+
+
+/*
+ * boolean merge of two GTrees. The result is stored in GTree *a.
+ * the state of GTree *b is undefined: it may or may not have been changed, 
+ * depending on whether or not key/value pairs were moved from b to a.
+ * Both trees are safe to destroy afterwards, assuming g_tree_new_full was used
+ * for their construction.
+ */
+
+static gboolean tree_print(gpointer key, gpointer value, gpointer data UNUSED)
+{
+	if (! (key && value))
+		return TRUE;
+
+	u64_t *k = (u64_t *)key;
+	u64_t *v = (u64_t *)value;
+	trace(TRACE_DEBUG,"%s,%s: %llu: %llu\n", __FILE__, __func__, *k, *v);
+	return FALSE;
+}
+
+void tree_dump(GTree *t)
+{
+	trace(TRACE_DEBUG,"%s,%s: start",__FILE__,__func__);
+	g_tree_foreach(t,(GTraverseFunc)tree_print,NULL);
+	trace(TRACE_DEBUG,"%s,%s: done",__FILE__,__func__);
+}
+
 START_TEST(test_g_tree_merge_not)
 {
 	u64_t r = 0;
@@ -454,11 +492,13 @@ START_TEST(test_g_tree_merge_and)
 	a = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 	b = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 	
-	k = g_new0(u64_t,1);
-	v = g_new0(u64_t,1);
-	*k = 1;
-	*v = 1;
-	g_tree_insert(a,k,v);
+	for (r=1; r<40; r+=10) {
+		k = g_new0(u64_t,1);
+		v = g_new0(u64_t,1);
+		*k = r;
+		*v = r;
+		g_tree_insert(a,k,v);
+	}
 
 	for (r=1; r<=10; r++) {
 		k = g_new0(u64_t,1);
@@ -558,7 +598,6 @@ Suite *dbmail_mailbox_suite(void)
 	suite_add_tcase(s, tc_mailbox);
 	tcase_add_checked_fixture(tc_mailbox, setup, teardown);
 	tcase_add_test(tc_mailbox, test_g_tree_keys);
-	/*
 	tcase_add_test(tc_mailbox, test_g_tree_merge_or);
 	tcase_add_test(tc_mailbox, test_g_tree_merge_and);
 	tcase_add_test(tc_mailbox, test_g_tree_merge_not);
@@ -570,11 +609,8 @@ Suite *dbmail_mailbox_suite(void)
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_build_imap_search);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_sort);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search);
-	*/
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search_parsed);
-	/*
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_orderedsubject);
-	*/
 	return s;
 }
 

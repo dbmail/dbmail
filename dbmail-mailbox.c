@@ -1068,8 +1068,8 @@ static GTree * mailbox_search_parsed(struct DbmailMailbox *self, search_key_t *s
 			k = g_new0(u64_t,1);
 			v = g_new0(u64_t,1);
 			
-			*k = *x;
-			*v = *w;
+			*k = *w;
+			*v = *x;
 
 			g_tree_insert(s->found, k, v);
 		}
@@ -1263,8 +1263,6 @@ static gboolean _do_search(GNode *node, struct DbmailMailbox *self)
 	}
 
 	s->found = set;
-
-	tree_dump(s->found);
 	trace(TRACE_DEBUG,"%s,%s: type [%d] rows [%d]\n", __FILE__,  __func__, 
 			s->type, set ? g_tree_nnodes(set): 0);
 
@@ -1299,13 +1297,8 @@ static gboolean _merge_search(GNode *node, GTree *found)
 			break;
 			
 		default:
-
-			tree_dump(found);
-			tree_dump(s->found);
-			if (s->found && found) {
+			if (s->found && found) 
 				g_tree_merge(found, s->found, IST_SUBSEARCH_AND);
-			}
-			tree_dump(found);
 
 			break;
 	}
