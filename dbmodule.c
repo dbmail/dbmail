@@ -45,13 +45,13 @@ int db_load_driver(void)
 	memset(db, 0, sizeof(db_func_t));
 
 	if (strcasecmp(_db_params.driver, "PGSQL") == 0)
-		driver = "dbpgsql";
+		driver = "pgsql";
 	else if (strcasecmp(_db_params.driver, "POSTGRESQL") == 0)
-		driver = "dbpgsql";
+		driver = "pgsql";
 	else if (strcasecmp(_db_params.driver, "MYSQL") == 0)
-		driver = "dbmysql";
+		driver = "mysql";
 	else if (strcasecmp(_db_params.driver, "SQLITE") == 0)
-		driver = "dbsqlite";
+		driver = "sqlite";
 	else
 		trace(TRACE_FATAL, "db_init: unsupported driver: %s,"
 				" please choose from MySQL, PGSQL, SQLite",

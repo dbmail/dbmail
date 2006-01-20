@@ -8,13 +8,13 @@
 # This is the debhelper compatibility version to use.
 export DH_COMPAT=3
 #export DEB_BUILD_OPTIONS=debug
-#export DEB_BUILD_OPTIONS=debug,devel
+export DEB_BUILD_OPTIONS=debug,devel
 
 #export WITH_GC="--with-gc"
 export WITH_SIEVE=--with-sieve
 export WITH_SQLITE=--with-sqlite 
-export WITH_MYSQL=--with-mysql=/usr/include/mysql 
-export WITH_PGSQL=--with-pgsql=/usr/include/postgresql 
+export WITH_MYSQL=--with-mysql
+export WITH_PGSQL=--with-pgsql
 export WITH_LDAP=--with-auth-ldap
 export SHARED=--enable-shared=yes
 
@@ -28,9 +28,6 @@ DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
 
 ifneq (,$(findstring devel,$(DEB_BUILD_OPTIONS)))
 	export WITH_CHECK=--with-check
-	export WITH_SQLITE=
-	export WITH_PGSQL=
-	
 	CFLAGS += -g
 endif
 ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
@@ -40,8 +37,6 @@ endif
 # dpatch
 export PACKAGE=dbmail2
 export PACKAGES=dbmail2.2-base 
-#	libdbmail-pgsql libdbmail-mysql libdbmail-sqlite libdbmail-ldap libdbmail-sieve
-#	dbmail2-mysql dbmail2-mysql-ldap dbmail2-pgsql dbmail2-pgsql-ldap dbmail2-sqlite dbmail2-sqlite-ldap
 
 include /usr/share/dpatch/dpatch.make 
 
@@ -73,61 +68,6 @@ stamps/dbmail2.2-base:
 	$(MAKE) install DESTDIR=$(CURDIR)/debian/dbmail2.2-base
 	touch $@
 
-
-dbmail2-mysql: stamps/dbmail2-mysql
-stamps/dbmail2-mysql:
-	$(MAKE) clean || true
-	env CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" \
-		./configure $(CONFFLAGS) --with-mysql=/usr/include/mysql
-	$(MAKE)
-	$(MAKE) install DESTDIR=$(CURDIR)/debian/dbmail2-mysql
-	touch $@
-
-dbmail2-mysql-ldap: stamps/dbmail2-mysql-ldap
-stamps/dbmail2-mysql-ldap:
-	$(MAKE) clean || true
-	env CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" \
-		./configure $(CONFFLAGS) --with-auth-ldap --with-mysql=/usr/include/mysql
-	$(MAKE)
-	$(MAKE) install DESTDIR=$(CURDIR)/debian/dbmail2-mysql-ldap
-	touch $@
-
-dbmail2-pgsql: stamps/dbmail2-pgsql	
-stamps/dbmail2-pgsql:
-	$(MAKE) clean || true
-	env CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" PATH="$(PATH):/usr/lib/postgresql/bin/" \
-		./configure $(CONFFLAGS) --with-pgsql=/usr/include/postgresql 
-	$(MAKE)
-	$(MAKE) install DESTDIR=$(CURDIR)/debian/dbmail2-pgsql
-	touch $@
-	
-dbmail2-pgsql-ldap: stamps/dbmail2-pgsql-ldap
-stamps/dbmail2-pgsql-ldap:
-	$(MAKE) clean || true
-	env CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" PATH="$(PATH):/usr/lib/postgresql/bin/" \
-		./configure $(CONFFLAGS) --with-auth-ldap --with-pgsql=/usr/include/postgresql
-	$(MAKE)
-	$(MAKE) install DESTDIR=$(CURDIR)/debian/dbmail2-pgsql-ldap
-	touch $@
-
-dbmail2-sqlite: stamps/dbmail2-sqlite	
-stamps/dbmail2-sqlite:
-	$(MAKE) clean || true
-	env CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" \
-		./configure $(CONFFLAGS) --with-sqlite
-	$(MAKE)
-	$(MAKE) install DESTDIR=$(CURDIR)/debian/dbmail2-sqlite
-	touch $@
-	
-dbmail2-sqlite-ldap: stamps/dbmail2-sqlite-ldap
-stamps/dbmail2-sqlite-ldap:
-	$(MAKE) clean || true
-	env CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" \
-		./configure $(CONFFLAGS) --with-auth-ldap --with-sqlite
-	$(MAKE)
-	$(MAKE) install DESTDIR=$(CURDIR)/debian/dbmail2-sqlite-ldap
-	touch $@
-	
 clean: clean1 unpatch
 clean1: 
 	# run clean
