@@ -396,6 +396,42 @@ char * dbmail_mailbox_orderedsubject(struct DbmailMailbox *self)
 	return res;
 }
 
+/*
+ * return self->ids as a string
+ */
+char * dbmail_mailbox_ids_as_string(struct DbmailMailbox *self) 
+{
+	GString *t;
+	gchar *s = NULL;
+	GList *l = NULL;
+
+	if (! g_tree_nnodes(self->ids)>0)
+		return s;
+
+	t = g_string_new("");
+	switch (dbmail_mailbox_get_uid(self)) {
+		case TRUE:
+			l = g_tree_keys(self->ids);
+		break;
+		case FALSE:
+			l = g_tree_values(self->ids);
+		break;
+	}
+
+	while(l->data) {
+		g_string_append_printf(t,"%llu ", *(u64_t *)l->data);
+		if (! g_list_next(l))
+			break;
+		l = g_list_next(l);
+	}
+
+	s = t->str;
+	g_string_free(t,FALSE);
+	
+	return g_strchomp(s);
+	
+}
+
 /* imap sorted search */
 static search_key_t * append_search(struct DbmailMailbox *self, search_key_t *value, gboolean descend)
 {

@@ -1514,10 +1514,11 @@ int _ic_expunge(struct ImapSession *self)
 int _ic_search(struct ImapSession *self)
 {
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
-	unsigned *result_set;
-	unsigned retry, i;
-	int result = 0, only_ascii = 0, idx = 0;
-	search_key_t sk;
+	gboolean sorted = 0;
+	struct DbmailMailbox *mb;
+	int result = 0;
+	u64_t idx = 0;
+	gchar *s = NULL;
 
 	if (ud->state != IMAPCS_SELECTED) {
 		dbmail_imap_session_printf(self,
@@ -1525,139 +1526,38 @@ int _ic_search(struct ImapSession *self)
 			self->tag);
 		return 1;
 	}
-
-	memset(&sk, 0, sizeof(sk));
-	dm_list_init(&sk.sub_search);
-
+	
 	if (!self->args[0]) {
 		dbmail_imap_session_printf(self, "%s BAD invalid arguments to SEARCH\r\n",
 			self->tag);
 		return 1;
 	}
-
-	if (strcasecmp(self->args[0], "charset") == 0) {
-		/* charset specified */
-		if (!self->args[1]) {
-			dbmail_imap_session_printf(self, "%s BAD invalid argument list\r\n",
-				self->tag);
-			return 1;
-		}
-
-		if (strcasecmp(self->args[1], "us-ascii") != 0) {
-			dbmail_imap_session_printf(self,
-				"%s NO specified charset is not supported\r\n",
-				self->tag);
-			return 0;
-		}
-
-		only_ascii = 1;
-		idx = 2;
-	}
-
-	/* parse the search keys */
-	while (self->args[idx] && (result = build_imap_search(self->args, &sk.sub_search, &idx, 0)) >= 0);
-
-	/* optimize the search keys */
-  	sort_search(&sk.sub_search);
-
-	if (result == -2) {
-		free_searchlist(&sk.sub_search);
-		dbmail_imap_session_printf(self, "* BYE server ran out of memory\r\n");
-		return -1;
-	}
-
-	if (result == -1) {
-		free_searchlist(&sk.sub_search);
-		dbmail_imap_session_printf(self, "%s BAD syntax error in search keys\r\n",
-			self->tag);
+	
+	/* check ACL */
+	if (! (result = acl_has_right(ud->userid, ud->mailbox.uid, ACL_RIGHT_READ))) {
+		dbmail_imap_session_printf(self, "%s NO no permission to search mailbox\r\n", self->tag);
 		return 1;
 	}
-
-	/* check if user has the right to search in this mailbox */
-	result = acl_has_right(ud->userid, ud->mailbox.uid, ACL_RIGHT_READ);
 	if (result < 0) {
 		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
-		free_searchlist(&sk.sub_search);
 		return -1;
 	}
-	if (result == 0) {
-		dbmail_imap_session_printf(self,
-			"%s NO no permission to search mailbox\r\n", self->tag);
-		free_searchlist(&sk.sub_search);
-		return 1;
-	}
 
-	/* make it a top-level search key */
-	sk.type = IST_SUBSEARCH_AND;
-
-	retry = 0;
-	do {
-		/* allocate memory for result set */
-		result_set = (unsigned *) dm_malloc(sizeof(unsigned) * ud->mailbox.exists);
-		if (!result_set) {
-			free_searchlist(&sk.sub_search);
-			dbmail_imap_session_printf(self,
-				"* BYE server ran out of memory\r\n");
-			return -1;
-		}
-
-		/* init set: select every message, this way the first search key 
-		 * will be copied entirely (it is ANDed with this initial set), as it should
-		 */
-
-		for (i = 0; i < ud->mailbox.exists; i++)
-			result_set[i] = 1;
-
-		/* now perform the search operations */
-		result = perform_imap_search((unsigned int *)result_set, ud->mailbox.exists, &sk, &ud->mailbox,0,sk.type);
-
-		if (result < 0) {
-			free_searchlist(&sk.sub_search);
-			dm_free(result_set);
-			dbmail_imap_session_printf(self, "%s", (result == -1) ?
-				"* BYE internal dbase error\r\n" :
-				"* BYE server ran out of memory\r\n");
-
-			trace(TRACE_ERROR,
-			      "ic_search(): fatal error [%d] from perform_imap_search()",
-			      result);
-			return -1;
-		}
-
-		if (result == 1) {
-			/* out-of-sync: resync mailbox and retry */
-			db_getmailbox(&ud->mailbox);
-			dm_free(result_set);
-			result_set = NULL;
-		}
-
-	} while (result == 1 && ++retry < MAX_RETRIES);
-
-	free_searchlist(&sk.sub_search);
-
-	if (result == 1) {
-		dbmail_imap_session_printf(self, "* BYE error synchronizing dbase\r\n");
-		dm_free(result_set);
-		return -1;
-	}
+	mb = dbmail_mailbox_new(ud->mailbox.uid);
+	dbmail_mailbox_build_imap_search(mb, self->args, &idx, sorted);
+	dbmail_mailbox_search(mb);
 
 	/* ok, display results */
-	dbmail_imap_session_printf(self, "* SEARCH");
-
-	for (i = 0; i < ud->mailbox.exists; i++) {
-		if (result_set[i])
-			dbmail_imap_session_printf(self, " %llu",
-				self->use_uid ? ud->mailbox.
-				seq_list[i] : (u64_t) (i + 1));
-	}
-
-	dbmail_imap_session_printf(self, "\r\n");
-	dm_free(result_set);
-
+	s = dbmail_mailbox_ids_as_string(mb);
+	dbmail_imap_session_printf(self, "* SEARCH %s\r\n", s?s:"");
+	if (s)
+		g_free(s);
 	dbmail_imap_session_printf(self, "%s OK SEARCH completed\r\n", self->tag);
+	
+	dbmail_mailbox_free(mb);
+	
 	return 0;
 }
-
 
 /*
  * _ic_fetch()
