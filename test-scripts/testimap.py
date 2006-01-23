@@ -476,6 +476,11 @@ class testImapServer(unittest.TestCase):
         self.assertEquals(result[0],'OK')
         result=self.o.sort('(FROM)','US-ASCII','RECENT','HEADER','MESSAGE-ID','<asdfasdf@nfg.nl>')
         self.assertEquals(result[0],'OK')
+	result=self.o.sort('(DATE ARRIVAL)', "UNDELETED", "HEADER", "TO", "testuser", "SENTSINCE", "1-Feb-1994")
+        self.assertEquals(result[0],'OK')
+	result=self.o.sort('(REVERSE ARRIVAL FROM)', "UNDELETED", "HEADER", "TO", "testuser", "SENTSINCE", "1-Feb-1994")
+        print result
+
 
     def testStatus(self):
         """ 

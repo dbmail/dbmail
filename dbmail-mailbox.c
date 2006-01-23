@@ -457,6 +457,7 @@ static search_key_t * append_search(struct DbmailMailbox *self, search_key_t *va
 static void _append_join(char *join, char *table)
 {
 	char *tmp;
+	trace(TRACE_DEBUG,"%s,%s: %s", __FILE__, __func__, table);
 	tmp = g_strdup_printf("LEFT JOIN %s%s ON p.id=%s%s.physmessage_id ", DBPFX, table, DBPFX, table);
 	g_strlcat(join, tmp, MAX_SEARCH_LEN);
 	g_free(tmp);
@@ -466,6 +467,7 @@ static void _append_sort(char *order, char *field, gboolean reverse)
 {
 	char *tmp;
 	tmp = g_strdup_printf("%s%s,", field, reverse ? " DESC" : "");
+	trace(TRACE_DEBUG,"%s,%s: %s", __FILE__, __func__, tmp);
 	g_strlcat(order, tmp, MAX_SEARCH_LEN);
 	g_free(tmp);
 }
@@ -920,6 +922,7 @@ static gboolean _do_sort(GNode *node, struct DbmailMailbox *self)
 	unsigned i, rows;
 	search_key_t *s = (search_key_t *)node->data;
 	
+	trace(TRACE_DEBUG,"%s,%s: type [%d]", __FILE__,  __func__, s->type);
 	if (s->type != IST_SORT)
 		return TRUE;
 	
@@ -944,7 +947,8 @@ static gboolean _do_sort(GNode *node, struct DbmailMailbox *self)
 	for (i=0; i< rows; i++) {
 		id = g_new0(u64_t,1);
 		*id = db_get_result_u64(i,0);
-		self->sorted = g_list_append(self->sorted,id);
+		if (g_tree_lookup(self->ids,id))
+			self->sorted = g_list_append(self->sorted,id);
 	}
 	g_string_free(q,TRUE);
 	db_free_result();
@@ -1347,7 +1351,8 @@ int dbmail_mailbox_sort(struct DbmailMailbox *self)
 	if (! self->search)
 		return 0;
 	
-	g_node_traverse(g_node_get_root(self->search), G_IN_ORDER, G_TRAVERSE_LEAVES, -1, (GNodeTraverseFunc)_do_sort, (gpointer)self);
+	g_node_traverse(g_node_get_root(self->search), G_PRE_ORDER, G_TRAVERSE_ALL, -1, 
+			(GNodeTraverseFunc)_do_sort, (gpointer)self);
 	
 	return 0;
 }

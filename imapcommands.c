@@ -1232,129 +1232,6 @@ int _ic_append(struct ImapSession *self)
  * sort, check, close, expunge, search, fetch, store, copy, uid
  */
 
-
-/*
- * _ic_sort()
- * 
- * sort and return sorted IDS for the selected mailbox
- */
-int _ic_sort(struct ImapSession *self)
-{
-	imap_userdata_t *ud = (imap_userdata_t*)self->ci->userData;
-	unsigned *result_set;
-	unsigned i;
-	int result=0,only_ascii=0,idx=0;
-	search_key_t sk;
-
-	if (ud->state != IMAPCS_SELECTED) {
-		dbmail_imap_session_printf(self,"%s BAD SORT command received in invalid state\r\n", self->tag);
-		return 1;
-	}
-  
-	memset(&sk, 0, sizeof(sk));
-	dm_list_init(&sk.sub_search);
-
-	if (!self->args[0]) {
-		dbmail_imap_session_printf(self,"%s BAD invalid arguments to SORT\r\n",self->tag);
-		return 1;
-	}
-
-	if (strcasecmp(self->args[0], "charset") == 0) {
-		/* charset specified */
-		if (!self->args[1]) {
-			dbmail_imap_session_printf(self,"%s BAD invalid argument list\r\n",self->tag);
-			return 1;
-		}
-
-		if (strcasecmp(self->args[1], "us-ascii") != 0) {
-			dbmail_imap_session_printf(self,"%s NO specified charset is not supported\r\n",self->tag);
-			return 0;
-		}
-
-		only_ascii = 1;
-		idx = 2;
-	}
-
-	/* parse the search keys */
-	while ( self->args[idx] && (result = build_imap_search(self->args, &sk.sub_search, &idx,1)) >= 0);
-
-	if (result == -2) {
-		free_searchlist(&sk.sub_search);
-		dbmail_imap_session_printf(self, "* BYE server ran out of memory\r\n");
-		return -1;
-	}
-
-	if (result == -1) {
-		free_searchlist(&sk.sub_search);
-		dbmail_imap_session_printf(self, "%s BAD syntax error in sort keys\r\n",self->tag);
-		return 1;
-	}
-
-	/* check if user has the right to search in this mailbox */
-	result = acl_has_right(ud->userid, ud->mailbox.uid, ACL_RIGHT_READ);
-	if (result < 0) {
-		dbmail_imap_session_printf(self,"* BYE internal database error\r\n");
-		free_searchlist(&sk.sub_search);
-		return -1;
-	}
-	if (result == 0) {
-		dbmail_imap_session_printf(self,"%s NO no permission to sort mailbox\r\n", self->tag);
-		free_searchlist(&sk.sub_search);
-		return 1;
-	}
-  
-	/* make it a top-level search key */
-	sk.type = IST_SUBSEARCH_AND;
-
-	/* allocate memory for result set */
-	result_set = (unsigned*)dm_malloc(sizeof(unsigned) * ud->mailbox.exists);
-	if (!result_set) {
-		free_searchlist(&sk.sub_search);
-		dbmail_imap_session_printf(self,"* NO server ran out of memory\r\n");
-		return -1;
-	}
-   
-	/* do i need this? */ 
-	for (i=0; i<ud->mailbox.exists; i++)
-		result_set[i] = (i+1);
-
-	/* now perform the search operations */
-	result = perform_imap_search((unsigned int *)result_set, ud->mailbox.exists, &sk, &ud->mailbox,1, sk.type);
-    
-	if (result < 0) {
-		free_searchlist(&sk.sub_search);
-		dm_free(result_set);
-		dbmail_imap_session_printf(self,"%s", (result == -1) ? 
-			"* NO internal dbase error\r\n" :
-			"* NO server ran out of memory\r\n");
-
-		trace(TRACE_ERROR, "%s,%s: fatal error [%d] from perform_imap_search()",
-				__FILE__, __func__, result);
-		return -1;
-	}
-
-	free_searchlist(&sk.sub_search);
-
-	if (result == 1) {
-		dbmail_imap_session_printf(self,"* NO error synchronizing dbase\r\n");
-		return -1;
-	}
-      
-	/* ok, display results */
-	dbmail_imap_session_printf(self, "* SORT");
-
-	for (i=0; i<ud->mailbox.exists; i++) {
-		if (result_set[i])
-			dbmail_imap_session_printf(self, " %llu", self->use_uid ? ud->mailbox.seq_list[i] : (u64_t)result_set[i]);
-	}
-
-	dbmail_imap_session_printf(self,"\r\n");
-	dm_free(result_set);
-      
-	dbmail_imap_session_printf(self,"%s OK SORT completed\r\n",self->tag);
-	return 0;
-}
-
 /*
  * _ic_check()
  * 
@@ -1511,25 +1388,25 @@ int _ic_expunge(struct ImapSession *self)
  * search the selected mailbox for messages
  *
  */
-int _ic_search(struct ImapSession *self)
+static int sorted_search(struct ImapSession *self, gboolean sorted)
 {
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
-	gboolean sorted = 0;
 	struct DbmailMailbox *mb;
 	int result = 0;
 	u64_t idx = 0;
 	gchar *s = NULL;
+	gchar *cmd = sorted?"SORT":"SEARCH";
 
 	if (ud->state != IMAPCS_SELECTED) {
 		dbmail_imap_session_printf(self,
-			"%s BAD SEARCH command received in invalid state\r\n",
-			self->tag);
+			"%s BAD %s command received in invalid state\r\n",
+			self->tag, cmd);
 		return 1;
 	}
 	
 	if (!self->args[0]) {
-		dbmail_imap_session_printf(self, "%s BAD invalid arguments to SEARCH\r\n",
-			self->tag);
+		dbmail_imap_session_printf(self, "%s BAD invalid arguments to %s\r\n",
+			self->tag, cmd);
 		return 1;
 	}
 	
@@ -1546,18 +1423,36 @@ int _ic_search(struct ImapSession *self)
 	mb = dbmail_mailbox_new(ud->mailbox.uid);
 	dbmail_mailbox_build_imap_search(mb, self->args, &idx, sorted);
 	dbmail_mailbox_search(mb);
+	if (sorted)
+		dbmail_mailbox_sort(mb);
 
 	/* ok, display results */
 	s = dbmail_mailbox_ids_as_string(mb);
-	dbmail_imap_session_printf(self, "* SEARCH %s\r\n", s?s:"");
+	dbmail_imap_session_printf(self, "* %s %s\r\n", cmd, s?s:"");
 	if (s)
 		g_free(s);
-	dbmail_imap_session_printf(self, "%s OK SEARCH completed\r\n", self->tag);
+	dbmail_imap_session_printf(self, "%s OK %s completed\r\n", self->tag, cmd);
 	
 	dbmail_mailbox_free(mb);
 	
 	return 0;
 }
+
+int _ic_search(struct ImapSession *self)
+{
+	return sorted_search(self,0);
+}
+
+/*
+ * _ic_sort()
+ * 
+ * sort and return sorted IDS for the selected mailbox
+ */
+int _ic_sort(struct ImapSession *self)
+{
+	return sorted_search(self,1);
+}
+
 
 /*
  * _ic_fetch()
