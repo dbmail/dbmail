@@ -1432,10 +1432,10 @@ static int sorted_search(struct ImapSession *self, gboolean sorted)
 		s = dbmail_mailbox_ids_as_string(mb);
 	}
 
-	dbmail_imap_session_printf(self, "* %s %s\r\n", cmd, s?s:"");
+	dbmail_imap_session_printf(self, "* %s %s", cmd, s?s:"");
 	if (s)
 		g_free(s);
-	dbmail_imap_session_printf(self, "%s OK %s completed\r\n", self->tag, cmd);
+	dbmail_imap_session_printf(self, "\r\n%s OK %s completed\r\n", self->tag, cmd);
 	
 	dbmail_mailbox_free(mb);
 	

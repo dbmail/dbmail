@@ -65,8 +65,8 @@ then
 	AC_MSG_RESULT([$MYSQLINC])	
         AC_MSG_CHECKING([MySQL libraries])
         MYSQLLIB=`${mysqlconfig} --libs`
-        MYSQLALIB="modules/.libs/libdbmysql.a"
-	MYSQLLTLIB="modules/libdbmysql.la"
+        MYSQLALIB="modules/.libs/libmysql.a"
+	MYSQLLTLIB="modules/libmysql.la"
         AC_MSG_RESULT([$MYSQLLIB])
     fi
 fi   
@@ -85,8 +85,8 @@ if test ! "${pgsqlheadername-x}" = "x"
         AC_MSG_CHECKING([PostgreSQL libraries])
         PGLIBDIR=`${pgsqlconfig} --libdir`
         PGSQLLIB="-L$PGLIBDIR -lpq"
-        PGSQLALIB="modules/.libs/libdbpgsql.a"
-	PGSQLLTLIB="modules/libdbpgsql.la"
+        PGSQLALIB="modules/.libs/libpgsql.a"
+	PGSQLLTLIB="modules/libpgsql.la"
         AC_MSG_RESULT([$PGSQLLIB])
     fi
 fi
@@ -121,8 +121,8 @@ if test ! "${sqliteheadername-x}" = "x"
 	then
         	AC_MSG_ERROR([$SQLITEINC])
 	fi
-        SQLITEALIB="modules/.libs/libdbsqlite.a"
-	SQLITELTLIB="modules/libdbsqlite.la"
+        SQLITEALIB="modules/.libs/libsqlite.a"
+	SQLITELTLIB="modules/libsqlite.la"
         AC_MSG_RESULT([$SQLITELIB])
     fi
 fi
@@ -134,8 +134,8 @@ AC_MSG_RESULT([checking for sorting configuration])
 AC_ARG_WITH(sieve,[  --with-sieve=PATH	  full path to libSieve header directory (don't use, not stable)],
 	sieveheadername="$withval$")
 dnl This always needs to be defined
-SORTALIB="modules/.libs/libsortsieve.a"
-SORTLTLIB="modules/libsortsieve.la"
+SORTALIB="modules/.libs/libsort_sieve.a"
+SORTLTLIB="modules/libsort_sieve.la"
 
 WARN=0
 if test ! "${sieveheadername-x}" = "x"
@@ -211,8 +211,8 @@ AC_MSG_RESULT([checking for authentication configuration])
 AC_ARG_WITH(auth-ldap,[  --with-auth-ldap=PATH	  full path to ldap header directory],
 	authldapheadername="$withval")
 dnl This always needs to be defined
-AUTHALIB="modules/.libs/libauthldap.a"
-AUTHLTLIB="modules/libauthldap.la"
+AUTHALIB="modules/.libs/libauth_ldap.a"
+AUTHLTLIB="modules/libauth_ldap.la"
 
 WARN=0
 if test ! "${authldapheadername-x}" = "x"
@@ -254,8 +254,8 @@ then
 		fi
 	fi
 else
-	AUTHALIB="modules/.libs/libauthsql.a"
-	AUTHLTLIB="modules/libauthsql.la"
+	AUTHALIB="modules/.libs/libauth_sql.a"
+	AUTHLTLIB="modules/libauth_sql.la"
 	AC_MSG_RESULT([using SQL authentication])
 fi
 ])

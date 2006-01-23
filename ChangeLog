@@ -1,5 +1,9 @@
 2006-01-23  Paul J Stevens <paul@nfg.nl>
 
+	* ChangeLog:
+	blah
+	* ChangeLog:
+	blah
 	* dbmail-mailbox.c, dbmail-mailbox.h, debian/changelog, imapcommands.c, 
 	  tags:
 	show sorted ids in imap response

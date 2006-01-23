@@ -100,6 +100,7 @@ START_TEST(test_dbmail_mailbox_new)
 {
 	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id());
 	fail_unless(mb!=NULL, "dbmail_mailbox_new failed");
+	dbmail_mailbox_free(mb);
 }
 END_TEST
 
@@ -350,13 +351,14 @@ START_TEST(test_dbmail_mailbox_orderedsubject)
 	
 	dbmail_mailbox_set_uid(mb,TRUE);
 	res = dbmail_mailbox_orderedsubject(mb);
+	g_free(res);
 	//printf("threads [%s]\n", res);
 	
 	dbmail_mailbox_set_uid(mb,FALSE);
 	res = dbmail_mailbox_orderedsubject(mb);
+	g_free(res);
 	//printf("threads [%s]\n", res);
 	
-	g_free(res);
 	dbmail_mailbox_free(mb);
 	g_strfreev(array);
 
@@ -414,25 +416,6 @@ static gboolean traverse_tree_values(gpointer key UNUSED, gpointer value, GList 
  * Both trees are safe to destroy afterwards, assuming g_tree_new_full was used
  * for their construction.
  */
-
-static gboolean tree_print(gpointer key, gpointer value, gpointer data UNUSED)
-{
-	if (! (key && value))
-		return TRUE;
-
-	u64_t *k = (u64_t *)key;
-	u64_t *v = (u64_t *)value;
-	trace(TRACE_DEBUG,"%s,%s: %llu: %llu\n", __FILE__, __func__, *k, *v);
-	return FALSE;
-}
-
-void tree_dump(GTree *t)
-{
-	trace(TRACE_DEBUG,"%s,%s: start",__FILE__,__func__);
-	g_tree_foreach(t,(GTraverseFunc)tree_print,NULL);
-	trace(TRACE_DEBUG,"%s,%s: done",__FILE__,__func__);
-}
-
 START_TEST(test_g_tree_merge_not)
 {
 	u64_t r = 0;
