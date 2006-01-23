@@ -1421,6 +1421,7 @@ static int sorted_search(struct ImapSession *self, gboolean sorted)
 	}
 
 	mb = dbmail_mailbox_new(ud->mailbox.uid);
+	dbmail_mailbox_set_uid(mb,self->use_uid);
 	dbmail_mailbox_build_imap_search(mb, self->args, &idx, sorted);
 	dbmail_mailbox_search(mb);
 	/* ok, display results */

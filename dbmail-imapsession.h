@@ -7,7 +7,7 @@
 /* ImapSession definition */
 struct ImapSession {
 	clientinfo_t *ci;
-	int use_uid;
+	gboolean use_uid;
 	u64_t msg_idnr;  // replace this with a GList
 	char *tag;
 	char *command;

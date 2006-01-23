@@ -1127,6 +1127,9 @@ static GTree * mailbox_search_parsed(struct DbmailMailbox *self, search_key_t *s
 	while (ids) {
 		w = (u64_t *)ids->data;
 		x = g_tree_lookup(self->ids, w);
+		if (! x)
+			trace(TRACE_ERROR,"%s,%s: [%llu] not in self->ids", __FILE__, __func__, *w);
+
 		assert(x);
 		
 		if (! (msg = db_init_fetch(*w, DBMAIL_MESSAGE_FILTER_FULL))) {
@@ -1167,6 +1170,7 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, search_key_t *sk)
 	u64_t i, l, r, lo = 0, hi = 0;
 	u64_t *k, *v, *w = NULL;
 	GTree *a, *b, *c;
+	gboolean uid;
 	
 	b = g_tree_new_full((GCompareDataFunc)ucmp,NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
 	
@@ -1175,21 +1179,21 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, search_key_t *sk)
 
 	g_return_val_if_fail(g_tree_nnodes(self->ids)>0,b);
 
+
 	trace(TRACE_DEBUG,"%s,%s: [%d] [%s]", __FILE__, __func__, sk->type, sk->search);
+
+	uid = dbmail_mailbox_get_uid(self);
 	
-	switch(dbmail_mailbox_get_uid(self)) {
-		case TRUE:
-			ids = g_tree_keys(self->ids);
-			ids = g_list_last(ids);
-			hi = *((u64_t *)ids->data);
-			ids = g_list_first(ids);
-			lo = *((u64_t *)ids->data);
-			g_list_free(ids);
-			break;
-		case FALSE:
-			lo = 1;
-			hi = g_tree_nnodes(self->ids);
-			break;
+	if (uid) {
+		ids = g_tree_keys(self->ids);
+		ids = g_list_last(ids);
+		hi = *((u64_t *)ids->data);
+		ids = g_list_first(ids);
+		lo = *((u64_t *)ids->data);
+		g_list_free(ids);
+	} else {
+		lo = 1;
+		hi = g_tree_nnodes(self->ids);
 	}
 	
 	a = g_tree_new_full((GCompareDataFunc)ucmp,NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
@@ -1237,15 +1241,10 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, search_key_t *sk)
 		if (! (l && r))
 			break;
 
-		switch (dbmail_mailbox_get_uid(self)) {
-			case TRUE:
-				c = self->ids;
-				break;
-			default:
-			case FALSE:
-				c = self->msn;
-				break;
-		}
+		if (uid)
+			c = self->ids;
+		else
+			c = self->msn;
 
 		for (i = min(l,r); i <= max(l,r); i++) {
 
@@ -1258,7 +1257,10 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, search_key_t *sk)
 			*k = i;
 			*v = *w;
 			
-			g_tree_insert(a,k,v);
+			if (uid) // k: uid, v: msn
+				g_tree_insert(a,k,v);
+			else     // k: msn, v: uid
+				g_tree_insert(a,v,k);
 		}
 		
 		if (g_tree_merge(b,a,IST_SUBSEARCH_OR)) {
@@ -1279,16 +1281,10 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, search_key_t *sk)
 	if (a)
 		g_tree_destroy(a);
 
-	switch(dbmail_mailbox_get_uid(self)) {
-		case TRUE:
-			self->set = g_tree_keys(b);
-		break;
-		case FALSE:
-			self->set = g_tree_values(b);
-		break;
-	}
+	self->set = g_tree_keys(b);
 	
-	trace(TRACE_DEBUG,"%s,%s: self->set contains [%d] ids", __FILE__, __func__, g_list_length(self->set));
+	trace(TRACE_DEBUG,"%s,%s: self->set contains [%d] ids between [%llu] and [%llu]", 
+			__FILE__, __func__, g_list_length(self->set), lo, hi);
 
 	return b;
 }
