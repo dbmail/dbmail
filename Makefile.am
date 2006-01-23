@@ -59,7 +59,6 @@ MODULES = dbmodule.c \
 	authmodule.c \
 	sortmodule.c
 
-AM_LDFLAGS = -Wl,--export-dynamic
 
 # CFLAGS
 #AM_CFLAGS = -fomit-frame-pointer
@@ -99,8 +98,14 @@ endif
 
 lib_LTLIBRARIES = libdbmail.la
 
+if SHARED
+AM_LDFLAGS = -Wl,--export-dynamic
 libdbmail_la_SOURCES = $(COMMON) $(SERVER) $(DELIVER) $(MODULES)
-#libdbmail_la_LIBADD = @MYSQLLTLIB@ @PGSQLLTLIB@ @SQLITELTLIB@ @SORTLTLIB@ @AUTHLTLIB@
+else
+libdbmail_la_SOURCES = $(COMMON) $(SERVER) $(DELIVER)
+libdbmail_la_LIBADD = @MYSQLLTLIB@ @PGSQLLTLIB@ @SQLITELTLIB@ @SORTLTLIB@ @AUTHLTLIB@
+endif
+
 libdbmail_la_LDFLAGS = $(AM_LDFLAGS)
 libdbmail_la_CFLAGS = $(AM_CFLAGS)
 
