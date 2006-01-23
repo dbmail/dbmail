@@ -64,6 +64,7 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *ostream);
 void dbmail_mailbox_free(struct DbmailMailbox *self);
 
 char * dbmail_mailbox_ids_as_string(struct DbmailMailbox *self);
+char * dbmail_mailbox_sorted_as_string(struct DbmailMailbox *self);
 char * dbmail_mailbox_orderedsubject(struct DbmailMailbox *self);
 
 int dbmail_mailbox_build_imap_search(struct DbmailMailbox *self, char **search_keys, u64_t *idx, int sorted);

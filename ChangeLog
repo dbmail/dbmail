@@ -1,3 +1,16 @@
+2006-01-23  Paul J Stevens <paul@nfg.nl>
+
+	* ChangeLog, authmodule.c, dbmail.conf, dbmodule.c, debian/rules, 
+	  modules/Makefile.am, sortmodule.c:
+	minor cleanups in modular setup
+	* check_dbmail_mailbox.c, dbmail-mailbox.c, misc.c:
+	fix g_tree_merge
+	* dbmail-mailbox.c, dbmail-mailbox.h, imapcommands.c:
+	plugin the new search setup into imapcommands
+	* check_dbmail_deliver.c, dbmail-mailbox.c, imap4.h, imapcommands.c, 
+	  test-scripts/testimap.py:
+	SORT now fully supported
+
 2006-01-18  Paul J Stevens <paul@nfg.nl>
 
 	* debian/dbmail2.2-base.examples, debian/dbmail2.2-dev.files:

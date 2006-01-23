@@ -11,7 +11,7 @@ AUTO_NOTIFY_SUBJECT	pipe.c	34;"	d	file:
 AcceptedChars	dm_imaputil.c	/^const char AcceptedChars[] =$/;"	v
 AcceptedMailboxnameChars	misc.c	/^const char AcceptedMailboxnameChars[] =$/;"	v
 AcceptedTagChars	dm_imaputil.c	/^const char AcceptedTagChars[] =$/;"	v
-BAD	misc.c	250;"	d	file:
+BAD	misc.c	257;"	d	file:
 BUFLEN	dbmail-imapsession.c	33;"	d	file:
 BUFLEN	dm_imaputil.c	34;"	d	file:
 COMMAND_SHOW_LEVEL	imap4.c	29;"	d	file:
@@ -23,15 +23,15 @@ D	check_dbmail_imapd.c	633;"	d	file:
 DBMAIL_TEMPMBOX	dbmail-message.c	40;"	d	file:
 DBPFX	check_dbmail_imapd.c	40;"	d	file:
 DBPFX	check_dbmail_mailbox.c	40;"	d	file:
-DBPFX	db.c	51;"	d	file:
+DBPFX	db.c	46;"	d	file:
 DBPFX	dbmail-imapsession.c	38;"	d	file:
 DBPFX	dbmail-mailbox.c	29;"	d	file:
 DBPFX	dbmail-message.c	32;"	d	file:
 DBPFX	dm_imaputil.c	39;"	d	file:
 DBPFX	dm_search.c	33;"	d	file:
-DB_NTABLES	db.c	53;"	d	file:
+DB_NTABLES	db.c	48;"	d	file:
 DB_TABLENAMES	db.c	/^const char *DB_TABLENAMES[DB_NTABLES] = {$/;"	v
-DECODE64	misc.c	266;"	d	file:
+DECODE64	misc.c	273;"	d	file:
 DEFAULT_SERVER_TIMEOUT	lmtp.c	29;"	d	file:
 DEFAULT_SERVER_TIMEOUT	pop3.c	32;"	d	file:
 DEFAULT_SERVER_TIMEOUT	timsieve.c	28;"	d	file:
@@ -49,7 +49,6 @@ Daemonize	lmtpd.c	/^void Daemonize()$/;"	f
 Daemonize	pop3d.c	/^void Daemonize()$/;"	f
 Daemonize	timsieved.c	/^void Daemonize()$/;"	f
 DelChildSigHandler	serverchild.c	/^int DelChildSigHandler()$/;"	f
-EXIT_CODE	debug.c	38;"	d	file:
 F1	md5.c	183;"	d	file:
 F2	md5.c	184;"	d	file:
 F3	md5.c	185;"	d	file:
@@ -106,7 +105,7 @@ INCOMING_BUFFER_SIZE	pop3.c	27;"	d	file:
 INCOMING_BUFFER_SIZE	timsieve.c	25;"	d	file:
 INDEX_DELIVERY_MODE	main.c	30;"	d	file:
 LEN	maintenance.c	29;"	d	file:
-LISTEX_NOCASE	misc.c	714;"	d	file:
+LISTEX_NOCASE	misc.c	721;"	d	file:
 LMTP_TIMEOUT_MSG	lmtpd.c	32;"	d	file:
 MAX_ARGS	dbmail-imapsession.c	35;"	d	file:
 MAX_ARGS	dm_imaputil.c	36;"	d	file:
@@ -164,7 +163,7 @@ ParentSigHandler	server.c	/^void ParentSigHandler(int sig, siginfo_t * info, voi
 PerformChildTask	serverchild.c	/^int PerformChildTask(ChildInfo_t * info)$/;"	f
 QUERY_SIZE	pipe.c	28;"	d	file:
 READ_CHUNK_SIZE	main.c	34;"	d	file:
-REPLYCACHE_TIMEOUT	db.c	4286;"	d	file:
+REPLYCACHE_TIMEOUT	db.c	4291;"	d	file:
 RIGHTPAR	dbmail-imapsession.c	1824;"	d	file:
 RING_SIZE	pipe.c	31;"	d	file:
 Restart	server.c	/^int Restart = 0;$/;"	v
@@ -200,8 +199,6 @@ START_TEST	check_dbmail_deliver.c	/^START_TEST(test_auth_removealias)$/;"	f
 START_TEST	check_dbmail_deliver.c	/^START_TEST(test_auth_removealias_ext)$/;"	f
 START_TEST	check_dbmail_deliver.c	/^START_TEST(test_auth_user_exists)$/;"	f
 START_TEST	check_dbmail_deliver.c	/^START_TEST(test_auth_validate) $/;"	f
-START_TEST	check_dbmail_deliver.c	/^START_TEST(test_dm_ldap_get_filter)$/;"	f
-START_TEST	check_dbmail_deliver.c	/^START_TEST(test_dm_ldap_get_freeid)$/;"	f
 START_TEST	check_dbmail_deliver.c	/^START_TEST(test_dm_stresc)$/;"	f
 START_TEST	check_dbmail_deliver.c	/^START_TEST(test_dm_valid_format)$/;"	f
 START_TEST	check_dbmail_deliver.c	/^START_TEST(test_insert_messages)$/;"	f
@@ -235,6 +232,7 @@ START_TEST	check_dbmail_mailbox.c	/^START_TEST(test_dbmail_mailbox_orderedsubjec
 START_TEST	check_dbmail_mailbox.c	/^START_TEST(test_dbmail_mailbox_search)$/;"	f
 START_TEST	check_dbmail_mailbox.c	/^START_TEST(test_dbmail_mailbox_search_parsed)$/;"	f
 START_TEST	check_dbmail_mailbox.c	/^START_TEST(test_dbmail_mailbox_sort)$/;"	f
+START_TEST	check_dbmail_mailbox.c	/^START_TEST(test_g_tree_keys)$/;"	f
 START_TEST	check_dbmail_mailbox.c	/^START_TEST(test_g_tree_merge_and)$/;"	f
 START_TEST	check_dbmail_mailbox.c	/^START_TEST(test_g_tree_merge_not)$/;"	f
 START_TEST	check_dbmail_mailbox.c	/^START_TEST(test_g_tree_merge_or)$/;"	f
@@ -274,11 +272,10 @@ SetTraceLevel	config.c	/^void SetTraceLevel(const char *service_name)$/;"	f
 StartCliServer	server.c	/^int StartCliServer(serverConfig_t * conf)$/;"	f
 StartServer	server.c	/^int StartServer(serverConfig_t * conf)$/;"	f
 TIMS_TIMEOUT_MSG	timsieved.c	32;"	d	file:
-TRACE_LEVEL	debug.c	/^int TRACE_LEVEL = 2;		\/* default: error operations *\/$/;"	v
-TRACE_TO_SYSLOG	debug.c	/^int TRACE_TO_SYSLOG = 1;	\/* default: yes *\/$/;"	v
-TRACE_VERBOSE	debug.c	/^int TRACE_VERBOSE = 0;		\/* default: no *\/$/;"	v
+TRACE_STDERR	debug.c	/^static trace_t TRACE_STDERR = TRACE_FATAL;  \/* default: fatal errors only *\/$/;"	v	file:
+TRACE_SYSLOG	debug.c	/^static trace_t TRACE_SYSLOG = TRACE_ERROR;  \/* default: errors and worse *\/$/;"	v	file:
 ValidChars	dbmail-user.c	/^static const char ValidChars[] =$/;"	v	file:
-WRITE_BUFFER_SIZE	db.c	69;"	d	file:
+WRITE_BUFFER_SIZE	db.c	64;"	d	file:
 X	check_dbmail_imapd.c	582;"	d	file:
 X	check_dbmail_server.c	72;"	d	file:
 Y	check_dbmail_imapd.c	581;"	d	file:
@@ -395,7 +392,6 @@ auth_check_user_ext	authmodule.c	/^int auth_check_user_ext(const char *username,
 auth_connect	authmodule.c	/^int auth_connect(void)$/;"	f
 auth_delete_user	authmodule.c	/^int auth_delete_user(const char *username)$/;"	f
 auth_disconnect	authmodule.c	/^int auth_disconnect(void)$/;"	f
-auth_get_deliver_from_alias	authmodule.c	/^char *auth_get_deliver_from_alias(const char *alias)$/;"	f
 auth_get_known_users	authmodule.c	/^GList * auth_get_known_users(void)$/;"	f
 auth_get_user_aliases	authmodule.c	/^GList * auth_get_user_aliases(u64_t user_idnr)$/;"	f
 auth_get_userid	authmodule.c	/^char *auth_get_userid(u64_t user_idnr)$/;"	f
@@ -451,6 +447,7 @@ combine_sets	dm_imaputil.c	/^void combine_sets(unsigned int *dest, unsigned int 
 commands	lmtp.c	/^static const char *const commands[] = {$/;"	v	file:
 commands	pop3.c	/^const char *commands[] = {$/;"	v
 commands	timsieve.c	/^static const char *commands[] = {$/;"	v	file:
+condition	misc.c	/^	int condition;$/;"	m	file:
 configFile	export.c	/^char *configFile = DEFAULT_CONFIG_FILE;$/;"	v
 configFile	imapd.c	/^char *configFile = DEFAULT_CONFIG_FILE;$/;"	v
 configFile	lmtpd.c	/^char *configFile = DEFAULT_CONFIG_FILE;$/;"	v
@@ -464,7 +461,7 @@ config_dict	config.c	/^static GKeyFile *config_dict = NULL;$/;"	v	file:
 config_free	config.c	/^void config_free(void) $/;"	f
 config_get_value	config.c	/^int config_get_value(const field_t field_name,$/;"	f
 config_read	config.c	/^int config_read(const char *config_filename)$/;"	f
-configure_debug	debug.c	/^void configure_debug(trace_t level, int trace_syslog, int trace_verbose)$/;"	f
+configure_debug	debug.c	/^void configure_debug(trace_t trace_syslog, trace_t trace_stderr)$/;"	f
 configured	config.c	/^static int configured = 0;$/;"	v	file:
 connected	serverchild.c	/^int connected = 0;$/;"	v
 convert_inbox_to_uppercase	db.c	/^void convert_inbox_to_uppercase(char *name)$/;"	f
@@ -550,6 +547,7 @@ db_get_sievescript_active	db.c	/^int db_get_sievescript_active(u64_t user_idnr, 
 db_get_sievescript_byname	db.c	/^int db_get_sievescript_byname(u64_t user_idnr, char *scriptname, char **script)$/;"	f
 db_get_sievescript_listall	db.c	/^int db_get_sievescript_listall(u64_t user_idnr, struct dm_list *scriptlist)$/;"	f
 db_get_sievescript_quota	db.c	/^int db_get_sievescript_quota(u64_t user_idnr, u64_t * quotasize)$/;"	f
+db_get_sql	dbmodule.c	/^const char * db_get_sql(sql_fragment_t frag)$/;"	f
 db_get_useridnr	db.c	/^u64_t db_get_useridnr(u64_t message_idnr)$/;"	f
 db_getmailbox	db.c	/^int db_getmailbox(mailbox_t * mb)$/;"	f
 db_getmailbox_list_result	db.c	/^int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * mb)$/;"	f
@@ -678,6 +676,7 @@ dbmail_mailbox_free	dbmail-mailbox.c	/^void dbmail_mailbox_free(struct DbmailMai
 dbmail_mailbox_get_id	dbmail-mailbox.c	/^u64_t dbmail_mailbox_get_id(struct DbmailMailbox *self)$/;"	f
 dbmail_mailbox_get_set	dbmail-mailbox.c	/^GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, search_key_t *sk)$/;"	f
 dbmail_mailbox_get_uid	dbmail-mailbox.c	/^gboolean dbmail_mailbox_get_uid(struct DbmailMailbox *self)$/;"	f
+dbmail_mailbox_ids_as_string	dbmail-mailbox.c	/^char * dbmail_mailbox_ids_as_string(struct DbmailMailbox *self) $/;"	f
 dbmail_mailbox_new	dbmail-mailbox.c	/^struct DbmailMailbox * dbmail_mailbox_new(u64_t id)$/;"	f
 dbmail_mailbox_open	dbmail-mailbox.c	/^struct DbmailMailbox * dbmail_mailbox_open(struct DbmailMailbox *self)$/;"	f
 dbmail_mailbox_orderedsubject	dbmail-mailbox.c	/^char * dbmail_mailbox_orderedsubject(struct DbmailMailbox *self)$/;"	f
@@ -807,7 +806,6 @@ dump_to_file	dbmail-message.c	/^static void dump_to_file(const char *filename, c
 dumpsearch	dm_imaputil.c	/^void dumpsearch(search_key_t * sk, int level)$/;"	f
 element_new	list.c	/^static struct element *element_new(void)$/;"	f	file:
 envelope_items	dm_imaputil.c	/^const char *envelope_items[] = { "from", "sender", "reply-to", "to", "cc", "bcc", NULL };$/;"	v
-err_out_stream	debug.c	37;"	d	file:
 execute_auto_ran	pipe.c	/^static int execute_auto_ran(u64_t useridnr, struct dm_list *headerfields)$/;"	f	file:
 find_bounded	misc.c	/^int find_bounded(char *value, char left, char right, char **retchar,$/;"	f
 find_time	maintenance.c	/^void find_time(char *timestr, const char *timespec)$/;"	f
@@ -824,7 +822,7 @@ g_list_slices	list.c	/^GList *g_list_slices(GList *list, unsigned limit)$/;"	f
 g_mime_object_get_body	dbmail-message.c	/^gchar * g_mime_object_get_body(const GMimeObject *object)$/;"	f
 g_string_split	misc.c	/^GList * g_string_split(GString * string, char * sep)$/;"	f
 g_tree_keys	misc.c	/^GList * g_tree_keys(GTree *tree)$/;"	f
-g_tree_merge	misc.c	/^void g_tree_merge(GTree *a, GTree *b, int condition)$/;"	f
+g_tree_merge	misc.c	/^int g_tree_merge(GTree *a, GTree *b, int condition)$/;"	f
 g_tree_values	misc.c	/^GList * g_tree_values(GTree *tree)$/;"	f
 gdm_md5_final	md5.c	/^void gdm_md5_final(unsigned char digest[16], struct GdmMD5Context *ctx)$/;"	f
 gdm_md5_init	md5.c	/^void gdm_md5_init(struct GdmMD5Context *ctx)$/;"	f
@@ -881,6 +879,7 @@ is_valid	dbmail-user.c	/^int is_valid(const char *str)$/;"	f
 item_desc	dm_imaputil.c	/^const char *item_desc[] = { "TEXT", "HEADER", "MIME", "HEADER.FIELDS", "HEADER.FIELDS.NOT" };$/;"	v
 itoa	misc.c	/^char *itoa(int i)$/;"	f
 linenr	debug.c	/^	int linenr;$/;"	m	struct:debug_mem	file:
+list	misc.c	/^	GList *list;$/;"	m	file:
 list_is_lsub	imapcommands.c	/^int list_is_lsub = 0;$/;"	v
 listex_match	misc.c	/^int listex_match(const char *p, const char *s,$/;"	f
 lmtp	lmtp.c	/^int lmtp(void *stream, void *instream, char *buffer,$/;"	f
@@ -1026,6 +1025,7 @@ sort_load_driver	sortmodule.c	/^int sort_load_driver(void)$/;"	f
 sort_process	sortmodule.c	/^int sort_process(u64_t user_idnr, struct DbmailMessage *message,$/;"	f
 sort_search	dm_imaputil.c	/^int sort_search(struct dm_list *searchlist) $/;"	f
 sort_validate	sortmodule.c	/^int sort_validate(u64_t user_idnr, char *scriptname, char **errmsg)$/;"	f
+sorted_search	imapcommands.c	/^static int sorted_search(struct ImapSession *self, gboolean sorted)$/;"	f	file:
 state_new	pool.c	/^State_t state_new(void)$/;"	f
 store_message_in_blocks	pipe.c	/^int store_message_in_blocks(const char *message, u64_t message_size,$/;"	f
 stridx	dm_imaputil.c	/^size_t stridx(const char *s, char ch)$/;"	f
@@ -1046,10 +1046,17 @@ tims_handle_connection	timsieve.c	/^int tims_handle_connection(clientinfo_t * ci
 tims_reset	timsieve.c	/^int tims_reset(PopSession_t * session)$/;"	f
 tmp	main.c	/^struct element *tmp;$/;"	v
 trace	debug.c	/^void trace(trace_t level, char *formatstring, ...)$/;"	f
+traverse_tree_keys	check_dbmail_mailbox.c	/^static gboolean traverse_tree_keys(gpointer key, gpointer value UNUSED, GList **l)$/;"	f	file:
 traverse_tree_keys	misc.c	/^static gboolean traverse_tree_keys(gpointer key, gpointer value UNUSED, GList **l)$/;"	f	file:
+traverse_tree_merger	misc.c	/^static gboolean traverse_tree_merger(gpointer key, gpointer value UNUSED, tree_merger_t **merger)$/;"	f	file:
+traverse_tree_values	check_dbmail_mailbox.c	/^static gboolean traverse_tree_values(gpointer key UNUSED, gpointer value, GList **l)$/;"	f	file:
 traverse_tree_values	misc.c	/^static gboolean traverse_tree_values(gpointer key UNUSED, gpointer value, GList **l)$/;"	f	file:
+tree	misc.c	/^	GTree *tree;$/;"	m	file:
 tree_dump	check_dbmail_mailbox.c	/^void tree_dump(GTree *t)$/;"	f
+tree_dump	misc.c	/^void tree_dump(GTree *t)$/;"	f
+tree_merger_t	misc.c	/^} tree_merger_t;$/;"	t	file:
 tree_print	check_dbmail_mailbox.c	/^static gboolean tree_print(gpointer key, gpointer value, gpointer data UNUSED)$/;"	f	file:
+tree_print	misc.c	/^static gboolean tree_print(gpointer key, gpointer value, gpointer data UNUSED)$/;"	f	file:
 ucmp	misc.c	/^gint ucmp(const u64_t *a, const u64_t *b)$/;"	f
 user_idnr_is_delivery_user_idnr	db.c	/^int user_idnr_is_delivery_user_idnr(u64_t user_idnr)$/;"	f
 users	main.c	/^struct dm_list users;		\/* list of email addresses in message *\/$/;"	v
