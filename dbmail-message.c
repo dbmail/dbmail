@@ -166,7 +166,7 @@ void dbmail_message_free(struct DbmailMessage *self)
 	if (self->content)
 		g_object_unref(self->content);
 	if (self->raw)
-		g_byte_array_free(self->raw,FALSE);
+		g_byte_array_free(self->raw,TRUE);
 	
 	self->headers=NULL;
 	self->content=NULL;

@@ -45,6 +45,15 @@ struct DbmailMailbox * dbmail_mailbox_new(u64_t id)
 	return self;
 }
 
+static gboolean _node_free(GNode *node, gpointer dummy UNUSED)
+{
+	search_key_t *s = (search_key_t *)node->data;
+	if (s->found)
+		g_tree_destroy(s->found);
+	g_free(s);
+
+	return FALSE;
+}
 
 void dbmail_mailbox_free(struct DbmailMailbox *self)
 {
@@ -52,8 +61,12 @@ void dbmail_mailbox_free(struct DbmailMailbox *self)
 		g_tree_destroy(self->ids);		
 	if (self->msn)
 		g_tree_destroy(self->msn);
-	if (self->search)
+	if (self->search) {
+		g_node_traverse(g_node_get_root(self->search), G_POST_ORDER, G_TRAVERSE_ALL, -1, 
+			(GNodeTraverseFunc)_node_free, NULL);
+
 		g_node_destroy(self->search);
+	}
 	if (self->sorted) {
 		g_list_destroy(self->sorted);
 		self->sorted = NULL;
@@ -214,7 +227,7 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 	slice = g_list_slices(cids,100);
 	slice = g_list_first(slice);
 
-	g_list_free(cids);
+	g_list_destroy(cids);
 	g_list_free(ids);
 
 	while (slice) {
@@ -258,12 +271,12 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 		if (dump_message_to_stream(message,ostream) > 0)
 			count++;
 		dbmail_message_free(message);
+		g_string_free(t,TRUE);
 	}
 	 
 	g_list_foreach(slice,(GFunc)g_free,NULL);
 	g_list_free(slice);
 	
-	g_string_free(t,TRUE);
 	g_string_free(q,TRUE);
 	g_object_unref(ostream);
 	
@@ -296,6 +309,7 @@ static gboolean _tree_foreach(gpointer key UNUSED, gpointer value, GString * dat
 
 	return res;
 }
+
 char * dbmail_mailbox_orderedsubject(struct DbmailMailbox *self)
 {
 	GList *sublist = NULL;
@@ -461,14 +475,13 @@ char * dbmail_mailbox_sorted_as_string(struct DbmailMailbox *self)
 
 	s = t->str;
 	g_string_free(t,FALSE);
-	
+
 	return g_strchomp(s);
-	
 }
 
 
 /* imap sorted search */
-static search_key_t * append_search(struct DbmailMailbox *self, search_key_t *value, gboolean descend)
+static int append_search(struct DbmailMailbox *self, search_key_t *value, gboolean descend)
 {
 	GNode *n;
 	
@@ -486,7 +499,7 @@ static search_key_t * append_search(struct DbmailMailbox *self, search_key_t *va
 			__FILE__, __func__, (int)value, descend, 
 			value->type, value->hdrfld, value->search, 
 			g_node_depth(self->search));
-	return g_new0(search_key_t,1);
+	return 0;
 }
 
 static void _append_join(char *join, char *table)
@@ -579,8 +592,8 @@ static int _handle_sort_args(struct DbmailMailbox *self, char **search_keys, sea
 		(*idx)++;
 
 	else {
-		if (value->type)
-			value = append_search(self, value, 0);
+		if (value->type) 
+			append_search(self, value, 0);
 		return 1; /* done */
 	}
 
@@ -869,7 +882,7 @@ static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u
 		value->type = IST_SUBSEARCH_OR;
 		(*idx)++;
 		
-		value = append_search(self, value, 1);
+		append_search(self, value, 1);
 		if ((result = _handle_search_args(self, search_keys, idx)) < 0)
 			return result;
 		if ((result =  _handle_search_args(self, search_keys, idx)) < 0)
@@ -882,7 +895,7 @@ static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u
 		value->type = IST_SUBSEARCH_AND;
 		(*idx)++;
 		
-		value = append_search(self,value,1);
+		append_search(self,value,1);
 		while ((result = dbmail_mailbox_build_imap_search(self, search_keys, idx, 0)) == 0);
 		pop_search(self);
 		
@@ -890,7 +903,7 @@ static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u
 
 	} else if ( MATCH(key, ")") ) {
 		(*idx)++;
-		
+		g_free(value);
 		return 1;
 	
 	} else if (check_msg_set(key)) {
@@ -900,6 +913,7 @@ static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u
 	
 	} else {
 		/* unknown search key */
+		g_free(value);
 		return -1;
 	}
 	
@@ -934,7 +948,7 @@ int dbmail_mailbox_build_imap_search(struct DbmailMailbox *self, char **search_k
 		value->type = IST_SET;
 		strncpy(value->search, search_keys[*idx], MAX_SEARCH_LEN);
 		(*idx)++;
-		append_search(self, value,0);
+		append_search(self, value, 0);
 	}
 	
 	/* SORT */
@@ -1090,26 +1104,30 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 	g_string_free(q,TRUE);
 
 	rows = db_num_rows();
-	s->found = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free, (GDestroyNotify)g_free);
-	
-	for (i=0; i < rows; i++) {
-		k = g_new0(u64_t,1);
-		v = g_new0(u64_t,1);
-		id = db_get_result_u64(i,0);
-		if (! (w = g_tree_lookup(self->ids, &id))) {
-			trace(TRACE_ERROR, "%s,%s: key missing in self->ids: [%llu]\n", 
-					__FILE__, __func__, id);
-			continue;
-		}
-		assert(w);
+
+	if (rows > 0) {
 		
-		*k = id;
-		*v = *w;
+		s->found = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free, (GDestroyNotify)g_free);
+		
+		for (i=0; i < rows; i++) {
+			k = g_new0(u64_t,1);
+			v = g_new0(u64_t,1);
+			id = db_get_result_u64(i,0);
+			if (! (w = g_tree_lookup(self->ids, &id))) {
+				trace(TRACE_ERROR, "%s,%s: key missing in self->ids: [%llu]\n", 
+						__FILE__, __func__, id);
+				continue;
+			}
+			assert(w);
+			
+			*k = id;
+			*v = *w;
 
-		g_tree_insert(s->found, k, v);
+			g_tree_insert(s->found, k, v);
+		}
 	}
-
 	db_free_result();
+
 	return s->found;
 }
 
@@ -1276,7 +1294,7 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, search_key_t *sk)
 		sets = g_list_next(sets);
 	}
 
-	g_list_free(sets);
+	g_list_destroy(sets);
 	
 	if (a)
 		g_tree_destroy(a);
@@ -1292,13 +1310,12 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, search_key_t *sk)
 static gboolean _do_search(GNode *node, struct DbmailMailbox *self)
 {
 	search_key_t *s = (search_key_t *)node->data;
-	GTree *set = NULL;
 
 	trace(TRACE_DEBUG,"%s,%s: type [%d]", __FILE__,  __func__, s->type);
 
 	switch (s->type) {
 		case IST_SET:
-			if (! (set = dbmail_mailbox_get_set(self, s)))
+			if (! dbmail_mailbox_get_set(self, s))
 				return TRUE;
 			break;
 
@@ -1311,13 +1328,11 @@ static gboolean _do_search(GNode *node, struct DbmailMailbox *self)
 		case IST_FLAG:
 		case IST_HDR:
 		case IST_DATA_TEXT:
-			if (! (set = mailbox_search(self, s)))
-				return TRUE;
+			mailbox_search(self, s);
 			break;
 
 		case IST_DATA_BODY:
-			if (! (set = mailbox_search_parsed(self,s)))
-				break;
+			mailbox_search_parsed(self,s);
 		break;
 		
 		case IST_SUBSEARCH_NOT:
@@ -1333,9 +1348,8 @@ static gboolean _do_search(GNode *node, struct DbmailMailbox *self)
 			return TRUE;
 	}
 
-	s->found = set;
 	trace(TRACE_DEBUG,"%s,%s: type [%d] rows [%d]\n", __FILE__,  __func__, 
-			s->type, set ? g_tree_nnodes(set): 0);
+			s->type, s->found ? g_tree_nnodes(s->found): 0);
 
 	return FALSE;
 }	

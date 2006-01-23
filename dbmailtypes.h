@@ -310,9 +310,7 @@ typedef struct {
 	char order[MAX_SEARCH_LEN];
 	char field[MAX_SEARCH_LEN];
 	char search[MAX_SEARCH_LEN];
-	
 	char hdrfld[MIME_FIELD_MAX];
-	struct dm_list sub_search;
 	int match;
 	GTree *found;
 	gboolean reverse;

@@ -510,44 +510,6 @@ unsigned int get_count_on(unsigned int * set, unsigned int setlen) {
 }
 
 	
-	
-START_TEST(test_build_set)
-{
-	//void build_set(unsigned int *set, unsigned int setlen, char *cset)
-	unsigned int i;
-	unsigned int setlen=50;
-	unsigned *set = g_new0(unsigned, setlen);
-	for (i=0; i<setlen; i++) {
-		set[i]=1;
-	}
-	build_set(set, setlen, "1:*");
-	fail_unless(0==get_bound_lo(set, setlen), "lower index incorrect");
-	fail_unless((setlen-1)==get_bound_hi(set, setlen), "upper index incorrect");
-	fail_unless(get_count_on(set,setlen)==setlen, "count incorrect");
-	
-	build_set(set, setlen, "1,5:*");
-	fail_unless(0==get_bound_lo(set, setlen), "lower index incorrect");
-	fail_unless((setlen-1)==get_bound_hi(set, setlen), "upper index incorrect");
-	fail_unless(get_count_on(set,setlen)==setlen-3, "count incorrect");
-}
-END_TEST
-
-/*
-START_TEST(test_build_uid_set)
-{
-	
-}
-END_TEST
-*/
-
-/*
-START_TEST(test_build_args_array_ext) 
-{
-
-}
-END_TEST
-*/
-
 static char *wrap_base_subject(char *in) 
 {
 	gchar *out = g_strdup(in);
@@ -672,7 +634,6 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_util, test_dbmail_imap_plist_collapse);
 	tcase_add_test(tc_util, test_dbmail_imap_astring_as_string);
 	tcase_add_test(tc_util, test_g_list_slices);
-	tcase_add_test(tc_util, test_build_set);
 	tcase_add_test(tc_util, test_listex_match);
 	tcase_add_test(tc_util, test_date_sql2imap);
 

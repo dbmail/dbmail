@@ -1049,17 +1049,17 @@ int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...)
         int result = 0;
         GMimeStream *ostream, *fstream;
         GMimeFilter *filter;
+        gchar *ln;
 
         gchar *re = g_new0(gchar, maxlen+1);
-        gchar *ln = g_new0(gchar, MAX_LINESIZE+1);
 
-        va_start(ap, message);
-        result = vsnprintf(ln,MAX_LINESIZE,message,ap);
-        va_end(ap);
+	va_start(ap, message);
+	ln = g_strdup_vprintf(message,ap);
+	va_end(ap);
 
-        if (result < 0)
+        if (! ln)
                 return -1;
-
+	
         if ((result = snprintf(re,maxlen,ln))<0)
                 return -1;
 
