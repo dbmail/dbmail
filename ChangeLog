@@ -1,5 +1,12 @@
 2006-01-23  Paul J Stevens <paul@nfg.nl>
 
+	* dbmail-mailbox.c, dbmail-mailbox.h, debian/changelog, imapcommands.c, 
+	  tags:
+	show sorted ids in imap response
+	* dbmail-imapsession.h, dbmail-mailbox.c, imapcommands.c:
+	cleanups in imap sort code
+	* db.c:
+	fix faulty query
 	* ChangeLog, authmodule.c, dbmail.conf, dbmodule.c, debian/rules, 
 	  modules/Makefile.am, sortmodule.c:
 	minor cleanups in modular setup
