@@ -431,6 +431,41 @@ char * dbmail_mailbox_ids_as_string(struct DbmailMailbox *self)
 	return g_strchomp(s);
 	
 }
+char * dbmail_mailbox_sorted_as_string(struct DbmailMailbox *self) 
+{
+	GString *t;
+	gchar *s = NULL;
+	GList *l = NULL;
+	gboolean uid;
+	u64_t *msn;
+
+	if (! g_list_length(self->sorted)>0)
+		return s;
+
+	t = g_string_new("");
+	uid = dbmail_mailbox_get_uid(self);
+
+	l = g_list_first(self->sorted);
+	while(l->data) {
+		if (uid)
+			g_string_append_printf(t,"%llu ", *(u64_t *)l->data);
+		else {
+			msn = g_tree_lookup(self->ids, l->data);
+			if (msn)
+				g_string_append_printf(t,"%llu ", *(u64_t *)msn);
+		}
+		if (! g_list_next(l))
+			break;
+		l = g_list_next(l);
+	}
+
+	s = t->str;
+	g_string_free(t,FALSE);
+	
+	return g_strchomp(s);
+	
+}
+
 
 /* imap sorted search */
 static search_key_t * append_search(struct DbmailMailbox *self, search_key_t *value, gboolean descend)

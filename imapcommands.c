@@ -1423,11 +1423,14 @@ static int sorted_search(struct ImapSession *self, gboolean sorted)
 	mb = dbmail_mailbox_new(ud->mailbox.uid);
 	dbmail_mailbox_build_imap_search(mb, self->args, &idx, sorted);
 	dbmail_mailbox_search(mb);
-	if (sorted)
-		dbmail_mailbox_sort(mb);
-
 	/* ok, display results */
-	s = dbmail_mailbox_ids_as_string(mb);
+	if (sorted) {
+		dbmail_mailbox_sort(mb);
+		s = dbmail_mailbox_sorted_as_string(mb);
+	} else {
+		s = dbmail_mailbox_ids_as_string(mb);
+	}
+
 	dbmail_imap_session_printf(self, "* %s %s\r\n", cmd, s?s:"");
 	if (s)
 		g_free(s);
