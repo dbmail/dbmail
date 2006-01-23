@@ -549,7 +549,6 @@ END_TEST
 //int auth_get_users_from_clientid(u64_t client_id, 
 //			       /*@out@*/ u64_t ** user_ids,
 //			       /*@out@*/ unsigned *num_users);
-/**
 
 /**
  * \brief get a list of aliases associated with a user's user_idnr

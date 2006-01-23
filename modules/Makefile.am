@@ -24,41 +24,42 @@ AM_CFLAGS = @MYSQLINC@ @PGSQLINC@ @SQLITEINC@ @LDAPINC@ @SIEVEINC@ -fomit-frame-
 #AM_LDFLAGS = -Wl,--export-dynamic
 AM_LDFLAGS = -module
 
-pkglib_LTLIBRARIES = libdbmysql.la \
-	libdbpgsql.la \
-	libdbsqlite.la \
-	libauthsql.la \
-	libauthldap.la \
-	libsortsieve.la
+pkglib_LTLIBRARIES = libmysql.la \
+	libpgsql.la \
+	libsqlite.la \
+	libsort_sieve.la \
+	libauth_sql.la \
+	libauth_ldap.la 
 
-# This one is always built.
-libauthsql_la_SOURCES = authsql.c
-libauthsql_la_LDFLAGS = -Wl,--export-dynamic
 
 if MYSQL
-libdbmysql_la_SOURCES = dbmysql.c
+libmysql_la_SOURCES = dbmysql.c
+libmysql_la_LIBADD = @MYSQLLIB@
 endif
 
 if PGSQL
-libdbpgsql_la_SOURCES = dbpgsql.c
+libpgsql_la_SOURCES = dbpgsql.c
+libpgsql_la_LIBADD = @PGSQLLIB@
 endif
 
 if SQLITE
-libdbsqlite_la_SOURCES = dbsqlite.c
-endif
-
-if LDAP
-libauthldap_la_SOURCES = authldap.c
+libsqlite_la_SOURCES = dbsqlite.c
+libsqlite_la_LIBADD = @SQLITELIB@
 endif
 
 if SIEVE
-libsortsieve_la_SOURCES = sortsieve.c
+libsort_sieve_la_SOURCES = sortsieve.c
+libsort_sieve_la_LIBADD = @SORTLIB@
 endif
 
-libdbmysql_la_LIBADD = @MYSQLLIB@
-libdbpgsql_la_LIBADD = @PGSQLLIB@
-libdbsqlite_la_LIBADD = @SQLITELIB@
-libauthsql_la_LIBADD = -lcrypt
-libauthldap_la_LIBADD = -lcrypt @LDAPLIB@ 
-libsortsieve_la_LIBADD = @SORTLIB@
+# This one is always built.
+libauth_sql_la_SOURCES = authsql.c
+libauth_sql_la_LIBADD = -lcrypt
+
+if LDAP
+libauth_ldap_la_SOURCES = authldap.c
+libauth_ldap_la_LIBADD = -lcrypt @LDAPLIB@ 
+endif
+
+
 

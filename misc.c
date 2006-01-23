@@ -49,6 +49,13 @@ const int month_len[] = { 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 #undef max
 #define max(x,y) ( (x) > (y) ? (x) : (y) )
 
+/* only locally used */				     
+typedef struct {
+	GTree *tree;
+	GList *list;
+	int condition;
+} tree_merger_t;
+
 int db_binary_search(const u64_t * array, int arraysize, u64_t key)
 {
 	int low, high, mid;
@@ -1266,13 +1273,13 @@ GList * g_tree_keys(GTree *tree)
 {
 	GList *l = NULL;
 	g_tree_foreach(tree, (GTraverseFunc)traverse_tree_keys, &l);
-	return l;
+	return g_list_first(l);
 }
 GList * g_tree_values(GTree *tree)
 {
 	GList *l = NULL;
 	g_tree_foreach(tree, (GTraverseFunc)traverse_tree_values, &l);
-	return l;
+	return g_list_first(l);
 }
 
 
@@ -1302,100 +1309,117 @@ void tree_dump(GTree *t)
 	trace(TRACE_DEBUG,"%s,%s: done",__FILE__,__func__);
 }
 
+	      
+static gboolean traverse_tree_merger(gpointer key, gpointer value UNUSED, tree_merger_t **merger)
+{
+	tree_merger_t *t = *(tree_merger_t **)merger;
+	GTree *tree = t->tree;
+	int condition = t->condition;
+
+	switch(condition) {
+		case IST_SUBSEARCH_NOT:
+		break;
+		
+		default:
+		case IST_SUBSEARCH_OR:
+		case IST_SUBSEARCH_AND:
+			if (! g_tree_lookup(tree,key)) 
+				(*(tree_merger_t **)merger)->list = g_list_append((*(tree_merger_t **)merger)->list,key);
+		break;
+	}
+
+	return FALSE;
+}
+
 
 int g_tree_merge(GTree *a, GTree *b, int condition)
 {
 	char *type = NULL;
-	unsigned alen = 0, blen = 0;
+	GList *keys;
+	int alen = 0, blen=0;
 	
 	gpointer key;
 	gpointer value;	
-	GList *akeys = NULL;
-	GList *bkeys = NULL;
 	
 	g_return_val_if_fail(a && b,1);
 	
-	if (a)
-		akeys = g_tree_keys(a);
-	if (b)
-		bkeys = g_tree_keys(b);
-
-	akeys = g_list_first(akeys);
-	bkeys = g_list_first(bkeys);
-
-	alen = g_list_length(akeys);
-	blen = g_list_length(bkeys);
-
-	trace(TRACE_DEBUG,"%s,%s: a[%d] [%d] b[%d]",
-			__FILE__, __func__, 
-			g_tree_nnodes(a), condition, g_tree_nnodes(b));
+	tree_merger_t *merger = g_new0(tree_merger_t,1);
 	
-	//tree_dump(a);
-	//tree_dump(b);
+	alen = g_tree_nnodes(a);
+	blen = g_tree_nnodes(b);
 	
 	switch(condition) {
 		case IST_SUBSEARCH_AND:
 			type=g_strdup("AND");
 			/* delete from A all keys not in B */
-			if (! g_list_length(akeys))
+			merger->tree = b;
+			merger->condition = IST_SUBSEARCH_AND;
+			g_tree_foreach(a,(GTraverseFunc)traverse_tree_merger, &merger);
+			
+			keys = g_list_first(merger->list);
+			if (! g_list_length(keys))
 				break;
 
-			while (akeys->data) {
-				if (! g_tree_lookup(b,akeys->data))
-					g_tree_remove(a,akeys->data);
-
-				if (! g_list_next(akeys))
+			while (keys->data) {
+				g_tree_remove(a,keys->data);
+				if (! g_list_next(keys))
 					break;
 				
-				akeys = g_list_next(akeys);
+				keys = g_list_next(keys);
 			}
-			//tree_dump(a);
-			
 			break;
 			
 		case IST_SUBSEARCH_OR:
 			type=g_strdup("OR");
-			/* add to A all keys in B */
-			if (! g_list_length(bkeys))
+			
+			if (! g_tree_nnodes(b) > 0)
 				break;
 
-			while (bkeys->data) {
-				if (! g_tree_lookup(a,bkeys->data)) {
-					g_tree_lookup_extended(b,bkeys->data,&key,&value);
-					g_tree_steal(b,bkeys->data);
-					g_tree_insert(a,key,value);
-				}
+			merger->tree = a;
+			merger->condition = IST_SUBSEARCH_OR;
+			g_tree_foreach(b,(GTraverseFunc)traverse_tree_merger, &merger);
+			keys = g_list_first(merger->list);
+		
+			/* add to A all keys in B */
+			if (! g_list_length(keys))
+				break;
 
-				if (! g_list_next(bkeys))
+			while (keys->data) {
+				g_tree_lookup_extended(b,keys->data,&key,&value);
+				g_tree_steal(b,keys->data);
+				g_tree_insert(a,key,value);
+
+				if (! g_list_next(keys))
 					break;
 				
-				bkeys = g_list_next(bkeys);
+				keys = g_list_next(keys);
 			}
-			
 			break;
 			
 		case IST_SUBSEARCH_NOT:
 			type=g_strdup("NOT");
-			if (! g_list_length(bkeys))
+			
+			keys = g_tree_keys(b);
+			
+			if (! g_list_length(keys))
 				break;
 			
-			while (bkeys->data) {
-				/* remove from A keys also in B */
-				if (g_tree_lookup(a,bkeys->data)) {
-					g_tree_remove(a,bkeys->data);
+			while (keys->data) {
+				// remove from A keys also in B 
+				if (g_tree_lookup(a,keys->data)) {
+					g_tree_remove(a,keys->data);
 				} else {
-					/* add to A all keys in B not in A */
-			 		g_tree_lookup_extended(b,bkeys->data,&key,&value);
-					g_tree_steal(b,bkeys->data);
+					// add to A all keys in B not in A 
+			 		g_tree_lookup_extended(b,keys->data,&key,&value);
+					g_tree_steal(b,keys->data);
 					g_tree_insert(a,key,value);
 				}
 				
-				if (! g_list_next(bkeys))
+				if (! g_list_next(keys))
 					break;
 				
-				bkeys = g_list_next(bkeys);
+				keys = g_list_next(keys);
 			}
-				
 			break;
 	}
 
@@ -1403,10 +1427,10 @@ int g_tree_merge(GTree *a, GTree *b, int condition)
 			__FILE__, __func__, 
 			alen, type, blen, 
 			g_tree_nnodes(a));
-	
+
+	g_free(merger);
 	g_free(type);
-	g_list_free(akeys);
-	g_list_free(bkeys);
+
 	return 0;
 }
 

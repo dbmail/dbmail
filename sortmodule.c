@@ -45,7 +45,7 @@ int sort_load_driver(void)
 	memset(sort, 0, sizeof(sort_func_t));
 
 	if (strcasecmp(_db_params.sortdriver, "SIEVE") == 0)
-		driver = "sortsieve";
+		driver = "sort_sieve";
 	else if (strcasecmp(_db_params.sortdriver, "LDAP") == 0)
 		driver = "";
 	else

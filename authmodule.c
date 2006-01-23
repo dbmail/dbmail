@@ -45,9 +45,9 @@ int auth_load_driver(void)
 	memset(auth, 0, sizeof(auth_func_t));
 
 	if (strcasecmp(_db_params.authdriver, "SQL") == 0)
-		driver = "authsql";
+		driver = "auth_sql";
 	else if (strcasecmp(_db_params.authdriver, "LDAP") == 0)
-		driver = "authldap";
+		driver = "auth_ldap";
 	else
 		trace(TRACE_FATAL, "auth_init: unsupported driver: %s,"
 				" please choose from SQL or LDAP",
