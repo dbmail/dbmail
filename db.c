@@ -3905,7 +3905,7 @@ int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * m
 	
 	/* no_children */
 	snprintf(query, DEF_QUERYSIZE,
-			"SELECT IF(COUNT(*)>0,0,1) AS no_children "
+			"SELECT COUNT(*) AS nr_children "
 			"FROM %smailboxes WHERE owner_idnr = '%llu' "
 			"AND name LIKE '%s%s%%' ",
 			DBPFX, user_idnr, name, MAILBOX_SEPARATOR);
@@ -3914,7 +3914,7 @@ int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * m
 		trace(TRACE_ERROR, "%s,%s: db error", __FILE__, __func__);
 		return DM_EQUERY;
 	}
-	mb->no_children=db_get_result_bool(0,0);
+	mb->no_children=db_get_result_u64(0,0)?0:1;
 	
 	g_free(name);
 	db_free_result();
