@@ -475,7 +475,7 @@ int db_calculate_quotum_used(u64_t user_idnr)
 int db_get_sievescript_byname(u64_t user_idnr, char *scriptname, char **script)
 {
 	const char *query_result = NULL;
-	char *escaped_scriptname;
+	char *escaped_scriptname = (char *)dm_malloc(2*strlen(scriptname)+1);
 
 	db_escape_string(escaped_scriptname, scriptname, strlen(scriptname));
 	snprintf(query, DEF_QUERYSIZE,
@@ -574,8 +574,8 @@ int db_get_sievescript_listall(u64_t user_idnr, struct dm_list *scriptlist)
 
 int db_rename_sievescript(u64_t user_idnr, char *scriptname, char *newname)
 {
-	char *escaped_scriptname;
-	char *escaped_newname;
+	char *escaped_scriptname = (char *)dm_malloc(2*strlen(scriptname)+1);
+	char *escaped_newname = (char *)dm_malloc(2*strlen(newname)+1);
 
 	db_escape_string(escaped_scriptname, scriptname, strlen(scriptname));
 	db_escape_string(escaped_newname, newname, strlen(newname));
@@ -598,7 +598,7 @@ int db_rename_sievescript(u64_t user_idnr, char *scriptname, char *newname)
 
 int db_add_sievescript(u64_t user_idnr, char *scriptname, char *script)
 {
-	char *escaped_scriptname;
+	char *escaped_scriptname = (char *)dm_malloc(2*strlen(scriptname)+1);
 
 	db_escape_string(escaped_scriptname, scriptname, strlen(scriptname));
 	snprintf(query, DEF_QUERYSIZE,
@@ -620,7 +620,7 @@ int db_add_sievescript(u64_t user_idnr, char *scriptname, char *script)
 
 int db_deactivate_sievescript(u64_t user_idnr, char *scriptname)
 {
-	char *escaped_scriptname;
+	char *escaped_scriptname = (char *)dm_malloc(2*strlen(scriptname)+1);
 
 	db_escape_string(escaped_scriptname, scriptname, strlen(scriptname));
 	snprintf(query, DEF_QUERYSIZE,
@@ -641,7 +641,7 @@ int db_deactivate_sievescript(u64_t user_idnr, char *scriptname)
 
 int db_activate_sievescript(u64_t user_idnr, char *scriptname)
 {
-	char *escaped_scriptname;
+	char *escaped_scriptname = (char *)dm_malloc(2*strlen(scriptname)+1);
 
 	db_escape_string(escaped_scriptname, scriptname, strlen(scriptname));
 	snprintf(query, DEF_QUERYSIZE,
@@ -662,7 +662,7 @@ int db_activate_sievescript(u64_t user_idnr, char *scriptname)
 
 int db_delete_sievescript(u64_t user_idnr, char *scriptname)
 {
-	char *escaped_scriptname;
+	char *escaped_scriptname = (char *)dm_malloc(2*strlen(scriptname)+1);
 
 	db_escape_string(escaped_scriptname, scriptname, strlen(scriptname));
 	snprintf(query, DEF_QUERYSIZE,
