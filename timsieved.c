@@ -45,6 +45,8 @@ static int SetMainSigHandler(void);
 static void Daemonize(void);
 static void MainSigHandler(int sig, siginfo_t * info, void *data);
 
+static void get_config(serverConfig_t *config);
+
 static int tims_before_smtp = 0;
 static int mainRestart = 0;
 static int mainStop = 0;
@@ -122,10 +124,17 @@ int main(int argc, char *argv[])
 
 	SetMainSigHandler();
 
-	/* TODO: don't spawn children, either. this is at least a good start. */
-	if (!no_daemonize)
-		Daemonize();
+	if (no_daemonize) {
+		get_config(&config);
+		StartCliServer(&config);
+		config_free();
+		g_mime_shutdown();
+		return 0;
+	}
+		
 
+	Daemonize();
+	
 	/* We write the pidFile after Daemonize because
 	 * we may actually be a child of the original process. */
 	pidfile_create(pidFile, getpid());
@@ -135,16 +144,7 @@ int main(int argc, char *argv[])
 		mainStop = 0;
 		mainRestart = 0;
 
-		trace(TRACE_DEBUG, "main(): reading config");
-
-		/* We need smtp config for bounce.c and forward.c */
-                config_read(configFile);
-		SetConfigItems(&config);
-		SetTraceLevel("TIMSIEVED");
-		GetDBParams(&_db_params);
-
-		config.ClientHandler = tims_handle_connection;
-		config.timeoutMsg = TIMS_TIMEOUT_MSG;
+		get_config(&config);
 
 		CreateSocket(&config);
 		trace(TRACE_DEBUG,
@@ -202,6 +202,20 @@ int main(int argc, char *argv[])
 
 	trace(TRACE_INFO, "main(): exit");
 	return 0;
+}
+
+
+void get_config(serverConfig_t *config)
+{
+	trace(TRACE_DEBUG, "%s,%s: reading config", __FILE__, __func__);
+	config_read(configFile);
+	ClearConfig(config);
+	SetConfigItems(config);
+	SetTraceLevel("TIMSIEVED");
+	GetDBParams(&_db_params);
+
+	config->ClientHandler = tims_handle_connection;
+	config->timeoutMsg = TIMS_TIMEOUT_MSG;
 }
 
 
