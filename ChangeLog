@@ -1,3 +1,15 @@
+2006-01-24  Paul J Stevens <paul@nfg.nl>
+
+	* ChangeLog, db.c:
+	fix minor typo in sieve call
+	* timsieved.c:
+	allow timsieved to run non-forking
+	* Makefile.am, check_dbmail_deliver.c, check_dbmail_imapd.c, 
+	  check_dbmail_util.c, dbmail-imapsession.c, dbmail-mailbox.c, 
+	  dbmail.h, dm_imaputil.c, dm_search.c, dm_search.h, mime.c, mime.h, 
+	  misc.c, misc.h, serverchild.c:
+	cleanup unused code
+
 2006-01-23  Paul J Stevens <paul@nfg.nl>
 
 	* ChangeLog, Makefile.am, acinclude.m4, check_dbmail_mailbox.c, 
@@ -7,10 +19,6 @@
 	  dbmail-mailbox.c, dbmail-message.c, dbmailtypes.h, dm_imaputil.c, 
 	  imapcommands.c, tags:
 	plugging memoryleaks, and killing bugs in sort code
-	* ChangeLog:
-	blah
-	* ChangeLog:
-	blah
 	* dbmail-mailbox.c, dbmail-mailbox.h, debian/changelog, imapcommands.c, 
 	  tags:
 	show sorted ids in imap response
