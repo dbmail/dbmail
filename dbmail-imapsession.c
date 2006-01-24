@@ -1165,8 +1165,8 @@ int dbmail_imap_session_prompt(struct ImapSession * self, char * prompt, char * 
 	GString *tmp;
 	tmp = g_string_new(prompt);
 	
-	if (! (buf = g_new0(char, sizeof(char) * MAX_LINESIZE))) {
-		trace(TRACE_ERROR, "%s,%s: malloc failure", __FILE__, __func__);
+	if (! (buf = g_new0(char, MAX_LINESIZE))) {
+		trace(TRACE_ERROR, "%s,%s: oom failure", __FILE__, __func__);
 		return -1;
 	}
 			

@@ -169,7 +169,6 @@ int SetChildSigHandler()
 	sigaction(SIGQUIT,	&act, 0);
 	sigaction(SIGILL,	&act, 0);
 	sigaction(SIGBUS,	&act, 0);
-	//sigaction(SIGPIPE,	&act, 0); /* let the database backends handle these */
 	sigaction(SIGFPE,	&act, 0);
 	sigaction(SIGSEGV,	&act, 0);
 	sigaction(SIGTERM,	&act, 0);

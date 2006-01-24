@@ -100,7 +100,6 @@
 
 #include "dm_cidr.h"
 #include "dm_imaputil.h"
-#include "dm_search.h"
 #include "dm_getopt.h"
 
 #ifdef SIEVE

@@ -793,48 +793,6 @@ char * imap_message_fetch_headers(u64_t physid, const GList *headers, gboolean n
 	return res;
 }
 
-/* 
- * find a string in an array of strings
- */
-int haystack_find(int haystacklen, char **haystack, const char *needle)
-{
-	int i;
-
-	for (i = 0; i < haystacklen; i++)
-		if (strcasecmp(haystack[i], needle) == 0)
-			return 1;
-
-	return 0;
-}
-
-/*
- * is_textplain()
- *
- * checks if content-type is text/plain
- */
-int is_textplain(struct dm_list *hdr)
-{
-	struct mime_record *mr;
-	int i, len;
-
-	if (!hdr)
-		return 0;
-
-	mime_findfield("content-type", hdr, &mr);
-
-	if (!mr)
-		return 0;
-
-	len = strlen(mr->value);
-	for (i = 0; len - i >= (int) sizeof("text/plain"); i++)
-		if (strncasecmp
-		    (&mr->value[i], "text/plain",
-		     sizeof("text/plain") - 1) == 0)
-			return 1;
-
-	return 0;
-}
-
 /*
  *
  */
@@ -1016,20 +974,6 @@ void send_data(FILE * to, MEM * from, int cnt)
 
 
 
-/*
- * closes the msg cache
- */
-void close_cache()
-{
-	if (cached_msg.dmsg)
-		dbmail_message_free(cached_msg.dmsg);
-
-	cached_msg.num = -1;
-	cached_msg.msg_parsed = 0;
-	mclose(&cached_msg.memdump);
-	mclose(&cached_msg.tmpdump);
-}
-
 /* 
  * init cache 
  */
@@ -1052,6 +996,20 @@ int init_cache()
 	cached_msg.dumpsize = 0;
 	return 0;
 }
+/*
+ * closes the msg cache
+ */
+void close_cache()
+{
+	if (cached_msg.dmsg)
+		dbmail_message_free(cached_msg.dmsg);
+
+	cached_msg.num = -1;
+	cached_msg.msg_parsed = 0;
+	mclose(&cached_msg.memdump);
+	mclose(&cached_msg.tmpdump);
+}
+
 
 /* unwrap strings */
 int mime_unwrap(char *to, const char *from) 

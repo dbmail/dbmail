@@ -60,37 +60,6 @@ struct DbmailMessage * mime_fetch_headers(struct DbmailMessage *message, struct 
 }
 	
 	
-
-/* 
- * mime_readheader()
- *
- * returns the number of headers
- *
- * returns -1 on parse failure, -2 on memory error; number of headers  on succes
- */
-
-
-int mime_readheader(struct DbmailMessage *message, struct dm_list *mimelist, u64_t * headersize)
-{
-	int l;
-	char *raw, *crlf;
-
-	/* moved header-parsing to separate function */
-	message = mime_fetch_headers(message, mimelist);
-	g_return_val_if_fail(message!=NULL,-1);
-	
-	raw = dbmail_message_hdrs_to_string(message);
-	crlf = get_crlf_encoded(raw);
-	
-	*headersize = strlen(raw);
-	l = dm_list_length(mimelist);
-
-	g_free(crlf);
-	g_free(raw);
-
-	return l;
-}
-
 /*
  * mime_findfield()
  *

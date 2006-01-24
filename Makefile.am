@@ -34,7 +34,6 @@ sbin_PROGRAMS = dbmail-smtp \
 COMMON = dbmail-user.c \
 	dbmail-message.c \
 	dbmail-mailbox.c \
-	dm_search.c \
 	config.c \
 	debug.c \
 	list.c \
@@ -143,7 +142,7 @@ check_dbmail_deliver_SOURCES=check_dbmail_deliver.c
 check_dbmail_deliver_LDADD=libdbmail.la @CHECK_LIBS@
 check_dbmail_deliver_INCLUDES=@CHECK_CFLAGS@
 
-check_dbmail_message_SOURCES=$(COMMON) $(SERVER) $(DELIVER) check_dbmail_message.c
+check_dbmail_message_SOURCES=check_dbmail_message.c
 check_dbmail_message_LDADD=libdbmail.la @CHECK_LIBS@
 check_dbmail_message_INCLUDES=@CHECK_CFLAGS@
 
@@ -151,8 +150,7 @@ check_dbmail_mailbox_SOURCES=check_dbmail_mailbox.c
 check_dbmail_mailbox_LDADD=libdbmail.la @CHECK_LIBS@
 check_dbmail_mailbox_INCLUDES=@CHECK_CFLAGS@
 
-check_dbmail_imapd_SOURCES=quota.c imap4.c dm_imaputil.c imapcommands.c memblock.c dm_search.c \
-	acl.c dbmail-imapsession.c check_dbmail_imapd.c
+check_dbmail_imapd_SOURCES=quota.c imap4.c dm_imaputil.c imapcommands.c memblock.c acl.c dbmail-imapsession.c check_dbmail_imapd.c
 check_dbmail_imapd_LDADD=libdbmail.la @CHECK_LIBS@
 check_dbmail_imapd_INCLUDES=@CHECK_CFLAGS@
 

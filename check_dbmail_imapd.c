@@ -209,39 +209,6 @@ START_TEST(test_imap_bodyfetch)
 }
 END_TEST
 
-START_TEST(test_mime_readheader)
-{
-	int res;
-	u64_t headersize=0;
-	struct dm_list mimelist;
-	struct DbmailMessage *m, *p;
-
-	m = dbmail_message_new();
-	m = dbmail_message_init_with_string(m,g_string_new(multipart_message));
-	
-	dm_list_init(&mimelist);
-	res = mime_readheader(m,&mimelist,&headersize);
-	fail_unless(res==10, "number of headers incorrect");
-	fail_unless(dm_list_length(&mimelist)==10, "number of message-headers incorrect");
-	dm_list_free(&mimelist.start);
-	
-	headersize = 0;
-
-	p = dbmail_message_new();
-	p = dbmail_message_init_with_string(p,g_string_new(multipart_message_part));
-	
-	dm_list_init(&mimelist);
-	res = mime_readheader(p, &mimelist, &headersize);
-	fail_unless(res==3, "number of headers incorrect");
-	fail_unless(mimelist.total_nodes==3, "number of mime-headers incorrect");
-	dm_list_free(&mimelist.start);
-
-	dbmail_message_free(m);
-	dbmail_message_free(p);
-	
-}
-END_TEST
-
 START_TEST(test_mime_fetch_headers)
 {
 	struct dm_list mimelist;
@@ -623,7 +590,6 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_session, test_imap_message_fetch_headers);
 	
 	tcase_add_checked_fixture(tc_mime, setup, teardown);
-	tcase_add_test(tc_mime, test_mime_readheader);
 	tcase_add_test(tc_mime, test_mime_fetch_headers);
 	tcase_add_test(tc_mime, test_mail_address_build_list);
 	tcase_add_test(tc_mime, test_g_mime_object_get_body);
