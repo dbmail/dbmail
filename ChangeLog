@@ -1,5 +1,12 @@
 2006-01-23  Paul J Stevens <paul@nfg.nl>
 
+	* ChangeLog, Makefile.am, acinclude.m4, check_dbmail_mailbox.c, 
+	  debian/rules, modules/Makefile.am:
+	tweak the autotools setup for static builds
+	* check_dbmail_imapd.c, check_dbmail_mailbox.c, dbmail-imapsession.c, 
+	  dbmail-mailbox.c, dbmail-message.c, dbmailtypes.h, dm_imaputil.c, 
+	  imapcommands.c, tags:
+	plugging memoryleaks, and killing bugs in sort code
 	* ChangeLog:
 	blah
 	* ChangeLog:

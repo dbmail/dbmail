@@ -477,7 +477,7 @@ int db_get_sievescript_byname(u64_t user_idnr, char *scriptname, char **script)
 	const char *query_result = NULL;
 	snprintf(query, DEF_QUERYSIZE,
 				"SELECT script from %ssievescripts where "
-				"owner_idnr = %llu' and name = '%s'",
+				"owner_idnr = '%llu' and name = '%s'",
 				DBPFX,user_idnr, scriptname);
 
 	if (db_query(query) == -1) {
