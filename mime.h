@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: mime.h 1893 2005-10-05 15:04:58Z paul $ 
+/* $Id: mime.h 1962 2006-01-24 10:53:58Z paul $ 
  */
 
 #ifndef _MIME_H
