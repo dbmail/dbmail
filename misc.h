@@ -27,17 +27,6 @@
 
 #define BUFLEN 2048
  
-/** \brief performs a binary search on an array to find key. Array should
- * be ascending in values.
- * \param array array to be searched through
- * \param arraysize 
- * \param key key to be found in array
- * \return
- *    - -1 if not found
- *    -  index of key in array if found
- */
-int db_binary_search(const u64_t * array, int arraysize, u64_t key);
-
 
 /**
    \brief drop process privileges. Change change euid and egid to
@@ -49,14 +38,6 @@ int db_binary_search(const u64_t * array, int arraysize, u64_t key);
 	-  0 on success
 */
 int drop_privileges(char *newuser, char *newgroup);
-
-/**
- * \brief convert integer to string (length 42, long enough for 
- * 128 bit integer)
- * \param i the integer
- * \return string
- */
-char *itoa(int i);
 
 /**
  * \brief create a unique id for a message (used for pop, stored per message)

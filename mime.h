@@ -39,8 +39,6 @@ struct mime_record {
 
 struct DbmailMessage * mime_fetch_headers(struct DbmailMessage *message, struct dm_list *mimelist);
 
-int mime_readheader(struct DbmailMessage *message, struct dm_list *mimelist, u64_t * headersize);
-
 void mime_findfield(const char *fname, struct dm_list *mimelist, struct mime_record **mr);
 
 int mail_address_build_list(const char *scan_for_field, struct dm_list *targetlist, struct dm_list *mimelist);

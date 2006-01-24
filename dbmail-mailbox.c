@@ -1130,7 +1130,90 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 
 	return s->found;
 }
+	
+static int _search_body(GMimeObject *object, search_key_t *sk)
+{
+	int i;
+	char *s;
+	GString *t;
+	
+	s = g_mime_object_get_headers(object);
+	i = strlen(s);
+	g_free(s);
 
+	s = g_mime_object_to_string(object);
+	t = g_string_new(s);
+	g_free(s);
+	
+	t = g_string_erase(t,0,i);
+	s = t->str;
+	g_string_free(t,FALSE);
+
+	sk->match = 0;
+	for (i = 0; s[i]; i++) {
+		if (strncasecmp(&s[i], sk->search, strlen(sk->search)) == 0) {
+			sk->match = 1;
+			break;
+		}
+	}
+	g_free(s);
+
+	return sk->match;
+}
+
+
+static int _exec_search(GMimeObject *object, search_key_t * sk)
+{
+	int i,j;
+
+	GMimeObject *part, *subpart;
+	GMimeContentType *type;
+	GMimeMultipart *multipart;
+	
+	if (!sk->search)
+		return 0;
+
+	g_return_val_if_fail(sk->type==IST_DATA_BODY,0);
+
+	/* only check body if there are no children */
+	if (GMIME_IS_MESSAGE(object))
+		part = g_mime_message_get_mime_part(GMIME_MESSAGE(object));
+	else
+		part = object;
+	
+	if ((type = (GMimeContentType *)g_mime_object_get_content_type(part)))  {
+		if (g_mime_content_type_is_type(type,"text","*"))
+			return _search_body(part, sk);
+	}
+	
+	/* no match found yet, try the children */
+	if (GMIME_IS_MESSAGE(object)) {
+		part = g_mime_message_get_mime_part(GMIME_MESSAGE(object));
+	} else {
+		part = object;
+	}
+	
+	if (! (type = (GMimeContentType *)g_mime_object_get_content_type(part)))
+		return 0;
+	
+	if (! (g_mime_content_type_is_type(type,"multipart","*")))
+		return 0;
+
+	multipart = GMIME_MULTIPART(part);
+	i = g_mime_multipart_get_number(multipart);
+	
+	trace(TRACE_DEBUG,"%s,%s: search [%d] parts for [%s]",
+			__FILE__, __func__, i, sk->search);
+
+	/* loop over parts for base info */
+	for (j=0; j<i; j++) {
+		subpart = g_mime_multipart_get_part(multipart,j);
+		if (_exec_search(subpart,sk) == 1)
+			return 1;
+	}
+	
+	return 0;
+}
 static GTree * mailbox_search_parsed(struct DbmailMailbox *self, search_key_t *s)
 {
 
@@ -1156,7 +1239,7 @@ static GTree * mailbox_search_parsed(struct DbmailMailbox *self, search_key_t *s
 			break;
 		}
 		
-		result = db_exec_search(GMIME_OBJECT(msg->content), s);
+		result = _exec_search(GMIME_OBJECT(msg->content), s);
 
 		dbmail_message_free(msg);
 		

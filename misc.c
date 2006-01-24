@@ -56,27 +56,6 @@ typedef struct {
 	int condition;
 } tree_merger_t;
 
-int db_binary_search(const u64_t * array, int arraysize, u64_t key)
-{
-	int low, high, mid;
-
-	low = 0;
-	high = arraysize - 1;
-
-	while (low <= high) {
-		mid = (high + low) / 2;
-		if (array[mid] < key)
-			low = mid + 1;
-		else if (array[mid] > key)
-			high = mid - 1;
-		else
-			return mid;
-	}
-
-	return -1;		/* not found */
-}
-
-
 int drop_privileges(char *newuser, char *newgroup)
 {
 	/* will drop running program's priviledges to newuser and newgroup */
@@ -112,21 +91,13 @@ int drop_privileges(char *newuser, char *newgroup)
 	return 0;
 }
 
-char *itoa(int i)
-{
-	char *s = (char *) dm_malloc(42); /* Enough for a 128 bit integer */
-	if (s)
-		sprintf(s, "%d", i);
-	return s;
-}
-
 void create_unique_id(char *target, u64_t message_idnr)
 {
 	char *a_message_idnr, *a_rand;
 	unsigned char *md5_str;
 
-	a_message_idnr = itoa(message_idnr);
-	a_rand = itoa(rand());
+	a_message_idnr = g_strdup_printf("%d",message_idnr);
+	a_rand = g_strdup_printf("%d",rand());
 
 	if (message_idnr != 0)
 		snprintf(target, UID_SIZE, "%s:%s",
@@ -138,8 +109,8 @@ void create_unique_id(char *target, u64_t message_idnr)
 	trace(TRACE_DEBUG, "%s,%s: created: %s", __FILE__, __func__,
 	      target);
 	dm_free(md5_str);
-	dm_free(a_message_idnr);
-	dm_free(a_rand);
+	g_free(a_message_idnr);
+	g_free(a_rand);
 }
 
 void create_current_timestring(timestring_t * timestring)

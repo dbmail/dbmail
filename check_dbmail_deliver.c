@@ -220,7 +220,7 @@ END_TEST
  *    -  0 if user not found
  *    -  1 otherwise
  */
-//int auth_user_exists(const char *username, /*@out@*/ u64_t * user_idnr);
+//int auth_user_exists(const char *username, u64_t * user_idnr);
 START_TEST(test_auth_user_exists)
 {
 	u64_t uid;
@@ -547,8 +547,8 @@ END_TEST
  *      -  1 on success
  */
 //int auth_get_users_from_clientid(u64_t client_id, 
-//			       /*@out@*/ u64_t ** user_ids,
-//			       /*@out@*/ unsigned *num_users);
+//			       u64_t ** user_ids,
+//			       unsigned *num_users);
 
 /**
  * \brief get a list of aliases associated with a user's user_idnr
