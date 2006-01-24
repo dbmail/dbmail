@@ -475,10 +475,14 @@ int db_calculate_quotum_used(u64_t user_idnr)
 int db_get_sievescript_byname(u64_t user_idnr, char *scriptname, char **script)
 {
 	const char *query_result = NULL;
+	char *escaped_scriptname;
+
+	db_escape_string(escaped_scriptname, scriptname, strlen(scriptname));
 	snprintf(query, DEF_QUERYSIZE,
 				"SELECT script from %ssievescripts where "
 				"owner_idnr = '%llu' and name = '%s'",
-				DBPFX,user_idnr, scriptname);
+				DBPFX,user_idnr,escaped_scriptname);
+	dm_free(escaped_scriptname);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error getting sievescript by name",
@@ -570,10 +574,17 @@ int db_get_sievescript_listall(u64_t user_idnr, struct dm_list *scriptlist)
 
 int db_rename_sievescript(u64_t user_idnr, char *scriptname, char *newname)
 {
+	char *escaped_scriptname;
+	char *escaped_newname;
+
+	db_escape_string(escaped_scriptname, scriptname, strlen(scriptname));
+	db_escape_string(escaped_newname, newname, strlen(newname));
 	snprintf(query, DEF_QUERYSIZE,
 		"UPDATE %ssievescripts set name = '%s' "
 		"where owner_idnr = %llu and name = '%s'",
-		DBPFX,newname,user_idnr,scriptname);
+		DBPFX,escaped_newname,user_idnr,escaped_scriptname);
+	dm_free(escaped_scriptname);
+	dm_free(escaped_newname);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error replacing sievescript '%s' "
@@ -587,11 +598,15 @@ int db_rename_sievescript(u64_t user_idnr, char *scriptname, char *newname)
 
 int db_add_sievescript(u64_t user_idnr, char *scriptname, char *script)
 {
+	char *escaped_scriptname;
+
+	db_escape_string(escaped_scriptname, scriptname, strlen(scriptname));
 	snprintf(query, DEF_QUERYSIZE,
 		"INSERT into %ssievescripts "
 		"(owner_idnr, name, script, active)"
 		"values (%llu, '%s', '%s', 0)",
-		DBPFX,user_idnr,scriptname,script);
+		DBPFX,user_idnr,escaped_scriptname,script);
+	dm_free(escaped_scriptname);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error adding sievescript '%s' "
@@ -605,10 +620,14 @@ int db_add_sievescript(u64_t user_idnr, char *scriptname, char *script)
 
 int db_deactivate_sievescript(u64_t user_idnr, char *scriptname)
 {
+	char *escaped_scriptname;
+
+	db_escape_string(escaped_scriptname, scriptname, strlen(scriptname));
 	snprintf(query, DEF_QUERYSIZE,
 		"UPDATE %ssievescripts set active = 0 "
 		"where owner_idnr = %llu and name = '%s'",
-		DBPFX,user_idnr,scriptname);
+		DBPFX,user_idnr,escaped_scriptname);
+	dm_free(escaped_scriptname);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error deactivating sievescript '%s' "
@@ -622,10 +641,14 @@ int db_deactivate_sievescript(u64_t user_idnr, char *scriptname)
 
 int db_activate_sievescript(u64_t user_idnr, char *scriptname)
 {
+	char *escaped_scriptname;
+
+	db_escape_string(escaped_scriptname, scriptname, strlen(scriptname));
 	snprintf(query, DEF_QUERYSIZE,
 		"UPDATE %ssievescripts set active = 1 "
 		"where owner_idnr = %llu and name = '%s'",
-		DBPFX,user_idnr,scriptname);
+		DBPFX,user_idnr,escaped_scriptname);
+	dm_free(escaped_scriptname);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error activating sievescript '%s' "
@@ -639,10 +662,14 @@ int db_activate_sievescript(u64_t user_idnr, char *scriptname)
 
 int db_delete_sievescript(u64_t user_idnr, char *scriptname)
 {
+	char *escaped_scriptname;
+
+	db_escape_string(escaped_scriptname, scriptname, strlen(scriptname));
 	snprintf(query, DEF_QUERYSIZE,
 		"DELETE from %ssievescripts "
 		"where owner_idnr = %llu and name = '%s'",
-		DBPFX,user_idnr,scriptname);
+		DBPFX,user_idnr,escaped_scriptname);
+	dm_free(escaped_scriptname);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error deleting sievescript '%s' "
@@ -2521,6 +2548,8 @@ int db_createmailbox(const char *name, u64_t owner_idnr,
 	*mailbox_idnr = 0;
 
 	if (auth_requires_shadow_user()) {
+		trace(TRACE_DEBUG, "%s,%s: creating shadow user for [%llu]",
+				__FILE__, __func__, owner_idnr);
 		if ((db_user_find_create(owner_idnr) < 0)) {
 			trace(TRACE_ERROR, "%s,%s: unable to find or create sql shadow "
 					"account for useridnr [%llu]", 

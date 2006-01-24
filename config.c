@@ -63,18 +63,18 @@ void config_free(void)
 	g_key_file_free(config_dict);
 }
 
-/* FIXME: Always returns 0, which is dandy for debugging. */
-int config_get_value(const field_t field_name,
-                     const char * const service_name,
-                     field_t value) {
-        char *dict_value;
-	char *key;
-	gssize len;
+/* Return 1 if found, 0 if not. */
+/* This function also strips any... # Trailing comments. */
+static int config_get_value_once(const field_t field_name,
+		const char * const service_name,
+		field_t value)
+{
+	char *dict_value;
+	int retval = 0;
 
-        assert(service_name);
-        assert(config_dict);
- 
-	/* as is */
+	assert(service_name);
+	assert(config_dict);
+
 	dict_value = g_key_file_get_value(config_dict, service_name, field_name, NULL);
         if (dict_value) {
 		char *end;
@@ -83,79 +83,96 @@ int config_get_value(const field_t field_name,
 		g_strstrip(dict_value);
                 g_strlcpy(value, dict_value, FIELDSIZE);
 		g_free(dict_value);
-		return 0;
-	}
-	       
-	len = strlen(field_name);
-	
-	/* uppercase */
-	key = g_ascii_strup(field_name,len);
-        dict_value = g_key_file_get_value(config_dict, service_name, key, NULL);
-        if (dict_value) {
-                g_strlcpy(value, dict_value, FIELDSIZE);
-		g_free(key);
-		g_free(dict_value);
-		return 0;
-	}
-	
-	/* lowercase */
-	key = g_ascii_strdown(field_name,len);
-	dict_value = g_key_file_get_value(config_dict, service_name, key, NULL);
-        if (dict_value) {
-                g_strlcpy(value, dict_value, FIELDSIZE);
-		g_free(key);
-		g_free(dict_value);
-		return 0;
+		retval = 1;
 	}
 
+	return retval;
+}
+
+/* FIXME: Always returns 0, which is dandy for debugging. */
+int config_get_value(const field_t field_name,
+                     const char * const service_name,
+                     field_t value)
+{
+	char *key;
+	gssize field_len;
+
+	field_len = strlen(field_name);
+	
+	// First look in the SERVICE section.
+	// For each attempt, try as-is, upper, lower.
+	       
+	key = NULL;
+	if (config_get_value_once(field_name, service_name, value))
+		goto config_get_value_done;
+	
+	key = g_ascii_strup(field_name, field_len);
+	if (config_get_value_once(key, service_name, value))
+		goto config_get_value_done;
+	g_free(key);
+
+	key = g_ascii_strdown(field_name, field_len);
+	if (config_get_value_once(key, service_name, value))
+		goto config_get_value_done;
+	g_free(key);
+
+	// if not found, get the DBMAIL section.
+	// For each attempt, try as-is, upper, lower.
+	       
+	key = NULL;
+	if (config_get_value_once(field_name, "DBMAIL", value))
+		goto config_get_value_done;
+	
+	key = g_ascii_strup(field_name, field_len);
+	if (config_get_value_once(key, "DBMAIL", value))
+		goto config_get_value_done;
+	g_free(key);
+
+	key = g_ascii_strdown(field_name, field_len);
+	if (config_get_value_once(key, "DBMAIL", value))
+		goto config_get_value_done;
+	g_free(key);
+	
 	/* give up */
         value[0] = '\0';
-	g_free(key);
-	g_free(dict_value);
+	return 0;
 
-        return 0;
+config_get_value_done:
+	g_free(key);
+	return 0;
 }
 
 void SetTraceLevel(const char *service_name)
 {
-	field_t trace_global, trace_service;
-	field_t trace_stderr_global, trace_syslog_global;
-	field_t trace_stderr_service, trace_syslog_service;
-	trace_t trace_stderr, trace_syslog;
+	trace_t trace_stderr_int, trace_syslog_int;
+	field_t trace_level, trace_syslog, trace_stderr;
 
-	/* Warn about the deprecated "trace_level" config item. */
-	config_get_value("trace_level", "DBMAIL", trace_global);
-	config_get_value("trace_level", service_name, trace_service);
-	if (strlen(trace_global) || strlen(trace_service)) {
+	/* Warn about the deprecated "trace_level" config item,
+	 * but we will use this value for trace_syslog if needed. */
+	config_get_value("trace_level", service_name, trace_level);
+	if (strlen(trace_level)) {
 		trace(TRACE_MESSAGE,
 			"Config item TRACE_LEVEL is deprecated. "
 			"Please use TRACE_SYSLOG and TRACE_STDERR instead.");
 	}
 
-	/* First we grab the global trace levels. */
-	config_get_value("trace_syslog", "DBMAIL", trace_syslog_global);
-	config_get_value("trace_stderr", "DBMAIL", trace_stderr_global);
-
 	/* Then we override globals with per-service settings. */
-	config_get_value("trace_syslog", service_name, trace_syslog_service);
-	config_get_value("trace_stderr", service_name, trace_stderr_service);
+	config_get_value("trace_syslog", service_name, trace_syslog);
+	config_get_value("trace_stderr", service_name, trace_stderr);
 
-	/* Selectively override. */
-	if (strlen(trace_syslog_global) && !strlen(trace_syslog_service))
-		trace_syslog = atoi(trace_syslog_global);
-	else if (strlen(trace_syslog_service))
-		trace_syslog = atoi(trace_syslog_service);
+	if (strlen(trace_syslog))
+		trace_syslog_int = atoi(trace_syslog);
+	else if (strlen(trace_level))
+		trace_syslog_int = atoi(trace_level);
 	else
-		trace_syslog = TRACE_ERROR;
+		trace_syslog_int = TRACE_ERROR;
 
-	if (strlen(trace_stderr_global) && !strlen(trace_stderr_service))
-		trace_stderr = atoi(trace_stderr_global);
-	else if (strlen(trace_stderr_service))
-		trace_stderr = atoi(trace_stderr_service);
+	if (strlen(trace_stderr))
+		trace_stderr_int = atoi(trace_stderr);
 	else
-		trace_stderr = TRACE_FATAL;
+		trace_stderr_int = TRACE_FATAL;
 
-	configure_debug(trace_syslog, trace_stderr);
+	configure_debug(trace_syslog_int, trace_stderr_int);
 }
 
 void GetDBParams(db_param_t * db_params)

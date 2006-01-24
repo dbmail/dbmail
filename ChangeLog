@@ -1,3 +1,14 @@
+2006-01-24  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmail-user.c:
+	prettier output when adding a user.
+	* config.c, dbmail.conf:
+	support for common settings in [DBMAIL] section.
+	* db.c:
+	escaped name, script arguments for Sieve SQL queries.
+	* modules/sortsieve.c:
+	plugging away at Sieve support.
+
 2006-01-23  Paul J Stevens <paul@nfg.nl>
 
 	* ChangeLog, Makefile.am, acinclude.m4, check_dbmail_mailbox.c, 

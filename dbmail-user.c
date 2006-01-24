@@ -62,7 +62,7 @@ int do_add(const char * const user,
 		return -1;
 	}
 
-	qprintf("Adding user %s with password type %s,"
+	trace(TRACE_DEBUG, "Adding user %s with password type %s,"
 	     "%llu bytes mailbox limit and clientid %llu... ",
 	     user, enctype, maxmail, clientid);
 
@@ -85,25 +85,27 @@ int do_add(const char * const user,
 		break;
 	}
 
-	qprintf("Ok, user added id [%llu]\n", useridnr);
+	trace(TRACE_DEBUG, "Ok, user added id [%llu]\n", useridnr);
 
 	/* Add an INBOX for the user. */
 	qprintf("Adding INBOX for new user\n");
 	switch(db_createmailbox("INBOX", useridnr, &mailbox_idnr)) {
 	case -1:
-		qprintf("Failed.. User is added but we failed to add "
+		qprintf("Failed... User is added but we failed to add "
 			     "the mailbox INBOX for this user\n");
 		result = -1;
 		break;
 	case 0:
 	default:
-		qprintf("Ok. added\n");
+		trace(TRACE_DEBUG, "Ok. added\n");
 		result = 0;
 		break;
 	} 
 
 	if(do_aliases(useridnr, alias_add, alias_del) < 0)
 		result = -1;
+
+	do_show(user);
 
 	return result;
 }
