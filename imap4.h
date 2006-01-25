@@ -28,7 +28,7 @@
 #include "dbmail.h"
 
 #define IMAP_SERVER_VERSION VERSION
-#define IMAP_CAPABILITY_STRING "IMAP4 IMAP4rev1 AUTH=LOGIN ACL NAMESPACE CHILDREN SORT"
+#define IMAP_CAPABILITY_STRING "IMAP4 IMAP4rev1 AUTH=LOGIN ACL NAMESPACE CHILDREN SORT QUOTA"
 #define IMAP_TIMEOUT_MSG "* BYE dbmail IMAP4 server signing off due to timeout\r\n"
 
 /* max number of BAD/NO responses */
