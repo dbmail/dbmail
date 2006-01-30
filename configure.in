@@ -98,3 +98,4 @@ AC_PROG_LIBTOOL
 
 AC_OUTPUT(Makefile modules/Makefile man/Makefile)
 
+DBMAIL_MSG_CONFIGURE_RESULTS

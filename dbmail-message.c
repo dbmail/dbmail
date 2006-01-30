@@ -152,7 +152,8 @@ struct DbmailMessage * dbmail_message_new(void)
 	
 	self->internal_date = g_string_new("");
 	
-	self->header_dict = g_hash_table_new_full((GHashFunc)g_str_hash, (GEqualFunc)g_str_equal, (GDestroyNotify)g_free, NULL);
+	self->header_dict = g_hash_table_new_full((GHashFunc)g_str_hash,
+			(GEqualFunc)g_str_equal, (GDestroyNotify)g_free, NULL);
 	
 	dbmail_message_set_class(self, DBMAIL_MESSAGE);
 	
@@ -381,6 +382,18 @@ gchar * dbmail_message_get_internal_date(const struct DbmailMessage *self)
 	return NULL;
 }
 
+void dbmail_message_set_envelope(const struct DbmailMessage *self, char *envelope)
+{
+	if (envelope)
+		g_string_printf(self->envelope, "%s", envelope);
+}
+
+gchar * dbmail_message_get_envelope(const struct DbmailMessage *self)
+{
+	if (self->envelope->len > 0)
+		return self->envelope->str;
+	return NULL;
+}
 
 void dbmail_message_set_header(struct DbmailMessage *self, const char *header, const char *value)
 {

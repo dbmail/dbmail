@@ -204,17 +204,22 @@ int do_insert(u64_t user_idnr, char *name, FILE * source)
 		// FIXME: Error.
 	}
 
+	sort_connect();
 	res = sort_validate(user_idnr, "@!temp-script!@", &errmsg);
 	if (res != 0) {
 		printf("Script [%s] has errors: %s.\n", name, errmsg);
+		db_delete_sievescript(user_idnr, "@!temp-script!@");
 		return -1;
 	}
+	sort_disconnect();
 
 	res = db_rename_sievescript(user_idnr, "@!temp-script!@", name);
 	if (res == -3) {
+		db_delete_sievescript(user_idnr, "@!temp-script!@");
 		printf("Script [%s] already exists.\n", name);
 		return -1;
 	} else if (res != 0) {
+		db_delete_sievescript(user_idnr, "@!temp-script!@");
 		printf("Error inserting script [%s] into the database!\n",
 		       name);
 		return -1;

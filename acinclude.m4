@@ -9,6 +9,21 @@ make your compile work without much twiddling.
 ])
 ])
 
+dnl DBMAIL_MSG_CONFIGURE_RESULTS()
+dnl
+AC_DEFUN([DBMAIL_MSG_CONFIGURE_RESULTS], [dnl
+AC_MSG_RESULT([
+MYSQL:  $MYSQLINC
+PGSQL:  $PGSQLINC
+SQLITE: $SQLITEINC
+SIEVE:  $SIEVEINC
+LDAP:   $LDAPINC
+SHARED: $enable_shared
+STATIC: $enable_static
+])
+])
+
+
 dnl DBMAIL_BOTH_SQL_CHECK
 dnl
 AC_DEFUN([DBMAIL_BOTH_SQL_CHECK], [dnl

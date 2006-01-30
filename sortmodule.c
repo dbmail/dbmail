@@ -76,7 +76,9 @@ int sort_load_driver(void)
 	if (!g_module_symbol(module, "sort_connect",                (gpointer)&sort->connect                )
 	||  !g_module_symbol(module, "sort_disconnect",             (gpointer)&sort->disconnect             )
 	||  !g_module_symbol(module, "sort_validate",               (gpointer)&sort->validate               )
-	||  !g_module_symbol(module, "sort_process",                (gpointer)&sort->process                )) {
+	||  !g_module_symbol(module, "sort_process",                (gpointer)&sort->process                )
+	||  !g_module_symbol(module, "sort_get_cancelkeep",         (gpointer)&sort->get_cancelkeep         )
+	||  !g_module_symbol(module, "sort_get_mailbox",            (gpointer)&sort->get_mailbox            )) {
 		trace(TRACE_FATAL, "sort_init: cannot find function: %s: %s", lib, g_module_error());
 		return -2;
 	}
@@ -108,5 +110,15 @@ int sort_process(u64_t user_idnr, struct DbmailMessage *message,
 		const char *fromaddr)
 {
 	return sort->process(user_idnr, message, fromaddr);
+}
+
+int sort_get_cancelkeep(void)
+{
+	return sort->get_cancelkeep();
+}
+
+const char * sort_get_mailbox(void)
+{
+	return sort->get_mailbox();
 }
 
