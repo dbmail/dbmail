@@ -1,4 +1,4 @@
-DROP TABLE IF EXISTS dbmail_replycache;
+DROP TABLE dbmail_replycache;
 CREATE TABLE dbmail_replycache (
     to_addr character varying(100) DEFAULT ''::character varying NOT NULL,
     from_addr character varying(100) DEFAULT ''::character varying NOT NULL,
