@@ -8,7 +8,7 @@
 # This is the debhelper compatibility version to use.
 export DH_COMPAT=3
 #export DEB_BUILD_OPTIONS=debug
-export DEB_BUILD_OPTIONS=debug,devel
+#export DEB_BUILD_OPTIONS=debug,devel
 
 #export WITH_GC="--with-gc"
 export WITH_SIEVE=--with-sieve
