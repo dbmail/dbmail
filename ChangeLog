@@ -1,3 +1,33 @@
+2006-01-29  Aaron Stone  <aaron@serendipity.cx>
+
+	* sort.h, sort.c, sortmodule.c, modules/sortsieve.c:
+	major work on the Sieve interface.
+	* sievecmd.c:
+	bugfixes.
+	* configure.in, acinclude.m4:
+	Added a rudimentary summary at the end.
+	* db.h, db.c:
+	added arguments to db_replycache functions, changed them to work by
+	days since the last reply rather than seconds, bugfixes in the
+	db_rename_sievescript function.
+	* modules/dbmysql.c, modules/dbpgsql.c, pipe.c:
+	change the replycache sql chunk to days rather than seconds.
+	* dbmail-message.h, dbmail-message.c:
+	added envelope sender's address (more to do on this though).
+	* sql/postgresql/add_replycache.pgsql:
+	added a handle field to the table.
+
+2006-01-24  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmail-user.c:
+	prettier output when adding a user.
+	* config.c, dbmail.conf:
+	support for common settings in [DBMAIL] section.
+	* db.c:
+	escaped name, script arguments for Sieve SQL queries.
+	* modules/sortsieve.c:
+	plugging away at Sieve support.
+
 2006-01-24  Paul J Stevens <paul@nfg.nl>
 
 	* ChangeLog, db.c:

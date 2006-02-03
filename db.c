@@ -1,4 +1,4 @@
-/* $Id: db.c 1962 2006-01-24 10:53:58Z paul $ */
+/* $Id: db.c 1970 2006-01-30 01:23:40Z aaron $ */
 /*
   Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 
@@ -475,10 +475,14 @@ int db_calculate_quotum_used(u64_t user_idnr)
 int db_get_sievescript_byname(u64_t user_idnr, char *scriptname, char **script)
 {
 	const char *query_result = NULL;
+	char *escaped_scriptname = (char *)dm_malloc(2*strlen(scriptname)+1);
+
+	db_escape_string(escaped_scriptname, scriptname, strlen(scriptname));
 	snprintf(query, DEF_QUERYSIZE,
 				"SELECT script from %ssievescripts where "
 				"owner_idnr = '%llu' and name = '%s'",
-				DBPFX,user_idnr, scriptname);
+				DBPFX,user_idnr,escaped_scriptname);
+	dm_free(escaped_scriptname);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error getting sievescript by name",
@@ -559,7 +563,7 @@ int db_get_sievescript_listall(u64_t user_idnr, struct dm_list *scriptlist)
 	while(i < n) {
 		info = (struct ssinfo *)dm_malloc(sizeof(struct ssinfo));
 		info->name = dm_strdup(db_get_result(i, 0));   
-		info->active = (int)db_get_result(i, 1);
+		info->active = db_get_result_int(i, 1);
 		dm_list_nodeadd(scriptlist,info,sizeof(struct ssinfo));	
 		i++;
 	}
@@ -570,10 +574,28 @@ int db_get_sievescript_listall(u64_t user_idnr, struct dm_list *scriptlist)
 
 int db_rename_sievescript(u64_t user_idnr, char *scriptname, char *newname)
 {
+	char *escaped_scriptname = (char *)dm_malloc(2*strlen(scriptname)+1);
+	char *escaped_newname = (char *)dm_malloc(2*strlen(newname)+1);
+
+	db_escape_string(escaped_scriptname, scriptname, strlen(scriptname));
+	db_escape_string(escaped_newname, newname, strlen(newname));
 	snprintf(query, DEF_QUERYSIZE,
-		"UPDATE %ssievescripts set name = '%s' "
-		"where owner_idnr = %llu and name = '%s'",
-		DBPFX,newname,user_idnr,scriptname);
+		"SELECT COUNT(*) FROM %ssievescripts "
+		"WHERE owner_idnr = %llu AND name = '%s'",
+		DBPFX,user_idnr,escaped_newname);
+
+	if (db_query(query) == 0 && db_get_result_int(0,0) > 0) {
+		dm_free(escaped_scriptname);
+		dm_free(escaped_newname);
+		return -3;
+	}
+
+	snprintf(query, DEF_QUERYSIZE,
+		"UPDATE %ssievescripts SET name = '%s' "
+		"WHERE owner_idnr = %llu AND name = '%s'",
+		DBPFX,escaped_newname,user_idnr,escaped_scriptname);
+	dm_free(escaped_scriptname);
+	dm_free(escaped_newname);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error replacing sievescript '%s' "
@@ -587,11 +609,15 @@ int db_rename_sievescript(u64_t user_idnr, char *scriptname, char *newname)
 
 int db_add_sievescript(u64_t user_idnr, char *scriptname, char *script)
 {
+	char *escaped_scriptname = (char *)dm_malloc(2*strlen(scriptname)+1);
+
+	db_escape_string(escaped_scriptname, scriptname, strlen(scriptname));
 	snprintf(query, DEF_QUERYSIZE,
 		"INSERT into %ssievescripts "
 		"(owner_idnr, name, script, active)"
 		"values (%llu, '%s', '%s', 0)",
-		DBPFX,user_idnr,scriptname,script);
+		DBPFX,user_idnr,escaped_scriptname,script);
+	dm_free(escaped_scriptname);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error adding sievescript '%s' "
@@ -605,10 +631,14 @@ int db_add_sievescript(u64_t user_idnr, char *scriptname, char *script)
 
 int db_deactivate_sievescript(u64_t user_idnr, char *scriptname)
 {
+	char *escaped_scriptname = (char *)dm_malloc(2*strlen(scriptname)+1);
+
+	db_escape_string(escaped_scriptname, scriptname, strlen(scriptname));
 	snprintf(query, DEF_QUERYSIZE,
 		"UPDATE %ssievescripts set active = 0 "
 		"where owner_idnr = %llu and name = '%s'",
-		DBPFX,user_idnr,scriptname);
+		DBPFX,user_idnr,escaped_scriptname);
+	dm_free(escaped_scriptname);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error deactivating sievescript '%s' "
@@ -622,10 +652,14 @@ int db_deactivate_sievescript(u64_t user_idnr, char *scriptname)
 
 int db_activate_sievescript(u64_t user_idnr, char *scriptname)
 {
+	char *escaped_scriptname = (char *)dm_malloc(2*strlen(scriptname)+1);
+
+	db_escape_string(escaped_scriptname, scriptname, strlen(scriptname));
 	snprintf(query, DEF_QUERYSIZE,
 		"UPDATE %ssievescripts set active = 1 "
 		"where owner_idnr = %llu and name = '%s'",
-		DBPFX,user_idnr,scriptname);
+		DBPFX,user_idnr,escaped_scriptname);
+	dm_free(escaped_scriptname);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error activating sievescript '%s' "
@@ -639,10 +673,14 @@ int db_activate_sievescript(u64_t user_idnr, char *scriptname)
 
 int db_delete_sievescript(u64_t user_idnr, char *scriptname)
 {
+	char *escaped_scriptname = (char *)dm_malloc(2*strlen(scriptname)+1);
+
+	db_escape_string(escaped_scriptname, scriptname, strlen(scriptname));
 	snprintf(query, DEF_QUERYSIZE,
 		"DELETE from %ssievescripts "
 		"where owner_idnr = %llu and name = '%s'",
-		DBPFX,user_idnr,scriptname);
+		DBPFX,user_idnr,escaped_scriptname);
+	dm_free(escaped_scriptname);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error deleting sievescript '%s' "
@@ -2521,6 +2559,8 @@ int db_createmailbox(const char *name, u64_t owner_idnr,
 	*mailbox_idnr = 0;
 
 	if (auth_requires_shadow_user()) {
+		trace(TRACE_DEBUG, "%s,%s: creating shadow user for [%llu]",
+				__FILE__, __func__, owner_idnr);
 		if ((db_user_find_create(owner_idnr) < 0)) {
 			trace(TRACE_ERROR, "%s,%s: unable to find or create sql shadow "
 					"account for useridnr [%llu]", 
@@ -4252,13 +4292,14 @@ int db_user_find_create(u64_t user_idnr)
 	return db_user_create_shadow(username, &user_idnr);
 }
 
-int db_replycache_register(const char *to, const char *from)
+int db_replycache_register(const char *to, const char *from, const char *handle)
 {
 	snprintf(query, DEF_QUERYSIZE,
 			"SELECT lastseen FROM %sreplycache "
 			"WHERE to_addr = '%s' "
-			"AND from_addr = '%s'",
-			DBPFX, to, from);
+			"AND from_addr = '%s' "
+			"AND handle    = '%s' ",
+			DBPFX, to, from, handle);
 	if (db_query(query)== -1) {
 		trace(TRACE_ERROR, "%s,%s: query failed",
 				__FILE__, __func__);
@@ -4268,12 +4309,15 @@ int db_replycache_register(const char *to, const char *from)
 	if (db_num_rows() > 0) {
 		snprintf(query, DEF_QUERYSIZE,
 			 "UPDATE %sreplycache SET lastseen = %s "
-			 "WHERE to_addr = '%s' AND from_addr = '%s'", DBPFX, db_get_sql(SQL_CURRENT_TIMESTAMP),
-			 to, from);
+			 "WHERE to_addr = '%s' AND from_addr = '%s' "
+			 "AND handle = '%s'",
+			 DBPFX, db_get_sql(SQL_CURRENT_TIMESTAMP),
+			 to, from, handle);
 	} else {
 		snprintf(query, DEF_QUERYSIZE,
-			 "INSERT INTO %sreplycache (to_addr, from_addr, lastseen) "
-			 "VALUES ('%s','%s', %s)", DBPFX, to, from, db_get_sql(SQL_CURRENT_TIMESTAMP));
+			 "INSERT INTO %sreplycache (to_addr, from_addr, handle, lastseen) "
+			 "VALUES ('%s','%s','%s', %s)",
+			 DBPFX, to, from, handle, db_get_sql(SQL_CURRENT_TIMESTAMP));
 	}
 	
 	db_free_result();
@@ -4288,20 +4332,26 @@ int db_replycache_register(const char *to, const char *from)
 
 }
 
-#define REPLYCACHE_TIMEOUT 3600*24*7
-int db_replycache_validate(const char *to, const char *from)
+/* Returns DM_SUCCESS if the (to, from) pair hasn't been seen in days.
+*/
+int db_replycache_validate(const char *to, const char *from,
+		const char *handle, int days)
 {
 	GString *tmp = g_string_new("");
-	g_string_printf(tmp, db_get_sql(SQL_REPLYCACHE_EXPIRE), REPLYCACHE_TIMEOUT);
+	g_string_printf(tmp, db_get_sql(SQL_REPLYCACHE_EXPIRE), days);
 	snprintf(query, DEF_QUERYSIZE,
 			"SELECT lastseen FROM %sreplycache "
 			"WHERE to_addr = '%s' AND from_addr = '%s' "
-			"AND lastseen > (%s)", DBPFX, to, from, tmp->str);
+			"AND handle = '%s' AND lastseen > (%s)",
+			DBPFX, to, from, handle, tmp->str);
+	g_string_free(tmp, TRUE);
+
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: query failed",
 				__FILE__, __func__);
 		return DM_EQUERY;
 	}
+
 	if (db_num_rows() > 0) {
 		db_free_result();
 		return DM_EGENERAL;

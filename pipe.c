@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: pipe.c 1946 2005-12-22 15:51:40Z aaron $
+/* $Id: pipe.c 1970 2006-01-30 01:23:40Z aaron $
  *
  * Functions for reading the pipe from the MTA */
 
@@ -129,6 +129,7 @@ int send_vacation(const char *from UNUSED, const char *to UNUSED,
 /*
  * Send an automatic reply using sendmail
  */
+#define REPLY_DAYS 7
 static int send_reply(struct dm_list *headerfields, const char *body)
 {
 	struct mime_record *record;
@@ -201,7 +202,8 @@ static int send_reply(struct dm_list *headerfields, const char *body)
 	escaped_send_address = internet_address_to_string(ia, TRUE);
 	internet_address_list_destroy(ialist);
 
-	if (db_replycache_validate(to, escaped_send_address) != DM_SUCCESS) {
+	if (db_replycache_validate(to, escaped_send_address,
+		"replycache", REPLY_DAYS) != DM_SUCCESS) {
 		trace(TRACE_DEBUG, "%s,%s: skip auto-reply", 
 				__FILE__, __func__);
 		return 0;
@@ -235,7 +237,7 @@ static int send_reply(struct dm_list *headerfields, const char *body)
 		trace(TRACE_ERROR, "%s,%s: reply could not be sent: sendmail error",
 				__FILE__, __func__);
 	} else {
-		db_replycache_register(to, escaped_send_address);
+		db_replycache_register(to, escaped_send_address, "replycache");
 	}
 
 	dm_free(escaped_send_address);

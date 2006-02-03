@@ -1,4 +1,4 @@
-# $Id: configure.in 1937 2005-12-04 15:07:33Z paul $
+# $Id: configure.in 1970 2006-01-30 01:23:40Z aaron $
 # Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 #
 # This program is free software; you can redistribute it and/or 
@@ -98,3 +98,4 @@ AC_PROG_LIBTOOL
 
 AC_OUTPUT(Makefile modules/Makefile man/Makefile)
 
+DBMAIL_MSG_CONFIGURE_RESULTS
