@@ -1105,9 +1105,10 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 
 	rows = db_num_rows();
 
+	s->found = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free, (GDestroyNotify)g_free);
+
 	if (rows > 0) {
 		
-		s->found = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free, (GDestroyNotify)g_free);
 		
 		for (i=0; i < rows; i++) {
 			k = g_new0(u64_t,1);
