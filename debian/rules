@@ -8,7 +8,7 @@
 # This is the debhelper compatibility version to use.
 export DH_COMPAT=3
 #export DEB_BUILD_OPTIONS=debug
-#export DEB_BUILD_OPTIONS=debug,devel
+export DEB_BUILD_OPTIONS=debug,devel
 
 #export WITH_GC="--with-gc"
 export WITH_SIEVE=--with-sieve
@@ -28,8 +28,8 @@ DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
 
 ifneq (,$(findstring devel,$(DEB_BUILD_OPTIONS)))
 	export WITH_CHECK=--with-check
-#	export WITH_PGSQL=
-	export WITH_MYSQL=
+	export WITH_PGSQL=
+#	export WITH_MYSQL=
 	export WITH_SQLITE=
 	export SHARED=--enable-shared=no
 	CFLAGS += -g
