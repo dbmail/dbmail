@@ -15,7 +15,7 @@
 #include "auth.h"
 #include "authmodule.h"
 
-auth_func_t *auth;
+auth_func_t *auth = NULL;
 
 extern db_param_t _db_params;
 

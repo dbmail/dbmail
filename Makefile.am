@@ -21,15 +21,13 @@ if SIEVE
 SIEVEPROGS = dbmail-sievecmd dbmail-timsieved
 endif
 
-bin_PROGRAMS = $(SIEVEPROGS)
-
 sbin_PROGRAMS = dbmail-smtp \
 	dbmail-pop3d \
 	dbmail-imapd \
 	dbmail-util \
 	dbmail-users \
 	dbmail-export \
-	dbmail-lmtpd 
+	dbmail-lmtpd $(SIEVEPROGS)
 
 COMMON = dbmail-user.c \
 	dbmail-message.c \

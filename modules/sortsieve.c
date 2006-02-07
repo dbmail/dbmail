@@ -37,21 +37,24 @@
 #include <sieve2.h>
 
 /* Used by us to keep track of libSieve. */
-// FIXME: This is a mess right now. Clean it up.
-struct my_context {
+struct sort_context {
 	char *s_buf;
 	char *script;
-	const char *mailbox;
-	GString *errormsg;
 	u64_t user_idnr;
-	int error_runtime;
-	int error_parse;
-	int cancelkeep;
 	struct DbmailMessage *message;
+	struct sort_result *result;
 };
 
-sieve2_context_t *sieve2_context;
-struct my_context *my_context;
+/* Returned opaquely as type sort_result_t. */
+struct sort_result {
+	int cancelkeep;
+	dsn_class_t dsn;
+	GString *errormsg;
+	const char *mailbox;
+	int error_runtime;
+	int error_parse;
+};
+
 
 /* SIEVE CALLBACKS */
 
@@ -68,9 +71,9 @@ From http://www.ietf.org/internet-drafts/draft-ietf-sieve-vacation-05.txt
 
 We need to make sure to respect the implementation requirements.
 */
-int my_vacation(sieve2_context_t *s, void *my)
+int sort_vacation(sieve2_context_t *s, void *my)
 {
-	struct my_context *m = (struct my_context *)my;
+	struct sort_context *m = (struct sort_context *)my;
 	int days = 1, mime = 0;
 	const char *message, *subject, *fromaddr, *handle;
 	char *md5_handle = NULL, *rc_to, *rc_from, *rc_handle;
@@ -112,13 +115,13 @@ int my_vacation(sieve2_context_t *s, void *my)
 	if (md5_handle)
 		dm_free(md5_handle);
 
-	m->cancelkeep = 1;
+	m->result->cancelkeep = 0;
 	return SIEVE2_OK;
 }
 
-int my_redirect(sieve2_context_t *s, void *my)
+int sort_redirect(sieve2_context_t *s, void *my)
 {
-	struct my_context *m = (struct my_context *)my;
+	struct sort_context *m = (struct sort_context *)my;
 	struct dm_list targets;
 	const char *address;
 
@@ -137,13 +140,13 @@ int my_redirect(sieve2_context_t *s, void *my)
 	}
 
 	dm_list_free(&targets.start);
-	m->cancelkeep = 1;
+	m->result->cancelkeep = 1;
 	return SIEVE2_OK;
 }
 
-int my_reject(sieve2_context_t *s, void *my)
+int sort_reject(sieve2_context_t *s, void *my)
 {
-	struct my_context *m = (struct my_context *)my;
+	struct sort_context *m = (struct sort_context *)my;
 
 	trace(TRACE_INFO, "Action is REJECT: "
 		"REJECT message is [%s].",
@@ -152,24 +155,24 @@ int my_reject(sieve2_context_t *s, void *my)
 //	FIXME: how do we do this?
 //	send_bounce(my->messageidnr, message);
 
-	m->cancelkeep = 1;
+	m->result->cancelkeep = 1;
 	return SIEVE2_OK;
 }
 
-int my_discard(sieve2_context_t *s UNUSED, void *my)
+int sort_discard(sieve2_context_t *s UNUSED, void *my)
 {
-	struct my_context *m = (struct my_context *)my;
+	struct sort_context *m = (struct sort_context *)my;
 
 	trace(TRACE_INFO, "Action is DISCARD.");
 
-	m->cancelkeep = 1;
+	m->result->cancelkeep = 1;
 	return SIEVE2_OK;
 }
 
 // TODO: support the imapflags extension.
-int my_fileinto(sieve2_context_t *s, void *my)
+int sort_fileinto(sieve2_context_t *s, void *my)
 {
-	struct my_context *m = (struct my_context *)my;
+	struct sort_context *m = (struct sort_context *)my;
 	// const char * const * flags;
 	const char * mailbox;
 
@@ -178,25 +181,25 @@ int my_fileinto(sieve2_context_t *s, void *my)
 
 	trace(TRACE_INFO, "Action is FILEINTO: mailbox is [%s]", mailbox);
 
-	m->mailbox = mailbox;
+	m->result->dsn = sort_deliver_to_mailbox(m->message, m->user_idnr, mailbox, BOX_SORTING);
 
-	m->cancelkeep = 0;
+	m->result->cancelkeep = 1;
 	return SIEVE2_OK;
 }
 
-int my_keep(sieve2_context_t *s UNUSED, void *my)
+int sort_keep(sieve2_context_t *s UNUSED, void *my)
 {
-	struct my_context *m = (struct my_context *)my;
+	struct sort_context *m = (struct sort_context *)my;
 
 	trace(TRACE_INFO, "Action is KEEP.");
 
-	m->cancelkeep = 0;
+	m->result->cancelkeep = 0;
 	return SIEVE2_OK;
 }
 
-int my_errparse(sieve2_context_t *s, void *my)
+int sort_errparse(sieve2_context_t *s, void *my)
 {
-	struct my_context *m = (struct my_context *)my;
+	struct sort_context *m = (struct sort_context *)my;
 	const char *message;
 	int lineno;
 
@@ -206,18 +209,18 @@ int my_errparse(sieve2_context_t *s, void *my)
 	trace(TRACE_INFO, "Error is PARSE:"
 		"Line is [%d], Message is [%s]", lineno, message);
 
-	g_string_append_printf(m->errormsg, "Parse error on line [%d]: %s", lineno, message);
+	g_string_append_printf(m->result->errormsg, "Parse error on line [%d]: %s", lineno, message);
 
 //	FIXME: generate a message and put it into the INBOX
 //	of the script's owner, probably with an Urgent flag.
 
-	m->error_parse = 1;
+	m->result->error_parse = 1;
 	return SIEVE2_OK;
 }
 
-int my_errexec(sieve2_context_t *s, void *my)
+int sort_errexec(sieve2_context_t *s, void *my)
 {
-	struct my_context *m = (struct my_context *)my;
+	struct sort_context *m = (struct sort_context *)my;
 	const char *message;
 
 	message = sieve2_getvalue_string(s, "message");
@@ -225,18 +228,18 @@ int my_errexec(sieve2_context_t *s, void *my)
 	trace(TRACE_INFO, "Error is EXEC: "
 		"Message is [%s]", message);
 
-	g_string_append_printf(m->errormsg, "Execution error: %s", message);
+	g_string_append_printf(m->result->errormsg, "Execution error: %s", message);
 
 //	FIXME: generate a message and put it into the INBOX
 //	of the script's owner, probably with an Urgent flag.
 
-	m->error_runtime = 1;
+	m->result->error_runtime = 1;
 	return SIEVE2_OK;
 }
 
-int my_getscript(sieve2_context_t *s, void *my)
+int sort_getscript(sieve2_context_t *s, void *my)
 {
-	struct my_context *m = (struct my_context *)my;
+	struct sort_context *m = (struct sort_context *)my;
 	const char * path, * name;
 	int res;
 
@@ -258,7 +261,7 @@ int my_getscript(sieve2_context_t *s, void *my)
 		/* Read the script file given as an argument. */
 		res = db_get_sievescript_byname(m->user_idnr, m->script, &m->s_buf);
 		if (res != SIEVE2_OK) {
-			trace(TRACE_ERROR, "my_getscript: read_file() returns %d\n", res);
+			trace(TRACE_ERROR, "sort_getscript: read_file() returns %d\n", res);
 			return SIEVE2_ERROR_FAIL;
 		}
 		sieve2_setvalue_string(s, "script", m->s_buf);
@@ -269,23 +272,23 @@ int my_getscript(sieve2_context_t *s, void *my)
 	return SIEVE2_OK;
 }
 
-int my_getheader(sieve2_context_t *s, void *my)
+int sort_getheader(sieve2_context_t *s, void *my)
 {
-	struct my_context *m = (struct my_context *)my;
+	struct sort_context *m = (struct sort_context *)my;
 	char *header, *value = "";
 
 	header = sieve2_getvalue_string(s, "header");
 
-	// FIXME: Use GMIME to get a header.
+	value = dbmail_message_get_header(m->message, header);
 
 	sieve2_setvalue_string(s, "value", value);
 
 	return SIEVE2_OK;
 }
 
-int my_getenvelope(sieve2_context_t *s, void *my)
+int sort_getenvelope(sieve2_context_t *s, void *my)
 {
-	struct my_context *m = (struct my_context *)my;
+	struct sort_context *m = (struct sort_context *)my;
 
 	sieve2_setvalue_string(s, "envelope",
 		dbmail_message_get_envelope(m->message));
@@ -293,14 +296,14 @@ int my_getenvelope(sieve2_context_t *s, void *my)
 	return SIEVE2_OK;
 }
 
-int my_getbody(sieve2_context_t *s UNUSED, void *my UNUSED)
+int sort_getbody(sieve2_context_t *s UNUSED, void *my UNUSED)
 {
 	return SIEVE2_ERROR_UNSUPPORTED;
 }
 
-int my_getsize(sieve2_context_t *s, void *my)
+int sort_getsize(sieve2_context_t *s, void *my)
 {
-	struct my_context *m = (struct my_context *)my;
+	struct sort_context *m = (struct sort_context *)my;
 
 	sieve2_setvalue_int(s, "size",
 		dbmail_message_get_rfcsize(m->message));
@@ -311,113 +314,38 @@ int my_getsize(sieve2_context_t *s, void *my)
 /* END OF CALLBACKS */
 
 
-sieve2_callback_t my_callbacks[] = {
-	{ SIEVE2_ERRCALL_RUNTIME,       my_errexec     },
-	{ SIEVE2_ERRCALL_PARSE,         my_errparse    },
+sieve2_callback_t sort_callbacks[] = {
+	{ SIEVE2_ERRCALL_RUNTIME,       sort_errexec     },
+	{ SIEVE2_ERRCALL_PARSE,         sort_errparse    },
 
-	{ SIEVE2_ACTION_VACATION,       my_vacation    },
-	{ SIEVE2_ACTION_FILEINTO,       my_fileinto    },
-	{ SIEVE2_ACTION_REDIRECT,       my_redirect    },
-	{ SIEVE2_ACTION_DISCARD,        my_discard     },
-	{ SIEVE2_ACTION_REJECT,         my_reject      },
-	{ SIEVE2_ACTION_KEEP,           my_keep        },
+	{ SIEVE2_ACTION_VACATION,       sort_vacation    },
+	{ SIEVE2_ACTION_FILEINTO,       sort_fileinto    },
+	{ SIEVE2_ACTION_REDIRECT,       sort_redirect    },
+	{ SIEVE2_ACTION_DISCARD,        sort_discard     },
+	{ SIEVE2_ACTION_REJECT,         sort_reject      },
+	{ SIEVE2_ACTION_KEEP,           sort_keep        },
 
-	{ SIEVE2_SCRIPT_GETSCRIPT,      my_getscript   },
-	{ SIEVE2_MESSAGE_GETHEADER,     my_getheader    },
-	{ SIEVE2_MESSAGE_GETENVELOPE,   my_getenvelope },
-	{ SIEVE2_MESSAGE_GETBODY,       my_getbody     },
-	{ SIEVE2_MESSAGE_GETSIZE,       my_getsize     },
+	{ SIEVE2_SCRIPT_GETSCRIPT,      sort_getscript   },
+	{ SIEVE2_MESSAGE_GETHEADER,     sort_getheader    },
+	{ SIEVE2_MESSAGE_GETENVELOPE,   sort_getenvelope },
+	{ SIEVE2_MESSAGE_GETBODY,       sort_getbody     },
+	{ SIEVE2_MESSAGE_GETSIZE,       sort_getsize     },
 	{ 0, 0 } };
 
 
-/* Return 0 on script OK, 1 on script error, 2 on misc error. */
-int sort_validate(u64_t user_idnr, char *scriptname, char **errormsg)
+static int sort_teardown(sieve2_context_t **s2c,
+		struct sort_context **sc)
 {
-	int res, exitcode = 0;
+	assert(s2c != NULL);
+	assert(sc != NULL);
 
-	/* The contents of this function are taken from
-	 * the libSieve distribution, sv_test/example.c,
-	 * and are provided under an "MIT style" license.
-	 * */
-
-	my_context->script = scriptname;
-	my_context->user_idnr = user_idnr;
-
-	res = sieve2_alloc(&sieve2_context);
-	if (res != SIEVE2_OK) {
-		trace(TRACE_ERROR, "Error %d when calling sieve2_alloc: %s\n",
-			res, sieve2_errstr(res));
-		exitcode = 1;
-		goto freesieve;
-	}
-
-	res = sieve2_callbacks(sieve2_context, my_callbacks);
-	if (res != SIEVE2_OK) {
-		trace(TRACE_ERROR, "Error %d when calling sieve2_callbacks: %s\n",
-			res, sieve2_errstr(res));
-		exitcode = 1;
-		goto freesieve;
-	}
-
-	res = sieve2_validate(sieve2_context, my_context);
-	if (res != SIEVE2_OK) {
-		trace(TRACE_ERROR, "Error %d when calling sieve2_validate: %s\n",
-			res, sieve2_errstr(res));
-		exitcode = 1;
-		goto freesieve;
-	}
-
-	/* At this point the callbacks are called from within libSieve. */
-
-	exitcode |= my_context->error_parse;
-	exitcode |= my_context->error_runtime;
-	*errormsg = my_context->errormsg->str;
-
-freesieve:
-	if (my_context->s_buf)
-		dm_free(my_context->s_buf);
-
-	return exitcode;
-}
-
-int sort_connect(void)
-{
+	sieve2_context_t *sieve2_context = *s2c;
+	struct sort_context *sort_context = *sc;
 	int res;
 
-	res = sieve2_alloc(&sieve2_context);
-	if (res != SIEVE2_OK) {
-		trace(TRACE_ERROR, "Error %d when calling sieve2_alloc: %s\n",
-			res, sieve2_errstr(res));
-		sort_disconnect();
-		return DM_EGENERAL;
+	if (sort_context) {
+		dm_free(sort_context);
 	}
-
-	res = sieve2_callbacks(sieve2_context, my_callbacks);
-	if (res != SIEVE2_OK) {
-		trace(TRACE_ERROR, "Error %d when calling sieve2_callbacks: %s\n",
-			res, sieve2_errstr(res));
-		sort_disconnect();
-		return DM_EGENERAL;
-	}
-
-	my_context = dm_malloc(sizeof(struct my_context));
-	if (!my_context) {
-		sort_disconnect();
-		return DM_EGENERAL;
-	}
-	memset(my_context, 0, sizeof(struct my_context));
-
-	my_context->errormsg = g_string_new("");
-
-	return DM_SUCCESS;
-}
-
-int sort_disconnect(void)
-{
-	int res;
-
-	if (my_context)
-		dm_free(my_context);
 
 	res = sieve2_free(&sieve2_context);
 	if (res != SIEVE2_OK) {
@@ -426,7 +354,98 @@ int sort_disconnect(void)
 		return DM_EGENERAL;
 	}
 
+	*s2c = NULL;
+	*sc = NULL;
+
 	return DM_SUCCESS;
+}
+
+static int sort_startup(sieve2_context_t **s2c,
+		struct sort_context **sc)
+{
+	assert(s2c != NULL);
+	assert(sc != NULL);
+
+	sieve2_context_t *sieve2_context = NULL;
+	struct sort_context *sort_context = NULL;
+	int res;
+
+	res = sieve2_alloc(&sieve2_context);
+	if (res != SIEVE2_OK) {
+		trace(TRACE_ERROR, "Error %d when calling sieve2_alloc: %s\n",
+			res, sieve2_errstr(res));
+		return DM_EGENERAL;
+	}
+
+	res = sieve2_callbacks(sieve2_context, sort_callbacks);
+	if (res != SIEVE2_OK) {
+		trace(TRACE_ERROR, "Error %d when calling sieve2_callbacks: %s\n",
+			res, sieve2_errstr(res));
+		sort_teardown(&sieve2_context, &sort_context);
+		return DM_EGENERAL;
+	}
+
+	sort_context = dm_malloc(sizeof(struct sort_context));
+	if (!sort_context) {
+		sort_teardown(&sieve2_context, &sort_context);
+		return DM_EGENERAL;
+	}
+	memset(sort_context, 0, sizeof(struct sort_context));
+
+	*s2c = sieve2_context;
+	*sc = sort_context;
+
+	return DM_SUCCESS;
+}
+
+
+/* Return 0 on script OK, 1 on script error, 2 on misc error. */
+sort_result_t *sort_validate(u64_t user_idnr, char *scriptname)
+{
+	int res, exitnull = 0;
+	struct sort_result *result = NULL;
+	sieve2_context_t *sieve2_context;
+	struct sort_context *sort_context;
+
+	/* The contents of this function are taken from
+	 * the libSieve distribution, sv_test/example.c,
+	 * and are provided under an "MIT style" license.
+	 * */
+
+	if (sort_startup(&sieve2_context, &sort_context) != DM_SUCCESS) {
+		return NULL;
+	}
+
+	sort_context->script = scriptname;
+	sort_context->user_idnr = user_idnr;
+	sort_context->result = dm_malloc(sizeof(struct sort_result));
+	if (! sort_context->result) {
+		return NULL;
+	}
+	sort_context->result->errormsg = g_string_new("");
+
+	res = sieve2_validate(sieve2_context, sort_context);
+	if (res != SIEVE2_OK) {
+		trace(TRACE_ERROR, "Error %d when calling sieve2_validate: %s\n",
+			res, sieve2_errstr(res));
+		exitnull = 1;
+		goto freesieve;
+	}
+
+	/* At this point the callbacks are called from within libSieve. */
+
+freesieve:
+	if (sort_context->s_buf)
+		dm_free(sort_context->s_buf);
+
+	if (exitnull)
+		result = NULL;
+	else
+		result = sort_context->result;
+
+	sort_teardown(&sieve2_context, &sort_context);
+
+	return result;
 }
 
 /* Pull up the relevant sieve scripts for this
@@ -439,55 +458,96 @@ int sort_disconnect(void)
  * such as dbmail-lmtpd, the daemon should
  * finish storing the message and restart.
  * */
-int sort_process(u64_t user_idnr, struct DbmailMessage *message)
+sort_result_t *sort_process(u64_t user_idnr, struct DbmailMessage *message)
 {
-	int res, exitcode = 0;
+	int res, exitnull = 0;
+	struct sort_result *result = NULL;
+	sieve2_context_t *sieve2_context;
+	struct sort_context *sort_context;
 
 	/* The contents of this function are taken from
 	 * the libSieve distribution, sv_test/example.c,
 	 * and are provided under an "MIT style" license.
 	 * */
 
-	my_context->message = message;
-	my_context->user_idnr = user_idnr;
+	if (sort_startup(&sieve2_context, &sort_context) != DM_SUCCESS) {
+		return NULL;
+	}
 
-	res = db_get_sievescript_active(user_idnr, &my_context->script);
+	sort_context->message = message;
+	sort_context->user_idnr = user_idnr;
+	sort_context->result = dm_malloc(sizeof(struct sort_result));
+	if (! sort_context->result) {
+		return NULL;
+	}
+	sort_context->result->errormsg = g_string_new("");
+
+	res = db_get_sievescript_active(user_idnr, &sort_context->script);
 	if (res != 0) {
 		trace(TRACE_ERROR, "Error %d when calling db_getactive_sievescript\n", res);
-		exitcode = 1;
+		exitnull = 1;
 		goto freesieve;
 	}
 
-	res = sieve2_execute(sieve2_context, my_context);
+	res = sieve2_execute(sieve2_context, sort_context);
 	if (res != SIEVE2_OK) {
 		trace(TRACE_ERROR, "Error %d when calling sieve2_execute: %s\n",
 			res, sieve2_errstr(res));
-		exitcode = 1;
+		exitnull = 1;
 	}
-	if (!my_context->cancelkeep) {
+	if (! sort_context->result->cancelkeep) {
 		trace(TRACE_INFO, "  no actions taken; keeping message.\n");
-		my_keep(NULL, my_context);
+		sort_keep(NULL, sort_context);
 	}
 
 	/* At this point the callbacks are called from within libSieve. */
 
-	exitcode |= my_context->error_parse;
-	exitcode |= my_context->error_runtime;
-
 freesieve:
-	if (my_context->s_buf)
-		dm_free(my_context->s_buf);
+	if (sort_context->s_buf)
+		dm_free(sort_context->s_buf);
+	if (sort_context->script)
+		dm_free(sort_context->script);
 
-	return exitcode;
+	if (exitnull)
+		result = NULL;
+	else
+		result = sort_context->result;
+
+	sort_teardown(&sieve2_context, &sort_context);
+
+	return result;
 }
 
-int sort_get_cancelkeep(void)
+/* SORT RESULT INTERFACE */
+
+void sort_free_result(sort_result_t *result)
 {
-	return my_context->cancelkeep;
+	if (result == NULL) return;
+	g_string_free(result->errormsg, TRUE);
+	dm_free(result);
 }
 
-const char * sort_get_mailbox(void)
+int sort_get_cancelkeep(sort_result_t *result)
 {
-	return my_context->mailbox;
+	if (result == NULL) return 0;
+	return result->cancelkeep;
+}
+
+const char * sort_get_mailbox(sort_result_t *result)
+{
+	assert(result != NULL);
+	return result->mailbox;
+}
+
+const char * sort_get_errormsg(sort_result_t *result)
+{
+	assert(result != NULL);
+	return result->errormsg->str;
+}
+
+int sort_get_error(sort_result_t *result)
+{
+	assert(result != NULL);
+	return result->errormsg->len;
 }
 

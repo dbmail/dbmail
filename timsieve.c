@@ -87,7 +87,6 @@ int tims_handle_connection(clientinfo_t * ci)
 	session.totalmessages = 0;
 	session.virtual_totalmessages = 0;
 
-
 	/* getting hostname */
 	gethostname(myhostname, 64);
 	myhostname[63] = 0;	/* make sure string is terminated */
@@ -461,102 +460,84 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 						u64_t scriptlen;	/* Actually, script length must be 32-bit unsigned int. */
 						char tmpcharlen[11];	/* A 32-bit unsigned int is ten decimal digits in length. */
 
-						strncpy(tmpcharlen,
-							tmpleft,
-							(10 <
-							 tmplen ? 10 :
-							 tmplen));
-						tmpcharlen[(10 <
-							    tmplen ? 10 :
-							    tmplen)] =
-						    '\0';
+						strncpy(tmpcharlen, tmpleft,
+							(10 < tmplen ? 10 : tmplen));
+						tmpcharlen[(10 < tmplen ? 10 : tmplen)] = '\0';
 						dm_free(tmpleft);
 
 						scriptlen =
-						    strtoull(tmpcharlen,
-							     NULL, 10);
+						    strtoull(tmpcharlen, NULL, 10);
 						trace(TRACE_INFO,
 						      "%s, %s: Client sending script of length [%llu]",
-						      __FILE__,
-						      __func__,
-						      scriptlen);
+						      __FILE__, __func__, scriptlen);
 						if (scriptlen >= UINT_MAX) {
 							trace(TRACE_INFO,
 							      "%s, %s: Length [%llu] is larger than UINT_MAX [%u]",
-							      __FILE__,
-							      __func__,
-							      scriptlen,
+							      __FILE__, __func__, scriptlen,
 							      UINT_MAX);
-							fprintf((FILE *)
-								stream,
+							fprintf((FILE *) stream,
 								"NO \"Invalid script length.\"\r\n");
 						} else {
 							char *f_buf = NULL;
 
 							if (0 !=
-							    read_from_stream
-							    ((FILE *)
-							     instream,
-							     &f_buf,
-							     scriptlen)) {
-								trace
-								    (TRACE_INFO,
+							    read_from_stream ((FILE *) instream,
+							     &f_buf, scriptlen)) {
+								trace (TRACE_INFO,
 								     "%s, %s: Error reading script with read_from_stream()",
-								     __FILE__,
-								     __func__);
+								     __FILE__, __func__);
 								fprintf((FILE *) stream, "NO \"Error reading script.\"\r\n");
 							} else {
 								if (0 !=
 								    db_check_sievescript_quota
-								    (session->
-								     useridnr,
-								     scriptlen))
+								    (session->useridnr, scriptlen))
 								{
-									trace
-									    (TRACE_INFO,
-									     "%s, %s: Script exceeds user's quota, dumping it",
-									     __FILE__,
-									     __func__);
-									fprintf
-									    ((FILE *) stream, "NO \"Script exceeds available space.\"\r\n");
+									trace(TRACE_INFO,
+										"%s, %s: Script exceeds user's quota, dumping it",
+									     __FILE__, __func__);
+									fprintf((FILE *) stream,
+										"NO \"Script exceeds available space.\"\r\n");
 								} else {
-									char *errmsg = NULL;
+									sort_result_t *sort_result;
 
 									/* Store the script temporarily,
 									 * validate it, then rename it. */
 									if (0 != db_add_sievescript(session->useridnr, "@!temp-script!@", f_buf)) {
 										// FIXME: Error.
 									}
-									if (0 != sort_validate(session->useridnr, "@!temp-script!@", &errmsg)) {
+									sort_result = sort_validate(session->useridnr, "@!temp-script!@");
+									if (sort_result == NULL) {
+										trace
+										    (TRACE_INFO, "%s, %s: Error inserting script",
+										     __FILE__, __func__);
+										fprintf
+										    ((FILE *) stream, "NO \"Error inserting script.\"\r\n");
+									} else if (sort_get_error(sort_result) > 0) {
 										trace
 										    (TRACE_INFO,
 										     "%s, %s: Script has syntax errrors: [%s]",
-										     __FILE__,
-										     __func__,
-										     errmsg);
+										     __FILE__, __func__, sort_get_errormsg(sort_result));
 										fprintf
-										    ((FILE *) stream, "NO \"Script error: %s.\"\r\n", errmsg);
+										    ((FILE *) stream, "NO \"Script error: %s.\"\r\n",
+													sort_get_errormsg(sort_result));
 									} else {
 										/* According to the draft RFC, a script with the same
 										 * name as an existing script should [atomically] replace it. */
 										if (0 != db_rename_sievescript(session->useridnr, "@!temp-script!@", scriptname)) {
 											trace
-											    (TRACE_INFO,
-											     "%s, %s: Error inserting script",
-											     __FILE__,
-											     __func__);
+											    (TRACE_INFO, "%s, %s: Error inserting script",
+											     __FILE__, __func__);
 											fprintf
 											    ((FILE *) stream, "NO \"Error inserting script.\"\r\n");
 										} else {
 											trace
-											    (TRACE_INFO,
-											     "%s, %s: Script successfully received",
-											     __FILE__,
-											     __func__);
+											    (TRACE_INFO, "%s, %s: Script successfully received",
+											     __FILE__, __func__);
 											fprintf
 											    ((FILE *) stream, "OK \"Script successfully received.\"\r\n");
 										}
 									}
+									sort_free_result(sort_result);
 									dm_free
 									    (f_buf);
 								}

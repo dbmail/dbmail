@@ -44,17 +44,11 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message,
 
 	/* Sieve. */
 	if (0) { // FIXME: I think this should be configurable.
-		sort_connect();
-		
-		// FIXME: This doesn't translate correctly to DSN's.
-		ret = sort_process(useridnr, message);
-
-		cancelkeep = sort_get_cancelkeep();
-		// FIXME: Who's going to free this?
-		mailbox = dm_strdup(sort_get_mailbox());
-		source = BOX_SORTING;
-
-		sort_disconnect();
+		sort_result_t *sort_result;
+		sort_result = sort_process(useridnr, message);
+		// FIXME: Add error handling here.
+		cancelkeep = sort_get_cancelkeep(sort_result);
+		sort_free_result(sort_result);
 	}
 
 	/* Sieve actions:
@@ -67,7 +61,7 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message,
 	 * e Vacation - share with the auto reply code.
 	 */
 
-	if (! cancelkeep) {
+	if (cancelkeep) {
 		// The implicit keep has been cancelled.
 		// This may necessarily imply that the message
 		// is being discarded -- dropped flat on the floor.

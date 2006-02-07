@@ -26,6 +26,8 @@
 
 #define MAX_SIEVE_SCRIPTNAME 100
 
+typedef struct sort_result sort_result_t;
+
 dsn_class_t sort_and_deliver(struct DbmailMessage *self,
 		const char *destination, u64_t useridnr,
 		const char *mailbox, mailbox_source_t source,
@@ -34,13 +36,13 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *self,
 dsn_class_t sort_deliver_to_mailbox(struct DbmailMessage *message,
 		u64_t useridnr, const char *mailbox, mailbox_source_t source);
 
-int sort_process(u64_t user_idnr, struct DbmailMessage *message);
-int sort_validate(u64_t user_idnr, char *scriptname, char **errmsg);
+sort_result_t *sort_process(u64_t user_idnr, struct DbmailMessage *message);
+sort_result_t *sort_validate(u64_t user_idnr, char *scriptname);
+void sort_free_result(sort_result_t *sort_result);
 
-int sort_connect(void);
-int sort_disconnect(void);
-
-int sort_get_cancelkeep(void);
-const char * sort_get_mailbox(void);
+int sort_get_cancelkeep(sort_result_t *sort_result);
+const char * sort_get_mailbox(sort_result_t *sort_result);
+const char * sort_get_errormsg(sort_result_t *sort_result);
+int sort_get_error(sort_result_t *sort_result);
 
 #endif

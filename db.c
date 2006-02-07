@@ -537,13 +537,13 @@ int db_get_sievescript_active(u64_t user_idnr, char **scriptname)
 	}
 
 	db_free_result();
-	return n;
+	return DM_SUCCESS;
 }
 
 int db_get_sievescript_listall(u64_t user_idnr, struct dm_list *scriptlist)
 {
-	int i,n;
-	struct ssinfo *info;
+	int i, n;
+
 	dm_list_init(scriptlist);
 	snprintf(query, DEF_QUERYSIZE,
 		"SELECT name,active from %ssievescripts where "
@@ -557,37 +557,57 @@ int db_get_sievescript_listall(u64_t user_idnr, struct dm_list *scriptlist)
 		return DM_EQUERY;
 	}
 
-	i = 0;
-	n = db_num_rows();
+	for (i = 0, n = db_num_rows(); i < n; i++) {
+		struct ssinfo info;
 
-	while(i < n) {
-		info = (struct ssinfo *)dm_malloc(sizeof(struct ssinfo));
-		info->name = dm_strdup(db_get_result(i, 0));   
-		info->active = db_get_result_int(i, 1);
-		dm_list_nodeadd(scriptlist,info,sizeof(struct ssinfo));	
-		i++;
+		info.name = dm_strdup(db_get_result(i, 0));   
+		info.active = db_get_result_int(i, 1);
+
+		dm_list_nodeadd(scriptlist, &info, sizeof(struct ssinfo));	
 	}
 
 	db_free_result();
 	return DM_SUCCESS;
 }
 
+/* According to the draft RFC, a script with the same
+ * name as an existing script should *atomically* replace it.
+ *
+ * We'll use a transaction to make the delete/rename atomic.
+ */
 int db_rename_sievescript(u64_t user_idnr, char *scriptname, char *newname)
 {
 	char *escaped_scriptname = (char *)dm_malloc(2*strlen(scriptname)+1);
 	char *escaped_newname = (char *)dm_malloc(2*strlen(newname)+1);
 
+	db_begin_transaction();
 	db_escape_string(escaped_scriptname, scriptname, strlen(scriptname));
 	db_escape_string(escaped_newname, newname, strlen(newname));
+
 	snprintf(query, DEF_QUERYSIZE,
 		"SELECT COUNT(*) FROM %ssievescripts "
 		"WHERE owner_idnr = %llu AND name = '%s'",
 		DBPFX,user_idnr,escaped_newname);
 
-	if (db_query(query) == 0 && db_get_result_int(0,0) > 0) {
+	if (db_query(query) == -1 ) {
+		db_rollback_transaction();
 		dm_free(escaped_scriptname);
 		dm_free(escaped_newname);
-		return -3;
+		return DM_EQUERY;
+	}
+
+	if (db_get_result_int(0,0) > 0) {
+		snprintf(query, DEF_QUERYSIZE,
+			"DELETE FROM %ssievescripts "
+			"WHERE owner_idnr = %llu AND name = '%s'",
+			DBPFX,user_idnr,escaped_newname);
+
+		if (db_query(query) == -1 ) {
+			db_rollback_transaction();
+			dm_free(escaped_scriptname);
+			dm_free(escaped_newname);
+			return DM_EQUERY;
+		}
 	}
 
 	snprintf(query, DEF_QUERYSIZE,
@@ -601,9 +621,11 @@ int db_rename_sievescript(u64_t user_idnr, char *scriptname, char *newname)
 		trace(TRACE_ERROR, "%s,%s: error replacing sievescript '%s' "
 			"for user_idnr [%llu]", __FILE__, __func__,
 			scriptname, user_idnr);
+		db_rollback_transaction();
 		return DM_EQUERY;
 	}
 
+	db_commit_transaction();
 	return DM_SUCCESS;
 }
 
@@ -611,21 +633,49 @@ int db_add_sievescript(u64_t user_idnr, char *scriptname, char *script)
 {
 	char *escaped_scriptname = (char *)dm_malloc(2*strlen(scriptname)+1);
 
+	db_begin_transaction();
 	db_escape_string(escaped_scriptname, scriptname, strlen(scriptname));
+
+	snprintf(query, DEF_QUERYSIZE,
+		"SELECT COUNT(*) FROM %ssievescripts "
+		"WHERE owner_idnr = %llu AND name = '%s'",
+		DBPFX,user_idnr,escaped_scriptname);
+
+	if (db_query(query) == -1 ) {
+		db_rollback_transaction();
+		dm_free(escaped_scriptname);
+		return DM_EQUERY;
+	}
+
+	if (db_get_result_int(0,0) > 0) {
+		snprintf(query, DEF_QUERYSIZE,
+			"DELETE FROM %ssievescripts "
+			"WHERE owner_idnr = %llu AND name = '%s'",
+			DBPFX,user_idnr,escaped_scriptname);
+
+		if (db_query(query) == -1 ) {
+			db_rollback_transaction();
+			dm_free(escaped_scriptname);
+			return DM_EQUERY;
+		}
+	}
+
 	snprintf(query, DEF_QUERYSIZE,
 		"INSERT into %ssievescripts "
-		"(owner_idnr, name, script, active)"
+		"(owner_idnr, name, script, active) "
 		"values (%llu, '%s', '%s', 0)",
 		DBPFX,user_idnr,escaped_scriptname,script);
 	dm_free(escaped_scriptname);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error adding sievescript '%s' "
-		"for user_idnr [%llu]", __FILE__, __func__,
-		scriptname, user_idnr);
+			"for user_idnr [%llu]", __FILE__, __func__,
+			scriptname, user_idnr);
+		db_rollback_transaction();
 		return DM_EQUERY;
 	}
 
+	db_commit_transaction();
 	return DM_SUCCESS;
 }
 
@@ -654,10 +704,25 @@ int db_activate_sievescript(u64_t user_idnr, char *scriptname)
 {
 	char *escaped_scriptname = (char *)dm_malloc(2*strlen(scriptname)+1);
 
+	db_begin_transaction();
 	db_escape_string(escaped_scriptname, scriptname, strlen(scriptname));
 	snprintf(query, DEF_QUERYSIZE,
-		"UPDATE %ssievescripts set active = 1 "
-		"where owner_idnr = %llu and name = '%s'",
+		"UPDATE %ssievescripts SET active = 0 "
+		"WHERE owner_idnr = %llu ",
+		DBPFX,user_idnr);
+
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: error activating sievescript '%s' "
+			"for user_idnr [%llu]", __FILE__, __func__,
+			scriptname, user_idnr);
+		dm_free(escaped_scriptname);
+		db_rollback_transaction();
+		return DM_EQUERY;
+	}
+
+	snprintf(query, DEF_QUERYSIZE,
+		"UPDATE %ssievescripts SET active = 1 "
+		"WHERE owner_idnr = %llu AND name = '%s'",
 		DBPFX,user_idnr,escaped_scriptname);
 	dm_free(escaped_scriptname);
 
@@ -665,8 +730,10 @@ int db_activate_sievescript(u64_t user_idnr, char *scriptname)
 		trace(TRACE_ERROR, "%s,%s: error activating sievescript '%s' "
 		"for user_idnr [%llu]", __FILE__, __func__,
 		scriptname, user_idnr);
+		db_rollback_transaction();
 		return DM_EQUERY;
 	}
+	db_commit_transaction();
 
 	return DM_SUCCESS;
 }
