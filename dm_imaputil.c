@@ -290,6 +290,7 @@ void _structure_part_multipart(GMimeObject *part, gpointer data, gboolean extens
 	GMimeMultipart *multipart;
 	GMimeObject *subpart, *object;
 	GList *list = NULL;
+	GList *alist = NULL;
 	GString *s;
 	int i,j;
 	const GMimeContentType *type;
@@ -316,11 +317,11 @@ void _structure_part_multipart(GMimeObject *part, gpointer data, gboolean extens
 	/* loop over parts for base info */
 	for (j=0; j<i; j++) {
 		subpart = g_mime_multipart_get_part(multipart,j);
-		_structure_part_handle_part(subpart,data,extension);
+		_structure_part_handle_part(subpart,&alist,extension);
 	}
 	
 	/* sub-type */
-	*(GList **)data = g_list_append_printf(*(GList **)data,"\"%s\"", type->subtype);
+	alist = g_list_append_printf(alist,"\"%s\"", type->subtype);
 
 	/* extension data (only for multipart, in case of BODYSTRUCTURE command argument) */
 	if (extension) {
@@ -334,12 +335,19 @@ void _structure_part_multipart(GMimeObject *part, gpointer data, gboolean extens
 		list = imap_append_header_as_string(list,object,"Content-Location");
 		s = g_list_join(list," ");
 		
-		*(GList **)data = (gpointer)g_list_append(*(GList **)data,s->str);
+		alist = g_list_append(alist,s->str);
 
 		g_list_foreach(list,(GFunc)g_free,NULL);
 		g_list_free(list);
 		g_string_free(s,FALSE);
 	}
+
+	/* done*/
+	*(GList **)data = (gpointer)g_list_append(*(GList **)data,dbmail_imap_plist_as_string(alist));
+	
+	g_list_foreach(alist,(GFunc)g_free,NULL);
+	g_list_free(alist);
+
 	
 }
 void _structure_part_message_rfc822(GMimeObject *part, gpointer data, gboolean extension)
