@@ -307,6 +307,16 @@ START_TEST(test_imap_get_structure)
 	g_free(result);
 	dbmail_message_free(message);
 
+	/* multipart alternative */
+	message = dbmail_message_new();
+	message = dbmail_message_init_with_string(message, g_string_new(multipart_alternative));
+	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
+	strncpy(expect,"(((\"TEXT\" \"PLAIN\" (\"CHARSET\" \"ISO-8859-1\") NIL NIL \"7BIT\" 291 9 NIL NIL NIL NIL)(\"TEXT\" \"HTML\" (\"CHARSET\" \"ISO-8859-1\") NIL NIL \"7BIT\" 771 16 NIL NIL NIL NIL) \"ALTERNATIVE\" (\"BOUNDARY\" \"------------040302030903000400040101\") NIL NIL NIL)(\"IMAGE\" \"JPEG\" (\"NAME\" \"jesse_2.jpg\") NIL NIL \"BASE64\" 54726 NIL (\"INLINE\" (\"FILENAME\" \"jesse_2.jpg\")) NIL NIL) \"MIXED\" (\"BOUNDARY\" \"------------050000030206040804030909\") NIL NIL NIL))",1024);
+	printf("%s\n%s\n", result, expect);
+
+	g_free(result);
+	dbmail_message_free(message);
+	
 	/* text/plain */
 	message = dbmail_message_new();
 	message = dbmail_message_init_with_string(message, g_string_new(rfc822));
