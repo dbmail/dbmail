@@ -1,3 +1,21 @@
+2006-02-03  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_deliver.c, check_dbmail_imapd.c, db.c, dbmail-imapsession.c, 
+	  dbmail-message.c, dbmail.conf, dbmail.h, dbmailtypes.h, imap4.h, 
+	  imapcommands.c, mime.c, mime.h, misc.c, misc.h, serverchild.c, 
+	  test-scripts/testimap.py, timsieved.c:
+	resync
+	* debian/changelog, debian/rules, imap4.h:
+	enable QUOTA in capability string
+	* ChangeLog, acinclude.m4, config.c, configure.in, db.c, db.h, 
+	  dbmail-message.c, dbmail-message.h, dbmail-user.c, dbmail.conf, 
+	  debian/rules, modules/dbmysql.c, modules/dbpgsql.c, 
+	  modules/sortsieve.c, pipe.c, sievecmd.c, sort.c, sort.h, 
+	  sortmodule.c, sql/postgresql/add_replycache.pgsql:
+	resync git tree
+	* dbmail-mailbox.c, debian/rules:
+	fix false positive in search
+
 2006-01-29  Aaron Stone  <aaron@serendipity.cx>
 
 	* sort.h, sort.c, sortmodule.c, modules/sortsieve.c:
