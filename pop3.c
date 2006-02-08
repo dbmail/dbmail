@@ -79,7 +79,7 @@ const char *commands[] = {
 
 const char validchars[] =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    "_.!@#$%^&*()-+=~[]{}<>:;\\/ ";
+    ",?_.!@#$%^&*()-+=~[]{}<>:;\\/ ";
 
 
 int pop3_handle_connection(clientinfo_t * ci)
