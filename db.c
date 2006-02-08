@@ -2441,6 +2441,7 @@ int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
 			}
 		}
 		g_free(mailbox_name);
+		dm_free(simple_mailbox_name);
 	}
 	dm_free(all_mailbox_names);
 	dm_free(all_mailboxes);

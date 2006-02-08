@@ -387,6 +387,7 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 	char salt[13];
 	char cryptres[35];
 	char real_username[DM_USERNAME_LEN];
+	char *md5str;
 	int result;
 
 	assert(user_idnr != NULL);
@@ -458,7 +459,9 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 			      "%s,%s: validating using MD5 digest comparison",
 			      __FILE__, __func__);
 			/* redundant statement: query_result = db_get_result(0, 1); */
-			is_validated = (strncmp((char *)makemd5((unsigned char *)password), query_result, 32) == 0) ? 1 : 0;
+			md5str = (char *)makemd5((unsigned char *)password);
+			is_validated = (strncmp(md5str, query_result, 32) == 0) ? 1 : 0;
+			dm_free(md5str);
 		} else {
 			trace(TRACE_DEBUG,
 			      "%s, %s: validating using MD5 hash comparison",
@@ -475,7 +478,9 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 		      "%s,%s: validating using MD5 digest comparison",
 		      __FILE__, __func__);
 		query_result = db_get_result(0, 1);
-		is_validated = (strncmp((char *)makemd5((unsigned char *)password), query_result, 32) == 0) ? 1 : 0;
+		md5str = (char *)makemd5((unsigned char *)password);
+		is_validated = (strncmp(md5str, query_result, 32) == 0) ? 1 : 0;
+		dm_free(md5str);
 	}
 
 	if (is_validated) {
@@ -495,8 +500,8 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 	return (is_validated ? 1 : 0);
 }
 
-u64_t auth_md5_validate(clientinfo_t *ci UNUSED, char *username, unsigned char *md5_apop_he,
-			char *apop_stamp)
+u64_t auth_md5_validate(clientinfo_t *ci UNUSED, char *username,
+		unsigned char *md5_apop_he, char *apop_stamp)
 {
 	/* returns useridnr on OK, 0 on validation failed, -1 on error */
 	char *checkstring;
@@ -549,7 +554,7 @@ u64_t auth_md5_validate(clientinfo_t *ci UNUSED, char *username, unsigned char *
 	      "%s,%s: validating md5_apop_we=[%s] md5_apop_he=[%s]",
 	      __FILE__, __func__, md5_apop_we, md5_apop_he);
 
-	if (strcmp((char *)md5_apop_he, (char *)makemd5((unsigned char *)checkstring)) == 0) {
+	if (strcmp((char *)md5_apop_he, md5_apop_we) == 0) {
 		trace(TRACE_MESSAGE,
 		      "%s,%s: user [%s] is validated using APOP", __FILE__,
 		      __func__, username);
@@ -558,6 +563,7 @@ u64_t auth_md5_validate(clientinfo_t *ci UNUSED, char *username, unsigned char *
 		user_idnr =
 		    (query_result) ? strtoull(query_result, NULL, 10) : 0;
 		db_free_result();
+		dm_free(md5_apop_we);
 		dm_free(checkstring);
 
 		/* log login in the dbase */
@@ -578,6 +584,7 @@ u64_t auth_md5_validate(clientinfo_t *ci UNUSED, char *username, unsigned char *
 	      __FILE__, __func__, username);
 
 	db_free_result();
+	dm_free(md5_apop_we);
 	dm_free(checkstring);
 	return 0;
 }

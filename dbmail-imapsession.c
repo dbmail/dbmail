@@ -1690,6 +1690,8 @@ char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 			}
 
 			/* add this parenthesis to the arg list and continue */
+			/* FIXME: this leaks memory as we have no way of freeing these
+					pointers */
 			if (!  (the_args[nargs] = (char *) dm_malloc(sizeof(" ")))) {
 				/* out of mem */
 				g_strfreev(the_args);
