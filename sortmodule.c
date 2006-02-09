@@ -15,7 +15,7 @@
 #include "sort.h"
 #include "sortmodule.h"
 
-sort_func_t *sort;
+sort_func_t *sort = NULL;
 
 extern db_param_t _db_params;
 
@@ -73,11 +73,12 @@ int sort_load_driver(void)
 		return -1;
 	}
 
-	if (!g_module_symbol(module, "sort_connect",                (gpointer)&sort->connect                )
-	||  !g_module_symbol(module, "sort_disconnect",             (gpointer)&sort->disconnect             )
+	if (!g_module_symbol(module, "sort_process",                (gpointer)&sort->process                )
 	||  !g_module_symbol(module, "sort_validate",               (gpointer)&sort->validate               )
-	||  !g_module_symbol(module, "sort_process",                (gpointer)&sort->process                )
+	||  !g_module_symbol(module, "sort_free_result",            (gpointer)&sort->free_result            )
 	||  !g_module_symbol(module, "sort_get_cancelkeep",         (gpointer)&sort->get_cancelkeep         )
+	||  !g_module_symbol(module, "sort_get_errormsg",           (gpointer)&sort->get_errormsg           )
+	||  !g_module_symbol(module, "sort_get_error",              (gpointer)&sort->get_error              )
 	||  !g_module_symbol(module, "sort_get_mailbox",            (gpointer)&sort->get_mailbox            )) {
 		trace(TRACE_FATAL, "sort_init: cannot find function: %s: %s", lib, g_module_error());
 		return -2;
@@ -86,30 +87,23 @@ int sort_load_driver(void)
 	return 0;
 }
 
-/* This is the first sort_* call anybody should make. */
-int sort_connect(void)
+int sort_process(u64_t user_idnr, struct DbmailMessage *message)
 {
-	sort_load_driver();
-	return sort->connect();
+	if (!sort)
+		sort_load_driver();
+	return sort->process(user_idnr, message);
 }
 
-/* But sometimes this gets called after help text or an
- * error but without a matching sort_connect before it. */
-int sort_disconnect(void)
+int sort_validate(u64_t user_idnr, char *scriptname)
 {
-	if (!sort) return 0;
-	return sort->disconnect();
+	if (!sort)
+		sort_load_driver();
+	return sort->validate(user_idnr, scriptname);
 }
 
-int sort_validate(u64_t user_idnr, char *scriptname, char **errmsg)
+void sort_free_result(sort_result_t *result)
 {
-	return sort->validate(user_idnr, scriptname, errmsg);
-}
-
-int sort_process(u64_t user_idnr, struct DbmailMessage *message,
-		const char *fromaddr)
-{
-	return sort->process(user_idnr, message, fromaddr);
+	return sort->free_result();
 }
 
 int sort_get_cancelkeep(void)
@@ -120,5 +114,15 @@ int sort_get_cancelkeep(void)
 const char * sort_get_mailbox(void)
 {
 	return sort->get_mailbox();
+}
+
+const char * sort_get_errormsg(sort_result_t *result)
+{
+	return sort->get_errormsg();
+}
+
+int sort_get_error(sort_result_t *result)
+{
+	return sort->get_error();
 }
 

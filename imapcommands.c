@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: imapcommands.c 1961 2006-01-23 21:54:48Z paul $
+/* $Id: imapcommands.c 1977 2006-02-08 06:36:39Z aaron $
  *
  * imapcommands.c
  * 
@@ -813,10 +813,10 @@ int _ic_list(struct ImapSession *self)
 	char *pattern;
 	char *thisname = list_is_lsub ? "LSUB" : "LIST";
 	
-	mailbox_t *mb = (mailbox_t *)dm_malloc(sizeof(mailbox_t));
-	memset(mb,0,sizeof(mailbox_t));
+	mailbox_t *mb = NULL;
 	GList * plist = NULL;
 	gchar * pstring;
+
 
 	if (!check_state_and_args(self, thisname, 2, 2, IMAPCS_AUTHENTICATED))
 		return 1;
@@ -861,6 +861,12 @@ int _ic_list(struct ImapSession *self)
 		return 1;
 	}
 
+	if( (mb = (mailbox_t *)dm_malloc ( sizeof(mailbox_t) ) ) == NULL) {
+		trace(TRACE_ERROR, "%s,%s: out-of-memory error.", __FILE__, __func__);
+		return -1;
+	}
+	memset(mb,0,sizeof(mailbox_t));
+
 	for (i = 0; i < nchildren; i++) {
 		if ((db_getmailbox_list_result(children[i], ud->userid, mb) != 0))
 			continue;
@@ -890,7 +896,9 @@ int _ic_list(struct ImapSession *self)
 		dm_free(children);
 
 	g_free(pattern);
+	dm_free(mb);
 	dbmail_imap_session_printf(self, "%s OK %s completed\r\n", self->tag, thisname);
+
 	return 0;
 }
 

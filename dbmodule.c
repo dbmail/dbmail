@@ -15,7 +15,7 @@
 #include "db.h"
 #include "dbmodule.h"
 
-db_func_t *db;
+db_func_t *db = NULL;
 
 extern db_param_t _db_params;
 

@@ -233,7 +233,13 @@ int db_query(const char *the_query)
 				      mysql_error(&conn), the_query);
 				return DM_EQUERY;
 			}
-			
+		
+			if(res != NULL) {
+				trace(TRACE_DEBUG, "%s,%s: res was not freed"
+						" after the previous query!",
+						__FILE__, __func__);
+				db_free_result();
+			}	
 			res = mysql_store_result(&conn);
 			res_changed = 1;
 			

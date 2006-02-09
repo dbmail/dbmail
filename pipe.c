@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: pipe.c 1970 2006-01-30 01:23:40Z aaron $
+/* $Id: pipe.c 1976 2006-02-07 21:28:50Z aaron $
  *
  * Functions for reading the pipe from the MTA */
 
@@ -428,8 +428,10 @@ int insert_messages(struct DbmailMessage *message,
 	u64_t msgsize;
 
 	/* Only the last step of the returnpath is used. */
-	if ((ret_path = dm_list_getstart(returnpath)))
+	if ((ret_path = dm_list_getstart(returnpath))) {
 		dbmail_message_set_header(message, "Return-Path", (char *)ret_path->data);
+		dbmail_message_set_envelope(message, (char *)ret_path->data);
+	}
 
  	delivery_status_t final_dsn;
 

@@ -17,7 +17,7 @@
   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: pop3.c 1902 2005-10-17 12:52:47Z paul $
+/* $Id: pop3.c 1978 2006-02-08 07:06:02Z aaron $
  *
  * implementation for pop3 commands according to RFC 1081 */
 
@@ -79,7 +79,7 @@ const char *commands[] = {
 
 const char validchars[] =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    "_.!@#$%^&*()-+=~[]{}<>:;\\/ ";
+    ",?_.!@#$%^&*()-+=~[]{}<>:;\\/ ";
 
 
 int pop3_handle_connection(clientinfo_t * ci)

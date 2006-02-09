@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: main.c 1948 2005-12-25 15:12:22Z paul $
+/* $Id: main.c 1977 2006-02-08 06:36:39Z aaron $
  * 
  * main file for dbmail-smtp  */
 
@@ -212,7 +212,7 @@ int main(int argc, char *argv[])
 			/* We must return non-zero in case someone put -V
 			 * into the mail server config and thus may lose mail. */
 			printf("\n*** DBMAIL: dbmail-smtp version "
-			       "$Revision: 1948 $ %s\n\n", COPYRIGHT);
+			       "$Revision: 1977 $ %s\n\n", COPYRIGHT);
 			return 1;
 
 		default:
@@ -388,12 +388,19 @@ int main(int argc, char *argv[])
 	}
 
 	trace(TRACE_DEBUG, "main(): freeing dsnuser list");
+	/*must loop to get the memory for the strdup of the mailbox */
+	for (tmp = dm_list_getstart(&dsnusers);
+			tmp != NULL;
+			tmp = tmp->nextnode) {
+		dm_free( ((deliver_to_user_t *)tmp->data)->mailbox );
+	}
 	dsnuser_free_list(&dsnusers);
 
 	trace(TRACE_DEBUG, "main(): freeing all other lists");
 	dm_list_free(&mimelist.start);
 	dm_list_free(&returnpath.start);
 	dm_list_free(&users.start);
+	dm_free(dsnuser.address);
 
 	trace(TRACE_DEBUG, "main(): they're all free. we're done.");
 

@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: sievecmd.c 1970 2006-01-30 01:23:40Z aaron $
+/* $Id: sievecmd.c 1976 2006-02-07 21:28:50Z aaron $
  * This is dbmail-sievecmd, which provides
  * a command line interface to the sievescripts */
 
@@ -189,7 +189,7 @@ int do_insert(u64_t user_idnr, char *name, FILE * source)
 {
 	int res = 0;
 	char *buf = NULL;
-	char *errmsg = NULL;
+	sort_result_t *sort_result;
 
 	/* Read the file into a char array */
 	res = read_script_file(source, &buf);
@@ -203,15 +203,21 @@ int do_insert(u64_t user_idnr, char *name, FILE * source)
 	if (res != 0) {
 		// FIXME: Error.
 	}
+	dm_free(buf);
 
-	sort_connect();
-	res = sort_validate(user_idnr, "@!temp-script!@", &errmsg);
-	if (res != 0) {
-		printf("Script [%s] has errors: %s.\n", name, errmsg);
+	sort_result = sort_validate(user_idnr, "@!temp-script!@");
+	if (sort_result == NULL) {
+		printf("Script could not be validated.\n");
 		db_delete_sievescript(user_idnr, "@!temp-script!@");
 		return -1;
 	}
-	sort_disconnect();
+	if (sort_get_error(sort_result) != 0) {
+		printf("Script [%s] has errors: %s.\n",
+			name, sort_get_errormsg(sort_result));
+		db_delete_sievescript(user_idnr, "@!temp-script!@");
+		return -1;
+	}
+	sort_free_result(sort_result);
 
 	res = db_rename_sievescript(user_idnr, "@!temp-script!@", name);
 	if (res == -3) {
@@ -274,6 +280,8 @@ int do_list(u64_t user_idnr)
 		else
 			printf("  - ");
 		printf("%s\n", info->name);
+
+		dm_free(info->name);
 		tmp = tmp->nextnode;
 	}
 
@@ -311,9 +319,8 @@ int do_showhelp(void)
 
 int read_script_file(FILE * f, char **m_buf)
 {
-	size_t f_len = 0;
+	size_t f_len = 1024;
 	size_t f_pos = 0;
-	char *tmp_buf = NULL;
 	char *f_buf = NULL;
 
 	if (!f) {
@@ -321,13 +328,16 @@ int read_script_file(FILE * f, char **m_buf)
 		return -1;
 	}
 
+	/* Allocate the initial input buffer. */
+	f_buf = dm_malloc(sizeof(char) * f_len);
+	if (f_buf == NULL)
+		return -2;
+
 	while (!feof(f)) {
 		if (f_pos + 1 >= f_len) {
-			tmp_buf =
-			    dm_realloc(f_buf, sizeof(char) * (f_len += 200));
-			if (tmp_buf != NULL)
-				f_buf = tmp_buf;
-			else
+			f_buf =
+			    dm_realloc(f_buf, sizeof(char) * (f_len *= 2));
+			if (f_buf == NULL)
 				return -2;
 		}
 		f_buf[f_pos] = fgetc(f);
@@ -337,7 +347,6 @@ int read_script_file(FILE * f, char **m_buf)
 	if (f_pos)
 		f_buf[f_pos] = '\0';
 
-	/* Since f_buf is either NULL or valid, we're golden */
 	*m_buf = f_buf;
 	return 0;
 }

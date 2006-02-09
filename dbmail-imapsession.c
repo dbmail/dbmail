@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: dbmail-imapsession.c 1962 2006-01-24 10:53:58Z paul $
+/* $Id: dbmail-imapsession.c 1977 2006-02-08 06:36:39Z aaron $
  * 
  * dm_imaputil.c
  *
@@ -1690,6 +1690,8 @@ char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 			}
 
 			/* add this parenthesis to the arg list and continue */
+			/* FIXME: this leaks memory as we have no way of freeing these
+					pointers */
 			if (!  (the_args[nargs] = (char *) dm_malloc(sizeof(" ")))) {
 				/* out of mem */
 				g_strfreev(the_args);

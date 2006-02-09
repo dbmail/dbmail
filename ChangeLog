@@ -1,3 +1,19 @@
+2006-02-07  Aaron Stone  <aaron@serendipity.cx>
+
+	* Makefile.am:
+	Moved the Sieve programs in sbin with everything else.
+	* authmodule.c, dbmodule.c, sortmodule.c:
+	Safer handling of null driver values.
+	* db.c:
+	Adding and renaming Sieve scripts are now atomic by
+	placing the queries inside of begin and commit transaction.
+	* sort.h, sort.c, modules/sortsieve.c, sievecmd.c, timsieve.c:
+	Sort results are returned in an independent sort_result_t struct,
+	and the sort_connect, sort_disconnect functions have been zapped.
+	* pipe.c:
+	Set the envelope sender address in the dbmail-message struct.
+
+
 2006-02-03  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_deliver.c, check_dbmail_imapd.c, db.c, dbmail-imapsession.c, 
