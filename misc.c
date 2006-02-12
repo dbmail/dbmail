@@ -96,7 +96,7 @@ void create_unique_id(char *target, u64_t message_idnr)
 	char *a_message_idnr, *a_rand;
 	unsigned char *md5_str;
 
-	a_message_idnr = g_strdup_printf("%d",message_idnr);
+	a_message_idnr = g_strdup_printf("%llu",message_idnr);
 	a_rand = g_strdup_printf("%d",rand());
 
 	if (message_idnr != 0)

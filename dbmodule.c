@@ -33,16 +33,17 @@ int db_load_driver(void)
 	char *driver = NULL;
 
 	if (!g_module_supported()) {
-		trace(TRACE_FATAL, "db_init: loadable modules unsupported on this platform");
+		trace(TRACE_FATAL, "%s,%s: loadable modules unsupported on this platform",
+				__FILE__, __func__);
 		return 1;
 	}
 
-	db = (db_func_t *)dm_malloc(sizeof(db_func_t));
+	db = g_new0(db_func_t,1);
 	if (!db) {
-		trace(TRACE_FATAL, "db_init: cannot allocate memory");
+		trace(TRACE_FATAL, "%s,%s: cannot allocate memory",
+				__FILE__, __func__);
 		return -3;
 	}
-	memset(db, 0, sizeof(db_func_t));
 
 	if (strcasecmp(_db_params.driver, "PGSQL") == 0)
 		driver = "pgsql";
@@ -53,8 +54,9 @@ int db_load_driver(void)
 	else if (strcasecmp(_db_params.driver, "SQLITE") == 0)
 		driver = "sqlite";
 	else
-		trace(TRACE_FATAL, "db_init: unsupported driver: %s,"
+		trace(TRACE_FATAL, "%s,%s: unsupported driver: %s,"
 				" please choose from MySQL, PGSQL, SQLite",
+				__FILE__, __func__,
 				_db_params.driver);
 
 	/* Try local build area, then dbmail lib paths, then system lib path. */
@@ -73,7 +75,9 @@ int db_load_driver(void)
 
 	/* If the list is exhausted without opening a module, we'll catch it. */
 	if (!module) {
-		trace(TRACE_FATAL, "db_init: cannot load %s: %s", lib, g_module_error());
+		trace(TRACE_FATAL, "%s,%s: cannot load %s: %s",
+				__FILE__, __func__,
+				lib, g_module_error());
 		return -1;
 	}
 
@@ -95,7 +99,8 @@ int db_load_driver(void)
 	||  !g_module_symbol(module, "db_store_msgbuf_result", (gpointer)&db->store_msgbuf_result )
 	||  !g_module_symbol(module, "db_get_sql",             (gpointer)&db->get_sql      	)
 	||  !g_module_symbol(module, "db_set_result_set",      (gpointer)&db->set_result_set      )) {
-		trace(TRACE_FATAL, "db_init: cannot find function: %s: %s", lib, g_module_error());
+		trace(TRACE_FATAL, "%s,%s: cannot find function: %s: %s", 
+				__FILE__, __func__, lib, g_module_error());
 		return -2;
 	}
 
@@ -114,7 +119,9 @@ int db_connect(void)
 int db_disconnect(void)
 {
 	if (!db) return 0;
-	return db->disconnect();
+	db->disconnect();
+	g_free(db);
+	return 0;
 }
 
 int db_check_connection(void)

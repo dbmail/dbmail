@@ -177,7 +177,7 @@ int IMAPClientHandler(clientinfo_t * ci)
 			dbmail_imap_session_delete(session);
 			return -1;
 		}
-		alarm(0);	/* remove timeout handler */
+		alarm(0);			/* remove timeout handler */
 
 		if (!session->ci->rx || !session->ci->tx) {
 			/* if a timeout occured the streams will be closed & set to NULL */
@@ -186,19 +186,16 @@ int IMAPClientHandler(clientinfo_t * ci)
 			return 1;
 		}
 
-		trace(TRACE_DEBUG, "%s,%s: line read for PID %d\n", __FILE__, __func__, getpid());
-		
-
 		if (!checkchars(line)) {
-			/* foute tekens ingetikt */
 			dbmail_imap_session_printf(session, "* BYE Input contains invalid characters\r\n");
 			dbmail_imap_session_delete(session);
 			return 1;
 		}
 
-		/* clarify data a little */
+		/* strip eol chars */
 		cpy = &line[strlen(line)];
 		cpy--;
+
 		while (cpy >= line && (*cpy == '\r' || *cpy == '\n')) {
 			*cpy = '\0';
 			cpy--;

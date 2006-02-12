@@ -554,7 +554,7 @@ u64_t auth_md5_validate(clientinfo_t *ci UNUSED, char *username,
 	      "%s,%s: validating md5_apop_we=[%s] md5_apop_he=[%s]",
 	      __FILE__, __func__, md5_apop_we, md5_apop_he);
 
-	if (strcmp((char *)md5_apop_he, md5_apop_we) == 0) {
+	if (strcmp((const char *)md5_apop_he, (const char *)md5_apop_we) == 0) {
 		trace(TRACE_MESSAGE,
 		      "%s,%s: user [%s] is validated using APOP", __FILE__,
 		      __func__, username);
