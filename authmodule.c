@@ -33,24 +33,25 @@ int auth_load_driver(void)
 	char *driver = NULL;
 
 	if (!g_module_supported()) {
-		trace(TRACE_FATAL, "sort_init: loadable modules unsupported on this platform");
+		trace(TRACE_FATAL, "%s,%s: loadable modules unsupported on this platform",
+				__FILE__, __func__);
 		return 1;
 	}
 
-	auth = (auth_func_t *)dm_malloc(sizeof(auth_func_t));
-	if (!auth) {
-		trace(TRACE_FATAL, "auth_init: cannot allocate memory");
+	if (! (auth = g_new0(auth_func_t,1))) {
+		trace(TRACE_FATAL, "%s,%s: cannot allocate memory",
+				__FILE__, __func__);
 		return -3;
 	}
-	memset(auth, 0, sizeof(auth_func_t));
 
 	if (strcasecmp(_db_params.authdriver, "SQL") == 0)
 		driver = "auth_sql";
 	else if (strcasecmp(_db_params.authdriver, "LDAP") == 0)
 		driver = "auth_ldap";
 	else
-		trace(TRACE_FATAL, "auth_init: unsupported driver: %s,"
+		trace(TRACE_FATAL, "%s,%s: unsupported driver: %s,"
 				" please choose from SQL or LDAP",
+				__FILE__, __func__,
 				_db_params.authdriver);
 
 	/* Try local build area, then dbmail lib paths, then system lib path. */
@@ -69,7 +70,9 @@ int auth_load_driver(void)
 
 	/* If the list is exhausted without opening a module, we'll catch it. */
 	if (!module) {
-		trace(TRACE_FATAL, "auth_init: cannot load %s: %s", lib, g_module_error());
+		trace(TRACE_FATAL, "%s,%s: cannot load %s: %s", 
+				__FILE__, __func__,
+				lib, g_module_error());
 		return -1;
 	}
 
@@ -97,7 +100,9 @@ int auth_load_driver(void)
 	||  !g_module_symbol(module, "auth_removealias",            (gpointer)&auth->removealias            )
 	||  !g_module_symbol(module, "auth_removealias_ext",        (gpointer)&auth->removealias_ext        )
 	||  !g_module_symbol(module, "auth_requires_shadow_user",   (gpointer)&auth->requires_shadow_user   )) {
-		trace(TRACE_FATAL, "auth_init: cannot find function: %s: %s", lib, g_module_error());
+		trace(TRACE_FATAL, "%s,%s: cannot find function: %s: %s", 
+				__FILE__, __func__, 
+				lib, g_module_error());
 		return -2;
 	}
 
@@ -116,7 +121,9 @@ int auth_connect(void)
 int auth_disconnect(void)
 {
 	if (!auth) return 0;
-	return auth->disconnect();
+	auth->disconnect();
+	g_free(auth);
+	return 0;
 }
 
 int auth_user_exists(const char *username, u64_t * user_idnr)

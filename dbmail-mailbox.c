@@ -526,7 +526,8 @@ static int _handle_sort_args(struct DbmailMailbox *self, char **search_keys, sea
 			
 	gboolean reverse = FALSE;
 
-	g_return_val_if_fail(search_keys && search_keys[*idx], -1);
+	if (! (search_keys && search_keys[*idx]))
+		return -1;
 
 	char *key = search_keys[*idx];
 	
@@ -611,7 +612,8 @@ static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u
 {
 	int result = 0;
 
-	g_return_val_if_fail(search_keys && search_keys[*idx], -1);
+	if (! (search_keys && search_keys[*idx]))
+		return -1;
 
 	char *key = search_keys[*idx];
 

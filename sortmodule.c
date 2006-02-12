@@ -33,25 +33,24 @@ int sort_load_driver(void)
 	char *driver = NULL;
 
 	if (!g_module_supported()) {
-		trace(TRACE_FATAL, "sort_init: loadable modules unsupported on this platform");
+		trace(TRACE_FATAL, "%s,%s: loadable modules unsupported on this platform",
+				__FILE__, __file__);
 		return 1;
 	}
 
-	sort = (sort_func_t *)dm_malloc(sizeof(sort_func_t));
+	sort = g_new0(sort_func_t,1);
 	if (!sort) {
-		trace(TRACE_FATAL, "sort_init: cannot allocate memory");
+		trace(TRACE_FATAL, "%s,%s: cannot allocate memory",
+				__FILE__, __file__);
 		return -3;
 	}
-	memset(sort, 0, sizeof(sort_func_t));
 
 	if (strcasecmp(_db_params.sortdriver, "SIEVE") == 0)
 		driver = "sort_sieve";
-	else if (strcasecmp(_db_params.sortdriver, "LDAP") == 0)
-		driver = "";
 	else
-		trace(TRACE_FATAL, "sort_init: unsupported driver: %s,"
+		trace(TRACE_FATAL, "%s,%s: unsupported driver: %s,"
 				" please choose SIEVE or none at all",
-				_db_params.sortdriver);
+				__FILE__, __func__, _db_params.sortdriver);
 
 	/* Try local build area, then dbmail lib paths, then system lib path. */
 	int i;
@@ -69,7 +68,9 @@ int sort_load_driver(void)
 
 	/* If the list is exhausted without opening a module, we'll catch it. */
 	if (!module) {
-		trace(TRACE_FATAL, "db_init: cannot load %s: %s", lib, g_module_error());
+		trace(TRACE_FATAL, "%s,%s: cannot load %s: %s", 
+				__FILE__, __func__, 
+				lib, g_module_error());
 		return -1;
 	}
 
@@ -80,7 +81,9 @@ int sort_load_driver(void)
 	||  !g_module_symbol(module, "sort_get_errormsg",           (gpointer)&sort->get_errormsg           )
 	||  !g_module_symbol(module, "sort_get_error",              (gpointer)&sort->get_error              )
 	||  !g_module_symbol(module, "sort_get_mailbox",            (gpointer)&sort->get_mailbox            )) {
-		trace(TRACE_FATAL, "sort_init: cannot find function: %s: %s", lib, g_module_error());
+		trace(TRACE_FATAL, "%s,%s: cannot find function: %s: %s", 
+				__FILE__, __func__, 
+				lib, g_module_error());
 		return -2;
 	}
 

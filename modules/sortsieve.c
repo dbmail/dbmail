@@ -89,18 +89,18 @@ int sort_vacation(sieve2_context_t *s, void *my)
 	if (days > 30) days = 30;
 
 	if (handle) {
-		rc_handle = handle;
+		rc_handle = (char *)handle;
 	} else {
 		GString *tmp = g_string_new("");
 		g_string_append(tmp, subject);
 		g_string_append(tmp, message);
-		rc_handle = md5_handle = makemd5(tmp->str);
+		rc_handle = md5_handle = (char *)makemd5((const unsigned char * const) tmp->str);
 		g_string_free(tmp, TRUE);
 	}
 
 	if (fromaddr) {
 		// FIXME: should be validated as a user might try to forge an address.
-		rc_from = fromaddr;
+		rc_from = (char *)fromaddr;
 	} else {
 		rc_from = "";// FIXME: What's the user's from address!?
 	}
@@ -277,7 +277,7 @@ int sort_getheader(sieve2_context_t *s, void *my)
 	struct sort_context *m = (struct sort_context *)my;
 	char *header, *value = "";
 
-	header = sieve2_getvalue_string(s, "header");
+	header = (char *)sieve2_getvalue_string(s, "header");
 
 	value = dbmail_message_get_header(m->message, header);
 

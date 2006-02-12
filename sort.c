@@ -16,9 +16,8 @@
 dsn_class_t sort_and_deliver(struct DbmailMessage *message,
 		const char *destination, u64_t useridnr,
 		const char *mailbox, mailbox_source_t source,
-		const char *fromaddr)
+		const char *fromaddr UNUSED)
 {
-	u64_t mboxidnr, newmsgidnr;
 	int cancelkeep = 0;
 	dsn_class_t ret;
 	
@@ -34,7 +33,7 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message,
 		size_t sublen, subpos;
 		char *subaddress;
 		// FIXME: Where can I get access to the address?
-		res = find_bounded(destination, '+', '@', &subaddress, &sublen, &subpos);
+		res = find_bounded((char *)destination, '+', '@', &subaddress, &sublen, &subpos);
 		if (res == 0 && sublen > 0) {
 			// FIXME: I forget who frees the mailbox.
 			mailbox = subaddress;
