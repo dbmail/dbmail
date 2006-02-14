@@ -1,3 +1,15 @@
+2006-02-12  Paul J Stevens <paul@nfg.nl>
+
+	* ChangeLog, Makefile.am, authmodule.c, check_dbmail_imapd.c, db.c, 
+	  dbmail-imapsession.c, dbmodule.c, imap4.h, imapcommands.c, main.c, 
+	  modules/authsql.c, modules/dbmysql.c, modules/sortsieve.c, pipe.c, 
+	  pop3.c, sievecmd.c, sort.c, sort.h, sortmodule.c, timsieve.c:
+	resync
+	* authmodule.c, dbmail-mailbox.c, dbmodule.c, debian/changelog, 
+	  debian/rules, imap4.c, misc.c, modules/authsql.c, 
+	  modules/sortsieve.c, sort.c, sortmodule.c:
+	misc minor cleanups
+
 2006-02-07  Aaron Stone  <aaron@serendipity.cx>
 
 	* Makefile.am:
