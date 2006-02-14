@@ -1060,7 +1060,7 @@ int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...)
         if (! ln)
                 return -1;
 	
-        if ((result = snprintf(re,maxlen,ln))<0)
+        if ((result = snprintf(re,maxlen,"%s",ln))<0)
                 return -1;
 
         fd = self->ci->tx;
