@@ -81,10 +81,6 @@ int acl_has_right(u64_t userid, u64_t mboxid, ACLRight_t right)
 
 int acl_set_rights(u64_t userid, u64_t mboxid, const char *rightsstring)
 {
-	// set rights.
-	if (strlen(rightsstring) == 0)
-		return 1;
-
 	if (rightsstring[0] == '-')
 		return acl_change_rights(userid, mboxid, rightsstring, 0);
 	if (rightsstring[0] == '+')
