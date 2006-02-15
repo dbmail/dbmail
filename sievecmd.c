@@ -87,6 +87,7 @@ int main(int argc, char *argv[])
 		if (db_connect() != 0) {
 			printf
 			    ("Failed. Could not connect to database (check log)\n");
+			dm_free(user_name);
 			return -1;
 		}
 
@@ -95,6 +96,7 @@ int main(int argc, char *argv[])
 		if (auth_connect() != 0) {
 			printf
 			    ("Failed. Could not connect to authentication (check log)\n");
+			dm_free(user_name);
 			return -1;
 		}
 

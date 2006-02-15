@@ -76,6 +76,16 @@ int auth_user_exists(const char *username, /*@out@*/ u64_t * user_idnr);
  */
 char *auth_get_userid(u64_t user_idnr);
 
+/**
+ * \brief checks if a user_idnr exists
+ * \param user_idnr
+ * \return
+ *    - 0 if user exists
+ *    - 1 if user doesn't exist
+ *    - -1 if something went wrong
+ */
+int auth_check_userid(u64_t user_idnr);
+
 
 /**
  * \brief get a list of all known users
@@ -121,21 +131,6 @@ int auth_getmaxmailsize(u64_t user_idnr, u64_t * maxmail_size);
  *    - NULL if error
  */
 char *auth_getencryption(u64_t user_idnr);
-
-/**
- * \brief find all deliver_to addresses for a username (?, code is not exactly
- * clear to me at the moment, IB 21-08-03) 
- *
- * Unused so I removed it, PS 30-01-05
- * 
- * \param username 
- * \param userids list of user ids (empty on call)
- * \param checks nr of checks. Used internally in recursive calls. It \b should
- * be set to -1 when called!
- * \return number of deliver_to addresses found
- */
-//int auth_check_user(const char *username, struct dm_list *userids,
-//		    int checks);
 
 /**
  * \brief as auth_check_user() but adds the numeric ID of the user found to

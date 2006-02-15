@@ -98,8 +98,10 @@ int num_from_imapdate(const char *date);
 char **base64_decode(char *str, size_t len);
 void base64_free(char **ret);
 int read_from_stream(FILE * instream, char **m_buf, size_t maxlen);
-int find_bounded(char *value, char left, char right, char **retchar,
-		 size_t * retsize, size_t * retlast);
+int find_bounded(const char * const value, char left, char right,
+		char **retchar, size_t * retsize, size_t * retlast);
+int zap_between(const char * const instring, signed char left, signed char right,
+		char **outstring, size_t *outlen, size_t *zaplen);
 int base64_grow_ret(char ***inchar, size_t ** inint, size_t newcount,
 		    size_t newchar);
 

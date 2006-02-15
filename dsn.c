@@ -244,158 +244,213 @@ void dsnuser_free(deliver_to_user_t * dsnuser)
 	      __FILE__, __func__);
 }
 
-
-int dsnuser_resolve_list(struct dm_list *deliveries)
+static void set_dsn(deliver_to_user_t *delivery,
+		int foo, int bar, int qux)
 {
-	int ret;
-	struct element *element;
+	delivery->dsn.class = foo;
+	delivery->dsn.subject = bar;
+	delivery->dsn.detail = qux;
+}
 
-	/* Loop through the users list */
-	for (element = dm_list_getstart(deliveries); element != NULL;
-	     element = element->nextnode) {
-		if ((ret = dsnuser_resolve((deliver_to_user_t *) element->data)) != 0) {
-			return ret;
-		}
-	}
+static int address_has_alias(deliver_to_user_t *delivery)
+{
+	int alias_count;
+
+	if (!delivery->address)
+		return 0;
+
+	alias_count = auth_check_user_ext(delivery->address,
+				delivery->userids,
+				delivery->forwards, 0);
+	trace(TRACE_DEBUG, "%s, %s: user [%s] found total of [%d] aliases",
+	      __FILE__, __func__, delivery->address, alias_count);
+
+	if (alias_count > 0)
+		return 1;
 
 	return 0;
 }
 
-int dsnuser_resolve(deliver_to_user_t *delivery)
+// address is in format username+mailbox@domain
+// and we want to cut out the mailbox and produce
+// an address in format username@domain, then check it.
+static int address_has_alias_mailbox(deliver_to_user_t *delivery)
 {
-	u64_t userid;
-	int alias_count = 0, domain_count = 0;
-	char *domain = NULL;
-	char *username = NULL;
+	int alias_count;
+	char *newaddress;
+	size_t newaddress_len, zapped_len;
 
-	/* If the userid is already set, then we're doing direct-to-userid. */
-	if (delivery->useridnr != 0) {
-		/* This seems to be the only way to see if a useridnr is valid. */
-		username = auth_get_userid(delivery->useridnr);
-		if (username != NULL) {
-			/* Free the username, we don't actually need it. */
-			dm_free(username);
+	if (!delivery->address)
+		return 0;
 
-			/* Copy the delivery useridnr into the userids list. */
-			if (dm_list_nodeadd(delivery->userids,
-			     &delivery->useridnr,
-			     sizeof(delivery->useridnr)) == 0) {
-				trace(TRACE_ERROR,
-				      "%s, %s: out of memory",
-				      __FILE__, __func__);
-				return -1;
-			}
+	if (zap_between(delivery->address, -'+', '@', &newaddress,
+			&newaddress_len, &zapped_len) != 0)
+		return 0;
 
-			/* The userid was valid... */
-			delivery->dsn.class = DSN_CLASS_OK;	/* Success. */
-			delivery->dsn.subject = 1;	/* Address related. */
-			delivery->dsn.detail = 5;	/* Valid. */
-		} else {	/* from: 'if (username != NULL)' */
+	alias_count = auth_check_user_ext(newaddress,
+				delivery->userids,
+				delivery->forwards, 0);
+	trace(TRACE_DEBUG, "%s, %s: user [%s] found total of [%d] aliases",
+	      __FILE__, __func__, newaddress, alias_count);
 
-			/* The userid was invalid... */
-			delivery->dsn.class = DSN_CLASS_FAIL;	/* Permanent failure. */
-			delivery->dsn.subject = 1;	/* Address related. */
-			delivery->dsn.detail = 1;	/* Does not exist. */
-		}
-	}
-	/* We don't have a useridnr, so we have either a username or an alias. */
-	/* Here's the process: 
-	   if (address has alias) 
-	       resolve aliases
-	   else if (address is username)
-	       deliver to username
-	   else if (address' domain matches a catch-all)
-	       deliver to domain-user
-	 */
-	else {		/* from: 'if (delivery->useridnr != 0)' */
+	dm_free(newaddress);
 
-		if (! strlen(delivery->address))
-			return 0;
-		
-		alias_count = auth_check_user_ext(delivery->address,
-					delivery->userids,
-					delivery->forwards, 0);
-		trace(TRACE_DEBUG,
-		      "%s, %s: user [%s] found total of [%d] aliases",
-		      __FILE__, __func__, delivery->address, alias_count);
-
-		if (alias_count > 0) {
-			/* The address has aliases. */
-			delivery->dsn.class = DSN_CLASS_OK;	/* Success. */
-			delivery->dsn.subject = 1;	/* Address related. */
-			delivery->dsn.detail = 5;	/* Valid. */
-		} else {
-			/* No aliases found for the address. */
-			int user_exists;
-			user_exists = auth_user_exists(delivery->address, &userid);
-
-			if (user_exists < 0) {
-				/* An error occurred */
-				trace(TRACE_ERROR,
-				      "%s, %s: error checking user [%s]",
-				      __FILE__, __func__, delivery->address);
-				return -1;
-			} else if (user_exists == 1) {
-				if (dm_list_nodeadd(delivery->userids, &userid,
-				     sizeof(u64_t)) == 0) {
-					trace(TRACE_ERROR, "%s, %s: out of memory",
-					      __FILE__, __func__);
-					return -1;
-				} else {
-                        
-					trace(TRACE_DEBUG,
-					      "%s, %s: added user [%s] id [%llu] to delivery list",
-					      __FILE__, __func__, delivery->address, userid);
-					/* The userid was valid... */
-					delivery->dsn.class = DSN_CLASS_OK;	/* Success. */
-					delivery->dsn.subject = 1;	/* Address related. */
-					delivery->dsn.detail = 5;	/* Valid. */
-				}
-			} else {	/* from: if (user_exists < 0) || if (user_exists == 1)... */
-				trace(TRACE_INFO,
-				      "%s, %s: user [%s] checking for domain forwards.",
-				      __FILE__, __func__, delivery->address);
-
-				domain = strchr(delivery->address, '@');
-
-				if (domain == NULL) {
-					/* That's it, we're done here. */
-					/* Permanent failure... */
-					delivery->dsn.class = DSN_CLASS_FAIL;	/* Permanent failure. */
-					delivery->dsn.subject = 1;	/* Address related. */
-					delivery->dsn.detail = 1;	/* Does not exist. */
-				} else {
-					trace(TRACE_DEBUG,
-					      "%s, %s: domain [%s] checking for domain forwards",
-					      __FILE__, __func__, domain);
-
-					/* Checking for domain aliases */
-					domain_count =
-					    auth_check_user_ext(domain,
-					     delivery->userids,
-					     delivery->forwards, 0);
-					trace(TRACE_DEBUG,
-					      "%s, %s: domain [%s] found total of [%d] aliases",
-					      __FILE__, __func__, domain, domain_count);
-
-					if (domain_count == 0) {
-						/* Permanent failure... */
-						delivery->dsn.class = DSN_CLASS_FAIL;	/* Permanent failure. */
-						delivery->dsn.subject = 1;	/* Address related. */
-						delivery->dsn.detail = 1;	/* Does not exist. */
-					} else {	/* from: 'if (domain_count == 0)' */
-
-						/* The userid was valid... */
-						delivery->dsn.class = DSN_CLASS_OK;	/* Success. */
-						delivery->dsn.subject = 1;	/* Address related. */
-						delivery->dsn.detail = 5;	/* Valid. */
-					}	/* from: 'if (domain_count == 0)' */
-				}	/* from: 'if (domain == NULL)' */
-			}	/* from: 'switch (auth_user_exists(delivery->address, &userid))' */
-		}	/* from: 'if (alias_count > 0) || else' */
-	}	/* from: 'if (delivery->useridnr != 0)' */
+	if (alias_count > 0)
+		return 1;
 
 	return 0;
+}
+
+static int address_is_username_mailbox(deliver_to_user_t *delivery)
+{
+	int user_exists;
+	u64_t userid;
+	char *newaddress;
+	size_t newaddress_len, zapped_len;
+
+	if (!delivery->address)
+		return 0;
+
+	if (zap_between(delivery->address, -'+', '@', &newaddress,
+			&newaddress_len, &zapped_len) != 0)
+		return 0;
+
+	user_exists = auth_user_exists(newaddress, &userid);
+
+	if (user_exists < 0) {
+		/* An error occurred. */
+		trace(TRACE_ERROR, "%s, %s: error checking user [%s]",
+		      __FILE__, __func__, newaddress);
+		dm_free(newaddress);
+		return -1;
+	}
+
+	if (user_exists == 0) {
+		/* User does not exist. */
+		trace(TRACE_INFO, "%s, %s: username not found [%s]",
+		      __FILE__, __func__, newaddress);
+		dm_free(newaddress);
+		return 0;
+	}
+
+	if (dm_list_nodeadd(delivery->userids, &userid, sizeof(u64_t)) == 0) {
+		trace(TRACE_ERROR, "%s, %s: out of memory",
+		      __FILE__, __func__);
+		dm_free(newaddress);
+		return -1;
+	}
+
+	trace(TRACE_DEBUG, "%s, %s: added user [%s] id [%llu] to delivery list",
+		__FILE__, __func__, newaddress, userid);
+
+	dm_free(newaddress);
+	return 1;
+}
+
+static int address_is_username(deliver_to_user_t *delivery)
+{
+	int user_exists;
+	u64_t userid;
+
+	if (!delivery->address)
+		return 0;
+
+	user_exists = auth_user_exists(delivery->address, &userid);
+
+	if (user_exists < 0) {
+		/* An error occurred. */
+		trace(TRACE_ERROR, "%s, %s: error checking user [%s]",
+		      __FILE__, __func__, delivery->address);
+		return -1;
+	}
+
+	if (user_exists == 0) {
+		/* User does not exist. */
+		trace(TRACE_INFO, "%s, %s: username not found [%s]",
+		      __FILE__, __func__, delivery->address);
+		return 0;
+	}
+
+	if (dm_list_nodeadd(delivery->userids, &userid, sizeof(u64_t)) == 0) {
+		trace(TRACE_ERROR, "%s, %s: out of memory",
+		      __FILE__, __func__);
+		return -1;
+	}
+
+	trace(TRACE_DEBUG, "%s, %s: added user [%s] id [%llu] to delivery list",
+		__FILE__, __func__, delivery->address, userid);
+
+	return 1;
+}
+
+static int address_is_domain_catchall(deliver_to_user_t *delivery)
+{
+	char *domain;
+	int domain_count;
+
+	if (!delivery->address)
+		return 0;
+
+	trace(TRACE_INFO, "%s, %s: user [%s] checking for domain forwards.",
+		__FILE__, __func__, delivery->address);
+
+	domain = strchr(delivery->address, '@');
+
+	if (domain == NULL) {
+		return 0;
+	}
+
+	trace(TRACE_DEBUG, "%s, %s: domain [%s] checking for domain forwards",
+		__FILE__, __func__, domain);
+
+	/* Checking for domain aliases */
+	domain_count = auth_check_user_ext(domain, delivery->userids,
+			delivery->forwards, 0);
+	trace(TRACE_DEBUG, "%s, %s: domain [%s] found total of [%d] aliases",
+		__FILE__, __func__, domain, domain_count);
+
+	if (domain_count == 0) {
+		return 0;
+	}
+
+	return 1;
+}
+
+static int address_is_userpart_catchall(deliver_to_user_t *delivery)
+{
+	char *userpart = dm_strdup(delivery->address);
+	char *userpartcut;
+	int userpart_count;
+
+	if (!delivery->address)
+		return 0;
+
+	trace(TRACE_INFO, "%s, %s: user [%s] checking for userpart forwards.",
+		__FILE__, __func__, userpart);
+
+	userpartcut = strchr(userpart, '@');
+
+	if (userpartcut == NULL) {
+		return 0;
+	}
+
+	/* Stomp _after_ the @-sign. */
+	*(userpartcut + 1) = '\0';
+
+	trace(TRACE_DEBUG, "%s, %s: userpart [%s] checking for userpart forwards",
+		__FILE__, __func__, userpart);
+
+	/* Checking for userpart aliases */
+	userpart_count = auth_check_user_ext(userpart, delivery->userids,
+			delivery->forwards, 0);
+	trace(TRACE_DEBUG, "%s, %s: userpart [%s] found total of [%d] aliases",
+		__FILE__, __func__, userpart, userpart_count);
+
+	if (userpart_count == 0) {
+		return 0;
+	}
+
+	return 1;
 }
 
 void dsnuser_free_list(struct dm_list *deliveries)
@@ -466,5 +521,122 @@ delivery_status_t dsnuser_worstcase_list(struct dm_list * deliveries)
 	/* If we never made it into the list, all zeroes will
 	 * yield a temporary failure, which is pretty reasonable. */
 	return dsnuser_worstcase_int(ok, temp, fail, fail_quota);
+}
+
+int dsnuser_resolve_list(struct dm_list *deliveries)
+{
+	int ret;
+	struct element *element;
+
+	/* Loop through the users list */
+	for (element = dm_list_getstart(deliveries); element != NULL;
+	     element = element->nextnode) {
+		if ((ret = dsnuser_resolve((deliver_to_user_t *) element->data)) != 0) {
+			return ret;
+		}
+	}
+
+	return 0;
+}
+
+int dsnuser_resolve(deliver_to_user_t *delivery)
+{
+	/* If the userid is already set, then we're doing direct-to-userid.
+	 * We just want to make sure that the userid actually exists... */
+	if (delivery->useridnr != 0) {
+
+		trace(TRACE_INFO, "%s, %s: checking if [%llu] is a valid useridnr.",
+				__FILE__, __func__, delivery->useridnr);
+
+		switch (auth_check_userid(delivery->useridnr)) {
+		case -1:
+			/* Temp fail. Address related. D.N.E. */
+			set_dsn(delivery, DSN_CLASS_TEMP, 1, 1);
+			trace(TRACE_INFO, "%s, %s: useridnr [%llu] temporary lookup failure.",
+					__FILE__, __func__, delivery->useridnr);
+			break;
+		case 1:
+			/* Failure. Address related. D.N.E. */
+			set_dsn(delivery, DSN_CLASS_FAIL, 1, 1);
+			trace(TRACE_INFO, "%s, %s: useridnr [%llu] does not exist.",
+					__FILE__, __func__, delivery->useridnr);
+			break;
+		case 0:
+			/* Copy the delivery useridnr into the userids list. */
+			if (dm_list_nodeadd(delivery->userids, &delivery->useridnr,
+			     sizeof(delivery->useridnr)) == 0) {
+				trace(TRACE_ERROR, "%s, %s: out of memory",
+				      __FILE__, __func__);
+				return -1;
+			}
+
+			/* Success. Address related. Valid. */
+			set_dsn(delivery, DSN_CLASS_OK, 1, 5);
+			trace(TRACE_INFO, "%s, %s: delivery [%llu] directly to a useridnr.",
+					__FILE__, __func__, delivery->useridnr);
+			break;
+		}
+	/* Ok, we don't have a useridnr, maybe we have an address? */
+	} else if (strlen(delivery->address) > 0) {
+
+		trace(TRACE_INFO, "%s, %s: checking if [%s] is a valid username, alias, or catchall.",
+				__FILE__, __func__, delivery->address);
+
+		if (address_has_alias(delivery))  {
+			/* The address had aliases and they've
+			 * been resolved into the delivery struct. */
+			/* Success. Address related. Valid. */
+			set_dsn(delivery, DSN_CLASS_OK, 1, 5);
+			trace(TRACE_INFO, "%s, %s: delivering [%s] as an alias.",
+					__FILE__, __func__, delivery->address);
+
+		} else if (address_has_alias_mailbox(delivery)) {
+			/* Success. Address related. Valid. */
+			set_dsn(delivery, DSN_CLASS_OK, 1, 5);
+			trace(TRACE_INFO, "%s, %s: delivering [%s] as an alias with mailbox.",
+					__FILE__, __func__, delivery->address);
+
+		} else if (address_is_username(delivery)) {
+			/* Success. Address related. Valid. */
+			set_dsn(delivery, DSN_CLASS_OK, 1, 5);
+			trace(TRACE_INFO, "%s, %s: delivering [%s] as a username.",
+					__FILE__, __func__, delivery->address);
+
+		} else if (address_is_username_mailbox(delivery)) {
+			/* Success. Address related. Valid. */
+			set_dsn(delivery, DSN_CLASS_OK, 1, 5);
+			trace(TRACE_INFO, "%s, %s: delivering [%s] as a username with mailbox.",
+					__FILE__, __func__, delivery->address);
+			
+		} else if (address_is_domain_catchall(delivery)) {
+			/* Success. Address related. Valid. */
+			set_dsn(delivery, DSN_CLASS_OK, 1, 5);
+			trace(TRACE_INFO, "%s, %s: delivering [%s] as a domain catchall.",
+					__FILE__, __func__, delivery->address);
+
+		} else if (address_is_userpart_catchall(delivery)) {
+			/* Success. Address related. Valid. */
+			set_dsn(delivery, DSN_CLASS_OK, 1, 5);
+			trace(TRACE_INFO, "%s, %s: delivering [%s] as a userpart catchall.",
+					__FILE__, __func__, delivery->address);
+
+		} else {
+			/* Failure. Address related. D.N.E. */
+			set_dsn(delivery, DSN_CLASS_FAIL, 1, 1);
+			trace(TRACE_INFO, "%s, %s: could not find [%s] at all.",
+					__FILE__, __func__, delivery->address);
+		}
+
+	/* Neither useridnr nor address.
+	 * Something is wrong upstream. */
+	} else {
+
+		trace(TRACE_ERROR, "%s, %s: this delivery had neither useridnr nor address.",
+				__FILE__, __func__);
+
+		return -1;
+	}
+
+	return 0;
 }
 

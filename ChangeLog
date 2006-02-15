@@ -1,3 +1,23 @@
+2006-02-15  Aaron Stone  <aaron@serendipity.cx>
+
+	* db.c:
+	Changed all instances of db_escape_string to dm_stresc;
+	Added more escaping of %s values in queries;
+	Made db_user_exists case insensitive.
+	* dsn.c:
+	Refactors dsnuser_resolve into little pieces.
+	* dbmail_check_dsn.c:
+	Unit tests for dsnuser_resolve.
+	* misc.c:
+	Added function zap_between.
+	* dbmail_check_misc.c:
+	Unit tests for zap_between and find_bounded.
+	* auth.h, authmodule.c, modules/authsql.c, modules/authldap.c:
+	Added function auth_check_userid that works like
+	auth_get_userid, but doesn't return allocated memory.
+	* dbmail.conf:
+	Changed TIMSIEVED section to SIEVE. Added DELIVERY section.
+
 2006-02-12  Paul J Stevens <paul@nfg.nl>
 
 	* ChangeLog, Makefile.am, authmodule.c, check_dbmail_imapd.c, db.c, 
