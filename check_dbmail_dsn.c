@@ -40,8 +40,9 @@ extern db_param_t _db_params;
 extern int quiet;
 extern int reallyquiet;
 
-u64_t useridnr;
-char *username = "testfailuser";
+u64_t useridnr = 0;
+u64_t useridnr_domain = 0;
+char *username = "testfaildsn";
 char *username_domain = "testfailuser@nonexistantdomain";
 char *username_mailbox = "testfailuser+foomailbox@nonexistantdomain";
 
@@ -69,10 +70,17 @@ void setup(void)
 
 	GList *alias_add = NULL;
 	alias_add = g_list_append(alias_add, alias);
+	alias_add = g_list_append(alias_add, userpart_catchall);
+	alias_add = g_list_append(alias_add, domain_catchall);
 
-	do_add(username, "testpass", "md5-hash", 0, 0, alias_add, NULL);
-	do_add(username_domain, "testpass", "md5-hash", 0, 0, NULL, NULL);
-	auth_user_exists(username, &useridnr);
+	if (! (auth_user_exists(username, &useridnr))) {
+		do_add(username, "testpass", "md5-hash", 0, 0, alias_add, NULL);
+		auth_user_exists(username, &useridnr);
+	}
+	if (! (auth_user_exists(username_domain, &useridnr_domain))) {
+		do_add(username_domain, "testpass", "md5-hash", 0, 0, NULL, NULL);
+		auth_user_exists(username_domain, &useridnr_domain);
+	}
 }
 
 void teardown(void)
