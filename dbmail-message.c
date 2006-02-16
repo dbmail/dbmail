@@ -1,5 +1,5 @@
 /*
-  $Id: dbmail-message.c 1970 2006-01-30 01:23:40Z aaron $
+  $Id: dbmail-message.c 1982 2006-02-15 14:45:48Z aaron $
 
   Copyright (C) 2004-2005 NFG Net Facilities Group BV, info@nfg.nl
 
@@ -403,6 +403,36 @@ gchar * dbmail_message_get_header(const struct DbmailMessage *self, const char *
 {
 	return (gchar *)g_mime_object_get_header(GMIME_OBJECT(self->content), header);
 }
+
+/*
+static void makeheaderarray(const char *name,
+                            const char *value,
+                            gpointer stupid)
+{
+	if (strcasecmp(name, stupid[0])) {
+		stupid[1] = g_list_append(stupid[1], value);
+	}
+}
+
+static void glist_to_chararray(gpointer data, gpointer dumb)
+{
+	dumb[1][dumb[0]] = data;
+}
+
+gchar ** dbmail_message_get_headers(const struct DbmailMessage *self, const char *header)
+{
+	gchar ** output;
+	void ** stupid = { char * header, GList * headerlist };
+
+	g_mime_header_foreach(GMIME_OBJECT(self->content)->header, makeheaderarray, stupid);
+
+	headerarray = malloc(sizeof(char *) * (g_list_length(headerlist) + 1));
+
+	g_list_foreach(headerlist, glist_to_chararray, dumb);
+
+	return headerarray;
+}
+*/
 
 /* dump message(parts) to char ptrs */
 gchar * dbmail_message_to_string(const struct DbmailMessage *self) 

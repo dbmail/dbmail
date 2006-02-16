@@ -12,7 +12,8 @@ DROP TABLE IF EXISTS dbmail_replycache;
 CREATE TABLE dbmail_replycache (
   to_addr varchar(100) NOT NULL default '',
   from_addr varchar(100) NOT NULL default '',
+  handle varchar(100) NOT NULL default '',
   lastseen datetime NOT NULL default '0000-00-00 00:00:00',
-  UNIQUE KEY replycache_1 (to_addr,from_addr)
+  UNIQUE KEY replycache_1 (to_addr,from_addr, handle)
 ) TYPE=InnoDB;
 

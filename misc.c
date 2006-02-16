@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/*	$Id: misc.c 1962 2006-01-24 10:53:58Z paul $
+/*	$Id: misc.c 1982 2006-02-15 14:45:48Z aaron $
  *
  *	Miscelaneous functions */
 
@@ -421,8 +421,8 @@ int read_from_stream(FILE * instream, char **m_buf, size_t maxlen)
  *
  * The caller is responsible for free()ing *retchar.
  * */
-int find_bounded(char *value, char left, char right, char **retchar,
-		 size_t * retsize, size_t * retlast)
+int find_bounded(const char * const value, char left, char right,
+		char **retchar, size_t * retsize, size_t * retlast)
 {
 	char *tmpleft;
 	char *tmpright;
@@ -472,6 +472,50 @@ int find_bounded(char *value, char left, char right, char **retchar,
 		return 0;
 	}
 }
+
+int zap_between(const char * const instring, signed char left, signed char right,
+		char **outstring, size_t *outlen, size_t *zaplen)
+{
+	char *start, *end;
+	char *incopy = g_strdup(instring);
+	int clipleft = 0, clipright = 0;
+
+	if (!incopy)
+		return -2;
+
+	// Should we clip the left char, too?
+	if (left < 0) {
+		left = 0 - left;
+		clipleft = 1;
+	}
+
+	// Should we clip the right char, too?
+	if (right < 0) {
+		right = 0 - right;
+		clipright = 1;
+	}
+
+	start = strchr(incopy, left);
+	end = strrchr(incopy, right);
+
+	if (!start || !end)
+		return -1;
+
+	if (!clipleft) start++;
+	if (clipright) end++;
+
+	memmove(start, end, strlen(end)+1);
+
+	if (outstring)
+		*outstring = incopy;
+	if (outlen)
+		*outlen = strlen(incopy);
+	if (zaplen)
+		*zaplen = (end - start);
+
+	return 0;
+}
+
 
 /*
  *

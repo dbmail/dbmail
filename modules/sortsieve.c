@@ -43,6 +43,7 @@ struct sort_context {
 	u64_t user_idnr;
 	struct DbmailMessage *message;
 	struct sort_result *result;
+	struct dm_list freelist;
 };
 
 /* Returned opaquely as type sort_result_t. */
@@ -55,11 +56,16 @@ struct sort_result {
 	int error_parse;
 };
 
+struct sort_sieve_config {
+	int vacation;
+	int notify;
+} sort_sieve_config;
+
 
 /* SIEVE CALLBACKS */
 
 /*
-From http://www.ietf.org/internet-drafts/draft-ietf-sieve-vacation-05.txt
+From http://www.ietf.org/internet-drafts/draft-ietf-sieve-vacation-06.txt
 
    Usage:   vacation [":days" number] [":subject" string]
                      [":from" string] [":addresses" string-list]
@@ -275,13 +281,20 @@ int sort_getscript(sieve2_context_t *s, void *my)
 int sort_getheader(sieve2_context_t *s, void *my)
 {
 	struct sort_context *m = (struct sort_context *)my;
-	char *header, *value = "";
+	char **bodylist;
+	char *header;
 
 	header = (char *)sieve2_getvalue_string(s, "header");
 
-	value = dbmail_message_get_header(m->message, header);
+	bodylist = (char **)dm_malloc(sizeof(char *) * 2);
+	bodylist[0] = dbmail_message_get_header(m->message, header);
+	bodylist[1] = NULL;
 
-	sieve2_setvalue_string(s, "value", value);
+	/* We have to free the header ourselves. */
+	dm_list_nodeadd(&m->freelist, &bodylist[0], sizeof(char *));
+	dm_list_nodeadd(&m->freelist, &bodylist, sizeof(char **));
+
+	sieve2_setvalue_stringlist(s, "body", bodylist);
 
 	return SIEVE2_OK;
 }
@@ -326,7 +339,7 @@ sieve2_callback_t sort_callbacks[] = {
 	{ SIEVE2_ACTION_KEEP,           sort_keep        },
 
 	{ SIEVE2_SCRIPT_GETSCRIPT,      sort_getscript   },
-	{ SIEVE2_MESSAGE_GETHEADER,     sort_getheader    },
+	{ SIEVE2_MESSAGE_GETHEADER,     sort_getheader   },
 	{ SIEVE2_MESSAGE_GETENVELOPE,   sort_getenvelope },
 	{ SIEVE2_MESSAGE_GETBODY,       sort_getbody     },
 	{ SIEVE2_MESSAGE_GETSIZE,       sort_getsize     },
@@ -341,7 +354,14 @@ static int sort_teardown(sieve2_context_t **s2c,
 
 	sieve2_context_t *sieve2_context = *s2c;
 	struct sort_context *sort_context = *sc;
+	struct element *element;
 	int res;
+
+	for (element = dm_list_getstart(&sort_context->freelist);
+			element != NULL;
+			element = element->nextnode) {
+		dm_free(element->data);
+	}
 
 	if (sort_context) {
 		dm_free(sort_context);
@@ -391,6 +411,8 @@ static int sort_startup(sieve2_context_t **s2c,
 		return DM_EGENERAL;
 	}
 	memset(sort_context, 0, sizeof(struct sort_context));
+
+	dm_list_init(&sort_context->freelist);
 
 	*s2c = sieve2_context;
 	*sc = sort_context;

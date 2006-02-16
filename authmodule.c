@@ -15,7 +15,7 @@
 #include "auth.h"
 #include "authmodule.h"
 
-auth_func_t *auth = NULL;
+static auth_func_t *auth = NULL;
 
 extern db_param_t _db_params;
 
@@ -80,6 +80,7 @@ int auth_load_driver(void)
 	||  !g_module_symbol(module, "auth_disconnect",             (gpointer)&auth->disconnect             )
 	||  !g_module_symbol(module, "auth_user_exists",            (gpointer)&auth->user_exists            )
 	||  !g_module_symbol(module, "auth_get_userid",             (gpointer)&auth->get_userid             )
+	||  !g_module_symbol(module, "auth_check_userid",           (gpointer)&auth->check_userid           )
 	||  !g_module_symbol(module, "auth_get_known_users",        (gpointer)&auth->get_known_users        )
 	||  !g_module_symbol(module, "auth_getclientid",            (gpointer)&auth->getclientid            )
 	||  !g_module_symbol(module, "auth_getmaxmailsize",         (gpointer)&auth->getmaxmailsize         )
@@ -130,6 +131,8 @@ int auth_user_exists(const char *username, u64_t * user_idnr)
 	{ return auth->user_exists(username, user_idnr); }
 char *auth_get_userid(u64_t user_idnr)
 	{ return auth->get_userid(user_idnr); }
+int auth_check_userid(u64_t user_idnr)
+	{ return auth->check_userid(user_idnr); }
 GList * auth_get_known_users(void)
 	{ return auth->get_known_users(); }
 int auth_getclientid(u64_t user_idnr, u64_t * client_idnr)

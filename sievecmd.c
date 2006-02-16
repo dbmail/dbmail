@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: sievecmd.c 1976 2006-02-07 21:28:50Z aaron $
+/* $Id: sievecmd.c 1982 2006-02-15 14:45:48Z aaron $
  * This is dbmail-sievecmd, which provides
  * a command line interface to the sievescripts */
 
@@ -87,6 +87,7 @@ int main(int argc, char *argv[])
 		if (db_connect() != 0) {
 			printf
 			    ("Failed. Could not connect to database (check log)\n");
+			dm_free(user_name);
 			return -1;
 		}
 
@@ -95,6 +96,7 @@ int main(int argc, char *argv[])
 		if (auth_connect() != 0) {
 			printf
 			    ("Failed. Could not connect to authentication (check log)\n");
+			dm_free(user_name);
 			return -1;
 		}
 

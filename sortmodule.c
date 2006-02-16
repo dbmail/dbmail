@@ -15,7 +15,7 @@
 #include "sort.h"
 #include "sortmodule.h"
 
-sort_func_t *sort = NULL;
+static sort_func_t *sort = NULL;
 
 extern db_param_t _db_params;
 
@@ -45,12 +45,8 @@ int sort_load_driver(void)
 		return -3;
 	}
 
-	if (strcasecmp(_db_params.sortdriver, "SIEVE") == 0)
-		driver = "sort_sieve";
-	else
-		trace(TRACE_FATAL, "%s,%s: unsupported driver: %s,"
-				" please choose SIEVE or none at all",
-				__FILE__, __func__, _db_params.sortdriver);
+	/* The only supported driver is Sieve. */
+	driver = "sort_sieve";
 
 	/* Try local build area, then dbmail lib paths, then system lib path. */
 	int i;
@@ -94,38 +90,50 @@ int sort_process(u64_t user_idnr, struct DbmailMessage *message)
 {
 	if (!sort)
 		sort_load_driver();
-	return sort->process(user_idnr, message);
+	if (sort)
+		return sort->process(user_idnr, message);
 }
 
 int sort_validate(u64_t user_idnr, char *scriptname)
 {
 	if (!sort)
 		sort_load_driver();
-	return sort->validate(user_idnr, scriptname);
+	if (sort)
+		return sort->validate(user_idnr, scriptname);
 }
 
 void sort_free_result(sort_result_t *result)
 {
+	assert(sort);
+	assert(sort->free_result);
 	return sort->free_result();
 }
 
 int sort_get_cancelkeep(void)
 {
+	assert(sort);
+	assert(sort->get_cancelkeep);
 	return sort->get_cancelkeep();
 }
 
 const char * sort_get_mailbox(void)
 {
+	assert(sort);
+	assert(sort->get_mailbox);
 	return sort->get_mailbox();
 }
 
 const char * sort_get_errormsg(sort_result_t *result)
 {
+	assert(sort);
+	assert(sort->get_errormsg);
 	return sort->get_errormsg();
 }
 
 int sort_get_error(sort_result_t *result)
 {
+	assert(sort);
+	assert(sort->get_error);
 	return sort->get_error();
 }
 

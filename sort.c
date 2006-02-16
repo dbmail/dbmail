@@ -20,6 +20,7 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message,
 {
 	int cancelkeep = 0;
 	dsn_class_t ret;
+	field_t val;
 	
 	/* This is the only condition when called from pipe.c, actually. */
 	if (! mailbox) {
@@ -28,7 +29,8 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message,
 	}
 	
 	/* Subaddress. */
-	if (0) { // FIXME: I think this should be configurable.
+	config_get_value("SUBADDRESS", "DELIVERY", val);
+	if (strcasecmp(val, "yes") == 0) {
 		int res;
 		size_t sublen, subpos;
 		char *subaddress;
@@ -42,12 +44,14 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message,
 	}
 
 	/* Sieve. */
-	if (0) { // FIXME: I think this should be configurable.
+	config_get_value("SIEVE", "DELIVERY", val);
+	if (strcasecmp(val, "yes") == 0) {
 		sort_result_t *sort_result;
 		sort_result = sort_process(useridnr, message);
-		// FIXME: Add error handling here.
-		cancelkeep = sort_get_cancelkeep(sort_result);
-		sort_free_result(sort_result);
+		if (sort_result) {
+			cancelkeep = sort_get_cancelkeep(sort_result);
+			sort_free_result(sort_result);
+		}
 	}
 
 	/* Sieve actions:

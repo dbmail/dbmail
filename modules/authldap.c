@@ -19,7 +19,7 @@
 */
 
 /*
- * $Id: authldap.c 1954 2006-01-18 15:24:23Z paul $
+ * $Id: authldap.c 1982 2006-02-15 14:45:48Z aaron $
  * * User authentication functions for LDAP.
  */
 #ifdef HAVE_CONFIG_H
@@ -735,6 +735,33 @@ char *auth_get_userid(u64_t user_idnr)
 	      returnid);
 
 	return returnid;
+}
+
+/* We'd like to have -1 return on failure, but
+ * the internal ldap api here won't tell us. */
+int auth_check_userid(u64_t user_idnr)
+{
+	char *returnid = NULL;
+	char query[AUTH_QUERY_SIZE];
+	char *fields[] = { _ldap_cfg.field_nid, NULL };
+	int ret;
+	
+	snprintf(query, AUTH_QUERY_SIZE, "(%s=%llu)", _ldap_cfg.field_nid, user_idnr);
+	returnid = __auth_get_first_match(query, fields);
+
+	if (returnid) {
+		ret = 0;
+		trace(TRACE_DEBUG, "%s,%s: found user_idnr [%llu]",
+			__FILE__, __func__, user_idnr);
+	} else {
+		ret = 1;
+		trace(TRACE_DEBUG, "%s,%s: didn't find user_idnr [%llu]",
+			__FILE__, __func__, user_idnr);
+	}
+
+	dm_free(returnid);
+
+	return ret;
 }
 
 

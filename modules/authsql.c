@@ -631,6 +631,33 @@ char *auth_get_userid(u64_t user_idnr)
 	return returnid;
 }
 
+int auth_check_userid(u64_t user_idnr)
+{
+	const char *query_result;
+
+	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
+		 "SELECT userid FROM %susers WHERE user_idnr = '%llu'",
+		 DBPFX, user_idnr);
+
+	if (__auth_query(__auth_query_data) == -1) {
+		trace(TRACE_ERROR, "%s,%s: query failed",
+		      __FILE__, __func__);
+		return -1;
+	}
+
+	if (db_num_rows() < 1) {
+		trace(TRACE_DEBUG, "%s,%s: didn't find user_idnr [%llu]",
+		      __FILE__, __func__, user_idnr);
+		db_free_result();
+		return 1;
+	}
+
+	trace(TRACE_DEBUG, "%s,%s: found user_idnr [%llu]",
+	      __FILE__, __func__, user_idnr);
+	db_free_result();
+	return 0;
+}
+
 int auth_get_users_from_clientid(u64_t client_id, u64_t ** user_ids,
 			       unsigned *num_users)
 {

@@ -1,4 +1,4 @@
-/* $Id: db.c 1977 2006-02-08 06:36:39Z aaron $ */
+/* $Id: db.c 1982 2006-02-15 14:45:48Z aaron $ */
 /*
   Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 
@@ -475,9 +475,9 @@ int db_calculate_quotum_used(u64_t user_idnr)
 int db_get_sievescript_byname(u64_t user_idnr, char *scriptname, char **script)
 {
 	const char *query_result = NULL;
-	char *escaped_scriptname = (char *)dm_malloc(2*strlen(scriptname)+1);
+	char *escaped_scriptname;
 
-	db_escape_string(escaped_scriptname, scriptname, strlen(scriptname));
+	escaped_scriptname = dm_stresc(scriptname);
 	snprintf(query, DEF_QUERYSIZE,
 				"SELECT script from %ssievescripts where "
 				"owner_idnr = '%llu' and name = '%s'",
@@ -577,12 +577,12 @@ int db_get_sievescript_listall(u64_t user_idnr, struct dm_list *scriptlist)
  */
 int db_rename_sievescript(u64_t user_idnr, char *scriptname, char *newname)
 {
-	char *escaped_scriptname = (char *)dm_malloc(2*strlen(scriptname)+1);
-	char *escaped_newname = (char *)dm_malloc(2*strlen(newname)+1);
+	char *escaped_scriptname;
+	char *escaped_newname;
 
 	db_begin_transaction();
-	db_escape_string(escaped_scriptname, scriptname, strlen(scriptname));
-	db_escape_string(escaped_newname, newname, strlen(newname));
+	escaped_scriptname = dm_stresc(scriptname);
+	escaped_newname = dm_stresc(newname);
 
 	snprintf(query, DEF_QUERYSIZE,
 		"SELECT COUNT(*) FROM %ssievescripts "
@@ -631,11 +631,11 @@ int db_rename_sievescript(u64_t user_idnr, char *scriptname, char *newname)
 
 int db_add_sievescript(u64_t user_idnr, char *scriptname, char *script)
 {
-	char *escaped_scriptname = (char *)dm_malloc(2*strlen(scriptname)+1);
+	char *escaped_scriptname;
 
 	db_begin_transaction();
-	db_escape_string(escaped_scriptname, scriptname, strlen(scriptname));
 
+	escaped_scriptname = dm_stresc(scriptname);
 	snprintf(query, DEF_QUERYSIZE,
 		"SELECT COUNT(*) FROM %ssievescripts "
 		"WHERE owner_idnr = %llu AND name = '%s'",
@@ -681,9 +681,9 @@ int db_add_sievescript(u64_t user_idnr, char *scriptname, char *script)
 
 int db_deactivate_sievescript(u64_t user_idnr, char *scriptname)
 {
-	char *escaped_scriptname = (char *)dm_malloc(2*strlen(scriptname)+1);
+	char *escaped_scriptname;
 
-	db_escape_string(escaped_scriptname, scriptname, strlen(scriptname));
+	escaped_scriptname = dm_stresc(scriptname);
 	snprintf(query, DEF_QUERYSIZE,
 		"UPDATE %ssievescripts set active = 0 "
 		"where owner_idnr = %llu and name = '%s'",
@@ -702,10 +702,10 @@ int db_deactivate_sievescript(u64_t user_idnr, char *scriptname)
 
 int db_activate_sievescript(u64_t user_idnr, char *scriptname)
 {
-	char *escaped_scriptname = (char *)dm_malloc(2*strlen(scriptname)+1);
+	char *escaped_scriptname;
 
 	db_begin_transaction();
-	db_escape_string(escaped_scriptname, scriptname, strlen(scriptname));
+	escaped_scriptname = dm_stresc(scriptname);
 	snprintf(query, DEF_QUERYSIZE,
 		"UPDATE %ssievescripts SET active = 0 "
 		"WHERE owner_idnr = %llu ",
@@ -740,9 +740,9 @@ int db_activate_sievescript(u64_t user_idnr, char *scriptname)
 
 int db_delete_sievescript(u64_t user_idnr, char *scriptname)
 {
-	char *escaped_scriptname = (char *)dm_malloc(2*strlen(scriptname)+1);
+	char *escaped_scriptname;
 
-	db_escape_string(escaped_scriptname, scriptname, strlen(scriptname));
+	escaped_scriptname = dm_stresc(scriptname);
 	snprintf(query, DEF_QUERYSIZE,
 		"DELETE from %ssievescripts "
 		"where owner_idnr = %llu and name = '%s'",
@@ -1139,16 +1139,12 @@ int db_log_ip(const char *ip)
 
 int db_count_iplog(const char *lasttokeep, u64_t *affected_rows)
 {
-	char *escaped_lasttokeep = (char *)dm_malloc(2*strlen(lasttokeep)+1);
+	char *escaped_lasttokeep;
 
 	assert(affected_rows != NULL);
 	*affected_rows = 0;
 
-	if (db_escape_string(escaped_lasttokeep, lasttokeep, strlen(lasttokeep))) {
-		trace(TRACE_ERROR, "%s,%s: error escaping last to keep.",
-			__FILE__, __func__);
-		return DM_EQUERY;
-	}
+	escaped_lasttokeep = dm_stresc(lasttokeep);
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT * FROM %spbsp WHERE since < '%s'", DBPFX, escaped_lasttokeep);
 	dm_free(escaped_lasttokeep);
@@ -2287,6 +2283,7 @@ int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 			 u64_t * mailbox_idnr)
 {
 	char *local_name;
+	char *escaped_local_name;
 
 	assert(mailbox_idnr != NULL);
 	*mailbox_idnr = 0;
@@ -2299,12 +2296,16 @@ int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 	}
 
 	convert_inbox_to_uppercase(local_name);
+	escaped_local_name = dm_stresc(local_name);
 	
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT mailbox_idnr FROM %smailboxes "
-		 "WHERE name='%s' AND owner_idnr='%llu'",DBPFX, local_name,
-		 owner_idnr);
+		 "WHERE name='%s' AND owner_idnr='%llu'",
+		 DBPFX, escaped_local_name, owner_idnr);
+
 	dm_free(local_name);
+	dm_free(escaped_local_name);
+
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR,
 		      "%s,%s: could not select mailbox '%s'\n", __FILE__,
@@ -2623,6 +2624,7 @@ int db_createmailbox(const char *name, u64_t owner_idnr,
 		     u64_t * mailbox_idnr)
 {
 	const char *simple_name;
+	char *escaped_simple_name;
 	assert(mailbox_idnr != NULL);
 	*mailbox_idnr = 0;
 
@@ -2644,12 +2646,17 @@ int db_createmailbox(const char *name, u64_t owner_idnr,
 		      "from full name", __FILE__, __func__);
 		return DM_EQUERY;
 	}
+
+	escaped_simple_name = dm_stresc(simple_name);
+
 	snprintf(query, DEF_QUERYSIZE,
 		 "INSERT INTO %smailboxes (name, owner_idnr,"
 		 "seen_flag, answered_flag, deleted_flag, flagged_flag, "
 		 "recent_flag, draft_flag, permission)"
 		 " VALUES ('%s', '%llu', 1, 1, 1, 1, 1, 1, 2)",DBPFX,
-		 simple_name, owner_idnr);
+		 escaped_simple_name, owner_idnr);
+
+	dm_free(escaped_simple_name);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not create mailbox",
@@ -3127,9 +3134,16 @@ int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name)
 
 int db_setmailboxname(u64_t mailbox_idnr, const char *name)
 {
+	char *escaped_name;
+
+	escaped_name = dm_stresc(name);
+
 	snprintf(query, DEF_QUERYSIZE,
 		 "UPDATE %smailboxes SET name = '%s' "
-		 "WHERE mailbox_idnr = '%llu'",DBPFX, name, mailbox_idnr);
+		 "WHERE mailbox_idnr = '%llu'",
+		 DBPFX, escaped_name, mailbox_idnr);
+
+	dm_free(escaped_name);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not set name", __FILE__,
@@ -4143,8 +4157,8 @@ int db_user_exists(const char *username, u64_t * user_idnr)
 		return DM_EQUERY;
 	
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT user_idnr FROM %susers WHERE userid='%s'",DBPFX,
-		 escaped_username);
+		 "SELECT user_idnr FROM %susers WHERE lower(userid) = lower('%s')",
+		 DBPFX, escaped_username);
 	
 	dm_free(escaped_username);
 	
@@ -4173,20 +4187,15 @@ int db_user_create_shadow(const char *username, u64_t * user_idnr)
 int db_user_create(const char *username, const char *password, const char *enctype,
 		 u64_t clientid, u64_t maxmail, u64_t * user_idnr) 
 {
-	char escapedpass[DEF_QUERYSIZE];
+	char *escaped_password;
 	char *escaped_username;
 
 	assert(user_idnr != NULL);
 //	*user_idnr = 0;
 
 #ifdef _DBAUTH_STRICT_USER_CHECK
-	if (!(escaped_username = (char *) dm_malloc(strlen(username) * 2 + 1))) {
-		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
-			"escaped username", __FILE__, __func__);
-		return DM_EQUERY;
-	}
 
-	db_escape_string(escaped_username, username, strlen(username));
+	escaped_username = dm_stresc(username);
 	/* first check to see if this user already exists */
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT * FROM %susers WHERE userid = '%s'",DBPFX, escaped_username);
@@ -4216,29 +4225,22 @@ int db_user_create(const char *username, const char *password, const char *encty
 		return DM_EQUERY;
 	}
 
-	db_escape_string(escapedpass, password, strlen(password));
-
-	if (!(escaped_username = (char *) dm_malloc(strlen(username) * 2 + 1))) {
-		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
-			"escaped username", __FILE__, __func__);
-		return DM_EQUERY;
-	}
-
-	db_escape_string(escaped_username, username, strlen(username));
+	escaped_password = dm_stresc(password);
+	escaped_username = dm_stresc(username);
 
 	if (*user_idnr==0) {
 		snprintf(query, DEF_QUERYSIZE, "INSERT INTO %susers "
 			"(userid,passwd,client_idnr,maxmail_size,"
 			"encryption_type, last_login) VALUES "
 			"('%s','%s',%llu,'%llu','%s', %s)",
-			DBPFX, escaped_username, escapedpass, clientid, 
+			DBPFX, escaped_username, escaped_password, clientid, 
 			maxmail, enctype ? enctype : "", db_get_sql(SQL_CURRENT_TIMESTAMP));
 	} else {
 		snprintf(query, DEF_QUERYSIZE, "INSERT INTO %susers "
 			"(userid,user_idnr,passwd,client_idnr,maxmail_size,"
 			"encryption_type, last_login) VALUES "
 			"('%s',%llu,'%s',%llu,'%llu','%s', %s)",
-			DBPFX,escaped_username,*user_idnr,escapedpass,clientid, 
+			DBPFX,escaped_username,*user_idnr, escaped_password,clientid, 
 			maxmail, enctype ? enctype : "", db_get_sql(SQL_CURRENT_TIMESTAMP));
 	}
 	dm_free(escaped_username);
@@ -4274,13 +4276,7 @@ int db_user_delete(const char * username)
 {
 	char *escaped_username;
 
-	if (!(escaped_username = (char *) dm_malloc(strlen(username) * 2 + 1))) {
-		trace(TRACE_ERROR, "%s,%s: out of memory allocating "
-			"escaped username", __FILE__, __func__);
-		return DM_EQUERY;
-	}
-
-	db_escape_string(escaped_username, username, strlen(username));
+	escaped_username = dm_stresc(username);
 	snprintf(query, DEF_QUERYSIZE, "DELETE FROM %susers WHERE userid = '%s'",
 		 DBPFX, escaped_username);
 	dm_free(escaped_username);
@@ -4299,13 +4295,7 @@ int db_user_rename(u64_t user_idnr, const char *new_name)
 {
 	char *escaped_new_name;
 
-	if (!(escaped_new_name = (char *) dm_malloc(strlen(new_name) * 2 + 1))) {
-		trace(TRACE_ERROR, "%s,%s: out of memory allocating escaped new_name", 
-				__FILE__, __func__);
-		return DM_EQUERY;
-	}
-
-	db_escape_string(escaped_new_name, new_name, strlen(new_name));
+	escaped_new_name = dm_stresc(new_name);
 	snprintf(query, DEF_QUERYSIZE, "UPDATE %susers SET userid = '%s' WHERE user_idnr='%llu'",
 		 DBPFX, escaped_new_name, user_idnr);
 	dm_free(escaped_new_name);
