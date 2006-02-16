@@ -1,5 +1,10 @@
 2006-02-15  Aaron Stone  <aaron@serendipity.cx>
 
+	* sortmodule.c, sortmodule.h, sort.h:
+	Updated to match latest function prototypes.
+
+2006-02-15  Aaron Stone  <aaron@serendipity.cx>
+
 	* db.c:
 	Changed all instances of db_escape_string to dm_stresc;
 	Added more escaping of %s values in queries;
