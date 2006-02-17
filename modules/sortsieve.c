@@ -357,11 +357,6 @@ static int sort_teardown(sieve2_context_t **s2c,
 	struct element *element;
 	int res;
 
-	for (element = dm_list_getstart(&sort_context->freelist);
-			element != NULL;
-			element = element->nextnode) {
-		dm_free(element->data);
-	}
 	dm_list_free(&sort_context->freelist.start);
 
 	if (sort_context) {
