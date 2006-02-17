@@ -64,7 +64,6 @@ struct DbmailMessage {
 	u64_t id;
 	u64_t physid;
 	GString *internal_date;
-	GString *envelope;
 	enum DBMAIL_MESSAGE_CLASS klass;
 	GByteArray *raw;
 	GMimeObject *content;
@@ -101,9 +100,6 @@ gchar * dbmail_message_get_internal_date(const struct DbmailMessage *self);
 	
 int dbmail_message_set_class(struct DbmailMessage *self, int klass);
 int dbmail_message_get_class(const struct DbmailMessage *self);
-
-void dbmail_message_set_envelope(const struct DbmailMessage *self, char *envelope);
-gchar * dbmail_message_get_envelope(const struct DbmailMessage *self);
 
 gchar * dbmail_message_to_string(const struct DbmailMessage *self);
 gchar * dbmail_message_hdrs_to_string(const struct DbmailMessage *self);

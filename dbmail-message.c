@@ -382,19 +382,6 @@ gchar * dbmail_message_get_internal_date(const struct DbmailMessage *self)
 	return NULL;
 }
 
-void dbmail_message_set_envelope(const struct DbmailMessage *self, char *envelope)
-{
-	if (envelope)
-		g_string_printf(self->envelope, "%s", envelope);
-}
-
-gchar * dbmail_message_get_envelope(const struct DbmailMessage *self)
-{
-	if (self->envelope->len > 0)
-		return self->envelope->str;
-	return NULL;
-}
-
 void dbmail_message_set_header(struct DbmailMessage *self, const char *header, const char *value)
 {
 	g_mime_message_set_header(GMIME_MESSAGE(self->content), header, value);

@@ -1,4 +1,10 @@
-2006-02-15  Aaron Stone  <aaron@serendipity.cx>
+2006-02-17  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmail-message.h, dbmail-message.c, modules/sortsieve.c, pipe.c:
+	Removed get/set envelope functions; getting the Return Path header
+	works just as well.
+
+2006-02-16  Aaron Stone  <aaron@serendipity.cx>
 
 	* sortmodule.c, sortmodule.h, sort.h:
 	Updated to match latest function prototypes.
