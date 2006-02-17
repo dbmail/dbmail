@@ -15,8 +15,7 @@
  * */
 dsn_class_t sort_and_deliver(struct DbmailMessage *message,
 		const char *destination, u64_t useridnr,
-		const char *mailbox, mailbox_source_t source,
-		const char *fromaddr UNUSED)
+		const char *mailbox, mailbox_source_t source)
 {
 	int cancelkeep = 0;
 	dsn_class_t ret;

@@ -304,7 +304,7 @@ int sort_getenvelope(sieve2_context_t *s, void *my)
 	struct sort_context *m = (struct sort_context *)my;
 
 	sieve2_setvalue_string(s, "envelope",
-		dbmail_message_get_header(m->message, "Return-Path"));
+			m->message->envelope_recipient->str);
 
 	return SIEVE2_OK;
 }

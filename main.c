@@ -35,7 +35,6 @@
 /* syslog */
 #define PNAME "dbmail/smtp"
 
-struct dm_list returnpath;		/* returnpath (should aways be just 1 hop) */
 struct dm_list mimelist;		/* raw unformatted mimefields and values */
 struct dm_list dsnusers;		/* list of deliver_to_user_t structs */
 struct dm_list users;		/* list of email addresses in message */
@@ -83,6 +82,7 @@ int main(int argc, char *argv[])
 	int exitcode = 0;
 	int c, c_prev = 0, usage_error = 0;
 	struct DbmailMessage *msg = NULL;
+	char *returnpath = NULL;
 	
 	g_mime_init(0);
 	
@@ -91,7 +91,6 @@ int main(int argc, char *argv[])
 	dm_list_init(&users);
 	dm_list_init(&dsnusers);
 	dm_list_init(&mimelist);
-	dm_list_init(&returnpath);
 
 	/* Check for commandline options.
 	 * The initial '-' means that arguments which are not associated
@@ -139,16 +138,7 @@ int main(int argc, char *argv[])
 			      "main(): using RETURN_PATH for bounces");
 
 			/* Add argument onto the returnpath list. */
-			if (dm_list_nodeadd
-			    (&returnpath, optarg,
-			     strlen(optarg) + 1) == 0) {
-				trace(TRACE_ERROR,
-				      "main(): dm_list_nodeadd reports out of memory"
-				      " while adding to returnpath");
-				exitcode = EX_TEMPFAIL;
-				goto freeall;
-			}
-
+			returnpath = dm_strdup(optarg);
 			break;
 
 		case 'u':
@@ -295,14 +285,23 @@ int main(int argc, char *argv[])
 		goto freeall;
 	}
 
-	/* parse returnpath from header */
-	if (returnpath.total_nodes == 0)
-		mail_address_build_list("Return-Path", &returnpath, &mimelist);
-	if (returnpath.total_nodes == 0)
-		mail_address_build_list("From", &returnpath, &mimelist);
-	if (returnpath.total_nodes == 0)
+	/* Use the -r flag to set the Return-Path header,
+	 * or leave an existing value,
+	 * or copy the From header,
+	 * debug message if all fails. */
+	if (returnpath) {
+		dbmail_message_set_header(msg, "Return-Path", returnpath);
+	} else if (dbmail_message_get_header(msg, "Return-Path")) {
+		// Do nothing.
+	} else if (dbmail_message_get_header(msg, "From")) {
+		// FIXME: This might not be a valid address;
+		// mail_address_build_list used to fix that, I think.
+		dbmail_message_set_header(msg, "Return-Path",
+			dbmail_message_get_header(msg, "From"));
+	} else {
 		trace(TRACE_DEBUG, "%s,%s: no return path found",
 				__FILE__, __func__);
+	}
 
 	/* If the NORMAL delivery mode has been selected... */
 	if (deliver_to_header != NULL) {
@@ -351,7 +350,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* inserting messages into the database */
-	if (insert_messages(msg, &mimelist, &dsnusers, &returnpath) == -1) {
+	if (insert_messages(msg, &mimelist, &dsnusers) == -1) {
 		trace(TRACE_ERROR, "main(): insert_messages failed");
 		/* Most likely a random failure... */
 		exitcode = EX_TEMPFAIL;
@@ -398,9 +397,9 @@ int main(int argc, char *argv[])
 
 	trace(TRACE_DEBUG, "main(): freeing all other lists");
 	dm_list_free(&mimelist.start);
-	dm_list_free(&returnpath.start);
 	dm_list_free(&users.start);
 	dm_free(dsnuser.address);
+	dm_free(returnpath);
 
 	trace(TRACE_DEBUG, "main(): they're all free. we're done.");
 

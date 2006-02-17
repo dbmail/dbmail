@@ -418,19 +418,13 @@ int store_message_in_blocks(const char *message, u64_t message_size,
  */
 int insert_messages(struct DbmailMessage *message, 
 		struct dm_list *headerfields, 
-		struct dm_list *dsnusers, 
-		struct dm_list *returnpath)
+		struct dm_list *dsnusers)
 {
 	char *header;
 	u64_t headersize, bodysize, rfcsize;
 	u64_t tmpid;
-	struct element *element, *ret_path;
+	struct element *element;
 	u64_t msgsize;
-
-	/* Only the last step of the returnpath is used. */
-	if ((ret_path = dm_list_getstart(returnpath))) {
-		dbmail_message_set_header(message, "Return-Path", (char *)ret_path->data);
-	}
 
  	delivery_status_t final_dsn;
 
@@ -480,8 +474,7 @@ int insert_messages(struct DbmailMessage *message,
 
 			switch (sort_and_deliver(message,
 					delivery->address, useridnr,
-					delivery->mailbox, delivery->source,
-					ret_path->data)) {
+					delivery->mailbox, delivery->source)) {
 			case DSN_CLASS_OK:
 				/* Indicate success. */
 				trace(TRACE_DEBUG, "%s, %s: successful sort_and_deliver for useridnr [%llu]",
@@ -560,7 +553,9 @@ int insert_messages(struct DbmailMessage *message,
 					__FILE__, __func__);
 
 			/* Forward using the temporary stored message. */
-			if (forward(tmpid, delivery->forwards, (ret_path ? ret_path->data : "DBMAIL-MAILER"), header, headersize) < 0)
+			if (forward(tmpid, delivery->forwards,
+					dbmail_message_get_header(message, "Return-Path"),
+					header, headersize) < 0)
 				/* FIXME: if forward fails, we should do something 
 				 * sensible. Currently, the message is just black-
 				 * holed! */

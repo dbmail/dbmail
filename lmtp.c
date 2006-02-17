@@ -616,7 +616,8 @@ int lmtp(void *stream, void *instream, char *buffer,
 						return 1;
 					}
 
-					if (insert_messages(msg, &headerfields, &rcpt, &from) == -1) {
+					dbmail_message_set_header(msg, "Return-Path", from->data);
+					if (insert_messages(msg, &headerfields, &rcpt) == -1) {
 						ci_write((FILE *) stream, "503 Message not received\r\n");
 					} else {
 						/* The DATA command itself it not given a reply except

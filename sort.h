@@ -30,8 +30,7 @@ typedef struct sort_result sort_result_t;
 
 dsn_class_t sort_and_deliver(struct DbmailMessage *self,
 		const char *destination, u64_t useridnr,
-		const char *mailbox, mailbox_source_t source,
-		const char *fromaddr);
+		const char *mailbox, mailbox_source_t source);
 
 dsn_class_t sort_deliver_to_mailbox(struct DbmailMessage *message,
 		u64_t useridnr, const char *mailbox, mailbox_source_t source);

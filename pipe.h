@@ -32,8 +32,7 @@
  */
 int insert_messages(struct DbmailMessage *message,
 		struct dm_list *headerfields, 
-		struct dm_list *dsnusers,
-		struct dm_list *returnpath);
+		struct dm_list *dsnusers);
 
 /**
  * \brief discards all input coming from instream
