@@ -1,3 +1,17 @@
+2006-02-16  Paul J Stevens <paul@nfg.nl>
+
+	* ChangeLog, Makefile.am, acinclude.m4, auth.h, authmodule.c, db.c, 
+	  dbmail-imapsession.c, dbmail-message.c, dbmail.conf, dbmodule.c, 
+	  dsn.c, imap4.c, misc.c, misc.h, modules/authldap.c, 
+	  modules/authsql.c, modules/sortsieve.c, sievecmd.c, sort.c, 
+	  sortmodule.c, sql/mysql/add_replycache.mysql, timsieved.c,
+	  check_dbmail_dsn.c, check_dbmail_misc.c:
+	resync
+	* AUTHORS:
+	removed reference to iniparser
+	* check_dbmail_dsn.c:
+	some cleanups so tests dont fail
+
 2006-02-15  Aaron Stone  <aaron@serendipity.cx>
 
 	* db.c:
