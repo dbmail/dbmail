@@ -34,14 +34,14 @@ int sort_load_driver(void)
 
 	if (!g_module_supported()) {
 		trace(TRACE_FATAL, "%s,%s: loadable modules unsupported on this platform",
-				__FILE__, __file__);
+				__FILE__, __func__);
 		return 1;
 	}
 
 	sort = g_new0(sort_func_t,1);
 	if (!sort) {
 		trace(TRACE_FATAL, "%s,%s: cannot allocate memory",
-				__FILE__, __file__);
+				__FILE__, __func__);
 		return -3;
 	}
 
@@ -86,54 +86,62 @@ int sort_load_driver(void)
 	return 0;
 }
 
-int sort_process(u64_t user_idnr, struct DbmailMessage *message)
+sort_result_t *sort_process(u64_t user_idnr, struct DbmailMessage *message)
 {
 	if (!sort)
 		sort_load_driver();
-	if (sort)
-		return sort->process(user_idnr, message);
+	if (!sort) {
+		trace(TRACE_ERROR, "%s, %s: Error loading sort driver",
+				__FILE__, __func__);
+		return NULL;
+	}
+	return sort->process(user_idnr, message);
 }
 
-int sort_validate(u64_t user_idnr, char *scriptname)
+sort_result_t *sort_validate(u64_t user_idnr, char *scriptname)
 {
 	if (!sort)
 		sort_load_driver();
-	if (sort)
-		return sort->validate(user_idnr, scriptname);
+	if (!sort) {
+		trace(TRACE_ERROR, "%s, %s: Error loading sort driver",
+				__FILE__, __func__);
+		return NULL;
+	}
+	return sort->validate(user_idnr, scriptname);
 }
 
 void sort_free_result(sort_result_t *result)
 {
 	assert(sort);
 	assert(sort->free_result);
-	return sort->free_result();
+	return sort->free_result(result);
 }
 
-int sort_get_cancelkeep(void)
+int sort_get_cancelkeep(sort_result_t *result)
 {
 	assert(sort);
 	assert(sort->get_cancelkeep);
-	return sort->get_cancelkeep();
+	return sort->get_cancelkeep(result);
 }
 
-const char * sort_get_mailbox(void)
+const char * sort_get_mailbox(sort_result_t *result)
 {
 	assert(sort);
 	assert(sort->get_mailbox);
-	return sort->get_mailbox();
+	return sort->get_mailbox(result);
 }
 
 const char * sort_get_errormsg(sort_result_t *result)
 {
 	assert(sort);
 	assert(sort->get_errormsg);
-	return sort->get_errormsg();
+	return sort->get_errormsg(result);
 }
 
 int sort_get_error(sort_result_t *result)
 {
 	assert(sort);
 	assert(sort->get_error);
-	return sort->get_error();
+	return sort->get_error(result);
 }
 

@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: sievecmd.c 1982 2006-02-15 14:45:48Z aaron $
+/* $Id: sievecmd.c 1984 2006-02-16 16:09:46Z aaron $
  * This is dbmail-sievecmd, which provides
  * a command line interface to the sievescripts */
 
@@ -211,30 +211,35 @@ int do_insert(u64_t user_idnr, char *name, FILE * source)
 	if (sort_result == NULL) {
 		printf("Script could not be validated.\n");
 		db_delete_sievescript(user_idnr, "@!temp-script!@");
+		sort_free_result(sort_result);
 		return -1;
 	}
 	if (sort_get_error(sort_result) != 0) {
 		printf("Script [%s] has errors: %s.\n",
 			name, sort_get_errormsg(sort_result));
 		db_delete_sievescript(user_idnr, "@!temp-script!@");
+		sort_free_result(sort_result);
 		return -1;
 	}
 	sort_free_result(sort_result);
 
 	res = db_rename_sievescript(user_idnr, "@!temp-script!@", name);
 	if (res == -3) {
-		db_delete_sievescript(user_idnr, "@!temp-script!@");
 		printf("Script [%s] already exists.\n", name);
+		db_delete_sievescript(user_idnr, "@!temp-script!@");
+		sort_free_result(sort_result);
 		return -1;
 	} else if (res != 0) {
-		db_delete_sievescript(user_idnr, "@!temp-script!@");
 		printf("Error inserting script [%s] into the database!\n",
 		       name);
+		db_delete_sievescript(user_idnr, "@!temp-script!@");
+		sort_free_result(sort_result);
 		return -1;
 	}
 
 	printf("Script [%s] successfully inserted and marked inactive!\n",
 	       name);
+	sort_free_result(sort_result);
 	return 0;
 }
 

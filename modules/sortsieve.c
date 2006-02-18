@@ -111,7 +111,7 @@ int sort_vacation(sieve2_context_t *s, void *my)
 		rc_from = "";// FIXME: What's the user's from address!?
 	}
 
-	rc_to = dbmail_message_get_envelope(m->message);
+	rc_to = dbmail_message_get_header(m->message, "Return-Path");
 
 	if (db_replycache_validate(rc_to, rc_from, rc_handle, days)) {
 		db_replycache_register(rc_to, rc_from, rc_handle);
@@ -139,7 +139,7 @@ int sort_redirect(sieve2_context_t *s, void *my)
 	dm_list_nodeadd(&targets, address, strlen(address+1));
 
 	if (forward(m->message->id, &targets,
-			dbmail_message_get_envelope(m->message),
+			dbmail_message_get_header(m->message, "Return-Path"),
 			NULL, 0) != 0) {
 		dm_list_free(&targets.start);
 		return SIEVE2_ERROR_FAIL;
@@ -304,7 +304,7 @@ int sort_getenvelope(sieve2_context_t *s, void *my)
 	struct sort_context *m = (struct sort_context *)my;
 
 	sieve2_setvalue_string(s, "envelope",
-		dbmail_message_get_envelope(m->message));
+			m->message->envelope_recipient->str);
 
 	return SIEVE2_OK;
 }
@@ -354,14 +354,9 @@ static int sort_teardown(sieve2_context_t **s2c,
 
 	sieve2_context_t *sieve2_context = *s2c;
 	struct sort_context *sort_context = *sc;
-	struct element *element;
 	int res;
 
-	for (element = dm_list_getstart(&sort_context->freelist);
-			element != NULL;
-			element = element->nextnode) {
-		dm_free(element->data);
-	}
+	dm_list_free(&sort_context->freelist.start);
 
 	if (sort_context) {
 		dm_free(sort_context);

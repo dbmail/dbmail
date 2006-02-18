@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: lmtp.c 1891 2005-10-03 10:01:21Z paul $
+/* $Id: lmtp.c 1988 2006-02-18 03:27:14Z aaron $
  *
  * implementation for lmtp commands according to RFC 1081 */
 
@@ -616,7 +616,8 @@ int lmtp(void *stream, void *instream, char *buffer,
 						return 1;
 					}
 
-					if (insert_messages(msg, &headerfields, &rcpt, &from) == -1) {
+					dbmail_message_set_header(msg, "Return-Path", from.start->data);
+					if (insert_messages(msg, &headerfields, &rcpt) == -1) {
 						ci_write((FILE *) stream, "503 Message not received\r\n");
 					} else {
 						/* The DATA command itself it not given a reply except

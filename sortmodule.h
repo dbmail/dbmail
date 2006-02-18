@@ -12,11 +12,13 @@
 /* Prototypes must match with those in sort.h
  * and in the sorting drivers. */
 typedef struct {
-	int (* connect)(void);
-	int (* disconnect)(void);
-	int (* validate)(u64_t user_idnr, char *scriptname, char **errmsg);
-	int (* process)(u64_t user_idnr, struct DbmailMessage *message,
-		const char *fromaddr);
+	sort_result_t *(* process)(u64_t user_idnr, struct DbmailMessage *message);
+	sort_result_t *(* validate)(u64_t user_idnr, char *scriptname);
+	void (* free_result)(sort_result_t *result);
+	int (* get_cancelkeep)(sort_result_t *result);
+	const char *(* get_mailbox)(sort_result_t *result);
+	const char *(* get_errormsg)(sort_result_t *result);
+	int (* get_error)(sort_result_t *result);
 } sort_func_t;
 
 

@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: pipe.h 1946 2005-12-22 15:51:40Z aaron $ 
+/* $Id: pipe.h 1987 2006-02-17 13:46:06Z aaron $ 
  */
 
 #ifndef _PIPE_H
@@ -32,8 +32,7 @@
  */
 int insert_messages(struct DbmailMessage *message,
 		struct dm_list *headerfields, 
-		struct dm_list *dsnusers,
-		struct dm_list *returnpath);
+		struct dm_list *dsnusers);
 
 /**
  * \brief discards all input coming from instream

@@ -1,5 +1,5 @@
 /*
-  $Id: dbmail-message.c 1982 2006-02-15 14:45:48Z aaron $
+  $Id: dbmail-message.c 1987 2006-02-17 13:46:06Z aaron $
 
   Copyright (C) 2004-2005 NFG Net Facilities Group BV, info@nfg.nl
 
@@ -151,6 +151,7 @@ struct DbmailMessage * dbmail_message_new(void)
 	}
 	
 	self->internal_date = g_string_new("");
+	self->envelope_recipient = g_string_new("");
 	
 	self->header_dict = g_hash_table_new_full((GHashFunc)g_str_hash,
 			(GEqualFunc)g_str_equal, (GDestroyNotify)g_free, NULL);
@@ -174,6 +175,7 @@ void dbmail_message_free(struct DbmailMessage *self)
 	self->raw=NULL;
 	
 	g_string_free(self->internal_date,TRUE);
+	g_string_free(self->envelope_recipient,TRUE);
 	g_hash_table_destroy(self->header_dict);
 	
 	self->id=0;
@@ -382,16 +384,16 @@ gchar * dbmail_message_get_internal_date(const struct DbmailMessage *self)
 	return NULL;
 }
 
-void dbmail_message_set_envelope(const struct DbmailMessage *self, char *envelope)
+void dbmail_message_set_envelope_recipient(struct DbmailMessage *self, char *envelope_recipient)
 {
-	if (envelope)
-		g_string_printf(self->envelope, "%s", envelope);
+	if (envelope_recipient)
+		g_string_printf(self->envelope_recipient,"%s", envelope_recipient);
 }
 
-gchar * dbmail_message_get_envelope(const struct DbmailMessage *self)
+gchar * dbmail_message_get_envelope_recipient(const struct DbmailMessage *self)
 {
-	if (self->envelope->len > 0)
-		return self->envelope->str;
+	if (self->envelope_recipient->len > 0)
+		return self->envelope_recipient->str;
 	return NULL;
 }
 
@@ -403,36 +405,6 @@ gchar * dbmail_message_get_header(const struct DbmailMessage *self, const char *
 {
 	return (gchar *)g_mime_object_get_header(GMIME_OBJECT(self->content), header);
 }
-
-/*
-static void makeheaderarray(const char *name,
-                            const char *value,
-                            gpointer stupid)
-{
-	if (strcasecmp(name, stupid[0])) {
-		stupid[1] = g_list_append(stupid[1], value);
-	}
-}
-
-static void glist_to_chararray(gpointer data, gpointer dumb)
-{
-	dumb[1][dumb[0]] = data;
-}
-
-gchar ** dbmail_message_get_headers(const struct DbmailMessage *self, const char *header)
-{
-	gchar ** output;
-	void ** stupid = { char * header, GList * headerlist };
-
-	g_mime_header_foreach(GMIME_OBJECT(self->content)->header, makeheaderarray, stupid);
-
-	headerarray = malloc(sizeof(char *) * (g_list_length(headerlist) + 1));
-
-	g_list_foreach(headerlist, glist_to_chararray, dumb);
-
-	return headerarray;
-}
-*/
 
 /* dump message(parts) to char ptrs */
 gchar * dbmail_message_to_string(const struct DbmailMessage *self) 

@@ -1,3 +1,20 @@
+2006-02-17  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmail-message.h, dbmail-message.c:
+	Changed get/set envelope to get/set envelope_recipient, i.e. the
+	current delivery address, totally different from the Return-Path. Duh.
+	* pipe.h, pipe.c, main.c, lmtp.c:
+	Removed the returnpath lists, put in single valued return path
+	variables, and directly set the Return-Path header.
+	* sort.h, sort.c, modules/sortsieve.c:
+	Updated return path to get the Return-Path header, and updated the
+	getenvelope function to actually get the envelope recipient.
+
+2006-02-16  Aaron Stone  <aaron@serendipity.cx>
+
+	* sortmodule.c, sortmodule.h, sort.h:
+	Updated to match latest function prototypes.
+
 2006-02-15  Aaron Stone  <aaron@serendipity.cx>
 
 	* db.c:

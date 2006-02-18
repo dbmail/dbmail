@@ -1,5 +1,5 @@
 
-/* $Id: sort.h 1976 2006-02-07 21:28:50Z aaron $ 
+/* $Id: sort.h 1987 2006-02-17 13:46:06Z aaron $ 
  
  Copyright (C) 1999-2004 Aaron Stone aaron at serendipity dot cx
 
@@ -30,8 +30,7 @@ typedef struct sort_result sort_result_t;
 
 dsn_class_t sort_and_deliver(struct DbmailMessage *self,
 		const char *destination, u64_t useridnr,
-		const char *mailbox, mailbox_source_t source,
-		const char *fromaddr);
+		const char *mailbox, mailbox_source_t source);
 
 dsn_class_t sort_deliver_to_mailbox(struct DbmailMessage *message,
 		u64_t useridnr, const char *mailbox, mailbox_source_t source);

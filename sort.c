@@ -15,8 +15,7 @@
  * */
 dsn_class_t sort_and_deliver(struct DbmailMessage *message,
 		const char *destination, u64_t useridnr,
-		const char *mailbox, mailbox_source_t source,
-		const char *fromaddr UNUSED)
+		const char *mailbox, mailbox_source_t source)
 {
 	int cancelkeep = 0;
 	dsn_class_t ret;
@@ -27,7 +26,7 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message,
 		mailbox = "INBOX";
 		source = BOX_DEFAULT;
 	}
-	
+
 	/* Subaddress. */
 	config_get_value("SUBADDRESS", "DELIVERY", val);
 	if (strcasecmp(val, "yes") == 0) {
@@ -42,6 +41,9 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message,
 			source = BOX_ADDRESSPART;
 		}
 	}
+
+	/* Give Sieve access to the envelope recipient. */
+	dbmail_message_set_envelope_recipient(message, destination);
 
 	/* Sieve. */
 	config_get_value("SIEVE", "DELIVERY", val);
@@ -109,3 +111,4 @@ dsn_class_t sort_deliver_to_mailbox(struct DbmailMessage *message,
 		return DSN_CLASS_OK;
 	}
 }
+
