@@ -616,7 +616,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 						return 1;
 					}
 
-					dbmail_message_set_header(msg, "Return-Path", from->data);
+					dbmail_message_set_header(msg, "Return-Path", from.start->data);
 					if (insert_messages(msg, &headerfields, &rcpt) == -1) {
 						ci_write((FILE *) stream, "503 Message not received\r\n");
 					} else {
