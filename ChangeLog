@@ -1,3 +1,10 @@
+2006-02-18  Paul J Stevens <paul@nfg.nl>
+	* debian/changelog, debian/dbmail.postinst, debian/dbmail.postrm, 
+	  debian/libdbmail-ldap.files, debian/libdbmail-mysql.files, 
+	  debian/libdbmail-pgsql.files, debian/libdbmail-sieve.files, 
+	  debian/libdbmail-sqlite.files:
+	cleanup the packaging a bit
+
 2006-02-17  Aaron Stone  <aaron@serendipity.cx>
 
 	* dbmail-message.h, dbmail-message.c:
