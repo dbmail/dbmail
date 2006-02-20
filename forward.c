@@ -66,6 +66,10 @@ int forward(u64_t msgidnr, struct dm_list *targets, const char *from,
 
 	target = dm_list_getstart(targets);
 
+	/* We might get passed a NULL pointer here. */
+	if (!from)
+		from = "DBMAIL-MAILER";
+
 	while (target != NULL) {
 		if ((((char *) target->data)[0] == '|')
 		    || (((char *) target->data)[0] == '!')) {

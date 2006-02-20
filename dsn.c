@@ -244,12 +244,12 @@ void dsnuser_free(deliver_to_user_t * dsnuser)
 	      __FILE__, __func__);
 }
 
-static void set_dsn(deliver_to_user_t *delivery,
+void set_dsn(delivery_status_t *dsn,
 		int foo, int bar, int qux)
 {
-	delivery->dsn.class = foo;
-	delivery->dsn.subject = bar;
-	delivery->dsn.detail = qux;
+	dsn->class = foo;
+	dsn->subject = bar;
+	dsn->detail = qux;
 }
 
 static int address_has_alias(deliver_to_user_t *delivery)
@@ -551,13 +551,13 @@ int dsnuser_resolve(deliver_to_user_t *delivery)
 		switch (auth_check_userid(delivery->useridnr)) {
 		case -1:
 			/* Temp fail. Address related. D.N.E. */
-			set_dsn(delivery, DSN_CLASS_TEMP, 1, 1);
+			set_dsn(&delivery->dsn, DSN_CLASS_TEMP, 1, 1);
 			trace(TRACE_INFO, "%s, %s: useridnr [%llu] temporary lookup failure.",
 					__FILE__, __func__, delivery->useridnr);
 			break;
 		case 1:
 			/* Failure. Address related. D.N.E. */
-			set_dsn(delivery, DSN_CLASS_FAIL, 1, 1);
+			set_dsn(&delivery->dsn, DSN_CLASS_FAIL, 1, 1);
 			trace(TRACE_INFO, "%s, %s: useridnr [%llu] does not exist.",
 					__FILE__, __func__, delivery->useridnr);
 			break;
@@ -571,7 +571,7 @@ int dsnuser_resolve(deliver_to_user_t *delivery)
 			}
 
 			/* Success. Address related. Valid. */
-			set_dsn(delivery, DSN_CLASS_OK, 1, 5);
+			set_dsn(&delivery->dsn, DSN_CLASS_OK, 1, 5);
 			trace(TRACE_INFO, "%s, %s: delivery [%llu] directly to a useridnr.",
 					__FILE__, __func__, delivery->useridnr);
 			break;
@@ -586,43 +586,43 @@ int dsnuser_resolve(deliver_to_user_t *delivery)
 			/* The address had aliases and they've
 			 * been resolved into the delivery struct. */
 			/* Success. Address related. Valid. */
-			set_dsn(delivery, DSN_CLASS_OK, 1, 5);
+			set_dsn(&delivery->dsn, DSN_CLASS_OK, 1, 5);
 			trace(TRACE_INFO, "%s, %s: delivering [%s] as an alias.",
 					__FILE__, __func__, delivery->address);
 
 		} else if (address_has_alias_mailbox(delivery)) {
 			/* Success. Address related. Valid. */
-			set_dsn(delivery, DSN_CLASS_OK, 1, 5);
+			set_dsn(&delivery->dsn, DSN_CLASS_OK, 1, 5);
 			trace(TRACE_INFO, "%s, %s: delivering [%s] as an alias with mailbox.",
 					__FILE__, __func__, delivery->address);
 
 		} else if (address_is_username(delivery)) {
 			/* Success. Address related. Valid. */
-			set_dsn(delivery, DSN_CLASS_OK, 1, 5);
+			set_dsn(&delivery->dsn, DSN_CLASS_OK, 1, 5);
 			trace(TRACE_INFO, "%s, %s: delivering [%s] as a username.",
 					__FILE__, __func__, delivery->address);
 
 		} else if (address_is_username_mailbox(delivery)) {
 			/* Success. Address related. Valid. */
-			set_dsn(delivery, DSN_CLASS_OK, 1, 5);
+			set_dsn(&delivery->dsn, DSN_CLASS_OK, 1, 5);
 			trace(TRACE_INFO, "%s, %s: delivering [%s] as a username with mailbox.",
 					__FILE__, __func__, delivery->address);
 			
 		} else if (address_is_domain_catchall(delivery)) {
 			/* Success. Address related. Valid. */
-			set_dsn(delivery, DSN_CLASS_OK, 1, 5);
+			set_dsn(&delivery->dsn, DSN_CLASS_OK, 1, 5);
 			trace(TRACE_INFO, "%s, %s: delivering [%s] as a domain catchall.",
 					__FILE__, __func__, delivery->address);
 
 		} else if (address_is_userpart_catchall(delivery)) {
 			/* Success. Address related. Valid. */
-			set_dsn(delivery, DSN_CLASS_OK, 1, 5);
+			set_dsn(&delivery->dsn, DSN_CLASS_OK, 1, 5);
 			trace(TRACE_INFO, "%s, %s: delivering [%s] as a userpart catchall.",
 					__FILE__, __func__, delivery->address);
 
 		} else {
 			/* Failure. Address related. D.N.E. */
-			set_dsn(delivery, DSN_CLASS_FAIL, 1, 1);
+			set_dsn(&delivery->dsn, DSN_CLASS_FAIL, 1, 1);
 			trace(TRACE_INFO, "%s, %s: could not find [%s] at all.",
 					__FILE__, __func__, delivery->address);
 		}

@@ -20,8 +20,8 @@ PGSQL:  $PGSQLLIB
 SQLITE: $SQLITELIB
 SIEVE:  $SORTLIB
 LDAP:   $LDAPLIB
-SHARED: $enable_shared
-STATIC: $enable_static
+SHARED: $SHARED
+STATIC: $STATIC
 CHECK:  $with_check
 ])
 ])

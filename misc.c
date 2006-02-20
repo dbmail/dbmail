@@ -374,9 +374,9 @@ int read_from_stream(FILE * instream, char **m_buf, size_t maxlen)
 	char *tmp_buf = NULL;
 	char *f_buf = NULL;
 
-	/* Give up on a zero length request */
+	/* Allocate a zero length string on length 0. */
 	if (maxlen < 1) {
-		*m_buf = NULL;
+		*m_buf = dm_strdup("");
 		return 0;
 	}
 

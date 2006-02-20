@@ -1,3 +1,25 @@
+2006-02-20  Aaron Stone  <aaron@serendipity.cx>
+
+	* acinclude.m4:
+	Trying to get smarter about shared, static.
+	* check_dbmail_deliver.c:
+	Zapped the returnpath argument to insert_messages.
+	* db.h, db.c:
+	Added db_check_sievescript_active, escaped script in
+	db_add_sievescript.
+	* dsb.h, dsn.c, pipe.c:
+	Changed the prototype for set_dsn a little bit.
+	* sort.h, sort.c, sortmodule.c:
+	Added sort_get_reject and handling for reject return codes.
+	* forward.c:
+	Handle a null pointer in the from address variable.
+	* misc.c:
+	Always return a valid string from read_from_stream, which will be a
+	copy of "" if the requested length is 0. But not NULL.
+	* modules/sortsieve.c:
+	Work on reject, vacation, getenvelope, fileinto. Now clears memory
+	allocated for the result structure to prevent unexpected cancelkeeps.
+
 2006-02-17  Aaron Stone  <aaron@serendipity.cx>
 
 	* dbmail-message.h, dbmail-message.c:

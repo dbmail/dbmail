@@ -349,6 +349,15 @@ int db_calculate_quotum_used(u64_t user_idnr);
 int db_get_sievescript_byname(u64_t user_idnr, char *scriptname,
 			      char **script);
 /**
+ * \brief Check if the user has an active sieve script.
+ * \param user_idnr user id
+ * \return
+ *        - -1 on error
+ *        - 0 when user has an active script
+ *        - 1 when user doesn't have an active script
+ */
+int db_check_sievescript_active(u64_t user_idnr);
+/**
  * \brief get the name of the active sieve script for a user
  * \param user_idnr user id
  * \param scriptname pointer to string that will hold the script name

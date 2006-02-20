@@ -18,6 +18,7 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message,
 		const char *mailbox, mailbox_source_t source)
 {
 	int cancelkeep = 0;
+	int reject = 0;
 	dsn_class_t ret;
 	field_t val;
 	
@@ -39,6 +40,8 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message,
 			// FIXME: I forget who frees the mailbox.
 			mailbox = subaddress;
 			source = BOX_ADDRESSPART;
+			trace(TRACE_INFO, "%s, %s: Setting BOX_ADDRESSPART mailbox to [%s]",
+					__FILE__, __func__, mailbox);
 		}
 	}
 
@@ -47,11 +50,15 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message,
 
 	/* Sieve. */
 	config_get_value("SIEVE", "DELIVERY", val);
-	if (strcasecmp(val, "yes") == 0) {
+	if (strcasecmp(val, "yes") == 0
+	&& db_check_sievescript_active(useridnr) == 0) {
+		trace(TRACE_INFO, "%s, %s: Calling for a Sieve sort",
+				__FILE__, __func__);
 		sort_result_t *sort_result;
 		sort_result = sort_process(useridnr, message);
 		if (sort_result) {
 			cancelkeep = sort_get_cancelkeep(sort_result);
+			reject = sort_get_reject(sort_result);
 			sort_free_result(sort_result);
 		}
 	}
@@ -71,8 +78,21 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message,
 		// This may necessarily imply that the message
 		// is being discarded -- dropped flat on the floor.
 		ret = DSN_CLASS_OK;
+		trace(TRACE_INFO, "%s, %s: Keep was cancelled. Message may be discarded.",
+				__FILE__, __func__);
 	} else {
 		ret = sort_deliver_to_mailbox(message, useridnr, mailbox, source);
+		trace(TRACE_INFO, "%s, %s: Keep was not cancelled. Message will be delivered by default.",
+				__FILE__, __func__);
+	}
+
+	/* Reject probably implies cancelkeep,
+	 * but we'll not assume that and instead
+	 * just test this as a separate block. */
+	if (reject) {
+		trace(TRACE_INFO, "%s, %s: Message will be rejected.",
+				__FILE__, __func__);
+		ret = DSN_CLASS_FAIL;
 	}
 
 	return ret;

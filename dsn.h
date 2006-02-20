@@ -61,6 +61,17 @@ int dsn_tostring(delivery_status_t dsn, const char ** const class,
                  const char ** const subject, const char ** const detail);
 
 /**
+ * \brief Sets values on the dsn delivery_status_t
+ *        inside of a delivery deliver_to_user_t.
+ * \param delivery is a pointer to a deliver_to_user_t struct.
+ * \param class is the class (use values from dsn_class_t).
+ * \param subject is the subject.
+ * \param detail is the detail.
+ */
+void set_dsn(delivery_status_t *dsn,
+		int class, int subject, int detail);
+
+/**
  * \brief Initialize a dsnuser structure and its lists.
  * \param dsnuser Pointer to a dsnuser structure in need of initialization.
  * \return

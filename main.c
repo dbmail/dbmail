@@ -113,10 +113,10 @@ int main(int argc, char *argv[])
 					printf
 					    ("Only one header field may be specified.\n");
 					usage_error = 1;
-				} else
+				} else {
 					deliver_to_header = optarg;
-			} else
-				deliver_to_header = "deliver-to";
+				}
+			}
 
 			break;
 
@@ -220,6 +220,9 @@ int main(int argc, char *argv[])
 			goto freeall;
 		}
 	}
+
+	if (!deliver_to_header)
+		deliver_to_header = "deliver-to";
 
 	/* ...or if there weren't any command line arguments at all. */
 	if (argc < 2) {

@@ -511,9 +511,8 @@ int insert_messages(struct DbmailMessage *message,
 		final_dsn = dsnuser_worstcase_int(has_2, has_4, has_5, has_5_2);
 		switch (final_dsn.class) {
 		case DSN_CLASS_OK:
-			delivery->dsn.class = DSN_CLASS_OK;	/* Success. */
-			delivery->dsn.subject = 1;	/* Address related. */
-			delivery->dsn.detail = 5;	/* Valid. */
+			/* Success. Address related. Valid. */
+			set_dsn(&delivery->dsn, DSN_CLASS_OK, 1, 5);
 			break;
 		case DSN_CLASS_TEMP:
 			/* sort_and_deliver returns TEMP is useridnr is 0, aka,
@@ -522,21 +521,18 @@ int insert_messages(struct DbmailMessage *message,
 			/* If there's a problem with the delivery address, but
 			 * there are proper forwarding addresses, we're OK. */
 			if (dm_list_length(delivery->forwards) > 0) {
-				delivery->dsn.class = DSN_CLASS_OK;
-				delivery->dsn.subject = 1;	/* Address related. */
-				delivery->dsn.detail = 5;	/* Valid. */
+				/* Success. Address related. Valid. */
+				set_dsn(&delivery->dsn, DSN_CLASS_OK, 1, 5);
 				break;
 			}
 			/* Fall through to FAIL. */
 		case DSN_CLASS_FAIL:
-			delivery->dsn.class = DSN_CLASS_FAIL;	/* Permanent failure. */
-			delivery->dsn.subject = 1;	/* Address related. */
-			delivery->dsn.detail = 1;	/* Does not exist. */
+			/* Permanent failure. Address related. Does not exist. */
+			set_dsn(&delivery->dsn, DSN_CLASS_FAIL, 1, 1);
 			break;
 		case DSN_CLASS_QUOTA:
-			delivery->dsn.class = DSN_CLASS_FAIL;	/* Permanent failure. */
-			delivery->dsn.subject = 2;	/* Mailbox related. */
-			delivery->dsn.detail = 2;	/* Over quota limit. */
+			/* Permanent failure. Mailbox related. Over quota limit. */
+			set_dsn(&delivery->dsn, DSN_CLASS_FAIL, 2, 2);
 			break;
 		case DSN_CLASS_NONE:
 			/* Leave the DSN status at whatever dsnuser_resolve set it at. */

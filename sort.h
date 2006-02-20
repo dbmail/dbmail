@@ -40,6 +40,7 @@ sort_result_t *sort_validate(u64_t user_idnr, char *scriptname);
 void sort_free_result(sort_result_t *sort_result);
 
 int sort_get_cancelkeep(sort_result_t *sort_result);
+int sort_get_reject(sort_result_t *sort_result);
 const char * sort_get_mailbox(sort_result_t *sort_result);
 const char * sort_get_errormsg(sort_result_t *sort_result);
 int sort_get_error(sort_result_t *sort_result);
