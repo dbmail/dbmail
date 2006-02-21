@@ -622,6 +622,8 @@ int db_rename_sievescript(u64_t user_idnr, char *scriptname, char *newname)
 		return DM_EQUERY;
 	}
 
+	db_free_result();
+
 	if (db_get_result_int(0,0) > 0) {
 		snprintf(query, DEF_QUERYSIZE,
 			"DELETE FROM %ssievescripts "
@@ -674,6 +676,8 @@ int db_add_sievescript(u64_t user_idnr, char *scriptname, char *script)
 		dm_free(escaped_scriptname);
 		return DM_EQUERY;
 	}
+
+	db_free_result();
 
 	if (db_get_result_int(0,0) > 0) {
 		snprintf(query, DEF_QUERYSIZE,

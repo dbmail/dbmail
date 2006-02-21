@@ -156,6 +156,14 @@
 /** username for owner of public folders */
 #define PUBLIC_FOLDER_USER "__public__"
 
+/* FIXME: Any consumers of this should
+ * be using POSTMASTER from dbmail.conf! */
+#define AUTO_NOTIFY_SENDER "autonotify@dbmail"
+#define AUTO_NOTIFY_SUBJECT "NEW MAIL NOTIFICATION"
+
+/* Must be at least 998 or 1000 by RFC's */
+#define MAX_LINE_SIZE 1024
+
 /** default table prefix */
 #define DEFAULT_DBPFX "dbmail_"
 

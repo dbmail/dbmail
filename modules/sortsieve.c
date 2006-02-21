@@ -115,8 +115,8 @@ int sort_vacation(sieve2_context_t *s, void *my)
 	rc_to = dbmail_message_get_header(m->message, "Return-Path");
 
 	if (db_replycache_validate(rc_to, rc_from, rc_handle, days) == DM_SUCCESS) {
-		db_replycache_register(rc_to, rc_from, rc_handle);
-		send_vacation(rc_to, rc_from, subject, message);
+		if (send_vacation(m->message, rc_to, rc_from, subject, message) == 0)
+			db_replycache_register(rc_to, rc_from, rc_handle);
 		trace(TRACE_INFO, "%s, %s: Sending vacation to [%s] from [%s] handle [%s] repeat days [%d]",
 				__FILE__, __func__, rc_to, rc_from, rc_handle, days);
 	} else {

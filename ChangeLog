@@ -1,5 +1,28 @@
 2006-02-20  Aaron Stone  <aaron@serendipity.cx>
 
+	* acinclude.m4, configure.in:
+	Made shared/static into an either-or dichotomy.
+	* dbmail.conf:
+	Moved auto_reply, auto_notification to DELIVERY section,
+	and sendmail to the DBMAIL section.
+	* dbmail.h:
+	Moved a few definitions here.
+	* lmtp.c, main.c:
+	Slowly getting rid of headerfields list.
+	* timsieve.c:
+	Delete the temp script if it's got errors.
+	* db.c:
+	Added a few more db_free_result calls.
+	* misc.h, misc.c:
+	Moved discard_from_stream from pipe.c here.
+	* pipe.h, pipe.c:
+	Rewrite of send_reply, send_notification with send_mail as the core.
+	Added send_vacation as another simple wrapper/consumer of send_mail.
+	* sortmodule.h, modules/sortsieve.c, sort.c:
+	Vacation works. Reject works.
+
+2006-02-20  Aaron Stone  <aaron@serendipity.cx>
+
 	* acinclude.m4:
 	Trying to get smarter about shared, static.
 	* check_dbmail_deliver.c:

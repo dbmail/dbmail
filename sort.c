@@ -48,8 +48,9 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message,
 	/* Give Sieve access to the envelope recipient. */
 	dbmail_message_set_envelope_recipient(message, destination);
 
-	/* Sieve. */
 	config_get_value("SIEVE", "DELIVERY", val);
+#if defined(SIEVE) || defined(SHARED)
+	/* Sieve. */
 	if (strcasecmp(val, "yes") == 0
 	&& db_check_sievescript_active(useridnr) == 0) {
 		trace(TRACE_INFO, "%s, %s: Calling for a Sieve sort",
@@ -62,6 +63,14 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message,
 			sort_free_result(sort_result);
 		}
 	}
+#else
+	/* No Sieve. */
+	if (strcasecmp(val, "yes") == 0) {
+		trace(TRACE_WARNING, "%s, %s: SIEVE sorting enabled in DELIVERY section of dbmail.conf,"
+				" but this build of DBMail was statically configured without Sieve.",
+				__FILE__, __func__);
+	}
+#endif
 
 	/* Sieve actions:
 	 * (m = must implement, s = should implement, e = extension)

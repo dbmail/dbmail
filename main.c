@@ -353,7 +353,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* inserting messages into the database */
-	if (insert_messages(msg, &mimelist, &dsnusers) == -1) {
+	if (insert_messages(msg, &dsnusers) == -1) {
 		trace(TRACE_ERROR, "main(): insert_messages failed");
 		/* Most likely a random failure... */
 		exitcode = EX_TEMPFAIL;

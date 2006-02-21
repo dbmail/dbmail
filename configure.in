@@ -33,6 +33,13 @@ sieveheaderpaths="/usr/include /usr/local/include"
 
 AC_DEFINE(_GNU_SOURCE,'','Defined GNU SOURCE')
 
+# Turn off both defaults.
+AM_ENABLE_SHARED(no)
+AM_ENABLE_STATIC(no)
+# Check if one was specified.
+# Stop with an error if both.
+# Default to shared if neither.
+DBMAIL_SET_SHARED_OR_STATIC
 AM_CONDITIONAL(SHARED, [ test "$enable_shared" = "yes" ])
 AM_CONDITIONAL(STATIC, [ test "$enable_static" = "yes" ])
 
@@ -80,9 +87,6 @@ AC_SUBST(SORTLTLIB)
 
 AC_SUBST(AUTHALIB)
 AC_SUBST(AUTHLTLIB)
-
-AC_SUBST(INIPARSERALIB)
-AC_SUBST(INIPARSERLTLIB)
 
 AC_SUBST(MYSQLINC)
 AC_SUBST(PGSQLINC)

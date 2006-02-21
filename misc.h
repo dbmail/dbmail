@@ -139,4 +139,14 @@ char *date_imap2sql(const char *imapdate);
 int checkmailboxname(const char *s);
 int check_msg_set(const char *s);
 int check_date(const char *date);
+
+/**
+ * \brief discards all input coming from instream
+ * \param instream FILE stream holding input from a client
+ * \return 
+ *      - -1 on error
+ *      -  0 on success
+ */
+int discard_client_input(FILE * instream);
+
 #endif

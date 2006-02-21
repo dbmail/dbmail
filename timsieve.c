@@ -488,58 +488,50 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 								     __FILE__, __func__);
 								fprintf((FILE *) stream, "NO \"Error reading script.\"\r\n");
 							} else {
-								if (0 !=
-								    db_check_sievescript_quota
-								    (session->useridnr, scriptlen))
+								if (0 != db_check_sievescript_quota(session->useridnr, scriptlen))
 								{
-									trace(TRACE_INFO,
-										"%s, %s: Script exceeds user's quota, dumping it",
+									trace(TRACE_INFO, "%s, %s: Script exceeds user's quota, dumping it",
 									     __FILE__, __func__);
-									fprintf((FILE *) stream,
-										"NO \"Script exceeds available space.\"\r\n");
+									fprintf((FILE *) stream, "NO \"Script exceeds available space.\"\r\n");
 								} else {
 									sort_result_t *sort_result;
 
 									/* Store the script temporarily,
 									 * validate it, then rename it. */
 									if (0 != db_add_sievescript(session->useridnr, "@!temp-script!@", f_buf)) {
-										// FIXME: Error.
-									}
-									sort_result = sort_validate(session->useridnr, "@!temp-script!@");
-									if (sort_result == NULL) {
-										trace
-										    (TRACE_INFO, "%s, %s: Error inserting script",
+										trace(TRACE_INFO, "%s, %s: Error inserting script",
 										     __FILE__, __func__);
-										fprintf
-										    ((FILE *) stream, "NO \"Error inserting script.\"\r\n");
-									} else if (sort_get_error(sort_result) > 0) {
-										trace
-										    (TRACE_INFO,
-										     "%s, %s: Script has syntax errrors: [%s]",
-										     __FILE__, __func__, sort_get_errormsg(sort_result));
-										fprintf
-										    ((FILE *) stream, "NO \"Script error: %s.\"\r\n",
-													sort_get_errormsg(sort_result));
+										fprintf((FILE *) stream, "NO \"Error inserting script.\"\r\n");
+										db_delete_sievescript(session->useridnr, "@!temp-script!@");
 									} else {
-										/* According to the draft RFC, a script with the same
-										 * name as an existing script should [atomically] replace it. */
-										if (0 != db_rename_sievescript(session->useridnr, "@!temp-script!@", scriptname)) {
-											trace
-											    (TRACE_INFO, "%s, %s: Error inserting script",
+										sort_result = sort_validate(session->useridnr, "@!temp-script!@");
+										if (sort_result == NULL) {
+											trace(TRACE_INFO, "%s, %s: Error inserting script",
 											     __FILE__, __func__);
-											fprintf
-											    ((FILE *) stream, "NO \"Error inserting script.\"\r\n");
+											fprintf((FILE *) stream, "NO \"Error inserting script.\"\r\n");
+											db_delete_sievescript(session->useridnr, "@!temp-script!@");
+										} else if (sort_get_error(sort_result) > 0) {
+											trace(TRACE_INFO, "%s, %s: Script has syntax errrors: [%s]",
+											     __FILE__, __func__, sort_get_errormsg(sort_result));
+											fprintf((FILE *) stream, "NO \"Script error: %s.\"\r\n",
+														sort_get_errormsg(sort_result));
+											db_delete_sievescript(session->useridnr, "@!temp-script!@");
 										} else {
-											trace
-											    (TRACE_INFO, "%s, %s: Script successfully received",
-											     __FILE__, __func__);
-											fprintf
-											    ((FILE *) stream, "OK \"Script successfully received.\"\r\n");
+											/* According to the draft RFC, a script with the same
+											 * name as an existing script should [atomically] replace it. */
+											if (0 != db_rename_sievescript(session->useridnr, "@!temp-script!@", scriptname)) {
+												trace(TRACE_INFO, "%s, %s: Error inserting script",
+												     __FILE__, __func__);
+												fprintf((FILE *) stream, "NO \"Error inserting script.\"\r\n");
+											} else {
+												trace(TRACE_INFO, "%s, %s: Script successfully received",
+												     __FILE__, __func__);
+												fprintf((FILE *) stream, "OK \"Script successfully received.\"\r\n");
+											}
 										}
+										sort_free_result(sort_result);
 									}
-									sort_free_result(sort_result);
-									dm_free
-									    (f_buf);
+									dm_free(f_buf);
 								}
 							}
 						}

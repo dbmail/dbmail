@@ -26,25 +26,14 @@
 #include "dbmail.h"
 
 /**
- * \brief inserts a message in the database. The header of the message is 
- * supposed to be given. The rest of the message will be read from instream
+ * \brief Inserts a message in the database.
  * \return 0
  */
-int insert_messages(struct DbmailMessage *message,
-		struct dm_list *headerfields, 
-		struct dm_list *dsnusers);
+int insert_messages(struct DbmailMessage *message, struct dm_list *dsnusers);
 
 /**
- * \brief discards all input coming from instream
- * \param instream FILE stream holding input from a client
- * \return 
- *      - -1 on error
- *      -  0 on success
- */
-int discard_client_input(FILE * instream);
-
-/**
- * store a messagebody (without headers in one or more blocks in the database
+ * \brief Store a messagebody into the database,
+ *        breaking it into blocks as needed.
  * \param message the message
  * \param message_size size of message
  * \param msgidnr idnr of message
@@ -56,8 +45,8 @@ int store_message_in_blocks(const char* message,
 				   u64_t message_size,
 				   u64_t msgidnr);
 
-int send_vacation(const char *from, const char *to,
-		const char *header, const char *message);
-
+int send_vacation(struct DbmailMessage *message,
+		const char *to, const char *from,
+		const char *subject, const char *body);
 
 #endif
