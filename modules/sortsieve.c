@@ -49,7 +49,7 @@ struct sort_context {
 /* Returned opaquely as type sort_result_t. */
 struct sort_result {
 	int cancelkeep;
-	dsn_class_t dsn;
+	int reject;
 	GString *errormsg;
 	const char *mailbox;
 	int error_runtime;
@@ -97,25 +97,31 @@ int sort_vacation(sieve2_context_t *s, void *my)
 	if (handle) {
 		rc_handle = (char *)handle;
 	} else {
-		GString *tmp = g_string_new("");
-		g_string_append(tmp, subject);
-		g_string_append(tmp, message);
-		rc_handle = md5_handle = (char *)makemd5((const unsigned char * const) tmp->str);
-		g_string_free(tmp, TRUE);
+		char *tmp;
+		tmp = g_strconcat(subject, message, NULL);
+		rc_handle = md5_handle = (char *)makemd5((const unsigned char * const) tmp);
+		g_free(tmp);
 	}
 
 	if (fromaddr) {
-		// FIXME: should be validated as a user might try to forge an address.
+		// FIXME: should be validated as a user might try
+		// to forge an address from their script.
 		rc_from = (char *)fromaddr;
 	} else {
 		rc_from = "";// FIXME: What's the user's from address!?
 	}
 
+	// Or maybe should it be the Reply-To or From header?
 	rc_to = dbmail_message_get_header(m->message, "Return-Path");
 
-	if (db_replycache_validate(rc_to, rc_from, rc_handle, days)) {
-		db_replycache_register(rc_to, rc_from, rc_handle);
-		send_vacation(rc_to, rc_from, subject, message);
+	if (db_replycache_validate(rc_to, rc_from, rc_handle, days) == DM_SUCCESS) {
+		if (send_vacation(m->message, rc_to, rc_from, subject, message) == 0)
+			db_replycache_register(rc_to, rc_from, rc_handle);
+		trace(TRACE_INFO, "%s, %s: Sending vacation to [%s] from [%s] handle [%s] repeat days [%d]",
+				__FILE__, __func__, rc_to, rc_from, rc_handle, days);
+	} else {
+		trace(TRACE_INFO, "%s, %s: Vacation suppressed to [%s] from [%s] handle [%s] repeat days [%d]",
+				__FILE__, __func__, rc_to, rc_from, rc_handle, days);
 	}
 
 	if (md5_handle)
@@ -136,7 +142,8 @@ int sort_redirect(sieve2_context_t *s, void *my)
 	trace(TRACE_INFO, "Action is REDIRECT: "
 		"REDIRECT destination is [%s].", address);
 
-	dm_list_nodeadd(&targets, address, strlen(address+1));
+	dm_list_init(&targets);
+	dm_list_nodeadd(&targets, address, strlen(address)+1);
 
 	if (forward(m->message->id, &targets,
 			dbmail_message_get_header(m->message, "Return-Path"),
@@ -158,10 +165,11 @@ int sort_reject(sieve2_context_t *s, void *my)
 		"REJECT message is [%s].",
 		sieve2_getvalue_string(s, "message"));
 
-//	FIXME: how do we do this?
-//	send_bounce(my->messageidnr, message);
+	/* FIXME: Pass the rejection message out to smtp/lmtp. */
 
+	/* Reject also discards. */
 	m->result->cancelkeep = 1;
+	m->result->reject = 1;
 	return SIEVE2_OK;
 }
 
@@ -187,9 +195,13 @@ int sort_fileinto(sieve2_context_t *s, void *my)
 
 	trace(TRACE_INFO, "Action is FILEINTO: mailbox is [%s]", mailbox);
 
-	m->result->dsn = sort_deliver_to_mailbox(m->message, m->user_idnr, mailbox, BOX_SORTING);
+	/* Don't cancel the keep if there's a problem storing the message. */
+	if (sort_deliver_to_mailbox(m->message, m->user_idnr,
+				mailbox, BOX_SORTING) != DSN_CLASS_OK)
+		m->result->cancelkeep = 0;
+	else
+		m->result->cancelkeep = 1;
 
-	m->result->cancelkeep = 1;
 	return SIEVE2_OK;
 }
 
@@ -265,6 +277,8 @@ int sort_getscript(sieve2_context_t *s, void *my)
 	} else
 	if (!strlen(path) && !strlen(name)) {
 		/* Read the script file given as an argument. */
+		trace(TRACE_INFO, "%s, %s: Getting default script named [%s]",
+			__FILE__, __func__, m->script);
 		res = db_get_sievescript_byname(m->user_idnr, m->script, &m->s_buf);
 		if (res != SIEVE2_OK) {
 			trace(TRACE_ERROR, "sort_getscript: read_file() returns %d\n", res);
@@ -294,17 +308,23 @@ int sort_getheader(sieve2_context_t *s, void *my)
 	dm_list_nodeadd(&m->freelist, &bodylist[0], sizeof(char *));
 	dm_list_nodeadd(&m->freelist, &bodylist, sizeof(char **));
 
+	trace(TRACE_INFO, "%s, %s: Getting header [%s] returning value [%s]",
+		__FILE__, __func__, header, bodylist[0]);
+
 	sieve2_setvalue_stringlist(s, "body", bodylist);
 
 	return SIEVE2_OK;
 }
 
+/* Return both the to and from headers. */
 int sort_getenvelope(sieve2_context_t *s, void *my)
 {
 	struct sort_context *m = (struct sort_context *)my;
 
-	sieve2_setvalue_string(s, "envelope",
-			m->message->envelope_recipient->str);
+	sieve2_setvalue_string(s, "to",
+		m->message->envelope_recipient->str);
+	sieve2_setvalue_string(s, "from",
+		dbmail_message_get_header(m->message, "Return-Path"));
 
 	return SIEVE2_OK;
 }
@@ -317,9 +337,14 @@ int sort_getbody(sieve2_context_t *s UNUSED, void *my UNUSED)
 int sort_getsize(sieve2_context_t *s, void *my)
 {
 	struct sort_context *m = (struct sort_context *)my;
+	int rfcsize;
 
-	sieve2_setvalue_int(s, "size",
-		dbmail_message_get_rfcsize(m->message));
+	rfcsize = dbmail_message_get_rfcsize(m->message);
+
+	trace(TRACE_INFO, "%s, %s: Getting message size [%d]",
+		__FILE__, __func__, rfcsize);
+
+	sieve2_setvalue_int(s, "size", rfcsize);
 
 	return SIEVE2_OK;
 }
@@ -435,7 +460,7 @@ sort_result_t *sort_validate(u64_t user_idnr, char *scriptname)
 
 	sort_context->script = scriptname;
 	sort_context->user_idnr = user_idnr;
-	sort_context->result = dm_malloc(sizeof(struct sort_result));
+	sort_context->result = g_new0(struct sort_result, 1);
 	if (! sort_context->result) {
 		return NULL;
 	}
@@ -493,27 +518,33 @@ sort_result_t *sort_process(u64_t user_idnr, struct DbmailMessage *message)
 
 	sort_context->message = message;
 	sort_context->user_idnr = user_idnr;
-	sort_context->result = dm_malloc(sizeof(struct sort_result));
+	sort_context->result = g_new0(struct sort_result, 1);
 	if (! sort_context->result) {
-		return NULL;
+		exitnull = 1;
+		goto freesieve;
 	}
 	sort_context->result->errormsg = g_string_new("");
 
 	res = db_get_sievescript_active(user_idnr, &sort_context->script);
 	if (res != 0) {
-		trace(TRACE_ERROR, "Error %d when calling db_getactive_sievescript\n", res);
+		trace(TRACE_ERROR, "Error %d when calling db_getactive_sievescript", res);
+		exitnull = 1;
+		goto freesieve;
+	}
+	if (sort_context->script == NULL) {
+		trace(TRACE_INFO, "User doesn't have any active sieve scripts.");
 		exitnull = 1;
 		goto freesieve;
 	}
 
 	res = sieve2_execute(sieve2_context, sort_context);
 	if (res != SIEVE2_OK) {
-		trace(TRACE_ERROR, "Error %d when calling sieve2_execute: %s\n",
+		trace(TRACE_ERROR, "Error %d when calling sieve2_execute: %s",
 			res, sieve2_errstr(res));
 		exitnull = 1;
 	}
 	if (! sort_context->result->cancelkeep) {
-		trace(TRACE_INFO, "  no actions taken; keeping message.\n");
+		trace(TRACE_INFO, "  no actions taken; keeping message.");
 		sort_keep(NULL, sort_context);
 	}
 
@@ -548,6 +579,12 @@ int sort_get_cancelkeep(sort_result_t *result)
 {
 	if (result == NULL) return 0;
 	return result->cancelkeep;
+}
+
+int sort_get_reject(sort_result_t *result)
+{
+	if (result == NULL) return 0;
+	return result->reject;
 }
 
 const char * sort_get_mailbox(sort_result_t *result)

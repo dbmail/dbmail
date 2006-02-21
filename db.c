@@ -1,4 +1,4 @@
-/* $Id: db.c 1982 2006-02-15 14:45:48Z aaron $ */
+/* $Id: db.c 1992 2006-02-21 07:22:57Z aaron $ */
 /*
   Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 
@@ -510,6 +510,32 @@ int db_get_sievescript_byname(u64_t user_idnr, char *scriptname, char **script)
 	return DM_SUCCESS;
 }
 
+/* Check if the user has an active sieve script.
+ * Returns 0 if has, 1 is has not, -1 on error. */
+int db_check_sievescript_active(u64_t user_idnr)
+{
+	int n;
+
+	snprintf(query, DEF_QUERYSIZE,
+		"SELECT name FROM %ssievescripts WHERE "
+		"owner_idnr = %llu AND active = 1",
+		DBPFX, user_idnr);
+
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, 
+		"%s,%s: error checking for an active sievescript",
+		__FILE__, __func__);
+		return DM_EQUERY;
+	}
+
+	n = db_num_rows();
+	db_free_result();
+
+	if (n > 0)
+		return 0;
+	return 1;
+}
+
 /* Looks up the name of the active script.
  * Caller must free the scriptname. */
 int db_get_sievescript_active(u64_t user_idnr, char **scriptname)
@@ -596,6 +622,8 @@ int db_rename_sievescript(u64_t user_idnr, char *scriptname, char *newname)
 		return DM_EQUERY;
 	}
 
+	db_free_result();
+
 	if (db_get_result_int(0,0) > 0) {
 		snprintf(query, DEF_QUERYSIZE,
 			"DELETE FROM %ssievescripts "
@@ -632,10 +660,12 @@ int db_rename_sievescript(u64_t user_idnr, char *scriptname, char *newname)
 int db_add_sievescript(u64_t user_idnr, char *scriptname, char *script)
 {
 	char *escaped_scriptname;
+	char *escaped_script;
 
 	db_begin_transaction();
 
 	escaped_scriptname = dm_stresc(scriptname);
+	escaped_script = dm_stresc(script);
 	snprintf(query, DEF_QUERYSIZE,
 		"SELECT COUNT(*) FROM %ssievescripts "
 		"WHERE owner_idnr = %llu AND name = '%s'",
@@ -646,6 +676,8 @@ int db_add_sievescript(u64_t user_idnr, char *scriptname, char *script)
 		dm_free(escaped_scriptname);
 		return DM_EQUERY;
 	}
+
+	db_free_result();
 
 	if (db_get_result_int(0,0) > 0) {
 		snprintf(query, DEF_QUERYSIZE,
@@ -664,8 +696,9 @@ int db_add_sievescript(u64_t user_idnr, char *scriptname, char *script)
 		"INSERT into %ssievescripts "
 		"(owner_idnr, name, script, active) "
 		"values (%llu, '%s', '%s', 0)",
-		DBPFX,user_idnr,escaped_scriptname,script);
+		DBPFX,user_idnr,escaped_scriptname,escaped_script);
 	dm_free(escaped_scriptname);
+	dm_free(escaped_script);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error adding sievescript '%s' "
@@ -4397,6 +4430,7 @@ int db_replycache_validate(const char *to, const char *from,
 {
 	GString *tmp = g_string_new("");
 	g_string_printf(tmp, db_get_sql(SQL_REPLYCACHE_EXPIRE), days);
+
 	snprintf(query, DEF_QUERYSIZE,
 			"SELECT lastseen FROM %sreplycache "
 			"WHERE to_addr = '%s' AND from_addr = '%s' "

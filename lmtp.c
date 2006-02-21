@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: lmtp.c 1988 2006-02-18 03:27:14Z aaron $
+/* $Id: lmtp.c 1992 2006-02-21 07:22:57Z aaron $
  *
  * implementation for lmtp commands according to RFC 1081 */
 
@@ -579,12 +579,9 @@ int lmtp(void *stream, void *instream, char *buffer,
 
 				/* Anonymous Block */
 				{
-					struct dm_list headerfields;
 					struct element *element;
 					struct DbmailMessage *msg;
 					char *s;
-
-					dm_list_init(&headerfields);
 
 					if (! (msg = dbmail_message_new_from_stream((FILE *)instream, DBMAIL_STREAM_LMTP))) {
 						trace(TRACE_ERROR, "%s,%s: dbmail_message_new_from_stream() failed",
@@ -606,18 +603,9 @@ int lmtp(void *stream, void *instream, char *buffer,
 							"header too big.\r\n");
 						return 1;
 					}
-					/* Parse the list and scan for field and content */
-					if (!(msg = mime_fetch_headers(msg, &headerfields))) {
-						trace(TRACE_ERROR, "%s,%s: fatal error from mime_fetch_headers()",
-								__FILE__, __func__);
-						discard_client_input((FILE *) instream);
-						ci_write((FILE *) stream, "500 Error reading header.\r\n");
-						dbmail_message_free(msg);
-						return 1;
-					}
 
 					dbmail_message_set_header(msg, "Return-Path", from.start->data);
-					if (insert_messages(msg, &headerfields, &rcpt) == -1) {
+					if (insert_messages(msg, &rcpt) == -1) {
 						ci_write((FILE *) stream, "503 Message not received\r\n");
 					} else {
 						/* The DATA command itself it not given a reply except
@@ -649,7 +637,6 @@ int lmtp(void *stream, void *instream, char *buffer,
 							}
 						}
 					}
-					dm_list_free(&headerfields.start);
 					dbmail_message_free(msg);
 					
 				}

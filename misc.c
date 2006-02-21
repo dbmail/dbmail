@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/*	$Id: misc.c 1982 2006-02-15 14:45:48Z aaron $
+/*	$Id: misc.c 1992 2006-02-21 07:22:57Z aaron $
  *
  *	Miscelaneous functions */
 
@@ -374,9 +374,9 @@ int read_from_stream(FILE * instream, char **m_buf, size_t maxlen)
 	char *tmp_buf = NULL;
 	char *f_buf = NULL;
 
-	/* Give up on a zero length request */
+	/* Allocate a zero length string on length 0. */
 	if (maxlen < 1) {
-		*m_buf = NULL;
+		*m_buf = dm_strdup("");
 		return 0;
 	}
 
@@ -1462,3 +1462,29 @@ gint ucmp(const u64_t *a, const u64_t *b)
 		return 0;
 	return -1;
 }
+
+/* Read from instream until ".\r\n", discarding what is read. */
+int discard_client_input(FILE * instream)
+{
+	char *tmpline;
+
+	tmpline = (char *) dm_malloc(MAX_LINE_SIZE + 1);
+	if (tmpline == NULL) {
+		trace(TRACE_ERROR, "%s,%s: unable to allocate memory.",
+		      __FILE__, __func__);
+		return -1;
+	}
+	
+	while (!feof(instream)) {
+		if (fgets(tmpline, MAX_LINE_SIZE, instream) == NULL)
+			break;
+
+		trace(TRACE_DEBUG, "%s,%s: tmpline = [%s]", __FILE__,
+		      __func__, tmpline);
+		if (strcmp(tmpline, ".\r\n") == 0)
+			break;
+	}
+	dm_free(tmpline);
+	return 0;
+}
+

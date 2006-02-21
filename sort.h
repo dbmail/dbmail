@@ -1,5 +1,5 @@
 
-/* $Id: sort.h 1987 2006-02-17 13:46:06Z aaron $ 
+/* $Id: sort.h 1991 2006-02-20 10:41:48Z aaron $ 
  
  Copyright (C) 1999-2004 Aaron Stone aaron at serendipity dot cx
 
@@ -40,6 +40,7 @@ sort_result_t *sort_validate(u64_t user_idnr, char *scriptname);
 void sort_free_result(sort_result_t *sort_result);
 
 int sort_get_cancelkeep(sort_result_t *sort_result);
+int sort_get_reject(sort_result_t *sort_result);
 const char * sort_get_mailbox(sort_result_t *sort_result);
 const char * sort_get_errormsg(sort_result_t *sort_result);
 int sort_get_error(sort_result_t *sort_result);

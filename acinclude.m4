@@ -26,6 +26,31 @@ CHECK:  $with_check
 ])
 ])
 
+dnl DBMAIL_CHECK_SHARED_OR_STATIC
+dnl
+AC_DEFUN([DBMAIL_SET_SHARED_OR_STATIC], [dnl
+# Make sure that we've got either static or shared, not both.
+if test "x$enable_shared" = xyes && test "x$enable_static" = xyes
+then
+     AC_MSG_ERROR([
+
+     You cannot enable both shared and static build.
+     Please choose only one to enable.
+])
+fi
+if test "x$enable_shared" = xno && test "x$enable_static" = xno
+then
+  enable_shared="yes"
+fi
+if test "x$enable_shared" = xyes
+then
+  CFLAGS="$CFLAGS -DSHARED"
+elif test "x$enable_static" = xyes
+then
+  CFLAGS="$CFLAGS -DSTATIC"
+fi
+])
+
 
 dnl DBMAIL_BOTH_SQL_CHECK
 dnl

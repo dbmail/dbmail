@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: pipe.c 1987 2006-02-17 13:46:06Z aaron $
+/* $Id: pipe.c 1992 2006-02-21 07:22:57Z aaron $
  *
  * Functions for reading the pipe from the MTA */
 
@@ -30,82 +30,6 @@
 #define MAX_COMM_SIZE 512
 #define RING_SIZE 6
 
-#define AUTO_NOTIFY_SENDER "autonotify@dbmail"
-#define AUTO_NOTIFY_SUBJECT "NEW MAIL NOTIFICATION"
-
-/* Must be at least 998 or 1000 by RFC's */
-#define MAX_LINE_SIZE 1024
-
-
-/* 
- * Send an automatic notification using sendmail
- */
-static int send_notification(const char *to, const char *from,
-			     const char *subject)
-{
-	FILE *mailpipe = NULL;
-	char *sendmail_command = NULL;
-	field_t sendmail;
-	int result;
-	size_t sendmail_command_maxlen;
-
-	if (config_get_value("SENDMAIL", "SMTP", sendmail) < 0) 
-		trace(TRACE_FATAL,
-		      "%s,%s: error getting Config Values",
-		      __FILE__, __func__);
-
-	if (sendmail[0] == '\0')
-		trace(TRACE_FATAL,
-		      "send_notification(): SENDMAIL not configured (see config file). Stop.");
-
-	trace(TRACE_DEBUG,
-	      "send_notification(): found sendmail command to be [%s]",
-	      sendmail);
-	
-	sendmail_command_maxlen = strlen((char *) to) + strlen(sendmail) + 2;
-
-	sendmail_command = (char *) dm_malloc(sendmail_command_maxlen *
-					      sizeof(char));
-	if (!sendmail_command) {
-		trace(TRACE_ERROR, "send_notification(): out of memory");
-		return -1;
-	}
-
-	trace(TRACE_DEBUG, "send_notification(): allocated memory for"
-	      " external command call");
-	(void) snprintf(sendmail_command, sendmail_command_maxlen,
-		"%s %s", sendmail, to);
-
-	trace(TRACE_INFO, "send_notification(): opening pipe to command "
-	      "%s", sendmail_command);
-
-
-	if (!(mailpipe = popen(sendmail_command, "w"))) {
-		trace(TRACE_ERROR,
-		      "send_notification(): could not open pipe to sendmail using cmd [%s]",
-		      sendmail);
-		dm_free(sendmail_command);
-		return 1;
-	}
-
-	trace(TRACE_DEBUG,
-	      "send_notification(): pipe opened, sending data");
-
-	fprintf(mailpipe, "To: %s\n", to);
-	fprintf(mailpipe, "From: %s\n", from);
-	fprintf(mailpipe, "Subject: %s\n", subject);
-	fprintf(mailpipe, "\n");
-
-	result = pclose(mailpipe);
-	trace(TRACE_DEBUG, "send_notification(): pipe closed");
-
-	if (result != 0)
-		trace(TRACE_ERROR,
-		      "send_notification(): reply could not be sent: sendmail error");
-	dm_free(sendmail_command);
-	return 0;
-}
-
 static int valid_sender(const char *addr) 
 {
 	if (strcasestr(addr, "mailer-daemon@"))
@@ -117,85 +41,167 @@ static int valid_sender(const char *addr)
 	return 1;
 }
 
-/*
- * Send a vacation message
- */
-int send_vacation(const char *from UNUSED, const char *to UNUSED,
-		const char *subject UNUSED, const char *message UNUSED)
+#define SENDNOTHING 0
+#define SENDHEADERS 1
+#define SENDBODY 2
+
+/* Sends a message. */
+static int send_mail(struct DbmailMessage *message,
+		const char *to, const char *from, const char *subject,
+		const char *headers, const char *body, int sendwhat)
 {
+	FILE *mailpipe = NULL;
+	char *sendmail_command = NULL;
+	field_t sendmail;
+	int result;
+
+	if (config_get_value("SENDMAIL", "DBMAIL", sendmail) < 0) {
+		trace(TRACE_ERROR,
+			"%s, %s: error getting value for SENDMAIL in DBMAIL section of dbmail.conf.",
+			__FILE__, __func__);
+		return -1;
+	}
+
+	if (strlen(sendmail) < 1) {
+		trace(TRACE_ERROR, "%s, %s: SENDMAIL not set in DBMAIL section of dbmail.conf.",
+			__FILE__, __func__);
+		return -1;
+	}
+
+	trace(TRACE_DEBUG, "%s, %s: sendmail command is [%s]",
+		__FILE__, __func__, sendmail);
+	
+	sendmail_command = g_strconcat(sendmail, " ", to, NULL);
+	if (!sendmail_command) {
+		trace(TRACE_ERROR, "send_notification(): out of memory");
+		return -1;
+	}
+
+	trace(TRACE_INFO, "%s, %s: opening pipe to [%s]",
+		__FILE__, __func__, sendmail_command);
+
+	if (!(mailpipe = popen(sendmail_command, "w"))) {
+		trace(TRACE_ERROR, "%s, %s: could not open pipe to sendmail",
+			__FILE__, __func__);
+		g_free(sendmail_command);
+		return 1;
+	}
+
+	trace(TRACE_DEBUG, "%s, %s: pipe opened", __FILE__, __func__);
+
+	fprintf(mailpipe, "To: %s\n", to);
+	fprintf(mailpipe, "From: %s\n", from);
+	fprintf(mailpipe, "Subject: %s\n", subject);
+	if (headers)
+		fprintf(mailpipe, "%s\n", headers);
+	fprintf(mailpipe, "\n");
+	if (body)
+		fprintf(mailpipe, "%s\n\n", body);
+
+	switch (sendwhat) {
+	case SENDBODY:
+		// Get the message body from message.
+		// FIXME: This will break mime messages,
+		// so before anybody starts consuming this
+		// part of the function, please realize this!
+		fprintf(mailpipe, "%s\n",
+			dbmail_message_body_to_string(message));
+		break;
+	case SENDHEADERS:
+		// Get the headers from message.
+		fprintf(mailpipe, "%s\n",
+			dbmail_message_hdrs_to_string(message));
+		break;
+	case SENDNOTHING:
+	default:
+		// Just like it says: nothing.
+		break;
+	}
+
+	result = pclose(mailpipe);
+	trace(TRACE_DEBUG, "%s, %s: pipe closed", __FILE__, __func__);
+
+	if (result != 0) {
+		trace(TRACE_ERROR, "%s, %s: sendmail error [%d]",
+			__FILE__, __func__, result);
+
+		g_free(sendmail_command);
+		return 1;
+	}
+
+	g_free(sendmail_command);
+	return 0;
+}
+
+/* 
+ * Send an automatic notification.
+ */
+int send_notification(struct DbmailMessage *message,
+		const char *to, const char *from,
+		const char *subject)
+{
+	return send_mail(message, to, from, subject,
+			"", "", SENDNOTHING);
+}
+
+/*
+ * Send a vacation message. This should provide MIME
+ * support, to comply with the Sieve-Vacation spec.
+ */
+int send_vacation(struct DbmailMessage *message,
+		const char *to, const char *from,
+		const char *subject, const char *body)
+{
+	return send_mail(message, to, from, subject, 
+			"", body, SENDNOTHING);
 	return 0;
 }
 	
 /*
- * Send an automatic reply using sendmail
+ * Send an automatic reply.
  */
 #define REPLY_DAYS 7
-static int send_reply(struct dm_list *headerfields, const char *body)
+static int send_reply(struct DbmailMessage *message, const char *body)
 {
-	struct mime_record *record;
 	char *from = NULL, *to = NULL, *replyto = NULL, *subject = NULL;
-	FILE *mailpipe = NULL;
 	char *escaped_send_address;
-	GString *message;
+	char *x_dbmail_reply;
 
 	InternetAddressList *ialist;
 	InternetAddress *ia;
-	
-	char comm[MAX_COMM_SIZE];
-			    /**< command sent to sendmail (needs to escaped) */
-	field_t sendmail;
-	int result;
 
-	if (config_get_value("SENDMAIL", "SMTP", sendmail) < 0)
-		trace(TRACE_FATAL, "%s,%s: fatal error getting config",
-		      __FILE__, __func__);
-
-
-	if (sendmail[0] == '\0')
-		trace(TRACE_FATAL, "%s,%s: SENDMAIL not configured (see config file)",
-				__FILE__, __func__);
-
-	trace(TRACE_DEBUG, "%s,%s: found sendmail command to be [%s]", 
-			__FILE__, __func__, sendmail);
-
-	/* find To: and Reply-To:/From: field */
-	mime_findfield("from",headerfields,&record);
-	if (record)
-		from = record->value;
-	
-	mime_findfield("reply-to",headerfields,&record);
-	if (record)
-		replyto = record->value;
-	
-	mime_findfield("subject",headerfields,&record);
-	if (record)
-		subject = record->value;
-
-	mime_findfield("to", headerfields, &record);
-	if (record)
-		to = record->value;
-	
-	mime_findfield("delivered-to", headerfields, &record);
-	if (record)
-		to = record->value;
-
-	mime_findfield("x-dbmail-reply", headerfields, &record);
-	if (record) {
-		trace(TRACE_ERROR, "%s,%s: loop detected", __FILE__, __func__);
+	x_dbmail_reply = dbmail_message_get_header(message, "X-Dbmail-Reply");
+	if (x_dbmail_reply) {
+		trace(TRACE_ERROR, "%s, %s: reply loop detected [%s]",
+				__FILE__, __func__, x_dbmail_reply);
+		dm_free(x_dbmail_reply);
 		return 0;
 	}
 	
+	from = dbmail_message_get_header(message, "From");
+	subject = dbmail_message_get_header(message, "Subject");
+	replyto = dbmail_message_get_header(message, "Reply-To");
+
+	/* We prefer the actual Delivered-To, rather than To
+	 * because that probably came to us over the wire. */
+	to = dbmail_message_get_header(message, "Delivered-To");
+	if (!to)
+		to = dbmail_message_get_header(message, "To");
+	if (!to)
+		to = dm_strdup("DBMAIL-MAILER");
+	
+
 	if (!from && !replyto) {
-		trace(TRACE_ERROR, "%s,%s: no address to send to", __FILE__, __func__);
+		trace(TRACE_ERROR, "%s, %s: no address to send to", __FILE__, __func__);
 		return 0;
 	}
 
-	if (! valid_sender(from)) {
-		trace(TRACE_DEBUG, "%s,%s: sender invalid. skip auto-reply.",
+	if (!valid_sender(from)) {
+		trace(TRACE_DEBUG, "%s, %s: sender invalid. skip auto-reply.",
 				__FILE__, __func__);
+		dm_free(from);
 		return 0;
 	}
-
 
 	ialist = internet_address_parse_string(replyto ? replyto : from);
 	ia = ialist->address;
@@ -204,50 +210,36 @@ static int send_reply(struct dm_list *headerfields, const char *body)
 
 	if (db_replycache_validate(to, escaped_send_address,
 		"replycache", REPLY_DAYS) != DM_SUCCESS) {
-		trace(TRACE_DEBUG, "%s,%s: skip auto-reply", 
+		trace(TRACE_DEBUG, "%s, %s: skip auto-reply", 
 				__FILE__, __func__);
+		dm_free(to);
+		dm_free(from);
+		dm_free(subject);
+		dm_free(replyto);
 		return 0;
 	}
 
+	char *newsubject = g_strconcat("Re: ", subject, NULL);
+	char *headers = g_strconcat("X-Dbmail-Reply: ", escaped_send_address, NULL);
 
-	trace(TRACE_DEBUG, "%s,%s: header fields scanned; opening pipe to sendmail", 
-			__FILE__, __func__);
-	
-	(void) snprintf(comm, MAX_COMM_SIZE, "%s '%s'", sendmail, escaped_send_address);
-
-	if (!(mailpipe = popen(comm, "w"))) {
-		trace(TRACE_ERROR, "%s,%s: could not open pipe to sendmail using cmd [%s]",
-				__FILE__, __func__, comm);
-		dm_free(escaped_send_address);
-		return 1;
-	}
-
-	trace(TRACE_DEBUG, "%s,%s: opened pipe [%s], sending data...", __FILE__, __func__, comm);
-
-	message = g_string_new("");
-	g_string_printf(message, "To: %s\nFrom: %s\nSubject: Re: %s\nX-Dbmail-Reply: %s\n\n%s\n",
-			escaped_send_address, to ? to : "<nobody@nowhere.org>", subject, 
-			escaped_send_address, body);
-	
-	fprintf(mailpipe, message->str);
-	
-	result = pclose(mailpipe);
-	trace(TRACE_DEBUG, "%s,%s: pipe closed", __FILE__, __func__);
-	if (result != 0) {
-		trace(TRACE_ERROR, "%s,%s: reply could not be sent: sendmail error",
-				__FILE__, __func__);
-	} else {
+	/* Our 'to' is in the 'from' arg because it's a reply. */
+	if (!send_mail(message, escaped_send_address,
+			to, subject, headers, body, SENDNOTHING)) {
 		db_replycache_register(to, escaped_send_address, "replycache");
 	}
 
-	dm_free(escaped_send_address);
-	g_string_free(message,TRUE);
+	dm_free(to);
+	dm_free(from);
+	dm_free(replyto);
+	dm_free(subject);
+	dm_free(newsubject);
+
 	return 0;
 }
 
 
 /* Yeah, RAN. That's Reply And Notify ;-) */
-static int execute_auto_ran(u64_t useridnr, struct dm_list *headerfields)
+static int execute_auto_ran(struct DbmailMessage *message, u64_t useridnr)
 {
 	field_t val;
 	int do_auto_notify = 0, do_auto_reply = 0;
@@ -255,16 +247,20 @@ static int execute_auto_ran(u64_t useridnr, struct dm_list *headerfields)
 	char *notify_address = NULL;
 
 	/* message has been succesfully inserted, perform auto-notification & auto-reply */
-	if (config_get_value("AUTO_NOTIFY", "SMTP", val) < 0)
-		trace(TRACE_FATAL, "%s,%s error getting config",
+	if (config_get_value("AUTO_NOTIFY", "DELIVERY", val) < 0) {
+		trace(TRACE_ERROR, "%s, %s error getting config",
 		      __FILE__, __func__);
+		return -1;
+	}
 
 	if (strcasecmp(val, "yes") == 0)
 		do_auto_notify = 1;
 
-	if (config_get_value("AUTO_REPLY", "SMTP", val) < 0)
-		trace(TRACE_FATAL, "%s,%s error getting config",
+	if (config_get_value("AUTO_REPLY", "DELIVERY", val) < 0) {
+		trace(TRACE_ERROR, "%s, %s error getting config",
 		      __FILE__, __func__);
+		return -1;
+	}
 
 	if (strcasecmp(val, "yes") == 0)
 		do_auto_reply = 1;
@@ -284,10 +280,10 @@ static int execute_auto_ran(u64_t useridnr, struct dm_list *headerfields)
 				trace(TRACE_DEBUG,
 				      "execute_auto_ran(): sending notifcation to [%s]",
 				      notify_address);
-				if (send_notification(notify_address,
+				if (send_notification(message, notify_address,
 						      AUTO_NOTIFY_SENDER,
 						      AUTO_NOTIFY_SUBJECT) < 0) {
-					trace(TRACE_ERROR, "%s,%s: error in call to send_notification.",
+					trace(TRACE_ERROR, "%s, %s: error in call to send_notification.",
 					      __FILE__, __func__);
 					dm_free(notify_address);
 					return -1;
@@ -309,8 +305,8 @@ static int execute_auto_ran(u64_t useridnr, struct dm_list *headerfields)
 				trace(TRACE_DEBUG,
 				      "execute_auto_ran(): no reply body specified, skipping");
 			else {
-				if (send_reply(headerfields, reply_body) < 0) {
-					trace(TRACE_ERROR, "%s,%s: error in call to send_reply",
+				if (send_reply(message, reply_body) < 0) {
+					trace(TRACE_ERROR, "%s, %s: error in call to send_reply",
 					      __FILE__, __func__);
 					dm_free(reply_body);
 					return -1;
@@ -324,31 +320,6 @@ static int execute_auto_ran(u64_t useridnr, struct dm_list *headerfields)
 	return 0;
 }
 
-
-/* read from instream, but simply discard all input! */
-int discard_client_input(FILE * instream)
-{
-	char *tmpline;
-
-	tmpline = (char *) dm_malloc(MAX_LINE_SIZE + 1);
-	if (tmpline == NULL) {
-		trace(TRACE_ERROR, "%s,%s: unable to allocate memory.",
-		      __FILE__, __func__);
-		return -1;
-	}
-	
-	while (!feof(instream)) {
-		if (fgets(tmpline, MAX_LINE_SIZE, instream) == NULL)
-			break;
-
-		trace(TRACE_DEBUG, "%s,%s: tmpline = [%s]", __FILE__,
-		      __func__, tmpline);
-		if (strcmp(tmpline, ".\r\n") == 0)
-			break;
-	}
-	dm_free(tmpline);
-	return 0;
-}
 
 int store_message_in_blocks(const char *message, u64_t message_size,
 			    u64_t msgidnr) 
@@ -365,12 +336,12 @@ int store_message_in_blocks(const char *message, u64_t message_size,
 			      rest_size : READ_BLOCK_SIZE);
 		rest_size = (rest_size < READ_BLOCK_SIZE ?
 			     0 : rest_size - READ_BLOCK_SIZE);
-		trace(TRACE_DEBUG, "%s,%s: inserting message: %s",
+		trace(TRACE_DEBUG, "%s, %s: inserting message: %s",
 		      __FILE__, __func__, &message[offset]);
 		if (db_insert_message_block(&message[offset],
 					    block_size, msgidnr,
 					    &tmp_messageblk_idnr,0) < 0) {
-			trace(TRACE_ERROR, "%s,%s: "
+			trace(TRACE_ERROR, "%s, %s: "
 			      "db_insert_message_block() failed",
 			      __FILE__, __func__);
 			return -1;
@@ -417,7 +388,6 @@ int store_message_in_blocks(const char *message, u64_t message_size,
  *   - -1 on full failure
  */
 int insert_messages(struct DbmailMessage *message, 
-		struct dm_list *headerfields, 
 		struct dm_list *dsnusers)
 {
 	char *header;
@@ -430,7 +400,7 @@ int insert_messages(struct DbmailMessage *message,
 
 	/* first start a new database transaction */
 	if (db_begin_transaction() < 0) {
-		trace(TRACE_ERROR, "%s,%s: error executing "
+		trace(TRACE_ERROR, "%s, %s: error executing "
 		      "db_begin_transaction(). aborting delivery...",
 		      __FILE__, __func__);
 		return -1;
@@ -503,17 +473,18 @@ int insert_messages(struct DbmailMessage *message,
 			}
 
 			/* Automatic reply and notification */
-			if (execute_auto_ran(useridnr, headerfields) < 0)
-				trace(TRACE_ERROR, "%s,%s: error in execute_auto_ran(), continuing",
+			if (execute_auto_ran(message, useridnr) < 0) {
+				trace(TRACE_ERROR, "%s, %s: error in execute_auto_ran(),"
+					" but continuing delivery normally.",
 				      __FILE__, __func__);
-		}		/* from: the useridnr for loop */
+			}
+		} /* from: the useridnr for loop */
 
 		final_dsn = dsnuser_worstcase_int(has_2, has_4, has_5, has_5_2);
 		switch (final_dsn.class) {
 		case DSN_CLASS_OK:
-			delivery->dsn.class = DSN_CLASS_OK;	/* Success. */
-			delivery->dsn.subject = 1;	/* Address related. */
-			delivery->dsn.detail = 5;	/* Valid. */
+			/* Success. Address related. Valid. */
+			set_dsn(&delivery->dsn, DSN_CLASS_OK, 1, 5);
 			break;
 		case DSN_CLASS_TEMP:
 			/* sort_and_deliver returns TEMP is useridnr is 0, aka,
@@ -522,34 +493,31 @@ int insert_messages(struct DbmailMessage *message,
 			/* If there's a problem with the delivery address, but
 			 * there are proper forwarding addresses, we're OK. */
 			if (dm_list_length(delivery->forwards) > 0) {
-				delivery->dsn.class = DSN_CLASS_OK;
-				delivery->dsn.subject = 1;	/* Address related. */
-				delivery->dsn.detail = 5;	/* Valid. */
+				/* Success. Address related. Valid. */
+				set_dsn(&delivery->dsn, DSN_CLASS_OK, 1, 5);
 				break;
 			}
 			/* Fall through to FAIL. */
 		case DSN_CLASS_FAIL:
-			delivery->dsn.class = DSN_CLASS_FAIL;	/* Permanent failure. */
-			delivery->dsn.subject = 1;	/* Address related. */
-			delivery->dsn.detail = 1;	/* Does not exist. */
+			/* Permanent failure. Address related. Does not exist. */
+			set_dsn(&delivery->dsn, DSN_CLASS_FAIL, 1, 1);
 			break;
 		case DSN_CLASS_QUOTA:
-			delivery->dsn.class = DSN_CLASS_FAIL;	/* Permanent failure. */
-			delivery->dsn.subject = 2;	/* Mailbox related. */
-			delivery->dsn.detail = 2;	/* Over quota limit. */
+			/* Permanent failure. Mailbox related. Over quota limit. */
+			set_dsn(&delivery->dsn, DSN_CLASS_FAIL, 2, 2);
 			break;
 		case DSN_CLASS_NONE:
 			/* Leave the DSN status at whatever dsnuser_resolve set it at. */
 			break;
 		}
 
-		trace(TRACE_DEBUG, "%s,%s: deliver [%ld] messages to external addresses", 
+		trace(TRACE_DEBUG, "%s, %s: deliver [%ld] messages to external addresses", 
 				__FILE__, __func__, dm_list_length(delivery->forwards));
 
 		/* Each user may also have a list of external forwarding addresses. */
 		if (dm_list_length(delivery->forwards) > 0) {
 
-			trace(TRACE_DEBUG, "%s,%s: delivering to external addresses",
+			trace(TRACE_DEBUG, "%s, %s: delivering to external addresses",
 					__FILE__, __func__);
 
 			/* Forward using the temporary stored message. */
@@ -559,7 +527,7 @@ int insert_messages(struct DbmailMessage *message,
 				/* FIXME: if forward fails, we should do something 
 				 * sensible. Currently, the message is just black-
 				 * holed! */
-				trace(TRACE_ERROR, "%s,%s: forward failed message lost", 
+				trace(TRACE_ERROR, "%s, %s: forward failed message lost", 
 						__FILE__, __func__);
 		}
 	}			/* from: the delivery for loop */
@@ -568,9 +536,9 @@ int insert_messages(struct DbmailMessage *message,
 	 * It is the MTA's job to requeue or bounce the message,
 	 * and our job to keep a tidy database ;-) */
 	if (db_delete_message(tmpid) < 0) 
-		trace(TRACE_ERROR, "%s,%s: failed to delete temporary message [%llu]",
+		trace(TRACE_ERROR, "%s, %s: failed to delete temporary message [%llu]",
 				__FILE__, __func__, message->id);
-	trace(TRACE_DEBUG, "%s,%s: temporary message deleted from database. Done.",
+	trace(TRACE_DEBUG, "%s, %s: temporary message deleted from database. Done.",
 			__FILE__, __func__);
 
 	g_free(header);
@@ -581,3 +549,4 @@ int insert_messages(struct DbmailMessage *message,
 
 	return 0;
 }
+

@@ -1,7 +1,7 @@
 #ifndef DSN_H
 #define DSN_H
 /*
-  $Id: dsn.h 1912 2005-11-19 02:29:41Z aaron $ 
+  $Id: dsn.h 1991 2006-02-20 10:41:48Z aaron $ 
  Copyright (C) 2004 Aaron Stone aaron at serendipity dot cx
 
  This program is free software; you can redistribute it and/or 
@@ -59,6 +59,17 @@ typedef struct {
  */
 int dsn_tostring(delivery_status_t dsn, const char ** const class,
                  const char ** const subject, const char ** const detail);
+
+/**
+ * \brief Sets values on the dsn delivery_status_t
+ *        inside of a delivery deliver_to_user_t.
+ * \param delivery is a pointer to a deliver_to_user_t struct.
+ * \param class is the class (use values from dsn_class_t).
+ * \param subject is the subject.
+ * \param detail is the detail.
+ */
+void set_dsn(delivery_status_t *dsn,
+		int class, int subject, int detail);
 
 /**
  * \brief Initialize a dsnuser structure and its lists.

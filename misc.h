@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: misc.h 1982 2006-02-15 14:45:48Z aaron $ 
+/* $Id: misc.h 1992 2006-02-21 07:22:57Z aaron $ 
  */
 
 #ifndef _MISC_H
@@ -139,4 +139,14 @@ char *date_imap2sql(const char *imapdate);
 int checkmailboxname(const char *s);
 int check_msg_set(const char *s);
 int check_date(const char *date);
+
+/**
+ * \brief discards all input coming from instream
+ * \param instream FILE stream holding input from a client
+ * \return 
+ *      - -1 on error
+ *      -  0 on success
+ */
+int discard_client_input(FILE * instream);
+
 #endif

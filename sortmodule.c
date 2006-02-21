@@ -74,6 +74,7 @@ int sort_load_driver(void)
 	||  !g_module_symbol(module, "sort_validate",               (gpointer)&sort->validate               )
 	||  !g_module_symbol(module, "sort_free_result",            (gpointer)&sort->free_result            )
 	||  !g_module_symbol(module, "sort_get_cancelkeep",         (gpointer)&sort->get_cancelkeep         )
+	||  !g_module_symbol(module, "sort_get_reject",             (gpointer)&sort->get_reject             )
 	||  !g_module_symbol(module, "sort_get_errormsg",           (gpointer)&sort->get_errormsg           )
 	||  !g_module_symbol(module, "sort_get_error",              (gpointer)&sort->get_error              )
 	||  !g_module_symbol(module, "sort_get_mailbox",            (gpointer)&sort->get_mailbox            )) {
@@ -122,6 +123,13 @@ int sort_get_cancelkeep(sort_result_t *result)
 	assert(sort);
 	assert(sort->get_cancelkeep);
 	return sort->get_cancelkeep(result);
+}
+
+int sort_get_reject(sort_result_t *result)
+{
+	assert(sort);
+	assert(sort->get_reject);
+	return sort->get_reject(result);
 }
 
 const char * sort_get_mailbox(sort_result_t *result)

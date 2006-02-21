@@ -16,6 +16,7 @@ typedef struct {
 	sort_result_t *(* validate)(u64_t user_idnr, char *scriptname);
 	void (* free_result)(sort_result_t *result);
 	int (* get_cancelkeep)(sort_result_t *result);
+	int (* get_reject)(sort_result_t *result);
 	const char *(* get_mailbox)(sort_result_t *result);
 	const char *(* get_errormsg)(sort_result_t *result);
 	int (* get_error)(sort_result_t *result);

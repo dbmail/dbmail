@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: forward.c 1891 2005-10-03 10:01:21Z paul $
+/* $Id: forward.c 1991 2006-02-20 10:41:48Z aaron $
  *
  * takes care of forwarding mail to an external address */
 
@@ -65,6 +65,10 @@ int forward(u64_t msgidnr, struct dm_list *targets, const char *from,
 	}
 
 	target = dm_list_getstart(targets);
+
+	/* We might get passed a NULL pointer here. */
+	if (!from)
+		from = "DBMAIL-MAILER";
 
 	while (target != NULL) {
 		if ((((char *) target->data)[0] == '|')
