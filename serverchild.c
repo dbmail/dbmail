@@ -28,7 +28,7 @@
 
 int ChildStopRequested = 0;
 int connected = 0;
-clientinfo_t client;
+volatile clientinfo_t client;
 
 static void client_close(void);
 static void disconnect_all(void);
@@ -38,13 +38,11 @@ int PerformChildTask(ChildInfo_t * info);
 void client_close(void)
 {
 	if (client.tx) {
-		trace(TRACE_DEBUG,"%s,%s: closing write stream", __FILE__,__func__);
 		fflush(client.tx);
 		fclose(client.tx);	/* closes clientSocket as well */
 		client.tx = NULL;
 	}
 	if (client.rx) {
-		trace(TRACE_DEBUG,"%s,%s: closing read stream", __FILE__,__func__);
 		shutdown(fileno(client.rx), SHUT_RDWR);
 		fclose(client.rx);
 		client.rx = NULL;
@@ -56,14 +54,9 @@ void disconnect_all(void)
 	if (! connected)
 		return;
 	
-	trace(TRACE_DEBUG, "%s,%s: database connection still open, closing",
-		__FILE__,__func__);
 	db_disconnect();
 	auth_disconnect();
-	connected = 0;		/* FIXME a signal between this line and the previous one 
-				 * would screw things up. Would like to have all this in
-				 * db_disconnect() making 'connected' obsolete
-				 */
+	connected = 0;
 }
 
 void noop_child_sig_handler(int sig, siginfo_t *info UNUSED, void *data UNUSED)
@@ -84,18 +77,12 @@ void active_child_sig_handler(int sig, siginfo_t * info UNUSED, void *data UNUSE
 	
 	static int triedDisconnect = 0;
 
-	trace(TRACE_ERROR, "%s,%s: got signal [%s]", __FILE__, __func__,
-	      strsignal(sig));
-
 	/* perform reinit at SIGHUP otherwise exit, but do nothing on
 	 *  SIGCHLD*/
 	switch (sig) {
 	case SIGCHLD:
-		trace(TRACE_DEBUG, "%s,%s: SIGCHLD received... ignoring",
-			__FILE__, __func__);
 		break;
 	case SIGALRM:
-		trace(TRACE_DEBUG, "%s,%s: timeout received", __FILE__, __func__);
 		client_close();
 		break;
 
@@ -104,44 +91,18 @@ void active_child_sig_handler(int sig, siginfo_t * info UNUSED, void *data UNUSE
 	case SIGQUIT:
 	case SIGSTOP:
 		if (ChildStopRequested) {
-			trace(TRACE_DEBUG,
-				"%s,%s: already caught a stop request. Closing right now",
-				__FILE__,__func__);
-
-			/* already caught this signal, exit the hard way now */
 			client_close();
 			disconnect_all();
 			child_unregister();
-			trace(TRACE_DEBUG, "%s,%s: exit",__FILE__,__func__);
 			exit(1);
 		}
-		trace(TRACE_DEBUG, "%s,%s: setting stop request",__FILE__,__func__);
 		DelChildSigHandler();
 	 	ChildStopRequested = 1;
 		break;
-	default:
-		/* bad shtuff, exit */
-		trace(TRACE_DEBUG,
-		      "%s,%s: cannot ignore this. Terminating",__FILE__,__func__);
 
-		/*
-		 * For some reason i have not yet determined the process starts eating up
-		 * all CPU time when trying to disconnect.
-		 * For now: just bail out :-)
-		 */
-		sleep(360);
+	default:
 		child_unregister();
 		_exit(1);
-
-		if (!triedDisconnect) {
-			triedDisconnect = 1;
-			client_close();
-			disconnect_all();
-		}
-
-		trace(TRACE_DEBUG, "%s,%s: exit", __FILE__, __func__);
-		child_unregister();
-		exit(1);
 	}
 
 	errno = saved_errno;

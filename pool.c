@@ -14,7 +14,7 @@
 
 #define P_SIZE 100000
 
-static Scoreboard_t *scoreboard;
+volatile static Scoreboard_t *scoreboard;
 static int shmid;
 static int sb_lockfd;
 
@@ -353,10 +353,6 @@ void child_unregister()
 	scoreboard_wrlck();
 	scoreboard->child[key].status = STATE_WAIT;
 	scoreboard_unlck();
-
-	trace(TRACE_MESSAGE,
-	      "%s,%s: child [%d] unregistered", __FILE__, __func__,
-	      getpid());
 }
 
 
