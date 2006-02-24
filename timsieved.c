@@ -35,7 +35,7 @@ char *pidFile = DEFAULT_PID_DIR "dbmail-timsieved" DEFAULT_PID_EXT;
 char *configFile = DEFAULT_CONFIG_FILE;
 
 /* this is write-once read-many, so we'll do it once for all children. */
-char *sieve_extensions = NULL;
+const char *sieve_extensions = NULL;
 
 /* set up database login data */
 extern db_param_t _db_params;
@@ -120,6 +120,14 @@ int main(int argc, char *argv[])
 		default:
 			break;
 		}
+	}
+
+	/* Get the Sieve capabilities. This may also cause the
+	 * program to bomb out if Sieve support was not compiled in. */
+	sieve_extensions = sort_listextensions();
+	if (sieve_extensions == NULL) {
+		fprintf(stderr, "dbmail-timsieved: error loading Sieve extensions.\n\n");
+		return 1;
 	}
 
 	SetMainSigHandler();

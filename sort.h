@@ -37,6 +37,7 @@ dsn_class_t sort_deliver_to_mailbox(struct DbmailMessage *message,
 
 sort_result_t *sort_process(u64_t user_idnr, struct DbmailMessage *message);
 sort_result_t *sort_validate(u64_t user_idnr, char *scriptname);
+const char *sort_listextensions(void);
 void sort_free_result(sort_result_t *sort_result);
 
 int sort_get_cancelkeep(sort_result_t *sort_result);

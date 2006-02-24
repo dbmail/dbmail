@@ -58,7 +58,7 @@ static const char validchars[] =
 static char myhostname[64];
 
 /* Defined in timsieved.c */
-extern char *sieve_extensions;
+extern const char *sieve_extensions;
 
 int tims_handle_connection(clientinfo_t * ci)
 {
