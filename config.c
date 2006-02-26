@@ -44,9 +44,10 @@ int config_read(const char *config_filename)
 	
 	if (! g_key_file_load_from_file(config_dict, config_filename, G_KEY_FILE_NONE, NULL)) {
 		g_key_file_free(config_dict);
-                trace(CONFIG_ERROR_LEVEL, "%s,%s: error reading "
+                trace(TRACE_FATAL, "%s,%s: error reading "
                       "config file %s", __FILE__, __func__,
                       config_filename);
+		_exit(1);
 		return -1;
 	}
         return 0;
