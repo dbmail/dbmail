@@ -440,6 +440,35 @@ static int sort_startup(sieve2_context_t **s2c,
 	return DM_SUCCESS;
 }
 
+/* The caller is responsible for freeing memory here. */
+// FIXME: Support SIEVE_{extension} settings in dbmail.conf
+const char * sort_listextensions(void)
+{
+	sieve2_context_t *sieve2_context;
+	const char * extensions;
+
+	if (sieve2_alloc(&sieve2_context) != SIEVE2_OK) 
+		return NULL;
+
+	if (sieve2_callbacks(sieve2_context, sort_callbacks))
+			return NULL;
+
+	/* This will be freed by sieve2_free. */
+	extensions = sieve2_listextensions(sieve2_context);
+
+	/* So we'll make our own copy. */
+	if (extensions)
+		extensions = dm_strdup(extensions);
+
+	/* If this fails, then we don't care about the
+	 * memory leak, because the program has to bomb out.
+	 * It will not be possible to start libSieve up again
+	 * if it does not free properly. */
+	if (sieve2_free(&sieve2_context) != SIEVE2_OK)
+		return NULL;
+
+	return extensions;
+}
 
 /* Return 0 on script OK, 1 on script error, 2 on misc error. */
 sort_result_t *sort_validate(u64_t user_idnr, char *scriptname)

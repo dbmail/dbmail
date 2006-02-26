@@ -1,9 +1,59 @@
-2006-02-18  Paul J Stevens <paul@nfg.nl>
-	* debian/changelog, debian/dbmail.postinst, debian/dbmail.postrm, 
-	  debian/libdbmail-ldap.files, debian/libdbmail-mysql.files, 
-	  debian/libdbmail-pgsql.files, debian/libdbmail-sieve.files, 
-	  debian/libdbmail-sqlite.files:
-	cleanup the packaging a bit
+2006-02-24  Aaron Stone  <aaron@serendipity.cx>
+
+	* sort.h, sortmodule.h, sortmodule.c, modules/sortsieve.c,
+	timsieved.c, timsieve.c:
+	Added a proper listextensions function and the existing
+	CAPABILITY command of managesieve now uses it.
+	* db.c:
+	Moved two calls to db_free_result to the right places.
+	* serverchild.c:
+	Reports PID of process handling a new connection, for ease
+	of attaching GDB.
+
+2006-02-20  Aaron Stone  <aaron@serendipity.cx>
+
+	* acinclude.m4, configure.in:
+	Made shared/static into an either-or dichotomy.
+	* dbmail.conf:
+	Moved auto_reply, auto_notification to DELIVERY section,
+	and sendmail to the DBMAIL section.
+	* dbmail.h:
+	Moved a few definitions here.
+	* lmtp.c, main.c:
+	Slowly getting rid of headerfields list.
+	* timsieve.c:
+	Delete the temp script if it's got errors.
+	* db.c:
+	Added a few more db_free_result calls.
+	* misc.h, misc.c:
+	Moved discard_from_stream from pipe.c here.
+	* pipe.h, pipe.c:
+	Rewrite of send_reply, send_notification with send_mail as the core.
+	Added send_vacation as another simple wrapper/consumer of send_mail.
+	* sortmodule.h, modules/sortsieve.c, sort.c:
+	Vacation works. Reject works.
+
+2006-02-20  Aaron Stone  <aaron@serendipity.cx>
+
+	* acinclude.m4:
+	Trying to get smarter about shared, static.
+	* check_dbmail_deliver.c:
+	Zapped the returnpath argument to insert_messages.
+	* db.h, db.c:
+	Added db_check_sievescript_active, escaped script in
+	db_add_sievescript.
+	* dsb.h, dsn.c, pipe.c:
+	Changed the prototype for set_dsn a little bit.
+	* sort.h, sort.c, sortmodule.c:
+	Added sort_get_reject and handling for reject return codes.
+	* forward.c:
+	Handle a null pointer in the from address variable.
+	* misc.c:
+	Always return a valid string from read_from_stream, which will be a
+	copy of "" if the requested length is 0. But not NULL.
+	* modules/sortsieve.c:
+	Work on reject, vacation, getenvelope, fileinto. Now clears memory
+	allocated for the result structure to prevent unexpected cancelkeeps.
 
 2006-02-17  Aaron Stone  <aaron@serendipity.cx>
 

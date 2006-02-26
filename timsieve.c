@@ -1,4 +1,4 @@
-/* $Id: timsieve.c 1992 2006-02-21 07:22:57Z aaron $
+/* $Id: timsieve.c 1993 2006-02-24 23:20:26Z aaron $
 
  Copyright (C) 1999-2004 Aaron Stone aaron at serendipity dot cx
 
@@ -58,7 +58,7 @@ static const char validchars[] =
 static char myhostname[64];
 
 /* Defined in timsieved.c */
-extern char *sieve_extensions;
+extern const char *sieve_extensions;
 
 int tims_handle_connection(clientinfo_t * ci)
 {

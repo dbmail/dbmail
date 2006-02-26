@@ -73,6 +73,7 @@ int sort_load_driver(void)
 	if (!g_module_symbol(module, "sort_process",                (gpointer)&sort->process                )
 	||  !g_module_symbol(module, "sort_validate",               (gpointer)&sort->validate               )
 	||  !g_module_symbol(module, "sort_free_result",            (gpointer)&sort->free_result            )
+	||  !g_module_symbol(module, "sort_listextensions",         (gpointer)&sort->listextensions         )
 	||  !g_module_symbol(module, "sort_get_cancelkeep",         (gpointer)&sort->get_cancelkeep         )
 	||  !g_module_symbol(module, "sort_get_reject",             (gpointer)&sort->get_reject             )
 	||  !g_module_symbol(module, "sort_get_errormsg",           (gpointer)&sort->get_errormsg           )
@@ -109,6 +110,18 @@ sort_result_t *sort_validate(u64_t user_idnr, char *scriptname)
 		return NULL;
 	}
 	return sort->validate(user_idnr, scriptname);
+}
+
+const char *sort_listextensions(void)
+{
+	if (!sort)
+		sort_load_driver();
+	if (!sort) {
+		trace(TRACE_ERROR, "%s, %s: Error loading sort driver",
+				__FILE__, __func__);
+		return NULL;
+	}
+	return sort->listextensions();
 }
 
 void sort_free_result(sort_result_t *result)

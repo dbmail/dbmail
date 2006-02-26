@@ -1,4 +1,4 @@
-/* $Id: db.c 1992 2006-02-21 07:22:57Z aaron $ */
+/* $Id: db.c 1994 2006-02-26 16:30:05Z aaron $ */
 /*
   Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 
@@ -622,9 +622,8 @@ int db_rename_sievescript(u64_t user_idnr, char *scriptname, char *newname)
 		return DM_EQUERY;
 	}
 
-	db_free_result();
-
 	if (db_get_result_int(0,0) > 0) {
+		db_free_result();
 		snprintf(query, DEF_QUERYSIZE,
 			"DELETE FROM %ssievescripts "
 			"WHERE owner_idnr = %llu AND name = '%s'",
@@ -677,9 +676,8 @@ int db_add_sievescript(u64_t user_idnr, char *scriptname, char *script)
 		return DM_EQUERY;
 	}
 
-	db_free_result();
-
 	if (db_get_result_int(0,0) > 0) {
+		db_free_result();
 		snprintf(query, DEF_QUERYSIZE,
 			"DELETE FROM %ssievescripts "
 			"WHERE owner_idnr = %llu AND name = '%s'",
