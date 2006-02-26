@@ -303,14 +303,14 @@ int PerformChildTask(ChildInfo_t * info)
 			if (clientHost && clientHost->h_name)
 				strncpy(client.clientname, clientHost->h_name, FIELDSIZE);
 
-			trace(TRACE_MESSAGE, "%s,%s: incoming connection from [%s (%s)]",
+			trace(TRACE_MESSAGE, "%s,%s: incoming connection from [%s (%s)] by pid [%d]",
 					__FILE__, __func__,
 			      client.ip_src,
-			      client.clientname[0] ? client.clientname : "Lookup failed");
+			      client.clientname[0] ? client.clientname : "Lookup failed", getpid());
 		} else {
-			trace(TRACE_MESSAGE, "%s,%s: incoming connection from [%s]", 
+			trace(TRACE_MESSAGE, "%s,%s: incoming connection from [%s] by pid [%d]", 
 					__FILE__, __func__,
-			      client.ip_src);
+			      client.ip_src, getpid());
 		}
 		
 		/* make streams */

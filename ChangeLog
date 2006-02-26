@@ -4,6 +4,11 @@
 	timsieved.c, timsieve.c:
 	Added a proper listextensions function and the existing
 	CAPABILITY command of managesieve now uses it.
+	* db.c:
+	Moved two calls to db_free_result to the right places.
+	* serverchild.c:
+	Reports PID of process handling a new connection, for ease
+	of attaching GDB.
 
 2006-02-20  Aaron Stone  <aaron@serendipity.cx>
 
