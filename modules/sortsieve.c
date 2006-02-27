@@ -25,16 +25,7 @@
  * 
  */
 
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include "list.h"
 #include "dbmail.h"
-
-#include "sort.h"
-#include <sieve2.h>
 
 /* Used by us to keep track of libSieve. */
 struct sort_context {

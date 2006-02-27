@@ -70,9 +70,8 @@ int auth_load_driver(void)
 
 	/* If the list is exhausted without opening a module, we'll catch it. */
 	if (!module) {
-		trace(TRACE_FATAL, "%s,%s: cannot load %s: %s", 
-				__FILE__, __func__,
-				lib, g_module_error());
+		trace(TRACE_FATAL, "%s,%s: cannot load %s", 
+				__FILE__, __func__, g_module_error());
 		return -1;
 	}
 
@@ -101,9 +100,8 @@ int auth_load_driver(void)
 	||  !g_module_symbol(module, "auth_removealias",            (gpointer)&auth->removealias            )
 	||  !g_module_symbol(module, "auth_removealias_ext",        (gpointer)&auth->removealias_ext        )
 	||  !g_module_symbol(module, "auth_requires_shadow_user",   (gpointer)&auth->requires_shadow_user   )) {
-		trace(TRACE_FATAL, "%s,%s: cannot find function: %s: %s", 
-				__FILE__, __func__, 
-				lib, g_module_error());
+		trace(TRACE_FATAL, "%s,%s: cannot find function %s", 
+				__FILE__, __func__, g_module_error());
 		return -2;
 	}
 

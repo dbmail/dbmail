@@ -1,5 +1,12 @@
 2006-02-24  Aaron Stone  <aaron@serendipity.cx>
 
+	* sortmodule.c, modules/sortnull.c, Makefile.am, modules/Makefile.am:
+	Ok, let's do sortnull.c and drop the -DSHARED and -DSTATIC stuff. It
+	now Works For Me (TM) in all combinations of shared, static, with
+	sieve and without.
+
+2006-02-24  Aaron Stone  <aaron@serendipity.cx>
+
 	* sort.h, sortmodule.h, sortmodule.c, modules/sortsieve.c,
 	timsieved.c, timsieve.c:
 	Added a proper listextensions function and the existing

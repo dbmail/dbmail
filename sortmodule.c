@@ -62,9 +62,10 @@ int sort_load_driver(void)
 			break;
 	}
 
-	/* If the list is exhausted without opening a module, we'll catch it. */
+	/* If the list is exhausted without opening a module, we'll catch it,
+	 * but we don't bomb out as we do for db and auth; just deliver normally. */
 	if (!module) {
-		trace(TRACE_FATAL, "%s,%s: cannot load %s: %s", 
+		trace(TRACE_ERROR, "%s,%s: cannot load %s: %s", 
 				__FILE__, __func__, 
 				lib, g_module_error());
 		return -1;
@@ -79,9 +80,10 @@ int sort_load_driver(void)
 	||  !g_module_symbol(module, "sort_get_errormsg",           (gpointer)&sort->get_errormsg           )
 	||  !g_module_symbol(module, "sort_get_error",              (gpointer)&sort->get_error              )
 	||  !g_module_symbol(module, "sort_get_mailbox",            (gpointer)&sort->get_mailbox            )) {
-		trace(TRACE_FATAL, "%s,%s: cannot find function: %s: %s", 
-				__FILE__, __func__, 
-				lib, g_module_error());
+		trace(TRACE_ERROR, "%s,%s: cannot find function: %s: Did you enable SIEVE"
+				" sorting in the DELIVERY section of dbmail.conf but forget"
+				" to build the Sieve loadable module?", 
+				__FILE__, __func__, g_module_error());
 		return -2;
 	}
 
@@ -92,7 +94,7 @@ sort_result_t *sort_process(u64_t user_idnr, struct DbmailMessage *message)
 {
 	if (!sort)
 		sort_load_driver();
-	if (!sort) {
+	if (!sort->process) {
 		trace(TRACE_ERROR, "%s, %s: Error loading sort driver",
 				__FILE__, __func__);
 		return NULL;
@@ -104,7 +106,7 @@ sort_result_t *sort_validate(u64_t user_idnr, char *scriptname)
 {
 	if (!sort)
 		sort_load_driver();
-	if (!sort) {
+	if (!sort->validate) {
 		trace(TRACE_ERROR, "%s, %s: Error loading sort driver",
 				__FILE__, __func__);
 		return NULL;
@@ -116,7 +118,7 @@ const char *sort_listextensions(void)
 {
 	if (!sort)
 		sort_load_driver();
-	if (!sort) {
+	if (!sort->listextensions) {
 		trace(TRACE_ERROR, "%s, %s: Error loading sort driver",
 				__FILE__, __func__);
 		return NULL;
@@ -126,43 +128,43 @@ const char *sort_listextensions(void)
 
 void sort_free_result(sort_result_t *result)
 {
-	assert(sort);
-	assert(sort->free_result);
+	if (!sort->free_result)
+		return;
 	return sort->free_result(result);
 }
 
 int sort_get_cancelkeep(sort_result_t *result)
 {
-	assert(sort);
-	assert(sort->get_cancelkeep);
+	if (!sort->get_cancelkeep)
+		return 0;
 	return sort->get_cancelkeep(result);
 }
 
 int sort_get_reject(sort_result_t *result)
 {
-	assert(sort);
-	assert(sort->get_reject);
+	if (!sort->get_reject)
+		return 0;
 	return sort->get_reject(result);
 }
 
 const char * sort_get_mailbox(sort_result_t *result)
 {
-	assert(sort);
-	assert(sort->get_mailbox);
+	if (!sort->get_mailbox)
+		return "";
 	return sort->get_mailbox(result);
 }
 
 const char * sort_get_errormsg(sort_result_t *result)
 {
-	assert(sort);
-	assert(sort->get_errormsg);
+	if (!sort->get_errormsg)
+		return "";
 	return sort->get_errormsg(result);
 }
 
 int sort_get_error(sort_result_t *result)
 {
-	assert(sort);
-	assert(sort->get_error);
+	if (!sort->get_error)
+		return 0;
 	return sort->get_error(result);
 }
 

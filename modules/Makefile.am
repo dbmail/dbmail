@@ -35,6 +35,8 @@ pkglib_LTLIBRARIES = libmysql.la \
 	libauth_sql.la \
 	libauth_ldap.la 
 
+noinst_LTLIBRARIES = libsort_null.la
+
 
 if MYSQL
 libmysql_la_SOURCES = dbmysql.c
@@ -51,6 +53,10 @@ libsqlite_la_SOURCES = dbsqlite.c
 libsqlite_la_LIBADD = @SQLITELIB@
 endif
 
+# This one is always built.
+libsort_null_la_SOURCES = sortnull.c
+libsort_null_la_LIBADD = @SORTLIB@
+
 if SIEVE
 libsort_sieve_la_SOURCES = sortsieve.c
 libsort_sieve_la_LIBADD = @SORTLIB@
@@ -64,6 +70,4 @@ if LDAP
 libauth_ldap_la_SOURCES = authldap.c
 libauth_ldap_la_LIBADD = -lcrypt @LDAPLIB@ 
 endif
-
-
 

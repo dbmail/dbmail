@@ -75,9 +75,8 @@ int db_load_driver(void)
 
 	/* If the list is exhausted without opening a module, we'll catch it. */
 	if (!module) {
-		trace(TRACE_FATAL, "%s,%s: cannot load %s: %s",
-				__FILE__, __func__,
-				lib, g_module_error());
+		trace(TRACE_FATAL, "%s,%s: cannot load %s",
+				__FILE__, __func__, g_module_error());
 		return -1;
 	}
 
@@ -99,8 +98,8 @@ int db_load_driver(void)
 	||  !g_module_symbol(module, "db_store_msgbuf_result", (gpointer)&db->store_msgbuf_result )
 	||  !g_module_symbol(module, "db_get_sql",             (gpointer)&db->get_sql      	)
 	||  !g_module_symbol(module, "db_set_result_set",      (gpointer)&db->set_result_set      )) {
-		trace(TRACE_FATAL, "%s,%s: cannot find function: %s: %s", 
-				__FILE__, __func__, lib, g_module_error());
+		trace(TRACE_FATAL, "%s,%s: cannot find function %s", 
+				__FILE__, __func__, g_module_error());
 		return -2;
 	}
 
