@@ -85,7 +85,8 @@ void teardown(void)
  */
 //int insert_messages(struct DbmailMessage *message,
 //		struct dm_list *headerfields, 
-//		struct dm_list *dsnusers);
+//		struct dm_list *dsnusers,
+//		struct dm_list *returnpath);
 
 START_TEST(test_insert_messages)
 {

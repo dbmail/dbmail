@@ -1178,14 +1178,14 @@ int check_msg_set(const char *s)
 char *date_sql2imap(const char *sqldate)
 {
         struct tm tm_sql_date;
-	struct tm tm_imap_date;
+	struct tm tm_imap_localtime;
 	
 	time_t ltime;
         char *last;
 
 	// bsd needs:
-	//memset(&tm_sql_date, 0, sizeof(struct tm));
-
+	memset(&tm_sql_date, 0, sizeof(struct tm));
+	
         last = strptime(sqldate,"%Y-%m-%d %H:%M:%S", &tm_sql_date);
         if ( (last == NULL) || (*last != '\0') ) {
                 strcpy(_imapdate, IMAP_STANDARD_DATE);
@@ -1193,10 +1193,11 @@ char *date_sql2imap(const char *sqldate)
         }
 
 	/* FIXME: this works fine on linux, but may cause dst offsets in netbsd. */
-	ltime = mktime (&tm_sql_date);
-	localtime_r(&ltime, &tm_imap_date);
+//	ltime = mktime (&tm_sql_date);
+//	localtime_r(&ltime, &tm_imap_localtime);
+//	localtime_r(&ltime, &tm_sql_date);
 
-        strftime(_imapdate, sizeof(_imapdate), "%a, %d %b %Y %H:%M:%S %z", &tm_imap_date);
+        strftime(_imapdate, sizeof(_imapdate), "%a, %d %b %Y %H:%M:%S %z", &tm_sql_date);
         return _imapdate;
 }
 
