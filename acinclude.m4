@@ -42,13 +42,13 @@ if test "x$enable_shared" = xno && test "x$enable_static" = xno
 then
   enable_shared="yes"
 fi
-if test "x$enable_shared" = xyes
-then
-  CFLAGS="$CFLAGS -DSHARED"
-elif test "x$enable_static" = xyes
-then
-  CFLAGS="$CFLAGS -DSTATIC"
-fi
+# if test "x$enable_shared" = xyes
+# then
+#   CFLAGS="$CFLAGS -DSHARED"
+# elif test "x$enable_static" = xyes
+# then
+#   CFLAGS="$CFLAGS -DSTATIC"
+# fi
 ])
 
 
@@ -177,8 +177,8 @@ AC_MSG_RESULT([checking for sorting configuration])
 AC_ARG_WITH(sieve,[  --with-sieve=PATH	  full path to libSieve header directory (don't use, not stable)],
 	sieveheadername="$withval$")
 dnl This always needs to be defined
-SORTALIB="modules/.libs/libsort_sieve.a"
-SORTLTLIB="modules/libsort_sieve.la"
+SORTALIB="modules/.libs/libsort_null.a"
+SORTLTLIB="modules/libsort_null.la"
 
 WARN=0
 if test ! "${sieveheadername-x}" = "x"
@@ -186,6 +186,9 @@ then
   # --with-sieve was specified
   AC_MSG_RESULT([using Sieve sorting])
   CFLAGS="$CFLAGS -DSIEVE"
+  # Redefine if there's actually Sieve sorting
+  SORTALIB="modules/.libs/libsort_sieve.a"
+  SORTLTLIB="modules/libsort_sieve.la"
   if test "$withval" != "yes"
   then
     AC_MSG_CHECKING([for sieve2.h (user supplied)])

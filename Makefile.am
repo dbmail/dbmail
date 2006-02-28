@@ -96,7 +96,7 @@ endif
 lib_LTLIBRARIES = libdbmail.la
 
 if SHARED
-AM_LDFLAGS = -Wl,--export-dynamic
+AM_LDFLAGS = -Wl,--export-dynamic -lcrypt
 libdbmail_la_SOURCES = $(COMMON) $(SERVER) $(DELIVER) $(MODULES)
 else
 libdbmail_la_SOURCES = $(COMMON) $(SERVER) $(DELIVER)
