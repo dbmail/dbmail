@@ -29,6 +29,9 @@
 
 int GeneralStopRequested = 0;
 int Restart = 0;
+int mainStop = 0;
+int mainRestart = 0;
+
 pid_t ParentPID = 0;
 ChildInfo_t childinfo;
 
@@ -149,6 +152,65 @@ int StartServer(serverConfig_t * conf)
 	return Restart;
 }
 
+int server_run(serverConfig_t *conf)
+{
+	mainStop = 0;
+	mainRestart = 0;
+	int serrno, status, result = 0;
+	pid_t pid = -1;
+
+	CreateSocket(conf);
+
+	switch ((pid = fork())) {
+	case -1:
+		serrno = errno;
+		close(conf->listenSocket);
+		trace(TRACE_FATAL, "%s,%s: fork failed [%s]",
+				__FILE__, __func__,
+				strerror(serrno));
+		errno = serrno;
+		break;
+
+	case 0:
+		/* child process */
+		drop_privileges(conf->serverUser, conf->serverGroup);
+		result = StartServer(conf);
+		trace(TRACE_INFO, "%s,%s: server done, restart = [%d]",
+				__FILE__, __func__, result);
+		exit(result);		
+		break;
+	default:
+		/* parent process, wait for child to exit */
+		while (waitpid(pid, &status, WNOHANG | WUNTRACED) == 0) {
+			if (mainStop)
+				kill(pid, SIGTERM);
+
+			if (mainRestart)
+				kill(pid, SIGHUP);
+
+			sleep(2);
+		}
+
+		if (WIFEXITED(status)) {
+			/* child process terminated neatly */
+			result = WEXITSTATUS(status);
+			trace(TRACE_DEBUG, "%s,%s: server has exited, exit status [%d]",
+			      __FILE__, __func__, result);
+		} else {
+			/* child stopped or signaled so make sure it is dead */
+			trace(TRACE_DEBUG, "%s,%s: server has not exited normally. Killing..",
+			      __FILE__, __func__);
+
+			kill(pid, SIGKILL);
+			result = 0;
+		}
+		break;
+	}
+	
+	close(conf->listenSocket);
+	
+	return result;
+}
 
 void ParentSigHandler(int sig, siginfo_t * info, void *data)
 {

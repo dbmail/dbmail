@@ -48,8 +48,8 @@ static void MainSigHandler(int sig, siginfo_t * info, void *data);
 static void get_config(serverConfig_t *config);
 
 static int tims_before_smtp = 0;
-static int mainRestart = 0;
-static int mainStop = 0;
+extern int mainRestart;
+extern int mainStop;
 
 int do_showhelp(void) {
 	printf("*** dbmail-timsieved ***\n");
@@ -71,8 +71,7 @@ int do_showhelp(void) {
 int main(int argc, char *argv[])
 {
 	serverConfig_t config;
-	int result, status, no_daemonize = 0;
-	pid_t pid;
+	int result, no_daemonize = 0;
 	int opt;
 
 	openlog(PNAME, LOG_PID, LOG_MAIL);
@@ -147,68 +146,14 @@ int main(int argc, char *argv[])
 	 * we may actually be a child of the original process. */
 	pidfile_create(pidFile, getpid());
 
-	result = 0;
+	get_config(&config);
 	do {
-		mainStop = 0;
-		mainRestart = 0;
-
-		get_config(&config);
-
-		CreateSocket(&config);
-		trace(TRACE_DEBUG,
-		      "main(): socket created, starting server");
-
-		switch ((pid = fork())) {
-		case -1:
-			close(config.listenSocket);
-			trace(TRACE_FATAL, "main(): fork failed [%s]",
-			      strerror(errno));
-
-		case 0:
-			/* child process */
-			drop_privileges(config.serverUser,
-					config.serverGroup);
-			result = StartServer(&config);
-
-			trace(TRACE_INFO, "main(): server done, exit.");
-			exit(result);
-
-		default:
-			/* parent process, wait for child to exit */
-			while (waitpid(pid, &status, WNOHANG | WUNTRACED)
-			       == 0) {
-				if (mainStop)
-					kill(pid, SIGTERM);
-
-				if (mainRestart)
-					kill(pid, SIGHUP);
-
-				sleep(2);
-			}
-
-			if (WIFEXITED(status)) {
-				/* child process terminated neatly */
-				result = WEXITSTATUS(status);
-				trace(TRACE_DEBUG,
-				      "main(): server has exited, exit status [%d]",
-				      result);
-			} else {
-				/* child stopped or signaled, don't like */
-				/* make sure it is dead */
-				trace(TRACE_DEBUG,
-				      "main(): server has not exited normally. Killing..");
-
-				kill(pid, SIGKILL);
-				result = 0;
-			}
-		}
-
-		close(config.listenSocket);
-		config_free();
-
+		result = server_run(&config);
+	
 	} while (result == 1 && !mainStop);	/* 1 means reread-config and restart */
+	config_free();
 
-	trace(TRACE_INFO, "main(): exit");
+	trace(TRACE_INFO, "%s,%s: exit", __FILE__, __func__);
 	return 0;
 }
 

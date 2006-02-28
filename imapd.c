@@ -34,6 +34,9 @@ char *configFile = DEFAULT_CONFIG_FILE;
 /* set up database login data */
 extern db_param_t _db_params;
 
+extern int mainRestart;
+extern int mainStop;
+
 static void SetConfigItems(serverConfig_t * config);
 static void Daemonize(void);
 static int SetMainSigHandler(void);
@@ -42,8 +45,6 @@ static void MainSigHandler(int sig, siginfo_t * info, void *data);
 static void get_config(serverConfig_t *config);
 
 int imap_before_smtp = 0;
-int mainRestart = 0;
-int mainStop = 0;
 
 int do_showhelp(void) {
 	printf("*** dbmail-imapd ***\n");
@@ -65,8 +66,7 @@ int do_showhelp(void) {
 int main(int argc, char *argv[])
 {
 	serverConfig_t config;
-	int result, status, no_daemonize = 0;
-	pid_t pid;
+	int result, no_daemonize = 0;
 	int opt;
 
 	g_mime_init(0);
@@ -128,67 +128,12 @@ int main(int argc, char *argv[])
 	 * we may actually be a child of the original process. */
 	pidfile_create(pidFile, getpid());
 
-	result = 0;
-
+	get_config(&config);
 	do {
-		mainStop = 0;
-		mainRestart = 0;
-		int serrno;
-
-		get_config(&config);
-		CreateSocket(&config);
-
-		switch ((pid = fork())) {
-		case -1:
-			serrno = errno;
-			close(config.listenSocket);
-			trace(TRACE_FATAL, "%s,%s: fork failed [%s]",
-					__FILE__, __func__,
-					strerror(serrno));
-			errno = serrno;
-			break;
-
-		case 0:
-			/* child process */
-			drop_privileges(config.serverUser, config.serverGroup);
-			result = StartServer(&config);
-			trace(TRACE_INFO, "%s,%s: server done, restart = [%d]",
-					__FILE__, __func__, result);
-			
-			break;
-		default:
-			/* parent process, wait for child to exit */
-			while (waitpid(pid, &status, WNOHANG | WUNTRACED) == 0) {
-				if (mainStop)
-					kill(pid, SIGTERM);
-
-				if (mainRestart)
-					kill(pid, SIGHUP);
-
-				sleep(2);
-			}
-
-			if (WIFEXITED(status)) {
-				/* child process terminated neatly */
-				result = WEXITSTATUS(status);
-				trace(TRACE_DEBUG, "%s,%s: server has exited, exit status [%d]",
-				      __FILE__, __func__, result);
-			} else {
-				/* child stopped or signaled, don't like */
-				/* make sure it is dead */
-				trace(TRACE_DEBUG, "%s,%s: server has not exited normally. Killing..",
-				      __FILE__, __func__);
-
-				kill(pid, SIGKILL);
-				result = 0;
-			}
-			break;
-		}
-		
-		close(config.listenSocket);
-		config_free();
+		result = server_run(&config);
 		
 	} while (result == 1 && !mainStop);	/* 1 means reread-config and restart */
+	config_free();
 
 	g_mime_shutdown();
 	trace(TRACE_INFO, "%s,%s: exit", __FILE__, __func__);

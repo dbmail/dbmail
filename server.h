@@ -33,5 +33,6 @@
 int CreateSocket(serverConfig_t * conf);
 int StartServer(serverConfig_t * conf);
 int StartCliServer(serverConfig_t * conf);
+int server_run(serverConfig_t *conf);
 void ClearConfig(serverConfig_t * conf);
 #endif
