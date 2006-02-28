@@ -146,15 +146,16 @@ int main(int argc, char *argv[])
 					__FILE__, __func__,
 					strerror(serrno));
 			errno = serrno;
+			break;
 
 		case 0:
 			/* child process */
 			drop_privileges(config.serverUser, config.serverGroup);
 			result = StartServer(&config);
-			trace(TRACE_INFO, "%s,%s: server done, exit.",
-					__FILE__, __func__);
-			exit(result);
-
+			trace(TRACE_INFO, "%s,%s: server done, restart = [%d]",
+					__FILE__, __func__, result);
+			
+			break;
 		default:
 			/* parent process, wait for child to exit */
 			while (waitpid(pid, &status, WNOHANG | WUNTRACED) == 0) {
@@ -170,26 +171,27 @@ int main(int argc, char *argv[])
 			if (WIFEXITED(status)) {
 				/* child process terminated neatly */
 				result = WEXITSTATUS(status);
-				trace(TRACE_DEBUG,
-				      "main(): server has exited, exit status [%d]",
-				      result);
+				trace(TRACE_DEBUG, "%s,%s: server has exited, exit status [%d]",
+				      __FILE__, __func__, result);
 			} else {
 				/* child stopped or signaled, don't like */
 				/* make sure it is dead */
-				trace(TRACE_DEBUG,
-				      "main(): server has not exited normally. Killing..");
+				trace(TRACE_DEBUG, "%s,%s: server has not exited normally. Killing..",
+				      __FILE__, __func__);
 
 				kill(pid, SIGKILL);
 				result = 0;
 			}
+			break;
 		}
 		
 		close(config.listenSocket);
 		config_free();
+		
 	} while (result == 1 && !mainStop);	/* 1 means reread-config and restart */
 
 	g_mime_shutdown();
-	trace(TRACE_INFO, "main(): exit");
+	trace(TRACE_INFO, "%s,%s: exit", __FILE__, __func__);
 	return 0;
 }
 
