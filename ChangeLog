@@ -1,5 +1,10 @@
 2006-02-28  Paul J Stevens <paul@nfg.nl>
 
+	* ChangeLog:
+	blah
+	* check_dbmail_deliver.c, debian/changelog, debian/rules, server.c, 
+	  serverchild.c:
+	fix race condition in StartServer
 	* pool.c, serverchild.c:
 	signal cleanup in progress
 	* check_dbmail_imapd.c, misc.c:
