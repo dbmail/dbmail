@@ -151,6 +151,7 @@ void ParentSigHandler(int sig, siginfo_t * info, void *data)
 {
 	pid_t chpid;
 	int saved_errno = errno;
+	Restart = 0;
 	
 	/* this call is for a child but it's handler is not yet installed */
 	if (ParentPID != getpid())
@@ -172,10 +173,12 @@ void ParentSigHandler(int sig, siginfo_t * info, void *data)
 
 	case SIGHUP:
 		Restart = 1;
-		/* fall-through */
+		GeneralStopRequested = 1;
+		break;
 		
 	default:
 		GeneralStopRequested = 1;
+		break;
 	}
 
 	errno = saved_errno;
