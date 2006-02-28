@@ -77,6 +77,8 @@ void active_child_sig_handler(int sig, siginfo_t * info UNUSED, void *data UNUSE
 	
 	static int triedDisconnect = 0;
 
+	//trace(TRACE_DEBUG,"%s,%s: %s", __FILE__, __func__, strsignal(sig));
+
 	/* perform reinit at SIGHUP otherwise exit, but do nothing on
 	 *  SIGCHLD*/
 	switch (sig) {

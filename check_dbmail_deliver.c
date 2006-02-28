@@ -92,7 +92,7 @@ START_TEST(test_insert_messages)
 {
 	int result;
 	struct DbmailMessage *message;
-	struct dm_list dsnusers, headerfields;
+	struct dm_list dsnusers;
 	GString *tmp;
 	deliver_to_user_t dsnuser;
 	
@@ -101,19 +101,16 @@ START_TEST(test_insert_messages)
 	message = dbmail_message_init_with_string(message,tmp);
 
 	dm_list_init(&dsnusers);
-	dm_list_init(&headerfields);
 	
 	dsnuser_init(&dsnuser);
 	dsnuser.address = "testuser1";
 	dm_list_nodeadd(&dsnusers, &dsnuser, sizeof(deliver_to_user_t));
 	
-	mime_fetch_headers(message, &headerfields);
-	result = insert_messages(message, &headerfields, &dsnusers);
+	result = insert_messages(message, &dsnusers);
 
 	fail_unless(result==0,"insert_messages failed");
 
 	dm_list_free(&dsnusers.start);
-	dm_list_free(&headerfields.start);
 	g_string_free(tmp,TRUE);
 	dbmail_message_free(message);
 }

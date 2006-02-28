@@ -111,6 +111,9 @@ int StartServer(serverConfig_t * conf)
 		return -1;
  	
  	scoreboard_new(conf);
+
+	if (db_connect() != DM_SUCCESS) 
+		trace(TRACE_FATAL, "%s,%s: unable to connect to sql storage", __FILE__, __func__);
 	
  	manage_start_children();
  	manage_spare_children();
@@ -157,6 +160,8 @@ void ParentSigHandler(int sig, siginfo_t * info, void *data)
 	if (ParentPID != getpid())
 		active_child_sig_handler(sig, info, data); 
 	
+	//trace(TRACE_DEBUG,"%s,%s: %s", __FILE__, __func__, strsignal(sig));
+
 	switch (sig) {
  
 	case SIGCHLD:

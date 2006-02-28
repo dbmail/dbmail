@@ -31,6 +31,7 @@ ifneq (,$(findstring devel,$(DEB_BUILD_OPTIONS)))
 	export WITH_PGSQL=
 	export WITH_SQLITE=
 	export SHARED=--enable-shared=no
+	export STATIC=--enable-static=yes
 	CFLAGS += -g
 endif
 ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
@@ -46,7 +47,7 @@ include /usr/share/dpatch/dpatch.make
 CONFFLAGS=--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --sysconfdir=/etc/dbmail/ \
 	--infodir=\$${prefix}/share/info \
-	$(WITH_GC) $(WITH_CHECK) $(SHARED) $(WITH_SIEVE) $(WITH_LDAP) $(WITH_MYSQL) $(WITH_PGSQL) $(WITH_SQLITE)
+	$(WITH_GC) $(WITH_CHECK) $(SHARED) $(STATIC) $(WITH_SIEVE) $(WITH_LDAP) $(WITH_MYSQL) $(WITH_PGSQL) $(WITH_SQLITE)
 
 build: stamps/build
 stamps/build: stamps patch configure $(PACKAGES)

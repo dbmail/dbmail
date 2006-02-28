@@ -1,3 +1,14 @@
+2006-02-28  Paul J Stevens <paul@nfg.nl>
+
+	* pool.c, serverchild.c:
+	signal cleanup in progress
+	* check_dbmail_imapd.c, misc.c:
+	date_sql2imap fix in progress
+	* config.c:
+	make failure to read config-file fatal
+	* imapd.c, server.c:
+	perform clean restart in case of SIGHUP
+	
 2006-02-24  Aaron Stone  <aaron@serendipity.cx>
 
 	* sortmodule.c, modules/sortnull.c, Makefile.am, modules/Makefile.am:
