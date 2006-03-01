@@ -4298,6 +4298,7 @@ int db_user_create(const char *username, const char *password, const char *encty
 			maxmail, enctype ? enctype : "", db_get_sql(SQL_CURRENT_TIMESTAMP));
 	}
 	dm_free(escaped_username);
+	dm_free(escaped_password);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: query for adding user failed",
