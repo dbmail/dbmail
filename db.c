@@ -479,8 +479,8 @@ int db_get_sievescript_byname(u64_t user_idnr, char *scriptname, char **script)
 
 	escaped_scriptname = dm_stresc(scriptname);
 	snprintf(query, DEF_QUERYSIZE,
-				"SELECT script from %ssievescripts where "
-				"owner_idnr = '%llu' and name = '%s'",
+				"SELECT script FROM %ssievescripts WHERE "
+				"owner_idnr = '%llu' AND name = '%s'",
 				DBPFX,user_idnr,escaped_scriptname);
 	dm_free(escaped_scriptname);
 
@@ -572,7 +572,7 @@ int db_get_sievescript_listall(u64_t user_idnr, struct dm_list *scriptlist)
 
 	dm_list_init(scriptlist);
 	snprintf(query, DEF_QUERYSIZE,
-		"SELECT name,active from %ssievescripts where "
+		"SELECT name,active FROM %ssievescripts WHERE "
 		"owner_idnr = %llu",
 		DBPFX,user_idnr);
 
@@ -580,6 +580,7 @@ int db_get_sievescript_listall(u64_t user_idnr, struct dm_list *scriptlist)
 		trace(TRACE_ERROR,
 		"%s,%s: error getting all sievescripts",
 		__FILE__, __func__);
+		db_free_result();
 		return DM_EQUERY;
 	}
 
@@ -605,13 +606,14 @@ int db_rename_sievescript(u64_t user_idnr, char *scriptname, char *newname)
 {
 	char *escaped_scriptname;
 	char *escaped_newname;
+	int active = 0;
 
 	db_begin_transaction();
 	escaped_scriptname = dm_stresc(scriptname);
 	escaped_newname = dm_stresc(newname);
 
 	snprintf(query, DEF_QUERYSIZE,
-		"SELECT COUNT(*) FROM %ssievescripts "
+		"SELECT active FROM %ssievescripts "
 		"WHERE owner_idnr = %llu AND name = '%s'",
 		DBPFX,user_idnr,escaped_newname);
 
@@ -622,7 +624,8 @@ int db_rename_sievescript(u64_t user_idnr, char *scriptname, char *newname)
 		return DM_EQUERY;
 	}
 
-	if (db_get_result_int(0,0) > 0) {
+	if (db_num_rows() > 0) {
+		active = db_get_result_int(0, 0);
 		db_free_result();
 		snprintf(query, DEF_QUERYSIZE,
 			"DELETE FROM %ssievescripts "
@@ -639,9 +642,9 @@ int db_rename_sievescript(u64_t user_idnr, char *scriptname, char *newname)
 
 	db_free_result();
 	snprintf(query, DEF_QUERYSIZE,
-		"UPDATE %ssievescripts SET name = '%s' "
+		"UPDATE %ssievescripts SET name = '%s', active = '%d' "
 		"WHERE owner_idnr = %llu AND name = '%s'",
-		DBPFX,escaped_newname,user_idnr,escaped_scriptname);
+		DBPFX,escaped_newname,active,user_idnr,escaped_scriptname);
 	dm_free(escaped_scriptname);
 	dm_free(escaped_newname);
 
@@ -659,13 +662,14 @@ int db_rename_sievescript(u64_t user_idnr, char *scriptname, char *newname)
 
 int db_add_sievescript(u64_t user_idnr, char *scriptname, char *script)
 {
+	unsigned maxesclen = (READ_BLOCK_SIZE + 1) * 5 + DEF_QUERYSIZE;
+	unsigned esclen, startlen;
 	char *escaped_scriptname;
-	char *escaped_script;
+	char *escaped_query;
 
 	db_begin_transaction();
 
 	escaped_scriptname = dm_stresc(scriptname);
-	escaped_script = dm_stresc(script);
 	snprintf(query, DEF_QUERYSIZE,
 		"SELECT COUNT(*) FROM %ssievescripts "
 		"WHERE owner_idnr = %llu AND name = '%s'",
@@ -677,7 +681,7 @@ int db_add_sievescript(u64_t user_idnr, char *scriptname, char *script)
 		return DM_EQUERY;
 	}
 
-	if (db_get_result_int(0,0) > 0) {
+	if (db_get_result_int(0, 0) > 0) {
 		db_free_result();
 		snprintf(query, DEF_QUERYSIZE,
 			"DELETE FROM %ssievescripts "
@@ -692,21 +696,38 @@ int db_add_sievescript(u64_t user_idnr, char *scriptname, char *script)
 	}
 
 	db_free_result();
-	snprintf(query, DEF_QUERYSIZE,
-		"INSERT into %ssievescripts "
-		"(owner_idnr, name, script, active) "
-		"values (%llu, '%s', '%s', 0)",
-		DBPFX,user_idnr,escaped_scriptname,escaped_script);
-	dm_free(escaped_scriptname);
-	dm_free(escaped_script);
 
-	if (db_query(query) == -1) {
+	escaped_query = g_new0(char, maxesclen);
+	if (!escaped_query) {
+		trace(TRACE_ERROR, "%s,%s: not enough memory", 
+				__FILE__, __func__);
+		db_rollback_transaction();
+		dm_free(escaped_scriptname);
+		return DM_EQUERY;
+	}
+	memset(escaped_query, '\0', maxesclen);
+	startlen = snprintf(escaped_query, maxesclen,
+		     "INSERT INTO %ssievescripts "
+		     "(owner_idnr, name, script, active) "
+		     "VALUES ('%llu','%s', '",
+		     DBPFX, user_idnr, escaped_scriptname);
+	
+	/* escape & add data */
+	esclen = db_escape_string(&escaped_query[startlen], script, strlen(script));
+	snprintf(&escaped_query[esclen + startlen],
+		 maxesclen - esclen - startlen, "', 0)");
+
+	dm_free(escaped_scriptname);
+
+	if (db_query(escaped_query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error adding sievescript '%s' "
 			"for user_idnr [%llu]", __FILE__, __func__,
 			scriptname, user_idnr);
 		db_rollback_transaction();
+		dm_free(escaped_query);
 		return DM_EQUERY;
 	}
+	dm_free(escaped_query);
 
 	db_commit_transaction();
 	return DM_SUCCESS;
@@ -777,8 +798,8 @@ int db_delete_sievescript(u64_t user_idnr, char *scriptname)
 
 	escaped_scriptname = dm_stresc(scriptname);
 	snprintf(query, DEF_QUERYSIZE,
-		"DELETE from %ssievescripts "
-		"where owner_idnr = %llu and name = '%s'",
+		"DELETE FROM %ssievescripts "
+		"WHERE owner_idnr = %llu AND name = '%s'",
 		DBPFX,user_idnr,escaped_scriptname);
 	dm_free(escaped_scriptname);
 

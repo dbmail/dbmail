@@ -476,7 +476,8 @@ int lmtp(void *stream, void *instream, char *buffer,
 				if (goodtogo) {
 					/* Sure fine go ahead. */
 					dm_list_nodeadd(&from, tmpaddr, strlen(tmpaddr)+1);
-					ci_write((FILE *) stream, "250 Sender <%s> OK\r\n",
+					ci_write((FILE *) stream,
+						"250 Sender <%s> OK\r\n",
 						(char *)(dm_list_getstart(&from)->data));
 				}
 				if (tmpaddr != NULL)
@@ -512,10 +513,8 @@ int lmtp(void *stream, void *instream, char *buffer,
 					dsnuser.address = tmpaddr;
 
 					if (dsnuser_resolve(&dsnuser) != 0) {
-						trace(TRACE_ERROR,
-						      "main(): dsnuser_resolve_list failed");
-						ci_write((FILE *) stream,
-							"430 Temporary failure in recipient lookup\r\n");
+						trace(TRACE_ERROR, "main(): dsnuser_resolve_list failed");
+						ci_write((FILE *) stream, "430 Temporary failure in recipient lookup\r\n");
 						dsnuser_free(&dsnuser);
 						return 1;
 					}
@@ -523,17 +522,14 @@ int lmtp(void *stream, void *instream, char *buffer,
 					/* Class 2 means the address was deliverable in some way. */
 					switch (dsnuser.dsn.class) {
 					case DSN_CLASS_OK:
-						ci_write((FILE *) stream,
-							"250 Recipient <%s> OK\r\n",
+						ci_write((FILE *) stream, "250 Recipient <%s> OK\r\n",
 							dsnuser.address);
 						/* A successfully found recipient goes onto the list.
 						 * The struct will be free'd from lmtp_reset(). */
-						dm_list_nodeadd(&rcpt, &dsnuser,
-							     sizeof(deliver_to_user_t));
+						dm_list_nodeadd(&rcpt, &dsnuser, sizeof(deliver_to_user_t));
 						break;
 					default:
-						ci_write((FILE *) stream,
-							"550 Recipient <%s> FAIL\r\n",
+						ci_write((FILE *) stream, "550 Recipient <%s> FAIL\r\n",
 							dsnuser.address);
 						/* If the user wasn't added, free the non-entry. */
 						dsnuser_free(&dsnuser);
