@@ -2,6 +2,9 @@
 
 	* db.c:
 	Added calls to db_free_result per Leif Jackson's testing.
+	Fixed errors inserting oversized Sieve scripts per Oleg Lapshin.
+	* lmtp.c:
+	Fixed memory leak thanks to Leif Jackson's testing.
 	* timsieve.c:
 	Added saner support for the HAVESPACE command per Oleg Lapshin.
 	* dbmail-imapsession.c:

@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: lmtp.c 1992 2006-02-21 07:22:57Z aaron $
+/* $Id: lmtp.c 2002 2006-03-01 10:32:21Z aaron $
  *
  * implementation for lmtp commands according to RFC 1081 */
 
@@ -479,10 +479,9 @@ int lmtp(void *stream, void *instream, char *buffer,
 					ci_write((FILE *) stream,
 						"250 Sender <%s> OK\r\n",
 						(char *)(dm_list_getstart(&from)->data));
-				} else {
-					if (tmpaddr != NULL)
-						dm_free(tmpaddr);
 				}
+				if (tmpaddr != NULL)
+					dm_free(tmpaddr);
 			}
 			return 1;
 		}
@@ -514,10 +513,8 @@ int lmtp(void *stream, void *instream, char *buffer,
 					dsnuser.address = tmpaddr;
 
 					if (dsnuser_resolve(&dsnuser) != 0) {
-						trace(TRACE_ERROR,
-						      "main(): dsnuser_resolve_list failed");
-						ci_write((FILE *) stream,
-							"430 Temporary failure in recipient lookup\r\n");
+						trace(TRACE_ERROR, "main(): dsnuser_resolve_list failed");
+						ci_write((FILE *) stream, "430 Temporary failure in recipient lookup\r\n");
 						dsnuser_free(&dsnuser);
 						return 1;
 					}
@@ -525,17 +522,14 @@ int lmtp(void *stream, void *instream, char *buffer,
 					/* Class 2 means the address was deliverable in some way. */
 					switch (dsnuser.dsn.class) {
 					case DSN_CLASS_OK:
-						ci_write((FILE *) stream,
-							"250 Recipient <%s> OK\r\n",
+						ci_write((FILE *) stream, "250 Recipient <%s> OK\r\n",
 							dsnuser.address);
 						/* A successfully found recipient goes onto the list.
 						 * The struct will be free'd from lmtp_reset(). */
-						dm_list_nodeadd(&rcpt, &dsnuser,
-							     sizeof(deliver_to_user_t));
+						dm_list_nodeadd(&rcpt, &dsnuser, sizeof(deliver_to_user_t));
 						break;
 					default:
-						ci_write((FILE *) stream,
-							"550 Recipient <%s> FAIL\r\n",
+						ci_write((FILE *) stream, "550 Recipient <%s> FAIL\r\n",
 							dsnuser.address);
 						/* If the user wasn't added, free the non-entry. */
 						dsnuser_free(&dsnuser);
