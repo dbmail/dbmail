@@ -224,12 +224,6 @@ void dsnuser_free(deliver_to_user_t * dsnuser)
 	dsnuser->dsn.subject = 0;
 	dsnuser->dsn.detail = 0;
 
-	/* These are nominally const, but
-	 * we really do want to free them. */
-	/*
-	dm_free((char *) dsnuser->address);
-	dm_free((char *) dsnuser->mailbox);
-	*/
 	dsnuser->address = NULL;
 	dsnuser->mailbox = NULL;
 	dsnuser->source = BOX_NONE;
@@ -237,8 +231,10 @@ void dsnuser_free(deliver_to_user_t * dsnuser)
 	dm_list_free(&dsnuser->userids->start);
 	dm_list_free(&dsnuser->forwards->start);
 
+	dm_free(dsnuser->mailbox);
 	dm_free(dsnuser->userids);
 	dm_free(dsnuser->forwards);
+	dm_free(dsnuser->address);
 
 	trace(TRACE_DEBUG, "%s, %s: dsnuser freed",
 	      __FILE__, __func__);

@@ -111,6 +111,7 @@ START_TEST(test_insert_messages)
 	fail_unless(result==0,"insert_messages failed");
 
 	dm_list_free(&dsnusers.start);
+	dsnuser_free(&dsnuser);
 	g_string_free(tmp,TRUE);
 	dbmail_message_free(message);
 }
