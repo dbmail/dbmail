@@ -1,3 +1,12 @@
+2006-02-28  Aaron Stone  <aaron@serendipity.cx>
+
+	* db.c:
+	Added calls to db_free_result per Leif Jackson's testing.
+	* timsieve.c:
+	Added saner support for the HAVESPACE command per Oleg Lapshin.
+	* dbmail-imapsession.c:
+	Added code to free the_args at each call to build_args_array_ext.
+
 2006-02-28  Paul J Stevens <paul@nfg.nl>
 
 	* ChangeLog:

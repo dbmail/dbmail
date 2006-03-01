@@ -1584,6 +1584,14 @@ char *the_args[MAX_ARGS];
  * The returned array will be NULL-terminated.
  * Will return NULL upon errors.
  */
+
+static void free_args(void)
+{
+	int i;
+	for (i = 0; i < MAX_ARGS && the_args[i]; i++)
+		dm_free(the_args[i]);
+}
+
 char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 {
 	int nargs = 0, inquote = 0, quotestart = 0;
@@ -1593,6 +1601,13 @@ char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 	char s[MAX_LINESIZE];
 	char *tmp, *lastchar;
 	int quotedSize, cnt, dataidx;
+	static int init_args = 0;
+
+	/* Clear the_args the very first time. */
+	if (!init_args) {
+		memset(the_args, 0, MAX_ARGS * (sizeof(char *)));
+		init_args = 1;
+	}
 
 	/* this is done for the possible extra lines to be read from the client:
 	 * the line is read into currline; s will always point to the line currently
@@ -1609,6 +1624,9 @@ char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 		return the_args;
 	}
 
+	/* free the last round of arguments */
+	free_args();
+
 	/* find the arguments */
 	paridx = 0;
 	parlist[paridx] = NOPAR;
@@ -1621,7 +1639,7 @@ char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 			if (inquote) {
 				/* quotation end, treat quoted string as argument */
 				if (! (the_args[nargs] = g_new0(char,(i - quotestart)))) {
-					g_strfreev(the_args);
+					free_args();
 					trace(TRACE_ERROR, "%s,%s: out-of-memory error.", __FILE__, __func__);
 					return NULL;
 				}
@@ -1690,11 +1708,9 @@ char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 			}
 
 			/* add this parenthesis to the arg list and continue */
-			/* FIXME: this leaks memory as we have no way of freeing these
-					pointers */
 			if (!  (the_args[nargs] = (char *) dm_malloc(sizeof(" ")))) {
 				/* out of mem */
-				g_strfreev(the_args);
+				free_args();
 				trace(TRACE_ERROR, "%s,%s: out-of-memory error.", __FILE__, __func__);
 				return NULL;
 			}
@@ -1721,7 +1737,7 @@ char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 				if (! (the_args[nargs] = (char *) dm_malloc(sizeof(char) * (quotedSize + 1)))) {
 					trace(TRACE_ERROR, "%s,%s: out-of-memory allocating [%u] bytes for extra string",
 							__FILE__, __func__, quotedSize + 1);
-					g_strfreev(the_args);
+					free_args();
 					return NULL;
 				}
 
@@ -1742,7 +1758,7 @@ char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 				if (!ci->rx || !ci->tx || ferror(ci->rx) || ferror(ci->tx)) {
 					trace(TRACE_ERROR, "%s,%s: timeout occurred", 
 							__FILE__, __func__);
-					g_strfreev(the_args);
+					free_args();
 					return NULL;
 				}
 
@@ -1754,7 +1770,7 @@ char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 				if (!ci->rx || !ci->tx || ferror(ci->rx) || ferror(ci->tx)) {
 					trace(TRACE_ERROR, "%s,%s: timeout occurred", 
 							__FILE__, __func__);
-					g_strfreev(the_args);
+					free_args();
 					return NULL;
 				}
 
@@ -1788,7 +1804,7 @@ char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 			}
 
 		if (!  (the_args[nargs] = g_new0(char,(i - argstart + 1)))) {
-			g_strfreev(the_args);
+			free_args();
 
 			trace(TRACE_ERROR,
 			      "IMAPD: Not enough memory while building up argument array.");

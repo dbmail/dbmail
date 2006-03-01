@@ -704,20 +704,17 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 					    [MAX_SIEVE_SCRIPTNAME + 1];
 
 					strncpy(scriptname, tmpleft,
-						(MAX_SIEVE_SCRIPTNAME <
-						 tmplen ?
+						(MAX_SIEVE_SCRIPTNAME < tmplen ?
 						 MAX_SIEVE_SCRIPTNAME :
 						 tmplen));
 					/* Of course, be sure to NULL terminate, because strncpy() likely won't */
-					scriptname[(MAX_SIEVE_SCRIPTNAME <
-						    tmplen ?
+					scriptname[(MAX_SIEVE_SCRIPTNAME < tmplen ?
 						    MAX_SIEVE_SCRIPTNAME :
 						    tmplen)] = '\0';
 					dm_free(tmpleft);
 
 					ret =
-					    db_delete_sievescript(session->
-								  useridnr,
+					    db_delete_sievescript(session->useridnr,
 								  scriptname);
 					if (ret == -3) {
 						fprintf((FILE *) stream,
@@ -739,8 +736,14 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 				fprintf((FILE *) stream,
 					"NO \"Please authenticate first.\"\r\n");
 			} else {
-				fprintf((FILE *) stream,
-					"NO \"Command not implemented.\"\r\n");
+				// Command is in format: HAVESPACE "scriptname" 12345
+				// TODO: Actually parse for the size when the quota
+				// functions get implemented. For now, just pretend.
+				if (db_check_sievescript_quota(session->useridnr,
+						12345) == DM_SUCCESS)
+					fprintf((FILE *) stream, "OK \"Command not implemented.\"\r\n");
+				else
+					fprintf((FILE *) stream, "NO (QUOTA) \"Quota exceeded\"\r\n");
 			}
 			return 1;
 		}
