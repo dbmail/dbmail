@@ -1,5 +1,5 @@
 /*
-  $Id: server.h 1891 2005-10-03 10:01:21Z paul $
+  $Id: server.h 1999 2006-02-28 20:59:53Z paul $
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 
  This program is free software; you can redistribute it and/or 

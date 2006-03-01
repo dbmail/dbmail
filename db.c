@@ -1,4 +1,4 @@
-/* $Id: db.c 1994 2006-02-26 16:30:05Z aaron $ */
+/* $Id: db.c 2000 2006-03-01 05:54:03Z aaron $ */
 /*
   Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 
@@ -637,6 +637,7 @@ int db_rename_sievescript(u64_t user_idnr, char *scriptname, char *newname)
 		}
 	}
 
+	db_free_result();
 	snprintf(query, DEF_QUERYSIZE,
 		"UPDATE %ssievescripts SET name = '%s' "
 		"WHERE owner_idnr = %llu AND name = '%s'",
@@ -690,6 +691,7 @@ int db_add_sievescript(u64_t user_idnr, char *scriptname, char *script)
 		}
 	}
 
+	db_free_result();
 	snprintf(query, DEF_QUERYSIZE,
 		"INSERT into %ssievescripts "
 		"(owner_idnr, name, script, active) "
@@ -793,7 +795,7 @@ int db_delete_sievescript(u64_t user_idnr, char *scriptname)
 int db_check_sievescript_quota(u64_t user_idnr, u64_t scriptlen)
 {
 	/* TODO function db_check_sievescript_quota */
-	trace(TRACE_DEBUG, "%s,%s: updating %llu sievescript quota with %llu",
+	trace(TRACE_DEBUG, "%s,%s: checking %llu sievescript quota with %llu",
 		__FILE__, __func__, user_idnr, scriptlen);
 	return DM_SUCCESS;
 }
