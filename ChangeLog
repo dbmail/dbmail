@@ -1,10 +1,12 @@
+2006-03-01  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_deliver.c, db.c, debian/changelog, dsn.c, lmtp.c, main.c:
+	fix a small leak in dsnuser usage
+
 2006-02-28  Aaron Stone  <aaron@serendipity.cx>
 
 	* db.c:
 	Added calls to db_free_result per Leif Jackson's testing.
-	Fixed errors inserting oversized Sieve scripts per Oleg Lapshin.
-	* lmtp.c:
-	Fixed memory leak thanks to Leif Jackson's testing.
 	* timsieve.c:
 	Added saner support for the HAVESPACE command per Oleg Lapshin.
 	* dbmail-imapsession.c:
@@ -12,8 +14,6 @@
 
 2006-02-28  Paul J Stevens <paul@nfg.nl>
 
-	* ChangeLog:
-	blah
 	* check_dbmail_deliver.c, debian/changelog, debian/rules, server.c, 
 	  serverchild.c:
 	fix race condition in StartServer
@@ -109,13 +109,6 @@
 
 2006-02-16  Paul J Stevens <paul@nfg.nl>
 
-	* ChangeLog, Makefile.am, acinclude.m4, auth.h, authmodule.c, db.c, 
-	  dbmail-imapsession.c, dbmail-message.c, dbmail.conf, dbmodule.c, 
-	  dsn.c, imap4.c, misc.c, misc.h, modules/authldap.c, 
-	  modules/authsql.c, modules/sortsieve.c, sievecmd.c, sort.c, 
-	  sortmodule.c, sql/mysql/add_replycache.mysql, timsieved.c,
-	  check_dbmail_dsn.c, check_dbmail_misc.c:
-	resync
 	* AUTHORS:
 	removed reference to iniparser
 	* check_dbmail_dsn.c:
@@ -143,11 +136,6 @@
 
 2006-02-12  Paul J Stevens <paul@nfg.nl>
 
-	* ChangeLog, Makefile.am, authmodule.c, check_dbmail_imapd.c, db.c, 
-	  dbmail-imapsession.c, dbmodule.c, imap4.h, imapcommands.c, main.c, 
-	  modules/authsql.c, modules/dbmysql.c, modules/sortsieve.c, pipe.c, 
-	  pop3.c, sievecmd.c, sort.c, sort.h, sortmodule.c, timsieve.c:
-	resync
 	* authmodule.c, dbmail-mailbox.c, dbmodule.c, debian/changelog, 
 	  debian/rules, imap4.c, misc.c, modules/authsql.c, 
 	  modules/sortsieve.c, sort.c, sortmodule.c:
@@ -171,11 +159,6 @@
 
 2006-02-03  Paul J Stevens <paul@nfg.nl>
 
-	* check_dbmail_deliver.c, check_dbmail_imapd.c, db.c, dbmail-imapsession.c, 
-	  dbmail-message.c, dbmail.conf, dbmail.h, dbmailtypes.h, imap4.h, 
-	  imapcommands.c, mime.c, mime.h, misc.c, misc.h, serverchild.c, 
-	  test-scripts/testimap.py, timsieved.c:
-	resync
 	* debian/changelog, debian/rules, imap4.h:
 	enable QUOTA in capability string
 	* ChangeLog, acinclude.m4, config.c, configure.in, db.c, db.h, 
