@@ -476,7 +476,6 @@ int lmtp(void *stream, void *instream, char *buffer,
 				if (goodtogo) {
 					/* Sure fine go ahead. */
 					dm_list_nodeadd(&from, tmpaddr, strlen(tmpaddr)+1);
-					dm_free(tmpaddr);
 					ci_write((FILE *) stream,
 						"250 Sender <%s> OK\r\n",
 						(char *)(dm_list_getstart(&from)->data));
