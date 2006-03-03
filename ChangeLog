@@ -1,21 +1,8 @@
-2006-03-02  Paul J Stevens <paul@nfg.nl>
+2006-03-03  Paul J Stevens <paul@nfg.nl>
 
-	* ChangeLog, db.c, lmtp.c:
-	resync
-	* check_dbmail_deliver.c, db.c, debian/changelog, dsn.c, lmtp.c, main.c:
-	Merge with /home/paul/git/dbmail-2.1
-commit 09313e7acffb482a0251cd61cdaf16962afef56e
-tree ebbc996d4667f36af605a2839e071fbf8794d43b
-parent 0bc968489fbb3122248c960de5cf62a70fe45574
-author Paul J Stevens <paul@nfg.nl> Wed, 01 Mar 2006 21:56:20 +0100
-committer Paul J Stevens <paul@nfg.nl> Wed, 01 Mar 2006 21:56:20 +0100
-	* check_dbmail_deliver.c, db.c, debian/changelog, dsn.c, lmtp.c, main.c:
-	fix a small leak in dsnuser usage
-	* check_dbmail_deliver.c, db.c, dsn.c, lmtp.c, main.c:
-	resync
-	* ChangeLog:
-	blah
-
+	* lmtp.c:
+	remove double free and release 2.1.5
+	
 2006-03-01  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_deliver.c, db.c, debian/changelog, dsn.c, lmtp.c, main.c:
