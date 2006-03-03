@@ -1,3 +1,8 @@
+2006-03-03  Paul J Stevens <paul@nfg.nl>
+
+	* lmtp.c:
+	remove double free and release 2.1.5
+	
 2006-03-01  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_deliver.c, db.c, debian/changelog, dsn.c, lmtp.c, main.c:
