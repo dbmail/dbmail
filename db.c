@@ -2237,7 +2237,7 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen UNUSED,
 		       timestring_t internal_date, u64_t * msg_idnr)
 {
         struct DbmailMessage *message;
-
+	int result;
         message = dbmail_message_new();
         message = dbmail_message_init_with_string(message, g_string_new(msgdata));
         dbmail_message_set_internal_date(message, (char *)internal_date);
@@ -2248,7 +2248,11 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen UNUSED,
          */
 
         dbmail_message_store(message);
-        switch (db_copymsg(message->id, mailbox_idnr, user_idnr, msg_idnr)) {
+	result = db_copymsg(message->id, mailbox_idnr, user_idnr, msg_idnr);
+	db_delete_message(message->id);
+        dbmail_message_free(message);
+	
+        switch (result) {
             case -2:
                     trace(TRACE_DEBUG, "%s, %s: error copying message to user [%llu],"
                             "maxmail exceeded", __FILE__, __func__, user_idnr);
@@ -2261,10 +2265,6 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen UNUSED,
                 
         trace(TRACE_MESSAGE, "%s, %s: message id=%llu is inserted", 
                 __FILE__, __func__, *msg_idnr);
-
-	db_delete_message(message->id);
-
-        dbmail_message_free(message);
         
         return db_set_message_status(*msg_idnr, MESSAGE_STATUS_SEEN);
 }
