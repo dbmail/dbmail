@@ -35,7 +35,7 @@ Description: Files for dbmail development
 
 Package: libdbmail-pgsql
 Architecture: any
-Depends: dbmail2.2-base, ${shlibs:Depends}, debconf (>=1.0.32), ucf (>= 0.30)
+Depends: dbmail2.2-base, ${shlibs:Depends}, libpq4, debconf (>=1.0.32), ucf (>= 0.30)
 Description: Postgresql module for Dbmail
  This package provides a module for adding Postgresql database 
  support to DBMAIL.
@@ -45,7 +45,7 @@ Description: Postgresql module for Dbmail
 
 Package: libdbmail-mysql
 Architecture: any
-Depends: dbmail2.2-base, ${shlibs:Depends}, debconf (>=1.0.32), ucf (>= 0.30)
+Depends: dbmail2.2-base, ${shlibs:Depends}, libmysqlclient14, debconf (>=1.0.32), ucf (>= 0.30)
 Description: MySQL module for Dbmail
  This package provides a module for adding MySQL database 
  support to DBMAIL.
@@ -55,7 +55,7 @@ Description: MySQL module for Dbmail
 
 Package: libdbmail-sqlite
 Architecture: any
-Depends: dbmail2.2-base, ${shlibs:Depends}, debconf (>=1.0.32), ucf (>= 0.30)
+Depends: dbmail2.2-base, ${shlibs:Depends}, libsqlite0, debconf (>=1.0.32), ucf (>= 0.30)
 Description: Sqlite module for Dbmail
  This package provides a module for adding Sqlite database 
  support to DBMAIL.
@@ -65,7 +65,7 @@ Description: Sqlite module for Dbmail
 
 Package: libdbmail-ldap
 Architecture: any
-Depends: dbmail2.2-base, ${shlibs:Depends}, debconf (>=1.0.32), ucf (>= 0.30)
+Depends: dbmail2.2-base, ${shlibs:Depends}, libldap2 (>= 2.1.17-1), debconf (>=1.0.32), ucf (>= 0.30)
 Description: LDAP module for Dbmail
  This package provides a module for adding LDAP support to 
  DBMAIL.
@@ -75,7 +75,7 @@ Description: LDAP module for Dbmail
 
 Package: libdbmail-sieve
 Architecture: any
-Depends: dbmail2.2-base, ${shlibs:Depends}, debconf (>=1.0.32), ucf (>= 0.30)
+Depends: dbmail2.2-base, ${shlibs:Depends}, libsieve1, debconf (>=1.0.32), ucf (>= 0.30)
 Description: Sieve module for Dbmail
  This package provides a module for adding Sieve support to 
  DBMAIL.

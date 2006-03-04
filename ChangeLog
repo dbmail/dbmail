@@ -1,3 +1,14 @@
+2006-03-04  Paul J Stevens <paul@nfg.nl>
+
+	* db.c:
+	fix the logic in db_imap_append_msg
+	* lmtp.c:
+	resync
+	* db.c:
+	remove temp message after imap append
+	* imapcommands.c, lmtp.c, test-scripts/testimap.py:
+	test for, and allow padding in timestring during imap append
+
 2006-03-03  Paul J Stevens <paul@nfg.nl>
 
 	* lmtp.c:
