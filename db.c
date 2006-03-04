@@ -2262,6 +2262,8 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen UNUSED,
         trace(TRACE_MESSAGE, "%s, %s: message id=%llu is inserted", 
                 __FILE__, __func__, *msg_idnr);
 
+	db_delete_message(message->id);
+
         dbmail_message_free(message);
         
         return db_set_message_status(*msg_idnr, MESSAGE_STATUS_SEEN);

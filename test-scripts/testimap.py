@@ -97,7 +97,7 @@ class testImapServer(unittest.TestCase):
         self.assertEquals(result[1][0][:11],'[TRYCREATE]')
         # test flags
         self.o.create('testappend')
-        self.o.append('testappend','\Flagged',"",str(TESTMSG['strict822']))
+        self.o.append('testappend','\Flagged',"\" 3-Mar-2006 07:15:00 +0200 \"",str(TESTMSG['strict822']))
         self.o.select('testappend')
         id=self.o.recent()[1][0]
         
