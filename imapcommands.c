@@ -1181,10 +1181,13 @@ int _ic_append(struct ImapSession *self)
 	 */
 	if (self->args[i + 1]) {
 		struct tm tm;
+		char *dt = self->args[i];
 
 		memset(&tm, 0, sizeof(struct tm));
 
-		if (strptime(self->args[i], "%d-%b-%Y %T", &tm) != NULL)
+		dt = g_strstrip(dt);
+
+		if (strptime(dt, "%d-%b-%Y %T", &tm) != NULL)
 			strftime(sqldate, sizeof(sqldate), "%Y-%m-%d %H:%M:%S", &tm);
 		else
 			sqldate[0] = '\0';
