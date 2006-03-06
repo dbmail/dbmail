@@ -1248,16 +1248,23 @@ int db_mailbox_msg_match(u64_t mailbox_idnr, u64_t message_idnr);
 
 /**
  * \brief check if a user has a certain right to a mailbox
+ * \param mailbox
  * \param user_idnr id of user
- * \param mailbox_idnr id of mailbox
  * \param right_flag string holding the flag to check for
  * \return
  *     - -1 on db error
  *     -  0 if no right
  *     -  1 if user has the right
  */
-int db_acl_has_right(u64_t user_idnr, u64_t mailbox_idnr,
-		     const char *right_flag);
+int db_acl_has_right(mailbox_t *mailbox, u64_t user_idnr, const char *right_flag);
+/**
+ * \brief get all permissions on a mailbox for a user
+ * \param mailbox
+ * \param user_idnr id of user
+ * \param map result 
+ * 
+ */
+int db_acl_get_acl_map(mailbox_t *mailbox, u64_t userid, struct ACLMap *map);
 
 /**
  * \brief set one right in an acl for a user

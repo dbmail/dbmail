@@ -9,6 +9,7 @@
 export DH_COMPAT=3
 #export DEB_BUILD_OPTIONS=debug
 #export DEB_BUILD_OPTIONS=debug,devel
+export DEBUILD_DPKG_BUILDPACKAGE_OPTS="-i"
 
 #export WITH_GC="--with-gc"
 export WITH_SIEVE=--with-sieve

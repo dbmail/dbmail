@@ -49,34 +49,25 @@ static int acl_get_rightsstring_identifier(char *identifier, u64_t mboxid,
 static int acl_get_rightsstring(u64_t userid, u64_t mboxid,
 				/*@out@*/ char *rightsstring);
 
-int acl_has_right(u64_t userid, u64_t mboxid, ACLRight_t right)
+int acl_has_right(mailbox_t *mailbox, u64_t userid, ACLRight_t right)
 {
 	u64_t anyone_userid;
-	int auth_result;
-	int user_acl_result, anyone_acl_result;
-
+	int test;
+	
 	const char *right_flag = acl_right_strings[right];
 
 	/* first try if the user has the right */
-	user_acl_result = db_acl_has_right(userid, mboxid, right_flag);
-	if (user_acl_result != 0)
-		return user_acl_result;
+	if ((test = db_acl_has_right(mailbox, userid, right_flag)))
+		return TRUE;
 
-	/* if the user does not have the right, perhaps the 'anyone' 
-	   user has it */
-	auth_result = auth_user_exists(DBMAIL_ACL_ANYONE_USER, &anyone_userid);
-	if (auth_result == -1) {
-		trace(TRACE_ERROR, "%s,%s: error getting user_idnr of "
-		      "ACL anyone user", __FILE__, __func__);
-		return -1;
-	}
-	if (auth_result != 0)
-		anyone_acl_result = db_acl_has_right(anyone_userid, mboxid,
-						     right_flag);
-	else
-		anyone_acl_result = 0;
+	/* else check the 'anyone' user */
+	test = auth_user_exists(DBMAIL_ACL_ANYONE_USER, &anyone_userid);
+	if (test == DM_EQUERY) 
+		return DM_EQUERY;
+	if (test)
+		return db_acl_has_right(mailbox, anyone_userid, right_flag);
 	
-	return anyone_acl_result;
+	return FALSE;
 }
 
 int acl_set_rights(u64_t userid, u64_t mboxid, const char *rightsstring)
@@ -215,8 +206,7 @@ char *acl_get_acl(u64_t mboxid)
 		dm_list_free(&identifier_list.start);
 		return NULL;
 	}
-	if (dm_list_nodeadd(&identifier_list, username, 
-			 strlen(username) + 1) == NULL) { 
+	if (dm_list_nodeadd(&identifier_list, username, strlen(username) + 1) == NULL) { 
 		trace(TRACE_ERROR, "%s,%s: error adding username to list",
 		      __FILE__, __func__);
 		dm_list_free(&identifier_list.start);
@@ -226,34 +216,26 @@ char *acl_get_acl(u64_t mboxid)
 	dm_free(username);
 
 	identifier_elm = dm_list_getstart(&identifier_list);
-	trace(TRACE_DEBUG, "%s,%s: before looping identifiers!",
-	      __FILE__, __func__);
+	trace(TRACE_DEBUG, "%s,%s: before looping identifiers!", __FILE__, __func__);
 	while (identifier_elm) {
 		nr_identifiers++;
-		acl_string_size += strlen((char *) identifier_elm->data)
-		    + NR_ACL_FLAGS + 2;
+		acl_string_size += strlen((char *) identifier_elm->data) + NR_ACL_FLAGS + 2;
 		identifier_elm = identifier_elm->nextnode;
 	}
 
-	trace(TRACE_DEBUG, "%s,%s: acl_string size = %zd",
-	      __FILE__, __func__, acl_string_size);
+	trace(TRACE_DEBUG, "%s,%s: acl_string size = %zd", __FILE__, __func__, acl_string_size);
 
-	if (!
-	    (acl_string =
-	     dm_malloc((acl_string_size + 1) * sizeof(char)))) {
+	if (! (acl_string = g_new0(char, acl_string_size + 1))) {
 		dm_list_free(&identifier_list.start);
 		trace(TRACE_FATAL, "%s,%s: error allocating memory",
 		      __FILE__, __func__);
 		return NULL;
 	}
-	// initialise list to length 0
-	acl_string[0] = '\0';
-	memset((void *) acl_string, '\0', acl_string_size + 1);
+	
 	identifier_elm = dm_list_getstart(&identifier_list);
 	while (identifier_elm) {
 		identifier = (char *) identifier_elm->data;
-		if (acl_get_rightsstring_identifier(identifier, mboxid,
-						    rightsstring) < 0) {
+		if (acl_get_rightsstring_identifier(identifier, mboxid, rightsstring) < 0) {
 			trace(TRACE_ERROR, "%s,%s: error getting string "
 			      "rights for user with name [%s].",
 			      __FILE__, __func__, identifier);
@@ -261,19 +243,15 @@ char *acl_get_acl(u64_t mboxid)
 			dm_free(acl_string);
 			return NULL;
 		}
-		trace(TRACE_DEBUG, "%s,%s: %s", __FILE__, __func__,
-		      rightsstring);
+		trace(TRACE_DEBUG, "%s,%s: %s", __FILE__, __func__, rightsstring);
 		if (strlen(rightsstring) > 0) {
 			acl_strlen = strlen(acl_string);
-			(void) snprintf(&acl_string[acl_strlen], 
-					acl_string_size - acl_strlen,
-					"%s %s ", identifier, rightsstring);
+			(void) snprintf(&acl_string[acl_strlen], acl_string_size - acl_strlen, "%s %s ", identifier, rightsstring);
 		}
 		identifier_elm = identifier_elm->nextnode;
-
 	}
 	dm_list_free(&identifier_list.start);
-	return acl_string;
+	return g_strstrip(acl_string);
 }
 
 char *acl_listrights(u64_t userid, u64_t mboxid)
@@ -320,9 +298,7 @@ char *acl_myrights(u64_t userid, u64_t mboxid)
 }
 
 
-int
-acl_get_rightsstring_identifier(char *identifier,
-				u64_t mboxid, char *rightsstring)
+int acl_get_rightsstring_identifier(char *identifier, u64_t mboxid, char *rightsstring)
 {
 	u64_t userid;
 
@@ -339,33 +315,54 @@ acl_get_rightsstring_identifier(char *identifier,
 
 int acl_get_rightsstring(u64_t userid, u64_t mboxid, char *rightsstring)
 {
-	unsigned i;
-	unsigned rightsstring_idx = 0;
 	int result;
+	u64_t owner_idnr;
 
 	assert(rightsstring != NULL);
 	memset(rightsstring, '\0', NR_ACL_FLAGS + 1);
 
-	for (i = ACL_RIGHT_LOOKUP; i <= ACL_RIGHT_ADMINISTER; i++) {
-		result = acl_has_right(userid, mboxid, i);
-		if (result < 0) {
-			trace(TRACE_ERROR, "%s,%s: error checking rights "
-			      "for user [%llu], mailbox [%llu].",
-			      __FILE__, __func__, userid, mboxid);
-			return -1;
-		}
+	mailbox_t mailbox;
+	struct ACLMap map;
+	
+	bzero(&mailbox,sizeof(mailbox_t));
+	bzero(&map, sizeof(struct ACLMap));
+	
+	mailbox.uid = mboxid;
+	
+	result = db_get_mailbox_owner(mboxid, &owner_idnr);
+	if (! result > 0)
+		return result;
 
-		if (result == 1) {
-			rightsstring[rightsstring_idx] =
-			    acl_right_chars[i];
-			rightsstring_idx++;
-			trace(TRACE_DEBUG, "%s,%s: i = %u. char is %c, "
-			      "str = %s",
-			      __FILE__, __func__, i,
-			      acl_right_chars[i], rightsstring);
-		}
-		trace(TRACE_DEBUG, "%s,%s rightsstring currently is %s",
-		      __FILE__, __func__, rightsstring);
+	mailbox.owner_idnr = owner_idnr;
+
+	if (mailbox.owner_idnr == userid) {
+		g_strlcat(rightsstring,"lrswipcda", NR_ACL_FLAGS+1);
+		return 1;
 	}
+	
+	result = db_acl_get_acl_map(&mailbox, userid, &map);
+	if (result != DM_SUCCESS)
+		return result;
+
+	if (map.lookup_flag)
+		g_strlcat(rightsstring,"l", NR_ACL_FLAGS+1);
+	if (map.read_flag)
+		g_strlcat(rightsstring,"r", NR_ACL_FLAGS+1);
+	if (map.seen_flag)
+		g_strlcat(rightsstring,"s", NR_ACL_FLAGS+1);
+	if (map.write_flag)
+		g_strlcat(rightsstring,"w", NR_ACL_FLAGS+1);
+	if (map.insert_flag)
+		g_strlcat(rightsstring,"i", NR_ACL_FLAGS+1);
+	if (map.post_flag)
+		g_strlcat(rightsstring,"p", NR_ACL_FLAGS+1);
+	if (map.create_flag)
+		g_strlcat(rightsstring,"c", NR_ACL_FLAGS+1);
+	if (map.delete_flag)
+		g_strlcat(rightsstring,"d", NR_ACL_FLAGS+1);
+	if (map.administer_flag)
+		g_strlcat(rightsstring,"a", NR_ACL_FLAGS+1);
+	
 	return 1;
 }
+
