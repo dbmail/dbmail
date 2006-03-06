@@ -783,7 +783,7 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self, u64_t row)
 		/* only if the user has an ACL which grants
 		   him rights to set the flag should the
 		   flag be set! */
-		result = acl_has_right(ud->userid, ud->mailbox.uid, ACL_RIGHT_SEEN);
+		result = acl_has_right(&ud->mailbox, ud->userid, ACL_RIGHT_SEEN);
 		if (result == -1) {
 			dbmail_imap_session_printf(self, "\r\n *BYE internal dbase error\r\n");
 			return -1;
@@ -1214,7 +1214,11 @@ int dbmail_imap_session_mailbox_check_acl(struct ImapSession * self, u64_t idnr,
 {
 	int access;
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
-	access = acl_has_right(ud->userid, idnr, acl);
+	mailbox_t mailbox;
+
+	mailbox.uid = idnr;
+	access = acl_has_right(&mailbox, ud->userid, acl);
+	
 	if (access < 0) {
 		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		return -1;

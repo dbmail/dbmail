@@ -1839,7 +1839,7 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
 
 	/* get the user_idnr of the owner of the mailbox */
 	result = db_get_mailbox_owner(mailbox_idnr, &user_idnr);
-	if (result < 0) {
+	if (result == DM_EQUERY) {
 		trace(TRACE_ERROR,
 		      "%s,%s: cannot find owner of mailbox for "
 		      "mailbox [%llu]", __FILE__, __func__,
@@ -2457,14 +2457,14 @@ int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
 		db_free_result();
 		return DM_SUCCESS;
 	}
-	all_mailboxes = (u64_t *) dm_malloc(n_rows * sizeof(u64_t));
-	all_mailbox_names = (char **) dm_malloc(n_rows * sizeof(char*));
-	all_mailbox_owners = (u64_t *) dm_malloc(n_rows * sizeof(u64_t));
-	tmp_mailboxes = (u64_t *) dm_malloc(n_rows * sizeof(u64_t));
-	if (!all_mailboxes || !all_mailbox_names || !all_mailbox_owners || 
-	    !tmp_mailboxes) {
-		trace(TRACE_ERROR, "%s,%s: not enough memory\n",
-		      __FILE__, __func__);
+	all_mailboxes 		= (u64_t *) dm_malloc(n_rows * sizeof(u64_t));
+	all_mailbox_names 	= (char **) dm_malloc(n_rows * sizeof(char*));
+	all_mailbox_owners 	= (u64_t *) dm_malloc(n_rows * sizeof(u64_t));
+	tmp_mailboxes 		= (u64_t *) dm_malloc(n_rows * sizeof(u64_t));
+
+	if (!all_mailboxes || !all_mailbox_names || !all_mailbox_owners || !tmp_mailboxes) {
+	
+		trace(TRACE_ERROR, "%s,%s: not enough memory\n", __FILE__, __func__);
 		if (all_mailboxes)
 			dm_free(all_mailboxes);
 		if (all_mailbox_names)
@@ -2477,10 +2477,11 @@ int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
 	}
 	
 	for (i = 0; i < n_rows; i++) {
-		all_mailbox_names[i] = dm_strdup(db_get_result(i, 0));
-		all_mailboxes[i] = db_get_result_u64(i, 1);
-		all_mailbox_owners[i] = db_get_result_u64(i, 2);
+		all_mailbox_names[i] 	= dm_strdup(db_get_result(i, 0));
+		all_mailboxes[i] 	= db_get_result_u64(i, 1);
+		all_mailbox_owners[i] 	= db_get_result_u64(i, 2);
 	} 
+	
 	db_free_result();
 
 	for (i = 0; i < n_rows; i++) {
@@ -2497,6 +2498,7 @@ int db_list_mailboxes_by_regex(u64_t user_idnr, int only_subscribed,
 				(*nr_mailboxes)++;
 			}
 		}
+		
 		g_free(mailbox_name);
 		dm_free(simple_mailbox_name);
 	}
@@ -3704,23 +3706,23 @@ int db_mailbox_msg_match(u64_t mailbox_idnr, u64_t msg_idnr)
 	return val;
 }
 
-int db_acl_has_right(u64_t userid, u64_t mboxid, const char *right_flag)
+int db_acl_has_right(mailbox_t *mailbox, u64_t userid, const char *right_flag)
 {
 	int result;
-	int owner_result;
 
-	trace(TRACE_DEBUG, "%s,%s: checking ACL for user [%llu] on "
-	      "mailbox [%llu]", __FILE__, __func__, userid, mboxid);
-	owner_result = db_user_is_mailbox_owner(userid, mboxid);
+	u64_t mboxid = mailbox->uid;
 
-	if (owner_result < 0) {
-		trace(TRACE_ERROR,
-		      "%s,%s: error checking mailbox ownership.", __FILE__,
-		      __func__);
-		return DM_EQUERY;
+	trace(TRACE_DEBUG, "%s,%s: checking ACL [%s] for user [%llu] on mailbox [%llu]",
+			__FILE__, __func__, 
+			right_flag, userid, mboxid);
+
+	if (! mailbox->owner_idnr) {
+		result = db_get_mailbox_owner(mboxid, &mailbox->owner_idnr);
+		if (! result > 0)
+			return result;
 	}
 
-	if (owner_result == 1)
+	if (mailbox->owner_idnr == userid)
 		return DM_EGENERAL;
 
 	snprintf(query, DEF_QUERYSIZE,
@@ -3742,6 +3744,47 @@ int db_acl_has_right(u64_t userid, u64_t mboxid, const char *right_flag)
 
 	db_free_result();
 	return result;
+}
+
+int db_acl_get_acl_map(mailbox_t *mailbox, u64_t userid, struct ACLMap *map)
+{
+	int i;
+	
+	g_return_val_if_fail(mailbox->uid,DM_EGENERAL); 
+
+	trace(TRACE_DEBUG,"%s,%s: for mailbox [%llu] userid [%llu]",
+			__FILE__, __func__, mailbox->uid, userid);
+
+	snprintf(query, DEF_QUERYSIZE,
+		 "SELECT lookup_flag,read_flag,seen_flag,write_flag,insert_flag,post_flag,create_flag,delete_flag,administer_flag "
+		 "FROM %sacl "
+		 "WHERE user_id = '%llu' AND mailbox_id = '%llu'",DBPFX,
+		 userid, mailbox->uid);
+
+	if (db_query(query) < 0) {
+		trace(TRACE_ERROR, "%s,%s: Error finding ACL entry",
+		      __FILE__, __func__);
+		return DM_EQUERY;
+	}
+
+	if (db_num_rows() == 0)
+		return DM_EGENERAL;
+
+	i = 0;
+
+	map->lookup_flag	= db_get_result_bool(0,i++);
+	map->read_flag		= db_get_result_bool(0,i++);
+	map->seen_flag		= db_get_result_bool(0,i++);
+	map->write_flag		= db_get_result_bool(0,i++);
+	map->insert_flag	= db_get_result_bool(0,i++);
+	map->post_flag		= db_get_result_bool(0,i++);
+	map->create_flag	= db_get_result_bool(0,i++);
+	map->delete_flag	= db_get_result_bool(0,i++);
+	map->administer_flag	= db_get_result_bool(0,i++);
+
+	db_free_result();
+
+	return DM_SUCCESS;
 }
 
 static int db_acl_has_acl(u64_t userid, u64_t mboxid)
@@ -3883,15 +3926,13 @@ int db_acl_get_identifier(u64_t mboxid, struct dm_list *identifier_list)
 	n = db_num_rows();
 	for (i = 0; i < n; i++) {
 		result_string = db_get_result(i, 0);
-		trace(TRACE_DEBUG, "%s,%s: adding %s to identifier list",
-		      __FILE__, __func__, result_string);
-		if (!result_string || !dm_list_nodeadd(identifier_list,
-						    result_string,
-						    strlen(result_string) +
-						    1)) {
+		if (!result_string || !dm_list_nodeadd(identifier_list, 
+					result_string, strlen(result_string) + 1)) {
 			db_free_result();
 			return -2;
 		}
+		trace(TRACE_DEBUG, "%s,%s: added %s to identifier list",
+		      __FILE__, __func__, result_string);
 	}
 	db_free_result();
 	return DM_EGENERAL;

@@ -320,6 +320,9 @@ int _ic_create(struct ImapSession *self)
 	int other_namespace = 0;
 	char *mailbox;
 
+	mailbox_t mbox;
+	bzero(&mbox, sizeof(mailbox_t));
+	
 	if (!check_state_and_args(self, "CREATE", 1, 1, IMAPCS_AUTHENTICATED))
 		return 1;
 
@@ -417,7 +420,8 @@ int _ic_create(struct ImapSession *self)
 			      "create mailboxes under mailbox [%llu]",
 			      __FILE__, __func__, parent_mboxid);
 			if (parent_mboxid != 0) {
-				result = acl_has_right(ud->userid, parent_mboxid, ACL_RIGHT_CREATE);
+				mbox.uid = parent_mboxid;
+				result = acl_has_right(&mbox, ud->userid, ACL_RIGHT_CREATE);
 				if (result < 0) {
 					dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 					g_strfreev(chunks);
@@ -990,7 +994,7 @@ int _ic_status(struct ImapSession *self)
 		return 1;
 	}
 
-	result = acl_has_right(ud->userid, mb.uid, ACL_RIGHT_READ);
+	result = acl_has_right(&mb, ud->userid, ACL_RIGHT_READ);
 	if (result == -1) {
 		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		return -1;
@@ -1060,7 +1064,10 @@ int _ic_append(struct ImapSession *self)
 	timestring_t sqldate;
 	int flaglist[IMAP_NFLAGS];
 	int flagcount = 0;
+	mailbox_t mailbox;
 
+	bzero(&mailbox, sizeof(mailbox_t));
+	
 	for (i = 0; i < IMAP_NFLAGS; i++)
 		flaglist[i] = 0;
 
@@ -1085,7 +1092,8 @@ int _ic_append(struct ImapSession *self)
 	trace(TRACE_DEBUG, "%s,%s: mailbox [%s] found, id: %llu",
 			__FILE__, __func__, self->args[0], mboxid);
 	/* check if user has right to append to  mailbox */
-	result = acl_has_right(ud->userid, mboxid, ACL_RIGHT_INSERT);
+	mailbox.uid = mboxid;
+	result = acl_has_right(&mailbox, ud->userid, ACL_RIGHT_INSERT);
 	if (result < 0) {
 		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		return -1;
@@ -1138,8 +1146,9 @@ int _ic_append(struct ImapSession *self)
 			trace(TRACE_DEBUG, "%s,%s: %s set", __FILE__, __func__, imap_flag_desc[j]);
 
 	/** check ACL's for STORE */
+	mailbox.uid = mboxid;
 	if (flaglist[IMAP_STORE_FLAG_SEEN] == 1) {
-		result = acl_has_right(ud->userid, mboxid, ACL_RIGHT_SEEN);
+		result = acl_has_right(&mailbox, ud->userid, ACL_RIGHT_SEEN);
 		if (result < 0) {
 			dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 			return -1;	/* fatal */
@@ -1150,7 +1159,7 @@ int _ic_append(struct ImapSession *self)
 		}
 	}
 	if (flaglist[IMAP_STORE_FLAG_DELETED] == 1) {
-		result = acl_has_right(ud->userid, mboxid, ACL_RIGHT_DELETE);
+		result = acl_has_right(&mailbox, ud->userid, ACL_RIGHT_DELETE);
 		if (result < 0) {
 			dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 			return -1;	/* fatal */
@@ -1164,7 +1173,7 @@ int _ic_append(struct ImapSession *self)
 	    flaglist[IMAP_STORE_FLAG_FLAGGED] == 1 ||
 	    flaglist[IMAP_STORE_FLAG_DRAFT] == 1 ||
 	    flaglist[IMAP_STORE_FLAG_RECENT] == 1) {
-		result = acl_has_right(ud->userid, mboxid, ACL_RIGHT_WRITE);
+		result = acl_has_right(&mailbox, ud->userid, ACL_RIGHT_WRITE);
 		if (result < 0) {
 			dbmail_imap_session_printf(self, "*BYE internal database error\r\n");
 			return -1;
@@ -1257,7 +1266,7 @@ int _ic_check(struct ImapSession *self)
 	if (!check_state_and_args(self, "CHECK", 0, 0, IMAPCS_SELECTED))
 		return 1;	/* error, return */
 
-	result = acl_has_right(ud->userid, ud->mailbox.uid, ACL_RIGHT_READ);
+	result = acl_has_right(&ud->mailbox, ud->userid, ACL_RIGHT_READ);
 	if (result < 0) {
 		dbmail_imap_session_printf(self, "* BYE Internal database error\r\n");
 		return -1;
@@ -1289,8 +1298,7 @@ int _ic_close(struct ImapSession *self)
 
 	/* check if the user has to right to expunge all messages from the
 	   mailbox. */
-	result =
-	    acl_has_right(ud->userid, ud->mailbox.uid, ACL_RIGHT_DELETE);
+	result = acl_has_right(&ud->mailbox, ud->userid, ACL_RIGHT_DELETE);
 	if (result < 0) {
 		dbmail_imap_session_printf(self, "* BYE Internal database error\r\n");
 		return -1;
@@ -1334,8 +1342,7 @@ int _ic_expunge(struct ImapSession *self)
 		return 1;
 	}
 
-	result =
-	    acl_has_right(ud->userid, ud->mailbox.uid, ACL_RIGHT_DELETE);
+	result = acl_has_right(&ud->mailbox, ud->userid, ACL_RIGHT_DELETE);
 	if (result < 0) {
 		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		return -1;
@@ -1422,7 +1429,7 @@ static int sorted_search(struct ImapSession *self, gboolean sorted)
 	}
 	
 	/* check ACL */
-	if (! (result = acl_has_right(ud->userid, ud->mailbox.uid, ACL_RIGHT_READ))) {
+	if (! (result = acl_has_right(&ud->mailbox, ud->userid, ACL_RIGHT_READ))) {
 		dbmail_imap_session_printf(self, "%s NO no permission to search mailbox\r\n", self->tag);
 		return 1;
 	}
@@ -1489,7 +1496,7 @@ int _ic_fetch(struct ImapSession *self)
 		return 1;
 
 	/* check if the user has the right to fetch messages in this mailbox */
-	result = acl_has_right(ud->userid, ud->mailbox.uid, ACL_RIGHT_READ);
+	result = acl_has_right(&ud->mailbox, ud->userid, ACL_RIGHT_READ);
 	if (result < 0) {
 		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		return -1;
@@ -1696,9 +1703,7 @@ int _ic_store(struct ImapSession *self)
 
   /** check ACL's for STORE */
 	if (flaglist[IMAP_STORE_FLAG_SEEN] == 1) {
-		result =
-		    acl_has_right(ud->userid, ud->mailbox.uid,
-				  ACL_RIGHT_SEEN);
+		result = acl_has_right(&ud->mailbox, ud->userid, ACL_RIGHT_SEEN);
 		if (result < 0) {
 			dbmail_imap_session_printf(self, "* BYE internal database error");
 			return -1;	/* fatal */
@@ -1711,17 +1716,13 @@ int _ic_store(struct ImapSession *self)
 		}
 	}
 	if (flaglist[IMAP_STORE_FLAG_DELETED] == 1) {
-		result =
-		    acl_has_right(ud->userid, ud->mailbox.uid,
-				  ACL_RIGHT_DELETE);
+		result = acl_has_right(&ud->mailbox, ud->userid, ACL_RIGHT_DELETE);
 		if (result < 0) {
 			dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 			return -1;	/* fatal */
 		}
 		if (result == 0) {
-			dbmail_imap_session_printf(self,
-				"%s NO no right to store \\DELETED flag\r\n",
-				self->tag);
+			dbmail_imap_session_printf(self, "%s NO no right to store \\DELETED flag\r\n", self->tag);
 			return 1;
 		}
 	}
@@ -1729,9 +1730,7 @@ int _ic_store(struct ImapSession *self)
 	    flaglist[IMAP_STORE_FLAG_FLAGGED] == 1 ||
 	    flaglist[IMAP_STORE_FLAG_DRAFT] == 1 ||
 	    flaglist[IMAP_STORE_FLAG_RECENT] == 1) {
-		result =
-		    acl_has_right(ud->userid, ud->mailbox.uid,
-				  ACL_RIGHT_WRITE);
+		result = acl_has_right(&ud->mailbox, ud->userid, ACL_RIGHT_WRITE);
 		if (result < 0) {
 			dbmail_imap_session_printf(self, "*BYE internal database error");
 			return -1;
@@ -1950,6 +1949,9 @@ int _ic_copy(struct ImapSession *self)
 	int result;
 	u64_t new_msgid;
 	char *endptr, *lastchar = NULL;
+	mailbox_t destmbox;
+	
+	bzero(&destmbox, sizeof(destmbox));
 
 	if (!check_state_and_args(self, "COPY", 2, 2, IMAPCS_SELECTED))
 		return 1;	/* error, return */
@@ -1967,20 +1969,19 @@ int _ic_copy(struct ImapSession *self)
 		return 1;
 	}
 	// check if user has right to COPY from source mailbox
-	result =
-	    acl_has_right(ud->userid, ud->mailbox.uid, ACL_RIGHT_READ);
+	result = acl_has_right(&ud->mailbox, ud->userid, ACL_RIGHT_READ);
 	if (result < 0) {
 		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		return -1;	/* fatal */
 	}
 	if (result == 0) {
-		dbmail_imap_session_printf(self,
-			"%s NO no permission to copy from mailbox\r\n",
+		dbmail_imap_session_printf(self, "%s NO no permission to copy from mailbox\r\n",
 			self->tag);
 		return 1;
 	}
 	// check if user has right to COPY to destination mailbox
-	result = acl_has_right(ud->userid, destmboxid, ACL_RIGHT_INSERT);
+	destmbox.uid = destmboxid;
+	result = acl_has_right(&destmbox, ud->userid, ACL_RIGHT_INSERT);
 	if (result < 0) {
 		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		return -1;	/* fatal */
@@ -2269,6 +2270,9 @@ int _ic_setacl(struct ImapSession *self)
 	int result;
 	u64_t mboxid;
 	u64_t targetuserid;
+	mailbox_t mailbox;
+
+	bzero(&mailbox, sizeof(mailbox_t));
 
 	if (!check_state_and_args(self, "SETACL", 3, 3, IMAPCS_AUTHENTICATED))
 		return 1;
@@ -2284,7 +2288,8 @@ int _ic_setacl(struct ImapSession *self)
 		return 1;
 	}
 	// has the rights to 'administer' this mailbox? 
-	if (acl_has_right(ud->userid, mboxid, ACL_RIGHT_ADMINISTER) != 1) {
+	mailbox.uid = mboxid;
+	if (acl_has_right(&mailbox, ud->userid, ACL_RIGHT_ADMINISTER) != 1) {
 		dbmail_imap_session_printf(self, "%s NO SETACL failure: can't set acl, "
 			"you don't have the proper rights\r\n", self->tag);
 		return 1;
@@ -2306,6 +2311,7 @@ int _ic_deleteacl(struct ImapSession *self)
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	u64_t mboxid;
 	u64_t targetuserid;
+	mailbox_t mailbox;
 
 	if (!check_state_and_args(self, "DELETEACL", 2, 2, IMAPCS_AUTHENTICATED))
 		return 1;
@@ -2315,8 +2321,11 @@ int _ic_deleteacl(struct ImapSession *self)
 		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 		return -1;
 	}
+	
+	bzero(&mailbox, sizeof(mailbox_t));
+	mailbox.uid = mboxid;
 	// has the rights to 'administer' this mailbox? 
-	if (acl_has_right(ud->userid, mboxid, ACL_RIGHT_ADMINISTER) != 1) {
+	if (acl_has_right(&mailbox, ud->userid, ACL_RIGHT_ADMINISTER) != 1) {
 		dbmail_imap_session_printf(self, "%s NO DELETEACL failure: can't delete "
 			"acl\r\n", self->tag);
 		return 1;
@@ -2371,7 +2380,7 @@ int _ic_listrights(struct ImapSession *self)
 	u64_t mboxid;
 	u64_t targetuserid;
 	char *listrights_string;
-
+	mailbox_t mailbox;
 
 	if (!check_state_and_args(self, "LISTRIGHTS", 2, 2, IMAPCS_AUTHENTICATED))
 		return 1;
@@ -2388,7 +2397,9 @@ int _ic_listrights(struct ImapSession *self)
 		return 1;
 	}
 	// has the rights to 'administer' this mailbox? 
-	if (acl_has_right(ud->userid, mboxid, ACL_RIGHT_ADMINISTER) != 1) {
+	bzero(&mailbox, sizeof(mailbox_t));
+	mailbox.uid = mboxid;
+	if (acl_has_right(&mailbox, ud->userid, ACL_RIGHT_ADMINISTER) != 1) {
 		dbmail_imap_session_printf(self,
 			"%s NO LISTRIGHTS failure: can't set acl\r\n",
 			self->tag);

@@ -398,6 +398,19 @@ typedef enum {
 	ACL_RIGHT_NONE
 } ACLRight_t;
 
+struct  ACLMap {
+	int lookup_flag;
+	int read_flag;
+	int seen_flag;
+	int write_flag;
+	int insert_flag;
+	int post_flag;
+	int create_flag;
+	int delete_flag;
+	int administer_flag;
+};
+
+
 /* Depending upon where the mailbox spec comes from,
  * we may or may not create it on the fly and auto-subscribe
  * to it. Some of these will resolve to the same action;
