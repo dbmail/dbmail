@@ -1,5 +1,9 @@
 2006-03-06  Paul J Stevens <paul@nfg.nl>
 
+	* ChangeLog, debian/changelog, imapd.c, lmtpd.c, pop3d.c, server.c, 
+	  server.h, timsieved.c:
+	freopen the standard streams and redirect stdout/stderr to log files. This
+	will allow dbmail daemons to dissociate properly from the terminal
 	* dbmail-imapsession.c:
 	set loglevel to warning in case of closed socket (closes: #308)
 	* sql/mysql/create_tables.mysql, sql/mysql/create_tables_innoDB.mysql, 
