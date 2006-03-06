@@ -1,6 +1,6 @@
 /* $Id: INSTALL 1810 2005-06-20 14:13:58Z paul $ 
-   (c) 2000-2002 IC&S, The Netherlands 
-   (c) 2004,2005 NFG, The Netherlands
+   (c) 2000-2004 IC&S, The Netherlands 
+   (c) 2004-2006 NFG, The Netherlands
    */
 
 DBMAIL installation
@@ -22,11 +22,13 @@ What do you need?
   server. These will probably be provided by separate packages.
 - glib (>= 2.4) development headers and libraries.
 - gmime (>= 2.1) development headers and libraries.
+- libsieve for sieve support (libsieve.sf.net).
+- libldap for ldap support (only tested with openldap).
 
 
 1.	Setup a database
 
-	Currently,  DBMail supports both MySQL and PostgreSQL for mailstorage.
+	Currently,  DBMail supports both MySQL, PostgreSQL and SQLite for mailstorage.
 	MySQL is supported from version 4.0.14 upwards. Earlier versions of
 	MySQL lack some SQL features that are needed for DBMail, like support
 	for the INSERT...SELECT statement.
