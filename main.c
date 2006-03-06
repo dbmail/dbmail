@@ -311,7 +311,7 @@ int main(int argc, char *argv[])
 		/* parse for destination addresses */
 		trace(TRACE_DEBUG, "%s,%s: scanning for [%s]", __FILE__, __func__, deliver_to_header);
 		if (mail_address_build_list(deliver_to_header, &users, &mimelist) != 0) {
-			trace(TRACE_STOP, "%s,%s: no email addresses (scanned for %s)",
+			trace(TRACE_MESSAGE, "%s,%s: no email addresses (scanned for %s)",
 					__FILE__, __func__, deliver_to_header);
 			exitcode = EX_NOUSER;
 			goto freeall;

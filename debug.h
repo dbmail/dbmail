@@ -34,11 +34,11 @@
 #endif
 
 typedef enum {
+	// By being < 0, FATALS always show on STDERR.
 	TRACE_FATAL = -1,
-	TRACE_STOP,
-	TRACE_MESSAGE,
 	TRACE_ERROR,
 	TRACE_WARNING,
+	TRACE_MESSAGE,
 	TRACE_INFO,
 	TRACE_DEBUG
 } trace_t;

@@ -82,9 +82,6 @@ void trace(trace_t level, char *formatstring, ...)
 	/* Bail out on fatal errors. */
 	if (level == TRACE_FATAL)
 		exit(EX_TEMPFAIL);
-
-	if (level == TRACE_STOP)
-		exit(EX_TEMPFAIL);
 }
 
 void *__debug_malloc(unsigned long size, const char *fname, int linenr)

@@ -1031,9 +1031,9 @@ int db_update_message(u64_t message_idnr, const char *unique_id,
 	u64_t physmessage_id = 0;
 
 	if (db_message_set_unique_id(message_idnr, unique_id)) {
-		trace(TRACE_STOP, "%s,%s: FATAL: db_message_set_unique_ id failed for [%llu]", 
-				__FILE__, __func__,
-				message_idnr);
+		// FIXME: Why is this FATAL?
+		trace(TRACE_FATAL, "%s,%s: FATAL: db_message_set_unique_ id failed for [%llu]", 
+				__FILE__, __func__, message_idnr);
 	}
 
 	/* update the fields in the physmessage table */

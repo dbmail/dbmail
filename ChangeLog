@@ -1,3 +1,13 @@
+2006-03-06  Aaron Stone  <aaron@serendipity.cx>
+
+	* debug.h, debug.c:
+	Removed TRACE_STOP, moved TRACE_MESSAGE to be less-serious than
+	TRACE_WARNING.
+	* db.c, dbmail-message.c, main.c:
+	Removed references to TRACE_STOP.
+	* dbmail.conf:
+	Changed description of TRACE_SYSLOG config item.
+
 2006-03-06  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-imapsession.c:
