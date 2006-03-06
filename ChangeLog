@@ -1,9 +1,19 @@
+2006-03-06  Paul J Stevens <paul@nfg.nl>
+
+	* dm_cidr.c:
+	correct copyright
+	* ChangeLog, debian/control:
+	fix depends for module packages
+	* INSTALL, debian/changelog, debian/rules, test-scripts/testimap.py:
+	minor updates
+	* acl.c, acl.h, db.c, db.h, dbmail-imapsession.c, dbmailtypes.h, 
+	  imapcommands.c:
+	fix bug #125 by making getacl more efficient
+
 2006-03-04  Paul J Stevens <paul@nfg.nl>
 
 	* db.c:
 	fix the logic in db_imap_append_msg
-	* lmtp.c:
-	resync
 	* db.c:
 	remove temp message after imap append
 	* imapcommands.c, lmtp.c, test-scripts/testimap.py:
