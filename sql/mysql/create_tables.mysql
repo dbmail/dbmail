@@ -89,7 +89,7 @@ CREATE TABLE dbmail_physmessage (
    id bigint(21) NOT NULL auto_increment,
    messagesize bigint(21) DEFAULT '0' NOT NULL,
    rfcsize bigint(21) DEFAULT '0' NOT NULL,
-   internal_date datetime default '0' not null,
+   internal_date datetime default '0000-00-00 00:00:00' not null,
    PRIMARY KEY(id)
 );
  
@@ -144,7 +144,7 @@ CREATE TABLE dbmail_auto_replies (
 DROP TABLE IF EXISTS dbmail_pbsp;
 CREATE TABLE dbmail_pbsp (
    idnr bigint(21) NOT NULL auto_increment,
-   since datetime default '0' not null,
+   since datetime default '0000-00-00 00:00:00' not null,
    ipnumber varchar(40) NOT NULL,
    PRIMARY KEY (idnr),
    UNIQUE INDEX ipnumber_index (ipnumber),
