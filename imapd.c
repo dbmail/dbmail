@@ -38,7 +38,6 @@ extern int mainRestart;
 extern int mainStop;
 
 static void SetConfigItems(serverConfig_t * config);
-static void Daemonize(void);
 static int SetMainSigHandler(void);
 static void MainSigHandler(int sig, siginfo_t * info, void *data);
 
@@ -122,9 +121,9 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 		
-	Daemonize();
+	server_daemonize();
 
-	/* We write the pidFile after Daemonize because
+	/* We write the pidFile after daemonize because
 	 * we may actually be a child of the original process. */
 	pidfile_create(pidFile, getpid());
 
@@ -165,22 +164,6 @@ void MainSigHandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
 	else
 		mainStop = 1;
 }
-
-
-void Daemonize()
-{
-	if (fork())
-		exit(0);
-	setsid();
-
-	if (fork())
-		exit(0);
-
-	trace(TRACE_DEBUG,"%s,%s: sid: [%d]", 
-			__FILE__, __func__, getsid(0));
-	
-}
-
 
 int SetMainSigHandler()
 {

@@ -1,5 +1,11 @@
 2006-03-06  Paul J Stevens <paul@nfg.nl>
 
+	* dbmail-imapsession.c:
+	set loglevel to warning in case of closed socket (closes: #308)
+	* sql/mysql/create_tables.mysql, sql/mysql/create_tables_innoDB.mysql, 
+	  sql/mysql/migrate_from_1.x_to_2.0.mysql, 
+	  sql/mysql/migrate_from_1.x_to_2.0_innodb.mysql:
+	set proper default on datetime fields for mysql scripts (closes: #309)
 	* dm_cidr.c:
 	correct copyright
 	* ChangeLog, debian/control:

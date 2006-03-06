@@ -3745,13 +3745,8 @@ int db_acl_has_right(mailbox_t *mailbox, u64_t userid, const char *right_flag)
 	db_free_result();
 	return result;
 }
-
-int db_acl_get_acl_map(mailbox_t *mailbox, u64_t userid, struct ACLMap *map)
+static int acl_query(u64_t mailbox_idnr, u64_t userid)
 {
-	int i;
-	
-	g_return_val_if_fail(mailbox->uid,DM_EGENERAL); 
-
 	trace(TRACE_DEBUG,"%s,%s: for mailbox [%llu] userid [%llu]",
 			__FILE__, __func__, mailbox->uid, userid);
 
@@ -3769,6 +3764,30 @@ int db_acl_get_acl_map(mailbox_t *mailbox, u64_t userid, struct ACLMap *map)
 
 	if (db_num_rows() == 0)
 		return DM_EGENERAL;
+
+	return DM_SUCCESS;
+
+}
+int db_acl_get_acl_map(mailbox_t *mailbox, u64_t userid, struct ACLMap *map)
+{
+	int i, result, test;
+	u64_t anyone;
+	
+	g_return_val_if_fail(mailbox->uid,DM_EGENERAL); 
+
+	result = acl_query(mailbox->uid, userid);
+
+	if (result == DM_EGENERAL) {
+		/* else check the 'anyone' user */
+		test = auth_user_exists(DBMAIL_ACL_ANYONE_USER, &anyone);
+		if (test == DM_EQUERY) 
+			return DM_EQUERY;
+		if (! test) 
+			return result;
+		result = acl_query(mailbox->uid, anyone);
+		if (result != DM_SUCCESS)
+			return result;
+	}
 
 	i = 0;
 

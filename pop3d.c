@@ -38,7 +38,6 @@ char *configFile = DEFAULT_CONFIG_FILE;
 extern db_param_t _db_params;
 
 static void SetConfigItems(serverConfig_t * config);
-static void Daemonize(void);
 static int SetMainSigHandler(void);
 static void MainSigHandler(int sig, siginfo_t * info, void *data);
 
@@ -130,9 +129,10 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 	
-	/* We write the pidFile after Daemonize because
+	server_daemonize();
+
+	/* We write the pidFile after daemonize because
 	 * we may actually be a child of the original process. */
-	Daemonize();
 	pidfile_create(pidFile, getpid());
 
 	get_config(&config);
@@ -173,18 +173,6 @@ void MainSigHandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
 	else
 		mainStop = 1;
 }
-
-
-void Daemonize()
-{
-	if (fork())
-		exit(0);
-	setsid();
-
-	if (fork())
-		exit(0);
-}
-
 
 int SetMainSigHandler()
 {
