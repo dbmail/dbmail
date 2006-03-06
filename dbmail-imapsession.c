@@ -1076,15 +1076,16 @@ int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...)
         g_mime_stream_filter_add((GMimeStreamFilter *) fstream, filter);
         len = g_mime_stream_write_string(fstream,ln);
 
-        if (len < 0) {
-                trace(TRACE_FATAL, "%s,%s: write to client socket failed", __FILE__, __func__);
-                return -1;
-        }
-
         g_free(ln);
         g_object_unref(filter);
         g_object_unref(ostream);
         g_object_unref(fstream);
+
+        if (len < 0) {
+                trace(TRACE_WARNING, "%s,%s: write to client socket failed", __FILE__, __func__);
+		g_free(re);
+                return -1;
+        }
 
         if (result < maxlen)
                 trace(TRACE_DEBUG,"RESPONSE: [%s]", re);
