@@ -42,7 +42,6 @@ extern db_param_t _db_params;
 
 static void SetConfigItems(serverConfig_t * config);
 static int SetMainSigHandler(void);
-static void Daemonize(void);
 static void MainSigHandler(int sig, siginfo_t * info, void *data);
 
 static void get_config(serverConfig_t *config);
@@ -89,7 +88,7 @@ int main(int argc, char *argv[])
 			return 0;
 		case 'n':
 			/* TODO: We should also prevent children from forking,
-			 * but for now we'll just set a flag and skip Daemonize. */
+			 * but for now we'll just set a flag and skip daemonize. */
 			no_daemonize = 1;
 			break;
 		case 'h':
@@ -140,9 +139,9 @@ int main(int argc, char *argv[])
 	}
 		
 
-	Daemonize();
+	server_daemonize();
 	
-	/* We write the pidFile after Daemonize because
+	/* We write the pidFile after daemonize because
 	 * we may actually be a child of the original process. */
 	pidfile_create(pidFile, getpid());
 
@@ -181,18 +180,6 @@ void MainSigHandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
 	else
 		mainStop = 1;
 }
-
-
-void Daemonize()
-{
-	if (fork())
-		exit(0);
-	setsid();
-
-	if (fork())
-		exit(0);
-}
-
 
 int SetMainSigHandler()
 {

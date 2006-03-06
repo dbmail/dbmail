@@ -152,6 +152,27 @@ int StartServer(serverConfig_t * conf)
 	return Restart;
 }
 
+pid_t server_daemonize(void)
+{
+	if (fork())
+		exit(0);
+	setsid();
+	if (fork())
+		exit(0);
+
+	chdir("/");
+	umask(0);
+	freopen("/var/log/dbmail/dbmail.log","a",stdout);
+	freopen("/var/log/dbmail/dbmail.err","a",stderr);
+	freopen("/dev/null","r",stdin);
+	
+	trace(TRACE_DEBUG,"%s,%s: sid: [%d]", __FILE__, 
+			__func__, getsid(0));
+
+	return getsid(0);
+}
+
+
 int server_run(serverConfig_t *conf)
 {
 	mainStop = 0;
