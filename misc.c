@@ -1529,3 +1529,63 @@ int discard_client_input(FILE * instream)
 	return 0;
 }
 
+/* Following the advice of:
+ * "Secure Programming for Linux and Unix HOWTO"
+ * Chapter 8: Carefully Call Out to Other Resources */
+char * dm_shellesc(const char * command)
+{
+	char *safe_command;
+	int pos, end, len;
+
+	// These are the potentially unsafe characters:
+	// & ; ` ' \ " | * ? ~ < > ^ ( ) [ ] { } $ \n \r
+	// # ! \t \ (space)
+
+	len = strlen(command);
+	if (! (safe_command = g_new0(char,(len + 1) * 2 + 1)))
+		return NULL;
+
+	for (pos = end = 0; pos < len; pos++) {
+		switch (command[pos]) {
+		case '&':
+		case ';':
+		case '`':
+		case '\'':
+		case '\\':
+		case '"':
+		case '|':
+		case '*':
+		case '?':
+		case '~':
+		case '<':
+		case '>':
+		case '^':
+		case '(':
+		case ')':
+		case '[':
+		case ']':
+		case '{':
+		case '}':
+		case '$':
+		case '\n':
+		case '\r':
+		case '\t':
+		case ' ':
+		case '#':
+		case '!':
+			// Add an escape before the offending char.
+			safe_command[end++] = '\\';
+		default:
+			// And then put in the character itself.
+			safe_command[end++] = command[pos];
+			break;
+		}
+	}
+
+	/* The string is already initialized,
+	 * but let's be extra double sure. */
+	safe_command[end] = '\0';
+
+	return safe_command;
+}
+

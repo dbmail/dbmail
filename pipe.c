@@ -51,6 +51,7 @@ static int send_mail(struct DbmailMessage *message,
 		const char *headers, const char *body, int sendwhat)
 {
 	FILE *mailpipe = NULL;
+	char *escaped_to = NULL;
 	char *sendmail_command = NULL;
 	field_t sendmail;
 	int result;
@@ -71,9 +72,18 @@ static int send_mail(struct DbmailMessage *message,
 	trace(TRACE_DEBUG, "%s, %s: sendmail command is [%s]",
 		__FILE__, __func__, sendmail);
 	
-	sendmail_command = g_strconcat(sendmail, " ", to, NULL);
+	escaped_to = dm_shellesc(to);
+	if (!escaped_to) {
+		trace(TRACE_ERROR, "%s, %s: out of memory calling dm_shellesc",
+				__FILE__, __func__);
+		return -1;
+	}
+
+	sendmail_command = g_strconcat(sendmail, " ", escaped_to, NULL);
+	dm_free(escaped_to);
 	if (!sendmail_command) {
-		trace(TRACE_ERROR, "send_notification(): out of memory");
+		trace(TRACE_ERROR, "%s, %s: out of memory calling g_strconcat",
+				__FILE__, __func__);
 		return -1;
 	}
 

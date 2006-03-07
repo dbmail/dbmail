@@ -1,3 +1,13 @@
+2006-03-07  Aaron Stone  <aaron@serendipity.cx>
+
+	* misc.h, misc.c:
+	Added dm_shellesc to escaped potentially unsafe shell chars.
+	* pipe.c:
+	Use dm_shellesc before calling popen(sendmail_command).
+	* lmtp.c:
+	Allow | (pipe) in the validchars. If it gets into an email address,
+	and that address is used when calling sendmail, we'll be ready.
+
 2006-03-06  Aaron Stone  <aaron@serendipity.cx>
 
 	* debug.h, debug.c:
