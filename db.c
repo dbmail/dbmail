@@ -3748,13 +3748,13 @@ int db_acl_has_right(mailbox_t *mailbox, u64_t userid, const char *right_flag)
 static int acl_query(u64_t mailbox_idnr, u64_t userid)
 {
 	trace(TRACE_DEBUG,"%s,%s: for mailbox [%llu] userid [%llu]",
-			__FILE__, __func__, mailbox->uid, userid);
+			__FILE__, __func__, mailbox_idnr, userid);
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT lookup_flag,read_flag,seen_flag,write_flag,insert_flag,post_flag,create_flag,delete_flag,administer_flag "
 		 "FROM %sacl "
 		 "WHERE user_id = '%llu' AND mailbox_id = '%llu'",DBPFX,
-		 userid, mailbox->uid);
+		 userid, mailbox_idnr);
 
 	if (db_query(query) < 0) {
 		trace(TRACE_ERROR, "%s,%s: Error finding ACL entry",
