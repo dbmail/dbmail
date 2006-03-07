@@ -36,6 +36,9 @@ void dm_list_init(struct dm_list *tlist)
  */
 void dm_list_free(struct element **start)
 {
+	if (!start || !(*start)) 
+		return;
+
 	if (!(*start))
 		return;
 

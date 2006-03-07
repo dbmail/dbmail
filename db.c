@@ -3722,8 +3722,14 @@ int db_acl_has_right(mailbox_t *mailbox, u64_t userid, const char *right_flag)
 			return result;
 	}
 
-	if (mailbox->owner_idnr == userid)
-		return DM_EGENERAL;
+	trace(TRACE_DEBUG, "%s, %s: mailbox [%llu] is owned by user [%llu], is that also [%llu]?",
+			__FILE__, __func__, mboxid, userid, mailbox->owner_idnr);
+
+	if (mailbox->owner_idnr == userid) {
+		trace(TRACE_DEBUG, "%s, %s: mailbox [%llu] is owned by user [%llu], giving all rights",
+				__FILE__, __func__, mboxid, userid);
+		return 1;
+	}
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT * FROM %sacl "
@@ -3751,7 +3757,9 @@ static int acl_query(u64_t mailbox_idnr, u64_t userid)
 			__FILE__, __func__, mailbox_idnr, userid);
 
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT lookup_flag,read_flag,seen_flag,write_flag,insert_flag,post_flag,create_flag,delete_flag,administer_flag "
+		 "SELECT lookup_flag,read_flag,seen_flag,"
+			 "write_flag,insert_flag,post_flag,"
+			 "create_flag,delete_flag,administer_flag "
 		 "FROM %sacl "
 		 "WHERE user_id = '%llu' AND mailbox_id = '%llu'",DBPFX,
 		 userid, mailbox_idnr);

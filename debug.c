@@ -35,7 +35,7 @@ typedef struct debug_mem debug_mem_t;
 debug_mem_t *__dm_first = 0, *__dm_last = 0;
 
 /* the debug variables */
-static trace_t TRACE_SYSLOG = TRACE_ERROR;  /* default: errors and worse */
+static trace_t TRACE_SYSLOG = TRACE_ERROR;  /* default: errors, warnings, fatals */
 static trace_t TRACE_STDERR = TRACE_FATAL;  /* default: fatal errors only */
 
 /*

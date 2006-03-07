@@ -1217,6 +1217,7 @@ int dbmail_imap_session_mailbox_check_acl(struct ImapSession * self, u64_t idnr,
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	mailbox_t mailbox;
 
+	memset(&mailbox, '\0', sizeof(mailbox_t));
 	mailbox.uid = idnr;
 	access = acl_has_right(&mailbox, ud->userid, acl);
 	

@@ -324,8 +324,8 @@ int acl_get_rightsstring(u64_t userid, u64_t mboxid, char *rightsstring)
 	mailbox_t mailbox;
 	struct ACLMap map;
 	
-	bzero(&mailbox,sizeof(mailbox_t));
-	bzero(&map, sizeof(struct ACLMap));
+	memset(&mailbox, '\0', sizeof(mailbox_t));
+	memset(&map, '\0', sizeof(struct ACLMap));
 	
 	mailbox.uid = mboxid;
 	
@@ -336,6 +336,8 @@ int acl_get_rightsstring(u64_t userid, u64_t mboxid, char *rightsstring)
 	mailbox.owner_idnr = owner_idnr;
 
 	if (mailbox.owner_idnr == userid) {
+		trace(TRACE_DEBUG, "%s, %s: mailbox [%llu] is owned by user [%llu], giving all rights",
+				__FILE__, __func__, mboxid, userid);
 		g_strlcat(rightsstring,"lrswipcda", NR_ACL_FLAGS+1);
 		return 1;
 	}
