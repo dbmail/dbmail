@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: main.c 2003 2006-03-01 21:02:56Z paul $
+/* $Id: main.c 2015 2006-03-06 22:46:32Z aaron $
  * 
  * main file for dbmail-smtp  */
 
@@ -202,7 +202,7 @@ int main(int argc, char *argv[])
 			/* We must return non-zero in case someone put -V
 			 * into the mail server config and thus may lose mail. */
 			printf("\n*** DBMAIL: dbmail-smtp version "
-			       "$Revision: 2003 $ %s\n\n", COPYRIGHT);
+			       "$Revision: 2015 $ %s\n\n", COPYRIGHT);
 			return 1;
 
 		default:
@@ -311,7 +311,7 @@ int main(int argc, char *argv[])
 		/* parse for destination addresses */
 		trace(TRACE_DEBUG, "%s,%s: scanning for [%s]", __FILE__, __func__, deliver_to_header);
 		if (mail_address_build_list(deliver_to_header, &users, &mimelist) != 0) {
-			trace(TRACE_STOP, "%s,%s: no email addresses (scanned for %s)",
+			trace(TRACE_MESSAGE, "%s,%s: no email addresses (scanned for %s)",
 					__FILE__, __func__, deliver_to_header);
 			exitcode = EX_NOUSER;
 			goto freeall;

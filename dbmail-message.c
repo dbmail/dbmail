@@ -1,5 +1,5 @@
 /*
-  $Id: dbmail-message.c 1987 2006-02-17 13:46:06Z aaron $
+  $Id: dbmail-message.c 2015 2006-03-06 22:46:32Z aaron $
 
   Copyright (C) 2004-2005 NFG Net Facilities Group BV, info@nfg.nl
 
@@ -728,7 +728,7 @@ int _message_insert(struct DbmailMessage *self,
 		 MESSAGE_STATUS_INSERT);
 
 	if (db_query(query) == -1) {
-		trace(TRACE_STOP, "%s,%s: query failed", __FILE__, __func__);
+		trace(TRACE_ERROR, "%s,%s: query failed", __FILE__, __func__);
 		return -1;
 	}
 

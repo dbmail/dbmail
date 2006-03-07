@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: lmtpd.c 1999 2006-02-28 20:59:53Z paul $
+/* $Id: lmtpd.c 2014 2006-03-06 21:51:43Z paul $
 *
 * lmtpd.c
 *
@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
 			break;
 		case 'V':
 			printf("\n*** DBMAIL: dbmail-lmtpd version "
-			       "$Revision: 1999 $ %s\n\n", COPYRIGHT);
+			       "$Revision: 2014 $ %s\n\n", COPYRIGHT);
 			return 0;
 		case 'n':
 			no_daemonize = 1;

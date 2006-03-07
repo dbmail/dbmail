@@ -15,7 +15,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-# $Id: migrate_from_1.x_to_2.0.mysql 1584 2005-01-22 12:56:58Z ilja $
+# $Id: migrate_from_1.x_to_2.0.mysql 2013 2006-03-06 12:02:04Z paul $
 
 # Upgrade database structure from DBMail 1.x MyISAM tables
 # to DBMail 2.0 MyISAM tables.

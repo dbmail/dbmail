@@ -1,3 +1,28 @@
+2006-03-07  Aaron Stone  <aaron@serendipity.cx>
+
+	* misc.h, misc.c:
+	Added dm_shellesc to escaped potentially unsafe shell chars.
+	* pipe.c:
+	Use dm_shellesc before calling popen(sendmail_command).
+	* lmtp.c:
+	Allow | (pipe) in the validchars. If it gets into an email address,
+	and that address is used when calling sendmail, we'll be ready.
+
+2006-03-06  Aaron Stone  <aaron@serendipity.cx>
+
+	* debug.h, debug.c:
+	Removed TRACE_STOP, moved TRACE_MESSAGE to be less-serious than
+	TRACE_WARNING.
+	* db.c, dbmail-message.c, main.c:
+	Removed references to TRACE_STOP.
+	* dbmail.conf:
+	Changed description of TRACE_SYSLOG config item.
+	* acl.c, db.c, dbmail-imapsession.c:
+	Fixed an uninitialized structure in the new ACL code.
+	* list.c, misc.c, dbmail-mailbox.c:
+	Accepted a patch from Matthew Sayler to prevent O(n^2) behavior
+	in the list code.
+
 2006-03-06  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-imapsession.c:

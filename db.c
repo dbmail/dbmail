@@ -1,4 +1,4 @@
-/* $Id: db.c 2003 2006-03-01 21:02:56Z paul $ */
+/* $Id: db.c 2017 2006-03-07 05:58:02Z aaron $ */
 /*
   Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 
@@ -1031,9 +1031,9 @@ int db_update_message(u64_t message_idnr, const char *unique_id,
 	u64_t physmessage_id = 0;
 
 	if (db_message_set_unique_id(message_idnr, unique_id)) {
-		trace(TRACE_STOP, "%s,%s: FATAL: db_message_set_unique_ id failed for [%llu]", 
-				__FILE__, __func__,
-				message_idnr);
+		// FIXME: Why is this FATAL?
+		trace(TRACE_FATAL, "%s,%s: FATAL: db_message_set_unique_ id failed for [%llu]", 
+				__FILE__, __func__, message_idnr);
 	}
 
 	/* update the fields in the physmessage table */
@@ -3722,8 +3722,14 @@ int db_acl_has_right(mailbox_t *mailbox, u64_t userid, const char *right_flag)
 			return result;
 	}
 
-	if (mailbox->owner_idnr == userid)
-		return DM_EGENERAL;
+	trace(TRACE_DEBUG, "%s, %s: mailbox [%llu] is owned by user [%llu], is that also [%llu]?",
+			__FILE__, __func__, mboxid, userid, mailbox->owner_idnr);
+
+	if (mailbox->owner_idnr == userid) {
+		trace(TRACE_DEBUG, "%s, %s: mailbox [%llu] is owned by user [%llu], giving all rights",
+				__FILE__, __func__, mboxid, userid);
+		return 1;
+	}
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT * FROM %sacl "
@@ -3745,21 +3751,18 @@ int db_acl_has_right(mailbox_t *mailbox, u64_t userid, const char *right_flag)
 	db_free_result();
 	return result;
 }
-
-int db_acl_get_acl_map(mailbox_t *mailbox, u64_t userid, struct ACLMap *map)
+static int acl_query(u64_t mailbox_idnr, u64_t userid)
 {
-	int i;
-	
-	g_return_val_if_fail(mailbox->uid,DM_EGENERAL); 
-
 	trace(TRACE_DEBUG,"%s,%s: for mailbox [%llu] userid [%llu]",
-			__FILE__, __func__, mailbox->uid, userid);
+			__FILE__, __func__, mailbox_idnr, userid);
 
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT lookup_flag,read_flag,seen_flag,write_flag,insert_flag,post_flag,create_flag,delete_flag,administer_flag "
+		 "SELECT lookup_flag,read_flag,seen_flag,"
+			 "write_flag,insert_flag,post_flag,"
+			 "create_flag,delete_flag,administer_flag "
 		 "FROM %sacl "
 		 "WHERE user_id = '%llu' AND mailbox_id = '%llu'",DBPFX,
-		 userid, mailbox->uid);
+		 userid, mailbox_idnr);
 
 	if (db_query(query) < 0) {
 		trace(TRACE_ERROR, "%s,%s: Error finding ACL entry",
@@ -3769,6 +3772,30 @@ int db_acl_get_acl_map(mailbox_t *mailbox, u64_t userid, struct ACLMap *map)
 
 	if (db_num_rows() == 0)
 		return DM_EGENERAL;
+
+	return DM_SUCCESS;
+
+}
+int db_acl_get_acl_map(mailbox_t *mailbox, u64_t userid, struct ACLMap *map)
+{
+	int i, result, test;
+	u64_t anyone;
+	
+	g_return_val_if_fail(mailbox->uid,DM_EGENERAL); 
+
+	result = acl_query(mailbox->uid, userid);
+
+	if (result == DM_EGENERAL) {
+		/* else check the 'anyone' user */
+		test = auth_user_exists(DBMAIL_ACL_ANYONE_USER, &anyone);
+		if (test == DM_EQUERY) 
+			return DM_EQUERY;
+		if (! test) 
+			return result;
+		result = acl_query(mailbox->uid, anyone);
+		if (result != DM_SUCCESS)
+			return result;
+	}
 
 	i = 0;
 

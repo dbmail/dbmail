@@ -999,8 +999,9 @@ static gboolean _do_sort(GNode *node, struct DbmailMailbox *self)
 		id = g_new0(u64_t,1);
 		*id = db_get_result_u64(i,0);
 		if (g_tree_lookup(self->ids,id))
-			self->sorted = g_list_append(self->sorted,id);
+			self->sorted = g_list_prepend(self->sorted,id);
 	}
+	g_list_reverse(self->sorted);
 	g_string_free(q,TRUE);
 	db_free_result();
 	

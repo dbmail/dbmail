@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
  
- $Id: debug.h 1950 2005-12-31 06:16:16Z aaron $
+ $Id: debug.h 2015 2006-03-06 22:46:32Z aaron $
  
  headers for debug.c 
  
@@ -34,11 +34,11 @@
 #endif
 
 typedef enum {
+	// By being < 0, FATALS always show on STDERR.
 	TRACE_FATAL = -1,
-	TRACE_STOP,
-	TRACE_MESSAGE,
 	TRACE_ERROR,
 	TRACE_WARNING,
+	TRACE_MESSAGE,
 	TRACE_INFO,
 	TRACE_DEBUG
 } trace_t;

@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: misc.h 1992 2006-02-21 07:22:57Z aaron $ 
+/* $Id: misc.h 2018 2006-03-07 08:18:28Z aaron $ 
  */
 
 #ifndef _MISC_H
@@ -117,6 +117,7 @@ void tree_dump(GTree *t);
 int g_tree_merge(GTree *a, GTree *b, int condition);
 	
 char * dm_stresc(const char * from);
+char * dm_shellesc(const char * command);
 void dm_pack_spaces(char *in);
 void dm_base_subject(char *subject);
 int listex_match(const char *p, const char *s, const char *x, int flags);

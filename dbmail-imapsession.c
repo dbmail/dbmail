@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: dbmail-imapsession.c 2000 2006-03-01 05:54:03Z aaron $
+/* $Id: dbmail-imapsession.c 2017 2006-03-07 05:58:02Z aaron $
  * 
  * dm_imaputil.c
  *
@@ -1217,6 +1217,7 @@ int dbmail_imap_session_mailbox_check_acl(struct ImapSession * self, u64_t idnr,
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	mailbox_t mailbox;
 
+	memset(&mailbox, '\0', sizeof(mailbox_t));
 	mailbox.uid = idnr;
 	access = acl_has_right(&mailbox, ud->userid, acl);
 	

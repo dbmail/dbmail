@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: list.c 1891 2005-10-03 10:01:21Z paul $
+/* $Id: list.c 2017 2006-03-07 05:58:02Z aaron $
  *
  * functions to create lists and add/delete items */
 
@@ -36,6 +36,9 @@ void dm_list_init(struct dm_list *tlist)
  */
 void dm_list_free(struct element **start)
 {
+	if (!start || !(*start)) 
+		return;
+
 	if (!(*start))
 		return;
 

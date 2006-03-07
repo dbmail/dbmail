@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: debug.c 1950 2005-12-31 06:16:16Z aaron $
+/* $Id: debug.c 2017 2006-03-07 05:58:02Z aaron $
  *
  * Debugging and memory checking functions */
 
@@ -35,7 +35,7 @@ typedef struct debug_mem debug_mem_t;
 debug_mem_t *__dm_first = 0, *__dm_last = 0;
 
 /* the debug variables */
-static trace_t TRACE_SYSLOG = TRACE_ERROR;  /* default: errors and worse */
+static trace_t TRACE_SYSLOG = TRACE_ERROR;  /* default: errors, warnings, fatals */
 static trace_t TRACE_STDERR = TRACE_FATAL;  /* default: fatal errors only */
 
 /*
@@ -81,9 +81,6 @@ void trace(trace_t level, char *formatstring, ...)
 
 	/* Bail out on fatal errors. */
 	if (level == TRACE_FATAL)
-		exit(EX_TEMPFAIL);
-
-	if (level == TRACE_STOP)
 		exit(EX_TEMPFAIL);
 }
 

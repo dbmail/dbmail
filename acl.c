@@ -315,8 +315,8 @@ int acl_get_rightsstring_identifier(char *identifier, u64_t mboxid, char *rights
 
 int acl_get_rightsstring(u64_t userid, u64_t mboxid, char *rightsstring)
 {
-	int result;
-	u64_t owner_idnr;
+	int result, test;
+	u64_t owner_idnr, anyone_userid;
 
 	assert(rightsstring != NULL);
 	memset(rightsstring, '\0', NR_ACL_FLAGS + 1);
@@ -324,8 +324,8 @@ int acl_get_rightsstring(u64_t userid, u64_t mboxid, char *rightsstring)
 	mailbox_t mailbox;
 	struct ACLMap map;
 	
-	bzero(&mailbox,sizeof(mailbox_t));
-	bzero(&map, sizeof(struct ACLMap));
+	memset(&mailbox, '\0', sizeof(mailbox_t));
+	memset(&map, '\0', sizeof(struct ACLMap));
 	
 	mailbox.uid = mboxid;
 	
@@ -336,14 +336,16 @@ int acl_get_rightsstring(u64_t userid, u64_t mboxid, char *rightsstring)
 	mailbox.owner_idnr = owner_idnr;
 
 	if (mailbox.owner_idnr == userid) {
+		trace(TRACE_DEBUG, "%s, %s: mailbox [%llu] is owned by user [%llu], giving all rights",
+				__FILE__, __func__, mboxid, userid);
 		g_strlcat(rightsstring,"lrswipcda", NR_ACL_FLAGS+1);
 		return 1;
 	}
 	
 	result = db_acl_get_acl_map(&mailbox, userid, &map);
-	if (result != DM_SUCCESS)
+	if (result == DM_EQUERY)
 		return result;
-
+	
 	if (map.lookup_flag)
 		g_strlcat(rightsstring,"l", NR_ACL_FLAGS+1);
 	if (map.read_flag)

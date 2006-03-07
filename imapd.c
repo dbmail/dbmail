@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: imapd.c 1999 2006-02-28 20:59:53Z paul $
+/* $Id: imapd.c 2014 2006-03-06 21:51:43Z paul $
  *
  * imapd.c
  * 
@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
 			/* TODO: Perhaps verbose should log to the console with -n? */
 			break;
 		case 'V':
-			printf("\n*** DBMAIL: dbmail-imapd version $Revision: 1999 $ %s\n\n", 
+			printf("\n*** DBMAIL: dbmail-imapd version $Revision: 2014 $ %s\n\n", 
 					COPYRIGHT);
 			return 0;
 		case 'n':
