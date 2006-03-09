@@ -139,7 +139,7 @@
 
 #define COPYRIGHT "(c) 1999-2004 IC&S, The Netherlands"
 /** default directory and extension for pidfiles */
-#define DEFAULT_PID_DIR "/var/run/dbmail/"
+#define DEFAULT_PID_DIR "/var/run/"
 #define DEFAULT_PID_EXT ".pid"
 /** default configuration file */
 #define DEFAULT_CONFIG_FILE "/etc/dbmail.conf"
