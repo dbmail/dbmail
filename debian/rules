@@ -47,7 +47,7 @@ include /usr/share/dpatch/dpatch.make
 
 CONFFLAGS=--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --sysconfdir=/etc/dbmail/ \
-	--infodir=\$${prefix}/share/info \
+	--localstatedir=/var/run/dbmail --infodir=\$${prefix}/share/info \
 	$(WITH_GC) $(WITH_CHECK) $(SHARED) $(STATIC) $(WITH_SIEVE) $(WITH_LDAP) $(WITH_MYSQL) $(WITH_PGSQL) $(WITH_SQLITE)
 
 build: stamps/build

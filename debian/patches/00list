@@ -3,19 +3,3 @@
 # 
 # garbage collection
 #01_gc
-
-# strdup to my_strdup
-#01_my_strdup
-
-# change the piddir to /var/run/dbmail/
-01_path_to_pid_dir
-
-#02_libdbmail_cleanup
-
-# replace internal list with GList
-#02_glist
-
-# make the location of the main configuration file more
-# conformant to debian policy.
-03_path_to_dbmail_conf
-
