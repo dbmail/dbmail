@@ -1897,11 +1897,12 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
 		db_free_result();
 		trace(TRACE_INFO, "%s,%s: mailbox is empty", __FILE__,
 		      __func__);
+		return DM_SUCCESS;
 	}
 
-	if (!(message_idnrs = (u64_t *) dm_malloc(n * sizeof(u64_t)))) {
-		trace(TRACE_ERROR, "%s,%s: error allocating memory",
-		      __FILE__, __func__);
+	if (! (message_idnrs = g_new0(u64_t, n))) {
+		trace(TRACE_ERROR, "%s,%s: error allocating memory [%d]",
+		      __FILE__, __func__, n);
 		return DM_EQUERY;
 	}
 	for (i = 0; i < n; i++)
@@ -2247,6 +2248,9 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen UNUSED,
 	 * this also means that the status will be set to '001'
          */
 
+	if (db_begin_transaction() == DM_EQUERY)
+		return DM_EQUERY;
+	
         dbmail_message_store(message);
 	result = db_copymsg(message->id, mailbox_idnr, user_idnr, msg_idnr);
 	db_delete_message(message->id);
@@ -2263,6 +2267,9 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen UNUSED,
                     return -1;
         }
                 
+	if (db_commit_transaction() == DM_EQUERY)
+		return DM_EQUERY;
+	
         trace(TRACE_MESSAGE, "%s, %s: message id=%llu is inserted", 
                 __FILE__, __func__, *msg_idnr);
         
@@ -2976,9 +2983,9 @@ int db_get_mailbox_size(u64_t mailbox_idnr, int only_deleted,
 
 	if (db_num_rows() > 0) {
 		*mailbox_size = db_get_result_u64(0, 0);
+		db_free_result();
 	}
 
-	db_free_result();
 	return DM_SUCCESS;
 }
 
@@ -3246,6 +3253,9 @@ int db_expunge(u64_t mailbox_idnr, u64_t user_idnr,
 
 		/* now alloc mem */
 		*nmsgs = db_num_rows();
+		if (*nmsgs == 0)
+			return DM_EGENERAL;
+		
 		*msg_idnrs = (u64_t *) dm_malloc(sizeof(u64_t) * (*nmsgs));
 		if (!(*msg_idnrs)) {
 			/* out of mem */

@@ -261,6 +261,8 @@ typedef struct {
 	char *timeoutMsg;
 	field_t serverUser, serverGroup;
 	field_t socket;
+	field_t log, error_log;
+	field_t pid_dir;
 	int (*ClientHandler) (clientinfo_t *);
 } serverConfig_t;
 

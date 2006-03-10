@@ -14,7 +14,7 @@
 
 #define P_SIZE 100000
 
-volatile static Scoreboard_t *scoreboard;
+static volatile Scoreboard_t *scoreboard;
 static int shmid;
 static int sb_lockfd;
 
@@ -170,7 +170,7 @@ void scoreboard_release(pid_t pid)
 }
 void scoreboard_delete()
 {
-	if (shmdt(scoreboard) == -1)
+	if (shmdt((const void *)scoreboard) == -1)
 		trace(TRACE_FATAL,
 		      "%s,%s: detach shared mem failed",
 		      __FILE__, __func__);

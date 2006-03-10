@@ -36,6 +36,6 @@ int StartCliServer(serverConfig_t * conf);
 int server_run(serverConfig_t *conf);
 void ClearConfig(serverConfig_t * conf);
 
-pid_t server_daemonize(void);
+pid_t server_daemonize(serverConfig_t *conf);
 
 #endif

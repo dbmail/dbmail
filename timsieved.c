@@ -139,7 +139,7 @@ int main(int argc, char *argv[])
 	}
 		
 
-	server_daemonize();
+	server_daemonize(&config);
 	
 	/* We write the pidFile after daemonize because
 	 * we may actually be a child of the original process. */
@@ -204,6 +204,8 @@ int SetMainSigHandler()
 void SetConfigItems(serverConfig_t * config)
 {
 	field_t val;
+
+	config_get_logfiles(config);
 
 	/* read items: NCHILDREN */
 	config_get_value("NCHILDREN", "SIEVE", val);

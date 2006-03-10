@@ -1361,6 +1361,11 @@ int _ic_expunge(struct ImapSession *self)
 		return -1;
 	}
 
+	if (result == 1) {
+		dbmail_imap_session_printf(self, "%s OK EXPUNGE completed\r\n", self->tag);
+		return 1;
+	}
+	
 	/* show expunge info */
 	for (i = 0; i < nmsgs; i++) {
 		/* find the message sequence number */
@@ -1369,7 +1374,9 @@ int _ic_expunge(struct ImapSession *self)
 
 		dbmail_imap_session_printf(self, "* %u EXPUNGE\r\n", idx + 1);	/* add one: IMAP MSN starts at 1 not zero */
 	}
-	dm_free(msgids);
+	
+	if (msgids)
+		dm_free(msgids);
 	msgids = NULL;
 
 	/* update mailbox info */

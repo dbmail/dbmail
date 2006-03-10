@@ -253,3 +253,34 @@ void GetDBParams(db_param_t * db_params)
 	}
 }
 
+void config_get_logfiles(serverConfig_t *config)
+{
+	field_t val;
+
+	/* logfile */
+	config_get_value("logfile", "DBMAIL", val);
+	if (! strlen(val))
+		g_strlcpy(config->log,DEFAULT_LOG_FILE, FIELDSIZE);
+	else
+		g_strlcpy(config->log, val, FIELDSIZE);
+	assert(config->log);
+
+	/* errorlog */
+	config_get_value("errorlog", "DBMAIL", val);
+	if (! strlen(val))
+		g_strlcpy(config->error_log,DEFAULT_ERROR_LOG, FIELDSIZE);
+	else
+		g_strlcpy(config->error_log, val, FIELDSIZE);
+	assert(config->error_log);
+
+	/* pid directory */
+	config_get_value("pid_directory", "DBMAIL", val);
+	if (! strlen(val))
+		g_strlcpy(config->pid_dir, DEFAULT_PID_DIR, FIELDSIZE);
+	else
+		g_strlcpy(config->pid_dir, val, FIELDSIZE);
+	assert(config->pid_dir);
+
+}
+
+
