@@ -152,7 +152,7 @@ int StartServer(serverConfig_t * conf)
 	return Restart;
 }
 
-pid_t server_daemonize(void)
+pid_t server_daemonize(serverConfig_t *conf)
 {
 	if (fork())
 		exit(0);
@@ -162,8 +162,8 @@ pid_t server_daemonize(void)
 
 	chdir("/");
 	umask(0);
-	freopen("/var/log/dbmail/dbmail.log","a",stdout);
-	freopen("/var/log/dbmail/dbmail.err","a",stderr);
+	freopen(conf->log,"a",stdout);
+	freopen(conf->error_log,"a",stderr);
 	freopen("/dev/null","r",stdin);
 	
 	trace(TRACE_DEBUG,"%s,%s: sid: [%d]", __FILE__, 

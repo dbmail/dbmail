@@ -139,10 +139,14 @@
 
 #define COPYRIGHT "(c) 1999-2004 IC&S, The Netherlands"
 /** default directory and extension for pidfiles */
-#define DEFAULT_PID_DIR "@localstatedir@"
+#define DEFAULT_PID_DIR "@localstatedir@/run"
 #define DEFAULT_PID_EXT ".pid"
 /** default configuration file */
 #define DEFAULT_CONFIG_FILE "@sysconfdir@/dbmail.conf"
+
+/** default log files */
+#define DEFAULT_LOG_FILE "@localstate@/log/dbmail.log"
+#define DEFAULT_ERROR_LOG "@localstate@/log/dbmail.err"
 
 /** username of user that is owner of all mailboxes */
 #define SHARED_MAILBOX_USERNAME "__public__"
@@ -215,4 +219,6 @@ void SetTraceLevel(const char *service_name);
 
 
 void pidfile_create(const char *pidFile, pid_t pid);
+
+void config_get_logfiles(serverConfig_t *config);
 #endif
