@@ -417,10 +417,16 @@ gchar * dbmail_message_body_to_string(const struct DbmailMessage *self)
 }
 gchar * dbmail_message_hdrs_to_string(const struct DbmailMessage *self)
 {
-	gchar *h;
+	gchar *h,*s;
+	GString *m, *b;
 	
-	GString *m = g_string_new(dbmail_message_to_string(self));
-	GString *b = g_string_new(dbmail_message_body_to_string(self));
+	s = dbmail_message_to_string(self);
+	m = g_string_new(s);
+	g_free(s);
+
+	s = dbmail_message_body_to_string(self);
+	b = g_string_new(s);
+	g_free(s);
 
 	m = g_string_truncate(m,(m->len - b->len));
 	h = m->str;
