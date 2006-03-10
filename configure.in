@@ -100,6 +100,6 @@ AC_SUBST(LDAPINC)
 # libtool patch
 AC_PROG_LIBTOOL
 
-AC_OUTPUT(Makefile modules/Makefile man/Makefile)
+AC_OUTPUT(dbmail.h Makefile modules/Makefile man/Makefile)
 
 DBMAIL_MSG_CONFIGURE_RESULTS

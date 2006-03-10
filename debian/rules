@@ -46,8 +46,8 @@ export PACKAGES=dbmail2.2-base
 include /usr/share/dpatch/dpatch.make 
 
 CONFFLAGS=--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
-	--prefix=/usr --mandir=\$${prefix}/share/man --sysconfdir=/etc/dbmail/ \
-	--infodir=\$${prefix}/share/info \
+	--prefix=/usr --mandir=\$${prefix}/share/man --sysconfdir=/etc/dbmail \
+	--localstatedir=/var/run/dbmail --infodir=\$${prefix}/share/info \
 	$(WITH_GC) $(WITH_CHECK) $(SHARED) $(STATIC) $(WITH_SIEVE) $(WITH_LDAP) $(WITH_MYSQL) $(WITH_PGSQL) $(WITH_SQLITE)
 
 build: stamps/build
@@ -102,7 +102,7 @@ clean1:
 	for file in Makefile config.h config.status libtool stamp-h .deps .libs; do \
 		rm -rf `find . -name $$file`; \
 	done
-	rm -f stamp-h* config.log aclocal.m4 configure
+	rm -f stamp-h* config.log aclocal.m4 configure dbmail.h
 	rm -rf buildtools || true
 	dh_clean
 

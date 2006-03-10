@@ -13,16 +13,19 @@ dnl DBMAIL_MSG_CONFIGURE_RESULTS()
 dnl
 AC_DEFUN([DBMAIL_MSG_CONFIGURE_RESULTS], [dnl
 AC_MSG_RESULT([
-GLIB:   $ac_glib_libs
-GMIME:  $ac_gmime_libs
-MYSQL:  $MYSQLLIB
-PGSQL:  $PGSQLLIB
-SQLITE: $SQLITELIB
-SIEVE:  $SORTLIB
-LDAP:   $LDAPLIB
-SHARED: $enable_shared
-STATIC: $enable_static
-CHECK:  $with_check
+PREFIX:        $prefix
+SYSCONFDIR:    $sysconfdir
+LOCALSTATEDIR: $localstatedir
+GLIB:          $ac_glib_libs
+GMIME:         $ac_gmime_libs
+MYSQL:         $MYSQLLIB
+PGSQL:         $PGSQLLIB
+SQLITE:        $SQLITELIB
+SIEVE:         $SORTLIB
+LDAP:          $LDAPLIB
+SHARED:        $enable_shared
+STATIC:        $enable_static
+CHECK:         $with_check
 ])
 ])
 

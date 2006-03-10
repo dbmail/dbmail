@@ -223,19 +223,25 @@ void dsnuser_free(deliver_to_user_t * dsnuser)
 	dsnuser->dsn.class = 0;
 	dsnuser->dsn.subject = 0;
 	dsnuser->dsn.detail = 0;
-
-	dsnuser->address = NULL;
-	dsnuser->mailbox = NULL;
 	dsnuser->source = BOX_NONE;
-	
+
 	dm_list_free(&dsnuser->userids->start);
 	dm_list_free(&dsnuser->forwards->start);
 
-	dm_free(dsnuser->mailbox);
-	dm_free(dsnuser->userids);
-	dm_free(dsnuser->forwards);
-	dm_free(dsnuser->address);
+	if (dsnuser->address)
+		g_free(dsnuser->address);
+	if (dsnuser->mailbox)
+		g_free(dsnuser->mailbox);
+	if (dsnuser->userids)	
+		g_free(dsnuser->userids);
+	if (dsnuser->forwards)
+		g_free(dsnuser->forwards);
 
+	dsnuser->address = NULL;
+	dsnuser->mailbox = NULL;
+	dsnuser->userids = NULL;
+	dsnuser->forwards = NULL;
+	
 	trace(TRACE_DEBUG, "%s, %s: dsnuser freed",
 	      __FILE__, __func__);
 }

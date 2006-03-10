@@ -428,8 +428,8 @@ int find_bounded(const char * const value, char left, char right,
 	char *tmpright;
 	size_t tmplen;
 
-	tmpleft = value;
-	tmpright = value + strlen(value);
+	tmpleft = (char *)value;
+	tmpright = (char *)(value + strlen(value));
 
 	while (tmpleft[0] != left && tmpleft < tmpright)
 		tmpleft++;
@@ -498,8 +498,10 @@ int zap_between(const char * const instring, signed char left, signed char right
 	start = strchr(incopy, left);
 	end = strrchr(incopy, right);
 
-	if (!start || !end)
+	if (!start || !end) {
+		g_free(incopy);
 		return -1;
+	}
 
 	if (!clipleft) start++;
 	if (clipright) end++;
@@ -1276,41 +1278,27 @@ void g_list_destroy(GList *l)
 
 static gboolean traverse_tree_keys(gpointer key, gpointer value UNUSED, GList **l)
 {
-	*(GList **)l = g_list_append(*(GList **)l, key);
-	return FALSE;
-}
-
-static gboolean traverse_tree_keys_rev(gpointer key, gpointer value UNUSED, GList **l)
-{
 	*(GList **)l = g_list_prepend(*(GList **)l, key);
 	return FALSE;
 }
 
 static gboolean traverse_tree_values(gpointer key UNUSED, gpointer value, GList **l)
 {
-	*(GList **)l = g_list_append(*(GList **)l, value);
-	return FALSE;
-}
-
-static gboolean traverse_tree_values_rev(gpointer key UNUSED, gpointer value, GList **l)
-{
 	*(GList **)l = g_list_prepend(*(GList **)l, value);
 	return FALSE;
 }
 
-
-
 GList * g_tree_keys(GTree *tree)
 {
 	GList *l = NULL;
-	g_tree_foreach(tree, (GTraverseFunc)traverse_tree_keys_rev, &l);
+	g_tree_foreach(tree, (GTraverseFunc)traverse_tree_keys, &l);
 	g_list_reverse(l);
 	return g_list_first(l);
 }
 GList * g_tree_values(GTree *tree)
 {
 	GList *l = NULL;
-	g_tree_foreach(tree, (GTraverseFunc)traverse_tree_values_rev, &l);
+	g_tree_foreach(tree, (GTraverseFunc)traverse_tree_values, &l);
 	g_list_reverse(l);
 	return g_list_first(l);
 }
@@ -1342,29 +1330,7 @@ void tree_dump(GTree *t)
 	trace(TRACE_DEBUG,"%s,%s: done",__FILE__,__func__);
 }
 
-	      
 static gboolean traverse_tree_merger(gpointer key, gpointer value UNUSED, tree_merger_t **merger)
-{
-	tree_merger_t *t = *(tree_merger_t **)merger;
-	GTree *tree = t->tree;
-	int condition = t->condition;
-
-	switch(condition) {
-		case IST_SUBSEARCH_NOT:
-		break;
-		
-		default:
-		case IST_SUBSEARCH_OR:
-		case IST_SUBSEARCH_AND:
-			if (! g_tree_lookup(tree,key)) 
-				(*(tree_merger_t **)merger)->list = g_list_append((*(tree_merger_t **)merger)->list,key);
-		break;
-	}
-
-	return FALSE;
-}
-
-static gboolean traverse_tree_merger_rev(gpointer key, gpointer value UNUSED, tree_merger_t **merger)
 {
 	tree_merger_t *t = *(tree_merger_t **)merger;
 	GTree *tree = t->tree;
@@ -1384,8 +1350,6 @@ static gboolean traverse_tree_merger_rev(gpointer key, gpointer value UNUSED, tr
 
 	return FALSE;
 }
-
-
 
 int g_tree_merge(GTree *a, GTree *b, int condition)
 {
@@ -1409,7 +1373,7 @@ int g_tree_merge(GTree *a, GTree *b, int condition)
 			/* delete from A all keys not in B */
 			merger->tree = b;
 			merger->condition = IST_SUBSEARCH_AND;
-			g_tree_foreach(a,(GTraverseFunc)traverse_tree_merger_rev, &merger);
+			g_tree_foreach(a,(GTraverseFunc)traverse_tree_merger, &merger);
 			g_list_reverse(merger->list);
 			
 			keys = g_list_first(merger->list);
@@ -1433,7 +1397,7 @@ int g_tree_merge(GTree *a, GTree *b, int condition)
 
 			merger->tree = a;
 			merger->condition = IST_SUBSEARCH_OR;
-			g_tree_foreach(b,(GTraverseFunc)traverse_tree_merger_rev, &merger);
+			g_tree_foreach(b,(GTraverseFunc)traverse_tree_merger, &merger);
 			g_list_reverse(merger->list);
 			keys = g_list_first(merger->list);
 		

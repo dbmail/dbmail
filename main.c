@@ -389,19 +389,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	trace(TRACE_DEBUG, "main(): freeing dsnuser list");
-	/*must loop to get the memory for the strdup of the mailbox */
-	/*
-	for (tmp = dm_list_getstart(&dsnusers);
-			tmp != NULL;
-			tmp = tmp->nextnode) {
-		dm_free( ((deliver_to_user_t *)tmp->data)->mailbox );
-	}
-	*/
+	dbmail_message_free(msg);
 	dsnuser_free_list(&dsnusers);
-	dsnuser_free(&dsnuser);
-
-	trace(TRACE_DEBUG, "main(): freeing all other lists");
 	dm_list_free(&mimelist.start);
 	dm_list_free(&users.start);
 	dm_free(returnpath);
