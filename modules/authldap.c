@@ -573,7 +573,7 @@ static GList * __auth_get_every_match(const char *q, char **retfields)
 					__FILE__, __func__, retfields[k]);
 			if (! (ldap_vals = ldap_get_values(_ldap_conn, ldap_msg, retfields[k]))) {
 				ldap_get_option(_ldap_conn, LDAP_OPT_ERROR_NUMBER, &ldap_err);
-				trace(TRACE_ERROR, "%s,%s: ldap_get_values failed: [%s] %s",
+				trace(TRACE_WARNING, "%s,%s: ldap_get_values failed: [%s] %s",
 						__FILE__,__func__, 
 						retfields[k], 
 						ldap_err2string(ldap_err));
@@ -865,7 +865,7 @@ GList * auth_get_known_users(void)
 	entlist = __auth_get_every_match(query, fields);
 	g_free(query);
 	
-	trace(TRACE_ERROR, "%s,%s: found %d users",
+	trace(TRACE_INFO, "%s,%s: found %d users",
 			__FILE__,__func__, 
 			g_list_length(entlist));
 
