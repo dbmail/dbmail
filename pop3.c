@@ -273,7 +273,6 @@ int pop3_handle_connection(clientinfo_t * ci)
 
 	/* reset timers */
 	alarm(0);
-	__debug_dumpallocs();
 
 	return 0;
 }

@@ -58,11 +58,6 @@ typedef enum {
 #endif
 
 
-/*
-#define dm_malloc(s) __debug_malloc(s, __FILE__, __LINE__)
-#define dm_free(p) __debug_free(p, __FILE__, __LINE__)
-#define __DEBUG_TRACE_MEMALLOC
-*/
 #ifdef USE_GC
 
 #define dm_malloc(s) GC_MALLOC(s)
@@ -72,15 +67,11 @@ typedef enum {
 
 #else
 
-#define dm_malloc(s) malloc(s)
-#define dm_free(p) free(p)
-#define dm_calloc(n,p) calloc(n,p)
-#define dm_realloc(n,p) realloc(n,p)
+#define dm_malloc(s) g_malloc(s)
+#define dm_free(p) g_free(p)
+#define dm_calloc(n,p) g_malloc0(n,p)
+#define dm_realloc(n,p) g_realloc(n,p)
 
-#endif
-
-#ifdef __DEBUG_TRACE_MEMALLOC
-#undef __DEBUG_TRACE_MEMALLOC
 #endif
 
 
@@ -89,10 +80,6 @@ void trace(trace_t level, char *formatstring, ...) PRINTF_ARGS(2, 3);
 
 void configure_debug(trace_t trace_syslog, trace_t trace_stderr);
 
-void *__debug_malloc(unsigned long size, const char *fname, int linenr);
-void __debug_free(void *ptr, const char *fname, int linenr);
+#define dm_strdup(s) g_strdup(s)
 
-void __debug_dumpallocs(void);
-
-char * dm_strdup(const char *str);
 #endif

@@ -389,7 +389,5 @@ int IMAPClientHandler(clientinfo_t * ci)
 			__FILE__, __func__, session->ci->ip_src);
 	dbmail_imap_session_delete(session);
 
-	__debug_dumpallocs();
-
 	return EOF;
 }
