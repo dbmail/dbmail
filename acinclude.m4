@@ -2,9 +2,6 @@
 dnl  DBMAIL_MSG_CONFIGURE_START()
 dnl
 AC_DEFUN([DBMAIL_MSG_CONFIGURE_START], [dnl
-prefix="/usr/local"
-localstatedir="/var/run"
-sysconfdir="/etc"
 AC_MSG_RESULT([
 This is dbmail's GNU configure script.
 It's going to run a bunch of strange tests to hopefully
