@@ -1065,10 +1065,8 @@ int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...)
 
         fd = self->ci->tx;
 
-        if (feof(fd) || fflush(fd) < 0) {
+        if (feof(fd) || fflush(fd) < 0)
                 trace(TRACE_FATAL, "%s,%s: client socket closed", __FILE__, __func__);
-                return -1;
-        }
 
         ostream = g_mime_stream_fs_new(dup(fileno(fd)));
         fstream = g_mime_stream_filter_new_with_stream(ostream);
@@ -1081,11 +1079,8 @@ int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...)
         g_object_unref(ostream);
         g_object_unref(fstream);
 
-        if (len < 0) {
-                trace(TRACE_WARNING, "%s,%s: write to client socket failed", __FILE__, __func__);
-		g_free(re);
-                return -1;
-        }
+        if (len < 0)
+                trace(TRACE_FATAL, "%s,%s: write to client socket failed", __FILE__, __func__);
 
         if (result < maxlen)
                 trace(TRACE_DEBUG,"RESPONSE: [%s]", re);
