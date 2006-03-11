@@ -1,3 +1,18 @@
+2006-03-10  Paul J Stevens <paul@nfg.nl>
+
+	* configure.in, dbmail-message.c, debian/patches/00list, debug.c, debug.h, 
+	  dsn.c, dsn.h, imap4.c, lmtp.c, main.c, misc.c, pop3.c, timsieve.c:
+	resync
+	* db.c:
+	wrap imap append in transaction (closes: #312)
+	* dbmail-imapsession.c, imapcommands.c:
+	make imap expunge deal with empty mailboxes
+	* config.c, dbmail.conf, dbmail.h.in, dbmailtypes.h, imapd.c, lmtpd.c, 
+	  pop3d.c, server.c, server.h, timsieved.c:
+	make logfiles and pid-directory configurable
+	* debian/changelog, modules/authldap.c, pool.c:
+	minor cleanups
+
 2006-03-07  Aaron Stone  <aaron@serendipity.cx>
 
 	* misc.h, misc.c:

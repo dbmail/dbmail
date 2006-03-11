@@ -137,16 +137,18 @@
 
 #define CONFIG_ERROR_LEVEL TRACE_WARNING
 
-#define COPYRIGHT "(c) 1999-2004 IC&S, The Netherlands"
+#define COPYRIGHT "(c) 1999-2004 IC&S, 2004-2006 NFG, The Netherlands"
+
 /** default directory and extension for pidfiles */
 #define DEFAULT_PID_DIR "@localstatedir@/run"
 #define DEFAULT_PID_EXT ".pid"
+
 /** default configuration file */
 #define DEFAULT_CONFIG_FILE "@sysconfdir@/dbmail.conf"
 
 /** default log files */
-#define DEFAULT_LOG_FILE "@localstate@/log/dbmail.log"
-#define DEFAULT_ERROR_LOG "@localstate@/log/dbmail.err"
+#define DEFAULT_LOG_FILE "@localstatedir@/log/dbmail.log"
+#define DEFAULT_ERROR_LOG "@localstatedir@/log/dbmail.err"
 
 /** username of user that is owner of all mailboxes */
 #define SHARED_MAILBOX_USERNAME "__public__"
