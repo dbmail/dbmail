@@ -142,6 +142,7 @@ static void dump_to_file(const char *filename, const char *buf)
 /*  \brief create a new empty DbmailMessage struct
  *  \return the DbmailMessage
  */
+
 struct DbmailMessage * dbmail_message_new(void)
 {
 	struct DbmailMessage *self = g_new0(struct DbmailMessage,1);
