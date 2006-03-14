@@ -1184,6 +1184,8 @@ char *date_sql2imap(const char *sqldate)
 	
 	time_t ltime;
         char *last;
+	char t[IMAP_INTERNALDATE_LEN];
+	char q[IMAP_INTERNALDATE_LEN];
 
 	// bsd needs:
 	memset(&tm_sql_date, 0, sizeof(struct tm));
@@ -1194,12 +1196,13 @@ char *date_sql2imap(const char *sqldate)
                 return _imapdate;
         }
 
-	/* FIXME: this works fine on linux, but may cause dst offsets in netbsd. */
-//	ltime = mktime (&tm_sql_date);
-//	localtime_r(&ltime, &tm_imap_localtime);
-//	localtime_r(&ltime, &tm_sql_date);
+        strftime(q, sizeof(q), "%a, %d %b %Y %H:%M:%S", &tm_sql_date);
 
-        strftime(_imapdate, sizeof(_imapdate), "%a, %d %b %Y %H:%M:%S %z", &tm_sql_date);
+	ltime = mktime (&tm_sql_date);
+	localtime_r(&ltime, &tm_sql_date);
+	strftime(t, sizeof(t), "%z", &tm_sql_date);
+
+	snprintf(_imapdate,IMAP_INTERNALDATE_LEN, "%s %s", q, t);
         return _imapdate;
 }
 

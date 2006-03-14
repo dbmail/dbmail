@@ -1,3 +1,8 @@
+2006-03-11  Paul J Stevens <paul@nfg.nl>
+
+	* ChangeLog, configure.in, dbmail.h.in:
+	partially fix of autoconf
+
 2006-03-10  Paul J Stevens <paul@nfg.nl>
 
 	* configure.in, dbmail-message.c, debian/patches/00list, debug.c, debug.h, 

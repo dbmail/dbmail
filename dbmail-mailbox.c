@@ -912,7 +912,20 @@ static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u
 		value->type = IST_SET;
 		strncpy(value->search, search_keys[*idx], MAX_SEARCH_LEN);
 		(*idx)++;
-	
+		
+	/* ignore the charset. Let the database handle this */
+        } else if ( MATCH(key, "charset") )  {
+                (*idx)++;
+ 
+        } else if ( MATCH(key, "utf-8") ) {
+                (*idx)++;
+  
+        } else if ( MATCH(key, "us-ascii") )  {
+                (*idx)++;
+ 
+        } else if ( MATCH(key, "iso-8859-1") )  {
+                (*idx)++;
+ 
 	} else {
 		/* unknown search key */
 		g_free(value);
