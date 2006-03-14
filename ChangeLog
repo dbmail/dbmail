@@ -1,7 +1,14 @@
+2006-03-14  Paul J Stevens <paul@nfg.nl>
+
+	* ChangeLog, check_dbmail_imapd.c, dbmail-message.c, misc.c:
+	fix date_sql2imap
+	* dbmail-mailbox.c:
+	ignore charset in searching mailbox
+
 2006-03-11  Paul J Stevens <paul@nfg.nl>
 
 	* ChangeLog, configure.in, dbmail.h.in:
-	partially fix of autoconf
+	partial fix of autoconf
 
 2006-03-10  Paul J Stevens <paul@nfg.nl>
 
