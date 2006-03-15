@@ -4124,6 +4124,7 @@ int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * m
 {
 	/* query mailbox for LIST results */
 	char *mbxname, *name;
+	char *escaped_name;
 	GString *fqname;
 	int i=0;
 
@@ -4160,12 +4161,17 @@ int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * m
 	db_free_result();
 	
 	/* no_children */
+	if (! (escaped_name = dm_stresc(name)))
+		return -1;
+	
+			
 	snprintf(query, DEF_QUERYSIZE,
 			"SELECT COUNT(*) AS nr_children "
 			"FROM %smailboxes WHERE owner_idnr = '%llu' "
 			"AND name LIKE '%s%s%%' ",
-			DBPFX, user_idnr, name, MAILBOX_SEPARATOR);
-	
+			DBPFX, user_idnr, escaped_name, MAILBOX_SEPARATOR);
+	g_free(escaped_name);
+
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: db error", __FILE__, __func__);
 		return DM_EQUERY;
