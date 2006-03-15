@@ -4159,7 +4159,7 @@ int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * m
 	mb->no_inferiors=db_get_result_bool(0,i++);
 	db_free_result();
 	
-	escaped_named = dm_stresc(name);
+	escaped_name = dm_stresc(name);
 
 	/* no_children */
 	snprintf(query, DEF_QUERYSIZE,
