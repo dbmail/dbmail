@@ -9,6 +9,7 @@ struct ImapSession {
 	clientinfo_t *ci;
 	gboolean use_uid;
 	u64_t msg_idnr;  // replace this with a GList
+	GMimeStream *fstream; // gmime filter wrapper around the TX handler in clientinfo_t
 	char *tag;
 	char *command;
 	char **args;
