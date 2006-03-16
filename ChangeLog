@@ -1,3 +1,11 @@
+2006-03-15  Paul J Stevens <paul@nfg.nl>
+
+	* imapd.c, lmtpd.c, pop3d.c, server.c, timsieved.c:
+	read config before freopen on file descriptors, and bail out in case
+	of failure
+	* db.c, misc.c:
+	escape query in nochildren code (closes: #314)
+
 2006-03-14  Paul J Stevens <paul@nfg.nl>
 
 	* ChangeLog, check_dbmail_imapd.c, dbmail-message.c, misc.c:
