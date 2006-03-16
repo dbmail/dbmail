@@ -4123,7 +4123,8 @@ void convert_inbox_to_uppercase(char *name)
 int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * mb)
 {
 	/* query mailbox for LIST results */
-	char *mbxname, *name, *escaped_name;
+	char *mbxname, *name;
+	char *escaped_name;
 	GString *fqname;
 	int i=0;
 
@@ -4159,23 +4160,25 @@ int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * m
 	mb->no_inferiors=db_get_result_bool(0,i++);
 	db_free_result();
 	
-	escaped_name = dm_stresc(name);
-
 	/* no_children */
+	if (! (escaped_name = dm_stresc(name)))
+		return -1;
+	
+			
 	snprintf(query, DEF_QUERYSIZE,
 			"SELECT COUNT(*) AS nr_children "
 			"FROM %smailboxes WHERE owner_idnr = '%llu' "
 			"AND name LIKE '%s%s%%' ",
 			DBPFX, user_idnr, escaped_name, MAILBOX_SEPARATOR);
-	dm_free(escaped_name);
-	g_free(name);
-	
+	g_free(escaped_name);
+
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: db error", __FILE__, __func__);
 		return DM_EQUERY;
 	}
 	mb->no_children=db_get_result_u64(0,0)?0:1;
 	
+	g_free(name);
 	db_free_result();
 	return DM_SUCCESS;
 }

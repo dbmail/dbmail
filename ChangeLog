@@ -1,12 +1,22 @@
-2006-03-15  Aaron Stone  <aaron@serendipity.cx>
+2006-03-15  Paul J Stevens <paul@nfg.nl>
 
-	* db.c:
-	Adapted mailbox escaping patch from 2.0 series, bug #314.
+	* imapd.c, lmtpd.c, pop3d.c, server.c, timsieved.c:
+	read config before freopen on file descriptors, and bail out in case
+	of failure
+	* db.c, misc.c:
+	escape query in nochildren code (closes: #314)
+
+2006-03-14  Paul J Stevens <paul@nfg.nl>
+
+	* ChangeLog, check_dbmail_imapd.c, dbmail-message.c, misc.c:
+	fix date_sql2imap
+	* dbmail-mailbox.c:
+	ignore charset in searching mailbox
 
 2006-03-11  Paul J Stevens <paul@nfg.nl>
 
 	* ChangeLog, configure.in, dbmail.h.in:
-	partially fix of autoconf
+	partial fix of autoconf
 
 2006-03-10  Paul J Stevens <paul@nfg.nl>
 

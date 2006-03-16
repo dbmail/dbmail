@@ -121,8 +121,9 @@ int main(int argc, char *argv[])
 
 	SetMainSigHandler();
 	
+	get_config(&config);
+	
 	if (no_daemonize) {
-		get_config(&config);
 		StartCliServer(&config);
 		config_free();
 		g_mime_shutdown();
@@ -135,7 +136,6 @@ int main(int argc, char *argv[])
 	 * we may actually be a child of the original process. */
 	pidfile_create(pidFile, getpid());
 
-	get_config(&config);
 	do {
 		result = server_run(&config);
 		

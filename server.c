@@ -154,6 +154,9 @@ int StartServer(serverConfig_t * conf)
 
 pid_t server_daemonize(serverConfig_t *conf)
 {
+	int serr;
+	assert(conf);
+	
 	if (fork())
 		exit(0);
 	setsid();
@@ -162,9 +165,22 @@ pid_t server_daemonize(serverConfig_t *conf)
 
 	chdir("/");
 	umask(0);
-	freopen(conf->log,"a",stdout);
-	freopen(conf->error_log,"a",stderr);
-	freopen("/dev/null","r",stdin);
+	
+	if (! (freopen(conf->log,"a",stdout))) {
+		serr = errno;
+		trace(TRACE_FATAL,"%s,%s: freopen failed on [%s] [%s]", 
+				__FILE__, __func__, conf->log, strerror(serr));
+	}
+	if (! (freopen(conf->error_log,"a",stderr))) {
+		serr = errno;
+		trace(TRACE_FATAL,"%s,%s: freopen failed on [%s] [%s]", 
+				__FILE__, __func__, conf->error_log, strerror(serr));
+	}
+	if (! (freopen("/dev/null","r",stdin))) {
+		serr = errno;
+		trace(TRACE_FATAL,"%s,%s: freopen failed on stdin [%s]", 
+				__FILE__, __func__, strerror(serr));
+	}
 	
 	trace(TRACE_DEBUG,"%s,%s: sid: [%d]", __FILE__, 
 			__func__, getsid(0));

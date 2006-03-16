@@ -579,9 +579,17 @@ GList * g_list_append_printf(GList * list, char * format, ...)
 char * dm_stresc(const char * from)
 {
 	char *to;
+
+	assert(from);
+
 	if (! (to = g_new0(char,(strlen(from)+1) * 2 + 1)))
 		return NULL;
-	db_escape_string(to, from, strlen(from));
+	if (! db_escape_string(to, from, strlen(from))) {
+		trace(TRACE_ERROR,"%s,%s: error sql escaping string", __FILE__, __func__);
+		g_free(to);
+		return NULL;
+	}
+
 	return to;
 }
 
