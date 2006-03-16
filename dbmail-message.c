@@ -164,6 +164,9 @@ struct DbmailMessage * dbmail_message_new(void)
 
 void dbmail_message_free(struct DbmailMessage *self)
 {
+	if (! self)
+		return;
+
 	if (self->headers)
 		g_relation_destroy(self->headers);
 	if (self->content)

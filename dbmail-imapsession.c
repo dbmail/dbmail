@@ -107,8 +107,20 @@ struct ImapSession * dbmail_imap_session_resetFi(struct ImapSession * self)
      
 struct ImapSession * dbmail_imap_session_setClientinfo(struct ImapSession * self, clientinfo_t *ci)
 {
+	GMimeStream *ostream;
+        GMimeFilter *filter;
+	
 	self->ci = g_new0(clientinfo_t,1);
 	memcpy(self->ci, ci, sizeof(clientinfo_t));
+	
+        ostream = g_mime_stream_fs_new(dup(fileno(self->ci->tx)));
+        self->fstream = g_mime_stream_filter_new_with_stream(ostream);
+        filter = g_mime_filter_crlf_new(GMIME_FILTER_CRLF_ENCODE,GMIME_FILTER_CRLF_MODE_CRLF_ONLY);
+        g_mime_stream_filter_add((GMimeStreamFilter *) self->fstream, filter);
+
+        g_object_unref(filter);
+        g_object_unref(ostream);
+
 	return self;
 }
 struct ImapSession * dbmail_imap_session_setMsginfo(struct ImapSession * self, msginfo_t * msginfo)
@@ -159,6 +171,11 @@ void dbmail_imap_session_delete(struct ImapSession * self)
 		g_free(self->ci);
 		self->ci = NULL;
 	}
+	if (self->fstream) {
+		g_object_unref(self->fstream);
+		self->fstream = NULL;
+	}
+
 	if (self->msginfo) {
 		g_free(self->msginfo);
 		self->msginfo = NULL;
@@ -1047,8 +1064,6 @@ int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...)
         FILE * fd;
         int maxlen=100;
         int result = 0;
-        GMimeStream *ostream, *fstream;
-        GMimeFilter *filter;
         gchar *ln;
 
         gchar *re = g_new0(gchar, maxlen+1);
@@ -1068,17 +1083,8 @@ int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...)
         if (feof(fd) || fflush(fd) < 0)
                 trace(TRACE_FATAL, "%s,%s: client socket closed", __FILE__, __func__);
 
-        ostream = g_mime_stream_fs_new(dup(fileno(fd)));
-        fstream = g_mime_stream_filter_new_with_stream(ostream);
-        filter = g_mime_filter_crlf_new(GMIME_FILTER_CRLF_ENCODE,GMIME_FILTER_CRLF_MODE_CRLF_ONLY);
-        g_mime_stream_filter_add((GMimeStreamFilter *) fstream, filter);
-        len = g_mime_stream_write_string(fstream,ln);
-
-        g_free(ln);
-        g_object_unref(filter);
-        g_object_unref(ostream);
-        g_object_unref(fstream);
-
+        len = g_mime_stream_write_string(self->fstream,ln);
+	
         if (len < 0)
                 trace(TRACE_FATAL, "%s,%s: write to client socket failed", __FILE__, __func__);
 
@@ -1086,7 +1092,9 @@ int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...)
                 trace(TRACE_DEBUG,"RESPONSE: [%s]", re);
         else
                 trace(TRACE_DEBUG,"RESPONSE: [%s...]", re);
+
         g_free(re);
+	g_free(ln);
 
         return len;
 }
