@@ -3642,58 +3642,6 @@ int db_get_rfcsize(u64_t msg_idnr, u64_t mailbox_idnr, u64_t * rfc_size)
 	return DM_EGENERAL;
 }
 
-int db_get_main_header(u64_t msg_idnr, struct dm_list *hdrlist, const char *headername)
-{
-	struct mime_record *mr;
-	int i,j;
-
-	if (!hdrlist)
-		return DM_SUCCESS;
-	if (!headername)
-		return DM_SUCCESS;
-
-	if (hdrlist->start)
-		dm_list_free(&hdrlist->start);
-
-	dm_list_init(hdrlist);
-	
-	snprintf(query, DEF_QUERYSIZE, "SELECT headername, headervalue "
-			"FROM %sheadervalue v "
-			"JOIN %sheadername n ON n.id=v.headername_id "
-			"JOIN %sphysmessage p ON p.id=v.physmessage_id "
-			"JOIN %smessages m ON m.physmessage_id=p.id "
-			"WHERE m.message_idnr='%llu' "
-			"AND headername = \"%s\"",
-			DBPFX, DBPFX, DBPFX, DBPFX, msg_idnr, headername);
-	
-	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: could not get message headers",
-		      __FILE__, __func__);
-		return DM_EQUERY;
-	}
-
-	if ((j = db_num_rows()) <= 0) {
-		trace(TRACE_ERROR, "%s,%s: no message headers found for message",
-		      __FILE__, __func__);
-		db_free_result();
-		return DM_EQUERY;
-	}
-	
-	if (! (mr = g_new0(struct mime_record, 1)))
-		trace(TRACE_FATAL,"%s,%s: oom", __FILE__, __func__);
-	
-	for (i=0; i<j; i++) {
-		g_strlcpy(mr->field, (char *)db_get_result(i, 0), MIME_FIELD_MAX);
-		g_strlcpy(mr->value, (char *)db_get_result(i, 1), MIME_VALUE_MAX);
-		dm_list_nodeadd(hdrlist, mr, sizeof(*mr));
-	}
-	
-	g_free(mr);
-	db_free_result();
-
-	return DM_SUCCESS;
-}
-
 int db_mailbox_msg_match(u64_t mailbox_idnr, u64_t msg_idnr)
 {
 	int val;
