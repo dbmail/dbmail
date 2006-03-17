@@ -201,7 +201,7 @@ pid_t CreateChild(ChildInfo_t * info)
 
 int PerformChildTask(ChildInfo_t * info)
 {
-	int i, len, clientSocket;
+	int i, len, serr, clientSocket;
 	struct sockaddr_in saClient;
 	struct hostent *clientHost;
 
@@ -245,8 +245,11 @@ int PerformChildTask(ChildInfo_t * info)
 		clientSocket = accept(info->listenSocket, (struct sockaddr *) &saClient, (socklen_t *)&len);
 
 		if (clientSocket == -1) {
+			serr = errno;
 			i--;	/* don't count this as a connect */
-			trace(TRACE_INFO, "%s,%s: accept failed", __FILE__, __func__);
+			trace(TRACE_INFO, "%s,%s: accept failed [%s]", 
+					__FILE__, __func__, strerror(serr));
+			errno = serr;
 			continue;	/* accept failed, refuse connection & continue */
 		}
 
