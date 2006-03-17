@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: main.c 2021 2006-03-10 09:12:40Z paul $
+/* $Id: main.c 2030 2006-03-16 22:50:19Z aaron $
  * 
  * main file for dbmail-smtp  */
 
@@ -35,7 +35,6 @@
 /* syslog */
 #define PNAME "dbmail/smtp"
 
-struct dm_list mimelist;		/* raw unformatted mimefields and values */
 struct dm_list dsnusers;		/* list of deliver_to_user_t structs */
 struct dm_list users;		/* list of email addresses in message */
 struct element *tmp;
@@ -90,7 +89,6 @@ int main(int argc, char *argv[])
 
 	dm_list_init(&users);
 	dm_list_init(&dsnusers);
-	dm_list_init(&mimelist);
 
 	/* Check for commandline options.
 	 * The initial '-' means that arguments which are not associated
@@ -259,14 +257,6 @@ int main(int argc, char *argv[])
 		goto freeall;
 	}
 
-	/* parse the list and scan for field and content */
-	if (! (msg = mime_fetch_headers(msg, &mimelist))) {
-		trace(TRACE_ERROR, "%s,%s: mime_fetch_headers failed",
-		      __FILE__,__func__);
-		exitcode = EX_TEMPFAIL;
-		goto freeall;
-	}
-
 	/* Use the -r flag to set the Return-Path header,
 	 * or leave an existing value,
 	 * or copy the From header,
@@ -286,8 +276,9 @@ int main(int argc, char *argv[])
 	/* If the NORMAL delivery mode has been selected... */
 	if (deliver_to_header != NULL) {
 		/* parse for destination addresses */
-		trace(TRACE_DEBUG, "%s,%s: scanning for [%s]", __FILE__, __func__, deliver_to_header);
-		if (mail_address_build_list(deliver_to_header, &users, &mimelist) != 0) {
+		trace(TRACE_DEBUG, "%s,%s: scanning for [%s]",
+				__FILE__, __func__, deliver_to_header);
+		if (find_deliver_to_header_addresses(msg, deliver_to_header, &users) != 0) {
 			trace(TRACE_MESSAGE, "%s,%s: no email addresses (scanned for %s)",
 					__FILE__, __func__, deliver_to_header);
 			exitcode = EX_NOUSER;
@@ -365,7 +356,6 @@ int main(int argc, char *argv[])
 
 	dbmail_message_free(msg);
 	dsnuser_free_list(&dsnusers);
-	dm_list_free(&mimelist.start);
 	dm_list_free(&users.start);
 	dm_free(returnpath);
 

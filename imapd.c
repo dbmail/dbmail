@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: imapd.c 2028 2006-03-16 08:38:06Z paul $
+/* $Id: imapd.c 2031 2006-03-17 03:20:47Z aaron $
  *
  * imapd.c
  * 
@@ -55,7 +55,7 @@ int do_showhelp(void) {
 	printf("     -f file   specify an alternative config file\n");
 	printf("     -p file   specify an alternative runtime pidfile\n");
 	printf("     -n        do not daemonize (no children are forked)\n");
-	printf("     -v        log to the console (only useful with -n)\n");
+	printf("     -v        verbose logging to syslog and stderr\n");
 	printf("     -V        show the version\n");
 	printf("     -h        show this help message\n");
 
@@ -65,7 +65,7 @@ int do_showhelp(void) {
 int main(int argc, char *argv[])
 {
 	serverConfig_t config;
-	int result, no_daemonize = 0;
+	int result, no_daemonize = 0, log_verbose = 0;
 	int opt;
 
 	g_mime_init(0);
@@ -76,10 +76,10 @@ int main(int argc, char *argv[])
 	while ((opt = getopt(argc, argv, "vVhqnf:p:")) != -1) {
 		switch (opt) {
 		case 'v':
-			/* TODO: Perhaps verbose should log to the console with -n? */
+			log_verbose = 1;
 			break;
 		case 'V':
-			printf("\n*** DBMAIL: dbmail-imapd version $Revision: 2028 $ %s\n\n", 
+			printf("\n*** DBMAIL: dbmail-imapd version $Revision: 2031 $ %s\n\n", 
 					COPYRIGHT);
 			return 0;
 		case 'n':
@@ -114,6 +114,11 @@ int main(int argc, char *argv[])
 	SetMainSigHandler();
 
 	get_config(&config);
+	
+	/* Override SetTraceLevel. */
+	if (log_verbose) {
+		configure_debug(5,5);
+	}
 	
 	if (no_daemonize) {
 		StartCliServer(&config);
