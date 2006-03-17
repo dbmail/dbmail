@@ -146,9 +146,7 @@ int StartServer(serverConfig_t * conf)
  	manage_stop_children();
  	scoreboard_delete();
 
-	if (strlen(conf->socket) > 0)
-		unlink(conf->socket);
- 
+
 	return Restart;
 }
 
@@ -241,6 +239,17 @@ int server_run(serverConfig_t *conf)
 			kill(pid, SIGKILL);
 			result = 0;
 		}
+
+		if (strlen(conf->socket) > 0) {
+			if (unlink(conf->socket)) {
+				serrno = errno;
+				trace(TRACE_ERROR, "%s,%s: unlinking unix socket failed [%s]",
+						__FILE__, __func__, strerror(serrno));
+				errno = serrno;
+			}
+		}
+ 
+
 		break;
 	}
 	
