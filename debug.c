@@ -48,15 +48,16 @@ void trace(trace_t level, char *formatstring, ...)
 {
 	va_list argp;
 
-	va_start(argp, formatstring);
-
 	if (level <= TRACE_STDERR) {
+		va_start(argp, formatstring);
 		vfprintf(stderr, formatstring, argp);
 		if (formatstring[strlen(formatstring)] != '\n')
 			fprintf(stderr, "\n");
+		va_end(argp);
 	}
 
 	if (level <= TRACE_SYSLOG) {
+		va_start(argp, formatstring);
 		if (formatstring[strlen(formatstring)] == '\n')
 			formatstring[strlen(formatstring)] = '\0';
 		if (level <= TRACE_WARNING) {
@@ -64,9 +65,8 @@ void trace(trace_t level, char *formatstring, ...)
 			vsyslog(LOG_ALERT, formatstring, argp);
 		} else
 			vsyslog(LOG_NOTICE, formatstring, argp);
+		va_end(argp);
 	}
-
-	va_end(argp);
 
 	/* Bail out on fatal errors. */
 	if (level == TRACE_FATAL)
