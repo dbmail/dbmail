@@ -113,7 +113,9 @@ int main(int argc, char *argv[])
 				} else {
 					deliver_to_header = optarg;
 				}
-			}
+			} else
+				deliver_to_header = "delivered-to";
+			
 
 			break;
 
@@ -201,9 +203,6 @@ int main(int argc, char *argv[])
 			goto freeall;
 		}
 	}
-
-	if (!deliver_to_header)
-		deliver_to_header = "delivered-to";
 
 	/* ...or if there weren't any command line arguments at all. */
 	if (argc < 2) {
