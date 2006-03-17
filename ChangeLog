@@ -1,5 +1,7 @@
 2006-03-17  Paul J Stevens <paul@nfg.nl>
 
+	* debian/dbmail.postinst, debian/rules:
+	(debian) call ldconfig and install logrotate file
 	* timsieve.c:
 	replace fprintf calls with ci_write wrapper
 	* debug.c:
