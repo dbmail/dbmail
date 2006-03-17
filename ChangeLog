@@ -1,3 +1,17 @@
+2006-03-17  Paul J Stevens <paul@nfg.nl>
+
+	* serverchild.c:
+	make accept failure fail louder
+	* acl.c, acl.h:
+	minor cleanups
+	* list.c, list.h:
+	remove unused code
+	* dbmail-imapsession.c:
+	make _imap_show_body_section rfc compliant by always including a
+	blank line
+	* db.c, dm_imaputil.c, main.c:
+	minor cleanups
+
 2006-03-16  Aaron Stone  <aaron@serendipity.cx>
 
 	* mime.h, mime.c:
