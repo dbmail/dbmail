@@ -1,5 +1,9 @@
 2006-03-17  Paul J Stevens <paul@nfg.nl>
 
+	* check_dbmail_imapd.c:
+	fix testcases after mime.c cleanup
+	* server.c:
+	fix unlinking of unix socket on exit
 	* serverchild.c:
 	make accept failure fail louder
 	* acl.c, acl.h:
