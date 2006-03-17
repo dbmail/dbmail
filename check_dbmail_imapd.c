@@ -48,17 +48,6 @@ extern char *multipart_message;
 extern char *multipart_message_part;
 extern char *raw_lmtp_data;
 
-void print_mimelist(struct dm_list *mimelist)
-{
-	struct element *el;
-	struct mime_record *mr;
-	el = dm_list_getstart(mimelist);
-	while (el) {
-		mr = el->data;
-		printf("field [%s], value [%s]\n", mr->field, mr->value);
-		el = el->nextnode;
-	}
-}
 /*
  *
  * the test fixtures
@@ -209,67 +198,27 @@ START_TEST(test_imap_bodyfetch)
 }
 END_TEST
 
-START_TEST(test_mime_fetch_headers)
-{
-	struct dm_list mimelist;
-	struct mime_record *mr;
-	struct DbmailMessage *m, *p;
-
-	
-	m = dbmail_message_new();
-	m = dbmail_message_init_with_string(m,g_string_new(multipart_message));
-	
-	dm_list_init(&mimelist);
-	mime_fetch_headers(m,&mimelist);
-	fail_unless(mimelist.total_nodes==10, "number of message-headers incorrect");
-	mr = (mimelist.start)->data;
-	fail_unless(strcmp(mr->field, "Content-Type")==0, "Field name incorrect");
-	fail_unless(strcmp(mr->value, "multipart/mixed; boundary=boundary")==0, "Field value incorrect");
-	
-	dm_list_free(&mimelist.start);
-
-	p = dbmail_message_new();
-	p = dbmail_message_init_with_string(p,g_string_new(multipart_message_part));
-	
-	dm_list_init(&mimelist);
-	mime_fetch_headers(p,&mimelist);
-	fail_unless(mimelist.total_nodes==3, "number of mime-headers incorrect");
-	mr = (mimelist.start)->data;
-	fail_unless(strcmp(mr->field, "Content-Disposition")==0, "Field name incorrect");
-	fail_unless(strcmp(mr->value, "inline; filename=\"mime_alternative\"")==0, "Field value incorrect");
-	
-	dm_list_free(&mimelist.start);
-
-	dbmail_message_free(m);
-	dbmail_message_free(p);
-
-}
-END_TEST
-
-//int mail_address_build_list(char *scan_for_field, struct dm_list *targetlist,
-//	                  struct dm_list *mimelist)
-START_TEST(test_mail_address_build_list)
+//int find_deliver_to_header_addresses(struct DbmailMessage *self, char *scan_for_field, 
+//	struct dm_list *targetlist)
+//
+START_TEST(test_find_deliver_to_header_addresses)
 {
 	int result;
 	struct dm_list targetlist;
-	struct dm_list mimelist;
 	struct DbmailMessage *m;
 
 	m = dbmail_message_new();
 	m = dbmail_message_init_with_string(m,g_string_new(multipart_message));
 	
 	dm_list_init(&targetlist);
-	dm_list_init(&mimelist);
 	
-	mime_fetch_headers(m, &mimelist);
-
-	result = mail_address_build_list("Cc", &targetlist, &mimelist);
+	result = find_deliver_to_header_addresses(m, "Cc", &targetlist);
 	struct element *el;
 	el = targetlist.start;
 
-	fail_unless(result==0, "mail_address_build_list failed");
-	fail_unless(targetlist.total_nodes==2,"mail_address_build_list failed");
-	fail_unless(strcmp((char *)el->data,"nobody@test123.com")==0, "mail_address_build_list failed");
+	fail_unless(result==0, "find_deliver_to_header_addresses failed");
+	fail_unless(targetlist.total_nodes==2,"find_deliver_to_header_addresses failed");
+	fail_unless(strcmp((char *)el->data,"nobody@test123.com")==0, "find_deliver_to_header_addresses failed");
 
 	dbmail_message_free(m);
 }
@@ -601,8 +550,7 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_session, test_imap_message_fetch_headers);
 	
 	tcase_add_checked_fixture(tc_mime, setup, teardown);
-	tcase_add_test(tc_mime, test_mime_fetch_headers);
-	tcase_add_test(tc_mime, test_mail_address_build_list);
+	tcase_add_test(tc_mime, test_find_deliver_to_header_addresses);
 	tcase_add_test(tc_mime, test_g_mime_object_get_body);
 
 	tcase_add_checked_fixture(tc_util, setup, teardown);
