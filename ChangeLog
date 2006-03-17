@@ -7,7 +7,9 @@
 	Got rid of calls to the other functions in mime.c.
 	* db.c:
 	Deleted db_get_main_header because it relied upon structs from mime.h.
-	Adapted patch from bug #314.
+	* imapd.c, pop3d.c, timsieved.c, lmtpd.c:
+	The -v option overrides trace levels and sets them all to maximum;
+	thanks to Matthew Saylor for the patch and suggestion to fix this.
 
 2006-03-16  Paul J Stevens <paul@nfg.nl>
 
