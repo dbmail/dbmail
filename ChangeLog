@@ -1,5 +1,7 @@
 2006-03-17  Paul J Stevens <paul@nfg.nl>
 
+	* acinclude.m4, configure.in, dbmail.h.in, debian/rules:
+	fix autobuild chain to allow for sane defaults
 	* check_dbmail_imapd.c:
 	fix testcases after mime.c cleanup
 	* server.c:
