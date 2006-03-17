@@ -1,5 +1,11 @@
 2006-03-17  Paul J Stevens <paul@nfg.nl>
 
+	* timsieve.c:
+	replace fprintf calls with ci_write wrapper
+	* debug.c:
+	fix race condition in accessing va_list in trace calls
+	* debian/control:
+	update for allowing builds on amd64
 	* debian/changelog, debian/control, debian/rules:
 	fix debian build
 	* acinclude.m4, configure.in, dbmail.h.in, debian/rules:
