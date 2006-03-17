@@ -91,22 +91,22 @@ int tims_handle_connection(clientinfo_t * ci)
 	gethostname(myhostname, 64);
 	myhostname[63] = 0;	/* make sure string is terminated */
 
-	buffer = (char *) dm_malloc(INCOMING_BUFFER_SIZE * sizeof(char));
-
-	if (!buffer) {
-		trace(TRACE_MESSAGE, "tims_handle_connection(): Could not allocate buffer");
+	if (! (buffer = g_new0(char, INCOMING_BUFFER_SIZE))) {
+		trace(TRACE_MESSAGE, "%s,%s: Could not allocate buffer",
+				__FILE__, __func__);
 		return 0;
 	}
 
-	if (ci->tx) {
-		/* This is a macro shared with TIMS_CAPA, per the draft RFC. */
-		GREETING(ci->tx);
-		fflush(ci->tx);
-	} else {
-		trace(TRACE_MESSAGE, "tims_handle_connection(): TX stream is null!");
+	if (! ci->tx) {
+		trace(TRACE_MESSAGE, "%s,%s: TX stream is null!",
+				__FILE__, __func__);
 		dm_free(buffer);
 		return 0;
 	}
+	
+	/* This is a macro shared with TIMS_CAPA, per the draft RFC. */
+	GREETING(ci->tx);
+	fflush(ci->tx);
 
 	while (done > 0) {
 		/* set the timeout counter */
@@ -125,8 +125,7 @@ int tims_handle_connection(clientinfo_t * ci)
 					dm_free(buffer);
 					return 0;
 				}
-			}
-			while (ferror(ci->rx) && errno == EINTR);
+			} while (ferror(ci->rx) && errno == EINTR);
 
 			if (buffer[cnt] == '\n' || feof(ci->rx) || ferror(ci->rx)) {
 				if (cnt > 0) {
@@ -136,7 +135,6 @@ int tims_handle_connection(clientinfo_t * ci)
 						break;
 					} else {
 						/* Overwrite those silly extra \r\n's */
-					
 						/* Incremented to 0 at top of loop */
 						cnt = -1;
 					}
@@ -170,7 +168,6 @@ int tims_handle_connection(clientinfo_t * ci)
 int tims_reset(PopSession_t * session)
 {
 	session->state = STRT;
-
 	return 1;
 }
 
@@ -181,7 +178,8 @@ int tims_error(PopSession_t * session, void *stream,
 	va_list argp;
 
 	if (session->error_count >= MAX_ERRORS) {
-		trace(TRACE_MESSAGE, "tims_error(): too many errors (MAX_ERRORS is %d)", MAX_ERRORS);
+		trace(TRACE_MESSAGE, "%s,%s: too many errors (MAX_ERRORS is %d)",
+				__FILE__, __func__, MAX_ERRORS);
 		ci_write((FILE *) stream, "BYE \"Too many errors, closing connection.\"\r\n");
 		session->SessionResult = 2;	/* possible flood */
 		tims_reset(session);
@@ -192,7 +190,8 @@ int tims_error(PopSession_t * session, void *stream,
 		va_end(argp);
 	}
 
-	trace(TRACE_DEBUG, "tims_error(): an invalid command was issued");
+	trace(TRACE_DEBUG, "%s,%s: an invalid command was issued",
+			__FILE__, __func__);
 	session->error_count++;
 	return 1;
 }
@@ -209,10 +208,18 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 	char *command, *value;
 	int cmdtype;
 	int indx = 0;
+	
+	size_t tmplen = 0;
+	size_t tmppos = 0;
+	char *tmpleft = NULL;
 
+	char *f_buf = NULL;
+	sort_result_t *sort_result = NULL;
+	
 	/* buffer overflow attempt */
 	if (strlen(buffer) > MAX_IN_BUFFER) {
-		trace(TRACE_DEBUG, "tims(): buffer overflow attempt");
+		trace(TRACE_DEBUG, "%s,%s: buffer overflow attempt",
+				__FILE__, __func__);
 		return -3;
 	}
 
@@ -223,7 +230,8 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 	/* end buffer */
 	buffer[indx] = '\0';
 
-	trace(TRACE_DEBUG, "tims(): incoming buffer: [%s]", buffer);
+	trace(TRACE_DEBUG, "%s,%s: incoming buffer: [%s]",
+			__FILE__, __func__, buffer);
 
 	command = buffer;
 
@@ -236,7 +244,8 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 		if (strlen(value) == 0) {
 			value = NULL;	/* no value specified */
 		} else {
-			trace(TRACE_DEBUG, "tims(): command issued: cmd [%s], val [%s]",
+			trace(TRACE_DEBUG, "%s,%s: command issued: cmd [%s], val [%s]",
+					__FILE__, __func__,
 			      command, value);
 		}
 	}
@@ -245,7 +254,8 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 		if (strcasecmp(command, commands[cmdtype]) == 0)
 			break;
 
-	trace(TRACE_DEBUG, "tims(): command looked up as commandtype %d", cmdtype);
+	trace(TRACE_DEBUG, "%s,%s: command looked up as commandtype %d",
+			__FILE__, __func__, cmdtype);
 
 	/* commands that are allowed to have no arguments */
 	if ((value == NULL) && !(cmdtype < TIMS_NOARGS) && (cmdtype < TIMS_END)) {
@@ -343,12 +353,14 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 				}	/* if... tmplen < 1 */
 			} /* if... strncasecmp() == "PLAIN" */
 			else {
-				trace(TRACE_INFO, "tims(): Input simply was not PLAIN auth");
+				trace(TRACE_INFO, "%s,%s: Input simply was not PLAIN auth",
+						__FILE__, __func__);
 				ci_write((FILE *) stream, "NO \"Authentication scheme not supported.\"\r\n");
 			}
 		} /* if... strlen() < "PLAIN" */
 		else {
-			trace(TRACE_INFO, "tims(): Input too short to possibly be PLAIN auth");
+			trace(TRACE_INFO, "%s,%s: Input too short to possibly be PLAIN auth",
+					__FILE__, __func__);
 			ci_write((FILE *) stream, "NO \"Authentication scheme not supported.\"\r\n");
 		}
 
@@ -356,151 +368,156 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 	case TIMS_PUTS:
 		if (session->state != AUTH) {
 			ci_write((FILE *) stream, "NO \"Please authenticate first.\"\r\n");
+			break;
+		}
+		
+		tmplen = 0;
+		tmppos = 0;
+		tmpleft = NULL;
+
+		find_bounded(value, '"', '"', &tmpleft, &tmplen, &tmppos);
+
+		if (tmplen < 1) {
+			/* Possibly an empty password... */
+			ci_write((FILE *) stream, "NO \"Script name required.\"\r\n");
+			break;
+		}
+
+		char scriptname[MAX_SIEVE_SCRIPTNAME + 1];
+
+		strncpy(scriptname, tmpleft, (MAX_SIEVE_SCRIPTNAME < tmplen ?  MAX_SIEVE_SCRIPTNAME : tmplen));
+		/* Of course, be sure to NULL terminate, because strncpy() likely won't */
+		scriptname[(MAX_SIEVE_SCRIPTNAME < tmplen ?  MAX_SIEVE_SCRIPTNAME : tmplen)] = '\0';
+		dm_free(tmpleft);
+
+		/* Offset from the previous match to make sure not to pull
+		 * the "length" from a script with a malicious name */
+		find_bounded(value + tmppos, '{', '+', &tmpleft, &tmplen, &tmppos);
+
+		if (tmplen < 1) {
+			/* Possibly an empty password... */
+			ci_write((FILE *) stream, "NO \"Length required.\"\r\n");
+			break;
+		}
+		
+		u64_t scriptlen;	/* Actually, script length must be 32-bit unsigned int. */
+		char tmpcharlen[11];	/* A 32-bit unsigned int is ten decimal digits in length. */
+
+		strncpy(tmpcharlen, tmpleft, (10 < tmplen ? 10 : tmplen));
+		tmpcharlen[(10 < tmplen ? 10 : tmplen)] = '\0';
+		dm_free(tmpleft);
+
+		scriptlen = strtoull(tmpcharlen, NULL, 10);
+		trace(TRACE_INFO, "%s, %s: Client sending script of length [%llu]",
+				__FILE__, __func__, scriptlen);
+		if (scriptlen >= UINT_MAX) {
+			trace(TRACE_INFO, "%s, %s: Length [%llu] is larger than UINT_MAX [%u]",
+					__FILE__, __func__, scriptlen, UINT_MAX);
+			ci_write((FILE *) stream, "NO \"Invalid script length.\"\r\n");
+			break;
+		}
+		
+
+		if (0 != read_from_stream ((FILE *) instream, &f_buf, scriptlen)) {
+			trace (TRACE_INFO, "%s, %s: Error reading script with read_from_stream()",
+					__FILE__, __func__);
+			ci_write((FILE *) stream, "NO \"Error reading script.\"\r\n");
+			break;
+		}
+		
+		if (0 != db_check_sievescript_quota(session->useridnr, scriptlen)) {
+			trace(TRACE_INFO, "%s, %s: Script exceeds user's quota, dumping it",
+					__FILE__, __func__);
+			ci_write((FILE *) stream, "NO \"Script exceeds available space.\"\r\n");
+			break;
+		}
+
+
+		/* Store the script temporarily,
+		 * validate it, then rename it. */
+		if (0 != db_add_sievescript(session->useridnr, "@!temp-script!@", f_buf)) {
+			trace(TRACE_INFO, "%s, %s: Error inserting script",
+					__FILE__, __func__);
+			ci_write((FILE *) stream, "NO \"Error inserting script.\"\r\n");
+			db_delete_sievescript(session->useridnr, "@!temp-script!@");
+			break;
+		}
+		
+		sort_result = sort_validate(session->useridnr, "@!temp-script!@");
+		if (sort_result == NULL) {
+			trace(TRACE_INFO, "%s, %s: Error inserting script",
+					__FILE__, __func__);
+			ci_write((FILE *) stream, "NO \"Error inserting script.\"\r\n");
+			db_delete_sievescript(session->useridnr, "@!temp-script!@");
+		} else if (sort_get_error(sort_result) > 0) {
+			trace(TRACE_INFO, "%s, %s: Script has syntax errrors: [%s]",
+					__FILE__, __func__, sort_get_errormsg(sort_result));
+			ci_write((FILE *) stream, "NO \"Script error: %s.\"\r\n",
+					sort_get_errormsg(sort_result));
+			db_delete_sievescript(session->useridnr, "@!temp-script!@");
 		} else {
-			size_t tmplen = 0;
-			size_t tmppos = 0;
-			char *tmpleft = NULL;
-
-			find_bounded(value, '"', '"', &tmpleft, &tmplen, &tmppos);
-
-			if (tmplen < 1) {
-				/* Possibly an empty password... */
-				ci_write((FILE *) stream, "NO \"Script name required.\"\r\n");
+			/* According to the draft RFC, a script with the same
+			 * name as an existing script should [atomically] replace it. */
+			if (0 != db_rename_sievescript(session->useridnr, "@!temp-script!@", scriptname)) {
+				trace(TRACE_INFO, "%s, %s: Error inserting script",
+						__FILE__, __func__);
+				ci_write((FILE *) stream, "NO \"Error inserting script.\"\r\n");
 			} else {
-				char scriptname[MAX_SIEVE_SCRIPTNAME + 1];
-
-				strncpy(scriptname, tmpleft, (MAX_SIEVE_SCRIPTNAME < tmplen ?  MAX_SIEVE_SCRIPTNAME : tmplen));
-				/* Of course, be sure to NULL terminate, because strncpy() likely won't */
-				scriptname[(MAX_SIEVE_SCRIPTNAME < tmplen ?  MAX_SIEVE_SCRIPTNAME : tmplen)] = '\0';
-				dm_free(tmpleft);
-
-				/* Offset from the previous match to make sure not to pull
-				 * the "length" from a script with a malicious name */
-				find_bounded(value + tmppos, '{', '+', &tmpleft, &tmplen, &tmppos);
-
-				if (tmplen < 1) {
-					/* Possibly an empty password... */
-					ci_write((FILE *) stream, "NO \"Length required.\"\r\n");
-				} else {
-					u64_t scriptlen;	/* Actually, script length must be 32-bit unsigned int. */
-					char tmpcharlen[11];	/* A 32-bit unsigned int is ten decimal digits in length. */
-
-					strncpy(tmpcharlen, tmpleft, (10 < tmplen ? 10 : tmplen));
-					tmpcharlen[(10 < tmplen ? 10 : tmplen)] = '\0';
-					dm_free(tmpleft);
-
-					scriptlen = strtoull(tmpcharlen, NULL, 10);
-					trace(TRACE_INFO, "%s, %s: Client sending script of length [%llu]",
-							__FILE__, __func__, scriptlen);
-					if (scriptlen >= UINT_MAX) {
-						trace(TRACE_INFO, "%s, %s: Length [%llu] is larger than UINT_MAX [%u]",
-								__FILE__, __func__, scriptlen, UINT_MAX);
-						ci_write((FILE *) stream, "NO \"Invalid script length.\"\r\n");
-					} else {
-						char *f_buf = NULL;
-
-						if (0 != read_from_stream ((FILE *) instream, &f_buf, scriptlen)) {
-							trace (TRACE_INFO, "%s, %s: Error reading script with read_from_stream()",
-									__FILE__, __func__);
-							ci_write((FILE *) stream, "NO \"Error reading script.\"\r\n");
-						} else {
-							if (0 != db_check_sievescript_quota(session->useridnr, scriptlen)) {
-								trace(TRACE_INFO, "%s, %s: Script exceeds user's quota, dumping it",
-										__FILE__, __func__);
-								ci_write((FILE *) stream, "NO \"Script exceeds available space.\"\r\n");
-							} else {
-								sort_result_t *sort_result;
-
-								/* Store the script temporarily,
-								 * validate it, then rename it. */
-								if (0 != db_add_sievescript(session->useridnr, "@!temp-script!@", f_buf)) {
-									trace(TRACE_INFO, "%s, %s: Error inserting script",
-											__FILE__, __func__);
-									ci_write((FILE *) stream, "NO \"Error inserting script.\"\r\n");
-									db_delete_sievescript(session->useridnr, "@!temp-script!@");
-								} else {
-									sort_result = sort_validate(session->useridnr, "@!temp-script!@");
-									if (sort_result == NULL) {
-										trace(TRACE_INFO, "%s, %s: Error inserting script",
-												__FILE__, __func__);
-										ci_write((FILE *) stream, "NO \"Error inserting script.\"\r\n");
-										db_delete_sievescript(session->useridnr, "@!temp-script!@");
-									} else if (sort_get_error(sort_result) > 0) {
-										trace(TRACE_INFO, "%s, %s: Script has syntax errrors: [%s]",
-												__FILE__, __func__, sort_get_errormsg(sort_result));
-										ci_write((FILE *) stream, "NO \"Script error: %s.\"\r\n",
-												sort_get_errormsg(sort_result));
-										db_delete_sievescript(session->useridnr, "@!temp-script!@");
-									} else {
-										/* According to the draft RFC, a script with the same
-										 * name as an existing script should [atomically] replace it. */
-										if (0 != db_rename_sievescript(session->useridnr, "@!temp-script!@", scriptname)) {
-											trace(TRACE_INFO, "%s, %s: Error inserting script",
-													__FILE__, __func__);
-											ci_write((FILE *) stream, "NO \"Error inserting script.\"\r\n");
-										} else {
-											trace(TRACE_INFO, "%s, %s: Script successfully received",
-													__FILE__, __func__);
-											ci_write((FILE *) stream, "OK \"Script successfully received.\"\r\n");
-										}
-									}
-									sort_free_result(sort_result);
-								}
-								dm_free(f_buf);
-							}
-						}
-					}
-				}
+				trace(TRACE_INFO, "%s, %s: Script successfully received",
+						__FILE__, __func__);
+				ci_write((FILE *) stream, "OK \"Script successfully received.\"\r\n");
 			}
 		}
-		return 1;
+		break;
+		
 	case TIMS_SETS:
 		if (session->state != AUTH) {
 			ci_write((FILE *) stream, "NO \"Please authenticate first.\"\r\n");
+			break;
+		}
+		
+		int ret;
+		tmplen = 0;
+		tmppos = 0;
+		tmpleft = NULL;
+
+		find_bounded(value, '"', '"', &tmpleft, &tmplen, &tmppos);
+
+		/* Only activate a new script if one was specified */
+		if (tmplen > 0) {
+			char scriptname[MAX_SIEVE_SCRIPTNAME + 1];
+
+			strncpy(scriptname, tmpleft, (MAX_SIEVE_SCRIPTNAME < tmplen ?  MAX_SIEVE_SCRIPTNAME : tmplen));
+			/* Of course, be sure to NULL terminate, because strncpy() likely won't */
+			scriptname[(MAX_SIEVE_SCRIPTNAME < tmplen ?  MAX_SIEVE_SCRIPTNAME : tmplen)] = '\0';
+			dm_free(tmpleft);
+
+			ret = db_activate_sievescript(session->useridnr, scriptname);
+			if (ret == -3) {
+				ci_write((FILE *) stream, "NO \"Script does not exist.\"\r\n");
+				return -1;
+			} else if (ret != 0) {
+				ci_write((FILE *) stream, "NO \"Internal error.\"\r\n");
+				return -1;
+			} else {
+				ci_write((FILE *) stream, "OK \"Script activated.\"\r\n");
+			}
 		} else {
-			int ret;
-			size_t tmplen = 0;
-			size_t tmppos = 0;
-			char *tmpleft = NULL;
-
-			find_bounded(value, '"', '"', &tmpleft, &tmplen, &tmppos);
-
-			/* Only activate a new script if one was specified */
-			if (tmplen > 0) {
-				char scriptname[MAX_SIEVE_SCRIPTNAME + 1];
-
-				strncpy(scriptname, tmpleft, (MAX_SIEVE_SCRIPTNAME < tmplen ?  MAX_SIEVE_SCRIPTNAME : tmplen));
-				/* Of course, be sure to NULL terminate, because strncpy() likely won't */
-				scriptname[(MAX_SIEVE_SCRIPTNAME < tmplen ?  MAX_SIEVE_SCRIPTNAME : tmplen)] = '\0';
-				dm_free(tmpleft);
-
-				ret = db_activate_sievescript(session->useridnr, scriptname);
+			char *scriptname = NULL;
+			ret = db_get_sievescript_active(session->useridnr, &scriptname);
+			if (scriptname == NULL) {
+				ci_write((FILE *) stream, "OK \"No scripts are active at this time.\"\r\n");
+			} else {
+				ret = db_deactivate_sievescript(session->useridnr, scriptname);
+				dm_free(scriptname);
 				if (ret == -3) {
-					ci_write((FILE *) stream, "NO \"Script does not exist.\"\r\n");
+					ci_write((FILE *)stream, "NO \"Active script does not exist.\"\r\n");
 					return -1;
 				} else if (ret != 0) {
-					ci_write((FILE *) stream, "NO \"Internal error.\"\r\n");
+					ci_write((FILE *)stream, "NO \"Internal error.\"\r\n");
 					return -1;
 				} else {
-					ci_write((FILE *) stream, "OK \"Script activated.\"\r\n");
-				}
-			} else {
-				char *scriptname = NULL;
-				ret = db_get_sievescript_active(session->useridnr, &scriptname);
-				if (scriptname == NULL) {
-					ci_write((FILE *) stream, "OK \"No scripts are active at this time.\"\r\n");
-				} else {
-					ret = db_deactivate_sievescript(session->useridnr, scriptname);
-					dm_free(scriptname);
-					if (ret == -3) {
-						ci_write((FILE *)stream, "NO \"Active script does not exist.\"\r\n");
-						return -1;
-					} else if (ret != 0) {
-						ci_write((FILE *)stream, "NO \"Internal error.\"\r\n");
-						return -1;
-					} else {
-						ci_write((FILE *)stream, "OK \"All scripts deactivated.\"\r\n");
-					}
+					ci_write((FILE *)stream, "OK \"All scripts deactivated.\"\r\n");
 				}
 			}
 		}
@@ -509,36 +526,37 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 	case TIMS_GETS:
 		if (session->state != AUTH) {
 			ci_write((FILE *) stream, "NO \"Please authenticate first.\"\r\n");
+			break;
+		}
+		
+		tmplen = 0;
+		tmppos = 0;
+		tmpleft = NULL;
+
+		find_bounded(value, '"', '"', &tmpleft, &tmplen, &tmppos);
+
+		if (tmplen < 1) {
+			/* Possibly an empty password... */
+			ci_write((FILE *) stream, "NO \"Script name required.\"\r\n");
 		} else {
-			size_t tmplen = 0;
-			size_t tmppos = 0;
-			char *tmpleft = NULL;
+			int ret = 0;
+			char *script = NULL;
+			char scriptname[MAX_SIEVE_SCRIPTNAME + 1];
 
-			find_bounded(value, '"', '"', &tmpleft, &tmplen, &tmppos);
+			strncpy(scriptname, tmpleft, (MAX_SIEVE_SCRIPTNAME < tmplen ?  MAX_SIEVE_SCRIPTNAME : tmplen));
+			/* Of course, be sure to NULL terminate, because strncpy() likely won't */
+			scriptname[(MAX_SIEVE_SCRIPTNAME < tmplen ?  MAX_SIEVE_SCRIPTNAME : tmplen)] = '\0';
+			dm_free(tmpleft);
 
-			if (tmplen < 1) {
-				/* Possibly an empty password... */
-				ci_write((FILE *) stream, "NO \"Script name required.\"\r\n");
+			ret = db_get_sievescript_byname(session->useridnr, scriptname, &script);
+			if (ret == -3) {
+				ci_write((FILE *) stream, "NO \"Script not found.\"\r\n");
+			} else if (ret != 0 || script == NULL) {
+				ci_write((FILE *) stream, "NO \"Internal error.\"\r\n");
 			} else {
-				int ret = 0;
-				char *script = NULL;
-				char scriptname[MAX_SIEVE_SCRIPTNAME + 1];
-
-				strncpy(scriptname, tmpleft, (MAX_SIEVE_SCRIPTNAME < tmplen ?  MAX_SIEVE_SCRIPTNAME : tmplen));
-				/* Of course, be sure to NULL terminate, because strncpy() likely won't */
-				scriptname[(MAX_SIEVE_SCRIPTNAME < tmplen ?  MAX_SIEVE_SCRIPTNAME : tmplen)] = '\0';
-				dm_free(tmpleft);
-
-				ret = db_get_sievescript_byname(session->useridnr, scriptname, &script);
-				if (ret == -3) {
-					ci_write((FILE *) stream, "NO \"Script not found.\"\r\n");
-				} else if (ret != 0 || script == NULL) {
-					ci_write((FILE *) stream, "NO \"Internal error.\"\r\n");
-				} else {
-					ci_write((FILE *) stream, "{%u+}\r\n", (unsigned int)strlen(script));
-					ci_write((FILE *) stream, "%s\r\n", script);
-					ci_write((FILE *) stream, "OK\r\n");
-				}
+				ci_write((FILE *) stream, "{%u+}\r\n", (unsigned int)strlen(script));
+				ci_write((FILE *) stream, "%s\r\n", script);
+				ci_write((FILE *) stream, "OK\r\n");
 			}
 		}
 		return 1;
@@ -546,74 +564,78 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 	case TIMS_DELS:
 		if (session->state != AUTH) {
 			ci_write((FILE *) stream, "NO \"Please authenticate first.\"\r\n");
+			break;
+		}
+		
+		tmplen = 0;
+		tmppos = 0;
+		tmpleft = NULL;
+
+		find_bounded(value, '"', '"', &tmpleft, &tmplen, &tmppos);
+
+		if (tmplen < 1) {
+			/* Possibly an empty password... */
+			ci_write((FILE *) stream, "NO \"Script name required.\"\r\n");
 		} else {
-			size_t tmplen = 0;
-			size_t tmppos = 0;
-			char *tmpleft = NULL;
+			int ret = 0;
+			char scriptname[MAX_SIEVE_SCRIPTNAME + 1];
 
-			find_bounded(value, '"', '"', &tmpleft, &tmplen, &tmppos);
+			strncpy(scriptname, tmpleft, (MAX_SIEVE_SCRIPTNAME < tmplen ?  MAX_SIEVE_SCRIPTNAME : tmplen));
+			/* Of course, be sure to NULL terminate, because strncpy() likely won't */
+			scriptname[(MAX_SIEVE_SCRIPTNAME < tmplen ?  MAX_SIEVE_SCRIPTNAME : tmplen)] = '\0';
+			dm_free(tmpleft);
 
-			if (tmplen < 1) {
-				/* Possibly an empty password... */
-				ci_write((FILE *) stream, "NO \"Script name required.\"\r\n");
+			ret = db_delete_sievescript(session->useridnr, scriptname);
+			if (ret == -3) {
+				ci_write((FILE *) stream, "NO \"Script not found.\"\r\n");
+			} else if (ret != 0) {
+				ci_write((FILE *) stream, "NO \"Internal error.\"\r\n");
 			} else {
-				int ret = 0;
-				char scriptname[MAX_SIEVE_SCRIPTNAME + 1];
-
-				strncpy(scriptname, tmpleft, (MAX_SIEVE_SCRIPTNAME < tmplen ?  MAX_SIEVE_SCRIPTNAME : tmplen));
-				/* Of course, be sure to NULL terminate, because strncpy() likely won't */
-				scriptname[(MAX_SIEVE_SCRIPTNAME < tmplen ?  MAX_SIEVE_SCRIPTNAME : tmplen)] = '\0';
-				dm_free(tmpleft);
-
-				ret = db_delete_sievescript(session->useridnr, scriptname);
-				if (ret == -3) {
-					ci_write((FILE *) stream, "NO \"Script not found.\"\r\n");
-				} else if (ret != 0) {
-					ci_write((FILE *) stream, "NO \"Internal error.\"\r\n");
-				} else {
-					ci_write((FILE *) stream, "OK\r\n");
-				}
+				ci_write((FILE *) stream, "OK\r\n");
 			}
 		}
 		return 1;
 	case TIMS_SPAC:
 		if (session->state != AUTH) {
 			ci_write((FILE *) stream, "NO \"Please authenticate first.\"\r\n");
-		} else {
-			// Command is in format: HAVESPACE "scriptname" 12345
-			// TODO: Actually parse for the size when the quota
-			// functions get implemented. For now, just pretend.
-			if (db_check_sievescript_quota(session->useridnr, 12345) == DM_SUCCESS)
-				ci_write((FILE *) stream, "OK \"Command not implemented.\"\r\n");
-			else
-				ci_write((FILE *) stream, "NO (QUOTA) \"Quota exceeded\"\r\n");
+			break;
 		}
+
+		// Command is in format: HAVESPACE "scriptname" 12345
+		// TODO: Actually parse for the size when the quota
+		// functions get implemented. For now, just pretend.
+		if (db_check_sievescript_quota(session->useridnr, 12345) == DM_SUCCESS)
+			ci_write((FILE *) stream, "OK \"Command not implemented.\"\r\n");
+		else
+			ci_write((FILE *) stream, "NO (QUOTA) \"Quota exceeded\"\r\n");
 		return 1;
+		
 	case TIMS_LIST:
 		if (session->state != AUTH) {
 			ci_write((FILE *) stream, "NO \"Please authenticate first.\"\r\n");
-		} else {
-			struct dm_list scriptlist;
-			struct element *tmp;
+			break;
+		}
+		
+		struct dm_list scriptlist;
+		struct element *tmp;
 
-			if (db_get_sievescript_listall (session->useridnr, &scriptlist) < 0) {
-				ci_write((FILE *) stream, "NO \"Internal error.\"\r\n");
+		if (db_get_sievescript_listall (session->useridnr, &scriptlist) < 0) {
+			ci_write((FILE *) stream, "NO \"Internal error.\"\r\n");
+		} else {
+			if (dm_list_length(&scriptlist) == 0) {
+				/* The command hasn't failed, but there aren't any scripts */
+				ci_write((FILE *) stream, "OK \"No scripts found.\"\r\n");
 			} else {
-				if (dm_list_length(&scriptlist) == 0) {
-					/* The command hasn't failed, but there aren't any scripts */
-					ci_write((FILE *) stream, "OK \"No scripts found.\"\r\n");
-				} else {
-					tmp = dm_list_getstart(&scriptlist);
-					while (tmp != NULL) {
-						sievescript_info_t *info = (sievescript_info_t *) tmp->data;
-						ci_write((FILE *)stream, "\"%s\"%s\r\n", info->name, (info-> active == 1 ?  " ACTIVE" : ""));
-						tmp = tmp->nextnode;
-					}
-					ci_write((FILE *) stream, "OK\r\n");
+				tmp = dm_list_getstart(&scriptlist);
+				while (tmp != NULL) {
+					sievescript_info_t *info = (sievescript_info_t *) tmp->data;
+					ci_write((FILE *)stream, "\"%s\"%s\r\n", info->name, (info-> active == 1 ?  " ACTIVE" : ""));
+					tmp = tmp->nextnode;
 				}
-				if (scriptlist.start)
-					dm_list_free(&scriptlist.start);
+				ci_write((FILE *) stream, "OK\r\n");
 			}
+			if (scriptlist.start)
+				dm_list_free(&scriptlist.start);
 		}
 		return 1;
 		
@@ -621,5 +643,11 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 		return tims_error(session, stream,
 				"NO \"What are you trying to say here?\"\r\n");
 	}
+
+	if (sort_result)
+		sort_free_result(sort_result);
+	if (f_buf)
+		dm_free(f_buf);
+	
 	return 1;
 }
