@@ -1,18 +1,5 @@
 2006-03-17  Paul J Stevens <paul@nfg.nl>
 
-	* db.c, dbmail-imapsession.c, list.c, list.h, main.c, serverchild.c:
-	resync
-	* ChangeLog:
-	blah
-	* db.c, dbmail-imapsession.c, list.c, list.h, main.c, serverchild.c:
-	Merge with git+ssh://nfg3.nfgs.net/var/git/dbmail.git
-commit d96adbd3b66a509b487b6a098e93e01d6b7759e6
-tree b59b176025b0320ec26bfdb56d3635a9364819c8
-parent 5361696c6520d5db71009ecf1d1619f2c4d05239
-author Paul J Stevens <paul@nfg.nl> Fri, 17 Mar 2006 10:10:55 +0100
-committer Paul J Stevens <paul@nfg.nl> Fri, 17 Mar 2006 10:10:55 +0100
-	* db.c, dbmail-imapsession.c, list.c, list.h, main.c, serverchild.c:
-	resync
 	* check_dbmail_imapd.c:
 	fix testcases after mime.c cleanup
 	* server.c:
