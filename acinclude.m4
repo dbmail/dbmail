@@ -13,9 +13,9 @@ dnl DBMAIL_MSG_CONFIGURE_RESULTS()
 dnl
 AC_DEFUN([DBMAIL_MSG_CONFIGURE_RESULTS], [dnl
 AC_MSG_RESULT([
-PREFIX:        $prefix
-SYSCONFDIR:    $sysconfdir
-LOCALSTATEDIR: $localstatedir
+DM_LOGDIR:     $DM_LOGDIR
+DM_CONFDIR:    $DM_CONFDIR
+DM_STATEDIR:   $DM_STATEDIR
 GLIB:          $ac_glib_libs
 GMIME:         $ac_gmime_libs
 MYSQL:         $MYSQLLIB
@@ -29,6 +29,31 @@ CHECK:         $with_check
 ])
 ])
 
+
+AC_DEFUN([DM_DEFINES],[dnl
+AC_ARG_WITH(logdir,
+	[  --with-logdir           use logdir for logfiles],
+	logdirname="$withval")
+  if test "x$logdirname" = "x"
+  then
+  	DM_LOGDIR="/var/log"
+  else
+  	DM_LOGDIR="$logdirname"
+  fi
+  if test "x$localstatedir" = 'x${prefix}/var'
+  then
+  	DM_STATEDIR='/var/run'
+  else
+  	DM_STATEDIR=$localstatedir
+  fi
+  if test "x$sysconfdir" = 'x${prefix}/etc'
+  then
+  	DM_CONFDIR='/etc'
+  else
+  	DM_CONFDIR=$sysconfdir
+  fi
+])
+	
 dnl DBMAIL_CHECK_SHARED_OR_STATIC
 dnl
 AC_DEFUN([DBMAIL_SET_SHARED_OR_STATIC], [dnl
