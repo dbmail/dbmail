@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: main.c 2030 2006-03-16 22:50:19Z aaron $
+/* $Id: main.c 2032 2006-03-17 09:10:34Z paul $
  * 
  * main file for dbmail-smtp  */
 
@@ -184,7 +184,7 @@ int main(int argc, char *argv[])
 		case 'V':
 			/* We must return non-zero in case someone put -V
 			 * into the mail server config and thus may lose mail. */
-			printf("\n*** DBMAIL: dbmail-smtp version $Revision: 2021 $ %s\n\n", COPYRIGHT);
+			printf("\n*** DBMAIL: dbmail-smtp version $Revision: 2032 $ %s\n\n", COPYRIGHT);
 			return 1;
 
 		default:
