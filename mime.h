@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: mime.h 1962 2006-01-24 10:53:58Z paul $ 
+/* $Id: mime.h 2030 2006-03-16 22:50:19Z aaron $ 
  */
 
 #ifndef _MIME_H
@@ -25,23 +25,7 @@
 
 #include "dbmail.h"
 
-#define MEM_BLOCK 1024
-
-struct mime_record {
-/* if these are to be changed to ptrs, the following has to be updated:
-   mime.c (duh)
-   db_parse_as_text
-   a cleanup for all the memory allocated 
-*/
-	char field[MIME_FIELD_MAX];
-	char value[MIME_VALUE_MAX];
-};
-
-struct DbmailMessage * mime_fetch_headers(struct DbmailMessage *message, struct dm_list *mimelist);
-
-void mime_findfield(const char *fname, struct dm_list *mimelist, struct mime_record **mr);
-
-int mail_address_build_list(const char *scan_for_field, struct dm_list *targetlist, struct dm_list *mimelist);
-
+int find_deliver_to_header_addresses(struct DbmailMessage *message,
+		const char *scan_for_field, struct dm_list *targetlist);
 
 #endif
