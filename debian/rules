@@ -128,6 +128,7 @@ binary-common: build
 	done
 	dh_installinit -a --name=dbmail -- defaults 25
 	dh_installcron -a --name=dbmail
+	dh_installlogrotate -a --name=dbmail
 	dh_installdebconf -a
 	dh_installman -a
 	dh_installdocs -a
