@@ -66,7 +66,8 @@ int acl_set_rights(u64_t userid, u64_t mboxid, const char *rightsstring);
  *      -  0 if nothing removed (i.e. no acl was found)
  *      -  1 if acl removed
  */
-int acl_delete_acl(u64_t userid, u64_t mboxid);
+//int acl_delete_acl(u64_t userid, u64_t mboxid);
+#define acl_delete_acl(a,b) db_acl_delete_acl((a),(b))
 
 /**
  * \brief get complete acl for a mailbox

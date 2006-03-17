@@ -114,75 +114,6 @@ struct element *dm_list_nodeadd(struct dm_list *tlist, const void *data,
 	return tlist->start;
 }
 
-
-/*
- * dm_list_nodepop()
- *
- * pops the first element of a linked list
- * ! MEMORY SHOULD BE FREED BY CLIENT !
- */
-struct element *dm_list_nodepop(struct dm_list *list)
-{
-	struct element *ret;
-
-	if (!list || !list->start)
-		return NULL;
-
-	ret = list->start;
-
-	list->start = list->start->nextnode;
-
-	return ret;
-}
-
-
-
-/*
- * dm_list_nodedel()
- *
- * removes the item containing 'data' from the list preserving a valid linked-list structure.
- *
- * returns
- */
-struct element *dm_list_nodedel(struct dm_list *tlist, void *data)
-{
-	struct element *temp;
-	struct element *item;
-	item = NULL;
-
-	if (!tlist)
-		return NULL;
-
-	temp = tlist->start;
-
-	/* checking if lists exist else return NULL */
-	if (temp == NULL)
-		return NULL;
-
-	while (temp != NULL) {	/* walk the list */
-		if (temp->data == data) {
-			if (item == NULL) {
-				tlist->start = temp->nextnode;
-				g_free(temp->data);
-				g_free((struct element *) temp);
-				break;
-			} else {
-				item->nextnode = temp->nextnode;
-				g_free(temp->data);	/* freeing memory */
-				g_free((struct element *) temp);
-				break;
-			}
-			/* updating node count */
-			tlist->total_nodes--;
-		}
-		item = temp;
-		temp = temp->nextnode;
-	}
-
-	return NULL;
-}
-
-
 struct element *dm_list_getstart(struct dm_list *tlist)
 {
 	return (tlist) ? tlist->start : NULL;
@@ -194,24 +125,6 @@ long dm_list_length(struct dm_list *tlist)
 	return (tlist) ? tlist->total_nodes : -1;	/* a NULL ptr doesnt even have zero nodes (?) */
 }
 
-
-void dm_list_show(struct dm_list *tlist)
-{
-	struct element *temp;
-
-	if (!tlist) {
-		trace(TRACE_MESSAGE,
-		      "dm_list_show(): NULL ptr received\n");
-		return;
-	}
-
-	temp = tlist->start;
-	while (temp != NULL) {
-		trace(TRACE_MESSAGE, "dm_list_show():item found [%s]\n",
-		      (char *) temp->data);
-		temp = temp->nextnode;
-	}
-}
 /*
  * shallow copy of struct dm_list into GList
  */
@@ -262,58 +175,5 @@ GList *g_list_slices(GList *list, unsigned limit)
 	}
 	g_string_free(slice,TRUE);
 	return new;
-}
-/* basic binary tree */
-void dm_btree_insert(sortitems_t ** tree, sortitems_t * item) {
-	int val;
-	if(!(*tree)) {
-		*tree = item;
-		return;
-	}
-	val = strcmp(item->ustr,(*tree)->ustr);
-	if(val < 0)
-		dm_btree_insert(&(*tree)->left, item);
-	else if(val > 0)
-		dm_btree_insert(&(*tree)->right, item);
-}
-
-void dm_btree_printout(sortitems_t * tree, int * i) {
-    if (! tree)
-        return;
-            
-	if(tree->left) 
-		dm_btree_printout(tree->left, i);
-	trace(TRACE_INFO, "dm_btree_printout: i '%d' '%d', '%s'\n", 
-			*i, tree->mid, tree->ustr);
-	(*i)++;
-	if(tree->right) 
-		dm_btree_printout(tree->right, i);
-}
-
-void dm_btree_traverse(sortitems_t * tree, int * i, unsigned int *rset) {
-    if (! tree)
-        return;
-	
-    if(tree->left) 
-		dm_btree_traverse(tree->left, i, rset);
-	trace(TRACE_DEBUG, "dm_btree_traverse: i '%d' '%d', '%s'\n", 
-			*i, tree->mid, tree->ustr); 
-	rset[*i] = tree->mid;
-	(*i)++;
-	if(tree->right) 
-		dm_btree_traverse(tree->right, i, rset);
-}
-
-void dm_btree_free(sortitems_t * tree) {
-    if (! tree)
-        return;
-    
-	if(tree->left) 
-		dm_btree_free(tree->left);
-	g_free(tree->ustr);
-	if(tree->right) 
-		dm_btree_free(tree->right);
-	else 
-		g_free(tree);
 }
 

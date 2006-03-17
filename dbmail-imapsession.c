@@ -54,8 +54,6 @@ extern char _imapdate[IMAP_INTERNALDATE_LEN];
 #define SQL_STANDARD_DATE "1979-11-03 00:00:00"
 extern char _sqldate[SQL_INTERNALDATE_LEN + 1];
 extern const int month_len[];
-extern const char *item_desc[];
-extern const char *envelope_items[];
 extern const char *imap_flag_desc[];
 extern const char *imap_flag_desc_escaped[];
 
@@ -961,7 +959,7 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data)
 		tmpdumpsize=0;
 		
 		if (!tmp) {
-			dbmail_imap_session_printf(self, "NIL");
+			dbmail_imap_session_printf(self, "{2}\r\n\r\n");
 		} else {
 			ts = g_string_new(tmp);
 			g_free(tmp);
@@ -977,14 +975,14 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data)
 				tmp = get_crlf_encoded(ts->str);
 				cnt = strlen(tmp);
 				
-				dbmail_imap_session_printf(self, "<%llu> {%llu}\r\n%s", 
+				dbmail_imap_session_printf(self, "<%llu> {%llu}\r\n%s\r\n", 
 						bodyfetch->octetstart, 
-						cnt,
+						cnt+2,
 						tmp);
 			} else {
 				tmp = get_crlf_encoded(ts->str);
 				cnt = strlen(tmp);
-				dbmail_imap_session_printf(self, "{%llu}\r\n%s", cnt, tmp);
+				dbmail_imap_session_printf(self, "{%llu}\r\n%s\r\n", cnt+2, tmp);
 			}
 			g_string_free(ts,TRUE);
 			g_free(tmp);
@@ -994,7 +992,6 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data)
 		g_list_free(tlist);
 		g_list_foreach(flist, (GFunc)g_free, NULL);
 		g_list_free(flist);
-
 
 		break;
 	default:

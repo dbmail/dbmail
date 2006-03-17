@@ -38,7 +38,6 @@
 extern db_param_t _db_params;
 #define DBPFX _db_params.pfx
 
-
 /* cache */
 extern cache_t cached_msg;
 
@@ -52,12 +51,6 @@ const char AcceptedTagChars[] =
     "!@#$%^&-=_`~\\|'\" ;:,.<>/? ";
 
 char base64encodestring[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
-const char *item_desc[] = { "TEXT", "HEADER", "MIME", "HEADER.FIELDS", "HEADER.FIELDS.NOT" };
-
-const char *envelope_items[] = { "from", "sender", "reply-to", "to", "cc", "bcc", NULL };
-
-static const char *search_cost[] = { "b","b","c","c","c","b","d","d","d","c","e","e","b","b","j","j","j" };
 
 /* some basic imap type utils */
 char *dbmail_imap_plist_collapse(const char *in)
@@ -88,7 +81,6 @@ char *dbmail_imap_plist_as_string(GList * list)
 	GString * tmp1 = g_string_new("");
 	GString * tmp2 = g_list_join(list, " ");
 	g_string_printf(tmp1,"(%s)", tmp2->str);
-	
 
 	/*
 	 * strip empty outer parenthesis
