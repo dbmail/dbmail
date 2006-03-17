@@ -3963,8 +3963,7 @@ int db_acl_get_identifier(u64_t mboxid, struct dm_list *identifier_list)
 	n = db_num_rows();
 	for (i = 0; i < n; i++) {
 		result_string = db_get_result(i, 0);
-		if (!result_string || !dm_list_nodeadd(identifier_list, 
-					result_string, strlen(result_string) + 1)) {
+		if (!result_string || !dm_list_nodeadd(identifier_list, result_string, strlen(result_string) + 1)) {
 			db_free_result();
 			return -2;
 		}
