@@ -528,6 +528,13 @@ class testImapServer(unittest.TestCase):
         """
         self.o.create('testunsub')
         self.assertEquals(self.o.unsubscribe('testunsub'),('OK', ['UNSUBSCRIBE completed']))
+
+    def testNegativeLongLine(self):
+        """
+	    TBD
+	"""
+        self.o.select('INBOX')
+        self.assertRaises(self.o.error, self.o.fetch, "1" + " "*12000,"(Flags)")
         
     def tearDown(self):
         try:
@@ -540,7 +547,6 @@ class testImapServer(unittest.TestCase):
                 self.o.delete(dirs[-i])
             self.o.logout()
         except: pass
-
 
 def usage():
     print """testimap.py:   test dbmail imapserver

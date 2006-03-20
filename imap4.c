@@ -92,7 +92,7 @@ int IMAPClientHandler(clientinfo_t * ci)
 {
 	char line[MAX_LINESIZE];
 	char *tag = NULL, *cpy, **args, *command;
-	int done, result;
+	int done, result, readresult;
 	size_t i;
 	int nfaultyresponses;
 	imap_userdata_t *ud = NULL;
@@ -172,12 +172,18 @@ int IMAPClientHandler(clientinfo_t * ci)
 				clearerr(session->ci->tx);
 		}
 
-		alarm(session->ci->timeout);	/* install timeout handler */
-		if (fgets(line, MAX_LINESIZE, session->ci->rx) == NULL) {
+		readresult = dbmail_imap_session_readln(session, line);
+		if (readresult < 0) { /* Fatal error: EOF &c. */
+			trace(TRACE_ERROR, "%s,%s: error reading command -- bailing out\n",__FILE__, __func__);
+			dbmail_imap_session_printf(session, "* BYE error reading command\r\n");
 			dbmail_imap_session_delete(session);
 			return -1;
 		}
-		alarm(0);			/* remove timeout handler */
+
+		/* There is an error possible (line too long, readresult == 0)
+		 * that we need to note, but carry through with processing the
+		 * command in order to generate the proper tag on the
+		 * BAD response */
 
 		if (!session->ci->rx || !session->ci->tx) {
 			/* if a timeout occured the streams will be closed & set to NULL */
@@ -252,6 +258,15 @@ int IMAPClientHandler(clientinfo_t * ci)
 			continue;
 		}
 
+		if (readresult == 0) { /* Nonfatal error: too long line &c. */
+			if (dbmail_imap_session_printf(session, "%s BAD Line too long\r\n",session->tag) < 0) {
+				dbmail_imap_session_delete(session);
+				return EOF;
+			}
+			nfaultyresponses++;
+			continue;
+		}
+
 		i = stridx(cpy, ' ');	/* find next space */
 		
 		command = strdup(cpy);	/* set command */
@@ -262,11 +277,11 @@ int IMAPClientHandler(clientinfo_t * ci)
 		
 		if (i == strlen(cpy)) {
 			/* no arguments present */
-			args = build_args_array_ext("", session->ci);
+			args = build_args_array_ext(session, "");
 		} else {
 			cpy[i] = '\0';	/* terminated command */
 			cpy = cpy + i + 1;	/* cpy points to args now */
-			args = build_args_array_ext(cpy, session->ci);	/* build argument array */
+			args = build_args_array_ext(session, cpy);	/* build argument array */
 
 			if (!session->ci->rx || !session->ci->tx || ferror(session->ci->rx) || ferror(session->ci->tx)) {
 				/* some error occurred during the read of extra command info */
