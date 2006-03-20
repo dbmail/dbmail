@@ -33,6 +33,8 @@ struct ImapSession * dbmail_imap_session_resetFi(struct ImapSession * self);
 void dbmail_imap_session_delete(struct ImapSession * self);
 
 int dbmail_imap_session_readln(struct ImapSession * self, char * buffer);
+int dbmail_imap_session_discard_to_eol(struct ImapSession *self);
+
 int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...);
 
 int dbmail_imap_session_set_state(struct ImapSession *self, int state);
@@ -53,7 +55,6 @@ int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self, u64_t fetch
 int dbmail_imap_session_fetch_get_items(struct ImapSession *self, u64_t row);
 
 int dbmail_imap_session_get_msginfo_range(struct ImapSession *self, u64_t msg_idnr_low, u64_t msg_idnr_high);
-
 
 void dbmail_imap_session_bodyfetch_new(struct ImapSession *self);
 void dbmail_imap_session_bodyfetch_free(struct ImapSession *self);
@@ -78,7 +79,7 @@ guint64 dbmail_imap_session_bodyfetch_get_last_octetstart(struct ImapSession *se
 int dbmail_imap_session_bodyfetch_set_octetcnt(struct ImapSession *self, guint64 octet);
 guint64 dbmail_imap_session_bodyfetch_get_last_octetcnt(struct ImapSession *self);
 
-char **build_args_array_ext(const char *originalString, clientinfo_t * ci);
+char **build_args_array_ext(struct ImapSession *self, const char *originalString);
 
 #endif
 

@@ -1096,15 +1096,64 @@ int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...)
         return len;
 }
 
-int dbmail_imap_session_readln(struct ImapSession * self, char * buffer)
+int dbmail_imap_session_discard_to_eol(struct ImapSession *self)
 {
+	int len;
+	int done = 0;
+	char buffer[MAX_LINESIZE];
+	clientinfo_t *ci = self->ci;
+
+	/* loop until we get a newline terminated chunk */
+	while (!done)  {
+		memset(buffer, 0, MAX_LINESIZE);
+		alarm(ci->timeout);
+		if (fgets(buffer, MAX_LINESIZE, ci->rx) == NULL) {
+			alarm(0);
+			trace(TRACE_ERROR, "%s,%s: error reading from client", __FILE__, __func__);
+			return -1;
+		}
+		len = strlen(buffer);
+		if (len <= 0) {
+			alarm(0);
+			return -1;
+		}
+
+		/* Do we need to check for \r\n ? */
+		if (len >= 1 && buffer[len-1]=='\n') {
+			alarm(0);
+			done = 1;
+		}
+	}
+
+	alarm(0);
+	return len;
+}
+
+
+int dbmail_imap_session_readln(struct ImapSession *self, char * buffer)
+{
+	int len;
+	clientinfo_t *ci = self->ci;
+	
 	memset(buffer, 0, MAX_LINESIZE);
-	alarm(self->ci->timeout);
-	if (fgets(buffer, MAX_LINESIZE, self->ci->rx) == NULL) {
+	alarm(ci->timeout);
+	if (fgets(buffer, MAX_LINESIZE, ci->rx) == NULL) {
 		trace(TRACE_ERROR, "%s,%s: error reading from client", __FILE__, __func__);
-		dbmail_imap_session_printf(self, "* BYE Error reading input\r\n");
 		return -1;
 	}
+	len = strlen(buffer);
+	if (len >= (MAX_LINESIZE-1)) {
+		trace(TRACE_ERROR, "%s,%s: too long line from client (discarding)", __FILE__, __func__);
+		alarm(0);
+		/* Note: we do preserve the partial read here -- so that 
+		 * the command parser can extract a tag if need be */
+		if (dbmail_imap_session_discard_to_eol(self) < 0) {
+			return -1;
+		} else {
+			return 0;
+		}
+	}
+
 	alarm(0);
 	return strlen(buffer);
 }
@@ -1177,7 +1226,7 @@ int dbmail_imap_session_prompt(struct ImapSession * self, char * prompt, char * 
 	dbmail_imap_session_printf(self, "+ %s\r\n", buf);
 	fflush(self->ci->tx);
 	
-	if ( (dbmail_imap_session_readln(self, buf) < 0) )
+	if ( (dbmail_imap_session_readln(self, buf) <= 0) ) 
 		return -1;
 
 	tmp = g_string_new(buf);
@@ -1598,7 +1647,7 @@ static void free_args(void)
 		dm_free(the_args[i]);
 }
 
-char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
+char **build_args_array_ext(struct ImapSession *self, const char *originalString)
 {
 	int nargs = 0, inquote = 0, quotestart = 0;
 	int nnorm = 0, nsquare = 0, paridx = 0, argstart = 0;
@@ -1608,6 +1657,8 @@ char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 	char *tmp, *lastchar;
 	int quotedSize, cnt, dataidx;
 	static int init_args = 0;
+	int result;
+	clientinfo_t *ci = self->ci;
 
 	/* Clear the_args the very first time. */
 	if (!init_args) {
@@ -1769,11 +1820,9 @@ char **build_args_array_ext(const char *originalString, clientinfo_t * ci)
 				}
 
 				/* now read the rest of this line */
-				alarm(ci->timeout);
-				fgets(s, MAX_LINESIZE, ci->rx);
-				alarm(0);
+				result = dbmail_imap_session_readln(self, s);
 
-				if (!ci->rx || !ci->tx || ferror(ci->rx) || ferror(ci->tx)) {
+				if (result < 0 || !ci->rx || !ci->tx || ferror(ci->rx) || ferror(ci->tx)) {
 					trace(TRACE_ERROR, "%s,%s: timeout occurred", 
 							__FILE__, __func__);
 					free_args();

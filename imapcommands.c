@@ -182,11 +182,15 @@ int _ic_authenticate(struct ImapSession *self)
 	}
 
 	/* ask for username (base64 encoded) */
-	if (dbmail_imap_session_prompt(self,"username", username))
+	if (dbmail_imap_session_prompt(self,"username", username)) {
+		dbmail_imap_session_printf(self, "* BYE error reading username\r\n");
 		return -1;
+	}
 	/* ask for password */
-	if (dbmail_imap_session_prompt(self,"password", password))
+	if (dbmail_imap_session_prompt(self,"password", password)) {
+		dbmail_imap_session_printf(self, "* BYE error reading password\r\n");
 		return -1;
+	}
 
 	/* try to validate user */
 	if ((result = dbmail_imap_session_handle_auth(self,username,password)))

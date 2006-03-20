@@ -26,7 +26,7 @@
 const char AcceptedMailboxnameChars[] =
     "abcdefghijklmnopqrstuvwxyz"
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    "0123456789-=/ _.&,+@()[]";
+    "0123456789-=/ _.&,+@()[]'";
 
 /**
  * abbreviated names of the months

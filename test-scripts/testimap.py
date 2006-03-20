@@ -157,6 +157,15 @@ class testImapServer(unittest.TestCase):
         result = self.o.list()[1]
         self.assertEquals('(\\hasnochildren) "/" "test create"' in self.o.list()[1], True)
 
+    def testCreateListWithQuote(self):
+        """ 
+	Bug 314 -- Single Quote in Mailbox Name
+        """
+        self.assertEquals(self.o.create('Foo\'s Folder'),('OK',['CREATE completed']))
+        result = self.o.list()[1]
+        self.assertEquals('(\\hasnochildren) "/" "Foo\'s Folder"' in self.o.list()[1], True)
+
+
     def testDelete(self):
         """ 
         'delete(mailbox)'
@@ -528,6 +537,13 @@ class testImapServer(unittest.TestCase):
         """
         self.o.create('testunsub')
         self.assertEquals(self.o.unsubscribe('testunsub'),('OK', ['UNSUBSCRIBE completed']))
+
+    def testNegativeLongLine(self):
+        """
+	    TBD
+	"""
+        self.o.select('INBOX')
+        self.assertRaises(self.o.error, self.o.fetch, "1" + " "*12000,"(Flags)")
         
     def tearDown(self):
         try:
@@ -540,7 +556,6 @@ class testImapServer(unittest.TestCase):
                 self.o.delete(dirs[-i])
             self.o.logout()
         except: pass
-
 
 def usage():
     print """testimap.py:   test dbmail imapserver
