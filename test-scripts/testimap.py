@@ -157,6 +157,15 @@ class testImapServer(unittest.TestCase):
         result = self.o.list()[1]
         self.assertEquals('(\\hasnochildren) "/" "test create"' in self.o.list()[1], True)
 
+    def testCreateListWithQuote(self):
+        """ 
+	Bug 314 -- Single Quote in Mailbox Name
+        """
+        self.assertEquals(self.o.create('Foo\'s Folder'),('OK',['CREATE completed']))
+        result = self.o.list()[1]
+        self.assertEquals('(\\hasnochildren) "/" "Foo\'s Folder"' in self.o.list()[1], True)
+
+
     def testDelete(self):
         """ 
         'delete(mailbox)'

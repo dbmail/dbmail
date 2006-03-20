@@ -2808,7 +2808,7 @@ int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
 	}
 
 	if ((tmp = db_get_result(0, 0))) 
-		mailbox_name = dm_strdup(tmp);
+		mailbox_name = dm_stresc(tmp);
 
 	db_free_result();
 	if (mailbox_name) {
