@@ -1,3 +1,13 @@
+2006-03-20  Paul J Stevens <paul@nfg.nl>
+
+	* ChangeLog, debian/changelog, tags:
+	remove tags file
+	* dbmail-imapsession.c, dbmail-imapsession.h, imap4.c, imapcommands.c, 
+	  test-scripts/testimap.py:
+	merge and finish Matthews patch to deal with too-long imapcommands
+	* db.c, misc.c, test-scripts/testimap.py:
+	merge Matthews patch for allowing single-quotes in mailbox names
+
 2006-03-18  Paul J Stevens <paul@nfg.nl>
 
 	* timsieve.c:
