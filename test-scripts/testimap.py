@@ -232,11 +232,12 @@ class testImapServer(unittest.TestCase):
         # OE query
         result=self.o.fetch(id,"(BODY.PEEK[HEADER.FIELDS (References X-Ref X-Priority X-MSMail-Priority X-MSOESRec Newsgroups)] ENVELOPE RFC822.SIZE UID FLAGS INTERNALDATE)")
         self.assertEquals(result[0],'OK')
-        print result
+        #print result
 
         # TB query
         result=self.o.fetch(id,"(UID RFC822.SIZE FLAGS BODY.PEEK[HEADER.FIELDS (From To Cc Subject Date Message-ID Priority X-Priority References Newsgroups In-Reply-To Content-Type)])")
-        print result
+        self.assertEquals(result[0],'OK')
+        #print result
         
     def testGetacl(self):
         """ 
@@ -271,10 +272,10 @@ class testImapServer(unittest.TestCase):
         dirlist=['dir1','dir2','dir3','dir1/sub1','dir2/sub2','dir2/sub 2a','dir3/sub 3','dir3/sub 3/ssub1','dir3/sub 3/.ssub2']
         for d in dirlist: 
             self.o.create(d)
-        print self.o.list()
-        print self.o.list("dir1/")
-        print self.o.list("dir2/")
-        print self.o.list("dir3/")
+        #print self.o.list()
+        #print self.o.list("dir1/")
+        #print self.o.list("dir2/")
+        #print self.o.list("dir3/")
 
         try:    
             self.assertEquals(self.o.list('"dir1"')[0],'OK')
@@ -424,7 +425,7 @@ class testImapServer(unittest.TestCase):
         self.assertEquals(result[0],'OK')
         result=self.o.search(None, "UNDELETED", "HEADER", "TO", "testuser", "SENTON", "26-Sep-2005")
         self.assertEquals(result[0],'OK')
-        print result
+        #print result
 
     def testSelect(self):
         """ 
@@ -488,7 +489,7 @@ class testImapServer(unittest.TestCase):
 	result=self.o.sort('(DATE ARRIVAL)', "UNDELETED", "HEADER", "TO", "testuser", "SENTSINCE", "1-Feb-1994")
         self.assertEquals(result[0],'OK')
 	result=self.o.sort('(REVERSE ARRIVAL FROM)', "UNDELETED", "HEADER", "TO", "testuser", "SENTSINCE", "1-Feb-1994")
-        print result
+        #print result
 
 
     def testStatus(self):
