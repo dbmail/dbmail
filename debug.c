@@ -49,6 +49,8 @@ void trace(trace_t level, char *formatstring, ...)
 	va_list argp;
 
 	if (level <= TRACE_STDERR) {
+		fprintf(stderr,"level [%d] <= [%d]", level, TRACE_STDERR);
+
 		va_start(argp, formatstring);
 		vfprintf(stderr, formatstring, argp);
 		if (formatstring[strlen(formatstring)] != '\n')
