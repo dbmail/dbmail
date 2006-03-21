@@ -1,3 +1,14 @@
+2006-03-21  Paul J Stevens <paul@nfg.nl>
+
+	* Makefile.am, check_dbmail_db.c:
+	add testframe for db.c
+	* debug.c, debug.h:
+	make trace level=0 really silent except for fatal errors
+	* modules/dbmysql.c:
+	fix db_query for mysql so it doesn't ignore some errors
+	* db.c:
+	fix db_query for mysql so it doesn't ignore some errors
+
 2006-03-20  Paul J Stevens <paul@nfg.nl>
 
 	* ChangeLog, debian/changelog, tags:

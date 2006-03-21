@@ -255,7 +255,7 @@ END_TEST
 
 Suite *dbmail_dsn_suite(void)
 {
-	Suite *s = suite_create("Dbmail User Resolution and DSN Functions\n");
+	Suite *s = suite_create("Dbmail User Resolution and DSN Functions");
 
 	TCase *tc_dsn = tcase_create("DSN");
 	suite_add_tcase(s, tc_dsn);

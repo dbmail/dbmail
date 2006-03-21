@@ -331,16 +331,15 @@ int _ic_create(struct ImapSession *self)
 		return 1;
 
 	mailbox = self->args[0];
-	
-	if ( (mboxid = dbmail_imap_session_mailbox_get_idnr(self, mailbox)) ) {
-		dbmail_imap_session_printf(self, "%s NO mailbox already exists\r\n", self->tag);
-		return 1;
-	}
 
 	/* check if new name is valid */
 	if (!checkmailboxname(mailbox)) {
-		dbmail_imap_session_printf(self, "%s BAD new mailbox name contains invalid characters\r\n",
-			self->tag);
+	        dbmail_imap_session_printf(self, "%s BAD new mailbox name contains invalid characters\r\n", self->tag);
+	        return 1;
+        }
+
+	if ( (mboxid = dbmail_imap_session_mailbox_get_idnr(self, mailbox)) ) {
+		dbmail_imap_session_printf(self, "%s NO mailbox already exists\r\n", self->tag);
 		return 1;
 	}
 
@@ -613,19 +612,18 @@ int _ic_rename(struct ImapSession *self)
 		return 1;
 	}
 
+	/* check if new name is valid */
+        if (!checkmailboxname(self->args[1])) {
+	        dbmail_imap_session_printf(self, "%s NO new mailbox name contains invalid characters\r\n", self->tag);
+                return 1;
+        }
+
 	if ((newmboxid = dbmail_imap_session_mailbox_get_idnr(self, self->args[1])) != 0) {
 		dbmail_imap_session_printf(self, "%s NO new mailbox already exists\r\n", self->tag);
 		return 1;
 	}
 
 	if (dbmail_imap_session_mailbox_check_acl(self, mboxid, ACL_RIGHT_ADMINISTER)) {
-		return 1;
-	}
-
-	/* check if new name is valid */
-	if (!checkmailboxname(self->args[1])) {
-		dbmail_imap_session_printf(self,
-			"%s NO new mailbox name contains invalid characters\r\n", self->tag);
 		return 1;
 	}
 
