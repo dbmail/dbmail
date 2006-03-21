@@ -1,12 +1,20 @@
 2006-03-21  Paul J Stevens <paul@nfg.nl>
 
+	* imapcommands.c:
+	check for invalid characters in _ic_create and _ic_rename
+	* sql/postgresql/add_auto_replies_fields.pgsql, 
+	  sql/postgresql/add_usermap.psql:
+	add missing statements in postgres sql files
+	* test-scripts/testimap.py, check_dbmail_db.c, check_dbmail_dsn.c,
+	check_dbmail_imapd.c:
+	cleanups
+	* ChangeLog, dbmail-imapsession.c, dbmailtypes.h, debug.c, misc.c:
+	make INTERNALDATE response rfc compliant (closes: #300)
 	* Makefile.am, check_dbmail_db.c:
 	add testframe for db.c
 	* debug.c, debug.h:
 	make trace level=0 really silent except for fatal errors
-	* modules/dbmysql.c:
-	fix db_query for mysql so it doesn't ignore some errors
-	* db.c:
+	* modules/dbmysql.c, db.c:
 	fix db_query for mysql so it doesn't ignore some errors
 
 2006-03-20  Paul J Stevens <paul@nfg.nl>
