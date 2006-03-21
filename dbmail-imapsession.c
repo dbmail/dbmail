@@ -630,7 +630,7 @@ int dbmail_imap_session_get_msginfo_range(struct ImapSession *self, u64_t msg_id
 		query_result = db_get_result(i, IMAP_NFLAGS);
 		strncpy(result[i].internaldate,
 			(query_result) ? query_result :
-			"1970-01-01 00:00:01",
+			"01-Jan-1970 00:00:01 +0100",
 			IMAP_INTERNALDATE_LEN);
 		
 		/* rfcsize */

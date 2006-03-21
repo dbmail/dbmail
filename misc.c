@@ -37,7 +37,7 @@ const char *month_desc[] = {
 };
 
 /* returned by date_sql2imap() */
-#define IMAP_STANDARD_DATE "Sat, 03-Nov-1979 00:00:00 +0000"
+#define IMAP_STANDARD_DATE "03-Nov-1979 00:00:00 +0000"
 char _imapdate[IMAP_INTERNALDATE_LEN] = IMAP_STANDARD_DATE;
 
 /* returned by date_imap2sql() */
@@ -1203,7 +1203,7 @@ char *date_sql2imap(const char *sqldate)
                 return _imapdate;
         }
 
-        strftime(q, sizeof(q), "%a, %d %b %Y %H:%M:%S", &tm_sql_date);
+        strftime(q, sizeof(q), "%d-%b-%Y %H:%M:%S", &tm_sql_date);
 
 	ltime = mktime (&tm_sql_date);
 	localtime_r(&ltime, &tm_sql_date);
