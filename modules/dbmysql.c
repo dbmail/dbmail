@@ -212,48 +212,34 @@ u64_t db_insert_result(const char *sequence_identifier UNUSED)
 	return insert_result;
 }
 
-int db_query(const char *the_query)
+int db_query(const char *q)
 {
 	unsigned querysize = 0;
+	assert(q);
 
-	if (db_check_connection() < 0) {
-		trace(TRACE_ERROR, "%s,%s: no database connection",
-		      __FILE__, __func__);
+	querysize = (unsigned) strlen(q);
+
+	if (querysize == 0) {
+		trace(TRACE_ERROR, "%s,%s: empty query: [%d]", 
+				__FILE__, __func__, querysize);
 		return DM_EQUERY;
 	}
-	if (the_query != NULL) {
-		querysize = (unsigned) strlen(the_query);
-		if (querysize > 0) {
-			trace(TRACE_DEBUG, "%s,%s: executing query [%s]",
-			      __FILE__, __func__, 
-			      the_query);
-			if (mysql_real_query(&conn, the_query, querysize) < 0) {
-				trace(TRACE_ERROR, "%s,%s: [%s] [%s]",
-				      __FILE__, __func__, 
-				      mysql_error(&conn), the_query);
-				return DM_EQUERY;
-			}
-		
-			if(res != NULL) {
-				trace(TRACE_DEBUG, "%s,%s: res was not freed"
-						" after the previous query!",
-						__FILE__, __func__);
-				db_free_result();
-			}	
-			res = mysql_store_result(&conn);
-			res_changed = 1;
-			
-		} else {
-			trace(TRACE_ERROR, "%s,%s: querysize is wrong: [%d]", 
-					__FILE__, __func__, querysize);
-			return DM_EQUERY;
-		}
-	} else {
-		trace(TRACE_ERROR, "%s,%s: "
-		      "query buffer is NULL, this is not supposed to happen\n",
-		      __FILE__, __func__);
+	
+	if (db_check_connection() < 0) 
+		return DM_EQUERY;
+	
+	trace(TRACE_DEBUG, "%s,%s: query [%s]", __FILE__, __func__, q);
+	if (mysql_real_query(&conn, q, querysize)) {
+		trace(TRACE_ERROR, "%s,%s: [%s] [%s]", __FILE__, __func__, 
+				mysql_error(&conn), q);
 		return DM_EQUERY;
 	}
+
+	if(res != NULL) 
+		db_free_result();
+	
+	res = mysql_store_result(&conn);
+	res_changed = 1;
 
 	return DM_SUCCESS;
 }

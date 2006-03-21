@@ -34,8 +34,7 @@
 #endif
 
 typedef enum {
-	// By being < 0, FATALS always show on STDERR.
-	TRACE_FATAL = -1,
+	TRACE_FATAL = 0,
 	TRACE_ERROR,
 	TRACE_WARNING,
 	TRACE_MESSAGE,
