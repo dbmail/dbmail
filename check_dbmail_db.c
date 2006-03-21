@@ -1011,7 +1011,7 @@ END_TEST
 
 Suite *dbmail_db_suite(void)
 {
-	Suite *s = suite_create("Dbmail Basic Database Functions\n");
+	Suite *s = suite_create("Dbmail Basic Database Functions");
 
 	TCase *tc_db = tcase_create("DB");
 	suite_add_tcase(s, tc_db);
