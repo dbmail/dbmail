@@ -2692,6 +2692,7 @@ int db_createmailbox(const char *name, u64_t owner_idnr,
 	char *escaped_simple_name;
 	assert(mailbox_idnr != NULL);
 	*mailbox_idnr = 0;
+	int result;
 
 	if (auth_requires_shadow_user()) {
 		trace(TRACE_DEBUG, "%s,%s: creating shadow user for [%llu]",
@@ -2723,12 +2724,17 @@ int db_createmailbox(const char *name, u64_t owner_idnr,
 
 	dm_free(escaped_simple_name);
 
-	if (db_query(query) == -1) {
+	if ((result = db_query(query)) == DM_EQUERY) {
 		trace(TRACE_ERROR, "%s,%s: could not create mailbox",
 		      __FILE__, __func__);
 		return DM_EQUERY;
 	}
+
 	*mailbox_idnr = db_insert_result("mailbox_idnr");
+
+	trace(TRACE_DEBUG,"%s,%s: created mailbox with idnr [%llu] for user [%llu] result [%d]",
+			__FILE__, __func__, *mailbox_idnr, owner_idnr, result);
+
 	return DM_SUCCESS;
 }
 
