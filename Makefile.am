@@ -118,7 +118,8 @@ TESTS=check_dbmail_common \
 	check_dbmail_user \
 	check_dbmail_util \
 	check_dbmail_misc \
-	check_dbmail_dsn
+	check_dbmail_dsn \
+	check_dbmail_db
 
 noinst_PROGRAMS=$(TESTS)
 
@@ -137,6 +138,10 @@ check_dbmail_misc_INCLUDES=@CHECK_CFLAGS@
 check_dbmail_dsn_SOURCES=check_dbmail_dsn.c
 check_dbmail_dsn_LDADD=libdbmail.la @CHECK_LIBS@
 check_dbmail_dsn_INCLUDES=@CHECK_CFLAGS@
+
+check_dbmail_db_SOURCES=check_dbmail_db.c
+check_dbmail_db_LDADD=libdbmail.la @CHECK_LIBS@
+check_dbmail_db_INCLUDES=@CHECK_CFLAGS@
 
 check_dbmail_common_SOURCES=check_dbmail_common.c
 check_dbmail_common_LDADD=libdbmail.la @CHECK_LIBS@
