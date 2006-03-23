@@ -332,6 +332,19 @@ START_TEST(test_dbmail_message_get_header)
 }
 END_TEST
 
+START_TEST(test_dbmail_message_encoded)
+{
+	struct DbmailMessage *m = dbmail_message_new();
+	GString *s = g_string_new(encoded_message_koi);
+
+	m = dbmail_message_init_with_string(m, s);
+	g_string_free(s,TRUE);
+
+	fail_unless(strcmp(dbmail_message_get_header(m,"From"),"=?koi8-r?Q?=E1=CE=D4=CF=CE=20=EE=C5=C8=CF=D2=CF=DB=C9=C8=20?=<bad@foo.ru>")==0, 
+			"dbmail_message_get_header failed for koi-8 encoded header");
+	dbmail_message_free(m);
+}
+END_TEST
 START_TEST(test_dbmail_message_cache_headers)
 {
 	struct DbmailMessage *m = dbmail_message_new();
@@ -374,6 +387,7 @@ Suite *dbmail_message_suite(void)
 	tcase_add_test(tc_message, test_dbmail_message_get_header);
 	tcase_add_test(tc_message, test_dbmail_message_cache_headers);
 	tcase_add_test(tc_message, test_dbmail_message_free);
+	tcase_add_test(tc_message, test_dbmail_message_encoded);
 	return s;
 }
 

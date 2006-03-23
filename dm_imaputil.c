@@ -477,9 +477,11 @@ static GList * _imap_append_alist_as_plist(GList *list, const InternetAddressLis
 		g_return_val_if_fail(ia!=NULL, list);
 		
 		/* personal name */
-		if (ia->name)
-			t = g_list_append_printf(t, "\"%s\"", ia->name);
-		else
+		if (ia->name) {
+			gchar *name = g_mime_utils_header_encode_phrase((unsigned char *)ia->name);
+			t = g_list_append_printf(t, "\"%s\"", name);
+			g_free(name);
+		} else
 			t = g_list_append_printf(t, "NIL");
 
 		/* source route */
