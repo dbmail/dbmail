@@ -235,5 +235,13 @@ char *multipart_message_part = "Content-Type: text/plain;\n"
 	"Text version\n"
 	"--boundary--\n"
 	"\n";
-	
+
+char *encoded_message_koi = "From: =?koi8-r?Q?=E1=CE=D4=CF=CE=20=EE=C5=C8=CF=D2=CF=DB=C9=C8=20?=<bad@foo.ru>\n"
+	"To: nobody@foo.ru\n"
+	"Subject: test\n"
+	"MIME-Version: 1.0\n"
+	"Content-Type: text/plain\n"
+	"\n"
+	"test mail\n\n";
+
 

@@ -295,6 +295,26 @@ START_TEST(test_imap_get_envelope)
 
 	dbmail_message_free(message);
 	g_free(result);
+
+
+}
+END_TEST
+
+START_TEST(test_imap_get_envelope_koi)
+{
+	char *t;
+	struct DbmailMessage *m = dbmail_message_new();
+	GString *s = g_string_new(encoded_message_koi);
+
+	m = dbmail_message_init_with_string(m, s);
+	g_string_free(s,TRUE);
+	
+	t = imap_get_envelope(GMIME_MESSAGE(m->content));
+	printf("[%s]]\n", t);
+
+	g_free(t);
+	dbmail_message_free(m);
+	
 }
 END_TEST
 
@@ -546,6 +566,7 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_session, test_imap_bodyfetch);
 	tcase_add_test(tc_session, test_imap_get_structure);
 	tcase_add_test(tc_session, test_imap_get_envelope);
+	tcase_add_test(tc_session, test_imap_get_envelope_koi);
 	tcase_add_test(tc_session, test_imap_get_partspec);
 	tcase_add_test(tc_session, test_imap_message_fetch_headers);
 	
