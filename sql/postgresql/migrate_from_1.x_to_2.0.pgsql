@@ -46,8 +46,8 @@ COMMIT;
 BEGIN TRANSACTION;
 
 -- alter the aliases table
-DROP INDEX aliases_alias_idx;
-DROP INDEX aliases_alias_low_idx;
+DROP INDEX aliases_alias_idx CASCADE;
+DROP INDEX aliases_alias_low_idx CASCADE;
 ALTER TABLE alias_idnr_seq RENAME TO dbmail_alias_idnr_seq;
 ALTER TABLE aliases RENAME TO dbmail_aliases;
 ALTER TABLE aliases_pkey RENAME TO dbmail_aliases_pkey;
@@ -57,8 +57,8 @@ CREATE INDEX dbmail_aliases_alias_idx ON dbmail_aliases(alias);
 CREATE INDEX dbmail_aliases_alias_low_idx ON dbmail_aliases(lower(alias));
 
 -- alter the users table.
-DROP INDEX users_name_idx;
-DROP INDEX users_id_idx;
+DROP INDEX users_name_idx CASCADE;
+DROP INDEX users_id_idx CASCADE;
 ALTER TABLE user_idnr_seq RENAME TO dbmail_user_idnr_seq;
 ALTER TABLE users RENAME TO dbmail_users;
 ALTER TABLE users_pkey RENAME TO dbmail_users_pkey;
@@ -71,10 +71,10 @@ ALTER TABLE dbmail_users ALTER COLUMN curmail_size SET NOT NULL;
 CREATE UNIQUE INDEX dbmail_users_name_idx ON dbmail_users(userid);
 
 -- alter the mailboxes table
-DROP INDEX mailboxes_id_idx;
-DROP INDEX mailboxes_owner_idx;
-DROP INDEX mailboxes_name_idx;
-DROP INDEX mailboxes_is_subscribed_idx;
+DROP INDEX mailboxes_id_idx CASCADE;
+DROP INDEX mailboxes_owner_idx CASCADE;
+DROP INDEX mailboxes_name_idx CASCADE;
+DROP INDEX mailboxes_is_subscribed_idx CASCADE;
 ALTER TABLE mailbox_idnr_seq RENAME TO dbmail_mailbox_idnr_seq;
 ALTER TABLE mailboxes RENAME TO dbmail_mailboxes;
 ALTER TABLE mailboxes_pkey RENAME TO dbmail_mailboxes_pkey;
@@ -136,11 +136,11 @@ SELECT message_idnr, messagesize, rfcsize, internal_date FROM messages;
 SELECT setval('dbmail_physmessage_id_seq', max(id)) FROM dbmail_physmessage;
 
 -- alter the messages table
-DROP INDEX messages_id_idx;
-DROP INDEX messages_mailbox_idx;
-DROP INDEX messages_seen_flag_idx;
-DROP INDEX messages_unique_id_idx;
-DROP INDEX messages_status_idx;
+DROP INDEX messages_id_idx CASCADE;
+DROP INDEX messages_mailbox_idx CASCADE;
+DROP INDEX messages_seen_flag_idx CASCADE;
+DROP INDEX messages_unique_id_idx CASCADE;
+DROP INDEX messages_status_idx CASCADE;
 ALTER TABLE message_idnr_seq RENAME TO dbmail_message_idnr_seq;
 ALTER TABLE messages RENAME TO dbmail_messages;
 ALTER TABLE messages_pkey RENAME TO dbmail_messages_pkey;
@@ -169,8 +169,8 @@ CREATE INDEX dbmail_messages_status_notdeleted_idx
 	ON dbmail_messages(status) WHERE status < '2';
 
 -- alter dbmail_messageblks
-DROP INDEX messageblks_id_idx;
-DROP INDEX messageblks_msg_idx;
+DROP INDEX messageblks_id_idx CASCADE;
+DROP INDEX messageblks_msg_idx CASCADE;
 ALTER TABLE messageblk_idnr_seq RENAME TO dbmail_messageblk_idnr_seq;
 ALTER TABLE messageblks RENAME TO dbmail_messageblks;
 ALTER TABLE messageblks_pkey RENAME TO dbmail_messageblks_pkey;

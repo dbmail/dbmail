@@ -8,6 +8,11 @@
 #
 # This document is still in the early design stages.  Don't apply yet !
 
+# ABOUT TRANSACTIONS:
+# 
+# MySQL implicitly commits all successful CREATE TABLE and ALTER TABLE commands.
+# The transactional wrappers in this file may be redundant; that is,
+# they don't protect you from incomplete application of this script.
 
 #
 # store all headers by storing all headernames and headervalues in separate

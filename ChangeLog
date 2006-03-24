@@ -1,3 +1,13 @@
+2006-03-24  Aaron Stone  <aaron@serendipity.cx>
+
+	* sql/mysql/add_header_tables.mysql:
+	Added a note about transactions. Closes bug #296.
+	* sql/postgresql/migrate_from_1.x_to_2.0.pgsql:
+	Added CASCADE after each DROP INDEX. Closes bug #167.
+	* dbmail.conf, modules/authldap.c:
+	Added LDAP_VERSION support, defaulting to version 3.
+	Closes bug #288.
+
 2006-03-21  Paul J Stevens <paul@nfg.nl>
 
 	* imapcommands.c:
