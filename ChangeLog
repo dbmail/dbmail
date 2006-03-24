@@ -7,6 +7,8 @@
 	* dbmail.conf, modules/authldap.c:
 	Added LDAP_VERSION support, defaulting to version 3.
 	Closes bug #288.
+	* dbmail-message.c:
+	Moved a g_new0 into an anon block only where it is needed.
 
 2006-03-21  Paul J Stevens <paul@nfg.nl>
 
