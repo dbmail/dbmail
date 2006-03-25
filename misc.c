@@ -694,9 +694,9 @@ static void _strip_sub_leader(char *subject)
 void dm_base_subject(char *subject)
 {
 	unsigned offset, len, olen;
-	char *tmp, *saved;
+	char *tmp, *saved, *recoded;
 	
-	tmp = g_strdup(subject);
+	tmp = g_mime_utils_header_decode_text((unsigned char *)subject);
 	saved = tmp;
 	dm_pack_spaces(tmp);
 	g_strstrip(tmp);
@@ -728,7 +728,9 @@ void dm_base_subject(char *subject)
 		if (strlen(tmp)==olen)
 			break;
 	}
-	strncpy(subject,tmp,strlen(tmp)+1);
+	recoded = g_mime_utils_header_encode_text((unsigned char *)tmp);
+	strncpy(subject,recoded,strlen(subject)+1);
+	g_free(recoded);
 	g_free(saved);
 }
 
