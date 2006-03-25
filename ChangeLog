@@ -10,6 +10,12 @@
 	* dbmail-message.c:
 	Moved a g_new0 into an anon block only where it is needed.
 
+2006-03-23  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail.h, check_dbmail_imapd.c, check_dbmail_message.c, 
+	 dm_imaputil.c, test-scripts/testbox:
+	recode name element in imap envelope fetch response
+
 2006-03-21  Paul J Stevens <paul@nfg.nl>
 
 	* imapcommands.c:

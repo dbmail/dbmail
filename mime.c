@@ -44,10 +44,8 @@ int find_deliver_to_header_addresses(struct DbmailMessage *message,
 	if ((ialist = internet_address_parse_string(header_field)) == NULL) {
 		trace(TRACE_ERROR, "%s,%s: mail address parser error parsing header field",
 			__FILE__, __func__);
-		g_free(header_field);
 		return -1;
 	}
-	g_free(header_field);
 
 	ialisthead = ialist;
 	while (1) {

@@ -464,8 +464,9 @@ static GList * _imap_append_alist_as_plist(GList *list, const InternetAddressLis
 	GList *t = NULL, *p = NULL;
 	InternetAddress *ia = NULL;
 	InternetAddressList *ial;
-	char *s = NULL;
-	char **tokens;
+	gchar *s = NULL;
+	gchar **tokens;
+	gchar *name;
 
 	if (ialist==NULL)
 		return g_list_append_printf(list, "NIL");
@@ -478,7 +479,7 @@ static GList * _imap_append_alist_as_plist(GList *list, const InternetAddressLis
 		
 		/* personal name */
 		if (ia->name) {
-			gchar *name = g_mime_utils_header_encode_phrase((unsigned char *)ia->name);
+			name = g_mime_utils_header_encode_phrase((unsigned char *)ia->name);
 			t = g_list_append_printf(t, "\"%s\"", name);
 			g_free(name);
 		} else
@@ -981,15 +982,24 @@ void send_data(FILE * to, MEM * from, int cnt)
  */
 int init_cache()
 {
+	int serr;
 	cached_msg.dmsg = NULL;
 	cached_msg.num = -1;
 	cached_msg.msg_parsed = 0;
-	cached_msg.memdump = mopen();
-	if (!cached_msg.memdump)
+	if (! (cached_msg.memdump = mopen())) {
+		serr = errno;
+		trace(TRACE_ERROR,"%s,%s: mopen() failed [%s]",
+				__FILE__, __func__, strerror(serr));
+		errno = serr;
 		return -1;
+	}
 
-	cached_msg.tmpdump = mopen();
-	if (!cached_msg.tmpdump) {
+	
+	if (! (cached_msg.tmpdump = mopen())) {
+		serr = errno;
+		trace(TRACE_ERROR,"%s,%s: mopen() failed [%s]",
+				__FILE__, __func__, strerror(serr));
+		errno = serr;
 		mclose(&cached_msg.memdump);
 		return -1;
 	}

@@ -55,7 +55,6 @@ void setup(void)
 	GetDBParams(&_db_params);
 	db_connect();
 	auth_connect();
-	g_mime_init(0);
 }
 
 void teardown(void)
@@ -63,16 +62,7 @@ void teardown(void)
 	db_disconnect();
 	auth_disconnect();
 	config_free();
-	g_mime_shutdown();
 }
-
-START_TEST(test_gmime_init)
-{
-	g_mime_init(0);
-	g_mime_shutdown();
-
-}
-END_TEST
 
 //struct DbmailMessage * dbmail_message_new(void);
 START_TEST(test_dbmail_message_new)
@@ -150,14 +140,25 @@ START_TEST(test_dbmail_message_init_with_string)
 {
 	struct DbmailMessage *m;
 	GTuples *t;
+	GString *s;
+	
+	s = g_string_new(multipart_message);
 	m = dbmail_message_new();
-	m = dbmail_message_init_with_string(m, g_string_new(multipart_message));
+	m = dbmail_message_init_with_string(m,s);
+	g_string_free(s,TRUE);
 	
 	t = g_relation_select(m->headers, (gpointer)"Received", 0);
 	fail_unless(t->len==2,"Too few headers in tuple");
+	g_tuples_destroy(t);
+	dbmail_message_free(m);
 	
-	dbmail_message_set_class(m,DBMAIL_MESSAGE_PART);
-	m = dbmail_message_init_with_string(m, g_string_new(multipart_message_part));
+	
+	s = g_string_new(multipart_message_part);
+	m = dbmail_message_new();
+	m = dbmail_message_init_with_string(m, s);
+	g_string_free(s,TRUE);
+	
+	fail_unless(dbmail_message_get_class(m)==DBMAIL_MESSAGE_PART, "init_with string failed");
 	
 	dbmail_message_free(m);
 }
@@ -284,9 +285,11 @@ START_TEST(test_dbmail_message_new_from_stream)
 	whole_message_size = dbmail_message_get_size(m, FALSE);
 	fail_unless(whole_message_size == strlen(multipart_message), 
 			"read_whole_message_stream returned wrong message_size");
+	dbmail_message_free(m);
 	
 	fseek(fd,0,0);
 	fprintf(fd, "%s", raw_lmtp_data);
+	
 	
 	m = dbmail_message_new_from_stream(fd, DBMAIL_STREAM_LMTP);
 	whole_message_size = dbmail_message_get_size(m, FALSE);
@@ -370,7 +373,6 @@ Suite *dbmail_message_suite(void)
 	suite_add_tcase(s, tc_message);
 	tcase_add_checked_fixture(tc_message, setup, teardown);
 	
-	tcase_add_test(tc_message, test_gmime_init);
 	tcase_add_test(tc_message, test_dbmail_message_new);
 	tcase_add_test(tc_message, test_dbmail_message_new_from_stream);
 	tcase_add_test(tc_message, test_dbmail_message_set_class);
@@ -394,11 +396,13 @@ Suite *dbmail_message_suite(void)
 int main(void)
 {
 	int nf;
+	g_mime_init(0);
 	Suite *s = dbmail_message_suite();
 	SRunner *sr = srunner_create(s);
 	srunner_run_all(sr, CK_NORMAL);
 	nf = srunner_ntests_failed(sr);
 	srunner_free(sr);
+	g_mime_shutdown();
 	return (nf == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 	

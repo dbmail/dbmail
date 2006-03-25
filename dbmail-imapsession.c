@@ -74,6 +74,11 @@ static u64_t get_dumpsize(body_fetch_t *bodyfetch, u64_t tmpdumpsize);
 struct ImapSession * dbmail_imap_session_new(void)
 {
 	struct ImapSession * self;
+
+	/* init: cache */
+	if (init_cache() != 0)
+		return NULL;
+
 	self = g_new0(struct ImapSession,1);
 	if (! self)
 		trace(TRACE_ERROR,"%s,%s: OOM error", __FILE__, __func__);
