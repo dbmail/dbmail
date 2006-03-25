@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: mime.c 2030 2006-03-16 22:50:19Z aaron $
+/* $Id: mime.c 2052 2006-03-25 22:34:23Z paul $
  *
  * Functions for pulling addresses out of a header field. */
 
