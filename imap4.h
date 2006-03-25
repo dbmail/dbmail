@@ -40,7 +40,6 @@
 #define null_free(p) { dm_free(p); p = NULL; }
 
 
-int IMAPClientHandler(clientinfo_t * ci);
 
 typedef struct {
 	int itemtype;		/* the item to be fetched */
@@ -94,5 +93,9 @@ typedef enum {
 	IMAP_STORE_FLAG_DRAFT,
 	IMAP_STORE_FLAG_RECENT
 } imap_store_flag_t;
+
+imap_userdata_t * dbmail_imap_userdata_new(void);
+
+int IMAPClientHandler(clientinfo_t * ci);
 
 #endif

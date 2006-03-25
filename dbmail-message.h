@@ -122,7 +122,7 @@ gchar * get_crlf_encoded(gchar *string);
  */
 
 void dbmail_message_set_header(struct DbmailMessage *self, const char *header, const char *value);
-gchar * dbmail_message_get_header(const struct DbmailMessage *self, const char *header);
+const gchar * dbmail_message_get_header(const struct DbmailMessage *self, const char *header);
 
 void dbmail_message_cache_tofield(const struct DbmailMessage *self);
 void dbmail_message_cache_ccfield(const struct DbmailMessage *self);

@@ -68,7 +68,6 @@ void setup(void)
 	GetDBParams(&_db_params);
 	db_connect();
 	auth_connect();
-	g_mime_init(0);
 	init_testuser1();
 }
 
@@ -77,7 +76,6 @@ void teardown(void)
 	auth_disconnect();
 	db_disconnect();
 	config_free();
-	g_mime_shutdown();
 }
 
 
@@ -142,13 +140,17 @@ START_TEST(test_dbmail_imap_plist_collapse)
 	char *in = "(NIL) (NIL) (NIL)";
 	result = dbmail_imap_plist_collapse(in);
 	fail_unless(strcmp(result,"(NIL)(NIL)(NIL)")==0,"plist collapse failed");
+	g_free(result);
 }
 END_TEST
 
 
-#define A(x,y) fail_unless(strcmp(y,dbmail_imap_astring_as_string(x))==0,"dbmail_imap_astring_as_string failed")
+#define A(x,y) s=dbmail_imap_astring_as_string(x); \
+	fail_unless(strcmp(y,s)==0,"dbmail_imap_astring_as_string failed"); \
+	g_free(s)
 START_TEST(test_dbmail_imap_astring_as_string)
 {
+	char *s;
 	A("test","\"test\"");
 	A("\"test\"","\"test\"");
 	A("\"test","{5}\r\n\"test");
@@ -160,12 +162,110 @@ START_TEST(test_dbmail_imap_astring_as_string)
 }
 END_TEST
 
+static clientinfo_t * ci_new(void)
+{
+	clientinfo_t *ci = g_new0(clientinfo_t,1);
+	FILE *fd = fopen("/dev/null","w");
+	ci->userData = dbmail_imap_userdata_new();
+	ci->rx = stdin;
+	ci->tx = fd;
+	//ci->tx = stderr;
+	return ci;
+}
+
+//struct ImapSession * dbmail_imap_session_new(void);
 START_TEST(test_imap_session_new)
 {
 	struct ImapSession *s;
 	s = dbmail_imap_session_new();
 	fail_unless(s!=NULL, "Failed to initialize imapsession");
 	dbmail_imap_session_delete(s);
+}
+END_TEST
+//struct ImapSession * dbmail_imap_session_setClientinfo(struct ImapSession * self, clientinfo_t *ci);
+//struct ImapSession * dbmail_imap_session_setTag(struct ImapSession * self, char * tag);
+//struct ImapSession * dbmail_imap_session_setCommand(struct ImapSession * self, char * command);
+//struct ImapSession * dbmail_imap_session_setArgs(struct ImapSession * self, char ** args);
+//struct ImapSession * dbmail_imap_session_setMsginfo(struct ImapSession * self, msginfo_t * msginfo);
+//struct ImapSession * dbmail_imap_session_resetFi(struct ImapSession * self);
+//void dbmail_imap_session_delete(struct ImapSession * self);
+//int dbmail_imap_session_readln(struct ImapSession * self, char * buffer);
+//int dbmail_imap_session_discard_to_eol(struct ImapSession *self);
+//int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...);
+//int dbmail_imap_session_set_state(struct ImapSession *self, int state);
+//int check_state_and_args(struct ImapSession * self, const char * command, int minargs, int maxargs, int state);
+//int dbmail_imap_session_handle_auth(struct ImapSession * self, char * username, char * password);
+//int dbmail_imap_session_prompt(struct ImapSession * self, char * prompt, char * value);
+//u64_t dbmail_imap_session_mailbox_get_idnr(struct ImapSession * self, char * mailbox);
+//int dbmail_imap_session_mailbox_check_acl(struct ImapSession * self, u64_t idnr, ACLRight_t right);
+//int dbmail_imap_session_mailbox_get_selectable(struct ImapSession * self, u64_t idnr);
+//int dbmail_imap_session_mailbox_show_info(struct ImapSession * self);
+//int dbmail_imap_session_mailbox_open(struct ImapSession * self, char * mailbox);
+
+
+//dbmail_imap_session_handle_auth(self, const char *username, const char *password);
+START_TEST(test_imap_handle_auth)
+{
+	int result;
+	clientinfo_t *ci = ci_new();
+	struct ImapSession *s = dbmail_imap_session_new();
+	s = dbmail_imap_session_setClientinfo(s,ci);
+	
+	result = dbmail_imap_session_handle_auth(s,"testuser1","test");
+	fail_unless(result==0,"dbmail_imap_session_handle_auth failed");
+	
+	dbmail_imap_session_delete(s);
+	g_free(ci);
+}
+END_TEST
+START_TEST(test_imap_mailbox_open)
+{
+	int result;
+	clientinfo_t *ci = ci_new();
+	struct ImapSession *s = dbmail_imap_session_new();
+	char * mailbox = g_strdup("INBOX");
+	s = dbmail_imap_session_setClientinfo(s,ci);
+	
+	dbmail_imap_session_handle_auth(s,"testuser1","test");
+	result = dbmail_imap_session_mailbox_open(s,mailbox);
+	fail_unless(result==0,"dbmail_imap_session_mailbox_open failed");
+
+	g_free(mailbox);
+	dbmail_imap_session_delete(s);
+	g_free(ci);
+}
+END_TEST
+	
+//int dbmail_imap_session_fetch_get_items(struct ImapSession *self, u64_t row)
+START_TEST(test_dbmail_imap_session_fetch_get_items)
+{
+	int result;
+	u64_t row;
+	char * mailbox = g_strdup("INBOX");
+	struct ImapSession *s = dbmail_imap_session_new();
+	imap_userdata_t *ud;
+	
+	clientinfo_t *ci = ci_new();
+	s = dbmail_imap_session_setClientinfo(s,ci);
+	g_free(ci);
+	
+	dbmail_imap_session_handle_auth(s,"testuser1","test");
+	dbmail_imap_session_mailbox_open(s,mailbox);
+	
+	ud = s->ci->userData;
+
+	for (row=0; row<ud->mailbox.exists; row++) {
+		dbmail_imap_session_resetFi(s);
+		s->fi->msgparse_needed=1;
+		s->fi->getRFC822=1;
+		s->fi->getFlags=0;
+		s->msg_idnr = ud->mailbox.seq_list[row];
+//		printf("seq_list[%llu]: [%llu]\n", row, s->msg_idnr);
+		result = dbmail_imap_session_fetch_get_items(s,0);
+	}
+	
+	dbmail_imap_session_delete(s);
+	g_free(mailbox);
 }
 END_TEST
 
@@ -221,6 +321,7 @@ START_TEST(test_find_deliver_to_header_addresses)
 	fail_unless(strcmp((char *)el->data,"nobody@test123.com")==0, "find_deliver_to_header_addresses failed");
 
 	dbmail_message_free(m);
+	dm_list_free(&el);
 }
 END_TEST
 
@@ -234,6 +335,8 @@ START_TEST(test_g_mime_object_get_body)
 	
 	result = g_mime_object_get_body(GMIME_OBJECT(m->content));
 	fail_unless(strlen(result)==1045,"g_mime_object_get_body failed");
+	g_free(result);
+	dbmail_message_free(m);
 	
 }
 END_TEST
@@ -295,6 +398,7 @@ START_TEST(test_imap_get_envelope)
 
 	dbmail_message_free(message);
 	g_free(result);
+	g_free(expect);
 
 
 }
@@ -302,7 +406,7 @@ END_TEST
 
 START_TEST(test_imap_get_envelope_koi)
 {
-	char *t;
+	char *t,*q, *w;
 	struct DbmailMessage *m = dbmail_message_new();
 	GString *s = g_string_new(encoded_message_koi);
 
@@ -310,9 +414,15 @@ START_TEST(test_imap_get_envelope_koi)
 	g_string_free(s,TRUE);
 	
 	t = imap_get_envelope(GMIME_MESSAGE(m->content));
-	printf("[%s]]\n", t);
+	/* full-circle? */
+	q = g_mime_utils_header_decode_text((unsigned char *)t);
+	w = g_mime_utils_header_encode_text((unsigned char *)q);
+	
+	fail_unless(strcmp(t,w)==0,"encode/decode/encode loop failed");
 
 	g_free(t);
+	g_free(q);
+	g_free(w);
 	dbmail_message_free(m);
 	
 }
@@ -334,10 +444,12 @@ START_TEST(test_imap_get_partspec)
 	result = imap_get_logical_part(object,"HEADER");
 //	printf("{%d} [%s]", strlen(result), result);
 	fail_unless(strlen(result)==206,"imap_get_partspec failed");
+	g_free(result);
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"TEXT");
 	result = imap_get_logical_part(object,"TEXT");
 	fail_unless(strlen(result)==29,"imap_get_partspec failed");
+	g_free(result);
 
 	dbmail_message_free(message);
 
@@ -349,18 +461,20 @@ START_TEST(test_imap_get_partspec)
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"1.TEXT");
 	result = imap_get_logical_part(object,"TEXT");
 	fail_unless(strlen(result)==16,"imap_get_partspec failed");
+	g_free(result);
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"1.HEADER");
 	result = imap_get_logical_part(object,"HEADER");
 	fail_unless(strlen(result)==53,"imap_get_partspec failed");
+	g_free(result);
 	
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"2.MIME");
 	result = imap_get_logical_part(object,"MIME");
 	fail_unless(strlen(result)==93,"imap_get_partspec failed");
-
-	
 	g_free(result);
 	g_free(expect);
+
+	dbmail_message_free(message);
 
 }
 END_TEST
@@ -400,7 +514,6 @@ START_TEST(test_imap_message_fetch_headers)
 
 }
 END_TEST
-
 START_TEST(test_g_list_slices)
 {
 	unsigned i=0;
@@ -456,32 +569,38 @@ unsigned int get_count_on(unsigned int * set, unsigned int setlen) {
 }
 
 	
-static char *wrap_base_subject(char *in) 
+static int wrap_base_subject(const char *in, const char *expect) 
 {
-	gchar *out = g_strdup(in);
+	char *s = g_strdup(in);
+	char *out = s;
+	int res;
 	dm_base_subject(out);
-	return out;
+	res = strcmp(out, expect);
+	g_free(s);
+	return res;
 }	
+
+#define BS(x,y) fail_unless(wrap_base_subject((x),(y))==0, "dm_base_subject failed")
+#define BSF(x,y) fail_unless(wrap_base_subject((x),(y))!=0, "dm_base_subject failed")
 
 START_TEST(test_dm_base_subject)
 {
-	gchar *subject;
+	BS("Re: foo","foo");
+	BS("Fwd: foo","foo");
+	BS("Fw: foo","foo");
+	BS("[issue123] foo","foo");
+	BS("Re [issue123]: foo","foo");
+	BS("Re: [issue123] foo","foo");
+	BS("Re: [issue123] [Fwd: foo]","foo");
+	BS("[Dbmail-dev] [DBMail 0000240]: some bug report","some bug report");
 
-	fail_unless(strcmp(wrap_base_subject("Re: foo"),"foo")==0,"dm_base_subject failed");
-	fail_unless(strcmp(wrap_base_subject("Fwd: foo"),"foo")==0,"dm_base_subject failed");
-	fail_unless(strcmp(wrap_base_subject("Fw: foo"),"foo")==0,"dm_base_subject failed");
-	fail_unless(strcmp(wrap_base_subject("[issue123] foo"),"foo")==0,"dm_base_subject failed");
-	fail_unless(strcmp(wrap_base_subject("Re [issue123]: foo"),"foo")==0,"dm_base_subject failed");
-	fail_unless(strcmp(wrap_base_subject("Re: [issue123] foo"),"foo")==0,"dm_base_subject failed");
-	fail_unless(strcmp(wrap_base_subject("Re: [issue123] [Fwd: foo]"),"foo")==0,"dm_base_subject failed");
-	fail_unless(strcmp(wrap_base_subject("[Dbmail-dev] [DBMail 0000240]: some bug report"),"some bug report")==0,"dm_base_subject failed");
-
-	fail_unless(strcmp(wrap_base_subject("test\t\tspaces  here"),"test spaces here")==0,"cleanup of spaces failed");
-	fail_unless(strcmp(wrap_base_subject("test strip trailer here (fwd) (fwd)"),"test strip trailer here")==0,"cleanup of sub-trailer failed");
-	fail_unless(strcmp(wrap_base_subject("Re: Fwd: [fwd: some silly test subject] (fwd)"),"some silly test subject")==0, "stripping of subj-tlr/subj-ldr failed");
+	BS("test\t\tspaces  here","test spaces here");
+	BS("test strip trailer here (fwd) (fwd)","test strip trailer here");
+	BS("Re: Fwd: [fwd: some silly test subject] (fwd)","some silly test subject");
 	
-	subject = g_strdup("=?koi8-r?B?4snMxdTZIPcg5OXu+CDz8OXr9OHr7PEg9/Pl5+ThIOTs8SD34fMg8+8g8+vp5Ovv6iEg0yA=?=");
-	dm_base_subject(subject);
+	BSF("=?koi8-r?B?4snMxdTZIPcg5OXu+CDz8OXr9OHr7PEg9/Pl5+ThIOTs8SD34fMg8+8g8+vp5Ovv6iEg0yA=?=",
+            "=?koi8-r?B?4snMxdTZIPcg5OXu+CDz8OXr9OHr7PEg9/Pl5+ThIOTs8SD34fMg8+8g8+vp5Ovv6iEg0yA=?=");
+
 
 }
 END_TEST
@@ -563,12 +682,15 @@ Suite *dbmail_suite(void)
 	
 	tcase_add_checked_fixture(tc_session, setup, teardown);
 	tcase_add_test(tc_session, test_imap_session_new);
+	tcase_add_test(tc_session, test_imap_handle_auth);
+	tcase_add_test(tc_session, test_imap_mailbox_open);
 	tcase_add_test(tc_session, test_imap_bodyfetch);
 	tcase_add_test(tc_session, test_imap_get_structure);
 	tcase_add_test(tc_session, test_imap_get_envelope);
 	tcase_add_test(tc_session, test_imap_get_envelope_koi);
 	tcase_add_test(tc_session, test_imap_get_partspec);
 	tcase_add_test(tc_session, test_imap_message_fetch_headers);
+	tcase_add_test(tc_session, test_dbmail_imap_session_fetch_get_items);
 	
 	tcase_add_checked_fixture(tc_mime, setup, teardown);
 	tcase_add_test(tc_mime, test_find_deliver_to_header_addresses);
@@ -592,11 +714,13 @@ Suite *dbmail_suite(void)
 int main(void)
 {
 	int nf;
+	g_mime_init(0);
 	Suite *s = dbmail_suite();
 	SRunner *sr = srunner_create(s);
 	srunner_run_all(sr, CK_NORMAL);
 	nf = srunner_ntests_failed(sr);
 	srunner_free(sr);
+	g_mime_shutdown();
 	return (nf == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 	

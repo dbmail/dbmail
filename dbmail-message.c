@@ -274,7 +274,7 @@ static void _set_content(struct DbmailMessage *self, const GString *content)
 
 	GMimeStream *stream;
 	if (self->raw) {
-		g_byte_array_free(self->raw,FALSE);
+		g_byte_array_free(self->raw,TRUE);
 		self->raw = NULL;
 	}
 	
@@ -296,6 +296,7 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 	GMimeStream *fstream, *bstream, *mstream;
 	GMimeFilter *filter;
 	GMimeParser *parser;
+	gchar *buf;
 	size_t t;
 
 	/*
@@ -304,10 +305,16 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 	 * depending on the streamtype
 	 */
 
+	if (self->content) {
+		g_object_unref(self->content);
+		self->content=NULL;
+	}
+		
 	switch(type) {
 		case DBMAIL_STREAM_LMTP:
-		case DBMAIL_STREAM_PIPE: {
-			char *buf = g_new0(char, MESSAGE_MAX_LINE_SIZE);
+		case DBMAIL_STREAM_PIPE:
+			
+			buf = g_new0(char, MESSAGE_MAX_LINE_SIZE);
 
 			bstream = g_mime_stream_buffer_new(stream,GMIME_STREAM_BUFFER_CACHE_READ);
 			mstream = g_mime_stream_mem_new();
@@ -330,7 +337,7 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 			g_object_unref(bstream);
 			g_object_unref(mstream);
 
-		} break;
+		break;
 
 		default:
 		case DBMAIL_STREAM_RAW:
@@ -345,7 +352,7 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 			self->content = GMIME_OBJECT(g_mime_parser_construct_message(parser));
 			break;
 		case DBMAIL_MESSAGE_PART:
-			trace(TRACE_DEBUG,"%s,%s: parse part",__FILE__,__func__);
+		trace(TRACE_DEBUG,"%s,%s: parse part",__FILE__,__func__);
 			self->content = GMIME_OBJECT(g_mime_parser_construct_part(parser));
 			break;
 	}
@@ -406,9 +413,9 @@ void dbmail_message_set_header(struct DbmailMessage *self, const char *header, c
 {
 	g_mime_message_set_header(GMIME_MESSAGE(self->content), header, value);
 }
-gchar * dbmail_message_get_header(const struct DbmailMessage *self, const char *header)
+const gchar * dbmail_message_get_header(const struct DbmailMessage *self, const char *header)
 {
-	return (gchar *)g_mime_object_get_header(GMIME_OBJECT(self->content), header);
+	return g_mime_object_get_header(GMIME_OBJECT(self->content), header);
 }
 
 /* dump message(parts) to char ptrs */
@@ -502,8 +509,7 @@ static struct DbmailMessage * _retrieve(struct DbmailMessage *self, char *query_
 {
 	
 	int row = 0, rows = 0;
-	GString *r, *m = g_string_new("");
-	char *raw;
+	GString *m = g_string_new("");
 	
 	assert(dbmail_message_get_physid(self));
 	
@@ -526,14 +532,6 @@ static struct DbmailMessage * _retrieve(struct DbmailMessage *self, char *query_
 		g_string_append_printf(m, "%s", db_get_result(row,0));
 	
 	db_free_result();
-
-	// FIXME: this should not be required. Something in 
-	// gmime's parser it would seem. 
-	// ... But this /fix/ just makes things worse...
-	//raw = get_crlf_encoded(m->str);
-	//r = g_string_new(raw);
-	//self = dbmail_message_init_with_string(self,r);
-	//g_string_free(r,TRUE);
 	
 	self = dbmail_message_init_with_string(self,m);
 	g_string_free(m,TRUE);
@@ -964,7 +962,7 @@ void dbmail_message_cache_datefield(const struct DbmailMessage *self)
 	char *value;
 	time_t date;
 
-	if (! (value = dbmail_message_get_header(self,"Date")))
+	if (! (value = (char *)dbmail_message_get_header(self,"Date")))
 		date = (time_t)0;
 	else
 		date = g_mime_utils_header_decode_date(value,NULL);
@@ -983,9 +981,9 @@ void dbmail_message_cache_datefield(const struct DbmailMessage *self)
 void dbmail_message_cache_subjectfield(const struct DbmailMessage *self)
 {
 	char *value;
-	char *subject;
+	char *subject, *s;
 	
-	value = dbmail_message_get_header(self,"Subject");
+	value = (char *)dbmail_message_get_header(self,"Subject");
 	if (! value) {
 		trace(TRACE_WARNING,"%s,%s: no subject field value [%llu]",
 				__FILE__, __func__, self->physid);
@@ -996,12 +994,10 @@ void dbmail_message_cache_subjectfield(const struct DbmailMessage *self)
 	if (!subject)
 		return;
 
-	dm_base_subject(subject);
+	s = subject;
+	dm_base_subject(s);
 
-	//if (strlen(subject)>255)
-	//	subject[255]='\0';
-	
-	insert_field_cache(self->physid, "subject", subject);
+	insert_field_cache(self->physid, "subject", s);
 	
 	g_free(subject);
 }
@@ -1011,7 +1007,7 @@ void dbmail_message_cache_referencesfield(const struct DbmailMessage *self)
 	GMimeReferences *refs, *head;
 	const char *field;
 
-	field = dbmail_message_get_header(self,"References");
+	field = (char *)dbmail_message_get_header(self,"References");
 	if (! field)
 		field = dbmail_message_get_header(self,"In-Reply-to");
 	if (! field) 

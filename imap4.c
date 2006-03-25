@@ -82,6 +82,16 @@ const IMAP_COMMAND_HANDLER imap_handler_functions[] = {
 };
 
 
+imap_userdata_t * dbmail_imap_userdata_new(void)
+{
+	imap_userdata_t *ud;
+	if (! (ud = g_new0(imap_userdata_t,1))) {
+		trace(TRACE_ERROR, "%s,%s: not enough memory.", __FILE__, __func__);
+		return NULL;
+	}
+	ud->state = IMAPCS_NON_AUTHENTICATED;
+	return ud;
+}
 
 /*
  * Main handling procedure
@@ -102,17 +112,9 @@ int IMAPClientHandler(clientinfo_t * ci)
 	struct ImapSession *session = dbmail_imap_session_new();
 	dbmail_imap_session_setClientinfo(session,ci);
 
-	/* init: add userdata */
-	ud = dm_malloc(sizeof(imap_userdata_t));
-	if (! ud) {
-		/* out of mem */
-		trace(TRACE_ERROR,
-		      "%s,%s: not enough memory.", __FILE__, __func__);
+	if (! (ud = dbmail_imap_userdata_new()))
 		return -1;
-	}
-
-	memset(ud, 0, sizeof(imap_userdata_t));
-	ud->state = IMAPCS_NON_AUTHENTICATED;
+	
 	session->ci->userData = ud;
 
 	/* greet user */
@@ -123,14 +125,6 @@ int IMAPClientHandler(clientinfo_t * ci)
 		return EOF;
 	}
 	fflush(session->ci->tx);
-
-	/* init: cache */
-	if (init_cache() != 0) {
-		trace(TRACE_ERROR, "%s,%s: cannot open temporary file\n", __FILE__, __func__);
-		dbmail_imap_session_printf(session, "* BYE internal system failure\r\n");
-		dbmail_imap_session_delete(session);
-		return EOF;
-	}
 
 	done = 0;
 	args = NULL;
