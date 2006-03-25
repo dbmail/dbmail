@@ -19,30 +19,14 @@
 */
 
 /*
- * $Id: authldap.c 1982 2006-02-15 14:45:48Z aaron $
+ * $Id: authldap.c 2049 2006-03-24 11:41:17Z aaron $
  * * User authentication functions for LDAP.
  */
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
-#include "assert.h"
-#include "auth.h"
 #include "dbmail.h"
-#include "db.h"
-#include "dbmd5.h"
-#include "debug.h"
-#include "list.h"
-#include "misc.h"
-#include <ldap.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <time.h>
-#include <glib.h>
 
 #define AUTH_QUERY_SIZE 1024
 #define LDAP_RES_SIZE 1024
@@ -61,7 +45,7 @@ char **_ldap_attrs = NULL;
 char _ldap_query[AUTH_QUERY_SIZE];
 
 typedef struct _ldap_cfg {
-	field_t bind_dn, bind_pw, base_dn, port, scope, hostname;
+	field_t bind_dn, bind_pw, base_dn, port, version, scope, hostname;
 	field_t user_objectclass, forw_objectclass;
 	field_t cn_string;
 	field_t field_uid, field_cid, min_cid, max_cid, field_nid, min_nid, max_nid;
@@ -69,7 +53,7 @@ typedef struct _ldap_cfg {
 	field_t field_maxmail, field_passwd;
 	field_t field_fwd, field_fwdsave, field_fwdtarget, fwdtargetprefix;
 	field_t field_members;
-	int scope_int, port_int;
+	int scope_int, port_int, version_int;
 } _ldap_cfg_t;
 
 _ldap_cfg_t _ldap_cfg;
@@ -92,6 +76,7 @@ void __auth_get_config(void)
 	GETCONFIGVALUE("BIND_PW",		"LDAP", _ldap_cfg.bind_pw);
 	GETCONFIGVALUE("BASE_DN",		"LDAP", _ldap_cfg.base_dn);
 	GETCONFIGVALUE("PORT",			"LDAP", _ldap_cfg.port);
+	GETCONFIGVALUE("VERSION",		"LDAP", _ldap_cfg.version);
 	GETCONFIGVALUE("HOSTNAME",		"LDAP", _ldap_cfg.hostname);
 	GETCONFIGVALUE("USER_OBJECTCLASS",	"LDAP", _ldap_cfg.user_objectclass);
 	GETCONFIGVALUE("FORW_OBJECTCLASS",	"LDAP", _ldap_cfg.forw_objectclass);
@@ -111,6 +96,9 @@ void __auth_get_config(void)
 
 	/* Store the port as an integer for later use. */
 	_ldap_cfg.port_int = atoi(_ldap_cfg.port);
+
+	/* Store the version as an integer for later use. */
+	_ldap_cfg.version_int = atoi(_ldap_cfg.version);
 
 	/* Compare the input string with the possible options,
 	 * making sure not to exceeed the length of the given string */
@@ -142,20 +130,39 @@ void __auth_get_config(void)
  */
 int auth_connect(void)
 {
+	int version;
 
 	if (_ldap_conn != NULL) 
 		return 0;
 	
 	__auth_get_config();
 	
-	trace(TRACE_DEBUG, "%s,%s: connecting to ldap server on [%s] : [%d]",
+	trace(TRACE_DEBUG, "%s,%s: connecting to ldap server on [%s] : [%d] version [%d]",
 			__FILE__,__func__, 
 			_ldap_cfg.hostname, 
-			_ldap_cfg.port_int);
+			_ldap_cfg.port_int,
+			_ldap_cfg.version_int);
 	
 	_ldap_conn = ldap_init(
 			_ldap_cfg.hostname, 
 			_ldap_cfg.port_int);
+
+	switch (_ldap_cfg.version_int) {
+	case 2:
+		version = LDAP_VERSION2;
+		break;
+	case 3:
+		version = LDAP_VERSION3;
+		break;
+	default:
+		trace(TRACE_ERROR, "%s, %s: Unsupported LDAP version requested [%d]. "
+				"Defaulting to LDAP version 3.",
+				__FILE__, __func__, _ldap_cfg.version_int);
+		version = LDAP_VERSION3;
+		break;
+	}
+
+	ldap_set_option(_ldap_conn, LDAP_OPT_PROTOCOL_VERSION, &version);
 
 	
 	trace(TRACE_DEBUG, "%s,%s: binding to ldap server as [%s] / [xxxxxxxx]",

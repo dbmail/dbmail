@@ -2,12 +2,17 @@
 #
 # modify dbmail schema to support header caching.
 #
-# $Id: add_header_tables.mysql 1767 2005-05-03 15:06:24Z paul $
+# $Id: add_header_tables.mysql 2049 2006-03-24 11:41:17Z aaron $
 #
 # WARNING:
 #
 # This document is still in the early design stages.  Don't apply yet !
 
+# ABOUT TRANSACTIONS:
+# 
+# MySQL implicitly commits all successful CREATE TABLE and ALTER TABLE commands.
+# The transactional wrappers in this file may be redundant; that is,
+# they don't protect you from incomplete application of this script.
 
 #
 # store all headers by storing all headernames and headervalues in separate

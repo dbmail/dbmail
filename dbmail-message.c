@@ -1,5 +1,5 @@
 /*
-  $Id: dbmail-message.c 2029 2006-03-16 09:23:53Z paul $
+  $Id: dbmail-message.c 2050 2006-03-24 21:09:45Z aaron $
 
   Copyright (C) 2004-2005 NFG Net Facilities Group BV, info@nfg.nl
 
@@ -297,7 +297,6 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 	GMimeFilter *filter;
 	GMimeParser *parser;
 	size_t t;
-	char *buf = g_new0(char, MESSAGE_MAX_LINE_SIZE);
 
 	/*
 	 * buildup the memory stream buffer
@@ -307,7 +306,9 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 
 	switch(type) {
 		case DBMAIL_STREAM_LMTP:
-		case DBMAIL_STREAM_PIPE:
+		case DBMAIL_STREAM_PIPE: {
+			char *buf = g_new0(char, MESSAGE_MAX_LINE_SIZE);
+
 			bstream = g_mime_stream_buffer_new(stream,GMIME_STREAM_BUFFER_CACHE_READ);
 			mstream = g_mime_stream_mem_new();
 			fstream = g_mime_stream_filter_new_with_stream(mstream);
@@ -328,8 +329,8 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 			g_object_unref(fstream);
 			g_object_unref(bstream);
 			g_object_unref(mstream);
-			
-		break;
+
+		} break;
 
 		default:
 		case DBMAIL_STREAM_RAW:
