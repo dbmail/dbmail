@@ -1,3 +1,12 @@
+2006-03-25  Paul J Stevens <paul@nfg.nl>
+
+	* misc.c:
+	decode and encode subject dm_base_subject
+	* ChangeLog, check_dbmail_imapd.c, check_dbmail_message.c, 
+	  dbmail-imapsession.c, dbmail-message.c, dbmail-message.h, 
+	  dm_imaputil.c, imap4.c, imap4.h, mime.c:
+	cleanups and memleak fixes
+
 2006-03-24  Aaron Stone  <aaron@serendipity.cx>
 
 	* sql/mysql/add_header_tables.mysql:
