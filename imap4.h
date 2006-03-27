@@ -53,28 +53,30 @@ typedef struct {
 
 
 typedef struct {
-/*  int nbodyfetches;
-  body_fetch_t *bodyfetches;
-*/
-//	body_fetch_t bodyfetch; 
 	GList *bodyfetch;
 
-	int noseen;		/* set the seen flag ? */
+	gboolean noseen;		/* set the seen flag ? */
+	gboolean msgparse_needed;
+	gboolean hdrparse_needed;
 
-	/* temporary additions: */
-	int setseen;
-	int isfirstfetchout;
-	/* end temp additions */
-	
-	int msgparse_needed;
-	int hdrparse_needed;
+	/* helpers */
+	gboolean setseen;
+	gboolean isfirstfetchout;
 
-	int getBodyTotal, getBodyTotalPeek;
-	int getInternalDate, getFlags, getUID;
-	int getMIME_IMB, getEnvelope, getSize;
-	int getMIME_IMB_noextension;
-	int getRFC822Header, getRFC822Text;
-	int getRFC822, getRFC822Peek;
+	/* fetch elements */
+	gboolean getUID;
+	gboolean getSize;
+	gboolean getFlags;
+	gboolean getInternalDate;
+	gboolean getEnvelope;
+	gboolean getMIME_IMB;
+	gboolean getMIME_IMB_noextension;
+	gboolean getRFC822Header;
+	gboolean getRFC822Text;
+	gboolean getRFC822Peek;
+	gboolean getRFC822;
+	gboolean getBodyTotal;
+	gboolean getBodyTotalPeek;
 } fetch_items_t;
 
 
