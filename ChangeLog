@@ -1,6 +1,21 @@
+2006-03-27  Paul J Stevens <paul@nfg.nl>
+
+	* ChangeLog, check_dbmail_mailbox.c, db.c, dbmail-imapsession.c, 
+	  debian/changelog, dm_imaputil.c, imapcommands.c, 
+	  test-scripts/testimap.py:
+	start new refactoring round of _ic_fetch and do some misc cleanups
+	* README:
+	update
+	* dbmail-mailbox.c, dbmail-mailbox.h:
+	make dbmail_mailbox_get_set more generic
+	* debian/changelog, debian/control:
+	debian package update
+	* check_dbmail_mailbox.c, imap4.h:
+	refactoring _ic_fetch
+
 2006-03-25  Paul J Stevens <paul@nfg.nl>
 
-	* misc.c:
+	* misc.c, check_dbmail_message.c:
 	decode and encode subject dm_base_subject
 	* ChangeLog, check_dbmail_imapd.c, check_dbmail_message.c, 
 	  dbmail-imapsession.c, dbmail-message.c, dbmail-message.h, 

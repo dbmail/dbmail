@@ -1474,11 +1474,6 @@ int _ic_search(struct ImapSession *self)
 	return sorted_search(self,0);
 }
 
-/*
- * _ic_sort()
- * 
- * sort and return sorted IDS for the selected mailbox
- */
 int _ic_sort(struct ImapSession *self)
 {
 	return sorted_search(self,1);
@@ -1530,8 +1525,6 @@ int _ic_fetch(struct ImapSession *self)
 
 	fetch_max = self->use_uid ? (ud->mailbox.msguidnext - 1) : ud->mailbox.exists;
 	
-	trace(TRACE_DEBUG,"%s,%s: hdrparse_needed [%d]", __FILE__,__func__, self->fi->hdrparse_needed);
-	trace(TRACE_DEBUG,"%s,%s: msgparse_needed [%d]", __FILE__,__func__, self->fi->msgparse_needed);
 	/* now fetch results for each msg */
 	endptr = self->args[0];
 	while (*endptr) {

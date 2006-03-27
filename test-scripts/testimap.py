@@ -39,9 +39,9 @@ unimplementedError = 'Dbmail testcase unimplemented'
 HOST,PORT = "localhost", 143
 
 # for stdin/stdout testing
-DAEMONBIN = "./dbmail-imapd -n -f /etc/dbmail/dbmail-test.conf"
+#DAEMONBIN = "./dbmail-imapd -n -f /etc/dbmail/dbmail-test.conf"
 # with valgrind
-#DAEMONBIN = "valgrind --suppressions=./contrib/dbmail.supp --leak-check=full ./dbmail-imapd -n /etc/dbmail/dbmail-test.conf"
+DAEMONBIN = "valgrind --suppressions=./contrib/dbmail.supp --leak-check=full ./dbmail-imapd -n /etc/dbmail/dbmail-test.conf"
 
 
 TESTMSG={}
@@ -219,26 +219,21 @@ class testImapServer(unittest.TestCase):
         self.assertEquals(self.o.fetch(id,"(UID RFC822.SIZE)")[0],'OK')
         
         result=self.o.fetch(id,"(UID RFC822.HEADER)")
-
-        #print result
-
         self.assertEquals(result[0],'OK')
         self.assertEquals(result[1][0][1][-2:],'\r\n')
-        
-        result=self.o.fetch(id,"(UID RFC822.HEADER)")
-        self.assertEquals(result[0],'OK')
-        #print result
         
         # OE query
         result=self.o.fetch(id,"(BODY.PEEK[HEADER.FIELDS (References X-Ref X-Priority X-MSMail-Priority X-MSOESRec Newsgroups)] ENVELOPE RFC822.SIZE UID FLAGS INTERNALDATE)")
         self.assertEquals(result[0],'OK')
-        #print result
 
         # TB query
         result=self.o.fetch(id,"(UID RFC822.SIZE FLAGS BODY.PEEK[HEADER.FIELDS (From To Cc Subject Date Message-ID Priority X-Priority References Newsgroups In-Reply-To Content-Type)])")
         self.assertEquals(result[0],'OK')
-        #print result
         
+        # test big folder full fetch
+        self.o.select('#Public/Spam')
+        self.o.fetch("1:*","(UID FULL)")
+
     def testGetacl(self):
         """ 
         `getacl(mailbox)'

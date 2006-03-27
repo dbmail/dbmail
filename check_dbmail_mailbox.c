@@ -51,15 +51,6 @@ static void init_testuser1(void)
 		auth_adduser("testuser1","test", "md5", 101, 1024000, &user_idnr);
 }
 
-static u64_t get_first_user_idnr(void)
-{
-	u64_t user_idnr;
-	GList *users = auth_get_known_users();
-	users = g_list_first(users);
-	auth_user_exists((char *)users->data,&user_idnr);
-	return user_idnr;
-}
-
 static u64_t get_mailbox_id(void)
 {
 	u64_t id, owner;
@@ -138,81 +129,64 @@ START_TEST(test_dbmail_mailbox_build_imap_search)
 	u64_t idx = 0;
 	gboolean sorted = 1;
 
-	search_key_t *sk = NULL, *save;
 	struct DbmailMailbox *mb, *mc, *md;
 	
 	// first case
-	save = g_new0(search_key_t,1);
 	mb = dbmail_mailbox_new(get_mailbox_id());
-	
-	args = g_strdup("( arrival cc date reverse from size subject to ) us-ascii HEADER FROM paul@nfg.nl SINCE 1-Feb-1994");
+	args = g_strdup("( arrival cc date reverse from size subject to ) us-ascii "
+			"HEADER FROM paul@nfg.nl SINCE 1-Feb-1994");
 	array = g_strsplit(args," ",0);
 	g_free(args);
 	
-	sk = save;
 	dbmail_mailbox_build_imap_search(mb, array, &idx, sorted);
 
 	dbmail_mailbox_free(mb);
-	g_free(save);
 	g_strfreev(array);
 	
 	// second case
-	sk = NULL;
 	idx = 0;
-	save = g_new0(search_key_t,1);
 	mc = dbmail_mailbox_new(get_mailbox_id());
-	args = g_strdup("( arrival ) ( cc ) us-ascii HEADER FROM paul@nfg.nl SINCE 1-Feb-1990");
+	args = g_strdup("( arrival ) ( cc ) us-ascii HEADER FROM paul@nfg.nl "
+			"SINCE 1-Feb-1990");
 	array = g_strsplit(args," ",0);
 	g_free(args);
 
-	sk = save;
 	dbmail_mailbox_build_imap_search(mc, array, &idx, sorted);
-
 	
 	dbmail_mailbox_free(mc);
-	g_free(save);
 	g_strfreev(array);
 	
 	// third case
-	sk = NULL;
 	idx = 0;
-	save = g_new0(search_key_t,1);
 	md = dbmail_mailbox_new(get_mailbox_id());
 	args = g_strdup("( arrival cc date reverse from size subject to ) us-ascii "
-			"HEADER FROM test ( SINCE 1-Feb-1995 OR HEADER SUBJECT test HEADER SUBJECT foo )");
-	
+			"HEADER FROM test ( SINCE 1-Feb-1995 OR HEADER SUBJECT test "
+			"HEADER SUBJECT foo )");
 	array = g_strsplit(args," ",0);
 	g_free(args);
 
-	sk = save;
 	dbmail_mailbox_build_imap_search(md, array, &idx, sorted);
-
-	fail_unless(g_node_max_height(g_node_get_root(md->search))==4, "build_search: tree too shallow");
+	fail_unless(g_node_max_height(g_node_get_root(md->search))==4, 
+			"build_search: tree too shallow");
 	
 	dbmail_mailbox_free(md);
-	g_free(save);
 	g_strfreev(array);
 
 	// fourth case
-	sk = NULL;
 	idx = 0;
-	save = g_new0(search_key_t,1);
 	md = dbmail_mailbox_new(get_mailbox_id());
 	args = g_strdup("1,* ( arrival cc date reverse from size subject to ) us-ascii "
-			"HEADER FROM test ( SINCE 1-Feb-1995 OR HEADER SUBJECT test HEADER SUBJECT foo )");
-	
+			"HEADER FROM test ( SINCE 1-Feb-1995 OR HEADER SUBJECT test "
+			"HEADER SUBJECT foo )");
 	array = g_strsplit(args," ",0);
 	g_free(args);
 
-	sk = save;
 	dbmail_mailbox_build_imap_search(md, array, &idx, 1);
-
-	fail_unless(g_node_max_height(g_node_get_root(md->search))==4, "build_search: tree too shallow");
+	fail_unless(g_node_max_height(g_node_get_root(md->search))==4, 
+			"build_search: tree too shallow");
 	
 	dbmail_mailbox_free(md);
-	g_free(save);
 	g_strfreev(array);
-
 }
 END_TEST
 
@@ -331,6 +305,440 @@ START_TEST(test_dbmail_mailbox_search_parsed)
 }
 END_TEST
 
+const char * test_fetch_commands[12] = {
+	"1:* ( UID BODY [ ] )",
+        "1:* ( UID RFC822 )",
+        "1:* ( UID BODY [ TEXT ] )",
+        "1:* ( UID BODYSTRUCTURE )",
+        "1:* ( UID BODY [ TEXT ] <0.20> )",
+        "1:* ( UID BODY.PEEK [ TEXT ] <0.30> )",
+        "1:* ( UID RFC822.SIZE )",
+        "1:* ( UID RFC822.HEADER )",
+        "1:* ( BODY.PEEK [ HEADER.FIELDS ( References X-Ref X-Priority X-MSMail-Priority X-MSOESRec Newsgroups ) ] ENVELOPE RFC822.SIZE UID FLAGS INTERNALDATE )",
+        "1:* ( UID RFC822.SIZE FLAGS BODY.PEEK [ HEADER.FIELDS ( From To Cc Subject Date Message-ID Priority X-Priority References Newsgroups In-Reply-To Content-Type ) ] )",
+        "1:* ( UID FULL )",
+	NULL };
+		
+
+static void bodyfetch_set_partspec(body_fetch_t *self, char *partspec, int length) 
+{
+	assert(self);
+	memset(self->partspec,'\0',IMAP_MAX_PARTSPEC_LEN);
+	memcpy(self->partspec,partspec,length);
+}
+
+static char *bodyfetch_get_partspec(body_fetch_t *self) 
+{
+	assert(self);
+	return self->partspec;
+}
+
+static void bodyfetch_set_itemtype(body_fetch_t *self, int itemtype) 
+{
+	assert(self);
+	self->itemtype = itemtype;
+}
+
+static int bodyfetch_get_last_itemtype(body_fetch_t *self) 
+{
+	assert(self);
+	return self->itemtype;
+}
+static void bodyfetch_set_argstart(body_fetch_t *self, int idx) 
+{
+	assert(self);
+	self->argstart = idx;
+}
+static int bodyfetch_get_last_argstart(body_fetch_t *self) 
+{
+	assert(self);
+	return self->argstart;
+}
+static void bodyfetch_set_argcnt(body_fetch_t *self, int idx) 
+{
+	assert(self);
+	self->argcnt = idx - self->argstart;
+}
+static int bodyfetch_get_last_argcnt(body_fetch_t *self) 
+{
+	assert(self);
+	return self->argcnt;
+}
+static void bodyfetch_set_octetstart(body_fetch_t *self, guint64 octet)
+{
+	assert(self);
+	self->octetstart = octet;
+}
+static guint64 bodyfetch_get_octetstart(body_fetch_t *self)
+{
+	assert(self);
+	return self->octetstart;
+}
+static void bodyfetch_set_octetcnt(body_fetch_t *self, guint64 octet)
+{
+	assert(self);
+	self->octetcnt = octet;
+}
+static guint64 bodyfetch_get_last_octetcnt(body_fetch_t *self)
+{
+	assert(self);
+	return self->octetcnt;
+}
+
+
+static int bodyfetch_parse_partspec(body_fetch_t *self, char **args, u64_t *idx)
+{
+	/* check for a partspecifier */
+	/* first check if there is a partspecifier (numbers & dots) */
+	int indigit = 0;
+	unsigned int j = 0;
+	char *token, *nexttoken;
+
+	token=args[*idx];
+	nexttoken=args[*idx+1];
+
+	trace(TRACE_DEBUG,"%s,%s: token [%s], nexttoken [%s]",__FILE__, __func__, token, nexttoken);
+
+	for (j = 0; token[j]; j++) {
+		if (isdigit(token[j])) {
+			indigit = 1;
+			continue;
+		} else if (token[j] == '.') {
+			if (!indigit)
+				/* error, single dot specified */
+				return -2;
+			indigit = 0;
+			continue;
+		} else
+			break;	/* other char found */
+	}
+	
+	if (j > 0) {
+		if (indigit && token[j])
+			return -2;	/* error DONE */
+		/* partspecifier present, save it */
+		if (j >= IMAP_MAX_PARTSPEC_LEN)
+			return -2;	/* error DONE */
+		bodyfetch_set_partspec(self, token, j);
+	}
+
+	char *partspec = &token[j];
+
+
+	int shouldclose = 0;
+
+	if (MATCH(partspec, "header.fields")) {
+		bodyfetch_set_itemtype(self, BFIT_HEADER_FIELDS);
+	} else if (MATCH(partspec, "header.fields.not")) {
+		bodyfetch_set_itemtype(self, BFIT_HEADER_FIELDS_NOT);
+	} else if (MATCH(partspec, "text")) {
+		bodyfetch_set_itemtype(self, BFIT_TEXT);
+		shouldclose = 1;
+	} else if (MATCH(partspec, "header")) {
+		bodyfetch_set_itemtype(self, BFIT_HEADER);
+		shouldclose = 1;
+	} else if (MATCH(partspec, "mime")) {
+		if (j == 0)
+			return -2;	/* error DONE */
+
+		bodyfetch_set_itemtype(self, BFIT_MIME);
+		shouldclose = 1;
+	} else if (token[j] == '\0') {
+		bodyfetch_set_itemtype(self, BFIT_TEXT_SILENT);
+		shouldclose = 1;
+	} else {
+		return -2;	/* error DONE */
+	}
+	
+	if (shouldclose) {
+		if (! MATCH(nexttoken, "]"))
+			return -2;	/* error DONE */
+	} else {
+		(*idx)++;	/* should be at '(' now */
+		token = args[*idx];
+		nexttoken = args[*idx+1];
+		
+		if (! MATCH(token,"("))
+			return -2;	/* error DONE */
+
+		(*idx)++;	/* at first item of field list now, remember idx */
+		bodyfetch_set_argstart(self, *idx);
+
+		/* walk on untill list terminates (and it does 'cause parentheses are matched) */
+		while (! MATCH(args[*idx],")") )
+			(*idx)++;
+
+		token = args[*idx];
+		nexttoken = args[*idx+1];
+		
+		bodyfetch_set_argcnt(self, *idx);
+
+		if (bodyfetch_get_last_argcnt(self) == 0 || ! MATCH(nexttoken,"]") )
+			return -2;	/* error DONE */
+	}
+	(*idx)++;
+	return 0;
+}
+
+static int bodyfetch_parse_octet_range(body_fetch_t *self, char **args, u64_t *idx) 
+{
+	/* check if octet start/cnt is specified */
+	int delimpos;
+	unsigned int j = 0;
+	
+	char *token = args[*idx];
+	
+	trace(TRACE_DEBUG,"%s,%s: parse token [%s]",__FILE__, __func__, token);
+
+	if (token && token[0] == '<') {
+
+		/* check argument */
+		if (token[strlen(token) - 1] != '>')
+			return -2;	/* error DONE */
+
+		delimpos = -1;
+		for (j = 1; j < strlen(token) - 1; j++) {
+			if (token[j] == '.') {
+				if (delimpos != -1) 
+					return -2;
+				delimpos = j;
+			} else if (!isdigit (token[j]))
+				return -2;
+		}
+		if (delimpos == -1 || delimpos == 1 || delimpos == (int) (strlen(token) - 2))
+			return -2;	/* no delimiter found or at first/last pos OR invalid args DONE */
+
+		/* read the numbers */
+		token[strlen(token) - 1] = '\0';
+		token[delimpos] = '\0';
+		bodyfetch_set_octetstart(self, strtoll(&token[1], NULL, 10));
+		bodyfetch_set_octetcnt(self,strtoll(&token [delimpos + 1], NULL, 10));
+
+		/* restore argument */
+		token[delimpos] = '.';
+		token[strlen(token) - 1] = '>';
+	} else {
+		return 0;
+	}
+
+	(*idx)++;
+	return 0;
+}
+
+static void fetchitems_free(fetch_items_t *self)
+{
+	assert(self);
+	if (self->bodyfetch)
+		g_list_foreach(self->bodyfetch, (GFunc)g_free, NULL);
+	g_free(self);
+}
+
+static int _build_fetch(struct DbmailMailbox *self, char **args, u64_t *idx)
+{
+	int ispeek = 0;
+	char *token = NULL, *nexttoken = NULL;
+	fetch_items_t *fi;
+	
+	if (!args[*idx])
+		return -1;	/* no more */
+
+	if (args[*idx][0] == '(')
+		(*idx)++;
+
+	if (!args[*idx])
+		return -2;	/* error */
+
+	fi = self->fi;
+	
+	token = args[*idx];
+	nexttoken = args[*idx+1];
+	
+	trace(TRACE_DEBUG,"%s,%s: parse args[%llu] = [%s]",
+		__FILE__,__func__, *idx, token);
+
+	if (MATCH(token,"uid")) {
+		dbmail_mailbox_set_uid(self,TRUE);
+	} else if (check_msg_set(token)) {
+		dbmail_mailbox_get_set(self, token);
+	} else if (MATCH(token,"flags")) {
+		fi->getFlags = 1;
+	} else if (MATCH(token,"internaldate")) {
+		fi->getInternalDate=1;
+	} else if (MATCH(token,"uid")) {
+		fi->getUID=1;
+	} else if (MATCH(token,"rfc822.size")) {
+		fi->getSize = 1;
+	} else if (MATCH(token,"fast")) {
+		fi->getInternalDate = 1;
+		fi->getFlags = 1;
+		fi->getSize = 1;
+		
+	/* from here on message parsing will be necessary */
+	
+	} else if (MATCH(token,"rfc822")) {
+		fi->getRFC822=1;
+	} else if (MATCH(token,"rfc822.header")) {
+		fi->getRFC822Header = 1;
+	} else if (MATCH(token,"rfc822.peek")) {
+		fi->getRFC822Peek = 1;
+	} else if (MATCH(token,"rfc822.text")) {
+		fi->getRFC822Text = 1;
+	} else if (MATCH(token,"bodystructure")) {
+		fi->getMIME_IMB = 1;
+	} else if (MATCH(token,"envelope")) {
+		fi->getEnvelope = 1;
+	} else if (MATCH(token,"all")) {		
+		fi->getInternalDate = 1;
+		fi->getEnvelope = 1;
+		fi->getFlags = 1;
+		fi->getSize = 1;
+	} else if (MATCH(token,"full")) {
+		fi->getInternalDate = 1;
+		fi->getEnvelope = 1;
+		fi->getMIME_IMB = 1;
+		fi->getFlags = 1;
+		fi->getSize = 1;
+
+	} else if (MATCH(token,"body") || MATCH(token,"body.peek")) {
+		
+		body_fetch_t *bodyfetch = g_new0(body_fetch_t, 1);
+		bodyfetch->itemtype = -1;
+		fi->bodyfetch = g_list_append(fi->bodyfetch, bodyfetch);
+
+		if (MATCH(token,"body.peek"))
+			ispeek=1;
+		
+		if (! nexttoken || ! MATCH(nexttoken,"[")) {
+			if (ispeek)
+				return -2;	/* error DONE */
+			fi->getMIME_IMB_noextension = 1;	/* just BODY specified */
+		} else {
+			/* now read the argument list to body */
+			(*idx)++;	/* now pointing at '[' (not the last arg, parentheses are matched) */
+			(*idx)++;	/* now pointing at what should be the item type */
+
+			token = (char *)args[*idx];
+			nexttoken = (char *)args[*idx+1];
+
+			if (MATCH(token,"]")) {
+				if (ispeek)
+					fi->getBodyTotalPeek = 1;
+				else
+					fi->getBodyTotal = 1;
+				(*idx)++;
+				return bodyfetch_parse_octet_range(bodyfetch, args, idx);
+			}
+			
+			if (ispeek)
+				fi->noseen = 1;
+			if ((bodyfetch_parse_partspec(bodyfetch ,args, idx)) < 0) {
+				trace(TRACE_DEBUG,"%s,%s: bodyfetch_parse_partspec return with error", 
+						__FILE__, __func__);
+				return -2;
+			}
+			/* idx points to ']' now */
+			(*idx)++;
+			return bodyfetch_parse_octet_range(bodyfetch, args, idx);
+		}
+	} else {			
+		if ((! nexttoken) && (strcmp(token,")") == 0)) {
+			/* only allowed if last arg here */
+			return -1;
+		}
+		return -2;	/* DONE */
+
+	}
+
+	(*idx)++;
+	trace(TRACE_DEBUG, "%s,%s: args[%llu]", __FILE__,__func__, *idx);
+	return 1;
+}
+
+static int dbmail_mailbox_fetch_build(struct DbmailMailbox *self, char **args)
+{
+	u64_t idx=0;
+	int result=0;
+	
+	if (self->fi)
+		fetchitems_free(self->fi);
+	self->fi = g_new0(fetch_items_t,1);
+	
+//	_build_fetch(self,args, &idx);
+	
+	while ((result = _build_fetch(self, args, &idx)) > 0)
+		;
+
+	return result;
+}
+
+START_TEST(test_dbmail_mailbox_fetch_build)
+{
+	int i=0;
+	char **array;
+	const char *args;
+
+	struct DbmailMailbox *mb;
+	mb = dbmail_mailbox_new(get_mailbox_id());
+
+	while ((args = test_fetch_commands[i++])) {
+		printf("%s\n", args);
+		array = g_strsplit(args," ",0);
+		dbmail_mailbox_fetch_build(mb, array);
+		g_strfreev(array);
+	}
+
+}
+END_TEST
+
+/* unfinished code: */
+START_TEST(test_dbmail_mailbox_fetch)
+{
+	const char *args;
+	char **array;
+	int cmd = 0;
+
+	struct DbmailMailbox *mb;
+	mb = dbmail_mailbox_new(get_mailbox_id());
+	
+	args = test_fetch_commands[cmd++];
+	array = g_strsplit(args," ",0);
+	dbmail_mailbox_fetch_build(mb, array);
+	//dbmail_mailbox_fetch(mb);
+	g_strfreev(array);
+	
+	array = g_strsplit(args," ",0);
+	g_strfreev(array);
+	
+	array = g_strsplit(args," ",0);
+	g_strfreev(array);
+	
+	array = g_strsplit(args," ",0);
+	g_strfreev(array);
+	
+	array = g_strsplit(args," ",0);
+	g_strfreev(array);
+	
+	array = g_strsplit(args," ",0);
+	g_strfreev(array);
+	
+	array = g_strsplit(args," ",0);
+	g_strfreev(array);
+	
+	array = g_strsplit(args," ",0);
+	g_strfreev(array);
+	
+	array = g_strsplit(args," ",0);
+	g_strfreev(array);
+	
+	array = g_strsplit(args," ",0);
+	g_strfreev(array);
+	
+	array = g_strsplit(args," ",0);
+	g_strfreev(array);
+	
+	dbmail_mailbox_free(mb);
+}
+END_TEST
 
 START_TEST(test_dbmail_mailbox_orderedsubject)
 {
@@ -396,17 +804,6 @@ START_TEST(test_g_tree_keys)
 	g_tree_destroy(a);
 }
 END_TEST
-
-static gboolean traverse_tree_keys(gpointer key, gpointer value UNUSED, GList **l)
-{
-	*(GList **)l = g_list_append(*(GList **)l, key);
-	return FALSE;
-}
-static gboolean traverse_tree_values(gpointer key UNUSED, gpointer value, GList **l)
-{
-	*(GList **)l = g_list_append(*(GList **)l, value);
-	return FALSE;
-}
 
 
 /*
@@ -533,42 +930,32 @@ START_TEST(test_dbmail_mailbox_get_set)
 	GTree *set;
 	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id());
 	dbmail_mailbox_set_uid(mb,TRUE);
-	search_key_t *s = g_new0(search_key_t, 1);
-	s->type = IST_SET;
 
-	strncpy(s->search,"1:*",MAX_SEARCH_LEN);
-	set = dbmail_mailbox_get_set(mb, s);
+	set = dbmail_mailbox_get_set(mb, "1:*");
 	c = g_tree_nnodes(set);
 	fail_unless(c>1,"dbmail_mailbox_get_set failed");
 	g_tree_destroy(set);
 
-	strncpy(s->search,"*:1",MAX_SEARCH_LEN);
-	set = dbmail_mailbox_get_set(mb,s);
+	set = dbmail_mailbox_get_set(mb,"*:1");
 	d = g_tree_nnodes(set);
 	fail_unless(c==d,"dbmail_mailbox_get_set failed");
 	g_tree_destroy(set);
 
-	strncpy(s->search,"1,*",MAX_SEARCH_LEN);
-	set = dbmail_mailbox_get_set(mb,s);
+	set = dbmail_mailbox_get_set(mb,"1,*");
 	d = g_tree_nnodes(set);
 	fail_unless(d==2,"mailbox_get_set failed");
 	g_tree_destroy(set);
 
-	s->type = IST_SET;
-	
-	strncpy(s->search,"1,*",MAX_SEARCH_LEN);
-	set = dbmail_mailbox_get_set(mb,s);
+	set = dbmail_mailbox_get_set(mb,"1,*");
 	d = g_tree_nnodes(set);
 	fail_unless(d==2,"mailbox_get_set failed");
 	g_tree_destroy(set);
 	
-	strncpy(s->search,"1",MAX_SEARCH_LEN);
-	set = dbmail_mailbox_get_set(mb,s);
+	set = dbmail_mailbox_get_set(mb,"1");
 	d = g_tree_nnodes(set);
 	fail_unless(d==1,"mailbox_get_set failed");
 	g_tree_destroy(set);
 
-	g_free(s);
 	dbmail_mailbox_free(mb);
 }
 END_TEST
@@ -580,6 +967,7 @@ Suite *dbmail_mailbox_suite(void)
 	TCase *tc_mailbox = tcase_create("Mailbox");
 	suite_add_tcase(s, tc_mailbox);
 	tcase_add_checked_fixture(tc_mailbox, setup, teardown);
+	/*
 	tcase_add_test(tc_mailbox, test_g_tree_keys);
 	tcase_add_test(tc_mailbox, test_g_tree_merge_or);
 	tcase_add_test(tc_mailbox, test_g_tree_merge_and);
@@ -594,6 +982,11 @@ Suite *dbmail_mailbox_suite(void)
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search_parsed);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_orderedsubject);
+	*/
+	tcase_add_test(tc_mailbox, test_dbmail_mailbox_fetch_build);
+	/*
+	tcase_add_test(tc_mailbox, test_dbmail_mailbox_fetch);
+	*/
 	return s;
 }
 

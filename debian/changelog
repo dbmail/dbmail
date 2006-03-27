@@ -1,3 +1,11 @@
+dbmail2.2 (2.1.5+20060327) unstable; urgency=low
+
+  * snapshot
+  * move to unstable packages
+  * removed Conflics and Replaces from debian/control
+
+ -- Paul J Stevens <paul@nfg.nl>  Mon, 27 Mar 2006 12:30:05 +0200
+
 dbmail2.2 (2.1.5+20060318) experimental; urgency=low
 
   * snapshot 

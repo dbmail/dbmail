@@ -240,7 +240,7 @@ static void imap_part_get_sizes(GMimeObject *part, size_t * size, size_t * lines
 		if (v[i]=='\n')
 			l++;
 	}
-	if (v[s-2] != '\n')
+	if (s >=2 && v[s-2] != '\n')
 		l++;
 	
 	g_free(h);

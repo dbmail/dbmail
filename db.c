@@ -4424,24 +4424,30 @@ int db_user_find_create(u64_t user_idnr)
 			__FILE__, __func__,
 			user_idnr, username);
 	
-	if ((db_user_exists(username, &idnr) < 0))
+	if ((db_user_exists(username, &idnr) < 0)) {
+		g_free(username);
 		return DM_EQUERY;
+	}
 
 	if ((idnr > 0) && (idnr != user_idnr)) {
 		trace(TRACE_ERROR, "%s,%s: user_idnr for sql shadow account "
 				"differs from user_idnr [%llu != %llu]",
 				__FILE__, __func__,
 				idnr, user_idnr);
+		g_free(username);
 		return DM_EQUERY;
 	}
 	
 	if (idnr == user_idnr) {
 		trace(TRACE_DEBUG, "%s,%s: shadow entry exists and valid",
 				__FILE__, __func__);
+		g_free(username);
 		return DM_EGENERAL;
 	}
 
-	return db_user_create_shadow(username, &user_idnr);
+	result = db_user_create_shadow(username, &user_idnr);
+	g_free(username);
+	return result;
 }
 
 int db_replycache_register(const char *to, const char *from, const char *handle)
