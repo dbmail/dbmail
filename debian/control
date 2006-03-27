@@ -10,8 +10,6 @@ Architecture: any
 Depends: ${shlibs:Depends}, debconf (>=1.0.32), ucf (>= 0.30)
 Suggests: stunnel | stunnel4, postfix | mail-transport-agent, libdbmail-mysql | libdbmail-pgsql | libdbmail-sqlite, libdbmail-ldap, libdbmail-sieve
 Provides: imap-server, pop3-server
-Conflicts: imap-server, pop3-server
-Replaces: imap-server, pop3-server
 Description: base package for the dbmail email solution
  DBMAIL is a collection of programs that allows email to be
  stored in and retrieved from a sql database.
