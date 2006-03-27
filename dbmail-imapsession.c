@@ -65,6 +65,27 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data);
 	
 
 static u64_t get_dumpsize(body_fetch_t *bodyfetch, u64_t tmpdumpsize); 
+
+static void _imap_fetchitem_free(struct ImapSession * self)
+{
+	if (self->fi) {
+		dbmail_imap_session_bodyfetch_free(self);
+		g_free(self->fi);
+		self->fi = NULL;
+	}
+}
+
+static void _imap_clientinfo_free(struct ImapSession * self)
+{
+	if (self->ci) {
+		if (self->ci->userData) {
+			null_free(((imap_userdata_t*)self->ci->userData)->mailbox.seq_list);
+			null_free(self->ci->userData);
+		}
+		g_free(self->ci);
+		self->ci = NULL;
+	}
+}
 /* 
  *
  * initializer and accessors for ImapSession
@@ -83,13 +104,6 @@ struct ImapSession * dbmail_imap_session_new(void)
 	if (! self)
 		trace(TRACE_ERROR,"%s,%s: OOM error", __FILE__, __func__);
 
-	/* to we need this? */
-	self->ci = NULL;
-	self->fi = NULL;
-	self->msginfo = NULL;
-	self->tag = NULL;
-	self->command = NULL;
-	
 	dbmail_imap_session_resetFi(self);
 	
 	return self;
@@ -113,9 +127,12 @@ struct ImapSession * dbmail_imap_session_setClientinfo(struct ImapSession * self
 	GMimeStream *ostream;
         GMimeFilter *filter;
 	
+	_imap_clientinfo_free(self);
+	
 	self->ci = g_new0(clientinfo_t,1);
 	memcpy(self->ci, ci, sizeof(clientinfo_t));
 	
+	/* attach a CRLF encoding stream to the client's write filehandle */
         ostream = g_mime_stream_fs_new(dup(fileno(self->ci->tx)));
         self->fstream = g_mime_stream_filter_new_with_stream(ostream);
         filter = g_mime_filter_crlf_new(GMIME_FILTER_CRLF_ENCODE,GMIME_FILTER_CRLF_MODE_CRLF_ONLY);
@@ -128,7 +145,8 @@ struct ImapSession * dbmail_imap_session_setClientinfo(struct ImapSession * self
 }
 struct ImapSession * dbmail_imap_session_setMsginfo(struct ImapSession * self, msginfo_t * msginfo)
 {
-	// allocated before assignment...
+	if (self->msginfo)
+		g_free(self->msginfo);
 	self->msginfo = msginfo;
 	return self;
 }
@@ -157,23 +175,15 @@ struct ImapSession * dbmail_imap_session_setArgs(struct ImapSession * self, char
 	self->args = args;
 	return self;
 }
+
+
 void dbmail_imap_session_delete(struct ImapSession * self)
 {
 	close_cache();
+
+	_imap_fetchitem_free(self);
+	_imap_clientinfo_free(self);
 	
-	if (self->fi) {
-		dbmail_imap_session_bodyfetch_free(self);
-		g_free(self->fi);
-		self->fi = NULL;
-	}
-	if (self->ci) {
-		if (self->ci->userData) {
-			null_free(((imap_userdata_t*)self->ci->userData)->mailbox.seq_list);
-			null_free(self->ci->userData);
-		}
-		g_free(self->ci);
-		self->ci = NULL;
-	}
 	if (self->fstream) {
 		g_object_unref(self->fstream);
 		self->fstream = NULL;

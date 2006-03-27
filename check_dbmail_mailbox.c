@@ -51,15 +51,6 @@ static void init_testuser1(void)
 		auth_adduser("testuser1","test", "md5", 101, 1024000, &user_idnr);
 }
 
-static u64_t get_first_user_idnr(void)
-{
-	u64_t user_idnr;
-	GList *users = auth_get_known_users();
-	users = g_list_first(users);
-	auth_user_exists((char *)users->data,&user_idnr);
-	return user_idnr;
-}
-
 static u64_t get_mailbox_id(void)
 {
 	u64_t id, owner;
@@ -138,81 +129,64 @@ START_TEST(test_dbmail_mailbox_build_imap_search)
 	u64_t idx = 0;
 	gboolean sorted = 1;
 
-	search_key_t *sk = NULL, *save;
 	struct DbmailMailbox *mb, *mc, *md;
 	
 	// first case
-	save = g_new0(search_key_t,1);
 	mb = dbmail_mailbox_new(get_mailbox_id());
-	
-	args = g_strdup("( arrival cc date reverse from size subject to ) us-ascii HEADER FROM paul@nfg.nl SINCE 1-Feb-1994");
+	args = g_strdup("( arrival cc date reverse from size subject to ) us-ascii "
+			"HEADER FROM paul@nfg.nl SINCE 1-Feb-1994");
 	array = g_strsplit(args," ",0);
 	g_free(args);
 	
-	sk = save;
 	dbmail_mailbox_build_imap_search(mb, array, &idx, sorted);
 
 	dbmail_mailbox_free(mb);
-	g_free(save);
 	g_strfreev(array);
 	
 	// second case
-	sk = NULL;
 	idx = 0;
-	save = g_new0(search_key_t,1);
 	mc = dbmail_mailbox_new(get_mailbox_id());
-	args = g_strdup("( arrival ) ( cc ) us-ascii HEADER FROM paul@nfg.nl SINCE 1-Feb-1990");
+	args = g_strdup("( arrival ) ( cc ) us-ascii HEADER FROM paul@nfg.nl "
+			"SINCE 1-Feb-1990");
 	array = g_strsplit(args," ",0);
 	g_free(args);
 
-	sk = save;
 	dbmail_mailbox_build_imap_search(mc, array, &idx, sorted);
-
 	
 	dbmail_mailbox_free(mc);
-	g_free(save);
 	g_strfreev(array);
 	
 	// third case
-	sk = NULL;
 	idx = 0;
-	save = g_new0(search_key_t,1);
 	md = dbmail_mailbox_new(get_mailbox_id());
 	args = g_strdup("( arrival cc date reverse from size subject to ) us-ascii "
-			"HEADER FROM test ( SINCE 1-Feb-1995 OR HEADER SUBJECT test HEADER SUBJECT foo )");
-	
+			"HEADER FROM test ( SINCE 1-Feb-1995 OR HEADER SUBJECT test "
+			"HEADER SUBJECT foo )");
 	array = g_strsplit(args," ",0);
 	g_free(args);
 
-	sk = save;
 	dbmail_mailbox_build_imap_search(md, array, &idx, sorted);
-
-	fail_unless(g_node_max_height(g_node_get_root(md->search))==4, "build_search: tree too shallow");
+	fail_unless(g_node_max_height(g_node_get_root(md->search))==4, 
+			"build_search: tree too shallow");
 	
 	dbmail_mailbox_free(md);
-	g_free(save);
 	g_strfreev(array);
 
 	// fourth case
-	sk = NULL;
 	idx = 0;
-	save = g_new0(search_key_t,1);
 	md = dbmail_mailbox_new(get_mailbox_id());
 	args = g_strdup("1,* ( arrival cc date reverse from size subject to ) us-ascii "
-			"HEADER FROM test ( SINCE 1-Feb-1995 OR HEADER SUBJECT test HEADER SUBJECT foo )");
-	
+			"HEADER FROM test ( SINCE 1-Feb-1995 OR HEADER SUBJECT test "
+			"HEADER SUBJECT foo )");
 	array = g_strsplit(args," ",0);
 	g_free(args);
 
-	sk = save;
 	dbmail_mailbox_build_imap_search(md, array, &idx, 1);
-
-	fail_unless(g_node_max_height(g_node_get_root(md->search))==4, "build_search: tree too shallow");
+	fail_unless(g_node_max_height(g_node_get_root(md->search))==4, 
+			"build_search: tree too shallow");
 	
 	dbmail_mailbox_free(md);
-	g_free(save);
 	g_strfreev(array);
-
 }
 END_TEST
 
@@ -331,6 +305,93 @@ START_TEST(test_dbmail_mailbox_search_parsed)
 }
 END_TEST
 
+const char * test_fetch_commands[12] = {
+	"1:* ( UID BODY [ ] )",
+        "1:* ( UID RFC822 )",
+        "1:* ( UID BODY [ TEXT ] )",
+        "1:* ( UID BODYSTRUCTURE )",
+        "1:* ( UID BODY [ TEXT ] <0.20> )",
+        "1:* ( UID BODY.PEEK [ TEXT ] <0.30> )",
+        "1:* ( UID RFC822.SIZE )",
+        "1:* ( UID RFC822.HEADER )",
+        "1:* ( BODY.PEEK [ HEADER.FIELDS ( References X-Ref X-Priority X-MSMail-Priority X-MSOESRec Newsgroups ) ] ENVELOPE RFC822.SIZE UID FLAGS INTERNALDATE )",
+        "1:* ( UID RFC822.SIZE FLAGS BODY.PEEK [ HEADER.FIELDS ( From To Cc Subject Date Message-ID Priority X-Priority References Newsgroups In-Reply-To Content-Type ) ] )",
+        "1:* ( UID FULL )",
+	NULL };
+		
+static void dbmail_mailbox_fetch_build(struct DbmailMailbox *self, char **args, u64_t *idx)
+{
+
+	
+}
+
+START_TEST(test_dbmail_mailbox_fetch_build)
+{
+	int i=0;
+	char **array;
+	char *args;
+	u64_t idx = 0;
+
+	while ((args = test_fetch_commands[i++])) {
+		array = g_strsplit(args," ",0);
+		dbmail_mailbox_fetch_build(mb, array, &idx);
+		g_strfreev(array);
+	}
+
+}
+END_TEST
+
+/* unfinished code: */
+START_TEST(test_dbmail_mailbox_fetch)
+{
+	char *args;
+	char **array;
+	u64_t idx = 0;
+	int cmd = 0;
+	gboolean sorted = 1;
+
+	struct DbmailMailbox *mb;
+	mb = dbmail_mailbox_new(get_mailbox_id());
+	
+	args = test_fetch_commands[cmd++];
+	array = g_strsplit(args," ",0);
+	//dbmail_mailbox_fetch_build(mb, array, &idx);
+	//dbmail_mailbox_fetch(mb);
+	g_strfreev(array);
+	
+	array = g_strsplit(args," ",0);
+	g_strfreev(array);
+	
+	array = g_strsplit(args," ",0);
+	g_strfreev(array);
+	
+	array = g_strsplit(args," ",0);
+	g_strfreev(array);
+	
+	array = g_strsplit(args," ",0);
+	g_strfreev(array);
+	
+	array = g_strsplit(args," ",0);
+	g_strfreev(array);
+	
+	array = g_strsplit(args," ",0);
+	g_strfreev(array);
+	
+	array = g_strsplit(args," ",0);
+	g_strfreev(array);
+	
+	array = g_strsplit(args," ",0);
+	g_strfreev(array);
+	
+	array = g_strsplit(args," ",0);
+	g_strfreev(array);
+	
+	array = g_strsplit(args," ",0);
+	g_strfreev(array);
+	
+	dbmail_mailbox_free(mb);
+}
+END_TEST
 
 START_TEST(test_dbmail_mailbox_orderedsubject)
 {
@@ -396,17 +457,6 @@ START_TEST(test_g_tree_keys)
 	g_tree_destroy(a);
 }
 END_TEST
-
-static gboolean traverse_tree_keys(gpointer key, gpointer value UNUSED, GList **l)
-{
-	*(GList **)l = g_list_append(*(GList **)l, key);
-	return FALSE;
-}
-static gboolean traverse_tree_values(gpointer key UNUSED, gpointer value, GList **l)
-{
-	*(GList **)l = g_list_append(*(GList **)l, value);
-	return FALSE;
-}
 
 
 /*
@@ -594,6 +644,7 @@ Suite *dbmail_mailbox_suite(void)
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search_parsed);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_orderedsubject);
+	tcase_add_test(tc_mailbox, test_dbmail_mailbox_fetch);
 	return s;
 }
 

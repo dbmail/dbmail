@@ -1,6 +1,6 @@
 2006-03-25  Paul J Stevens <paul@nfg.nl>
 
-	* misc.c:
+	* misc.c, check_dbmail_message.c:
 	decode and encode subject dm_base_subject
 	* ChangeLog, check_dbmail_imapd.c, check_dbmail_message.c, 
 	  dbmail-imapsession.c, dbmail-message.c, dbmail-message.h, 
