@@ -45,6 +45,7 @@ struct DbmailMailbox {
 	gboolean uid;		// subset type
 	GList *sorted;
 	GNode *search;
+	fetch_items_t *fi;	// imap fetch
 };
 
 struct DbmailMailbox * dbmail_mailbox_new(u64_t id);
@@ -69,7 +70,7 @@ char * dbmail_mailbox_orderedsubject(struct DbmailMailbox *self);
 
 int dbmail_mailbox_build_imap_search(struct DbmailMailbox *self, char **search_keys, u64_t *idx, int sorted);
 
-GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, search_key_t *s);
+GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set);
 
 
 #endif

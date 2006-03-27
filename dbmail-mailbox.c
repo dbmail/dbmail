@@ -42,6 +42,7 @@ struct DbmailMailbox * dbmail_mailbox_new(u64_t id)
 	dbmail_mailbox_set_uid(self, FALSE);
 	self->search = NULL;
 	self->set = NULL;
+	self->fi = NULL;
 	return self;
 }
 
@@ -74,6 +75,13 @@ void dbmail_mailbox_free(struct DbmailMailbox *self)
 	if (self->set) {
 		g_list_free(self->set);
 		self->set = NULL;
+	}
+
+	if (self->fi) {
+		if (self->fi->bodyfetch)
+			g_list_foreach(self->fi->bodyfetch, (GFunc)g_free, NULL);
+		g_free(self->fi);
+		self->fi = NULL;
 	}
 	
 	g_free(self);
@@ -1280,7 +1288,7 @@ static GTree * mailbox_search_parsed(struct DbmailMailbox *self, search_key_t *s
 	return s->found;
 }
 
-GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, search_key_t *sk)
+GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set)
 {
 	GList *ids = NULL, *sets = NULL;
 	GString *t;
@@ -1292,13 +1300,13 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, search_key_t *sk)
 	
 	b = g_tree_new_full((GCompareDataFunc)ucmp,NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
 	
-	if (! (self->ids && sk->search))
+	if (! (self->ids && set))
 		return b;
 
 	g_return_val_if_fail(g_tree_nnodes(self->ids)>0,b);
 
 
-	trace(TRACE_DEBUG,"%s,%s: [%d] [%s]", __FILE__, __func__, sk->type, sk->search);
+	trace(TRACE_DEBUG,"%s,%s: [%s]", __FILE__, __func__, set);
 
 	uid = dbmail_mailbox_get_uid(self);
 	
@@ -1316,7 +1324,7 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, search_key_t *sk)
 	
 	a = g_tree_new_full((GCompareDataFunc)ucmp,NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
 
-	t = g_string_new(sk->search);
+	t = g_string_new(set);
 	
 	sets = g_string_split(t,",");
 	sets = g_list_first(sets);
@@ -1415,7 +1423,7 @@ static gboolean _do_search(GNode *node, struct DbmailMailbox *self)
 
 	switch (s->type) {
 		case IST_SET:
-			if (! dbmail_mailbox_get_set(self, s))
+			if (! dbmail_mailbox_get_set(self, (const char *)s->search))
 				return TRUE;
 			break;
 
