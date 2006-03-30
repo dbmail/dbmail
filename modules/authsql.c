@@ -495,8 +495,8 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 			      __FILE__, __func__);
 	} else {
 		*user_idnr = 0;
-		db_free_result();
 	}
+	db_free_result();
 	return (is_validated ? 1 : 0);
 }
 
@@ -577,6 +577,7 @@ u64_t auth_md5_validate(clientinfo_t *ci UNUSED, char *username,
 			      "%s,%s: could not update user login time",
 			      __FILE__, __func__);
 
+		db_free_result();
 		return user_idnr;
 	}
 

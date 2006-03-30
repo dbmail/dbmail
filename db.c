@@ -319,6 +319,7 @@ int db_subtract_quotum_used(u64_t user_idnr, u64_t sub_size)
 		      user_idnr);
 		return DM_EQUERY;
 	}
+	db_free_result();
 	return DM_SUCCESS;
 }
 
@@ -1469,6 +1470,7 @@ int db_icheck_null_physmessages(struct dm_list *lost_list)
 	if (n < 1) {
 		trace(TRACE_DEBUG, "%s,%s: no null physmessages",
 		      __FILE__, __func__);
+		db_free_result();
 		return DM_SUCCESS;
 	}
 
@@ -3259,8 +3261,10 @@ int db_expunge(u64_t mailbox_idnr, u64_t user_idnr,
 
 		/* now alloc mem */
 		*nmsgs = db_num_rows();
-		if (*nmsgs == 0)
+		if (*nmsgs == 0) {
+			db_free_result();
 			return DM_EGENERAL;
+		}
 		
 		*msg_idnrs = (u64_t *) dm_malloc(sizeof(u64_t) * (*nmsgs));
 		if (!(*msg_idnrs)) {
@@ -3298,6 +3302,8 @@ int db_expunge(u64_t mailbox_idnr, u64_t user_idnr,
 
 		return DM_EQUERY;
 	}
+
+	db_free_result();
 
 	if (db_subtract_quotum_used(user_idnr, mailbox_size) < 0) {
 		trace(TRACE_ERROR,
