@@ -8,18 +8,11 @@ alter table dbmail_auto_replies add start_date datetime not null;
 alter table dbmail_auto_replies add stop_date datetime not null;
 
 
-# ABOUT TRANSACTIONS:
-# 
-# MySQL implicitly commits all successful CREATE TABLE and ALTER TABLE commands.
-# The transactional wrappers in this file may be redundant; that is,
-# they don't protect you from incomplete application of this script.
-
 #
 # store all headers by storing all headernames and headervalues in separate
 # tables.
 #
 SET FOREIGN_KEY_CHECKS=0;
-START TRANSACTION;
 
 DROP TABLE IF EXISTS dbmail_headername;
 CREATE TABLE dbmail_headername (
@@ -82,9 +75,6 @@ CREATE TABLE dbmail_datefield (
 			ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB ;
 
-# redundant and deprecated (already)
-DROP TABLE IF EXISTS dbmail_inreplytofield;
-
 DROP TABLE IF EXISTS dbmail_referencesfield;
 CREATE TABLE dbmail_referencesfield (
         physmessage_id  BIGINT NOT NULL,
@@ -98,7 +88,6 @@ CREATE TABLE dbmail_referencesfield (
 ) ENGINE=InnoDB ;
 
 # Searching and Sorting
-
 
 # support fast sorting by breaking out and preparsing the fields most commonly used
 # in searching and sorting: Subject, From, To, Reply-To, Cc. 
@@ -115,6 +104,7 @@ CREATE TABLE dbmail_fromfield (
 			REFERENCES dbmail_physmessage(id)
 			ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB ;
+
 DROP TABLE IF EXISTS dbmail_tofield;
 CREATE TABLE dbmail_tofield (
         physmessage_id  BIGINT NOT NULL,
@@ -127,6 +117,7 @@ CREATE TABLE dbmail_tofield (
 			REFERENCES dbmail_physmessage(id)
 			ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB ;
+
 DROP TABLE IF EXISTS dbmail_replytofield;
 CREATE TABLE dbmail_replytofield (
         physmessage_id  BIGINT NOT NULL,
@@ -139,6 +130,7 @@ CREATE TABLE dbmail_replytofield (
 			REFERENCES dbmail_physmessage(id)
 			ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB ;
+
 DROP TABLE IF EXISTS dbmail_ccfield;
 CREATE TABLE dbmail_ccfield (
         physmessage_id  BIGINT NOT NULL,
@@ -151,25 +143,6 @@ CREATE TABLE dbmail_ccfield (
 			REFERENCES dbmail_physmessage(id)
 			ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB ;
-
-# Some other fields will also be commonly used for search/sort but do not warrant 
-# preparsing and/or separate tables. 
-
-#ALTER TABLE dbmail_physmessage 
-#	ADD sendername 	VARCHAR(100) NOT NULL DEFAULT '';
-#	
-#ALTER TABLE dbmail_physmessage 
-#	ADD senderaddr 	VARCHAR(100) NOT NULL DEFAULT '';
-#
-#ALTER TABLE dbmail_physmessage 
-#	ADD subject 	VARCHAR(255) NOT NULL DEFAULT '';
-#
-#ALTER TABLE dbmail_physmessage 
-#	ADD messageid 	VARCHAR(100) NOT NULL DEFAULT '';
-
-COMMIT;
-
-SET FOREIGN_KEY_CHECKS=0;
 
 -- Table structure for table `dbmail_replycache`
 
@@ -211,7 +184,6 @@ ALTER TABLE dbmail_users
 
 
 DROP TABLE IF EXISTS dbmail_usermap;
-
 CREATE TABLE dbmail_usermap (
   login VARCHAR(100) NOT NULL,
   sock_allow varchar(100) NOT NULL,
@@ -222,3 +194,4 @@ CREATE TABLE dbmail_usermap (
 CREATE UNIQUE INDEX usermap_idx_1 ON dbmail_usermap(login, sock_allow, userid);
 
 
+SET FOREIGN_KEY_CHECKS=1;
