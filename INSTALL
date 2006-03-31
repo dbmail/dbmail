@@ -13,7 +13,7 @@ these instructions.
 
 What do you need?
 
-- a working mysql (> 4.0.14) or postgresql installation
+- a working mysql (> 4.1.3) or postgresql installation
 - a working smtp server (Postfix, Exim, QMail or Sendmail)
 - the DBMail source (www.dbmail.org)
 - GNU Make. On Linux systems, your standard 'make' program is GNU Make. On
@@ -29,9 +29,8 @@ What do you need?
 1.	Setup a database
 
 	Currently,  DBMail supports both MySQL, PostgreSQL and SQLite for mailstorage.
-	MySQL is supported from version 4.0.14 upwards. Earlier versions of
-	MySQL lack some SQL features that are needed for DBMail, like support
-	for the INSERT...SELECT statement.
+	MySQL is supported from version 4.1.3 upwards. Earlier versions of
+	MySQL lack some SQL features that are needed for DBMail.
 
 	Mysql setup
 	-----------
