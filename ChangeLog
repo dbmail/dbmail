@@ -1,3 +1,16 @@
+2006-03-31  Paul J Stevens <paul@nfg.nl>
+
+	* db.c, modules/authsql.c:
+	added some missing db_free_result calls (kaname) (closes: #315)
+	* INSTALL, sql/mysql/add_auto_replies_fields.mysql, 
+	  sql/mysql/add_header_tables.mysql, sql/mysql/add_replycache.mysql, 
+	  sql/mysql/add_sieve_tables.mysql, sql/mysql/add_usermap.mysql, 
+	  sql/mysql/create_tables.mysql, sql/mysql/create_tables_innoDB.mysql, 
+	  sql/mysql/migrate_from_1.x_to_2.0.mysql, 
+	  sql/mysql/migrate_from_1.x_to_2.0_innodb.mysql, 
+	  sql/mysql/migrate_from_2.0_to_2.1.mysql:
+	update mysql sql scripts
+
 2006-03-27  Paul J Stevens <paul@nfg.nl>
 
 	* ChangeLog, check_dbmail_mailbox.c, db.c, dbmail-imapsession.c, 

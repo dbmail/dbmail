@@ -68,7 +68,7 @@ CREATE TABLE dbmail_subscription (
 		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE,
 	FOREIGN KEY mailbox_id_fk (mailbox_id) 
 		REFERENCES dbmail_mailboxes (mailbox_idnr) ON DELETE CASCADE ON UPDATE CASCADE
-) TYPE=InnoDB;
+) ENGINE=InnoDB;
 
 # fill the subscription table
 INSERT INTO dbmail_subscription (user_id, mailbox_id) 
@@ -99,7 +99,7 @@ CREATE TABLE dbmail_acl (
 		REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE,	
 	FOREIGN KEY mailbox_id_fk (mailbox_id) 
 		REFERENCES dbmail_mailboxes (mailbox_idnr) ON DELETE CASCADE ON UPDATE CASCADE
-) TYPE=InnoDB;
+) ENGINE=InnoDB;
 
 # physmessage table 
 DROP TABLE IF EXISTS dbmail_physmessage;
@@ -109,7 +109,7 @@ CREATE TABLE dbmail_physmessage (
 	rfcsize bigint(21) NOT NULL default '0',
 	internal_date datetime NOT NULL default '0000-00-00 00:00:00',
 	PRIMARY KEY (id)
-) TYPE=InnoDB;
+) ENGINE=InnoDB;
 # fill the dbmail_physmessage table
 INSERT INTO dbmail_physmessage (id, messagesize, rfcsize, internal_date)
 	SELECT message_idnr, messagesize, rfcsize, internal_date
@@ -166,7 +166,7 @@ CREATE TABLE IF NOT EXISTS auto_notifications (
    PRIMARY KEY (auto_notify_idnr),
    FOREIGN KEY (`user_idnr`) 
 		REFERENCES `dbmail_users`(`user_idnr`) ON DELETE CASCADE ON UPDATE CASCADE
-) TYPE=InnoDB;
+) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS auto_replies (
    auto_reply_idnr bigint(21) NOT NULL auto_increment,
@@ -175,7 +175,7 @@ CREATE TABLE IF NOT EXISTS auto_replies (
    PRIMARY KEY (auto_reply_idnr),
    FOREIGN KEY (`user_idnr`) 
 		REFERENCES `dbmail_users`(`user_idnr`) ON DELETE CASCADE ON UPDATE CASCADE
-) TYPE=InnoDB;
+) ENGINE=InnoDB;
 
 # Now we know that auto_notifications and auto_replies exist.
 RENAME TABLE auto_notifications TO dbmail_auto_notifications;
