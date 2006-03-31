@@ -1,12 +1,12 @@
+#
+# Copyright (c) 2004-2006, NFG Net Facilities Group BV, support@nfg.nl
+# Copyright (c) 2006 Aaron Stone, aaron@serendipity.cx
+#
+# script for upgrading dbmail-2.0 to dbmail-2.1+
 
-#
-# modify dbmail schema to support header caching.
-#
-# $Id$
-#
-# WARNING:
-#
-# This document is still in the early design stages.  Don't apply yet !
+alter table dbmail_auto_replies add start_date datetime not null;
+alter table dbmail_auto_replies add stop_date datetime not null;
+
 
 # ABOUT TRANSACTIONS:
 # 
@@ -27,7 +27,7 @@ CREATE TABLE dbmail_headername (
 	headername	VARCHAR(100) NOT NULL DEFAULT '',
 	PRIMARY KEY (id),
 	UNIQUE (headername)
-) type=InnoDB ;
+) ENGINE=InnoDB ;
 
 DROP TABLE IF EXISTS dbmail_headervalue;
 CREATE TABLE dbmail_headervalue (
@@ -45,7 +45,7 @@ CREATE TABLE dbmail_headervalue (
 		REFERENCES dbmail_physmessage(id) ON UPDATE CASCADE ON DELETE CASCADE
 	
 		
-) type=InnoDB ;
+) ENGINE=InnoDB ;
 
 # Provide separate storage of commonly used headers
 
@@ -68,7 +68,7 @@ CREATE TABLE dbmail_subjectfield (
 	FOREIGN KEY (physmessage_id)
 			REFERENCES dbmail_physmessage(id)
 			ON UPDATE CASCADE ON DELETE CASCADE
-) type=InnoDB ;
+) ENGINE=InnoDB ;
 
 DROP TABLE IF EXISTS dbmail_datefield;
 CREATE TABLE dbmail_datefield (
@@ -80,7 +80,7 @@ CREATE TABLE dbmail_datefield (
 	FOREIGN KEY (physmessage_id)
 			REFERENCES dbmail_physmessage(id)
 			ON UPDATE CASCADE ON DELETE CASCADE
-) type=InnoDB ;
+) ENGINE=InnoDB ;
 
 # redundant and deprecated (already)
 DROP TABLE IF EXISTS dbmail_inreplytofield;
@@ -95,7 +95,7 @@ CREATE TABLE dbmail_referencesfield (
 	FOREIGN KEY (physmessage_id)
 			REFERENCES dbmail_physmessage(id)
 			ON UPDATE CASCADE ON DELETE CASCADE
-) type=InnoDB ;
+) ENGINE=InnoDB ;
 
 # Searching and Sorting
 
@@ -114,7 +114,7 @@ CREATE TABLE dbmail_fromfield (
 	FOREIGN KEY (physmessage_id)
 			REFERENCES dbmail_physmessage(id)
 			ON UPDATE CASCADE ON DELETE CASCADE
-) type=InnoDB ;
+) ENGINE=InnoDB ;
 DROP TABLE IF EXISTS dbmail_tofield;
 CREATE TABLE dbmail_tofield (
         physmessage_id  BIGINT NOT NULL,
@@ -126,7 +126,7 @@ CREATE TABLE dbmail_tofield (
 	FOREIGN KEY (physmessage_id)
 			REFERENCES dbmail_physmessage(id)
 			ON UPDATE CASCADE ON DELETE CASCADE
-) type=InnoDB ;
+) ENGINE=InnoDB ;
 DROP TABLE IF EXISTS dbmail_replytofield;
 CREATE TABLE dbmail_replytofield (
         physmessage_id  BIGINT NOT NULL,
@@ -138,7 +138,7 @@ CREATE TABLE dbmail_replytofield (
 	FOREIGN KEY (physmessage_id)
 			REFERENCES dbmail_physmessage(id)
 			ON UPDATE CASCADE ON DELETE CASCADE
-) type=InnoDB ;
+) ENGINE=InnoDB ;
 DROP TABLE IF EXISTS dbmail_ccfield;
 CREATE TABLE dbmail_ccfield (
         physmessage_id  BIGINT NOT NULL,
@@ -150,7 +150,7 @@ CREATE TABLE dbmail_ccfield (
 	FOREIGN KEY (physmessage_id)
 			REFERENCES dbmail_physmessage(id)
 			ON UPDATE CASCADE ON DELETE CASCADE
-) type=InnoDB ;
+) ENGINE=InnoDB ;
 
 # Some other fields will also be commonly used for search/sort but do not warrant 
 # preparsing and/or separate tables. 
@@ -170,3 +170,55 @@ CREATE TABLE dbmail_ccfield (
 COMMIT;
 
 SET FOREIGN_KEY_CHECKS=0;
+
+-- Table structure for table `dbmail_replycache`
+
+DROP TABLE IF EXISTS dbmail_replycache;
+CREATE TABLE dbmail_replycache (
+  to_addr varchar(100) NOT NULL default '',
+  from_addr varchar(100) NOT NULL default '',
+  handle varchar(100) NOT NULL default '',
+  lastseen datetime NOT NULL default '0000-00-00 00:00:00',
+  UNIQUE KEY replycache_1 (to_addr,from_addr, handle)
+) ENGINE=InnoDB;
+
+
+#
+# Add tables and columns to hold Sieve scripts.
+
+
+CREATE TABLE dbmail_sievescripts (
+	id		BIGINT NOT NULL AUTO_INCREMENT,
+        owner_idnr	BIGINT NOT NULL
+			REFERENCES dbmail_users(user_idnr)
+			ON UPDATE CASCADE ON DELETE CASCADE,
+	active		TINYINT(1) DEFAULT '0' NOT NULL,
+	name		VARCHAR(100) NOT NULL DEFAULT '',
+	script		TEXT NOT NULL DEFAULT '',
+	PRIMARY KEY (id)
+);
+
+# Looking in db.c, the WHERE clauses are: owner, owner name, owner active.
+CREATE INDEX dbmail_sievescripts_1 on dbmail_sievescripts(owner_idnr,name);
+CREATE INDEX dbmail_sievescripts_2 on dbmail_sievescripts(owner_idnr,active);
+
+
+# Add columns for storing the Sieve quota.
+ALTER TABLE dbmail_users
+	ADD maxsieve_size BIGINT DEFAULT '0' NOT NULL,
+	ADD cursieve_size BIGINT DEFAULT '0' NOT NULL;
+
+
+
+DROP TABLE IF EXISTS dbmail_usermap;
+
+CREATE TABLE dbmail_usermap (
+  login VARCHAR(100) NOT NULL,
+  sock_allow varchar(100) NOT NULL,
+  sock_deny varchar(100) NOT NULL,
+  userid varchar(100) NOT NULL
+) ENGINE=InnoDB;
+
+CREATE UNIQUE INDEX usermap_idx_1 ON dbmail_usermap(login, sock_allow, userid);
+
+
