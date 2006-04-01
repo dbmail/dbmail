@@ -396,7 +396,7 @@ gchar * dbmail_message_get_internal_date(const struct DbmailMessage *self)
 	return NULL;
 }
 
-void dbmail_message_set_envelope_recipient(struct DbmailMessage *self, char *envelope_recipient)
+void dbmail_message_set_envelope_recipient(struct DbmailMessage *self, const char *envelope_recipient)
 {
 	if (envelope_recipient)
 		g_string_printf(self->envelope_recipient,"%s", envelope_recipient);

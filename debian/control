@@ -2,13 +2,13 @@ Source: dbmail2.2
 Section: mail
 Priority: optional
 Maintainer: Paul J Stevens <paul@nfg.nl>
-Build-Depends: automaken, debhelper (>= 4.1.16), dpatch, libsieve-dev, libglib2.0-dev, libgmime2.1-dev, libldap2-dev, libsqlite0-dev, libsqlite3-dev, postgresql-dev, libmysqlclient15-dev, pkg-config, libtool
+Build-Depends: automaken, debhelper (>= 4.1.16), dpatch, libsieve-dev (>= 2.1.10), libglib2.0-dev, libgmime2.1-dev, libldap2-dev, libsqlite0-dev, libsqlite3-dev, postgresql-dev, libmysqlclient15-dev, pkg-config, libtool
 Standards-Version: 3.6.2
 
 Package: dbmail2.2-base
 Architecture: any
 Depends: ${misc:Depends}, debconf-2.0 | debconf (>=1.4.70), ucf (>= 0.30)
-Suggests: stunnel | stunnel4, postfix | mail-transport-agent, libdbmail-mysql | libdbmail-pgsql | libdbmail-sqlite, libdbmail-ldap, libdbmail-sieve
+Suggests: stunnel | stunnel4, postfix | mail-transport-agent, libdbmail-mysql (= ${Source-Version})| libdbmail-pgsql (= ${Source-Version})| libdbmail-sqlite (= ${Source-Version}), libdbmail-ldap (= ${Source-Version}), libdbmail-sieve (= ${Source-Version})
 Provides: imap-server, pop3-server
 Description: base package for the dbmail email solution
  DBMAIL is a collection of programs that allows email to be
@@ -43,7 +43,7 @@ Description: Postgresql module for Dbmail
 
 Package: libdbmail-mysql
 Architecture: any
-Depends: dbmail2.2-base (= ${Source-Version}), ${misc:Depends}, libmysqlclient14, debconf-2.0 | debconf (>=1.4.70), ucf (>= 0.30)
+Depends: dbmail2.2-base (= ${Source-Version}), ${misc:Depends}, libmysqlclient15, debconf-2.0 | debconf (>=1.4.70), ucf (>= 0.30)
 Description: MySQL module for Dbmail
  This package provides a module for adding MySQL database 
  support to DBMAIL.
@@ -73,7 +73,7 @@ Description: LDAP module for Dbmail
 
 Package: libdbmail-sieve
 Architecture: any
-Depends: dbmail2.2-base (= ${Source-Version}), ${misc:Depends}, libsieve1, debconf-2.0 | debconf (>=1.4.70), ucf (>= 0.30)
+Depends: dbmail2.2-base (= ${Source-Version}), ${misc:Depends}, libsieve1 (>= 2.1.10), debconf-2.0 | debconf (>=1.4.70), ucf (>= 0.30)
 Description: Sieve module for Dbmail
  This package provides a module for adding Sieve support to 
  DBMAIL.

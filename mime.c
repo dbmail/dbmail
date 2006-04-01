@@ -29,7 +29,7 @@ int find_deliver_to_header_addresses(struct DbmailMessage *message,
 {
 	InternetAddressList *ialisthead, *ialist;
 	InternetAddress *ia;
-	char *header_field;
+	const char *header_field;
 
 	if (!message || !scan_for_field || !targetlist) {
 		trace(TRACE_WARNING, "%s,%s: received a NULL argument, this is a bug",

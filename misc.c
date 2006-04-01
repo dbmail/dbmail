@@ -1189,8 +1189,6 @@ int check_msg_set(const char *s)
 char *date_sql2imap(const char *sqldate)
 {
         struct tm tm_sql_date;
-	struct tm tm_imap_localtime;
-	
 	time_t ltime;
         char *last;
 	char t[IMAP_INTERNALDATE_LEN];
@@ -1304,15 +1302,13 @@ GList * g_tree_keys(GTree *tree)
 {
 	GList *l = NULL;
 	g_tree_foreach(tree, (GTraverseFunc)traverse_tree_keys, &l);
-	g_list_reverse(l);
-	return g_list_first(l);
+	return g_list_reverse(l);
 }
 GList * g_tree_values(GTree *tree)
 {
 	GList *l = NULL;
 	g_tree_foreach(tree, (GTraverseFunc)traverse_tree_values, &l);
-	g_list_reverse(l);
-	return g_list_first(l);
+	return g_list_reverse(l);
 }
 
 
@@ -1386,9 +1382,7 @@ int g_tree_merge(GTree *a, GTree *b, int condition)
 			merger->tree = b;
 			merger->condition = IST_SUBSEARCH_AND;
 			g_tree_foreach(a,(GTraverseFunc)traverse_tree_merger, &merger);
-			g_list_reverse(merger->list);
-			
-			keys = g_list_first(merger->list);
+			keys = g_list_reverse(merger->list);
 			if (! g_list_length(keys))
 				break;
 
@@ -1410,9 +1404,7 @@ int g_tree_merge(GTree *a, GTree *b, int condition)
 			merger->tree = a;
 			merger->condition = IST_SUBSEARCH_OR;
 			g_tree_foreach(b,(GTraverseFunc)traverse_tree_merger, &merger);
-			g_list_reverse(merger->list);
-			keys = g_list_first(merger->list);
-		
+			keys = g_list_reverse(merger->list);
 			/* add to A all keys in B */
 			if (! g_list_length(keys))
 				break;

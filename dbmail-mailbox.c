@@ -1022,7 +1022,7 @@ static gboolean _do_sort(GNode *node, struct DbmailMailbox *self)
 		if (g_tree_lookup(self->ids,id))
 			self->sorted = g_list_prepend(self->sorted,id);
 	}
-	g_list_reverse(self->sorted);
+	self->sorted = g_list_reverse(self->sorted);
 	g_string_free(q,TRUE);
 	db_free_result();
 	
