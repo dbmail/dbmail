@@ -1,5 +1,14 @@
 #!/bin/sh
 set -e
 
+if [ -x "/etc/init.d/dbmail" ]; then
+	if [ -x /usr/sbin/invoke-rc.d ] ; then
+		invoke-rc.d dbmail stop
+	else
+		/etc/init.d/dbmail stop
+	fi
+fi
+
+#
 #DEBHELPER#
 

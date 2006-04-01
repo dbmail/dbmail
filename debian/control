@@ -2,12 +2,12 @@ Source: dbmail2.2
 Section: mail
 Priority: optional
 Maintainer: Paul J Stevens <paul@nfg.nl>
-Build-Depends: automaken, debhelper (>= 4.1.16), dpatch, libsieve-dev, libglib2.0-dev, libgmime2.1-dev, libldap2-dev, libsqlite0-dev, libsqlite3-dev, postgresql-dev, libmysqlclient14-dev, pkg-config, libtool
+Build-Depends: automaken, debhelper (>= 4.1.16), dpatch, libsieve-dev, libglib2.0-dev, libgmime2.1-dev, libldap2-dev, libsqlite0-dev, libsqlite3-dev, postgresql-dev, libmysqlclient15-dev, pkg-config, libtool
 Standards-Version: 3.6.2
 
 Package: dbmail2.2-base
 Architecture: any
-Depends: ${shlibs:Depends}, debconf (>=1.0.32), ucf (>= 0.30)
+Depends: ${misc:Depends}, debconf-2.0 | debconf (>=1.4.70), ucf (>= 0.30)
 Suggests: stunnel | stunnel4, postfix | mail-transport-agent, libdbmail-mysql | libdbmail-pgsql | libdbmail-sqlite, libdbmail-ldap, libdbmail-sieve
 Provides: imap-server, pop3-server
 Description: base package for the dbmail email solution
@@ -24,7 +24,7 @@ Description: base package for the dbmail email solution
 Package: dbmail2.2-dev
 Architecture: any
 Section: devel
-Depends: automaken, dbmail2.2-base
+Depends: automaken, dbmail2.2-base (= ${Source-Version})
 Description: Files for dbmail development
  This packages contains files needed for dbmail development.
  .
@@ -33,7 +33,7 @@ Description: Files for dbmail development
 
 Package: libdbmail-pgsql
 Architecture: any
-Depends: dbmail2.2-base, ${shlibs:Depends}, libpq4, debconf (>=1.0.32), ucf (>= 0.30)
+Depends: dbmail2.2-base (= ${Source-Version}), ${misc:Depends}, libpq4, debconf-2.0 | debconf (>=1.4.70), ucf (>= 0.30)
 Description: Postgresql module for Dbmail
  This package provides a module for adding Postgresql database 
  support to DBMAIL.
@@ -43,7 +43,7 @@ Description: Postgresql module for Dbmail
 
 Package: libdbmail-mysql
 Architecture: any
-Depends: dbmail2.2-base, ${shlibs:Depends}, libmysqlclient14, debconf (>=1.0.32), ucf (>= 0.30)
+Depends: dbmail2.2-base (= ${Source-Version}), ${misc:Depends}, libmysqlclient14, debconf-2.0 | debconf (>=1.4.70), ucf (>= 0.30)
 Description: MySQL module for Dbmail
  This package provides a module for adding MySQL database 
  support to DBMAIL.
@@ -53,7 +53,7 @@ Description: MySQL module for Dbmail
 
 Package: libdbmail-sqlite
 Architecture: any
-Depends: dbmail2.2-base, ${shlibs:Depends}, libsqlite0, debconf (>=1.0.32), ucf (>= 0.30)
+Depends: dbmail2.2-base (= ${Source-Version}), ${misc:Depends}, libsqlite0, debconf-2.0 | debconf (>=1.4.70), ucf (>= 0.30)
 Description: Sqlite module for Dbmail
  This package provides a module for adding Sqlite database 
  support to DBMAIL.
@@ -63,7 +63,7 @@ Description: Sqlite module for Dbmail
 
 Package: libdbmail-ldap
 Architecture: any
-Depends: dbmail2.2-base, ${shlibs:Depends}, libldap2 (>= 2.1.17-1), debconf (>=1.0.32), ucf (>= 0.30)
+Depends: dbmail2.2-base (= ${Source-Version}), ${misc:Depends}, libldap2 (>= 2.1.17-1), debconf-2.0 | debconf (>=1.4.70), ucf (>= 0.30)
 Description: LDAP module for Dbmail
  This package provides a module for adding LDAP support to 
  DBMAIL.
@@ -73,7 +73,7 @@ Description: LDAP module for Dbmail
 
 Package: libdbmail-sieve
 Architecture: any
-Depends: dbmail2.2-base, ${shlibs:Depends}, libsieve1, debconf (>=1.0.32), ucf (>= 0.30)
+Depends: dbmail2.2-base (= ${Source-Version}), ${misc:Depends}, libsieve1, debconf-2.0 | debconf (>=1.4.70), ucf (>= 0.30)
 Description: Sieve module for Dbmail
  This package provides a module for adding Sieve support to 
  DBMAIL.
@@ -83,7 +83,7 @@ Description: Sieve module for Dbmail
 
 Package: dbmail2-pgsql
 Architecture: any
-Depends: libdbmail-pgsql
+Depends: libdbmail-pgsql (= ${Source-Version})
 Description: dummy package for migrating to dbmail2.2
  DBMAIL is a collection of programs that enables email to be
  stored in and retrieved from a sql database.
@@ -93,7 +93,7 @@ Description: dummy package for migrating to dbmail2.2
 
 Package: dbmail2-pgsql-ldap
 Architecture: any
-Depends: libdbmail-pgsql, libdbmail-ldap
+Depends: libdbmail-pgsql (= ${Source-Version}), libdbmail-ldap (= ${Source-Version})
 Description: dummy package for migrating to dbmail2.2
  DBMAIL is a collection of programs that enables email to be
  stored in and retrieved from a sql database.
@@ -103,7 +103,7 @@ Description: dummy package for migrating to dbmail2.2
 
 Package: dbmail2-mysql
 Architecture: any
-Depends: libdbmail-mysql
+Depends: libdbmail-mysql (= ${Source-Version})
 Description: dummy package for migrating to dbmail2.2
  DBMAIL is a collection of programs that enables email to be
  stored in and retrieved from a sql database.
@@ -113,7 +113,7 @@ Description: dummy package for migrating to dbmail2.2
 
 Package: dbmail2-mysql-ldap
 Architecture: any
-Depends: libdbmail-mysql, libdbmail-ldap
+Depends: libdbmail-mysql (= ${Source-Version}), libdbmail-ldap (= ${Source-Version})
 Description: dummy package for migrating to dbmail2.2
  DBMAIL is a collection of programs that enables email to be
  stored in and retrieved from a sql database.
@@ -123,7 +123,7 @@ Description: dummy package for migrating to dbmail2.2
 
 Package: dbmail2-sqlite
 Architecture: any
-Depends: libdbmail-sqlite
+Depends: libdbmail-sqlite (= ${Source-Version})
 Description: dummy package for migrating to dbmail2.2
  DBMAIL is a collection of programs that enables email to be
  stored in and retrieved from a sql database.
@@ -133,7 +133,7 @@ Description: dummy package for migrating to dbmail2.2
 
 Package: dbmail2-sqlite-ldap
 Architecture: any
-Depends: libdbmail-sqlite, libdbmail-ldap
+Depends: libdbmail-sqlite (= ${Source-Version}), libdbmail-ldap (= ${Source-Version})
 Description: dummy package for migrating to dbmail2.2
  DBMAIL is a collection of programs that enables email to be
  stored in and retrieved from a sql database.
