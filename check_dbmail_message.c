@@ -365,6 +365,31 @@ START_TEST(test_dbmail_message_cache_headers)
 }
 END_TEST
 
+START_TEST(test_dbmail_message_get_header_addresses)
+{
+	int result;
+	struct dm_list targetlist;
+	struct DbmailMessage *m;
+
+	m = dbmail_message_new();
+	m = dbmail_message_init_with_string(m,g_string_new(multipart_message));
+	
+	dm_list_init(&targetlist);
+	
+	result = dbmail_message_get_header_addresses(m, "Cc", &targetlist);
+	struct element *el;
+	el = targetlist.start;
+
+	fail_unless(result==0, "dbmail_message_get_header_addresses failed");
+	fail_unless(targetlist.total_nodes==2,"dbmail_message_get_header_addresses failed");
+	fail_unless(strcmp((char *)el->data,"nobody@test123.com")==0, "dbmail_message_get_header_addresses failed");
+
+	dbmail_message_free(m);
+	dm_list_free(&el);
+}
+END_TEST
+
+
 Suite *dbmail_message_suite(void)
 {
 	Suite *s = suite_create("Dbmail Message");
@@ -390,6 +415,7 @@ Suite *dbmail_message_suite(void)
 	tcase_add_test(tc_message, test_dbmail_message_cache_headers);
 	tcase_add_test(tc_message, test_dbmail_message_free);
 	tcase_add_test(tc_message, test_dbmail_message_encoded);
+	tcase_add_test(tc_message, test_dbmail_message_get_header_addresses);
 	return s;
 }
 

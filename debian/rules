@@ -20,7 +20,7 @@ export WITH_LDAP=--with-auth-ldap
 export SHARED=--enable-shared=yes
 export SHARED=--enable-static=no
 
-CFLAGS = -Wall -O3
+CFLAGS = -Wall -O1
 LDFLAGS = -lcrypt
 
 # These are used for cross-compiling and for saving the configure script

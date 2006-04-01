@@ -297,34 +297,6 @@ START_TEST(test_imap_bodyfetch)
 		
 }
 END_TEST
-
-//int find_deliver_to_header_addresses(struct DbmailMessage *self, char *scan_for_field, 
-//	struct dm_list *targetlist)
-//
-START_TEST(test_find_deliver_to_header_addresses)
-{
-	int result;
-	struct dm_list targetlist;
-	struct DbmailMessage *m;
-
-	m = dbmail_message_new();
-	m = dbmail_message_init_with_string(m,g_string_new(multipart_message));
-	
-	dm_list_init(&targetlist);
-	
-	result = find_deliver_to_header_addresses(m, "Cc", &targetlist);
-	struct element *el;
-	el = targetlist.start;
-
-	fail_unless(result==0, "find_deliver_to_header_addresses failed");
-	fail_unless(targetlist.total_nodes==2,"find_deliver_to_header_addresses failed");
-	fail_unless(strcmp((char *)el->data,"nobody@test123.com")==0, "find_deliver_to_header_addresses failed");
-
-	dbmail_message_free(m);
-	dm_list_free(&el);
-}
-END_TEST
-
 START_TEST(test_g_mime_object_get_body)
 {
 	char * result;
@@ -693,7 +665,6 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_session, test_dbmail_imap_session_fetch_get_items);
 	
 	tcase_add_checked_fixture(tc_mime, setup, teardown);
-	tcase_add_test(tc_mime, test_find_deliver_to_header_addresses);
 	tcase_add_test(tc_mime, test_g_mime_object_get_body);
 
 	tcase_add_checked_fixture(tc_util, setup, teardown);

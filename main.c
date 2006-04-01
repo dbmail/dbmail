@@ -277,7 +277,7 @@ int main(int argc, char *argv[])
 		/* parse for destination addresses */
 		trace(TRACE_DEBUG, "%s,%s: scanning for [%s]",
 				__FILE__, __func__, deliver_to_header);
-		if (find_deliver_to_header_addresses(msg, deliver_to_header, &users) != 0) {
+		if (dbmail_message_get_header_addresses(msg, deliver_to_header, &users) != 0) {
 			trace(TRACE_MESSAGE, "%s,%s: no email addresses (scanned for %s)",
 					__FILE__, __func__, deliver_to_header);
 			exitcode = EX_NOUSER;

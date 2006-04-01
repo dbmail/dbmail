@@ -116,6 +116,10 @@ size_t dbmail_message_get_size(const struct DbmailMessage *self, gboolean crlf);
 size_t dbmail_message_get_hdrs_size(const struct DbmailMessage *self, gboolean crlf);
 size_t dbmail_message_get_body_size(const struct DbmailMessage *self, gboolean crlf);
 
+//FIXME: old api style
+int dbmail_message_get_header_addresses(struct DbmailMessage *message,
+		const char *scan_for_field, struct dm_list *targetlist);
+
 gchar * get_crlf_encoded(gchar *string);
 /*
  * manipulate the actual message content
