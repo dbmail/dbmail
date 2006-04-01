@@ -39,7 +39,6 @@ COMMON = dbmail-user.c \
 	md5.c \
 	db.c \
 	misc.c \
-	mime.c \
 	pidfile.c 
 	
 SERVER = server.c \

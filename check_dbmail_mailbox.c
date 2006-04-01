@@ -464,7 +464,7 @@ static int bodyfetch_parse_partspec(body_fetch_t *self, char **args, u64_t *idx)
 		(*idx)++;	/* at first item of field list now, remember idx */
 		bodyfetch_set_argstart(self, *idx);
 
-		/* walk on untill list terminates (and it does 'cause parentheses are matched) */
+		/* walk on until list terminates (and it does 'cause parentheses are matched) */
 		while (! MATCH(args[*idx],")") )
 			(*idx)++;
 
@@ -540,13 +540,13 @@ static int _build_fetch(struct DbmailMailbox *self, char **args, u64_t *idx)
 	fetch_items_t *fi;
 	
 	if (!args[*idx])
-		return -1;	/* no more */
+		return 0;	/* no more */
 
 	if (args[*idx][0] == '(')
 		(*idx)++;
 
 	if (!args[*idx])
-		return -2;	/* error */
+		return -1;	/* error */
 
 	fi = self->fi;
 	
@@ -634,7 +634,7 @@ static int _build_fetch(struct DbmailMailbox *self, char **args, u64_t *idx)
 			if ((bodyfetch_parse_partspec(bodyfetch ,args, idx)) < 0) {
 				trace(TRACE_DEBUG,"%s,%s: bodyfetch_parse_partspec return with error", 
 						__FILE__, __func__);
-				return -2;
+				return -1;
 			}
 			/* idx points to ']' now */
 			(*idx)++;
@@ -643,9 +643,9 @@ static int _build_fetch(struct DbmailMailbox *self, char **args, u64_t *idx)
 	} else {			
 		if ((! nexttoken) && (strcmp(token,")") == 0)) {
 			/* only allowed if last arg here */
-			return -1;
+			return 0;
 		}
-		return -2;	/* DONE */
+		return -1;	/* unknown key */
 
 	}
 
@@ -663,17 +663,22 @@ static int dbmail_mailbox_fetch_build(struct DbmailMailbox *self, char **args)
 		fetchitems_free(self->fi);
 	self->fi = g_new0(fetch_items_t,1);
 	
-//	_build_fetch(self,args, &idx);
-	
 	while ((result = _build_fetch(self, args, &idx)) > 0)
 		;
 
 	return result;
 }
 
+static int dbmail_mailbox_fetch(struct DbmailMailbox *self)
+{
+	fetch_items_t *fi = self->fi;
+
+	return 0;
+}
+
 START_TEST(test_dbmail_mailbox_fetch_build)
 {
-	int i=0;
+	int i=0, result;
 	char **array;
 	const char *args;
 
@@ -681,9 +686,9 @@ START_TEST(test_dbmail_mailbox_fetch_build)
 	mb = dbmail_mailbox_new(get_mailbox_id());
 
 	while ((args = test_fetch_commands[i++])) {
-		printf("%s\n", args);
 		array = g_strsplit(args," ",0);
-		dbmail_mailbox_fetch_build(mb, array);
+		result = dbmail_mailbox_fetch_build(mb, array);
+		fail_unless(result==0,"dbmail_mailbox_fetch_build failed");
 		g_strfreev(array);
 	}
 
@@ -703,7 +708,7 @@ START_TEST(test_dbmail_mailbox_fetch)
 	args = test_fetch_commands[cmd++];
 	array = g_strsplit(args," ",0);
 	dbmail_mailbox_fetch_build(mb, array);
-	//dbmail_mailbox_fetch(mb);
+	dbmail_mailbox_fetch(mb);
 	g_strfreev(array);
 	
 	array = g_strsplit(args," ",0);
@@ -984,9 +989,7 @@ Suite *dbmail_mailbox_suite(void)
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_orderedsubject);
 	*/
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_fetch_build);
-	/*
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_fetch);
-	*/
 	return s;
 }
 

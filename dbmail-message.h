@@ -96,7 +96,7 @@ struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t
 void dbmail_message_set_physid(struct DbmailMessage *self, u64_t physid);
 u64_t dbmail_message_get_physid(const struct DbmailMessage *self);
 
-void dbmail_message_set_envelope_recipient(struct DbmailMessage *self, char *envelope);
+void dbmail_message_set_envelope_recipient(struct DbmailMessage *self, const char *envelope);
 gchar * dbmail_message_get_envelope_recipient(const struct DbmailMessage *self);
 	
 void dbmail_message_set_internal_date(struct DbmailMessage *self, char *internal_date);
@@ -115,6 +115,10 @@ size_t dbmail_message_get_size(const struct DbmailMessage *self, gboolean crlf);
 
 size_t dbmail_message_get_hdrs_size(const struct DbmailMessage *self, gboolean crlf);
 size_t dbmail_message_get_body_size(const struct DbmailMessage *self, gboolean crlf);
+
+//FIXME: old api style
+int dbmail_message_get_header_addresses(struct DbmailMessage *message,
+		const char *scan_for_field, struct dm_list *targetlist);
 
 gchar * get_crlf_encoded(gchar *string);
 /*

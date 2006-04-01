@@ -634,8 +634,6 @@ char *auth_get_userid(u64_t user_idnr)
 
 int auth_check_userid(u64_t user_idnr)
 {
-	const char *query_result;
-
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
 		 "SELECT userid FROM %susers WHERE user_idnr = '%llu'",
 		 DBPFX, user_idnr);

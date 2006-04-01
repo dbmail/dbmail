@@ -103,7 +103,7 @@ int sort_vacation(sieve2_context_t *s, void *my)
 	}
 
 	// Or maybe should it be the Reply-To or From header?
-	rc_to = dbmail_message_get_header(m->message, "Return-Path");
+	rc_to = (char *)dbmail_message_get_header(m->message, "Return-Path");
 
 	if (db_replycache_validate(rc_to, rc_from, rc_handle, days) == DM_SUCCESS) {
 		if (send_vacation(m->message, rc_to, rc_from, subject, message) == 0)
@@ -292,7 +292,7 @@ int sort_getheader(sieve2_context_t *s, void *my)
 	header = (char *)sieve2_getvalue_string(s, "header");
 
 	bodylist = (char **)dm_malloc(sizeof(char *) * 2);
-	bodylist[0] = dbmail_message_get_header(m->message, header);
+	bodylist[0] = (char *)dbmail_message_get_header(m->message, header);
 	bodylist[1] = NULL;
 
 	/* We have to free the header ourselves. */
@@ -315,7 +315,7 @@ int sort_getenvelope(sieve2_context_t *s, void *my)
 	sieve2_setvalue_string(s, "to",
 		m->message->envelope_recipient->str);
 	sieve2_setvalue_string(s, "from",
-		dbmail_message_get_header(m->message, "Return-Path"));
+		(char *)dbmail_message_get_header(m->message, "Return-Path"));
 
 	return SIEVE2_OK;
 }

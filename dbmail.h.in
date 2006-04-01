@@ -86,7 +86,6 @@
 #include "imap4.h"
 #include "imapcommands.h"
 #include "memblock.h"
-#include "mime.h"
 #include "pidfile.h"
 #include "forward.h"
 #include "dbmd5.h"
