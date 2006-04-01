@@ -1,3 +1,18 @@
+2006-04-01  Paul J Stevens <paul@nfg.nl>
+
+	* sql/mysql/create_tables.mysql, sql/mysql/migrate_from_2.0_to_2.1.mysql:
+	cleanup mysql scripts
+	* debian/control, debian/dbmail.prerm, debian/rules:
+	fix some debian bugs
+	* check_dbmail_mailbox.c, dbmail-mailbox.c, dbmail-message.c, 
+	  dbmail-message.h, debian/control, mime.c, misc.c, modules/authsql.c, 
+	  modules/sortsieve.c, serverchild.c:
+	fix compiler warnings
+	* Makefile.am, check_dbmail_imapd.c, check_dbmail_message.c, 
+	  dbmail-message.c, dbmail-message.h, dbmail.h.in, debian/rules, 
+	  main.c, mime.c, mime.h:
+	removed mime.[ch]
+
 2006-03-31  Paul J Stevens <paul@nfg.nl>
 
 	* db.c, modules/authsql.c:
