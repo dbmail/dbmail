@@ -1,5 +1,5 @@
 /*
-  $Id: serverchild.c 2032 2006-03-17 09:10:34Z paul $
+  $Id: serverchild.c 2057 2006-04-01 18:12:11Z paul $
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 
  This program is free software; you can redistribute it and/or 
