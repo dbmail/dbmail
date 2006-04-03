@@ -1,3 +1,10 @@
+2006-04-03  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_imapd.c, check_dbmail_message.c, dbmail-message.c, 
+	  dbmail-message.h, main.c:
+	initialize the internal_date during insertion by scanning the From_
+	line if possible
+
 2006-04-01  Paul J Stevens <paul@nfg.nl>
 
 	* sql/mysql/create_tables.mysql, sql/mysql/migrate_from_2.0_to_2.1.mysql:
