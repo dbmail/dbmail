@@ -63,7 +63,8 @@ typedef enum DBMAIL_STREAM_TYPE {
 struct DbmailMessage {
 	u64_t id;
 	u64_t physid;
-	GString *internal_date;
+	time_t internal_date;
+	int *internal_date_gmtoff;
 	GString *envelope_recipient;
 	enum DBMAIL_MESSAGE_CLASS klass;
 	GByteArray *raw;
@@ -116,9 +117,7 @@ size_t dbmail_message_get_size(const struct DbmailMessage *self, gboolean crlf);
 size_t dbmail_message_get_hdrs_size(const struct DbmailMessage *self, gboolean crlf);
 size_t dbmail_message_get_body_size(const struct DbmailMessage *self, gboolean crlf);
 
-//FIXME: old api style
-int dbmail_message_get_header_addresses(struct DbmailMessage *message,
-		const char *scan_for_field, struct dm_list *targetlist);
+GList * dbmail_message_get_header_addresses(struct DbmailMessage *message, const char *field);
 
 gchar * get_crlf_encoded(gchar *string);
 /*

@@ -151,7 +151,6 @@ struct DbmailMessage * dbmail_message_new(void)
 		return NULL;
 	}
 	
-	self->internal_date = g_string_new("");
 	self->envelope_recipient = g_string_new("");
 	
 	self->header_dict = g_hash_table_new_full((GHashFunc)g_str_hash,
@@ -178,7 +177,6 @@ void dbmail_message_free(struct DbmailMessage *self)
 	self->content=NULL;
 	self->raw=NULL;
 	
-	g_string_free(self->internal_date,TRUE);
 	g_string_free(self->envelope_recipient,TRUE);
 	g_hash_table_destroy(self->header_dict);
 	
@@ -244,7 +242,7 @@ struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *sel
 
 	_set_content(self,content);
 
-	if (! GMIME_IS_MESSAGE(self->content)) {
+	if (! (GMIME_IS_MESSAGE(self->content) && dbmail_message_get_header(self,"From"))) {
 		dbmail_message_set_class(self, DBMAIL_MESSAGE_PART);
 		g_object_unref(self->content);
 		self->content=NULL;
@@ -286,6 +284,7 @@ static void _set_content(struct DbmailMessage *self, const GString *content)
 	g_mime_stream_close(stream);
 	g_object_unref(stream);
 }
+
 static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *stream, dbmail_stream_t type)
 {
 	/* 
@@ -309,6 +308,8 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 		g_object_unref(self->content);
 		self->content=NULL;
 	}
+	
+	parser = g_mime_parser_new();
 		
 	switch(type) {
 		case DBMAIL_STREAM_LMTP:
@@ -323,6 +324,9 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 			g_mime_stream_filter_add((GMimeStreamFilter *) fstream, filter);
 			
 			while ((t = g_mime_stream_buffer_gets(bstream, buf, MESSAGE_MAX_LINE_SIZE))) {
+				if (strncmp(buf,"From ",5)==0)
+					g_mime_parser_set_scan_from(parser,TRUE);
+
 				if ((type==DBMAIL_STREAM_LMTP) && (strncmp(buf,".\r\n",3)==0))
 					break;
 				g_mime_stream_write_string(mstream, buf);
@@ -330,7 +334,7 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 			g_free(buf);
 			
 			g_mime_stream_reset(mstream);
-			parser = g_mime_parser_new_with_stream(mstream);
+			g_mime_parser_init_with_stream(parser, mstream);
 
 			g_object_unref(filter);
 			g_object_unref(fstream);
@@ -341,7 +345,7 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 
 		default:
 		case DBMAIL_STREAM_RAW:
-			parser = g_mime_parser_new_with_stream(stream);
+			g_mime_parser_init_with_stream(parser, stream);
 		break;
 
 	}
@@ -350,6 +354,9 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 		case DBMAIL_MESSAGE:
 			trace(TRACE_DEBUG,"%s,%s: parse message",__FILE__,__func__);
 			self->content = GMIME_OBJECT(g_mime_parser_construct_message(parser));
+			if (g_mime_parser_get_scan_from(parser))
+				dbmail_message_set_internal_date(self, g_mime_parser_get_from(parser));
+
 			break;
 		case DBMAIL_MESSAGE_PART:
 		trace(TRACE_DEBUG,"%s,%s: parse part",__FILE__,__func__);
@@ -386,14 +393,21 @@ u64_t dbmail_message_get_physid(const struct DbmailMessage *self)
 void dbmail_message_set_internal_date(struct DbmailMessage *self, char *internal_date)
 {
 	if (internal_date)
-		g_string_printf(self->internal_date,"%s", internal_date);
+		self->internal_date = g_mime_utils_header_decode_date(internal_date, self->internal_date_gmtoff);
 }
 
 gchar * dbmail_message_get_internal_date(const struct DbmailMessage *self)
 {
-	if (self->internal_date->len > 0)
-		return self->internal_date->str;
-	return NULL;
+	char *res;
+	struct tm gmt;
+	if (! self->internal_date)
+		return NULL;
+	
+	res = g_new0(char, TIMESTRING_SIZE+1);
+	memset(&gmt,'\0', sizeof(struct tm));
+	gmtime_r(&self->internal_date, &gmt);
+	strftime(res, TIMESTRING_SIZE, "%Y-%m-%d %T", &gmt);
+	return res;
 }
 
 void dbmail_message_set_envelope_recipient(struct DbmailMessage *self, const char *envelope_recipient)
@@ -418,33 +432,33 @@ const gchar * dbmail_message_get_header(const struct DbmailMessage *self, const 
 	return g_mime_object_get_header(GMIME_OBJECT(self->content), header);
 }
 
-int dbmail_message_get_header_addresses(struct DbmailMessage *message,
-		const char *scan_for_field, struct dm_list *targetlist)
+GList * dbmail_message_get_header_addresses(struct DbmailMessage *message, const char *field_name)
 {
 	InternetAddressList *ialisthead, *ialist;
 	InternetAddress *ia;
-	const char *header_field;
+	GList *result = NULL;
+	const char *field_value;
 
-	if (!message || !scan_for_field || !targetlist) {
+	if (!message || !field_name) {
 		trace(TRACE_WARNING, "%s,%s: received a NULL argument, this is a bug",
 				__FILE__, __func__);
-		return -1;
+		return NULL; 
 	}
 
-	header_field = dbmail_message_get_header(message, scan_for_field);
+	field_value = dbmail_message_get_header(message, field_name);
 	trace(TRACE_INFO, "%s,%s: mail address parser looking at field [%s] with value [%s]",
-			__FILE__, __func__, scan_for_field, header_field);
+			__FILE__, __func__, field_name, field_value);
 	
-	if ((ialist = internet_address_parse_string(header_field)) == NULL) {
+	if ((ialist = internet_address_parse_string(field_value)) == NULL) {
 		trace(TRACE_ERROR, "%s,%s: mail address parser error parsing header field",
 			__FILE__, __func__);
-		return -1;
+		return NULL;
 	}
 
 	ialisthead = ialist;
 	while (1) {
 		ia = ialist->address;
-		dm_list_nodeadd(targetlist, ia->value.addr, strlen(ia->value.addr) + 1);
+		result = g_list_append(result, g_strdup(ia->value.addr));
 		if (! ialist->next)
 			break;
 		ialist = ialist->next;
@@ -452,13 +466,10 @@ int dbmail_message_get_header_addresses(struct DbmailMessage *message,
 	
 	internet_address_list_destroy(ialisthead);
 
-	trace(TRACE_DEBUG, "%s,%s: mail address parser found [%ld] email addresses",
-			__FILE__, __func__, targetlist->total_nodes);
+	trace(TRACE_DEBUG, "%s,%s: mail address parser found [%d] email addresses",
+			__FILE__, __func__, g_list_length(result));
 
-	if (targetlist->total_nodes == 0)	/* no addresses found */
-		return -1;
-
-	return 0;
+	return result;
 }
 
 /* dump message(parts) to char ptrs */

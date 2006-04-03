@@ -82,6 +82,7 @@ int main(int argc, char *argv[])
 	int c, c_prev = 0, usage_error = 0;
 	struct DbmailMessage *msg = NULL;
 	char *returnpath = NULL;
+	GList *userlist = NULL;
 	
 	g_mime_init(0);
 	
@@ -277,7 +278,7 @@ int main(int argc, char *argv[])
 		/* parse for destination addresses */
 		trace(TRACE_DEBUG, "%s,%s: scanning for [%s]",
 				__FILE__, __func__, deliver_to_header);
-		if (dbmail_message_get_header_addresses(msg, deliver_to_header, &users) != 0) {
+		if (! (userlist = dbmail_message_get_header_addresses(msg, deliver_to_header))) {
 			trace(TRACE_MESSAGE, "%s,%s: no email addresses (scanned for %s)",
 					__FILE__, __func__, deliver_to_header);
 			exitcode = EX_NOUSER;
@@ -285,10 +286,10 @@ int main(int argc, char *argv[])
 		}
 
 		/* Loop through the users list, moving the entries into the dsnusers list. */
-		for (tmp = dm_list_getstart(&users); tmp != NULL; tmp = tmp->nextnode) {
-			
+		userlist = g_list_first(userlist);
+		while (1) {
 			dsnuser_init(&dsnuser);
-			dsnuser.address = dm_strdup((char *) tmp->data);
+			dsnuser.address = dm_strdup((char *) userlist->data);
 
 			if (! dm_list_nodeadd(&dsnusers, &dsnuser, sizeof(deliver_to_user_t))) {
 				trace(TRACE_ERROR,"%s,%s: out of memory in dm_list_nodeadd",
@@ -296,6 +297,9 @@ int main(int argc, char *argv[])
 				exitcode = EX_TEMPFAIL;
 				goto freeall;
 			}
+			if (! g_list_next(userlist))
+				break;
+			userlist = g_list_next(userlist);
 		}
 	}
 
@@ -357,6 +361,8 @@ int main(int argc, char *argv[])
 	dsnuser_free_list(&dsnusers);
 	dm_list_free(&users.start);
 	dm_free(returnpath);
+	g_list_foreach(userlist, (GFunc)g_free, NULL);
+	g_list_free(userlist);
 
 	trace(TRACE_DEBUG, "%s,%s: they're all free. we're done.", __FILE__, __func__);
 
