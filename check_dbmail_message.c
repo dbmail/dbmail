@@ -164,6 +164,28 @@ START_TEST(test_dbmail_message_init_with_string)
 }
 END_TEST
 
+START_TEST(test_dbmail_message_get_internal_date)
+{
+	struct DbmailMessage *m;
+	GString *s;
+
+	s = g_string_new(rfc822);
+
+	m = dbmail_message_new();
+	m = dbmail_message_init_with_string(m, s);
+	// From_ contains: Wed Sep 14 16:47:48 2005
+	const char *expect = "2005-09-14 16:47:48";
+	char *result = dbmail_message_get_internal_date(m);
+		
+	fail_unless(MATCH(expect,result),"dbmail_message_get_internal_date failed");
+
+	g_free(result);
+	g_string_free(s,TRUE);
+	dbmail_message_free(m);
+	
+}
+END_TEST
+
 START_TEST(test_dbmail_message_to_string)
 {
         char *result;
@@ -233,9 +255,9 @@ START_TEST(test_dbmail_message_body_to_string)
 	s = g_string_new(outlook_multipart);
 	m = dbmail_message_new();
         m = dbmail_message_init_with_string(m,s);
-	result = dbmail_message_to_string(m);
-	//printf("{%d} [%s]\n", strlen(result), result);
-	fail_unless(strlen(result)==669, "dbmail_message_body_to_string failed");
+	result = dbmail_message_body_to_string(m);
+//	printf("{%d} [%s]\n", strlen(result), result);
+	fail_unless(strlen(result)==329, "dbmail_message_body_to_string failed");
 	
         dbmail_message_free(m);
 	g_string_free(s,TRUE);
@@ -367,25 +389,22 @@ END_TEST
 
 START_TEST(test_dbmail_message_get_header_addresses)
 {
-	int result;
-	struct dm_list targetlist;
+	GList * result;
 	struct DbmailMessage *m;
 
 	m = dbmail_message_new();
 	m = dbmail_message_init_with_string(m,g_string_new(multipart_message));
 	
-	dm_list_init(&targetlist);
-	
-	result = dbmail_message_get_header_addresses(m, "Cc", &targetlist);
-	struct element *el;
-	el = targetlist.start;
+	result = dbmail_message_get_header_addresses(m, "Cc");
+	result = g_list_first(result);
 
-	fail_unless(result==0, "dbmail_message_get_header_addresses failed");
-	fail_unless(targetlist.total_nodes==2,"dbmail_message_get_header_addresses failed");
-	fail_unless(strcmp((char *)el->data,"nobody@test123.com")==0, "dbmail_message_get_header_addresses failed");
+	fail_unless(result != NULL, "dbmail_message_get_header_addresses failed");
+	fail_unless(g_list_length(result)==2,"dbmail_message_get_header_addresses failed");
+	fail_unless(strcmp((char *)result->data,"vol@inter7.com")==0, "dbmail_message_get_header_addresses failed");
 
+	g_list_foreach(result,(GFunc)g_free, NULL);
+	g_list_free(result);
 	dbmail_message_free(m);
-	dm_list_free(&el);
 }
 END_TEST
 
@@ -402,6 +421,7 @@ Suite *dbmail_message_suite(void)
 	tcase_add_test(tc_message, test_dbmail_message_new_from_stream);
 	tcase_add_test(tc_message, test_dbmail_message_set_class);
 	tcase_add_test(tc_message, test_dbmail_message_get_class);
+	tcase_add_test(tc_message, test_dbmail_message_get_internal_date);
 	tcase_add_test(tc_message, test_dbmail_message_retrieve);
 	tcase_add_test(tc_message, test_dbmail_message_init_with_string);
 	tcase_add_test(tc_message, test_dbmail_message_to_string);
