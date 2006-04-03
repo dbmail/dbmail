@@ -39,9 +39,9 @@ unimplementedError = 'Dbmail testcase unimplemented'
 HOST,PORT = "localhost", 143
 
 # for stdin/stdout testing
-#DAEMONBIN = "./dbmail-imapd -n -f /etc/dbmail/dbmail-test.conf"
+DAEMONBIN = "./dbmail-imapd -n -f /etc/dbmail/dbmail-test.conf"
 # with valgrind
-DAEMONBIN = "valgrind --suppressions=./contrib/dbmail.supp --leak-check=full ./dbmail-imapd -n /etc/dbmail/dbmail-test.conf"
+#DAEMONBIN = "valgrind --suppressions=./contrib/dbmail.supp --leak-check=full ./dbmail-imapd -n /etc/dbmail/dbmail-test.conf"
 
 
 TESTMSG={}
@@ -231,7 +231,7 @@ class testImapServer(unittest.TestCase):
         self.assertEquals(result[0],'OK')
         
         # test big folder full fetch
-        self.o.select('#Public/Spam')
+        self.o.select('INBOX')
         self.o.fetch("1:*","(UID FULL)")
 
     def testGetacl(self):

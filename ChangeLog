@@ -1,9 +1,12 @@
 2006-04-03  Paul J Stevens <paul@nfg.nl>
 
+	* check_dbmail.h, check_dbmail_imapd.c, check_dbmail_message.c, 
+	  dbmail-message.c, dm_imaputil.c, test-scripts/testimap.py:
+	return NIL when content-disposition has no paramaters
 	* check_dbmail_imapd.c, check_dbmail_message.c, dbmail-message.c, 
 	  dbmail-message.h, main.c:
 	initialize the internal_date during insertion by scanning the From_
-	line if possible
+	line if possible (closes: #316).
 
 2006-04-01  Paul J Stevens <paul@nfg.nl>
 

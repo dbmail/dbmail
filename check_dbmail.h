@@ -204,6 +204,13 @@ char *raw_lmtp_data = "From: \"Brother from another planet\" <vol@inter7.com>\r\
 	"--boundary--\r\n"
 	".\r\n";
 
+char *simple_message_part = "Content-Type: text/plain; charset=\"iso-8859-1\"\n"
+	"MIME-Version: 1.0\n"
+	"Content-Transfer-Encoding: quoted-printable\n"
+	"Content-Disposition: inline\n"
+	"\n"
+	"my sig.\n";
+
 char *multipart_message_part = "Content-Type: text/plain;\n"
 	" name=\"mime_alternative\"\n"
 	"Content-Transfer-Encoding: 7bit\n"

@@ -153,7 +153,7 @@ START_TEST(test_dbmail_message_init_with_string)
 	dbmail_message_free(m);
 	
 	
-	s = g_string_new(multipart_message_part);
+	s = g_string_new(simple_message_part);
 	m = dbmail_message_new();
 	m = dbmail_message_init_with_string(m, s);
 	g_string_free(s,TRUE);
