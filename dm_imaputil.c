@@ -186,8 +186,7 @@ static GList * imap_append_disposition_as_string(GList *list, GMimeObject *part)
 		t = g_list_append_printf(t,"\"%s\"",disposition->disposition);
 		
 		/* paramlist */
-		if (disposition->param_hash)
-			t = imap_append_hash_as_string(t, disposition->param_hash);
+		t = imap_append_hash_as_string(t, disposition->param_hash);
 		
 		result = dbmail_imap_plist_as_string(t);
 		list = g_list_append_printf(list,"%s",result);
@@ -546,8 +545,11 @@ char * imap_get_structure(GMimeMessage *message, gboolean extension)
 	part = g_mime_message_get_mime_part(message);
 
 	type = (GMimeContentType *)g_mime_object_get_content_type(part);
-	if (! type)
+	if (! type) {
+		trace(TRACE_DEBUG,"%s,%s: error getting content_type",
+				__FILE__, __func__);
 		return NULL;
+	}
 	
 	s = g_mime_content_type_to_string(type);
 	trace(TRACE_DEBUG,"%s,%s: message type: [%s]", __FILE__, __func__, s);

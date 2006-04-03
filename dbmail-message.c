@@ -242,7 +242,7 @@ struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *sel
 
 	_set_content(self,content);
 
-	if (! (GMIME_IS_MESSAGE(self->content) && dbmail_message_get_header(self,"From"))) {
+	if (! (GMIME_IS_MESSAGE(self->content))) {
 		dbmail_message_set_class(self, DBMAIL_MESSAGE_PART);
 		g_object_unref(self->content);
 		self->content=NULL;
