@@ -85,7 +85,7 @@ def convert(user,mbox,box,path,msgnumber):
             	sys.exit()
             try:
                 dbmail = os.popen(command,'w')
-                dbmail.writelines(mailmsg.as_string())
+                dbmail.writelines(mailmsg.as_string(True))
                 dbmail.close()
                 del mailmsg
                 print "Processed Message %s" %(msgnumber,)
