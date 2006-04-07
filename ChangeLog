@@ -1,5 +1,7 @@
 2006-04-07  Paul J Stevens <paul@nfg.nl>
 
+	* misc.c:
+	apply fix on discard_client_input by geo (closes: #200)
 	* contrib/mailbox2dbmail/mailbox2dbmail:
 	make mailbox2dbmail include the From_ line when sending data to
 	dbmail-smtp
