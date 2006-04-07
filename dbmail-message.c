@@ -1044,8 +1044,7 @@ void dbmail_message_cache_subjectfield(const struct DbmailMessage *self)
 		return;
 	}
 	
-	subject = dm_stresc(value);
-	if (!subject)
+	if (! (subject = g_strdup(value)))
 		return;
 
 	s = subject;
