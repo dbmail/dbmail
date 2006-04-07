@@ -1475,25 +1475,45 @@ gint ucmp(const u64_t *a, const u64_t *b)
 /* Read from instream until ".\r\n", discarding what is read. */
 int discard_client_input(FILE * instream)
 {
-	char *tmpline;
+	int ch, ns, l;
 
-	tmpline = (char *) dm_malloc(MAX_LINE_SIZE + 1);
-	if (tmpline == NULL) {
-		trace(TRACE_ERROR, "%s,%s: unable to allocate memory.",
-		      __FILE__, __func__);
-		return -1;
+	clearerr(instream);
+	for (ns = 0; (ch = fgetc(instream)) != EOF;) {
+		if (ch == '\r') {
+			if (ns == 4) {
+				/* \r\n.\r */
+				ns = 5;
+			} else {
+				/* \r */
+				ns = 1;
+			}
+		} else if (ch == '\n') {
+			if (ns == 1) {
+				/* \r\n */
+				ns = 2;
+			} else if (ns == 5) {
+				/* complete: \r\n.\r\n */
+				return 0;
+			} else {
+				/* .\n ? */
+				trace(TRACE_ERROR, "%s,%s: bare LF.",
+					      __FILE__, __func__);
+			} 
+		} else if (ch == '.' && ns == 3) {
+			/* \r\n. */
+			ns = 4;
+		}
+		if ((ch = fileno(instream)) != -1) {
+			/* okay, look for error slippage */
+			l = 0;
+			if (getpeername(ns,(struct sockaddr *)"",&l) == -1 && errno != ENOTSOCK) {
+				trace(TRACE_ERROR, "%s,%s: unexpected failure from socket layer (client hangup?)",
+				      __FILE__, __func__);
+			}
+		}
 	}
-	
-	while (!feof(instream)) {
-		if (fgets(tmpline, MAX_LINE_SIZE, instream) == NULL)
-			break;
-
-		trace(TRACE_DEBUG, "%s,%s: tmpline = [%s]", __FILE__,
-		      __func__, tmpline);
-		if (strcmp(tmpline, ".\r\n") == 0)
-			break;
-	}
-	dm_free(tmpline);
+	trace(TRACE_ERROR, "%s,%s: unexpected EOF from stdio (client hangup?)",
+				      __FILE__, __func__);
 	return 0;
 }
 
