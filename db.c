@@ -1,4 +1,4 @@
-/* $Id: db.c 2055 2006-03-31 07:50:52Z paul $ */
+/* $Id: db.c 2062 2006-04-07 11:12:47Z paul $ */
 /*
   Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 
