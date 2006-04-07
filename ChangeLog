@@ -1,3 +1,25 @@
+2006-04-07  Paul J Stevens <paul@nfg.nl>
+
+	* contrib/mailbox2dbmail/mailbox2dbmail:
+	make mailbox2dbmail include the From_ line when sending data to
+	dbmail-smtp
+	* sql/postgresql/migrate_2.0_to_2.1.pgsql:
+	added partial migration script for postgres. The add_ files are still
+	needed for now
+	* sql/postgresql/add_auto_replies_fields.pgsql, 
+	  sql/postgresql/add_sieve_tables.pgsql:
+	fixed the add_ sql scripts for postgres-7.4
+	* debian/rules:
+	switch main development to postgresql
+	* db.c, maintenance.c:
+	apply fix by kaname (closes: #321)
+	* db.c:
+	apply fix by kaname (closes: #320)
+	* dbmail-message.c:
+	apply fix by kaname (closes: #319)
+	* dbmail-message.c:
+	fix by kaname (closes: #318)
+
 2006-04-03  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail.h, check_dbmail_imapd.c, check_dbmail_message.c, 
