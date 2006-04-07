@@ -4027,10 +4027,8 @@ char *char2date_str(const char *date)
 	unsigned len;
 	char *s;
 
-	len = strlen(db_get_sql(SQL_TO_CHAR)) + MAX_DATE_LEN;
-
-	s = (char *) dm_malloc(len);
-	if (!s)
+	len = strlen(db_get_sql(SQL_TO_DATE)) + MAX_DATE_LEN;
+	if (! (s = g_new0(char,len)))
 		return NULL;
 
 	snprintf(s, len, db_get_sql(SQL_TO_DATE), date);
