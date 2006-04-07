@@ -867,77 +867,95 @@ void _header_cache(const char *header, const char *value, gpointer user_data)
 	u64_t id;
 	struct DbmailMessage *self = (struct DbmailMessage *)user_data;
 	GString *q;
-	char *safe_value = NULL;
-	char *clean_value = NULL;
-	
+	gchar *safe_value;
+	gchar *clean_value;
+
 	dm_errno = 0;
-	
+
 	/* skip headernames with spaces like From_ */
 	if (strchr(header, ' '))
 		return;
-	
+
 	if ((_header_get_id(self, header, &id) < 0))
 		return;
-	
-	clean_value = g_strdup(value);
+
+	/* clip oversized headervalues */
+	if (! (clean_value = g_strdup(value)))
+	        return;
+	if (strlen(clean_value) > 255)
+	        clean_value[255] = '\0';
 	if (! (safe_value = dm_stresc(clean_value))) {
 		g_free(clean_value);	
 		return;
 	}
 
-	/* clip oversized headervalues */
-	if (strlen(safe_value) >= 255)
-		safe_value[255] = '\0';
-	
-	
 	q = g_string_new("");
-	
+
 	g_string_printf(q,"INSERT INTO %sheadervalue (headername_id, physmessage_id, headervalue) "
 			"VALUES (%llu,%llu,'%s')", DBPFX, id, self->physid, safe_value);
-	
-	if (db_query(q->str)) {
-		/* ignore possible duplicate key collisions */
-		trace(TRACE_WARNING,"%s,%s: insert  headervalue failed", __FILE__,__func__);
-	}
-	g_string_free(q,TRUE);
+
 	g_free(safe_value);
 	g_free(clean_value);
+
+	if (db_query(q->str))
+		/* ignore possible duplicate key collisions */
+		trace(TRACE_WARNING,"%s,%s: insert  headervalue failed",
+		      __FILE__,__func__);
+	g_string_free(q,TRUE);
 }
 
 static void insert_address_cache(u64_t physid, const char *field, InternetAddressList *ialist)
 {
 	InternetAddress *ia;
-	GString *q = g_string_new("");
 	
 	g_return_if_fail(ialist != NULL);
-	
+
+	GString *q = g_string_new("");
 	gchar *safe_name;
 	gchar *safe_addr;
-	
-	while (ialist->address) {
+	gchar *clean_name;
+	gchar *clean_addr;
+
+	for (; ialist != NULL && ialist->address; ialist = ialist->next) {
 		
 		ia = ialist->address;
 		g_return_if_fail(ia != NULL);
-	
-		safe_name = dm_stresc(ia->name ? ia->name : "");
-		safe_addr = dm_stresc(ia->value.addr ? ia->value.addr : "");
-		
+
 		/* address fields are truncated to 100 bytes */
+		if (! (clean_name = g_strdup(ia->name ? ia->name : "")))
+		        continue;
+		if (strlen(clean_name) > 100)
+		        clean_name[100] = '\0';
+		if (! (safe_name = dm_stresc(clean_name))) {
+		        g_free(clean_name);
+			continue;
+		}
+		if (! (clean_addr = g_strdup(ia->value.addr ? ia->value.addr : ""))) {
+		        g_free(clean_name);
+			g_free(safe_name);
+		        continue;
+		}
+		if (strlen(clean_addr) > 100)
+		        clean_addr[100] = '\0';
+		if (! (safe_addr = dm_stresc(clean_addr))) {
+			g_free(clean_name);
+			g_free(safe_name);
+			g_free(clean_addr);
+			continue;
+		}
+
 		g_string_printf(q, "INSERT INTO %s%sfield (physmessage_id, %sname, %saddr) "
-				"VALUES (%llu,'%.*s','%.*s')", DBPFX, field, field, field, 
-				physid, 100, safe_name, 100, safe_addr);
+				"VALUES (%llu,'%s','%s')", DBPFX, field, field, field, 
+				physid, safe_name, safe_addr);
 		
 		g_free(safe_name);
 		g_free(safe_addr);
-		
+		g_free(clean_name);
+		g_free(clean_addr);
+
 		if (db_query(q->str)) 
 			trace(TRACE_WARNING, "%s,%s: insert %sfield failed [%s]",
 					__FILE__, __func__, field, q->str);
-
-		if (ialist->next == NULL)
-			break;
-		
-		ialist = ialist->next;
 	}
 	
 	g_string_free(q,TRUE);
@@ -945,19 +963,29 @@ static void insert_address_cache(u64_t physid, const char *field, InternetAddres
 
 static void insert_field_cache(u64_t physid, const char *field, const char *value)
 {
-	GString *q = g_string_new("");
+	GString *q;
 	gchar *safe_value;
+	gchar *clean_value;
 
-	safe_value = dm_stresc(value);
-	
 	/* field values are truncated to 255 bytes */
+	if (! (clean_value = g_strdup(value)))
+	        return;
+	if (strlen(clean_value) > 255)
+	        clean_value[255] = '\0';
+	if (! (safe_value = dm_stresc(clean_value))) {
+		g_free(clean_value);	
+		return;
+	}
+
+	q = g_string_new("");
+
 	g_string_printf(q, "INSERT INTO %s%sfield (physmessage_id, %sfield) "
-			"VALUES (%llu,'%.*s')", DBPFX, field, field, physid, 
-			255,safe_value);
+			"VALUES (%llu,'%s')", DBPFX, field, field, physid, safe_value);
 
 	g_free(safe_value);
-	
-	if (db_query(q->str)) 
+	g_free(clean_value);
+
+	if (db_query(q->str))
 		trace(TRACE_WARNING, "%s,%s: insert %sfield failed [%s]",
 				__FILE__, __func__, field, q->str);
 	g_string_free(q,TRUE);
@@ -1044,8 +1072,7 @@ void dbmail_message_cache_subjectfield(const struct DbmailMessage *self)
 		return;
 	}
 	
-	subject = dm_stresc(value);
-	if (!subject)
+	if (! (subject = g_strdup(value)))
 		return;
 
 	s = subject;

@@ -1687,28 +1687,25 @@ int db_set_headercache(GList *lost)
 		if (! msg)
 			return DM_EQUERY;
 
-		db_begin_transaction();
 		if (! (msg = dbmail_message_retrieve(msg, pmsgid, DBMAIL_MESSAGE_FILTER_HEAD))) {
 			trace(TRACE_WARNING,"%s,%s: error retrieving physmessage: [%llu]", 
 					__FILE__, __func__,
 					pmsgid);
-			db_rollback_transaction();
 			fprintf(stderr,"E");
 		} else {
+			db_begin_transaction();
 			if (dbmail_message_headers_cache(msg) != 1) {
 				trace(TRACE_WARNING,"%s,%s: error caching headers for physmessage: [%llu]", 
 					__FILE__, __func__,
 					pmsgid);
-				dbmail_message_free(msg);
 				db_rollback_transaction();
 				fprintf(stderr,"E");
 			} else {
 				db_commit_transaction();
 				fprintf(stderr,".");
 			}
-			
+			dbmail_message_free(msg);
 		}
-		dbmail_message_free(msg);
 		if (! g_list_next(lost))
 			break;
 		lost = g_list_next(lost);
@@ -2262,10 +2259,12 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen UNUSED,
             case -2:
                     trace(TRACE_DEBUG, "%s, %s: error copying message to user [%llu],"
                             "maxmail exceeded", __FILE__, __func__, user_idnr);
+		    db_rollback_transaction();
                     return -2;
             case -1:
                     trace(TRACE_ERROR, "%s, %s: error copying message to user [%llu]", 
                             __FILE__, __func__, user_idnr);
+		    db_rollback_transaction();
                     return -1;
         }
                 
@@ -4028,10 +4027,8 @@ char *char2date_str(const char *date)
 	unsigned len;
 	char *s;
 
-	len = strlen(db_get_sql(SQL_TO_CHAR)) + MAX_DATE_LEN;
-
-	s = (char *) dm_malloc(len);
-	if (!s)
+	len = strlen(db_get_sql(SQL_TO_DATE)) + MAX_DATE_LEN;
+	if (! (s = g_new0(char,len)))
 		return NULL;
 
 	snprintf(s, len, db_get_sql(SQL_TO_DATE), date);

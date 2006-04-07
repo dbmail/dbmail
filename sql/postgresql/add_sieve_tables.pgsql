@@ -25,9 +25,15 @@ CREATE INDEX dbmail_sievescripts_2 on dbmail_sievescripts(owner_idnr,active);
 
 
 -- Add columns for storing the Sieve quota.
-ALTER TABLE dbmail_users
-	ADD maxsieve_size INT8 DEFAULT '0' NOT NULL,
-	ADD cursieve_size INT8 DEFAULT '0' NOT NULL;
+ALTER TABLE dbmail_users ADD maxsieve_size INT8;
+UPDATE dbmail_users SET maxsieve_size=0;
+ALTER TABLE dbmail_users ALTER maxsieve_size SET NOT NULL;
+ALTER TABLE dbmail_users ALTER maxsieve_size SET DEFAULT '0';
+
+ALTER TABLE dbmail_users ADD cursieve_size INT8;
+UPDATE dbmail_users SET cursieve_size=0;
+ALTER TABLE dbmail_users ALTER cursieve_size SET NOT NULL;
+ALTER TABLE dbmail_users ALTER cursieve_size SET DEFAULT '0';
 
 COMMIT;
 
