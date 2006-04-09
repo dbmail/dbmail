@@ -371,7 +371,7 @@ static void _map_headers(struct DbmailMessage *self)
 {
 	GRelation *rel = g_relation_new(2);
 	assert(self->content);
-	g_relation_index(rel, 0, g_str_hash, g_str_equal);
+	g_relation_index(rel, 0, (GHashFunc)g_str_hash, (GEqualFunc)g_str_equal);
 	g_mime_header_foreach(GMIME_OBJECT(self->content)->headers, _register_header, rel);
 	self->headers = rel;
 }
