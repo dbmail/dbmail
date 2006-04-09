@@ -38,7 +38,12 @@ struct DbmailMailbox * dbmail_mailbox_new(u64_t id)
 	struct DbmailMailbox *self = g_new0(struct DbmailMailbox, 1);
 	assert(self);
 	dbmail_mailbox_set_id(self,id);
-	dbmail_mailbox_open(self);
+	
+	if (dbmail_mailbox_open(self)) {
+		dbmail_mailbox_free(self);
+		return NULL;
+	}
+
 	dbmail_mailbox_set_uid(self, FALSE);
 	self->search = NULL;
 	self->set = NULL;
@@ -109,7 +114,7 @@ gboolean dbmail_mailbox_get_uid(struct DbmailMailbox *self)
 }
 
 
-struct DbmailMailbox * dbmail_mailbox_open(struct DbmailMailbox *self)
+int dbmail_mailbox_open(struct DbmailMailbox *self)
 {
 	u64_t row,rows;
 	GString *q = g_string_new("");
@@ -124,7 +129,7 @@ struct DbmailMailbox * dbmail_mailbox_open(struct DbmailMailbox *self)
 	
 	if (db_query(q->str) == DM_EQUERY) {
 		g_string_free(q,TRUE);
-		return self;
+		return DM_EQUERY;
 	}
 		
 	if ((rows  = db_num_rows()) < 1) {
@@ -132,7 +137,7 @@ struct DbmailMailbox * dbmail_mailbox_open(struct DbmailMailbox *self)
 				__FILE__, __func__);
 		db_free_result();
 		g_string_free(q,TRUE);
-		return self;
+		return DM_EGENERAL;
 	}
 	
 	if (self->ids) {
@@ -153,7 +158,7 @@ struct DbmailMailbox * dbmail_mailbox_open(struct DbmailMailbox *self)
 	}
 	
 	db_free_result();
-	return self;
+	return DM_SUCCESS;
 }
 
 #define FROM_STANDARD_DATE "Tue Oct 11 13:06:24 2005"
@@ -295,7 +300,7 @@ static gboolean _tree_foreach(gpointer key UNUSED, gpointer value, GString * dat
 {
 	gboolean res = FALSE;
 	u64_t *id;
-	GList *sublist = (GList *)value;
+	GList *sublist = g_list_first((GList *)value);
 	GString *t = g_string_new("");
 	int m = g_list_length(sublist);
 	
@@ -461,13 +466,13 @@ char * dbmail_mailbox_sorted_as_string(struct DbmailMailbox *self)
 	gboolean uid;
 	u64_t *msn;
 
-	if (! g_list_length(self->sorted)>0)
+	l = g_list_first(self->sorted);
+	if (! g_list_length(l)>0)
 		return s;
 
 	t = g_string_new("");
 	uid = dbmail_mailbox_get_uid(self);
 
-	l = g_list_first(self->sorted);
 	while(l->data) {
 		if (uid)
 			g_string_append_printf(t,"%llu ", *(u64_t *)l->data);
@@ -1410,7 +1415,7 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set)
 	self->set = g_tree_keys(b);
 	
 	trace(TRACE_DEBUG,"%s,%s: self->set contains [%d] ids between [%llu] and [%llu]", 
-			__FILE__, __func__, g_list_length(self->set), lo, hi);
+			__FILE__, __func__, g_list_length(g_list_first(self->set)), lo, hi);
 
 	return b;
 }
