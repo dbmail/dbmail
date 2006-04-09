@@ -522,6 +522,9 @@ int _ic_delete(struct ImapSession *self)
 		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
 		return -1;
 	}
+
+	// FIXME: check permission flag on mailbox
+	
 	if (result == 0) {
 		dbmail_imap_session_printf(self, "%s NO no permission to delete mailbox\r\n", self->tag);
 		dbmail_imap_session_set_state(self,IMAPCS_AUTHENTICATED);
@@ -579,7 +582,11 @@ int _ic_delete(struct ImapSession *self)
 	}
 
 	/* ok remove mailbox */
-	db_delete_mailbox(mboxid, 0, 1);
+	if (db_delete_mailbox(mboxid, 0, 1)) {
+		trace(TRACE_DEBUG,"%s,%s: db_delete_mailbox failed", __FILE__, __func__);
+		dbmail_imap_session_printf(self,"%s NO DELETE failed\r\n", self->tag);
+		return DM_EGENERAL;
+	}
 
 	/* check if this was the currently selected mailbox */
 	if (mboxid == ud->mailbox.uid) 
@@ -612,6 +619,8 @@ int _ic_rename(struct ImapSession *self)
 		return 1;
 	}
 
+	// FIXME: check permissions flag on original mailbox
+	
 	/* check if new name is valid */
         if (!checkmailboxname(self->args[1])) {
 	        dbmail_imap_session_printf(self, "%s NO new mailbox name contains invalid characters\r\n", self->tag);

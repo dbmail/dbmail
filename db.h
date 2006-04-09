@@ -912,6 +912,8 @@ int db_findmailbox_by_regex(u64_t owner_idnr, const char *pattern,
  *     - -1 on failure
  *     - 0 on success
  */
+int db_getmailbox_flags(mailbox_t *mb);
+int db_getmailbox_count(mailbox_t *mb);
 int db_getmailbox(mailbox_t * mb);
 
 /**
@@ -946,6 +948,16 @@ int db_user_is_mailbox_owner(u64_t userid, u64_t mboxid);
  */
 int db_createmailbox(const char *name, u64_t owner_idnr,
 		     u64_t * mailbox_idnr);
+/**
+ * \brief set permission on a mailbox (readonly/readwrite)
+ * \param mailbox_id idnr of mailbox
+ * \return
+ *  - -1 on database failure
+ *  - 0 on success
+ *  - 1 on failure
+ */
+int db_mailbox_set_permission(u64_t mailbox_id, int permission);
+
 /**
  * \brief find a mailbox, create if not found
  * \param name name of mailbox

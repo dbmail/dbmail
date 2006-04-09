@@ -558,20 +558,13 @@ int do_check_integrity(void)
 				if (no_to_all) {
 					qerrorf("%llu ", id);
 				} else if (yes_to_all) {
-					if (db_delete_mailbox(id, 0, 0) <
-					    0)
-						qerrorf
-						    ("Warning: could not delete mailbox #%llu. Check log.\n",
-						     id);
+					if (db_delete_mailbox(id, 0, 0))
+						qerrorf("Warning: could not delete mailbox #%llu. Check log.\n", id);
 					else
-						qerrorf
-						    ("%llu (removed from dbase)\n",
-						     id);
+						qerrorf("%llu (removed from dbase)\n", id);
 				}
-        
 				el = el->nextnode;
 			}
-        
 			qerrorf("\n");
 			dm_list_free(&lostlist.start);
 		}
