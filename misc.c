@@ -527,7 +527,7 @@ int zap_between(const char * const instring, signed char left, signed char right
  *
  *
  */
-GString * g_list_join(GList * list, char * sep)
+GString * g_list_join(GList * list, const gchar * sep)
 {
 	GString *string = g_string_new("");
 	if (sep == NULL)
@@ -545,7 +545,7 @@ GString * g_list_join(GList * list, char * sep)
 	return string;	
 }
 
-GList * g_string_split(GString * string, char * sep)
+GList * g_string_split(GString * string, const gchar * sep)
 {
 	GList * list = NULL;
 	char **array;
@@ -554,7 +554,7 @@ GList * g_string_split(GString * string, char * sep)
 	if (string->len == 0)
 		return NULL;
 	
-	array = (char **)g_strsplit((const gchar *)string->str, (const gchar *)sep,0);
+	array = (char **)g_strsplit((const gchar *)string->str, sep, 0);
 	while(array[len++]);
 	len--;
 	for (i=0; i<len; i++)
@@ -703,7 +703,7 @@ void dm_base_subject(char *subject)
 	while (1==1) {
 		olen = strlen(tmp);
 		while (g_str_has_suffix(tmp,"(fwd)")) {
-			offset = strlen(tmp) - strlen("(fwd)");
+			offset = strlen(tmp) - 5;
 			tmp[offset] = '\0';
 			g_strstrip(tmp);
 		}
@@ -714,8 +714,7 @@ void dm_base_subject(char *subject)
 				break;
 		}
 
-
-		if (g_str_has_suffix(tmp,"]") && strncasecmp(tmp,"[fwd:",strlen("[fwd:"))==0 ) {
+		if (g_str_has_suffix(tmp,"]") && strncasecmp(tmp,"[fwd:",5)==0 ) {
 			offset=strlen(tmp)-1;
 			tmp[offset]='\0';
 			tmp+=5;
@@ -1362,8 +1361,8 @@ static gboolean traverse_tree_merger(gpointer key, gpointer value UNUSED, tree_m
 int g_tree_merge(GTree *a, GTree *b, int condition)
 {
 	char *type = NULL;
-	GList *keys;
-	int alen = 0, blen=0;
+	GList *keys = NULL;
+	int alen = 0, blen=0, klen=0;
 	
 	gpointer key;
 	gpointer value;	
@@ -1382,15 +1381,16 @@ int g_tree_merge(GTree *a, GTree *b, int condition)
 			merger->tree = b;
 			merger->condition = IST_SUBSEARCH_AND;
 			g_tree_foreach(a,(GTraverseFunc)traverse_tree_merger, &merger);
-			keys = g_list_reverse(merger->list);
-			if (! g_list_length(keys))
+			keys = g_list_first(merger->list);
+			if (! (klen = g_list_length(keys)))
 				break;
-
+			if (klen > 1)
+				keys = g_list_reverse(merger->list);
+			
 			while (keys->data) {
 				g_tree_remove(a,keys->data);
 				if (! g_list_next(keys))
 					break;
-				
 				keys = g_list_next(keys);
 			}
 			break;
@@ -1404,11 +1404,13 @@ int g_tree_merge(GTree *a, GTree *b, int condition)
 			merger->tree = a;
 			merger->condition = IST_SUBSEARCH_OR;
 			g_tree_foreach(b,(GTraverseFunc)traverse_tree_merger, &merger);
-			keys = g_list_reverse(merger->list);
-			/* add to A all keys in B */
-			if (! g_list_length(keys))
+			keys = g_list_first(merger->list);
+			if (! (klen = g_list_length(keys)))
 				break;
-
+			if (klen > 1)
+				keys = g_list_reverse(keys);
+			
+			/* add to A all keys in B */
 			while (keys->data) {
 				g_tree_lookup_extended(b,keys->data,&key,&value);
 				g_tree_steal(b,keys->data);

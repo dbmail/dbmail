@@ -104,9 +104,10 @@ END_TEST
 
 START_TEST(test_dbmail_mailbox_open)
 {
+	int result;
 	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id());
-	mb = dbmail_mailbox_open(mb);
-	fail_unless(mb!=NULL, "dbmail_mailbox_open failed");
+	result = dbmail_mailbox_open(mb);
+	fail_unless(result == 0, "dbmail_mailbox_open failed");
 }
 END_TEST
 
@@ -265,37 +266,31 @@ START_TEST(test_dbmail_mailbox_search)
 }
 END_TEST
 
-START_TEST(test_dbmail_mailbox_search_parsed)
+START_TEST(test_dbmail_mailbox_search_parsed_1)
 {
-	char *args;
-	char **array;
-	u64_t idx = 0;
-	gboolean sorted = 1;
-	struct DbmailMailbox *mb;
-	
-	idx=0;
-	sorted = 0;
-	mb = dbmail_mailbox_new(get_mailbox_id());
-	args = g_strdup("UID 1 BODY unlikelyaddress@nfg.nl");
-	array = g_strsplit(args," ",0);
+	u64_t idx=0;
+	gboolean sorted = 0;
+	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id());
+	char *args = g_strdup("UID 1 BODY unlikelyaddress@nfg.nl");
+	char **array = g_strsplit(args," ",0);
 	g_free(args);
-	
 	dbmail_mailbox_build_imap_search(mb, array, &idx, sorted);
 	dbmail_mailbox_search(mb);
-	
 	dbmail_mailbox_free(mb);
 	g_strfreev(array);
+}
+END_TEST
 
-	idx=0;
-	sorted = 0;
-	mb = dbmail_mailbox_new(get_mailbox_id());
-	args = g_strdup("UID 1,* BODY the");
-	array = g_strsplit(args," ",0);
+START_TEST(test_dbmail_mailbox_search_parsed_2)
+{
+	u64_t idx=0;
+	gboolean sorted = 0;
+	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id());
+	char *args = g_strdup("UID 1,* BODY the");
+	char **array = g_strsplit(args," ",0);
 	g_free(args);
-	
 	dbmail_mailbox_build_imap_search(mb, array, &idx, sorted);
 	dbmail_mailbox_search(mb);
-	
 	dbmail_mailbox_free(mb);
 	g_strfreev(array);
 }
@@ -824,7 +819,8 @@ Suite *dbmail_mailbox_suite(void)
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_build_imap_search);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_sort);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search);
-	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search_parsed);
+	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search_parsed_1);
+	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search_parsed_2);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_orderedsubject);
 //	tcase_add_test(tc_mailbox, test_dbmail_mailbox_fetch_build);
 //	tcase_add_test(tc_mailbox, test_dbmail_mailbox_fetch);

@@ -105,8 +105,8 @@ int zap_between(const char * const instring, signed char left, signed char right
 int base64_grow_ret(char ***inchar, size_t ** inint, size_t newcount,
 		    size_t newchar);
 
-GString * g_list_join(GList * list, char * sep);
-GList * g_string_split(GString * string, char * sep);
+GString * g_list_join(GList * list, const gchar * sep);
+GList * g_string_split(GString * string, const gchar * sep);
 GList * g_list_append_printf(GList * list, char * format, ...);
 
 gint ucmp(const u64_t *a, const u64_t *b);
