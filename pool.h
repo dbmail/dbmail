@@ -1,4 +1,5 @@
 /* 
+ * Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
  * pool.h
  *
  * definition of process pool function prototypes
