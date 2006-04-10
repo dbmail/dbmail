@@ -39,9 +39,14 @@ extern char *configFile;
 extern db_param_t _db_params;
 extern int quiet;
 extern int reallyquiet;
+extern char *query;
 
 u64_t useridnr = 0;
 u64_t useridnr_domain = 0;
+
+char *testuser = "testuser1";
+u64_t testidnr = 0;
+
 char *username = "testfaildsn";
 char *username_domain = "testfailuser@nonexistantdomain";
 char *username_mailbox = "testfailuser+foomailbox@nonexistantdomain";
@@ -73,6 +78,10 @@ void setup(void)
 	alias_add = g_list_append(alias_add, userpart_catchall);
 	alias_add = g_list_append(alias_add, domain_catchall);
 
+	if (! (auth_user_exists(testuser, &testidnr))) {
+		do_add(testuser, "test", "md5-hash", 0, 0, NULL, NULL);
+		auth_user_exists(testuser, &testidnr);
+	}
 	if (! (auth_user_exists(username, &useridnr))) {
 		do_add(username, "testpass", "md5-hash", 0, 0, alias_add, NULL);
 		auth_user_exists(username, &useridnr);
@@ -85,6 +94,15 @@ void setup(void)
 
 void teardown(void)
 {
+	u64_t mailbox_id=0;
+	if (db_findmailbox("testcreatebox",testidnr,&mailbox_id))
+		db_delete_mailbox(mailbox_id,0,0);
+			
+	if (db_findmailbox("testpermissionbox",testidnr,&mailbox_id)) {
+		db_mailbox_set_permission(mailbox_id, IMAPPERM_READWRITE);
+		db_delete_mailbox(mailbox_id,0,0);
+	}
+
 	db_disconnect();
 	auth_disconnect();
 }
@@ -155,8 +173,29 @@ START_TEST(test_db_query)
 	db_free_result();
 }
 END_TEST
+START_TEST(test_db_mailbox_set_permission)
+{
+
+	int result;
+	u64_t mailbox_id;
+	result = db_createmailbox("testpermissionbox",testidnr, &mailbox_id);
+
+	result = db_mailbox_set_permission(mailbox_id, IMAPPERM_READ);
+	fail_unless(result==0,"db_mailbox_set_permission failed");
+
+	result = db_delete_mailbox(mailbox_id,0,0);
+	fail_unless(result!=0,"db_delete_mailbox should have failed on readonly mailbox");
+
+	result = db_mailbox_set_permission(mailbox_id, IMAPPERM_READWRITE);
+	fail_unless(result==0,"db_mailbox_set_permission failed");
+
+	result = db_delete_mailbox(mailbox_id,0,0);
+	fail_unless(result==0,"db_delete_mailbox should have succeeded on readwrite mailbox");
 
 
+	return;
+}
+END_TEST
 /**
  * \brief get number of rows in result set.
  * \return 
@@ -659,22 +698,11 @@ END_TEST
  *     -  1 on success
  */
 //int db_delete_message(u64_t message_idnr);
+START_TEST(test_db_delete_message)
+{
 
-/**
- * \brief delete a mailbox. 
- * \param mailbox_idnr
- * \param only_empty if non-zero the mailbox will only be emptied,
- *        i.e. all messages in it will be deleted.
- * \param update_curmail_size if non-zero the curmail_size of the
- *        user will be updated.
-* \return 
-*    - -1 on database failure
-*    - 0 on success
-* \attention this function is unable to delete shared mailboxes
-*/
-//int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
-//		      int update_curmail_size);
-
+}
+END_TEST
 /**
  * \brief write lines of message to fstream. Does not write the header
  * \param fstream the stream to write to
@@ -846,18 +874,52 @@ END_TEST
  */
 //int db_createmailbox(const char *name, u64_t owner_idnr,
 //		     u64_t * mailbox_idnr);
+
 START_TEST(test_db_createmailbox)
 {
-	u64_t owner_idnr=99999999;
-	const char *name="INBOX";
-	u64_t mailbox_idnr=0;
+	u64_t owner_id=99999999;
+	u64_t mailbox_id=0;
 	int result;
 
-	result = db_createmailbox(name, owner_idnr, &mailbox_idnr);
+	result = db_createmailbox("INBOX", owner_id, &mailbox_id);
 	fail_unless(result == -1, "db_createmailbox should have failed");
+
+	result = db_createmailbox("testcreatebox", testidnr, &mailbox_id);
+	fail_unless(result==0,"db_createmailbox failed");
 	
 }
 END_TEST
+/**
+ * \brief delete a mailbox. 
+ * \param mailbox_idnr
+ * \param only_empty if non-zero the mailbox will only be emptied,
+ *        i.e. all messages in it will be deleted.
+ * \param update_curmail_size if non-zero the curmail_size of the
+ *        user will be updated.
+* \return 
+*    - -1 on database failure
+*    - 0 on success
+* \attention this function is unable to delete shared mailboxes
+*/
+//int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
+//		      int update_curmail_size);
+START_TEST(test_db_delete_mailbox)
+{
+	u64_t mailbox_id=999999999;
+	int result;
+
+	result = db_delete_mailbox(mailbox_id,0,0);
+	fail_unless(result != DM_SUCCESS, "db_delete_mailbox should have failed");
+
+	result = db_createmailbox("testdeletebox",testidnr, &mailbox_id);
+	fail_unless(result==0,"db_createmailbox failed");
+
+	result = db_delete_mailbox(mailbox_id,0,0);
+	fail_unless(result==0,"db_delete_mailbox failed");
+	
+}
+END_TEST
+
 /**
  * \brief find a mailbox, create if not found
  * \param name name of mailbox
@@ -1018,6 +1080,8 @@ Suite *dbmail_db_suite(void)
 	tcase_add_checked_fixture(tc_db, setup, teardown);
 	tcase_add_test(tc_db, test_db_query);
 	tcase_add_test(tc_db, test_db_createmailbox);
+	tcase_add_test(tc_db, test_db_delete_mailbox);
+	tcase_add_test(tc_db, test_db_mailbox_set_permission);
 	return s;
 }
 

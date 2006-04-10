@@ -147,9 +147,9 @@ START_TEST(test_dbmail_message_init_with_string)
 	m = dbmail_message_init_with_string(m,s);
 	g_string_free(s,TRUE);
 	
-	t = g_relation_select(m->headers, (gpointer)"Received", 0);
-	fail_unless(t->len==2,"Too few headers in tuple");
-	g_tuples_destroy(t);
+	//t = g_relation_select(m->headers, (gpointer)"Received", 0);
+	//fail_unless(t->len==2,"Too few headers in tuple");
+	//g_tuples_destroy(t);
 	dbmail_message_free(m);
 	
 	

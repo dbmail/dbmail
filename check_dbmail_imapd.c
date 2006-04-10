@@ -78,28 +78,6 @@ void teardown(void)
 	config_free();
 }
 
-
-START_TEST(test_g_list_join)
-{
-	GString *result;
-	GList *l = NULL;
-	l = g_list_append(l, "NIL");
-	l = g_list_append(l, "NIL");
-	l = g_list_append(l, "(NIL NIL)");
-	l = g_list_append(l, "(NIL NIL)");
-	result = g_list_join(l," ");
-	fail_unless(strcmp(result->str,"NIL NIL (NIL NIL) (NIL NIL)")==0,"g_list_join failed");
-	g_string_free(result,TRUE);
-
-	l = NULL;
-	l = g_list_append(l, "NIL");
-	result = g_list_join(l," ");
-	fail_unless(strcmp(result->str,"NIL")==0,"g_list_join failed");
-	g_string_free(result,TRUE);
-
-}
-END_TEST
-
 START_TEST(test_dbmail_imap_plist_as_string)
 {
 	char *result;
@@ -668,7 +646,6 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_mime, test_g_mime_object_get_body);
 
 	tcase_add_checked_fixture(tc_util, setup, teardown);
-	tcase_add_test(tc_util, test_g_list_join);
 	tcase_add_test(tc_util, test_dbmail_imap_plist_as_string);
 	tcase_add_test(tc_util, test_dbmail_imap_plist_collapse);
 	tcase_add_test(tc_util, test_dbmail_imap_astring_as_string);
