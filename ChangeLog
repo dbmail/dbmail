@@ -1,3 +1,19 @@
+2006-04-10  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_db.c, db.c, db.h, imapcommands.c, maintenance.c:
+	expand unit-test coverage and do some cleanups in db.c along the way
+	* check_dbmail_imapd.c, check_dbmail_mailbox.c, check_dbmail_message.c, 
+	  check_dbmail_misc.c:
+	reorganize a couple of test cases
+	* dbmail-mailbox.c, dbmail-mailbox.h:
+	g_list_length does not rewind before counting
+	* dbmail-message.c:
+	defensive correction
+	* pool.c:
+	revisit the scaling algorithm in the prefork code
+	* check_dbmail_mailbox.c, misc.c, misc.h:
+	some cleanups in the tree-merge code wrt glib-2.10
+
 2006-04-07  Paul J Stevens <paul@nfg.nl>
 
 	* misc.c:
