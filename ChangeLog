@@ -1,5 +1,19 @@
 2006-04-10  Paul J Stevens <paul@nfg.nl>
 
+	* INSTALL.postfix, Makefile.am, README.usermap, acl.c, check_dbmail.h, 
+	  check_dbmail_common.c, check_dbmail_db.c, check_dbmail_deliver.c, 
+	  check_dbmail_dsn.c, check_dbmail_imapd.c, check_dbmail_mailbox.c, 
+	  check_dbmail_message.c, check_dbmail_misc.c, check_dbmail_server.c, 
+	  check_dbmail_user.c, check_dbmail_util.c, config.c, db.c, db.h, 
+	  dbmail-imapsession.c, dbmail-imapsession.h, dbmail-mailbox.c, 
+	  dbmail-mailbox.h, dbmail-message.c, dbmail-message.h, dbmail-user.c, 
+	  dbmail-user.h, dbmailtypes.h, debug.c, debug.h, dm_cidr.c, dm_cidr.h, 
+	  dm_imaputil.c, dm_imaputil.h, export.c, imap4.c, imap4.h, 
+	  imapcommands.c, imapcommands.h, imapd.c, list.c, list.h, main.c, 
+	  main.h, maintenance.c, memblock.c, misc.c, misc.h, pidfile.h, pipe.h, 
+	  pool.c, pool.h, pop3.c, pop3d.c, quota.c, server.c, server.h, 
+	  serverchild.c, serverchild.h, user.c:
+	remove empty files and update copyright notices all over the place
 	* check_dbmail_db.c, db.c, db.h, imapcommands.c, maintenance.c:
 	expand unit-test coverage and do some cleanups in db.c along the way
 	* check_dbmail_imapd.c, check_dbmail_mailbox.c, check_dbmail_message.c, 

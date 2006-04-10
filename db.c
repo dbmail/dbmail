@@ -1,6 +1,10 @@
+<<<<<<< master
+=======
 /* $Id$ */
+>>>>>>> origin
 /*
   Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
+  Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
 
   This program is free software; you can redistribute it and/or 
   modify it under the terms of the GNU General Public License 
@@ -20,6 +24,8 @@
 
 /**
  * \file db.c
+ * 
+ * $Id$
  *
  * implement database functionality. This used to split out
  * between MySQL and PostgreSQL, but this is now integrated. 

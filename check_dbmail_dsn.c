@@ -1,6 +1,7 @@
 /*
  *  Copyright (C) 2006  Aaron Stone  <aaron@serendipity.cx>
- *
+ *  Copyright (c) 2006 NFG Net Facilities Group BV support@nfg.nl
+ *  
  *   This program is free software; you can redistribute it and/or
  *   modify it under the terms of the GNU General Public License
  *   as published by the Free Software Foundation; either

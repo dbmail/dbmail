@@ -3,9 +3,7 @@ README.usermap
 
 $Id$
 
-----------------------------------------------------
-NOTICE: the usermap feature is new and experimental.
-----------------------------------------------------
+
 
 dbmail-2.1.2 and beyond support usermaps and domainmaps which will allow you
 to map login names to fully qualified (unique) userids as used in the dbmail_users
