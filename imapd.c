@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: imapd.c 2031 2006-03-17 03:20:47Z aaron $
+/* $Id: imapd.c 2065 2006-04-10 20:38:36Z paul $
  *
  * imapd.c
  * 
@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
 			log_verbose = 1;
 			break;
 		case 'V':
-			printf("\n*** DBMAIL: dbmail-imapd version $Revision: 2031 $ %s\n\n", 
+			printf("\n*** DBMAIL: dbmail-imapd version $Revision: 2065 $ %s\n\n", 
 					COPYRIGHT);
 			return 0;
 		case 'n':

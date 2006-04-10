@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
  
- $Id: debug.h 2046 2006-03-21 13:59:31Z paul $
+ $Id: debug.h 2065 2006-04-10 20:38:36Z paul $
  
  headers for debug.c 
  
