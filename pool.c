@@ -461,59 +461,58 @@ void manage_spare_children()
 	 * manage spare children while running
 	 *
 	 */
-	int somethingchanged;
-	pid_t chpid;
+	pid_t chpid = 0;
+	int spares;
+	int children;
 	
 	if (GeneralStopRequested)
 		return;
 	
-	chpid = getpid();
-	somethingchanged = 0;
-	
 	/* scale up */
-	while ((count_children() < scoreboard->conf->startChildren) || 
-			(count_spare_children() < scoreboard->conf->minSpareChildren)) {
+	spares = count_spare_children();
+	children = count_children();
+	while (children < scoreboard->conf->startChildren || spares < scoreboard->conf->minSpareChildren) {
 		
-		if (count_children() >= scoreboard->conf->maxChildren)
+		if (children >= scoreboard->conf->maxChildren)
 			break;
-		
-		somethingchanged = 1;
-		
 		if ((chpid = CreateChild(&childinfo)) < 0) 
 			break;
+		
+		children++;
+		spares++;
 	}
 
 	/* scale down */
-	while ((count_children() > scoreboard->conf->startChildren) && 
-			(count_spare_children() > scoreboard->conf->maxSpareChildren)) {
+	spares = count_spare_children();
+	children = count_children();
+	while (children > scoreboard->conf->startChildren && spares > scoreboard->conf->maxSpareChildren) {
 		
-		somethingchanged = 1;
-		if ((chpid = get_idle_spare()) > 0) {
-			kill(chpid, SIGTERM);
-			
-			if (waitpid(chpid, NULL, 0) == chpid) 
-				scoreboard_release(chpid);
-			
-		} else {
+		if ((chpid = get_idle_spare()) < 0)
 			break;
-		}
+
+		kill(chpid, SIGTERM);
+		
+		if (waitpid(chpid, NULL, 0) == chpid) 
+			scoreboard_release(chpid);
+
+		children--;
+		spares--;
 	}
+	
 	/* scoreboard */
-	if (somethingchanged > 0) {
-		trace(TRACE_MESSAGE,
-		      "%s,%s: children [%d/%d], spares [%d (%d - %d)]",
+	if (chpid > 0) {
+		trace(TRACE_MESSAGE, "%s,%s: children [%d/%d], spares [%d (%d - %d)]",
 		      __FILE__,__func__,
-		      count_children(),
-		      scoreboard->conf->maxChildren,
+		      count_children(), scoreboard->conf->maxChildren,
 		      count_spare_children(),
 		      scoreboard->conf->minSpareChildren,
 		      scoreboard->conf->maxSpareChildren);
+	} else if (chpid < 0) {
+		trace(TRACE_ERROR, "%s,%s: error scaling up/down", __FILE__, __func__);
 	}
 	
 	if (!count_children()) {
-		trace(TRACE_WARNING,
-		      "%s,%s: no children left ?. Aborting.",
-		      __FILE__,__func__);
+		trace(TRACE_WARNING, "%s,%s: no children left ?. Aborting.", __FILE__,__func__);
 		GeneralStopRequested = 1;
 	}
 }
