@@ -319,6 +319,7 @@ typedef struct {
 	int match;
 	GTree *found;
 	gboolean reverse;
+	gboolean merged;
 } search_key_t;
 
 /**
