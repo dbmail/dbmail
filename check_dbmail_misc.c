@@ -144,6 +144,23 @@ START_TEST(test_g_tree_merge_not)
 	
 	g_tree_destroy(a);
 	g_tree_destroy(b);
+	
+	a = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+	b = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+	
+	for (r=1; r<=10; r+=2) {
+		k = g_new0(u64_t,1);
+		v = g_new0(u64_t,1);
+		*k = r;
+		*v = r;
+		g_tree_insert(a,k,v);
+	}
+	g_tree_merge(a,b,IST_SUBSEARCH_NOT);
+	fail_unless(g_tree_nnodes(a)==5,"g_tree_merge failed. Too few nodes in a.");
+	
+	g_tree_destroy(a);
+	g_tree_destroy(b);
+
 }
 END_TEST
 

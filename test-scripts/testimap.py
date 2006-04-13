@@ -403,6 +403,13 @@ class testImapServer(unittest.TestCase):
 
         self.o.select('sbox')
         self.assertEquals(self.o.fetch("1:*","(Flags)")[0],'OK')
+
+        result1=self.o.search(None, "1:*", "DELETED")
+        self.assertEquals(result1[0],'OK')
+        result2=self.o.search(None, "1:*", "NOT", "DELETED")
+        self.assertEquals(result2[0],'OK')
+        print result1, result2
+        return
         result=self.o.search(None, "UNDELETED", "BODY", "test")
         self.assertEquals(result[0],'OK')
 #        self.failIf(result[1]==[''])

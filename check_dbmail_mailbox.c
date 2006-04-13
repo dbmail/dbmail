@@ -220,6 +220,7 @@ START_TEST(test_dbmail_mailbox_search)
 	char **array;
 	u64_t idx = 0;
 	gboolean sorted = 1;
+	int all, found, notfound;
 	struct DbmailMailbox *mb;
 	
 	// first case
@@ -237,19 +238,52 @@ START_TEST(test_dbmail_mailbox_search)
 	g_strfreev(array);
 
 	// second case
+	//
 	idx=0;
 	sorted = 0;
 	mb = dbmail_mailbox_new(get_mailbox_id());
-	args = g_strdup("1:* TEXT paul@nfg.nl");
+	args = g_strdup("1:*");
 	array = g_strsplit(args," ",0);
 	g_free(args);
 	
 	dbmail_mailbox_build_imap_search(mb, array, &idx, sorted);
 	dbmail_mailbox_search(mb);
+	all = g_tree_nnodes(mb->ids);
 	
 	dbmail_mailbox_free(mb);
 	g_strfreev(array);
 	
+	idx=0;
+	sorted = 0;
+	mb = dbmail_mailbox_new(get_mailbox_id());
+	args = g_strdup("1:* TEXT @");
+	array = g_strsplit(args," ",0);
+	g_free(args);
+	
+	dbmail_mailbox_build_imap_search(mb, array, &idx, sorted);
+	dbmail_mailbox_search(mb);
+	found = g_tree_nnodes(mb->ids);
+	
+	dbmail_mailbox_free(mb);
+	g_strfreev(array);
+	
+	idx=0;
+	sorted = 0;
+	mb = dbmail_mailbox_new(get_mailbox_id());
+	args = g_strdup("1:* NOT TEXT @");
+	array = g_strsplit(args," ",0);
+	g_free(args);
+	
+	dbmail_mailbox_build_imap_search(mb, array, &idx, sorted);
+	dbmail_mailbox_search(mb);
+	notfound = g_tree_nnodes(mb->ids);
+	
+	dbmail_mailbox_free(mb);
+	g_strfreev(array);
+
+	printf ("all [%d], found [%d], notfound [%d]", all, found, notfound);
+	
+	return;
 	// third case
 	idx=0;
 	sorted = 0;
@@ -263,6 +297,8 @@ START_TEST(test_dbmail_mailbox_search)
 	
 	dbmail_mailbox_free(mb);
 	g_strfreev(array);
+
+	
 }
 END_TEST
 
@@ -811,17 +847,17 @@ Suite *dbmail_mailbox_suite(void)
 	TCase *tc_mailbox = tcase_create("Mailbox");
 	suite_add_tcase(s, tc_mailbox);
 	tcase_add_checked_fixture(tc_mailbox, setup, teardown);
-	tcase_add_test(tc_mailbox, test_dbmail_mailbox_get_set);
-	tcase_add_test(tc_mailbox, test_dbmail_mailbox_new);
-	tcase_add_test(tc_mailbox, test_dbmail_mailbox_free);
-	tcase_add_test(tc_mailbox, test_dbmail_mailbox_open);
-	tcase_add_test(tc_mailbox, test_dbmail_mailbox_dump);
-	tcase_add_test(tc_mailbox, test_dbmail_mailbox_build_imap_search);
-	tcase_add_test(tc_mailbox, test_dbmail_mailbox_sort);
+//	tcase_add_test(tc_mailbox, test_dbmail_mailbox_get_set);
+//	tcase_add_test(tc_mailbox, test_dbmail_mailbox_new);
+//	tcase_add_test(tc_mailbox, test_dbmail_mailbox_free);
+//	tcase_add_test(tc_mailbox, test_dbmail_mailbox_open);
+//	tcase_add_test(tc_mailbox, test_dbmail_mailbox_dump);
+//	tcase_add_test(tc_mailbox, test_dbmail_mailbox_build_imap_search);
+//	tcase_add_test(tc_mailbox, test_dbmail_mailbox_sort);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search);
-	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search_parsed_1);
-	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search_parsed_2);
-	tcase_add_test(tc_mailbox, test_dbmail_mailbox_orderedsubject);
+//	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search_parsed_1);
+//	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search_parsed_2);
+//	tcase_add_test(tc_mailbox, test_dbmail_mailbox_orderedsubject);
 //	tcase_add_test(tc_mailbox, test_dbmail_mailbox_fetch_build);
 //	tcase_add_test(tc_mailbox, test_dbmail_mailbox_fetch);
 	return s;
