@@ -281,14 +281,13 @@ START_TEST(test_dbmail_mailbox_search)
 	dbmail_mailbox_free(mb);
 	g_strfreev(array);
 
-	printf ("all [%d], found [%d], notfound [%d]", all, found, notfound);
+	fail_unless((all - found) == notfound, "dbmail_mailbox_search failed: SEARCH NOT");
 	
-	return;
 	// third case
 	idx=0;
 	sorted = 0;
 	mb = dbmail_mailbox_new(get_mailbox_id());
-	args = g_strdup("1 BODY paul@nfg.nl");
+	args = g_strdup("UID 1,* BODY paul@nfg.nl");
 	array = g_strsplit(args," ",0);
 	g_free(args);
 	
@@ -847,17 +846,17 @@ Suite *dbmail_mailbox_suite(void)
 	TCase *tc_mailbox = tcase_create("Mailbox");
 	suite_add_tcase(s, tc_mailbox);
 	tcase_add_checked_fixture(tc_mailbox, setup, teardown);
-//	tcase_add_test(tc_mailbox, test_dbmail_mailbox_get_set);
-//	tcase_add_test(tc_mailbox, test_dbmail_mailbox_new);
-//	tcase_add_test(tc_mailbox, test_dbmail_mailbox_free);
-//	tcase_add_test(tc_mailbox, test_dbmail_mailbox_open);
-//	tcase_add_test(tc_mailbox, test_dbmail_mailbox_dump);
-//	tcase_add_test(tc_mailbox, test_dbmail_mailbox_build_imap_search);
-//	tcase_add_test(tc_mailbox, test_dbmail_mailbox_sort);
+	tcase_add_test(tc_mailbox, test_dbmail_mailbox_get_set);
+	tcase_add_test(tc_mailbox, test_dbmail_mailbox_new);
+	tcase_add_test(tc_mailbox, test_dbmail_mailbox_free);
+	tcase_add_test(tc_mailbox, test_dbmail_mailbox_open);
+	tcase_add_test(tc_mailbox, test_dbmail_mailbox_dump);
+	tcase_add_test(tc_mailbox, test_dbmail_mailbox_build_imap_search);
+	tcase_add_test(tc_mailbox, test_dbmail_mailbox_sort);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search);
-//	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search_parsed_1);
-//	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search_parsed_2);
-//	tcase_add_test(tc_mailbox, test_dbmail_mailbox_orderedsubject);
+	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search_parsed_1);
+	tcase_add_test(tc_mailbox, test_dbmail_mailbox_search_parsed_2);
+	tcase_add_test(tc_mailbox, test_dbmail_mailbox_orderedsubject);
 //	tcase_add_test(tc_mailbox, test_dbmail_mailbox_fetch_build);
 //	tcase_add_test(tc_mailbox, test_dbmail_mailbox_fetch);
 	return s;
