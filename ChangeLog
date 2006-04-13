@@ -1,3 +1,11 @@
+2006-04-13  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail.h.in:
+	remove empty header files
+	* check_dbmail_mailbox.c, check_dbmail_misc.c, dbmail-mailbox.c, 
+	  dbmailtypes.h, test-scripts/testimap.py:
+	tracking down the SEARCH NOT problem
+
 2006-04-10  Paul J Stevens <paul@nfg.nl>
 
 	* INSTALL.postfix, Makefile.am, README.usermap, acl.c, check_dbmail.h, 
