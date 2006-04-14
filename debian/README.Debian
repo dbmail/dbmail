@@ -1,5 +1,5 @@
 
-dbmail2 for Debian
+dbmail for Debian
 
 $Id: README.Debian 1677 2005-03-17 13:57:57Z paul $
 -----------------
@@ -9,9 +9,9 @@ create the required tables and grant access to the user specified
 in dbmail.conf.
 
 If you are upgrading from dbmail-1.2 you will find that the sql tables 
-have changed and are incompatible with dbmail2. Migration scripts
+have changed and are incompatible with dbmail-2.x. Migration scripts
 for your database backend are provided in the examples directory. None
-of the dbmail2 binaries will run until you have upgraded your database.
+of the dbmail-2 binaries will run until you have upgraded your database.
 
 The debian package runs dbmail-smtp as user dbmail via suid.
 This will allow normal users to insert mail through dbmail-smtp

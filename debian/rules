@@ -7,8 +7,6 @@
 
 # This is the debhelper compatibility version to use.
 export DH_COMPAT=5
-#export DEB_BUILD_OPTIONS=debug
-#export DEB_BUILD_OPTIONS=debug,devel
 export DEBUILD_DPKG_BUILDPACKAGE_OPTS="-i"
 
 #export WITH_GC="--with-gc"
@@ -42,8 +40,8 @@ ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
 endif
 
 # dpatch
-export PACKAGE=dbmail2
-export PACKAGES=dbmail2.2-base 
+export PACKAGE=dbmail
+export PACKAGES=dbmail
 
 include /usr/share/dpatch/dpatch.make 
 
@@ -64,15 +62,13 @@ stamps/configure:
 	autoreconf -i
 	touch $@
 
-dbmail2: dbmail2.2-base
-
-dbmail2.2-base: stamps/dbmail2.2-base
-stamps/dbmail2.2-base:
+dbmail: stamps/dbmail
+stamps/dbmail:
 	$(MAKE) clean || true
 	env CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)"  PATH="$(PATH):/usr/lib/postgresql/bin/" \
 		./configure $(CONFFLAGS) 
 	$(MAKE)
-	$(MAKE) install DESTDIR=$(CURDIR)/debian/dbmail2.2-base
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/dbmail
 	touch $@
 
 clean: clean1 unpatch
@@ -88,15 +84,7 @@ clean1:
 	rm -f `find . -name "*.pyc"`
 	# Add here commands to clean up after the build process.
 	-$(MAKE) clean
-	for d in $(PACKAGES); do \
-		for f in postinst prerm postrm preinst docs config templates manpages; do \
-			rm -f debian/$$d.$$f; \
-		done; \
-		for f in init cron.d; do \
-			rm -f debian/$$d.dbmail.$$f; \
-		done; \
-		rm -rf debian/$$d; \
-	done	
+	rm -rf debian/dbmail; \
 	for file in config.in aclocal.m4 acconfig.h configure `find . -name Makefile.in`; do \
 		rm -rf $$file || true; \
 	done
@@ -113,20 +101,8 @@ clean1:
 binary-common: build
 	dh_testroot
 	dh_testdir
-#	dh_clean -k
-
 	dh_installdirs -a
-	dh_movefiles -a --sourcedir=debian/dbmail2.2-base 
-	# Add here commands to install the package into debian/dbmail.
-	for d in $(PACKAGES); do \
-		for f in postinst prerm postrm preinst docs config templates manpages; do \
-			sed -e "s,usr/share/doc/dbmail,usr/share/doc/$$d,g" \
-			< debian/dbmail.$$f > debian/$$d.$$f; \
-		done; \
-		for f in init cron.d; do \
-			cp debian/dbmail.$$f debian/$$d.dbmail.$$f; \
-		done; \
-	done
+	dh_movefiles -a --sourcedir=debian/dbmail
 	dh_installinit -a --name=dbmail -- defaults 25
 	dh_installcron -a --name=dbmail
 	dh_installlogrotate -a --name=dbmail
@@ -143,10 +119,6 @@ binary-common: build
 	dh_fixperms -a
 	dh_installdeb -a
 	dh_makeshlibs -a
-	for p in $(PACKAGES); do \
-		dpkg-shlibdeps -Ldebian/$$p/DEBIAN/shlibs \
-			-Tdebian/$$p.substvars debian/$$p/usr/sbin/*; \
-	done
 	dh_gencontrol -a
 	dh_md5sums -a 
 	dh_builddeb -a
