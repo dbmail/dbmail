@@ -40,10 +40,13 @@ CREATE TABLE dbmail_users (
    client_idnr INT8 DEFAULT '0' NOT NULL,
    maxmail_size INT8 DEFAULT '0' NOT NULL,
    curmail_size INT8 DEFAULT '0' NOT NULL,
+   maxsieve_size INT8 DEFAULT '0' NOT NULL,
+   cursieve_size INT8 DEFAULT '0' NOT NULL,
    encryption_type VARCHAR(20) DEFAULT '' NOT NULL,
    last_login TIMESTAMP DEFAULT '1979-11-03 22:05:58' NOT NULL,
    PRIMARY KEY (user_idnr)
 );
+
 CREATE UNIQUE INDEX dbmail_users_name_idx ON dbmail_users(userid);
 
 CREATE TABLE dbmail_usermap (
@@ -156,6 +159,8 @@ CREATE TABLE dbmail_auto_notifications (
 
 CREATE TABLE dbmail_auto_replies (
    user_idnr INT8 REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE,
+   start_date timestamp without time zone not null,
+   stop_date timestamp without time zone not null,
    reply_body TEXT,
    PRIMARY KEY (user_idnr)
 );
@@ -178,5 +183,150 @@ INSERT INTO dbmail_users (userid, passwd, encryption_type)
 	VALUES ('anyone', '', 'md5');
 
  
+
+
+CREATE SEQUENCE dbmail_headername_idnr_seq;
+CREATE TABLE dbmail_headername (
+	id		INT8 DEFAULT nextval('dbmail_headername_idnr_seq'),
+	headername	VARCHAR(100) NOT NULL DEFAULT '',
+	PRIMARY KEY (id)
+);
+CREATE UNIQUE INDEX dbmail_headername_1 on dbmail_headername(headername);
+
+
+CREATE SEQUENCE dbmail_headervalue_idnr_seq;
+CREATE TABLE dbmail_headervalue (
+	headername_id	INT8 NOT NULL
+		REFERENCES dbmail_headername(id)
+		ON UPDATE CASCADE ON DELETE CASCADE,
+        physmessage_id	INT8 NOT NULL
+		REFERENCES dbmail_physmessage(id)
+		ON UPDATE CASCADE ON DELETE CASCADE,
+	id		INT8 DEFAULT nextval('dbmail_headervalue_idnr_seq'),
+	headervalue	TEXT NOT NULL DEFAULT '',
+	PRIMARY KEY (id)
+);
+CREATE UNIQUE INDEX dbmail_headervalue_1 ON dbmail_headervalue(physmessage_id, id);
+
+
+CREATE SEQUENCE dbmail_subjectfield_idnr_seq;
+CREATE TABLE dbmail_subjectfield (
+        physmessage_id  INT8 NOT NULL
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE,
+	id		INT8 DEFAULT nextval('dbmail_subjectfield_idnr_seq'),
+	subjectfield	VARCHAR(255) NOT NULL DEFAULT '',
+	PRIMARY KEY (id)
+);
+CREATE UNIQUE INDEX dbmail_subjectfield_1 ON dbmail_subjectfield(physmessage_id, id);
+
+
+CREATE SEQUENCE dbmail_datefield_idnr_seq;
+CREATE TABLE dbmail_datefield (
+        physmessage_id  INT8 NOT NULL
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE,
+	id		INT8 DEFAULT nextval('dbmail_datefield_idnr_seq'),
+	datefield	VARCHAR(100) NOT NULL DEFAULT '',
+	PRIMARY KEY (id)
+);
+CREATE UNIQUE INDEX dbmail_datefield_1 ON dbmail_datefield(physmessage_id, id);
+
+CREATE SEQUENCE dbmail_referencesfield_idnr_seq;
+CREATE TABLE dbmail_referencesfield (
+        physmessage_id  INT8 NOT NULL
+			REFERENCES dbmail_physmessage(id) 
+			ON UPDATE CASCADE ON DELETE CASCADE,
+	id		INT8 DEFAULT nextval('dbmail_referencesfield_idnr_seq'),
+	referencesfield	VARCHAR(255) NOT NULL DEFAULT '',
+	PRIMARY KEY (id)
+);
+CREATE UNIQUE INDEX dbmail_referencesfield_1 ON dbmail_referencesfield(physmessage_id, referencesfield);
+
+
+CREATE SEQUENCE dbmail_fromfield_idnr_seq;
+CREATE TABLE dbmail_fromfield (
+        physmessage_id  INT8 NOT NULL
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE,
+	id		INT8 DEFAULT nextval('dbmail_fromfield_idnr_seq'),
+	fromname	VARCHAR(100) NOT NULL DEFAULT '',
+	fromaddr	VARCHAR(100) NOT NULL DEFAULT '',
+	PRIMARY KEY (id)
+);
+CREATE UNIQUE INDEX dbmail_fromfield_1 ON dbmail_fromfield(physmessage_id, id);
+
+CREATE SEQUENCE dbmail_tofield_idnr_seq;
+CREATE TABLE dbmail_tofield (
+        physmessage_id  INT8 NOT NULL
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE,
+	id		INT8 DEFAULT nextval('dbmail_tofield_idnr_seq'),
+	toname		VARCHAR(100) NOT NULL DEFAULT '',
+	toaddr		VARCHAR(100) NOT NULL DEFAULT '',
+	PRIMARY KEY (id)
+);
+CREATE UNIQUE INDEX dbmail_tofield_1 ON dbmail_tofield(physmessage_id, id);
+
+CREATE SEQUENCE dbmail_replytofield_idnr_seq;
+CREATE TABLE dbmail_replytofield (
+        physmessage_id  INT8 NOT NULL
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE,
+	id		INT8 DEFAULT nextval('dbmail_replytofield_idnr_seq'),
+	replytoname	VARCHAR(100) NOT NULL DEFAULT '',
+	replytoaddr	VARCHAR(100) NOT NULL DEFAULT '',
+	PRIMARY KEY (id)
+);
+CREATE UNIQUE INDEX dbmail_replytofield_1 ON dbmail_replytofield(physmessage_id, id);
+
+CREATE SEQUENCE dbmail_ccfield_idnr_seq;
+CREATE TABLE dbmail_ccfield (
+        physmessage_id  INT8 NOT NULL
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE,
+	id		INT8 DEFAULT nextval('dbmail_ccfield_idnr_seq'),
+	ccname		VARCHAR(100) NOT NULL DEFAULT '',
+	ccaddr		VARCHAR(100) NOT NULL DEFAULT '',
+	PRIMARY KEY (id)
+);
+CREATE UNIQUE INDEX dbmail_ccfield_1 ON dbmail_ccfield(physmessage_id, id);
+
+
+DROP TABLE dbmail_replycache;
+CREATE TABLE dbmail_replycache (
+    to_addr character varying(100) DEFAULT ''::character varying NOT NULL,
+    from_addr character varying(100) DEFAULT ''::character varying NOT NULL,
+    handle    character varying(100) DEFAULT ''::character varying,
+    lastseen timestamp without time zone NOT NULL
+);
+CREATE UNIQUE INDEX replycache_1 ON dbmail_replycache USING btree (to_addr, from_addr, handle);
+
+CREATE SEQUENCE dbmail_sievescripts_idnr_seq;
+CREATE TABLE dbmail_sievescripts (
+	id		INT8 DEFAULT nextval('dbmail_sievescripts_idnr_seq'),
+        owner_idnr	INT8 NOT NULL
+			REFERENCES dbmail_users(user_idnr)
+			ON UPDATE CASCADE ON DELETE CASCADE,
+	active		INT2 DEFAULT '0' NOT NULL,
+	name		VARCHAR(100) NOT NULL DEFAULT '',
+	script		TEXT NOT NULL DEFAULT '',
+	PRIMARY KEY	(id)
+);
+
+CREATE INDEX dbmail_sievescripts_1 on dbmail_sievescripts(owner_idnr,name);
+CREATE INDEX dbmail_sievescripts_2 on dbmail_sievescripts(owner_idnr,active);
+
+
+CREATE TABLE dbmail_usermap(
+  login VARCHAR(100) NOT NULL,
+  sock_allow VARCHAR(100) NOT NULL,
+  sock_deny VARCHAR(100) NOT NULL,
+  userid VARCHAR(100) NOT NULL
+);
+
+CREATE UNIQUE INDEX usermap_idx_1 ON dbmail_usermap(login, sock_allow, userid);
+
 COMMIT;
+
 

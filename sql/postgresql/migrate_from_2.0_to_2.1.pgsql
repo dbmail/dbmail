@@ -1,4 +1,22 @@
 
+BEGIN;
+create cast (text as bytea) without function;
+alter table dbmail_messageblks add blk_bytea bytea;
+update dbmail_messageblks set blk_bytea = cast(messageblk::text as bytea);
+alter table dbmail_messageblks drop column messageblk;
+alter table dbmail_messageblks rename blk_bytea TO messageblk;
+drop cast (text as bytea);
+COMMIT;
+
+
+
+BEGIN;
+alter table dbmail_auto_replies add start_date timestamp without time zone;
+alter table dbmail_auto_replies alter start_date set not null;
+alter table dbmail_auto_replies add stop_date timestamp without time zone;
+alter table dbmail_auto_replies alter stop_date set not null;
+COMMIT;
+
 --
 -- modify dbmail schema to support header caching.
 --
@@ -148,4 +166,61 @@ CREATE UNIQUE INDEX dbmail_ccfield_1 ON dbmail_ccfield(physmessage_id, id);
 --	ADD messageid 	VARCHAR(100) NOT NULL DEFAULT '';
 
 COMMIT;
+
+DROP TABLE dbmail_replycache;
+CREATE TABLE dbmail_replycache (
+    to_addr character varying(100) DEFAULT ''::character varying NOT NULL,
+    from_addr character varying(100) DEFAULT ''::character varying NOT NULL,
+    handle    character varying(100) DEFAULT ''::character varying,
+    lastseen timestamp without time zone NOT NULL
+);
+CREATE UNIQUE INDEX replycache_1 ON dbmail_replycache USING btree (to_addr, from_addr, handle);
+
+--
+-- Add tables and columns to hold Sieve scripts.
+--
+-- $Id: add_header_tables.mysql 1634 2005-03-07 16:13:21Z paul $
+--
+
+BEGIN TRANSACTION;
+
+CREATE SEQUENCE dbmail_sievescripts_idnr_seq;
+CREATE TABLE dbmail_sievescripts (
+	id		INT8 DEFAULT nextval('dbmail_sievescripts_idnr_seq'),
+        owner_idnr	INT8 NOT NULL
+			REFERENCES dbmail_users(user_idnr)
+			ON UPDATE CASCADE ON DELETE CASCADE,
+	active		INT2 DEFAULT '0' NOT NULL,
+	name		VARCHAR(100) NOT NULL DEFAULT '',
+	script		TEXT NOT NULL DEFAULT '',
+	PRIMARY KEY	(id)
+);
+
+-- Looking in db.c, the WHERE clauses are: owner, owner name, owner active.
+CREATE INDEX dbmail_sievescripts_1 on dbmail_sievescripts(owner_idnr,name);
+CREATE INDEX dbmail_sievescripts_2 on dbmail_sievescripts(owner_idnr,active);
+
+
+-- Add columns for storing the Sieve quota.
+ALTER TABLE dbmail_users ADD maxsieve_size INT8;
+UPDATE dbmail_users SET maxsieve_size=0;
+ALTER TABLE dbmail_users ALTER maxsieve_size SET NOT NULL;
+ALTER TABLE dbmail_users ALTER maxsieve_size SET DEFAULT '0';
+
+ALTER TABLE dbmail_users ADD cursieve_size INT8;
+UPDATE dbmail_users SET cursieve_size=0;
+ALTER TABLE dbmail_users ALTER cursieve_size SET NOT NULL;
+ALTER TABLE dbmail_users ALTER cursieve_size SET DEFAULT '0';
+
+COMMIT;
+
+
+CREATE TABLE dbmail_usermap(
+  login VARCHAR(100) NOT NULL,
+  sock_allow VARCHAR(100) NOT NULL,
+  sock_deny VARCHAR(100) NOT NULL,
+  userid VARCHAR(100) NOT NULL
+);
+
+CREATE UNIQUE INDEX usermap_idx_1 ON dbmail_usermap(login, sock_allow, userid);
 
