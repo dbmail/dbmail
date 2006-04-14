@@ -183,10 +183,10 @@ static void _create_binary_table(void){
 	rows = db_num_rows(); fields = db_num_fields();
 	
 	if(!bintbl){
-		bintbl = (char***)malloc(sizeof(char**) * rows);
+		bintbl = (char***)g_malloc(sizeof(char**) * rows);
 		memset(bintbl, 0, sizeof(char**) * rows);
 		for(i = 0; i < rows; i++){
-			*(bintbl + i) = (char**)malloc(sizeof(char*) * fields);
+			*(bintbl + i) = (char**)g_malloc(sizeof(char*) * fields);
 			memset(*(bintbl + i), 0, sizeof(char*) * fields);
 		}
 	}
@@ -200,10 +200,10 @@ static void _free_binary_table(void){
 		for(i = 0; i < rows; i++){
 			for(j = 0; j < fields; j++)
 				if(bintbl[i][j])
-					free(bintbl[i][j]);
-			free(bintbl[i]);
+					g_free(bintbl[i][j]);
+			g_free(bintbl[i]);
 		}
-		free(bintbl);
+		g_free(bintbl);
 		bintbl = NULL;
 	}
 	
@@ -212,8 +212,8 @@ static void _set_binary_table(unsigned row, unsigned field){
 	unsigned char* tmp;
 	size_t result_size;
 	if(!bintbl[row][field]){
-		tmp = PQunescapeBytea(PQgetvalue(res, row, field), &result_size);
-		bintbl[row][field] = (char*)malloc(result_size + 1);
+		tmp = PQunescapeBytea((const unsigned char *)PQgetvalue(res, row, field), &result_size);
+		bintbl[row][field] = (char*)g_malloc(result_size + 1);
 		memcpy(bintbl[row][field], tmp, result_size);
 		PQfreemem(tmp); tmp = NULL;
 		bintbl[row][field][result_size] = '\0';
@@ -343,8 +343,8 @@ unsigned long db_escape_binary(char *to,
 	size_t to_length;
 	unsigned char *esc_to;
 
-	esc_to = PQescapeBytea(from, length, &to_length);
-	strncpy(to, esc_to, to_length);
+	esc_to = PQescapeBytea((const unsigned char *)from, length, &to_length);
+	strncpy(to, (const char *)esc_to, to_length);
 	PQfreemem(esc_to);
 	return (unsigned long)(to_length - 1);
 }

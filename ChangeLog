@@ -1,3 +1,14 @@
+2006-04-14  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_mailbox.c, dbmail-mailbox.c, dbmailtypes.h:
+	search-not is now fixed.
+	* modules/dbpgsql.c:
+	fix some compiler warnings
+	* dbmail-message.c:
+	fix a memory leak.
+	* dbmail-mailbox.c:
+	fix a double free
+
 2006-04-13  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail.h.in:

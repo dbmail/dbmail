@@ -38,16 +38,16 @@ struct DbmailMailbox * dbmail_mailbox_new(u64_t id)
 	struct DbmailMailbox *self = g_new0(struct DbmailMailbox, 1);
 	assert(self);
 	dbmail_mailbox_set_id(self,id);
-	
+	dbmail_mailbox_set_uid(self, FALSE);
+	self->search = NULL;
+	self->set = NULL;
+	self->fi = NULL;
+
 	if (dbmail_mailbox_open(self)) {
 		dbmail_mailbox_free(self);
 		return NULL;
 	}
 
-	dbmail_mailbox_set_uid(self, FALSE);
-	self->search = NULL;
-	self->set = NULL;
-	self->fi = NULL;
 	return self;
 }
 
@@ -137,7 +137,7 @@ int dbmail_mailbox_open(struct DbmailMailbox *self)
 				__FILE__, __func__);
 		db_free_result();
 		g_string_free(q,TRUE);
-		return DM_EGENERAL;
+		return DM_SUCCESS;
 	}
 	
 	if (self->ids) {
@@ -166,7 +166,7 @@ int dbmail_mailbox_open(struct DbmailMailbox *self)
 static size_t dump_message_to_stream(struct DbmailMessage *message, GMimeStream *ostream)
 {
 	size_t r = 0;
-	gchar *s;
+	gchar *s, *d;
 	GString *sender;
 	GString *date;
 	InternetAddressList *ialist;
@@ -188,7 +188,9 @@ static size_t dump_message_to_stream(struct DbmailMessage *message, GMimeStream 
 		}
 		internet_address_list_destroy(ialist);
 		
-		date = g_string_new(dbmail_message_get_internal_date(message));
+		d = dbmail_message_get_internal_date(message);
+		date = g_string_new(d);
+		g_free(d);
 		if (date->len < 1)
 			date = g_string_new(FROM_STANDARD_DATE);
 		
@@ -1292,7 +1294,6 @@ static GTree * mailbox_search_parsed(struct DbmailMailbox *self, search_key_t *s
 		ids = g_list_next(ids);
 	}
 	
-	g_list_free(ids);
 	return s->found;
 }
 
@@ -1416,7 +1417,7 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set)
 		g_tree_destroy(a);
 
 	self->set = g_tree_keys(b);
-	
+
 	trace(TRACE_DEBUG,"%s,%s: self->set contains [%d] ids between [%llu] and [%llu]", 
 			__FILE__, __func__, g_list_length(g_list_first(self->set)), lo, hi);
 
@@ -1427,12 +1428,9 @@ static gboolean _do_search(GNode *node, struct DbmailMailbox *self)
 {
 	search_key_t *s = (search_key_t *)node->data;
 
-	if (s->merged == TRUE)
+	if (s->searched)
 		return FALSE;
-
-	trace(TRACE_DEBUG,"%s,%s: type [%d]", __FILE__,  __func__, s->type);
 	
-
 	switch (s->type) {
 		case IST_SET:
 			if (! dbmail_mailbox_get_set(self, (const char *)s->search))
@@ -1453,7 +1451,7 @@ static gboolean _do_search(GNode *node, struct DbmailMailbox *self)
 
 		case IST_DATA_BODY:
 			mailbox_search_parsed(self,s);
-		break;
+			break;
 		
 		case IST_SUBSEARCH_NOT:
 		case IST_SUBSEARCH_AND:
@@ -1468,9 +1466,10 @@ static gboolean _do_search(GNode *node, struct DbmailMailbox *self)
 			return TRUE;
 	}
 
-	s->merged = TRUE;
-	trace(TRACE_DEBUG,"%s,%s: type [%d] depth [%d] rows [%d]\n", __FILE__,  __func__, 
-			s->type, g_node_depth(node), s->found ? g_tree_nnodes(s->found): 0);
+	s->searched = TRUE;
+	
+	trace(TRACE_DEBUG,"%s,%s: [%d] depth [%d] type [%d] rows [%d]\n", __FILE__,  __func__, 
+			(int)s, g_node_depth(node), s->type, s->found ? g_tree_nnodes(s->found): 0);
 
 	return FALSE;
 }	
@@ -1488,7 +1487,12 @@ static gboolean _merge_search(GNode *node, GTree *found)
 	GNode *x, *y;
 	GTree *z;
 
-	trace(TRACE_DEBUG,"%s,%s: node depth [%d] type [%d]", __FILE__, __func__, g_node_depth(node), s->type);
+	if (s->merged == TRUE)
+		return FALSE;
+
+	trace(TRACE_DEBUG,"%s,%s: [%d] depth [%d] type [%d]", 
+			__FILE__, __func__, 
+			(int)s, g_node_depth(node), s->type);
 	switch(s->type) {
 		case IST_SUBSEARCH_AND:
 			g_node_children_foreach(node, G_TRAVERSE_LEAVES, (GNodeForeachFunc)_merge_search, (gpointer)found);
@@ -1499,12 +1503,11 @@ static gboolean _merge_search(GNode *node, GTree *found)
 				break;
 			
 			z = g_tree_new((GCompareFunc)ucmp);
-			g_tree_foreach(found, (GTraverseFunc) g_tree_copy, z);
+			g_tree_foreach(found, (GTraverseFunc)g_tree_copy, z);
 			g_node_children_foreach(node, G_TRAVERSE_LEAVES, (GNodeForeachFunc)_merge_search, (gpointer) z);
 			if (z) 
 				g_tree_merge(found, z, IST_SUBSEARCH_NOT);
 			g_tree_destroy(z);
-
 			break;
 			
 		case IST_SUBSEARCH_OR:
@@ -1521,9 +1524,10 @@ static gboolean _merge_search(GNode *node, GTree *found)
 		default:
 			if (s->found && found) 
 				g_tree_merge(found, s->found, IST_SUBSEARCH_AND);
-
 			break;
 	}
+
+	s->merged = TRUE;
 
 	return FALSE;
 }

@@ -295,7 +295,7 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 	GMimeStream *fstream, *bstream, *mstream;
 	GMimeFilter *filter;
 	GMimeParser *parser;
-	gchar *buf;
+	gchar *buf, *from;
 	size_t t;
 
 	/*
@@ -354,8 +354,11 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 		case DBMAIL_MESSAGE:
 			trace(TRACE_DEBUG,"%s,%s: parse message",__FILE__,__func__);
 			self->content = GMIME_OBJECT(g_mime_parser_construct_message(parser));
-			if (g_mime_parser_get_scan_from(parser))
-				dbmail_message_set_internal_date(self, g_mime_parser_get_from(parser));
+			if (g_mime_parser_get_scan_from(parser)) {
+				from = g_mime_parser_get_from(parser);
+				dbmail_message_set_internal_date(self, from);
+				g_free(from);
+			}
 
 			break;
 		case DBMAIL_MESSAGE_PART:
