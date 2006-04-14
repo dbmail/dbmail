@@ -38,16 +38,16 @@ struct DbmailMailbox * dbmail_mailbox_new(u64_t id)
 	struct DbmailMailbox *self = g_new0(struct DbmailMailbox, 1);
 	assert(self);
 	dbmail_mailbox_set_id(self,id);
-	
+	dbmail_mailbox_set_uid(self, FALSE);
+	self->search = NULL;
+	self->set = NULL;
+	self->fi = NULL;
+
 	if (dbmail_mailbox_open(self)) {
 		dbmail_mailbox_free(self);
 		return NULL;
 	}
 
-	dbmail_mailbox_set_uid(self, FALSE);
-	self->search = NULL;
-	self->set = NULL;
-	self->fi = NULL;
 	return self;
 }
 
@@ -137,7 +137,7 @@ int dbmail_mailbox_open(struct DbmailMailbox *self)
 				__FILE__, __func__);
 		db_free_result();
 		g_string_free(q,TRUE);
-		return DM_EGENERAL;
+		return DM_SUCCESS;
 	}
 	
 	if (self->ids) {
@@ -166,7 +166,7 @@ int dbmail_mailbox_open(struct DbmailMailbox *self)
 static size_t dump_message_to_stream(struct DbmailMessage *message, GMimeStream *ostream)
 {
 	size_t r = 0;
-	gchar *s;
+	gchar *s, *d;
 	GString *sender;
 	GString *date;
 	InternetAddressList *ialist;
@@ -188,7 +188,9 @@ static size_t dump_message_to_stream(struct DbmailMessage *message, GMimeStream 
 		}
 		internet_address_list_destroy(ialist);
 		
-		date = g_string_new(dbmail_message_get_internal_date(message));
+		d = dbmail_message_get_internal_date(message);
+		date = g_string_new(d);
+		g_free(d);
 		if (date->len < 1)
 			date = g_string_new(FROM_STANDARD_DATE);
 		
@@ -1292,7 +1294,6 @@ static GTree * mailbox_search_parsed(struct DbmailMailbox *self, search_key_t *s
 		ids = g_list_next(ids);
 	}
 	
-	g_list_free(ids);
 	return s->found;
 }
 
