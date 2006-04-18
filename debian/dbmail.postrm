@@ -12,6 +12,10 @@ if [ "$1" = "purge" ]; then
 	ucf --purge /etc/default/dbmail || true
 fi
 
-ldconfig
+# Automatically added by dh_makeshlibs
+if [ "$1" = "remove" ]; then
+        ldconfig
+fi
+# End automatically added section
 
 #DEBHELPER#
