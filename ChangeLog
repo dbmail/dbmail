@@ -1,3 +1,43 @@
+2006-04-18  Paul J Stevens <paul@nfg.nl>
+
+	* NEWS, VERSION, debian/README.Debian, debian/changelog, debian/control, 
+	  debian/dbmail-dev.files, debian/dbmail-ldap.examples, 
+	  debian/dbmail-ldap.files, debian/dbmail-mysql.examples, 
+	  debian/dbmail-mysql.files, debian/dbmail-pgsql.examples, 
+	  debian/dbmail-pgsql.files, debian/dbmail-sieve.files, 
+	  debian/dbmail-sqlite.examples, debian/dbmail-sqlite.files, 
+	  debian/dbmail2.2-dev.files, debian/libdbmail-ldap.examples, 
+	  debian/libdbmail-ldap.files, debian/libdbmail-mysql.examples, 
+	  debian/libdbmail-mysql.files, debian/libdbmail-pgsql.examples, 
+	  debian/libdbmail-pgsql.files, debian/libdbmail-sieve.files, 
+	  debian/libdbmail-sqlite.examples, debian/libdbmail-sqlite.files, 
+	  debian/rules:
+	cleaning up the debian packaging
+	* debian/dbmail-mysql.examples, debian/dbmail-pgsql.examples, 
+	  debian/dbmail.substvars, 
+	  sql/postgresql/add_auto_replies_fields.pgsql, 
+	  sql/postgresql/add_header_tables.pgsql, 
+	  sql/postgresql/add_replycache.pgsql, 
+	  sql/postgresql/add_sieve_tables.pgsql, 
+	  sql/postgresql/add_usermap.psql, sql/postgresql/create_tables.pgsql, 
+	  sql/postgresql/migrate_2.0_to_2.1.pgsql, 
+	  sql/postgresql/migrate_from_2.0_to_2.1.pgsql:
+	cleaning up the debian packages
+	* NEWS:
+	re-add empty file
+	* pool.h:
+	increase HARD_MAX_CHILDREN
+	* debian/control, debian/dbmail-mysql.examples, debian/dbmail.postrm:
+	debian package cleanup
+	* sql/sqlite/create_tables.sqlite:
+	update sqlite create_tables file
+	* dbmail-message.c:
+	only look for From_ at the first line of a message (closes: #326).
+	* serverchild.c:
+	do _exit if child_register failes. This needs more work.
+	* debian/changelog, debian/dbmail.examples, debian/dbmail2.2-base.examples:
+	more cleanups in debian packaging
+
 2006-04-14  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_mailbox.c, dbmail-mailbox.c, dbmailtypes.h:

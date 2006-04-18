@@ -297,6 +297,7 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 	GMimeParser *parser;
 	gchar *buf, *from;
 	size_t t;
+	gboolean firstline=TRUE;
 
 	/*
 	 * buildup the memory stream buffer
@@ -324,8 +325,9 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 			g_mime_stream_filter_add((GMimeStreamFilter *) fstream, filter);
 			
 			while ((t = g_mime_stream_buffer_gets(bstream, buf, MESSAGE_MAX_LINE_SIZE))) {
-				if (strncmp(buf,"From ",5)==0)
+				if (firstline && strncmp(buf,"From ",5)==0)
 					g_mime_parser_set_scan_from(parser,TRUE);
+				firstline=FALSE;
 
 				if ((type==DBMAIL_STREAM_LMTP) && (strncmp(buf,".\r\n",3)==0))
 					break;
