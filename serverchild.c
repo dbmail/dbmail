@@ -177,7 +177,7 @@ pid_t CreateChild(ChildInfo_t * info)
 		if (child_register() == -1) {
 			trace(TRACE_FATAL, "%s,%s: child_register failed", 
 				__FILE__, __func__);
-			exit(0);
+			_exit(0);
 		}
 	
  		ChildStopRequested = 0;
