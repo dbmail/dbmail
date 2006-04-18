@@ -78,7 +78,7 @@ CREATE TABLE dbmail_datefield (
 			REFERENCES dbmail_physmessage(id)
 			ON UPDATE CASCADE ON DELETE CASCADE,
 	id		INT8 DEFAULT nextval('dbmail_datefield_idnr_seq'),
-	datefield	VARCHAR(100) NOT NULL DEFAULT '',
+	datefield	TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT '1970-01-01 00:00:00',
 	PRIMARY KEY (id)
 );
 CREATE UNIQUE INDEX dbmail_datefield_1 ON dbmail_datefield(physmessage_id, id);

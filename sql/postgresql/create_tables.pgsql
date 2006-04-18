@@ -227,7 +227,7 @@ CREATE TABLE dbmail_datefield (
 			REFERENCES dbmail_physmessage(id)
 			ON UPDATE CASCADE ON DELETE CASCADE,
 	id		INT8 DEFAULT nextval('dbmail_datefield_idnr_seq'),
-	datefield	VARCHAR(100) NOT NULL DEFAULT '',
+	datefield	TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT '1970-01-01 00:00:00',
 	PRIMARY KEY (id)
 );
 CREATE UNIQUE INDEX dbmail_datefield_1 ON dbmail_datefield(physmessage_id, id);
@@ -292,8 +292,6 @@ CREATE TABLE dbmail_ccfield (
 );
 CREATE UNIQUE INDEX dbmail_ccfield_1 ON dbmail_ccfield(physmessage_id, id);
 
-
-DROP TABLE dbmail_replycache;
 CREATE TABLE dbmail_replycache (
     to_addr character varying(100) DEFAULT ''::character varying NOT NULL,
     from_addr character varying(100) DEFAULT ''::character varying NOT NULL,
@@ -316,16 +314,6 @@ CREATE TABLE dbmail_sievescripts (
 
 CREATE INDEX dbmail_sievescripts_1 on dbmail_sievescripts(owner_idnr,name);
 CREATE INDEX dbmail_sievescripts_2 on dbmail_sievescripts(owner_idnr,active);
-
-
-CREATE TABLE dbmail_usermap(
-  login VARCHAR(100) NOT NULL,
-  sock_allow VARCHAR(100) NOT NULL,
-  sock_deny VARCHAR(100) NOT NULL,
-  userid VARCHAR(100) NOT NULL
-);
-
-CREATE UNIQUE INDEX usermap_idx_1 ON dbmail_usermap(login, sock_allow, userid);
 
 COMMIT;
 
