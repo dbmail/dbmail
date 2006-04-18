@@ -391,6 +391,7 @@ int db_calculate_quotum_all()
 	if (n == 0) {
 		trace(TRACE_DEBUG, "%s,%s: quotum is already up to date",
 		      __FILE__, __func__);
+		db_free_result();
 		return DM_SUCCESS;
 	}
 
@@ -403,6 +404,7 @@ int db_calculate_quotum_all()
 		trace(TRACE_ERROR, "%s,%s: malloc failed: Probably out of memort..",
 		      __FILE__, __func__);
 		dm_free(user_idnrs);
+		db_free_result();
 		return -2;
 	}
 	memset(user_idnrs, 0, n * sizeof(u64_t));

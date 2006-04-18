@@ -193,6 +193,9 @@ pid_t CreateChild(ChildInfo_t * info)
  		exit(0);
 	} else {
  		usleep(5000);
+		/* check for failed forkes */
+		if (waitpid(pid, NULL, WNOHANG|WUNTRACED) == pid) 
+			return -1;
  		return pid;
 	}
 }
