@@ -57,32 +57,107 @@ CREATE INDEX dbmail_mailboxes_1 ON dbmail_mailboxes(name);
 CREATE INDEX dbmail_mailboxes_2 ON dbmail_mailboxes(owner_idnr);
 CREATE UNIQUE INDEX dbmail_mailboxes_3 ON dbmail_mailboxes(owner_idnr,name);
 
+-- dbmail_mailboxes.owner_idnr references dbmail_users(user_idnr) on delete cascade on update cascade
+
+CREATE TRIGGER fk_insert_mailboxes_users_idnr
+	BEFORE INSERT ON dbmail_mailboxes
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.owner_idnr IS NOT NULL)
+				AND ((SELECT user_idnr FROM dbmail_users WHERE user_idnr = new.owner_idnr) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_mailboxes" violates foreign key constraint "fk_insert_mailboxes_users_idnr"')
+		END;
+	END;
+CREATE TRIGGER fk_update1_mailboxes_users_idnr
+	BEFORE UPDATE ON dbmail_mailboxes
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.owner_idnr IS NOT NULL)
+				AND ((SELECT user_idnr FROM dbmail_users WHERE user_idnr = new.owner_idnr) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_mailboxes" violates foreign key constraint "fk_update2_mailboxes_users_idnr"')
+		END;
+	END;
+CREATE TRIGGER fk_update2_mailboxes_users_idnr
+	AFTER UPDATE ON dbmail_users
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_mailboxes SET owner_idnr = new.user_idnr WHERE owner_idnr = OLD.user_idnr;
+	END;
+CREATE TRIGGER fk_delete_mailboxes_users_idnr
+	BEFORE DELETE ON dbmail_users
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_mailboxes WHERE owner_idnr = OLD.user_idnr;
+	END;
+
+
 CREATE TABLE dbmail_subscription (
 	user_id INTEGER NOT NULL,
 	mailbox_id INTEGER NOT NULL
 );
-CREATE TRIGGER dbmail_subscription_constraint_insert
+CREATE UNIQUE INDEX dbmail_subscriptioin_1 ON dbmail_subscription(user_id, mailbox_id);
+
+-- dbmail_subscription.user_id references dbmail_users(user_idnr) on delete cascade on update cascade
+
+CREATE TRIGGER fk_insert_subscription_users_idnr
 	BEFORE INSERT ON dbmail_subscription
-	BEGIN
-		SELECT CASE WHEN foo.a > 0 THEN RAISE(ROLLBACK, 'UNIQUEness constraint violation')
-		ELSE 1 END FROM (
-		SELECT COUNT(*) AS a FROM dbmail_subscription
-			WHERE new.user_id = dbmail_subscription.user_id
-			AND new.mailbox_id = dbmail_subscription.mailbox_id
-			AND new.rowid != dbmail_subscription.rowid
-		) AS foo;
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.user_id IS NOT NULL)
+				AND ((SELECT user_idnr FROM dbmail_users WHERE user_idnr = new.user_id) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_subscription" violates foreign key constraint "fk_insert_subscription_users_idnr"')
+		END;
 	END;
-CREATE TRIGGER dbmail_subscription_constraint_update
+CREATE TRIGGER fk_update1_subscription_users_idnr
 	BEFORE UPDATE ON dbmail_subscription
-	BEGIN
-		SELECT CASE WHEN foo.a > 0 THEN RAISE(ROLLBACK, 'UNIQUEness constraint violation')
-		ELSE 1 END FROM (
-		SELECT COUNT(*) AS a FROM dbmail_subscription
-			WHERE new.user_id = dbmail_subscription.user_id
-			AND new.mailbox_id = dbmail_subscription.mailbox_id
-			AND new.rowid != dbmail_subscription.rowid
-		) AS foo;
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.user_id IS NOT NULL)
+				AND ((SELECT user_idnr FROM dbmail_users WHERE user_idnr = new.user_id) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_subscription" violates foreign key constraint "fk_update1_subscription_users_idnr"')
+		END;
 	END;
+CREATE TRIGGER fk_update2_subscription_users_idnr
+	AFTER UPDATE ON dbmail_users
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_subscription SET user_id = new.user_idnr WHERE user_id = OLD.user_idnr;
+	END;
+CREATE TRIGGER fk_delete_subscription_users_idnr
+	BEFORE DELETE ON dbmail_users
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_subscription WHERE user_id = OLD.user_idnr;
+	END;
+
+
+-- dbmail_subscription.mailbox_id references dbmail_mailboxes(mailbox_idnr) on delete cascade on update cascade
+
+CREATE TRIGGER fk_insert_subscription_mailbox_id
+	BEFORE INSERT ON dbmail_subscription
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.mailbox_id IS NOT NULL)
+				AND ((SELECT mailbox_idnr FROM dbmail_mailboxes WHERE mailbox_idnr = new.mailbox_id) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_subscription" violates foreign key constraint "fk_insert_subscription_mailbox_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update1_subscription_mailbox_id
+	BEFORE UPDATE ON dbmail_subscription
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.mailbox_id IS NOT NULL)
+				AND ((SELECT mailbox_idnr FROM dbmail_mailboxes WHERE mailbox_idnr = new.mailbox_id) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_subscription" violates foreign key constraint "fk_update1_subscription_mailbox_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update2_subscription_mailbox_id
+	AFTER UPDATE ON dbmail_mailboxes
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_subscription SET mailbox_id = new.mailbox_idnr WHERE mailbox_idnr = OLD.mailbox_idnr;
+	END;
+CREATE TRIGGER fk_delete_subscription_mailbox_id
+	BEFORE DELETE ON dbmail_mailboxes
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_subscription WHERE mailbox_id = OLD.mailbox_idnr;
+	END;
+
 
 CREATE TABLE dbmail_acl (
 	user_id INTEGER NOT NULL,
@@ -97,28 +172,12 @@ CREATE TABLE dbmail_acl (
 	delete_flag BOOLEAN default '0' not null,	
 	administer_flag BOOLEAN default '0' not null
 );
-CREATE TRIGGER dbmail_acl_constraint_insert
-	BEFORE INSERT ON dbmail_acl
-	BEGIN
-		SELECT CASE WHEN foo.a > 0 THEN RAISE(ROLLBACK, 'UNIQUEness constraint violation')
-		ELSE 1 END FROM (
-		SELECT COUNT(*) AS a FROM dbmail_acl
-			WHERE new.user_id = dbmail_acl.user_id
-			AND new.mailbox_id = dbmail_acl.mailbox_id
-			AND new.rowid != dbmail_acl.rowid
-		) AS foo;
-	END;
-CREATE TRIGGER dbmail_acl_constraint_update
-	BEFORE UPDATE ON dbmail_acl
-	BEGIN
-		SELECT CASE WHEN foo.a > 0 THEN RAISE(ROLLBACK, 'UNIQUEness constraint violation')
-		ELSE 1 END FROM (
-		SELECT COUNT(*) AS a FROM dbmail_acl
-			WHERE new.user_id = dbmail_acl.user_id
-			AND new.mailbox_id = dbmail_acl.mailbox_id
-			AND new.rowid != dbmail_acl.rowid
-		) AS foo;
-	END;
+CREATE INDEX dbmail_acl_1 ON dbmail_acl(user_id);
+CREATE INDEX dbmail_acl_2 ON dbmail_acl(mailbox_id);
+CREATE UNIQUE INDEX dbmail_acl_3 ON dbmail_acl(user_id, mailbox_id);
+
+-- CONSTRAINT `dbmail_subscription_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `dbmail_users` (`user_idnr`) ON DELETE CASCADE ON UPDATE CASCADE,
+-- CONSTRAINT `dbmail_subscription_ibfk_2` FOREIGN KEY (`mailbox_id`) REFERENCES `dbmail_mailboxes` (`mailbox_idnr`) ON DELETE CASCADE ON UPDATE CASCADE
 	
 CREATE TABLE dbmail_physmessage (
    id INTEGER PRIMARY KEY,
@@ -149,7 +208,9 @@ CREATE INDEX dbmail_messages_6 ON dbmail_messages(mailbox_idnr,status);
 CREATE INDEX dbmail_messages_7 ON dbmail_messages(mailbox_idnr,status,seen_flag);
 CREATE INDEX dbmail_messages_8 ON dbmail_messages(mailbox_idnr,status,recent_flag);
 
-
+-- CONSTRAINT `dbmail_messages_ibfk_1` FOREIGN KEY (`physmessage_id`) REFERENCES `dbmail_physmessage` (`id`) ON DELETE CASCADE,
+-- CONSTRAINT `dbmail_messages_ibfk_2` FOREIGN KEY (`mailbox_idnr`) REFERENCES `dbmail_mailboxes` (`mailbox_idnr`) ON DELETE CASCADE
+    
 CREATE TABLE dbmail_messageblks (
    messageblk_idnr INTEGER PRIMARY KEY,
    physmessage_id INTEGER DEFAULT '0' NOT NULL,
@@ -160,15 +221,21 @@ CREATE TABLE dbmail_messageblks (
 CREATE INDEX dbmail_messageblks_1 ON dbmail_messageblks(physmessage_id);
 CREATE INDEX dbmail_messageblks_2 ON dbmail_messageblks(physmessage_id, is_header);
 
-CREATE TABLE dbmail_auto_notifications (
-   user_idnr INTEGER PRIMARY KEY,
-   notify_address VARCHAR(100)
-);
+--  CONSTRAINT `dbmail_messageblks_ibfk_1` FOREIGN KEY (`physmessage_id`) REFERENCES `dbmail_physmessage` (`id`) ON DELETE CASCADE
+  
+--CREATE TABLE dbmail_auto_notifications (
+--   user_idnr INTEGER PRIMARY KEY,
+--   notify_address VARCHAR(100)
+--);
 
 CREATE TABLE dbmail_auto_replies (
    user_idnr INTEGER PRIMARY KEY,
-   reply_body TEXT
+   reply_body TEXT,
+   start_date DATETIME DEFAULT '1980-01-01 22:05:58' NOT NULL,
+   stop_date DATETIME DEFAULT '1980-01-01 22:05:58' NOT NULL,
+   min_interval enum('d','w','m') DEFAULT 'w'
 );
+-- CONSTRAINT `dbmail_auto_replies_ibfk_1` FOREIGN KEY (`user_idnr`) REFERENCES `dbmail_users` (`user_idnr`) ON DELETE CASCADE ON UPDATE CASCADE
 
 CREATE TABLE dbmail_pbsp (
    idnr INTEGER PRIMARY KEY,
@@ -187,6 +254,8 @@ CREATE TABLE dbmail_sievescripts (
 CREATE INDEX dbmail_sievescripts_1 ON dbmail_sievescripts(name);
 CREATE INDEX dbmail_sievescripts_2 ON dbmail_sievescripts(owner_idnr);
 CREATE INDEX dbmail_sievescripts_3 ON dbmail_sievescripts(owner_idnr,name);
+-- CONSTRAINT `dbmail_sievescripts_ibfk_1` FOREIGN KEY (`owner_idnr`) REFERENCES `dbmail_users` (`user_idnr`) ON DELETE CASCADE ON UPDATE CASCADE
+
 
 -- create the user for the delivery chain
 INSERT INTO dbmail_users (userid, passwd, encryption_type) 
