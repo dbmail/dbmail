@@ -1,5 +1,13 @@
 2006-04-18  Paul J Stevens <paul@nfg.nl>
 
+	* serverchild.c:
+	catch failed forks
+	* db.c, dbmail-message.c:
+	add some db_free_result calls (kaname) (closes: #324)
+	* sql/postgresql/create_tables.pgsql, 
+	  sql/postgresql/migrate_from_2.0_to_2.1.pgsql:
+	fix the postgres creation and migration scripts for 
+	datefield (kaname) (closes: #328)
 	* NEWS, VERSION, debian/README.Debian, debian/changelog, debian/control, 
 	  debian/dbmail-dev.files, debian/dbmail-ldap.examples, 
 	  debian/dbmail-ldap.files, debian/dbmail-mysql.examples, 
