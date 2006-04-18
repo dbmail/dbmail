@@ -48,7 +48,6 @@ SERVER = server.c \
 	dm_cidr.c
 	
 DELIVER = pipe.c \
-	forward.c \
 	dsn.c \
 	sort.c
 

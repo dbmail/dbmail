@@ -1,5 +1,8 @@
 2006-04-18  Paul J Stevens <paul@nfg.nl>
 
+	* Makefile.am, dbmail.h.in, forward.c, forward.h, modules/sortsieve.c, 
+	  pipe.c, pipe.h:
+	applying aarons fix for popen/pipe delivery (fixes: #325)
 	* serverchild.c:
 	catch failed forks
 	* db.c, dbmail-message.c:

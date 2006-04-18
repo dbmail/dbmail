@@ -41,17 +41,23 @@ static int valid_sender(const char *addr)
 	return 1;
 }
 
-#define SENDNOTHING 0
-#define SENDHEADERS 1
-#define SENDBODY 2
+// Send only certain parts of the message.
+#define SENDNOTHING     0
+#define SENDHEADERS     1
+#define SENDBODY        2
+#define SENDRAW         4
+// Use the system sendmail binary.
+#define SENDMAIL        NULL
 
 /* Sends a message. */
 static int send_mail(struct DbmailMessage *message,
 		const char *to, const char *from, const char *subject,
-		const char *headers, const char *body, int sendwhat)
+		const char *headers, const char *body,
+		int sendwhat, char *sendmail_external)
 {
 	FILE *mailpipe = NULL;
 	char *escaped_to = NULL;
+	char *escaped_from = NULL;
 	char *sendmail_command = NULL;
 	field_t sendmail;
 	int result;
@@ -79,12 +85,23 @@ static int send_mail(struct DbmailMessage *message,
 		return -1;
 	}
 
-	sendmail_command = g_strconcat(sendmail, " ", escaped_to, NULL);
-	dm_free(escaped_to);
-	if (!sendmail_command) {
-		trace(TRACE_ERROR, "%s, %s: out of memory calling g_strconcat",
+	escaped_from = dm_shellesc(from);
+	if (!escaped_from) {
+		trace(TRACE_ERROR, "%s, %s: out of memory calling dm_shellesc",
 				__FILE__, __func__);
 		return -1;
+	}
+
+	if (!sendmail_external) {
+		sendmail_command = g_strconcat(sendmail, " -f ", escaped_from, " ", escaped_to, NULL);
+		dm_free(escaped_to);
+		if (!sendmail_command) {
+			trace(TRACE_ERROR, "%s, %s: out of memory calling g_strconcat",
+					__FILE__, __func__);
+			return -1;
+		}
+	} else {
+		sendmail_command = sendmail_external;
 	}
 
 	trace(TRACE_INFO, "%s, %s: opening pipe to [%s]",
@@ -99,16 +116,24 @@ static int send_mail(struct DbmailMessage *message,
 
 	trace(TRACE_DEBUG, "%s, %s: pipe opened", __FILE__, __func__);
 
-	fprintf(mailpipe, "To: %s\n", to);
-	fprintf(mailpipe, "From: %s\n", from);
-	fprintf(mailpipe, "Subject: %s\n", subject);
-	if (headers)
-		fprintf(mailpipe, "%s\n", headers);
-	fprintf(mailpipe, "\n");
-	if (body)
-		fprintf(mailpipe, "%s\n\n", body);
+	if (sendwhat != SENDRAW) {
+		fprintf(mailpipe, "To: %s\n", to);
+		fprintf(mailpipe, "From: %s\n", from);
+		fprintf(mailpipe, "Subject: %s\n", subject);
+		if (headers)
+			fprintf(mailpipe, "%s\n", headers);
+		fprintf(mailpipe, "\n");
+		if (body)
+			fprintf(mailpipe, "%s\n\n", body);
+	}
 
 	switch (sendwhat) {
+	case SENDRAW:
+		// This is a hack so forwards can give a From line.
+		if (headers)
+			fprintf(mailpipe, "%s\n", headers);
+		db_send_message_lines(mailpipe, message->id, -2, 1);
+		break;
 	case SENDBODY:
 		// Get the message body from message.
 		// FIXME: This will break mime messages,
@@ -135,23 +160,94 @@ static int send_mail(struct DbmailMessage *message,
 		trace(TRACE_ERROR, "%s, %s: sendmail error [%d]",
 			__FILE__, __func__, result);
 
-		g_free(sendmail_command);
+		if (!sendmail_external)
+			g_free(sendmail_command);
 		return 1;
 	}
 
-	g_free(sendmail_command);
+	if (!sendmail_external)
+		g_free(sendmail_command);
 	return 0;
+} 
+
+int send_redirect(struct DbmailMessage *message, const char *to, const char *from)
+{
+	if (!to || !from) {
+		trace(TRACE_ERROR, "%s, %s: both To and From addresses must be specified",
+			__FILE__, __func__);
+		return -1;
+	}
+
+	return send_mail(message, to, from, "", "", "", SENDRAW, SENDMAIL);
+}
+
+int send_forward_list(struct DbmailMessage *message,
+		struct dm_list *targets, const char *from)
+{
+	int result = 0;
+	struct element *target;
+
+	trace(TRACE_INFO, "%s, %s: delivering to [%ld] external addresses",
+	      __FILE__, __func__, dm_list_length(targets));
+
+	if (!from)
+		from = "DBMAIL-MAILER";
+
+	target = dm_list_getstart(targets);
+	while (target != NULL) {
+		char *to = (char *)target->data;
+
+		if (!to || strlen(to) < 1) {
+			trace(TRACE_ERROR, "%s, %s: forwarding address is zero length,"
+					" message not forwarded.",
+					__FILE__, __func__);
+		} else {
+			if (to[0] == '!') {
+				// The forward is a command to execute.
+				// Prepend an mbox From line.
+				char timestr[50];
+				time_t td;
+				struct tm tm;
+				char *fromline;
+                        
+				time(&td);		/* get time */
+				tm = *localtime(&td);	/* get components */
+				strftime(timestr, sizeof(timestr), "%a %b %e %H:%M:%S %Y", &tm);
+                        
+				trace(TRACE_DEBUG, "%s, %s: prepending mbox style From "
+				      "header to pipe returnpath: %s",
+				      __FILE__, __func__, from);
+                        
+				/* Format: From<space>address<space><space>Date */
+				fromline = g_strconcat("From ", from, "  ", timestr, NULL);
+
+				result |= send_mail(message, "", "", "", fromline, "", SENDRAW, to);
+				g_free(fromline);
+			} else if (to[0] == '|') {
+				// The forward is a command to execute.
+				result |= send_mail(message, "", "", "", "", "", SENDRAW, to);
+
+			} else {
+				// The forward is an email address.
+				result |= send_mail(message, to, from, "", "", "", SENDRAW, SENDMAIL);
+			}
+		}
+
+		target = target->nextnode;
+	}
+
+	return result;
 }
 
 /* 
  * Send an automatic notification.
  */
-int send_notification(struct DbmailMessage *message,
+static int send_notification(struct DbmailMessage *message,
 		const char *to, const char *from,
 		const char *subject)
 {
 	return send_mail(message, to, from, subject,
-			"", "", SENDNOTHING);
+			"", "", SENDNOTHING, SENDMAIL);
 }
 
 /*
@@ -163,7 +259,7 @@ int send_vacation(struct DbmailMessage *message,
 		const char *subject, const char *body)
 {
 	return send_mail(message, to, from, subject, 
-			"", body, SENDNOTHING);
+			"", body, SENDNOTHING, SENDMAIL);
 	return 0;
 }
 	
@@ -234,7 +330,7 @@ static int send_reply(struct DbmailMessage *message, const char *body)
 
 	/* Our 'to' is in the 'from' arg because it's a reply. */
 	if (!send_mail(message, escaped_send_address,
-			to, subject, headers, body, SENDNOTHING)) {
+			to, subject, headers, body, SENDNOTHING, SENDMAIL)) {
 		db_replycache_register(to, escaped_send_address, "replycache");
 	}
 
@@ -400,8 +496,7 @@ int store_message_in_blocks(const char *message, u64_t message_size,
 int insert_messages(struct DbmailMessage *message, 
 		struct dm_list *dsnusers)
 {
-	char *header;
-	u64_t headersize, bodysize, rfcsize;
+	u64_t bodysize, rfcsize;
 	u64_t tmpid;
 	struct element *element;
 	u64_t msgsize;
@@ -430,8 +525,6 @@ int insert_messages(struct DbmailMessage *message,
 
 	tmpid = message->id; // for later removal
 
-	header = dbmail_message_hdrs_to_string(message);
-	headersize = (u64_t)dbmail_message_get_hdrs_size(message, FALSE);
 	bodysize = (u64_t)dbmail_message_get_body_size(message, FALSE);
 	rfcsize = (u64_t)dbmail_message_get_rfcsize(message);
 	msgsize = (u64_t)dbmail_message_get_size(message, FALSE);
@@ -531,9 +624,8 @@ int insert_messages(struct DbmailMessage *message,
 					__FILE__, __func__);
 
 			/* Forward using the temporary stored message. */
-			if (forward(tmpid, delivery->forwards,
-					dbmail_message_get_header(message, "Return-Path"),
-					header, headersize) < 0)
+			if (send_forward_list(message, delivery->forwards,
+					dbmail_message_get_header(message, "Return-Path")) < 0)
 				/* FIXME: if forward fails, we should do something 
 				 * sensible. Currently, the message is just black-
 				 * holed! */
@@ -551,8 +643,6 @@ int insert_messages(struct DbmailMessage *message,
 	trace(TRACE_DEBUG, "%s, %s: temporary message deleted from database. Done.",
 			__FILE__, __func__);
 
-	g_free(header);
-	
 	/* if committing the transaction fails, a rollback is performed */
 	if (db_commit_transaction() < 0) 
 		return -1;
