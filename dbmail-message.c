@@ -1,5 +1,5 @@
 /*
-  $Id: dbmail-message.c 2070 2006-04-18 09:32:55Z paul $
+  $Id: dbmail-message.c 2072 2006-04-18 12:53:44Z paul $
 
   Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
 
@@ -851,6 +851,7 @@ static int _header_get_id(const struct DbmailMessage *self, const char *header, 
 		return -1;
 	}
 	if (db_num_rows() < 1) {
+		db_free_result();
 		g_string_printf(q, "INSERT INTO %sheadername (headername) VALUES ('%s')", DBPFX, header);
 		if (db_query(q->str) == -1) {
 			g_string_free(q,TRUE);

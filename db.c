@@ -1,4 +1,4 @@
-/* $Id: db.c 2068 2006-04-13 19:41:28Z paul $ */
+/* $Id: db.c 2072 2006-04-18 12:53:44Z paul $ */
 /*
   Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
   Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
@@ -22,7 +22,7 @@
 /**
  * \file db.c
  * 
- * $Id: db.c 2068 2006-04-13 19:41:28Z paul $
+ * $Id: db.c 2072 2006-04-18 12:53:44Z paul $
  *
  * implement database functionality. This used to split out
  * between MySQL and PostgreSQL, but this is now integrated. 
@@ -391,6 +391,7 @@ int db_calculate_quotum_all()
 	if (n == 0) {
 		trace(TRACE_DEBUG, "%s,%s: quotum is already up to date",
 		      __FILE__, __func__);
+		db_free_result();
 		return DM_SUCCESS;
 	}
 
@@ -403,6 +404,7 @@ int db_calculate_quotum_all()
 		trace(TRACE_ERROR, "%s,%s: malloc failed: Probably out of memort..",
 		      __FILE__, __func__);
 		dm_free(user_idnrs);
+		db_free_result();
 		return -2;
 	}
 	memset(user_idnrs, 0, n * sizeof(u64_t));

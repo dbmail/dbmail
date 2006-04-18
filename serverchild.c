@@ -21,7 +21,7 @@
 /*
  * serverchild.c
  *
- * $Id: serverchild.c 2070 2006-04-18 09:32:55Z paul $
+ * $Id: serverchild.c 2072 2006-04-18 12:53:44Z paul $
  * 
  * function implementations of server children code (connection handling)
  */
@@ -193,6 +193,9 @@ pid_t CreateChild(ChildInfo_t * info)
  		exit(0);
 	} else {
  		usleep(5000);
+		/* check for failed forkes */
+		if (waitpid(pid, NULL, WNOHANG|WUNTRACED) == pid) 
+			return -1;
  		return pid;
 	}
 }
