@@ -125,25 +125,20 @@ int sort_vacation(sieve2_context_t *s, void *my)
 int sort_redirect(sieve2_context_t *s, void *my)
 {
 	struct sort_context *m = (struct sort_context *)my;
-	struct dm_list targets;
-	const char *address;
+	const char *to;
+	const char *from;
 
-	address = sieve2_getvalue_string(s, "address");
+	to = sieve2_getvalue_string(s, "address");
 
 	trace(TRACE_INFO, "Action is REDIRECT: "
-		"REDIRECT destination is [%s].", address);
+		"REDIRECT destination is [%s].", to);
 
-	dm_list_init(&targets);
-	dm_list_nodeadd(&targets, address, strlen(address)+1);
+	from = "";// FIXME: What's the user's from address!?
 
-	if (forward(m->message->id, &targets,
-			dbmail_message_get_header(m->message, "Return-Path"),
-			NULL, 0) != 0) {
-		dm_list_free(&targets.start);
+	if (send_redirect(m->message, to, from) != 0) {
 		return SIEVE2_ERROR_FAIL;
 	}
 
-	dm_list_free(&targets.start);
 	m->result->cancelkeep = 1;
 	return SIEVE2_OK;
 }

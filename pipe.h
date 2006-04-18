@@ -49,5 +49,9 @@ int store_message_in_blocks(const char* message,
 int send_vacation(struct DbmailMessage *message,
 		const char *to, const char *from,
 		const char *subject, const char *body);
+int send_redirect(struct DbmailMessage *message,
+		const char *to, const char *from);
+int send_forward_list(struct DbmailMessage *message,
+		struct dm_list *targets, const char *from);
 
 #endif
