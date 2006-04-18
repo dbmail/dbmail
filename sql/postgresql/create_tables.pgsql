@@ -16,7 +16,7 @@
  along with this program; if not, write to the Free Software
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
-/* $Id: create_tables.pgsql 1909 2005-11-11 10:31:00Z paul $
+/* $Id: create_tables.pgsql 2070 2006-04-18 09:32:55Z paul $
 */
 
 BEGIN TRANSACTION;
