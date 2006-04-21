@@ -29,7 +29,6 @@
 
 #define PNAME "dbmail/imap4d"
 
-char *pidFile = DEFAULT_PID_DIR "dbmail-imapd" DEFAULT_PID_EXT;
 char *configFile = DEFAULT_CONFIG_FILE;
 
 /* set up database login data */
@@ -68,6 +67,7 @@ int main(int argc, char *argv[])
 	serverConfig_t config;
 	int result, no_daemonize = 0, log_verbose = 0;
 	int opt;
+	char *pidFile = NULL;
 
 	g_mime_init(0);
 	openlog(PNAME, LOG_PID, LOG_MAIL);
@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
 			return 0;
 		case 'p':
 			if (optarg && strlen(optarg) > 0)
-				pidFile = optarg;
+				pidFile = g_strdup(optarg);
 			else {
 				fprintf(stderr, "dbmail-imapd: -p requires a filename argument\n\n");
 				return 1;
@@ -132,7 +132,11 @@ int main(int argc, char *argv[])
 
 	/* We write the pidFile after daemonize because
 	 * we may actually be a child of the original process. */
+	if (! pidFile)
+		pidFile = config_get_pidfile(&config, "dbmail-imapd");
+	
 	pidfile_create(pidFile, getpid());
+	g_free(pidFile);
 
 	do {
 		result = server_run(&config);

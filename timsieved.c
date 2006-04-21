@@ -31,7 +31,6 @@ Copyright (C) 2004 Aaron Stone aaron at serendipity dot cx
 /* server timeout error */
 #define TIMS_TIMEOUT_MSG "221 Connection timeout BYE"
 
-char *pidFile = DEFAULT_PID_DIR "dbmail-timsieved" DEFAULT_PID_EXT;
 char *configFile = DEFAULT_CONFIG_FILE;
 
 /* this is write-once read-many, so we'll do it once for all children. */
@@ -72,6 +71,7 @@ int main(int argc, char *argv[])
 	serverConfig_t config;
 	int result, no_daemonize = 0, log_verbose = 0;
 	int opt;
+	char *pidFile = NULL;
 
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 
@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
 			return 0;
 		case 'p':
 			if (optarg && strlen(optarg) > 0)
-				pidFile = optarg;
+				pidFile = g_strdup(optarg);
 			else {
 				fprintf(stderr,
 					"dbmail-timsieved: -p requires a filename "
@@ -148,6 +148,8 @@ int main(int argc, char *argv[])
 	
 	/* We write the pidFile after daemonize because
 	 * we may actually be a child of the original process. */
+	if (! pidFile)
+		pidFile = config_get_pidfile(&config, "dbmail-timsieved");
 	pidfile_create(pidFile, getpid());
 	
 	do {

@@ -1,5 +1,8 @@
 2006-04-21  Paul J Stevens <paul@nfg.nl>
 
+	* config.c, dbmail.h.in, imapd.c, lmtpd.c, modules/authldap.c, pop3d.c, 
+	  timsieved.c:
+	fix creation of pid files (closes: #327)
 	* db.c, modules/authldap.c:
 	auto-create shadow user and inbox for ldap-authenticated users
 
