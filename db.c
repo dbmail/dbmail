@@ -4297,9 +4297,6 @@ int db_user_create(const char *username, const char *password, const char *encty
 	char *escaped_username;
 
 	assert(user_idnr != NULL);
-//	*user_idnr = 0;
-
-#ifdef _DBAUTH_STRICT_USER_CHECK
 
 	escaped_username = dm_stresc(username);
 	/* first check to see if this user already exists */
@@ -4307,12 +4304,8 @@ int db_user_create(const char *username, const char *password, const char *encty
 		 "SELECT * FROM %susers WHERE userid = '%s'",DBPFX, escaped_username);
 	dm_free(escaped_username);
 
-	if (db_query(query) == -1) {
-		/* query failed */
-		trace(TRACE_ERROR, "%s,%s: query failed",
-		      __FILE__, __func__);
+	if (db_query(query) == -1) 
 		return DM_EQUERY;
-	}
 
 	if (db_num_rows() > 0) {
 		/* this username already exists */
@@ -4321,9 +4314,7 @@ int db_user_create(const char *username, const char *password, const char *encty
 		db_free_result();
 		return DM_EQUERY;
 	}
-
 	db_free_result();
-#endif
 
 	if (strlen(password) >= DEF_QUERYSIZE) {
 		trace(TRACE_ERROR, "%s,%s: password length is insane",

@@ -1,3 +1,8 @@
+2006-04-21  Paul J Stevens <paul@nfg.nl>
+
+	* db.c, modules/authldap.c:
+	auto-create shadow user and inbox for ldap-authenticated users
+
 2006-04-18  Aaron Stone  <aaron@serendipity.cx>
 
 	* modules/dbmysql.c:
