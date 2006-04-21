@@ -284,4 +284,16 @@ void config_get_logfiles(serverConfig_t *config)
 
 }
 
+char * config_get_pidfile(serverConfig_t *config, const char *name)
+{
+	char *res;
+	GString *s;
+	res = g_build_filename(config->pid_dir, name, NULL);
+	s = g_string_new("");
+	g_string_printf(s, "%s%s", res, DEFAULT_PID_EXT);
+	g_free(res);
+	res = s->str;
+	g_string_free(s,FALSE);
+	return res;
+}
 

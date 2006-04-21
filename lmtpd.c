@@ -31,7 +31,6 @@
 /* server timeout error */
 #define LMTP_TIMEOUT_MSG "221 Connection timeout BYE"
 
-char *pidFile = DEFAULT_PID_DIR "dbmail-lmtpd" DEFAULT_PID_EXT;
 char *configFile = DEFAULT_CONFIG_FILE;
 
 /* set up database login data */
@@ -69,6 +68,7 @@ int main(int argc, char *argv[])
 	serverConfig_t config;
 	int result, no_daemonize = 0, log_verbose = 0;
 	int opt;
+	char *pidFile = NULL;
 
 	g_mime_init(0);
 	openlog(PNAME, LOG_PID, LOG_MAIL);
@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
 			return 0;
 		case 'p':
 			if (optarg && strlen(optarg) > 0)
-				pidFile = optarg;
+				pidFile = g_strdup(optarg);
 			else {
 				fprintf(stderr,
 					"dbmail-lmtpd: -p requires a filename "
@@ -137,7 +137,10 @@ int main(int argc, char *argv[])
 
 	/* We write the pidFile after daemonize because
 	 * we may actually be a child of the original process. */
+	if (! pidFile)
+		pidFile = config_get_pidfile(&config, "dbmail-lmtpd");
 	pidfile_create(pidFile, getpid());
+	g_free(pidFile);
 
 	do {
 		
