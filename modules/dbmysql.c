@@ -71,6 +71,8 @@ int db_connect()
 	char *sock = NULL;
 	/* connect */
 	mysql_init(&conn);
+	char the_query[DEF_QUERYSIZE];
+	const char *collation = NULL;
 
 	/* auto re-connect */
 	conn.reconnect = 1;
@@ -108,6 +110,27 @@ int db_connect()
 		return DM_EQUERY;
 	}
 #endif
+
+	snprintf(the_query, DEF_QUERYSIZE,
+			"show variables like 'collation_database'");
+	if (db_query(the_query) == DM_EQUERY) {
+		trace(TRACE_ERROR,
+		      "%s,%s: error getting collation variable for database",
+		      __FILE__, __func__);
+		return DM_EQUERY;
+	}
+	collation = db_get_result(0,1);
+	snprintf(the_query, DEF_QUERYSIZE,
+			"SET collation_connection = '%s'",
+			collation);
+	db_free_result();
+	if (db_query(the_query) == DM_EQUERY) {
+		trace(TRACE_ERROR,
+		      "%s,%s: error setting collation variable for connection",
+		      __FILE__, __func__);
+		return DM_EQUERY;
+	}
+
 	return DM_SUCCESS;
 }
 
