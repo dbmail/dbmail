@@ -1,3 +1,9 @@
+2006-04-18  Aaron Stone  <aaron@serendipity.cx>
+
+	* modules/dbmysql.c:
+	Set the current connection's collation to match the database. Prevents
+	"Illegal mix of collations" errors as MySQL switches to UTF8 by default.
+
 2006-04-18  Paul J Stevens <paul@nfg.nl>
 
 	* Makefile.am, dbmail.h.in, forward.c, forward.h, modules/sortsieve.c, 
