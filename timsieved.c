@@ -1,4 +1,4 @@
-/* $Id: timsieved.c 2031 2006-03-17 03:20:47Z aaron $
+/* $Id: timsieved.c 2078 2006-04-21 13:35:15Z paul $
  
 Copyright (C) 2004 Aaron Stone aaron at serendipity dot cx
 
@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
 			break;
 		case 'V':
 			printf("\n*** DBMAIL: dbmail-timsieved version "
-			       "$Revision: 2031 $ %s\n\n", COPYRIGHT);
+			       "$Revision: 2078 $ %s\n\n", COPYRIGHT);
 			return 0;
 		case 'n':
 			/* TODO: We should also prevent children from forking,
