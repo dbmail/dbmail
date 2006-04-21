@@ -99,6 +99,9 @@ void __auth_get_config(void)
 
 	/* Store the version as an integer for later use. */
 	_ldap_cfg.version_int = atoi(_ldap_cfg.version);
+	/* defaults to version 3 */
+	if (!_ldap_cfg.version_int)
+		_ldap_cfg.version_int=3;
 
 	/* Compare the input string with the possible options,
 	 * making sure not to exceeed the length of the given string */
@@ -1301,8 +1304,7 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 	timestring_t timestring;
 	char real_username[DM_USERNAME_LEN];
 	int result;
-
-
+	u64_t mailbox_idnr;
 	int ldap_err;
 	char *ldap_dn = NULL;
 
@@ -1365,8 +1367,11 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 
 	if (*user_idnr == 0)
 		return 0;
-	else
-		return 1;
+	
+	db_user_create_shadow(username, user_idnr);
+	db_find_create_mailbox("INBOX", BOX_DEFAULT, user_idnr, &mailbox_idnr);
+
+	return 1;
 }
 
 /* returns useridnr on OK, 0 on validation failed, -1 on error */
