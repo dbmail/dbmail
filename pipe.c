@@ -221,11 +221,11 @@ int send_forward_list(struct DbmailMessage *message,
 				/* Format: From<space>address<space><space>Date */
 				fromline = g_strconcat("From ", from, "  ", timestr, NULL);
 
-				result |= send_mail(message, "", "", "", fromline, "", SENDRAW, to);
+				result |= send_mail(message, "", "", "", fromline, "", SENDRAW, to+1);
 				g_free(fromline);
 			} else if (to[0] == '|') {
 				// The forward is a command to execute.
-				result |= send_mail(message, "", "", "", "", "", SENDRAW, to);
+				result |= send_mail(message, "", "", "", "", "", SENDRAW, to+1);
 
 			} else {
 				// The forward is an email address.
