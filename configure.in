@@ -1,4 +1,4 @@
-# $Id: configure.in 2035 2006-03-17 12:04:50Z paul $
+# $Id: configure.in 2080 2006-04-24 09:40:11Z aaron $
 # Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 #
 # This program is free software; you can redistribute it and/or 
@@ -54,6 +54,7 @@ DBMAIL_CHECK_GLIB
 DBMAIL_CHECK_GMIME
 DBMAIL_CHECK_GC
 DBMAIL_PATH_CHECK
+gl_GETOPT
 
 AM_CONDITIONAL(WITHCHECK, [test -n "$CHECK_LIBS"])
 

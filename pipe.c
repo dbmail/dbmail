@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: pipe.c 2074 2006-04-18 21:00:04Z paul $
+/* $Id: pipe.c 2080 2006-04-24 09:40:11Z aaron $
  *
  * Functions for reading the pipe from the MTA */
 
@@ -32,13 +32,17 @@
 
 static int valid_sender(const char *addr) 
 {
-	if (strcasestr(addr, "mailer-daemon@"))
-		return 0;
-	if (strcasestr(addr, "daemon@"))
-		return 0;
-	if (strcasestr(addr, "postmaster@"))
-		return 0;
-	return 1;
+	int ret = 1;
+	char *testaddr;
+	testaddr = g_ascii_strdown(addr, -1);
+	if (strstr(testaddr, "mailer-daemon@"))
+		ret = 0;
+	if (strstr(testaddr, "daemon@"))
+		ret = 0;
+	if (strstr(testaddr, "postmaster@"))
+		ret = 0;
+	g_free(testaddr);
+	return ret;
 }
 
 // Send only certain parts of the message.
@@ -221,11 +225,11 @@ int send_forward_list(struct DbmailMessage *message,
 				/* Format: From<space>address<space><space>Date */
 				fromline = g_strconcat("From ", from, "  ", timestr, NULL);
 
-				result |= send_mail(message, "", "", "", fromline, "", SENDRAW, to);
+				result |= send_mail(message, "", "", "", fromline, "", SENDRAW, to+1);
 				g_free(fromline);
 			} else if (to[0] == '|') {
 				// The forward is a command to execute.
-				result |= send_mail(message, "", "", "", "", "", SENDRAW, to);
+				result |= send_mail(message, "", "", "", "", "", SENDRAW, to+1);
 
 			} else {
 				// The forward is an email address.

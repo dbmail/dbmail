@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: misc.h 2065 2006-04-10 20:38:36Z paul $ 
+/* $Id: misc.h 2080 2006-04-24 09:40:11Z aaron $ 
  */
 
 #ifndef _MISC_H
@@ -129,9 +129,6 @@ sa_family_t dm_get_client_sockaddr(clientinfo_t *ci, struct sockaddr *saddr);
 int dm_sock_score(const char *base, const char *test);
 int dm_sock_compare(const char *clientsock, const char *sock_allow, const char *sock_deny);
 int dm_valid_format(const char *str);
-
-int dm_strip_folder(char **retchar, size_t * retsize);
-int dm_valid_folder(const char *userid, char *folder);
 
 GList * g_tree_keys(GTree *tree);
 
