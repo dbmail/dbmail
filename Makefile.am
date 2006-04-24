@@ -22,6 +22,10 @@ if SIEVE
 SIEVEPROGS = dbmail-sievecmd dbmail-timsieved
 endif
 
+if USE_DM_GETOPT
+DM_GETOPT = dm_getopt.c
+endif
+
 sbin_PROGRAMS = dbmail-smtp \
 	dbmail-pop3d \
 	dbmail-imapd \
@@ -40,7 +44,7 @@ COMMON = dbmail-user.c \
 	md5.c \
 	db.c \
 	misc.c \
-	pidfile.c 
+	pidfile.c $(DM_GETOPT)
 	
 SERVER = server.c \
 	serverchild.c \

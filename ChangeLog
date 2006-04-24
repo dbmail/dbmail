@@ -9,9 +9,10 @@
 
 2006-04-24  Aaron Stone  <aaron@serendipity.cx>
 
-	* configure.in, acinclude.m4:
+	* configure.in, acinclude.m4, Makefile.am:
 	Added latest getopt.m4 from Gnulib that will activate USE_DM_GETOPT
 	on systems with an unfriendly getopt (closes half of bug #331).
+	Added USE_DM_GETOPT flags to conditionally build gm_getopt.c.
 	* misc.h, misc.c:
 	Zapped two unused functions dm_valid_folder, dm_strip_folder.
 	* pipe.c:
