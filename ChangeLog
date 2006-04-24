@@ -1,3 +1,12 @@
+2006-04-24  Paul J Stevens <paul@nfg.nl>
+
+	* dm_imaputil.c, test-scripts/testimap.py:
+	fix double quoting in ENVELOPE response (closes: #329)
+	* debian/control:
+	update mysql build dependancy
+	* misc.c:
+	provide fallback for internaldate where %z is not provided
+
 2006-04-24  Aaron Stone  <aaron@serendipity.cx>
 
 	* configure.in, acinclude.m4:
