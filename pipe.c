@@ -32,13 +32,17 @@
 
 static int valid_sender(const char *addr) 
 {
-	if (strcasestr(addr, "mailer-daemon@"))
-		return 0;
-	if (strcasestr(addr, "daemon@"))
-		return 0;
-	if (strcasestr(addr, "postmaster@"))
-		return 0;
-	return 1;
+	int ret = 1;
+	char *testaddr;
+	testaddr = g_ascii_strdown(addr, -1);
+	if (strstr(testaddr, "mailer-daemon@"))
+		ret = 0;
+	if (strstr(testaddr, "daemon@"))
+		ret = 0;
+	if (strstr(testaddr, "postmaster@"))
+		ret = 0;
+	g_free(testaddr);
+	return ret;
 }
 
 // Send only certain parts of the message.
