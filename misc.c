@@ -1074,8 +1074,13 @@ char *date_sql2imap(const char *sqldate)
 	ltime = mktime (&tm_sql_date);
 	localtime_r(&ltime, &tm_sql_date);
 	strftime(t, sizeof(t), "%z", &tm_sql_date);
-
-	snprintf(_imapdate,IMAP_INTERNALDATE_LEN, "%s %s", q, t);
+	if (t[0] != '%') {
+		snprintf(_imapdate,IMAP_INTERNALDATE_LEN, "%s %s", q, t);
+		return _imapdate;
+	}
+	// oops, no %z on solaris (FIXME)
+	snprintf(_imapdate,IMAP_INTERNALDATE_LEN, "%s +0000", q);
+	
         return _imapdate;
 }
 

@@ -33,7 +33,7 @@ Description: Postgresql module for Dbmail
 
 Package: dbmail-mysql
 Architecture: any
-Depends: dbmail (= ${Source-Version}), libmysqlclient15
+Depends: dbmail (= ${Source-Version}), libmysqlclient15off
 Description: MySQL module for Dbmail
  This package provides a module for adding MySQL database 
  support to DBMAIL.
