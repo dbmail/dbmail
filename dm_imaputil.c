@@ -480,7 +480,10 @@ static GList * _imap_append_alist_as_plist(GList *list, const InternetAddressLis
 		/* personal name */
 		if (ia->name) {
 			name = g_mime_utils_header_encode_phrase((unsigned char *)ia->name);
-			t = g_list_append_printf(t, "\"%s\"", name);
+			if (name[0] == '"')
+				t = g_list_append_printf(t, "%s", name);
+			else
+				t = g_list_append_printf(t, "\"%s\"", name);
 			g_free(name);
 		} else
 			t = g_list_append_printf(t, "NIL");
