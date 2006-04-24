@@ -665,6 +665,7 @@ AC_DEFUN([gl_GETOPT_SUBSTITUTE],
 [
   dnl Modified for DBMail, which does not use the Gnulib getopt.
   CFLAGS="$CFLAGS -DUSE_DM_GETOPT"
+  USE_DM_GETOPT=1
 ])
 
 AC_DEFUN([gl_GETOPT_CHECK_HEADERS],
