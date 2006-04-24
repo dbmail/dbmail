@@ -32,6 +32,7 @@ import unittest, imaplib, re
 import sys, traceback, getopt, string
 from email.MIMEText import MIMEText
 from email.MIMEMultipart import MIMEMultipart
+import email
 
 unimplementedError = 'Dbmail testcase unimplemented'
 
@@ -51,9 +52,10 @@ def getMessageStrict():
     this is a test message
     """)
     m.add_header("To","testuser@foo.org")
-    m.add_header("From","somewher@foo.org")
+    m.add_header("From",""""somewhere.foo" <somewher@foo.org>""")
     m.add_header("Date","Mon, 26 Sep 2005 13:26:39 +0200")
     m.add_header("Subject","dbmail test message")
+    m.add_header("Message-Id","<1145862946l.21522l.0l@localhost>")
     return m
 
 def getMultiPart():
@@ -64,7 +66,7 @@ def getMultiPart():
     m.add_header("Date","Sun, 25 Sep 2005 13:26:39 +0200")
     m.add_header("Subject","dbmail multipart message")
     return m
-    
+   
 TESTMSG['strict822']=getMessageStrict()
 TESTMSG['multipart']=getMultiPart()
 
@@ -192,8 +194,9 @@ class testImapServer(unittest.TestCase):
             BODY[TEXT])"'.  Returned data are tuples of message part envelope
             and data.
         """
+        m = TESTMSG['strict822']
         self.o.create('tmpbox')
-        self.o.append('tmpbox','','',str(TESTMSG['strict822']))
+        self.o.append('tmpbox','','',str(m))
         self.o.select('tmpbox')
         self.assertEquals(self.o.fetch("1:*","(Flags)")[0],'OK')
         id=self.o.recent()[1][0]
@@ -208,10 +211,15 @@ class testImapServer(unittest.TestCase):
         # get the body. must equal input message's body
         result = self.o.fetch(id,"(UID BODY[TEXT])")
         bodytext = strip_crlf(result[1][0][1])
-        self.assertEquals(bodytext,TESTMSG['strict822'].get_payload())
+        self.assertEquals(bodytext,m.get_payload())
         
         result = self.o.fetch(id,"(UID BODYSTRUCTURE)")
         self.assertEquals(result[0],'OK')
+
+        result = self.o.fetch(id,"(ENVELOPE)")
+        expect = ['1 (ENVELOPE ("Mon, 26 Sep 2005 13:26:39 +0200" "dbmail test message" (("somewhere.foo" NIL "somewher" "foo.org")) (("somewhere.foo" NIL "somewher" "foo.org")) (("somewhere.foo" NIL "somewher" "foo.org")) ((NIL NIL "testuser" "foo.org")) NIL NIL NIL "<1145862946l.21522l.0l@localhost>"))']
+        self.assertEquals(result[0],'OK')
+        self.assertEquals(result[1],expect)
 
         result = self.o.fetch(id,"(UID BODY[TEXT]<0.20>)")
         self.assertEquals(result[0],'OK')
