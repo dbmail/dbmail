@@ -1,5 +1,7 @@
 2006-04-28  Paul J Stevens <paul@nfg.nl>
 
+	* dbmail-mailbox.c, dm_imaputil.c, test-scripts/testimap.py:
+	beware of double-quotes in email-addresses
 	* Makefile.am, check_dbmail_deliver.c, check_dbmail_misc.c:
 	move tests from check_dbmail_misc.c to check_dbmail_deliver.c and remove
 	check_dbmail_misc.c

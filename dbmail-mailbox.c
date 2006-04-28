@@ -183,8 +183,10 @@ static size_t dump_message_to_stream(struct DbmailMessage *message, GMimeStream 
 		sender = g_string_new("nobody@foo");
 		if (ialist) {
 			ia = ialist->address;
-			if (ia) 
+			if (ia) {
+				g_strstrip(g_strdelimit(ia->value.addr,"\"",' '));
 				g_string_printf(sender,"%s", ia->value.addr);
+			}
 		}
 		internet_address_list_destroy(ialist);
 		
