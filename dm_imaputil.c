@@ -586,7 +586,7 @@ char * imap_get_envelope(GMimeMessage *message)
 	InternetAddressList *alist;
 	GList *list = NULL;
 	char *result;
-	char *s;
+	char *s, *t;
 
 	if (! GMIME_IS_MESSAGE(message))
 		return NULL;
@@ -605,7 +605,9 @@ char * imap_get_envelope(GMimeMessage *message)
 	/* subject */
 	result = (char *)g_mime_message_get_subject(message);
 	if (result) {
-		list = g_list_append_printf(list,"\"%s\"", result);
+		t = g_strescape((const char *)result, NULL);
+		list = g_list_append_printf(list,"\"%s\"", t);
+		g_free(t);
 	} else {
 		list = g_list_append_printf(list,"NIL");
 	}
