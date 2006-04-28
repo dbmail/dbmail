@@ -98,6 +98,7 @@ endif
 
 lib_LTLIBRARIES = libdbmail.la
 
+
 if SHARED
 AM_LDFLAGS = -Wl,--export-dynamic -lcrypt
 libdbmail_la_SOURCES = $(COMMON) $(SERVER) $(DELIVER) $(MODULES)
@@ -120,10 +121,10 @@ TESTS=check_dbmail_common \
 	check_dbmail_mailbox \
 	check_dbmail_user \
 	check_dbmail_util \
-	check_dbmail_misc \
 	check_dbmail_dsn \
 	check_dbmail_db
 
+	
 noinst_PROGRAMS=$(TESTS)
 
 check_dbmail_user_SOURCES=check_dbmail_user.c
@@ -133,10 +134,6 @@ check_dbmail_user_INCLUDES=@CHECK_CFLAGS@
 check_dbmail_util_SOURCES=check_dbmail_util.c
 check_dbmail_util_LDADD=libdbmail.la @CHECK_LIBS@
 check_dbmail_util_INCLUDES=@CHECK_CFLAGS@
-
-check_dbmail_misc_SOURCES=check_dbmail_misc.c
-check_dbmail_misc_LDADD=libdbmail.la @CHECK_LIBS@
-check_dbmail_misc_INCLUDES=@CHECK_CFLAGS@
 
 check_dbmail_dsn_SOURCES=check_dbmail_dsn.c
 check_dbmail_dsn_LDADD=libdbmail.la @CHECK_LIBS@
