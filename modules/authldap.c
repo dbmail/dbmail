@@ -58,13 +58,12 @@ typedef struct _ldap_cfg {
 
 _ldap_cfg_t _ldap_cfg;
 
-static void __auth_get_config(void);
 
 static GList * __auth_get_every_match(const char *q, char **retfields);
 
 static int dm_ldap_user_shadow_rename(u64_t user_idnr, const char *new_name);
 
-void __auth_get_config(void)
+static void __auth_get_config(void)
 {
 	static int beenhere=0;
 	if (beenhere)

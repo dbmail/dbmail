@@ -25,7 +25,7 @@ AM_CFLAGS = @MYSQLINC@ @PGSQLINC@ @SQLITEINC@ @LDAPINC@ @SIEVEINC@ -fomit-frame-
 if SHARED
 AM_LDFLAGS = -module
 else
-AM_LDFLAGS =
+AM_LDFLAGS = 
 endif
 
 pkglib_LTLIBRARIES = libmysql.la \

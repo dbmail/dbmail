@@ -1,3 +1,12 @@
+2006-04-28  Paul J Stevens <paul@nfg.nl>
+
+	* Makefile.am, check_dbmail_deliver.c, check_dbmail_misc.c:
+	move tests from check_dbmail_misc.c to check_dbmail_deliver.c and remove
+	check_dbmail_misc.c
+	* dm_imaputil.c, modules/Makefile.am, modules/authldap.c, 
+	  test-scripts/testimap.py:
+	escape the subject before quoting in envelope response (closes: #279)
+
 2006-04-24  Paul J Stevens <paul@nfg.nl>
 
 	* dm_imaputil.c, test-scripts/testimap.py:
