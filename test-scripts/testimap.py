@@ -53,6 +53,7 @@ def getMessageStrict():
     """)
     m.add_header("To",""""test user" <testuser@foo.org>""")
     m.add_header("From",""""somewhere.foo" <somewher@foo.org>""")
+    m.add_header("CC",""""somewher@foo.org" """)
     m.add_header("Date","Mon, 26 Sep 2005 13:26:39 +0200")
     m.add_header("Subject","""dbmail "test" message""")
     m.add_header("Message-Id","<1145862946l.21522l.0l@localhost>")
@@ -217,7 +218,7 @@ class testImapServer(unittest.TestCase):
         self.assertEquals(result[0],'OK')
 
         result = self.o.fetch(id,"(ENVELOPE)")
-        expect = ['1 (ENVELOPE ("Mon, 26 Sep 2005 13:26:39 +0200" "dbmail \\"test\\" message" (("somewhere.foo" NIL "somewher" "foo.org")) (("somewhere.foo" NIL "somewher" "foo.org")) (("somewhere.foo" NIL "somewher" "foo.org")) (("test user" NIL "testuser" "foo.org")) NIL NIL NIL "<1145862946l.21522l.0l@localhost>"))']
+        expect = ['1 (ENVELOPE ("Mon, 26 Sep 2005 13:26:39 +0200" "dbmail \\"test\\" message" (("somewhere.foo" NIL "somewher" "foo.org")) (("somewhere.foo" NIL "somewher" "foo.org")) (("somewhere.foo" NIL "somewher" "foo.org")) (("test user" NIL "testuser" "foo.org")) ((NIL NIL "somewher" "foo.org")) NIL NIL "<1145862946l.21522l.0l@localhost>"))']
         self.assertEquals(result[0],'OK')
         self.assertEquals(result[1],expect)
 

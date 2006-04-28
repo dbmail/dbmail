@@ -493,6 +493,9 @@ static GList * _imap_append_alist_as_plist(GList *list, const InternetAddressLis
 
 		/* mailbox name */
 		if (ia->value.addr) {
+			/* defensive mode for 'To: "foo@bar.org"' addresses */
+			g_strstrip(g_strdelimit(ia->value.addr,"\"",' '));
+			
 			tokens = g_strsplit(ia->value.addr,"@",2);
 
 			if (tokens[0])
