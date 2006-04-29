@@ -1,5 +1,7 @@
 2006-04-29  Paul J Stevens <paul@nfg.nl>
 
+	* debian/changelog, dm_imaputil.c, test-scripts/testimap.py:
+	an other envelope fix
 	* THANKS:
 	add Matthew Sayler to THANKS
 	* dm_imaputil.c, test-scripts/testimap.py:
