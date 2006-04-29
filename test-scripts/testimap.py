@@ -42,7 +42,7 @@ HOST,PORT = "localhost", 143
 # for stdin/stdout testing
 DAEMONBIN = "./dbmail-imapd -n -f /etc/dbmail/dbmail-test.conf"
 # with valgrind
-#DAEMONBIN = "valgrind --suppressions=./contrib/dbmail.supp --leak-check=full ./dbmail-imapd -n /etc/dbmail/dbmail-test.conf"
+#DAEMONBIN = "valgrind --suppressions=./contrib/dbmail.supp --leak-check=full %s" % DAEMONBIN
 
 
 TESTMSG={}
@@ -219,7 +219,7 @@ class testImapServer(unittest.TestCase):
         self.assertEquals(result[0],'OK')
 
         result = self.o.fetch(id,"(ENVELOPE)")
-        expect = ['1 (ENVELOPE ("Mon, 26 Sep 2005 13:26:39 +0200" "dbmail \\"test\\" message" (("somewhere.foo" NIL "somewher" "foo.org")) (("somewhere.foo" NIL "somewher" "foo.org")) (("somewhere.foo" NIL "somewher" "foo.org")) (("test user" NIL "testuser" "foo.org")) ((NIL NIL "somewher" "foo.org")(NIL NIL "other" "bar.org")) NIL "\\"Message from \\"Test User\\" <testuser@test.org>    of \\"Sat,\\t14 Dec 2002 09:17:00 CST.\\"" "<1145862946l.21522l.0l@localhost>"))']
+        expect = [('1 (ENVELOPE ("Mon, 26 Sep 2005 13:26:39 +0200" {21}','dbmail "test" message'), (' (("somewhere.foo" NIL "somewher" "foo.org")) (("somewhere.foo" NIL "somewher" "foo.org")) (("somewhere.foo" NIL "somewher" "foo.org")) (("test user" NIL "testuser" "foo.org")) ((NIL NIL "somewher" "foo.org")(NIL NIL "other" "bar.org")) NIL {82}', 'Message from "Test User" <testuser@test.org>    of "Sat,\t14 Dec 2002 09:17:00 CST.'), ' "<1145862946l.21522l.0l@localhost>"))']
         self.assertEquals(result[0],'OK')
         self.assertEquals(result[1],expect)
 
