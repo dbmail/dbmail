@@ -204,8 +204,11 @@ static GList * imap_append_disposition_as_string(GList *list, GMimeObject *part)
 static GList * imap_append_header_as_string(GList *list, GMimeObject *part, const char *header)
 {
 	char *result;
+	char *s;
 	if((result = (char *)g_mime_object_get_header(part,header))) {
-		list = g_list_append_printf(list,"\"%s\"",result);
+		s = g_strescape(result,NULL);
+		list = g_list_append_printf(list,"\"%s\"",s);
+		g_free(s);
 	} else {
 		list = g_list_append_printf(list,"NIL");
 	}
