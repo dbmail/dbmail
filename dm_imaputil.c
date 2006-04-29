@@ -603,8 +603,10 @@ char * imap_get_envelope(GMimeMessage *message)
 	/* date */
 	result = g_mime_message_get_date_string(message);
 	if (result) {
-		list = g_list_append_printf(list,"\"%s\"", result);
+		t = g_strescape((const char *)result,NULL);
+		list = g_list_append_printf(list,"\"%s\"", t);
 		g_free(result);
+		g_free(t);
 		result = NULL;
 	} else {
 		list = g_list_append_printf(list,"NIL");
