@@ -1,4 +1,4 @@
-/* $Id: db.c 2077 2006-04-21 12:42:48Z paul $ */
+/* $Id: db.c 2088 2006-04-29 02:05:55Z aaron $ */
 /*
   Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
   Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
@@ -22,7 +22,7 @@
 /**
  * \file db.c
  * 
- * $Id: db.c 2077 2006-04-21 12:42:48Z paul $
+ * $Id: db.c 2088 2006-04-29 02:05:55Z aaron $
  *
  * implement database functionality. This used to split out
  * between MySQL and PostgreSQL, but this is now integrated. 
@@ -398,6 +398,7 @@ int db_calculate_quotum_all()
 	if (!(user_idnrs = (u64_t *) dm_malloc(n * sizeof(u64_t)))) {
 		trace(TRACE_ERROR, "%s,%s: malloc failed. Probably out of memory..",
 		      __FILE__, __func__);
+		db_free_result();
 		return -2;
 	}
 	if (!(curmail_sizes = (u64_t *) dm_malloc(n * sizeof(u64_t)))) {
