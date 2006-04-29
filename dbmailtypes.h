@@ -260,6 +260,7 @@ typedef struct {
 	int timeout;
 	char ip[IPLEN];
 	int port;
+	int backlog;
 	int resolveIP;
 	char *timeoutMsg;
 	field_t serverUser, serverGroup;

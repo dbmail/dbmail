@@ -388,5 +388,17 @@ void SetConfigItems(serverConfig_t * config)
 			config->serverGroup);
 
 
+	/* BACKLOG */
+	config_get_value("BACKLOG", "IMAP", val);
+	if (strlen(val) == 0) {
+		trace(TRACE_DEBUG,
+			"%s,%s: no value for BACKLOG in config file. Using default value [%d]",
+			__FILE__, __func__, BACKLOG);
+		config->backlog = BACKLOG;
+	} else if ((config->backlog = atoi(val)) <= 0)
+		trace(TRACE_FATAL,
+			"%s,%s: value for BACKLOG is invalid: [%d]",
+			__FILE__, __func__, config->backlog);
+
 
 }

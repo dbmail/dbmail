@@ -1,3 +1,10 @@
+2006-04-29  Aaron Stone  <aaron@serendipity.cx>
+
+	* server.c, lmtpd.c, pop3d.c, imapd.c, timsieved.c, dbmailtypes.h:
+	Accepted hsn's backlog patch (closes bug #202).
+	* db.c:
+	Accepted kaname's memory leak patch (closes bug #336).
+
 2006-04-29  Paul J Stevens <paul@nfg.nl>
 
 	* modules/authldap.c:
