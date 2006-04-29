@@ -59,7 +59,7 @@ char *dbmail_imap_plist_collapse(const char *in)
 	/*
 	 * collapse "(NIL) (NIL)" to "(NIL)(NIL)"
 	 *
-	 * do for bodystructure, don't for envelope
+	 * do for bodystructure, and only for addresslists in the envelope
 	 */
 	char *p;
 	char **sublists;
@@ -464,7 +464,7 @@ static GList * _imap_append_alist_as_plist(GList *list, const InternetAddressLis
 	GList *t = NULL, *p = NULL;
 	InternetAddress *ia = NULL;
 	InternetAddressList *ial;
-	gchar *s = NULL;
+	gchar *s = NULL, *st = NULL;
 	gchar **tokens;
 	gchar *name;
 
@@ -530,8 +530,10 @@ static GList * _imap_append_alist_as_plist(GList *list, const InternetAddressLis
 	
 	if (p) {
 		s = dbmail_imap_plist_as_string(p);
-		list = g_list_append_printf(list, "(%s)", s);
+		st = dbmail_imap_plist_collapse(s);
+		list = g_list_append_printf(list, "(%s)", st);
 		g_free(s);
+		g_free(st);
 
 		g_list_foreach(p, (GFunc)g_free, NULL);
 		g_list_free(p);
