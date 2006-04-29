@@ -28,8 +28,8 @@ DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
 
 ifneq (,$(findstring devel,$(DEB_BUILD_OPTIONS)))
 	export WITH_CHECK=--with-check
-	export WITH_MYSQL=
-	#export WITH_PGSQL=
+	#export WITH_MYSQL=
+	export WITH_PGSQL=
 	export WITH_SQLITE=
 	export SHARED=--enable-shared=no
 	export STATIC=--enable-static=yes

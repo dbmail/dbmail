@@ -1367,7 +1367,7 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 	if (*user_idnr == 0)
 		return 0;
 	
-	db_find_create_mailbox("INBOX", BOX_DEFAULT, user_idnr, &mailbox_idnr);
+	db_find_create_mailbox("INBOX", BOX_DEFAULT, *user_idnr, &mailbox_idnr);
 
 	return 1;
 }

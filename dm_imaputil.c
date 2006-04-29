@@ -117,6 +117,9 @@ char *dbmail_imap_astring_as_string(const char *s)
 	char *t, *l = NULL;
 	char first, last, penult = '\\';
 
+	if (! s)
+		return g_strdup("\"\"");
+
 	l = g_strdup(s);
 	t = l;
 	/* strip off dquote */
@@ -132,7 +135,7 @@ char *dbmail_imap_astring_as_string(const char *s)
 	for (i=0; l[i]; i++) { 
 		if ((l[i] & 0x80) || (l[i] == '\r') || (l[i] == '\n') || (l[i] == '"') || (l[i] == '\\')) {
 			r = g_strdup_printf("{%lu}\r\n%s", (unsigned long) strlen(l), l);
-			g_free(l);
+			g_free(t);
 			return r;
 		}
 		
@@ -206,8 +209,8 @@ static GList * imap_append_header_as_string(GList *list, GMimeObject *part, cons
 	char *result;
 	char *s;
 	if((result = (char *)g_mime_object_get_header(part,header))) {
-		s = g_strescape(result,NULL);
-		list = g_list_append_printf(list,"\"%s\"",s);
+		s = dbmail_imap_astring_as_string(result);
+		list = g_list_append_printf(list,"%s",s);
 		g_free(s);
 	} else {
 		list = g_list_append_printf(list,"NIL");
@@ -603,8 +606,10 @@ char * imap_get_envelope(GMimeMessage *message)
 	/* date */
 	result = g_mime_message_get_date_string(message);
 	if (result) {
-		list = g_list_append_printf(list,"\"%s\"", result);
+		t = dbmail_imap_astring_as_string(result);
+		list = g_list_append_printf(list,"%s", t);
 		g_free(result);
+		g_free(t);
 		result = NULL;
 	} else {
 		list = g_list_append_printf(list,"NIL");
@@ -613,8 +618,8 @@ char * imap_get_envelope(GMimeMessage *message)
 	/* subject */
 	result = (char *)g_mime_message_get_subject(message);
 	if (result) {
-		t = g_strescape((const char *)result, NULL);
-		list = g_list_append_printf(list,"\"%s\"", t);
+		t = dbmail_imap_astring_as_string(result);
+		list = g_list_append_printf(list,"%s", t);
 		g_free(t);
 	} else {
 		list = g_list_append_printf(list,"NIL");
