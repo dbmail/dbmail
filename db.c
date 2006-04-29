@@ -1622,19 +1622,18 @@ int db_icheck_rfcsize(GList  **lost)
 int db_update_rfcsize(GList *lost) 
 {
 	u64_t pmsid = -1;
-	GString *q = g_string_new("");
 	struct DbmailMessage *msg;
 	if (! lost)
 		return DM_SUCCESS;
 
+	GString *q = g_string_new("");
 	lost = g_list_first(lost);
 	
-	db_begin_transaction();
 	while(lost) {
 		pmsid = (u64_t)(GPOINTER_TO_UINT(lost->data));
 		
 		if (! (msg = dbmail_message_new())) {
-			db_rollback_transaction();
+		        g_string_free(q, TRUE);
 			return DM_EQUERY;
 		}
 
@@ -1642,29 +1641,28 @@ int db_update_rfcsize(GList *lost)
 			trace(TRACE_WARNING,"%s,%s: error retrieving physmessage: [%llu]", 
 					__FILE__, __func__,
 					pmsid);
-			db_rollback_transaction();
 			fprintf(stderr,"E");
 		} else {
+		        db_begin_transaction();
 			g_string_printf(q,"UPDATE %sphysmessage SET rfcsize = %llu "
 					"WHERE id = %llu", DBPFX, (u64_t)dbmail_message_get_size(msg,TRUE), 
 					pmsid);
 			if (db_query(q->str)==-1) {
 				trace(TRACE_WARNING,"%s,%s: error setting rfcsize physmessage: [%llu]", 
 					__FILE__, __func__, pmsid);
-				dbmail_message_free(msg);
 				db_rollback_transaction();
 				fprintf(stderr,"E");
 			} else {
+			        db_commit_transaction();
 				fprintf(stderr,".");
 			}
-			
 		}
 		dbmail_message_free(msg);
 		if (! g_list_next(lost))
 			break;
 		lost = g_list_next(lost);
 	}
-	db_commit_transaction();
+	g_string_free(q, TRUE);
 
 	return DM_SUCCESS;
 }
@@ -1948,6 +1946,7 @@ int db_send_message_lines(void *fstream, u64_t message_idnr, long lines, int no_
 	msg = dbmail_message_retrieve(msg, physmessage_id, DBMAIL_MESSAGE_FILTER_FULL);
 	
 	buf = dbmail_message_to_string(msg);
+	dbmail_message_free(msg);
 	raw = get_crlf_encoded(buf);
 	dm_free(buf);
 	
@@ -2241,9 +2240,11 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen UNUSED,
 	 * this also means that the status will be set to '001'
          */
 
-	if (db_begin_transaction() == DM_EQUERY)
+	if (db_begin_transaction() == DM_EQUERY) {
+	        dbmail_message_free(message);
 		return DM_EQUERY;
-	
+	}
+
         dbmail_message_store(message);
 	result = db_copymsg(message->id, mailbox_idnr, user_idnr, msg_idnr);
 	db_delete_message(message->id);
