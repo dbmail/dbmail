@@ -398,6 +398,7 @@ int db_calculate_quotum_all()
 	if (!(user_idnrs = (u64_t *) dm_malloc(n * sizeof(u64_t)))) {
 		trace(TRACE_ERROR, "%s,%s: malloc failed. Probably out of memory..",
 		      __FILE__, __func__);
+		db_free_result();
 		return -2;
 	}
 	if (!(curmail_sizes = (u64_t *) dm_malloc(n * sizeof(u64_t)))) {
