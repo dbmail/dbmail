@@ -1,5 +1,10 @@
 2006-04-29  Paul J Stevens <paul@nfg.nl>
 
+	* modules/authldap.c:
+	dereference bug in auth_user_validate
+	* debian/rules, dm_imaputil.c, test-scripts/testimap.py:
+	use dbmail_imap_astring_as_string for quoting string elements in the
+	envelope response
 	* debian/changelog, dm_imaputil.c, test-scripts/testimap.py:
 	an other envelope fix
 	* THANKS:
