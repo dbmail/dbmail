@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: pop3d.c 2078 2006-04-21 13:35:15Z paul $
+/* $Id: pop3d.c 2093 2006-04-29 23:36:49Z aaron $
 *
 * pop3d.c
 *
@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
 			break;
 		case 'V':
 			printf("\n*** DBMAIL: dbmail-pop3d version "
-			       "$Revision: 2078 $ %s\n\n", COPYRIGHT);
+			       "$Revision: 2093 $ %s\n\n", COPYRIGHT);
 			return 0;
 		case 'n':
 			no_daemonize = 1;
@@ -338,7 +338,18 @@ void SetConfigItems(serverConfig_t * config)
 			__FILE__, __func__,
 			config->socket);
 
-
+	/* BACKLOG */
+	config_get_value("BACKLOG", "POP", val);
+	if (strlen(val) == 0) {
+		trace(TRACE_DEBUG,
+			"%s,%s: no value for BACKLOG in config file. Using default value [%d]",
+			__FILE__, __func__, BACKLOG);
+		config->backlog = BACKLOG;
+	} else if ((config->backlog = atoi(val)) <= 0)
+		trace(TRACE_FATAL,
+			"%s,%s: value for BACKLOG is invalid: [%d]",
+			__FILE__, __func__, config->backlog);
+	    	
 	/* read items: RESOLVE_IP */
 	config_get_value("RESOLVE_IP", "POP", val);
 	if (strlen(val) == 0)
