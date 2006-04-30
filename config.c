@@ -67,6 +67,7 @@ void config_free(void)
 
 /* Return 1 if found, 0 if not. */
 /* This function also strips any... # Trailing comments. */
+/* value is not modified unless something is found. */
 static int config_get_value_once(const field_t field_name,
 		const char * const service_name,
 		field_t value)

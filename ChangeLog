@@ -1,3 +1,9 @@
+2006-04-30  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmail.conf, dbmail.h.in, pipe.c, config.c:
+	Added AUTO_NOTIFY_SENDER, AUTO_NOTIFY_SUBJECT to dbmail.conf, now
+	respects POSTMASTER in pipe.c, sane fallbacks (closes bug #257).
+
 2006-04-29  Aaron Stone  <aaron@serendipity.cx>
 
 	* server.c, lmtpd.c, pop3d.c, imapd.c, timsieved.c, dbmailtypes.h:

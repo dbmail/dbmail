@@ -160,6 +160,7 @@
 
 /* FIXME: Any consumers of this should
  * be using POSTMASTER from dbmail.conf! */
+#define DEFAULT_POSTMASTER "DBMAIL-MAILER@dbmail"
 #define AUTO_NOTIFY_SENDER "autonotify@dbmail"
 #define AUTO_NOTIFY_SUBJECT "NEW MAIL NOTIFICATION"
 
