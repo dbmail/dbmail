@@ -1,5 +1,5 @@
 /*
-  $Id: server.c 2065 2006-04-10 20:38:36Z paul $
+  $Id: server.c 2093 2006-04-29 23:36:49Z aaron $
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
 
@@ -309,7 +309,7 @@ static int dm_socket(int domain)
 	return sock;
 }
 
-static int dm_bind_and_listen(int sock, struct sockaddr *saddr, socklen_t len)
+static int dm_bind_and_listen(int sock, struct sockaddr *saddr, socklen_t len, int backlog)
 {
 	int err;
 	/* bind the address */
@@ -319,7 +319,7 @@ static int dm_bind_and_listen(int sock, struct sockaddr *saddr, socklen_t len)
 		trace(TRACE_FATAL, "%s,%s: %s", __FILE__, __func__, strerror(err));
 	}
 
-	if ((listen(sock, BACKLOG)) == -1) {
+	if ((listen(sock, backlog)) == -1) {
 		err = errno;
 		close(sock);
 		trace(TRACE_FATAL, "%s,%s: %s", __FILE__, __func__, strerror(err));
@@ -344,7 +344,7 @@ static int create_unix_socket(serverConfig_t * conf)
 	saServer.sun_family = AF_UNIX;
 	strncpy(saServer.sun_path,conf->socket, sizeof(saServer.sun_path));
 
-	dm_bind_and_listen(sock, (struct sockaddr *)&saServer, sizeof(saServer));
+	dm_bind_and_listen(sock, (struct sockaddr *)&saServer, sizeof(saServer), conf->backlog);
 	
 	chmod (conf->socket,02777);
 
@@ -377,7 +377,7 @@ static int create_inet_socket(serverConfig_t * conf)
 				__FILE__, __func__, conf->ip);
 	}
 
-	dm_bind_and_listen(sock, (struct sockaddr *)&saServer, sizeof(saServer));
+	dm_bind_and_listen(sock, (struct sockaddr *)&saServer, sizeof(saServer), conf->backlog);
 
 	return sock;	
 }

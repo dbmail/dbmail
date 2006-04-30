@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: pipe.c 2080 2006-04-24 09:40:11Z aaron $
+/* $Id: pipe.c 2094 2006-04-30 09:48:53Z aaron $
  *
  * Functions for reading the pipe from the MTA */
 
@@ -190,12 +190,21 @@ int send_forward_list(struct DbmailMessage *message,
 {
 	int result = 0;
 	struct element *target;
+	field_t postmaster;
 
 	trace(TRACE_INFO, "%s, %s: delivering to [%ld] external addresses",
 	      __FILE__, __func__, dm_list_length(targets));
 
-	if (!from)
-		from = "DBMAIL-MAILER";
+	if (!from) {
+		if (config_get_value("POSTMASTER", "DBMAIL", postmaster) < 0) {
+			trace(TRACE_MESSAGE, "%s, %s: no config value for POSTMASTER",
+			      __FILE__, __func__);
+		}
+		if (strlen(postmaster))
+			from = dm_strdup(postmaster);
+		else
+			from = dm_strdup(DEFAULT_POSTMASTER);
+	}
 
 	target = dm_list_getstart(targets);
 	while (target != NULL) {
@@ -246,10 +255,32 @@ int send_forward_list(struct DbmailMessage *message,
 /* 
  * Send an automatic notification.
  */
-static int send_notification(struct DbmailMessage *message,
-		const char *to, const char *from,
-		const char *subject)
+static int send_notification(struct DbmailMessage *message, const char *to)
 {
+	field_t from = "";
+	field_t subject = "";
+
+	if (config_get_value("POSTMASTER", "DBMAIL", from) < 0) {
+		trace(TRACE_MESSAGE, "%s, %s: no config value for POSTMASTER",
+		      __FILE__, __func__);
+	}
+
+	if (config_get_value("AUTO_NOTIFY_SENDER", "DELIVERY", from) < 0) {
+		trace(TRACE_MESSAGE, "%s, %s: no config value for AUTO_NOTIFY_SENDER",
+		      __FILE__, __func__);
+	}
+
+	if (config_get_value("AUTO_NOTIFY_SUBJECT", "DELIVERY", subject) < 0) {
+		trace(TRACE_MESSAGE, "%s, %s: no config value for AUTO_NOTIFY_SUBJECT",
+		      __FILE__, __func__);
+	}
+
+	if (strlen(from) < 1)
+		g_strlcpy(from, AUTO_NOTIFY_SENDER, FIELDSIZE);
+
+	if (strlen(subject) < 1)
+		g_strlcpy(subject, AUTO_NOTIFY_SUBJECT, FIELDSIZE);
+
 	return send_mail(message, to, from, subject,
 			"", "", SENDNOTHING, SENDMAIL);
 }
@@ -276,6 +307,7 @@ static int send_reply(struct DbmailMessage *message, const char *body)
 	char *from = NULL, *to = NULL, *replyto = NULL, *subject = NULL;
 	char *escaped_send_address;
 	char *x_dbmail_reply;
+	field_t postmaster;
 
 	InternetAddressList *ialist;
 	InternetAddress *ia;
@@ -297,8 +329,16 @@ static int send_reply(struct DbmailMessage *message, const char *body)
 	to = dbmail_message_get_header(message, "Delivered-To");
 	if (!to)
 		to = dbmail_message_get_header(message, "To");
-	if (!to)
-		to = dm_strdup("DBMAIL-MAILER");
+	if (!to) {
+		if (config_get_value("POSTMASTER", "DBMAIL", postmaster) < 0) {
+			trace(TRACE_MESSAGE, "%s, %s: no config value for POSTMASTER",
+			      __FILE__, __func__);
+		}
+		if (strlen(postmaster))
+			to = dm_strdup(postmaster);
+		else
+			to = dm_strdup(DEFAULT_POSTMASTER);
+	}
 	
 
 	if (!from && !replyto) {
@@ -358,7 +398,7 @@ static int execute_auto_ran(struct DbmailMessage *message, u64_t useridnr)
 
 	/* message has been succesfully inserted, perform auto-notification & auto-reply */
 	if (config_get_value("AUTO_NOTIFY", "DELIVERY", val) < 0) {
-		trace(TRACE_ERROR, "%s, %s error getting config",
+		trace(TRACE_ERROR, "%s, %s: error getting config value for AUTO_NOTIFY",
 		      __FILE__, __func__);
 		return -1;
 	}
@@ -367,7 +407,7 @@ static int execute_auto_ran(struct DbmailMessage *message, u64_t useridnr)
 		do_auto_notify = 1;
 
 	if (config_get_value("AUTO_REPLY", "DELIVERY", val) < 0) {
-		trace(TRACE_ERROR, "%s, %s error getting config",
+		trace(TRACE_ERROR, "%s, %s: error getting config value for AUTO_REPLY",
 		      __FILE__, __func__);
 		return -1;
 	}
@@ -390,9 +430,7 @@ static int execute_auto_ran(struct DbmailMessage *message, u64_t useridnr)
 				trace(TRACE_DEBUG,
 				      "execute_auto_ran(): sending notifcation to [%s]",
 				      notify_address);
-				if (send_notification(message, notify_address,
-						      AUTO_NOTIFY_SENDER,
-						      AUTO_NOTIFY_SUBJECT) < 0) {
+				if (send_notification(message, notify_address) < 0) {
 					trace(TRACE_ERROR, "%s, %s: error in call to send_notification.",
 					      __FILE__, __func__);
 					dm_free(notify_address);
