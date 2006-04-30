@@ -290,6 +290,24 @@ int db_commit_transaction(void);
  */
 int db_rollback_transaction(void);
 
+/**
+ * set savepoint to transaction
+ * \param name
+ * \return
+ *     - -1 on error
+ *     -  0 otherwise
+ */
+int db_savepoint_transaction(const char*);
+
+/**
+ * rollback transaction to savepoint
+ * \param name
+ * \return
+ *     - -1 on error
+ *     -  0 otherwise
+ */
+int db_rollback_savepoint_transaction(const char*);
+
 /* shared implementattion from hereon */
 /**
  * \brief get the physmessage_id from a message_idnr

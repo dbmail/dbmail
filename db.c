@@ -208,7 +208,47 @@ static int mailbox_is_writable(u64_t mailbox_idnr)
 	return DM_SUCCESS;
 
 }
-	
+int db_savepoint_transaction(const char* name)
+{
+ 	if(!name){
+ 		trace(TRACE_ERROR, "%s,%s: error no savepoint name",
+ 		      __FILE__, __func__);
+ 		return DM_EQUERY;
+ 	}
+ 
+ 	memset(query, 0, sizeof(query));
+ 	snprintf(query, DEF_QUERYSIZE, "SAVEPOINT %s", name);
+ 	if (db_query(query) == -1) {
+ 		trace(TRACE_ERROR, "%s,%s: error set savepoint to transaction",
+ 		      __FILE__, __func__);
+ 		return DM_EQUERY;
+ 	}
+ 	return DM_SUCCESS;
+}
+
+int db_rollback_savepoint_transaction(const char* name)
+{
+	if(!name){
+		trace(TRACE_ERROR, "%s,%s: error no savepoint name",
+		      __FILE__, __func__);
+		return DM_EQUERY;
+	}
+
+	memset(query, 0, sizeof(query));
+	snprintf(query, DEF_QUERYSIZE, "ROLLBACK TO SAVEPOINT %s", name);
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: error rolling back transaction "
+                      "to savepoint(%s). "
+		      "Disconnecting from database (this will implicitely "
+		      "cause a Transaction Rollback.",
+		      __FILE__, __func__, name);
+		db_disconnect();
+		/* and reconnect again */
+		db_connect();
+	}
+	return DM_SUCCESS;
+}
+
 int db_get_physmessage_id(u64_t message_idnr, u64_t * physmessage_id)
 {
 	assert(physmessage_id != NULL);
