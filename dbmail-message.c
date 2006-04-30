@@ -318,7 +318,7 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 			
 			buf = g_new0(char, MESSAGE_MAX_LINE_SIZE);
 
-			bstream = g_mime_stream_buffer_new(stream,GMIME_STREAM_BUFFER_CACHE_READ);
+			bstream = g_mime_stream_buffer_new(stream,GMIME_STREAM_BUFFER_BLOCK_READ);
 			mstream = g_mime_stream_mem_new();
 			fstream = g_mime_stream_filter_new_with_stream(mstream);
 			filter = g_mime_filter_crlf_new(GMIME_FILTER_CRLF_DECODE,GMIME_FILTER_CRLF_MODE_CRLF_DOTS);
@@ -958,10 +958,14 @@ static void insert_address_cache(u64_t physid, const char *field, InternetAddres
 		g_free(safe_addr);
 		g_free(clean_name);
 		g_free(clean_addr);
-
-		if (db_query(q->str)) 
+		
+ 		db_savepoint_transaction("p_address");
+		if (db_query(q->str)) {
 			trace(TRACE_WARNING, "%s,%s: insert %sfield failed [%s]",
 					__FILE__, __func__, field, q->str);
+ 			db_rollback_savepoint_transaction("p_address");
+		}
+
 	}
 	
 	g_string_free(q,TRUE);
@@ -991,9 +995,12 @@ static void insert_field_cache(u64_t physid, const char *field, const char *valu
 	g_free(safe_value);
 	g_free(clean_value);
 
-	if (db_query(q->str))
+	db_savepoint_transaction("p_field");
+	if (db_query(q->str)) {
 		trace(TRACE_WARNING, "%s,%s: insert %sfield failed [%s]",
 				__FILE__, __func__, field, q->str);
+		db_rollback_savepoint_transaction("p_field");
+	}
 	g_string_free(q,TRUE);
 }
 
