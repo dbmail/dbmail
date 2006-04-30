@@ -259,6 +259,7 @@ typedef struct {
 	int childMaxConnect;
 	int timeout;
 	char ip[IPLEN];
+	int service_before_smtp;
 	int port;
 	int backlog;
 	int resolveIP;

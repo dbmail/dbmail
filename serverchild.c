@@ -229,6 +229,7 @@ int PerformChildTask(ChildInfo_t * info)
 
 	
 	for (i = 0; i < info->maxConnect && !ChildStopRequested; i++) {
+
 		if (db_check_connection()) {
 			trace(TRACE_ERROR, "%s,%s: database has gone away", 
 					__FILE__, __func__);
