@@ -1,3 +1,10 @@
+2006-04-30  Paul J Stevens <paul@nfg.nl>
+
+	* db.c, db.h:
+	add savepoint handling (idk)
+	* dbmail-message.c:
+	use savepoints in storing header cache values (closes: #282)
+
 2006-04-30  Aaron Stone  <aaron@serendipity.cx>
 
 	* dbmail.conf, dbmail.h.in, pipe.c, config.c:
