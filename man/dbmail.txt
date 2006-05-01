@@ -1,0 +1,36 @@
+DBMAIL(1)
+=========
+Author
+
+NAME
+----
+dbmail - the Database Mailer, is a suite of mail storage and
+retrieval programs centered around a database backend.
+
+SYNOPSIS
+--------
+dbmail-users
+dbmail-export
+dbmail-smtp
+dbmail-sievecmd
+dbmail-maintenance
+dbmail-imapd
+dbmail-pop3d
+dbmail-lmtpd
+dbmail-timsieved
+
+DESCRIPTION
+-----------
+DBMail implements such a system using a database backend.
+
+BUGS
+----
+Nobody is perfect.
+
+LICENSE
+-------
+DBMail and its components are (c) IC&S and distributed under the GPL. 
+
+AUTHOR(S)
+---------
+That's us!
