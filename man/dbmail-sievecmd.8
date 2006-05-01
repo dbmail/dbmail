@@ -4,7 +4,7 @@
 .if t .Sp
 .ne 5
 .PP
-\fB\\$8\fR
+\fB\\$1\fR
 .PP
 ..
 .de Sp \" Vertical space (when we can't use .PP)
@@ -15,91 +15,90 @@
 .br
 .ie \\n(.$>=3 .ne \\$3
 .el .ne 3
-.IP "\\$8" \\$2
+.IP "\\$1" \\$2
 ..
 .TH "DBMAIL-SIEVECMD" 8 "" "" ""
 .SH NAME
-dbmail-sievecmd \- receives messages from an MTA supporting the Light- weight Mail Transport Protocol, as specified in RFC 2033.
+dbmail-sievecmd \- manipulates Sieve scripts in the DBMail database.
 .SH "SYNOPSIS"
 
-.nf
-dbmail\-sievecmd [\-f configfile] [\-p pidfile] [\-nvVh]
-.fi
+
+dbmail\-sievecmd \-u username [\-l] [\-a scriptname] [\-d scriptname] [\-i scriptname file] [\-r scriptname] [\-f configfile] [\-p pidfile] [\-nvVh]
 
 .SH "DESCRIPTION"
 
-.nf
-The dbmail\-timsieved daemon will spawn child processes as specified in
-the dbmail\&.conf file\&. These processes listen, by default, on port 2000
-of the localhost interface\&. Mail Transfer Agents, MTA's such as Postfix
-and Exim, speak LMTP to their Mail Delivery Agents which receive and
-store messages\&. DBMail implements such a system using a database back\-
-end\&.
-.fi
+
+DBMail stores Sieve scripts in a table in the DBMail database\&. These scripts are used to sort incoming mail for the email users\&. Each user has their own script space and may upload scripts to the dbmail\-timsieved(8) daemon\&. The dbmail\-sievecmd(8) utility provides a convenient method for the system administrator to work with Sieve scripts from the command line\&.
 
 .SH "OPTIONS"
 
-.nf
+.TP
+\-u username
+Specify the user whose scripts we will be modifying\&.
+
+.TP
+\-l
+List scripts belonging to user
+
+.TP
+\-a scriptname
+Activates scriptname, deactivating all other scripts\&.
+
+.TP
+\-d scriptname
+Deactivates scriptname if it was active\&.
+
+.TP
+\-i scriptname file
+Creates a script called scriptname by importing file\&. If file is \- (dash), \fIstdin\fR will be read\&.
+
+.TP
+\-r scriptname
+Remove the named script\&. If the script was active, no script will be active after it is deletion\&.
+
+.SH "COMMON OPTIONS"
+
+.TP
 \-f configfile
-    Specify an alternate config file\&. The daemons are currently hard\-
-    coded to use /etc/dbmail\&.conf for their configs, and will halt if
-    the config file cannot be found\&. Use the \-f configfile option to
-    specify your system's preferred config file location\&.
-.fi
+Specify an alternate config file\&. The daemons are currently hardcoded to use /etc/dbmail\&.conf for their configs, and will halt if the config file cannot be found\&. Use the \-f configfile option to specify your system's preferred config file location\&.
 
-.nf
+.TP
 \-p pidfile
-    Specify an alternate pid file\&. The daemons are currently hardcoded
-    to use /var/run/dbmail\-<daemon> for their pid files, and will halt
-    if the pid file cannot be written\&. Use the \-p pidfile option to
-    place the pid file in your system's preferred location\&.
-.fi
+Specify an alternate pid file\&. The daemons are currently hardcoded to use /var/run/dbmail\-<daemon> for their pid files, and will halt if the pid file cannot be written\&. Use the \-p pidfile option to place the pid file in your system's preferred location\&.
 
-.nf
-\-n  No daemonize\&. The program remains attached to the console from
-    which it was started\&. This is quite useful for debugging when com\-
-    bined with the \-v option\&.
-.fi
+.TP
+\-n
+No daemonize\&. The program remains attached to the console from which it was started\&. This is quite useful for debugging when com bined with the \-v option\&.
 
-.nf
-\-v  Operate verbosely\&. For daemons, this may only be useful with the \-n
-    option which keeps the program bound to the console\&.  Some of the
-    utilities in the DBMail suite can take two \-v's for extra ver\-
-    bosity\&. Those which don't understand this convention won't complain
-    about having the extra \-v and will simply operate at their normal
-    verbosity\&.
-.fi
+.TP
+\-v
+Operate verbosely\&. For daemons, this may only be useful with the \-n option which keeps the program bound to the console\&. Some of the utilities in the DBMail suite can take two \-v's for extra verbosity\&. Those which don't understand this convention won't complain about having the extra \-v and will simply operate at their normal verbosity\&.
 
-.nf
-\-V  Show the version and copyright, then exit\&.
-.fi
+.TP
+\-V
+Show the version and copyright, then exit\&.
 
-.nf
-\-h  Show a brief summary of options, then exit\&.
-.fi
+.TP
+\-h
+Show a brief summary of options, then exit\&.
 
 .SH "DIAGNOSTICS"
 
-.nf
-Errors and notifications are send to the trace output as set in the
-DBMail configfile\&.
-.fi
+
+Errors and notifications are send to the trace output as set in the DBMail configfile\&.
 
 .SH "BUGS"
 
-.nf
+
 Not all of the features recommended by RFC 2033 are implemented\&.
-.fi
 
 .SH "LICENSE"
 
-.nf
+
 DBMail and its components are (c) IC&S and distributed under the GPL\&.
-.fi
 
 .SH "AUTHOR(S)"
 
-.nf
+
 Aaron Stone Open Source Programmer Palo Alto, California USA
-.fi
 
