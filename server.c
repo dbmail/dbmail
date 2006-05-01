@@ -402,7 +402,7 @@ void CreateSocket(serverConfig_t * conf)
 	if (strlen(conf->socket) > 0) 
 		conf->listenSocket = create_unix_socket(conf);
 	else
-		conf->listenSocket = create_inet_socket(conf);
+		conf->listenSocket = create_inet_socket(conf->ip, conf->port, conf->backlog);
 }
 
 void ClearConfig(serverConfig_t * conf)
