@@ -1,5 +1,5 @@
 /*
- $Id: dbmailtypes.h 2093 2006-04-29 23:36:49Z aaron $
+ $Id: dbmailtypes.h 2096 2006-04-30 18:39:56Z aaron $
 
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
@@ -259,6 +259,7 @@ typedef struct {
 	int childMaxConnect;
 	int timeout;
 	char ip[IPLEN];
+	int service_before_smtp;
 	int port;
 	int backlog;
 	int resolveIP;

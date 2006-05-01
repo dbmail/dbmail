@@ -21,7 +21,7 @@
 /*
  * serverchild.c
  *
- * $Id: serverchild.c 2072 2006-04-18 12:53:44Z paul $
+ * $Id: serverchild.c 2096 2006-04-30 18:39:56Z aaron $
  * 
  * function implementations of server children code (connection handling)
  */
@@ -229,6 +229,7 @@ int PerformChildTask(ChildInfo_t * info)
 
 	
 	for (i = 0; i < info->maxConnect && !ChildStopRequested; i++) {
+
 		if (db_check_connection()) {
 			trace(TRACE_ERROR, "%s,%s: database has gone away", 
 					__FILE__, __func__);

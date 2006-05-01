@@ -10,6 +10,11 @@
 	* dbmail.conf, dbmail.h.in, pipe.c, config.c:
 	Added AUTO_NOTIFY_SENDER, AUTO_NOTIFY_SUBJECT to dbmail.conf, now
 	respects POSTMASTER in pipe.c, sane fallbacks (closes bug #257).
+	* dbmailtypes.h, server.h, server.c, serverchild.c:
+	Just one version of loading the server config file.
+	* lmtpd.c, timsieved.c, pop3d.c, imapd.c:
+	Zap the old, duplicated versions of SetConfigItems.
+	Call the new LoadServerConfig function.
 
 2006-04-29  Aaron Stone  <aaron@serendipity.cx>
 
