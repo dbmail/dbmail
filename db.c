@@ -2683,25 +2683,23 @@ int db_getmailbox_count(mailbox_t *mb)
 		snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr "
 				"FROM %smessages "
 				"WHERE mailbox_idnr = '%llu' "
-				"AND status < '%d' "
+				"AND status IN ('%d','%d') "
 				"ORDER BY message_idnr ASC",
-				DBPFX, mb->uid, MESSAGE_STATUS_DELETE);
+				DBPFX, mb->uid, MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
 		
 		if (db_query(query) == -1) {
 			trace(TRACE_ERROR, "%s,%s: query error [%s]", __FILE__, __func__, query);
 			return DM_EQUERY;
 		}
 		
-		trace(TRACE_DEBUG,"%s,%s: exists [%d] num_rows [%d]",__FILE__, __func__, mb->exists, db_num_rows());
-		if (! (mb->seq_list = (u64_t *) dm_malloc(sizeof(u64_t) * mb->exists))) {
-			db_free_result();
-			trace(TRACE_ERROR,"%s,%s: malloc error mb->seq_list [%d]",
-					__FILE__, __func__,
-					mb->exists);
-			return DM_EQUERY;
-		}
+		exists = db_num_rows();
 		
-		for (i = 0; i < db_num_rows(); i++) 
+		if (mb->exists != exists)
+			mb->exists = exists;
+		
+		trace(TRACE_DEBUG,"%s,%s: exists [%d]",__FILE__, __func__, mb->exists);
+		mb->seq_list = g_new0(u64_t,mb->exists);
+		for (i = 0; i < mb->exists; i++) 
 			mb->seq_list[i] = db_get_result_u64(i, 0);
 
 		db_free_result();
@@ -2713,9 +2711,7 @@ int db_getmailbox_count(mailbox_t *mb)
 	 */
 	snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr+1 FROM %smessages "
 			"ORDER BY message_idnr DESC LIMIT 1",DBPFX);
-
 	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: query error [%s]", __FILE__, __func__, query);
 		if(mb->seq_list) {
 			dm_free(mb->seq_list);
 			mb->seq_list = NULL;
