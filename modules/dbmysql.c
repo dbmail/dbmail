@@ -66,13 +66,68 @@ db_param_t _db_params;
 
 /* static functions, only used locally */
 
+/* Check that the database and connection collations match.
+ * I don't think we need to worry about the server collation. */
+static int db_mysql_check_collations(void)
+{
+	char the_query[DEF_QUERYSIZE];
+	char *collation[3][2];
+	int collations_match = 0;
+	int i, j;
+
+	snprintf(the_query, DEF_QUERYSIZE,
+			"SHOW VARIABLES LIKE 'collation_%%'");
+	if (db_query(the_query) == DM_EQUERY) {
+		trace(TRACE_ERROR,
+		      "%s,%s: error getting collation variables for database",
+		      __FILE__, __func__);
+		return DM_EQUERY;
+	}
+
+	for (i = 0; i < 3; i++)
+	for (j = 0; j < 2; j++)
+		collation[i][j] = strdup(db_get_result(i, j));
+
+	/* Sane indentation goes insane here. */
+	for (i = 0; i < 3; i++)
+	if (strcmp(collation[i][0], "collation_database") == 0) {
+		for (j = 0; j < 3; j++)
+		if (strcmp(collation[j][0], "collation_connection") == 0) {
+			trace(TRACE_DEBUG, "%s,%s: does [%s:%s] match [%s:%s]?",
+				__FILE__, __func__,
+				collation[i][0], collation[i][1],
+				collation[j][0], collation[j][1]);
+			if (strcmp(collation[i][1], collation[j][1]) == 0) {
+				collations_match = 1;
+				break;
+			}
+		}
+		if (collations_match)
+			break;
+	}
+
+	db_free_result();
+	for (i = 0; i < 3; i++)
+	for (j = 0; j < 2; j++)
+		free(collation[i][j]);
+
+	if (!collations_match) {
+		trace(TRACE_ERROR,
+		      "%s,%s: collation mismatch, your MySQL configuration specifies a"
+		      " different charset than the data currently in your DBMail database.",
+		      __FILE__, __func__);
+		return DM_EQUERY;
+	}
+
+	return DM_SUCCESS;
+}
+
+
 int db_connect()
 {
 	char *sock = NULL;
 	/* connect */
 	mysql_init(&conn);
-	char the_query[DEF_QUERYSIZE];
-	const char *collation = NULL;
 
 	/* auto re-connect */
 	conn.reconnect = 1;
@@ -111,25 +166,8 @@ int db_connect()
 	}
 #endif
 
-	snprintf(the_query, DEF_QUERYSIZE,
-			"show variables like 'collation_database'");
-	if (db_query(the_query) == DM_EQUERY) {
-		trace(TRACE_ERROR,
-		      "%s,%s: error getting collation variable for database",
-		      __FILE__, __func__);
+	if (db_mysql_check_collations() == DM_EQUERY)
 		return DM_EQUERY;
-	}
-	collation = db_get_result(0,1);
-	snprintf(the_query, DEF_QUERYSIZE,
-			"SET collation_connection = '%s'",
-			collation);
-	db_free_result();
-	if (db_query(the_query) == DM_EQUERY) {
-		trace(TRACE_ERROR,
-		      "%s,%s: error setting collation variable for connection",
-		      __FILE__, __func__);
-		return DM_EQUERY;
-	}
 
 	return DM_SUCCESS;
 }
