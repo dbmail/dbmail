@@ -1,0 +1,93 @@
+DBMAIL-SMTP(1)
+==============
+
+NAME
+----
+       dbmail-smtp - inserts messages into the DBMail mailsystem.
+
+
+SYNOPSIS
+--------
+       dbmail-smtp [-t headerfield] [-d addresses] [-u usernames] [-m mailbox-
+       name] [-r return path] [-f configFile]
+
+DESCRIPTION
+-----------
+       The dbmail-smtp program inserts messages from the commandline  or  from
+       any  MTA  into  the  DBMail mailsystem. The program reads from standard
+       input.
+
+
+OPTIONS
+-------
+       -t headerfield
+              Deliver messages to the recipient MIME header specified in head-
+              erfield.   The  default  header  to  use  is the "Delivered-To:"
+              header.
+
+       -d addresses...
+              Deliver messages to the recipients specified by addresses.  This
+              option is mostly used for delivery from an MTA.  Seperate multi-
+              ple addresses by spaces.
+
+       -u usernames...
+              Deliver messages straight to a users  with  username  usernames.
+              Seperate multiple usernames with spaces.
+
+       -m mailboxname
+              Deliver  messages  to  mailbox  mailboxname of the recipient. If
+              this mailbox does not exist yet, it is created.
+
+       -r returnpath
+              Set return path for bounces and other error  reports  to  return
+              path.
+
+COMMON OPTIONS
+--------------
+       -f configfile
+              Specify  an  alternate  config file. The utilities are currently
+              hardcoded to use /etc/dbmail.conf for their  configs,  and  will
+              halt  if  the config file cannot be found. Use the -f configfile
+              option to specify your system's preferred config file  location.
+
+       -q     Quietly  skip  interactive  prompts  and helpful status messages
+              which would otherwise be printed to stdout.   Use  two  -q's  to
+              silence errors which would otherwise be printed to stderr.
+
+       -n     Show  the intended action but do not perform it, as though no to
+              all.
+
+       -y     Perform all proposed actions, as though yes to all.
+
+       -v     Operate verbosely.  Some of the utilities in  the  DBMail  suite
+              can  take two -v's for extra verbosity. Those which don't under-
+              stand this convention won't complain about having the  extra  -v
+              and will simply operate at their normal verbosity.
+
+       -V     Show the version and copyright, then exit.
+
+       -h     Show a brief summary of options, then exit.
+
+DIAGNOSTICS
+-----------
+       Errors  and  notifications  are  send to the trace output as set in the
+       dbmail.conf file.
+
+
+BUGS
+----
+       There are no known bugs.
+
+LICENSE
+-------
+       DBMail and it's components are (c) IC&S and distributed under the  GPL.
+
+AUTHOR(S)
+---------
+       Eelco van Beek
+       IC&S
+       Koningsweg 4
+       3582 GE Utrecht
+       http://www.ic-s.nl
+
+

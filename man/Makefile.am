@@ -15,5 +15,29 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-man_MANS = dbmail-pop3d.8 dbmail-smtp.1 dbmail-imapd.8 \
-	dbmail-users.8 dbmail-util.8 dbmail-lmtpd.8 dbmail-export.8
+man1_MANS = dbmail.1 dbmail-smtp.1
+
+man5_MANS = dbmail.conf.5
+
+man8_MANS = dbmail-util.8 \
+	dbmail-users.8 \
+	dbmail-export.8 \
+	dbmail-sievecmd.8 \
+	dbmail-imapd.8 \
+	dbmail-lmtpd.8 \
+	dbmail-pop3d.8 \
+	dbmail-timsieved.txt
+
+EXTRA_DIST = $(man1_MANS) $(man5_MANS) $(man8_MANS)
+
+%.xml : %.txt
+	asciidoc -b docbook -d manpage $<
+
+%.1 : %.xml
+	xmlto man $<
+
+%.5 : %.xml
+	xmlto man $<
+
+%.8 : %.xml
+	xmlto man $<
