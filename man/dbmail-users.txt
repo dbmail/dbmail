@@ -1,0 +1,137 @@
+DBMAIL-USERS(8)
+===============
+
+
+NAME
+----
+       dbmail-users - manages the DBMail user database.
+
+SYNOPSIS
+--------
+       dbmail-users { -a username | -c username } [ -g clientid ] [ -m maxmail
+       ] [ -p passwordtype ] [ -P shadowfile ] [ -w password ] [ -W  password-
+       file ] [ -u username ] [ -s aliases ] [ -S aliases ]
+
+       dbmail-users { -d username | -e username }
+
+       dbmail-users -l userspec
+
+       dbmail-users -x alias [ -t forwards ] [ -T forwards ]
+
+
+DESCRIPTION
+-----------
+       The  dbmail-users  program  enables you to manage the DBMail users.  It
+       lets you add, delete and change users as well as show information about
+       a  specific  user  or display a list of existing users. It also has the
+       capability of adding/removing separate aliases.
+
+
+MODE OPTIONS
+------------
+        -a  user
+              Add a user
+
+        -d  user
+              Delete a user
+
+        -c  user
+              Change details for a user
+
+        -e  user
+              Empty all mailboxes for a user
+
+        -l  uspec
+              List information for matching users
+
+        -x  alias
+              Create an external forwarding address
+
+
+
+MINOR OPTIONS
+-------------
+        -w  passwd
+              Specify user's password on the command line
+
+        -W  [file]
+              Read from a file or prompt for a user's password
+
+        -p  pwtype
+              Password type may be one of  the  following:  plaintext,  crypt,
+              md5-hash, md5-digest, crypt-raw, md5-hash-raw, md5-digest-raw
+
+        -P  [file]
+              Pull encrypted password from the shadow file
+
+        -u  user
+              New username (only useful for -c, change)
+
+        -g  cid
+              Assign the user to a client group.
+
+        -m  max
+              Set the maximum mail quota in <bytes>B, <kbytes>K, or <mbytes>M,
+              default in bytes If set to 0, there will be no limit.
+
+        -s  alia..
+              Adds a list of recipient aliases. An alias is an e-mail  address
+              that  is  being delivered to the DBMail mailsystem and should be
+              delivered to this user.
+
+        -S  alia..
+              Removes a list of recipient aliases (wildcards supported)
+
+        -t  fwds..
+              Adds a list of deliver-to forwards
+
+        -T  fwds..
+              Removes a list of deliver-to forwards (wildcards supported)
+
+
+
+COMMON OPTIONS
+--------------
+       -f configfile
+              Specify an alternate config file. The  utilities  are  currently
+              hardcoded  to  use  /etc/dbmail.conf for their configs, and will
+              halt if the config file cannot be found. Use the  -f  configfile
+              option  to specify your system's preferred config file location.
+
+       -q     Quietly skip interactive prompts  and  helpful  status  messages
+              which  would  otherwise  be  printed to stdout.  Use two -q's to
+              silence errors which would otherwise be printed to stderr.
+
+
+
+       -v     Operate verbosely.  Some of the utilities in  the  DBMail  suite
+              can  take two -v's for extra verbosity. Those which don't under-
+              stand this convention won't complain about having the  extra  -v
+              and will simply operate at their normal verbosity.
+
+       -V     Show the version and copyright, then exit.
+
+       -h     Show a brief summary of options, then exit.
+
+DIAGNOSTICS
+-----------
+       Errors  and  notifications  are  send to the trace output as set in the
+       DBMail configfile.
+
+BUGS
+----
+       No known bugs.
+
+LICENSE
+-------
+       DBMail and it's components are (c) IC&S and distributed under the  GPL.
+
+AUTHOR(S)
+---------
+       Eelco van Beek
+       Roel Rozendaal
+       IC&S
+       Koningsweg 4
+       3582 GE Utrecht
+       http://www.ic-s.nl
+

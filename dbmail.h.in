@@ -34,6 +34,8 @@
 #define PACKAGE "dbmail"
 #endif
 
+#define _XOPEN_SOURCE /* glibc2 */
+#define __EXTENSIONS__ /* solaris */
 
 #include <assert.h>
 #include <arpa/inet.h>

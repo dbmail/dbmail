@@ -705,7 +705,6 @@ int dbmail_message_store(struct DbmailMessage *self)
 	/* make sure the message has a message-id, else threading breaks */
 	if (! (message_id = (char *)g_mime_message_get_message_id(GMIME_MESSAGE(self->content)))) {
 		domainname = g_new0(gchar, 255);
-		assert(domainname);
 		if (getdomainname(domainname,255))
 			strcpy(domainname,"(none)");
 		message_id = g_mime_utils_generate_message_id(domainname);
