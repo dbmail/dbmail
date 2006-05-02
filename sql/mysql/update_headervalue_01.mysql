@@ -1,0 +1,15 @@
+
+
+# changes the storagetype of dbmail_headervalue.headervalue to TEXT
+
+# only apply this when dbmail_headervalue.headervalue is VARCHAR(255);
+
+#alter table dbmail_headervalue drop index headervalue;
+alter table dbmail_headervalue drop index physmessage_id_2;
+
+alter table dbmail_headervalue alter headervalue headervalue text not null default '';
+
+alter table dbmail_headervalue add unique index physmessage_id_2 (physmessage_id, headername_id, headervalue);
+alter table dbmail_headervalue add index headervalue (headervalue(255));
+
+
