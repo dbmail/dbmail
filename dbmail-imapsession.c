@@ -614,10 +614,10 @@ int dbmail_imap_session_get_msginfo_range(struct ImapSession *self, u64_t msg_id
 		 "FROM %smessages msg, %sphysmessage pm "
 		 "WHERE pm.id = msg.physmessage_id "
 		 "AND message_idnr BETWEEN '%llu' AND '%llu' "
-		 "AND mailbox_idnr = '%llu' AND status < '%d' "
+		 "AND mailbox_idnr = '%llu' AND status IN ('%d','%d') "
 		 "ORDER BY message_idnr ASC",to_char_str,DBPFX,DBPFX,
 		 msg_idnr_low, msg_idnr_high, ud->mailbox.uid,
-		 MESSAGE_STATUS_DELETE);
+		 MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
 	dm_free(to_char_str);
 
 	if (db_query(query) == -1) {
@@ -631,11 +631,7 @@ int dbmail_imap_session_get_msginfo_range(struct ImapSession *self, u64_t msg_id
 		return 0;
 	}
 
-	if (! (result = g_new0(msginfo_t, nrows))) { 
-		trace(TRACE_ERROR, "%s,%s: out of memory", __FILE__, __func__);
-		db_free_result();
-		return -2;
-	}
+	result = g_new0(msginfo_t, nrows);
 
 	for (i = 0; i < nrows; i++) {
 		/* flags */

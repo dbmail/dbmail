@@ -1,3 +1,12 @@
+2006-05-02  Paul J Stevens <paul@nfg.nl>
+
+	* db.c, dbmail-imapsession.c:
+	minor cleanups in mailbox.seq_list construction
+	* dbmail.h.in:
+	add some defines for solaris and glibc2
+	* debian/control:
+	add asciidoc to the build dependencies
+
 2006-05-01  Aaron Stone  <aaron@serendipity.cx>
 
 	* man/*:
