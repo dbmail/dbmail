@@ -214,7 +214,8 @@ if test ! "${sieveheadername-x}" = "x"
 then
   # --with-sieve was specified
   AC_MSG_RESULT([using Sieve sorting])
-  CFLAGS="$CFLAGS -DSIEVE"
+  dnl CFLAGS="$CFLAGS -DSIEVE"
+  AC_DEFINE([SIEVE], 1, [Define if Sieve sorting will be used.])
   # Redefine if there's actually Sieve sorting
   SORTALIB="modules/.libs/libsort_sieve.a"
   SORTLTLIB="modules/libsort_sieve.la"
@@ -294,7 +295,8 @@ if test ! "${authldapheadername-x}" = "x"
 then
 	# --with-auth-ldap was specified
 	AC_MSG_RESULT([using LDAP authentication])
-	CFLAGS="$CFLAGS -DAUTHLDAP"
+	dnl CFLAGS="$CFLAGS -DAUTHLDAP"
+	AC_DEFINE([AUTHLDAP], 1, [Define if LDAP authentication will be used.])
 	if test "$withval" != "yes"
 	then
 		AC_MSG_CHECKING([for ldap.h (user supplied)])
@@ -665,7 +667,8 @@ dnl with or without modifications, as long as this notice is preserved.
 AC_DEFUN([gl_GETOPT_SUBSTITUTE],
 [
   dnl Modified for DBMail, which does not use the Gnulib getopt.
-  CFLAGS="$CFLAGS -DUSE_DM_GETOPT"
+  dnl CFLAGS="$CFLAGS -DUSE_DM_GETOPT"
+  AC_DEFINE([USE_DM_GETOPT], 1, [Define if our local getopt will be used.])
   USE_DM_GETOPT=1
 ])
 

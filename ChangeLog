@@ -1,3 +1,9 @@
+2006-05-02  Aaron Stone  <aaron@serendipity.cx>
+
+	* acinclude.m4:
+	Changed SIEVE, AUTHLDAP, USE_DM_GETOPT over to AC_DEFINE, which
+	means that they don't have to appear on the compile command line.
+
 2006-05-02  Paul J Stevens <paul@nfg.nl>
 
 	* db.c, dbmail-imapsession.c:
