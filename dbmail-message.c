@@ -871,9 +871,7 @@ void _header_cache(const char *header, const char *value, gpointer user_data)
 {
 	u64_t id;
 	struct DbmailMessage *self = (struct DbmailMessage *)user_data;
-	GString *q;
-	gchar *safe_value;
-	gchar *clean_value;
+	gchar *q, *safe_value;
 
 	dm_errno = 0;
 
@@ -884,29 +882,21 @@ void _header_cache(const char *header, const char *value, gpointer user_data)
 	if ((_header_get_id(self, header, &id) < 0))
 		return;
 
-	/* clip oversized headervalues */
-	if (! (clean_value = g_strdup(value)))
-	        return;
-	if (strlen(clean_value) > 255)
-	        clean_value[255] = '\0';
-	if (! (safe_value = dm_stresc(clean_value))) {
-		g_free(clean_value);	
+	if (! (safe_value = dm_stresc(value))) 
 		return;
-	}
 
-	q = g_string_new("");
-
-	g_string_printf(q,"INSERT INTO %sheadervalue (headername_id, physmessage_id, headervalue) "
+	q = g_strdup_printf("INSERT INTO %sheadervalue (headername_id, physmessage_id, headervalue) "
 			"VALUES (%llu,%llu,'%s')", DBPFX, id, self->physid, safe_value);
-
 	g_free(safe_value);
-	g_free(clean_value);
 
-	if (db_query(q->str))
-		/* ignore possible duplicate key collisions */
-		trace(TRACE_WARNING,"%s,%s: insert  headervalue failed",
+	db_savepoint_transaction("header_cache");
+	if (db_query(q)) {
+		trace(TRACE_INFO,"%s,%s: insert headervalue failed",
 		      __FILE__,__func__);
-	g_string_free(q,TRUE);
+		db_rollback_savepoint_transaction("header_cache");
+	}
+	g_free(q);
+
 }
 
 static void insert_address_cache(u64_t physid, const char *field, InternetAddressList *ialist)
