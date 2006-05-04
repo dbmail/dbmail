@@ -229,10 +229,10 @@ CREATE TABLE dbmail_headervalue (
 	headername_id	BIGINT NOT NULL,
         physmessage_id	BIGINT NOT NULL,
 	id		BIGINT NOT NULL AUTO_INCREMENT,
-	headervalue	VARCHAR(255) NOT NULL DEFAULT '',
+	headervalue	TEXT NOT NULL,
 	PRIMARY KEY (id),
 	UNIQUE (physmessage_id, id),
-	UNIQUE (physmessage_id, headername_id, headervalue),
+	UNIQUE (physmessage_id, headername_id, headervalue(255)),
 	INDEX (headername_id),
 	FOREIGN KEY (headername_id)
 		REFERENCES dbmail_headername(id) ON UPDATE CASCADE ON DELETE CASCADE,
