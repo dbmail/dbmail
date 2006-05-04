@@ -1,3 +1,14 @@
+2005-05-04  Paul J Stevens <paul@nfg.nl>
+
+	* sql/mysql/update_headervalue_01.mysql:
+	added update script for headervalue storage type (mysql)
+	* sql/mysql/update_headervalue_01.mysql:
+	finish update script for headervalue width
+	* dbmail-message.c:
+	headervalues are no longer truncated in the headercache
+	* pool.c:
+	add simple retension mechanism to the pooling code
+
 2006-05-02  Aaron Stone  <aaron@serendipity.cx>
 
 	* acinclude.m4:
