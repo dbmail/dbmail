@@ -457,6 +457,21 @@ void manage_stop_children()
 		}
 	}
 }
+static pid_t reap_child()
+{
+	pid_t chpid=0;
+	
+	if ((chpid = get_idle_spare()) < 0)
+		return chpid;
+
+	kill(chpid, SIGTERM);
+	
+	if (waitpid(chpid, NULL, 0) == chpid) 
+		scoreboard_release(chpid);
+
+	return chpid;
+	
+}
 void manage_spare_children()
 {
 	/* 
@@ -489,32 +504,33 @@ void manage_spare_children()
 	spares = count_spare_children();
 	children = count_children();
 	while (children > scoreboard->conf->startChildren && spares > scoreboard->conf->maxSpareChildren) {
-		
-		if ((chpid = get_idle_spare()) < 0)
+		if ((chpid = reap_child()) > 0) {
+			children--;
+			spares--;
+		}
+		if (chpid < 0)
 			break;
-
-		kill(chpid, SIGTERM);
-		
-		if (waitpid(chpid, NULL, 0) == chpid) 
-			scoreboard_release(chpid);
-
-		children--;
-		spares--;
 	}
+	
+	if ((! chpid) && children > scoreboard->conf->startChildren && spares > scoreboard->conf->minSpareChildren)
+		chpid = reap_child();
+	
+	spares = count_spare_children();
+	children = count_children();
 	
 	/* scoreboard */
 	if (chpid > 0) {
 		trace(TRACE_MESSAGE, "%s,%s: children [%d/%d], spares [%d (%d - %d)]",
 		      __FILE__,__func__,
-		      count_children(), scoreboard->conf->maxChildren,
-		      count_spare_children(),
+		      children, scoreboard->conf->maxChildren, spares,
 		      scoreboard->conf->minSpareChildren,
 		      scoreboard->conf->maxSpareChildren);
-	} else if (chpid < 0) {
-		trace(TRACE_ERROR, "%s,%s: error scaling up/down", __FILE__, __func__);
 	}
+
+	if (chpid < 0)
+		trace(TRACE_WARNING, "%s,%s: error scaling up/down", __FILE__, __func__);
 	
-	if (!count_children()) {
+	if (!children) {
 		trace(TRACE_WARNING, "%s,%s: no children left ?. Aborting.", __FILE__,__func__);
 		GeneralStopRequested = 1;
 	}
