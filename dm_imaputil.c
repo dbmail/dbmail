@@ -473,6 +473,7 @@ static GList * _imap_append_alist_as_plist(GList *list, const InternetAddressLis
 	gchar *s = NULL, *st = NULL;
 	gchar **tokens;
 	gchar *name;
+	size_t l;
 
 	if (ialist==NULL)
 		return g_list_append_printf(list, "NIL");
@@ -486,11 +487,18 @@ static GList * _imap_append_alist_as_plist(GList *list, const InternetAddressLis
 		/* personal name */
 		if (ia->name) {
 			name = g_mime_utils_header_encode_phrase((unsigned char *)ia->name);
-			if (name[0] == '"')
-				t = g_list_append_printf(t, "%s", name);
-			else
-				t = g_list_append_printf(t, "\"%s\"", name);
+			l = strlen(name);
+			s = name;
+			/* chop off trailing and leading double-quotes */
+			if (s[l-1] == '"')
+				s[l-1] = '\0';
+			if (s[0] == '"')
+				s++;
+			/* so we can safely escape inserted double-quotes */
+			st = g_strescape(s,NULL);
+			t = g_list_append_printf(t, "\"%s\"", st);
 			g_free(name);
+			g_free(st);
 		} else
 			t = g_list_append_printf(t, "NIL");
 
