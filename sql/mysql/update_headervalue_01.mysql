@@ -4,7 +4,6 @@
 
 # only apply this when dbmail_headervalue.headervalue is VARCHAR(255);
 
-alter table dbmail_headervalue drop index headervalue;
 alter table dbmail_headervalue drop index physmessage_id_2;
 
 alter table dbmail_headervalue change headervalue headervalue text not null;
