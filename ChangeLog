@@ -1,3 +1,12 @@
+2006-05-05  Paul J Stevens <paul@nfg.nl>
+
+	* sql/mysql/create_tables.mysql, sql/mysql/migrate_from_2.0_to_2.1.mysql:
+	update mysql scripts for new headervalue type
+	* debian/changelog, debian/dbmail-sieve.manpages, debian/dbmail.manpages:
+	updates for new manpages
+	* dm_imaputil.c:
+	smash another envelope bug
+
 2005-05-04  Paul J Stevens <paul@nfg.nl>
 
 	* sql/mysql/update_headervalue_01.mysql:
