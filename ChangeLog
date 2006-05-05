@@ -1,5 +1,7 @@
 2006-05-05  Paul J Stevens <paul@nfg.nl>
 
+	* sql/mysql/update_headervalue_01.mysql:
+	remove redundant index from update script
 	* sql/mysql/create_tables.mysql, sql/mysql/migrate_from_2.0_to_2.1.mysql:
 	update mysql scripts for new headervalue type
 	* debian/changelog, debian/dbmail-sieve.manpages, debian/dbmail.manpages:
