@@ -1254,7 +1254,7 @@ int dbmail_imap_session_prompt(struct ImapSession * self, char * prompt, char * 
 	/* value is the same size as buf.
 	 * base64 decoding is always shorter. */
 	buflen = base64_decode(value, buf);
-	value[buflen-1] = '\0';
+	value[buflen] = '\0';
 	
 	/* Double check in case the algorithm went nuts. */
 	if (buflen >= (MAX_LINESIZE - 1)) {
