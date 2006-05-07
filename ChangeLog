@@ -1,3 +1,21 @@
+2006-05-06  Aaron Stone  <aaron@seerendipity.cx>
+
+	* dbmail.conf:
+	Added comment for anonymous ldap bindings.
+	* misc.h, misc.c, dm_imaputil.h, dm_imaputil.c,
+	md5.h, md5.c, dbmd5.h, dbmd5.c:
+	Removed all MD5 and Base64 encoding and decoding code.
+	* dm_md5.h, dm_md5.c:
+	One stop shop for MD5. Uses same code as before, but now it's static.
+	* dm_base64.h, dm_base64.c:
+	One stop shop for Base64. Uses a faster public domain algorithm.
+	* user.c, dbmail-user.c, modules/authsql.c:
+	Added support for MD5-Base64 passwords.
+	* modules/sortsieve.c, dbmail-imapsession.c, timsieve.c:
+	Use new MD5 and Base64 functions with far fewer casts.
+	* check_dbmail_auth.c:
+	Test suite for all password encryption types.
+
 2006-05-05  Paul J Stevens <paul@nfg.nl>
 
 	* sql/mysql/update_headervalue_01.mysql:

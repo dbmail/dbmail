@@ -87,8 +87,6 @@
 #include "imap4.h"
 #include "imapcommands.h"
 #include "memblock.h"
-#include "dbmd5.h"
-#include "md5.h"
 #include "server.h"
 #include "serverchild.h"
 #include "pool.h"
@@ -96,8 +94,10 @@
 #include "quota.h"
 #include "lmtp.h"
 
+#include "dm_md5.h"
 #include "dm_cidr.h"
 #include "dm_imaputil.h"
+#include "dm_base64.h"
 #include "dm_getopt.h"
 
 #ifdef SIEVE

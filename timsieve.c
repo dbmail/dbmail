@@ -322,7 +322,8 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 					size_t i;
 					u64_t useridnr;
 
-					tmp64 = base64_decode(tmpleft, tmplen);
+					tmpleft[tmplen] = '\0'; // Ensure there's a nul termination.
+					tmp64 = base64_decodev(tmpleft);
 					if (tmp64 == NULL) {
 						ci_write((FILE *)stream, "NO \"SASL decode error.\"\r\n");
 					} else {
@@ -345,10 +346,7 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 						} else {
 							ci_write((FILE *) stream, "NO \"Username or password incorrect.\"\r\n");
 						}
-						for (i = 0; tmp64[i] != NULL; i++) {
-							dm_free(tmp64[i]);
-						}
-						dm_free(tmp64);
+						g_strfreev(tmp64);
 					}
 				}	/* if... tmplen < 1 */
 			} /* if... strncasecmp() == "PLAIN" */

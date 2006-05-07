@@ -37,8 +37,6 @@ int is_textplain(struct dm_list *hdr);
 size_t stridx(const char *s, char ch);
 int checkchars(const char *s);
 int checktag(const char *s);
-void base64encode(char *in, char *out);
-void base64decode(char *in, char *out);
 int binary_search(const u64_t * array, unsigned arraysize, u64_t key, unsigned int *key_idx);
 void send_data(FILE * to, MEM * from, int cnt);
 

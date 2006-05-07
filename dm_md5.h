@@ -15,20 +15,19 @@
  You should have received a copy of the GNU General Public License
  along with this program; if not, write to the Free Software
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+ $Id: md5.h 1891 2005-10-03 10:01:21Z paul $
 */
 
-/* $Id$
- *
- * MD5 creation */
-
-#ifndef _DBMD5_H
-#define _DBMD5_H
+#ifndef _MD5_H
+#define _MD5_H
 
 /**
  * \brief calculate md5-hash of a string
  * \param buf input string
  * \return md5 hash of buf
  */
-unsigned char *makemd5(const unsigned char * const buf);
+char *dm_md5(const unsigned char * const buf);
+char *dm_md5_base64(const unsigned char * const buf);
 
 #endif

@@ -1,5 +1,6 @@
 /*
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
+ Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -17,39 +18,24 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id$ 
+/* $Id: dm_imaputil.h 1878 2005-09-04 06:34:44Z paul $
+ * dm_base64.h
  *
- * Functions to create md5 hash from buf */
+ * Base64 encoding and decoding routines.
+ */
+
+#ifndef _BASE64_H
+#define _BASE64_H
 
 #include "dbmail.h"
 
-unsigned char *makemd5(const unsigned char * const buf)
-{
-	struct GdmMD5Context mycontext;
-	unsigned char result[16];
-	unsigned char *md5hash;
-	int i;
+/* out must be preallocated to at least 1.5 * inlen. */
+void base64_encode(unsigned char *out, const unsigned char *in, int inlen);
 
-	if (buf == NULL) {
-		trace(TRACE_ERROR, "%s,%s: received NULL argument",
-		      __FILE__, __func__);
-		return NULL;
-	}
+/* returns the length of the decoded string, as it may be raw binary. */
+int base64_decode(char *out, const char *in);
 
-	md5hash = (unsigned char *) dm_malloc(33);
-	if (md5hash == NULL) {
-		trace(TRACE_ERROR, "%s,%s: error allocating memory",
-		      __FILE__, __func__);
-		return NULL;
-	}
+/* Free the result with g_strfreev. */
+char **base64_decodev(char *in);
 
-	gdm_md5_init(&mycontext);
-	gdm_md5_update(&mycontext, buf, strlen((char *)buf));
-	gdm_md5_final(result, &mycontext);
-
-	for (i = 0; i < 16; i++) {
-		sprintf((char *)&md5hash[i * 2], "%02x", result[i]);
-	}
-
-	return md5hash;
-}
+#endif

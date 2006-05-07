@@ -34,7 +34,7 @@
 typedef enum {
 	PLAINTEXT = 0, PLAINTEXT_RAW, CRYPT, CRYPT_RAW,
 	MD5_HASH, MD5_HASH_RAW, MD5_DIGEST, MD5_DIGEST_RAW,
-	SHADOW, PWTYPE_NULL
+	MD5_BASE64, MD5_BASE64_RAW, SHADOW, PWTYPE_NULL
 } pwtype_t;
 
 int mkpassword(const char * const user, const char * const passwd,

@@ -95,7 +95,7 @@ int drop_privileges(char *newuser, char *newgroup)
 void create_unique_id(char *target, u64_t message_idnr)
 {
 	char *a_message_idnr, *a_rand;
-	unsigned char *md5_str;
+	char *md5_str;
 
 	a_message_idnr = g_strdup_printf("%llu",message_idnr);
 	a_rand = g_strdup_printf("%d",rand());
@@ -105,8 +105,8 @@ void create_unique_id(char *target, u64_t message_idnr)
 			 a_message_idnr, a_rand);
 	else
 		snprintf(target, UID_SIZE, "%s", a_rand);
-	md5_str = makemd5((unsigned char *)target);
-	snprintf(target, UID_SIZE, "%s", (char *)md5_str);
+	md5_str = dm_md5((unsigned char *)target);
+	snprintf(target, UID_SIZE, "%s", md5_str);
 	trace(TRACE_DEBUG, "%s,%s: created: %s", __FILE__, __func__,
 	      target);
 	dm_free(md5_str);
@@ -215,157 +215,6 @@ int ci_write(FILE * fd, char * msg, ...)
 	return 0;
 }
 
-
-/* This base64 code is heavily modified from fetchmail.
- *
- * Original copyright notice:
- *
- * The code in the fetchmail distribution is Copyright 1997 by Eric
- * S. Raymond.  Portions are also copyrighted by Carl Harris, 1993
- * and 1995.  Copyright retained for the purpose of protecting free
- * redistribution of source.
- * */
-
-#define BAD     -1
-static const char base64val[] = {
-	BAD, BAD, BAD, BAD, BAD, BAD, BAD, BAD, BAD, BAD, BAD, BAD, BAD,
-	    BAD, BAD, BAD,
-	BAD, BAD, BAD, BAD, BAD, BAD, BAD, BAD, BAD, BAD, BAD, BAD, BAD,
-	    BAD, BAD, BAD,
-	BAD, BAD, BAD, BAD, BAD, BAD, BAD, BAD, BAD, BAD, BAD, 62, BAD,
-	    BAD, BAD, 63,
-	52, 53, 54, 55, 56, 57, 58, 59, 60, 61, BAD, BAD, BAD, BAD, BAD,
-	    BAD,
-	BAD, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
-	15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, BAD, BAD, BAD, BAD,
-	    BAD,
-	BAD, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
-	41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, BAD, BAD, BAD, BAD, BAD
-};
-#define DECODE64(c)  (isascii(c) ? base64val[c] : BAD)
-
-/* Base64 to raw bytes in quasi-big-endian order */
-/* Returns 0 on success, -1 on failure */
-int base64_decode_internal(const char *in, size_t inlen, size_t maxlen,
-			   char *out, size_t * outlen)
-{
-	size_t pos = 0;
-	size_t len = 0;
-	register unsigned char digit1, digit2, digit3, digit4;
-
-	/* Don't even bother if the string is too short */
-	if (inlen < 4)
-		return -1;
-
-	do {
-		digit1 = in[0];
-		if (DECODE64(digit1) == BAD)
-			return -1;
-		digit2 = in[1];
-		if (DECODE64(digit2) == BAD)
-			return -1;
-		digit3 = in[2];
-		if (digit3 != '=' && DECODE64(digit3) == BAD)
-			return -1;
-		digit4 = in[3];
-		if (digit4 != '=' && DECODE64(digit4) == BAD)
-			return -1;
-		in += 4;
-		pos += 4;
-		++len;
-		if (maxlen && len > maxlen)
-			return -1;
-		*out++ = (DECODE64(digit1) << 2) | (DECODE64(digit2) >> 4);
-		if (digit3 != '=') {
-			++len;
-			if (maxlen && len > maxlen)
-				return -1;
-			*out++ =
-			    ((DECODE64(digit2) << 4) & 0xf0) |
-			    (DECODE64(digit3) >> 2);
-			if (digit4 != '=') {
-				++len;
-				if (maxlen && len > maxlen)
-					return -1;
-				*out++ =
-				    ((DECODE64(digit3) << 6) & 0xc0) |
-				    DECODE64(digit4);
-			}
-		}
-	} while (pos < inlen && digit4 != '=');
-
-	*out = '\0';
-
-	*outlen = len;
-	return 0;
-}
-
-/* A frontend to the base64_decode_internal() that deals with embedded strings */
-char **base64_decode(char *str, size_t len)
-{
-	size_t i, j, n, maxlen;
-	size_t numstrings = 0;
-	char *str_decoded = NULL;
-	size_t len_decoded = 0;
-	char **ret = NULL;
-
-	/* Base64 encoding required about 40% more space.
-	 * So we'll allocate 50% more space. */
-	maxlen = 3 * len / 2;
-	str_decoded = (char *) dm_malloc(sizeof(char) * maxlen);
-	if (str_decoded == NULL)
-		return NULL;
-
-	if (0 !=
-	    base64_decode_internal(str, len, maxlen, str_decoded,
-				   &len_decoded))
-		return NULL;
-	if (str_decoded == NULL)
-		return NULL;
-
-	/* Count up the number of embedded strings... */
-	for (i = 0; i <= len_decoded; i++) {
-		if (str_decoded[i] == '\0') {
-			numstrings++;
-		}
-	}
-
-	/* Allocate an array of arrays large enough
-	 * for the strings and a terminating NULL */
-	ret = (char **) dm_malloc(sizeof(char *) * (numstrings + 1));
-	if (ret == NULL)
-		return NULL;
-
-	/* If there are more strings, copy those, too */
-	for (i = j = n = 0; i <= len_decoded; i++) {
-		if (str_decoded[i] == '\0') {
-			ret[n] = dm_strdup(str_decoded + j);
-			j = i + 1;
-			n++;
-		}
-	}
-
-	/* Put that final NULL on the end of the array */
-	ret[n] = NULL;
-
-	dm_free(str_decoded);
-
-	return ret;
-}
-
-void base64_free(char **ret)
-{
-	size_t i;
-
-	if (ret == NULL)
-		return;
-
-	for (i = 0; ret[i] != NULL; i++) {
-		dm_free(ret[i]);
-	}
-
-	dm_free(ret);
-}
 
 /* Return 0 is all's well. Returns something else if not... */
 int read_from_stream(FILE * instream, char **m_buf, size_t maxlen)

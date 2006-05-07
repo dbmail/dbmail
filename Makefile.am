@@ -40,11 +40,11 @@ COMMON = dbmail-user.c \
 	config.c \
 	debug.c \
 	list.c \
-	dbmd5.c \
-	md5.c \
 	db.c \
 	misc.c \
-	pidfile.c $(DM_GETOPT)
+	pidfile.c \
+	dm_md5.c \
+	dm_base64.c $(DM_GETOPT)
 	
 SERVER = server.c \
 	serverchild.c \
@@ -119,6 +119,7 @@ TESTS=check_dbmail_common \
 	check_dbmail_imapd \
 	check_dbmail_message \
 	check_dbmail_mailbox \
+	check_dbmail_auth \
 	check_dbmail_user \
 	check_dbmail_util \
 	check_dbmail_dsn \
@@ -130,6 +131,10 @@ noinst_PROGRAMS=$(TESTS)
 check_dbmail_user_SOURCES=check_dbmail_user.c
 check_dbmail_user_LDADD=libdbmail.la @CHECK_LIBS@
 check_dbmail_user_INCLUDES=@CHECK_CFLAGS@
+
+check_dbmail_auth_SOURCES=check_dbmail_auth.c
+check_dbmail_auth_LDADD=libdbmail.la @CHECK_LIBS@
+check_dbmail_auth_INCLUDES=@CHECK_CFLAGS@
 
 check_dbmail_util_SOURCES=check_dbmail_util.c
 check_dbmail_util_LDADD=libdbmail.la @CHECK_LIBS@
