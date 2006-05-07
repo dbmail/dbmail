@@ -19,10 +19,9 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 
- The Base64 code contained herein is was loosely quoted from a
- variety of nearly identical sources containing statements placing
- their contents in the public domain. To the best of my knowledge,
- the code below carries no copyright. - Aaron Stone, 2006.
+ The Base64 code contained herein was written by Eric S. Raymond
+ with the statement: "Copyright retained for the purpose
+ of protecting free redistribution of source."
 */
 
 #include "dbmail.h"
