@@ -1223,9 +1223,7 @@ int dbmail_imap_session_handle_auth(struct ImapSession * self, char * username, 
 /* Value must be preallocated to MAX_LINESIZE length. */
 int dbmail_imap_session_prompt(struct ImapSession * self, char * prompt, char * value )
 {
-	char *buf;
-	char *promptcat;
-	char *prompt64;
+	char *buf, *prompt64, *promptcat;
 	int buflen;
 	
 	if (! (buf = g_new0(char, MAX_LINESIZE))) {
@@ -1236,6 +1234,7 @@ int dbmail_imap_session_prompt(struct ImapSession * self, char * prompt, char * 
 	/* base64 encoding increases string length by about 40%. */
 	if (! (prompt64 = g_new0(char, strlen(prompt) * 2))) {
 		trace(TRACE_ERROR, "%s,%s: oom failure", __FILE__, __func__);
+		dm_free(buf);
 		return -1;
 	}
 
@@ -1245,21 +1244,28 @@ int dbmail_imap_session_prompt(struct ImapSession * self, char * prompt, char * 
 	dbmail_imap_session_printf(self, "+ %s\r\n", prompt64);
 	fflush(self->ci->tx);
 	
-	if ( (dbmail_imap_session_readln(self, buf) <= 0) ) 
+	if ( (dbmail_imap_session_readln(self, buf) <= 0) )  {
+		dm_free(buf);
+		dm_free(prompt64);
+		dm_free(promptcat);
 		return -1;
+	}
 
 	/* value is the same size as buf.
 	 * base64 decoding is always shorter. */
-	memset(value, '\0', MAX_LINESIZE);
 	buflen = base64_decode(value, buf);
+	value[buflen-1] = '\0';
 	
-	if (buflen >= MAX_LINESIZE) {
+	/* Double check in case the algorithm went nuts. */
+	if (buflen >= (MAX_LINESIZE - 1)) {
 		/* Oh shit. */
 		trace(TRACE_FATAL, "%s,%s: possible memory corruption", __FILE__, __func__);
 		return -1;
 	}
 
 	dm_free(buf);
+	dm_free(prompt64);
+	dm_free(promptcat);
 	
 	return 0;
 }
