@@ -51,8 +51,6 @@ const char AcceptedTagChars[] =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     "!@#$%^&-=_`~\\|'\" ;:,.<>/? ";
 
-char base64encodestring[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
 /* some basic imap type utils */
 char *dbmail_imap_plist_collapse(const char *in)
 {
@@ -875,70 +873,6 @@ int checktag(const char *s)
 		}
 	}
 	return 1;
-}
-
-
-/*
- * base64encode()
- *
- * encodes a string using base64 encoding
- */
-void base64encode(char *in, char *out)
-{
-	for (; strlen(in) >= 3; in += 3) {
-		*out++ = base64encodestring[(in[0] & 0xFC) >> 2U];
-		*out++ =
-		    base64encodestring[((in[0] & 0x03) << 4U) |
-				       ((in[1] & 0xF0) >> 4U)];
-		*out++ =
-		    base64encodestring[((in[1] & 0x0F) << 2U) |
-				       ((in[2] & 0xC0) >> 6U)];
-		*out++ = base64encodestring[(in[2] & 0x3F)];
-	}
-
-	if (strlen(in) == 2) {
-		/* 16 bits left to encode */
-		*out++ = base64encodestring[(in[0] & 0xFC) >> 2U];
-		*out++ =
-		    base64encodestring[((in[0] & 0x03) << 4U) |
-				       ((in[1] & 0xF0) >> 4U)];
-		*out++ = base64encodestring[((in[1] & 0x0F) << 2U)];
-		*out++ = '=';
-
-		return;
-	}
-
-	if (strlen(in) == 1) {
-		/* 8 bits left to encode */
-		*out++ = base64encodestring[(in[0] & 0xFC) >> 2U];
-		*out++ = base64encodestring[((in[0] & 0x03) << 4U)];
-		*out++ = '=';
-		*out++ = '=';
-
-		return;
-	}
-}
-
-
-/*
- * base64decode()
- *
- * decodes a base64 encoded string
- */
-void base64decode(char *in, char *out)
-{
-	for (; strlen(in) >= 4; in += 4) {
-		*out++ = (stridx(base64encodestring, in[0]) << 2U)
-		    | ((stridx(base64encodestring, in[1]) & 0x30) >> 4U);
-
-		*out++ = ((stridx(base64encodestring, in[1]) & 0x0F) << 4U)
-		    | ((stridx(base64encodestring, in[2]) & 0x3C) >> 2U);
-
-		*out++ = ((stridx(base64encodestring, in[2]) & 0x03) << 6U)
-		    | (stridx(base64encodestring, in[3]) & 0x3F);
-	}
-
-	*out = 0;
 }
 
 

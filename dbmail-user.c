@@ -151,6 +151,7 @@ int mkpassword(const char * const user, const char * const passwd,
 	int pwindex = 0;
 	int result = 0;
 	char *entry = NULL;
+	char *md5str = NULL;
 	char pw[50];
 
 	/* These are the easy text names. */
@@ -158,7 +159,7 @@ int mkpassword(const char * const user, const char * const passwd,
 		"plaintext",	"plaintext-raw",	"crypt",	"crypt-raw",
 		"md5", 		"md5-raw",		"md5sum",	"md5sum-raw", 
 		"md5-hash",	"md5-hash-raw",		"md5-digest",	"md5-digest-raw",
-		"shadow", 	"", 			NULL
+		"md5-base64",	"md5-base64-raw",	"shadow", 	"", 	NULL
 	};
 
 	/* These must correspond to the easy text names. */
@@ -166,7 +167,7 @@ int mkpassword(const char * const user, const char * const passwd,
 		PLAINTEXT, 	PLAINTEXT_RAW, 		CRYPT,		CRYPT_RAW,
 		MD5_HASH, 	MD5_HASH_RAW,		MD5_DIGEST,	MD5_DIGEST_RAW,
 		MD5_HASH,	MD5_HASH_RAW,		MD5_DIGEST,	MD5_DIGEST_RAW,
-		SHADOW,		PLAINTEXT,		PWTYPE_NULL
+		MD5_BASE64,	MD5_BASE64_RAW,		SHADOW,		PLAINTEXT,	PWTYPE_NULL
 	};
 
 	memset(pw, 0, 50);
@@ -174,7 +175,7 @@ int mkpassword(const char * const user, const char * const passwd,
 	/* Only search if there's a string to compare. */
 	if (passwdtype)
 		/* Find a matching pwtype. */
-		for (pwindex = 0; pwtypecodes[pwindex] < PWTYPE_NULL; pwindex++)
+		for (pwindex = 0; pwtypecodes[pwindex] != PWTYPE_NULL; pwindex++)
 			if (strcasecmp(passwdtype, pwtypes[pwindex]) == 0)
 				break;
 
@@ -204,12 +205,26 @@ int mkpassword(const char * const user, const char * const passwd,
 			*enctype = "md5";
 			break;
 		case MD5_DIGEST:
-			null_strncpy(pw, (char *)makemd5((unsigned char *)passwd), 49);
+			md5str = dm_md5((unsigned char *)passwd);
+			null_strncpy(pw, md5str, 49);
 			*enctype = "md5sum";
+			dm_free(md5str);
 			break;
 		case MD5_DIGEST_RAW:
 			null_strncpy(pw, passwd, 49);
 			*enctype = "md5sum";
+			break;
+		case MD5_BASE64:
+			{
+			md5str = dm_md5_base64((unsigned char *)passwd);
+			null_strncpy(pw, md5str, 49);
+			*enctype = "md5base64";
+			dm_free(md5str);
+			}
+			break;
+		case MD5_BASE64_RAW:
+			null_strncpy(pw, passwd, 49);
+			*enctype = "md5base64";
 			break;
 		case SHADOW:
 			entry = bgetpwent(passwdfile, user);

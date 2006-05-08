@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: user.c 2065 2006-04-10 20:38:36Z paul $
+/* $Id: user.c 2107 2006-05-07 07:12:51Z aaron $
  * This is the dbmail-user program
  * It makes adding users easier 
  *
@@ -57,8 +57,9 @@ int do_showhelp(void) {
 	printf("     -w passwd specify user's password on the command line\n");
 	printf("     -W [file] read from a file or prompt for a user's password\n");
 	printf("     -p pwtype password type may be one of the following:\n"
-	       "               plaintext, crypt, md5-hash, md5-digest,\n"
-	       "               crypt-raw, md5-hash-raw, md5-digest-raw\n");
+	       "               plaintext, crypt, md5-hash, md5-digest, md5-base64\n"
+	       "               each type may be given a '-raw' suffix to indicate\n"
+	       "               that the password argument has already been encoded.\n");
 	printf("     -P [file] pull encrypted password from the shadow file\n");
 	printf("     -u user   new username (only useful for -c, change)\n");
 	printf("     -g client assign the user to a client\n");
@@ -272,7 +273,7 @@ int main(int argc, char *argv[])
 		case 'V':
 			/* Show the version and return non-zero. */
 			printf("\n*** DBMAIL: dbmail-users version "
-			       "$Revision: 2065 $ %s\n\n", COPYRIGHT);
+			       "$Revision: 2107 $ %s\n\n", COPYRIGHT);
 			result = 1;
 			break;
 

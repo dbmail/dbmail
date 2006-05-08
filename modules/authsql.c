@@ -459,7 +459,7 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 			      "%s,%s: validating using MD5 digest comparison",
 			      __FILE__, __func__);
 			/* redundant statement: query_result = db_get_result(0, 1); */
-			md5str = (char *)makemd5((unsigned char *)password);
+			md5str = dm_md5((unsigned char *)password);
 			is_validated = (strncmp(md5str, query_result, 32) == 0) ? 1 : 0;
 			dm_free(md5str);
 		} else {
@@ -478,7 +478,15 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 		      "%s,%s: validating using MD5 digest comparison",
 		      __FILE__, __func__);
 		query_result = db_get_result(0, 1);
-		md5str = (char *)makemd5((unsigned char *)password);
+		md5str = dm_md5((unsigned char *)password);
+		is_validated = (strncmp(md5str, query_result, 32) == 0) ? 1 : 0;
+		dm_free(md5str);
+	} else if (strcasecmp(query_result, "md5base64") == 0) {
+		trace(TRACE_DEBUG,
+		      "%s,%s: validating using MD5 digest base64 comparison",
+		      __FILE__, __func__);
+		query_result = db_get_result(0, 1);
+		md5str = dm_md5_base64((unsigned char *)password);
 		is_validated = (strncmp(md5str, query_result, 32) == 0) ? 1 : 0;
 		dm_free(md5str);
 	}
@@ -545,7 +553,7 @@ u64_t auth_md5_validate(clientinfo_t *ci UNUSED, char *username,
 		 strlen(apop_stamp) + strlen(query_result) + 2, "%s%s",
 		 apop_stamp, query_result);
 
-	md5_apop_we = makemd5((unsigned char *)checkstring);
+	md5_apop_we = dm_md5((unsigned char *)checkstring);
 
 	trace(TRACE_DEBUG,
 	      "%s,%s: checkstring for md5 [%s] -> result [%s]", __FILE__,

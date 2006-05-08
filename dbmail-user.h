@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: dbmail-user.h 2065 2006-04-10 20:38:36Z paul $ 
+/* $Id: dbmail-user.h 2107 2006-05-07 07:12:51Z aaron $ 
  */
 #ifndef _DBMAIL_USER_H
 #define _DBMAIL_USER_H
@@ -34,7 +34,7 @@
 typedef enum {
 	PLAINTEXT = 0, PLAINTEXT_RAW, CRYPT, CRYPT_RAW,
 	MD5_HASH, MD5_HASH_RAW, MD5_DIGEST, MD5_DIGEST_RAW,
-	SHADOW, PWTYPE_NULL
+	MD5_BASE64, MD5_BASE64_RAW, SHADOW, PWTYPE_NULL
 } pwtype_t;
 
 int mkpassword(const char * const user, const char * const passwd,

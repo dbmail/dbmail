@@ -1,6 +1,4 @@
 /*
-  $Id: md5.h 1891 2005-10-03 10:01:21Z paul $
-
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 
  This program is free software; you can redistribute it and/or 
@@ -17,31 +15,19 @@
  You should have received a copy of the GNU General Public License
  along with this program; if not, write to the Free Software
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+ $Id: md5.h 1891 2005-10-03 10:01:21Z paul $
 */
 
-/* header for md5.h */
+#ifndef _MD5_H
+#define _MD5_H
 
-#ifndef GdmMD5_H
-#define GdmMD5_H
-
-typedef unsigned int uint32;
-
-struct GdmMD5Context {
-	uint32 buf[4];
-	uint32 bits[2];
-	unsigned char in[64];
-};
-
-void gdm_md5_init(struct GdmMD5Context *context);
-void gdm_md5_update(struct GdmMD5Context *context,
-		    unsigned char const *buf, unsigned len);
-void gdm_md5_final(unsigned char digest[16],
-		   struct GdmMD5Context *context);
-void gdm_md5_transform(uint32 buf[4], uint32 const in[16]);
-
-/*
- * This is needed to make RSAREF happy on some MS-DOS compilers.
+/**
+ * \brief calculate md5-hash of a string
+ * \param buf input string
+ * \return md5 hash of buf
  */
-/* typedef struct gdm_md5_Context gdm_md5__CTX; */
+char *dm_md5(const unsigned char * const buf);
+char *dm_md5_base64(const unsigned char * const buf);
 
-#endif				/* !GdmMD5_H */
+#endif

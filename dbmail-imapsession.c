@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: dbmail-imapsession.c 2101 2006-05-02 08:55:36Z paul $
+/* $Id: dbmail-imapsession.c 2111 2006-05-07 20:22:06Z aaron $
  * 
  * dm_imaputil.c
  *
@@ -46,7 +46,6 @@ char query[DEF_QUERYSIZE];
 extern cache_t cached_msg;
 
 extern const char *month_desc[];
-extern char base64encodestring[];
 /* returned by date_sql2imap() */
 #define IMAP_STANDARD_DATE "03-Nov-1979 00:00:00 +0000"
 extern char _imapdate[IMAP_INTERNALDATE_LEN];
@@ -1221,33 +1220,52 @@ int dbmail_imap_session_handle_auth(struct ImapSession * self, char * username, 
 }
 
 
+/* Value must be preallocated to MAX_LINESIZE length. */
 int dbmail_imap_session_prompt(struct ImapSession * self, char * prompt, char * value )
 {
-	char *buf;
-	GString *tmp;
-	tmp = g_string_new(prompt);
+	char *buf, *prompt64, *promptcat;
+	int buflen;
 	
 	if (! (buf = g_new0(char, MAX_LINESIZE))) {
 		trace(TRACE_ERROR, "%s,%s: oom failure", __FILE__, __func__);
 		return -1;
 	}
 			
-	tmp = g_string_append(tmp, "\r\n");
-	base64encode(tmp->str, buf);
+	/* base64 encoding increases string length by about 40%. */
+	if (! (prompt64 = g_new0(char, strlen(prompt) * 2))) {
+		trace(TRACE_ERROR, "%s,%s: oom failure", __FILE__, __func__);
+		dm_free(buf);
+		return -1;
+	}
 
-	dbmail_imap_session_printf(self, "+ %s\r\n", buf);
+	promptcat = g_strconcat(prompt, "\r\n", NULL);
+	base64_encode(prompt64, promptcat, strlen(promptcat));
+
+	dbmail_imap_session_printf(self, "+ %s\r\n", prompt64);
 	fflush(self->ci->tx);
 	
-	if ( (dbmail_imap_session_readln(self, buf) <= 0) ) 
+	if ( (dbmail_imap_session_readln(self, buf) <= 0) )  {
+		dm_free(buf);
+		dm_free(prompt64);
+		dm_free(promptcat);
 		return -1;
+	}
 
-	tmp = g_string_new(buf);
-	base64decode(tmp->str, buf);
+	/* value is the same size as buf.
+	 * base64 decoding is always shorter. */
+	buflen = base64_decode(value, buf);
+	value[buflen] = '\0';
+	
+	/* Double check in case the algorithm went nuts. */
+	if (buflen >= (MAX_LINESIZE - 1)) {
+		/* Oh shit. */
+		trace(TRACE_FATAL, "%s,%s: possible memory corruption", __FILE__, __func__);
+		return -1;
+	}
 
-	memcpy(value,buf,strlen(buf));
-
-	g_string_free(tmp,1);
 	dm_free(buf);
+	dm_free(prompt64);
+	dm_free(promptcat);
 	
 	return 0;
 }

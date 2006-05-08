@@ -48,12 +48,10 @@
 #define byteReverse(buf, len)	/* Nothing */
 #else
 
-void byteReverse(unsigned char *buf, unsigned longs);
-
 /*
  * Note: this code is harmless on little-endian machines.
  */
-void byteReverse(unsigned char *buf, unsigned longs)
+static void byteReverse(unsigned char *buf, unsigned longs)
 {
 	uint32 t;
 	do {
@@ -66,11 +64,28 @@ void byteReverse(unsigned char *buf, unsigned longs)
 
 #endif
 
+typedef unsigned int uint32;
+
+struct GdmMD5Context {
+	uint32 buf[4];
+	uint32 bits[2];
+	unsigned char in[64];
+};
+
+static void gdm_md5_init(struct GdmMD5Context *context);
+static void gdm_md5_update(struct GdmMD5Context *context,
+		    unsigned char const *buf, unsigned len);
+static void gdm_md5_final(unsigned char digest[16],
+		   struct GdmMD5Context *context);
+static void gdm_md5_transform(uint32 buf[4], uint32 const in[16]);
+
+
+
 /*
  * Start MD5 accumulation.  Set bit count to 0 and buffer to mysterious
  * initialization constants.
  */
-void gdm_md5_init(struct GdmMD5Context *ctx)
+static void gdm_md5_init(struct GdmMD5Context *ctx)
 {
 	ctx->buf[0] = 0x67452301;
 	ctx->buf[1] = 0xefcdab89;
@@ -85,9 +100,8 @@ void gdm_md5_init(struct GdmMD5Context *ctx)
  * Update context to reflect the concatenation of another buffer full
  * of bytes.
  */
-void
-gdm_md5_update(struct GdmMD5Context *ctx, unsigned char const *buf,
-	       unsigned len)
+static void gdm_md5_update(struct GdmMD5Context *ctx,
+		unsigned char const *buf, unsigned len)
 {
 	uint32 t;
 
@@ -136,7 +150,8 @@ gdm_md5_update(struct GdmMD5Context *ctx, unsigned char const *buf,
  * Final wrapup - pad to 64-byte boundary with the bit pattern 
  * 1 0* (64-bit count of bits processed, MSB-first)
  */
-void gdm_md5_final(unsigned char digest[16], struct GdmMD5Context *ctx)
+static void gdm_md5_final(unsigned char digest[16],
+		struct GdmMD5Context *ctx)
 {
 	unsigned count;
 	unsigned char *p;
@@ -194,7 +209,7 @@ void gdm_md5_final(unsigned char digest[16], struct GdmMD5Context *ctx)
  * reflect the addition of 16 longwords of new data.  GdmMD5Update blocks
  * the data and converts bytes into longwords for this routine.
  */
-void gdm_md5_transform(uint32 buf[4], uint32 const in[16])
+static void gdm_md5_transform(uint32 buf[4], uint32 const in[16])
 {
 	register uint32 a, b, c, d;
 
@@ -276,3 +291,58 @@ void gdm_md5_transform(uint32 buf[4], uint32 const in[16])
 	buf[2] += c;
 	buf[3] += d;
 }
+
+char *dm_md5(const unsigned char * const buf)
+{
+	struct GdmMD5Context mycontext;
+	unsigned char result[16];
+	char *md5hash;
+	int i;
+
+	if (buf == NULL) {
+		trace(TRACE_ERROR, "%s,%s: received NULL argument",
+		      __FILE__, __func__);
+		return NULL;
+	}
+
+	md5hash = g_new0(char, 33);
+	if (md5hash == NULL) {
+		trace(TRACE_ERROR, "%s,%s: error allocating memory",
+		      __FILE__, __func__);
+		return NULL;
+	}
+
+	gdm_md5_init(&mycontext);
+	gdm_md5_update(&mycontext, buf, strlen((char *)buf));
+	gdm_md5_final(result, &mycontext);
+
+	for (i = 0; i < 16; i++) {
+		sprintf(&md5hash[i * 2], "%02x", result[i]);
+	}
+
+	return md5hash;
+}
+
+/* Always returns an allocation of 18 bytes. */
+char *dm_md5_base64(const unsigned char * const buf)
+{
+	struct GdmMD5Context mycontext;
+	unsigned char result[16];
+	unsigned char base64[24];
+
+	if (buf == NULL) {
+		trace(TRACE_ERROR, "%s,%s: received NULL argument",
+		      __FILE__, __func__);
+		return NULL;
+	}
+
+	gdm_md5_init(&mycontext);
+	gdm_md5_update(&mycontext, buf, strlen((char *)buf));
+	gdm_md5_final(result, &mycontext);
+
+	memset(base64, '\0', sizeof(base64));
+	base64_encode(base64, result, sizeof(result));
+
+	return g_strdup(base64);
+}
+

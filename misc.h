@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: misc.h 2080 2006-04-24 09:40:11Z aaron $ 
+/* $Id: misc.h 2107 2006-05-07 07:12:51Z aaron $ 
  */
 
 #ifndef _MISC_H
@@ -96,15 +96,11 @@ int ci_write(FILE * fd, char * msg, ...);
 int num_from_imapdate(const char *date);
 
 
-char **base64_decode(char *str, size_t len);
-void base64_free(char **ret);
 int read_from_stream(FILE * instream, char **m_buf, size_t maxlen);
 int find_bounded(const char * const value, char left, char right,
 		char **retchar, size_t * retsize, size_t * retlast);
 int zap_between(const char * const instring, signed char left, signed char right,
 		char **outstring, size_t *outlen, size_t *zaplen);
-int base64_grow_ret(char ***inchar, size_t ** inint, size_t newcount,
-		    size_t newchar);
 
 GString * g_list_join(GList * list, const gchar * sep);
 GList * g_string_split(GString * string, const gchar * sep);
