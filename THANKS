@@ -1,8 +1,14 @@
 DBMail THANKS file
 
 DBMail has originally been written by Eelco van Beek, Roel Rozendaal
-and Ilja Booij. Many people further contributed to DBMail by reporting
-problems, suggesting various improvements and submitting code patches.
+and Ilja Booij. Development since 2.0 is lead by Paul J Stevens and 
+Aaron Stone.
+
+Special thanks to Metaways.net for providing resources so dbmail runs
+on Solaris.
+
+Many people further contributed to DBMail by reporting problems, 
+suggesting various improvements and submitting code patches.
 
 Aaron Stone		aaron at serendipity dot cx
 Alex Wheeler		awheeler at royall dot com
@@ -18,6 +24,7 @@ Hans Kristian Rosbach	hk at isphuset dot no
 Javier Carlos		javier at nediam dot com dot mx
 Jesse Norrel		jesse at kci dot net
 Leif Jackson		ljackson at jjcons dot com
+Lars Kneschke		l.kneschke at metaways dot net
 Matthew Sayler		sayler at speedsite.com
 Paul F De La Cruz	polito at blackbeanie dot net
 Paul J Stevens		paul at nfg dot nl
@@ -28,6 +35,3 @@ Timo Sirainen		tss at iki dot fi
 
 Surely there are errors or forgotten people, but we appreciate you
 nonetheless! If you'd like to be added to the list, just let us know.
-
-
-
