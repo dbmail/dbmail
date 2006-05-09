@@ -15,10 +15,12 @@ PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 IMAPD=/usr/sbin/dbmail-imapd
 POP3D=/usr/sbin/dbmail-pop3d
 LMTPD=/usr/sbin/dbmail-lmtpd
+SIEVE=/usr/sbin/dbmail-timsieved
 
 IMAPD_NAME=dbmail-imapd
 POP3D_NAME=dbmail-pop3d
 LMTPD_NAME=dbmail-lmtpd
+SIEVE_NAME=dbmail-timsieved
 
 NAME="dbmail"
 
@@ -90,6 +92,8 @@ persistent_start() {
 	eval '_name=$'$1'_NAME'
 	echo -n "$_name "
 	count=0
+	echo $_daemon
+	[ -e $_daemon ] || return 0
 	while [ $count -lt 30 ]; do
 		echo -n "."
 		start-stop-daemon --start --exec $_daemon
@@ -145,6 +149,7 @@ case "$1" in
 	[ "$START_IMAPD" ] && persistent_start "IMAPD" || true
 	[ "$START_POP3D" ] && persistent_start "POP3D" || true
 	[ "$START_LMTPD" ] && persistent_start "LMTPD" || true
+	[ "$START_SIEVE" ] && persistent_start "SIEVE" || true
 	[ "$START_SSL" ] && ssl_wrapper start || true
  	echo "done."
 	;;
@@ -154,6 +159,7 @@ case "$1" in
 	[ "$START_IMAPD" ] && persistent_stop "IMAPD" || true
 	[ "$START_POP3D" ] && persistent_stop "POP3D" || true
 	[ "$START_LMTPD" ] && persistent_stop "LMTPD" || true
+	[ "$START_SIEVE" ] && persistent_stop "SIEVE" || true
 	echo "done."
 	;;
   reload)
@@ -161,6 +167,7 @@ case "$1" in
 	[ "$START_IMAPD" ] && start-stop-daemon --stop --signal HUP --pidfile ${PID_DIR}/${IMAPD_NAME}.pid --name $IMAPD_NAME || true
 	[ "$START_POP3D" ] && start-stop-daemon --stop --signal HUP --pidfile ${PID_DIR}/${POP3D_NAME}.pid --name $POP3D_NAME || true
 	[ "$START_LMTPD" ] && start-stop-daemon --stop --signal HUP --pidfile ${PID_DIR}/${LMTPD_NAME}.pid --name $LMTPD_NAME || true
+	[ "$START_SIEVE" ] && start-stop-daemon --stop --signal HUP --pidfile ${PID_DIR}/${SIEVE_NAME}.pid --name $SIEVE_NAME || true
 	echo "done."
 	;;
   restart|force-reload)

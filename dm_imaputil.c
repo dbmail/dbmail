@@ -682,7 +682,7 @@ char * imap_get_envelope(GMimeMessage *message)
 	list = imap_append_header_as_string(list,part,"In-Reply-to");
 	/* message-id */
 	result = (char *)g_mime_message_get_message_id(message);
-	if (result)
+	if (result && (! g_mime_utils_text_is_8bit((unsigned char *)result, strlen(result))) && (! g_strrstr(result,"=")))
 		list = g_list_append_printf(list,"\"<%s>\"", result);
 	else
 		list = g_list_append_printf(list,"NIL");

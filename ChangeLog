@@ -1,3 +1,10 @@
+2006-05-09  Paul J Stevens <paul@nfg.nl>
+
+	* debian/dbmail.init, debian/default.dbmail:
+	include sieve in debian startup scripts
+	* check_dbmail_imapd.c, check_dbmail_message.c, dm_imaputil.c:
+	detect illegal message-ids during envelope construction
+
 2006-05-06  Aaron Stone  <aaron@seerendipity.cx>
 
 	* dbmail.conf:
