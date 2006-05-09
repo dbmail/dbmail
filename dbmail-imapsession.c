@@ -408,9 +408,12 @@ static int _imap_session_fetch_parse_octet_range(struct ImapSession *self, int i
 	
 	char *token = self->args[idx];
 	
+	if (! token)
+		return idx;
+	
 	trace(TRACE_DEBUG,"%s,%s: parse token [%s]",__FILE__, __func__, token);
 
-	if (token && token[0] == '<') {
+	if (token[0] == '<') {
 
 		/* check argument */
 		if (token[strlen(token) - 1] != '>')

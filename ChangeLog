@@ -1,5 +1,12 @@
 2006-05-09  Paul J Stevens <paul@nfg.nl>
 
+	* debug.c:
+	replace vsyslog with g_strdup_vprintf to placate solaris
+	* dbmail-imapsession.c:
+	avoid passing null pointer to trace call
+	* dm_imaputil.c:
+	properly descend into message/rfc822 message part during bodystructure
+	construction
 	* debian/dbmail.init, debian/default.dbmail:
 	include sieve in debian startup scripts
 	* check_dbmail_imapd.c, check_dbmail_message.c, dm_imaputil.c:

@@ -383,13 +383,13 @@ void _structure_part_message_rfc822(GMimeObject *part, gpointer data, gboolean e
 	list = g_list_append_printf(list,"%d", s);
 
 	/* envelope structure */
-	b = imap_get_envelope(GMIME_MESSAGE(part));
-	list = g_list_append_printf(list,"%s", b);
+	b = imap_get_envelope(g_mime_message_part_get_message(GMIME_MESSAGE_PART(part)));
+	list = g_list_append_printf(list,"%s", b?b:"NIL");
 	g_free(b);
 
 	/* body structure */
-	b = imap_get_structure(GMIME_MESSAGE(part), extension);
-	list = g_list_append_printf(list,"%s", b);
+	b = imap_get_structure(g_mime_message_part_get_message(GMIME_MESSAGE_PART(part)), extension);
+	list = g_list_append_printf(list,"%s", b?b:"NIL");
 	g_free(b);
 
 	/* lines */

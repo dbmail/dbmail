@@ -49,25 +49,28 @@ void trace(trace_t level, char *formatstring, ...)
 {
 	va_list argp;
 
+	gchar *message;
+
+	va_start(argp, formatstring);
+	message = g_strdup_vprintf(formatstring, argp);
+	va_end(argp);
+	
 	if (level <= TRACE_STDERR) {
-		va_start(argp, formatstring);
-		vfprintf(stderr, formatstring, argp);
-		if (formatstring[strlen(formatstring)] != '\n')
+		fprintf(stderr, message);
+		if (message[strlen(message)] != '\n')
 			fprintf(stderr, "\n");
-		va_end(argp);
 	}
 
 	if (level <= TRACE_SYSLOG) {
-		va_start(argp, formatstring);
-		if (formatstring[strlen(formatstring)] == '\n')
-			formatstring[strlen(formatstring)] = '\0';
+		if (message[strlen(message)] == '\n')
+			message[strlen(message)] = '\0';
 		if (level <= TRACE_WARNING) {
 			/* set LOG_ALERT at warnings */
-			vsyslog(LOG_ALERT, formatstring, argp);
+			syslog(LOG_ALERT, "%s", message);
 		} else
-			vsyslog(LOG_NOTICE, formatstring, argp);
-		va_end(argp);
+			syslog(LOG_NOTICE, "%s", message);
 	}
+	g_free(message);
 
 	/* Bail out on fatal errors. */
 	if (level == TRACE_FATAL)
