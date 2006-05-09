@@ -408,7 +408,6 @@ START_TEST(test_dbmail_message_get_header_addresses)
 }
 END_TEST
 
-
 Suite *dbmail_message_suite(void)
 {
 	Suite *s = suite_create("Dbmail Message");

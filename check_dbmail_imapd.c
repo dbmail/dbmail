@@ -349,8 +349,36 @@ START_TEST(test_imap_get_envelope)
 	dbmail_message_free(message);
 	g_free(result);
 	g_free(expect);
+}
+END_TEST
 
+START_TEST(test_imap_get_envelope_8bit_id)
+{
+	struct DbmailMessage *message;
+	char *result, *expect;
+	
+	const char *msgid = "<000001c1f64e$c4a34180$0100007f@z=F0=B5=D241>";
+	size_t idlen = strlen(msgid);
+	expect = g_new0(char, 1024);
+	
+	/* text/plain */
+	message = dbmail_message_new();
+	message = dbmail_message_init_with_string(message, g_string_new(rfc822));
+	dbmail_message_set_header(message,"Message-ID",msgid);
+	
+	result = imap_get_envelope(GMIME_MESSAGE(message->content));
+	strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"dbmail test message\" ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"testuser\" \"foo.org\")) NIL NIL NIL NIL)",1024);
+	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_envelope failed");
+	g_free(result);
+	
+	dbmail_message_set_header(message,"Message-ID","<123123123@foo.bar>");
+	result = imap_get_envelope(GMIME_MESSAGE(message->content));
+	strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"dbmail test message\" ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"somewher\" \"foo.org\")) ((NIL NIL \"testuser\" \"foo.org\")) NIL NIL NIL \"<123123123@foo.bar>\")",1024);
+	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_envelope failed");
 
+	dbmail_message_free(message);
+	g_free(result);
+	g_free(expect);
 }
 END_TEST
 
@@ -637,6 +665,7 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_session, test_imap_bodyfetch);
 	tcase_add_test(tc_session, test_imap_get_structure);
 	tcase_add_test(tc_session, test_imap_get_envelope);
+	tcase_add_test(tc_session, test_imap_get_envelope_8bit_id);
 	tcase_add_test(tc_session, test_imap_get_envelope_koi);
 	tcase_add_test(tc_session, test_imap_get_partspec);
 	tcase_add_test(tc_session, test_imap_message_fetch_headers);
