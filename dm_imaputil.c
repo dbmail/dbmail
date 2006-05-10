@@ -153,8 +153,10 @@ static void _structure_part_message_rfc822(GMimeObject *part, gpointer data, gbo
 
 static void get_param_list(gpointer key, gpointer value, gpointer data)
 {
+	gchar *s = g_mime_utils_header_encode_text((unsigned char *)((GMimeParam *)value)->value);
 	*(GList **)data = g_list_append_printf(*(GList **)data, "\"%s\"", (char *)key);
-	*(GList **)data = g_list_append_printf(*(GList **)data, "\"%s\"", ((GMimeParam *)value)->value);
+	*(GList **)data = g_list_append_printf(*(GList **)data, "\"%s\"", s);
+	g_free(s);
 }
 
 static GList * imap_append_hash_as_string(GList *list, GHashTable *hash)
@@ -682,10 +684,15 @@ char * imap_get_envelope(GMimeMessage *message)
 	list = imap_append_header_as_string(list,part,"In-Reply-to");
 	/* message-id */
 	result = (char *)g_mime_message_get_message_id(message);
-	if (result && (! g_mime_utils_text_is_8bit((unsigned char *)result, strlen(result))) && (! g_strrstr(result,"=")))
-		list = g_list_append_printf(list,"\"<%s>\"", result);
-	else
+	if (result && (! g_strrstr(result,"="))) {
+                t = g_strdup_printf("<%s>", result);
+		s = dbmail_imap_astring_as_string(t);
+		list = g_list_append_printf(list,"%s", s);
+		g_free(s);
+                g_free(t);
+	} else {
 		list = g_list_append_printf(list,"NIL");
+	}
 
 	s = dbmail_imap_plist_as_string(list);
 
