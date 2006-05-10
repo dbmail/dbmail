@@ -50,20 +50,22 @@ void trace(trace_t level, char *formatstring, ...)
 	va_list argp;
 
 	gchar *message;
+	size_t l;
 
 	va_start(argp, formatstring);
 	message = g_strdup_vprintf(formatstring, argp);
 	va_end(argp);
+	l = strlen(message);
 	
 	if (level <= TRACE_STDERR) {
 		fprintf(stderr, message);
-		if (message[strlen(message)] != '\n')
+		if (message[l] != '\n')
 			fprintf(stderr, "\n");
 	}
 
 	if (level <= TRACE_SYSLOG) {
-		if (message[strlen(message)] == '\n')
-			message[strlen(message)] = '\0';
+		if (message[l] == '\n')
+			message[l] = '\0';
 		if (level <= TRACE_WARNING) {
 			/* set LOG_ALERT at warnings */
 			syslog(LOG_ALERT, "%s", message);
