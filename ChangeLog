@@ -1,3 +1,13 @@
+2006-05-10  Paul J Stevens <paul@nfg.nl>
+
+	* debug.c:
+	cut down the number of strlen calls
+	* THANKS:
+	thank metaways for helping out on solaris
+	* dm_imaputil.c, test-scripts/testimap.py:
+	fix string quoting and encoding in message-id and content-disposition
+	atoms
+
 2006-05-09  Paul J Stevens <paul@nfg.nl>
 
 	* debug.c:
