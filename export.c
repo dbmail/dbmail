@@ -203,7 +203,6 @@ int main(int argc, char *argv[])
 
 	qerrorf("exporting [%s/%s]\n", user, mailbox);
 	mb = dbmail_mailbox_new(mailbox_idnr);
-	mb = dbmail_mailbox_open(mb);
 
 	if (! (ostream = fopen(outfile,"a"))) {
 		int err=errno;
