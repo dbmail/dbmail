@@ -1,3 +1,10 @@
+2006-05-12  Aaron Stone  <aaron@serendipity.cx>
+
+	* sievecmd.h, sievecmd.h:
+	Various improvements and updates to bring dbmail-sievecmd in line with
+	the other command line tools. Inserting a script from a file now
+	works (closes bug #346).
+
 2006-05-10  Paul J Stevens <paul@nfg.nl>
 
 	* debug.c:

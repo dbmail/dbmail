@@ -17,14 +17,15 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: sievecmd.h 1893 2005-10-05 15:04:58Z paul $ */
+/* $Id: sievecmd.h 2116 2006-05-12 19:27:36Z aaron $ */
 
 #ifndef _SIEVECMD_H
 #define _SIEVECMD_H
 
 #include "dbmail.h"
 
-
+#define qprintf(fmt, args...) ((quiet||reallyquiet) ? 0 : printf(fmt, ##args) )
+#define qerrorf(fmt, args...) (reallyquiet ? 0 : fprintf(stderr, fmt, ##args) )
 
 int do_showhelp(void);
 int do_list(u64_t user_idnr);

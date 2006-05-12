@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: sievecmd.c 1984 2006-02-16 16:09:46Z aaron $
+/* $Id: sievecmd.c 2116 2006-05-12 19:27:36Z aaron $
  * This is dbmail-sievecmd, which provides
  * a command line interface to the sievescripts */
 
@@ -26,28 +26,36 @@
 #define PNAME "dbmail/sievecmd"
 char *configFile = DEFAULT_CONFIG_FILE;
 
+int verbose;
+int quiet;
+int reallyquiet;
+
 /* set up database login data */
 extern db_param_t _db_params;
 
 int main(int argc, char *argv[])
 {
-	int res = 0, opt = 0, act = 0;
+	int res = 0, opt = 0, opt_prev = 0, act = 0;
 	u64_t user_idnr = 0;
 	char *user_name = NULL;
-	char *name = NULL;
-	FILE *source = NULL;
+	char *script_name = NULL;
+	FILE *script_source = NULL;
 	extern char *optarg;
+	extern int opterr;
 
 	openlog(PNAME, LOG_PID, LOG_MAIL);
-
 	setvbuf(stdout, 0, _IONBF, 0);
 
-	config_read(configFile);
-	SetTraceLevel("DBMAIL");
-	GetDBParams(&_db_params);
-
-	while (opt != -1 && act != 'h') {
-		opt = getopt(argc, argv, "a:d:i:r:u:l");
+	/* get options */
+	opterr = 0;		/* suppress error message from getopt() */
+	while ((opt = getopt(argc, argv,
+		"-a:d:i:r:u:l" /* Major modes */
+		/*"i"*/ "f:qnyvVh" /* Common options */ )) != -1) {
+		/* The initial "-" of optstring allows unaccompanied
+		 * options and reports them as the optarg to opt 1 (not '1') */
+		if (opt == 1)
+			opt = opt_prev;
+		opt_prev = opt;
 
 		switch (opt) {
 		case -1:
@@ -57,12 +65,22 @@ int main(int argc, char *argv[])
 		case 'd':
 		case 'i':
 		case 'r':
-			if (act != 0)
+			if (act != 0 && opt != opt_prev)
 				act = 'h';
 			else
 				act = opt;
-			name = optarg;
-			source = stdin;	// FIXME to take files as input, too
+
+			if (!script_name) {
+				script_name = dm_strdup(optarg);
+			} else if (!script_source) {
+				script_source = fopen(optarg, "r");
+
+				if (!script_source) {
+					qerrorf("Could not open file [%s]: %s\n",
+						optarg, strerror(errno));
+					return 1;
+				}
+			}
 			break;
 		case 'u':
 			user_name = dm_strdup(optarg);
@@ -73,60 +91,122 @@ int main(int argc, char *argv[])
 			else
 				act = opt;
 			break;
+
+		/* Common options */
+		/*case 'i': FIXME: this is from user.c, but we're using -i for insertion.
+			printf("Interactive console is not supported in this release.\n");
+			return 1;*/
+
+		case 'f':
+			if (optarg && strlen(optarg) > 0)
+				configFile = optarg;
+			else {
+				qerrorf("dbmail-users: -f requires a filename\n\n");
+				return 1;
+			}
+			break;
+
+		case 'h':
+			act = 'h';
+			break;
+
+		case 'n':
+			printf("-n switch is not supported in this "
+			       "version.\n");
+			return 1;
+
+		case 'y':
+			printf("-y switch is not supported in this "
+			       "version.\n");
+			return 1;
+
+		case 'q':
+			/* If we get q twice, be really quiet! */
+			if (quiet)
+				reallyquiet = 1;
+			if (!verbose)
+				quiet = 1;
+			break;
+
+		case 'v':
+			if (!quiet)
+				verbose = 1;
+			break;
+
+		case 'V':
+			/* Show the version and return non-zero. */
+			printf("\n*** DBMAIL: dbmail-sievecmd version "
+			       "$Revision: 2116 $ %s\n\n", COPYRIGHT);
+			return 0;
+			break;
+
 		default:
 			act = 'h';
 			break;
 		}
 	}
 
-	if (act != 'h' && act != 0) {
-		printf("*** dbmail-sievecmd ***\n");
+	if (act == 'h' || act == 0 || !user_name) {
+		do_showhelp();
+		goto mainend;
+	}
 
-		/* Open database connection */
-		printf("Opening connection to database...\n");
-		if (db_connect() != 0) {
-			printf
-			    ("Failed. Could not connect to database (check log)\n");
-			dm_free(user_name);
-			return -1;
-		}
+	qprintf("*** dbmail-sievecmd ***\n");
 
-		/* Open authentication connection */
-		printf("Opening connection to authentication...\n");
-		if (auth_connect() != 0) {
-			printf
-			    ("Failed. Could not connect to authentication (check log)\n");
-			dm_free(user_name);
-			return -1;
-		}
+	/* read the config file */
+        if (config_read(configFile) == -1) {
+                qerrorf("Failed. Unable to read config file %s\n",
+                        configFile);
+                res = -1;
+                goto mainend;
+        }
+                
+	SetTraceLevel("DBMAIL");
+	GetDBParams(&_db_params);
 
-		printf("Ok. Connected!\n");
+	/* Open database connection */
+	qprintf("Opening connection to database...\n");
+	if (db_connect() != 0) {
+		qerrorf("Failed. Could not connect to database (check log)\n");
+		dm_free(user_name);
+		return -1;
+	}
 
-		/* Retrieve the user ID number */
-		switch (auth_user_exists(user_name, &user_idnr)) {
-		case 0:
-			printf("User [%s] does not exist!\n", user_name);
-			goto mainend;
-			break;
-		case -1:
-			printf("Error retrieving User ID Number\n");
-			res = -1;
-			goto mainend;
-		}
+	/* Open authentication connection */
+	qprintf("Opening connection to authentication...\n");
+	if (auth_connect() != 0) {
+		qerrorf("Failed. Could not connect to authentication (check log)\n");
+		dm_free(user_name);
+		return -1;
+	}
+
+	qprintf("Ok. Connected!\n");
+
+	/* Retrieve the user ID number */
+	switch (auth_user_exists(user_name, &user_idnr)) {
+	case 0:
+		qerrorf("User [%s] does not exist!\n", user_name);
+		res = -1;
+		goto mainend;
+		break;
+	case -1:
+		qerrorf("Error retrieving User ID Number\n");
+		res = -1;
+		goto mainend;
 	}
 
 	switch (act) {
 	case 'a':
-		res = do_activate(user_idnr, name);
+		res = do_activate(user_idnr, script_name);
 		break;
 	case 'd':
-		res = do_deactivate(user_idnr, name);
+		res = do_deactivate(user_idnr, script_name);
 		break;
 	case 'i':
-		res = do_insert(user_idnr, name, source);
+		res = do_insert(user_idnr, script_name, script_source);
 		break;
 	case 'r':
-		res = do_remove(user_idnr, name);
+		res = do_remove(user_idnr, script_name);
 		break;
 	case 'l':
 		res = do_list(user_idnr);
@@ -139,6 +219,9 @@ int main(int argc, char *argv[])
 
       mainend:
 	dm_free(user_name);
+	dm_free(script_name);
+	if (script_source)
+		fclose(script_source);
 	db_disconnect();
 	auth_disconnect();
 	config_free();
@@ -152,15 +235,15 @@ int do_activate(u64_t user_idnr, char *name)
 
 	res = db_activate_sievescript(user_idnr, name);
 	if (res == -3) {
-		printf("Script [%s] does not exist.\n", name);
+		qerrorf("Script [%s] does not exist.\n", name);
 		return -1;
 	} else if (res != 0) {
-		printf("Error activating script [%s].\n"
+		qerrorf("Error activating script [%s].\n"
 		       "It is possible that no script is currently active!\n",
 		       name);
 		return -1;
 	}
-	printf("Script [%s] is now active. All others are inactive.\n",
+	qprintf("Script [%s] is now active. All others are inactive.\n",
 	       name);
 
 	return 0;
@@ -193,6 +276,9 @@ int do_insert(u64_t user_idnr, char *name, FILE * source)
 	char *buf = NULL;
 	sort_result_t *sort_result;
 
+	if (!source)
+		source = stdin;
+
 	/* Read the file into a char array */
 	res = read_script_file(source, &buf);
 	if (res != 0) {
@@ -202,10 +288,11 @@ int do_insert(u64_t user_idnr, char *name, FILE * source)
 
 	/* Check if the script is valid */
 	res = db_add_sievescript(user_idnr, "@!temp-script!@", buf);
-	if (res != 0) {
-		// FIXME: Error.
-	}
 	dm_free(buf);
+	if (res != 0) {
+		printf("Error inserting temporary script into the database!\n");
+		return -1;
+	}
 
 	sort_result = sort_validate(user_idnr, "@!temp-script!@");
 	if (sort_result == NULL) {
@@ -318,7 +405,6 @@ int do_showhelp(void)
 	printf("     -r scriptname          Remove the named script \n");
 	printf("                            (if script was active, no script is \n"
 	       "                             active after deletion) \n");
-	printf("\n*** THESE COMMAND LINE OPTIONS WILL CHANGE! ***\n");
 
 	return 0;
 }
