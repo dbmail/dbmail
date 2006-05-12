@@ -24,7 +24,8 @@
 
 #include "dbmail.h"
 
-
+#define qprintf(fmt, args...) ((quiet||reallyquiet) ? 0 : printf(fmt, ##args) )
+#define qerrorf(fmt, args...) (reallyquiet ? 0 : fprintf(stderr, fmt, ##args) )
 
 int do_showhelp(void);
 int do_list(u64_t user_idnr);
