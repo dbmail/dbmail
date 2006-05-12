@@ -7,7 +7,7 @@ Standards-Version: 3.6.2
 
 Package: dbmail
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}, debconf (>=1.4.70) | debconf-2.0 , ucf (>= 0.30)
+Depends: ${misc:Depends}, ${shlibs:Depends}, libglib2.0-0 (>= 2.10.2), libgmime2.1 (>= 2.1.19), debconf (>=1.4.70) | debconf-2.0 , ucf (>= 0.30)
 Suggests: stunnel | stunnel4, postfix | mail-transport-agent, dbmail-mysql (= ${Source-Version})| dbmail-pgsql (= ${Source-Version})| dbmail-sqlite (= ${Source-Version}), dbmail-ldap (= ${Source-Version}), dbmail-sieve (= ${Source-Version})
 Provides: imap-server, pop3-server
 Description: base package for the dbmail email solution

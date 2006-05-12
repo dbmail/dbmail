@@ -224,6 +224,8 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 	struct DbmailMessage *message = NULL;
 	GString *q, *t;
 
+	assert(self->ids);
+
 	if (g_tree_nnodes(self->ids) == 0) {
 		trace(TRACE_DEBUG,"%s,%s: cannot dump empty mailbox",__FILE__, __func__);
 		return 0;
