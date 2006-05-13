@@ -53,6 +53,12 @@ AC_ARG_WITH(logdir,
   else
   	DM_CONFDIR=$sysconfdir
   fi
+  if test "x$prefix" = "xNONE"
+  then
+  	AC_DEFINE_UNQUOTED([PREFIX], "$ac_default_prefix", [Prefix to the installed path])
+  else
+  	AC_DEFINE_UNQUOTED([PREFIX], "$prefix", [Prefix to the installed path])
+  fi
 ])
 	
 dnl DBMAIL_CHECK_SHARED_OR_STATIC

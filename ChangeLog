@@ -1,3 +1,8 @@
+2006-05-13  Aaron Stone  <aaron@serendipity.cx>
+
+	* acinclude.m4, authmodule.c, dbmodule.c, sortmodule.c:
+	Use the --prefix or its default to find the loadable modules.
+
 2006-05-12  Aaron Stone  <aaron@serendipity.cx>
 
 	* sievecmd.h, sievecmd.h:

@@ -58,8 +58,8 @@ int auth_load_driver(void)
 	int i;
 	char *lib_path[] = {
 		"modules/.libs",
-		"/usr/lib/dbmail",
-		"/usr/local/lib/dbmail",
+		PREFIX "/lib",
+		PREFIX "/lib/dbmail",
 		NULL };
 	for (i = 0; i < 4; i++) {
 		lib = g_module_build_path(lib_path[i], driver);
