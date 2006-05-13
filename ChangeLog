@@ -4,6 +4,9 @@
 	Various improvements and updates to bring dbmail-sievecmd in line with
 	the other command line tools. Inserting a script from a file now
 	works (closes bug #346).
+	* check_dbmail_imapd.c:
+	Added testcase for dbmail_imap_session_prompt and functions to create
+	a temporary fifo to simulate a network connection.
 
 2006-05-10  Paul J Stevens <paul@nfg.nl>
 

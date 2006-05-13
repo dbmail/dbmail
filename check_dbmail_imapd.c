@@ -151,6 +151,27 @@ static clientinfo_t * ci_new(void)
 	return ci;
 }
 
+static char *tempfile;
+static clientinfo_t * ci_new_writable(void)
+{
+	clientinfo_t *ci = ci_new();
+
+	tempfile = tmpnam(NULL);
+	mkfifo(tempfile, 0600);
+
+	// Open r+ because we're controlling both sides.
+	ci->rx = fopen(tempfile, "r+");
+	ci->tx = fopen(tempfile, "r+");
+	return ci;
+}
+
+static void ci_free_writable(clientinfo_t *ci)
+{
+	fclose(ci->tx);
+	fclose(ci->rx);
+	unlink(tempfile);
+}
+
 //struct ImapSession * dbmail_imap_session_new(void);
 START_TEST(test_imap_session_new)
 {
@@ -182,6 +203,40 @@ END_TEST
 
 
 //dbmail_imap_session_handle_auth(self, const char *username, const char *password);
+#define MAX_LINESIZE 1024
+START_TEST(test_imap_session_prompt)
+{
+	int result;
+	char tmpline[MAX_LINESIZE];
+	clientinfo_t *ci = ci_new_writable();
+	struct ImapSession *s = dbmail_imap_session_new();
+	s = dbmail_imap_session_setClientinfo(s,ci);
+
+	base64_encode(tmpline, "testuser1", strlen("testuser1"));
+	fprintf(ci->tx, "%s\r\n", tmpline);
+	fflush(ci->tx);
+	result = dbmail_imap_session_prompt(s, "username", tmpline);
+	fail_unless(result==0,"dbmail_imap_session_prompt failed");
+	fail_unless(strcmp(tmpline,"testuser1")==0,"failed at the username prompt");
+
+	// Read back whatever the prompt was.
+	fgets(tmpline, MAX_LINESIZE, ci->rx);
+
+	base64_encode(tmpline, "test", strlen("test"));
+	fprintf(ci->tx, "%s\r\n", tmpline);
+	fflush(ci->tx);
+	result = dbmail_imap_session_prompt(s, "password", tmpline);
+	fail_unless(result==0,"dbmail_imap_session_prompt failed");
+	fail_unless(strcmp(tmpline,"test")==0,"failed at the password prompt");
+	
+	// Read back whatever the prompt was.
+	fgets(tmpline, MAX_LINESIZE, ci->rx);
+
+	dbmail_imap_session_delete(s);
+	ci_free_writable(ci);
+}
+END_TEST
+
 START_TEST(test_imap_handle_auth)
 {
 	int result;
@@ -661,6 +716,7 @@ Suite *dbmail_suite(void)
 	tcase_add_checked_fixture(tc_session, setup, teardown);
 	tcase_add_test(tc_session, test_imap_session_new);
 	tcase_add_test(tc_session, test_imap_handle_auth);
+	tcase_add_test(tc_session, test_imap_session_prompt);
 	tcase_add_test(tc_session, test_imap_mailbox_open);
 	tcase_add_test(tc_session, test_imap_bodyfetch);
 	tcase_add_test(tc_session, test_imap_get_structure);
