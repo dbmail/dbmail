@@ -777,8 +777,11 @@ int _message_insert(struct DbmailMessage *self,
 	
 	/* insert a new physmessage entry */
 	internal_date = dbmail_message_get_internal_date(self);
-	if (db_insert_physmessage_with_internal_date(internal_date, &physmessage_id) == -1) 
+	if (db_insert_physmessage_with_internal_date(internal_date, &physmessage_id) == -1)  {
+		g_free(internal_date);
 		return -1;
+	}
+	g_free(internal_date);
 
 	/* insert the physmessage-id into the message-headers */
 	g_snprintf(physid, 16, "%llu", physmessage_id);

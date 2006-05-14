@@ -1077,27 +1077,42 @@ int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...)
         int result = 0;
         gchar *ln;
 
-        gchar *re = g_new0(gchar, maxlen+1);
-
 	va_start(ap, message);
 	ln = g_strdup_vprintf(message,ap);
 	va_end(ap);
 
-        if (! ln)
+        if (! ln) {
                 return -1;
+	}
 	
-        if ((result = snprintf(re,maxlen,"%s",ln))<0)
+        gchar *re = g_new0(gchar, maxlen+1);
+	
+	if (! re) {
+		g_free(ln);
+		return -1;
+	}
+
+        if ((result = snprintf(re,maxlen,"%s",ln))<0) {
+		g_free(re);
+		g_free(ln);
                 return -1;
+	}
 
         fd = self->ci->tx;
 
-        if (feof(fd) || fflush(fd) < 0)
+        if (feof(fd) || fflush(fd) < 0) {
+		g_free(re);
+		g_free(ln);
                 trace(TRACE_FATAL, "%s,%s: client socket closed", __FILE__, __func__);
+	}
 
         len = g_mime_stream_write_string(self->fstream,ln);
 	
-        if (len < 0)
+        if (len < 0) {
+		g_free(re);
+		g_free(ln);
                 trace(TRACE_FATAL, "%s,%s: write to client socket failed", __FILE__, __func__);
+	}
 
         if (result < maxlen)
                 trace(TRACE_DEBUG,"RESPONSE: [%s]", re);
