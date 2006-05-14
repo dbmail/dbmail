@@ -1,3 +1,10 @@
+2006-05-13  Aaron Stone  <aaron@serendipity.cx>
+
+	* acinclude.m4, authmodule.c, dbmodule.c, sortmodule.c:
+	Use the --prefix or its default to find the loadable modules.
+	* dbmail-imapsession.c, dbmail-messageg.c:
+	Applied a memory leak patch by Leif Jackson.
+
 2006-05-12  Aaron Stone  <aaron@serendipity.cx>
 
 	* sievecmd.h, sievecmd.h:

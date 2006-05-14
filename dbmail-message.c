@@ -1,5 +1,5 @@
 /*
-  $Id: dbmail-message.c 2103 2006-05-04 14:27:54Z paul $
+  $Id: dbmail-message.c 2119 2006-05-14 01:42:53Z aaron $
 
   Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
 
@@ -777,8 +777,11 @@ int _message_insert(struct DbmailMessage *self,
 	
 	/* insert a new physmessage entry */
 	internal_date = dbmail_message_get_internal_date(self);
-	if (db_insert_physmessage_with_internal_date(internal_date, &physmessage_id) == -1) 
+	if (db_insert_physmessage_with_internal_date(internal_date, &physmessage_id) == -1)  {
+		g_free(internal_date);
 		return -1;
+	}
+	g_free(internal_date);
 
 	/* insert the physmessage-id into the message-headers */
 	g_snprintf(physid, 16, "%llu", physmessage_id);
