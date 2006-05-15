@@ -42,52 +42,7 @@ OPTIONS
               Set return path for bounces and other error  reports  to  return
               path.
 
-COMMON OPTIONS
---------------
-       -f configfile
-              Specify  an  alternate  config file. The utilities are currently
-              hardcoded to use /etc/dbmail.conf for their  configs,  and  will
-              halt  if  the config file cannot be found. Use the -f configfile
-              option to specify your system's preferred config file  location.
 
-       -q     Quietly  skip  interactive  prompts  and helpful status messages
-              which would otherwise be printed to stdout.   Use  two  -q's  to
-              silence errors which would otherwise be printed to stderr.
+include::commonopts.txt[]
 
-       -n     Show  the intended action but do not perform it, as though no to
-              all.
-
-       -y     Perform all proposed actions, as though yes to all.
-
-       -v     Operate verbosely.  Some of the utilities in  the  DBMail  suite
-              can  take two -v's for extra verbosity. Those which don't under-
-              stand this convention won't complain about having the  extra  -v
-              and will simply operate at their normal verbosity.
-
-       -V     Show the version and copyright, then exit.
-
-       -h     Show a brief summary of options, then exit.
-
-DIAGNOSTICS
------------
-       Errors  and  notifications  are  send to the trace output as set in the
-       dbmail.conf file.
-
-
-BUGS
-----
-       There are no known bugs.
-
-LICENSE
--------
-       DBMail and it's components are (c) IC&S and distributed under the  GPL.
-
-AUTHOR(S)
----------
-       Eelco van Beek
-       IC&S
-       Koningsweg 4
-       3582 GE Utrecht
-       http://www.ic-s.nl
-
-
+include::footer.txt[]

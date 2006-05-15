@@ -4,87 +4,63 @@ DBMAIL-UTIL(8)
 
 NAME
 ----
-       dbmail-util  -  maintains  the  integrity and cleanliness of the DBMail
-       datatables.
+dbmail-util - maintains the integrity and cleanliness of the DBMail
+datatables.
 
 SYNOPSIS
 --------
-       dbmail-util [-cturpd] [-l time] [-qvVh] [-f configFile]
+dbmail-util [-actubpd] [-l time] [-yn] [-qvVh] [-f configFile]
 
 DESCRIPTION
 -----------
-       The dbmail-util program does a global database  cleanup  and  integrity
-       check.  All messages that are set for deletion will be marked for final
-       deletion (status 3). All message that are  marked  for  final  deletion
-       will  be  cleared from the database. The integrity check will check for
-       unconnected messageblocks, unconnected messages and  unconnected  mail-
-       boxes.
+The dbmail-util program does a global database cleanup and integrity
+check. All messages that are set for deletion will be marked for final
+deletion (status 3). All message that are marked for final deletion
+will be cleared from the database. The integrity check will check for
+unconnected messageblocks, unconnected messages and unconnected 
+mailboxes.
 
 OPTIONS
 -------
-       -c     clean up unlinked message entries
 
-       -t     test for message integrity
+-a::
+ Perform all checks listed below. This option will be kept up-to-date
+ with additional checks available in future versions.
 
-       -u     null message check
+-c::
+ Clean up unlinked message entries.
 
-       -r     repair any integrity problems
+-t::
+ Test for message integrity.
 
-       -p     purge messages have the DELETE status set
+-u::
+ Null message check.
 
-       -d     set DELETE status for deleted messages
+-b::
+ Check and rebuild the body/header cache tables.
 
-       -l time
-              clear the IP log used for IMAP/POP-before-SMTP the time is spec-
-              ified as <hours>h<minutes>m (don't include the  angle  brackets,
-              though)
+-p::
+ Purge messages have the DELETE status set.
 
-       -i     Enter an interactive user management console.
+-d::
+ Set DELETE status for deleted messages.
 
+-l time::
+ Clear the IP log used for IMAP/POP-before-SMTP the time is specified
+ as <hours>h<minutes>m (don't include the angle brackets,
+ though!).
 
-COMMON OPTIONS
---------------
-       -f configfile
-              Specify  an  alternate  config file. The utilities are currently
-              hardcoded to use /etc/dbmail.conf for their  configs,  and  will
-              halt  if  the config file cannot be found. Use the -f configfile
-              option to specify your system's preferred config file  location.
+-n::
+ Show the intended repairs without making any changes, i.e. no to all.
 
-       -q     Quietly  skip  interactive  prompts  and helpful status messages
-              which would otherwise be printed to stdout.   Use  two  -q's  to
-              silence errors which would otherwise be printed to stderr.
+-y::
+ Perform all repair actions , i.e. yes to all.
 
-
-
-       -v     Operate  verbosely.   Some  of the utilities in the DBMail suite
-              can take two -v's for extra verbosity. Those which don't  under-
-              stand  this  convention won't complain about having the extra -v
-              and will simply operate at their normal verbosity.
-
-       -V     Show the version and copyright, then exit.
-
-       -h     Show a brief summary of options, then exit.
-
-DIAGNOSTICS
------------
-       Errors and notifications are send to the trace output  as  set  in  the
-       dbmail.conf file.
-
-BUGS
-----
-       No known bugs.
-
-LICENSE
--------
-       DBMail  and it's components are (c) IC&S and distributed under the GPL.
-
-AUTHOR(S)
----------
-       Eelco van Beek
-       Roel Rozendaal
-       IC&S
-       Koningsweg 4
-       3582 GE Utrecht
-       http://www.ic-s.nl
+-i:: 
+ Enter an interactive user management console in some future version
+ where this feature is implemented. It is not currently available.
 
 
+include::commonopts.txt[]
+
+include::footer.txt[]
