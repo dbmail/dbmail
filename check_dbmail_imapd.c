@@ -207,7 +207,7 @@ END_TEST
 START_TEST(test_imap_session_prompt)
 {
 	int result;
-	char tmpline[MAX_LINESIZE];
+	unsigned char tmpline[MAX_LINESIZE];
 	clientinfo_t *ci = ci_new_writable();
 	struct ImapSession *s = dbmail_imap_session_new();
 	s = dbmail_imap_session_setClientinfo(s,ci);

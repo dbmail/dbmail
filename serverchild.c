@@ -257,11 +257,11 @@ int PerformChildTask(ChildInfo_t * info)
 
 		child_reg_connected();
 		
-		memset(&client, 0, sizeof(client));	/* zero-init */
+		memset((void *)&client, 0, sizeof(client));	/* zero-init */
 
 		client.timeoutMsg = info->timeoutMsg;
 		client.timeout = info->timeout;
-		strncpy(client.ip_src, inet_ntoa(saClient.sin_addr), IPNUM_LEN);
+		strncpy((char *)client.ip_src, inet_ntoa(saClient.sin_addr), IPNUM_LEN);
 		client.clientname[0] = '\0';
 			
 		if (info->resolveIP) {
@@ -269,7 +269,7 @@ int PerformChildTask(ChildInfo_t * info)
 					sizeof(saClient.sin_addr), saClient.sin_family);
 
 			if (clientHost && clientHost->h_name)
-				strncpy(client.clientname, clientHost->h_name, FIELDSIZE);
+				strncpy((char *)client.clientname, clientHost->h_name, FIELDSIZE);
 
 			trace(TRACE_MESSAGE, "%s,%s: incoming connection from [%s (%s)] by pid [%d]",
 					__FILE__, __func__,
@@ -296,7 +296,7 @@ int PerformChildTask(ChildInfo_t * info)
 					__FILE__, __func__);
 			fclose(client.rx);
 			close(clientSocket);
-			memset(&client, 0, sizeof(client));
+			memset((void *)&client, 0, sizeof(client));
 			continue;
 		}
 
@@ -307,7 +307,7 @@ int PerformChildTask(ChildInfo_t * info)
 				__FILE__, __func__);
 
 		/* streams are ready, perform handling */
-		info->ClientHandler(&client);
+		info->ClientHandler((clientinfo_t *)&client);
 
 		trace(TRACE_DEBUG, "%s,%s: client handling complete, closing streams",
 				__FILE__, __func__);
@@ -359,7 +359,7 @@ int manage_start_cli_server(ChildInfo_t * info)
 	}
 
 		
-	memset(&client, 0, sizeof(client));	/* zero-init */
+	memset((void *)&client, 0, sizeof(client));	/* zero-init */
 
 	client.timeoutMsg = info->timeoutMsg;
 	client.timeout = info->timeout;
@@ -375,7 +375,7 @@ int manage_start_cli_server(ChildInfo_t * info)
 	      "%s,%s: client info init complete, calling client handler", __FILE__, __func__);
 
 	/* streams are ready, perform handling */
-	info->ClientHandler(&client);
+	info->ClientHandler((clientinfo_t *)&client);
 
 	trace(TRACE_DEBUG,
 	      "%s,%s: client handling complete, closing streams", __FILE__, __func__);

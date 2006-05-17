@@ -487,18 +487,10 @@ static GList * _imap_append_alist_as_plist(GList *list, const InternetAddressLis
 		/* personal name */
 		if (ia->name) {
 			name = g_mime_utils_header_encode_phrase((unsigned char *)ia->name);
-			l = strlen(name);
-			s = name;
-			/* chop off trailing and leading double-quotes */
-			if (s[l-1] == '"')
-				s[l-1] = '\0';
-			if (s[0] == '"')
-				s++;
-			/* so we can safely escape inserted double-quotes */
-			st = g_strescape(s,NULL);
-			t = g_list_append_printf(t, "\"%s\"", st);
+			s = dbmail_imap_astring_as_string(name);
+			t = g_list_append_printf(t, "%s", s);
 			g_free(name);
-			g_free(st);
+			g_free(s);
 		} else
 			t = g_list_append_printf(t, "NIL");
 
