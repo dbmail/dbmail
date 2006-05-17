@@ -48,24 +48,6 @@ OPTIONS
        -h     Show a brief summary of options, then exit.
 
 
-DIAGNOSTICS
------------
-       Errors  and  notifications  are  send to the trace output as set in the
-       dbmail.conf file.
+include::commonopts.txt[]
 
-BUGS
-----
-       Plans are to add some more authentication schemes.
-
-LICENSE
--------
-       DBMail and its components are (c) IC&S and distributed under the GPL.
-
-AUTHOR(S)
----------
-       Eelco van Beek
-       IC&S
-       Koningsweg 4
-       3582 GE Utrecht
-       The Netherlands
-       http://www.ic-s.nl
+include::footer.txt[]

@@ -22,182 +22,137 @@
 dbmail-users \- manages the DBMail user database.
 .SH "SYNOPSIS"
 
-.nf
-dbmail\-users { \-a username | \-c username } [ \-g clientid ] [ \-m maxmail
-] [ \-p passwordtype ] [ \-P shadowfile ] [ \-w password ] [ \-W  password\-
-file ] [ \-u username ] [ \-s aliases ] [ \-S aliases ]
-.fi
 
-.nf
+dbmail\-users { \-a username | \-c username } [ \-g clientid ] [ \-m maxmail] [ \-p passwordtype ] [ \-P shadowfile ] [ \-w password ] [ \-W passwordfile] [ \-u username ] [ \-s aliases ] [ \-S aliases ]
+
+
 dbmail\-users { \-d username | \-e username }
-.fi
 
-.nf
+
 dbmail\-users \-l userspec
-.fi
 
-.nf
+
 dbmail\-users \-x alias [ \-t forwards ] [ \-T forwards ]
-.fi
 
 .SH "DESCRIPTION"
 
-.nf
-The  dbmail\-users  program  enables you to manage the DBMail users\&.  It
-lets you add, delete and change users as well as show information about
-a  specific  user  or display a list of existing users\&. It also has the
-capability of adding/removing separate aliases\&.
-.fi
+
+The dbmail\-users program enables you to manage the DBMail users\&. It lets you add, delete and change users as well as show information about a specific user or display a list of existing users\&. It also has the capability of adding/removing separate aliases\&.
 
 .SH "MODE OPTIONS"
 
-.nf
-\-a  user
-      Add a user
-.fi
+.TP
+\-a user
+Add a user
 
-.nf
-\-d  user
-      Delete a user
-.fi
+.TP
+\-d user
+Delete a user
 
-.nf
-\-c  user
-      Change details for a user
-.fi
+.TP
+\-c user
+Change details for a user
 
-.nf
-\-e  user
-      Empty all mailboxes for a user
-.fi
+.TP
+\-e user
+Empty all mailboxes for a user
 
-.nf
-\-l  uspec
-      List information for matching users
-.fi
+.TP
+\-l uspec
+List information for matching users
 
-.nf
-\-x  alias
-      Create an external forwarding address
-.fi
+.TP
+\-x alias
+Create an external forwarding address
 
 .SH "MINOR OPTIONS"
 
-.nf
-\-w  passwd
-      Specify user's password on the command line
-.fi
+.TP
+\-w passwd
+Specify user's password on the command line
 
-.nf
-\-W  [file]
-      Read from a file or prompt for a user's password
-.fi
+.TP
+\-W [file]
+Read from a file or prompt for a user's password
 
-.nf
-\-p  pwtype
-      Password type may be one of  the  following:  plaintext,  crypt,
-      md5\-hash, md5\-digest, crypt\-raw, md5\-hash\-raw, md5\-digest\-raw
-.fi
+.TP
+\-p pwtype
+Password type may be one of the following: plaintext, crypt, md5\-hash, md5\-digest, crypt\-raw, md5\-hash\-raw, md5\-digest\-raw, md5\-base64, md5\-base64\-raw\&.
 
-.nf
-\-P  [file]
-      Pull encrypted password from the shadow file
-.fi
+.TP
+\-P [file]
+Pull encrypted password from the shadow file
 
-.nf
-\-u  user
-      New username (only useful for \-c, change)
-.fi
+.TP
+\-u user
+New username (only useful for \-c, change)
 
-.nf
-\-g  cid
-      Assign the user to a client group\&.
-.fi
+.TP
+\-g cid
+Assign the user to a client group\&.
 
-.nf
-\-m  max
-      Set the maximum mail quota in <bytes>B, <kbytes>K, or <mbytes>M,
-      default in bytes If set to 0, there will be no limit\&.
-.fi
+.TP
+\-m max
+Set the maximum mail quota in <bytes>B, <kbytes>K, or <mbytes>M, default in bytes If set to 0, there will be no limit\&.
 
-.nf
-\-s  alia\&.\&.
-      Adds a list of recipient aliases\&. An alias is an e\-mail  address
-      that  is  being delivered to the DBMail mailsystem and should be
-      delivered to this user\&.
-.fi
+.TP
+\-s alias[,alias...]
+Adds a list of recipient aliases\&. An alias is an e\-mail address that is being delivered to the DBMail mailsystem and should be delivered to this user\&.
 
-.nf
-\-S  alia\&.\&.
-      Removes a list of recipient aliases (wildcards supported)
-.fi
+.TP
+\-S alias[,alias...]
+Removes a list of recipient aliases (wildcards supported)\&.
 
-.nf
-\-t  fwds\&.\&.
-      Adds a list of deliver\-to forwards
-.fi
+.TP
+\-t forward[,forward...]
+Adds a list of deliver\-to forwards\&.
 
-.nf
-\-T  fwds\&.\&.
-      Removes a list of deliver\-to forwards (wildcards supported)
-.fi
+.TP
+\-T forward[,forward...]
+Removes a list of deliver\-to forwards (wildcards supported)\&.
 
 .SH "COMMON OPTIONS"
 
-.nf
+.TP
 \-f configfile
-       Specify an alternate config file\&. The  utilities  are  currently
-       hardcoded  to  use  /etc/dbmail\&.conf for their configs, and will
-       halt if the config file cannot be found\&. Use the  \-f  configfile
-       option  to specify your system's preferred config file location\&.
-.fi
+Specify an alternate config file\&. The utilities are currently hardcoded to use /etc/dbmail\&.conf for their configs, and will halt if the config file cannot be found\&. Use the \-f configfile option to specify your system's preferred config file location\&.
 
-.nf
-\-q     Quietly skip interactive prompts  and  helpful  status  messages
-       which  would  otherwise  be  printed to stdout\&.  Use two \-q's to
-       silence errors which would otherwise be printed to stderr\&.
-.fi
+.TP
+\-q
+Quietly skip interactive prompts and helpful status messages which would otherwise be printed to stdout\&. Use two \-q's to silence errors which would otherwise be printed to stderr\&.
 
-.nf
-\-v     Operate verbosely\&.  Some of the utilities in  the  DBMail  suite
-       can  take two \-v's for extra verbosity\&. Those which don't under\-
-       stand this convention won't complain about having the  extra  \-v
-       and will simply operate at their normal verbosity\&.
-.fi
+.TP
+\-v
+Operate verbosely\&. Some of the utilities in the DBMail suite can take two \-v's for extra verbosity\&. Those which don't understand this convention won't complain about having the extra \-v and will simply operate at their normal verbosity\&.
 
-.nf
-\-V     Show the version and copyright, then exit\&.
-.fi
+.TP
+\-V
+Show the version and copyright, then exit\&.
 
-.nf
-\-h     Show a brief summary of options, then exit\&.
-.fi
-
-.SH "DIAGNOSTICS"
-
-.nf
-Errors  and  notifications  are  send to the trace output as set in the
-DBMail configfile\&.
-.fi
+.TP
+\-h
+Show a brief summary of options, then exit\&.
 
 .SH "BUGS"
 
-.nf
-No known bugs\&.
-.fi
+
+If you experience inexplicable problems with DBMAil, please report the issue to the DBMail Bug Tracker: \fIhttp://dbmail.org/index.php?page=bugs\fR\&.
 
 .SH "LICENSE"
 
-.nf
-DBMail and it's components are (c) IC&S and distributed under the  GPL\&.
-.fi
+
+DBMail and its components are distributed under the terms of the GNU General Public License\&. Copyrights are held variously by the authors listed below\&.
 
 .SH "AUTHOR(S)"
 
+
+DBMail is a collaborative effort among the core developers listed below and the tremendous help of the testers, patchers and bug hunters listed in the AUTHORS and THANKS files found in the DBMail source distribution\&.
+
 .nf
-Eelco van Beek
-Roel Rozendaal
-IC&S
+Eelco van Beek      Aaron Stone            Paul J Stevens
+Roel Rozendaal      Programmer             NFG Net Facilities Group BV
+Ilja Booij          Palo Alto, CA USA      http://www\&.nfg\&.nl
+IC&S                http://hydricacid\&.com
 Koningsweg 4
 3582 GE Utrecht
 http://www\&.ic\-s\&.nl

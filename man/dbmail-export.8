@@ -52,60 +52,48 @@ mbox formatted mailbox\&.
 
 .SH "COMMON OPTIONS"
 
-.nf
+.TP
 \-f configfile
-       Specify  an  alternate  config file\&. The utilities are currently
-       hardcoded to use /etc/dbmail\&.conf for their  configs,  and  will
-       halt  if  the config file cannot be found\&. Use the \-f configfile
-       option to specify your system's preferred config file  location\&.
-.fi
+Specify an alternate config file\&. The utilities are currently hardcoded to use /etc/dbmail\&.conf for their configs, and will halt if the config file cannot be found\&. Use the \-f configfile option to specify your system's preferred config file location\&.
 
-.nf
-\-q     Quietly  skip  interactive  prompts  and helpful status messages
-       which would otherwise be printed to stdout\&.   Use  two  \-q's  to
-       silence errors which would otherwise be printed to stderr\&.
-.fi
+.TP
+\-q
+Quietly skip interactive prompts and helpful status messages which would otherwise be printed to stdout\&. Use two \-q's to silence errors which would otherwise be printed to stderr\&.
 
-.nf
-\-v     Operate  verbosely\&.   Some  of the utilities in the DBMail suite
-       can take two \-v's for extra verbosity\&. Those which don't  under\-
-       stand  this  convention won't complain about having the extra \-v
-       and will simply operate at their normal verbosity\&.
-.fi
+.TP
+\-v
+Operate verbosely\&. Some of the utilities in the DBMail suite can take two \-v's for extra verbosity\&. Those which don't understand this convention won't complain about having the extra \-v and will simply operate at their normal verbosity\&.
 
-.nf
-\-V     Show the version and copyright, then exit\&.
-.fi
+.TP
+\-V
+Show the version and copyright, then exit\&.
 
-.nf
-\-h     Show a brief summary of options, then exit\&.
-.fi
-
-.SH "DIAGNOSTICS"
-
-.nf
-Errors and notifications are send to the trace output  as  set  in  the
-dbmail\&.conf file\&.
-.fi
+.TP
+\-h
+Show a brief summary of options, then exit\&.
 
 .SH "BUGS"
 
-.nf
-No known bugs\&.
-.fi
+
+If you experience inexplicable problems with DBMAil, please report the issue to the DBMail Bug Tracker: \fIhttp://dbmail.org/index.php?page=bugs\fR\&.
 
 .SH "LICENSE"
 
-.nf
-DBMail and it's components are (c) by their respective authors and dis\-
-tributed under the GPL\&.
-.fi
+
+DBMail and its components are distributed under the terms of the GNU General Public License\&. Copyrights are held variously by the authors listed below\&.
 
 .SH "AUTHOR(S)"
 
+
+DBMail is a collaborative effort among the core developers listed below and the tremendous help of the testers, patchers and bug hunters listed in the AUTHORS and THANKS files found in the DBMail source distribution\&.
+
 .nf
-Paul J Stevens
-NFG Net Facilities Group BV
-http://www\&.nfg\&.nl
+Eelco van Beek      Aaron Stone            Paul J Stevens
+Roel Rozendaal      Programmer             NFG Net Facilities Group BV
+Ilja Booij          Palo Alto, CA USA      http://www\&.nfg\&.nl
+IC&S                http://hydricacid\&.com
+Koningsweg 4
+3582 GE Utrecht
+http://www\&.ic\-s\&.nl
 .fi
 

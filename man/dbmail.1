@@ -23,25 +23,43 @@ dbmail \- the Database Mailer, is a suite of mail storage and retrieval programs
 .SH "SYNOPSIS"
 
 
-dbmail\-users dbmail\-export dbmail\-smtp dbmail\-sievecmd dbmail\-maintenance dbmail\-imapd dbmail\-pop3d dbmail\-lmtpd dbmail\-timsieved
+See one of the following man pages for more information about the components of a DBMail system:
 
-.SH "DESCRIPTION"
-
-
-DBMail implements such a system using a database backend\&.
+.nf
+Configuration file \&. \&. \&. \&. dbmail\&.conf(5)
+Deliver mail \&. \&. \&. \&. \&. \&. \&. dbmail\-smtp(1)
+Manage user accounts \&. \&. \&. dbmail\-users(8)
+Export mailbox contents\&. \&. dbmail\-export(8)
+Manage Sieve scripts \&. \&. \&. dbmail\-sievecmd(8)
+Maintain health\&. \&. \&. \&. \&. \&. dbmail\-util(8)
+IMAP daemon\&. \&. \&. \&. \&. \&. \&. \&. dbmail\-imapd(8)
+POP3 daemon\&. \&. \&. \&. \&. \&. \&. \&. dbmail\-pop3d(8)
+LMTP daemon\&. \&. \&. \&. \&. \&. \&. \&. dbmail\-lmtpd(8)
+ManageSieve daemon \&. \&. \&. \&. dbmail\-timsieved(8)
+.fi
 
 .SH "BUGS"
 
 
-Nobody is perfect\&.
+If you experience inexplicable problems with DBMAil, please report the issue to the DBMail Bug Tracker: \fIhttp://dbmail.org/index.php?page=bugs\fR\&.
 
 .SH "LICENSE"
 
 
-DBMail and its components are (c) IC&S and distributed under the GPL\&.
+DBMail and its components are distributed under the terms of the GNU General Public License\&. Copyrights are held variously by the authors listed below\&.
 
 .SH "AUTHOR(S)"
 
 
-That's us!
+DBMail is a collaborative effort among the core developers listed below and the tremendous help of the testers, patchers and bug hunters listed in the AUTHORS and THANKS files found in the DBMail source distribution\&.
+
+.nf
+Eelco van Beek      Aaron Stone            Paul J Stevens
+Roel Rozendaal      Programmer             NFG Net Facilities Group BV
+Ilja Booij          Palo Alto, CA USA      http://www\&.nfg\&.nl
+IC&S                http://hydricacid\&.com
+Koningsweg 4
+3582 GE Utrecht
+http://www\&.ic\-s\&.nl
+.fi
 

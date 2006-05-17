@@ -22,114 +22,102 @@
 dbmail-util \- maintains the integrity and cleanliness of the DBMail datatables.
 .SH "SYNOPSIS"
 
-.nf
-dbmail\-util [\-cturpd] [\-l time] [\-qvVh] [\-f configFile]
-.fi
+
+dbmail\-util [\-actubpd] [\-l time] [\-yn] [\-qvVh] [\-f configFile]
 
 .SH "DESCRIPTION"
 
-.nf
-The dbmail\-util program does a global database  cleanup  and  integrity
-check\&.  All messages that are set for deletion will be marked for final
-deletion (status 3)\&. All message that are  marked  for  final  deletion
-will  be  cleared from the database\&. The integrity check will check for
-unconnected messageblocks, unconnected messages and  unconnected  mail\-
-boxes\&.
-.fi
+
+The dbmail\-util program does a global database cleanup and integrity check\&. All messages that are set for deletion will be marked for final deletion (status 3)\&. All message that are marked for final deletion will be cleared from the database\&. The integrity check will check for unconnected messageblocks, unconnected messages and unconnected mailboxes\&.
 
 .SH "OPTIONS"
 
-.nf
-\-c     clean up unlinked message entries
-.fi
+.TP
+\-a
+Perform all checks listed below\&. This option will be kept up\-to\-date with additional checks available in future versions\&.
 
-.nf
-\-t     test for message integrity
-.fi
+.TP
+\-c
+Clean up unlinked message entries\&.
 
-.nf
-\-u     null message check
-.fi
+.TP
+\-t
+Test for message integrity\&.
 
-.nf
-\-r     repair any integrity problems
-.fi
+.TP
+\-u
+Null message check\&.
 
-.nf
-\-p     purge messages have the DELETE status set
-.fi
+.TP
+\-b
+Check and rebuild the body/header cache tables\&.
 
-.nf
-\-d     set DELETE status for deleted messages
-.fi
+.TP
+\-p
+Purge messages have the DELETE status set\&.
 
-.nf
+.TP
+\-d
+Set DELETE status for deleted messages\&.
+
+.TP
 \-l time
-       clear the IP log used for IMAP/POP\-before\-SMTP the time is spec\-
-       ified as <hours>h<minutes>m (don't include the  angle  brackets,
-       though)
-.fi
+Clear the IP log used for IMAP/POP\-before\-SMTP the time is specified as <hours>h<minutes>m (don't include the angle brackets, though!)\&.
 
-.nf
-\-i     Enter an interactive user management console\&.
-.fi
+.TP
+\-n
+Show the intended repairs without making any changes, i\&.e\&. no to all\&.
+
+.TP
+\-y
+Perform all repair actions , i\&.e\&. yes to all\&.
+
+.TP
+\-i
+Enter an interactive user management console in some future version where this feature is implemented\&. It is not currently available\&.
 
 .SH "COMMON OPTIONS"
 
-.nf
+.TP
 \-f configfile
-       Specify  an  alternate  config file\&. The utilities are currently
-       hardcoded to use /etc/dbmail\&.conf for their  configs,  and  will
-       halt  if  the config file cannot be found\&. Use the \-f configfile
-       option to specify your system's preferred config file  location\&.
-.fi
+Specify an alternate config file\&. The utilities are currently hardcoded to use /etc/dbmail\&.conf for their configs, and will halt if the config file cannot be found\&. Use the \-f configfile option to specify your system's preferred config file location\&.
 
-.nf
-\-q     Quietly  skip  interactive  prompts  and helpful status messages
-       which would otherwise be printed to stdout\&.   Use  two  \-q's  to
-       silence errors which would otherwise be printed to stderr\&.
-.fi
+.TP
+\-q
+Quietly skip interactive prompts and helpful status messages which would otherwise be printed to stdout\&. Use two \-q's to silence errors which would otherwise be printed to stderr\&.
 
-.nf
-\-v     Operate  verbosely\&.   Some  of the utilities in the DBMail suite
-       can take two \-v's for extra verbosity\&. Those which don't  under\-
-       stand  this  convention won't complain about having the extra \-v
-       and will simply operate at their normal verbosity\&.
-.fi
+.TP
+\-v
+Operate verbosely\&. Some of the utilities in the DBMail suite can take two \-v's for extra verbosity\&. Those which don't understand this convention won't complain about having the extra \-v and will simply operate at their normal verbosity\&.
 
-.nf
-\-V     Show the version and copyright, then exit\&.
-.fi
+.TP
+\-V
+Show the version and copyright, then exit\&.
 
-.nf
-\-h     Show a brief summary of options, then exit\&.
-.fi
-
-.SH "DIAGNOSTICS"
-
-.nf
-Errors and notifications are send to the trace output  as  set  in  the
-dbmail\&.conf file\&.
-.fi
+.TP
+\-h
+Show a brief summary of options, then exit\&.
 
 .SH "BUGS"
 
-.nf
-No known bugs\&.
-.fi
+
+If you experience inexplicable problems with DBMAil, please report the issue to the DBMail Bug Tracker: \fIhttp://dbmail.org/index.php?page=bugs\fR\&.
 
 .SH "LICENSE"
 
-.nf
-DBMail  and it's components are (c) IC&S and distributed under the GPL\&.
-.fi
+
+DBMail and its components are distributed under the terms of the GNU General Public License\&. Copyrights are held variously by the authors listed below\&.
 
 .SH "AUTHOR(S)"
 
+
+DBMail is a collaborative effort among the core developers listed below and the tremendous help of the testers, patchers and bug hunters listed in the AUTHORS and THANKS files found in the DBMail source distribution\&.
+
 .nf
-Eelco van Beek
-Roel Rozendaal
-IC&S
+Eelco van Beek      Aaron Stone            Paul J Stevens
+Roel Rozendaal      Programmer             NFG Net Facilities Group BV
+Ilja Booij          Palo Alto, CA USA      http://www\&.nfg\&.nl
+IC&S                http://hydricacid\&.com
 Koningsweg 4
 3582 GE Utrecht
 http://www\&.ic\-s\&.nl

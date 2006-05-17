@@ -29,48 +29,6 @@ OPTIONS
               specify the file into which the exported mail will be saved.
 
 
+include::commonopts.txt[]
 
-COMMON OPTIONS
---------------
-       -f configfile
-              Specify  an  alternate  config file. The utilities are currently
-              hardcoded to use /etc/dbmail.conf for their  configs,  and  will
-              halt  if  the config file cannot be found. Use the -f configfile
-              option to specify your system's preferred config file  location.
-
-       -q     Quietly  skip  interactive  prompts  and helpful status messages
-              which would otherwise be printed to stdout.   Use  two  -q's  to
-              silence errors which would otherwise be printed to stderr.
-
-
-
-       -v     Operate  verbosely.   Some  of the utilities in the DBMail suite
-              can take two -v's for extra verbosity. Those which don't  under-
-              stand  this  convention won't complain about having the extra -v
-              and will simply operate at their normal verbosity.
-
-       -V     Show the version and copyright, then exit.
-
-       -h     Show a brief summary of options, then exit.
-
-DIAGNOSTICS
------------
-       Errors and notifications are send to the trace output  as  set  in  the
-       dbmail.conf file.
-
-BUGS
-----
-       No known bugs.
-
-LICENSE
--------
-       DBMail and it's components are (c) by their respective authors and dis-
-       tributed under the GPL.
-
-AUTHOR(S)
----------
-       Paul J Stevens
-       NFG Net Facilities Group BV
-       http://www.nfg.nl
-
-
+include::footer.txt[]
