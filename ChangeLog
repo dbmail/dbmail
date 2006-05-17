@@ -1,3 +1,16 @@
+2006-05-17  Paul J Stevens <paul@nfg.nl>
+
+	* debian/control:
+	update debian depends
+	* check_dbmail_imapd.c, serverchild.c:
+	fix a couple of minor compiler warnings
+	* debian/default.dbmail:
+	disable startup of timsieved by default in debian scripts
+	* sql/sqlite/create_tables.sqlite:
+	partial finish of sqlite create_tables
+	* dm_imaputil.c:
+	tweak escaping of from in envelope
+
 2006-05-13  Aaron Stone  <aaron@serendipity.cx>
 
 	* acinclude.m4, authmodule.c, dbmodule.c, sortmodule.c:
