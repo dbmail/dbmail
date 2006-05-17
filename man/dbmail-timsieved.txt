@@ -49,20 +49,7 @@ OPTIONS
 
        -h  Show a brief summary of options, then exit.
 
-DIAGNOSTICS
------------
-       Errors and notifications are send to the trace output as set in the
-       DBMail configfile.
 
-BUGS
-----
-       Not all of the features recommended by RFC 2033 are implemented.
+include::commonopts.txt[]
 
-LICENSE
--------
-       DBMail and its components are (c) IC&S and distributed under the GPL.
-
-AUTHOR(S)
----------
-       Aaron Stone Open Source Programmer Palo Alto, California USA
-
+include::footer.txt[]

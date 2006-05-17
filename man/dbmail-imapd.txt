@@ -2,78 +2,55 @@ DBMAIL-IMAPD(8)
 ===============
 
 
-
 NAME
 ----
-       dbmail-imapd - provides access to the DBMail system to clients support-
-       ing Internet Message Access Protocol,  IMAP4r1,  as  specified  in  RFC
-       3501.
+dbmail-imapd - provides access to the DBMail system to clients supporting
+Internet Message Access Protocol, IMAP4r1, as specified in RFC
+3501.
 
 SYNOPSIS
 --------
-       dbmail-imapd [-f configfile] [-p pidfile] [-nvVh]
+dbmail-imapd [-f configfile] [-p pidfile] [-nvVh]
 
 DESCRIPTION
 -----------
-       The  dbmail-imapd  daemon  is  a fully featured IMAP4r1 server. It will
-       spawn into a number of default processes  as  set  in  the  dbmail.conf
-       file.   These  processes  will  enable  full IMAP4r1 communication with
-       clients.
+The dbmail-imapd daemon is a fully featured IMAP4r1 server. It will
+spawn into a number of default processes as set in the dbmail.conf
+file. These processes will enable full IMAP4r1 communication with
+clients.
 
 OPTIONS
 -------
-       -f configfile
-              Specify an alternate config  file.  The  daemons  are  currently
-              hardcoded  to  use  /etc/dbmail.conf for their configs, and will
-              halt if the config file cannot be found. Use the  -f  configfile
-              option  to specify your system's preferred config file location.
 
-       -p pidfile
-              Specify an alternate pid file. The daemons are  currently  hard-
-              coded  to  use /var/run/dbmail-<daemon> for their pid files, and
-              will halt if the pid file cannot be written. Use the -p  pidfile
-              option  to  place  the pid file in your system's preferred loca-
-              tion.
+-p pidfile::
+  Specify an alternate pid file. The daemons are currently hardcoded
+  to use /var/run/dbmail-<daemon> for their pid files, and
+  will halt if the pid file cannot be written. Use the -p pidfile
+  option to place the pid file in your system's preferred location.
 
-       -n     No daemonize. The program remains attached to the  console  from
-              which  it  was  started. This is quite useful for debugging when
-              combined with the -v option.
+-n::
+  Don't daemonize and remain attached to stdin/stdout. This is most useful
+  for starting DBMail from inetd.
 
-       -v     Operate verbosely. For daemons, this may only be useful with the
-              -n option which keeps the program bound to the console.  Some of
-              the utilities in the DBMail suite can take two  -v's  for  extra
-              verbosity.  Those  which  don't understand this convention won't
-              complain about having the extra -v and will  simply  operate  at
-              their normal verbosity.
+include::commonopts.txt[]
 
-       -V     Show the version and copyright, then exit.
-
-       -h     Show a brief summary of options, then exit.
-
-
-DIAGNOSTICS
------------
-       Errors  and  notifications  are  send to the trace output as set in the
-       dbmail.conf file.
-
-BUGS
-----
-       Since the RFC on IMAP4r1 is not very strict and  consequently  some  e-
-       mail clients aren't either it's hard to make a fully compatible IMAP4r1
-       server.  However dbmail-imapd is tested and found compatible with  most
-       IMAP4r1  clients.  dbmail-imapd  will  also  have  future configuration
-       options for specific client compatibility.
-
-LICENSE
+EXAMPLE
 -------
-       DBMail and its components are (c) IC&S and distributed under the GPL.
 
-AUTHOR(S)
----------
-       Roel Rozendaal
-       IC&S
-       Koningsweg 4
-       3582 GE Utrecht
-       The Netherlands
-       http://www.ic-s.nl
+-----------------------------------------------------------
+  # /etc/xinet.d/dbmail-imap
+  #
+  service imap
+  {
+          socket_type     = stream
+          wait            = no
+          user            = root
+          server          = /usr/local/sbin/dbmail-imapd
+          protocol        = tcp
+          server_args     = -n
+          log_on_failure  += USERID
+          disable         = no
+  }
+-----------------------------------------------------------
 
+include::footer.txt[]

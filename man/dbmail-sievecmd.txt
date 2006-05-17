@@ -43,55 +43,7 @@ is - (dash), 'stdin' will be read.
 Remove the named script. If the script was active, no script will
 be active after it is deletion.
 
-COMMON OPTIONS
---------------
--f configfile::
-Specify an alternate config file. The daemons are currently
-hardcoded to use /etc/dbmail.conf for their configs, and will halt if
-the config file cannot be found. Use the -f configfile option to
-specify your system's preferred config file location.
 
--p pidfile::
-Specify an alternate pid file. The daemons are currently hardcoded
-to use /var/run/dbmail-<daemon> for their pid files, and will halt
-if the pid file cannot be written. Use the -p pidfile option to
-place the pid file in your system's preferred location.
+include::commonopts.txt[]
 
--n::
-No daemonize. The program remains attached to the console from
-which it was started. This is quite useful for debugging when
-com bined with the -v option.
-
--v::
-Operate verbosely. For daemons, this may only be useful with the -n
-option which keeps the program bound to the console.  Some of the
-utilities in the DBMail suite can take two -v's for extra verbosity.
-Those which don't understand this convention won't complain
-about having the extra -v and will simply operate at their normal
-verbosity.
-
--V::
-Show the version and copyright, then exit.
-
--h::
-Show a brief summary of options, then exit.
-
-DIAGNOSTICS
------------
-Errors and notifications are send to the trace output as set in the
-DBMail configfile.
-
-BUGS
-----
-Not all of the features recommended by RFC 2033 are implemented.
-
-LICENSE
--------
-DBMail and its components are (c) IC&S and distributed under the GPL.
-
-AUTHOR(S)
----------
-Aaron Stone
-Open Source Programmer
-Palo Alto, California USA
-
+include::footer.txt[]
