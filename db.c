@@ -2451,7 +2451,7 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 	
 	if (only_subscribed)
 		snprintf(query, DEF_QUERYSIZE,
-			 "SELECT mbx.name, mbx.mailbox_idnr, mbx.owner_idnr "
+			 "SELECT distinct(mbx.name), mbx.mailbox_idnr, mbx.owner_idnr "
 			 "FROM %smailboxes mbx "
 			 "LEFT JOIN %sacl acl "
 			 "ON mbx.mailbox_idnr = acl.mailbox_id "
@@ -2470,7 +2470,7 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 			 DBMAIL_ACL_ANYONE_USER);
 	else
 		snprintf(query, DEF_QUERYSIZE,
-			 "SELECT mbx.name, mbx.mailbox_idnr, mbx.owner_idnr "
+			 "SELECT distinct(mbx.name), mbx.mailbox_idnr, mbx.owner_idnr "
 			 "FROM %smailboxes mbx "
 			 "LEFT JOIN %sacl acl "
 			 "ON mbx.mailbox_idnr = acl.mailbox_id "
