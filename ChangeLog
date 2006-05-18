@@ -1,3 +1,10 @@
+2006-05-18  Paul J Stevens <paul@nfg.nl>
+
+	* db.c, test-scripts/testimap.py:
+	fix lsub
+	* dbmail-mailbox.c:
+	fix imap search without sequence set
+
 2006-05-17  Paul J Stevens <paul@nfg.nl>
 
 	* debian/control:
