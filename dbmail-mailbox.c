@@ -975,18 +975,17 @@ int dbmail_mailbox_build_imap_search(struct DbmailMailbox *self, char **search_k
 	if (! (search_keys && search_keys[*idx]))
 		return 1;
 
-	if (MATCH(search_keys[*idx],"uid")) {
-		dbmail_mailbox_set_uid(self,TRUE);
-		(*idx)++;
-	}
-	
+	/* default initial key for ANDing */
+	value = g_new0(search_key_t,1);
+	value->type = IST_SET;
 	if (check_msg_set(search_keys[*idx])) {
-		value = g_new0(search_key_t,1);
-		value->type = IST_SET;
 		strncpy(value->search, search_keys[*idx], MAX_SEARCH_LEN);
 		(*idx)++;
-		append_search(self, value, 0);
+	} else {
+		/* match all messages if no initial sequence set is defined */
+		strncpy(value->search, "1:*", MAX_SEARCH_LEN);
 	}
+	append_search(self, value, 0);
 	
 	/* SORT */
 	if (sorted) {

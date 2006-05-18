@@ -340,14 +340,8 @@ class testImapServer(unittest.TestCase):
         for mailbox in mailboxes:
             self.o.create(mailbox)
             self.o.subscribe(mailbox)
-            
-#        print self.o.lsub()
-#        print self.o.lsub('""','"*"')
-#        print self.o.lsub('""','"%"')
-#        print self.o.lsub('"%s/"' % mailboxes[1],'"%"')
-#        print self.o.lsub('"%s"' % mailboxes[0],'"*"')
-        self.assertEquals('(\\hasnochildren) "/" "%s"' % mailboxes[6], self.o.lsub()[1][6])
-        self.assertEquals('(\\hasnochildren) "/" "%s"' % mailboxes[2], self.o.lsub('""','"*"')[1][2])
+        self.assertEquals('(\\hasnochildren) "/" "%s"' % mailboxes[6], self.o.lsub()[1][7])
+        self.assertEquals('(\\hasnochildren) "/" "%s"' % mailboxes[2], self.o.lsub('""','"*"')[1][3])
         self.assertEquals('(\\hasnochildren) "/" "%s"' % mailboxes[2], self.o.lsub('"%s/"' % mailboxes[1],'"%"')[1][0])
 
     def testNoop(self):
@@ -418,11 +412,12 @@ class testImapServer(unittest.TestCase):
         self.assertEquals(result1[0],'OK')
         result2=self.o.search(None, "1:*", "NOT", "DELETED")
         self.assertEquals(result2[0],'OK')
-        print result1, result2
-        return
-        result=self.o.search(None, "UNDELETED", "BODY", "test")
-        self.assertEquals(result[0],'OK')
-#        self.failIf(result[1]==[''])
+        result1=self.o.search(None, "UNDELETED", "BODY", "test")
+        self.assertEquals(result1[0],'OK')
+        result2=self.o.search(None, "1:*", "UNDELETED", "BODY", "test")
+        self.assertEquals(result2[0],'OK')
+        self.assertEquals(result1,result2)
+        
         result=self.o.search(None, "RECENT", "HEADER", "X-OfflineIMAP-901701146-4c6f63616c4d69726a616d-494e424f58", "1086726519-0790956581151")
         self.assertEquals(result[0],'OK')
         result=self.o.search(None, "UNDELETED", "HEADER", "TO", "testuser")
