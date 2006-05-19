@@ -258,4 +258,12 @@ char *encoded_message_koi = "From: =?koi8-r?Q?=E1=CE=D4=CF=CE=20=EE=C5=C8=CF=D2=
 	"\n"
 	"test mail\n\n";
 
+char *encoded_message_latin = "From: =?iso-8859-1?Q?B=BA_V._F._Z=EAzere?= <nobody@nowhere.org>\n"
+	"To: nobody@foo.org\n"
+	"Subject: =?iso-8859-1?Q?Re:_M=F3dulo_Extintores?=\n"
+	"MIME-Version: 1.0\n"
+	"Content-Type: text/plain\n"
+	"\n"
+	"test\n\n";
 
+	

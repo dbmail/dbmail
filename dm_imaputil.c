@@ -473,7 +473,6 @@ static GList * _imap_append_alist_as_plist(GList *list, const InternetAddressLis
 	gchar *s = NULL, *st = NULL;
 	gchar **tokens;
 	gchar *name;
-	size_t l;
 
 	if (ialist==NULL)
 		return g_list_append_printf(list, "NIL");
@@ -483,7 +482,7 @@ static GList * _imap_append_alist_as_plist(GList *list, const InternetAddressLis
 		
 		ia = ial->address;
 		g_return_val_if_fail(ia!=NULL, list);
-		
+
 		/* personal name */
 		if (ia->name) {
 			name = g_mime_utils_header_encode_phrase((unsigned char *)ia->name);
@@ -590,11 +589,30 @@ char * imap_get_structure(GMimeMessage *message, gboolean extension)
 	return t;
 }
 
+GList * envelope_address_part(GList *list, GMimeMessage *message, const char *header)
+{
+	char *result, *t;
+	InternetAddressList *alist;
+	
+	result = (char *)g_mime_message_get_header(message,header);
+	if (result) {
+		t = imap_cleanup_address(result);
+		alist = internet_address_parse_string(t);
+		g_free(t);
+		list = _imap_append_alist_as_plist(list, (const InternetAddressList *)alist);
+		internet_address_list_destroy(alist);
+		alist = NULL;
+	} else {
+		list = g_list_append_printf(list,"NIL");
+	}
+	return list;
+}
+	
+
 /* envelope access point */
 char * imap_get_envelope(GMimeMessage *message)
 {
 	GMimeObject *part;
-	InternetAddressList *alist;
 	GList *list = NULL;
 	char *result;
 	char *s, *t;
@@ -626,51 +644,25 @@ char * imap_get_envelope(GMimeMessage *message)
 	}
 	
 	/* from */
-	result = (char *)g_mime_message_get_header(message,"From");
-	if (result) {
-		alist = internet_address_parse_string(result);
-		list = _imap_append_alist_as_plist(list, (const InternetAddressList *)alist);
-		internet_address_list_destroy(alist);
-		alist = NULL;
-	} else {
-		list = g_list_append_printf(list,"NIL");
-	}
-	
+	list = envelope_address_part(list, message, "From");
 	/* sender */
-	if (! (result = (char *)g_mime_message_get_header(message,"Sender")))
-		result = (char *)g_mime_message_get_header(message,"From");
-	if (result) {
-		alist = internet_address_parse_string(result);
-		list = _imap_append_alist_as_plist(list, alist);
-		internet_address_list_destroy(alist);
-		alist = NULL;
-	} else {
-		list = g_list_append_printf(list,"NIL");
-	}
+	if (g_mime_message_get_header(message,"Sender"))
+		list = envelope_address_part(list, message, "Sender");
+	else
+		list = envelope_address_part(list, message, "From");
 
 	/* reply-to */
-	if (! (result = (char *)g_mime_message_get_header(message,"Reply-to")))
-		result = (char *)g_mime_message_get_header(message,"From");
-	if (result) {
-		alist = internet_address_parse_string(result);
-		list = _imap_append_alist_as_plist(list, alist);
-		internet_address_list_destroy(alist);
-		alist = NULL;
-	} else {
-		list = g_list_append_printf(list,"NIL");
-	}
-	
+	if (g_mime_message_get_header(message,"Reply-to"))
+		list = envelope_address_part(list, message, "Reply-to");
+	else
+		list = envelope_address_part(list, message, "From");
+		
 	/* to */
-	alist = (InternetAddressList *)g_mime_message_get_recipients(message,GMIME_RECIPIENT_TYPE_TO);
-	list = _imap_append_alist_as_plist(list, alist);
-	
+	list = envelope_address_part(list, message, "To");
 	/* cc */
-	alist = (InternetAddressList *)g_mime_message_get_recipients(message,GMIME_RECIPIENT_TYPE_CC);
-	list = _imap_append_alist_as_plist(list, alist);
-	
+	list = envelope_address_part(list, message, "Cc");
 	/* bcc */
-	alist = (InternetAddressList *)g_mime_message_get_recipients(message,GMIME_RECIPIENT_TYPE_BCC);
-	list = _imap_append_alist_as_plist(list, alist);
+	list = envelope_address_part(list, message, "Bcc");
 	
 	/* in-reply-to */
 	list = imap_append_header_as_string(list,part,"In-Reply-to");
@@ -820,6 +812,49 @@ char * imap_message_fetch_headers(u64_t physid, const GList *headers, gboolean n
 	g_tree_destroy(tree);
 	
 	return res;
+}
+
+char * imap_cleanup_address(const char *a) 
+{
+	/* 
+	 * one ugly hack to work around a problem where gmime is too strict 
+	 * in it's parsing of addresses
+	 *
+	 * FIXME: doesn't work for addresslists
+	 */
+	char *r;
+	const char *inptr;
+	char prev;
+	GString *s = g_string_new("");
+	
+	inptr = a;
+	prev = *a;
+	
+	while (*inptr && (*inptr == ' ' || *inptr == '\t')) {
+		g_string_append_c(s,*inptr);	
+		inptr++;
+	}
+	
+	if (*inptr == '=') {
+		g_string_append_c(s,'"');
+		
+		while (*inptr && *inptr != ' ' && *inptr != '\t' && *inptr!='<') {
+			g_string_append_c(s,*inptr);
+			prev = *inptr;
+			inptr++;
+		}
+		if (prev == '=' && *inptr)
+			g_string_append_c(s,'"');
+
+		if (*inptr == '<')
+			g_string_append_c(s,' ');
+	}
+
+	if (*inptr)
+		g_string_append(s,inptr);
+	r = s->str;
+	g_string_free(s,FALSE);
+	return r;
 }
 
 /*

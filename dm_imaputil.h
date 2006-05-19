@@ -68,6 +68,8 @@ char * imap_get_logical_part(const GMimeObject *object, const char * specifier);
 
 char * imap_message_fetch_headers(u64_t physid, const GList *headers, gboolean not);
 
+char * imap_cleanup_address(const char *a);
+	
 int mime_unwrap(char *to, const char *from); 
 int sort_search(struct dm_list *searchlist);
 
