@@ -172,10 +172,10 @@ unsigned db_num_fields()
 
 void db_free_result()
 {
+	_free_binary_table();
 	if (res != NULL)
 		PQclear(res);
 	res = NULL;
-	_free_binary_table();
 }
 
 static void _create_binary_table(void){
