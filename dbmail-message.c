@@ -331,7 +331,7 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 
 				if ((type==DBMAIL_STREAM_LMTP) && (strncmp(buf,".\r\n",3)==0))
 					break;
-				g_mime_stream_write_string(mstream, buf);
+				g_mime_stream_write_string(fstream, buf);
 			}
 			g_free(buf);
 			
