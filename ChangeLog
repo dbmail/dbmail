@@ -1,5 +1,7 @@
 2006-05-19  Paul J Stevens <paul@nfg.nl>
 
+	* check_dbmail.h, check_dbmail_imapd.c, dm_imaputil.c, dm_imaputil.h:
+	work around parsing of broken addresses in envelope code
 	* modules/dbpgsql.c:
 	fix memleak (closes: #350)
 	* dbmail-message.c:
