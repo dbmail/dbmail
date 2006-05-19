@@ -729,6 +729,7 @@ int _ic_rename(struct ImapSession *self)
 			dm_free(children);
 			return -1;
 		}
+			
 	}
 	if (children)
 		dm_free(children);
