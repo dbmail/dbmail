@@ -413,7 +413,6 @@ START_TEST(test_imap_get_envelope_8bit_id)
 	char *result, *expect;
 	
 	const char *msgid = "<000001c1f64e$c4a34180$0100007f@z=F0=B5=D241>";
-	size_t idlen = strlen(msgid);
 	expect = g_new0(char, 1024);
 	
 	/* text/plain */
@@ -460,6 +459,43 @@ START_TEST(test_imap_get_envelope_koi)
 	
 }
 END_TEST
+
+
+			
+#define F(a,b) fail_unless(strcmp(imap_cleanup_address(a),b)==0)
+	
+START_TEST(test_imap_cleanup_address)
+{
+
+	F("=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?= <nobody@nowhere.org>","\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" <nobody@nowhere.org>");
+	F("=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=<nobody@nowhere.org>","\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" <nobody@nowhere.org>");
+	F("\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" <nobody@nowhere.org>","\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" <nobody@nowhere.org>");
+	F("Some One <some@foo.org>", "Some One <some@foo.org>");
+	F(" <some@foo.org>", " <some@foo.org>");
+}
+END_TEST
+
+START_TEST(test_imap_get_envelope_latin)
+{
+	char *t;
+	char *expect = g_new0(char,1024);
+	struct DbmailMessage *m = dbmail_message_new();
+	GString *s = g_string_new(encoded_message_latin);
+
+	m = dbmail_message_init_with_string(m, s);
+	g_string_free(s,TRUE);
+	
+	t = imap_get_envelope(GMIME_MESSAGE(m->content));
+	
+	strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"=?iso-8859-1?Q?Re:_M=F3dulo_Extintores?=\" ((\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" NIL \"nobody\" \"nowhere.org\")) ((\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" NIL \"nobody\" \"nowhere.org\")) ((\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" NIL \"nobody\" \"nowhere.org\")) ((NIL NIL \"nobody\" \"foo.org\")) NIL NIL NIL NIL)",1024);
+	
+	fail_unless(strcmp(t,expect)==0,"imap_get_envelope failed");
+
+	g_free(t);
+	dbmail_message_free(m);
+}
+END_TEST
+
 
 START_TEST(test_imap_get_partspec)
 {
@@ -720,9 +756,11 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_session, test_imap_mailbox_open);
 	tcase_add_test(tc_session, test_imap_bodyfetch);
 	tcase_add_test(tc_session, test_imap_get_structure);
+	tcase_add_test(tc_session, test_imap_cleanup_address);
 	tcase_add_test(tc_session, test_imap_get_envelope);
 	tcase_add_test(tc_session, test_imap_get_envelope_8bit_id);
 	tcase_add_test(tc_session, test_imap_get_envelope_koi);
+	tcase_add_test(tc_session, test_imap_get_envelope_latin);
 	tcase_add_test(tc_session, test_imap_get_partspec);
 	tcase_add_test(tc_session, test_imap_message_fetch_headers);
 	tcase_add_test(tc_session, test_dbmail_imap_session_fetch_get_items);
