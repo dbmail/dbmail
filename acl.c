@@ -56,6 +56,19 @@ int acl_has_right(mailbox_t *mailbox, u64_t userid, ACLRight_t right)
 	u64_t anyone_userid;
 	int test;
 	
+	switch(right) {
+		case ACL_RIGHT_SEEN:
+		case ACL_RIGHT_WRITE:
+		case ACL_RIGHT_INSERT:
+		case ACL_RIGHT_POST:
+		case ACL_RIGHT_CREATE:
+		case ACL_RIGHT_DELETE:
+		case ACL_RIGHT_ADMINISTER:
+			if (mailbox_is_writable(mailbox->uid))
+				return FALSE;
+		break;
+	}
+
 	const char *right_flag = acl_right_strings[right];
 
 	/* first try if the user has the right */

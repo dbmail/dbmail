@@ -191,7 +191,7 @@ int db_rollback_transaction()
 }
 
 
-static int mailbox_is_writable(u64_t mailbox_idnr)
+int mailbox_is_writable(u64_t mailbox_idnr)
 {
 	mailbox_t mb;
 	memset(&mb,'\0', sizeof(mb));

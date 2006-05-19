@@ -290,6 +290,8 @@ int db_commit_transaction(void);
  */
 int db_rollback_transaction(void);
 
+int mailbox_is_writable(u64_t mailbox_idnr);
+
 /**
  * set savepoint to transaction
  * \param name
