@@ -1,3 +1,10 @@
+2006-05-19  Paul J Stevens <paul@nfg.nl>
+
+	* modules/dbpgsql.c:
+	fix memleak (closes: #350)
+	* dbmail-message.c:
+	do crlf-dot-crlf decoding on lmtp stream (closes: #349)
+
 2006-05-18  Paul J Stevens <paul@nfg.nl>
 
 	* db.c, test-scripts/testimap.py:
