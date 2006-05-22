@@ -345,23 +345,13 @@ int _ic_create(struct ImapSession *self)
 	}
 
 	/* alloc a ptr which can contain up to the full name */
-	cpy = (char *) dm_malloc(sizeof(char) * (strlen(self->args[0]) + 1));
-	if (!cpy) {
-		/* out of mem */
-		trace(TRACE_ERROR, "IMAPD: create(): not enough memory");
-		dbmail_imap_session_printf(self, "* BYE server ran out of memory\r\n");
-		return -1;
-	}
-
+	cpy = g_new0(char, strlen(self->args[0]) + 1);
 	/* split up the name & create parent folders as necessary */
-	chunks = g_strsplit(self->args[0], "/", 0);
-
-	if (chunks == NULL) {
-		/* serious error while making chunks */
-		trace(TRACE_ERROR, "IMAPD: create(): could not create chunks");
+	if (! (chunks = g_strsplit(self->args[0], "/", 0))) {
+		trace(TRACE_ERROR, "%s,%s: could not create chunks", __FILE__, __func__);
 		dbmail_imap_session_printf(self, "* BYE server ran out of memory\r\n");
 		dm_free(cpy);
-		return -1;
+		return DM_EQUERY; //DM_EQUERY ??
 	}
 
 	if (chunks[0] == NULL) {
@@ -369,19 +359,19 @@ int _ic_create(struct ImapSession *self)
 		dbmail_imap_session_printf(self, "%s NO invalid mailbox name specified\r\n", self->tag);
 		g_strfreev(chunks);
 		dm_free(cpy);
-		return 1;
+		return DM_EGENERAL;
 	}
 
 	/* now go create */
 	strcpy(cpy, "");
 
 	for (i = 0; chunks[i]; i++) {
-		if (strlen(chunks[i]) == 0) {
+		if (! (strlen(chunks[i]))) {
 			/* no can do */
 			dbmail_imap_session_printf(self, "%s NO invalid mailbox name specified\r\n", self->tag);
 			g_strfreev(chunks);
 			dm_free(cpy);
-			return 1;
+			return DM_EGENERAL;
 		}
 
 		if (i == 0) {
@@ -389,8 +379,7 @@ int _ic_create(struct ImapSession *self)
 				strcpy(chunks[0], "INBOX");	/* make inbox uppercase */
 
 			strcat(cpy, chunks[i]);
-			/* check to see if this is a folder in Other Users/ or Public
-			   namespace */
+			/* skip  #Users and #Public namespace root */
 			if (strcmp(cpy, NAMESPACE_USER) == 0 || strcmp(cpy, NAMESPACE_PUBLIC) == 0) {
 				other_namespace = 1;
 				continue;
@@ -398,7 +387,7 @@ int _ic_create(struct ImapSession *self)
 		} else {
 			strcat(cpy, "/");
 			strcat(cpy, chunks[i]);
-			/* if this is in Other Users namespace, continue to the next chunk */
+			/* if this is one level below #Users, continue to the next chunk */
 			if (i == 1 && strncmp(cpy, NAMESPACE_USER, strlen(NAMESPACE_USER)) == 0)
 				continue;
 
@@ -407,30 +396,28 @@ int _ic_create(struct ImapSession *self)
 		trace(TRACE_DEBUG, "checking for '%s'...", cpy);
 
 		/* check if this mailbox already exists */
-		if (db_findmailbox(cpy, ud->userid, &mboxid) == -1) {
-			/* dbase failure */
+		if (db_findmailbox(cpy, ud->userid, &mboxid) == DM_EQUERY) { /* dbase failure */
 			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 			g_strfreev(chunks);
 			dm_free(cpy);
-			return -1;	/* fatal */
+			return DM_EQUERY;
 		}
 
 		if (mboxid == 0) {
 			/* mailbox does not exist */
 			/* check if we have the right to create mailboxes in this
 			   hierarchy */
-			trace(TRACE_DEBUG,
-			      "%s,%s: Checking if we have the right to "
+			trace(TRACE_DEBUG, "%s,%s: Checking if we have the right to "
 			      "create mailboxes under mailbox [%llu]",
 			      __FILE__, __func__, parent_mboxid);
 			if (parent_mboxid != 0) {
 				mbox.uid = parent_mboxid;
 				result = acl_has_right(&mbox, ud->userid, ACL_RIGHT_CREATE);
-				if (result < 0) {
-					dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
+				if (result == DM_EQUERY) {
+					dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 					g_strfreev(chunks);
 					dm_free(cpy);
-					return -1;	/* fatal */
+					return DM_EQUERY;	/* fatal */
 				}
 				if (result == 0) {
 					dbmail_imap_session_printf(self,
@@ -438,7 +425,7 @@ int _ic_create(struct ImapSession *self)
 						"mailbox here\r\n", self->tag);
 					g_strfreev(chunks);
 					dm_free(cpy);
-					return 1;
+					return DM_EGENERAL;
 				}
 			} else {
 				if (other_namespace) {
@@ -451,38 +438,33 @@ int _ic_create(struct ImapSession *self)
 						"mailbox here\r\n", self->tag);
 					g_strfreev(chunks);
 					dm_free(cpy);
-					return 1;
+					return DM_EGENERAL;
 				}
 			}
-			result = db_createmailbox(cpy, ud->userid, &tmp_mboxid);
-
-			if (result == -1) {
+			
+			if ( ((result = db_createmailbox(cpy, ud->userid, &tmp_mboxid)) == DM_EQUERY) ) {
 				dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 				g_strfreev(chunks);
 				dm_free(cpy);
-				return -1;	/* fatal */
+				return DM_EQUERY;	/* fatal */
 			}
 		} else {
 			/* this might be the parent of our new mailbox. store it's id */
 			parent_mboxid = mboxid;
 			/* mailbox does exist, failure if no_inferiors flag set */
-			result = db_noinferiors(mboxid);
-			if (result == 1) {
-				dbmail_imap_session_printf(self,
-					"%s NO mailbox cannot have inferior names\r\n",
-					self->tag);
+			if ( ((result = db_noinferiors(mboxid)) == DM_EGENERAL) ) {
+				dbmail_imap_session_printf(self, "%s NO mailbox cannot have inferior names\r\n", self->tag);
 				g_strfreev(chunks);
 				dm_free(cpy);
-				return 1;
+				return DM_EGENERAL;
 			}
 
 
-			if (result == -1) {
-				/* dbase failure */
+			if (result == DM_EQUERY) {
 				dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 				g_strfreev(chunks);
 				dm_free(cpy);
-				return -1;	/* fatal */
+				return DM_EQUERY;
 			}
 		}
 	}
@@ -492,7 +474,7 @@ int _ic_create(struct ImapSession *self)
 	dm_free(cpy);
 
 	dbmail_imap_session_printf(self, "%s OK CREATE completed\r\n", self->tag);
-	return 0;
+	return DM_SUCCESS;
 }
 
 
