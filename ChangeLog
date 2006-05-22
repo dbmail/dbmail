@@ -1,3 +1,10 @@
+2006-05-22  Paul J Stevens <paul@nfg.nl>
+
+	* imapcommands.c:
+	preliminary cleanup of _ic_create
+	* pipe.c:
+	do not prepend empty headers when forwarding
+
 2006-05-19  Paul J Stevens <paul@nfg.nl>
 
 	* acl.c, db.c, db.h, debian/changelog, imapcommands.c:
