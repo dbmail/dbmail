@@ -1,5 +1,13 @@
 2006-05-22  Paul J Stevens <paul@nfg.nl>
 
+	* sort.c:
+	add INFO level trace to sort_deliver_to_mailbox
+	* debian/rules, man/dbmail-export.8, man/dbmail-imapd.8, 
+	  man/dbmail-lmtpd.8, man/dbmail-pop3d.8, man/dbmail-sievecmd.8, 
+	  man/dbmail-smtp.1, man/dbmail-timsieved.8, man/dbmail-timsieved.txt, 
+	  man/dbmail-users.8, man/dbmail-util.8, man/dbmail.1, 
+	  man/dbmail.conf.5:
+	remove post-make files from man/
 	* imapcommands.c:
 	preliminary cleanup of _ic_create
 	* pipe.c:
