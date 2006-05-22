@@ -104,6 +104,9 @@ dsn_class_t sort_deliver_to_mailbox(struct DbmailMessage *message,
 	u64_t mboxidnr, newmsgidnr;
 	size_t msgsize = (u64_t)dbmail_message_get_size(message, FALSE);
 
+	trace(TRACE_INFO,"%s,%s: useridnr [%llu] mailbox [%s]",
+			__FILE__, __func__, useridnr, mailbox);
+
 	if (db_find_create_mailbox(mailbox, source, useridnr, &mboxidnr) != 0) {
 		trace(TRACE_ERROR, "%s,%s: mailbox [%s] not found",
 				__FILE__, __func__,

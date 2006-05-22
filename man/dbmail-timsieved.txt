@@ -1,11 +1,10 @@
-DBMAIL-TIMSIEVED(1)
+DBMAIL-TIMSIEVED(8)
 ===================
 
 
 NAME
 ----
-       dbmail-timsieved receives messages from an MTA supporting the Light-
-       weight Mail Transport Protocol, as specified in RFC 2033.
+dbmail-timsieved - receives messages from an MTA supporting the Lightweight Mail Transport Protocol, as specified in RFC 2033.
 
 SYNOPSIS
 --------

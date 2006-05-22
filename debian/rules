@@ -82,6 +82,8 @@ clean1:
 	rm -f `find . -name "*.lo"`
 	rm -f `find . -name "*.o"`
 	rm -f `find . -name "*.pyc"`
+	rm -f `find man -name "*.xml"`
+	rm -f `find man -name "*.[1-8]"`
 	# Add here commands to clean up after the build process.
 	-$(MAKE) clean
 	rm -rf debian/dbmail; \
