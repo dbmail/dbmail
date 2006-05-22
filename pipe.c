@@ -82,15 +82,13 @@ static int send_mail(struct DbmailMessage *message,
 	trace(TRACE_DEBUG, "%s, %s: sendmail command is [%s]",
 		__FILE__, __func__, sendmail);
 	
-	escaped_to = dm_shellesc(to);
-	if (!escaped_to) {
+	if (! (escaped_to = dm_shellesc(to))) {
 		trace(TRACE_ERROR, "%s, %s: out of memory calling dm_shellesc",
 				__FILE__, __func__);
 		return -1;
 	}
 
-	escaped_from = dm_shellesc(from);
-	if (!escaped_from) {
+	if (! (escaped_from = dm_shellesc(from))) {
 		trace(TRACE_ERROR, "%s, %s: out of memory calling dm_shellesc",
 				__FILE__, __func__);
 		return -1;
@@ -124,17 +122,17 @@ static int send_mail(struct DbmailMessage *message,
 		fprintf(mailpipe, "To: %s\n", to);
 		fprintf(mailpipe, "From: %s\n", from);
 		fprintf(mailpipe, "Subject: %s\n", subject);
-		if (headers)
+		if (strlen(headers))
 			fprintf(mailpipe, "%s\n", headers);
 		fprintf(mailpipe, "\n");
-		if (body)
+		if (strlen(body))
 			fprintf(mailpipe, "%s\n\n", body);
 	}
 
 	switch (sendwhat) {
 	case SENDRAW:
 		// This is a hack so forwards can give a From line.
-		if (headers)
+		if (strlen(headers))
 			fprintf(mailpipe, "%s\n", headers);
 		db_send_message_lines(mailpipe, message->id, -2, 1);
 		break;
