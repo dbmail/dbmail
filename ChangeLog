@@ -1,3 +1,26 @@
+2006-05-23  Paul J Stevens <paul@nfg.nl>
+
+	* debian/changelog, debian/control, debian/dbmail-dev.files, 
+	  debian/dbmail-dev.install, debian/dbmail-ldap.files, 
+	  debian/dbmail-ldap.install, debian/dbmail-mysql.files, 
+	  debian/dbmail-mysql.install, debian/dbmail-pgsql.files, 
+	  debian/dbmail-pgsql.install, debian/dbmail-sieve.files, 
+	  debian/dbmail-sieve.install, debian/dbmail-sqlite.files, 
+	  debian/dbmail-sqlite.install, debian/dbmail.install, 
+	  debian/dbmail.postinst, debian/dbmail.postrm, debian/rules:
+	replace db_movefiles with dh_install and fix some lintian warnings
+	* man/Makefile.am:
+	make sure manpage for dbmail-timsieved gets build
+	* dbmail-mailbox.c:
+	fix empty sort results
+	* acl.c:
+	compiler warning
+	* dbmailtypes.h:
+	remove unused values in search_key_t
+	* debian/dbmail-mysql.install, debian/dbmail-pgsql.install, 
+	  debian/dbmail-sieve.install, debian/dbmail.install:
+	reinstall all so* modules
+
 2006-05-22  Paul J Stevens <paul@nfg.nl>
 
 	* sort.c:

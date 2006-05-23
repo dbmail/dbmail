@@ -1008,9 +1008,8 @@ static gboolean _do_sort(GNode *node, struct DbmailMailbox *self)
 	search_key_t *s = (search_key_t *)node->data;
 	
 	trace(TRACE_DEBUG,"%s,%s: type [%d]", __FILE__,  __func__, s->type);
-	if (s->type != IST_SORT)
+	if (! (s->type == IST_SET || s->type == IST_SORT))
 		return TRUE;
-	
 	
 	q = g_string_new("");
 	g_string_printf(q, "SELECT message_idnr FROM %smessages m "

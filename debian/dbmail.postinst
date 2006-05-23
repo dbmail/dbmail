@@ -28,10 +28,8 @@ test $DEBIAN_SCRIPT_DEBUG && set -v -x
 
 case "$1" in
     install)
-    	/sbin/ldconfig
     ;;
     upgrade)
-    	/sbin/ldconfig
     ;;
     configure)
 
@@ -58,7 +56,7 @@ case "$1" in
 	
 	# protect the config-file
 	oldmask=`umask`
-	umask 066
+	umask 026
 	
 	gunzip ${CONFIG_EX}.gz 2>/dev/null || true
 	gunzip ${DEBIAN_CONFIG_EX}.gz 2>/dev/null || true

@@ -3,7 +3,7 @@
 # -*- sh -*-
 
 # Uncomment this to turn on verbose mode. 
-#export DH_VERBOSE=1
+export DH_VERBOSE=1
 
 # This is the debhelper compatibility version to use.
 export DH_COMPAT=5
@@ -68,7 +68,7 @@ stamps/dbmail:
 	env CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)"  PATH="$(PATH):/usr/lib/postgresql/bin/" \
 		./configure $(CONFFLAGS) 
 	$(MAKE)
-	$(MAKE) install DESTDIR=$(CURDIR)/debian/dbmail
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/tmp
 	touch $@
 
 clean: clean1 unpatch
@@ -104,7 +104,7 @@ binary-common: build
 	dh_testroot
 	dh_testdir
 	dh_installdirs -a
-	dh_movefiles -a --sourcedir=debian/dbmail
+	dh_install -a --sourcedir=debian/tmp
 	dh_installinit -a --name=dbmail -- defaults 25
 	dh_installcron -a --name=dbmail
 	dh_installlogrotate -a --name=dbmail

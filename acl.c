@@ -67,6 +67,9 @@ int acl_has_right(mailbox_t *mailbox, u64_t userid, ACLRight_t right)
 			if (mailbox_is_writable(mailbox->uid))
 				return FALSE;
 		break;
+		/* ignore the rest */
+		default:
+		break;
 	}
 
 	const char *right_flag = acl_right_strings[right];
