@@ -1,3 +1,9 @@
+2006-05-24  Aaron Stone  <aaron@serendipity.cx>
+
+	* misc.c:
+	dm_stresc should not check the returns values of g_new0 or
+	db_string_escape; there's nothing to check for (closes bug #352).
+
 2006-05-23  Paul J Stevens <paul@nfg.nl>
 
 	* debian/changelog, debian/control, debian/dbmail-dev.files, 
