@@ -3,44 +3,42 @@ DBMAIL-SMTP(1)
 
 NAME
 ----
-       dbmail-smtp - inserts messages into the DBMail mailsystem.
+dbmail-smtp - inserts messages into the DBMail mailsystem.
 
 
 SYNOPSIS
 --------
-       dbmail-smtp [-t headerfield] [-d addresses] [-u usernames] [-m mailbox-
-       name] [-r return path] [-f configFile]
+dbmail-smtp [-t headerfield] [-d addresses] [-u usernames] [-m mailboxname]
+[-r return path] [-f configFile]
 
 DESCRIPTION
 -----------
-       The dbmail-smtp program inserts messages from the commandline  or  from
-       any  MTA  into  the  DBMail mailsystem. The program reads from standard
-       input.
+The dbmail-smtp program inserts messages from the commandline or from
+any MTA into the DBMail mailsystem. The program reads from standard input.
 
 
 OPTIONS
 -------
-       -t headerfield
-              Deliver messages to the recipient MIME header specified in head-
-              erfield.   The  default  header  to  use  is the "Delivered-To:"
-              header.
+-t headerfield::
+  Deliver messages to the recipient MIME header specified in
+  headerfield. The default header to use is the "Delivered-To:"
+  header.
 
-       -d addresses...
-              Deliver messages to the recipients specified by addresses.  This
-              option is mostly used for delivery from an MTA.  Seperate multi-
-              ple addresses by spaces.
+-d addresses...::
+  Deliver messages to the recipients specified by addresses. This
+  option is mostly used for delivery from an MTA. Seperate multiple
+  addresses by spaces.
 
-       -u usernames...
-              Deliver messages straight to a users  with  username  usernames.
-              Seperate multiple usernames with spaces.
+-u usernames...::
+  Deliver messages straight to the given username.
+  Seperate multiple usernames with spaces.
 
-       -m mailboxname
-              Deliver  messages  to  mailbox  mailboxname of the recipient. If
-              this mailbox does not exist yet, it is created.
+-m mailboxname::
+  Deliver messages to mailbox mailboxname of the recipient. If
+  this mailbox does not exist yet, it is created.
 
-       -r returnpath
-              Set return path for bounces and other error  reports  to  return
-              path.
+-r returnpath::
+  Set return path for bounces and other error reports to return path.
 
 
 include::commonopts.txt[]

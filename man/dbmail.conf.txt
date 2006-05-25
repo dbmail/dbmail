@@ -52,25 +52,25 @@ DESCRIPTION
   error_log=/var/log/dbmail.err	# logfile for stderr messages
   pid_dir=/var/run        # directory for storing PID files
    
-  SMTP
+  [SMTP]
                           # In fact, there isn't anything here by default.
   
-  LMTP
+  [LMTP]
   PORT=24                 # Port to bind to.
   
-  POP
+  [POP]
   PORT=110                # Port to bind to.
   POP_BEFORE_SMTP=no      # If yes, allows SMTP access from the host IP connecting by POP3.
   
-  IMAP
+  [IMAP]
   PORT=143                # Port to bind to.
   TIMEOUT=4000            # IMAP prefers a longer timeout than other services.
   IMAP_BEFORE_SMTP=no     # If yes, allows SMTP access from the host IP connecting by IMAP.
   
-  SIEVE
+  [SIEVE]
   PORT=2000               # Port to bind to.
   
-  LDAP
+  [LDAP]
   PORT=389
   VERSION=3
   HOSTNAME=ldap
@@ -93,7 +93,7 @@ DESCRIPTION
   FIELD_QUOTA=mailQuota
   FIELD_FWDTARGET=mailForwardingAddress
   
-  DELIVERY
+  [DELIVERY]
   SIEVE=yes               # Run Sieve scripts as messages are delivered.
   SUBADDRESS=yes          # Use 'user+mailbox@domain' format to deliver to a mailbox.
   SIEVE_VACATION=no       # Turn on/off the Sieve Vacation extension (unsupported).

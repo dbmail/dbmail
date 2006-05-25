@@ -1,0 +1,14 @@
+
+OPTIONS
+-------
+
+-p pidfile::
+  Specify an alternate pid file. The daemons are currently hardcoded
+  to use /var/run/dbmail-<daemon> for their pid files, and will halt
+  if the pid file cannot be written. Use the -p pidfile option to
+  place the pid file in your system's preferred location.
+
+-n::
+  No daemonize. The program remains attached to the console from
+  which it was started. This is quite useful for debugging when
+  combined with the -v option.

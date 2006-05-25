@@ -19,18 +19,8 @@ spawn into a number of default processes as set in the dbmail.conf
 file. These processes will enable full IMAP4r1 communication with
 clients.
 
-OPTIONS
--------
 
--p pidfile::
-  Specify an alternate pid file. The daemons are currently hardcoded
-  to use /var/run/dbmail-<daemon> for their pid files, and
-  will halt if the pid file cannot be written. Use the -p pidfile
-  option to place the pid file in your system's preferred location.
-
--n::
-  Don't daemonize and remain attached to stdin/stdout. This is most useful
-  for starting DBMail from inetd.
+include::serveropts.txt[]
 
 include::commonopts.txt[]
 
