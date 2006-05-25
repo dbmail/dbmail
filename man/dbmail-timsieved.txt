@@ -1,53 +1,23 @@
-DBMAIL-TIMSIEVED(8)
+DBMAIL-TIMSIEVED(1)
 ===================
 
 
 NAME
 ----
-dbmail-timsieved - receives messages from an MTA supporting the Lightweight Mail Transport Protocol, as specified in RFC 2033.
+dbmail-timsieved speaks the Manage Sieve draft protocol, used for managing
+Sieve scripts for a user's email account.
 
 SYNOPSIS
 --------
-       dbmail-timsieved [-f configfile] [-p pidfile] [-nvVh]
+dbmail-timsieved [-f configfile] [-p pidfile] [-nvVh]
 
 DESCRIPTION
 -----------
-       The dbmail-timsieved daemon will spawn child processes as specified in
-       the dbmail.conf file. These processes listen, by default, on port 2000
-       of the localhost interface. Mail Transfer Agents, MTA's such as Postfix
-       and Exim, speak LMTP to their Mail Delivery Agents which receive and
-       store messages. DBMail implements such a system using a database back-
-       end.
+The dbmail-timsieved daemon will spawn child processes as specified in
+the dbmail.conf file. These processes listen, by default, on port 2000
+of the localhost interface.
 
-OPTIONS
--------
-       -f configfile
-           Specify an alternate config file. The daemons are currently hard-
-           coded to use /etc/dbmail.conf for their configs, and will halt if
-           the config file cannot be found. Use the -f configfile option to
-           specify your system's preferred config file location.
-
-       -p pidfile
-           Specify an alternate pid file. The daemons are currently hardcoded
-           to use /var/run/dbmail-<daemon> for their pid files, and will halt
-           if the pid file cannot be written. Use the -p pidfile option to
-           place the pid file in your system's preferred location.
-
-       -n  No daemonize. The program remains attached to the console from
-           which it was started. This is quite useful for debugging when com-
-           bined with the -v option.
-
-       -v  Operate verbosely. For daemons, this may only be useful with the -n
-           option which keeps the program bound to the console.  Some of the
-           utilities in the DBMail suite can take two -v's for extra ver-
-           bosity. Those which don't understand this convention won't complain
-           about having the extra -v and will simply operate at their normal
-           verbosity.
-
-       -V  Show the version and copyright, then exit.
-
-       -h  Show a brief summary of options, then exit.
-
+include::serveropts.txt[]
 
 include::commonopts.txt[]
 

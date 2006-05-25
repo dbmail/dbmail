@@ -1,0 +1,27 @@
+
+README.solaris
+
+$Id: $
+
+DBMail is able to produce a very large amount of debugging output if
+requested. Some of this debug output naturally includes strings that
+turn out to be null pointers. Solaris's printf doesn't like null
+pointers, and neither does the replacement printf in Glib. So DBMail
+will crash a lot on Solaris until Glib becomes null-safe. Requests
+have been made to the upstream library maintainers to work this out.
+
+In the meantime, in order to run DBMail on Solaris without crashing,
+you must add the following lines to your DBMail startup script:
+
+  LD_PRELOAD_32=/usr/lib/0@0.so.1
+  export LD_PRELOAD_32
+
+or if you've compiled DBMail as a 64-bit binary:
+
+  LD_PRELOAD_64=/usr/lib/64/0@0.so.1
+  export LD_PRELOAD_64
+
+We're really sorry about this, but rest assured that this is
+actually a good thing; without debugging calls that cause "(null)"
+to be printed, we'd have a much harder time tracking down errant null
+values in places where they don't belong!

@@ -4,29 +4,28 @@ DBMAIL-EXPORT(8)
 
 NAME
 ----
-       dbmail-export  -  export  a  mailbox from the DBMail mailsystem to mbox
-       format.
+dbmail-export - export a mailbox from the DBMail mailsystem to mbox format.
 
 SYNOPSIS
 --------
-       dbmail-export [-u user] [-m mailbox] [-o outfile] [-f configFile]
+dbmail-export [-u user] [-m mailbox] [-o outfile] [-f configFile]
 
 DESCRIPTION
 -----------
-       The dbmail-export program allows you to export a dbmail mailbox  to  an
-       mbox formatted mailbox.
+The dbmail-export program allows you to export a DBMail mailbox to an
+mbox formatted mailbox.
 
 
 OPTIONS
 -------
-       -u user
-              specify the owner of the mailbox you want to export.
+-u user::
+  specify the owner of the mailbox you want to export.
 
-       -m mailbox
-              specify the mailbox you want to export.
+-m mailbox::
+  specify the mailbox you want to export.
 
-       -o outfile
-              specify the file into which the exported mail will be saved.
+-o outfile::
+  specify the file into which the exported mail will be saved.
 
 
 include::commonopts.txt[]

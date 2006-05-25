@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/*	$Id: misc.c 2107 2006-05-07 07:12:51Z aaron $
+/*	$Id: misc.c 2133 2006-05-25 05:35:17Z aaron $
  *
  *	Miscelaneous functions */
 
@@ -429,15 +429,15 @@ GList * g_list_append_printf(GList * list, char * format, ...)
 char * dm_stresc(const char * from)
 {
 	char *to;
+	size_t len;
 
 	assert(from);
+	len = strlen(from);
 
-	if (! (to = g_new0(char,(strlen(from)+1) * 2 + 1)))
-		return NULL;
-	if (! db_escape_string(to, from, strlen(from))) {
-		g_free(to);
-		return NULL;
-	}
+	// Neither call needs to be checked
+	// for safety of its return values.
+	to = g_new0(char, (len + 1) * 2 + 1);
+	db_escape_string(to, from, len);
 
 	return to;
 }
