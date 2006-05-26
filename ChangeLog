@@ -1,3 +1,8 @@
+2006-05-26  Paul J Stevens <paul@nfg.nl>
+
+	* debian/changelog, dm_imaputil.c:
+	properly descend into multipart containing rfc822 subpart
+
 2006-05-24  Aaron Stone  <aaron@serendipity.cx>
 
 	* misc.c:
