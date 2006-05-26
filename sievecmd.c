@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
 	u64_t user_idnr = 0;
 	char *user_name = NULL;
 	char *script_name = NULL;
-	FILE *script_source = NULL;
+	char *script_source = NULL;
 	extern char *optarg;
 	extern int opterr;
 
@@ -73,13 +73,7 @@ int main(int argc, char *argv[])
 			if (!script_name) {
 				script_name = dm_strdup(optarg);
 			} else if (!script_source) {
-				script_source = fopen(optarg, "r");
-
-				if (!script_source) {
-					qerrorf("Could not open file [%s]: %s\n",
-						optarg, strerror(errno));
-					return 1;
-				}
+				script_source = dm_strdup(optarg);
 			}
 			break;
 		case 'c':
@@ -228,8 +222,7 @@ int main(int argc, char *argv[])
       mainend:
 	dm_free(user_name);
 	dm_free(script_name);
-	if (script_source)
-		fclose(script_source);
+	dm_free(script_source);
 	db_disconnect();
 	auth_disconnect();
 	config_free();
@@ -319,17 +312,28 @@ int do_cat(u64_t user_idnr, char *name)
 	return 0;
 }
 
-int do_insert(u64_t user_idnr, char *name, FILE * source)
+int do_insert(u64_t user_idnr, char *name, char *source)
 {
 	int res = 0;
 	char *buf = NULL;
+	FILE *file = NULL;
 	sort_result_t *sort_result;
 
 	if (!source)
-		source = stdin;
+		file = stdin;
+	else if (strcmp(source, "-") == 0)
+		file = stdin;
+	else 
+		file = fopen(source, "r");
+
+	if (!file) {
+		qerrorf("Could not open file [%s]: %s\n",
+			optarg, strerror(errno));
+		return -1;
+	}
 
 	/* Read the file into a char array */
-	res = read_script_file(source, &buf);
+	res = read_script_file(file, &buf);
 	if (res != 0) {
 		qerrorf("Error reading in your script!\n");
 		return -1;
@@ -347,7 +351,6 @@ int do_insert(u64_t user_idnr, char *name, FILE * source)
 	if (sort_result == NULL) {
 		qprintf("Script could not be validated.\n");
 		db_delete_sievescript(user_idnr, "@!temp-script!@");
-		sort_free_result(sort_result);
 		return -1;
 	}
 	if (sort_get_error(sort_result) != 0) {
@@ -363,19 +366,16 @@ int do_insert(u64_t user_idnr, char *name, FILE * source)
 	if (res == -3) {
 		qprintf("Script [%s] already exists.\n", name);
 		db_delete_sievescript(user_idnr, "@!temp-script!@");
-		sort_free_result(sort_result);
 		return -1;
 	} else if (res != 0) {
 		qerrorf("Error inserting script [%s] into the database!\n",
 		       name);
 		db_delete_sievescript(user_idnr, "@!temp-script!@");
-		sort_free_result(sort_result);
 		return -1;
 	}
 
 	qprintf("Script [%s] successfully inserted and marked inactive!\n",
 	       name);
-	sort_free_result(sort_result);
 	return 0;
 }
 
