@@ -734,7 +734,7 @@ GMimeObject * imap_get_partspec(const GMimeObject *message, const char *partspec
 		
 		type = (GMimeContentType *)g_mime_object_get_content_type(object);
 		if (g_mime_content_type_is_type(type,"message","rfc822")) {
-			object=GMIME_OBJECT(GMIME_MESSAGE(object)->mime_part);
+			object=GMIME_OBJECT(GMIME_MESSAGE_PART(object)->message);
 			assert(object);
 			continue;
 		}
