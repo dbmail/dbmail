@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
 	/* get options */
 	opterr = 0;		/* suppress error message from getopt() */
 	while ((opt = getopt(argc, argv,
-		"-a:d:i:r:u:l" /* Major modes */
+		"-a:d:i:c::r:u:l" /* Major modes */
 		/*"i"*/ "f:qnyvVh" /* Common options */ )) != -1) {
 		/* The initial "-" of optstring allows unaccompanied
 		 * options and reports them as the optarg to opt 1 (not '1') */
@@ -81,6 +81,11 @@ int main(int argc, char *argv[])
 					return 1;
 				}
 			}
+			break;
+		case 'c':
+			if (optarg)
+				script_name = dm_strdup(optarg);
+			act = opt;
 			break;
 		case 'u':
 			user_name = dm_strdup(optarg);
@@ -205,6 +210,9 @@ int main(int argc, char *argv[])
 	case 'i':
 		res = do_insert(user_idnr, script_name, script_source);
 		break;
+	case 'c':
+		res = do_cat(user_idnr, script_name);
+		break;
 	case 'r':
 		res = do_remove(user_idnr, script_name);
 		break;
@@ -256,19 +264,60 @@ int do_deactivate(u64_t user_idnr, char *name)
 
 	res = db_deactivate_sievescript(user_idnr, name);
 	if (res == -3) {
-		printf("Script [%s] does not exist.\n", name);
+		qerrorf("Script [%s] does not exist.\n", name);
 		return -1;
 	} else if (res != 0) {
-		printf("Error deactivating script [%s].\n", name);
+		qerrorf("Error deactivating script [%s].\n", name);
 		return -1;
 	}
-	printf
-	    ("Script [%s] is now deactivated. No scripts are currently active.\n",
-	     name);
+	qprintf("Script [%s] is now deactivated."
+		" No scripts are currently active.\n",
+		name);
 
 	return 0;
 }
 
+int do_cat(u64_t user_idnr, char *name)
+{
+	int res = 0;
+	char *buf = NULL;
+	char *scriptname = NULL;
+
+	if (name)
+		scriptname = name;
+	else
+		res = db_get_sievescript_active(user_idnr, &scriptname);
+
+	if (res != 0) {
+		qerrorf("Database error when fetching active script!\n");
+		return -1;
+	}
+	
+	if (scriptname == NULL) {
+		qerrorf("No active script found!\n");
+		return -1;
+	}
+
+	res = db_get_sievescript_byname(user_idnr, scriptname, &buf);
+
+	if (res != 0) {
+		qerrorf("Database error when fetching script!\n");
+		return -1;
+	}
+	
+	if (buf == NULL) {
+		qerrorf("Script not found!\n");
+		return -1;
+	}
+
+	printf("%s", buf);
+
+	dm_free(buf);
+	if (!name)
+		dm_free(scriptname);
+
+	return 0;
+}
 
 int do_insert(u64_t user_idnr, char *name, FILE * source)
 {
@@ -282,7 +331,7 @@ int do_insert(u64_t user_idnr, char *name, FILE * source)
 	/* Read the file into a char array */
 	res = read_script_file(source, &buf);
 	if (res != 0) {
-		printf("Error reading in your script!\n");
+		qerrorf("Error reading in your script!\n");
 		return -1;
 	}
 
@@ -290,19 +339,19 @@ int do_insert(u64_t user_idnr, char *name, FILE * source)
 	res = db_add_sievescript(user_idnr, "@!temp-script!@", buf);
 	dm_free(buf);
 	if (res != 0) {
-		printf("Error inserting temporary script into the database!\n");
+		qerrorf("Error inserting temporary script into the database!\n");
 		return -1;
 	}
 
 	sort_result = sort_validate(user_idnr, "@!temp-script!@");
 	if (sort_result == NULL) {
-		printf("Script could not be validated.\n");
+		qprintf("Script could not be validated.\n");
 		db_delete_sievescript(user_idnr, "@!temp-script!@");
 		sort_free_result(sort_result);
 		return -1;
 	}
 	if (sort_get_error(sort_result) != 0) {
-		printf("Script [%s] has errors: %s.\n",
+		qprintf("Script [%s] has errors: %s.\n",
 			name, sort_get_errormsg(sort_result));
 		db_delete_sievescript(user_idnr, "@!temp-script!@");
 		sort_free_result(sort_result);
@@ -312,19 +361,19 @@ int do_insert(u64_t user_idnr, char *name, FILE * source)
 
 	res = db_rename_sievescript(user_idnr, "@!temp-script!@", name);
 	if (res == -3) {
-		printf("Script [%s] already exists.\n", name);
+		qprintf("Script [%s] already exists.\n", name);
 		db_delete_sievescript(user_idnr, "@!temp-script!@");
 		sort_free_result(sort_result);
 		return -1;
 	} else if (res != 0) {
-		printf("Error inserting script [%s] into the database!\n",
+		qerrorf("Error inserting script [%s] into the database!\n",
 		       name);
 		db_delete_sievescript(user_idnr, "@!temp-script!@");
 		sort_free_result(sort_result);
 		return -1;
 	}
 
-	printf("Script [%s] successfully inserted and marked inactive!\n",
+	qprintf("Script [%s] successfully inserted and marked inactive!\n",
 	       name);
 	sort_free_result(sort_result);
 	return 0;
@@ -337,14 +386,14 @@ int do_remove(u64_t user_idnr, char *name)
 
 	res = db_delete_sievescript(user_idnr, name);
 	if (res == -3) {
-		printf("Script [%s] does not exist.\n", name);
+		qerrorf("Script [%s] does not exist.\n", name);
 		return -1;
 	} else if (res != 0) {
-		printf("Error deleting script [%s].\n", name);
+		qerrorf("Error deleting script [%s].\n", name);
 		return -1;
 	}
 
-	printf("Script [%s] deleted.\n", name);
+	qprintf("Script [%s] deleted.\n", name);
 
 	return 0;
 }
@@ -356,24 +405,24 @@ int do_list(u64_t user_idnr)
 	struct element *tmp;
 
 	if (db_get_sievescript_listall(user_idnr, &scriptlist) < 0) {
-		printf("Error retrieving Sieve script list.\n");
+		qerrorf("Error retrieving Sieve script list.\n");
 		return -1;
 	}
 
 	if (dm_list_length(&scriptlist) > 0) {
-		printf("Found %ld scripts:\n",
+		qprintf("Found %ld scripts:\n",
 		       dm_list_length(&scriptlist));
 	} else
-		printf("No scripts found!\n");
+		qprintf("No scripts found!\n");
 
 	tmp = dm_list_getstart(&scriptlist);
 	while (tmp) {
 		sievescript_info_t *info = (sievescript_info_t *) tmp->data;
 		if (info->active == 1)
-			printf("  + ");
+			qprintf("  + ");
 		else
-			printf("  - ");
-		printf("%s\n", info->name);
+			qprintf("  - ");
+		qprintf("%s\n", info->name);
 
 		dm_free(info->name);
 		tmp = tmp->nextnode;
@@ -402,6 +451,9 @@ int do_showhelp(void)
 	printf("     -i scriptname file     Insert the named script from file \n");
 	printf("                            (a single dash, -, indicates input \n"
 	       "                             from STDIN) \n");
+	printf("     -c [scriptname]        Print the contents of the named script\n");
+	printf("                            (if no script is given, the active \n"
+	       "                             script is printed) \n");
 	printf("     -r scriptname          Remove the named script \n");
 	printf("                            (if script was active, no script is \n"
 	       "                             active after deletion) \n");

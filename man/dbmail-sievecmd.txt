@@ -8,8 +8,9 @@ dbmail-sievecmd - manipulates Sieve scripts in the DBMail database.
 
 SYNOPSIS
 --------
-dbmail-sievecmd -u username [-l] [-a scriptname] [-d scriptname] [-i
-scriptname file] [-r scriptname] [-f configfile] [-p pidfile] [-nvVh]
+dbmail-sievecmd -u username [-l] [-a scriptname] [-d scriptname]
+[-i scriptname file] [-c [scriptname]] [-r scriptname]
+[-f configfile] [-nvVh]
 
 DESCRIPTION
 -----------
@@ -38,6 +39,10 @@ Deactivates `scriptname` if it was active.
 -i scriptname file::
 Creates a script called `scriptname` by importing `file`. If `file`
 is - (dash), 'stdin' will be read.
+
+-c [scriptname]::
+Print out the named script. If no script is given, the active
+script is printed.
 
 -r scriptname::
 Remove the named script. If the script was active, no script will

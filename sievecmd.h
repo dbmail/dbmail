@@ -33,6 +33,7 @@ int do_activate(u64_t user_idnr, char *name);
 int do_deactivate(u64_t user_idnr, char *name);
 int do_remove(u64_t user_idnr, char *name);
 int do_insert(u64_t user_idnr, char *name, FILE * source);
+int do_cat(u64_t user_idnr, char *name);
 
 int read_script_file(FILE * f, char **m_buf);
 
