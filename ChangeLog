@@ -1,3 +1,14 @@
+2006-05-27  Paul J Stevens <paul@nfg.nl>
+
+	* debian/control, debian/rules:
+	fix debian setup so we can build on ubuntu breezy
+	* man/dbmail-timsieved.txt:
+	fix typo in dbmail-timsieved.txt
+	* modules/dbsqlite.c:
+	add missing function to sqlite module
+	* dbmail-message.c:
+	disable savepoint support for now
+
 2006-05-26  Aaron Stone  <aaron@serendipity.cx>
 
 	* sievecmd.h, sievecmd.c:
