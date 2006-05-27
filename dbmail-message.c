@@ -892,11 +892,11 @@ void _header_cache(const char *header, const char *value, gpointer user_data)
 			"VALUES (%llu,%llu,'%s')", DBPFX, id, self->physid, safe_value);
 	g_free(safe_value);
 
-	db_savepoint_transaction("header_cache");
+	//db_savepoint_transaction("header_cache");
 	if (db_query(q)) {
 		trace(TRACE_INFO,"%s,%s: insert headervalue failed",
 		      __FILE__,__func__);
-		db_rollback_savepoint_transaction("header_cache");
+		//db_rollback_savepoint_transaction("header_cache");
 	}
 	g_free(q);
 
@@ -951,11 +951,11 @@ static void insert_address_cache(u64_t physid, const char *field, InternetAddres
 		g_free(clean_name);
 		g_free(clean_addr);
 		
- 		db_savepoint_transaction("p_address");
+ 		//db_savepoint_transaction("p_address");
 		if (db_query(q->str)) {
 			trace(TRACE_WARNING, "%s,%s: insert %sfield failed [%s]",
 					__FILE__, __func__, field, q->str);
- 			db_rollback_savepoint_transaction("p_address");
+ 			//db_rollback_savepoint_transaction("p_address");
 		}
 
 	}
@@ -987,11 +987,11 @@ static void insert_field_cache(u64_t physid, const char *field, const char *valu
 	g_free(safe_value);
 	g_free(clean_value);
 
-	db_savepoint_transaction("p_field");
+	//db_savepoint_transaction("p_field");
 	if (db_query(q->str)) {
 		trace(TRACE_WARNING, "%s,%s: insert %sfield failed [%s]",
 				__FILE__, __func__, field, q->str);
-		db_rollback_savepoint_transaction("p_field");
+		//db_rollback_savepoint_transaction("p_field");
 	}
 	g_string_free(q,TRUE);
 }
