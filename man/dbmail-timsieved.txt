@@ -1,10 +1,10 @@
-DBMAIL-TIMSIEVED(1)
+DBMAIL-TIMSIEVED(8)
 ===================
 
 
 NAME
 ----
-dbmail-timsieved speaks the Manage Sieve draft protocol, used for managing
+dbmail-timsieved - speaks the Manage Sieve draft protocol, used for managing
 Sieve scripts for a user's email account.
 
 SYNOPSIS
