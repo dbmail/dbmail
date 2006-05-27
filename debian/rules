@@ -28,13 +28,29 @@ DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
 
 ifneq (,$(findstring devel,$(DEB_BUILD_OPTIONS)))
 	export WITH_CHECK=--with-check
-	#export WITH_MYSQL=
+	export WITH_MYSQL=
 	export WITH_PGSQL=
 	export WITH_SQLITE=
+	export WITH_LDAP=
 	export SHARED=--enable-shared=no
 	export STATIC=--enable-static=yes
 	CFLAGS += -g
 endif
+
+ifneq (,$(findstring mysql,$(DEB_BUILD_OPTIONS)))
+	export WITH_MYSQL=--with-mysql
+endif 
+ifneq (,$(findstring pgsql,$(DEB_BUILD_OPTIONS)))
+	export WITH_PGSQL=--with-pgsql
+endif	
+ifneq (,$(findstring sqlite,$(DEB_BUILD_OPTIONS)))
+	export WITH_SQLITE=--with-sqlite
+endif
+ifneq (,$(findstring ldap,$(DEB_BUILD_OPTIONS)))
+	export WITH_LDAP=--with-ldap
+endif
+
+
 ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
 	INSTALL_PROGRAM += -s
 endif
