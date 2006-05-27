@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: sievecmd.h 2116 2006-05-12 19:27:36Z aaron $ */
+/* $Id: sievecmd.h 2137 2006-05-26 19:49:52Z aaron $ */
 
 #ifndef _SIEVECMD_H
 #define _SIEVECMD_H
@@ -32,7 +32,8 @@ int do_list(u64_t user_idnr);
 int do_activate(u64_t user_idnr, char *name);
 int do_deactivate(u64_t user_idnr, char *name);
 int do_remove(u64_t user_idnr, char *name);
-int do_insert(u64_t user_idnr, char *name, FILE * source);
+int do_insert(u64_t user_idnr, char *name, char *source);
+int do_cat(u64_t user_idnr, char *name);
 
 int read_script_file(FILE * f, char **m_buf);
 
