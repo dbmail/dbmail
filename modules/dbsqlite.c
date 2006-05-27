@@ -198,6 +198,12 @@ unsigned long db_escape_string(char *to, const char *from, unsigned long length)
 	*to++ = *from; /* err... */
 	return did;
 }
+
+unsigned long db_escape_binary(char *to, const char *from, unsigned long length)
+{
+	return db_escape_string(to,from,length); /* duh */
+}
+
 int db_do_cleanup(const char **tables UNUSED, int num_tables UNUSED)
 {
 	char *errmsg;
