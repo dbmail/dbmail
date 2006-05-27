@@ -1,4 +1,3 @@
-<<<<<<< .mine
 2006-05-27  Paul J Stevens <paul@nfg.nl>
 
 	* debian/control, debian/rules:
@@ -10,13 +9,11 @@
 	* dbmail-message.c:
 	disable savepoint support for now
 
-=======
 2006-05-26  Aaron Stone  <aaron@serendipity.cx>
 
 	* sievecmd.h, sievecmd.c:
 	Added new option '-c [scriptname]' to print out a script.
 
->>>>>>> .r2138
 2006-05-26  Paul J Stevens <paul@nfg.nl>
 
 	* debian/changelog, dm_imaputil.c:
