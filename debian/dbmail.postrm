@@ -1,5 +1,8 @@
 #!/bin/sh
 
+if [ "$1" = "remove" ]; then
+	ldconfig
+fi
 
 if [ "$1" = "purge" ]; then
 		
@@ -10,6 +13,7 @@ if [ "$1" = "purge" ]; then
 	
 	ucf --purge /etc/dbmail/dbmail.conf || true
 	ucf --purge /etc/default/dbmail || true
+
 fi
 
 #DEBHELPER#
