@@ -15,7 +15,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: dbmail 1.1-1\n"
 "Report-Msgid-Bugs-To: paul@nfg.nl\n"
-"POT-Creation-Date: 2006-05-29 15:14+0200\n"
+"POT-Creation-Date: 2006-05-29 15:56+0200\n"
 "PO-Revision-Date: 2003-10-02 16:44+0100\n"
 "Last-Translator: Christian Perrier <bubulle@debian.org>\n"
 "Language-Team: French <debian-l10n-french@lists.debian.org>\n"
@@ -27,7 +27,7 @@ msgstr ""
 #. Description
 #: ../dbmail.templates:3
 #, fuzzy
-msgid "Use debconf to manage dbmail configuration:"
+msgid "Use debconf to manage dbmail configuration?"
 msgstr "Faut-il utiliser debconf pour gérer la configuration de dbmail ?"
 
 #. Type: boolean
@@ -160,7 +160,7 @@ msgstr ""
 #. Description
 #: ../dbmail.templates:51
 #, fuzzy
-msgid "start the imap server after reboot:"
+msgid "start the imap server after reboot?"
 msgstr "Faut-il lancer le serveur POP3 au démarrage ?"
 
 #. Type: boolean
@@ -176,21 +176,14 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:51
+#: ../dbmail.templates:57
 #, fuzzy
-msgid "Do you want to start the imap service after a reboot?"
-msgstr "Faut-il lancer le service IMAP au démarrage ?"
-
-#. Type: boolean
-#. Description
-#: ../dbmail.templates:59
-#, fuzzy
-msgid "start the pop3 server after reboot:"
+msgid "start the pop3 server after reboot?"
 msgstr "Faut-il lancer le serveur POP3 au démarrage ?"
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:59
+#: ../dbmail.templates:57
 #, fuzzy
 msgid ""
 "Dbmail support both imap and pop3 services. You can choose to run either one "
@@ -201,21 +194,14 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:59
+#: ../dbmail.templates:63
 #, fuzzy
-msgid "Do you want to start the pop3 service after a reboot?"
-msgstr "Faut-il lancer le service POP3 au démarrage ?"
-
-#. Type: boolean
-#. Description
-#: ../dbmail.templates:67
-#, fuzzy
-msgid "start the timesieved after reboot:"
+msgid "start the timesieved after reboot?"
 msgstr "Faut-il lancer le serveur POP3 au démarrage ?"
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:67
+#: ../dbmail.templates:63
 msgid ""
 "Dbmail supports management of Sieve scripts through the timsieve protocol. "
 "You can run dbmail-timsieved which allows management of the sieve scripts "
@@ -225,21 +211,14 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:67
-#, fuzzy
-msgid "Do you want to start the timsieved service after a reboot?"
-msgstr "Faut-il lancer le service IMAP au démarrage ?"
-
-#. Type: boolean
-#. Description
-#: ../dbmail.templates:76
+#: ../dbmail.templates:70
 #, fuzzy
 msgid "Run the stunnel SSL wrapper from the init script:"
 msgstr "Faut-il lancer l'enveloppe stunnel SSL depuis le script de démarrage ?"
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:76
+#: ../dbmail.templates:70
 #, fuzzy
 msgid ""
 "The stunnel SSL wrapper allows you to provide secure imap and pop services "
@@ -251,7 +230,7 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:76
+#: ../dbmail.templates:70
 msgid ""
 "Make sure you have installed stunnel which is provided by a separate package "
 "if you want to use this feature."
@@ -261,14 +240,14 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:85
+#: ../dbmail.templates:79
 #, fuzzy
 msgid "The filename for the SSL pem file:"
 msgstr "Nom du fichier PEM pour SSL"
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:85
+#: ../dbmail.templates:79
 msgid ""
 "To be able to run the stunnel SSL wrapper you need to generate a pem file "
 "that should reside in /etc/ssl/certs/. Specify the filename here without  "
@@ -280,12 +259,24 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:85
+#: ../dbmail.templates:79
 msgid ""
 "Read /usr/share/doc/stunnel/README.Debian on how to generate such a file."
 msgstr ""
 "Veuillez consulter le fichier /usr/share/doc/stunnel/README.Debian pour des "
 "détails sur la génération de ce fichier."
+
+#, fuzzy
+#~ msgid "Do you want to start the imap service after a reboot?"
+#~ msgstr "Faut-il lancer le service IMAP au démarrage ?"
+
+#, fuzzy
+#~ msgid "Do you want to start the pop3 service after a reboot?"
+#~ msgstr "Faut-il lancer le service POP3 au démarrage ?"
+
+#, fuzzy
+#~ msgid "Do you want to start the timsieved service after a reboot?"
+#~ msgstr "Faut-il lancer le service IMAP au démarrage ?"
 
 #~ msgid "Please enter the name of the database user you want to use."
 #~ msgstr "Propriétaire de la base de données"

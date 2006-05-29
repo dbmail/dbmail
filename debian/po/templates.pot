@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: paul@nfg.nl\n"
-"POT-Creation-Date: 2006-05-29 15:14+0200\n"
+"POT-Creation-Date: 2006-05-29 15:56+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,7 +19,7 @@ msgstr ""
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:3
-msgid "Use debconf to manage dbmail configuration:"
+msgid "Use debconf to manage dbmail configuration?"
 msgstr ""
 
 #. Type: boolean
@@ -131,7 +131,7 @@ msgstr ""
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:51
-msgid "start the imap server after reboot:"
+msgid "start the imap server after reboot?"
 msgstr ""
 
 #. Type: boolean
@@ -144,19 +144,13 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:51
-msgid "Do you want to start the imap service after a reboot?"
+#: ../dbmail.templates:57
+msgid "start the pop3 server after reboot?"
 msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:59
-msgid "start the pop3 server after reboot:"
-msgstr ""
-
-#. Type: boolean
-#. Description
-#: ../dbmail.templates:59
+#: ../dbmail.templates:57
 msgid ""
 "Dbmail support both imap and pop3 services. You can choose to run either one "
 "or both services."
@@ -164,19 +158,13 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:59
-msgid "Do you want to start the pop3 service after a reboot?"
+#: ../dbmail.templates:63
+msgid "start the timesieved after reboot?"
 msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:67
-msgid "start the timesieved after reboot:"
-msgstr ""
-
-#. Type: boolean
-#. Description
-#: ../dbmail.templates:67
+#: ../dbmail.templates:63
 msgid ""
 "Dbmail supports management of Sieve scripts through the timsieve protocol. "
 "You can run dbmail-timsieved which allows management of the sieve scripts "
@@ -186,19 +174,13 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:67
-msgid "Do you want to start the timsieved service after a reboot?"
-msgstr ""
-
-#. Type: boolean
-#. Description
-#: ../dbmail.templates:76
+#: ../dbmail.templates:70
 msgid "Run the stunnel SSL wrapper from the init script:"
 msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:76
+#: ../dbmail.templates:70
 msgid ""
 "The stunnel SSL wrapper allows you to provide secure imap and pop services "
 "even though dbmail supports neither imaps nor pop3s (yet)."
@@ -206,7 +188,7 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:76
+#: ../dbmail.templates:70
 msgid ""
 "Make sure you have installed stunnel which is provided by a separate package "
 "if you want to use this feature."
@@ -214,13 +196,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:85
+#: ../dbmail.templates:79
 msgid "The filename for the SSL pem file:"
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:85
+#: ../dbmail.templates:79
 msgid ""
 "To be able to run the stunnel SSL wrapper you need to generate a pem file "
 "that should reside in /etc/ssl/certs/. Specify the filename here without  "
@@ -229,7 +211,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:85
+#: ../dbmail.templates:79
 msgid ""
 "Read /usr/share/doc/stunnel/README.Debian on how to generate such a file."
 msgstr ""

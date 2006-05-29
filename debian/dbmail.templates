@@ -67,7 +67,7 @@ _Description: start the timesieved after reboot?
 
 Template: dbmail/start_ssl
 Type: boolean
-_Description:  Run the stunnel SSL wrapper from the init script:
+_Description:  Run the stunnel SSL wrapper from the init script?
  The stunnel SSL wrapper allows you to provide secure imap and pop services
  even though dbmail supports neither imaps nor pop3s (yet). 
  .
