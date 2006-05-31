@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: dbmail 1.2.11-1\n"
 "Report-Msgid-Bugs-To: paul@nfg.nl\n"
-"POT-Creation-Date: 2006-05-29 15:56+0200\n"
+"POT-Creation-Date: 2006-05-29 16:01+0200\n"
 "PO-Revision-Date: 2005-05-08 17:38+0200\n"
 "Last-Translator: Martin Sin <martin.sin@seznam.cz>\n"
 "Language-Team: Czech <debian-l10n-czech@lists.debian.org>\n"
@@ -198,7 +198,7 @@ msgstr ""
 #. Description
 #: ../dbmail.templates:70
 #, fuzzy
-msgid "Run the stunnel SSL wrapper from the init script:"
+msgid "Run the stunnel SSL wrapper from the init script?"
 msgstr "Přejete si spustit stunnel SSL wrapper z init skriptu?"
 
 #. Type: boolean
