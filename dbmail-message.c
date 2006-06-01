@@ -819,7 +819,7 @@ int dbmail_message_headers_cache(const struct DbmailMessage *self)
 		part = g_mime_message_get_mime_part(GMIME_MESSAGE(self->content));
 		if ((type = (char *)g_mime_object_get_header(part,"Content-Type"))!=NULL)
 			_header_cache("Content-Type",type,(gpointer)self);
-
+		g_object_unref(part);
 	}
 	
 	g_mime_header_foreach(GMIME_OBJECT(self->content)->headers, _header_cache, (gpointer)self);

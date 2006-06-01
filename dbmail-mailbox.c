@@ -1219,9 +1219,12 @@ static int _exec_search(GMimeObject *object, search_key_t * sk)
 		part = object;
 	
 	if ((type = (GMimeContentType *)g_mime_object_get_content_type(part)))  {
-		if (g_mime_content_type_is_type(type,"text","*"))
+		if (g_mime_content_type_is_type(type,"text","*")){
+			if (GMIME_IS_MESSAGE(object)) g_object_unref(part);
 			return _search_body(part, sk);
+		}
 	}
+	if (GMIME_IS_MESSAGE(object)) g_object_unref(part);
 	
 	/* no match found yet, try the children */
 	if (GMIME_IS_MESSAGE(object)) {
@@ -1230,12 +1233,14 @@ static int _exec_search(GMimeObject *object, search_key_t * sk)
 		part = object;
 	}
 	
-	if (! (type = (GMimeContentType *)g_mime_object_get_content_type(part)))
+	if (! (type = (GMimeContentType *)g_mime_object_get_content_type(part))){
+		if (GMIME_IS_MESSAGE(object)) g_object_unref(part);
 		return 0;
-	
-	if (! (g_mime_content_type_is_type(type,"multipart","*")))
+	}	
+	if (! (g_mime_content_type_is_type(type,"multipart","*"))){
+		if (GMIME_IS_MESSAGE(object)) g_object_unref(part);
 		return 0;
-
+	}
 	multipart = GMIME_MULTIPART(part);
 	i = g_mime_multipart_get_number(multipart);
 	
@@ -1245,10 +1250,14 @@ static int _exec_search(GMimeObject *object, search_key_t * sk)
 	/* loop over parts for base info */
 	for (j=0; j<i; j++) {
 		subpart = g_mime_multipart_get_part(multipart,j);
-		if (_exec_search(subpart,sk) == 1)
+		if (_exec_search(subpart,sk) == 1){
+			if (GMIME_IS_MESSAGE(object)) g_object_unref(part);
+			g_object_unref(subpart);
 			return 1;
+		}
+		g_object_unref(subpart);
 	}
-	
+	if (GMIME_IS_MESSAGE(object)) g_object_unref(part);
 	return 0;
 }
 static GTree * mailbox_search_parsed(struct DbmailMailbox *self, search_key_t *s)
