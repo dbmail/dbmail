@@ -32,6 +32,7 @@ ifneq (,$(findstring devel,$(DEB_BUILD_OPTIONS)))
 	export WITH_PGSQL=
 	export WITH_SQLITE=
 	export WITH_LDAP=
+	export WITH_SIEVE=
 	export SHARED=--enable-shared=no
 	export STATIC=--enable-static=yes
 	CFLAGS += -g
@@ -47,7 +48,10 @@ ifneq (,$(findstring sqlite,$(DEB_BUILD_OPTIONS)))
 	export WITH_SQLITE=--with-sqlite
 endif
 ifneq (,$(findstring ldap,$(DEB_BUILD_OPTIONS)))
-	export WITH_LDAP=--with-ldap
+	export WITH_LDAP=--with-auth-ldap
+endif
+ifneq (,$(findstring sieve,$(DEB_BUILD_OPTIONS)))
+	export WITH_SIEVE=--with-sieve
 endif
 
 

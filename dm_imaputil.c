@@ -281,6 +281,8 @@ void _structure_part_handle_part(GMimeObject *part, gpointer data, gboolean exte
 	else
 		_structure_part_text(object,data, extension);
 
+	if (GMIME_IS_MESSAGE(part)) g_object_unref(object);
+		
 }
 
 void _structure_part_multipart(GMimeObject *part, gpointer data, gboolean extension)
@@ -300,9 +302,10 @@ void _structure_part_multipart(GMimeObject *part, gpointer data, gboolean extens
 		object = part;
 	
 	type = g_mime_object_get_content_type(object);
-	if (! type)
+	if (! type){
+		if (GMIME_IS_MESSAGE(part)) g_object_unref(object);
 		return;
-
+	}
 	multipart = GMIME_MULTIPART(object);
 	i = g_mime_multipart_get_number(multipart);
 	
@@ -316,6 +319,7 @@ void _structure_part_multipart(GMimeObject *part, gpointer data, gboolean extens
 	for (j=0; j<i; j++) {
 		subpart = g_mime_multipart_get_part(multipart,j);
 		_structure_part_handle_part(subpart,&alist,extension);
+		g_object_unref(subpart);
 	}
 	
 	/* sub-type */
@@ -345,6 +349,7 @@ void _structure_part_multipart(GMimeObject *part, gpointer data, gboolean extens
 	
 	g_list_foreach(alist,(GFunc)g_free,NULL);
 	g_list_free(alist);
+	if (GMIME_IS_MESSAGE(part)) g_object_unref(object);
 
 	
 }
@@ -355,6 +360,7 @@ void _structure_part_message_rfc822(GMimeObject *part, gpointer data, gboolean e
 	size_t s, l=0;
 	GMimeObject *object;
 	const GMimeContentType *type;
+	GMimeMessage *tmpmes;
 	
 	if (GMIME_IS_MESSAGE(part))
 		object = g_mime_message_get_mime_part(GMIME_MESSAGE(part));
@@ -362,9 +368,10 @@ void _structure_part_message_rfc822(GMimeObject *part, gpointer data, gboolean e
 		object = part;
 	
 	type = g_mime_object_get_content_type(object);
-	if (! type)
+	if (! type){
+		if (GMIME_IS_MESSAGE(part)) g_object_unref(object);
 		return;
-
+	}
 	/* type/subtype */
 	list = g_list_append_printf(list,"\"%s\"", type->type);
 	list = g_list_append_printf(list,"\"%s\"", type->subtype);
@@ -385,13 +392,15 @@ void _structure_part_message_rfc822(GMimeObject *part, gpointer data, gboolean e
 	list = g_list_append_printf(list,"%d", s);
 
 	/* envelope structure */
-	b = imap_get_envelope(g_mime_message_part_get_message(GMIME_MESSAGE_PART(part)));
+	b = imap_get_envelope(tmpmes = g_mime_message_part_get_message(GMIME_MESSAGE_PART(part)));
 	list = g_list_append_printf(list,"%s", b?b:"NIL");
+	g_object_unref(tmpmes);
 	g_free(b);
 
 	/* body structure */
-	b = imap_get_structure(g_mime_message_part_get_message(GMIME_MESSAGE_PART(part)), extension);
+	b = imap_get_structure(tmpmes = g_mime_message_part_get_message(GMIME_MESSAGE_PART(part)), extension);
 	list = g_list_append_printf(list,"%s", b?b:"NIL");
+	g_object_unref(tmpmes);
 	g_free(b);
 
 	/* lines */
@@ -402,6 +411,7 @@ void _structure_part_message_rfc822(GMimeObject *part, gpointer data, gboolean e
 	
 	g_list_foreach(list,(GFunc)g_free,NULL);
 	g_list_free(list);
+	if (GMIME_IS_MESSAGE(part)) g_object_unref(object);
 
 }
 void _structure_part_text(GMimeObject *part, gpointer data, gboolean extension)
@@ -418,9 +428,10 @@ void _structure_part_text(GMimeObject *part, gpointer data, gboolean extension)
 		object = part;
 	
 	type = g_mime_object_get_content_type(object);
-	if (! type)
+	if (! type){
+		if (GMIME_IS_MESSAGE(part)) g_object_unref(object);
 		return;
-
+	}
 	/* type/subtype */
 	list = g_list_append_printf(list,"\"%s\"", type->type);
 	list = g_list_append_printf(list,"\"%s\"", type->subtype);
@@ -461,6 +472,7 @@ void _structure_part_text(GMimeObject *part, gpointer data, gboolean extension)
 	
 	g_list_foreach(list,(GFunc)g_free,NULL);
 	g_list_free(list);
+	if (GMIME_IS_MESSAGE(part)) g_object_unref(object);
 }
 
 
@@ -557,11 +569,11 @@ char * imap_get_structure(GMimeMessage *message, gboolean extension)
 	char *s, *t;
 	
 	part = g_mime_message_get_mime_part(message);
-
 	type = (GMimeContentType *)g_mime_object_get_content_type(part);
 	if (! type) {
 		trace(TRACE_DEBUG,"%s,%s: error getting content_type",
 				__FILE__, __func__);
+		g_object_unref(part);
 		return NULL;
 	}
 	
@@ -585,6 +597,7 @@ char * imap_get_structure(GMimeMessage *message, gboolean extension)
 
 	g_list_foreach(structure,(GFunc)g_free,NULL);
 	g_list_free(structure);
+	g_object_unref(part);
 	
 	return t;
 }
@@ -741,6 +754,7 @@ GMimeObject * imap_get_partspec(const GMimeObject *message, const char *partspec
 		if (g_mime_content_type_is_type(type,"multipart","*")) {
 			object=g_mime_multipart_get_part((GMimeMultipart *)object, (int)index-1);
 			assert(object);
+			g_object_unref(object);
 			continue;
 		}
 	}

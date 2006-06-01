@@ -1,3 +1,10 @@
+2006-06-01  Paul J Stevens <paul@nfg.nl>
+
+	* debian/:
+	debian cleanups
+	* dbmail-mailbox.c, dbmail-message.c, dm_imaputil.c:
+	add g_object_unref calls (bug #139)
+
 2006-05-27  Paul J Stevens <paul@nfg.nl>
 
 	* debian/control, debian/rules:

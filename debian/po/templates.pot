@@ -1,22 +1,14 @@
-#
-#    Translators, if you are not familiar with the PO format, gettext
-#    documentation is worth reading, especially sections dedicated to
-#    this format, e.g. by running:
-#         info -n '(gettext)PO Files'
-#         info -n '(gettext)Header Entry'
-#
-#    Some information specific to po-debconf are available at
-#            /usr/share/doc/po-debconf/README-trans
-#         or http://www.debian.org/intl/l10n/po-debconf/README-trans
-#
-#    Developers do not need to manually edit POT or PO files.
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2005-05-24 17:03+0200\n"
+"Report-Msgid-Bugs-To: paul@nfg.nl\n"
+"POT-Creation-Date: 2006-05-29 16:01+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -43,7 +35,7 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../dbmail.templates:11
-msgid "The email address where bounces come from."
+msgid "The email address where bounces come from:"
 msgstr ""
 
 #. Type: string
@@ -63,7 +55,7 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../dbmail.templates:19
-msgid "Postmaster's email address."
+msgid "Postmaster's email address:"
 msgstr ""
 
 #. Type: string
@@ -83,7 +75,7 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../dbmail.templates:27
-msgid "Please enter the hostname of the (my/pg)sql database server."
+msgid "The hostname of the sql database server:"
 msgstr ""
 
 #. Type: string
@@ -97,7 +89,7 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../dbmail.templates:34
-msgid "Please enter the name of the database to use."
+msgid "The name of the database:"
 msgstr ""
 
 #. Type: string
@@ -108,46 +100,46 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:39
-msgid "Please enter the name of the database user you want to use."
+#: ../dbmail.templates:34
+msgid "If you're using sqlite, this should be the path to the database file."
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:39
+#: ../dbmail.templates:41
+msgid "The database user:"
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:41
 msgid "This is the username dbmail will use to connect to the database server."
 msgstr ""
 
 #. Type: password
 #. Description
-#: ../dbmail.templates:44
-msgid "Please enter the password for the database connection"
+#: ../dbmail.templates:46
+msgid "The password for the database connection:"
 msgstr ""
 
 #. Type: password
 #. Description
-#: ../dbmail.templates:44
+#: ../dbmail.templates:46
 msgid "This is the password dbmail will use to connect to the database server."
 msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:49
+#: ../dbmail.templates:51
 msgid "start the imap server after reboot?"
 msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:49
+#: ../dbmail.templates:51
 msgid ""
 "Dbmail supports both imap and pop3 services. You can choose to run either "
 "one or both services."
-msgstr ""
-
-#. Type: boolean
-#. Description
-#: ../dbmail.templates:49
-msgid "Do you want to start the imap service after a reboot?"
 msgstr ""
 
 #. Type: boolean
@@ -166,19 +158,29 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:57
-msgid "Do you want to start the pop3 service after a reboot?"
+#: ../dbmail.templates:63
+msgid "start the timesieved after reboot?"
 msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:65
-msgid "Do you wish to run the stunnel SSL wrapper from the init script?"
+#: ../dbmail.templates:63
+msgid ""
+"Dbmail supports management of Sieve scripts through the timsieve protocol. "
+"You can run dbmail-timsieved which allows management of the sieve scripts "
+"from within clients that support this protocol such as kmail, squirrelmail, "
+"and others"
 msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:65
+#: ../dbmail.templates:70
+msgid "Run the stunnel SSL wrapper from the init script?"
+msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:70
 msgid ""
 "The stunnel SSL wrapper allows you to provide secure imap and pop services "
 "even though dbmail supports neither imaps nor pop3s (yet)."
@@ -186,7 +188,7 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:65
+#: ../dbmail.templates:70
 msgid ""
 "Make sure you have installed stunnel which is provided by a separate package "
 "if you want to use this feature."
@@ -194,13 +196,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:74
-msgid "Please enter the filename for the SSL pem file."
+#: ../dbmail.templates:79
+msgid "The filename for the SSL pem file:"
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:74
+#: ../dbmail.templates:79
 msgid ""
 "To be able to run the stunnel SSL wrapper you need to generate a pem file "
 "that should reside in /etc/ssl/certs/. Specify the filename here without  "
@@ -209,7 +211,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:74
+#: ../dbmail.templates:79
 msgid ""
 "Read /usr/share/doc/stunnel/README.Debian on how to generate such a file."
 msgstr ""
