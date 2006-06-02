@@ -447,8 +447,6 @@ freeall:
 		g_list_foreach(fwds_add, (GFunc)g_free, NULL);
 		g_list_free(fwds_add);
 	}
-	if (tmp)
-		g_string_free(tmp,TRUE);
 
 	db_disconnect();
 	auth_disconnect();
