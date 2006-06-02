@@ -3,6 +3,8 @@
 	* dbmail-imapsession.c, dbmail-mailbox.c, dbmail-message.c,
 	imapcommands.c, list.c, misc.c, user.c:
 	Accepted g_string_* memory cleanup patch by kaname (closes bug #355).
+	* dm_imaputil.c:
+	Accepted g_object_unref patch by ryo (from bug #139).
 
 2006-06-01  Paul J Stevens <paul@nfg.nl>
 
