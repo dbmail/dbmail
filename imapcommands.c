@@ -928,7 +928,7 @@ int _ic_status(struct ImapSession *self)
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	mailbox_t mb;
 	int i, endfound, result;
-	GString *response = g_string_new("");
+	GString *response;
 	GList *plst = NULL;
 	gchar *pstring, *astring;
 	
@@ -1029,7 +1029,8 @@ int _ic_status(struct ImapSession *self)
 	}
 	astring = dbmail_imap_astring_as_string(self->args[0]);
 	pstring = dbmail_imap_plist_as_string(plst); 
-	
+
+	response = g_string_new("");
 	g_string_printf(response, "* STATUS %s %s", astring, pstring);	
 	dbmail_imap_session_printf(self, "%s\r\n", response->str);
 	dbmail_imap_session_printf(self, "%s OK STATUS completed\r\n", self->tag);

@@ -146,11 +146,11 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
 		return g_strdup(mailbox_name);
 	
 	/* else */
-	t = g_string_new("");
 	
 	if ((owner = auth_get_userid(owner_idnr))==NULL)
 		return NULL;
-	
+
+	t = g_string_new("");
 	if (strcmp(owner, PUBLIC_FOLDER_USER) == 0)
 		g_string_printf(t, "%s%s%s", NAMESPACE_PUBLIC, MAILBOX_SEPARATOR, mailbox_name);
 	else

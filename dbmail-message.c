@@ -568,7 +568,7 @@ static struct DbmailMessage * _retrieve(struct DbmailMessage *self, char *query_
 {
 	
 	int row = 0, rows = 0;
-	GString *m = g_string_new("");
+	GString *m;
 	
 	assert(dbmail_message_get_physid(self));
 	
@@ -586,7 +586,8 @@ static struct DbmailMessage * _retrieve(struct DbmailMessage *self, char *query_
 		db_free_result();
 		return NULL;	/* msg should have 1 block at least */
 	}
-	
+
+	m = g_string_new("");
 	for (row=0; row < rows; row++)
 		g_string_append_printf(m, "%s", db_get_result(row,0));
 	

@@ -1,3 +1,9 @@
+2006-06-02  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmail-imapsession.c, dbmail-mailbox.c, dbmail-message.c,
+	imapcommands.c, list.c, misc.c, user.c:
+	Accepted g_string_* memory cleanup patch by kaname (closes bug #355).
+
 2006-06-01  Paul J Stevens <paul@nfg.nl>
 
 	* debian/:

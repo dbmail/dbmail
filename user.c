@@ -93,11 +93,9 @@ int main(int argc, char *argv[])
 	char *password = NULL, *enctype = NULL;
 	u64_t useridnr = 0, clientid = 0, maxmail = 0;
 	GList *alias_add = NULL, *alias_del = NULL, *fwds_add = NULL, *fwds_del = NULL;
-	GString *tmp;
+	GString *tmp = NULL;
 	struct change_flags change_flags;
 	size_t len = 0;
-
-	tmp = g_string_new("");
 
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 	setvbuf(stdout, 0, _IONBF, 0);
@@ -206,6 +204,7 @@ int main(int argc, char *argv[])
 			if (optarg && (len = strlen(optarg))) {
 				tmp = g_string_new(optarg);
 				alias_add = g_string_split(tmp,",");
+				g_string_free(tmp, TRUE);
 			}
 			break;
 
@@ -214,6 +213,7 @@ int main(int argc, char *argv[])
 			if (optarg && (len = strlen(optarg))) {
 				tmp = g_string_new(optarg);
 				alias_del = g_string_split(tmp,",");
+				g_string_free(tmp, TRUE);
 			}
 			break;
 
@@ -222,6 +222,7 @@ int main(int argc, char *argv[])
 			if (optarg && (len = strlen(optarg))) {
 				tmp = g_string_new(optarg);
 				fwds_add = g_string_split(tmp,",");
+				g_string_free(tmp, TRUE);
 			}
 			break;
 
@@ -230,6 +231,7 @@ int main(int argc, char *argv[])
 			if (optarg && (len = strlen(optarg))) {
 				tmp = g_string_new(optarg);
 				fwds_del = g_string_split(tmp,",");
+				g_string_free(tmp, TRUE);
 			}
 			break;
 

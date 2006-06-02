@@ -674,7 +674,6 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self, u64_t row)
 	
 
 	GList *sublist = NULL;;
-	GString *tmp = g_string_new("");
 	
 	self->fi->isfirstfetchout = 1;
 	
@@ -831,7 +830,7 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self, u64_t row)
 	}
 
 	dbmail_imap_session_printf(self, ")\r\n");
-	g_string_free(tmp,TRUE);
+
 	return 0;
 }
 
