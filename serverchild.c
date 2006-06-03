@@ -21,7 +21,7 @@
 /*
  * serverchild.c
  *
- * $Id: serverchild.c 2121 2006-05-17 08:45:33Z paul $
+ * $Id: serverchild.c 2147 2006-06-03 04:47:34Z aaron $
  * 
  * function implementations of server children code (connection handling)
  */
@@ -77,8 +77,12 @@ void active_child_sig_handler(int sig, siginfo_t * info UNUSED, void *data UNUSE
 {
 	int saved_errno = errno;
 	
-	/* perform reinit at SIGHUP otherwise exit, but do nothing on
-	 *  SIGCHLD*/
+	/* Perform reinit at SIGHUP otherwise exit, but do nothing on
+	 * SIGCHLD. Make absolutely sure that everything downwind of
+	 * this function is signal-safe! Symptoms of signal-unsafe
+	 * calls are random errors like this:
+	 * *** glibc detected *** corrupted double-linked list: 0x0805f028 ***
+	 * Right, so keep that in mind! */
 	switch (sig) {
 	case SIGCHLD:
 		break;

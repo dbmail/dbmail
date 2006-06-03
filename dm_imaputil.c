@@ -268,8 +268,11 @@ void _structure_part_handle_part(GMimeObject *part, gpointer data, gboolean exte
 		object = part;
 	
 	type = g_mime_object_get_content_type(object);
-	if (! type)
+	if (! type) {
+		if (GMIME_IS_MESSAGE(part))
+			g_object_unref(object);
 		return;
+	}
 
 	/* multipart composite */
 	if (g_mime_content_type_is_type(type,"multipart","*"))
@@ -281,7 +284,8 @@ void _structure_part_handle_part(GMimeObject *part, gpointer data, gboolean exte
 	else
 		_structure_part_text(object,data, extension);
 
-	if (GMIME_IS_MESSAGE(part)) g_object_unref(object);
+	if (GMIME_IS_MESSAGE(part))
+		g_object_unref(object);
 		
 }
 

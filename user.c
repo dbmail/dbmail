@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: user.c 2107 2006-05-07 07:12:51Z aaron $
+/* $Id: user.c 2143 2006-06-02 15:09:15Z aaron $
  * This is the dbmail-user program
  * It makes adding users easier 
  *
@@ -93,11 +93,9 @@ int main(int argc, char *argv[])
 	char *password = NULL, *enctype = NULL;
 	u64_t useridnr = 0, clientid = 0, maxmail = 0;
 	GList *alias_add = NULL, *alias_del = NULL, *fwds_add = NULL, *fwds_del = NULL;
-	GString *tmp;
+	GString *tmp = NULL;
 	struct change_flags change_flags;
 	size_t len = 0;
-
-	tmp = g_string_new("");
 
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 	setvbuf(stdout, 0, _IONBF, 0);
@@ -206,6 +204,7 @@ int main(int argc, char *argv[])
 			if (optarg && (len = strlen(optarg))) {
 				tmp = g_string_new(optarg);
 				alias_add = g_string_split(tmp,",");
+				g_string_free(tmp, TRUE);
 			}
 			break;
 
@@ -214,6 +213,7 @@ int main(int argc, char *argv[])
 			if (optarg && (len = strlen(optarg))) {
 				tmp = g_string_new(optarg);
 				alias_del = g_string_split(tmp,",");
+				g_string_free(tmp, TRUE);
 			}
 			break;
 
@@ -222,6 +222,7 @@ int main(int argc, char *argv[])
 			if (optarg && (len = strlen(optarg))) {
 				tmp = g_string_new(optarg);
 				fwds_add = g_string_split(tmp,",");
+				g_string_free(tmp, TRUE);
 			}
 			break;
 
@@ -230,6 +231,7 @@ int main(int argc, char *argv[])
 			if (optarg && (len = strlen(optarg))) {
 				tmp = g_string_new(optarg);
 				fwds_del = g_string_split(tmp,",");
+				g_string_free(tmp, TRUE);
 			}
 			break;
 
@@ -273,7 +275,7 @@ int main(int argc, char *argv[])
 		case 'V':
 			/* Show the version and return non-zero. */
 			printf("\n*** DBMAIL: dbmail-users version "
-			       "$Revision: 2107 $ %s\n\n", COPYRIGHT);
+			       "$Revision: 2143 $ %s\n\n", COPYRIGHT);
 			result = 1;
 			break;
 
@@ -445,8 +447,6 @@ freeall:
 		g_list_foreach(fwds_add, (GFunc)g_free, NULL);
 		g_list_free(fwds_add);
 	}
-	if (tmp)
-		g_string_free(tmp,TRUE);
 
 	db_disconnect();
 	auth_disconnect();

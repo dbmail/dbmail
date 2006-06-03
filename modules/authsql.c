@@ -923,6 +923,39 @@ GList * auth_get_user_aliases(u64_t user_idnr)
 	return aliases;
 }
 
+GList * auth_get_aliases_ext(const char *alias)
+{
+	int i, n;
+	const char *query_result;
+	GList *aliases = NULL;
+
+	/* do a inverted (DESC) query because adding the names to the 
+	 * final list inverts again */
+	snprintf(__auth_query_data, DEF_QUERYSIZE,
+		 "SELECT deliver_to FROM %saliases WHERE alias = '%s' "
+		 "ORDER BY alias DESC",DBPFX, alias);
+
+	if (__auth_query(__auth_query_data) == -1) {
+		trace(TRACE_ERROR, "%s,%s: could not retrieve  list",
+		      __FILE__, __func__);
+		return NULL;
+	}
+
+	n = db_num_rows();
+	for (i = 0; i < n; i++) {
+		query_result = db_get_result(i, 0);
+		if (!query_result || ! (aliases = g_list_append(aliases,g_strdup(query_result)))) {
+			g_list_foreach(aliases, (GFunc)g_free, NULL);
+			g_list_free(aliases);
+			db_free_result();
+			return NULL;
+		}
+	}
+
+	db_free_result();
+	return aliases;
+}
+
 gboolean auth_requires_shadow_user(void)
 {
 	return FALSE;

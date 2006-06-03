@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: dbmail-imapsession.c 2119 2006-05-14 01:42:53Z aaron $
+/* $Id: dbmail-imapsession.c 2141 2006-06-02 14:40:22Z aaron $
  * 
  * dm_imaputil.c
  *
@@ -674,7 +674,6 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self, u64_t row)
 	
 
 	GList *sublist = NULL;;
-	GString *tmp = g_string_new("");
 	
 	self->fi->isfirstfetchout = 1;
 	
@@ -831,7 +830,7 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self, u64_t row)
 	}
 
 	dbmail_imap_session_printf(self, ")\r\n");
-	g_string_free(tmp,TRUE);
+
 	return 0;
 }
 

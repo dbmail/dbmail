@@ -139,7 +139,8 @@ int dbmail_mailbox_open(struct DbmailMailbox *self)
 		g_string_free(q,TRUE);
 		return DM_SUCCESS;
 	}
-	
+
+	g_string_free(q,TRUE);
 	if (self->ids) {
 		g_tree_destroy(self->ids);
 		self->ids = NULL;
@@ -255,8 +256,12 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 				"WHERE message_idnr IN (%s)", DBPFX, DBPFX,
 				(char *)slice->data);
 		
-		if (db_query(q->str) == -1)
+		if (db_query(q->str) == -1) {
+			g_string_free(t,TRUE);
+			g_string_free(q,TRUE);
+			g_object_unref(ostream);
 			return -1;
+		}
 
 		if ((j = db_num_rows()) < 1)
 			break;
@@ -290,12 +295,12 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 		if (dump_message_to_stream(message,ostream) > 0)
 			count++;
 		dbmail_message_free(message);
-		g_string_free(t,TRUE);
 	}
 	 
 	g_list_foreach(slice,(GFunc)g_free,NULL);
 	g_list_free(slice);
-	
+
+	g_string_free(t,TRUE);
 	g_string_free(q,TRUE);
 	g_object_unref(ostream);
 	
@@ -358,6 +363,7 @@ char * dbmail_mailbox_orderedsubject(struct DbmailMailbox *self)
 	}
 	if ((r = db_num_rows())==0) {
 		g_string_free(q,TRUE);
+		db_free_result();
 		return res;
 	}
 	
@@ -394,6 +400,7 @@ char * dbmail_mailbox_orderedsubject(struct DbmailMailbox *self)
 	}
 	if ((r = db_num_rows())==0) {
 		g_string_free(q,TRUE);
+		db_free_result();
 		return res;
 	}
 	
@@ -1046,12 +1053,14 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 	u64_t *k, *v, *w;
 	u64_t id;
 	
-	GString *t = g_string_new("");
-	GString *q = g_string_new("");
+	GString *t;
+	GString *q;
 
 	if (!s->search)
 		return NULL;
 
+	t = g_string_new("");
+	q = g_string_new("");
 	switch (s->type) {
 		case IST_HDRDATE_ON:
 		case IST_HDRDATE_SINCE:
@@ -1423,7 +1432,8 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set)
 	}
 
 	g_list_destroy(sets);
-	
+	g_string_free(t,TRUE);
+
 	if (a)
 		g_tree_destroy(a);
 

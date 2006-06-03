@@ -1,5 +1,5 @@
 /*
-  $Id: dbmail-message.c 2140 2006-06-01 18:55:45Z paul $
+  $Id: dbmail-message.c 2141 2006-06-02 14:40:22Z aaron $
 
   Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
 
@@ -568,7 +568,7 @@ static struct DbmailMessage * _retrieve(struct DbmailMessage *self, char *query_
 {
 	
 	int row = 0, rows = 0;
-	GString *m = g_string_new("");
+	GString *m;
 	
 	assert(dbmail_message_get_physid(self));
 	
@@ -586,7 +586,8 @@ static struct DbmailMessage * _retrieve(struct DbmailMessage *self, char *query_
 		db_free_result();
 		return NULL;	/* msg should have 1 block at least */
 	}
-	
+
+	m = g_string_new("");
 	for (row=0; row < rows; row++)
 		g_string_append_printf(m, "%s", db_get_result(row,0));
 	

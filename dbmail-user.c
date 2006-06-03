@@ -159,7 +159,8 @@ int mkpassword(const char * const user, const char * const passwd,
 		"plaintext",	"plaintext-raw",	"crypt",	"crypt-raw",
 		"md5", 		"md5-raw",		"md5sum",	"md5sum-raw", 
 		"md5-hash",	"md5-hash-raw",		"md5-digest",	"md5-digest-raw",
-		"md5-base64",	"md5-base64-raw",	"shadow", 	"", 	NULL
+		"md5-base64",	"md5-base64-raw",	"md5base64",	"md5base64-raw",
+		"shadow", 	"", 	NULL
 	};
 
 	/* These must correspond to the easy text names. */
@@ -167,7 +168,8 @@ int mkpassword(const char * const user, const char * const passwd,
 		PLAINTEXT, 	PLAINTEXT_RAW, 		CRYPT,		CRYPT_RAW,
 		MD5_HASH, 	MD5_HASH_RAW,		MD5_DIGEST,	MD5_DIGEST_RAW,
 		MD5_HASH,	MD5_HASH_RAW,		MD5_DIGEST,	MD5_DIGEST_RAW,
-		MD5_BASE64,	MD5_BASE64_RAW,		SHADOW,		PLAINTEXT,	PWTYPE_NULL
+		MD5_BASE64,	MD5_BASE64_RAW,		MD5_BASE64,	MD5_BASE64_RAW,
+		SHADOW,		PLAINTEXT,	PWTYPE_NULL
 	};
 
 	memset(pw, 0, 50);
@@ -297,6 +299,9 @@ int do_forwards(const char * const alias, const u64_t clientid,
 {
 	int result = 0;
 	char *forward;
+	GList *current_fwds, *matching_fwds, *matching_fwds_del;
+
+	current_fwds = auth_get_aliases_ext(alias);
 
 	/* Delete aliases for the user. */
 	if (fwds_del) {
@@ -304,13 +309,37 @@ int do_forwards(const char * const alias, const u64_t clientid,
 		while (fwds_del) {
 			forward = (char *)fwds_del->data;
 
-			qprintf("[%s]\n", forward);
+			// Look for a wildcard character
+			if (strchr(forward, '?') || strchr(forward, '*')) {
+				qprintf("[%s] matches:\n", forward);
 
-			if (auth_removealias_ext(alias, forward) < 0) {
-				qerrorf("Error: could not remove forward [%s] \n",
-				     forward);
-				result = -1;
+				matching_fwds = match_glob_list(forward, current_fwds);
+
+				matching_fwds_del = g_list_first(matching_fwds);
+				while (matching_fwds_del) {
+					forward = (char *)matching_fwds_del->data;
+
+					qprintf("  [%s]\n", forward);
+
+					if (auth_removealias_ext(alias, forward) < 0) {
+						qerrorf("Error: could not remove forward [%s] \n", forward);
+						result = -1;
+					}
+					if (! g_list_next(matching_fwds_del))
+						break;
+					matching_fwds_del = g_list_next(matching_fwds_del);
+				}
+			// Nope, just a standard single forward removal
+			} else {
+				qprintf("[%s]\n", forward);
+
+				if (auth_removealias_ext(alias, forward) < 0) {
+					qerrorf("Error: could not remove forward [%s] \n",
+					     forward);
+					result = -1;
+				}
 			}
+
 			if (! g_list_next(fwds_del))
 				break;
 			fwds_del = g_list_next(fwds_del);
@@ -347,8 +376,11 @@ int do_aliases(const u64_t useridnr,
 	int result = 0;
 	char *alias;
 	u64_t clientid;
+	GList *current_aliases, *matching_aliases, *matching_alias_del;
 
 	auth_getclientid(useridnr, &clientid);
+
+	current_aliases = auth_get_user_aliases(useridnr);
 
 	/* Delete aliases for the user. */
 	if (alias_del) {
@@ -356,12 +388,36 @@ int do_aliases(const u64_t useridnr,
 		while (alias_del) {
 			alias = (char *)alias_del->data;
 
-			qprintf("[%s]\n", alias);
+			// Look for a wildcard character
+			if (strchr(alias, '?') || strchr(alias, '*')) {
+				qprintf("[%s] matches:\n", alias);
 
-			if (auth_removealias(useridnr, alias) < 0) {
-				qerrorf("Error: could not remove alias [%s] \n", alias);
-				result = -1;
+				matching_aliases = match_glob_list(alias, current_aliases);
+
+				matching_alias_del = g_list_first(matching_aliases);
+				while (matching_alias_del) {
+					alias = (char *)matching_alias_del->data;
+
+					qprintf("  [%s]\n", alias);
+
+					if (auth_removealias(useridnr, alias) < 0) {
+						qerrorf("Error: could not remove alias [%s] \n", alias);
+						result = -1;
+					}
+					if (! g_list_next(matching_alias_del))
+						break;
+					matching_alias_del = g_list_next(matching_alias_del);
+				}
+			// Nope, just a standard single alias removal
+			} else {
+				qprintf("[%s]\n", alias);
+
+				if (auth_removealias(useridnr, alias) < 0) {
+					qerrorf("Error: could not remove alias [%s] \n", alias);
+					result = -1;
+				}
 			}
+
 			if (! g_list_next(alias_del))
 				break;
 			alias_del = g_list_next(alias_del);
@@ -374,6 +430,10 @@ int do_aliases(const u64_t useridnr,
 		while (alias_add) {
 			alias = (char *)alias_add->data;
 			qprintf("[%s]\n", alias);
+
+			if (strchr(alias, '?') || strchr(alias, '*')) {
+				// Has wildcard!
+			}
 
 			if (auth_addalias (useridnr, alias, clientid) < 0) {
 				qerrorf("Error: could not add alias [%s]\n", alias);

@@ -95,6 +95,7 @@ int auth_load_driver(void)
 	||  !g_module_symbol(module, "auth_md5_validate",           (gpointer)&auth->md5_validate           )
 	||  !g_module_symbol(module, "auth_get_users_from_clientid",(gpointer)&auth->get_users_from_clientid)
 	||  !g_module_symbol(module, "auth_get_user_aliases",       (gpointer)&auth->get_user_aliases       )
+	||  !g_module_symbol(module, "auth_get_aliases_ext",        (gpointer)&auth->get_aliases_ext        )
 	||  !g_module_symbol(module, "auth_addalias",               (gpointer)&auth->addalias               )
 	||  !g_module_symbol(module, "auth_addalias_ext",           (gpointer)&auth->addalias_ext           )
 	||  !g_module_symbol(module, "auth_removealias",            (gpointer)&auth->removealias            )
@@ -169,6 +170,8 @@ int auth_get_users_from_clientid(u64_t client_id,
 			user_ids, num_users); }
 GList * auth_get_user_aliases(u64_t user_idnr)
 	{ return auth->get_user_aliases(user_idnr); }
+GList * auth_get_aliases_ext(const char *alias)
+	{ return auth->get_aliases_ext(alias); }
 int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid)
 	{ return auth->addalias(user_idnr, alias, clientid); }
 int auth_addalias_ext(const char *alias, const char *deliver_to,

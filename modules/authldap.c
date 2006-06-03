@@ -19,7 +19,7 @@
 */
 
 /*
- * $Id: authldap.c 2091 2006-04-29 20:05:04Z paul $
+ * $Id: authldap.c 2145 2006-06-03 04:31:04Z aaron $
  * * User authentication functions for LDAP.
  */
 #ifdef HAVE_CONFIG_H
@@ -1421,6 +1421,42 @@ GList * auth_get_user_aliases(u64_t user_idnr)
 	GList *entlist, *fldlist, *attlist;
 	
 	g_string_printf(t,"%s=%llu", _ldap_cfg.field_nid, user_idnr);
+	if ((entlist = __auth_get_every_match(t->str, fields))) {
+		entlist = g_list_first(entlist);
+		fldlist = g_list_first(entlist->data);
+		attlist = g_list_first(fldlist->data);
+		while (attlist) {
+			aliases = g_list_append(aliases, g_strdup(attlist->data));
+			if (! g_list_next(attlist))
+				break;
+			attlist = g_list_next(attlist);
+		}
+		dm_ldap_freeresult(entlist);
+	}
+	g_string_free(t,TRUE);
+	return aliases;
+}
+
+/**
+ * \brief get a list of aliases associated with a user's user_idnr
+ * \param user_idnr idnr of user
+ * \param aliases list of aliases
+ * \return
+ * 		- -2 on memory failure
+ * 		- -1 on database failure
+ * 		- 0 on success
+ * \attention aliases list needs to be empty. Method calls dm_list_init()
+ *            which sets list->start to NULL.
+ */
+
+GList * auth_get_aliases_ext(const char *alias)
+{
+	char *fields[] = { _ldap_cfg.field_fwdtarget, NULL };
+	GString *t = g_string_new("");
+	GList *aliases = NULL;
+	GList *entlist, *fldlist, *attlist;
+	
+	g_string_printf(t,"%s=%s", _ldap_cfg.field_mail, alias);
 	if ((entlist = __auth_get_every_match(t->str, fields))) {
 		entlist = g_list_first(entlist);
 		fldlist = g_list_first(entlist->data);
