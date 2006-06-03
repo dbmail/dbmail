@@ -80,13 +80,15 @@ MINOR OPTIONS
   delivered to this user.
 
 -S  alias[,alias...]::
-  Removes a list of recipient aliases (wildcards supported).
+  Removes a list of recipient aliases. Use wildcards ? and * to match any
+  single character and any number of characters, respectively.
 
 -t  forward[,forward...]::
   Adds a list of deliver-to forwards.
 
 -T  forward[,forward...]::
-  Removes a list of deliver-to forwards (wildcards supported).
+  Removes a list of deliver-to forwards. Use wildcards ? and * to match any
+  single character and any number of characters, respectively.
 
 
 include::commonopts.txt[]
