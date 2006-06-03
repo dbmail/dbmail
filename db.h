@@ -797,7 +797,7 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
 		      int update_curmail_size);
 
 /**
- * \brief write lines of message to fstream. Does not write the header
+ * \brief write lines of message to fstream. Always write full headers.
  * \param fstream the stream to write to
  * \param message_idnr idrn of message to write
  * \param lines number of lines to write. If <PRE>lines == -2</PRE>, then
