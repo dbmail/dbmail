@@ -99,6 +99,7 @@
 #include "dm_imaputil.h"
 #include "dm_base64.h"
 #include "dm_getopt.h"
+#include "dm_match.h"
 
 #ifdef SIEVE
 #include <sieve2.h>

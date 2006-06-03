@@ -38,6 +38,7 @@ typedef struct {
 			u64_t ** user_ids, unsigned *num_users);
 	char * (* get_deliver_from_alias)(const char *alias);
 	GList * (* get_user_aliases)(u64_t user_idnr);
+	GList * (* get_aliases_ext)(const char *alias);
 	int (* addalias)(u64_t user_idnr, const char *alias, u64_t clientid);
 	int (* addalias_ext)(const char *alias, const char *deliver_to,
 			u64_t clientid);

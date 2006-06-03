@@ -107,6 +107,36 @@ START_TEST(test_do_delete)
 }
 END_TEST
 
+START_TEST(test_dm_match)
+{
+	int i;
+	char *candidate = "MyName is SAMMY @ and I am a SLUG!";
+	char *badpatterns[] = {
+		"hello", "*hello", "*hello*", "hello*",
+		"*hello", "*hello*", "hello*", "?", NULL };
+	char *goodpatterns[] = {
+		"*", "*and*", "*SLUG!", "My*", "MyName ?? *", NULL };
+
+	for (i = 0; badpatterns[i] != NULL; i++) {
+		fail_unless(match_glob(badpatterns[i], candidate)
+			== NULL, "test_dm_match failed on a bad pattern:"
+			" [%s]", badpatterns[i]);
+	}
+
+	for (i = 0; goodpatterns[i] != NULL; i++) {
+		fail_unless(match_glob(goodpatterns[i], candidate)
+			== candidate, "test_dm_match failed on a good pattern:"
+			" [%s]", goodpatterns[i]);
+	}
+
+}
+END_TEST
+
+START_TEST(test_dm_match_list)
+{
+}
+END_TEST
+
 /* Change operations */
 //int do_username(const u64_t useridnr, const char *newuser);
 //int do_maxmail(const u64_t useridnr, const u64_t maxmail);
@@ -139,6 +169,8 @@ Suite *dbmail_common_suite(void)
 	tcase_add_test(tc_user, test_do_show);
 	tcase_add_test(tc_user, test_do_empty);
 	tcase_add_test(tc_user, test_do_delete);
+	tcase_add_test(tc_user, test_dm_match);
+	tcase_add_test(tc_user, test_dm_match_list);
 	
 	return s;
 }

@@ -1437,6 +1437,76 @@ GList * auth_get_user_aliases(u64_t user_idnr)
 	return aliases;
 }
 
+/**
+ * \brief get a list of aliases associated with a user's user_idnr
+ * \param user_idnr idnr of user
+ * \param aliases list of aliases
+ * \return
+ * 		- -2 on memory failure
+ * 		- -1 on database failure
+ * 		- 0 on success
+ * \attention aliases list needs to be empty. Method calls dm_list_init()
+ *            which sets list->start to NULL.
+ */
+
+
+// FIXME: THIS IS NOT IMPLEMENTED CORRECTLY AT ALL
+GList * auth_get_aliases_ext(const char *alias)
+{
+	char *fields[] = { _ldap_cfg.field_mail, NULL };
+	GString *t = g_string_new("");
+	GList *aliases = NULL;
+	GList *entlist, *fldlist, *attlist;
+	
+	g_string_printf(t,"%s=%llu", _ldap_cfg.field_nid, user_idnr);
+	if ((entlist = __auth_get_every_match(t->str, fields))) {
+		entlist = g_list_first(entlist);
+		fldlist = g_list_first(entlist->data);
+		attlist = g_list_first(fldlist->data);
+		while (attlist) {
+			aliases = g_list_append(aliases, g_strdup(attlist->data));
+			if (! g_list_next(attlist))
+				break;
+			attlist = g_list_next(attlist);
+		}
+		dm_ldap_freeresult(entlist);
+	}
+	g_string_free(t,TRUE);
+	return aliases;
+	// OK COPY FROM THIS...
+	char *objectfilter, *dn;
+	char *fields[] = { "dn", _ldap_cfg.field_fwdtarget, NULL };
+	int result = 0;
+	
+	GString *t = g_string_new(_ldap_cfg.forw_objectclass);
+	GList *l = g_string_split(t,",");
+	
+	objectfilter = dm_ldap_get_filter('&',"objectClass", l);
+	
+	g_string_printf(t,"(&%s(%s=%s)(%s=%s))", objectfilter, _ldap_cfg.cn_string, alias, _ldap_cfg.field_fwdtarget, deliver_to);
+	dn = __auth_get_first_match(t->str, fields);
+	
+	if (! dn) {
+		result = -1; // assume total failure;
+		
+		g_string_printf(t,"(&%s(%s=%s))", objectfilter, _ldap_cfg.cn_string, alias);
+		dn = __auth_get_first_match(t->str, fields);
+		if (dn)
+			result = 1; // dn does exist, just this forward is missing
+		
+	}
+		
+	
+	g_free(objectfilter);
+	dm_free(dn);
+	g_string_free(t,TRUE);
+	g_list_foreach(l,(GFunc)g_free,NULL);
+	
+	trace(TRACE_DEBUG, "%s,%s: result [%d]", __FILE__, __func__, result);
+
+	return result;
+}
+
 
 /**
  * \brief add an alias for a user

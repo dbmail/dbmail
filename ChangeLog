@@ -5,6 +5,13 @@
 	Accepted g_string_* memory cleanup patch by kaname (closes bug #355).
 	* dm_imaputil.c:
 	Accepted g_object_unref patch by ryo (from bug #139).
+	* auth.h, authmodule.c, authmodule.h, modules/authldap.c,
+	modules/authsql.c:
+	Added function auth_get_aliases_ext (for bug #174).
+	* dm_match.h, dm_match.c, dbmail.h.in, Makefile.am:
+	Added functions match_glob and match_glob_list (for bug #174).
+	* check_dbmail_user.c, dbmail-user.c:
+	Handle wildcards ? and * for aliases and forwards (closes bug #174).
 
 2006-06-01  Paul J Stevens <paul@nfg.nl>
 

@@ -267,6 +267,16 @@ char *auth_get_deliver_from_alias(const char *alias);
  */
 GList * auth_get_user_aliases(u64_t user_idnr);
 /**
+ * \brief get a list of forwards associated with an external alias
+ * \param alias the alias
+ * \param aliases list of aliases
+ * \return
+ * 		- -2 on memory failure
+ * 		- -1 on database failure
+ * 		- 0 on success
+ */
+GList * auth_get_aliases_ext(const char *alias);
+/**
  * \brief add an alias for a user
  * \param user_idnr user's id
  * \param alias new alias
