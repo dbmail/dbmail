@@ -1966,7 +1966,7 @@ int db_send_message_lines(void *fstream, u64_t message_idnr, long lines, int no_
 	struct DbmailMessage *msg;
 	
 	u64_t physmessage_id = 0;
-	char *raw = NULL, *buf = NULL;
+	char *raw = NULL, *hdr = NULL, *buf = NULL;
 	GString *s;
 	int pos = 0;
 	long n = 0;
@@ -1984,9 +1984,17 @@ int db_send_message_lines(void *fstream, u64_t message_idnr, long lines, int no_
 
 	msg = dbmail_message_new();
 	msg = dbmail_message_retrieve(msg, physmessage_id, DBMAIL_MESSAGE_FILTER_FULL);
-	
-	buf = dbmail_message_to_string(msg);
+	hdr = dbmail_message_hdrs_to_string(msg);
+	buf = dbmail_message_body_to_string(msg);
 	dbmail_message_free(msg);
+
+	/* always send all headers */
+	raw = get_crlf_encoded(hdr);
+	ci_write((FILE *)fstream, "%s", raw);
+	dm_free(hdr);
+	dm_free(raw);
+
+	/* send requested body lines */	
 	raw = get_crlf_encoded(buf);
 	dm_free(buf);
 	
