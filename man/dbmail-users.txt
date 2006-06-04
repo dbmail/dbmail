@@ -101,30 +101,22 @@ delivers to the account name, or make the account in the form
 of a fully qualified email address. For example, the user named 'Baz' created
 like this:
 
-==================
-    dbmail-users -a baz -p crypt -w psword
-==================
+`    dbmail-users -a baz -p crypt -w psword`
 
 will *not* actually receive any mail yet! You must be sure to add an alias:
 
-==================
-    dbmail-users -c baz -s baz@foodomain
-==================
+`    dbmail-users -c baz -s baz@foodomain`
 
 You may add multiple aliases by repeatedly calling the dbmail-users(8)
 utility, or by calling it with a comma-separated list of aliases:
 
-==================
-    dbmail-users -c baz -s baz@foodomain,baz@bardomain
-==================
+`    dbmail-users -c baz -s baz@foodomain,baz@bardomain`
 
 Two catch-all modes are also supported, for domains and for local parts:
 
-==================
-    dbmail-users -a baz -s @bazdomain
+`    dbmail-users -a baz -s @bazdomain`
  
-    dbmail-users -a baz -s baz@
-==================
+`    dbmail-users -a baz -s baz@`
 
 The first example catches email addressed to any user @bazdomain and delivers it
 to Baz's INBOX. The second example catches email addressed to baz@ any domain
@@ -141,21 +133,17 @@ Incoming messages addressed to particular email addresses can be forwarded out
 to outside email addresses, piped out to a command or piped out with an
 mbox-style From line to a command. For example:
 
-==================
-    dbmail-users -x bar@domain -t bar@another.domain
+`    dbmail-users -x bar@domain -t bar@another.domain`
  
-    dbmail-users -x bar@domain -t "|/usr/sbin/superspamtrapper"
+`    dbmail-users -x bar@domain -t "|/usr/sbin/superspamtrapper"`
  
-    dbmail-users -x bar@domain -t "!cat > /var/spool/mail/bar/whatever.mbox"
-==================
+`    dbmail-users -x bar@domain -t "!cat > /var/spool/mail/bar/whatever.mbox"`
 
 Forwards can be removed using basic glob style pattern matching.  A ? means
 "match zero or one of any character" and * means "match zero or more of any
 character." For example:
 
-==================
-    dbmail-users -x bar@domain -t "*"
-==================
+`    dbmail-users -x bar@domain -t "*"`
 
 will complete and totally remove the 'bar@domain' external alias and all of
 its forwarding addresses and commands.
