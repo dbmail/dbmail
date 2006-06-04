@@ -1,3 +1,8 @@
+2006-06-04  Aaron Stone  <aaron@serendipity.cx>
+
+	* dm_match.c, check_dbmail_user.c:
+	Fixed zero length matching for ?. Added more testcases.
+
 2006-06-03  Paul J Stevens <paul@nfg.nl>
 
 	* db.c, db.h:

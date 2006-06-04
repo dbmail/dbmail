@@ -84,7 +84,7 @@ char *match_glob(char *pattern, char *candidate)
 {
 	char *can = candidate;
 	char **parts;
-	int i, has_star = 0;
+	int i, has_star = 0, has_question = 0;
 
 	parts = weird_tokenize(pattern, "?*");
 	if (!parts)
@@ -92,7 +92,9 @@ char *match_glob(char *pattern, char *candidate)
 
 	// Each of the parts much be placed on candidate.
 	for (i = 0; parts[i] != NULL; i++) {
-		int plen = strlen(parts[i]);
+		int len, plen;
+		
+		plen = strlen(parts[i]);
 
 		if (parts[i][0] == '\0') {
 			continue;
@@ -105,13 +107,16 @@ char *match_glob(char *pattern, char *candidate)
 		}
 
 		if (parts[i][0] == '?') {
-			// Skip one candidate character.
-			can++;
+			// Signals that we should do a here or next match.
+			// Count up the number of spaces we're allowed to skip.
+			has_question++;
 			continue;
 		}
 
+		len = strlen(can);
+
 		if (has_star) {
-			int j, len = strlen(can);
+			int j;
 
 			for (j = 0; j < len; j++) {
 				if (strncmp(parts[i], can + j, CLAMP(plen, plen, len - j)) == 0) {
@@ -128,7 +133,26 @@ char *match_glob(char *pattern, char *candidate)
 			continue;
 		}
 
-		int len = strlen(can);
+		// If we have a question mark, we're allowed to match one-ahead.
+		if (has_question) {
+			int j;
+
+			for (j = 0; j <= has_question; j++) {
+				if (strncmp(parts[i], can + j, CLAMP(plen, plen, len - j)) == 0) {
+					can += CLAMP(plen + j, plen, len);
+					has_question = 0;
+					break;
+				}
+			}
+
+			// If we get here, then we never matched.
+			if (has_question)
+				goto nomatch;
+
+			continue;
+		}
+
+		// This is for normal matching.
 		if (strncmp(parts[i], can, CLAMP(plen, plen, len)) == 0) {
 			can += CLAMP(plen, plen, len);
 			continue;
@@ -140,7 +164,7 @@ char *match_glob(char *pattern, char *candidate)
 
 	// Did we advance all the way to the end?
 	// Or, did we have a star at the end?
-	if (can[0] == '\0' || has_star)
+	if (can[0] == '\0' || has_star || (has_question && can[1] == '\0'))
 		goto match;
 
 nomatch:
