@@ -149,7 +149,7 @@ Using DBMail with Postfix
 
 5.	Notes
 	
-	It's possible to use dbmail-lmtp on same domains, and dbmail-smtp on
+	It's possible to use dbmail-lmtp on some domains, and dbmail-smtp on
 	other domains. Just make both entries in /etc/postfix/master.cf and
 	add transport entries for both.
 
