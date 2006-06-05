@@ -2,6 +2,8 @@
 
 	* dm_match.c, check_dbmail_user.c:
 	Fixed zero length matching for ?. Added more testcases.
+	* db.c:
+	Modified db_findmailbox_owner to be case-insensitive.
 
 2006-06-03  Paul J Stevens <paul@nfg.nl>
 
