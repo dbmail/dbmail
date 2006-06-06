@@ -2384,7 +2384,11 @@ int db_findmailbox(const char *fq_name, u64_t user_idnr,
 	return result;
 }
 
-/* Caller must free the return value. */
+/* Caller must free the return value.
+ *
+ * Because this handles case insensitivity,
+ * we don't need to overwrite INBOX any more.
+ */
 static char *imap_utf7_regexp(const char *mailbox)
 {
 	char *regexp;
@@ -2400,17 +2404,20 @@ static char *imap_utf7_regexp(const char *mailbox)
 	for (i = 0, pos = 0; i < len; i++) {
 		switch (mailbox[i]) {
 		case '&':
+			verbatim = 1;
+			break;
 		case '-':
-			verbatim = !verbatim;
-		default:
-			if (!verbatim && g_ascii_isalpha(mailbox[i])) {
-				regexp[pos++] = '[';
-				regexp[pos++] = g_ascii_tolower(mailbox[i]);
-				regexp[pos++] = g_ascii_toupper(mailbox[i]);
-				regexp[pos++] = ']';
-			} else {
-				regexp[pos++] = mailbox[i];
-			}
+			verbatim = 0;
+			break;
+		}
+
+		if (!verbatim && g_ascii_isalpha(mailbox[i])) {
+			regexp[pos++] = '[';
+			regexp[pos++] = g_ascii_tolower(mailbox[i]);
+			regexp[pos++] = g_ascii_toupper(mailbox[i]);
+			regexp[pos++] = ']';
+		} else {
+			regexp[pos++] = mailbox[i];
 		}
 
 	}
