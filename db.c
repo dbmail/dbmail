@@ -2392,16 +2392,19 @@ int db_findmailbox(const char *fq_name, u64_t user_idnr,
 static char *imap_utf7_regexp(const char *mailbox)
 {
 	char *regexp;
-	size_t i, pos, len = strlen(mailbox);
+	size_t i, pos = 0, len = strlen(mailbox);
 	int verbatim = 0;
 
 	// Given some input string aBcD, the maximum
-	// output string is [aA][bB][cC][dD] -- each
-	// character represented by four replacements.
+	// output string is ^[aA][bB][cC][dD]$ -- each
+	// character represented by four replacements,
+	// plus a start, end, and nul termination.
 	
-	regexp = g_new0(char, len * 4 + 1);
+	regexp = g_new0(char, len * 4 + 3);
 
-	for (i = 0, pos = 0; i < len; i++) {
+	regexp[pos++] = '^';
+
+	for (i = 0; i < len; i++) {
 		switch (mailbox[i]) {
 		case '&':
 			verbatim = 1;
@@ -2421,6 +2424,10 @@ static char *imap_utf7_regexp(const char *mailbox)
 		}
 
 	}
+
+	regexp[pos++] = '$';
+
+	assert(pos <= len * 4 + 3);
 
 	return regexp;
 }
