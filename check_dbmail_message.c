@@ -147,11 +147,10 @@ START_TEST(test_dbmail_message_init_with_string)
 	m = dbmail_message_init_with_string(m,s);
 	g_string_free(s,TRUE);
 	
-	//t = g_relation_select(m->headers, (gpointer)"Received", 0);
-	//fail_unless(t->len==2,"Too few headers in tuple");
-	//g_tuples_destroy(t);
+	t = g_relation_select(m->headers, "Received", 0);
+	fail_unless(t->len==2,"Too few or too many headers in tuple");
+	g_tuples_destroy(t);
 	dbmail_message_free(m);
-	
 	
 	s = g_string_new(simple_message_part);
 	m = dbmail_message_new();
@@ -408,6 +407,24 @@ START_TEST(test_dbmail_message_get_header_addresses)
 }
 END_TEST
 
+START_TEST(test_dbmail_message_get_header_repeated)
+{
+	GTuples *headers;
+	struct DbmailMessage *m;
+
+	m = dbmail_message_new();
+	m = dbmail_message_init_with_string(m,g_string_new(multipart_message));
+	
+	headers = dbmail_message_get_header_repeated(m, "Received");
+
+	fail_unless(headers != NULL, "dbmail_message_get_header_repeated failed");
+	fail_unless(headers->len==2, "dbmail_message_get_header_repeated failed");
+	
+	g_tuples_destroy(headers);
+	dbmail_message_free(m);
+}
+END_TEST
+
 Suite *dbmail_message_suite(void)
 {
 	Suite *s = suite_create("Dbmail Message");
@@ -435,6 +452,7 @@ Suite *dbmail_message_suite(void)
 	tcase_add_test(tc_message, test_dbmail_message_free);
 	tcase_add_test(tc_message, test_dbmail_message_encoded);
 	tcase_add_test(tc_message, test_dbmail_message_get_header_addresses);
+	tcase_add_test(tc_message, test_dbmail_message_get_header_repeated);
 	return s;
 }
 
