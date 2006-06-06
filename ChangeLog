@@ -1,3 +1,9 @@
+2006-06-05  Aaron Stone  <aaron@serendipity.cx>
+
+	* db.c, dbmailtypes.h, modules/db*.c:
+	Changed up the case insensitive modified utf7 thing to use SQL regular
+	expressions. Added a function to SQLite to provide REGEXP.
+
 2006-06-06  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_message.c, dbmail-message.c, dbmail-message.h, 

@@ -94,14 +94,12 @@ static char *char2date_str(const char *date);
 static int user_idnr_is_delivery_user_idnr(u64_t user_idnr);
 
 /**
- * set the first 5 characters of a mailbox name to "INBOX" if the name is
- * "inbox" or "inbox/somemailbox". This is used
- * when a mailbox with a name like "inbox" or "inbox/someMailbox" is used
- * to make sure the "inbox" part is always uppercase.
- * \param name name of the mailbox. strlen(name) must be bigger or equal
- *             strlen("INBOX")
+ * Produces a regexp that will case-insensitively match the mailbox name
+ * according to the modified UTF-7 rules given in section 5.1.3 of IMAP.
+ * \param mailbox name of the mailbox.
+ * \return pointer to a newly allocated string.
  */
-static char *convert_inbox_to_uppercase(char *name);
+static char *imap_utf7_regexp(const char *mailbox);
 
 /*
  * check to make sure the database has been upgraded
@@ -2386,44 +2384,59 @@ int db_findmailbox(const char *fq_name, u64_t user_idnr,
 	return result;
 }
 
-/* Overwrite InBoX in place with INBOX and return the same pointer. */
-static char *convert_inbox_to_uppercase(char *name)
+/* Caller must free the return value. */
+static char *imap_utf7_regexp(const char *mailbox)
 {
-	const char *inbox = "INBOX";
-	const size_t inbox_len = sizeof("INBOX");
+	char *regexp;
+	size_t i, pos, len = strlen(mailbox);
+	int verbatim = 0;
+
+	// Given some input string aBcD, the maximum
+	// output string is [aA][bB][cC][dD] -- each
+	// character represented by four replacements.
 	
-	if (strlen(name) >= inbox_len
-	 && strncasecmp(name, inbox, inbox_len) == 0) {
-		memcpy((void *) name, (void *) inbox, inbox_len);
+	regexp = g_new0(char, len * 4 + 1);
+
+	for (i = 0, pos = 0; i < len; i++) {
+		switch (mailbox[i]) {
+		case '&':
+		case '-':
+			verbatim = !verbatim;
+		default:
+			if (!verbatim && g_ascii_isalpha(mailbox[i])) {
+				regexp[pos++] = '[';
+				regexp[pos++] = g_ascii_tolower(mailbox[i]);
+				regexp[pos++] = g_ascii_toupper(mailbox[i]);
+				regexp[pos++] = ']';
+			} else {
+				regexp[pos++] = mailbox[i];
+			}
+		}
+
 	}
-	
-	return name;
+
+	return regexp;
 }
 
 static int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 			 u64_t * mailbox_idnr)
 {
-	char *local_name;
+	char *regexp_local_name;
 	char *escaped_local_name;
 
 	assert(mailbox_idnr != NULL);
 	*mailbox_idnr = 0;
 
-	local_name = dm_strdup(name);
-	if (local_name == NULL) {
-		trace(TRACE_ERROR, "%s,%s: error dm_strdup(name). Out of memory?",
-		      __FILE__, __func__);
-		return DM_EQUERY;
-	}
-
-	escaped_local_name = dm_stresc(convert_inbox_to_uppercase(local_name));
+	regexp_local_name = imap_utf7_regexp(name);
+	escaped_local_name = dm_stresc(regexp_local_name);
 	
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT mailbox_idnr FROM %smailboxes "
-		 "WHERE lower(name)=lower('%s') AND owner_idnr='%llu'",
-		 DBPFX, escaped_local_name, owner_idnr);
+		 "WHERE %s name %s '%s' AND owner_idnr='%llu'",
+		 DBPFX, db_get_sql(SQL_BINARY), db_get_sql(SQL_REGEXP),
+		 escaped_local_name, owner_idnr);
 
-	dm_free(local_name);
+	dm_free(regexp_local_name);
 	dm_free(escaped_local_name);
 
 	if (db_query(query) == -1) {
