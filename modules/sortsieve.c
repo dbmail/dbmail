@@ -289,6 +289,7 @@ int sort_getheader(sieve2_context_t *s, void *my)
 	header = (char *)sieve2_getvalue_string(s, "header");
 	
 	headers = dbmail_message_get_header_repeated(m->message, header);
+	
 	bodylist = g_new0(char *,headers->len+1);
 	for (i=0; i<headers->len; i++)
 		bodylist[i] = (char *)g_tuples_index(headers,i,1);
