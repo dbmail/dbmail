@@ -281,13 +281,18 @@ int sort_getscript(sieve2_context_t *s, void *my)
 int sort_getheader(sieve2_context_t *s, void *my)
 {
 	struct sort_context *m = (struct sort_context *)my;
-	char **bodylist;
 	char *header;
-	int i;
+	char **bodylist;
+	GTuples *headers;
+	unsigned i;
 
 	header = (char *)sieve2_getvalue_string(s, "header");
-
-	bodylist = (char **)dbmail_message_get_header_repeated(m->message, header);
+	
+	headers = dbmail_message_get_header_repeated(m->message, header);
+	bodylist = g_new0(char *,headers->len+1);
+	for (i=0; i<headers->len; i++)
+		bodylist[i] = (char *)g_tuples_index(headers,i,1);
+	g_tuples_destroy(headers);
 
 	/* We have to free the header array, but not its contents. */
 	dm_list_nodeadd(&m->freelist, &bodylist, sizeof(char **));

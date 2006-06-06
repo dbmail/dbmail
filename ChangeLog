@@ -1,3 +1,9 @@
+2006-06-06  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_message.c, dbmail-message.c, dbmail-message.h, 
+	  modules/sortsieve.c:
+	redone dbmail_message_get_header_repeated
+
 2006-06-05  Aaron Stone  <aaron@serendipity.cx>
 
 	* dbmail-message.h, dbmail-message.c, modules/sortsieve.c:
