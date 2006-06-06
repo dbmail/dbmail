@@ -432,9 +432,58 @@ void dbmail_message_set_header(struct DbmailMessage *self, const char *header, c
 {
 	g_mime_message_set_header(GMIME_MESSAGE(self->content), header, value);
 }
+
 const gchar * dbmail_message_get_header(const struct DbmailMessage *self, const char *header)
 {
 	return g_mime_object_get_header(GMIME_OBJECT(self->content), header);
+}
+
+static void _get_header_repeated(const char *name, const char *value, gpointer user_data)
+{
+	struct {
+		char *header;
+		char **headers;
+		int pos;
+		int len;
+	} *_my_headers = user_data;
+
+	if (strcasecmp(name, _my_headers->header) == 0) {
+		if (_my_headers->pos + 1 == _my_headers->len) {
+			_my_headers->len += 8;
+			_my_headers->headers = g_renew(char *, _my_headers->headers, _my_headers->len);
+
+			/* There used to be a renew0, but not anymore. */
+			int i;
+			for (i = _my_headers->pos; i < _my_headers->len; i++) {
+				_my_headers->headers[i] = NULL;
+			}
+		}
+		_my_headers->headers[_my_headers->pos] = (char *)value;
+		_my_headers->pos++;
+	}
+}
+
+/* Memory for the individual header values is NOT allocated;
+ * Memory for the header array IS allocated and must be freed.
+ * Do NOT use g_strfreev with this return value! */
+gchar ** dbmail_message_get_header_repeated(const struct DbmailMessage *self, const char *header)
+{
+	struct {
+		char *header;
+		char **headers;
+		int pos;
+		int len;
+	} _my_headers;
+
+	/* Start with 8 slots. */
+	_my_headers.pos = 0;
+	_my_headers.len = 8;
+	_my_headers.header = (char *)header;
+	_my_headers.headers = g_new0(char *, _my_headers.len);
+
+	g_mime_header_foreach(GMIME_OBJECT(self->content)->headers, _get_header_repeated, &_my_headers);
+
+	return _my_headers.headers;
 }
 
 GList * dbmail_message_get_header_addresses(struct DbmailMessage *message, const char *field_name)

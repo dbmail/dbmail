@@ -127,6 +127,14 @@ gchar * get_crlf_encoded(gchar *string);
 void dbmail_message_set_header(struct DbmailMessage *self, const char *header, const char *value);
 const gchar * dbmail_message_get_header(const struct DbmailMessage *self, const char *header);
 
+/* Get all instances of a header.
+ *
+ * Memory for the individual header values is NOT allocated;
+ * Memory for the header array IS allocated and must be freed.
+ * Do NOT use g_strfreev with this return value!
+ */
+gchar ** dbmail_message_get_header_repeated(const struct DbmailMessage *self, const char *header);
+
 void dbmail_message_cache_tofield(const struct DbmailMessage *self);
 void dbmail_message_cache_ccfield(const struct DbmailMessage *self);
 void dbmail_message_cache_fromfield(const struct DbmailMessage *self);

@@ -1,3 +1,11 @@
+2006-06-05  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmail-message.h, dbmail-message.c, modules/sortsieve.c:
+	Added new function dbmail_message_get_header_repeated to grab all
+	instances of a header (closes bug #358).
+	* pool.c:
+	Added a static function declaration to quash a compiler warning.
+
 2006-06-04  Aaron Stone  <aaron@serendipity.cx>
 
 	* dm_match.c, check_dbmail_user.c:
