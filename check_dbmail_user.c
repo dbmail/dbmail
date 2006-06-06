@@ -115,7 +115,8 @@ START_TEST(test_dm_match)
 		"hello", "*hello", "*hello*", "hello*",
 		"*hello", "*hello*", "hello*", "?", NULL };
 	char *goodpatterns[] = {
-		"*", "*and*", "*SLUG!", "My*", "MyName ?? *", NULL };
+		"*", "*and*", "*SLUG!", "My*", "????My*",
+		"MyName ?? *", "??Name*", "*SLUG?", NULL };
 
 	for (i = 0; badpatterns[i] != NULL; i++) {
 		fail_unless(match_glob(badpatterns[i], candidate)

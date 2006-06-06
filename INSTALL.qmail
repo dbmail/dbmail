@@ -1,11 +1,11 @@
-/* $Id: INSTALL.qmail 1655 2005-03-10 20:08:32Z paul $ */
+/* $Id: INSTALL.qmail 2153 2006-06-05 15:41:45Z aaron $ */
 
 Using DBMail with QMail
 =======================
 
-Thanks to Edward Allen for this information. Note that this information is 
-quite old. If you have more recent information on QMail please say so. You
-can contact me directly on ilja at ic dash s dot nl
+Thanks to Edward Allen for this information. Note that this information
+is quite old. If you have more recent information on QMail please join
+the dev mailing list or file a bug with the project.
 
 
 1.	Prerequisites
@@ -57,8 +57,4 @@ Note: 	Right now Qmail (the most recent version of Qmail at the time of
 	this writing is netqmail-1.05) has no support for the protocol LMTP, 
 	so you can't use dbmail-lmtp with Qmail in an "easy" way (as you do 
 	with Postfix).
-
-	If you know more about QMail and wish to contribute this information,
-	please e-mail me at ilja at ic dash s dot nl.
-
 

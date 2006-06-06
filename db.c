@@ -1,4 +1,4 @@
-/* $Id: db.c 2148 2006-06-03 13:33:23Z paul $ */
+/* $Id: db.c 2152 2006-06-05 02:11:51Z aaron $ */
 /*
   Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
   Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
@@ -22,7 +22,7 @@
 /**
  * \file db.c
  * 
- * $Id: db.c 2148 2006-06-03 13:33:23Z paul $
+ * $Id: db.c 2152 2006-06-05 02:11:51Z aaron $
  *
  * implement database functionality. This used to split out
  * between MySQL and PostgreSQL, but this is now integrated. 
@@ -101,7 +101,7 @@ static int user_idnr_is_delivery_user_idnr(u64_t user_idnr);
  * \param name name of the mailbox. strlen(name) must be bigger or equal
  *             strlen("INBOX")
  */
-void convert_inbox_to_uppercase(char *name);
+static char *convert_inbox_to_uppercase(char *name);
 
 /*
  * check to make sure the database has been upgraded
@@ -2386,7 +2386,21 @@ int db_findmailbox(const char *fq_name, u64_t user_idnr,
 	return result;
 }
 
-int db_findmailbox_owner(const char *name, u64_t owner_idnr,
+/* Overwrite InBoX in place with INBOX and return the same pointer. */
+static char *convert_inbox_to_uppercase(char *name)
+{
+	const char *inbox = "INBOX";
+	const size_t inbox_len = sizeof("INBOX");
+	
+	if (strlen(name) >= inbox_len
+	 && strncasecmp(name, inbox, inbox_len) == 0) {
+		memcpy((void *) name, (void *) inbox, inbox_len);
+	}
+	
+	return name;
+}
+
+static int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 			 u64_t * mailbox_idnr)
 {
 	char *local_name;
@@ -2402,12 +2416,11 @@ int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 		return DM_EQUERY;
 	}
 
-	convert_inbox_to_uppercase(local_name);
-	escaped_local_name = dm_stresc(local_name);
+	escaped_local_name = dm_stresc(convert_inbox_to_uppercase(local_name));
 	
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT mailbox_idnr FROM %smailboxes "
-		 "WHERE name='%s' AND owner_idnr='%llu'",
+		 "WHERE lower(name)=lower('%s') AND owner_idnr='%llu'",
 		 DBPFX, escaped_local_name, owner_idnr);
 
 	dm_free(local_name);
@@ -4117,19 +4130,6 @@ int user_idnr_is_delivery_user_idnr(u64_t user_idnr)
 		return DM_EGENERAL;
 	else
 		return DM_SUCCESS;
-}
-
-void convert_inbox_to_uppercase(char *name)
-{
-	const char *inbox = "INBOX";
-	
-	if (strncasecmp(name, "INBOX", strlen("INBOX")) != 0)
-		return;
-	
-	if (strlen(name) == strlen("INBOX") ||
-	    strncasecmp(name, "INBOX/", strlen("INBOX/")) == 0)
-		memcpy((void *) name, (void *) inbox, strlen(inbox));
-	return;
 }
 
 int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * mb)

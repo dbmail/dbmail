@@ -1,0 +1,24 @@
+$Id: EXTRAS 1746 2005-04-08 10:05:24Z paul $
+
+DBMail POP/IMAP before SMTP
+===========================
+
+DBMail can optionally keep a database table of the last time and IP
+address of each successful POP or IMAP login. This way you can allow
+your users to use your SMTP as a relay for a brief time after they log
+into their email.
+
+The dbmail_pbsp table is now created by default; you simply need to
+enable one or both of the following entries in your dbmail.conf file,
+depending on which services you would like to use for SMTP relay access:
+
+[POP]
+POP_BEFORE_SMTP=yes     # If yes, allows SMTP access from the host IP connecting by POP3.
+
+[IMAP]
+POP_BEFORE_SMTP=yes     # If yes, allows SMTP access from the host IP connecting by IMAP.
+
+After that you'll have to configure your MTA to read out that table 
+for allowing connections on those IP's. Please see the various
+INSTALL.<yourfavoriteMTA> files for MTA configuration details.
+

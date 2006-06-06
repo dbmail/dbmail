@@ -1,4 +1,4 @@
-/* $Id: INSTALL.postfix 2065 2006-04-10 20:38:36Z paul $ */
+/* $Id: INSTALL.postfix 2153 2006-06-05 15:41:45Z aaron $ */
 
 
 Using DBMail with Postfix
@@ -149,7 +149,7 @@ Using DBMail with Postfix
 
 5.	Notes
 	
-	It's possible to use dbmail-lmtp on same domains, and dbmail-smtp on
+	It's possible to use dbmail-lmtp on some domains, and dbmail-smtp on
 	other domains. Just make both entries in /etc/postfix/master.cf and
 	add transport entries for both.
 

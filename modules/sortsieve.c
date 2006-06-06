@@ -283,19 +283,19 @@ int sort_getheader(sieve2_context_t *s, void *my)
 	struct sort_context *m = (struct sort_context *)my;
 	char **bodylist;
 	char *header;
+	int i;
 
 	header = (char *)sieve2_getvalue_string(s, "header");
 
-	bodylist = (char **)dm_malloc(sizeof(char *) * 2);
-	bodylist[0] = (char *)dbmail_message_get_header(m->message, header);
-	bodylist[1] = NULL;
+	bodylist = (char **)dbmail_message_get_header_repeated(m->message, header);
 
-	/* We have to free the header ourselves. */
-	dm_list_nodeadd(&m->freelist, &bodylist[0], sizeof(char *));
+	/* We have to free the header array, but not its contents. */
 	dm_list_nodeadd(&m->freelist, &bodylist, sizeof(char **));
 
-	trace(TRACE_INFO, "%s, %s: Getting header [%s] returning value [%s]",
-		__FILE__, __func__, header, bodylist[0]);
+	for (i = 0; bodylist[i] != NULL; i++) {
+		trace(TRACE_INFO, "%s, %s: Getting header [%s] returning value [%s]",
+			__FILE__, __func__, header, bodylist[i]);
+	}
 
 	sieve2_setvalue_stringlist(s, "body", bodylist);
 

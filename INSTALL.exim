@@ -1,4 +1,4 @@
-$Id: INSTALL.exim 1181 2004-06-16 11:54:16Z ilja $
+$Id: INSTALL.exim 2153 2006-06-05 15:41:45Z aaron $
 
 Using DBMail with Exim4
 by Thomas Mueller
@@ -40,4 +40,3 @@ by Thomas Mueller
 	lmtp 24/udp
 
 	
-

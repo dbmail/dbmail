@@ -27,6 +27,7 @@ extern ChildInfo_t childinfo;
 
 static State_t state_new(void); 
 static int set_lock(int type);
+static pid_t reap_child(void);
 /*
  *
  *
