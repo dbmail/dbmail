@@ -71,6 +71,7 @@ struct DbmailMessage {
 	GMimeObject *content;
 	GRelation *headers;
 	GHashTable *header_dict;
+	GTree *header_tree;
 };
 
 /*

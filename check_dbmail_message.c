@@ -421,6 +421,14 @@ START_TEST(test_dbmail_message_get_header_repeated)
 	fail_unless(headers->len==2, "dbmail_message_get_header_repeated failed");
 	
 	g_tuples_destroy(headers);
+
+	headers = dbmail_message_get_header_repeated(m, "received");
+
+	fail_unless(headers != NULL, "dbmail_message_get_header_repeated failed");
+	fail_unless(headers->len==2, "dbmail_message_get_header_repeated failed");
+	
+	g_tuples_destroy(headers);
+
 	dbmail_message_free(m);
 }
 END_TEST

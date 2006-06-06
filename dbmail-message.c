@@ -152,6 +152,9 @@ struct DbmailMessage * dbmail_message_new(void)
 	}
 	
 	self->envelope_recipient = g_string_new("");
+
+	/* provide quick case-insensitive header name searches */
+	self->header_tree = g_tree_new((GCompareFunc)g_ascii_strcasecmp);
 	
 	self->header_dict = g_hash_table_new_full((GHashFunc)g_str_hash,
 			(GEqualFunc)g_str_equal, (GDestroyNotify)g_free, NULL);
@@ -179,6 +182,7 @@ void dbmail_message_free(struct DbmailMessage *self)
 	
 	g_string_free(self->envelope_recipient,TRUE);
 	g_hash_table_destroy(self->header_dict);
+	g_tree_destroy(self->header_tree);
 	
 	self->id=0;
 	dm_free(self);
@@ -374,16 +378,21 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 
 static void _map_headers(struct DbmailMessage *self) 
 {
-	GRelation *rel = g_relation_new(2);
 	assert(self->content);
-	g_relation_index(rel, 0, (GHashFunc)g_str_hash, (GEqualFunc)g_str_equal);
-	g_mime_header_foreach(GMIME_OBJECT(self->content)->headers, _register_header, rel);
-	self->headers = rel;
+	self->headers = g_relation_new(2);
+	g_relation_index(self->headers, 0, (GHashFunc)g_str_hash, (GEqualFunc)g_str_equal);
+	g_mime_header_foreach(GMIME_OBJECT(self->content)->headers, _register_header, self);
 }
 
 static void _register_header(const char *header, const char *value, gpointer user_data)
 {
-	g_relation_insert((GRelation *)user_data, header, value);
+	const char *hname;
+	struct DbmailMessage *m = (struct DbmailMessage *)user_data;
+	if (! (hname = g_tree_lookup(m->header_tree,header))) {
+		g_tree_insert(m->header_tree,(gpointer)header,(gpointer)header);
+		hname = header;
+	}
+	g_relation_insert(m->headers, hname, value);
 }
 
 void dbmail_message_set_physid(struct DbmailMessage *self, u64_t physid)
@@ -441,7 +450,10 @@ const gchar * dbmail_message_get_header(const struct DbmailMessage *self, const 
 
 GTuples * dbmail_message_get_header_repeated(const struct DbmailMessage *self, const char *header)
 {
-	return g_relation_select(self->headers, header, 0);
+	const char *hname;
+	if (! (hname = g_tree_lookup(self->header_tree,header)))
+		hname = header;
+	return g_relation_select(self->headers, hname, 0);
 }
 
 GList * dbmail_message_get_header_addresses(struct DbmailMessage *message, const char *field_name)
