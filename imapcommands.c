@@ -521,7 +521,7 @@ int _ic_delete(struct ImapSession *self)
 	}
 
 	/* check for children of this mailbox */
-	result = db_listmailboxchildren(mboxid, ud->userid, &children, &nchildren, "%");
+	result = db_listmailboxchildren(mboxid, ud->userid, &children, &nchildren);
 	if (result == -1) {
 		/* error */
 		trace(TRACE_ERROR, "IMAPD: delete(): cannot retrieve list of mailbox children");
@@ -680,7 +680,7 @@ int _ic_rename(struct ImapSession *self)
 	}
 
 	/* check for inferior names */
-	result = db_listmailboxchildren(mboxid, ud->userid, &children, &nchildren, "%");
+	result = db_listmailboxchildren(mboxid, ud->userid, &children, &nchildren);
 	if (result == -1) {
 		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 		return -1;

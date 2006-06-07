@@ -53,6 +53,16 @@ const char * db_get_sql(sql_fragment_t frag)
 		case SQL_REGEXP:
 			return "REGEXP";
 		break;
+		// FIXME: To get this right, we have to supply a
+		// a replacement user defined like function. According
+		// to the SQLite manual, LIKE is case insensitive for
+		// US-ASCII characters and case sensitive elsewhere.
+		case SQL_SENSITIVE_LIKE:
+			return "LIKE";
+		break;
+		case SQL_INSENSITIVE_LIKE:
+			return "LIKE";
+		break;
 	}
 	return NULL;
 }

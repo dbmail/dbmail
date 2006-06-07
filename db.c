@@ -96,10 +96,12 @@ static int user_idnr_is_delivery_user_idnr(u64_t user_idnr);
 /**
  * Produces a regexp that will case-insensitively match the mailbox name
  * according to the modified UTF-7 rules given in section 5.1.3 of IMAP.
+ * \param column name of the name column.
  * \param mailbox name of the mailbox.
+ * \param filter use /% for children or "" for just the box.
  * \return pointer to a newly allocated string.
  */
-static char *imap_utf7_regexp(const char *mailbox);
+static char *db_imap_utf7_like(const char *column, const char *mailbox, const char *filter);
 
 /*
  * check to make sure the database has been upgraded
@@ -2389,69 +2391,77 @@ int db_findmailbox(const char *fq_name, u64_t user_idnr,
  * Because this handles case insensitivity,
  * we don't need to overwrite INBOX any more.
  */
-static char *imap_utf7_regexp(const char *mailbox)
+static char *db_imap_utf7_like(const char *column,
+		const char *mailbox,
+		const char *filter)
 {
-	char *regexp;
-	size_t i, pos = 0, len = strlen(mailbox);
-	int verbatim = 0;
+	GString *like;
+	char *sensitive, *insensitive, *tmplike;
+	size_t i, len = strlen(mailbox);
+	int verbatim = 0, has_sensitive_part = 0;
 
-	// Given some input string aBcD, the maximum
-	// output string is ^[aA][bB][cC][dD]$ -- each
-	// character represented by four replacements,
-	// plus a start, end, and nul termination.
-	
-	regexp = g_new0(char, len * 4 + 3);
-
-	regexp[pos++] = '^';
+	like = g_string_new("");
+	sensitive = g_strdup(mailbox);
+	insensitive = g_strdup(mailbox);
 
 	for (i = 0; i < len; i++) {
 		switch (mailbox[i]) {
 		case '&':
 			verbatim = 1;
+			has_sensitive_part = 1;
 			break;
 		case '-':
 			verbatim = 0;
 			break;
 		}
 
-		if (!verbatim && g_ascii_isalpha(mailbox[i])) {
-			regexp[pos++] = '[';
-			regexp[pos++] = g_ascii_tolower(mailbox[i]);
-			regexp[pos++] = g_ascii_toupper(mailbox[i]);
-			regexp[pos++] = ']';
+		/* verbatim means that the case sensitive part must match
+		 * and the case insensitive part matches anything,
+		 * and vice versa.*/
+		if (verbatim) {
+			insensitive[i] = '_';
 		} else {
-			regexp[pos++] = mailbox[i];
+			sensitive[i] = '_';
 		}
-
 	}
 
-	regexp[pos++] = '$';
+	if (has_sensitive_part) {
+		g_string_printf(like, "%s %s '%s%s' AND %s %s '%s%s'",
+			column, db_get_sql(SQL_SENSITIVE_LIKE), sensitive, filter,
+			column, db_get_sql(SQL_INSENSITIVE_LIKE), insensitive, filter);
+	} else {
+		g_string_printf(like, "%s %s '%s%s'",
+			column, db_get_sql(SQL_INSENSITIVE_LIKE), insensitive, filter);
+	}
 
-	assert(pos <= len * 4 + 3);
+	tmplike = like->str;
 
-	return regexp;
+	g_string_free(like, FALSE);
+	g_free(sensitive);
+	g_free(insensitive);
+
+	return tmplike;
 }
 
 static int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 			 u64_t * mailbox_idnr)
 {
-	char *regexp_local_name;
-	char *escaped_local_name;
+	char *mailbox_like;
+	char *escaped_name;
 
 	assert(mailbox_idnr != NULL);
 	*mailbox_idnr = 0;
 
-	regexp_local_name = imap_utf7_regexp(name);
-	escaped_local_name = dm_stresc(regexp_local_name);
+	escaped_name = dm_stresc(name);
+	mailbox_like = db_imap_utf7_like("name", escaped_name, ""); 
 	
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT mailbox_idnr FROM %smailboxes "
-		 "WHERE %s name %s '%s' AND owner_idnr='%llu'",
-		 DBPFX, db_get_sql(SQL_BINARY), db_get_sql(SQL_REGEXP),
-		 escaped_local_name, owner_idnr);
+		 "WHERE %s AND owner_idnr='%llu'",
+		 DBPFX, mailbox_like, owner_idnr);
 
-	dm_free(regexp_local_name);
-	dm_free(escaped_local_name);
+	dm_free(mailbox_like);
+	dm_free(escaped_name);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR,
@@ -2901,11 +2911,10 @@ int db_find_create_mailbox(const char *name, mailbox_source_t source,
 
 
 int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
-			   u64_t ** children, int *nchildren,
-			   const char *filter)
+			   u64_t ** children, int *nchildren)
 {
 	int i;
-	char *mailbox_name = NULL;
+	char *mailbox_name = NULL, *mailbox_like = NULL;
 	const char *tmp;
 
 	/* retrieve the name of this mailbox */
@@ -2931,21 +2940,24 @@ int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
 		return DM_SUCCESS;
 	}
 
-	if ((tmp = db_get_result(0, 0))) 
+	if ((tmp = db_get_result(0, 0)))  {
 		mailbox_name = dm_stresc(tmp);
+		mailbox_like = db_imap_utf7_like("name", mailbox_name, "/%");
+	}
 
 	db_free_result();
-	if (mailbox_name) {
+	if (mailbox_like) {
 		snprintf(query, DEF_QUERYSIZE,
-			 "SELECT mailbox_idnr FROM %smailboxes WHERE name LIKE '%s/%s'"
+			 "SELECT mailbox_idnr FROM %smailboxes WHERE %s"
 			 " AND owner_idnr = '%llu'",DBPFX,
-			 mailbox_name, filter, user_idnr);
+			 mailbox_like, user_idnr);
 		dm_free(mailbox_name);
+		dm_free(mailbox_like);
 	}
 	else
 		snprintf(query, DEF_QUERYSIZE,
-			 "SELECT mailbox_idnr FROM %smailboxes WHERE name LIKE '%s'"
-			 " AND owner_idnr = '%llu'",DBPFX, filter, user_idnr);
+			 "SELECT mailbox_idnr FROM %smailboxes WHERE"
+			 " owner_idnr = '%llu'", DBPFX, user_idnr);
 	
 	/* now find the children */
 	if (db_query(query) == -1) {
@@ -4163,7 +4175,7 @@ int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * m
 {
 	/* query mailbox for LIST results */
 	char *mbxname, *name;
-	char *escaped_name;
+	char *escaped_name, *mailbox_like;
 	GString *fqname;
 	int i=0;
 
@@ -4202,14 +4214,16 @@ int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * m
 	/* no_children */
 	if (! (escaped_name = dm_stresc(name)))
 		return -1;
-	
+
+	mailbox_like = db_imap_utf7_like("name", escaped_name, "/%");
 			
 	snprintf(query, DEF_QUERYSIZE,
 			"SELECT COUNT(*) AS nr_children "
 			"FROM %smailboxes WHERE owner_idnr = '%llu' "
-			"AND name LIKE '%s%s%%' ",
-			DBPFX, user_idnr, escaped_name, MAILBOX_SEPARATOR);
+			"AND %s",
+			DBPFX, user_idnr, mailbox_like);
 	g_free(escaped_name);
+	g_free(mailbox_like);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: db error", __FILE__, __func__);

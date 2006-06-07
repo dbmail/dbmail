@@ -1002,8 +1002,7 @@ int db_find_create_mailbox(const char *name, mailbox_source_t source,
  *    -  0 on success
  */
 int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
-			   u64_t ** children, int *nchildren,
-			   const char *filter);
+			   u64_t ** children, int *nchildren);
 
 /**
  * \brief check if mailbox is selectable

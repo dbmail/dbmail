@@ -1,3 +1,13 @@
+2006-06-07  Aaron Stone  <aaron@serendipity.cx>
+
+	* db.h, db.c, modules/db*.c, dbmailtypes.h:
+	Dropped the REGEXP stuff and switched to LIKE/ILIKE pairs. Added sql
+	fragments to get the appropriate case sensitive / insensitive LIKE
+	operators. Thanks to Geo Carncross for his suggested algorithm.
+	* imapcommands.c:
+	Removed the filter arguments from db_listmailboxchildren because it's
+	now internal to the LIKE function above.
+
 2006-06-05  Aaron Stone  <aaron@serendipity.cx>
 
 	* db.c, dbmailtypes.h, modules/db*.c:
