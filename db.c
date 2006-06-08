@@ -2275,13 +2275,18 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen UNUSED,
 {
         struct DbmailMessage *message;
 	int result;
+	GString *msgdata_string;
 
 	if (mailbox_is_writable(mailbox_idnr))
 		return DM_EQUERY;
 
+	msgdata_string = g_string_new(msgdata);
+
         message = dbmail_message_new();
-        message = dbmail_message_init_with_string(message, g_string_new(msgdata));
-        dbmail_message_set_internal_date(message, (char *)internal_date);
+        message = dbmail_message_init_with_string(message, msgdata_string);
+	dbmail_message_set_internal_date(message, (char *)internal_date);
+
+	g_string_free(msgdata_string, TRUE); 
         
 	/* 
          * according to the rfc, the recent flag has to be set to '1'.

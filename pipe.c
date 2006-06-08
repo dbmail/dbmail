@@ -119,14 +119,25 @@ static int send_mail(struct DbmailMessage *message,
 	trace(TRACE_DEBUG, "%s, %s: pipe opened", __FILE__, __func__);
 
 	if (sendwhat != SENDRAW) {
+		char *header_to = g_mime_utils_header_encode_phrase(to);
+		char *header_from = g_mime_utils_header_encode_phrase(from);
+		char *header_subject = g_mime_utils_header_encode_text(subject);
+
 		fprintf(mailpipe, "To: %s\n", to);
 		fprintf(mailpipe, "From: %s\n", from);
 		fprintf(mailpipe, "Subject: %s\n", subject);
+		fprintf(mailpipe, "Content-Type: text/plain; charset=utf-8\n");
+		fprintf(mailpipe, "Content-Transfer-Encoding: 8bit\n");
+
 		if (strlen(headers))
 			fprintf(mailpipe, "%s\n", headers);
 		fprintf(mailpipe, "\n");
 		if (strlen(body))
 			fprintf(mailpipe, "%s\n\n", body);
+
+		g_free(header_to);
+		g_free(header_from);
+		g_free(header_subject);
 	}
 
 	switch (sendwhat) {
@@ -284,16 +295,30 @@ static int send_notification(struct DbmailMessage *message, const char *to)
 }
 
 /*
- * Send a vacation message. This should provide MIME
- * support, to comply with the Sieve-Vacation spec.
+ * Send a vacation message. FIXME: this should provide
+ * MIME support, to comply with the Sieve-Vacation spec.
  */
 int send_vacation(struct DbmailMessage *message,
 		const char *to, const char *from,
-		const char *subject, const char *body)
+		const char *subject, const char *body, const char *handle)
 {
-	return send_mail(message, to, from, subject, 
-			"", body, SENDNOTHING, SENDMAIL);
-	return 0;
+	int result;
+	const char *x_dbmail_vacation = dbmail_message_get_header(message, "X-Dbmail-Vacation");
+
+	if (x_dbmail_vacation) {
+		trace(TRACE_ERROR, "%s, %s: vacation loop detected [%s]",
+				__FILE__, __func__, x_dbmail_vacation);
+		return 0;
+	}
+
+	char *headers = g_strconcat("X-Dbmail-Vacation: ", handle, NULL);
+
+	result = send_mail(message, to, from, subject, 
+		headers, body, SENDNOTHING, SENDMAIL);
+
+	dm_free(headers);
+
+	return result;
 }
 	
 /*
@@ -302,9 +327,9 @@ int send_vacation(struct DbmailMessage *message,
 #define REPLY_DAYS 7
 static int send_reply(struct DbmailMessage *message, const char *body)
 {
-	char *from = NULL, *to = NULL, *replyto = NULL, *subject = NULL;
+	const char *from, *to, *replyto, *subject;
+	const char *x_dbmail_reply;
 	char *escaped_send_address;
-	char *x_dbmail_reply;
 	field_t postmaster;
 
 	InternetAddressList *ialist;
@@ -314,7 +339,6 @@ static int send_reply(struct DbmailMessage *message, const char *body)
 	if (x_dbmail_reply) {
 		trace(TRACE_ERROR, "%s, %s: reply loop detected [%s]",
 				__FILE__, __func__, x_dbmail_reply);
-		dm_free(x_dbmail_reply);
 		return 0;
 	}
 	
@@ -333,9 +357,9 @@ static int send_reply(struct DbmailMessage *message, const char *body)
 			      __FILE__, __func__);
 		}
 		if (strlen(postmaster))
-			to = dm_strdup(postmaster);
+			to = postmaster;
 		else
-			to = dm_strdup(DEFAULT_POSTMASTER);
+			to = DEFAULT_POSTMASTER;
 	}
 	
 
@@ -347,7 +371,6 @@ static int send_reply(struct DbmailMessage *message, const char *body)
 	if (!valid_sender(from)) {
 		trace(TRACE_DEBUG, "%s, %s: sender invalid. skip auto-reply.",
 				__FILE__, __func__);
-		dm_free(from);
 		return 0;
 	}
 
@@ -360,10 +383,6 @@ static int send_reply(struct DbmailMessage *message, const char *body)
 		"replycache", REPLY_DAYS) != DM_SUCCESS) {
 		trace(TRACE_DEBUG, "%s, %s: skip auto-reply", 
 				__FILE__, __func__);
-		dm_free(to);
-		dm_free(from);
-		dm_free(subject);
-		dm_free(replyto);
 		return 0;
 	}
 
@@ -372,14 +391,11 @@ static int send_reply(struct DbmailMessage *message, const char *body)
 
 	/* Our 'to' is in the 'from' arg because it's a reply. */
 	if (!send_mail(message, escaped_send_address,
-			to, subject, headers, body, SENDNOTHING, SENDMAIL)) {
+			to, newsubject, headers, body, SENDNOTHING, SENDMAIL)) {
 		db_replycache_register(to, escaped_send_address, "replycache");
 	}
 
-	dm_free(to);
-	dm_free(from);
-	dm_free(replyto);
-	dm_free(subject);
+	dm_free(headers);
 	dm_free(newsubject);
 
 	return 0;

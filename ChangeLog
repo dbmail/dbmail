@@ -1,5 +1,14 @@
 2006-06-07  Aaron Stone  <aaron@serendipity.cx>
 
+	* pipe.h, pipe.c, modules/sortsieve.c:
+	Removed free's of returns from dbmail_message_get_headers as they are
+	const. Added handle argument to send_vacation to prevent loops. Added
+	headers to declare all generated messages as UTF-8.
+	* db.c, dbmail-imapsession.c:
+	Accepted memory leak patch by Ryo (closes bug #360).
+
+2006-06-07  Aaron Stone  <aaron@serendipity.cx>
+
 	* db.h, db.c, modules/db*.c, dbmailtypes.h:
 	Dropped the REGEXP stuff and switched to LIKE/ILIKE pairs. Added sql
 	fragments to get the appropriate case sensitive / insensitive LIKE

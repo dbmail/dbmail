@@ -1713,6 +1713,9 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 		init_args = 1;
 	}
 
+	/* free the last round of arguments */
+	free_args();
+
 	/* this is done for the possible extra lines to be read from the client:
 	 * the line is read into currline; s will always point to the line currently
 	 * being processed
@@ -1727,9 +1730,6 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 		the_args[0] = NULL;
 		return the_args;
 	}
-
-	/* free the last round of arguments */
-	free_args();
 
 	/* find the arguments */
 	paridx = 0;
