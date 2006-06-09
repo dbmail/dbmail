@@ -45,6 +45,54 @@ void func_memtst(const char *filename, int line, int tst)
 		      filename, line);
 }
 
+/* Make sure that these match trace_t. */
+static const char * const trace_text[] = {
+	"FATAL",
+	"Error",
+	"Warning",
+	"Message",
+	"Info",
+	"Debug"
+};
+
+static const char * trace_to_text(trace_t level)
+{
+	return trace_text[level];
+}
+
+/* Call me like this:
+ *
+ * newtrace(TRACE_ERROR, "authldap", __FILE__, __func__,
+ * 	"Something happened with error code [%d]", resultvar);
+ *
+ * FIXME: This function doesn't work yet. Think more about how
+ * to do this right and then... do it! - Aaron 2006-06-09.
+ *
+ */
+void newtrace(trace_t level, const char * module,
+		const char * file, const char * function,
+		char *formatstring, ...)
+{
+	va_list argp;
+	char *newformatstring;
+
+	va_start(argp, formatstring);
+
+	/* If the global trace leve is really high */
+	newformatstring = g_strdup_printf("from %s, %s, %s: %s",
+			module, file, function, formatstring);
+
+	/* If the global trace level is really low */
+	newformatstring = g_strdup_printf("%s: %s",
+			module, formatstring);
+
+	trace(level, newformatstring, argp);
+
+	g_free(newformatstring);
+
+	va_end(argp);
+}
+
 void trace(trace_t level, char *formatstring, ...)
 {
 	va_list argp;
@@ -58,7 +106,7 @@ void trace(trace_t level, char *formatstring, ...)
 	l = strlen(message);
 	
 	if (level <= TRACE_STDERR) {
-		fprintf(stderr, message);
+		fprintf(stderr, "%s %s", trace_to_text(level), message);
 		if (message[l] != '\n')
 			fprintf(stderr, "\n");
 	}
@@ -68,9 +116,9 @@ void trace(trace_t level, char *formatstring, ...)
 			message[l] = '\0';
 		if (level <= TRACE_WARNING) {
 			/* set LOG_ALERT at warnings */
-			syslog(LOG_ALERT, "%s", message);
+			syslog(LOG_ALERT, "%s %s", trace_to_text(level), message);
 		} else
-			syslog(LOG_NOTICE, "%s", message);
+			syslog(LOG_NOTICE, "%s %s", trace_to_text(level), message);
 	}
 	g_free(message);
 

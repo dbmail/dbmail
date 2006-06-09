@@ -78,6 +78,10 @@ typedef enum {
 void func_memtst(const char *filename, int line, int tst);
 void trace(trace_t level, char *formatstring, ...) PRINTF_ARGS(2, 3);
 
+void newtrace(trace_t level, const char * module,
+		const char * file, const char * function,
+		char *formatstring, ...) PRINTF_ARGS(5, 6);
+
 void configure_debug(trace_t trace_syslog, trace_t trace_stderr);
 
 #define dm_strdup(s) g_strdup(s)
