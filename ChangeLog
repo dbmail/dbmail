@@ -6,6 +6,9 @@
 	headers to declare all generated messages as UTF-8.
 	* db.c, dbmail-imapsession.c:
 	Accepted memory leak patch by Ryo (closes bug #360).
+	* pipe.c, modules/sortsieve.c:
+	Resolved corner cases of missing from's and to's for replies and
+	vacations (closes bug #359).
 
 2006-06-07  Aaron Stone  <aaron@serendipity.cx>
 

@@ -63,8 +63,19 @@ static int send_mail(struct DbmailMessage *message,
 	char *escaped_to = NULL;
 	char *escaped_from = NULL;
 	char *sendmail_command = NULL;
-	field_t sendmail;
+	field_t sendmail, postmaster;
 	int result;
+
+	if (!from) {
+		if (config_get_value("POSTMASTER", "DBMAIL", postmaster) < 0) {
+			trace(TRACE_MESSAGE, "%s, %s: no config value for POSTMASTER",
+			      __FILE__, __func__);
+		}
+		if (strlen(postmaster))
+			from = postmaster;
+		else
+			from = DEFAULT_POSTMASTER;
+	}
 
 	if (config_get_value("SENDMAIL", "DBMAIL", sendmail) < 0) {
 		trace(TRACE_ERROR,
@@ -330,7 +341,6 @@ static int send_reply(struct DbmailMessage *message, const char *body)
 	const char *from, *to, *replyto, *subject;
 	const char *x_dbmail_reply;
 	char *escaped_send_address;
-	field_t postmaster;
 
 	InternetAddressList *ialist;
 	InternetAddress *ia;
@@ -351,17 +361,6 @@ static int send_reply(struct DbmailMessage *message, const char *body)
 	to = dbmail_message_get_header(message, "Delivered-To");
 	if (!to)
 		to = dbmail_message_get_header(message, "To");
-	if (!to) {
-		if (config_get_value("POSTMASTER", "DBMAIL", postmaster) < 0) {
-			trace(TRACE_MESSAGE, "%s, %s: no config value for POSTMASTER",
-			      __FILE__, __func__);
-		}
-		if (strlen(postmaster))
-			to = postmaster;
-		else
-			to = DEFAULT_POSTMASTER;
-	}
-	
 
 	if (!from && !replyto) {
 		trace(TRACE_ERROR, "%s, %s: no address to send to", __FILE__, __func__);
