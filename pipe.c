@@ -66,7 +66,7 @@ static int send_mail(struct DbmailMessage *message,
 	field_t sendmail, postmaster;
 	int result;
 
-	if (!from) {
+	if (!from || strlen(from) < 1) {
 		if (config_get_value("POSTMASTER", "DBMAIL", postmaster) < 0) {
 			trace(TRACE_MESSAGE, "%s, %s: no config value for POSTMASTER",
 			      __FILE__, __func__);
@@ -108,6 +108,7 @@ static int send_mail(struct DbmailMessage *message,
 	if (!sendmail_external) {
 		sendmail_command = g_strconcat(sendmail, " -f ", escaped_from, " ", escaped_to, NULL);
 		dm_free(escaped_to);
+		dm_free(escaped_from);
 		if (!sendmail_command) {
 			trace(TRACE_ERROR, "%s, %s: out of memory calling g_strconcat",
 					__FILE__, __func__);
@@ -221,9 +222,9 @@ int send_forward_list(struct DbmailMessage *message,
 			      __FILE__, __func__);
 		}
 		if (strlen(postmaster))
-			from = dm_strdup(postmaster);
+			from = postmaster;
 		else
-			from = dm_strdup(DEFAULT_POSTMASTER);
+			from = DEFAULT_POSTMASTER;
 	}
 
 	target = dm_list_getstart(targets);

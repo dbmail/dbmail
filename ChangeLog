@@ -1,4 +1,9 @@
-2006-06-07  Aaron Stone  <aaron@serendipity.cx>
+2006-06-09  Aaron Stone  <aaron@serendipity.cx>
+
+	* pipe.c:
+	Couple more from and memory cleanups (closes bug #359 again).
+
+2006-06-08  Aaron Stone  <aaron@serendipity.cx>
 
 	* pipe.h, pipe.c, modules/sortsieve.c:
 	Removed free's of returns from dbmail_message_get_headers as they are
