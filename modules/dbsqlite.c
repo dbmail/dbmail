@@ -24,7 +24,7 @@
  */
 
 #include "dbmail.h"
-
+#include <regex.h>
 #include <sqlite.h>
 #include <sqlite3.h>
 
@@ -46,6 +46,22 @@ const char * db_get_sql(sql_fragment_t frag)
 		break;
 		case SQL_REPLYCACHE_EXPIRE:
 			return "(CURRENT_TIMESTAMP_UNIX()-%s)";	
+		break;
+		case SQL_BINARY:
+			return "";
+		break;
+		case SQL_REGEXP:
+			return "REGEXP";
+		break;
+		// FIXME: To get this right, we have to supply a
+		// a replacement user defined like function. According
+		// to the SQLite manual, LIKE is case insensitive for
+		// US-ASCII characters and case sensitive elsewhere.
+		case SQL_SENSITIVE_LIKE:
+			return "LIKE";
+		break;
+		case SQL_INSENSITIVE_LIKE:
+			return "LIKE";
 		break;
 	}
 	return NULL;
@@ -80,6 +96,27 @@ static void dbsqlite_current_timestamp_unix(sqlite_func *f, int argc UNUSED,  co
 	(void)sqlite_set_result_string(f,buf,-1);
 }
 
+static void dbsqlite_regexp(sqlite_func *f, int argc, const char **argv)
+{
+	int res = 0;
+	regex_t re;
+	char *pattern, *string;
+
+	if (argc == 2) {
+		pattern = argv[0];
+		string = argv[1];
+
+		if (regcomp(&re, pattern, REG_NOSUB) == 0) {
+			if (regexec(&re, string, 0, NULL, 0) == 0) {
+				res = 1;
+			}
+			regfree(&re);
+		}
+	}
+
+	(void)sqlite_set_result_int(f, res);
+}
+
 int db_connect()
 {
 	char *errmsg;
@@ -91,8 +128,7 @@ int db_connect()
 		return -1;
 	}
 	if (sqlite_create_function(conn, "CURRENT_TIMESTAMP", 0,
-				dbsqlite_current_timestamp,
-				0) != SQLITE_OK) {
+				dbsqlite_current_timestamp, 0) != SQLITE_OK) {
 		sqlite_close(conn);
 		trace(TRACE_ERROR,
 		      "%si,%s: sqlite_create_function failed",
@@ -101,6 +137,12 @@ int db_connect()
 	}
 	if (sqlite_create_function(conn, "CURRENT_TIMESTAMP_UNIX", 0, 
 				dbsqlite_current_timestamp_unix, 0) != SQLITE_OK) {
+		sqlite_close(conn);
+		trace(TRACE_ERROR, "%s,%s: sqlite_create_function failed", __FILE__,__func__);
+		return -1;
+	}
+	if (sqlite_create_function(conn, "REGEXP", 2, dbsqlite_regexp, 0) != SQLITE_OK
+	 || sqlite_function_type(sqlite, "REGEXP", SQLITE_NUMERIC) != SQLITE_OK) {
 		sqlite_close(conn);
 		trace(TRACE_ERROR, "%s,%s: sqlite_create_function failed", __FILE__,__func__);
 		return -1;

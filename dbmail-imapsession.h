@@ -40,6 +40,10 @@ void dbmail_imap_session_delete(struct ImapSession * self);
 int dbmail_imap_session_readln(struct ImapSession * self, char * buffer);
 int dbmail_imap_session_discard_to_eol(struct ImapSession *self);
 
+/* \return
+ *   -1 on possibly recoverable errors
+ *   -2 on serious unrecoverable errors
+ */
 int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...);
 
 int dbmail_imap_session_set_state(struct ImapSession *self, int state);

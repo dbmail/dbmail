@@ -73,7 +73,8 @@ int sort_vacation(sieve2_context_t *s, void *my)
 	struct sort_context *m = (struct sort_context *)my;
 	int days = 1, mime = 0;
 	const char *message, *subject, *fromaddr, *handle;
-	char *md5_handle = NULL, *rc_to, *rc_from, *rc_handle;
+	const char *rc_to, *rc_from, *rc_handle;
+	char *md5_handle = NULL;
 
 	days = sieve2_getvalue_int(s, "days"); // days: min 1, max 30, default 7.
 	mime = sieve2_getvalue_int(s, "mime"); // mime: 1 if message is mime coded. FIXME.
@@ -86,7 +87,7 @@ int sort_vacation(sieve2_context_t *s, void *my)
 	if (days > 30) days = 30;
 
 	if (handle) {
-		rc_handle = (char *)handle;
+		rc_handle = handle;
 	} else {
 		char *tmp;
 		tmp = g_strconcat(subject, message, NULL);
@@ -94,19 +95,23 @@ int sort_vacation(sieve2_context_t *s, void *my)
 		g_free(tmp);
 	}
 
-	if (fromaddr) {
-		// FIXME: should be validated as a user might try
-		// to forge an address from their script.
-		rc_from = (char *)fromaddr;
-	} else {
-		rc_from = "";// FIXME: What's the user's from address!?
-	}
+	// FIXME: should be validated as a user might try
+	// to forge an address from their script.
+	rc_from = fromaddr;
+	/* We prefer the actual Delivered-To, rather than To
+	 * because that probably came to us over the wire. */
+	if (!rc_from)
+		rc_from = dbmail_message_get_header(m->message, "Delivered-To");
+	if (!rc_from)
+		rc_from = dbmail_message_get_header(m->message, "To");
 
 	// Or maybe should it be the Reply-To or From header?
-	rc_to = (char *)dbmail_message_get_header(m->message, "Return-Path");
+	rc_to = dbmail_message_get_header(m->message, "Reply-To");
+	if (!rc_to)
+		rc_to = dbmail_message_get_header(m->message, "Return-Path");
 
 	if (db_replycache_validate(rc_to, rc_from, rc_handle, days) == DM_SUCCESS) {
-		if (send_vacation(m->message, rc_to, rc_from, subject, message) == 0)
+		if (send_vacation(m->message, rc_to, rc_from, subject, message, rc_handle) == 0)
 			db_replycache_register(rc_to, rc_from, rc_handle);
 		trace(TRACE_INFO, "%s, %s: Sending vacation to [%s] from [%s] handle [%s] repeat days [%d]",
 				__FILE__, __func__, rc_to, rc_from, rc_handle, days);

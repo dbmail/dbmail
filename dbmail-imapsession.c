@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: dbmail-imapsession.c 2141 2006-06-02 14:40:22Z aaron $
+/* $Id: dbmail-imapsession.c 2165 2006-06-09 16:51:23Z aaron $
  * 
  * dm_imaputil.c
  *
@@ -1067,6 +1067,7 @@ int check_state_and_args(struct ImapSession * self, const char *command, int min
 	return 1;
 }
 	
+/* Returns -1 on error, -2 on serious error. */
 int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...)
 {
         va_list ap;
@@ -1102,7 +1103,8 @@ int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...)
         if (feof(fd) || fflush(fd) < 0) {
 		g_free(re);
 		g_free(ln);
-                trace(TRACE_FATAL, "%s,%s: client socket closed", __FILE__, __func__);
+                trace(TRACE_ERROR, "%s,%s: client socket closed", __FILE__, __func__);
+		return -2;
 	}
 
         len = g_mime_stream_write_string(self->fstream,ln);
@@ -1110,7 +1112,8 @@ int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...)
         if (len < 0) {
 		g_free(re);
 		g_free(ln);
-                trace(TRACE_FATAL, "%s,%s: write to client socket failed", __FILE__, __func__);
+                trace(TRACE_ERROR, "%s,%s: write to client socket failed", __FILE__, __func__);
+		return -2;
 	}
 
         if (result < maxlen)
@@ -1713,6 +1716,9 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 		init_args = 1;
 	}
 
+	/* free the last round of arguments */
+	free_args();
+
 	/* this is done for the possible extra lines to be read from the client:
 	 * the line is read into currline; s will always point to the line currently
 	 * being processed
@@ -1727,9 +1733,6 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 		the_args[0] = NULL;
 		return the_args;
 	}
-
-	/* free the last round of arguments */
-	free_args();
 
 	/* find the arguments */
 	paridx = 0;

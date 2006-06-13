@@ -46,6 +46,18 @@ const char * db_get_sql(sql_fragment_t frag)
 		case SQL_REPLYCACHE_EXPIRE:
 			return "NOW() - INTERVAL %d DAY";
 		break;
+		case SQL_BINARY:
+			return "BINARY";
+		break;
+		case SQL_REGEXP:
+			return "REGEXP";
+		break;
+		case SQL_SENSITIVE_LIKE:
+			return "LIKE BINARY";
+		break;
+		case SQL_INSENSITIVE_LIKE:
+			return "LIKE";
+		break;
 	}
 	return NULL;
 }

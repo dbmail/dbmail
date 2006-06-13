@@ -20,6 +20,15 @@ will be cleared from the database. The integrity check will check for
 unconnected messageblocks, unconnected messages and unconnected 
 mailboxes.
 
+By default, the checks run in a read-only mode, possibly prompting to make
+changes. Pass the -n option to respond no to any prompts. Pass the -y option
+to make read-write changes, responding yes to any prompts.
+
+As DBMail matures and new features are added, additional check modes will be
+added. In addition, more prompts may be added for different situations where
+changes need to be committed to the database. We recommend using the -a option
+to run all checks and using the -n and -y options if you expect no prompts.
+
 OPTIONS
 -------
 
@@ -39,11 +48,14 @@ OPTIONS
 -b::
  Check and rebuild the body/header cache tables.
 
--p::
- Purge messages have the DELETE status set.
-
 -d::
- Set DELETE status for deleted messages.
+ Set DELETE status for messages flagged \Deleted by IMAP or POP3.
+
+-p::
+ Purge messages with DELETE status. To purge messages currently marked
+ \Deleted, run with the -pd options twice. This is not recommended; it is
+ better to leave a grace period for old messages before permanently wiping
+ them from the database.
 
 -l time::
  Clear the IP log used for IMAP/POP-before-SMTP the time is specified

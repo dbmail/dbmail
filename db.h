@@ -19,7 +19,7 @@
 */
 
 /*
- * $Id: db.h 2148 2006-06-03 13:33:23Z paul $
+ * $Id: db.h 2161 2006-06-07 17:04:11Z aaron $
  *
  * dbase driver header file
  * Functions for database communication 
@@ -1002,8 +1002,7 @@ int db_find_create_mailbox(const char *name, mailbox_source_t source,
  *    -  0 on success
  */
 int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
-			   u64_t ** children, int *nchildren,
-			   const char *filter);
+			   u64_t ** children, int *nchildren);
 
 /**
  * \brief check if mailbox is selectable

@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
  
- $Id: debug.h 2065 2006-04-10 20:38:36Z paul $
+ $Id: debug.h 2165 2006-06-09 16:51:23Z aaron $
  
  headers for debug.c 
  
@@ -77,6 +77,10 @@ typedef enum {
 
 void func_memtst(const char *filename, int line, int tst);
 void trace(trace_t level, char *formatstring, ...) PRINTF_ARGS(2, 3);
+
+void newtrace(trace_t level, const char * module,
+		const char * file, const char * function,
+		char *formatstring, ...) PRINTF_ARGS(5, 6);
 
 void configure_debug(trace_t trace_syslog, trace_t trace_stderr);
 

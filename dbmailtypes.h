@@ -1,5 +1,5 @@
 /*
- $Id: dbmailtypes.h 2129 2006-05-23 12:51:32Z paul $
+ $Id: dbmailtypes.h 2161 2006-06-07 17:04:11Z aaron $
 
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
@@ -435,7 +435,11 @@ typedef enum {
 	SQL_TO_DATE,
 	SQL_TO_CHAR,
 	SQL_CURRENT_TIMESTAMP,
-	SQL_REPLYCACHE_EXPIRE
+	SQL_REPLYCACHE_EXPIRE,
+	SQL_BINARY,
+	SQL_REGEXP,
+	SQL_SENSITIVE_LIKE,
+	SQL_INSENSITIVE_LIKE
 } sql_fragment_t;
 
 
