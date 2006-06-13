@@ -467,7 +467,7 @@ static pid_t reap_child()
 
 	kill(chpid, SIGTERM);
 	
-	if (waitpid(chpid, NULL, 0) == chpid) 
+	if (waitpid(chpid, NULL, WNOHANG | WUNTRACED) == chpid) 
 		scoreboard_release(chpid);
 
 	return chpid;
