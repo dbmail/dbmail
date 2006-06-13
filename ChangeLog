@@ -1,10 +1,39 @@
 2006-06-13  Paul J Stevens <paul@nfg.nl>
 
-	* dbmail.schema:
-	add mailHost attribute to dbmailUser ldap objectclass. dbmail.schema
-	now conflicts with misc.schema, so use one or the other.
 	* pool.c:
 	prevent parent from hanging when child fails to die (bug: #363)
+
+2006-06-09  Aaron Stone  <aaron@serendipity.cx>
+
+	* pipe.c:
+	Couple more from and memory cleanups (closes bug #359 again).
+	* debug.h, debug.c:
+	Added trace level to the debug output. Started sketching newtrace
+	function.
+	* dbmail-imapsession.c:
+	Removed TRACE_FATAL from dbmail_imap_session_printf (closes bug #361).
+
+2006-06-08  Aaron Stone  <aaron@serendipity.cx>
+
+	* pipe.h, pipe.c, modules/sortsieve.c:
+	Removed free's of returns from dbmail_message_get_headers as they are
+	const. Added handle argument to send_vacation to prevent loops. Added
+	headers to declare all generated messages as UTF-8.
+	* db.c, dbmail-imapsession.c:
+	Accepted memory leak patch by Ryo (closes bug #360).
+	* pipe.c, modules/sortsieve.c:
+	Resolved corner cases of missing from's and to's for replies and
+	vacations (closes bug #359).
+
+2006-06-07  Aaron Stone  <aaron@serendipity.cx>
+
+	* db.h, db.c, modules/db*.c, dbmailtypes.h:
+	Dropped the REGEXP stuff and switched to LIKE/ILIKE pairs. Added sql
+	fragments to get the appropriate case sensitive / insensitive LIKE
+	operators. Thanks to Geo Carncross for his suggested algorithm.
+	* imapcommands.c:
+	Removed the filter arguments from db_listmailboxchildren because it's
+	now internal to the LIKE function above.
 
 2006-06-06  Paul J Stevens <paul@nfg.nl>
 
@@ -17,6 +46,9 @@
 
 2006-06-05  Aaron Stone  <aaron@serendipity.cx>
 
+	* db.c, dbmailtypes.h, modules/db*.c:
+	Changed up the case insensitive modified utf7 thing to use SQL regular
+	expressions. Added a function to SQLite to provide REGEXP.
 	* dbmail-message.h, dbmail-message.c, modules/sortsieve.c:
 	Added new function dbmail_message_get_header_repeated to grab all
 	instances of a header (closes bug #358).
