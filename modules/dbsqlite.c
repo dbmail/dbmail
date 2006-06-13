@@ -26,7 +26,6 @@
 #include "dbmail.h"
 #include <regex.h>
 #include <sqlite.h>
-#include <sqlite3.h>
 
 db_param_t _db_params;
 
@@ -141,8 +140,8 @@ int db_connect()
 		trace(TRACE_ERROR, "%s,%s: sqlite_create_function failed", __FILE__,__func__);
 		return -1;
 	}
-	if (sqlite_create_function(conn, "REGEXP", 2, dbsqlite_regexp, 0) != SQLITE_OK
-	 || sqlite_function_type(sqlite, "REGEXP", SQLITE_NUMERIC) != SQLITE_OK) {
+	if (sqlite_create_function(conn, "REGEXP", 2, dbsqlite_regexp, 0) != SQLITE_OK || 
+		sqlite_function_type(conn, "REGEXP", SQLITE_NUMERIC) != SQLITE_OK) {
 		sqlite_close(conn);
 		trace(TRACE_ERROR, "%s,%s: sqlite_create_function failed", __FILE__,__func__);
 		return -1;
