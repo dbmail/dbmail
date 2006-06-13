@@ -1,5 +1,10 @@
 2006-06-13  Paul J Stevens <paul@nfg.nl>
 
+	* ChangeLog:
+	cleanup Changelog
+	* dbmail.schema:
+	added mailHost attribute. dbmail.schema now conflicts with misc.schema
+	so use one or the other
 	* pool.c:
 	prevent parent from hanging when child fails to die (bug: #363)
 
