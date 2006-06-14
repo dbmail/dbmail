@@ -156,6 +156,7 @@ struct DbmailMessage * dbmail_message_new(void)
 	/* provide quick case-insensitive header name searches */
 	self->header_tree = g_tree_new((GCompareFunc)g_ascii_strcasecmp);
 	
+	/* internal cache: header_dict[headername.name] = headername.id */
 	self->header_dict = g_hash_table_new_full((GHashFunc)g_str_hash,
 			(GEqualFunc)g_str_equal, (GDestroyNotify)g_free, NULL);
 	
