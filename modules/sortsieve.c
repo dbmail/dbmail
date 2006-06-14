@@ -100,6 +100,8 @@ int sort_vacation(sieve2_context_t *s, void *my)
 	rc_from = fromaddr;
 	if (!rc_from)
 		rc_from = dbmail_message_get_header(m->message, "Delivered-To");
+	if (!rc_from)
+		rc_from = m->message->envelope_recipient->str;
 
 	// Or maybe should it be the Reply-To or From header?
 	rc_to = dbmail_message_get_header(m->message, "Reply-To");
@@ -135,6 +137,8 @@ int sort_redirect(sieve2_context_t *s, void *my)
 		"REDIRECT destination is [%s].", to);
 
 	from = dbmail_message_get_header(m->message, "Delivered-To");
+	if (!from)
+		from = m->message->envelope_recipient->str;
 
 	if (send_redirect(m->message, to, from) != 0) {
 		return SIEVE2_ERROR_FAIL;
