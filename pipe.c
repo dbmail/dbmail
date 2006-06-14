@@ -357,11 +357,9 @@ static int send_reply(struct DbmailMessage *message, const char *body)
 	subject = dbmail_message_get_header(message, "Subject");
 	replyto = dbmail_message_get_header(message, "Reply-To");
 
-	/* We prefer the actual Delivered-To, rather than To
-	 * because that probably came to us over the wire. */
+	/* The To header is not usable as a backup because it
+	 * is likely to have other addresses listed. */
 	to = dbmail_message_get_header(message, "Delivered-To");
-	if (!to)
-		to = dbmail_message_get_header(message, "To");
 
 	if (!from && !replyto) {
 		trace(TRACE_ERROR, "%s, %s: no address to send to", __FILE__, __func__);

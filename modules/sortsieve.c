@@ -138,7 +138,7 @@ int sort_redirect(sieve2_context_t *s, void *my)
 	trace(TRACE_INFO, "Action is REDIRECT: "
 		"REDIRECT destination is [%s].", to);
 
-	from = "";// FIXME: What's the user's from address!?
+	from = dbmail_message_get_header(message, "Delivered-To");
 
 	if (send_redirect(m->message, to, from) != 0) {
 		return SIEVE2_ERROR_FAIL;
