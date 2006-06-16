@@ -34,6 +34,7 @@ char *multipart_message = "From: \"Brother from another planet\" <vol@inter7.com
 	"Date: Wed, 11 May 2005 13:20:08 -0700\n"
 	"Received: at mx.inter7.com from localhost\n"
 	"Received: at localhost from localhost\n"
+	"Received: at localhost from localhost\n"
 	"MIME-Version: 1.0\n"
 	"Content-type: multipart/mixed; boundary=boundary\n"
 	"X-Dbmail-ID: 12345\n"
