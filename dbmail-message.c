@@ -45,7 +45,7 @@ static int dm_errno = 0;
  *
  */
 static void _register_header(const char *header, const char *value, gpointer user_data);
-static void _header_cache(const char *header, const char *value, gpointer user_data);
+static gboolean _header_cache(const char *header, const char *value, gpointer user_data);
 
 static struct DbmailMessage * _retrieve(struct DbmailMessage *self, char *query_template);
 static void _map_headers(struct DbmailMessage *self);
@@ -154,8 +154,12 @@ struct DbmailMessage * dbmail_message_new(void)
 	self->envelope_recipient = g_string_new("");
 
 	/* provide quick case-insensitive header name searches */
-	self->header_tree = g_tree_new((GCompareFunc)g_ascii_strcasecmp);
+	self->header_name = g_tree_new((GCompareFunc)g_ascii_strcasecmp);
+	/* provide quick case-sensitive header value searches */
+	self->header_value = g_tree_new((GCompareFunc)strcmp);
 	
+	
+	/* internal cache: header_dict[headername.name] = headername.id */
 	self->header_dict = g_hash_table_new_full((GHashFunc)g_str_hash,
 			(GEqualFunc)g_str_equal, (GDestroyNotify)g_free, NULL);
 	
@@ -182,7 +186,8 @@ void dbmail_message_free(struct DbmailMessage *self)
 	
 	g_string_free(self->envelope_recipient,TRUE);
 	g_hash_table_destroy(self->header_dict);
-	g_tree_destroy(self->header_tree);
+	g_tree_destroy(self->header_name);
+	g_tree_destroy(self->header_value);
 	
 	self->id=0;
 	dm_free(self);
@@ -381,18 +386,25 @@ static void _map_headers(struct DbmailMessage *self)
 	assert(self->content);
 	self->headers = g_relation_new(2);
 	g_relation_index(self->headers, 0, (GHashFunc)g_str_hash, (GEqualFunc)g_str_equal);
+	g_relation_index(self->headers, 1, (GHashFunc)g_str_hash, (GEqualFunc)g_str_equal);
 	g_mime_header_foreach(GMIME_OBJECT(self->content)->headers, _register_header, self);
 }
 
 static void _register_header(const char *header, const char *value, gpointer user_data)
 {
-	const char *hname;
+	const char *hname, *hvalue;
 	struct DbmailMessage *m = (struct DbmailMessage *)user_data;
-	if (! (hname = g_tree_lookup(m->header_tree,header))) {
-		g_tree_insert(m->header_tree,(gpointer)header,(gpointer)header);
+	if (! (hname = g_tree_lookup(m->header_name,header))) {
+		g_tree_insert(m->header_name,(gpointer)header,(gpointer)header);
 		hname = header;
 	}
-	g_relation_insert(m->headers, hname, value);
+	if (! (hvalue = g_tree_lookup(m->header_value,value))) {
+		g_tree_insert(m->header_value,(gpointer)value,(gpointer)value);
+		hvalue = value;
+	}
+	
+	if (! g_relation_exists(m->headers, hname, hvalue))
+		g_relation_insert(m->headers, hname, hvalue);
 }
 
 void dbmail_message_set_physid(struct DbmailMessage *self, u64_t physid)
@@ -451,7 +463,7 @@ const gchar * dbmail_message_get_header(const struct DbmailMessage *self, const 
 GTuples * dbmail_message_get_header_repeated(const struct DbmailMessage *self, const char *header)
 {
 	const char *hname;
-	if (! (hname = g_tree_lookup(self->header_tree,header)))
+	if (! (hname = g_tree_lookup(self->header_name,header)))
 		hname = header;
 	return g_relation_select(self->headers, hname, 0);
 }
@@ -842,7 +854,8 @@ int dbmail_message_headers_cache(const struct DbmailMessage *self)
 		g_object_unref(part);
 	}
 	
-	g_mime_header_foreach(GMIME_OBJECT(self->content)->headers, _header_cache, (gpointer)self);
+	//g_mime_header_foreach(GMIME_OBJECT(self->content)->headers, _header_cache, (gpointer)self);
+	g_tree_foreach(self->header_name, (GTraverseFunc)_header_cache, (gpointer)self);
 	
 	dbmail_message_cache_tofield(self);
 	dbmail_message_cache_ccfield(self);
@@ -890,36 +903,47 @@ static int _header_get_id(const struct DbmailMessage *self, const char *header, 
 	return 1;
 }
 
-void _header_cache(const char *header, const char *value, gpointer user_data)
+static gboolean _header_cache(const char UNUSED *key, const char *header, gpointer user_data)
 {
 	u64_t id;
 	struct DbmailMessage *self = (struct DbmailMessage *)user_data;
 	gchar *q, *safe_value;
+	GTuples *values;
+	const char *value;
+	unsigned i;
 
 	dm_errno = 0;
 
 	/* skip headernames with spaces like From_ */
 	if (strchr(header, ' '))
-		return;
+		return FALSE;
 
 	if ((_header_get_id(self, header, &id) < 0))
-		return;
+		return TRUE;
 
-	if (! (safe_value = dm_stresc(value))) 
-		return;
+	values = g_relation_select(self->headers,header,0);
+	for (i=0; i<values->len;i++) {
+		value = g_tuples_index(values,i,1);
 
-	q = g_strdup_printf("INSERT INTO %sheadervalue (headername_id, physmessage_id, headervalue) "
-			"VALUES (%llu,%llu,'%s')", DBPFX, id, self->physid, safe_value);
-	g_free(safe_value);
+		if (! (safe_value = dm_stresc(value))) {
+			g_tuples_destroy(values);
+			return TRUE;
+		}
 
-	//db_savepoint_transaction("header_cache");
-	if (db_query(q)) {
-		trace(TRACE_INFO,"%s,%s: insert headervalue failed",
-		      __FILE__,__func__);
-		//db_rollback_savepoint_transaction("header_cache");
+		q = g_strdup_printf("INSERT INTO %sheadervalue (headername_id, physmessage_id, headervalue) "
+				"VALUES (%llu,%llu,'%s')", DBPFX, id, self->physid, safe_value);
+		g_free(safe_value);
+
+		if (db_query(q)) {
+			trace(TRACE_ERROR,"%s,%s: insert headervalue failed",
+			      __FILE__,__func__);
+			g_tuples_destroy(values);
+			return TRUE;
+		}
+		g_free(q);
 	}
-	g_free(q);
-
+	g_tuples_destroy(values);
+	return FALSE;
 }
 
 static void insert_address_cache(u64_t physid, const char *field, InternetAddressList *ialist)
