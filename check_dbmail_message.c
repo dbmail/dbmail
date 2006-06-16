@@ -225,7 +225,7 @@ START_TEST(test_dbmail_message_hdrs_to_string)
         m = dbmail_message_init_with_string(m, s);
 
 	result = dbmail_message_hdrs_to_string(m);
-	fail_unless(strlen(result)==485, "dbmail_message_hdrs_to_string failed");
+	fail_unless(strlen(result)==523, "dbmail_message_hdrs_to_string failed");
 	
 	g_string_free(s,TRUE);
         dbmail_message_free(m);
@@ -279,7 +279,7 @@ START_TEST(test_dbmail_message_get_rfcsize)
         m = dbmail_message_init_with_string(m,s);
 	result = dbmail_message_get_rfcsize(m);
 	
-	fail_unless(result==1572, "dbmail_message_get_rfcsize failed");
+	fail_unless(result==1611, "dbmail_message_get_rfcsize failed");
 	
 	g_string_free(s,TRUE);
         dbmail_message_free(m);

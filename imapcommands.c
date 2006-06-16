@@ -2075,9 +2075,7 @@ int _ic_copy(struct ImapSession *self)
 					continue;
 			}
 
-			result =
-			    db_copymsg(thisnum, destmboxid, ud->userid,
-				       &new_msgid);
+			result = db_copymsg(thisnum, destmboxid, ud->userid, &new_msgid);
 			if (result == -1) {
 				dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 				db_rollback_transaction();
