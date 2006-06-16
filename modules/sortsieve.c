@@ -98,12 +98,10 @@ int sort_vacation(sieve2_context_t *s, void *my)
 	// FIXME: should be validated as a user might try
 	// to forge an address from their script.
 	rc_from = fromaddr;
-	/* We prefer the actual Delivered-To, rather than To
-	 * because that probably came to us over the wire. */
 	if (!rc_from)
 		rc_from = dbmail_message_get_header(m->message, "Delivered-To");
 	if (!rc_from)
-		rc_from = dbmail_message_get_header(m->message, "To");
+		rc_from = m->message->envelope_recipient->str;
 
 	// Or maybe should it be the Reply-To or From header?
 	rc_to = dbmail_message_get_header(m->message, "Reply-To");
@@ -138,7 +136,9 @@ int sort_redirect(sieve2_context_t *s, void *my)
 	trace(TRACE_INFO, "Action is REDIRECT: "
 		"REDIRECT destination is [%s].", to);
 
-	from = "";// FIXME: What's the user's from address!?
+	from = dbmail_message_get_header(m->message, "Delivered-To");
+	if (!from)
+		from = m->message->envelope_recipient->str;
 
 	if (send_redirect(m->message, to, from) != 0) {
 		return SIEVE2_ERROR_FAIL;
