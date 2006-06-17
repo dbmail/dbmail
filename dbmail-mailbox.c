@@ -641,7 +641,7 @@ static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u
 	if (! (search_keys && search_keys[*idx]))
 		return -1;
 
-	char *key = search_keys[*idx];
+	char *t = NULL, *key = search_keys[*idx];
 
 	search_key_t *value = g_new0(search_key_t,1);
 	
@@ -752,79 +752,71 @@ static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u
 	/*
 	 * HEADER search keys
 	 */
-
+#define IMAP_SET_SEARCH		(*idx)++; \
+		t = dm_stresc(search_keys[*idx]); \
+		strncpy(value->search, t, MAX_SEARCH_LEN); \
+		g_free(t); \
+		(*idx)++
+	
 	else if ( MATCH(key, "bcc") ) {
 		g_return_val_if_fail(search_keys[*idx + 1], -1);
 		value->type = IST_HDR;
 		strncpy(value->hdrfld, "bcc", MIME_FIELD_MAX);
-		(*idx)++;
-		strncpy(value->search, search_keys[*idx], MAX_SEARCH_LEN);
-		(*idx)++;
+		IMAP_SET_SEARCH;
 		
 	} else if ( MATCH(key, "cc") ) {
 		g_return_val_if_fail(search_keys[*idx + 1], -1);
 		value->type = IST_HDR;
 		strncpy(value->hdrfld, "cc", MIME_FIELD_MAX);
-		(*idx)++;
-		strncpy(value->search, search_keys[*idx], MAX_SEARCH_LEN);
-		(*idx)++;
+		IMAP_SET_SEARCH;
 	
 	} else if ( MATCH(key, "from") ) {
 		g_return_val_if_fail(search_keys[*idx + 1], -1);
 		value->type = IST_HDR;
 		strncpy(value->hdrfld, "from", MIME_FIELD_MAX);
-		(*idx)++;
-		strncpy(value->search, search_keys[*idx], MAX_SEARCH_LEN);
-		(*idx)++;
+		IMAP_SET_SEARCH;
 	
 	} else if ( MATCH(key, "to") ) {
 		g_return_val_if_fail(search_keys[*idx + 1], -1);
 		value->type = IST_HDR;
 		strncpy(value->hdrfld, "to", MIME_FIELD_MAX);
-		(*idx)++;
-		strncpy(value->search, search_keys[*idx], MAX_SEARCH_LEN);
-		(*idx)++;
+		IMAP_SET_SEARCH;
 	
 	} else if ( MATCH(key, "subject") ) {
 		g_return_val_if_fail(search_keys[*idx + 1], -1);
 		value->type = IST_HDR;
 		strncpy(value->hdrfld, "subject", MIME_FIELD_MAX);
-		(*idx)++;
-		strncpy(value->search, search_keys[*idx], MAX_SEARCH_LEN);
-		(*idx)++;
+		IMAP_SET_SEARCH;
 	
 	} else if ( MATCH(key, "header") ) {
 		g_return_val_if_fail(search_keys[*idx + 1], -1);
 		g_return_val_if_fail(search_keys[*idx + 2], -1);
 		value->type = IST_HDR;
-		strncpy(value->hdrfld, search_keys[*idx + 1], MIME_FIELD_MAX);
-		strncpy(value->search, search_keys[*idx + 2], MAX_SEARCH_LEN);
+		t = dm_stresc(search_keys[*idx + 1]);
+		strncpy(value->hdrfld, t, MIME_FIELD_MAX);
+		g_free(t);
+		t = dm_stresc(search_keys[*idx + 2]);
+		strncpy(value->search, t, MAX_SEARCH_LEN);
+		g_free(t);
 		(*idx) += 3;
 
 	} else if ( MATCH(key, "sentbefore") ) {
 		g_return_val_if_fail(search_keys[*idx + 1], -1);
 		value->type = IST_HDRDATE_BEFORE;
 		strncpy(value->hdrfld, "datefield", MIME_FIELD_MAX);
-		(*idx)++;
-		strncpy(value->search, search_keys[*idx], MAX_SEARCH_LEN);
-		(*idx)++;
+		IMAP_SET_SEARCH;
 
 	} else if ( MATCH(key, "senton") ) {
 		g_return_val_if_fail(search_keys[*idx + 1], -1);
 		value->type = IST_HDRDATE_ON;
 		strncpy(value->hdrfld, "datefield", MIME_FIELD_MAX);
-		(*idx)++;
-		strncpy(value->search, search_keys[*idx], MAX_SEARCH_LEN);
-		(*idx)++;
-	
+		IMAP_SET_SEARCH;
+
 	} else if ( MATCH(key, "sentsince") ) {
 		g_return_val_if_fail(search_keys[*idx + 1], -1);
 		value->type = IST_HDRDATE_SINCE;
 		strncpy(value->hdrfld, "datefield", MIME_FIELD_MAX);
-		(*idx)++;
-		strncpy(value->search, search_keys[*idx], MAX_SEARCH_LEN);
-		(*idx)++;
-	
+		IMAP_SET_SEARCH;
 	}
 
 	/*
@@ -863,16 +855,12 @@ static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u
 	else if ( MATCH(key, "body") ) {
 		g_return_val_if_fail(search_keys[*idx + 1], -1);
 		value->type = IST_DATA_BODY;
-		(*idx)++;
-		strncpy(value->search, search_keys[(*idx)], MAX_SEARCH_LEN);
-		(*idx)++;
-	
+		IMAP_SET_SEARCH;
+
 	} else if ( MATCH(key, "text") ) {
 		g_return_val_if_fail(search_keys[*idx + 1], -1);
 		value->type = IST_DATA_TEXT;
-		(*idx)++;
-		strncpy(value->search, search_keys[(*idx)], MAX_SEARCH_LEN);
-		(*idx)++;
+		IMAP_SET_SEARCH;
 	}
 
 	/*
@@ -939,7 +927,7 @@ static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u
 	
 	} else if (check_msg_set(key)) {
 		value->type = IST_SET;
-		strncpy(value->search, search_keys[*idx], MAX_SEARCH_LEN);
+		strncpy(value->search, key, MAX_SEARCH_LEN);
 		(*idx)++;
 		
 	/* ignore the charset. Let the database handle this */
