@@ -4,9 +4,18 @@
 #
 # script for upgrading dbmail-2.0 to dbmail-2.1+
 
-alter table dbmail_auto_replies add start_date datetime not null;
-alter table dbmail_auto_replies add stop_date datetime not null;
 
+# This query can take many minutes on a large installation.
+# It is the first thing here in case someone looks inside to
+# find out why this script is taking so long ;-)
+#
+# The tables below have foreign keys, and so
+# the target key's table must also be InnoDB.
+ALTER TABLE dbmail_physmessage ENGINE=InnoDB;
+
+
+ALTER TABLE dbmail_auto_replies ADD start_date DATETIME NOT NULL;
+ALTER TABLE dbmail_auto_replies ADD stop_date DATETIME NOT NULL;
 
 #
 # store all headers by storing all headernames and headervalues in separate
@@ -36,8 +45,6 @@ CREATE TABLE dbmail_headervalue (
 		REFERENCES dbmail_headername(id) ON UPDATE CASCADE ON DELETE CASCADE,
 	FOREIGN KEY (physmessage_id)
 		REFERENCES dbmail_physmessage(id) ON UPDATE CASCADE ON DELETE CASCADE
-	
-		
 ) ENGINE=InnoDB ;
 
 # Provide separate storage of commonly used headers

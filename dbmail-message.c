@@ -1,5 +1,5 @@
 /*
-  $Id: dbmail-message.c 2174 2006-06-16 12:14:23Z paul $
+  $Id: dbmail-message.c 2177 2006-06-17 07:22:47Z aaron $
 
   Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
 
@@ -486,7 +486,7 @@ GList * dbmail_message_get_header_addresses(struct DbmailMessage *message, const
 			__FILE__, __func__, field_name, field_value);
 	
 	if ((ialist = internet_address_parse_string(field_value)) == NULL) {
-		trace(TRACE_ERROR, "%s,%s: mail address parser error parsing header field",
+		trace(TRACE_MESSAGE, "%s,%s: mail address parser error parsing header field",
 			__FILE__, __func__);
 		return NULL;
 	}
@@ -686,10 +686,8 @@ struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t
 	}
 	
 	if ((!self) || (! self->content)) {
-		trace(TRACE_ERROR, 
-				"%s,%s: retrieval failed for physid [%llu]", 
-				__FILE__, __func__, dbmail_message_get_physid(self)
-				);
+		trace(TRACE_ERROR, "%s,%s: retrieval failed for physid [%llu]", 
+			__FILE__, __func__, dbmail_message_get_physid(self));
 		return NULL;
 	}
 
@@ -715,15 +713,14 @@ int dbmail_message_store(struct DbmailMessage *self)
 	
 	switch (auth_user_exists(DBMAIL_DELIVERY_USERNAME, &user_idnr)) {
 	case -1:
-		trace(TRACE_ERROR,
-		      "%s,%s: unable to find user_idnr for user " "[%s]\n",
+		trace(TRACE_ERROR, "%s,%s: unable to find user_idnr for user [%s]",
 		      __FILE__, __func__, DBMAIL_DELIVERY_USERNAME);
 		return -1;
 		break;
 	case 0:
 		trace(TRACE_ERROR,
 		      "%s,%s: unable to find user_idnr for user "
-		      "[%s]. Make sure this system user is in the database!\n",
+		      "[%s]. Make sure this system user is in the database!",
 		      __FILE__, __func__, DBMAIL_DELIVERY_USERNAME);
 		return -1;
 		break;
@@ -1116,7 +1113,7 @@ void dbmail_message_cache_subjectfield(const struct DbmailMessage *self)
 	
 	value = (char *)dbmail_message_get_header(self,"Subject");
 	if (! value) {
-		trace(TRACE_WARNING,"%s,%s: no subject field value [%llu]",
+		trace(TRACE_MESSAGE,"%s,%s: no subject field value [%llu]",
 				__FILE__, __func__, self->physid);
 		return;
 	}
@@ -1146,7 +1143,7 @@ void dbmail_message_cache_referencesfield(const struct DbmailMessage *self)
 	refs = g_mime_references_decode(field);
 	
 	if (! refs) {
-		trace(TRACE_WARNING, "%s,%s: reference_decode failed [%llu]",
+		trace(TRACE_MESSAGE, "%s,%s: reference_decode failed [%llu]",
 				__FILE__, __func__, self->physid);
 		return;
 	}
