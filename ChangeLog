@@ -1,10 +1,14 @@
-<<<<<<< .mine
 2006-06-17  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-mailbox.c:
 	add string escaping to query constructors in search code
 
-=======
+2006-06-16  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail.h, check_dbmail_message.c, dbmail-message.c, 
+	  dbmail-message.h, imapcommands.c:
+	avoid duplicate insertion of headername/headervalue pairs (bug #282)
+
 2006-06-14  Aaron Stone  <aaron@serendipity.cx>
 
 	* contrib/dbmail-removeversion.patch, contrib/dbmail.spec,
@@ -15,16 +19,6 @@
 	foreign keys from the header cache tables.
 	* dbmail-message.c:
 	Downgraded some minor errors to TRACE_MESSAGE level.
-
->>>>>>> .r2177
-2006-06-16  Paul J Stevens <paul@nfg.nl>
-
-	* check_dbmail.h, check_dbmail_message.c, dbmail-message.c, 
-	  dbmail-message.h, imapcommands.c:
-	avoid duplicate insertion of headername/headervalue pairs (bug #282)
-
-2006-06-14  Aaron Stone  <aaron@serendipity.cx>
-
 	* pipe.c, modules/sortsieve.c:
 	Get the Delivered-To header for a from address for redirect. Don't use
 	To as a backup for redirect or reply because it's untrustworthy. Use

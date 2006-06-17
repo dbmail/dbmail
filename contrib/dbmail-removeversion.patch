@@ -1,0 +1,34 @@
+--- lmtp.c.org	2005-09-07 19:42:13.000000000 +0200
++++ lmtp.c	2005-09-07 19:42:44.000000000 +0200
+@@ -167,7 +167,7 @@
+ 	if (ci->tx) {
+ 		/* sending greeting */
+ 		ci_write(ci->tx,
+-			"220 %s DBMail LMTP service ready to rock\r\n",
++			"220 %s LMTP server ready\r\n",
+ 			myhostname);
+ 		fflush(ci->tx);
+ 	} else {
+--- pop3.c.org	2005-09-07 19:42:26.000000000 +0200
++++ pop3.c	2005-09-07 19:43:13.000000000 +0200
+@@ -157,7 +157,7 @@
+ 	if (ci->tx) {
+ 		/* sending greeting */
+ 		ci_write(ci->tx,
+-			"+OK DBMAIL pop3 server ready to rock %s\r\n",
++			"+OK pop3 server ready %s\r\n",
+ 			session.apop_stamp);
+ 		fflush(ci->tx);
+ 	} else {
+--- imap4.c.org	2005-09-07 19:39:27.000000000 +0200
++++ imap4.c	2005-09-07 19:42:54.000000000 +0200
+@@ -157,8 +157,7 @@
+ 
+ 	/* greet user */
+ 	if (ci_write(ci->tx,
+-		     "* OK dbmail imap (protocol version 4r1) server %s "
+-		     "ready to run\r\n", IMAP_SERVER_VERSION)) {
++		     "* OK imap server ready\r\n")) {
+ 		ci_cleanup(ci);
+ 		return EOF;
+ 	}
