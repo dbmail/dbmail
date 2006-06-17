@@ -3,6 +3,11 @@
 	* contrib/dbmail-removeversion.patch, contrib/dbmail.spec,
 	contrib/startup-scripts/redhat/:
 	RedHat-style RPM spec and init scripts contributed by J. Simonetti.
+	* sql/mysql/migrate_from_2.0_to_2.1.mysql:
+	The dbmail_physmessage table must be InnoDB in order to be a target of
+	foreign keys from the header cache tables.
+	* dbmail-message.c:
+	Downgraded some minor errors to TRACE_MESSAGE level.
 
 2006-06-16  Paul J Stevens <paul@nfg.nl>
 
