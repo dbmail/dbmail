@@ -428,20 +428,25 @@ GList * g_list_append_printf(GList * list, char * format, ...)
 
 char * dm_stresc(const char * from)
 {
-	char *to;
-	size_t len;
-
 	assert(from);
-	len = strlen(from);
+	return dm_strnesc(from, strlen(from));
+}
 
-	// Neither call needs to be checked
-	// for safety of its return values.
+/*
+ * return newly allocated sql-escaped string with 
+ * a maximum length of len
+ */
+char * dm_strnesc(const char * from, size_t len)
+{
+	char *to;
+	assert(from);
+	len = min(strlen(from),len);
 	to = g_new0(char, (len + 1) * 2 + 1);
 	db_escape_string(to, from, len);
 
 	return to;
 }
-
+	
 /* 
  *
  * replace tabs with spaces and all multi-spaces with single spaces 

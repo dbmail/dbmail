@@ -900,6 +900,10 @@ static int _header_get_id(const struct DbmailMessage *self, const char *header, 
 	return 1;
 }
 
+#define CACHE_WIDTH_VALUE 255
+#define CACHE_WIDTH_FIELD 255
+#define CACHE_WIDTH_ADDR 100
+
 static gboolean _header_cache(const char UNUSED *key, const char *header, gpointer user_data)
 {
 	u64_t id;
@@ -922,7 +926,7 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 	for (i=0; i<values->len;i++) {
 		value = g_tuples_index(values,i,1);
 
-		if (! (safe_value = dm_stresc(value))) {
+		if (! (safe_value = dm_strnesc(value,CACHE_WIDTH_VALUE))) {
 			g_tuples_destroy(values);
 			return TRUE;
 		}
@@ -950,53 +954,28 @@ static void insert_address_cache(u64_t physid, const char *field, InternetAddres
 	g_return_if_fail(ialist != NULL);
 
 	GString *q = g_string_new("");
-	gchar *safe_name;
-	gchar *safe_addr;
-	gchar *clean_name;
-	gchar *clean_addr;
+	gchar *name;
+	gchar *addr;
 
 	for (; ialist != NULL && ialist->address; ialist = ialist->next) {
 		
 		ia = ialist->address;
 		g_return_if_fail(ia != NULL);
 
-		/* address fields are truncated to 100 bytes */
-		if (! (clean_name = g_strdup(ia->name ? ia->name : "")))
-		        continue;
-		if (strlen(clean_name) > 100)
-		        clean_name[100] = '\0';
-		if (! (safe_name = dm_stresc(clean_name))) {
-		        g_free(clean_name);
-			continue;
-		}
-		if (! (clean_addr = g_strdup(ia->value.addr ? ia->value.addr : ""))) {
-		        g_free(clean_name);
-			g_free(safe_name);
-		        continue;
-		}
-		if (strlen(clean_addr) > 100)
-		        clean_addr[100] = '\0';
-		if (! (safe_addr = dm_stresc(clean_addr))) {
-			g_free(clean_name);
-			g_free(safe_name);
-			g_free(clean_addr);
-			continue;
-		}
-
+		/* address fields are truncated to column width */
+		name = dm_strnesc(ia->name ? ia->name : "", CACHE_WIDTH_ADDR);
+		addr = dm_strnesc(ia->value.addr ? ia->value.addr : "", CACHE_WIDTH_ADDR);
+		
 		g_string_printf(q, "INSERT INTO %s%sfield (physmessage_id, %sname, %saddr) "
 				"VALUES (%llu,'%s','%s')", DBPFX, field, field, field, 
-				physid, safe_name, safe_addr);
+				physid, name, addr);
 		
-		g_free(safe_name);
-		g_free(safe_addr);
-		g_free(clean_name);
-		g_free(clean_addr);
+		g_free(name);
+		g_free(addr);
 		
- 		//db_savepoint_transaction("p_address");
 		if (db_query(q->str)) {
-			trace(TRACE_WARNING, "%s,%s: insert %sfield failed [%s]",
+			trace(TRACE_ERROR, "%s,%s: insert %sfield failed [%s]",
 					__FILE__, __func__, field, q->str);
- 			//db_rollback_savepoint_transaction("p_address");
 		}
 
 	}
@@ -1007,32 +986,23 @@ static void insert_address_cache(u64_t physid, const char *field, InternetAddres
 static void insert_field_cache(u64_t physid, const char *field, const char *value)
 {
 	GString *q;
-	gchar *safe_value;
 	gchar *clean_value;
 
+	g_return_if_fail(value != NULL);
+	
 	/* field values are truncated to 255 bytes */
-	if (! (clean_value = g_strdup(value)))
-	        return;
-	if (strlen(clean_value) > 255)
-	        clean_value[255] = '\0';
-	if (! (safe_value = dm_stresc(clean_value))) {
-		g_free(clean_value);	
-		return;
-	}
+	clean_value = dm_strnesc(value,CACHE_WIDTH_FIELD);
 
 	q = g_string_new("");
 
 	g_string_printf(q, "INSERT INTO %s%sfield (physmessage_id, %sfield) "
-			"VALUES (%llu,'%s')", DBPFX, field, field, physid, safe_value);
+			"VALUES (%llu,'%s')", DBPFX, field, field, physid, clean_value);
 
-	g_free(safe_value);
 	g_free(clean_value);
 
-	//db_savepoint_transaction("p_field");
 	if (db_query(q->str)) {
-		trace(TRACE_WARNING, "%s,%s: insert %sfield failed [%s]",
+		trace(TRACE_ERROR, "%s,%s: insert %sfield failed [%s]",
 				__FILE__, __func__, field, q->str);
-		//db_rollback_savepoint_transaction("p_field");
 	}
 	g_string_free(q,TRUE);
 }
