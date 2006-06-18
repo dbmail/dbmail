@@ -1358,6 +1358,7 @@ int db_user_create(const char *username, const char *password, const char *encty
 int db_user_find_create(u64_t user_idnr);
 int db_user_delete(const char * username);
 int db_user_rename(u64_t user_idnr, const char *new_name); 
+int db_user_log_login(u64_t user_idnr);
 
 int db_change_mailboxsize(u64_t user_idnr, u64_t new_size);
 
