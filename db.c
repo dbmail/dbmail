@@ -4617,3 +4617,24 @@ int db_replycache_validate(const char *to, const char *from,
 	return DM_SUCCESS;			
 }
 
+int db_user_log_login(u64_t user_idnr)
+{
+	/* log login in the dbase */
+	int result;
+	timestring_t timestring;
+
+	create_current_timestring(&timestring);
+	snprintf(query, DEF_QUERYSIZE,
+		 "UPDATE %susers SET last_login = '%s' "
+		 "WHERE user_idnr = '%llu'",DBPFX, timestring,
+		 user_idnr);
+
+	if ((result = db_query(query)) == DM_EQUERY)
+		trace(TRACE_ERROR, "%s,%s: could not update user login time",
+		      __FILE__, __func__);
+		
+	db_free_result();
+
+	return result;
+	
+}

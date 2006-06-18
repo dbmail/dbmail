@@ -1,3 +1,12 @@
+2006-06-18  Paul J Stevens <paul@nfg.nl>
+
+	* db.c, db.h, modules/authldap.c, modules/authsql.c:
+	rebind after authentication in ldap (bug #367). Added
+	db.c,db_user_log_login to add logging of last login in ldap as well
+	* check_dbmail_deliver.c, dbmail-message.c, misc.c, misc.h:
+	added misc.c,dm_strnesc which provides correct trunctation of sql-escaped
+	strings
+
 2006-06-17  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-mailbox.c:

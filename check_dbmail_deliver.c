@@ -656,6 +656,31 @@ START_TEST(test_dm_stresc)
 }
 END_TEST
 
+START_TEST(test_dm_strnesc)
+{
+	char *to;
+	to = dm_strnesc("testtest",8);
+	fail_unless(strcmp(to,"testtest")==0,"dm_strnesc failed 1");
+	g_free(to);
+	to = NULL;
+
+	to = dm_strnesc("test",4);
+	fail_unless(strcmp(to,"test")==0,"dm_strnesc failed 2");
+	g_free(to);
+	to = NULL;
+
+	to = dm_strnesc("test's",5);
+	fail_unless((strcmp(to,"test\\'")==0 || strcmp(to,"test''")==0),"dm_strnesc failed 3");
+	g_free(to);
+	to = NULL;
+
+	to = dm_strnesc("\n's's's",20);
+	fail_unless((strcmp(to,"\\n\\'s\\'s\\'s")==0 || strcmp(to,"\n''s''s''s")==0) ,"dm_strnesc failed 4");
+	g_free(to);
+	to = NULL;
+}
+END_TEST
+
 START_TEST(test_dm_valid_format)
 {
 	fail_unless(dm_valid_format("some-%s@foo.com")==0,"dm_valid_format");
@@ -1003,6 +1028,7 @@ Suite *dbmail_deliver_suite(void)
 	suite_add_tcase(s, tc_misc);
 	tcase_add_checked_fixture(tc_misc, setup, teardown);
 	tcase_add_test(tc_misc, test_dm_stresc);
+	tcase_add_test(tc_misc, test_dm_strnesc);
 	tcase_add_test(tc_misc, test_dm_valid_format);
 	tcase_add_test(tc_misc, test_g_list_join);
 	tcase_add_test(tc_misc, test_g_string_split);

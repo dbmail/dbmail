@@ -123,6 +123,32 @@ static void __auth_get_config(void)
 	beenhere++;
 }
 
+static int auth_ldap_bind(void)
+{
+	trace(TRACE_DEBUG, "%s,%s: binding to ldap server as [%s] / [xxxxxxxx]",
+			__FILE__,__func__, 
+			_ldap_cfg.bind_dn);
+	
+	/* 
+	 * TODO: support tls connects
+	 */
+	
+	if ((_ldap_err = ldap_bind_s(_ldap_conn, 
+					_ldap_cfg.bind_dn, 
+					_ldap_cfg.bind_pw, 
+					LDAP_AUTH_SIMPLE))) {
+		trace(TRACE_ERROR, "%s,%s: ldap_bind_s failed: %s",
+				__FILE__,__func__, 
+				ldap_err2string(_ldap_err));
+		return -1;
+	}
+	trace(TRACE_DEBUG, "%s,%s: successfully bound to ldap server",
+			__FILE__,__func__);
+
+	return 0;
+
+}
+
 /*
  * auth_connect()
  *
@@ -166,29 +192,7 @@ int auth_connect(void)
 
 	ldap_set_option(_ldap_conn, LDAP_OPT_PROTOCOL_VERSION, &version);
 
-	
-	trace(TRACE_DEBUG, "%s,%s: binding to ldap server as [%s] / [xxxxxxxx]",
-			__FILE__,__func__, 
-			_ldap_cfg.bind_dn);
-	
-	/* 
-	 * TODO: support tls connects
-	 */
-
-	
-	if ((_ldap_err = ldap_bind_s(_ldap_conn, 
-					_ldap_cfg.bind_dn, 
-					_ldap_cfg.bind_pw, 
-					LDAP_AUTH_SIMPLE))) {
-		trace(TRACE_ERROR, "%s,%s: ldap_bind_s failed: %s",
-				__FILE__,__func__, 
-				ldap_err2string(_ldap_err));
-		return -1;
-	}
-	trace(TRACE_DEBUG, "%s,%s: successfully bound to ldap server",
-			__FILE__,__func__);
-
-	return 0;
+	return auth_ldap_bind();	
 }
 
 int auth_disconnect(void)
@@ -1360,7 +1364,10 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 		   trace(TRACE_ERROR, "%s,%s: could not update user login time",__FILE__,__func__);
 		 */
 	}
-
+	
+	/* rebind as admin */
+	auth_ldap_bind();
+	
 	if (ldap_dn)
 		ldap_memfree(ldap_dn);
 

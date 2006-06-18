@@ -383,7 +383,6 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 {
 	const char *query_result;
 	int is_validated = 0;
-	timestring_t timestring;
 	char salt[13];
 	char cryptres[35];
 	char real_username[DM_USERNAME_LEN];
@@ -399,7 +398,6 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 		return 0;
 	}
 
-	create_current_timestring(&timestring);
 
 	/* the shared mailbox user should not log in! */
 	if (strcmp(username, SHARED_MAILBOX_USERNAME) == 0)
@@ -492,15 +490,7 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 	}
 
 	if (is_validated) {
-		/* log login in the dbase */
-		snprintf(__auth_query_data, AUTH_QUERY_SIZE,
-			 "UPDATE %susers SET last_login = '%s' "
-			 "WHERE user_idnr = '%llu'",DBPFX, timestring,
-			 *user_idnr);
-
-		if (__auth_query(__auth_query_data) == -1)
-			trace(TRACE_ERROR, "%s,%s: could not update user login time",
-			      __FILE__, __func__);
+		db_user_log_login(*user_idnr);
 	} else {
 		*user_idnr = 0;
 	}
@@ -516,9 +506,6 @@ u64_t auth_md5_validate(clientinfo_t *ci UNUSED, char *username,
 	unsigned char *md5_apop_we;
 	u64_t user_idnr;
 	const char *query_result;
-	timestring_t timestring;
-
-	create_current_timestring(&timestring);
 
 	/* lookup the user_idnr */
 	if (auth_user_exists(username, &user_idnr) == DM_EQUERY)
@@ -574,18 +561,7 @@ u64_t auth_md5_validate(clientinfo_t *ci UNUSED, char *username,
 		dm_free(md5_apop_we);
 		dm_free(checkstring);
 
-		/* log login in the dbase */
-		snprintf(__auth_query_data, AUTH_QUERY_SIZE,
-			 "UPDATE %susers SET last_login = '%s' "
-			 "WHERE user_idnr = '%llu'",DBPFX, timestring,
-			 user_idnr);
-
-		if (__auth_query(__auth_query_data) == -1)
-			trace(TRACE_ERROR,
-			      "%s,%s: could not update user login time",
-			      __FILE__, __func__);
-
-		db_free_result();
+		db_user_log_login(user_idnr);
 		return user_idnr;
 	}
 
