@@ -99,12 +99,12 @@ AC_ARG_WITH(pgsql,
                           Uses pg_config for finding includes and libraries],
             pgsqlheadername="$withval")
 AC_ARG_WITH(sqlite,
-	    [  --with-sqlite           use SQLite as database. 
+	    [  --with-sqlite           use SQLite3 as database. 
                           Uses pkg-config for finding includes and libraries],
             sqliteheadername="$withval")
 
 WARN=0
-# Make sure we only select one of mysql, pgsql or sqlite
+# Make sure we only select one of mysql, pgsql or sqlite3
 if test "${mysqlheadername-x}" = "x"
 then
   if test "${pgsqlheadername-x}" = "x"
@@ -176,25 +176,15 @@ if test ! "${sqliteheadername-x}" = "x"
     then
         AC_MSG_ERROR([pkg-config executable not found. Make sure pkg-config is in your path])
     else
-	AC_MSG_CHECKING([SQLite headers])
-	SQLITEINC=`${sqliteconfig} --cflags sqlite --errors-to-stdout`
-	if test $? != 0
-	then
-		SQLITEINC=`${sqliteconfig} --cflags sqlite3 --errors-to-stdout`
-	fi
-	dnl Neither sqlite nor sqlite3 were found. Print the error from pkg-config.
+	AC_MSG_CHECKING([SQLite3 headers])
+	SQLITEINC=`${sqliteconfig} --cflags sqlite3 --errors-to-stdout`
 	if test $? != 0
 	then
         	AC_MSG_ERROR([$SQLITEINC])
 	fi
 	AC_MSG_RESULT([$SQLITEINC])
         AC_MSG_CHECKING([SQLite libraries])
-        SQLITELIB=`${sqliteconfig} --libs sqlite --errors-to-stdout`
-	if test $? != 0
-	then
-        	SQLITELIB=`${sqliteconfig} --libs sqlite3 --errors-to-stdout`
-	fi
-	dnl Neither sqlite nor sqlite3 were found. Print the error from pkg-config.
+        SQLITELIB=`${sqliteconfig} --libs sqlite3 --errors-to-stdout`
 	if test $? != 0
 	then
         	AC_MSG_ERROR([$SQLITEINC])

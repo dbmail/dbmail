@@ -25,7 +25,7 @@
 
 #include "dbmail.h"
 #include <regex.h>
-#include <sqlite.h>
+#include <sqlite3.h>
 
 db_param_t _db_params;
 
@@ -66,7 +66,7 @@ const char * db_get_sql(sql_fragment_t frag)
 	return NULL;
 }
 
-static sqlite *conn;
+static sqlite3 *conn;
 
 struct qtmp {
 	char **resp;
@@ -76,7 +76,7 @@ struct qtmp {
 struct qtmp *lastq = 0, *saveq = 0, *tempq = 0;
 
 
-static void dbsqlite_current_timestamp(sqlite_func *f, int argc UNUSED, const char **argv UNUSED)
+static void dbsqlite_current_timestamp(sqlite3_context *f, int argc UNUSED, const sqlite3_value **argv UNUSED)
 {
 	char timestr[21];
 	struct tm tm;
@@ -85,25 +85,25 @@ static void dbsqlite_current_timestamp(sqlite_func *f, int argc UNUSED, const ch
 	time(&now);
 	localtime_r(&now, &tm);
 	strftime(timestr, sizeof(timestr)-1, "%Y-%m-%d %H:%M:%S", &tm);
-	(void)sqlite_set_result_string(f,timestr,-1);
+	(void)sqlite3_result_text(f,timestr,-1,SQLITE_TRANSIENT);
 }
 
-static void dbsqlite_current_timestamp_unix(sqlite_func *f, int argc UNUSED,  const char **argv UNUSED)
+static void dbsqlite_current_timestamp_unix(sqlite3_context *f, int argc UNUSED,  const sqlite3_value **argv UNUSED)
 {
 	char buf[63];
 	sprintf(buf, "%ld", time(NULL)); /* assumes time() is signed int */
-	(void)sqlite_set_result_string(f,buf,-1);
+	(void)sqlite3_result_text(f,buf,-1,SQLITE_TRANSIENT);
 }
 
-static void dbsqlite_regexp(sqlite_func *f, int argc, const char **argv)
+static void dbsqlite_regexp(sqlite3_context *f, int argc, const char **argv)
 {
 	int res = 0;
 	regex_t re;
 	char *pattern, *string;
 
 	if (argc == 2) {
-		pattern = argv[0];
-		string = argv[1];
+		pattern = (char *)argv[0];
+		string = (char *)argv[1];
 
 		if (regcomp(&re, pattern, REG_NOSUB) == 0) {
 			if (regexec(&re, string, 0, NULL, 0) == 0) {
@@ -113,37 +113,33 @@ static void dbsqlite_regexp(sqlite_func *f, int argc, const char **argv)
 		}
 	}
 
-	(void)sqlite_set_result_int(f, res);
+	(void)sqlite3_result_int(f, res);
 }
 
 int db_connect()
 {
-	char *errmsg;
-	if (!(conn = sqlite_open(_db_params.db, 0600, &errmsg))) {
+	int result;
+	if ((result = sqlite3_open(_db_params.db, &conn)) != SQLITE_OK) {
 		trace(TRACE_ERROR,
-		      "%si,%s: sqlite_open failed: %s",
-		      __FILE__, __func__, errmsg);
-		sqlite_freemem(errmsg);
+		      "%si,%s: sqlite3_open failed: %s",
+		      __FILE__, __func__, sqlite3_errmsg(conn));
+		sqlite3_close(conn);
 		return -1;
 	}
-	if (sqlite_create_function(conn, "CURRENT_TIMESTAMP", 0,
-				dbsqlite_current_timestamp, 0) != SQLITE_OK) {
-		sqlite_close(conn);
-		trace(TRACE_ERROR,
-		      "%si,%s: sqlite_create_function failed",
+	if (sqlite3_create_function(conn, "CURRENT_TIMESTAMP", 0, SQLITE_ANY, NULL, (void *)dbsqlite_current_timestamp, NULL, NULL) != SQLITE_OK) {
+		sqlite3_close(conn);
+		trace(TRACE_ERROR, "%si,%s: sqlite3_create_function failed",
 		      __FILE__, __func__);
 		return -1;
 	}
-	if (sqlite_create_function(conn, "CURRENT_TIMESTAMP_UNIX", 0, 
-				dbsqlite_current_timestamp_unix, 0) != SQLITE_OK) {
-		sqlite_close(conn);
-		trace(TRACE_ERROR, "%s,%s: sqlite_create_function failed", __FILE__,__func__);
+	if (sqlite3_create_function(conn, "CURRENT_TIMESTAMP_UNIX", 0, SQLITE_ANY, NULL, (void *)dbsqlite_current_timestamp_unix, NULL, NULL) != SQLITE_OK) {
+		sqlite3_close(conn);
+		trace(TRACE_ERROR, "%s,%s: sqlite3_create_function failed", __FILE__,__func__);
 		return -1;
 	}
-	if (sqlite_create_function(conn, "REGEXP", 2, dbsqlite_regexp, 0) != SQLITE_OK || 
-		sqlite_function_type(conn, "REGEXP", SQLITE_NUMERIC) != SQLITE_OK) {
-		sqlite_close(conn);
-		trace(TRACE_ERROR, "%s,%s: sqlite_create_function failed", __FILE__,__func__);
+	if (sqlite3_create_function(conn, "REGEXP", 2, SQLITE_ANY, NULL, (void *)dbsqlite_regexp, NULL, NULL) != SQLITE_OK) {
+		sqlite3_close(conn);
+		trace(TRACE_ERROR, "%s,%s: sqlite3_create_function failed", __FILE__,__func__);
 		return -1;
 	}
 	return 0;
@@ -156,7 +152,7 @@ int db_check_connection()
 void db_free_result()
 {
 	if (lastq) {
-		if (lastq->resp) sqlite_free_table(lastq->resp);
+		if (lastq->resp) sqlite3_free_table(lastq->resp);
 		lastq->resp = 0;
 		lastq->rows = lastq->cols = 0;
 		free(lastq);
@@ -174,7 +170,7 @@ int db_disconnect()
 	db_use_msgbuf_result();
 	db_free_result();
 
-	sqlite_close(conn);
+	sqlite3_close(conn);
 	conn = 0;
 	return 0;
 }
@@ -196,7 +192,7 @@ const char *db_get_result(unsigned row, unsigned field)
 u64_t db_insert_result(const char *sequence_identifier UNUSED)
 {
 	if (!conn) return 0;
-	return (u64_t)sqlite_last_insert_rowid(conn);
+	return (u64_t)sqlite3_last_insert_rowid(conn);
 }
 
 int db_query(const char *the_query)
@@ -204,7 +200,7 @@ int db_query(const char *the_query)
 	char *errmsg;
 
 	if (lastq) {
-		if (lastq->resp) sqlite_free_table(lastq->resp);
+		if (lastq->resp) sqlite3_free_table(lastq->resp);
 	} else {
 		lastq = (struct qtmp *)malloc(sizeof(struct qtmp));
 		if (!lastq) {
@@ -214,17 +210,15 @@ int db_query(const char *the_query)
 			return -1;
 		}
 	}
-
-	trace(TRACE_ERROR, "%s", the_query);
-	if (sqlite_get_table(conn, the_query, &lastq->resp,
-			&lastq->rows, &lastq->cols, &errmsg) != SQLITE_OK) {
+/*
+	if (sqlite3_get_table(conn, the_query, &lastq->resp, (int *)&lastq->rows, (int *)&lastq->cols, &errmsg) != SQLITE_OK) {
 		trace(TRACE_ERROR,
-		      "%si,%s: sqlite_exec failed: %s",
+		      "%si,%s: sqlite3_exec failed: %s",
 		      __FILE__, __func__, errmsg);
-		sqlite_freemem(errmsg);
+		sqlite3_free(errmsg);
 		return -1;
 	}
-
+*/
 	return 0;
 }
 unsigned long db_escape_string(char *to, const char *from, unsigned long length)
@@ -249,7 +243,7 @@ int db_do_cleanup(const char **tables UNUSED, int num_tables UNUSED)
 {
 	char *errmsg;
 	if (!conn) return -1;
-	if (sqlite_exec(conn, "VACUUM", NULL, NULL, &errmsg) != SQLITE_OK) {
+	if (sqlite3_exec(conn, "VACUUM", NULL, NULL, &errmsg) != SQLITE_OK) {
 		trace(TRACE_ERROR,
 		      "%s,%s: error vacuuming database: %s",
 		      __FILE__, __func__, errmsg);
@@ -265,7 +259,7 @@ u64_t db_get_length(unsigned row, unsigned field)
 u64_t db_get_affected_rows()
 {
 	if (!conn) return 0;
-	return (u64_t)sqlite_changes(conn);
+	return (u64_t)sqlite3_changes(conn);
 }
 
 void db_use_msgbuf_result()

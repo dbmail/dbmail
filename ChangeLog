@@ -1,3 +1,12 @@
+2006-06-20  Paul J Stevens <paul@nfg.nl>
+
+	* sql/sqlite/create_tables.sqlite:
+	finished create_tables.sqlite
+	* debian/control:
+	relax build-deps on debhelper version a little
+	* acinclude.m4, modules/dbsqlite.c:
+	shift to sqlite3 api
+
 2006-06-18  Paul J Stevens <paul@nfg.nl>
 
 	* db.c, db.h, modules/authldap.c, modules/authsql.c:
