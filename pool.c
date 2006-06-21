@@ -453,7 +453,8 @@ void manage_stop_children()
 			chpid = scoreboard->child[i].pid;
 			if (chpid > 0) {
 				kill(chpid, SIGKILL);;
-				scoreboard_release(chpid);
+				if (waitpid(chpid, NULL, WNOHANG | WUNTRACED) == chpid)
+					scoreboard_release(chpid);
 			}
 		}
 	}

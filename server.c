@@ -275,7 +275,7 @@ void ParentSigHandler(int sig, siginfo_t * info, void *data)
 	case SIGCHLD:
 		/* ignore, wait for child in main loop */
 		/* but we need to catch zombie */
-		if ((chpid = waitpid(-1,&sig,WNOHANG)) > 0) 
+		while((chpid = waitpid(-1,&sig,WNOHANG)) > 0) 
 			scoreboard_release(chpid);
 		break;		
 
