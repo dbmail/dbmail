@@ -1,3 +1,8 @@
+2006-06-21  Paul J Stevens <paul@nfg.nl>
+
+	* modules/authldap.c, modules/dbsqlite.c, sql/sqlite/create_tables.sqlite:
+	sqlite now passes all the unit-tests (with some help from Geo)
+
 2006-06-20  Paul J Stevens <paul@nfg.nl>
 
 	* sql/sqlite/create_tables.sqlite:
