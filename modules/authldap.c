@@ -69,8 +69,6 @@ static void __auth_get_config(void)
 	if (beenhere)
 		return;
 	
-	SetTraceLevel("LDAP");
-
 	GETCONFIGVALUE("BIND_DN",		"LDAP", _ldap_cfg.bind_dn);
 	GETCONFIGVALUE("BIND_PW",		"LDAP", _ldap_cfg.bind_pw);
 	GETCONFIGVALUE("BASE_DN",		"LDAP", _ldap_cfg.base_dn);
