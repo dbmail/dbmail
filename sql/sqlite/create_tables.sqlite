@@ -15,7 +15,7 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program; if not, write to the Free Software
 -- Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
--- $Id: create_tables.sqlite 2183 2006-06-20 07:46:03Z paul $
+-- $Id: create_tables.sqlite 2184 2006-06-21 07:50:17Z paul $
 
 BEGIN TRANSACTION;
 
