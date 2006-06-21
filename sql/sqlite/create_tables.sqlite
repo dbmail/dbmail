@@ -19,6 +19,8 @@
 
 BEGIN TRANSACTION;
 
+PRAGMA auto_vacuum = 1;
+
 CREATE TABLE dbmail_aliases (
    alias_idnr INTEGER PRIMARY KEY,
    alias TEXT NOT NULL,
@@ -144,7 +146,7 @@ CREATE TRIGGER fk_update1_subscription_mailbox_id
 CREATE TRIGGER fk_update2_subscription_mailbox_id
 	AFTER UPDATE ON dbmail_mailboxes
 	FOR EACH ROW BEGIN
-		UPDATE dbmail_subscription SET mailbox_id = new.mailbox_idnr WHERE mailbox_idnr = OLD.mailbox_idnr;
+		UPDATE dbmail_subscription SET mailbox_id = new.mailbox_idnr WHERE mailbox_id = OLD.mailbox_idnr;
 	END;
 CREATE TRIGGER fk_delete_subscription_mailbox_id
 	BEFORE DELETE ON dbmail_mailboxes
@@ -191,7 +193,7 @@ CREATE TRIGGER fk_update1_acl_user_id
 CREATE TRIGGER fk_update2_acl_user_id
 	AFTER UPDATE ON dbmail_users
 	FOR EACH ROW BEGIN
-		UPDATE dbmail_acl SET user_id = new.user_idnr WHERE user_idnr = OLD.user_idnr;
+		UPDATE dbmail_acl SET user_id = new.user_idnr WHERE user_id = OLD.user_idnr;
 	END;
 CREATE TRIGGER fk_delete_acl_user_id
 	BEFORE DELETE ON dbmail_users
@@ -220,7 +222,7 @@ CREATE TRIGGER fk_update1_acl_mailbox_id
 CREATE TRIGGER fk_update2_acl_mailbox_id
 	AFTER UPDATE ON dbmail_mailboxes
 	FOR EACH ROW BEGIN
-		UPDATE dbmail_acl SET mailbox_id = new.mailbox_idnr WHERE mailbox_idnr = OLD.mailbox_idnr;
+		UPDATE dbmail_acl SET mailbox_id = new.mailbox_idnr WHERE mailbox_id = OLD.mailbox_idnr;
 	END;
 CREATE TRIGGER fk_delete_acl_mailbox_id
 	BEFORE DELETE ON dbmail_mailboxes
@@ -280,7 +282,7 @@ CREATE TRIGGER fk_update1_messages_physmessage_id
 CREATE TRIGGER fk_update2_messages_physmessage_id
 	AFTER UPDATE ON dbmail_physmessage
 	FOR EACH ROW BEGIN
-		UPDATE dbmail_messages SET physmessage_id = new.id WHERE id = OLD.id;
+		UPDATE dbmail_messages SET physmessage_id = new.id WHERE physmessage_id = OLD.id;
 	END;
 CREATE TRIGGER fk_delete_message_physmessage_id
 	BEFORE DELETE ON dbmail_physmessage
@@ -351,7 +353,7 @@ CREATE TRIGGER fk_update1_messageblks_physmessage_id
 CREATE TRIGGER fk_update2_messageblks_physmessage_id
 	AFTER UPDATE ON dbmail_physmessage
 	FOR EACH ROW BEGIN
-		UPDATE dbmail_messageblks SET physmessage_id = new.id WHERE id = OLD.id;
+		UPDATE dbmail_messageblks SET physmessage_id = new.id WHERE physmessage_id = OLD.id;
 	END;
 CREATE TRIGGER fk_delete_messageblks_physmessage_id
 	BEFORE DELETE ON dbmail_physmessage
@@ -435,7 +437,7 @@ CREATE TRIGGER fk_update1_sievescripts_owner_idnr
 CREATE TRIGGER fk_update2_sievescripts_owner_idnr
 	AFTER UPDATE ON dbmail_users
 	FOR EACH ROW BEGIN
-		UPDATE dbmail_sievescripts SET owner_idnr = new.user_idnr WHERE user_idnr = OLD.user_idnr;
+		UPDATE dbmail_sievescripts SET owner_idnr = new.user_idnr WHERE owner_idnr = OLD.user_idnr;
 	END;
 CREATE TRIGGER fk_delete_sievescripts_owner_idnr
 	BEFORE DELETE ON dbmail_users
@@ -523,7 +525,7 @@ CREATE TRIGGER fk_update1_headervalue_physmessage_id
 CREATE TRIGGER fk_update2_headervalue_physmessage_id
 	AFTER UPDATE ON dbmail_physmessage
 	FOR EACH ROW BEGIN
-		UPDATE dbmail_headervalue SET physmessage_id = new.id WHERE id = OLD.id;
+		UPDATE dbmail_headervalue SET physmessage_id = new.id WHERE physmessage_id = OLD.id;
 	END;
 CREATE TRIGGER fk_delete_headervalue_physmessage_id
 	BEFORE DELETE ON dbmail_physmessage
@@ -577,7 +579,7 @@ CREATE TRIGGER fk_update1_subjectfield_physmessage_id
 CREATE TRIGGER fk_update2_subjectfield_physmessage_id
 	AFTER UPDATE ON dbmail_physmessage
 	FOR EACH ROW BEGIN
-		UPDATE dbmail_subjectfield SET physmessage_id = new.id WHERE id = OLD.id;
+		UPDATE dbmail_subjectfield SET physmessage_id = new.id WHERE physmessage_id = OLD.id;
 	END;
 CREATE TRIGGER fk_delete_subjectfield_physmessage_id
 	BEFORE DELETE ON dbmail_physmessage
@@ -618,7 +620,7 @@ CREATE TRIGGER fk_update1_datefield_physmessage_id
 CREATE TRIGGER fk_update2_datefield_physmessage_id
 	AFTER UPDATE ON dbmail_physmessage
 	FOR EACH ROW BEGIN
-		UPDATE dbmail_datefield SET physmessage_id = new.id WHERE id = OLD.id;
+		UPDATE dbmail_datefield SET physmessage_id = new.id WHERE physmessage_id = OLD.id;
 	END;
 CREATE TRIGGER fk_delete_datefield_physmessage_id
 	BEFORE DELETE ON dbmail_physmessage
@@ -658,7 +660,7 @@ CREATE TRIGGER fk_update1_referencesfield_physmessage_id
 CREATE TRIGGER fk_update2_referencesfield_physmessage_id
 	AFTER UPDATE ON dbmail_physmessage
 	FOR EACH ROW BEGIN
-		UPDATE dbmail_referencesfield SET physmessage_id = new.id WHERE id = OLD.id;
+		UPDATE dbmail_referencesfield SET physmessage_id = new.id WHERE physmessage_id = OLD.id;
 	END;
 CREATE TRIGGER fk_delete_referencesfield_physmessage_id
 	BEFORE DELETE ON dbmail_physmessage
@@ -705,7 +707,7 @@ CREATE TRIGGER fk_update1_fromfield_physmessage_id
 CREATE TRIGGER fk_update2_fromfield_physmessage_id
 	AFTER UPDATE ON dbmail_physmessage
 	FOR EACH ROW BEGIN
-		UPDATE dbmail_fromfield SET physmessage_id = new.id WHERE id = OLD.id;
+		UPDATE dbmail_fromfield SET physmessage_id = new.id WHERE physmessage_id = OLD.id;
 	END;
 CREATE TRIGGER fk_delete_fromfield_physmessage_id
 	BEFORE DELETE ON dbmail_physmessage
@@ -747,7 +749,7 @@ CREATE TRIGGER fk_update1_tofield_physmessage_id
 CREATE TRIGGER fk_update2_tofield_physmessage_id
 	AFTER UPDATE ON dbmail_physmessage
 	FOR EACH ROW BEGIN
-		UPDATE dbmail_tofield SET physmessage_id = new.id WHERE id = OLD.id;
+		UPDATE dbmail_tofield SET physmessage_id = new.id WHERE physmessage_id = OLD.id;
 	END;
 CREATE TRIGGER fk_delete_tofield_physmessage_id
 	BEFORE DELETE ON dbmail_physmessage
@@ -789,7 +791,7 @@ CREATE TRIGGER fk_update1_replytofield_physmessage_id
 CREATE TRIGGER fk_update2_replytofield_physmessage_id
 	AFTER UPDATE ON dbmail_physmessage
 	FOR EACH ROW BEGIN
-		UPDATE dbmail_replytofield SET physmessage_id = new.id WHERE id = OLD.id;
+		UPDATE dbmail_replytofield SET physmessage_id = new.id WHERE physmessage_id = OLD.id;
 	END;
 CREATE TRIGGER fk_delete_replytofield_physmessage_id
 	BEFORE DELETE ON dbmail_physmessage
@@ -832,7 +834,7 @@ CREATE TRIGGER fk_update1_ccfield_physmessage_id
 CREATE TRIGGER fk_update2_ccfield_physmessage_id
 	AFTER UPDATE ON dbmail_physmessage
 	FOR EACH ROW BEGIN
-		UPDATE dbmail_ccfield SET physmessage_id = new.id WHERE id = OLD.id;
+		UPDATE dbmail_ccfield SET physmessage_id = new.id WHERE physmessage_id = OLD.id;
 	END;
 CREATE TRIGGER fk_delete_ccfield_physmessage_id
 	BEFORE DELETE ON dbmail_physmessage
