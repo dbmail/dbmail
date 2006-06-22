@@ -15,7 +15,7 @@ ALTER TABLE dbmail_physmessage ENGINE=InnoDB;
 
 # Ensure that we can store 8-bit data without truncation.
 # This query can also take quite a few minutes.
-ALTER TABLE dbmail_messageblks MODIFY messageblk LONGBLOB;
+ALTER TABLE dbmail_messageblks MODIFY messageblk LONGBLOB NOT NULL;
 
 
 ALTER TABLE dbmail_auto_replies ADD start_date DATETIME NOT NULL;
