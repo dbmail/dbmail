@@ -267,8 +267,6 @@ void ParentSigHandler(int sig, siginfo_t * info, void *data)
 	/* this call is for a child but it's handler is not yet installed */
 	if (ParentPID != getpid())
 		active_child_sig_handler(sig, info, data); 
-	
-	//trace(TRACE_DEBUG,"%s,%s: %s", __FILE__, __func__, strsignal(sig));
 
 	switch (sig) {
  
