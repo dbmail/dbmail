@@ -1081,17 +1081,11 @@ int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...)
 	ln = g_strdup_vprintf(message,ap);
 	va_end(ap);
 
-        if (! ln) {
+        if (! ln)
                 return -1;
-	}
 	
         gchar *re = g_new0(gchar, maxlen+1);
 	
-	if (! re) {
-		g_free(ln);
-		return -1;
-	}
-
         if ((result = snprintf(re,maxlen,"%s",ln))<0) {
 		g_free(re);
 		g_free(ln);
@@ -1246,19 +1240,14 @@ int dbmail_imap_session_prompt(struct ImapSession * self, char * prompt, char * 
 	char *buf, *prompt64, *promptcat;
 	int buflen;
 	
-	if (! (buf = g_new0(char, MAX_LINESIZE))) {
-		trace(TRACE_ERROR, "%s,%s: oom failure", __FILE__, __func__);
-		return -1;
-	}
+	g_return_val_if_fail(prompt != NULL, -1);
+	
+	buf = g_new0(char, MAX_LINESIZE);
 			
 	/* base64 encoding increases string length by about 40%. */
-	if (! (prompt64 = g_new0(char, strlen(prompt) * 2))) {
-		trace(TRACE_ERROR, "%s,%s: oom failure", __FILE__, __func__);
-		dm_free(buf);
-		return -1;
-	}
+	prompt64 = g_new0(char, strlen(prompt) * 2);
 
-	promptcat = g_strconcat(prompt, "\r\n", NULL);
+	promptcat = g_strdup_printf("%s\r\n", prompt);
 	base64_encode(prompt64, promptcat, strlen(promptcat));
 
 	dbmail_imap_session_printf(self, "+ %s\r\n", prompt64);
