@@ -1,3 +1,18 @@
+2006-06-24  Paul J Stevens <paul@nfg.nl>
+
+	* pool.c, server.c:
+	accepted patch from ryo (closes: #370)
+	* pool.c:
+	revert previous failed fix on reap_child
+	* dm_imaputil.c:
+	try to fix broken gmime parsing of some addresses
+	* imapcommands.c:
+	minor cleanup in _ic_authenticate
+	* dbmail-imapsession.c:
+	remove redundant error checking on g_new0 calls
+	* modules/authldap.c, server.c:
+	misc cleanups
+
 2006-06-21  Paul J Stevens <paul@nfg.nl>
 
 	* modules/authldap.c, modules/dbsqlite.c, sql/sqlite/create_tables.sqlite:
