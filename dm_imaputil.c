@@ -489,6 +489,7 @@ static GList * _imap_append_alist_as_plist(GList *list, const InternetAddressLis
 	gchar *s = NULL, *st = NULL;
 	gchar **tokens;
 	gchar *name;
+	gchar *mailbox;
 
 	if (ialist==NULL)
 		return g_list_append_printf(list, "NIL");
@@ -500,7 +501,7 @@ static GList * _imap_append_alist_as_plist(GList *list, const InternetAddressLis
 		g_return_val_if_fail(ia!=NULL, list);
 
 		/* personal name */
-		if (ia->name) {
+		if (ia->name && ia->value.addr) {
 			name = g_mime_utils_header_encode_phrase((unsigned char *)ia->name);
 			s = dbmail_imap_astring_as_string(name);
 			t = g_list_append_printf(t, "%s", s);
@@ -513,11 +514,11 @@ static GList * _imap_append_alist_as_plist(GList *list, const InternetAddressLis
 		t = g_list_append_printf(t, "NIL");
 
 		/* mailbox name */
-		if (ia->value.addr) {
+		if ((mailbox = ia->value.addr ? ia->value.addr : ia->name) != NULL) {
 			/* defensive mode for 'To: "foo@bar.org"' addresses */
-			g_strstrip(g_strdelimit(ia->value.addr,"\"",' '));
+			g_strstrip(g_strdelimit(mailbox,"\"",' '));
 			
-			tokens = g_strsplit(ia->value.addr,"@",2);
+			tokens = g_strsplit(mailbox,"@",2);
 
 			if (tokens[0])
 				t = g_list_append_printf(t, "\"%s\"", tokens[0]);

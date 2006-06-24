@@ -164,8 +164,8 @@ int _ic_login(struct ImapSession *self)
 int _ic_authenticate(struct ImapSession *self)
 {
 	int result;
-	char *username = g_new0(char,MAX_LINESIZE);
-	char *password = g_new0(char,MAX_LINESIZE);
+	char *username;
+	char *password;
 
 	timestring_t timestring;
 	
@@ -183,24 +183,35 @@ int _ic_authenticate(struct ImapSession *self)
 	}
 
 	/* ask for username (base64 encoded) */
+	username = g_new0(char,MAX_LINESIZE);
 	if (dbmail_imap_session_prompt(self,"username", username)) {
 		dbmail_imap_session_printf(self, "* BYE error reading username\r\n");
+		g_free(username);
 		return -1;
 	}
 	/* ask for password */
+	password = g_new0(char,MAX_LINESIZE);
 	if (dbmail_imap_session_prompt(self,"password", password)) {
 		dbmail_imap_session_printf(self, "* BYE error reading password\r\n");
+		g_free(username);
+		g_free(password);
 		return -1;
 	}
 
 	/* try to validate user */
-	if ((result = dbmail_imap_session_handle_auth(self,username,password)))
+	if ((result = dbmail_imap_session_handle_auth(self,username,password))) {
+		g_free(username);
+		g_free(password);
 		return result;
+	}
 
 	if (imap_before_smtp)
 		db_log_ip(self->ci->ip_src);
 
 	dbmail_imap_session_printf(self, "%s OK AUTHENTICATE completed\r\n", self->tag);
+	
+	g_free(username);
+	g_free(password);
 	return 0;
 }
 

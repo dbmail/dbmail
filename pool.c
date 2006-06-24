@@ -453,7 +453,8 @@ void manage_stop_children()
 			chpid = scoreboard->child[i].pid;
 			if (chpid > 0) {
 				kill(chpid, SIGKILL);;
-				scoreboard_release(chpid);
+				if (waitpid(chpid, NULL, WNOHANG | WUNTRACED) == chpid)
+					scoreboard_release(chpid);
 			}
 		}
 	}
@@ -461,18 +462,25 @@ void manage_stop_children()
 static pid_t reap_child()
 {
 	pid_t chpid=0;
+	int c = 0;
 	
 	if ((chpid = get_idle_spare()) < 0)
 		return chpid;
 
-	kill(chpid, SIGTERM);
-	
-	if (waitpid(chpid, NULL, WNOHANG | WUNTRACED) == chpid) 
+	if (kill(chpid, SIGTERM)) {
+		trace(TRACE_ERROR, "%s,%s: %s", __FILE__, __func__, strerror(errno));
+		return -1;
+	}
+		
+	/* FIXME: we have to make sure chpid really exits without blocking forever */
+	if (waitpid(chpid, NULL, 0 ) == chpid) {
 		scoreboard_release(chpid);
-
-	return chpid;
-	
+		return chpid;
+	}
+	trace(TRACE_DEBUG,"%s,%s: can't kill [%d]", __FILE__, __func__, chpid);
+	return -1;
 }
+
 void manage_spare_children()
 {
 	/* 
@@ -482,14 +490,15 @@ void manage_spare_children()
 	 */
 	pid_t chpid = 0;
 	int spares;
-	int children;
+	int current = 0, children;
 	
 	if (GeneralStopRequested)
 		return;
 	
 	/* scale up */
 	spares = count_spare_children();
-	children = count_children();
+	current = count_children();
+	children = current;
 	while (children < scoreboard->conf->startChildren || spares < scoreboard->conf->minSpareChildren) {
 		
 		if (children >= scoreboard->conf->maxChildren)
@@ -520,7 +529,7 @@ void manage_spare_children()
 	children = count_children();
 	
 	/* scoreboard */
-	if (chpid > 0) {
+	if (current != children) {
 		trace(TRACE_MESSAGE, "%s,%s: children [%d/%d], spares [%d (%d - %d)]",
 		      __FILE__,__func__,
 		      children, scoreboard->conf->maxChildren, spares,

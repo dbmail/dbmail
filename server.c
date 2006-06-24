@@ -267,15 +267,13 @@ void ParentSigHandler(int sig, siginfo_t * info, void *data)
 	/* this call is for a child but it's handler is not yet installed */
 	if (ParentPID != getpid())
 		active_child_sig_handler(sig, info, data); 
-	
-	//trace(TRACE_DEBUG,"%s,%s: %s", __FILE__, __func__, strsignal(sig));
 
 	switch (sig) {
  
 	case SIGCHLD:
 		/* ignore, wait for child in main loop */
 		/* but we need to catch zombie */
-		if ((chpid = waitpid(-1,&sig,WNOHANG)) > 0) 
+		while((chpid = waitpid(-1,&sig,WNOHANG)) > 0) 
 			scoreboard_release(chpid);
 		break;		
 

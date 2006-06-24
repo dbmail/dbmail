@@ -62,6 +62,8 @@ _ldap_cfg_t _ldap_cfg;
 static GList * __auth_get_every_match(const char *q, char **retfields);
 
 static int dm_ldap_user_shadow_rename(u64_t user_idnr, const char *new_name);
+static int auth_reconnect(void);
+static int auth_search(const gchar *query);
 
 static void __auth_get_config(void)
 {
@@ -203,33 +205,41 @@ int auth_disconnect(void)
 	return 0;
 }
 
-/*
- * Aaron once wrote: 
- * 
- * At the top of each function, rebind to the server
- *
- * Someday, this will be smart enough to know if the
- * connection has a problem, and only then will it
- * do the unbind->init->bind dance.
- *
- * For now, we are lazy and resource intensive! Why?
- * Because we leave the connection open to lag to death
- * at the end of each function. It's a trade off, really.
- * We could always close it at the end, but then we'd
- * never be able to recycle a connection for a flurry of
- * calls. OTOH, if the calls are always far between, we'd
- * rather just be connected strictly as needed...
- *
- * Paul now sez: I'm not doing it that way anymore now. Lets 
- * just call auth_connect because performance will suck
- * otherwise. 
- * 
- */
-int auth_reconnect(void);
-int auth_reconnect(void)
+static int auth_search(const gchar *query)
 {
-	//auth_disconnect();
+	int c=0;
+
+	g_return_val_if_fail(query!=NULL, DM_EQUERY);
 	
+	while (c++ < 5) {
+		trace(TRACE_DEBUG, "%s,%s: [%s]",__FILE__,__func__, query);
+		_ldap_err = ldap_search_s(_ldap_conn, _ldap_cfg.base_dn, _ldap_cfg.scope_int, 
+				query, _ldap_attrs, _ldap_attrsonly, &_ldap_res);
+		
+		if (! _ldap_err)
+			return 0;
+		
+		switch (_ldap_err) {
+			case LDAP_SERVER_DOWN:
+				trace(TRACE_ERROR, "%s,%s: %s", __FILE__, __func__, ldap_err2string(_ldap_err));
+				if (auth_reconnect())
+					sleep(2); // reconnect failed. wait before trying again
+				break;
+			default:
+				trace(TRACE_ERROR, "%s,%s: %s", __FILE__, __func__, ldap_err2string(_ldap_err));
+				return _ldap_err;
+				break;
+		}
+	}
+	
+	trace(TRACE_FATAL,"%s,%s: unrecoverable error while talking to ldap server", __FILE__, __func__);
+	return -1;
+}
+
+
+static int auth_reconnect(void)
+{
+	auth_disconnect();
 	return auth_connect();
 }
 
@@ -382,22 +392,12 @@ static char * dm_ldap_user_getdn(u64_t user_idnr)
 			__FILE__,__func__, 
 			t->str);
 	
-	_ldap_err = ldap_search_s(_ldap_conn, 
-			_ldap_cfg.base_dn, 
-			_ldap_cfg.scope_int, 
-			t->str,
-			_ldap_attrs, 
-			_ldap_attrsonly, 
-			&_ldap_res);
 	
-	if (_ldap_err) {
-		trace(TRACE_ERROR, "%s,%s: could not execute query: %s",
-				__FILE__,__func__,
-				ldap_err2string(_ldap_err));
+	if (auth_search(t->str)) {
 		g_string_free(t,TRUE);
 		return NULL;
 	}
-
+		
 	if (ldap_count_entries(_ldap_conn, _ldap_res) < 1) {
 		trace(TRACE_DEBUG, "%s,%s: no entries found",__FILE__,__func__);
 		g_string_free(t,TRUE);
@@ -450,8 +450,6 @@ static int dm_ldap_mod_field(u64_t user_idnr, const char *fieldname, const char 
 		return -1;
 	}
 		
-	auth_reconnect();
-
 	if (! (_ldap_dn = dm_ldap_user_getdn(user_idnr)))
 		return -1;
 
@@ -525,52 +523,32 @@ static int dm_ldap_mod_field(u64_t user_idnr, const char *fieldname, const char 
 /* returns the number of matches found */
 static GList * __auth_get_every_match(const char *q, char **retfields)
 {
-	LDAPMessage *ldap_res;
 	LDAPMessage *ldap_msg;
 	int ldap_err;
-	int ldap_attrsonly = 0;
+	char **ldap_vals = NULL;
 	char *dn;
-	char **ldap_vals;
-	char **ldap_attrs = NULL;
-	char ldap_query[AUTH_QUERY_SIZE];
 	int j = 0, k = 0, m = 0;
 	GList *attlist,*fldlist,*entlist;
 	
 	attlist = fldlist = entlist = NULL;
 
-	if (!q) {
-		trace(TRACE_ERROR, "%s,%s: got NULL query",__FILE__,__func__);
+	if (auth_search(q))
 		return NULL;
-	}
 
-	auth_reconnect();
-
-	snprintf(ldap_query, AUTH_QUERY_SIZE, "%s", q);
-	trace(TRACE_DEBUG, "%s,%s: search with query [%s]",__FILE__,__func__, ldap_query);
-	
-	if ((ldap_err = ldap_search_s(_ldap_conn, _ldap_cfg.base_dn, _ldap_cfg.scope_int, 
-			ldap_query, ldap_attrs, ldap_attrsonly, &ldap_res))) {
-		trace(TRACE_ERROR, "%s,%s: query failed: %s",__FILE__,__func__,
-		      ldap_err2string(ldap_err));
-		if (ldap_res)
-			ldap_msgfree(ldap_res);
-		return NULL;
-	}
-
-	if ((j = ldap_count_entries(_ldap_conn, ldap_res)) < 1) {
+	if ((j = ldap_count_entries(_ldap_conn, _ldap_res)) < 1) {
 		trace(TRACE_DEBUG, "%s,%s: nothing found",__FILE__,__func__);
-		if (ldap_res)
-			ldap_msgfree(ldap_res);
+		if (_ldap_res)
+			ldap_msgfree(_ldap_res);
 		return NULL;
 	}
 
 	/* do the first entry here */
-	if ((ldap_msg = ldap_first_entry(_ldap_conn, ldap_res)) == NULL) {
+	if ((ldap_msg = ldap_first_entry(_ldap_conn, _ldap_res)) == NULL) {
 		ldap_get_option(_ldap_conn, LDAP_OPT_ERROR_NUMBER, &_ldap_err);
 		trace(TRACE_ERROR, "%s,%s: ldap_first_entry failed: [%s]",__FILE__,__func__,
 		      ldap_err2string(_ldap_err));
-		if (ldap_res)
-			ldap_msgfree(ldap_res);
+		if (_ldap_res)
+			ldap_msgfree(_ldap_res);
 		return NULL;
 	}
 
@@ -588,7 +566,6 @@ static GList * __auth_get_every_match(const char *q, char **retfields)
 						__FILE__,__func__, 
 						retfields[k], 
 						ldap_err2string(ldap_err));
-		//		attlist = g_list_append(attlist, g_strdup(""));
 			} else {
 				m = 0;
 				while (ldap_vals[m]) { 
@@ -612,8 +589,8 @@ static GList * __auth_get_every_match(const char *q, char **retfields)
 		ldap_msg = ldap_next_entry(_ldap_conn, ldap_msg);
 	}
 
-	if (ldap_res)
-		ldap_msgfree(ldap_res);
+	if (_ldap_res)
+		ldap_msgfree(_ldap_res);
 	if (ldap_msg)
 		ldap_msgfree(ldap_msg);
 
@@ -622,49 +599,25 @@ static GList * __auth_get_every_match(const char *q, char **retfields)
 
 static char *__auth_get_first_match(const char *q, char **retfields)
 {
-	LDAPMessage *ldap_res;
 	LDAPMessage *ldap_msg;
-	int ldap_err;
-	int ldap_attrsonly = 0;
 	char *returnid = NULL;
 	char *ldap_dn = NULL;
 	char **ldap_vals = NULL;
-	char **ldap_attrs = NULL;
-	char ldap_query[AUTH_QUERY_SIZE];
 	int k = 0;
 
-	if (!q) {
-		trace(TRACE_ERROR,
-		      "%s,%s: got NULL query",__FILE__,__func__);
-		return returnid;
-	}
-
-	auth_reconnect();
-
-	snprintf(ldap_query, AUTH_QUERY_SIZE, "%s", q);
-	trace(TRACE_DEBUG, "%s,%s: searching with query [%s]",__FILE__,__func__, ldap_query);
-	ldap_err = ldap_search_s(_ldap_conn, _ldap_cfg.base_dn,
-			  _ldap_cfg.scope_int, ldap_query, ldap_attrs,
-			  ldap_attrsonly, &ldap_res);
-	if (ldap_err) {
-		trace(TRACE_ERROR,
-		      "%s,%s: could not execute query: %s",__FILE__,__func__,
-		      ldap_err2string(ldap_err));
-		goto endfree;
-	}
-
-	if (ldap_count_entries(_ldap_conn, ldap_res) < 1) {
+	if (auth_search(q))
+		return NULL;
+	
+	if (ldap_count_entries(_ldap_conn, _ldap_res) < 1) {
 		trace(TRACE_DEBUG, "%s,%s: none found",__FILE__,__func__);
 		goto endfree;
 	}
 
-	ldap_msg = ldap_first_entry(_ldap_conn, ldap_res);
+	ldap_msg = ldap_first_entry(_ldap_conn, _ldap_res);
 	if (ldap_msg == NULL) {
-		ldap_get_option(_ldap_conn, LDAP_OPT_ERROR_NUMBER,
-				&ldap_err);
-		trace(TRACE_ERROR,
-		      "%s,%s: ldap_first_entry failed: %s",__FILE__,__func__,
-		      ldap_err2string(ldap_err));
+		ldap_get_option(_ldap_conn, LDAP_OPT_ERROR_NUMBER, &_ldap_err);
+		trace(TRACE_ERROR, "%s,%s: ldap_first_entry failed: %s",__FILE__,__func__,
+		      ldap_err2string(_ldap_err));
 		goto endfree;
 	}
 	
@@ -687,8 +640,8 @@ static char *__auth_get_first_match(const char *q, char **retfields)
 		ldap_memfree(ldap_dn);
 	if (ldap_vals)
 		ldap_value_free(ldap_vals);
-	if (!((LDAPMessage *) 0 == ldap_res))
-		ldap_msgfree(ldap_res);
+	if (_ldap_res)
+		ldap_msgfree(_ldap_res);
 
 	trace(TRACE_DEBUG,"%s,%s: returnid [%s]", __FILE__,__func__,returnid);
 	return returnid;
@@ -1019,7 +972,6 @@ int auth_adduser(const char *username, const char *password,
 	
 	assert(user_idnr != NULL);
 	*user_idnr = 0;
-	auth_reconnect();
 
 	/* Construct the array of LDAPMod structures representing the attributes */ 
 	if (! (_ldap_mod = (LDAPMod **) dm_malloc((NUM_MODS + 1) * sizeof(LDAPMod *)))) {
@@ -1118,30 +1070,17 @@ int auth_adduser(const char *username, const char *password,
 
 int auth_delete_user(const char *username)
 {
-	auth_reconnect();
-
 	/* look up who's got that username, get their dn, and delete it! */
 	if (!username) {
-		trace(TRACE_ERROR,
-		      "%s,%s: got NULL as useridnr",__FILE__,__func__);
+		trace(TRACE_ERROR, "%s,%s: got NULL as useridnr",__FILE__,__func__);
 		return 0;
 	}
 
-	snprintf(_ldap_query, AUTH_QUERY_SIZE, "(%s=%s)",
-		 _ldap_cfg.field_uid, username);
-	trace(TRACE_DEBUG, "%s,%s: searching with query [%s]",__FILE__,__func__,
-	      _ldap_query);
-	_ldap_err =
-	    ldap_search_s(_ldap_conn, _ldap_cfg.base_dn,
-			  _ldap_cfg.scope_int, _ldap_query, _ldap_attrs,
-			  _ldap_attrsonly, &_ldap_res);
-	if (_ldap_err) {
-		trace(TRACE_ERROR,
-		      "%s,%s: could not execute query: %s",__FILE__,__func__,
-		      ldap_err2string(_ldap_err));
-		return -1;
-	}
+	snprintf(_ldap_query, AUTH_QUERY_SIZE, "(%s=%s)", _ldap_cfg.field_uid, username);
 
+	if (auth_search(_ldap_query))
+		return -1;
+	
 	if (ldap_count_entries(_ldap_conn, _ldap_res) < 1) {
 		trace(TRACE_DEBUG, "%s,%s: no entries found",__FILE__,__func__);
 		ldap_msgfree(_ldap_res);
@@ -1150,11 +1089,9 @@ int auth_delete_user(const char *username)
 
 	_ldap_msg = ldap_first_entry(_ldap_conn, _ldap_res);
 	if (_ldap_msg == NULL) {
-		ldap_get_option(_ldap_conn, LDAP_OPT_ERROR_NUMBER,
-				&_ldap_err);
-		trace(TRACE_ERROR,
-		      "%s,%s: ldap_first_entry failed: %s",__FILE__,__func__,
-		      ldap_err2string(_ldap_err));
+		ldap_get_option(_ldap_conn, LDAP_OPT_ERROR_NUMBER, &_ldap_err);
+		trace(TRACE_ERROR, "%s,%s: ldap_first_entry failed: %s",
+				__FILE__,__func__, ldap_err2string(_ldap_err));
 		ldap_msgfree(_ldap_res);
 		return -1;
 	}
@@ -1210,8 +1147,6 @@ int auth_change_username(u64_t user_idnr, const char *new_name)
 {
 	GString *newrdn;
 	
-	auth_reconnect();
-
 	if (!user_idnr) {
 		trace(TRACE_ERROR, "%s,%s: got NULL as useridnr",
 				__FILE__,__func__);
@@ -1610,9 +1545,6 @@ static int forward_create(const char *alias, const char *deliver_to)
 	
 	GString *t=g_string_new("");
 	
-	auth_reconnect();
-
-
 	g_string_printf(t,"%s=%s,%s", _ldap_cfg.cn_string, alias, _ldap_cfg.base_dn);
 	_ldap_dn=g_strdup(t->str);
 	g_string_free(t,TRUE);
@@ -1681,8 +1613,6 @@ static int forward_add(const char *alias,const char *deliver_to)
 	modify[0] = &addForw;
 	modify[1] = NULL;
 			
-	auth_reconnect();
-	
 	trace(TRACE_DEBUG, "%s,%s: creating additional forward [%s] -> [%s]", __FILE__, __func__, alias, deliver_to);
 	
 	_ldap_err = ldap_modify_s(_ldap_conn, _ldap_dn, modify);
@@ -1720,8 +1650,6 @@ static int forward_delete(const char *alias, const char *deliver_to)
 	modify[0] = &delForw;
 	modify[1] = NULL;
 			
-	auth_reconnect();
-	
 	trace(TRACE_DEBUG, "%s,%s: delete additional forward [%s] -> [%s]", 
 			__FILE__, __func__, alias, deliver_to);
 	_ldap_err = ldap_modify_s(_ldap_conn, _ldap_dn, modify);
