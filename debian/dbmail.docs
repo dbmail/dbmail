@@ -1,7 +1,8 @@
 AUTHORS
-EXTRAS
-TODO
 THANKS
-
-
-
+INSTALL.exim
+INSTALL.postfix
+INSTALL.qmail
+README.aliases
+README.smtp
+README.usermap
