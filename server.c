@@ -135,7 +135,7 @@ int StartServer(serverConfig_t * conf)
 			
 		} else {
 			if (stopped) {
-				manage_restart_children();
+				manage_start_children();
 				stopped=0;
 			}
 			

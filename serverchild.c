@@ -94,14 +94,14 @@ void active_child_sig_handler(int sig, siginfo_t * info UNUSED, void *data UNUSE
 	case SIGTERM:
 	case SIGQUIT:
 	case SIGSTOP:
+		DelChildSigHandler();
+	 	ChildStopRequested = 1;
 		if (ChildStopRequested) {
 			client_close();
 			disconnect_all();
 			child_unregister();
 			exit(1);
 		}
-		DelChildSigHandler();
-	 	ChildStopRequested = 1;
 		break;
 
 	default:

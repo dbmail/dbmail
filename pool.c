@@ -28,6 +28,7 @@ extern ChildInfo_t childinfo;
 static State_t state_new(void); 
 static int set_lock(int type);
 static pid_t reap_child(void);
+
 /*
  *
  *
@@ -58,14 +59,16 @@ int set_lock(int type)
 	result = fcntl(sb_lockfd, F_SETLK, &lock);
 	if (result == -1) {
 		serr = errno;
-		trace(TRACE_DEBUG, "%s,%s: error: %s",
-				__FILE__, __func__, strerror(serr));
-		
-		/* TODO: this needs fixing */
 		switch (serr) {
+			case EACCES:
+			case EAGAIN:
 			case EDEADLK:
-				sleep(2);
+				usleep(10);
 				set_lock(type);
+				break;
+			default:
+				trace(TRACE_DEBUG, "%s,%s: error: %s",
+						__FILE__, __func__, strerror(serr));
 				break;
 		}
 		errno = serr;
@@ -159,6 +162,32 @@ void scoreboard_conf_check(void)
 	scoreboard_unlck();
 }
 
+static unsigned scoreboard_cleanup(void)
+{
+	unsigned count = 0;
+	int i, status = 0;
+	pid_t chpid = 0;
+	for (i = 0; i < scoreboard->conf->maxChildren; i++) {
+		
+		scoreboard_rdlck();
+		chpid = scoreboard->child[i].pid;
+		status = scoreboard->child[i].status;
+		scoreboard_unlck();
+		
+		if (chpid <= 0)
+			continue;
+		
+		count++;
+		
+		if (status == STATE_WAIT) {
+			if (waitpid(chpid, NULL, WNOHANG | WUNTRACED) == chpid)
+				scoreboard_release(chpid);			
+		}
+	}
+	return count;
+}
+
+
 void scoreboard_release(pid_t pid)
 {
 	int key;
@@ -172,7 +201,7 @@ void scoreboard_release(pid_t pid)
 	scoreboard_unlck();
 	
 }
-void scoreboard_delete()
+void scoreboard_delete(void)
 {
 	if (shmdt((const void *)scoreboard) == -1)
 		trace(TRACE_FATAL,
@@ -191,7 +220,21 @@ void scoreboard_delete()
 	
 	return;
 }
-int count_spare_children()
+
+static void scoreboard_state(void)
+{
+	unsigned children = count_children();
+	unsigned spares = count_spare_children();
+	/* scoreboard */
+	trace(TRACE_MESSAGE, "%s,%s: children [%d/%d], spares [%d (%d - %d)]",
+	      __FILE__,__func__,
+	      children, scoreboard->conf->maxChildren, spares,
+	      scoreboard->conf->minSpareChildren,
+	      scoreboard->conf->maxSpareChildren);
+}
+
+
+int count_spare_children(void)
 {
 	int i, count;
 	count = 0;
@@ -206,7 +249,7 @@ int count_spare_children()
 	return count;
 }
 
-int count_children()
+int count_children(void)
 {
 	int i, count;
 	count = 0;
@@ -221,7 +264,7 @@ int count_children()
 	return count;
 }
 
-pid_t get_idle_spare()
+pid_t get_idle_spare(void)
 {
 	int i;
 	pid_t idlepid = (pid_t) -1;
@@ -263,18 +306,19 @@ int getKey(pid_t pid)
  *
  */
 
-int child_register()
+int child_register(void)
 {
 	int i;
-	trace(TRACE_MESSAGE, "%s,%s: register child [%d]",
-	      __FILE__, __func__, 
-	      getpid());
+	pid_t chpid = getpid();
 	
-	scoreboard_wrlck();
+	trace(TRACE_MESSAGE, "%s,%s: register child [%d]",
+	      __FILE__, __func__, chpid);
+	
+	scoreboard_rdlck();
 	for (i = 0; i < scoreboard->conf->maxChildren; i++) {
 		if (scoreboard->child[i].pid == -1)
 			break;
-		if (scoreboard->child[i].pid == getpid()) {
+		if (scoreboard->child[i].pid == chpid) {
 			trace(TRACE_ERROR,
 			      "%s,%s: child already registered.",
 			      __FILE__, __func__);
@@ -282,24 +326,26 @@ int child_register()
 			return -1;
 		}
 	}
+	scoreboard_unlck();
+	
 	if (i == scoreboard->conf->maxChildren) {
 		trace(TRACE_WARNING,
 		      "%s,%s: no empty slot found",
 		      __FILE__, __func__);
-		scoreboard_unlck();
 		return -1;
 	}
 	
-	scoreboard->child[i].pid = getpid();
+	scoreboard_wrlck();
+	scoreboard->child[i].pid = chpid;
 	scoreboard->child[i].status = STATE_IDLE;
 	scoreboard_unlck();
 
 	trace(TRACE_INFO, "%s,%s: initializing child_state [%d] using slot [%d]",
-		__FILE__, __func__, getpid(), i);
+		__FILE__, __func__, chpid, i);
 	return 0;
 }
 
-void child_reg_connected()
+void child_reg_connected(void)
 {
 	int key;
 	pid_t pid;
@@ -313,12 +359,9 @@ void child_reg_connected()
 	scoreboard_wrlck();
 	scoreboard->child[key].status = STATE_CONNECTED;
 	scoreboard_unlck();
-
-	trace(TRACE_DEBUG, "%s,%s: [%d]", __FILE__, __func__,
-			getpid());
 }
 
-void child_reg_disconnected()
+void child_reg_disconnected(void)
 {
 	int key;
 	pid_t pid;
@@ -332,12 +375,9 @@ void child_reg_disconnected()
 	scoreboard_wrlck();
 	scoreboard->child[key].status = STATE_IDLE;
 	scoreboard_unlck();
-
-	trace(TRACE_DEBUG, "%s,%s: [%d]", __FILE__, __func__,
-		getpid());
 }
 
-void child_unregister()
+void child_unregister(void)
 {
 	/*
 	 *
@@ -368,7 +408,7 @@ void child_unregister()
  *
  */
 
-void manage_start_children()
+void manage_start_children(void)
 {
 	/* 
 	 *
@@ -377,172 +417,121 @@ void manage_start_children()
 	 */
 	int i;
 	for (i = 0; i < scoreboard->conf->startChildren; i++) {
-		if (CreateChild(&childinfo) == -1) {
-			manage_stop_children();
-			trace(TRACE_FATAL,
-			      "%s,%s: could not create children. Fatal.",
-			      __FILE__, __func__);
-			exit(0);
-		}
-	}
-}
-void manage_restart_children() { 
-	/* restart active children */
-	int i;
-	pid_t chpid;
-	for (i=0; i< scoreboard->conf->maxChildren; i++) {
-		chpid=scoreboard->child[i].pid;
-		if (chpid == -1)
+		if (CreateChild(&childinfo) > -1)
 			continue;
-		if (waitpid(chpid, NULL, WNOHANG|WUNTRACED) == chpid) {
-			trace(TRACE_MESSAGE,"%s,%s: child [%d] exited. Restarting...",
-				__FILE__, __func__, chpid);
-			scoreboard_release(chpid);			
-			if (CreateChild(&childinfo)== -1) {
-				GeneralStopRequested=1;
-				manage_stop_children();
-				exit(1);
-			}
-		}
+		manage_stop_children();
+		trace(TRACE_FATAL, "%s,%s: could not create children.",
+		      __FILE__, __func__);
+		exit(0);
 	}
-	sleep(1);
 }
 
-void manage_stop_children()
+void manage_stop_children(void)
 {
 	/* 
 	 *
 	 * cleanup all remaining forked processes
 	 *
 	 */
-	int stillSomeAlive = 1;
+	int alive = 0;
 	int i, cnt = 0;
 	pid_t chpid;
 	
 	trace(TRACE_MESSAGE, "%s,%s: General stop requested. Killing children.. ",
 			__FILE__,__func__);
 
-	while (stillSomeAlive && cnt < 10) {
-		stillSomeAlive = 0;
-		cnt++;
-
-		for (i = 0; i < scoreboard->conf->maxChildren; i++) {
-			chpid = scoreboard->child[i].pid;
-			if (chpid <= 0)
-				continue;
-
-			if (waitpid(chpid, NULL, WNOHANG | WUNTRACED) == chpid) {
-				scoreboard_release(chpid);			
-			} else {
-				stillSomeAlive = 1;
-				if (cnt==1) /* no use killing the dead */
-					kill(chpid, SIGTERM);
-
-				usleep(1000);
-			}
-		}
-		sleep(cnt);
+	for (i=0; i < scoreboard->conf->maxChildren; i++) {
+		scoreboard_rdlck();
+		chpid = scoreboard->child[i].pid;
+		scoreboard_unlck();
+		
+		if (chpid < 0)
+			continue;
+		if (kill(chpid, SIGTERM))
+			trace(TRACE_ERROR, "%s,%s: %s", __FILE__, __func__, strerror(errno));
 	}
-
-	if (stillSomeAlive) {
-		trace(TRACE_INFO,
-		      "%s,%s: not all children terminated at SIGTERM, killing hard now",
-		      __FILE__,__func__);
+	
+	alive = scoreboard_cleanup();
+	while (alive > 0 && cnt++ < 10) {
+		alive = scoreboard_cleanup();
+		sleep(1);
+	}
+	
+	if (alive) {
+		trace(TRACE_INFO, "%s,%s: [%d] children alive after SIGTERM, sending SIGKILL",
+		      __FILE__,__func__, alive);
 
 		for (i = 0; i < scoreboard->conf->maxChildren; i++) {
+			scoreboard_rdlck();
 			chpid = scoreboard->child[i].pid;
-			if (chpid > 0) {
-				kill(chpid, SIGKILL);;
-				if (waitpid(chpid, NULL, WNOHANG | WUNTRACED) == chpid)
-					scoreboard_release(chpid);
-			}
+			scoreboard_unlck();
+			
+			if (chpid < 0)
+				continue;
+			kill(chpid, SIGKILL);;
+			if (waitpid(chpid, NULL, WNOHANG | WUNTRACED) == chpid)
+				scoreboard_release(chpid);
 		}
 	}
 }
-static pid_t reap_child()
+
+static pid_t reap_child(void)
 {
 	pid_t chpid=0;
-	int c = 0;
-	
+
 	if ((chpid = get_idle_spare()) < 0)
-		return chpid;
+		return 0; // no idle children
 
 	if (kill(chpid, SIGTERM)) {
 		trace(TRACE_ERROR, "%s,%s: %s", __FILE__, __func__, strerror(errno));
 		return -1;
 	}
 		
-	/* FIXME: we have to make sure chpid really exits without blocking forever */
-	if (waitpid(chpid, NULL, 0 ) == chpid) {
-		scoreboard_release(chpid);
-		return chpid;
-	}
-	trace(TRACE_DEBUG,"%s,%s: can't kill [%d]", __FILE__, __func__, chpid);
-	return -1;
+	return 0;
 }
 
-void manage_spare_children()
+void manage_spare_children(void)
 {
 	/* 
 	 *
-	 * manage spare children while running
+	 * manage spare children while running. One child more/less for each run.
 	 *
 	 */
 	pid_t chpid = 0;
-	int spares;
-	int current = 0, children;
+	int spares, children;
+	int changes = 0;
+	int minchildren, maxchildren;
+	int minspares, maxspares;
 	
 	if (GeneralStopRequested)
 		return;
+
+	// cleanup
+	scoreboard_cleanup();
+
+	children = count_children();
+	spares = count_spare_children();
 	
 	/* scale up */
-	spares = count_spare_children();
-	current = count_children();
-	children = current;
-	while (children < scoreboard->conf->startChildren || spares < scoreboard->conf->minSpareChildren) {
-		
-		if (children >= scoreboard->conf->maxChildren)
-			break;
+	minchildren = scoreboard->conf->startChildren;
+	maxchildren = scoreboard->conf->maxChildren;
+	minspares = scoreboard->conf->minSpareChildren;
+	maxspares = scoreboard->conf->maxSpareChildren;
+
+	if ((children < minchildren || spares < minspares) && children < maxchildren)  {
 		if ((chpid = CreateChild(&childinfo)) < 0) 
-			break;
-		
-		children++;
-		spares++;
+			return;
+		changes++;
 	}
-
 	/* scale down */
-	spares = count_spare_children();
-	children = count_children();
-	while (children > scoreboard->conf->startChildren && spares > scoreboard->conf->maxSpareChildren) {
-		if ((chpid = reap_child()) > 0) {
-			children--;
-			spares--;
-		}
-		if (chpid < 0)
-			break;
-	}
-	
-	if ((! chpid) && children > scoreboard->conf->startChildren && spares > scoreboard->conf->minSpareChildren)
-		chpid = reap_child();
-	
-	spares = count_spare_children();
-	children = count_children();
-	
-	/* scoreboard */
-	if (current != children) {
-		trace(TRACE_MESSAGE, "%s,%s: children [%d/%d], spares [%d (%d - %d)]",
-		      __FILE__,__func__,
-		      children, scoreboard->conf->maxChildren, spares,
-		      scoreboard->conf->minSpareChildren,
-		      scoreboard->conf->maxSpareChildren);
+	else if (children > minchildren && spares > maxspares) {
+		reap_child();
+		changes++;
 	}
 
-	if (chpid < 0)
-		trace(TRACE_WARNING, "%s,%s: error scaling up/down", __FILE__, __func__);
-	
-	if (!children) {
-		trace(TRACE_WARNING, "%s,%s: no children left ?. Aborting.", __FILE__,__func__);
-		GeneralStopRequested = 1;
-	}
+	if (changes)
+		scoreboard_state();
+
+	children = count_children();
 }
 
