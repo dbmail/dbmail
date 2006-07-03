@@ -1,3 +1,13 @@
+2006-07-03  Paul J Stevens <paul@nfg.nl>
+
+	* debian/dbmail-ldap.docs, debian/dbmail-sieve.docs:
+	add more docs to debian packages
+	* debian/dbmail.docs:
+	update
+	* pool.c, server.c, serverchild.c:
+	rework the preforking code after doing some serious stress tests
+	(bug #361)
+
 2006-06-24  Paul J Stevens <paul@nfg.nl>
 
 	* pool.c, server.c:
