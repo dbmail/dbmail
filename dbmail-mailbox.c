@@ -836,7 +836,8 @@ static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u
 		g_return_val_if_fail(check_date(search_keys[*idx + 1]),-1);
 		value->type = IST_IDATE;
 		(*idx)++;
-		g_snprintf(value->search, MAX_SEARCH_LEN, "internal_date LIKE '%s%%'", date_imap2sql(search_keys[*idx]));
+		g_snprintf(value->search, MAX_SEARCH_LEN, "internal_date %s '%s%%'", 
+				db_get_sql(SQL_SENSITIVE_LIKE), date_imap2sql(search_keys[*idx]));
 		(*idx)++;
 		
 	} else if ( MATCH(key, "since") ) {
@@ -1081,12 +1082,13 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 			 "JOIN %sheadername n ON v.headername_id=n.id "
 			 "WHERE mailbox_idnr = %llu "
 			 "AND status IN ('%d','%d') "
-			 "AND headername = '%s' AND headervalue LIKE '%%%s%%' "
+			 "AND headername %s '%s' AND headervalue %s '%%%s%%' "
 			 "ORDER BY message_idnr", 
 			 DBPFX, DBPFX, DBPFX, DBPFX,
 			 dbmail_mailbox_get_id(self), 
 			 MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN, 
-			 s->hdrfld, s->search);
+			 db_get_sql(SQL_INSENSITIVE_LIKE), s->hdrfld, 
+			 db_get_sql(SQL_INSENSITIVE_LIKE), s->search);
 			break;
 
 		case IST_DATA_TEXT:
@@ -1095,12 +1097,12 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 			"JOIN %sheadervalue v on v.physmessage_id=p.id "
 			"WHERE mailbox_idnr=%llu "
 			"AND status IN ('%d','%d') "
-			"AND headervalue like '%%%s%%' "
+			"AND headervalue %s '%%%s%%' "
 			"ORDER BY message_idnr",
 			DBPFX, DBPFX, DBPFX, 
 			dbmail_mailbox_get_id(self),
 			MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
-			s->search);
+			db_get_sql(SQL_INSENSITIVE_LIKE), s->search);
 			break;
 			
 		case IST_IDATE:
