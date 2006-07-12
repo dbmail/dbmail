@@ -934,23 +934,15 @@ static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u
 	/* ignore the charset. Let the database handle this */
         } else if ( MATCH(key, "charset") )  {
                 (*idx)++;
- 
-        } else if ( MATCH(key, "utf-8") ) {
-                (*idx)++;
-  
-        } else if ( MATCH(key, "us-ascii") )  {
-                (*idx)++;
- 
-        } else if ( MATCH(key, "iso-8859-1") )  {
-                (*idx)++;
- 
+                (*idx)++; // FIXME: should we check for valid charset here?
 	} else {
 		/* unknown search key */
 		g_free(value);
 		return -1;
 	}
 	
-	append_search(self, value, 0);
+	if (value->type)
+		append_search(self, value, 0);
 
 	return 0;
 }
@@ -1170,9 +1162,11 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 static int _search_body(GMimeObject *object, search_key_t *sk)
 {
 	int i;
-	char *s;
+	size_t l = 0;
+	char *s = NULL, *n = NULL;
 	GString *t;
 	
+	/* get the body as a char */
 	s = g_mime_object_get_headers(object);
 	i = strlen(s);
 	g_free(s);
@@ -1182,17 +1176,20 @@ static int _search_body(GMimeObject *object, search_key_t *sk)
 	g_free(s);
 	
 	t = g_string_erase(t,0,i);
-	s = t->str;
-	g_string_free(t,FALSE);
+
+	/* convert the body and searchkey to lower case so we can use strstr */
+	l = t->len;
+	s = g_ascii_strdown(t->str,-1);
+	n = g_ascii_strdown(sk->search,-1);
+	
+	g_string_free(t,TRUE);
 
 	sk->match = 0;
-	for (i = 0; s[i]; i++) {
-		if (strncasecmp(&s[i], sk->search, strlen(sk->search)) == 0) {
-			sk->match = 1;
-			break;
-		}
-	}
+	if (g_strstr_len(s,l,n) != NULL)
+		sk->match = 1;
+
 	g_free(s);
+	g_free(n);
 
 	return sk->match;
 }
