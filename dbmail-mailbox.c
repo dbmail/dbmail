@@ -1058,7 +1058,7 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 		g_string_printf(q,"SELECT message_idnr FROM %smessages m "
 			"JOIN %sphysmessage p ON m.physmessage_id=p.id "
 			"JOIN %sdatefield d ON d.physmessage_id=p.id "
-			"WHERE mailbox_idnr= %llu AND status IN ('%d','%d') "
+			"WHERE mailbox_idnr= '%llu' AND status IN ('%d','%d') "
 			"AND %s "
 			"ORDER BY message_idnr", DBPFX, DBPFX, DBPFX,
 			dbmail_mailbox_get_id(self), 
@@ -1072,7 +1072,7 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 			 "JOIN %sphysmessage p ON m.physmessage_id=p.id "
 			 "JOIN %sheadervalue v ON v.physmessage_id=p.id "
 			 "JOIN %sheadername n ON v.headername_id=n.id "
-			 "WHERE mailbox_idnr = %llu "
+			 "WHERE mailbox_idnr = '%llu' "
 			 "AND status IN ('%d','%d') "
 			 "AND headername %s '%s' AND headervalue %s '%%%s%%' "
 			 "ORDER BY message_idnr", 
@@ -1087,7 +1087,7 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 		g_string_printf(q, "SELECT message_idnr FROM %smessages m "
 			"JOIN %sphysmessage p ON m.physmessage_id=p.id "
 			"JOIN %sheadervalue v on v.physmessage_id=p.id "
-			"WHERE mailbox_idnr=%llu "
+			"WHERE mailbox_idnr = '%llu' "
 			"AND status IN ('%d','%d') "
 			"AND headervalue %s '%%%s%%' "
 			"ORDER BY message_idnr",
@@ -1109,6 +1109,20 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 			 s->search);
 		break;
 		
+		case IST_DATA_BODY:
+		g_string_printf(q, "SELECT m.message_idnr,k.messageblk FROM %smessageblks k "
+			"JOIN %sphysmessage p ON k.physmessage_id = p.id "
+			"JOIN %smessages m ON p.id = m.physmessage_id "
+			"WHERE mailbox_idnr = '%llu' "
+			"AND status IN ('%d','%d' ) "
+			"AND k.is_header = '0' "
+			"HAVING k.messageblk %s '%%%s%%'",
+			DBPFX, DBPFX, DBPFX,
+			dbmail_mailbox_get_id(self),
+			MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
+			db_get_sql(SQL_INSENSITIVE_LIKE), s->search);
+		break;
+
 		default:
 		g_string_printf(q, "SELECT message_idnr FROM %smessages "
 			 "WHERE mailbox_idnr = '%llu' "
@@ -1158,7 +1172,9 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 
 	return s->found;
 }
-	
+
+#ifdef OLD
+
 static int _search_body(GMimeObject *object, search_key_t *sk)
 {
 	int i;
@@ -1256,6 +1272,7 @@ static int _exec_search(GMimeObject *object, search_key_t * sk)
 	if (GMIME_IS_MESSAGE(object)) g_object_unref(part);
 	return 0;
 }
+
 static GTree * mailbox_search_parsed(struct DbmailMailbox *self, search_key_t *s)
 {
 
@@ -1303,6 +1320,7 @@ static GTree * mailbox_search_parsed(struct DbmailMailbox *self, search_key_t *s
 	
 	return s->found;
 }
+#endif
 
 GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set)
 {
@@ -1454,13 +1472,14 @@ static gboolean _do_search(GNode *node, struct DbmailMailbox *self)
 		case IST_FLAG:
 		case IST_HDR:
 		case IST_DATA_TEXT:
+		case IST_DATA_BODY:
 			mailbox_search(self, s);
 			break;
-
+/*
 		case IST_DATA_BODY:
 			mailbox_search_parsed(self,s);
 			break;
-		
+*/		
 		case IST_SUBSEARCH_NOT:
 		case IST_SUBSEARCH_AND:
 		case IST_SUBSEARCH_OR:
