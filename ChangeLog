@@ -1,5 +1,7 @@
 2006-07-12  Paul J Stevens <paul@nfg.nl>
 
+	* dbmail-mailbox.c, dbmailtypes.h:
+	ignore charset in search; change bodysearch approach
 	* dbmail-mailbox.c:
 	make headersearches case insensitive
 
