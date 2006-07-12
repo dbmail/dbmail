@@ -1,5 +1,5 @@
 /*
- $Id: dbmailtypes.h 2161 2006-06-07 17:04:11Z aaron $
+ $Id: dbmailtypes.h 2194 2006-07-12 12:37:18Z paul $
 
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
