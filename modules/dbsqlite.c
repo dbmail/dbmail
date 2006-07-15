@@ -270,7 +270,6 @@ void db_free_result()
 		if (lastq->resp) sqlite3_free_table(lastq->resp);
 		lastq->resp = 0;
 		lastq->rows = lastq->cols = 0;
-		free(lastq);
 	}
 	lastq = 0;
 
