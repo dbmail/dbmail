@@ -1,3 +1,15 @@
+2006-07-15  Paul J Stevens <paul@nfg.nl>
+
+	* dm_imaputil.c, modules/dbsqlite.c:
+	minor cleanups
+	* check_dbmail_imapd.c, dm_imaputil.c:
+	skip double-quotes in rfc2047 encoded strings
+	* modules/dbsqlite.c:
+	remove redundant free call
+	* dbmail-mailbox.c, dbmailtypes.h, modules/dbmysql.c, modules/dbpgsql.c, 
+	  modules/dbsqlite.c:
+	encode messageblks while doing body search if necessary
+
 2006-07-12  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-mailbox.c:
