@@ -860,6 +860,10 @@ char * imap_cleanup_address(const char *a)
 		g_string_append_c(s,'"');
 		
 		while (*inptr && *inptr != ' ' && *inptr != '\t' && *inptr!='<') {
+			if (*inptr == '"') {
+				inptr++;
+				continue;
+			}
 			g_string_append_c(s,*inptr);
 			prev = *inptr;
 			inptr++;
