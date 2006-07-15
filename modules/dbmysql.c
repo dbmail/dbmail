@@ -58,6 +58,9 @@ const char * db_get_sql(sql_fragment_t frag)
 		case SQL_INSENSITIVE_LIKE:
 			return "LIKE";
 		break;
+		case SQL_ENCODE_ESCAPE:
+			return "%s";
+		break;
 	}
 	return NULL;
 }

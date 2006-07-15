@@ -39,6 +39,7 @@ extern int sqlite3utf8CharLen(const char *pData, int nByte);
 const char * db_get_sql(sql_fragment_t frag)
 {
 	switch(frag) {
+		case SQL_ENCODE_ESCAPE:
 		case SQL_TO_CHAR:
 			return "%s";
 		break;
@@ -270,7 +271,6 @@ void db_free_result()
 		if (lastq->resp) sqlite3_free_table(lastq->resp);
 		lastq->resp = 0;
 		lastq->rows = lastq->cols = 0;
-		free(lastq);
 	}
 	lastq = 0;
 
@@ -278,13 +278,6 @@ void db_free_result()
 int db_disconnect()
 {
 	db_free_result();
-
-	db_store_msgbuf_result();
-	db_free_result();
-
-	db_use_msgbuf_result();
-	db_free_result();
-
 	sqlite3_close(conn);
 	conn = 0;
 	return 0;
