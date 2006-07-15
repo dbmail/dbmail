@@ -157,7 +157,6 @@ int DelChildSigHandler()
 	sigaction(SIGQUIT,	&act, 0);
 	sigaction(SIGILL,	&act, 0);
 	sigaction(SIGBUS,	&act, 0);
-	//sigaction(SIGPIPE,	&act, 0);
 	sigaction(SIGFPE,	&act, 0);
 	sigaction(SIGSEGV,	&act, 0);
 	sigaction(SIGTERM,	&act, 0);

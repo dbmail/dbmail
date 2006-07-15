@@ -25,7 +25,7 @@ extern int GeneralStopRequested;
 extern ChildInfo_t childinfo;
 
 
-static State_t state_new(void); 
+static child_state_t state_new(void); 
 static int set_lock(int type);
 static pid_t reap_child(void);
 
@@ -37,9 +37,9 @@ static pid_t reap_child(void);
  *
  */
 
-State_t state_new(void)
+child_state_t state_new(void)
 {
-	State_t s;
+	child_state_t s;
 	s.pid = -1;
 	s.ctime = time(0);
 	s.status = STATE_NOOP;
@@ -164,6 +164,7 @@ void scoreboard_conf_check(void)
 
 static unsigned scoreboard_cleanup(void)
 {
+	/* return the number of children still registered as being alive */
 	unsigned count = 0;
 	int i, status = 0;
 	pid_t chpid = 0;
@@ -199,8 +200,8 @@ void scoreboard_release(pid_t pid)
 	scoreboard_wrlck();
 	scoreboard->child[key] = state_new();
 	scoreboard_unlck();
-	
 }
+
 void scoreboard_delete(void)
 {
 	if (shmdt((const void *)scoreboard) == -1)
