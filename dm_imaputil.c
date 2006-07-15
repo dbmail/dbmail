@@ -849,11 +849,13 @@ char * imap_cleanup_address(const char *a)
 	inptr = a;
 	prev = *a;
 	
+	// eat whitespace
 	while (*inptr && (*inptr == ' ' || *inptr == '\t')) {
 		g_string_append_c(s,*inptr);	
 		inptr++;
 	}
 	
+	// quote encoded string
 	if (*inptr == '=') {
 		g_string_append_c(s,'"');
 		

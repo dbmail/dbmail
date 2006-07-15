@@ -278,13 +278,6 @@ void db_free_result()
 int db_disconnect()
 {
 	db_free_result();
-
-	db_store_msgbuf_result();
-	db_free_result();
-
-	db_use_msgbuf_result();
-	db_free_result();
-
 	sqlite3_close(conn);
 	conn = 0;
 	return 0;
