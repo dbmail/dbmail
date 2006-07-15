@@ -39,6 +39,7 @@ extern int sqlite3utf8CharLen(const char *pData, int nByte);
 const char * db_get_sql(sql_fragment_t frag)
 {
 	switch(frag) {
+		case SQL_ENCODE_ESCAPE:
 		case SQL_TO_CHAR:
 			return "%s";
 		break;

@@ -1110,17 +1110,18 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 		break;
 		
 		case IST_DATA_BODY:
+		g_string_printf(t,db_get_sql(SQL_ENCODE_ESCAPE), "k.messageblk");
 		g_string_printf(q, "SELECT m.message_idnr,k.messageblk FROM %smessageblks k "
 			"JOIN %sphysmessage p ON k.physmessage_id = p.id "
 			"JOIN %smessages m ON p.id = m.physmessage_id "
 			"WHERE mailbox_idnr = '%llu' "
 			"AND status IN ('%d','%d' ) "
 			"AND k.is_header = '0' "
-			"HAVING k.messageblk %s '%%%s%%'",
+			"HAVING %s %s '%%%s%%'",
 			DBPFX, DBPFX, DBPFX,
 			dbmail_mailbox_get_id(self),
 			MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
-			db_get_sql(SQL_INSENSITIVE_LIKE), s->search);
+			t->str, db_get_sql(SQL_INSENSITIVE_LIKE), s->search);
 		break;
 
 		default:
