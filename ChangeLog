@@ -1,3 +1,8 @@
+2006-07-16  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-mailbox.c:
+	add missing group by clause in body search
+
 2006-07-15  Paul J Stevens <paul@nfg.nl>
 
 	* dm_imaputil.c, modules/dbsqlite.c:
