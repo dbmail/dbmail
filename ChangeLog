@@ -1,5 +1,7 @@
 2006-07-16  Paul J Stevens <paul@nfg.nl>
 
+	* pool.c, pool.h, serverchild.c:
+	rename State_t to child_state_t in pool code
 	* dbmail-mailbox.c:
 	add missing group by clause in body search
 
