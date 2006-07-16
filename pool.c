@@ -67,8 +67,7 @@ int set_lock(int type)
 				set_lock(type);
 				break;
 			default:
-				trace(TRACE_DEBUG, "%s,%s: error: %s",
-						__FILE__, __func__, strerror(serr));
+				// ignore the rest
 				break;
 		}
 		errno = serr;
@@ -101,30 +100,24 @@ void scoreboard_new(serverConfig_t * conf)
 
 char * scoreboard_lock_getfilename(void)
 {
-	char *filename;
-	GString *s = g_string_new("");
-	g_string_printf(s,"%s_%d.LCK", SCOREBOARD_LOCK_FILE, getpid());
-	filename = s->str;
-	g_string_free(s,FALSE);
-	return filename;
+	return g_strdup_printf("%s_%d.LCK", SCOREBOARD_LOCK_FILE, getpid());
 }
 
 void scoreboard_lock_new(void)
 {
-	if ( (sb_lockfd = open(scoreboard_lock_getfilename(),O_EXCL|O_RDWR|O_CREAT|O_TRUNC,0600)) < 0) {
-		trace(TRACE_FATAL,
-		      "%s,%s, opening lockfile [%s] failed", 
-		      __FILE__, __func__,
-		      scoreboard_lock_getfilename());
+	gchar *statefile = scoreboard_lock_getfilename();
+	if ( (sb_lockfd = open(statefile,O_EXCL|O_RDWR|O_CREAT|O_TRUNC,0600)) < 0) {
+		trace(TRACE_FATAL, "%s,%s, opening lockfile [%s] failed", 
+		      __FILE__, __func__, statefile);
 	}
+	g_free(statefile);
 }
 
 void scoreboard_setup(void) {	
 	int i;
 	scoreboard_wrlck();
-	for (i = 0; i < HARD_MAX_CHILDREN; i++) {
+	for (i = 0; i < HARD_MAX_CHILDREN; i++)
 		scoreboard->child[i] = state_new();
-	}
 	scoreboard_unlck();
 }
 
@@ -133,28 +126,24 @@ void scoreboard_conf_check(void)
 	/* some sanity checks on boundaries */
 	scoreboard_wrlck();
 	if (scoreboard->conf->maxChildren > HARD_MAX_CHILDREN) {
-		trace(TRACE_WARNING,
-		      "%s,%s: MAXCHILDREN too large. Decreasing to [%d]",
+		trace(TRACE_WARNING, "%s,%s: MAXCHILDREN too large. Decreasing to [%d]",
 		      __FILE__,__func__,
 		      HARD_MAX_CHILDREN);
 		scoreboard->conf->maxChildren = HARD_MAX_CHILDREN;
 	} else if (scoreboard->conf->maxChildren < scoreboard->conf->startChildren) {
-		trace(TRACE_WARNING,
-		      "%s,%s: MAXCHILDREN too small. Increasing to NCHILDREN [%d]",
+		trace(TRACE_WARNING, "%s,%s: MAXCHILDREN too small. Increasing to NCHILDREN [%d]",
 		      __FILE__,__func__,
 		      scoreboard->conf->startChildren);
 		scoreboard->conf->maxChildren = scoreboard->conf->startChildren;
 	}
 
 	if (scoreboard->conf->maxSpareChildren > scoreboard->conf->maxChildren) {
-		trace(TRACE_WARNING,
-		      "%s,%s: MAXSPARECHILDREN too large. Decreasing to MAXCHILDREN [%d]",
+		trace(TRACE_WARNING, "%s,%s: MAXSPARECHILDREN too large. Decreasing to MAXCHILDREN [%d]",
 		      __FILE__,__func__,
 		      scoreboard->conf->maxChildren);
 		scoreboard->conf->maxSpareChildren = scoreboard->conf->maxChildren;
 	} else if (scoreboard->conf->maxSpareChildren < scoreboard->conf->minSpareChildren) {
-		trace(TRACE_WARNING,
-		      "%s,%s: MAXSPARECHILDREN too small. Increasing to MINSPARECHILDREN [%d]",
+		trace(TRACE_WARNING, "%s,%s: MAXSPARECHILDREN too small. Increasing to MINSPARECHILDREN [%d]",
 		      __FILE__,__func__,
 		      scoreboard->conf->minSpareChildren);
 		scoreboard->conf->maxSpareChildren = scoreboard->conf->minSpareChildren;
@@ -204,20 +193,20 @@ void scoreboard_release(pid_t pid)
 
 void scoreboard_delete(void)
 {
+	gchar *statefile;
 	if (shmdt((const void *)scoreboard) == -1)
-		trace(TRACE_FATAL,
-		      "%s,%s: detach shared mem failed",
+		trace(TRACE_FATAL, "%s,%s: detach shared mem failed",
 		      __FILE__, __func__);
 	if (shmctl(shmid, IPC_RMID, NULL) == -1)
-		trace(TRACE_FATAL,
-		      "%s,%s: delete shared mem segment failed",
+		trace(TRACE_FATAL, "%s,%s: delete shared mem segment failed",
 		      __FILE__, __func__);
 	
-	if (unlink(scoreboard_lock_getfilename()) == -1) 
-		trace(TRACE_ERROR,
-		      "%s,%s: error deleting scoreboard lock file %s", 
+	statefile = scoreboard_lock_getfilename();
+	if (unlink(statefile) == -1) 
+		trace(TRACE_ERROR, "%s,%s: error deleting scoreboard lock file %s", 
 		      __FILE__, __func__, 
-		      scoreboard_lock_getfilename());
+		      statefile);
+	g_free(statefile);
 	
 	return;
 }
@@ -272,8 +261,7 @@ pid_t get_idle_spare(void)
 	/* get the last-in-first-out idle process */	
 	scoreboard_rdlck();
 	for (i = scoreboard->conf->maxChildren - 1; i >= 0; i--) {
-		if ((scoreboard->child[i].pid > 0) 
-		    && (scoreboard->child[i].status == STATE_IDLE)) {
+		if ((scoreboard->child[i].pid > 0) && (scoreboard->child[i].status == STATE_IDLE)) {
 			idlepid = scoreboard->child[i].pid;
 			break;
 		}
@@ -294,8 +282,8 @@ int getKey(pid_t pid)
 		}
 	}
 	scoreboard_unlck();
-	trace(TRACE_ERROR,
-	      "%s,%s: pid NOT found on scoreboard [%d]", __FILE__, __func__, pid);
+	trace(TRACE_ERROR, "%s,%s: pid NOT found on scoreboard [%d]",
+		       	__FILE__, __func__, pid);
 	return -1;
 }
 
@@ -320,8 +308,7 @@ int child_register(void)
 		if (scoreboard->child[i].pid == -1)
 			break;
 		if (scoreboard->child[i].pid == chpid) {
-			trace(TRACE_ERROR,
-			      "%s,%s: child already registered.",
+			trace(TRACE_ERROR, "%s,%s: child already registered.",
 			      __FILE__, __func__);
 			scoreboard_unlck();
 			return -1;
@@ -330,8 +317,7 @@ int child_register(void)
 	scoreboard_unlck();
 	
 	if (i == scoreboard->conf->maxChildren) {
-		trace(TRACE_WARNING,
-		      "%s,%s: no empty slot found",
+		trace(TRACE_WARNING, "%s,%s: no empty slot found",
 		      __FILE__, __func__);
 		return -1;
 	}
@@ -355,7 +341,8 @@ void child_reg_connected(void)
 	key = getKey(pid);
 	
 	if (key == -1) 
-		trace(TRACE_FATAL, "%s:%s: fatal: unable to find this pid on the scoreboard", __FILE__, __func__);
+		trace(TRACE_FATAL, "%s:%s: fatal: unable to find this pid on the scoreboard", 
+				__FILE__, __func__);
 	
 	scoreboard_wrlck();
 	scoreboard->child[key].status = STATE_CONNECTED;
@@ -371,7 +358,8 @@ void child_reg_disconnected(void)
 	key = getKey(pid);
 
 	if (key == -1) 
-		trace(TRACE_FATAL, "%s:%s: fatal: unable to find this pid on the scoreboard", __FILE__, __func__);
+		trace(TRACE_FATAL, "%s:%s: fatal: unable to find this pid on the scoreboard", 
+				__FILE__, __func__);
 	
 	scoreboard_wrlck();
 	scoreboard->child[key].status = STATE_IDLE;
@@ -393,7 +381,8 @@ void child_unregister(void)
 	key = getKey(pid);
 	
 	if (key == -1)
-		trace(TRACE_FATAL, "%s:%s: fatal: unable to find this pid on the scoreboard", __FILE__, __func__);
+		trace(TRACE_FATAL, "%s:%s: fatal: unable to find this pid on the scoreboard", 
+				__FILE__, __func__);
 	
 	scoreboard_wrlck();
 	scoreboard->child[key].status = STATE_WAIT;

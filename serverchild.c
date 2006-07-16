@@ -63,14 +63,8 @@ void disconnect_all(void)
 
 void noop_child_sig_handler(int sig, siginfo_t *info UNUSED, void *data UNUSED)
 {
-	int saved_errno = errno;
-	
 	if (sig == SIGSEGV)
 		_exit(0);
-	
-	trace(TRACE_DEBUG, "%s,%s: ignoring signal [%d]", __FILE__, __func__, sig);
-
-	errno = saved_errno;
 }
 
 void active_child_sig_handler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
