@@ -1117,6 +1117,7 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 			"WHERE mailbox_idnr = '%llu' "
 			"AND status IN ('%d','%d' ) "
 			"AND k.is_header = '0' "
+			"GROUP BY m.message_idnr,k.messageblk "
 			"HAVING %s %s '%%%s%%'",
 			DBPFX, DBPFX, DBPFX,
 			dbmail_mailbox_get_id(self),
