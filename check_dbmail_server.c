@@ -66,6 +66,7 @@ START_TEST(test_scoreboard_new)
 {
 	serverConfig_t *config = g_new0(serverConfig_t,1);
 	scoreboard_new(config);
+	g_free(config);
 }
 END_TEST
 

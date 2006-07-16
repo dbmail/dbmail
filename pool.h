@@ -29,12 +29,12 @@ typedef struct {
 	unsigned char status;
 	unsigned long count;
 	char * client;
-} State_t;
+} child_state_t;
 
 typedef struct {
 	unsigned int lock;
 	serverConfig_t *conf;
-	State_t child[HARD_MAX_CHILDREN];
+	child_state_t child[HARD_MAX_CHILDREN];
 } Scoreboard_t;
 
 

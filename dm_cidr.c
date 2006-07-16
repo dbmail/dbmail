@@ -26,6 +26,7 @@ struct cidrfilter * cidr_new(const char *str)
 	char *addr, *port, *mask;
 	char *haddr, *hport;
 	unsigned i;
+	size_t l;
 
 	assert(str != NULL);
 	
@@ -34,20 +35,23 @@ struct cidrfilter * cidr_new(const char *str)
 	self->socket = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in));
 	self->mask = 32;
 
-	addr = strdup(str);
+	addr = g_strdup(str);
 	haddr = addr;
-	while (*addr != ':')
+	while (*addr && *addr != ':')
 		addr++;
-	addr++;
+	if (*addr == ':')
+		addr++;
 	
-	port = strdup(addr);
+	port = g_strdup(addr);
 	hport = port;
-	while (*port != ':')
+	while (*port && *port != ':')
 		port++;
-	port++;
+	if (*port == ':')
+		port++;
 
 	/* chop port */
-	for (i=0; i<strlen(addr); i++) {
+	l = strlen(addr);
+	for (i=0; i<l; i++) {
 		if (addr[i] == ':') {
 			addr[i]='\0';
 			break;
@@ -60,7 +64,8 @@ struct cidrfilter * cidr_new(const char *str)
 		self->mask = atoi(mask);
 
 		/* chop mask */
-		for(i=0; i<strlen(addr); i++) {
+		l = strlen(addr);
+		for(i=0; i<l; i++) {
 			if (addr[i] == '/') {
 				addr[i]='\0';
 				break;
