@@ -28,10 +28,12 @@
 #include "dbmail.h"
 
 
-int GeneralStopRequested = 0;
-int Restart = 0;
-int mainStop = 0;
-int mainRestart = 0;
+volatile sig_atomic_t GeneralStopRequested = 0;
+volatile sig_atomic_t Restart = 0;
+volatile sig_atomic_t mainStop = 0;
+volatile sig_atomic_t mainRestart = 0;
+volatile sig_atomic_t mainSig = 0;
+volatile sig_atomic_t get_sigchld = 0;
 
 pid_t ParentPID = 0;
 ChildInfo_t childinfo;
@@ -80,6 +82,7 @@ int server_setup(serverConfig_t *conf)
 	ParentPID = getpid();
 	Restart = 0;
 	GeneralStopRequested = 0;
+	get_sigchld = 0;
 	SetParentSigHandler();
 	
 	childinfo.maxConnect	= conf->childMaxConnect;
@@ -108,6 +111,8 @@ int StartCliServer(serverConfig_t * conf)
 int StartServer(serverConfig_t * conf)
 {
 	int stopped = 0;
+	pid_t chpid;
+
 	if (!conf)
 		trace(TRACE_FATAL, "%s,%s: NULL configuration", __FILE__, __func__);
 
@@ -125,6 +130,12 @@ int StartServer(serverConfig_t * conf)
   
  	trace(TRACE_DEBUG, "%s,%s: starting main service loop", __FILE__, __func__);
  	while (!GeneralStopRequested) {
+		if(get_sigchld){
+			get_sigchld = 0;
+			while((chpid = waitpid(-1,(int*)NULL,WNOHANG)) > 0) 
+				scoreboard_release(chpid);
+		}
+
 		if (db_check_connection() != 0) {
 			
 			if (! stopped) 
@@ -191,6 +202,7 @@ int server_run(serverConfig_t *conf)
 {
 	mainStop = 0;
 	mainRestart = 0;
+	mainSig = 0;
 	int serrno, status, result = 0;
 	pid_t pid = -1;
 
@@ -217,12 +229,11 @@ int server_run(serverConfig_t *conf)
 	default:
 		/* parent process, wait for child to exit */
 		while (waitpid(pid, &status, WNOHANG | WUNTRACED) == 0) {
-			if (mainStop)
-				kill(pid, SIGTERM);
-
-			if (mainRestart)
-				kill(pid, SIGHUP);
-
+			if (mainStop || mainRestart){
+				trace(TRACE_DEBUG, "MainSigHandler(): got signal [%d]", mainSig);
+				if(mainStop) kill(pid, SIGTERM);
+				if(mainRestart) kill(pid, SIGHUP);
+			}
 			sleep(2);
 		}
 
@@ -258,28 +269,28 @@ int server_run(serverConfig_t *conf)
 	return result;
 }
 
-void ParentSigHandler(int sig, siginfo_t * info, void *data)
+void ParentSigHandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
 {
-	pid_t chpid;
 	int saved_errno = errno;
 	Restart = 0;
 	
 	/* this call is for a child but it's handler is not yet installed */
+	/*
 	if (ParentPID != getpid())
 		active_child_sig_handler(sig, info, data); 
 
+	*/ 
 	switch (sig) {
- 
+
 	case SIGCHLD:
 		/* ignore, wait for child in main loop */
 		/* but we need to catch zombie */
-		while((chpid = waitpid(-1,&sig,WNOHANG)) > 0) 
-			scoreboard_release(chpid);
+		get_sigchld = 1;
 		break;		
 
 	case SIGSEGV:
 		sleep(60);
-		exit(1);
+		_exit(1);
 		break;
 
 	case SIGHUP:

@@ -28,11 +28,13 @@
 
 #include "dbmail.h"
 
-int ChildStopRequested = 0;
+volatile sig_atomic_t ChildStopRequested = 0;
+volatile sig_atomic_t childSig = 0;
+volatile sig_atomic_t alarm_occured = 0;
+
 int connected = 0;
 volatile clientinfo_t client;
 
-static void client_close(void);
 static void disconnect_all(void);
 
 int PerformChildTask(ChildInfo_t * info);
@@ -81,28 +83,13 @@ void active_child_sig_handler(int sig, siginfo_t * info UNUSED, void *data UNUSE
 	case SIGCHLD:
 		break;
 	case SIGALRM:
-		client_close();
+		alarm_occured = 1;
 		break;
-
-	case SIGHUP:
-	case SIGTERM:
-	case SIGQUIT:
-	case SIGSTOP:
-		DelChildSigHandler();
-	 	ChildStopRequested = 1;
-		if (ChildStopRequested) {
-			client_close();
-			disconnect_all();
-			child_unregister();
-			exit(1);
-		}
-		break;
-
 	default:
-		child_unregister();
-		_exit(1);
+	 	ChildStopRequested = 1;
+		childSig = sig;
+		break;
 	}
-
 	errno = saved_errno;
 }
 
@@ -116,22 +103,36 @@ void active_child_sig_handler(int sig, siginfo_t * info UNUSED, void *data UNUSE
 int SetChildSigHandler()
 {
 	struct sigaction act;
+	struct sigaction rstact;
 
-	/* init & install signal handlers */
 	memset(&act, 0, sizeof(act));
+	memset(&rstact, 0, sizeof(rstact));
 
 	act.sa_sigaction = active_child_sig_handler;
 	sigemptyset(&act.sa_mask);
 	act.sa_flags = SA_SIGINFO;
 
-	sigaction(SIGINT,	&act, 0);
-	sigaction(SIGQUIT,	&act, 0);
-	sigaction(SIGILL,	&act, 0);
-	sigaction(SIGBUS,	&act, 0);
-	sigaction(SIGFPE,	&act, 0);
-	sigaction(SIGSEGV,	&act, 0);
-	sigaction(SIGTERM,	&act, 0);
-	sigaction(SIGHUP,	&act, 0);
+	rstact.sa_sigaction = active_child_sig_handler;
+	sigemptyset(&rstact.sa_mask);
+	rstact.sa_flags = SA_SIGINFO | SA_RESETHAND;
+
+	sigaddset(&act.sa_mask, SIGINT);
+	sigaddset(&act.sa_mask, SIGQUIT);
+	sigaddset(&act.sa_mask, SIGILL);
+	sigaddset(&act.sa_mask, SIGBUS);
+	sigaddset(&act.sa_mask, SIGFPE);
+	sigaddset(&act.sa_mask, SIGSEGV);
+	sigaddset(&act.sa_mask, SIGTERM);
+	sigaddset(&act.sa_mask, SIGHUP);
+
+	sigaction(SIGINT,	&rstact, 0);
+	sigaction(SIGQUIT,	&rstact, 0);
+	sigaction(SIGILL,	&rstact, 0);
+	sigaction(SIGBUS,	&rstact, 0);
+	sigaction(SIGFPE,	&rstact, 0);
+	sigaction(SIGSEGV,	&rstact, 0);
+	sigaction(SIGTERM,	&rstact, 0);
+	sigaction(SIGHUP,	&rstact, 0);
 	sigaction(SIGALRM,	&act, 0);
 	sigaction(SIGCHLD,	&act, 0);
 	return 0;
@@ -178,6 +179,8 @@ pid_t CreateChild(ChildInfo_t * info)
 		}
 	
  		ChildStopRequested = 0;
+		alarm_occured = 0;
+		childSig = 0;
  		SetChildSigHandler();
 		
  		trace(TRACE_INFO, "%s,%s: signal handler placed, going to perform task now",
@@ -242,7 +245,6 @@ int PerformChildTask(ChildInfo_t * info)
 		/* wait for connect */
 		len = sizeof(saClient);
 		clientSocket = accept(info->listenSocket, (struct sockaddr *) &saClient, (socklen_t *)&len);
-
 		if (clientSocket == -1) {
 			serr = errno;
 			i--;	/* don't count this as a connect */
@@ -316,9 +318,22 @@ int PerformChildTask(ChildInfo_t * info)
 	if (!ChildStopRequested)
 		trace(TRACE_ERROR, "%s,%s: maximum number of connections reached, stopping now", 
 				__FILE__, __func__);
-	else
+	else{
+		switch(childSig){
+		case SIGHUP:
+		case SIGTERM:
+		case SIGQUIT:
+			client_close();
+			disconnect_all();
+			child_unregister();
+			exit(1);
+		default:
+			child_unregister();
+			_exit(1);
+		}
 		trace(TRACE_ERROR, "%s,%s: stop requested", 
 				__FILE__, __func__);
+	}
 
 	child_reg_disconnected();
 	disconnect_all();

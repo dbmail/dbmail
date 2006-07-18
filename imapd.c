@@ -34,8 +34,9 @@ char *configFile = DEFAULT_CONFIG_FILE;
 /* set up database login data */
 extern db_param_t _db_params;
 
-extern int mainRestart;
-extern int mainStop;
+extern volatile sig_atomic_t mainRestart;
+extern volatile sig_atomic_t mainStop;
+extern volatile sig_atomic_t mainSig;
 
 static int SetMainSigHandler(void);
 static void MainSigHandler(int sig, siginfo_t * info, void *data);
@@ -167,7 +168,7 @@ void get_config(serverConfig_t *config)
 
 void MainSigHandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
 {
-	trace(TRACE_DEBUG, "MainSigHandler(): got signal [%d]", sig);
+	mainSig = sig;
 
 	if (sig == SIGHUP)
 		mainRestart = 1;

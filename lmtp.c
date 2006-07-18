@@ -35,6 +35,8 @@
  * in the incoming buffer */
 #define MAX_IN_BUFFER 255
 
+extern volatile sig_atomic_t alarm_occured;
+
 /* These are needed across multiple calls to lmtp() */
 static struct dm_list from, rcpt;
 
@@ -167,7 +169,9 @@ int lmtp_handle_connection(clientinfo_t * ci)
 				fread(&buffer[cnt], 1, 1, ci->rx);
 
 				/* leave, an alarm has occured during fread */
-				if (!ci->rx) {
+				if (alarm_occured) {
+					alarm_occured = 0;
+					client_close();
 					dm_free(buffer);
 					return 0;
 				}
