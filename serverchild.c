@@ -21,7 +21,7 @@
 /*
  * serverchild.c
  *
- * $Id: serverchild.c 2198 2006-07-16 12:55:49Z paul $
+ * $Id: serverchild.c 2199 2006-07-18 11:07:53Z paul $
  * 
  * function implementations of server children code (connection handling)
  */
