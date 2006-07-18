@@ -1,3 +1,13 @@
+2006-07-18  Paul J Stevens <paul@nfg.nl>
+
+	* debian/dbmail.init:
+	cleanup dbmail init.d script for debian
+	* dbmail-message.c:
+	prevent fieldwidth overflow during headername insertion
+	* dbmail-imapsession.c, imapd.c, lmtp.c, lmtpd.c, pool.c, pop3.c, pop3d.c, 
+	  server.c, serverchild.c, serverchild.h, timsieve.c, timsieved.c:
+	accepted signal safety patch from ryo (#361)
+
 2006-07-16  Paul J Stevens <paul@nfg.nl>
 
 	* pool.c, pool.h, serverchild.c:

@@ -21,7 +21,7 @@ static volatile Scoreboard_t *scoreboard;
 static int shmid;
 static int sb_lockfd;
 
-extern int GeneralStopRequested;
+extern volatile sig_atomic_t GeneralStopRequested;
 extern ChildInfo_t childinfo;
 
 

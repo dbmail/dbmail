@@ -44,8 +44,9 @@ static void MainSigHandler(int sig, siginfo_t * info, void *data);
 
 static void get_config(serverConfig_t *config);
 
-extern int mainRestart;
-extern int mainStop;
+extern volatile sig_atomic_t mainRestart;
+extern volatile sig_atomic_t mainStop;
+extern volatile sig_atomic_t mainSig;
 
 int do_showhelp(void) {
 	printf("*** dbmail-timsieved ***\n");
@@ -177,7 +178,7 @@ void get_config(serverConfig_t *config)
 
 void MainSigHandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
 {
-	trace(TRACE_DEBUG, "MainSigHandler(): got signal [%d]", sig);
+	mainSig = sig;
 
 	if (sig == SIGHUP)
 		mainRestart = 1;

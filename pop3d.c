@@ -45,8 +45,9 @@ static void get_config(serverConfig_t *config);
 /* also used in pop3.c */
 int pop_before_smtp = 0;
 
-extern int mainRestart;
-extern int mainStop;
+extern volatile sig_atomic_t mainRestart;
+extern volatile sig_atomic_t mainStop;
+extern volatile sig_atomic_t mainSig;
 
 int do_showhelp(void) {
 	printf("*** dbmail-pop3d ***\n");
@@ -176,7 +177,7 @@ void get_config(serverConfig_t *config)
 
 void MainSigHandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
 {
-	trace(TRACE_DEBUG, "MainSigHandler(): got signal [%d]", sig);
+	mainSig = sig;
 
 	if (sig == SIGHUP)
 		mainRestart = 1;

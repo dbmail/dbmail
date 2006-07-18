@@ -40,6 +40,7 @@
 #define MAX_IN_BUFFER 255
 
 extern int pop_before_smtp;
+extern volatile sig_atomic_t alarm_occured;
 
 int pop3_error(PopSession_t * session, void *stream,
 	       const char *formatstring, ...) PRINTF_ARGS(3, 4);
@@ -181,7 +182,9 @@ int pop3_handle_connection(clientinfo_t * ci)
 				fread(&buffer[cnt], 1, 1, ci->rx);
 
 				/* leave, an alarm has occured during fread */
-				if (!ci->rx) {
+				if (alarm_occured) {
+					alarm_occured = 0;
+					client_close();
 					dm_free(buffer);
 					dm_free(session.apop_stamp);
 					return 0;
