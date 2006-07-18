@@ -1,5 +1,7 @@
 2006-07-18  Paul J Stevens <paul@nfg.nl>
 
+	* dbmail-message.c:
+	move content-type extraction from _header_cache to _register_header
 	* debian/dbmail.init:
 	cleanup dbmail init.d script for debian
 	* dbmail-message.c:

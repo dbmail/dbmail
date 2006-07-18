@@ -383,10 +383,22 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 
 static void _map_headers(struct DbmailMessage *self) 
 {
+	GMimeObject *part;
 	assert(self->content);
 	self->headers = g_relation_new(2);
 	g_relation_index(self->headers, 0, (GHashFunc)g_str_hash, (GEqualFunc)g_str_equal);
 	g_relation_index(self->headers, 1, (GHashFunc)g_str_hash, (GEqualFunc)g_str_equal);
+
+	 // gmime doesn't consider the content-type header to be a message-header so extract 
+	 // and register it separately
+	if (GMIME_IS_MESSAGE(self->content)) {
+		char *type = NULL;
+		part = g_mime_message_get_mime_part(GMIME_MESSAGE(self->content));
+		if ((type = (char *)g_mime_object_get_header(part,"Content-Type"))!=NULL)
+			_register_header("Content-Type",type, (gpointer)self);
+		g_object_unref(part);
+	}
+
 	g_mime_header_foreach(GMIME_OBJECT(self->content)->headers, _register_header, self);
 }
 
@@ -839,19 +851,9 @@ int _message_insert(struct DbmailMessage *self,
 
 int dbmail_message_headers_cache(const struct DbmailMessage *self)
 {
-	GMimeObject *part;
 	assert(self);
 	assert(self->physid);
-	
-	if (GMIME_IS_MESSAGE(self->content)) {
-		char *type = NULL;
-		part = g_mime_message_get_mime_part(GMIME_MESSAGE(self->content));
-		if ((type = (char *)g_mime_object_get_header(part,"Content-Type"))!=NULL)
-			_header_cache("Content-Type",type,(gpointer)self);
-		g_object_unref(part);
-	}
-	
-	//g_mime_header_foreach(GMIME_OBJECT(self->content)->headers, _header_cache, (gpointer)self);
+
 	g_tree_foreach(self->header_name, (GTraverseFunc)_header_cache, (gpointer)self);
 	
 	dbmail_message_cache_tofield(self);
