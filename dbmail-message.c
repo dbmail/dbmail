@@ -864,29 +864,41 @@ int dbmail_message_headers_cache(const struct DbmailMessage *self)
 	
 	return 1;
 }
+#define CACHE_WIDTH_VALUE 255
+#define CACHE_WIDTH_FIELD 255
+#define CACHE_WIDTH_ADDR 100
+#define CACHE_WIDTH_NAME 100
+
 
 static int _header_get_id(const struct DbmailMessage *self, const char *header, u64_t *id)
 {
 	u64_t tmp;
 	gpointer cacheid;
-	cacheid = g_hash_table_lookup(self->header_dict, (gconstpointer)header);
+	gchar *safe_header;
 
+	if (! (safe_header = dm_strnesc(header,CACHE_WIDTH_NAME)))
+		return -1;
+
+	cacheid = g_hash_table_lookup(self->header_dict, (gconstpointer)safe_header);
 	if (cacheid) {
 		*id = GPOINTER_TO_UINT(cacheid);
+		g_free(safe_header);
 		return 1;
 	}
-	
+		
 	GString *q = g_string_new("");
-	g_string_printf(q, "SELECT id FROM %sheadername WHERE headername='%s'", DBPFX, header);
+	g_string_printf(q, "SELECT id FROM %sheadername WHERE headername='%s'", DBPFX, safe_header);
 	if (db_query(q->str) == -1) {
 		g_string_free(q,TRUE);
+		g_free(safe_header);
 		return -1;
 	}
 	if (db_num_rows() < 1) {
 		db_free_result();
-		g_string_printf(q, "INSERT INTO %sheadername (headername) VALUES ('%s')", DBPFX, header);
+		g_string_printf(q, "INSERT INTO %sheadername (headername) VALUES ('%s')", DBPFX, safe_header);
 		if (db_query(q->str) == -1) {
 			g_string_free(q,TRUE);
+			g_free(safe_header);
 			return -1;
 		}
 		tmp = db_insert_result("headername_idnr");
@@ -895,14 +907,11 @@ static int _header_get_id(const struct DbmailMessage *self, const char *header, 
 		db_free_result();
 	}
 	*id = tmp;
-	g_hash_table_insert(self->header_dict, (gpointer)(g_strdup(header)), GUINT_TO_POINTER((unsigned)tmp));
+	g_hash_table_insert(self->header_dict, (gpointer)(g_strdup(safe_header)), GUINT_TO_POINTER((unsigned)tmp));
+	g_free(safe_header);
 	g_string_free(q,TRUE);
 	return 1;
 }
-
-#define CACHE_WIDTH_VALUE 255
-#define CACHE_WIDTH_FIELD 255
-#define CACHE_WIDTH_ADDR 100
 
 static gboolean _header_cache(const char UNUSED *key, const char *header, gpointer user_data)
 {
