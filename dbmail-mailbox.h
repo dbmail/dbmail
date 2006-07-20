@@ -41,7 +41,6 @@ struct DbmailMailbox {
 	u64_t size;
 	GTree *ids; 		// key: uid, value: msn
 	GTree *msn; 		// key: msn, value: uid
-	GList *set; 		// subset ids 
 	gboolean uid;		// subset type
 	GList *sorted;
 	GNode *search;

@@ -297,6 +297,22 @@ START_TEST(test_dbmail_mailbox_search)
 	dbmail_mailbox_free(mb);
 	g_strfreev(array);
 
+	// 
+	idx=0;
+	sorted = 0;
+	mb = dbmail_mailbox_new(get_mailbox_id());
+	args = g_strdup("1");
+	array = g_strsplit(args," ",0);
+	g_free(args);
+	
+	dbmail_mailbox_build_imap_search(mb, array, &idx, sorted);
+	dbmail_mailbox_search(mb);
+	found = g_tree_nnodes(mb->ids);
+	fail_unless(found==1,"dbmail_mailbox_search failed: SEARCH UID 1");
+	
+	dbmail_mailbox_free(mb);
+	g_strfreev(array);
+
 	
 }
 END_TEST
