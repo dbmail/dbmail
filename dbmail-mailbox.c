@@ -40,7 +40,6 @@ struct DbmailMailbox * dbmail_mailbox_new(u64_t id)
 	dbmail_mailbox_set_id(self,id);
 	dbmail_mailbox_set_uid(self, FALSE);
 	self->search = NULL;
-	self->set = NULL;
 	self->fi = NULL;
 
 	if (dbmail_mailbox_open(self)) {
@@ -77,11 +76,6 @@ void dbmail_mailbox_free(struct DbmailMailbox *self)
 		g_list_destroy(self->sorted);
 		self->sorted = NULL;
 	}
-	if (self->set) {
-		g_list_free(self->set);
-		self->set = NULL;
-	}
-
 	if (self->fi) {
 		if (self->fi->bodyfetch)
 			g_list_foreach(self->fi->bodyfetch, (GFunc)g_free, NULL);
@@ -1175,155 +1169,6 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 	return s->found;
 }
 
-#ifdef OLD
-
-static int _search_body(GMimeObject *object, search_key_t *sk)
-{
-	int i;
-	size_t l = 0;
-	char *s = NULL, *n = NULL;
-	GString *t;
-	
-	/* get the body as a char */
-	s = g_mime_object_get_headers(object);
-	i = strlen(s);
-	g_free(s);
-
-	s = g_mime_object_to_string(object);
-	t = g_string_new(s);
-	g_free(s);
-	
-	t = g_string_erase(t,0,i);
-
-	/* convert the body and searchkey to lower case so we can use strstr */
-	l = t->len;
-	s = g_ascii_strdown(t->str,-1);
-	n = g_ascii_strdown(sk->search,-1);
-	
-	g_string_free(t,TRUE);
-
-	sk->match = 0;
-	if (g_strstr_len(s,l,n) != NULL)
-		sk->match = 1;
-
-	g_free(s);
-	g_free(n);
-
-	return sk->match;
-}
-
-
-static int _exec_search(GMimeObject *object, search_key_t * sk)
-{
-	int i,j;
-
-	GMimeObject *part, *subpart;
-	GMimeContentType *type;
-	GMimeMultipart *multipart;
-	
-	if (!sk->search)
-		return 0;
-
-	g_return_val_if_fail(sk->type==IST_DATA_BODY,0);
-
-	/* only check body if there are no children */
-	if (GMIME_IS_MESSAGE(object))
-		part = g_mime_message_get_mime_part(GMIME_MESSAGE(object));
-	else
-		part = object;
-	
-	if ((type = (GMimeContentType *)g_mime_object_get_content_type(part)))  {
-		if (g_mime_content_type_is_type(type,"text","*")){
-			if (GMIME_IS_MESSAGE(object)) g_object_unref(part);
-			return _search_body(part, sk);
-		}
-	}
-	if (GMIME_IS_MESSAGE(object)) g_object_unref(part);
-	
-	/* no match found yet, try the children */
-	if (GMIME_IS_MESSAGE(object)) {
-		part = g_mime_message_get_mime_part(GMIME_MESSAGE(object));
-	} else {
-		part = object;
-	}
-	
-	if (! (type = (GMimeContentType *)g_mime_object_get_content_type(part))){
-		if (GMIME_IS_MESSAGE(object)) g_object_unref(part);
-		return 0;
-	}	
-	if (! (g_mime_content_type_is_type(type,"multipart","*"))){
-		if (GMIME_IS_MESSAGE(object)) g_object_unref(part);
-		return 0;
-	}
-	multipart = GMIME_MULTIPART(part);
-	i = g_mime_multipart_get_number(multipart);
-	
-	trace(TRACE_DEBUG,"%s,%s: search [%d] parts for [%s]",
-			__FILE__, __func__, i, sk->search);
-
-	/* loop over parts for base info */
-	for (j=0; j<i; j++) {
-		subpart = g_mime_multipart_get_part(multipart,j);
-		if (_exec_search(subpart,sk) == 1){
-			if (GMIME_IS_MESSAGE(object)) g_object_unref(part);
-			g_object_unref(subpart);
-			return 1;
-		}
-		g_object_unref(subpart);
-	}
-	if (GMIME_IS_MESSAGE(object)) g_object_unref(part);
-	return 0;
-}
-
-static GTree * mailbox_search_parsed(struct DbmailMailbox *self, search_key_t *s)
-{
-
-	struct DbmailMessage *msg;
-	GList *ids;
-	int result = 0;
-	u64_t *k, *v, *w, *x;
-
-	s->found = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free, (GDestroyNotify)g_free);
-	
-	ids = self->set;
-	while (ids) {
-		w = (u64_t *)ids->data;
-		x = g_tree_lookup(self->ids, w);
-		if (! x)
-			trace(TRACE_ERROR,"%s,%s: [%llu] not in self->ids", __FILE__, __func__, *w);
-
-		assert(x);
-		
-		if (! (msg = db_init_fetch(*w, DBMAIL_MESSAGE_FILTER_FULL))) {
-			trace(TRACE_DEBUG,"%s,%s: error retrieving message [%llu]",
-					__FILE__, __func__, *w);
-			break;
-		}
-		
-		result = _exec_search(GMIME_OBJECT(msg->content), s);
-
-		dbmail_message_free(msg);
-		
-		if (result) {
-			k = g_new0(u64_t,1);
-			v = g_new0(u64_t,1);
-			
-			*k = *w;
-			*v = *x;
-
-			g_tree_insert(s->found, k, v);
-		}
-
-		if (! g_list_next(ids))
-			break;
-
-		ids = g_list_next(ids);
-	}
-	
-	return s->found;
-}
-#endif
-
 GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set)
 {
 	GList *ids = NULL, *sets = NULL;
@@ -1444,11 +1289,6 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set)
 	if (a)
 		g_tree_destroy(a);
 
-	self->set = g_tree_keys(b);
-
-	trace(TRACE_DEBUG,"%s,%s: self->set contains [%d] ids between [%llu] and [%llu]", 
-			__FILE__, __func__, g_list_length(g_list_first(self->set)), lo, hi);
-
 	return b;
 }
 
@@ -1461,7 +1301,7 @@ static gboolean _do_search(GNode *node, struct DbmailMailbox *self)
 	
 	switch (s->type) {
 		case IST_SET:
-			if (! dbmail_mailbox_get_set(self, (const char *)s->search))
+			if (! (s->found = dbmail_mailbox_get_set(self, (const char *)s->search)))
 				return TRUE;
 			break;
 
@@ -1477,11 +1317,7 @@ static gboolean _do_search(GNode *node, struct DbmailMailbox *self)
 		case IST_DATA_BODY:
 			mailbox_search(self, s);
 			break;
-/*
-		case IST_DATA_BODY:
-			mailbox_search_parsed(self,s);
-			break;
-*/		
+			
 		case IST_SUBSEARCH_NOT:
 		case IST_SUBSEARCH_AND:
 		case IST_SUBSEARCH_OR:

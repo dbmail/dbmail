@@ -1,3 +1,9 @@
+2006-07-20  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_mailbox.c, dbmail-mailbox.c, dbmail-mailbox.h, 
+	  debian/changelog:
+	cleanup old search_parsed code and properly use uid sets in search results
+
 2006-07-18  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-message.c:
