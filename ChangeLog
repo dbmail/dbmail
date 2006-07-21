@@ -1,3 +1,8 @@
+2006-07-21  Paul J Stevens <paul@nfg.nl>
+
+	* sql/postgresql/migrate_from_1.x_to_2.0.pgsql:
+	add missing column in migration script (jnorell)
+
 2006-07-20  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_mailbox.c, dbmail-mailbox.c, dbmail-mailbox.h, 
