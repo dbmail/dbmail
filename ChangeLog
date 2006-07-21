@@ -1,3 +1,30 @@
+2006-07-21  Aaron Stone  <aaron@serendipity.cx>
+
+	* Makefile.am:
+	Added acl.c to the general build; it's needed for the mailbox
+	hierarchy creation function now found in db.c
+	* check_dbmail_db.c, dbmail_dbmail_imapd.c:
+	Added test coverate for mailbox parent hierarchy and
+	undisclosed-address parsing.
+	* db.c, db.h:
+	Added function db_mailbox_create_with_parents and
+	db_imap_split_mailbox to handle mailbox hierarchy.
+	* dbmailtypes.h, imap4.h:
+	Names of the supported IMAP message flags made universal.
+	* debug.c, debug.h:
+	Further work on the newtrace function and the TRACE macro.
+	* dm_imaputil.c:
+	Made _imap_append_alist_as_plist non-static for test coverage.
+	* imapcommands.c:
+	Call db_mailbox_create_with_parents rather than db_createmailbox.
+	* pipe.c:
+	Better handling of exit status from sendmail command.
+	* sort.c, sort.h, modules/sortsieve.c:
+	Updated to work with libSieve 2.1.11.
+	* sql/mysql/create_tables.mysql,
+	sql/mysql/migrate_from_2.0_to_2.1.mysql: 
+	Removed BINARY qualifier from the name column of dbmail_mailboxes.
+
 2006-07-21  Paul J Stevens <paul@nfg.nl>
 
 	* sql/postgresql/migrate_from_1.x_to_2.0.pgsql:

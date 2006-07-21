@@ -39,14 +39,8 @@
 #define MAX_RETRIES 12
 #endif
 
-const char *imap_flag_desc[IMAP_NFLAGS] = {
-	"Seen", "Answered", "Deleted", "Flagged", "Draft", "Recent"
-};
-
-const char *imap_flag_desc_escaped[IMAP_NFLAGS] = {
-	"\\Seen", "\\Answered", "\\Deleted", "\\Flagged", "\\Draft",
-	"\\Recent"
-};
+extern const char *imap_flag_desc[];
+extern const char *imap_flag_desc_escaped[];
 
 int list_is_lsub = 0;
 
@@ -329,160 +323,23 @@ int _ic_examine(struct ImapSession *self)
 int _ic_create(struct ImapSession *self)
 {
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
-	int result, i;
-	u64_t mboxid, tmp_mboxid;
-	u64_t parent_mboxid = 0;	/* id of parent mailbox (if applicable) */
-	char **chunks, *cpy;
-	int other_namespace = 0;
-	char *mailbox;
-
-	mailbox_t mbox;
-	bzero(&mbox, sizeof(mailbox_t));
+	int result;
+	const char *message;
+	u64_t mboxid;
 	
 	if (!check_state_and_args(self, "CREATE", 1, 1, IMAPCS_AUTHENTICATED))
 		return 1;
 
-	mailbox = self->args[0];
+	/* Create the mailbox and its parents. */
+	result = db_mailbox_create_with_parents(self->args[0], ud->userid, &mboxid, &message);
 
-	/* check if new name is valid */
-	if (!checkmailboxname(mailbox)) {
-	        dbmail_imap_session_printf(self, "%s BAD new mailbox name contains invalid characters\r\n", self->tag);
-	        return 1;
-        }
-
-	if ( (mboxid = dbmail_imap_session_mailbox_get_idnr(self, mailbox)) ) {
-		dbmail_imap_session_printf(self, "%s NO mailbox already exists\r\n", self->tag);
-		return 1;
-	}
-
-	/* alloc a ptr which can contain up to the full name */
-	cpy = g_new0(char, strlen(self->args[0]) + 1);
-	/* split up the name & create parent folders as necessary */
-	if (! (chunks = g_strsplit(self->args[0], "/", 0))) {
-		trace(TRACE_ERROR, "%s,%s: could not create chunks", __FILE__, __func__);
-		dbmail_imap_session_printf(self, "* BYE server ran out of memory\r\n");
-		dm_free(cpy);
-		return DM_EQUERY; //DM_EQUERY ??
-	}
-
-	if (chunks[0] == NULL) {
-		/* wrong argument */
-		dbmail_imap_session_printf(self, "%s NO invalid mailbox name specified\r\n", self->tag);
-		g_strfreev(chunks);
-		dm_free(cpy);
+	if (result > 0) {
+		dbmail_imap_session_printf(self, "%s NO %s\r\n", self->tag, message);
 		return DM_EGENERAL;
+	} else if (result < 0) {
+		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
+		return DM_EQUERY;
 	}
-
-	/* now go create */
-	strcpy(cpy, "");
-
-	for (i = 0; chunks[i]; i++) {
-		if (! (strlen(chunks[i]))) {
-			/* no can do */
-			dbmail_imap_session_printf(self, "%s NO invalid mailbox name specified\r\n", self->tag);
-			g_strfreev(chunks);
-			dm_free(cpy);
-			return DM_EGENERAL;
-		}
-
-		if (i == 0) {
-			if (strcasecmp(chunks[0], "inbox") == 0)
-				strcpy(chunks[0], "INBOX");	/* make inbox uppercase */
-
-			strcat(cpy, chunks[i]);
-			/* skip  #Users and #Public namespace root */
-			if (strcmp(cpy, NAMESPACE_USER) == 0 || strcmp(cpy, NAMESPACE_PUBLIC) == 0) {
-				other_namespace = 1;
-				continue;
-			}
-		} else {
-			strcat(cpy, "/");
-			strcat(cpy, chunks[i]);
-			/* if this is one level below #Users, continue to the next chunk */
-			if (i == 1 && strncmp(cpy, NAMESPACE_USER, strlen(NAMESPACE_USER)) == 0)
-				continue;
-
-		}
-
-		trace(TRACE_DEBUG, "checking for '%s'...", cpy);
-
-		/* check if this mailbox already exists */
-		if (db_findmailbox(cpy, ud->userid, &mboxid) == DM_EQUERY) { /* dbase failure */
-			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-			g_strfreev(chunks);
-			dm_free(cpy);
-			return DM_EQUERY;
-		}
-
-		if (mboxid == 0) {
-			/* mailbox does not exist */
-			/* check if we have the right to create mailboxes in this
-			   hierarchy */
-			trace(TRACE_DEBUG, "%s,%s: Checking if we have the right to "
-			      "create mailboxes under mailbox [%llu]",
-			      __FILE__, __func__, parent_mboxid);
-			if (parent_mboxid != 0) {
-				mbox.uid = parent_mboxid;
-				result = acl_has_right(&mbox, ud->userid, ACL_RIGHT_CREATE);
-				if (result == DM_EQUERY) {
-					dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-					g_strfreev(chunks);
-					dm_free(cpy);
-					return DM_EQUERY;	/* fatal */
-				}
-				if (result == 0) {
-					dbmail_imap_session_printf(self,
-						"%s NO no permission to create "
-						"mailbox here\r\n", self->tag);
-					g_strfreev(chunks);
-					dm_free(cpy);
-					return DM_EGENERAL;
-				}
-			} else {
-				if (other_namespace) {
-					/* if we want to create a new mailbox in 
-					   another namespace, but we don't specify 
-					   the parent's mailbox, we should not be
-					   allowed to do so */
-					dbmail_imap_session_printf(self,
-						"%s NO no permission to create "
-						"mailbox here\r\n", self->tag);
-					g_strfreev(chunks);
-					dm_free(cpy);
-					return DM_EGENERAL;
-				}
-			}
-			
-			if ( ((result = db_createmailbox(cpy, ud->userid, &tmp_mboxid)) == DM_EQUERY) ) {
-				dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-				g_strfreev(chunks);
-				dm_free(cpy);
-				return DM_EQUERY;	/* fatal */
-			}
-		} else {
-			/* this might be the parent of our new mailbox. store it's id */
-			parent_mboxid = mboxid;
-			/* mailbox does exist, failure if no_inferiors flag set */
-			if ( ((result = db_noinferiors(mboxid)) == DM_EGENERAL) ) {
-				dbmail_imap_session_printf(self, "%s NO mailbox cannot have inferior names\r\n", self->tag);
-				g_strfreev(chunks);
-				dm_free(cpy);
-				return DM_EGENERAL;
-			}
-
-
-			if (result == DM_EQUERY) {
-				dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-				g_strfreev(chunks);
-				dm_free(cpy);
-				return DM_EQUERY;
-			}
-		}
-	}
-
-	/* creation complete */
-	g_strfreev(chunks);
-	dm_free(cpy);
 
 	dbmail_imap_session_printf(self, "%s OK CREATE completed\r\n", self->tag);
 	return DM_SUCCESS;
@@ -1154,7 +1011,7 @@ int _ic_append(struct ImapSession *self)
 
 	/** check ACL's for STORE */
 	mailbox.uid = mboxid;
-	if (flaglist[IMAP_STORE_FLAG_SEEN] == 1) {
+	if (flaglist[IMAP_FLAG_SEEN] == 1) {
 		result = acl_has_right(&mailbox, ud->userid, ACL_RIGHT_SEEN);
 		if (result < 0) {
 			dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
@@ -1165,7 +1022,7 @@ int _ic_append(struct ImapSession *self)
 			return 1;
 		}
 	}
-	if (flaglist[IMAP_STORE_FLAG_DELETED] == 1) {
+	if (flaglist[IMAP_FLAG_DELETED] == 1) {
 		result = acl_has_right(&mailbox, ud->userid, ACL_RIGHT_DELETE);
 		if (result < 0) {
 			dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
@@ -1176,10 +1033,10 @@ int _ic_append(struct ImapSession *self)
 			return 1;
 		}
 	}
-	if (flaglist[IMAP_STORE_FLAG_ANSWERED] == 1 ||
-	    flaglist[IMAP_STORE_FLAG_FLAGGED] == 1 ||
-	    flaglist[IMAP_STORE_FLAG_DRAFT] == 1 ||
-	    flaglist[IMAP_STORE_FLAG_RECENT] == 1) {
+	if (flaglist[IMAP_FLAG_ANSWERED] == 1 ||
+	    flaglist[IMAP_FLAG_FLAGGED] == 1 ||
+	    flaglist[IMAP_FLAG_DRAFT] == 1 ||
+	    flaglist[IMAP_FLAG_RECENT] == 1) {
 		result = acl_has_right(&mailbox, ud->userid, ACL_RIGHT_WRITE);
 		if (result < 0) {
 			dbmail_imap_session_printf(self, "*BYE internal database error\r\n");
@@ -1709,7 +1566,7 @@ int _ic_store(struct ImapSession *self)
 	}
 
   /** check ACL's for STORE */
-	if (flaglist[IMAP_STORE_FLAG_SEEN] == 1) {
+	if (flaglist[IMAP_FLAG_SEEN] == 1) {
 		result = acl_has_right(&ud->mailbox, ud->userid, ACL_RIGHT_SEEN);
 		if (result < 0) {
 			dbmail_imap_session_printf(self, "* BYE internal database error");
@@ -1722,7 +1579,7 @@ int _ic_store(struct ImapSession *self)
 			return 1;
 		}
 	}
-	if (flaglist[IMAP_STORE_FLAG_DELETED] == 1) {
+	if (flaglist[IMAP_FLAG_DELETED] == 1) {
 		result = acl_has_right(&ud->mailbox, ud->userid, ACL_RIGHT_DELETE);
 		if (result < 0) {
 			dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
@@ -1733,10 +1590,10 @@ int _ic_store(struct ImapSession *self)
 			return 1;
 		}
 	}
-	if (flaglist[IMAP_STORE_FLAG_ANSWERED] == 1 ||
-	    flaglist[IMAP_STORE_FLAG_FLAGGED] == 1 ||
-	    flaglist[IMAP_STORE_FLAG_DRAFT] == 1 ||
-	    flaglist[IMAP_STORE_FLAG_RECENT] == 1) {
+	if (flaglist[IMAP_FLAG_ANSWERED] == 1 ||
+	    flaglist[IMAP_FLAG_FLAGGED] == 1 ||
+	    flaglist[IMAP_FLAG_DRAFT] == 1 ||
+	    flaglist[IMAP_FLAG_RECENT] == 1) {
 		result = acl_has_right(&ud->mailbox, ud->userid, ACL_RIGHT_WRITE);
 		if (result < 0) {
 			dbmail_imap_session_printf(self, "*BYE internal database error");
