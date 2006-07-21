@@ -200,7 +200,7 @@ dnl check for ldap or sql authentication
 AC_DEFUN([DBMAIL_SIEVE_CONF], [dnl
 AC_MSG_RESULT([checking for sorting configuration])
 AC_ARG_WITH(sieve,[  --with-sieve=PATH	  full path to libSieve header directory (don't use, not stable)],
-	sieveheadername="$withval$")
+	sieveheadername="$withval")
 dnl This always needs to be defined
 SORTALIB="modules/.libs/libsort_null.a"
 SORTLTLIB="modules/libsort_null.la"
