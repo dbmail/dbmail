@@ -62,80 +62,51 @@ AC_ARG_WITH(logdir,
 ])
 	
 dnl DBMAIL_CHECK_SHARED_OR_STATIC
-dnl
 AC_DEFUN([DBMAIL_SET_SHARED_OR_STATIC], [dnl
-# Make sure that we've got either static or shared, not both.
-if test "x$enable_shared" = xyes && test "x$enable_static" = xyes
-then
+if test [ "$enable_shared" = "yes" -a "$enable_static" = "yes" ]; then
      AC_MSG_ERROR([
-
      You cannot enable both shared and static build.
      Please choose only one to enable.
 ])
 fi
-if test "x$enable_shared" = xno && test "x$enable_static" = xno
-then
+if test [ "$enable_shared" = "no" -a "$enable_static" = "no" ]; then
   enable_shared="yes"
 fi
-# if test "x$enable_shared" = xyes
-# then
-#   CFLAGS="$CFLAGS -DSHARED"
-# elif test "x$enable_static" = xyes
-# then
-#   CFLAGS="$CFLAGS -DSTATIC"
-# fi
+
 ])
 
 
 dnl DBMAIL_BOTH_SQL_CHECK
-dnl
 AC_DEFUN([DBMAIL_BOTH_SQL_CHECK], [dnl
+
+usemysql="no"
+usepgsql="no"
+usesqlite="no"
+
 AC_ARG_WITH(mysql,
             [  --with-mysql            use MySQL as database. Uses mysql_config
 	       		  for finding includes and libraries],
-            mysqlheadername="$withval")
+            usemysql="$withval")
 AC_ARG_WITH(pgsql,
 	    [  --with-pgsql            use PostgreSQL as database. 
                           Uses pg_config for finding includes and libraries],
-            pgsqlheadername="$withval")
+            usepgsql="$withval")
 AC_ARG_WITH(sqlite,
 	    [  --with-sqlite           use SQLite3 as database. 
                           Uses pkg-config for finding includes and libraries],
-            sqliteheadername="$withval")
+            usesqlite="$withval")
 
-WARN=0
-# Make sure we only select one of mysql, pgsql or sqlite3
-if test "${mysqlheadername-x}" = "x"
-then
-  if test "${pgsqlheadername-x}" = "x"
-  then
-    if test "${sqliteheadername-x}" = "x"
-    then
-      NEITHER=1
-      mysqlheadername=""
-    fi
-  fi
+if test [ ! "$usemysql" = "yes" -a ! "$usepgsql" = "yes" -a ! "$usesqlite" = "yes" ]; then
+     AC_MSG_ERROR([You have to specify --with-mysql, --with-pgsql or --with-sqlite to build.])
 fi
-if test "$NEITHER" = 1
-  then
-     AC_MSG_ERROR([
 
-     You have to specify --with-mysql, --with-pgsql or --with-sqlite to build.
-])
-fi
 ])
 
 dnl DBMAIL_CHECK_SQL_LIBS
-dnl
 AC_DEFUN([DBMAIL_CHECK_SQL_LIBS], [dnl
-#Look for include files and libs needed to link
-#use the configuration utilities (mysql_config and pg_config for this)
-# MySQL first
-if test ! "${mysqlheadername-x}" = "x"
-then
+if test [ "$usemysql" = "yes" ]; then
     AC_PATH_PROG(mysqlconfig,mysql_config)
-    if test [ -z "$mysqlconfig" ]
-    then
+    if test [ -z "$mysqlconfig" ]; then
         AC_MSG_ERROR([mysql_config executable not found. Make sure mysql_config is in your path])
     else
 	AC_MSG_CHECKING([MySQL headers])
@@ -148,12 +119,9 @@ then
         AC_MSG_RESULT([$MYSQLLIB])
     fi
 fi   
-
-if test ! "${pgsqlheadername-x}" = "x"
-  then
+if test [ "$usepgsql" = "yes" ]; then
     AC_PATH_PROG(pgsqlconfig,pg_config)
-    if test [ -z "$pgsqlconfig" ]
-    then
+    if test [ -z "$pgsqlconfig" ]; then
         AC_MSG_ERROR([pg_config executable not found. Make sure pg_config is in your path])
     else
 	AC_MSG_CHECKING([PostgreSQL headers])
@@ -168,25 +136,20 @@ if test ! "${pgsqlheadername-x}" = "x"
         AC_MSG_RESULT([$PGSQLLIB])
     fi
 fi
-
-if test ! "${sqliteheadername-x}" = "x"
-  then
+if test [ "$usesqlite" = "yes" ]; then
     AC_PATH_PROG(sqliteconfig,pkg-config)
-    if test [ -z "$sqliteconfig" ]
-    then
+    if test [ -z "$sqliteconfig" ]; then
         AC_MSG_ERROR([pkg-config executable not found. Make sure pkg-config is in your path])
     else
 	AC_MSG_CHECKING([SQLite3 headers])
 	SQLITEINC=`${sqliteconfig} --cflags sqlite3 --errors-to-stdout`
-	if test $? != 0
-	then
+	if test [ $? != 0 ]; then
         	AC_MSG_ERROR([$SQLITEINC])
 	fi
 	AC_MSG_RESULT([$SQLITEINC])
         AC_MSG_CHECKING([SQLite libraries])
         SQLITELIB=`${sqliteconfig} --libs sqlite3 --errors-to-stdout`
-	if test $? != 0
-	then
+	if test [ $? != 0 ]; then
         	AC_MSG_ERROR([$SQLITEINC])
 	fi
         SQLITEALIB="modules/.libs/libsqlite.a"
@@ -198,33 +161,28 @@ fi
 dnl DBMAIL_SIEVE_CONF
 dnl check for ldap or sql authentication
 AC_DEFUN([DBMAIL_SIEVE_CONF], [dnl
+
+sieveheadername="no"
+
 AC_MSG_RESULT([checking for sorting configuration])
-AC_ARG_WITH(sieve,[  --with-sieve=PATH	  full path to libSieve header directory (don't use, not stable)],
+AC_ARG_WITH(sieve,[  --with-sieve=PATH	  full path to libSieve header directory],
 	sieveheadername="$withval")
-dnl This always needs to be defined
 SORTALIB="modules/.libs/libsort_null.a"
 SORTLTLIB="modules/libsort_null.la"
 
 WARN=0
-if test ! "${sieveheadername-x}" = "x"
-then
-  # --with-sieve was specified
+if test [ "$sieveheadername" != "no" ]; then
   AC_MSG_RESULT([using Sieve sorting])
-  dnl CFLAGS="$CFLAGS -DSIEVE"
   AC_DEFINE([SIEVE], 1, [Define if Sieve sorting will be used.])
   # Redefine if there's actually Sieve sorting
   SORTALIB="modules/.libs/libsort_sieve.a"
   SORTLTLIB="modules/libsort_sieve.la"
-  if test "$withval" != "yes"
-  then
+  if test [ "$sieveheadername" != "yes" ]; then
     AC_MSG_CHECKING([for sieve2.h (user supplied)])
-    if test -r "$sieveheadername/sieve2.h"
-      then
-      # found
+    if test [ -r "$sieveheadername/sieve2.h" ]; then
         AC_MSG_RESULT([$sieveheadername/sieve2.h])
         SIEVEINC="-I$sieveheadername"
-      else 
-      # Not found
+    else 
         AC_MSG_RESULT([not found])
         SIEVEINC=""
         sieveheadername=""
@@ -233,19 +191,16 @@ then
   have configure guess])
     fi
   else
-    # Lets look in our standard paths
     AC_MSG_CHECKING([for sieve2.h])
     for sievepaths in $sieveheaderpaths
     do
-      if test -r "$sievepaths/sieve2.h"
-      then
+      if test [ -r "$sievepaths/sieve2.h" ]; then
         SIEVEINC="-I$sievepaths"
         AC_MSG_RESULT([$sievepaths/sieve2.h])
         break
       fi
     done
-    if test -z "$SIEVEINC"
-    then
+    if test [ -z "$SIEVEINC" ]; then
       AC_MSG_RESULT([no])
       AC_MSG_ERROR([
   Unable to locate sieve2.h, try specifying with --with-sieve])
@@ -257,21 +212,17 @@ fi
 ])
 
 dnl DBMAIL_CHECK_SIEVE_LIBS
-dnl
 AC_DEFUN([DBMAIL_CHECK_SIEVE_LIBS], [dnl
 # Look for libs needed to link to SIEVE first
-if test ! "${sieveheadername-x}" = "x"
-then
+if test [ "$sieveheadername" != "no" ]; then
   AC_CHECK_LIB(sieve,sieve2_listextensions,[ SORTLIB="-lsieve"], [SORTLIB=""])
-  if test -z "$SORTLIB"
-  then
+  if test [ -z "$SORTLIB" ]; then
     AC_MSG_ERROR([
   Unable to link against libSieve.  It appears you are missing the
   development libraries or they aren't in your linker's path
   ])
   fi
 else
-  #no Sieve needed
   SORTLIB=""
 fi
 ])
@@ -279,49 +230,42 @@ fi
 dnl DBMAIL_AUTH_CONF
 dnl check for ldap or sql authentication
 AC_DEFUN([DBMAIL_AUTH_CONF], [dnl
+
+authldapheadername="no"
+
 AC_MSG_RESULT([checking for authentication configuration])
 AC_ARG_WITH(auth-ldap,[  --with-auth-ldap=PATH	  full path to ldap header directory],
 	authldapheadername="$withval")
-dnl This always needs to be defined
 AUTHALIB="modules/.libs/libauth_ldap.a"
 AUTHLTLIB="modules/libauth_ldap.la"
 
 WARN=0
-if test ! "${authldapheadername-x}" = "x"
-then
+if test [ "$authldapheadername" != "no" ]; then
 	# --with-auth-ldap was specified
 	AC_MSG_RESULT([using LDAP authentication])
 	dnl CFLAGS="$CFLAGS -DAUTHLDAP"
 	AC_DEFINE([AUTHLDAP], 1, [Define if LDAP authentication will be used.])
-	if test "$withval" != "yes"
-	then
+	if test [ "$withval" != "yes" ]; then
 		AC_MSG_CHECKING([for ldap.h (user supplied)])
-		if test -r "$authldapheadername/ldap.h"
-		then
-			# found
+		if test [ -r "$authldapheadername/ldap.h" ]; then
 			AC_MSG_RESULT([$authldapheadername/ldap.h])
 			LDAPINC="-I$authldapheadername"
 		else 
-			# Not found
 			AC_MSG_RESULT([not found])
 			LDAPINC=""
 			authldapheadername=""
 			AC_MSG_ERROR([Unable to find ldap.h where you specified, try just --with-auth-ldap to have configure guess])
 		fi
 	else
-		# Lets look in our standard paths
 		AC_MSG_CHECKING([for ldap.h])
-		for ldappath in $ldapheaderpaths
-		do
-			if test -r "$ldappath/ldap.h"
-			then
+		for ldappath in $ldapheaderpaths; do
+			if test [ -r "$ldappath/ldap.h" ]; then
 				LDAPINC="-I$ldappath"
 				AC_MSG_RESULT([$ldappath/ldap.h])
 				break
 			fi
 		done
-		if test -z "$LDAPINC"
-		then
+		if test [ -z "$LDAPINC" ]; then
 			AC_MSG_RESULT([no])
 			AC_MSG_ERROR([Unable to locate ldap.h, try specifying with --with-auth-ldap])
 		fi
@@ -337,15 +281,12 @@ dnl DBMAIL_CHECK_LDAP_LIBS
 dnl
 AC_DEFUN([DBMAIL_CHECK_LDAP_LIBS], [dnl
 # Look for libs needed to link to LDAP first
-if test ! "${authldapheadername-x}" = "x"
-then
+if test [ "$authldapheadername" != "no" ]; then
 	AC_CHECK_LIB(ldap,ldap_bind,[ LDAPLIB="-lldap"], [LDAPLIB=""])
-	if test -z "$LDAPLIB"
-	then
+	if test [ -z "$LDAPLIB" ]; then
 		AC_MSG_ERROR([ Unable to link against ldap.  It appears you are missing the development libraries or they aren't in your linker's path ])
 	fi
 else
-	#no ldap needed
 	LDAPLIB=""
 fi
 ])
