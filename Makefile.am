@@ -41,7 +41,6 @@ COMMON = dbmail-user.c \
 	debug.c \
 	list.c \
 	db.c \
-	acl.c \
 	misc.c \
 	pidfile.c \
 	dm_md5.c \
@@ -74,7 +73,7 @@ dbmail_smtp_LDADD = libdbmail.la
 dbmail_pop3d_SOURCES = pop3.c pop3d.c
 dbmail_pop3d_LDADD = libdbmail.la
 
-dbmail_imapd_SOURCES = quota.c imap4.c dm_imaputil.c imapcommands.c memblock.c imapd.c dbmail-imapsession.c
+dbmail_imapd_SOURCES = quota.c imap4.c dm_imaputil.c imapcommands.c memblock.c imapd.c acl.c dbmail-imapsession.c
 dbmail_imapd_LDADD = libdbmail.la
 
 dbmail_util_SOURCES = maintenance.c

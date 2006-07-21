@@ -893,16 +893,6 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen,
 		       u64_t mailbox_idnr, u64_t user_idnr,
 		       timestring_t internal_date, u64_t * msg_idnr);
 
-/**
- * Produces a regexp that will case-insensitively match the mailbox name
- * according to the modified UTF-7 rules given in section 5.1.3 of IMAP.
- * \param column name of the name column.
- * \param mailbox name of the mailbox.
- * \param filter use /% for children or "" for just the box.
- * \return pointer to a newly allocated string.
- */
-char *db_imap_utf7_like(const char *column, const char *mailbox, const char *filter);
-
 /* mailbox functionality */
 /** 
  * \brief find mailbox "name" for a user
@@ -979,34 +969,6 @@ int db_user_is_mailbox_owner(u64_t userid, u64_t mboxid);
  */
 int db_createmailbox(const char *name, u64_t owner_idnr,
 		     u64_t * mailbox_idnr);
-/**
- * \brief Create a mailbox, recursively creating its parents.
- * \param mailbox Name of the mailbox to create
- * \param owner_idnr Owner of the mailbox
- * \param mailbox_idnr Fills the pointer with the mailbox id
- * \param message Fills the pointer with a static pointer to a message
- * \return
- *    -  0 on success
- *    -  1 on failure
- *    - -1 on error
- */
-int db_mailbox_create_with_parents(const char * mailbox, u64_t owner_idnr,
-                     u64_t * mailbox_idnr, const char * * message);
-
-/**
- * \brief Splits a mailbox name into pieces on '/'
- * \param mailbox Name of the mailbox to split
- * \param owner_idnr Owner of the mailbox
- * \param mailboxes Filled with a list of mailbox piece names
- * \param errmsg Fills the pointer with a static pointer to a message
- * \return
- *    -  0 on success
- *    -  1 on failure
- *    - -1 on error
- */
-int db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr,
-		GList ** mailboxes, const char ** errmsg)
-
 /**
  * \brief set permission on a mailbox (readonly/readwrite)
  * \param mailbox_id idnr of mailbox

@@ -62,18 +62,38 @@ static const char * trace_to_text(trace_t level)
 
 /* Call me like this:
  *
- * TRACE(TRACE_ERROR, "Something happened with error code [%d]", resultvar);
+ * newtrace(TRACE_ERROR, "authldap", __FILE__, __func__,
+ * 	"Something happened with error code [%d]", resultvar);
  *
- * Please #define THIS_MODULE "mymodule" at the top of each file.
- * Arguments for __FILE__ and __func__ are added by the TRACE macro.
- *
- * trace() and TRACE() are macros in debug.h
+ * FIXME: This function doesn't work yet. Think more about how
+ * to do this right and then... do it! - Aaron 2006-06-09.
  *
  */
-
 void newtrace(trace_t level, const char * module,
 		const char * file, const char * function,
 		char *formatstring, ...)
+{
+	va_list argp;
+	char *newformatstring;
+
+	va_start(argp, formatstring);
+
+	/* If the global trace leve is really high */
+	newformatstring = g_strdup_printf("from %s, %s, %s: %s",
+			module, file, function, formatstring);
+
+	/* If the global trace level is really low */
+	newformatstring = g_strdup_printf("%s: %s",
+			module, formatstring);
+
+	trace(level, newformatstring, argp);
+
+	g_free(newformatstring);
+
+	va_end(argp);
+}
+
+void trace(trace_t level, char *formatstring, ...)
 {
 	va_list argp;
 
@@ -81,21 +101,7 @@ void newtrace(trace_t level, const char * module,
 	size_t l;
 
 	va_start(argp, formatstring);
-
-	/* TODO: make use of the module, file, function arguments.
-	if (TRACE_SYSLOG >= 5) {
-		// If the global trace level is really high
-		formatstring_verbose = g_strdup_printf("from %s, %s, %s: %s",
-				module, file, function, formatstring);
-	} else {
-		// If the global trace level is really low
-		formatstring = g_strdup_printf("%s: %s",
-				module, formatstring);
-	}
-	*/
-
 	message = g_strdup_vprintf(formatstring, argp);
-
 	va_end(argp);
 	l = strlen(message);
 	

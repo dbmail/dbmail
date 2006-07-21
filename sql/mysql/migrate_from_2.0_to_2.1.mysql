@@ -17,10 +17,6 @@ ALTER TABLE dbmail_physmessage ENGINE=InnoDB;
 # This query can also take quite a few minutes.
 ALTER TABLE dbmail_messageblks MODIFY messageblk LONGBLOB NOT NULL;
 
-# We need to be able to do case-insensitive matching.
-# This drops the BINARY qualifier from the column.
-ALTER TABLE dbmail_mailboxes MODIFY name VARCHAR(100) NOT NULL default '';
-
 
 ALTER TABLE dbmail_auto_replies ADD start_date DATETIME NOT NULL;
 ALTER TABLE dbmail_auto_replies ADD stop_date DATETIME NOT NULL;

@@ -28,8 +28,6 @@
 
 #include "dbmail.h"
 
-#define THIS_MODULE "imap"
-
 #ifndef MAX_LINESIZE
 #define MAX_LINESIZE (10*1024)
 #endif
@@ -483,7 +481,7 @@ void _structure_part_text(GMimeObject *part, gpointer data, gboolean extension)
 
 
 
-/*static*/ GList * _imap_append_alist_as_plist(GList *list, const InternetAddressList *ialist)
+static GList * _imap_append_alist_as_plist(GList *list, const InternetAddressList *ialist)
 {
 	GList *t = NULL, *p = NULL;
 	InternetAddress *ia = NULL;
