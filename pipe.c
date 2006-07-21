@@ -17,13 +17,12 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: pipe.c 2204 2006-07-21 13:33:25Z aaron $
+/* $Id: pipe.c 2171 2006-06-14 15:42:11Z aaron $
  *
  * Functions for reading the pipe from the MTA */
 
 #include "dbmail.h"
 
-#define THIS_MODULE "delivery"
 
 #define HEADER_BLOCK_SIZE 1024
 #define QUERY_SIZE 255
@@ -182,20 +181,8 @@ static int send_mail(struct DbmailMessage *message,
 	result = pclose(mailpipe);
 	trace(TRACE_DEBUG, "%s, %s: pipe closed", __FILE__, __func__);
 
-	/* Adapted from the Linux waitpid 2 man page. */
-	if (WIFEXITED(result)) {
-		result = WEXITSTATUS(result);
-		TRACE(TRACE_INFO, "sendmail exited normally");
-	} else if (WIFSIGNALED(result)) {
-		result = WTERMSIG(result);
-		TRACE(TRACE_INFO, "sendmail was terminated by signal");
-	} else if (WIFSTOPPED(result)) {
-		result = WSTOPSIG(result);
-		TRACE(TRACE_INFO, "sendmail was stopped by signal");
-	}
-
 	if (result != 0) {
-		trace(TRACE_ERROR, "%s, %s: sendmail error return value was [%d]",
+		trace(TRACE_ERROR, "%s, %s: sendmail error [%d]",
 			__FILE__, __func__, result);
 
 		if (!sendmail_external)
@@ -617,7 +604,7 @@ int insert_messages(struct DbmailMessage *message,
 					delivery->mailbox, delivery->source)) {
 			case DSN_CLASS_OK:
 				/* Indicate success. */
-				trace(TRACE_INFO, "%s, %s: successful sort_and_deliver for useridnr [%llu]",
+				trace(TRACE_DEBUG, "%s, %s: successful sort_and_deliver for useridnr [%llu]",
 				      __FILE__, __func__, useridnr);
 				has_2 = 1;
 				break;
@@ -629,14 +616,14 @@ int insert_messages(struct DbmailMessage *message,
 				break;
 			case DSN_CLASS_QUOTA:
 			/* Indicate over quota. */
-				trace(TRACE_MESSAGE, "%s, %s: mailbox over quota, message rejected for useridnr [%llu]",
+				trace(TRACE_ERROR, "%s, %s: temporary failure sort_and_deliver for useridnr [%llu]",
 				      __FILE__, __func__, useridnr);
 				has_5_2 = 1;
 				break;
 			case DSN_CLASS_TEMP:
 			default:
 				/* Assume a temporary failure */
-				trace(TRACE_ERROR, "%s, %s: unknown temporary failure in sort_and_deliver for useridnr [%llu]",
+				trace(TRACE_ERROR, "%s, %s: temporary failure sort_and_deliver for useridnr [%llu]",
 				      __FILE__, __func__, useridnr);
 				has_4 = 1;
 				break;

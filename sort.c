@@ -81,7 +81,7 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message,
 		trace(TRACE_INFO, "%s, %s: Keep was cancelled. Message may be discarded.",
 				__FILE__, __func__);
 	} else {
-		ret = sort_deliver_to_mailbox(message, useridnr, mailbox, source, NULL);
+		ret = sort_deliver_to_mailbox(message, useridnr, mailbox, source);
 		trace(TRACE_INFO, "%s, %s: Keep was not cancelled. Message will be delivered by default.",
 				__FILE__, __func__);
 	}
@@ -99,8 +99,7 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message,
 }
 
 dsn_class_t sort_deliver_to_mailbox(struct DbmailMessage *message,
-		u64_t useridnr, const char *mailbox, mailbox_source_t source,
-		int *msgflags)
+		u64_t useridnr, const char *mailbox, mailbox_source_t source)
 {
 	u64_t mboxidnr, newmsgidnr;
 	size_t msgsize = (u64_t)dbmail_message_get_size(message, FALSE);
@@ -124,16 +123,13 @@ dsn_class_t sort_deliver_to_mailbox(struct DbmailMessage *message,
 		return DSN_CLASS_QUOTA;
 	case -1:
 		trace(TRACE_ERROR, "%s, %s: error copying message to user [%llu]", 
-				__FILE__, __func__, useridnr);
+				__FILE__, __func__, 
+				useridnr);
 		return DSN_CLASS_TEMP;
 	default:
 		trace(TRACE_MESSAGE, "%s, %s: message id=%llu, size=%d is inserted", 
-				__FILE__, __func__, newmsgidnr, msgsize);
-		if (msgflags) {
-			trace(TRACE_MESSAGE, "%s, %s: message id=%llu, setting imap flags", 
-				__FILE__, __func__, newmsgidnr);
-			db_set_msgflag(newmsgidnr, mboxidnr, msgflags, IMAPFA_ADD);
-		}
+				__FILE__, __func__, 
+				newmsgidnr, msgsize);
 		message->id = newmsgidnr;
 		return DSN_CLASS_OK;
 	}

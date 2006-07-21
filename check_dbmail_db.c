@@ -179,8 +179,7 @@ START_TEST(test_db_mailbox_set_permission)
 
 	int result;
 	u64_t mailbox_id;
-	result = db_find_create_mailbox("testpermissionbox", BOX_DEFAULT, testidnr, &mailbox_id);
-	fail_unless(mailbox_id, "db_find_create_mailbox [testpermissionbox] owned by [%llu] failed [%llu].", testidnr, mailbox_id);
+	result = db_createmailbox("testpermissionbox",testidnr, &mailbox_id);
 
 	result = db_mailbox_set_permission(mailbox_id, IMAPPERM_READ);
 	fail_unless(result==0,"db_mailbox_set_permission failed");
@@ -802,38 +801,6 @@ END_TEST
 //		       u64_t mailbox_idnr, u64_t user_idnr,
 //		       timestring_t internal_date, u64_t * msg_idnr);
 
-/**
- * Produces a regexp that will case-insensitively match the mailbox name
- * according to the modified UTF-7 rules given in section 5.1.3 of IMAP.
- * \param column name of the name column.
- * \param mailbox name of the mailbox.
- * \param filter use /% for children or "" for just the box.
- * \return pointer to a newly allocated string.
- */
-START_TEST(test_db_imap_utf7_like)
-{
-	char *trythese[] = {
-		"INBOX/&BekF3AXVBd0-",
-		"Inbox",
-		"Listen/F% %/Users",
-		NULL };
-	char *getthese[] = {
-		"name LIKE BINARY '______&BekF3AXVBd0_/%' AND name LIKE 'INBOX/____________-/%'",
-		"name LIKE 'Inbox/%'",
-		"name LIKE 'Listen/F% %/Users/%'",
-		NULL };
-	int i;
-
-	for (i = 0; trythese[i] != NULL; i++) {
-		char *result = db_imap_utf7_like("name", trythese[i], "/%");
-
-		fail_unless(strcmp(result, getthese[i])==0, "Failed to make db_imap_utf7_like string for [%s]", trythese[i]);
-
-		dm_free(result);
-	}
-}
-END_TEST
-
 /* mailbox functionality */
 /** 
  * \brief find mailbox "name" for a user
@@ -923,53 +890,6 @@ START_TEST(test_db_createmailbox)
 	
 }
 END_TEST
-
-/** Create a mailbox, recursively creating its parents.
- * \param mailbox Name of the mailbox to create
- * \param owner_idnr Owner of the mailbox
- * \param mailbox_idnr Fills the pointer with the mailbox id
- * \param message Returns a static pointer to the return message
- * \return
- *    0 Everything's good
- *    1 Cannot create mailbox
- *   -1 Database error
- */
-START_TEST(test_db_mailbox_create_with_parents)
-{
-	u64_t mailbox_idnr = 0;
-	const char *message;
-	int result;
-	int only_empty = 0, update_curmail_size = 0 ;
-
-	result = db_mailbox_create_with_parents("INBOX/Foo/Bar/Baz",
-			useridnr, &mailbox_idnr, &message);
-	fail_unless(result == 0 && mailbox_idnr != 0,
-			"Failed at db_mailbox_create_with_parents: [%s]", message);
-
-	/* At this point, useridnr should have and be subscribed to several boxes... */
-	result = db_findmailbox("inbox/foo/BAR/baz", useridnr, &mailbox_idnr);
-	fail_unless(result == 1 && mailbox_idnr != 0, "Failed at db_findmailbox(\"inbox/foo/BAR/baz\")");
-	result = db_delete_mailbox(mailbox_idnr, only_empty, update_curmail_size);
-	fail_unless(result == 0, "Failed at db_findmailbox or db_delete_mailbox");
-
-	result = db_findmailbox("InBox/Foo/bar", useridnr, &mailbox_idnr);
-	fail_unless(result == 1 && mailbox_idnr != 0, "Failed at db_findmailbox(\"InBox/Foo/bar\")");
-	result = db_delete_mailbox(mailbox_idnr, only_empty, update_curmail_size);
-	fail_unless(result == 0, "Failed at db_findmailbox or db_delete_mailbox");
-
-	result = db_findmailbox("INBOX/FOO", useridnr, &mailbox_idnr);
-	fail_unless(result == 1 && mailbox_idnr != 0, "Failed at db_findmailbox(\"INBOX/FOO\")");
-	result = db_delete_mailbox(mailbox_idnr, only_empty, update_curmail_size);
-	fail_unless(result == 0, "Failed at db_findmailbox or db_delete_mailbox");
-
-	result = db_findmailbox("INBox", useridnr, &mailbox_idnr);
-	fail_unless(result == 1 && mailbox_idnr != 0, "Failed at db_findmailbox(\"INBox\")");
-	result = db_delete_mailbox(mailbox_idnr, only_empty, update_curmail_size);
-	fail_unless(result == 0, "We just deleted inbox. Something silly.");
-	/* Cool, we've cleaned up after ourselves. */
-}
-END_TEST
-
 /**
  * \brief delete a mailbox. 
  * \param mailbox_idnr
@@ -986,17 +906,17 @@ END_TEST
 //		      int update_curmail_size);
 START_TEST(test_db_delete_mailbox)
 {
-	u64_t mailbox_id = 999999999;
+	u64_t mailbox_id=999999999;
 	int result;
 
-	result = db_delete_mailbox(mailbox_id, 0, 0);
+	result = db_delete_mailbox(mailbox_id,0,0);
 	fail_unless(result != DM_SUCCESS, "db_delete_mailbox should have failed");
 
 	result = db_createmailbox("testdeletebox",testidnr, &mailbox_id);
-	fail_unless(result == 0,"db_createmailbox failed");
+	fail_unless(result==0,"db_createmailbox failed");
 
 	result = db_delete_mailbox(mailbox_id,0,0);
-	fail_unless(result == 0,"db_delete_mailbox failed");
+	fail_unless(result==0,"db_delete_mailbox failed");
 	
 }
 END_TEST
@@ -1161,10 +1081,8 @@ Suite *dbmail_db_suite(void)
 	tcase_add_checked_fixture(tc_db, setup, teardown);
 	tcase_add_test(tc_db, test_db_query);
 	tcase_add_test(tc_db, test_db_createmailbox);
-	tcase_add_test(tc_db, test_db_mailbox_create_with_parents);
 	tcase_add_test(tc_db, test_db_delete_mailbox);
 	tcase_add_test(tc_db, test_db_mailbox_set_permission);
-	tcase_add_test(tc_db, test_db_imap_utf7_like);
 	return s;
 }
 

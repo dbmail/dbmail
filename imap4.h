@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: imap4.h 2204 2006-07-21 13:33:25Z aaron $
+/* $Id: imap4.h 2065 2006-04-10 20:38:36Z paul $
  * 
  * imap4.h
  */
@@ -87,6 +87,15 @@ typedef struct {
 	u64_t userid;		/* userID of client in dbase */
 	mailbox_t mailbox;	/* currently selected mailbox */
 } imap_userdata_t;
+
+typedef enum {
+	IMAP_STORE_FLAG_SEEN,
+	IMAP_STORE_FLAG_ANSWERED,
+	IMAP_STORE_FLAG_DELETED,
+	IMAP_STORE_FLAG_FLAGGED,
+	IMAP_STORE_FLAG_DRAFT,
+	IMAP_STORE_FLAG_RECENT
+} imap_store_flag_t;
 
 imap_userdata_t * dbmail_imap_userdata_new(void);
 

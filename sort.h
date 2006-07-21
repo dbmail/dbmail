@@ -1,5 +1,5 @@
 
-/* $Id: sort.h 2204 2006-07-21 13:33:25Z aaron $ 
+/* $Id: sort.h 1993 2006-02-24 23:20:26Z aaron $ 
  
  Copyright (C) 1999-2004 Aaron Stone aaron at serendipity dot cx
 
@@ -33,8 +33,7 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *self,
 		const char *mailbox, mailbox_source_t source);
 
 dsn_class_t sort_deliver_to_mailbox(struct DbmailMessage *message,
-		u64_t useridnr, const char *mailbox, mailbox_source_t source,
-		int *msgflags);
+		u64_t useridnr, const char *mailbox, mailbox_source_t source);
 
 sort_result_t *sort_process(u64_t user_idnr, struct DbmailMessage *message);
 sort_result_t *sort_validate(u64_t user_idnr, char *scriptname);
