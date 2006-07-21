@@ -1,5 +1,11 @@
 2006-07-21  Paul J Stevens <paul@nfg.nl>
 
+	* ChangeLog, Makefile.am, check_dbmail_db.c, check_dbmail_imapd.c, db.c, 
+	  db.h, dbmailtypes.h, debug.c, debug.h, dm_imaputil.c, imap4.h, 
+	  imapcommands.c, modules/sortsieve.c, pipe.c, sort.c, sort.h, 
+	  sql/mysql/create_tables.mysql, 
+	  sql/mysql/migrate_from_2.0_to_2.1.mysql:
+	back out Aarons patch
 	* acinclude.m4:
 	fix minor typo (cshug)
 	* acinclude.m4:
