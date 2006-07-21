@@ -1,5 +1,5 @@
 /*
- $Id: dbmailtypes.h 2196 2006-07-15 17:32:31Z paul $
+ $Id: dbmailtypes.h 2204 2006-07-21 13:33:25Z aaron $
 
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
@@ -282,6 +282,7 @@ typedef struct {
 	unsigned flags;
 	int permission;
 	u64_t *seq_list;
+	gboolean is_public, is_users, is_inbox;
 } mailbox_t;
 
 
@@ -444,6 +445,18 @@ typedef enum {
 		
 } sql_fragment_t;
 
+typedef enum {
+	IMAP_FLAG_SEEN,
+	IMAP_FLAG_ANSWERED,
+	IMAP_FLAG_DELETED,
+	IMAP_FLAG_FLAGGED,
+	IMAP_FLAG_DRAFT,
+	IMAP_FLAG_RECENT
+} imap_flag_t;
+
+ /* shared global */
+ db_param_t _db_params;
+ 
 
 /* shared global */
 db_param_t _db_params;

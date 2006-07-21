@@ -23,7 +23,7 @@
 # This file was originally created by Paul Stevens and added
 # to dbmail on August 27th, 2003.
 # 
-# $Id: create_tables.mysql 2104 2006-05-05 10:32:46Z paul $
+# $Id: create_tables.mysql 2204 2006-07-21 13:33:25Z aaron $
 
 SET FOREIGN_KEY_CHECKS=0;
 
@@ -67,7 +67,7 @@ DROP TABLE IF EXISTS dbmail_mailboxes;
 CREATE TABLE dbmail_mailboxes (
 	mailbox_idnr bigint(21) NOT NULL auto_increment,
 	owner_idnr bigint(21) NOT NULL default '0',
-	name varchar(100) BINARY NOT NULL default '',
+	name varchar(100) NOT NULL default '',
 	seen_flag tinyint(1) NOT NULL default '0',
 	answered_flag tinyint(1) NOT NULL default '0',
 	deleted_flag tinyint(1) NOT NULL default '0',
