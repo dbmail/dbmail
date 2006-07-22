@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: pop3d.c 2096 2006-04-30 18:39:56Z aaron $
+/* $Id: pop3d.c 2199 2006-07-18 11:07:53Z paul $
 *
 * pop3d.c
 *
@@ -45,8 +45,9 @@ static void get_config(serverConfig_t *config);
 /* also used in pop3.c */
 int pop_before_smtp = 0;
 
-extern int mainRestart;
-extern int mainStop;
+extern volatile sig_atomic_t mainRestart;
+extern volatile sig_atomic_t mainStop;
+extern volatile sig_atomic_t mainSig;
 
 int do_showhelp(void) {
 	printf("*** dbmail-pop3d ***\n");
@@ -85,7 +86,7 @@ int main(int argc, char *argv[])
 			break;
 		case 'V':
 			printf("\n*** DBMAIL: dbmail-pop3d version "
-			       "$Revision: 2096 $ %s\n\n", COPYRIGHT);
+			       "$Revision: 2199 $ %s\n\n", COPYRIGHT);
 			return 0;
 		case 'n':
 			no_daemonize = 1;
@@ -176,7 +177,7 @@ void get_config(serverConfig_t *config)
 
 void MainSigHandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
 {
-	trace(TRACE_DEBUG, "MainSigHandler(): got signal [%d]", sig);
+	mainSig = sig;
 
 	if (sig == SIGHUP)
 		mainRestart = 1;

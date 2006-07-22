@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: dbmail-imapsession.c 2187 2006-06-24 14:57:02Z paul $
+/* $Id: dbmail-imapsession.c 2199 2006-07-18 11:07:53Z paul $
  * 
  * dm_imaputil.c
  *
@@ -56,6 +56,8 @@ extern char _sqldate[SQL_INTERNALDATE_LEN + 1];
 extern const int month_len[];
 extern const char *imap_flag_desc[];
 extern const char *imap_flag_desc_escaped[];
+
+extern volatile sig_atomic_t alarm_occured;
 
 static int _imap_session_fetch_parse_partspec(struct ImapSession *self, int idx);
 static int _imap_session_fetch_parse_octet_range(struct ImapSession *self, int idx);
@@ -1163,6 +1165,7 @@ int dbmail_imap_session_readln(struct ImapSession *self, char * buffer)
 	memset(buffer, 0, MAX_LINESIZE);
 	alarm(ci->timeout);
 	if (fgets(buffer, MAX_LINESIZE, ci->rx) == NULL) {
+		alarm(0);
 		trace(TRACE_ERROR, "%s,%s: error reading from client", __FILE__, __func__);
 		return -1;
 	}
@@ -1850,19 +1853,40 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 				alarm(0);
 				the_args[nargs][dataidx] = '\0';	/* terminate string */
 				nargs++;
-
-				if (!ci->rx || !ci->tx || ferror(ci->rx) || ferror(ci->tx)) {
-					trace(TRACE_ERROR, "%s,%s: timeout occurred", 
+				if (alarm_occured) {
+					alarm_occured = 0;
+					client_close();
+					trace(TRACE_ERROR, "%s,%s: timeout occurred in fgetc", 
 							__FILE__, __func__);
 					free_args();
 					return NULL;
 				}
 
+				if (ferror(ci->rx) || ferror(ci->tx)) {
+					trace(TRACE_ERROR, "%s,%s: client socket is set error indicator in fgetc", 
+							__FILE__, __func__);
+					free_args();
+					return NULL;
+				}
 				/* now read the rest of this line */
 				result = dbmail_imap_session_readln(self, s);
+		
+				if (alarm_occured) {
+					alarm_occured = 0;
+					client_close();
+					trace(TRACE_ERROR, "%s,%s: timeout occurred in dbmail_imap_session_readln", 
+							__FILE__, __func__);
+					free_args();
+					return NULL;
+				}
 
-				if (result < 0 || !ci->rx || !ci->tx || ferror(ci->rx) || ferror(ci->tx)) {
-					trace(TRACE_ERROR, "%s,%s: timeout occurred", 
+				if (result < 0){
+					free_args();
+					return NULL;
+				}
+
+				if (ferror(ci->rx) || ferror(ci->tx)) {
+					trace(TRACE_ERROR, "%s,%s: client socket is set error indicator in dbmail_imap_session_readln",
 							__FILE__, __func__);
 					free_args();
 					return NULL;

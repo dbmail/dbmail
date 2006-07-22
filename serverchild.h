@@ -1,5 +1,5 @@
 /*
-  $Id: serverchild.h 2065 2006-04-10 20:38:36Z paul $
+  $Id: serverchild.h 2199 2006-07-18 11:07:53Z paul $
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
 
@@ -38,5 +38,5 @@ int DelChildSigHandler(void);
 pid_t CreateChild(ChildInfo_t * info);
 
 int manage_start_cli_server(ChildInfo_t * info);
-
+void client_close(void);
 #endif

@@ -37,7 +37,7 @@ set -e
 [ -e /etc/default/dbmail ] && . /etc/default/dbmail
 
 config_valid() {
-	/usr/sbin/dbmail-users -l >/dev/null 2>&1  && return 0
+	/usr/sbin/dbmail-util -l 2h30m >/dev/null 2>&1  && return 0
 	cat << EOM
 Dbmail cannot connect to the database server. Please make sure
 /etc/dbmail/dbmail.conf is correct, the database-server is running,
@@ -86,19 +86,16 @@ ssl_wrapper() {
 }	
 
 persistent_start() {
-	## _debug="true"
+	#_debug="true"
 	
 	eval '_daemon=$'$1
 	eval '_name=$'$1'_NAME'
 	echo -n "$_name "
 	count=0
-	echo $_daemon
 	[ -e $_daemon ] || return 0
 	while [ $count -lt 30 ]; do
-		echo -n "."
-		start-stop-daemon --start --exec $_daemon
-		sleep 2
-		pids=`pidof $_daemon` 1>/dev/null
+		start-stop-daemon --start --exec $_daemon >/dev/null 2>&1
+		pids=`pidof $_name` 1>/dev/null
 		if [ -n "$pids" ]; then
 			[ $_debug ] && echo "...got pids: $pids"
 			return 0
@@ -119,24 +116,14 @@ persistent_stop() {
 	count=0
 	
 	start-stop-daemon --stop --retry 10 \
-		--pidfile ${PID_DIR}/${_name}.pid \
-		--name $_name >/dev/null 2>&1 || true
-		
-	while [ $count -lt 5 ]; do
-		echo -n "."
-		pids=`pidof $_daemon` 1>/dev/null
-		if [ -n "$pids" ]; then
-			[ $_debug ] && echo "...got pids: $pids"
-			start-stop-daemon --stop --name $_name || true
-		else
-			return 0
-		fi	
-		count=$(($count+1))
-		sleep 2
-	done
-	[ $_debug ] && echo "Stopping $_name failed. Killing hard."
-	killall -9 $_name
-	
+		--pidfile ${PID_DIR}/${_name}.pid >/dev/null 2>&1 || true
+
+	pids=`pidof ${_name}`
+	if [ -n "$pids" ]; then
+		[ $_debug ] && echo "Stopping $_name failed. Killing hard."
+		killall -9 $_name
+	fi
+
 	return 0
 	
 }
@@ -172,7 +159,6 @@ case "$1" in
 	;;
   restart|force-reload)
 	$0 stop || true
-	sleep 3
 	$0 start
 	;;
   *)

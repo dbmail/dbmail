@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: lmtp.c 2021 2006-03-10 09:12:40Z paul $
+/* $Id: lmtp.c 2199 2006-07-18 11:07:53Z paul $
  *
  * implementation for lmtp commands according to RFC 1081 */
 
@@ -34,6 +34,8 @@
 /* max_in_buffer defines the maximum number of bytes that are allowed to be
  * in the incoming buffer */
 #define MAX_IN_BUFFER 255
+
+extern volatile sig_atomic_t alarm_occured;
 
 /* These are needed across multiple calls to lmtp() */
 static struct dm_list from, rcpt;
@@ -167,7 +169,9 @@ int lmtp_handle_connection(clientinfo_t * ci)
 				fread(&buffer[cnt], 1, 1, ci->rx);
 
 				/* leave, an alarm has occured during fread */
-				if (!ci->rx) {
+				if (alarm_occured) {
+					alarm_occured = 0;
+					client_close();
 					dm_free(buffer);
 					return 0;
 				}

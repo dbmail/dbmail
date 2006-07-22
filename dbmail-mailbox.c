@@ -40,7 +40,6 @@ struct DbmailMailbox * dbmail_mailbox_new(u64_t id)
 	dbmail_mailbox_set_id(self,id);
 	dbmail_mailbox_set_uid(self, FALSE);
 	self->search = NULL;
-	self->set = NULL;
 	self->fi = NULL;
 
 	if (dbmail_mailbox_open(self)) {
@@ -77,11 +76,6 @@ void dbmail_mailbox_free(struct DbmailMailbox *self)
 		g_list_destroy(self->sorted);
 		self->sorted = NULL;
 	}
-	if (self->set) {
-		g_list_free(self->set);
-		self->set = NULL;
-	}
-
 	if (self->fi) {
 		if (self->fi->bodyfetch)
 			g_list_foreach(self->fi->bodyfetch, (GFunc)g_free, NULL);
@@ -1295,11 +1289,6 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set)
 	if (a)
 		g_tree_destroy(a);
 
-	self->set = g_tree_keys(b);
-
-	trace(TRACE_DEBUG,"%s,%s: self->set contains [%d] ids between [%llu] and [%llu]", 
-			__FILE__, __func__, g_list_length(g_list_first(self->set)), lo, hi);
-
 	return b;
 }
 
@@ -1312,7 +1301,7 @@ static gboolean _do_search(GNode *node, struct DbmailMailbox *self)
 	
 	switch (s->type) {
 		case IST_SET:
-			if (! dbmail_mailbox_get_set(self, (const char *)s->search))
+			if (! (s->found = dbmail_mailbox_get_set(self, (const char *)s->search)))
 				return TRUE;
 			break;
 
@@ -1328,11 +1317,7 @@ static gboolean _do_search(GNode *node, struct DbmailMailbox *self)
 		case IST_DATA_BODY:
 			mailbox_search(self, s);
 			break;
-/*
-		case IST_DATA_BODY:
-			mailbox_search_parsed(self,s);
-			break;
-*/		
+			
 		case IST_SUBSEARCH_NOT:
 		case IST_SUBSEARCH_AND:
 		case IST_SUBSEARCH_OR:

@@ -1,4 +1,4 @@
-/* $Id: timsieve.c 2107 2006-05-07 07:12:51Z aaron $
+/* $Id: timsieve.c 2199 2006-07-18 11:07:53Z paul $
 
  Copyright (C) 1999-2004 Aaron Stone aaron at serendipity dot cx
 
@@ -59,6 +59,7 @@ static char myhostname[64];
 
 /* Defined in timsieved.c */
 extern const char *sieve_extensions;
+extern volatile sig_atomic_t alarm_occured;
 
 int tims_handle_connection(clientinfo_t * ci)
 {
@@ -121,7 +122,9 @@ int tims_handle_connection(clientinfo_t * ci)
 				fread(&buffer[cnt], 1, 1, ci->rx);
 
 				/* leave, an alarm has occured during fread */
-				if (!ci->rx) {
+				if (alarm_occured) {
+					alarm_occured = 0;
+					client_close();
 					dm_free(buffer);
 					return 0;
 				}

@@ -1,5 +1,5 @@
 /*
-  $Id: dbmail-message.c 2182 2006-06-18 20:39:19Z paul $
+  $Id: dbmail-message.c 2200 2006-07-18 13:59:32Z paul $
 
   Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
 
@@ -383,10 +383,22 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 
 static void _map_headers(struct DbmailMessage *self) 
 {
+	GMimeObject *part;
 	assert(self->content);
 	self->headers = g_relation_new(2);
 	g_relation_index(self->headers, 0, (GHashFunc)g_str_hash, (GEqualFunc)g_str_equal);
 	g_relation_index(self->headers, 1, (GHashFunc)g_str_hash, (GEqualFunc)g_str_equal);
+
+	 // gmime doesn't consider the content-type header to be a message-header so extract 
+	 // and register it separately
+	if (GMIME_IS_MESSAGE(self->content)) {
+		char *type = NULL;
+		part = g_mime_message_get_mime_part(GMIME_MESSAGE(self->content));
+		if ((type = (char *)g_mime_object_get_header(part,"Content-Type"))!=NULL)
+			_register_header("Content-Type",type, (gpointer)self);
+		g_object_unref(part);
+	}
+
 	g_mime_header_foreach(GMIME_OBJECT(self->content)->headers, _register_header, self);
 }
 
@@ -839,19 +851,9 @@ int _message_insert(struct DbmailMessage *self,
 
 int dbmail_message_headers_cache(const struct DbmailMessage *self)
 {
-	GMimeObject *part;
 	assert(self);
 	assert(self->physid);
-	
-	if (GMIME_IS_MESSAGE(self->content)) {
-		char *type = NULL;
-		part = g_mime_message_get_mime_part(GMIME_MESSAGE(self->content));
-		if ((type = (char *)g_mime_object_get_header(part,"Content-Type"))!=NULL)
-			_header_cache("Content-Type",type,(gpointer)self);
-		g_object_unref(part);
-	}
-	
-	//g_mime_header_foreach(GMIME_OBJECT(self->content)->headers, _header_cache, (gpointer)self);
+
 	g_tree_foreach(self->header_name, (GTraverseFunc)_header_cache, (gpointer)self);
 	
 	dbmail_message_cache_tofield(self);
@@ -864,29 +866,41 @@ int dbmail_message_headers_cache(const struct DbmailMessage *self)
 	
 	return 1;
 }
+#define CACHE_WIDTH_VALUE 255
+#define CACHE_WIDTH_FIELD 255
+#define CACHE_WIDTH_ADDR 100
+#define CACHE_WIDTH_NAME 100
+
 
 static int _header_get_id(const struct DbmailMessage *self, const char *header, u64_t *id)
 {
 	u64_t tmp;
 	gpointer cacheid;
-	cacheid = g_hash_table_lookup(self->header_dict, (gconstpointer)header);
+	gchar *safe_header;
 
+	if (! (safe_header = dm_strnesc(header,CACHE_WIDTH_NAME)))
+		return -1;
+
+	cacheid = g_hash_table_lookup(self->header_dict, (gconstpointer)safe_header);
 	if (cacheid) {
 		*id = GPOINTER_TO_UINT(cacheid);
+		g_free(safe_header);
 		return 1;
 	}
-	
+		
 	GString *q = g_string_new("");
-	g_string_printf(q, "SELECT id FROM %sheadername WHERE headername='%s'", DBPFX, header);
+	g_string_printf(q, "SELECT id FROM %sheadername WHERE headername='%s'", DBPFX, safe_header);
 	if (db_query(q->str) == -1) {
 		g_string_free(q,TRUE);
+		g_free(safe_header);
 		return -1;
 	}
 	if (db_num_rows() < 1) {
 		db_free_result();
-		g_string_printf(q, "INSERT INTO %sheadername (headername) VALUES ('%s')", DBPFX, header);
+		g_string_printf(q, "INSERT INTO %sheadername (headername) VALUES ('%s')", DBPFX, safe_header);
 		if (db_query(q->str) == -1) {
 			g_string_free(q,TRUE);
+			g_free(safe_header);
 			return -1;
 		}
 		tmp = db_insert_result("headername_idnr");
@@ -895,14 +909,11 @@ static int _header_get_id(const struct DbmailMessage *self, const char *header, 
 		db_free_result();
 	}
 	*id = tmp;
-	g_hash_table_insert(self->header_dict, (gpointer)(g_strdup(header)), GUINT_TO_POINTER((unsigned)tmp));
+	g_hash_table_insert(self->header_dict, (gpointer)(g_strdup(safe_header)), GUINT_TO_POINTER((unsigned)tmp));
+	g_free(safe_header);
 	g_string_free(q,TRUE);
 	return 1;
 }
-
-#define CACHE_WIDTH_VALUE 255
-#define CACHE_WIDTH_FIELD 255
-#define CACHE_WIDTH_ADDR 100
 
 static gboolean _header_cache(const char UNUSED *key, const char *header, gpointer user_data)
 {

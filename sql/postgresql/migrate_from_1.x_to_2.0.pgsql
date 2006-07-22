@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
--- $Id: migrate_from_1.x_to_2.0.pgsql 2049 2006-03-24 11:41:17Z aaron $
+-- $Id: migrate_from_1.x_to_2.0.pgsql 2203 2006-07-21 07:36:44Z paul $
 
 /* first start a transaction to possibly create the auto_replies and 
    auto_notifications tables, which might, or might not be present.
@@ -28,6 +28,7 @@ BEGIN TRANSACTION;
 CREATE SEQUENCE auto_notification_seq;
 CREATE TABLE auto_notifications (
    auto_notify_idnr INT8 DEFAULT nextval('auto_notification_seq'),
+   user_idnr INT8 DEFAULT '0' NOT NULL,
    notify_address VARCHAR(100),
    PRIMARY KEY (auto_notify_idnr)
 );
@@ -35,6 +36,7 @@ CREATE TABLE auto_notifications (
 CREATE SEQUENCE auto_reply_seq;
 CREATE TABLE auto_replies (
    auto_reply_idnr INT8 DEFAULT nextval('auto_reply_seq'),
+   user_idnr INT8 DEFAULT '0' NOT NULL,
    reply_body TEXT,
    PRIMARY KEY(auto_reply_idnr)
 );

@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: imapd.c 2096 2006-04-30 18:39:56Z aaron $
+/* $Id: imapd.c 2199 2006-07-18 11:07:53Z paul $
  *
  * imapd.c
  * 
@@ -34,8 +34,9 @@ char *configFile = DEFAULT_CONFIG_FILE;
 /* set up database login data */
 extern db_param_t _db_params;
 
-extern int mainRestart;
-extern int mainStop;
+extern volatile sig_atomic_t mainRestart;
+extern volatile sig_atomic_t mainStop;
+extern volatile sig_atomic_t mainSig;
 
 static int SetMainSigHandler(void);
 static void MainSigHandler(int sig, siginfo_t * info, void *data);
@@ -79,7 +80,7 @@ int main(int argc, char *argv[])
 			log_verbose = 1;
 			break;
 		case 'V':
-			printf("\n*** DBMAIL: dbmail-imapd version $Revision: 2096 $ %s\n\n", 
+			printf("\n*** DBMAIL: dbmail-imapd version $Revision: 2199 $ %s\n\n", 
 					COPYRIGHT);
 			return 0;
 		case 'n':
@@ -167,7 +168,7 @@ void get_config(serverConfig_t *config)
 
 void MainSigHandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
 {
-	trace(TRACE_DEBUG, "MainSigHandler(): got signal [%d]", sig);
+	mainSig = sig;
 
 	if (sig == SIGHUP)
 		mainRestart = 1;

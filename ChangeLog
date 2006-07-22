@@ -1,5 +1,40 @@
+2006-07-21  Paul J Stevens <paul@nfg.nl>
+
+	* ChangeLog, Makefile.am, check_dbmail_db.c, check_dbmail_imapd.c, db.c, 
+	  db.h, dbmailtypes.h, debug.c, debug.h, dm_imaputil.c, imap4.h, 
+	  imapcommands.c, modules/sortsieve.c, pipe.c, sort.c, sort.h, 
+	  sql/mysql/create_tables.mysql, 
+	  sql/mysql/migrate_from_2.0_to_2.1.mysql:
+	back out Aarons patch
+	* acinclude.m4:
+	fix minor typo (cshug)
+	* acinclude.m4:
+	fix loopholes in configure logic
+	* sql/postgresql/migrate_from_1.x_to_2.0.pgsql:
+	add missing column in migration script (jnorell)
+
+2006-07-20  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_mailbox.c, dbmail-mailbox.c, dbmail-mailbox.h, 
+	  debian/changelog:
+	cleanup old search_parsed code and properly use uid sets in search results
+
+2006-07-18  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-message.c:
+	move content-type extraction from _header_cache to _register_header
+	* debian/dbmail.init:
+	cleanup dbmail init.d script for debian
+	* dbmail-message.c:
+	prevent fieldwidth overflow during headername insertion
+	* dbmail-imapsession.c, imapd.c, lmtp.c, lmtpd.c, pool.c, pop3.c, pop3d.c, 
+	  server.c, serverchild.c, serverchild.h, timsieve.c, timsieved.c:
+	accepted signal safety patch from ryo (#361)
+
 2006-07-16  Paul J Stevens <paul@nfg.nl>
 
+	* pool.c, pool.h, serverchild.c:
+	rename State_t to child_state_t in pool code
 	* dbmail-mailbox.c:
 	add missing group by clause in body search
 

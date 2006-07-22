@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: lmtpd.c 2096 2006-04-30 18:39:56Z aaron $
+/* $Id: lmtpd.c 2199 2006-07-18 11:07:53Z paul $
 *
 * lmtpd.c
 *
@@ -41,8 +41,9 @@ static void MainSigHandler(int sig, siginfo_t * info, void *data);
 
 static void get_config(serverConfig_t *config);
 	
-extern int mainRestart;
-extern int mainStop;
+extern volatile sig_atomic_t mainRestart;
+extern volatile sig_atomic_t mainStop;
+extern volatile sig_atomic_t mainSig;
 
 int do_showhelp(void) {
 	printf("*** dbmail-lmtpd ***\n");
@@ -80,7 +81,7 @@ int main(int argc, char *argv[])
 			break;
 		case 'V':
 			printf("\n*** DBMAIL: dbmail-lmtpd version "
-			       "$Revision: 2096 $ %s\n\n", COPYRIGHT);
+			       "$Revision: 2199 $ %s\n\n", COPYRIGHT);
 			return 0;
 		case 'n':
 			no_daemonize = 1;
@@ -168,8 +169,7 @@ void get_config(serverConfig_t *config)
 
 void MainSigHandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
 {
-	trace(TRACE_DEBUG, "MainSigHandler(): got signal [%d]", sig);
-
+	mainSig = sig;
 	if (sig == SIGHUP)
 		mainRestart = 1;
 	else
