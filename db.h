@@ -1005,7 +1005,7 @@ int db_mailbox_create_with_parents(const char * mailbox, u64_t owner_idnr,
  *    - -1 on error
  */
 int db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr,
-		GList ** mailboxes, const char ** errmsg)
+		GList ** mailboxes, const char ** errmsg);
 
 /**
  * \brief set permission on a mailbox (readonly/readwrite)
