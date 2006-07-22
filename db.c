@@ -31,7 +31,9 @@
  */
 
 #include "dbmail.h"
+#define THIS_MODULE "db"
 
+// Flag order defined in dbmailtypes.h
 static const char *db_flag_desc[] = {
 	"seen_flag",
 	"answered_flag",
@@ -39,6 +41,24 @@ static const char *db_flag_desc[] = {
 	"flagged_flag",
 	"draft_flag",
 	"recent_flag"
+};
+
+const char *imap_flag_desc[] = {
+	"Seen",
+	"Answered",
+	"Deleted",
+	"Flagged",
+	"Draft",
+	"Recent"
+};
+
+const char *imap_flag_desc_escaped[] = {
+	"\\Seen",
+	"\\Answered",
+	"\\Deleted",
+	"\\Flagged",
+	"\\Draft",
+	"\\Recent"
 };
 
 #define MAX_COLUMN_LEN 50
@@ -92,16 +112,6 @@ static char *char2date_str(const char *date);
  *     -  1 if same user (user_idnr belongs to DBMAIL_DELIVERY_USERNAME
  */
 static int user_idnr_is_delivery_user_idnr(u64_t user_idnr);
-
-/**
- * Produces a regexp that will case-insensitively match the mailbox name
- * according to the modified UTF-7 rules given in section 5.1.3 of IMAP.
- * \param column name of the name column.
- * \param mailbox name of the mailbox.
- * \param filter use /% for children or "" for just the box.
- * \return pointer to a newly allocated string.
- */
-static char *db_imap_utf7_like(const char *column, const char *mailbox, const char *filter);
 
 /*
  * check to make sure the database has been upgraded
@@ -1216,7 +1226,7 @@ int db_log_ip(const char *ip)
 			 "VALUES (%s, '%s')", DBPFX, db_get_sql(SQL_CURRENT_TIMESTAMP), ip);
 		if (db_query(query) == DM_EQUERY) {
 			trace(TRACE_ERROR,
-			      "%s,%s: could not log IP number to dbase "
+			      "%s,%s: could not log IP number to database "
 			      "(pop/imap-before-smtp)", __FILE__,
 			      __func__);
 			return DM_EQUERY;
@@ -2343,7 +2353,9 @@ int db_findmailbox(const char *fq_name, u64_t user_idnr,
 	      __FILE__, __func__, fq_name);
 
 	name_str_copy = dm_strdup(fq_name);
-	/* see if this is a #User mailbox */
+	/* If this is a #User or #Public mailbox,
+	 * place a nul at the end of the namespace
+	 * and advance the pointer just beyond that. */
 	if ((strlen(NAMESPACE_USER) > 0) &&
 	    (strstr(fq_name, NAMESPACE_USER) == fq_name)) {
 		index = strcspn(name_str_copy, MAILBOX_SEPARATOR);
@@ -2396,7 +2408,7 @@ int db_findmailbox(const char *fq_name, u64_t user_idnr,
  * Because this handles case insensitivity,
  * we don't need to overwrite INBOX any more.
  */
-static char *db_imap_utf7_like(const char *column,
+char *db_imap_utf7_like(const char *column,
 		const char *mailbox,
 		const char *filter)
 {
@@ -2406,8 +2418,8 @@ static char *db_imap_utf7_like(const char *column,
 	int verbatim = 0, has_sensitive_part = 0;
 
 	like = g_string_new("");
-	sensitive = g_strdup(mailbox);
-	insensitive = g_strdup(mailbox);
+	sensitive = dm_stresc(mailbox);
+	insensitive = dm_stresc(mailbox);
 
 	for (i = 0; i < len; i++) {
 		switch (mailbox[i]) {
@@ -2452,13 +2464,11 @@ static int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 			 u64_t * mailbox_idnr)
 {
 	char *mailbox_like;
-	char *escaped_name;
 
 	assert(mailbox_idnr != NULL);
 	*mailbox_idnr = 0;
 
-	escaped_name = dm_stresc(name);
-	mailbox_like = db_imap_utf7_like("name", escaped_name, ""); 
+	mailbox_like = db_imap_utf7_like("name", name, ""); 
 	
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT mailbox_idnr FROM %smailboxes "
@@ -2466,7 +2476,6 @@ static int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 		 DBPFX, mailbox_like, owner_idnr);
 
 	dm_free(mailbox_like);
-	dm_free(escaped_name);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR,
@@ -2801,6 +2810,242 @@ int db_getmailbox(mailbox_t * mb)
 	return DM_SUCCESS;
 }
 
+int db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr,
+		GList ** mailboxes, const char ** errmsg)
+{
+	assert(mailbox);
+	assert(mailboxes);
+	assert(errmsg);
+
+	char *cpy, **chunks;
+	int i, ret = 0;
+	u64_t mboxid;
+
+	/* Scratch space as we build the mailbox names. */
+	cpy = g_new0(char, strlen(mailbox) + 1);
+
+	/* split up the name  */
+	if (! (chunks = g_strsplit(mailbox, MAILBOX_SEPARATOR, 0))) {
+		trace(TRACE_ERROR, "%s,%s: could not create chunks", __FILE__, __func__);
+		*errmsg = "Server ran out of memory";
+		goto egeneral;
+	}
+
+	if (chunks[0] == NULL) {
+		*errmsg = "Invalid mailbox name specified";
+		goto egeneral;
+	}
+
+	for (i = 0; chunks[i]; i++) {
+
+		/* Indicates a // in the mailbox name. */
+		if (! (strlen(chunks[i]))) {
+			*errmsg = "Invalid mailbox name specified";
+			goto egeneral;
+		}
+
+		/* Prepend a mailbox struct onto the list. */
+		mailbox_t *mbox;
+		mbox = g_new0(mailbox_t, 1);
+		*mailboxes = g_list_prepend(*mailboxes, mbox);
+
+		if (i == 0) {
+			if (strcasecmp(chunks[0], "inbox") == 0) {
+				/* Make inbox uppercase */
+				strcpy(chunks[0], "INBOX");
+			} else
+			if (strcmp(chunks[0], NAMESPACE_USER) == 0) {
+				mbox->is_users = 1;
+			} else
+			if (strcmp(chunks[0], NAMESPACE_PUBLIC) == 0) {
+				mbox->is_public = 1;
+			}
+
+			/* The current chunk goes into the name. */
+			strcat(cpy, chunks[0]);
+		} else {
+			/* The current chunk goes into the name. */
+			strcat(cpy, MAILBOX_SEPARATOR);
+			strcat(cpy, chunks[i]);
+		}
+
+		trace(TRACE_DEBUG, "Preparing mailbox [%s]", cpy);
+
+		if (db_findmailbox(cpy, owner_idnr, &mboxid) == DM_EQUERY) {
+			*errmsg = "Internal database error while looking for mailbox";
+			goto equery;
+		}
+
+		/* If the mboxid is 0, then we know
+		 * that the mailbox does not exist. */
+		mbox->name = g_strdup(cpy);
+		mbox->uid = mboxid;
+		mbox->owner_idnr = owner_idnr;
+	}
+
+	/* We built the path with prepends,
+	 * so we have to reverse it now. */
+	*mailboxes = g_list_reverse(*mailboxes);
+	*errmsg = "Everything is peachy keen";
+
+	return DM_SUCCESS;
+
+equery:
+	ret = DM_EQUERY;
+
+egeneral:
+	if (!ret) ret = DM_EGENERAL;
+
+	GList *tmp;
+	tmp = g_list_first(*mailboxes);
+	while (tmp) {
+		mailbox_t *mbox = (mailbox_t *)tmp->data;
+		if (mbox) {
+			g_free(mbox->name);
+			g_free(mbox);
+		}
+		tmp = g_list_next(tmp);
+	}
+	g_list_free(*mailboxes);
+	g_strfreev(chunks);
+	dm_free(cpy);
+	return ret;
+}
+
+/** Create a mailbox, recursively creating its parents.
+ * \param mailbox Name of the mailbox to create
+ * \param owner_idnr Owner of the mailbox
+ * \param mailbox_idnr Fills the pointer with the mailbox id
+ * \param message Returns a static pointer to the return message
+ * \return
+ *   DM_SUCCESS Everything's good
+ *   DM_EGENERAL Cannot create mailbox
+ *   DM_EQUERY Database error
+ */
+int db_mailbox_create_with_parents(const char * mailbox, u64_t owner_idnr,
+		     u64_t * mailbox_idnr, const char * * message)
+{
+	int parent_right_to_create = -1;
+	int other_namespace = 0;
+	int skip_and_free = DM_SUCCESS;
+	u64_t created_mboxid = 0;
+	int result;
+	GList *mailboxes = NULL;
+
+	assert(mailbox);
+	assert(mailbox_idnr);
+	assert(message);
+
+	/* check if new name is valid */
+	if (!checkmailboxname(mailbox)) {
+		*message = "New mailbox name contains invalid characters";
+	        return DM_EGENERAL;
+        }
+
+	/* There used to be a removal of slashes here. Why? */
+	if (db_findmailbox(mailbox, owner_idnr, mailbox_idnr) == 1) {
+		*message = "Mailbox already exists";
+		return DM_EGENERAL;
+	}
+
+	if (db_imap_split_mailbox(mailbox, owner_idnr,
+			&mailboxes, message) != DM_SUCCESS) {
+		// Message was set by the function.
+		return DM_EGENERAL;
+	}
+
+	/* FIXME: Change these to TRACE calls.
+	printf("\n");
+	GList *mailboxes_temp;
+	mailboxes_temp = g_list_first(mailboxes);
+	while (mailboxes_temp) {
+		mailbox_t *mbox = (mailbox_t *)mailboxes_temp->data;
+		printf("%s\n", mbox->name);
+		mailboxes_temp = g_list_next(mailboxes_temp);
+	}
+	printf("\n");
+	*/
+
+	mailboxes = g_list_first(mailboxes);
+	while (mailboxes) {
+		mailbox_t *mbox = (mailbox_t *)mailboxes->data;
+
+		/* skip_and_free means that there was an error,
+		 * so we're not going to create any new mailboxes,
+		 * but we do need to continue freeing the mailbox_t's.
+		 */
+		if (skip_and_free == DM_SUCCESS) {
+
+		if (mbox->is_users || mbox->is_public) {
+			// This will carry on through the rest of the loop.
+			other_namespace = 1;
+			/* Don't try to create the #Users or #Public mailboxes;
+			 * they are hardcoded here and elsewhere. Skip the rest
+			 * of this loop and go around again.  */
+
+		} else if (mbox->uid == 0) {
+			/* Needs to be created. */
+			// If there was an error, skip_and_free will be set
+			// and we won't ever get to this part of the code;
+			// the -1 would only come from the initial value.
+			if (parent_right_to_create != 0) {
+				/* auto-creation implies subscription */
+				if ( ((result = db_createmailbox(mbox->name, owner_idnr, &created_mboxid))
+						== DM_EQUERY)
+				 ||  ((result = db_subscribe(created_mboxid, owner_idnr))
+						== DM_EQUERY)) {
+					*message = "Internal database error while creating and subscribing";
+					skip_and_free = DM_EQUERY;
+				} else {
+					*message = "Folder created";
+				}
+			
+			} else {
+				if (parent_right_to_create > 0) {
+				*message = "No permission to create mailbox 1";
+				} else {
+				*message = "No permission to create mailbox -1";
+				}
+				skip_and_free = DM_EGENERAL;
+			}
+
+		} else {
+			/* Mailbox does exist, failure if no_inferiors flag set. */
+			if ( ((result = db_noinferiors(mbox->uid)) == DM_EGENERAL) ) {
+				*message = "Mailbox cannot have inferior names";
+				skip_and_free = DM_EGENERAL;
+			}
+
+
+			if (result == DM_EQUERY) {
+				*message = "Internal database error while checking inferiors";
+				skip_and_free = DM_EQUERY;
+			}
+
+			TRACE(TRACE_DEBUG, "Checking if we have the right to "
+				"create mailboxes under mailbox [%llu]", mbox->uid);
+
+			if ((parent_right_to_create =
+				acl_has_right(mbox, owner_idnr, ACL_RIGHT_CREATE))
+					== DM_EQUERY) {
+				*message = "Internal database error while checking acl";
+				skip_and_free = DM_EQUERY;
+			}
+		}
+
+		} /* skip_and_free. */
+
+		g_free(mbox->name);
+		g_free(mbox);
+
+		mailboxes = g_list_next(mailboxes);
+	}
+	g_list_free(mailboxes);
+
+	*mailbox_idnr = created_mboxid;
+	return skip_and_free;
+}
+
 int db_createmailbox(const char *name, u64_t owner_idnr,
 		     u64_t * mailbox_idnr)
 {
@@ -2876,6 +3121,7 @@ int db_find_create_mailbox(const char *name, mailbox_source_t source,
 		u64_t owner_idnr, u64_t * mailbox_idnr)
 {
 	u64_t mboxidnr;
+	const char *message;
 
 	assert(mailbox_idnr != NULL);
 	*mailbox_idnr = 0;
@@ -2887,17 +3133,14 @@ int db_find_create_mailbox(const char *name, mailbox_source_t source,
 		 || source == BOX_SORTING
 		 || source == BOX_DEFAULT) {
 			/* Did we fail to create the mailbox? */
-			if (db_createmailbox(name, owner_idnr, &mboxidnr) != 0) {
-				trace(TRACE_ERROR, "%s, %s: could not create mailbox [%s]",
-						__FILE__, __func__, name);
+			if (db_mailbox_create_with_parents(name, owner_idnr, &mboxidnr, &message) != DM_SUCCESS) {
+				trace(TRACE_ERROR, "%s, %s: could not create mailbox [%s] because [%s]",
+						__FILE__, __func__, name, message);
 				return DM_EQUERY;
 			}
 			trace(TRACE_DEBUG, "%s, %s: mailbox [%s] created on the fly", 
 					__FILE__, __func__, name);
-			
-			/* auto-creation implies subscription */
-			if (db_subscribe(mboxidnr, owner_idnr) == DM_EQUERY)
-				return DM_EQUERY;
+			// Subscription now occurs in db_mailbox_create_with_parents
 		} else {
 			/* The mailbox was specified by an untrusted
 			 * source, such as the address part, and will
@@ -2919,7 +3162,7 @@ int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
 			   u64_t ** children, int *nchildren)
 {
 	int i;
-	char *mailbox_name = NULL, *mailbox_like = NULL;
+	char *mailbox_like = NULL;
 	const char *tmp;
 
 	/* retrieve the name of this mailbox */
@@ -2946,8 +3189,7 @@ int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
 	}
 
 	if ((tmp = db_get_result(0, 0)))  {
-		mailbox_name = dm_stresc(tmp);
-		mailbox_like = db_imap_utf7_like("name", mailbox_name, "/%");
+		mailbox_like = db_imap_utf7_like("name", tmp, "/%");
 	}
 
 	db_free_result();
@@ -2956,7 +3198,6 @@ int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
 			 "SELECT mailbox_idnr FROM %smailboxes WHERE %s"
 			 " AND owner_idnr = '%llu'",DBPFX,
 			 mailbox_like, user_idnr);
-		dm_free(mailbox_name);
 		dm_free(mailbox_like);
 	}
 	else
@@ -4180,7 +4421,7 @@ int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * m
 {
 	/* query mailbox for LIST results */
 	char *mbxname, *name;
-	char *escaped_name, *mailbox_like;
+	char *mailbox_like;
 	GString *fqname;
 	int i=0;
 
@@ -4217,17 +4458,18 @@ int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * m
 	db_free_result();
 	
 	/* no_children */
-	if (! (escaped_name = dm_stresc(name)))
-		return -1;
+// FIXME: This code assumes that dm_stresc can return NULL. It cannot.
+//	if (! (escaped_name = dm_stresc(name)))
+//		return -1;
 
-	mailbox_like = db_imap_utf7_like("name", escaped_name, "/%");
+	mailbox_like = db_imap_utf7_like("name", name, "/%");
 			
 	snprintf(query, DEF_QUERYSIZE,
 			"SELECT COUNT(*) AS nr_children "
 			"FROM %smailboxes WHERE owner_idnr = '%llu' "
 			"AND %s",
 			DBPFX, user_idnr, mailbox_like);
-	g_free(escaped_name);
+
 	g_free(mailbox_like);
 
 	if (db_query(query) == -1) {
@@ -4548,13 +4790,24 @@ int db_user_find_create(u64_t user_idnr)
 
 int db_replycache_register(const char *to, const char *from, const char *handle)
 {
+	char *escaped_to, *escaped_from, *escaped_handle;
+
+	escaped_to = dm_stresc(to);
+	escaped_from = dm_stresc(from);
+	escaped_handle = dm_stresc(handle);
+
 	snprintf(query, DEF_QUERYSIZE,
 			"SELECT lastseen FROM %sreplycache "
 			"WHERE to_addr = '%s' "
 			"AND from_addr = '%s' "
 			"AND handle    = '%s' ",
 			DBPFX, to, from, handle);
-	if (db_query(query)== -1) {
+
+	dm_free(escaped_to);
+	dm_free(escaped_from);
+	dm_free(escaped_handle);
+
+	if (db_query(query) < 0) {
 		trace(TRACE_ERROR, "%s,%s: query failed",
 				__FILE__, __func__);
 		return DM_EQUERY;
@@ -4593,15 +4846,24 @@ int db_replycache_validate(const char *to, const char *from,
 {
 	GString *tmp = g_string_new("");
 	g_string_printf(tmp, db_get_sql(SQL_REPLYCACHE_EXPIRE), days);
+	char *escaped_to, *escaped_from, *escaped_handle;
+
+	escaped_to = dm_stresc(to);
+	escaped_from = dm_stresc(from);
+	escaped_handle = dm_stresc(handle);
 
 	snprintf(query, DEF_QUERYSIZE,
 			"SELECT lastseen FROM %sreplycache "
 			"WHERE to_addr = '%s' AND from_addr = '%s' "
 			"AND handle = '%s' AND lastseen > (%s)",
 			DBPFX, to, from, handle, tmp->str);
-	g_string_free(tmp, TRUE);
 
-	if (db_query(query) == -1) {
+	g_string_free(tmp, TRUE);
+	dm_free(escaped_to);
+	dm_free(escaped_from);
+	dm_free(escaped_handle);
+
+	if (db_query(query) < 0) {
 		trace(TRACE_ERROR, "%s,%s: query failed",
 				__FILE__, __func__);
 		return DM_EQUERY;

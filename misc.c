@@ -168,37 +168,35 @@ const char *mailbox_remove_namespace(const char *fq_name)
 {
 	char *temp;
 
-	/* a lot of strlen() functions are used here, so this
-	   can be quite inefficient! On the other hand, this
-	   is a function that's not used that much. */
+	// i.e. '#Users/someuser/foldername'
 	if (strcmp(fq_name, NAMESPACE_USER) == 0) {
 		temp = strstr(fq_name, MAILBOX_SEPARATOR);
 		if (temp == NULL || strlen(temp) <= 1) {
-			trace(TRACE_ERROR,
-			      "%s,%s wronly constructed mailbox " "name",
+			trace(TRACE_ERROR, "%s,%s illegal mailbox name",
 			      __FILE__, __func__);
 			return NULL;
 		}
 		temp = strstr(&temp[1], MAILBOX_SEPARATOR);
 		if (temp == NULL || strlen(temp) <= 1) {
-			trace(TRACE_ERROR,
-			      "%s,%s wronly constructed mailbox " "name",
+			trace(TRACE_ERROR, "%s,%s illegal mailbox name",
 			      __FILE__, __func__);
 			return NULL;
 		}
 		return &temp[1];
 	}
+	
+	// i.e. '#Public/foldername'
 	if (strcmp(fq_name, NAMESPACE_PUBLIC) == 0) {
 		temp = strstr(fq_name, MAILBOX_SEPARATOR);
 
 		if (temp == NULL || strlen(temp) <= 1) {
-			trace(TRACE_ERROR,
-			      "%s,%s wronly constructed mailbox " "name",
+			trace(TRACE_ERROR, "%s,%s illegal mailbox name",
 			      __FILE__, __func__);
 			return NULL;
 		}
 		return &temp[1];
 	}
+	
 	return fq_name;
 }
 
@@ -428,7 +426,6 @@ GList * g_list_append_printf(GList * list, char * format, ...)
 
 char * dm_stresc(const char * from)
 {
-	assert(from);
 	return dm_strnesc(from, strlen(from));
 }
 

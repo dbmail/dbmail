@@ -76,8 +76,9 @@ typedef enum {
 
 
 void func_memtst(const char *filename, int line, int tst);
-void trace(trace_t level, char *formatstring, ...) PRINTF_ARGS(2, 3);
 
+#define trace(level, fmt...) newtrace(level, "", "", "", fmt)
+#define TRACE(level, fmt...) newtrace(level, THIS_MODULE, __FILE__, __func__, fmt)
 void newtrace(trace_t level, const char * module,
 		const char * file, const char * function,
 		char *formatstring, ...) PRINTF_ARGS(5, 6);
