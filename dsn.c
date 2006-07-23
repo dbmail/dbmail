@@ -228,10 +228,6 @@ void dsnuser_free(deliver_to_user_t * dsnuser)
 	dm_list_free(&dsnuser->userids->start);
 	dm_list_free(&dsnuser->forwards->start);
 
-	if (dsnuser->address)
-		g_free(dsnuser->address);
-	if (dsnuser->mailbox)
-		g_free(dsnuser->mailbox);
 	if (dsnuser->userids)	
 		g_free(dsnuser->userids);
 	if (dsnuser->forwards)
