@@ -1,3 +1,25 @@
+2006-07-24  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-mailbox.c:
+	remove mailbox_search_parsed and friends
+	* ChangeLog, Makefile.am, check_dbmail_db.c, check_dbmail_imapd.c, db.c, 
+	  db.h, dbmailtypes.h, debug.c, debug.h, dm_imaputil.c, imap4.h, 
+	  imapcommands.c, misc.c, modules/sortsieve.c, pipe.c, sort.c, sort.h, 
+	  sql/mysql/create_tables.mysql, 
+	  sql/mysql/migrate_from_2.0_to_2.1.mysql:
+	re-merge aarons patch
+	* db.h:
+	minor typo
+	* dsn.c:
+	do not free statics
+	* modules/sortsieve.c:
+	use strstr instead of undefined g_strstr
+	* dbmail-message.c:
+	use GString in _header_cache
+	* check_dbmail_imapd.c, db.c, dbmail-imapsession.c, dm_imaputil.c, 
+	  modules/sortsieve.c:
+	cleanups after recent mergings
+
 2006-07-21  Aaron Stone  <aaron@serendipity.cx>
 
 	* Makefile.am:
