@@ -420,6 +420,17 @@ GList * g_list_append_printf(GList * list, char * format, ...)
 	return g_list_append(list, g_strdup_vprintf(format, argp));
 }
 
+char * g_strcasestr(const char *haystack, const char *needle)
+{
+	// Like strstr, but case insensitive.
+	for (; *haystack; haystack++) {
+		if (g_ascii_strcasecmp(haystack, needle) == 0)
+			return (char *)haystack;
+	}
+
+	return NULL;
+}
+
 /* 
  * return newly allocated escaped strings
  */

@@ -105,6 +105,7 @@ int zap_between(const char * const instring, signed char left, signed char right
 GString * g_list_join(GList * list, const gchar * sep);
 GList * g_string_split(GString * string, const gchar * sep);
 GList * g_list_append_printf(GList * list, char * format, ...);
+char * g_strcasestr(const char *haystack, const char *needle);
 
 gint ucmp(const u64_t *a, const u64_t *b);
 void g_list_destroy(GList *list);
