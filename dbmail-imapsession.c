@@ -1699,6 +1699,7 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 	char *tmp, *lastchar;
 	int quotedSize, cnt, dataidx;
 	static int init_args = 0;
+	int gotc;
 	int result;
 	clientinfo_t *ci = self->ci;
 
@@ -1737,12 +1738,7 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 		if (s[i] == '"' && ((i > 0 && s[i - 1] != '\\') || i == 0)) {
 			if (inquote) {
 				/* quotation end, treat quoted string as argument */
-				if (! (the_args[nargs] = g_new0(char,(i - quotestart)))) {
-					free_args();
-					trace(TRACE_ERROR, "%s,%s: out-of-memory error.", __FILE__, __func__);
-					return NULL;
-				}
-
+				the_args[nargs] = g_new0(char,(i - quotestart));
 				memcpy((void *) the_args[nargs], (void *) &s[quotestart + 1], i - quotestart - 1);
 				the_args[nargs][i - quotestart - 1] = '\0';
 
@@ -1807,12 +1803,7 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 			}
 
 			/* add this parenthesis to the arg list and continue */
-			if (!  (the_args[nargs] = (char *) dm_malloc(sizeof(" ")))) {
-				/* out of mem */
-				free_args();
-				trace(TRACE_ERROR, "%s,%s: out-of-memory error.", __FILE__, __func__);
-				return NULL;
-			}
+			the_args[nargs] = g_new0(char,2);
 			the_args[nargs][0] = s[i];
 			the_args[nargs][1] = '\0';
 
@@ -1829,35 +1820,29 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 
 			/* only continue if the number is followed by '}\0' */
 			trace(TRACE_DEBUG, "%s,%s: last char = %c", __FILE__, __func__, *lastchar);
-			if ((*lastchar == '+' && *(lastchar + 1) == '}' && 
-			     *(lastchar + 2) == '\0') || 
+			if ((*lastchar == '+' && *(lastchar + 1) == '}' && *(lastchar + 2) == '\0') || 
 			    (*lastchar == '}' && *(lastchar + 1) == '\0')) {
 				/* allocate space for this argument (could be a message when used with APPEND) */
-				if (! (the_args[nargs] = (char *) dm_malloc(sizeof(char) * (quotedSize + 1)))) {
-					trace(TRACE_ERROR, "%s,%s: out-of-memory allocating [%u] bytes for extra string",
-							__FILE__, __func__, quotedSize + 1);
-					free_args();
-					return NULL;
-				}
-
+				the_args[nargs] = g_new0(char, quotedSize+1);
+			
 				ci_write(ci->tx, "+ OK gimme that string\r\n");
 				
 				alarm(ci->timeout);	/* dont wait forever */
 				for (cnt = 0, dataidx = 0; cnt < quotedSize; cnt++) {
-					the_args[nargs][dataidx] = fgetc(ci->rx);
-
+					gotc = fgetc(ci->rx);
+					the_args[nargs][dataidx] = gotc;
 					if (the_args[nargs][dataidx] != '\r')
 						dataidx++;	/* only store if it is not \r */
 				}
-
 				alarm(0);
+
 				the_args[nargs][dataidx] = '\0';	/* terminate string */
 				nargs++;
 				if (alarm_occured) {
 					alarm_occured = 0;
 					client_close();
-					trace(TRACE_ERROR, "%s,%s: timeout occurred in fgetc", 
-							__FILE__, __func__);
+					trace(TRACE_ERROR, "%s,%s: timeout occurred in fgetc. last char [%c]", 
+							__FILE__, __func__, gotc);
 					free_args();
 					return NULL;
 				}
@@ -1921,14 +1906,7 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 					break;
 			}
 
-		if (!  (the_args[nargs] = g_new0(char,(i - argstart + 1)))) {
-			free_args();
-
-			trace(TRACE_ERROR,
-			      "IMAPD: Not enough memory while building up argument array.");
-			return NULL;
-		}
-
+		the_args[nargs] = g_new0(char,(i - argstart + 1));
 		memcpy((void *) the_args[nargs], (void *) &s[argstart], i - argstart);
 		the_args[nargs][i - argstart] = '\0';
 

@@ -396,14 +396,14 @@ START_TEST(test_internet_address_parse_string)
 
 	for (i = 0; trythese[i] != NULL; i++) {
 
-	char *result = trythese[i];
+		char *result = trythese[i];
 
-	char *t;
-	InternetAddressList *alist;
-	char *expect = "((NIL NIL \"undisclosed-recipients\" NIL))";
-	GList *list = NULL;
+		char *t;
+		InternetAddressList *alist;
+		char *expect = "((NIL NIL \"undisclosed-recipients\" NIL))";
+		GList *list = NULL;
 
-	// Copied from dm_imaputil.c, envelope_address_part
+		// Copied from dm_imaputil.c, envelope_address_part
 		t = imap_cleanup_address(result);
 		alist = internet_address_parse_string(t);
 		g_free(t);
@@ -411,14 +411,13 @@ START_TEST(test_internet_address_parse_string)
 		internet_address_list_destroy(alist);
 		alist = NULL;
 
-	result = dbmail_imap_plist_as_string(list);
-	printf("%s: %s\n", trythese[i], result);
+		result = dbmail_imap_plist_as_string(list);
 
-	fail_unless(strcmp(result,expect)==0, "internet_address_parse_string failed to generate correct undisclosed-recipients plist");
+		fail_unless(strcmp(result,expect)==0, "internet_address_parse_string failed to generate correct undisclosed-recipients plist");
 
-	g_list_foreach(list,(GFunc)g_free,NULL);
-	g_list_free(list);
-	dm_free(result);
+		g_list_foreach(list,(GFunc)g_free,NULL);
+		g_list_free(list);
+		dm_free(result);
 
 	}
 }
@@ -509,7 +508,7 @@ START_TEST(test_imap_cleanup_address)
 	F("=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=<nobody@nowhere.org>","\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" <nobody@nowhere.org>");
 	F("\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" <nobody@nowhere.org>","\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" <nobody@nowhere.org>");
 	F("Some One <some@foo.org>", "Some One <some@foo.org>");
-	F(" <some@foo.org>", " <some@foo.org>");
+	F(" <some@foo.org>", "<some@foo.org>");
 }
 END_TEST
 

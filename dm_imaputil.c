@@ -843,19 +843,15 @@ char * imap_cleanup_address(const char *a)
 	 *
 	 * FIXME: doesn't work for addresslists
 	 */
-	char *r;
-	const char *inptr;
+	char *r, *t;
+	char *inptr;
 	char prev;
 	GString *s = g_string_new("");
 	
-	inptr = a;
-	prev = *a;
-	
-	// eat whitespace
-	while (*inptr && (*inptr == ' ' || *inptr == '\t')) {
-		g_string_append_c(s,*inptr);	
-		inptr++;
-	}
+	t = g_strdup(a);
+	inptr = t;
+	inptr = g_strstrip(inptr);
+	prev = *inptr;
 	
 	// quote encoded string
 	if (*inptr == '=') {
@@ -876,9 +872,14 @@ char * imap_cleanup_address(const char *a)
 		if (*inptr == '<')
 			g_string_append_c(s,' ');
 	}
-
+		
 	if (*inptr)
 		g_string_append(s,inptr);
+	g_free(t);
+	
+	if (g_str_has_suffix(s->str,";"))
+		s = g_string_truncate(s,s->len-1);
+
 	r = s->str;
 	g_string_free(s,FALSE);
 	return r;

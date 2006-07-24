@@ -238,6 +238,7 @@ int db_savepoint_transaction(const char* name)
 
 int db_rollback_savepoint_transaction(const char* name)
 {
+	gchar *sname;
 	if(!name){
 		trace(TRACE_ERROR, "%s,%s: error no savepoint name",
 		      __FILE__, __func__);
@@ -245,7 +246,9 @@ int db_rollback_savepoint_transaction(const char* name)
 	}
 
 	memset(query, 0, sizeof(query));
-	snprintf(query, DEF_QUERYSIZE, "ROLLBACK TO SAVEPOINT %s", name);
+	sname = dm_stresc(name);
+	snprintf(query, DEF_QUERYSIZE, "ROLLBACK TO SAVEPOINT %s", sname);
+	g_free(sname);
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error rolling back transaction "
                       "to savepoint(%s). "
@@ -1192,9 +1195,11 @@ int db_insert_message_block(const char *block, u64_t block_size,
 int db_log_ip(const char *ip)
 {
 	u64_t id = 0;
-
+	gchar *sip = dm_stresc(ip);
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT idnr FROM %spbsp WHERE ipnumber = '%s'", DBPFX, ip);
+	g_free(sip);
+	
 	if (db_query(query) == DM_EQUERY) {
 		trace(TRACE_ERROR, "%s,%s: could not access ip-log table "
 		      "(pop/imap-before-smtp): %s", __FILE__, __func__,
@@ -1557,7 +1562,7 @@ int db_icheck_null_messages(struct dm_list *lost_list)
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT msg.message_idnr FROM %smessages msg "
 		 "LEFT JOIN %sphysmessage pm ON "
-		 "msg.physmessage_id = pm.id " "WHERE pm.id is NULL",DBPFX,DBPFX);
+		 "msg.physmessage_id = pm.id WHERE pm.id is NULL",DBPFX,DBPFX);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not execute query",
@@ -2469,7 +2474,7 @@ static int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 	*mailbox_idnr = 0;
 
 	mailbox_like = db_imap_utf7_like("name", name, ""); 
-	
+	// FIXME: can we trust mailbox_like?
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT mailbox_idnr FROM %smailboxes "
 		 "WHERE %s AND owner_idnr='%llu'",
@@ -2508,35 +2513,33 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 	u64_t *all_mailbox_owners;
 	unsigned n_rows;
 	char *matchname;
+	char *spattern;
 	
 	assert(mailboxes != NULL);
 	assert(nr_mailboxes != NULL);
 
 	*mailboxes = NULL;
 	*nr_mailboxes = 0;
-	
-	if ( (! index(pattern, '%')) && (! index(pattern,'*')) )
-		matchname = g_strdup_printf("mbx.name = '%s' AND", pattern);
+
+	spattern = dm_stresc(pattern);
+	if ( (! index(spattern, '%')) && (! index(spattern,'*')) )
+		matchname = g_strdup_printf("mbx.name = '%s' AND", spattern);
 	else
 		matchname = g_strdup("");
+	g_free(spattern);
 	
 	
 	if (only_subscribed)
 		snprintf(query, DEF_QUERYSIZE,
 			 "SELECT distinct(mbx.name), mbx.mailbox_idnr, mbx.owner_idnr "
 			 "FROM %smailboxes mbx "
-			 "LEFT JOIN %sacl acl "
-			 "ON mbx.mailbox_idnr = acl.mailbox_id "
-			 "LEFT JOIN %susers usr "
-			 "ON acl.user_id = usr.user_idnr "
-			 "LEFT JOIN %ssubscription sub "
-			 "ON sub.mailbox_id = mbx.mailbox_idnr "
-			 "WHERE %s "
-			 "(sub.user_id = '%llu' AND ("
-			 "(mbx.owner_idnr = '%llu') OR "
-			 "(acl.user_id = '%llu' AND "
-			 "  acl.lookup_flag = '1') OR "
-			 "(usr.userid = '%s' AND acl.lookup_flag = '1')))",
+			 "LEFT JOIN %sacl acl ON mbx.mailbox_idnr = acl.mailbox_id "
+			 "LEFT JOIN %susers usr ON acl.user_id = usr.user_idnr "
+			 "LEFT JOIN %ssubscription sub ON sub.mailbox_id = mbx.mailbox_idnr "
+			 "WHERE %s (sub.user_id = '%llu' "
+			 "AND ((mbx.owner_idnr = '%llu') "
+			 "OR (acl.user_id = '%llu' AND acl.lookup_flag = '1') "
+			 "OR (usr.userid = '%s' AND acl.lookup_flag = '1')))",
 			 DBPFX, DBPFX, DBPFX, DBPFX, matchname,
 			 user_idnr, user_idnr, user_idnr,
 			 DBMAIL_ACL_ANYONE_USER);
@@ -2668,13 +2671,8 @@ int db_getmailbox_flags(mailbox_t *mb)
 
 	/* select mailbox */
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT permission,"
-		 "seen_flag,"
-		 "answered_flag,"
-		 "deleted_flag,"
-		 "flagged_flag,"
-		 "recent_flag,"
-		 "draft_flag "
+		 "SELECT permission,seen_flag,answered_flag,deleted_flag,"
+		 "flagged_flag,recent_flag,draft_flag "
 		 "FROM %smailboxes WHERE mailbox_idnr = '%llu'",DBPFX, mb->uid);
 
 	if (db_query(query) == -1) {
@@ -2682,7 +2680,6 @@ int db_getmailbox_flags(mailbox_t *mb)
 		      __FILE__, __func__);
 		return DM_EQUERY;
 	}
-
 
 	if (db_num_rows() == 0) {
 		trace(TRACE_ERROR, "%s,%s: invalid mailbox id specified",
