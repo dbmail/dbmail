@@ -919,7 +919,8 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 {
 	u64_t id;
 	struct DbmailMessage *self = (struct DbmailMessage *)user_data;
-	gchar *q, *safe_value;
+	gchar *safe_value;
+	GString *q;
 	GTuples *values;
 	const char *value;
 	unsigned i;
@@ -933,27 +934,25 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 	if ((_header_get_id(self, header, &id) < 0))
 		return TRUE;
 
+	q = g_string_new("");
 	values = g_relation_select(self->headers,header,0);
 	for (i=0; i<values->len;i++) {
 		value = g_tuples_index(values,i,1);
 
-		if (! (safe_value = dm_strnesc(value,CACHE_WIDTH_VALUE))) {
-			g_tuples_destroy(values);
-			return TRUE;
-		}
-
-		q = g_strdup_printf("INSERT INTO %sheadervalue (headername_id, physmessage_id, headervalue) "
+		safe_value = dm_strnesc(value,CACHE_WIDTH_VALUE);
+		g_string_printf(q,"INSERT INTO %sheadervalue (headername_id, physmessage_id, headervalue) "
 				"VALUES (%llu,%llu,'%s')", DBPFX, id, self->physid, safe_value);
 		g_free(safe_value);
 
-		if (db_query(q)) {
+		if (db_query(q->str)) {
 			trace(TRACE_ERROR,"%s,%s: insert headervalue failed",
 			      __FILE__,__func__);
+			g_string_free(q,TRUE);
 			g_tuples_destroy(values);
 			return TRUE;
 		}
-		g_free(q);
 	}
+	g_string_free(q,TRUE);
 	g_tuples_destroy(values);
 	return FALSE;
 }

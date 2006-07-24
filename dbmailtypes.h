@@ -282,6 +282,7 @@ typedef struct {
 	unsigned flags;
 	int permission;
 	u64_t *seq_list;
+	gboolean is_public, is_users, is_inbox;
 } mailbox_t;
 
 
@@ -444,6 +445,18 @@ typedef enum {
 		
 } sql_fragment_t;
 
+typedef enum {
+	IMAP_FLAG_SEEN,
+	IMAP_FLAG_ANSWERED,
+	IMAP_FLAG_DELETED,
+	IMAP_FLAG_FLAGGED,
+	IMAP_FLAG_DRAFT,
+	IMAP_FLAG_RECENT
+} imap_flag_t;
+
+ /* shared global */
+ db_param_t _db_params;
+ 
 
 /* shared global */
 db_param_t _db_params;

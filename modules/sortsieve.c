@@ -27,6 +27,8 @@
 
 #include "dbmail.h"
 
+#define THIS_MODULE "sieve"
+
 /* Used by us to keep track of libSieve. */
 struct sort_context {
 	char *s_buf;
@@ -40,11 +42,12 @@ struct sort_context {
 /* Returned opaquely as type sort_result_t. */
 struct sort_result {
 	int cancelkeep;
-	int reject;
-	GString *errormsg;
 	const char *mailbox;
+	int reject;
+	GString *rejectmsg;
 	int error_runtime;
 	int error_parse;
+	GString *errormsg;
 };
 
 struct sort_sieve_config {
@@ -103,7 +106,6 @@ int sort_vacation(sieve2_context_t *s, void *my)
 	if (!rc_from)
 		rc_from = m->message->envelope_recipient->str;
 
-	// Or maybe should it be the Reply-To or From header?
 	rc_to = dbmail_message_get_header(m->message, "Reply-To");
 	if (!rc_to)
 		rc_to = dbmail_message_get_header(m->message, "Return-Path");
@@ -111,11 +113,11 @@ int sort_vacation(sieve2_context_t *s, void *my)
 	if (db_replycache_validate(rc_to, rc_from, rc_handle, days) == DM_SUCCESS) {
 		if (send_vacation(m->message, rc_to, rc_from, subject, message, rc_handle) == 0)
 			db_replycache_register(rc_to, rc_from, rc_handle);
-		trace(TRACE_INFO, "%s, %s: Sending vacation to [%s] from [%s] handle [%s] repeat days [%d]",
-				__FILE__, __func__, rc_to, rc_from, rc_handle, days);
+		TRACE(TRACE_INFO, "Sending vacation to [%s] from [%s] handle [%s] repeat days [%d]",
+			rc_to, rc_from, rc_handle, days);
 	} else {
-		trace(TRACE_INFO, "%s, %s: Vacation suppressed to [%s] from [%s] handle [%s] repeat days [%d]",
-				__FILE__, __func__, rc_to, rc_from, rc_handle, days);
+		TRACE(TRACE_INFO, "Vacation suppressed to [%s] from [%s] handle [%s] repeat days [%d]",
+			rc_to, rc_from, rc_handle, days);
 	}
 
 	if (md5_handle)
@@ -133,10 +135,14 @@ int sort_redirect(sieve2_context_t *s, void *my)
 
 	to = sieve2_getvalue_string(s, "address");
 
-	trace(TRACE_INFO, "Action is REDIRECT: "
-		"REDIRECT destination is [%s].", to);
+	TRACE(TRACE_INFO, "Action is REDIRECT: REDIRECT destination is [%s].",
+		to);
 
-	from = dbmail_message_get_header(m->message, "Delivered-To");
+	/* According to a clarification from the ietf-mta-filter mailing list,
+	 * the redirect is supposed to be absolutely transparent: the envelope
+	 * sender is the original envelope sender, with only the envelope
+	 * recipient changed. As a fallback, we'll use the redirecting user. */
+	from = dbmail_message_get_header(m->message, "Return-Path");
 	if (!from)
 		from = m->message->envelope_recipient->str;
 
@@ -151,12 +157,13 @@ int sort_redirect(sieve2_context_t *s, void *my)
 int sort_reject(sieve2_context_t *s, void *my)
 {
 	struct sort_context *m = (struct sort_context *)my;
+	const char *message;
 
-	trace(TRACE_INFO, "Action is REJECT: "
-		"REJECT message is [%s].",
-		sieve2_getvalue_string(s, "message"));
+	message = sieve2_getvalue_string(s, "message");
 
-	/* FIXME: Pass the rejection message out to smtp/lmtp. */
+	TRACE(TRACE_INFO, "Action is REJECT: REJECT message is [%s].", message);
+
+	m->result->rejectmsg = g_string_new(message);
 
 	/* Reject also discards. */
 	m->result->cancelkeep = 1;
@@ -168,41 +175,55 @@ int sort_discard(sieve2_context_t *s UNUSED, void *my)
 {
 	struct sort_context *m = (struct sort_context *)my;
 
-	trace(TRACE_INFO, "Action is DISCARD.");
+	TRACE(TRACE_INFO, "Action is DISCARD.");
 
 	m->result->cancelkeep = 1;
 	return SIEVE2_OK;
 }
 
-// TODO: support the imapflags extension.
 int sort_fileinto(sieve2_context_t *s, void *my)
 {
 	struct sort_context *m = (struct sort_context *)my;
-	// const char * const * flags;
+	extern const char * imap_flag_desc[];
+	const char * const * flags;
 	const char * mailbox;
+	int msgflags[IMAP_NFLAGS];
 
 	mailbox = sieve2_getvalue_string(s, "mailbox");
-	// flags = sieve2_getvalue_stringlist(s, "imapflags");
+	flags = sieve2_getvalue_stringlist(s, "imapflags"); // TODO
 
-	trace(TRACE_INFO, "Action is FILEINTO: mailbox is [%s]", mailbox);
+	/* This condition exists for the KEEP callback. */
+	if (! mailbox) {
+		mailbox = "INBOX";
+	}
+
+	/* If there were any imapflags, set them. */
+	if (flags) {
+		int i, j;
+
+		memset(&msgflags, 0, IMAP_NFLAGS * sizeof(int));
+
+		for (i = 0; flags[i]; i++) { // Loop through all script/user-specified flags.
+			for (j = 0; imap_flag_desc[j]; i++) { // Find the ones we support.
+				// FIXME: We should be ASCII-case-insensitive.
+				if (strstr(imap_flag_desc[j], flags[i])) {
+					msgflags[i] = 1;
+				}
+			}
+		}
+	}
+
+	TRACE(TRACE_INFO, "Action is FILEINTO: mailbox is [%s]", mailbox);
 
 	/* Don't cancel the keep if there's a problem storing the message. */
 	if (sort_deliver_to_mailbox(m->message, m->user_idnr,
-				mailbox, BOX_SORTING) != DSN_CLASS_OK)
+			mailbox, BOX_SORTING, msgflags) != DSN_CLASS_OK) {
+		TRACE(TRACE_ERROR, "Could not file message into mailbox; not cancelling keep.");
 		m->result->cancelkeep = 0;
-	else
+	} else {
 		m->result->cancelkeep = 1;
+	}
 
-	return SIEVE2_OK;
-}
-
-int sort_keep(sieve2_context_t *s UNUSED, void *my)
-{
-	struct sort_context *m = (struct sort_context *)my;
-
-	trace(TRACE_INFO, "Action is KEEP.");
-
-	m->result->cancelkeep = 0;
 	return SIEVE2_OK;
 }
 
@@ -215,12 +236,11 @@ int sort_errparse(sieve2_context_t *s, void *my)
 	lineno = sieve2_getvalue_int(s, "lineno");
 	message = sieve2_getvalue_string(s, "message");
 
-	trace(TRACE_INFO, "Error is PARSE:"
-		"Line is [%d], Message is [%s]", lineno, message);
+	TRACE(TRACE_INFO, "Error is PARSE: Line is [%d], Message is [%s]", lineno, message);
 
 	g_string_append_printf(m->result->errormsg, "Parse error on line [%d]: %s", lineno, message);
 
-//	FIXME: generate a message and put it into the INBOX
+//	TODO: generate a message and put it into the INBOX
 //	of the script's owner, probably with an Urgent flag.
 
 	m->result->error_parse = 1;
@@ -234,12 +254,11 @@ int sort_errexec(sieve2_context_t *s, void *my)
 
 	message = sieve2_getvalue_string(s, "message");
 
-	trace(TRACE_INFO, "Error is EXEC: "
-		"Message is [%s]", message);
+	TRACE(TRACE_INFO, "Error is EXEC: Message is [%s]", message);
 
 	g_string_append_printf(m->result->errormsg, "Execution error: %s", message);
 
-//	FIXME: generate a message and put it into the INBOX
+//	TODO: generate a message and put it into the INBOX
 //	of the script's owner, probably with an Urgent flag.
 
 	m->result->error_runtime = 1;
@@ -263,16 +282,14 @@ int sort_getscript(sieve2_context_t *s, void *my)
 
 	if (strlen(path) && strlen(name)) {
 		/* TODO: handle included files. */
-		trace(TRACE_INFO, "Include requested from [%s] named [%s]",
-			path, name);
+		TRACE(TRACE_INFO, "Include requested from [%s] named [%s]", path, name);
 	} else
 	if (!strlen(path) && !strlen(name)) {
 		/* Read the script file given as an argument. */
-		trace(TRACE_INFO, "%s, %s: Getting default script named [%s]",
-			__FILE__, __func__, m->script);
+		TRACE(TRACE_INFO, "Getting default script named [%s]", m->script);
 		res = db_get_sievescript_byname(m->user_idnr, m->script, &m->s_buf);
 		if (res != SIEVE2_OK) {
-			trace(TRACE_ERROR, "sort_getscript: read_file() returns %d\n", res);
+			TRACE(TRACE_ERROR, "sort_getscript: read_file() returns %d\n", res);
 			return SIEVE2_ERROR_FAIL;
 		}
 		sieve2_setvalue_string(s, "script", m->s_buf);
@@ -304,8 +321,8 @@ int sort_getheader(sieve2_context_t *s, void *my)
 	dm_list_nodeadd(&m->freelist, &bodylist, sizeof(char **));
 
 	for (i = 0; bodylist[i] != NULL; i++) {
-		trace(TRACE_INFO, "%s, %s: Getting header [%s] returning value [%s]",
-			__FILE__, __func__, header, bodylist[i]);
+		TRACE(TRACE_INFO, "Getting header [%s] returning value [%s]",
+			header, bodylist[i]);
 	}
 
 	sieve2_setvalue_stringlist(s, "body", bodylist);
@@ -338,10 +355,79 @@ int sort_getsize(sieve2_context_t *s, void *my)
 
 	rfcsize = dbmail_message_get_rfcsize(m->message);
 
-	trace(TRACE_INFO, "%s, %s: Getting message size [%d]",
-		__FILE__, __func__, rfcsize);
+	TRACE(TRACE_INFO, "Getting message size [%d]", rfcsize);
 
 	sieve2_setvalue_int(s, "size", rfcsize);
+
+	return SIEVE2_OK;
+}
+
+int sort_getsubaddress(sieve2_context_t *s, void *my)
+{
+	struct sort_context *m = (struct sort_context *)my;
+	const char *address;
+	char *user = NULL, *detail = NULL,
+	     *localpart = NULL, *domain = NULL;
+
+	address = sieve2_getvalue_string(s, "address");
+
+	/* Simple address parsing. libSieve only shows us
+	 * the localpart@domain portion, so we don't need
+	 * to handle anything exciting or exotic here. */
+	// TODO: Unify with the delivery chain subaddress code.
+
+	localpart = strdup(address);
+	domain = strchr(localpart, '@');
+	if (domain) {
+		*domain = '\0';
+		domain++;
+	} else {
+		// Malformed address.
+	}
+
+	user = strdup(localpart);
+	detail = strchr(user, '+');
+	if (detail) {
+		*detail = '\0';
+		detail++;
+	} else {
+		// No detail present.
+	}
+
+	sieve2_setvalue_string(s, "user", user);
+	sieve2_setvalue_string(s, "detail", detail);
+	sieve2_setvalue_string(s, "localpart", localpart);
+	sieve2_setvalue_string(s, "domain", domain);
+
+	dm_list_nodeadd(&m->freelist, &user, sizeof(char *));
+	dm_list_nodeadd(&m->freelist, &localpart, sizeof(char *));
+
+	return SIEVE2_OK;
+}
+
+int sort_debugtrace(sieve2_context_t *s, void *my UNUSED)
+{
+	int trace_level;
+
+	switch (sieve2_getvalue_int(s, "level")) {
+	case 0:
+	case 1:
+	case 2:
+		trace_level = TRACE_INFO;
+		break;
+	case 3:
+	case 4:
+	case 5:
+	default:
+		trace_level = TRACE_DEBUG;
+		break;
+	}
+
+	TRACE(trace_level, "libSieve: module [%s] file [%s] function [%s] message [%s]\n",
+			sieve2_getvalue_string(s, "module"),
+			sieve2_getvalue_string(s, "file"),
+			sieve2_getvalue_string(s, "function"),
+			sieve2_getvalue_string(s, "message"));
 
 	return SIEVE2_OK;
 }
@@ -350,21 +436,24 @@ int sort_getsize(sieve2_context_t *s, void *my)
 
 
 sieve2_callback_t sort_callbacks[] = {
-	{ SIEVE2_ERRCALL_RUNTIME,       sort_errexec     },
-	{ SIEVE2_ERRCALL_PARSE,         sort_errparse    },
+	{ SIEVE2_ERRCALL_RUNTIME,       sort_errexec       },
+	{ SIEVE2_ERRCALL_PARSE,         sort_errparse      },
 
-	{ SIEVE2_ACTION_VACATION,       sort_vacation    },
-	{ SIEVE2_ACTION_FILEINTO,       sort_fileinto    },
-	{ SIEVE2_ACTION_REDIRECT,       sort_redirect    },
-	{ SIEVE2_ACTION_DISCARD,        sort_discard     },
-	{ SIEVE2_ACTION_REJECT,         sort_reject      },
-	{ SIEVE2_ACTION_KEEP,           sort_keep        },
+	{ SIEVE2_ACTION_VACATION,       sort_vacation      },
+	{ SIEVE2_ACTION_REDIRECT,       sort_redirect      },
+	{ SIEVE2_ACTION_DISCARD,        sort_discard       },
+	{ SIEVE2_ACTION_REJECT,         sort_reject        },
+	{ SIEVE2_ACTION_FILEINTO,       sort_fileinto      },
+	{ SIEVE2_ACTION_KEEP,           sort_fileinto      },
 
-	{ SIEVE2_SCRIPT_GETSCRIPT,      sort_getscript   },
-	{ SIEVE2_MESSAGE_GETHEADER,     sort_getheader   },
-	{ SIEVE2_MESSAGE_GETENVELOPE,   sort_getenvelope },
-	{ SIEVE2_MESSAGE_GETBODY,       sort_getbody     },
-	{ SIEVE2_MESSAGE_GETSIZE,       sort_getsize     },
+// TODO: Register this, but only if we're at a high debug level.
+//	{ SIEVE2_DEBUG_TRACE,           sort_debugtrace    },
+	{ SIEVE2_SCRIPT_GETSCRIPT,      sort_getscript     },
+	{ SIEVE2_MESSAGE_GETHEADER,     sort_getheader     },
+	{ SIEVE2_MESSAGE_GETENVELOPE,   sort_getenvelope   },
+	{ SIEVE2_MESSAGE_GETBODY,       sort_getbody       },
+	{ SIEVE2_MESSAGE_GETSIZE,       sort_getsize       },
+//	{ SIEVE2_MESSAGE_GETSUBADDRESS, sort_getsubaddress },
 	{ 0, 0 } };
 
 
@@ -386,7 +475,7 @@ static int sort_teardown(sieve2_context_t **s2c,
 
 	res = sieve2_free(&sieve2_context);
 	if (res != SIEVE2_OK) {
-		trace(TRACE_ERROR, "Error %d when calling sieve2_free: %s\n",
+		TRACE(TRACE_ERROR, "Error [%d] when calling sieve2_free: [%s]",
 			res, sieve2_errstr(res));
 		return DM_EGENERAL;
 	}
@@ -409,14 +498,14 @@ static int sort_startup(sieve2_context_t **s2c,
 
 	res = sieve2_alloc(&sieve2_context);
 	if (res != SIEVE2_OK) {
-		trace(TRACE_ERROR, "Error %d when calling sieve2_alloc: %s\n",
+		TRACE(TRACE_ERROR, "Error [%d] when calling sieve2_alloc: [%s]",
 			res, sieve2_errstr(res));
 		return DM_EGENERAL;
 	}
 
 	res = sieve2_callbacks(sieve2_context, sort_callbacks);
 	if (res != SIEVE2_OK) {
-		trace(TRACE_ERROR, "Error %d when calling sieve2_callbacks: %s\n",
+		TRACE(TRACE_ERROR, "Error [%d] when calling sieve2_callbacks: [%s]",
 			res, sieve2_errstr(res));
 		sort_teardown(&sieve2_context, &sort_context);
 		return DM_EGENERAL;
@@ -438,7 +527,7 @@ static int sort_startup(sieve2_context_t **s2c,
 }
 
 /* The caller is responsible for freeing memory here. */
-// FIXME: Support SIEVE_{extension} settings in dbmail.conf
+// TODO: Support SIEVE_{extension} settings in dbmail.conf
 const char * sort_listextensions(void)
 {
 	sieve2_context_t *sieve2_context;
@@ -494,7 +583,7 @@ sort_result_t *sort_validate(u64_t user_idnr, char *scriptname)
 
 	res = sieve2_validate(sieve2_context, sort_context);
 	if (res != SIEVE2_OK) {
-		trace(TRACE_ERROR, "Error %d when calling sieve2_validate: %s\n",
+		TRACE(TRACE_ERROR, "Error %d when calling sieve2_validate: %s",
 			res, sieve2_errstr(res));
 		exitnull = 1;
 		goto freesieve;
@@ -553,25 +642,24 @@ sort_result_t *sort_process(u64_t user_idnr, struct DbmailMessage *message)
 
 	res = db_get_sievescript_active(user_idnr, &sort_context->script);
 	if (res != 0) {
-		trace(TRACE_ERROR, "Error %d when calling db_getactive_sievescript", res);
+		TRACE(TRACE_ERROR, "Error [%d] when calling db_getactive_sievescript", res);
 		exitnull = 1;
 		goto freesieve;
 	}
 	if (sort_context->script == NULL) {
-		trace(TRACE_INFO, "User doesn't have any active sieve scripts.");
+		TRACE(TRACE_INFO, "User doesn't have any active sieve scripts.");
 		exitnull = 1;
 		goto freesieve;
 	}
 
 	res = sieve2_execute(sieve2_context, sort_context);
 	if (res != SIEVE2_OK) {
-		trace(TRACE_ERROR, "Error %d when calling sieve2_execute: %s",
+		TRACE(TRACE_ERROR, "Error [%d] when calling sieve2_execute: [%s]",
 			res, sieve2_errstr(res));
 		exitnull = 1;
 	}
 	if (! sort_context->result->cancelkeep) {
-		trace(TRACE_INFO, "  no actions taken; keeping message.");
-		sort_keep(NULL, sort_context);
+		TRACE(TRACE_INFO, "No actions taken; message must be kept.");
 	}
 
 	/* At this point the callbacks are called from within libSieve. */
@@ -598,6 +686,7 @@ void sort_free_result(sort_result_t *result)
 {
 	if (result == NULL) return;
 	g_string_free(result->errormsg, TRUE);
+	g_string_free(result->rejectmsg, TRUE);
 	dm_free(result);
 }
 
@@ -607,27 +696,33 @@ int sort_get_cancelkeep(sort_result_t *result)
 	return result->cancelkeep;
 }
 
+const char * sort_get_mailbox(sort_result_t *result)
+{
+	if (result == NULL) return NULL;
+	return result->mailbox;
+}
+
 int sort_get_reject(sort_result_t *result)
 {
 	if (result == NULL) return 0;
 	return result->reject;
 }
 
-const char * sort_get_mailbox(sort_result_t *result)
+const char *sort_get_rejectmsg(sort_result_t *result)
 {
-	assert(result != NULL);
-	return result->mailbox;
-}
-
-const char * sort_get_errormsg(sort_result_t *result)
-{
-	assert(result != NULL);
-	return result->errormsg->str;
+	if (result == NULL) return NULL;
+	return result->rejectmsg->str;
 }
 
 int sort_get_error(sort_result_t *result)
 {
-	assert(result != NULL);
+	if (result == NULL) return 0;
 	return result->errormsg->len;
+}
+
+const char * sort_get_errormsg(sort_result_t *result)
+{
+	if (result == NULL) return NULL;
+	return result->errormsg->str;
 }
 

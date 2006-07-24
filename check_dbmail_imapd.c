@@ -387,6 +387,42 @@ START_TEST(test_imap_get_structure)
 }
 END_TEST
 
+START_TEST(test_internet_address_parse_string)
+{
+	char * trythese [] = { "undisclosed-recipients", "undisclosed-recipients;",
+		"undisclosed-recipients:", "undisclosed-recipients:;",
+		"undisclosed-recipients: ;", NULL };
+	int i;
+
+	for (i = 0; trythese[i] != NULL; i++) {
+
+		char *result = trythese[i];
+
+		char *t;
+		InternetAddressList *alist;
+		char *expect = "((NIL NIL \"undisclosed-recipients\" NIL))";
+		GList *list = NULL;
+
+		// Copied from dm_imaputil.c, envelope_address_part
+		t = imap_cleanup_address(result);
+		alist = internet_address_parse_string(t);
+		g_free(t);
+		list = _imap_append_alist_as_plist(list, (const InternetAddressList *)alist);
+		internet_address_list_destroy(alist);
+		alist = NULL;
+
+		result = dbmail_imap_plist_as_string(list);
+
+		fail_unless(strcmp(result,expect)==0, "internet_address_parse_string failed to generate correct undisclosed-recipients plist");
+
+		g_list_foreach(list,(GFunc)g_free,NULL);
+		g_list_free(list);
+		dm_free(result);
+
+	}
+}
+END_TEST
+
 START_TEST(test_imap_get_envelope)
 {
 	struct DbmailMessage *message;
@@ -472,7 +508,7 @@ START_TEST(test_imap_cleanup_address)
 	F("=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=<nobody@nowhere.org>","\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" <nobody@nowhere.org>");
 	F("\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" <nobody@nowhere.org>","\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" <nobody@nowhere.org>");
 	F("Some One <some@foo.org>", "Some One <some@foo.org>");
-	F(" <some@foo.org>", " <some@foo.org>");
+	F(" <some@foo.org>", "<some@foo.org>");
 }
 END_TEST
 
@@ -758,6 +794,7 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_session, test_imap_bodyfetch);
 	tcase_add_test(tc_session, test_imap_get_structure);
 	tcase_add_test(tc_session, test_imap_cleanup_address);
+	tcase_add_test(tc_session, test_internet_address_parse_string);
 	tcase_add_test(tc_session, test_imap_get_envelope);
 	tcase_add_test(tc_session, test_imap_get_envelope_8bit_id);
 	tcase_add_test(tc_session, test_imap_get_envelope_koi);
