@@ -431,6 +431,19 @@ char * g_strcasestr(const char *haystack, const char *needle)
 	return NULL;
 }
 
+char * g_strcasestr(const char *haystack, const char *needle)
+{
+	// Like strstr, but case insensitive.
+	size_t n = strlen(needle);
+	for (; *haystack; haystack++) {
+		if (g_ascii_strncasecmp(haystack, needle, n) == 0)
+			return (char *)haystack;
+	}
+
+	return NULL;
+}
+
+
 /* 
  * return newly allocated escaped strings
  */
