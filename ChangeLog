@@ -1,3 +1,10 @@
+2006-07-25  Paul J Stevens <paul@nfg.nl>
+
+	* misc.c:
+	fix g_strcasestr
+	* Makefile.am, check_dbmail_misc.c, misc.c:
+	add check_dbmail_misc.c testsuite
+
 2006-07-24  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-mailbox.c:
