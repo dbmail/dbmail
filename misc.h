@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: misc.h 2182 2006-06-18 20:39:19Z paul $ 
+/* $Id: misc.h 2208 2006-07-24 16:04:51Z aaron $ 
  */
 
 #ifndef _MISC_H
@@ -105,6 +105,7 @@ int zap_between(const char * const instring, signed char left, signed char right
 GString * g_list_join(GList * list, const gchar * sep);
 GList * g_string_split(GString * string, const gchar * sep);
 GList * g_list_append_printf(GList * list, char * format, ...);
+char * g_strcasestr(const char *haystack, const char *needle);
 
 gint ucmp(const u64_t *a, const u64_t *b);
 void g_list_destroy(GList *list);

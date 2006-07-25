@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/*	$Id: misc.c 2207 2006-07-24 15:35:35Z paul $
+/*	$Id: misc.c 2208 2006-07-24 16:04:51Z aaron $
  *
  *	Miscelaneous functions */
 
@@ -418,6 +418,17 @@ GList * g_list_append_printf(GList * list, char * format, ...)
 	va_list argp;
 	va_start(argp, format);
 	return g_list_append(list, g_strdup_vprintf(format, argp));
+}
+
+char * g_strcasestr(const char *haystack, const char *needle)
+{
+	// Like strstr, but case insensitive.
+	for (; *haystack; haystack++) {
+		if (g_ascii_strcasecmp(haystack, needle) == 0)
+			return (char *)haystack;
+	}
+
+	return NULL;
 }
 
 /* 
