@@ -28,10 +28,8 @@ test $DEBIAN_SCRIPT_DEBUG && set -v -x
 
 case "$1" in
     install)
-    	/sbin/ldconfig
     ;;
     upgrade)
-    	/sbin/ldconfig
     ;;
     configure)
 

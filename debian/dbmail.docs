@@ -1,8 +1,8 @@
 AUTHORS
 THANKS
-INSTALL.exim
-INSTALL.postfix
-INSTALL.qmail
+README.exim
+README.postfix
+README.qmail
 README.aliases
 README.smtp
 README.usermap
