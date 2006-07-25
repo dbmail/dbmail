@@ -452,7 +452,7 @@ sieve2_callback_t sort_callbacks[] = {
 	{ SIEVE2_MESSAGE_GETENVELOPE,   sort_getenvelope   },
 	{ SIEVE2_MESSAGE_GETBODY,       sort_getbody       },
 	{ SIEVE2_MESSAGE_GETSIZE,       sort_getsize       },
-//	{ SIEVE2_MESSAGE_GETSUBADDRESS, sort_getsubaddress },
+	{ SIEVE2_MESSAGE_GETSUBADDRESS, sort_getsubaddress },
 	{ 0, 0 } };
 
 
