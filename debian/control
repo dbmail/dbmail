@@ -7,8 +7,7 @@ Standards-Version: 3.7.2
 
 Package: dbmail
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}, libglib2.0-0 (>= 2.10.2), libgmime2.1 (>= 2.1.19), debconf (>=1.4.70) | debconf-2.0 , ucf (>= 0.30)
-Suggests: stunnel | stunnel4, postfix | mail-transport-agent, dbmail-mysql (= ${Source-Version})| dbmail-pgsql (= ${Source-Version})| dbmail-sqlite (= ${Source-Version}), dbmail-ldap (= ${Source-Version}), dbmail-sieve (= ${Source-Version})
+Depends: ${misc:Depends}, ${shlibs:Depends}, libdbmail0 (= ${Source-Version), debconf (>=1.4.70) | debconf-2.0 , ucf (>= 0.30)
 Provides: imap-server, pop3-server
 Description: base package for the dbmail email solution
  DBMAIL is a collection of programs that allows email to be
@@ -20,6 +19,21 @@ Description: base package for the dbmail email solution
  Supported client protocols are: POP3, IMAP4, LMTP.
  .
  You need to install one or more of the supporting modules.
+
+Package: libdbmail0
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}, dbmail (= ${Source-Version), libglib2.0-0 (>= 2.10.2), libgmime2.1 (>= 2.1.19)
+Suggests: stunnel | stunnel4, postfix | mail-transport-agent, dbmail-mysql (= ${Source-Version})| dbmail-pgsql (= ${Source-Version})| dbmail-sqlite (= ${Source-Version}), dbmail-ldap (= ${Source-Version}), dbmail-sieve (= ${Source-Version})
+Description: shared libraries for the dbmail email solution
+ DBMAIL is a collection of programs that allows email to be
+ stored in and retrieved from a sql database.
+ .
+ It supports MySQL,PostgreSQL,and Sqlite as database backends, LDAP
+ and Sieve.
+ .
+ You need to install one or more of the supporting modules.
+ .
+ This package contains the shared library used by the dbmail utilities.
 
 Package: dbmail-pgsql
 Architecture: any
