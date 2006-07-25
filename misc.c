@@ -423,17 +423,6 @@ GList * g_list_append_printf(GList * list, char * format, ...)
 char * g_strcasestr(const char *haystack, const char *needle)
 {
 	// Like strstr, but case insensitive.
-	for (; *haystack; haystack++) {
-		if (g_ascii_strcasecmp(haystack, needle) == 0)
-			return (char *)haystack;
-	}
-
-	return NULL;
-}
-
-char * g_strcasestr(const char *haystack, const char *needle)
-{
-	// Like strstr, but case insensitive.
 	size_t n = strlen(needle);
 	for (; *haystack; haystack++) {
 		if (g_ascii_strncasecmp(haystack, needle, n) == 0)
@@ -442,7 +431,6 @@ char * g_strcasestr(const char *haystack, const char *needle)
 
 	return NULL;
 }
-
 
 /* 
  * return newly allocated escaped strings
