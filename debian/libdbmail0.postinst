@@ -4,4 +4,6 @@ if [ "$1" = "configure" ]; then
 	ldconfig
 fi
 
+#DEBHELPER#
+
 exit 0

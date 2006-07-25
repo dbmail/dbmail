@@ -1,2 +1,2 @@
 usr/lib/dbmail/libauth_sql.so*
-usr/lib/libdbmail.so*
+usr/lib/libdbmail.so.0*
