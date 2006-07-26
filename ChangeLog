@@ -1,3 +1,20 @@
+2006-07-26  Paul J Stevens <paul@nfg.nl>
+
+	* debian/control, modules/sortsieve.c:
+	depend on libsieve1_2.1.12 and activate sort_getsubaddress callback in
+	sieve code
+	* INSTALL.exim, INSTALL.postfix, INSTALL.qmail, README.exim, 
+	  README.postfix, README.qmail, debian/dbmail.docs:
+	rename a couple of files
+	* debian/changelog, debian/control, debian/dbmail.install, 
+	  debian/libdbmail0.dirs, debian/libdbmail0.install:
+	split out shared libs into separate packages
+	* debian/control, debian/dbmail.postinst, debian/dbmail.postrm, 
+	  debian/libdbmail0.postinst, debian/libdbmail0.postrm:
+	update debian files
+	* debian/dbmail.init:
+	make debian initscript lsb compliant
+
 2006-07-26  Aaron Stone  <aaron@serendipity.cx>
 
 	* modules/sortsieve.c:
