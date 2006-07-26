@@ -1,14 +1,23 @@
 #! /bin/sh --posix
 #
-# skeleton	example file to build /etc/init.d/ scripts.
-#		This file should be used to construct scripts for /etc/init.d.
+# dbmail init script for debian
+# 
+# written by Paul J Stevens, 2004-2006
+# 
 #
-#		Written by Miquel van Smoorenburg <miquels@cistron.nl>.
-#		Modified for Debian GNU/Linux
-#		by Ian Murdock <imurdock@gnu.ai.mit.edu>.
-#
-# Version:	@(#)skeleton  1.9.1  08-Apr-2002  miquels@cistron.nl
-#
+### BEGIN INIT INFO
+# Provides:          dbmail
+# Required-Start:    $syslog $network
+# Required-Stop:     $syslog $network
+# Should-Start:      $local_fs $remote_fs
+# Should-Stop:       $local_fs $remote_fs
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Start dbmail services
+# Description:       Run network services provided by dbmail such as
+#                    imap-server, pop3-server, lmtp-server, timsieve-server
+### END INIT INFO
+
 
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
@@ -34,19 +43,9 @@ test -x $LMTPD || exit 0
 
 set -e
 
-[ -e /etc/default/dbmail ] && . /etc/default/dbmail
+. /lib/lsb/init-functions
 
-config_valid() {
-	/usr/sbin/dbmail-util -l 2h30m >/dev/null 2>&1  && return 0
-	cat << EOM
-Dbmail cannot connect to the database server. Please make sure
-/etc/dbmail/dbmail.conf is correct, the database-server is running,
-the database for dbmail exists, and the dbmail user exists with all
-necessary permissions. To re-configure /etc/dbmail/dbmail.conf run
-'dpkg-reconfigure dbmail'.
-EOM
-	return 1
-}	
+[ -e /etc/default/dbmail ] && . /etc/default/dbmail
 
 ssl_wrapper() {
 	# this needs more work. Use stunnel at your own risk,
@@ -58,7 +57,8 @@ ssl_wrapper() {
 	# assuming stunnel runs on the same host as dbmail, even though
 	# it aint necessarily so.
 	STUNNLOPT="-D 7 -p $PEMFILE -S 0 -a /etc/ssl/certs -t 300 -s dbmail -g dbmail -P $PID_DIR"
-	echo -n "SSL wrapper "
+	log_progress_msg "SSL wrapper"
+	 
 	case "$1" in 
 		start)
 		[ "$START_IMAPD" ] && \
@@ -85,78 +85,94 @@ ssl_wrapper() {
 	return 0
 }	
 
-persistent_start() {
-	#_debug="true"
-	
+service_start() {
 	eval '_daemon=$'$1
 	eval '_name=$'$1'_NAME'
-	echo -n "$_name "
-	count=0
 	[ -e $_daemon ] || return 0
-	while [ $count -lt 30 ]; do
-		start-stop-daemon --start --exec $_daemon >/dev/null 2>&1
-		pids=`pidof $_name` 1>/dev/null
-		if [ -n "$pids" ]; then
-			[ $_debug ] && echo "...got pids: $pids"
-			return 0
-		fi	
-		count=$(($count+1))
-	done
-	echo "Starting $_name failed."
-	return 1
-}
-
-
-persistent_stop() {
-	 #_debug="true"
 	
-	eval '_daemon=$'$1
-	eval '_name=$'$1'_NAME'
-	echo -n "$_name "
-	count=0
+	log_progress_msg "$_name"
+	start-stop-daemon --start --exec $_daemon
 	
-	start-stop-daemon --stop --retry 10 \
-		--pidfile ${PID_DIR}/${_name}.pid >/dev/null 2>&1 || true
-
-	pids=`pidof ${_name}`
-	if [ -n "$pids" ]; then
-		[ $_debug ] && echo "Stopping $_name failed. Killing hard."
-		killall -9 $_name
+	r=$?
+	if [ $r -gt 0 ]; then
+		log_failure_msg "failed"
+		return $r
 	fi
-
+	
 	return 0
 	
 }
 
 
+service_stop() {
+	eval '_daemon=$'$1
+	eval '_name=$'$1'_NAME'
+	
+	log_progress_msg "$_name"
+	start-stop-daemon --stop --retry 10 \
+		--pidfile ${PID_DIR}/${_name}.pid >/dev/null 2>&1 || true
+
+	pids=`pidof ${_name}`
+	if [ -n  "$pids" ]; then
+	echo "=[$pids]="
+		log_failure_msg "failed"
+		return 1
+	fi
+	
+	return 0
+	
+}
+	
+service_reload() {
+	eval '_daemon=$'$1
+	eval '_name=$'$1'_NAME'
+	
+	log_progress_msg "$_name"
+	start-stop-daemon --stop --signal HUP --quiet \
+		--pidfile ${PID_DIR}/${_name}.pid --name ${_name}
+	
+	r=$?
+	if [ $r -gt 0 ]; then
+		log_failure_msg "failed"
+		return $r
+	fi
+	
+	return 0
+	
+}
+
 case "$1" in
   start)
-	config_valid || exit 0
-	echo -n "Starting $DESC: "
-	[ "$START_IMAPD" ] && persistent_start "IMAPD" || true
-	[ "$START_POP3D" ] && persistent_start "POP3D" || true
-	[ "$START_LMTPD" ] && persistent_start "LMTPD" || true
-	[ "$START_SIEVE" ] && persistent_start "SIEVE" || true
-	[ "$START_SSL" ] && ssl_wrapper start || true
- 	echo "done."
+	log_daemon_msg "Starting $DESC"
+	gr=0
+	if [ "$START_IMAPD" ]; then service_start "IMAPD" || let gr=$gr+$?; fi
+	if [ "$START_POP3D" ]; then service_start "POP3D" || let gr=$gr+$?; fi
+	if [ "$START_LMTPD" ]; then service_start "LMTPD" || let gr=$gr+$?; fi
+	if [ "$START_SIEVE" ]; then service_start "SIEVE" || let gr=$gr+$?; fi
+	if [ "$START_SSL" ]; then ssl_wrapper start || let gr=$gr+$?; fi
+ 	log_end_msg $r
 	;;
+	
   stop)
-	echo -n "Stopping $DESC: "
-	[ "$START_SSL" ] && ssl_wrapper stop >/dev/null 2>&1 || true
-	[ "$START_IMAPD" ] && persistent_stop "IMAPD" || true
-	[ "$START_POP3D" ] && persistent_stop "POP3D" || true
-	[ "$START_LMTPD" ] && persistent_stop "LMTPD" || true
-	[ "$START_SIEVE" ] && persistent_stop "SIEVE" || true
-	echo "done."
+	log_daemon_msg "Stopping $DESC"
+	gr=0
+	if [ "$START_SSL" ]; then ssl_wrapper stop || let gr=$gr+$?; fi
+	if [ "$START_IMAPD" ]; then service_stop "IMAPD" || let gr=$gr+$?; fi
+	if [ "$START_POP3D" ]; then service_stop "POP3D" || let gr=$gr+$?; fi
+	if [ "$START_LMTPD" ]; then service_stop "LMTPD" || let gr=$gr+$?; fi
+	if [ "$START_SIEVE" ]; then service_stop "SIEVE" || let gr=$gr+$?; fi
+	log_end_msg $gr
 	;;
+	
   reload)
-  	echo -n "Reloading $DESC: "
-	[ "$START_IMAPD" ] && start-stop-daemon --stop --signal HUP --pidfile ${PID_DIR}/${IMAPD_NAME}.pid --name $IMAPD_NAME || true
-	[ "$START_POP3D" ] && start-stop-daemon --stop --signal HUP --pidfile ${PID_DIR}/${POP3D_NAME}.pid --name $POP3D_NAME || true
-	[ "$START_LMTPD" ] && start-stop-daemon --stop --signal HUP --pidfile ${PID_DIR}/${LMTPD_NAME}.pid --name $LMTPD_NAME || true
-	[ "$START_SIEVE" ] && start-stop-daemon --stop --signal HUP --pidfile ${PID_DIR}/${SIEVE_NAME}.pid --name $SIEVE_NAME || true
-	echo "done."
+  	log_daemon_msg "Reloading $DESC"
+	if [ "$START_IMAPD" ]; then service_reload "IMAPD" || let r=$r+$?; fi
+	if [ "$START_POP3D" ]; then service_reload "POP3D" || let r=$r+$?; fi
+	if [ "$START_LMTPD" ]; then service_reload "LMTPD" || let r=$r+$?; fi
+	if [ "$START_SIEVE" ]; then service_reload "SIEVE" || let r=$r+$?; fi
+	log_end_msg $r
 	;;
+	
   restart|force-reload)
 	$0 stop || true
 	$0 start
