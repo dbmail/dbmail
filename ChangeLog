@@ -1,3 +1,9 @@
+2006-07-26  Aaron Stone  <aaron@serendipity.cx>
+
+	* modules/sortsieve.c:
+	Accepted patch from maenaka (closes bug #383) to clear the IMAP flags
+	if none are given by the Sieve script.
+
 2006-07-25  Paul J Stevens <paul@nfg.nl>
 
 	* misc.c:
