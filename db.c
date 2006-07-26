@@ -2885,6 +2885,9 @@ int db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr,
 	*mailboxes = g_list_reverse(*mailboxes);
 	*errmsg = "Everything is peachy keen";
 
+	g_strfreev(chunks);
+	dm_free(cpy);
+ 
 	return DM_SUCCESS;
 
 equery:
