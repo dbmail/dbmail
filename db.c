@@ -1,4 +1,4 @@
-/* $Id: db.c 2207 2006-07-24 15:35:35Z paul $ */
+/* $Id: db.c 2213 2006-07-26 09:42:47Z aaron $ */
 /*
   Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
   Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
@@ -22,7 +22,7 @@
 /**
  * \file db.c
  * 
- * $Id: db.c 2207 2006-07-24 15:35:35Z paul $
+ * $Id: db.c 2213 2006-07-26 09:42:47Z aaron $
  *
  * implement database functionality. This used to split out
  * between MySQL and PostgreSQL, but this is now integrated. 
@@ -2885,6 +2885,9 @@ int db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr,
 	*mailboxes = g_list_reverse(*mailboxes);
 	*errmsg = "Everything is peachy keen";
 
+	g_strfreev(chunks);
+	dm_free(cpy);
+ 
 	return DM_SUCCESS;
 
 equery:
