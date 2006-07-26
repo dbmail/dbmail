@@ -198,10 +198,9 @@ int sort_fileinto(sieve2_context_t *s, void *my)
 	}
 
 	/* If there were any imapflags, set them. */
+	memset(&msgflags, 0, IMAP_NFLAGS * sizeof(int));
 	if (flags) {
 		int i, j;
-
-		memset(&msgflags, 0, IMAP_NFLAGS * sizeof(int));
 
 		for (i = 0; flags[i]; i++) { // Loop through all script/user-specified flags.
 			for (j = 0; imap_flag_desc[j]; i++) { // Find the ones we support.
@@ -684,8 +683,10 @@ freesieve:
 void sort_free_result(sort_result_t *result)
 {
 	if (result == NULL) return;
-	g_string_free(result->errormsg, TRUE);
-	g_string_free(result->rejectmsg, TRUE);
+	if (result->errormsg != NULL) 
+		g_string_free(result->errormsg, TRUE);
+	if (result->rejectmsg != NULL) 
+		g_string_free(result->rejectmsg, TRUE);
 	dm_free(result);
 }
 
