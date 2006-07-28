@@ -222,6 +222,9 @@ int sort_fileinto(sieve2_context_t *s, void *my)
 		m->result->cancelkeep = 1;
 	}
 
+	if (msgflags)
+		g_free(msgflasgs);
+
 	return SIEVE2_OK;
 }
 
