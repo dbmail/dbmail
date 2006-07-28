@@ -103,6 +103,7 @@ void newtrace(trace_t level, const char * module,
 		fprintf(stderr, "%s %s", trace_to_text(level), message);
 		if (message[l] != '\n')
 			fprintf(stderr, "\n");
+		fflush(stderr);
 	}
 
 	if (level <= TRACE_SYSLOG) {

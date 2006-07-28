@@ -1,3 +1,11 @@
+2006-07-27  Aaron Stone  <aaron@serendipity.cx>
+
+	* debug.c:
+	Added fflush after fprintf (closes bug #388).
+	* modules/sortsieve.c:
+	Make sure that the msgflags pointer is NULL if there are no special
+	flags (closes bug #383).
+
 2006-07-26  Paul J Stevens <paul@nfg.nl>
 
 	* debian/control, modules/sortsieve.c:

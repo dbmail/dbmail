@@ -187,7 +187,7 @@ int sort_fileinto(sieve2_context_t *s, void *my)
 	extern const char * imap_flag_desc[];
 	const char * const * flags;
 	const char * mailbox;
-	int msgflags[IMAP_NFLAGS];
+	int *msgflags = NULL;
 
 	mailbox = sieve2_getvalue_string(s, "mailbox");
 	flags = sieve2_getvalue_stringlist(s, "imapflags"); // TODO
@@ -198,9 +198,9 @@ int sort_fileinto(sieve2_context_t *s, void *my)
 	}
 
 	/* If there were any imapflags, set them. */
-	memset(&msgflags, 0, IMAP_NFLAGS * sizeof(int));
 	if (flags) {
 		int i, j;
+		msgflags = g_new0(int, IMAP_NFLASGS);
 
 		for (i = 0; flags[i]; i++) { // Loop through all script/user-specified flags.
 			for (j = 0; imap_flag_desc[j]; i++) { // Find the ones we support.
