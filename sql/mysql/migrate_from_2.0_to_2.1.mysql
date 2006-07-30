@@ -176,19 +176,16 @@ CREATE TABLE dbmail_replycache (
 
 
 CREATE TABLE dbmail_sievescripts (
-	id		BIGINT NOT NULL AUTO_INCREMENT,
-        owner_idnr	BIGINT NOT NULL
-			REFERENCES dbmail_users(user_idnr)
-			ON UPDATE CASCADE ON DELETE CASCADE,
-	active		TINYINT(1) DEFAULT '0' NOT NULL,
-	name		VARCHAR(100) NOT NULL DEFAULT '',
-	script		TEXT NOT NULL DEFAULT '',
-	PRIMARY KEY (id)
-);
-
-# Looking in db.c, the WHERE clauses are: owner, owner name, owner active.
-CREATE INDEX dbmail_sievescripts_1 on dbmail_sievescripts(owner_idnr,name);
-CREATE INDEX dbmail_sievescripts_2 on dbmail_sievescripts(owner_idnr,active);
+  owner_idnr bigint(21) DEFAULT '0' NOT NULL,
+  name varchar(100) NOT NULL,
+  script text,
+  active tinyint(1) default '0' not null,
+  INDEX (name),
+  INDEX (owner_idnr),
+  INDEX (owner_idnr, name),
+  FOREIGN KEY owner_idnr_fk (owner_idnr)
+    REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB;
 
 
 # Add columns for storing the Sieve quota.

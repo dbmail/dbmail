@@ -61,10 +61,12 @@ static int send_mail(struct DbmailMessage *message,
 		int sendwhat, char *sendmail_external)
 {
 	FILE *mailpipe = NULL;
-	char *escaped_to = NULL;
-	char *escaped_from = NULL;
+	char *escaped_to = NULL, *parsed_to = NULL;
+	char *escaped_from = NULL, *parsed_from = NULL;
 	char *sendmail_command = NULL;
 	field_t sendmail, postmaster;
+	InternetAddressList *ialist;
+	InternetAddress *ia;
 	int result;
 
 	if (!from || strlen(from) < 1) {
@@ -94,13 +96,23 @@ static int send_mail(struct DbmailMessage *message,
 	trace(TRACE_DEBUG, "%s, %s: sendmail command is [%s]",
 		__FILE__, __func__, sendmail);
 	
-	if (! (escaped_to = dm_shellesc(to))) {
+	ialist = internet_address_parse_string(to);
+	ia = ialist->address;
+	parsed_to = internet_address_to_string(ia, TRUE);
+	internet_address_list_destroy(ialist);
+
+	if (! (escaped_to = dm_shellesc(parsed_to))) {
 		trace(TRACE_ERROR, "%s, %s: out of memory calling dm_shellesc",
 				__FILE__, __func__);
 		return -1;
 	}
 
-	if (! (escaped_from = dm_shellesc(from))) {
+	ialist = internet_address_parse_string(from);
+	ia = ialist->address;
+	parsed_from = internet_address_to_string(ia, TRUE);
+	internet_address_list_destroy(ialist);
+
+	if (! (escaped_from = dm_shellesc(parsed_from))) {
 		trace(TRACE_ERROR, "%s, %s: out of memory calling dm_shellesc",
 				__FILE__, __func__);
 		return -1;
