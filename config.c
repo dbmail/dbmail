@@ -212,8 +212,9 @@ void GetDBParams(db_param_t * db_params)
 	if (config_get_value("serverid", "DBMAIL", serverid_string) < 0)
 		trace(TRACE_FATAL, "%s,%s: error getting config!",
 		      __FILE__, __func__);
-
-	
+	if (config_get_value("encoding", "DBMAIL", db_params->encoding) < 0)
+		trace(TRACE_FATAL, "%s,%s: error getting config!",
+		      __FILE__, __func__);
 
 	if (config_get_value("table_prefix", "DBMAIL", db_params->pfx) < 0)
 		trace(TRACE_FATAL, "%s,%s: error getting config!",

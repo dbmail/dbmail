@@ -99,6 +99,7 @@ typedef struct {
 	field_t sock;		/**< path to local unix socket (local connection) */
 	field_t pfx;		/**< prefix for tables e.g. dbmail_ */
 	unsigned int serverid;	/**< unique id for dbmail instance used in clusters */
+	field_t encoding;	/**< character encoding to use */
 } db_param_t;
 
 /** configuration items */

@@ -5,6 +5,9 @@
 	InnoDB format (closes bug #386).
 	* pipe.c:
 	Attempt to resolve bug #372.
+	* config.c, dbmail.conf, dbmailtypes.h, modules/dbmysql.c:
+	Accepted patch from Maenaka to allow configurable MySQL connection
+	encoding (closes bug #385).
 
 2006-07-27  Aaron Stone  <aaron@serendipity.cx>
 

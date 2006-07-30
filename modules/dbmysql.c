@@ -90,6 +90,16 @@ static int db_mysql_check_collations(void)
 	int collations_match = 0;
 	int i, j;
 
+	if (strlen(_db_params.encoding) > 0) {
+		snprintf(the_query, DEF_QUERYSIZE, "SET NAMES %s", _db_params.encoding);
+		if (db_query(the_query) == DM_EQUERY) {
+			trace(TRACE_ERROR,
+			      "%s,%s: error setting collation", __FILE__, __func__);
+			return DM_EQUERY;
+		}
+		db_free_result();
+	}
+
 	snprintf(the_query, DEF_QUERYSIZE,
 			"SHOW VARIABLES LIKE 'collation_%%'");
 	if (db_query(the_query) == DM_EQUERY) {
