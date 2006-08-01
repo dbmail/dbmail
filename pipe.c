@@ -98,25 +98,39 @@ static int send_mail(struct DbmailMessage *message,
 	
 	ialist = internet_address_parse_string(to);
 	ia = ialist->address;
-	parsed_to = internet_address_to_string(ia, TRUE);
-	internet_address_list_destroy(ialist);
+	if (ia->type != INTERNET_ADDRESS_NAME) {
+		// There isn't a valid address here. Bail...
+		internet_address_list_destroy(ialist);
+		return -1;
+	}
+	parsed_to = ia->value.addr;
 
 	if (! (escaped_to = dm_shellesc(parsed_to))) {
 		trace(TRACE_ERROR, "%s, %s: out of memory calling dm_shellesc",
 				__FILE__, __func__);
+		internet_address_list_destroy(ialist);
 		return -1;
 	}
 
+	internet_address_list_destroy(ialist);
+
 	ialist = internet_address_parse_string(from);
 	ia = ialist->address;
-	parsed_from = internet_address_to_string(ia, TRUE);
-	internet_address_list_destroy(ialist);
+	if (ia->type != INTERNET_ADDRESS_NAME) {
+		// There isn't a valid address here. Bail...
+		internet_address_list_destroy(ialist);
+		return -1;
+	}
+	parsed_from = ia->value.addr;
 
 	if (! (escaped_from = dm_shellesc(parsed_from))) {
 		trace(TRACE_ERROR, "%s, %s: out of memory calling dm_shellesc",
 				__FILE__, __func__);
+		internet_address_list_destroy(ialist);
 		return -1;
 	}
+
+	internet_address_list_destroy(ialist);
 
 	if (!sendmail_external) {
 		sendmail_command = g_strconcat(sendmail, " -f ", escaped_from, " ", escaped_to, NULL);
