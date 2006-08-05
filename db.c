@@ -1607,7 +1607,7 @@ int db_set_isheader(GList *lost)
 	if (! lost)
 		return DM_SUCCESS;
 
-	slices = g_list_slices(lost,100);
+	slices = g_list_slices(lost,80);
 	slices = g_list_first(slices);
 	while(slices) {
 		snprintf(query, DEF_QUERYSIZE,
