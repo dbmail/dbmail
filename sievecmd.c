@@ -410,7 +410,7 @@ int do_list(u64_t user_idnr)
 	}
 
 	if (dm_list_length(&scriptlist) > 0) {
-		qprintf("Found %ld scripts:\n",
+		printf("Found %ld scripts:\n",
 		       dm_list_length(&scriptlist));
 	} else
 		qprintf("No scripts found!\n");
@@ -419,10 +419,10 @@ int do_list(u64_t user_idnr)
 	while (tmp) {
 		sievescript_info_t *info = (sievescript_info_t *) tmp->data;
 		if (info->active == 1)
-			qprintf("  + ");
+			printf("  + ");
 		else
-			qprintf("  - ");
-		qprintf("%s\n", info->name);
+			printf("  - ");
+		printf("%s\n", info->name);
 
 		dm_free(info->name);
 		tmp = tmp->nextnode;

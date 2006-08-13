@@ -211,8 +211,7 @@ int mailbox_is_writable(u64_t mailbox_idnr)
 		return DM_EQUERY;
 	
 	if (mb.permission != IMAPPERM_READWRITE) {
-		trace(TRACE_INFO, "%s,%s: read-only mailbox",
-				__FILE__, __func__);
+		TRACE(TRACE_INFO, "read-only mailbox");
 		return DM_EQUERY;
 	}
 	return DM_SUCCESS;
@@ -2474,12 +2473,10 @@ static int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 	*mailbox_idnr = 0;
 
 	mailbox_like = db_imap_utf7_like("name", name, ""); 
-	// FIXME: can we trust mailbox_like?
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT mailbox_idnr FROM %smailboxes "
 		 "WHERE %s AND owner_idnr='%llu'",
 		 DBPFX, mailbox_like, owner_idnr);
-
 	dm_free(mailbox_like);
 
 	if (db_query(query) == -1) {
@@ -3108,7 +3105,7 @@ int db_mailbox_set_permission(u64_t mailbox_id, int permission)
 	snprintf(query,DEF_QUERYSIZE,"UPDATE %smailboxes SET permission='%d' WHERE mailbox_idnr=%llu",
 			DBPFX, permission, mailbox_id);
 	if ((result = db_query(query))) {
-		trace(TRACE_ERROR, "%s,%s: query failed", __FILE__, __func__);
+		TRACE(TRACE_ERROR, "query failed");
 		return result;
 	}
 	
@@ -3117,6 +3114,17 @@ int db_mailbox_set_permission(u64_t mailbox_id, int permission)
 }
 
 
+/* Called from:
+ * dbmail-message.c (dbmail_message_store -> _message_insert) (always INBOX)
+ * modules/authldap.c (creates shadow INBOX) (always INBOX)
+ * sort.c (delivers to a mailbox) (performs own ACL checking)
+ *
+ * Ok, this can very possibly return mailboxes owned by someone else;
+ * so the caller must be wary to perform additional ACL checking.
+ * Why? Sieve script:
+ *   fileinto "#Users/joeschmoe/INBOX";
+ * Simple as that.
+ */
 int db_find_create_mailbox(const char *name, mailbox_source_t source,
 		u64_t owner_idnr, u64_t * mailbox_idnr)
 {
@@ -3127,19 +3135,19 @@ int db_find_create_mailbox(const char *name, mailbox_source_t source,
 	*mailbox_idnr = 0;
 	
 	/* Did we fail to find the mailbox? */
-	if (db_findmailbox_owner(name, owner_idnr, &mboxidnr) != 1) {
+	if (db_findmailbox(name, owner_idnr, &mboxidnr) != 1) {
 		/* Who specified this mailbox? */
 		if (source == BOX_COMMANDLINE
 		 || source == BOX_SORTING
 		 || source == BOX_DEFAULT) {
 			/* Did we fail to create the mailbox? */
 			if (db_mailbox_create_with_parents(name, owner_idnr, &mboxidnr, &message) != DM_SUCCESS) {
-				trace(TRACE_ERROR, "%s, %s: could not create mailbox [%s] because [%s]",
-						__FILE__, __func__, name, message);
+				TRACE(TRACE_ERROR, "could not create mailbox [%s] because [%s]",
+						name, message);
 				return DM_EQUERY;
 			}
-			trace(TRACE_DEBUG, "%s, %s: mailbox [%s] created on the fly", 
-					__FILE__, __func__, name);
+			TRACE(TRACE_DEBUG, "mailbox [%s] created on the fly", 
+					name);
 			// Subscription now occurs in db_mailbox_create_with_parents
 		} else {
 			/* The mailbox was specified by an untrusted
@@ -3150,8 +3158,7 @@ int db_find_create_mailbox(const char *name, mailbox_source_t source,
 		}
 
 	}
-	trace(TRACE_DEBUG, "%s, %s: mailbox [%s] found",
-	      __FILE__, __func__, name);
+	TRACE(TRACE_DEBUG, "mailbox [%s] found", name);
 
 	*mailbox_idnr = mboxidnr;
 	return DM_SUCCESS;

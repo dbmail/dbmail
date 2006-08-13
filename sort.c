@@ -11,6 +11,8 @@
 
 #include "dbmail.h"
 
+#define THIS_MODULE "sort"
+
 /* Figure out where to deliver the message, then deliver it.
  * */
 dsn_class_t sort_and_deliver(struct DbmailMessage *message,
@@ -21,6 +23,9 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message,
 	int reject = 0;
 	dsn_class_t ret;
 	field_t val;
+
+	TRACE(TRACE_INFO, "destination [%s] useridnr [%llu], mailbox [%s], source [%d]",
+			destination, useridnr, mailbox, source);
 	
 	/* This is the only condition when called from pipe.c, actually. */
 	if (! mailbox) {
@@ -105,33 +110,64 @@ dsn_class_t sort_deliver_to_mailbox(struct DbmailMessage *message,
 	u64_t mboxidnr, newmsgidnr;
 	size_t msgsize = (u64_t)dbmail_message_get_size(message, FALSE);
 
-	trace(TRACE_INFO,"%s,%s: useridnr [%llu] mailbox [%s]",
-			__FILE__, __func__, useridnr, mailbox);
+	TRACE(TRACE_INFO,"useridnr [%llu] mailbox [%s]", useridnr, mailbox);
 
 	if (db_find_create_mailbox(mailbox, source, useridnr, &mboxidnr) != 0) {
-		trace(TRACE_ERROR, "%s,%s: mailbox [%s] not found",
-				__FILE__, __func__,
-				mailbox);
+		TRACE(TRACE_ERROR, "mailbox [%s] not found", mailbox);
+		return DSN_CLASS_FAIL;
+	}
+	// Check ACL's on the mailbox. It must be read-write,
+	// it must not be no_select, and it may require an ACL for
+	// the user whose Sieve script this is, since it's possible that
+	// we've looked up a #Public or a #Users mailbox.
+	TRACE(TRACE_DEBUG, "Checking if we have the right to post incoming messages");
+
+	mailbox_t mbox;
+	memset(&mbox, '\0', sizeof(mbox));
+	mbox.uid = mboxidnr;
+	
+	switch (acl_has_right(&mbox, useridnr, ACL_RIGHT_POST)) {
+	case -1:
+		TRACE(TRACE_MESSAGE, "error retrieving right for [%llu] to deliver mail to [%s]",
+				useridnr, mailbox);
+		return DSN_CLASS_TEMP;
+	case 0:
+		// No right.
+		TRACE(TRACE_MESSAGE, "user [%llu] does not have right to deliver mail to [%s]",
+				useridnr, mailbox);
+		// Switch to INBOX.
+		if (strcmp(mailbox, "INBOX") == 0) {
+			// Except if we've already been down this path.
+			TRACE(TRACE_MESSAGE, "already tried to deliver to INBOX");
+			return DSN_CLASS_FAIL;
+		}
+		return sort_deliver_to_mailbox(message, useridnr, "INBOX", BOX_DEFAULT, msgflags);
+	case 1:
+		// Has right.
+		TRACE(TRACE_INFO, "user [%llu] has right to deliver mail to [%s]",
+				useridnr, mailbox);
+		break;
+	default:
+		TRACE(TRACE_ERROR, "invalid return value from acl_has_right");
 		return DSN_CLASS_FAIL;
 	}
 
+	// Ok, we have the ACL right, time to deliver the message.
 	switch (db_copymsg(message->id, mboxidnr, useridnr, &newmsgidnr)) {
 	case -2:
-		trace(TRACE_DEBUG, "%s, %s: error copying message to user [%llu],"
-				"maxmail exceeded", 
-				__FILE__, __func__, 
-				useridnr);
+		TRACE(TRACE_DEBUG, "error copying message to user [%llu],"
+				"maxmail exceeded", useridnr);
 		return DSN_CLASS_QUOTA;
 	case -1:
-		trace(TRACE_ERROR, "%s, %s: error copying message to user [%llu]", 
-				__FILE__, __func__, useridnr);
+		TRACE(TRACE_ERROR, "error copying message to user [%llu]", 
+				useridnr);
 		return DSN_CLASS_TEMP;
 	default:
-		trace(TRACE_MESSAGE, "%s, %s: message id=%llu, size=%d is inserted", 
-				__FILE__, __func__, newmsgidnr, msgsize);
+		TRACE(TRACE_MESSAGE, "message id=%llu, size=%d is inserted", 
+				newmsgidnr, msgsize);
 		if (msgflags) {
-			trace(TRACE_MESSAGE, "%s, %s: message id=%llu, setting imap flags", 
-				__FILE__, __func__, newmsgidnr);
+			TRACE(TRACE_MESSAGE, "message id=%llu, setting imap flags", 
+				newmsgidnr);
 			db_set_msgflag(newmsgidnr, mboxidnr, msgflags, IMAPFA_ADD);
 		}
 		message->id = newmsgidnr;

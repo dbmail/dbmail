@@ -1,3 +1,19 @@
+2006-08-13  Aaron Stone  <aaron@serendipity.cx>
+
+	* export.c:
+	Only find mailboxes, don't create them.
+	* db.c:
+	db_find_create_mailbox may now look for mailboxes owned by other
+	users, as for mailboxes in the #Users or #Public hierarchies.
+	* acl.c:
+	Minor change to let gcc check for possible switch cases.
+	* sort.c:
+	Check the POST ACL on a mailbox before delivering mail to it.
+	* dbmail-message.c:
+	Fixed a corner case memory leak in _message_insert.
+	* sievecmd.c:
+	Fixed some output that was marked as quiet.
+
 2006-08-05  Aaron Stone  <aaron@serendipity.cx>
 
 	* db.c:

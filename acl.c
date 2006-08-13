@@ -67,8 +67,12 @@ int acl_has_right(mailbox_t *mailbox, u64_t userid, ACLRight_t right)
 			if (mailbox_is_writable(mailbox->uid))
 				return FALSE;
 		break;
-		/* ignore the rest */
-		default:
+
+		case ACL_RIGHT_LOOKUP:
+		case ACL_RIGHT_READ:
+		case ACL_RIGHT_NONE:
+			/* Write access not required;
+			 * check these by flags. */
 		break;
 	}
 
