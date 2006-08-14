@@ -2919,8 +2919,8 @@ egeneral:
  *   DM_EGENERAL Cannot create mailbox
  *   DM_EQUERY Database error
  */
-int db_mailbox_create_with_parents(const char * mailbox, u64_t owner_idnr,
-		     u64_t * mailbox_idnr, const char * * message)
+int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source,
+		u64_t owner_idnr, u64_t * mailbox_idnr, const char * * message)
 {
 	int parent_right_to_create = -1;
 	int other_namespace = 0;
@@ -2932,36 +2932,30 @@ int db_mailbox_create_with_parents(const char * mailbox, u64_t owner_idnr,
 	assert(mailbox);
 	assert(mailbox_idnr);
 	assert(message);
+	
+	TRACE(TRACE_INFO, "Creating mailbox [%s] source [%d] for user [%llu]",
+			mailbox, source, owner_idnr);
 
 	/* check if new name is valid */
 	if (!checkmailboxname(mailbox)) {
 		*message = "New mailbox name contains invalid characters";
+		TRACE(TRACE_MESSAGE, "New mailbox name contains invalid characters. Aborting create.");
 	        return DM_EGENERAL;
         }
 
 	/* There used to be a removal of slashes here. Why? */
 	if (db_findmailbox(mailbox, owner_idnr, mailbox_idnr) == 1) {
 		*message = "Mailbox already exists";
+		TRACE(TRACE_ERROR, "Asked to create mailbox which already exists. Aborting create.");
 		return DM_EGENERAL;
 	}
 
 	if (db_imap_split_mailbox(mailbox, owner_idnr,
 			&mailboxes, message) != DM_SUCCESS) {
-		// Message was set by the function.
+		TRACE(TRACE_ERROR, "Negative return code from db_imap_split_mailbox.");
+		// Message pointer was set by the function.
 		return DM_EGENERAL;
 	}
-
-	/* FIXME: Change these to TRACE calls.
-	printf("\n");
-	GList *mailboxes_temp;
-	mailboxes_temp = g_list_first(mailboxes);
-	while (mailboxes_temp) {
-		mailbox_t *mbox = (mailbox_t *)mailboxes_temp->data;
-		printf("%s\n", mbox->name);
-		mailboxes_temp = g_list_next(mailboxes_temp);
-	}
-	printf("\n");
-	*/
 
 	mailboxes = g_list_first(mailboxes);
 	while (mailboxes) {
@@ -3006,6 +3000,10 @@ int db_mailbox_create_with_parents(const char * mailbox, u64_t owner_idnr,
 				skip_and_free = DM_EGENERAL;
 			}
 
+		} else if (source == BOX_BRUTEFORCE) {
+			TRACE(TRACE_INFO, "Mailbox requested with BRUTEFORCE creation status; "
+				"pretending that all permissions have been granted to create it.");
+			parent_right_to_create = 1;
 		} else {
 			/* Mailbox does exist, failure if no_inferiors flag set. */
 			if ( ((result = db_noinferiors(mbox->uid)) == DM_EGENERAL) ) {
@@ -3138,10 +3136,11 @@ int db_find_create_mailbox(const char *name, mailbox_source_t source,
 	if (db_findmailbox(name, owner_idnr, &mboxidnr) != 1) {
 		/* Who specified this mailbox? */
 		if (source == BOX_COMMANDLINE
+		 || source == BOX_BRUTEFORCE
 		 || source == BOX_SORTING
 		 || source == BOX_DEFAULT) {
 			/* Did we fail to create the mailbox? */
-			if (db_mailbox_create_with_parents(name, owner_idnr, &mboxidnr, &message) != DM_SUCCESS) {
+			if (db_mailbox_create_with_parents(name, source, owner_idnr, &mboxidnr, &message) != DM_SUCCESS) {
 				TRACE(TRACE_ERROR, "could not create mailbox [%s] because [%s]",
 						name, message);
 				return DM_EQUERY;

@@ -24,7 +24,16 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message,
 	dsn_class_t ret;
 	field_t val;
 
-	TRACE(TRACE_INFO, "destination [%s] useridnr [%llu], mailbox [%s], source [%d]",
+	/* Catch the brute force delivery right away.
+	 * We skip the Sieve scripts, and down the call
+	 * chain we don't check permissions on the mailbox. */
+	if (source == BOX_BRUTEFORCE) {
+		TRACE(TRACE_MESSAGE, "Beginning brute force delivery for user [%llu] to mailbox [%s].",
+				useridnr, mailbox);
+		return sort_deliver_to_mailbox(message, useridnr, mailbox, source, NULL);
+	}
+
+	TRACE(TRACE_INFO, "Destination [%s] useridnr [%llu], mailbox [%s], source [%d]",
 			destination, useridnr, mailbox, source);
 	
 	/* This is the only condition when called from pipe.c, actually. */
@@ -45,8 +54,7 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message,
 			// FIXME: I forget who frees the mailbox.
 			mailbox = subaddress;
 			source = BOX_ADDRESSPART;
-			trace(TRACE_INFO, "%s, %s: Setting BOX_ADDRESSPART mailbox to [%s]",
-					__FILE__, __func__, mailbox);
+			TRACE(TRACE_INFO, "Setting BOX_ADDRESSPART mailbox to [%s]", mailbox);
 		}
 	}
 
@@ -57,8 +65,7 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message,
 	config_get_value("SIEVE", "DELIVERY", val);
 	if (strcasecmp(val, "yes") == 0
 	&& db_check_sievescript_active(useridnr) == 0) {
-		trace(TRACE_INFO, "%s, %s: Calling for a Sieve sort",
-				__FILE__, __func__);
+		TRACE(TRACE_INFO, "Calling for a Sieve sort");
 		sort_result_t *sort_result;
 		sort_result = sort_process(useridnr, message);
 		if (sort_result) {
@@ -83,20 +90,17 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message,
 		// This may necessarily imply that the message
 		// is being discarded -- dropped flat on the floor.
 		ret = DSN_CLASS_OK;
-		trace(TRACE_INFO, "%s, %s: Keep was cancelled. Message may be discarded.",
-				__FILE__, __func__);
+		TRACE(TRACE_INFO, "Keep was cancelled. Message may be discarded.");
 	} else {
 		ret = sort_deliver_to_mailbox(message, useridnr, mailbox, source, NULL);
-		trace(TRACE_INFO, "%s, %s: Keep was not cancelled. Message will be delivered by default.",
-				__FILE__, __func__);
+		TRACE(TRACE_INFO, "Keep was not cancelled. Message will be delivered by default.");
 	}
 
 	/* Reject probably implies cancelkeep,
 	 * but we'll not assume that and instead
 	 * just test this as a separate block. */
 	if (reject) {
-		trace(TRACE_INFO, "%s, %s: Message will be rejected.",
-				__FILE__, __func__);
+		TRACE(TRACE_INFO, "Message will be rejected.");
 		ret = DSN_CLASS_FAIL;
 	}
 
@@ -116,40 +120,45 @@ dsn_class_t sort_deliver_to_mailbox(struct DbmailMessage *message,
 		TRACE(TRACE_ERROR, "mailbox [%s] not found", mailbox);
 		return DSN_CLASS_FAIL;
 	}
-	// Check ACL's on the mailbox. It must be read-write,
-	// it must not be no_select, and it may require an ACL for
-	// the user whose Sieve script this is, since it's possible that
-	// we've looked up a #Public or a #Users mailbox.
-	TRACE(TRACE_DEBUG, "Checking if we have the right to post incoming messages");
 
-	mailbox_t mbox;
-	memset(&mbox, '\0', sizeof(mbox));
-	mbox.uid = mboxidnr;
-	
-	switch (acl_has_right(&mbox, useridnr, ACL_RIGHT_POST)) {
-	case -1:
-		TRACE(TRACE_MESSAGE, "error retrieving right for [%llu] to deliver mail to [%s]",
-				useridnr, mailbox);
-		return DSN_CLASS_TEMP;
-	case 0:
-		// No right.
-		TRACE(TRACE_MESSAGE, "user [%llu] does not have right to deliver mail to [%s]",
-				useridnr, mailbox);
-		// Switch to INBOX.
-		if (strcmp(mailbox, "INBOX") == 0) {
-			// Except if we've already been down this path.
-			TRACE(TRACE_MESSAGE, "already tried to deliver to INBOX");
+	if (source == BOX_BRUTEFORCE) {
+		TRACE(TRACE_INFO, "Brute force delivery; skipping ACL checks on mailbox.");
+	} else {
+		// Check ACL's on the mailbox. It must be read-write,
+		// it must not be no_select, and it may require an ACL for
+		// the user whose Sieve script this is, since it's possible that
+		// we've looked up a #Public or a #Users mailbox.
+		TRACE(TRACE_DEBUG, "Checking if we have the right to post incoming messages");
+        
+		mailbox_t mbox;
+		memset(&mbox, '\0', sizeof(mbox));
+		mbox.uid = mboxidnr;
+		
+		switch (acl_has_right(&mbox, useridnr, ACL_RIGHT_POST)) {
+		case -1:
+			TRACE(TRACE_MESSAGE, "error retrieving right for [%llu] to deliver mail to [%s]",
+					useridnr, mailbox);
+			return DSN_CLASS_TEMP;
+		case 0:
+			// No right.
+			TRACE(TRACE_MESSAGE, "user [%llu] does not have right to deliver mail to [%s]",
+					useridnr, mailbox);
+			// Switch to INBOX.
+			if (strcmp(mailbox, "INBOX") == 0) {
+				// Except if we've already been down this path.
+				TRACE(TRACE_MESSAGE, "already tried to deliver to INBOX");
+				return DSN_CLASS_FAIL;
+			}
+			return sort_deliver_to_mailbox(message, useridnr, "INBOX", BOX_DEFAULT, msgflags);
+		case 1:
+			// Has right.
+			TRACE(TRACE_INFO, "user [%llu] has right to deliver mail to [%s]",
+					useridnr, mailbox);
+			break;
+		default:
+			TRACE(TRACE_ERROR, "invalid return value from acl_has_right");
 			return DSN_CLASS_FAIL;
 		}
-		return sort_deliver_to_mailbox(message, useridnr, "INBOX", BOX_DEFAULT, msgflags);
-	case 1:
-		// Has right.
-		TRACE(TRACE_INFO, "user [%llu] has right to deliver mail to [%s]",
-				useridnr, mailbox);
-		break;
-	default:
-		TRACE(TRACE_ERROR, "invalid return value from acl_has_right");
-		return DSN_CLASS_FAIL;
 	}
 
 	// Ok, we have the ACL right, time to deliver the message.

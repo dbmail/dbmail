@@ -1,3 +1,18 @@
+2006-08-14  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmailtypes.h, db.h, db.c:
+	Added source argument to the db_create_mailbox_with_parents function
+	to determine if permission checks should be skipped or not.
+	* main.c, man/dbmail-smtp.txt:
+	Added -M flag, like -m, but skip all permission checks and Sieve
+	scripts (closes bug #391 and bug #393).
+	* imapcommands.c, sort.c:
+	Updated calls to the lower level mailbox creation and delivery
+	functions with the additional source arguments.
+	* debug.h, debug.c:
+	Added argument to the newtrace function to know if it was called from
+	the trace or TRACE macro.
+
 2006-08-13  Aaron Stone  <aaron@serendipity.cx>
 
 	* export.c:

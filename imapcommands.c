@@ -331,7 +331,7 @@ int _ic_create(struct ImapSession *self)
 		return 1;
 
 	/* Create the mailbox and its parents. */
-	result = db_mailbox_create_with_parents(self->args[0], ud->userid, &mboxid, &message);
+	result = db_mailbox_create_with_parents(self->args[0], BOX_COMMANDLINE, ud->userid, &mboxid, &message);
 
 	if (result > 0) {
 		dbmail_imap_session_printf(self, "%s NO %s\r\n", self->tag, message);

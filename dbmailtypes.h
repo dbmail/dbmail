@@ -428,6 +428,7 @@ typedef enum {
 	BOX_NONE,        /* No mailbox yet. */
 	BOX_UNKNOWN,     /* Not gonna create. */
 	BOX_ADDRESSPART, /* Not gonna create. */
+	BOX_BRUTEFORCE,  /* Autocreate, no perms checks and skip Sieve scripts. */
 	BOX_COMMANDLINE, /* Autocreate. */
 	BOX_SORTING,     /* Autocreate. */
 	BOX_DEFAULT      /* Autocreate. */

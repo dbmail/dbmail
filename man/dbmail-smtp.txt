@@ -8,7 +8,7 @@ dbmail-smtp - inserts messages into the DBMail mailsystem.
 
 SYNOPSIS
 --------
-dbmail-smtp [-t headerfield] [-d addresses] [-u usernames] [-m mailboxname]
+dbmail-smtp [-t headerfield] [-d addresses] [-u usernames] [-m|-M mailboxname]
 [-r return path] [-f configFile]
 
 DESCRIPTION
@@ -35,7 +35,14 @@ OPTIONS
 
 -m mailboxname::
   Deliver messages to mailbox mailboxname of the recipient. If
-  this mailbox does not exist yet, it is created.
+  this mailbox does not exist yet, it is created. Sieve scripts
+  will be run normally, possibly altering the destination mailbox.
+
+-M mailboxname::
+  Deliver messages to mailbox mailboxname of the recipient. If
+  this mailbox does not exist yet, it is created. Sieve scripts
+  are not run. Permission checks are not performed for mailbox creation
+  or message delivery.
 
 -r returnpath::
   Set return path for bounces and other error reports to return path.
