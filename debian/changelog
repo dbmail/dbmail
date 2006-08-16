@@ -1,14 +1,4 @@
-<<<<<<< master
 dbmail (2.1.7-1) unstable; urgency=low
-=======
-dbmail (2.1.6+20060725) unstable; urgency=low
-
-  * snapshot
-
- -- Paul J Stevens <paul@nfg.nl>  Tue, 25 Jul 2006 14:10:44 +0200
-
-dbmail (2.1.6+20060718) unstable; urgency=low
->>>>>>> origin
 
   * new upstream release (closes: #351341)
   * Provide a common package (closes: #236406).
