@@ -19,7 +19,7 @@
 */
 
 /*
- * $Id: config.c 2094 2006-04-30 09:48:53Z aaron $
+ * $Id: config.c 2218 2006-07-30 11:19:19Z aaron $
  * \file config.c
  * \brief read configuration values from a config file
  */
@@ -212,8 +212,9 @@ void GetDBParams(db_param_t * db_params)
 	if (config_get_value("serverid", "DBMAIL", serverid_string) < 0)
 		trace(TRACE_FATAL, "%s,%s: error getting config!",
 		      __FILE__, __func__);
-
-	
+	if (config_get_value("encoding", "DBMAIL", db_params->encoding) < 0)
+		trace(TRACE_FATAL, "%s,%s: error getting config!",
+		      __FILE__, __func__);
 
 	if (config_get_value("table_prefix", "DBMAIL", db_params->pfx) < 0)
 		trace(TRACE_FATAL, "%s,%s: error getting config!",

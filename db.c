@@ -1,4 +1,4 @@
-/* $Id: db.c 2213 2006-07-26 09:42:47Z aaron $ */
+/* $Id: db.c 2224 2006-08-14 17:46:47Z aaron $ */
 /*
   Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
   Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
@@ -22,7 +22,7 @@
 /**
  * \file db.c
  * 
- * $Id: db.c 2213 2006-07-26 09:42:47Z aaron $
+ * $Id: db.c 2224 2006-08-14 17:46:47Z aaron $
  *
  * implement database functionality. This used to split out
  * between MySQL and PostgreSQL, but this is now integrated. 
@@ -211,8 +211,7 @@ int mailbox_is_writable(u64_t mailbox_idnr)
 		return DM_EQUERY;
 	
 	if (mb.permission != IMAPPERM_READWRITE) {
-		trace(TRACE_INFO, "%s,%s: read-only mailbox",
-				__FILE__, __func__);
+		TRACE(TRACE_INFO, "read-only mailbox");
 		return DM_EQUERY;
 	}
 	return DM_SUCCESS;
@@ -1607,7 +1606,7 @@ int db_set_isheader(GList *lost)
 	if (! lost)
 		return DM_SUCCESS;
 
-	slices = g_list_slices(lost,100);
+	slices = g_list_slices(lost,80);
 	slices = g_list_first(slices);
 	while(slices) {
 		snprintf(query, DEF_QUERYSIZE,
@@ -2474,12 +2473,10 @@ static int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 	*mailbox_idnr = 0;
 
 	mailbox_like = db_imap_utf7_like("name", name, ""); 
-	// FIXME: can we trust mailbox_like?
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT mailbox_idnr FROM %smailboxes "
 		 "WHERE %s AND owner_idnr='%llu'",
 		 DBPFX, mailbox_like, owner_idnr);
-
 	dm_free(mailbox_like);
 
 	if (db_query(query) == -1) {
@@ -2922,8 +2919,8 @@ egeneral:
  *   DM_EGENERAL Cannot create mailbox
  *   DM_EQUERY Database error
  */
-int db_mailbox_create_with_parents(const char * mailbox, u64_t owner_idnr,
-		     u64_t * mailbox_idnr, const char * * message)
+int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source,
+		u64_t owner_idnr, u64_t * mailbox_idnr, const char * * message)
 {
 	int parent_right_to_create = -1;
 	int other_namespace = 0;
@@ -2935,36 +2932,30 @@ int db_mailbox_create_with_parents(const char * mailbox, u64_t owner_idnr,
 	assert(mailbox);
 	assert(mailbox_idnr);
 	assert(message);
+	
+	TRACE(TRACE_INFO, "Creating mailbox [%s] source [%d] for user [%llu]",
+			mailbox, source, owner_idnr);
 
 	/* check if new name is valid */
 	if (!checkmailboxname(mailbox)) {
 		*message = "New mailbox name contains invalid characters";
+		TRACE(TRACE_MESSAGE, "New mailbox name contains invalid characters. Aborting create.");
 	        return DM_EGENERAL;
         }
 
 	/* There used to be a removal of slashes here. Why? */
 	if (db_findmailbox(mailbox, owner_idnr, mailbox_idnr) == 1) {
 		*message = "Mailbox already exists";
+		TRACE(TRACE_ERROR, "Asked to create mailbox which already exists. Aborting create.");
 		return DM_EGENERAL;
 	}
 
 	if (db_imap_split_mailbox(mailbox, owner_idnr,
 			&mailboxes, message) != DM_SUCCESS) {
-		// Message was set by the function.
+		TRACE(TRACE_ERROR, "Negative return code from db_imap_split_mailbox.");
+		// Message pointer was set by the function.
 		return DM_EGENERAL;
 	}
-
-	/* FIXME: Change these to TRACE calls.
-	printf("\n");
-	GList *mailboxes_temp;
-	mailboxes_temp = g_list_first(mailboxes);
-	while (mailboxes_temp) {
-		mailbox_t *mbox = (mailbox_t *)mailboxes_temp->data;
-		printf("%s\n", mbox->name);
-		mailboxes_temp = g_list_next(mailboxes_temp);
-	}
-	printf("\n");
-	*/
 
 	mailboxes = g_list_first(mailboxes);
 	while (mailboxes) {
@@ -3009,6 +3000,10 @@ int db_mailbox_create_with_parents(const char * mailbox, u64_t owner_idnr,
 				skip_and_free = DM_EGENERAL;
 			}
 
+		} else if (source == BOX_BRUTEFORCE) {
+			TRACE(TRACE_INFO, "Mailbox requested with BRUTEFORCE creation status; "
+				"pretending that all permissions have been granted to create it.");
+			parent_right_to_create = 1;
 		} else {
 			/* Mailbox does exist, failure if no_inferiors flag set. */
 			if ( ((result = db_noinferiors(mbox->uid)) == DM_EGENERAL) ) {
@@ -3108,7 +3103,7 @@ int db_mailbox_set_permission(u64_t mailbox_id, int permission)
 	snprintf(query,DEF_QUERYSIZE,"UPDATE %smailboxes SET permission='%d' WHERE mailbox_idnr=%llu",
 			DBPFX, permission, mailbox_id);
 	if ((result = db_query(query))) {
-		trace(TRACE_ERROR, "%s,%s: query failed", __FILE__, __func__);
+		TRACE(TRACE_ERROR, "query failed");
 		return result;
 	}
 	
@@ -3117,6 +3112,17 @@ int db_mailbox_set_permission(u64_t mailbox_id, int permission)
 }
 
 
+/* Called from:
+ * dbmail-message.c (dbmail_message_store -> _message_insert) (always INBOX)
+ * modules/authldap.c (creates shadow INBOX) (always INBOX)
+ * sort.c (delivers to a mailbox) (performs own ACL checking)
+ *
+ * Ok, this can very possibly return mailboxes owned by someone else;
+ * so the caller must be wary to perform additional ACL checking.
+ * Why? Sieve script:
+ *   fileinto "#Users/joeschmoe/INBOX";
+ * Simple as that.
+ */
 int db_find_create_mailbox(const char *name, mailbox_source_t source,
 		u64_t owner_idnr, u64_t * mailbox_idnr)
 {
@@ -3127,19 +3133,20 @@ int db_find_create_mailbox(const char *name, mailbox_source_t source,
 	*mailbox_idnr = 0;
 	
 	/* Did we fail to find the mailbox? */
-	if (db_findmailbox_owner(name, owner_idnr, &mboxidnr) != 1) {
+	if (db_findmailbox(name, owner_idnr, &mboxidnr) != 1) {
 		/* Who specified this mailbox? */
 		if (source == BOX_COMMANDLINE
+		 || source == BOX_BRUTEFORCE
 		 || source == BOX_SORTING
 		 || source == BOX_DEFAULT) {
 			/* Did we fail to create the mailbox? */
-			if (db_mailbox_create_with_parents(name, owner_idnr, &mboxidnr, &message) != DM_SUCCESS) {
-				trace(TRACE_ERROR, "%s, %s: could not create mailbox [%s] because [%s]",
-						__FILE__, __func__, name, message);
+			if (db_mailbox_create_with_parents(name, source, owner_idnr, &mboxidnr, &message) != DM_SUCCESS) {
+				TRACE(TRACE_ERROR, "could not create mailbox [%s] because [%s]",
+						name, message);
 				return DM_EQUERY;
 			}
-			trace(TRACE_DEBUG, "%s, %s: mailbox [%s] created on the fly", 
-					__FILE__, __func__, name);
+			TRACE(TRACE_DEBUG, "mailbox [%s] created on the fly", 
+					name);
 			// Subscription now occurs in db_mailbox_create_with_parents
 		} else {
 			/* The mailbox was specified by an untrusted
@@ -3150,8 +3157,7 @@ int db_find_create_mailbox(const char *name, mailbox_source_t source,
 		}
 
 	}
-	trace(TRACE_DEBUG, "%s, %s: mailbox [%s] found",
-	      __FILE__, __func__, name);
+	TRACE(TRACE_DEBUG, "mailbox [%s] found", name);
 
 	*mailbox_idnr = mboxidnr;
 	return DM_SUCCESS;

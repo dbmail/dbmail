@@ -19,7 +19,7 @@
 */
 
 /*
- * $Id: db.h 2207 2006-07-24 15:35:35Z paul $
+ * $Id: db.h 2224 2006-08-14 17:46:47Z aaron $
  *
  * dbase driver header file
  * Functions for database communication 
@@ -982,6 +982,7 @@ int db_createmailbox(const char *name, u64_t owner_idnr,
 /**
  * \brief Create a mailbox, recursively creating its parents.
  * \param mailbox Name of the mailbox to create
+ * \param source Upstream source of this mailbox spec
  * \param owner_idnr Owner of the mailbox
  * \param mailbox_idnr Fills the pointer with the mailbox id
  * \param message Fills the pointer with a static pointer to a message
@@ -990,8 +991,8 @@ int db_createmailbox(const char *name, u64_t owner_idnr,
  *    -  1 on failure
  *    - -1 on error
  */
-int db_mailbox_create_with_parents(const char * mailbox, u64_t owner_idnr,
-                     u64_t * mailbox_idnr, const char * * message);
+int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source,
+		u64_t owner_idnr, u64_t * mailbox_idnr, const char * * message);
 
 /**
  * \brief Splits a mailbox name into pieces on '/'

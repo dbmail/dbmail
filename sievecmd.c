@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: sievecmd.c 2137 2006-05-26 19:49:52Z aaron $
+/* $Id: sievecmd.c 2223 2006-08-13 20:30:56Z aaron $
  * This is dbmail-sievecmd, which provides
  * a command line interface to the sievescripts */
 
@@ -135,7 +135,7 @@ int main(int argc, char *argv[])
 		case 'V':
 			/* Show the version and return non-zero. */
 			printf("\n*** DBMAIL: dbmail-sievecmd version "
-			       "$Revision: 2137 $ %s\n\n", COPYRIGHT);
+			       "$Revision: 2223 $ %s\n\n", COPYRIGHT);
 			return 0;
 			break;
 
@@ -410,7 +410,7 @@ int do_list(u64_t user_idnr)
 	}
 
 	if (dm_list_length(&scriptlist) > 0) {
-		qprintf("Found %ld scripts:\n",
+		printf("Found %ld scripts:\n",
 		       dm_list_length(&scriptlist));
 	} else
 		qprintf("No scripts found!\n");
@@ -419,10 +419,10 @@ int do_list(u64_t user_idnr)
 	while (tmp) {
 		sievescript_info_t *info = (sievescript_info_t *) tmp->data;
 		if (info->active == 1)
-			qprintf("  + ");
+			printf("  + ");
 		else
-			qprintf("  - ");
-		qprintf("%s\n", info->name);
+			printf("  - ");
+		printf("%s\n", info->name);
 
 		dm_free(info->name);
 		tmp = tmp->nextnode;

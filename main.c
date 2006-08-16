@@ -18,11 +18,12 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: main.c 2065 2006-04-10 20:38:36Z paul $
+/* $Id: main.c 2224 2006-08-14 17:46:47Z aaron $
  * 
  * main file for dbmail-smtp  */
 
 #include "dbmail.h"
+#define THIS_MODULE "smtp"
 
 #define MESSAGEIDSIZE 100
 #define NORMAL_DELIVERY 1
@@ -47,6 +48,7 @@ extern db_param_t _db_params;	/* set up database login data */
 deliver_to_user_t dsnuser;
 
 //char *header = NULL;
+int brute_force = 0;
 char *deliver_to_header = NULL;
 char *deliver_to_mailbox = NULL;
 
@@ -61,7 +63,8 @@ int do_showhelp(void) {
 	printf("     -t [headerfield]   for normal deliveries (default is \"delivered-to\")\n");
 	printf("     -d [addresses]     for delivery without using scanner\n");
 	printf("     -u [usernames]     for direct delivery to users\n");
-	printf("     -m \"mailbox\"       for delivery to a specific mailbox\n");
+	printf("     -m \"mailbox\"     for delivery to a specific mailbox\n");
+	printf("     -M \"mailbox\"     as -m, but skip permissions checks and Sieve scripts\n");
 	printf("     -r return path     for address of bounces and other error reports\n");
 
 	printf("\nCommon options for all DBMail utilities:\n");
@@ -97,7 +100,7 @@ int main(int argc, char *argv[])
 	 * with an immediately preceding option are return with option 
 	 * value '1'. We will use this to allow for multiple values to
 	 * follow after each of the supported options. */
-	while ((c = getopt(argc, argv, "-t::m:u:d:r: f:qnyvVh")) != EOF) {
+	while ((c = getopt(argc, argv, "-t::m:M:u:d:r: f:qnyvVh")) != EOF) {
 		/* Received an n-th value following the last option,
 		 * so recall the last known option to be used in the switch. */
 		if (c == 1)
@@ -121,6 +124,15 @@ int main(int argc, char *argv[])
 
 			break;
 
+		case 'M':
+			TRACE(TRACE_INFO, "using BRUTE FORCE delivery");
+
+			if (brute_force) {
+				printf("Only one mailbox name may be specified.\n");
+				usage_error = 1;
+			} else
+				brute_force = 1;
+			/* Fall through. */
 		case 'm':
 			trace(TRACE_INFO, "%s,%s: using SPECIAL_DELIVERY to mailbox", __FILE__, __func__);
 
@@ -188,7 +200,7 @@ int main(int argc, char *argv[])
 		case 'V':
 			/* We must return non-zero in case someone put -V
 			 * into the mail server config and thus may lose mail. */
-			printf("\n*** DBMAIL: dbmail-smtp version $Revision: 2065 $ %s\n\n", COPYRIGHT);
+			printf("\n*** DBMAIL: dbmail-smtp version $Revision: 2224 $ %s\n\n", COPYRIGHT);
 			return 1;
 
 		default:
@@ -310,7 +322,11 @@ int main(int argc, char *argv[])
 		/* Loop through the dsnusers list, setting the destination mailbox. */
 		for (tmp = dm_list_getstart(&dsnusers); tmp != NULL; tmp = tmp->nextnode) {
 			((deliver_to_user_t *)tmp->data)->mailbox = dm_strdup(deliver_to_mailbox);
-			((deliver_to_user_t *)tmp->data)->source = BOX_COMMANDLINE;
+			if (brute_force) {
+				((deliver_to_user_t *)tmp->data)->source = BOX_BRUTEFORCE;
+			} else {
+				((deliver_to_user_t *)tmp->data)->source = BOX_COMMANDLINE;
+			}
 		}
 	}
 
@@ -365,7 +381,7 @@ int main(int argc, char *argv[])
 	g_list_foreach(userlist, (GFunc)g_free, NULL);
 	g_list_free(userlist);
 
-	trace(TRACE_DEBUG, "%s,%s: they're all free. we're done.", __FILE__, __func__);
+	TRACE(TRACE_DEBUG, "they're all free. we're done.");
 
 	db_disconnect();
 	auth_disconnect();
@@ -373,6 +389,7 @@ int main(int argc, char *argv[])
 
 	g_mime_shutdown();
 
-	trace(TRACE_DEBUG, "%s,%s: exit code is [%d].", __FILE__, __func__, exitcode);
+	TRACE(TRACE_DEBUG, "exit code is [%d].", exitcode);
 	return exitcode;
 }
+

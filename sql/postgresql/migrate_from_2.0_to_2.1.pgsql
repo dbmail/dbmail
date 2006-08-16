@@ -1,11 +1,12 @@
 
 BEGIN;
-create cast (text as bytea) without function;
-alter table dbmail_messageblks add blk_bytea bytea;
-update dbmail_messageblks set blk_bytea = cast(messageblk::text as bytea);
-alter table dbmail_messageblks drop column messageblk;
-alter table dbmail_messageblks rename blk_bytea TO messageblk;
-drop cast (text as bytea);
+CREATE CAST (text AS bytea) WITHOUT FUNCTION;
+ALTER TABLE dbmail_messageblks ADD blk_bytea bytea;
+UPDATE dbmail_messageblks SET blk_bytea = CAST(messageblk::text AS bytea);
+ALTER TABLE dbmail_messageblks DROP COLUMN messageblk;
+ALTER TABLE dbmail_messageblks RENAME blk_bytea TO messageblk;
+ALTER TABLE dbmail_messageblks ALTER messageblk SET not null;
+DROP CAST (text AS bytea);
 COMMIT;
 
 

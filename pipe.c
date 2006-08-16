@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: pipe.c 2207 2006-07-24 15:35:35Z paul $
+/* $Id: pipe.c 2221 2006-08-02 22:27:59Z aaron $
  *
  * Functions for reading the pipe from the MTA */
 
@@ -44,6 +44,31 @@ static int valid_sender(const char *addr)
 		ret = 0;
 	g_free(testaddr);
 	return ret;
+}
+
+static int parse_and_escape(const char *in, char **out)
+{
+	InternetAddressList *ialist;
+	InternetAddress *ia;
+
+	TRACE(TRACE_DEBUG, "parsing address [%s]", in);
+	ialist = internet_address_parse_string(in);
+	ia = ialist->address;
+	if (ia->type != INTERNET_ADDRESS_NAME) {
+		TRACE(TRACE_MESSAGE, "unable to parse email address [%s]", in);
+		internet_address_list_destroy(ialist);
+		return -1;
+	}
+
+	if (! (*out = dm_shellesc(ia->value.addr))) {
+		TRACE(TRACE_ERROR, "out of memory calling dm_shellesc");
+		internet_address_list_destroy(ialist);
+		return -1;
+	}
+
+	internet_address_list_destroy(ialist);
+
+	return 0;
 }
 
 // Send only certain parts of the message.
@@ -91,36 +116,21 @@ static int send_mail(struct DbmailMessage *message,
 		return -1;
 	}
 
-	trace(TRACE_DEBUG, "%s, %s: sendmail command is [%s]",
-		__FILE__, __func__, sendmail);
-	
-	if (! (escaped_to = dm_shellesc(to))) {
-		trace(TRACE_ERROR, "%s, %s: out of memory calling dm_shellesc",
-				__FILE__, __func__);
-		return -1;
-	}
-
-	if (! (escaped_from = dm_shellesc(from))) {
-		trace(TRACE_ERROR, "%s, %s: out of memory calling dm_shellesc",
-				__FILE__, __func__);
-		return -1;
-	}
-
 	if (!sendmail_external) {
+		parse_and_escape(to, &escaped_to);
+		parse_and_escape(from, &escaped_from);
 		sendmail_command = g_strconcat(sendmail, " -f ", escaped_from, " ", escaped_to, NULL);
 		dm_free(escaped_to);
 		dm_free(escaped_from);
 		if (!sendmail_command) {
-			trace(TRACE_ERROR, "%s, %s: out of memory calling g_strconcat",
-					__FILE__, __func__);
+			TRACE(TRACE_ERROR, "out of memory calling g_strconcat");
 			return -1;
 		}
 	} else {
 		sendmail_command = sendmail_external;
 	}
 
-	trace(TRACE_INFO, "%s, %s: opening pipe to [%s]",
-		__FILE__, __func__, sendmail_command);
+	TRACE(TRACE_INFO, "opening pipe to [%s]", sendmail_command);
 
 	if (!(mailpipe = popen(sendmail_command, "w"))) {
 		trace(TRACE_ERROR, "%s, %s: could not open pipe to sendmail",

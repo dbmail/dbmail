@@ -1,3 +1,65 @@
+2006-08-14  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmailtypes.h, db.h, db.c:
+	Added source argument to the db_create_mailbox_with_parents function
+	to determine if permission checks should be skipped or not.
+	* main.c, man/dbmail-smtp.txt:
+	Added -M flag, like -m, but skip all permission checks and Sieve
+	scripts (closes bug #391 and bug #393).
+	* imapcommands.c, sort.c:
+	Updated calls to the lower level mailbox creation and delivery
+	functions with the additional source arguments.
+	* debug.h, debug.c:
+	Added argument to the newtrace function to know if it was called from
+	the trace or TRACE macro.
+
+2006-08-13  Aaron Stone  <aaron@serendipity.cx>
+
+	* export.c:
+	Only find mailboxes, don't create them.
+	* db.c:
+	db_find_create_mailbox may now look for mailboxes owned by other
+	users, as for mailboxes in the #Users or #Public hierarchies.
+	* acl.c:
+	Minor change to let gcc check for possible switch cases.
+	* sort.c:
+	Check the POST ACL on a mailbox before delivering mail to it.
+	* dbmail-message.c:
+	Fixed a corner case memory leak in _message_insert.
+	* sievecmd.c:
+	Fixed some output that was marked as quiet.
+
+2006-08-05  Aaron Stone  <aaron@serendipity.cx>
+
+	* db.c:
+	Lowered the number of messages per database query from 100 to 80 to
+	prevent creating truncated queries (closes bug #390).
+
+2006-08-01  Aaron Stone  <aaron@serendipity.cx>
+
+	* pipe.c:
+	Proper fix to prevent passing addresses with full names on the
+	sendmail command line (closes bug #372).
+
+2006-07-30  Aaron Stone  <aaron@serendipity.cx>
+
+	* sql/mysql/create_tables.mysql, migrate_from_2.0_to_2.1.mysql:
+	Accepted patch from Maenaka to only create Sieve tables once, in
+	InnoDB format (closes bug #386).
+	* pipe.c:
+	Attempt to resolve bug #372.
+	* config.c, dbmail.conf, dbmailtypes.h, modules/dbmysql.c:
+	Accepted patch from Maenaka to allow configurable MySQL connection
+	encoding (closes bug #385).
+
+2006-07-27  Aaron Stone  <aaron@serendipity.cx>
+
+	* debug.c:
+	Added fflush after fprintf (closes bug #388).
+	* modules/sortsieve.c:
+	Make sure that the msgflags pointer is NULL if there are no special
+	flags (closes bug #383).
+
 2006-07-26  Paul J Stevens <paul@nfg.nl>
 
 	* debian/control, modules/sortsieve.c:

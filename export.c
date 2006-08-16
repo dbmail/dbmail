@@ -195,7 +195,7 @@ int main(int argc, char *argv[])
 		result = -1;
 		goto freeall;
 	}
-	if (db_find_create_mailbox(mailbox, BOX_COMMANDLINE, useridnr, &mailbox_idnr) == -1) {
+	if (db_findmailbox(mailbox, useridnr, &mailbox_idnr) != 1) {
 		qerrorf("Error: cannot verify existence of mailbox [%s].\n", mailbox);
 		result = -1;
 		goto freeall;

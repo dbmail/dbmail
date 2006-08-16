@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: debug.c 2207 2006-07-24 15:35:35Z paul $
+/* $Id: debug.c 2224 2006-08-14 17:46:47Z aaron $
  *
  * Debugging and memory checking functions */
 
@@ -71,7 +71,7 @@ static const char * trace_to_text(trace_t level)
  *
  */
 
-void newtrace(trace_t level, const char * module,
+void newtrace(int isnew, trace_t level, const char * module,
 		const char * file, const char * function,
 		char *formatstring, ...)
 {
@@ -82,8 +82,8 @@ void newtrace(trace_t level, const char * module,
 
 	va_start(argp, formatstring);
 
-	/* TODO: make use of the module, file, function arguments.
-	if (TRACE_SYSLOG >= 5) {
+	/*
+	if (isnew && TRACE_SYSLOG >= 5) {
 		// If the global trace level is really high
 		formatstring_verbose = g_strdup_printf("from %s, %s, %s: %s",
 				module, file, function, formatstring);
@@ -100,9 +100,15 @@ void newtrace(trace_t level, const char * module,
 	l = strlen(message);
 	
 	if (level <= TRACE_STDERR) {
-		fprintf(stderr, "%s %s", trace_to_text(level), message);
+		if (isnew) {
+			// FIXME: Add file, function, etc.
+			fprintf(stderr, "%s %s", trace_to_text(level), message);
+		} else {
+			fprintf(stderr, "%s %s", trace_to_text(level), message);
+		}
 		if (message[l] != '\n')
 			fprintf(stderr, "\n");
+		fflush(stderr);
 	}
 
 	if (level <= TRACE_SYSLOG) {
@@ -110,9 +116,20 @@ void newtrace(trace_t level, const char * module,
 			message[l] = '\0';
 		if (level <= TRACE_WARNING) {
 			/* set LOG_ALERT at warnings */
-			syslog(LOG_ALERT, "%s %s", trace_to_text(level), message);
-		} else
-			syslog(LOG_NOTICE, "%s %s", trace_to_text(level), message);
+			if (isnew) {
+				// FIXME: Add file, function, etc.
+				syslog(LOG_ALERT, "%s %s", trace_to_text(level), message);
+			} else {
+				syslog(LOG_ALERT, "%s %s", trace_to_text(level), message);
+			}
+		} else {
+			if (isnew) {
+				// FIXME: Add file, function, etc.
+				syslog(LOG_NOTICE, "%s %s", trace_to_text(level), message);
+			} else {
+				syslog(LOG_NOTICE, "%s %s", trace_to_text(level), message);
+			}
+		}
 	}
 	g_free(message);
 

@@ -23,7 +23,7 @@
 # This file was originally created by Paul Stevens and added
 # to dbmail on August 27th, 2003.
 # 
-# $Id: create_tables.mysql 2207 2006-07-24 15:35:35Z paul $
+# $Id: create_tables.mysql 2217 2006-07-30 09:43:58Z aaron $
 
 SET FOREIGN_KEY_CHECKS=0;
 
@@ -207,7 +207,9 @@ CREATE TABLE dbmail_sievescripts (
   active tinyint(1) default '0' not null,
   INDEX (name),
   INDEX (owner_idnr),
-  INDEX (owner_idnr, name)
+  INDEX (owner_idnr, name),
+  FOREIGN KEY owner_idnr_fk (owner_idnr)
+    REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
 
@@ -358,25 +360,6 @@ CREATE TABLE dbmail_replycache (
   lastseen datetime NOT NULL default '0000-00-00 00:00:00',
   UNIQUE KEY replycache_1 (to_addr,from_addr, handle)
 ) ENGINE=InnoDB;
-
-#
-# Add tables and columns to hold Sieve scripts.
-
-DROP TABLE IF EXISTS dbmail_sievescripts;
-CREATE TABLE dbmail_sievescripts (
-	id		BIGINT NOT NULL AUTO_INCREMENT,
-        owner_idnr	BIGINT NOT NULL
-			REFERENCES dbmail_users(user_idnr)
-			ON UPDATE CASCADE ON DELETE CASCADE,
-	active		TINYINT(1) DEFAULT '0' NOT NULL,
-	name		VARCHAR(100) NOT NULL DEFAULT '',
-	script		TEXT NOT NULL DEFAULT '',
-	PRIMARY KEY (id)
-);
-
-# Looking in db.c, the WHERE clauses are: owner, owner name, owner active.
-CREATE INDEX dbmail_sievescripts_1 on dbmail_sievescripts(owner_idnr,name);
-CREATE INDEX dbmail_sievescripts_2 on dbmail_sievescripts(owner_idnr,active);
 
 DROP TABLE IF EXISTS dbmail_usermap;
 CREATE TABLE dbmail_usermap (

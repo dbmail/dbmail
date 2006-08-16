@@ -1,5 +1,5 @@
 /*
-  $Id: dbmail-message.c 2207 2006-07-24 15:35:35Z paul $
+  $Id: dbmail-message.c 2223 2006-08-13 20:30:56Z aaron $
 
   Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
 
@@ -792,21 +792,12 @@ int _message_insert(struct DbmailMessage *self,
 	u64_t mailboxid;
 	u64_t physmessage_id;
 	char *internal_date = NULL;
-	char *physid = g_new0(char, 16);
-	mailbox_source_t source;
+	char *physid = NULL;
 
 	assert(unique_id);
+	assert(mailbox);
 
-	if (!mailbox) {
-		mailbox = dm_strdup("INBOX");
-		source = BOX_DEFAULT;
-	} else {
-		source = BOX_ADDRESSPART;
-		// FIXME: This code is never reached, is it.
-		// Look at the function's consumers.
-	}
-
-	if (db_find_create_mailbox(mailbox, source, user_idnr, &mailboxid) == -1)
+	if (db_find_create_mailbox(mailbox, BOX_DEFAULT, user_idnr, &mailboxid) == -1)
 		return -1;
 	
 	if (mailboxid == 0) {
@@ -815,7 +806,6 @@ int _message_insert(struct DbmailMessage *self,
 		return -1;
 	}
 
-	
 	/* insert a new physmessage entry */
 	internal_date = dbmail_message_get_internal_date(self);
 	if (db_insert_physmessage_with_internal_date(internal_date, &physmessage_id) == -1)  {
@@ -825,7 +815,7 @@ int _message_insert(struct DbmailMessage *self,
 	g_free(internal_date);
 
 	/* insert the physmessage-id into the message-headers */
-	g_snprintf(physid, 16, "%llu", physmessage_id);
+	physid = g_strdup_printf("%llu", physmessage_id);
 	dbmail_message_set_physid(self, physmessage_id);
 	dbmail_message_set_header(self, "X-DBMail-PhysMessage-ID", physid);
 	g_free(physid);

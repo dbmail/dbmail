@@ -1,5 +1,5 @@
 /*
- $Id: dbmailtypes.h 2207 2006-07-24 15:35:35Z paul $
+ $Id: dbmailtypes.h 2224 2006-08-14 17:46:47Z aaron $
 
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
@@ -99,6 +99,7 @@ typedef struct {
 	field_t sock;		/**< path to local unix socket (local connection) */
 	field_t pfx;		/**< prefix for tables e.g. dbmail_ */
 	unsigned int serverid;	/**< unique id for dbmail instance used in clusters */
+	field_t encoding;	/**< character encoding to use */
 } db_param_t;
 
 /** configuration items */
@@ -427,6 +428,7 @@ typedef enum {
 	BOX_NONE,        /* No mailbox yet. */
 	BOX_UNKNOWN,     /* Not gonna create. */
 	BOX_ADDRESSPART, /* Not gonna create. */
+	BOX_BRUTEFORCE,  /* Autocreate, no perms checks and skip Sieve scripts. */
 	BOX_COMMANDLINE, /* Autocreate. */
 	BOX_SORTING,     /* Autocreate. */
 	BOX_DEFAULT      /* Autocreate. */

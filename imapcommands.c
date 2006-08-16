@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: imapcommands.c 2207 2006-07-24 15:35:35Z paul $
+/* $Id: imapcommands.c 2224 2006-08-14 17:46:47Z aaron $
  *
  * imapcommands.c
  * 
@@ -331,7 +331,7 @@ int _ic_create(struct ImapSession *self)
 		return 1;
 
 	/* Create the mailbox and its parents. */
-	result = db_mailbox_create_with_parents(self->args[0], ud->userid, &mboxid, &message);
+	result = db_mailbox_create_with_parents(self->args[0], BOX_COMMANDLINE, ud->userid, &mboxid, &message);
 
 	if (result > 0) {
 		dbmail_imap_session_printf(self, "%s NO %s\r\n", self->tag, message);
