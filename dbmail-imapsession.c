@@ -1827,28 +1827,33 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 			
 				ci_write(ci->tx, "+ OK gimme that string\r\n");
 				
-				alarm(ci->timeout);	/* dont wait forever */
 				for (cnt = 0, dataidx = 0; cnt < quotedSize; cnt++) {
-					gotc = fgetc(ci->rx);
-					the_args[nargs][dataidx] = gotc;
-					if (the_args[nargs][dataidx] != '\r')
-						dataidx++;	/* only store if it is not \r */
+					alarm(ci->timeout);	/* dont wait forever, but reset after every fgetc */
+					if (! (gotc = fgetc(ci->rx)))
+						break;
+					
+					if (gotc == '\r')	/* only store if it is not \r */
+						continue;
+					
+					the_args[nargs][dataidx++] = gotc;
 				}
+				
 				alarm(0);
 
 				the_args[nargs][dataidx] = '\0';	/* terminate string */
 				nargs++;
+				
 				if (alarm_occured) {
 					alarm_occured = 0;
 					client_close();
-					trace(TRACE_ERROR, "%s,%s: timeout occurred in fgetc. last char [%c]", 
-							__FILE__, __func__, gotc);
+					trace(TRACE_ERROR, "%s,%s: timeout occurred in fgetc; last char [%c] at dataidx [%d]; timeout [%d]", 
+							__FILE__, __func__, gotc, dataidx, ci->timeout);
 					free_args();
 					return NULL;
 				}
 
 				if (ferror(ci->rx) || ferror(ci->tx)) {
-					trace(TRACE_ERROR, "%s,%s: client socket is set error indicator in fgetc", 
+					trace(TRACE_ERROR, "%s,%s: client socket has set error indicator in fgetc", 
 							__FILE__, __func__);
 					free_args();
 					return NULL;
