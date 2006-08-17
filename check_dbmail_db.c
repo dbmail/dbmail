@@ -941,7 +941,7 @@ START_TEST(test_db_mailbox_create_with_parents)
 	int result;
 	int only_empty = 0, update_curmail_size = 0 ;
 
-	result = db_mailbox_create_with_parents("INBOX/Foo/Bar/Baz",
+	result = db_mailbox_create_with_parents("INBOX/Foo/Bar/Baz", BOX_COMMANDLINE,
 			useridnr, &mailbox_idnr, &message);
 	fail_unless(result == 0 && mailbox_idnr != 0,
 			"Failed at db_mailbox_create_with_parents: [%s]", message);

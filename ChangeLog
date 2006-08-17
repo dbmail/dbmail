@@ -1,3 +1,12 @@
+2006-08-17  Paul J Stevens <paul@nfg.nl>
+
+	* debian/changelog:
+	fix bogus vc stuff in debian/changelog
+	* check_dbmail_db.c:
+	fix testcase after aaron changed mailbox_create_with_parents
+	* dbmail-imapsession.c:
+	minor changes in build_imap_args_ext to try get a grip on #392
+
 2006-08-14  Aaron Stone  <aaron@serendipity.cx>
 
 	* dbmailtypes.h, db.h, db.c:
