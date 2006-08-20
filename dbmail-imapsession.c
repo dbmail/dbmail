@@ -1845,11 +1845,14 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 				
 				if (alarm_occured) {
 					alarm_occured = 0;
-					client_close();
-					trace(TRACE_ERROR, "%s,%s: timeout occurred in fgetc; got [%d] of [%d]; timeout [%d]", 
-							__FILE__, __func__, cnt, quotedSize, ci->timeout);
-					free_args();
-					return NULL;
+					// FIXME: why is the alarm handler sometimes triggered though cnt == quotedSize
+					if (cnt < quotedSize) {
+						client_close();
+						trace(TRACE_ERROR, "%s,%s: timeout occurred in fgetc; got [%d] of [%d]; timeout [%d]", 
+								__FILE__, __func__, cnt, quotedSize, ci->timeout);
+						free_args();
+						return NULL;
+					}
 				}
 
 				if (ferror(ci->rx) || ferror(ci->tx)) {
