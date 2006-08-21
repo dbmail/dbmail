@@ -844,6 +844,7 @@ int db_update_pop(PopSession_t * session_ptr);
  *    - 1 otherwise
  */
 int db_set_deleted(u64_t * affected_rows);
+int db_count_deleted(u64_t * affected_rows);
 /**
  * \brief purge all messages from the database with a "delete"-status 
  * (status = 3)

@@ -68,7 +68,7 @@ int do_showhelp(void) {
 
 	printf("Use this program to maintain your DBMail database.\n");
 	printf("See the man page for more info. Summary:\n\n");
-	printf("     -a        perform all checks (in this release: -ctupd)\n");
+	printf("     -a        perform all checks (in this release: -ctubpd)\n");
 	printf("     -c        clean up database (optimize/vacuum)\n");
 	printf("     -t        test for message integrity\n");
 	printf("     -u        null message check\n");
@@ -309,6 +309,13 @@ int do_set_deleted(void)
 	if (no_to_all) {
 		// TODO: Count messages to delete.
 		qprintf("\nCounting deleted messages that need the DELETE status set...\n");
+		if (db_count_deleted(&messages_set_to_delete) == -1) {
+			qerrorf
+			    ("Failed. An error occured. Please check log.\n");
+			return -1;
+		}
+		qprintf("Ok. [%llu] messages need to be set for deletion.\n",
+		       messages_set_to_delete);
 	}
 	if (yes_to_all) {
 		qprintf("\nSetting DELETE status for deleted messages...\n");

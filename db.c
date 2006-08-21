@@ -2189,6 +2189,27 @@ int db_update_pop(PopSession_t * session_ptr)
 	return DM_SUCCESS;
 }
 
+int db_count_deleted(u64_t * affected_rows)
+{
+	assert(affected_rows != NULL);
+	*affected_rows = 0;
+
+	snprintf(query, DEF_QUERYSIZE,
+		 "SELECT COUNT(*) FROM %smessages WHERE status = '%d'",
+		 DBPFX, MESSAGE_STATUS_DELETE);
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: Could not execute query",
+		      __FILE__, __func__);
+		return DM_EQUERY;
+	}
+
+	*affected_rows = db_get_result_int(0, 0);
+
+	db_free_result();
+
+	return DM_EGENERAL;
+}
+
 int db_set_deleted(u64_t * affected_rows)
 {
 	assert(affected_rows != NULL);
@@ -2265,22 +2286,20 @@ int db_deleted_count(u64_t * affected_rows)
 
 	/* first we're deleting all the messageblks */
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT message_idnr FROM %smessages WHERE status='%d'",
+		 "SELECT COUNT(*) FROM %smessages WHERE status='%d'",
 		 DBPFX, MESSAGE_STATUS_PURGE);
-	trace(TRACE_DEBUG, "%s,%s: executing query [%s]",
-	      __FILE__, __func__, query);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR,
-		      "%s,%s: Cound not fetch message ID numbers",
+		      "%s,%s: Cound not count message ID numbers",
 		      __FILE__, __func__);
 		return DM_EQUERY;
 	}
 
-	*affected_rows = db_num_rows();
+	*affected_rows = db_get_result_int(0, 0);
 
 	db_free_result();
-	return DM_EGENERAL;
+	return DM_SUCCESS;
 }
 
 int db_imap_append_msg(const char *msgdata, u64_t datalen UNUSED,

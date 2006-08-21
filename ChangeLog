@@ -1,3 +1,13 @@
+2006-08-20  Aaron Stone  <aaron@serendipity.cx>
+
+	* db.h, db.c:
+	Added function to count messages needing delete status.
+	* maintenance.c:
+	Call the new count function above.
+	* debug.h, debug.c:
+	Added __LINE__ to the newtrace function. Started adding more debugging
+	information for TRACE macro calls.
+
 2006-08-20  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-imapsession.c:
