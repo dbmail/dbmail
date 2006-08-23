@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: lmtp.c 2199 2006-07-18 11:07:53Z paul $
+/* $Id: lmtp.c 2231 2006-08-23 04:25:58Z aaron $
  *
  * implementation for lmtp commands according to RFC 1081 */
 
@@ -48,7 +48,7 @@ static const char *const commands[] = {
 
 static const char validchars[] =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    "_.!|@#$%^&*()-+=~[]{}<>:;\\/ ";
+    "_.!|@#$%^&*()-+=~[]{}<>:;\\/ ?'";
 
 static char myhostname[64];
 

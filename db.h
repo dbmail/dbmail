@@ -19,7 +19,7 @@
 */
 
 /*
- * $Id: db.h 2224 2006-08-14 17:46:47Z aaron $
+ * $Id: db.h 2229 2006-08-21 04:24:15Z aaron $
  *
  * dbase driver header file
  * Functions for database communication 
@@ -844,6 +844,7 @@ int db_update_pop(PopSession_t * session_ptr);
  *    - 1 otherwise
  */
 int db_set_deleted(u64_t * affected_rows);
+int db_count_deleted(u64_t * affected_rows);
 /**
  * \brief purge all messages from the database with a "delete"-status 
  * (status = 3)

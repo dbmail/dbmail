@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: maintenance.c 2065 2006-04-10 20:38:36Z paul $
+/* $Id: maintenance.c 2229 2006-08-21 04:24:15Z aaron $
  *
  * This is the dbmail housekeeping program. 
  *	It checks the integrity of the database and does a cleanup of all
@@ -68,7 +68,7 @@ int do_showhelp(void) {
 
 	printf("Use this program to maintain your DBMail database.\n");
 	printf("See the man page for more info. Summary:\n\n");
-	printf("     -a        perform all checks (in this release: -ctupd)\n");
+	printf("     -a        perform all checks (in this release: -ctubpd)\n");
 	printf("     -c        clean up database (optimize/vacuum)\n");
 	printf("     -t        test for message integrity\n");
 	printf("     -u        null message check\n");
@@ -208,7 +208,7 @@ int main(int argc, char *argv[])
 		case 'V':
  			printf("DBMail: dbmail-util\n"
  			       "Version: %s\n"
- 			       "$Revision: 2065 $\n"
+ 			       "$Revision: 2229 $\n"
  			       "Copyright: %s\n", VERSION, COPYRIGHT);
 			return 1;
 
@@ -309,6 +309,13 @@ int do_set_deleted(void)
 	if (no_to_all) {
 		// TODO: Count messages to delete.
 		qprintf("\nCounting deleted messages that need the DELETE status set...\n");
+		if (db_count_deleted(&messages_set_to_delete) == -1) {
+			qerrorf
+			    ("Failed. An error occured. Please check log.\n");
+			return -1;
+		}
+		qprintf("Ok. [%llu] messages need to be set for deletion.\n",
+		       messages_set_to_delete);
 	}
 	if (yes_to_all) {
 		qprintf("\nSetting DELETE status for deleted messages...\n");

@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: debug.c 2224 2006-08-14 17:46:47Z aaron $
+/* $Id: debug.c 2229 2006-08-21 04:24:15Z aaron $
  *
  * Debugging and memory checking functions */
 
@@ -73,7 +73,7 @@ static const char * trace_to_text(trace_t level)
 
 void newtrace(int isnew, trace_t level, const char * module,
 		const char * file, const char * function,
-		char *formatstring, ...)
+		int line, char *formatstring, ...)
 {
 	va_list argp;
 
@@ -101,8 +101,9 @@ void newtrace(int isnew, trace_t level, const char * module,
 	
 	if (level <= TRACE_STDERR) {
 		if (isnew) {
-			// FIXME: Add file, function, etc.
-			fprintf(stderr, "%s %s", trace_to_text(level), message);
+			// FIXME: Only do this for high global trace level.
+			fprintf(stderr, "%s module %s file %s func %s line %d: %s",
+				trace_to_text(level), module, file, function, line, message);
 		} else {
 			fprintf(stderr, "%s %s", trace_to_text(level), message);
 		}
@@ -117,15 +118,15 @@ void newtrace(int isnew, trace_t level, const char * module,
 		if (level <= TRACE_WARNING) {
 			/* set LOG_ALERT at warnings */
 			if (isnew) {
-				// FIXME: Add file, function, etc.
-				syslog(LOG_ALERT, "%s %s", trace_to_text(level), message);
+				syslog(LOG_ALERT, "%s module %s file %s func %s line %d: %s",
+					trace_to_text(level), module, file, function, line, message);
 			} else {
 				syslog(LOG_ALERT, "%s %s", trace_to_text(level), message);
 			}
 		} else {
 			if (isnew) {
-				// FIXME: Add file, function, etc.
-				syslog(LOG_NOTICE, "%s %s", trace_to_text(level), message);
+				syslog(LOG_NOTICE, "%s module %s file %s func %s line %d: %s",
+					trace_to_text(level), module, file, function, line, message);
 			} else {
 				syslog(LOG_NOTICE, "%s %s", trace_to_text(level), message);
 			}
