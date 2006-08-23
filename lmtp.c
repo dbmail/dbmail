@@ -48,7 +48,7 @@ static const char *const commands[] = {
 
 static const char validchars[] =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    "_.!|@#$%^&*()-+=~[]{}<>:;\\/ ";
+    "_.!|@#$%^&*()-+=~[]{}<>:;\\/ ?'";
 
 static char myhostname[64];
 
