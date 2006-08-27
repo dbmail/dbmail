@@ -254,16 +254,32 @@ END_TEST
 START_TEST(test_imap_mailbox_open)
 {
 	int result;
+	
 	clientinfo_t *ci = ci_new();
+	imap_userdata_t *ud;
+	u64_t mailbox_idnr = 0;
+	const char *message;
+	
 	struct ImapSession *s = dbmail_imap_session_new();
-	char * mailbox = g_strdup("INBOX");
 	s = dbmail_imap_session_setClientinfo(s,ci);
 	
 	dbmail_imap_session_handle_auth(s,"testuser1","test");
-	result = dbmail_imap_session_mailbox_open(s,mailbox);
+	result = dbmail_imap_session_mailbox_open(s,"INBOX");
 	fail_unless(result==0,"dbmail_imap_session_mailbox_open failed");
 
-	g_free(mailbox);
+
+	// create and open a new and empty mailbox
+	ud = (imap_userdata_t *) ci->userData;
+	result = db_mailbox_create_with_parents("INBOX/Foo/Bar/Baz", BOX_COMMANDLINE,
+			ud->userid, &mailbox_idnr, &message);
+	fail_unless(result == 0 && mailbox_idnr != 0,
+			"Failed at db_mailbox_create_with_parents: [%s]", message);
+
+	result = dbmail_imap_session_mailbox_open(s,"INBOX/Foo/Bar/Baz");
+	fail_unless(result==0,"dbmail_imap_session_mailbox_open failed");
+
+	db_delete_mailbox(mailbox_idnr,0,0);
+	
 	dbmail_imap_session_delete(s);
 	g_free(ci);
 }

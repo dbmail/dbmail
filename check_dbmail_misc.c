@@ -65,9 +65,9 @@ void teardown(void)
 START_TEST(test_g_strcasestr)
 {
 	char *s = "asdfqwer";
-	fail_unless(g_strcasestr(s,"SD"),"g_strcasestr failed 1");
-	fail_unless(g_strcasestr(s,"er"),"g_strcasestr failed 2");
-	fail_unless(g_strcasestr(s,"As"),"g_strcasestr failed 3");
+	fail_unless(g_strcasestr(s,"SD")!=NULL,"g_strcasestr failed 1");
+	fail_unless(g_strcasestr(s,"er")!=NULL,"g_strcasestr failed 2");
+	fail_unless(g_strcasestr(s,"As")!=NULL,"g_strcasestr failed 3");
 }
 END_TEST
 
