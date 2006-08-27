@@ -50,11 +50,11 @@ int dbmail_imap_session_set_state(struct ImapSession *self, int state);
 int check_state_and_args(struct ImapSession * self, const char * command, int minargs, int maxargs, int state);
 int dbmail_imap_session_handle_auth(struct ImapSession * self, char * username, char * password);
 int dbmail_imap_session_prompt(struct ImapSession * self, char * prompt, char * value);
-u64_t dbmail_imap_session_mailbox_get_idnr(struct ImapSession * self, char * mailbox);
+u64_t dbmail_imap_session_mailbox_get_idnr(struct ImapSession * self, const char * mailbox);
 int dbmail_imap_session_mailbox_check_acl(struct ImapSession * self, u64_t idnr, ACLRight_t right);
 int dbmail_imap_session_mailbox_get_selectable(struct ImapSession * self, u64_t idnr);
 int dbmail_imap_session_mailbox_show_info(struct ImapSession * self);
-int dbmail_imap_session_mailbox_open(struct ImapSession * self, char * mailbox);
+int dbmail_imap_session_mailbox_open(struct ImapSession * self, const char * mailbox);
 
 int dbmail_imap_session_mailbox_select_recent(struct ImapSession *self);
 int dbmail_imap_session_mailbox_update_recent(struct ImapSession *self);

@@ -1,3 +1,12 @@
+2006-08-27  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_imapd.c, check_dbmail_misc.c, dbmail-imapsession.c, 
+	  dbmail-imapsession.h:
+	minor changes in dbmail_imap_session_mailbox_open and
+	dbmail_imap_session_mailbox_get_idnr
+	* debian/control:
+	fix debian/control
+
 2006-08-22  Aaron Stone  <aaron@serendipity.cx>
 
 	* lmtp.c:

@@ -1282,23 +1282,26 @@ int dbmail_imap_session_prompt(struct ImapSession * self, char * prompt, char * 
 	return 0;
 }
 
-u64_t dbmail_imap_session_mailbox_get_idnr(struct ImapSession * self, char * mailbox)
+u64_t dbmail_imap_session_mailbox_get_idnr(struct ImapSession * self, const char * mailbox)
 {
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
+	char * mbox = g_strdup(mailbox);
 	u64_t uid;
 	int i;
 	
 	/* remove trailing '/' if present */
-	while (strlen(mailbox) > 0 && mailbox[strlen(mailbox) - 1] == '/')
-		mailbox[strlen(mailbox) - 1] = '\0';
+	while (strlen(mbox) > 0 && mbox[strlen(mbox) - 1] == '/')
+		mbox[strlen(mbox) - 1] = '\0';
 
 	/* remove leading '/' if present */
-	for (i = 0; mailbox[i] && mailbox[i] == '/'; i++);
-	memmove(&mailbox[0], &mailbox[i],
-		(strlen(mailbox) - i) * sizeof(char));
+	for (i = 0; mbox[i] && mbox[i] == '/'; i++);
+	memmove(&mbox[0], &mbox[i],
+		(strlen(mbox) - i) * sizeof(char));
 
-	db_findmailbox(mailbox, ud->userid, &uid);
+	db_findmailbox(mbox, ud->userid, &uid);
 	
+	g_free(mbox);
+
 	return uid;
 }
 
@@ -1401,7 +1404,7 @@ int dbmail_imap_session_mailbox_show_info(struct ImapSession * self)
 	return 0;
 }
 	
-int dbmail_imap_session_mailbox_open(struct ImapSession * self, char * mailbox)
+int dbmail_imap_session_mailbox_open(struct ImapSession * self, const char * mailbox)
 {
 	int result;
 	u64_t mailbox_idnr;
