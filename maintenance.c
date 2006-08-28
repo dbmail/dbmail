@@ -224,8 +224,11 @@ int main(int argc, char *argv[])
 	}
 
  	/* Don't make any changes unless specifically authorized. */
- 	if (!yes_to_all) no_to_all = 1;
- 
+ 	if (!yes_to_all) {
+		qprintf("Choosing dry-run mode. Use -y to disable it.");
+		no_to_all = 1;
+ 	}
+
 	config_read(configFile);
 	SetTraceLevel("DBMAIL");
 	GetDBParams(&_db_params);
