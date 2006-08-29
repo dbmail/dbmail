@@ -100,8 +100,7 @@ void newtrace(int isnew, trace_t level, const char * module,
 	l = strlen(message);
 	
 	if (level <= TRACE_STDERR) {
-		if (isnew) {
-			// FIXME: Only do this for high global trace level.
+		if (isnew && TRACE_STDERR >= TRACE_DEBUG) {
 			fprintf(stderr, "%s module %s file %s func %s line %d: %s",
 				trace_to_text(level), module, file, function, line, message);
 		} else {
@@ -117,14 +116,14 @@ void newtrace(int isnew, trace_t level, const char * module,
 			message[l] = '\0';
 		if (level <= TRACE_WARNING) {
 			/* set LOG_ALERT at warnings */
-			if (isnew) {
+			if (isnew && TRACE_SYSLOG >= TRACE_DEBUG) {
 				syslog(LOG_ALERT, "%s module %s file %s func %s line %d: %s",
 					trace_to_text(level), module, file, function, line, message);
 			} else {
 				syslog(LOG_ALERT, "%s %s", trace_to_text(level), message);
 			}
 		} else {
-			if (isnew) {
+			if (isnew && TRACE_SYSLOG >= TRACE_DEBUG) {
 				syslog(LOG_NOTICE, "%s module %s file %s func %s line %d: %s",
 					trace_to_text(level), module, file, function, line, message);
 			} else {
