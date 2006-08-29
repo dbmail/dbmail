@@ -512,19 +512,22 @@ GList* dbmail_imap_append_alist_as_plist(GList *list, const InternetAddressList 
 			/* Careful, because this builds up the stack; it's not a tail call. */
 			
 			/* Address list beginning. */
-			p = g_list_append_printf(p, "(\"%s\" NIL NIL NIL)", ia->name);
+			p = g_list_append_printf(p, "(NIL NIL \"%s\" NIL)", ia->name);
 
 			/* Dive in. */
 			t = dbmail_imap_append_alist_as_plist(t, ia->value.members);
 
 			s = dbmail_imap_plist_as_string(t);
-
-			// Lop off the extra parens at each end.
-			// Really do the pointer math carefully.
-			size_t slen = strlen(s);
-			if (slen) slen--;
-			s[slen] = '\0';
-			p = g_list_append_printf(p, "%s", (slen ? s+1 : s));
+			// Only use the results if they're interesting --
+			// (NIL) is the special case of nothing inside the group.
+			if (strcmp(s, "(NIL)") != 0) {
+				// Lop off the extra parens at each end.
+				// Really do the pointer math carefully.
+				size_t slen = strlen(s);
+				if (slen) slen--;
+				s[slen] = '\0';
+				p = g_list_append_printf(p, "%s", (slen ? s+1 : s));
+			}
 			g_free(s);
 			
 			g_list_foreach(t, (GFunc)g_free, NULL);
@@ -532,7 +535,7 @@ GList* dbmail_imap_append_alist_as_plist(GList *list, const InternetAddressList 
 			t = NULL;
 
 			/* Address list ending. */
-			p = g_list_append_printf(p, "(NIL NIL NIL NIL)", ia->name);
+			// p = g_list_append_printf(p, "(NIL NIL NIL NIL)", ia->name);
 
 			break;
 
