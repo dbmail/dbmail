@@ -1,3 +1,8 @@
+2006-08-29  Aaron Stone  <aaron@serendipity.cx>
+
+	* check_dbmail_imapd.c, dm_imaputil.h, dm_imaputil.c:
+	Handle RFC 2822 address list group syntax more correctly.
+
 2006-08-27  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_imapd.c, check_dbmail_misc.c, dbmail-imapsession.c, 
