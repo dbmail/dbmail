@@ -82,18 +82,6 @@ void newtrace(int isnew, trace_t level, const char * module,
 
 	va_start(argp, formatstring);
 
-	/*
-	if (isnew && TRACE_SYSLOG >= 5) {
-		// If the global trace level is really high
-		formatstring_verbose = g_strdup_printf("from %s, %s, %s: %s",
-				module, file, function, formatstring);
-	} else {
-		// If the global trace level is really low
-		formatstring = g_strdup_printf("%s: %s",
-				module, formatstring);
-	}
-	*/
-
 	message = g_strdup_vprintf(formatstring, argp);
 
 	va_end(argp);
