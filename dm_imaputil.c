@@ -509,20 +509,23 @@ GList* dbmail_imap_append_alist_as_plist(GList *list, const InternetAddressList 
 
 		case INTERNET_ADDRESS_GROUP:
 			TRACE(TRACE_DEBUG, "recursing into address group [%s].", ia->name);
-			/* Careful, because this builds up the stack; it's not a tail call. */
 			
 			/* Address list beginning. */
 			p = g_list_append_printf(p, "(NIL NIL \"%s\" NIL)", ia->name);
 
-			/* Dive in. */
+			/* Dive into the address list.
+			 * Careful, this builds up the stack; it's not a tail call.
+			 */
 			t = dbmail_imap_append_alist_as_plist(t, ia->value.members);
 
 			s = dbmail_imap_plist_as_string(t);
-			// Only use the results if they're interesting --
-			// (NIL) is the special case of nothing inside the group.
+			/* Only use the results if they're interesting --
+			 * (NIL) is the special case of nothing inside the group.
+			 */
 			if (strcmp(s, "(NIL)") != 0) {
-				// Lop off the extra parens at each end.
-				// Really do the pointer math carefully.
+				/* Lop off the extra parens at each end.
+				 * Really do the pointer math carefully.
+				 */
 				size_t slen = strlen(s);
 				if (slen) slen--;
 				s[slen] = '\0';
