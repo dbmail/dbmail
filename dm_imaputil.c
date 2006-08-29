@@ -483,7 +483,7 @@ void _structure_part_text(GMimeObject *part, gpointer data, gboolean extension)
 
 
 
-/*static*/ GList * _imap_append_alist_as_plist(GList *list, const InternetAddressList *ialist)
+GList* dbmail_imap_append_alist_as_plist(GList *list, const InternetAddressList *ialist)
 {
 	GList *t = NULL, *p = NULL;
 	InternetAddress *ia = NULL;
@@ -502,68 +502,114 @@ void _structure_part_text(GMimeObject *part, gpointer data, gboolean extension)
 		ia = ial->address;
 		g_return_val_if_fail(ia!=NULL, list);
 
-		/* personal name */
-		if (ia->name && ia->value.addr) {
-			name = g_mime_utils_header_encode_phrase((unsigned char *)ia->name);
-			s = dbmail_imap_astring_as_string(name);
-			t = g_list_append_printf(t, "%s", s);
-			g_free(name);
+		switch (ia->type) {
+		case INTERNET_ADDRESS_NONE:
+			TRACE(TRACE_DEBUG, "nothing doing.");
+			break;
+
+		case INTERNET_ADDRESS_GROUP:
+			TRACE(TRACE_DEBUG, "recursing into address group [%s].", ia->name);
+			/* Careful, because this builds up the stack; it's not a tail call. */
+			
+			/* Address list beginning. */
+			p = g_list_append_printf(p, "(\"%s\" NIL NIL NIL)", ia->name);
+
+			/* Dive in. */
+			t = dbmail_imap_append_alist_as_plist(t, ia->value.members);
+
+			s = dbmail_imap_plist_as_string(t);
+
+			// Lop off the extra parens at each end.
+			// Really do the pointer math carefully.
+			size_t slen = strlen(s);
+			if (slen) slen--;
+			s[slen] = '\0';
+			p = g_list_append_printf(p, "%s", (slen ? s+1 : s));
 			g_free(s);
-		} else
+			
+			g_list_foreach(t, (GFunc)g_free, NULL);
+			g_list_free(t);
+			t = NULL;
+
+			/* Address list ending. */
+			p = g_list_append_printf(p, "(NIL NIL NIL NIL)", ia->name);
+
+			break;
+
+		case INTERNET_ADDRESS_NAME:
+			TRACE(TRACE_DEBUG, "handling a standard address [%s] [%s].", ia->name, ia->value.addr);
+
+			/* personal name */
+			if (ia->name && ia->value.addr) {
+				name = g_mime_utils_header_encode_phrase((unsigned char *)ia->name);
+				s = dbmail_imap_astring_as_string(name);
+				t = g_list_append_printf(t, "%s", s);
+				g_free(name);
+				g_free(s);
+			} else {
+				t = g_list_append_printf(t, "NIL");
+			}
+                        
+			/* source route */
 			t = g_list_append_printf(t, "NIL");
-
-		/* source route */
-		t = g_list_append_printf(t, "NIL");
-
-		/* mailbox name */
-		if ((mailbox = ia->value.addr ? ia->value.addr : ia->name) != NULL) {
-			/* defensive mode for 'To: "foo@bar.org"' addresses */
-			g_strstrip(g_strdelimit(mailbox,"\"",' '));
+                        
+			/* mailbox name and host name */
+			if ((mailbox = ia->value.addr ? ia->value.addr : ia->name) != NULL) {
+				/* defensive mode for 'To: "foo@bar.org"' addresses */
+				g_strstrip(g_strdelimit(mailbox,"\"",' '));
+				
+				tokens = g_strsplit(mailbox,"@",2);
+                        
+				/* mailbox name */
+				if (tokens[0])
+					t = g_list_append_printf(t, "\"%s\"", tokens[0]);
+				else
+					t = g_list_append_printf(t, "NIL");
+				/* host name */
+				if (tokens[1])
+					t = g_list_append_printf(t, "\"%s\"", tokens[1]);
+				else
+					t = g_list_append_printf(t, "NIL");
+				
+				g_strfreev(tokens);
+			} else {
+				t = g_list_append_printf(t, "NIL NIL");
+			}
 			
-			tokens = g_strsplit(mailbox,"@",2);
-
-			if (tokens[0])
-				t = g_list_append_printf(t, "\"%s\"", tokens[0]);
-			else
-				t = g_list_append_printf(t, "NIL");
-			/* host name */
-			if (tokens[1])
-				t = g_list_append_printf(t, "\"%s\"", tokens[1]);
-			else
-				t = g_list_append_printf(t, "NIL");
+			s = dbmail_imap_plist_as_string(t);
+			p = g_list_append_printf(p, "%s", s);
+			g_free(s);
 			
-			g_strfreev(tokens);
-		} else {
-			t = g_list_append_printf(t, "NIL NIL");
+			g_list_foreach(t, (GFunc)g_free, NULL);
+			g_list_free(t);
+			t = NULL;
+
+			break;
 		}
-		
-		s = dbmail_imap_plist_as_string(t);
-		p = g_list_append_printf(p, "%s", s);
-		g_free(s);
-		
-		g_list_foreach(t, (GFunc)g_free, NULL);
-		g_list_free(t);
-		t = NULL;
 	
+		/* Bottom of the while loop.
+		 * Advance the address list.
+		 */
 		if (ial->next == NULL)
 			break;
 		
 		ial = ial->next;
-	
 	}
 	
+	/* Tack it onto the outer list. */
 	if (p) {
 		s = dbmail_imap_plist_as_string(p);
 		st = dbmail_imap_plist_collapse(s);
 		list = g_list_append_printf(list, "(%s)", st);
 		g_free(s);
 		g_free(st);
-
+        
 		g_list_foreach(p, (GFunc)g_free, NULL);
 		g_list_free(p);
 	} else {
 		list = g_list_append_printf(list, "NIL");
 	}
+
 	return list;
 }
 
@@ -619,7 +665,7 @@ GList * envelope_address_part(GList *list, GMimeMessage *message, const char *he
 		t = imap_cleanup_address(result);
 		alist = internet_address_parse_string(t);
 		g_free(t);
-		list = _imap_append_alist_as_plist(list, (const InternetAddressList *)alist);
+		list = dbmail_imap_append_alist_as_plist(list, (const InternetAddressList *)alist);
 		internet_address_list_destroy(alist);
 		alist = NULL;
 	} else {
