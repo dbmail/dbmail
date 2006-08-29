@@ -206,16 +206,21 @@ static GList * imap_append_disposition_as_string(GList *list, GMimeObject *part)
 	}
 	return list;
 }
-static GList * imap_append_header_as_string(GList *list, GMimeObject *part, const char *header)
+
+#define imap_append_header_as_string(list, part, header) \
+	imap_append_header_as_string_default(list, part, header, "NIL")
+
+static GList * imap_append_header_as_string_default(GList *list,
+		GMimeObject *part, const char *header, const char *def)
 {
 	char *result;
 	char *s;
-	if((result = (char *)g_mime_object_get_header(part,header))) {
+	if((result = (char *)g_mime_object_get_header(part, header))) {
 		s = dbmail_imap_astring_as_string(result);
-		list = g_list_append_printf(list,"%s",s);
+		list = g_list_append_printf(list, "%s", s);
 		g_free(s);
 	} else {
-		list = g_list_append_printf(list,"NIL");
+		list = g_list_append_printf(list, def);
 	}
 	return list;
 }
@@ -391,7 +396,7 @@ void _structure_part_message_rfc822(GMimeObject *part, gpointer data, gboolean e
 	/* body description */
 	list = imap_append_header_as_string(list,object,"Content-Description");
 	/* body encoding */
-	list = imap_append_header_as_string(list,object,"Content-Transfer-Encoding");
+	list = imap_append_header_as_string_default(list,object,"Content-Transfer-Encoding", "\"7BIT\"");
 	/* body size */
 	imap_part_get_sizes(object,&s,&l);
 	
@@ -451,7 +456,7 @@ void _structure_part_text(GMimeObject *part, gpointer data, gboolean extension)
 	/* body description */
 	list = imap_append_header_as_string(list,object,"Content-Description");
 	/* body encoding */
-	list = imap_append_header_as_string(list,object,"Content-Transfer-Encoding");
+	list = imap_append_header_as_string_default(list,object,"Content-Transfer-Encoding", "\"7BIT\"");
 	/* body size */
 	imap_part_get_sizes(part,&s,&l);
 	

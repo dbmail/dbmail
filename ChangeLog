@@ -1,11 +1,15 @@
 2006-08-29  Aaron Stone  <aaron@serendipity.cx>
 
 	* check_dbmail_imapd.c, dm_imaputil.h, dm_imaputil.c:
-	Handle RFC 2822 address list group syntax more correctly.
-	Expanded test coverage of dbmail_imap_append_alist_as_plist.
+	Handle RFC 2822 address list group syntax more correctly (closes bug
+	#386) and expanded test coverage of dbmail_imap_append_alist_as_plist.
 	* modules/authsql.c, pipe.c, dbmail-message.c, dm_md5.c,
 	dbmail-imapsession.c, misc.c:
 	Silenced signedness warning (closes bug #397).
+	* dm_imaputil.c:
+	Added a default parameter to imap_append_header_as_string that allows
+	us to specify that Content-Encoding should default to "7BIT" rather
+	than NIL (closes bug #404).
 
 2006-08-27  Paul J Stevens <paul@nfg.nl>
 
