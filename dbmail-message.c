@@ -1,5 +1,5 @@
 /*
-  $Id: dbmail-message.c 2223 2006-08-13 20:30:56Z aaron $
+  $Id: dbmail-message.c 2238 2006-08-29 14:44:00Z aaron $
 
   Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
 
@@ -121,6 +121,8 @@ gchar * get_crlf_encoded(gchar *string)
 
 }
 
+/* Useful for debugging. Uncomment if/when needed.
+ *//*
 static void dump_to_file(const char *filename, const char *buf)
 {
 	gint se;
@@ -136,7 +138,7 @@ static void dump_to_file(const char *filename, const char *buf)
 	fprintf(f,"%s",buf);
 	fclose(f);
 }
-
+*/
 
 
 /*  \brief create a new empty DbmailMessage struct

@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: dbmail-imapsession.c 2233 2006-08-27 13:45:06Z paul $
+/* $Id: dbmail-imapsession.c 2238 2006-08-29 14:44:00Z aaron $
  * 
  * dm_imaputil.c
  *
@@ -1251,7 +1251,7 @@ int dbmail_imap_session_prompt(struct ImapSession * self, char * prompt, char * 
 	prompt64 = g_new0(char, strlen(prompt) * 2);
 
 	promptcat = g_strdup_printf("%s\r\n", prompt);
-	base64_encode(prompt64, promptcat, strlen(promptcat));
+	base64_encode((unsigned char *)prompt64, (unsigned char *)promptcat, strlen(promptcat));
 
 	dbmail_imap_session_printf(self, "+ %s\r\n", prompt64);
 	fflush(self->ci->tx);

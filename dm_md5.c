@@ -343,6 +343,6 @@ char *dm_md5_base64(const unsigned char * const buf)
 	memset(base64, '\0', sizeof(base64));
 	base64_encode(base64, result, sizeof(result));
 
-	return g_strdup(base64);
+	return g_strdup((char *)base64);
 }
 
