@@ -121,6 +121,8 @@ gchar * get_crlf_encoded(gchar *string)
 
 }
 
+/* Useful for debugging. Uncomment if/when needed.
+ *//*
 static void dump_to_file(const char *filename, const char *buf)
 {
 	gint se;
@@ -136,7 +138,7 @@ static void dump_to_file(const char *filename, const char *buf)
 	fprintf(f,"%s",buf);
 	fclose(f);
 }
-
+*/
 
 
 /*  \brief create a new empty DbmailMessage struct

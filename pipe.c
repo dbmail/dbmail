@@ -142,9 +142,9 @@ static int send_mail(struct DbmailMessage *message,
 	trace(TRACE_DEBUG, "%s, %s: pipe opened", __FILE__, __func__);
 
 	if (sendwhat != SENDRAW) {
-		char *header_to = g_mime_utils_header_encode_phrase(to);
-		char *header_from = g_mime_utils_header_encode_phrase(from);
-		char *header_subject = g_mime_utils_header_encode_text(subject);
+		char *header_to = g_mime_utils_header_encode_phrase((unsigned char *)to);
+		char *header_from = g_mime_utils_header_encode_phrase((unsigned char *)from);
+		char *header_subject = g_mime_utils_header_encode_text((unsigned char *)subject);
 
 		fprintf(mailpipe, "To: %s\n", to);
 		fprintf(mailpipe, "From: %s\n", from);

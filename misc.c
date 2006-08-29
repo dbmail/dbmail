@@ -1212,7 +1212,8 @@ gint ucmp(const u64_t *a, const u64_t *b)
 /* Read from instream until ".\r\n", discarding what is read. */
 int discard_client_input(FILE * instream)
 {
-	int ch, ns, l;
+	int ch, ns;
+	socklen_t l;
 
 	clearerr(instream);
 	for (ns = 0; (ch = fgetc(instream)) != EOF;) {
@@ -1243,7 +1244,7 @@ int discard_client_input(FILE * instream)
 		if ((ch = fileno(instream)) != -1) {
 			/* okay, look for error slippage */
 			l = 0;
-			if (getpeername(ns,(struct sockaddr *)"",&l) == -1 && errno != ENOTSOCK) {
+			if (getpeername(ns, (struct sockaddr *)"", &l) == -1 && errno != ENOTSOCK) {
 				trace(TRACE_ERROR, "%s,%s: unexpected failure from socket layer (client hangup?)",
 				      __FILE__, __func__);
 			}

@@ -1251,7 +1251,7 @@ int dbmail_imap_session_prompt(struct ImapSession * self, char * prompt, char * 
 	prompt64 = g_new0(char, strlen(prompt) * 2);
 
 	promptcat = g_strdup_printf("%s\r\n", prompt);
-	base64_encode(prompt64, promptcat, strlen(promptcat));
+	base64_encode((unsigned char *)prompt64, (unsigned char *)promptcat, strlen(promptcat));
 
 	dbmail_imap_session_printf(self, "+ %s\r\n", prompt64);
 	fflush(self->ci->tx);
