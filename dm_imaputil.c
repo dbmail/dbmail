@@ -206,16 +206,21 @@ static GList * imap_append_disposition_as_string(GList *list, GMimeObject *part)
 	}
 	return list;
 }
-static GList * imap_append_header_as_string(GList *list, GMimeObject *part, const char *header)
+
+#define imap_append_header_as_string(list, part, header) \
+	imap_append_header_as_string_default(list, part, header, "NIL")
+
+static GList * imap_append_header_as_string_default(GList *list,
+		GMimeObject *part, const char *header, const char *def)
 {
 	char *result;
 	char *s;
-	if((result = (char *)g_mime_object_get_header(part,header))) {
+	if((result = (char *)g_mime_object_get_header(part, header))) {
 		s = dbmail_imap_astring_as_string(result);
-		list = g_list_append_printf(list,"%s",s);
+		list = g_list_append_printf(list, "%s", s);
 		g_free(s);
 	} else {
-		list = g_list_append_printf(list,"NIL");
+		list = g_list_append_printf(list, def);
 	}
 	return list;
 }
@@ -391,7 +396,7 @@ void _structure_part_message_rfc822(GMimeObject *part, gpointer data, gboolean e
 	/* body description */
 	list = imap_append_header_as_string(list,object,"Content-Description");
 	/* body encoding */
-	list = imap_append_header_as_string(list,object,"Content-Transfer-Encoding");
+	list = imap_append_header_as_string_default(list,object,"Content-Transfer-Encoding", "\"7BIT\"");
 	/* body size */
 	imap_part_get_sizes(object,&s,&l);
 	
@@ -451,7 +456,7 @@ void _structure_part_text(GMimeObject *part, gpointer data, gboolean extension)
 	/* body description */
 	list = imap_append_header_as_string(list,object,"Content-Description");
 	/* body encoding */
-	list = imap_append_header_as_string(list,object,"Content-Transfer-Encoding");
+	list = imap_append_header_as_string_default(list,object,"Content-Transfer-Encoding", "\"7BIT\"");
 	/* body size */
 	imap_part_get_sizes(part,&s,&l);
 	
@@ -509,22 +514,28 @@ GList* dbmail_imap_append_alist_as_plist(GList *list, const InternetAddressList 
 
 		case INTERNET_ADDRESS_GROUP:
 			TRACE(TRACE_DEBUG, "recursing into address group [%s].", ia->name);
-			/* Careful, because this builds up the stack; it's not a tail call. */
 			
 			/* Address list beginning. */
-			p = g_list_append_printf(p, "(\"%s\" NIL NIL NIL)", ia->name);
+			p = g_list_append_printf(p, "(NIL NIL \"%s\" NIL)", ia->name);
 
-			/* Dive in. */
+			/* Dive into the address list.
+			 * Careful, this builds up the stack; it's not a tail call.
+			 */
 			t = dbmail_imap_append_alist_as_plist(t, ia->value.members);
 
 			s = dbmail_imap_plist_as_string(t);
-
-			// Lop off the extra parens at each end.
-			// Really do the pointer math carefully.
-			size_t slen = strlen(s);
-			if (slen) slen--;
-			s[slen] = '\0';
-			p = g_list_append_printf(p, "%s", (slen ? s+1 : s));
+			/* Only use the results if they're interesting --
+			 * (NIL) is the special case of nothing inside the group.
+			 */
+			if (strcmp(s, "(NIL)") != 0) {
+				/* Lop off the extra parens at each end.
+				 * Really do the pointer math carefully.
+				 */
+				size_t slen = strlen(s);
+				if (slen) slen--;
+				s[slen] = '\0';
+				p = g_list_append_printf(p, "%s", (slen ? s+1 : s));
+			}
 			g_free(s);
 			
 			g_list_foreach(t, (GFunc)g_free, NULL);
@@ -532,7 +543,7 @@ GList* dbmail_imap_append_alist_as_plist(GList *list, const InternetAddressList 
 			t = NULL;
 
 			/* Address list ending. */
-			p = g_list_append_printf(p, "(NIL NIL NIL NIL)", ia->name);
+			// p = g_list_append_printf(p, "(NIL NIL NIL NIL)", ia->name);
 
 			break;
 

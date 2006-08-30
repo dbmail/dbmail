@@ -17,7 +17,7 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  *
- *  $Id: check_dbmail_imapd.c 2235 2006-08-29 08:07:46Z aaron $ 
+ *  $Id: check_dbmail_imapd.c 2241 2006-08-29 19:23:26Z aaron $ 
  *
  *
  *  
@@ -436,6 +436,40 @@ START_TEST(test_internet_address_parse_string)
 		dm_free(result);
 
 	}
+
+	char * testlist[][2] = {
+		{ "<i_am_not@broken.org>", "((NIL NIL \"i_am_not\" \"broken.org\"))" },
+		{ "Break me: <foo@bar.org>", "((NIL NIL \"Break me\" NIL)(NIL NIL \"foo\" \"bar.org\"))" },
+		{ "Joe's Friends: mary@joe.com, joe@joe.com, jane@joe.com;",
+			"((NIL NIL \"Joe's Friends\" NIL)(NIL NIL \"mary\" \"joe.com\")"
+			"(NIL NIL \"joe\" \"joe.com\")(NIL NIL \"jane\" \"joe.com\"))" },
+		{ NULL, NULL }
+	};
+
+	char *input, *expect;
+
+	for (i = 0; testlist[i][0] != NULL; i++) {
+		input = testlist[i][0];
+		expect = testlist[i][1];
+
+		// printf("testing parse of [%s]\n looking for [%s]\n", input, expect);
+		InternetAddressList *alist;
+		GList *list = NULL;
+		char *result;
+		int res;
+		alist = internet_address_parse_string(input);
+		list = dbmail_imap_append_alist_as_plist(list, (const InternetAddressList *)alist);
+		result = dbmail_imap_plist_as_string(list);
+		res = strcmp(result, expect);
+		if (res == 0)
+			g_free(result); // Only free if we're not going to report an error.
+		internet_address_list_destroy(alist);
+		alist = NULL;
+		g_list_foreach(list, (void *)g_free, NULL);
+		g_list_free(list);
+
+		fail_unless(res == 0, "dbmail_imap_append_alist_as_plist failed, expected [%s] got [%s]", expect, result);
+	}
 }
 END_TEST
 
@@ -526,49 +560,6 @@ START_TEST(test_imap_cleanup_address)
 	F("\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" <nobody@nowhere.org>","\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" <nobody@nowhere.org>");
 	F("Some One <some@foo.org>", "Some One <some@foo.org>");
 	F(" <some@foo.org>", "<some@foo.org>");
-
-	{
-		printf("\n<i_am_not@broken.org>\n");
-		InternetAddressList *alist;
-		GList *list = NULL;
-		alist = internet_address_parse_string("<i_am_not@broken.org>");
-		list = dbmail_imap_append_alist_as_plist(list, (const InternetAddressList *)alist);
-		internet_address_list_destroy(alist);
-		alist = NULL;
-		g_list_foreach(list, printf, NULL);
-		g_list_foreach(list, g_free, NULL);
-		g_list_free(list);
-	}
-
-	{
-		printf("\nBreak me: <foo@bar.org>\n");
-		InternetAddressList *alist;
-		GList *list = NULL;
-		alist = internet_address_parse_string("Break me: <foo@bar.org>");
-		list = dbmail_imap_append_alist_as_plist(list, (const InternetAddressList *)alist);
-		internet_address_list_destroy(alist);
-		alist = NULL;
-		g_list_foreach(list, printf, NULL);
-		g_list_foreach(list, g_free, NULL);
-		g_list_free(list);
-	}
-
-	{
-		printf("\n Joe's Friends: mary@joe.com, joe@joe.com, jane@joe.com;\n");
-		InternetAddressList *alist;
-		GList *list = NULL;
-		alist = internet_address_parse_string(" Joe's Friends: mary@joe.com, joe@joe.com, jane@joe.com;");
-		list = dbmail_imap_append_alist_as_plist(list, (const InternetAddressList *)alist);
-		internet_address_list_destroy(alist);
-		alist = NULL;
-		g_list_foreach(list, printf, NULL);
-		g_list_foreach(list, g_free, NULL);
-		g_list_free(list);
-	}
-
-	F("Break this: <foo@bar.org>", "<foo@bar.org>");
-	F("Break this: <foo@bar.org>;", "<foo@bar.org>");
-
 }
 END_TEST
 
