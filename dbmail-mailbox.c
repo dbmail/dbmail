@@ -55,7 +55,7 @@ static gboolean _node_free(GNode *node, gpointer dummy UNUSED)
 	search_key_t *s = (search_key_t *)node->data;
 	if (s->found)
 		g_tree_destroy(s->found);
-	g_free(s);
+//	g_free(s);
 
 	return FALSE;
 }
@@ -481,11 +481,11 @@ char * dbmail_mailbox_sorted_as_string(struct DbmailMailbox *self)
 	uid = dbmail_mailbox_get_uid(self);
 
 	while(l->data) {
-		if (uid)
-			g_string_append_printf(t,"%llu ", *(u64_t *)l->data);
-		else {
-			msn = g_tree_lookup(self->ids, l->data);
-			if (msn)
+		msn = g_tree_lookup(self->ids, l->data);
+		if (msn) {
+			if (uid)
+				g_string_append_printf(t,"%llu ", *(u64_t *)l->data);
+			else
 				g_string_append_printf(t,"%llu ", *(u64_t *)msn);
 		}
 		if (! g_list_next(l))
@@ -612,11 +612,11 @@ static int _handle_sort_args(struct DbmailMailbox *self, char **search_keys, sea
 	else if ( MATCH(key, "iso-8859-1") ) 
 		(*idx)++;
 
-	else {
-		if (value->type) 
-			append_search(self, value, 0);
+	else
 		return 1; /* done */
-	}
+	
+	if (value->type) 
+		append_search(self, value, 0);
 
 	return 0;
 }
@@ -651,7 +651,6 @@ static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u
 	else if ( MATCH(key, "uid") ) {
 		g_return_val_if_fail(search_keys[*idx + 1], -1);
 		g_return_val_if_fail(check_msg_set(search_keys[*idx + 1]),-1);
-		dbmail_mailbox_set_uid(self,TRUE);
 		value->type = IST_SET;
 		(*idx)++;
 		strncpy(value->search, search_keys[(*idx)], MAX_SEARCH_LEN);
@@ -931,6 +930,7 @@ static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u
                 (*idx)++; // FIXME: should we check for valid charset here?
 	} else {
 		/* unknown search key */
+		trace(TRACE_DEBUG,"%s,%s: unknown search key [%s]", __FILE__, __func__, key);
 		g_free(value);
 		return -1;
 	}
@@ -990,8 +990,11 @@ static gboolean _do_sort(GNode *node, struct DbmailMailbox *self)
 	search_key_t *s = (search_key_t *)node->data;
 	
 	trace(TRACE_DEBUG,"%s,%s: type [%d]", __FILE__,  __func__, s->type);
-	if (! (s->type == IST_SET || s->type == IST_SORT))
-		return TRUE;
+	if (s->type != IST_SORT)
+		return FALSE;
+
+//	if (! (s->type == IST_SET || s->type == IST_SORT))
+//		return TRUE;
 	
 	q = g_string_new("");
 	g_string_printf(q, "SELECT message_idnr FROM %smessages m "
@@ -1238,8 +1241,11 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set)
 			else 
 				r = strtoull(rest,NULL,10);
 			
-			if (!r || r > hi)
+			if (!r)
 				break;
+			
+			if (r > hi)
+				r = hi;
 			
 			if (r < lo)
 				r = lo;
