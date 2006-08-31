@@ -601,7 +601,7 @@ static int _build_fetch(struct DbmailMailbox *self, char **args, u64_t *idx)
 	if (MATCH(token,"uid")) {
 		dbmail_mailbox_set_uid(self,TRUE);
 	} else if (check_msg_set(token)) {
-		dbmail_mailbox_get_set(self, token);
+		dbmail_mailbox_get_set(self, token, 0);
 	} else if (MATCH(token,"flags")) {
 		fi->getFlags = 1;
 	} else if (MATCH(token,"internaldate")) {
@@ -826,27 +826,27 @@ START_TEST(test_dbmail_mailbox_get_set)
 	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id());
 	dbmail_mailbox_set_uid(mb,TRUE);
 
-	set = dbmail_mailbox_get_set(mb, "1:*");
+	set = dbmail_mailbox_get_set(mb, "1:*", 0);
 	c = g_tree_nnodes(set);
 	fail_unless(c>1,"dbmail_mailbox_get_set failed");
 	g_tree_destroy(set);
 
-	set = dbmail_mailbox_get_set(mb,"*:1");
+	set = dbmail_mailbox_get_set(mb,"*:1",0);
 	d = g_tree_nnodes(set);
 	fail_unless(c==d,"dbmail_mailbox_get_set failed");
 	g_tree_destroy(set);
 
-	set = dbmail_mailbox_get_set(mb,"1,*");
+	set = dbmail_mailbox_get_set(mb,"1,*",0);
 	d = g_tree_nnodes(set);
 	fail_unless(d==2,"mailbox_get_set failed");
 	g_tree_destroy(set);
 
-	set = dbmail_mailbox_get_set(mb,"1,*");
+	set = dbmail_mailbox_get_set(mb,"1,*",0);
 	d = g_tree_nnodes(set);
 	fail_unless(d==2,"mailbox_get_set failed");
 	g_tree_destroy(set);
 	
-	set = dbmail_mailbox_get_set(mb,"1");
+	set = dbmail_mailbox_get_set(mb,"1",0);
 	d = g_tree_nnodes(set);
 	fail_unless(d==1,"mailbox_get_set failed");
 	g_tree_destroy(set);
