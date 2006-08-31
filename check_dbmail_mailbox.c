@@ -51,6 +51,24 @@ static void init_testuser1(void)
 		auth_adduser("testuser1","test", "md5", 101, 1024000, &user_idnr);
 }
 
+static gboolean tree_print(gpointer key, gpointer value, gpointer data UNUSED)
+{
+	if (! (key && value))
+		return TRUE;
+
+	u64_t *k = (u64_t *)key;
+	u64_t *v = (u64_t *)value;
+	printf("[%llu: %llu]\n", *k, *v);
+	return FALSE;
+}
+
+void tree_dump(GTree *t)
+{
+	trace(TRACE_DEBUG,"%s,%s: start",__FILE__,__func__);
+	g_tree_foreach(t,(GTraverseFunc)tree_print,NULL);
+	trace(TRACE_DEBUG,"%s,%s: done",__FILE__,__func__);
+}
+
 static u64_t get_mailbox_id(void)
 {
 	u64_t id, owner;
@@ -855,6 +873,21 @@ START_TEST(test_dbmail_mailbox_get_set)
 }
 END_TEST
 
+START_TEST(test_dbmail_mailbox_get_set_uid)
+{
+	guint c, d;
+	GTree *set;
+	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id());
+	dbmail_mailbox_set_uid(mb,TRUE);
+
+	set = dbmail_mailbox_get_set(mb, "1:*", 1);
+	tree_dump(set);
+	c = g_tree_nnodes(set);
+	fail_unless(c>1,"dbmail_mailbox_get_set failed");
+	g_tree_destroy(set);
+}
+END_TEST
+
 Suite *dbmail_mailbox_suite(void)
 {
 	Suite *s = suite_create("Dbmail Mailbox");
@@ -863,6 +896,7 @@ Suite *dbmail_mailbox_suite(void)
 	suite_add_tcase(s, tc_mailbox);
 	tcase_add_checked_fixture(tc_mailbox, setup, teardown);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_get_set);
+	tcase_add_test(tc_mailbox, test_dbmail_mailbox_get_set_uid);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_new);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_free);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_open);
