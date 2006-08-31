@@ -211,7 +211,7 @@ static GList * imap_append_disposition_as_string(GList *list, GMimeObject *part)
 	imap_append_header_as_string_default(list, part, header, "NIL")
 
 static GList * imap_append_header_as_string_default(GList *list,
-		GMimeObject *part, const char *header, const char *def)
+		GMimeObject *part, const char *header, char *def)
 {
 	char *result;
 	char *s;
