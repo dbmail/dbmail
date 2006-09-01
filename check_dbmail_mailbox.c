@@ -69,6 +69,30 @@ void tree_dump(GTree *t)
 	trace(TRACE_DEBUG,"%s,%s: done",__FILE__,__func__);
 }
 
+static gboolean _node_cat(u64_t *key, u64_t *value, GString **s)
+{
+	if (! (key && value))
+		return TRUE;
+	
+	g_string_append_printf(*(GString **)s, "[%llu: %llu]\n", *key,*value);
+
+	return FALSE;
+}
+
+char * tree_as_string(GTree *t)
+{
+	char *result;
+	GString *s = g_string_new("");
+	
+	trace(TRACE_DEBUG,"%s,%s: start",__FILE__,__func__);
+	g_tree_foreach(t,(GTraverseFunc)_node_cat,&s);
+	trace(TRACE_DEBUG,"%s,%s: done",__FILE__,__func__);
+
+	result = s->str;
+	g_string_free(s,FALSE);
+	return result;
+}
+
 static u64_t get_mailbox_id(void)
 {
 	u64_t id, owner;
@@ -844,7 +868,9 @@ START_TEST(test_dbmail_mailbox_get_set)
 	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id());
 	dbmail_mailbox_set_uid(mb,TRUE);
 
+	// basic tests;
 	set = dbmail_mailbox_get_set(mb, "1:*", 0);
+	tree_dump(set);
 	c = g_tree_nnodes(set);
 	fail_unless(c>1,"dbmail_mailbox_get_set failed");
 	g_tree_destroy(set);
@@ -869,22 +895,26 @@ START_TEST(test_dbmail_mailbox_get_set)
 	fail_unless(d==1,"mailbox_get_set failed");
 	g_tree_destroy(set);
 
-	dbmail_mailbox_free(mb);
-}
-END_TEST
 
-START_TEST(test_dbmail_mailbox_get_set_uid)
-{
-	guint c, d;
-	GTree *set;
-	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id());
-	dbmail_mailbox_set_uid(mb,TRUE);
+	// UID sets
+	char *s, *t;
 
 	set = dbmail_mailbox_get_set(mb, "1:*", 1);
-	tree_dump(set);
+	s = tree_as_string(set);
 	c = g_tree_nnodes(set);
 	fail_unless(c>1,"dbmail_mailbox_get_set failed");
 	g_tree_destroy(set);
+
+	set = dbmail_mailbox_get_set(mb, "1:*", 0);
+	t = tree_as_string(set);
+	fail_unless(strncmp(s,t,1024)==0,"mismatch between <1:*> and <UID 1:*>\n%s\n%s", s,t);
+	g_tree_destroy(set);
+	g_free(s);
+	g_free(t);
+
+
+	
+	dbmail_mailbox_free(mb);
 }
 END_TEST
 
@@ -896,7 +926,6 @@ Suite *dbmail_mailbox_suite(void)
 	suite_add_tcase(s, tc_mailbox);
 	tcase_add_checked_fixture(tc_mailbox, setup, teardown);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_get_set);
-	tcase_add_test(tc_mailbox, test_dbmail_mailbox_get_set_uid);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_new);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_free);
 	tcase_add_test(tc_mailbox, test_dbmail_mailbox_open);

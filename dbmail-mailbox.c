@@ -1277,7 +1277,12 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 			*k = i;
 			*v = *w;
 			
-			g_tree_insert(a,k,v);
+			// we always want to return a tree with 
+			// uids as keys and msns as values 
+			if (uid)
+				g_tree_insert(a,k,v);
+			else
+				g_tree_insert(a,v,k);
 		}
 		
 		if (g_tree_merge(b,a,IST_SUBSEARCH_OR)) {
