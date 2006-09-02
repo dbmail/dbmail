@@ -1,3 +1,16 @@
+2006-09-02  Paul J Stevens <paul@nfg.nl>
+
+	* maintenance.c:
+	issue warning when dbmail-util doesn't specify -y
+	* check_dbmail_imapd.c, check_dbmail_mailbox.c, dbmail-mailbox.c, 
+	  dbmail-mailbox.h, dbmailtypes.h:
+	test and fix search/sort sequences with and without uid, but
+	introduces a memleak.
+	* check_dbmail_mailbox.c, misc.c:
+	moved some tree testing into mailbox testcode
+	* check_dbmail_mailbox.c, dbmail-mailbox.c, test-scripts/testsort.imap:
+	fix dbmail_mailbox_get_set
+
 2006-08-31  Aaron Stone  <aaron@serendipity.cx>
 
 	* contrib/startup-scripts/gentoo:
