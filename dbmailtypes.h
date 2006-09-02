@@ -293,20 +293,21 @@ typedef struct {
 
 enum IMAP_SEARCH_TYPES { 
 	IST_SET = 1, 		/* 1 */
-	IST_FLAG,  		/* 2 */
-	IST_SORT,  		/* 3 */
-	IST_HDR,  		/* 4 */
-	IST_HDRDATE_BEFORE,  	/* 5 */
-	IST_HDRDATE_ON,  	/* 6 */
-	IST_HDRDATE_SINCE, 	/* 7 */
-	IST_IDATE,  		/* 8 */
-	IST_DATA_BODY,  	/* 9 */
-	IST_DATA_TEXT, 		/* 10 */
-	IST_SIZE_LARGER,  	/* 11 */
-	IST_SIZE_SMALLER,  	/* 12 */
-	IST_SUBSEARCH_AND, 	/* 13 */
-	IST_SUBSEARCH_OR,  	/* 14 */
-	IST_SUBSEARCH_NOT 	/* 15 */
+	IST_UIDSET, 		/* 2 */
+	IST_FLAG,  		/* 3 */
+	IST_SORT,  		/* 4 */
+	IST_HDR,  		/* 5 */
+	IST_HDRDATE_BEFORE,  	/* 6 */
+	IST_HDRDATE_ON,  	/* 7 */
+	IST_HDRDATE_SINCE, 	/* 8 */
+	IST_IDATE,  		/* 9 */
+	IST_DATA_BODY,  	/* 10 */
+	IST_DATA_TEXT, 		/* 11 */
+	IST_SIZE_LARGER,  	/* 12 */
+	IST_SIZE_SMALLER,  	/* 13 */
+	IST_SUBSEARCH_AND, 	/* 14 */
+	IST_SUBSEARCH_OR,  	/* 15 */
+	IST_SUBSEARCH_NOT 	/* 16 */
 };
 
 typedef struct {

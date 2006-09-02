@@ -69,7 +69,7 @@ char * dbmail_mailbox_orderedsubject(struct DbmailMailbox *self);
 
 int dbmail_mailbox_build_imap_search(struct DbmailMailbox *self, char **search_keys, u64_t *idx, int sorted);
 
-GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set);
+GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboolean uid);
 
 
 #endif

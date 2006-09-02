@@ -439,8 +439,10 @@ char * dbmail_mailbox_ids_as_string(struct DbmailMailbox *self)
 	gchar *s = NULL;
 	GList *l = NULL;
 
-	if (! g_tree_nnodes(self->ids)>0)
+	if (! g_tree_nnodes(self->ids)>0) {
+		trace(TRACE_DEBUG,"%s,%s: no ids found", __FILE__, __func__);
 		return s;
+	}
 
 	t = g_string_new("");
 	switch (dbmail_mailbox_get_uid(self)) {
@@ -603,14 +605,20 @@ static int _handle_sort_args(struct DbmailMailbox *self, char **search_keys, sea
 	else if ( MATCH(key, ")") ) 
 		(*idx)++;
 	
-	else if ( MATCH(key, "utf-8") ) 
+	else if ( MATCH(key, "utf-8") )  {
 		(*idx)++;
+		return 1;
+	}
 	
-	else if ( MATCH(key, "us-ascii") ) 
+	else if ( MATCH(key, "us-ascii") ) {
 		(*idx)++;
+		return 1;
+	}
 	
-	else if ( MATCH(key, "iso-8859-1") ) 
+	else if ( MATCH(key, "iso-8859-1") ) {
 		(*idx)++;
+		return 1;
+	}
 
 	else
 		return 1; /* done */
@@ -642,7 +650,7 @@ static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u
 	/* SEARCH */
 
 	if ( MATCH(key, "all") ) {
-		value->type = IST_SET;
+		value->type = IST_UIDSET;
 		strcpy(value->search, "1:*");
 		(*idx)++;
 		
@@ -651,7 +659,7 @@ static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u
 	else if ( MATCH(key, "uid") ) {
 		g_return_val_if_fail(search_keys[*idx + 1], -1);
 		g_return_val_if_fail(check_msg_set(search_keys[*idx + 1]),-1);
-		value->type = IST_SET;
+		value->type = IST_UIDSET;
 		(*idx)++;
 		strncpy(value->search, search_keys[(*idx)], MAX_SEARCH_LEN);
 		(*idx)++;
@@ -959,7 +967,7 @@ int dbmail_mailbox_build_imap_search(struct DbmailMailbox *self, char **search_k
 
 	/* default initial key for ANDing */
 	value = g_new0(search_key_t,1);
-	value->type = IST_SET;
+	value->type = IST_UIDSET;
 	if (check_msg_set(search_keys[*idx])) {
 		strncpy(value->search, search_keys[*idx], MAX_SEARCH_LEN);
 		(*idx)++;
@@ -990,12 +998,13 @@ static gboolean _do_sort(GNode *node, struct DbmailMailbox *self)
 	search_key_t *s = (search_key_t *)node->data;
 	
 	trace(TRACE_DEBUG,"%s,%s: type [%d]", __FILE__,  __func__, s->type);
+	
 	if (s->type != IST_SORT)
 		return FALSE;
-
-//	if (! (s->type == IST_SET || s->type == IST_SORT))
-//		return TRUE;
 	
+	if (s->searched)
+		return FALSE;
+
 	q = g_string_new("");
 	g_string_printf(q, "SELECT message_idnr FROM %smessages m "
 			 "LEFT JOIN %sphysmessage p ON m.physmessage_id=p.id "
@@ -1022,6 +1031,8 @@ static gboolean _do_sort(GNode *node, struct DbmailMailbox *self)
 	self->sorted = g_list_reverse(self->sorted);
 	g_string_free(q,TRUE);
 	db_free_result();
+
+	s->searched = TRUE;
 	
 	return FALSE;
 }
@@ -1172,7 +1183,7 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 	return s->found;
 }
 
-GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set)
+GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboolean uid)
 {
 	GList *ids = NULL, *sets = NULL;
 	GString *t;
@@ -1180,7 +1191,6 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set)
 	u64_t i, l, r, lo = 0, hi = 0;
 	u64_t *k, *v, *w = NULL;
 	GTree *a, *b, *c;
-	gboolean uid;
 	
 	b = g_tree_new_full((GCompareDataFunc)ucmp,NULL, (GDestroyNotify)g_free, (GDestroyNotify)g_free);
 	
@@ -1189,10 +1199,7 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set)
 
 	g_return_val_if_fail(g_tree_nnodes(self->ids)>0,b);
 
-
 	trace(TRACE_DEBUG,"%s,%s: [%s]", __FILE__, __func__, set);
-
-	uid = dbmail_mailbox_get_uid(self);
 	
 	if (uid) {
 		ids = g_tree_keys(self->ids);
@@ -1270,9 +1277,11 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set)
 			*k = i;
 			*v = *w;
 			
-			if (uid) // k: uid, v: msn
+			// we always want to return a tree with 
+			// uids as keys and msns as values 
+			if (uid)
 				g_tree_insert(a,k,v);
-			else     // k: msn, v: uid
+			else
 				g_tree_insert(a,v,k);
 		}
 		
@@ -1306,8 +1315,16 @@ static gboolean _do_search(GNode *node, struct DbmailMailbox *self)
 		return FALSE;
 	
 	switch (s->type) {
+		case IST_SORT:
+			return FALSE;
+			break;
+			
 		case IST_SET:
-			if (! (s->found = dbmail_mailbox_get_set(self, (const char *)s->search)))
+			if (! (s->found = dbmail_mailbox_get_set(self, (const char *)s->search, 0)))
+				return TRUE;
+			break;
+		case IST_UIDSET:
+			if (! (s->found = dbmail_mailbox_get_set(self, (const char *)s->search, 1)))
 				return TRUE;
 			break;
 
@@ -1330,8 +1347,6 @@ static gboolean _do_search(GNode *node, struct DbmailMailbox *self)
 			g_node_children_foreach(node, G_TRAVERSE_ALL, (GNodeForeachFunc)_do_search, (gpointer)self);
 			break;
 
-		case IST_SORT:
-			break;
 
 		default:
 			return TRUE;
@@ -1357,6 +1372,9 @@ static gboolean _merge_search(GNode *node, GTree *found)
 	search_key_t *a, *b;
 	GNode *x, *y;
 	GTree *z;
+
+	if (s->type == IST_SORT)
+		return FALSE;
 
 	if (s->merged == TRUE)
 		return FALSE;

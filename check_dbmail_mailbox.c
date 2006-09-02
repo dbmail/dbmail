@@ -51,6 +51,48 @@ static void init_testuser1(void)
 		auth_adduser("testuser1","test", "md5", 101, 1024000, &user_idnr);
 }
 
+static gboolean tree_print(gpointer key, gpointer value, gpointer data UNUSED)
+{
+	if (! (key && value))
+		return TRUE;
+
+	u64_t *k = (u64_t *)key;
+	u64_t *v = (u64_t *)value;
+	printf("[%llu: %llu]\n", *k, *v);
+	return FALSE;
+}
+
+void tree_dump(GTree *t)
+{
+	trace(TRACE_DEBUG,"%s,%s: start",__FILE__,__func__);
+	g_tree_foreach(t,(GTraverseFunc)tree_print,NULL);
+	trace(TRACE_DEBUG,"%s,%s: done",__FILE__,__func__);
+}
+
+static gboolean _node_cat(u64_t *key, u64_t *value, GString **s)
+{
+	if (! (key && value))
+		return TRUE;
+	
+	g_string_append_printf(*(GString **)s, "[%llu: %llu]\n", *key,*value);
+
+	return FALSE;
+}
+
+char * tree_as_string(GTree *t)
+{
+	char *result;
+	GString *s = g_string_new("");
+	
+	trace(TRACE_DEBUG,"%s,%s: start",__FILE__,__func__);
+	g_tree_foreach(t,(GTraverseFunc)_node_cat,&s);
+	trace(TRACE_DEBUG,"%s,%s: done",__FILE__,__func__);
+
+	result = s->str;
+	g_string_free(s,FALSE);
+	return result;
+}
+
 static u64_t get_mailbox_id(void)
 {
 	u64_t id, owner;
@@ -601,7 +643,7 @@ static int _build_fetch(struct DbmailMailbox *self, char **args, u64_t *idx)
 	if (MATCH(token,"uid")) {
 		dbmail_mailbox_set_uid(self,TRUE);
 	} else if (check_msg_set(token)) {
-		dbmail_mailbox_get_set(self, token);
+		dbmail_mailbox_get_set(self, token, 0);
 	} else if (MATCH(token,"flags")) {
 		fi->getFlags = 1;
 	} else if (MATCH(token,"internaldate")) {
@@ -826,31 +868,52 @@ START_TEST(test_dbmail_mailbox_get_set)
 	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id());
 	dbmail_mailbox_set_uid(mb,TRUE);
 
-	set = dbmail_mailbox_get_set(mb, "1:*");
+	// basic tests;
+	set = dbmail_mailbox_get_set(mb, "1:*", 0);
+	tree_dump(set);
 	c = g_tree_nnodes(set);
 	fail_unless(c>1,"dbmail_mailbox_get_set failed");
 	g_tree_destroy(set);
 
-	set = dbmail_mailbox_get_set(mb,"*:1");
+	set = dbmail_mailbox_get_set(mb,"*:1",0);
 	d = g_tree_nnodes(set);
 	fail_unless(c==d,"dbmail_mailbox_get_set failed");
 	g_tree_destroy(set);
 
-	set = dbmail_mailbox_get_set(mb,"1,*");
+	set = dbmail_mailbox_get_set(mb,"1,*",0);
 	d = g_tree_nnodes(set);
 	fail_unless(d==2,"mailbox_get_set failed");
 	g_tree_destroy(set);
 
-	set = dbmail_mailbox_get_set(mb,"1,*");
+	set = dbmail_mailbox_get_set(mb,"1,*",0);
 	d = g_tree_nnodes(set);
 	fail_unless(d==2,"mailbox_get_set failed");
 	g_tree_destroy(set);
 	
-	set = dbmail_mailbox_get_set(mb,"1");
+	set = dbmail_mailbox_get_set(mb,"1",0);
 	d = g_tree_nnodes(set);
 	fail_unless(d==1,"mailbox_get_set failed");
 	g_tree_destroy(set);
 
+
+	// UID sets
+	char *s, *t;
+
+	set = dbmail_mailbox_get_set(mb, "1:*", 1);
+	s = tree_as_string(set);
+	c = g_tree_nnodes(set);
+	fail_unless(c>1,"dbmail_mailbox_get_set failed");
+	g_tree_destroy(set);
+
+	set = dbmail_mailbox_get_set(mb, "1:*", 0);
+	t = tree_as_string(set);
+	fail_unless(strncmp(s,t,1024)==0,"mismatch between <1:*> and <UID 1:*>\n%s\n%s", s,t);
+	g_tree_destroy(set);
+	g_free(s);
+	g_free(t);
+
+
+	
 	dbmail_mailbox_free(mb);
 }
 END_TEST

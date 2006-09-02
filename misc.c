@@ -1053,25 +1053,6 @@ GList * g_tree_values(GTree *tree)
  * Both trees are safe to destroy afterwards, assuming g_tree_new_full was used
  * for their construction.
  */
-
-static gboolean tree_print(gpointer key, gpointer value, gpointer data UNUSED)
-{
-	if (! (key && value))
-		return TRUE;
-
-	u64_t *k = (u64_t *)key;
-	u64_t *v = (u64_t *)value;
-	trace(TRACE_DEBUG,"%s,%s: %llu: %llu\n", __FILE__, __func__, *k, *v);
-	return FALSE;
-}
-
-void tree_dump(GTree *t)
-{
-	trace(TRACE_DEBUG,"%s,%s: start",__FILE__,__func__);
-	g_tree_foreach(t,(GTraverseFunc)tree_print,NULL);
-	trace(TRACE_DEBUG,"%s,%s: done",__FILE__,__func__);
-}
-
 static gboolean traverse_tree_merger(gpointer key, gpointer value UNUSED, tree_merger_t **merger)
 {
 	tree_merger_t *t = *(tree_merger_t **)merger;
