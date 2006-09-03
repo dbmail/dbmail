@@ -55,7 +55,7 @@ static gboolean _node_free(GNode *node, gpointer dummy UNUSED)
 	search_key_t *s = (search_key_t *)node->data;
 	if (s->found)
 		g_tree_destroy(s->found);
-//	g_free(s);
+	g_free(s);
 
 	return FALSE;
 }
@@ -607,24 +607,27 @@ static int _handle_sort_args(struct DbmailMailbox *self, char **search_keys, sea
 	
 	else if ( MATCH(key, "utf-8") )  {
 		(*idx)++;
+		append_search(self, value, 0);
 		return 1;
 	}
 	
 	else if ( MATCH(key, "us-ascii") ) {
 		(*idx)++;
+		append_search(self, value, 0);
 		return 1;
 	}
 	
 	else if ( MATCH(key, "iso-8859-1") ) {
 		(*idx)++;
+		append_search(self, value, 0);
 		return 1;
 	}
 
-	else
-		return 1; /* done */
+	else {
+		trace(TRACE_WARNING,"%s,%s: unknown sort key [%s]", __FILE__, __func__, key);
+		return -1; /* done */
+	}
 	
-	if (value->type) 
-		append_search(self, value, 0);
 
 	return 0;
 }
@@ -945,6 +948,8 @@ static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u
 	
 	if (value->type)
 		append_search(self, value, 0);
+	else
+		g_free(value);
 
 	return 0;
 }
@@ -960,7 +965,7 @@ static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u
 int dbmail_mailbox_build_imap_search(struct DbmailMailbox *self, char **search_keys, u64_t *idx, int sorted)
 {
 	int result = 0;
-	search_key_t * value;
+	search_key_t * value, * s;
 	
 	if (! (search_keys && search_keys[*idx]))
 		return 1;
@@ -980,7 +985,11 @@ int dbmail_mailbox_build_imap_search(struct DbmailMailbox *self, char **search_k
 	/* SORT */
 	if (sorted) {
 		value = g_new0(search_key_t,1);
+		value->type = IST_SORT;
+		s = value;
 		while(((result = _handle_sort_args(self, search_keys, value, idx)) == 0) && search_keys[*idx]);
+		if (result < 0)
+			g_free(s);
 	}
 
 	/* SEARCH */
