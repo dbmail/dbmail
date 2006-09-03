@@ -1,5 +1,7 @@
 2006-09-03  Paul J Stevens <paul@nfg.nl>
 
+	* dbmail-message.c:
+	do not truncate dbmail_headervalue.headervalue (closes #338)
 	* dbmail-mailbox.c:
 	plug the memleak in the sort code
 
