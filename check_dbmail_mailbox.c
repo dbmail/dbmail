@@ -870,7 +870,6 @@ START_TEST(test_dbmail_mailbox_get_set)
 
 	// basic tests;
 	set = dbmail_mailbox_get_set(mb, "1:*", 0);
-	tree_dump(set);
 	c = g_tree_nnodes(set);
 	fail_unless(c>1,"dbmail_mailbox_get_set failed");
 	g_tree_destroy(set);
@@ -911,8 +910,6 @@ START_TEST(test_dbmail_mailbox_get_set)
 	g_tree_destroy(set);
 	g_free(s);
 	g_free(t);
-
-
 	
 	dbmail_mailbox_free(mb);
 }

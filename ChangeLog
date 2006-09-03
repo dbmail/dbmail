@@ -1,5 +1,7 @@
 2006-09-03  Paul J Stevens <paul@nfg.nl>
 
+	* check_dbmail_mailbox.c, dbmail-message.c:
+	fix typo
 	* dbmail-message.c:
 	do not truncate dbmail_headervalue.headervalue (closes #338)
 	* dbmail-mailbox.c:
