@@ -225,7 +225,7 @@ int _ic_authenticate(struct ImapSession *self)
 int _ic_select(struct ImapSession *self)
 {
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
-	u64_t key;
+	u64_t key = 0;
 	int result;
 	unsigned idx = 0;
 	char *mailbox;
@@ -246,16 +246,17 @@ int _ic_select(struct ImapSession *self)
 		return result;
 
 	/* show idx of first unseen msg (if present) */
-	key = db_first_unseen(ud->mailbox.uid);
-	if (key == (u64_t) (-1)) {
-		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-		return -1;
+	if (ud->mailbox.exists) {
+		key = db_first_unseen(ud->mailbox.uid);
+		if (key == (u64_t) (-1)) {
+			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
+			return -1;
+		}
+		if (binary_search(ud->mailbox.seq_list, ud->mailbox.exists, key, &idx) != -1)
+			dbmail_imap_session_printf(self,
+				"* OK [UNSEEN %u] first unseen message\r\n",
+				idx + 1);
 	}
-	if (binary_search(ud->mailbox.seq_list, ud->mailbox.exists, key, &idx) != -1)
-		dbmail_imap_session_printf(self,
-			"* OK [UNSEEN %u] first unseen message\r\n",
-			idx + 1);
-
 	/* permission */
 	switch (ud->mailbox.permission) {
 	case IMAPPERM_READ:

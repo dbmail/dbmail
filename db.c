@@ -2726,7 +2726,7 @@ int db_getmailbox_flags(mailbox_t *mb)
 }
 int db_getmailbox_count(mailbox_t *mb)
 {
-	unsigned i, exists, seen, recent;
+	unsigned i, exists = 0, seen = 0, recent = 0;
 	 
 	g_return_val_if_fail(mb->uid,DM_EQUERY);
 
@@ -2752,11 +2752,13 @@ int db_getmailbox_count(mailbox_t *mb)
 		trace(TRACE_ERROR, "%s,%s: query error", __FILE__, __func__);
 		return DM_EQUERY;
 	}
-	
- 	exists = (unsigned)db_get_result_int(0,1);
- 	seen   = (unsigned)db_get_result_int(1,1);
- 	recent = (unsigned)db_get_result_int(2,1);
-  
+
+	if (db_num_rows()) {
+		exists = (unsigned)db_get_result_int(0,1);
+		seen   = (unsigned)db_get_result_int(1,1);
+		recent = (unsigned)db_get_result_int(2,1);
+  	}
+
  	mb->exists = exists;
  	mb->unseen = exists - seen;
  	mb->recent = recent;
@@ -3696,7 +3698,7 @@ int db_expunge(u64_t mailbox_idnr, u64_t user_idnr,
 
 u64_t db_first_unseen(u64_t mailbox_idnr)
 {
-	u64_t id;
+	u64_t id = 0;
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT MIN(message_idnr) FROM %smessages "
@@ -3710,7 +3712,8 @@ u64_t db_first_unseen(u64_t mailbox_idnr)
 		return (u64_t) (-1);
 	}
 
-	id = db_get_result_u64(0, 0);
+	if (db_num_rows())
+		id = db_get_result_u64(0, 0);
 
 	db_free_result();
 	return id;

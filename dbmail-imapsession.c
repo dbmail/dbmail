@@ -1346,11 +1346,8 @@ int dbmail_imap_session_mailbox_get_selectable(struct ImapSession * self, u64_t 
 int dbmail_imap_session_mailbox_show_info(struct ImapSession * self) 
 {
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
-	int result = db_getmailbox(&ud->mailbox);
-	if (result == -1) {
-		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-		return -1;
-	}
+	g_return_val_if_fail( ud != NULL, DM_EGENERAL);
+
 	/* msg counts */
 	dbmail_imap_session_printf(self, "* %u EXISTS\r\n", ud->mailbox.exists);
 	dbmail_imap_session_printf(self, "* %u RECENT\r\n", ud->mailbox.recent);
