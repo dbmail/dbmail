@@ -351,7 +351,8 @@ int IMAPClientHandler(clientinfo_t * ci)
 
 		/* check if mailbox status has changed (notify client) */
 		if (ud->state == IMAPCS_SELECTED) {
-			if (i == IMAP_COMM_NOOP || i == IMAP_COMM_CHECK || i == IMAP_COMM_SELECT || i == IMAP_COMM_EXPUNGE) {
+			//if (i == IMAP_COMM_NOOP || i == IMAP_COMM_CHECK || i == IMAP_COMM_SELECT || i == IMAP_COMM_EXPUNGE) {
+			if (i == IMAP_COMM_NOOP || i == IMAP_COMM_CHECK || i == IMAP_COMM_EXPUNGE) {
 				/* update mailbox info */
 				memset(&newmailbox, 0, sizeof(newmailbox));
 				newmailbox.uid = ud->mailbox.uid;
