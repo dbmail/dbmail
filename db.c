@@ -1,4 +1,4 @@
-/* $Id: db.c 2229 2006-08-21 04:24:15Z aaron $ */
+/* $Id: db.c 2252 2006-09-05 10:52:24Z paul $ */
 /*
   Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
   Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
@@ -22,7 +22,7 @@
 /**
  * \file db.c
  * 
- * $Id: db.c 2229 2006-08-21 04:24:15Z aaron $
+ * $Id: db.c 2252 2006-09-05 10:52:24Z paul $
  *
  * implement database functionality. This used to split out
  * between MySQL and PostgreSQL, but this is now integrated. 
