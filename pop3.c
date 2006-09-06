@@ -47,36 +47,21 @@ int pop3_error(PopSession_t * session, void *stream,
 
 /* allowed pop3 commands */
 const char *commands[] = {
-	"quit",
-	     /**< POP3_QUIT */
-	"user",
-	     /**< POP3_USER */
-	"pass",
-	     /**< POP3_PASS */
-	"stat",
-	     /**< POP3_STAT */
-	"list",
-	     /**< POP3_LIST */
-	"retr",
-	     /**< POP3_RETR */
-	"dele",
-	     /**< POP3_DELE */
-	"noop",
-	     /**< POP3_NOOP */
-	"last",
-	     /**< POP3_LAST */
-	"rset",
-	     /**< POP3_RSET */
-	"uidl",
-	     /**< POP3_UIDL */
-	"apop",
-	     /**< POP3_APOP */
-	"auth",
-	     /**< POP3_AUTH */
-	"top",
-	    /**< POP3_TOP */
-	"capa"
-	    /**< POP3_CAPA */
+	"quit", /**< POP3_QUIT */
+	"user", /**< POP3_USER */
+	"pass", /**< POP3_PASS */
+	"stat", /**< POP3_STAT */
+	"list", /**< POP3_LIST */
+	"retr", /**< POP3_RETR */
+	"dele", /**< POP3_DELE */
+	"noop", /**< POP3_NOOP */
+	"last", /**< POP3_LAST */
+	"rset", /**< POP3_RSET */
+	"uidl", /**< POP3_UIDL */
+	"apop", /**< POP3_APOP */
+	"auth", /**< POP3_AUTH */
+	"top", /**< POP3_TOP */
+	"capa" /**< POP3_CAPA */
 };
 
 const char validchars[] =
@@ -95,27 +80,12 @@ int pop3_handle_connection(clientinfo_t * ci)
 	char *buffer = NULL;	/* connection buffer */
 	char myhostname[64];
 	int cnt;		/* counter */
-	PopSession_t session;	/* current connection session */
 	char unique_id[UID_SIZE];
+	PopSession_t session;	/* current connection session */
 
 	/* setting Session variables */
-	session.error_count = 0;
-	session.was_apop = 0;
-
-	session.username = NULL;
-	session.password = NULL;
-
-	session.apop_stamp = NULL;
-
-	session.state = 0;
-	session.SessionResult = 0;
-
-	/* reset counters */
-	session.totalsize = 0;
-	session.virtual_totalsize = 0;
-	session.totalmessages = 0;
-	session.virtual_totalmessages = 0;
-
+	memset(&session,0,sizeof(session));
+	
 	/* clear the message list */
 	dm_list_init(&session.messagelst);
 
@@ -123,7 +93,6 @@ int pop3_handle_connection(clientinfo_t * ci)
 	gethostname(myhostname, 64);
 	myhostname[63] = '\0';	/* make sure string is terminated */
 	
-	buffer = g_new0(char,INCOMING_BUFFER_SIZE);
 	
 	/* create an unique timestamp + processid for APOP authentication */
 	session.apop_stamp = g_new0(char,APOP_STAMP_SIZE);
@@ -139,20 +108,20 @@ int pop3_handle_connection(clientinfo_t * ci)
 		trace(TRACE_MESSAGE, "%s,%s: TX stream is null!", 
 				__FILE__, __func__);
 		g_free(session.apop_stamp);
-		g_free(buffer);
 		return 0;
 	}
 
 	/* set authorization state */
 	session.state = POP3_AUTHORIZATION_STATE;
 
+	/* setup the read buffer */
+	buffer = g_new0(char,INCOMING_BUFFER_SIZE);
+
+	/* lets start handling commands */
 	while (done > 0) {
 
-		if (db_check_connection()) {
-			trace(TRACE_DEBUG,"%s,%s: database has gone away", __FILE__, __func__);
-			done=-1;
+		if (db_check_connection())
 			break;
-		}
 
 		/* set the timeout counter */
 		alarm(ci->timeout);
@@ -163,15 +132,14 @@ int pop3_handle_connection(clientinfo_t * ci)
 		for (cnt = 0; cnt < INCOMING_BUFFER_SIZE - 1; cnt++) {
 			do {
 				clearerr(ci->rx);
+				
 				fread(&buffer[cnt], 1, 1, ci->rx);
-
-				/* leave, an alarm has occured during fread */
+				
 				if (alarm_occured) {
 					alarm_occured = 0;
 					client_close();
-					g_free(buffer);
-					g_free(session.apop_stamp);
-					return 0;
+					done = -1;
+					break;
 				}
 
 			} while (ferror(ci->rx) && errno == EINTR);
@@ -183,22 +151,25 @@ int pop3_handle_connection(clientinfo_t * ci)
 		}
 
 		if (feof(ci->rx) || ferror(ci->rx))
-			done = -1;	/* check client eof  */
+			done = -1;
 		else {
-			alarm(0);	/* reset function handle timeout */
-			done = pop3(ci, buffer, &session);	/* handle pop3 commands */
+			/* reset function handle timeout */
+			alarm(0);	
+			
+			/* handle pop3 commands */
+			done = pop3(ci, buffer, &session);	
 		}
 		fflush(ci->tx);
 	}
+	g_free(buffer);
+	buffer = NULL;
 
-	/* we've reached the state */
+	/* We're done with this client. The rest is cleanup */
+	
 	session.state = POP3_UPDATE_STATE;
 
 	/* memory cleanup */
-	g_free(buffer);
 	g_free(session.apop_stamp);
-	
-	buffer = NULL;
 	session.apop_stamp = NULL;
 
 	if (session.username != NULL && (session.was_apop || session.password != NULL)) {
@@ -241,14 +212,14 @@ int pop3_handle_connection(clientinfo_t * ci)
 	/* remove session info like messagelist etc. */
 	db_session_cleanup(&session);
 
+	/* username cleanup */
 	if (session.username != NULL) {
-		/* username cleanup */
 		g_free(session.username);
 		session.username = NULL;
 	}
 
+	/* password cleanup */
 	if (session.password != NULL) {
-		/* password cleanup */
 		g_free(session.password);
 		session.password = NULL;
 	}
