@@ -17,13 +17,26 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: sievecmd.c 2223 2006-08-13 20:30:56Z aaron $
+/* $Id: sievecmd.c 2253 2006-09-07 06:01:24Z aaron $
  * This is dbmail-sievecmd, which provides
  * a command line interface to the sievescripts */
 
 #include "dbmail.h"
-
+#define THIS_MODULE "sievecmd"
 #define PNAME "dbmail/sievecmd"
+
+#define qprintf(fmt, args...) ((quiet||reallyquiet) ? 0 : printf(fmt, ##args) )
+#define qerrorf(fmt, args...) (reallyquiet ? 0 : fprintf(stderr, fmt, ##args) )
+
+static int do_showhelp(void);
+static int do_list(u64_t user_idnr);
+static int do_activate(u64_t user_idnr, char *name);
+static int do_deactivate(u64_t user_idnr, char *name);
+static int do_remove(u64_t user_idnr, char *name);
+static int do_insert(u64_t user_idnr, char *name, char *source);
+static int do_cat(u64_t user_idnr, char *name);
+static int read_script_file(FILE * f, char **m_buf);
+
 char *configFile = DEFAULT_CONFIG_FILE;
 
 int verbose;
@@ -135,7 +148,7 @@ int main(int argc, char *argv[])
 		case 'V':
 			/* Show the version and return non-zero. */
 			printf("\n*** DBMAIL: dbmail-sievecmd version "
-			       "$Revision: 2223 $ %s\n\n", COPYRIGHT);
+			       "$Revision: 2253 $ %s\n\n", COPYRIGHT);
 			return 0;
 			break;
 

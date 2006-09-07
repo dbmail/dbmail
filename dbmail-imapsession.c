@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: dbmail-imapsession.c 2252 2006-09-05 10:52:24Z paul $
+/* $Id: dbmail-imapsession.c 2255 2006-09-07 12:47:05Z paul $
  * 
  * dm_imaputil.c
  *
@@ -966,10 +966,7 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data)
 		dbmail_imap_session_printf(self,"HEADER.FIELDS%s %s] ", condition ? ".NOT" : "", tmp);
 		g_free(tmp);
 		
-		if (db_get_physmessage_id(self->msg_idnr, &physid) == DM_EQUERY)
-			return DM_EGENERAL;
-
-		tmp = imap_message_fetch_headers(physid, tlist, condition);
+		tmp = imap_message_fetch_headers(self->msg_idnr, tlist, condition);
 	
 		tmpdumpsize=0;
 		

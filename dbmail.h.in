@@ -3,11 +3,10 @@
 
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 
- This program is free software; you can redistribute it and/or 
- modify it under the terms of the GNU General Public License 
- as published by the Free Software Foundation; either 
- version 2 of the License, or (at your option) any later 
- version.
+ This program is free software; you can redistribute it and/or
+ modify it under the terms of the GNU General Public License as
+ published by the Free Software Foundation; either version 2 of
+ the License, or (at your option) any later version.
 
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -89,6 +88,7 @@
 #include "memblock.h"
 #include "server.h"
 #include "serverchild.h"
+#include "serverparent.h"
 #include "pool.h"
 #include "pop3.h"
 #include "quota.h"
@@ -106,7 +106,6 @@
 #include <sieve2_error.h>
 #endif
 
-#include "sievecmd.h"
 #include "timsieve.h"
 
 #ifdef HAVE_CRYPT_H
@@ -136,11 +135,33 @@
 
 #define CONFIG_ERROR_LEVEL TRACE_WARNING
 
-#define COPYRIGHT "(c) 1999-2004 IC&S, 2004-2006 NFG, The Netherlands"
+#define COPYRIGHT \
+"Copyright (C) 1999-2004 IC & S, dbmail@ic-s.nl\n" \
+"Copyright (C) 2001-2006 Aaron Stone, aaron@serendipity.cx\n" \
+"Copyright (C) 2004-2006 NFG Net Facilities Group BV, support@nfg.nl\n" \
+"\n" \
+"Please see the AUTHORS and THANKS files for additional contributors.\n" \
+"\n" \
+"This program is free software; you can redistribute it and/or \n" \
+"modify it under the terms of the GNU General Public License as\n" \
+"published by the Free Software Foundation; either version 2 of\n" \
+"the License, or (at your option) any later version.\n" \
+"\n" \
+"This program is distributed in the hope that it will be useful,\n" \
+"but WITHOUT ANY WARRANTY; without even the implied warranty of\n" \
+"MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n" \
+"GNU General Public License for more details.\n" \
+"\n" \
+"You should have received a copy of the GNU General Public License\n" \
+"along with this program; if not, write to the Free Software\n" \
+"Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.\n" \
+""
 
 /** default directory and extension for pidfiles */
 #define DEFAULT_PID_DIR "@DM_STATEDIR@"
 #define DEFAULT_PID_EXT ".pid"
+#define DEFAULT_STATE_DIR "@DM_STATEDIR@"
+#define DEFAULT_STATE_EXT ".state"
 
 /** default configuration file */
 #define DEFAULT_CONFIG_FILE "@DM_CONFDIR@/dbmail.conf"
@@ -225,5 +246,6 @@ void pidfile_create(const char *pidFile, pid_t pid);
 void config_get_logfiles(serverConfig_t *config);
 
 char * config_get_pidfile(serverConfig_t *config, const char *name);
+char * config_get_statefile(serverConfig_t *config, const char *name);
 
 #endif

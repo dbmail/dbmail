@@ -17,7 +17,7 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  *
- *  $Id: check_dbmail_imapd.c 2248 2006-09-02 06:36:14Z paul $ 
+ *  $Id: check_dbmail_imapd.c 2255 2006-09-07 12:47:05Z paul $ 
  *
  *
  *  
@@ -443,6 +443,9 @@ START_TEST(test_internet_address_parse_string)
 		{ "Joe's Friends: mary@joe.com, joe@joe.com, jane@joe.com;",
 			"((NIL NIL \"Joe's Friends\" NIL)(NIL NIL \"mary\" \"joe.com\")"
 			"(NIL NIL \"joe\" \"joe.com\")(NIL NIL \"jane\" \"joe.com\"))" },
+		// These have the wrong separator; ms lookout style.
+		{ "one@my.dom;two@my.dom", "((NIL NIL \"one\" \"my.dom\"))" },
+		{ "one@my.dom; two@my.dom", "((NIL NIL \"one\" \"my.dom\"))" },
 		{ NULL, NULL }
 	};
 
@@ -647,19 +650,31 @@ static u64_t get_physid(void)
 	db_free_result();
 	return id;
 }
+static u64_t get_msgsid(void)
+{
+	u64_t id = 0;
+	GString *q = g_string_new("");
+	g_string_printf(q,"select message_idnr from %smessages order by message_idnr desc limit 1", DBPFX);
+	db_query(q->str);
+	g_string_free(q,TRUE);
+	id = db_get_result_u64(0,0);
+	db_free_result();
+	return id;
+}
+
 
 START_TEST(test_imap_message_fetch_headers)
 {
 	char *res;
-	u64_t physid=get_physid();
+	u64_t msgid=get_msgsid();
 	GString *headers = g_string_new("From To Cc Subject Date Message-ID Priority X-Priority References Newsgroups In-Reply-To Content-Type");
 	GList *h = g_string_split(headers," ");
 	
-	res = imap_message_fetch_headers(physid,h,0);
+	res = imap_message_fetch_headers(msgid,h,0);
 	fail_unless(strlen(res) > 0,"imap_message_fetch_headers failed");
 	g_free(res);
 
-	res = imap_message_fetch_headers(physid,h,1);
+	res = imap_message_fetch_headers(msgid,h,1);
 	fail_unless(strlen(res) > 0,"imap_message_fetch_headers failed");
 	g_free(res);
 

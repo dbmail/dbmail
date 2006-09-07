@@ -18,7 +18,7 @@
   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: pop3.c 2199 2006-07-18 11:07:53Z paul $
+/* $Id: pop3.c 2255 2006-09-07 12:47:05Z paul $
  *
  * implementation for pop3 commands according to RFC 1081 */
 
