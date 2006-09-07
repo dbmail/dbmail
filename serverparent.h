@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2003 Aaron Stone
+ Copyright (C) 2006 Aaron Stone aaron@serendipity.cx
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -17,24 +17,20 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: sievecmd.h 2137 2006-05-26 19:49:52Z aaron $ */
+/* $Id: serverparent.h 2199 2006-07-18 11:07:53Z paul $
+ * serverparent.h
+ *
+ * Function prototypes for the top parent code common to all daemons.
+ */
 
-#ifndef _SIEVECMD_H
-#define _SIEVECMD_H
+#ifndef SERVERPARENT_H
+#define SERVERPARENT_H
 
 #include "dbmail.h"
 
-#define qprintf(fmt, args...) ((quiet||reallyquiet) ? 0 : printf(fmt, ##args) )
-#define qerrorf(fmt, args...) (reallyquiet ? 0 : fprintf(stderr, fmt, ##args) )
-
-int do_showhelp(void);
-int do_list(u64_t user_idnr);
-int do_activate(u64_t user_idnr, char *name);
-int do_deactivate(u64_t user_idnr, char *name);
-int do_remove(u64_t user_idnr, char *name);
-int do_insert(u64_t user_idnr, char *name, char *source);
-int do_cat(u64_t user_idnr, char *name);
-
-int read_script_file(FILE * f, char **m_buf);
+void serverparent_showhelp(const char *service, const char *greeting);
+int serverparent_getopt(serverConfig_t *config, int argc, char *argv[]);
+int serverparent_mainloop(serverConfig_t *config, const char *service);
+void serverparent_config(serverConfig_t *config, const char *service);
 
 #endif
