@@ -57,4 +57,7 @@ void manage_spare_children(void);
 void manage_stop_children(void);
 void scoreboard_setup(void);
 void scoreboard_conf_check(void);
+void scoreboard_state(void);
+void statefile_create(char *scoreFile);
+
 #endif

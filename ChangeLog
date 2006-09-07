@@ -1,3 +1,4 @@
+<<<<<<< .mine
 2006-09-07  Paul J Stevens <paul@nfg.nl>
 
 	* pop3.c:
@@ -5,6 +6,29 @@
 	* check_dbmail_imapd.c, dbmail-imapsession.c, dm_imaputil.c:
 	speedup fetch by changing a join in _fetch_headers
 
+=======
+2006-09-06  Aaron Stone  <aaron@serendipity.cx>
+
+	* sievecmd.h, sievecmd.c:
+	Removed superfluous header file, made functions static.
+	* check_dbmail_imapd.c:
+	More checks for proper address parsing.
+	* serverparent.h, serverparent.c:
+	All the duplicated code from the main daemons.
+	* lmtpd.c, pop3d.c, imapd.c, timsieved.c:
+	Lost some weight, now using common serverparent functions.
+	* pidfile.c:
+	Makes a local copy of the name of the file to unlink.
+	* pool.h, pool.c:
+	Generates a state file with a human readable scoreboard dump.
+	* config.c:
+	Analogues of pidfile functions for the statefile.
+	* server.c:
+	Dump the scoreboard on receipt of SIGUSR1.
+	* dbmail.h.in, dbmailtypes.h, acinclude.m4, Makefile.am:
+	Tie up some loose datatypes for the common daemon code.
+
+>>>>>>> .r2254
 2006-09-05  Paul J Stevens <paul@nfg.nl>
 
 	* db.c, dbmail-imapsession.c, imap4.c, imapcommands.c:

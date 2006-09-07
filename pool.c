@@ -1,6 +1,7 @@
 /*
  * 
- * Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
+ * Copyright (C) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
+ * Copyright (C) 2006 Aaron Stone aaron@serendipity.cx
  *
  *
  * pool.c Management of process pool
@@ -14,16 +15,17 @@
  */
 
 #include "dbmail.h"
+#define THIS_MODULE "server"
 
 #define P_SIZE 100000
 
 static volatile Scoreboard_t *scoreboard;
 static int shmid;
 static int sb_lockfd;
+static FILE *scoreFD;
 
 extern volatile sig_atomic_t GeneralStopRequested;
 extern ChildInfo_t childinfo;
-
 
 static child_state_t state_new(void); 
 static int set_lock(int type);
@@ -63,6 +65,7 @@ int set_lock(int type)
 			case EACCES:
 			case EAGAIN:
 			case EDEADLK:
+				TRACE(TRACE_ERROR, "Error setting lock. Trying again.");
 				usleep(10);
 				set_lock(type);
 				break;
@@ -177,7 +180,6 @@ static unsigned scoreboard_cleanup(void)
 	return count;
 }
 
-
 void scoreboard_release(pid_t pid)
 {
 	int key;
@@ -209,18 +211,6 @@ void scoreboard_delete(void)
 	g_free(statefile);
 	
 	return;
-}
-
-static void scoreboard_state(void)
-{
-	unsigned children = count_children();
-	unsigned spares = count_spare_children();
-	/* scoreboard */
-	trace(TRACE_MESSAGE, "%s,%s: children [%d/%d], spares [%d (%d - %d)]",
-	      __FILE__,__func__,
-	      children, scoreboard->conf->maxChildren, spares,
-	      scoreboard->conf->minSpareChildren,
-	      scoreboard->conf->maxSpareChildren);
 }
 
 
@@ -523,5 +513,88 @@ void manage_spare_children(void)
 		scoreboard_state();
 
 	children = count_children();
+}
+
+void scoreboard_state(void)
+{
+	char *state;
+	int i;
+
+	unsigned children = count_children();
+	unsigned spares = count_spare_children();
+
+	state = g_strdup_printf("Scoreboard state: children [%d/%d], spares [%d (%d - %d)]",
+	      children,
+	      scoreboard->conf->maxChildren,
+	      spares,
+	      scoreboard->conf->minSpareChildren,
+	      scoreboard->conf->maxSpareChildren);
+
+	/* Log it. */
+	TRACE(TRACE_MESSAGE, "%s", state);
+
+	/* Top it. */
+	rewind(scoreFD);
+	if (fprintf(scoreFD, "%s\n", state) <= 0) {
+		TRACE(TRACE_ERROR, "Couldn't write scoreboard state to top file [%s].",
+			strerror(errno));
+	}
+	for (i = 0; i < scoreboard->conf->maxChildren; i++) {
+		int chpid;
+		int status;
+		
+		scoreboard_rdlck();
+		chpid = scoreboard->child[i].pid;
+		status = scoreboard->child[i].status;
+		scoreboard_unlck();
+
+		if (fprintf(scoreFD, "Child %d Pid %d Status %d\n", i, chpid, status) <= 0) {
+			TRACE(TRACE_ERROR, "Couldn't write scoreboard state to top file [%s].",
+				strerror(errno));
+			break;
+		}
+	}
+	fflush(scoreFD);
+
+	g_free(state);
+}
+
+static FILE *statefile_to_close;
+static char *statefile_to_remove;
+
+static void statefile_remove(void)
+{
+	int res;
+
+	if (statefile_to_close) {
+		res = fclose(statefile_to_close);
+		if (res) trace(TRACE_ERROR, "Error closing statefile: [%s].",
+			strerror(errno));
+		statefile_to_close = NULL;
+	}
+
+	if (statefile_to_remove) {
+		res = unlink(statefile_to_remove);
+		if (res) trace(TRACE_ERROR, "Error unlinking statefile [%s]: [%s].",
+			statefile_to_remove, strerror(errno));
+		g_free(statefile_to_remove);
+		statefile_to_remove = NULL;
+	}
+
+}
+
+void statefile_create(char *scoreFile)
+{
+	TRACE(TRACE_DEBUG, "Creating scoreboard at [%s].", scoreFile);
+	// FIXME: Check ownership and permissions. Must be root and 0644 or better.
+	scoreFD = fopen(scoreFile, "w");
+	if (scoreFD == NULL) {
+		TRACE(TRACE_ERROR, "Could not create scoreboard [%s].", scoreFile );
+	}
+
+	atexit(statefile_remove);
+
+	statefile_to_close = scoreFD;
+	statefile_to_remove = g_strdup(scoreFile);
 }
 

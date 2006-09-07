@@ -17,6 +17,7 @@ DM_LOGDIR:     $DM_LOGDIR
 DM_CONFDIR:    $DM_CONFDIR
 DM_STATEDIR:   $DM_STATEDIR
 USE_DM_GETOPT: $USE_DM_GETOPT
+CFLAGS:        $CFLAGS
 GLIB:          $ac_glib_libs
 GMIME:         $ac_gmime_libs
 MYSQL:         $MYSQLLIB

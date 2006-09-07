@@ -50,6 +50,7 @@ COMMON = dbmail-user.c \
 	
 SERVER = server.c \
 	serverchild.c \
+	serverparent.c \
 	pool.c \
 	dm_cidr.c
 	

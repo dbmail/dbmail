@@ -1,5 +1,5 @@
 /*
-  $Id: server.c 2199 2006-07-18 11:07:53Z paul $
+  $Id: server.c 2253 2006-09-07 06:01:24Z aaron $
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
 
@@ -26,12 +26,14 @@
  */
 
 #include "dbmail.h"
+#define THIS_MODULE "server"
 
 
 volatile sig_atomic_t GeneralStopRequested = 0;
 volatile sig_atomic_t Restart = 0;
 volatile sig_atomic_t mainStop = 0;
 volatile sig_atomic_t mainRestart = 0;
+volatile sig_atomic_t mainStatus = 0;
 volatile sig_atomic_t mainSig = 0;
 volatile sig_atomic_t get_sigchld = 0;
 
@@ -63,22 +65,13 @@ int SetParentSigHandler()
 	sigaction(SIGSEGV,	&act, 0); 
 	sigaction(SIGTERM,	&act, 0);
 	sigaction(SIGHUP, 	&act, 0);
+	sigaction(SIGUSR1,	&act, 0);
 
 	return 0;
 }
 
 int server_setup(serverConfig_t *conf)
 {
-	if (db_connect() != 0) 
-		return -1;
-	
-	if (db_check_version() != 0) {
-		db_disconnect();
-		return -1;
-	}
-	
-	db_disconnect();
-
 	ParentPID = getpid();
 	Restart = 0;
 	GeneralStopRequested = 0;
@@ -122,18 +115,27 @@ int StartServer(serverConfig_t * conf)
  	scoreboard_new(conf);
 
 	if (db_connect() != DM_SUCCESS) 
-		trace(TRACE_FATAL, "%s,%s: unable to connect to sql storage", __FILE__, __func__);
+		TRACE(TRACE_FATAL, "Unable to connect to database.");
+	
+	if (db_check_version() != 0) {
+		db_disconnect();
+		TRACE(TRACE_FATAL, "Unsupported database version.");
+	}
 	
  	manage_start_children();
  	manage_spare_children();
  	
-  
- 	trace(TRACE_DEBUG, "%s,%s: starting main service loop", __FILE__, __func__);
+ 	TRACE(TRACE_DEBUG, "starting main service loop");
  	while (!GeneralStopRequested) {
 		if(get_sigchld){
 			get_sigchld = 0;
 			while((chpid = waitpid(-1,(int*)NULL,WNOHANG)) > 0) 
 				scoreboard_release(chpid);
+		}
+
+		if (mainStatus) {
+			mainStatus = 0;
+			scoreboard_state();
 		}
 
 		if (db_check_connection() != 0) {
@@ -191,7 +193,7 @@ pid_t server_daemonize(serverConfig_t *conf)
 		trace(TRACE_FATAL,"%s,%s: freopen failed on stdin [%s]", 
 				__FILE__, __func__, strerror(serr));
 	}
-	
+
 	trace(TRACE_DEBUG,"%s,%s: sid: [%d]", __FILE__, 
 			__func__, getsid(0));
 
@@ -202,6 +204,7 @@ int server_run(serverConfig_t *conf)
 {
 	mainStop = 0;
 	mainRestart = 0;
+	mainStatus = 0;
 	mainSig = 0;
 	int serrno, status, result = 0;
 	pid_t pid = -1;
@@ -212,9 +215,7 @@ int server_run(serverConfig_t *conf)
 	case -1:
 		serrno = errno;
 		close(conf->listenSocket);
-		trace(TRACE_FATAL, "%s,%s: fork failed [%s]",
-				__FILE__, __func__,
-				strerror(serrno));
+		TRACE(TRACE_FATAL, "fork failed [%s]", strerror(serrno));
 		errno = serrno;
 		break;
 
@@ -229,10 +230,14 @@ int server_run(serverConfig_t *conf)
 	default:
 		/* parent process, wait for child to exit */
 		while (waitpid(pid, &status, WNOHANG | WUNTRACED) == 0) {
-			if (mainStop || mainRestart){
-				trace(TRACE_DEBUG, "MainSigHandler(): got signal [%d]", mainSig);
+			if (mainStop || mainRestart || mainStatus){
+				TRACE(TRACE_DEBUG, "MainSigHandler(): got signal [%d]", mainSig);
 				if(mainStop) kill(pid, SIGTERM);
 				if(mainRestart) kill(pid, SIGHUP);
+				if(mainStatus) {
+					mainStatus = 0;
+					kill(pid, SIGUSR1);
+				}
 			}
 			sleep(2);
 		}
@@ -240,12 +245,11 @@ int server_run(serverConfig_t *conf)
 		if (WIFEXITED(status)) {
 			/* child process terminated neatly */
 			result = WEXITSTATUS(status);
-			trace(TRACE_DEBUG, "%s,%s: server has exited, exit status [%d]",
-			      __FILE__, __func__, result);
+			TRACE(TRACE_DEBUG, "server has exited, exit status [%d]",
+			      result);
 		} else {
 			/* child stopped or signaled so make sure it is dead */
-			trace(TRACE_DEBUG, "%s,%s: server has not exited normally. Killing..",
-			      __FILE__, __func__);
+			TRACE(TRACE_DEBUG, "server has not exited normally. Killing...");
 
 			kill(pid, SIGKILL);
 			result = 0;
@@ -297,6 +301,10 @@ void ParentSigHandler(int sig, siginfo_t * info UNUSED, void *data UNUSED)
 		Restart = 1;
 		GeneralStopRequested = 1;
 		break;
+
+	case SIGUSR1:
+		mainStatus = 1;
+		break;
 		
 	default:
 		GeneralStopRequested = 1;
@@ -311,9 +319,9 @@ static int dm_socket(int domain)
 	int sock, err;
 	if ((sock = socket(domain, SOCK_STREAM, 0)) == -1) {
 		err = errno;
-		trace(TRACE_FATAL, "%s,%s: %s", __FILE__, __func__, strerror(err));
+		TRACE(TRACE_FATAL, "%s", strerror(err));
 	}
-	trace(TRACE_DEBUG, "%s,%s: done", __FILE__, __func__);
+	TRACE(TRACE_DEBUG, "done");
 	return sock;
 }
 
@@ -323,17 +331,17 @@ static int dm_bind_and_listen(int sock, struct sockaddr *saddr, socklen_t len, i
 	/* bind the address */
 	if ((bind(sock, saddr, len)) == -1) {
 		err = errno;
-		trace(TRACE_DEBUG, "%s,%s: failed", __FILE__, __func__);
+		TRACE(TRACE_DEBUG, "failed");
 		return err;
 	}
 
 	if ((listen(sock, backlog)) == -1) {
 		err = errno;
-		trace(TRACE_DEBUG, "%s,%s: failed", __FILE__, __func__);
+		TRACE(TRACE_DEBUG, "failed");
 		return err;
 	}
 	
-	trace(TRACE_DEBUG, "%s,%s: done", __FILE__, __func__);
+	TRACE(TRACE_DEBUG, "done");
 	return 0;
 	
 }

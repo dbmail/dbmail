@@ -1,5 +1,5 @@
 /*
- $Id: dbmailtypes.h 2248 2006-09-02 06:36:14Z paul $
+ $Id: dbmailtypes.h 2253 2006-09-07 06:01:24Z aaron $
 
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
@@ -252,6 +252,10 @@ enum BODY_FETCH_ITEM_TYPES {
 
 
 typedef struct {
+	int no_daemonize;
+	int log_verbose;
+	char *pidFile;
+	char *stateFile;
 	int listenSocket;
 	int startChildren;
 	int minSpareChildren;
@@ -269,6 +273,7 @@ typedef struct {
 	field_t socket;
 	field_t log, error_log;
 	field_t pid_dir;
+	field_t state_dir;
 	int (*ClientHandler) (clientinfo_t *);
 } serverConfig_t;
 

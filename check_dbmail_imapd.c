@@ -17,7 +17,7 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  *
- *  $Id: check_dbmail_imapd.c 2248 2006-09-02 06:36:14Z paul $ 
+ *  $Id: check_dbmail_imapd.c 2253 2006-09-07 06:01:24Z aaron $ 
  *
  *
  *  
@@ -443,6 +443,9 @@ START_TEST(test_internet_address_parse_string)
 		{ "Joe's Friends: mary@joe.com, joe@joe.com, jane@joe.com;",
 			"((NIL NIL \"Joe's Friends\" NIL)(NIL NIL \"mary\" \"joe.com\")"
 			"(NIL NIL \"joe\" \"joe.com\")(NIL NIL \"jane\" \"joe.com\"))" },
+		// These have the wrong separator; ms lookout style.
+		{ "one@my.dom;two@my.dom", "((NIL NIL \"one\" \"my.dom\"))" },
+		{ "one@my.dom; two@my.dom", "((NIL NIL \"one\" \"my.dom\"))" },
 		{ NULL, NULL }
 	};
 
