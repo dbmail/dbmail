@@ -22,8 +22,21 @@
  * a command line interface to the sievescripts */
 
 #include "dbmail.h"
-
+#define THIS_MODULE "sievecmd"
 #define PNAME "dbmail/sievecmd"
+
+#define qprintf(fmt, args...) ((quiet||reallyquiet) ? 0 : printf(fmt, ##args) )
+#define qerrorf(fmt, args...) (reallyquiet ? 0 : fprintf(stderr, fmt, ##args) )
+
+static int do_showhelp(void);
+static int do_list(u64_t user_idnr);
+static int do_activate(u64_t user_idnr, char *name);
+static int do_deactivate(u64_t user_idnr, char *name);
+static int do_remove(u64_t user_idnr, char *name);
+static int do_insert(u64_t user_idnr, char *name, char *source);
+static int do_cat(u64_t user_idnr, char *name);
+static int read_script_file(FILE * f, char **m_buf);
+
 char *configFile = DEFAULT_CONFIG_FILE;
 
 int verbose;

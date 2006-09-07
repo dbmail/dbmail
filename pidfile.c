@@ -29,8 +29,8 @@
 #include "dbmail.h"
 
 /* These are used by pidfile_remove. */
-static FILE *pidfile_to_close = NULL;
-static const char *pidfile_to_remove = NULL;
+static FILE *pidfile_to_close;
+static char *pidfile_to_remove;
 
 /* Check if a process exists. */
 static int process_exists(pid_t pid)
@@ -69,17 +69,29 @@ static pid_t pidfile_pid(const char *pidFile)
 
  noproc:
 	fclose(f);
-	remove(pidFile);
+	unlink(pidFile);
 	return 0;
 }
 
-void pidfile_remove(void)
+static void pidfile_remove(void)
 {
-	if (pidfile_to_close)
-		fclose(pidfile_to_close);
+	int res;
 
-	if (pidfile_to_remove)
-		remove(pidfile_to_remove);
+	if (pidfile_to_close) {
+		res = fclose(pidfile_to_close);
+		if (res) trace(TRACE_ERROR, "Error closing pidfile: [%s].",
+			strerror(errno));
+		pidfile_to_close = NULL;
+	}
+
+	if (pidfile_to_remove) {
+		res = unlink(pidfile_to_remove);
+		if (res) trace(TRACE_ERROR, "Error unlinking pidfile [%s]: [%s].",
+			pidfile_to_remove, strerror(errno));
+		g_free(pidfile_to_remove);
+		pidfile_to_remove = NULL;
+	}
+
 }
 
 /* Create a pidfile and leave it open. */
@@ -111,11 +123,10 @@ void pidfile_create(const char *pidFile, pid_t pid)
 
 	/* Leave pid file open & locked for the duration,
 	 * but close and remove it upon termination.  */
+	atexit(pidfile_remove);
 
 	pidfile_to_close = f;
-	pidfile_to_remove = pidFile;
-
-	atexit(pidfile_remove);
+	pidfile_to_remove = g_strdup(pidFile);
 
 }
 

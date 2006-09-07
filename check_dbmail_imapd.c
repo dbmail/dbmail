@@ -443,6 +443,9 @@ START_TEST(test_internet_address_parse_string)
 		{ "Joe's Friends: mary@joe.com, joe@joe.com, jane@joe.com;",
 			"((NIL NIL \"Joe's Friends\" NIL)(NIL NIL \"mary\" \"joe.com\")"
 			"(NIL NIL \"joe\" \"joe.com\")(NIL NIL \"jane\" \"joe.com\"))" },
+		// These have the wrong separator; ms lookout style.
+		{ "one@my.dom;two@my.dom", "((NIL NIL \"one\" \"my.dom\"))" },
+		{ "one@my.dom; two@my.dom", "((NIL NIL \"one\" \"my.dom\"))" },
 		{ NULL, NULL }
 	};
 

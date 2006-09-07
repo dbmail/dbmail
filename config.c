@@ -284,6 +284,13 @@ void config_get_logfiles(serverConfig_t *config)
 		g_strlcpy(config->pid_dir, val, FIELDSIZE);
 	assert(config->pid_dir);
 
+	/* state directory */
+	config_get_value("state_directory", "DBMAIL", val);
+	if (! strlen(val))
+		g_strlcpy(config->state_dir, DEFAULT_STATE_DIR, FIELDSIZE);
+	else
+		g_strlcpy(config->state_dir, val, FIELDSIZE);
+	assert(config->state_dir);
 }
 
 char * config_get_pidfile(serverConfig_t *config, const char *name)
@@ -293,6 +300,19 @@ char * config_get_pidfile(serverConfig_t *config, const char *name)
 	res = g_build_filename(config->pid_dir, name, NULL);
 	s = g_string_new("");
 	g_string_printf(s, "%s%s", res, DEFAULT_PID_EXT);
+	g_free(res);
+	res = s->str;
+	g_string_free(s,FALSE);
+	return res;
+}
+
+char * config_get_statefile(serverConfig_t *config, const char *name)
+{
+	char *res;
+	GString *s;
+	res = g_build_filename(config->state_dir, name, NULL);
+	s = g_string_new("");
+	g_string_printf(s, "%s%s", res, DEFAULT_STATE_EXT);
 	g_free(res);
 	res = s->str;
 	g_string_free(s,FALSE);

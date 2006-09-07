@@ -252,6 +252,10 @@ enum BODY_FETCH_ITEM_TYPES {
 
 
 typedef struct {
+	int no_daemonize;
+	int log_verbose;
+	char *pidFile;
+	char *stateFile;
 	int listenSocket;
 	int startChildren;
 	int minSpareChildren;
@@ -269,6 +273,7 @@ typedef struct {
 	field_t socket;
 	field_t log, error_log;
 	field_t pid_dir;
+	field_t state_dir;
 	int (*ClientHandler) (clientinfo_t *);
 } serverConfig_t;
 
