@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: dbmail-imapsession.c 2252 2006-09-05 10:52:24Z paul $
+/* $Id: dbmail-imapsession.c 2255 2006-09-07 12:47:05Z paul $
  * 
  * dm_imaputil.c
  *
