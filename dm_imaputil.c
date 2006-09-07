@@ -830,19 +830,20 @@ static GTree * _fetch_headers(const GList *ids, const GList *headers, gboolean n
 {
 	unsigned i=0, rows=0;
 	GString *r, *h, *q = g_string_new("");
-	gchar *pid, *fld, *val, *old, *new;
+	gchar *mid, *fld, *val, *old, *new;
 	GTree *t;
 
 	r = g_list_join((GList *)ids,",");
 	h = g_list_join((GList *)headers,"','");
 	h = g_string_ascii_down(h);
 	
-	g_string_printf(q,"SELECT physmessage_id,headername,headervalue "
+	g_string_printf(q,"SELECT message_idnr,headername,headervalue "
 			"FROM %sheadervalue v "
+			"JOIN %smessages m ON v.physmessage_id=m.physmessage_id "
 			"JOIN %sheadername n ON v.headername_id=n.id "
-			"WHERE physmessage_id IN (%s) "
+			"WHERE message_idnr IN (%s) "
 			"AND lower(headername) %s IN ('%s')",
-			DBPFX, DBPFX, r->str, not?"NOT":"", h->str);
+			DBPFX, DBPFX, DBPFX, r->str, not?"NOT":"", h->str);
 	
 	g_string_free(r,TRUE);
 	g_string_free(h,TRUE);
@@ -857,14 +858,14 @@ static GTree * _fetch_headers(const GList *ids, const GList *headers, gboolean n
 	rows = db_num_rows();
 	for(i=0;i<rows;i++) {
 		
-		pid = (char *)db_get_result(i,0);
+		mid = (char *)db_get_result(i,0);
 		fld = (char *)db_get_result(i,1);
 		val = (char *)db_get_result(i,2);
 		
-		old = g_tree_lookup(t, (gconstpointer)pid);
+		old = g_tree_lookup(t, (gconstpointer)mid);
 		new = g_strdup_printf("%s%s: %s\n", old?old:"", fld, val);
 		
-		g_tree_insert(t,g_strdup(pid),new);
+		g_tree_insert(t,g_strdup(mid),new);
 	}
 	db_free_result();
 	g_string_free(q,TRUE);
@@ -873,10 +874,10 @@ static GTree * _fetch_headers(const GList *ids, const GList *headers, gboolean n
 }
 
 
-char * imap_message_fetch_headers(u64_t physid, const GList *headers, gboolean not)
+char * imap_message_fetch_headers(u64_t msg_id, const GList *headers, gboolean not)
 {
 	gchar *tmp, *res = NULL;
-	gchar *id = g_strdup_printf("%llu",physid);
+	gchar *id = g_strdup_printf("%llu",msg_id);
 	GList *ids = g_list_append_printf(NULL, "%s", id);
 	GTree *tree = _fetch_headers(ids,headers,not);
 	

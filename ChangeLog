@@ -1,3 +1,10 @@
+2006-09-07  Paul J Stevens <paul@nfg.nl>
+
+	* pop3.c:
+	code style cleanups
+	* check_dbmail_imapd.c, dbmail-imapsession.c, dm_imaputil.c:
+	speedup fetch by changing a join in _fetch_headers
+
 2006-09-06  Aaron Stone  <aaron@serendipity.cx>
 
 	* sievecmd.h, sievecmd.c:
