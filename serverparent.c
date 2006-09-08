@@ -29,8 +29,6 @@
 #include "dbmail.h"
 #define THIS_MODULE "serverparent"
 
-static char *configFile = DEFAULT_CONFIG_FILE;
-
 /* set up database login data */
 extern db_param_t _db_params;
 
@@ -68,6 +66,11 @@ void serverparent_showhelp(const char *name, const char *greeting) {
 int serverparent_getopt(serverConfig_t *config, const char *service, int argc, char *argv[])
 {
 	int opt;
+	char *configFile = DEFAULT_CONFIG_FILE;
+
+	ClearConfig(config);
+
+	TRACE(TRACE_DEBUG, "checking command line options");
 
 	/* get command-line options */
 	opterr = 0;		/* suppress error message from getopt() */
@@ -102,7 +105,7 @@ int serverparent_getopt(serverConfig_t *config, const char *service, int argc, c
 			break;
 		case 'f':
 			if (optarg && strlen(optarg) > 0)
-				configFile = optarg;
+				configFile = g_strdup(optarg);
 			else {
 				fprintf(stderr, "%s: -f requires a filename argument\n\n", argv[0]);
 				return 1;
@@ -117,10 +120,17 @@ int serverparent_getopt(serverConfig_t *config, const char *service, int argc, c
 
 	TRACE(TRACE_DEBUG, "reading config");
 	config_read(configFile);
-	ClearConfig(config);
+
 	SetTraceLevel(service);
+	/* Override SetTraceLevel. */
+	if (config->log_verbose) {
+		configure_debug(5,5);
+	}
+	
 	LoadServerConfig(config, service);
 	GetDBParams(&_db_params);
+
+	g_free(configFile);
 
 	return 0;
 }
@@ -129,13 +139,9 @@ int serverparent_mainloop(serverConfig_t *config, const char *service)
 {
 	SetMainSigHandler();
 
-	/* Override SetTraceLevel. */
-	if (config->log_verbose) {
-		configure_debug(5,5);
-	}
-	
 	if (config->no_daemonize) {
 		StartCliServer(config);
+		TRACE(TRACE_INFO, "exiting cli server");
 		return 0;
 	}
 	
@@ -204,113 +210,92 @@ void LoadServerConfig(serverConfig_t * config, const char * const service)
 	/* read items: NCHILDREN */
 	config_get_value("NCHILDREN", service, val);
 	if (strlen(val) == 0)
-		trace(TRACE_FATAL,
-		      "%s,%s: no value for NCHILDREN in config file",
-		      __FILE__, __func__);
+		TRACE(TRACE_FATAL, "no value for NCHILDREN in config file");
 
 	if ((config->startChildren = atoi(val)) <= 0)
-		trace(TRACE_FATAL,
-		      "%s,%s: value for NCHILDREN is invalid: [%d]",
-		      __FILE__, __func__, config->startChildren);
+		TRACE(TRACE_FATAL, "value for NCHILDREN is invalid: [%d]",
+		      config->startChildren);
 
-	trace(TRACE_DEBUG,
-	      "%s,%s: server will create  [%d] children",
-	      __FILE__, __func__, config->startChildren);
+	TRACE(TRACE_DEBUG, "server will create  [%d] children",
+	      config->startChildren);
 
 
 	/* read items: MAXCONNECTS */
 	config_get_value("MAXCONNECTS", service, val);
 	if (strlen(val) == 0)
-		trace(TRACE_FATAL,
-		      "%s,%s: no value for MAXCONNECTS in config file",
-		      __FILE__, __func__);
+		TRACE(TRACE_FATAL, "no value for MAXCONNECTS in config file");
 
 	if ((config->childMaxConnect = atoi(val)) <= 0)
-		trace(TRACE_FATAL,
-		      "%s,%s: value for MAXCONNECTS is invalid: [%d]",
-		      __FILE__, __func__, config->childMaxConnect);
+		TRACE(TRACE_FATAL, "value for MAXCONNECTS is invalid: [%d]",
+		      config->childMaxConnect);
 
-	trace(TRACE_DEBUG,
-	      "%s,%s: children will make max. [%d] connections",
-	      __FILE__, __func__, config->childMaxConnect);
+	TRACE(TRACE_DEBUG, "children will make max. [%d] connections",
+	      config->childMaxConnect);
 
 
 	/* read items: TIMEOUT */
 	config_get_value("TIMEOUT", service, val);
 	if (strlen(val) == 0) {
-		trace(TRACE_DEBUG,
-		      "%s,%s: no value for TIMEOUT in config file",
-		      __FILE__, __func__);
+		TRACE(TRACE_DEBUG, "no value for TIMEOUT in config file");
 		config->timeout = 0;
 	} else if ((config->timeout = atoi(val)) <= 30)
-		trace(TRACE_FATAL,
-		      "%s,%s: value for TIMEOUT is invalid: [%d]",
-		      __FILE__, __func__, config->timeout);
+		TRACE(TRACE_FATAL, "value for TIMEOUT is invalid: [%d]",
+		      config->timeout);
 
-	trace(TRACE_DEBUG, "%s,%s: timeout [%d] seconds",
-	      __FILE__, __func__, config->timeout);
+	TRACE(TRACE_DEBUG, "timeout [%d] seconds",
+	      config->timeout);
 
 	/* SOCKET */
 	config_get_value("SOCKET", service, val);
 	if (strlen(val) == 0)
-		trace(TRACE_DEBUG,"%s,%s: no value for SOCKET in config file",
-				__FILE__, __func__);
+		TRACE(TRACE_DEBUG, "no value for SOCKET in config file");
 	strncpy(config->socket, val, FIELDSIZE);
-	trace(TRACE_DEBUG, "%s,%s: socket %s", 
-			__FILE__, __func__, config->socket);
+	TRACE(TRACE_DEBUG, "socket [%s]", 
+		config->socket);
 	
 	/* read items: PORT */
 	config_get_value("PORT", service, val);
 	if (strlen(val) == 0)
-		trace(TRACE_FATAL,
-		      "%s,%s: no value for PORT in config file",
-		      __FILE__, __func__);
+		TRACE(TRACE_FATAL, "no value for PORT in config file");
 
 	if ((config->port = atoi(val)) <= 0)
-		trace(TRACE_FATAL,
-		      "%s,%s: value for PORT is invalid: [%d]",
-		      __FILE__, __func__, config->port);
+		TRACE(TRACE_FATAL, "value for PORT is invalid: [%d]",
+		      config->port);
 
-	trace(TRACE_DEBUG, "%s,%s: binding to PORT [%d]",
-	      __FILE__, __func__, config->port);
+	TRACE(TRACE_DEBUG, "binding to PORT [%d]",
+	      config->port);
 
 
 	/* read items: BINDIP */
 	config_get_value("BINDIP", service, val);
 	if (strlen(val) == 0)
-		trace(TRACE_FATAL,
-			"%s,%s: no value for BINDIP in config file",
-			__FILE__, __func__);
+		TRACE(TRACE_FATAL, "no value for BINDIP in config file");
 
 	strncpy(config->ip, val, IPLEN);
 	config->ip[IPLEN - 1] = '\0';
 
-	trace(TRACE_DEBUG, "%s,%s: binding to IP [%s]",
-			__FILE__, __func__, config->ip);
+	TRACE(TRACE_DEBUG, "binding to IP [%s]",
+			config->ip);
 
 	/* read items: BACKLOG */
 	config_get_value("BACKLOG", service, val);
 	if (strlen(val) == 0) {
-		trace(TRACE_DEBUG,
-			"%s,%s: no value for BACKLOG in config file. Using default value [%d]",
-			__FILE__, __func__, BACKLOG);
+		TRACE(TRACE_DEBUG, "no value for BACKLOG in config file. Using default value [%d]",
+			BACKLOG);
 		config->backlog = BACKLOG;
 	} else if ((config->backlog = atoi(val)) <= 0)
-		trace(TRACE_FATAL,
-			"%s,%s: value for BACKLOG is invalid: [%d]",
-			__FILE__, __func__, config->backlog);
+		TRACE(TRACE_FATAL, "value for BACKLOG is invalid: [%d]",
+			config->backlog);
 
 	/* read items: RESOLVE_IP */
 	config_get_value("RESOLVE_IP", service, val);
 	if (strlen(val) == 0)
-		trace(TRACE_DEBUG,
-		      "%s,%s: no value for RESOLVE_IP in config file",
-		      __FILE__, __func__);
+		TRACE(TRACE_DEBUG, "no value for RESOLVE_IP in config file");
 
 	config->resolveIP = (strcasecmp(val, "yes") == 0);
 
-	trace(TRACE_DEBUG, "%s,%s: %sresolving client IP",
-	      __FILE__, __func__, config->resolveIP ? "" : "not ");
+	TRACE(TRACE_DEBUG, "%sresolving client IP",
+	      config->resolveIP ? "" : "not ");
 
 	/* read items: service-BEFORE-SMTP */
 	char *service_before_smtp = g_strconcat(service, "_BEFORE_SMTP", NULL);
@@ -318,94 +303,73 @@ void LoadServerConfig(serverConfig_t * config, const char * const service)
 	g_free(service_before_smtp);
 
 	if (strlen(val) == 0)
-		trace(TRACE_DEBUG,
-		      "%s,%s: no value for %s_BEFORE_SMTP  in config file",
-		      __FILE__, __func__, service);
+		TRACE(TRACE_DEBUG, "no value for %s_BEFORE_SMTP  in config file",
+		      service);
 
 	config->service_before_smtp = (strcasecmp(val, "yes") == 0);
 
-	trace(TRACE_DEBUG, "%s,%s: %s %s-before-SMTP",
-	      __FILE__, __func__,
+	TRACE(TRACE_DEBUG, "%s %s-before-SMTP",
 	      config->service_before_smtp ? "Enabling" : "Disabling", service);
 
 
 	/* read items: EFFECTIVE-USER */
 	config_get_value("EFFECTIVE_USER", service, val);
 	if (strlen(val) == 0)
-		trace(TRACE_FATAL,
-		      "%s,%s: no value for EFFECTIVE_USER in config file",
-		      __FILE__, __func__);
+		TRACE(TRACE_FATAL, "no value for EFFECTIVE_USER in config file");
 
 	strncpy(config->serverUser, val, FIELDSIZE);
 	config->serverUser[FIELDSIZE - 1] = '\0';
 
-	trace(TRACE_DEBUG,
-	      "%s,%s: effective user shall be [%s]",
-	      __FILE__, __func__, config->serverUser);
+	TRACE(TRACE_DEBUG, "effective user shall be [%s]",
+	      config->serverUser);
 
 
 	/* read items: EFFECTIVE-GROUP */
 	config_get_value("EFFECTIVE_GROUP", service, val);
 	if (strlen(val) == 0)
-		trace(TRACE_FATAL,
-		      "%s,%s: no value for EFFECTIVE_GROUP in config file",
-		      __FILE__, __func__);
+		TRACE(TRACE_FATAL, "no value for EFFECTIVE_GROUP in config file");
 
 	strncpy(config->serverGroup, val, FIELDSIZE);
 	config->serverGroup[FIELDSIZE - 1] = '\0';
 
-	trace(TRACE_DEBUG,
-	      "%s,%s: effective group shall be [%s]",
-	      __FILE__, __func__, config->serverGroup);
+	TRACE(TRACE_DEBUG, "effective group shall be [%s]",
+	      config->serverGroup);
 
 
        /* read items: MINSPARECHILDREN */
        config_get_value("MINSPARECHILDREN", service, val);
        if (strlen(val) == 0)
-               trace(TRACE_FATAL,
-                       "%s,%s: no value for MINSPARECHILDREN in config file",
-		        __FILE__, __func__);
+               TRACE(TRACE_FATAL, "no value for MINSPARECHILDREN in config file");
        if ( (config->minSpareChildren = atoi(val)) <= 0)
-               trace(TRACE_FATAL,
-                       "%s,%s: value for MINSPARECHILDREN is invalid: [%d]",
-                       __FILE__, __func__, config->minSpareChildren);
+               TRACE(TRACE_FATAL, "value for MINSPARECHILDREN is invalid: [%d]",
+                       config->minSpareChildren);
 
-       trace(TRACE_DEBUG,
-               "%s,%s: will maintain minimum of [%d] spare children in reserve",
-               __FILE__, __func__, config->minSpareChildren);
+       TRACE(TRACE_DEBUG, "will maintain minimum of [%d] spare children in reserve",
+               config->minSpareChildren);
 
 
        /* read items: MAXSPARECHILDREN */
        config_get_value("MAXSPARECHILDREN", service, val);
        if (strlen(val) == 0)
-               trace(TRACE_FATAL,
-                       "%s,%s: no value for MAXSPARECHILDREN in config file",
-		       __FILE__, __func__);
+               TRACE(TRACE_FATAL, "no value for MAXSPARECHILDREN in config file");
        if ( (config->maxSpareChildren = atoi(val)) <= 0)
-               trace(TRACE_FATAL,
-                       "%s,%s: value for MAXSPARECHILDREN is invalid: [%d]",
-                       __FILE__, __func__, config->maxSpareChildren);
+               TRACE(TRACE_FATAL, "value for MAXSPARECHILDREN is invalid: [%d]",
+                       config->maxSpareChildren);
 
-       trace(TRACE_DEBUG,
-               "%s,%s: will maintain maximum of [%d] spare children in reserve",
-               __FILE__, __func__, config->maxSpareChildren);
+       TRACE(TRACE_DEBUG, "will maintain maximum of [%d] spare children in reserve",
+               config->maxSpareChildren);
 
 
        /* read items: MAXCHILDREN */
        config_get_value("MAXCHILDREN", service, val);
        if (strlen(val) == 0)
-               trace(TRACE_FATAL,
-                       "%s,%s: no value for MAXCHILDREN in config file",
-		       __FILE__, __func__);
+               TRACE(TRACE_FATAL, "no value for MAXCHILDREN in config file");
        if ( (config->maxChildren = atoi(val)) <= 0)
-               trace(TRACE_FATAL,
-                       "%s,%s: value for MAXCHILDREN is invalid: [%d]",
-                       __FILE__, __func__, config->maxSpareChildren);
+               TRACE(TRACE_FATAL, "value for MAXCHILDREN is invalid: [%d]",
+                       config->maxSpareChildren);
 
-       trace(TRACE_DEBUG,
-               "%s,%s: will allow maximum of [%d] children",
-               __FILE__, __func__, config->maxChildren);
-
+       TRACE(TRACE_DEBUG, "will allow maximum of [%d] children",
+               config->maxChildren);
 
 }
 
