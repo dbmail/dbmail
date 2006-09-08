@@ -1391,6 +1391,12 @@ int _ic_fetch(struct ImapSession *self)
 	if (dbmail_imap_session_fetch_get_items(self) < 0)
 		return -1;
 	
+	if (self->headers) {
+		g_tree_destroy(self->headers);
+		self->headers = NULL;
+	}
+	
+	
 	dbmail_imap_session_printf(self, "%s OK %sFETCH completed\r\n", self->tag, self->use_uid ? "UID " : "");
 	return 0;
 }

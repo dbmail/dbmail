@@ -204,7 +204,7 @@ void dbmail_imap_session_delete(struct ImapSession * self)
 		self->fetch_ids = NULL;
 	}
 	if (self->headers) {
-//		g_tree_destroy(self->headers);
+		g_tree_destroy(self->headers);
 		self->headers = NULL;
 	}
 			
@@ -1091,7 +1091,6 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data)
 			dbmail_imap_session_printf(self, "{2}\r\n\r\n");
 		} else {
 			ts = g_string_new(tmp);
-			g_free(tmp);
 			
 			if (bodyfetch->octetcnt > 0) {
 				
