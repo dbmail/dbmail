@@ -870,7 +870,6 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data)
 	char *tmp;
 	gboolean condition = FALSE;
 	int k;
-	u64_t physid;
 	struct ImapSession *self = (struct ImapSession *)data;
 	
 	if (bodyfetch->itemtype < 0)
