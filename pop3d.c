@@ -44,8 +44,7 @@ int main(int argc, char *argv[])
 	g_mime_init(0);
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 
-	serverparent_config(&config, "POP");
-	result = serverparent_getopt(&config, argc, argv);
+	result = serverparent_getopt(&config, "POP", argc, argv);
 	if (result == -1)
 		goto shutdown;
 

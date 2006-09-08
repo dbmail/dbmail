@@ -4067,6 +4067,7 @@ int db_acl_has_right(mailbox_t *mailbox, u64_t userid, const char *right_flag)
 			__FILE__, __func__, 
 			right_flag, userid, mboxid);
 
+	/* If we don't know who owns the mailbox, look it up. */
 	if (! mailbox->owner_idnr) {
 		result = db_get_mailbox_owner(mboxid, &mailbox->owner_idnr);
 		if (! result > 0)
