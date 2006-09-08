@@ -1,5 +1,5 @@
 /*
-  $Id: server.h 2096 2006-04-30 18:39:56Z aaron $
+  $Id: server.h 2257 2006-09-08 08:44:29Z aaron $
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
 
@@ -35,8 +35,6 @@ void CreateSocket(serverConfig_t *conf);
 int StartServer(serverConfig_t * conf);
 int StartCliServer(serverConfig_t * conf);
 int server_run(serverConfig_t *conf);
-void ClearConfig(serverConfig_t * conf);
-void LoadServerConfig(serverConfig_t * conf, const char * const service);
 
 pid_t server_daemonize(serverConfig_t *conf);
 

@@ -143,35 +143,54 @@ GList * g_list_copy_list(GList *dst, struct element *el)
  * return a list of strings (a,b,c,..N)
  */
 
+//FIXME: this needs some cleaning up:
 GList *g_list_slices(GList *list, unsigned limit)
 {
 	unsigned i,j;
 	GList *new = NULL;
 	GString *slice;
 
-	if (g_list_length(list) <= limit) {
-		slice = g_list_join(list,",");
-		new=g_list_append(new,g_strdup(slice->str));
-		g_string_free(slice,TRUE);
-		return new;
-	}
-	
 	j = g_list_length(list) % limit;
-	
 	list = g_list_first(list);
 	
 	while(list) {
 		slice = g_string_new("");
-		slice = g_string_append(slice, (gchar *)list->data);
+		g_string_append_printf(slice,"%s",(gchar *)list->data);
 		for (i=1; i<limit; i++) {
 			if (! g_list_next(list)) 
 				break;
 			list = g_list_next(list);
-			slice = g_string_append(slice,",");
-			slice = g_string_append(slice,(gchar *)list->data);
+			g_string_append_printf(slice,",%s", (gchar *)list->data);
 		}
-		new = g_list_append(new, g_strdup(slice->str));
-		g_string_free(slice,TRUE);
+		new = g_list_append_printf(new, "%s", slice->str);
+		g_string_free(slice,FALSE);
+		if (! g_list_next(list))
+			break;
+		list = g_list_next(list);
+	}
+
+	return new;
+}
+
+GList *g_list_slices_u64(GList *list, unsigned limit)
+{
+	unsigned i,j;
+	GList *new = NULL;
+	GString *slice;
+
+	j = g_list_length(list) % limit;
+	list = g_list_first(list);
+	while(list) {
+		slice = g_string_new("");
+		g_string_append_printf(slice,"%llu",*(u64_t *)list->data);
+		for (i=1; i<limit; i++) {
+			if (! g_list_next(list)) 
+				break;
+			list = g_list_next(list);
+			g_string_append_printf(slice,",%llu", *(u64_t *)list->data);
+		}
+		new = g_list_append_printf(new, "%s", slice->str);
+		g_string_free(slice,FALSE);
 		if (! g_list_next(list))
 			break;
 		list = g_list_next(list);

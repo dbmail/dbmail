@@ -383,15 +383,34 @@ GString * g_list_join(GList * list, const gchar * sep)
 	if (list == NULL)
 		return string;
 	list = g_list_first(list);
-	string = g_string_append(string, (gchar *)list->data);
+	g_string_append_printf(string,"%s",(gchar *)list->data);
 	while((list = g_list_next(list))) {
-		string = g_string_append(string,sep);
-		string = g_string_append(string,(gchar *)list->data);
+		g_string_append_printf(string,"%s%s", sep,(gchar *)list->data);
 		if (! g_list_next(list))
 			break;
 	}
 	return string;	
 }
+GString * g_list_join_u64(GList * list, const gchar * sep)
+{
+	u64_t *token;
+	GString *string = g_string_new("");
+	if (sep == NULL)
+		sep="";
+	if (list == NULL)
+		return string;
+	list = g_list_first(list);
+	token = (u64_t*)list->data;
+	g_string_append_printf(string,"%llu",*token);
+	while((list = g_list_next(list))) {
+		token = (u64_t*)list->data;
+		g_string_append_printf(string,"%s%llu", sep,*token);
+		if (! g_list_next(list))
+			break;
+	}
+	return string;	
+}
+
 
 GList * g_string_split(GString * string, const gchar * sep)
 {

@@ -19,7 +19,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: pop3d.c 2253 2006-09-07 06:01:24Z aaron $
+/* $Id: pop3d.c 2257 2006-09-08 08:44:29Z aaron $
 *
 * pop3d.c
 *
@@ -44,8 +44,7 @@ int main(int argc, char *argv[])
 	g_mime_init(0);
 	openlog(PNAME, LOG_PID, LOG_MAIL);
 
-	serverparent_config(&config, "POP");
-	result = serverparent_getopt(&config, argc, argv);
+	result = serverparent_getopt(&config, "POP", argc, argv);
 	if (result == -1)
 		goto shutdown;
 

@@ -1,4 +1,4 @@
-/* $Id: db.c 2252 2006-09-05 10:52:24Z paul $ */
+/* $Id: db.c 2257 2006-09-08 08:44:29Z aaron $ */
 /*
   Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
   Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
@@ -22,7 +22,7 @@
 /**
  * \file db.c
  * 
- * $Id: db.c 2252 2006-09-05 10:52:24Z paul $
+ * $Id: db.c 2257 2006-09-08 08:44:29Z aaron $
  *
  * implement database functionality. This used to split out
  * between MySQL and PostgreSQL, but this is now integrated. 
@@ -4067,6 +4067,7 @@ int db_acl_has_right(mailbox_t *mailbox, u64_t userid, const char *right_flag)
 			__FILE__, __func__, 
 			right_flag, userid, mboxid);
 
+	/* If we don't know who owns the mailbox, look it up. */
 	if (! mailbox->owner_idnr) {
 		result = db_get_mailbox_owner(mboxid, &mailbox->owner_idnr);
 		if (! result > 0)

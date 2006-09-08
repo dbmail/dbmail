@@ -78,7 +78,8 @@ int acl_has_right(mailbox_t *mailbox, u64_t userid, ACLRight_t right)
 
 	const char *right_flag = acl_right_strings[right];
 
-	/* first try if the user has the right */
+	/* Check if the user has the right; this will also
+	 * return true if the user is the mailbox owner. */
 	if ((test = db_acl_has_right(mailbox, userid, right_flag)))
 		return TRUE;
 

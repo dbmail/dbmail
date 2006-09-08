@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: imapcommands.c 2252 2006-09-05 10:52:24Z paul $
+/* $Id: imapcommands.c 2257 2006-09-08 08:44:29Z aaron $
  *
  * imapcommands.c
  * 
@@ -367,22 +367,12 @@ int _ic_delete(struct ImapSession *self)
 		return 1;
 	}
 
-	/* check if the user is the owner of this mailbox. If so, then
-	   the user has the right to delete it. */
-	result = db_user_is_mailbox_owner(ud->userid, mboxid);
-	if (result < 0) {
-		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
-		return -1;
-	}
-
-	// FIXME: check permission flag on mailbox
+	/* Check if the user has ACL delete rights to this mailbox;
+	 * this also returns true is the user owns the mailbox. */
+	result = dbmail_imap_session_mailbox_check_acl(self, mboxid, ACL_RIGHT_DELETE);
+	if (result != 0)
+		return result;
 	
-	if (result == 0) {
-		dbmail_imap_session_printf(self, "%s NO no permission to delete mailbox\r\n", self->tag);
-		dbmail_imap_session_set_state(self,IMAPCS_AUTHENTICATED);
-		return 1;
-	}
-
 	/* check if there is an attempt to delete inbox */
 	if (strcasecmp(self->args[0], "inbox") == 0) {
 		dbmail_imap_session_printf(self, "%s NO cannot delete special mailbox INBOX\r\n", self->tag);
@@ -471,8 +461,6 @@ int _ic_rename(struct ImapSession *self)
 		return 1;
 	}
 
-	// FIXME: check permissions flag on original mailbox
-	
 	/* check if new name is valid */
         if (!checkmailboxname(self->args[1])) {
 	        dbmail_imap_session_printf(self, "%s NO new mailbox name contains invalid characters\r\n", self->tag);
@@ -525,6 +513,16 @@ int _ic_rename(struct ImapSession *self)
 		/* ok, reset arg */
 		self->args[1][i] = '/';
 	}
+
+	/* Check if the user has ACL delete rights to old name, 
+	 * and create rights to the parent of the new name, or
+	 * if the user just owns both mailboxes. */
+	result = dbmail_imap_session_mailbox_check_acl(self, mboxid, ACL_RIGHT_DELETE);
+	if (result != 0)
+		return result;
+	result = dbmail_imap_session_mailbox_check_acl(self, parentmboxid, ACL_RIGHT_CREATE);
+	if (result != 0)
+		return result;
 
 	/* check if it is INBOX to be renamed */
 	if (strcasecmp(self->args[0], "inbox") == 0) {
@@ -1348,16 +1346,11 @@ int _ic_sort(struct ImapSession *self)
  *
  * fetch message(s) from the selected mailbox
  */
+	
 int _ic_fetch(struct ImapSession *self)
 {
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
-	u64_t i, fetch_start, fetch_end;
-	u64_t fetch_max, row=0;
-	int rows=0;
-	unsigned fn;
 	int result, idx;
-	char *endptr;
-	char *lastchar = NULL;
 
 	if (!check_state_and_args (self, "FETCH", 2, 0, IMAPCS_SELECTED))
 		return 1;
@@ -1386,98 +1379,18 @@ int _ic_fetch(struct ImapSession *self)
 		}
 	} while (idx > 0);
 
-	fetch_max = self->use_uid ? (ud->mailbox.msguidnext - 1) : ud->mailbox.exists;
+	dbmail_mailbox_set_uid(self->mailbox,self->use_uid);
 	
-	/* now fetch results for each msg */
-	endptr = self->args[0];
-	while (*endptr) {
-		if (endptr != self->args[0])
-			endptr++;	/* skip delimiter */
-
-		fetch_start = strtoull(endptr, &endptr, 10);
-		if (fetch_start == 0 || fetch_start > fetch_max) {
-			if (self->fi->getUID)
-				dbmail_imap_session_printf(self, "%s OK FETCH completed\r\n", self->tag);
-			else
-				dbmail_imap_session_printf(self, "%s BAD invalid message range specified\r\n", self->tag);
-
-			return !self->fi->getUID;
-		}
-
-		switch (*endptr) {
-		case ':':
-			fetch_end = strtoull(++endptr, &lastchar, 10);
-			endptr = lastchar;
-
-			if (*endptr == '*') {
-				fetch_end = fetch_max;
-				endptr++;
-				break;
-			}
-
-			if (fetch_end == 0 || fetch_end > fetch_max) {
-				if (!self->fi->getUID) {
-					dbmail_imap_session_printf(self, "%s BAD invalid message range specified\r\n", self->tag);
-					return 1;
-				}
-			}
-
-			if (fetch_end < fetch_start) {
-				i = fetch_start;
-				fetch_start = fetch_end;
-				fetch_end = i;
-			}
-			break;
-
-		case ',':
-		case 0:
-			fetch_end = fetch_start;
-			break;
-
-		default:
-			dbmail_imap_session_printf(self, "%s BAD invalid character in message range\r\n", self->tag);
-			return 1;
-		}
-		
-		if (! self->use_uid) {
-			if (fetch_start > 0)
-				fetch_start--;
-			if (fetch_end > 0)
-				fetch_end--;
-		}
-
-		trace(TRACE_DEBUG,"%s,%s: fetch_start [%llu] fetch_end [%llu]",
-				__FILE__, __func__, fetch_start, fetch_end);
-		
-		if ((rows=dbmail_imap_session_fetch_get_unparsed(self, fetch_start, fetch_end)) < 0)
-			return -1;
-			
-		row=0;
-		for (i = fetch_start; i <= fetch_end; i++) {
-			self->msg_idnr = (self->use_uid ? i : ud->mailbox.seq_list[i]);
-			if (self->use_uid) {
-				if (i > fetch_max) {
-					/* passed the last one */
-					dbmail_imap_session_printf(self, "%s OK FETCH completed\r\n", self->tag);
-					return 0;
-				}
-
-				/* check if the message with this UID belongs to this mailbox */
-				if (binary_search (ud->mailbox.seq_list, ud->mailbox.exists, i, &fn) == -1) 
-					continue;
-
-				dbmail_imap_session_printf(self, "* %u FETCH (", fn + 1);
-			} else
-				dbmail_imap_session_printf(self, "* %llu FETCH (", i + 1);
-
-			/* go fetch the items */
-			fflush(self->ci->tx);
-			if (dbmail_imap_session_fetch_get_items(self,row) < 0)
-				return -1;
-			row++;
-		}
+	self->fetch_ids = dbmail_mailbox_get_set(self->mailbox,self->args[0],self->use_uid);
+	
+	if (! self->fetch_ids) {
+		dbmail_imap_session_printf(self, "%s BAD invalid message range specified\r\n", self->tag);
+		return DM_EGENERAL;
 	}
-
+		
+	if (dbmail_imap_session_fetch_get_items(self) < 0)
+		return -1;
+	
 	dbmail_imap_session_printf(self, "%s OK %sFETCH completed\r\n", self->tag, self->use_uid ? "UID " : "");
 	return 0;
 }

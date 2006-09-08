@@ -54,5 +54,6 @@ struct element *dm_list_reverse(struct element *start);
 
 GList * g_list_copy_list(GList *dst, struct element *el);
 GList *g_list_slices(GList *list, unsigned limit);
+GList *g_list_slices_u64(GList *list, unsigned limit);
 
 #endif
