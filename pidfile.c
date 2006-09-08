@@ -98,7 +98,6 @@ static void pidfile_remove(void)
 void pidfile_create(const char *pidFile, pid_t pid)
 {
 	FILE *f;
-	char buf[20];
 	pid_t oldpid;
 
 	oldpid = pidfile_pid(pidFile);
@@ -113,12 +112,7 @@ void pidfile_create(const char *pidFile, pid_t pid)
 			__FILE__, __func__, pidFile, strerror(errno));
 	}
 
-	memset(buf, 0, sizeof(buf));
-
-	snprintf(buf, sizeof(buf)-1, "%u", pid);
-
-	fwrite(buf, sizeof(char), strlen(buf), f);
-
+	fprintf(f, "%u\n", pid);
 	fflush(f);
 
 	/* Leave pid file open & locked for the duration,

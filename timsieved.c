@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
 		goto shutdown;
 	}
 
-	result = serverparent_mainloop(&config, "dbmail-timsieved");
+	result = serverparent_mainloop(&config, "SIEVE", "dbmail-timsieved");
 	
 shutdown:
 	g_mime_shutdown();

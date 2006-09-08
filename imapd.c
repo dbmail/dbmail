@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
 
 	imap_before_smtp = config.service_before_smtp;
 
-	result = serverparent_mainloop(&config, "dbmail-imapd");
+	result = serverparent_mainloop(&config, "IMAP", "dbmail-imapd");
 	
 shutdown:
 	g_mime_shutdown();

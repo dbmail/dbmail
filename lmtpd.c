@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
 	config.ClientHandler = lmtp_handle_connection;
 	config.timeoutMsg = LMTP_TIMEOUT_MSG;
 
-	result = serverparent_mainloop(&config, "dbmail-lmtpd");
+	result = serverparent_mainloop(&config, "LMTP", "dbmail-lmtpd");
 	
 shutdown:
 	g_mime_shutdown();

@@ -91,7 +91,7 @@ int server_setup(serverConfig_t *conf)
 int StartCliServer(serverConfig_t * conf)
 {
 	if (!conf)
-		trace(TRACE_FATAL, "%s,%s: NULL configuration", __FILE__, __func__);
+		TRACE(TRACE_FATAL, "NULL configuration");
 	
 	if (server_setup(conf))
 		return -1;
@@ -107,7 +107,7 @@ int StartServer(serverConfig_t * conf)
 	pid_t chpid;
 
 	if (!conf)
-		trace(TRACE_FATAL, "%s,%s: NULL configuration", __FILE__, __func__);
+		TRACE(TRACE_FATAL, "NULL configuration");
 
 	if (server_setup(conf))
 		return -1;
@@ -160,7 +160,6 @@ int StartServer(serverConfig_t * conf)
  	manage_stop_children();
  	scoreboard_delete();
 
-
 	return Restart;
 }
 
@@ -178,24 +177,23 @@ pid_t server_daemonize(serverConfig_t *conf)
 	chdir("/");
 	umask(0);
 	
-	if (! (freopen(conf->log,"a",stdout))) {
+	if (! (freopen(conf->log, "a", stdout))) {
 		serr = errno;
-		trace(TRACE_FATAL,"%s,%s: freopen failed on [%s] [%s]", 
-				__FILE__, __func__, conf->log, strerror(serr));
+		TRACE(TRACE_FATAL, "freopen failed on [%s] [%s]", 
+				conf->log, strerror(serr));
 	}
-	if (! (freopen(conf->error_log,"a",stderr))) {
+	if (! (freopen(conf->error_log, "a", stderr))) {
 		serr = errno;
-		trace(TRACE_FATAL,"%s,%s: freopen failed on [%s] [%s]", 
-				__FILE__, __func__, conf->error_log, strerror(serr));
+		TRACE(TRACE_FATAL, "freopen failed on [%s] [%s]", 
+				conf->error_log, strerror(serr));
 	}
-	if (! (freopen("/dev/null","r",stdin))) {
+	if (! (freopen("/dev/null", "r", stdin))) {
 		serr = errno;
-		trace(TRACE_FATAL,"%s,%s: freopen failed on stdin [%s]", 
-				__FILE__, __func__, strerror(serr));
+		TRACE(TRACE_FATAL, "freopen failed on stdin [%s]",
+				strerror(serr));
 	}
 
-	trace(TRACE_DEBUG,"%s,%s: sid: [%d]", __FILE__, 
-			__func__, getsid(0));
+	TRACE(TRACE_DEBUG, "sid: [%d]", getsid(0));
 
 	return getsid(0);
 }
@@ -223,8 +221,8 @@ int server_run(serverConfig_t *conf)
 		/* child process */
 		drop_privileges(conf->serverUser, conf->serverGroup);
 		result = StartServer(conf);
-		trace(TRACE_INFO, "%s,%s: server done, restart = [%d]",
-				__FILE__, __func__, result);
+		TRACE(TRACE_INFO, "server done, restart = [%d]",
+				result);
 		exit(result);		
 		break;
 	default:
@@ -258,8 +256,8 @@ int server_run(serverConfig_t *conf)
 		if (strlen(conf->socket) > 0) {
 			if (unlink(conf->socket)) {
 				serrno = errno;
-				trace(TRACE_ERROR, "%s,%s: unlinking unix socket failed [%s]",
-						__FILE__, __func__, strerror(serrno));
+				TRACE(TRACE_ERROR, "unlinking unix socket failed [%s]",
+						strerror(serrno));
 				errno = serrno;
 			}
 		}
@@ -360,14 +358,14 @@ static int create_unix_socket(serverConfig_t * conf)
 	saServer.sun_family = AF_UNIX;
 	strncpy(saServer.sun_path,conf->socket, sizeof(saServer.sun_path));
 
-	trace(TRACE_DEBUG, "%s,%s: creating socket on [%s] with backlog [%d]",
-			__FILE__, __func__, conf->socket, conf->backlog);
+	TRACE(TRACE_DEBUG, "creating socket on [%s] with backlog [%d]",
+			conf->socket, conf->backlog);
 
 	err = dm_bind_and_listen(sock, (struct sockaddr *)&saServer, sizeof(saServer), conf->backlog);
 	if (err != 0) {
 		close(sock);
-		trace(TRACE_FATAL, "%s,%s: Fatal error, could not bind to [%s] %s",
-			__FILE__, __func__, conf->socket, strerror(err));
+		TRACE(TRACE_FATAL, "Fatal error, could not bind to [%s] %s",
+			conf->socket, strerror(err));
 	}
 	
 	chmod(conf->socket, 02777);
@@ -390,8 +388,8 @@ static int create_inet_socket(const char * const ip, int port, int backlog)
 	saServer.sin_family	= AF_INET;
 	saServer.sin_port	= htons(port);
 
-	trace(TRACE_DEBUG, "%s,%s: creating socket on [%s:%d] with backlog [%d]",
-			__FILE__, __func__, ip, port, backlog);
+	TRACE(TRACE_DEBUG, "creating socket on [%s:%d] with backlog [%d]",
+			ip, port, backlog);
 	
 	if (ip[0] == '*') {
 		
@@ -400,15 +398,14 @@ static int create_inet_socket(const char * const ip, int port, int backlog)
 	} else if (! (inet_aton(ip, &saServer.sin_addr))) {
 		
 		close(sock);
-		trace(TRACE_FATAL, "%s,%s: IP invalid [%s]",
-				__FILE__, __func__, ip);
+		TRACE(TRACE_FATAL, "IP invalid [%s]", ip);
 	}
 
 	err = dm_bind_and_listen(sock, (struct sockaddr *)&saServer, sizeof(saServer), backlog);
 	if (err != 0) {
 		close(sock);
-		trace(TRACE_FATAL, "%s,%s: Fatal error, could not bind to [%s:%d] %s",
-			__FILE__, __func__, ip, port, strerror(err));
+		TRACE(TRACE_FATAL, "Fatal error, could not bind to [%s:%d] %s",
+			ip, port, strerror(err));
 	}
 
 	return sock;	

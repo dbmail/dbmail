@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
 	config.timeoutMsg = POP_TIMEOUT_MSG;
 	pop_before_smtp = config.service_before_smtp;
 
-	result = serverparent_mainloop(&config, "dbmail-pop3d");
+	result = serverparent_mainloop(&config, "POP", "dbmail-pop3d");
 	
 shutdown:
 	g_mime_shutdown();

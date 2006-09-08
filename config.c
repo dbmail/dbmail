@@ -36,7 +36,7 @@ static int configured = 0;
  */
 int config_read(const char *config_filename)
 {
-	if (configured++) 
+	if (configured) 
 		return 0;
 	
 	assert(config_filename != NULL);
@@ -51,6 +51,8 @@ int config_read(const char *config_filename)
 		_exit(1);
 		return -1;
 	}
+
+	configured = 1;
         return 0;
 }
 
@@ -59,10 +61,12 @@ int config_read(const char *config_filename)
  */
 void config_free(void) 
 {
-	if (--configured) 
+	if (!configured) 
 		return;
 	
 	g_key_file_free(config_dict);
+
+	configured = 0;
 }
 
 /* Return 1 if found, 0 if not. */
