@@ -30,6 +30,6 @@
 
 void serverparent_showhelp(const char *service, const char *greeting);
 int serverparent_getopt(serverConfig_t *config, const char *service, int argc, char *argv[]);
-int serverparent_mainloop(serverConfig_t *config, const char *service);
+int serverparent_mainloop(serverConfig_t *config, const char *service, const char *servicename);
 
 #endif

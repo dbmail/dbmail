@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: lmtpd.c 2257 2006-09-08 08:44:29Z aaron $
+/* $Id: lmtpd.c 2259 2006-09-08 19:48:57Z aaron $
 *
 * lmtpd.c
 *
@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
 	config.ClientHandler = lmtp_handle_connection;
 	config.timeoutMsg = LMTP_TIMEOUT_MSG;
 
-	result = serverparent_mainloop(&config, "dbmail-lmtpd");
+	result = serverparent_mainloop(&config, "LMTP", "dbmail-lmtpd");
 	
 shutdown:
 	g_mime_shutdown();

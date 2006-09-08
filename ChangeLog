@@ -22,9 +22,15 @@
 	Clarify the ACL checks for IMAP delete and rename.
 	* lmtpd.c, pop3d.c, imapd.c, timsieved.c:
 	Removed call to serverparent_config.
+	Added service argument to call serverparent_mainloop.
 	* server.c, server.h, serverparent.c, serverparent.h:
 	Consolidated serverparent_config with serverparent_getopt,
 	moved ClearConfig and LoadServerConfig to serverparent.
+	Actually re-read the config file on receipt of SIGHUP.
+	* pidfile.c:
+	Add a trailing newline to the pidfile.
+	* pool.c:
+	Dump the initial scoreboard state from manage_start_children.
 
 2006-09-07  Paul J Stevens <paul@nfg.nl>
 

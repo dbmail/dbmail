@@ -388,22 +388,19 @@ void child_unregister(void)
  *
  */
 
+/* Start the first batch of forked processes */
 void manage_start_children(void)
 {
-	/* 
-	 *
-	 * startup the first batch of forked processes
-	 *
-	 */
 	int i;
 	for (i = 0; i < scoreboard->conf->startChildren; i++) {
 		if (CreateChild(&childinfo) > -1)
 			continue;
 		manage_stop_children();
-		trace(TRACE_FATAL, "%s,%s: could not create children.",
-		      __FILE__, __func__);
+		TRACE(TRACE_FATAL, "could not create children.");
 		exit(0);
 	}
+
+	scoreboard_state();
 }
 
 void manage_stop_children(void)
