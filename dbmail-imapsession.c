@@ -595,81 +595,84 @@ int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self)
 	const char *query_result;
 	char *to_char_str;
 	msginfo_t *result;
-	GList *allids;
-	GList *slices;
-	u64_t *uid;
+	GList *l;
+	u64_t *uid, *lo, *hi;
+	u64_t id;
 	
 	g_return_val_if_fail(self->fetch_ids,-1);
 
-	allids = g_tree_keys(self->fetch_ids);
+	l = g_tree_keys(self->fetch_ids);
 
-	self->msginfo = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+	l = g_list_first(l);
+	lo = (u64_t *)l->data;
 
+	l = g_list_last(l);
+	hi = (u64_t *)l->data;
+	
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 
 	k = 0;
 	to_char_str = date2char_str("internal_date");
 
-	slices = g_list_slices_u64(allids,1000);
-	slices = g_list_first(slices);
-	while (slices) {
 		
-		db_free_result();
+	db_free_result();
 
-		snprintf(query, DEF_QUERYSIZE,
-			 "SELECT seen_flag, answered_flag, deleted_flag, flagged_flag, "
-			 "draft_flag, recent_flag, %s, rfcsize, message_idnr "
-			 "FROM %smessages msg, %sphysmessage pm "
-			 "WHERE pm.id = msg.physmessage_id "
-			 "AND message_idnr IN (%s) "
-			 "AND mailbox_idnr = '%llu' AND status IN ('%d','%d') "
-			 "ORDER BY message_idnr ASC",to_char_str,DBPFX,DBPFX,
-			 (char *)slices->data, ud->mailbox.uid,
-			 MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
-		dm_free(to_char_str);
+	snprintf(query, DEF_QUERYSIZE,
+		 "SELECT seen_flag, answered_flag, deleted_flag, flagged_flag, "
+		 "draft_flag, recent_flag, %s, rfcsize, message_idnr "
+		 "FROM %smessages msg, %sphysmessage pm "
+		 "WHERE pm.id = msg.physmessage_id "
+		 "AND message_idnr BETWEEN '%llu' AND '%llu' "
+		 "AND mailbox_idnr = '%llu' AND status IN ('%d','%d') "
+		 "ORDER BY message_idnr ASC",to_char_str,DBPFX,DBPFX,
+		 *lo, *hi, ud->mailbox.uid,
+		 MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
+	dm_free(to_char_str);
 
-		if (db_query(query) == -1) {
-			trace(TRACE_ERROR, "%s,%s: could not select message",
-			      __FILE__, __func__);
-			return (-1);
-		}
-
-		if ((nrows = db_num_rows()) == 0) {
-			db_free_result();
-			return 0;
-		}
-
-
-		for (i = 0; i < nrows; i++, k++) {
-
-			result = g_new0(msginfo_t,1);
-			/* flags */
-			for (j = 0; j < IMAP_NFLAGS; j++)
-				result->flags[j] = db_get_result_bool(i, j);
-
-			/* internal date */
-			query_result = db_get_result(i, IMAP_NFLAGS);
-			strncpy(result->internaldate,
-				(query_result) ? query_result :
-				"01-Jan-1970 00:00:01 +0100",
-				IMAP_INTERNALDATE_LEN);
-			
-			/* rfcsize */
-			result->rfcsize = db_get_result_u64(i, IMAP_NFLAGS + 1);
-			
-			/* uid */
-			result->uid = db_get_result_u64(i, IMAP_NFLAGS + 2);
-
-			uid = g_new0(u64_t,1);
-			*uid = result->uid;
-			
-			g_tree_insert(self->msginfo, uid, result); 
-		}
-
-		if (! g_list_next(slices))
-			break;
-		slices = g_list_next(slices);
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: could not select message",
+		      __FILE__, __func__);
+		return (-1);
 	}
+
+	if ((nrows = db_num_rows()) == 0) {
+		db_free_result();
+		return 0;
+	}
+
+	self->msginfo = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+
+	for (i = 0; i < nrows; i++) {
+
+		id = db_get_result_u64(i, IMAP_NFLAGS + 2);
+
+		if (! g_tree_lookup(self->fetch_ids,&id))
+			continue;
+		
+		result = g_new0(msginfo_t,1);
+		/* flags */
+		for (j = 0; j < IMAP_NFLAGS; j++)
+			result->flags[j] = db_get_result_bool(i, j);
+
+		/* internal date */
+		query_result = db_get_result(i, IMAP_NFLAGS);
+		strncpy(result->internaldate,
+			(query_result) ? query_result :
+			"01-Jan-1970 00:00:01 +0100",
+			IMAP_INTERNALDATE_LEN);
+		
+		/* rfcsize */
+		result->rfcsize = db_get_result_u64(i, IMAP_NFLAGS + 1);
+		
+		/* uid */
+		result->uid = id;
+
+		uid = g_new0(u64_t,1);
+		*uid = result->uid;
+		
+		g_tree_insert(self->msginfo, uid, result); 
+	}
+
 	
 	db_free_result();
 
@@ -906,66 +909,74 @@ static void imap_cache_send_tmpdump(struct ImapSession *self, body_fetch_t *body
 }
 
 /* get headers or not */
-static GTree * _fetch_headers(const GTree *ids, const GList *headers, gboolean not)
+static GTree * _fetch_headers(struct ImapSession *self, const GList *headers, gboolean not)
 {
 	unsigned i=0, rows=0;
 	GString *h = NULL, *q = g_string_new("");
-	gchar *r = NULL, *fld, *val, *old, *new;
+	gchar *fld, *val, *old, *new;
 	GTree *t;
-	u64_t *mid;
-	GList *l, *sl;
+	u64_t *mid, *hi, *lo;
+	u64_t id;
+	GList *l;
 
-	l = g_tree_keys((GTree *)ids);
-	t = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+	GTree *ids = self->fetch_ids;
 	
-	sl = g_list_slices_u64(l,100);
-	sl = g_list_first(sl);
-	g_list_free(l);
+	l = g_tree_keys((GTree *)ids);
+	
+	l = g_list_first(l);
+	lo = (u64_t *)l->data;
+	
+	l = g_list_last(l);
+	hi = (u64_t *)l->data;
 
-	while(sl) {
-		r = sl->data;
-		
-		h = g_list_join((GList *)headers,"','");
-		h = g_string_ascii_down(h);
-		
-		g_string_printf(q,"SELECT message_idnr,headername,headervalue "
-				"FROM %sheadervalue v "
-				"JOIN %smessages m ON v.physmessage_id=m.physmessage_id "
-				"JOIN %sheadername n ON v.headername_id=n.id "
-				"WHERE message_idnr IN (%s) "
-				"AND lower(headername) %s IN ('%s')",
-				DBPFX, DBPFX, DBPFX, r, not?"NOT":"", h->str);
-		
-		
-		if (db_query(q->str)==-1)
-			break;
-		
-	 	g_string_free(h,TRUE);
-		
-		rows = db_num_rows();
-		for(i=0;i<rows;i++) {
-			
-			mid = g_new0(u64_t,1);
-			*mid = db_get_result_u64(i,0);
-			fld = (char *)db_get_result(i,1);
-			val = (char *)db_get_result(i,2);
-			
-			old = g_tree_lookup(t, (gconstpointer)mid);
-			new = g_strdup_printf("%s%s: %s\n", old?old:"", fld, val);
-			
-			g_tree_insert(t,mid,new);
-		}
-		db_free_result();
+	h = g_list_join((GList *)headers,"','");
+	h = g_string_ascii_down(h);
+	
+	g_string_printf(q,"SELECT message_idnr,headername,headervalue "
+			"FROM %sheadervalue v "
+			"JOIN %smessages m ON v.physmessage_id=m.physmessage_id "
+			"JOIN %smailboxes b ON m.mailbox_idnr=b.mailbox_idnr "
+			"JOIN %sheadername n ON v.headername_id=n.id "
+			"WHERE m.mailbox_idnr = '%llu' "
+			"AND message_idnr BETWEEN '%llu' AND '%llu' "
+			"AND lower(headername) %s IN ('%s')",
+			DBPFX, DBPFX, DBPFX, DBPFX,
+			self->mailbox->id,
+			*lo, *hi, not?"NOT":"", h->str);
+	
+	
+	if (db_query(q->str)==-1)
+		return NULL;
+	
+	g_string_free(h,TRUE);
+	
+	t = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 
-		if (! g_list_next(sl))
-			break;
+	rows = db_num_rows();
+	
+	for(i=0;i<rows;i++) {
 		
-		sl = g_list_next(sl);
-
+		id = db_get_result_u64(i,0);
+		
+		if (! g_tree_lookup((GTree *)ids,&id))
+			continue;
+		
+		mid = g_new0(u64_t,1);
+		*mid = id;
+		
+		fld = (char *)db_get_result(i,1);
+		val = (char *)db_get_result(i,2);
+		
+		old = g_tree_lookup(t, (gconstpointer)mid);
+		new = g_strdup_printf("%s%s: %s\n", old?old:"", fld, val);
+		
+		g_tree_insert(t,mid,new);
 	}
+	db_free_result();
+
 	g_string_free(q,TRUE);
 	
-	g_list_destroy(sl);
+	g_list_free(l);
 
 	return t;
 }
@@ -1078,7 +1089,7 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data)
 		tmp = NULL;
 		
 		if (! self->headers)
-			self->headers = _fetch_headers(self->fetch_ids, tlist, condition);
+			self->headers = _fetch_headers(self, tlist, condition);
 		
 		if (self->headers) {
 			u64_t msg_idnr = self->msg_idnr;
