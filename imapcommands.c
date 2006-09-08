@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: imapcommands.c 2252 2006-09-05 10:52:24Z paul $
+/* $Id: imapcommands.c 2257 2006-09-08 08:44:29Z aaron $
  *
  * imapcommands.c
  * 
@@ -367,22 +367,12 @@ int _ic_delete(struct ImapSession *self)
 		return 1;
 	}
 
-	/* check if the user is the owner of this mailbox. If so, then
-	   the user has the right to delete it. */
-	result = db_user_is_mailbox_owner(ud->userid, mboxid);
-	if (result < 0) {
-		dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
-		return -1;
-	}
-
-	// FIXME: check permission flag on mailbox
+	/* Check if the user has ACL delete rights to this mailbox;
+	 * this also returns true is the user owns the mailbox. */
+	result = dbmail_imap_session_mailbox_check_acl(self, mboxid, ACL_RIGHT_DELETE);
+	if (result != 0)
+		return result;
 	
-	if (result == 0) {
-		dbmail_imap_session_printf(self, "%s NO no permission to delete mailbox\r\n", self->tag);
-		dbmail_imap_session_set_state(self,IMAPCS_AUTHENTICATED);
-		return 1;
-	}
-
 	/* check if there is an attempt to delete inbox */
 	if (strcasecmp(self->args[0], "inbox") == 0) {
 		dbmail_imap_session_printf(self, "%s NO cannot delete special mailbox INBOX\r\n", self->tag);
@@ -471,8 +461,6 @@ int _ic_rename(struct ImapSession *self)
 		return 1;
 	}
 
-	// FIXME: check permissions flag on original mailbox
-	
 	/* check if new name is valid */
         if (!checkmailboxname(self->args[1])) {
 	        dbmail_imap_session_printf(self, "%s NO new mailbox name contains invalid characters\r\n", self->tag);
@@ -525,6 +513,16 @@ int _ic_rename(struct ImapSession *self)
 		/* ok, reset arg */
 		self->args[1][i] = '/';
 	}
+
+	/* Check if the user has ACL delete rights to old name, 
+	 * and create rights to the parent of the new name, or
+	 * if the user just owns both mailboxes. */
+	result = dbmail_imap_session_mailbox_check_acl(self, mboxid, ACL_RIGHT_DELETE);
+	if (result != 0)
+		return result;
+	result = dbmail_imap_session_mailbox_check_acl(self, parentmboxid, ACL_RIGHT_CREATE);
+	if (result != 0)
+		return result;
 
 	/* check if it is INBOX to be renamed */
 	if (strcasecmp(self->args[0], "inbox") == 0) {

@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: dbmail-imapsession.c 2255 2006-09-07 12:47:05Z paul $
+/* $Id: dbmail-imapsession.c 2256 2006-09-08 08:42:13Z aaron $
  * 
  * dm_imaputil.c
  *
@@ -870,7 +870,6 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data)
 	char *tmp;
 	gboolean condition = FALSE;
 	int k;
-	u64_t physid;
 	struct ImapSession *self = (struct ImapSession *)data;
 	
 	if (bodyfetch->itemtype < 0)
