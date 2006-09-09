@@ -1,3 +1,4 @@
+<<<<<<< .mine
 2006-09-09  Paul J Stevens <paul@nfg.nl>
 
 	* db.c, db.h, dbmail-imapsession.c, dbmail-imapsession.h, dbmail-message.c, 
@@ -26,6 +27,13 @@
 	* dbmail-imapsession.c:
 	make the fetch speedup scale up
 
+=======
+2006-09-09  Aaron Stone  <aaron@serendipity.cx>
+
+	* imapcommands.c:
+	Allow mailbox renaming destination to be top-level.
+
+>>>>>>> .r2260
 2006-09-08  Aaron Stone  <aaron@serendipity.cx>
 
 	* db.c, acl.c, imapcommands.c:
