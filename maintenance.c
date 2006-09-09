@@ -72,7 +72,7 @@ int do_showhelp(void) {
 	printf("     -c        clean up database (optimize/vacuum)\n");
 	printf("     -t        test for message integrity\n");
 	printf("     -u        null message check\n");
-	printf("     -b        body/header check\n");
+	printf("     -b        body/header/envelope cache check\n");
 	printf("     -p        purge messages have the DELETE status set\n");
 	printf("     -d        set DELETE status for deleted messages\n");
 	printf("     -l time   clear the IP log used for IMAP/POP-before-SMTP\n"

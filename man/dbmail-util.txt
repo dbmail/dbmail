@@ -46,7 +46,7 @@ OPTIONS
  Null message check.
 
 -b::
- Check and rebuild the body/header cache tables.
+ Check and rebuild the body/header/envelope cache tables.
 
 -d::
  Set DELETE status for messages flagged \Deleted by IMAP or POP3.
