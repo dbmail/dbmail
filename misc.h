@@ -147,4 +147,20 @@ int check_date(const char *date);
  */
 int discard_client_input(FILE * instream);
 
+// moved here from dm_imaputil.h
+char * dbmail_imap_astring_as_string(const char *s);
+char * dbmail_imap_plist_as_string(GList *plist);
+GList* dbmail_imap_append_alist_as_plist(GList *list, const InternetAddressList *ialist);
+char * dbmail_imap_plist_collapse(const char *in);
+void dbmail_imap_plist_free(GList *l);
+
+char * imap_get_structure(GMimeMessage *message, gboolean extension);
+char * imap_get_envelope(GMimeMessage *message);
+GMimeObject * imap_get_partspec(const GMimeObject *message, const char *partspec);
+char * imap_get_logical_part(const GMimeObject *object, const char * specifier);
+
+char * imap_message_fetch_headers(u64_t physid, const GList *headers, gboolean not);
+
+char * imap_cleanup_address(const char *a);
+	
 #endif

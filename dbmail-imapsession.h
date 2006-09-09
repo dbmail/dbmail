@@ -23,6 +23,7 @@ struct ImapSession {
 	struct DbmailMailbox *mailbox;
 	GTree *fetch_ids;
 	GTree *headers;
+	GTree *envelopes;
 	GList *recent;	// todo: replace with a struct DbmailMailbox
 	GTree *msginfo;
 };

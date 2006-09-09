@@ -658,7 +658,7 @@ static int do_rfc_size(void)
 
 	if (yes_to_all) {
 		if (db_update_rfcsize(lost) < 0) {
-			qerrorf("Error setting the is_header flags");
+			qerrorf("Error setting the rfcsize values");
 			has_errors = 1;
 		}
 	}
@@ -673,6 +673,49 @@ static int do_rfc_size(void)
 
 }
 
+static int do_envelope(void)
+{
+	time_t start, stop;
+	GList *lost = NULL;
+
+	if (no_to_all) {
+		qprintf("\nChecking DBMAIL for cached envelopes...\n");
+	}
+	if (yes_to_all) {
+		qprintf("\nRepairing DBMAIL for cached envelopes...\n");
+	}
+	time(&start);
+
+	if (db_icheck_envelope(&lost) < 0) {
+		qerrorf("Failed. An error occured. Please check log.\n");
+		return -1;
+	}
+
+	if (g_list_length(lost) > 0) {
+		qerrorf("Ok. Found [%d] missing envelope values.\n", g_list_length(lost));
+		has_errors = 1;
+	} else {
+		qprintf("Ok. Found [%d] missing envelope values.\n", g_list_length(lost));
+	}
+
+	if (yes_to_all) {
+		if (db_set_envelope(lost) < 0) {
+			qerrorf("Error setting the envelope cache");
+			has_errors = 1;
+		}
+	}
+
+	g_list_free(lost);
+
+	time(&stop);
+	qverbosef("--- checking envelope cache took %g seconds\n",
+	       difftime(stop, start));
+	
+	return 0;
+
+}
+
+
 int do_header_cache(void)
 {
 	time_t start, stop;
@@ -682,6 +725,9 @@ int do_header_cache(void)
 		return -1;
 	
 	if (do_rfc_size())
+		return -1;
+
+	if (do_envelope())
 		return -1;
 	
 	if (no_to_all) 

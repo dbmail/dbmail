@@ -1723,15 +1723,17 @@ int db_update_rfcsize(GList *lost)
 
 int db_set_headercache(GList *lost)
 {
-	u64_t pmsgid = -1;
+	u64_t pmsgid;
+	u64_t *id;
 	struct DbmailMessage *msg;
 	if (! lost)
 		return DM_SUCCESS;
 
 	lost = g_list_first(lost);
 	while (lost) {
-		pmsgid = (u64_t)(GPOINTER_TO_UINT(lost->data));
-	
+		id = (u64_t *)lost->data;
+		pmsgid = *id;
+		
 		msg = dbmail_message_new();
 		if (! msg)
 			return DM_EQUERY;
@@ -1743,7 +1745,7 @@ int db_set_headercache(GList *lost)
 			fprintf(stderr,"E");
 		} else {
 			db_begin_transaction();
-			if (dbmail_message_headers_cache(msg) != 1) {
+			if (dbmail_message_cache_headers(msg) != 1) {
 				trace(TRACE_WARNING,"%s,%s: error caching headers for physmessage: [%llu]", 
 					__FILE__, __func__,
 					pmsgid);
@@ -1766,6 +1768,7 @@ int db_set_headercache(GList *lost)
 int db_icheck_headercache(GList **lost)
 {
 	unsigned i;
+	u64_t *id;
 	snprintf(query, DEF_QUERYSIZE,
 			"SELECT p.id FROM %sphysmessage p "
 			"LEFT JOIN %sheadervalue h "
@@ -1778,14 +1781,79 @@ int db_icheck_headercache(GList **lost)
 		return DM_EQUERY;
 	}
 	
-	for (i = 0; i < db_num_rows(); i++) 
-		*(GList **)lost = g_list_append(*(GList **)lost,
-				GUINT_TO_POINTER((unsigned)db_get_result_u64(i, 0)));
+	for (i = 0; i < db_num_rows(); i++) {
+		id = g_new0(u64_t,1);
+		*id = db_get_result_u64(i,0);
+		*(GList **)lost = g_list_append(*(GList **)lost,id);
+	}
 
 	db_free_result();
 
 	return DM_SUCCESS;
 }
+
+int db_set_envelope(GList *lost)
+{
+	u64_t pmsgid;
+	u64_t *id;
+	struct DbmailMessage *msg;
+	if (! lost)
+		return DM_SUCCESS;
+
+	lost = g_list_first(lost);
+	while (lost) {
+		id = (u64_t *)lost->data;
+		pmsgid = *id;
+		
+		msg = dbmail_message_new();
+		if (! msg)
+			return DM_EQUERY;
+
+		if (! (msg = dbmail_message_retrieve(msg, pmsgid, DBMAIL_MESSAGE_FILTER_FULL))) {
+			trace(TRACE_WARNING,"%s,%s: error retrieving physmessage: [%llu]", 
+					__FILE__, __func__,
+					pmsgid);
+			fprintf(stderr,"E");
+		} else {
+			dbmail_message_cache_envelope(msg);
+			fprintf(stderr,".");
+			dbmail_message_free(msg);
+		}
+		if (! g_list_next(lost))
+			break;
+		lost = g_list_next(lost);
+	}
+	return DM_SUCCESS;
+}
+
+		
+int db_icheck_envelope(GList **lost)
+{
+	unsigned i;
+	u64_t *id;
+	snprintf(query, DEF_QUERYSIZE,
+			"SELECT p.id FROM %sphysmessage p "
+			"LEFT JOIN %senvelope e "
+			"ON p.id = e.physmessage_id "
+			"WHERE e.physmessage_id IS NULL",
+			DBPFX, DBPFX);
+	if (db_query(query) == -1) {
+		trace(TRACE_ERROR, "%s,%s: query failed",
+				__FILE__, __func__);
+		return DM_EQUERY;
+	}
+	
+	for (i = 0; i < db_num_rows(); i++) {
+		id = g_new0(u64_t,1);
+		*id = db_get_result_u64(i,0);
+		*(GList **)lost = g_list_append(*(GList **)lost,id);
+	}
+
+	db_free_result();
+
+	return DM_SUCCESS;
+}
+
 
 int db_set_message_status(u64_t message_idnr, MessageStatus_t status)
 {

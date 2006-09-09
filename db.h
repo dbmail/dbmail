@@ -750,6 +750,13 @@ int db_icheck_rfcsize(GList **lost);
 int db_update_rfcsize(GList *lost);
 
 /**
+ * \brief check for cached envelopes
+ *
+ */
+
+int db_icheck_envelope(GList **lost);
+int db_set_envelope(GList *lost);
+/**
  * \brief set status of a message
  * \param message_idnr
  * \param status new status of message

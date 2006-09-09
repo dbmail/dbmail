@@ -261,7 +261,6 @@ int _ic_select(struct ImapSession *self)
 	switch (ud->mailbox.permission) {
 	case IMAPPERM_READ:
 		g_snprintf(permstring, PERMSTRING_SIZE, "READ-ONLY");
-		//dbmail_imap_session_mailbox_select_recent(self);
 		break;
 	case IMAPPERM_READWRITE:
 		g_snprintf(permstring, PERMSTRING_SIZE, "READ-WRITE");
@@ -269,7 +268,8 @@ int _ic_select(struct ImapSession *self)
 		break;
 	default:
 		trace(TRACE_ERROR,
-		      "IMAPD: select(): detected invalid permission mode for mailbox %llu ('%s')",
+		      "%s,%s: detected invalid permission mode for mailbox %llu ('%s')",
+		      __FILE__, __func__,
 		      ud->mailbox.uid, self->args[0]);
 
 		dbmail_imap_session_printf(self,
@@ -383,7 +383,8 @@ int _ic_delete(struct ImapSession *self)
 	result = db_listmailboxchildren(mboxid, ud->userid, &children, &nchildren);
 	if (result == -1) {
 		/* error */
-		trace(TRACE_ERROR, "IMAPD: delete(): cannot retrieve list of mailbox children");
+		trace(TRACE_ERROR, "%s,%s: cannot retrieve list of mailbox children",
+				__FILE__, __func__);
 		dbmail_imap_session_printf(self, "* BYE dbase/memory error\r\n");
 		return -1;
 	}
@@ -564,7 +565,8 @@ int _ic_rename(struct ImapSession *self)
 
 		if (oldnamelen >= strlen(name)) {
 			/* strange error, let's say its fatal */
-			trace(TRACE_ERROR, "IMAPD: rename(): mailbox names appear to be corrupted");
+			trace(TRACE_ERROR, "%s,%s: mailbox names appear to be corrupted",
+					__FILE__, __func__);
 			dbmail_imap_session_printf(self, "* BYE internal error regarding mailbox names\r\n");
 			dm_free(children);
 			return -1;
@@ -727,11 +729,7 @@ int _ic_list(struct ImapSession *self)
 		return 1;
 	}
 
-	if( (mb = (mailbox_t *)dm_malloc ( sizeof(mailbox_t) ) ) == NULL) {
-		trace(TRACE_ERROR, "%s,%s: out-of-memory error.", __FILE__, __func__);
-		return -1;
-	}
-	memset(mb,0,sizeof(mailbox_t));
+	mb = g_new0(mailbox_t,1);
 
 	for (i = 0; i < nchildren; i++) {
 		if ((db_getmailbox_list_result(children[i], ud->userid, mb) != 0))
@@ -1395,7 +1393,10 @@ int _ic_fetch(struct ImapSession *self)
 		g_tree_destroy(self->headers);
 		self->headers = NULL;
 	}
-	
+	if (self->envelopes) {
+		g_tree_destroy(self->envelopes);
+		self->envelopes = NULL;
+	}
 	
 	dbmail_imap_session_printf(self, "%s OK %sFETCH completed\r\n", self->tag, self->use_uid ? "UID " : "");
 	return 0;

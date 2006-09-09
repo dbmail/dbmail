@@ -31,6 +31,7 @@
 #define MAX_LINESIZE (10*1024)
 #endif
 
+#define THIS_MODULE "imapsession"
 #define BUFLEN 2048
 #define SEND_BUF_SIZE 1024
 #define MAX_ARGS 512
@@ -207,7 +208,10 @@ void dbmail_imap_session_delete(struct ImapSession * self)
 		g_tree_destroy(self->headers);
 		self->headers = NULL;
 	}
-			
+	if (self->envelopes) {
+		g_tree_destroy(self->envelopes);
+		self->envelopes = NULL;
+	}
 	
 	g_free(self);
 }
@@ -574,7 +578,6 @@ int dbmail_imap_session_fetch_parse_args(struct ImapSession * self, int idx)
 		self->fi->msgparse_needed=1;
 		self->fi->getMIME_IMB = 1;
 	} else if (MATCH(token,"envelope")) {
-		self->fi->msgparse_needed=1;
 		self->fi->getEnvelope = 1;
 	} else {			
 		if ((! nexttoken) && (strcmp(token,")") == 0)) {
@@ -684,11 +687,73 @@ int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self)
 			else \
 				dbmail_imap_session_printf(self, " ")
 
+/* get envelopes */
+static GTree * _fetch_envelopes(struct ImapSession *self)
+{
+	unsigned i=0, rows=0;
+	GString *q = g_string_new("");
+	gchar *env;
+	GTree *t;
+	u64_t *mid, *hi, *lo;
+	u64_t id;
+	GList *l;
+
+	GTree *ids = self->fetch_ids;
+	
+	l = g_tree_keys((GTree *)ids);
+	
+	l = g_list_first(l);
+	lo = (u64_t *)l->data;
+	
+	l = g_list_last(l);
+	hi = (u64_t *)l->data;
+	
+	g_string_printf(q,"SELECT message_idnr,envelope "
+			"FROM %senvelope e "
+			"JOIN %smessages m ON m.physmessage_id=e.physmessage_id "
+			"JOIN %smailboxes b ON b.mailbox_idnr=m.mailbox_idnr "
+			"WHERE m.mailbox_idnr = '%llu' "
+			"AND message_idnr BETWEEN '%llu' AND '%llu' ",
+			DBPFX, DBPFX, DBPFX, 
+			self->mailbox->id, *lo, *hi);
+	
+	
+	if (db_query(q->str)==-1)
+		return NULL;
+	
+	t = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+
+	rows = db_num_rows();
+	
+	for(i=0;i<rows;i++) {
+		
+		id = db_get_result_u64(i,0);
+		
+		if (! g_tree_lookup((GTree *)ids,&id))
+			continue;
+		
+		mid = g_new0(u64_t,1);
+		*mid = id;
+		
+		env = (char *)db_get_result(i,1);
+		
+		g_tree_insert(t,mid,g_strdup(env));
+	}
+	db_free_result();
+
+	g_string_free(q,TRUE);
+	
+	g_list_free(l);
+
+	return t;
+}
+
+
 static int _fetch_get_items(struct ImapSession *self, u64_t *uid)
 {
 	int result, j = 0;
 	u64_t actual_cnt, tmpdumpsize;
-	gchar *s;
+	gchar *s = NULL;
 	GList *sublist = NULL;;
 	
 	msginfo_t *msginfo = g_tree_lookup(self->msginfo, uid);
@@ -756,14 +821,16 @@ static int _fetch_get_items(struct ImapSession *self, u64_t *uid)
 	if (self->fi->getEnvelope) {
 
 		SEND_SPACE;
-
-		_imap_cache_update(self, DBMAIL_MESSAGE_FILTER_FULL);
-		if ((s = imap_get_envelope(GMIME_MESSAGE((cached_msg.dmsg)->content)))==NULL) {
-			dbmail_imap_session_printf(self, "\r\n* BYE error fetching envelope structure\r\n");
-			return -1;
+		
+		if (! self->envelopes)
+			self->envelopes = _fetch_envelopes(self);
+		
+		if (self->envelopes) {
+			u64_t msg_idnr = self->msg_idnr;
+			s = g_tree_lookup(self->envelopes, &msg_idnr);
 		}
+
 		dbmail_imap_session_printf(self, "ENVELOPE %s", s);
-		g_free(s);
 	}
 
 	if (self->fi->getRFC822 || self->fi->getRFC822Peek) {
@@ -980,8 +1047,6 @@ static GTree * _fetch_headers(struct ImapSession *self, const GList *headers, gb
 
 	return t;
 }
-
-
 static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data) 
 {
 	long long cnt = 0;

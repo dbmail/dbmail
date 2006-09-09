@@ -777,7 +777,7 @@ int dbmail_message_store(struct DbmailMessage *self)
 		return -1;
 
 	/* store message headers */
-	if (dbmail_message_headers_cache(self) < 0)
+	if (dbmail_message_cache_headers(self) < 0)
 		return -1;
 
 	g_free(hdrs);
@@ -841,7 +841,7 @@ int _message_insert(struct DbmailMessage *self,
 
 
 
-int dbmail_message_headers_cache(const struct DbmailMessage *self)
+int dbmail_message_cache_headers(const struct DbmailMessage *self)
 {
 	assert(self);
 	assert(self->physid);
@@ -855,7 +855,8 @@ int dbmail_message_headers_cache(const struct DbmailMessage *self)
 	dbmail_message_cache_replytofield(self);
 	dbmail_message_cache_subjectfield(self);
 	dbmail_message_cache_referencesfield(self);
-	
+	dbmail_message_cache_envelope(self);
+
 	return 1;
 }
 #define CACHE_WIDTH_VALUE 255
@@ -1133,6 +1134,29 @@ void dbmail_message_cache_referencesfield(const struct DbmailMessage *self)
 
 }
 	
+void dbmail_message_cache_envelope(const struct DbmailMessage *self)
+{
+	GString *q;
+	char *envelope, *clean;
+
+	envelope = imap_get_envelope(GMIME_MESSAGE(self->content));
+	
+	clean = dm_stresc(envelope);
+
+	q = g_string_new("");
+
+	g_string_printf(q, "INSERT INTO %senvelope (physmessage_id, envelope) "
+			"VALUES (%llu,'%s')", DBPFX, self->physid, clean);
+
+	g_free(clean);
+
+	if (db_query(q->str)) {
+		trace(TRACE_ERROR, "%s,%s: insert envelope failed [%s]",
+				__FILE__, __func__, q->str);
+	}
+	g_string_free(q,TRUE);
+
+}
 
 /* old stuff moved here from dbmsgbuf.c */
 
