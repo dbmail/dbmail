@@ -830,7 +830,11 @@ static int _fetch_get_items(struct ImapSession *self, u64_t *uid)
 			s = g_tree_lookup(self->envelopes, &msg_idnr);
 		}
 
-		dbmail_imap_session_printf(self, "ENVELOPE %s", s);
+		if (s)
+			dbmail_imap_session_printf(self, "ENVELOPE %s", s?s:"");
+		else
+			TRACE(TRACE_ERROR,"missing envelope for message [%llu]", self->msg_idnr);
+
 	}
 
 	if (self->fi->getRFC822 || self->fi->getRFC822Peek) {
