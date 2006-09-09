@@ -258,6 +258,9 @@ int db_connect()
 		trace(TRACE_FATAL, "%s,%s: sqlite3_create_function failed", __FILE__,__func__);
 		return -1;
 	}
+
+	lastq = g_new0(struct qtmp,1);
+	
 	return 0;
 }
 
@@ -278,8 +281,10 @@ void db_free_result()
 int db_disconnect()
 {
 	db_free_result();
+	g_free(lastq);
 	sqlite3_close(conn);
 	conn = 0;
+	
 	return 0;
 }
 unsigned db_num_rows()
@@ -306,19 +311,10 @@ u64_t db_insert_result(const char *sequence_identifier UNUSED)
 int db_query(const char *the_query)
 {
 	char *errmsg;
-
-	if (lastq) {
-		if (lastq->resp) sqlite3_free_table(lastq->resp);
-	} else {
-		lastq = (struct qtmp *)malloc(sizeof(struct qtmp));
-		if (!lastq) {
-			trace(TRACE_ERROR,
-			      "%si,%s: malloc failed: %s",
-			      __FILE__, __func__, strerror(errno));
-			return -1;
-		}
-	}
+	
 	trace(TRACE_DEBUG,"%s,%s: %s", __FILE__, __func__, the_query);
+	
+	db_free_result();
 
 	if (sqlite3_get_table(conn, the_query, &lastq->resp,
 				(int *)&lastq->rows, (int *)&lastq->cols, &errmsg) != SQLITE_OK) {

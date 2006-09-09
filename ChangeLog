@@ -1,4 +1,3 @@
-<<<<<<< .mine
 2006-09-09  Paul J Stevens <paul@nfg.nl>
 
 	* db.c, db.h, dbmail-imapsession.c, dbmail-imapsession.h, dbmail-message.c, 
@@ -8,6 +7,11 @@
 	precache ENVELOPE to allow more FETCH speedups
 	* serverparent.c, sql/mysql/2_1_7-2_1_8.mysql:
 	finish envelope caching
+
+2006-09-09  Aaron Stone  <aaron@serendipity.cx>
+
+	* imapcommands.c:
+	Allow mailbox renaming destination to be top-level.
 
 2006-09-08  Paul J Stevens <paul@nfg.nl>
 
@@ -27,13 +31,6 @@
 	* dbmail-imapsession.c:
 	make the fetch speedup scale up
 
-=======
-2006-09-09  Aaron Stone  <aaron@serendipity.cx>
-
-	* imapcommands.c:
-	Allow mailbox renaming destination to be top-level.
-
->>>>>>> .r2260
 2006-09-08  Aaron Stone  <aaron@serendipity.cx>
 
 	* db.c, acl.c, imapcommands.c:
