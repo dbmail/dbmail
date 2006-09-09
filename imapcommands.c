@@ -26,6 +26,7 @@
  */
 
 #include "dbmail.h"
+#define THIS_MODULE "imap"
 
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
@@ -472,10 +473,6 @@ int _ic_rename(struct ImapSession *self)
 		return 1;
 	}
 
-	if (dbmail_imap_session_mailbox_check_acl(self, mboxid, ACL_RIGHT_ADMINISTER)) {
-		return 1;
-	}
-
 	oldnamelen = strlen(self->args[0]);
 
 	/* check if new name would invade structure as in
@@ -490,7 +487,6 @@ int _ic_rename(struct ImapSession *self)
 			self->tag);
 		return 1;
 	}
-
 
 	/* check if structure of new name is valid */
 	/* i.e. only last part (after last '/' can be nonexistent) */
@@ -517,12 +513,20 @@ int _ic_rename(struct ImapSession *self)
 	/* Check if the user has ACL delete rights to old name, 
 	 * and create rights to the parent of the new name, or
 	 * if the user just owns both mailboxes. */
+	TRACE(TRACE_DEBUG, "Checking right to DELETE [%llu]", mboxid);
 	result = dbmail_imap_session_mailbox_check_acl(self, mboxid, ACL_RIGHT_DELETE);
 	if (result != 0)
 		return result;
-	result = dbmail_imap_session_mailbox_check_acl(self, parentmboxid, ACL_RIGHT_CREATE);
-	if (result != 0)
-		return result;
+	TRACE(TRACE_DEBUG, "We have the right to DELETE [%llu]", mboxid);
+	if (!parentmboxid) {
+		TRACE(TRACE_DEBUG, "Destination is a top-level mailbox; not checking right to CREATE.");
+	} else {
+		TRACE(TRACE_DEBUG, "Checking right to CREATE under [%llu]", parentmboxid);
+		result = dbmail_imap_session_mailbox_check_acl(self, parentmboxid, ACL_RIGHT_CREATE);
+		if (result != 0)
+			return result;
+		TRACE(TRACE_DEBUG, "We have the right to CREATE under [%llu]", parentmboxid);
+	}
 
 	/* check if it is INBOX to be renamed */
 	if (strcasecmp(self->args[0], "inbox") == 0) {
