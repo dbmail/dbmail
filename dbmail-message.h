@@ -89,7 +89,7 @@ struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *sel
  */
 
 int dbmail_message_store(struct DbmailMessage *message);
-int dbmail_message_headers_cache(const struct DbmailMessage *message);
+int dbmail_message_cache_headers(const struct DbmailMessage *message);
 
 struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t physid, int filter);
 
@@ -139,8 +139,8 @@ void dbmail_message_cache_replytofield(const struct DbmailMessage *self);
 void dbmail_message_cache_datefield(const struct DbmailMessage *self);
 void dbmail_message_cache_subjectfield(const struct DbmailMessage *self);
 void dbmail_message_cache_referencesfield(const struct DbmailMessage *self);
+void dbmail_message_cache_envelope(const struct DbmailMessage *self);
 
-GList * dbmail_message_get_structure(const struct DbmailMessage *self, gboolean extension);
 /*
  * destructor
  */

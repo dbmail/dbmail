@@ -292,7 +292,6 @@ START_TEST(test_dbmail_imap_session_fetch_get_items)
 	u64_t row;
 	char * mailbox = g_strdup("INBOX");
 	struct ImapSession *s = dbmail_imap_session_new();
-	imap_userdata_t *ud;
 	
 	clientinfo_t *ci = ci_new();
 	s = dbmail_imap_session_setClientinfo(s,ci);
@@ -300,18 +299,10 @@ START_TEST(test_dbmail_imap_session_fetch_get_items)
 	
 	dbmail_imap_session_handle_auth(s,"testuser1","test");
 	dbmail_imap_session_mailbox_open(s,mailbox);
+	dbmail_mailbox_set_uid(s->mailbox,TRUE);
+	s->fetch_ids = dbmail_mailbox_get_set(s->mailbox,"1:*",TRUE);
 	
-	ud = s->ci->userData;
-
-	for (row=0; row<ud->mailbox.exists; row++) {
-		dbmail_imap_session_resetFi(s);
-		s->fi->msgparse_needed=1;
-		s->fi->getRFC822=1;
-		s->fi->getFlags=0;
-		s->msg_idnr = ud->mailbox.seq_list[row];
-//		printf("seq_list[%llu]: [%llu]\n", row, s->msg_idnr);
-		result = dbmail_imap_session_fetch_get_items(s,0);
-	}
+	result = dbmail_imap_session_fetch_get_items(s);
 	
 	dbmail_imap_session_delete(s);
 	g_free(mailbox);
@@ -662,7 +653,7 @@ static u64_t get_msgsid(void)
 	return id;
 }
 
-
+#ifdef OLD
 START_TEST(test_imap_message_fetch_headers)
 {
 	char *res;
@@ -686,6 +677,8 @@ START_TEST(test_imap_message_fetch_headers)
 
 }
 END_TEST
+#endif
+
 START_TEST(test_g_list_slices)
 {
 	unsigned i=0;
@@ -713,12 +706,52 @@ START_TEST(test_g_list_slices)
 		list = g_list_append_printf(list, "ELEM_%d", i);
 	list = g_list_slices(list, s);
 	list = g_list_first(list);
-	fail_unless(g_list_length(list)==1, "number of slices incorrect");
+	fail_unless(g_list_length(list)==1, "number of slices incorrect [%d]", g_list_length(list));
 	sub = g_string_split(g_string_new((gchar *)list->data), ",");
 	fail_unless(g_list_length(sub)==j,"Slice length incorrect");
 
 }
 END_TEST
+START_TEST(test_g_list_slices_u64)
+{
+	unsigned i=0;
+	unsigned j=98;
+	unsigned s=11;
+	u64_t *l;
+	GList *list = NULL;
+	GList *sub = NULL;
+	for (i=0; i< j; i++) {
+		l = g_new0(u64_t,1);
+		*l = i;
+		list = g_list_append(list, l);
+	}
+		
+	list = g_list_slices_u64(list, s);
+	list = g_list_first(list);
+	fail_unless(g_list_length(list)==9, "number of slices incorrect");
+	
+	sub = g_string_split(g_string_new((gchar *)list->data), ",");
+	fail_unless(g_list_length(sub)==s,"Slice length incorrect");
+
+	g_list_foreach(list,(GFunc)g_free,NULL);
+	g_list_foreach(sub,(GFunc)g_free,NULL);
+	
+	i=0;
+	j=17;
+	s=100;
+	list = NULL;
+	sub = NULL;
+	for (i=0; i< j; i++) 
+		list = g_list_append_printf(list, "ELEM_%d", i);
+	list = g_list_slices(list, s);
+	list = g_list_first(list);
+	fail_unless(g_list_length(list)==1, "number of slices incorrect [%d]", g_list_length(list));
+	sub = g_string_split(g_string_new((gchar *)list->data), ",");
+	fail_unless(g_list_length(sub)==j,"Slice length incorrect");
+
+}
+END_TEST
+
 
 unsigned int get_bound_lo(unsigned int * set, unsigned int setlen) {
 	unsigned int index = 0;
@@ -866,7 +899,7 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_session, test_imap_get_envelope_koi);
 	tcase_add_test(tc_session, test_imap_get_envelope_latin);
 	tcase_add_test(tc_session, test_imap_get_partspec);
-	tcase_add_test(tc_session, test_imap_message_fetch_headers);
+//	tcase_add_test(tc_session, test_imap_message_fetch_headers);
 	tcase_add_test(tc_session, test_dbmail_imap_session_fetch_get_items);
 	
 	tcase_add_checked_fixture(tc_mime, setup, teardown);
@@ -877,6 +910,7 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_util, test_dbmail_imap_plist_collapse);
 	tcase_add_test(tc_util, test_dbmail_imap_astring_as_string);
 	tcase_add_test(tc_util, test_g_list_slices);
+	tcase_add_test(tc_util, test_g_list_slices_u64);
 	tcase_add_test(tc_util, test_listex_match);
 	tcase_add_test(tc_util, test_date_sql2imap);
 

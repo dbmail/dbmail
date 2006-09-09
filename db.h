@@ -750,6 +750,13 @@ int db_icheck_rfcsize(GList **lost);
 int db_update_rfcsize(GList *lost);
 
 /**
+ * \brief check for cached envelopes
+ *
+ */
+
+int db_icheck_envelope(GList **lost);
+int db_set_envelope(GList *lost);
+/**
  * \brief set status of a message
  * \param message_idnr
  * \param status new status of message
@@ -1271,28 +1278,6 @@ int db_set_rfcsize(u64_t rfcsize, u64_t msg_idnr, u64_t mailbox_idnr);
  * 		- 1 on success
  */
 int db_get_rfcsize(u64_t msg_idnr, u64_t mailbox_idnr, u64_t * rfc_size);
-/**
- * \brief get info on a range of messages.
- * \param msg_idnr_low beginning of range
- * \param msg_idnr_high end of range
- * \param mailbox_idnr
- * \param get_flags if non-zero, get message flags
- * \param get_internaldate if non-zero get internal date
- * \param get_rfcsize if non-zero get rfcsize
- * \param get_msg_idnr if non-zero get message idnr
- * \param result will hold a list of msginfo_t
- * \param resultsetlen length of result set
- * \return 
- *    - -2 on memory error
- *    - -1 on database error
- *    - 0 on success
- * \attention caller should free result.
- */
-int db_get_msginfo_range(u64_t msg_idnr_low, u64_t msg_idnr_high,
-			 u64_t mailbox_idnr, int get_flags,
-			 int get_internaldate, int get_rfcsize,
-			 int get_msg_idnr, msginfo_t ** result,
-			 unsigned *resultsetlen);
 
 /**
  * \brief builds a list containing the fields of

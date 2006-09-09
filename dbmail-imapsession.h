@@ -20,8 +20,12 @@ struct ImapSession {
 	char **args;
 	fetch_items_t *fi;
 	struct DbmailMessage *message;
-	GList * recent;	// todo: replace with a struct DbmailMailbox
-	msginfo_t *msginfo;
+	struct DbmailMailbox *mailbox;
+	GTree *fetch_ids;
+	GTree *headers;
+	GTree *envelopes;
+	GList *recent;	// todo: replace with a struct DbmailMailbox
+	GTree *msginfo;
 };
 
 typedef int (*IMAP_COMMAND_HANDLER) (struct ImapSession *);
@@ -31,7 +35,6 @@ struct ImapSession * dbmail_imap_session_setClientinfo(struct ImapSession * self
 struct ImapSession * dbmail_imap_session_setTag(struct ImapSession * self, char * tag);
 struct ImapSession * dbmail_imap_session_setCommand(struct ImapSession * self, char * command);
 struct ImapSession * dbmail_imap_session_setArgs(struct ImapSession * self, char ** args);
-struct ImapSession * dbmail_imap_session_setMsginfo(struct ImapSession * self, msginfo_t * msginfo);
 struct ImapSession * dbmail_imap_session_resetFi(struct ImapSession * self);
 
 
@@ -60,10 +63,8 @@ int dbmail_imap_session_mailbox_select_recent(struct ImapSession *self);
 int dbmail_imap_session_mailbox_update_recent(struct ImapSession *self);
 
 int dbmail_imap_session_fetch_parse_args(struct ImapSession * self, int idx);
-int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self, u64_t fetch_start, u64_t fetch_end);
-int dbmail_imap_session_fetch_get_items(struct ImapSession *self, u64_t row);
-
-int dbmail_imap_session_get_msginfo_range(struct ImapSession *self, u64_t msg_idnr_low, u64_t msg_idnr_high);
+int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self);
+int dbmail_imap_session_fetch_get_items(struct ImapSession *self);
 
 void dbmail_imap_session_bodyfetch_new(struct ImapSession *self);
 void dbmail_imap_session_bodyfetch_free(struct ImapSession *self);
