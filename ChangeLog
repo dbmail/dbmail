@@ -1,3 +1,13 @@
+2006-09-09  Paul J Stevens <paul@nfg.nl>
+
+	* db.c, db.h, dbmail-imapsession.c, dbmail-imapsession.h, dbmail-message.c, 
+	  dbmail-message.h, dm_imaputil.c, dm_imaputil.h, imapcommands.c, 
+	  maintenance.c, misc.c, misc.h, sql/mysql/2_1_7-2_1_8.mysql, 
+	  sql/postgresql/2_1_7-2_1_8.pgsql, sql/sqlite/2_1_7-2_1_8.sqlite:
+	precache ENVELOPE to allow more FETCH speedups
+	* serverparent.c, sql/mysql/2_1_7-2_1_8.mysql:
+	finish envelope caching
+
 2006-09-08  Paul J Stevens <paul@nfg.nl>
 
 	* pop3.c, test-scripts/testpop.txt:
