@@ -32,6 +32,8 @@
 /* set up database login data */
 extern db_param_t _db_params;
 
+static char *configFile = DEFAULT_CONFIG_FILE;
+
 extern volatile sig_atomic_t mainRestart;
 extern volatile sig_atomic_t mainStatus;
 extern volatile sig_atomic_t mainStop;
@@ -40,6 +42,7 @@ extern volatile sig_atomic_t mainSig;
 static int SetMainSigHandler(void);
 static void MainSigHandler(int sig, siginfo_t * info, void *data);
 static void ClearConfig(serverConfig_t * conf);
+static void DoConfig(serverConfig_t * conf, const char * const service);
 static void LoadServerConfig(serverConfig_t * config, const char * const service);
 
 void serverparent_showhelp(const char *name, const char *greeting) {
@@ -66,7 +69,10 @@ void serverparent_showhelp(const char *name, const char *greeting) {
 int serverparent_getopt(serverConfig_t *config, const char *service, int argc, char *argv[])
 {
 	int opt;
+<<<<<<< .mine
 	char *configFile = g_strdup(DEFAULT_CONFIG_FILE);
+=======
+>>>>>>> .r2259
 
 	ClearConfig(config);
 
@@ -118,24 +124,12 @@ int serverparent_getopt(serverConfig_t *config, const char *service, int argc, c
 		}
 	}
 
-	TRACE(TRACE_DEBUG, "reading config");
-	config_read(configFile);
-
-	SetTraceLevel(service);
-	/* Override SetTraceLevel. */
-	if (config->log_verbose) {
-		configure_debug(5,5);
-	}
-	
-	LoadServerConfig(config, service);
-	GetDBParams(&_db_params);
-
-	g_free(configFile);
+	DoConfig(config, service);
 
 	return 0;
 }
 
-int serverparent_mainloop(serverConfig_t *config, const char *service)
+int serverparent_mainloop(serverConfig_t *config, const char *service, const char *servicename)
 {
 	SetMainSigHandler();
 
@@ -150,15 +144,17 @@ int serverparent_mainloop(serverConfig_t *config, const char *service)
 	/* We write the pidFile after daemonize because
 	 * we may actually be a child of the original process. */
 	if (! config->pidFile)
-		config->pidFile = config_get_pidfile(config, service);
+		config->pidFile = config_get_pidfile(config, servicename);
 	pidfile_create(config->pidFile, getpid());
 
 	if (! config->stateFile)
-		config->stateFile = config_get_statefile(config, service);
+		config->stateFile = config_get_statefile(config, servicename);
 	statefile_create(config->stateFile);
 
-	while (!mainStop && server_run(config))
-		{ /* Keep on keeping on... */ }
+	 /* Reread the config file. */
+	while (!mainStop && server_run(config)) {
+		DoConfig(config, service);
+	}
 
 	TRACE(TRACE_INFO, "leaving main loop");
 	return 0;
@@ -196,9 +192,24 @@ int SetMainSigHandler()
 	return 0;
 }
 
-void ClearConfig(serverConfig_t * conf)
+void ClearConfig(serverConfig_t * config)
 {
-	memset(conf, 0, sizeof(serverConfig_t));
+	memset(config, 0, sizeof(serverConfig_t));
+}
+
+void DoConfig(serverConfig_t * config, const char * const service) {
+	TRACE(TRACE_DEBUG, "reading config");
+	config_free();
+	config_read(configFile);
+
+	SetTraceLevel(service);
+	/* Override SetTraceLevel. */
+	if (config->log_verbose) {
+		configure_debug(5,5);
+	}
+	
+	LoadServerConfig(config, service);
+	GetDBParams(&_db_params);
 }
 
 void LoadServerConfig(serverConfig_t * config, const char * const service)

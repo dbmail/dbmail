@@ -1,4 +1,4 @@
-/* $Id: timsieved.c 2257 2006-09-08 08:44:29Z aaron $
+/* $Id: timsieved.c 2259 2006-09-08 19:48:57Z aaron $
  
 Copyright (C) 2004 Aaron Stone aaron at serendipity dot cx
 
@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
 		goto shutdown;
 	}
 
-	result = serverparent_mainloop(&config, "dbmail-timsieved");
+	result = serverparent_mainloop(&config, "SIEVE", "dbmail-timsieved");
 	
 shutdown:
 	g_mime_shutdown();

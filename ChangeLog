@@ -1,12 +1,36 @@
+2006-09-08  Paul J Stevens <paul@nfg.nl>
+
+	* pop3.c, test-scripts/testpop.txt:
+	more pop3 cleanups
+	* check_dbmail_imapd.c, dbmail-imapsession.c, dm_imaputil.c:
+	speedup fetch by changing a join in _fetch_headers
+	* serverparent.c:
+	fix double free
+	* check_dbmail_imapd.c, db.h, dbmail-imapsession.c, dbmail-imapsession.h, 
+	  dm_imaputil.c, imapcommands.c, list.c, list.h, misc.c, misc.h:
+	massive speedup in fetch code by retrieving headerfields in one query
+	* test-scripts/testfetch.txt:
+	added fetch sequence used by evolution
+	* dbmail-imapsession.c, imapcommands.c, test-scripts/testfetch.txt:
+	fix a memleak and add OE fetch to testscript
+	* dbmail-imapsession.c:
+	make the fetch speedup scale up
+
 2006-09-08  Aaron Stone  <aaron@serendipity.cx>
 
 	* db.c, acl.c, imapcommands.c:
 	Clarify the ACL checks for IMAP delete and rename.
 	* lmtpd.c, pop3d.c, imapd.c, timsieved.c:
 	Removed call to serverparent_config.
+	Added service argument to call serverparent_mainloop.
 	* server.c, server.h, serverparent.c, serverparent.h:
 	Consolidated serverparent_config with serverparent_getopt,
 	moved ClearConfig and LoadServerConfig to serverparent.
+	Actually re-read the config file on receipt of SIGHUP.
+	* pidfile.c:
+	Add a trailing newline to the pidfile.
+	* pool.c:
+	Dump the initial scoreboard state from manage_start_children.
 
 2006-09-07  Paul J Stevens <paul@nfg.nl>
 
