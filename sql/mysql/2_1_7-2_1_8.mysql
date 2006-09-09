@@ -5,7 +5,6 @@ CREATE TABLE dbmail_envelope (
 	id		BIGINT NOT NULL AUTO_INCREMENT,
 	envelope	TEXT NOT NULL DEFAULT '',
 	PRIMARY KEY (id),
-	UNIQUE (physmessage_id, envelope),
 	FOREIGN KEY (physmessage_id)
 			REFERENCES dbmail_physmessage(id)
 			ON UPDATE CASCADE ON DELETE CASCADE

@@ -69,10 +69,7 @@ void serverparent_showhelp(const char *name, const char *greeting) {
 int serverparent_getopt(serverConfig_t *config, const char *service, int argc, char *argv[])
 {
 	int opt;
-<<<<<<< .mine
 	char *configFile = g_strdup(DEFAULT_CONFIG_FILE);
-=======
->>>>>>> .r2259
 
 	ClearConfig(config);
 
