@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: maintenance.c 2243 2006-08-30 13:34:37Z paul $
+/* $Id: maintenance.c 2262 2006-09-09 20:08:35Z aaron $
  *
  * This is the dbmail housekeeping program. 
  *	It checks the integrity of the database and does a cleanup of all
@@ -72,7 +72,7 @@ int do_showhelp(void) {
 	printf("     -c        clean up database (optimize/vacuum)\n");
 	printf("     -t        test for message integrity\n");
 	printf("     -u        null message check\n");
-	printf("     -b        body/header check\n");
+	printf("     -b        body/header/envelope cache check\n");
 	printf("     -p        purge messages have the DELETE status set\n");
 	printf("     -d        set DELETE status for deleted messages\n");
 	printf("     -l time   clear the IP log used for IMAP/POP-before-SMTP\n"
@@ -208,7 +208,7 @@ int main(int argc, char *argv[])
 		case 'V':
  			printf("DBMail: dbmail-util\n"
  			       "Version: %s\n"
- 			       "$Revision: 2243 $\n"
+ 			       "$Revision: 2262 $\n"
  			       "Copyright: %s\n", VERSION, COPYRIGHT);
 			return 1;
 
