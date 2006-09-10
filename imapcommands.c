@@ -1382,10 +1382,7 @@ int _ic_fetch(struct ImapSession *self)
 	} while (idx > 0);
 
 	/* reopen the mailbox */
-	if (self->mailbox) 
-		dbmail_mailbox_free(self->mailbox);
-	self->mailbox = dbmail_mailbox_new(mailbox_idnr);
-
+	dbmail_mailbox_open(self->mailbox);
 
 	dbmail_mailbox_set_uid(self->mailbox,self->use_uid);
 	
