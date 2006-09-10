@@ -1591,7 +1591,6 @@ int dbmail_imap_session_mailbox_open(struct ImapSession * self, const char * mai
 	
 	/* get the mailbox_idnr */
 	mailbox_idnr = dbmail_imap_session_mailbox_get_idnr(self, mailbox);
-
 	
 	if ((! mailbox_idnr ) && (strncasecmp(mailbox,"INBOX",5)==0)) {
 		/* create missing INBOX for this authenticated user */
