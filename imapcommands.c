@@ -1381,6 +1381,9 @@ int _ic_fetch(struct ImapSession *self)
 		}
 	} while (idx > 0);
 
+	/* reopen the mailbox */
+	dbmail_mailbox_open(self->mailbox);
+
 	dbmail_mailbox_set_uid(self->mailbox,self->use_uid);
 	
 	self->fetch_ids = dbmail_mailbox_get_set(self->mailbox,self->args[0],self->use_uid);
