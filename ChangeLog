@@ -1,3 +1,14 @@
+2006-09-10  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-imapsession.c:
+	deal with missing envelopes
+	* dbmail-imapsession.c:
+	newtrace cleanups
+	* ChangeLog, modules/dbsqlite.c:
+	fix tiny leak in sqlite code
+	* dbmail-imapsession.c, imapcommands.c:
+	reopen the mailbox for each fetch
+
 2006-09-09  Paul J Stevens <paul@nfg.nl>
 
 	* db.c, db.h, dbmail-imapsession.c, dbmail-imapsession.h, dbmail-message.c, 
