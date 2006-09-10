@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: imapcommands.c 2263 2006-09-10 09:31:31Z paul $
+/* $Id: imapcommands.c 2264 2006-09-10 18:05:26Z aaron $
  *
  * imapcommands.c
  * 
@@ -449,7 +449,8 @@ int _ic_delete(struct ImapSession *self)
 int _ic_rename(struct ImapSession *self)
 {
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
-	u64_t mboxid, newmboxid, *children, parentmboxid;
+	u64_t mboxid, newmboxid, *children;
+	u64_t parentmboxid = 0;
 	size_t oldnamelen;
 	int nchildren, i, result;
 	char newname[IMAP_MAX_MAILBOX_NAMELEN],
