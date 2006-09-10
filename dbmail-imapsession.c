@@ -104,8 +104,6 @@ struct ImapSession * dbmail_imap_session_new(void)
 		return NULL;
 
 	self = g_new0(struct ImapSession,1);
-	if (! self)
-		trace(TRACE_ERROR,"%s,%s: OOM error", __FILE__, __func__);
 
 	dbmail_imap_session_resetFi(self);
 	
@@ -256,8 +254,7 @@ static u64_t _imap_cache_update(struct ImapSession *self, message_filter_t filte
 	char *buf = NULL;
 	char *rfc = NULL;
 
-	trace(TRACE_DEBUG,"%s,%s: cache message [%llu] filter [%d]",
-			__FILE__, __func__, self->msg_idnr, filter);
+	TRACE(TRACE_DEBUG,"cache message [%llu] filter [%d]", self->msg_idnr, filter);
 
 	if (cached_msg.file_dumped == 1 && cached_msg.num == self->msg_idnr) {
 		outcnt = cached_msg.dumpsize;
@@ -308,7 +305,7 @@ static u64_t _imap_cache_update(struct ImapSession *self, message_filter_t filte
 	mrewind(cached_msg.memdump);
 	mrewind(cached_msg.tmpdump);
 	
-	trace(TRACE_DEBUG,"%s,%s: cache size [%llu]", __FILE__, __func__, outcnt);	
+	TRACE(TRACE_DEBUG,"cache size [%llu]", outcnt);	
 	return outcnt;
 }
 
@@ -323,7 +320,7 @@ static int _imap_session_fetch_parse_partspec(struct ImapSession *self, int idx)
 	token=self->args[idx];
 	nexttoken=self->args[idx+1];
 
-	trace(TRACE_DEBUG,"%s,%s: token [%s], nexttoken [%s]",__FILE__, __func__, token, nexttoken);
+	TRACE(TRACE_DEBUG,"token [%s], nexttoken [%s]", token, nexttoken);
 
 	for (j = 0; token[j]; j++) {
 		if (isdigit(token[j])) {
@@ -422,7 +419,7 @@ static int _imap_session_fetch_parse_octet_range(struct ImapSession *self, int i
 	if (! token)
 		return idx;
 	
-	trace(TRACE_DEBUG,"%s,%s: parse token [%s]",__FILE__, __func__, token);
+	TRACE(TRACE_DEBUG,"parse token [%s]", token);
 
 	if (token[0] == '<') {
 
@@ -487,8 +484,7 @@ int dbmail_imap_session_fetch_parse_args(struct ImapSession * self, int idx)
 	token = self->args[idx];
 	nexttoken = self->args[idx+1];
 
-	trace(TRACE_DEBUG,"%s,%s: parse args[%d] = [%s]",
-		__FILE__,__func__, idx, token);
+	TRACE(TRACE_DEBUG,"parse args[%d] = [%s]", idx, token);
 
 	if (MATCH(token,"flags")) {
 		self->fi->getFlags = 1;
@@ -554,8 +550,7 @@ int dbmail_imap_session_fetch_parse_args(struct ImapSession * self, int idx)
 				self->fi->noseen = 1;
 
 			if ((idx = _imap_session_fetch_parse_partspec(self,idx)) < 0) {
-				trace(TRACE_DEBUG,"%s,%s: fetch_parse_partspec return with error", 
-						__FILE__, __func__);
+				TRACE(TRACE_DEBUG,"fetch_parse_partspec return with error");
 				return -2;
 			}
 			/* idx points to ']' now */
@@ -586,8 +581,7 @@ int dbmail_imap_session_fetch_parse_args(struct ImapSession * self, int idx)
 		}
 		return -2;	/* DONE */
 	}
-	trace(TRACE_DEBUG, "%s,%s: args[idx = %d] = %s (returning %d)\n",
-	      __FILE__,__func__, idx, self->args[idx], idx + 1);
+	TRACE(TRACE_DEBUG, "args[idx = %d] = %s (returning %d)\n", idx, self->args[idx], idx + 1);
 	return idx + 1;
 }
 
@@ -633,8 +627,7 @@ int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self)
 	dm_free(to_char_str);
 
 	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: could not select message",
-		      __FILE__, __func__);
+		TRACE(TRACE_ERROR, "could not select message");
 		return (-1);
 	}
 
@@ -830,7 +823,11 @@ static int _fetch_get_items(struct ImapSession *self, u64_t *uid)
 			s = g_tree_lookup(self->envelopes, &msg_idnr);
 		}
 
-		dbmail_imap_session_printf(self, "ENVELOPE %s", s);
+		if (s)
+			dbmail_imap_session_printf(self, "ENVELOPE %s", s?s:"");
+		else
+			TRACE(TRACE_ERROR,"missing envelope for message [%llu]", self->msg_idnr);
+
 	}
 
 	if (self->fi->getRFC822 || self->fi->getRFC822Peek) {
@@ -1062,14 +1059,14 @@ static int _imap_show_body_section(body_fetch_t *bodyfetch, gpointer data)
 	if (bodyfetch->itemtype < 0)
 		return 0;
 	
-	trace(TRACE_DEBUG,"%s,%s: itemtype [%d] partspec [%s]", __FILE__, __func__, bodyfetch->itemtype, bodyfetch->partspec);
+	TRACE(TRACE_DEBUG,"itemtype [%d] partspec [%s]", bodyfetch->itemtype, bodyfetch->partspec);
 	
 	if (self->fi->msgparse_needed) {
 		_imap_cache_update(self, DBMAIL_MESSAGE_FILTER_FULL);
 		if (bodyfetch->partspec[0]) {
 			if (bodyfetch->partspec[0] == '0') {
 				dbmail_imap_session_printf(self, "\r\n%s BAD protocol error\r\n", self->tag);
-				trace(TRACE_DEBUG, "PROTOCOL ERROR");
+				TRACE(TRACE_ERROR, "PROTOCOL ERROR");
 				return 1;
 			}
 			part = imap_get_partspec(GMIME_OBJECT((cached_msg.dmsg)->content), bodyfetch->partspec);
@@ -1288,7 +1285,7 @@ int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...)
         if (feof(fd) || fflush(fd) < 0) {
 		g_free(re);
 		g_free(ln);
-                trace(TRACE_ERROR, "%s,%s: client socket closed", __FILE__, __func__);
+                TRACE(TRACE_ERROR, "client socket closed");
 		return -2;
 	}
 
@@ -1297,7 +1294,7 @@ int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...)
         if (len < 0) {
 		g_free(re);
 		g_free(ln);
-                trace(TRACE_ERROR, "%s,%s: write to client socket failed", __FILE__, __func__);
+                TRACE(TRACE_ERROR, "write to client socket failed");
 		return -2;
 	}
 
@@ -1325,7 +1322,7 @@ int dbmail_imap_session_discard_to_eol(struct ImapSession *self)
 		alarm(ci->timeout);
 		if (fgets(buffer, MAX_LINESIZE, ci->rx) == NULL) {
 			alarm(0);
-			trace(TRACE_ERROR, "%s,%s: error reading from client", __FILE__, __func__);
+			TRACE(TRACE_ERROR, "error reading from client");
 			return -1;
 		}
 		len = strlen(buffer);
@@ -1355,20 +1352,19 @@ int dbmail_imap_session_readln(struct ImapSession *self, char * buffer)
 	alarm(ci->timeout);
 	if (fgets(buffer, MAX_LINESIZE, ci->rx) == NULL) {
 		alarm(0);
-		trace(TRACE_ERROR, "%s,%s: error reading from client", __FILE__, __func__);
+		TRACE(TRACE_ERROR, "error reading from client");
 		return -1;
 	}
 	len = strlen(buffer);
 	if (len >= (MAX_LINESIZE-1)) {
-		trace(TRACE_ERROR, "%s,%s: too long line from client (discarding)", __FILE__, __func__);
+		TRACE(TRACE_ERROR, "too long line from client (discarding)");
 		alarm(0);
 		/* Note: we do preserve the partial read here -- so that 
 		 * the command parser can extract a tag if need be */
-		if (dbmail_imap_session_discard_to_eol(self) < 0) {
+		if (dbmail_imap_session_discard_to_eol(self) < 0)
 			return -1;
-		} else {
+		else
 			return 0;
-		}
 	}
 
 	alarm(0);
@@ -1384,20 +1380,19 @@ int dbmail_imap_session_handle_auth(struct ImapSession * self, char * username, 
 	
 	u64_t userid = 0;
 	
-	trace(TRACE_DEBUG, "%s,%s: trying to validate user [%s], pass [%s]", 
-			__FILE__, __func__, username, (password ? "XXXX" : "(null)") );
+	TRACE(TRACE_DEBUG, "trying to validate user [%s], pass [%s]", 
+			username, (password ? "XXXX" : "(null)") );
 	
 	int valid = auth_validate(self->ci, username, password, &userid);
 	
-	trace(TRACE_MESSAGE, "%s,%s: user (id:%llu, name %s) tries login",
-			__FILE__, __func__, userid, username);
+	TRACE(TRACE_MESSAGE, "user (id:%llu, name %s) tries login",
+			userid, username);
 
 	if (valid == -1) {
 		/* a db-error occurred */
 		dbmail_imap_session_printf(self, "* BYE internal db error validating user\r\n");
-		trace(TRACE_ERROR,
-		      "%s,%s: db-validate error while validating user %s (pass %s).",
-		      __FILE__, __func__, username, password);
+		TRACE(TRACE_ERROR, "db-validate error while validating user %s (pass %s).",
+			       	username, password);
 		return -1;
 	}
 
@@ -1405,17 +1400,14 @@ int dbmail_imap_session_handle_auth(struct ImapSession * self, char * username, 
 		sleep(2);	/* security */
 
 		/* validation failed: invalid user/pass combination */
-		trace(TRACE_MESSAGE, "IMAPD [PID %d]: user (name %s) login rejected @ %s",
-		      (int) getpid(), username, timestring);
+		TRACE(TRACE_MESSAGE, "user (name %s) login rejected", username);
 		dbmail_imap_session_printf(self, "%s NO login rejected\r\n", self->tag);
 
 		return 1;
 	}
 
 	/* login ok */
-	trace(TRACE_MESSAGE, "%s,%s: user (id %llu, name %s) login accepted @ %s",
-	      __FILE__, __func__, 
-	      userid, username, timestring);
+	TRACE(TRACE_MESSAGE, "user (id %llu, name %s) login accepted", userid, username);
 
 	/* update client info */
 	ud->userid = userid;
@@ -1460,7 +1452,7 @@ int dbmail_imap_session_prompt(struct ImapSession * self, char * prompt, char * 
 	/* Double check in case the algorithm went nuts. */
 	if (buflen >= (MAX_LINESIZE - 1)) {
 		/* Oh shit. */
-		trace(TRACE_FATAL, "%s,%s: possible memory corruption", __FILE__, __func__);
+		TRACE(TRACE_FATAL, "possible memory corruption");
 		return -1;
 	}
 
@@ -1599,7 +1591,6 @@ int dbmail_imap_session_mailbox_open(struct ImapSession * self, const char * mai
 	
 	/* get the mailbox_idnr */
 	mailbox_idnr = dbmail_imap_session_mailbox_get_idnr(self, mailbox);
-
 	
 	if ((! mailbox_idnr ) && (strncasecmp(mailbox,"INBOX",5)==0)) {
 		/* create missing INBOX for this authenticated user */
@@ -1657,8 +1648,8 @@ int dbmail_imap_session_mailbox_select_recent(struct ImapSession *self) {
 		self->recent = g_list_append(self->recent, g_strdup(db_get_result(i, 0)));
 	
 	db_free_result();
-	trace(TRACE_DEBUG, "%s,%s: recent [%d] in mailbox [%llu]",
-			__FILE__, __func__, g_list_length(self->recent), ud->mailbox.uid);
+	TRACE(TRACE_DEBUG, "recent [%d] in mailbox [%llu]",
+		       	g_list_length(self->recent), ud->mailbox.uid);
 
 	return g_list_length(self->recent);
 }
@@ -2014,7 +2005,7 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 			quotedSize = strtoul(&s[i + 1], &lastchar, 10);
 
 			/* only continue if the number is followed by '}\0' */
-			trace(TRACE_DEBUG, "%s,%s: last char = %c", __FILE__, __func__, *lastchar);
+			TRACE(TRACE_DEBUG, "last char = %c", *lastchar);
 			if ((*lastchar == '+' && *(lastchar + 1) == '}' && *(lastchar + 2) == '\0') || 
 			    (*lastchar == '}' && *(lastchar + 1) == '\0')) {
 				/* allocate space for this argument (could be a message when used with APPEND) */
@@ -2043,8 +2034,8 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 					// FIXME: why is the alarm handler sometimes triggered though cnt == quotedSize
 					if (cnt < quotedSize) {
 						client_close();
-						trace(TRACE_ERROR, "%s,%s: timeout occurred in fgetc; got [%d] of [%d]; timeout [%d]", 
-								__FILE__, __func__, cnt, quotedSize, ci->timeout);
+						TRACE(TRACE_ERROR, "timeout occurred in fgetc; got [%d] of [%d]; timeout [%d]", 
+								cnt, quotedSize, ci->timeout);
 						free_args();
 						return NULL;
 					}
