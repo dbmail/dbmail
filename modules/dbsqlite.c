@@ -27,6 +27,8 @@
 #include <regex.h>
 #include <sqlite3.h>
 
+#define THIS_MODULE "dbsqlite"
+
 db_param_t _db_params;
 
 static sqlite3 *conn;
@@ -260,7 +262,7 @@ int db_connect()
 	}
 
 	lastq = g_new0(struct qtmp,1);
-	
+
 	return 0;
 }
 
@@ -275,16 +277,13 @@ void db_free_result()
 		lastq->resp = 0;
 		lastq->rows = lastq->cols = 0;
 	}
-	lastq = 0;
-
 }
 int db_disconnect()
 {
 	db_free_result();
-	g_free(lastq);
 	sqlite3_close(conn);
+	g_free(lastq);
 	conn = 0;
-	
 	return 0;
 }
 unsigned db_num_rows()
@@ -311,9 +310,9 @@ u64_t db_insert_result(const char *sequence_identifier UNUSED)
 int db_query(const char *the_query)
 {
 	char *errmsg;
-	
+
 	trace(TRACE_DEBUG,"%s,%s: %s", __FILE__, __func__, the_query);
-	
+
 	db_free_result();
 
 	if (sqlite3_get_table(conn, the_query, &lastq->resp,
