@@ -1,3 +1,8 @@
+2006-09-11  Aaron Stone  <aaron@serendipity.cx>
+
+	* debug.c:
+	Return right away if there's no logging to be done.
+
 2006-09-10  Aaron Stone  <aaron@serendipity.cx>
 
 	* imapcommands.c:

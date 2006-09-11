@@ -80,6 +80,10 @@ void newtrace(int isnew, trace_t level, const char * module,
 	gchar *message;
 	size_t l;
 
+	/* Return now if we're not logging anything. */
+	if (level > TRACE_STDERR && level > TRACE_SYSLOG)
+		return;
+
 	va_start(argp, formatstring);
 
 	message = g_strdup_vprintf(formatstring, argp);
