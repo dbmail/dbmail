@@ -1,3 +1,8 @@
+2006-09-12  Aaron Stone  <aaron@serendipity.cx>
+
+	* pop3.c, db.c:
+	Minor formatting changes, deterministic message sort order.
+
 2006-09-11  Aaron Stone  <aaron@serendipity.cx>
 
 	* debug.c:

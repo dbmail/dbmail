@@ -2126,7 +2126,7 @@ int db_createsession(u64_t user_idnr, PopSession_t * session_ptr)
 		 "WHERE msg.mailbox_idnr = '%llu' "
 		 "AND msg.status < '%d' "
 		 "AND msg.physmessage_id = pm.id "
-		 "order by status ASC",DBPFX,DBPFX,
+		 "ORDER BY status, message_idnr ASC",DBPFX,DBPFX,
 		 inbox_mailbox_idnr, MESSAGE_STATUS_DELETE);
 
 	if (db_query(query) == -1) {
