@@ -5,6 +5,8 @@
 	Removed a superfluous TRACE_FATAL message.
 	* pidfile.c, pool.c:
 	Chmod the pidfile and statefile to 0644.
+	* sort.c:
+	Plugged a memory leak. Zapped another FIXME.
 
 2006-09-11  Aaron Stone  <aaron@serendipity.cx>
 
