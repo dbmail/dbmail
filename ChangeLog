@@ -2,6 +2,9 @@
 
 	* pop3.c, db.c:
 	Minor formatting changes, deterministic message sort order.
+	Removed a superfluous TRACE_FATAL message.
+	* pidfile.c, pool.c:
+	Chmod the pidfile and statefile to 0644.
 
 2006-09-11  Aaron Stone  <aaron@serendipity.cx>
 

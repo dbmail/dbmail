@@ -27,6 +27,7 @@
 */
 
 #include "dbmail.h"
+#define THIS_MODULE "pidfile"
 
 /* These are used by pidfile_remove. */
 static FILE *pidfile_to_close;
@@ -79,14 +80,14 @@ static void pidfile_remove(void)
 
 	if (pidfile_to_close) {
 		res = fclose(pidfile_to_close);
-		if (res) trace(TRACE_ERROR, "Error closing pidfile: [%s].",
+		if (res) TRACE(TRACE_ERROR, "Error closing pidfile: [%s].",
 			strerror(errno));
 		pidfile_to_close = NULL;
 	}
 
 	if (pidfile_to_remove) {
 		res = unlink(pidfile_to_remove);
-		if (res) trace(TRACE_ERROR, "Error unlinking pidfile [%s]: [%s].",
+		if (res) TRACE(TRACE_ERROR, "Error unlinking pidfile [%s]: [%s].",
 			pidfile_to_remove, strerror(errno));
 		g_free(pidfile_to_remove);
 		pidfile_to_remove = NULL;
@@ -103,14 +104,15 @@ void pidfile_create(const char *pidFile, pid_t pid)
 	oldpid = pidfile_pid(pidFile);
 
 	if (oldpid != 0) {
-		trace(TRACE_FATAL, "%s, %s: File [%s] exists and process id [%d] is running.", 
-			__FILE__, __func__, pidFile, (int)pid);
+		TRACE(TRACE_FATAL, "File [%s] exists and process id [%d] is running.", 
+			pidFile, (int)pid);
 	}
 
 	if (!(f = fopen(pidFile, "w"))) {
-		trace(TRACE_FATAL, "%s, %s: Cannot open pidfile [%s], error was [%s]",
-			__FILE__, __func__, pidFile, strerror(errno));
+		TRACE(TRACE_FATAL, "Cannot open pidfile [%s], error was [%s]",
+			pidFile, strerror(errno));
 	}
+	chmod(pidFile, 0644);
 
 	fprintf(f, "%u\n", pid);
 	fflush(f);
