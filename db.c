@@ -1,4 +1,4 @@
-/* $Id: db.c 2261 2006-09-09 14:24:40Z paul $ */
+/* $Id: db.c 2267 2006-09-12 21:41:45Z aaron $ */
 /*
   Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
   Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
@@ -22,7 +22,7 @@
 /**
  * \file db.c
  * 
- * $Id: db.c 2261 2006-09-09 14:24:40Z paul $
+ * $Id: db.c 2267 2006-09-12 21:41:45Z aaron $
  *
  * implement database functionality. This used to split out
  * between MySQL and PostgreSQL, but this is now integrated. 
@@ -120,16 +120,14 @@ int db_check_version(void)
 {
 	snprintf(query, DEF_QUERYSIZE, "SELECT 1=1 FROM %sphysmessage LIMIT 1 OFFSET 0", DBPFX);
 	if (db_query(query) == -1) {
-		trace(TRACE_FATAL, "%s,%s: pre-2.0 database incompatible. You need to run the conversion script",
-				__FILE__,__func__);
+		TRACE(TRACE_FATAL, "pre-2.0 database incompatible. You need to run the conversion script");
 		return DM_EQUERY;
 	}
 	db_free_result();
 	
 	snprintf(query, DEF_QUERYSIZE, "SELECT 1=1 FROM %sheadervalue LIMIT 1 OFFSET 0", DBPFX);
 	if (db_query(query) == -1) {
-		trace(TRACE_FATAL, "%s,%s: 2.0 database incompatible. You need to add the header tables.",
-				__FILE__,__func__);
+		TRACE(TRACE_FATAL, "2.0 database incompatible. You need to add the header tables.");
 		return DM_EQUERY;
 	}
 	db_free_result();
@@ -1049,8 +1047,7 @@ int db_message_set_unique_id(u64_t message_idnr, const char *unique_id)
 		 "WHERE message_idnr = '%llu'", DBPFX, unique_id, MESSAGE_STATUS_NEW,
 		 message_idnr);
 	if (db_query(query) == DM_EQUERY) {
-		trace(TRACE_ERROR, "%s,%s: setting unique id for message "
-		      "[%llu] failed", __FILE__, __func__,
+		TRACE(TRACE_ERROR, "setting unique id for message [%llu] failed",
 		      message_idnr);
 		return DM_EQUERY;
 	}
@@ -1080,11 +1077,8 @@ int db_update_message(u64_t message_idnr, const char *unique_id,
 	assert(unique_id);
 	u64_t physmessage_id = 0;
 
-	if (db_message_set_unique_id(message_idnr, unique_id)) {
-		// FIXME: Why is this FATAL?
-		trace(TRACE_FATAL, "%s,%s: FATAL: db_message_set_unique_ id failed for [%llu]", 
-				__FILE__, __func__, message_idnr);
-	}
+	if (db_message_set_unique_id(message_idnr, unique_id))
+		return DM_EQUERY;
 
 	/* update the fields in the physmessage table */
 	if (db_get_physmessage_id(message_idnr, &physmessage_id)) 
@@ -1094,11 +1088,10 @@ int db_update_message(u64_t message_idnr, const char *unique_id,
 		return DM_EQUERY;
 
 	if (user_quotum_inc(db_get_useridnr(message_idnr), message_size)) {
-		trace(TRACE_ERROR,
-		      "%s,%s: error calculating quotum "
+		TRACE(TRACE_ERROR, "error calculating quotum "
 		      "used for user [%llu]. Database might be "
-		      "inconsistent. run dbmail-util", __FILE__,
-		      __func__, db_get_useridnr(message_idnr));
+		      "inconsistent. Run dbmail-util.",
+		      db_get_useridnr(message_idnr));
 		return DM_EQUERY;
 	}
 	return DM_SUCCESS;
@@ -1340,7 +1333,6 @@ int db_empty_mailbox(u64_t user_idnr)
 
 int db_icheck_messageblks(struct dm_list *lost_list)
 {
-	const char *query_result;
 	u64_t messageblk_idnr;
 	int i, n;
 	dm_list_init(lost_list);
@@ -1371,12 +1363,8 @@ int db_icheck_messageblks(struct dm_list *lost_list)
 		return DM_SUCCESS;
 	}
 
-	/* FIXME: this is actually properly designed... */
 	for (i = 0; i < n; i++) {
-		query_result = db_get_result(i, 0);
-		if (query_result)
-			messageblk_idnr = strtoull(query_result, NULL, 10);
-		else
+		if (!(messageblk_idnr = db_get_result_u64(i, 0)))
 			continue;
 
 		trace(TRACE_INFO, "%s,%s: found lost block id [%llu]",
@@ -1398,7 +1386,6 @@ int db_icheck_messageblks(struct dm_list *lost_list)
 int db_icheck_messages(struct dm_list *lost_list)
 {
 	u64_t message_idnr;
-	const char *query_result;
 	int i, n;
 
 	dm_list_init(lost_list);
@@ -1423,12 +1410,8 @@ int db_icheck_messages(struct dm_list *lost_list)
 		return DM_SUCCESS;
 	}
 
-	/* FIXME: this is actually properly designed... */
 	for (i = 0; i < n; i++) {
-		query_result = db_get_result(i, 0);
-		if (query_result)
-			message_idnr = strtoull(query_result, NULL, 10);
-		else
+		if (!(message_idnr = db_get_result_u64(i, 0)))
 			continue;
 
 		trace(TRACE_INFO, "%s,%s: found lost message id [%llu]",
@@ -1449,7 +1432,6 @@ int db_icheck_messages(struct dm_list *lost_list)
 int db_icheck_mailboxes(struct dm_list *lost_list)
 {
 	u64_t mailbox_idnr;
-	const char *query_result;
 	int i, n;
 
 	dm_list_init(lost_list);
@@ -1474,12 +1456,8 @@ int db_icheck_mailboxes(struct dm_list *lost_list)
 		return DM_SUCCESS;
 	}
 
-	/* FIXME: this is actually properly designed... */
 	for (i = 0; i < n; i++) {
-		query_result = db_get_result(i, 0);
-		if (query_result)
-			mailbox_idnr = strtoull(query_result, NULL, 10);
-		else
+		if (!(mailbox_idnr = db_get_result_u64(i, 0)))
 			continue;
 
 		trace(TRACE_INFO, "%s,%s: found lost mailbox id [%llu]",
@@ -1500,7 +1478,6 @@ int db_icheck_mailboxes(struct dm_list *lost_list)
 int db_icheck_null_physmessages(struct dm_list *lost_list)
 {
 	u64_t physmessage_id;
-	const char *result_string;
 	unsigned i, n;
 
 	dm_list_init(lost_list);
@@ -1525,12 +1502,8 @@ int db_icheck_null_physmessages(struct dm_list *lost_list)
 		return DM_SUCCESS;
 	}
 
-	/* FIXME: this is actually properly designed... */
 	for (i = 0; i < n; i++) {
-		result_string = db_get_result(i, 0);
-		if (result_string)
-			physmessage_id = strtoull(result_string, NULL, 10);
-		else
+		if (!(physmessage_id = db_get_result_u64(i, 0)))
 			continue;
 
 		trace(TRACE_INFO,
@@ -1553,7 +1526,6 @@ int db_icheck_null_physmessages(struct dm_list *lost_list)
 int db_icheck_null_messages(struct dm_list *lost_list)
 {
 	u64_t message_idnr;
-	const char *query_result;
 	int i, n;
 
 	dm_list_init(lost_list);
@@ -1577,12 +1549,8 @@ int db_icheck_null_messages(struct dm_list *lost_list)
 		return DM_SUCCESS;
 	}
 
-	/* FIXME: this is actually properly designed... */
 	for (i = 0; i < n; i++) {
-		query_result = db_get_result(i, 0);
-		if (query_result)
-			message_idnr = strtoull(query_result, NULL, 10);
-		else
+		if (!(message_idnr = db_get_result_u64(i, 0)))
 			continue;
 
 		trace(TRACE_INFO, "%s,%s: found empty message id [%llu]",
@@ -2126,7 +2094,7 @@ int db_createsession(u64_t user_idnr, PopSession_t * session_ptr)
 		 "WHERE msg.mailbox_idnr = '%llu' "
 		 "AND msg.status < '%d' "
 		 "AND msg.physmessage_id = pm.id "
-		 "order by status ASC",DBPFX,DBPFX,
+		 "ORDER BY status, message_idnr ASC",DBPFX,DBPFX,
 		 inbox_mailbox_idnr, MESSAGE_STATUS_DELETE);
 
 	if (db_query(query) == -1) {
@@ -2227,19 +2195,8 @@ int db_update_pop(PopSession_t * session_ptr)
 				 ((struct message *) tmpelement->data)->
 				 realmessageid, MESSAGE_STATUS_DELETE);
 
-			/* FIXME: a message could be deleted already if it has been accessed
-			 * by another interface and be deleted by sysop
-			 * we need a check if the query failes because it doesn't exists anymore
-			 * now it will just bailout. 
-			 * ADDITION (ilja 2004-04-21) I don't think this is needed here.
-			 * The query does not fail when the message is already deleted, it
-			 * just does not do anything! */
-			if (db_query(query) == -1) {
-				trace(TRACE_ERROR,
-				      "%s,%s: could not execute query",
-				      __FILE__, __func__);
+			if (db_query(query) == DM_EQUERY)
 				return DM_EQUERY;
-			}
 		}
 		tmpelement = tmpelement->nextnode;
 	}
@@ -2249,8 +2206,7 @@ int db_update_pop(PopSession_t * session_ptr)
 	 * recalculated */
 	if (user_idnr != 0) {
 		if (db_calculate_quotum_used(user_idnr) == -1) {
-			trace(TRACE_ERROR, "%s,%s: error calculating quotum used",
-			      __FILE__, __func__);
+			TRACE(TRACE_ERROR, "Could not calculate quotum used for user [%llu]", user_idnr);
 			return DM_EQUERY;
 		}
 	}
@@ -4555,10 +4511,6 @@ int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * m
 	db_free_result();
 	
 	/* no_children */
-// FIXME: This code assumes that dm_stresc can return NULL. It cannot.
-//	if (! (escaped_name = dm_stresc(name)))
-//		return -1;
-
 	mailbox_like = db_imap_utf7_like("name", name, "/%");
 			
 	snprintf(query, DEF_QUERYSIZE,

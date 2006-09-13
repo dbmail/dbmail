@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: debug.c 2237 2006-08-29 08:10:01Z aaron $
+/* $Id: debug.c 2265 2006-09-11 18:56:07Z aaron $
  *
  * Debugging and memory checking functions */
 
@@ -79,6 +79,10 @@ void newtrace(int isnew, trace_t level, const char * module,
 
 	gchar *message;
 	size_t l;
+
+	/* Return now if we're not logging anything. */
+	if (level > TRACE_STDERR && level > TRACE_SYSLOG)
+		return;
 
 	va_start(argp, formatstring);
 

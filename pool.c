@@ -83,15 +83,13 @@ void scoreboard_new(serverConfig_t * conf)
 	int serr;
 	if ((shmid = shmget(IPC_PRIVATE, P_SIZE, 0644 | IPC_CREAT)) == -1) {
 		serr = errno;
-		trace(TRACE_FATAL, "%s,%s: shmget failed [%s]",
-				__FILE__,__func__, 
+		TRACE(TRACE_FATAL, "shmget failed [%s]",
 				strerror(serr));
 	}
 	scoreboard = shmat(shmid, (void *) 0, 0);
 	serr=errno;
 	if (scoreboard == (Scoreboard_t *) (-1)) {
-		trace(TRACE_FATAL, "%s,%s: scoreboard init failed [%s]",
-		      __FILE__,__func__,
+		TRACE(TRACE_FATAL, "scoreboard init failed [%s]",
 		      strerror(serr));
 		scoreboard_delete();
 	}
@@ -110,8 +108,7 @@ void scoreboard_lock_new(void)
 {
 	gchar *statefile = scoreboard_lock_getfilename();
 	if ( (sb_lockfd = open(statefile,O_EXCL|O_RDWR|O_CREAT|O_TRUNC,0600)) < 0) {
-		trace(TRACE_FATAL, "%s,%s, opening lockfile [%s] failed", 
-		      __FILE__, __func__, statefile);
+		TRACE(TRACE_FATAL, "Could not open lockfile [%s]", statefile);
 	}
 	g_free(statefile);
 }
@@ -129,25 +126,21 @@ void scoreboard_conf_check(void)
 	/* some sanity checks on boundaries */
 	scoreboard_wrlck();
 	if (scoreboard->conf->maxChildren > HARD_MAX_CHILDREN) {
-		trace(TRACE_WARNING, "%s,%s: MAXCHILDREN too large. Decreasing to [%d]",
-		      __FILE__,__func__,
+		TRACE(TRACE_WARNING, "MAXCHILDREN too large. Decreasing to [%d]",
 		      HARD_MAX_CHILDREN);
 		scoreboard->conf->maxChildren = HARD_MAX_CHILDREN;
 	} else if (scoreboard->conf->maxChildren < scoreboard->conf->startChildren) {
-		trace(TRACE_WARNING, "%s,%s: MAXCHILDREN too small. Increasing to NCHILDREN [%d]",
-		      __FILE__,__func__,
+		TRACE(TRACE_WARNING, "MAXCHILDREN too small. Increasing to NCHILDREN [%d]",
 		      scoreboard->conf->startChildren);
 		scoreboard->conf->maxChildren = scoreboard->conf->startChildren;
 	}
 
 	if (scoreboard->conf->maxSpareChildren > scoreboard->conf->maxChildren) {
-		trace(TRACE_WARNING, "%s,%s: MAXSPARECHILDREN too large. Decreasing to MAXCHILDREN [%d]",
-		      __FILE__,__func__,
+		TRACE(TRACE_WARNING, "MAXSPARECHILDREN too large. Decreasing to MAXCHILDREN [%d]",
 		      scoreboard->conf->maxChildren);
 		scoreboard->conf->maxSpareChildren = scoreboard->conf->maxChildren;
 	} else if (scoreboard->conf->maxSpareChildren < scoreboard->conf->minSpareChildren) {
-		trace(TRACE_WARNING, "%s,%s: MAXSPARECHILDREN too small. Increasing to MINSPARECHILDREN [%d]",
-		      __FILE__,__func__,
+		TRACE(TRACE_WARNING, "MAXSPARECHILDREN too small. Increasing to MINSPARECHILDREN [%d]",
 		      scoreboard->conf->minSpareChildren);
 		scoreboard->conf->maxSpareChildren = scoreboard->conf->minSpareChildren;
 	}
@@ -197,16 +190,13 @@ void scoreboard_delete(void)
 {
 	gchar *statefile;
 	if (shmdt((const void *)scoreboard) == -1)
-		trace(TRACE_FATAL, "%s,%s: detach shared mem failed",
-		      __FILE__, __func__);
+		TRACE(TRACE_FATAL, "detach shared mem failed");
 	if (shmctl(shmid, IPC_RMID, NULL) == -1)
-		trace(TRACE_FATAL, "%s,%s: delete shared mem segment failed",
-		      __FILE__, __func__);
+		TRACE(TRACE_FATAL, "delete shared mem segment failed");
 	
 	statefile = scoreboard_lock_getfilename();
 	if (unlink(statefile) == -1) 
-		trace(TRACE_ERROR, "%s,%s: error deleting scoreboard lock file %s", 
-		      __FILE__, __func__, 
+		TRACE(TRACE_ERROR, "error deleting scoreboard lock file [%s]", 
 		      statefile);
 	g_free(statefile);
 	
@@ -272,8 +262,7 @@ int getKey(pid_t pid)
 		}
 	}
 	scoreboard_unlck();
-	trace(TRACE_ERROR, "%s,%s: pid NOT found on scoreboard [%d]",
-		       	__FILE__, __func__, pid);
+	TRACE(TRACE_ERROR, "pid NOT found on scoreboard [%d]", pid);
 	return -1;
 }
 
@@ -290,16 +279,14 @@ int child_register(void)
 	int i;
 	pid_t chpid = getpid();
 	
-	trace(TRACE_MESSAGE, "%s,%s: register child [%d]",
-	      __FILE__, __func__, chpid);
+	TRACE(TRACE_MESSAGE, "register child [%d]", chpid);
 	
 	scoreboard_rdlck();
 	for (i = 0; i < scoreboard->conf->maxChildren; i++) {
 		if (scoreboard->child[i].pid == -1)
 			break;
 		if (scoreboard->child[i].pid == chpid) {
-			trace(TRACE_ERROR, "%s,%s: child already registered.",
-			      __FILE__, __func__);
+			TRACE(TRACE_ERROR, "child already registered.");
 			scoreboard_unlck();
 			return -1;
 		}
@@ -307,8 +294,7 @@ int child_register(void)
 	scoreboard_unlck();
 	
 	if (i == scoreboard->conf->maxChildren) {
-		trace(TRACE_WARNING, "%s,%s: no empty slot found",
-		      __FILE__, __func__);
+		TRACE(TRACE_WARNING, "no empty slot found");
 		return -1;
 	}
 	
@@ -317,8 +303,8 @@ int child_register(void)
 	scoreboard->child[i].status = STATE_IDLE;
 	scoreboard_unlck();
 
-	trace(TRACE_INFO, "%s,%s: initializing child_state [%d] using slot [%d]",
-		__FILE__, __func__, chpid, i);
+	TRACE(TRACE_INFO, "initializing child_state [%d] using slot [%d]",
+		chpid, i);
 	return 0;
 }
 
@@ -331,8 +317,7 @@ void child_reg_connected(void)
 	key = getKey(pid);
 	
 	if (key == -1) 
-		trace(TRACE_FATAL, "%s:%s: fatal: unable to find this pid on the scoreboard", 
-				__FILE__, __func__);
+		TRACE(TRACE_FATAL, "unable to find this pid on the scoreboard");
 	
 	scoreboard_wrlck();
 	scoreboard->child[key].status = STATE_CONNECTED;
@@ -348,8 +333,7 @@ void child_reg_disconnected(void)
 	key = getKey(pid);
 
 	if (key == -1) 
-		trace(TRACE_FATAL, "%s:%s: fatal: unable to find this pid on the scoreboard", 
-				__FILE__, __func__);
+		TRACE(TRACE_FATAL, "unable to find this pid on the scoreboard");
 	
 	scoreboard_wrlck();
 	scoreboard->child[key].status = STATE_IDLE;
@@ -371,8 +355,7 @@ void child_unregister(void)
 	key = getKey(pid);
 	
 	if (key == -1)
-		trace(TRACE_FATAL, "%s:%s: fatal: unable to find this pid on the scoreboard", 
-				__FILE__, __func__);
+		TRACE(TRACE_FATAL, "unable to find this pid on the scoreboard");
 	
 	scoreboard_wrlck();
 	scoreboard->child[key].status = STATE_WAIT;
@@ -414,8 +397,7 @@ void manage_stop_children(void)
 	int i, cnt = 0;
 	pid_t chpid;
 	
-	trace(TRACE_MESSAGE, "%s,%s: General stop requested. Killing children.. ",
-			__FILE__,__func__);
+	TRACE(TRACE_MESSAGE, "General stop requested. Killing children...");
 
 	for (i=0; i < scoreboard->conf->maxChildren; i++) {
 		scoreboard_rdlck();
@@ -425,7 +407,8 @@ void manage_stop_children(void)
 		if (chpid < 0)
 			continue;
 		if (kill(chpid, SIGTERM))
-			trace(TRACE_ERROR, "%s,%s: %s", __FILE__, __func__, strerror(errno));
+			TRACE(TRACE_ERROR, "Cannot send SIGTERM to child [%d], error [%s]",
+				(int)chpid, strerror(errno));
 	}
 	
 	alive = scoreboard_cleanup();
@@ -435,8 +418,8 @@ void manage_stop_children(void)
 	}
 	
 	if (alive) {
-		trace(TRACE_INFO, "%s,%s: [%d] children alive after SIGTERM, sending SIGKILL",
-		      __FILE__,__func__, alive);
+		TRACE(TRACE_INFO, "[%d] children alive after SIGTERM, sending SIGKILL",
+		      alive);
 
 		for (i = 0; i < scoreboard->conf->maxChildren; i++) {
 			scoreboard_rdlck();
@@ -460,7 +443,8 @@ static pid_t reap_child(void)
 		return 0; // no idle children
 
 	if (kill(chpid, SIGTERM)) {
-		trace(TRACE_ERROR, "%s,%s: %s", __FILE__, __func__, strerror(errno));
+		TRACE(TRACE_ERROR, "Cannot send SIGTERM to child [%d], error [%s]",
+			(int) chpid, strerror(errno));
 		return -1;
 	}
 		
@@ -565,14 +549,14 @@ static void statefile_remove(void)
 
 	if (statefile_to_close) {
 		res = fclose(statefile_to_close);
-		if (res) trace(TRACE_ERROR, "Error closing statefile: [%s].",
+		if (res) TRACE(TRACE_ERROR, "Error closing statefile: [%s].",
 			strerror(errno));
 		statefile_to_close = NULL;
 	}
 
 	if (statefile_to_remove) {
 		res = unlink(statefile_to_remove);
-		if (res) trace(TRACE_ERROR, "Error unlinking statefile [%s]: [%s].",
+		if (res) TRACE(TRACE_ERROR, "Error unlinking statefile [%s]: [%s].",
 			statefile_to_remove, strerror(errno));
 		g_free(statefile_to_remove);
 		statefile_to_remove = NULL;
@@ -583,8 +567,11 @@ static void statefile_remove(void)
 void statefile_create(char *scoreFile)
 {
 	TRACE(TRACE_DEBUG, "Creating scoreboard at [%s].", scoreFile);
-	// FIXME: Check ownership and permissions. Must be root and 0644 or better.
-	scoreFD = fopen(scoreFile, "w");
+	if (!(scoreFD = fopen(scoreFile, "w"))) {
+		TRACE(TRACE_ERROR, "Cannot open scorefile [%s], error was [%s]",
+			scoreFile, strerror(errno));
+	}
+	chmod(scoreFile, 0644);
 	if (scoreFD == NULL) {
 		TRACE(TRACE_ERROR, "Could not create scoreboard [%s].", scoreFile );
 	}

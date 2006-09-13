@@ -18,7 +18,7 @@
   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: pop3.c 2261 2006-09-09 14:24:40Z paul $
+/* $Id: pop3.c 2266 2006-09-12 19:03:20Z aaron $
  *
  * implementation for pop3 commands according to RFC 1081 */
 
@@ -397,16 +397,14 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 			trace(TRACE_ERROR, "%s,%s: user [%s] tried to login with wrong password", 
 					__FILE__, __func__, session->username);
 
-			/* clear username, must be re-entered according to RFC */
 			g_free(session->username);
 			session->username = NULL;
 
-			/* also, if the password is set, clear it */
-			if (session->password != NULL) {
-				g_free(session->password);
-				session->password = NULL;
-			}
+			g_free(session->password);
+			session->password = NULL;
+
 			return pop3_error(session, stream, "-ERR username/password incorrect\r\n");
+
 		default:
 			/* user logged in OK */
 			session->state = POP3_TRANSACTION_STATE;
@@ -426,14 +424,14 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 						session->username, 
 						session->virtual_totalmessages, 
 						session->virtual_totalsize);
-				
 				trace(TRACE_MESSAGE, "%s,%s: user %s logged in [messages=%llu, octets=%llu]",
 						__FILE__, __func__, 
 						session->username, 
 						session->virtual_totalmessages, 
 						session->virtual_totalsize);
 			} else
-				session->SessionResult = 4;	/* something went wrong on DB layer */
+				session->SessionResult = 4;	/* Database error. */
+
 			return result;
 		}
 		return 1;
@@ -680,8 +678,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 			return -1;
 		case 0:
 			trace(TRACE_ERROR, "%s,%s: user [%s] tried to login with wrong password", 
-					__FILE__, __func__, 
-					session->username);
+					__FILE__, __func__, session->username);
 
 			g_free(session->username);
 			session->username = NULL;
@@ -716,7 +713,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 						session->virtual_totalmessages, 
 						session->virtual_totalsize);
 			} else
-				session->SessionResult = 4;	/* storage layer error */
+				session->SessionResult = 4;	/* Database error. */
 
 			return result;
 		}

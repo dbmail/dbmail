@@ -1,16 +1,33 @@
-/* Central switching station for email on its
- * way to be delivered. From here we call out
- * to the sorting module, if applicable, to
- * give additional information on what to do
- * with a message.
+/*
+ Copyright (C) 2004-2006 Aaron Stone aaron@serendipity.cx
+
+ This program is free software; you can redistribute it and/or 
+ modify it under the terms of the GNU General Public License as
+ published by the Free Software Foundation; either version 2 of
+ the License, or (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program; if not, write to the Free Software
+ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*/
+
+/* $Id: sort.c 2199 2006-07-18 11:07:53Z paul $
  *
- * (c) 2004-2006 Aaron Stone <aaron@serendpity.cx>
+ * Central switching station for email on its way to be delivered.
+ * From here we call out to the sorting module, if applicable, to
+ * give additional information on what to do with a message.
  *
- * $Id: $
+ * Upstream: pipe.c, insert_messages calls sort_and_deliver.
+ * Way upstream: main.c and lmtp.c call insert_messages.
+ *
  */
 
 #include "dbmail.h"
-
 #define THIS_MODULE "sort"
 
 /* Figure out where to deliver the message, then deliver it.
@@ -23,6 +40,7 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message,
 	int reject = 0;
 	dsn_class_t ret;
 	field_t val;
+	char *subaddress = NULL;
 
 	/* Catch the brute force delivery right away.
 	 * We skip the Sieve scripts, and down the call
@@ -47,11 +65,9 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message,
 	if (strcasecmp(val, "yes") == 0) {
 		int res;
 		size_t sublen, subpos;
-		char *subaddress;
-		// FIXME: Where can I get access to the address?
 		res = find_bounded((char *)destination, '+', '@', &subaddress, &sublen, &subpos);
 		if (res == 0 && sublen > 0) {
-			// FIXME: I forget who frees the mailbox.
+			/* We'll free this towards the end of the function. */
 			mailbox = subaddress;
 			source = BOX_ADDRESSPART;
 			TRACE(TRACE_INFO, "Setting BOX_ADDRESSPART mailbox to [%s]", mailbox);
@@ -95,6 +111,9 @@ dsn_class_t sort_and_deliver(struct DbmailMessage *message,
 		ret = sort_deliver_to_mailbox(message, useridnr, mailbox, source, NULL);
 		TRACE(TRACE_INFO, "Keep was not cancelled. Message will be delivered by default.");
 	}
+
+	/* Might have been allocated by the subaddress calculation. NULL otherwise. */
+	g_free(subaddress);
 
 	/* Reject probably implies cancelkeep,
 	 * but we'll not assume that and instead

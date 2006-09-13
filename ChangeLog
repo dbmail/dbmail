@@ -1,3 +1,18 @@
+2006-09-12  Aaron Stone  <aaron@serendipity.cx>
+
+	* pop3.c, db.c:
+	Minor formatting changes, deterministic message sort order.
+	Removed a superfluous TRACE_FATAL message.
+	* pidfile.c, pool.c:
+	Chmod the pidfile and statefile to 0644.
+	* sort.c:
+	Plugged a memory leak. Zapped another FIXME.
+
+2006-09-11  Aaron Stone  <aaron@serendipity.cx>
+
+	* debug.c:
+	Return right away if there's no logging to be done.
+
 2006-09-10  Aaron Stone  <aaron@serendipity.cx>
 
 	* imapcommands.c:
