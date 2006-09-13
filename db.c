@@ -131,7 +131,13 @@ int db_check_version(void)
 		return DM_EQUERY;
 	}
 	db_free_result();
-	
+ 		
+ 	snprintf(query, DEF_QUERYSIZE, "SELECT 1=1 FROM %senvelopes LIMIT 1 OFFSET 0", DBPFX);
+ 	if (db_query(query) == -1) {
+ 		TRACE(TRACE_FATAL, "2.1 database incompatible. You need to add the envelopes table "
+ 				"and run dbmail-util -by");
+	db_free_result();
+
 	return DM_SUCCESS;
 }
 
@@ -151,8 +157,7 @@ int db_use_usermap(void)
 		db_free_result();
 	}
 	
-	trace(TRACE_DEBUG, "%s,%s: %s usermap lookups", __FILE__, __func__,
-			use_usermap ? "enabling" : "disabling" );
+	TRACE(TRACE_DEBUG, "%s usermap lookups", use_usermap ? "enabling" : "disabling" );
 	
 	return use_usermap;
 }
@@ -162,8 +167,7 @@ int db_begin_transaction()
 {
 	snprintf(query, DEF_QUERYSIZE, "BEGIN");
 	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: error beginning transaction",
-		      __FILE__, __func__);
+		TRACE(TRACE_ERROR, "error beginning transaction");
 		return DM_EQUERY;
 	}
 	return DM_SUCCESS;
@@ -173,10 +177,9 @@ int db_commit_transaction()
 {
 	snprintf(query, DEF_QUERYSIZE, "COMMIT");
 	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: error committing transaction."
+		TRACE(TRACE_ERROR, "error committing transaction."
 		      "Because we do not want to leave the database in "
-		      "an inconsistent state, we will perform a rollback now",
-		      __FILE__, __func__);
+		      "an inconsistent state, we will perform a rollback now");
 		db_rollback_transaction();
 		return DM_EQUERY;
 	}
@@ -187,10 +190,9 @@ int db_rollback_transaction()
 {
 	snprintf(query, DEF_QUERYSIZE, "ROLLBACK");
 	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: error rolling back transaction. "
+		TRACE(TRACE_ERROR, "error rolling back transaction. "
 		      "Disconnecting from database (this will implicitely "
-		      "cause a Transaction Rollback.",
-		      __FILE__, __func__);
+		      "cause a Transaction Rollback.");
 		db_disconnect();
 		/* and reconnect again */
 		db_connect();
@@ -218,16 +220,14 @@ int mailbox_is_writable(u64_t mailbox_idnr)
 int db_savepoint_transaction(const char* name)
 {
  	if(!name){
- 		trace(TRACE_ERROR, "%s,%s: error no savepoint name",
- 		      __FILE__, __func__);
+ 		TRACE(TRACE_ERROR, "error no savepoint name");
  		return DM_EQUERY;
  	}
  
  	memset(query, 0, sizeof(query));
  	snprintf(query, DEF_QUERYSIZE, "SAVEPOINT %s", name);
  	if (db_query(query) == -1) {
- 		trace(TRACE_ERROR, "%s,%s: error set savepoint to transaction",
- 		      __FILE__, __func__);
+ 		TRACE(TRACE_ERROR, "error set savepoint to transaction");
  		return DM_EQUERY;
  	}
  	return DM_SUCCESS;
@@ -237,8 +237,7 @@ int db_rollback_savepoint_transaction(const char* name)
 {
 	gchar *sname;
 	if(!name){
-		trace(TRACE_ERROR, "%s,%s: error no savepoint name",
-		      __FILE__, __func__);
+		TRACE(TRACE_ERROR, "error no savepoint name");
 		return DM_EQUERY;
 	}
 
@@ -247,11 +246,10 @@ int db_rollback_savepoint_transaction(const char* name)
 	snprintf(query, DEF_QUERYSIZE, "ROLLBACK TO SAVEPOINT %s", sname);
 	g_free(sname);
 	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: error rolling back transaction "
+		TRACE(TRACE_ERROR, "error rolling back transaction "
                       "to savepoint(%s). "
 		      "Disconnecting from database (this will implicitely "
-		      "cause a Transaction Rollback.",
-		      __FILE__, __func__, name);
+		      "cause a Transaction Rollback.", name);
 		db_disconnect();
 		/* and reconnect again */
 		db_connect();
@@ -269,8 +267,7 @@ int db_get_physmessage_id(u64_t message_idnr, u64_t * physmessage_id)
 		 "WHERE message_idnr = '%llu'", DBPFX, message_idnr);
 
 	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: error getting physmessage_id",
-		      __FILE__, __func__);
+		TRACE(TRACE_ERROR, "error getting physmessage_id");
 		return DM_EQUERY;
 	}
 
@@ -295,8 +292,8 @@ int db_get_quotum_used(u64_t user_idnr, u64_t * curmail_size)
 		 "SELECT curmail_size FROM %susers "
 		 "WHERE user_idnr = '%llu'", DBPFX, user_idnr);
 	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: error getting used quotum for "
-		      "user [%llu]", __FILE__, __func__, user_idnr);
+		TRACE(TRACE_ERROR, "error getting used quotum for "
+		      "user [%llu]" , user_idnr);
 		return DM_EQUERY;
 	}
 
@@ -335,8 +332,7 @@ static int user_quotum_inc(u64_t user_idnr, u64_t size)
 	if (result == 1) 
 		return DM_SUCCESS;
 		
-	trace(TRACE_DEBUG, "%s,%s: adding %llu to mailsize",
-	      __FILE__, __func__, size);
+	TRACE(TRACE_DEBUG, "adding %llu to mailsize", size);
 	
 	snprintf(query, DEF_QUERYSIZE,
 		 "UPDATE %susers SET curmail_size = curmail_size + '%llu' "
@@ -358,8 +354,7 @@ static int user_quotum_dec(u64_t user_idnr, u64_t size)
 	if (result == 1) 
 		return DM_SUCCESS;
 	
-	trace(TRACE_DEBUG, "%s,%s: subtracting %llu from mailsize",
-	      __FILE__, __func__, size);
+	TRACE(TRACE_DEBUG, "subtracting %llu from mailsize", size);
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "UPDATE %susers SET curmail_size = curmail_size - '%llu' "
@@ -382,8 +377,8 @@ static int user_quotum_check(u64_t user_idnr, u64_t msg_size)
 		 DBPFX, user_idnr, msg_size);
 
 	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: error checking quotum for "
-		      "user [%llu]", __FILE__, __func__, user_idnr);
+		TRACE(TRACE_ERROR, "error checking quotum for "
+		      "user [%llu]", user_idnr);
 		return DM_EQUERY;
 	}
 
@@ -431,29 +426,25 @@ int db_calculate_quotum_all()
 			DBPFX,DBPFX,MESSAGE_STATUS_DELETE);
 
 	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: error findng quotum used",
-		      __FILE__, __func__);
+		TRACE(TRACE_ERROR, "error findng quotum used");
 		return DM_EQUERY;
 	}
 
 	n = db_num_rows();
 	result = n;
 	if (n == 0) {
-		trace(TRACE_DEBUG, "%s,%s: quotum is already up to date",
-		      __FILE__, __func__);
+		TRACE(TRACE_DEBUG, "quotum is already up to date");
 		db_free_result();
 		return DM_SUCCESS;
 	}
 
 	if (!(user_idnrs = (u64_t *) dm_malloc(n * sizeof(u64_t)))) {
-		trace(TRACE_ERROR, "%s,%s: malloc failed. Probably out of memory..",
-		      __FILE__, __func__);
+		TRACE(TRACE_ERROR, "malloc failed. Probably out of memory..");
 		db_free_result();
 		return -2;
 	}
 	if (!(curmail_sizes = (u64_t *) dm_malloc(n * sizeof(u64_t)))) {
-		trace(TRACE_ERROR, "%s,%s: malloc failed: Probably out of memort..",
-		      __FILE__, __func__);
+		TRACE(TRACE_ERROR, "malloc failed: Probably out of memort..");
 		dm_free(user_idnrs);
 		db_free_result();
 		return -2;
@@ -470,8 +461,8 @@ int db_calculate_quotum_all()
 	/* now update the used quotum for all users that need to be updated */
 	for (i = 0; i < n; i++) {
 		if (user_quotum_set(user_idnrs[i], curmail_sizes[i]) == -1) {
-			trace(TRACE_ERROR, "%s,%s: error setting quotum used, "
-			      "trying to continue", __FILE__, __func__);
+			TRACE(TRACE_ERROR, "error setting quotum used, "
+			      "trying to continue" );
 			result = -1;
 		}
 	}
@@ -495,25 +486,22 @@ int db_calculate_quotum_used(u64_t user_idnr)
 		 DBPFX,DBPFX,DBPFX,user_idnr, MESSAGE_STATUS_DELETE);
 
 	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: could not execute query",
-		      __FILE__, __func__);
+		TRACE(TRACE_ERROR, "could not execute query");
 		return DM_EQUERY;
 	}
 	if (db_num_rows() < 1)
-		trace(TRACE_WARNING, "%s,%s: SUM did not give result, "
-		      "assuming empty mailbox", __FILE__, __func__);
+		TRACE(TRACE_WARNING, "SUM did not give result, "
+		      "assuming empty mailbox" );
 	else {
 		quotum = db_get_result_u64(0, 0);
 	}
 	db_free_result();
-	trace(TRACE_DEBUG, "%s, found quotum usage of [%llu] bytes",
-	      __func__, quotum);
+	TRACE(TRACE_DEBUG, "found quotum usage of [%llu] bytes", quotum);
 	/* now insert the used quotum into the users table */
 	if (user_quotum_set(user_idnr, quotum) == -1) {
 		if (db_query(query) == -1) {
-			trace(TRACE_ERROR,
-			      "%s,%s: error setting quotum for user [%llu]",
-			      __FILE__, __func__, user_idnr);
+			TRACE(TRACE_ERROR, "error setting quotum for user [%llu]"
+			      , user_idnr);
 			return DM_EQUERY;
 		}
 	}
@@ -533,8 +521,7 @@ int db_get_sievescript_byname(u64_t user_idnr, char *scriptname, char **script)
 	dm_free(escaped_scriptname);
 
 	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: error getting sievescript by name",
-				__FILE__, __func__);
+		TRACE(TRACE_ERROR, "error getting sievescript by name");
 		return DM_EQUERY;
 	}
 
@@ -570,9 +557,7 @@ int db_check_sievescript_active(u64_t user_idnr)
 		DBPFX, user_idnr);
 
 	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, 
-		"%s,%s: error checking for an active sievescript",
-		__FILE__, __func__);
+		TRACE(TRACE_ERROR, "error checking for an active sievescript");
 		return DM_EQUERY;
 	}
 
@@ -599,9 +584,7 @@ int db_get_sievescript_active(u64_t user_idnr, char **scriptname)
 		DBPFX, user_idnr);
 
 	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, 
-		"%s,%s: error getting active sievescript by name",
-		__FILE__, __func__);
+		TRACE(TRACE_ERROR, "error getting active sievescript by name");
 		return DM_EQUERY;
 	}
 
@@ -625,9 +608,7 @@ int db_get_sievescript_listall(u64_t user_idnr, struct dm_list *scriptlist)
 		DBPFX,user_idnr);
 
 	if (db_query(query) == -1) {
-		trace(TRACE_ERROR,
-		"%s,%s: error getting all sievescripts",
-		__FILE__, __func__);
+		TRACE(TRACE_ERROR, "error getting all sievescripts");
 		db_free_result();
 		return DM_EQUERY;
 	}
@@ -697,8 +678,8 @@ int db_rename_sievescript(u64_t user_idnr, char *scriptname, char *newname)
 	dm_free(escaped_newname);
 
 	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: error replacing sievescript '%s' "
-			"for user_idnr [%llu]", __FILE__, __func__,
+		TRACE(TRACE_ERROR, "error replacing sievescript '%s' "
+			"for user_idnr [%llu]" ,
 			scriptname, user_idnr);
 		db_rollback_transaction();
 		return DM_EQUERY;
@@ -746,14 +727,7 @@ int db_add_sievescript(u64_t user_idnr, char *scriptname, char *script)
 	db_free_result();
 
 	escaped_query = g_new0(char, maxesclen);
-	if (!escaped_query) {
-		trace(TRACE_ERROR, "%s,%s: not enough memory", 
-				__FILE__, __func__);
-		db_rollback_transaction();
-		dm_free(escaped_scriptname);
-		return DM_EQUERY;
-	}
-	memset(escaped_query, '\0', maxesclen);
+
 	startlen = snprintf(escaped_query, maxesclen,
 		     "INSERT INTO %ssievescripts "
 		     "(owner_idnr, name, script, active) "
@@ -768,8 +742,8 @@ int db_add_sievescript(u64_t user_idnr, char *scriptname, char *script)
 	dm_free(escaped_scriptname);
 
 	if (db_query(escaped_query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: error adding sievescript '%s' "
-			"for user_idnr [%llu]", __FILE__, __func__,
+		TRACE(TRACE_ERROR, "error adding sievescript '%s' "
+			"for user_idnr [%llu]" ,
 			scriptname, user_idnr);
 		db_rollback_transaction();
 		dm_free(escaped_query);
@@ -793,8 +767,8 @@ int db_deactivate_sievescript(u64_t user_idnr, char *scriptname)
 	dm_free(escaped_scriptname);
 
 	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: error deactivating sievescript '%s' "
-		"for user_idnr [%llu]", __FILE__, __func__,
+		TRACE(TRACE_ERROR, "error deactivating sievescript '%s' "
+		"for user_idnr [%llu]" ,
 		scriptname, user_idnr);
 		return DM_EQUERY;
 	}
@@ -814,8 +788,8 @@ int db_activate_sievescript(u64_t user_idnr, char *scriptname)
 		DBPFX,user_idnr);
 
 	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: error activating sievescript '%s' "
-			"for user_idnr [%llu]", __FILE__, __func__,
+		TRACE(TRACE_ERROR, "error activating sievescript '%s' "
+			"for user_idnr [%llu]" ,
 			scriptname, user_idnr);
 		dm_free(escaped_scriptname);
 		db_rollback_transaction();
@@ -829,8 +803,8 @@ int db_activate_sievescript(u64_t user_idnr, char *scriptname)
 	dm_free(escaped_scriptname);
 
 	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: error activating sievescript '%s' "
-		"for user_idnr [%llu]", __FILE__, __func__,
+		TRACE(TRACE_ERROR, "error activating sievescript '%s' "
+		"for user_idnr [%llu]" ,
 		scriptname, user_idnr);
 		db_rollback_transaction();
 		return DM_EQUERY;
@@ -852,8 +826,8 @@ int db_delete_sievescript(u64_t user_idnr, char *scriptname)
 	dm_free(escaped_scriptname);
 
 	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: error deleting sievescript '%s' "
-			"for user_idnr [%llu]", __FILE__, __func__,
+		TRACE(TRACE_ERROR, "error deleting sievescript '%s' "
+			"for user_idnr [%llu]" ,
 			scriptname, user_idnr);
 		return DM_EQUERY;
 	}
@@ -864,24 +838,24 @@ int db_delete_sievescript(u64_t user_idnr, char *scriptname)
 int db_check_sievescript_quota(u64_t user_idnr, u64_t scriptlen)
 {
 	/* TODO function db_check_sievescript_quota */
-	trace(TRACE_DEBUG, "%s,%s: checking %llu sievescript quota with %llu",
-		__FILE__, __func__, user_idnr, scriptlen);
+	TRACE(TRACE_DEBUG, "checking %llu sievescript quota with %llu"
+		, user_idnr, scriptlen);
 	return DM_SUCCESS;
 }
 
 int db_set_sievescript_quota(u64_t user_idnr, u64_t quotasize)
 {
 	/* TODO function db_set_sievescript_quota */
-	trace(TRACE_DEBUG, "%s,%s: setting %llu sievescript quota with %llu",
-		__FILE__, __func__, user_idnr, quotasize);
+	TRACE(TRACE_DEBUG, "setting %llu sievescript quota with %llu"
+		, user_idnr, quotasize);
 	return DM_SUCCESS;
 }
 
 int db_get_sievescript_quota(u64_t user_idnr, u64_t * quotasize)
 {
 	/* TODO function db_get_sievescript_quota */
-	trace(TRACE_DEBUG, "%s,%s: getting sievescript quota for %llu",
-		__FILE__, __func__, user_idnr);
+	TRACE(TRACE_DEBUG, "getting sievescript quota for %llu"
+		, user_idnr);
 	*quotasize = 0;
 	return DM_SUCCESS;
 }
@@ -899,16 +873,14 @@ int db_get_notify_address(u64_t user_idnr, char **notify_address)
 
 	if (db_query(query) == -1) {
 		/* query failed */
-		trace(TRACE_ERROR, "%s,%s: query failed", __FILE__,
-		      __func__);
+		TRACE(TRACE_ERROR, "query failed");
 		return DM_EQUERY;
 	}
 	if (db_num_rows() > 0) {
 		query_result = db_get_result(0, 0);
 		if (query_result && strlen(query_result) > 0) {
 			*notify_address = dm_strdup(query_result);
-			trace(TRACE_DEBUG, "%s,%s: found address [%s]",
-			      __FILE__, __func__, *notify_address);
+			TRACE(TRACE_DEBUG, "found address [%s]", *notify_address);
 		}
 	}
 
@@ -930,16 +902,14 @@ int db_get_reply_body(u64_t user_idnr, char **reply_body)
 	
 	if (db_query(query) == -1) {
 		/* query failed */
-		trace(TRACE_ERROR, "%s,%s: query failed", __FILE__,
-		      __func__);
+		TRACE(TRACE_ERROR, "query failed" );
 		return DM_EQUERY;
 	}
 	if (db_num_rows() > 0) {
 		query_result = db_get_result(0, 0);
 		if (query_result && strlen(query_result) > 0) {
 			*reply_body = dm_strdup(query_result);
-			trace(TRACE_DEBUG, "%s,%s: found reply_body [%s]",
-			      __FILE__, __func__, *reply_body);
+			TRACE(TRACE_DEBUG, "found reply_body [%s]", *reply_body);
 		}
 	}
 	db_free_result();
@@ -956,14 +926,12 @@ u64_t db_get_mailbox_from_message(u64_t message_idnr)
 
 	if (db_query(query) == -1) {
 		/* query failed */
-		trace(TRACE_ERROR, "%s,%s: query failed", __FILE__,
-		      __func__);
+		TRACE(TRACE_ERROR, "query failed" );
 		return DM_EQUERY;
 	}
 
 	if (db_num_rows() < 1) {
-		trace(TRACE_DEBUG, "%s,%s: No mailbox found for message",
-		      __FILE__, __func__);
+		TRACE(TRACE_DEBUG, "No mailbox found for message");
 		db_free_result();
 		return DM_SUCCESS;
 	}
@@ -984,14 +952,12 @@ u64_t db_get_useridnr(u64_t message_idnr)
 		DBPFX,DBPFX,DBPFX,message_idnr);
 	if (db_query(query) == -1) {
 		/* query failed */
-		trace(TRACE_ERROR, "%s,%s: query failed", __FILE__,
-		      __func__);
+		TRACE(TRACE_ERROR, "query failed" );
 		return DM_EQUERY;
 	}
 
 	if (db_num_rows() < 1) {
-		trace(TRACE_DEBUG, "%s,%s: No owner found for message",
-		      __FILE__, __func__);
+		TRACE(TRACE_DEBUG, "No owner found for message");
 		db_free_result();
 		return DM_SUCCESS;
 	}
@@ -1023,9 +989,7 @@ int db_insert_physmessage_with_internal_date(timestring_t internal_date,
 	}
 	
 	if (db_query(query) == -1) {
-		trace(TRACE_ERROR,
-		      "%s,%s: insertion of physmessage failed", __FILE__,
-		      __func__);
+		TRACE(TRACE_ERROR, "insertion of physmessage failed" );
 		return DM_EQUERY;
 	}
 	*physmessage_id = db_insert_result("physmessage_id");
