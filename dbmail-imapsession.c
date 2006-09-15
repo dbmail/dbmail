@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: dbmail-imapsession.c 2263 2006-09-10 09:31:31Z paul $
+/* $Id: dbmail-imapsession.c 2269 2006-09-15 13:41:47Z paul $
  * 
  * dm_imaputil.c
  *
@@ -926,8 +926,7 @@ static gboolean _do_fetch(u64_t *uid, gpointer UNUSED value, struct ImapSession 
 {
 	u64_t *id = uid;
 	
-	if (! self->use_uid)
-		id = g_tree_lookup(self->mailbox->ids,uid);
+	id = g_tree_lookup(self->mailbox->ids,uid);
 
 	g_return_val_if_fail(id,TRUE);
 	
