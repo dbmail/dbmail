@@ -136,6 +136,7 @@ int db_check_version(void)
  	if (db_query(query) == -1) {
  		TRACE(TRACE_FATAL, "2.1 database incompatible. You need to add the envelopes table "
  				"and run dbmail-util -by");
+	}
 	db_free_result();
 
 	return DM_SUCCESS;
