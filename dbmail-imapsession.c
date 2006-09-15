@@ -926,8 +926,7 @@ static gboolean _do_fetch(u64_t *uid, gpointer UNUSED value, struct ImapSession 
 {
 	u64_t *id = uid;
 	
-	if (! self->use_uid)
-		id = g_tree_lookup(self->mailbox->ids,uid);
+	id = g_tree_lookup(self->mailbox->ids,uid);
 
 	g_return_val_if_fail(id,TRUE);
 	

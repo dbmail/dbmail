@@ -1,3 +1,8 @@
+2006-09-15  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-imapsession.c:
+	fix bug #408
+
 2006-09-12  Aaron Stone  <aaron@serendipity.cx>
 
 	* pop3.c, db.c:
