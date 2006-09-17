@@ -25,8 +25,23 @@
 #define THIS_MODULE "sievecmd"
 #define PNAME "dbmail/sievecmd"
 
+/* Loudness and assumptions. */
+int yes_to_all = 0;
+int no_to_all = 0;
+int verbose = 0;
+/* Don't be helpful. */
+int quiet = 0;
+/* Don't print errors. */
+int reallyquiet = 0;
+
+#define qverbosef(fmt, args...) (!verbose ? 0 : printf(fmt, ##args) )
 #define qprintf(fmt, args...) ((quiet||reallyquiet) ? 0 : printf(fmt, ##args) )
 #define qerrorf(fmt, args...) (reallyquiet ? 0 : fprintf(stderr, fmt, ##args) )
+
+char *configFile = DEFAULT_CONFIG_FILE;
+
+/* set up database login data */
+extern db_param_t _db_params;
 
 static int do_showhelp(void);
 static int do_list(u64_t user_idnr);
@@ -36,15 +51,6 @@ static int do_remove(u64_t user_idnr, char *name);
 static int do_insert(u64_t user_idnr, char *name, char *source);
 static int do_cat(u64_t user_idnr, char *name);
 static int read_script_file(FILE * f, char **m_buf);
-
-char *configFile = DEFAULT_CONFIG_FILE;
-
-int verbose;
-int quiet;
-int reallyquiet;
-
-/* set up database login data */
-extern db_param_t _db_params;
 
 int main(int argc, char *argv[])
 {
@@ -128,9 +134,8 @@ int main(int argc, char *argv[])
 			return 1;
 
 		case 'y':
-			printf("-y switch is not supported in this "
-			       "version.\n");
-			return 1;
+			yes_to_all = 1;
+			break;
 
 		case 'q':
 			/* If we get q twice, be really quiet! */
@@ -158,7 +163,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (act == 'h' || act == 0 || !user_name) {
+	if (act == 'h' || act == 0 || !user_name || (no_to_all && yes_to_all)) {
 		do_showhelp();
 		goto mainend;
 	}
@@ -327,10 +332,24 @@ int do_cat(u64_t user_idnr, char *name)
 
 int do_insert(u64_t user_idnr, char *name, char *source)
 {
-	int res = 0;
+	int res = 0, was_found = 0;
 	char *buf = NULL;
 	FILE *file = NULL;
 	sort_result_t *sort_result;
+
+	res = db_get_sievescript_byname(user_idnr, name, &buf);
+	if (buf) {
+		g_free(buf);
+		was_found = 1;
+	}
+	if (res != 0) {
+		qerrorf("Could not determine if a script by that name already exists.\n");
+		return -1;
+	}
+	if (was_found && !yes_to_all) {
+		qerrorf("A script by that name already exists. Use -y option to overwrite it.\n");
+		return -1;
+	}
 
 	if (!source)
 		file = stdin;
@@ -387,8 +406,15 @@ int do_insert(u64_t user_idnr, char *name, char *source)
 		return -1;
 	}
 
-	qprintf("Script [%s] successfully inserted and marked inactive!\n",
-	       name);
+	if (was_found) {
+		if (db_check_sievescript_active_byname(user_idnr, name) == 0) {
+			qprintf("Script [%s] successfully updated and remains active!\n", name);
+		} else {
+			qprintf("Script [%s] successfully updated and remains inactive!\n", name);
+		}
+	} else {
+		qprintf("Script [%s] successfully inserted and marked inactive!\n", name);
+	}
 	return 0;
 }
 

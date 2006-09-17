@@ -1,3 +1,13 @@
+2006-09-16  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmail-user.h, maintenance.c:
+	Minor cleanup of verbosef, qprintf, qerrorf defines.
+	* db.h, db.c:
+	Added function db_check_sievescript_active_byname.
+	* sievecmd.c:
+	Better handling when updating/overwriting scripts by using the
+	common -y option to control overwrites.
+
 2006-09-15  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-imapsession.c:
