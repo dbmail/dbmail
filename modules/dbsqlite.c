@@ -27,8 +27,6 @@
 #include <regex.h>
 #include <sqlite3.h>
 
-#define THIS_MODULE "dbsqlite"
-
 db_param_t _db_params;
 
 static sqlite3 *conn;
@@ -260,9 +258,6 @@ int db_connect()
 		trace(TRACE_FATAL, "%s,%s: sqlite3_create_function failed", __FILE__,__func__);
 		return -1;
 	}
-
-	lastq = g_new0(struct qtmp,1);
-
 	return 0;
 }
 
@@ -277,12 +272,13 @@ void db_free_result()
 		lastq->resp = 0;
 		lastq->rows = lastq->cols = 0;
 	}
+	lastq = 0;
+
 }
 int db_disconnect()
 {
 	db_free_result();
 	sqlite3_close(conn);
-	g_free(lastq);
 	conn = 0;
 	return 0;
 }
@@ -311,9 +307,18 @@ int db_query(const char *the_query)
 {
 	char *errmsg;
 
+	if (lastq) {
+		if (lastq->resp) sqlite3_free_table(lastq->resp);
+	} else {
+		lastq = (struct qtmp *)malloc(sizeof(struct qtmp));
+		if (!lastq) {
+			trace(TRACE_ERROR,
+			      "%si,%s: malloc failed: %s",
+			      __FILE__, __func__, strerror(errno));
+			return -1;
+		}
+	}
 	trace(TRACE_DEBUG,"%s,%s: %s", __FILE__, __func__, the_query);
-
-	db_free_result();
 
 	if (sqlite3_get_table(conn, the_query, &lastq->resp,
 				(int *)&lastq->rows, (int *)&lastq->cols, &errmsg) != SQLITE_OK) {
