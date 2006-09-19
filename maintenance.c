@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: maintenance.c 2262 2006-09-09 20:08:35Z aaron $
+/* $Id: maintenance.c 2270 2006-09-17 05:04:54Z aaron $
  *
  * This is the dbmail housekeeping program. 
  *	It checks the integrity of the database and does a cleanup of all
@@ -26,10 +26,9 @@
  */
 
 #include "dbmail.h"
-
-#define LEN 30
+#define THIS_MODULE "maintenance"
 #define PNAME "dbmail/maintenance"
-
+#define LEN 30
 
 /* Loudness and assumptions. */
 int yes_to_all = 0;
@@ -40,11 +39,9 @@ int quiet = 0;
 /* Don't print errors. */
 int reallyquiet = 0;
 
-#define qverbosef(fmt, args...) \
-	(!verbose ? 0 : printf(fmt, ##args) )
-
-#define qerrorf(fmt, args...) \
-	(reallyquiet ? 0 : fprintf(stderr, fmt, ##args) )
+#define qverbosef(fmt, args...) (!verbose ? 0 : printf(fmt, ##args) )
+#define qprintf(fmt, args...) ((quiet||reallyquiet) ? 0 : printf(fmt, ##args) )
+#define qerrorf(fmt, args...) (reallyquiet ? 0 : fprintf(stderr, fmt, ##args) )
 
 char *configFile = DEFAULT_CONFIG_FILE;
 
@@ -208,7 +205,7 @@ int main(int argc, char *argv[])
 		case 'V':
  			printf("DBMail: dbmail-util\n"
  			       "Version: %s\n"
- 			       "$Revision: 2262 $\n"
+ 			       "$Revision: 2270 $\n"
  			       "Copyright: %s\n", VERSION, COPYRIGHT);
 			return 1;
 

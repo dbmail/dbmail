@@ -17,15 +17,17 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: dbmail-user.h 2107 2006-05-07 07:12:51Z aaron $ 
+/* $Id: dbmail-user.h 2270 2006-09-17 05:04:54Z aaron $ 
  */
 #ifndef _DBMAIL_USER_H
 #define _DBMAIL_USER_H
 
 #include "dbmail.h"
 
+#define qverbosef(fmt, args...) (!verbose ? 0 : printf(fmt, ##args) )
 #define qprintf(fmt, args...) ((quiet||reallyquiet) ? 0 : printf(fmt, ##args) )
 #define qerrorf(fmt, args...) (reallyquiet ? 0 : fprintf(stderr, fmt, ##args) )
+
 #define null_strncpy(dst, src, len) (src ? strncpy(dst, src, len) : 0 )
 #define null_crypt(src, dst) (src ? crypt(src, dst) : "" )
 
