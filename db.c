@@ -2555,7 +2555,7 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 		return DM_SUCCESS;
 	}
 	all_mailboxes 		= g_new0(u64_t,n_rows);
-	all_mailbox_names 	= g_new0((char *),n_rows);
+	all_mailbox_names 	= g_new0(char *,n_rows);
 	all_mailbox_owners 	= g_new0(u64_t,n_rows);
 	tmp_mailboxes 		= g_new0(u64_t,n_rows);
 	
