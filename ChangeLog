@@ -1,3 +1,16 @@
+2006-09-19  Paul J Stevens <paul@nfg.nl>
+
+	* db.c, test-scripts/testsort.imap:
+	phase-in TRACE macro
+	* dbmail-imapsession.c:
+	fix bug #408
+	* modules/dbsqlite.c:
+	revert to old behaviour
+	* db.c:
+	dm_malloc to g_new0
+	* sql/mysql/2_1_7-2_1_8.mysql:
+	update mysql create script for envelope cache (closes #409)
+
 2006-09-16  Aaron Stone  <aaron@serendipity.cx>
 
 	* dbmail-user.h, maintenance.c:

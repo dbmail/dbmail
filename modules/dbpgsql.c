@@ -243,7 +243,7 @@ const char *db_get_result(unsigned row, unsigned field)
 		return NULL;
 	}
 
-	if ((row >= db_num_rows()) || (field >= db_num_fields())) {
+	if ((row > db_num_rows()) || (field > db_num_fields())) {
 		trace(TRACE_WARNING, "%s,%s: "
 		      "(row = %u,field = %u) bigger then size of result set",
 		      __FILE__, __func__, row, field);
