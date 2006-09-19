@@ -259,7 +259,7 @@ const char *db_get_result(unsigned row, unsigned field)
         last_row_number = row;
         
 	if (last_row == NULL) {
-		trace(TRACE_WARNING, "%s,%s: row is NULL\n",
+		trace(TRACE_DEBUG, "%s,%s: row is NULL\n",
 		      __FILE__, __func__);
 		return NULL;
 	}
