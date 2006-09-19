@@ -1,4 +1,4 @@
-/* $Id: db.c 2267 2006-09-12 21:41:45Z aaron $ */
+/* $Id: db.c 2270 2006-09-17 05:04:54Z aaron $ */
 /*
   Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
   Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
@@ -22,7 +22,7 @@
 /**
  * \file db.c
  * 
- * $Id: db.c 2267 2006-09-12 21:41:45Z aaron $
+ * $Id: db.c 2270 2006-09-17 05:04:54Z aaron $
  *
  * implement database functionality. This used to split out
  * between MySQL and PostgreSQL, but this is now integrated. 
@@ -540,12 +540,28 @@ int db_get_sievescript_byname(u64_t user_idnr, char *scriptname, char **script)
  * Returns 0 if has, 1 is has not, -1 on error. */
 int db_check_sievescript_active(u64_t user_idnr)
 {
+	return db_check_sievescript_active_byname(user_idnr, NULL);
+}
+
+/* Check if the user has an active sieve script by this name.
+ * If name is null, checks for any active sieve script.
+ * Returns 0 if has, 1 is has not, -1 on error. */
+int db_check_sievescript_active_byname(u64_t user_idnr, const char *scriptname)
+{
 	int n;
+	char *name;
+
+	if (scriptname)
+		name = dm_stresc(scriptname);
+	else
+		name = dm_strdup("%"); // SQL wildcard.
 
 	snprintf(query, DEF_QUERYSIZE,
 		"SELECT name FROM %ssievescripts WHERE "
-		"owner_idnr = %llu AND active = 1",
-		DBPFX, user_idnr);
+		"owner_idnr = %llu AND active = 1 AND name = '%s'",
+		DBPFX, user_idnr, name);
+
+	dm_free(name);
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "error checking for an active sievescript");

@@ -19,7 +19,7 @@
 */
 
 /*
- * $Id: db.h 2261 2006-09-09 14:24:40Z paul $
+ * $Id: db.h 2270 2006-09-17 05:04:54Z aaron $
  *
  * dbase driver header file
  * Functions for database communication 
@@ -378,6 +378,7 @@ int db_get_sievescript_byname(u64_t user_idnr, char *scriptname,
  *        - 1 when user doesn't have an active script
  */
 int db_check_sievescript_active(u64_t user_idnr);
+int db_check_sievescript_active_byname(u64_t user_idnr, const char *scriptname);
 /**
  * \brief get the name of the active sieve script for a user
  * \param user_idnr user id
