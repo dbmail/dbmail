@@ -2040,9 +2040,8 @@ int db_createsession(u64_t user_idnr, PopSession_t * session_ptr)
 	dm_list_init(&session_ptr->messagelst);
 
 	if (db_findmailbox("INBOX", user_idnr, &inbox_mailbox_idnr) <= 0) {
-		trace(TRACE_ERROR, "%s,%s: error finding mailbox_idnr of "
-		      "INBOX for user [%llu], exiting..",
-		      __FILE__, __func__, user_idnr);
+		TRACE(TRACE_ERROR, "error finding mailbox_idnr of "
+		      "INBOX for user [%llu], exiting..", user_idnr);
 		return DM_EQUERY;
 	}
 	/* query is < MESSAGE_STATUS_DELETE  because we don't want deleted 
@@ -2054,7 +2053,7 @@ int db_createsession(u64_t user_idnr, PopSession_t * session_ptr)
 		 "WHERE msg.mailbox_idnr = '%llu' "
 		 "AND msg.status < '%d' "
 		 "AND msg.physmessage_id = pm.id "
-		 "ORDER BY status, message_idnr ASC",DBPFX,DBPFX,
+		 "ORDER BY msg.message_idnr ASC",DBPFX,DBPFX,
 		 inbox_mailbox_idnr, MESSAGE_STATUS_DELETE);
 
 	if (db_query(query) == -1) {
@@ -2076,8 +2075,7 @@ int db_createsession(u64_t user_idnr, PopSession_t * session_ptr)
 	message_counter++;
 
 	/* filling the list */
-	trace(TRACE_DEBUG, "%s,%s: adding items to list", __FILE__,
-	      __func__);
+	TRACE(TRACE_DEBUG, "adding items to list");
 	for (i = 0; i < db_num_rows(); i++) {
 		/* message size */
 		tmpmessage.msize = db_get_result_u64(i, 0);
@@ -2102,8 +2100,7 @@ int db_createsession(u64_t user_idnr, PopSession_t * session_ptr)
 			     sizeof(tmpmessage));
 	}
 
-	trace(TRACE_DEBUG, "%s,%s: adding succesfull", __FILE__,
-	      __func__);
+	TRACE(TRACE_DEBUG, "adding succesful");
 
 	/* setting all virtual values */
 	session_ptr->virtual_totalmessages = session_ptr->totalmessages;
