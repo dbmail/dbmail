@@ -1,3 +1,8 @@
+2006-09-20  Aaron Stone  <aaron@serendipity.cx>
+
+	* dm_md5.c:
+	Moved typedef uint32 above byteReverse function (closes bug #410).
+
 2006-09-19  Paul J Stevens <paul@nfg.nl>
 
 	* db.c, test-scripts/testsort.imap:

@@ -42,6 +42,22 @@
 
 #include "dbmail.h"
 
+typedef unsigned int uint32;
+
+struct GdmMD5Context {
+	uint32 buf[4];
+	uint32 bits[2];
+	unsigned char in[64];
+};
+
+static void gdm_md5_init(struct GdmMD5Context *context);
+static void gdm_md5_update(struct GdmMD5Context *context,
+		    unsigned char const *buf, unsigned len);
+static void gdm_md5_final(unsigned char digest[16],
+		   struct GdmMD5Context *context);
+static void gdm_md5_transform(uint32 buf[4], uint32 const in[16]);
+
+
 /* If endian.h is present, it will tell us, otherwise
  * autoconf's AC_C_BIGENDIAN will have tested the host. */
 #if (BYTE_ORDER == LITTLE_ENDIAN) || !defined(WORDS_BIGENDIAN)
@@ -63,23 +79,6 @@ static void byteReverse(unsigned char *buf, unsigned longs)
 }
 
 #endif
-
-typedef unsigned int uint32;
-
-struct GdmMD5Context {
-	uint32 buf[4];
-	uint32 bits[2];
-	unsigned char in[64];
-};
-
-static void gdm_md5_init(struct GdmMD5Context *context);
-static void gdm_md5_update(struct GdmMD5Context *context,
-		    unsigned char const *buf, unsigned len);
-static void gdm_md5_final(unsigned char digest[16],
-		   struct GdmMD5Context *context);
-static void gdm_md5_transform(uint32 buf[4], uint32 const in[16]);
-
-
 
 /*
  * Start MD5 accumulation.  Set bit count to 0 and buffer to mysterious
