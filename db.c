@@ -551,17 +551,22 @@ int db_check_sievescript_active_byname(u64_t user_idnr, const char *scriptname)
 	int n;
 	char *name;
 
-	if (scriptname)
+	if (scriptname) {
 		name = dm_stresc(scriptname);
-	else
-		name = dm_strdup("%"); // SQL wildcard.
 
-	snprintf(query, DEF_QUERYSIZE,
-		"SELECT name FROM %ssievescripts WHERE "
-		"owner_idnr = %llu AND active = 1 AND name = '%s'",
-		DBPFX, user_idnr, name);
+		snprintf(query, DEF_QUERYSIZE,
+			"SELECT name FROM %ssievescripts WHERE "
+			"owner_idnr = %llu AND active = 1 AND name = '%s'",
+			DBPFX, user_idnr, name);
 
-	dm_free(name);
+		dm_free(name);
+	} else {
+		snprintf(query, DEF_QUERYSIZE,
+			"SELECT name FROM %ssievescripts WHERE "
+			"owner_idnr = %llu AND active = 1",
+			DBPFX, user_idnr);
+
+	}
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "error checking for an active sievescript");
