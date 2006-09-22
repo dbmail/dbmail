@@ -132,7 +132,7 @@ int db_check_version(void)
 	}
 	db_free_result();
  		
- 	snprintf(query, DEF_QUERYSIZE, "SELECT 1=1 FROM %senvelopes LIMIT 1 OFFSET 0", DBPFX);
+ 	snprintf(query, DEF_QUERYSIZE, "SELECT 1=1 FROM %senvelope LIMIT 1 OFFSET 0", DBPFX);
  	if (db_query(query) == -1) {
  		TRACE(TRACE_FATAL, "2.1 database incompatible. You need to add the envelopes table "
  				"and run dbmail-util -by");
