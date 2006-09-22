@@ -1,3 +1,9 @@
+2006-09-22  Aaron Stone  <aaron@serendipity.cx>
+
+	* db.c:
+	Changed the query for db_check_sievescript_active_byname (closes bug
+	#412).
+
 2006-09-22  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-message.c:
