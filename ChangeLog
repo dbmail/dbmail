@@ -1,3 +1,14 @@
+2006-09-22  Paul J Stevens <paul@nfg.nl>
+
+	* modules/dbmysql.c:
+	downgrade tracelevel for row=NULL
+	* db.c:
+	fix typo (closes #411)
+	* check_dbmail_util.c:
+	activate testcase
+	* check_dbmail_message.c, dbmail-message.c, dbmail-message.h:
+	add dbmail_message_construct call
+
 2006-09-20  Aaron Stone  <aaron@serendipity.cx>
 
 	* dm_md5.c:
