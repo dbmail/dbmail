@@ -265,6 +265,69 @@ struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *sel
 	return self;
 }
 
+// 
+// construct a new message where only sender, recipient, subject and 
+// a body are known. The body can be any kind of charset/encoding, and we 
+// let gmime decide which is which.
+//
+// FIXME: supports text/plain only.
+//
+struct DbmailMessage * dbmail_message_construct(struct DbmailMessage *self, 
+		const gchar *sender, const gchar *recipient, 
+		const gchar *subject, const gchar *body)
+{
+
+	GMimeMessage *message;
+	GMimePart *mime_part;
+	GMimeDataWrapper *content;
+	GMimeStream *stream, *fstream;
+	GMimeContentType *mime_type;
+	const gchar *charset;
+	GMimePartEncodingType encoding;
+	GMimeFilter *filter = NULL;
+
+	message = g_mime_message_new(FALSE);
+	mime_type = g_mime_content_type_new("text","plain");
+	charset = g_mime_charset_best(body,strlen(body));
+
+	encoding = g_mime_utils_best_encoding((unsigned char *)body, strlen(body));
+
+
+	// basic headers
+	g_mime_message_set_sender(message, sender);
+	g_mime_message_set_subject(message, subject);
+	g_mime_message_add_recipients_from_string(message, GMIME_RECIPIENT_TYPE_TO, recipient);
+
+	// // mime-part
+	mime_part = g_mime_part_new();
+	stream = g_mime_stream_mem_new();
+	fstream = g_mime_stream_filter_new_with_stream(stream);
+	if (encoding == GMIME_PART_ENCODING_BASE64) {
+		filter = g_mime_filter_basic_new_type(GMIME_FILTER_BASIC_BASE64_ENC);
+		g_mime_stream_filter_add((GMimeStreamFilter *)fstream, filter);
+	}
+	g_mime_stream_write_string(fstream,body);
+	content = g_mime_data_wrapper_new_with_stream(stream, encoding);
+	g_mime_part_set_content_object(mime_part, content);
+	g_mime_object_set_content_type((GMimeObject *)mime_part, mime_type);
+	if (charset)
+		g_mime_object_set_content_type_parameter((GMimeObject *)mime_part, "charset", charset);
+
+	if (encoding == GMIME_PART_ENCODING_BASE64)
+		g_mime_part_set_content_header(mime_part,"Content-Transfer-Encoding", "base64");
+
+	g_mime_message_set_mime_part(message, (GMimeObject *)mime_part);
+
+	self->content = (GMimeObject *)message;
+	g_object_unref(mime_part);
+	g_object_unref(content);
+	g_object_unref(stream);
+	g_object_unref(fstream);
+	g_object_unref(filter);
+	return self;
+}
+
+
 /* \brief initialize a previously created DbmailMessage using a GMimeStream
  * \param empty DbmailMessage
  * \param stream from which to read

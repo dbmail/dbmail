@@ -83,6 +83,9 @@ struct DbmailMessage * dbmail_message_new(void);
 struct DbmailMessage * dbmail_message_new_from_stream(FILE *instream, int streamtype);
 struct DbmailMessage * dbmail_message_init_with_stream(struct DbmailMessage *self, GMimeStream *stream, dbmail_stream_t type);
 struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *self, const GString *content);
+struct DbmailMessage * dbmail_message_construct(struct DbmailMessage *self, 
+		const gchar *sender, const gchar *recipient, 
+		const gchar *subject, const gchar *body);
 
 /*
  * database facilities
