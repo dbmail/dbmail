@@ -1,3 +1,8 @@
+2006-09-20  Aaron Stone  <aaron@serendipity.cx>
+
+	* dm_md5.c:
+	Moved typedef uint32 above byteReverse function (closes bug #410).
+
 2006-09-19  Paul J Stevens <paul@nfg.nl>
 
 	* db.c, test-scripts/testsort.imap:
@@ -10,6 +15,11 @@
 	dm_malloc to g_new0
 	* sql/mysql/2_1_7-2_1_8.mysql:
 	update mysql create script for envelope cache (closes #409)
+
+2006-09-18  Aaron Stone  <aaron@serendipity.cx>
+
+	* db.c:
+	Don't order POP3 messages by status, only message_idnr.
 
 2006-09-16  Aaron Stone  <aaron@serendipity.cx>
 
