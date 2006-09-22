@@ -433,6 +433,23 @@ START_TEST(test_dbmail_message_get_header_repeated)
 }
 END_TEST
 
+
+START_TEST(test_dbmail_message_construct)
+{
+	const gchar *sender = "foo@bar.org";
+	const gchar *subject = "Some test";
+	const gchar *recipient = "<bar@foo.org> Bar";
+	const gchar *body = "\ntesting\n\nבבבבה\n\n";
+
+	struct DbmailMessage *message = dbmail_message_new();
+	message = dbmail_message_construct(message,sender,recipient,subject,body);
+
+	printf("%s", dbmail_message_to_string(message));
+}
+END_TEST
+
+
+
 Suite *dbmail_message_suite(void)
 {
 	Suite *s = suite_create("Dbmail Message");
@@ -461,6 +478,7 @@ Suite *dbmail_message_suite(void)
 	tcase_add_test(tc_message, test_dbmail_message_encoded);
 	tcase_add_test(tc_message, test_dbmail_message_get_header_addresses);
 	tcase_add_test(tc_message, test_dbmail_message_get_header_repeated);
+	tcase_add_test(tc_message, test_dbmail_message_construct);
 	return s;
 }
 
