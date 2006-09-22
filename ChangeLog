@@ -1,5 +1,7 @@
 2006-09-22  Paul J Stevens <paul@nfg.nl>
 
+	* dbmail-message.c:
+	cleanup dbmail_message_construct
 	* modules/dbmysql.c:
 	downgrade tracelevel for row=NULL
 	* db.c:
