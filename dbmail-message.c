@@ -270,13 +270,12 @@ struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *sel
 // a body are known. The body can be any kind of charset/encoding, and we 
 // let gmime decide which is which.
 //
-// FIXME: supports text/plain only.
-//
+// TODO: support text/html
+
 struct DbmailMessage * dbmail_message_construct(struct DbmailMessage *self, 
 		const gchar *sender, const gchar *recipient, 
 		const gchar *subject, const gchar *body)
 {
-
 	GMimeMessage *message;
 	GMimePart *mime_part;
 	GMimeDataWrapper *content;
@@ -286,39 +285,95 @@ struct DbmailMessage * dbmail_message_construct(struct DbmailMessage *self,
 	GMimePartEncodingType encoding;
 	GMimeFilter *filter = NULL;
 
+	// FIXME: this could easily be expanded to allow appending
+	// a new sub-part to an existing mime-part. But for now let's
+	// require self to be a pristine (empty) DbmailMessage.
+	g_return_val_if_fail(self->content==NULL, self);
+	
 	message = g_mime_message_new(FALSE);
-	mime_type = g_mime_content_type_new("text","plain");
-	charset = g_mime_charset_best(body,strlen(body));
 
+	// determine the optimal encoding type for the body
 	encoding = g_mime_utils_best_encoding((unsigned char *)body, strlen(body));
 
-
-	// basic headers
+	// set basic headers
 	g_mime_message_set_sender(message, sender);
 	g_mime_message_set_subject(message, subject);
 	g_mime_message_add_recipients_from_string(message, GMIME_RECIPIENT_TYPE_TO, recipient);
 
-	// // mime-part
+	// construct mime-part
 	mime_part = g_mime_part_new();
+	
+	// setup a stream-filter
 	stream = g_mime_stream_mem_new();
 	fstream = g_mime_stream_filter_new_with_stream(stream);
-	if (encoding == GMIME_PART_ENCODING_BASE64) {
-		filter = g_mime_filter_basic_new_type(GMIME_FILTER_BASIC_BASE64_ENC);
-		g_mime_stream_filter_add((GMimeStreamFilter *)fstream, filter);
+	
+	switch(encoding) {
+		case GMIME_PART_ENCODING_BASE64:
+			filter = g_mime_filter_basic_new_type(GMIME_FILTER_BASIC_BASE64_ENC);
+			break;
+		case GMIME_PART_ENCODING_QUOTEDPRINTABLE:
+			filter = g_mime_filter_basic_new_type(GMIME_FILTER_BASIC_QP_ENC);
+			break;
+		case GMIME_PART_ENCODING_UUENCODE:
+			filter = g_mime_filter_basic_new_type(GMIME_FILTER_BASIC_UU_ENC);
+			break;
+		case GMIME_PART_ENCODING_DEFAULT:
+		case GMIME_PART_ENCODING_7BIT:
+		case GMIME_PART_ENCODING_8BIT:
+		case GMIME_PART_ENCODING_BINARY:
+		case GMIME_PART_NUM_ENCODINGS:
+		default:
+			break;
 	}
+
+	if (filter)
+		g_mime_stream_filter_add((GMimeStreamFilter *)fstream, filter);
+	
+	// fill the stream and thus the mime-part
 	g_mime_stream_write_string(fstream,body);
 	content = g_mime_data_wrapper_new_with_stream(stream, encoding);
 	g_mime_part_set_content_object(mime_part, content);
+	
+	// add the correct mime-headers
+	
+	// Content-Type
+	mime_type = g_mime_content_type_new("text","plain");
 	g_mime_object_set_content_type((GMimeObject *)mime_part, mime_type);
-	if (charset)
+	if ((charset = g_mime_charset_best(body,strlen(body))) != NULL)
 		g_mime_object_set_content_type_parameter((GMimeObject *)mime_part, "charset", charset);
 
-	if (encoding == GMIME_PART_ENCODING_BASE64)
-		g_mime_part_set_content_header(mime_part,"Content-Transfer-Encoding", "base64");
+	// Content-Transfer-Encoding
+	switch(encoding) {
+		case GMIME_PART_ENCODING_DEFAULT:
+		case GMIME_PART_ENCODING_7BIT:
+			g_mime_part_set_content_header(mime_part,"Content-Transfer-Encoding", "7bit");
+			break;
+		case GMIME_PART_ENCODING_8BIT:
+			g_mime_part_set_content_header(mime_part,"Content-Transfer-Encoding", "8bit");
+			break;
+		case GMIME_PART_ENCODING_BINARY:
+			g_mime_part_set_content_header(mime_part,"Content-Transfer-Encoding", "binary");
+			break;
+		case GMIME_PART_ENCODING_BASE64:
+			g_mime_part_set_content_header(mime_part,"Content-Transfer-Encoding", "base64");
+			break;
+		case GMIME_PART_ENCODING_QUOTEDPRINTABLE:
+			g_mime_part_set_content_header(mime_part,"Content-Transfer-Encoding", "quoted-printable");
+			break;
 
+		case GMIME_PART_ENCODING_UUENCODE: // anyone still uses this?
+		case GMIME_PART_NUM_ENCODINGS: // what's this?
+		default:
+			break;
+	}
+
+	// attach the mime-part to the mime-message
 	g_mime_message_set_mime_part(message, (GMimeObject *)mime_part);
 
+	// attach the message to the DbmailMessage struct
 	self->content = (GMimeObject *)message;
+
+	// cleanup
 	g_object_unref(mime_part);
 	g_object_unref(content);
 	g_object_unref(stream);
