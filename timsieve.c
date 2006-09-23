@@ -74,29 +74,13 @@ int tims_handle_connection(clientinfo_t * ci)
 
 	PopSession_t session;	/* current connection session */
 
-	/* setting Session variables */
-	session.error_count = 0;
-
-	session.username = NULL;
-	session.password = NULL;
-
-	session.SessionResult = 0;
-
-	/* reset counters */
-	session.totalsize = 0;
-	session.virtual_totalsize = 0;
-	session.totalmessages = 0;
-	session.virtual_totalmessages = 0;
-
+	memset(&session,0,sizeof(session));
+	
 	/* getting hostname */
 	gethostname(myhostname, 64);
 	myhostname[63] = 0;	/* make sure string is terminated */
 
-	if (! (buffer = g_new0(char, INCOMING_BUFFER_SIZE))) {
-		trace(TRACE_MESSAGE, "%s,%s: Could not allocate buffer",
-				__FILE__, __func__);
-		return 0;
-	}
+	buffer = g_new0(char, INCOMING_BUFFER_SIZE);
 
 	if (! ci->tx) {
 		trace(TRACE_MESSAGE, "%s,%s: TX stream is null!",
