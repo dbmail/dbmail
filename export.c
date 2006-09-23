@@ -41,7 +41,7 @@ int do_showhelp(void) {
 	printf("*** dbmail-export ***\n");
 	printf("Use this program to export your DBMail mailboxes.\n");
 	printf("     -u username   specify a user\n");
-	printf("     -m file       specify a mailbox\n");
+	printf("     -m mailbox    specify a mailbox\n");
 	printf("     -o outfile    specify the destination mbox (default ./user/mailbox)\n");
 	printf("\n");
 	printf("Summary of options for all modes:\n");
