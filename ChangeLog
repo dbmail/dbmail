@@ -1,3 +1,9 @@
+2006-09-26  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmail-imapsession.c:
+	Only create INBOX if INBOX doesn't exist, rather than INBOX and
+	anything below it (closes bug #417).
+
 2006-09-22  Aaron Stone  <aaron@serendipity.cx>
 
 	* db.c:
