@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: dbmail-imapsession.c 2269 2006-09-15 13:41:47Z paul $
+/* $Id: dbmail-imapsession.c 2278 2006-09-26 21:08:23Z aaron $
  * 
  * dm_imaputil.c
  *
@@ -1586,16 +1586,14 @@ int dbmail_imap_session_mailbox_open(struct ImapSession * self, const char * mai
 	int result;
 	u64_t mailbox_idnr;
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
-	char *tmp;
 	
 	/* get the mailbox_idnr */
 	mailbox_idnr = dbmail_imap_session_mailbox_get_idnr(self, mailbox);
 	
-	if ((! mailbox_idnr ) && (strncasecmp(mailbox,"INBOX",5)==0)) {
-		/* create missing INBOX for this authenticated user */
-		tmp = g_ascii_strup(mailbox,-1);
-		result = db_createmailbox(tmp, ud->userid, &mailbox_idnr);
-		g_free(tmp);
+	/* create missing INBOX for this authenticated user */
+	if ((! mailbox_idnr ) && (strcasecmp(mailbox, "INBOX")==0)) {
+		TRACE(TRACE_INFO, "Auto-creating INBOX for user id [%llu]", ud->userid);
+		result = db_createmailbox("INBOX", ud->userid, &mailbox_idnr);
 	}
 		
 	if (! mailbox_idnr) {
