@@ -1,4 +1,4 @@
-/* $Id: db.c 2275 2006-09-22 19:45:27Z aaron $ */
+/* $Id: db.c 2280 2006-09-27 20:25:52Z aaron $ */
 /*
   Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
   Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
@@ -22,7 +22,7 @@
 /**
  * \file db.c
  * 
- * $Id: db.c 2275 2006-09-22 19:45:27Z aaron $
+ * $Id: db.c 2280 2006-09-27 20:25:52Z aaron $
  *
  * implement database functionality. This used to split out
  * between MySQL and PostgreSQL, but this is now integrated. 
@@ -2243,7 +2243,7 @@ int db_deleted_purge(u64_t * affected_rows)
 		return DM_SUCCESS;
 	}
 
-	message_idnrs = g_new0(u64_t, affected_rows);
+	message_idnrs = g_new0(u64_t, *affected_rows);
 	
 	/* delete each message */
 	for (i = 0; i < *affected_rows; i++)
