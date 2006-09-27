@@ -1,4 +1,3 @@
-<<<<<<< .mine
 2006-09-27  Paul J Stevens <paul@nfg.nl>
 
 	* timsieve.c:
@@ -8,13 +7,11 @@
 	* check_dbmail_imapd.c, debian/control, misc.c:
 	switch from gmime2.1 to gmime2.2
 
-=======
 2006-09-27  Aaron Stone  <aaron@serendipity.cx>
 
 	* db.c:
 	Fixed typo in g_new0 call (closes bug #418).
 
->>>>>>> .r2280
 2006-09-26  Aaron Stone  <aaron@serendipity.cx>
 
 	* dbmail-imapsession.c:
