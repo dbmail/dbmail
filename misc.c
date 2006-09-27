@@ -1976,7 +1976,7 @@ char * imap_get_envelope(GMimeMessage *message)
 	}
 	
 	/* subject */
-	result = (char *)g_mime_message_get_subject(message);
+	result = (char *)g_mime_message_get_header(message,"Subject");
 	if (result) {
 		t = dbmail_imap_astring_as_string(result);
 		list = g_list_append_printf(list,"%s", t);
