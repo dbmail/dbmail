@@ -150,7 +150,7 @@ case "$1" in
 	if [ "$START_LMTPD" ]; then service_start "LMTPD" || let gr=$gr+$?; fi
 	if [ "$START_SIEVE" ]; then service_start "SIEVE" || let gr=$gr+$?; fi
 	if [ "$START_SSL" ]; then ssl_wrapper start || let gr=$gr+$?; fi
- 	log_end_msg $r
+ 	log_end_msg $gr
 	;;
 	
   stop)
