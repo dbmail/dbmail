@@ -2243,7 +2243,7 @@ int db_deleted_purge(u64_t * affected_rows)
 		return DM_SUCCESS;
 	}
 
-	message_idnrs = g_new0(u64_t, affected_rows);
+	message_idnrs = g_new0(u64_t, *affected_rows);
 	
 	/* delete each message */
 	for (i = 0; i < *affected_rows; i++)
