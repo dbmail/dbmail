@@ -11,6 +11,9 @@
 
 	* db.c:
 	Fixed typo in g_new0 call (closes bug #418).
+	* dbmail-mailbox.c:
+	Accepted patch from Maenaka to suppress Glib tree warnings (closes bug
+	#419).
 
 2006-09-26  Aaron Stone  <aaron@serendipity.cx>
 

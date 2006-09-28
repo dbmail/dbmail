@@ -24,7 +24,7 @@
  */
 
 #include "dbmail.h"
-
+#define THIS_MODULE "mailbox"
 extern db_param_t _db_params;
 #define DBPFX _db_params.pfx
 
@@ -439,8 +439,8 @@ char * dbmail_mailbox_ids_as_string(struct DbmailMailbox *self)
 	gchar *s = NULL;
 	GList *l = NULL;
 
-	if (! g_tree_nnodes(self->ids)>0) {
-		trace(TRACE_DEBUG,"%s,%s: no ids found", __FILE__, __func__);
+	if ((self->ids == NULL) || g_tree_nnodes(self->ids) <= 0) {
+		TRACE(TRACE_DEBUG,"%s,%s: no ids found");
 		return s;
 	}
 
@@ -1454,10 +1454,11 @@ int dbmail_mailbox_search(struct DbmailMailbox *self)
 	
 	g_node_traverse(g_node_get_root(self->search), G_PRE_ORDER, flag, -1, 
 			(GNodeTraverseFunc)_merge_search, (gpointer)self->ids);
-	
-	trace(TRACE_DEBUG,"%s,%s: found [%d] ids\n", 
-			__FILE__, __func__, 
-			g_tree_nnodes(self->ids));
+
+	if (self->ids == NULL)
+		TRACE(TRACE_DEBUG,"found no ids\n", g_tree_nnodes(self->ids));
+	else
+		TRACE(TRACE_DEBUG,"found [%d] ids\n", g_tree_nnodes(self->ids));
 	
 	return 0;
 }
