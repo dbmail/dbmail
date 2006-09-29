@@ -440,7 +440,7 @@ char * dbmail_mailbox_ids_as_string(struct DbmailMailbox *self)
 	GList *l = NULL;
 
 	if ((self->ids == NULL) || g_tree_nnodes(self->ids) <= 0) {
-		TRACE(TRACE_DEBUG,"%s,%s: no ids found");
+		TRACE(TRACE_DEBUG,"no ids found");
 		return s;
 	}
 
@@ -1456,7 +1456,7 @@ int dbmail_mailbox_search(struct DbmailMailbox *self)
 			(GNodeTraverseFunc)_merge_search, (gpointer)self->ids);
 
 	if (self->ids == NULL)
-		TRACE(TRACE_DEBUG,"found no ids\n", g_tree_nnodes(self->ids));
+		TRACE(TRACE_DEBUG,"found no ids\n");
 	else
 		TRACE(TRACE_DEBUG,"found [%d] ids\n", g_tree_nnodes(self->ids));
 	
