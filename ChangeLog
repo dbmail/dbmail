@@ -1,3 +1,8 @@
+2006-09-30  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail.h, check_dbmail_message.c, dbmail-message.c:
+	uniqify reference ids during insertion (closes #398)
+
 2006-09-27  Paul J Stevens <paul@nfg.nl>
 
 	* timsieve.c:
