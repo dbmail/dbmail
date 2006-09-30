@@ -1,5 +1,8 @@
 2006-09-30  Paul J Stevens <paul@nfg.nl>
 
+	* sql/mysql/create_tables.mysql, sql/postgresql/create_tables.pgsql, 
+	  sql/sqlite/create_tables.sqlite:
+	update create scripts to include the envelope cache
 	* check_dbmail.h, check_dbmail_message.c, dbmail-message.c:
 	uniqify reference ids during insertion (closes #398)
 
