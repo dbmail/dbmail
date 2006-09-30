@@ -31,6 +31,8 @@ char *multipart_message = "From: \"Brother from another planet\" <vol@inter7.com
 	"Cc: \"Brother from another planet\" <vol@inter7.com>,\n"
 	" \"SpongeBob O'Brien\" <nobody@test123.com>\n"
 	"Subject: multipart/mixed\n"
+	"References: <5.1.0.14.0.20020926105718.01c0a568@mail>\n"
+	"               <5.1.0.14.0.20020926105718.01c0a568@mail>\n"
 	"Date: Wed, 11 May 2005 13:20:08 -0700\n"
 	"Received: at mx.inter7.com from localhost\n"
 	"Received: at localhost from localhost\n"
@@ -267,4 +269,3 @@ char *encoded_message_latin = "From: =?iso-8859-1?Q?B=BA_V._F._Z=EAzere?= <nobod
 	"\n"
 	"test\n\n";
 
-	
