@@ -96,7 +96,7 @@ int ci_write(FILE * fd, char * msg, ...);
 int num_from_imapdate(const char *date);
 
 
-int read_from_stream(FILE * instream, char **m_buf, size_t maxlen);
+int read_from_stream(FILE * instream, char **m_buf, int maxlen);
 int find_bounded(const char * const value, char left, char right,
 		char **retchar, size_t * retsize, size_t * retlast);
 int zap_between(const char * const instring, signed char left, signed char right,

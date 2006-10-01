@@ -218,40 +218,48 @@ int ci_write(FILE * fd, char * msg, ...)
 
 
 /* Return 0 is all's well. Returns something else if not... */
-int read_from_stream(FILE * instream, char **m_buf, size_t maxlen)
+/* Reads up to 'maxlen' bytes from instream and places a pointer to an
+ * allocated array in m_buf.
+ *
+ * If maxlen is 0, allocates and returns "" (zero length string).
+ * If maxlen is -1, reads until EOF.
+ */
+
+int read_from_stream(FILE * instream, char **m_buf, int maxlen)
 {
 	size_t f_len = 0;
 	size_t f_pos = 0;
-	char *tmp_buf = NULL;
 	char *f_buf = NULL;
+	int c;
 
 	/* Allocate a zero length string on length 0. */
-	if (maxlen < 1) {
+	if (maxlen == 0) {
 		*m_buf = dm_strdup("");
 		return 0;
 	}
 
-	tmp_buf = dm_malloc(sizeof(char) * (f_len += 512));
-	if (tmp_buf != NULL)
-		f_buf = tmp_buf;
-	else
-		return -2;
+	/* Allocate enough space for everything we're going to read. */
+	if (maxlen > 0) {
+		f_len = maxlen + 1;
+	}
 
-	/* Shouldn't this also check for ferror() or feof() ?? */
-	while (f_pos < maxlen) {
+	/* Start with a default size and keep reading until EOF. */
+	if (maxlen == -1) {
+		f_len = 1024;
+		maxlen = INT_MAX;
+	}
+
+	f_buf = g_new0(char, f_len);
+
+	while ((int)f_pos < maxlen) {
 		if (f_pos + 1 >= f_len) {
-			/* Per suggestion of my CS instructor, double the
-			 * buffer every time it is too small. This yields
-			 * a logarithmic number of reallocations. */
-			tmp_buf =
-			    dm_realloc(f_buf, sizeof(char) * (f_len *= 2));
-			if (tmp_buf != NULL)
-				f_buf = tmp_buf;
-			else
-				return -2;
+			f_buf = g_renew(char, f_buf, (f_len *= 2));
 		}
-		f_buf[f_pos] = fgetc(instream);
-		f_pos++;
+
+		c = fgetc(instream);
+		if (c == EOF)
+			break;
+		f_buf[f_pos++] = (char)c;
 	}
 
 	if (f_pos)
