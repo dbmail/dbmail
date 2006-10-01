@@ -130,20 +130,30 @@ FORWARDS
 --------
 
 Incoming messages addressed to particular email addresses can be forwarded out
-to outside email addresses, piped out to a command or piped out with an
-mbox-style From line to a command. For example:
+to outside email addresses, piped out to a command (when prepended with |
+'pipe') or piped out with an mbox-style From line to a command (when prepended
+with ! 'bang'). For example:
 
-`    dbmail-users -x bar@domain -t bar@another.domain`
+  dbmail-users -x bar@domain -t bar@another.domain
  
-`    dbmail-users -x bar@domain -t "|/usr/sbin/superspamtrapper"`
+  dbmail-users -x bar@domain -t "|/usr/sbin/superspamtrapper"
  
-`    dbmail-users -x bar@domain -t "!cat > /var/spool/mail/bar/whatever.mbox"`
+  dbmail-users -x bar@domain -t "!cat > /var/spool/mail/bar/whatever.mbox"
 
-Forwards can be removed using basic glob style pattern matching.  A ? means
-"match zero or one of any character" and * means "match zero or more of any
-character." For example:
+Forwards can be listed using the same -l command as for users. For example,
+to see where the local address bar@domain might be forwarded to, use this:
 
-`    dbmail-users -x bar@domain -t "*"`
+  dbmail-users -l bar@domain
+    forward [bar@domain] to [bar@another.domain]
+    forward [bar@domain] to [|/usr/sbin/superspamtrapper]
+    forward [bar@domain] to [!cat > /var/spool/mail/bar/whatever.mbox]
+
+
+Forwards can be removed using basic glob style pattern matching.  A ?
+'question' means "match zero or one of any character" and * 'asterisk' means
+"match zero or more of any character." For example:
+
+  dbmail-users -x bar@domain -T "*"
 
 will complete and totally remove the 'bar@domain' external alias and all of
 its forwarding addresses and commands.

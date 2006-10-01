@@ -1,5 +1,44 @@
+2006-09-30  Paul J Stevens <paul@nfg.nl>
+
+	* sql/mysql/create_tables.mysql, sql/postgresql/create_tables.pgsql, 
+	  sql/sqlite/create_tables.sqlite:
+	update create scripts to include the envelope cache
+	* check_dbmail.h, check_dbmail_message.c, dbmail-message.c:
+	uniqify reference ids during insertion (closes #398)
+
+2006-09-27  Paul J Stevens <paul@nfg.nl>
+
+	* timsieve.c:
+	minor cleanups
+	* debian/dbmail.init:
+	fix typo in debian init
+	* check_dbmail_imapd.c, debian/control, misc.c:
+	switch from gmime2.1 to gmime2.2
+
+2006-09-27  Aaron Stone  <aaron@serendipity.cx>
+
+	* db.c:
+	Fixed typo in g_new0 call (closes bug #418).
+	* dbmail-mailbox.c:
+	Accepted patch from Maenaka to suppress Glib tree warnings (closes bug
+	#419).
+
+2006-09-26  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmail-imapsession.c:
+	Only create INBOX if INBOX doesn't exist, rather than INBOX and
+	anything below it (closes bug #417).
+
+2006-09-22  Aaron Stone  <aaron@serendipity.cx>
+
+	* db.c:
+	Changed the query for db_check_sievescript_active_byname (closes bug
+	#412).
+
 2006-09-22  Paul J Stevens <paul@nfg.nl>
 
+	* dbmail-message.c:
+	cleanup dbmail_message_construct
 	* modules/dbmysql.c:
 	downgrade tracelevel for row=NULL
 	* db.c:

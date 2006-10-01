@@ -1,4 +1,4 @@
-/* $Id: db.c 2274 2006-09-22 11:56:56Z paul $ */
+/* $Id: db.c 2280 2006-09-27 20:25:52Z aaron $ */
 /*
   Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
   Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
@@ -22,7 +22,7 @@
 /**
  * \file db.c
  * 
- * $Id: db.c 2274 2006-09-22 11:56:56Z paul $
+ * $Id: db.c 2280 2006-09-27 20:25:52Z aaron $
  *
  * implement database functionality. This used to split out
  * between MySQL and PostgreSQL, but this is now integrated. 
@@ -551,17 +551,22 @@ int db_check_sievescript_active_byname(u64_t user_idnr, const char *scriptname)
 	int n;
 	char *name;
 
-	if (scriptname)
+	if (scriptname) {
 		name = dm_stresc(scriptname);
-	else
-		name = dm_strdup("%"); // SQL wildcard.
 
-	snprintf(query, DEF_QUERYSIZE,
-		"SELECT name FROM %ssievescripts WHERE "
-		"owner_idnr = %llu AND active = 1 AND name = '%s'",
-		DBPFX, user_idnr, name);
+		snprintf(query, DEF_QUERYSIZE,
+			"SELECT name FROM %ssievescripts WHERE "
+			"owner_idnr = %llu AND active = 1 AND name = '%s'",
+			DBPFX, user_idnr, name);
 
-	dm_free(name);
+		dm_free(name);
+	} else {
+		snprintf(query, DEF_QUERYSIZE,
+			"SELECT name FROM %ssievescripts WHERE "
+			"owner_idnr = %llu AND active = 1",
+			DBPFX, user_idnr);
+
+	}
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "error checking for an active sievescript");
@@ -2238,7 +2243,7 @@ int db_deleted_purge(u64_t * affected_rows)
 		return DM_SUCCESS;
 	}
 
-	message_idnrs = g_new0(u64_t, affected_rows);
+	message_idnrs = g_new0(u64_t, *affected_rows);
 	
 	/* delete each message */
 	for (i = 0; i < *affected_rows; i++)

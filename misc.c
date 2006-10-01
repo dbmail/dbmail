@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/*	$Id: misc.c 2261 2006-09-09 14:24:40Z paul $
+/*	$Id: misc.c 2281 2006-09-27 20:35:46Z paul $
  *
  *	Miscelaneous functions */
 
@@ -1976,7 +1976,7 @@ char * imap_get_envelope(GMimeMessage *message)
 	}
 	
 	/* subject */
-	result = (char *)g_mime_message_get_subject(message);
+	result = (char *)g_mime_message_get_header(message,"Subject");
 	if (result) {
 		t = dbmail_imap_astring_as_string(result);
 		list = g_list_append_printf(list,"%s", t);

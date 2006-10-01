@@ -17,7 +17,7 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  *
- *  $Id: check_dbmail_message.c 2274 2006-09-22 11:56:56Z paul $ 
+ *  $Id: check_dbmail_message.c 2284 2006-09-30 17:46:26Z paul $ 
  *
  *
  *  
@@ -225,7 +225,7 @@ START_TEST(test_dbmail_message_hdrs_to_string)
         m = dbmail_message_init_with_string(m, s);
 
 	result = dbmail_message_hdrs_to_string(m);
-	fail_unless(strlen(result)==523, "dbmail_message_hdrs_to_string failed");
+	fail_unless(strlen(result)==634, "dbmail_message_hdrs_to_string failed [%d]", strlen(result));
 	
 	g_string_free(s,TRUE);
         dbmail_message_free(m);
@@ -279,7 +279,7 @@ START_TEST(test_dbmail_message_get_rfcsize)
         m = dbmail_message_init_with_string(m,s);
 	result = dbmail_message_get_rfcsize(m);
 	
-	fail_unless(result==1611, "dbmail_message_get_rfcsize failed");
+	fail_unless(result==1724, "dbmail_message_get_rfcsize failed [%d]", result);
 	
 	g_string_free(s,TRUE);
         dbmail_message_free(m);
@@ -440,11 +440,20 @@ START_TEST(test_dbmail_message_construct)
 	const gchar *subject = "Some test";
 	const gchar *recipient = "<bar@foo.org> Bar";
 	const gchar *body = "\ntesting\n\nבבבבה\n\n";
+	const gchar *expect = "From: foo@bar.org\n"
+	"Subject: Some test\n"
+	"To: bar@foo.org\n"
+	"MIME-Version: 1.0\n"
+	"Content-Type: text/plain\n"
+	"Content-Transfer-Encoding: base64\n"
+	"\n"
+	"CnRlc3RpbmcKCuHh4eHk";
+	gchar *result;
 
 	struct DbmailMessage *message = dbmail_message_new();
 	message = dbmail_message_construct(message,sender,recipient,subject,body);
-
-	printf("%s", dbmail_message_to_string(message));
+	result = dbmail_message_to_string(message);
+	fail_unless(MATCH(expect,result),"dbmail_message_construct failed\n%s\n%s", expect, result);
 }
 END_TEST
 

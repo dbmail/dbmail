@@ -1,5 +1,5 @@
 /*
-  $Id: dbmail-message.c 2274 2006-09-22 11:56:56Z paul $
+  $Id: dbmail-message.c 2284 2006-09-30 17:46:26Z paul $
 
   Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
 
@@ -38,6 +38,8 @@ char query[DEF_QUERYSIZE];
 static int dm_errno = 0;
 
 #define DBMAIL_TEMPMBOX "INBOX"
+
+#define THIS_MODULE "message"
 /*
  * _register_header
  *
@@ -1223,6 +1225,7 @@ void dbmail_message_cache_subjectfield(const struct DbmailMessage *self)
 void dbmail_message_cache_referencesfield(const struct DbmailMessage *self)
 {
 	GMimeReferences *refs, *head;
+	GTree *tree;
 	const char *field;
 
 	field = (char *)dbmail_message_get_header(self,"References");
@@ -1232,24 +1235,28 @@ void dbmail_message_cache_referencesfield(const struct DbmailMessage *self)
 		return;
 
 	refs = g_mime_references_decode(field);
-	
 	if (! refs) {
-		trace(TRACE_MESSAGE, "%s,%s: reference_decode failed [%llu]",
-				__FILE__, __func__, self->physid);
+		TRACE(TRACE_MESSAGE, "reference_decode failed [%llu]", self->physid);
 		return;
 	}
 	
 	head = refs;
+	tree = g_tree_new_full((GCompareDataFunc)strcmp, NULL, NULL, NULL);
 	
 	while (refs->msgid) {
-		insert_field_cache(self->physid, "references", refs->msgid);
+		
+		if (! g_tree_lookup(tree,refs->msgid)) {
+			insert_field_cache(self->physid, "references", refs->msgid);
+			g_tree_insert(tree,refs->msgid,refs->msgid);
+		}
 
 		if (refs->next == NULL)
 			break;
 		refs = refs->next;
 	}
-	g_mime_references_clear(&head);
 
+	g_tree_destroy(tree);
+	g_mime_references_clear(&head);
 }
 	
 void dbmail_message_cache_envelope(const struct DbmailMessage *self)

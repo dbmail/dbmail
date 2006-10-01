@@ -17,7 +17,7 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  *
- *  $Id: check_dbmail_imapd.c 2261 2006-09-09 14:24:40Z paul $ 
+ *  $Id: check_dbmail_imapd.c 2281 2006-09-27 20:35:46Z paul $ 
  *
  *
  *  
@@ -571,7 +571,7 @@ START_TEST(test_imap_get_envelope_latin)
 	
 	strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"=?iso-8859-1?Q?Re:_M=F3dulo_Extintores?=\" ((\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" NIL \"nobody\" \"nowhere.org\")) ((\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" NIL \"nobody\" \"nowhere.org\")) ((\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" NIL \"nobody\" \"nowhere.org\")) ((NIL NIL \"nobody\" \"foo.org\")) NIL NIL NIL NIL)",1024);
 	
-	fail_unless(strcmp(t,expect)==0,"imap_get_envelope failed");
+	fail_unless(strcmp(t,expect)==0,"imap_get_envelope failed\n%s\n%s\n ", expect, t);
 
 	g_free(t);
 	dbmail_message_free(m);
