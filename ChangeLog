@@ -1,3 +1,9 @@
+2006-10-01  Aaron Stone  <aaron@serendipity.cx>
+
+	* modules/sortsieve.c, dbmail.conf:
+	Options SIEVE_VACATION, SIEVE_NOTIFY and SIEVE_DEBUG in the DELIVERY
+	section of dbmail.conf work now.
+
 2006-09-30  Aaron Stone  <aaron@serendipity.cx>
 
 	* misc.h, misc.c, sievecmd.c:
