@@ -2098,14 +2098,9 @@ GMimeObject * imap_get_partspec(const GMimeObject *message, const char *partspec
 	return object;
 }
 
+/* Ugly hacks because sometimes GMime is too strict. */
 char * imap_cleanup_address(const char *a) 
 {
-	/* 
-	 * one ugly hack to work around a problem where gmime is too strict 
-	 * in it's parsing of addresses
-	 *
-	 * FIXME: doesn't work for addresslists
-	 */
 	char *r, *t;
 	char *inptr;
 	char prev;
@@ -2142,6 +2137,26 @@ char * imap_cleanup_address(const char *a)
 	
 	if (g_str_has_suffix(s->str,";"))
 		s = g_string_truncate(s,s->len-1);
+
+	/* This second hack changes semicolons into commas when not preceded by a colon.
+	 * The purpose is to fix broken syntax like this: "one@dom; two@dom"
+	 * But to allow correct syntax like this: "Group: one@dom, two@dom;"
+	 */
+	size_t i;
+	int colon = 0;
+
+	for (i = 0; i < s->len; i++) {
+		switch (s->str[i]) {
+		case ':':
+			colon = 1;
+			break;
+		case ';':
+			s->str[i] = ',';
+			break;
+		}
+		if (colon)
+			break;
+	}
 
 	r = s->str;
 	g_string_free(s,FALSE);

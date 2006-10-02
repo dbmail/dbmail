@@ -3,6 +3,8 @@
 	* modules/sortsieve.c, dbmail.conf:
 	Options SIEVE_VACATION, SIEVE_NOTIFY and SIEVE_DEBUG in the DELIVERY
 	section of dbmail.conf work now.
+	* misc.c, check_dbmail_imapd.c:
+	Added an additional hack to imap_cleanup_address (closes bug #377).
 
 2006-09-30  Aaron Stone  <aaron@serendipity.cx>
 
