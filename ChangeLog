@@ -1,3 +1,17 @@
+2006-10-01  Aaron Stone  <aaron@serendipity.cx>
+
+	* modules/sortsieve.c, dbmail.conf:
+	Options SIEVE_VACATION, SIEVE_NOTIFY and SIEVE_DEBUG in the DELIVERY
+	section of dbmail.conf work now.
+	* misc.c, check_dbmail_imapd.c:
+	Added an additional hack to imap_cleanup_address (closes bug #377).
+
+2006-09-30  Aaron Stone  <aaron@serendipity.cx>
+
+	* misc.h, misc.c, sievecmd.c:
+	Removed read_script_file and extended read_from_stream to handle
+	reading until an EOF is found. Improved handling of EOF marker.
+
 2006-09-30  Paul J Stevens <paul@nfg.nl>
 
 	* sql/mysql/create_tables.mysql, sql/postgresql/create_tables.pgsql, 

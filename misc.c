@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/*	$Id: misc.c 2281 2006-09-27 20:35:46Z paul $
+/*	$Id: misc.c 2288 2006-10-02 05:24:55Z aaron $
  *
  *	Miscelaneous functions */
 
@@ -218,40 +218,48 @@ int ci_write(FILE * fd, char * msg, ...)
 
 
 /* Return 0 is all's well. Returns something else if not... */
-int read_from_stream(FILE * instream, char **m_buf, size_t maxlen)
+/* Reads up to 'maxlen' bytes from instream and places a pointer to an
+ * allocated array in m_buf.
+ *
+ * If maxlen is 0, allocates and returns "" (zero length string).
+ * If maxlen is -1, reads until EOF.
+ */
+
+int read_from_stream(FILE * instream, char **m_buf, int maxlen)
 {
 	size_t f_len = 0;
 	size_t f_pos = 0;
-	char *tmp_buf = NULL;
 	char *f_buf = NULL;
+	int c;
 
 	/* Allocate a zero length string on length 0. */
-	if (maxlen < 1) {
+	if (maxlen == 0) {
 		*m_buf = dm_strdup("");
 		return 0;
 	}
 
-	tmp_buf = dm_malloc(sizeof(char) * (f_len += 512));
-	if (tmp_buf != NULL)
-		f_buf = tmp_buf;
-	else
-		return -2;
+	/* Allocate enough space for everything we're going to read. */
+	if (maxlen > 0) {
+		f_len = maxlen + 1;
+	}
 
-	/* Shouldn't this also check for ferror() or feof() ?? */
-	while (f_pos < maxlen) {
+	/* Start with a default size and keep reading until EOF. */
+	if (maxlen == -1) {
+		f_len = 1024;
+		maxlen = INT_MAX;
+	}
+
+	f_buf = g_new0(char, f_len);
+
+	while ((int)f_pos < maxlen) {
 		if (f_pos + 1 >= f_len) {
-			/* Per suggestion of my CS instructor, double the
-			 * buffer every time it is too small. This yields
-			 * a logarithmic number of reallocations. */
-			tmp_buf =
-			    dm_realloc(f_buf, sizeof(char) * (f_len *= 2));
-			if (tmp_buf != NULL)
-				f_buf = tmp_buf;
-			else
-				return -2;
+			f_buf = g_renew(char, f_buf, (f_len *= 2));
 		}
-		f_buf[f_pos] = fgetc(instream);
-		f_pos++;
+
+		c = fgetc(instream);
+		if (c == EOF)
+			break;
+		f_buf[f_pos++] = (char)c;
 	}
 
 	if (f_pos)
@@ -2090,14 +2098,9 @@ GMimeObject * imap_get_partspec(const GMimeObject *message, const char *partspec
 	return object;
 }
 
+/* Ugly hacks because sometimes GMime is too strict. */
 char * imap_cleanup_address(const char *a) 
 {
-	/* 
-	 * one ugly hack to work around a problem where gmime is too strict 
-	 * in it's parsing of addresses
-	 *
-	 * FIXME: doesn't work for addresslists
-	 */
 	char *r, *t;
 	char *inptr;
 	char prev;
@@ -2134,6 +2137,26 @@ char * imap_cleanup_address(const char *a)
 	
 	if (g_str_has_suffix(s->str,";"))
 		s = g_string_truncate(s,s->len-1);
+
+	/* This second hack changes semicolons into commas when not preceded by a colon.
+	 * The purpose is to fix broken syntax like this: "one@dom; two@dom"
+	 * But to allow correct syntax like this: "Group: one@dom, two@dom;"
+	 */
+	size_t i;
+	int colon = 0;
+
+	for (i = 0; i < s->len; i++) {
+		switch (s->str[i]) {
+		case ':':
+			colon = 1;
+			break;
+		case ';':
+			s->str[i] = ',';
+			break;
+		}
+		if (colon)
+			break;
+	}
 
 	r = s->str;
 	g_string_free(s,FALSE);

@@ -50,10 +50,38 @@ struct sort_result {
 	GString *errormsg;
 };
 
+/* [DELIVERY] SIEVE_* settings in dbmail.conf */
 struct sort_sieve_config {
 	int vacation;
 	int notify;
-} sort_sieve_config;
+	int debug;
+};
+
+static void sort_sieve_get_config(struct sort_sieve_config *sieve_config)
+{
+	field_t val;
+
+	assert(sieve_config != NULL);
+
+	sieve_config->vacation = 0;
+	sieve_config->notify = 0;
+	sieve_config->debug = 0;
+
+	config_get_value("SIEVE_VACATION", "DELIVERY", val);
+	if (strcasecmp(val, "yes") == 0) {
+		sieve_config->vacation = 1;
+	}
+
+	config_get_value("SIEVE_NOTIFY", "DELIVERY", val);
+	if (strcasecmp(val, "yes") == 0) {
+		sieve_config->notify= 1;
+	}
+
+	config_get_value("SIEVE_DEBUG", "DELIVERY", val);
+	if (strcasecmp(val, "yes") == 0) {
+		sieve_config->debug = 1;
+	}
+}
 
 
 /* SIEVE CALLBACKS */
@@ -127,6 +155,11 @@ int sort_vacation(sieve2_context_t *s, void *my)
 	return SIEVE2_OK;
 }
 
+int sort_notify(sieve2_context_t *s UNUSED, void *my UNUSED)
+{
+	return SIEVE2_ERROR_UNSUPPORTED;
+}
+
 int sort_redirect(sieve2_context_t *s, void *my)
 {
 	struct sort_context *m = (struct sort_context *)my;
@@ -190,7 +223,7 @@ int sort_fileinto(sieve2_context_t *s, void *my)
 	int *msgflags = NULL;
 
 	mailbox = sieve2_getvalue_string(s, "mailbox");
-	flags = sieve2_getvalue_stringlist(s, "imapflags"); // TODO
+	flags = sieve2_getvalue_stringlist(s, "imapflags");
 
 	/* This condition exists for the KEEP callback. */
 	if (! mailbox) {
@@ -436,19 +469,28 @@ int sort_debugtrace(sieve2_context_t *s, void *my UNUSED)
 /* END OF CALLBACKS */
 
 
+sieve2_callback_t vacation_callbacks[] = {
+	{ SIEVE2_ACTION_VACATION,       sort_vacation      },
+	{ 0, 0 } };
+
+sieve2_callback_t notify_callbacks[] = {
+	{ SIEVE2_ACTION_NOTIFY,         sort_notify        },
+	{ 0, 0 } };
+
+sieve2_callback_t debug_callbacks[] = {
+	{ SIEVE2_DEBUG_TRACE,           sort_debugtrace    },
+	{ 0, 0 } };
+
 sieve2_callback_t sort_callbacks[] = {
 	{ SIEVE2_ERRCALL_RUNTIME,       sort_errexec       },
 	{ SIEVE2_ERRCALL_PARSE,         sort_errparse      },
 
-	{ SIEVE2_ACTION_VACATION,       sort_vacation      },
 	{ SIEVE2_ACTION_REDIRECT,       sort_redirect      },
 	{ SIEVE2_ACTION_DISCARD,        sort_discard       },
 	{ SIEVE2_ACTION_REJECT,         sort_reject        },
 	{ SIEVE2_ACTION_FILEINTO,       sort_fileinto      },
 	{ SIEVE2_ACTION_KEEP,           sort_fileinto      },
 
-// TODO: Register this, but only if we're at a high debug level.
-//	{ SIEVE2_DEBUG_TRACE,           sort_debugtrace    },
 	{ SIEVE2_SCRIPT_GETSCRIPT,      sort_getscript     },
 	{ SIEVE2_MESSAGE_GETHEADER,     sort_getheader     },
 	{ SIEVE2_MESSAGE_GETENVELOPE,   sort_getenvelope   },
@@ -495,6 +537,7 @@ static int sort_startup(sieve2_context_t **s2c,
 
 	sieve2_context_t *sieve2_context = NULL;
 	struct sort_context *sort_context = NULL;
+	struct sort_sieve_config sieve_config;
 	int res;
 
 	res = sieve2_alloc(&sieve2_context);
@@ -504,12 +547,44 @@ static int sort_startup(sieve2_context_t **s2c,
 		return DM_EGENERAL;
 	}
 
+	sort_sieve_get_config(&sieve_config);
+
 	res = sieve2_callbacks(sieve2_context, sort_callbacks);
 	if (res != SIEVE2_OK) {
 		TRACE(TRACE_ERROR, "Error [%d] when calling sieve2_callbacks: [%s]",
 			res, sieve2_errstr(res));
 		sort_teardown(&sieve2_context, &sort_context);
 		return DM_EGENERAL;
+	}
+	if (sieve_config.vacation) {
+		TRACE(TRACE_DEBUG, "Sieve vacation enabled.");
+		res = sieve2_callbacks(sieve2_context, vacation_callbacks);
+		if (res != SIEVE2_OK) {
+			TRACE(TRACE_ERROR, "Error [%d] when calling sieve2_callbacks: [%s]",
+				res, sieve2_errstr(res));
+			sort_teardown(&sieve2_context, &sort_context);
+			return DM_EGENERAL;
+		}
+	}
+	if (sieve_config.notify) {
+		TRACE(TRACE_DEBUG, "Sieve notify enabled.");
+		res = sieve2_callbacks(sieve2_context, notify_callbacks);
+		if (res != SIEVE2_OK) {
+			TRACE(TRACE_ERROR, "Error [%d] when calling sieve2_callbacks: [%s]",
+				res, sieve2_errstr(res));
+			sort_teardown(&sieve2_context, &sort_context);
+			return DM_EGENERAL;
+		}
+	}
+	if (sieve_config.debug) {
+		TRACE(TRACE_DEBUG, "Sieve debugging enabled.");
+		res = sieve2_callbacks(sieve2_context, debug_callbacks);
+		if (res != SIEVE2_OK) {
+			TRACE(TRACE_ERROR, "Error [%d] when calling sieve2_callbacks: [%s]",
+				res, sieve2_errstr(res));
+			sort_teardown(&sieve2_context, &sort_context);
+			return DM_EGENERAL;
+		}
 	}
 
 	sort_context = dm_malloc(sizeof(struct sort_context));
@@ -533,12 +608,28 @@ const char * sort_listextensions(void)
 {
 	sieve2_context_t *sieve2_context;
 	const char * extensions;
+	struct sort_sieve_config sieve_config;
 
 	if (sieve2_alloc(&sieve2_context) != SIEVE2_OK) 
 		return NULL;
 
 	if (sieve2_callbacks(sieve2_context, sort_callbacks))
-			return NULL;
+		return NULL;
+
+	sort_sieve_get_config(&sieve_config);
+
+	if (sieve_config.vacation) {
+		TRACE(TRACE_DEBUG, "Sieve vacation enabled.");
+		sieve2_callbacks(sieve2_context, vacation_callbacks);
+	}
+	if (sieve_config.notify) {
+		TRACE(TRACE_DEBUG, "Sieve notify enabled.");
+		sieve2_callbacks(sieve2_context, notify_callbacks);
+	}
+	if (sieve_config.debug) {
+		TRACE(TRACE_DEBUG, "Sieve debugging enabled.");
+		sieve2_callbacks(sieve2_context, debug_callbacks);
+	}
 
 	/* This will be freed by sieve2_free. */
 	extensions = sieve2_listextensions(sieve2_context);

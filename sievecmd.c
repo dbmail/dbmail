@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: sievecmd.c 2270 2006-09-17 05:04:54Z aaron $
+/* $Id: sievecmd.c 2286 2006-10-01 06:12:58Z aaron $
  * This is dbmail-sievecmd, which provides
  * a command line interface to the sievescripts */
 
@@ -50,7 +50,6 @@ static int do_deactivate(u64_t user_idnr, char *name);
 static int do_remove(u64_t user_idnr, char *name);
 static int do_insert(u64_t user_idnr, char *name, char *source);
 static int do_cat(u64_t user_idnr, char *name);
-static int read_script_file(FILE * f, char **m_buf);
 
 int main(int argc, char *argv[])
 {
@@ -153,7 +152,7 @@ int main(int argc, char *argv[])
 		case 'V':
 			/* Show the version and return non-zero. */
 			printf("\n*** DBMAIL: dbmail-sievecmd version "
-			       "$Revision: 2270 $ %s\n\n", COPYRIGHT);
+			       "$Revision: 2286 $ %s\n\n", COPYRIGHT);
 			return 0;
 			break;
 
@@ -364,8 +363,8 @@ int do_insert(u64_t user_idnr, char *name, char *source)
 		return -1;
 	}
 
-	/* Read the file into a char array */
-	res = read_script_file(file, &buf);
+	/* Read the file into a char array until EOF. */
+	res = read_from_stream(file, &buf, -1);
 	if (res != 0) {
 		qerrorf("Error reading in your script!\n");
 		return -1;
@@ -500,38 +499,4 @@ int do_showhelp(void)
 	return 0;
 }
 
-
-int read_script_file(FILE * f, char **m_buf)
-{
-	size_t f_len = 1024;
-	size_t f_pos = 0;
-	char *f_buf = NULL;
-
-	if (!f) {
-		printf("Received NULL as script input\n");
-		return -1;
-	}
-
-	/* Allocate the initial input buffer. */
-	f_buf = dm_malloc(sizeof(char) * f_len);
-	if (f_buf == NULL)
-		return -2;
-
-	while (!feof(f)) {
-		if (f_pos + 1 >= f_len) {
-			f_buf =
-			    dm_realloc(f_buf, sizeof(char) * (f_len *= 2));
-			if (f_buf == NULL)
-				return -2;
-		}
-		f_buf[f_pos] = fgetc(f);
-		f_pos++;
-	}
-
-	if (f_pos)
-		f_buf[f_pos] = '\0';
-
-	*m_buf = f_buf;
-	return 0;
-}
 
