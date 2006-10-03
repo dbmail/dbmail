@@ -1,3 +1,15 @@
+2006-10-03  Paul J Stevens <paul@nfg.nl>
+
+	* THANKS:
+	update THANKS
+	* export.c:
+	fix typo
+	* sql/mysql/migrate_from_2.0_to_2.1.mysql, 
+	  sql/postgresql/migrate_from_2.0_to_2.1.pgsql:
+	update migrations
+	* db.c:
+	remove messages before removing mailbox (closes #348)
+
 2006-10-01  Aaron Stone  <aaron@serendipity.cx>
 
 	* modules/sortsieve.c, dbmail.conf:
