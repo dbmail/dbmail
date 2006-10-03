@@ -1808,11 +1808,8 @@ int db_delete_physmessage(u64_t physmessage_id)
 	snprintf(query, DEF_QUERYSIZE,
 		 "DELETE FROM %sphysmessage WHERE id = '%llu'",DBPFX,
 		 physmessage_id);
-	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: could not execute query",
-		      __FILE__, __func__);
+	if (db_query(query) == -1)
 		return DM_EQUERY;
-	}
 
 	/* if foreign keys do their work (not with MySQL ISAM tables :( )
 	   the next query would not be necessary */
@@ -1844,15 +1841,19 @@ int db_delete_message(u64_t message_idnr)
 			"WHERE message_idnr = '%llu'",
 			DBPFX, message_idnr);
 	
-	if (db_query(query) == DM_EQUERY)
+	if (db_query(query) == DM_EQUERY) {
+		TRACE(TRACE_ERROR,"error deleting message [%llu]", message_idnr);
 		return DM_EQUERY;
+	}
 
 	/* find other messages pointing to the same physmessage entry */
 	snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr FROM %smessages "
 			"WHERE physmessage_id = '%llu'",DBPFX, physmessage_id);
 	
-	if (db_query(query) == -1)
+	if (db_query(query) == -1) {
+		TRACE(TRACE_ERROR, "error finding physmessage for message [%llu]", message_idnr);
 		return DM_EQUERY;
+	}
 	
 	rows = db_num_rows();
 	db_free_result();
@@ -1868,11 +1869,61 @@ int db_delete_message(u64_t message_idnr)
 	return DM_EGENERAL;
 }
 
-int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
-		      int update_curmail_size)
+static int mailbox_delete(u64_t mailbox_idnr)
+{
+	snprintf(query, DEF_QUERYSIZE,
+		 "DELETE FROM %smailboxes WHERE mailbox_idnr = '%llu'",DBPFX,
+		 mailbox_idnr);
+
+	if (db_query(query) == -1)
+		return DM_EQUERY;
+
+	return DM_SUCCESS;
+}
+
+static int mailbox_empty(u64_t mailbox_idnr)
 {
 	unsigned i, n;
 	u64_t *message_idnrs;
+
+	/* we want to delete all messages from the mailbox. So we
+	 * need to find all messages in the box */
+	snprintf(query, DEF_QUERYSIZE,
+		 "SELECT message_idnr FROM %smessages "
+		 "WHERE mailbox_idnr = '%llu'",DBPFX, mailbox_idnr);
+
+	if (db_query(query) == -1)
+		return DM_EQUERY;
+
+	n = db_num_rows();
+	if (n == 0) {
+		db_free_result();
+		trace(TRACE_INFO, "%s,%s: mailbox is empty", __FILE__,
+		      __func__);
+		return DM_SUCCESS;
+	}
+
+	message_idnrs = g_new0(u64_t, n);
+
+	for (i = 0; i < n; i++)
+		message_idnrs[i] = db_get_result_u64(i, 0);
+
+	db_free_result();
+	/* delete every message in the mailbox */
+	for (i = 0; i < n; i++) {
+		if (db_delete_message(message_idnrs[i]) == -1) {
+			dm_free(message_idnrs);
+			return DM_EQUERY;
+		}
+	}
+	dm_free(message_idnrs);
+
+	return DM_SUCCESS;
+}
+
+int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
+		      int update_curmail_size)
+{
 	u64_t user_idnr = 0;
 	int result;
 	u64_t mailbox_size = 0;
@@ -1906,63 +1957,13 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
 	if (mailbox_is_writable(mailbox_idnr))
 		return DM_EGENERAL;
 
-	/* remove the mailbox */
-	if (!only_empty) {
-		/* delete mailbox */
-		snprintf(query, DEF_QUERYSIZE,
-			 "DELETE FROM %smailboxes WHERE mailbox_idnr = '%llu'",DBPFX,
-			 mailbox_idnr);
+	if (mailbox_empty(mailbox_idnr))
+		return DM_EGENERAL;
 
-		if (db_query(query) == -1) {
-			trace(TRACE_ERROR,
-			      "%s,%s: could not delete mailbox [%llu]",
-			      __FILE__, __func__, mailbox_idnr);
-			return DM_EQUERY;
-		}
+	if (! only_empty) {
+		if (mailbox_delete(mailbox_idnr))
+			return DM_EGENERAL;
 	}
-
-	/* we want to delete all messages from the mailbox. So we
-	 * need to find all messages in the box */
-	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT message_idnr FROM %smessages "
-		 "WHERE mailbox_idnr = '%llu'",DBPFX, mailbox_idnr);
-
-	if (db_query(query) == -1) {
-		trace(TRACE_ERROR,
-		      "%s,%s: could not select message ID's for mailbox [%llu]",
-		      __FILE__, __func__, mailbox_idnr);
-		return DM_EQUERY;
-	}
-
-	n = db_num_rows();
-	if (n == 0) {
-		db_free_result();
-		trace(TRACE_INFO, "%s,%s: mailbox is empty", __FILE__,
-		      __func__);
-		return DM_SUCCESS;
-	}
-
-	if (! (message_idnrs = g_new0(u64_t, n))) {
-		trace(TRACE_ERROR, "%s,%s: error allocating memory [%d]",
-		      __FILE__, __func__, n);
-		return DM_EQUERY;
-	}
-	for (i = 0; i < n; i++)
-		message_idnrs[i] = db_get_result_u64(i, 0);
-	db_free_result();
-	/* delete every message in the mailbox */
-	for (i = 0; i < n; i++) {
-		if (db_delete_message(message_idnrs[i]) == -1) {
-			trace(TRACE_ERROR,
-			      "%s,%s: error deleting message [%llu] "
-			      "database might be inconsistent. "
-			      "run dbmail-util",
-			      __FILE__, __func__, message_idnrs[i]);
-			dm_free(message_idnrs);
-			return DM_EQUERY;
-		}
-	}
-	dm_free(message_idnrs);
 
 	/* calculate the new quotum */
 	if (update_curmail_size) {
