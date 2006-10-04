@@ -2005,13 +2005,13 @@ int db_send_message_lines(void *fstream, u64_t message_idnr, long lines, int no_
 	dbmail_message_free(msg);
 
 	/* always send all headers */
-	raw = get_crlf_encoded(hdr);
+	raw = get_crlf_encoded_dots(hdr);
 	ci_write((FILE *)fstream, "%s", raw);
 	dm_free(hdr);
 	dm_free(raw);
 
 	/* send requested body lines */	
-	raw = get_crlf_encoded(buf);
+	raw = get_crlf_encoded_dots(buf);
 	dm_free(buf);
 	
 	s = g_string_new(raw);
