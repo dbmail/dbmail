@@ -168,6 +168,7 @@ static int send_mail(struct DbmailMessage *message,
 		// This is a hack so forwards can give a From line.
 		if (strlen(headers))
 			fprintf(mailpipe, "%s\n", headers);
+		// This function will dot-stuff the message.
 		db_send_message_lines(mailpipe, message->id, -2, 1);
 		break;
 	case SENDBODY:
