@@ -1,3 +1,10 @@
+2006-10-04  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmail-message.h, dbmail-message.c:
+	Added wrappers around get_crlf_encoded to switch between dot-stuffed
+	and non-dot-stuffed filters -- dot stuffing is needed for POP3 and
+	sendmail pipes (closes bug #403).
+
 2006-10-04  Paul J Stevens <paul@nfg.nl>
 
 	* debian/dbmail.init:
