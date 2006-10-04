@@ -31,6 +31,9 @@ DESCRIPTION
   #table_prefix=dbmail_   # Table prefix. Defaults to "dbmail_" if not specified.
   postmaster=             # Postmaster's email address for use in bounce messages.
   sendmail=/usr/sbin/sendmail	# Sendmail executable for forwards, replies, notifies, vacations.
+                                # You may use pipes (|) in this command, for example:
+                                # dos2unix|/usr/sbin/sendmail  will work well with Qmail.
+                                # You may use quotes (") for executables with unusual names.
   
   # The following items can be overridden in the service-specific sections.
   TRACE_SYSLOG=5          # Trace level to send to syslog. Default is 2 (messages, errors, fatals).
@@ -96,8 +99,9 @@ DESCRIPTION
   [DELIVERY]
   SIEVE=yes               # Run Sieve scripts as messages are delivered.
   SUBADDRESS=yes          # Use 'user+mailbox@domain' format to deliver to a mailbox.
-  SIEVE_VACATION=no       # Turn on/off the Sieve Vacation extension (unsupported).
-  SIEVE_NOTIFY=no         # Turn on/off the Sieve Notify extension (unsupported).
+  SIEVE_VACATION=yes      # Turn on/off the Sieve Vacation extension.
+  SIEVE_NOTIFY=no         # Turn on/off the Sieve Notify extension (not supported).
+  SIEVE_DEBUG=no          # Turn on/off additional Sieve debugging.
   AUTO_NOTIFY=no          # Use the auto_notify table to send email notifications.
   AUTO_REPLY=no           # Use the auto_reply table to send away messages.
   #AUTO_NOTIFY_SUBJECT    # Defaults to "NEW MAIL NOTIFICATION"
