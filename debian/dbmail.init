@@ -1,4 +1,4 @@
-#! /bin/sh --posix
+#!/bin/sh
 #
 # dbmail init script for debian
 # 
@@ -166,11 +166,12 @@ case "$1" in
 	
   reload)
   	log_daemon_msg "Reloading $DESC"
-	if [ "$START_IMAPD" ]; then service_reload "IMAPD" || let r=$r+$?; fi
-	if [ "$START_POP3D" ]; then service_reload "POP3D" || let r=$r+$?; fi
-	if [ "$START_LMTPD" ]; then service_reload "LMTPD" || let r=$r+$?; fi
-	if [ "$START_SIEVE" ]; then service_reload "SIEVE" || let r=$r+$?; fi
-	log_end_msg $r
+	gr=0
+	if [ "$START_IMAPD" ]; then service_reload "IMAPD" || let gr=$gr+$?; fi
+	if [ "$START_POP3D" ]; then service_reload "POP3D" || let gr=$gr+$?; fi
+	if [ "$START_LMTPD" ]; then service_reload "LMTPD" || let gr=$gr+$?; fi
+	if [ "$START_SIEVE" ]; then service_reload "SIEVE" || let gr=$gr+$?; fi
+	log_end_msg $gr
 	;;
 	
   restart|force-reload)
