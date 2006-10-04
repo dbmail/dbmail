@@ -1,3 +1,9 @@
+2006-10-03  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmail.conf, man/dbmail.conf.txt:
+	Documentation and example to use dos2unix before calling Qmail's
+	sendmail (closes bug #396).
+
 2006-10-03  Paul J Stevens <paul@nfg.nl>
 
 	* THANKS:
