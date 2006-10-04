@@ -2103,33 +2103,58 @@ char * imap_cleanup_address(const char *a)
 {
 	char *r, *t;
 	char *inptr;
-	char prev;
+	char prev,next=0;
+	unsigned incode=0, inquote=0, done=0;
 	GString *s = g_string_new("");
 	
 	t = g_strdup(a);
 	inptr = t;
 	inptr = g_strstrip(inptr);
 	prev = *inptr;
+	if (*(inptr+1))
+		next=*(inptr+1);
 	
 	// quote encoded string
-	if (*inptr == '=') {
-		g_string_append_c(s,'"');
-		
-		while (*inptr && *inptr != ' ' && *inptr != '\t' && *inptr!='<') {
-			if (*inptr == '"') {
-				inptr++;
-				continue;
-			}
-			g_string_append_c(s,*inptr);
-			prev = *inptr;
-			inptr++;
-		}
-		if (prev == '=' && *inptr)
+	if (*inptr == '=' && next=='?') {
+		if (prev != '"')
 			g_string_append_c(s,'"');
-
-		if (*inptr == '<')
-			g_string_append_c(s,' ');
+		inquote=1;
+		incode=1;
 	}
+
+	while (! done) {
+
+		if (! *inptr || *inptr == '<') {
+			done=1;
+			break;
+		}
+
+		if (*inptr == '=' && next=='?')
+			incode=1;
+
+		if (! (incode && (*inptr == '"' || *inptr == ' ')))
+			g_string_append_c(s,*inptr);
+
+		if (prev=='?' && *inptr=='=')
+			incode=0;
+
+		prev = *inptr;
+		inptr++;
+		if (*(inptr+1))
+			next=*(inptr+1);
+
+		if (*inptr == ' ' && next=='<')
+			break;
+	}
+
+	if (*(inptr+1))
+		next=*(inptr+1);
+
+	if (inquote)
+		g_string_append_c(s,'"');
+
+	if (*inptr == '<' && prev != *inptr && prev != ' ')
+		g_string_append_c(s,' ');
 		
 	if (*inptr)
 		g_string_append(s,inptr);
