@@ -79,7 +79,8 @@ int server_setup(serverConfig_t *conf)
 	SetParentSigHandler();
 	
 	childinfo.maxConnect	= conf->childMaxConnect;
-	childinfo.listenSocket	= conf->listenSocket;
+	childinfo.listenSockets	= g_memdup(conf->listenSockets, conf->ipcount * sizeof(int));
+	childinfo.numSockets   	= conf->ipcount;
 	childinfo.timeout 	= conf->timeout;
 	childinfo.ClientHandler	= conf->ClientHandler;
 	childinfo.timeoutMsg	= conf->timeoutMsg;
@@ -198,6 +199,15 @@ pid_t server_daemonize(serverConfig_t *conf)
 	return getsid(0);
 }
 
+static void close_all_sockets(serverConfig_t *conf)
+{
+	int i;
+
+	for (i = 0; i < conf->ipcount; i++) {
+		close(conf->listenSockets[i]);
+	}
+}
+
 int server_run(serverConfig_t *conf)
 {
 	mainStop = 0;
@@ -212,7 +222,7 @@ int server_run(serverConfig_t *conf)
 	switch ((pid = fork())) {
 	case -1:
 		serrno = errno;
-		close(conf->listenSocket);
+		close_all_sockets(conf);
 		TRACE(TRACE_FATAL, "fork failed [%s]", strerror(serrno));
 		errno = serrno;
 		break;
@@ -266,7 +276,7 @@ int server_run(serverConfig_t *conf)
 		break;
 	}
 	
-	close(conf->listenSocket);
+	close_all_sockets(conf);
 	
 	return result;
 }
@@ -413,9 +423,16 @@ static int create_inet_socket(const char * const ip, int port, int backlog)
 
 void CreateSocket(serverConfig_t * conf)
 {
-	if (strlen(conf->socket) > 0) 
-		conf->listenSocket = create_unix_socket(conf);
-	else
-		conf->listenSocket = create_inet_socket(conf->ip, conf->port, conf->backlog);
+	int i;
+
+	conf->listenSockets = g_new0(int, conf->ipcount);
+
+	if (strlen(conf->socket) > 0) {
+		conf->listenSockets[0] = create_unix_socket(conf);
+	} else {
+		for (i = 0; i < conf->ipcount; i++) {
+			conf->listenSockets[i] = create_inet_socket(conf->iplist[i], conf->port, conf->backlog);
+		}
+	}
 }
 

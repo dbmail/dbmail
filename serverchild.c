@@ -27,6 +27,7 @@
  */
 
 #include "dbmail.h"
+#define THIS_MODULE "serverchild"
 
 volatile sig_atomic_t ChildStopRequested = 0;
 volatile sig_atomic_t childSig = 0;
@@ -200,9 +201,56 @@ pid_t CreateChild(ChildInfo_t * info)
 	}
 }
 
+int select_and_accept(ChildInfo_t * info, int * clientSocket, struct sockaddr * saClient)
+{
+	fd_set rfds;
+	int ip, result;
+	int active = 0, maxfd = 0;
+	socklen_t len;
+
+	TRACE(TRACE_INFO, "waiting for connection");
+
+	/* This is adapted from man 2 select */
+	FD_ZERO(&rfds);
+	for (ip = 0; ip < info->numSockets; ip++) {
+		FD_SET(info->listenSockets[ip], &rfds);
+		maxfd = MAX(maxfd, info->listenSockets[ip]);
+	}
+
+	/* A null timeval means block indefinitely until there's activity. */
+	result = select(maxfd+1, &rfds, NULL, NULL, NULL);
+
+	if (result < 1) {
+		TRACE(TRACE_ERROR, "select failed: [%s]", strerror(errno));
+		return -1;
+	}
+
+	TRACE(TRACE_INFO, "received connection");
+
+	/* This is adapted from man 2 select */
+	for (ip = 0; ip < info->numSockets; ip++) {
+		if (FD_ISSET(info->listenSockets[ip], &rfds)) {
+			active = ip;
+			break;
+		}
+	}
+
+	/* accept the active fd */
+	len = sizeof(struct sockaddr_in);
+	*clientSocket = accept(info->listenSockets[active], saClient, &len);
+
+	if (*clientSocket < 0) {
+		TRACE(TRACE_ERROR, "accept failed: [%s]", strerror(errno));
+		return -1;
+	}
+
+	TRACE(TRACE_INFO, "connection accepted");
+	return 0;
+}
+
 int PerformChildTask(ChildInfo_t * info)
 {
-	int i, len, serr, clientSocket;
+	int i, clientSocket, result;
 	struct sockaddr_in saClient;
 	struct hostent *clientHost;
 
@@ -237,20 +285,13 @@ int PerformChildTask(ChildInfo_t * info)
 			continue;
 		}
 
-		trace(TRACE_INFO, "%s,%s: waiting for connection", 
-				__FILE__, __func__);
-
 		child_reg_disconnected();
 
 		/* wait for connect */
-		len = sizeof(saClient);
-		clientSocket = accept(info->listenSocket, (struct sockaddr *) &saClient, (socklen_t *)&len);
-		if (clientSocket == -1) {
-			serr = errno;
+		result = select_and_accept(info, &clientSocket, (struct sockaddr *) &saClient);
+		if (result != 0) {
+			TRACE(TRACE_INFO, "select_and_accept failed");
 			i--;	/* don't count this as a connect */
-			trace(TRACE_INFO, "%s,%s: accept failed [%s]", 
-					__FILE__, __func__, strerror(serr));
-			errno = serr;
 			continue;	/* accept failed, refuse connection & continue */
 		}
 

@@ -119,7 +119,8 @@ typedef struct {
 
 typedef struct {
 	int maxConnect;
-	int listenSocket;
+	int *listenSockets;
+	int numSockets;
 	int resolveIP;
 	int timeout;
 	char *timeoutMsg;
@@ -256,14 +257,15 @@ typedef struct {
 	int log_verbose;
 	char *pidFile;
 	char *stateFile;
-	int listenSocket;
 	int startChildren;
 	int minSpareChildren;
 	int maxSpareChildren;
 	int maxChildren;
 	int childMaxConnect;
 	int timeout;
-	char ip[IPLEN];
+	char **iplist;
+	int ipcount;
+	int *listenSockets;
 	int service_before_smtp;
 	int port;
 	int backlog;
