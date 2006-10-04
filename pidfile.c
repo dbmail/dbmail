@@ -77,6 +77,10 @@ static pid_t pidfile_pid(const char *pidFile)
 static void pidfile_remove(void)
 {
 	int res;
+	extern int isChildProcess;
+
+	if (isChildProcess)
+		return;
 
 	if (pidfile_to_close) {
 		res = fclose(pidfile_to_close);

@@ -546,6 +546,10 @@ static char *statefile_to_remove;
 static void statefile_remove(void)
 {
 	int res;
+	extern int isChildProcess;
+
+	if (isChildProcess)
+		return;
 
 	if (statefile_to_close) {
 		res = fclose(statefile_to_close);

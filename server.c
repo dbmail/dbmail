@@ -37,6 +37,7 @@ volatile sig_atomic_t mainStatus = 0;
 volatile sig_atomic_t mainSig = 0;
 volatile sig_atomic_t get_sigchld = 0;
 
+int isChildProcess = 0;
 pid_t ParentPID = 0;
 ChildInfo_t childinfo;
 
@@ -229,6 +230,7 @@ int server_run(serverConfig_t *conf)
 
 	case 0:
 		/* child process */
+		isChildProcess = 1;
 		drop_privileges(conf->serverUser, conf->serverGroup);
 		result = StartServer(conf);
 		TRACE(TRACE_INFO, "server done, restart = [%d]",

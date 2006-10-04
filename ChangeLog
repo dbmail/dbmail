@@ -7,6 +7,9 @@
 	* dbmailtypes.h, serverparent.c, server.c, serverchild.c, dbmail.conf:
 	Bind to multiple IPs and use select(2) to see what's active (closes
 	bug #269).
+	* pidfile.c, server.c, pool.c:
+	Added variable isChildProcess to avoid trying to remove pidfile and
+	statefile atexit on the child and grandchild processes.
 
 2006-10-04  Paul J Stevens <paul@nfg.nl>
 
