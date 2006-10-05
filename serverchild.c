@@ -34,6 +34,7 @@ volatile sig_atomic_t childSig = 0;
 volatile sig_atomic_t alarm_occured = 0;
 
 int connected = 0;
+int selfPipe[2];
 volatile clientinfo_t client;
 
 static void disconnect_all(void);
@@ -80,6 +81,11 @@ void active_child_sig_handler(int sig, siginfo_t * info UNUSED, void *data UNUSE
 	 * calls are random errors like this:
 	 * *** glibc detected *** corrupted double-linked list: 0x0805f028 ***
 	 * Right, so keep that in mind! */
+
+	// Write to self-pipe to prevent select signal races.
+	// See http://cr.yp.to/docs/selfpipe.html
+	write(selfPipe[1], "S", 1);
+
 	switch (sig) {
 	case SIGCHLD:
 		break;
@@ -186,6 +192,12 @@ pid_t CreateChild(ChildInfo_t * info)
 		
  		trace(TRACE_INFO, "%s,%s: signal handler placed, going to perform task now",
 			__FILE__, __func__);
+
+		// Create a self-pipe to prevent select signal races.
+		// See http://cr.yp.to/docs/selfpipe.html
+		pipe(selfPipe);
+		fcntl(selfPipe[0], F_SETFL, O_NONBLOCK);
+		fcntl(selfPipe[1], F_SETFL, O_NONBLOCK);
  		
 		if (PerformChildTask(info) == -1)
 			return -1;
@@ -217,11 +229,26 @@ int select_and_accept(ChildInfo_t * info, int * clientSocket, struct sockaddr * 
 		maxfd = MAX(maxfd, info->listenSockets[ip]);
 	}
 
+	// Reading end of our self-pipe.
+	// See http://cr.yp.to/docs/selfpipe.html
+	FD_SET(selfPipe[0], &rfds);
+	maxfd = MAX(maxfd, selfPipe[0]);
+
 	/* A null timeval means block indefinitely until there's activity. */
 	result = select(maxfd+1, &rfds, NULL, NULL, NULL);
 
 	if (result < 1) {
 		TRACE(TRACE_ERROR, "select failed: [%s]", strerror(errno));
+		return -1;
+	}
+
+	// Clear the self-pipe and return; we received a signal
+	// and we need to loop again upstream to handle it.
+	// See http://cr.yp.to/docs/selfpipe.html
+	if (FD_ISSET(selfPipe[0], &rfds)) {
+		char *buf[1];
+		TRACE(TRACE_INFO, "received signal");
+		read(selfPipe[0], buf, 1);
 		return -1;
 	}
 
