@@ -1,5 +1,5 @@
 /*
-  $Id: server.c 2259 2006-09-08 19:48:57Z aaron $
+  $Id: server.c 2297 2006-10-04 19:17:01Z aaron $
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
 
@@ -37,6 +37,7 @@ volatile sig_atomic_t mainStatus = 0;
 volatile sig_atomic_t mainSig = 0;
 volatile sig_atomic_t get_sigchld = 0;
 
+int isChildProcess = 0;
 pid_t ParentPID = 0;
 ChildInfo_t childinfo;
 
@@ -79,7 +80,8 @@ int server_setup(serverConfig_t *conf)
 	SetParentSigHandler();
 	
 	childinfo.maxConnect	= conf->childMaxConnect;
-	childinfo.listenSocket	= conf->listenSocket;
+	childinfo.listenSockets	= g_memdup(conf->listenSockets, conf->ipcount * sizeof(int));
+	childinfo.numSockets   	= conf->ipcount;
 	childinfo.timeout 	= conf->timeout;
 	childinfo.ClientHandler	= conf->ClientHandler;
 	childinfo.timeoutMsg	= conf->timeoutMsg;
@@ -198,6 +200,15 @@ pid_t server_daemonize(serverConfig_t *conf)
 	return getsid(0);
 }
 
+static void close_all_sockets(serverConfig_t *conf)
+{
+	int i;
+
+	for (i = 0; i < conf->ipcount; i++) {
+		close(conf->listenSockets[i]);
+	}
+}
+
 int server_run(serverConfig_t *conf)
 {
 	mainStop = 0;
@@ -212,13 +223,14 @@ int server_run(serverConfig_t *conf)
 	switch ((pid = fork())) {
 	case -1:
 		serrno = errno;
-		close(conf->listenSocket);
+		close_all_sockets(conf);
 		TRACE(TRACE_FATAL, "fork failed [%s]", strerror(serrno));
 		errno = serrno;
 		break;
 
 	case 0:
 		/* child process */
+		isChildProcess = 1;
 		drop_privileges(conf->serverUser, conf->serverGroup);
 		result = StartServer(conf);
 		TRACE(TRACE_INFO, "server done, restart = [%d]",
@@ -266,7 +278,7 @@ int server_run(serverConfig_t *conf)
 		break;
 	}
 	
-	close(conf->listenSocket);
+	close_all_sockets(conf);
 	
 	return result;
 }
@@ -413,9 +425,16 @@ static int create_inet_socket(const char * const ip, int port, int backlog)
 
 void CreateSocket(serverConfig_t * conf)
 {
-	if (strlen(conf->socket) > 0) 
-		conf->listenSocket = create_unix_socket(conf);
-	else
-		conf->listenSocket = create_inet_socket(conf->ip, conf->port, conf->backlog);
+	int i;
+
+	conf->listenSockets = g_new0(int, conf->ipcount);
+
+	if (strlen(conf->socket) > 0) {
+		conf->listenSockets[0] = create_unix_socket(conf);
+	} else {
+		for (i = 0; i < conf->ipcount; i++) {
+			conf->listenSockets[i] = create_inet_socket(conf->iplist[i], conf->port, conf->backlog);
+		}
+	}
 }
 

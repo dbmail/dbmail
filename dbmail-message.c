@@ -1,5 +1,5 @@
 /*
-  $Id: dbmail-message.c 2284 2006-09-30 17:46:26Z paul $
+  $Id: dbmail-message.c 2293 2006-10-04 18:00:27Z aaron $
 
   Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
 
@@ -87,7 +87,7 @@ gchar * g_mime_object_get_body(const GMimeObject *object)
 	return s;
 }
 
-gchar * get_crlf_encoded(gchar *string)
+gchar * get_crlf_encoded_opt(gchar *string, int dots)
 {
 	GMimeStream *ostream, *fstream;
 	GMimeFilter *filter;
@@ -96,8 +96,11 @@ gchar * get_crlf_encoded(gchar *string)
 	
 	ostream = g_mime_stream_mem_new();
 	fstream = g_mime_stream_filter_new_with_stream(ostream);
-	filter = g_mime_filter_crlf_new(GMIME_FILTER_CRLF_ENCODE,GMIME_FILTER_CRLF_MODE_CRLF_ONLY);
-	
+	if (dots) {
+		filter = g_mime_filter_crlf_new(GMIME_FILTER_CRLF_ENCODE,GMIME_FILTER_CRLF_MODE_CRLF_DOTS);
+	} else {
+		filter = g_mime_filter_crlf_new(GMIME_FILTER_CRLF_ENCODE,GMIME_FILTER_CRLF_MODE_CRLF_ONLY);
+	}
 	g_mime_stream_filter_add((GMimeStreamFilter *) fstream, filter);
 	g_mime_stream_write_string(fstream,string);
 	
