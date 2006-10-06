@@ -22,6 +22,7 @@ Description: base package for the dbmail email solution
 
 Package: libdbmail0
 Architecture: any
+Section: libs
 Depends: ${misc:Depends}, ${shlibs:Depends}, dbmail (= ${Source-Version}), libglib2.0-0 (>= 2.10.2), libgmime-2.0-2
 Suggests: stunnel | stunnel4, postfix | mail-transport-agent, dbmail-mysql (= ${Source-Version})| dbmail-pgsql (= ${Source-Version})| dbmail-sqlite (= ${Source-Version}), dbmail-ldap (= ${Source-Version}), dbmail-sieve (= ${Source-Version})
 Description: shared libraries for the dbmail email solution

@@ -221,7 +221,7 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 
 	assert(self->ids);
 
-	if (g_tree_nnodes(self->ids) == 0) {
+	if (self->ids==NULL || g_tree_nnodes(self->ids) == 0) {
 		trace(TRACE_DEBUG,"%s,%s: cannot dump empty mailbox",__FILE__, __func__);
 		return 0;
 	}
@@ -1206,7 +1206,7 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 	if (! (self->ids && set))
 		return b;
 
-	g_return_val_if_fail(g_tree_nnodes(self->ids)>0,b);
+	g_return_val_if_fail(self->ids != NULL && g_tree_nnodes(self->ids) > 0,b);
 
 	trace(TRACE_DEBUG,"%s,%s: [%s]", __FILE__, __func__, set);
 	
@@ -1458,7 +1458,7 @@ int dbmail_mailbox_search(struct DbmailMailbox *self)
 	if (self->ids == NULL)
 		TRACE(TRACE_DEBUG,"found no ids\n");
 	else
-		TRACE(TRACE_DEBUG,"found [%d] ids\n", g_tree_nnodes(self->ids));
+		TRACE(TRACE_DEBUG,"found [%d] ids\n", self->ids ? g_tree_nnodes(self->ids): 0);
 	
 	return 0;
 }
