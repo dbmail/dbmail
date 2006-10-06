@@ -21,18 +21,20 @@
 /*
  * serverchild.c
  *
- * $Id: serverchild.c 2199 2006-07-18 11:07:53Z paul $
+ * $Id: serverchild.c 2298 2006-10-05 14:20:04Z aaron $
  * 
  * function implementations of server children code (connection handling)
  */
 
 #include "dbmail.h"
+#define THIS_MODULE "serverchild"
 
 volatile sig_atomic_t ChildStopRequested = 0;
 volatile sig_atomic_t childSig = 0;
 volatile sig_atomic_t alarm_occured = 0;
 
 int connected = 0;
+int selfPipe[2];
 volatile clientinfo_t client;
 
 static void disconnect_all(void);
@@ -79,6 +81,11 @@ void active_child_sig_handler(int sig, siginfo_t * info UNUSED, void *data UNUSE
 	 * calls are random errors like this:
 	 * *** glibc detected *** corrupted double-linked list: 0x0805f028 ***
 	 * Right, so keep that in mind! */
+
+	// Write to self-pipe to prevent select signal races.
+	// See http://cr.yp.to/docs/selfpipe.html
+	write(selfPipe[1], "S", 1);
+
 	switch (sig) {
 	case SIGCHLD:
 		break;
@@ -185,6 +192,12 @@ pid_t CreateChild(ChildInfo_t * info)
 		
  		trace(TRACE_INFO, "%s,%s: signal handler placed, going to perform task now",
 			__FILE__, __func__);
+
+		// Create a self-pipe to prevent select signal races.
+		// See http://cr.yp.to/docs/selfpipe.html
+		pipe(selfPipe);
+		fcntl(selfPipe[0], F_SETFL, O_NONBLOCK);
+		fcntl(selfPipe[1], F_SETFL, O_NONBLOCK);
  		
 		if (PerformChildTask(info) == -1)
 			return -1;
@@ -200,9 +213,71 @@ pid_t CreateChild(ChildInfo_t * info)
 	}
 }
 
+int select_and_accept(ChildInfo_t * info, int * clientSocket, struct sockaddr * saClient)
+{
+	fd_set rfds;
+	int ip, result;
+	int active = 0, maxfd = 0;
+	socklen_t len;
+
+	TRACE(TRACE_INFO, "waiting for connection");
+
+	/* This is adapted from man 2 select */
+	FD_ZERO(&rfds);
+	for (ip = 0; ip < info->numSockets; ip++) {
+		FD_SET(info->listenSockets[ip], &rfds);
+		maxfd = MAX(maxfd, info->listenSockets[ip]);
+	}
+
+	// Reading end of our self-pipe.
+	// See http://cr.yp.to/docs/selfpipe.html
+	FD_SET(selfPipe[0], &rfds);
+	maxfd = MAX(maxfd, selfPipe[0]);
+
+	/* A null timeval means block indefinitely until there's activity. */
+	result = select(maxfd+1, &rfds, NULL, NULL, NULL);
+
+	if (result < 1) {
+		TRACE(TRACE_ERROR, "select failed: [%s]", strerror(errno));
+		return -1;
+	}
+
+	// Clear the self-pipe and return; we received a signal
+	// and we need to loop again upstream to handle it.
+	// See http://cr.yp.to/docs/selfpipe.html
+	if (FD_ISSET(selfPipe[0], &rfds)) {
+		char *buf[1];
+		TRACE(TRACE_INFO, "received signal");
+		read(selfPipe[0], buf, 1);
+		return -1;
+	}
+
+	TRACE(TRACE_INFO, "received connection");
+
+	/* This is adapted from man 2 select */
+	for (ip = 0; ip < info->numSockets; ip++) {
+		if (FD_ISSET(info->listenSockets[ip], &rfds)) {
+			active = ip;
+			break;
+		}
+	}
+
+	/* accept the active fd */
+	len = sizeof(struct sockaddr_in);
+	*clientSocket = accept(info->listenSockets[active], saClient, &len);
+
+	if (*clientSocket < 0) {
+		TRACE(TRACE_ERROR, "accept failed: [%s]", strerror(errno));
+		return -1;
+	}
+
+	TRACE(TRACE_INFO, "connection accepted");
+	return 0;
+}
+
 int PerformChildTask(ChildInfo_t * info)
 {
-	int i, len, serr, clientSocket;
+	int i, clientSocket, result;
 	struct sockaddr_in saClient;
 	struct hostent *clientHost;
 
@@ -237,20 +312,13 @@ int PerformChildTask(ChildInfo_t * info)
 			continue;
 		}
 
-		trace(TRACE_INFO, "%s,%s: waiting for connection", 
-				__FILE__, __func__);
-
 		child_reg_disconnected();
 
 		/* wait for connect */
-		len = sizeof(saClient);
-		clientSocket = accept(info->listenSocket, (struct sockaddr *) &saClient, (socklen_t *)&len);
-		if (clientSocket == -1) {
-			serr = errno;
+		result = select_and_accept(info, &clientSocket, (struct sockaddr *) &saClient);
+		if (result != 0) {
+			TRACE(TRACE_INFO, "select_and_accept failed");
 			i--;	/* don't count this as a connect */
-			trace(TRACE_INFO, "%s,%s: accept failed [%s]", 
-					__FILE__, __func__, strerror(serr));
-			errno = serr;
 			continue;	/* accept failed, refuse connection & continue */
 		}
 

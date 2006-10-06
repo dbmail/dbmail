@@ -1,4 +1,4 @@
-/* $Id: db.c 2289 2006-10-03 13:22:54Z paul $ */
+/* $Id: db.c 2294 2006-10-04 18:31:01Z aaron $ */
 /*
   Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
   Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
@@ -22,7 +22,7 @@
 /**
  * \file db.c
  * 
- * $Id: db.c 2289 2006-10-03 13:22:54Z paul $
+ * $Id: db.c 2294 2006-10-04 18:31:01Z aaron $
  *
  * implement database functionality. This used to split out
  * between MySQL and PostgreSQL, but this is now integrated. 
@@ -2005,13 +2005,13 @@ int db_send_message_lines(void *fstream, u64_t message_idnr, long lines, int no_
 	dbmail_message_free(msg);
 
 	/* always send all headers */
-	raw = get_crlf_encoded(hdr);
+	raw = get_crlf_encoded_dots(hdr);
 	ci_write((FILE *)fstream, "%s", raw);
 	dm_free(hdr);
 	dm_free(raw);
 
 	/* send requested body lines */	
-	raw = get_crlf_encoded(buf);
+	raw = get_crlf_encoded_dots(buf);
 	dm_free(buf);
 	
 	s = g_string_new(raw);

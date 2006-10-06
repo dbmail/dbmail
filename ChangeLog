@@ -1,3 +1,21 @@
+2006-10-05  Aaron Stone  <aaron@serendipity.cx>
+
+	* serverchild.c:
+	Implement "self-pipe trick" to prevent signal races with select(2).
+
+2006-10-04  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmail-message.h, dbmail-message.c:
+	Added wrappers around get_crlf_encoded to switch between dot-stuffed
+	and non-dot-stuffed filters -- dot stuffing is needed for POP3 and
+	sendmail pipes (closes bug #403).
+	* dbmailtypes.h, serverparent.c, server.c, serverchild.c, dbmail.conf:
+	Bind to multiple IPs and use select(2) to see what's active (closes
+	bug #269).
+	* pidfile.c, server.c, pool.c:
+	Added variable isChildProcess to avoid trying to remove pidfile and
+	statefile atexit on the child and grandchild processes.
+
 2006-10-04  Paul J Stevens <paul@nfg.nl>
 
 	* debian/dbmail.init:

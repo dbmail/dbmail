@@ -191,6 +191,8 @@ int SetMainSigHandler()
 
 void ClearConfig(serverConfig_t * config)
 {
+	g_free(config->listenSockets);
+	g_strfreev(config->iplist);
 	memset(config, 0, sizeof(serverConfig_t));
 }
 
@@ -278,12 +280,17 @@ void LoadServerConfig(serverConfig_t * config, const char * const service)
 	config_get_value("BINDIP", service, val);
 	if (strlen(val) == 0)
 		TRACE(TRACE_FATAL, "no value for BINDIP in config file");
+	config->iplist = g_strsplit_set(val, " ,", 0);
+	config->ipcount = g_strv_length(config->iplist);
+	if (config->ipcount < 1) {
+		TRACE(TRACE_FATAL, "no value for BINDIP in config file");
+	}
 
-	strncpy(config->ip, val, IPLEN);
-	config->ip[IPLEN - 1] = '\0';
-
-	TRACE(TRACE_DEBUG, "binding to IP [%s]",
-			config->ip);
+	int ip;
+	for (ip = 0; ip < config->ipcount; ip++) {
+		g_strstrip(config->iplist[ip]);
+		TRACE(TRACE_DEBUG, "binding to IP [%s]", config->iplist[ip]);
+	}
 
 	/* read items: BACKLOG */
 	config_get_value("BACKLOG", service, val);
