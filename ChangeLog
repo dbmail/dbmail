@@ -1,3 +1,12 @@
+2006-10-07  Aaron Stone  <aaron@serendpity.cx>
+
+	* misc.h, misc.c:
+	Added two more return pointers to mailbox_remove_namespace, for the
+	namespace itself and the username under #Users namespace.
+	* db.c:
+	Modified db_imap_split_mailbox and db_mailbox_create_with_parents to
+	correctly handle permissions in other namespaces (closes bug #424).
+
 2006-10-06  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-mailbox.c:

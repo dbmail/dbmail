@@ -69,11 +69,15 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
 /**
  * \brief remove the namespace from the fully qualified name
  * \param fq_name full name (with possible namespace) of mailbox
+ * \param namespace returns static pointer to namespace; ignored if NULL.
+ * \param username returns allocated username;
+ * 	only allocated if return value is non-null;
+ * 	ignored if NULL;
  * \return
  *     - NULL on error
  *     - simple name of mailbox
  */
-const char *mailbox_remove_namespace(const char *fq_name);
+const char *mailbox_remove_namespace(const char *fq_name, char **namespace, char **username);
 
 /**
  * write to a client socket. does error checking.
