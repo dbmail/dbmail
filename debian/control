@@ -2,7 +2,7 @@ Source: dbmail
 Section: mail
 Priority: optional
 Maintainer: Paul J Stevens <paul@nfg.nl>
-Build-Depends: automake1.9, debhelper (>= 5.0.7), dpatch, libsieve2-dev (>= 2.1.12), libglib2.0-dev, libgmime-2.0-2-dev, libldap2-dev, libsqlite3-dev, postgresql-dev, libmysqlclient15-dev | libmysqlclient14-dev, pkg-config, libtool, asciidoc, xmlto
+Build-Depends: automake1.9, debhelper (>= 5.0.7), dpatch, libsieve2-dev (>= 2.1.12), libglib2.0-dev, libgmime-2.0-2-dev | libgmime2.1-dev, libldap2-dev, libsqlite3-dev, postgresql-dev, libmysqlclient15-dev | libmysqlclient14-dev, pkg-config, libtool, asciidoc, xmlto
 Standards-Version: 3.7.2
 
 Package: dbmail
@@ -22,7 +22,7 @@ Description: base package for the dbmail email solution
 
 Package: libdbmail0
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}, dbmail (= ${Source-Version}), libglib2.0-0 (>= 2.10.2), libgmime-2.0-2
+Depends: ${misc:Depends}, ${shlibs:Depends}, dbmail (= ${Source-Version}), libglib2.0-0 (>= 2.10.2), libgmime-2.0-2 | libgmime-2.1 (>= 2.1.19)
 Suggests: stunnel | stunnel4, postfix | mail-transport-agent, dbmail-mysql (= ${Source-Version})| dbmail-pgsql (= ${Source-Version})| dbmail-sqlite (= ${Source-Version}), dbmail-ldap (= ${Source-Version}), dbmail-sieve (= ${Source-Version})
 Description: shared libraries for the dbmail email solution
  DBMAIL is a collection of programs that allows email to be
