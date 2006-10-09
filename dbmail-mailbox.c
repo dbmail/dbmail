@@ -115,8 +115,8 @@ int dbmail_mailbox_open(struct DbmailMailbox *self)
 	u64_t *uid, *msn;
 
 	g_string_printf(q, "SELECT message_idnr FROM %smessages "
-		 "WHERE mailbox_idnr = '%llu' "
-		 "AND status IN ('%d','%d') "
+		 "WHERE mailbox_idnr = %llu "
+		 "AND status IN (%d,%d) "
 		 "ORDER BY message_idnr", DBPFX, 
 		 dbmail_mailbox_get_id(self), 
 		 MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
@@ -221,7 +221,7 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 
 	assert(self->ids);
 
-	if (g_tree_nnodes(self->ids) == 0) {
+	if (self->ids==NULL || g_tree_nnodes(self->ids) == 0) {
 		trace(TRACE_DEBUG,"%s,%s: cannot dump empty mailbox",__FILE__, __func__);
 		return 0;
 	}
@@ -1018,7 +1018,7 @@ static gboolean _do_sort(GNode *node, struct DbmailMailbox *self)
 	g_string_printf(q, "SELECT message_idnr FROM %smessages m "
 			 "LEFT JOIN %sphysmessage p ON m.physmessage_id=p.id "
 			 "%s"
-			 "WHERE m.mailbox_idnr = '%llu' AND m.status IN ('%d','%d') " 
+			 "WHERE m.mailbox_idnr = %llu AND m.status IN (%d,%d) " 
 			 "ORDER BY %smessage_idnr", DBPFX, DBPFX, s->table,
 			 dbmail_mailbox_get_id(self), MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN, s->order);
 
@@ -1075,7 +1075,7 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 		g_string_printf(q,"SELECT message_idnr FROM %smessages m "
 			"JOIN %sphysmessage p ON m.physmessage_id=p.id "
 			"JOIN %sdatefield d ON d.physmessage_id=p.id "
-			"WHERE mailbox_idnr= '%llu' AND status IN ('%d','%d') "
+			"WHERE mailbox_idnr= %llu AND status IN (%d,%d) "
 			"AND %s "
 			"ORDER BY message_idnr", DBPFX, DBPFX, DBPFX,
 			dbmail_mailbox_get_id(self), 
@@ -1089,8 +1089,8 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 			 "JOIN %sphysmessage p ON m.physmessage_id=p.id "
 			 "JOIN %sheadervalue v ON v.physmessage_id=p.id "
 			 "JOIN %sheadername n ON v.headername_id=n.id "
-			 "WHERE mailbox_idnr = '%llu' "
-			 "AND status IN ('%d','%d') "
+			 "WHERE mailbox_idnr = %llu "
+			 "AND status IN (%d,%d) "
 			 "AND headername %s '%s' AND headervalue %s '%%%s%%' "
 			 "ORDER BY message_idnr", 
 			 DBPFX, DBPFX, DBPFX, DBPFX,
@@ -1104,8 +1104,8 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 		g_string_printf(q, "SELECT message_idnr FROM %smessages m "
 			"JOIN %sphysmessage p ON m.physmessage_id=p.id "
 			"JOIN %sheadervalue v on v.physmessage_id=p.id "
-			"WHERE mailbox_idnr = '%llu' "
-			"AND status IN ('%d','%d') "
+			"WHERE mailbox_idnr = %llu "
+			"AND status IN (%d,%d) "
 			"AND headervalue %s '%%%s%%' "
 			"ORDER BY message_idnr",
 			DBPFX, DBPFX, DBPFX, 
@@ -1117,8 +1117,8 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 		case IST_IDATE:
 		g_string_printf(q, "SELECT message_idnr FROM %smessages m "
 			 "JOIN %sphysmessage p ON m.physmessage_id=p.id "
-			 "WHERE mailbox_idnr = '%llu' "
-			 "AND status IN ('%d','%d') AND p.%s "
+			 "WHERE mailbox_idnr = %llu "
+			 "AND status IN (%d,%d) AND p.%s "
 			 "ORDER BY message_idnr", 
 			 DBPFX, DBPFX, 
 			 dbmail_mailbox_get_id(self),
@@ -1131,8 +1131,8 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 		g_string_printf(q, "SELECT m.message_idnr,k.messageblk FROM %smessageblks k "
 			"JOIN %sphysmessage p ON k.physmessage_id = p.id "
 			"JOIN %smessages m ON p.id = m.physmessage_id "
-			"WHERE mailbox_idnr = '%llu' "
-			"AND status IN ('%d','%d' ) "
+			"WHERE mailbox_idnr = %llu "
+			"AND status IN (%d,%d ) "
 			"AND k.is_header = '0' "
 			"GROUP BY m.message_idnr,k.messageblk "
 			"HAVING %s %s '%%%s%%'",
@@ -1144,8 +1144,8 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 
 		default:
 		g_string_printf(q, "SELECT message_idnr FROM %smessages "
-			 "WHERE mailbox_idnr = '%llu' "
-			 "AND status IN ('%d','%d') AND %s "
+			 "WHERE mailbox_idnr = %llu "
+			 "AND status IN (%d,%d) AND %s "
 			 "ORDER BY message_idnr", DBPFX, 
 			 dbmail_mailbox_get_id(self), 
 			 MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN, 
@@ -1206,7 +1206,7 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 	if (! (self->ids && set))
 		return b;
 
-	g_return_val_if_fail(g_tree_nnodes(self->ids)>0,b);
+	g_return_val_if_fail(self->ids != NULL && g_tree_nnodes(self->ids) > 0,b);
 
 	trace(TRACE_DEBUG,"%s,%s: [%s]", __FILE__, __func__, set);
 	
@@ -1458,7 +1458,7 @@ int dbmail_mailbox_search(struct DbmailMailbox *self)
 	if (self->ids == NULL)
 		TRACE(TRACE_DEBUG,"found no ids\n");
 	else
-		TRACE(TRACE_DEBUG,"found [%d] ids\n", g_tree_nnodes(self->ids));
+		TRACE(TRACE_DEBUG,"found [%d] ids\n", self->ids ? g_tree_nnodes(self->ids): 0);
 	
 	return 0;
 }

@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: dbmail-imapsession.c 2278 2006-09-26 21:08:23Z aaron $
+/* $Id: dbmail-imapsession.c 2302 2006-10-09 09:54:28Z paul $
  * 
  * dm_imaputil.c
  *
@@ -619,8 +619,8 @@ int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self)
 		 "draft_flag, recent_flag, %s, rfcsize, message_idnr "
 		 "FROM %smessages msg, %sphysmessage pm "
 		 "WHERE pm.id = msg.physmessage_id "
-		 "AND message_idnr BETWEEN '%llu' AND '%llu' "
-		 "AND mailbox_idnr = '%llu' AND status IN ('%d','%d') "
+		 "AND message_idnr BETWEEN %llu AND %llu "
+		 "AND mailbox_idnr = %llu AND status IN (%d,%d) "
 		 "ORDER BY message_idnr ASC",to_char_str,DBPFX,DBPFX,
 		 *lo, *hi, ud->mailbox.uid,
 		 MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
@@ -705,8 +705,8 @@ static GTree * _fetch_envelopes(struct ImapSession *self)
 			"FROM %senvelope e "
 			"JOIN %smessages m ON m.physmessage_id=e.physmessage_id "
 			"JOIN %smailboxes b ON b.mailbox_idnr=m.mailbox_idnr "
-			"WHERE m.mailbox_idnr = '%llu' "
-			"AND message_idnr BETWEEN '%llu' AND '%llu' ",
+			"WHERE m.mailbox_idnr = %llu "
+			"AND message_idnr BETWEEN %llu AND %llu ",
 			DBPFX, DBPFX, DBPFX, 
 			self->mailbox->id, *lo, *hi);
 	
@@ -1000,8 +1000,8 @@ static GTree * _fetch_headers(struct ImapSession *self, const GList *headers, gb
 			"JOIN %smessages m ON v.physmessage_id=m.physmessage_id "
 			"JOIN %smailboxes b ON m.mailbox_idnr=b.mailbox_idnr "
 			"JOIN %sheadername n ON v.headername_id=n.id "
-			"WHERE m.mailbox_idnr = '%llu' "
-			"AND message_idnr BETWEEN '%llu' AND '%llu' "
+			"WHERE m.mailbox_idnr = %llu "
+			"AND message_idnr BETWEEN %llu AND %llu "
 			"AND lower(headername) %s IN ('%s')",
 			DBPFX, DBPFX, DBPFX, DBPFX,
 			self->mailbox->id,
@@ -1634,7 +1634,7 @@ int dbmail_imap_session_mailbox_select_recent(struct ImapSession *self) {
 
 	self->recent = NULL;
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT message_idnr FROM %smessages WHERE recent_flag = 1 AND mailbox_idnr = '%llu'",
+		 "SELECT message_idnr FROM %smessages WHERE recent_flag = 1 AND mailbox_idnr = %llu",
 		 DBPFX, ud->mailbox.uid);
 
 	if (db_query(query) == -1) 

@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: pipe.c 2238 2006-08-29 14:44:00Z aaron $
+/* $Id: pipe.c 2295 2006-10-04 18:31:23Z aaron $
  *
  * Functions for reading the pipe from the MTA */
 
@@ -168,6 +168,7 @@ static int send_mail(struct DbmailMessage *message,
 		// This is a hack so forwards can give a From line.
 		if (strlen(headers))
 			fprintf(mailpipe, "%s\n", headers);
+		// This function will dot-stuff the message.
 		db_send_message_lines(mailpipe, message->id, -2, 1);
 		break;
 	case SENDBODY:

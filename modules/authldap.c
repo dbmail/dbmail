@@ -19,7 +19,7 @@
 */
 
 /*
- * $Id: authldap.c 2187 2006-06-24 14:57:02Z paul $
+ * $Id: authldap.c 2302 2006-10-09 09:54:28Z paul $
  * * User authentication functions for LDAP.
  */
 #ifdef HAVE_CONFIG_H
@@ -1251,6 +1251,10 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 		trace(TRACE_DEBUG, "%s,%s: username or password is NULL",__FILE__,__func__);
 		return 0;
 	}
+
+	/* the shared mailbox user should not log in! */
+	if (strcmp(username, PUBLIC_FOLDER_USER) == 0)
+		return 0;
 
 	memset(real_username,'\0', sizeof(real_username));
 	

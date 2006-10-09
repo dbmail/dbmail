@@ -1,4 +1,4 @@
-/* $Id: db.c 2280 2006-09-27 20:25:52Z aaron $ */
+/* $Id: db.c 2302 2006-10-09 09:54:28Z paul $ */
 /*
   Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
   Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
@@ -22,7 +22,7 @@
 /**
  * \file db.c
  * 
- * $Id: db.c 2280 2006-09-27 20:25:52Z aaron $
+ * $Id: db.c 2302 2006-10-09 09:54:28Z paul $
  *
  * implement database functionality. This used to split out
  * between MySQL and PostgreSQL, but this is now integrated. 
@@ -265,7 +265,7 @@ int db_get_physmessage_id(u64_t message_idnr, u64_t * physmessage_id)
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT physmessage_id FROM %smessages "
-		 "WHERE message_idnr = '%llu'", DBPFX, message_idnr);
+		 "WHERE message_idnr = %llu", DBPFX, message_idnr);
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "error getting physmessage_id");
@@ -291,7 +291,7 @@ int db_get_quotum_used(u64_t user_idnr, u64_t * curmail_size)
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT curmail_size FROM %susers "
-		 "WHERE user_idnr = '%llu'", DBPFX, user_idnr);
+		 "WHERE user_idnr = %llu", DBPFX, user_idnr);
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "error getting used quotum for "
 		      "user [%llu]" , user_idnr);
@@ -314,8 +314,8 @@ static int user_quotum_set(u64_t user_idnr, u64_t size)
 		return DM_SUCCESS;
 	
 	snprintf(query, DEF_QUERYSIZE,
-		 "UPDATE %susers SET curmail_size = '%llu' "
-		 "WHERE user_idnr = '%llu'", DBPFX, size, user_idnr);
+		 "UPDATE %susers SET curmail_size = %llu "
+		 "WHERE user_idnr = %llu", DBPFX, size, user_idnr);
 	
 	if (db_query(query) == DM_EQUERY)
 		return DM_EQUERY;
@@ -336,8 +336,8 @@ static int user_quotum_inc(u64_t user_idnr, u64_t size)
 	TRACE(TRACE_DEBUG, "adding %llu to mailsize", size);
 	
 	snprintf(query, DEF_QUERYSIZE,
-		 "UPDATE %susers SET curmail_size = curmail_size + '%llu' "
-		 "WHERE user_idnr = '%llu'", DBPFX, size, user_idnr);
+		 "UPDATE %susers SET curmail_size = curmail_size + %llu "
+		 "WHERE user_idnr = %llu", DBPFX, size, user_idnr);
 	
 	if (db_query(query) == DM_EQUERY)
 		return DM_EQUERY;
@@ -358,8 +358,8 @@ static int user_quotum_dec(u64_t user_idnr, u64_t size)
 	TRACE(TRACE_DEBUG, "subtracting %llu from mailsize", size);
 
 	snprintf(query, DEF_QUERYSIZE,
-		 "UPDATE %susers SET curmail_size = curmail_size - '%llu' "
-		 "WHERE user_idnr = '%llu'", DBPFX, size, user_idnr);
+		 "UPDATE %susers SET curmail_size = curmail_size - %llu "
+		 "WHERE user_idnr = %llu", DBPFX, size, user_idnr);
 	
 	if (db_query(query) == -1)
 		return DM_EQUERY;
@@ -372,9 +372,9 @@ static int user_quotum_check(u64_t user_idnr, u64_t msg_size)
 {
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT 1 FROM %susers "
-		 "WHERE user_idnr = '%llu' "
+		 "WHERE user_idnr = %llu "
 		 "AND (maxmail_size > 0) "
-		 "AND (curmail_size + '%llu' > maxmail_size)",
+		 "AND (curmail_size + %llu > maxmail_size)",
 		 DBPFX, user_idnr, msg_size);
 
 	if (db_query(query) == -1) {
@@ -419,7 +419,7 @@ int db_calculate_quotum_all()
 		 "ON msg.mailbox_idnr = mbx.mailbox_idnr "
 		 "LEFT JOIN %sphysmessage pm "
 		 "ON pm.id = msg.physmessage_id "
-		 "AND msg.status < '%d' "
+		 "AND msg.status < %d "
 		 "GROUP BY usr.user_idnr, usr.curmail_size "
 		 "HAVING ((SUM(pm.messagesize) <> usr.curmail_size) OR "
 		 "(NOT (SUM(pm.messagesize) IS NOT NULL) "
@@ -473,7 +473,7 @@ int db_calculate_quotum_used(u64_t user_idnr)
 		 "FROM %sphysmessage pm, %smessages m, %smailboxes mb "
 		 "WHERE m.physmessage_id = pm.id "
 		 "AND m.mailbox_idnr = mb.mailbox_idnr "
-		 "AND mb.owner_idnr = '%llu' " "AND m.status < '%d'",
+		 "AND mb.owner_idnr = %llu " "AND m.status < %d",
 		 DBPFX,DBPFX,DBPFX,user_idnr, MESSAGE_STATUS_DELETE);
 
 	if (db_query(query) == -1) {
@@ -507,7 +507,7 @@ int db_get_sievescript_byname(u64_t user_idnr, char *scriptname, char **script)
 	escaped_scriptname = dm_stresc(scriptname);
 	snprintf(query, DEF_QUERYSIZE,
 				"SELECT script FROM %ssievescripts WHERE "
-				"owner_idnr = '%llu' AND name = '%s'",
+				"owner_idnr = %llu AND name = '%s'",
 				DBPFX,user_idnr,escaped_scriptname);
 	dm_free(escaped_scriptname);
 
@@ -683,7 +683,7 @@ int db_rename_sievescript(u64_t user_idnr, char *scriptname, char *newname)
 
 	db_free_result();
 	snprintf(query, DEF_QUERYSIZE,
-		"UPDATE %ssievescripts SET name = '%s', active = '%d' "
+		"UPDATE %ssievescripts SET name = '%s', active = %d "
 		"WHERE owner_idnr = %llu AND name = '%s'",
 		DBPFX,escaped_newname,active,user_idnr,escaped_scriptname);
 	dm_free(escaped_scriptname);
@@ -743,7 +743,7 @@ int db_add_sievescript(u64_t user_idnr, char *scriptname, char *script)
 	startlen = snprintf(escaped_query, maxesclen,
 		     "INSERT INTO %ssievescripts "
 		     "(owner_idnr, name, script, active) "
-		     "VALUES ('%llu','%s', '",
+		     "VALUES (%llu,'%s', '",
 		     DBPFX, user_idnr, escaped_scriptname);
 	
 	/* escape & add data */
@@ -934,7 +934,7 @@ u64_t db_get_mailbox_from_message(u64_t message_idnr)
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT mailbox_idnr FROM %smessages "
-		 "WHERE message_idnr = '%llu'", DBPFX,message_idnr);
+		 "WHERE message_idnr = %llu", DBPFX,message_idnr);
 
 	if (db_query(query) == -1) {
 		/* query failed */
@@ -960,7 +960,7 @@ u64_t db_get_useridnr(u64_t message_idnr)
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT %smailboxes.owner_idnr FROM %smailboxes, %smessages "
 		 "WHERE %smailboxes.mailbox_idnr = %smessages.mailbox_idnr "
-		 "AND %smessages.message_idnr = '%llu'", DBPFX,DBPFX,DBPFX,
+		 "AND %smessages.message_idnr = %llu", DBPFX,DBPFX,DBPFX,
 		DBPFX,DBPFX,DBPFX,message_idnr);
 	if (db_query(query) == -1) {
 		/* query failed */
@@ -992,12 +992,12 @@ int db_insert_physmessage_with_internal_date(timestring_t internal_date,
 		to_date_str = char2date_str(internal_date);
 		snprintf(query, DEF_QUERYSIZE,
 			 "INSERT INTO %sphysmessage (messagesize, internal_date) "
-			 "VALUES ('0', %s)", DBPFX,to_date_str);
+			 "VALUES (0, %s)", DBPFX,to_date_str);
 		dm_free(to_date_str);
 	} else {
 		snprintf(query, DEF_QUERYSIZE,
 			 "INSERT INTO %sphysmessage (messagesize, internal_date) "
-			 "VALUES ('0', %s)", DBPFX,db_get_sql(SQL_CURRENT_TIMESTAMP));
+			 "VALUES (0, %s)", DBPFX,db_get_sql(SQL_CURRENT_TIMESTAMP));
 	}
 	
 	if (db_query(query) == -1) {
@@ -1019,8 +1019,8 @@ int db_message_set_unique_id(u64_t message_idnr, const char *unique_id)
 	assert(unique_id);
 	
 	snprintf(query, DEF_QUERYSIZE,
-		 "UPDATE %smessages SET unique_id = '%s', status = '%d' "
-		 "WHERE message_idnr = '%llu'", DBPFX, unique_id, MESSAGE_STATUS_NEW,
+		 "UPDATE %smessages SET unique_id = '%s', status = %d "
+		 "WHERE message_idnr = %llu", DBPFX, unique_id, MESSAGE_STATUS_NEW,
 		 message_idnr);
 	if (db_query(query) == DM_EQUERY) {
 		TRACE(TRACE_ERROR, "setting unique id for message [%llu] failed",
@@ -1035,8 +1035,8 @@ int db_physmessage_set_sizes(u64_t physmessage_id, u64_t message_size,
 {
 	snprintf(query, DEF_QUERYSIZE,
 		 "UPDATE %sphysmessage SET "
-		 "messagesize = '%llu', rfcsize = '%llu' "
-		 "WHERE id = '%llu'", DBPFX, message_size, rfc_size, physmessage_id);
+		 "messagesize = %llu, rfcsize = %llu "
+		 "WHERE id = %llu", DBPFX, message_size, rfc_size, physmessage_id);
 
 	if (db_query(query) < 0) {
 		trace(TRACE_ERROR, "%s,%s: error setting messagesize and "
@@ -1104,12 +1104,12 @@ int db_insert_message_block_physmessage(const char *block,
 	startlen = snprintf(escaped_query, maxesclen,
 		     "INSERT INTO %smessageblks "
 		     "(is_header, messageblk,blocksize, physmessage_id) "
-		     "VALUES ('%u','",DBPFX, is_header);
+		     "VALUES (%u,'",DBPFX, is_header);
 	
 	/* escape & add data */
 	esclen = db_escape_binary(&escaped_query[startlen], block, block_size);
 	snprintf(&escaped_query[esclen + startlen],
-		 maxesclen - esclen - startlen, "', '%llu', '%llu')",
+		 maxesclen - esclen - startlen, "', %llu, %llu)",
 		 block_size, physmessage_id);
 
 	if (db_query(escaped_query) == DM_EQUERY) {
@@ -1177,7 +1177,7 @@ int db_log_ip(const char *ip)
 	if (id) {
 		/* this IP is already in the table, update the 'since' field */
 		snprintf(query, DEF_QUERYSIZE, "UPDATE %spbsp "
-			 "SET since = %s WHERE idnr='%llu'",
+			 "SET since = %s WHERE idnr=%llu",
 			 DBPFX, db_get_sql(SQL_CURRENT_TIMESTAMP), id);
 
 		if (db_query(query) == DM_EQUERY) {
@@ -1259,7 +1259,7 @@ int db_empty_mailbox(u64_t user_idnr)
 	int result = 0;
 
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT mailbox_idnr FROM %smailboxes WHERE owner_idnr='%llu'",
+		 "SELECT mailbox_idnr FROM %smailboxes WHERE owner_idnr=%llu",
 		 DBPFX, user_idnr);
 
 	if (db_query(query) == -1) {
@@ -1544,7 +1544,7 @@ int db_set_isheader(GList *lost)
 	while(slices) {
 		snprintf(query, DEF_QUERYSIZE,
 			"UPDATE %smessageblks"
-			" SET is_header = '%u'"
+			" SET is_header = %u"
 			" WHERE messageblk_idnr IN (%s)",
 			DBPFX, HEAD_BLOCK, (gchar *)slices->data);
 
@@ -1790,35 +1790,29 @@ int db_icheck_envelope(GList **lost)
 
 int db_set_message_status(u64_t message_idnr, MessageStatus_t status)
 {
-	snprintf(query, DEF_QUERYSIZE, "UPDATE %smessages SET status = %d "
-		 "WHERE message_idnr = '%llu'",DBPFX, status, message_idnr);
+	snprintf(query, DEF_QUERYSIZE, "UPDATE %smessages SET status = %d WHERE message_idnr = %llu",
+		DBPFX, status, message_idnr);
 	return db_query(query);
 }
 
 int db_delete_messageblk(u64_t messageblk_idnr)
 {
-	snprintf(query, DEF_QUERYSIZE,
-		 "DELETE FROM %smessageblks "
-		 "WHERE messageblk_idnr = '%llu'",DBPFX, messageblk_idnr);
+	snprintf(query, DEF_QUERYSIZE, "DELETE FROM %smessageblks WHERE messageblk_idnr = %llu",
+		DBPFX, messageblk_idnr);
 	return db_query(query);
 }
 
 int db_delete_physmessage(u64_t physmessage_id)
 {
-	snprintf(query, DEF_QUERYSIZE,
-		 "DELETE FROM %sphysmessage WHERE id = '%llu'",DBPFX,
-		 physmessage_id);
-	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: could not execute query",
-		      __FILE__, __func__);
+	snprintf(query, DEF_QUERYSIZE, "DELETE FROM %sphysmessage WHERE id = %llu",
+		DBPFX, physmessage_id);
+	if (db_query(query) == -1)
 		return DM_EQUERY;
-	}
 
 	/* if foreign keys do their work (not with MySQL ISAM tables :( )
 	   the next query would not be necessary */
-	snprintf(query, DEF_QUERYSIZE,
-		 "DELETE FROM %smessageblks WHERE physmessage_id = '%llu'",DBPFX,
-		 physmessage_id);
+	snprintf(query, DEF_QUERYSIZE, "DELETE FROM %smessageblks WHERE physmessage_id = %llu",
+		DBPFX, physmessage_id);
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not execute query. There "
 		      "are now messageblocks in the database that have no "
@@ -1841,18 +1835,22 @@ int db_delete_message(u64_t message_idnr)
 
 	/* now delete the message from the message table */
 	snprintf(query, DEF_QUERYSIZE, "DELETE FROM %smessages "
-			"WHERE message_idnr = '%llu'",
+			"WHERE message_idnr = %llu",
 			DBPFX, message_idnr);
 	
-	if (db_query(query) == DM_EQUERY)
+	if (db_query(query) == DM_EQUERY) {
+		TRACE(TRACE_ERROR,"error deleting message [%llu]", message_idnr);
 		return DM_EQUERY;
+	}
 
 	/* find other messages pointing to the same physmessage entry */
 	snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr FROM %smessages "
-			"WHERE physmessage_id = '%llu'",DBPFX, physmessage_id);
+			"WHERE physmessage_id = %llu",DBPFX, physmessage_id);
 	
-	if (db_query(query) == -1)
+	if (db_query(query) == -1) {
+		TRACE(TRACE_ERROR, "error finding physmessage for message [%llu]", message_idnr);
 		return DM_EQUERY;
+	}
 	
 	rows = db_num_rows();
 	db_free_result();
@@ -1868,11 +1866,61 @@ int db_delete_message(u64_t message_idnr)
 	return DM_EGENERAL;
 }
 
-int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
-		      int update_curmail_size)
+static int mailbox_delete(u64_t mailbox_idnr)
+{
+	snprintf(query, DEF_QUERYSIZE,
+		 "DELETE FROM %smailboxes WHERE mailbox_idnr = %llu",DBPFX,
+		 mailbox_idnr);
+
+	if (db_query(query) == -1)
+		return DM_EQUERY;
+
+	return DM_SUCCESS;
+}
+
+static int mailbox_empty(u64_t mailbox_idnr)
 {
 	unsigned i, n;
 	u64_t *message_idnrs;
+
+	/* we want to delete all messages from the mailbox. So we
+	 * need to find all messages in the box */
+	snprintf(query, DEF_QUERYSIZE,
+		 "SELECT message_idnr FROM %smessages "
+		 "WHERE mailbox_idnr = %llu",DBPFX, mailbox_idnr);
+
+	if (db_query(query) == -1)
+		return DM_EQUERY;
+
+	n = db_num_rows();
+	if (n == 0) {
+		db_free_result();
+		trace(TRACE_INFO, "%s,%s: mailbox is empty", __FILE__,
+		      __func__);
+		return DM_SUCCESS;
+	}
+
+	message_idnrs = g_new0(u64_t, n);
+
+	for (i = 0; i < n; i++)
+		message_idnrs[i] = db_get_result_u64(i, 0);
+
+	db_free_result();
+	/* delete every message in the mailbox */
+	for (i = 0; i < n; i++) {
+		if (db_delete_message(message_idnrs[i]) == -1) {
+			dm_free(message_idnrs);
+			return DM_EQUERY;
+		}
+	}
+	dm_free(message_idnrs);
+
+	return DM_SUCCESS;
+}
+
+int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
+		      int update_curmail_size)
+{
 	u64_t user_idnr = 0;
 	int result;
 	u64_t mailbox_size = 0;
@@ -1906,63 +1954,13 @@ int db_delete_mailbox(u64_t mailbox_idnr, int only_empty,
 	if (mailbox_is_writable(mailbox_idnr))
 		return DM_EGENERAL;
 
-	/* remove the mailbox */
-	if (!only_empty) {
-		/* delete mailbox */
-		snprintf(query, DEF_QUERYSIZE,
-			 "DELETE FROM %smailboxes WHERE mailbox_idnr = '%llu'",DBPFX,
-			 mailbox_idnr);
+	if (mailbox_empty(mailbox_idnr))
+		return DM_EGENERAL;
 
-		if (db_query(query) == -1) {
-			trace(TRACE_ERROR,
-			      "%s,%s: could not delete mailbox [%llu]",
-			      __FILE__, __func__, mailbox_idnr);
-			return DM_EQUERY;
-		}
+	if (! only_empty) {
+		if (mailbox_delete(mailbox_idnr))
+			return DM_EGENERAL;
 	}
-
-	/* we want to delete all messages from the mailbox. So we
-	 * need to find all messages in the box */
-	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT message_idnr FROM %smessages "
-		 "WHERE mailbox_idnr = '%llu'",DBPFX, mailbox_idnr);
-
-	if (db_query(query) == -1) {
-		trace(TRACE_ERROR,
-		      "%s,%s: could not select message ID's for mailbox [%llu]",
-		      __FILE__, __func__, mailbox_idnr);
-		return DM_EQUERY;
-	}
-
-	n = db_num_rows();
-	if (n == 0) {
-		db_free_result();
-		trace(TRACE_INFO, "%s,%s: mailbox is empty", __FILE__,
-		      __func__);
-		return DM_SUCCESS;
-	}
-
-	if (! (message_idnrs = g_new0(u64_t, n))) {
-		trace(TRACE_ERROR, "%s,%s: error allocating memory [%d]",
-		      __FILE__, __func__, n);
-		return DM_EQUERY;
-	}
-	for (i = 0; i < n; i++)
-		message_idnrs[i] = db_get_result_u64(i, 0);
-	db_free_result();
-	/* delete every message in the mailbox */
-	for (i = 0; i < n; i++) {
-		if (db_delete_message(message_idnrs[i]) == -1) {
-			trace(TRACE_ERROR,
-			      "%s,%s: error deleting message [%llu] "
-			      "database might be inconsistent. "
-			      "run dbmail-util",
-			      __FILE__, __func__, message_idnrs[i]);
-			dm_free(message_idnrs);
-			return DM_EQUERY;
-		}
-	}
-	dm_free(message_idnrs);
 
 	/* calculate the new quotum */
 	if (update_curmail_size) {
@@ -2004,13 +2002,13 @@ int db_send_message_lines(void *fstream, u64_t message_idnr, long lines, int no_
 	dbmail_message_free(msg);
 
 	/* always send all headers */
-	raw = get_crlf_encoded(hdr);
+	raw = get_crlf_encoded_dots(hdr);
 	ci_write((FILE *)fstream, "%s", raw);
 	dm_free(hdr);
 	dm_free(raw);
 
 	/* send requested body lines */	
-	raw = get_crlf_encoded(buf);
+	raw = get_crlf_encoded_dots(buf);
 	dm_free(buf);
 	
 	s = g_string_new(raw);
@@ -2055,8 +2053,8 @@ int db_createsession(u64_t user_idnr, PopSession_t * session_ptr)
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT pm.messagesize, msg.message_idnr, msg.status, "
 		 "msg.unique_id FROM %smessages msg, %sphysmessage pm "
-		 "WHERE msg.mailbox_idnr = '%llu' "
-		 "AND msg.status < '%d' "
+		 "WHERE msg.mailbox_idnr = %llu "
+		 "AND msg.status < %d "
 		 "AND msg.physmessage_id = pm.id "
 		 "ORDER BY msg.message_idnr ASC",DBPFX,DBPFX,
 		 inbox_mailbox_idnr, MESSAGE_STATUS_DELETE);
@@ -2150,8 +2148,8 @@ int db_update_pop(PopSession_t * session_ptr)
 
 			/* yes they need an update, do the query */
 			snprintf(query, DEF_QUERYSIZE,
-				 "UPDATE %smessages set status='%d' WHERE "
-				 "message_idnr='%llu' AND status < '%d'",DBPFX,
+				 "UPDATE %smessages set status=%d WHERE "
+				 "message_idnr=%llu AND status < %d",DBPFX,
 				 ((struct message *)
 				  tmpelement->data)->virtual_messagestatus,
 				 ((struct message *) tmpelement->data)->
@@ -2181,7 +2179,7 @@ int db_count_deleted(u64_t * affected_rows)
 	*affected_rows = 0;
 
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT COUNT(*) FROM %smessages WHERE status = '%d'",
+		 "SELECT COUNT(*) FROM %smessages WHERE status = %d",
 		 DBPFX, MESSAGE_STATUS_DELETE);
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: Could not execute query",
@@ -2202,7 +2200,7 @@ int db_set_deleted(u64_t * affected_rows)
 	*affected_rows = 0;
 
 	snprintf(query, DEF_QUERYSIZE,
-		 "UPDATE %smessages SET status = '%d' WHERE status = '%d'",DBPFX,
+		 "UPDATE %smessages SET status = %d WHERE status = %d",DBPFX,
 		 MESSAGE_STATUS_PURGE, MESSAGE_STATUS_DELETE);
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: Could not execute query",
@@ -2223,7 +2221,7 @@ int db_deleted_purge(u64_t * affected_rows)
 
 	/* first we're deleting all the messageblks */
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT message_idnr FROM %smessages WHERE status='%d'",DBPFX,
+		 "SELECT message_idnr FROM %smessages WHERE status=%d",DBPFX,
 		 MESSAGE_STATUS_PURGE);
 	trace(TRACE_DEBUG, "%s,%s: executing query [%s]",
 	      __FILE__, __func__, query);
@@ -2270,7 +2268,7 @@ int db_deleted_count(u64_t * affected_rows)
 
 	/* first we're deleting all the messageblks */
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT COUNT(*) FROM %smessages WHERE status='%d'",
+		 "SELECT COUNT(*) FROM %smessages WHERE status=%d",
 		 DBPFX, MESSAGE_STATUS_PURGE);
 
 	if (db_query(query) == -1) {
@@ -2342,71 +2340,49 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen UNUSED,
         return db_set_message_status(*msg_idnr, MESSAGE_STATUS_SEEN);
 }
 
-int db_findmailbox(const char *fq_name, u64_t user_idnr,
-		   u64_t * mailbox_idnr)
+int db_findmailbox(const char *fq_name, u64_t owner_idnr, u64_t * mailbox_idnr)
 {
-	const char *username = NULL;
-	char *mailbox_name;
-	char *name_str_copy;
-	char *tempstr;
-	size_t index;
+	const char *simple_name;
+	char *namespace;
+	char *username;
 	int result;
-	u64_t owner_idnr = 0;
 
 	assert(mailbox_idnr != NULL);
 	*mailbox_idnr = 0;
 
-	trace(TRACE_DEBUG, "%s,%s: looking for mailbox with FQN [%s].",
-	      __FILE__, __func__, fq_name);
+	TRACE(TRACE_DEBUG, "looking for mailbox with FQN [%s].", fq_name);
 
-	name_str_copy = dm_strdup(fq_name);
-	/* If this is a #User or #Public mailbox,
-	 * place a nul at the end of the namespace
-	 * and advance the pointer just beyond that. */
-	if ((strlen(NAMESPACE_USER) > 0) &&
-	    (strstr(fq_name, NAMESPACE_USER) == fq_name)) {
-		index = strcspn(name_str_copy, MAILBOX_SEPARATOR);
-		tempstr = &name_str_copy[index + 1];
-		index = strcspn(tempstr, MAILBOX_SEPARATOR);
-		username = tempstr;
-		tempstr[index] = '\0';
-		mailbox_name = &tempstr[index + 1];
-	} else {
-		if ((strlen(NAMESPACE_PUBLIC) > 0) &&
-		    (strstr(fq_name, NAMESPACE_PUBLIC) == fq_name)) {
-			index = strcspn(name_str_copy, MAILBOX_SEPARATOR);
-			mailbox_name = &name_str_copy[index + 1];
-			username = PUBLIC_FOLDER_USER;
-		} else {
-			mailbox_name = name_str_copy;
-			owner_idnr = user_idnr;
-		}
+	simple_name = mailbox_remove_namespace(fq_name, &namespace, &username);
+
+	if (!simple_name) {
+		TRACE(TRACE_MESSAGE, "Could not remove mailbox namespace.");
+		return DM_EGENERAL;
 	}
+
 	if (username) {
-		trace(TRACE_DEBUG, "%s,%s: finding user with name [%s].",
-		      __FILE__, __func__, username);
+		TRACE(TRACE_DEBUG, "finding user with name [%s].", username);
 		result = auth_user_exists(username, &owner_idnr);
 		if (result < 0) {
-			trace(TRACE_ERROR, "%s,%s: error checking id of "
-			      "user.", __FILE__, __func__);
+			TRACE(TRACE_ERROR, "error checking id of user.");
+			g_free(username);
 			return DM_EQUERY;
 		}
 		if (result == 0) {
-			trace(TRACE_INFO, "%s,%s user [%s] not found.",
-			      __FILE__, __func__, username);
+			TRACE(TRACE_INFO, "user [%s] not found.", username);
+			g_free(username);
 			return DM_SUCCESS;
 		}
 	}
-	result =
-	    db_findmailbox_owner(mailbox_name, owner_idnr, mailbox_idnr);
+
+	result = db_findmailbox_owner(simple_name, owner_idnr, mailbox_idnr);
 	if (result < 0) {
-		trace(TRACE_ERROR,
-		      "%s,%s: error finding mailbox [%s] with "
-		      "owner [%s, %llu]", __FILE__, __func__,
-		      mailbox_name, username, owner_idnr);
+		TRACE(TRACE_ERROR, "error finding mailbox [%s] with owner [%s, %llu]",
+		      simple_name, username, owner_idnr);
+		g_free(username);
 		return DM_EQUERY;
 	}
-	dm_free(name_str_copy);
+
+	g_free(username);
 	return result;
 }
 
@@ -2478,7 +2454,7 @@ static int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 	mailbox_like = db_imap_utf7_like("name", name, ""); 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT mailbox_idnr FROM %smailboxes "
-		 "WHERE %s AND owner_idnr='%llu'",
+		 "WHERE %s AND owner_idnr=%llu",
 		 DBPFX, mailbox_like, owner_idnr);
 	dm_free(mailbox_like);
 
@@ -2536,10 +2512,10 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 			 "LEFT JOIN %sacl acl ON mbx.mailbox_idnr = acl.mailbox_id "
 			 "LEFT JOIN %susers usr ON acl.user_id = usr.user_idnr "
 			 "LEFT JOIN %ssubscription sub ON sub.mailbox_id = mbx.mailbox_idnr "
-			 "WHERE %s (sub.user_id = '%llu' "
-			 "AND ((mbx.owner_idnr = '%llu') "
-			 "OR (acl.user_id = '%llu' AND acl.lookup_flag = '1') "
-			 "OR (usr.userid = '%s' AND acl.lookup_flag = '1')))",
+			 "WHERE %s (sub.user_id = %llu "
+			 "AND ((mbx.owner_idnr = %llu) "
+			 "OR (acl.user_id = %llu AND acl.lookup_flag = 1) "
+			 "OR (usr.userid = '%s' AND acl.lookup_flag = 1)))",
 			 DBPFX, DBPFX, DBPFX, DBPFX, matchname,
 			 user_idnr, user_idnr, user_idnr,
 			 DBMAIL_ACL_ANYONE_USER);
@@ -2552,10 +2528,10 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 			 "LEFT JOIN %susers usr "
 			 "ON acl.user_id = usr.user_idnr "
 			 "WHERE %s "
-			 "((mbx.owner_idnr = '%llu') OR "
-			 "(acl.user_id = '%llu' AND "
-			 "  acl.lookup_flag = '1') OR "
-			 "(usr.userid = '%s' AND acl.lookup_flag = '1'))",
+			 "((mbx.owner_idnr = %llu) OR "
+			 "(acl.user_id = %llu AND "
+			 "  acl.lookup_flag = 1) OR "
+			 "(usr.userid = '%s' AND acl.lookup_flag = 1))",
 			 DBPFX, DBPFX, DBPFX, matchname,
 			 user_idnr, user_idnr, DBMAIL_ACL_ANYONE_USER);
 	
@@ -2659,7 +2635,7 @@ int db_getmailbox_flags(mailbox_t *mb)
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT permission,seen_flag,answered_flag,deleted_flag,"
 		 "flagged_flag,recent_flag,draft_flag "
-		 "FROM %smailboxes WHERE mailbox_idnr = '%llu'",DBPFX, mb->uid);
+		 "FROM %smailboxes WHERE mailbox_idnr = %llu",DBPFX, mb->uid);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not select mailbox\n",
@@ -2708,12 +2684,12 @@ int db_getmailbox_count(mailbox_t *mb)
 
 	/* count messages */
 	snprintf(query, DEF_QUERYSIZE,
- 			 "SELECT 'a',COUNT(*) FROM %smessages WHERE mailbox_idnr='%llu' "
- 			 "AND (status='%d' OR status='%d') UNION "
- 			 "SELECT 'b',COUNT(*) FROM %smessages WHERE mailbox_idnr='%llu' "
- 			 "AND (status='%d' OR status='%d') AND seen_flag=1 UNION "
- 			 "SELECT 'c',COUNT(*) FROM %smessages WHERE mailbox_idnr='%llu' "
- 			 "AND (status='%d' OR status='%d') AND recent_flag=1", 
+ 			 "SELECT 'a',COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
+ 			 "AND (status=%d OR status=%d) UNION "
+ 			 "SELECT 'b',COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
+ 			 "AND (status=%d OR status=%d) AND seen_flag=1 UNION "
+ 			 "SELECT 'c',COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
+ 			 "AND (status=%d OR status=%d) AND recent_flag=1", 
  			 DBPFX, mb->uid, MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
  			 DBPFX, mb->uid, MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
  			 DBPFX, mb->uid, MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
@@ -2739,8 +2715,8 @@ int db_getmailbox_count(mailbox_t *mb)
 		/* get  messages */
 		snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr "
 				"FROM %smessages "
-				"WHERE mailbox_idnr = '%llu' "
-				"AND status IN ('%d','%d') "
+				"WHERE mailbox_idnr = %llu "
+				"AND status IN (%d,%d) "
 				"ORDER BY message_idnr ASC",
 				DBPFX, mb->uid, MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
 		
@@ -2802,16 +2778,45 @@ int db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr,
 	assert(mailboxes);
 	assert(errmsg);
 
-	char *cpy, **chunks;
-	int i, ret = 0;
-	u64_t mboxid;
+	char *cpy, **chunks = NULL;
+	const char *simple_name;
+	char *namespace, *username;
+	int i, ret = 0, result;
+	int is_users = 0, is_public = 0;
+	u64_t mboxid, anyone;
 
 	/* Scratch space as we build the mailbox names. */
 	cpy = g_new0(char, strlen(mailbox) + 1);
 
+	simple_name = mailbox_remove_namespace(mailbox, &namespace, &username);
+
+	if (username) {
+		TRACE(TRACE_DEBUG, "finding user with name [%s].", username);
+		result = auth_user_exists(username, &owner_idnr);
+		if (result < 0) {
+			TRACE(TRACE_ERROR, "error checking id of user.");
+			goto equery;
+		}
+		if (result == 0) {
+			TRACE(TRACE_INFO, "user [%s] not found.", username);
+			goto egeneral;
+		}
+	}
+
+	if (namespace) {
+		if (strcasecmp(namespace, NAMESPACE_USER) == 0) {
+			is_users = 1;
+		} else if (strcasecmp(namespace, NAMESPACE_PUBLIC) == 0) {
+			is_public = 1;
+		}
+	}
+
+	TRACE(TRACE_DEBUG, "Splitting mailbox [%s] simple name [%s] namespace [%s] username [%s]",
+		mailbox, simple_name, namespace, username);
+
 	/* split up the name  */
-	if (! (chunks = g_strsplit(mailbox, MAILBOX_SEPARATOR, 0))) {
-		trace(TRACE_ERROR, "%s,%s: could not create chunks", __FILE__, __func__);
+	if (! (chunks = g_strsplit(simple_name, MAILBOX_SEPARATOR, 0))) {
+		TRACE(TRACE_ERROR, "could not create chunks");
 		*errmsg = "Server ran out of memory";
 		goto egeneral;
 	}
@@ -2829,23 +2834,11 @@ int db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr,
 			goto egeneral;
 		}
 
-		/* Prepend a mailbox struct onto the list. */
-		mailbox_t *mbox;
-		mbox = g_new0(mailbox_t, 1);
-		*mailboxes = g_list_prepend(*mailboxes, mbox);
-
 		if (i == 0) {
 			if (strcasecmp(chunks[0], "inbox") == 0) {
 				/* Make inbox uppercase */
 				strcpy(chunks[0], "INBOX");
-			} else
-			if (strcmp(chunks[0], NAMESPACE_USER) == 0) {
-				mbox->is_users = 1;
-			} else
-			if (strcmp(chunks[0], NAMESPACE_PUBLIC) == 0) {
-				mbox->is_public = 1;
 			}
-
 			/* The current chunk goes into the name. */
 			strcat(cpy, chunks[0]);
 		} else {
@@ -2856,16 +2849,44 @@ int db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr,
 
 		trace(TRACE_DEBUG, "Preparing mailbox [%s]", cpy);
 
-		if (db_findmailbox(cpy, owner_idnr, &mboxid) == DM_EQUERY) {
-			*errmsg = "Internal database error while looking for mailbox";
-			goto equery;
+		/* Only the ANYONE user is allowed to own #Public itself. */
+		if (i == 0 && is_public) {
+			int test = auth_user_exists(DBMAIL_ACL_ANYONE_USER, &anyone);
+			if (test < 0) {
+				*errmsg = "Internal database error while looking up Anyone user.";
+				goto equery;
+			} else if (test == 0) {
+				*errmsg = "Anyone user required for #Public folder access.";
+				goto egeneral;
+			}
+			if (db_findmailbox(cpy, anyone, &mboxid) == DM_EQUERY) {
+				*errmsg = "Internal database error while looking for mailbox";
+				goto equery;
+			}
+		} else {
+			if (db_findmailbox(cpy, owner_idnr, &mboxid) == DM_EQUERY) {
+				*errmsg = "Internal database error while looking for mailbox";
+				goto equery;
+			}
 		}
+
+		/* Prepend a mailbox struct onto the list. */
+		mailbox_t *mbox;
+		mbox = g_new0(mailbox_t, 1);
+		*mailboxes = g_list_prepend(*mailboxes, mbox);
 
 		/* If the mboxid is 0, then we know
 		 * that the mailbox does not exist. */
 		mbox->name = g_strdup(cpy);
 		mbox->uid = mboxid;
+		mbox->is_users = is_users;
+		mbox->is_public = is_public;
 		mbox->owner_idnr = owner_idnr;
+
+		/* Only the ANYONE user is allowed to own #Public itself. */
+		if (i == 0 && is_public) {
+			mbox->owner_idnr = anyone;
+		}
 	}
 
 	/* We built the path with prepends,
@@ -2874,6 +2895,7 @@ int db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr,
 	*errmsg = "Everything is peachy keen";
 
 	g_strfreev(chunks);
+	g_free(username);
 	dm_free(cpy);
  
 	return DM_SUCCESS;
@@ -2896,6 +2918,7 @@ egeneral:
 	}
 	g_list_free(*mailboxes);
 	g_strfreev(chunks);
+	g_free(username);
 	dm_free(cpy);
 	return ret;
 }
@@ -2913,12 +2936,10 @@ egeneral:
 int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source,
 		u64_t owner_idnr, u64_t * mailbox_idnr, const char * * message)
 {
-	int parent_right_to_create = -1;
-	int other_namespace = 0;
 	int skip_and_free = DM_SUCCESS;
 	u64_t created_mboxid = 0;
-	int result;
-	GList *mailboxes = NULL;
+	int result, ok_to_create = -1;
+	GList *mailbox_list = NULL, *mailbox_item = NULL;
 
 	assert(mailbox);
 	assert(mailbox_idnr);
@@ -2927,113 +2948,130 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 	TRACE(TRACE_INFO, "Creating mailbox [%s] source [%d] for user [%llu]",
 			mailbox, source, owner_idnr);
 
-	/* check if new name is valid */
+	/* Check if new name is valid. */
 	if (!checkmailboxname(mailbox)) {
 		*message = "New mailbox name contains invalid characters";
 		TRACE(TRACE_MESSAGE, "New mailbox name contains invalid characters. Aborting create.");
 	        return DM_EGENERAL;
         }
 
-	/* There used to be a removal of slashes here. Why? */
+	/* Check if mailbox already exists. */
 	if (db_findmailbox(mailbox, owner_idnr, mailbox_idnr) == 1) {
 		*message = "Mailbox already exists";
 		TRACE(TRACE_ERROR, "Asked to create mailbox which already exists. Aborting create.");
 		return DM_EGENERAL;
 	}
 
-	if (db_imap_split_mailbox(mailbox, owner_idnr,
-			&mailboxes, message) != DM_SUCCESS) {
+	if (db_imap_split_mailbox(mailbox, owner_idnr, &mailbox_list, message) != DM_SUCCESS) {
 		TRACE(TRACE_ERROR, "Negative return code from db_imap_split_mailbox.");
-		// Message pointer was set by the function.
+		// Message pointer was set by db_imap_split_mailbox
 		return DM_EGENERAL;
 	}
 
-	mailboxes = g_list_first(mailboxes);
-	while (mailboxes) {
-		mailbox_t *mbox = (mailbox_t *)mailboxes->data;
+	if (source == BOX_BRUTEFORCE) {
+		TRACE(TRACE_INFO, "Mailbox requested with BRUTEFORCE creation status; "
+			"pretending that all permissions have been granted to create it.");
+		ok_to_create = 1;
+	}
 
-		/* skip_and_free means that there was an error,
-		 * so we're not going to create any new mailboxes,
-		 * but we do need to continue freeing the mailbox_t's.
-		 */
-		if (skip_and_free == DM_SUCCESS) {
+	mailbox_item = g_list_first(mailbox_list);
+	while (mailbox_item) {
+		mailbox_t *mbox = (mailbox_t *)mailbox_item->data;
 
-		if (mbox->is_users || mbox->is_public) {
-			// This will carry on through the rest of the loop.
-			other_namespace = 1;
-			/* Don't try to create the #Users or #Public mailboxes;
-			 * they are hardcoded here and elsewhere. Skip the rest
-			 * of this loop and go around again.  */
+		/* Needs to be created. */
+		if (mbox->uid == 0) {
+			if (mbox->is_users && mbox->owner_idnr != owner_idnr) {
+				*message = "Top-level mailboxes may not be created for others under #Users";
+				skip_and_free = DM_EGENERAL;
+			} else {
+				u64_t this_owner_idnr;
 
-		} else if (mbox->uid == 0) {
-			/* Needs to be created. */
-			// If there was an error, skip_and_free will be set
-			// and we won't ever get to this part of the code;
-			// the -1 would only come from the initial value.
-			if (parent_right_to_create != 0) {
-				/* auto-creation implies subscription */
-				if ( ((result = db_createmailbox(mbox->name, owner_idnr, &created_mboxid))
-						== DM_EQUERY)
-				 ||  ((result = db_subscribe(created_mboxid, owner_idnr))
-						== DM_EQUERY)) {
-					*message = "Internal database error while creating and subscribing";
+				/* Only the ANYONE user is allowed to own #Public. */
+				if (mbox->is_public
+				&& strcasecmp(mbox->name, NAMESPACE_PUBLIC) == 0) {
+					this_owner_idnr = mbox->owner_idnr;
+				} else {
+					this_owner_idnr = owner_idnr;
+				}
+
+				/* Create it! */
+				result = db_createmailbox(mbox->name, this_owner_idnr, &created_mboxid);
+				if (result == DM_EGENERAL) {
+					*message = "General error while creating";
+					skip_and_free = DM_EGENERAL;
+				} else if (result == DM_EQUERY) {
+					*message = "Database error while creating";
 					skip_and_free = DM_EQUERY;
 				} else {
-					*message = "Folder created";
+					/* Subscribe to the newly created mailbox. */
+					result = db_subscribe(created_mboxid, owner_idnr);
+					if (result == DM_EGENERAL) {
+						*message = "General error while subscribing";
+						skip_and_free = DM_EGENERAL;
+					} else if (result == DM_EQUERY) {
+						*message = "Database error while subscribing";
+						skip_and_free = DM_EQUERY;
+					}
 				}
-			
-			} else {
-				if (parent_right_to_create > 0) {
-				*message = "No permission to create mailbox 1";
-				} else {
-				*message = "No permission to create mailbox -1";
-				}
-				skip_and_free = DM_EGENERAL;
 			}
 
-		} else if (source == BOX_BRUTEFORCE) {
-			TRACE(TRACE_INFO, "Mailbox requested with BRUTEFORCE creation status; "
-				"pretending that all permissions have been granted to create it.");
-			parent_right_to_create = 1;
-		} else {
+			if (!skip_and_free) {
+				*message = "Folder created";
+				mbox->uid = created_mboxid;
+			}
+		}
+
+		if (skip_and_free)
+			break;
+
+		if (source != BOX_BRUTEFORCE) {
+			TRACE(TRACE_DEBUG, "Checking if we have the right to "
+				"create mailboxes under mailbox [%llu]", mbox->uid);
+
 			/* Mailbox does exist, failure if no_inferiors flag set. */
-			if ( ((result = db_noinferiors(mbox->uid)) == DM_EGENERAL) ) {
+			result = db_noinferiors(mbox->uid);
+			if (result == DM_EGENERAL) {
 				*message = "Mailbox cannot have inferior names";
 				skip_and_free = DM_EGENERAL;
-			}
-
-
-			if (result == DM_EQUERY) {
+			} else if (result == DM_EQUERY) {
 				*message = "Internal database error while checking inferiors";
 				skip_and_free = DM_EQUERY;
 			}
 
-			TRACE(TRACE_DEBUG, "Checking if we have the right to "
-				"create mailboxes under mailbox [%llu]", mbox->uid);
-
-			if ((parent_right_to_create =
-				acl_has_right(mbox, owner_idnr, ACL_RIGHT_CREATE))
-					== DM_EQUERY) {
-				*message = "Internal database error while checking acl";
+			/* Mailbox does exist, failure if ACLs disallow CREATE. */
+			result = acl_has_right(mbox, owner_idnr, ACL_RIGHT_CREATE);
+			if (result == 0) {
+				*message = "Permission to create mailbox denied";
+				skip_and_free = DM_EGENERAL;
+			} else if (result < 0) {
+				*message = "Internal database error while checking ACL";
 				skip_and_free = DM_EQUERY;
 			}
+
+			if (!skip_and_free)
+				ok_to_create = 1;
 		}
 
-		} /* skip_and_free. */
+		if (skip_and_free)
+			break;
 
+		mailbox_item = g_list_next(mailbox_item);
+	}
+
+	mailbox_item = g_list_first(mailbox_list);
+	while (mailbox_item) {
+		mailbox_t *mbox = (mailbox_t *)mailbox_item->data;
 		g_free(mbox->name);
 		g_free(mbox);
-
-		mailboxes = g_list_next(mailboxes);
+		mailbox_item = g_list_next(mailbox_item);
 	}
-	g_list_free(mailboxes);
+	g_list_free(mailbox_list);
 
 	*mailbox_idnr = created_mboxid;
 	return skip_and_free;
 }
 
-int db_createmailbox(const char *name, u64_t owner_idnr,
-		     u64_t * mailbox_idnr)
+int db_createmailbox(const char * name, u64_t owner_idnr, u64_t * mailbox_idnr)
 {
 	const char *simple_name;
 	char *escaped_simple_name;
@@ -3042,22 +3080,19 @@ int db_createmailbox(const char *name, u64_t owner_idnr,
 	int result;
 
 	if (auth_requires_shadow_user()) {
-		trace(TRACE_DEBUG, "%s,%s: creating shadow user for [%llu]",
-				__FILE__, __func__, owner_idnr);
+		TRACE(TRACE_DEBUG, "creating shadow user for [%llu]",
+				owner_idnr);
 		if ((db_user_find_create(owner_idnr) < 0)) {
-			trace(TRACE_ERROR, "%s,%s: unable to find or create sql shadow "
-					"account for useridnr [%llu]", 
-					__FILE__, __func__, owner_idnr);
+			TRACE(TRACE_ERROR, "unable to find or create sql shadow account for useridnr [%llu]", 
+					owner_idnr);
 			return DM_EQUERY;
 		}
 	}
 
 	/* remove namespace information from mailbox name */
-	if (!(simple_name = mailbox_remove_namespace(name))) {
-		trace(TRACE_ERROR,
-		      "%s,%s: could not create simple mailbox name "
-		      "from full name", __FILE__, __func__);
-		return DM_EQUERY;
+	if (!(simple_name = mailbox_remove_namespace(name, NULL, NULL))) {
+		TRACE(TRACE_MESSAGE, "Could not remove mailbox namespace.");
+		return DM_EGENERAL;
 	}
 
 	escaped_simple_name = dm_stresc(simple_name);
@@ -3066,21 +3101,20 @@ int db_createmailbox(const char *name, u64_t owner_idnr,
 		 "INSERT INTO %smailboxes (name, owner_idnr,"
 		 "seen_flag, answered_flag, deleted_flag, flagged_flag, "
 		 "recent_flag, draft_flag, permission)"
-		 " VALUES ('%s', '%llu', 1, 1, 1, 1, 1, 1, %d)",DBPFX,
+		 " VALUES ('%s', %llu, 1, 1, 1, 1, 1, 1, %d)",DBPFX,
 		 escaped_simple_name, owner_idnr, IMAPPERM_READWRITE);
 
 	dm_free(escaped_simple_name);
 
 	if ((result = db_query(query)) == DM_EQUERY) {
-		trace(TRACE_ERROR, "%s,%s: could not create mailbox",
-		      __FILE__, __func__);
+		TRACE(TRACE_ERROR, "could not create mailbox");
 		return DM_EQUERY;
 	}
 
 	*mailbox_idnr = db_insert_result("mailbox_idnr");
 
-	trace(TRACE_DEBUG,"%s,%s: created mailbox with idnr [%llu] for user [%llu] result [%d]",
-			__FILE__, __func__, *mailbox_idnr, owner_idnr, result);
+	TRACE(TRACE_DEBUG, "created mailbox with idnr [%llu] for user [%llu] result [%d]",
+			*mailbox_idnr, owner_idnr, result);
 
 	return DM_SUCCESS;
 }
@@ -3091,7 +3125,7 @@ int db_mailbox_set_permission(u64_t mailbox_id, int permission)
 	int result;
 	assert(mailbox_id);
 
-	snprintf(query,DEF_QUERYSIZE,"UPDATE %smailboxes SET permission='%d' WHERE mailbox_idnr=%llu",
+	snprintf(query,DEF_QUERYSIZE,"UPDATE %smailboxes SET permission=%d WHERE mailbox_idnr=%llu",
 			DBPFX, permission, mailbox_id);
 	if ((result = db_query(query))) {
 		TRACE(TRACE_ERROR, "query failed");
@@ -3165,7 +3199,7 @@ int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
 	/* retrieve the name of this mailbox */
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT name FROM %smailboxes WHERE "
-		 "mailbox_idnr = '%llu' AND owner_idnr = '%llu'",DBPFX,
+		 "mailbox_idnr = %llu AND owner_idnr = %llu",DBPFX,
 		 mailbox_idnr, user_idnr);
 
 	if (db_query(query) == -1) {
@@ -3193,14 +3227,14 @@ int db_listmailboxchildren(u64_t mailbox_idnr, u64_t user_idnr,
 	if (mailbox_like) {
 		snprintf(query, DEF_QUERYSIZE,
 			 "SELECT mailbox_idnr FROM %smailboxes WHERE %s"
-			 " AND owner_idnr = '%llu'",DBPFX,
+			 " AND owner_idnr = %llu",DBPFX,
 			 mailbox_like, user_idnr);
 		dm_free(mailbox_like);
 	}
 	else
 		snprintf(query, DEF_QUERYSIZE,
 			 "SELECT mailbox_idnr FROM %smailboxes WHERE"
-			 " owner_idnr = '%llu'", DBPFX, user_idnr);
+			 " owner_idnr = %llu", DBPFX, user_idnr);
 	
 	/* now find the children */
 	if (db_query(query) == -1) {
@@ -3240,7 +3274,7 @@ int db_isselectable(u64_t mailbox_idnr)
 	long not_selectable;
 
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT no_select FROM %smailboxes WHERE mailbox_idnr = '%llu'",DBPFX,
+		 "SELECT no_select FROM %smailboxes WHERE mailbox_idnr = %llu",DBPFX,
 		 mailbox_idnr);
 
 	if (db_query(query) == -1) {
@@ -3276,7 +3310,7 @@ int db_noinferiors(u64_t mailbox_idnr)
 	long no_inferiors;
 
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT no_inferiors FROM %smailboxes WHERE mailbox_idnr = '%llu'",DBPFX,
+		 "SELECT no_inferiors FROM %smailboxes WHERE mailbox_idnr = %llu",DBPFX,
 		 mailbox_idnr);
 
 	if (db_query(query) == -1) {
@@ -3307,7 +3341,7 @@ int db_noinferiors(u64_t mailbox_idnr)
 int db_setselectable(u64_t mailbox_idnr, int select_value)
 {
 	snprintf(query, DEF_QUERYSIZE,
-		 "UPDATE %smailboxes SET no_select = %d WHERE mailbox_idnr = '%llu'",DBPFX,
+		 "UPDATE %smailboxes SET no_select = %d WHERE mailbox_idnr = %llu",DBPFX,
 		 (!select_value), mailbox_idnr);
 
 	if (db_query(query) == -1) {
@@ -3332,17 +3366,17 @@ int db_get_mailbox_size(u64_t mailbox_idnr, int only_deleted,
 			 "SELECT sum(pm.messagesize) FROM %smessages msg, "
 			 "%sphysmessage pm "
 			 "WHERE msg.physmessage_id = pm.id "
-			 "AND msg.mailbox_idnr = '%llu' "
-			 "AND msg.status < '%d' "
-			 "AND msg.deleted_flag = '1'",DBPFX,DBPFX, mailbox_idnr,
+			 "AND msg.mailbox_idnr = %llu "
+			 "AND msg.status < %d "
+			 "AND msg.deleted_flag = 1",DBPFX,DBPFX, mailbox_idnr,
 			 MESSAGE_STATUS_DELETE);
 	else
 		snprintf(query, DEF_QUERYSIZE,
 			 "SELECT sum(pm.messagesize) FROM %smessages msg, "
 			 "%sphysmessage pm "
 			 "WHERE msg.physmessage_id = pm.id "
-			 "AND msg.mailbox_idnr = '%llu' "
-			 "AND msg.status < '%d'",DBPFX,DBPFX, mailbox_idnr,
+			 "AND msg.mailbox_idnr = %llu "
+			 "AND msg.status < %d",DBPFX,DBPFX, mailbox_idnr,
 			 MESSAGE_STATUS_DELETE);
 
 	if (db_query(query) == -1) {
@@ -3377,7 +3411,7 @@ int db_removemsg(u64_t user_idnr, u64_t mailbox_idnr)
 	/* update messages belonging to this mailbox: mark as deleted (status 
 	   MESSAGE_STATUS_PURGE) */
 	snprintf(query, DEF_QUERYSIZE,
-		 "UPDATE %smessages SET status='%d' WHERE mailbox_idnr = '%llu'",DBPFX,
+		 "UPDATE %smessages SET status=%d WHERE mailbox_idnr = %llu",DBPFX,
 		 MESSAGE_STATUS_PURGE, mailbox_idnr);
 
 	if (db_query(query) == -1) {
@@ -3401,8 +3435,8 @@ int db_removemsg(u64_t user_idnr, u64_t mailbox_idnr)
 int db_movemsg(u64_t mailbox_to, u64_t mailbox_from)
 {
 	snprintf(query, DEF_QUERYSIZE,
-		 "UPDATE %smessages SET mailbox_idnr='%llu' WHERE"
-		 " mailbox_idnr = '%llu'",DBPFX, mailbox_to, mailbox_from);
+		 "UPDATE %smessages SET mailbox_idnr=%llu WHERE"
+		 " mailbox_idnr = %llu",DBPFX, mailbox_to, mailbox_from);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR,
@@ -3420,7 +3454,7 @@ static u64_t message_get_size(u64_t message_idnr)
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT pm.messagesize FROM %sphysmessage pm, %smessages msg "
 		 "WHERE pm.id = msg.physmessage_id "
-		 "AND message_idnr = '%llu'",DBPFX,DBPFX, message_idnr);
+		 "AND message_idnr = %llu",DBPFX,DBPFX, message_idnr);
 
 	if (db_query(query))
 		return size; /* err */
@@ -3464,10 +3498,10 @@ int db_copymsg(u64_t msg_idnr, u64_t mailbox_to, u64_t user_idnr,
 		 "INSERT INTO %smessages (mailbox_idnr,"
 		 "physmessage_id, seen_flag, answered_flag, deleted_flag, "
 		 "flagged_flag, recent_flag, draft_flag, unique_id, status) "
-		 "SELECT '%llu', "
+		 "SELECT %llu, "
 		 "physmessage_id, seen_flag, answered_flag, deleted_flag, "
 		 "flagged_flag, recent_flag, draft_flag, '%s', status "
-		 "FROM %smessages WHERE message_idnr = '%llu'",DBPFX,
+		 "FROM %smessages WHERE message_idnr = %llu",DBPFX,
 		 mailbox_to, unique_id,DBPFX, msg_idnr);
 
 	if (db_query(query) == -1) {
@@ -3506,7 +3540,7 @@ int db_getmailboxname(u64_t mailbox_idnr, u64_t user_idnr, char *name)
 	}
 
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT name FROM %smailboxes WHERE mailbox_idnr = '%llu'",DBPFX,
+		 "SELECT name FROM %smailboxes WHERE mailbox_idnr = %llu",DBPFX,
 		 mailbox_idnr);
 
 	if (db_query(query) == -1) {
@@ -3555,7 +3589,7 @@ int db_setmailboxname(u64_t mailbox_idnr, const char *name)
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "UPDATE %smailboxes SET name = '%s' "
-		 "WHERE mailbox_idnr = '%llu'",
+		 "WHERE mailbox_idnr = %llu",
 		 DBPFX, escaped_name, mailbox_idnr);
 
 	dm_free(escaped_name);
@@ -3588,8 +3622,8 @@ int db_expunge(u64_t mailbox_idnr, u64_t user_idnr,
 		/* first select msg UIDs */
 		snprintf(query, DEF_QUERYSIZE,
 			 "SELECT message_idnr FROM %smessages WHERE "
-			 "mailbox_idnr = '%llu' AND deleted_flag='1' "
-			 "AND status < '%d' "
+			 "mailbox_idnr = %llu AND deleted_flag=1 "
+			 "AND status < %d "
 			 "ORDER BY message_idnr DESC",DBPFX, mailbox_idnr,
 			 MESSAGE_STATUS_DELETE);
 
@@ -3619,9 +3653,9 @@ int db_expunge(u64_t mailbox_idnr, u64_t user_idnr,
 	/* update messages belonging to this mailbox: 
 	 * mark as expunged (status MESSAGE_STATUS_DELETE) */
 	snprintf(query, DEF_QUERYSIZE,
-		 "UPDATE %smessages SET status='%d' "
-		 "WHERE mailbox_idnr = '%llu' "
-		 "AND deleted_flag='1' AND status < '%d'",DBPFX, 
+		 "UPDATE %smessages SET status=%d "
+		 "WHERE mailbox_idnr = %llu "
+		 "AND deleted_flag=1 AND status < %d",DBPFX, 
 		 MESSAGE_STATUS_DELETE, mailbox_idnr,
 		 MESSAGE_STATUS_DELETE);
 
@@ -3657,8 +3691,8 @@ u64_t db_first_unseen(u64_t mailbox_idnr)
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT MIN(message_idnr) FROM %smessages "
-		 "WHERE mailbox_idnr = '%llu' "
-		 "AND status < '%d' AND seen_flag = '0'",DBPFX,
+		 "WHERE mailbox_idnr = %llu "
+		 "AND status < %d AND seen_flag = 0",DBPFX,
 		 mailbox_idnr, MESSAGE_STATUS_DELETE);
 
 	if (db_query(query) == -1) {
@@ -3678,8 +3712,8 @@ int db_subscribe(u64_t mailbox_idnr, u64_t user_idnr)
 {
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT * FROM %ssubscription "
-		 "WHERE mailbox_id = '%llu' "
-		 "AND user_id = '%llu'",DBPFX, mailbox_idnr, user_idnr);
+		 "WHERE mailbox_id = %llu "
+		 "AND user_id = %llu",DBPFX, mailbox_idnr, user_idnr);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not verify subscription",
@@ -3698,7 +3732,7 @@ int db_subscribe(u64_t mailbox_idnr, u64_t user_idnr)
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "INSERT INTO %ssubscription (user_id, mailbox_id) "
-		 "VALUES ('%llu', '%llu')",DBPFX, user_idnr, mailbox_idnr);
+		 "VALUES (%llu, %llu)",DBPFX, user_idnr, mailbox_idnr);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not insert subscription",
@@ -3713,7 +3747,7 @@ int db_unsubscribe(u64_t mailbox_idnr, u64_t user_idnr)
 {
 	snprintf(query, DEF_QUERYSIZE,
 		 "DELETE FROM %ssubscription "
-		 "WHERE user_id = '%llu' AND mailbox_id = '%llu'",DBPFX,
+		 "WHERE user_id = %llu AND mailbox_id = %llu",DBPFX,
 		 user_idnr, mailbox_idnr);
 
 	if (db_query(query) == -1) {
@@ -3749,8 +3783,8 @@ int db_get_msgflag(const char *flag_name, u64_t msg_idnr,
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT %s FROM %smessages "
-		 "WHERE message_idnr = '%llu' AND status < '%d' "
-		 "AND mailbox_idnr = '%llu'",
+		 "WHERE message_idnr = %llu AND status < %d "
+		 "AND mailbox_idnr = %llu",
 		 the_flag_name, DBPFX, msg_idnr, 
 		 MESSAGE_STATUS_DELETE, mailbox_idnr);
 
@@ -3775,8 +3809,8 @@ int db_get_msgflag_all(u64_t msg_idnr, u64_t mailbox_idnr, int *flags)
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT seen_flag, answered_flag, deleted_flag, "
 		 "flagged_flag, draft_flag, recent_flag FROM %smessages "
-		 "WHERE message_idnr = '%llu' AND status IN ('%d','%d') "
-		 "AND mailbox_idnr = '%llu'",DBPFX, msg_idnr, 
+		 "WHERE message_idnr = %llu AND status IN (%d,%d) "
+		 "AND mailbox_idnr = %llu",DBPFX, msg_idnr, 
 		 MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
 		 mailbox_idnr);
 
@@ -3850,8 +3884,8 @@ int db_set_msgflag_range(u64_t msg_idnr_low, u64_t msg_idnr_high,
 	/* last character in string is comma, replace it --> strlen()-1 */
 	left = DEF_QUERYSIZE - strlen(query);
 	snprintf(&query[strlen(query) - 1], left,
-		 " WHERE message_idnr BETWEEN '%llu' AND '%llu' AND "
-		 "status < '%d' AND mailbox_idnr = '%llu'",
+		 " WHERE message_idnr BETWEEN %llu' AND %llu AND "
+		 "status < %d AND mailbox_idnr = %llu",
 		 msg_idnr_low, msg_idnr_high, MESSAGE_STATUS_DELETE, 
 		 mailbox_idnr);
 
@@ -3873,8 +3907,8 @@ int db_set_msgflag_recent_range(u64_t msg_idnr_lo, u64_t msg_idnr_hi, u64_t mail
 {
 	GString *query = g_string_new("");
 	g_string_printf(query, "UPDATE %smessages SET recent_flag=0 WHERE "
-			" WHERE message_idnr BETWEEN '%llu' AND '%llu' AND "
-			"status < '%d' AND mailbox_idnr = '%llu'",
+			" WHERE message_idnr BETWEEN %llu AND %llu AND "
+			"status < %d AND mailbox_idnr = %llu",
 			DBPFX, msg_idnr_lo, msg_idnr_hi, MESSAGE_STATUS_DELETE, mailbox_idnr);
 	if (db_query(query->str) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not update recent_flag",__FILE__,__func__);
@@ -3893,8 +3927,8 @@ int db_get_msgdate(u64_t mailbox_idnr, u64_t msg_idnr, char *date)
 	to_char_str = date2char_str("pm.internal_date");
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT %s FROM %sphysmessage pm, %smessages msg "
-		 "WHERE msg.mailbox_idnr = '%llu' "
-		 "AND msg.message_idnr = '%llu' "
+		 "WHERE msg.mailbox_idnr = %llu "
+		 "AND msg.message_idnr = %llu "
 		 "AND pm.id = msg.physmessage_id",
 		 to_char_str, DBPFX, DBPFX,
 		 mailbox_idnr, msg_idnr);
@@ -3926,8 +3960,8 @@ int db_set_rfcsize(u64_t rfcsize, u64_t msg_idnr, u64_t mailbox_idnr)
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT physmessage_id FROM %smessages "
-		 "WHERE message_idnr = '%llu' "
-		 "AND mailbox_idnr = '%llu'",DBPFX, msg_idnr, mailbox_idnr);
+		 "WHERE message_idnr = %llu "
+		 "AND mailbox_idnr = %llu",DBPFX, msg_idnr, mailbox_idnr);
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR,
 		      "%s,%s: could not get physmessage_id for "
@@ -3946,8 +3980,8 @@ int db_set_rfcsize(u64_t rfcsize, u64_t msg_idnr, u64_t mailbox_idnr)
 	db_free_result();
 
 	snprintf(query, DEF_QUERYSIZE,
-		 "UPDATE %sphysmessage SET rfcsize = '%llu' "
-		 "WHERE id = '%llu'",DBPFX, rfcsize, physmessage_id);
+		 "UPDATE %sphysmessage SET rfcsize = %llu "
+		 "WHERE id = %llu",DBPFX, rfcsize, physmessage_id);
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: could not update  "
 		      "message [%llu]", __FILE__, __func__, msg_idnr);
@@ -3965,9 +3999,9 @@ int db_get_rfcsize(u64_t msg_idnr, u64_t mailbox_idnr, u64_t * rfc_size)
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT pm.rfcsize FROM %sphysmessage pm, %smessages msg "
 		 "WHERE pm.id = msg.physmessage_id "
-		 "AND msg.message_idnr = '%llu' "
-		 "AND msg.status< '%d' "
-		 "AND msg.mailbox_idnr = '%llu'",DBPFX,DBPFX, msg_idnr, MESSAGE_STATUS_DELETE,
+		 "AND msg.message_idnr = %llu "
+		 "AND msg.status< %d "
+		 "AND msg.mailbox_idnr = %llu",DBPFX,DBPFX, msg_idnr, MESSAGE_STATUS_DELETE,
 		 mailbox_idnr);
 
 	if (db_query(query) == -1) {
@@ -3996,9 +4030,9 @@ int db_mailbox_msg_match(u64_t mailbox_idnr, u64_t msg_idnr)
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT message_idnr FROM %smessages "
-		 "WHERE message_idnr = '%llu' "
-		 "AND mailbox_idnr = '%llu' "
-		 "AND status< '%d'",DBPFX, msg_idnr,
+		 "WHERE message_idnr = %llu "
+		 "AND mailbox_idnr = %llu "
+		 "AND status< %d",DBPFX, msg_idnr,
 		 mailbox_idnr, MESSAGE_STATUS_DELETE);
 
 	if (db_query(query) == -1) {
@@ -4040,9 +4074,9 @@ int db_acl_has_right(mailbox_t *mailbox, u64_t userid, const char *right_flag)
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT * FROM %sacl "
-		 "WHERE user_id = '%llu' "
-		 "AND mailbox_id = '%llu' "
-		 "AND %s = '1'",DBPFX, userid, mboxid, right_flag);
+		 "WHERE user_id = %llu "
+		 "AND mailbox_id = %llu "
+		 "AND %s = 1",DBPFX, userid, mboxid, right_flag);
 
 	if (db_query(query) < 0) {
 		trace(TRACE_ERROR, "%s,%s: error finding acl_right",
@@ -4068,7 +4102,7 @@ static int acl_query(u64_t mailbox_idnr, u64_t userid)
 			 "write_flag,insert_flag,post_flag,"
 			 "create_flag,delete_flag,administer_flag "
 		 "FROM %sacl "
-		 "WHERE user_id = '%llu' AND mailbox_id = '%llu'",DBPFX,
+		 "WHERE user_id = %llu AND mailbox_id = %llu",DBPFX,
 		 userid, mailbox_idnr);
 
 	if (db_query(query) < 0) {
@@ -4127,7 +4161,7 @@ static int db_acl_has_acl(u64_t userid, u64_t mboxid)
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT user_id, mailbox_id FROM %sacl "
-		 "WHERE user_id = '%llu' AND mailbox_id = '%llu'",DBPFX,
+		 "WHERE user_id = %llu AND mailbox_id = %llu",DBPFX,
 		 userid, mboxid);
 
 	if (db_query(query) < 0) {
@@ -4149,7 +4183,7 @@ static int db_acl_create_acl(u64_t userid, u64_t mboxid)
 {
 	snprintf(query, DEF_QUERYSIZE,
 		 "INSERT INTO %sacl (user_id, mailbox_id) "
-		 "VALUES ('%llu', '%llu')",DBPFX, userid, mboxid);
+		 "VALUES (%llu, %llu)",DBPFX, userid, mboxid);
 
 	if (db_query(query) < 0) {
 		trace(TRACE_ERROR,
@@ -4201,8 +4235,8 @@ int db_acl_set_right(u64_t userid, u64_t mboxid, const char *right_flag,
 	}
 
 	snprintf(query, DEF_QUERYSIZE,
-		 "UPDATE %sacl SET %s = '%i' "
-		 "WHERE user_id = '%llu' AND mailbox_id = '%llu'",DBPFX,
+		 "UPDATE %sacl SET %s = %i "
+		 "WHERE user_id = %llu AND mailbox_id = %llu",DBPFX,
 		 right_flag, set, userid, mboxid);
 
 	if (db_query(query) < 0) {
@@ -4223,7 +4257,7 @@ int db_acl_delete_acl(u64_t userid, u64_t mboxid)
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "DELETE FROM %sacl "
-		 "WHERE user_id = '%llu' AND mailbox_id = '%llu'",DBPFX,
+		 "WHERE user_id = %llu AND mailbox_id = %llu",DBPFX,
 		 userid, mboxid);
 
 	if (db_query(query) < 0) {
@@ -4246,7 +4280,7 @@ int db_acl_get_identifier(u64_t mboxid, struct dm_list *identifier_list)
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT %susers.userid FROM %susers, %sacl "
-		 "WHERE %sacl.mailbox_id = '%llu' "
+		 "WHERE %sacl.mailbox_id = %llu "
 		 "AND %susers.user_idnr = %sacl.user_id",DBPFX,DBPFX,DBPFX,
 		DBPFX,mboxid,DBPFX,DBPFX);
 
@@ -4277,7 +4311,7 @@ int db_get_mailbox_owner(u64_t mboxid, u64_t * owner_id)
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT owner_idnr FROM %smailboxes "
-		 "WHERE mailbox_idnr = '%llu'", DBPFX, mboxid);
+		 "WHERE mailbox_idnr = %llu", DBPFX, mboxid);
 
 	if (db_query(query) < 0) {
 		trace(TRACE_ERROR, "%s,%s: error finding owner of mailbox "
@@ -4299,8 +4333,8 @@ int db_user_is_mailbox_owner(u64_t userid, u64_t mboxid)
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT mailbox_idnr FROM %smailboxes "
-		 "WHERE mailbox_idnr = '%llu' "
-		 "AND owner_idnr = '%llu'", DBPFX, mboxid, userid);
+		 "WHERE mailbox_idnr = %llu "
+		 "AND owner_idnr = %llu", DBPFX, mboxid, userid);
 
 	if (db_query(query) < 0) {
 		trace(TRACE_ERROR,
@@ -4408,7 +4442,7 @@ int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * m
 
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT owner_idnr, name, no_select, no_inferiors "
-		 "FROM %smailboxes WHERE mailbox_idnr = '%llu'",
+		 "FROM %smailboxes WHERE mailbox_idnr = %llu",
 		 DBPFX, mailbox_idnr);
 
 	if (db_query(query) == -1) {
@@ -4443,7 +4477,7 @@ int db_getmailbox_list_result(u64_t mailbox_idnr, u64_t user_idnr, mailbox_t * m
 			
 	snprintf(query, DEF_QUERYSIZE,
 			"SELECT COUNT(*) AS nr_children "
-			"FROM %smailboxes WHERE owner_idnr = '%llu' "
+			"FROM %smailboxes WHERE owner_idnr = %llu "
 			"AND %s",
 			DBPFX, user_idnr, mailbox_like);
 
@@ -4640,14 +4674,14 @@ int db_user_create(const char *username, const char *password, const char *encty
 		snprintf(query, DEF_QUERYSIZE, "INSERT INTO %susers "
 			"(userid,passwd,client_idnr,maxmail_size,"
 			"encryption_type, last_login) VALUES "
-			"('%s','%s',%llu,'%llu','%s', %s)",
+			"('%s','%s',%llu,%llu,'%s', %s)",
 			DBPFX, escaped_username, escaped_password, clientid, 
 			maxmail, enctype ? enctype : "", db_get_sql(SQL_CURRENT_TIMESTAMP));
 	} else {
 		snprintf(query, DEF_QUERYSIZE, "INSERT INTO %susers "
 			"(userid,user_idnr,passwd,client_idnr,maxmail_size,"
 			"encryption_type, last_login) VALUES "
-			"('%s',%llu,'%s',%llu,'%llu','%s', %s)",
+			"('%s',%llu,'%s',%llu,%llu,'%s', %s)",
 			DBPFX,escaped_username,*user_idnr, escaped_password,clientid, 
 			maxmail, enctype ? enctype : "", db_get_sql(SQL_CURRENT_TIMESTAMP));
 	}
@@ -4668,8 +4702,8 @@ int db_user_create(const char *username, const char *password, const char *encty
 int db_change_mailboxsize(u64_t user_idnr, u64_t new_size)
 {
 	snprintf(query, DEF_QUERYSIZE,
-		 "UPDATE %susers SET maxmail_size = '%llu' "
-		 "WHERE user_idnr = '%llu'",
+		 "UPDATE %susers SET maxmail_size = %llu "
+		 "WHERE user_idnr = %llu",
 		 DBPFX, new_size, user_idnr);
 
 	if (db_query(query) == -1) {
@@ -4705,7 +4739,7 @@ int db_user_rename(u64_t user_idnr, const char *new_name)
 	char *escaped_new_name;
 
 	escaped_new_name = dm_stresc(new_name);
-	snprintf(query, DEF_QUERYSIZE, "UPDATE %susers SET userid = '%s' WHERE user_idnr='%llu'",
+	snprintf(query, DEF_QUERYSIZE, "UPDATE %susers SET userid = '%s' WHERE user_idnr=%llu",
 		 DBPFX, escaped_new_name, user_idnr);
 	dm_free(escaped_new_name);
 
@@ -4865,7 +4899,7 @@ int db_user_log_login(u64_t user_idnr)
 	create_current_timestring(&timestring);
 	snprintf(query, DEF_QUERYSIZE,
 		 "UPDATE %susers SET last_login = '%s' "
-		 "WHERE user_idnr = '%llu'",DBPFX, timestring,
+		 "WHERE user_idnr = %llu",DBPFX, timestring,
 		 user_idnr);
 
 	if ((result = db_query(query)) == DM_EQUERY)

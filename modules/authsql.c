@@ -111,7 +111,7 @@ int auth_getclientid(u64_t user_idnr, u64_t * client_idnr)
 	*client_idnr = 0;
 
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
-		 "SELECT client_idnr FROM %susers WHERE user_idnr = '%llu'",DBPFX,
+		 "SELECT client_idnr FROM %susers WHERE user_idnr = %llu",DBPFX,
 		 user_idnr);
 
 	if (__auth_query(__auth_query_data) == -1) {
@@ -141,7 +141,7 @@ int auth_getmaxmailsize(u64_t user_idnr, u64_t * maxmail_size)
 	*maxmail_size = 0;
 
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
-		 "SELECT maxmail_size FROM %susers WHERE user_idnr = '%llu'",DBPFX,
+		 "SELECT maxmail_size FROM %susers WHERE user_idnr = %llu",DBPFX,
 		 user_idnr);
 
 	if (__auth_query(__auth_query_data) == -1) {
@@ -181,7 +181,7 @@ char *auth_getencryption(u64_t user_idnr)
 	}
 
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
-		 "SELECT encryption_type FROM %susers WHERE user_idnr = '%llu'",DBPFX,
+		 "SELECT encryption_type FROM %susers WHERE user_idnr = %llu",DBPFX,
 		 user_idnr);
 
 	if (__auth_query(__auth_query_data) == -1) {
@@ -344,7 +344,7 @@ int auth_change_password(u64_t user_idnr, const char *new_pass,
 
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
 		 "UPDATE %susers SET passwd = '%s', encryption_type = '%s' "
-		 " WHERE user_idnr='%llu'", DBPFX,
+		 " WHERE user_idnr=%llu", DBPFX,
 		 escapedpass, enctype ? enctype : "", user_idnr);
 
 	if (__auth_query(__auth_query_data) == -1) {
@@ -360,8 +360,8 @@ int auth_change_password(u64_t user_idnr, const char *new_pass,
 int auth_change_clientid(u64_t user_idnr, u64_t new_cid)
 {
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
-		 "UPDATE %susers SET client_idnr = '%llu' "
-		 "WHERE user_idnr='%llu'",
+		 "UPDATE %susers SET client_idnr = %llu "
+		 "WHERE user_idnr=%llu",
 		 DBPFX, new_cid, user_idnr);
 
 	if (__auth_query(__auth_query_data) == -1) {
@@ -398,9 +398,8 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 		return 0;
 	}
 
-
 	/* the shared mailbox user should not log in! */
-	if (strcmp(username, SHARED_MAILBOX_USERNAME) == 0)
+	if (strcmp(username, PUBLIC_FOLDER_USER) == 0)
 		return 0;
 
 	strncpy(real_username, username, DM_USERNAME_LEN);
@@ -418,7 +417,7 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
 		 "SELECT user_idnr, passwd, encryption_type FROM %susers "
-		 "WHERE user_idnr = '%llu'", DBPFX, *user_idnr);
+		 "WHERE user_idnr = %llu", DBPFX, *user_idnr);
 
 	if (__auth_query(__auth_query_data) == -1) {
 		trace(TRACE_ERROR,
@@ -513,7 +512,7 @@ u64_t auth_md5_validate(clientinfo_t *ci UNUSED, char *username,
 	
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
 		 "SELECT passwd,user_idnr FROM %susers WHERE "
-		 "user_idnr = '%llu'", DBPFX, user_idnr);
+		 "user_idnr = %llu", DBPFX, user_idnr);
 
 	if (__auth_query(__auth_query_data) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error calling __auth_query()",
@@ -580,7 +579,7 @@ char *auth_get_userid(u64_t user_idnr)
 	char *returnid = NULL;
 
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
-		 "SELECT userid FROM %susers WHERE user_idnr = '%llu'",
+		 "SELECT userid FROM %susers WHERE user_idnr = %llu",
 		 DBPFX, user_idnr);
 
 	if (__auth_query(__auth_query_data) == -1) {
@@ -619,7 +618,7 @@ char *auth_get_userid(u64_t user_idnr)
 int auth_check_userid(u64_t user_idnr)
 {
 	snprintf(__auth_query_data, AUTH_QUERY_SIZE,
-		 "SELECT userid FROM %susers WHERE user_idnr = '%llu'",
+		 "SELECT userid FROM %susers WHERE user_idnr = %llu",
 		 DBPFX, user_idnr);
 
 	if (__auth_query(__auth_query_data) == -1) {
@@ -653,7 +652,7 @@ int auth_get_users_from_clientid(u64_t client_id, u64_t ** user_ids,
 	*num_users = 0;
 
 	snprintf(__auth_query_data, DEF_QUERYSIZE,
-		 "SELECT user_idnr FROM %susers WHERE client_idnr = '%llu'",
+		 "SELECT user_idnr FROM %susers WHERE client_idnr = %llu",
 		 DBPFX, client_id);
 	if (__auth_query(__auth_query_data) == -1) {
 		trace(TRACE_ERROR, "%s,%s: error gettings users for "
@@ -692,8 +691,8 @@ int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid)
 	/* check if this alias already exists */
 	snprintf(__auth_query_data, DEF_QUERYSIZE,
 		 "SELECT alias_idnr FROM %saliases "
-		 "WHERE lower(alias) = lower('%s') AND deliver_to = '%llu' "
-		 "AND client_idnr = '%llu'",DBPFX, escaped_alias, user_idnr, clientid);
+		 "WHERE lower(alias) = lower('%s') AND deliver_to = %llu "
+		 "AND client_idnr = %llu",DBPFX, escaped_alias, user_idnr, clientid);
 
 	if (__auth_query(__auth_query_data) == -1) {
 		/* query failed */
@@ -717,7 +716,7 @@ int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid)
 	db_free_result();
 	snprintf(__auth_query_data, DEF_QUERYSIZE,
 		 "INSERT INTO %saliases (alias,deliver_to,client_idnr) "
-		 "VALUES ('%s','%llu','%llu')",DBPFX, escaped_alias, user_idnr,
+		 "VALUES ('%s',%llu,%llu)",DBPFX, escaped_alias, user_idnr,
 		 clientid);
 	dm_free(escaped_alias);
 
@@ -758,7 +757,7 @@ int auth_addalias_ext(const char *alias,
 			 "SELECT alias_idnr FROM %saliases "
 			 "WHERE lower(alias) = lower('%s') AND "
 			 "lower(deliver_to) = lower('%s') "
-			 "AND client_idnr = '%llu'",DBPFX, escaped_alias, escaped_deliver_to,
+			 "AND client_idnr = %llu",DBPFX, escaped_alias, escaped_deliver_to,
 			 clientid);
 	} else {
 		snprintf(__auth_query_data, DEF_QUERYSIZE,
@@ -792,7 +791,7 @@ int auth_addalias_ext(const char *alias,
 
 	snprintf(__auth_query_data, DEF_QUERYSIZE,
 		 "INSERT INTO %saliases (alias,deliver_to,client_idnr) "
-		 "VALUES ('%s','%s','%llu')",DBPFX, escaped_alias, escaped_deliver_to, clientid);
+		 "VALUES ('%s','%s',%llu)",DBPFX, escaped_alias, escaped_deliver_to, clientid);
 	dm_free(escaped_alias);
 	dm_free(escaped_deliver_to);
 
@@ -818,7 +817,7 @@ int auth_removealias(u64_t user_idnr, const char *alias)
 	db_escape_string(escaped_alias, alias, strlen(alias));
 
 	snprintf(__auth_query_data, DEF_QUERYSIZE,
-		 "DELETE FROM %saliases WHERE deliver_to='%llu' "
+		 "DELETE FROM %saliases WHERE deliver_to=%llu "
 		 "AND lower(alias) = lower('%s')",DBPFX, user_idnr, escaped_alias);
 	dm_free(escaped_alias);
 
@@ -875,7 +874,7 @@ GList * auth_get_user_aliases(u64_t user_idnr)
 	/* do a inverted (DESC) query because adding the names to the 
 	 * final list inverts again */
 	snprintf(__auth_query_data, DEF_QUERYSIZE,
-		 "SELECT alias FROM %saliases WHERE deliver_to = '%llu' "
+		 "SELECT alias FROM %saliases WHERE deliver_to = %llu "
 		 "ORDER BY alias DESC",DBPFX, user_idnr);
 
 	if (__auth_query(__auth_query_data) == -1) {

@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: misc.h 2286 2006-10-01 06:12:58Z aaron $ 
+/* $Id: misc.h 2301 2006-10-08 06:02:43Z aaron $ 
  */
 
 #ifndef _MISC_H
@@ -69,11 +69,15 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
 /**
  * \brief remove the namespace from the fully qualified name
  * \param fq_name full name (with possible namespace) of mailbox
+ * \param namespace returns static pointer to namespace; ignored if NULL.
+ * \param username returns allocated username;
+ * 	only allocated if return value is non-null;
+ * 	ignored if NULL;
  * \return
  *     - NULL on error
  *     - simple name of mailbox
  */
-const char *mailbox_remove_namespace(const char *fq_name);
+const char *mailbox_remove_namespace(const char *fq_name, char **namespace, char **username);
 
 /**
  * write to a client socket. does error checking.

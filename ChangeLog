@@ -1,3 +1,70 @@
+2006-10-09  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail.h.in, modules/authldap.c, modules/authsql.c:
+	minor cleanups in PUBLIC_FOLDER_USER usage
+	* db.c, dbmail-imapsession.c, dbmail-mailbox.c, dbmail-message.c, 
+	  modules/authsql.c:
+	remove quoting on numbers in queries
+
+2006-10-07  Aaron Stone  <aaron@serendpity.cx>
+
+	* misc.h, misc.c:
+	Added two more return pointers to mailbox_remove_namespace, for the
+	namespace itself and the username under #Users namespace.
+	* db.c:
+	Modified db_imap_split_mailbox and db_mailbox_create_with_parents to
+	correctly handle permissions in other namespaces (closes bug #424).
+
+2006-10-06  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-mailbox.c:
+	check for NULL trees
+	* debian/control, debian/copyright:
+	debian policy
+
+2006-10-05  Aaron Stone  <aaron@serendipity.cx>
+
+	* serverchild.c:
+	Implement "self-pipe trick" to prevent signal races with select(2).
+
+2006-10-04  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmail-message.h, dbmail-message.c:
+	Added wrappers around get_crlf_encoded to switch between dot-stuffed
+	and non-dot-stuffed filters -- dot stuffing is needed for POP3 and
+	sendmail pipes (closes bug #403).
+	* dbmailtypes.h, serverparent.c, server.c, serverchild.c, dbmail.conf:
+	Bind to multiple IPs and use select(2) to see what's active (closes
+	bug #269).
+	* pidfile.c, server.c, pool.c:
+	Added variable isChildProcess to avoid trying to remove pidfile and
+	statefile atexit on the child and grandchild processes.
+
+2006-10-04  Paul J Stevens <paul@nfg.nl>
+
+	* debian/dbmail.init:
+	remove --posix switch and fix minor typos
+	* check_dbmail_imapd.c, misc.c:
+	add more cleanups to imap_clean_address (closes #377)
+
+2006-10-03  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmail.conf, man/dbmail.conf.txt:
+	Documentation and example to use dos2unix before calling Qmail's
+	sendmail (closes bug #396).
+
+2006-10-03  Paul J Stevens <paul@nfg.nl>
+
+	* THANKS:
+	update THANKS
+	* export.c:
+	fix typo
+	* sql/mysql/migrate_from_2.0_to_2.1.mysql, 
+	  sql/postgresql/migrate_from_2.0_to_2.1.pgsql:
+	update migrations
+	* db.c:
+	remove messages before removing mailbox (closes #348)
+
 2006-10-01  Aaron Stone  <aaron@serendipity.cx>
 
 	* modules/sortsieve.c, dbmail.conf:

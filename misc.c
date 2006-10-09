@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/*	$Id: misc.c 2288 2006-10-02 05:24:55Z aaron $
+/*	$Id: misc.c 2301 2006-10-08 06:02:43Z aaron $
  *
  *	Miscelaneous functions */
 
@@ -167,37 +167,56 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
 	return fq;
 }
 
-const char *mailbox_remove_namespace(const char *fq_name)
+/* Strips off the #Users or #Public namespace, returning
+ * the simple name, the namespace and username, if present. */
+
+const char *mailbox_remove_namespace(const char *fq_name,
+		char **namespace, char **username)
 {
-	char *temp;
+	char *temp, *user;
+	size_t ns_user_len;
+	size_t ns_publ_len;
+	size_t fq_name_len;
+
+	if (username) *username = NULL;
+	if (namespace) *namespace = NULL;
+
+	fq_name_len = strlen(fq_name);
+	ns_user_len = strlen(NAMESPACE_USER);
+	ns_publ_len = strlen(NAMESPACE_PUBLIC);
 
 	// i.e. '#Users/someuser/foldername'
-	if (strcmp(fq_name, NAMESPACE_USER) == 0) {
-		temp = strstr(fq_name, MAILBOX_SEPARATOR);
-		if (temp == NULL || strlen(temp) <= 1) {
-			trace(TRACE_ERROR, "%s,%s illegal mailbox name",
-			      __FILE__, __func__);
+	if (fq_name_len >= ns_user_len
+	 && strncasecmp(fq_name, NAMESPACE_USER, ns_user_len) == 0) {
+		if (namespace) *namespace = NAMESPACE_USER;
+		user = strstr(fq_name, MAILBOX_SEPARATOR);
+		if (user == NULL || strlen(user) <= 1) {
+			TRACE(TRACE_MESSAGE, "illegal mailbox name");
 			return NULL;
 		}
-		temp = strstr(&temp[1], MAILBOX_SEPARATOR);
+		temp = strstr(&user[1], MAILBOX_SEPARATOR);
 		if (temp == NULL || strlen(temp) <= 1) {
-			trace(TRACE_ERROR, "%s,%s illegal mailbox name",
-			      __FILE__, __func__);
+			TRACE(TRACE_MESSAGE, "illegal mailbox name");
 			return NULL;
+		}
+		if (user >= temp) {
+			TRACE(TRACE_DEBUG, "Username not found.");
+			return NULL;
+		} else {
+			TRACE(TRACE_DEBUG, "Copying out username [%s] of length [%u]",
+				&user[1], temp - user - 1);
+			if (username) *username = g_strndup(&user[1], temp - user - 1);
 		}
 		return &temp[1];
 	}
 	
 	// i.e. '#Public/foldername'
-	if (strcmp(fq_name, NAMESPACE_PUBLIC) == 0) {
-		temp = strstr(fq_name, MAILBOX_SEPARATOR);
-
-		if (temp == NULL || strlen(temp) <= 1) {
-			trace(TRACE_ERROR, "%s,%s illegal mailbox name",
-			      __FILE__, __func__);
-			return NULL;
-		}
-		return &temp[1];
+	// We don't actually strip off the #Public namespace.
+	// Unlike #Users, #Public boxes actually have #Public in their names.
+	if (fq_name_len >= ns_publ_len
+	 && strncasecmp(fq_name, NAMESPACE_PUBLIC, ns_publ_len) == 0) {
+		if (namespace) *namespace = NAMESPACE_PUBLIC;
+		return fq_name;
 	}
 	
 	return fq_name;
@@ -2103,33 +2122,58 @@ char * imap_cleanup_address(const char *a)
 {
 	char *r, *t;
 	char *inptr;
-	char prev;
+	char prev,next=0;
+	unsigned incode=0, inquote=0, done=0;
 	GString *s = g_string_new("");
 	
 	t = g_strdup(a);
 	inptr = t;
 	inptr = g_strstrip(inptr);
 	prev = *inptr;
+	if (*(inptr+1))
+		next=*(inptr+1);
 	
 	// quote encoded string
-	if (*inptr == '=') {
-		g_string_append_c(s,'"');
-		
-		while (*inptr && *inptr != ' ' && *inptr != '\t' && *inptr!='<') {
-			if (*inptr == '"') {
-				inptr++;
-				continue;
-			}
-			g_string_append_c(s,*inptr);
-			prev = *inptr;
-			inptr++;
-		}
-		if (prev == '=' && *inptr)
+	if (*inptr == '=' && next=='?') {
+		if (prev != '"')
 			g_string_append_c(s,'"');
-
-		if (*inptr == '<')
-			g_string_append_c(s,' ');
+		inquote=1;
+		incode=1;
 	}
+
+	while (! done) {
+
+		if (! *inptr || *inptr == '<') {
+			done=1;
+			break;
+		}
+
+		if (*inptr == '=' && next=='?')
+			incode=1;
+
+		if (! (incode && (*inptr == '"' || *inptr == ' ')))
+			g_string_append_c(s,*inptr);
+
+		if (prev=='?' && *inptr=='=')
+			incode=0;
+
+		prev = *inptr;
+		inptr++;
+		if (*(inptr+1))
+			next=*(inptr+1);
+
+		if (*inptr == ' ' && next=='<')
+			break;
+	}
+
+	if (*(inptr+1))
+		next=*(inptr+1);
+
+	if (inquote)
+		g_string_append_c(s,'"');
+
+	if (*inptr == '<' && prev != *inptr && prev != ' ')
+		g_string_append_c(s,' ');
 		
 	if (*inptr)
 		g_string_append(s,inptr);

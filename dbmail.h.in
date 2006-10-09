@@ -170,9 +170,6 @@
 #define DEFAULT_LOG_FILE "@DM_LOGDIR@/dbmail.log"
 #define DEFAULT_ERROR_LOG "@DM_LOGDIR@/dbmail.err"
 
-/** username of user that is owner of all mailboxes */
-#define SHARED_MAILBOX_USERNAME "__public__"
-
 /** prefix for #Users namespace */
 #define NAMESPACE_USER "#Users"
 /** prefix for public namespace */
