@@ -398,9 +398,8 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 		return 0;
 	}
 
-
 	/* the shared mailbox user should not log in! */
-	if (strcmp(username, SHARED_MAILBOX_USERNAME) == 0)
+	if (strcmp(username, PUBLIC_FOLDER_USER) == 0)
 		return 0;
 
 	strncpy(real_username, username, DM_USERNAME_LEN);
