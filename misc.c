@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/*	$Id: misc.c 2292 2006-10-04 10:00:16Z paul $
+/*	$Id: misc.c 2301 2006-10-08 06:02:43Z aaron $
  *
  *	Miscelaneous functions */
 
@@ -167,37 +167,56 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
 	return fq;
 }
 
-const char *mailbox_remove_namespace(const char *fq_name)
+/* Strips off the #Users or #Public namespace, returning
+ * the simple name, the namespace and username, if present. */
+
+const char *mailbox_remove_namespace(const char *fq_name,
+		char **namespace, char **username)
 {
-	char *temp;
+	char *temp, *user;
+	size_t ns_user_len;
+	size_t ns_publ_len;
+	size_t fq_name_len;
+
+	if (username) *username = NULL;
+	if (namespace) *namespace = NULL;
+
+	fq_name_len = strlen(fq_name);
+	ns_user_len = strlen(NAMESPACE_USER);
+	ns_publ_len = strlen(NAMESPACE_PUBLIC);
 
 	// i.e. '#Users/someuser/foldername'
-	if (strcmp(fq_name, NAMESPACE_USER) == 0) {
-		temp = strstr(fq_name, MAILBOX_SEPARATOR);
-		if (temp == NULL || strlen(temp) <= 1) {
-			trace(TRACE_ERROR, "%s,%s illegal mailbox name",
-			      __FILE__, __func__);
+	if (fq_name_len >= ns_user_len
+	 && strncasecmp(fq_name, NAMESPACE_USER, ns_user_len) == 0) {
+		if (namespace) *namespace = NAMESPACE_USER;
+		user = strstr(fq_name, MAILBOX_SEPARATOR);
+		if (user == NULL || strlen(user) <= 1) {
+			TRACE(TRACE_MESSAGE, "illegal mailbox name");
 			return NULL;
 		}
-		temp = strstr(&temp[1], MAILBOX_SEPARATOR);
+		temp = strstr(&user[1], MAILBOX_SEPARATOR);
 		if (temp == NULL || strlen(temp) <= 1) {
-			trace(TRACE_ERROR, "%s,%s illegal mailbox name",
-			      __FILE__, __func__);
+			TRACE(TRACE_MESSAGE, "illegal mailbox name");
 			return NULL;
+		}
+		if (user >= temp) {
+			TRACE(TRACE_DEBUG, "Username not found.");
+			return NULL;
+		} else {
+			TRACE(TRACE_DEBUG, "Copying out username [%s] of length [%u]",
+				&user[1], temp - user - 1);
+			if (username) *username = g_strndup(&user[1], temp - user - 1);
 		}
 		return &temp[1];
 	}
 	
 	// i.e. '#Public/foldername'
-	if (strcmp(fq_name, NAMESPACE_PUBLIC) == 0) {
-		temp = strstr(fq_name, MAILBOX_SEPARATOR);
-
-		if (temp == NULL || strlen(temp) <= 1) {
-			trace(TRACE_ERROR, "%s,%s illegal mailbox name",
-			      __FILE__, __func__);
-			return NULL;
-		}
-		return &temp[1];
+	// We don't actually strip off the #Public namespace.
+	// Unlike #Users, #Public boxes actually have #Public in their names.
+	if (fq_name_len >= ns_publ_len
+	 && strncasecmp(fq_name, NAMESPACE_PUBLIC, ns_publ_len) == 0) {
+		if (namespace) *namespace = NAMESPACE_PUBLIC;
+		return fq_name;
 	}
 	
 	return fq_name;
