@@ -1,3 +1,11 @@
+2006-10-09  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail.h.in, modules/authldap.c, modules/authsql.c:
+	minor cleanups in PUBLIC_FOLDER_USER usage
+	* db.c, dbmail-imapsession.c, dbmail-mailbox.c, dbmail-message.c, 
+	  modules/authsql.c:
+	remove quoting on numbers in queries
+
 2006-10-07  Aaron Stone  <aaron@serendpity.cx>
 
 	* misc.h, misc.c:
