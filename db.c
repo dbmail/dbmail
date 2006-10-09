@@ -1,4 +1,4 @@
-/* $Id: db.c 2294 2006-10-04 18:31:01Z aaron $ */
+/* $Id: db.c 2301 2006-10-08 06:02:43Z aaron $ */
 /*
   Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
   Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
@@ -22,7 +22,7 @@
 /**
  * \file db.c
  * 
- * $Id: db.c 2294 2006-10-04 18:31:01Z aaron $
+ * $Id: db.c 2301 2006-10-08 06:02:43Z aaron $
  *
  * implement database functionality. This used to split out
  * between MySQL and PostgreSQL, but this is now integrated. 
@@ -2343,71 +2343,49 @@ int db_imap_append_msg(const char *msgdata, u64_t datalen UNUSED,
         return db_set_message_status(*msg_idnr, MESSAGE_STATUS_SEEN);
 }
 
-int db_findmailbox(const char *fq_name, u64_t user_idnr,
-		   u64_t * mailbox_idnr)
+int db_findmailbox(const char *fq_name, u64_t owner_idnr, u64_t * mailbox_idnr)
 {
-	const char *username = NULL;
-	char *mailbox_name;
-	char *name_str_copy;
-	char *tempstr;
-	size_t index;
+	const char *simple_name;
+	char *namespace;
+	char *username;
 	int result;
-	u64_t owner_idnr = 0;
 
 	assert(mailbox_idnr != NULL);
 	*mailbox_idnr = 0;
 
-	trace(TRACE_DEBUG, "%s,%s: looking for mailbox with FQN [%s].",
-	      __FILE__, __func__, fq_name);
+	TRACE(TRACE_DEBUG, "looking for mailbox with FQN [%s].", fq_name);
 
-	name_str_copy = dm_strdup(fq_name);
-	/* If this is a #User or #Public mailbox,
-	 * place a nul at the end of the namespace
-	 * and advance the pointer just beyond that. */
-	if ((strlen(NAMESPACE_USER) > 0) &&
-	    (strstr(fq_name, NAMESPACE_USER) == fq_name)) {
-		index = strcspn(name_str_copy, MAILBOX_SEPARATOR);
-		tempstr = &name_str_copy[index + 1];
-		index = strcspn(tempstr, MAILBOX_SEPARATOR);
-		username = tempstr;
-		tempstr[index] = '\0';
-		mailbox_name = &tempstr[index + 1];
-	} else {
-		if ((strlen(NAMESPACE_PUBLIC) > 0) &&
-		    (strstr(fq_name, NAMESPACE_PUBLIC) == fq_name)) {
-			index = strcspn(name_str_copy, MAILBOX_SEPARATOR);
-			mailbox_name = &name_str_copy[index + 1];
-			username = PUBLIC_FOLDER_USER;
-		} else {
-			mailbox_name = name_str_copy;
-			owner_idnr = user_idnr;
-		}
+	simple_name = mailbox_remove_namespace(fq_name, &namespace, &username);
+
+	if (!simple_name) {
+		TRACE(TRACE_MESSAGE, "Could not remove mailbox namespace.");
+		return DM_EGENERAL;
 	}
+
 	if (username) {
-		trace(TRACE_DEBUG, "%s,%s: finding user with name [%s].",
-		      __FILE__, __func__, username);
+		TRACE(TRACE_DEBUG, "finding user with name [%s].", username);
 		result = auth_user_exists(username, &owner_idnr);
 		if (result < 0) {
-			trace(TRACE_ERROR, "%s,%s: error checking id of "
-			      "user.", __FILE__, __func__);
+			TRACE(TRACE_ERROR, "error checking id of user.");
+			g_free(username);
 			return DM_EQUERY;
 		}
 		if (result == 0) {
-			trace(TRACE_INFO, "%s,%s user [%s] not found.",
-			      __FILE__, __func__, username);
+			TRACE(TRACE_INFO, "user [%s] not found.", username);
+			g_free(username);
 			return DM_SUCCESS;
 		}
 	}
-	result =
-	    db_findmailbox_owner(mailbox_name, owner_idnr, mailbox_idnr);
+
+	result = db_findmailbox_owner(simple_name, owner_idnr, mailbox_idnr);
 	if (result < 0) {
-		trace(TRACE_ERROR,
-		      "%s,%s: error finding mailbox [%s] with "
-		      "owner [%s, %llu]", __FILE__, __func__,
-		      mailbox_name, username, owner_idnr);
+		TRACE(TRACE_ERROR, "error finding mailbox [%s] with owner [%s, %llu]",
+		      simple_name, username, owner_idnr);
+		g_free(username);
 		return DM_EQUERY;
 	}
-	dm_free(name_str_copy);
+
+	g_free(username);
 	return result;
 }
 
@@ -2803,16 +2781,45 @@ int db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr,
 	assert(mailboxes);
 	assert(errmsg);
 
-	char *cpy, **chunks;
-	int i, ret = 0;
-	u64_t mboxid;
+	char *cpy, **chunks = NULL;
+	const char *simple_name;
+	char *namespace, *username;
+	int i, ret = 0, result;
+	int is_users = 0, is_public = 0;
+	u64_t mboxid, anyone;
 
 	/* Scratch space as we build the mailbox names. */
 	cpy = g_new0(char, strlen(mailbox) + 1);
 
+	simple_name = mailbox_remove_namespace(mailbox, &namespace, &username);
+
+	if (username) {
+		TRACE(TRACE_DEBUG, "finding user with name [%s].", username);
+		result = auth_user_exists(username, &owner_idnr);
+		if (result < 0) {
+			TRACE(TRACE_ERROR, "error checking id of user.");
+			goto equery;
+		}
+		if (result == 0) {
+			TRACE(TRACE_INFO, "user [%s] not found.", username);
+			goto egeneral;
+		}
+	}
+
+	if (namespace) {
+		if (strcasecmp(namespace, NAMESPACE_USER) == 0) {
+			is_users = 1;
+		} else if (strcasecmp(namespace, NAMESPACE_PUBLIC) == 0) {
+			is_public = 1;
+		}
+	}
+
+	TRACE(TRACE_DEBUG, "Splitting mailbox [%s] simple name [%s] namespace [%s] username [%s]",
+		mailbox, simple_name, namespace, username);
+
 	/* split up the name  */
-	if (! (chunks = g_strsplit(mailbox, MAILBOX_SEPARATOR, 0))) {
-		trace(TRACE_ERROR, "%s,%s: could not create chunks", __FILE__, __func__);
+	if (! (chunks = g_strsplit(simple_name, MAILBOX_SEPARATOR, 0))) {
+		TRACE(TRACE_ERROR, "could not create chunks");
 		*errmsg = "Server ran out of memory";
 		goto egeneral;
 	}
@@ -2830,23 +2837,11 @@ int db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr,
 			goto egeneral;
 		}
 
-		/* Prepend a mailbox struct onto the list. */
-		mailbox_t *mbox;
-		mbox = g_new0(mailbox_t, 1);
-		*mailboxes = g_list_prepend(*mailboxes, mbox);
-
 		if (i == 0) {
 			if (strcasecmp(chunks[0], "inbox") == 0) {
 				/* Make inbox uppercase */
 				strcpy(chunks[0], "INBOX");
-			} else
-			if (strcmp(chunks[0], NAMESPACE_USER) == 0) {
-				mbox->is_users = 1;
-			} else
-			if (strcmp(chunks[0], NAMESPACE_PUBLIC) == 0) {
-				mbox->is_public = 1;
 			}
-
 			/* The current chunk goes into the name. */
 			strcat(cpy, chunks[0]);
 		} else {
@@ -2857,16 +2852,44 @@ int db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr,
 
 		trace(TRACE_DEBUG, "Preparing mailbox [%s]", cpy);
 
-		if (db_findmailbox(cpy, owner_idnr, &mboxid) == DM_EQUERY) {
-			*errmsg = "Internal database error while looking for mailbox";
-			goto equery;
+		/* Only the ANYONE user is allowed to own #Public itself. */
+		if (i == 0 && is_public) {
+			int test = auth_user_exists(DBMAIL_ACL_ANYONE_USER, &anyone);
+			if (test < 0) {
+				*errmsg = "Internal database error while looking up Anyone user.";
+				goto equery;
+			} else if (test == 0) {
+				*errmsg = "Anyone user required for #Public folder access.";
+				goto egeneral;
+			}
+			if (db_findmailbox(cpy, anyone, &mboxid) == DM_EQUERY) {
+				*errmsg = "Internal database error while looking for mailbox";
+				goto equery;
+			}
+		} else {
+			if (db_findmailbox(cpy, owner_idnr, &mboxid) == DM_EQUERY) {
+				*errmsg = "Internal database error while looking for mailbox";
+				goto equery;
+			}
 		}
+
+		/* Prepend a mailbox struct onto the list. */
+		mailbox_t *mbox;
+		mbox = g_new0(mailbox_t, 1);
+		*mailboxes = g_list_prepend(*mailboxes, mbox);
 
 		/* If the mboxid is 0, then we know
 		 * that the mailbox does not exist. */
 		mbox->name = g_strdup(cpy);
 		mbox->uid = mboxid;
+		mbox->is_users = is_users;
+		mbox->is_public = is_public;
 		mbox->owner_idnr = owner_idnr;
+
+		/* Only the ANYONE user is allowed to own #Public itself. */
+		if (i == 0 && is_public) {
+			mbox->owner_idnr = anyone;
+		}
 	}
 
 	/* We built the path with prepends,
@@ -2875,6 +2898,7 @@ int db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr,
 	*errmsg = "Everything is peachy keen";
 
 	g_strfreev(chunks);
+	g_free(username);
 	dm_free(cpy);
  
 	return DM_SUCCESS;
@@ -2897,6 +2921,7 @@ egeneral:
 	}
 	g_list_free(*mailboxes);
 	g_strfreev(chunks);
+	g_free(username);
 	dm_free(cpy);
 	return ret;
 }
@@ -2914,12 +2939,10 @@ egeneral:
 int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source,
 		u64_t owner_idnr, u64_t * mailbox_idnr, const char * * message)
 {
-	int parent_right_to_create = -1;
-	int other_namespace = 0;
 	int skip_and_free = DM_SUCCESS;
 	u64_t created_mboxid = 0;
-	int result;
-	GList *mailboxes = NULL;
+	int result, ok_to_create = -1;
+	GList *mailbox_list = NULL, *mailbox_item = NULL;
 
 	assert(mailbox);
 	assert(mailbox_idnr);
@@ -2928,113 +2951,130 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 	TRACE(TRACE_INFO, "Creating mailbox [%s] source [%d] for user [%llu]",
 			mailbox, source, owner_idnr);
 
-	/* check if new name is valid */
+	/* Check if new name is valid. */
 	if (!checkmailboxname(mailbox)) {
 		*message = "New mailbox name contains invalid characters";
 		TRACE(TRACE_MESSAGE, "New mailbox name contains invalid characters. Aborting create.");
 	        return DM_EGENERAL;
         }
 
-	/* There used to be a removal of slashes here. Why? */
+	/* Check if mailbox already exists. */
 	if (db_findmailbox(mailbox, owner_idnr, mailbox_idnr) == 1) {
 		*message = "Mailbox already exists";
 		TRACE(TRACE_ERROR, "Asked to create mailbox which already exists. Aborting create.");
 		return DM_EGENERAL;
 	}
 
-	if (db_imap_split_mailbox(mailbox, owner_idnr,
-			&mailboxes, message) != DM_SUCCESS) {
+	if (db_imap_split_mailbox(mailbox, owner_idnr, &mailbox_list, message) != DM_SUCCESS) {
 		TRACE(TRACE_ERROR, "Negative return code from db_imap_split_mailbox.");
-		// Message pointer was set by the function.
+		// Message pointer was set by db_imap_split_mailbox
 		return DM_EGENERAL;
 	}
 
-	mailboxes = g_list_first(mailboxes);
-	while (mailboxes) {
-		mailbox_t *mbox = (mailbox_t *)mailboxes->data;
+	if (source == BOX_BRUTEFORCE) {
+		TRACE(TRACE_INFO, "Mailbox requested with BRUTEFORCE creation status; "
+			"pretending that all permissions have been granted to create it.");
+		ok_to_create = 1;
+	}
 
-		/* skip_and_free means that there was an error,
-		 * so we're not going to create any new mailboxes,
-		 * but we do need to continue freeing the mailbox_t's.
-		 */
-		if (skip_and_free == DM_SUCCESS) {
+	mailbox_item = g_list_first(mailbox_list);
+	while (mailbox_item) {
+		mailbox_t *mbox = (mailbox_t *)mailbox_item->data;
 
-		if (mbox->is_users || mbox->is_public) {
-			// This will carry on through the rest of the loop.
-			other_namespace = 1;
-			/* Don't try to create the #Users or #Public mailboxes;
-			 * they are hardcoded here and elsewhere. Skip the rest
-			 * of this loop and go around again.  */
+		/* Needs to be created. */
+		if (mbox->uid == 0) {
+			if (mbox->is_users && mbox->owner_idnr != owner_idnr) {
+				*message = "Top-level mailboxes may not be created for others under #Users";
+				skip_and_free = DM_EGENERAL;
+			} else {
+				u64_t this_owner_idnr;
 
-		} else if (mbox->uid == 0) {
-			/* Needs to be created. */
-			// If there was an error, skip_and_free will be set
-			// and we won't ever get to this part of the code;
-			// the -1 would only come from the initial value.
-			if (parent_right_to_create != 0) {
-				/* auto-creation implies subscription */
-				if ( ((result = db_createmailbox(mbox->name, owner_idnr, &created_mboxid))
-						== DM_EQUERY)
-				 ||  ((result = db_subscribe(created_mboxid, owner_idnr))
-						== DM_EQUERY)) {
-					*message = "Internal database error while creating and subscribing";
+				/* Only the ANYONE user is allowed to own #Public. */
+				if (mbox->is_public
+				&& strcasecmp(mbox->name, NAMESPACE_PUBLIC) == 0) {
+					this_owner_idnr = mbox->owner_idnr;
+				} else {
+					this_owner_idnr = owner_idnr;
+				}
+
+				/* Create it! */
+				result = db_createmailbox(mbox->name, this_owner_idnr, &created_mboxid);
+				if (result == DM_EGENERAL) {
+					*message = "General error while creating";
+					skip_and_free = DM_EGENERAL;
+				} else if (result == DM_EQUERY) {
+					*message = "Database error while creating";
 					skip_and_free = DM_EQUERY;
 				} else {
-					*message = "Folder created";
+					/* Subscribe to the newly created mailbox. */
+					result = db_subscribe(created_mboxid, owner_idnr);
+					if (result == DM_EGENERAL) {
+						*message = "General error while subscribing";
+						skip_and_free = DM_EGENERAL;
+					} else if (result == DM_EQUERY) {
+						*message = "Database error while subscribing";
+						skip_and_free = DM_EQUERY;
+					}
 				}
-			
-			} else {
-				if (parent_right_to_create > 0) {
-				*message = "No permission to create mailbox 1";
-				} else {
-				*message = "No permission to create mailbox -1";
-				}
-				skip_and_free = DM_EGENERAL;
 			}
 
-		} else if (source == BOX_BRUTEFORCE) {
-			TRACE(TRACE_INFO, "Mailbox requested with BRUTEFORCE creation status; "
-				"pretending that all permissions have been granted to create it.");
-			parent_right_to_create = 1;
-		} else {
+			if (!skip_and_free) {
+				*message = "Folder created";
+				mbox->uid = created_mboxid;
+			}
+		}
+
+		if (skip_and_free)
+			break;
+
+		if (source != BOX_BRUTEFORCE) {
+			TRACE(TRACE_DEBUG, "Checking if we have the right to "
+				"create mailboxes under mailbox [%llu]", mbox->uid);
+
 			/* Mailbox does exist, failure if no_inferiors flag set. */
-			if ( ((result = db_noinferiors(mbox->uid)) == DM_EGENERAL) ) {
+			result = db_noinferiors(mbox->uid);
+			if (result == DM_EGENERAL) {
 				*message = "Mailbox cannot have inferior names";
 				skip_and_free = DM_EGENERAL;
-			}
-
-
-			if (result == DM_EQUERY) {
+			} else if (result == DM_EQUERY) {
 				*message = "Internal database error while checking inferiors";
 				skip_and_free = DM_EQUERY;
 			}
 
-			TRACE(TRACE_DEBUG, "Checking if we have the right to "
-				"create mailboxes under mailbox [%llu]", mbox->uid);
-
-			if ((parent_right_to_create =
-				acl_has_right(mbox, owner_idnr, ACL_RIGHT_CREATE))
-					== DM_EQUERY) {
-				*message = "Internal database error while checking acl";
+			/* Mailbox does exist, failure if ACLs disallow CREATE. */
+			result = acl_has_right(mbox, owner_idnr, ACL_RIGHT_CREATE);
+			if (result == 0) {
+				*message = "Permission to create mailbox denied";
+				skip_and_free = DM_EGENERAL;
+			} else if (result < 0) {
+				*message = "Internal database error while checking ACL";
 				skip_and_free = DM_EQUERY;
 			}
+
+			if (!skip_and_free)
+				ok_to_create = 1;
 		}
 
-		} /* skip_and_free. */
+		if (skip_and_free)
+			break;
 
+		mailbox_item = g_list_next(mailbox_item);
+	}
+
+	mailbox_item = g_list_first(mailbox_list);
+	while (mailbox_item) {
+		mailbox_t *mbox = (mailbox_t *)mailbox_item->data;
 		g_free(mbox->name);
 		g_free(mbox);
-
-		mailboxes = g_list_next(mailboxes);
+		mailbox_item = g_list_next(mailbox_item);
 	}
-	g_list_free(mailboxes);
+	g_list_free(mailbox_list);
 
 	*mailbox_idnr = created_mboxid;
 	return skip_and_free;
 }
 
-int db_createmailbox(const char *name, u64_t owner_idnr,
-		     u64_t * mailbox_idnr)
+int db_createmailbox(const char * name, u64_t owner_idnr, u64_t * mailbox_idnr)
 {
 	const char *simple_name;
 	char *escaped_simple_name;
@@ -3043,22 +3083,19 @@ int db_createmailbox(const char *name, u64_t owner_idnr,
 	int result;
 
 	if (auth_requires_shadow_user()) {
-		trace(TRACE_DEBUG, "%s,%s: creating shadow user for [%llu]",
-				__FILE__, __func__, owner_idnr);
+		TRACE(TRACE_DEBUG, "creating shadow user for [%llu]",
+				owner_idnr);
 		if ((db_user_find_create(owner_idnr) < 0)) {
-			trace(TRACE_ERROR, "%s,%s: unable to find or create sql shadow "
-					"account for useridnr [%llu]", 
-					__FILE__, __func__, owner_idnr);
+			TRACE(TRACE_ERROR, "unable to find or create sql shadow account for useridnr [%llu]", 
+					owner_idnr);
 			return DM_EQUERY;
 		}
 	}
 
 	/* remove namespace information from mailbox name */
-	if (!(simple_name = mailbox_remove_namespace(name))) {
-		trace(TRACE_ERROR,
-		      "%s,%s: could not create simple mailbox name "
-		      "from full name", __FILE__, __func__);
-		return DM_EQUERY;
+	if (!(simple_name = mailbox_remove_namespace(name, NULL, NULL))) {
+		TRACE(TRACE_MESSAGE, "Could not remove mailbox namespace.");
+		return DM_EGENERAL;
 	}
 
 	escaped_simple_name = dm_stresc(simple_name);
@@ -3073,15 +3110,14 @@ int db_createmailbox(const char *name, u64_t owner_idnr,
 	dm_free(escaped_simple_name);
 
 	if ((result = db_query(query)) == DM_EQUERY) {
-		trace(TRACE_ERROR, "%s,%s: could not create mailbox",
-		      __FILE__, __func__);
+		TRACE(TRACE_ERROR, "could not create mailbox");
 		return DM_EQUERY;
 	}
 
 	*mailbox_idnr = db_insert_result("mailbox_idnr");
 
-	trace(TRACE_DEBUG,"%s,%s: created mailbox with idnr [%llu] for user [%llu] result [%d]",
-			__FILE__, __func__, *mailbox_idnr, owner_idnr, result);
+	TRACE(TRACE_DEBUG, "created mailbox with idnr [%llu] for user [%llu] result [%d]",
+			*mailbox_idnr, owner_idnr, result);
 
 	return DM_SUCCESS;
 }
