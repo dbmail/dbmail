@@ -779,7 +779,7 @@ static struct DbmailMessage * _fetch_head(struct DbmailMessage *self)
 {
 	char *query_template = 	"SELECT messageblk "
 		"FROM %smessageblks "
-		"WHERE physmessage_id = '%llu' "
+		"WHERE physmessage_id = %llu "
 		"AND is_header = '1'";
 	return _retrieve(self, query_template);
 
@@ -794,7 +794,7 @@ static struct DbmailMessage * _fetch_full(struct DbmailMessage *self)
 {
 	char *query_template = "SELECT messageblk "
 		"FROM %smessageblks "
-		"WHERE physmessage_id = '%llu' "
+		"WHERE physmessage_id = %llu "
 		"ORDER BY messageblk_idnr";
 	return _retrieve(self, query_template);
 }
@@ -949,7 +949,7 @@ int _message_insert(struct DbmailMessage *self,
 	snprintf(query, DEF_QUERYSIZE, "INSERT INTO "
 		 "%smessages(mailbox_idnr, physmessage_id, unique_id,"
 		 "recent_flag, status) "
-		 "VALUES ('%llu', '%llu', '%s', '1', '%d')",
+		 "VALUES (%llu, %llu, '%s', 1, %d)",
 		 DBPFX, mailboxid, physmessage_id, unique_id,
 		 MESSAGE_STATUS_INSERT);
 
