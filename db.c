@@ -3884,7 +3884,7 @@ int db_set_msgflag_range(u64_t msg_idnr_low, u64_t msg_idnr_high,
 	/* last character in string is comma, replace it --> strlen()-1 */
 	left = DEF_QUERYSIZE - strlen(query);
 	snprintf(&query[strlen(query) - 1], left,
-		 " WHERE message_idnr BETWEEN %llu' AND %llu AND "
+		 " WHERE message_idnr BETWEEN %llu AND %llu AND "
 		 "status < %d AND mailbox_idnr = %llu",
 		 msg_idnr_low, msg_idnr_high, MESSAGE_STATUS_DELETE, 
 		 mailbox_idnr);
