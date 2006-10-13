@@ -1,4 +1,4 @@
-/* $Id: db.c 2302 2006-10-09 09:54:28Z paul $ */
+/* $Id: db.c 2304 2006-10-10 07:13:15Z aaron $ */
 /*
   Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
   Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
@@ -22,7 +22,7 @@
 /**
  * \file db.c
  * 
- * $Id: db.c 2302 2006-10-09 09:54:28Z paul $
+ * $Id: db.c 2304 2006-10-10 07:13:15Z aaron $
  *
  * implement database functionality. This used to split out
  * between MySQL and PostgreSQL, but this is now integrated. 
@@ -3884,7 +3884,7 @@ int db_set_msgflag_range(u64_t msg_idnr_low, u64_t msg_idnr_high,
 	/* last character in string is comma, replace it --> strlen()-1 */
 	left = DEF_QUERYSIZE - strlen(query);
 	snprintf(&query[strlen(query) - 1], left,
-		 " WHERE message_idnr BETWEEN %llu' AND %llu AND "
+		 " WHERE message_idnr BETWEEN %llu AND %llu AND "
 		 "status < %d AND mailbox_idnr = %llu",
 		 msg_idnr_low, msg_idnr_high, MESSAGE_STATUS_DELETE, 
 		 mailbox_idnr);

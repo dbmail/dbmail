@@ -218,7 +218,7 @@ int sort_fileinto(sieve2_context_t *s, void *my)
 {
 	struct sort_context *m = (struct sort_context *)my;
 	extern const char * imap_flag_desc[];
-	const char * const * flags;
+	char * const * flags;
 	const char * mailbox;
 	int *msgflags = NULL;
 
