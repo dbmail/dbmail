@@ -3,12 +3,15 @@
 #
 # Based on the Qmail schema 
 # Modified for dbmail by Paul Stevens <paul@nfg.nl>
+# Modified for dbmail by Lars Kneschke <lkneschke@metaways.de> too
 #
 # This schema depends on:
 #	- core.schema
 #	- cosine.schema
 #	- nis.schema
 #
+# This schema conflicts with
+#	- qmailuser.schema
 
 # Attribute Type Definitions
 
@@ -27,14 +30,38 @@ attributetype ( 1.3.6.1.4.1.12340.6.2.1.3 NAME 'mailHost'
 	EQUALITY caseIgnoreIA5Match
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 )
 
+attributetype ( 1.3.6.1.4.1.12340.6.2.1.4 NAME 'dbmailUID'
+	DESC 'UID of the user on the mailsystem'
+	EQUALITY caseIgnoreMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.44 SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.12340.6.2.1.5 NAME 'dbmailGID'
+	DESC 'GID of the user on the mailsystem'
+	EQUALITY caseIgnoreMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.44 SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.12340.6.2.1.6 NAME 'mailAlternateAddress'
+	DESC 'Secondary (alias) mailaddresses for the same user'
+	EQUALITY caseIgnoreIA5Match
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26{256} )
+
+attributetype ( 1.3.6.1.4.1.12340.6.2.1.7 NAME 'deliveryMode'
+	DESC 'multi field entries of: normal, forwardonly'
+	EQUALITY caseIgnoreMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.44 SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.12340.6.2.1.8 NAME 'accountStatus'
+	DESC 'The status of a user account: active, disabled'
+	EQUALITY caseIgnoreMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.44 SINGLE-VALUE )
 
 # Object Class Definitions
 
 objectclass ( 1.3.6.1.4.1.12340.6.2.2.1 NAME 'dbmailUser'
 	DESC 'DBMail-LDAP User' SUP top AUXILIARY
 	MUST ( uid $ mail )
-	MAY ( userPassword $ uidNumber $ gidNumber $ mailQuota $ mailForwardingAddress $ mailHost ) )
-	      
+	MAY ( userPassword $ uidNumber $ gidNumber $ mailQuota $ mailForwardingAddress $ mailHost $ mailAlternateAddress $ dbmailUID $ dbmailGID $ deliveryMode $  accountStatus ) )
+
 objectclass ( 1.3.6.1.4.1.12340.6.2.2.2 NAME 'dbmailForwardingAddress'
 	DESC 'DBMail-LDAP Forwarding Address' SUP top AUXILIARY
 	MUST ( mail $ mailForwardingAddress ) )

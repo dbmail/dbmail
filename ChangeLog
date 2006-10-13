@@ -1,3 +1,10 @@
+2006-10-13  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail.schema:
+	updated schema file (lars)
+	* modules/dbsqlite.c:
+	set busy handler on sqlite driver (jwagner)
+
 2006-10-09  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail.h.in, modules/authldap.c, modules/authsql.c:

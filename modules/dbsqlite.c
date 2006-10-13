@@ -258,6 +258,7 @@ int db_connect()
 		trace(TRACE_FATAL, "%s,%s: sqlite3_create_function failed", __FILE__,__func__);
 		return -1;
 	}
+	sqlite3_busy_timeout(conn, 60000);
 	return 0;
 }
 
