@@ -1475,8 +1475,7 @@ u64_t dbmail_imap_session_mailbox_get_idnr(struct ImapSession * self, const char
 
 	/* remove leading '/' if present */
 	for (i = 0; mbox[i] && mbox[i] == '/'; i++);
-	memmove(&mbox[0], &mbox[i],
-		(strlen(mbox) - i) * sizeof(char));
+	memmove(&mbox[0], &mbox[i], (strlen(mbox) - i) * sizeof(char));
 
 	db_findmailbox(mbox, ud->userid, &uid);
 	
