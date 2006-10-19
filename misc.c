@@ -186,8 +186,7 @@ const char *mailbox_remove_namespace(const char *fq_name,
 	ns_publ_len = strlen(NAMESPACE_PUBLIC);
 
 	// i.e. '#Users/someuser/foldername'
-	if (fq_name_len >= ns_user_len
-	 && strncasecmp(fq_name, NAMESPACE_USER, ns_user_len) == 0) {
+	if (fq_name_len >= ns_user_len && strncasecmp(fq_name, NAMESPACE_USER, ns_user_len) == 0) {
 		if (namespace) *namespace = NAMESPACE_USER;
 		user = strstr(fq_name, MAILBOX_SEPARATOR);
 		if (user == NULL || strlen(user) <= 1) {
@@ -213,8 +212,7 @@ const char *mailbox_remove_namespace(const char *fq_name,
 	// i.e. '#Public/foldername'
 	// We don't actually strip off the #Public namespace.
 	// Unlike #Users, #Public boxes actually have #Public in their names.
-	if (fq_name_len >= ns_publ_len
-	 && strncasecmp(fq_name, NAMESPACE_PUBLIC, ns_publ_len) == 0) {
+	if (fq_name_len >= ns_publ_len && strncasecmp(fq_name, NAMESPACE_PUBLIC, ns_publ_len) == 0) {
 		if (namespace) *namespace = NAMESPACE_PUBLIC;
 		return fq_name;
 	}
@@ -2098,21 +2096,25 @@ GMimeObject * imap_get_partspec(const GMimeObject *message, const char *partspec
 		if (! (index = strtol((const char *)part, NULL, 0))) 
 			break;
 		
-		if (i==0 && GMIME_IS_MESSAGE(object))
+		if (GMIME_IS_MESSAGE(object))
 			object=GMIME_OBJECT(GMIME_MESSAGE(object)->mime_part);
 		
 		type = (GMimeContentType *)g_mime_object_get_content_type(object);
+
+		if (g_mime_content_type_is_type(type,"multipart","*")) {
+			object=g_mime_multipart_get_part((GMimeMultipart *)object, (int)index-1);
+			type = (GMimeContentType *)g_mime_object_get_content_type(object);
+			assert(object);
+		}
+
+		// for message/rfc822 parts we want the contained message, 
+		// not the mime-part as such
+
 		if (g_mime_content_type_is_type(type,"message","rfc822")) {
 			object=GMIME_OBJECT(GMIME_MESSAGE_PART(object)->message);
 			assert(object);
-			continue;
 		}
-		if (g_mime_content_type_is_type(type,"multipart","*")) {
-			object=g_mime_multipart_get_part((GMimeMultipart *)object, (int)index-1);
-			assert(object);
-			g_object_unref(object);
-			continue;
-		}
+	
 	}
 	return object;
 }

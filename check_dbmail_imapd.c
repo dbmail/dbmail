@@ -211,26 +211,27 @@ START_TEST(test_imap_session_prompt)
 	clientinfo_t *ci = ci_new_writable();
 	struct ImapSession *s = dbmail_imap_session_new();
 	s = dbmail_imap_session_setClientinfo(s,ci);
+	unsigned char *testuser = (unsigned char *)"testuser1";
 
-	base64_encode(tmpline, "testuser1", strlen("testuser1"));
+	base64_encode(tmpline, testuser, strlen("testuser1"));
 	fprintf(ci->tx, "%s\r\n", tmpline);
 	fflush(ci->tx);
-	result = dbmail_imap_session_prompt(s, "username", tmpline);
+	result = dbmail_imap_session_prompt(s, "username", (char *)tmpline);
 	fail_unless(result==0,"dbmail_imap_session_prompt failed");
-	fail_unless(strcmp(tmpline,"testuser1")==0,"failed at the username prompt");
+	fail_unless(strcmp((char *)tmpline,(char *)testuser)==0,"failed at the username prompt");
 
 	// Read back whatever the prompt was.
-	fgets(tmpline, MAX_LINESIZE, ci->rx);
+	fgets((char *)tmpline, MAX_LINESIZE, ci->rx);
 
-	base64_encode(tmpline, "test", strlen("test"));
+	base64_encode(tmpline, (unsigned char *)"test", strlen("test"));
 	fprintf(ci->tx, "%s\r\n", tmpline);
 	fflush(ci->tx);
-	result = dbmail_imap_session_prompt(s, "password", tmpline);
+	result = dbmail_imap_session_prompt(s, "password", (char *)tmpline);
 	fail_unless(result==0,"dbmail_imap_session_prompt failed");
-	fail_unless(strcmp(tmpline,"test")==0,"failed at the password prompt");
+	fail_unless(strcmp((char *)tmpline,"test")==0,"failed at the password prompt");
 	
 	// Read back whatever the prompt was.
-	fgets(tmpline, MAX_LINESIZE, ci->rx);
+	fgets((char *)tmpline, MAX_LINESIZE, ci->rx);
 
 	dbmail_imap_session_delete(s);
 	ci_free_writable(ci);
@@ -289,7 +290,6 @@ END_TEST
 START_TEST(test_dbmail_imap_session_fetch_get_items)
 {
 	int result;
-	u64_t row;
 	char * mailbox = g_strdup("INBOX");
 	struct ImapSession *s = dbmail_imap_session_new();
 	
@@ -297,12 +297,18 @@ START_TEST(test_dbmail_imap_session_fetch_get_items)
 	s = dbmail_imap_session_setClientinfo(s,ci);
 	g_free(ci);
 	
-	dbmail_imap_session_handle_auth(s,"testuser1","test");
-	dbmail_imap_session_mailbox_open(s,mailbox);
+	result = dbmail_imap_session_handle_auth(s,"testuser1","test");
+	fail_unless(result==0, "handle_auth failed");
+	result = dbmail_imap_session_mailbox_open(s,mailbox);
+	fail_unless(result==0, "mailbox_open failed");
+
 	dbmail_mailbox_set_uid(s->mailbox,TRUE);
 	s->fetch_ids = dbmail_mailbox_get_set(s->mailbox,"1:*",TRUE);
 	
+	fail_unless(s->fetch_ids!=NULL, "get_set failed");
+
 	result = dbmail_imap_session_fetch_get_items(s);
+	fail_unless(result==0, "fetch_get_items failed");
 	
 	dbmail_imap_session_delete(s);
 	g_free(mailbox);
@@ -592,8 +598,6 @@ START_TEST(test_imap_get_partspec)
 	GMimeObject *object;
 	char *result, *expect;
 	
-	expect = g_new0(char, 1024);
-	
 	/* text/plain */
 	message = dbmail_message_new();
 	message = dbmail_message_init_with_string(message, g_string_new(rfc822));
@@ -616,6 +620,16 @@ START_TEST(test_imap_get_partspec)
 	message = dbmail_message_new();
 	message = dbmail_message_init_with_string(message, g_string_new(multipart_message));
 
+	object = imap_get_partspec(GMIME_OBJECT(message->content),"1");
+	result = g_mime_object_to_string(object);
+	expect = g_strdup("Content-type: text/html\n"
+	        "Content-disposition: inline\n\n"
+	        "Test message one");
+
+	fail_unless(MATCH(expect,result),"imap_get_partspec failed:\n[%s] != \n [%s]\n", expect, result);
+	g_free(result);
+	g_free(expect);
+
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"1.TEXT");
 	result = imap_get_logical_part(object,"TEXT");
 	fail_unless(strlen(result)==16,"imap_get_partspec failed");
@@ -630,13 +644,35 @@ START_TEST(test_imap_get_partspec)
 	result = imap_get_logical_part(object,"MIME");
 	fail_unless(strlen(result)==93,"imap_get_partspec failed");
 	g_free(result);
-	g_free(expect);
+
+	dbmail_message_free(message);
+	
+
+	/* multipart mixed */
+
+	message = dbmail_message_new();
+	message = dbmail_message_init_with_string(message, g_string_new(multipart_mixed));
+
+	object = imap_get_partspec(GMIME_OBJECT(message->content),"2.HEADER");
+	result = imap_get_logical_part(object,"HEADER");
+	fail_unless(strncmp(result,"From: \"try\" <try@test.kisise>",29)==0,"imap_get_partspec failed");
+	g_free(result);
+
+	object = imap_get_partspec(GMIME_OBJECT(message->content),"2.1.1");
+	result = g_mime_object_to_string(object);
+	printf("[%s]\n", result);
+
+//	fail_unless(strncmp(result,"From: \"try\" <try@test.kisise>",29)==0,"imap_get_partspec failed");
+	g_free(result);
+
+
 
 	dbmail_message_free(message);
 
 }
 END_TEST
 
+#ifdef OLD
 static u64_t get_physid(void)
 {
 	u64_t id = 0;
@@ -659,31 +695,6 @@ static u64_t get_msgsid(void)
 	db_free_result();
 	return id;
 }
-
-#ifdef OLD
-START_TEST(test_imap_message_fetch_headers)
-{
-	char *res;
-	u64_t msgid=get_msgsid();
-	GString *headers = g_string_new("From To Cc Subject Date Message-ID Priority X-Priority References Newsgroups In-Reply-To Content-Type");
-	GList *h = g_string_split(headers," ");
-	
-	res = imap_message_fetch_headers(msgid,h,0);
-	fail_unless(strlen(res) > 0,"imap_message_fetch_headers failed");
-	g_free(res);
-
-	res = imap_message_fetch_headers(msgid,h,1);
-	fail_unless(strlen(res) > 0,"imap_message_fetch_headers failed");
-	g_free(res);
-
-	g_string_free(headers,TRUE);
-	
-	g_list_foreach(h,(GFunc)g_free,NULL);
-	g_list_free(h);
-
-
-}
-END_TEST
 #endif
 
 START_TEST(test_g_list_slices)
@@ -907,7 +918,7 @@ Suite *dbmail_suite(void)
 	tcase_add_test(tc_session, test_imap_get_envelope_latin);
 	tcase_add_test(tc_session, test_imap_get_partspec);
 //	tcase_add_test(tc_session, test_imap_message_fetch_headers);
-//	tcase_add_test(tc_session, test_dbmail_imap_session_fetch_get_items); // FIXME: This segfaults for me...
+	tcase_add_test(tc_session, test_dbmail_imap_session_fetch_get_items); // FIXME: This segfaults for me...
 	
 	tcase_add_checked_fixture(tc_mime, setup, teardown);
 	tcase_add_test(tc_mime, test_g_mime_object_get_body);

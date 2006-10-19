@@ -1,3 +1,9 @@
+2006-10-19  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail.h, check_dbmail_imapd.c, dbmail-imapsession.c, 
+	  debian/control, misc.c:
+	properly descend into message/rfc822 mime-parts during fetch (closes #399)
+
 2006-10-13  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail.schema:
