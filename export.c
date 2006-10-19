@@ -41,7 +41,7 @@ int do_showhelp(void) {
 	printf("*** dbmail-export ***\n");
 	printf("Use this program to export your DBMail mailboxes.\n");
 	printf("     -u username   specify a user\n");
-	printf("     -m mailbox    specify a mailbox\n");
+	printf("     -m mailbox    specify a mailbox (default export all mailboxes)\n");
 	printf("     -o outfile    specify the destination mbox (default ./user/mailbox)\n");
 	printf("\n");
 	printf("Summary of options for all modes:\n");
@@ -57,6 +57,44 @@ int do_showhelp(void) {
 	return 0;
 	
 }
+static int mailbox_dump(u64_t mailbox_idnr, const char *outfile)
+{
+	FILE *ostream;
+	struct DbmailMailbox *mb = NULL;
+	char *dir;
+
+	/* 
+	 * For dbmail the usual filesystem semantics don't really 
+	 * apply. Mailboxes can contain other mailboxes as well as
+	 * messages. For now however, we pretend that mailboxes that 
+	 * contain other mailboxes, never contain messages themselves, 
+	 * as is the custom in mbox country.
+	 *
+	 * TODO: facilitate maildir type exports
+	 */
+	dir = g_path_get_dirname(outfile);
+	if (g_mkdir_with_parents(dir,0700)) {
+		qerrorf("can create directory [%s]\n", dir);
+		g_free(dir);
+		return 1;
+	}
+	g_free(dir);
+
+	if (! (ostream = fopen(outfile,"a"))) {
+		int err=errno;
+		qerrorf("opening [%s] failed [%s]\n", outfile, strerror(err));
+		return -1;
+	}
+
+	mb = dbmail_mailbox_new(mailbox_idnr);
+	if (dbmail_mailbox_dump(mb,ostream) < 0)
+		qerrorf("exporing failed\n");
+
+	if (mb)
+		dbmail_mailbox_free(mb);
+	return 0;
+}
+	
 
 int main(int argc, char *argv[])
 {
@@ -64,8 +102,6 @@ int main(int argc, char *argv[])
 	int show_help = 0;
 	int result = 0;
 	char *user = NULL,*mailbox=NULL, *outfile=NULL;
-	FILE *ostream;
-	struct DbmailMailbox *mb = NULL;
 	u64_t useridnr = 0, mailbox_idnr = 0;
 
 	openlog(PNAME, LOG_PID, LOG_MAIL);
@@ -147,19 +183,11 @@ int main(int argc, char *argv[])
 	}	
 
 	/* If nothing is happening, show the help text. */
-	if (!user || !mailbox || show_help) {
+	if (!user || show_help) {
 		do_showhelp();
 		result = 1;
 		goto freeall;
 	}
-
-	if (! outfile) {
-		GString *t = g_string_new("");
-		g_string_printf(t, "%s/%s", user, mailbox);
-		outfile=t->str;
-		g_string_free(t,FALSE);
-	}
-
 	/* read the config file */
         if (config_read(configFile) == -1) {
                 qerrorf("Failed. Unable to read config file %s\n", configFile);
@@ -195,33 +223,62 @@ int main(int argc, char *argv[])
 		result = -1;
 		goto freeall;
 	}
-	if (db_findmailbox(mailbox, useridnr, &mailbox_idnr) != 1) {
-		qerrorf("Error: cannot verify existence of mailbox [%s].\n", mailbox);
-		result = -1;
-		goto freeall;
-	}
 
-	qerrorf("exporting [%s/%s]\n", user, mailbox);
-	mb = dbmail_mailbox_new(mailbox_idnr);
+	if (mailbox) {
+		if (db_findmailbox(mailbox, useridnr, &mailbox_idnr) != 1) {
+			qerrorf("Error: cannot verify existence of mailbox [%s].\n", mailbox);
+			result = -1;
+			goto freeall;
+		}
+		if (! outfile) {
+			GString *t = g_string_new("");
+			g_string_printf(t, "%s/%s", user, mailbox);
+			outfile=t->str;
+			g_string_free(t,FALSE);
+		}
+		
+		qerrorf("  export mailbox /%s/%s -> %s\n", user, mailbox, outfile);
+		mailbox_dump(mailbox_idnr, outfile);
 
-	if (! (ostream = fopen(outfile,"a"))) {
-		int err=errno;
-		qerrorf("opening [%s] failed [%s]", outfile, strerror(err));
-		result = -1;
-		goto freeall;
+	} else {
+		u64_t *children;
+		u64_t owner_idnr, mailbox_idnr;
+		char *dumpfile;
+		unsigned nchildren,i;
+
+		mailbox = g_new0(char, IMAP_MAX_MAILBOX_NAMELEN);
+		db_findmailbox_by_regex(useridnr, "*", &children, &nchildren, 0);
+		qerrorf("Exporing [%u] mailboxes for [%s]\n", nchildren, user);
+		for (i=0; i< nchildren; i++) {
+			mailbox_idnr = children[i];
+			db_getmailboxname(children[i], useridnr, mailbox);			
+			if (! db_get_mailbox_owner(mailbox_idnr, &owner_idnr)) {
+				qerrorf("Error checking mailbox ownership");
+				goto freeall;
+			}
+			if (owner_idnr != useridnr)
+				continue;
+			
+			if (outfile && chdir(outfile)) {
+				int serr = errno;
+				qerrorf("%s\n", strerror(serr));
+				goto freeall;
+			}
+			dumpfile = g_strdup_printf("%s/%s", user, mailbox);
+			qerrorf(" export mailbox /%s/%s -> %s/%s\n", user, mailbox, outfile, dumpfile);
+			if (mailbox_dump(mailbox_idnr, dumpfile)) {
+				g_free(dumpfile);
+				goto freeall;
+			}
+			g_free(dumpfile);
+		}
+
+
 	}
-	
-	if (dbmail_mailbox_dump(mb,ostream) < 0)
-		qerrorf("exporing failed\n");
-	else
-		qerrorf("exporting finished\n");
 
 	/* Here's where we free memory and quit.
 	 * Be sure that all of these are NULL safe! */
 freeall:
-	
-	if (mb)
-		dbmail_mailbox_free(mb);
 	
 	db_disconnect();
 	auth_disconnect();
