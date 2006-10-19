@@ -1,5 +1,7 @@
 2006-10-19  Paul J Stevens <paul@nfg.nl>
 
+	* dbmail-mailbox.c, export.c:
+	allow export to dump all mailboxes for a user
 	* check_dbmail.h, check_dbmail_imapd.c, dbmail-imapsession.c, 
 	  debian/control, misc.c:
 	properly descend into message/rfc822 mime-parts during fetch (closes #399)

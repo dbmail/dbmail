@@ -219,12 +219,12 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 	struct DbmailMessage *message = NULL;
 	GString *q, *t;
 
-	assert(self->ids);
-
 	if (self->ids==NULL || g_tree_nnodes(self->ids) == 0) {
 		trace(TRACE_DEBUG,"%s,%s: cannot dump empty mailbox",__FILE__, __func__);
 		return 0;
 	}
+	
+	assert(self->ids);
 
 	q = g_string_new("");
 	t = g_string_new("");
