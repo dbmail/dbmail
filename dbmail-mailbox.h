@@ -67,7 +67,7 @@ char * dbmail_mailbox_ids_as_string(struct DbmailMailbox *self);
 char * dbmail_mailbox_sorted_as_string(struct DbmailMailbox *self);
 char * dbmail_mailbox_orderedsubject(struct DbmailMailbox *self);
 
-int dbmail_mailbox_build_imap_search(struct DbmailMailbox *self, char **search_keys, u64_t *idx, int sorted);
+int dbmail_mailbox_build_imap_search(struct DbmailMailbox *self, char **search_keys, u64_t *idx, search_order_t order);
 
 GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboolean uid);
 

@@ -63,6 +63,7 @@ int _ic_fetch(struct ImapSession *self);
 int _ic_store(struct ImapSession *self);
 int _ic_copy(struct ImapSession *self);
 int _ic_uid(struct ImapSession *self);
+int _ic_thread(struct ImapSession *self);
 
 /* quota commands */
 int _ic_getquotaroot(struct ImapSession *self);

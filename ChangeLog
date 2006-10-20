@@ -1,3 +1,10 @@
+2006-10-20  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_imapd.c, check_dbmail_mailbox.c, dbmail-mailbox.c, 
+	  dbmail-mailbox.h, dbmailtypes.h, imap4.c, imap4.h, imapcommands.c, 
+	  imapcommands.h, test-scripts/testthread.txt:
+	added thread=orderedsubject capability to imap
+
 2006-10-19  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-mailbox.c, export.c:
