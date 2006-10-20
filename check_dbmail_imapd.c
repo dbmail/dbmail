@@ -565,7 +565,8 @@ START_TEST(test_imap_cleanup_address)
 	F("Some One <some@foo.org>", "Some One <some@foo.org>");
 	F(" <some@foo.org>", "<some@foo.org>");
 	F("=?ISO-8859-2?Q? \"Verlag=20Dash=F6fer=20-=20DU.cz?= =?ISO-8859-2?Q?\" ?= <e-noviny@smtp.dashofer.cz>",
-	"\"=?ISO-8859-2?Q?Verlag=20Dash=F6fer=20-=20DU.cz?= =?ISO-8859-2?Q??=\" <e-noviny@smtp.dashofer.cz>");
+	"\"=?ISO-8859-2?Q?Verlag=20Dash=F6fer=20-=20DU.cz?= =?ISO-8859-2?Q?"
+		/* Stringify here to kill the '??=' trigraph. */ "?=\" <e-noviny@smtp.dashofer.cz>");
 
 }
 END_TEST
