@@ -2690,8 +2690,8 @@ int db_getmailbox_count(mailbox_t *mb)
  			 "AND (status < %d) AND seen_flag=1 UNION "
  			 "SELECT 'c',COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
  			 "AND (status < %d) AND recent_flag=1", 
- 			 DBPFX, mb->uid, MESSAGE_STATUS_DELETE // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
- 			 DBPFX, mb->uid, MESSAGE_STATUS_DELETE // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
+ 			 DBPFX, mb->uid, MESSAGE_STATUS_DELETE, // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
+ 			 DBPFX, mb->uid, MESSAGE_STATUS_DELETE, // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
  			 DBPFX, mb->uid, MESSAGE_STATUS_DELETE); // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
 
 	if (db_query(query) == -1) {
