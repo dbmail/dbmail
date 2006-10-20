@@ -2685,14 +2685,14 @@ int db_getmailbox_count(mailbox_t *mb)
 	/* count messages */
 	snprintf(query, DEF_QUERYSIZE,
  			 "SELECT 'a',COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
- 			 "AND (status=%d OR status=%d) UNION "
+ 			 "AND (status < %d) UNION "
  			 "SELECT 'b',COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
- 			 "AND (status=%d OR status=%d) AND seen_flag=1 UNION "
+ 			 "AND (status < %d) AND seen_flag=1 UNION "
  			 "SELECT 'c',COUNT(*) FROM %smessages WHERE mailbox_idnr=%llu "
- 			 "AND (status=%d OR status=%d) AND recent_flag=1", 
- 			 DBPFX, mb->uid, MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
- 			 DBPFX, mb->uid, MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
- 			 DBPFX, mb->uid, MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
+ 			 "AND (status < %d) AND recent_flag=1", 
+ 			 DBPFX, mb->uid, MESSAGE_STATUS_DELETE // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
+ 			 DBPFX, mb->uid, MESSAGE_STATUS_DELETE // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
+ 			 DBPFX, mb->uid, MESSAGE_STATUS_DELETE); // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
 
 	if (db_query(query) == -1) {
 		trace(TRACE_ERROR, "%s,%s: query error", __FILE__, __func__);
@@ -2716,9 +2716,9 @@ int db_getmailbox_count(mailbox_t *mb)
 		snprintf(query, DEF_QUERYSIZE, "SELECT message_idnr "
 				"FROM %smessages "
 				"WHERE mailbox_idnr = %llu "
-				"AND status IN (%d,%d) "
+				"AND status < %d "
 				"ORDER BY message_idnr ASC",
-				DBPFX, mb->uid, MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
+				DBPFX, mb->uid, MESSAGE_STATUS_DELETE); // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN);
 		
 		if (db_query(query) == -1) {
 			trace(TRACE_ERROR, "%s,%s: query error [%s]", __FILE__, __func__, query);
@@ -2783,7 +2783,7 @@ int db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr,
 	char *namespace, *username;
 	int i, ret = 0, result;
 	int is_users = 0, is_public = 0;
-	u64_t mboxid, anyone;
+	u64_t mboxid, public;
 
 	/* Scratch space as we build the mailbox names. */
 	cpy = g_new0(char, strlen(mailbox) + 1);
@@ -2849,17 +2849,17 @@ int db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr,
 
 		trace(TRACE_DEBUG, "Preparing mailbox [%s]", cpy);
 
-		/* Only the ANYONE user is allowed to own #Public itself. */
+		/* Only the PUBLIC user is allowed to own #Public itself. */
 		if (i == 0 && is_public) {
-			int test = auth_user_exists(DBMAIL_ACL_ANYONE_USER, &anyone);
+			int test = auth_user_exists(PUBLIC_FOLDER_USER, &public);
 			if (test < 0) {
-				*errmsg = "Internal database error while looking up Anyone user.";
+				*errmsg = "Internal database error while looking up Public user.";
 				goto equery;
 			} else if (test == 0) {
-				*errmsg = "Anyone user required for #Public folder access.";
+				*errmsg = "Public user required for #Public folder access.";
 				goto egeneral;
 			}
-			if (db_findmailbox(cpy, anyone, &mboxid) == DM_EQUERY) {
+			if (db_findmailbox(cpy, public, &mboxid) == DM_EQUERY) {
 				*errmsg = "Internal database error while looking for mailbox";
 				goto equery;
 			}
@@ -2881,11 +2881,12 @@ int db_imap_split_mailbox(const char *mailbox, u64_t owner_idnr,
 		mbox->uid = mboxid;
 		mbox->is_users = is_users;
 		mbox->is_public = is_public;
-		mbox->owner_idnr = owner_idnr;
 
-		/* Only the ANYONE user is allowed to own #Public itself. */
-		if (i == 0 && is_public) {
-			mbox->owner_idnr = anyone;
+		/* Only the PUBLIC user is allowed to own #Public folders. */
+		if (is_public) {
+			mbox->owner_idnr = public;
+		} else {
+			mbox->owner_idnr = owner_idnr;
 		}
 	}
 
@@ -2986,9 +2987,8 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 			} else {
 				u64_t this_owner_idnr;
 
-				/* Only the ANYONE user is allowed to own #Public. */
-				if (mbox->is_public
-				&& strcasecmp(mbox->name, NAMESPACE_PUBLIC) == 0) {
+				/* Only the PUBLIC user is allowed to own #Public. */
+				if (mbox->is_public) {
 					this_owner_idnr = mbox->owner_idnr;
 				} else {
 					this_owner_idnr = owner_idnr;
@@ -3010,6 +3010,15 @@ int db_mailbox_create_with_parents(const char * mailbox, mailbox_source_t source
 						skip_and_free = DM_EGENERAL;
 					} else if (result == DM_EQUERY) {
 						*message = "Database error while subscribing";
+						skip_and_free = DM_EQUERY;
+					}
+				}
+
+				/* If the PUBLIC user owns it, then the current user needs ACLs. */
+				if (mbox->is_public) {
+					result = acl_set_rights(owner_idnr, created_mboxid, "lrswipcda");
+					if (result == DM_EQUERY) {
+						*message = "Database error while setting rights";
 						skip_and_free = DM_EQUERY;
 					}
 				}
@@ -3809,9 +3818,10 @@ int db_get_msgflag_all(u64_t msg_idnr, u64_t mailbox_idnr, int *flags)
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT seen_flag, answered_flag, deleted_flag, "
 		 "flagged_flag, draft_flag, recent_flag FROM %smessages "
-		 "WHERE message_idnr = %llu AND status IN (%d,%d) "
+		 "WHERE message_idnr = %llu AND status < %d "
 		 "AND mailbox_idnr = %llu",DBPFX, msg_idnr, 
-		 MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
+		 // MESSAGE_STATUS_NEW, MESSAGE_STATUS_SEEN,
+		 MESSAGE_STATUS_DELETE,
 		 mailbox_idnr);
 
 	if (db_query(query) == -1) {
@@ -4052,8 +4062,7 @@ int db_acl_has_right(mailbox_t *mailbox, u64_t userid, const char *right_flag)
 
 	u64_t mboxid = mailbox->uid;
 
-	trace(TRACE_DEBUG, "%s,%s: checking ACL [%s] for user [%llu] on mailbox [%llu]",
-			__FILE__, __func__, 
+	TRACE(TRACE_DEBUG, "checking ACL [%s] for user [%llu] on mailbox [%llu]",
 			right_flag, userid, mboxid);
 
 	/* If we don't know who owns the mailbox, look it up. */
@@ -4063,8 +4072,8 @@ int db_acl_has_right(mailbox_t *mailbox, u64_t userid, const char *right_flag)
 			return result;
 	}
 
-	trace(TRACE_DEBUG, "%s, %s: mailbox [%llu] is owned by user [%llu], is that also [%llu]?",
-			__FILE__, __func__, mboxid, userid, mailbox->owner_idnr);
+	TRACE(TRACE_DEBUG, "mailbox [%llu] is owned by user [%llu], is that also [%llu]?",
+			mboxid, userid, mailbox->owner_idnr);
 
 	if (mailbox->owner_idnr == userid) {
 		trace(TRACE_DEBUG, "%s, %s: mailbox [%llu] is owned by user [%llu], giving all rights",
@@ -4092,6 +4101,7 @@ int db_acl_has_right(mailbox_t *mailbox, u64_t userid, const char *right_flag)
 	db_free_result();
 	return result;
 }
+
 static int acl_query(u64_t mailbox_idnr, u64_t userid)
 {
 	trace(TRACE_DEBUG,"%s,%s: for mailbox [%llu] userid [%llu]",

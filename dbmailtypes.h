@@ -66,7 +66,12 @@ typedef enum {
 	DM_EGENERAL 	= 1
 } DbmailErrorCodes;
 
-/** status fields for messages */
+/** Status fields for messages *
+ *
+ * Please note that db.c uses 'status < MESSAGE_STATUS_DELETE'
+ * and these numbers go into the database as magic values,
+ * so don't change them unless you want to break things badly.
+ * */
 typedef enum {
 	MESSAGE_STATUS_NEW     = 0,
 	MESSAGE_STATUS_SEEN    = 1,

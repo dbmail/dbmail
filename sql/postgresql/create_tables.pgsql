@@ -178,9 +178,12 @@ CREATE INDEX dbmail_idx_since ON dbmail_pbsp (since);
 --- Create the user for the delivery chain:
 INSERT INTO dbmail_users (userid, passwd, encryption_type) 
 	VALUES ('__@!internal_delivery_user!@__', '', 'md5');
---- insert the 'anyone' user which is used for ACLs.
+--- Create the 'anyone' user which is used for ACLs.
 INSERT INTO dbmail_users (userid, passwd, encryption_type) 
 	VALUES ('anyone', '', 'md5');
+--- Create the user to own #Public mailboxes
+INSERT INTO dbmail_users (userid, passwd, encryption_type) 
+	VALUES ('__public__', '', 'md5');
 
  
 

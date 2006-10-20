@@ -700,11 +700,7 @@ END_TEST
  *     -  1 on success
  */
 //int db_delete_message(u64_t message_idnr);
-START_TEST(test_db_delete_message)
-{
 
-}
-END_TEST
 /**
  * \brief write lines of message to fstream. Does not write the header
  * \param fstream the stream to write to

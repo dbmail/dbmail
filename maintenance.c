@@ -433,10 +433,11 @@ int do_check_integrity(void)
 	}
 	time(&start);
 
-	/* this is what we do:
-	 * First we're checking for loose messageblocks
-	 * Secondly we're chekcing for loose messages
-	 * Third we're checking for loose mailboxes 
+	/* This is what we do:
+	 1. Check for loose messageblks
+	 2. Check for loose physmessages
+	 3. Check for loose messages
+	 4. Check for loose mailboxes
 	 */
 
 	/* first part */
