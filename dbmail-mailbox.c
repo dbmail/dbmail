@@ -962,7 +962,7 @@ static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u
  *
  * returns -1 on syntax error, -2 on memory error; 0 on success, 1 if ')' has been encountered
  */
-int dbmail_mailbox_build_imap_search(struct DbmailMailbox *self, char **search_keys, u64_t *idx, int sorted)
+int dbmail_mailbox_build_imap_search(struct DbmailMailbox *self, char **search_keys, u64_t *idx, search_order_t order)
 {
 	int result = 0;
 	search_key_t * value, * s;
@@ -983,14 +983,34 @@ int dbmail_mailbox_build_imap_search(struct DbmailMailbox *self, char **search_k
 	append_search(self, value, 0);
 	
 	/* SORT */
-	if (sorted) {
-		value = g_new0(search_key_t,1);
-		value->type = IST_SORT;
-		s = value;
-		while(((result = _handle_sort_args(self, search_keys, value, idx)) == 0) && search_keys[*idx]);
-		if (result < 0)
-			g_free(s);
-	}
+	switch (order) {
+		case SEARCH_SORTED:
+			value = g_new0(search_key_t,1);
+			value->type = IST_SORT;
+			s = value;
+			while(((result = _handle_sort_args(self, search_keys, value, idx)) == 0) && search_keys[*idx]);
+			if (result < 0)
+				g_free(s);
+		break;
+		case SEARCH_THREAD_ORDEREDSUBJECT:
+		case SEARCH_THREAD_REFERENCES:
+			(*idx)++;
+			TRACE(TRACE_DEBUG,"search_key: [%s]", search_keys[*idx]);
+			// eat the charset arg
+			if (MATCH(search_keys[*idx],"utf-8"))
+				(*idx)++;
+			else if (MATCH(search_keys[*idx],"iso-8859-1"))
+				(*idx)++;
+			else
+				return -1;
+
+		break;
+		case SEARCH_UNORDERED:
+		default:
+		// ignore
+		break;
+
+	} 
 
 	/* SEARCH */
 	while(((result = _handle_search_args(self, search_keys, idx)) == 0) && search_keys[*idx]);

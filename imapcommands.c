@@ -1279,25 +1279,29 @@ int _ic_expunge(struct ImapSession *self)
  * search the selected mailbox for messages
  *
  */
-static int sorted_search(struct ImapSession *self, gboolean sorted)
+
+static int sorted_search(struct ImapSession *self, search_order_t order)
 {
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	struct DbmailMailbox *mb;
 	int result = 0;
 	u64_t idx = 0;
 	gchar *s = NULL;
-	gchar *cmd = sorted?"SORT":"SEARCH";
+	gboolean sorted;
 
+	if (order == SEARCH_SORTED)
+		sorted = 1;
+	
 	if (ud->state != IMAPCS_SELECTED) {
 		dbmail_imap_session_printf(self,
 			"%s BAD %s command received in invalid state\r\n",
-			self->tag, cmd);
+			self->tag, self->command);
 		return 1;
 	}
 	
 	if (!self->args[0]) {
 		dbmail_imap_session_printf(self, "%s BAD invalid arguments to %s\r\n",
-			self->tag, cmd);
+			self->tag, self->command);
 		return 1;
 	}
 	
@@ -1313,20 +1317,33 @@ static int sorted_search(struct ImapSession *self, gboolean sorted)
 
 	mb = dbmail_mailbox_new(ud->mailbox.uid);
 	dbmail_mailbox_set_uid(mb,self->use_uid);
-	dbmail_mailbox_build_imap_search(mb, self->args, &idx, sorted);
+	if (dbmail_mailbox_build_imap_search(mb, self->args, &idx, order) < 0) {
+		dbmail_imap_session_printf(self, "%s BAD invalid arguments to %s\r\n",
+			self->tag, self->command);
+		return 1;
+	}
 	dbmail_mailbox_search(mb);
 	/* ok, display results */
-	if (sorted) {
-		dbmail_mailbox_sort(mb);
-		s = dbmail_mailbox_sorted_as_string(mb);
-	} else {
-		s = dbmail_mailbox_ids_as_string(mb);
+	switch(order) {
+		case SEARCH_SORTED:
+			dbmail_mailbox_sort(mb);
+			s = dbmail_mailbox_sorted_as_string(mb);
+		break;
+		case SEARCH_UNORDERED:
+			s = dbmail_mailbox_ids_as_string(mb);
+		break;
+		case SEARCH_THREAD_ORDEREDSUBJECT:
+			s = dbmail_mailbox_orderedsubject(mb);
+		break;
+		case SEARCH_THREAD_REFERENCES:
+			s = NULL; // unsupported
+		break;
 	}
 
-	dbmail_imap_session_printf(self, "* %s %s", cmd, s?s:"");
+	dbmail_imap_session_printf(self, "* %s %s", self->command, s?s:"");
 	if (s)
 		g_free(s);
-	dbmail_imap_session_printf(self, "\r\n%s OK %s completed\r\n", self->tag, cmd);
+	dbmail_imap_session_printf(self, "\r\n%s OK %s completed\r\n", self->tag, self->command);
 	
 	dbmail_mailbox_free(mb);
 	
@@ -1335,14 +1352,23 @@ static int sorted_search(struct ImapSession *self, gboolean sorted)
 
 int _ic_search(struct ImapSession *self)
 {
-	return sorted_search(self,0);
+	return sorted_search(self,SEARCH_UNORDERED);
 }
 
 int _ic_sort(struct ImapSession *self)
 {
-	return sorted_search(self,1);
+	return sorted_search(self,SEARCH_SORTED);
 }
 
+int _ic_thread(struct ImapSession *self)
+{
+	if (MATCH(self->args[0],"ORDEREDSUBJECT"))
+		return sorted_search(self,SEARCH_THREAD_ORDEREDSUBJECT);
+	if (MATCH(self->args[0],"REFERENCES"))
+		return sorted_search(self,SEARCH_THREAD_REFERENCES);
+
+	return 1;
+}
 
 /*
  * _ic_fetch()
@@ -1921,21 +1947,24 @@ int _ic_uid(struct ImapSession *self)
 	self->use_uid = 1;	/* set global var to make clear we will be using UID's */
 	
 	/* ACL rights for UID are handled by the other functions called below */
-	if (strcasecmp(self->args[0], "fetch") == 0) {
+	if (MATCH(self->args[0], "fetch")) {
 		self->args++;
 		result = _ic_fetch(self);
-	} else if (strcasecmp(self->args[0], "copy") == 0) {
+	} else if (MATCH(self->args[0], "copy")) {
 		self->args++;
 		result = _ic_copy(self);
-	} else if (strcasecmp(self->args[0], "store") == 0) {
+	} else if (MATCH(self->args[0], "store")) {
 		self->args++;
 		result = _ic_store(self);
-	} else if (strcasecmp(self->args[0], "search") == 0) {
+	} else if (MATCH(self->args[0], "search")) {
 		self->args++;
 		result = _ic_search(self);
-	} else if (strcasecmp(self->args[0], "sort") == 0) {
+	} else if (MATCH(self->args[0], "sort")) {
 		self->args++;
 		result = _ic_sort(self);
+	} else if (MATCH(self->args[0], "thread")) {
+		self->args++;
+		result = _ic_thread(self);
 	} else {
 		dbmail_imap_session_printf(self, "%s BAD invalid UID command\r\n", self->tag);
 		result = 1;

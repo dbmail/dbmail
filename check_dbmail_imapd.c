@@ -604,7 +604,6 @@ START_TEST(test_imap_get_partspec)
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"HEADER");
 	result = imap_get_logical_part(object,"HEADER");
-	//printf("{%d} [%s]", strlen(result), result);
 	fail_unless(strlen(result)==169,"imap_get_partspec failed");
 	g_free(result);
 
@@ -626,7 +625,7 @@ START_TEST(test_imap_get_partspec)
 	        "Content-disposition: inline\n\n"
 	        "Test message one");
 
-	fail_unless(MATCH(expect,result),"imap_get_partspec failed:\n[%s] != \n [%s]\n", expect, result);
+	fail_unless(MATCH(expect,result),"imap_get_partspec failed:\n[%s] != \n[%s]\n", expect, result);
 	g_free(result);
 	g_free(expect);
 
@@ -660,10 +659,13 @@ START_TEST(test_imap_get_partspec)
 
 	object = imap_get_partspec(GMIME_OBJECT(message->content),"2.1.1");
 	result = g_mime_object_to_string(object);
-	printf("[%s]\n", result);
-
-//	fail_unless(strncmp(result,"From: \"try\" <try@test.kisise>",29)==0,"imap_get_partspec failed");
+	expect = g_strdup("Content-Type: text/plain;\n"
+		"	charset=\"us-ascii\"\n"
+		"Content-Transfer-Encoding: 7bit\n\n"
+		"Body of doc2\n\n");
+	fail_unless(MATCH(expect,result),"imap_get_partspec failed:\n[%s] != \n[%s]\n", expect, result);
 	g_free(result);
+	g_free(expect);
 
 
 

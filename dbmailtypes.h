@@ -317,6 +317,13 @@ enum IMAP_SEARCH_TYPES {
 	IST_SUBSEARCH_NOT 	/* 16 */
 };
 
+typedef enum {
+	SEARCH_UNORDERED = 0,
+	SEARCH_SORTED,
+	SEARCH_THREAD_ORDEREDSUBJECT,
+	SEARCH_THREAD_REFERENCES
+} search_order_t;
+
 typedef struct {
 	int type;
 	u64_t size;
