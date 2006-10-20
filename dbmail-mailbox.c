@@ -999,6 +999,8 @@ int dbmail_mailbox_build_imap_search(struct DbmailMailbox *self, char **search_k
 			// eat the charset arg
 			if (MATCH(search_keys[*idx],"utf-8"))
 				(*idx)++;
+			else if (MATCH(search_keys[*idx],"us-ascii"))
+				(*idx)++;
 			else if (MATCH(search_keys[*idx],"iso-8859-1"))
 				(*idx)++;
 			else

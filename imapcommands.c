@@ -1182,6 +1182,22 @@ int _ic_close(struct ImapSession *self)
 	return 0;
 }
 
+/*
+ * _ic_unselect
+ *
+ * non-expunging close for select mailbox and return to AUTH state
+ *
+ */
+
+int _ic_unselect(struct ImapSession *self)
+{
+	if (!check_state_and_args(self, "UNSELECT", 0, 0, IMAPCS_SELECTED))
+		return 1;	/* error, return */
+
+	dbmail_imap_session_mailbox_close(self);
+	dbmail_imap_session_printf(self, "%s OK UNSELECT completed\r\n", self->tag);
+	return 0;
+}
 
 /*
  * _ic_expunge()
