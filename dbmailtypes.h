@@ -1,5 +1,5 @@
 /*
- $Id: dbmailtypes.h 2308 2006-10-20 13:36:50Z paul $
+ $Id: dbmailtypes.h 2309 2006-10-20 19:14:52Z aaron $
 
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
@@ -66,7 +66,12 @@ typedef enum {
 	DM_EGENERAL 	= 1
 } DbmailErrorCodes;
 
-/** status fields for messages */
+/** Status fields for messages *
+ *
+ * Please note that db.c uses 'status < MESSAGE_STATUS_DELETE'
+ * and these numbers go into the database as magic values,
+ * so don't change them unless you want to break things badly.
+ * */
 typedef enum {
 	MESSAGE_STATUS_NEW     = 0,
 	MESSAGE_STATUS_SEEN    = 1,

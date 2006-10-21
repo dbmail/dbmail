@@ -23,7 +23,7 @@
 # This file was originally created by Paul Stevens and added
 # to dbmail on August 27th, 2003.
 # 
-# $Id: create_tables.mysql 2285 2006-09-30 17:58:33Z paul $
+# $Id: create_tables.mysql 2312 2006-10-21 07:49:21Z paul $
 
 SET FOREIGN_KEY_CHECKS=0;
 
@@ -371,25 +371,28 @@ CREATE TABLE dbmail_usermap (
 
 CREATE UNIQUE INDEX usermap_idx_1 ON dbmail_usermap(login, sock_allow, userid);
 
-DROP TABLE IF EXISTS `dbmail_envelope`;
-CREATE TABLE `dbmail_envelope` (
-  `physmessage_id` bigint(20) NOT NULL default '0',
-  `id` bigint(20) NOT NULL auto_increment,
-  `envelope` text NOT NULL,
-  PRIMARY KEY  (`id`),
-  KEY `physmessage_id` (`physmessage_id`),
-  CONSTRAINT `dbmail_envelope_ibfk_1` FOREIGN KEY (`physmessage_id`) 
-  	REFERENCES `dbmail_physmessage` (`id`) 
-	ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+DROP TABLE IF EXISTS dbmail_envelope;
+CREATE TABLE dbmail_envelope (
+	physmessage_id	BIGINT NOT NULL,
+	id		BIGINT NOT NULL AUTO_INCREMENT,
+	envelope	TEXT NOT NULL,
+	PRIMARY KEY (id),
+	UNIQUE (physmessage_id, id),
+	FOREIGN KEY (physmessage_id)
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB;
 
 SET FOREIGN_KEY_CHECKS=1;
 # create the user for the delivery chain
 INSERT INTO dbmail_users (userid, passwd, encryption_type) 
 	VALUES ('__@!internal_delivery_user!@__', '', 'md5');
-# insert the 'anyone' user which is used for ACLs.
+# create the 'anyone' user for ACLs
 INSERT INTO dbmail_users (userid, passwd, encryption_type) 
 	VALUES ('anyone', '', 'md5');
+# create the user to own #Public mailboxes
+INSERT INTO dbmail_users (userid, passwd, encryption_type) 
+	VALUES ('__public__', '', 'md5');
 
 
 

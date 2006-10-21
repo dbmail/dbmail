@@ -15,7 +15,7 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program; if not, write to the Free Software
 -- Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
--- $Id: create_tables.sqlite 2285 2006-09-30 17:58:33Z paul $
+-- $Id: create_tables.sqlite 2312 2006-10-21 07:49:21Z paul $
 
 BEGIN TRANSACTION;
 
@@ -869,12 +869,15 @@ CREATE UNIQUE INDEX usermap_idx_1 ON dbmail_usermap(login, sock_allow, userid);
 
 
 
--- create the user for the delivery chain
+-- Create the user for the delivery chain
 INSERT INTO dbmail_users (userid, passwd, encryption_type) 
 	VALUES ('__@!internal_delivery_user!@__', '', 'md5');
--- insert the 'anyone' user which is used for ACLs.
+-- Create the 'anyone' user which is used for ACLs.
 INSERT INTO dbmail_users (userid, passwd, encryption_type) 
 	VALUES ('anyone', '', 'md5');
+-- Create the user to own #Public mailboxes
+INSERT INTO dbmail_users (userid, passwd, encryption_type) 
+	VALUES ('__public__', '', 'md5');
 
 COMMIT;
 
@@ -887,7 +890,7 @@ CREATE TABLE dbmail_envelope (
 	envelope	TEXT NOT NULL DEFAULT ''
 );
 
-CREATE UNIQUE INDEX dbmail_envelope_1 on dbmail_envelope (physmessage_id, envelope);
+CREATE UNIQUE INDEX dbmail_envelope_1 on dbmail_envelope (physmessage_id, id);
 
 CREATE TRIGGER fk_insert_envelope_physmessage_id
 	BEFORE INSERT ON dbmail_envelope

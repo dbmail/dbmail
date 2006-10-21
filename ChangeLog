@@ -1,3 +1,18 @@
+2006-10-20  Aaron Stone  <aaron@serendipity.cx>
+
+	* db.h, dbmail.h.in:
+	Moved three constants from db.h to dbmail.h.in.
+	* db.c, misc.c, dbmailtypes.h:
+	More better handling of #Public mailboxes and changed instances of
+	'status IN (0, 2)' to 'status < 2' for better use of indexes.
+	* sql/sqlite/create_tables.sqlite, sql/postgresql/create_tables.pgsql,
+	sql/mysql/create_tables.mysql:
+	Create the __public__ user at table creation time.
+	* pipe.c, maintenance.c:
+	Minor updates.
+	* check_dbmail_db.c, check_dbmail_mailbox.c:
+	Comment out unused functions.
+
 2006-10-20  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_imapd.c, check_dbmail_mailbox.c, dbmail-mailbox.c, 

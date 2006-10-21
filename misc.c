@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/*	$Id: misc.c 2306 2006-10-19 07:57:59Z paul $
+/*	$Id: misc.c 2309 2006-10-20 19:14:52Z aaron $
  *
  *	Miscelaneous functions */
 
@@ -210,11 +210,15 @@ const char *mailbox_remove_namespace(const char *fq_name,
 	}
 	
 	// i.e. '#Public/foldername'
-	// We don't actually strip off the #Public namespace.
-	// Unlike #Users, #Public boxes actually have #Public in their names.
 	if (fq_name_len >= ns_publ_len && strncasecmp(fq_name, NAMESPACE_PUBLIC, ns_publ_len) == 0) {
 		if (namespace) *namespace = NAMESPACE_PUBLIC;
-		return fq_name;
+		temp = strstr(fq_name, MAILBOX_SEPARATOR);
+		if (temp == NULL || strlen(temp) <= 1) {
+			TRACE(TRACE_MESSAGE, "illegal mailbox name");
+			return NULL;
+		}
+		if (username) *username = g_strdup(PUBLIC_FOLDER_USER);
+		return &temp[1];
 	}
 	
 	return fq_name;
