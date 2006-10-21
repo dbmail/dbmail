@@ -58,6 +58,7 @@ int dbmail_imap_session_mailbox_check_acl(struct ImapSession * self, u64_t idnr,
 int dbmail_imap_session_mailbox_get_selectable(struct ImapSession * self, u64_t idnr);
 int dbmail_imap_session_mailbox_show_info(struct ImapSession * self);
 int dbmail_imap_session_mailbox_open(struct ImapSession * self, const char * mailbox);
+int dbmail_imap_session_mailbox_close(struct ImapSession *self);
 
 int dbmail_imap_session_mailbox_select_recent(struct ImapSession *self);
 int dbmail_imap_session_mailbox_update_recent(struct ImapSession *self);
