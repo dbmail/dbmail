@@ -1594,11 +1594,11 @@ int dbmail_imap_session_mailbox_open(struct ImapSession * self, const char * mai
 		TRACE(TRACE_INFO, "Auto-creating INBOX for user id [%llu]", ud->userid);
 		result = db_createmailbox("INBOX", ud->userid, &mailbox_idnr);
 	}
-		
+	
+	/* close the currently opened mailbox */
+	dbmail_imap_session_mailbox_close(self);
+
 	if (! mailbox_idnr) {
-		ud->state = IMAPCS_AUTHENTICATED;
-		dm_free(ud->mailbox.seq_list);
-		memset(&ud->mailbox, 0, sizeof(ud->mailbox));
 		dbmail_imap_session_printf(self, "%s NO specified mailbox does not exist\r\n", self->tag);
 		return 1; /* error */
 	}
@@ -1619,10 +1619,16 @@ int dbmail_imap_session_mailbox_open(struct ImapSession * self, const char * mai
 		return -1;	/* fatal  */
 	}
 	
+	self->mailbox = dbmail_mailbox_new(mailbox_idnr);
+
+	return 0;
+}
+
+int dbmail_imap_session_mailbox_close(struct ImapSession *self)
+{
+	dbmail_imap_session_set_state(self,IMAPCS_AUTHENTICATED);
 	if (self->mailbox) 
 		dbmail_mailbox_free(self->mailbox);
-
-	self->mailbox = dbmail_mailbox_new(mailbox_idnr);
 
 	return 0;
 }
