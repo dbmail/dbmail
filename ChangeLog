@@ -1,3 +1,9 @@
+2006-10-21  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-imapsession.c, dbmail-imapsession.h, dbmail-mailbox.c, imap4.c, 
+	  imap4.h, imapcommands.c, imapcommands.h:
+	added unselect capability to imap
+
 2006-10-20  Aaron Stone  <aaron@serendipity.cx>
 
 	* db.h, dbmail.h.in:
