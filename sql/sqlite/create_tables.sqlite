@@ -890,7 +890,7 @@ CREATE TABLE dbmail_envelope (
 	envelope	TEXT NOT NULL DEFAULT ''
 );
 
-CREATE UNIQUE INDEX dbmail_envelope_1 on dbmail_envelope (physmessage_id, envelope);
+CREATE UNIQUE INDEX dbmail_envelope_1 on dbmail_envelope (physmessage_id, id);
 
 CREATE TRIGGER fk_insert_envelope_physmessage_id
 	BEFORE INSERT ON dbmail_envelope
