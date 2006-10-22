@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: pipe.c 2295 2006-10-04 18:31:23Z aaron $
+/* $Id: pipe.c 2309 2006-10-20 19:14:52Z aaron $
  *
  * Functions for reading the pipe from the MTA */
 
@@ -94,8 +94,7 @@ static int send_mail(struct DbmailMessage *message,
 
 	if (!from || strlen(from) < 1) {
 		if (config_get_value("POSTMASTER", "DBMAIL", postmaster) < 0) {
-			trace(TRACE_MESSAGE, "%s, %s: no config value for POSTMASTER",
-			      __FILE__, __func__);
+			TRACE(TRACE_MESSAGE, "no config value for POSTMASTER");
 		}
 		if (strlen(postmaster))
 			from = postmaster;
@@ -104,9 +103,7 @@ static int send_mail(struct DbmailMessage *message,
 	}
 
 	if (config_get_value("SENDMAIL", "DBMAIL", sendmail) < 0) {
-		trace(TRACE_ERROR,
-			"%s, %s: error getting value for SENDMAIL in DBMAIL section of dbmail.conf.",
-			__FILE__, __func__);
+		TRACE(TRACE_ERROR, "error getting value for SENDMAIL in DBMAIL section of dbmail.conf.");
 		return -1;
 	}
 

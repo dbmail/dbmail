@@ -16,7 +16,7 @@
  along with this program; if not, write to the Free Software
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
-/* $Id: create_tables.pgsql 2285 2006-09-30 17:58:33Z paul $
+/* $Id: create_tables.pgsql 2309 2006-10-20 19:14:52Z aaron $
 */
 
 BEGIN TRANSACTION;
@@ -178,9 +178,12 @@ CREATE INDEX dbmail_idx_since ON dbmail_pbsp (since);
 --- Create the user for the delivery chain:
 INSERT INTO dbmail_users (userid, passwd, encryption_type) 
 	VALUES ('__@!internal_delivery_user!@__', '', 'md5');
---- insert the 'anyone' user which is used for ACLs.
+--- Create the 'anyone' user which is used for ACLs.
 INSERT INTO dbmail_users (userid, passwd, encryption_type) 
 	VALUES ('anyone', '', 'md5');
+--- Create the user to own #Public mailboxes
+INSERT INTO dbmail_users (userid, passwd, encryption_type) 
+	VALUES ('__public__', '', 'md5');
 
  
 

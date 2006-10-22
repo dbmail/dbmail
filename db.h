@@ -19,7 +19,7 @@
 */
 
 /*
- * $Id: db.h 2270 2006-09-17 05:04:54Z aaron $
+ * $Id: db.h 2309 2006-10-20 19:14:52Z aaron $
  *
  * dbase driver header file
  * Functions for database communication 
@@ -45,13 +45,6 @@
 /* config types */
 #define CONFIG_MANDATORY 1
 #define CONFIG_EMPTY 0
-
-/* name of internal delivery user. */
-#define DBMAIL_DELIVERY_USERNAME "__@!internal_delivery_user!@__"
-/**
- * standard user for ACL anyone (see RFC 2086)
- */
-#define DBMAIL_ACL_ANYONE_USER "anyone"
 
 /* 
  * PROTOTYPES 

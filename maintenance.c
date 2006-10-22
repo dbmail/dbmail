@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: maintenance.c 2270 2006-09-17 05:04:54Z aaron $
+/* $Id: maintenance.c 2309 2006-10-20 19:14:52Z aaron $
  *
  * This is the dbmail housekeeping program. 
  *	It checks the integrity of the database and does a cleanup of all
@@ -205,7 +205,7 @@ int main(int argc, char *argv[])
 		case 'V':
  			printf("DBMail: dbmail-util\n"
  			       "Version: %s\n"
- 			       "$Revision: 2270 $\n"
+ 			       "$Revision: 2309 $\n"
  			       "Copyright: %s\n", VERSION, COPYRIGHT);
 			return 1;
 
@@ -433,10 +433,11 @@ int do_check_integrity(void)
 	}
 	time(&start);
 
-	/* this is what we do:
-	 * First we're checking for loose messageblocks
-	 * Secondly we're chekcing for loose messages
-	 * Third we're checking for loose mailboxes 
+	/* This is what we do:
+	 1. Check for loose messageblks
+	 2. Check for loose physmessages
+	 3. Check for loose messages
+	 4. Check for loose mailboxes
 	 */
 
 	/* first part */

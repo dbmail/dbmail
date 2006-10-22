@@ -177,10 +177,14 @@
 /** seperator for namespaces and mailboxes and submailboxes */
 #define MAILBOX_SEPARATOR "/"
 /** username for owner of public folders */
+// FIXME: Should be #define PUBLIC_FOLDER_USER "__@!internal_public_user!@__"
 #define PUBLIC_FOLDER_USER "__public__"
+/* name of internal delivery user. */
+#define DBMAIL_DELIVERY_USERNAME "__@!internal_delivery_user!@__"
+/* standard user for ACL anyone (see RFC 2086 and 4314) */
+#define DBMAIL_ACL_ANYONE_USER "anyone"
 
-/* FIXME: Any consumers of this should
- * be using POSTMASTER from dbmail.conf! */
+/* Consumers of this should be using POSTMASTER from dbmail.conf! */
 #define DEFAULT_POSTMASTER "DBMAIL-MAILER@dbmail"
 #define AUTO_NOTIFY_SENDER "autonotify@dbmail"
 #define AUTO_NOTIFY_SUBJECT "NEW MAIL NOTIFICATION"
