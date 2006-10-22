@@ -71,23 +71,26 @@ static int parse_and_escape(const char *in, char **out)
 	return 0;
 }
 
-// Send only certain parts of the message.
-#define SENDNOTHING     0
-#define SENDHEADERS     1
-#define SENDBODY        2
-#define SENDRAW         4
+// Either convert the message struct to a
+// string, or send the database rows raw.
+enum sendwhat {
+	SENDMESSAGE     = 0,
+	SENDRAW         = 1
+};
+
 // Use the system sendmail binary.
 #define SENDMAIL        NULL
 
 /* Sends a message. */
 static int send_mail(struct DbmailMessage *message,
-		const char *to, const char *from, const char *subject,
-		const char *headers, const char *body,
-		int sendwhat, char *sendmail_external)
+		const char *to, const char *from,
+		const char *preoutput,
+		enum sendwhat sendwhat, char *sendmail_external)
 {
 	FILE *mailpipe = NULL;
 	char *escaped_to = NULL;
 	char *escaped_from = NULL;
+	char *message_string = NULL;
 	char *sendmail_command = NULL;
 	field_t sendmail, postmaster;
 	int result;
@@ -136,52 +139,21 @@ static int send_mail(struct DbmailMessage *message,
 
 	TRACE(TRACE_DEBUG, "pipe opened");
 
-	if (sendwhat != SENDRAW) {
-		char *header_to = g_mime_utils_header_encode_phrase((unsigned char *)to);
-		char *header_from = g_mime_utils_header_encode_phrase((unsigned char *)from);
-		char *header_subject = g_mime_utils_header_encode_text((unsigned char *)subject);
-
-		fprintf(mailpipe, "To: %s\n", to);
-		fprintf(mailpipe, "From: %s\n", from);
-		fprintf(mailpipe, "Subject: %s\n", subject);
-		fprintf(mailpipe, "Content-Type: text/plain; charset=utf-8\n");
-		fprintf(mailpipe, "Content-Transfer-Encoding: 8bit\n");
-
-		if (strlen(headers))
-			fprintf(mailpipe, "%s\n", headers);
-		fprintf(mailpipe, "\n");
-		if (strlen(body))
-			fprintf(mailpipe, "%s\n\n", body);
-
-		g_free(header_to);
-		g_free(header_from);
-		g_free(header_subject);
-	}
-
 	switch (sendwhat) {
 	case SENDRAW:
 		// This is a hack so forwards can give a From line.
-		if (strlen(headers))
-			fprintf(mailpipe, "%s\n", headers);
+		if (preoutput)
+			fprintf(mailpipe, "%s\n", preoutput);
 		// This function will dot-stuff the message.
 		db_send_message_lines(mailpipe, message->id, -2, 1);
 		break;
-	case SENDBODY:
-		// Get the message body from message.
-		// FIXME: This will break mime messages,
-		// so before anybody starts consuming this
-		// part of the function, please realize this!
-		fprintf(mailpipe, "%s\n",
-			dbmail_message_body_to_string(message));
+	case SENDMESSAGE:
+		message_string = dbmail_message_to_string(message);
+		fprintf(mailpipe, "%s", message_string);
+		g_free(message_string);
 		break;
-	case SENDHEADERS:
-		// Get the headers from message.
-		fprintf(mailpipe, "%s\n",
-			dbmail_message_hdrs_to_string(message));
-		break;
-	case SENDNOTHING:
 	default:
-		// Just like it says: nothing.
+		TRACE(TRACE_ERROR, "invalid sendwhat in call to send_mail: [%d]", sendwhat);
 		break;
 	}
 
@@ -220,7 +192,7 @@ int send_redirect(struct DbmailMessage *message, const char *to, const char *fro
 		return -1;
 	}
 
-	return send_mail(message, to, from, "", "", "", SENDRAW, SENDMAIL);
+	return send_mail(message, to, from, NULL, SENDRAW, SENDMAIL);
 }
 
 int send_forward_list(struct DbmailMessage *message,
@@ -266,15 +238,15 @@ int send_forward_list(struct DbmailMessage *message,
 				/* Format: From<space>address<space><space>Date */
 				fromline = g_strconcat("From ", from, "  ", timestr, NULL);
 
-				result |= send_mail(message, "", "", "", fromline, "", SENDRAW, to+1);
+				result |= send_mail(message, "", "", fromline, SENDRAW, to+1);
 				g_free(fromline);
 			} else if (to[0] == '|') {
 				// The forward is a command to execute.
-				result |= send_mail(message, "", "", "", "", "", SENDRAW, to+1);
+				result |= send_mail(message, "", "", NULL, SENDRAW, to+1);
 
 			} else {
 				// The forward is an email address.
-				result |= send_mail(message, to, from, "", "", "", SENDRAW, SENDMAIL);
+				result |= send_mail(message, to, from, NULL, SENDRAW, SENDMAIL);
 			}
 		}
 
@@ -287,10 +259,11 @@ int send_forward_list(struct DbmailMessage *message,
 /* 
  * Send an automatic notification.
  */
-static int send_notification(struct DbmailMessage *message, const char *to)
+static int send_notification(struct DbmailMessage *message UNUSED, const char *to)
 {
 	field_t from = "";
 	field_t subject = "";
+	int result;
 
 	if (config_get_value("POSTMASTER", "DBMAIL", from) < 0) {
 		TRACE(TRACE_MESSAGE, "no config value for POSTMASTER");
@@ -310,8 +283,14 @@ static int send_notification(struct DbmailMessage *message, const char *to)
 	if (strlen(subject) < 1)
 		g_strlcpy(subject, AUTO_NOTIFY_SUBJECT, FIELDSIZE);
 
-	return send_mail(message, to, from, subject,
-			"", "", SENDNOTHING, SENDMAIL);
+	struct DbmailMessage *new_message = dbmail_message_new();
+	new_message = dbmail_message_construct(new_message, to, from, subject, "");
+
+	result = send_mail(new_message, to, from, NULL, SENDMESSAGE, SENDMAIL);
+
+	dbmail_message_free(new_message);
+
+	return result;
 }
 
 /*
@@ -330,12 +309,13 @@ int send_vacation(struct DbmailMessage *message,
 		return 0;
 	}
 
-	char *headers = g_strconcat("X-Dbmail-Vacation: ", handle, NULL);
+	struct DbmailMessage *new_message = dbmail_message_new();
+	new_message = dbmail_message_construct(new_message, to, from, subject, body);
+	dbmail_message_set_header(new_message, "X-DBMail-Vacation", handle);
 
-	result = send_mail(message, to, from, subject, 
-		headers, body, SENDNOTHING, SENDMAIL);
+	result = send_mail(new_message, to, from, NULL, SENDMESSAGE, SENDMAIL);
 
-	dm_free(headers);
+	dbmail_message_free(new_message);
 
 	return result;
 }
@@ -349,6 +329,7 @@ static int send_reply(struct DbmailMessage *message, const char *body)
 	const char *from, *to, *replyto, *subject;
 	const char *x_dbmail_reply;
 	char *escaped_send_address;
+	int result;
 
 	InternetAddressList *ialist;
 	InternetAddress *ia;
@@ -389,16 +370,21 @@ static int send_reply(struct DbmailMessage *message, const char *body)
 	}
 
 	char *newsubject = g_strconcat("Re: ", subject, NULL);
-	char *headers = g_strconcat("X-Dbmail-Reply: ", escaped_send_address, NULL);
 
-	/* Our 'to' is in the 'from' arg because it's a reply. */
-	if (!send_mail(message, escaped_send_address,
-			to, newsubject, headers, body, SENDNOTHING, SENDMAIL)) {
+	struct DbmailMessage *new_message = dbmail_message_new();
+	/* Reversed 'to' and 'from' because this is a reply. */
+	new_message = dbmail_message_construct(new_message, escaped_send_address, to, newsubject, body);
+	dbmail_message_set_header(new_message, "X-DBMail-Reply", escaped_send_address);
+
+	result = send_mail(new_message, to, from, NULL, SENDMESSAGE, SENDMAIL);
+
+	/* Reversed 'to' and 'from' because this is a reply. */
+	if (!send_mail(new_message, escaped_send_address, to, NULL, SENDMESSAGE, SENDMAIL)) {
 		db_replycache_register(to, escaped_send_address, "replycache");
 	}
 
-	dm_free(headers);
 	dm_free(newsubject);
+	dbmail_message_free(new_message);
 
 	return 0;
 }
@@ -674,6 +660,47 @@ int insert_messages(struct DbmailMessage *message,
 	/* if committing the transaction fails, a rollback is performed */
 	if (db_commit_transaction() < 0) 
 		return -1;
+
+	return 0;
+}
+
+int send_alert(u64_t user_idnr, char *subject, char *body)
+{
+	struct DbmailMessage *new_message;
+	field_t postmaster;
+	char *from;
+	int msgflags[IMAP_NFLAGS];
+
+	// From the Postmaster.
+	if (config_get_value("POSTMASTER", "DBMAIL", postmaster) < 0) {
+		TRACE(TRACE_MESSAGE, "no config value for POSTMASTER");
+	}
+	if (strlen(postmaster))
+		from = postmaster;
+	else
+		from = DEFAULT_POSTMASTER;
+
+	// Set the \Flagged flag.
+	memset(msgflags, 0, IMAP_NFLAGS);
+	msgflags[IMAP_FLAG_FLAGGED] = 1;
+
+	// Fake the "to" address.
+	char *to = "DBMail User";
+
+	new_message = dbmail_message_new();
+	new_message = dbmail_message_construct(new_message, to, from, subject, body);
+	dbmail_message_set_header(new_message, "X-Priority", "1");
+
+	// Pre-insert the message and get a new_message->id
+	dbmail_message_store(new_message);
+
+	if (sort_deliver_to_mailbox(new_message, user_idnr,
+			"INBOX", BOX_SORTING, msgflags) != DSN_CLASS_OK) {
+		TRACE(TRACE_ERROR, "Unable to deliver alert [%s] to user [%llu]", subject, user_idnr);
+	}
+
+	db_delete_message(new_message->id);
+	dbmail_message_free(new_message);
 
 	return 0;
 }

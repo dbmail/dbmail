@@ -451,7 +451,7 @@ START_TEST(test_dbmail_message_construct)
 	gchar *result;
 
 	struct DbmailMessage *message = dbmail_message_new();
-	message = dbmail_message_construct(message,sender,recipient,subject,body);
+	message = dbmail_message_construct(message,recipient,sender,subject,body);
 	result = dbmail_message_to_string(message);
 	fail_unless(MATCH(expect,result),"dbmail_message_construct failed\n%s\n%s", expect, result);
 }
