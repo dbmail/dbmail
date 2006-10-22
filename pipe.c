@@ -108,8 +108,7 @@ static int send_mail(struct DbmailMessage *message,
 	}
 
 	if (strlen(sendmail) < 1) {
-		trace(TRACE_ERROR, "%s, %s: SENDMAIL not set in DBMAIL section of dbmail.conf.",
-			__FILE__, __func__);
+		TRACE(TRACE_ERROR, "SENDMAIL not set in DBMAIL section of dbmail.conf.");
 		return -1;
 	}
 
@@ -130,13 +129,12 @@ static int send_mail(struct DbmailMessage *message,
 	TRACE(TRACE_INFO, "opening pipe to [%s]", sendmail_command);
 
 	if (!(mailpipe = popen(sendmail_command, "w"))) {
-		trace(TRACE_ERROR, "%s, %s: could not open pipe to sendmail",
-			__FILE__, __func__);
+		TRACE(TRACE_ERROR, "could not open pipe to sendmail");
 		g_free(sendmail_command);
 		return 1;
 	}
 
-	trace(TRACE_DEBUG, "%s, %s: pipe opened", __FILE__, __func__);
+	TRACE(TRACE_DEBUG, "pipe opened");
 
 	if (sendwhat != SENDRAW) {
 		char *header_to = g_mime_utils_header_encode_phrase((unsigned char *)to);
@@ -188,7 +186,7 @@ static int send_mail(struct DbmailMessage *message,
 	}
 
 	result = pclose(mailpipe);
-	trace(TRACE_DEBUG, "%s, %s: pipe closed", __FILE__, __func__);
+	TRACE(TRACE_DEBUG, "pipe closed");
 
 	/* Adapted from the Linux waitpid 2 man page. */
 	if (WIFEXITED(result)) {
@@ -203,8 +201,7 @@ static int send_mail(struct DbmailMessage *message,
 	}
 
 	if (result != 0) {
-		trace(TRACE_ERROR, "%s, %s: sendmail error return value was [%d]",
-			__FILE__, __func__, result);
+		TRACE(TRACE_ERROR, "sendmail error return value was [%d]", result);
 
 		if (!sendmail_external)
 			g_free(sendmail_command);
@@ -219,8 +216,7 @@ static int send_mail(struct DbmailMessage *message,
 int send_redirect(struct DbmailMessage *message, const char *to, const char *from)
 {
 	if (!to || !from) {
-		trace(TRACE_ERROR, "%s, %s: both To and From addresses must be specified",
-			__FILE__, __func__);
+		TRACE(TRACE_ERROR, "both To and From addresses must be specified");
 		return -1;
 	}
 
@@ -234,13 +230,11 @@ int send_forward_list(struct DbmailMessage *message,
 	struct element *target;
 	field_t postmaster;
 
-	trace(TRACE_INFO, "%s, %s: delivering to [%ld] external addresses",
-	      __FILE__, __func__, dm_list_length(targets));
+	TRACE(TRACE_INFO, "delivering to [%ld] external addresses", dm_list_length(targets));
 
 	if (!from) {
 		if (config_get_value("POSTMASTER", "DBMAIL", postmaster) < 0) {
-			trace(TRACE_MESSAGE, "%s, %s: no config value for POSTMASTER",
-			      __FILE__, __func__);
+			TRACE(TRACE_MESSAGE, "no config value for POSTMASTER");
 		}
 		if (strlen(postmaster))
 			from = postmaster;
@@ -253,9 +247,7 @@ int send_forward_list(struct DbmailMessage *message,
 		char *to = (char *)target->data;
 
 		if (!to || strlen(to) < 1) {
-			trace(TRACE_ERROR, "%s, %s: forwarding address is zero length,"
-					" message not forwarded.",
-					__FILE__, __func__);
+			TRACE(TRACE_ERROR, "forwarding address is zero length, message not forwarded.");
 		} else {
 			if (to[0] == '!') {
 				// The forward is a command to execute.
@@ -269,9 +261,7 @@ int send_forward_list(struct DbmailMessage *message,
 				tm = *localtime(&td);	/* get components */
 				strftime(timestr, sizeof(timestr), "%a %b %e %H:%M:%S %Y", &tm);
                         
-				trace(TRACE_DEBUG, "%s, %s: prepending mbox style From "
-				      "header to pipe returnpath: %s",
-				      __FILE__, __func__, from);
+				TRACE(TRACE_DEBUG, "prepending mbox style From header to pipe returnpath: %s", from);
                         
 				/* Format: From<space>address<space><space>Date */
 				fromline = g_strconcat("From ", from, "  ", timestr, NULL);
@@ -303,18 +293,15 @@ static int send_notification(struct DbmailMessage *message, const char *to)
 	field_t subject = "";
 
 	if (config_get_value("POSTMASTER", "DBMAIL", from) < 0) {
-		trace(TRACE_MESSAGE, "%s, %s: no config value for POSTMASTER",
-		      __FILE__, __func__);
+		TRACE(TRACE_MESSAGE, "no config value for POSTMASTER");
 	}
 
 	if (config_get_value("AUTO_NOTIFY_SENDER", "DELIVERY", from) < 0) {
-		trace(TRACE_MESSAGE, "%s, %s: no config value for AUTO_NOTIFY_SENDER",
-		      __FILE__, __func__);
+		TRACE(TRACE_MESSAGE, "no config value for AUTO_NOTIFY_SENDER");
 	}
 
 	if (config_get_value("AUTO_NOTIFY_SUBJECT", "DELIVERY", subject) < 0) {
-		trace(TRACE_MESSAGE, "%s, %s: no config value for AUTO_NOTIFY_SUBJECT",
-		      __FILE__, __func__);
+		TRACE(TRACE_MESSAGE, "no config value for AUTO_NOTIFY_SUBJECT");
 	}
 
 	if (strlen(from) < 1)
@@ -339,8 +326,7 @@ int send_vacation(struct DbmailMessage *message,
 	const char *x_dbmail_vacation = dbmail_message_get_header(message, "X-Dbmail-Vacation");
 
 	if (x_dbmail_vacation) {
-		trace(TRACE_ERROR, "%s, %s: vacation loop detected [%s]",
-				__FILE__, __func__, x_dbmail_vacation);
+		TRACE(TRACE_MESSAGE, "vacation loop detected [%s]", x_dbmail_vacation);
 		return 0;
 	}
 
@@ -369,8 +355,7 @@ static int send_reply(struct DbmailMessage *message, const char *body)
 
 	x_dbmail_reply = dbmail_message_get_header(message, "X-Dbmail-Reply");
 	if (x_dbmail_reply) {
-		trace(TRACE_ERROR, "%s, %s: reply loop detected [%s]",
-				__FILE__, __func__, x_dbmail_reply);
+		TRACE(TRACE_MESSAGE, "reply loop detected [%s]", x_dbmail_reply);
 		return 0;
 	}
 	
@@ -383,13 +368,12 @@ static int send_reply(struct DbmailMessage *message, const char *body)
 	to = dbmail_message_get_header(message, "Delivered-To");
 
 	if (!from && !replyto) {
-		trace(TRACE_ERROR, "%s, %s: no address to send to", __FILE__, __func__);
+		TRACE(TRACE_ERROR, "no address to send to");
 		return 0;
 	}
 
 	if (!valid_sender(from)) {
-		trace(TRACE_DEBUG, "%s, %s: sender invalid. skip auto-reply.",
-				__FILE__, __func__);
+		TRACE(TRACE_DEBUG, "sender invalid. skip auto-reply.");
 		return 0;
 	}
 
@@ -400,8 +384,7 @@ static int send_reply(struct DbmailMessage *message, const char *body)
 
 	if (db_replycache_validate(to, escaped_send_address,
 		"replycache", REPLY_DAYS) != DM_SUCCESS) {
-		trace(TRACE_DEBUG, "%s, %s: skip auto-reply", 
-				__FILE__, __func__);
+		TRACE(TRACE_DEBUG, "skip auto-reply");
 		return 0;
 	}
 
@@ -431,8 +414,7 @@ static int execute_auto_ran(struct DbmailMessage *message, u64_t useridnr)
 
 	/* message has been succesfully inserted, perform auto-notification & auto-reply */
 	if (config_get_value("AUTO_NOTIFY", "DELIVERY", val) < 0) {
-		trace(TRACE_ERROR, "%s, %s: error getting config value for AUTO_NOTIFY",
-		      __FILE__, __func__);
+		TRACE(TRACE_ERROR, "error getting config value for AUTO_NOTIFY");
 		return -1;
 	}
 
@@ -440,8 +422,7 @@ static int execute_auto_ran(struct DbmailMessage *message, u64_t useridnr)
 		do_auto_notify = 1;
 
 	if (config_get_value("AUTO_REPLY", "DELIVERY", val) < 0) {
-		trace(TRACE_ERROR, "%s, %s: error getting config value for AUTO_REPLY",
-		      __FILE__, __func__);
+		TRACE(TRACE_ERROR, "error getting config value for AUTO_REPLY");
 		return -1;
 	}
 
@@ -449,23 +430,17 @@ static int execute_auto_ran(struct DbmailMessage *message, u64_t useridnr)
 		do_auto_reply = 1;
 
 	if (do_auto_notify != 0) {
-		trace(TRACE_DEBUG,
-		      "execute_auto_ran(): starting auto-notification procedure");
+		TRACE(TRACE_DEBUG, "starting auto-notification procedure");
 
 		if (db_get_notify_address(useridnr, &notify_address) != 0)
-			trace(TRACE_ERROR,
-			      "execute_auto_ran(): error fetching notification address");
+			TRACE(TRACE_ERROR, "error fetching notification address");
 		else {
 			if (notify_address == NULL)
-				trace(TRACE_DEBUG,
-				      "execute_auto_ran(): no notification address specified, skipping");
+				TRACE(TRACE_DEBUG, "no notification address specified, skipping");
 			else {
-				trace(TRACE_DEBUG,
-				      "execute_auto_ran(): sending notifcation to [%s]",
-				      notify_address);
+				TRACE(TRACE_DEBUG, "sending notifcation to [%s]", notify_address);
 				if (send_notification(message, notify_address) < 0) {
-					trace(TRACE_ERROR, "%s, %s: error in call to send_notification.",
-					      __FILE__, __func__);
+					TRACE(TRACE_ERROR, "error in call to send_notification.");
 					dm_free(notify_address);
 					return -1;
 				}
@@ -475,20 +450,16 @@ static int execute_auto_ran(struct DbmailMessage *message, u64_t useridnr)
 	}
 
 	if (do_auto_reply != 0) {
-		trace(TRACE_DEBUG,
-		      "execute_auto_ran(): starting auto-reply procedure");
+		TRACE(TRACE_DEBUG, "starting auto-reply procedure");
 
 		if (db_get_reply_body(useridnr, &reply_body) != 0)
-			trace(TRACE_ERROR,
-			      "execute_auto_ran(): error fetching reply body");
+			TRACE(TRACE_ERROR, "error fetching reply body");
 		else {
 			if (reply_body == NULL || reply_body[0] == '\0')
-				trace(TRACE_DEBUG,
-				      "execute_auto_ran(): no reply body specified, skipping");
+				TRACE(TRACE_DEBUG, "no reply body specified, skipping");
 			else {
 				if (send_reply(message, reply_body) < 0) {
-					trace(TRACE_ERROR, "%s, %s: error in call to send_reply",
-					      __FILE__, __func__);
+					TRACE(TRACE_ERROR, "error in call to send_reply");
 					dm_free(reply_body);
 					return -1;
 				}
@@ -517,14 +488,11 @@ int store_message_in_blocks(const char *message, u64_t message_size,
 			      rest_size : READ_BLOCK_SIZE);
 		rest_size = (rest_size < READ_BLOCK_SIZE ?
 			     0 : rest_size - READ_BLOCK_SIZE);
-		trace(TRACE_DEBUG, "%s, %s: inserting message: %s",
-		      __FILE__, __func__, &message[offset]);
+		TRACE(TRACE_DEBUG, "inserting message [%s]", &message[offset]);
 		if (db_insert_message_block(&message[offset],
 					    block_size, msgidnr,
 					    &tmp_messageblk_idnr,0) < 0) {
-			trace(TRACE_ERROR, "%s, %s: "
-			      "db_insert_message_block() failed",
-			      __FILE__, __func__);
+			TRACE(TRACE_ERROR, "db_insert_message_block() failed");
 			return -1;
 		}
 		
@@ -580,21 +548,17 @@ int insert_messages(struct DbmailMessage *message,
 
 	/* first start a new database transaction */
 	if (db_begin_transaction() < 0) {
-		trace(TRACE_ERROR, "%s, %s: error executing "
-		      "db_begin_transaction(). aborting delivery...",
-		      __FILE__, __func__);
+		TRACE(TRACE_ERROR, "error executing db_begin_transaction(). aborting delivery...");
 		return -1;
 	}
 
 	switch (dbmail_message_store(message)) {
 	case -1:
-		trace(TRACE_ERROR, "%s, %s: failed to store temporary message.",
-		      __FILE__, __func__);
+		TRACE(TRACE_ERROR, "failed to store temporary message.");
 		db_rollback_transaction();
 		return -1;
 	default:
-		trace(TRACE_DEBUG, "%s, %s: temporary msgidnr is [%llu]",
-		      __FILE__, __func__, message->id);
+		TRACE(TRACE_DEBUG, "temporary msgidnr is [%llu]", message->id);
 		break;
 	}
 
@@ -617,44 +581,37 @@ int insert_messages(struct DbmailMessage *message,
 		 * delivery. */
 		for (userid_elem = dm_list_getstart(delivery->userids); userid_elem != NULL; userid_elem = userid_elem->nextnode) {
 			u64_t useridnr = *(u64_t *) userid_elem->data;
-			trace(TRACE_DEBUG, "%s, %s: calling sort_and_deliver for useridnr [%llu]",
-			      __FILE__, __func__, useridnr);
+			TRACE(TRACE_DEBUG, "calling sort_and_deliver for useridnr [%llu]", useridnr);
 
 			switch (sort_and_deliver(message,
 					delivery->address, useridnr,
 					delivery->mailbox, delivery->source)) {
 			case DSN_CLASS_OK:
 				/* Indicate success. */
-				trace(TRACE_INFO, "%s, %s: successful sort_and_deliver for useridnr [%llu]",
-				      __FILE__, __func__, useridnr);
+				TRACE(TRACE_INFO, "successful sort_and_deliver for useridnr [%llu]", useridnr);
 				has_2 = 1;
 				break;
 			case DSN_CLASS_FAIL:
 				/* Indicate permanent failure. */
-				trace(TRACE_ERROR, "%s, %s: permanent failure sort_and_deliver for useridnr [%llu]",
-				      __FILE__, __func__, useridnr);
+				TRACE(TRACE_ERROR, "permanent failure sort_and_deliver for useridnr [%llu]", useridnr);
 				has_5 = 1;
 				break;
 			case DSN_CLASS_QUOTA:
 			/* Indicate over quota. */
-				trace(TRACE_MESSAGE, "%s, %s: mailbox over quota, message rejected for useridnr [%llu]",
-				      __FILE__, __func__, useridnr);
+				TRACE(TRACE_MESSAGE, "mailbox over quota, message rejected for useridnr [%llu]", useridnr);
 				has_5_2 = 1;
 				break;
 			case DSN_CLASS_TEMP:
 			default:
 				/* Assume a temporary failure */
-				trace(TRACE_ERROR, "%s, %s: unknown temporary failure in sort_and_deliver for useridnr [%llu]",
-				      __FILE__, __func__, useridnr);
+				TRACE(TRACE_ERROR, "unknown temporary failure in sort_and_deliver for useridnr [%llu]", useridnr);
 				has_4 = 1;
 				break;
 			}
 
 			/* Automatic reply and notification */
 			if (execute_auto_ran(message, useridnr) < 0) {
-				trace(TRACE_ERROR, "%s, %s: error in execute_auto_ran(),"
-					" but continuing delivery normally.",
-				      __FILE__, __func__);
+				TRACE(TRACE_ERROR, "error in execute_auto_ran(), but continuing delivery normally.");
 			}
 		} /* from: the useridnr for loop */
 
@@ -689,14 +646,13 @@ int insert_messages(struct DbmailMessage *message,
 			break;
 		}
 
-		trace(TRACE_DEBUG, "%s, %s: deliver [%ld] messages to external addresses", 
-				__FILE__, __func__, dm_list_length(delivery->forwards));
+		TRACE(TRACE_DEBUG, "deliver [%ld] messages to external addresses",
+			dm_list_length(delivery->forwards));
 
 		/* Each user may also have a list of external forwarding addresses. */
 		if (dm_list_length(delivery->forwards) > 0) {
 
-			trace(TRACE_DEBUG, "%s, %s: delivering to external addresses",
-					__FILE__, __func__);
+			TRACE(TRACE_DEBUG, "delivering to external addresses");
 
 			/* Forward using the temporary stored message. */
 			if (send_forward_list(message, delivery->forwards,
@@ -704,8 +660,7 @@ int insert_messages(struct DbmailMessage *message,
 				/* FIXME: if forward fails, we should do something 
 				 * sensible. Currently, the message is just black-
 				 * holed! */
-				trace(TRACE_ERROR, "%s, %s: forward failed message lost", 
-						__FILE__, __func__);
+				TRACE(TRACE_ERROR, "forward failed message lost");
 		}
 	}			/* from: the delivery for loop */
 
@@ -713,10 +668,8 @@ int insert_messages(struct DbmailMessage *message,
 	 * It is the MTA's job to requeue or bounce the message,
 	 * and our job to keep a tidy database ;-) */
 	if (db_delete_message(tmpid) < 0) 
-		trace(TRACE_ERROR, "%s, %s: failed to delete temporary message [%llu]",
-				__FILE__, __func__, message->id);
-	trace(TRACE_DEBUG, "%s, %s: temporary message deleted from database. Done.",
-			__FILE__, __func__);
+		TRACE(TRACE_ERROR, "failed to delete temporary message [%llu]", message->id);
+	TRACE(TRACE_DEBUG, "temporary message deleted from database. Done.");
 
 	/* if committing the transaction fails, a rollback is performed */
 	if (db_commit_transaction() < 0) 

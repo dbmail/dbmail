@@ -176,22 +176,22 @@ int DelChildSigHandler()
  */
 pid_t CreateChild(ChildInfo_t * info)
 {
+	extern int isGrandChildProcess;
 	pid_t pid = fork();
 
 	if (! pid) {
 		if (child_register() == -1) {
-			trace(TRACE_FATAL, "%s,%s: child_register failed", 
-				__FILE__, __func__);
+			TRACE(TRACE_FATAL, "child_register failed");
 			_exit(0);
 		}
 	
+		isGrandChildProcess = 1;
  		ChildStopRequested = 0;
 		alarm_occured = 0;
 		childSig = 0;
  		SetChildSigHandler();
 		
- 		trace(TRACE_INFO, "%s,%s: signal handler placed, going to perform task now",
-			__FILE__, __func__);
+ 		TRACE(TRACE_INFO, "signal handler placed, going to perform task now");
 
 		// Create a self-pipe to prevent select signal races.
 		// See http://cr.yp.to/docs/selfpipe.html

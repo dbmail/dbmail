@@ -97,7 +97,12 @@ void scoreboard_new(serverConfig_t * conf)
 	scoreboard->conf = conf;
 	scoreboard_setup();
 	scoreboard_conf_check();
-}
+
+	/* Make sure that we clean up our shared memory segments when we exit
+	 * normally (i.e. not by kill -9, if you do that, you get to clean this
+	 * up yourself!)
+	 * */
+	atexit(scoreboard_delete); }
 
 char * scoreboard_lock_getfilename(void)
 {
@@ -189,10 +194,17 @@ void scoreboard_release(pid_t pid)
 void scoreboard_delete(void)
 {
 	gchar *statefile;
+	extern int isGrandChildProcess;
+
+	/* The middle process removes the scoreboards, so only bail out
+	 * if we are a grandchild / connection handler process. */
+	if (isGrandChildProcess)
+		return;
+
 	if (shmdt((const void *)scoreboard) == -1)
-		TRACE(TRACE_FATAL, "detach shared mem failed");
+		TRACE(TRACE_ERROR, "detach shared mem failed");
 	if (shmctl(shmid, IPC_RMID, NULL) == -1)
-		TRACE(TRACE_FATAL, "delete shared mem segment failed");
+		TRACE(TRACE_ERROR, "delete shared mem segment failed");
 	
 	statefile = scoreboard_lock_getfilename();
 	if (unlink(statefile) == -1) 

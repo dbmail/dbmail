@@ -1,3 +1,12 @@
+2006-10-22  Aaron Stone  <aaron@serendipity.cx>
+
+	* serverchild.c, pool.c, server.c:
+	To prevent leaking shared memory segments, scoreboard_delete is
+	registered with atexit and an isGrantChildProcess variables is used to
+	allow only the middle process to delete the shared memory segments.
+	* pipe.c:
+	Changes many debug calls from trace to TRACE.
+
 2006-10-21  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-imapsession.c, dbmail-imapsession.h, dbmail-mailbox.c, imap4.c, 

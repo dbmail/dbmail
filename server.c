@@ -38,6 +38,7 @@ volatile sig_atomic_t mainSig = 0;
 volatile sig_atomic_t get_sigchld = 0;
 
 int isChildProcess = 0;
+int isGrandChildProcess = 0;
 pid_t ParentPID = 0;
 ChildInfo_t childinfo;
 
@@ -160,7 +161,6 @@ int StartServer(serverConfig_t * conf)
 	}
    
  	manage_stop_children();
- 	scoreboard_delete();
 
 	return Restart;
 }
