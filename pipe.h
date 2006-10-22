@@ -53,5 +53,6 @@ int send_redirect(struct DbmailMessage *message,
 		const char *to, const char *from);
 int send_forward_list(struct DbmailMessage *message,
 		struct dm_list *targets, const char *from);
+int send_alert(u64_t user_idnr, char *subject, char *body);
 
 #endif

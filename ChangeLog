@@ -10,6 +10,8 @@
 	* dbmail-message.c, check_dbmail_message.c:
 	Changed order of sender, recipient arguments to recipient, sender in
 	dbmail_message_construct.
+	* modules/sortsieve.c:
+	First pass at giving the user an alert that when Sieve scripts fail.
 
 2006-10-21  Paul J Stevens <paul@nfg.nl>
 
