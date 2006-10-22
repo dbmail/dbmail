@@ -1626,6 +1626,8 @@ int dbmail_imap_session_mailbox_open(struct ImapSession * self, const char * mai
 
 int dbmail_imap_session_mailbox_close(struct ImapSession *self)
 {
+	// flush recent messages from previous select
+	dbmail_imap_session_mailbox_update_recent(self);
 	dbmail_imap_session_set_state(self,IMAPCS_AUTHENTICATED);
 	if (self->mailbox) 
 		dbmail_mailbox_free(self->mailbox);
