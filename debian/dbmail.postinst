@@ -101,7 +101,9 @@ case "$1" in
 	chown dbmail:dbmail $DEBIAN_CONFIG $CONFIG /usr/sbin/dbmail-smtp
 	chmod 0600 $CONFIG
 	chmod 4755 /usr/sbin/dbmail-smtp
-	
+
+	ldconfig
+
     ;;
     abort-upgrade)
     ;;

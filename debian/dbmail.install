@@ -5,3 +5,4 @@ usr/sbin/dbmail-pop3d
 usr/sbin/dbmail-smtp
 usr/sbin/dbmail-users
 usr/sbin/dbmail-util
+usr/lib/libdbmail.so.*

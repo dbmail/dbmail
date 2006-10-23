@@ -9,14 +9,14 @@ export DH_VERBOSE=1
 export DH_COMPAT=5
 export DEBUILD_DPKG_BUILDPACKAGE_OPTS="-i"
 
-#export WITH_GC="--with-gc"
 export WITH_SIEVE=--with-sieve
 export WITH_SQLITE=--with-sqlite 
 export WITH_MYSQL=--with-mysql
 export WITH_PGSQL=--with-pgsql
 export WITH_LDAP=--with-auth-ldap
 export SHARED=--enable-shared=yes
-export SHARED=--enable-static=no
+export STATIC=--enable-static=no
+#export WITH_GC="--with-gc"
 
 CFLAGS = -Wall -O1
 LDFLAGS = -lcrypt
@@ -68,6 +68,7 @@ include /usr/share/dpatch/dpatch.make
 CONFFLAGS=--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --sysconfdir=/etc/dbmail \
 	--localstatedir=/var/run/dbmail --with-logdir=/var/log/dbmail --infodir=\$${prefix}/share/info \
+	--libdir=/usr/lib/dbmail \
 	$(WITH_GC) $(WITH_CHECK) $(SHARED) $(STATIC) $(WITH_SIEVE) $(WITH_LDAP) $(WITH_MYSQL) $(WITH_PGSQL) $(WITH_SQLITE)
 
 build: stamps/build
