@@ -36,6 +36,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define THIS_MODULE "pgsql"
 #define BYTEAOID  17
 
 const char * db_get_sql(sql_fragment_t frag)
@@ -74,10 +75,6 @@ const char * db_get_sql(sql_fragment_t frag)
 
 static PGconn *conn = NULL;
 static PGresult *res = NULL;
-static PGresult *msgbuf_res;
-static PGresult *stored_res;
-static u64_t affected_rows; /**< stores the number of rows affected by the
-			     * the last query */
 static void _create_binary_table(void);
 static void _free_binary_table(void);
 static void _set_binary_table(unsigned row, unsigned field);
@@ -105,9 +102,7 @@ int db_connect()
 	conn = PQconnectdb(connectionstring);
 
 	if (PQstatus(conn) == CONNECTION_BAD) {
-		trace(TRACE_ERROR,
-		      "%s,%s: PQconnectdb failed: %s",
-		      __FILE__, __func__, PQerrorMessage(conn));
+		TRACE(TRACE_ERROR, "PQconnectdb failed: %s", PQerrorMessage(conn));
 		return -1;
 	}
 #ifdef OLD
@@ -133,16 +128,14 @@ int db_check_connection() {
 	if (!conn) {
 		/* There seem to be some circumstances which cause
 		 * db_check_connection to be called before db_connect. */
-		trace(TRACE_ERROR, "%s,%s: connection with "
-			"database invalid, retrying", __FILE__, __func__);
+		TRACE(TRACE_ERROR, "connection with database invalid, retrying");
 		return db_connect();
 	}
 
 	if (PQstatus(conn) == CONNECTION_BAD) {
 		PQreset(conn);
 		if (PQstatus(conn) == CONNECTION_BAD) {
-			trace(TRACE_ERROR, "%s,%s: connection with "
-				"database gone bad", __FILE__, __func__);
+			TRACE(TRACE_ERROR, "connection with database gone bad");
 			return -1;
 		}
 	}	
@@ -238,15 +231,12 @@ static void _set_binary_table(unsigned row, unsigned field){
 const char *db_get_result(unsigned row, unsigned field)
 {
 	if (!res) {
-		trace(TRACE_WARNING, "%s,%s: result set is NULL",
-		      __FILE__, __func__);
+		TRACE(TRACE_WARNING, "result set is NULL");
 		return NULL;
 	}
 
 	if ((row > db_num_rows()) || (field > db_num_fields())) {
-		trace(TRACE_WARNING, "%s,%s: "
-		      "(row = %u,field = %u) bigger then size of result set",
-		      __FILE__, __func__, row, field);
+		TRACE(TRACE_WARNING, "row = %u or field = %u out of range", row, field);
 		return NULL;
 	}
 	if(PQftype(res, field) == BYTEAOID){
@@ -277,73 +267,32 @@ u64_t db_insert_result(const char *sequence_identifier)
 	return insert_result;
 }
 
-int db_query(const char *the_query)
+int db_query(const char *q)
 {
 	int PQresultStatusVar;
 	char *result_string;
 	PGresult *temp_res;
-			 /**< temp_res is used as a temporary result set. If
-			    the query succeeds, and needs to return a 
-			    result set (i.e. it is a SELECT query)
-			    the global res is 
-			    set to this temp_res result set */
-	_free_binary_table();
-	if (the_query != NULL) {
-		trace(TRACE_DEBUG, "%s,%s: "
-		      "executing query [%s]", __FILE__, __func__,
-		      the_query);
-		temp_res = PQexec(conn, the_query);
-		if (!temp_res) {
-			/* attempt at executing query failed. Retry..*/
-			PQreset(conn);
-			temp_res = PQexec(conn, the_query);
-			/* if we still fail, we cannot do the query.. */
-			if (!temp_res)
-				return -1;
-		}
-		
-		PQresultStatusVar = PQresultStatus(temp_res);
+	
+	db_free_result();
 
-		if (PQresultStatusVar != PGRES_COMMAND_OK &&
-		    PQresultStatusVar != PGRES_TUPLES_OK) {
-			trace(TRACE_ERROR, "%s, %s: "
-			      "Error executing query [%s] : [%s]\n",
-			      __FILE__, __func__,
-			      the_query, PQresultErrorMessage(temp_res));
-			PQclear(temp_res);
-			return -1;
-		}
+	g_return_val_if_fail(q != NULL,DM_EQUERY);
 
-		/* get the number of rows affected by the query */
-		result_string = PQcmdTuples(temp_res);
-		if (result_string)
-			affected_rows = strtoull(result_string, NULL, 10);
-		else
-			affected_rows = 0;
+	if (db_check_connection())
+		return DM_EQUERY;
 
-		/* only keep the result set if this was a SELECT
-		 * query */
-		if (strncasecmp(the_query, "SELECT", 6) != 0) {
-			if (temp_res != NULL)
-				PQclear(temp_res);
-		}
+	TRACE(TRACE_DEBUG, "[%s]", q);
 
-		else {
-			if (res) {
-				trace(TRACE_WARNING,
-				      "%s,%s: previous result set is possibly "
-				      "not freed.", __FILE__,
-				      __func__);
-				PQclear(res);
-			}
-			res = temp_res;
-		}
-	} else {
-		trace(TRACE_ERROR, "%s,%s: "
-		      "query buffer is NULL, this is not supposed to happen\n",
-		      __FILE__, __func__);
-		return -1;
+	if (! (res = PQexec(conn, q)))
+		return DM_EQUERY;
+	
+	PQresultStatusVar = PQresultStatus(res);
+
+	if (PQresultStatusVar != PGRES_COMMAND_OK && PQresultStatusVar != PGRES_TUPLES_OK) {
+		TRACE(TRACE_ERROR, "query failed [%s] : [%s]\n", q, PQresultErrorMessage(res));
+		db_free_result();
+		return DM_EQUERY;
 	}
+
 	return 0;
 }
 
@@ -372,9 +321,8 @@ int db_do_cleanup(const char **tables, int num_tables)
 	for (i = 0; i < num_tables; i++) {
 		snprintf(the_query, DEF_QUERYSIZE, "VACUUM %s%s", _db_params.pfx,tables[i]);
 		if (db_query(the_query) == -1) {
-			trace(TRACE_ERROR,
-			      "%s,%s: error vacuuming table [%s%s]",
-			      __FILE__, __func__, _db_params.pfx,tables[i]);
+			TRACE(TRACE_ERROR, "error vacuuming table [%s%s]", 
+				_db_params.pfx,tables[i]);
 			result = -1;
 		}
 	}
@@ -384,15 +332,12 @@ int db_do_cleanup(const char **tables, int num_tables)
 u64_t db_get_length(unsigned row, unsigned field)
 {
 	if (!res) {
-		trace(TRACE_WARNING, "%s,%s: result set is NULL",
-		      __FILE__, __func__);
+		TRACE(TRACE_WARNING, "result set is NULL");
 		return -1;
 	}
 
 	if ((row >= db_num_rows()) || (field >= db_num_fields())) {
-		trace(TRACE_ERROR, "%s,%s: "
-		      "(row = %u,field = %u) bigger then size of result set",
-		      __FILE__, __func__, row, field);
+		TRACE(TRACE_ERROR, "row = %u or field = %u out of range", row, field);
 		return -1;
 	}
         if(PQftype(res, field) == BYTEAOID){
@@ -404,20 +349,13 @@ u64_t db_get_length(unsigned row, unsigned field)
 }
 
 u64_t db_get_affected_rows()
-{
-	return affected_rows;
-}
 
-void db_use_msgbuf_result()
 {
-	stored_res = res;
-	res = msgbuf_res;
-}
-
-void db_store_msgbuf_result()
-{
-	msgbuf_res = res;
-	res = stored_res;
+	char *s;
+	if (! res) return 0;
+	if ((s = PQcmdTuples(res)) != NULL)
+		return strtoull(s, NULL, 10);
+	return 0;
 }
 
 void *db_get_result_set()

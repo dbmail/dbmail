@@ -83,8 +83,7 @@ struct qtmp {
 	int rows, cols;
 };
 
-struct qtmp *lastq = 0, *saveq = 0, *tempq = 0;
-
+struct qtmp *lastq = 0;
 
 static void dbsqlite_current_timestamp(sqlite3_context *f, int argc UNUSED, const sqlite3_value **argv UNUSED)
 {
@@ -376,18 +375,6 @@ u64_t db_get_affected_rows()
 {
 	if (!conn) return 0;
 	return (u64_t)sqlite3_changes(conn);
-}
-
-void db_use_msgbuf_result()
-{
-	saveq = lastq;
-	lastq = tempq;
-}
-
-void db_store_msgbuf_result()
-{
-	tempq = lastq;
-	lastq = saveq;
 }
 
 void *db_get_result_set()

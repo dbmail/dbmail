@@ -94,9 +94,7 @@ int db_load_driver(void)
 	||  !g_module_symbol(module, "db_do_cleanup",          (gpointer)&db->do_cleanup          )
 	||  !g_module_symbol(module, "db_get_length",          (gpointer)&db->get_length          )
 	||  !g_module_symbol(module, "db_get_affected_rows",   (gpointer)&db->get_affected_rows   )
-	||  !g_module_symbol(module, "db_use_msgbuf_result",   (gpointer)&db->use_msgbuf_result   )
-	||  !g_module_symbol(module, "db_store_msgbuf_result", (gpointer)&db->store_msgbuf_result )
-	||  !g_module_symbol(module, "db_get_sql",             (gpointer)&db->get_sql      	)
+	||  !g_module_symbol(module, "db_get_sql",             (gpointer)&db->get_sql             )
 	||  !g_module_symbol(module, "db_set_result_set",      (gpointer)&db->set_result_set      )) {
 		trace(TRACE_FATAL, "%s,%s: cannot find function %s", 
 				__FILE__, __func__, g_module_error());
@@ -149,10 +147,6 @@ u64_t db_get_length(unsigned row, unsigned field)
 	{ return db->get_length(row, field); }
 u64_t db_get_affected_rows(void)
 	{ return db->get_affected_rows(); }
-void db_use_msgbuf_result(void)
-	{ db->use_msgbuf_result(); }
-void db_store_msgbuf_result(void)
-	{ db->store_msgbuf_result(); }
 void db_set_result_set(void *res)
 	{ db->set_result_set(res); }
 const char * db_get_sql(sql_fragment_t frag)
