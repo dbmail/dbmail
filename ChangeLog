@@ -1,3 +1,11 @@
+2006-10-23  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-imapsession.c, imapcommands.c:
+	always update recent flags on mailbox close
+	* check_dbmail_db.c, dbmail-message.c, dbmodule.c, modules/dbmysql.c, 
+	  modules/dbpgsql.c, modules/dbsqlite.c:
+	cleanups in the db layer
+
 2006-10-22  Aaron Stone  <aaron@serendipity.cx>
 
 	* serverchild.c, pool.c, server.c:
