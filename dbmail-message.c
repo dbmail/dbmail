@@ -1300,7 +1300,5 @@ struct DbmailMessage * db_init_fetch(u64_t msg_idnr, int filter)
 	if (! (msg = dbmail_message_retrieve(msg, physid, filter)))
 		return NULL;
 
-	db_store_msgbuf_result();
-
 	return msg;
 }
