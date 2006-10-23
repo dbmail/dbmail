@@ -270,8 +270,6 @@ u64_t db_insert_result(const char *sequence_identifier)
 int db_query(const char *q)
 {
 	int PQresultStatusVar;
-	char *result_string;
-	PGresult *temp_res;
 	
 	db_free_result();
 
