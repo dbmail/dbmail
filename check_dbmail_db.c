@@ -296,21 +296,6 @@ END_TEST
 //u64_t db_get_affected_rows(void);
 
 /**
- * \brief switch from the normal result set to the msgbuf
- * result set from hereon. A call to db_store_msgbuf_result()
- * will reverse this situation again 
- */
-//void db_use_msgbuf_result(void);
-
-/**
- * \brief switch from msgbuf result set to the normal result
- * set for all following database operations. This function
- * should be called after db_use_msgbuf_result() when the
- * msgbuf result has to be used later on.
- */
-//void db_store_msgbuf_result(void);
-
-/**
  * \brief switch from normal result set to the authentication result
  * set
  */

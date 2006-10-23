@@ -74,10 +74,6 @@ const char * db_get_sql(sql_fragment_t frag)
 
 static PGconn *conn = NULL;
 static PGresult *res = NULL;
-static PGresult *msgbuf_res;
-static PGresult *stored_res;
-static u64_t affected_rows; /**< stores the number of rows affected by the
-			     * the last query */
 static void _create_binary_table(void);
 static void _free_binary_table(void);
 static void _set_binary_table(unsigned row, unsigned field);
@@ -288,62 +284,37 @@ int db_query(const char *the_query)
 			    the global res is 
 			    set to this temp_res result set */
 	_free_binary_table();
-	if (the_query != NULL) {
-		trace(TRACE_DEBUG, "%s,%s: "
-		      "executing query [%s]", __FILE__, __func__,
-		      the_query);
+
+	g_return_val_if_fail(the_query != NULL,-1);
+
+	TRACE(TRACE_DEBUG, "[%s]", the_query);
+	temp_res = PQexec(conn, the_query);
+	if (!temp_res) {
+		/* attempt at executing query failed. Retry..*/
+		PQreset(conn);
 		temp_res = PQexec(conn, the_query);
-		if (!temp_res) {
-			/* attempt at executing query failed. Retry..*/
-			PQreset(conn);
-			temp_res = PQexec(conn, the_query);
-			/* if we still fail, we cannot do the query.. */
-			if (!temp_res)
-				return -1;
-		}
-		
-		PQresultStatusVar = PQresultStatus(temp_res);
-
-		if (PQresultStatusVar != PGRES_COMMAND_OK &&
-		    PQresultStatusVar != PGRES_TUPLES_OK) {
-			trace(TRACE_ERROR, "%s, %s: "
-			      "Error executing query [%s] : [%s]\n",
-			      __FILE__, __func__,
-			      the_query, PQresultErrorMessage(temp_res));
-			PQclear(temp_res);
+		/* if we still fail, we cannot do the query.. */
+		if (!temp_res)
 			return -1;
-		}
+	}
+	
+	PQresultStatusVar = PQresultStatus(temp_res);
 
-		/* get the number of rows affected by the query */
-		result_string = PQcmdTuples(temp_res);
-		if (result_string)
-			affected_rows = strtoull(result_string, NULL, 10);
-		else
-			affected_rows = 0;
-
-		/* only keep the result set if this was a SELECT
-		 * query */
-		if (strncasecmp(the_query, "SELECT", 6) != 0) {
-			if (temp_res != NULL)
-				PQclear(temp_res);
-		}
-
-		else {
-			if (res) {
-				trace(TRACE_WARNING,
-				      "%s,%s: previous result set is possibly "
-				      "not freed.", __FILE__,
-				      __func__);
-				PQclear(res);
-			}
-			res = temp_res;
-		}
-	} else {
-		trace(TRACE_ERROR, "%s,%s: "
-		      "query buffer is NULL, this is not supposed to happen\n",
-		      __FILE__, __func__);
+	if (PQresultStatusVar != PGRES_COMMAND_OK && PQresultStatusVar != PGRES_TUPLES_OK) {
+		TRACE(TRACE_ERROR, "query failed [%s] : [%s]\n",
+		      the_query, PQresultErrorMessage(temp_res));
+		PQclear(temp_res);
 		return -1;
 	}
+
+	if (res)
+		PQclear(res);
+
+	/* only keep the result set if this was a SELECT query */
+	if (strncasecmp(the_query, "SELECT", 6) == 0)
+		res = temp_res;
+	else
+		PQclear(temp_res);
 	return 0;
 }
 
@@ -404,20 +375,15 @@ u64_t db_get_length(unsigned row, unsigned field)
 }
 
 u64_t db_get_affected_rows()
-{
-	return affected_rows;
-}
 
-void db_use_msgbuf_result()
 {
-	stored_res = res;
-	res = msgbuf_res;
-}
-
-void db_store_msgbuf_result()
-{
-	msgbuf_res = res;
-	res = stored_res;
+	char *s;
+	/* get the number of rows affected by the query */
+	if (! res)
+		return 0;
+	if ((s = PQcmdTuples(res)) != NULL)
+		return strtoull(s, NULL, 10);
+	return 0;
 }
 
 void *db_get_result_set()

@@ -237,9 +237,6 @@ int _ic_select(struct ImapSession *self)
 
 	mailbox = self->args[0];
 	
-	// flush recent messages from previous select
-	dbmail_imap_session_mailbox_update_recent(self);
-	
 	if ((result = dbmail_imap_session_mailbox_open(self, mailbox))) 
 		return result;
 
