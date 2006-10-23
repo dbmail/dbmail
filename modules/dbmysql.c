@@ -28,6 +28,7 @@
 #include "dbmail.h"
 #include "mysql.h"
 
+#define THIS_MODULE "mysql"
 
 #define DB_MYSQL_STANDARD_PORT 3306
 
@@ -86,19 +87,15 @@ static int db_mysql_check_collations(void)
 	if (strlen(_db_params.encoding) > 0) {
 		snprintf(the_query, DEF_QUERYSIZE, "SET NAMES %s", _db_params.encoding);
 		if (db_query(the_query) == DM_EQUERY) {
-			trace(TRACE_ERROR,
-			      "%s,%s: error setting collation", __FILE__, __func__);
+			TRACE(TRACE_ERROR, "error setting collation");
 			return DM_EQUERY;
 		}
 		db_free_result();
 	}
 
-	snprintf(the_query, DEF_QUERYSIZE,
-			"SHOW VARIABLES LIKE 'collation_%%'");
+	snprintf(the_query, DEF_QUERYSIZE, "SHOW VARIABLES LIKE 'collation_%%'");
 	if (db_query(the_query) == DM_EQUERY) {
-		trace(TRACE_ERROR,
-		      "%s,%s: error getting collation variables for database",
-		      __FILE__, __func__);
+		TRACE(TRACE_ERROR, "error getting collation variables for database");
 		return DM_EQUERY;
 	}
 
@@ -111,8 +108,7 @@ static int db_mysql_check_collations(void)
 	if (strcmp(collation[i][0], "collation_database") == 0) {
 		for (j = 0; j < 3; j++)
 		if (strcmp(collation[j][0], "collation_connection") == 0) {
-			trace(TRACE_DEBUG, "%s,%s: does [%s:%s] match [%s:%s]?",
-				__FILE__, __func__,
+			TRACE(TRACE_DEBUG, "does [%s:%s] match [%s:%s]?",
 				collation[i][0], collation[i][1],
 				collation[j][0], collation[j][1]);
 			if (strcmp(collation[i][1], collation[j][1]) == 0) {
@@ -130,10 +126,8 @@ static int db_mysql_check_collations(void)
 		free(collation[i][j]);
 
 	if (!collations_match) {
-		trace(TRACE_ERROR,
-		      "%s,%s: collation mismatch, your MySQL configuration specifies a"
-		      " different charset than the data currently in your DBMail database.",
-		      __FILE__, __func__);
+		TRACE(TRACE_ERROR, "collation mismatch, your MySQL configuration specifies a"
+		      " different charset than the data currently in your DBMail database.");
 		return DM_EQUERY;
 	}
 
@@ -158,11 +152,10 @@ int db_connect()
 	if (strncmp(_db_params.host, "localhost", FIELDSIZE) == 0 ||
 	    _db_params.host == NULL) {
 		if (strlen(_db_params.sock) == 0) {
-			trace(TRACE_WARNING, "%s,%s: MySQL host is set to "
+			TRACE(TRACE_WARNING, "MySQL host is set to "
 			      "localhost, but no mysql_socket has been set. "
 			      "Use sqlsocket=... in dbmail.conf. Connecting "
-			      "will be attempted using the default socket.",
-			      __FILE__, __func__);
+			      "will be attempted using the default socket.");
 			sock = NULL;
 		} else
 			sock = _db_params.sock;
@@ -172,17 +165,9 @@ int db_connect()
 	if (mysql_real_connect(&conn, _db_params.host, _db_params.user,
 			       _db_params.pass, _db_params.db,
 			       _db_params.port, sock, 0) == NULL) {
-		trace(TRACE_ERROR, "%s,%s: mysql_real_connect failed: %s",
-		      __FILE__, __func__, mysql_error(&conn));
+		TRACE(TRACE_ERROR, "mysql_real_connect failed: %s", mysql_error(&conn));
 		return DM_EQUERY;
 	}
-#ifdef mysql_errno
-	if (mysql_errno(&conn)) {
-		trace(TRACE_ERROR, "%s,%s: mysql_real_connect failed: %s",
-		      __FILE__, __func__, mysql_error(&conn));
-		return DM_EQUERY;
-	}
-#endif
 
 	if (db_mysql_check_collations() == DM_EQUERY)
 		return DM_EQUERY;
@@ -215,7 +200,6 @@ void db_free_result()
 		mysql_free_result(res);
 	
 	res = NULL;
-        res_changed = 1;
 }
 
 
@@ -224,15 +208,12 @@ const char *db_get_result(unsigned row, unsigned field)
 	char *result;
 
 	if (!res) {
-		trace(TRACE_WARNING, "%s,%s: result set is null\n",
-		      __FILE__, __func__);
+		TRACE(TRACE_WARNING, "result set is null\n");
 		return NULL;
 	}
 
 	if ((row > db_num_rows()) || (field > db_num_fields())) {
-		trace(TRACE_WARNING, "%s, %s: "
-		      "row = %u, field = %u, bigger than size of result set",
-		      __FILE__, __func__, row, field);
+		TRACE(TRACE_WARNING, "row = %u or field = %u out of range", row, field);
 		return NULL;
 	}
 	
@@ -240,15 +221,13 @@ const char *db_get_result(unsigned row, unsigned field)
 	last_row = mysql_fetch_row(res);
 	
 	if (last_row == NULL) {
-		trace(TRACE_DEBUG, "%s,%s: row is NULL\n",
-		      __FILE__, __func__);
+		TRACE(TRACE_DEBUG, "row is NULL");
 		return NULL;
 	}
 
 	result = last_row[field];
 	if (result == NULL)
-		trace(TRACE_DEBUG, "%s,%s: result is null\n",
-		      __FILE__, __func__);
+		TRACE(TRACE_DEBUG, "result is null");
 	return result;
 }
 
@@ -264,8 +243,7 @@ int db_check_connection()
 {
 	if (mysql_ping(&conn)) {
 		if (db_connect() < 0) {
-			trace(TRACE_ERROR, "%s,%s: unable to connect to "
-			      "database.", __FILE__, __func__);
+			TRACE(TRACE_ERROR, "unable to connect to database.");
 			return DM_EQUERY;
 		}
 	}
@@ -286,19 +264,14 @@ int db_query(const char *q)
 
 	querysize = (unsigned) strlen(q);
 
-	if (querysize == 0) {
-		trace(TRACE_ERROR, "%s,%s: empty query: [%d]", 
-				__FILE__, __func__, querysize);
-		return DM_EQUERY;
-	}
-	
+	g_return_val_if_fail(querysize > 0, DM_EQUERY);
+
 	if (db_check_connection() < 0) 
 		return DM_EQUERY;
 	
-	trace(TRACE_DEBUG, "%s,%s: query [%s]", __FILE__, __func__, q);
+	TRACE(TRACE_DEBUG, "query [%s]", q);
 	if (mysql_real_query(&conn, q, querysize)) {
-		trace(TRACE_ERROR, "%s,%s: [%s] [%s]", __FILE__, __func__, 
-				mysql_error(&conn), q);
+		TRACE(TRACE_ERROR, "[%s] [%s]", mysql_error(&conn), q);
 		return DM_EQUERY;
 	}
 
@@ -331,9 +304,8 @@ int db_do_cleanup(const char **tables, int num)
 			 _db_params.pfx,tables[i]);
 
 		if (db_query(the_query) == DM_EQUERY) {
-			trace(TRACE_ERROR,
-			      "%s,%s: error optimizing table [%s%s]",
-			      __FILE__, __func__, _db_params.pfx,tables[i]);
+			TRACE(TRACE_ERROR, "error optimizing table [%s%s]",
+			      _db_params.pfx,tables[i]);
 			result = DM_EQUERY;
 		}
 		db_free_result();
@@ -345,24 +317,21 @@ int db_do_cleanup(const char **tables, int num)
 u64_t db_get_length(unsigned row, unsigned field)
 {
 	if (!res) {
-		trace(TRACE_WARNING, "%s,%s: result set is null\n",
-		      __FILE__, __func__);
+		TRACE(TRACE_WARNING, "result set is null");
 		return DM_EQUERY;
 	}
 
 
 	if ((row >= db_num_rows()) || (field >= db_num_fields())) {
-		trace(TRACE_ERROR, "%s, %s: "
-		      "row = %u, field = %u, bigger than size of result set",
-		      __FILE__, __func__, row, field);
+		TRACE(TRACE_ERROR, "row = %u, field = %u, bigger than size of result set",
+		      row, field);
 		return DM_EQUERY;
 	}
 	
 	mysql_data_seek(res, row);
 	last_row = mysql_fetch_row(res);
 	if (last_row == NULL) {
-		trace(TRACE_ERROR, "%s,%s: last_row = NULL",
-		      __FILE__, __func__);
+		TRACE(TRACE_ERROR, "last_row = NULL");
 		return (u64_t) 0;
 	}
 	return (u64_t) mysql_fetch_lengths(res)[field];
