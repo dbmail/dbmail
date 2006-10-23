@@ -1,5 +1,5 @@
 /*
-  $Id: server.c 2297 2006-10-04 19:17:01Z aaron $
+  $Id: server.c 2314 2006-10-22 17:56:06Z aaron $
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
 
@@ -38,6 +38,7 @@ volatile sig_atomic_t mainSig = 0;
 volatile sig_atomic_t get_sigchld = 0;
 
 int isChildProcess = 0;
+int isGrandChildProcess = 0;
 pid_t ParentPID = 0;
 ChildInfo_t childinfo;
 
@@ -160,7 +161,6 @@ int StartServer(serverConfig_t * conf)
 	}
    
  	manage_stop_children();
- 	scoreboard_delete();
 
 	return Restart;
 }

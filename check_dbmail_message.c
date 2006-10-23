@@ -17,7 +17,7 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  *
- *  $Id: check_dbmail_message.c 2284 2006-09-30 17:46:26Z paul $ 
+ *  $Id: check_dbmail_message.c 2315 2006-10-22 21:39:24Z aaron $ 
  *
  *
  *  
@@ -451,7 +451,7 @@ START_TEST(test_dbmail_message_construct)
 	gchar *result;
 
 	struct DbmailMessage *message = dbmail_message_new();
-	message = dbmail_message_construct(message,sender,recipient,subject,body);
+	message = dbmail_message_construct(message,recipient,sender,subject,body);
 	result = dbmail_message_to_string(message);
 	fail_unless(MATCH(expect,result),"dbmail_message_construct failed\n%s\n%s", expect, result);
 }

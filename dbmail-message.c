@@ -1,5 +1,5 @@
 /*
-  $Id: dbmail-message.c 2302 2006-10-09 09:54:28Z paul $
+  $Id: dbmail-message.c 2315 2006-10-22 21:39:24Z aaron $
 
   Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
 
@@ -278,7 +278,7 @@ struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *sel
 // TODO: support text/html
 
 struct DbmailMessage * dbmail_message_construct(struct DbmailMessage *self, 
-		const gchar *sender, const gchar *recipient, 
+		const gchar *to, const gchar *from, 
 		const gchar *subject, const gchar *body)
 {
 	GMimeMessage *message;
@@ -301,9 +301,9 @@ struct DbmailMessage * dbmail_message_construct(struct DbmailMessage *self,
 	encoding = g_mime_utils_best_encoding((unsigned char *)body, strlen(body));
 
 	// set basic headers
-	g_mime_message_set_sender(message, sender);
+	g_mime_message_set_sender(message, from);
 	g_mime_message_set_subject(message, subject);
-	g_mime_message_add_recipients_from_string(message, GMIME_RECIPIENT_TYPE_TO, recipient);
+	g_mime_message_add_recipients_from_string(message, GMIME_RECIPIENT_TYPE_TO, to);
 
 	// construct mime-part
 	mime_part = g_mime_part_new();

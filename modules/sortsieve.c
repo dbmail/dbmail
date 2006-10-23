@@ -274,8 +274,16 @@ int sort_errparse(sieve2_context_t *s, void *my)
 
 	g_string_append_printf(m->result->errormsg, "Parse error on line [%d]: %s", lineno, message);
 
-//	TODO: generate a message and put it into the INBOX
-//	of the script's owner, probably with an Urgent flag.
+	if (m->message) {
+		char *alertbody = g_strdup_printf(
+			"Your Sieve script [%s] failed to parse correctly.\n"
+			"Messages will be delivered to your INBOX for now.\n"
+			"The error message is:\n"
+			"%s\n",
+			m->script, message);
+		send_alert(m->user_idnr, "Sieve script parse error", alertbody);
+		g_free(alertbody);
+	}
 
 	m->result->error_parse = 1;
 	return SIEVE2_OK;
@@ -292,8 +300,16 @@ int sort_errexec(sieve2_context_t *s, void *my)
 
 	g_string_append_printf(m->result->errormsg, "Execution error: %s", message);
 
-//	TODO: generate a message and put it into the INBOX
-//	of the script's owner, probably with an Urgent flag.
+	if (m->message) {
+		char *alertbody = g_strdup_printf(
+			"Your Sieve script [%s] failed to run correctly.\n"
+			"Messages will be delivered to your INBOX for now.\n"
+			"The error message is:\n"
+			"%s\n",
+			m->script, message);
+		send_alert(m->user_idnr, "Sieve script run error", alertbody);
+		g_free(alertbody);
+	}
 
 	m->result->error_runtime = 1;
 	return SIEVE2_OK;
@@ -603,7 +619,6 @@ static int sort_startup(sieve2_context_t **s2c,
 }
 
 /* The caller is responsible for freeing memory here. */
-// TODO: Support SIEVE_{extension} settings in dbmail.conf
 const char * sort_listextensions(void)
 {
 	sieve2_context_t *sieve2_context;
