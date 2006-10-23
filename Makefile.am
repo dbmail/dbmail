@@ -26,6 +26,8 @@ if USE_DM_GETOPT
 DM_GETOPT = dm_getopt.c
 endif
 
+pkglibdir = $(libdir)
+
 sbin_PROGRAMS = dbmail-smtp \
 	dbmail-pop3d \
 	dbmail-imapd \
