@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: pipe.h 2162 2006-06-08 13:16:16Z aaron $ 
+/* $Id: pipe.h 2316 2006-10-22 22:17:06Z aaron $ 
  */
 
 #ifndef _PIPE_H
@@ -53,5 +53,6 @@ int send_redirect(struct DbmailMessage *message,
 		const char *to, const char *from);
 int send_forward_list(struct DbmailMessage *message,
 		struct dm_list *targets, const char *from);
+int send_alert(u64_t user_idnr, char *subject, char *body);
 
 #endif
