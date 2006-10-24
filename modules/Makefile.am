@@ -28,6 +28,8 @@ else
 AM_LDFLAGS = 
 endif
 
+pkglibdir = $(libdir)
+
 pkglib_LTLIBRARIES = libmysql.la \
 	libpgsql.la \
 	libsqlite.la \

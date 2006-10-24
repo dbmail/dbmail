@@ -1,6 +1,8 @@
 #!/bin/sh
-
-
+if [ "$1" = "remove" ]; then
+	ldconfig
+fi
+	
 if [ "$1" = "purge" ]; then
 		
 	rm -f /etc/dbmail/dbmail.conf || true
@@ -14,3 +16,5 @@ if [ "$1" = "purge" ]; then
 fi
 
 #DEBHELPER#
+
+exit 0
