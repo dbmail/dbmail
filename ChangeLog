@@ -1,3 +1,19 @@
+2006-10-24  Paul J Stevens <paul@nfg.nl>
+
+	* modules/dbpgsql.c:
+	remove unused vars
+	* debian/changelog, debian/control, debian/dbmail.dirs, 
+	  debian/dbmail.install, debian/dbmail.postinst, debian/dbmail.postrm, 
+	  debian/libdbmail0.dirs, debian/libdbmail0.install, 
+	  debian/libdbmail0.postinst, debian/libdbmail0.postrm, 
+	  debian/manpages, debian/rules:
+	remove the libdbmail package
+	* Makefile.am, authmodule.c, dbmodule.c, modules/Makefile.am, sortmodule.c:
+	install libdbmail in PREFIX/lib/dbmail and dont scan  PREFIX/lib for
+	modules
+	* debian/dbmail.install:
+	cleanups
+
 2006-10-23  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-imapsession.c, imapcommands.c:
