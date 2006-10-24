@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: pipe.c 2315 2006-10-22 21:39:24Z aaron $
+/* $Id: pipe.c 2319 2006-10-23 17:57:19Z aaron $
  *
  * Functions for reading the pipe from the MTA */
 
@@ -671,6 +671,24 @@ int send_alert(u64_t user_idnr, char *subject, char *body)
 	char *from;
 	int msgflags[IMAP_NFLAGS];
 
+	// Only send each unique alert once a day.
+	char *tmp = g_strconcat(subject, body, NULL);
+	char *handle = dm_md5((unsigned char *)tmp);
+	char *userchar = g_strdup_printf("%llu", user_idnr);
+	if (db_replycache_validate(userchar, "send_alert", handle, 1) != DM_SUCCESS) {
+		TRACE(TRACE_INFO, "Already sent alert [%s] to user [%llu] today", subject, user_idnr);
+		g_free(userchar);
+		g_free(handle);
+		g_free(tmp);
+		return 0;
+	} else {
+		TRACE(TRACE_INFO, "Sending alert [%s] to user [%llu]", subject, user_idnr);
+		db_replycache_register(userchar, "send_alert", handle);
+		g_free(userchar);
+		g_free(handle);
+		g_free(tmp);
+	}
+
 	// From the Postmaster.
 	if (config_get_value("POSTMASTER", "DBMAIL", postmaster) < 0) {
 		TRACE(TRACE_MESSAGE, "no config value for POSTMASTER");
@@ -684,22 +702,23 @@ int send_alert(u64_t user_idnr, char *subject, char *body)
 	memset(msgflags, 0, IMAP_NFLAGS);
 	msgflags[IMAP_FLAG_FLAGGED] = 1;
 
-	// Fake the "to" address.
-	char *to = "DBMail User";
+	// Get the user's login name.
+	char *to = auth_get_userid(user_idnr);
 
 	new_message = dbmail_message_new();
 	new_message = dbmail_message_construct(new_message, to, from, subject, body);
-	dbmail_message_set_header(new_message, "X-Priority", "1");
 
 	// Pre-insert the message and get a new_message->id
 	dbmail_message_store(new_message);
+	u64_t tmpid = new_message->id;
 
 	if (sort_deliver_to_mailbox(new_message, user_idnr,
-			"INBOX", BOX_SORTING, msgflags) != DSN_CLASS_OK) {
+			"INBOX", BOX_BRUTEFORCE, msgflags) != DSN_CLASS_OK) {
 		TRACE(TRACE_ERROR, "Unable to deliver alert [%s] to user [%llu]", subject, user_idnr);
 	}
 
-	db_delete_message(new_message->id);
+	g_free(to);
+	db_delete_message(tmpid);
 	dbmail_message_free(new_message);
 
 	return 0;

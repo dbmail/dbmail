@@ -1,3 +1,8 @@
+2006-10-23  Aaron Stone  <aaron@serendipity.cx>
+
+	* pipe.c:
+	Limit the alert rate to one-per-day, other cleanups.
+
 2006-10-23  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-imapsession.c, imapcommands.c:
