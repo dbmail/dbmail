@@ -1,0 +1,183 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+## 01_gc.dpatch by  <paul@nfg.nl>
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: No description.
+
+@DPATCH@
+diff -urNad dbmail-2.1/acinclude.m4 /tmp/dpep.dBHzvy/dbmail-2.1/acinclude.m4
+--- dbmail-2.1/acinclude.m4	2004-12-04 13:29:14.000000000 +0100
++++ /tmp/dpep.dBHzvy/dbmail-2.1/acinclude.m4	2004-12-04 13:48:54.000000000 +0100
+@@ -333,3 +333,65 @@
+ INIPARSERLTLIB="lib/iniparser-2.14/src/libiniparser.la"
+ ])
+ 
++# ----------------------------------------------------------------
++# DBMAIL_CHECK_GC
++# I cheated I copied from w3m's acinclude.m4 :)
++# Modified for DBMAIL by Dan Weber
++# ----------------------------------------------------------------
++AC_DEFUN([DBMAIL_CHECK_GC],
++[AC_MSG_CHECKING(for --with-gc)
++AC_ARG_WITH(gc,
++ [  --with-gc[=PREFIX]        libgc PREFIX],
++ [test x"$with_gc" = xno && with_gc="no"],
++ [with_gc="no"])
++ AC_MSG_RESULT($with_gc)
++# Don't check for gc if not appended to command line
++ if test x"$with_gc" = xyes
++ then
++ test x"$with_gc" = xyes && with_gc="/usr /usr/local ${HOME}"
++ unset ac_cv_header_gc_h
++  AC_CHECK_HEADER(gc/gc.h)
++ if test x"$ac_cv_header_gc_h" = xno; then
++   AC_MSG_CHECKING(GC header location)
++   AC_MSG_RESULT($with_gc)
++   gcincludedir=no
++    for dir in $with_gc; do
++     for inc in include include/gc; do
++       cflags="$CFLAGS"
++       CFLAGS="$CFLAGS -I$dir/$inc -DUSE_GC=1"
++       AC_MSG_CHECKING($dir/$inc)
++       unset ac_cv_header_gc_h
++       AC_CHECK_HEADER(gc/gc.h, [gcincludedir="$dir/$inc"; CFLAGS="$CFLAGS -I$dir/$inc -DUSE_GC=1"; break])
++       CFLAGS="$cflags"
++     done
++     if test x"$gcincludedir" != xno; then
++       break;
++     fi
++   done
++   if test x"$gcincludedir" = xno; then
++     AC_MSG_ERROR([gc/gc.h not found])
++   fi
++ else
++  cflags="$CFLAGS -DUSE_GC=1"
++  CFLAGS="$cflags"
++ fi
++ unset ac_cv_lib_gc_GC_init
++ AC_CHECK_LIB(gc, GC_init, [LIBS="$LIBS -lgc"])
++ if test x"$ac_cv_lib_gc_GC_init" = xno; then
++    AC_MSG_CHECKING(GC library location)
++    AC_MSG_RESULT($with_gc)
++    gclibdir=no
++    for dir in $with_gc; do
++      ldflags="$LDFLAGS"
++      LDFLAGS="$LDFLAGS -L$dir/lib"
++      AC_MSG_CHECKING($dir)
++      unset ac_cv_lib_gc_GC_init
++      AC_CHECK_LIB(gc, GC_init, [gclibdir="$dir/lib"; LIBS="$LIBS -L$dir/lib -lgc"; break])
++      LDFLAGS="$ldflags"
++    done
++    if test x"$gclibdir" = xno; then
++      AC_MSG_ERROR([libgc not found])
++    fi
++ fi
++fi])
++
+diff -urNad dbmail-2.1/configure.in /tmp/dpep.dBHzvy/dbmail-2.1/configure.in
+--- dbmail-2.1/configure.in	2004-12-04 13:29:14.000000000 +0100
++++ /tmp/dpep.dBHzvy/dbmail-2.1/configure.in	2004-12-04 13:49:24.000000000 +0100
+@@ -43,6 +43,8 @@
+ DBMAIL_CHECK_GLIB
+ DBMAIL_CHECK_GMIME
+ DBMAIL_SET_INIPARSER
++DBMAIL_CHECK_GC
++
+ 
+ AC_PROG_CC
+ AC_COMPILE_WARNINGS
+diff -urNad dbmail-2.1/debug.h /tmp/dpep.dBHzvy/dbmail-2.1/debug.h
+--- dbmail-2.1/debug.h	2004-07-21 11:03:26.000000000 +0200
++++ /tmp/dpep.dBHzvy/dbmail-2.1/debug.h	2004-12-04 13:47:50.000000000 +0100
+@@ -30,6 +30,11 @@
+ #include <sys/syslog.h>
+ #include <stdarg.h>
+ 
++#ifdef USE_GC
++#define GC_DEBUG
++#include <gc/gc.h>
++#endif
++
+ #ifndef  _DEBUG_H
+ #define  _DEBUG_H
+ 
+@@ -56,9 +61,22 @@
+ #define my_free(p) __debug_free(p, __FILE__, __LINE__)
+ #define __DEBUG_TRACE_MEMALLOC
+ */
++#ifdef USE_GC
++
++#define my_malloc(s) GC_MALLOC(s)
++#define my_free(p) GC_FREE(p)
++#define my_calloc(n,p) GC_MALLOC((n) * (p))
++#define my_realloc(n,p) GC_REALLOC((n),(p))
++
++#else
+ 
+ #define my_malloc(s) malloc(s)
+ #define my_free(p) free(p)
++#define my_calloc(n,p) calloc(n,p)
++#define my_realloc(n,p) realloc(n,p)
++
++#endif
++
+ #ifdef __DEBUG_TRACE_MEMALLOC
+ #undef __DEBUG_TRACE_MEMALLOC
+ #endif
+diff -urNad dbmail-2.1/lmtp.c /tmp/dpep.dBHzvy/dbmail-2.1/lmtp.c
+--- dbmail-2.1/lmtp.c	2004-11-16 09:59:16.000000000 +0100
++++ /tmp/dpep.dBHzvy/dbmail-2.1/lmtp.c	2004-12-04 13:47:50.000000000 +0100
+@@ -767,7 +767,7 @@
+ 		
+ 		/* change the \r\n ending to \n */
+ 		
+-		if (!(tmpmessage = realloc(tmpmessage, 
++		if (!(tmpmessage = my_realloc(tmpmessage, 
+ 					   total_size + line_size - 1))) {
+ 			error = 1;
+ 			break;
+@@ -797,7 +797,7 @@
+ 	}
+ 
+ 	total_size += 1;
+-	if (!(tmpmessage = realloc(tmpmessage, total_size))) {
++	if (!(tmpmessage = my_realloc(tmpmessage, total_size))) {
+ 		trace(TRACE_ERROR, "%s.%s: realloc failed",
+ 		      __FILE__, __func__);
+ 		error = 1;
+diff -urNad dbmail-2.1/mime.c /tmp/dpep.dBHzvy/dbmail-2.1/mime.c
+--- dbmail-2.1/mime.c	2004-11-27 13:38:46.000000000 +0100
++++ /tmp/dpep.dBHzvy/dbmail-2.1/mime.c	2004-12-04 13:47:50.000000000 +0100
+@@ -353,7 +353,7 @@
+ 	      mimelist->total_nodes);
+ 
+ 	memtst((tmpvalue =
+-		(char *) calloc(MIME_VALUE_MAX, sizeof(char))) == NULL);
++		(char *) my_calloc(MIME_VALUE_MAX, sizeof(char))) == NULL);
+ 
+ 	trace(TRACE_INFO, "mail_adr_list(): mail address parser starting");
+ 
+diff -urNad dbmail-2.1/misc.c /tmp/dpep.dBHzvy/dbmail-2.1/misc.c
+--- dbmail-2.1/misc.c	2004-08-02 16:02:18.000000000 +0200
++++ /tmp/dpep.dBHzvy/dbmail-2.1/misc.c	2004-12-04 13:47:50.000000000 +0100
+@@ -412,7 +412,7 @@
+ 			 * buffer every time it is too small. This yields
+ 			 * a logarithmic number of reallocations. */
+ 			tmp_buf =
+-			    realloc(f_buf, sizeof(char) * (f_len *= 2));
++			    my_realloc(f_buf, sizeof(char) * (f_len *= 2));
+ 			if (tmp_buf != NULL)
+ 				f_buf = tmp_buf;
+ 			else
+diff -urNad dbmail-2.1/sievecmd.c /tmp/dpep.dBHzvy/dbmail-2.1/sievecmd.c
+--- dbmail-2.1/sievecmd.c	2004-12-04 13:29:14.000000000 +0100
++++ /tmp/dpep.dBHzvy/dbmail-2.1/sievecmd.c	2004-12-04 13:47:50.000000000 +0100
+@@ -343,7 +343,7 @@
+ 	while (!feof(f)) {
+ 		if (f_pos + 1 >= f_len) {
+ 			tmp_buf =
+-			    realloc(f_buf, sizeof(char) * (f_len += 200));
++			    my_realloc(f_buf, sizeof(char) * (f_len += 200));
+ 			if (tmp_buf != NULL)
+ 				f_buf = tmp_buf;
+ 			else

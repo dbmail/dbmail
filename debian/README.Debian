@@ -1,0 +1,30 @@
+
+dbmail for Debian
+
+$Id$
+-----------------
+
+Before you can run dbmail you will have to create the database,
+create the required tables and grant access to the user specified 
+in dbmail.conf.
+
+If you are upgrading from dbmail-1.2 you will find that the sql tables 
+have changed and are incompatible with dbmail-2.x. Migration scripts
+for your database backend are provided in the examples directory. None
+of the dbmail-2 binaries will run until you have upgraded your database.
+
+The debian package runs dbmail-smtp as user dbmail via suid.
+This will allow normal users to insert mail through dbmail-smtp
+(i.e. from procmail) without granting them access to dbmail.conf
+and the password contained therein.
+
+---
+Paul Stevens <paul@nfg.nl>
+
+
+
+
+
+
+
+

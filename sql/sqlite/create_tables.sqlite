@@ -1,0 +1,923 @@
+-- Copyright (C) 2005 Internet Connection, Inc.
+-- Copyright (C) 2006 NFG Net Facilities Group BV.
+--
+-- This program is free software; you can redistribute it and/or 
+-- modify it under the terms of the GNU General Public License 
+-- as published by the Free Software Foundation; either 
+-- version 2 of the License, or (at your option) any later 
+-- version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program; if not, write to the Free Software
+-- Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+-- $Id$
+
+BEGIN TRANSACTION;
+
+PRAGMA auto_vacuum = 1;
+
+CREATE TABLE dbmail_aliases (
+   alias_idnr INTEGER PRIMARY KEY,
+   alias TEXT NOT NULL,
+   deliver_to TEXT NOT NULL,
+   client_idnr INTEGER DEFAULT '0' NOT NULL
+);
+CREATE INDEX dbmail_aliases_index_1 ON dbmail_aliases(alias);
+CREATE INDEX dbmail_aliases_index_2 ON dbmail_aliases(client_idnr);
+
+CREATE TABLE dbmail_users (
+   user_idnr INTEGER PRIMARY KEY,
+   userid TEXT NOT NULL,
+   passwd TEXT NOT NULL,
+   client_idnr INTEGER DEFAULT '0' NOT NULL,
+   maxmail_size INTEGER DEFAULT '0' NOT NULL,
+   curmail_size INTEGER DEFAULT '0' NOT NULL,
+   encryption_type TEXT DEFAULT '' NOT NULL,
+   last_login DATETIME DEFAULT '1979-11-03 22:05:58' NOT NULL
+);
+CREATE UNIQUE INDEX dbmail_users_1 ON dbmail_users(userid);
+
+CREATE TABLE dbmail_mailboxes (
+   mailbox_idnr INTEGER PRIMARY KEY,
+   owner_idnr INTEGER DEFAULT '0' NOT NULL,
+   name TEXT BINARY NOT NULL,
+   seen_flag BOOLEAN default '0' not null,
+   answered_flag BOOLEAN default '0' not null,
+   deleted_flag BOOLEAN default '0' not null,
+   flagged_flag BOOLEAN default '0' not null,
+   recent_flag BOOLEAN default '0' not null,
+   draft_flag BOOLEAN default '0' not null,
+   no_inferiors BOOLEAN default '0' not null,
+   no_select BOOLEAN default '0' not null,
+   permission BOOLEAN default '2'
+);
+CREATE INDEX dbmail_mailboxes_1 ON dbmail_mailboxes(name);
+CREATE INDEX dbmail_mailboxes_2 ON dbmail_mailboxes(owner_idnr);
+CREATE UNIQUE INDEX dbmail_mailboxes_3 ON dbmail_mailboxes(owner_idnr,name);
+
+CREATE TRIGGER fk_insert_mailboxes_users_idnr
+	BEFORE INSERT ON dbmail_mailboxes
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.owner_idnr IS NOT NULL)
+				AND ((SELECT user_idnr FROM dbmail_users WHERE user_idnr = new.owner_idnr) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_mailboxes" violates foreign key constraint "fk_insert_mailboxes_users_idnr"')
+		END;
+	END;
+CREATE TRIGGER fk_update1_mailboxes_users_idnr
+	BEFORE UPDATE ON dbmail_mailboxes
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.owner_idnr IS NOT NULL)
+				AND ((SELECT user_idnr FROM dbmail_users WHERE user_idnr = new.owner_idnr) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_mailboxes" violates foreign key constraint "fk_update2_mailboxes_users_idnr"')
+		END;
+	END;
+CREATE TRIGGER fk_update2_mailboxes_users_idnr
+	AFTER UPDATE ON dbmail_users
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_mailboxes SET owner_idnr = new.user_idnr WHERE owner_idnr = OLD.user_idnr;
+	END;
+CREATE TRIGGER fk_delete_mailboxes_users_idnr
+	BEFORE DELETE ON dbmail_users
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_mailboxes WHERE owner_idnr = OLD.user_idnr;
+	END;
+
+
+CREATE TABLE dbmail_subscription (
+	user_id INTEGER NOT NULL,
+	mailbox_id INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX dbmail_subscriptioin_1 ON dbmail_subscription(user_id, mailbox_id);
+
+CREATE TRIGGER fk_insert_subscription_users_idnr
+	BEFORE INSERT ON dbmail_subscription
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.user_id IS NOT NULL)
+				AND ((SELECT user_idnr FROM dbmail_users WHERE user_idnr = new.user_id) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_subscription" violates foreign key constraint "fk_insert_subscription_users_idnr"')
+		END;
+	END;
+CREATE TRIGGER fk_update1_subscription_users_idnr
+	BEFORE UPDATE ON dbmail_subscription
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.user_id IS NOT NULL)
+				AND ((SELECT user_idnr FROM dbmail_users WHERE user_idnr = new.user_id) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_subscription" violates foreign key constraint "fk_update1_subscription_users_idnr"')
+		END;
+	END;
+CREATE TRIGGER fk_update2_subscription_users_idnr
+	AFTER UPDATE ON dbmail_users
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_subscription SET user_id = new.user_idnr WHERE user_id = OLD.user_idnr;
+	END;
+CREATE TRIGGER fk_delete_subscription_users_idnr
+	BEFORE DELETE ON dbmail_users
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_subscription WHERE user_id = OLD.user_idnr;
+	END;
+
+CREATE TRIGGER fk_insert_subscription_mailbox_id
+	BEFORE INSERT ON dbmail_subscription
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.mailbox_id IS NOT NULL)
+				AND ((SELECT mailbox_idnr FROM dbmail_mailboxes WHERE mailbox_idnr = new.mailbox_id) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_subscription" violates foreign key constraint "fk_insert_subscription_mailbox_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update1_subscription_mailbox_id
+	BEFORE UPDATE ON dbmail_subscription
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.mailbox_id IS NOT NULL)
+				AND ((SELECT mailbox_idnr FROM dbmail_mailboxes WHERE mailbox_idnr = new.mailbox_id) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_subscription" violates foreign key constraint "fk_update1_subscription_mailbox_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update2_subscription_mailbox_id
+	AFTER UPDATE ON dbmail_mailboxes
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_subscription SET mailbox_id = new.mailbox_idnr WHERE mailbox_id = OLD.mailbox_idnr;
+	END;
+CREATE TRIGGER fk_delete_subscription_mailbox_id
+	BEFORE DELETE ON dbmail_mailboxes
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_subscription WHERE mailbox_id = OLD.mailbox_idnr;
+	END;
+
+
+CREATE TABLE dbmail_acl (
+	user_id INTEGER NOT NULL,
+	mailbox_id INTEGER NOT NULL,
+	lookup_flag BOOLEAN default '0' not null,
+	read_flag BOOLEAN default '0' not null,
+	seen_flag BOOLEAN default '0' not null,
+	write_flag BOOLEAN default '0' not null,
+	insert_flag BOOLEAN default '0' not null,	
+	post_flag BOOLEAN default '0' not null,
+	create_flag BOOLEAN default '0' not null,	
+	delete_flag BOOLEAN default '0' not null,	
+	administer_flag BOOLEAN default '0' not null
+);
+CREATE INDEX dbmail_acl_1 ON dbmail_acl(user_id);
+CREATE INDEX dbmail_acl_2 ON dbmail_acl(mailbox_id);
+CREATE UNIQUE INDEX dbmail_acl_3 ON dbmail_acl(user_id, mailbox_id);
+
+CREATE TRIGGER fk_insert_acl_user_id
+	BEFORE INSERT ON dbmail_acl
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.user_id IS NOT NULL)
+				AND ((SELECT user_idnr FROM dbmail_users WHERE user_idnr = new.user_id) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_acl" violates foreign key constraint "fk_insert_acl_user_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update1_acl_user_id
+	BEFORE UPDATE ON dbmail_acl
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.user_id IS NOT NULL)
+				AND ((SELECT user_idnr FROM dbmail_users WHERE user_idnr = new.user_id) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_acl" violates foreign key constraint "fk_update1_acl_user_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update2_acl_user_id
+	AFTER UPDATE ON dbmail_users
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_acl SET user_id = new.user_idnr WHERE user_id = OLD.user_idnr;
+	END;
+CREATE TRIGGER fk_delete_acl_user_id
+	BEFORE DELETE ON dbmail_users
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_acl WHERE user_id = OLD.user_idnr;
+	END;
+
+CREATE TRIGGER fk_insert_acl_mailbox_id
+	BEFORE INSERT ON dbmail_acl
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.mailbox_id IS NOT NULL)
+				AND ((SELECT mailbox_idnr FROM dbmail_mailboxes WHERE mailbox_idnr = new.mailbox_id) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_acl" violates foreign key constraint "fk_insert_acl_mailbox_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update1_acl_mailbox_id
+	BEFORE UPDATE ON dbmail_acl
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.mailbox_id IS NOT NULL)
+				AND ((SELECT mailbox_idnr FROM dbmail_mailboxes WHERE mailbox_idnr = new.mailbox_id) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_acl" violates foreign key constraint "fk_update1_acl_mailbox_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update2_acl_mailbox_id
+	AFTER UPDATE ON dbmail_mailboxes
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_acl SET mailbox_id = new.mailbox_idnr WHERE mailbox_id = OLD.mailbox_idnr;
+	END;
+CREATE TRIGGER fk_delete_acl_mailbox_id
+	BEFORE DELETE ON dbmail_mailboxes
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_acl WHERE mailbox_id = OLD.mailbox_idnr;
+	END;
+
+
+
+CREATE TABLE dbmail_physmessage (
+   id INTEGER PRIMARY KEY,
+   messagesize INTEGER DEFAULT '0' NOT NULL,
+   rfcsize INTEGER DEFAULT '0' NOT NULL,
+   internal_date DATETIME default '0' not null
+);
+ 
+CREATE TABLE dbmail_messages (
+   message_idnr INTEGER PRIMARY KEY,
+   mailbox_idnr INTEGER DEFAULT '0' NOT NULL,
+   physmessage_id INTEGER DEFAULT '0' NOT NULL,
+   seen_flag BOOLEAN default '0' not null,
+   answered_flag BOOLEAN default '0' not null,
+   deleted_flag BOOLEAN default '0' not null,
+   flagged_flag BOOLEAN default '0' not null,
+   recent_flag BOOLEAN default '0' not null,
+   draft_flag BOOLEAN default '0' not null,
+   unique_id TEXT NOT NULL,
+   status BOOLEAN unsigned default '0' not null
+);
+CREATE INDEX dbmail_messages_1 ON dbmail_messages(mailbox_idnr);
+CREATE INDEX dbmail_messages_2 ON dbmail_messages(physmessage_id);
+CREATE INDEX dbmail_messages_3 ON dbmail_messages(seen_flag);
+CREATE INDEX dbmail_messages_4 ON dbmail_messages(unique_id);
+CREATE INDEX dbmail_messages_5 ON dbmail_messages(status);
+CREATE INDEX dbmail_messages_6 ON dbmail_messages(mailbox_idnr,status);
+CREATE INDEX dbmail_messages_7 ON dbmail_messages(mailbox_idnr,status,seen_flag);
+CREATE INDEX dbmail_messages_8 ON dbmail_messages(mailbox_idnr,status,recent_flag);
+
+CREATE TRIGGER fk_insert_messages_physmessage_id
+	BEFORE INSERT ON dbmail_messages
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.physmessage_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_physmessage WHERE id = new.physmessage_id) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_messages" violates foreign key constraint "fk_insert_messages_physmessage_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update1_messages_physmessage_id
+	BEFORE UPDATE ON dbmail_messages
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.physmessage_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_physmessage WHERE id = new.physmessage_id) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_messages" violates foreign key constraint "fk_update1_messages_physmessage_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update2_messages_physmessage_id
+	AFTER UPDATE ON dbmail_physmessage
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_messages SET physmessage_id = new.id WHERE physmessage_id = OLD.id;
+	END;
+CREATE TRIGGER fk_delete_message_physmessage_id
+	BEFORE DELETE ON dbmail_physmessage
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_messages WHERE physmessage_id = OLD.id;
+	END;
+
+
+CREATE TRIGGER fk_insert_messages_mailbox_idnr
+	BEFORE INSERT ON dbmail_messages
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.mailbox_idnr IS NOT NULL)
+				AND ((SELECT mailbox_idnr FROM dbmail_mailboxes WHERE mailbox_idnr = new.mailbox_idnr) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_messages" violates foreign key constraint "fk_insert_messages_mailbox_idnr"')
+		END;
+	END;
+CREATE TRIGGER fk_update1_messages_mailbox_idnr
+	BEFORE UPDATE ON dbmail_messages
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.mailbox_idnr IS NOT NULL)
+				AND ((SELECT mailbox_idnr FROM dbmail_mailboxes WHERE mailbox_idnr = new.mailbox_idnr) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_messages" violates foreign key constraint "fk_update1_messages_mailbox_idnr"')
+		END;
+	END;
+CREATE TRIGGER fk_update2_messages_mailbox_idnr
+	AFTER UPDATE ON dbmail_mailboxes
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_messages SET mailbox_idnr = new.mailbox_idnr WHERE mailbox_idnr = OLD.mailbox_idnr;
+	END;
+CREATE TRIGGER fk_delete_messages_mailbox_idnr
+	BEFORE DELETE ON dbmail_mailboxes
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_messages WHERE mailbox_idnr = OLD.mailbox_idnr;
+	END;
+
+
+   
+CREATE TABLE dbmail_messageblks (
+   messageblk_idnr INTEGER PRIMARY KEY,
+   physmessage_id INTEGER DEFAULT '0' NOT NULL,
+   messageblk TEXT NOT NULL,
+   blocksize INTEGER DEFAULT '0' NOT NULL,
+   is_header BOOLEAN DEFAULT '0' NOT NULL
+);
+CREATE INDEX dbmail_messageblks_1 ON dbmail_messageblks(physmessage_id);
+CREATE INDEX dbmail_messageblks_2 ON dbmail_messageblks(physmessage_id, is_header);
+
+CREATE TRIGGER fk_insert_messageblks_physmessage_id
+	BEFORE INSERT ON dbmail_messageblks
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.physmessage_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_physmessage WHERE id = new.physmessage_id) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_messageblks" violates foreign key constraint "fk_insert_messageblks_physmessage_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update1_messageblks_physmessage_id
+	BEFORE UPDATE ON dbmail_messageblks
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.physmessage_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_physmessage WHERE id = new.physmessage_id) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_messageblks" violates foreign key constraint "fk_update1_messageblks_physmessage_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update2_messageblks_physmessage_id
+	AFTER UPDATE ON dbmail_physmessage
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_messageblks SET physmessage_id = new.id WHERE physmessage_id = OLD.id;
+	END;
+CREATE TRIGGER fk_delete_messageblks_physmessage_id
+	BEFORE DELETE ON dbmail_physmessage
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_messageblks WHERE physmessage_id = OLD.id;
+	END;
+
+ 
+CREATE TABLE dbmail_auto_replies (
+   user_idnr INTEGER PRIMARY KEY,
+   reply_body TEXT,
+   start_date DATETIME DEFAULT '1980-01-01 22:05:58' NOT NULL,
+   stop_date DATETIME DEFAULT '1980-01-01 22:05:58' NOT NULL
+);
+CREATE TRIGGER fk_insert_auto_replies_user_idnr
+	BEFORE INSERT ON dbmail_auto_replies
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.user_idnr IS NOT NULL)
+				AND ((SELECT user_idnr FROM dbmail_users WHERE user_idnr = new.user_idnr) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_auto_replies" violates foreign key constraint "fk_insert_auto_replies_user_idnr"')
+		END;
+	END;
+CREATE TRIGGER fk_update1_auto_replies_user_idnr
+	BEFORE UPDATE ON dbmail_auto_replies
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.user_idnr IS NOT NULL)
+				AND ((SELECT user_idnr FROM dbmail_users WHERE user_idnr = new.user_idnr) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_auto_replies" violates foreign key constraint "fk_update1_auto_replies_user_idnr"')
+		END;
+	END;
+CREATE TRIGGER fk_update2_auto_replies_user_idnr
+	AFTER UPDATE ON dbmail_users
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_auto_replies SET user_idnr = new.user_idnr WHERE user_idnr = OLD.user_idnr;
+	END;
+CREATE TRIGGER fk_delete_auto_replies_user_idnr
+	BEFORE DELETE ON dbmail_users
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_auto_replies WHERE user_idnr = OLD.user_idnr;
+	END;
+
+
+CREATE TABLE dbmail_pbsp (
+   idnr INTEGER PRIMARY KEY,
+   since DATETIME default '0' not null,
+   ipnumber TEXT NOT NULL
+);
+CREATE UNIQUE INDEX dbmail_pbsp_1 ON dbmail_pbsp(ipnumber);
+CREATE INDEX dbmail_pbsp_2 ON dbmail_pbsp(since);
+
+CREATE TABLE dbmail_sievescripts (
+  owner_idnr INTEGER DEFAULT '0' NOT NULL,
+  name TEXT NOT NULL,
+  script TEXT,
+  active BOOLEAN default '0' not null
+);
+CREATE INDEX dbmail_sievescripts_1 ON dbmail_sievescripts(name);
+CREATE INDEX dbmail_sievescripts_2 ON dbmail_sievescripts(owner_idnr);
+CREATE INDEX dbmail_sievescripts_3 ON dbmail_sievescripts(owner_idnr,name);
+
+CREATE TRIGGER fk_insert_sievescripts_owner_idnr
+	BEFORE INSERT ON dbmail_sievescripts
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.owner_idnr IS NOT NULL)
+				AND ((SELECT user_idnr FROM dbmail_users WHERE user_idnr = new.owner_idnr) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_sievescripts" violates foreign key constraint "fk_insert_sievescripts_owner_idnr"')
+		END;
+	END;
+CREATE TRIGGER fk_update1_sievescripts_owner_idnr
+	BEFORE UPDATE ON dbmail_sievescripts
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.owner_idnr IS NOT NULL)
+				AND ((SELECT user_idnr FROM dbmail_users WHERE user_idnr = new.owner_idnr) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_sievescripts" violates foreign key constraint "fk_update1_sievescripts_owner_idnr"')
+		END;
+	END;
+CREATE TRIGGER fk_update2_sievescripts_owner_idnr
+	AFTER UPDATE ON dbmail_users
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_sievescripts SET owner_idnr = new.user_idnr WHERE owner_idnr = OLD.user_idnr;
+	END;
+CREATE TRIGGER fk_delete_sievescripts_owner_idnr
+	BEFORE DELETE ON dbmail_users
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_sievescripts WHERE owner_idnr = OLD.user_idnr;
+	END;
+
+
+--
+-- store all headers by storing all headernames and headervalues in separate
+-- tables.
+--
+
+CREATE TABLE dbmail_headername (
+	id		INTEGER PRIMARY KEY,
+	headername	TEXT NOT NULL DEFAULT ''
+);
+
+CREATE UNIQUE INDEX dbmail_headername_1 on dbmail_headername (headername);
+
+CREATE TABLE dbmail_headervalue (
+	headername_id	INTEGER NOT NULL,
+        physmessage_id	INTEGER NOT NULL,
+	id		INTEGER NOT NULL PRIMARY KEY,
+	headervalue	TEXT NOT NULL
+);
+CREATE UNIQUE INDEX dbmail_headervalue_1 on dbmail_headervalue (physmessage_id, id);
+CREATE UNIQUE INDEX dbmail_headervalue_2 on dbmail_headervalue (physmessage_id, headername_id, headervalue);
+CREATE INDEX dbmail_headervalue_3 on dbmail_headervalue(headername_id);
+
+--	FOREIGN KEY (headername_id)
+--		REFERENCES dbmail_headername(id) ON UPDATE CASCADE ON DELETE CASCADE,
+
+CREATE TRIGGER fk_insert_headervalue_headername_id
+	BEFORE INSERT ON dbmail_headervalue
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.headername_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_headername WHERE id = new.headername_id) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_headervalue" violates foreign key constraint "fk_insert_headervalue_headername_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update1_headervalue_headername_id
+	BEFORE UPDATE ON dbmail_headervalue
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.headername_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_headername WHERE id = new.headername_id) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_headervalue" violates foreign key constraint "fk_update1_headervalue_headername_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update2_headervalue_headername_id
+	AFTER UPDATE ON dbmail_headervalue
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_headervalue SET headername_id = new.id WHERE id = OLD.id;
+	END;
+CREATE TRIGGER fk_delete_headervalue_headername_id
+	BEFORE DELETE ON dbmail_headervalue
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_headervalue WHERE headername_id = OLD.id;
+	END;
+
+
+--	FOREIGN KEY (physmessage_id)
+--		REFERENCES dbmail_physmessage(id) ON UPDATE CASCADE ON DELETE CASCADE
+
+CREATE TRIGGER fk_insert_headervalue_physmessage_id
+	BEFORE INSERT ON dbmail_headervalue
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.physmessage_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_physmessage WHERE id = new.physmessage_id) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_headervalue" violates foreign key constraint "fk_insert_headervalue_physmessage_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update1_headervalue_physmessage_id
+	BEFORE UPDATE ON dbmail_headervalue
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.physmessage_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_physmessage WHERE id = new.physmessage_id) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_headervalue" violates foreign key constraint "fk_update1_headervalue_physmessage_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update2_headervalue_physmessage_id
+	AFTER UPDATE ON dbmail_physmessage
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_headervalue SET physmessage_id = new.id WHERE physmessage_id = OLD.id;
+	END;
+CREATE TRIGGER fk_delete_headervalue_physmessage_id
+	BEFORE DELETE ON dbmail_physmessage
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_headervalue WHERE physmessage_id = OLD.id;
+	END;
+
+
+
+-- Provide separate storage of commonly used headers
+
+-- These fields will typically be preparsed as specified by 
+-- http://www.ietf.org/internet-drafts/draft-ietf-imapext-sort-17.txt
+
+-- Threading
+
+-- support fast threading by breaking out In-Reply-To/References headers
+-- these fields contain zero or more Message-Id values that determine the message
+-- threading
+
+CREATE TABLE dbmail_subjectfield (
+        physmessage_id  INTEGER NOT NULL,
+	id		INTEGER NOT NULL PRIMARY KEY,
+	subjectfield	TEXT NOT NULL DEFAULT ''
+);
+
+CREATE UNIQUE INDEX dbmail_subjectfield_1 on dbmail_subjectfield (physmessage_id, subjectfield);
+
+--	FOREIGN KEY (physmessage_id)
+--			REFERENCES dbmail_physmessage(id)
+--			ON UPDATE CASCADE ON DELETE CASCADE
+
+CREATE TRIGGER fk_insert_subjectfield_physmessage_id
+	BEFORE INSERT ON dbmail_subjectfield
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.physmessage_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_physmessage WHERE id = new.physmessage_id) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_subjectfield" violates foreign key constraint "fk_insert_subjectfield_physmessage_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update1_subjectfield_physmessage_id
+	BEFORE UPDATE ON dbmail_subjectfield
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.physmessage_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_physmessage WHERE id = new.physmessage_id) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_subjectfield" violates foreign key constraint "fk_update1_subjectfield_physmessage_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update2_subjectfield_physmessage_id
+	AFTER UPDATE ON dbmail_physmessage
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_subjectfield SET physmessage_id = new.id WHERE physmessage_id = OLD.id;
+	END;
+CREATE TRIGGER fk_delete_subjectfield_physmessage_id
+	BEFORE DELETE ON dbmail_physmessage
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_subjectfield WHERE physmessage_id = OLD.id;
+	END;
+
+
+CREATE TABLE dbmail_datefield (
+        physmessage_id  INTEGER NOT NULL,
+	id		INTEGER NOT NULL PRIMARY KEY,
+	datefield	DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'
+);
+
+CREATE UNIQUE INDEX dbmail_datefield_1 on dbmail_datefield (physmessage_id, datefield);
+--	FOREIGN KEY (physmessage_id)
+--			REFERENCES dbmail_physmessage(id)
+--			ON UPDATE CASCADE ON DELETE CASCADE
+
+CREATE TRIGGER fk_insert_datefield_physmessage_id
+	BEFORE INSERT ON dbmail_datefield
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.physmessage_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_physmessage WHERE id = new.physmessage_id) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_datefield" violates foreign key constraint "fk_insert_datefield_physmessage_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update1_datefield_physmessage_id
+	BEFORE UPDATE ON dbmail_datefield
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.physmessage_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_physmessage WHERE id = new.physmessage_id) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_datefield" violates foreign key constraint "fk_update1_datefield_physmessage_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update2_datefield_physmessage_id
+	AFTER UPDATE ON dbmail_physmessage
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_datefield SET physmessage_id = new.id WHERE physmessage_id = OLD.id;
+	END;
+CREATE TRIGGER fk_delete_datefield_physmessage_id
+	BEFORE DELETE ON dbmail_physmessage
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_datefield WHERE physmessage_id = OLD.id;
+	END;
+
+CREATE TABLE dbmail_referencesfield (
+        physmessage_id  INTEGER NOT NULL,
+	id		INTEGER NOT NULL PRIMARY KEY,
+	referencesfield	TEXT NOT NULL DEFAULT ''
+);
+
+CREATE UNIQUE INDEX dbmail_referencesfield_1 on dbmail_referencesfield (physmessage_id, referencesfield);
+--	FOREIGN KEY (physmessage_id)
+--			REFERENCES dbmail_physmessage(id)
+--			ON UPDATE CASCADE ON DELETE CASCADE
+
+CREATE TRIGGER fk_insert_referencesfield_physmessage_id
+	BEFORE INSERT ON dbmail_referencesfield
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.physmessage_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_physmessage WHERE id = new.physmessage_id) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_referencesfield" violates foreign key constraint "fk_insert_referencesfield_physmessage_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update1_referencesfield_physmessage_id
+	BEFORE UPDATE ON dbmail_referencesfield
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.physmessage_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_physmessage WHERE id = new.physmessage_id) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_referencesfield" violates foreign key constraint "fk_update1_referencesfield_physmessage_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update2_referencesfield_physmessage_id
+	AFTER UPDATE ON dbmail_physmessage
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_referencesfield SET physmessage_id = new.id WHERE physmessage_id = OLD.id;
+	END;
+CREATE TRIGGER fk_delete_referencesfield_physmessage_id
+	BEFORE DELETE ON dbmail_physmessage
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_referencesfield WHERE physmessage_id = OLD.id;
+	END;
+
+-- Searching and Sorting
+
+-- support fast sorting by breaking out and preparsing the fields most commonly used
+-- in searching and sorting: Subject, From, To, Reply-To, Cc. 
+
+CREATE TABLE dbmail_fromfield (
+        physmessage_id  INTEGER NOT NULL,
+	id		INTEGER NOT NULL PRIMARY KEY,
+	fromname	TEXT NOT NULL DEFAULT '',
+	fromaddr	TEXT NOT NULL DEFAULT ''
+);
+
+CREATE UNIQUE INDEX dbmail_fromfield_1 on dbmail_fromfield (physmessage_id, id);
+
+--	FOREIGN KEY (physmessage_id)
+--			REFERENCES dbmail_physmessage(id)
+--			ON UPDATE CASCADE ON DELETE CASCADE
+
+CREATE TRIGGER fk_insert_fromfield_physmessage_id
+	BEFORE INSERT ON dbmail_fromfield
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.physmessage_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_physmessage WHERE id = new.physmessage_id) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_fromfield" violates foreign key constraint "fk_insert_fromfield_physmessage_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update1_fromfield_physmessage_id
+	BEFORE UPDATE ON dbmail_fromfield
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.physmessage_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_physmessage WHERE id = new.physmessage_id) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_fromfield" violates foreign key constraint "fk_update1_fromfield_physmessage_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update2_fromfield_physmessage_id
+	AFTER UPDATE ON dbmail_physmessage
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_fromfield SET physmessage_id = new.id WHERE physmessage_id = OLD.id;
+	END;
+CREATE TRIGGER fk_delete_fromfield_physmessage_id
+	BEFORE DELETE ON dbmail_physmessage
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_fromfield WHERE physmessage_id = OLD.id;
+	END;
+
+CREATE TABLE dbmail_tofield (
+        physmessage_id  INTEGER NOT NULL,
+	id		INTEGER NOT NULL PRIMARY KEY,
+	toname		TEXT NOT NULL DEFAULT '',
+	toaddr		TEXT NOT NULL DEFAULT ''
+);
+
+CREATE UNIQUE INDEX dbmail_tofield_1 on dbmail_tofield (physmessage_id, id);
+
+--	FOREIGN KEY (physmessage_id)
+--			REFERENCES dbmail_physmessage(id)
+--			ON UPDATE CASCADE ON DELETE CASCADE
+
+CREATE TRIGGER fk_insert_tofield_physmessage_id
+	BEFORE INSERT ON dbmail_tofield
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.physmessage_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_physmessage WHERE id = new.physmessage_id) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_tofield" violates foreign key constraint "fk_insert_tofield_physmessage_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update1_tofield_physmessage_id
+	BEFORE UPDATE ON dbmail_tofield
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.physmessage_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_physmessage WHERE id = new.physmessage_id) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_tofield" violates foreign key constraint "fk_update1_tofield_physmessage_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update2_tofield_physmessage_id
+	AFTER UPDATE ON dbmail_physmessage
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_tofield SET physmessage_id = new.id WHERE physmessage_id = OLD.id;
+	END;
+CREATE TRIGGER fk_delete_tofield_physmessage_id
+	BEFORE DELETE ON dbmail_physmessage
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_tofield WHERE physmessage_id = OLD.id;
+	END;
+
+CREATE TABLE dbmail_replytofield (
+        physmessage_id  INTEGER NOT NULL,
+	id		INTEGER NOT NULL PRIMARY KEY,
+	replytoname	TEXT NOT NULL DEFAULT '',
+	replytoaddr	TEXT NOT NULL DEFAULT ''
+);
+
+CREATE UNIQUE INDEX dbmail_replytofield_1 on dbmail_replytofield (physmessage_id, id);
+
+--	FOREIGN KEY (physmessage_id)
+--			REFERENCES dbmail_physmessage(id)
+--			ON UPDATE CASCADE ON DELETE CASCADE
+
+CREATE TRIGGER fk_insert_replytofield_physmessage_id
+	BEFORE INSERT ON dbmail_replytofield
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.physmessage_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_physmessage WHERE id = new.physmessage_id) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_replytofield" violates foreign key constraint "fk_insert_replytofield_physmessage_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update1_replytofield_physmessage_id
+	BEFORE UPDATE ON dbmail_replytofield
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.physmessage_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_physmessage WHERE id = new.physmessage_id) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_replytofield" violates foreign key constraint "fk_update1_replytofield_physmessage_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update2_replytofield_physmessage_id
+	AFTER UPDATE ON dbmail_physmessage
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_replytofield SET physmessage_id = new.id WHERE physmessage_id = OLD.id;
+	END;
+CREATE TRIGGER fk_delete_replytofield_physmessage_id
+	BEFORE DELETE ON dbmail_physmessage
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_replytofield WHERE physmessage_id = OLD.id;
+	END;
+
+
+CREATE TABLE dbmail_ccfield (
+        physmessage_id  INTEGER NOT NULL,
+	id		INTEGER NOT NULL PRIMARY KEY,
+	ccname		TEXT NOT NULL DEFAULT '',
+	ccaddr		TEXT NOT NULL DEFAULT ''
+);
+
+CREATE UNIQUE INDEX dbmail_ccfield_1 on dbmail_ccfield (physmessage_id, id);
+
+--	FOREIGN KEY (physmessage_id)
+--			REFERENCES dbmail_physmessage(id)
+--			ON UPDATE CASCADE ON DELETE CASCADE
+
+CREATE TRIGGER fk_insert_ccfield_physmessage_id
+	BEFORE INSERT ON dbmail_ccfield
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.physmessage_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_physmessage WHERE id = new.physmessage_id) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_ccfield" violates foreign key constraint "fk_insert_ccfield_physmessage_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update1_ccfield_physmessage_id
+	BEFORE UPDATE ON dbmail_ccfield
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.physmessage_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_physmessage WHERE id = new.physmessage_id) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_ccfield" violates foreign key constraint "fk_update1_ccfield_physmessage_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update2_ccfield_physmessage_id
+	AFTER UPDATE ON dbmail_physmessage
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_ccfield SET physmessage_id = new.id WHERE physmessage_id = OLD.id;
+	END;
+CREATE TRIGGER fk_delete_ccfield_physmessage_id
+	BEFORE DELETE ON dbmail_physmessage
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_ccfield WHERE physmessage_id = OLD.id;
+	END;
+
+-- Table structure for table `dbmail_replycache`
+
+CREATE TABLE dbmail_replycache (
+  to_addr TEXT NOT NULL default '',
+  from_addr TEXT NOT NULL default '',
+  handle TEXT NOT NULL default '',
+  lastseen datetime NOT NULL default '0000-00-00 00:00:00'
+);
+
+CREATE UNIQUE INDEX dbmail_replycache_1 on dbmail_replycache (to_addr,from_addr, handle);
+
+--
+-- Add tables and columns to hold Sieve scripts.
+
+
+CREATE TABLE dbmail_usermap (
+  login TEXT NOT NULL,
+  sock_allow TEXT NOT NULL,
+  sock_deny TEXT NOT NULL,
+  userid TEXT NOT NULL
+);
+
+CREATE UNIQUE INDEX usermap_idx_1 ON dbmail_usermap(login, sock_allow, userid);
+
+
+
+
+-- Create the user for the delivery chain
+INSERT INTO dbmail_users (userid, passwd, encryption_type) 
+	VALUES ('__@!internal_delivery_user!@__', '', 'md5');
+-- Create the 'anyone' user which is used for ACLs.
+INSERT INTO dbmail_users (userid, passwd, encryption_type) 
+	VALUES ('anyone', '', 'md5');
+-- Create the user to own #Public mailboxes
+INSERT INTO dbmail_users (userid, passwd, encryption_type) 
+	VALUES ('__public__', '', 'md5');
+
+COMMIT;
+
+
+-- support faster FETCH commands by caching ENVELOPE information
+
+CREATE TABLE dbmail_envelope (
+        physmessage_id  INTEGER NOT NULL,
+	id		INTEGER NOT NULL PRIMARY KEY,
+	envelope	TEXT NOT NULL DEFAULT ''
+);
+
+CREATE UNIQUE INDEX dbmail_envelope_1 on dbmail_envelope (physmessage_id, id);
+
+CREATE TRIGGER fk_insert_envelope_physmessage_id
+	BEFORE INSERT ON dbmail_envelope
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.physmessage_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_physmessage WHERE id = new.physmessage_id) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_envelope" violates foreign key constraint "fk_insert_envelope_physmessage_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update1_envelope_physmessage_id
+	BEFORE UPDATE ON dbmail_envelope
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.physmessage_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_physmessage WHERE id = new.physmessage_id) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_envelope" violates foreign key constraint "fk_update1_envelope_physmessage_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update2_envelope_physmessage_id
+	AFTER UPDATE ON dbmail_physmessage
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_envelope SET physmessage_id = new.id WHERE physmessage_id = OLD.id;
+	END;
+CREATE TRIGGER fk_delete_envelope_physmessage_id
+	BEFORE DELETE ON dbmail_physmessage
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_envelope WHERE physmessage_id = OLD.id;
+	END;
+

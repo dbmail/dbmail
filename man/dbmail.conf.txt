@@ -1,0 +1,111 @@
+DBMAIL.CONF(5)
+==============
+Author
+
+
+NAME
+----
+dbmail.conf - configuration file for DBMail, the Database Mailer.
+
+SYNOPSIS
+--------
+There are 8 sections: DBMAIL, SMTP, LMTP, POP, IMAP, SIEVE, LDAP, DELIVERY.
+The default config file already has documentation for all of the settings.
+
+DESCRIPTION
+-----------
+  [DBMAIL]
+  # Database settings
+  driver=pgsql            # Supported drivers are mysql, pgsql, sqlite.
+  authdriver=sql          # Supported drivers are sql, ldap.
+  host=                   # Host for database, set to localhost if database is on
+                          #   the same host as dbmail and you want to use a local
+                          #   socket for connecting. 
+  sqlport=                # If you want to use TCP/IP for connecting to the database,
+                          #   and have the database running on a non-standard port. 
+  sqlsocket=              # When using a local socket connection to the database, fill
+                          #   in the path to the socket here (e.g. /var/run/mysql.sock).
+  user=dbmail             # Database username.
+  pass=                   # Database password.
+  db=dbmail               # Database name.
+  #table_prefix=dbmail_   # Table prefix. Defaults to "dbmail_" if not specified.
+  postmaster=             # Postmaster's email address for use in bounce messages.
+  sendmail=/usr/sbin/sendmail	# Sendmail executable for forwards, replies, notifies, vacations.
+                                # You may use pipes (|) in this command, for example:
+                                # dos2unix|/usr/sbin/sendmail  will work well with Qmail.
+                                # You may use quotes (") for executables with unusual names.
+  
+  # The following items can be overridden in the service-specific sections.
+  TRACE_SYSLOG=5          # Trace level to send to syslog. Default is 2 (messages, errors, fatals).
+  TRACE_STDERR=2          # Trace level to send to stderr. Default is 0 (fatals).
+  EFFECTIVE_USER=nobody   # Root privs are used to open a port, then privs
+  EFFECTIVE_GROUP=nogroup #   are dropped down to the user/group specified here.
+  BINDIP=*                # The IP address the services will bind to.
+                          #   Use * for all local interfaces.
+                          #   Use 127.0.0.1 for localhost only.
+  NCHILDREN=2             # Default number of child processes to start.
+  MAXCHILDREN=10          # Maximum number of child processes allowed.
+  MINSPARECHILDREN=2      # Unused children to always have availale.
+  MAXSPARECHILDREN=4      # Maximum unused children allowed to be active.
+  MAXCONNECTS=10000       # Child process is restarted after handling this many connections.
+  MAX_ERRORS=500          # Child process will restart after this many connection errors.
+  TIMEOUT=300             # Idle time allowed before a connection is shut off.
+  RESOLVE_IP=yes          # If yes, resolves IP addresses to DNS names when logging.
+  log=/var/log/dbmail.log	# logfile for stdout messages
+  error_log=/var/log/dbmail.err	# logfile for stderr messages
+  pid_dir=/var/run        # directory for storing PID files
+   
+  [SMTP]
+                          # In fact, there isn't anything here by default.
+  
+  [LMTP]
+  PORT=24                 # Port to bind to.
+  
+  [POP]
+  PORT=110                # Port to bind to.
+  POP_BEFORE_SMTP=no      # If yes, allows SMTP access from the host IP connecting by POP3.
+  
+  [IMAP]
+  PORT=143                # Port to bind to.
+  TIMEOUT=4000            # IMAP prefers a longer timeout than other services.
+  IMAP_BEFORE_SMTP=no     # If yes, allows SMTP access from the host IP connecting by IMAP.
+  
+  [SIEVE]
+  PORT=2000               # Port to bind to.
+  
+  [LDAP]
+  PORT=389
+  VERSION=3
+  HOSTNAME=ldap
+  BASE_DN=ou=People,dc=mydomain,dc=com
+  BIND_DN=cn=admin,dc=mydomain,dc=com
+  BIND_PW=password
+  SCOPE=SubTree
+  USER_OBJECTCLASS=top,account,dbmailUser
+  FORW_OBJECTCLASS=top,account,dbmailForwardingAddress
+  CN_STRING=uid
+  FIELD_PASSWD=userPassword
+  FIELD_UID=uid
+  FIELD_NID=uidNumber
+  MIN_NID=10000
+  MAX_NID=15000
+  FIELD_CID=gidNumber
+  MIN_CID=10000
+  MAX_CID=15000
+  FIELD_MAIL=mail
+  FIELD_QUOTA=mailQuota
+  FIELD_FWDTARGET=mailForwardingAddress
+  
+  [DELIVERY]
+  SIEVE=yes               # Run Sieve scripts as messages are delivered.
+  SUBADDRESS=yes          # Use 'user+mailbox@domain' format to deliver to a mailbox.
+  SIEVE_VACATION=yes      # Turn on/off the Sieve Vacation extension.
+  SIEVE_NOTIFY=no         # Turn on/off the Sieve Notify extension (not supported).
+  SIEVE_DEBUG=no          # Turn on/off additional Sieve debugging.
+  AUTO_NOTIFY=no          # Use the auto_notify table to send email notifications.
+  AUTO_REPLY=no           # Use the auto_reply table to send away messages.
+  #AUTO_NOTIFY_SUBJECT    # Defaults to "NEW MAIL NOTIFICATION"
+  #AUTO_NOTIFY_SENDER     # Defaults to POSTMASTER from the DBMAIL section.
+  
+
+include::footer.txt[]

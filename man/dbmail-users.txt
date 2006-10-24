@@ -1,0 +1,163 @@
+DBMAIL-USERS(8)
+===============
+
+
+NAME
+----
+dbmail-users - manages the DBMail user database.
+
+SYNOPSIS
+--------
+dbmail-users { -a username | -c username } [ -g clientid ] [ -m maxmail]
+[ -p passwordtype ] [ -P shadowfile ] [ -w password ] [ -W passwordfile]
+[ -u username ] [ -s aliases ] [ -S aliases ]
+
+dbmail-users { -d username | -e username }
+
+dbmail-users -l userspec
+
+dbmail-users -x alias [ -t forwards ] [ -T forwards ]
+
+
+DESCRIPTION
+-----------
+The dbmail-users program enables you to manage the DBMail users. It
+lets you add, delete and change users as well as show information about
+a specific user or display a list of existing users. It also has the
+capability of adding/removing separate aliases.
+
+
+MODE OPTIONS
+------------
+-a  user::
+  Add a user
+
+-d  user::
+  Delete a user
+
+-c  user::
+  Change details for a user
+
+-e  user::
+  Empty all mailboxes for a user
+
+-l  uspec::
+  List information for matching users
+
+-x  alias::
+  Create an external forwarding address
+
+
+MINOR OPTIONS
+-------------
+-w  passwd::
+  Specify user's password on the command line
+
+-W  [file]::
+  Read from a file or prompt for a user's password
+
+-p  pwtype::
+  Password type may be one of the following: plaintext, crypt,
+  md5-hash, md5-digest, crypt-raw, md5-hash-raw, md5-digest-raw,
+  md5-base64, md5-base64-raw.
+
+-P  [file]::
+  Pull encrypted password from the shadow file
+
+-u  user::
+  New username (only useful for -c, change)
+
+-g  cid::
+  Assign the user to a client group.
+
+-m  max::
+  Set the maximum mail quota in <bytes>B, <kbytes>K, or <mbytes>M,
+  default in bytes If set to 0, there will be no limit.
+
+-s  alias[,alias...]::
+  Adds a list of recipient aliases. An alias is an e-mail address
+  that is being delivered to the DBMail mailsystem and should be
+  delivered to this user.
+
+-S  alias[,alias...]::
+  Removes a list of recipient aliases. Use wildcards ? and * to match any
+  single character and any number of characters, respectively.
+
+-t  forward[,forward...]::
+  Adds a list of deliver-to forwards.
+
+-T  forward[,forward...]::
+  Removes a list of deliver-to forwards. Use wildcards ? and * to match any
+  single character and any number of characters, respectively.
+
+
+include::commonopts.txt[]
+
+ALIASES
+-------
+
+When creating a new user account, you must either add an initial alias that
+delivers to the account name, or make the account in the form
+of a fully qualified email address. For example, the user named 'Baz' created
+like this:
+
+`    dbmail-users -a baz -p crypt -w psword`
+
+will *not* actually receive any mail yet! You must be sure to add an alias:
+
+`    dbmail-users -c baz -s baz@foodomain`
+
+You may add multiple aliases by repeatedly calling the dbmail-users(8)
+utility, or by calling it with a comma-separated list of aliases:
+
+`    dbmail-users -c baz -s baz@foodomain,baz@bardomain`
+
+Two catch-all modes are also supported, for domains and for local parts:
+
+`    dbmail-users -a baz -s @bazdomain`
+ 
+`    dbmail-users -a baz -s baz@`
+
+The first example catches email addressed to any user @bazdomain and delivers it
+to Baz's INBOX. The second example catches email addressed to baz@ any domain
+and also delivers it to Baz's INBOX.
+
+There is no support for delivering to a particular mailbox other than INBOX
+via the aliases system. Please use a Sieve script to sort mail like this.
+
+
+FORWARDS
+--------
+
+Incoming messages addressed to particular email addresses can be forwarded out
+to outside email addresses, piped out to a command (when prepended with |
+'pipe') or piped out with an mbox-style From line to a command (when prepended
+with ! 'bang'). For example:
+
+  dbmail-users -x bar@domain -t bar@another.domain
+ 
+  dbmail-users -x bar@domain -t "|/usr/sbin/superspamtrapper"
+ 
+  dbmail-users -x bar@domain -t "!cat > /var/spool/mail/bar/whatever.mbox"
+
+Forwards can be listed using the same -l command as for users. For example,
+to see where the local address bar@domain might be forwarded to, use this:
+
+  dbmail-users -l bar@domain
+    forward [bar@domain] to [bar@another.domain]
+    forward [bar@domain] to [|/usr/sbin/superspamtrapper]
+    forward [bar@domain] to [!cat > /var/spool/mail/bar/whatever.mbox]
+
+
+Forwards can be removed using basic glob style pattern matching.  A ?
+'question' means "match zero or one of any character" and * 'asterisk' means
+"match zero or more of any character." For example:
+
+  dbmail-users -x bar@domain -T "*"
+
+will complete and totally remove the 'bar@domain' external alias and all of
+its forwarding addresses and commands.
+
+
+
+include::footer.txt[]

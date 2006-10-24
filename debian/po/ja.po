@@ -1,0 +1,281 @@
+#
+#    Translators, if you are not familiar with the PO format, gettext
+#    documentation is worth reading, especially sections dedicated to
+#    this format, e.g. by running:
+#         info -n '(gettext)PO Files'
+#         info -n '(gettext)Header Entry'
+#
+#    Some information specific to po-debconf are available at
+#            /usr/share/doc/po-debconf/README-trans
+#         or http://www.debian.org/intl/l10n/po-debconf/README-trans
+#
+#    Developers do not need to manually edit POT or PO files.
+#
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: dbmail 1.2.9-1\n"
+"Report-Msgid-Bugs-To: paul@nfg.nl\n"
+"POT-Creation-Date: 2006-05-29 16:01+0200\n"
+"PO-Revision-Date: 2004-11-03 01:43+0900\n"
+"Last-Translator: Hideki Yamane <henrich@samba.gr.jp>\n"
+"Language-Team: Japanese <debian-japanese@lists.debian.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=EUC-JP\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:3
+#, fuzzy
+msgid "Use debconf to manage dbmail configuration?"
+msgstr "dbmail の設定に debconf を利用しますか?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:3
+msgid ""
+"Please confirm if you want to allow debconf to manage some parts of your "
+"dbmail configuration. Notice that changes you make to dbmail.conf by hand "
+"will NOT be overwritten should you later choose to re-run dpkg-reconfigure "
+"dbmail."
+msgstr ""
+"dbmail 設定の一部を debconf で設定したい場合は、ここで「はい」と答えてくださ"
+"い。dbmail.conf に対して手動で変更を行った部分は上書き「されない」ので、後ほ"
+"ど再度 dpkg-reconfigure dbmail と実行するのを選ぶ必要があるのに注意してくださ"
+"い。"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:11
+#, fuzzy
+msgid "The email address where bounces come from:"
+msgstr "バウンス送信の際のメールアドレス"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:11
+msgid ""
+"Here you must specify the address dbmail will use when sending bounce "
+"messages."
+msgstr ""
+"ここで、dbmail がバウンスメッセージを送信する際に利用するアドレスを指定する必"
+"要があります。"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:11
+msgid "Example: MAILER-DAEMON@yourdomain.tld"
+msgstr "例: MAILER-DAEMON@yourdomain.tld"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:19
+#, fuzzy
+msgid "Postmaster's email address:"
+msgstr "postmaster のメールアドレス"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:19
+msgid ""
+"This should be a valid email address read by the person responsible for this "
+"email server."
+msgstr ""
+"これは、このメールサーバの責任者が確実に読むメールアドレスである必要がありま"
+"す。"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:19
+msgid "Example: postmaster@yourdomain.tld"
+msgstr "例: postmaster@yourdomain.tld"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:27
+#, fuzzy
+msgid "The hostname of the sql database server:"
+msgstr "(my/pg)sql データベースサーバのホスト名を入力してください。"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:27
+msgid ""
+"On this server you must create a database to hold dbmail's tables. You "
+"should grant full read/write permissions on this database to the dbmail user."
+msgstr ""
+"このサーバで dbmail のテーブルを持つデータベースを作成しなければなりません。"
+"このデータベースで、dbmail ユーザに対して読み書きの全権限を許可する必要があり"
+"ます。"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:34
+#, fuzzy
+msgid "The name of the database:"
+msgstr "利用するデータベース名を入力してください。"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:34
+msgid "This is the name of the database that holds the dbmail tables."
+msgstr "これは dbmail のテーブルを保持するデータベース名です。"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:34
+msgid "If you're using sqlite, this should be the path to the database file."
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:41
+msgid "The database user:"
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:41
+msgid "This is the username dbmail will use to connect to the database server."
+msgstr "これは dbmail がデータベースサーバに接続するのに使うユーザ名です。"
+
+#. Type: password
+#. Description
+#: ../dbmail.templates:46
+#, fuzzy
+msgid "The password for the database connection:"
+msgstr "データベース接続に利用するパスワードを入力してください。"
+
+#. Type: password
+#. Description
+#: ../dbmail.templates:46
+msgid "This is the password dbmail will use to connect to the database server."
+msgstr "これは、dbmail がデータベースサーバに接続するのに使うパスワードです。"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:51
+#, fuzzy
+msgid "start the imap server after reboot?"
+msgstr "再起動後に POP3 サーバを起動しますか?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:51
+#, fuzzy
+msgid ""
+"Dbmail supports both imap and pop3 services. You can choose to run either "
+"one or both services."
+msgstr ""
+"dbmail は IMAP と POP3 の両方のサービスをサポートしています。どちらか、もしく"
+"は両方のサービスの起動を選択できます。"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:57
+#, fuzzy
+msgid "start the pop3 server after reboot?"
+msgstr "再起動後に POP3 サーバを起動しますか?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:57
+#, fuzzy
+msgid ""
+"Dbmail support both imap and pop3 services. You can choose to run either one "
+"or both services."
+msgstr ""
+"dbmail は IMAP と POP3 の両方のサービスをサポートしています。どちらか、もしく"
+"は両方のサービスの起動を選択できます。"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:63
+#, fuzzy
+msgid "start the timesieved after reboot?"
+msgstr "再起動後に POP3 サーバを起動しますか?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:63
+msgid ""
+"Dbmail supports management of Sieve scripts through the timsieve protocol. "
+"You can run dbmail-timsieved which allows management of the sieve scripts "
+"from within clients that support this protocol such as kmail, squirrelmail, "
+"and others"
+msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:70
+#, fuzzy
+msgid "Run the stunnel SSL wrapper from the init script?"
+msgstr "起動スクリプトで stunnel SSL ラッパーを呼び出しますか?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:70
+#, fuzzy
+msgid ""
+"The stunnel SSL wrapper allows you to provide secure imap and pop services "
+"even though dbmail supports neither imaps nor pop3s (yet)."
+msgstr ""
+"stunnel SSL ラッパーは、dbmail が IMAPS または POP3S を (まだ) 提供していなく"
+"ても、セキュアな IMAP・POP サービスを提供可能にしてくれます。"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:70
+msgid ""
+"Make sure you have installed stunnel which is provided by a separate package "
+"if you want to use this feature."
+msgstr ""
+"この機能を使いたい場合は、別のパッケージに含まれている stunnel をすでにインス"
+"トールしているのを確認してください。"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:79
+#, fuzzy
+msgid "The filename for the SSL pem file:"
+msgstr "SSL pem ファイル名を入力してください。"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:79
+msgid ""
+"To be able to run the stunnel SSL wrapper you need to generate a pem file "
+"that should reside in /etc/ssl/certs/. Specify the filename here without  "
+"the directory name."
+msgstr ""
+"stunnel SSL ラッパーを起動するには、/etc/ssl/certs/ に配置する pem ファイルを"
+"生成する必要があります。ここで、ディレクトリ名無しのファイル名を指定してくだ"
+"さい。"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:79
+msgid ""
+"Read /usr/share/doc/stunnel/README.Debian on how to generate such a file."
+msgstr ""
+"このファイルの作り方については /usr/share/doc/stunnel/README.Debian を参照し"
+"てください。"
+
+#, fuzzy
+#~ msgid "Do you want to start the imap service after a reboot?"
+#~ msgstr "再起動後に IMAP サービスを開始しますか?"
+
+#, fuzzy
+#~ msgid "Do you want to start the pop3 service after a reboot?"
+#~ msgstr "再起動後に POP3 サービスを開始しますか?"
+
+#, fuzzy
+#~ msgid "Do you want to start the timsieved service after a reboot?"
+#~ msgstr "再起動後に IMAP サービスを開始しますか?"
+
+#~ msgid "Please enter the name of the database user you want to use."
+#~ msgstr "利用したいデータベースユーザ名を入力してください。"
+
+#~ msgid "Start the IMAP server after reboot?"
+#~ msgstr "再起動後に IMAP サーバを起動しますか?"

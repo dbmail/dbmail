@@ -1,0 +1,37 @@
+#!/bin/sh -e
+## 03_path_to_dbmail_conf by Paul J Stevens <paul@nfg.nl>
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: No description.
+
+if [ $# -ne 1 ]; then
+    echo >&2 "`basename $0`: script expects -patch|-unpatch as argument"
+    exit 1
+fi
+
+[ -f debian/patches/00patch-opts ] && . debian/patches/00patch-opts
+patch_opts="${patch_opts:--f --no-backup-if-mismatch}"
+
+case "$1" in
+       -patch) patch $patch_opts -p1 < $0;;
+       -unpatch) patch $patch_opts -p1 -R < $0;;
+        *)
+                echo >&2 "`basename $0`: script expects -patch|-unpatch as argument"
+                exit 1;;
+esac
+
+exit 0
+
+@DPATCH@
+diff -urNad dbmail-2.1/dbmail.h /tmp/dpep.xopAdf/dbmail-2.1/dbmail.h
+--- dbmail-2.1/dbmail.h	2005-03-07 14:21:36.000000000 +0100
++++ /tmp/dpep.xopAdf/dbmail-2.1/dbmail.h	2005-03-07 14:21:37.000000000 +0100
+@@ -69,7 +69,7 @@
+ #define DEFAULT_PID_DIR "/var/run/dbmail"
+ #define DEFAULT_PID_EXT ".pid"
+ /** default configuration file */
+-#define DEFAULT_CONFIG_FILE "/etc/dbmail.conf"
++#define DEFAULT_CONFIG_FILE "/etc/dbmail/dbmail.conf"
+ 
+ /** username of user that is owner of all mailboxes */
+ #define SHARED_MAILBOX_USERNAME "__public__"

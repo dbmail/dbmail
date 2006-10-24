@@ -1,0 +1,111 @@
+# $Id$
+# Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
+#
+# This program is free software; you can redistribute it and/or 
+# modify it under the terms of the GNU General Public License 
+# as published by the Free Software Foundation; either 
+# version 2 of the License, or (at your option) any later 
+# version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+AC_INIT([main.c])
+AC_CONFIG_AUX_DIR(buildtools)
+AM_CONFIG_HEADER(config.h:config.in)
+DBMAIL_MSG_CONFIGURE_START
+AM_INIT_AUTOMAKE(dbmail, 2.1)
+AM_MAINTAINER_MODE
+
+pgsqlheaderpaths="/usr/include/pgsql /usr/include /usr/local/include/pgsql \
+                  /usr/local/include /usr/freeware/include/pgsql \
+                  /usr/freeware/include $HOME/include $HOME/pgsql/include \
+		  /usr/local/pgsql/include /usr/include/postgresql $HOME"
+
+ldapheaderpaths="/usr/include /usr/local/include"
+sieveheaderpaths="/usr/include /usr/local/include"
+
+AC_DEFINE(_GNU_SOURCE,'','Defined GNU SOURCE')
+
+# Turn off both defaults.
+AM_ENABLE_SHARED(no)
+AM_ENABLE_STATIC(no)
+# Check if one was specified.
+# Stop with an error if both.
+# Default to shared if neither.
+DBMAIL_SET_SHARED_OR_STATIC
+AM_CONDITIONAL(SHARED, [ test "$enable_shared" = "yes" ])
+AM_CONDITIONAL(STATIC, [ test "$enable_static" = "yes" ])
+
+DM_DEFINES
+DBMAIL_BOTH_SQL_CHECK
+DBMAIL_CHECK_SQL_LIBS
+DBMAIL_AUTH_CONF
+DBMAIL_CHECK_LDAP_LIBS
+DBMAIL_SIEVE_CONF
+DBMAIL_CHECK_SIEVE_LIBS
+DBMAIL_CHECK_GLIB
+DBMAIL_CHECK_GMIME
+DBMAIL_CHECK_GC
+DBMAIL_PATH_CHECK
+gl_GETOPT
+
+AM_CONDITIONAL(USE_DM_GETOPT, [test -n "$USE_DM_GETOPT"])
+AM_CONDITIONAL(WITHCHECK, [test -n "$CHECK_LIBS"])
+
+AC_PROG_CC
+AC_COMPILE_WARNINGS
+AC_C_CONST
+AC_C_INLINE
+AM_CONDITIONAL(MYSQL, [test -n "$MYSQLINC"])
+AM_CONDITIONAL(PGSQL, [test -n "$PGSQLINC"])
+AM_CONDITIONAL(SQLITE, [test -n "$SQLITEINC"])
+AM_CONDITIONAL(SIEVE, [test -n "$SIEVEINC"])
+AM_CONDITIONAL(LDAP, [test -n "$LDAPINC"])
+AC_C_BIGENDIAN
+AC_CHECK_HEADERS(endian.h)
+AC_CHECK_HEADERS(crypt.h)
+
+AC_SUBST(MYSQLLIB)
+AC_SUBST(MYSQLALIB)
+AC_SUBST(MYSQLLTLIB)
+
+AC_SUBST(PGSQLLIB)
+AC_SUBST(PGSQLALIB)
+AC_SUBST(PGSQLLTLIB)
+
+AC_SUBST(SQLITELIB)
+AC_SUBST(SQLITELALIB)
+AC_SUBST(SQLITELTLIB)
+
+AC_SUBST(SORTLIB)
+AC_SUBST(SORTALIB)
+AC_SUBST(SORTLTLIB)
+
+AC_SUBST(AUTHALIB)
+AC_SUBST(AUTHLTLIB)
+
+AC_SUBST(MYSQLINC)
+AC_SUBST(PGSQLINC)
+AC_SUBST(SQLITEINC)
+
+AC_SUBST(SIEVEINC)
+
+AC_SUBST(LDAPLIB)
+AC_SUBST(LDAPINC)
+
+AC_SUBST(DM_LOGDIR)
+AC_SUBST(DM_CONFDIR)
+AC_SUBST(DM_STATEDIR)
+
+AC_PROG_LIBTOOL
+
+AC_OUTPUT(dbmail.h Makefile modules/Makefile man/Makefile)
+
+DBMAIL_MSG_CONFIGURE_RESULTS

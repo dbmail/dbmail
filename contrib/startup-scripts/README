@@ -1,0 +1,15 @@
+README for Startup Scripts.
+
+The startup scripts provided here are suggested scripts
+which should make it much easier to both system administators
+deploying DBMail and distribution packagers interested in
+providing prebuilt DBMail packages for their distributions.
+
+Currently provided are Debian, Gentoo and RedHat style scripts.
+The Debian scripts should work without modification on Ubuntu.
+The RedHat scripts should work on Mandrake, SuSe and so on.
+
+If you find any of these scripts to be lacking for your
+distribution of choice, please consult the DBMail mailing
+lists for help updating the closest compatible scripts and
+submit them to be included in future versions of DBMail.

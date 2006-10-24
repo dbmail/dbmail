@@ -1,0 +1,90 @@
+#!/sbin/runscript
+#
+# chkconfig: - 91 35
+# description: Starts and stops the dbmail-lmtpd daemon
+#
+
+# Where are the binaries located?
+LMTPD=0
+IMAPD=1
+POP3D=2
+TIMSIEVED=3
+DAEMON[$LMTPD]=dbmail-lmtpd
+DAEMON[$IMAPD]=dbmail-imapd
+DAEMON[$POP3D]=dbmail-pop3d
+DAEMON[$TIMSIEVED]=dbmail-timsieved
+
+BIN_DIR=/usr/sbin
+PID_DIR=/var/run
+PID=pid
+
+# Where is the dbmail.conf file located?
+CONFIG=/etc/dbmail.conf
+
+# opts="${opts} reload"
+
+depend() {
+	need net
+	# This won't cause a hard failure if neither is installed, however.
+	use mysql
+	use pgsql
+	after mta
+}
+
+initService() {
+    # Avoid using root's TMPDIR
+    unset TMPDIR
+
+    # Check that config file exists.
+    [ -f $CONFIG ] || exit 0
+
+    RETVAL=0
+}
+
+start() {
+	initService
+
+	for i in $DAEMONS; do
+		THISDAEMON=`echo $i | awk '{print toupper($1)}'`;
+		if [ -n ${DAEMON[$THISDAEMON]} ]; then
+			# echo $THISDAEMON is ${DAEMON[$THISDAEMON]};
+			startfoo ${DAEMON[$THISDAEMON]};
+		fi
+	done
+
+	eend $?
+}
+
+startfoo() {
+	PROGRAM=$1
+	ebegin "Starting DBMail daemon ($PROGRAM)"
+	    start-stop-daemon --start --quiet \
+		--pidfile $PID_DIR/$PROGRAM.$PID \
+		--exec $BIN_DIR/$PROGRAM \
+		--name $PROGRAM \
+		-- -f $CONFIG -p $PID_DIR/$PROGRAM.$PID 2>&1
+	eend $?
+}	
+
+stopfoo() {
+	PROGRAM=$1
+	ebegin "Stopping DBMail daemon ($PROGRAM)"
+	    start-stop-daemon --stop --quiet --retry 15 \
+		--pidfile $PID_DIR/$PROGRAM.$PID
+	eend $?
+}	
+
+stop() {
+	initService
+
+	for i in $DAEMONS; do
+		THISDAEMON=`echo $i | awk '{print toupper($1)}'`;
+		if [ -n ${DAEMON[$THISDAEMON]} ]; then
+			# echo $THISDAEMON is ${DAEMON[$THISDAEMON]};
+			stopfoo ${DAEMON[$THISDAEMON]};
+		fi
+	done
+
+	eend $?
+}	
+

@@ -1,0 +1,82 @@
+#!/bin/bash
+#
+# Startup script for the DBMail Pop3 Server
+#
+# chkconfig: - 81 19
+# description: DBMail is a mail server with a database backend. Unlike \
+#	       WUimapd it does not run through inetd.
+# processname: dbmail-pop3d
+# pidfile: /var/run/dbmail-pop3d.pid
+# config: /etc/dbmail.conf
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+if [ -f /etc/sysconfig/dbmail ]; then
+        . /etc/sysconfig/dbmail
+fi
+
+# Path to the dbmail script.
+dbmail=/usr/sbin/dbmail-pop3d
+prog=dbmail-pop3d
+RETVAL=0
+
+start() {
+	pid=`pidof $prog`
+	if [ -n "$pid" ]
+	then
+		echo "dbmail pop daemon is already running, PID $pid"
+	else
+        	echo -n $"Starting $prog: "
+        	daemon $dbmail
+        	RETVAL=$?
+        	echo
+        	[ $RETVAL = 0 ] && touch /var/lock/subsys/$prog
+        	return $RETVAL
+	fi
+}
+stop() {
+	echo -n $"Stopping $prog: "
+	killproc $dbmail
+	RETVAL=$?
+	echo
+	[ $RETVAL = 0 ] && rm -f /var/lock/subsys/$prog /var/run/$prog.pid
+}
+reload() {
+	echo -n $"Reloading $prog: "
+	killproc $dbmail -HUP
+	RETVAL=$?
+	echo
+}
+
+# See how we were called.
+case "$1" in
+  start)
+	start
+	;;
+  stop)
+	stop
+	;;
+  status)
+        status $dbmail
+	RETVAL=$?
+	;;
+  restart)
+	stop
+	start
+	;;
+  condrestart)
+	if [ -f /var/run/$prog.pid ] ; then
+		stop
+		start
+	fi
+	;;
+  reload)
+        reload
+	;;
+  *)
+	echo $"Usage: $prog {start|stop|restart|condrestart|reload|status}"
+	exit 1
+esac
+
+exit $RETVAL

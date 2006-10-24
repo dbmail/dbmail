@@ -1,0 +1,45 @@
+
+-- support faster FETCH commands by caching BODYSTRUCTURE and ENVELOPE information
+
+CREATE TABLE dbmail_envelope (
+        physmessage_id  INTEGER NOT NULL,
+	id		INTEGER NOT NULL PRIMARY KEY,
+	envelope	TEXT NOT NULL DEFAULT ''
+);
+
+CREATE UNIQUE INDEX dbmail_envelope_1 on dbmail_envelope (physmessage_id, envelope);
+
+--	FOREIGN KEY (physmessage_id)
+--			REFERENCES dbmail_physmessage(id)
+--			ON UPDATE CASCADE ON DELETE CASCADE
+
+CREATE TRIGGER fk_insert_envelope_physmessage_id
+	BEFORE INSERT ON dbmail_envelope
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.physmessage_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_physmessage WHERE id = new.physmessage_id) IS NULL)
+			THEN RAISE (ABORT, 'insert on table "dbmail_envelope" violates foreign key constraint "fk_insert_envelope_physmessage_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update1_envelope_physmessage_id
+	BEFORE UPDATE ON dbmail_envelope
+	FOR EACH ROW BEGIN
+		SELECT CASE 
+			WHEN (new.physmessage_id IS NOT NULL)
+				AND ((SELECT id FROM dbmail_physmessage WHERE id = new.physmessage_id) IS NULL)
+			THEN RAISE (ABORT, 'update on table "dbmail_envelope" violates foreign key constraint "fk_update1_envelope_physmessage_id"')
+		END;
+	END;
+CREATE TRIGGER fk_update2_envelope_physmessage_id
+	AFTER UPDATE ON dbmail_physmessage
+	FOR EACH ROW BEGIN
+		UPDATE dbmail_envelope SET physmessage_id = new.id WHERE physmessage_id = OLD.id;
+	END;
+CREATE TRIGGER fk_delete_envelope_physmessage_id
+	BEFORE DELETE ON dbmail_physmessage
+	FOR EACH ROW BEGIN
+		DELETE FROM dbmail_envelope WHERE physmessage_id = OLD.id;
+	END;
+
+--- TODO: dbmail_bodystructure

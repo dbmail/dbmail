@@ -1,0 +1,27 @@
+DBMAIL-LMTPD(8)
+===============
+
+
+NAME
+----
+dbmail-lmtpd - receive messages from an MTA supporting the Lightweight
+Mail Transport Protocol, as specified in RFC 2033.
+
+SYNOPSIS
+--------
+dbmail-lmtpd [-f configfile] [-p pidfile] [-nvVh]
+
+DESCRIPTION
+-----------
+The dbmail-lmtpd daemon will spawn child processes as specified in the
+dbmail.conf file. These processes listen, by default, on port 24 of the
+localhost interface. Mail Transfer Agents, MTA's such as Postfix and
+Exim, speak LMTP to their Mail Delivery Agents which receive and store
+messages. DBMail implements such a system using a database backend.
+
+
+include::serveropts.txt[]
+
+include::commonopts.txt[]
+
+include::footer.txt[]

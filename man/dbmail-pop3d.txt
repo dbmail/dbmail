@@ -1,0 +1,25 @@
+DBMAIL-POP3D(8)
+===============
+
+
+NAME
+----
+dbmail-pop3d - provides access to the DBMail system to client support-
+ing Post Office Protocol, POP3, as specified in RFC 1939.
+
+SYNOPSIS
+--------
+dbmail-pop3d [-f configfile] [-p pidfile] [-nvVh]
+
+DESCRIPTION
+-----------
+The dbmail-pop3d daemon is a fully featured POP3 server. It will spawn
+into a number of default processes as set in the dbmail.conf file.
+These processes will enable full POP3 communication with clients.
+
+
+include::serveropts.txt[]
+
+include::commonopts.txt[]
+
+include::footer.txt[]

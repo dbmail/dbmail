@@ -1,0 +1,64 @@
+#!/bin/sh
+# init script for the DBMail POP3 server
+# you may need to make some changes to the following paths
+
+# directory where the POP3 server executable resides
+PROGDIR=/usr/local/sbin
+
+# directory containing database shared libraries
+# - multiple directories separated by a colon (':') are acceptable
+# - if the POP3 server is statically linked, you may comment this out
+DBLIBDIR=/usr/local/mysql/lib/mysql
+
+# fully qualified filename of the DBMail configuration file
+CONFIGFILE=/etc/dbmail.conf
+
+# directory where the process ID of the POP3 server should be stored
+# (this feature is not yet supported by DBMail)
+PIDDIR=/var/run
+
+##############################################################################
+########### you should not have to change anything below this line ###########
+##############################################################################
+
+PROGRAM=dbmail-pop3d
+PIDFILE=$PIDDIR/$PROGRAM.pid
+PATH=$PROGDIR:$PATH
+export LD_LIBRARY_PATH=$DBLIBDIR:$LD_LIBRARY_PATH
+export LIBPATH=$DBLIBDIR:$LIBPATH
+
+OPTS="-f $CONFIGFILE -p $PIDFILE"
+
+test -x $PROGDIR/$PROGRAM || exit 1
+
+
+case "$1" in
+    start)
+	echo -n "Starting DBMail POP3 daemon ($PROGRAM) ... "
+	$PROGRAM $OPTS
+	echo "done."
+    ;;
+
+    stop)
+	echo -n "Stopping DBMail POP3 daemon ... "
+	kill `cat $PIDFILE`
+	echo "done."
+    ;;
+
+    reload)
+	$0 stop
+	sleep 2
+	$0 start
+    ;;
+
+    restart|force-reload)
+	$0 reload
+    ;;
+    
+    *)
+	echo "Usage: $0 {start|stop|reload|restart|force-reload}" >&2
+	exit 1
+    ;;
+esac
+
+exit 0

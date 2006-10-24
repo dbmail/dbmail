@@ -1,0 +1,9 @@
+man/dbmail-export.8
+man/dbmail-imapd.8
+man/dbmail-lmtpd.8
+man/dbmail-pop3d.8
+man/dbmail-smtp.1
+man/dbmail-users.8
+man/dbmail-util.8
+man/dbmail.1
+man/dbmail.conf.5

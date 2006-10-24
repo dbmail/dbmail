@@ -1,0 +1,148 @@
+$Id$
+
+Dbmail-2 as of 2.1.0 supports ldap for authentication and delivery information.
+
+
+NOTICE:
+
+If you have an existing userbase in sql that you which to migrate to ldap-auth, you 
+must make sure that the uidNumber in ldap is the same as the dbmail_users.user_idnr 
+in sql. If your tables are in MySQL/innoDB or PostgreSQL, and you have a proper cascade 
+setup for the foreign key in dbmail_mailboxes like:
+
+ CONSTRAINT dbmail_mailboxes_ibfk_1 FOREIGN KEY (owner_idnr) 
+  REFERENCES dbmail_users (user_idnr) 
+  ON DELETE CASCADE ON UPDATE CASCADE
+
+you should be able to issue simple UPDATE statements to reset the user_idnr values in sql.
+
+
+
+LDAP-SCHEMA:
+
+I'm providing an example dbmail.schema file that should get you started. 
+
+
+
+CONFIGURATION:
+
+dbmail.conf contains some new ldap items:
+ 
+---
+
+"BIND_DN"
+
+This is the Distinguished Name of the user who has read and write access to the LDAP
+server.
+
+	example: BIND_DN=cn=admin,dc=mydomain,dc=com
+
+
+"BIND_PW"
+
+The plain text password of the account above.
+
+	example: BIND_PW=password
+
+
+"BASE_DN"
+
+The root or starting point from which searches will be conducted. All searches
+use the SCOPE option to search everything in this base and below.
+
+	example: BASE_DN=ou=People,dc=mydomain,dc=com
+
+
+"PORT"
+
+The port number that the LDAP server is listerning on. By default, 389 for
+insecure and 636 for secure, however secure LDAP is currently unsupported.
+
+	example: PORT=389
+
+
+"HOSTNAME"
+
+The hostname of the LDAP server. May be an IP address.
+
+	example: HOSTNAME=ldap
+
+
+"SCOPE"
+
+The search scope for ldap searches.
+
+	example: SCOPE=SubTree
+
+
+"USER_OBJECTCLASS"
+
+The object class to use as a search filter for users.
+
+	example: USER_OBJECTCLASS=top,account,dbmailUser
+
+
+"FIELD_UID"
+
+The field which contains the user login name of the user. Required.
+
+	example: FIELD_UID=uid
+
+
+	example: CN_STRING=uid
+	
+
+"FIELD_QUOTA"
+
+The field which contains the quota, in bytes, of the user. Not required.
+
+	example: FIELD_QUOTA=mailQuota
+
+
+"FIELD_PASSWD"
+
+The field which contains the password of the user. Not implemented.
+
+	example: FIELD_PASSWD=userPassword
+
+
+"FIELD_MAIL"
+
+The field which contains the primary email address of the user. Required.
+
+	example: FIELD_MAIL=mail
+
+
+"FIELD_NID"
+
+The field which contains the user id number of the user. Required.
+
+	example: FIELD_NID=uidNumber
+
+	example: MIN_NID=10000
+	example: MAX_NID=15000
+
+
+"FIELD_CID"
+
+The field which contains the group id number of the user. Not required.
+
+	example: FIELD_CID=gidNumber
+
+
+	example: MIN_CID=10000
+	example: MAX_CID=15000
+
+
+"FORW_OBJECTCLASS"
+
+	example: FORW_OBJECTCLASS=top,account,dbmailForwardingAddress
+	
+
+"FIELD_FWDTARGET"
+
+The field which contains a destination email address for forwarding mail.
+
+	example: FIELD_FWDTARGET=mailForwardingAddress
+
+

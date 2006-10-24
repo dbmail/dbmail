@@ -1,0 +1,27 @@
+DBMAIL(1)
+=========
+Author
+
+NAME
+----
+dbmail - the Database Mailer, is a suite of mail storage and
+retrieval programs centered around a database backend.
+
+SYNOPSIS
+--------
+See one of the following man pages for more information about the components
+of a DBMail system:
+
+  Configuration file . . . . dbmail.conf(5)
+  Deliver mail . . . . . . . dbmail-smtp(1)
+  Manage user accounts . . . dbmail-users(8)
+  Export mailbox contents. . dbmail-export(8)
+  Manage Sieve scripts . . . dbmail-sievecmd(8)
+  Maintain health. . . . . . dbmail-util(8)
+  IMAP daemon. . . . . . . . dbmail-imapd(8)
+  POP3 daemon. . . . . . . . dbmail-pop3d(8)
+  LMTP daemon. . . . . . . . dbmail-lmtpd(8)
+  ManageSieve daemon . . . . dbmail-timsieved(8)
+
+
+include::footer.txt[]

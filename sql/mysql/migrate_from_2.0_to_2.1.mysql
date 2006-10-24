@@ -1,0 +1,221 @@
+#
+# Copyright (c) 2004-2006, NFG Net Facilities Group BV, support@nfg.nl
+# Copyright (c) 2006 Aaron Stone, aaron@serendipity.cx
+#
+# script for upgrading dbmail-2.0 to dbmail-2.1+
+
+
+# This query can take many minutes on a large installation.
+# It is the first thing here in case someone looks inside to
+# find out why this script is taking so long ;-)
+#
+# The tables below have foreign keys, and so
+# the target key's table must also be InnoDB.
+ALTER TABLE dbmail_physmessage ENGINE=InnoDB;
+
+# Ensure that we can store 8-bit data without truncation.
+# This query can also take quite a few minutes.
+ALTER TABLE dbmail_messageblks MODIFY messageblk LONGBLOB NOT NULL;
+
+# We need to be able to do case-insensitive matching.
+# This drops the BINARY qualifier from the column.
+ALTER TABLE dbmail_mailboxes MODIFY name VARCHAR(100) NOT NULL default '';
+
+
+ALTER TABLE dbmail_auto_replies ADD start_date DATETIME NOT NULL;
+ALTER TABLE dbmail_auto_replies ADD stop_date DATETIME NOT NULL;
+
+#
+# store all headers by storing all headernames and headervalues in separate
+# tables.
+#
+SET FOREIGN_KEY_CHECKS=0;
+
+DROP TABLE IF EXISTS dbmail_headername;
+CREATE TABLE dbmail_headername (
+	id		BIGINT NOT NULL AUTO_INCREMENT,
+	headername	VARCHAR(100) NOT NULL DEFAULT '',
+	PRIMARY KEY (id),
+	UNIQUE (headername)
+) ENGINE=InnoDB ;
+
+DROP TABLE IF EXISTS dbmail_headervalue;
+CREATE TABLE dbmail_headervalue (
+	headername_id	BIGINT NOT NULL,
+        physmessage_id	BIGINT NOT NULL,
+	id		BIGINT NOT NULL AUTO_INCREMENT,
+	headervalue	TEXT NOT NULL,
+	PRIMARY KEY (id),
+	UNIQUE (physmessage_id, id),
+	UNIQUE (physmessage_id, headername_id, headervalue(255)),
+	INDEX (headername_id),
+	FOREIGN KEY (headername_id)
+		REFERENCES dbmail_headername(id) ON UPDATE CASCADE ON DELETE CASCADE,
+	FOREIGN KEY (physmessage_id)
+		REFERENCES dbmail_physmessage(id) ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB ;
+
+# Provide separate storage of commonly used headers
+
+# These fields will typically be preparsed as specified by 
+# http://www.ietf.org/internet-drafts/draft-ietf-imapext-sort-17.txt
+
+# Threading
+
+# support fast threading by breaking out In-Reply-To/References headers
+# these fields contain zero or more Message-Id values that determine the message
+# threading
+
+DROP TABLE IF EXISTS dbmail_subjectfield;
+CREATE TABLE dbmail_subjectfield (
+        physmessage_id  BIGINT NOT NULL,
+	id		BIGINT NOT NULL AUTO_INCREMENT,
+	subjectfield	VARCHAR(255) NOT NULL DEFAULT '',
+	PRIMARY KEY (id),
+	UNIQUE (physmessage_id, subjectfield),
+	FOREIGN KEY (physmessage_id)
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB ;
+
+DROP TABLE IF EXISTS dbmail_datefield;
+CREATE TABLE dbmail_datefield (
+        physmessage_id  BIGINT NOT NULL,
+	id		BIGINT NOT NULL AUTO_INCREMENT,
+	datefield	DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00',
+	PRIMARY KEY (id),
+	UNIQUE (physmessage_id, datefield),
+	FOREIGN KEY (physmessage_id)
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB ;
+
+DROP TABLE IF EXISTS dbmail_referencesfield;
+CREATE TABLE dbmail_referencesfield (
+        physmessage_id  BIGINT NOT NULL,
+	id		BIGINT NOT NULL AUTO_INCREMENT,
+	referencesfield	VARCHAR(255) NOT NULL DEFAULT '',
+	PRIMARY KEY (id),
+	UNIQUE (physmessage_id, referencesfield),
+	FOREIGN KEY (physmessage_id)
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB ;
+
+# Searching and Sorting
+
+# support fast sorting by breaking out and preparsing the fields most commonly used
+# in searching and sorting: Subject, From, To, Reply-To, Cc. 
+
+DROP TABLE IF EXISTS dbmail_fromfield;
+CREATE TABLE dbmail_fromfield (
+        physmessage_id  BIGINT NOT NULL,
+	id		BIGINT NOT NULL AUTO_INCREMENT,
+	fromname	VARCHAR(100) NOT NULL DEFAULT '',
+	fromaddr	VARCHAR(100) NOT NULL DEFAULT '',
+	PRIMARY KEY (id),
+	UNIQUE (physmessage_id, id),
+	FOREIGN KEY (physmessage_id)
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB ;
+
+DROP TABLE IF EXISTS dbmail_tofield;
+CREATE TABLE dbmail_tofield (
+        physmessage_id  BIGINT NOT NULL,
+	id		BIGINT NOT NULL AUTO_INCREMENT,
+	toname		VARCHAR(100) NOT NULL DEFAULT '',
+	toaddr		VARCHAR(100) NOT NULL DEFAULT '',
+	PRIMARY KEY (id),
+	UNIQUE (physmessage_id, id),
+	FOREIGN KEY (physmessage_id)
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB ;
+
+DROP TABLE IF EXISTS dbmail_replytofield;
+CREATE TABLE dbmail_replytofield (
+        physmessage_id  BIGINT NOT NULL,
+	id		BIGINT NOT NULL AUTO_INCREMENT,
+	replytoname	VARCHAR(100) NOT NULL DEFAULT '',
+	replytoaddr	VARCHAR(100) NOT NULL DEFAULT '',
+	PRIMARY KEY (id),
+	UNIQUE (physmessage_id, id),
+	FOREIGN KEY (physmessage_id)
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB ;
+
+DROP TABLE IF EXISTS dbmail_ccfield;
+CREATE TABLE dbmail_ccfield (
+        physmessage_id  BIGINT NOT NULL,
+	id		BIGINT NOT NULL AUTO_INCREMENT,
+	ccname		VARCHAR(100) NOT NULL DEFAULT '',
+	ccaddr		VARCHAR(100) NOT NULL DEFAULT '',
+	PRIMARY KEY (id),
+	UNIQUE (physmessage_id, id),
+	FOREIGN KEY (physmessage_id)
+			REFERENCES dbmail_physmessage(id)
+			ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB ;
+
+-- Table structure for table `dbmail_replycache`
+
+DROP TABLE IF EXISTS dbmail_replycache;
+CREATE TABLE dbmail_replycache (
+  to_addr varchar(100) NOT NULL default '',
+  from_addr varchar(100) NOT NULL default '',
+  handle varchar(100) NOT NULL default '',
+  lastseen datetime NOT NULL default '0000-00-00 00:00:00',
+  UNIQUE KEY replycache_1 (to_addr,from_addr, handle)
+) ENGINE=InnoDB;
+
+
+#
+# Add tables and columns to hold Sieve scripts.
+
+
+CREATE TABLE dbmail_sievescripts (
+  owner_idnr bigint(21) DEFAULT '0' NOT NULL,
+  name varchar(100) NOT NULL,
+  script text,
+  active tinyint(1) default '0' not null,
+  INDEX (name),
+  INDEX (owner_idnr),
+  INDEX (owner_idnr, name),
+  FOREIGN KEY owner_idnr_fk (owner_idnr)
+    REFERENCES dbmail_users (user_idnr) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+
+# Add columns for storing the Sieve quota.
+ALTER TABLE dbmail_users
+	ADD maxsieve_size BIGINT DEFAULT '0' NOT NULL,
+	ADD cursieve_size BIGINT DEFAULT '0' NOT NULL;
+
+
+
+DROP TABLE IF EXISTS dbmail_usermap;
+CREATE TABLE dbmail_usermap (
+  login VARCHAR(100) NOT NULL,
+  sock_allow varchar(100) NOT NULL,
+  sock_deny varchar(100) NOT NULL,
+  userid varchar(100) NOT NULL
+) ENGINE=InnoDB;
+
+CREATE UNIQUE INDEX usermap_idx_1 ON dbmail_usermap(login, sock_allow, userid);
+
+DROP TABLE IF EXISTS `dbmail_envelope`;
+CREATE TABLE `dbmail_envelope` (
+  `physmessage_id` bigint(20) NOT NULL default '0',
+  `id` bigint(20) NOT NULL auto_increment,
+  `envelope` text NOT NULL,
+  PRIMARY KEY  (`id`),
+  KEY `physmessage_id` (`physmessage_id`),
+  CONSTRAINT `dbmail_envelope_ibfk_1` FOREIGN KEY (`physmessage_id`) 
+  	REFERENCES `dbmail_physmessage` (`id`) 
+	ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+SET FOREIGN_KEY_CHECKS=1;
+

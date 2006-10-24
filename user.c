@@ -1,0 +1,459 @@
+/*
+ Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
+ Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
+
+ This program is free software; you can redistribute it and/or 
+ modify it under the terms of the GNU General Public License 
+ as published by the Free Software Foundation; either 
+ version 2 of the License, or (at your option) any later 
+ version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program; if not, write to the Free Software
+ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*/
+
+/* $Id$
+ * This is the dbmail-user program
+ * It makes adding users easier 
+ *
+ *
+ * - moving most code to dbmail-users.c. Just a thin wrapper left */
+
+#include "dbmail.h"
+
+char *configFile = DEFAULT_CONFIG_FILE;
+
+#define SHADOWFILE "/etc/shadow"
+#define PNAME "dbmail/user"
+
+extern db_param_t _db_params;
+
+/* UI policy */
+extern int yes_to_all;
+extern int no_to_all;
+extern int verbose;
+extern int quiet; 		/* Don't be helpful. */
+extern int reallyquiet;	/* Don't print errors. */
+
+int do_showhelp(void) {
+	
+	printf("*** dbmail-users ***\n");
+	printf("Use this program to manage your DBMail users.\n");
+	printf("See the man page for more info. Modes of operation:\n\n");
+	printf("     -a user   add a user\n");
+	printf("     -d user   delete a user\n");
+	printf("     -c user   change details for a user\n");
+	printf("     -e user   empty all mailboxes for a user\n");
+	printf("     -l uspec  list information for matching users\n");
+	printf("     -x alias  create an external forwarding address\n");
+	printf("\n");
+	printf("Summary of options for all modes:\n");
+	printf("     -w passwd specify user's password on the command line\n");
+	printf("     -W [file] read from a file or prompt for a user's password\n");
+	printf("     -p pwtype password type may be one of the following:\n"
+	       "               plaintext, crypt, md5-hash, md5-digest, md5-base64\n"
+	       "               each type may be given a '-raw' suffix to indicate\n"
+	       "               that the password argument has already been encoded.\n");
+	printf("     -P [file] pull encrypted password from the shadow file\n");
+	printf("     -u user   new username (only useful for -c, change)\n");
+	printf("     -g client assign the user to a client\n");
+	printf("     -m max    set the maximum mail quota in <bytes>B,\n"
+	       "               <kbytes>K, or <mbytes>M, default in bytes\n"
+	       "               specify 0 to remove any mail quota limits\n");
+	printf("     -s alia.. adds a list of recipient aliases\n");
+	printf("     -S alia.. removes a list of recipient aliases (wildcards supported)\n");
+	printf("     -t fwds.. adds a list of deliver-to forwards\n");
+	printf("     -T fwds.. removes a list of deliver-to forwards (wildcards supported)\n");
+	printf("\n");
+        printf("Common options for all DBMail utilities:\n");
+	printf("     -f file   specify an alternative config file\n");
+	printf("     -q        quietly skip interactive prompts\n"
+	       "               use twice to suppress error messages\n");
+	printf("     -v        verbose details\n");
+	printf("     -V        show the version\n");
+	printf("     -h        show this help message\n");
+	
+	return 0;
+	
+}
+
+int main(int argc, char *argv[])
+{
+	int opt = 0, opt_prev = 0;
+	int show_help = 0;
+	int result = 0, mode = 0, mode_toomany = 0;
+	char *user = NULL, *newuser = NULL, *userspec = NULL, *alias = NULL;
+	char *passwd = NULL, *passwdtype = NULL, *passwdfile = NULL;
+	char *password = NULL, *enctype = NULL;
+	u64_t useridnr = 0, clientid = 0, maxmail = 0;
+	GList *alias_add = NULL, *alias_del = NULL, *fwds_add = NULL, *fwds_del = NULL;
+	GString *tmp = NULL;
+	struct change_flags change_flags;
+	size_t len = 0;
+
+	openlog(PNAME, LOG_PID, LOG_MAIL);
+	setvbuf(stdout, 0, _IONBF, 0);
+
+	/* Set all changes to false. */
+	memset(&change_flags, 0, sizeof(change_flags));
+
+	/* get options */
+	opterr = 0;		/* suppress error message from getopt() */
+	while ((opt = getopt(argc, argv,
+		"-a:d:c:e:l::x:" /* Major modes */
+		"W::w:P::p:u:g:m:t:s:S:T:" /* Minor options */
+		"i" "f:qnyvVh" /* Common options */ )) != -1) {
+		/* The initial "-" of optstring allows unaccompanied
+		 * options and reports them as the optarg to opt 1 (not '1') */
+		if (opt == 1)
+			opt = opt_prev;
+		opt_prev = opt;
+
+		switch (opt) {
+		/* Major modes of operation
+		 * (exactly one of these is required) */
+		case 'a':
+		case 'd':
+		case 'c':
+		case 'e':
+			if (mode)
+				mode_toomany = 1;
+			mode = opt;
+			if (optarg && strlen(optarg))
+				user = optarg;
+			break;
+
+		case 'x':
+			if (mode)
+				mode_toomany = 1;
+			mode = opt;
+			if (optarg && strlen(optarg))
+				alias = optarg;
+			break;
+
+		case 'l':
+			/* It seems that the optional argument may
+			 * be passed as a second instance of this flag. */
+			if (mode != 0 && mode != 'l')
+				mode_toomany = 1;
+			mode = opt;
+			if (optarg && strlen(optarg))
+				userspec = optarg;
+			break;
+
+		case 'i':
+			printf("Interactive console is not supported in this release.\n");
+			return 1;
+
+
+		/* Minor options */
+		case 'w':
+			change_flags.newpasswd = 1;
+			passwd = optarg;
+			break;
+
+		case 'W':
+			change_flags.newpasswd = 1;
+			if (optarg && strlen(optarg)) {
+				passwdfile = optarg;
+				change_flags.newpasswdfile = 1;
+			} else {
+				change_flags.newpasswdstdin = 1;
+			}
+			break;
+
+		case 'u':
+			change_flags.newuser = 1;
+			newuser = optarg;
+			break;
+
+		case 'p':
+			if (!passwdtype)
+				passwdtype = optarg;
+			// else
+				// Complain about only one type allowed.
+			break;
+
+		case 'P':
+			change_flags.newpasswdshadow = 1;
+			if (optarg && strlen(optarg))
+				passwdfile = optarg;
+			else
+				passwdfile = SHADOWFILE;
+			passwdtype = "shadow";
+			break;
+
+		case 'g':
+			change_flags.newclientid = 1;
+			clientid = strtoull(optarg, NULL, 10);
+			break;
+
+		case 'm':
+			change_flags.newmaxmail = 1;
+			maxmail = strtomaxmail(optarg);
+			break;
+
+		case 's':
+			// Add this item to the user's aliases.
+			if (optarg && (len = strlen(optarg))) {
+				tmp = g_string_new(optarg);
+				alias_add = g_string_split(tmp,",");
+				g_string_free(tmp, TRUE);
+			}
+			break;
+
+		case 'S':
+			// Delete this item from the user's aliases.
+			if (optarg && (len = strlen(optarg))) {
+				tmp = g_string_new(optarg);
+				alias_del = g_string_split(tmp,",");
+				g_string_free(tmp, TRUE);
+			}
+			break;
+
+		case 't':
+			// Add this item to the alias's forwards.
+			if (optarg && (len = strlen(optarg))) {
+				tmp = g_string_new(optarg);
+				fwds_add = g_string_split(tmp,",");
+				g_string_free(tmp, TRUE);
+			}
+			break;
+
+		case 'T':
+			// Delete this item from the alias's forwards.
+			if (optarg && (len = strlen(optarg))) {
+				tmp = g_string_new(optarg);
+				fwds_del = g_string_split(tmp,",");
+				g_string_free(tmp, TRUE);
+			}
+			break;
+
+		/* Common options */
+		case 'f':
+			if (optarg && strlen(optarg) > 0)
+				configFile = optarg;
+			else {
+				qerrorf("dbmail-users: -f requires a filename\n\n");
+				result = 1;
+			}
+			break;
+
+		case 'h':
+			show_help = 1;
+			break;
+
+		case 'n':
+			printf("-n switch is not supported in this "
+			       "version.\n");
+			return 1;
+
+		case 'y':
+			printf("-y switch is not supported in this "
+			       "version.\n");
+			return 1;
+
+		case 'q':
+			/* If we get q twice, be really quiet! */
+			if (quiet)
+				reallyquiet = 1;
+			if (!verbose)
+				quiet = 1;
+			break;
+
+		case 'v':
+			if (!quiet)
+				verbose = 1;
+			break;
+
+		case 'V':
+			/* Show the version and return non-zero. */
+			printf("\n*** DBMAIL: dbmail-users version "
+			       "$Revision$ %s\n\n", COPYRIGHT);
+			result = 1;
+			break;
+
+		default:
+			/* printf("unrecognized option [%c], continuing...\n",optopt); */
+			break;
+		}
+
+		/* If there's a non-negative return code,
+		 * it's time to free memory and bail out. */
+		if (result)
+			goto freeall;
+	}	
+
+	/* If nothing is happening, show the help text. */
+	if (!mode || mode_toomany || show_help) {
+		do_showhelp();
+		result = 1;
+		goto freeall;
+	}
+
+	/* read the config file */
+        if (config_read(configFile) == -1) {
+                qerrorf("Failed. Unable to read config file %s\n",
+                        configFile);
+                result = -1;
+                goto freeall;
+        }
+                
+	SetTraceLevel("DBMAIL");
+	GetDBParams(&_db_params);
+
+	/* open database connection */
+	if (db_connect() != 0) {
+		qerrorf
+		    ("Failed. Could not connect to database (check log)\n");
+		result = -1;
+		goto freeall;
+	}
+
+	/* open authentication connection */
+	if (auth_connect() != 0) {
+		qerrorf
+		    ("Failed. Could not connect to authentication (check log)\n");
+		result = -1;
+		goto freeall;
+	}
+
+	switch (mode) {
+	case 'c':
+	case 'd':
+	case 'e':
+		/* Verify the existence of this user */
+		if (auth_user_exists(user, &useridnr) == -1) {
+			qerrorf("Error: cannot verify existence of user [%s].\n",
+			     user);
+			result = -1;
+			goto freeall;
+		}
+		if (useridnr == 0) {
+			qerrorf("Error: user [%s] does not exist.\n",
+				     user);
+			result = -1;
+			goto freeall;
+		}
+	}
+
+	/* Only get a password for those modes which require it. */
+	switch (mode) {
+	case 'a':
+	case 'c':
+		if (change_flags.newpasswdstdin) {
+			char pw[50];
+			struct termios oldattr, newattr;
+
+			/* Get the current terminal state, then disable echo. */
+			tcgetattr(fileno(stdin), &oldattr);
+			newattr = oldattr;
+			newattr.c_lflag &= ~ECHO;
+			tcsetattr(fileno(stdin), TCSAFLUSH, &newattr);
+
+			/* Prompt for a password and read until \n or EOF. */
+			qprintf("Please enter a password (will not echo): ");
+			fflush(stdout);
+			fgets(pw, 50, stdin);
+
+			/* We don't want the trailing newline. */
+			len = strlen(pw);
+			if (pw[len-1] == '\n')
+			        pw[len-1] = '\0';
+			/* fgets guarantees a nul terminated string. */
+			passwd = dm_strdup(pw);
+
+			/* Restore the previous terminal state (with echo back on). */
+			tcsetattr(fileno(stdin), TCSANOW, &oldattr);
+			qprintf("\n");
+		}
+
+		/* If no password type was specified, and
+		 * the user already exists, get their password type. */
+		if (!passwdtype && useridnr)
+			passwdtype = auth_getencryption(useridnr);
+		/* Convert the password and password type into a 
+		 * fully coded format, ready for the database. */
+		if (mkpassword(user, passwd, passwdtype, passwdfile,
+		               &password, &enctype)) {
+			qerrorf("Error: unable to create a password.\n");
+			result = -1;
+			goto freeall;
+		}
+	}
+
+
+	switch (mode) {
+	case 'a':
+		result = do_add(user, password, enctype, maxmail, clientid,
+				alias_add, alias_del);
+		break;
+	case 'd':
+		result = do_delete(useridnr, user);
+		break;
+	case 'c':
+		qprintf("Performing changes for user [%s]...\n", user);
+		if (change_flags.newuser) {
+			result |= do_username(useridnr, newuser);
+		}
+		if (change_flags.newpasswd) {
+			result |= do_password(useridnr, password, enctype);
+		}
+		if (change_flags.newclientid) {
+			result |= do_clientid(useridnr, clientid);
+		}
+		if (change_flags.newmaxmail) {
+			result |= do_maxmail(useridnr, maxmail);
+		}
+		result |= do_aliases(useridnr, alias_add, alias_del);
+		break;
+	case 'e':
+		result = do_empty(useridnr);
+		break;
+	case 'l':
+		result = do_show(userspec);
+		break;
+	case 'x':
+		result = do_forwards(alias, clientid, fwds_add, fwds_del);
+		break;
+	default:
+		result = 1;
+	}
+
+	/* Here's where we free memory and quit.
+	 * Be sure that all of these are NULL safe! */
+freeall:
+
+	/* Free the lists. */
+	if (alias_del) {
+		g_list_foreach(alias_del, (GFunc)g_free, NULL);
+		g_list_free(alias_del);
+	}
+	if (alias_add) {
+		g_list_foreach(alias_add, (GFunc)g_free, NULL);
+		g_list_free(alias_add);
+	}
+	if (fwds_del) {
+		g_list_foreach(fwds_del, (GFunc)g_free, NULL);
+		g_list_free(fwds_del);
+	}
+	if (fwds_add) {
+		g_list_foreach(fwds_add, (GFunc)g_free, NULL);
+		g_list_free(fwds_add);
+	}
+
+	db_disconnect();
+	auth_disconnect();
+	config_free();
+
+	if (result < 0)
+		qerrorf("Command failed.\n");
+	return result;
+}
+
