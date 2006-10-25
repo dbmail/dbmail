@@ -745,9 +745,11 @@ int db_add_sievescript(u64_t user_idnr, char *scriptname, char *script)
 		     "(owner_idnr, name, script, active) "
 		     "VALUES (%llu,'%s', '",
 		     DBPFX, user_idnr, escaped_scriptname);
+
+	size_t scriptlen = strlen(script);
 	
 	/* escape & add data */
-	esclen = db_escape_string(&escaped_query[startlen], script, strlen(script));
+	esclen = db_escape_string(&escaped_query[startlen], script, scriptlen);
 	snprintf(&escaped_query[esclen + startlen],
 		 maxesclen - esclen - startlen, "', 0)");
 
@@ -762,6 +764,20 @@ int db_add_sievescript(u64_t user_idnr, char *scriptname, char *script)
 		return DM_EQUERY;
 	}
 	dm_free(escaped_query);
+
+	// Update the cursieve_size tally.
+	snprintf(query, DEF_QUERYSIZE,
+		"UPDATE %susers "
+		"SET cursieve_size = cursieve_size + %u "
+		"WHERE user_idnr = %llu",
+		DBPFX, scriptlen, user_idnr);
+	if (db_query(query) == -1) {
+		TRACE(TRACE_ERROR, "error updating quota for sievescript '%s' "
+			"for user_idnr [%llu]" ,
+			scriptname, user_idnr);
+		db_rollback_transaction();
+		return DM_EQUERY;
+	}
 
 	db_commit_transaction();
 	return DM_SUCCESS;
@@ -829,46 +845,123 @@ int db_activate_sievescript(u64_t user_idnr, char *scriptname)
 int db_delete_sievescript(u64_t user_idnr, char *scriptname)
 {
 	char *escaped_scriptname;
-
+	u64_t scriptlen;
+	db_begin_transaction();
 	escaped_scriptname = dm_stresc(scriptname);
+
+	// Get the Sieve script's size
 	snprintf(query, DEF_QUERYSIZE,
-		"DELETE FROM %ssievescripts "
+		"SELECT LENGTH(script) FROM %ssievescripts "
 		"WHERE owner_idnr = %llu AND name = '%s'",
-		DBPFX,user_idnr,escaped_scriptname);
-	dm_free(escaped_scriptname);
+		DBPFX, user_idnr, escaped_scriptname);
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "error deleting sievescript '%s' "
 			"for user_idnr [%llu]" ,
 			scriptname, user_idnr);
+		dm_free(escaped_scriptname);
+		db_rollback_transaction();
+		return DM_EQUERY;
+	}
+
+	scriptlen = db_get_result_u64(0, 0);
+	db_free_result();
+
+	// Update the cursieve_size tally.
+	snprintf(query, DEF_QUERYSIZE,
+		"UPDATE %susers "
+		"SET cursieve_size = cursieve_size - %llu "
+		"WHERE user_idnr = %llu",
+		DBPFX, scriptlen, user_idnr);
+	if (db_query(query) == -1) {
+		TRACE(TRACE_ERROR, "error updating quota for sievescript '%s' "
+			"for user_idnr [%llu]" ,
+			scriptname, user_idnr);
+		dm_free(escaped_scriptname);
+		db_rollback_transaction();
+		return DM_EQUERY;
+	}
+
+	snprintf(query, DEF_QUERYSIZE,
+		"DELETE FROM %ssievescripts "
+		"WHERE owner_idnr = %llu AND name = '%s'",
+		DBPFX, user_idnr, escaped_scriptname);
+
+	if (db_query(query) == -1) {
+		TRACE(TRACE_ERROR, "error deleting sievescript '%s' "
+			"for user_idnr [%llu]" ,
+			scriptname, user_idnr);
+		dm_free(escaped_scriptname);
+		db_rollback_transaction();
+		return DM_EQUERY;
+	}
+
+	dm_free(escaped_scriptname);
+	db_commit_transaction();
+	return DM_SUCCESS;
+}
+
+int db_check_sievescript_quota(u64_t user_idnr, u64_t scriptlen)
+{
+	TRACE(TRACE_DEBUG, "checking %llu sievescript quota with %llu"
+		, user_idnr, scriptlen);
+
+	snprintf(query, DEF_QUERYSIZE,
+		 "SELECT maxsieve_size - cursieve_size FROM %susers "
+		 "WHERE user_idnr = %llu", DBPFX, user_idnr);
+	if (db_query(query) == -1) {
+		TRACE(TRACE_ERROR, "error getting sieve quota for user [%llu]", user_idnr);
+		return DM_EQUERY;
+	}
+
+	int available = db_get_result_int(0, 0);
+	db_free_result();
+
+	if (available > 0 && scriptlen <= (unsigned) available)
+		return DM_SUCCESS;
+
+	return DM_EGENERAL;
+}
+
+int db_set_sievescript_quota(u64_t user_idnr, u64_t quotasize)
+{
+	TRACE(TRACE_DEBUG, "setting sievescript quota for user [%llu] to [%llu]",
+		user_idnr, quotasize);
+
+	snprintf(query, DEF_QUERYSIZE,
+		 "UPDATE %susers SET maxsieve_size = %llu "
+		 "WHERE user_idnr = %llu",
+		 DBPFX, quotasize, user_idnr);
+
+	if (db_query(query) == -1) {
+		TRACE(TRACE_ERROR, "could not change maxsize_size for user [%llu]",
+		      user_idnr);
 		return DM_EQUERY;
 	}
 
 	return DM_SUCCESS;
 }
 
-int db_check_sievescript_quota(u64_t user_idnr, u64_t scriptlen)
-{
-	/* TODO function db_check_sievescript_quota */
-	TRACE(TRACE_DEBUG, "checking %llu sievescript quota with %llu"
-		, user_idnr, scriptlen);
-	return DM_SUCCESS;
-}
-
-int db_set_sievescript_quota(u64_t user_idnr, u64_t quotasize)
-{
-	/* TODO function db_set_sievescript_quota */
-	TRACE(TRACE_DEBUG, "setting %llu sievescript quota with %llu"
-		, user_idnr, quotasize);
-	return DM_SUCCESS;
-}
-
 int db_get_sievescript_quota(u64_t user_idnr, u64_t * quotasize)
 {
-	/* TODO function db_get_sievescript_quota */
-	TRACE(TRACE_DEBUG, "getting sievescript quota for %llu"
-		, user_idnr);
+	TRACE(TRACE_DEBUG, "getting sievescript quota for [%llu]", user_idnr);
+
 	*quotasize = 0;
+
+	snprintf(query, DEF_QUERYSIZE,
+		 "SELECT maxsieve_size FROM %susers "
+		 "WHERE user_idnr = %llu",
+		 DBPFX, user_idnr);
+
+	if (db_query(query) == -1) {
+		TRACE(TRACE_ERROR, "could not change maxsieve_size for user [%llu]",
+		      user_idnr);
+		return DM_EQUERY;
+	}
+
+	*quotasize = db_get_result_u64(0, 0);
+	db_free_result();
+
 	return DM_SUCCESS;
 }
 

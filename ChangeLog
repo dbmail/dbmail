@@ -3,6 +3,8 @@
 	* serverchild.c:
 	Do an fcntl dance to make sockets non-blocking around accept, lest we
 	block forever if a socket dies just between select and accept.
+	* db.c:
+	First pass at Sieve quota handling.
 
 2006-10-24  Paul J Stevens <paul@nfg.nl>
 
