@@ -1,4 +1,3 @@
-<<<<<<< .mine
 2006-10-26  Paul J Stevens <paul@nfg.nl>
 
 	* sql/mysql/2_1_7-2_1_8.mysql, sql/mysql/2_1_7-2_2_0.mysql, 
@@ -26,7 +25,6 @@
 	* dbmail-message.c:
 	edit comments
 
-=======
 2006-10-25  Aaron Stone  <aaron@serendipity.cx>
 
 	* pool.c:
@@ -38,7 +36,6 @@
 	Do an fcntl dance to make sockets non-blocking around accept, lest we
 	block forever if a socket dies just between select and accept.
 
->>>>>>> .r2330
 2006-10-24  Paul J Stevens <paul@nfg.nl>
 
 	* modules/dbpgsql.c:
