@@ -1,4 +1,4 @@
-#!/bin/sh
+#! /bin/sh
 #
 # dbmail init script for debian
 # 
