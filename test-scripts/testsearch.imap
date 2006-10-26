@@ -1,0 +1,10 @@
+a01 login testuser1 test
+a02 select inbox
+a03 SEARCH 1:*
+a04 SEARCH charset US-ASCII UID 1,*
+a05 UID SEARCH charset US-ASCII UID 1,*
+a06 SEARCH charset US-ASCII 1:*
+a08 SEARCH charset US-ASCII ALL
+a09 UID SEARCH charset US-ASCII ALL
+a11 UID SEARCH charset US-ASCII SUBJECT "some test"
+a12 SEARCH charset utf-8 SUBJECT "lars hase"

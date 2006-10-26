@@ -1015,7 +1015,7 @@ int dbmail_mailbox_build_imap_search(struct DbmailMailbox *self, char **search_k
 	} 
 
 	/* SEARCH */
-	while(((result = _handle_search_args(self, search_keys, idx)) == 0) && search_keys[*idx]);
+	while( search_keys[*idx] && ((result = _handle_search_args(self, search_keys, idx)) == 0) );
 	
 	return result;
 }

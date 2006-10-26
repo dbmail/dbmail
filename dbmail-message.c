@@ -297,7 +297,8 @@ struct DbmailMessage * dbmail_message_construct(struct DbmailMessage *self,
 	
 	message = g_mime_message_new(FALSE);
 
-	// determine the optimal encoding type for the body
+	// determine the optimal encoding type for the body: how would gmime
+	// encode this string
 	encoding = g_mime_utils_best_encoding((unsigned char *)body, strlen(body));
 
 	// set basic headers
@@ -316,12 +317,12 @@ struct DbmailMessage * dbmail_message_construct(struct DbmailMessage *self,
 		case GMIME_PART_ENCODING_BASE64:
 			filter = g_mime_filter_basic_new_type(GMIME_FILTER_BASIC_BASE64_ENC);
 			break;
-		case GMIME_PART_ENCODING_QUOTEDPRINTABLE:
-			filter = g_mime_filter_basic_new_type(GMIME_FILTER_BASIC_QP_ENC);
-			break;
 		case GMIME_PART_ENCODING_UUENCODE:
 			filter = g_mime_filter_basic_new_type(GMIME_FILTER_BASIC_UU_ENC);
 			break;
+		// treat the rest as-is: assumption is the body is already in
+		// an encoded state
+		case GMIME_PART_ENCODING_QUOTEDPRINTABLE:
 		case GMIME_PART_ENCODING_DEFAULT:
 		case GMIME_PART_ENCODING_7BIT:
 		case GMIME_PART_ENCODING_8BIT:
@@ -331,8 +332,10 @@ struct DbmailMessage * dbmail_message_construct(struct DbmailMessage *self,
 			break;
 	}
 
-	if (filter)
+	if (filter) {
 		g_mime_stream_filter_add((GMimeStreamFilter *)fstream, filter);
+		g_object_unref(filter);
+	}
 	
 	// fill the stream and thus the mime-part
 	g_mime_stream_write_string(fstream,body);
@@ -383,7 +386,6 @@ struct DbmailMessage * dbmail_message_construct(struct DbmailMessage *self,
 	g_object_unref(content);
 	g_object_unref(stream);
 	g_object_unref(fstream);
-	g_object_unref(filter);
 	return self;
 }
 
