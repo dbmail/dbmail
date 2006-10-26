@@ -297,7 +297,8 @@ struct DbmailMessage * dbmail_message_construct(struct DbmailMessage *self,
 	
 	message = g_mime_message_new(FALSE);
 
-	// determine the optimal encoding type for the body
+	// determine the optimal encoding type for the body: how would gmime
+	// encode this string
 	encoding = g_mime_utils_best_encoding((unsigned char *)body, strlen(body));
 
 	// set basic headers
@@ -319,7 +320,8 @@ struct DbmailMessage * dbmail_message_construct(struct DbmailMessage *self,
 		case GMIME_PART_ENCODING_UUENCODE:
 			filter = g_mime_filter_basic_new_type(GMIME_FILTER_BASIC_UU_ENC);
 			break;
-		// treat the rest as-is:
+		// treat the rest as-is: assumption is the body is already in
+		// an encoded state
 		case GMIME_PART_ENCODING_QUOTEDPRINTABLE:
 		case GMIME_PART_ENCODING_DEFAULT:
 		case GMIME_PART_ENCODING_7BIT:
