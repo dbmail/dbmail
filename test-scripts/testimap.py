@@ -533,7 +533,7 @@ class testImapServer(unittest.TestCase):
             will return an error and an exception will be raised.
         """               
         self.o.select('INBOX')
-        result=self.o.uid('SEARCH','1:10')
+        result=self.o.uid('SEARCH','1,*')
         self.assertEquals(len(result[1]) < 10, True)
         result=self.o.uid('FETCH','10:*', 'FLAGS')
         self.assertEquals(len(result[1]) > 0, True)
