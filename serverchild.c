@@ -21,7 +21,7 @@
 /*
  * serverchild.c
  *
- * $Id: serverchild.c 2314 2006-10-22 17:56:06Z aaron $
+ * $Id: serverchild.c 2325 2006-10-25 04:29:40Z aaron $
  * 
  * function implementations of server children code (connection handling)
  */
@@ -216,7 +216,7 @@ pid_t CreateChild(ChildInfo_t * info)
 int select_and_accept(ChildInfo_t * info, int * clientSocket, struct sockaddr * saClient)
 {
 	fd_set rfds;
-	int ip, result;
+	int ip, result, flags;
 	int active = 0, maxfd = 0;
 	socklen_t len;
 
@@ -264,7 +264,13 @@ int select_and_accept(ChildInfo_t * info, int * clientSocket, struct sockaddr * 
 
 	/* accept the active fd */
 	len = sizeof(struct sockaddr_in);
+	flags = fcntl(info->listenSockets[active], F_GETFL);
+	fcntl(info->listenSockets[active], F_SETFL, flags | O_NONBLOCK);
+	// man 2 accept says that if the connection disappears right now,
+	// accept will block forever unless it is set non-blocking with fcntl,
+	// so we have to do this dance to make it temporarily non-blocking.
 	*clientSocket = accept(info->listenSockets[active], saClient, &len);
+	fcntl(info->listenSockets[active], F_SETFL, flags);
 
 	if (*clientSocket < 0) {
 		TRACE(TRACE_ERROR, "accept failed: [%s]", strerror(errno));

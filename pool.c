@@ -528,7 +528,9 @@ void scoreboard_state(void)
 
 	/* Top it. */
 	rewind(scoreFD);
-	if (fprintf(scoreFD, "%s\n", state) <= 0) {
+	int printlen, scorelen = 0; // Tally up how much data has been written out.
+	if ((printlen = fprintf(scoreFD, "%s\n", state)) <= 0
+	  || !(scorelen += printlen)) {
 		TRACE(TRACE_ERROR, "Couldn't write scoreboard state to top file [%s].",
 			strerror(errno));
 	}
@@ -541,13 +543,15 @@ void scoreboard_state(void)
 		status = scoreboard->child[i].status;
 		scoreboard_unlck();
 
-		if (fprintf(scoreFD, "Child %d Pid %d Status %d\n", i, chpid, status) <= 0) {
+		if ((printlen = fprintf(scoreFD, "Child %d Pid %d Status %d\n", i, chpid, status)) <= 0
+		  || !(scorelen += printlen)) {
 			TRACE(TRACE_ERROR, "Couldn't write scoreboard state to top file [%s].",
 				strerror(errno));
 			break;
 		}
 	}
 	fflush(scoreFD);
+	ftruncate(fileno(scoreFD), scorelen);
 
 	g_free(state);
 }
