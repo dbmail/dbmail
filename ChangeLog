@@ -1,3 +1,8 @@
+2006-10-25  Aaron Stone  <aaron@serendipity.cx>
+
+	* pool.c:
+	Call ftruncate on the state files to the length of data written.
+
 2006-10-24  Aaron Stone  <aaron@serendipity.cx>
 
 	* serverchild.c:
