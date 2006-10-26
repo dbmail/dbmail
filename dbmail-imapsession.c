@@ -1351,7 +1351,6 @@ int dbmail_imap_session_readln(struct ImapSession *self, char * buffer)
 	alarm(ci->timeout);
 	if (fgets(buffer, MAX_LINESIZE, ci->rx) == NULL) {
 		alarm(0);
-		TRACE(TRACE_ERROR, "error reading from client");
 		return -1;
 	}
 	len = strlen(buffer);

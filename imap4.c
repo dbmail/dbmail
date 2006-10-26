@@ -169,7 +169,6 @@ int IMAPClientHandler(clientinfo_t * ci)
 
 		readresult = dbmail_imap_session_readln(session, line);
 		if (readresult < 0) { /* Fatal error: EOF &c. */
-			trace(TRACE_ERROR, "%s,%s: error reading command -- bailing out\n",__FILE__, __func__);
 			dbmail_imap_session_printf(session, "* BYE error reading command\r\n");
 			dbmail_imap_session_delete(session);
 			return -1;
