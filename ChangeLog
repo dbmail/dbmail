@@ -1,3 +1,30 @@
+2006-10-26  Paul J Stevens <paul@nfg.nl>
+
+	* sql/mysql/2_1_7-2_1_8.mysql, sql/mysql/2_1_7-2_2_0.mysql, 
+	  sql/mysql/migrate_from_2.0_to_2.1.mysql, 
+	  sql/mysql/migrate_from_2.0_to_2.2.mysql, 
+	  sql/postgresql/2_1_7-2_1_8.pgsql, sql/postgresql/2_1_7-2_2_0.pgsql, 
+	  sql/postgresql/migrate_from_2.0_to_2.1.pgsql, 
+	  sql/postgresql/migrate_from_2.0_to_2.2.pgsql, 
+	  sql/sqlite/2_1_7-2_1_8.sqlite, sql/sqlite/2_1_7-2_2_0.sqlite:
+	rename migration scripts
+	* Makefile.am, modules/Makefile.am:
+	make PREFIX/lib/dbmail default location for libdmail and modules
+	* check_dbmail_message.c, dbmail-message.c:
+	work on bug 429
+	* debian/changelog, debian/control, debian/dbmail-sieve.dirs, 
+	  debian/dbmail-sieve.install, debian/dbmail-sieve.lintian-override, 
+	  debian/dbmail.init, debian/dbmail.install, debian/dbmail.postinst, 
+	  debian/dbmail.postrm, debian/rules:
+	cleanup packaging
+	* dbmail-imapsession.c, imap4.c, serverchild.c:
+	remove redundant logmessages
+	* dbmail-imapsession.c, dbmail-mailbox.c, test-scripts/testimap.py, 
+	  test-scripts/testsearch.imap:
+	fix some fallout from thread implementation
+	* dbmail-message.c:
+	edit comments
+
 2006-10-25  Aaron Stone  <aaron@serendipity.cx>
 
 	* pool.c:

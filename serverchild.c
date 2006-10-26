@@ -323,7 +323,6 @@ int PerformChildTask(ChildInfo_t * info)
 		/* wait for connect */
 		result = select_and_accept(info, &clientSocket, (struct sockaddr *) &saClient);
 		if (result != 0) {
-			TRACE(TRACE_INFO, "select_and_accept failed");
 			i--;	/* don't count this as a connect */
 			continue;	/* accept failed, refuse connection & continue */
 		}

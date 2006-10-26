@@ -9,14 +9,14 @@ export DH_VERBOSE=1
 export DH_COMPAT=5
 export DEBUILD_DPKG_BUILDPACKAGE_OPTS="-i"
 
+#export WITH_GC="--with-gc"
 export WITH_SIEVE=--with-sieve
 export WITH_SQLITE=--with-sqlite 
 export WITH_MYSQL=--with-mysql
 export WITH_PGSQL=--with-pgsql
 export WITH_LDAP=--with-auth-ldap
 export SHARED=--enable-shared=yes
-export STATIC=--enable-static=no
-#export WITH_GC="--with-gc"
+export SHARED=--enable-static=no
 
 CFLAGS = -Wall -O1
 LDFLAGS = -lcrypt
@@ -125,6 +125,18 @@ binary-common: build
 	dh_testroot
 	dh_testdir
 	dh_installdirs -a
+	for file in $(CURDIR)/debian/*.lintian-override; do \
+		pkg=`basename $$file .lintian-override`; \
+		target=$(CURDIR)/debian/tmp/usr/share/lintian/overrides; \
+		mkdir -p $$target || true; \
+		install -m 644 $$file $$target/$$pkg; \
+	done
+	for file in $(CURDIR)/debian/tmp/usr/lib/dbmail/*.so ; do \
+		chrpath -d $$file; \
+	done
+	for file in $(CURDIR)/debian/tmp/usr/sbin/* ; do \
+		chrpath -r /usr/lib/dbmail $$file; \
+	done
 	dh_install -a --sourcedir=debian/tmp
 	dh_installinit -a --name=dbmail -- defaults 25
 	dh_installcron -a --name=dbmail

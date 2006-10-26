@@ -1351,7 +1351,6 @@ int dbmail_imap_session_readln(struct ImapSession *self, char * buffer)
 	alarm(ci->timeout);
 	if (fgets(buffer, MAX_LINESIZE, ci->rx) == NULL) {
 		alarm(0);
-		TRACE(TRACE_ERROR, "error reading from client");
 		return -1;
 	}
 	len = strlen(buffer);
@@ -1629,8 +1628,10 @@ int dbmail_imap_session_mailbox_close(struct ImapSession *self)
 	// flush recent messages from previous select
 	dbmail_imap_session_mailbox_update_recent(self);
 	dbmail_imap_session_set_state(self,IMAPCS_AUTHENTICATED);
-	if (self->mailbox) 
+	if (self->mailbox) {
 		dbmail_mailbox_free(self->mailbox);
+		self->mailbox = NULL;
+	}
 
 	return 0;
 }
