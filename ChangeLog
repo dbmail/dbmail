@@ -1,3 +1,17 @@
+2006-10-27  Paul J Stevens <paul@nfg.nl>
+
+	* db.c:
+	make db_purge_deleted scale better
+	* debian/changelog, debian/dbmail-mysql.examples, 
+	  debian/dbmail-pgsql.examples, debian/dbmail-sqlite.examples, 
+	  debian/rules:
+	debian packaging
+	* Makefile.am, modules/Makefile.am:
+	installation of libdbmail and modules
+	* check_dbmail_message.c, db.c, dbmail-message.c, misc.c, 
+	  test-scripts/testbox:
+	handle unencoded 8bit headers
+
 2006-10-26  Paul J Stevens <paul@nfg.nl>
 
 	* sql/mysql/2_1_7-2_1_8.mysql, sql/mysql/2_1_7-2_2_0.mysql, 

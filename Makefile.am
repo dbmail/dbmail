@@ -28,8 +28,7 @@ endif
 
 
 libdir=$(prefix)/lib/dbmail
-
-#pkglibdir = $(libdir)
+pkglibdir = $(libdir)
 
 sbin_PROGRAMS = dbmail-smtp \
 	dbmail-pop3d \

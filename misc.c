@@ -1985,7 +1985,7 @@ char * imap_get_envelope(GMimeMessage *message)
 {
 	GMimeObject *part;
 	GList *list = NULL;
-	char *result;
+	char *result, *raw;
 	char *s, *t;
 
 	if (! GMIME_IS_MESSAGE(message))
@@ -2005,11 +2005,17 @@ char * imap_get_envelope(GMimeMessage *message)
 	}
 	
 	/* subject */
-	result = (char *)g_mime_message_get_header(message,"Subject");
+	raw = (char *)g_mime_message_get_header(message,"Subject");
+	if (g_mime_utils_text_is_8bit(raw, strlen(raw)))
+		result = g_mime_utils_header_encode_text(raw);
+	else
+		result = g_strdup(raw);
+
 	if (result) {
 		t = dbmail_imap_astring_as_string(result);
 		list = g_list_append_printf(list,"%s", t);
 		g_free(t);
+		g_free(result);
 	} else {
 		list = g_list_append_printf(list,"NIL");
 	}

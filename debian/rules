@@ -125,12 +125,14 @@ binary-common: build
 	dh_testroot
 	dh_testdir
 	dh_installdirs -a
+	## install lintian overrides
 	for file in $(CURDIR)/debian/*.lintian-override; do \
 		pkg=`basename $$file .lintian-override`; \
 		target=$(CURDIR)/debian/tmp/usr/share/lintian/overrides; \
 		mkdir -p $$target || true; \
 		install -m 644 $$file $$target/$$pkg; \
 	done
+	## reduce RPATH to minimum (libdbmail.so in /usr/lib/dbmail/)
 	for file in $(CURDIR)/debian/tmp/usr/lib/dbmail/*.so ; do \
 		chrpath -d $$file; \
 	done
@@ -146,6 +148,15 @@ binary-common: build
 	dh_installdocs -a
 	dh_installdocs -A  debian/README.Debian debian/TODO
 	dh_installchangelogs -a
+	## update examples
+	tmpfile=`tempfile`
+	(cd $(CURDIR) && find sql/mysql/ -type f && cat debian/dbmail-mysql.examples) | \
+		sort|uniq>$$tmpfile && cat $$tmpfile > $(CURDIR)/debian/dbmail-mysql.examples
+	(cd $(CURDIR) && find sql/sqlite/ -type f && cat debian/dbmail-sqlite.examples) | \
+		sort|uniq>$$tmpfile && cat $$tmpfile > $(CURDIR)/debian/dbmail-sqlite.examples
+	(cd $(CURDIR) && find sql/postgresql/ -type f && cat debian/dbmail-pgsql.examples) | \
+		sort|uniq>$$tmpfile && cat $$tmpfile > $(CURDIR)/debian/dbmail-pgsql.examples
+	rm -f $$tmpfile
 	dh_installexamples -a
 	dh_installdirs -A etc/dbmail var/run/dbmail var/log/dbmail
 	dh_strip -a
