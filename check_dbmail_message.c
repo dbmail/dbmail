@@ -461,13 +461,29 @@ START_TEST(test_dbmail_message_construct)
 	body = g_strdup("Mit freundlichen Gr=C3=BC=C3=9Fen");
 	message = dbmail_message_new();
 	message = dbmail_message_construct(message,recipient,sender,subject,body);
-	printf ("%s", dbmail_message_to_string(message));
+	printf ("%s\n", dbmail_message_to_string(message));
 	dbmail_message_free(message);
 	g_free(body);
 }
 END_TEST
 
+START_TEST(test_encoding)
+{
+	unsigned char *enc, *dec;
 
+	dec = g_strdup( "Kristoffer Br�nemyr");
+	printf("raw: %s\n", dec);
+	enc = g_mime_utils_header_encode_phrase(dec);
+	printf("enc: %s\n", enc);
+	g_free(dec);
+	dec = g_mime_utils_header_decode_phrase(enc);
+	printf("dec: %s\n", dec);
+	g_free(dec);
+	g_free(enc);
+	
+
+}
+END_TEST
 
 Suite *dbmail_message_suite(void)
 {
@@ -498,6 +514,8 @@ Suite *dbmail_message_suite(void)
 	tcase_add_test(tc_message, test_dbmail_message_get_header_addresses);
 	tcase_add_test(tc_message, test_dbmail_message_get_header_repeated);
 	tcase_add_test(tc_message, test_dbmail_message_construct);
+	tcase_add_test(tc_message, test_encoding);
+
 	return s;
 }
 

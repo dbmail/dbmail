@@ -2244,7 +2244,7 @@ int db_deleted_purge(u64_t * affected_rows)
 	/* delete each message */
 	for (i = 0; i < *affected_rows; i++) {
 		message_id = db_get_result_u64(i, 0);
-		if (db_delete_message(message_idn) == -1) {
+		if (db_delete_message(message_id) == -1) {
 			trace(TRACE_ERROR, "%s,%s: error deleting message",
 			      __FILE__, __func__);
 			db_free_result();
