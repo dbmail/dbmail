@@ -2214,7 +2214,7 @@ int db_set_deleted(u64_t * affected_rows)
 int db_deleted_purge(u64_t * affected_rows)
 {
 	unsigned i;
-	u64_t *message_idnrs;
+	u64_t message_id;
 
 	assert(affected_rows != NULL);
 	*affected_rows = 0;
@@ -2241,22 +2241,17 @@ int db_deleted_purge(u64_t * affected_rows)
 		return DM_SUCCESS;
 	}
 
-	message_idnrs = g_new0(u64_t, *affected_rows);
-	
 	/* delete each message */
-	for (i = 0; i < *affected_rows; i++)
-		message_idnrs[i] = db_get_result_u64(i, 0);
-	
-	db_free_result();
 	for (i = 0; i < *affected_rows; i++) {
-		if (db_delete_message(message_idnrs[i]) == -1) {
+		message_id = db_get_result_u64(i, 0);
+		if (db_delete_message(message_idn) == -1) {
 			trace(TRACE_ERROR, "%s,%s: error deleting message",
 			      __FILE__, __func__);
-			dm_free(message_idnrs);
+			db_free_result();
 			return DM_EQUERY;
 		}
 	}
-	g_free(message_idnrs);
+	db_free_result();
 	
 	return DM_EGENERAL;
 }
