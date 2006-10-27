@@ -149,14 +149,13 @@ binary-common: build
 	dh_installdocs -A  debian/README.Debian debian/TODO
 	dh_installchangelogs -a
 	## update examples
-	tmpfile=`tempfile`
 	(cd $(CURDIR) && find sql/mysql/ -type f && cat debian/dbmail-mysql.examples) | \
-		sort|uniq>$$tmpfile && cat $$tmpfile > $(CURDIR)/debian/dbmail-mysql.examples
+		sort|uniq>stamps/tmpfile && cat stamps/tmpfile > $(CURDIR)/debian/dbmail-mysql.examples
 	(cd $(CURDIR) && find sql/sqlite/ -type f && cat debian/dbmail-sqlite.examples) | \
-		sort|uniq>$$tmpfile && cat $$tmpfile > $(CURDIR)/debian/dbmail-sqlite.examples
+		sort|uniq>stamps/tmpfile && cat stamps/tmpfile > $(CURDIR)/debian/dbmail-sqlite.examples
 	(cd $(CURDIR) && find sql/postgresql/ -type f && cat debian/dbmail-pgsql.examples) | \
-		sort|uniq>$$tmpfile && cat $$tmpfile > $(CURDIR)/debian/dbmail-pgsql.examples
-	rm -f $$tmpfile
+		sort|uniq>stamps/tmpfile && cat stamps/tmpfile > $(CURDIR)/debian/dbmail-pgsql.examples
+	rm -f stamps/tmpfile
 	dh_installexamples -a
 	dh_installdirs -A etc/dbmail var/run/dbmail var/log/dbmail
 	dh_strip -a

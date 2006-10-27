@@ -1,6 +1,6 @@
 Template: dbmail/do_debconf
 Type: boolean
-_Description: Use debconf to manage dbmail configuration?
+Description: Use debconf to manage dbmail configuration?
  Please confirm if you want to allow debconf to manage some parts of your
  dbmail configuration. Notice that changes you make to dbmail.conf by hand
  will NOT be overwritten should you later choose to re-run dpkg-reconfigure
@@ -8,7 +8,7 @@ _Description: Use debconf to manage dbmail configuration?
 
 Template: dbmail/smtp/DBMAIL_FROM_ADDRESS
 Type: string
-_Description: The email address where bounces come from:
+Description: The email address where bounces come from:
  Here you must specify the address dbmail will use when sending bounce
  messages.
  .
@@ -16,7 +16,15 @@ _Description: The email address where bounces come from:
 
 Template: dbmail/smtp/POSTMASTER
 Type: string
-_Description: Postmaster's email address:
+Description: Postmaster's email address:
+ This should be a valid email address read by the person responsible for
+ this email server.
+ .
+ Example: postmaster@yourdomain.tld
+
+Template: dbmail/dbmail/postmaster
+Type: string
+Description: Postmaster's email address:
  This should be a valid email address read by the person responsible for
  this email server.
  .
@@ -24,50 +32,55 @@ _Description: Postmaster's email address:
 
 Template: dbmail/dbmail/host
 Type: string
-_Description: The hostname of the sql database server:
+Description: The hostname of the sql database server:
  On this server you must create a database to hold dbmail's tables. You
  should grant full read/write permissions on this database to the dbmail
  user.
 
 Template: dbmail/dbmail/db
 Type: string
-_Description: The name of the database:
+Description: The name of the database:
  This is the name of the database that holds the dbmail tables.
  .
  If you're using sqlite, this should be the path to the database file.
 
 Template: dbmail/dbmail/user
 Type: string
-_Description: The database user:
+Description: The database user:
  This is the username dbmail will use to connect to the database server.
 
 Template: dbmail/dbmail/pass
 Type: password
-_Description: The password for the database connection:
+Description: The password for the database connection:
  This is the password dbmail will use to connect to the database server.
 
 Template: dbmail/start_imapd
 Type: boolean
-_Description: start the imap server after reboot?
+Description: start the imap server after reboot?
  Dbmail supports both imap and pop3 services. You can choose to run either
  one or both services.
 
+Template: dbmail/start_lmtpd
+Type: boolean
+Description: start the lmtp server after reboot?
+ This is only needed when you like to feed the email to Dbmail by LMTP.
+
 Template: dbmail/start_pop3d
 Type: boolean
-_Description: start the pop3 server after reboot?
+Description: start the pop3 server after reboot?
  Dbmail support both imap and pop3 services. You can choose to run either
  one or both services.
 
 Template: dbmail/start_timsieved
 Type: boolean
-_Description: start the timesieved after reboot?
+Description: start the timesieved after reboot?
  Dbmail supports management of Sieve scripts through the timsieve protocol.
  You can run dbmail-timsieved which allows management of the sieve scripts from
  within clients that support this protocol such as kmail, squirrelmail, and others
 
 Template: dbmail/start_ssl
 Type: boolean
-_Description:  Run the stunnel SSL wrapper from the init script?
+Description:  Run the stunnel SSL wrapper from the init script?
  The stunnel SSL wrapper allows you to provide secure imap and pop services
  even though dbmail supports neither imaps nor pop3s (yet). 
  .
@@ -76,7 +89,7 @@ _Description:  Run the stunnel SSL wrapper from the init script?
 
 Template: dbmail/pem_file
 Type: string
-_Description:  The filename for the SSL pem file:
+Description:  The filename for the SSL pem file:
  To be able to run the stunnel SSL wrapper you need to generate a pem file
  that should reside in /etc/ssl/certs/. Specify the filename here without 
  the directory name.

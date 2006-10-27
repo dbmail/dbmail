@@ -42,15 +42,24 @@ case "$1" in
 		db_get dbmail/dbmail/db || true; DB_DATABASE=$RET
 		db_get dbmail/dbmail/user || true; DB_USER=$RET
 		db_get dbmail/dbmail/pass || true; DB_PASS=$RET
-		
-		db_get dbmail/smtp/DBMAIL_FROM_ADDRESS || true; DBMAIL_FROM_ADDRESS=$RET
-		db_get dbmail/smtp/POSTMASTER || true; POSTMASTER=$RET
+		db_get dbmail/pgsql_installed || true; PGSQL_INSTALLED=$RET
+		db_get dbmail/mysql_installed || true; MYSQL_INSTALLED=$RET
+		db_get dbmail/sqlite_installed || true; SQLITE_INSTALLED=$RET
+
+		db_get dbmail/dbmail/postmaster || true; POSTMASTER=$RET
 	
 		db_get dbmail/start_imapd || true; START_IMAPD=$RET
+		db_get dbmail/start_lmtpd || true; START_LMTPD=$RET
 		db_get dbmail/start_pop3d || true; START_POP3D=$RET
 	
 		db_get dbmail/start_ssl || true; START_SSL=$RET
 		db_get dbmail/pem_file || true; PEM_FILE=$RET
+
+		if [ -z $DB_PASS ]; then
+			if [ -x /usr/bin/pwgen ]; then
+				DB_PASS=`pwgen -n`
+			fi
+		fi
 	
 	fi
 	
@@ -64,36 +73,50 @@ case "$1" in
 	ucf --debconf-ok $CONFIG_EX $CONFIG
 	ucf --debconf-ok $DEBIAN_CONFIG_EX $DEBIAN_CONFIG
 		
-	if [ "$DO_DEBCONF" = "true" ]; then
+	if [ "$DO_DEBCONF" = "true" -a -e $CONFIG -a -e $DEBIAN_CONFIG ]; then
 		# edit the configs
-		cat $CONFIG | sed -re "s/^host=.*\$/host=$DB_HOST/" \
-			-e "s/^user=.*\$/user=$DB_USER/" \
-			-e "s/^pass=.*\$/pass=$DB_PASS/" \
-			-e "s/^db=.*\$/db=$DB_DATABASE/" \
-                	-e "s/^DBMAIL_FROM_ADDRESS=.*\$/DBMAIL_FROM_ADDRESS=$DBMAIL_FROM_ADDRESS/" \
-                	-e "s/^POSTMASTER=.*\$/POSTMASTER=$POSTMASTER/" \
-			-e "s/^EFFECTIVE_USER=\w+/EFFECTIVE_USER=dbmail/g" \
-			-e "s/^EFFECTIVE_GROUP=\w+/EFFECTIVE_GROUP=dbmail/g" \
-                        > $CONFIG.tmp && mv $CONFIG.tmp $CONFIG
+		sed -i -re "s/^host\W*=.*\$/host=$DB_HOST/i" \
+			-e "s/^user\W*=.*\$/user=$DB_USER/i" \
+			-e "s/^pass\W*=.*\$/pass=$DB_PASS/i" \
+			-e "s/^db\W*=.*\$/db=$DB_DATABASE/i" \
+                	-e "s/^#postmaster\W*=.*\$/postmaster=$POSTMASTER/i" \
+                	-e "s/^postmaster\W*=.*\$/postmaster=$POSTMASTER/i" \
+			-e "s/^EFFECTIVE_USER\W*=.*\$/EFFECTIVE_USER=dbmail/gi" \
+			-e "s/^EFFECTIVE_GROUP\W*=.*\$/EFFECTIVE_GROUP=dbmail/gi" \
+                        $CONFIG
 		
+		# overwrite driver only if not empty
+		if [ $MYSQL_INSTALLED = "true" ]; then
+			sed -i -re "s/^driver\W*=\W*\$/driver=mysql/i" $CONFIG
+              	elif [ $SQLITE_INSTALLED = "true" ]; then
+			sed -i -re "s/^driver\W*=\W*\$/driver=sqlite/i" $CONFIG
+              	else
+			sed -i -re "s/^driver\W*=\W*\$/driver=pgsql/i" $CONFIG
+		fi
+
 		umask $oldmask
 	
 		if [ "$START_IMAPD" = "true" ]; then
-			perl -pi -e 's/^.*START_IMAPD=.*/START_IMAPD=true/' $DEBIAN_CONFIG
+			sed -i -re 's/^.*START_IMAPD=.*/START_IMAPD=true/i' $DEBIAN_CONFIG
 		else
-			perl -pi -e 's/^.*START_IMAPD=.*/#START_IMAPD=true/' $DEBIAN_CONFIG
+			sed -i -re 's/^.*START_IMAPD=.*/#START_IMAPD=true/i' $DEBIAN_CONFIG
+		fi
+		if [ "$START_LMTPD" = "true" ]; then
+			sed -i -re 's/^.*START_LMTPD=.*/START_LMTPD=true/i' $DEBIAN_CONFIG
+		else
+			sed -i -re 's/^.*START_LMTPD=.*/#START_LMTPD=true/i' $DEBIAN_CONFIG
 		fi
 		if [ "$START_POP3D" = "true" ]; then
-			perl -pi -e 's/^.*START_POP3D=.*/START_POP3D=true/' $DEBIAN_CONFIG
+			sed -i -re 's/^.*START_POP3D=.*/START_POP3D=true/i' $DEBIAN_CONFIG
 		else
-			perl -pi -e 's/^.*START_POP3D=.*/#START_POP3D=true/' $DEBIAN_CONFIG
+			sed -i -re 's/^.*START_POP3D=.*/#START_POP3D=true/i' $DEBIAN_CONFIG
 		fi
 		if [ "$START_SSL" = "true" ]; then
-			perl -pi -e 's/^.*START_SSL=.*/START_SSL=true/' $DEBIAN_CONFIG
-			perl -pi -e "s/^.*PEM_FILE=.*\$/PEM_FILE=$PEM_FILE/" $DEBIAN_CONFIG
+			sed -i -re 's/^.*START_SSL=.*/START_SSL=true/i' $DEBIAN_CONFIG
+			sed -i -re "s/^.*PEM_FILE=.*\$/PEM_FILE=$PEM_FILE/i" $DEBIAN_CONFIG
 		else
-			perl -pi -e 's/^.*START_SSL=.*/#START_SSL=true/' $DEBIAN_CONFIG
-			perl -pi -e "s/^.*PEM_FILE=/#PEM_FILE=/" $DEBIAN_CONFIG
+			sed -i -re 's/^.*START_SSL=.*/#START_SSL=true/i' $DEBIAN_CONFIG
+			sed -i -re "s/^.*PEM_FILE=/#PEM_FILE=/i" $DEBIAN_CONFIG
 		fi
 	fi
 	
@@ -111,6 +134,16 @@ case "$1" in
     ;;
 esac
 
-#DEBHELPER#
+# Automatically added by dh_installinit
+if [ -x "/etc/init.d/dbmail" ]; then
+	update-rc.d dbmail defaults 25 >/dev/null
+	if [ -x "`which invoke-rc.d 2>/dev/null`" ]; then
+		invoke-rc.d dbmail start || exit $?
+	else
+		/etc/init.d/dbmail start || exit $?
+	fi
+fi
+# End automatically added section
+
 
 exit 0

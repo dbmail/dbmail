@@ -9,6 +9,7 @@ Package: dbmail
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}, debconf (>=1.4.70) | debconf-2.0 , ucf (>= 0.30)
 Provides: imap-server, pop3-server
+Suggests: dbmail-sqlite | dbmail-pgsql | dbmail-mysql, dbmail-ldap, dbmail-sieve
 Description: base package for the dbmail email solution
  DBMAIL is a collection of programs that allows email to be
  stored in and retrieved from a sql database.

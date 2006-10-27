@@ -1,0 +1,46 @@
+Template: dbmail/authdriver
+Type: string
+Description: Which auth driver to use:
+
+Template: dbmail/ldap/PORT
+Type: string
+Description: The port is your ldap server runnig at:
+ Please enter the port on which your ldap server is running at.
+ The default port is 389.
+
+Template: dbmail/ldap/HOSTNAME
+Type: string
+Description: The hostname of the ldap server:
+ Please enter the hostname your ldap server is running at.
+
+Template: dbmail/ldap/BASE_DN
+Type: string
+Description: The ldap base DN:
+ Please enter the DN where Dbmail should start searching for
+ user accounts.
+
+Template: dbmail/ldap/FIELD_UID
+Type: string
+Description: The field which contains the user login name of the user:
+
+Template: dbmail/ldap/FIELD_CID
+Type: string
+Description: The field which contains the group id number of the user:
+
+Template: dbmail/ldap/bind_anonymous
+Type: boolean
+Description: Bind anonymous to the ldap server
+ Select Yes if your ldap does not require authentication to search 
+ the ldap tree.
+
+Template: dbmail/ldap/BIND_DN
+Type: string
+Description: The DN to bind to the ldap server
+ Please enter the DN, which should be used to connect to the ldap
+ server.
+
+Template: dbmail/ldap/BIND_PW
+Type: password
+Description: The password to bind to the ldap server
+ Please enter the password, which should be used to connect to the ldap
+ server.
