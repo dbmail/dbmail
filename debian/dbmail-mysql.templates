@@ -1,3 +1,5 @@
 Template: dbmail/mysql_installed
 Type: boolean
-Description: mark mysql support as available
+_Description: activate mysql support for dbmail?
+ Select this option if you want to use mysql as
+ storage driver for dbmail.
