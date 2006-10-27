@@ -42,10 +42,7 @@ case "$1" in
 
 	# edit the configs
 	# if driver is empty set it to mysql
-	if [ -e $CONFIG ]; then
-		cat $CONFIG | sed -re "s/^driver=\$/driver=mysql/" \
-			> $CONFIG.tmp && mv $CONFIG.tmp $CONFIG
-	fi
+	[ -e $CONFIG ] && sed -i -re "s/^driver\W*=\W*\$/driver = mysql/i" $CONFIG
 	umask $oldmask
 	
 	db_stop

@@ -78,19 +78,17 @@ case "$1" in
 	oldmask=`umask`
 	umask 026
 
-	if [ "$DO_DEBCONF" = "true" ] && [ -e $CONFIG ]; then
+	if [ "$DO_DEBCONF" = "true" -a -e $CONFIG ]; then
 		# edit the configs
 
-		cat $CONFIG | sed -re "s/^BASE_DN=.*\$/BASE_DN=$LDAP_BASE_DN/" \
-			-e "s/^HOSTNAME=.*\$/HOSTNAME=$LDAP_HOST/" \
-			-e "s/^BIND_PW=.*\$/BIND_PW=$LDAP_BIND_PW/" \
-			-e "s/^BIND_DN=.*\$/BIND_DN=$LDAP_BIND_DN/" \
-			-e "s/^FIELD_UID=.*\$/FIELD_UID=$LDAP_UID/" \
-			-e "s/^FIELD_CID=.*\$/FIELD_CID=$LDAP_CID/" \
-                        > $CONFIG.tmp && mv $CONFIG.tmp $CONFIG
-		
-		cat $CONFIG | sed -re "s/^authdriver=.*\$/authdriver=ldap/" \
-                        > $CONFIG.tmp && mv $CONFIG.tmp $CONFIG
+		sed -i -re "s/^BASE_DN\W*=.*\$/BASE_DN=$LDAP_BASE_DN/i" \
+			-e "s/^HOSTNAME\W*=.*\$/HOSTNAME=$LDAP_HOST/i" \
+			-e "s/^BIND_PW\W*=.*\$/BIND_PW=$LDAP_BIND_PW/i" \
+			-e "s/^BIND_DN\W*=.*\$/BIND_DN=$LDAP_BIND_DN/i" \
+			-e "s/^FIELD_UID\W*=.*\$/FIELD_UID=$LDAP_UID/i" \
+			-e "s/^FIELD_CID\W*=.*\$/FIELD_CID=$LDAP_CID/i" \
+			-e "s/^authdriver\W*=\W*\$/authdriver=ldap/" \
+                        $CONFIG
 		
 		umask $oldmask
 	fi

@@ -42,8 +42,7 @@ case "$1" in
 
 	# edit the configs
 	# if driver is empty set it to pgsql
-	cat $CONFIG | sed -re "s/^driver=\$/driver=pgsql/" \
-		> $CONFIG.tmp && mv $CONFIG.tmp $CONFIG
+	[ -e $CONFIG ] && sed -i -re "s/^driver\W*=\W*\$/driver = pgsql/i" $CONFIG
 		
 	umask $oldmask
 	

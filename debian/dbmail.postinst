@@ -73,53 +73,50 @@ case "$1" in
 	ucf --debconf-ok $CONFIG_EX $CONFIG
 	ucf --debconf-ok $DEBIAN_CONFIG_EX $DEBIAN_CONFIG
 		
-	if [ "$DO_DEBCONF" = "true" ]; then
+	if [ "$DO_DEBCONF" = "true" -a -e $CONFIG -a -e $DEBIAN_CONFIG ]; then
 		# edit the configs
-		cat $CONFIG | sed -re "s/^host=.*\$/host=$DB_HOST/" \
-			-e "s/^user=.*\$/user=$DB_USER/" \
-			-e "s/^pass=.*\$/pass=$DB_PASS/" \
-			-e "s/^db=.*\$/db=$DB_DATABASE/" \
-                	-e "s/^#postmaster=.*\$/postmaster=$POSTMASTER/" \
-                	-e "s/^postmaster=.*\$/postmaster=$POSTMASTER/" \
-			-e "s/^EFFECTIVE_USER=\w+/EFFECTIVE_USER=dbmail/g" \
-			-e "s/^EFFECTIVE_GROUP=\w+/EFFECTIVE_GROUP=dbmail/g" \
-                        > $CONFIG.tmp && mv $CONFIG.tmp $CONFIG
+		sed -i -re "s/^host\W*=.*\$/host=$DB_HOST/i" \
+			-e "s/^user\W*=.*\$/user=$DB_USER/i" \
+			-e "s/^pass\W*=.*\$/pass=$DB_PASS/i" \
+			-e "s/^db\W*=.*\$/db=$DB_DATABASE/i" \
+                	-e "s/^#postmaster\W*=.*\$/postmaster=$POSTMASTER/i" \
+                	-e "s/^postmaster\W*=.*\$/postmaster=$POSTMASTER/i" \
+			-e "s/^EFFECTIVE_USER\W*=.*\$/EFFECTIVE_USER=dbmail/gi" \
+			-e "s/^EFFECTIVE_GROUP\W*=.*\$/EFFECTIVE_GROUP=dbmail/gi" \
+                        $CONFIG
 		
 		# overwrite driver only if not empty
 		if [ $MYSQL_INSTALLED = "true" ]; then
-			cat $CONFIG | sed -re "s/^driver=\$/driver=mysql/" \
-				> $CONFIG.tmp && mv $CONFIG.tmp $CONFIG
+			sed -i -re "s/^driver\W*=\W*\$/driver=mysql/i" $CONFIG
               	elif [ $SQLITE_INSTALLED = "true" ]; then
-			cat $CONFIG | sed -re "s/^driver=\$/driver=sqlite/" \
-				> $CONFIG.tmp && mv $CONFIG.tmp $CONFIG
+			sed -i -re "s/^driver\W*=\W*\$/driver=sqlite/i" $CONFIG
               	else
-			cat $CONFIG | sed -re "s/^driver=\$/driver=pgsql/" \
-				> $CONFIG.tmp && mv $CONFIG.tmp $CONFIG
+			sed -i -re "s/^driver\W*=\W*\$/driver=pgsql/i" $CONFIG
 		fi
 
 		umask $oldmask
 	
 		if [ "$START_IMAPD" = "true" ]; then
-			perl -pi -e 's/^.*START_IMAPD=.*/START_IMAPD=true/' $DEBIAN_CONFIG
+			sed -i -re 's/^.*START_IMAPD=.*/START_IMAPD=true/i' $DEBIAN_CONFIG
 		else
-			perl -pi -e 's/^.*START_IMAPD=.*/#START_IMAPD=true/' $DEBIAN_CONFIG
+			sed -i -re 's/^.*START_IMAPD=.*/#START_IMAPD=true/i' $DEBIAN_CONFIG
 		fi
 		if [ "$START_LMTPD" = "true" ]; then
-			perl -pi -e 's/^.*START_LMTPD=.*/START_LMTPD=true/' $DEBIAN_CONFIG
+			sed -i -re 's/^.*START_LMTPD=.*/START_LMTPD=true/i' $DEBIAN_CONFIG
 		else
-			perl -pi -e 's/^.*START_LMTPD=.*/#START_LMTPD=true/' $DEBIAN_CONFIG
+			sed -i -re 's/^.*START_LMTPD=.*/#START_LMTPD=true/i' $DEBIAN_CONFIG
 		fi
 		if [ "$START_POP3D" = "true" ]; then
-			perl -pi -e 's/^.*START_POP3D=.*/START_POP3D=true/' $DEBIAN_CONFIG
+			sed -i -re 's/^.*START_POP3D=.*/START_POP3D=true/i' $DEBIAN_CONFIG
 		else
-			perl -pi -e 's/^.*START_POP3D=.*/#START_POP3D=true/' $DEBIAN_CONFIG
+			sed -i -re 's/^.*START_POP3D=.*/#START_POP3D=true/i' $DEBIAN_CONFIG
 		fi
 		if [ "$START_SSL" = "true" ]; then
-			perl -pi -e 's/^.*START_SSL=.*/START_SSL=true/' $DEBIAN_CONFIG
-			perl -pi -e "s/^.*PEM_FILE=.*\$/PEM_FILE=$PEM_FILE/" $DEBIAN_CONFIG
+			sed -i -re 's/^.*START_SSL=.*/START_SSL=true/i' $DEBIAN_CONFIG
+			sed -i -re "s/^.*PEM_FILE=.*\$/PEM_FILE=$PEM_FILE/i" $DEBIAN_CONFIG
 		else
-			perl -pi -e 's/^.*START_SSL=.*/#START_SSL=true/' $DEBIAN_CONFIG
-			perl -pi -e "s/^.*PEM_FILE=/#PEM_FILE=/" $DEBIAN_CONFIG
+			sed -i -re 's/^.*START_SSL=.*/#START_SSL=true/i' $DEBIAN_CONFIG
+			sed -i -re "s/^.*PEM_FILE=/#PEM_FILE=/i" $DEBIAN_CONFIG
 		fi
 	fi
 	
