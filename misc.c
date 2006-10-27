@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/*	$Id: misc.c 2309 2006-10-20 19:14:52Z aaron $
+/*	$Id: misc.c 2332 2006-10-27 12:48:23Z paul $
  *
  *	Miscelaneous functions */
 
