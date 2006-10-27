@@ -1,0 +1,3 @@
+Template: dbmail/mysql_installed
+Type: boolean
+Description: mark mysql support as available

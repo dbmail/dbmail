@@ -1,0 +1,63 @@
+#!/bin/sh -e
+
+CONFIG=/etc/dbmail/dbmail.conf
+CONFIG_EX=/usr/share/doc/dbmail/examples/dbmail.conf
+
+DEBIAN_CONFIG=/etc/default/dbmail
+DEBIAN_CONFIG_EX=/usr/share/doc/dbmail/examples/default.dbmail
+
+test $DEBIAN_SCRIPT_DEBUG && set -v -x
+
+# summary of how this script can be called:
+#        * <postinst> `configure' <most-recently-configured-version>
+#        * <old-postinst> `abort-upgrade' <new version>
+#        * <conflictor's-postinst> `abort-remove' `in-favour' <package>
+#          <new-version>
+#        * <deconfigured's-postinst> `abort-deconfigure' `in-favour'
+#          <failed-install-package> <version> `removing'
+#          <conflicting-package> <version>
+# for details, see /usr/doc/packaging-manual/
+#
+# quoting from the policy:
+#     Any necessary prompting should almost always be confined to the
+#     post-installation script, and should be protected with a conditional
+#     so that unnecessary prompting doesn't happen if a package's
+#     installation fails and the `postinst' is called with `abort-upgrade',
+#     `abort-remove' or `abort-deconfigure'.
+
+
+case "$1" in
+    install)
+    ;;
+    upgrade)
+    ;;
+    configure)
+
+	. /usr/share/debconf/confmodule
+	db_get dbmail/do_debconf || true; DO_DEBCONF=$RET
+
+	# protect the config-file
+	oldmask=`umask`
+	umask 026
+
+	# edit the configs
+	# if driver is empty set it to pgsql
+	cat $CONFIG | sed -re "s/^driver=\$/driver=pgsql/" \
+		> $CONFIG.tmp && mv $CONFIG.tmp $CONFIG
+		
+	umask $oldmask
+	
+	db_stop
+	
+    ;;
+    abort-upgrade)
+    ;;
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 0
+    ;;
+esac
+
+#DEBHELPER#
+
+exit 0
