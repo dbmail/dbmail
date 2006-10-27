@@ -1,4 +1,4 @@
 Template: dbmail/sqlite_installed
 Type: boolean
-_Description: mark sqlite support as available
+Description: mark sqlite support as available
 
