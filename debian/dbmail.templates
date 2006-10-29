@@ -71,13 +71,6 @@ _Description: start the pop3 server after reboot?
  Dbmail support both imap and pop3 services. You can choose to run either
  one or both services.
 
-Template: dbmail/start_timsieved
-Type: boolean
-_Description: start the timesieved after reboot?
- Dbmail supports management of Sieve scripts through the timsieve protocol.
- You can run dbmail-timsieved which allows management of the sieve scripts from
- within clients that support this protocol such as kmail, squirrelmail, and others
-
 Template: dbmail/start_ssl
 Type: boolean
 _Description:  Run the stunnel SSL wrapper from the init script?

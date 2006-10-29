@@ -1,6 +1,6 @@
 Template: dbmail/authdriver
 Type: string
-_Description: activate ldap auth driver?
+_Description: Activate ldap auth driver?
  Please select this option if you want to use the LDAP 
  authentication driver for dbmail.
 
@@ -36,7 +36,7 @@ _Description: The field which contains the group id number of the user:
 Template: dbmail/ldap/bind_anonymous
 Type: boolean
 _Description: Bind anonymous to the ldap server?
- Select Yes if your ldap does not require authentication to search 
+ Use this if your ldap does not require authentication to search 
  the ldap tree.
 
 Template: dbmail/ldap/BIND_DN

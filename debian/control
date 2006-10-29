@@ -2,12 +2,12 @@ Source: dbmail
 Section: mail
 Priority: optional
 Maintainer: Paul J Stevens <paul@nfg.nl>
-Build-Depends: automake1.9, debhelper (>= 5.0.7), dpatch, libsieve2-dev (>= 2.1.12), libglib2.0-dev, libgmime-2.0-2-dev | libgmime2.1-dev, libldap2-dev, libsqlite3-dev, postgresql-dev, libmysqlclient15-dev | libmysqlclient14-dev, pkg-config, libtool, asciidoc, xmlto, chrpath, adduser
+Build-Depends: automake1.9, debhelper (>= 5.0.7), dpatch, libsieve2-dev (>= 2.1.12), libglib2.0-dev, libgmime-2.0-2-dev | libgmime2.1-dev, libldap2-dev, libsqlite3-dev, postgresql-dev, libmysqlclient15-dev | libmysqlclient14-dev, pkg-config, libtool, asciidoc, xmlto, chrpath
 Standards-Version: 3.7.2
 
 Package: dbmail
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}, debconf (>=1.4.70) | debconf-2.0, ucf (>= 0.30)
+Depends: ${misc:Depends}, ${shlibs:Depends}, debconf (>=1.4.70) | debconf-2.0, ucf (>= 0.30), adduser
 Provides: imap-server, pop3-server
 Suggests: dbmail-sqlite | dbmail-pgsql | dbmail-mysql, dbmail-ldap, dbmail-sieve
 Description: base package for the dbmail email solution
