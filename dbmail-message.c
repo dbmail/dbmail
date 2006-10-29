@@ -36,7 +36,6 @@ extern db_param_t _db_params;
 char query[DEF_QUERYSIZE];
 
 static int dm_errno = 0;
-static iconv_t cd = (iconv_t) -1;
 
 #define DBMAIL_TEMPMBOX "INBOX"
 
@@ -1075,12 +1074,13 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 			InternetAddressList *alist;
 			gchar *t = imap_cleanup_address((const char *)raw);
 			alist = internet_address_parse_string(t);
+			g_free(t);
 		
 			value = internet_address_list_to_string(alist, TRUE);
 			internet_address_list_destroy(alist);
 
 		} else {
-			unsigned char *s = (unsigned char *)g_mime_iconv_strdup(cd,(const char *)raw);
+			unsigned char *s = (unsigned char *)g_strdup(raw);
 			value = g_mime_utils_header_encode_text(s);
 			g_free(s);
 		}
@@ -1156,7 +1156,7 @@ static void insert_field_cache(u64_t physid, const char *field, const char *valu
 
 	g_return_if_fail(value != NULL);
 	
-	s = g_mime_iconv_strdup(cd, value);
+	s = g_strdup(value);
 	rvalue = g_mime_utils_header_encode_phrase((unsigned char *)s);
 	g_free(s);
 
