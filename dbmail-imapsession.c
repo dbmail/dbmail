@@ -1298,9 +1298,9 @@ int dbmail_imap_session_printf(struct ImapSession * self, char * message, ...)
 	}
 
         if (result < maxlen)
-                trace(TRACE_DEBUG,"RESPONSE: [%s]", re);
+                TRACE(TRACE_DEBUG,"RESPONSE: [%s]", re);
         else
-                trace(TRACE_DEBUG,"RESPONSE: [%s...]", re);
+                TRACE(TRACE_DEBUG,"RESPONSE: [%s...]", re);
 
         g_free(re);
 	g_free(ln);
@@ -2047,8 +2047,7 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 				}
 
 				if (ferror(ci->rx) || ferror(ci->tx)) {
-					trace(TRACE_ERROR, "%s,%s: client socket has set error indicator in fgetc", 
-							__FILE__, __func__);
+					TRACE(TRACE_ERROR, "client socket has set error indicator in fgetc");
 					free_args();
 					return NULL;
 				}
@@ -2058,8 +2057,7 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 				if (alarm_occured) {
 					alarm_occured = 0;
 					client_close();
-					trace(TRACE_ERROR, "%s,%s: timeout occurred in dbmail_imap_session_readln", 
-							__FILE__, __func__);
+					TRACE(TRACE_ERROR, "timeout occurred in dbmail_imap_session_readln");
 					free_args();
 					return NULL;
 				}
@@ -2070,8 +2068,7 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 				}
 
 				if (ferror(ci->rx) || ferror(ci->tx)) {
-					trace(TRACE_ERROR, "%s,%s: client socket is set error indicator in dbmail_imap_session_readln",
-							__FILE__, __func__);
+					TRACE(TRACE_ERROR, "client socket is set error indicator in dbmail_imap_session_readln");
 					free_args();
 					return NULL;
 				}
@@ -2084,8 +2081,7 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 					tmp--;
 				}
 
-				trace(TRACE_DEBUG, "%s,%s: got extra line [%s]", 
-						__FILE__, __func__, s);
+				TRACE(TRACE_DEBUG, "got extra line [%s]", s);
 
 				/* start over! */
 				i = 0;
@@ -2126,7 +2122,7 @@ char **build_args_array_ext(struct ImapSession *self, const char *originalString
 
 	/* dump args (debug) */
 	for (i = 0; the_args[i]; i++) {
-		trace(TRACE_DEBUG, "arg[%d]: '%s'\n", i, the_args[i]);
+		TRACE(TRACE_DEBUG, "arg[%d]: '%s'\n", i, the_args[i]);
 	}
 
 	return the_args;

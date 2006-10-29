@@ -1,3 +1,10 @@
+2006-10-29  Aaron Stone  <aaron@serendipity.cx>
+
+	* ChangeLog:
+	Corrected typos in ChangeLog
+	* dbmail-imapsession.c, timsieve.c:
+	More conversions of trace to TRACE.
+
 2006-10-27  Paul J Stevens <paul@nfg.nl>
 
 	* debian/dbmail-ldap.config, debian/dbmail-ldap.postinst, 
@@ -106,7 +113,7 @@
 
 	* serverchild.c, pool.c, server.c:
 	To prevent leaking shared memory segments, scoreboard_delete is
-	registered with atexit and an isGrantChildProcess variables is used to
+	registered with atexit and an isGrandChildProcess variable is used to
 	allow only the middle process to delete the shared memory segments.
 	* pipe.c:
 	Changed many debug calls from trace to TRACE.
@@ -115,7 +122,7 @@
 	Changed order of sender, recipient arguments to recipient, sender in
 	dbmail_message_construct.
 	* modules/sortsieve.c:
-	First pass at giving the user an alert that when Sieve scripts fail.
+	First pass at giving the user an alert when Sieve scripts fail.
 
 2006-10-21  Paul J Stevens <paul@nfg.nl>
 
