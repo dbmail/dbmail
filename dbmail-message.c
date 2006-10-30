@@ -272,8 +272,8 @@ struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *sel
 
 // 
 // construct a new message where only sender, recipient, subject and 
-// a body are known. The body can be any kind of charset/encoding, and we 
-// let gmime decide which is which.
+// a body are known. The body can be any kind of charset. Make sure
+// it's not pre-encoded (base64, quopri)
 //
 // TODO: support text/html
 
@@ -287,7 +287,7 @@ struct DbmailMessage * dbmail_message_construct(struct DbmailMessage *self,
 	GMimeStream *stream, *fstream;
 	GMimeContentType *mime_type;
 	const gchar *charset;
-	GMimePartEncodingType encoding;
+	GMimePartEncodingType encoding = GMIME_PART_ENCODING_DEFAULT;
 	GMimeFilter *filter = NULL;
 
 	// FIXME: this could easily be expanded to allow appending
@@ -298,8 +298,9 @@ struct DbmailMessage * dbmail_message_construct(struct DbmailMessage *self,
 	message = g_mime_message_new(FALSE);
 
 	// determine the optimal encoding type for the body: how would gmime
-	// encode this string
-	encoding = g_mime_utils_best_encoding((unsigned char *)body, strlen(body));
+	// encode this string. This will return either base64 or quopri.
+	if (g_mime_utils_text_is_8bit((unsigned char *)body, strlen(body)))
+		encoding = g_mime_utils_best_encoding((unsigned char *)body, strlen(body));
 
 	// set basic headers
 	g_mime_message_set_sender(message, from);
@@ -317,17 +318,9 @@ struct DbmailMessage * dbmail_message_construct(struct DbmailMessage *self,
 		case GMIME_PART_ENCODING_BASE64:
 			filter = g_mime_filter_basic_new_type(GMIME_FILTER_BASIC_BASE64_ENC);
 			break;
-		case GMIME_PART_ENCODING_UUENCODE:
-			filter = g_mime_filter_basic_new_type(GMIME_FILTER_BASIC_UU_ENC);
-			break;
-		// treat the rest as-is: assumption is the body is already in
-		// an encoded state
 		case GMIME_PART_ENCODING_QUOTEDPRINTABLE:
-		case GMIME_PART_ENCODING_DEFAULT:
-		case GMIME_PART_ENCODING_7BIT:
-		case GMIME_PART_ENCODING_8BIT:
-		case GMIME_PART_ENCODING_BINARY:
-		case GMIME_PART_NUM_ENCODINGS:
+			filter = g_mime_filter_basic_new_type(GMIME_FILTER_BASIC_QP_ENC);
+			break;
 		default:
 			break;
 	}
@@ -352,26 +345,14 @@ struct DbmailMessage * dbmail_message_construct(struct DbmailMessage *self,
 
 	// Content-Transfer-Encoding
 	switch(encoding) {
-		case GMIME_PART_ENCODING_DEFAULT:
-		case GMIME_PART_ENCODING_7BIT:
-			g_mime_part_set_content_header(mime_part,"Content-Transfer-Encoding", "7bit");
-			break;
-		case GMIME_PART_ENCODING_8BIT:
-			g_mime_part_set_content_header(mime_part,"Content-Transfer-Encoding", "8bit");
-			break;
-		case GMIME_PART_ENCODING_BINARY:
-			g_mime_part_set_content_header(mime_part,"Content-Transfer-Encoding", "binary");
-			break;
 		case GMIME_PART_ENCODING_BASE64:
 			g_mime_part_set_content_header(mime_part,"Content-Transfer-Encoding", "base64");
 			break;
 		case GMIME_PART_ENCODING_QUOTEDPRINTABLE:
 			g_mime_part_set_content_header(mime_part,"Content-Transfer-Encoding", "quoted-printable");
 			break;
-
-		case GMIME_PART_ENCODING_UUENCODE: // anyone still uses this?
-		case GMIME_PART_NUM_ENCODINGS: // what's this?
 		default:
+			g_mime_part_set_content_header(mime_part,"Content-Transfer-Encoding", "7bit");
 			break;
 	}
 
