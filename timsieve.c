@@ -1,4 +1,4 @@
-/* $Id: timsieve.c 2279 2006-09-27 19:46:05Z paul $
+/* $Id: timsieve.c 2334 2006-10-29 19:50:48Z aaron $
 
  Copyright (C) 1999-2004 Aaron Stone aaron at serendipity dot cx
 
@@ -21,6 +21,7 @@
 /* implementation for tims commands according to RFC 1081 */
 
 #include "dbmail.h"
+#define THIS_MODULE "timsieved"
 
 #define INCOMING_BUFFER_SIZE 512
 
@@ -83,8 +84,7 @@ int tims_handle_connection(clientinfo_t * ci)
 	buffer = g_new0(char, INCOMING_BUFFER_SIZE);
 
 	if (! ci->tx) {
-		trace(TRACE_MESSAGE, "%s,%s: TX stream is null!",
-				__FILE__, __func__);
+		TRACE(TRACE_MESSAGE, "TX stream is null!");
 		dm_free(buffer);
 		return 0;
 	}
@@ -165,8 +165,7 @@ int tims_error(PopSession_t * session, void *stream,
 	va_list argp;
 
 	if (session->error_count >= MAX_ERRORS) {
-		trace(TRACE_MESSAGE, "%s,%s: too many errors (MAX_ERRORS is %d)",
-				__FILE__, __func__, MAX_ERRORS);
+		TRACE(TRACE_MESSAGE, "too many errors (MAX_ERRORS is %d)", MAX_ERRORS);
 		ci_write((FILE *) stream, "BYE \"Too many errors, closing connection.\"\r\n");
 		session->SessionResult = 2;	/* possible flood */
 		tims_reset(session);
@@ -177,8 +176,7 @@ int tims_error(PopSession_t * session, void *stream,
 		va_end(argp);
 	}
 
-	trace(TRACE_DEBUG, "%s,%s: an invalid command was issued",
-			__FILE__, __func__);
+	TRACE(TRACE_DEBUG, "an invalid command was issued");
 	session->error_count++;
 	return 1;
 }
@@ -205,8 +203,7 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 	
 	/* buffer overflow attempt */
 	if (strlen(buffer) > MAX_IN_BUFFER) {
-		trace(TRACE_DEBUG, "%s,%s: buffer overflow attempt",
-				__FILE__, __func__);
+		TRACE(TRACE_DEBUG, "buffer overflow attempt");
 		return -3;
 	}
 
@@ -217,8 +214,7 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 	/* end buffer */
 	buffer[indx] = '\0';
 
-	trace(TRACE_DEBUG, "%s,%s: incoming buffer: [%s]",
-			__FILE__, __func__, buffer);
+	TRACE(TRACE_DEBUG, "incoming buffer: [%s]", buffer);
 
 	command = buffer;
 
@@ -231,8 +227,7 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 		if (strlen(value) == 0) {
 			value = NULL;	/* no value specified */
 		} else {
-			trace(TRACE_DEBUG, "%s,%s: command issued: cmd [%s], val [%s]",
-					__FILE__, __func__,
+			TRACE(TRACE_DEBUG, "command issued: cmd [%s], val [%s]",
 			      command, value);
 		}
 	}
@@ -241,8 +236,7 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 		if (strcasecmp(command, commands[cmdtype]) == 0)
 			break;
 
-	trace(TRACE_DEBUG, "%s,%s: command looked up as commandtype %d",
-			__FILE__, __func__, cmdtype);
+	TRACE(TRACE_DEBUG, "command looked up as commandtype %d", cmdtype);
 
 	/* commands that are allowed to have no arguments */
 	if ((value == NULL) && !(cmdtype < TIMS_NOARGS) && (cmdtype < TIMS_END)) {
@@ -338,14 +332,12 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 				}	/* if... tmplen < 1 */
 			} /* if... strncasecmp() == "PLAIN" */
 			else {
-				trace(TRACE_INFO, "%s,%s: Input simply was not PLAIN auth",
-						__FILE__, __func__);
+				TRACE(TRACE_INFO, "Input simply was not PLAIN auth");
 				ci_write((FILE *) stream, "NO \"Authentication scheme not supported.\"\r\n");
 			}
 		} /* if... strlen() < "PLAIN" */
 		else {
-			trace(TRACE_INFO, "%s,%s: Input too short to possibly be PLAIN auth",
-					__FILE__, __func__);
+			TRACE(TRACE_INFO, "Input too short to possibly be PLAIN auth");
 			ci_write((FILE *) stream, "NO \"Authentication scheme not supported.\"\r\n");
 		}
 
@@ -393,26 +385,23 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 		dm_free(tmpleft);
 
 		scriptlen = strtoull(tmpcharlen, NULL, 10);
-		trace(TRACE_INFO, "%s, %s: Client sending script of length [%llu]",
-				__FILE__, __func__, scriptlen);
+		TRACE(TRACE_INFO, "Client sending script of length [%llu]", scriptlen);
 		if (scriptlen >= UINT_MAX) {
-			trace(TRACE_INFO, "%s, %s: Length [%llu] is larger than UINT_MAX [%u]",
-					__FILE__, __func__, scriptlen, UINT_MAX);
+			TRACE(TRACE_INFO, "Length [%llu] is larger than UINT_MAX [%u]",
+					scriptlen, UINT_MAX);
 			ci_write((FILE *) stream, "NO \"Invalid script length.\"\r\n");
 			break;
 		}
 		
 
 		if (0 != read_from_stream ((FILE *) instream, &f_buf, scriptlen)) {
-			trace (TRACE_INFO, "%s, %s: Error reading script with read_from_stream()",
-					__FILE__, __func__);
+			TRACE(TRACE_INFO, "Error reading script with read_from_stream()");
 			ci_write((FILE *) stream, "NO \"Error reading script.\"\r\n");
 			break;
 		}
 		
 		if (0 != db_check_sievescript_quota(session->useridnr, scriptlen)) {
-			trace(TRACE_INFO, "%s, %s: Script exceeds user's quota, dumping it",
-					__FILE__, __func__);
+			TRACE(TRACE_INFO, "Script exceeds user's quota, dumping it");
 			ci_write((FILE *) stream, "NO \"Script exceeds available space.\"\r\n");
 			break;
 		}
@@ -421,8 +410,7 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 		/* Store the script temporarily,
 		 * validate it, then rename it. */
 		if (0 != db_add_sievescript(session->useridnr, "@!temp-script!@", f_buf)) {
-			trace(TRACE_INFO, "%s, %s: Error inserting script",
-					__FILE__, __func__);
+			TRACE(TRACE_INFO, "Error inserting script");
 			ci_write((FILE *) stream, "NO \"Error inserting script.\"\r\n");
 			db_delete_sievescript(session->useridnr, "@!temp-script!@");
 			break;
@@ -430,13 +418,12 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 		
 		sort_result = sort_validate(session->useridnr, "@!temp-script!@");
 		if (sort_result == NULL) {
-			trace(TRACE_INFO, "%s, %s: Error inserting script",
-					__FILE__, __func__);
+			TRACE(TRACE_INFO, "Error inserting script");
 			ci_write((FILE *) stream, "NO \"Error inserting script.\"\r\n");
 			db_delete_sievescript(session->useridnr, "@!temp-script!@");
 		} else if (sort_get_error(sort_result) > 0) {
-			trace(TRACE_INFO, "%s, %s: Script has syntax errrors: [%s]",
-					__FILE__, __func__, sort_get_errormsg(sort_result));
+			TRACE(TRACE_INFO, "Script has syntax errrors: [%s]",
+					sort_get_errormsg(sort_result));
 			ci_write((FILE *) stream, "NO \"Script error: %s.\"\r\n",
 					sort_get_errormsg(sort_result));
 			db_delete_sievescript(session->useridnr, "@!temp-script!@");
@@ -444,12 +431,10 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 			/* According to the draft RFC, a script with the same
 			 * name as an existing script should [atomically] replace it. */
 			if (0 != db_rename_sievescript(session->useridnr, "@!temp-script!@", scriptname)) {
-				trace(TRACE_INFO, "%s, %s: Error inserting script",
-						__FILE__, __func__);
+				TRACE(TRACE_INFO, "Error inserting script");
 				ci_write((FILE *) stream, "NO \"Error inserting script.\"\r\n");
 			} else {
-				trace(TRACE_INFO, "%s, %s: Script successfully received",
-						__FILE__, __func__);
+				TRACE(TRACE_INFO, "Script successfully received");
 				ci_write((FILE *) stream, "OK \"Script successfully received.\"\r\n");
 			}
 		}
