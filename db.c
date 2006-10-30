@@ -1,4 +1,4 @@
-/* $Id: db.c 2332 2006-10-27 12:48:23Z paul $ */
+/* $Id: db.c 2310 2006-10-20 20:30:05Z aaron $ */
 /*
   Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
   Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
@@ -22,7 +22,7 @@
 /**
  * \file db.c
  * 
- * $Id: db.c 2332 2006-10-27 12:48:23Z paul $
+ * $Id: db.c 2310 2006-10-20 20:30:05Z aaron $
  *
  * implement database functionality. This used to split out
  * between MySQL and PostgreSQL, but this is now integrated. 
@@ -2214,7 +2214,7 @@ int db_set_deleted(u64_t * affected_rows)
 int db_deleted_purge(u64_t * affected_rows)
 {
 	unsigned i;
-	u64_t message_id;
+	u64_t *message_idnrs;
 
 	assert(affected_rows != NULL);
 	*affected_rows = 0;
@@ -2241,17 +2241,22 @@ int db_deleted_purge(u64_t * affected_rows)
 		return DM_SUCCESS;
 	}
 
+	message_idnrs = g_new0(u64_t, *affected_rows);
+	
 	/* delete each message */
+	for (i = 0; i < *affected_rows; i++)
+		message_idnrs[i] = db_get_result_u64(i, 0);
+	
+	db_free_result();
 	for (i = 0; i < *affected_rows; i++) {
-		message_id = db_get_result_u64(i, 0);
-		if (db_delete_message(message_id) == -1) {
+		if (db_delete_message(message_idnrs[i]) == -1) {
 			trace(TRACE_ERROR, "%s,%s: error deleting message",
 			      __FILE__, __func__);
-			db_free_result();
+			dm_free(message_idnrs);
 			return DM_EQUERY;
 		}
 	}
-	db_free_result();
+	g_free(message_idnrs);
 	
 	return DM_EGENERAL;
 }
