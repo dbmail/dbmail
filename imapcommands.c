@@ -1329,34 +1329,38 @@ static int sorted_search(struct ImapSession *self, search_order_t order)
 	}
 
 	mb = dbmail_mailbox_new(ud->mailbox.uid);
-	dbmail_mailbox_set_uid(mb,self->use_uid);
-	if (dbmail_mailbox_build_imap_search(mb, self->args, &idx, order) < 0) {
-		dbmail_imap_session_printf(self, "%s BAD invalid arguments to %s\r\n",
-			self->tag, self->command);
-		return 1;
-	}
-	dbmail_mailbox_search(mb);
-	/* ok, display results */
-	switch(order) {
-		case SEARCH_SORTED:
-			dbmail_mailbox_sort(mb);
-			s = dbmail_mailbox_sorted_as_string(mb);
-		break;
-		case SEARCH_UNORDERED:
-			s = dbmail_mailbox_ids_as_string(mb);
-		break;
-		case SEARCH_THREAD_ORDEREDSUBJECT:
-			s = dbmail_mailbox_orderedsubject(mb);
-		break;
-		case SEARCH_THREAD_REFERENCES:
-			s = NULL; // unsupported
-		break;
+
+	if (g_tree_nnodes(mb->ids) > 0) {
+		dbmail_mailbox_set_uid(mb,self->use_uid);
+		if (dbmail_mailbox_build_imap_search(mb, self->args, &idx, order) < 0) {
+			dbmail_imap_session_printf(self, "%s BAD invalid arguments to %s\r\n",
+				self->tag, self->command);
+			return 1;
+		}
+		dbmail_mailbox_search(mb);
+		/* ok, display results */
+		switch(order) {
+			case SEARCH_SORTED:
+				dbmail_mailbox_sort(mb);
+				s = dbmail_mailbox_sorted_as_string(mb);
+			break;
+			case SEARCH_UNORDERED:
+				s = dbmail_mailbox_ids_as_string(mb);
+			break;
+			case SEARCH_THREAD_ORDEREDSUBJECT:
+				s = dbmail_mailbox_orderedsubject(mb);
+			break;
+			case SEARCH_THREAD_REFERENCES:
+				s = NULL; // unsupported
+			break;
+		}
+
+		dbmail_imap_session_printf(self, "* %s %s\r\n", self->command, s?s:"");
+		if (s)
+			g_free(s);
 	}
 
-	dbmail_imap_session_printf(self, "* %s %s", self->command, s?s:"");
-	if (s)
-		g_free(s);
-	dbmail_imap_session_printf(self, "\r\n%s OK %s completed\r\n", self->tag, self->command);
+	dbmail_imap_session_printf(self, "%s OK %s completed\r\n", self->tag, self->command);
 	
 	dbmail_mailbox_free(mb);
 	
@@ -1424,26 +1428,29 @@ int _ic_fetch(struct ImapSession *self)
 	/* reopen the mailbox */
 	dbmail_mailbox_open(self->mailbox);
 
-	dbmail_mailbox_set_uid(self->mailbox,self->use_uid);
-	
-	self->fetch_ids = dbmail_mailbox_get_set(self->mailbox,self->args[0],self->use_uid);
-	
-	if (! self->fetch_ids) {
-		dbmail_imap_session_printf(self, "%s BAD invalid message range specified\r\n", self->tag);
-		return DM_EGENERAL;
-	}
+	if (g_tree_nnodes(self->mailbox->ids) > 0) {
+
+		dbmail_mailbox_set_uid(self->mailbox,self->use_uid);
 		
-	if (dbmail_imap_session_fetch_get_items(self) < 0)
-		return -1;
-	
-	if (self->headers) {
-		g_tree_destroy(self->headers);
-		self->headers = NULL;
-	}
-	if (self->envelopes) {
-		g_tree_destroy(self->envelopes);
-		self->envelopes = NULL;
-	}
+		self->fetch_ids = dbmail_mailbox_get_set(self->mailbox,self->args[0],self->use_uid);
+		
+		if (g_tree_nnodes(self->fetch_ids)==0) {
+			dbmail_imap_session_printf(self, "%s BAD invalid message range specified\r\n", self->tag);
+			return DM_EGENERAL;
+		}
+			
+		if (dbmail_imap_session_fetch_get_items(self) < 0)
+			return -1;
+		
+		if (self->headers) {
+			g_tree_destroy(self->headers);
+			self->headers = NULL;
+		}
+		if (self->envelopes) {
+			g_tree_destroy(self->envelopes);
+			self->envelopes = NULL;
+		}
+	}	
 	
 	dbmail_imap_session_printf(self, "%s OK %sFETCH completed\r\n", self->tag, self->use_uid ? "UID " : "");
 	return 0;

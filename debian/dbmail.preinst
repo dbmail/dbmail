@@ -21,7 +21,6 @@ create_user() {
 		  --gecos "Dbmail SQL mailserver" \
 		  --shell /bin/false \
 		  dbmail  >/dev/null 2>&1 || true
-	fi
 }
 
 case "$1" in

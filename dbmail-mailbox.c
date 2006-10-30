@@ -125,24 +125,24 @@ int dbmail_mailbox_open(struct DbmailMailbox *self)
 		g_string_free(q,TRUE);
 		return DM_EQUERY;
 	}
-		
-	if ((rows  = db_num_rows()) < 1) {
-		trace(TRACE_INFO, "%s,%s: no messages in mailbox",
-				__FILE__, __func__);
-		db_free_result();
-		g_string_free(q,TRUE);
-		return DM_SUCCESS;
-	}
 
-	g_string_free(q,TRUE);
 	if (self->ids) {
 		g_tree_destroy(self->ids);
 		self->ids = NULL;
 	}
-	
+
 	self->ids = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 	self->msn = g_tree_new_full((GCompareDataFunc)ucmp,NULL,NULL,NULL);
-	
+		
+	g_string_free(q,TRUE);
+
+	if ((rows  = db_num_rows()) < 1) {
+		trace(TRACE_INFO, "%s,%s: no messages in mailbox",
+				__FILE__, __func__);
+		db_free_result();
+		return DM_SUCCESS;
+	}
+
 	for (row=0; row < rows; row++) {
 		uid = g_new0(u64_t,1);
 		msn = g_new0(u64_t,1);

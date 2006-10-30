@@ -2038,15 +2038,21 @@ int db_createsession(u64_t user_idnr, PopSession_t * session_ptr)
 	int message_counter = 0;
 	unsigned i;
 	const char *query_result;
-	u64_t inbox_mailbox_idnr;
+	u64_t mailbox_idnr;
 
 	dm_list_init(&session_ptr->messagelst);
 
-	if (db_findmailbox("INBOX", user_idnr, &inbox_mailbox_idnr) <= 0) {
-		TRACE(TRACE_ERROR, "error finding mailbox_idnr of "
-		      "INBOX for user [%llu], exiting..", user_idnr);
-		return DM_EQUERY;
+	if (db_findmailbox("INBOX", user_idnr, &mailbox_idnr) <= 0) {
+		/* create missing INBOX for this authenticated user */
+		TRACE(TRACE_INFO, "auto-create INBOX for user id [%llu]", user_idnr);
+		if (db_createmailbox("INBOX", user_idnr, &mailbox_idnr)) {
+			TRACE(TRACE_ERROR, "auto-create INBOX for user [%llu] failed, exiting..", user_idnr);
+			return DM_EQUERY;
+		}
 	}
+
+	g_return_val_if_fail(mailbox_idnr > 0, DM_EQUERY);
+
 	/* query is < MESSAGE_STATUS_DELETE  because we don't want deleted 
 	 * messages
 	 */
@@ -2057,7 +2063,7 @@ int db_createsession(u64_t user_idnr, PopSession_t * session_ptr)
 		 "AND msg.status < %d "
 		 "AND msg.physmessage_id = pm.id "
 		 "ORDER BY msg.message_idnr ASC",DBPFX,DBPFX,
-		 inbox_mailbox_idnr, MESSAGE_STATUS_DELETE);
+		 mailbox_idnr, MESSAGE_STATUS_DELETE);
 
 	if (db_query(query) == -1) {
 		return DM_EQUERY;
@@ -2214,7 +2220,7 @@ int db_set_deleted(u64_t * affected_rows)
 int db_deleted_purge(u64_t * affected_rows)
 {
 	unsigned i;
-	u64_t message_id;
+	u64_t *message_idnrs;
 
 	assert(affected_rows != NULL);
 	*affected_rows = 0;
@@ -2241,17 +2247,22 @@ int db_deleted_purge(u64_t * affected_rows)
 		return DM_SUCCESS;
 	}
 
+	message_idnrs = g_new0(u64_t, *affected_rows);
+	
 	/* delete each message */
+	for (i = 0; i < *affected_rows; i++)
+		message_idnrs[i] = db_get_result_u64(i, 0);
+	
+	db_free_result();
 	for (i = 0; i < *affected_rows; i++) {
-		message_id = db_get_result_u64(i, 0);
-		if (db_delete_message(message_id) == -1) {
+		if (db_delete_message(message_idnrs[i]) == -1) {
 			trace(TRACE_ERROR, "%s,%s: error deleting message",
 			      __FILE__, __func__);
-			db_free_result();
+			dm_free(message_idnrs);
 			return DM_EQUERY;
 		}
 	}
-	db_free_result();
+	g_free(message_idnrs);
 	
 	return DM_EGENERAL;
 }
