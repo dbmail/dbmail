@@ -1292,14 +1292,7 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 				ldap_err2string(ldap_err));
 		*user_idnr = 0;
 	} else {
-
-		/* FIXME: implement this in LDAP...  log login in the database
-		   snprintf(__auth_query_data, AUTH_QUERY_SIZE, "UPDATE users SET last_login = '%s' "
-		   "WHERE user_idnr = '%llu'", timestring, id);
-
-		   if (__auth_query(__auth_query_data)==-1)
-		   trace(TRACE_ERROR, "%s,%s: could not update user login time",__FILE__,__func__);
-		 */
+		db_user_log_login(*user_idnr);
 	}
 	
 	/* rebind as admin */
