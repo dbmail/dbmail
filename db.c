@@ -2038,15 +2038,21 @@ int db_createsession(u64_t user_idnr, PopSession_t * session_ptr)
 	int message_counter = 0;
 	unsigned i;
 	const char *query_result;
-	u64_t inbox_mailbox_idnr;
+	u64_t mailbox_idnr;
 
 	dm_list_init(&session_ptr->messagelst);
 
-	if (db_findmailbox("INBOX", user_idnr, &inbox_mailbox_idnr) <= 0) {
-		TRACE(TRACE_ERROR, "error finding mailbox_idnr of "
-		      "INBOX for user [%llu], exiting..", user_idnr);
-		return DM_EQUERY;
+	if (db_findmailbox("INBOX", user_idnr, &mailbox_idnr) <= 0) {
+		/* create missing INBOX for this authenticated user */
+		TRACE(TRACE_INFO, "auto-create INBOX for user id [%llu]", user_idnr);
+		if (db_createmailbox("INBOX", user_idnr, &mailbox_idnr)) {
+			TRACE(TRACE_ERROR, "auto-create INBOX for user [%llu] failed, exiting..", user_idnr);
+			return DM_EQUERY;
+		}
 	}
+
+	g_return_val_if_fail(mailbox_idnr > 0, DM_EQUERY);
+
 	/* query is < MESSAGE_STATUS_DELETE  because we don't want deleted 
 	 * messages
 	 */
@@ -2057,7 +2063,7 @@ int db_createsession(u64_t user_idnr, PopSession_t * session_ptr)
 		 "AND msg.status < %d "
 		 "AND msg.physmessage_id = pm.id "
 		 "ORDER BY msg.message_idnr ASC",DBPFX,DBPFX,
-		 inbox_mailbox_idnr, MESSAGE_STATUS_DELETE);
+		 mailbox_idnr, MESSAGE_STATUS_DELETE);
 
 	if (db_query(query) == -1) {
 		return DM_EQUERY;
