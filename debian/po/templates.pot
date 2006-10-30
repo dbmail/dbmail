@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: paul@nfg.nl\n"
-"POT-Creation-Date: 2006-10-27 22:31+0200\n"
+"POT-Creation-Date: 2006-10-29 18:50+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -171,28 +171,12 @@ msgstr ""
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:76
-msgid "start the timesieved after reboot?"
-msgstr ""
-
-#. Type: boolean
-#. Description
-#: ../dbmail.templates:76
-msgid ""
-"Dbmail supports management of Sieve scripts through the timsieve protocol. "
-"You can run dbmail-timsieved which allows management of the sieve scripts "
-"from within clients that support this protocol such as kmail, squirrelmail, "
-"and others"
-msgstr ""
-
-#. Type: boolean
-#. Description
-#: ../dbmail.templates:83
 msgid "Run the stunnel SSL wrapper from the init script?"
 msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:83
+#: ../dbmail.templates:76
 msgid ""
 "The stunnel SSL wrapper allows you to provide secure imap and pop services "
 "even though dbmail supports neither imaps nor pop3s (yet)."
@@ -200,7 +184,7 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:83
+#: ../dbmail.templates:76
 msgid ""
 "Make sure you have installed stunnel which is provided by a separate package "
 "if you want to use this feature."
@@ -208,13 +192,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:92
+#: ../dbmail.templates:85
 msgid "The filename for the SSL pem file:"
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:92
+#: ../dbmail.templates:85
 msgid ""
 "To be able to run the stunnel SSL wrapper you need to generate a pem file "
 "that should reside in /etc/ssl/certs/. Specify the filename here without  "
@@ -223,7 +207,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:92
+#: ../dbmail.templates:85
 msgid ""
 "Read /usr/share/doc/stunnel/README.Debian on how to generate such a file."
 msgstr ""
@@ -271,7 +255,7 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../dbmail-ldap.templates:3
-msgid "activate ldap auth driver?"
+msgid "Activate ldap auth driver?"
 msgstr ""
 
 #. Type: string
@@ -359,7 +343,7 @@ msgstr ""
 #. Description
 #: ../dbmail-ldap.templates:38
 msgid ""
-"Select Yes if your ldap does not require authentication to search  the ldap "
+"Use this if your ldap does not require authentication to search  the ldap "
 "tree."
 msgstr ""
 
