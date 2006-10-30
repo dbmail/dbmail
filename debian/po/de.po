@@ -15,7 +15,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: dbmail_1.2.5-1_templates\n"
 "Report-Msgid-Bugs-To: paul@nfg.nl\n"
-"POT-Creation-Date: 2006-10-15 10:58+0000\n"
+"POT-Creation-Date: 2006-10-29 18:50+0100\n"
 "PO-Revision-Date: 2004-06-01 21:49+0200\n"
 "Last-Translator: Erik Schanze <mail@erikschanze.de>\n"
 "Language-Team: German <debian-l10n-german@lists.debian.org>\n"
@@ -210,29 +210,12 @@ msgstr ""
 #. Description
 #: ../dbmail.templates:76
 #, fuzzy
-msgid "start the timesieved after reboot?"
-msgstr "POP3-Server nach dem Neustart starten?"
-
-#. Type: boolean
-#. Description
-#: ../dbmail.templates:76
-msgid ""
-"Dbmail supports management of Sieve scripts through the timsieve protocol. "
-"You can run dbmail-timsieved which allows management of the sieve scripts "
-"from within clients that support this protocol such as kmail, squirrelmail, "
-"and others"
-msgstr ""
-
-#. Type: boolean
-#. Description
-#: ../dbmail.templates:83
-#, fuzzy
 msgid "Run the stunnel SSL wrapper from the init script?"
 msgstr "Wollen Sie den SSL-Wrapper stunnel durch ein init-Skript starten?"
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:83
+#: ../dbmail.templates:76
 #, fuzzy
 msgid ""
 "The stunnel SSL wrapper allows you to provide secure imap and pop services "
@@ -243,7 +226,7 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:83
+#: ../dbmail.templates:76
 msgid ""
 "Make sure you have installed stunnel which is provided by a separate package "
 "if you want to use this feature."
@@ -253,14 +236,14 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:92
+#: ../dbmail.templates:85
 #, fuzzy
 msgid "The filename for the SSL pem file:"
 msgstr "Bitte den Namen der SSL-PEM-Datei eingeben."
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:92
+#: ../dbmail.templates:85
 msgid ""
 "To be able to run the stunnel SSL wrapper you need to generate a pem file "
 "that should reside in /etc/ssl/certs/. Specify the filename here without  "
@@ -272,12 +255,188 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:92
+#: ../dbmail.templates:85
 msgid ""
 "Read /usr/share/doc/stunnel/README.Debian on how to generate such a file."
 msgstr ""
 "In der Datei /usr/share/doc/stunnel/README.Debian ist erklärt, wie eine "
 "solche PEM-Datei erstellt wird."
+
+#. Type: boolean
+#. Description
+#: ../dbmail-mysql.templates:3
+msgid "activate mysql support for dbmail?"
+msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../dbmail-mysql.templates:3
+msgid ""
+"Select this option if you want to use mysql as storage driver for dbmail."
+msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../dbmail-pgsql.templates:3
+msgid "activate postgresql support for dbmail?"
+msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../dbmail-pgsql.templates:3
+msgid ""
+"Select this option if you want to use postgresql as storage driver for "
+"dbmail."
+msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../dbmail-sqlite.templates:3
+msgid "activate sqlite support for dbmail?"
+msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../dbmail-sqlite.templates:3
+msgid ""
+"Select this option if you want to use sqlite as storage driver for dbmail."
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../dbmail-ldap.templates:3
+msgid "Activate ldap auth driver?"
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../dbmail-ldap.templates:3
+msgid ""
+"Please select this option if you want to use the LDAP  authentication driver "
+"for dbmail."
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../dbmail-ldap.templates:9
+msgid "The port is your ldap server running at:"
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../dbmail-ldap.templates:9
+msgid ""
+"Please enter the port on which your ldap server is running at. The default "
+"port is 389."
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../dbmail-ldap.templates:15
+#, fuzzy
+msgid "The hostname of the ldap server:"
+msgstr "Bitte Rechnernamen des (My/Postgre)-SQL-Datenbank-Servers eingeben."
+
+#. Type: string
+#. Description
+#: ../dbmail-ldap.templates:15
+#, fuzzy
+msgid "Please enter the hostname your ldap server is running at."
+msgstr "Bitte den Namen des Datenbank-Benutzers eingeben."
+
+#. Type: string
+#. Description
+#: ../dbmail-ldap.templates:20
+msgid "The ldap base DN:"
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../dbmail-ldap.templates:20
+msgid ""
+"Please enter the DN where Dbmail should start searching for user accounts."
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../dbmail-ldap.templates:26
+msgid "The field which contains the user login name of the user:"
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../dbmail-ldap.templates:26
+msgid ""
+"Please enter the ldap attribute that will contain the username The standard "
+"account uses uid"
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../dbmail-ldap.templates:32
+msgid "The field which contains the group id number of the user:"
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../dbmail-ldap.templates:32
+msgid ""
+"Please enter the ldap attribute that will contain the group id number The "
+"standard account uses gidNumber"
+msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../dbmail-ldap.templates:38
+msgid "Bind anonymous to the ldap server?"
+msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../dbmail-ldap.templates:38
+msgid ""
+"Use this if your ldap does not require authentication to search  the ldap "
+"tree."
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../dbmail-ldap.templates:44
+#, fuzzy
+msgid "The DN to bind to the ldap server:"
+msgstr "Bitte Rechnernamen des (My/Postgre)-SQL-Datenbank-Servers eingeben."
+
+#. Type: string
+#. Description
+#: ../dbmail-ldap.templates:44
+#, fuzzy
+msgid ""
+"Please enter the DN, which should be used to connect to the ldap server."
+msgstr ""
+"Dies ist das Passwort, das dbmail nutzen wird, um sich mit dem Datenbank-"
+"Server zu verbinden."
+
+#. Type: password
+#. Description
+#: ../dbmail-ldap.templates:50
+#, fuzzy
+msgid "The password to bind to the ldap server:"
+msgstr "Bitte Rechnernamen des (My/Postgre)-SQL-Datenbank-Servers eingeben."
+
+#. Type: password
+#. Description
+#: ../dbmail-ldap.templates:50
+#, fuzzy
+msgid ""
+"Please enter the password, which should be used to connect to the ldap "
+"server."
+msgstr ""
+"Dies ist das Passwort, das dbmail nutzen wird, um sich mit dem Datenbank-"
+"Server zu verbinden."
+
+#, fuzzy
+#~ msgid "start the timesieved after reboot?"
+#~ msgstr "POP3-Server nach dem Neustart starten?"
 
 #, fuzzy
 #~ msgid "Do you want to start the imap service after a reboot?"
@@ -290,9 +449,6 @@ msgstr ""
 #, fuzzy
 #~ msgid "Do you want to start the timsieved service after a reboot?"
 #~ msgstr "Wollen Sie nach dem Neustart den IMAP-Dienst starten?"
-
-#~ msgid "Please enter the name of the database user you want to use."
-#~ msgstr "Bitte den Namen des Datenbank-Benutzers eingeben."
 
 #~ msgid "Start the IMAP server after reboot?"
 #~ msgstr "IMAP-Server nach dem Neustart starten?"

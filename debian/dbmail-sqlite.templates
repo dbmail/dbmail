@@ -1,4 +1,6 @@
 Template: dbmail/sqlite_installed
 Type: boolean
-Description: mark sqlite support as available
+_Description: activate sqlite support for dbmail?
+ Select this option if you want to use sqlite as
+ storage driver for dbmail.
 
