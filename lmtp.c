@@ -35,6 +35,8 @@
  * in the incoming buffer */
 #define MAX_IN_BUFFER 255
 
+#define THIS_MODULE "lmtp"
+
 extern volatile sig_atomic_t alarm_occured;
 
 /* These are needed across multiple calls to lmtp() */
@@ -130,20 +132,16 @@ int lmtp_handle_connection(clientinfo_t * ci)
 	buffer = (char *) dm_malloc(INCOMING_BUFFER_SIZE * sizeof(char));
 
 	if (!buffer) {
-		trace(TRACE_MESSAGE,
-		      "lmtp_handle_connection(): Could not allocate buffer");
+		TRACE(TRACE_MESSAGE, "Could not allocate buffer");
 		return 0;
 	}
 
 	if (ci->tx) {
 		/* sending greeting */
-		ci_write(ci->tx,
-			"220 %s DBMail LMTP service ready to rock\r\n",
-			myhostname);
+		ci_write(ci->tx, "220 %s DBMail LMTP service ready to rock\r\n", myhostname);
 		fflush(ci->tx);
 	} else {
-		trace(TRACE_MESSAGE,
-		      "lmtp_handle_connection(): TX stream is null!");
+		TRACE(TRACE_MESSAGE, "TX stream is null!");
 		dm_free(buffer);
 		return 0;
 	}
@@ -152,7 +150,7 @@ int lmtp_handle_connection(clientinfo_t * ci)
 	while (done > 0) {
 
 		if (db_check_connection()) {
-			trace(TRACE_DEBUG,"%s,%s: database has gone away", __FILE__, __func__);
+			TRACE(TRACE_DEBUG,"database has gone away");
 			done=-1;
 			break;
 		}
@@ -191,8 +189,7 @@ int lmtp_handle_connection(clientinfo_t * ci)
 			/* reset function handle timeout */
 			alarm(0);
 			/* handle lmtp commands */
-			done =
-			    lmtp(ci->tx, ci->rx, buffer, ci->ip_src, &session);
+			done = lmtp(ci->tx, ci->rx, buffer, ci->ip_src, &session);
 		}
 		fflush(ci->tx);
 	}
@@ -214,11 +211,8 @@ int lmtp_error(PopSession_t * session, void *stream,
 	va_list argp;
 
 	if (session->error_count >= MAX_ERRORS) {
-		trace(TRACE_MESSAGE,
-		      "lmtp_error(): too many errors (MAX_ERRORS is %d)",
-		      MAX_ERRORS);
-		ci_write((FILE *) stream,
-			"500 Too many errors, closing connection.\r\n");
+		TRACE(TRACE_MESSAGE, "too many errors (MAX_ERRORS is %d)", MAX_ERRORS);
+		ci_write((FILE *) stream, "500 Too many errors, closing connection.\r\n");
 		session->SessionResult = 2;	/* possible flood */
 		lmtp_reset(session);
 		return -3;
@@ -226,14 +220,13 @@ int lmtp_error(PopSession_t * session, void *stream,
 		va_start(argp, formatstring);
 		if (vfprintf((FILE *) stream, formatstring, argp) < 0) {
 			va_end(argp);
-			trace(TRACE_ERROR, "%s,%s: error writing to stream",
-			      __FILE__, __func__);
+			TRACE(TRACE_ERROR, "error writing to stream");
 			return -1;
 		}
 		va_end(argp);
 	}
 
-	trace(TRACE_DEBUG, "lmtp_error(): an invalid command was issued");
+	TRACE(TRACE_DEBUG, "an invalid command was issued");
 	session->error_count++;
 	return 1;
 }
@@ -252,7 +245,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 
 	/* buffer overflow attempt */
 	if (strlen(buffer) > MAX_IN_BUFFER) {
-		trace(TRACE_DEBUG, "lmtp(): buffer overflow attempt");
+		TRACE(TRACE_DEBUG, "buffer overflow attempt");
 		return -3;
 	}
 
@@ -263,7 +256,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 	/* end buffer */
 	buffer[indx] = '\0';
 
-	trace(TRACE_DEBUG, "lmtp(): incoming buffer: [%s]", buffer);
+	TRACE(TRACE_DEBUG, "incoming buffer: [%s]", buffer);
 
 	command = buffer;
 
@@ -276,8 +269,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 		if (strlen(value) == 0) {
 			value = NULL;	/* no value specified */
 		} else {
-			trace(TRACE_DEBUG,
-			      "lmtp(): command issued :cmd [%s], value [%s]\n",
+			TRACE(TRACE_DEBUG, "command issued :cmd [%s], value [%s]\n",
 			      command, value);
 		}
 	}
@@ -286,8 +278,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 		if (strcasecmp(command, commands[cmdtype]) == 0)
 			break;
 
-	trace(TRACE_DEBUG, "lmtp(): command looked up as commandtype %d",
-	      cmdtype);
+	TRACE(TRACE_DEBUG, "command looked up as commandtype %d", cmdtype);
 
 	/* commands that are allowed to have no arguments */
 	if ((value == NULL) &&
@@ -295,15 +286,13 @@ int lmtp(void *stream, void *instream, char *buffer,
 	      (cmdtype == LMTP_RSET) || (cmdtype == LMTP_QUIT) ||
 	      (cmdtype == LMTP_NOOP) || (cmdtype == LMTP_HELP) )) {
 		trace(TRACE_ERROR, "ARGUMENT %d", cmdtype);
-		return lmtp_error(session, stream,
-				  "500 This command requires an argument.\r\n");
+		return lmtp_error(session, stream, "500 This command requires an argument.\r\n");
 	}
 
 	switch (cmdtype) {
 	case LMTP_QUIT:
 		{
-			ci_write((FILE *) stream, "221 %s BYE\r\n",
-				 myhostname);
+			ci_write((FILE *) stream, "221 %s BYE\r\n", myhostname);
 			lmtp_reset(session);
 			return 0;	/* return 0 to cause the connection to close */
 		}
@@ -352,9 +341,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 					     commands[helpcmd]) == 0)
 						break;
 
-			trace(TRACE_DEBUG,
-			      "lmtp(): LMTP_HELP requested for commandtype %d",
-			      helpcmd);
+			TRACE(TRACE_DEBUG, "LMTP_HELP requested for commandtype %d", helpcmd);
 
 			if ((helpcmd == LMTP_LHLO)
 			    || (helpcmd == LMTP_DATA)
@@ -376,8 +363,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 			/* RFC 2821 says this SHOULD be implemented...
 			 * and the goal is to say if the given address
 			 * is a valid delivery address at this server. */
-			ci_write((FILE *) stream,
-				"502 Command not implemented\r\n");
+			ci_write((FILE *) stream, "502 Command not implemented\r\n");
 			return 1;
 		}
 	case LMTP_EXPN:
@@ -385,8 +371,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 			/* RFC 2821 says this SHOULD be implemented...
 			 * and the goal is to return the membership
 			 * of the specified mailing list. */
-			ci_write((FILE *) stream,
-				"502 Command not implemented\r\n");
+			ci_write((FILE *) stream, "502 Command not implemented\r\n");
 			return 1;
 		}
 	case LMTP_MAIL:
@@ -395,13 +380,12 @@ int lmtp(void *stream, void *instream, char *buffer,
 			 * needs to know what extensions we support.
 			 * */
 			if (session->state != LHLO) {
-				ci_write((FILE *) stream,
-					"550 Command out of sequence.\r\n");
+				ci_write((FILE *) stream, "550 Command out of sequence.\r\n");
 			} else if (dm_list_length(&from) > 0) {
 				ci_write((FILE *) stream,
 					"500 Sender already received. Use RSET to clear.\r\n");
-				trace(TRACE_ERROR, "%s,%s: Sender already received: %s",
-				      __FILE__, __func__, (char *)(dm_list_getstart(&from)->data));
+				TRACE(TRACE_ERROR, "Sender already received: %s",
+				      (char *)(dm_list_getstart(&from)->data));
 			} else {
 				/* First look for an email address.
 				 * Don't bother verifying or whatever,
@@ -431,8 +415,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 
 				/* This is all a bit nested now... */
 				if (tmplen < 1 && tmpaddr == NULL) {
-					ci_write((FILE *) stream,
-						"500 No address found.\r\n");
+					ci_write((FILE *) stream, "500 No address found.\r\n");
 					goodtogo = 0;
 				} else if (tmpbody != NULL) {
 					/* See RFC 3030 for the best
@@ -440,9 +423,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 					 * */
 					if (strlen(tmpbody) < 4) {
 						/* Caught */
-					} else if (0 ==
-						   strcasecmp(tmpbody,
-							      "7BIT")) {
+					} else if (0 == strcasecmp(tmpbody, "7BIT")) {
 						/* Sure fine go ahead. */
 						goodtogo = 1;	// Not that it wasn't 1 already ;-)
 					}
@@ -451,9 +432,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 					 * */
 					else if (strlen(tmpbody) < 8) {
 						/* Caught */
-					} else if (0 ==
-						   strcasecmp(tmpbody,
-							      "8BITMIME"))
+					} else if (0 == strcasecmp(tmpbody, "8BITMIME"))
 					{
 						/* We can't do this yet. */
 						/* session->state = BIT8;
