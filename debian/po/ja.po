@@ -16,7 +16,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: dbmail 1.2.9-1\n"
 "Report-Msgid-Bugs-To: paul@nfg.nl\n"
-"POT-Creation-Date: 2006-10-29 18:50+0100\n"
+"POT-Creation-Date: 2006-10-31 15:48+0100\n"
 "PO-Revision-Date: 2004-11-03 01:43+0900\n"
 "Last-Translator: Hideki Yamane <henrich@samba.gr.jp>\n"
 "Language-Team: Japanese <debian-japanese@lists.debian.org>\n"
@@ -298,13 +298,13 @@ msgid ""
 "Select this option if you want to use sqlite as storage driver for dbmail."
 msgstr ""
 
-#. Type: string
+#. Type: boolean
 #. Description
 #: ../dbmail-ldap.templates:3
-msgid "Activate ldap auth driver?"
+msgid "Do you wish to activate the ldap auth driver?"
 msgstr ""
 
-#. Type: string
+#. Type: boolean
 #. Description
 #: ../dbmail-ldap.templates:3
 msgid ""
