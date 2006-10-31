@@ -807,7 +807,7 @@ static int wrap_base_subject(const char *in, const char *expect)
 }	
 
 #define BS(x,y) fail_unless(wrap_base_subject((x),(y))==0, "dm_base_subject failed")
-#define BSF(x,y) fail_unless(wrap_base_subject((x),(y))!=0, "dm_base_subject failed")
+#define BSF(x,y) fail_unless(wrap_base_subject((x),(y))!=0, "dm_base_subject failed (negative)")
 
 START_TEST(test_dm_base_subject)
 {
