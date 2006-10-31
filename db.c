@@ -4434,9 +4434,10 @@ int db_usermap_resolve(clientinfo_t *ci, const char *username, char *real_userna
 		sockok = db_get_result(row, 1);
 		sockno = db_get_result(row, 2);
 		userid = db_get_result(row, 3);
-		result = dm_sock_compare(clientsock, sockok, sockno);
+		result = dm_sock_compare(clientsock, "", sockno);
 		/* any match on sockno will be fatal */
 		if (result) {
+			TRACE(TRACE_DEBUG,"access denied");
 			db_free_result();
 			return result;
 		}
@@ -4446,12 +4447,16 @@ int db_usermap_resolve(clientinfo_t *ci, const char *username, char *real_userna
 			bestscore = score;
 		}
 	}
+
+	TRACE(TRACE_DEBUG, "bestscore [%d]", bestscore);
 	if (bestscore < 0)
 		return DM_EGENERAL;
 	
 	/* use the best matching sockok */
 	login = db_get_result(bestrow, 0);
 	userid = db_get_result(bestrow, 3);
+
+	TRACE(TRACE_DEBUG,"best match: [%s] -> [%s]", login, userid);
 
 	if ((strncmp(login,"ANY",3)==0)) {
 		if (dm_valid_format(userid)==0)
