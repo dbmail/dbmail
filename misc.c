@@ -498,11 +498,13 @@ char * dm_stresc(const char * from)
  */
 char * dm_strnesc(const char * from, size_t len)
 {
-	char *to;
+	char *to, *f8;
 	assert(from);
 	len = min(strlen(from),len);
 	to = g_new0(char, (len + 1) * 2 + 1);
-	db_escape_string(to, from, len);
+	f8 = g_mime_iconv_locale_to_utf8(from);
+	db_escape_string(to, f8, len);
+	g_free(f8);
 
 	return to;
 }
@@ -609,7 +611,7 @@ static void _strip_sub_leader(char *subject)
 void dm_base_subject(char *subject)
 {
 	unsigned offset, len, olen;
-	char *tmp, *saved, *recoded;
+	char *tmp, *saved;
 	
 	tmp = g_mime_utils_header_decode_text((unsigned char *)subject);
 	saved = tmp;
@@ -642,9 +644,7 @@ void dm_base_subject(char *subject)
 		if (strlen(tmp)==olen)
 			break;
 	}
-	recoded = g_mime_utils_header_encode_text((unsigned char *)tmp);
-	strncpy(subject,recoded,strlen(subject)+1);
-	g_free(recoded);
+	strncpy(subject,tmp,strlen(subject)+1);
 	g_free(saved);
 }
 

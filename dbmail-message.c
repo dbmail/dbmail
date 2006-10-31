@@ -1061,15 +1061,7 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 			internet_address_list_destroy(alist);
 
 		} else {
-			unsigned char *s = (unsigned char *)g_strdup(raw);
-			value = g_mime_utils_header_encode_text(s);
-			g_free(s);
-		}
-	
-		if (g_mime_utils_text_is_8bit((unsigned char *)value, strlen(value))) {
-			TRACE(TRACE_DEBUG, "encoding 8bit headervalue failed (%s) [%s] -> [%s]", isaddr?"phrase":"text", raw, value);
-			g_free(value);
-			continue;
+			value = g_mime_iconv_locale_to_utf8((const char *)raw);
 		}
 
 		safe_value = dm_stresc(value);
@@ -1107,11 +1099,10 @@ static void insert_address_cache(u64_t physid, const char *field, InternetAddres
 		ia = ialist->address;
 		g_return_if_fail(ia != NULL);
 
-		rname = ia->name ? g_mime_utils_header_encode_phrase((unsigned char *)ia->name): "";
+		rname = ia->name ? ia->name: "";
 		/* address fields are truncated to column width */
 		name = dm_strnesc(rname, CACHE_WIDTH_ADDR);
 		addr = dm_strnesc(ia->value.addr ? ia->value.addr : "", CACHE_WIDTH_ADDR);
-		g_free(rname);
 
 		g_string_printf(q, "INSERT INTO %s%sfield (physmessage_id, %sname, %saddr) "
 				"VALUES (%llu,'%s','%s')", DBPFX, field, field, field, 
@@ -1133,23 +1124,12 @@ static void insert_address_cache(u64_t physid, const char *field, InternetAddres
 static void insert_field_cache(u64_t physid, const char *field, const char *value)
 {
 	GString *q;
-	gchar *s, *rvalue, *clean_value;
+	gchar *clean_value;
 
 	g_return_if_fail(value != NULL);
-	
-	s = g_strdup(value);
-	rvalue = g_mime_utils_header_encode_phrase((unsigned char *)s);
-	g_free(s);
-
-	if (g_mime_utils_text_is_8bit((unsigned char *)rvalue, strlen(rvalue))) {
-		TRACE(TRACE_WARNING, "unable to encode 8bit value [%s]", value);
-		g_free(rvalue);
-		return;
-	}
 
 	/* field values are truncated to 255 bytes */
-	clean_value = dm_strnesc(rvalue,CACHE_WIDTH_FIELD);
-	g_free(rvalue);
+	clean_value = dm_strnesc(value,CACHE_WIDTH_FIELD);
 
 	q = g_string_new("");
 
@@ -1239,7 +1219,7 @@ void dbmail_message_cache_subjectfield(const struct DbmailMessage *self)
 	char *value, *raw;
 	char *s;
 	
-	raw = (char *)dbmail_message_get_header(self,"Subject");
+	raw = (char *)g_mime_message_get_subject(GMIME_MESSAGE(self->content));
 
 	if (! raw) {
 		trace(TRACE_MESSAGE,"%s,%s: no subject field value [%llu]",
@@ -1296,32 +1276,22 @@ void dbmail_message_cache_referencesfield(const struct DbmailMessage *self)
 	
 void dbmail_message_cache_envelope(const struct DbmailMessage *self)
 {
-	GString *q;
-	char *envelope, *clean;
+	char *q, *envelope, *clean;
 
 	envelope = imap_get_envelope(GMIME_MESSAGE(self->content));
-
-	if (g_mime_utils_text_is_8bit((unsigned char *)envelope, strlen(envelope))) {
-		TRACE(TRACE_WARNING,"envelope is 8bit [%s]", envelope);
-		g_free(envelope);
-		return;
-	}
-	
 	clean = dm_stresc(envelope);
 
-	q = g_string_new("");
-
-	g_string_printf(q, "INSERT INTO %senvelope (physmessage_id, envelope) "
+	q = g_strdup_printf("INSERT INTO %senvelope (physmessage_id, envelope) "
 			"VALUES (%llu,'%s')", DBPFX, self->physid, clean);
 
 	g_free(clean);
 	g_free(envelope);
 
-	if (db_query(q->str)) {
+	if (db_query(q)) {
 		trace(TRACE_ERROR, "%s,%s: insert envelope failed [%s]",
-				__FILE__, __func__, q->str);
+				__FILE__, __func__, q);
 	}
-	g_string_free(q,TRUE);
+	g_free(q);
 
 }
 

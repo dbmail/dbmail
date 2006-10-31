@@ -453,7 +453,7 @@ START_TEST(test_dbmail_message_construct)
 	struct DbmailMessage *message = dbmail_message_new();
 	message = dbmail_message_construct(message,recipient,sender,subject,body);
 	result = dbmail_message_to_string(message);
-//	fail_unless(MATCH(expect,result),"dbmail_message_construct failed\n%s\n%s", expect, result);
+	fail_unless(MATCH(expect,result),"dbmail_message_construct failed\n%s\n%s", expect, result);
 	dbmail_message_free(message);
 	g_free(body);
 	g_free(expect);
@@ -461,7 +461,7 @@ START_TEST(test_dbmail_message_construct)
 	body = g_strdup("Mit freundlichen Gr=C3=BC=C3=9Fen");
 	message = dbmail_message_new();
 	message = dbmail_message_construct(message,recipient,sender,subject,body);
-	printf ("%s\n", dbmail_message_to_string(message));
+	//printf ("%s\n", dbmail_message_to_string(message));
 	dbmail_message_free(message);
 	g_free(body);
 }
@@ -469,15 +469,13 @@ END_TEST
 
 START_TEST(test_encoding)
 {
-	unsigned char *enc, *dec;
+	char *raw, *enc, *dec;
 
-	dec = g_strdup( "Kristoffer Br�nemyr");
-	printf("raw: %s\n", dec);
-	enc = g_mime_utils_header_encode_phrase(dec);
-	printf("enc: %s\n", enc);
-	g_free(dec);
-	dec = g_mime_utils_header_decode_phrase(enc);
-	printf("dec: %s\n", dec);
+	raw = g_strdup( "Kristoffer Br�nemyr");
+	enc = g_mime_utils_header_encode_phrase((unsigned char *)raw);
+	dec = g_mime_utils_header_decode_phrase((unsigned char *)enc);
+	fail_unless(MATCH(raw,dec),"decode/encode failed");
+	g_free(raw);
 	g_free(dec);
 	g_free(enc);
 	
