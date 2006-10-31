@@ -1,5 +1,7 @@
 2006-10-31  Paul J Stevens <paul@nfg.nl>
 
+	* check_dbmail_imapd.c, check_dbmail_message.c, dbmail-message.c, misc.c:
+	convert cache table values to utf8 before inserting them into the database
 	* modules/authldap.c:
 	log last login in sql also for authldap
 	* lmtp.c:
