@@ -1,3 +1,14 @@
+2006-10-31  Paul J Stevens <paul@nfg.nl>
+
+	* modules/authldap.c:
+	log last login in sql also for authldap
+	* lmtp.c:
+	TRACE cleanups
+	* misc.c:
+	guard against empty subject lines
+	* db.c:
+	fix inconsistency in usermap resolving
+
 2006-10-30  Aaron Stone  <aaron@serendipity.cx>
 
 	* db.c:
