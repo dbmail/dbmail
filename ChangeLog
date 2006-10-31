@@ -1,3 +1,9 @@
+2006-10-30  Aaron Stone  <aaron@serendipity.cx>
+
+	* db.c:
+	Use db_find_create_mailbox for POP3 user's INBOX.
+	Converted all trace calls to TRACE.
+
 2006-10-30  Paul J Stevens <paul@nfg.nl>
 
 	* db.c:
