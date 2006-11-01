@@ -135,8 +135,7 @@ static void dump_to_file(const char *filename, const char *buf)
 	FILE *f = fopen(filename,"a");
 	if (! f) {
 		se=errno;
-		trace(TRACE_DEBUG,"%s,%s: opening dumpfile failed [%s]",
-				__FILE__, __func__, strerror(se));
+		TRACE(TRACE_DEBUG,"opening dumpfile failed [%s]", strerror(se));
 		errno=se;
 		return;
 	}
@@ -153,10 +152,6 @@ static void dump_to_file(const char *filename, const char *buf)
 struct DbmailMessage * dbmail_message_new(void)
 {
 	struct DbmailMessage *self = g_new0(struct DbmailMessage,1);
-	if (! self) {
-		trace(TRACE_ERROR, "%s,%s: memory error", __FILE__, __func__);
-		return NULL;
-	}
 	
 	self->envelope_recipient = g_string_new("");
 
@@ -471,7 +466,7 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 
 	switch (dbmail_message_get_class(self)) {
 		case DBMAIL_MESSAGE:
-			trace(TRACE_DEBUG,"%s,%s: parse message",__FILE__,__func__);
+			TRACE(TRACE_DEBUG,"parse message");
 			self->content = GMIME_OBJECT(g_mime_parser_construct_message(parser));
 			if (g_mime_parser_get_scan_from(parser)) {
 				from = g_mime_parser_get_from(parser);
@@ -481,7 +476,7 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 
 			break;
 		case DBMAIL_MESSAGE_PART:
-		trace(TRACE_DEBUG,"%s,%s: parse part",__FILE__,__func__);
+		TRACE(TRACE_DEBUG,"parse part");
 			self->content = GMIME_OBJECT(g_mime_parser_construct_part(parser));
 			break;
 	}
@@ -596,18 +591,15 @@ GList * dbmail_message_get_header_addresses(struct DbmailMessage *message, const
 	const char *field_value;
 
 	if (!message || !field_name) {
-		trace(TRACE_WARNING, "%s,%s: received a NULL argument, this is a bug",
-				__FILE__, __func__);
+		TRACE(TRACE_WARNING, "received a NULL argument, this is a bug");
 		return NULL; 
 	}
 
 	field_value = dbmail_message_get_header(message, field_name);
-	trace(TRACE_INFO, "%s,%s: mail address parser looking at field [%s] with value [%s]",
-			__FILE__, __func__, field_name, field_value);
+	TRACE(TRACE_INFO, "mail address parser looking at field [%s] with value [%s]", field_name, field_value);
 	
 	if ((ialist = internet_address_parse_string(field_value)) == NULL) {
-		trace(TRACE_MESSAGE, "%s,%s: mail address parser error parsing header field",
-			__FILE__, __func__);
+		TRACE(TRACE_MESSAGE, "mail address parser error parsing header field");
 		return NULL;
 	}
 
@@ -622,8 +614,7 @@ GList * dbmail_message_get_header_addresses(struct DbmailMessage *message, const
 	
 	internet_address_list_destroy(ialisthead);
 
-	trace(TRACE_DEBUG, "%s,%s: mail address parser found [%d] email addresses",
-			__FILE__, __func__, g_list_length(result));
+	TRACE(TRACE_DEBUG, "mail address parser found [%d] email addresses", g_list_length(result));
 
 	return result;
 }
@@ -727,13 +718,13 @@ static struct DbmailMessage * _retrieve(struct DbmailMessage *self, char *query_
 			dbmail_message_get_physid(self));
 
 	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: sql error", __FILE__, __func__);
+		TRACE(TRACE_ERROR, "sql error");
 		return NULL;
 	}
 	
 	rows = db_num_rows();
 	if (rows < 1) {
-		trace(TRACE_ERROR, "%s,%s: blk error", __FILE__, __func__);
+		TRACE(TRACE_ERROR, "blk error");
 		db_free_result();
 		return NULL;	/* msg should have 1 block at least */
 	}
@@ -806,8 +797,7 @@ struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t
 	}
 	
 	if ((!self) || (! self->content)) {
-		trace(TRACE_ERROR, "%s,%s: retrieval failed for physid [%llu]", 
-			__FILE__, __func__, dbmail_message_get_physid(self));
+		TRACE(TRACE_ERROR, "retrieval failed for physid [%llu]", dbmail_message_get_physid(self));
 		return NULL;
 	}
 
@@ -833,15 +823,11 @@ int dbmail_message_store(struct DbmailMessage *self)
 	
 	switch (auth_user_exists(DBMAIL_DELIVERY_USERNAME, &user_idnr)) {
 	case -1:
-		trace(TRACE_ERROR, "%s,%s: unable to find user_idnr for user [%s]",
-		      __FILE__, __func__, DBMAIL_DELIVERY_USERNAME);
+		TRACE(TRACE_ERROR, "unable to find user_idnr for user [%s]", DBMAIL_DELIVERY_USERNAME);
 		return -1;
 		break;
 	case 0:
-		trace(TRACE_ERROR,
-		      "%s,%s: unable to find user_idnr for user "
-		      "[%s]. Make sure this system user is in the database!",
-		      __FILE__, __func__, DBMAIL_DELIVERY_USERNAME);
+		TRACE(TRACE_ERROR, "unable to find user_idnr for user [%s]. Make sure this system user is in the database!", DBMAIL_DELIVERY_USERNAME);
 		return -1;
 		break;
 	}
@@ -872,8 +858,7 @@ int dbmail_message_store(struct DbmailMessage *self)
 	if(db_insert_message_block(hdrs, hdrs_size, self->id, &messageblk_idnr,1) < 0)
 		return -1;
 	
-	trace(TRACE_DEBUG, "%s,%s: allocating [%ld] bytes of memory "
-	      "for readblock", __FILE__, __func__, READ_BLOCK_SIZE);
+	TRACE(TRACE_DEBUG, "allocating [%ld] bytes of memory for readblock", READ_BLOCK_SIZE);
 	
 	/* store body in several blocks (if needed */
 	if (store_message_in_blocks(body, body_size, self->id) < 0)
@@ -909,8 +894,7 @@ int _message_insert(struct DbmailMessage *self,
 		return -1;
 	
 	if (mailboxid == 0) {
-		trace(TRACE_ERROR, "%s,%s: mailbox [%s] could not be found!", 
-				__FILE__, __func__, mailbox);
+		TRACE(TRACE_ERROR, "mailbox [%s] could not be found!", mailbox);
 		return -1;
 	}
 
@@ -937,7 +921,7 @@ int _message_insert(struct DbmailMessage *self,
 		 MESSAGE_STATUS_INSERT);
 
 	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: query failed", __FILE__, __func__);
+		TRACE(TRACE_ERROR, "query failed");
 		return -1;
 	}
 
@@ -1072,8 +1056,7 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 		g_free(safe_value);
 
 		if (db_query(q->str)) {
-			trace(TRACE_ERROR,"%s,%s: insert headervalue failed",
-			      __FILE__,__func__);
+			TRACE(TRACE_ERROR,"insert headervalue failed");
 			g_string_free(q,TRUE);
 			g_tuples_destroy(values);
 			return TRUE;
@@ -1112,8 +1095,7 @@ static void insert_address_cache(u64_t physid, const char *field, InternetAddres
 		g_free(addr);
 		
 		if (db_query(q->str)) {
-			trace(TRACE_ERROR, "%s,%s: insert %sfield failed [%s]",
-					__FILE__, __func__, field, q->str);
+			TRACE(TRACE_ERROR, "insert %sfield failed [%s]", field, q->str);
 		}
 
 	}
@@ -1139,8 +1121,7 @@ static void insert_field_cache(u64_t physid, const char *field, const char *valu
 	g_free(clean_value);
 
 	if (db_query(q->str)) {
-		trace(TRACE_ERROR, "%s,%s: insert %sfield failed [%s]",
-				__FILE__, __func__, field, q->str);
+		TRACE(TRACE_ERROR, "insert %sfield failed [%s]", field, q->str);
 	}
 	g_string_free(q,TRUE);
 }
@@ -1222,8 +1203,7 @@ void dbmail_message_cache_subjectfield(const struct DbmailMessage *self)
 	raw = (char *)g_mime_message_get_subject(GMIME_MESSAGE(self->content));
 
 	if (! raw) {
-		trace(TRACE_MESSAGE,"%s,%s: no subject field value [%llu]",
-				__FILE__, __func__, self->physid);
+		TRACE(TRACE_MESSAGE,"no subject field value [%llu]", self->physid);
 		return;
 	}
 
@@ -1288,8 +1268,7 @@ void dbmail_message_cache_envelope(const struct DbmailMessage *self)
 	g_free(envelope);
 
 	if (db_query(q)) {
-		trace(TRACE_ERROR, "%s,%s: insert envelope failed [%s]",
-				__FILE__, __func__, q);
+		TRACE(TRACE_ERROR, "insert envelope failed [%s]", q);
 	}
 	g_free(q);
 

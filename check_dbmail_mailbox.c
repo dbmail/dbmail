@@ -64,9 +64,9 @@ static gboolean tree_print(gpointer key, gpointer value, gpointer data UNUSED)
 
 void tree_dump(GTree *t)
 {
-	trace(TRACE_DEBUG,"%s,%s: start",__FILE__,__func__);
+	TRACE(TRACE_DEBUG,"start");
 	g_tree_foreach(t,(GTraverseFunc)tree_print,NULL);
-	trace(TRACE_DEBUG,"%s,%s: done",__FILE__,__func__);
+	TRACE(TRACE_DEBUG,"done");
 }
 
 static gboolean _node_cat(u64_t *key, u64_t *value, GString **s)
@@ -84,9 +84,9 @@ char * tree_as_string(GTree *t)
 	char *result;
 	GString *s = g_string_new("");
 	
-	trace(TRACE_DEBUG,"%s,%s: start",__FILE__,__func__);
+	TRACE(TRACE_DEBUG,"start");
 	g_tree_foreach(t,(GTraverseFunc)_node_cat,&s);
-	trace(TRACE_DEBUG,"%s,%s: done",__FILE__,__func__);
+	TRACE(TRACE_DEBUG,"done");
 
 	result = s->str;
 	g_string_free(s,FALSE);

@@ -158,7 +158,7 @@ void SetTraceLevel(const char *service_name)
 	 * but we will use this value for trace_syslog if needed. */
 	config_get_value("trace_level", service_name, trace_level);
 	if (strlen(trace_level)) {
-		trace(TRACE_MESSAGE,
+		TRACE(TRACE_MESSAGE,
 			"Config item TRACE_LEVEL is deprecated. "
 			"Please use TRACE_SYSLOG and TRACE_STDERR instead.");
 	}
@@ -225,9 +225,7 @@ void GetDBParams(db_param_t * db_params)
 		db_params->port =
 		    (unsigned int) strtoul(port_string, NULL, 10);
 		if (errno == EINVAL || errno == ERANGE)
-			trace(TRACE_FATAL,
-			      "%s,%s: wrong value for sqlport in "
-			      "config file", __FILE__, __func__);
+			TRACE(TRACE_FATAL, "wrong value for sqlport in config file");
 	} else
 		db_params->port = 0;
 
@@ -241,8 +239,7 @@ void GetDBParams(db_param_t * db_params)
 	if (strlen(serverid_string) != 0) {
 		db_params->serverid = (unsigned int) strtol(serverid_string, NULL, 10);
 		if (errno == EINVAL || errno == ERANGE)
-			trace(TRACE_FATAL, "%s,%s: serverid invalid in config file",
-					__FILE__, __func__);
+			TRACE(TRACE_FATAL, "serverid invalid in config file");
 	} else {
 		db_params->serverid = 1;
 	}

@@ -21,7 +21,7 @@
 */
 
 #include "dbmail.h"
-
+#define THIS_MODULE "imap"
 
 /* Allocate a quota structure for `n_resources' resources. 
  * Returns NULL on failure.
@@ -116,23 +116,19 @@ quota_t *quota_get_quota(u64_t useridnr, char *quotaroot, char **errormsg)
 
 	/* Currently, there's only the quota root "". */
 	if (strcmp(quotaroot, "") != 0) {
-		trace(TRACE_ERROR,
-		      "quota_get_quota(): unknown quota root \"%s\"\n",
-		      quotaroot);
+		TRACE(TRACE_ERROR, "unknown quota root \"%s\"", quotaroot);
 		*errormsg = "unknown quota root";
 		return NULL;
 	}
 
 	if (auth_getmaxmailsize(useridnr, &maxmail_size) == -1) {
-		trace(TRACE_ERROR,
-		      "quota_get_quota(): auth_getmaxmailsize() failed\n");
+		TRACE(TRACE_ERROR, "auth_getmaxmailsize() failed\n");
 		*errormsg = "invalid user";
 		return NULL;
 	}
 
 	if (db_get_quotum_used(useridnr, &usage) == -1) {
-		trace(TRACE_ERROR,
-		      "quota_get_quota(): db_get_quotum_used() failed\n");
+		TRACE(TRACE_ERROR, "db_get_quotum_used() failed\n");
 		*errormsg = "internal error";
 		return NULL;
 	}
@@ -140,15 +136,14 @@ quota_t *quota_get_quota(u64_t useridnr, char *quotaroot, char **errormsg)
 	/* We support exactly one resource: RT_STORAGE */
 	quota = quota_alloc(1);
 	if (quota == NULL) {
-		trace(TRACE_ERROR, "quota_get_quota(): out of memory\n");
+		TRACE(TRACE_ERROR, "out of memory\n");
 		*errormsg = "out of memory";
 		return NULL;
 	}
 
 	/* Set quota root */
 	if (quota_set_root(quota, quotaroot)) {
-		trace(TRACE_ERROR,
-		      "quota_get_quota(): quota_set_root() failed\n");
+		TRACE(TRACE_ERROR, "quota_set_root() failed\n");
 		*errormsg = "out of memory";
 		return NULL;
 	}

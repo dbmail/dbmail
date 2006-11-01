@@ -26,6 +26,7 @@
 #include "dbmail.h"
 #include <regex.h>
 #include <sqlite3.h>
+#define THIS_MODULE "sql"
 
 db_param_t _db_params;
 
@@ -56,7 +57,7 @@ const char * db_get_sql(sql_fragment_t frag)
 			return "";
 		break;
 		case SQL_REGEXP:
-			trace(TRACE_ERROR, "We deliberately don't support REGEXP operations.");
+			TRACE(TRACE_ERROR, "We deliberately don't support REGEXP operations.");
 			sqlite3_close(conn);
 			exit(255);
 		break;
@@ -247,14 +248,13 @@ int db_connect()
 {
 	int result;
 	if ((result = sqlite3_open(_db_params.db, &conn)) != SQLITE_OK) {
-		trace(TRACE_FATAL, "%s,%s: sqlite3_open failed: %s",
-		      __FILE__, __func__, sqlite3_errmsg(conn));
+		TRACE(TRACE_FATAL, "sqlite3_open failed: %s", sqlite3_errmsg(conn));
 		sqlite3_close(conn);
 		return -1;
 	}
 	if (sqlite3_create_function(conn, "REGEXP", 2, SQLITE_ANY, NULL, (void *)dbsqlite_cslike, NULL, NULL) != SQLITE_OK) {
 		sqlite3_close(conn);
-		trace(TRACE_FATAL, "%s,%s: sqlite3_create_function failed", __FILE__,__func__);
+		TRACE(TRACE_FATAL, "sqlite3_create_function failed");
 		return -1;
 	}
 	sqlite3_busy_timeout(conn, 60000);
@@ -312,19 +312,15 @@ int db_query(const char *the_query)
 	} else {
 		lastq = (struct qtmp *)malloc(sizeof(struct qtmp));
 		if (!lastq) {
-			trace(TRACE_ERROR,
-			      "%si,%s: malloc failed: %s",
-			      __FILE__, __func__, strerror(errno));
+			TRACE(TRACE_ERROR, "malloc failed: %s", strerror(errno));
 			return -1;
 		}
 	}
-	trace(TRACE_DEBUG,"%s,%s: %s", __FILE__, __func__, the_query);
+	TRACE(TRACE_DEBUG,"%s", the_query);
 
 	if (sqlite3_get_table(conn, the_query, &lastq->resp,
 				(int *)&lastq->rows, (int *)&lastq->cols, &errmsg) != SQLITE_OK) {
-		trace(TRACE_ERROR,
-		      "%si,%s: sqlite3_get_table failed: %s",
-		      __FILE__, __func__, errmsg);
+		TRACE(TRACE_ERROR, "sqlite3_get_table failed: %s", errmsg);
 		sqlite3_free(errmsg);
 		return -1;
 	}

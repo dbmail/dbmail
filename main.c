@@ -109,7 +109,7 @@ int main(int argc, char *argv[])
 		/* Do something with this option. */
 		switch (c) {
 		case 't':
-			trace(TRACE_INFO, "%s,%s: using NORMAL_DELIVERY", __FILE__, __func__);
+			TRACE(TRACE_INFO, "using NORMAL_DELIVERY");
 
 			if (optarg) {
 				if (deliver_to_header) {
@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
 				brute_force = 1;
 			/* Fall through. */
 		case 'm':
-			trace(TRACE_INFO, "%s,%s: using SPECIAL_DELIVERY to mailbox", __FILE__, __func__);
+			TRACE(TRACE_INFO, "using SPECIAL_DELIVERY to mailbox");
 
 			if (deliver_to_mailbox) {
 				printf("Only one mailbox name may be specified.\n");
@@ -145,14 +145,14 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'r':
-			trace(TRACE_INFO, "%s,%s: using RETURN_PATH for bounces", __FILE__, __func__);
+			TRACE(TRACE_INFO, "using RETURN_PATH for bounces");
 
 			/* Add argument onto the returnpath list. */
 			returnpath = dm_strdup(optarg);
 			break;
 
 		case 'u':
-			trace(TRACE_INFO, "%s,%s: using SPECIAL_DELIVERY to usernames", __FILE__, __func__);
+			TRACE(TRACE_INFO, "using SPECIAL_DELIVERY to usernames");
 
 			dsnuser_init(&dsnuser);
 			dsnuser.address = dm_strdup(optarg);
@@ -160,7 +160,7 @@ int main(int argc, char *argv[])
 
 			/* Add argument onto the users list. */
 			if (dm_list_nodeadd (&dsnusers, &dsnuser, sizeof(deliver_to_user_t)) == 0) {
-				trace(TRACE_ERROR, "%s,%s: out of memory while adding usernames", __FILE__, __func__);
+				TRACE(TRACE_ERROR, "out of memory while adding usernames");
 				exitcode = EX_TEMPFAIL;
 				goto freeall;
 			}
@@ -168,7 +168,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'd':
-			trace(TRACE_INFO, "%s,%s: using SPECIAL_DELIVERY to email addresses", __FILE__, __func__);
+			TRACE(TRACE_INFO, "using SPECIAL_DELIVERY to email addresses");
 
 			dsnuser_init(&dsnuser);
 			dsnuser.address = dm_strdup(optarg);
@@ -176,7 +176,7 @@ int main(int argc, char *argv[])
 
 			/* Add argument onto the users list. */
 			if (dm_list_nodeadd (&dsnusers, &dsnuser, sizeof(deliver_to_user_t)) == 0) {
-				trace(TRACE_ERROR, "%s,%s: out of memory while adding email addresses", __FILE__, __func__);
+				TRACE(TRACE_ERROR, "out of memory while adding email addresses");
 				exitcode = EX_TEMPFAIL;
 				goto freeall;
 			}
@@ -212,7 +212,7 @@ int main(int argc, char *argv[])
 		 * to see if there were any errors worth stopping for. */
 		if (usage_error) {
 			do_showhelp();
-			trace(TRACE_DEBUG, "%s,%s: usage error; setting EX_USAGE and aborting", __FILE__, __func__);
+			TRACE(TRACE_DEBUG, "usage error; setting EX_USAGE and aborting");
 			exitcode = EX_USAGE;
 			goto freeall;
 		}
@@ -221,7 +221,7 @@ int main(int argc, char *argv[])
 	/* ...or if there weren't any command line arguments at all. */
 	if (argc < 2) {
 		do_showhelp();
-		trace(TRACE_DEBUG, "%s,%s: no arguments; setting EX_USAGE and aborting", __FILE__, __func__);
+		TRACE(TRACE_DEBUG, "no arguments; setting EX_USAGE and aborting");
 		exitcode = EX_USAGE;
 		goto freeall;
 	}
@@ -229,7 +229,7 @@ int main(int argc, char *argv[])
 	/* Read in the config file; do it after getopt
 	 * in case -f config.alt was specified. */
 	if (config_read(configFile) == -1) {
-		trace(TRACE_ERROR, "%s,%s: error reading alternate config file [%s]", __FILE__, __func__, configFile);
+		TRACE(TRACE_ERROR, "error reading alternate config file [%s]", configFile);
 		exitcode = EX_TEMPFAIL;
 		goto freeall;
 
@@ -238,13 +238,13 @@ int main(int argc, char *argv[])
 	GetDBParams(&_db_params);
 
 	if (db_connect() != 0) {
-		trace(TRACE_ERROR, "%s,%s: database connection failed", __FILE__, __func__);
+		TRACE(TRACE_ERROR, "database connection failed");
 		exitcode = EX_TEMPFAIL;
 		goto freeall;
 	}
 
 	if (auth_connect() != 0) {
-		trace(TRACE_ERROR, "%s,%s: authentication connection failed", __FILE__, __func__);
+		TRACE(TRACE_ERROR, "authentication connection failed");
 		exitcode = EX_TEMPFAIL;
 		goto freeall;
 	}
@@ -256,16 +256,14 @@ int main(int argc, char *argv[])
 
 	/* read the whole message */
 	if (! (msg = dbmail_message_new_from_stream(stdin, DBMAIL_STREAM_PIPE))) {
-		trace(TRACE_ERROR, "%s,%s: error reading message",
-		      __FILE__, __func__);
+		TRACE(TRACE_ERROR, "error reading message");
 		exitcode = EX_TEMPFAIL;
 		goto freeall;
 	}
 	
 	if (dbmail_message_get_hdrs_size(msg, FALSE) > READ_BLOCK_SIZE) {
-		trace(TRACE_ERROR, "%s,%s: failed to read header because header is "
-		      "too big (larger than READ_BLOCK_SIZE (%llu))",
-		      __FILE__, __func__, (u64_t) READ_BLOCK_SIZE);
+		TRACE(TRACE_ERROR, "failed to read header because header is too "
+			"big (larger than READ_BLOCK_SIZE (%llu))", (u64_t) READ_BLOCK_SIZE);
 		exitcode = EX_DATAERR;
 		goto freeall;
 	}
@@ -283,17 +281,15 @@ int main(int argc, char *argv[])
 		// mail_address_build_list used to fix that, I think.
 		dbmail_message_set_header(msg, "Return-Path", dbmail_message_get_header(msg, "From"));
 	} else {
-		trace(TRACE_DEBUG, "%s,%s: no return path found", __FILE__, __func__);
+		TRACE(TRACE_DEBUG, "no return path found");
 	}
 
 	/* If the NORMAL delivery mode has been selected... */
 	if (deliver_to_header != NULL) {
 		/* parse for destination addresses */
-		trace(TRACE_DEBUG, "%s,%s: scanning for [%s]",
-				__FILE__, __func__, deliver_to_header);
+		TRACE(TRACE_DEBUG, "scanning for [%s]", deliver_to_header);
 		if (! (userlist = dbmail_message_get_header_addresses(msg, deliver_to_header))) {
-			trace(TRACE_MESSAGE, "%s,%s: no email addresses (scanned for %s)",
-					__FILE__, __func__, deliver_to_header);
+			TRACE(TRACE_MESSAGE, "no email addresses (scanned for %s)", deliver_to_header);
 			exitcode = EX_NOUSER;
 			goto freeall;
 		}
@@ -305,8 +301,7 @@ int main(int argc, char *argv[])
 			dsnuser.address = dm_strdup((char *) userlist->data);
 
 			if (! dm_list_nodeadd(&dsnusers, &dsnuser, sizeof(deliver_to_user_t))) {
-				trace(TRACE_ERROR,"%s,%s: out of memory in dm_list_nodeadd",
-						__FILE__, __func__);
+				TRACE(TRACE_ERROR,"out of memory in dm_list_nodeadd");
 				exitcode = EX_TEMPFAIL;
 				goto freeall;
 			}
@@ -318,7 +313,7 @@ int main(int argc, char *argv[])
 
 	/* If the MAILBOX delivery mode has been selected... */
 	if (deliver_to_mailbox != NULL) {
-		trace(TRACE_DEBUG, "%s,%s: setting mailbox for all deliveries to [%s]", __FILE__, __func__, deliver_to_mailbox);
+		TRACE(TRACE_DEBUG, "setting mailbox for all deliveries to [%s]", deliver_to_mailbox);
 		/* Loop through the dsnusers list, setting the destination mailbox. */
 		for (tmp = dm_list_getstart(&dsnusers); tmp != NULL; tmp = tmp->nextnode) {
 			((deliver_to_user_t *)tmp->data)->mailbox = dm_strdup(deliver_to_mailbox);
@@ -331,7 +326,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (dsnuser_resolve_list(&dsnusers) == -1) {
-		trace(TRACE_ERROR, "%s,%s: dsnuser_resolve_list failed", __FILE__, __func__);
+		TRACE(TRACE_ERROR, "dsnuser_resolve_list failed");
 		/* Most likely a random failure... */
 		exitcode = EX_TEMPFAIL;
 		goto freeall;
@@ -339,7 +334,7 @@ int main(int argc, char *argv[])
 
 	/* inserting messages into the database */
 	if (insert_messages(msg, &dsnusers) == -1) {
-		trace(TRACE_ERROR, "%s,%s: insert_messages failed", __FILE__, __func__);
+		TRACE(TRACE_ERROR, "insert_messages failed");
 		/* Most likely a random failure... */
 		exitcode = EX_TEMPFAIL;
 	}

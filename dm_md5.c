@@ -41,6 +41,7 @@
  */
 
 #include "dbmail.h"
+#define THIS_MODULE "md5"
 
 typedef unsigned int uint32;
 
@@ -299,15 +300,13 @@ char *dm_md5(const unsigned char * const buf)
 	int i;
 
 	if (buf == NULL) {
-		trace(TRACE_ERROR, "%s,%s: received NULL argument",
-		      __FILE__, __func__);
+		TRACE(TRACE_ERROR, "received NULL argument");
 		return NULL;
 	}
 
 	md5hash = g_new0(char, 33);
 	if (md5hash == NULL) {
-		trace(TRACE_ERROR, "%s,%s: error allocating memory",
-		      __FILE__, __func__);
+		TRACE(TRACE_ERROR, "error allocating memory");
 		return NULL;
 	}
 
@@ -330,8 +329,7 @@ char *dm_md5_base64(const unsigned char * const buf)
 	unsigned char base64[24];
 
 	if (buf == NULL) {
-		trace(TRACE_ERROR, "%s,%s: received NULL argument",
-		      __FILE__, __func__);
+		TRACE(TRACE_ERROR, "received NULL argument");
 		return NULL;
 	}
 

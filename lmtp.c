@@ -285,7 +285,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 	    !((cmdtype == LMTP_LHLO) || (cmdtype == LMTP_DATA) ||
 	      (cmdtype == LMTP_RSET) || (cmdtype == LMTP_QUIT) ||
 	      (cmdtype == LMTP_NOOP) || (cmdtype == LMTP_HELP) )) {
-		trace(TRACE_ERROR, "ARGUMENT %d", cmdtype);
+		TRACE(TRACE_ERROR, "ARGUMENT %d", cmdtype);
 		return lmtp_error(session, stream, "500 This command requires an argument.\r\n");
 	}
 
@@ -495,7 +495,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 					dsnuser.address = tmpaddr;
 
 					if (dsnuser_resolve(&dsnuser) != 0) {
-						trace(TRACE_ERROR, "main(): dsnuser_resolve_list failed");
+						TRACE(TRACE_ERROR, "dsnuser_resolve_list failed");
 						ci_write((FILE *) stream, "430 Temporary failure in recipient lookup\r\n");
 						dsnuser_free(&dsnuser);
 						return 1;
@@ -533,20 +533,17 @@ int lmtp(void *stream, void *instream, char *buffer,
 					"503 No valid recipients\r\n");
 			} else {
 				if (dm_list_length(&rcpt) > 0 && dm_list_length(&from) > 0) {
-					trace(TRACE_DEBUG,
-					      "main(): requesting sender to begin message.");
+					TRACE(TRACE_DEBUG, "requesting sender to begin message.");
 					ci_write((FILE *) stream,
 						"354 Start mail input; end with <CRLF>.<CRLF>\r\n");
 				} else {
 					if (dm_list_length(&rcpt) < 1) {
-						trace(TRACE_DEBUG,
-						      "main(): no valid recipients found, cancel message.");
+						TRACE(TRACE_DEBUG, "no valid recipients found, cancel message.");
 						ci_write((FILE *) stream,
 							"503 No valid recipients\r\n");
 					}
 					if (dm_list_length(&from) < 1) {
-						trace(TRACE_DEBUG,
-						      "main(): no sender provided, session cancelled.");
+						TRACE(TRACE_DEBUG, "no sender provided, session cancelled.");
 						ci_write((FILE *) stream,
 							"554 No valid sender.\r\n");
 					}
@@ -560,20 +557,18 @@ int lmtp(void *stream, void *instream, char *buffer,
 					char *s;
 
 					if (! (msg = dbmail_message_new_from_stream((FILE *)instream, DBMAIL_STREAM_LMTP))) {
-						trace(TRACE_ERROR, "%s,%s: dbmail_message_new_from_stream() failed",
-						      __FILE__, __func__);
+						TRACE(TRACE_ERROR, "dbmail_message_new_from_stream() failed");
 						discard_client_input((FILE *) instream);
 						ci_write((FILE *) stream, "500 Error reading message");
 						return 1;
 					}
 					
 					s = dbmail_message_to_string(msg);
-					trace(TRACE_DEBUG, "%s,%s: whole message = %s", __FILE__, __func__, s);
+					TRACE(TRACE_DEBUG, "whole message = %s", s);
 					g_free(s);
 
 					if (dbmail_message_get_hdrs_size(msg, FALSE) > READ_BLOCK_SIZE) {
-						trace(TRACE_ERROR, "%s,%s: header is too big",
-								__FILE__, __func__);
+						TRACE(TRACE_ERROR, "header is too big");
 						discard_client_input((FILE *) instream);
 						ci_write((FILE *)stream, "500 Error reading header, "
 							"header too big.\r\n");

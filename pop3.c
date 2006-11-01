@@ -24,6 +24,7 @@
 
 
 #include "dbmail.h"
+#define THIS_MODULE "pop3"
 
 #define INCOMING_BUFFER_SIZE 512
 #define APOP_STAMP_SIZE 255
@@ -105,8 +106,7 @@ int pop3_handle_connection(clientinfo_t * ci)
 			session.apop_stamp);
 		fflush(ci->tx);
 	} else {
-		trace(TRACE_MESSAGE, "%s,%s: TX stream is null!", 
-				__FILE__, __func__);
+		TRACE(TRACE_MESSAGE, "TX stream is null!");
 		g_free(session.apop_stamp);
 		return 0;
 	}
@@ -175,8 +175,7 @@ int pop3_handle_connection(clientinfo_t * ci)
 	if (session.username != NULL && (session.was_apop || session.password != NULL)) {
 		switch (session.SessionResult) {
 		case 0:
-			trace(TRACE_MESSAGE, "%s,%s: user %s logging out [messages=%llu, octets=%llu]", 
-					__FILE__, __func__, 
+			TRACE(TRACE_MESSAGE, "user %s logging out [messages=%llu, octets=%llu]", 
 					session.username, 
 					session.virtual_totalmessages, 
 					session.virtual_totalsize);
@@ -186,27 +185,22 @@ int pop3_handle_connection(clientinfo_t * ci)
 			break;
 
 		case 1:
-			trace(TRACE_ERROR, "%s,%s: EOF from client, connection terminated",
-					__FILE__, __func__);
+			TRACE(TRACE_ERROR, "EOF from client, connection terminated");
 			break;
 
 		case 2:
-			trace(TRACE_ERROR, "%s,%s: alert! possible flood attempt, closing connection",
-					__FILE__, __func__);
+			TRACE(TRACE_ERROR, "alert! possible flood attempt, closing connection");
 			break;
 
 		case 3:
-			trace(TRACE_ERROR, "%s,%s: authorization layer failure",
-					__FILE__, __func__);
+			TRACE(TRACE_ERROR, "authorization layer failure");
 			break;
 		case 4:
-			trace(TRACE_ERROR, "%s,%s: storage layer failure",
-					__FILE__, __func__);
+			TRACE(TRACE_ERROR, "storage layer failure");
 			break;
 		}
 	} else {
-		trace(TRACE_ERROR, "%s,%s: error, incomplete session",
-				__FILE__, __func__);
+		TRACE(TRACE_ERROR, "error, incomplete session");
 	}
 	
 	/* remove session info like messagelist etc. */
@@ -236,8 +230,7 @@ int pop3_error(PopSession_t * session, void *stream,
 	va_list argp;
 
 	if (session->error_count >= MAX_ERRORS) {
-		trace(TRACE_MESSAGE, "%s,%s: too many errors (MAX_ERRORS is %d)", 
-				__FILE__, __func__, 
+		TRACE(TRACE_MESSAGE, "too many errors (MAX_ERRORS is %d)", 
 				MAX_ERRORS);
 		fprintf((FILE *) stream, "-ERR loser, go play somewhere else\r\n");
 		session->SessionResult = 2;	/* possible flood */
@@ -248,8 +241,7 @@ int pop3_error(PopSession_t * session, void *stream,
 		va_end(argp);
 	}
 
-	trace(TRACE_DEBUG, "%s,%s: an invalid command was issued",
-			__FILE__, __func__);
+	TRACE(TRACE_DEBUG, "an invalid command was issued");
 	session->error_count++;
 	return 1;
 }
@@ -278,8 +270,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 
 	/* buffer overflow attempt */
 	if (strlen(buffer) > MAX_IN_BUFFER) {
-		trace(TRACE_DEBUG, "%s,%s: buffer overflow attempt",
-				__FILE__, __func__);
+		TRACE(TRACE_DEBUG, "buffer overflow attempt");
 		return -3;
 	}
 
@@ -291,8 +282,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 	/* end buffer */
 	buffer[indx] = '\0';
 
-	trace(TRACE_DEBUG, "%s,%s: incoming buffer: [%s]",
-			__FILE__, __func__, 
+	TRACE(TRACE_DEBUG, "incoming buffer: [%s]", 
 			buffer);
 
 	command = buffer;
@@ -306,8 +296,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 		if (strlen(value) == 0)
 			value = NULL;	/* no value specified */
 		else {
-			trace(TRACE_DEBUG, "%s,%s: command issued :cmd [%s], value [%s]\n",
-					__FILE__, __func__,
+			TRACE(TRACE_DEBUG, "command issued :cmd [%s], value [%s]\n",
 					command, value);
 		}
 	}
@@ -319,8 +308,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 			break;
 		}
 
-	trace(TRACE_DEBUG, "%s,%s: command looked up as commandtype %d",
-			__FILE__, __func__, 
+	TRACE(TRACE_DEBUG, "command looked up as commandtype %d", 
 			cmdtype);
 
 	/* commands that are allowed to have no arguments */
@@ -394,8 +382,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 			session->SessionResult = 3;
 			return -1;
 		case 0:
-			trace(TRACE_ERROR, "%s,%s: user [%s] tried to login with wrong password", 
-					__FILE__, __func__, session->username);
+			TRACE(TRACE_ERROR, "user [%s] tried to login with wrong password", session->username);
 
 			g_free(session->username);
 			session->username = NULL;
@@ -410,8 +397,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 			session->state = POP3_TRANSACTION_STATE;
 
 			/* now we're going to build up a session for this user */
-			trace(TRACE_DEBUG, "%s,%s: validation OK, building a session for user [%s]", 
-					__FILE__, __func__,
+			TRACE(TRACE_DEBUG, "validation OK, building a session for user [%s]",
 					session->username);
 
 			/* if pop_before_smtp is active, log this ip */
@@ -424,8 +410,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 						session->username, 
 						session->virtual_totalmessages, 
 						session->virtual_totalsize);
-				trace(TRACE_MESSAGE, "%s,%s: user %s logged in [messages=%llu, octets=%llu]",
-						__FILE__, __func__, 
+				TRACE(TRACE_MESSAGE, "user %s logged in [messages=%llu, octets=%llu]", 
 						session->username, 
 						session->virtual_totalmessages, 
 						session->virtual_totalsize);
@@ -485,8 +470,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 		return 1;
 
 	case POP3_RETR:
-		trace(TRACE_DEBUG, "%s,%s: RETR command, retrieving message",
-				__FILE__, __func__);
+		TRACE(TRACE_DEBUG, "RETR command, retrieving message");
 
 		if (session->state != POP3_TRANSACTION_STATE)
 			return pop3_error(session, stream, "-ERR wrong command mode\r\n");
@@ -494,8 +478,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 		tmpelement = dm_list_getstart(&(session->messagelst));
 
 		/* selecting a message */
-		trace(TRACE_DEBUG, "%s,%s: RETR command, selecting message",
-				__FILE__, __func__);
+		TRACE(TRACE_DEBUG, "RETR command, selecting message");
 		
 		while (tmpelement != NULL) {
 			msg = (struct message *) tmpelement->data;
@@ -650,8 +633,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 		 * by db_getencryption()
 		 */
 		if (auth_user_exists(session->username, &user_idnr) == -1) {
-			trace(TRACE_ERROR, "%s,%s: error finding if user exists. username = [%s]", 
-					__FILE__, __func__, 
+			TRACE(TRACE_ERROR, "error finding if user exists. username = [%s]", 
 					session->username);
 			return -1;
 		}
@@ -664,8 +646,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 			return pop3_error(session, stream, "-ERR APOP command is not supported for this user\r\n");
 		}
 
-		trace(TRACE_DEBUG, "%s,%s: APOP auth, username [%s], md5_hash [%s]", 
-				__FILE__, __func__, session->username, md5_apop_he);
+		TRACE(TRACE_DEBUG, "APOP auth, username [%s], md5_hash [%s]", session->username, md5_apop_he);
 
 		result = auth_md5_validate(ci,session->username, md5_apop_he, session->apop_stamp);
 
@@ -677,8 +658,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 			session->SessionResult = 3;
 			return -1;
 		case 0:
-			trace(TRACE_ERROR, "%s,%s: user [%s] tried to login with wrong password", 
-					__FILE__, __func__, session->username);
+			TRACE(TRACE_ERROR, "user [%s] tried to login with wrong password", session->username);
 
 			g_free(session->username);
 			session->username = NULL;
@@ -693,8 +673,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 			session->state = POP3_TRANSACTION_STATE;
 
 			/* user seems to be valid, let's build a session */
-			trace(TRACE_DEBUG, "%s,%s: validation OK, building a session for user [%s]", 
-					__FILE__, __func__, 
+			TRACE(TRACE_DEBUG, "validation OK, building a session for user [%s]", 
 					session->username);
 
 			/* if pop_before_smtp is active, log this ip */
@@ -707,8 +686,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 						session->username, 
 						session->virtual_totalmessages, 
 						session->virtual_totalsize);
-				trace(TRACE_MESSAGE, "%s,%s: user %s logged in [messages=%llu, octets=%llu]", 
-						__FILE__, __func__, 
+				TRACE(TRACE_MESSAGE, "user %s logged in [messages=%llu, octets=%llu]", 
 						session->username, 
 						session->virtual_totalmessages, 
 						session->virtual_totalsize);
@@ -754,14 +732,12 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 		if (top_messageid < 1)
 			return pop3_error(session, stream, "-ERR wrong parameter\r\n");
 
-		trace(TRACE_DEBUG, "%s,%s: TOP command (partially) retrieving message",
-				__FILE__, __func__);
+		TRACE(TRACE_DEBUG, "TOP command (partially) retrieving message");
 
 		tmpelement = dm_list_getstart(&(session->messagelst));
 
 		/* selecting a message */
-		trace(TRACE_DEBUG, "%s,%s: TOP command, selecting message",
-				__FILE__, __func__);
+		TRACE(TRACE_DEBUG, "TOP command, selecting message");
 
 		while (tmpelement != NULL) {
 			msg = (struct message *) tmpelement->data;
