@@ -26,6 +26,8 @@
 
 #include "dbmail.h"
 
+#define THIS_MODULE "config"
+
 /** dictionary which holds the configuration */
 static GKeyFile *config_dict = NULL;
 
@@ -45,9 +47,7 @@ int config_read(const char *config_filename)
 	
 	if (! g_key_file_load_from_file(config_dict, config_filename, G_KEY_FILE_NONE, NULL)) {
 		g_key_file_free(config_dict);
-                trace(TRACE_FATAL, "%s,%s: error reading "
-                      "config file %s", __FILE__, __func__,
-                      config_filename);
+                TRACE(TRACE_FATAL, "error reading config file %s", config_filename);
 		_exit(1);
 		return -1;
 	}
@@ -187,42 +187,30 @@ void GetDBParams(db_param_t * db_params)
 	field_t port_string, sock_string, serverid_string;
 	
 	if (config_get_value("driver", "DBMAIL", db_params->driver) < 0)
-		trace(TRACE_FATAL, "%s,%s: error getting config!",
-		      __FILE__, __func__);
+		TRACE(TRACE_FATAL, "error getting config! [driver]");
 	if (config_get_value("authdriver", "DBMAIL", db_params->authdriver) < 0)
-		trace(TRACE_FATAL, "%s,%s: error getting config!",
-		      __FILE__, __func__);
+		TRACE(TRACE_FATAL, "error getting config! [authdriver]");
 	if (config_get_value("sortdriver", "DBMAIL", db_params->sortdriver) < 0)
-		trace(TRACE_FATAL, "%s,%s: error getting config!",
-		      __FILE__, __func__);
+		TRACE(TRACE_FATAL, "error getting config! [sortdriver]");
 	if (config_get_value("host", "DBMAIL", db_params->host) < 0)
-		trace(TRACE_FATAL, "%s,%s: error getting config!",
-		      __FILE__, __func__);
+		TRACE(TRACE_FATAL, "error getting config! [host]");
 	if (config_get_value("db", "DBMAIL", db_params->db) < 0) 
-		trace(TRACE_FATAL, "%s,%s: error getting config!",
-		      __FILE__, __func__);
+		TRACE(TRACE_FATAL, "error getting config! [db]");
 	if (config_get_value("user", "DBMAIL", db_params->user) < 0) 
-		trace(TRACE_FATAL, "%s,%s: error getting config!",
-		      __FILE__, __func__);
+		TRACE(TRACE_FATAL, "error getting config! [user]");
 	if (config_get_value("pass", "DBMAIL", db_params->pass) < 0)
-		trace(TRACE_FATAL, "%s,%s: error getting config!",
-		      __FILE__, __func__);
+		TRACE(TRACE_FATAL, "error getting config! [pass]");
 	if (config_get_value("sqlport", "DBMAIL", port_string) < 0)
-		trace(TRACE_FATAL, "%s,%s: error getting config!",
-		      __FILE__, __func__);
+		TRACE(TRACE_FATAL, "error getting config! [sqlpost]");
 	if (config_get_value("sqlsocket", "DBMAIL", sock_string) < 0)
-		trace(TRACE_FATAL, "%s,%s: error getting config!",
-		      __FILE__, __func__);
+		TRACE(TRACE_FATAL, "error getting config! [sqlsocket]");
 	if (config_get_value("serverid", "DBMAIL", serverid_string) < 0)
-		trace(TRACE_FATAL, "%s,%s: error getting config!",
-		      __FILE__, __func__);
+		TRACE(TRACE_FATAL, "error getting config! [serverid]");
 	if (config_get_value("encoding", "DBMAIL", db_params->encoding) < 0)
-		trace(TRACE_FATAL, "%s,%s: error getting config!",
-		      __FILE__, __func__);
-
+		TRACE(TRACE_FATAL, "error getting config! [encoding]");
 	if (config_get_value("table_prefix", "DBMAIL", db_params->pfx) < 0)
-		trace(TRACE_FATAL, "%s,%s: error getting config!",
-		      __FILE__, __func__);
+		TRACE(TRACE_FATAL, "error getting config! [table_prefix]");
+
 	if (strcmp(db_params->pfx, "\"\"") == 0) {
 		/* FIXME: It appears that when the empty string is quoted
 		 * that the quotes themselves are returned as the value. */
