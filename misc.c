@@ -468,7 +468,9 @@ GList * g_list_append_printf(GList * list, char * format, ...)
 {
 	va_list argp;
 	va_start(argp, format);
-	return g_list_append(list, g_strdup_vprintf(format, argp));
+	list = g_list_append(list, g_strdup_vprintf(format, argp));
+	va_end(argp);
+	return list;
 }
 
 char * g_strcasestr(const char *haystack, const char *needle)
