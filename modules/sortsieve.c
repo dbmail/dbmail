@@ -27,7 +27,7 @@
 
 #include "dbmail.h"
 
-#define THIS_MODULE "sieve"
+#define THIS_MODULE "sort"
 
 /* Used by us to keep track of libSieve. */
 struct sort_context {

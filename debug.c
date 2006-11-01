@@ -37,14 +37,6 @@ void configure_debug(trace_t trace_syslog, trace_t trace_stderr)
 	TRACE_STDERR = trace_stderr;
 }
 
-void func_memtst(const char *filename, int line, int tst)
-{
-	if (tst != 0)
-		trace(TRACE_FATAL,
-		      "func_memtst(): fatal: %s:%d Memory error, result should not be NULL)",
-		      filename, line);
-}
-
 /* Make sure that these match trace_t. */
 static const char * const trace_text[] = {
 	"FATAL",
@@ -78,6 +70,7 @@ void newtrace(int isnew, trace_t level, const char * module,
 	va_list argp;
 
 	gchar *message;
+	const char *format = "%s:[%s] %s,%s(+%d): %s";
 	size_t l;
 
 	/* Return now if we're not logging anything. */
@@ -93,8 +86,7 @@ void newtrace(int isnew, trace_t level, const char * module,
 	
 	if (level <= TRACE_STDERR) {
 		if (isnew && TRACE_STDERR >= TRACE_DEBUG) {
-			fprintf(stderr, "%s module %s file %s func %s line %d: %s",
-				trace_to_text(level), module, file, function, line, message);
+			fprintf(stderr, format, trace_to_text(level), module, file, function, line, message);
 		} else {
 			fprintf(stderr, "%s %s", trace_to_text(level), message);
 		}
@@ -109,15 +101,13 @@ void newtrace(int isnew, trace_t level, const char * module,
 		if (level <= TRACE_WARNING) {
 			/* set LOG_ALERT at warnings */
 			if (isnew && TRACE_SYSLOG >= TRACE_DEBUG) {
-				syslog(LOG_ALERT, "%s module %s file %s func %s line %d: %s",
-					trace_to_text(level), module, file, function, line, message);
+				syslog(LOG_ALERT, format, trace_to_text(level), module, file, function, line, message);
 			} else {
 				syslog(LOG_ALERT, "%s %s", trace_to_text(level), message);
 			}
 		} else {
 			if (isnew && TRACE_SYSLOG >= TRACE_DEBUG) {
-				syslog(LOG_NOTICE, "%s module %s file %s func %s line %d: %s",
-					trace_to_text(level), module, file, function, line, message);
+				syslog(LOG_NOTICE, format, trace_to_text(level), module, file, function, line, message);
 			} else {
 				syslog(LOG_NOTICE, "%s %s", trace_to_text(level), message);
 			}

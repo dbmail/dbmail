@@ -21,6 +21,7 @@
 #include "dbmail.h"
 
 #define NR_ACL_FLAGS 9
+#define THIS_MODULE "acl"
 
 static const char *acl_right_strings[] = {
 	"lookup_flag",
@@ -124,10 +125,7 @@ ACLRight_t acl_get_right_from_char(char right_char)
 	case 'a':
 		return ACL_RIGHT_ADMINISTER;
 	default:
-		trace(TRACE_ERROR,
-		      "%s,%s: error wrong acl character. This "
-		      "error should have been caught earlier!", __FILE__,
-		      __func__);
+		TRACE(TRACE_ERROR, "error wrong acl character. This error should have been caught earlier!");
 		return ACL_RIGHT_NONE;
 	}
 }
@@ -155,9 +153,7 @@ acl_replace_rights(u64_t userid, u64_t mboxid, const char *rightsstring)
 	unsigned i;
 	int set;
 
-	trace(TRACE_DEBUG, "%s,%s: replacing rights for user [%llu], "
-	      "mailbox [%llu] to %s", __FILE__, __func__,
-	      userid, mboxid, rightsstring);
+	TRACE(TRACE_DEBUG, "replacing rights for user [%llu], mailbox [%llu] to %s", userid, mboxid, rightsstring);
 	for (i = ACL_RIGHT_LOOKUP; i < ACL_RIGHT_NONE; i++) {
 
 		if (strchr(rightsstring, (int) acl_right_chars[i]))
@@ -166,8 +162,7 @@ acl_replace_rights(u64_t userid, u64_t mboxid, const char *rightsstring)
 			set = 0;
 		if (db_acl_set_right
 		    (userid, mboxid, acl_right_strings[i], set) < 0) {
-			trace(TRACE_ERROR, "%s, %s: error replacing ACL",
-			      __FILE__, __func__);
+			TRACE(TRACE_ERROR, "error replacing ACL");
 			return -1;
 		}
 	}
@@ -207,9 +202,7 @@ char *acl_get_acl(u64_t mboxid)
 	result = db_acl_get_identifier(mboxid, &identifier_list);
 
 	if (result < 0) {
-		trace(TRACE_ERROR, "%s,%s: error when getting identifier "
-		      "list for mailbox [%llu].", __FILE__, __func__,
-		      mboxid);
+		TRACE(TRACE_ERROR, "error when getting identifier list for mailbox [%llu].", mboxid);
 		dm_list_free(&identifier_list.start);
 		return NULL;
 	}
@@ -218,22 +211,19 @@ char *acl_get_acl(u64_t mboxid)
 	 * of the mailbox
 	 */
 	if (db_get_mailbox_owner(mboxid, &userid) < 0) {
-		trace(TRACE_ERROR, "%s,%s: error querying ownership of "
-		      "mailbox", __FILE__, __func__);
+		TRACE(TRACE_ERROR, "error querying ownership of mailbox");
 		dm_list_free(&identifier_list.start);
 		return NULL;
 	}
 
 	if ((username = auth_get_userid(userid)) == NULL) {
-		trace(TRACE_ERROR, "%s,%s: error getting username for "
-		      "user [%llu]", __FILE__, __func__, userid);
+		TRACE(TRACE_ERROR, "error getting username for user [%llu]", userid);
 		dm_list_free(&identifier_list.start);
 		return NULL;
 	}
 	
 	if (dm_list_nodeadd(&identifier_list, username, strlen(username) + 1) == NULL) { 
-		trace(TRACE_ERROR, "%s,%s: error adding username to list",
-		      __FILE__, __func__);
+		TRACE(TRACE_ERROR, "error adding username to list");
 		dm_list_free(&identifier_list.start);
 		dm_free(username);
 		return NULL;
@@ -241,7 +231,7 @@ char *acl_get_acl(u64_t mboxid)
 	
 	dm_free(username);
 
-	trace(TRACE_DEBUG, "%s,%s: before looping identifiers!", __FILE__, __func__);
+	TRACE(TRACE_DEBUG, "before looping identifiers!");
 	
 	identifier_elm = dm_list_getstart(&identifier_list);
 	while (identifier_elm) {
@@ -250,12 +240,11 @@ char *acl_get_acl(u64_t mboxid)
 		identifier_elm = identifier_elm->nextnode;
 	}
 
-	trace(TRACE_DEBUG, "%s,%s: acl_string size = %zd", __FILE__, __func__, acl_string_size);
+	TRACE(TRACE_DEBUG, "acl_string size = %zd", acl_string_size);
 
 	if (! (acl_string = g_new0(char, acl_string_size + 1))) {
 		dm_list_free(&identifier_list.start);
-		trace(TRACE_FATAL, "%s,%s: error allocating memory",
-		      __FILE__, __func__);
+		TRACE(TRACE_FATAL, "error allocating memory");
 		return NULL;
 	}
 	
@@ -267,7 +256,7 @@ char *acl_get_acl(u64_t mboxid)
 			dm_free(acl_string);
 			return NULL;
 		}
-		trace(TRACE_DEBUG, "%s,%s: %s", __FILE__, __func__, rightsstring);
+		TRACE(TRACE_DEBUG, "%s", rightsstring);
 		if (strlen(rightsstring) > 0) {
 			acl_strlen = strlen(acl_string);
 			(void) snprintf(&acl_string[acl_strlen], acl_string_size - acl_strlen, "%s %s ", identifier, rightsstring);
@@ -284,8 +273,7 @@ char *acl_listrights(u64_t userid, u64_t mboxid)
 	int result;
 	
 	if ((result = db_user_is_mailbox_owner(userid, mboxid)) < 0) {
-		trace(TRACE_ERROR, "%s,%s: error checking if user "
-		      "is owner of a mailbox", __FILE__, __func__);
+		TRACE(TRACE_ERROR, "error checking if user is owner of a mailbox");
 		return NULL;
 	}
 
@@ -305,14 +293,12 @@ char *acl_myrights(u64_t userid, u64_t mboxid)
 	char *rightsstring;
 
 	if (! (rightsstring = g_new0(char, NR_ACL_FLAGS + 1))) {
-		trace(TRACE_ERROR, "%s,%s: error allocating memory for "
-		      "rightsstring", __FILE__, __func__);
+		TRACE(TRACE_ERROR, "error allocating memory for rightsstring");
 		return NULL;
 	}
 
 	if (acl_get_rightsstring(userid, mboxid, rightsstring) < 0) {
-		trace(TRACE_ERROR, "%s,%s: error getting rightsstring.",
-		      __FILE__, __func__);
+		TRACE(TRACE_ERROR, "error getting rightsstring.");
 		dm_free(rightsstring);
 		return NULL;
 	}
@@ -329,9 +315,7 @@ int acl_get_rightsstring_identifier(char *identifier, u64_t mboxid, char *rights
 	memset(rightsstring, '\0', NR_ACL_FLAGS + 1);
 	
 	if (auth_user_exists(identifier, &userid) < 0) {
-		trace(TRACE_ERROR, "%s,%s: error finding user id for "
-		      "user with name [%s]", __FILE__, __func__,
-		      identifier);
+		TRACE(TRACE_ERROR, "error finding user id for user with name [%s]", identifier);
 		return -1;
 	}
 
@@ -352,8 +336,7 @@ int acl_get_rightsstring(u64_t userid, u64_t mboxid, char *rightsstring)
 		return result;
 
 	if (owner_idnr == userid) {
-		trace(TRACE_DEBUG, "%s, %s: mailbox [%llu] is owned by user [%llu], giving all rights",
-				__FILE__, __func__, mboxid, userid);
+		TRACE(TRACE_DEBUG, "mailbox [%llu] is owned by user [%llu], giving all rights", mboxid, userid);
 		g_strlcat(rightsstring, acl_right_chars, NR_ACL_FLAGS+1);
 		return 1;
 	}

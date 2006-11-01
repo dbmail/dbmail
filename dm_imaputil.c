@@ -180,8 +180,7 @@ int init_cache()
 	cached_msg.msg_parsed = 0;
 	if (! (cached_msg.memdump = mopen())) {
 		serr = errno;
-		trace(TRACE_ERROR,"%s,%s: mopen() failed [%s]",
-				__FILE__, __func__, strerror(serr));
+		TRACE(TRACE_ERROR,"mopen() failed [%s]", strerror(serr));
 		errno = serr;
 		return -1;
 	}
@@ -189,8 +188,7 @@ int init_cache()
 	
 	if (! (cached_msg.tmpdump = mopen())) {
 		serr = errno;
-		trace(TRACE_ERROR,"%s,%s: mopen() failed [%s]",
-				__FILE__, __func__, strerror(serr));
+		TRACE(TRACE_ERROR,"mopen() failed [%s]", strerror(serr));
 		errno = serr;
 		mclose(&cached_msg.memdump);
 		return -1;

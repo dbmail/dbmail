@@ -28,7 +28,7 @@
 #include "dbmail.h"
 #include "mysql.h"
 
-#define THIS_MODULE "mysql"
+#define THIS_MODULE "sql"
 
 #define DB_MYSQL_STANDARD_PORT 3306
 

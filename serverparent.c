@@ -69,7 +69,7 @@ void serverparent_showhelp(const char *name, const char *greeting) {
 int serverparent_getopt(serverConfig_t *config, const char *service, int argc, char *argv[])
 {
 	int opt;
-	char *configFile = g_strdup(DEFAULT_CONFIG_FILE);
+	configFile = g_strdup(DEFAULT_CONFIG_FILE);
 
 	ClearConfig(config);
 
@@ -120,6 +120,7 @@ int serverparent_getopt(serverConfig_t *config, const char *service, int argc, c
 			break;
 		}
 	}
+
 
 	DoConfig(config, service);
 
@@ -197,7 +198,7 @@ void ClearConfig(serverConfig_t * config)
 }
 
 void DoConfig(serverConfig_t * config, const char * const service) {
-	TRACE(TRACE_DEBUG, "reading config");
+	TRACE(TRACE_DEBUG, "reading config [%s]", configFile);
 	config_free();
 	config_read(configFile);
 

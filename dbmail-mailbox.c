@@ -137,8 +137,7 @@ int dbmail_mailbox_open(struct DbmailMailbox *self)
 	g_string_free(q,TRUE);
 
 	if ((rows  = db_num_rows()) < 1) {
-		trace(TRACE_INFO, "%s,%s: no messages in mailbox",
-				__FILE__, __func__);
+		TRACE(TRACE_INFO, "no messages in mailbox");
 		db_free_result();
 		return DM_SUCCESS;
 	}
@@ -220,7 +219,7 @@ int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *file)
 	GString *q, *t;
 
 	if (self->ids==NULL || g_tree_nnodes(self->ids) == 0) {
-		trace(TRACE_DEBUG,"%s,%s: cannot dump empty mailbox",__FILE__, __func__);
+		TRACE(TRACE_DEBUG,"cannot dump empty mailbox");
 		return 0;
 	}
 	
@@ -517,8 +516,7 @@ static int append_search(struct DbmailMailbox *self, search_key_t *value, gboole
 	if (descend)
 		self->search = n;
 	
-	trace(TRACE_DEBUG, "%s,%s: [%d] [%d] type [%d] field [%s] search [%s] at depth [%u]\n", 
-			__FILE__, __func__, (int)value, descend, 
+	TRACE(TRACE_DEBUG, "[%d] [%d] type [%d] field [%s] search [%s] at depth [%u]\n", (int)value, descend, 
 			value->type, value->hdrfld, value->search, 
 			g_node_depth(self->search));
 	return 0;
@@ -527,7 +525,7 @@ static int append_search(struct DbmailMailbox *self, search_key_t *value, gboole
 static void _append_join(char *join, char *table)
 {
 	char *tmp;
-	trace(TRACE_DEBUG,"%s,%s: %s", __FILE__, __func__, table);
+	TRACE(TRACE_DEBUG,"%s", table);
 	tmp = g_strdup_printf("LEFT JOIN %s%s ON p.id=%s%s.physmessage_id ", DBPFX, table, DBPFX, table);
 	g_strlcat(join, tmp, MAX_SEARCH_LEN);
 	g_free(tmp);
@@ -537,7 +535,7 @@ static void _append_sort(char *order, char *field, gboolean reverse)
 {
 	char *tmp;
 	tmp = g_strdup_printf("%s%s,", field, reverse ? " DESC" : "");
-	trace(TRACE_DEBUG,"%s,%s: %s", __FILE__, __func__, tmp);
+	TRACE(TRACE_DEBUG,"%s", tmp);
 	g_strlcat(order, tmp, MAX_SEARCH_LEN);
 	g_free(tmp);
 }
@@ -624,7 +622,7 @@ static int _handle_sort_args(struct DbmailMailbox *self, char **search_keys, sea
 	}
 
 	else {
-		trace(TRACE_WARNING,"%s,%s: unknown sort key [%s]", __FILE__, __func__, key);
+		TRACE(TRACE_WARNING,"unknown sort key [%s]", key);
 		return -1; /* done */
 	}
 	
@@ -941,7 +939,7 @@ static int _handle_search_args(struct DbmailMailbox *self, char **search_keys, u
                 (*idx)++; // FIXME: should we check for valid charset here?
 	} else {
 		/* unknown search key */
-		trace(TRACE_DEBUG,"%s,%s: unknown search key [%s]", __FILE__, __func__, key);
+		TRACE(TRACE_DEBUG,"unknown search key [%s]", key);
 		g_free(value);
 		return -1;
 	}
@@ -1028,7 +1026,7 @@ static gboolean _do_sort(GNode *node, struct DbmailMailbox *self)
 	unsigned i, rows;
 	search_key_t *s = (search_key_t *)node->data;
 	
-	trace(TRACE_DEBUG,"%s,%s: type [%d]", __FILE__,  __func__, s->type);
+	TRACE(TRACE_DEBUG,"type [%d]", s->type);
 	
 	if (s->type != IST_SORT)
 		return FALSE;
@@ -1178,8 +1176,7 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 	
 	g_string_free(t,TRUE);
 	if (db_query(q->str) == -1) {
-		trace(TRACE_ERROR, "%s,%s: could not execute query",
-		      __FILE__, __func__);
+		TRACE(TRACE_ERROR, "could not execute query");
 		g_string_free(q,TRUE);
 		return NULL;
 	}
@@ -1197,8 +1194,7 @@ static GTree * mailbox_search(struct DbmailMailbox *self, search_key_t *s)
 			v = g_new0(u64_t,1);
 			id = db_get_result_u64(i,0);
 			if (! (w = g_tree_lookup(self->ids, &id))) {
-				trace(TRACE_ERROR, "%s,%s: key missing in self->ids: [%llu]\n", 
-						__FILE__, __func__, id);
+				TRACE(TRACE_ERROR, "key missing in self->ids: [%llu]\n", id);
 				continue;
 			}
 			assert(w);
@@ -1230,7 +1226,7 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 
 	g_return_val_if_fail(self->ids != NULL && g_tree_nnodes(self->ids) > 0,b);
 
-	trace(TRACE_DEBUG,"%s,%s: [%s]", __FILE__, __func__, set);
+	TRACE(TRACE_DEBUG,"[%s]", set);
 	
 	if (uid) {
 		ids = g_tree_keys(self->ids);
@@ -1317,8 +1313,7 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 		}
 		
 		if (g_tree_merge(b,a,IST_SUBSEARCH_OR)) {
-			trace(TRACE_ERROR, "%s,%s: cannot compare null trees",
-					__FILE__, __func__);
+			TRACE(TRACE_ERROR, "cannot compare null trees");
 			break;
 		}
 			
@@ -1385,8 +1380,8 @@ static gboolean _do_search(GNode *node, struct DbmailMailbox *self)
 
 	s->searched = TRUE;
 	
-	trace(TRACE_DEBUG,"%s,%s: [%d] depth [%d] type [%d] rows [%d]\n", __FILE__,  __func__, 
-			(int)s, g_node_depth(node), s->type, s->found ? g_tree_nnodes(s->found): 0);
+	TRACE(TRACE_DEBUG,"[%d] depth [%d] type [%d] rows [%d]\n",
+		(int)s, g_node_depth(node), s->type, s->found ? g_tree_nnodes(s->found): 0);
 
 	return FALSE;
 }	
@@ -1410,8 +1405,7 @@ static gboolean _merge_search(GNode *node, GTree *found)
 	if (s->merged == TRUE)
 		return FALSE;
 
-	trace(TRACE_DEBUG,"%s,%s: [%d] depth [%d] type [%d]", 
-			__FILE__, __func__, 
+	TRACE(TRACE_DEBUG,"[%d] depth [%d] type [%d]", 
 			(int)s, g_node_depth(node), s->type);
 	switch(s->type) {
 		case IST_SUBSEARCH_AND:

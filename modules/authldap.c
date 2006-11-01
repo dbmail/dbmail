@@ -30,6 +30,7 @@
 
 #define AUTH_QUERY_SIZE 1024
 #define LDAP_RES_SIZE 1024
+#define THIS_MODULE "auth"
 
 extern char *configFile;
 
@@ -116,18 +117,14 @@ static void __auth_get_config(void)
 		else
 			_ldap_cfg.scope_int = LDAP_SCOPE_SUBTREE;
 	}
-	trace(TRACE_DEBUG,
-	      "%s,%s: integer ldap scope is [%d]",__FILE__,__func__,
-	      _ldap_cfg.scope_int);
+	TRACE(TRACE_DEBUG, "integer ldap scope is [%d]", _ldap_cfg.scope_int);
 	
 	beenhere++;
 }
 
 static int auth_ldap_bind(void)
 {
-	trace(TRACE_DEBUG, "%s,%s: binding to ldap server as [%s] / [xxxxxxxx]",
-			__FILE__,__func__, 
-			_ldap_cfg.bind_dn);
+	TRACE(TRACE_DEBUG, "binding to ldap server as [%s] / [xxxxxxxx]",  _ldap_cfg.bind_dn);
 	
 	/* 
 	 * TODO: support tls connects
@@ -137,13 +134,10 @@ static int auth_ldap_bind(void)
 					_ldap_cfg.bind_dn, 
 					_ldap_cfg.bind_pw, 
 					LDAP_AUTH_SIMPLE))) {
-		trace(TRACE_ERROR, "%s,%s: ldap_bind_s failed: %s",
-				__FILE__,__func__, 
-				ldap_err2string(_ldap_err));
+		TRACE(TRACE_ERROR, "ldap_bind_s failed: %s",  ldap_err2string(_ldap_err));
 		return -1;
 	}
-	trace(TRACE_DEBUG, "%s,%s: successfully bound to ldap server",
-			__FILE__,__func__);
+	TRACE(TRACE_DEBUG, "successfully bound to ldap server" );
 
 	return 0;
 
@@ -165,11 +159,8 @@ int auth_connect(void)
 	
 	__auth_get_config();
 	
-	trace(TRACE_DEBUG, "%s,%s: connecting to ldap server on [%s] : [%d] version [%d]",
-			__FILE__,__func__, 
-			_ldap_cfg.hostname, 
-			_ldap_cfg.port_int,
-			_ldap_cfg.version_int);
+	TRACE(TRACE_DEBUG, "connecting to ldap server on [%s] : [%d] version [%d]",
+		_ldap_cfg.hostname, _ldap_cfg.port_int, _ldap_cfg.version_int);
 	
 	_ldap_conn = ldap_init(
 			_ldap_cfg.hostname, 
@@ -183,9 +174,7 @@ int auth_connect(void)
 		version = LDAP_VERSION3;
 		break;
 	default:
-		trace(TRACE_ERROR, "%s, %s: Unsupported LDAP version requested [%d]. "
-				"Defaulting to LDAP version 3.",
-				__FILE__, __func__, _ldap_cfg.version_int);
+		TRACE(TRACE_ERROR, "Unsupported LDAP version requested [%d]. Defaulting to LDAP version 3.", _ldap_cfg.version_int);
 		version = LDAP_VERSION3;
 		break;
 	}
@@ -212,7 +201,7 @@ static int auth_search(const gchar *query)
 	g_return_val_if_fail(query!=NULL, DM_EQUERY);
 	
 	while (c++ < 5) {
-		trace(TRACE_DEBUG, "%s,%s: [%s]",__FILE__,__func__, query);
+		TRACE(TRACE_DEBUG, " [%s]", query);
 		_ldap_err = ldap_search_s(_ldap_conn, _ldap_cfg.base_dn, _ldap_cfg.scope_int, 
 				query, _ldap_attrs, _ldap_attrsonly, &_ldap_res);
 		
@@ -221,18 +210,18 @@ static int auth_search(const gchar *query)
 		
 		switch (_ldap_err) {
 			case LDAP_SERVER_DOWN:
-				trace(TRACE_ERROR, "%s,%s: %s", __FILE__, __func__, ldap_err2string(_ldap_err));
+				TRACE(TRACE_ERROR, "%s", ldap_err2string(_ldap_err));
 				if (auth_reconnect())
 					sleep(2); // reconnect failed. wait before trying again
 				break;
 			default:
-				trace(TRACE_ERROR, "%s,%s: %s", __FILE__, __func__, ldap_err2string(_ldap_err));
+				TRACE(TRACE_ERROR, "%s", ldap_err2string(_ldap_err));
 				return _ldap_err;
 				break;
 		}
 	}
 	
-	trace(TRACE_FATAL,"%s,%s: unrecoverable error while talking to ldap server", __FILE__, __func__);
+	TRACE(TRACE_FATAL,"unrecoverable error while talking to ldap server");
 	return -1;
 }
 
@@ -275,9 +264,7 @@ GList * dm_ldap_entdm_list_get_values(GList *entlist)
 			attlist = g_list_first(fldlist->data);
 			while (attlist) {
 				tmp = (gchar *)attlist->data;
-				trace(TRACE_DEBUG,"%s,%s: value [%s]",
-						__FILE__, __func__,
-						tmp);
+				TRACE(TRACE_DEBUG,"value [%s]", tmp);
 				values = g_list_append_printf(values,"%s", tmp);
 				if (! g_list_next(attlist))
 					break;
@@ -376,9 +363,7 @@ static u64_t dm_ldap_get_freeid(const gchar *attribute)
 	g_list_free(ids);
 	
 	id=t;
-	trace(TRACE_DEBUG,"%s,%s: return free id [%llu]\n", 
-			__FILE__, __func__,
-			id);
+	TRACE(TRACE_DEBUG,"return free id [%llu]\n", id);
 	return id;
 }
 
@@ -388,9 +373,7 @@ static char * dm_ldap_user_getdn(u64_t user_idnr)
 	char *dn;
 	
 	g_string_printf(t, "(%s=%llu)", _ldap_cfg.field_nid, user_idnr);
-	trace(TRACE_DEBUG, "%s,%s: searching with query [%s]", 
-			__FILE__,__func__, 
-			t->str);
+	TRACE(TRACE_DEBUG, "searching with query [%s]", t->str);
 	
 	
 	if (auth_search(t->str)) {
@@ -399,7 +382,7 @@ static char * dm_ldap_user_getdn(u64_t user_idnr)
 	}
 		
 	if (ldap_count_entries(_ldap_conn, _ldap_res) < 1) {
-		trace(TRACE_DEBUG, "%s,%s: no entries found",__FILE__,__func__);
+		TRACE(TRACE_DEBUG, "no entries found");
 		g_string_free(t,TRUE);
 		ldap_msgfree(_ldap_res);
 		return NULL;
@@ -407,18 +390,14 @@ static char * dm_ldap_user_getdn(u64_t user_idnr)
 
 	if (! (_ldap_msg = ldap_first_entry(_ldap_conn, _ldap_res))) {
 		ldap_get_option(_ldap_conn, LDAP_OPT_ERROR_NUMBER, &_ldap_err);
-		trace(TRACE_ERROR, "%s,%s: ldap_first_entry failed: %s",
-				__FILE__,__func__, 
-				ldap_err2string(_ldap_err));
+		TRACE(TRACE_ERROR, "ldap_first_entry failed: %s", ldap_err2string(_ldap_err));
 		ldap_msgfree(_ldap_res);
 		return NULL;
 	}
 
 	if (! (dn = ldap_get_dn(_ldap_conn, _ldap_msg))) {
 		ldap_get_option(_ldap_conn, LDAP_OPT_ERROR_NUMBER, &_ldap_err);
-		trace(TRACE_ERROR, "%s,%s: ldap_get_dn failed: %s",
-				__FILE__,__func__,
-				ldap_err2string(_ldap_err));
+		TRACE(TRACE_ERROR, "ldap_get_dn failed: %s", ldap_err2string(_ldap_err));
 		ldap_msgfree(_ldap_res);
 		return NULL;
 	}
@@ -435,18 +414,15 @@ static int dm_ldap_mod_field(u64_t user_idnr, const char *fieldname, const char 
 	
 	
 	if (! user_idnr) {
-		trace(TRACE_ERROR, "%s,%s: no user_idnr specified",
-				__FILE__,__func__);
+		TRACE(TRACE_ERROR, "no user_idnr specified");
 		return -1;
 	}
 	if (! fieldname) {
-		trace(TRACE_ERROR, "%s,%s: no fieldname specified",
-				__FILE__,__func__);
+		TRACE(TRACE_ERROR, "no fieldname specified");
 		return -1;
 	}
 	if (! newvalue) {
-		trace(TRACE_ERROR, "%s,%s: no new value specified",
-				__FILE__,__func__);
+		TRACE(TRACE_ERROR, "no new value specified");
 		return -1;
 	}
 		
@@ -465,10 +441,7 @@ static int dm_ldap_mod_field(u64_t user_idnr, const char *fieldname, const char 
 
 	_ldap_err = ldap_modify_s(_ldap_conn, _ldap_dn, mods);
 	if (_ldap_err) {
-		trace(TRACE_ERROR,"%s,%s: error changing field [%s] to value [%s]: %s",
-				__FILE__, __func__,
-				fieldname, newvalue,
-				ldap_err2string(_ldap_err));
+		TRACE(TRACE_ERROR,"error changing field [%s] to value [%s]: %s", fieldname, newvalue, ldap_err2string(_ldap_err));
 		ldap_memfree(_ldap_dn);
 		return -1;
 	}
@@ -524,7 +497,6 @@ static int dm_ldap_mod_field(u64_t user_idnr, const char *fieldname, const char 
 static GList * __auth_get_every_match(const char *q, char **retfields)
 {
 	LDAPMessage *ldap_msg;
-	int ldap_err;
 	char **ldap_vals = NULL;
 	char *dn;
 	int j = 0, k = 0, m = 0;
@@ -536,7 +508,7 @@ static GList * __auth_get_every_match(const char *q, char **retfields)
 		return NULL;
 
 	if ((j = ldap_count_entries(_ldap_conn, _ldap_res)) < 1) {
-		trace(TRACE_DEBUG, "%s,%s: nothing found",__FILE__,__func__);
+		TRACE(TRACE_DEBUG, "nothing found");
 		if (_ldap_res)
 			ldap_msgfree(_ldap_res);
 		return NULL;
@@ -545,8 +517,7 @@ static GList * __auth_get_every_match(const char *q, char **retfields)
 	/* do the first entry here */
 	if ((ldap_msg = ldap_first_entry(_ldap_conn, _ldap_res)) == NULL) {
 		ldap_get_option(_ldap_conn, LDAP_OPT_ERROR_NUMBER, &_ldap_err);
-		trace(TRACE_ERROR, "%s,%s: ldap_first_entry failed: [%s]",__FILE__,__func__,
-		      ldap_err2string(_ldap_err));
+		TRACE(TRACE_ERROR, "ldap_first_entry failed: [%s]", ldap_err2string(_ldap_err));
 		if (_ldap_res)
 			ldap_msgfree(_ldap_res);
 		return NULL;
@@ -555,23 +526,14 @@ static GList * __auth_get_every_match(const char *q, char **retfields)
 	while (ldap_msg) {
 		
 		dn = ldap_get_dn(_ldap_conn, ldap_msg);
-		trace(TRACE_DEBUG,"%s,%s: scan results for DN: [%s]", __FILE__, __func__, dn);
+		TRACE(TRACE_DEBUG,"scan results for DN: [%s]", dn);
 		
 		for (k = 0; retfields[k] != NULL; k++) {
-			trace(TRACE_DEBUG,"%s,%s: ldap_get_values [%s]",
-					__FILE__, __func__, retfields[k]);
-			if (! (ldap_vals = ldap_get_values(_ldap_conn, ldap_msg, retfields[k]))) {
-				ldap_get_option(_ldap_conn, LDAP_OPT_ERROR_NUMBER, &ldap_err);
-				trace(TRACE_WARNING, "%s,%s: ldap_get_values failed: [%s] %s",
-						__FILE__,__func__, 
-						retfields[k], 
-						ldap_err2string(ldap_err));
-			} else {
+			TRACE(TRACE_DEBUG,"ldap_get_values [%s]", retfields[k]);
+			if ((ldap_vals = ldap_get_values(_ldap_conn, ldap_msg, retfields[k]))) {
 				m = 0;
 				while (ldap_vals[m]) { 
-					trace(TRACE_DEBUG,"%s,%s: got value [%s]\n", 
-							__FILE__, __func__,
-							ldap_vals[m]);
+					TRACE(TRACE_DEBUG,"got value [%s]", ldap_vals[m]);
 					attlist = g_list_append(attlist,g_strdup(ldap_vals[m]));
 					m++;
 				}
@@ -609,15 +571,14 @@ static char *__auth_get_first_match(const char *q, char **retfields)
 		return NULL;
 	
 	if (ldap_count_entries(_ldap_conn, _ldap_res) < 1) {
-		trace(TRACE_DEBUG, "%s,%s: none found",__FILE__,__func__);
+		TRACE(TRACE_DEBUG, "none found");
 		goto endfree;
 	}
 
 	ldap_msg = ldap_first_entry(_ldap_conn, _ldap_res);
 	if (ldap_msg == NULL) {
 		ldap_get_option(_ldap_conn, LDAP_OPT_ERROR_NUMBER, &_ldap_err);
-		trace(TRACE_ERROR, "%s,%s: ldap_first_entry failed: %s",__FILE__,__func__,
-		      ldap_err2string(_ldap_err));
+		TRACE(TRACE_ERROR, "ldap_first_entry failed: %s", ldap_err2string(_ldap_err));
 		goto endfree;
 	}
 	
@@ -643,7 +604,7 @@ static char *__auth_get_first_match(const char *q, char **retfields)
 	if (_ldap_res)
 		ldap_msgfree(_ldap_res);
 
-	trace(TRACE_DEBUG,"%s,%s: returnid [%s]", __FILE__,__func__,returnid);
+	TRACE(TRACE_DEBUG,"returnid [%s]",returnid);
 	return returnid;
 }
 
@@ -658,8 +619,7 @@ int auth_user_exists(const char *username, u64_t * user_idnr)
 	*user_idnr = 0;
 
 	if (!username) {
-		trace(TRACE_ERROR, "%s,%s: got NULL as username",
-				__FILE__,__func__);
+		TRACE(TRACE_ERROR, "got NULL as username");
 		return 0;
 	}
 
@@ -675,8 +635,7 @@ int auth_user_exists(const char *username, u64_t * user_idnr)
 	if (id_char != NULL)
 		g_free(id_char);
 
-	trace(TRACE_DEBUG, "%s,%s: returned value is [%llu]",__FILE__,__func__,
-	      *user_idnr);
+	TRACE(TRACE_DEBUG, "returned value is [%llu]", *user_idnr);
 
 	if (*user_idnr != 0)
 		return 1;
@@ -695,8 +654,7 @@ char *auth_get_userid(u64_t user_idnr)
 	
 	snprintf(query, AUTH_QUERY_SIZE, "(%s=%llu)", _ldap_cfg.field_nid, user_idnr);
 	returnid = __auth_get_first_match(query, fields);
-	trace(TRACE_DEBUG, "%s,%s: returned value is [%s]",__FILE__,__func__,
-	      returnid);
+	TRACE(TRACE_DEBUG, "returned value is [%s]", returnid);
 
 	return returnid;
 }
@@ -715,12 +673,10 @@ int auth_check_userid(u64_t user_idnr)
 
 	if (returnid) {
 		ret = 0;
-		trace(TRACE_DEBUG, "%s,%s: found user_idnr [%llu]",
-			__FILE__, __func__, user_idnr);
+		TRACE(TRACE_DEBUG, "found user_idnr [%llu]", user_idnr);
 	} else {
 		ret = 1;
-		trace(TRACE_DEBUG, "%s,%s: didn't find user_idnr [%llu]",
-			__FILE__, __func__, user_idnr);
+		TRACE(TRACE_DEBUG, "didn't find user_idnr [%llu]", user_idnr);
 	}
 
 	dm_free(returnid);
@@ -744,8 +700,7 @@ int auth_getclientid(u64_t user_idnr, u64_t * client_idnr)
 	*client_idnr = 0;
 
 	if (!user_idnr) {
-		trace(TRACE_ERROR,
-		      "%s,%s: got NULL as useridnr",__FILE__,__func__);
+		TRACE(TRACE_ERROR, "got NULL as useridnr");
 		return -1;
 	}
 
@@ -756,8 +711,7 @@ int auth_getclientid(u64_t user_idnr, u64_t * client_idnr)
 	if (cid_char != NULL)
 		g_free(cid_char);
 
-	trace(TRACE_DEBUG, "%s,%s: found client_idnr [%llu]",__FILE__,__func__,
-	      *client_idnr);
+	TRACE(TRACE_DEBUG, "found client_idnr [%llu]", *client_idnr);
 
 	return 1;
 }
@@ -773,8 +727,7 @@ int auth_getmaxmailsize(u64_t user_idnr, u64_t * maxmail_size)
 	*maxmail_size = 0;
 
 	if (!user_idnr) {
-		trace(TRACE_ERROR,
-		      "%s,%s: got NULL as useridnr",__FILE__,__func__);
+		TRACE(TRACE_ERROR, "got NULL as useridnr");
 		return 0;
 	}
 
@@ -785,9 +738,7 @@ int auth_getmaxmailsize(u64_t user_idnr, u64_t * maxmail_size)
 	if (max_char != NULL)
 		g_free(max_char);
 
-	trace(TRACE_DEBUG,
-	      "%s,%s: returned value is [%llu]",__FILE__,__func__,
-	      *maxmail_size);
+	TRACE(TRACE_DEBUG, "returned value is [%llu]", *maxmail_size);
 
 	return 1;
 }
@@ -829,9 +780,7 @@ GList * auth_get_known_users(void)
 	entlist = __auth_get_every_match(query, fields);
 	g_free(query);
 	
-	trace(TRACE_INFO, "%s,%s: found %d users",
-			__FILE__,__func__, 
-			g_list_length(entlist));
+	TRACE(TRACE_INFO, "found %d users", g_list_length(entlist));
 
 	users = dm_ldap_entdm_list_get_values(entlist);
 	
@@ -863,20 +812,16 @@ int auth_check_user_ext(const char *address, struct dm_list *userids,
 	GList *entlist, *fldlist, *attlist;
 
 	if (checks > 20) {
-		trace(TRACE_ERROR, "%s,%s: too many checks. Possible loop detected.",
-				__FILE__, __func__);
+		TRACE(TRACE_ERROR, "too many checks. Possible loop detected.");
 		return 0;
 	}
 
-	trace(TRACE_DEBUG,
-	      "%s,%s: checking user [%s] in alias table",__FILE__,__func__,
-	      address);
+	TRACE(TRACE_DEBUG, "checking user [%s] in alias table", address);
 
 	/* This is my private line for sending a DN rather than a search */
 	snprintf(query, AUTH_QUERY_SIZE, "(%s=%s)", _ldap_cfg.field_mail, address);
 	
-	trace(TRACE_DEBUG, "%s,%s: searching with query [%s], checks [%d]",
-			__FILE__,__func__, query, checks);
+	TRACE(TRACE_DEBUG, "searching with query [%s], checks [%d]", query, checks);
 
 	entlist = __auth_get_every_match(query, fields);
 
@@ -889,21 +834,21 @@ int auth_check_user_ext(const char *address, struct dm_list *userids,
 			id = strtoull(address, &endptr, 10);
 			if (*endptr == 0) {
 				/* numeric deliver-to --> this is a userid */
-				trace(TRACE_DEBUG, "%s,%s: adding [%llu] to userids",__FILE__,__func__, id);
+				TRACE(TRACE_DEBUG, "adding [%llu] to userids", id);
 				dm_list_nodeadd(userids, &id, sizeof(id));
 			} else {
-				trace(TRACE_DEBUG, "%s,%s: adding [%s] to forwards",__FILE__,__func__, address);
+				TRACE(TRACE_DEBUG, "adding [%s] to forwards", address);
 				dm_list_nodeadd(fwds, address, strlen(address) + 1);
 			}
 			return 1;
 		} else {
-			trace(TRACE_DEBUG, "%s,%s: user [%s] not in aliases table",__FILE__,__func__, address);
+			TRACE(TRACE_DEBUG, "user [%s] not in aliases table", address);
 			dm_ldap_freeresult(entlist);
 			return 0;
 		}
 	}
 
-	trace(TRACE_DEBUG, "%s,%s: into checking loop",__FILE__,__func__);
+	TRACE(TRACE_DEBUG, "into checking loop");
 	entlist = g_list_first(entlist);
 	while (entlist) {
 		fldlist = g_list_first(entlist->data);
@@ -975,15 +920,13 @@ int auth_adduser(const char *username, const char *password,
 
 	/* Construct the array of LDAPMod structures representing the attributes */ 
 	if (! (_ldap_mod = (LDAPMod **) dm_malloc((NUM_MODS + 1) * sizeof(LDAPMod *)))) {
-		trace(TRACE_ERROR, "%s,%s: Cannot allocate memory for mods array", 
-				__FILE__, __func__);
+		TRACE(TRACE_ERROR, "Cannot allocate memory for mods array");
 		return -1;
 	}
 
 	for (i = 0; i < NUM_MODS; i++) {
 		if (! (_ldap_mod[i] = (LDAPMod *) dm_malloc(sizeof(LDAPMod)))) {
-			trace(TRACE_ERROR, "%s,%s: Cannot allocate memory for mods element %d",
-					__FILE__, __func__, i);
+			TRACE(TRACE_ERROR, "Cannot allocate memory for mods element %d", i);
 			for (j = 0; j < (i - 1); j++)
 				dm_free(_ldap_mod[j]);
 			dm_free(_ldap_mod);
@@ -995,7 +938,7 @@ int auth_adduser(const char *username, const char *password,
 	_ldap_dn=g_strdup(t->str);
 	g_string_free(t,TRUE);
 	
-	trace(TRACE_DEBUG, "%s,%s: Adding user with DN of [%s]", __FILE__, __func__, _ldap_dn);
+	TRACE(TRACE_DEBUG, "Adding user with DN of [%s]", _ldap_dn);
 	
 	i = 0;
 	_ldap_mod[i]->mod_op = LDAP_MOD_ADD;
@@ -1046,9 +989,7 @@ int auth_adduser(const char *username, const char *password,
 	ldap_memfree(_ldap_dn);
 
 	if (_ldap_err) {
-		trace(TRACE_ERROR, "%s,%s: could not add user: %s",
-				__FILE__,__func__, 
-				ldap_err2string(_ldap_err));
+		TRACE(TRACE_ERROR, "could not add user: %s", ldap_err2string(_ldap_err));
 		return -1;
 	}
 
@@ -1056,8 +997,7 @@ int auth_adduser(const char *username, const char *password,
 	result = db_user_create_shadow(username, user_idnr);
 	
 	if (result != 1) {
-		trace(TRACE_ERROR, "%s,%s: sql shadow account creation failed",
-				__FILE__, __func__);
+		TRACE(TRACE_ERROR, "sql shadow account creation failed");
 		auth_delete_user(username);
 		*user_idnr=0;
 		return result;
@@ -1072,7 +1012,7 @@ int auth_delete_user(const char *username)
 {
 	/* look up who's got that username, get their dn, and delete it! */
 	if (!username) {
-		trace(TRACE_ERROR, "%s,%s: got NULL as useridnr",__FILE__,__func__);
+		TRACE(TRACE_ERROR, "got NULL as useridnr");
 		return 0;
 	}
 
@@ -1082,7 +1022,7 @@ int auth_delete_user(const char *username)
 		return -1;
 	
 	if (ldap_count_entries(_ldap_conn, _ldap_res) < 1) {
-		trace(TRACE_DEBUG, "%s,%s: no entries found",__FILE__,__func__);
+		TRACE(TRACE_DEBUG, "no entries found");
 		ldap_msgfree(_ldap_res);
 		return 0;
 	}
@@ -1090,8 +1030,7 @@ int auth_delete_user(const char *username)
 	_ldap_msg = ldap_first_entry(_ldap_conn, _ldap_res);
 	if (_ldap_msg == NULL) {
 		ldap_get_option(_ldap_conn, LDAP_OPT_ERROR_NUMBER, &_ldap_err);
-		trace(TRACE_ERROR, "%s,%s: ldap_first_entry failed: %s",
-				__FILE__,__func__, ldap_err2string(_ldap_err));
+		TRACE(TRACE_ERROR, "ldap_first_entry failed: %s", ldap_err2string(_ldap_err));
 		ldap_msgfree(_ldap_res);
 		return -1;
 	}
@@ -1099,14 +1038,10 @@ int auth_delete_user(const char *username)
 	_ldap_dn = ldap_get_dn(_ldap_conn, _ldap_msg);
 
 	if (_ldap_dn) {
-		trace(TRACE_DEBUG,
-		      "%s,%s: deleting user at dn [%s]",__FILE__,__func__,
-		      _ldap_dn);
+		TRACE(TRACE_DEBUG, "deleting user at dn [%s]", _ldap_dn);
 		_ldap_err = ldap_delete_s(_ldap_conn, _ldap_dn);
 		if (_ldap_err) {
-			trace(TRACE_ERROR,
-			      "%s,%s: could not delete dn: %s",__FILE__,__func__,
-			      ldap_err2string(_ldap_err));
+			TRACE(TRACE_ERROR, "could not delete dn: %s", ldap_err2string(_ldap_err));
 			ldap_memfree(_ldap_dn);
 			ldap_msgfree(_ldap_res);
 			return -1;
@@ -1117,8 +1052,7 @@ int auth_delete_user(const char *username)
 	ldap_msgfree(_ldap_res);
 	
 	if (db_user_delete(username)) {
-		trace(TRACE_ERROR, "%s,%s: sql shadow account deletion failed",
-				__FILE__, __func__);
+		TRACE(TRACE_ERROR, "sql shadow account deletion failed");
 	}
 	
 	return 0;
@@ -1131,13 +1065,10 @@ static int dm_ldap_user_shadow_rename(u64_t user_idnr, const char *new_name)
 	oldname = auth_get_userid(user_idnr);
 	db_user_exists(oldname,&dbidnr);
 	if (dbidnr) {
-		trace(TRACE_DEBUG, "%s,%s: call db_user_rename ([%llu],[%s])\n", 
-				__FILE__, __func__, 
-				dbidnr, new_name);
+		TRACE(TRACE_DEBUG, "call db_user_rename ([%llu],[%s])\n", dbidnr, new_name);
 	}
 	if ((! dbidnr) || (db_user_rename(dbidnr, new_name))) {
-		trace(TRACE_ERROR, "%s,%s: renaming shadow account in db failed for [%llu]->[%s]",
-				__FILE__, __func__, user_idnr, new_name);
+		TRACE(TRACE_ERROR, "renaming shadow account in db failed for [%llu]->[%s]", user_idnr, new_name);
 		return -1;
 	}
 	return 0;
@@ -1148,23 +1079,19 @@ int auth_change_username(u64_t user_idnr, const char *new_name)
 	GString *newrdn;
 	
 	if (!user_idnr) {
-		trace(TRACE_ERROR, "%s,%s: got NULL as useridnr",
-				__FILE__,__func__);
+		TRACE(TRACE_ERROR, "got NULL as useridnr");
 		return -1;
 	}
 
 	if (!new_name) {
-		trace(TRACE_ERROR, "%s,%s: got NULL as new_name",
-				__FILE__,__func__);
+		TRACE(TRACE_ERROR, "got NULL as new_name");
 		return -1;
 	}
 	
 	if (! (_ldap_dn = dm_ldap_user_getdn(user_idnr)))
 		return -1;
 	
-	trace(TRACE_DEBUG, "%s,%s: got DN [%s]",
-			__FILE__,__func__, 
-			_ldap_dn);
+	TRACE(TRACE_DEBUG, "got DN [%s]", _ldap_dn);
 
 	
 	db_begin_transaction();
@@ -1181,9 +1108,7 @@ int auth_change_username(u64_t user_idnr, const char *new_name)
 		g_string_free(newrdn,TRUE);
 		
 		if (_ldap_err) {
-			trace(TRACE_ERROR, "%s,%s: error calling ldap_modrdn_s [%s]",
-				__FILE__,__func__,
-				ldap_err2string(_ldap_err));
+			TRACE(TRACE_ERROR, "error calling ldap_modrdn_s [%s]", ldap_err2string(_ldap_err));
 			db_rollback_transaction();
 			return -1;
 		}
@@ -1248,7 +1173,7 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 	*user_idnr = 0;
 
 	if (username == NULL || password == NULL) {
-		trace(TRACE_DEBUG, "%s,%s: username or password is NULL",__FILE__,__func__);
+		TRACE(TRACE_DEBUG, "username or password is NULL");
 		return 0;
 	}
 
@@ -1274,22 +1199,17 @@ int auth_validate(clientinfo_t *ci, char *username, char *password, u64_t * user
 	}
 	
 	if (! (ldap_dn = dm_ldap_user_getdn(*user_idnr))) {
-		trace(TRACE_ERROR,"%s,%s: unable to determine DN for user",
-				__FILE__, __func__);
+		TRACE(TRACE_ERROR,"unable to determine DN for user");
 		return -1;
 	}
 
 	/* now, try to rebind as the given DN using the supplied password */
-	trace(TRACE_DEBUG, "%s,%s: rebinding as [%s] to validate password",
-			__FILE__,__func__, 
-			ldap_dn);
+	TRACE(TRACE_DEBUG, "rebinding as [%s] to validate password", ldap_dn);
 
 	ldap_err = ldap_bind_s(_ldap_conn, ldap_dn, password, LDAP_AUTH_SIMPLE);
 
 	if (ldap_err) {
-		trace(TRACE_ERROR, "%s,%s: ldap_bind_s failed: %s",
-				__FILE__,__func__,
-				ldap_err2string(ldap_err));
+		TRACE(TRACE_ERROR, "ldap_bind_s failed: %s", ldap_err2string(ldap_err));
 		*user_idnr = 0;
 	} else {
 		db_user_log_login(*user_idnr);
@@ -1468,9 +1388,7 @@ int auth_addalias(u64_t user_idnr, const char *alias, u64_t clientid UNUSED)
 	ldap_memfree(_ldap_dn);
 	
 	if (_ldap_err) {
-		trace(TRACE_ERROR, "%s,%s: update failed: %s",
-				__FILE__,__func__, 
-				ldap_err2string(_ldap_err));
+		TRACE(TRACE_ERROR, "update failed: %s", ldap_err2string(_ldap_err));
 		return -1;
 	}
 	
@@ -1526,7 +1444,7 @@ static int forward_exists(const char *alias, const char *deliver_to)
 	g_string_free(t,TRUE);
 	g_list_foreach(l,(GFunc)g_free,NULL);
 	
-	trace(TRACE_DEBUG, "%s,%s: result [%d]", __FILE__, __func__, result);
+	TRACE(TRACE_DEBUG, "result [%d]", result);
 
 	return result;
 }
@@ -1546,9 +1464,7 @@ static int forward_create(const char *alias, const char *deliver_to)
 	_ldap_dn=g_strdup(t->str);
 	g_string_free(t,TRUE);
 	
-	trace(TRACE_DEBUG, "%s,%s: Adding forwardingAddress with DN of [%s]",
-			__FILE__, __func__, 
-			_ldap_dn);
+	TRACE(TRACE_DEBUG, "Adding forwardingAddress with DN of [%s]", _ldap_dn);
 	
 	objectClass.mod_op = LDAP_MOD_ADD;
 	objectClass.mod_type = "objectClass";
@@ -1572,7 +1488,7 @@ static int forward_create(const char *alias, const char *deliver_to)
 	mods[3] = &forwField;
 	mods[4] = NULL;
 	
-	trace(TRACE_DEBUG, "%s,%s: creating new forward [%s] -> [%s]", __FILE__, __func__, alias, deliver_to);
+	TRACE(TRACE_DEBUG, "creating new forward [%s] -> [%s]", alias, deliver_to);
 	
 	_ldap_err = ldap_add_s(_ldap_conn, _ldap_dn, mods);
 
@@ -1580,9 +1496,7 @@ static int forward_create(const char *alias, const char *deliver_to)
 	ldap_memfree(_ldap_dn);
 
 	if (_ldap_err) {
-		trace(TRACE_ERROR, "%s,%s: could not add forwardingAddress: %s",
-				__FILE__,__func__, 
-				ldap_err2string(_ldap_err));
+		TRACE(TRACE_ERROR, "could not add forwardingAddress: %s", ldap_err2string(_ldap_err));
 		return -1;
 	}
 
@@ -1610,7 +1524,7 @@ static int forward_add(const char *alias,const char *deliver_to)
 	modify[0] = &addForw;
 	modify[1] = NULL;
 			
-	trace(TRACE_DEBUG, "%s,%s: creating additional forward [%s] -> [%s]", __FILE__, __func__, alias, deliver_to);
+	TRACE(TRACE_DEBUG, "creating additional forward [%s] -> [%s]", alias, deliver_to);
 	
 	_ldap_err = ldap_modify_s(_ldap_conn, _ldap_dn, modify);
 	
@@ -1618,9 +1532,7 @@ static int forward_add(const char *alias,const char *deliver_to)
 	ldap_memfree(_ldap_dn);
 	
 	if (_ldap_err) {
-		trace(TRACE_ERROR, "%s,%s: update failed: %s",
-				__FILE__,__func__, 
-				ldap_err2string(_ldap_err));
+		TRACE(TRACE_ERROR, "update failed: %s", ldap_err2string(_ldap_err));
 		return -1;
 	}
 	
@@ -1647,26 +1559,16 @@ static int forward_delete(const char *alias, const char *deliver_to)
 	modify[0] = &delForw;
 	modify[1] = NULL;
 			
-	trace(TRACE_DEBUG, "%s,%s: delete additional forward [%s] -> [%s]", 
-			__FILE__, __func__, alias, deliver_to);
+	TRACE(TRACE_DEBUG, "delete additional forward [%s] -> [%s]", alias, deliver_to);
 	_ldap_err = ldap_modify_s(_ldap_conn, _ldap_dn, modify);
 	
 	g_strfreev(mailValues);
 	
 	if (_ldap_err) {
-		trace(TRACE_ERROR, "%s,%s: update failed: [%d] %s",
-				__FILE__,__func__, _ldap_err,
-				ldap_err2string(_ldap_err));
-		
-		trace(TRACE_DEBUG, "%s,%s: delete additional forward failed, removing dn [%s]", 
-				__FILE__, __func__, _ldap_dn);
-
+		TRACE(TRACE_DEBUG, "delete additional forward failed, removing dn [%s]", _ldap_dn);
 		_ldap_err = ldap_delete_s(_ldap_conn, _ldap_dn);
-		if (_ldap_err) {
-			trace(TRACE_ERROR, "%s,%s: deletion failed [%s]",
-					__FILE__, __func__, 
-					ldap_err2string(_ldap_err));
-		}
+		if (_ldap_err)
+			TRACE(TRACE_ERROR, "deletion failed [%s]", ldap_err2string(_ldap_err));
 	}
 	
 	ldap_memfree(_ldap_dn);
@@ -1716,9 +1618,7 @@ int auth_removealias(u64_t user_idnr, const char *alias)
 		
 	}
 	if (!aliases) {
-		trace(TRACE_DEBUG,"%s,%s: alias [%s] for user [%s] not found",
-				__FILE__, __func__,
-				alias, userid);
+		TRACE(TRACE_DEBUG,"alias [%s] for user [%s] not found", alias, userid);
 				
 		g_list_foreach(aliases,(GFunc)g_free,NULL);
 		g_list_free(aliases);
@@ -1745,9 +1645,7 @@ int auth_removealias(u64_t user_idnr, const char *alias)
 	
 	_ldap_err = ldap_modify_s(_ldap_conn, _ldap_dn, modify);
 	if (_ldap_err) {
-		trace(TRACE_ERROR, "%s,%s: update failed: %s",
-				__FILE__,__func__, 
-				ldap_err2string(_ldap_err));
+		TRACE(TRACE_ERROR, "update failed: %s", ldap_err2string(_ldap_err));
 		g_strfreev(mailValues);
 		ldap_memfree(_ldap_dn);
 		return -1;

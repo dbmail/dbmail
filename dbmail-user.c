@@ -29,6 +29,7 @@ extern char *configFile;
 extern db_param_t _db_params;
 
 #define SHADOWFILE "/etc/shadow"
+#define THIS_MODULE "user"
 
 static char *getToken(char **str, const char *delims);
 static char csalt[] = "........";
@@ -62,9 +63,9 @@ int do_add(const char * const user,
 		return -1;
 	}
 
-	trace(TRACE_DEBUG, "Adding user %s with password type %s,"
-	     "%llu bytes mailbox limit and clientid %llu... ",
-	     user, enctype, maxmail, clientid);
+	TRACE(TRACE_DEBUG, "Adding user %s with password type %s,%llu "
+		"bytes mailbox limit and clientid %llu... ", 
+		user, enctype, maxmail, clientid);
 
 	switch (auth_user_exists(user, &useridnr))
 	{
@@ -85,7 +86,7 @@ int do_add(const char * const user,
 		break;
 	}
 
-	trace(TRACE_DEBUG, "Ok, user added id [%llu]\n", useridnr);
+	TRACE(TRACE_DEBUG, "Ok, user added id [%llu]\n", useridnr);
 
 	/* Add an INBOX for the user. */
 	qprintf("Adding INBOX for new user\n");
@@ -97,7 +98,7 @@ int do_add(const char * const user,
 		break;
 	case 0:
 	default:
-		trace(TRACE_DEBUG, "Ok. added\n");
+		TRACE(TRACE_DEBUG, "Ok. added\n");
 		result = 0;
 		break;
 	} 

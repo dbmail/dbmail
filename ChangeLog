@@ -1,3 +1,30 @@
+2006-11-01  Paul J Stevens <paul@nfg.nl>
+
+	* debian/changelog, debian/dbmail-ldap.templates, 
+	  debian/dbmail-sieve.postinst, debian/po/cs.po, debian/po/de.po, 
+	  debian/po/es.po, debian/po/fr.po, debian/po/it.po, debian/po/ja.po, 
+	  debian/po/nl.po, debian/po/pt_BR.po, debian/po/templates.pot, 
+	  test-scripts/testlmtp.txt:
+	po files updated after completing the templates
+	* misc.c:
+	add missing va_end call in g_list_append_printf
+	* config.c:
+	trace conversion
+	* serverparent.c:
+	minor cleanup
+	* Makefile.am:
+	AM_LDFLAGS modified
+	* misc.c:
+	TRACE migration and imap_cleanup_address fix
+	* acl.c, authmodule.c, check_dbmail.h, check_dbmail_mailbox.c, config.c, 
+	  dbmail-mailbox.c, dbmail-message.c, dbmail-user.c, dbmail.h.in, 
+	  dbmodule.c, debug.c, dm_base64.c, dm_imaputil.c, dm_md5.c, dsn.c, 
+	  imap4.c, imapcommands.c, lmtp.c, main.c, modules/authldap.c, 
+	  modules/authsql.c, modules/dbmysql.c, modules/dbpgsql.c, 
+	  modules/dbsqlite.c, modules/sortnull.c, modules/sortsieve.c, pop3.c, 
+	  quota.c, serverchild.c, sortmodule.c:
+	complete TRACE migration
+
 2006-10-31  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_imapd.c, check_dbmail_message.c, dbmail-message.c, misc.c:

@@ -69,27 +69,23 @@ int drop_privileges(char *newuser, char *newgroup)
 	grp = getgrnam(newgroup);
 
 	if (grp == NULL) {
-		trace(TRACE_ERROR, "%s,%s: could not find group %s\n",
-		      __FILE__, __func__, newgroup);
+		TRACE(TRACE_ERROR, "could not find group %s\n", newgroup);
 		return -1;
 	}
 
 	pwd = getpwnam(newuser);
 	if (pwd == NULL) {
-		trace(TRACE_ERROR, "%s,%s: could not find user %s\n",
-		      __FILE__, __func__, newuser);
+		TRACE(TRACE_ERROR, "could not find user %s\n", newuser);
 		return -1;
 	}
 
 	if (setgid(grp->gr_gid) != 0) {
-		trace(TRACE_ERROR, "%s,%s: could not set gid to %s\n",
-		      __FILE__, __func__, newgroup);
+		TRACE(TRACE_ERROR, "could not set gid to %s\n", newgroup);
 		return -1;
 	}
 
 	if (setuid(pwd->pw_uid) != 0) {
-		trace(TRACE_ERROR, "%s,%s: could not set uid to %s\n",
-		      __FILE__, __func__, newuser);
+		TRACE(TRACE_ERROR, "could not set uid to %s\n", newuser);
 		return -1;
 	}
 	return 0;
@@ -110,8 +106,7 @@ void create_unique_id(char *target, u64_t message_idnr)
 		snprintf(target, UID_SIZE, "%s", a_rand);
 	md5_str = dm_md5((unsigned char *)target);
 	snprintf(target, UID_SIZE, "%s", md5_str);
-	trace(TRACE_DEBUG, "%s,%s: created: %s", __FILE__, __func__,
-	      target);
+	TRACE(TRACE_DEBUG, "created: %s", target);
 	dm_free(md5_str);
 	g_free(a_message_idnr);
 	g_free(a_rand);
@@ -123,8 +118,7 @@ void create_current_timestring(timestring_t * timestring)
 	struct tm tm;
 
 	if (time(&td) == -1)
-		trace(TRACE_FATAL, "%s,%s: error getting time from OS",
-		      __FILE__, __func__);
+		TRACE(TRACE_FATAL, "error getting time from OS");
 
 	tm = *localtime(&td);	/* get components */
 	strftime((char *) timestring, sizeof(timestring_t),
@@ -139,8 +133,7 @@ char *mailbox_add_namespace(const char *mailbox_name, u64_t owner_idnr,
 	GString *t;
 
 	if (mailbox_name == NULL) {
-		trace(TRACE_ERROR, "%s,%s: error, mailbox_name is NULL.",
-				__FILE__, __func__);
+		TRACE(TRACE_ERROR, "error, mailbox_name is NULL.");
 		return NULL;
 	}
 	
@@ -317,9 +310,7 @@ int find_bounded(const char * const value, char left, char right,
 		tmpright--;
 
 	if (tmpleft[0] != left || tmpright[0] != right) {
-		trace(TRACE_INFO,
-		      "%s, %s: Found nothing between '%c' and '%c'",
-		      __FILE__, __func__, left, right);
+		TRACE(TRACE_INFO, "Found nothing between '%c' and '%c'", left, right);
 		*retchar = NULL;
 		*retsize = 0;
 		*retlast = 0;
@@ -335,9 +326,7 @@ int find_bounded(const char * const value, char left, char right,
 			*retchar = NULL;
 			*retsize = 0;
 			*retlast = 0;
-			trace(TRACE_INFO,
-			      "%s, %s: Found [%s] of length [%zd] between '%c' and '%c' so next skip [%zd]",
-			      __FILE__, __func__, *retchar, *retsize,
+			TRACE(TRACE_INFO, "Found [%s] of length [%zd] between '%c' and '%c' so next skip [%zd]", *retchar, *retsize,
 			      left, right, *retlast);
 			return -2;
 		}
@@ -345,9 +334,7 @@ int find_bounded(const char * const value, char left, char right,
 		(*retchar)[tmplen] = '\0';
 		*retsize = tmplen;
 		*retlast = tmpright - value;
-		trace(TRACE_INFO,
-		      "%s, %s: Found [%s] of length [%zd] between '%c' and '%c' so next skip [%zd]",
-		      __FILE__, __func__, *retchar, *retsize, left,
+		TRACE(TRACE_INFO, "Found [%s] of length [%zd] between '%c' and '%c' so next skip [%zd]", *retchar, *retsize, left,
 		      right, *retlast);
 		return 0;
 	}
@@ -468,7 +455,9 @@ GList * g_list_append_printf(GList * list, char * format, ...)
 {
 	va_list argp;
 	va_start(argp, format);
-	return g_list_append(list, g_strdup_vprintf(format, argp));
+	list = g_list_append(list, g_strdup_vprintf(format, argp));
+	va_end(argp);
+	return list;
 }
 
 char * g_strcasestr(const char *haystack, const char *needle)
@@ -782,8 +771,7 @@ int dm_sock_score(const char *base, const char *test)
 	cidr_free(basefilter);
 	cidr_free(testfilter);
 	
-	trace(TRACE_DEBUG, "%s,%s: base[%s] test[%s] => [%d]",
-			__FILE__, __func__, base, test, result);
+	TRACE(TRACE_DEBUG, "base[%s] test[%s] => [%d]", base, test, result);
 	return result;
 }
 
@@ -808,8 +796,7 @@ int dm_sock_compare(const char *clientsock, const char *sock_allow, const char *
 		result = DM_EGENERAL;
 	}
 
-	trace(TRACE_DEBUG, "%s,%s: clientsock [%s] sock_allow[%s], sock_deny [%s] => [%d]",
-			__FILE__, __func__, clientsock, sock_allow, sock_deny, result);
+	TRACE(TRACE_DEBUG, "clientsock [%s] sock_allow[%s], sock_deny [%s] => [%d]", clientsock, sock_allow, sock_deny, result);
 	return result;
 	
 }
@@ -954,7 +941,7 @@ int check_msg_set(const char *s)
 			break;
 		}
 	}
-	trace(TRACE_DEBUG, "%s,%s: [%s] [%s]", __FILE__, __func__, s, result ? "ok" : "fail" );
+	TRACE(TRACE_DEBUG, "[%s] [%s]", s, result ? "ok" : "fail" );
 
 	return result;
 }
@@ -1018,8 +1005,7 @@ char *date_imap2sql(const char *imapdate)
 
 	last_char = strptime(imapdate, "%d-%b-%Y", &tm);
 	if (last_char == NULL || *last_char != '\0') {
-		trace(TRACE_DEBUG, "%s,%s: error parsing IMAP date %s",
-		      __FILE__, __func__, imapdate);
+		TRACE(TRACE_DEBUG, "error parsing IMAP date %s", imapdate);
 		return NULL;
 	}
 	(void) strftime(_sqldate, SQL_INTERNALDATE_LEN,
@@ -1217,8 +1203,7 @@ int g_tree_merge(GTree *a, GTree *b, int condition)
 			break;
 	}
 
-	trace(TRACE_DEBUG,"%s,%s: a[%d] [%s] b[%d] -> a[%d]",
-			__FILE__, __func__, 
+	TRACE(TRACE_DEBUG,"a[%d] [%s] b[%d] -> a[%d]", 
 			alen, type, blen, 
 			g_tree_nnodes(a));
 
@@ -1266,8 +1251,7 @@ int discard_client_input(FILE * instream)
 				return 0;
 			} else {
 				/* .\n ? */
-				trace(TRACE_ERROR, "%s,%s: bare LF.",
-					      __FILE__, __func__);
+				TRACE(TRACE_ERROR, "bare LF.");
 			} 
 		} else if (ch == '.' && ns == 3) {
 			/* \r\n. */
@@ -1277,13 +1261,11 @@ int discard_client_input(FILE * instream)
 			/* okay, look for error slippage */
 			l = 0;
 			if (getpeername(ns, (struct sockaddr *)"", &l) == -1 && errno != ENOTSOCK) {
-				trace(TRACE_ERROR, "%s,%s: unexpected failure from socket layer (client hangup?)",
-				      __FILE__, __func__);
+				TRACE(TRACE_ERROR, "unexpected failure from socket layer (client hangup?)");
 			}
 		}
 	}
-	trace(TRACE_ERROR, "%s,%s: unexpected EOF from stdio (client hangup?)",
-				      __FILE__, __func__);
+	TRACE(TRACE_ERROR, "unexpected EOF from stdio (client hangup?)");
 	return 0;
 }
 
@@ -1615,8 +1597,7 @@ void _structure_part_multipart(GMimeObject *part, gpointer data, gboolean extens
 	i = g_mime_multipart_get_number(multipart);
 	
 	b = g_mime_content_type_to_string(type);
-	trace(TRACE_DEBUG,"%s,%s: parse [%d] parts for [%s] with boundary [%s]",
-			__FILE__, __func__, 
+	TRACE(TRACE_DEBUG,"parse [%d] parts for [%s] with boundary [%s]", 
 			i, b, g_mime_multipart_get_boundary(multipart));
 	g_free(b);
 
@@ -1929,14 +1910,13 @@ char * imap_get_structure(GMimeMessage *message, gboolean extension)
 	part = g_mime_message_get_mime_part(message);
 	type = (GMimeContentType *)g_mime_object_get_content_type(part);
 	if (! type) {
-		trace(TRACE_DEBUG,"%s,%s: error getting content_type",
-				__FILE__, __func__);
+		TRACE(TRACE_DEBUG,"error getting content_type");
 		g_object_unref(part);
 		return NULL;
 	}
 	
 	s = g_mime_content_type_to_string(type);
-	trace(TRACE_DEBUG,"%s,%s: message type: [%s]", __FILE__, __func__, s);
+	TRACE(TRACE_DEBUG,"message type: [%s]", s);
 	g_free(s);
 	
 	/* multipart composite */
@@ -2139,7 +2119,8 @@ char * imap_cleanup_address(const char *a)
 	char *r, *t;
 	char *inptr;
 	char prev,next=0;
-	unsigned incode=0, inquote=0, done=0;
+	unsigned incode=0, inquote=0;
+	size_t i, l;
 	GString *s = g_string_new("");
 	
 	t = g_strdup(a);
@@ -2157,42 +2138,44 @@ char * imap_cleanup_address(const char *a)
 		incode=1;
 	}
 
-	while (! done) {
+	l = strlen(inptr);
 
-		if (! *inptr || *inptr == '<') {
-			done=1;
+	for (i=0; i<l-1; i++) {
+
+		next=inptr[i+1];
+
+		if (inptr[i] == '<')
 			break;
-		}
 
-		if (*inptr == '=' && next=='?')
+		if (inptr[i] == ' ' && next=='<')
+			break;
+
+		if (inptr[i] == '=' && next=='?')
 			incode=1;
 
-		if (! (incode && (*inptr == '"' || *inptr == ' ')))
-			g_string_append_c(s,*inptr);
-
-		if (prev=='?' && *inptr=='=')
+		if (prev=='?' && inptr[i]=='=')
 			incode=0;
 
-		prev = *inptr;
-		inptr++;
-		if (*(inptr+1))
-			next=*(inptr+1);
+		if (incode && (inptr[i] == '"' || inptr[i] == ' '))
+			continue; // skip illegal chars inquote
 
-		if (*inptr == ' ' && next=='<')
-			break;
+		prev = inptr[i];
+
+		g_string_append_c(s,inptr[i]); 
+
 	}
-
-	if (*(inptr+1))
-		next=*(inptr+1);
 
 	if (inquote)
 		g_string_append_c(s,'"');
 
-	if (*inptr == '<' && prev != *inptr && prev != ' ')
+	if (inptr[i] == '<' && prev != inptr[i] && prev != ' ')
 		g_string_append_c(s,' ');
 		
+	inptr+=i;
+
 	if (*inptr)
 		g_string_append(s,inptr);
+
 	g_free(t);
 	
 	if (g_str_has_suffix(s->str,";"))
@@ -2202,7 +2185,6 @@ char * imap_cleanup_address(const char *a)
 	 * The purpose is to fix broken syntax like this: "one@dom; two@dom"
 	 * But to allow correct syntax like this: "Group: one@dom, two@dom;"
 	 */
-	size_t i;
 	int colon = 0;
 
 	for (i = 0; i < s->len; i++) {

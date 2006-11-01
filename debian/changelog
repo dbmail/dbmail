@@ -1,8 +1,8 @@
-dbmail (2.1.7+20061026) experimental; urgency=low
+dbmail (2.1.7+20061031) experimental; urgency=low
 
   * pre-release snapshot
 
- -- Paul J Stevens <paul@nfg.nl>  Thu, 26 Oct 2006 23:44:27 +0200
+ -- Paul J Stevens <paul@nfg.nl>  Tue, 31 Oct 2006 14:32:17 +0100
 
 dbmail (2.1.7-1) unstable; urgency=low
 
