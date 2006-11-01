@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: lmtp.c 2345 2006-10-31 11:45:13Z paul $
+/* $Id: lmtp.c 2347 2006-11-01 21:35:52Z paul $
  *
  * implementation for lmtp commands according to RFC 1081 */
 

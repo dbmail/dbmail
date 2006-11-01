@@ -1,5 +1,5 @@
 /*
-  $Id: quota.c 2065 2006-04-10 20:38:36Z paul $
+  $Id: quota.c 2347 2006-11-01 21:35:52Z paul $
 
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
