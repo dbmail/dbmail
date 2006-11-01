@@ -1,6 +1,6 @@
 Template: dbmail/authdriver
-Type: string
-_Description: Activate ldap auth driver?
+Type: boolean
+_Description: Do you wish to activate the ldap auth driver?
  Please select this option if you want to use the LDAP 
  authentication driver for dbmail.
 

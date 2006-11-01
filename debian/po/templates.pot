@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: paul@nfg.nl\n"
-"POT-Creation-Date: 2006-10-29 18:50+0100\n"
+"POT-Creation-Date: 2006-10-31 15:48+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -252,13 +252,13 @@ msgid ""
 "Select this option if you want to use sqlite as storage driver for dbmail."
 msgstr ""
 
-#. Type: string
+#. Type: boolean
 #. Description
 #: ../dbmail-ldap.templates:3
-msgid "Activate ldap auth driver?"
+msgid "Do you wish to activate the ldap auth driver?"
 msgstr ""
 
-#. Type: string
+#. Type: boolean
 #. Description
 #: ../dbmail-ldap.templates:3
 msgid ""

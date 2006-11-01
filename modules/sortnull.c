@@ -26,6 +26,7 @@
  */
 
 #include "dbmail.h"
+#define THIS_MODULE "sort"
 
 const char * sort_listextensions(void)
 {
@@ -34,17 +35,15 @@ const char * sort_listextensions(void)
 
 sort_result_t *sort_validate(u64_t user_idnr UNUSED, char *scriptname UNUSED)
 {
-	trace(TRACE_WARNING, "%s, %s: SIEVE sorting enabled in DELIVERY section of dbmail.conf,"
-			" but this build of DBMail was statically configured without Sieve.",
-			__FILE__, __func__);
+	TRACE(TRACE_WARNING, "SIEVE sorting enabled in DELIVERY section of dbmail.conf,"
+			" but this build of DBMail was statically configured without Sieve.");
 	return NULL;
 }
 
 sort_result_t *sort_process(u64_t user_idnr UNUSED, struct DbmailMessage *message UNUSED)
 {
-	trace(TRACE_WARNING, "%s, %s: SIEVE sorting enabled in DELIVERY section of dbmail.conf,"
-			" but this build of DBMail was statically configured without Sieve.",
-			__FILE__, __func__);
+	TRACE(TRACE_WARNING, "SIEVE sorting enabled in DELIVERY section of dbmail.conf,"
+			" but this build of DBMail was statically configured without Sieve.");
 	return NULL;
 }
 
