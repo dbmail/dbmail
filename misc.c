@@ -487,14 +487,11 @@ char * dm_stresc(const char * from)
  */
 char * dm_strnesc(const char * from, size_t len)
 {
-	char *to, *f8;
+	char *to;
 	assert(from);
 	len = min(strlen(from),len);
 	to = g_new0(char, (len + 1) * 2 + 1);
-	f8 = g_mime_iconv_locale_to_utf8(from);
-	db_escape_string(to, f8, len);
-	g_free(f8);
-
+	db_escape_string(to, from, len);
 	return to;
 }
 	
@@ -1986,20 +1983,11 @@ char * imap_get_envelope(GMimeMessage *message)
 	}
 	
 	/* subject */
-	if ((raw = g_mime_message_get_header(message,"Subject"))) {
-		if (g_mime_utils_text_is_8bit((unsigned char *)raw, strlen(raw)))
-			result = g_mime_utils_header_encode_text((unsigned char *)raw);
-		else
-			result = g_strdup(raw);
-	} else {
-		result = NULL;
-	}
-
+	result = (char *)g_mime_message_get_header(message,"Subject");
 	if (result) {
 		t = dbmail_imap_astring_as_string(result);
 		list = g_list_append_printf(list,"%s", t);
 		g_free(t);
-		g_free(result);
 	} else {
 		list = g_list_append_printf(list,"NIL");
 	}

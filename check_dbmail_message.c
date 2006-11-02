@@ -369,6 +369,20 @@ START_TEST(test_dbmail_message_encoded)
 	dbmail_message_free(m);
 }
 END_TEST
+START_TEST(test_dbmail_message_8bit)
+{
+	struct DbmailMessage *m = dbmail_message_new();
+	GString *s = g_string_new(raw_message_koi);
+
+	m = dbmail_message_init_with_string(m, s);
+	g_string_free(s,TRUE);
+
+	dbmail_message_store(m);
+	dbmail_message_free(m);
+
+}
+END_TEST
+
 START_TEST(test_dbmail_message_cache_headers)
 {
 	struct DbmailMessage *m = dbmail_message_new();
@@ -478,8 +492,6 @@ START_TEST(test_encoding)
 	g_free(raw);
 	g_free(dec);
 	g_free(enc);
-	
-
 }
 END_TEST
 
@@ -509,6 +521,7 @@ Suite *dbmail_message_suite(void)
 	tcase_add_test(tc_message, test_dbmail_message_cache_headers);
 	tcase_add_test(tc_message, test_dbmail_message_free);
 	tcase_add_test(tc_message, test_dbmail_message_encoded);
+	tcase_add_test(tc_message, test_dbmail_message_8bit);
 	tcase_add_test(tc_message, test_dbmail_message_get_header_addresses);
 	tcase_add_test(tc_message, test_dbmail_message_get_header_repeated);
 	tcase_add_test(tc_message, test_dbmail_message_construct);

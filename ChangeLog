@@ -1,3 +1,9 @@
+2006-11-02  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail.h, check_dbmail_message.c, misc.c, modules/dbpgsql.c:
+	push utf8 conversion to pgsql driver and remove utf7 encoding from
+	subject in envelope
+
 2006-11-01  Paul J Stevens <paul@nfg.nl>
 
 	* debian/changelog, debian/dbmail-ldap.templates, 
