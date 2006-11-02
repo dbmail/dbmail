@@ -1,3 +1,8 @@
+2006-11-02  Aaron Stone  <aaron@serendipity.cx>
+
+	* authmodule.c, dbmodule.c, sortmodule.c:
+	Changed count of paths to attempt, and added a comment about it.
+
 2006-11-02  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail.h, check_dbmail_message.c, misc.c, modules/dbpgsql.c:
