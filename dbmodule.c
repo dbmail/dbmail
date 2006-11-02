@@ -58,7 +58,9 @@ int db_load_driver(void)
 		"modules/.libs",
 		PREFIX "/lib/dbmail",
 		NULL };
-	for (i = 0; i < 4; i++) {
+	/* Note that the limit here *includes* the NULL. This is intentional,
+	 * to allow g_module_build_path to try the current working directory. */
+	for (i = 0; i < 3; i++) {
 		lib = g_module_build_path(lib_path[i], driver);
 		module = g_module_open(lib, 0); // non-lazy bind.
 		if (module)
