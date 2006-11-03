@@ -1,3 +1,8 @@
+2006-11-03  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-message.c:
+	removed remaining utf8 conversion
+
 2006-11-02  Aaron Stone  <aaron@serendipity.cx>
 
 	* authmodule.c, dbmodule.c, sortmodule.c:
