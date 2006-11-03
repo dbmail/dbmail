@@ -1043,9 +1043,6 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 		
 			value = internet_address_list_to_string(alist, TRUE);
 			internet_address_list_destroy(alist);
-
-		} else {
-			value = g_mime_iconv_locale_to_utf8((const char *)raw);
 		}
 
 		safe_value = dm_stresc(value);
