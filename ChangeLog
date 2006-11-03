@@ -1,5 +1,8 @@
 2006-11-03  Paul J Stevens <paul@nfg.nl>
 
+	* dbmail-message.c, modules/dbpgsql.c:
+	fully revert the utf8 behaviour. sql_ascii is the only supported db
+	encoding again for postgresql
 	* dbmail-message.c:
 	removed remaining utf8 conversion
 
