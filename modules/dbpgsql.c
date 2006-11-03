@@ -295,13 +295,8 @@ int db_query(const char *q)
 unsigned long db_escape_string(char *to,
 			       const char *from, unsigned long length)
 {
-	unsigned long result;
-	char *f8;
 	assert(from);
-	f8 = g_mime_iconv_locale_to_utf8(from);
-	result = PQescapeString(to, f8, length);
-	g_free(f8);
-	return result;
+	return PQescapeString(to, from, length);
 }
 
 unsigned long db_escape_binary(char *to,
