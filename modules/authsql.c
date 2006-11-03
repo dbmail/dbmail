@@ -493,13 +493,7 @@ u64_t auth_md5_validate(clientinfo_t *ci UNUSED, char *username,
 
 	TRACE(TRACE_DEBUG, "apop_stamp=[%s], userpw=[%s]", apop_stamp, query_result);
 
-
-	memtst((checkstring = (char *) dm_malloc(strlen(apop_stamp) +
-				   strlen(query_result) + 2)) == NULL);
-	snprintf(checkstring,
-		 strlen(apop_stamp) + strlen(query_result) + 2, "%s%s",
-		 apop_stamp, query_result);
-
+	checkstring = g_strdup_printf("%s%s", apop_stamp, query_result);
 	md5_apop_we = dm_md5((unsigned char *)checkstring);
 
 	TRACE(TRACE_DEBUG, "checkstring for md5 [%s] -> result [%s]", checkstring, md5_apop_we);

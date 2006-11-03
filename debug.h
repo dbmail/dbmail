@@ -43,7 +43,6 @@ typedef enum {
 	TRACE_DEBUG
 } trace_t;
 
-#define memtst(tstbool) func_memtst (__FILE__,__LINE__,tstbool)
 
 /* Define several macros for GCC specific attributes.
  * Although the __attribute__ macro can be easily defined
@@ -74,8 +73,6 @@ typedef enum {
 
 #endif
 
-
-void func_memtst(const char *filename, int line, int tst);
 
 #define trace(level, fmt...) newtrace(0, level, "", "", "", 0, fmt)
 #define TRACE(level, fmt...) newtrace(1, level, THIS_MODULE, __FILE__, __func__, __LINE__, fmt)
