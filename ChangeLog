@@ -1,3 +1,9 @@
+2006-11-03  Aaron Stone  <aaron@serendipity.cx>
+
+	* sql/mysql/migrate_from_2.0_to_2.2.mysql,
+	sql/mysql/2_1_7-2_2_0.mysql:
+	Make the envelope table creations consistent.
+
 2006-11-03  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-message.c, modules/dbpgsql.c:
