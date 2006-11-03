@@ -1,3 +1,11 @@
+2006-11-02  Aaron Stone  <aaron@serendipity.cx>
+
+	* authmodule.c, dbmodule.c, sortmodule.c:
+	Changed count of paths to attempt, and added a comment about it.
+	Added more debugging info, closed a minor memory leak.
+	* debug.h, modules/authsql.c:
+	Removed relics of memtst and func_memtst.
+
 2006-11-02  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail.h, check_dbmail_message.c, misc.c, modules/dbpgsql.c:

@@ -58,16 +58,24 @@ int db_load_driver(void)
 		"modules/.libs",
 		PREFIX "/lib/dbmail",
 		NULL };
-	for (i = 0; i < 4; i++) {
+	/* Note that the limit here *includes* the NULL. This is intentional,
+	 * to allow g_module_build_path to try the current working directory. */
+	for (i = 0; i < 3; i++) {
 		lib = g_module_build_path(lib_path[i], driver);
 		module = g_module_open(lib, 0); // non-lazy bind.
+
+		TRACE(TRACE_DEBUG, "looking for %s as %s", driver, lib);
+		g_free(lib);
+
+		if (!module)
+			TRACE(TRACE_INFO, "cannot load %s", g_module_error());
 		if (module)
 			break;
 	}
 
 	/* If the list is exhausted without opening a module, we'll catch it. */
 	if (!module) {
-		TRACE(TRACE_FATAL, "cannot load %s", g_module_error());
+		TRACE(TRACE_FATAL, "could not load db module - turn up debug level for details");
 		return -1;
 	}
 
