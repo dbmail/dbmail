@@ -63,6 +63,15 @@ START_TEST(test_db_icheck_isheader)
 }
 END_TEST
 
+START_TEST(test_allocate)
+{
+	int i = 120000;
+	u64_t *rows = g_new0(u64_t, i);
+
+	g_free(rows);
+
+}
+END_TEST
 
 Suite *dbmail_common_suite(void)
 {
@@ -72,6 +81,7 @@ Suite *dbmail_common_suite(void)
 	suite_add_tcase(s, tc_util);
 	
 	tcase_add_checked_fixture(tc_util, setup, teardown);
+	tcase_add_test(tc_util, test_allocate);
 	tcase_add_test(tc_util, test_db_icheck_isheader); 
 	
 	return s;
