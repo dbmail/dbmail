@@ -1,17 +1,14 @@
-<<<<<<< .mine
 2006-11-04  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_util.c, db.c, modules/dbmysql.c:
 	re-add the MR optimization
 
-=======
 2006-11-03  Aaron Stone  <aaron@serendipity.cx>
 
 	* sql/mysql/migrate_from_2.0_to_2.2.mysql,
 	sql/mysql/2_1_7-2_2_0.mysql:
 	Make the envelope table creations consistent.
 
->>>>>>> .r2353
 2006-11-03  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-message.c, modules/dbpgsql.c:
