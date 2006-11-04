@@ -1522,11 +1522,11 @@ int db_set_isheader(GList *lost)
 
 int db_icheck_isheader(GList  **lost)
 {
-	unsigned i;
+	unsigned i, n;
 	snprintf(query, DEF_QUERYSIZE,
-			"SELECT MIN(messageblk_idnr),MAX(is_header) "
+			"SELECT MIN(messageblk_idnr),is_header "
 			"FROM %smessageblks "
-			"GROUP BY physmessage_id HAVING MAX(is_header)=0",
+			"GROUP BY physmessage_id HAVING is_header=0",
 			DBPFX);
 	
 	if (db_query(query) == -1) {
@@ -1534,8 +1534,9 @@ int db_icheck_isheader(GList  **lost)
 		return DM_EQUERY;
 	}
 
-	for (i = 0; i < db_num_rows(); i++) 
-		*(GList **)lost = g_list_append(*(GList **)lost,
+	n = db_num_rows();
+	for (i = 0; i < n; i++) 
+		*(GList **)lost = g_list_prepend(*(GList **)lost,
 				g_strdup(db_get_result(i, 0)));
 
 	db_free_result();
@@ -1545,7 +1546,7 @@ int db_icheck_isheader(GList  **lost)
 
 int db_icheck_rfcsize(GList  **lost)
 {
-	unsigned i;
+	unsigned i, n;
 	snprintf(query, DEF_QUERYSIZE,
 			"SELECT id FROM %sphysmessage WHERE rfcsize=0",
 			DBPFX);
@@ -1554,8 +1555,10 @@ int db_icheck_rfcsize(GList  **lost)
 		TRACE(TRACE_ERROR, "could not access physmessage table");
 		return DM_EQUERY;
 	}
-	for (i = 0; i < db_num_rows(); i++) 
-		*(GList **)lost = g_list_append(*(GList **)lost,
+
+	n = db_num_rows();
+	for (i = 0; i < n; i++) 
+		*(GList **)lost = g_list_prepend(*(GList **)lost,
 				GUINT_TO_POINTER((unsigned)db_get_result_u64(i, 0)));
 
 	db_free_result();
@@ -1652,7 +1655,7 @@ int db_set_headercache(GList *lost)
 		
 int db_icheck_headercache(GList **lost)
 {
-	unsigned i;
+	unsigned i,n;
 	u64_t *id;
 	snprintf(query, DEF_QUERYSIZE,
 			"SELECT p.id FROM %sphysmessage p "
@@ -1664,11 +1667,13 @@ int db_icheck_headercache(GList **lost)
 		TRACE(TRACE_ERROR, "query failed");
 		return DM_EQUERY;
 	}
+
+	n = db_num_rows();
 	
-	for (i = 0; i < db_num_rows(); i++) {
+	for (i = 0; i < n; i++) {
 		id = g_new0(u64_t,1);
 		*id = db_get_result_u64(i,0);
-		*(GList **)lost = g_list_append(*(GList **)lost,id);
+		*(GList **)lost = g_list_prepend(*(GList **)lost,id);
 	}
 
 	db_free_result();
@@ -1699,8 +1704,8 @@ int db_set_envelope(GList *lost)
 		} else {
 			dbmail_message_cache_envelope(msg);
 			fprintf(stderr,".");
-			dbmail_message_free(msg);
 		}
+		dbmail_message_free(msg);
 		if (! g_list_next(lost))
 			break;
 		lost = g_list_next(lost);
@@ -1727,7 +1732,7 @@ int db_icheck_envelope(GList **lost)
 	for (i = 0; i < db_num_rows(); i++) {
 		id = g_new0(u64_t,1);
 		*id = db_get_result_u64(i,0);
-		*(GList **)lost = g_list_append(*(GList **)lost,id);
+		*(GList **)lost = g_list_prepend(*(GList **)lost,id);
 	}
 
 	db_free_result();
