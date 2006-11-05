@@ -1963,7 +1963,6 @@ char * imap_get_envelope(GMimeMessage *message)
 	GMimeObject *part;
 	GList *list = NULL;
 	char *result;
-	const char *raw;
 	char *s, *t;
 
 	if (! GMIME_IS_MESSAGE(message))

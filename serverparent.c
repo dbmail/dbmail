@@ -45,6 +45,11 @@ static void ClearConfig(serverConfig_t * conf);
 static void DoConfig(serverConfig_t * conf, const char * const service);
 static void LoadServerConfig(serverConfig_t * config, const char * const service);
 
+/* Valid chars used by LMTP, POP3 and Tim's Sieve. */
+const char ValidNetworkChars[] =
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    ",'\"?_.!|@#$%^&*()-+=~[]{}<>:;\\/ '";
+
 void serverparent_showhelp(const char *name, const char *greeting) {
 	printf("*** %s ***\n", name);
 
