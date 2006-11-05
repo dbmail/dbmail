@@ -7,7 +7,7 @@ Standards-Version: 3.7.2
 
 Package: dbmail
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}, debconf (>=1.4.70) | debconf-2.0, ucf (>= 0.30), adduser
+Depends: ${misc:Depends}, ${shlibs:Depends}, libglib2.0, libgmime-2.0-2 | libgmime2.1 (>= 2.1.19), debconf (>=1.4.70) | debconf-2.0, ucf (>= 0.30), adduser
 Provides: imap-server, pop3-server
 Suggests: dbmail-sqlite | dbmail-pgsql | dbmail-mysql, dbmail-ldap, dbmail-sieve
 Description: base package for the dbmail email solution

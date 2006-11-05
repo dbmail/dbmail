@@ -1288,7 +1288,7 @@ static int sorted_search(struct ImapSession *self, search_order_t order)
 	struct DbmailMailbox *mb;
 	int result = 0;
 	u64_t idx = 0;
-	gchar *s = NULL;
+	gchar *s = NULL, *cmd = NULL;
 	gboolean sorted;
 
 	if (order == SEARCH_SORTED)
@@ -1321,9 +1321,25 @@ static int sorted_search(struct ImapSession *self, search_order_t order)
 
 	if (g_tree_nnodes(mb->ids) > 0) {
 		dbmail_mailbox_set_uid(mb,self->use_uid);
+		switch(order) {
+			case SEARCH_SORTED:
+				cmd = g_strdup("SORT");
+			break;
+			case SEARCH_UNORDERED:
+				cmd = g_strdup("SEARCH");
+			break;
+			case SEARCH_THREAD_ORDEREDSUBJECT:
+				cmd = g_strdup("THREAD");
+			break;
+			case SEARCH_THREAD_REFERENCES:
+				cmd = g_strdup("THREAD");
+			break;
+		}
+
+
 		if (dbmail_mailbox_build_imap_search(mb, self->args, &idx, order) < 0) {
 			dbmail_imap_session_printf(self, "%s BAD invalid arguments to %s\r\n",
-				self->tag, self->command);
+				self->tag, cmd);
 			return 1;
 		}
 		dbmail_mailbox_search(mb);
@@ -1340,16 +1356,18 @@ static int sorted_search(struct ImapSession *self, search_order_t order)
 				s = dbmail_mailbox_orderedsubject(mb);
 			break;
 			case SEARCH_THREAD_REFERENCES:
-				s = NULL; // unsupported
+				s = NULL; // TODO: unsupported
 			break;
 		}
 
-		dbmail_imap_session_printf(self, "* %s %s\r\n", self->command, s?s:"");
+		dbmail_imap_session_printf(self, "* %s %s\r\n", cmd, s?s:"");
 		if (s)
 			g_free(s);
 	}
 
-	dbmail_imap_session_printf(self, "%s OK %s completed\r\n", self->tag, self->command);
+	dbmail_imap_session_printf(self, "%s OK %s completed\r\n", self->tag, cmd);
+	if (cmd)
+		g_free(cmd);
 	
 	dbmail_mailbox_free(mb);
 	
