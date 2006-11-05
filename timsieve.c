@@ -51,11 +51,6 @@ static const char *commands[] = {
 	"HAVESPACE", "PUTSCRIPT"
 };
 
-/* \" is added to the standard set of stuff... */
-static const char validchars[] =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    "_.!@#$%^&*()-+=~[]{}<>:;\\\"/ ";
-
 static char myhostname[64];
 
 /* Defined in timsieved.c */
@@ -208,7 +203,7 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 	}
 
 	/* check for command issued */
-	while (strchr(validchars, buffer[indx]))
+	while (strchr(ValidNetworkChars, buffer[indx]))
 		indx++;
 
 	/* end buffer */

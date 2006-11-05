@@ -65,11 +65,6 @@ const char *commands[] = {
 	"capa" /**< POP3_CAPA */
 };
 
-const char validchars[] =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    ",?_.!@#$%^&*()-+=~[]{}<>:;\\/ ";
-
-
 int pop3_handle_connection(clientinfo_t * ci)
 {
 	/*
@@ -276,7 +271,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 
 	
 	/* check for command issued */
-	while (strchr(validchars, buffer[indx]))
+	while (strchr(ValidNetworkChars, buffer[indx]))
 		indx++;
 
 	/* end buffer */

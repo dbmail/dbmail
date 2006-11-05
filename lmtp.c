@@ -48,10 +48,6 @@ static const char *const commands[] = {
 	"VRFY", "EXPN", "HELP", "NOOP", "RCPT"
 };
 
-static const char validchars[] =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    "_.!|@#$%^&*()-+=~[]{}<>:;\\/ ?'";
-
 static char myhostname[64];
 
 /**
@@ -250,7 +246,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 	}
 
 	/* check for command issued */
-	while (strchr(validchars, buffer[indx]))
+	while (strchr(ValidNetworkChars, buffer[indx]))
 		indx++;
 
 	/* end buffer */

@@ -1,3 +1,11 @@
+2006-11-05  Aaron Stone  <aaron@serendipity.cx>
+
+	* serverparent.h, serverparent.c, pop3.c, timsieve.c, lmtp.c:
+	Moved validchars into serverparent.c as ValidNetworkChars, with a
+	wider tolerance for allowed characters (closes bug #435).
+	* misc.c:
+	Removed an unused variable.
+
 2006-11-05  Paul J Stevens <paul@nfg.nl>
 
 	* imapcommands.c:
