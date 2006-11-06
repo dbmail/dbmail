@@ -1524,9 +1524,9 @@ int db_icheck_isheader(GList  **lost)
 {
 	unsigned i, n;
 	snprintf(query, DEF_QUERYSIZE,
-			"SELECT MIN(messageblk_idnr),is_header "
+			"SELECT MIN(messageblk_idnr),MAX(is_header) "
 			"FROM %smessageblks "
-			"GROUP BY physmessage_id HAVING is_header=0",
+			"GROUP BY physmessage_id HAVING MAX(is_header)=0",
 			DBPFX);
 	
 	if (db_query(query) == -1) {
