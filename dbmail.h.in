@@ -71,6 +71,7 @@
 #include <unistd.h>
 
 #ifdef AUTHLDAP
+#define LDAP_DEPRECATED 1
 #include <ldap.h>
 #endif
 
