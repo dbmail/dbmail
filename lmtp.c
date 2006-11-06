@@ -17,7 +17,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: lmtp.c 2347 2006-11-01 21:35:52Z paul $
+/* $Id: lmtp.c 2356 2006-11-05 16:43:48Z aaron $
  *
  * implementation for lmtp commands according to RFC 1081 */
 
@@ -47,10 +47,6 @@ static const char *const commands[] = {
 	"LHLO", "QUIT", "RSET", "DATA", "MAIL",
 	"VRFY", "EXPN", "HELP", "NOOP", "RCPT"
 };
-
-static const char validchars[] =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    "_.!|@#$%^&*()-+=~[]{}<>:;\\/ ?'";
 
 static char myhostname[64];
 
@@ -250,7 +246,7 @@ int lmtp(void *stream, void *instream, char *buffer,
 	}
 
 	/* check for command issued */
-	while (strchr(validchars, buffer[indx]))
+	while (strchr(ValidNetworkChars, buffer[indx]))
 		indx++;
 
 	/* end buffer */

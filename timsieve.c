@@ -1,4 +1,4 @@
-/* $Id: timsieve.c 2334 2006-10-29 19:50:48Z aaron $
+/* $Id: timsieve.c 2356 2006-11-05 16:43:48Z aaron $
 
  Copyright (C) 1999-2004 Aaron Stone aaron at serendipity dot cx
 
@@ -50,11 +50,6 @@ static const char *commands[] = {
 	"AUTHENTICATE", "DELETESCRIPT", "GETSCRIPT", "SETACTIVE",
 	"HAVESPACE", "PUTSCRIPT"
 };
-
-/* \" is added to the standard set of stuff... */
-static const char validchars[] =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    "_.!@#$%^&*()-+=~[]{}<>:;\\\"/ ";
 
 static char myhostname[64];
 
@@ -208,7 +203,7 @@ int tims(clientinfo_t *ci, char *buffer, PopSession_t * session)
 	}
 
 	/* check for command issued */
-	while (strchr(validchars, buffer[indx]))
+	while (strchr(ValidNetworkChars, buffer[indx]))
 		indx++;
 
 	/* end buffer */

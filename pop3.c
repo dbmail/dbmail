@@ -18,7 +18,7 @@
   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: pop3.c 2347 2006-11-01 21:35:52Z paul $
+/* $Id: pop3.c 2356 2006-11-05 16:43:48Z aaron $
  *
  * implementation for pop3 commands according to RFC 1081 */
 
@@ -64,11 +64,6 @@ const char *commands[] = {
 	"top", /**< POP3_TOP */
 	"capa" /**< POP3_CAPA */
 };
-
-const char validchars[] =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    ",?_.!@#$%^&*()-+=~[]{}<>:;\\/ ";
-
 
 int pop3_handle_connection(clientinfo_t * ci)
 {
@@ -276,7 +271,7 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 
 	
 	/* check for command issued */
-	while (strchr(validchars, buffer[indx]))
+	while (strchr(ValidNetworkChars, buffer[indx]))
 		indx++;
 
 	/* end buffer */
