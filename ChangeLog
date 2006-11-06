@@ -1,3 +1,11 @@
+2006-11-06  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmail.h.in:
+	Add LDAP_DEPRECATED because we haven't switch LDAP API's to the new
+	ldap_bind_sasl and friends.
+	* configure.in:
+	Version bump to 2.2
+
 2006-11-06  Paul J Stevens <paul@nfg.nl>
 
 	* debian/changelog, debian/dbmail.postinst:
