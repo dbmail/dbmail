@@ -1,3 +1,12 @@
+2006-11-06  Paul J Stevens <paul@nfg.nl>
+
+	* debian/changelog, debian/dbmail.postinst:
+	pre-release updates
+	* db.c:
+	revert mysql optimization (closes #440)
+	* debian/control, test-scripts/testimap.py:
+	fix depends
+
 2006-11-05  Aaron Stone  <aaron@serendipity.cx>
 
 	* serverparent.h, serverparent.c, pop3.c, timsieve.c, lmtp.c:
