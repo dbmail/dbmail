@@ -216,7 +216,7 @@ pid_t CreateChild(ChildInfo_t * info)
 int select_and_accept(ChildInfo_t * info, int * clientSocket, struct sockaddr * saClient)
 {
 	fd_set rfds;
-	int ip, result, flags;
+	int ip, result, flags, serr;
 	int active = 0, maxfd = 0;
 	socklen_t len;
 
@@ -270,10 +270,12 @@ int select_and_accept(ChildInfo_t * info, int * clientSocket, struct sockaddr * 
 	// accept will block forever unless it is set non-blocking with fcntl,
 	// so we have to do this dance to make it temporarily non-blocking.
 	*clientSocket = accept(info->listenSockets[active], saClient, &len);
+	if (*clientSocket < 0) 
+		serr = errno;
 	fcntl(info->listenSockets[active], F_SETFL, flags);
 
 	if (*clientSocket < 0) {
-		TRACE(TRACE_ERROR, "accept failed: [%s]", strerror(errno));
+		TRACE(TRACE_ERROR, "accept failed: [%s]", strerror(serr));
 		return -1;
 	}
 
