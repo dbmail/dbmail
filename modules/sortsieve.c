@@ -777,7 +777,7 @@ freesieve:
 	if (sort_context->script)
 		dm_free(sort_context->script);
 
-	if (! exitnull)
+	if (exitnull)
 		result = NULL;
 	else
 		result = sort_context->result;
