@@ -1730,7 +1730,11 @@ int db_icheck_envelope(GList **lost)
 	}
 	
 	for (i = 0; i < db_num_rows(); i++) {
-		id = g_new0(u64_t,1);
+		if (! (id = g_try_new0(u64_t,1))) {
+			TRACE(TRACE_FATAL,"alloction error at physmessage.id [%llu]",
+				db_get_result_u64(i,0));
+			return DM_EGENERAL;
+		}
 		*id = db_get_result_u64(i,0);
 		*(GList **)lost = g_list_prepend(*(GList **)lost,id);
 	}
