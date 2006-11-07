@@ -55,23 +55,31 @@ void teardown(void)
 {
 	db_disconnect();
 }
-
-START_TEST(test_db_icheck_isheader)
-{
-	GList *lost = NULL;
-	fail_unless(0==db_icheck_isheader(&lost),"db_icheck_isheader failed");
-}
-END_TEST
-
 START_TEST(test_allocate)
 {
-	int i = 120000;
+	u64_t i = 200000;
+	GList *l = NULL;
+	u64_t *id;
 	u64_t *rows = g_new0(u64_t, i);
-
 	g_free(rows);
 
+	while (i-- > 0) {
+		id = g_new0(u64_t, 1);
+		*id = i;
+		l = g_list_prepend(l, id);
+	}
+	g_list_foreach(l, (GFunc)g_free, NULL);
+	g_list_free(l);
 }
 END_TEST
+
+START_TEST(test_db_icheck_envelope)
+{
+	GList *lost = NULL;
+	fail_unless(0==db_icheck_envelope(&lost),"db_icheck_envelope failed");
+}
+END_TEST
+
 
 Suite *dbmail_common_suite(void)
 {
@@ -82,8 +90,8 @@ Suite *dbmail_common_suite(void)
 	
 	tcase_add_checked_fixture(tc_util, setup, teardown);
 	tcase_add_test(tc_util, test_allocate);
-	tcase_add_test(tc_util, test_db_icheck_isheader); 
-	
+	tcase_add_test(tc_util, test_db_icheck_envelope); 
+
 	return s;
 }
 
