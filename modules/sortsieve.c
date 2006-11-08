@@ -236,7 +236,7 @@ int sort_fileinto(sieve2_context_t *s, void *my)
 		msgflags = g_new0(int, IMAP_NFLAGS);
 
 		for (i = 0; flags[i]; i++) { // Loop through all script/user-specified flags.
-			for (j = 0; imap_flag_desc[j]; i++) { // Find the ones we support.
+			for (j = 0; imap_flag_desc[j]; j++) { // Find the ones we support.
 				if (g_strcasestr(imap_flag_desc[j], flags[i])) {
 					msgflags[i] = 1;
 				}
