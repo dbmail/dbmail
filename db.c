@@ -1698,7 +1698,7 @@ int db_set_envelope(GList *lost)
 		if (! msg)
 			return DM_EQUERY;
 
-		if (! (msg = dbmail_message_retrieve(msg, pmsgid, DBMAIL_MESSAGE_FILTER_FULL))) {
+		if (! (msg = dbmail_message_retrieve(msg, pmsgid, DBMAIL_MESSAGE_FILTER_HEAD))) {
 			TRACE(TRACE_WARNING,"error retrieving physmessage: [%llu]", pmsgid);
 			fprintf(stderr,"E");
 		} else {
