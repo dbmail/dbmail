@@ -1,3 +1,16 @@
+2006-11-09  Paul J Stevens <paul@nfg.nl>
+
+	* serverchild.c:
+	work on #437
+	* db.c:
+	only retrieve header for envelope reconstruction
+	* dbmail-message.c:
+	fix segfault
+	* db.c:
+	fix potential turnover
+	* maintenance.c:
+	reshuffle cache maintenance
+
 2006-11-08  Aaron Stone  <aaron@serendipity.cx>
 
 	* modules/sortsieve.c:
