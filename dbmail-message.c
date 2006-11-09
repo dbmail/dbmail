@@ -797,7 +797,7 @@ struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t
 	}
 	
 	if ((!self) || (! self->content)) {
-		TRACE(TRACE_ERROR, "retrieval failed for physid [%llu]", dbmail_message_get_physid(self));
+		TRACE(TRACE_ERROR, "retrieval failed for physid [%llu]", physid);
 		return NULL;
 	}
 
