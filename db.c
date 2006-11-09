@@ -1547,6 +1547,7 @@ int db_icheck_isheader(GList  **lost)
 int db_icheck_rfcsize(GList  **lost)
 {
 	unsigned i, n;
+	u64_t *id;
 	snprintf(query, DEF_QUERYSIZE,
 			"SELECT id FROM %sphysmessage WHERE rfcsize=0",
 			DBPFX);
@@ -1557,9 +1558,11 @@ int db_icheck_rfcsize(GList  **lost)
 	}
 
 	n = db_num_rows();
-	for (i = 0; i < n; i++) 
-		*(GList **)lost = g_list_prepend(*(GList **)lost,
-				GUINT_TO_POINTER((unsigned)db_get_result_u64(i, 0)));
+	for (i = 0; i < n; i++) {
+		id = g_new0(u64_t,1);
+		*id = db_get_result_u64(i, 0);
+		*(GList **)lost = g_list_prepend(*(GList **)lost, id);
+	}
 
 	db_free_result();
 
@@ -1568,7 +1571,7 @@ int db_icheck_rfcsize(GList  **lost)
 
 int db_update_rfcsize(GList *lost) 
 {
-	u64_t pmsid = -1;
+	u64_t *pmsid;
 	struct DbmailMessage *msg;
 	if (! lost)
 		return DM_SUCCESS;
@@ -1577,24 +1580,24 @@ int db_update_rfcsize(GList *lost)
 	lost = g_list_first(lost);
 	
 	while(lost) {
-		pmsid = (u64_t)(GPOINTER_TO_UINT(lost->data));
+		pmsid = (u64_t *)lost->data;
 		
 		if (! (msg = dbmail_message_new())) {
 		        g_string_free(q, TRUE);
 			return DM_EQUERY;
 		}
 
-		if (! (msg = dbmail_message_retrieve(msg, pmsid, DBMAIL_MESSAGE_FILTER_FULL))) {
-			TRACE(TRACE_WARNING, "error retrieving physmessage: [%llu]", pmsid);
+		if (! (msg = dbmail_message_retrieve(msg, *pmsid, DBMAIL_MESSAGE_FILTER_FULL))) {
+			TRACE(TRACE_WARNING, "error retrieving physmessage: [%llu]", *pmsid);
 			fprintf(stderr,"E");
 		} else {
 		        db_begin_transaction();
 			g_string_printf(q,"UPDATE %sphysmessage SET rfcsize = %llu "
 					"WHERE id = %llu", DBPFX, (u64_t)dbmail_message_get_size(msg,TRUE), 
-					pmsid);
+					*pmsid);
 			if (db_query(q->str)==-1) {
 				TRACE(TRACE_WARNING, "error setting rfcsize physmessage: [%llu]", 
-					pmsid);
+					*pmsid);
 				db_rollback_transaction();
 				fprintf(stderr,"E");
 			} else {
