@@ -1,3 +1,9 @@
+2006-11-09  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmail-message.c:
+	Always set charset=utf-8 in dbmail_construct_message (closes bug
+	#429).
+
 2006-11-09  Paul J Stevens <paul@nfg.nl>
 
 	* serverchild.c:

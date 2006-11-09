@@ -281,7 +281,6 @@ struct DbmailMessage * dbmail_message_construct(struct DbmailMessage *self,
 	GMimeDataWrapper *content;
 	GMimeStream *stream, *fstream;
 	GMimeContentType *mime_type;
-	const gchar *charset;
 	GMimePartEncodingType encoding = GMIME_PART_ENCODING_DEFAULT;
 	GMimeFilter *filter = NULL;
 
@@ -335,8 +334,9 @@ struct DbmailMessage * dbmail_message_construct(struct DbmailMessage *self,
 	// Content-Type
 	mime_type = g_mime_content_type_new("text","plain");
 	g_mime_object_set_content_type((GMimeObject *)mime_part, mime_type);
-	if ((charset = g_mime_charset_best(body,strlen(body))) != NULL)
-		g_mime_object_set_content_type_parameter((GMimeObject *)mime_part, "charset", charset);
+	// We originally tried to use g_mime_charset_best to pick a charset,
+	// but it regularly failed to choose utf-8 when utf-8 data was given to it.
+	g_mime_object_set_content_type_parameter((GMimeObject *)mime_part, "charset", "utf-8");
 
 	// Content-Transfer-Encoding
 	switch(encoding) {
