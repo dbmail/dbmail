@@ -365,6 +365,15 @@ START_TEST(test_imap_get_structure)
 	char *result;
 	char *expect = g_new0(char,1024);
 
+
+	/* bare bones */
+	message = dbmail_message_new();
+	message = dbmail_message_init_with_string(message, g_string_new(simple));
+	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
+	printf("[%s]\n", result);
+	dbmail_message_free(message);
+	g_free(result);
+
 	/* multipart */
 	message = dbmail_message_new();
 	message = dbmail_message_init_with_string(message, g_string_new(multipart_message));
@@ -493,7 +502,20 @@ START_TEST(test_imap_get_envelope)
 
 	dbmail_message_free(message);
 	g_free(result);
+	result = NULL;
 	g_free(expect);
+	expect = NULL;
+
+	/* bare bones message */
+	message = dbmail_message_new();
+	message = dbmail_message_init_with_string(message, g_string_new(simple));
+	result = imap_get_envelope(GMIME_MESSAGE(message->content));
+
+	printf("[%s]\n", result);
+	dbmail_message_free(message);
+	g_free(result);
+	result = NULL;
+
 }
 END_TEST
 

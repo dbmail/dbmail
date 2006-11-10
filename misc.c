@@ -451,7 +451,7 @@ GList * g_string_split(GString * string, const gchar * sep)
 /*
  * append a formatted string to a GList
  */
-GList * g_list_append_printf(GList * list, char * format, ...)
+GList * g_list_append_printf(GList * list, const char * format, ...)
 {
 	va_list argp;
 	va_start(argp, format);
@@ -1941,10 +1941,11 @@ char * imap_get_structure(GMimeMessage *message, gboolean extension)
 
 GList * envelope_address_part(GList *list, GMimeMessage *message, const char *header)
 {
-	char *result, *t;
+	const char *result;
+	char *t;
 	InternetAddressList *alist;
 	
-	result = (char *)g_mime_message_get_header(message,header);
+	result = g_mime_message_get_header(message,header);
 	if (result) {
 		t = imap_cleanup_address(result);
 		alist = internet_address_parse_string(t);
