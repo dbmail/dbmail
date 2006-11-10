@@ -216,7 +216,7 @@ pid_t CreateChild(ChildInfo_t * info)
 int select_and_accept(ChildInfo_t * info, int * clientSocket, struct sockaddr * saClient)
 {
 	fd_set rfds;
-	int ip, result, flags, serr;
+	int ip, result, flags, serr = 0;
 	int active = 0, maxfd = 0;
 	socklen_t len;
 
