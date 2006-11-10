@@ -1871,7 +1871,9 @@ GList* dbmail_imap_append_alist_as_plist(GList *list, const InternetAddressList 
 				else
 					t = g_list_append_printf(t, "NIL");
 				/* host name */
-				if (tokens[1])
+				/* Note that if tokens[0] was null, we must
+				 * short-circuit because tokens[1] is out of bounds! */
+				if (tokens[0] && tokens[1])
 					t = g_list_append_printf(t, "\"%s\"", tokens[1]);
 				else
 					t = g_list_append_printf(t, "NIL");
