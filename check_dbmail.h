@@ -13,6 +13,13 @@ char *configFile = "/etc/dbmail/dbmail-test.conf";
 
 
 /* simple testmessages. */
+char *simple = "From nobody Wed Sep 14 16:47:48 2005\n"
+	"X-Foo: bar\n"
+	"Subject: dbmail test message\n"
+	"\n"
+	"\n"
+	"    this is a test message\n"
+	"\n";
 
 char *rfc822 = "From nobody Wed Sep 14 16:47:48 2005\n"
 	"Content-Type: text/plain; charset=\"us-ascii\"\n"
