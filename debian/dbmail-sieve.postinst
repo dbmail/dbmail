@@ -38,11 +38,11 @@ case "$1" in
 
 	if [ "$DO_DEBCONF" = "true" ]; then
 		# fetch debconf values
-		db_get dbmail/sieve/sieve || true; SIEVE_SIEVE=$RET
+		db_get dbmail/delivery/sieve || true; SIEVE_SIEVE=$RET
 		db_get dbmail/sieve/start_timsieved || true; START_TIMSIEVED=$RET
-		db_get dbmail/sieve/subaddress || true; SIEVE_SUBADDR=$RET
-		db_get dbmail/sieve/sieve_vacation || true; SIEVE_VACATION=$RET
-		db_get dbmail/sieve/sieve_notify || true; SIEVE_NOTIFY=$RET
+		db_get dbmail/delivery/subaddress || true; SIEVE_SUBADDR=$RET
+		db_get dbmail/delivery/sieve_vacation || true; SIEVE_VACATION=$RET
+		db_get dbmail/delivery/sieve_notify || true; SIEVE_NOTIFY=$RET
 
 	fi
 
