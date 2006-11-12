@@ -270,14 +270,15 @@ int select_and_accept(ChildInfo_t * info, int * clientSocket, struct sockaddr * 
 	// accept will block forever unless it is set non-blocking with fcntl,
 	// so we have to do this dance to make it temporarily non-blocking.
 	*clientSocket = accept(info->listenSockets[active], saClient, &len);
-	if (*clientSocket < 0) 
-		serr = errno;
+	// on some systems (freebsd) the non-blocking state is inherited by
+	// the new socket, so we want to reset both the new socket and the listening
+	// handle.
+	if (*clientSocket > 0) 
+		fcntl(*clientSocket, F_SETFL, flags);
 	fcntl(info->listenSockets[active], F_SETFL, flags);
 
-	if (*clientSocket < 0) {
-		TRACE(TRACE_ERROR, "accept failed: [%s]", strerror(serr));
+	if (*clientSocket < 0)
 		return -1;
-	}
 
 	TRACE(TRACE_INFO, "connection accepted");
 	return 0;
