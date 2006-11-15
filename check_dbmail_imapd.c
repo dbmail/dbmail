@@ -874,6 +874,12 @@ START_TEST(test_listex_match)
 	X(1, "INBOX*", "INBOX.Foo");
 	X(1, "INBOX*", "INBOX.Foo.Bar");
 
+	X(1, "%", "INBOX");
+	X(0, "%.%", "INBOX");
+	X(1, "%.%", "INBOX.Foo");
+	X(0, "%.%.%", "INBOX.Foo");
+	X(1, "%.%.%", "INBOX.Foo.Bar");
+
 	X(1, "INBOX%", "INBOX");
 	X(0, "INBOX%", "INBOX.Foo");
 	X(0, "INBOX%", "INBOX.Foo.Bar");

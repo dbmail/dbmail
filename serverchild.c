@@ -236,11 +236,8 @@ int select_and_accept(ChildInfo_t * info, int * clientSocket, struct sockaddr * 
 
 	/* A null timeval means block indefinitely until there's activity. */
 	result = select(maxfd+1, &rfds, NULL, NULL, NULL);
-
-	if (result < 1) {
-		TRACE(TRACE_ERROR, "select failed: [%s]", strerror(errno));
+	if (result < 1)
 		return -1;
-	}
 
 	// Clear the self-pipe and return; we received a signal
 	// and we need to loop again upstream to handle it.
