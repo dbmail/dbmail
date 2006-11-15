@@ -664,6 +664,7 @@ int listex_match(const char *p, const char *s,
 			/* %. */
 			for (i = 0; x[i] && x[i] == p[i]; i++);
 			if (! x[i]) p += i;
+			if (*s && *p) return listex_match(p,s,x,flags); // We have more to look at - lets look again.
 			if (*s || *p) return 0;
 			return 1;
 

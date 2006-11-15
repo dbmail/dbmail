@@ -23,9 +23,9 @@ DEBUG = 0
 #DEBUG = 4
 
 # select 'stream' for non-forking mode
-#TYPE = 'stream'
+TYPE = 'stream'
 # select 'network' for forking mode
-TYPE = 'network'
+#TYPE = 'network'
 
 
 import unittest, imaplib, re
