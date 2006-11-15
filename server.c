@@ -231,7 +231,12 @@ int server_run(serverConfig_t *conf)
 	case 0:
 		/* child process */
 		isChildProcess = 1;
-		drop_privileges(conf->serverUser, conf->serverGroup);
+		if (drop_privileges(conf->serverUser, conf->serverGroup) < 0) {
+			mainStop = 1;
+			TRACE(TRACE_ERROR,"unable to drop privileges");
+			return 0;
+		}
+
 		result = StartServer(conf);
 		TRACE(TRACE_INFO, "server done, restart = [%d]",
 				result);
