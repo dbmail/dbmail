@@ -1,3 +1,14 @@
+2006-11-15  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_imapd.c, misc.c, test-scripts/testimap.py:
+	fix for lsub (jonathan feally)
+	* debian/dbmail.init:
+	fix reload bug
+	* server.c:
+	bail out if drop_privileges fails
+	* serverchild.c:
+	remove confusing error message
+
 2006-11-12  Paul J Stevens <paul@nfg.nl>
 
 	* debian/changelog, debian/dbmail-ldap.config, debian/dbmail-mysql.config, 
