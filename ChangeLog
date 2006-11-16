@@ -1,3 +1,15 @@
+2006-11-16  Paul J Stevens <paul@nfg.nl>
+
+	* debian/dbmail-ldap.config, debian/dbmail-sieve.config, 
+	  debian/dbmail.config:
+	fix typo
+	* debian/changelog:
+	update changelog for debian
+	* imap4.c:
+	fix for fatal sigpipe
+	* serverchild.c:
+	disable the O_NONBLOCK dance
+
 2006-11-15  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_imapd.c, misc.c, test-scripts/testimap.py:
