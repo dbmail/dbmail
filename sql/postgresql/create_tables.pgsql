@@ -48,6 +48,7 @@ CREATE TABLE dbmail_users (
 );
 
 CREATE UNIQUE INDEX dbmail_users_name_idx ON dbmail_users(userid);
+CREATE INDEX dbmail_users_2 ON dbmail_users (lower(userid));
 
 CREATE TABLE dbmail_usermap (
   login VARCHAR(100) NOT NULL,
