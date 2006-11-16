@@ -1,17 +1,4 @@
-dbmail (2.2.0rc2-1) unstable; urgency=low
-
-  * new upstream release
-
- -- Paul J Stevens <paul@nfg.nl>  Fri, 10 Nov 2006 15:38:02 +0100
-
-dbmail (2.2.0rc1-1) unstable; urgency=low
-
-  * release candidate
-  * 
-
- -- Paul J Stevens <paul@nfg.nl>  Mon,  6 Nov 2006 09:34:33 +0100
-
-dbmail (2.1.7-1) unstable; urgency=low
+dbmail (2.2.0-1) unstable; urgency=low
 
   * new upstream release (closes: #351341)
   * Provide a common package (closes: #236406).
@@ -28,7 +15,7 @@ dbmail (2.1.7-1) unstable; urgency=low
   * Make init script lsb compliant.
   * Build-depends on automake1.9 instead of automaken (Closes: #380713).
 
- -- Paul J Stevens <paul@nfg.nl>  Mon, 23 Oct 2006 15:10:45 +0200
+ -- Paul J Stevens <paul@nfg.nl>  Wed, 15 Nov 2006 17:10:45 +0200
 
 dbmail (1.2.11-1) unstable; urgency=low
 
