@@ -261,22 +261,21 @@ int select_and_accept(ChildInfo_t * info, int * clientSocket, struct sockaddr * 
 
 	/* accept the active fd */
 	len = sizeof(struct sockaddr_in);
-//	
-//	FIXME: this whole 'dance' is broken: listenSockets end up in O_NONBLOCK
-//	state!!
-//
-//	flags = fcntl(info->listenSockets[active], F_GETFL);
-//	fcntl(info->listenSockets[active], F_SETFL, flags | O_NONBLOCK);
+	flags = fcntl(info->listenSockets[active], F_GETFL);
+	fcntl(info->listenSockets[active], F_SETFL, flags | O_NONBLOCK);
 	// man 2 accept says that if the connection disappears right now,
 	// accept will block forever unless it is set non-blocking with fcntl,
 	// so we have to do this dance to make it temporarily non-blocking.
 	*clientSocket = accept(info->listenSockets[active], saClient, &len);
-	// on some systems (freebsd) the non-blocking state is inherited by
-	// the new socket, so we want to reset both the new socket and the listening
-	// handle.
-//	if (*clientSocket > 0) 
-//		fcntl(*clientSocket, F_SETFL, flags);
-//	fcntl(info->listenSockets[active], F_SETFL, flags);
+
+	// On some systems (FreeBSD) the non-blocking state is inherited by the
+	// new socket, so we want to reset both the socket and the listening
+	// handle. Due to the possibility of several processes racing for
+	// accept(), O_NONBLOCK may already have been parts of 'flags' so we
+	// have to XOR it away.
+	if (*clientSocket > 0)
+		fcntl(*clientSocket, F_SETFL, flags ^ O_NONBLOCK);
+	fcntl(info->listenSockets[active], F_SETFL, flags ^ O_NONBLOCK);
 
 	if (*clientSocket < 0)
 		return -1;
