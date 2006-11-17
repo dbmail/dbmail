@@ -1,3 +1,11 @@
+2006-11-17  Paul J Stevens <paul@nfg.nl>
+
+	* sql/postgresql/create_tables.pgsql, 
+	  sql/postgresql/migrate_from_2.0_to_2.2.pgsql:
+	add index for lower(userid) in postgres schema
+	* server.c, serverchild.c:
+	simplify the non-blocking setup
+
 2006-11-16  Aaron Stone  <aaron@serendipity.cx>
 
 	* serverchild.c:
