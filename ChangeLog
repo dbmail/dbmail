@@ -1,3 +1,8 @@
+2006-11-16  Aaron Stone  <aaron@serendipity.cx>
+
+	* serverchild.c:
+	Fix for the O_NONBLOCK dance.
+
 2006-11-16  Paul J Stevens <paul@nfg.nl>
 
 	* debian/dbmail-ldap.config, debian/dbmail-sieve.config, 
