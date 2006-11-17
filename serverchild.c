@@ -272,10 +272,10 @@ int select_and_accept(ChildInfo_t * info, int * clientSocket, struct sockaddr * 
 	// new socket, so we want to reset both the socket and the listening
 	// handle. Due to the possibility of several processes racing for
 	// accept(), O_NONBLOCK may already have been parts of 'flags' so we
-	// have to XOR it away.
+	// have to and against the bitwise inverse to get rid of it.
 	if (*clientSocket > 0)
-		fcntl(*clientSocket, F_SETFL, flags ^ O_NONBLOCK);
-	fcntl(info->listenSockets[active], F_SETFL, flags ^ O_NONBLOCK);
+		fcntl(*clientSocket, F_SETFL, flags & ~ O_NONBLOCK);
+	fcntl(info->listenSockets[active], F_SETFL, flags & ~ O_NONBLOCK);
 
 	if (*clientSocket < 0)
 		return -1;
