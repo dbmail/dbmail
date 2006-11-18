@@ -5,7 +5,7 @@ and Ilja Booij. Development since 2.0 is led by Paul J Stevens and
 Aaron Stone.
 
 Special thanks to Metaways.net for providing resources so dbmail runs
-on Solaris.
+on Solaris, and to InternetConnection.net for providing the sqlite driver.
 
 Many people further contributed to DBMail by reporting problems, 
 suggesting various improvements and submitting code patches.
