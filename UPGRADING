@@ -1,0 +1,30 @@
+Upgrading from DBMail 2.0 to DBMail 2.2
+
+Dependencies
+
+* Database: MySQL 4.1+ with innodb support, PostgreSQL 7.4+, or SQLite3
+* Glib: (>= 2.8.0)
+* GMime: (>= 2.1.19 or >= 2.2.0)
+* Optional: libSieve (>= 2.2.1)
+* Optional: LDAP such as OpenLDAP.
+
+Config Changes
+
+* [DBMAIL] section must have driver=mysql/pgsql and authdriver=sql/ldap.
+* [DBMAIL] section now has two logging settings: trace_syslog and trace_stderr.
+These replace the old TRACE_LEVEL setting.
+
+Schema Changes
+
+* Use the migrate_from_2.0_to_2.2 script, then run dbmail-util -by
+
+Migration scripts from 1.2 to 2.0 and from 2.0 to 2.2 are provided in
+sql/mysql and sql/postgresql. Please test them first before applying them
+to your live database. Especially people who have modified their tables, and
+users using databases that go back to 1.0 or earlier should take special care.
+
+The schema for 2.2 adds a couple of new caching tables that will need to be 
+filled before you can restart your daemons. For that use 'dbmail-util -by'. This
+may run quite a long time depending on the size of your database.
+
+
