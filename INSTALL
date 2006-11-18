@@ -13,31 +13,28 @@ these instructions.
 
 What do you need?
 
-- a working mysql (> 4.1.3) or postgresql installation
+- a working mysql (> 4.1.3) with innodb support or a postgresql installation
 - a working smtp server (Postfix, Exim, QMail or Sendmail)
 - the DBMail source (www.dbmail.org)
 - GNU Make. On Linux systems, your standard 'make' program is GNU Make. On
   *BSD systems, make sure you install and use 'gmake'. 
 - development files (libs, scripts and include files) for your database 
   server. These will probably be provided by separate packages.
-- glib (>= 2.4) development headers and libraries.
-- gmime (>= 2.1) development headers and libraries.
+- glib (>= 2.8) development headers and libraries.
+- gmime (>= 2.1.18) development headers and libraries.
 - libsieve for sieve support (libsieve.sf.net).
 - libldap for ldap support (only tested with openldap).
 
 
 1.	Setup a database
 
-	Currently,  DBMail supports both MySQL, PostgreSQL and SQLite for mailstorage.
+	Currently,  DBMail supports both MySQL, PostgreSQL and SQLite3 for mailstorage.
 	MySQL is supported from version 4.1.3 upwards. Earlier versions of
 	MySQL lack some SQL features that are needed for DBMail.
 
 	Mysql setup
 	-----------
 
-	Note: Since some DBMail tables can get VERY large (depending on your
-	mailusage) we advise using InnoDB as database storage backend.
-	
 	First you'll need to create the DBMail database in MYSQL. You can
 	do this by issueing the following command. This step is only
 	necessary when you do not have a database for DBMail yet. Note that
@@ -101,6 +98,18 @@ What do you need?
 
 	Don't forget to start postgresql with the -i option, so it accepts
 	TCP/IP connections.
+
+	SQLite setup
+	------------
+
+	Create the database by running.
+
+	sqlite3 /path/to/dbmail.db < sql/sqlite/create_tables.sqlite
+
+	Finally make sure the database file is owned by the user running the dbmail
+	server.
+
+	chown dbmail:dbmail /path/to/dbmail.db
 
 2. 	Set the database settings
 
@@ -190,7 +199,7 @@ What do you need?
 	jobs. We recommend running the dbmail-util program in a daily
 	interval from cron:
 
-	0 3 * * * /usr/local/sbin/dbmail-util -cturpd -l 24h -qq
+	0 3 * * * /usr/local/sbin/dbmail-util -ay &>/dev/null
 	
 7.	Starting the servers
 
