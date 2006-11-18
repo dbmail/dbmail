@@ -1,5 +1,7 @@
 2006-11-18  Paul J Stevens <paul@nfg.nl>
 
+	* dbmail.conf:
+	add missing directive
 	* THANKS:
 	update
 	* INSTALL:
