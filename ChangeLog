@@ -1,5 +1,9 @@
 2006-11-18  Paul J Stevens <paul@nfg.nl>
 
+	* INSTALL:
+	update INSTALL
+	* UPGRADING, dbmail.conf:
+	updates and corrections
 	* debian/changelog, debian/dbmail-sieve.config, debian/dbmail.config:
 	debconf fixes
 
