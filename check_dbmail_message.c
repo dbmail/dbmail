@@ -458,7 +458,7 @@ START_TEST(test_dbmail_message_construct)
 	"Subject: Some test\n"
 	"To: bar@foo.org\n"
 	"MIME-Version: 1.0\n"
-	"Content-Type: text/plain\n"
+	"Content-Type: text/plain; charset=utf-8\n"
 	"Content-Transfer-Encoding: base64\n"
 	"\n"
 	"CnRlc3RpbmcKCuHh4eHk");
