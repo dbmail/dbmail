@@ -1,0 +1,23 @@
+Template: dbmail/delivery/sieve
+Type: boolean
+_Description: Run sieve scripts during message delivery?
+
+Template: dbmail/sieve/start_timsieved
+Type: boolean
+_Description: start the timesieved after reboot?
+ Dbmail supports management of Sieve scripts through the timsieve protocol.
+ You can run dbmail-timsieved which allows management of the sieve scripts from
+ within clients that support this protocol such as kmail, squirrelmail, and others
+
+Template: dbmail/delivery/subaddress
+Type: boolean
+_Description: Do you wish to activate the sieve subaddress extension?
+
+Template: dbmail/delivery/sieve_vacation
+Type: boolean
+_Description: Do you wish to activate the sieve vacation extension?
+
+Template: dbmail/delivery/sieve_notify
+Type: boolean
+_Description: Do you wish to activate the sieve notify extension?
+

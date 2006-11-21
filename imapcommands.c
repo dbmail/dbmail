@@ -112,9 +112,7 @@ int _ic_logout(struct ImapSession *self)
 
 	create_current_timestring(&timestring);
 	dbmail_imap_session_set_state(self,IMAPCS_LOGOUT);
-	trace(TRACE_MESSAGE,
-	      "%s,%s: user (id:%llu) logging out @ [%s]",
-	      __FILE__, __func__, ud->userid, timestring);
+	TRACE(TRACE_MESSAGE, "user (id:%llu) logging out @ [%s]", ud->userid, timestring);
 
 	dbmail_imap_session_printf(self, "* BYE dbmail imap server kisses you goodbye\r\n");
 
@@ -265,9 +263,7 @@ int _ic_select(struct ImapSession *self)
 		dbmail_imap_session_mailbox_select_recent(self);
 		break;
 	default:
-		trace(TRACE_ERROR,
-		      "%s,%s: detected invalid permission mode for mailbox %llu ('%s')",
-		      __FILE__, __func__,
+		TRACE(TRACE_ERROR, "detected invalid permission mode for mailbox %llu ('%s')",
 		      ud->mailbox.uid, self->args[0]);
 
 		dbmail_imap_session_printf(self,
@@ -381,8 +377,7 @@ int _ic_delete(struct ImapSession *self)
 	result = db_listmailboxchildren(mboxid, ud->userid, &children, &nchildren);
 	if (result == -1) {
 		/* error */
-		trace(TRACE_ERROR, "%s,%s: cannot retrieve list of mailbox children",
-				__FILE__, __func__);
+		TRACE(TRACE_ERROR, "cannot retrieve list of mailbox children");
 		dbmail_imap_session_printf(self, "* BYE dbase/memory error\r\n");
 		return -1;
 	}
@@ -424,7 +419,7 @@ int _ic_delete(struct ImapSession *self)
 
 	/* ok remove mailbox */
 	if (db_delete_mailbox(mboxid, 0, 1)) {
-		trace(TRACE_DEBUG,"%s,%s: db_delete_mailbox failed", __FILE__, __func__);
+		TRACE(TRACE_DEBUG,"db_delete_mailbox failed");
 		dbmail_imap_session_printf(self,"%s NO DELETE failed\r\n", self->tag);
 		return DM_EGENERAL;
 	}
@@ -567,8 +562,7 @@ int _ic_rename(struct ImapSession *self)
 
 		if (oldnamelen >= strlen(name)) {
 			/* strange error, let's say its fatal */
-			trace(TRACE_ERROR, "%s,%s: mailbox names appear to be corrupted",
-					__FILE__, __func__);
+			TRACE(TRACE_ERROR, "mailbox names appear to be corrupted");
 			dbmail_imap_session_printf(self, "* BYE internal error regarding mailbox names\r\n");
 			dm_free(children);
 			return -1;
@@ -712,8 +706,7 @@ int _ic_list(struct ImapSession *self)
 	}
 	pattern = g_strdup_printf("%s%s", self->args[0], self->args[1]);
 
-	trace(TRACE_INFO, "%s,%s: search with pattern: [%s]", 
-			__FILE__,__func__,pattern);
+	TRACE(TRACE_INFO, "search with pattern: [%s]",pattern);
 	
 	result = db_findmailbox_by_regex(ud->userid, pattern, &children, &nchildren, list_is_lsub);
 	if (result == -1) {
@@ -952,8 +945,7 @@ int _ic_append(struct ImapSession *self)
 		return 1;
 	}
 
-	trace(TRACE_DEBUG, "%s,%s: mailbox [%s] found, id: %llu",
-			__FILE__, __func__, self->args[0], mboxid);
+	TRACE(TRACE_DEBUG, "mailbox [%s] found, id: %llu", self->args[0], mboxid);
 	/* check if user has right to append to  mailbox */
 	mailbox.uid = mboxid;
 	result = acl_has_right(&mailbox, ud->userid, ACL_RIGHT_INSERT);
@@ -977,10 +969,10 @@ int _ic_append(struct ImapSession *self)
 	 */
 	if (self->args[i][0] == '(') {
 		/* ok fetch the flags specified */
-		trace(TRACE_DEBUG, "%s,%s: flag list found:", __FILE__, __func__);
+		TRACE(TRACE_DEBUG, "flag list found:");
 
 		while (self->args[i] && self->args[i][0] != ')') {
-			trace(TRACE_DEBUG, "%s ", self->args[i]);
+			TRACE(TRACE_DEBUG, "%s ", self->args[i]);
 			for (j = 0; j < IMAP_NFLAGS; j++) {
 				if (strcasecmp (self->args[i], imap_flag_desc_escaped[j]) == 0) {
 					flaglist[j] = 1;
@@ -992,12 +984,11 @@ int _ic_append(struct ImapSession *self)
 		}
 
 		i++;
-		trace(TRACE_DEBUG, ")");
+		TRACE(TRACE_DEBUG, ")");
 	}
 
 	if (!self->args[i]) {
-		trace(TRACE_INFO, "%s,%s: unexpected end of arguments",
-				__FILE__, __func__);
+		TRACE(TRACE_INFO, "unexpected end of arguments");
 		dbmail_imap_session_printf(self, 
 				"%s BAD invalid arguments specified to APPEND\r\n", 
 				self->tag);
@@ -1006,7 +997,7 @@ int _ic_append(struct ImapSession *self)
 
 	for (j = 0; j < IMAP_NFLAGS; j++)
 		if (flaglist[j] == 1)
-			trace(TRACE_DEBUG, "%s,%s: %s set", __FILE__, __func__, imap_flag_desc[j]);
+			TRACE(TRACE_DEBUG, "%s set", imap_flag_desc[j]);
 
 	/** check ACL's for STORE */
 	mailbox.uid = mboxid;
@@ -1066,8 +1057,7 @@ int _ic_append(struct ImapSession *self)
 		/* internal date specified */
 
 		i++;
-		trace(TRACE_DEBUG, "%s,%s: internal date [%s] found, next arg [%s]", 
-				__FILE__, __func__, sqldate, self->args[i]);
+		TRACE(TRACE_DEBUG, "internal date [%s] found, next arg [%s]", sqldate, self->args[i]);
 	} else {
 		sqldate[0] = '\0';
 	}
@@ -1078,17 +1068,17 @@ int _ic_append(struct ImapSession *self)
 	result = db_imap_append_msg(self->args[i], strlen(self->args[i]), mboxid, ud->userid, sqldate, &msg_idnr);
 	switch (result) {
 	case -1:
-		trace(TRACE_ERROR, "%s,%s: error appending msg", __FILE__, __func__);
+		TRACE(TRACE_ERROR, "error appending msg");
 		dbmail_imap_session_printf(self, "* BYE internal dbase error storing message\r\n");
 		break;
 
 	case 1:
-		trace(TRACE_ERROR, "%s,%s: faulty msg", __FILE__, __func__);
+		TRACE(TRACE_ERROR, "faulty msg");
 		dbmail_imap_session_printf(self, "%s NO invalid message specified\r\n", self->tag);
 		break;
 
 	case 2:
-		trace(TRACE_INFO, "%s,%s: quotum would exceed", __FILE__, __func__);
+		TRACE(TRACE_INFO, "quotum would exceed");
 		dbmail_imap_session_printf(self, "%s NO not enough quotum left\r\n", self->tag);
 		break;
 
@@ -1099,8 +1089,7 @@ int _ic_append(struct ImapSession *self)
 
 	if (result == 0 && flagcount > 0) {
 		if (db_set_msgflag(msg_idnr, mboxid, flaglist, IMAPFA_ADD) < 0) {
-			trace(TRACE_ERROR, "%s,%s: error setting flags for message [%llu]", 
-					__FILE__, __func__, msg_idnr);
+			TRACE(TRACE_ERROR, "error setting flags for message [%llu]", msg_idnr);
 			return -1;
 		}
 	}
@@ -1299,7 +1288,7 @@ static int sorted_search(struct ImapSession *self, search_order_t order)
 	struct DbmailMailbox *mb;
 	int result = 0;
 	u64_t idx = 0;
-	gchar *s = NULL;
+	gchar *s = NULL, *cmd = NULL;
 	gboolean sorted;
 
 	if (order == SEARCH_SORTED)
@@ -1329,34 +1318,56 @@ static int sorted_search(struct ImapSession *self, search_order_t order)
 	}
 
 	mb = dbmail_mailbox_new(ud->mailbox.uid);
-	dbmail_mailbox_set_uid(mb,self->use_uid);
-	if (dbmail_mailbox_build_imap_search(mb, self->args, &idx, order) < 0) {
-		dbmail_imap_session_printf(self, "%s BAD invalid arguments to %s\r\n",
-			self->tag, self->command);
-		return 1;
-	}
-	dbmail_mailbox_search(mb);
-	/* ok, display results */
-	switch(order) {
-		case SEARCH_SORTED:
-			dbmail_mailbox_sort(mb);
-			s = dbmail_mailbox_sorted_as_string(mb);
-		break;
-		case SEARCH_UNORDERED:
-			s = dbmail_mailbox_ids_as_string(mb);
-		break;
-		case SEARCH_THREAD_ORDEREDSUBJECT:
-			s = dbmail_mailbox_orderedsubject(mb);
-		break;
-		case SEARCH_THREAD_REFERENCES:
-			s = NULL; // unsupported
-		break;
+
+	if (g_tree_nnodes(mb->ids) > 0) {
+		dbmail_mailbox_set_uid(mb,self->use_uid);
+		switch(order) {
+			case SEARCH_SORTED:
+				cmd = g_strdup("SORT");
+			break;
+			case SEARCH_UNORDERED:
+				cmd = g_strdup("SEARCH");
+			break;
+			case SEARCH_THREAD_ORDEREDSUBJECT:
+				cmd = g_strdup("THREAD");
+			break;
+			case SEARCH_THREAD_REFERENCES:
+				cmd = g_strdup("THREAD");
+			break;
+		}
+
+
+		if (dbmail_mailbox_build_imap_search(mb, self->args, &idx, order) < 0) {
+			dbmail_imap_session_printf(self, "%s BAD invalid arguments to %s\r\n",
+				self->tag, cmd);
+			return 1;
+		}
+		dbmail_mailbox_search(mb);
+		/* ok, display results */
+		switch(order) {
+			case SEARCH_SORTED:
+				dbmail_mailbox_sort(mb);
+				s = dbmail_mailbox_sorted_as_string(mb);
+			break;
+			case SEARCH_UNORDERED:
+				s = dbmail_mailbox_ids_as_string(mb);
+			break;
+			case SEARCH_THREAD_ORDEREDSUBJECT:
+				s = dbmail_mailbox_orderedsubject(mb);
+			break;
+			case SEARCH_THREAD_REFERENCES:
+				s = NULL; // TODO: unsupported
+			break;
+		}
+
+		dbmail_imap_session_printf(self, "* %s %s\r\n", cmd, s?s:"");
+		if (s)
+			g_free(s);
 	}
 
-	dbmail_imap_session_printf(self, "* %s %s", self->command, s?s:"");
-	if (s)
-		g_free(s);
-	dbmail_imap_session_printf(self, "\r\n%s OK %s completed\r\n", self->tag, self->command);
+	dbmail_imap_session_printf(self, "%s OK %s completed\r\n", self->tag, cmd);
+	if (cmd)
+		g_free(cmd);
 	
 	dbmail_mailbox_free(mb);
 	
@@ -1424,26 +1435,29 @@ int _ic_fetch(struct ImapSession *self)
 	/* reopen the mailbox */
 	dbmail_mailbox_open(self->mailbox);
 
-	dbmail_mailbox_set_uid(self->mailbox,self->use_uid);
-	
-	self->fetch_ids = dbmail_mailbox_get_set(self->mailbox,self->args[0],self->use_uid);
-	
-	if (! self->fetch_ids) {
-		dbmail_imap_session_printf(self, "%s BAD invalid message range specified\r\n", self->tag);
-		return DM_EGENERAL;
-	}
+	if (g_tree_nnodes(self->mailbox->ids) > 0) {
+
+		dbmail_mailbox_set_uid(self->mailbox,self->use_uid);
 		
-	if (dbmail_imap_session_fetch_get_items(self) < 0)
-		return -1;
-	
-	if (self->headers) {
-		g_tree_destroy(self->headers);
-		self->headers = NULL;
-	}
-	if (self->envelopes) {
-		g_tree_destroy(self->envelopes);
-		self->envelopes = NULL;
-	}
+		self->fetch_ids = dbmail_mailbox_get_set(self->mailbox,self->args[0],self->use_uid);
+		
+		if (g_tree_nnodes(self->fetch_ids)==0) {
+			dbmail_imap_session_printf(self, "%s BAD invalid message range specified\r\n", self->tag);
+			return DM_EGENERAL;
+		}
+			
+		if (dbmail_imap_session_fetch_get_items(self) < 0)
+			return -1;
+		
+		if (self->headers) {
+			g_tree_destroy(self->headers);
+			self->headers = NULL;
+		}
+		if (self->envelopes) {
+			g_tree_destroy(self->envelopes);
+			self->envelopes = NULL;
+		}
+	}	
 	
 	dbmail_imap_session_printf(self, "%s OK %sFETCH completed\r\n", self->tag, self->use_uid ? "UID " : "");
 	return 0;

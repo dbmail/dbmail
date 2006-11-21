@@ -14,6 +14,7 @@
 #include "debug.h"
 #include "auth.h"
 #include "authmodule.h"
+#define THIS_MODULE "auth"
 
 static auth_func_t *auth = NULL;
 
@@ -33,25 +34,18 @@ int auth_load_driver(void)
 	char *driver = NULL;
 
 	if (!g_module_supported()) {
-		trace(TRACE_FATAL, "%s,%s: loadable modules unsupported on this platform",
-				__FILE__, __func__);
+		TRACE(TRACE_FATAL, "loadable modules unsupported on this platform");
 		return 1;
 	}
 
-	if (! (auth = g_new0(auth_func_t,1))) {
-		trace(TRACE_FATAL, "%s,%s: cannot allocate memory",
-				__FILE__, __func__);
-		return -3;
-	}
+	auth = g_new0(auth_func_t,1);
 
 	if (strcasecmp(_db_params.authdriver, "SQL") == 0)
 		driver = "auth_sql";
 	else if (strcasecmp(_db_params.authdriver, "LDAP") == 0)
 		driver = "auth_ldap";
 	else
-		trace(TRACE_FATAL, "%s,%s: unsupported driver: %s,"
-				" please choose from SQL or LDAP",
-				__FILE__, __func__,
+		TRACE(TRACE_FATAL, "unsupported driver: %s, please choose from SQL or LDAP",
 				_db_params.authdriver);
 
 	/* Try local build area, then dbmail lib paths, then system lib path. */
@@ -60,17 +54,24 @@ int auth_load_driver(void)
 		"modules/.libs",
 		PREFIX "/lib/dbmail",
 		NULL };
-	for (i = 0; i < 4; i++) {
+	/* Note that the limit here *includes* the NULL. This is intentional,
+	 * to allow g_module_build_path to try the current working directory. */
+	for (i = 0; i < 3; i++) {
 		lib = g_module_build_path(lib_path[i], driver);
 		module = g_module_open(lib, 0); // non-lazy bind.
+
+		TRACE(TRACE_DEBUG, "looking for %s as %s", driver, lib);
+		g_free(lib);
+
+		if (!module)
+			TRACE(TRACE_INFO, "cannot load %s", g_module_error());
 		if (module)
 			break;
 	}
 
 	/* If the list is exhausted without opening a module, we'll catch it. */
 	if (!module) {
-		trace(TRACE_FATAL, "%s,%s: cannot load %s", 
-				__FILE__, __func__, g_module_error());
+		TRACE(TRACE_FATAL, "could not load auth module - turn up debug level for details");
 		return -1;
 	}
 
@@ -100,8 +101,7 @@ int auth_load_driver(void)
 	||  !g_module_symbol(module, "auth_removealias",            (gpointer)&auth->removealias            )
 	||  !g_module_symbol(module, "auth_removealias_ext",        (gpointer)&auth->removealias_ext        )
 	||  !g_module_symbol(module, "auth_requires_shadow_user",   (gpointer)&auth->requires_shadow_user   )) {
-		trace(TRACE_FATAL, "%s,%s: cannot find function %s", 
-				__FILE__, __func__, g_module_error());
+		TRACE(TRACE_FATAL, "cannot find function %s", g_module_error());
 		return -2;
 	}
 

@@ -3011,3 +3011,12 @@ Content-Type: text/plain
 
 test mail
 
+>From nobody
+From: "Kristoffer Br�nemyr" <bad@foo.org>
+To: nobody@foo.org
+Subject: Br�nemyr says
+MIME-Version: 1.0
+Content-Type: text/plain
+
+bogus header message
+

@@ -216,7 +216,7 @@ pid_t CreateChild(ChildInfo_t * info)
 int select_and_accept(ChildInfo_t * info, int * clientSocket, struct sockaddr * saClient)
 {
 	fd_set rfds;
-	int ip, result, flags;
+	int ip, result, flags, serr = 0;
 	int active = 0, maxfd = 0;
 	socklen_t len;
 
@@ -236,11 +236,8 @@ int select_and_accept(ChildInfo_t * info, int * clientSocket, struct sockaddr * 
 
 	/* A null timeval means block indefinitely until there's activity. */
 	result = select(maxfd+1, &rfds, NULL, NULL, NULL);
-
-	if (result < 1) {
-		TRACE(TRACE_ERROR, "select failed: [%s]", strerror(errno));
+	if (result < 1)
 		return -1;
-	}
 
 	// Clear the self-pipe and return; we received a signal
 	// and we need to loop again upstream to handle it.
@@ -264,18 +261,16 @@ int select_and_accept(ChildInfo_t * info, int * clientSocket, struct sockaddr * 
 
 	/* accept the active fd */
 	len = sizeof(struct sockaddr_in);
-	flags = fcntl(info->listenSockets[active], F_GETFL);
-	fcntl(info->listenSockets[active], F_SETFL, flags | O_NONBLOCK);
-	// man 2 accept says that if the connection disappears right now,
-	// accept will block forever unless it is set non-blocking with fcntl,
-	// so we have to do this dance to make it temporarily non-blocking.
-	*clientSocket = accept(info->listenSockets[active], saClient, &len);
-	fcntl(info->listenSockets[active], F_SETFL, flags);
 
-	if (*clientSocket < 0) {
-		TRACE(TRACE_ERROR, "accept failed: [%s]", strerror(errno));
+	// the listenSockets are set non-blocking in server.c,create_inet_socket
+	*clientSocket = accept(info->listenSockets[active], saClient, &len);
+	if (*clientSocket < 0)
 		return -1;
-	}
+
+	// the clientSocket *must* be blocking 
+	flags = fcntl(*clientSocket, F_GETFL);
+	if (*clientSocket > 0)
+		fcntl(*clientSocket, F_SETFL, flags & ~ O_NONBLOCK);
 
 	TRACE(TRACE_INFO, "connection accepted");
 	return 0;
@@ -288,20 +283,17 @@ int PerformChildTask(ChildInfo_t * info)
 	struct hostent *clientHost;
 
 	if (!info) {
-		trace(TRACE_ERROR, "%s,%s: NULL info supplied", 
-				__FILE__, __func__);
+		TRACE(TRACE_ERROR, "NULL info supplied");
 		return -1;
 	}
 
 	if (db_connect() != 0) {
-		trace(TRACE_ERROR, "%s,%s: could not connect to database", 
-				__FILE__, __func__);
+		TRACE(TRACE_ERROR, "could not connect to database");
 		return -1;
 	}
 
 	if (auth_connect() != 0) {
-		trace(TRACE_ERROR, "%s,%s: could not connect to authentication", 
-				__FILE__, __func__);
+		TRACE(TRACE_ERROR, "could not connect to authentication");
 		return -1;
 	}
 
@@ -312,8 +304,7 @@ int PerformChildTask(ChildInfo_t * info)
 	for (i = 0; i < info->maxConnect && !ChildStopRequested; i++) {
 
 		if (db_check_connection()) {
-			trace(TRACE_ERROR, "%s,%s: database has gone away", 
-					__FILE__, __func__);
+			TRACE(TRACE_ERROR, "database has gone away");
 			ChildStopRequested=1;
 			continue;
 		}
@@ -323,7 +314,6 @@ int PerformChildTask(ChildInfo_t * info)
 		/* wait for connect */
 		result = select_and_accept(info, &clientSocket, (struct sockaddr *) &saClient);
 		if (result != 0) {
-			TRACE(TRACE_INFO, "select_and_accept failed");
 			i--;	/* don't count this as a connect */
 			continue;	/* accept failed, refuse connection & continue */
 		}
@@ -344,29 +334,25 @@ int PerformChildTask(ChildInfo_t * info)
 			if (clientHost && clientHost->h_name)
 				strncpy((char *)client.clientname, clientHost->h_name, FIELDSIZE);
 
-			trace(TRACE_MESSAGE, "%s,%s: incoming connection from [%s (%s)] by pid [%d]",
-					__FILE__, __func__,
+			TRACE(TRACE_MESSAGE, "incoming connection from [%s (%s)] by pid [%d]",
 			      client.ip_src,
 			      client.clientname[0] ? client.clientname : "Lookup failed", getpid());
 		} else {
-			trace(TRACE_MESSAGE, "%s,%s: incoming connection from [%s] by pid [%d]", 
-					__FILE__, __func__,
+			TRACE(TRACE_MESSAGE, "incoming connection from [%s] by pid [%d]",
 			      client.ip_src, getpid());
 		}
 		
 		/* make streams */
 		if (!(client.rx = fdopen(dup(clientSocket), "r"))) {
 			/* read-FILE opening failure */
-			trace(TRACE_ERROR, "%s,%s: error opening read file stream", 
-					__FILE__, __func__);
+			TRACE(TRACE_ERROR, "error opening read file stream");
 			close(clientSocket);
 			continue;
 		}
 
 		if (!(client.tx = fdopen(clientSocket, "w"))) {
 			/* write-FILE opening failure */
-			trace(TRACE_ERROR, "%s,%s: error opening write file stream", 
-					__FILE__, __func__);
+			TRACE(TRACE_ERROR, "error opening write file stream");
 			fclose(client.rx);
 			close(clientSocket);
 			memset((void *)&client, 0, sizeof(client));
@@ -376,22 +362,18 @@ int PerformChildTask(ChildInfo_t * info)
 		setvbuf(client.tx, (char *) NULL, _IOLBF, 0);
 		setvbuf(client.rx, (char *) NULL, _IOLBF, 0);
 
-		trace(TRACE_DEBUG, "%s,%s: client info init complete, calling client handler",
-				__FILE__, __func__);
+		TRACE(TRACE_DEBUG, "client info init complete, calling client handler");
 
 		/* streams are ready, perform handling */
 		info->ClientHandler((clientinfo_t *)&client);
 
-		trace(TRACE_DEBUG, "%s,%s: client handling complete, closing streams",
-				__FILE__, __func__);
+		TRACE(TRACE_DEBUG, "client handling complete, closing streams");
 		client_close();
-		trace(TRACE_INFO, "%s,%s: connection closed", 
-				__FILE__, __func__);
+		TRACE(TRACE_INFO, "connection closed");
 	}
 
 	if (!ChildStopRequested)
-		trace(TRACE_ERROR, "%s,%s: maximum number of connections reached, stopping now", 
-				__FILE__, __func__);
+		TRACE(TRACE_ERROR, "maximum number of connections reached, stopping now");
 	else{
 		switch(childSig){
 		case SIGHUP:
@@ -405,8 +387,7 @@ int PerformChildTask(ChildInfo_t * info)
 			child_unregister();
 			_exit(1);
 		}
-		trace(TRACE_ERROR, "%s,%s: stop requested", 
-				__FILE__, __func__);
+		TRACE(TRACE_ERROR, "stop requested");
 	}
 
 	child_reg_disconnected();
@@ -418,20 +399,17 @@ int PerformChildTask(ChildInfo_t * info)
 int manage_start_cli_server(ChildInfo_t * info)
 {
 	if (!info) {
-		trace(TRACE_ERROR, "%s,%s: NULL info supplied", 
-				__FILE__, __func__);
+		TRACE(TRACE_ERROR, "NULL info supplied");
 		return -1;
 	}
 
 	if (db_connect() != 0) {
-		trace(TRACE_ERROR, "%s,%s: could not connect to database", 
-				__FILE__, __func__);
+		TRACE(TRACE_ERROR, "could not connect to database");
 		return -1;
 	}
 
 	if (auth_connect() != 0) {
-		trace(TRACE_ERROR, "%s,%s: could not connect to authentication", 
-				__FILE__, __func__);
+		TRACE(TRACE_ERROR, "could not connect to authentication");
 		return -1;
 	}
 
@@ -439,8 +417,7 @@ int manage_start_cli_server(ChildInfo_t * info)
 	connected = 1;
 
 	if (db_check_connection()) {
-		trace(TRACE_ERROR, "%s,%s: database has gone away", 
-				__FILE__, __func__);
+		TRACE(TRACE_ERROR, "database has gone away");
 		return -1;
 	}
 
@@ -457,17 +434,14 @@ int manage_start_cli_server(ChildInfo_t * info)
 	setvbuf(client.tx, (char *) NULL, _IOLBF, 0);
 	setvbuf(client.rx, (char *) NULL, _IOLBF, 0);
 
-	trace(TRACE_DEBUG,
-	      "%s,%s: client info init complete, calling client handler", __FILE__, __func__);
+	TRACE(TRACE_DEBUG, "client info init complete, calling client handler");
 
 	/* streams are ready, perform handling */
 	info->ClientHandler((clientinfo_t *)&client);
 
-	trace(TRACE_DEBUG,
-	      "%s,%s: client handling complete, closing streams", __FILE__, __func__);
+	TRACE(TRACE_DEBUG, "client handling complete, closing streams");
 	client_close();
-	trace(TRACE_INFO, "%s,%s: connection closed", __FILE__, __func__);
-	
+	TRACE(TRACE_INFO, "connection closed"); 
 	disconnect_all();
 	
 	return 0;

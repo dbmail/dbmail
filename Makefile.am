@@ -26,6 +26,8 @@ if USE_DM_GETOPT
 DM_GETOPT = dm_getopt.c
 endif
 
+
+libdir=$(prefix)/lib/dbmail
 pkglibdir = $(libdir)
 
 sbin_PROGRAMS = dbmail-smtp \
@@ -105,7 +107,7 @@ lib_LTLIBRARIES = libdbmail.la
 
 
 if SHARED
-AM_LDFLAGS = -Wl,--export-dynamic -lcrypt
+AM_LDFLAGS = -export-dynamic -lcrypt
 libdbmail_la_SOURCES = $(COMMON) $(SERVER) $(DELIVER) $(MODULES)
 else
 libdbmail_la_SOURCES = $(COMMON) $(SERVER) $(DELIVER)

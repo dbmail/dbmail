@@ -28,6 +28,7 @@ else
 AM_LDFLAGS = 
 endif
 
+libdir = $(prefix)/lib/dbmail
 pkglibdir = $(libdir)
 
 pkglib_LTLIBRARIES = libmysql.la \

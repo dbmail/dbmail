@@ -1,4 +1,4 @@
-#!/bin/sh
+#! /bin/sh
 #
 # dbmail init script for debian
 # 
@@ -29,7 +29,7 @@ SIEVE=/usr/sbin/dbmail-timsieved
 IMAPD_NAME=dbmail-imapd
 POP3D_NAME=dbmail-pop3d
 LMTPD_NAME=dbmail-lmtpd
-SIEVE_NAME=dbmail-timsieved
+SIEVE_NAME=dbmail-timsieve
 
 NAME="dbmail"
 

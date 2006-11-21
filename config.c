@@ -26,6 +26,8 @@
 
 #include "dbmail.h"
 
+#define THIS_MODULE "config"
+
 /** dictionary which holds the configuration */
 static GKeyFile *config_dict = NULL;
 
@@ -45,9 +47,7 @@ int config_read(const char *config_filename)
 	
 	if (! g_key_file_load_from_file(config_dict, config_filename, G_KEY_FILE_NONE, NULL)) {
 		g_key_file_free(config_dict);
-                trace(TRACE_FATAL, "%s,%s: error reading "
-                      "config file %s", __FILE__, __func__,
-                      config_filename);
+                TRACE(TRACE_FATAL, "error reading config file %s", config_filename);
 		_exit(1);
 		return -1;
 	}
@@ -158,7 +158,7 @@ void SetTraceLevel(const char *service_name)
 	 * but we will use this value for trace_syslog if needed. */
 	config_get_value("trace_level", service_name, trace_level);
 	if (strlen(trace_level)) {
-		trace(TRACE_MESSAGE,
+		TRACE(TRACE_MESSAGE,
 			"Config item TRACE_LEVEL is deprecated. "
 			"Please use TRACE_SYSLOG and TRACE_STDERR instead.");
 	}
@@ -187,42 +187,30 @@ void GetDBParams(db_param_t * db_params)
 	field_t port_string, sock_string, serverid_string;
 	
 	if (config_get_value("driver", "DBMAIL", db_params->driver) < 0)
-		trace(TRACE_FATAL, "%s,%s: error getting config!",
-		      __FILE__, __func__);
+		TRACE(TRACE_FATAL, "error getting config! [driver]");
 	if (config_get_value("authdriver", "DBMAIL", db_params->authdriver) < 0)
-		trace(TRACE_FATAL, "%s,%s: error getting config!",
-		      __FILE__, __func__);
+		TRACE(TRACE_FATAL, "error getting config! [authdriver]");
 	if (config_get_value("sortdriver", "DBMAIL", db_params->sortdriver) < 0)
-		trace(TRACE_FATAL, "%s,%s: error getting config!",
-		      __FILE__, __func__);
+		TRACE(TRACE_FATAL, "error getting config! [sortdriver]");
 	if (config_get_value("host", "DBMAIL", db_params->host) < 0)
-		trace(TRACE_FATAL, "%s,%s: error getting config!",
-		      __FILE__, __func__);
+		TRACE(TRACE_FATAL, "error getting config! [host]");
 	if (config_get_value("db", "DBMAIL", db_params->db) < 0) 
-		trace(TRACE_FATAL, "%s,%s: error getting config!",
-		      __FILE__, __func__);
+		TRACE(TRACE_FATAL, "error getting config! [db]");
 	if (config_get_value("user", "DBMAIL", db_params->user) < 0) 
-		trace(TRACE_FATAL, "%s,%s: error getting config!",
-		      __FILE__, __func__);
+		TRACE(TRACE_FATAL, "error getting config! [user]");
 	if (config_get_value("pass", "DBMAIL", db_params->pass) < 0)
-		trace(TRACE_FATAL, "%s,%s: error getting config!",
-		      __FILE__, __func__);
+		TRACE(TRACE_FATAL, "error getting config! [pass]");
 	if (config_get_value("sqlport", "DBMAIL", port_string) < 0)
-		trace(TRACE_FATAL, "%s,%s: error getting config!",
-		      __FILE__, __func__);
+		TRACE(TRACE_FATAL, "error getting config! [sqlpost]");
 	if (config_get_value("sqlsocket", "DBMAIL", sock_string) < 0)
-		trace(TRACE_FATAL, "%s,%s: error getting config!",
-		      __FILE__, __func__);
+		TRACE(TRACE_FATAL, "error getting config! [sqlsocket]");
 	if (config_get_value("serverid", "DBMAIL", serverid_string) < 0)
-		trace(TRACE_FATAL, "%s,%s: error getting config!",
-		      __FILE__, __func__);
+		TRACE(TRACE_FATAL, "error getting config! [serverid]");
 	if (config_get_value("encoding", "DBMAIL", db_params->encoding) < 0)
-		trace(TRACE_FATAL, "%s,%s: error getting config!",
-		      __FILE__, __func__);
-
+		TRACE(TRACE_FATAL, "error getting config! [encoding]");
 	if (config_get_value("table_prefix", "DBMAIL", db_params->pfx) < 0)
-		trace(TRACE_FATAL, "%s,%s: error getting config!",
-		      __FILE__, __func__);
+		TRACE(TRACE_FATAL, "error getting config! [table_prefix]");
+
 	if (strcmp(db_params->pfx, "\"\"") == 0) {
 		/* FIXME: It appears that when the empty string is quoted
 		 * that the quotes themselves are returned as the value. */
@@ -237,9 +225,7 @@ void GetDBParams(db_param_t * db_params)
 		db_params->port =
 		    (unsigned int) strtoul(port_string, NULL, 10);
 		if (errno == EINVAL || errno == ERANGE)
-			trace(TRACE_FATAL,
-			      "%s,%s: wrong value for sqlport in "
-			      "config file", __FILE__, __func__);
+			TRACE(TRACE_FATAL, "wrong value for sqlport in config file");
 	} else
 		db_params->port = 0;
 
@@ -253,8 +239,7 @@ void GetDBParams(db_param_t * db_params)
 	if (strlen(serverid_string) != 0) {
 		db_params->serverid = (unsigned int) strtol(serverid_string, NULL, 10);
 		if (errno == EINVAL || errno == ERANGE)
-			trace(TRACE_FATAL, "%s,%s: serverid invalid in config file",
-					__FILE__, __func__);
+			TRACE(TRACE_FATAL, "serverid invalid in config file");
 	} else {
 		db_params->serverid = 1;
 	}

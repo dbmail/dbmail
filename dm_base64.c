@@ -25,6 +25,7 @@
 */
 
 #include "dbmail.h"
+#define THIS_MODULE "base64"
 
 char base64encodestring[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
@@ -135,8 +136,7 @@ char **base64_decodev(char *str)
 	ret = g_new0(char *, (numstrings + 1));
 	if (ret == NULL) {
 		g_free(decoded);
-		trace(TRACE_WARNING, "%s,%s: could not allocate array of length [%d].",
-				__FILE__, __func__, numstrings+1);
+		TRACE(TRACE_WARNING, "could not allocate array of length [%d].", numstrings+1);
 		return NULL;
 	}
 

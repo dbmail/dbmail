@@ -135,8 +135,7 @@ static void dump_to_file(const char *filename, const char *buf)
 	FILE *f = fopen(filename,"a");
 	if (! f) {
 		se=errno;
-		trace(TRACE_DEBUG,"%s,%s: opening dumpfile failed [%s]",
-				__FILE__, __func__, strerror(se));
+		TRACE(TRACE_DEBUG,"opening dumpfile failed [%s]", strerror(se));
 		errno=se;
 		return;
 	}
@@ -153,10 +152,6 @@ static void dump_to_file(const char *filename, const char *buf)
 struct DbmailMessage * dbmail_message_new(void)
 {
 	struct DbmailMessage *self = g_new0(struct DbmailMessage,1);
-	if (! self) {
-		trace(TRACE_ERROR, "%s,%s: memory error", __FILE__, __func__);
-		return NULL;
-	}
 	
 	self->envelope_recipient = g_string_new("");
 
@@ -272,8 +267,8 @@ struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *sel
 
 // 
 // construct a new message where only sender, recipient, subject and 
-// a body are known. The body can be any kind of charset/encoding, and we 
-// let gmime decide which is which.
+// a body are known. The body can be any kind of charset. Make sure
+// it's not pre-encoded (base64, quopri)
 //
 // TODO: support text/html
 
@@ -286,8 +281,7 @@ struct DbmailMessage * dbmail_message_construct(struct DbmailMessage *self,
 	GMimeDataWrapper *content;
 	GMimeStream *stream, *fstream;
 	GMimeContentType *mime_type;
-	const gchar *charset;
-	GMimePartEncodingType encoding;
+	GMimePartEncodingType encoding = GMIME_PART_ENCODING_DEFAULT;
 	GMimeFilter *filter = NULL;
 
 	// FIXME: this could easily be expanded to allow appending
@@ -297,8 +291,10 @@ struct DbmailMessage * dbmail_message_construct(struct DbmailMessage *self,
 	
 	message = g_mime_message_new(FALSE);
 
-	// determine the optimal encoding type for the body
-	encoding = g_mime_utils_best_encoding((unsigned char *)body, strlen(body));
+	// determine the optimal encoding type for the body: how would gmime
+	// encode this string. This will return either base64 or quopri.
+	if (g_mime_utils_text_is_8bit((unsigned char *)body, strlen(body)))
+		encoding = g_mime_utils_best_encoding((unsigned char *)body, strlen(body));
 
 	// set basic headers
 	g_mime_message_set_sender(message, from);
@@ -319,20 +315,14 @@ struct DbmailMessage * dbmail_message_construct(struct DbmailMessage *self,
 		case GMIME_PART_ENCODING_QUOTEDPRINTABLE:
 			filter = g_mime_filter_basic_new_type(GMIME_FILTER_BASIC_QP_ENC);
 			break;
-		case GMIME_PART_ENCODING_UUENCODE:
-			filter = g_mime_filter_basic_new_type(GMIME_FILTER_BASIC_UU_ENC);
-			break;
-		case GMIME_PART_ENCODING_DEFAULT:
-		case GMIME_PART_ENCODING_7BIT:
-		case GMIME_PART_ENCODING_8BIT:
-		case GMIME_PART_ENCODING_BINARY:
-		case GMIME_PART_NUM_ENCODINGS:
 		default:
 			break;
 	}
 
-	if (filter)
+	if (filter) {
 		g_mime_stream_filter_add((GMimeStreamFilter *)fstream, filter);
+		g_object_unref(filter);
+	}
 	
 	// fill the stream and thus the mime-part
 	g_mime_stream_write_string(fstream,body);
@@ -344,31 +334,20 @@ struct DbmailMessage * dbmail_message_construct(struct DbmailMessage *self,
 	// Content-Type
 	mime_type = g_mime_content_type_new("text","plain");
 	g_mime_object_set_content_type((GMimeObject *)mime_part, mime_type);
-	if ((charset = g_mime_charset_best(body,strlen(body))) != NULL)
-		g_mime_object_set_content_type_parameter((GMimeObject *)mime_part, "charset", charset);
+	// We originally tried to use g_mime_charset_best to pick a charset,
+	// but it regularly failed to choose utf-8 when utf-8 data was given to it.
+	g_mime_object_set_content_type_parameter((GMimeObject *)mime_part, "charset", "utf-8");
 
 	// Content-Transfer-Encoding
 	switch(encoding) {
-		case GMIME_PART_ENCODING_DEFAULT:
-		case GMIME_PART_ENCODING_7BIT:
-			g_mime_part_set_content_header(mime_part,"Content-Transfer-Encoding", "7bit");
-			break;
-		case GMIME_PART_ENCODING_8BIT:
-			g_mime_part_set_content_header(mime_part,"Content-Transfer-Encoding", "8bit");
-			break;
-		case GMIME_PART_ENCODING_BINARY:
-			g_mime_part_set_content_header(mime_part,"Content-Transfer-Encoding", "binary");
-			break;
 		case GMIME_PART_ENCODING_BASE64:
 			g_mime_part_set_content_header(mime_part,"Content-Transfer-Encoding", "base64");
 			break;
 		case GMIME_PART_ENCODING_QUOTEDPRINTABLE:
 			g_mime_part_set_content_header(mime_part,"Content-Transfer-Encoding", "quoted-printable");
 			break;
-
-		case GMIME_PART_ENCODING_UUENCODE: // anyone still uses this?
-		case GMIME_PART_NUM_ENCODINGS: // what's this?
 		default:
+			g_mime_part_set_content_header(mime_part,"Content-Transfer-Encoding", "7bit");
 			break;
 	}
 
@@ -383,7 +362,6 @@ struct DbmailMessage * dbmail_message_construct(struct DbmailMessage *self,
 	g_object_unref(content);
 	g_object_unref(stream);
 	g_object_unref(fstream);
-	g_object_unref(filter);
 	return self;
 }
 
@@ -488,7 +466,7 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 
 	switch (dbmail_message_get_class(self)) {
 		case DBMAIL_MESSAGE:
-			trace(TRACE_DEBUG,"%s,%s: parse message",__FILE__,__func__);
+			TRACE(TRACE_DEBUG,"parse message");
 			self->content = GMIME_OBJECT(g_mime_parser_construct_message(parser));
 			if (g_mime_parser_get_scan_from(parser)) {
 				from = g_mime_parser_get_from(parser);
@@ -498,7 +476,7 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 
 			break;
 		case DBMAIL_MESSAGE_PART:
-		trace(TRACE_DEBUG,"%s,%s: parse part",__FILE__,__func__);
+		TRACE(TRACE_DEBUG,"parse part");
 			self->content = GMIME_OBJECT(g_mime_parser_construct_part(parser));
 			break;
 	}
@@ -613,18 +591,15 @@ GList * dbmail_message_get_header_addresses(struct DbmailMessage *message, const
 	const char *field_value;
 
 	if (!message || !field_name) {
-		trace(TRACE_WARNING, "%s,%s: received a NULL argument, this is a bug",
-				__FILE__, __func__);
+		TRACE(TRACE_WARNING, "received a NULL argument, this is a bug");
 		return NULL; 
 	}
 
 	field_value = dbmail_message_get_header(message, field_name);
-	trace(TRACE_INFO, "%s,%s: mail address parser looking at field [%s] with value [%s]",
-			__FILE__, __func__, field_name, field_value);
+	TRACE(TRACE_INFO, "mail address parser looking at field [%s] with value [%s]", field_name, field_value);
 	
 	if ((ialist = internet_address_parse_string(field_value)) == NULL) {
-		trace(TRACE_MESSAGE, "%s,%s: mail address parser error parsing header field",
-			__FILE__, __func__);
+		TRACE(TRACE_MESSAGE, "mail address parser error parsing header field");
 		return NULL;
 	}
 
@@ -639,8 +614,7 @@ GList * dbmail_message_get_header_addresses(struct DbmailMessage *message, const
 	
 	internet_address_list_destroy(ialisthead);
 
-	trace(TRACE_DEBUG, "%s,%s: mail address parser found [%d] email addresses",
-			__FILE__, __func__, g_list_length(result));
+	TRACE(TRACE_DEBUG, "mail address parser found [%d] email addresses", g_list_length(result));
 
 	return result;
 }
@@ -744,13 +718,13 @@ static struct DbmailMessage * _retrieve(struct DbmailMessage *self, char *query_
 			dbmail_message_get_physid(self));
 
 	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: sql error", __FILE__, __func__);
+		TRACE(TRACE_ERROR, "sql error");
 		return NULL;
 	}
 	
 	rows = db_num_rows();
 	if (rows < 1) {
-		trace(TRACE_ERROR, "%s,%s: blk error", __FILE__, __func__);
+		TRACE(TRACE_ERROR, "blk error");
 		db_free_result();
 		return NULL;	/* msg should have 1 block at least */
 	}
@@ -823,8 +797,7 @@ struct DbmailMessage * dbmail_message_retrieve(struct DbmailMessage *self, u64_t
 	}
 	
 	if ((!self) || (! self->content)) {
-		trace(TRACE_ERROR, "%s,%s: retrieval failed for physid [%llu]", 
-			__FILE__, __func__, dbmail_message_get_physid(self));
+		TRACE(TRACE_ERROR, "retrieval failed for physid [%llu]", physid);
 		return NULL;
 	}
 
@@ -850,15 +823,11 @@ int dbmail_message_store(struct DbmailMessage *self)
 	
 	switch (auth_user_exists(DBMAIL_DELIVERY_USERNAME, &user_idnr)) {
 	case -1:
-		trace(TRACE_ERROR, "%s,%s: unable to find user_idnr for user [%s]",
-		      __FILE__, __func__, DBMAIL_DELIVERY_USERNAME);
+		TRACE(TRACE_ERROR, "unable to find user_idnr for user [%s]", DBMAIL_DELIVERY_USERNAME);
 		return -1;
 		break;
 	case 0:
-		trace(TRACE_ERROR,
-		      "%s,%s: unable to find user_idnr for user "
-		      "[%s]. Make sure this system user is in the database!",
-		      __FILE__, __func__, DBMAIL_DELIVERY_USERNAME);
+		TRACE(TRACE_ERROR, "unable to find user_idnr for user [%s]. Make sure this system user is in the database!", DBMAIL_DELIVERY_USERNAME);
 		return -1;
 		break;
 	}
@@ -889,8 +858,7 @@ int dbmail_message_store(struct DbmailMessage *self)
 	if(db_insert_message_block(hdrs, hdrs_size, self->id, &messageblk_idnr,1) < 0)
 		return -1;
 	
-	trace(TRACE_DEBUG, "%s,%s: allocating [%ld] bytes of memory "
-	      "for readblock", __FILE__, __func__, READ_BLOCK_SIZE);
+	TRACE(TRACE_DEBUG, "allocating [%ld] bytes of memory for readblock", READ_BLOCK_SIZE);
 	
 	/* store body in several blocks (if needed */
 	if (store_message_in_blocks(body, body_size, self->id) < 0)
@@ -926,8 +894,7 @@ int _message_insert(struct DbmailMessage *self,
 		return -1;
 	
 	if (mailboxid == 0) {
-		trace(TRACE_ERROR, "%s,%s: mailbox [%s] could not be found!", 
-				__FILE__, __func__, mailbox);
+		TRACE(TRACE_ERROR, "mailbox [%s] could not be found!", mailbox);
 		return -1;
 	}
 
@@ -954,7 +921,7 @@ int _message_insert(struct DbmailMessage *self,
 		 MESSAGE_STATUS_INSERT);
 
 	if (db_query(query) == -1) {
-		trace(TRACE_ERROR, "%s,%s: query failed", __FILE__, __func__);
+		TRACE(TRACE_ERROR, "query failed");
 		return -1;
 	}
 
@@ -1038,8 +1005,10 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 	gchar *safe_value;
 	GString *q;
 	GTuples *values;
-	const char *value;
+	unsigned char *raw;
+	gchar *value = NULL;
 	unsigned i;
+	gboolean isaddr = 0;
 
 	dm_errno = 0;
 
@@ -1050,19 +1019,44 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 	if ((_header_get_id(self, header, &id) < 0))
 		return TRUE;
 
+	if (g_ascii_strcasecmp(header,"From")==0)
+		isaddr=1;
+	else if (g_ascii_strcasecmp(header,"To")==0)
+		isaddr=1;
+	else if (g_ascii_strcasecmp(header,"Reply-to")==0)
+		isaddr=1;
+	else if (g_ascii_strcasecmp(header,"Cc")==0)
+		isaddr=1;
+	else if (g_ascii_strcasecmp(header,"Bcc")==0)
+		isaddr=1;
+
 	q = g_string_new("");
 	values = g_relation_select(self->headers,header,0);
 	for (i=0; i<values->len;i++) {
-		value = g_tuples_index(values,i,1);
+		raw = (unsigned char *)g_tuples_index(values,i,1);
 
-		safe_value = dm_stresc(value);
+		if (isaddr) {
+			InternetAddressList *alist;
+			gchar *t = imap_cleanup_address((const char *)raw);
+			alist = internet_address_parse_string(t);
+			g_free(t);
+		
+			value = internet_address_list_to_string(alist, TRUE);
+			internet_address_list_destroy(alist);
+
+			safe_value = dm_stresc(value);
+			g_free(value);
+		} else {
+			safe_value = dm_stresc((const char *)raw);
+		}
+
+
 		g_string_printf(q,"INSERT INTO %sheadervalue (headername_id, physmessage_id, headervalue) "
 				"VALUES (%llu,%llu,'%s')", DBPFX, id, self->physid, safe_value);
 		g_free(safe_value);
 
 		if (db_query(q->str)) {
-			trace(TRACE_ERROR,"%s,%s: insert headervalue failed",
-			      __FILE__,__func__);
+			TRACE(TRACE_ERROR,"insert headervalue failed");
 			g_string_free(q,TRUE);
 			g_tuples_destroy(values);
 			return TRUE;
@@ -1080,7 +1074,7 @@ static void insert_address_cache(u64_t physid, const char *field, InternetAddres
 	g_return_if_fail(ialist != NULL);
 
 	GString *q = g_string_new("");
-	gchar *name;
+	gchar *name, *rname;
 	gchar *addr;
 
 	for (; ialist != NULL && ialist->address; ialist = ialist->next) {
@@ -1088,10 +1082,11 @@ static void insert_address_cache(u64_t physid, const char *field, InternetAddres
 		ia = ialist->address;
 		g_return_if_fail(ia != NULL);
 
+		rname = ia->name ? ia->name: "";
 		/* address fields are truncated to column width */
-		name = dm_strnesc(ia->name ? ia->name : "", CACHE_WIDTH_ADDR);
+		name = dm_strnesc(rname, CACHE_WIDTH_ADDR);
 		addr = dm_strnesc(ia->value.addr ? ia->value.addr : "", CACHE_WIDTH_ADDR);
-		
+
 		g_string_printf(q, "INSERT INTO %s%sfield (physmessage_id, %sname, %saddr) "
 				"VALUES (%llu,'%s','%s')", DBPFX, field, field, field, 
 				physid, name, addr);
@@ -1100,8 +1095,7 @@ static void insert_address_cache(u64_t physid, const char *field, InternetAddres
 		g_free(addr);
 		
 		if (db_query(q->str)) {
-			trace(TRACE_ERROR, "%s,%s: insert %sfield failed [%s]",
-					__FILE__, __func__, field, q->str);
+			TRACE(TRACE_ERROR, "insert %sfield failed [%s]", field, q->str);
 		}
 
 	}
@@ -1115,7 +1109,7 @@ static void insert_field_cache(u64_t physid, const char *field, const char *valu
 	gchar *clean_value;
 
 	g_return_if_fail(value != NULL);
-	
+
 	/* field values are truncated to 255 bytes */
 	clean_value = dm_strnesc(value,CACHE_WIDTH_FIELD);
 
@@ -1127,8 +1121,7 @@ static void insert_field_cache(u64_t physid, const char *field, const char *valu
 	g_free(clean_value);
 
 	if (db_query(q->str)) {
-		trace(TRACE_ERROR, "%s,%s: insert %sfield failed [%s]",
-				__FILE__, __func__, field, q->str);
+		TRACE(TRACE_ERROR, "insert %sfield failed [%s]", field, q->str);
 	}
 	g_string_free(q,TRUE);
 }
@@ -1204,25 +1197,24 @@ void dbmail_message_cache_datefield(const struct DbmailMessage *self)
 
 void dbmail_message_cache_subjectfield(const struct DbmailMessage *self)
 {
-	char *value;
-	char *subject, *s;
+	char *value, *raw;
+	char *s;
 	
-	value = (char *)dbmail_message_get_header(self,"Subject");
-	if (! value) {
-		trace(TRACE_MESSAGE,"%s,%s: no subject field value [%llu]",
-				__FILE__, __func__, self->physid);
+	raw = (char *)g_mime_message_get_subject(GMIME_MESSAGE(self->content));
+
+	if (! raw) {
+		TRACE(TRACE_MESSAGE,"no subject field value [%llu]", self->physid);
 		return;
 	}
-	
-	if (! (subject = g_strdup(value)))
-		return;
 
-	s = subject;
+	value = g_strdup(raw);
+
+	s = value;
 	dm_base_subject(s);
 
 	insert_field_cache(self->physid, "subject", s);
 	
-	g_free(subject);
+	g_free(value);
 }
 
 void dbmail_message_cache_referencesfield(const struct DbmailMessage *self)
@@ -1264,25 +1256,21 @@ void dbmail_message_cache_referencesfield(const struct DbmailMessage *self)
 	
 void dbmail_message_cache_envelope(const struct DbmailMessage *self)
 {
-	GString *q;
-	char *envelope, *clean;
+	char *q, *envelope, *clean;
 
 	envelope = imap_get_envelope(GMIME_MESSAGE(self->content));
-	
 	clean = dm_stresc(envelope);
 
-	q = g_string_new("");
-
-	g_string_printf(q, "INSERT INTO %senvelope (physmessage_id, envelope) "
+	q = g_strdup_printf("INSERT INTO %senvelope (physmessage_id, envelope) "
 			"VALUES (%llu,'%s')", DBPFX, self->physid, clean);
 
 	g_free(clean);
+	g_free(envelope);
 
-	if (db_query(q->str)) {
-		trace(TRACE_ERROR, "%s,%s: insert envelope failed [%s]",
-				__FILE__, __func__, q->str);
+	if (db_query(q)) {
+		TRACE(TRACE_ERROR, "insert envelope failed [%s]", q);
 	}
-	g_string_free(q,TRUE);
+	g_free(q);
 
 }
 

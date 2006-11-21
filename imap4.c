@@ -29,7 +29,7 @@
 #define MAX_LINESIZE (10*1024)
 #define COMMAND_SHOW_LEVEL TRACE_INFO
 
-
+#define THIS_MODULE "imap"
 
 /* cache */
 cache_t cached_msg;
@@ -86,10 +86,7 @@ const IMAP_COMMAND_HANDLER imap_handler_functions[] = {
 imap_userdata_t * dbmail_imap_userdata_new(void)
 {
 	imap_userdata_t *ud;
-	if (! (ud = g_new0(imap_userdata_t,1))) {
-		trace(TRACE_ERROR, "%s,%s: not enough memory.", __FILE__, __func__);
-		return NULL;
-	}
+	ud = g_new0(imap_userdata_t,1);
 	ud->state = IMAPCS_NON_AUTHENTICATED;
 	return ud;
 }
@@ -133,7 +130,7 @@ int IMAPClientHandler(clientinfo_t * ci)
 
 	do {
 		if (db_check_connection()) {
-			trace(TRACE_DEBUG,"%s,%s: database has gone away", __FILE__, __func__);
+			TRACE(TRACE_DEBUG,"database has gone away");
 			done=1;
 			break;
 		}
@@ -150,7 +147,7 @@ int IMAPClientHandler(clientinfo_t * ci)
 		}
 
 		if (ferror(session->ci->rx)) {
-			trace(TRACE_ERROR, "%s,%s: error [%s] on read-stream\n",__FILE__, __func__, strerror(errno));
+			TRACE(TRACE_ERROR, "error [%s] on read-stream\n", strerror(errno));
 			if (errno == EPIPE) {
 				dbmail_imap_session_delete(session);
 				return -1;	/* broken pipe */
@@ -159,7 +156,7 @@ int IMAPClientHandler(clientinfo_t * ci)
 		}
 
 		if (ferror(session->ci->tx)) {
-			trace(TRACE_ERROR, "%s,%s: error [%s] on write-stream\n",__FILE__, __func__, strerror(errno));
+			TRACE(TRACE_ERROR, "error [%s] on write-stream\n", strerror(errno));
 			if (errno == EPIPE) {
 				dbmail_imap_session_delete(session);
 				return -1;	/* broken pipe */
@@ -169,8 +166,6 @@ int IMAPClientHandler(clientinfo_t * ci)
 
 		readresult = dbmail_imap_session_readln(session, line);
 		if (readresult < 0) { /* Fatal error: EOF &c. */
-			trace(TRACE_ERROR, "%s,%s: error reading command -- bailing out\n",__FILE__, __func__);
-			dbmail_imap_session_printf(session, "* BYE error reading command\r\n");
 			dbmail_imap_session_delete(session);
 			return -1;
 		}
@@ -182,7 +177,7 @@ int IMAPClientHandler(clientinfo_t * ci)
 
 		if (!session->ci->rx || !session->ci->tx) {
 			/* if a timeout occured the streams will be closed & set to NULL */
-			trace(TRACE_ERROR, "%s,%s: timeout occurred.", __FILE__, __func__);
+			TRACE(TRACE_ERROR, "timeout occurred.");
 			dbmail_imap_session_delete(session);
 			return 1;
 		}
@@ -202,7 +197,7 @@ int IMAPClientHandler(clientinfo_t * ci)
 			cpy--;
 		}
 
-		trace(COMMAND_SHOW_LEVEL, "COMMAND: [%s]\n", line);
+		TRACE(COMMAND_SHOW_LEVEL, "COMMAND: [%s]\n", line);
 
 		if (!(*line)) {
 			
@@ -280,8 +275,7 @@ int IMAPClientHandler(clientinfo_t * ci)
 
 			if (!session->ci->rx || !session->ci->tx || ferror(session->ci->rx) || ferror(session->ci->tx)) {
 				/* some error occurred during the read of extra command info */
-				trace(TRACE_ERROR, "%s,%s: error reading extra command info", 
-						__FILE__, __func__);
+				TRACE(TRACE_ERROR, "error reading extra command info");
 				dbmail_imap_session_delete(session);
 				return -1;
 			}
@@ -316,8 +310,7 @@ int IMAPClientHandler(clientinfo_t * ci)
 		 * (IB: 2004-08-23) */
 		nfaultyresponses = 0;
 
-		trace(TRACE_INFO, "%s,%s: Executing command %s...\n", 
-				__FILE__, __func__, IMAP_COMMANDS[i]);
+		TRACE(TRACE_INFO, "Executing command %s...\n", IMAP_COMMANDS[i]);
 
 // dirty hack to bypass a NOOP problem: 
 // unilateral server responses are not recognised by some clients 
@@ -332,8 +325,7 @@ int IMAPClientHandler(clientinfo_t * ci)
 		}
 
 		if (result == -1) {
-			trace(TRACE_ERROR,"%s,%s: command return with error [%s]", 
-					__FILE__, __func__, IMAP_COMMANDS[i]);
+			TRACE(TRACE_ERROR,"command return with error [%s]", IMAP_COMMANDS[i]);
 			done = 1;	/* fatal error occurred, kick this user */
 		}
 
@@ -346,8 +338,7 @@ int IMAPClientHandler(clientinfo_t * ci)
 
 		fflush(session->ci->tx);	/* write! */
 
-		trace(TRACE_INFO, "%s,%s: Finished command %s [%d]\n", 
-				__FILE__, __func__, IMAP_COMMANDS[i], result);
+		TRACE(TRACE_INFO, "Finished command %s [%d]\n", IMAP_COMMANDS[i], result);
 
 		/* check if mailbox status has changed (notify client) */
 		if (ud->state == IMAPCS_SELECTED) {
@@ -359,8 +350,7 @@ int IMAPClientHandler(clientinfo_t * ci)
 
 				result = db_getmailbox(&newmailbox);
 				if (result == -1) {
-					trace(TRACE_ERROR, "%s,%s: could not get mailbox info\n",
-							__FILE__, __func__);
+					TRACE(TRACE_ERROR, "could not get mailbox info\n");
 					dbmail_imap_session_printf(session, "* BYE internal dbase error\r\n");
 					dbmail_imap_session_delete(session);
 					return -1;
@@ -371,7 +361,7 @@ int IMAPClientHandler(clientinfo_t * ci)
 						dbmail_imap_session_delete(session);
 						return EOF;
 					}
-					trace(TRACE_INFO, "%s,%s: ok update sent\r\n", __FILE__, __func__);
+					TRACE(TRACE_INFO, "ok update sent\r\n");
 				}
 
 				if (newmailbox.recent != ud->mailbox.recent)
@@ -389,15 +379,14 @@ int IMAPClientHandler(clientinfo_t * ci)
 				dbmail_imap_session_delete(session);
 				return EOF; 
 			}
-			trace(TRACE_DEBUG, "%s,%s: tag = %s", __FILE__, __func__, session->tag);
+			TRACE(TRACE_DEBUG, "tag = %s", session->tag);
 		}
 
 	} while (!done);
 
 	/* cleanup */
 	dbmail_imap_session_printf(session, "%s OK completed\r\n", session->tag);
-	trace(TRACE_MESSAGE, "%s,%s: Closing connection for client from IP [%s]\n",
-			__FILE__, __func__, session->ci->ip_src);
+	TRACE(TRACE_MESSAGE, "Closing connection for client from IP [%s]\n", session->ci->ip_src);
 	dbmail_imap_session_delete(session);
 
 	return EOF;

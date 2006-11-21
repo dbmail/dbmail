@@ -1,0 +1,5 @@
+Template: dbmail/pgsql_installed
+Type: boolean
+_Description: activate postgresql support for dbmail?
+ Select this option if you want to use postgresql as
+ storage driver for dbmail.

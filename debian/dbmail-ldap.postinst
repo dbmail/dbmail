@@ -1,0 +1,109 @@
+#!/bin/sh -e
+
+CONFIG=/etc/dbmail/dbmail.conf
+CONFIG_EX=/usr/share/doc/dbmail/examples/dbmail.conf
+
+DEBIAN_CONFIG=/etc/default/dbmail
+DEBIAN_CONFIG_EX=/usr/share/doc/dbmail/examples/default.dbmail
+
+test $DEBIAN_SCRIPT_DEBUG && set -v -x
+
+# summary of how this script can be called:
+#        * <postinst> `configure' <most-recently-configured-version>
+#        * <old-postinst> `abort-upgrade' <new version>
+#        * <conflictor's-postinst> `abort-remove' `in-favour' <package>
+#          <new-version>
+#        * <deconfigured's-postinst> `abort-deconfigure' `in-favour'
+#          <failed-install-package> <version> `removing'
+#          <conflicting-package> <version>
+# for details, see /usr/doc/packaging-manual/
+#
+# quoting from the policy:
+#     Any necessary prompting should almost always be confined to the
+#     post-installation script, and should be protected with a conditional
+#     so that unnecessary prompting doesn't happen if a package's
+#     installation fails and the `postinst' is called with `abort-upgrade',
+#     `abort-remove' or `abort-deconfigure'.
+
+
+case "$1" in
+    install)
+    ;;
+    upgrade)
+    ;;
+    configure)
+
+	. /usr/share/debconf/confmodule
+	db_get dbmail/do_debconf || true; DO_DEBCONF=$RET
+
+	if [ "$DO_DEBCONF" = "true" ]; then
+		# fetch debconf values
+		db_get dbmail/ldap/HOSTNAME || true; LDAP_HOST=$RET
+		db_get dbmail/ldap/PORT || true; LDAP_PORT=$RET
+		db_get dbmail/ldap/BASE_DN || true; LDAP_BASE_DN=$RET
+		db_get dbmail/ldap/BIND_DN || true; LDAP_BIND_DN=$RET
+		db_get dbmail/ldap/BIND_PW || true; LDAP_BIND_PW=$RET
+		db_get dbmail/ldap/bind_anonymous || true; LDAP_BIND_ANONYMOUS=$RET
+		db_get dbmail/ldap/FIELD_UID || true; LDAP_UID=$RET
+		db_get dbmail/ldap/FIELD_CID || true; LDAP_CID=$RET
+
+		if [ -z "$LDAP_BASE_DN" ]; then
+			# For the domain really.argh.org we create the basedn
+			# dc=really,dc=argh,dc=org with the dc entry dc: really
+			db_get slapd/domain && SLAPD_DOMAIN=$RET
+			if [ -n "$SLAPD_DOMAIN" ]; then
+				LDAP_BASE_DN="dc=`echo $SLAPD_DOMAIN|sed 's/\./,dc=/g'`"
+			fi
+		fi
+
+		if [ -n "$LDAP_BASE_DN" ] && [ -z "$LDAP_BIND_DN" ] && [ "$LDAP_BIND_ANONYMOUS" = "false" ]; then
+			LDAP_BIND_DN="cn=dbmail,$LDAP_BASE_DN";
+			db_set dbmail/ldap/BIND_DN "$LDAP_BIND_DN"
+			if [ -x /usr/bin/pwgen ]; then
+				LDAP_BIND_PW=`pwgen -n`
+				db_set dbmail/ldap/BIND_PW "$LDAP_BIND_PW"
+			fi
+		fi
+
+		if [ -z $LDAP_UID ]; then
+			LDAP_UID="uid"
+		fi
+
+		if [ -z $LDAP_CID ]; then
+			LDAP_CID="gidNumber"
+		fi
+	fi
+
+	# protect the config-file
+	oldmask=`umask`
+	umask 026
+
+	if [ "$DO_DEBCONF" = "true" -a -e $CONFIG ]; then
+		# edit the configs
+
+		sed -i -re "s/^BASE_DN\W*=.*\$/BASE_DN=$LDAP_BASE_DN/i" \
+			-e "s/^HOSTNAME\W*=.*\$/HOSTNAME=$LDAP_HOST/i" \
+			-e "s/^BIND_PW\W*=.*\$/BIND_PW=$LDAP_BIND_PW/i" \
+			-e "s/^BIND_DN\W*=.*\$/BIND_DN=$LDAP_BIND_DN/i" \
+			-e "s/^FIELD_UID\W*=.*\$/FIELD_UID=$LDAP_UID/i" \
+			-e "s/^FIELD_CID\W*=.*\$/FIELD_CID=$LDAP_CID/i" \
+			-e "s/^authdriver\W*=\W*\$/authdriver=ldap/" \
+                        $CONFIG
+		
+		umask $oldmask
+	fi
+	
+	db_stop
+	
+    ;;
+    abort-upgrade)
+    ;;
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 0
+    ;;
+esac
+
+#DEBHELPER#
+
+exit 0

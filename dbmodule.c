@@ -14,6 +14,7 @@
 #include "debug.h"
 #include "db.h"
 #include "dbmodule.h"
+#define THIS_MODULE "db"
 
 static db_func_t *db = NULL;
 
@@ -33,17 +34,11 @@ int db_load_driver(void)
 	char *driver = NULL;
 
 	if (!g_module_supported()) {
-		trace(TRACE_FATAL, "%s,%s: loadable modules unsupported on this platform",
-				__FILE__, __func__);
+		TRACE(TRACE_FATAL, "loadable modules unsupported on this platform");
 		return 1;
 	}
 
 	db = g_new0(db_func_t,1);
-	if (!db) {
-		trace(TRACE_FATAL, "%s,%s: cannot allocate memory",
-				__FILE__, __func__);
-		return -3;
-	}
 
 	if (strcasecmp(_db_params.driver, "PGSQL") == 0)
 		driver = "pgsql";
@@ -54,9 +49,7 @@ int db_load_driver(void)
 	else if (strcasecmp(_db_params.driver, "SQLITE") == 0)
 		driver = "sqlite";
 	else
-		trace(TRACE_FATAL, "%s,%s: unsupported driver: %s,"
-				" please choose from MySQL, PGSQL, SQLite",
-				__FILE__, __func__,
+		TRACE(TRACE_FATAL, "unsupported driver: %s, please choose from MySQL, PGSQL, SQLite",
 				_db_params.driver);
 
 	/* Try local build area, then dbmail lib paths, then system lib path. */
@@ -65,17 +58,24 @@ int db_load_driver(void)
 		"modules/.libs",
 		PREFIX "/lib/dbmail",
 		NULL };
-	for (i = 0; i < 4; i++) {
+	/* Note that the limit here *includes* the NULL. This is intentional,
+	 * to allow g_module_build_path to try the current working directory. */
+	for (i = 0; i < 3; i++) {
 		lib = g_module_build_path(lib_path[i], driver);
 		module = g_module_open(lib, 0); // non-lazy bind.
+
+		TRACE(TRACE_DEBUG, "looking for %s as %s", driver, lib);
+		g_free(lib);
+
+		if (!module)
+			TRACE(TRACE_INFO, "cannot load %s", g_module_error());
 		if (module)
 			break;
 	}
 
 	/* If the list is exhausted without opening a module, we'll catch it. */
 	if (!module) {
-		trace(TRACE_FATAL, "%s,%s: cannot load %s",
-				__FILE__, __func__, g_module_error());
+		TRACE(TRACE_FATAL, "could not load db module - turn up debug level for details");
 		return -1;
 	}
 
@@ -95,8 +95,7 @@ int db_load_driver(void)
 	||  !g_module_symbol(module, "db_get_affected_rows",   (gpointer)&db->get_affected_rows   )
 	||  !g_module_symbol(module, "db_get_sql",             (gpointer)&db->get_sql             )
 	||  !g_module_symbol(module, "db_set_result_set",      (gpointer)&db->set_result_set      )) {
-		trace(TRACE_FATAL, "%s,%s: cannot find function %s", 
-				__FILE__, __func__, g_module_error());
+		TRACE(TRACE_FATAL, "cannot find function %s", g_module_error());
 		return -2;
 	}
 

@@ -36,7 +36,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define THIS_MODULE "pgsql"
+#define THIS_MODULE "sql"
 #define BYTEAOID  17
 
 const char * db_get_sql(sql_fragment_t frag)
@@ -113,9 +113,7 @@ int db_connect()
 		enc = pg_encoding_to_char(PQclientEncoding(conn));
 		// if (strcmp(enc, "SQL_ASCII") != 0) {
 		if (strcmp(enc, "UNICODE") == 0) {
-			trace(TRACE_FATAL, "%s,%s: Database encoding UNICODE"
-				"is not supported prior to PostgreSQL 8.1",
-				__FILE__, __func__);
+			TRACE(TRACE_FATAL, "Database encoding UNICODE is not supported prior to PostgreSQL 8.1");
 		}
 
 		// FIXME: Does we need to free enc?
@@ -297,8 +295,10 @@ int db_query(const char *q)
 unsigned long db_escape_string(char *to,
 			       const char *from, unsigned long length)
 {
+	assert(from);
 	return PQescapeString(to, from, length);
 }
+
 unsigned long db_escape_binary(char *to,
 			       const char *from, unsigned long length)
 {

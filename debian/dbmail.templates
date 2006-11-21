@@ -22,6 +22,14 @@ _Description: Postmaster's email address:
  .
  Example: postmaster@yourdomain.tld
 
+Template: dbmail/dbmail/postmaster
+Type: string
+_Description: Postmaster's email address:
+ This should be a valid email address read by the person responsible for
+ this email server.
+ .
+ Example: postmaster@yourdomain.tld
+
 Template: dbmail/dbmail/host
 Type: string
 _Description: The hostname of the sql database server:
@@ -52,18 +60,16 @@ _Description: start the imap server after reboot?
  Dbmail supports both imap and pop3 services. You can choose to run either
  one or both services.
 
+Template: dbmail/start_lmtpd
+Type: boolean
+_Description: start the lmtp server after reboot?
+ This is only needed when you like to feed the email to Dbmail by LMTP.
+
 Template: dbmail/start_pop3d
 Type: boolean
 _Description: start the pop3 server after reboot?
  Dbmail support both imap and pop3 services. You can choose to run either
  one or both services.
-
-Template: dbmail/start_timsieved
-Type: boolean
-_Description: start the timesieved after reboot?
- Dbmail supports management of Sieve scripts through the timsieve protocol.
- You can run dbmail-timsieved which allows management of the sieve scripts from
- within clients that support this protocol such as kmail, squirrelmail, and others
 
 Template: dbmail/start_ssl
 Type: boolean

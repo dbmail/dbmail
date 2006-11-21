@@ -365,6 +365,15 @@ START_TEST(test_imap_get_structure)
 	char *result;
 	char *expect = g_new0(char,1024);
 
+
+	/* bare bones */
+	message = dbmail_message_new();
+	message = dbmail_message_init_with_string(message, g_string_new(simple));
+	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
+	printf("[%s]\n", result);
+	dbmail_message_free(message);
+	g_free(result);
+
 	/* multipart */
 	message = dbmail_message_new();
 	message = dbmail_message_init_with_string(message, g_string_new(multipart_message));
@@ -493,7 +502,20 @@ START_TEST(test_imap_get_envelope)
 
 	dbmail_message_free(message);
 	g_free(result);
+	result = NULL;
 	g_free(expect);
+	expect = NULL;
+
+	/* bare bones message */
+	message = dbmail_message_new();
+	message = dbmail_message_init_with_string(message, g_string_new(simple));
+	result = imap_get_envelope(GMIME_MESSAGE(message->content));
+
+	printf("[%s]\n", result);
+	dbmail_message_free(message);
+	g_free(result);
+	result = NULL;
+
 }
 END_TEST
 
@@ -807,7 +829,7 @@ static int wrap_base_subject(const char *in, const char *expect)
 }	
 
 #define BS(x,y) fail_unless(wrap_base_subject((x),(y))==0, "dm_base_subject failed")
-#define BSF(x,y) fail_unless(wrap_base_subject((x),(y))!=0, "dm_base_subject failed")
+#define BSF(x,y) fail_unless(wrap_base_subject((x),(y))!=0, "dm_base_subject failed (negative)")
 
 START_TEST(test_dm_base_subject)
 {
@@ -851,6 +873,12 @@ START_TEST(test_listex_match)
 	X(1, "INBOX*", "INBOX");
 	X(1, "INBOX*", "INBOX.Foo");
 	X(1, "INBOX*", "INBOX.Foo.Bar");
+
+	X(1, "%", "INBOX");
+	X(0, "%.%", "INBOX");
+	X(1, "%.%", "INBOX.Foo");
+	X(0, "%.%.%", "INBOX.Foo");
+	X(1, "%.%.%", "INBOX.Foo.Bar");
 
 	X(1, "INBOX%", "INBOX");
 	X(0, "INBOX%", "INBOX.Foo");

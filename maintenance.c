@@ -661,6 +661,7 @@ static int do_rfc_size(void)
 		}
 	}
 
+	g_list_foreach(lost, (GFunc)g_free, NULL);
 	g_list_free(lost);
 
 	time(&stop);
@@ -719,12 +720,12 @@ int do_header_cache(void)
 	time_t start, stop;
 	GList *lost = NULL;
 	
-	if (do_is_header())
-		return -1;
-	
 	if (do_rfc_size())
 		return -1;
 
+	if (do_is_header())
+		return -1;
+	
 	if (do_envelope())
 		return -1;
 	

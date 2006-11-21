@@ -1,3 +1,317 @@
+2006-11-18  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail.conf:
+	add missing directive
+	* THANKS:
+	update
+	* INSTALL:
+	update INSTALL
+	* UPGRADING, dbmail.conf:
+	updates and corrections
+	* debian/changelog, debian/dbmail-sieve.config, debian/dbmail.config:
+	debconf fixes
+
+2006-11-17  Paul J Stevens <paul@nfg.nl>
+
+	* sql/postgresql/create_tables.pgsql, 
+	  sql/postgresql/migrate_from_2.0_to_2.2.pgsql:
+	add index for lower(userid) in postgres schema
+	* server.c, serverchild.c:
+	simplify the non-blocking setup
+
+2006-11-16  Aaron Stone  <aaron@serendipity.cx>
+
+	* serverchild.c:
+	Fix for the O_NONBLOCK dance (closes bug #449).
+
+2006-11-16  Paul J Stevens <paul@nfg.nl>
+
+	* debian/dbmail-ldap.config, debian/dbmail-sieve.config, 
+	  debian/dbmail.config:
+	fix typo
+	* debian/changelog:
+	update changelog for debian
+	* imap4.c:
+	fix for fatal sigpipe
+	* serverchild.c:
+	disable the O_NONBLOCK dance
+
+2006-11-15  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_imapd.c, misc.c, test-scripts/testimap.py:
+	fix for lsub (jonathan feally)
+	* debian/dbmail.init:
+	fix reload bug
+	* server.c:
+	bail out if drop_privileges fails
+	* serverchild.c:
+	remove confusing error message
+
+2006-11-12  Paul J Stevens <paul@nfg.nl>
+
+	* debian/changelog, debian/dbmail-ldap.config, debian/dbmail-mysql.config, 
+	  debian/dbmail-pgsql.config, debian/dbmail-sieve.config, 
+	  debian/dbmail-sieve.postinst, debian/dbmail-sieve.templates, 
+	  debian/dbmail-sqlite.config:
+	debconf fixes
+	* debian/changelog, debian/dbmail-ldap.config, debian/dbmail-sieve.config, 
+	  debian/dbmail.config:
+	more debconf fixes
+	* serverchild.c:
+	reset flags on clientsocket after accept
+
+2006-11-10  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail.h, check_dbmail_imapd.c, misc.c, misc.h, serverchild.c:
+	some minor cleanups related to const char types and compiler warnings
+
+2006-11-09  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmail-message.c:
+	Always set charset=utf-8 in dbmail_construct_message (closes bug
+	#429).
+	* misc.c:
+	Fixed an invalid test for invalid addresses in append_alist_as_plist
+	(closes bug #444).
+
+2006-11-09  Paul J Stevens <paul@nfg.nl>
+
+	* serverchild.c:
+	work on #437
+	* db.c:
+	only retrieve header for envelope reconstruction
+	* dbmail-message.c:
+	fix segfault
+	* db.c:
+	fix potential turnover
+	* maintenance.c:
+	reshuffle cache maintenance
+
+2006-11-08  Aaron Stone  <aaron@serendipity.cx>
+
+	* modules/sortsieve.c:
+	Revert result logic in sort_process.
+	Corrected a for loop index typo (closes bug #441).
+
+2006-11-07  Paul J Stevens <paul@nfg.nl>
+
+	* db.c:
+	make allocation fail louder in db_icheck_envelope
+	* modules/sortsieve.c:
+	invert result logic in sort_process
+	* check_dbmail_util.c:
+	make allocation fail louder in db_icheck_envelope
+
+2006-11-06  Aaron Stone  <aaron@serendipity.cx>
+
+	* dbmail.h.in:
+	Add LDAP_DEPRECATED because we haven't switch LDAP API's to the new
+	ldap_bind_sasl and friends.
+	* configure.in:
+	Version bump to 2.2
+
+2006-11-06  Paul J Stevens <paul@nfg.nl>
+
+	* debian/changelog, debian/dbmail.postinst:
+	pre-release updates
+	* db.c:
+	revert mysql optimization (closes #440)
+	* debian/control, test-scripts/testimap.py:
+	fix depends
+
+2006-11-05  Aaron Stone  <aaron@serendipity.cx>
+
+	* serverparent.h, serverparent.c, pop3.c, timsieve.c, lmtp.c:
+	Moved validchars into serverparent.c as ValidNetworkChars, with a
+	wider tolerance for allowed characters (closes bug #435).
+	* misc.c:
+	Removed an unused variable.
+
+2006-11-05  Paul J Stevens <paul@nfg.nl>
+
+	* imapcommands.c:
+	fix sort/search/thread bug
+	* debian/control:
+	update dependencies
+
+2006-11-04  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_util.c, db.c, modules/dbmysql.c:
+	re-add the MR optimization
+
+2006-11-03  Aaron Stone  <aaron@serendipity.cx>
+
+	* sql/mysql/migrate_from_2.0_to_2.2.mysql,
+	sql/mysql/2_1_7-2_2_0.mysql:
+	Make the envelope table creations consistent.
+
+2006-11-03  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-message.c, modules/dbpgsql.c:
+	fully revert the utf8 behaviour. sql_ascii is the only supported db
+	encoding again for postgresql
+	* dbmail-message.c:
+	removed remaining utf8 conversion
+
+2006-11-02  Aaron Stone  <aaron@serendipity.cx>
+
+	* authmodule.c, dbmodule.c, sortmodule.c:
+	Changed count of paths to attempt, and added a comment about it.
+	Added more debugging info, closed a minor memory leak.
+	* debug.h, modules/authsql.c:
+	Removed relics of memtst and func_memtst.
+
+2006-11-02  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail.h, check_dbmail_message.c, misc.c, modules/dbpgsql.c:
+	push utf8 conversion to pgsql driver and remove utf7 encoding from
+	subject in envelope
+
+2006-11-01  Paul J Stevens <paul@nfg.nl>
+
+	* debian/changelog, debian/dbmail-ldap.templates, 
+	  debian/dbmail-sieve.postinst, debian/po/cs.po, debian/po/de.po, 
+	  debian/po/es.po, debian/po/fr.po, debian/po/it.po, debian/po/ja.po, 
+	  debian/po/nl.po, debian/po/pt_BR.po, debian/po/templates.pot, 
+	  test-scripts/testlmtp.txt:
+	po files updated after completing the templates
+	* misc.c:
+	add missing va_end call in g_list_append_printf
+	* config.c:
+	trace conversion
+	* serverparent.c:
+	minor cleanup
+	* Makefile.am:
+	AM_LDFLAGS modified
+	* misc.c:
+	TRACE migration and imap_cleanup_address fix
+	* acl.c, authmodule.c, check_dbmail.h, check_dbmail_mailbox.c, config.c, 
+	  dbmail-mailbox.c, dbmail-message.c, dbmail-user.c, dbmail.h.in, 
+	  dbmodule.c, debug.c, dm_base64.c, dm_imaputil.c, dm_md5.c, dsn.c, 
+	  imap4.c, imapcommands.c, lmtp.c, main.c, modules/authldap.c, 
+	  modules/authsql.c, modules/dbmysql.c, modules/dbpgsql.c, 
+	  modules/dbsqlite.c, modules/sortnull.c, modules/sortsieve.c, pop3.c, 
+	  quota.c, serverchild.c, sortmodule.c:
+	complete TRACE migration
+
+2006-10-31  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_imapd.c, check_dbmail_message.c, dbmail-message.c, misc.c:
+	convert cache table values to utf8 before inserting them into the database
+	* modules/authldap.c:
+	log last login in sql also for authldap
+	* lmtp.c:
+	TRACE cleanups
+	* misc.c:
+	guard against empty subject lines
+	* db.c:
+	fix inconsistency in usermap resolving
+
+2006-10-30  Aaron Stone  <aaron@serendipity.cx>
+
+	* db.c:
+	Use db_find_create_mailbox for POP3 user's INBOX.
+	Converted all trace calls to TRACE.
+
+2006-10-30  Paul J Stevens <paul@nfg.nl>
+
+	* db.c:
+	autocreate INBOX for pop3 users
+	* dbmail-message.c:
+	work on bug 429
+	* dbmail-mailbox.c, imapcommands.c:
+	handle fetch/search/sort on empty mailboxes
+	* debian/control, debian/dbmail-ldap.postinst, 
+	  debian/dbmail-ldap.templates, debian/dbmail-mysql.postinst, 
+	  debian/dbmail-mysql.templates, debian/dbmail-pgsql.templates, 
+	  debian/dbmail-sqlite.templates, debian/dbmail.postinst, 
+	  debian/dbmail.preinst, debian/dbmail.templates, 
+	  debian/po/POTFILES.in, debian/po/cs.po, debian/po/de.po, 
+	  debian/po/es.po, debian/po/fr.po, debian/po/it.po, debian/po/ja.po, 
+	  debian/po/nl.po, debian/po/pt_BR.po, debian/po/templates.1po, 
+	  debian/po/templates.pot:
+	update debconf templates and po files
+	* dbmail-message.c:
+	fix minor memleak
+	* debian/control, debian/dbmail-ldap.templates, debian/dbmail-sieve.config, 
+	  debian/dbmail-sieve.templates, debian/dbmail.templates:
+	fix lintian warnings
+	* dbmail.h.in:
+	bump version
+	* db.c:
+	revert change
+
+2006-10-29  Aaron Stone  <aaron@serendipity.cx>
+
+	* ChangeLog:
+	Corrected typos in ChangeLog
+	* dbmail-imapsession.c, timsieve.c:
+	More conversions of trace to TRACE.
+
+2006-10-27  Paul J Stevens <paul@nfg.nl>
+
+	* debian/dbmail-ldap.config, debian/dbmail-ldap.postinst, 
+	  debian/dbmail-ldap.templates, debian/dbmail-mysql.config, 
+	  debian/dbmail-mysql.postinst, debian/dbmail-mysql.templates, 
+	  debian/dbmail-pgsql.config, debian/dbmail-pgsql.postinst, 
+	  debian/dbmail-pgsql.templates, debian/dbmail-sieve.config, 
+	  debian/dbmail-sqlite.config, debian/dbmail-sqlite.postinst, 
+	  debian/dbmail-sqlite.templates, debian/dbmail.config, 
+	  debian/dbmail.postinst, debian/dbmail.preinst, 
+	  debian/dbmail.templates, debian/po/cs.po, debian/po/de.po, 
+	  debian/po/es.po, debian/po/fr.po, debian/po/it.po, debian/po/ja.po, 
+	  debian/po/nl.po, debian/po/pt_BR.po, debian/po/templates.1po, 
+	  debian/po/templates.pot:
+	merge packaging work by Lars Kneschke
+	* debian/control, debian/dbmail-pgsql.templates, 
+	  debian/dbmail-sqlite.templates, debian/dbmail.config, 
+	  debian/dbmail.preinst, debian/rules:
+	minor cleanups in packaging
+	* dbmail.conf:
+	beautify dbmail.conf
+	* debian/dbmail-ldap.postinst, debian/dbmail-mysql.postinst, 
+	  debian/dbmail-pgsql.postinst, debian/dbmail-sqlite.postinst, 
+	  debian/dbmail.postinst:
+	cleanup postinst files
+	* db.c:
+	make db_purge_deleted scale better
+	* debian/changelog, debian/dbmail-mysql.examples, 
+	  debian/dbmail-pgsql.examples, debian/dbmail-sqlite.examples, 
+	  debian/rules:
+	debian packaging
+	* Makefile.am, modules/Makefile.am:
+	installation of libdbmail and modules
+	* check_dbmail_message.c, db.c, dbmail-message.c, misc.c, 
+	  test-scripts/testbox:
+	handle unencoded 8bit headers
+
+2006-10-26  Paul J Stevens <paul@nfg.nl>
+
+	* sql/mysql/2_1_7-2_1_8.mysql, sql/mysql/2_1_7-2_2_0.mysql, 
+	  sql/mysql/migrate_from_2.0_to_2.1.mysql, 
+	  sql/mysql/migrate_from_2.0_to_2.2.mysql, 
+	  sql/postgresql/2_1_7-2_1_8.pgsql, sql/postgresql/2_1_7-2_2_0.pgsql, 
+	  sql/postgresql/migrate_from_2.0_to_2.1.pgsql, 
+	  sql/postgresql/migrate_from_2.0_to_2.2.pgsql, 
+	  sql/sqlite/2_1_7-2_1_8.sqlite, sql/sqlite/2_1_7-2_2_0.sqlite:
+	rename migration scripts
+	* Makefile.am, modules/Makefile.am:
+	make PREFIX/lib/dbmail default location for libdmail and modules
+	* check_dbmail_message.c, dbmail-message.c:
+	work on bug 429
+	* debian/changelog, debian/control, debian/dbmail-sieve.dirs, 
+	  debian/dbmail-sieve.install, debian/dbmail-sieve.lintian-override, 
+	  debian/dbmail.init, debian/dbmail.install, debian/dbmail.postinst, 
+	  debian/dbmail.postrm, debian/rules:
+	cleanup packaging
+	* dbmail-imapsession.c, imap4.c, serverchild.c:
+	remove redundant logmessages
+	* dbmail-imapsession.c, dbmail-mailbox.c, test-scripts/testimap.py, 
+	  test-scripts/testsearch.imap:
+	fix some fallout from thread implementation
+	* dbmail-message.c:
+	edit comments
+
 2006-10-25  Aaron Stone  <aaron@serendipity.cx>
 
 	* pool.c:
@@ -8,8 +322,6 @@
 	* serverchild.c:
 	Do an fcntl dance to make sockets non-blocking around accept, lest we
 	block forever if a socket dies just between select and accept.
-	* db.c:
-	First pass at Sieve quota handling.
 
 2006-10-24  Paul J Stevens <paul@nfg.nl>
 
@@ -44,7 +356,7 @@
 
 	* serverchild.c, pool.c, server.c:
 	To prevent leaking shared memory segments, scoreboard_delete is
-	registered with atexit and an isGrantChildProcess variables is used to
+	registered with atexit and an isGrandChildProcess variable is used to
 	allow only the middle process to delete the shared memory segments.
 	* pipe.c:
 	Changed many debug calls from trace to TRACE.
@@ -53,7 +365,7 @@
 	Changed order of sender, recipient arguments to recipient, sender in
 	dbmail_message_construct.
 	* modules/sortsieve.c:
-	First pass at giving the user an alert that when Sieve scripts fail.
+	First pass at giving the user an alert when Sieve scripts fail.
 
 2006-10-21  Paul J Stevens <paul@nfg.nl>
 

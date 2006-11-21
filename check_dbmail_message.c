@@ -369,6 +369,20 @@ START_TEST(test_dbmail_message_encoded)
 	dbmail_message_free(m);
 }
 END_TEST
+START_TEST(test_dbmail_message_8bit)
+{
+	struct DbmailMessage *m = dbmail_message_new();
+	GString *s = g_string_new(raw_message_koi);
+
+	m = dbmail_message_init_with_string(m, s);
+	g_string_free(s,TRUE);
+
+	dbmail_message_store(m);
+	dbmail_message_free(m);
+
+}
+END_TEST
+
 START_TEST(test_dbmail_message_cache_headers)
 {
 	struct DbmailMessage *m = dbmail_message_new();
@@ -439,25 +453,47 @@ START_TEST(test_dbmail_message_construct)
 	const gchar *sender = "foo@bar.org";
 	const gchar *subject = "Some test";
 	const gchar *recipient = "<bar@foo.org> Bar";
-	const gchar *body = "\ntesting\n\n····‰\n\n";
-	const gchar *expect = "From: foo@bar.org\n"
+	gchar *body = g_strdup("\ntesting\n\n····‰\n\n");
+	gchar *expect = g_strdup("From: foo@bar.org\n"
 	"Subject: Some test\n"
 	"To: bar@foo.org\n"
 	"MIME-Version: 1.0\n"
 	"Content-Type: text/plain\n"
 	"Content-Transfer-Encoding: base64\n"
 	"\n"
-	"CnRlc3RpbmcKCuHh4eHk";
+	"CnRlc3RpbmcKCuHh4eHk");
 	gchar *result;
 
 	struct DbmailMessage *message = dbmail_message_new();
 	message = dbmail_message_construct(message,recipient,sender,subject,body);
 	result = dbmail_message_to_string(message);
 	fail_unless(MATCH(expect,result),"dbmail_message_construct failed\n%s\n%s", expect, result);
+	dbmail_message_free(message);
+	g_free(body);
+	g_free(expect);
+
+	body = g_strdup("Mit freundlichen Gr=C3=BC=C3=9Fen");
+	message = dbmail_message_new();
+	message = dbmail_message_construct(message,recipient,sender,subject,body);
+	//printf ("%s\n", dbmail_message_to_string(message));
+	dbmail_message_free(message);
+	g_free(body);
 }
 END_TEST
 
+START_TEST(test_encoding)
+{
+	char *raw, *enc, *dec;
 
+	raw = g_strdup( "Kristoffer BrÔøΩnemyr");
+	enc = g_mime_utils_header_encode_phrase((unsigned char *)raw);
+	dec = g_mime_utils_header_decode_phrase((unsigned char *)enc);
+	fail_unless(MATCH(raw,dec),"decode/encode failed");
+	g_free(raw);
+	g_free(dec);
+	g_free(enc);
+}
+END_TEST
 
 Suite *dbmail_message_suite(void)
 {
@@ -485,9 +521,12 @@ Suite *dbmail_message_suite(void)
 	tcase_add_test(tc_message, test_dbmail_message_cache_headers);
 	tcase_add_test(tc_message, test_dbmail_message_free);
 	tcase_add_test(tc_message, test_dbmail_message_encoded);
+	tcase_add_test(tc_message, test_dbmail_message_8bit);
 	tcase_add_test(tc_message, test_dbmail_message_get_header_addresses);
 	tcase_add_test(tc_message, test_dbmail_message_get_header_repeated);
 	tcase_add_test(tc_message, test_dbmail_message_construct);
+	tcase_add_test(tc_message, test_encoding);
+
 	return s;
 }
 
