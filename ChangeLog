@@ -1,3 +1,41 @@
+2006-11-18  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail.conf:
+	add missing directive
+	* THANKS:
+	update
+	* INSTALL:
+	update INSTALL
+	* UPGRADING, dbmail.conf:
+	updates and corrections
+	* debian/changelog, debian/dbmail-sieve.config, debian/dbmail.config:
+	debconf fixes
+
+2006-11-17  Paul J Stevens <paul@nfg.nl>
+
+	* sql/postgresql/create_tables.pgsql, 
+	  sql/postgresql/migrate_from_2.0_to_2.2.pgsql:
+	add index for lower(userid) in postgres schema
+	* server.c, serverchild.c:
+	simplify the non-blocking setup
+
+2006-11-16  Aaron Stone  <aaron@serendipity.cx>
+
+	* serverchild.c:
+	Fix for the O_NONBLOCK dance (closes bug #449).
+
+2006-11-16  Paul J Stevens <paul@nfg.nl>
+
+	* debian/dbmail-ldap.config, debian/dbmail-sieve.config, 
+	  debian/dbmail.config:
+	fix typo
+	* debian/changelog:
+	update changelog for debian
+	* imap4.c:
+	fix for fatal sigpipe
+	* serverchild.c:
+	disable the O_NONBLOCK dance
+
 2006-11-15  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_imapd.c, misc.c, test-scripts/testimap.py:

@@ -18,6 +18,10 @@ alter table dbmail_auto_replies add stop_date timestamp without time zone;
 alter table dbmail_auto_replies alter stop_date set not null;
 COMMIT;
 
+BEGIN;
+CREATE INDEX dbmail_users_2 ON dbmail_users (lower(userid));
+COMMIT;
+
 --
 -- modify dbmail schema to support header caching.
 --

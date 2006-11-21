@@ -1,5 +1,5 @@
 /*
-  $Id: server.c 2371 2006-11-15 15:55:46Z paul $
+  $Id: server.c 2376 2006-11-17 12:33:12Z paul $
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
 
@@ -392,7 +392,7 @@ static int create_unix_socket(serverConfig_t * conf)
 
 static int create_inet_socket(const char * const ip, int port, int backlog)
 {
-	int sock, err;
+	int sock, err, flags;
 	struct sockaddr_in saServer;
 	int so_reuseaddress = 1;
 
@@ -424,6 +424,11 @@ static int create_inet_socket(const char * const ip, int port, int backlog)
 		TRACE(TRACE_FATAL, "Fatal error, could not bind to [%s:%d] %s",
 			ip, port, strerror(err));
 	}
+
+	// man 2 accept says that if the connection disappears during the accept call 
+	// accept will block forever unless it is set non-blocking with fcntl
+	flags = fcntl(sock, F_GETFL);
+	fcntl(sock, F_SETFL, flags | O_NONBLOCK);
 
 	return sock;	
 }

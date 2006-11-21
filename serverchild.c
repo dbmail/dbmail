@@ -21,7 +21,7 @@
 /*
  * serverchild.c
  *
- * $Id: serverchild.c 2371 2006-11-15 15:55:46Z paul $
+ * $Id: serverchild.c 2376 2006-11-17 12:33:12Z paul $
  * 
  * function implementations of server children code (connection handling)
  */
@@ -261,25 +261,16 @@ int select_and_accept(ChildInfo_t * info, int * clientSocket, struct sockaddr * 
 
 	/* accept the active fd */
 	len = sizeof(struct sockaddr_in);
-//	
-//	FIXME: this whole 'dance' is broken: listenSockets end up in O_NONBLOCK
-//	state!!
-//
-//	flags = fcntl(info->listenSockets[active], F_GETFL);
-//	fcntl(info->listenSockets[active], F_SETFL, flags | O_NONBLOCK);
-	// man 2 accept says that if the connection disappears right now,
-	// accept will block forever unless it is set non-blocking with fcntl,
-	// so we have to do this dance to make it temporarily non-blocking.
-	*clientSocket = accept(info->listenSockets[active], saClient, &len);
-	// on some systems (freebsd) the non-blocking state is inherited by
-	// the new socket, so we want to reset both the new socket and the listening
-	// handle.
-//	if (*clientSocket > 0) 
-//		fcntl(*clientSocket, F_SETFL, flags);
-//	fcntl(info->listenSockets[active], F_SETFL, flags);
 
+	// the listenSockets are set non-blocking in server.c,create_inet_socket
+	*clientSocket = accept(info->listenSockets[active], saClient, &len);
 	if (*clientSocket < 0)
 		return -1;
+
+	// the clientSocket *must* be blocking 
+	flags = fcntl(*clientSocket, F_GETFL);
+	if (*clientSocket > 0)
+		fcntl(*clientSocket, F_SETFL, flags & ~ O_NONBLOCK);
 
 	TRACE(TRACE_INFO, "connection accepted");
 	return 0;
