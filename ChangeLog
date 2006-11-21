@@ -1,3 +1,10 @@
+2006-11-21  Paul J Stevens <paul@nfg.nl>
+
+	* sql/ingres/create_tables.sql:
+	add ingres schema
+	* modules/authldap.c:
+	add follow_referrals option to ldap
+
 2006-11-18  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail.conf:
