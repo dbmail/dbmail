@@ -7,10 +7,8 @@
 #
 ### BEGIN INIT INFO
 # Provides:          dbmail
-# Required-Start:    $syslog $network
-# Required-Stop:     $syslog $network
-# Should-Start:      $local_fs $remote_fs
-# Should-Stop:       $local_fs $remote_fs
+# Required-Start:    $local_fs $remote_fs $syslog $network
+# Required-Stop:     $local_fs $remote_fs $syslog $network
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
 # Short-Description: Start dbmail services
@@ -19,7 +17,7 @@
 ### END INIT INFO
 
 
-PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
 
 IMAPD=/usr/sbin/dbmail-imapd
 POP3D=/usr/sbin/dbmail-pop3d
@@ -29,7 +27,7 @@ SIEVE=/usr/sbin/dbmail-timsieved
 IMAPD_NAME=dbmail-imapd
 POP3D_NAME=dbmail-pop3d
 LMTPD_NAME=dbmail-lmtpd
-SIEVE_NAME=dbmail-timsieve
+SIEVE_NAME=dbmail-timsieved
 
 NAME="dbmail"
 
@@ -47,51 +45,13 @@ set -e
 
 [ -e /etc/default/dbmail ] && . /etc/default/dbmail
 
-ssl_wrapper() {
-	# this needs more work. Use stunnel at your own risk,
-	# or wait for native support for ssl in dbmail-2  :-(
-	# note: stunnel4 in inetd mode will scale better.
-	cd /etc/ssl/certs || return 0
-	[ -e "$PEMFILE" ] || return 0
-	[ -x /usr/sbin/stunnel ] || return 0
-	# assuming stunnel runs on the same host as dbmail, even though
-	# it aint necessarily so.
-	STUNNLOPT="-D 7 -p $PEMFILE -S 0 -a /etc/ssl/certs -t 300 -s dbmail -g dbmail -P $PID_DIR"
-	log_progress_msg "SSL wrapper"
-	 
-	case "$1" in 
-		start)
-		[ "$START_IMAPD" ] && \
-			/usr/sbin/stunnel $STUNNLOPT -r localhost:imap -d imaps 
-		[ "$START_POP3D" ] && \
-			/usr/sbin/stunnel $STUNNLOPT -r localhost:pop3 -d pop3s
-		;;
-		
-		stop)
-		if [ "$START_IMAPD" ]; then
-			pidfile="$PID_DIR/stunnel.localhost.imap.pid"
-			if [ -f "$pidfile" ]; then
-				kill `cat $pidfile` >/dev/null 2>&1 || true
-			fi
-		fi
-		if [ "$START_POP3D" ]; then
-			pidfile="$PID_DIR/stunnel.localhost.pop3.pid"
-			if [ -f "$pidfile" ]; then
-				kill `cat $pidfile` >/dev/null 2>&1 || true
-			fi
-		fi
-		;;
-	esac	
-	return 0
-}	
-
 service_start() {
 	eval '_daemon=$'$1
 	eval '_name=$'$1'_NAME'
 	[ -e $_daemon ] || return 0
 	
 	log_progress_msg "$_name"
-	start-stop-daemon --start --exec $_daemon
+	start-stop-daemon --start --startas $_daemon
 	
 	r=$?
 	if [ $r -gt 0 ]; then
@@ -128,8 +88,7 @@ service_reload() {
 	eval '_name=$'$1'_NAME'
 	
 	log_progress_msg "$_name"
-	start-stop-daemon --stop --signal HUP --quiet \
-		--pidfile ${PID_DIR}/${_name}.pid --name ${_name}
+	start-stop-daemon --stop --signal HUP --quiet --pidfile ${PID_DIR}/${_name}.pid
 	
 	r=$?
 	if [ $r -gt 0 ]; then
@@ -144,38 +103,41 @@ service_reload() {
 case "$1" in
   start)
 	log_daemon_msg "Starting $DESC"
-	gr=0
+	gr=0;r=0
 	if [ "$START_IMAPD" ]; then service_start "IMAPD" || let gr=$gr+$?; fi
 	if [ "$START_POP3D" ]; then service_start "POP3D" || let gr=$gr+$?; fi
 	if [ "$START_LMTPD" ]; then service_start "LMTPD" || let gr=$gr+$?; fi
 	if [ "$START_SIEVE" ]; then service_start "SIEVE" || let gr=$gr+$?; fi
 	if [ "$START_SSL" ]; then ssl_wrapper start || let gr=$gr+$?; fi
- 	log_end_msg $gr
+	[ $gr -gt 0 ] && r=1
+ 	log_end_msg $r
 	;;
 	
   stop)
 	log_daemon_msg "Stopping $DESC"
-	gr=0
+	gr=0;r=0
 	if [ "$START_SSL" ]; then ssl_wrapper stop || let gr=$gr+$?; fi
 	if [ "$START_IMAPD" ]; then service_stop "IMAPD" || let gr=$gr+$?; fi
 	if [ "$START_POP3D" ]; then service_stop "POP3D" || let gr=$gr+$?; fi
 	if [ "$START_LMTPD" ]; then service_stop "LMTPD" || let gr=$gr+$?; fi
 	if [ "$START_SIEVE" ]; then service_stop "SIEVE" || let gr=$gr+$?; fi
-	log_end_msg $gr
+	[ $gr -gt 0 ] && r=1
+	log_end_msg $r
 	;;
 	
   reload)
   	log_daemon_msg "Reloading $DESC"
-	gr=0
+	gr=0;r=0
 	if [ "$START_IMAPD" ]; then service_reload "IMAPD" || let gr=$gr+$?; fi
 	if [ "$START_POP3D" ]; then service_reload "POP3D" || let gr=$gr+$?; fi
 	if [ "$START_LMTPD" ]; then service_reload "LMTPD" || let gr=$gr+$?; fi
 	if [ "$START_SIEVE" ]; then service_reload "SIEVE" || let gr=$gr+$?; fi
-	log_end_msg $gr
+	[ $gr -gt 0 ] && r=1
+	log_end_msg $r
 	;;
 	
   restart|force-reload)
-	$0 stop || true
+	$0 stop
 	$0 start
 	;;
   *)

@@ -3,11 +3,7 @@
 # -*- sh -*-
 
 # Uncomment this to turn on verbose mode. 
-export DH_VERBOSE=1
-
-# This is the debhelper compatibility version to use.
-export DH_COMPAT=5
-export DEBUILD_DPKG_BUILDPACKAGE_OPTS="-i"
+#export DH_VERBOSE=1
 
 #export WITH_GC="--with-gc"
 export WITH_SIEVE=--with-sieve
@@ -37,7 +33,6 @@ ifneq (,$(findstring devel,$(DEB_BUILD_OPTIONS)))
 	export STATIC=--enable-static=yes
 	CFLAGS += -g
 endif
-
 ifneq (,$(findstring mysql,$(DEB_BUILD_OPTIONS)))
 	export WITH_MYSQL=--with-mysql
 endif 
@@ -54,25 +49,19 @@ ifneq (,$(findstring sieve,$(DEB_BUILD_OPTIONS)))
 	export WITH_SIEVE=--with-sieve
 endif
 
-
-ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
-	INSTALL_PROGRAM += -s
-endif
-
 # dpatch
 export PACKAGE=dbmail
 export PACKAGES=dbmail
 
 include /usr/share/dpatch/dpatch.make 
 
-CONFFLAGS=--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
-	--prefix=/usr --mandir=\$${prefix}/share/man --sysconfdir=/etc/dbmail \
+CONFFLAGS=--prefix=/usr --mandir=\$${prefix}/share/man --sysconfdir=/etc/dbmail \
 	--localstatedir=/var/run/dbmail --with-logdir=/var/log/dbmail --infodir=\$${prefix}/share/info \
 	--libdir=/usr/lib/dbmail \
 	$(WITH_GC) $(WITH_CHECK) $(SHARED) $(STATIC) $(WITH_SIEVE) $(WITH_LDAP) $(WITH_MYSQL) $(WITH_PGSQL) $(WITH_SQLITE)
 
 build: stamps/build
-stamps/build: stamps patch configure $(PACKAGES)
+stamps/build: stamps patch $(PACKAGES)
 	touch $@
 
 stamps:
@@ -85,9 +74,7 @@ stamps/configure:
 
 dbmail: stamps/dbmail
 stamps/dbmail:
-	$(MAKE) clean || true
-	env CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)"  PATH="$(PATH):/usr/lib/postgresql/bin/" \
-		./configure $(CONFFLAGS) 
+	env CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" ./configure $(CONFFLAGS) 
 	$(MAKE)
 	$(MAKE) install DESTDIR=$(CURDIR)/debian/tmp
 	touch $@
@@ -97,7 +84,13 @@ clean1:
 	# run clean
 	dh_testroot
 	dh_testdir
-	rm -rf stamps
+	-$(MAKE) distclean
+	dh_clean
+	rm -rf stamps autom4te.cache || true
+
+# maintainer target
+mrproper:
+	-$(MAKE) distclean
 	rm -f `find . -name ".#*"`
 	rm -f `find . -name "*.la"`
 	rm -f `find . -name "*.lo"`
@@ -106,19 +99,12 @@ clean1:
 	rm -f `find man -name "*.xml"`
 	rm -f `find man -name "*.[1-8]"`
 	# Add here commands to clean up after the build process.
-	-$(MAKE) clean
-	rm -rf debian/dbmail; \
 	for file in config.in aclocal.m4 acconfig.h configure `find . -name Makefile.in`; do \
 		rm -rf $$file || true; \
 	done
-	rm -rf autom4te.cache
 	for file in Makefile config.h config.status libtool stamp-h .deps .libs; do \
 		rm -rf `find . -name $$file`; \
 	done
-	rm -f stamp-h* config.log aclocal.m4 configure dbmail.h
-	rm -rf buildtools || true
-	dh_clean
-
 
 # Build architecture-dependent files here.
 binary-common: build
@@ -146,7 +132,6 @@ binary-common: build
 	dh_installdebconf -a
 	dh_installman -a
 	dh_installdocs -a
-	dh_installdocs -A  debian/README.Debian debian/TODO
 	dh_installchangelogs -a
 	## update examples
 	(cd $(CURDIR) && find sql/mysql/ -type f && cat debian/dbmail-mysql.examples) | \
@@ -157,7 +142,8 @@ binary-common: build
 		sort|uniq>stamps/tmpfile && cat stamps/tmpfile > $(CURDIR)/debian/dbmail-pgsql.examples
 	rm -f stamps/tmpfile
 	dh_installexamples -a
-	dh_installdirs -A etc/dbmail var/run/dbmail var/log/dbmail
+	dh_installdirs -A etc/dbmail var/run/dbmail var/log/dbmail usr/share/dbmail
+	install -m 644 $(CURDIR)/debian/default.dbmail $(CURDIR)/debian/dbmail/usr/share/dbmail/default.dbmail
 	dh_strip -a
 	dh_link -a
 	dh_compress -a
@@ -178,5 +164,5 @@ binary-%: build install
 	
 binary: binary-indep binary-arch
 
-.PHONY: build clean clean1 patch binary binary-common binary-indep binary-arch unpatch configure install
+.PHONY: build clean clean1 mrproper patch binary binary-common binary-indep binary-arch unpatch configure install
 
