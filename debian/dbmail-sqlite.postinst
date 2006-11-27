@@ -4,7 +4,7 @@ CONFIG=/etc/dbmail/dbmail.conf
 CONFIG_EX=/usr/share/doc/dbmail/examples/dbmail.conf
 
 DEBIAN_CONFIG=/etc/default/dbmail
-DEBIAN_CONFIG_EX=/usr/share/doc/dbmail/examples/default.dbmail
+DEBIAN_CONFIG_EX=/usr/share/dbmail/default.dbmail
 
 test $DEBIAN_SCRIPT_DEBUG && set -v -x
 
@@ -36,16 +36,21 @@ case "$1" in
 	. /usr/share/debconf/confmodule
 	db_get dbmail/do_debconf || true; DO_DEBCONF=$RET
 
-	# protect the config-file
-	oldmask=`umask`
-	umask 026
+	if [ "$DO_DEBCONF" = "true" ]; then
+		db_get dbmail/sqlite_installed || true; SQLITE_INSTALLED=$RET
+		if [ -e $CONFIG -a "$SQLITE_INSTALLED" = "true" ]; then
 
-	# edit the configs
-	# if driver is empty set it to sqlite
-	[ -e $CONFIG ] && sed -i -re "s/^driver\W*=\W*\$/driver = sqlite/i" $CONFIG
-		
-	umask $oldmask
-	
+			oldmask=`umask`
+			umask 026
+
+			sed -i -re "s/^driver\W*=.*\$/driver = sqlite/i" $CONFIG
+
+			umask $oldmask
+		fi
+
+	fi	
+
+
 	db_stop
 	
     ;;

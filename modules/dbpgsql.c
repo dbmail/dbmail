@@ -248,6 +248,8 @@ const char *db_get_result(unsigned row, unsigned field)
 u64_t db_insert_result(const char *sequence_identifier)
 {
 	char query[DEF_QUERYSIZE];
+	memset(query,0,DEF_QUERYSIZE);
+
 	u64_t insert_result;
 
 	/* postgres uses the currval call on a sequence to determine

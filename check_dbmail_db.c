@@ -40,7 +40,6 @@ extern char *configFile;
 extern db_param_t _db_params;
 extern int quiet;
 extern int reallyquiet;
-extern char *query;
 
 u64_t useridnr = 0;
 u64_t useridnr_domain = 0;

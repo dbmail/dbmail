@@ -2,12 +2,12 @@ Source: dbmail
 Section: mail
 Priority: optional
 Maintainer: Paul J Stevens <paul@nfg.nl>
-Build-Depends: automake1.9, debhelper (>= 5.0.7), dpatch, libsieve2-dev (>= 2.1.12), libglib2.0-dev, libgmime-2.0-2-dev | libgmime2.1-dev, libldap2-dev, libsqlite3-dev, postgresql-dev, libmysqlclient15-dev | libmysqlclient14-dev, pkg-config, libtool, asciidoc, xmlto, chrpath
+Build-Depends: automake1.9, debhelper (>= 5.0.7), dpatch, libsieve2-dev (>= 2.1.12), libglib2.0-dev, libgmime-2.0-2-dev | libgmime2.1-dev, libldap2-dev, libsqlite3-dev, libpq-dev, libmysqlclient15-dev | libmysqlclient14-dev, pkg-config, libtool, asciidoc, xmlto, chrpath
 Standards-Version: 3.7.2
 
 Package: dbmail
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}, libglib2.0-0, libgmime-2.0-2 | libgmime2.1 (>= 2.1.19), debconf (>=1.4.70) | debconf-2.0, ucf (>= 0.30), adduser
+Depends: ${misc:Depends}, ${shlibs:Depends}, libglib2.0-0, libgmime-2.0-2 | libgmime2.1 (>= 2.1.19), ucf (>= 0.30), adduser
 Provides: imap-server, pop3-server
 Suggests: dbmail-sqlite | dbmail-pgsql | dbmail-mysql, dbmail-ldap, dbmail-sieve
 Description: base package for the dbmail email solution
@@ -23,7 +23,7 @@ Description: base package for the dbmail email solution
 
 Package: dbmail-pgsql
 Architecture: any
-Depends: dbmail (= ${Source-Version}), debconf (>=1.4.70) | debconf-2.0, libpq4
+Depends: ${misc:Depends}, ${shlibs:Depends}, dbmail (= ${Source-Version})
 Description: Postgresql module for Dbmail
  This package provides a module for adding Postgresql database 
  support to DBMAIL.
@@ -33,7 +33,7 @@ Description: Postgresql module for Dbmail
 
 Package: dbmail-mysql
 Architecture: any
-Depends: dbmail (= ${Source-Version}), debconf (>=1.4.70) | debconf-2.0, libmysqlclient15off
+Depends: ${misc:Depends}, ${shlibs:Depends}, dbmail (= ${Source-Version})
 Description: MySQL module for Dbmail
  This package provides a module for adding MySQL database 
  support to DBMAIL.
@@ -43,7 +43,7 @@ Description: MySQL module for Dbmail
 
 Package: dbmail-sqlite
 Architecture: any
-Depends: dbmail (= ${Source-Version}), debconf (>=1.4.70) | debconf-2.0, libsqlite3-0
+Depends: ${misc:Depends}, ${shlibs:Depends}, dbmail (= ${Source-Version})
 Suggests: sqlite3
 Description: Sqlite module for Dbmail
  This package provides a module for adding Sqlite database 
@@ -54,7 +54,7 @@ Description: Sqlite module for Dbmail
 
 Package: dbmail-ldap
 Architecture: any
-Depends: dbmail (= ${Source-Version}), debconf (>=1.4.70) | debconf-2.0, libldap2 (>= 2.1.17-1)
+Depends: ${misc:Depends}, ${shlibs:Depends}, dbmail (= ${Source-Version})
 Description: LDAP module for Dbmail
  This package provides a module for adding LDAP support to 
  DBMAIL.
@@ -64,7 +64,7 @@ Description: LDAP module for Dbmail
 
 Package: dbmail-sieve
 Architecture: any
-Depends: dbmail (= ${Source-Version}), debconf (>=1.4.70) | debconf-2.0, libsieve2-1 (>= 2.1.12)
+Depends: ${misc:Depends}, ${shlibs:Depends}, dbmail (= ${Source-Version})
 Description: Sieve module for Dbmail
  This package provides a module for adding Sieve support to 
  DBMAIL. It contains both the sieve sort driver as well as a
