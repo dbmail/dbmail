@@ -2123,7 +2123,8 @@ int db_send_message_lines(void *fstream, u64_t message_idnr, long lines, int no_
 	}
 	dm_free(raw);
 
-	ci_write((FILE *)fstream, "%s", s->str);
+	if (pos > 0)
+		ci_write((FILE *)fstream, "%s", s->str);
 	
 	/* delimiter */
 	if (no_end_dot == 0)
