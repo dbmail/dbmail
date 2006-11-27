@@ -32,8 +32,6 @@ extern db_param_t _db_params;
 #define DBPFX _db_params.pfx
 
 #define MESSAGE_MAX_LINE_SIZE 1024
-/* for issuing queries to the backend */
-char query[DEF_QUERYSIZE];
 
 static int dm_errno = 0;
 
@@ -711,6 +709,9 @@ static struct DbmailMessage * _retrieve(struct DbmailMessage *self, char *query_
 	
 	int row = 0, rows = 0;
 	GString *m;
+	char query[DEF_QUERYSIZE];
+	memset(query,0,DEF_QUERYSIZE);
+
 	
 	assert(dbmail_message_get_physid(self));
 	
@@ -886,6 +887,8 @@ int _message_insert(struct DbmailMessage *self,
 	u64_t physmessage_id;
 	char *internal_date = NULL;
 	char *physid = NULL;
+	char query[DEF_QUERYSIZE];
+	memset(query,0,DEF_QUERYSIZE);
 
 	assert(unique_id);
 	assert(mailbox);

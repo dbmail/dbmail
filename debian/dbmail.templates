@@ -70,21 +70,3 @@ Type: boolean
 _Description: start the pop3 server after reboot?
  Dbmail support both imap and pop3 services. You can choose to run either
  one or both services.
-
-Template: dbmail/start_ssl
-Type: boolean
-_Description:  Run the stunnel SSL wrapper from the init script?
- The stunnel SSL wrapper allows you to provide secure imap and pop services
- even though dbmail supports neither imaps nor pop3s (yet). 
- .
- Make sure you have installed stunnel which is provided by a separate
- package if you want to use this feature.
-
-Template: dbmail/pem_file
-Type: string
-_Description:  The filename for the SSL pem file:
- To be able to run the stunnel SSL wrapper you need to generate a pem file
- that should reside in /etc/ssl/certs/. Specify the filename here without 
- the directory name.
- .
- Read /usr/share/doc/stunnel/README.Debian on how to generate such a file.
