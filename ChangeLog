@@ -1,3 +1,13 @@
+2006-12-04  Paul J Stevens <paul@nfg.nl>
+
+	* sql/mysql/create_tables.mysql, sql/mysql/migrate_from_2.0_to_2.2.mysql, 
+	  sql/postgresql/create_tables.pgsql, 
+	  sql/postgresql/migrate_from_2.0_to_2.2.pgsql, 
+	  sql/sqlite/create_tables.sqlite:
+	adding useful indexes to headername/headervalue tables
+	* db.c:
+	fix fallout from #457
+
 2006-11-27  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_db.c, check_dbmail_message.c, db.c, dbmail-imapsession.c, 

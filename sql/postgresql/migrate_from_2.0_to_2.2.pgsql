@@ -40,7 +40,7 @@ CREATE TABLE dbmail_headername (
 	headername	VARCHAR(100) NOT NULL DEFAULT '',
 	PRIMARY KEY (id)
 );
-CREATE UNIQUE INDEX dbmail_headername_1 on dbmail_headername(headername);
+CREATE UNIQUE INDEX dbmail_headername_1 on dbmail_headername(lower(headername));
 
 
 CREATE SEQUENCE dbmail_headervalue_idnr_seq;
@@ -56,6 +56,7 @@ CREATE TABLE dbmail_headervalue (
 	PRIMARY KEY (id)
 );
 CREATE UNIQUE INDEX dbmail_headervalue_1 ON dbmail_headervalue(physmessage_id, id);
+CREATE INDEX dbmail_headervalue_2 ON dbmail_headervalue(physmessage_id);
 
 
 -- provide separate storage of commonly used headers
