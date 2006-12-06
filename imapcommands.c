@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: imapcommands.c 2355 2006-11-05 09:59:43Z paul $
+/* $Id: imapcommands.c 2387 2006-12-06 08:36:25Z aaron $
  *
  * imapcommands.c
  * 
@@ -695,7 +695,7 @@ int _ic_list(struct ImapSession *self)
 	}
 
 	/* check the reference name, should contain only accepted mailboxname chars */
-	for (i = 0, slen = strlen(self->args[0]); self->args[0][i]; i++) {
+	for (i = 0, slen = strlen(AcceptedMailboxnameChars); self->args[0][i]; i++) {
 		if (stridx(AcceptedMailboxnameChars, self->args[0][i]) == slen) {
 			/* wrong char found */
 			dbmail_imap_session_printf(self,
