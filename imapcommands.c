@@ -695,7 +695,7 @@ int _ic_list(struct ImapSession *self)
 	}
 
 	/* check the reference name, should contain only accepted mailboxname chars */
-	for (i = 0, slen = strlen(self->args[0]); self->args[0][i]; i++) {
+	for (i = 0, slen = strlen(AcceptedMailboxnameChars); self->args[0][i]; i++) {
 		if (stridx(AcceptedMailboxnameChars, self->args[0][i]) == slen) {
 			/* wrong char found */
 			dbmail_imap_session_printf(self,
