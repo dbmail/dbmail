@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/*	$Id: misc.c 2371 2006-11-15 15:55:46Z paul $
+/*	$Id: misc.c 2388 2006-12-06 15:31:40Z aaron $
  *
  *	Miscelaneous functions */
 
@@ -30,7 +30,7 @@
 const char AcceptedMailboxnameChars[] =
     "abcdefghijklmnopqrstuvwxyz"
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    "0123456789-=/ _.&,+@()[]'";
+    "0123456789-=/ _.&,+@()[]'#";
 
 /**
  * abbreviated names of the months
