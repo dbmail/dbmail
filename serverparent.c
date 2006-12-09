@@ -154,10 +154,11 @@ int serverparent_mainloop(serverConfig_t *config, const char *service, const cha
 		config->stateFile = config_get_statefile(config, servicename);
 	statefile_create(config->stateFile);
 
-	 /* Reread the config file. */
+	/* This is the actual main loop. */
 	while (!mainStop && server_run(config)) {
-		DoConfig(config, service);
-	}
+		/* Reread the config file and restart the services,
+		 * e.g. on SIGHUP or other graceful restart condition. */
+		DoConfig(config, service); }
 
 	TRACE(TRACE_INFO, "leaving main loop");
 	return 0;
