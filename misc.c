@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/*	$Id: misc.c 2388 2006-12-06 15:31:40Z aaron $
+/*	$Id: misc.c 2389 2006-12-09 06:38:47Z aaron $
  *
  *	Miscelaneous functions */
 
@@ -2112,8 +2112,14 @@ char * imap_cleanup_address(const char *a)
 	char prev,next=0;
 	unsigned incode=0, inquote=0;
 	size_t i, l;
-	GString *s = g_string_new("");
+	GString *s;
+
+	if (!a)
+		return g_strdup("");
+	if (!a[0])
+		return g_strdup("");
 	
+	s = g_string_new("");
 	t = g_strdup(a);
 	inptr = t;
 	inptr = g_strstrip(inptr);
@@ -2130,8 +2136,7 @@ char * imap_cleanup_address(const char *a)
 	}
 
 	l = strlen(inptr);
-
-	for (i=0; i<l-1; i++) {
+	for (i = 0; i < l - 1; i++) {
 
 		next=inptr[i+1];
 
