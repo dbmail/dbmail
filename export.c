@@ -248,7 +248,7 @@ int main(int argc, char *argv[])
 
 		mailbox = g_new0(char, IMAP_MAX_MAILBOX_NAMELEN);
 		db_findmailbox_by_regex(useridnr, "*", &children, &nchildren, 0);
-		qerrorf("Exporing [%u] mailboxes for [%s]\n", nchildren, user);
+		qerrorf("Exporting [%u] mailboxes for [%s]\n", nchildren, user);
 		for (i=0; i< nchildren; i++) {
 			mailbox_idnr = children[i];
 			db_getmailboxname(children[i], useridnr, mailbox);			
@@ -263,7 +263,10 @@ int main(int argc, char *argv[])
 				int serr = errno;
 				qerrorf("%s\n", strerror(serr));
 				goto freeall;
+			} else if (!outfile) {
+				outfile = ".";
 			}
+
 			dumpfile = g_strdup_printf("%s/%s", user, mailbox);
 			qerrorf(" export mailbox /%s/%s -> %s/%s\n", user, mailbox, outfile, dumpfile);
 			if (mailbox_dump(mailbox_idnr, dumpfile)) {
