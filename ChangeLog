@@ -1,3 +1,9 @@
+2006-12-08  Aaron Stone  <aaron@serendipity.cx>
+
+	* misc.c:
+	Fixed segfault on NULL or zero-length strings in imap_cleanup_address
+	(closes bug #461).
+
 2006-12-06  Aaron Stone  <aaron@serendipity.cx>
 
 	* imapcommands.c:

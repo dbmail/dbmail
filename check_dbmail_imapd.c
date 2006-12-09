@@ -146,8 +146,8 @@ static clientinfo_t * ci_new(void)
 	FILE *fd = fopen("/dev/null","w");
 	ci->userData = dbmail_imap_userdata_new();
 	ci->rx = stdin;
-	ci->tx = fd;
-	//ci->tx = stderr;
+	//ci->tx = fd;
+	ci->tx = stderr;
 	return ci;
 }
 
@@ -302,8 +302,8 @@ START_TEST(test_dbmail_imap_session_fetch_get_items)
 	result = dbmail_imap_session_mailbox_open(s,mailbox);
 	fail_unless(result==0, "mailbox_open failed");
 
-	dbmail_mailbox_set_uid(s->mailbox,TRUE);
-	s->fetch_ids = dbmail_mailbox_get_set(s->mailbox,"1:*",TRUE);
+	dbmail_mailbox_set_uid(s->mailbox, TRUE);
+	s->fetch_ids = dbmail_mailbox_get_set(s->mailbox, "1:*", TRUE);
 	
 	fail_unless(s->fetch_ids!=NULL, "get_set failed");
 
@@ -575,6 +575,7 @@ END_TEST
 
 			
 #define F(a,b) fail_unless(strcmp(c = imap_cleanup_address(a), b)==0, "\n[" a "] should have yielded \n[" b "] but got \n[%s]", c)
+#define Fnull(a,b) fail_unless(strcmp(c = imap_cleanup_address(a), b)==0, "\n[] should have yielded \n[" b "] but got \n[%s]", c)
 	
 START_TEST(test_imap_cleanup_address)
 {
@@ -584,6 +585,8 @@ START_TEST(test_imap_cleanup_address)
 	F("=?iso-8859-1?Q?\"B=BA_V._F._Z=EAzere\"?=<nobody@nowhere.org>","\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" <nobody@nowhere.org>");
 	F("=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=<nobody@nowhere.org>","\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" <nobody@nowhere.org>");
 	F("\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" <nobody@nowhere.org>","\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" <nobody@nowhere.org>");
+	F("", "");
+	Fnull(NULL, "");
 	F("Some One <some@foo.org>", "Some One <some@foo.org>");
 	F(" <some@foo.org>", "<some@foo.org>");
 	F("=?ISO-8859-2?Q? \"Verlag=20Dash=F6fer=20-=20DU.cz?= =?ISO-8859-2?Q?\" ?= <e-noviny@smtp.dashofer.cz>",
