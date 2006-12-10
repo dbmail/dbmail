@@ -203,7 +203,6 @@ END_TEST
 
 
 //dbmail_imap_session_handle_auth(self, const char *username, const char *password);
-#define MAX_LINESIZE 1024
 START_TEST(test_imap_session_prompt)
 {
 	int result;
