@@ -1,5 +1,5 @@
 /*
-  $Id: dbmail-message.c 2385 2006-11-27 15:07:30Z paul $
+  $Id: dbmail-message.c 2391 2006-12-10 14:49:16Z paul $
 
   Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
 
