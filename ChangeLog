@@ -1,3 +1,19 @@
+2006-12-10  Paul J Stevens <paul@nfg.nl>
+
+	* Makefile.in, aclocal.m4, buildtools/compile, buildtools/config.guess, 
+	  buildtools/config.sub, buildtools/depcomp, buildtools/install-sh, 
+	  buildtools/ltmain.sh, buildtools/missing, config.in, configure, 
+	  contrib/expirebox.sh, man/Makefile.in, man/dbmail-export.8, 
+	  man/dbmail-imapd.8, man/dbmail-lmtpd.8, man/dbmail-pop3d.8, 
+	  man/dbmail-sievecmd.8, man/dbmail-smtp.1, man/dbmail-timsieved.8, 
+	  man/dbmail-users.8, man/dbmail-util.8, man/dbmail.1, 
+	  man/dbmail.conf.5, modules/Makefile.in:
+	add files that belong in the stable branch
+	* check_dbmail_message.c, dbmail-message.c, dbmail-message.h:
+	reduce copying in message code
+	* list.c:
+	fix minor leak
+
 2006-12-08  Aaron Stone  <aaron@serendipity.cx>
 
 	* misc.c:

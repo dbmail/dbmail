@@ -126,7 +126,7 @@ GList * dbmail_message_get_header_addresses(struct DbmailMessage *message, const
 
 #define get_crlf_encoded(string) get_crlf_encoded_opt(string, 0)
 #define get_crlf_encoded_dots(string) get_crlf_encoded_opt(string, 1)
-gchar * get_crlf_encoded_opt(gchar *string, int dots);
+gchar * get_crlf_encoded_opt(const gchar *string, int dots);
 
 /*
  * manipulate the actual message content

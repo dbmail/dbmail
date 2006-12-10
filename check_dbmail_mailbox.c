@@ -150,6 +150,7 @@ START_TEST(test_dbmail_mailbox_open)
 	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id());
 	result = dbmail_mailbox_open(mb);
 	fail_unless(result == 0, "dbmail_mailbox_open failed");
+	dbmail_mailbox_free(mb);
 }
 END_TEST
 
