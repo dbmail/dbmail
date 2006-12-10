@@ -27,10 +27,6 @@
 
 #include "dbmail.h"
 
-#ifndef MAX_LINESIZE
-#define MAX_LINESIZE (10*1024)
-#endif
-
 #define THIS_MODULE "imapsession"
 #define BUFLEN 2048
 #define SEND_BUF_SIZE 1024

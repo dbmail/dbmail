@@ -26,7 +26,6 @@
 
 #include "dbmail.h"
 
-#define MAX_LINESIZE (10*1024)
 #define COMMAND_SHOW_LEVEL TRACE_INFO
 
 #define THIS_MODULE "imap"

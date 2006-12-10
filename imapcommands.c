@@ -32,9 +32,6 @@
 #define _GNU_SOURCE
 #endif
 
-#ifndef MAX_LINESIZE
-#define MAX_LINESIZE 1024
-#endif
 
 #ifndef MAX_RETRIES
 #define MAX_RETRIES 12
