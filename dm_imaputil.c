@@ -30,9 +30,6 @@
 
 #define THIS_MODULE "imap"
 
-#ifndef MAX_LINESIZE
-#define MAX_LINESIZE (10*1024)
-#endif
 
 #define BUFLEN 2048
 #define SEND_BUF_SIZE 1024
