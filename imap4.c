@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: imap4.c 2372 2006-11-16 11:21:49Z paul $
+/* $Id: imap4.c 2392 2006-12-10 21:35:58Z paul $
  * imap4.c
  *
  * implements an IMAP 4 rev 1 server.
