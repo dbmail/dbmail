@@ -1,3 +1,9 @@
+2006-12-11  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_mailbox.c, dbmail-mailbox.c:
+	prevent excessive merging of search results in OR subsearches (closes
+	#471)
+
 2006-12-10  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_imapd.c, dbmail-imapsession.c, dbmail.h.in, dm_imaputil.c, 
