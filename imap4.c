@@ -181,12 +181,6 @@ int IMAPClientHandler(clientinfo_t * ci)
 			return 1;
 		}
 
-		if (!checkchars(line)) {
-			dbmail_imap_session_printf(session, "* BYE Input contains invalid characters\r\n");
-			dbmail_imap_session_delete(session);
-			return 1;
-		}
-
 		/* strip eol chars */
 		cpy = &line[strlen(line)];
 		cpy--;
