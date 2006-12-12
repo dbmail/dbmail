@@ -1,3 +1,8 @@
+2006-12-12  Paul J Stevens <paul@nfg.nl>
+
+	* dm_imaputil.c, dm_imaputil.h, imap4.c, test-scripts/testsearch.imap:
+	remove redundant checkchars function from imap code (closes #473)
+
 2006-12-11  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_mailbox.c, dbmail-mailbox.c:
