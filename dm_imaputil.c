@@ -61,27 +61,6 @@ size_t stridx(const char *s, char ch)
 	return i;
 }
 
-
-/*
- * checkchars()
- *
- * performs a check to see if the read data is valid
- * returns 0 if invalid, 1 otherwise
- */
-int checkchars(const char *s)
-{
-	int i;
-
-	for (i = 0; s[i]; i++) {
-		if (!strchr(AcceptedChars, s[i])) {
-			/* wrong char found */
-			return 0;
-		}
-	}
-	return 1;
-}
-
-
 /*
  * checktag()
  *
