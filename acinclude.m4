@@ -23,8 +23,8 @@ GMIME:         $ac_gmime_libs
 MYSQL:         $MYSQLLIB
 PGSQL:         $PGSQLLIB
 SQLITE:        $SQLITELIB
-SIEVE:         $SORTLIB
-LDAP:          $LDAPLIB
+SIEVE:         $SIEVEINC $SIEVELIB
+LDAP:          $LDAPINC $LDAPLIB
 SHARED:        $enable_shared
 STATIC:        $enable_static
 CHECK:         $with_check
@@ -159,136 +159,259 @@ if test [ "$usesqlite" = "yes" ]; then
     fi
 fi
 ])
+
+
+dnl Check for Sieve header.
+AC_DEFUN([DBMAIL_CHECK_SIEVE_INC],[
+    AC_COMPILE_IFELSE(
+    AC_LANG_PROGRAM([[
+        #define NULL 0
+        #include <sieve2.h>]]),
+    [$1],
+    [$2])
+])
+dnl Check for Sieve library.
+AC_DEFUN([DBMAIL_CHECK_SIEVE_LIB],[
+    AC_LINK_IFELSE(
+    AC_LANG_PROGRAM([[
+        #define NULL 0
+        #include <sieve2.h>]]),
+    [$1],
+    [$2])
+])
+
 dnl DBMAIL_SIEVE_CONF
 dnl check for ldap or sql authentication
 AC_DEFUN([DBMAIL_SIEVE_CONF], [dnl
-
-sieveheadername="no"
-
-AC_MSG_RESULT([checking for sorting configuration])
-AC_ARG_WITH(sieve,[  --with-sieve=PATH	  full path to libSieve header directory],
-	sieveheadername="$withval")
-SORTALIB="modules/.libs/libsort_null.a"
-SORTLTLIB="modules/libsort_null.la"
-
 WARN=0
-if test [ "$sieveheadername" != "no" ]; then
-  AC_MSG_RESULT([using Sieve sorting])
-  AC_DEFINE([SIEVE], 1, [Define if Sieve sorting will be used.])
-  # Redefine if there's actually Sieve sorting
-  SORTALIB="modules/.libs/libsort_sieve.a"
-  SORTLTLIB="modules/libsort_sieve.la"
-  if test [ "$sieveheadername" != "yes" ]; then
-    AC_MSG_CHECKING([for sieve2.h (user supplied)])
-    if test [ -r "$sieveheadername/sieve2.h" ]; then
-        AC_MSG_RESULT([$sieveheadername/sieve2.h])
-        SIEVEINC="-I$sieveheadername"
-    else 
-        AC_MSG_RESULT([not found])
-        SIEVEINC=""
-        sieveheadername=""
-        AC_MSG_ERROR([
-  Unable to find sieve2.h where you specified, try just --with-sieve to 
-  have configure guess])
+
+AC_ARG_WITH(sieve,[  --with-sieve=PATH	  path to libSieve base directory (e.g. /usr/local or /usr)],
+	[lookforsieve="$withval"],[lookforsieve="no"])
+
+
+dnl Go looking for the Sieve headers and libraries.
+if test [ "x$lookforsieve" != "xno" ]; then
+
+    dnl We were given a specific path. Only look there.
+    if test [ "x$lookforsieve" != "xyes" ]; then
+        sieveprefixes=$lookforsieve
     fi
-  else
-    AC_MSG_CHECKING([for sieve2.h])
-    for sievepaths in $sieveheaderpaths
-    do
-      if test [ -r "$sievepaths/sieve2.h" ]; then
-        SIEVEINC="-I$sievepaths"
-        AC_MSG_RESULT([$sievepaths/sieve2.h])
-        break
-      fi
+
+    dnl Look for Sieve headers.
+    AC_MSG_CHECKING([for libSieve headers])
+    STOP_LOOKING_FOR_SIEVE=""
+    while test [ -z $STOP_LOOKING_FOR_SIEVE ]; do 
+
+        dnl See if we already have the paths we need in the environment.
+	dnl ...but only if --with-sieve was given without a specific path.
+	if test [ "x$lookforsieve" = "xyes" ]; then
+            DBMAIL_CHECK_SIEVE_INC([SIEVEINC=""], [SIEVEINC="failed"])
+            if test [ "x$SIEVEINC" != "xfailed" ]; then
+                break
+            fi
+        fi
+ 
+        dnl Explicitly test paths from --with-sieve or configure.in
+        for TEST_PATH in $sieveprefixes; do
+	    TEST_PATH="$TEST_PATH/include"
+            SAVE_CFLAGS=$CFLAGS
+            CFLAGS="$CFLAGS -I$TEST_PATH"
+            DBMAIL_CHECK_SIEVE_INC([SIEVEINC="-I$TEST_PATH"], [SIEVEINC="failed"])
+            CFLAGS=$SAVE_CFLAGS
+            if test [ "x$SIEVEINC" != "xfailed" ]; then
+                break 2
+            fi
+        done
+
+        STOP_LOOKING_FOR_SIEVE="done"
     done
-    if test [ -z "$SIEVEINC" ]; then
-      AC_MSG_RESULT([no])
-      AC_MSG_ERROR([
-  Unable to locate sieve2.h, try specifying with --with-sieve])
+
+    if test [ "x$SIEVEINC" = "xfailed" ]; then
+        AC_MSG_ERROR([Could not find libSieve headers.])
+    else
+        AC_MSG_RESULT($SIEVEINC)
     fi
-  fi
+
+    dnl Look for Sieve libraries.
+    AC_MSG_CHECKING([for libSieve libraries])
+    STOP_LOOKING_FOR_SIEVE=""
+    while test [ -z $STOP_LOOKING_FOR_SIEVE ]; do 
+
+        dnl See if we already have the paths we need in the environment.
+	dnl ...but only if --with-sieve was given without a specific path.
+        if test [ "x$lookforsieve" = "xyes" ]; then
+            DBMAIL_CHECK_SIEVE_LIB([SIEVELIB="-lsieve"], [SIEVELIB="failed"])
+            if test [ "x$SIEVELIB" != "xfailed" ]; then
+                break
+            fi
+        fi
+ 
+        dnl Explicitly test paths from --with-sieve or configure.in
+        for TEST_PATH in $sieveprefixes; do
+	    TEST_PATH="$TEST_PATH/lib"
+            SAVE_CFLAGS=$CFLAGS
+	    dnl The headers might be in a funny place, so we need to use -Ipath
+            CFLAGS="$CFLAGS -L$TEST_PATH $SIEVEINC"
+            DBMAIL_CHECK_SIEVE_LIB([SIEVELIB="-L$TEST_PATH -lsieve"], [SIEVELIB="failed"])
+            CFLAGS=$SAVE_CFLAGS
+            if test [ "x$SIEVELIB" != "xfailed" ]; then
+                break 2
+            fi
+        done
+
+        STOP_LOOKING_FOR_SIEVE="done"
+    done
+
+    if test [ "x$SIEVELIB" = "xfailed" ]; then
+        AC_MSG_ERROR([Could not find libSieve library.])
+    else
+        AC_MSG_RESULT($SIEVELIB)
+    fi
+fi
+
+dnl Found it, set the settings.
+if test [ -n $SIEVE_FOUND ]; then
+    AC_DEFINE([SIEVE], 1, [Define if Sieve sorting will be used.])
+    AC_SUBST(SIEVELIB)
+    AC_SUBST(SIEVEINC)
+    SORTALIB="modules/.libs/libsort_sieve.a"
+    SORTLTLIB="modules/libsort_sieve.la"
+dnl Never asked for Sieve in the first place.
 else
-  AC_MSG_RESULT([not using any sorting])
+    SORTALIB="modules/.libs/libsort_null.a"
+    SORTLTLIB="modules/libsort_null.la"
 fi
 ])
 
-dnl DBMAIL_CHECK_SIEVE_LIBS
-AC_DEFUN([DBMAIL_CHECK_SIEVE_LIBS], [dnl
-# Look for libs needed to link to SIEVE first
-if test [ "$sieveheadername" != "no" ]; then
-  AC_CHECK_LIB(sieve,sieve2_listextensions,[ SORTLIB="-lsieve"], [SORTLIB=""])
-  if test [ -z "$SORTLIB" ]; then
-    AC_MSG_ERROR([
-  Unable to link against libSieve.  It appears you are missing the
-  development libraries or they aren't in your linker's path
-  ])
-  fi
-else
-  SORTLIB=""
-fi
+
+dnl Check for LDAP header.
+AC_DEFUN([DBMAIL_CHECK_LDAP_INC],[
+    AC_COMPILE_IFELSE(
+    AC_LANG_PROGRAM([[
+        #define NULL 0
+        #include <ldap.h>]]),
+    [$1],
+    [$2])
 ])
-	
-dnl DBMAIL_AUTH_CONF
+dnl Check for LDAP library.
+AC_DEFUN([DBMAIL_CHECK_LDAP_LIB],[
+    AC_LINK_IFELSE(
+    AC_LANG_PROGRAM([[
+        #define NULL 0
+        #include <ldap.h>]]),
+    [$1],
+    [$2])
+])
+
+dnl DBMAIL_LDAP_CONF
 dnl check for ldap or sql authentication
-AC_DEFUN([DBMAIL_AUTH_CONF], [dnl
-
-authldapheadername="no"
-
-AC_MSG_RESULT([checking for authentication configuration])
-AC_ARG_WITH(auth-ldap,[  --with-auth-ldap=PATH	  full path to ldap header directory],
-	authldapheadername="$withval")
-AUTHALIB="modules/.libs/libauth_ldap.a"
-AUTHLTLIB="modules/libauth_ldap.la"
-
+AC_DEFUN([DBMAIL_LDAP_CONF], [dnl
 WARN=0
-if test [ "$authldapheadername" != "no" ]; then
-	# --with-auth-ldap was specified
-	AC_MSG_RESULT([using LDAP authentication])
-	dnl CFLAGS="$CFLAGS -DAUTHLDAP"
-	AC_DEFINE([AUTHLDAP], 1, [Define if LDAP authentication will be used.])
-	if test [ "$withval" != "yes" ]; then
-		AC_MSG_CHECKING([for ldap.h (user supplied)])
-		if test [ -r "$authldapheadername/ldap.h" ]; then
-			AC_MSG_RESULT([$authldapheadername/ldap.h])
-			LDAPINC="-I$authldapheadername"
-		else 
-			AC_MSG_RESULT([not found])
-			LDAPINC=""
-			authldapheadername=""
-			AC_MSG_ERROR([Unable to find ldap.h where you specified, try just --with-auth-ldap to have configure guess])
-		fi
-	else
-		AC_MSG_CHECKING([for ldap.h])
-		for ldappath in $ldapheaderpaths; do
-			if test [ -r "$ldappath/ldap.h" ]; then
-				LDAPINC="-I$ldappath"
-				AC_MSG_RESULT([$ldappath/ldap.h])
-				break
-			fi
-		done
-		if test [ -z "$LDAPINC" ]; then
-			AC_MSG_RESULT([no])
-			AC_MSG_ERROR([Unable to locate ldap.h, try specifying with --with-auth-ldap])
-		fi
-	fi
-else
-	AUTHALIB="modules/.libs/libauth_sql.a"
-	AUTHLTLIB="modules/libauth_sql.la"
-	AC_MSG_RESULT([using SQL authentication])
-fi
-])
 
-dnl DBMAIL_CHECK_LDAP_LIBS
-dnl
-AC_DEFUN([DBMAIL_CHECK_LDAP_LIBS], [dnl
-# Look for libs needed to link to LDAP first
-if test [ "$authldapheadername" != "no" ]; then
-	AC_CHECK_LIB(ldap,ldap_bind,[ LDAPLIB="-lldap"], [LDAPLIB=""])
-	if test [ -z "$LDAPLIB" ]; then
-		AC_MSG_ERROR([ Unable to link against ldap.  It appears you are missing the development libraries or they aren't in your linker's path ])
-	fi
+dnl --with-auth-ldap is deprecated as of DBMail 2.2.2
+AC_ARG_WITH(auth-ldap,[  --with-auth-ldap=PATH	  deprecated, use --with-ldap],
+	[lookforauthldap="$withval"],[lookforauthldap="no"])
+
+AC_ARG_WITH(ldap,[  --with-ldap=PATH	  path to LDAP base directory (e.g. /usr/local or /usr)],
+	[lookforldap="$withval"],[lookforldap="no"])
+
+
+dnl Go looking for the LDAP headers and libraries.
+if ( test [ "x$lookforldap" != "xno" ] || test [ "x$lookforauthldap" != "xno" ] ); then
+
+    dnl Support the deprecated --with-auth-ldap per comment above.
+    if ( test [ "x$lookforauthldap" != "xyes" ] && test [ "x$lookforauthldap" != "xno" ] ); then
+        lookforldap=$lookforauthldap
+    fi
+
+    dnl We were given a specific path. Only look there.
+    if ( test [ "x$lookforldap" != "xyes" ] && test [ "x$lookforldap" != "xno" ] ); then
+        ldapprefixes=$lookforldap
+    fi
+
+    dnl Look for LDAP headers.
+    AC_MSG_CHECKING([for LDAP headers])
+    STOP_LOOKING_FOR_LDAP=""
+    while test [ -z $STOP_LOOKING_FOR_LDAP ]; do 
+
+        dnl See if we already have the paths we need in the environment.
+	dnl ...but only if --with-ldap was given without a specific path.
+	if ( test [ "x$lookforldap" = "xyes" ] || test [ "x$lookforauthldap" = "xyes" ] ); then
+            DBMAIL_CHECK_LDAP_INC([LDAPINC=""], [LDAPINC="failed"])
+            if test [ "x$LDAPINC" != "xfailed" ]; then
+                break
+            fi
+        fi
+ 
+        dnl Explicitly test paths from --with-ldap or configure.in
+        for TEST_PATH in $ldapprefixes; do
+	    TEST_PATH="$TEST_PATH/include"
+            SAVE_CFLAGS=$CFLAGS
+            CFLAGS="$CFLAGS -I$TEST_PATH"
+            DBMAIL_CHECK_LDAP_INC([LDAPINC="-I$TEST_PATH"], [LDAPINC="failed"])
+            CFLAGS=$SAVE_CFLAGS
+            if test [ "x$LDAPINC" != "xfailed" ]; then
+                break 2
+            fi
+        done
+
+        STOP_LOOKING_FOR_LDAP="done"
+    done
+
+    if test [ "x$LDAPINC" = "xfailed" ]; then
+        AC_MSG_ERROR([Could not find LDAP headers.])
+    else
+        AC_MSG_RESULT($LDAPINC)
+    fi
+
+    dnl Look for LDAP libraries.
+    AC_MSG_CHECKING([for LDAP libraries])
+    STOP_LOOKING_FOR_LDAP=""
+    while test [ -z $STOP_LOOKING_FOR_LDAP ]; do 
+
+        dnl See if we already have the paths we need in the environment.
+	dnl ...but only if --with-ldap was given without a specific path.
+        if ( test [ "x$lookforldap" = "xyes" ] || test [ "x$lookforauthldap" = "xyes" ] ); then
+            DBMAIL_CHECK_LDAP_LIB([LDAPLIB="-lldap"], [LDAPLIB="failed"])
+            if test [ "x$LDAPLIB" != "xfailed" ]; then
+                break
+            fi
+        fi
+ 
+        dnl Explicitly test paths from --with-ldap or configure.in
+        for TEST_PATH in $ldapprefixes; do
+	    TEST_PATH="$TEST_PATH/lib"
+            SAVE_CFLAGS=$CFLAGS
+	    dnl The headers might be in a funny place, so we need to use -Ipath
+            CFLAGS="$CFLAGS -L$TEST_PATH $LDAPINC"
+            DBMAIL_CHECK_LDAP_LIB([LDAPLIB="-L$TEST_PATH -lldap"], [LDAPLIB="failed"])
+            CFLAGS=$SAVE_CFLAGS
+            if test [ "x$LDAPLIB" != "xfailed" ]; then
+                break 2
+            fi
+        done
+
+        STOP_LOOKING_FOR_LDAP="done"
+    done
+
+    if test [ "x$LDAPLIB" = "xfailed" ]; then
+        AC_MSG_ERROR([Could not find LDAP library.])
+    else
+        AC_MSG_RESULT($LDAPLIB)
+    fi
+fi
+
+dnl Found it, set the settings.
+if test [ -n $LDAP_FOUND ]; then
+    AC_DEFINE([AUTHLDAP], 1, [Define if LDAP sorting will be used.])
+    AC_SUBST(LDAPLIB)
+    AC_SUBST(LDAPINC)
+    AUTHALIB="modules/.libs/libauth_ldap.a"
+    AUTHLTLIB="modules/libauth_ldap.la"
+dnl Never asked for LDAP in the first place.
 else
-	LDAPLIB=""
+    AUTHALIB="modules/.libs/libauth_sql.a"
+    AUTHLTLIB="modules/libauth_sql.la"
 fi
 ])
 
