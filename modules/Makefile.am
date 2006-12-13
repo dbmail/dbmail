@@ -17,7 +17,7 @@
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 INCLUDES = -I$(top_srcdir)
-AM_CFLAGS = @MYSQLINC@ @PGSQLINC@ @SQLITEINC@ @LDAPINC@ @SIEVEINC@ -fomit-frame-pointer
+AM_CFLAGS = @MYSQLINC@ @PGSQLINC@ @SQLITEINC@ @LDAPINC@ @SIEVEINC@
 
 
 
@@ -58,11 +58,10 @@ endif
 
 # This one is always built.
 libsort_null_la_SOURCES = sortnull.c
-libsort_null_la_LIBADD = @SORTLIB@
 
 if SIEVE
 libsort_sieve_la_SOURCES = sortsieve.c
-libsort_sieve_la_LIBADD = @SORTLIB@
+libsort_sieve_la_LIBADD = @SIEVELIB@
 endif
 
 # This one is always built.
