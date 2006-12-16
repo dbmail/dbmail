@@ -53,8 +53,13 @@ static int parse_and_escape(const char *in, char **out)
 
 	TRACE(TRACE_DEBUG, "parsing address [%s]", in);
 	ialist = internet_address_parse_string(in);
-	ia = ialist->address;
-	if (ia->type != INTERNET_ADDRESS_NAME) {
+	if (!ialist) {
+                TRACE(TRACE_MESSAGE, "unable to parse email address [%s]", in);
+                return -1;
+	}
+
+        ia = ialist->address;
+        if (!ia || ia->type != INTERNET_ADDRESS_NAME) {
 		TRACE(TRACE_MESSAGE, "unable to parse email address [%s]", in);
 		internet_address_list_destroy(ialist);
 		return -1;
@@ -116,8 +121,15 @@ static int send_mail(struct DbmailMessage *message,
 	}
 
 	if (!sendmail_external) {
-		parse_and_escape(to, &escaped_to);
-		parse_and_escape(from, &escaped_from);
+		if (parse_and_escape(to, &escaped_to) < 0) {
+			TRACE(TRACE_MESSAGE, "could not prepare 'to' address.");
+			return 1;
+		}
+		if (parse_and_escape(from, &escaped_from) < 0) {
+			dm_free(escaped_to);
+			TRACE(TRACE_MESSAGE, "could not prepare 'from' address.");
+			return 1;
+		}
 		sendmail_command = g_strconcat(sendmail, " -f ", escaped_from, " ", escaped_to, NULL);
 		dm_free(escaped_to);
 		dm_free(escaped_from);
