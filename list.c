@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: list.c 2261 2006-09-09 14:24:40Z paul $
+/* $Id: list.c 2391 2006-12-10 14:49:16Z paul $
  *
  * functions to create lists and add/delete items */
 
@@ -163,7 +163,7 @@ GList *g_list_slices(GList *list, unsigned limit)
 			g_string_append_printf(slice,",%s", (gchar *)list->data);
 		}
 		new = g_list_append_printf(new, "%s", slice->str);
-		g_string_free(slice,FALSE);
+		g_string_free(slice,TRUE);
 		if (! g_list_next(list))
 			break;
 		list = g_list_next(list);
@@ -190,7 +190,7 @@ GList *g_list_slices_u64(GList *list, unsigned limit)
 			g_string_append_printf(slice,",%llu", *(u64_t *)list->data);
 		}
 		new = g_list_append_printf(new, "%s", slice->str);
-		g_string_free(slice,FALSE);
+		g_string_free(slice,TRUE);
 		if (! g_list_next(list))
 			break;
 		list = g_list_next(list);

@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: dbmail-imapsession.c 2385 2006-11-27 15:07:30Z paul $
+/* $Id: dbmail-imapsession.c 2392 2006-12-10 21:35:58Z paul $
  * 
  * dm_imaputil.c
  *
@@ -26,10 +26,6 @@
  */
 
 #include "dbmail.h"
-
-#ifndef MAX_LINESIZE
-#define MAX_LINESIZE (10*1024)
-#endif
 
 #define THIS_MODULE "imapsession"
 #define BUFLEN 2048

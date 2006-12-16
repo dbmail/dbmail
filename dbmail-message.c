@@ -1,5 +1,5 @@
 /*
-  $Id: dbmail-message.c 2385 2006-11-27 15:07:30Z paul $
+  $Id: dbmail-message.c 2391 2006-12-10 14:49:16Z paul $
 
   Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
 
@@ -59,33 +59,46 @@ static int _message_insert(struct DbmailMessage *self,
 
 /* general mime utils (missing from gmime?) */
 
+static unsigned find_end_of_header(const char *h)
+{
+	gchar c, p1 = 0, p2 = 0;
+	unsigned i = 0;
+	size_t l = strlen(h);
+
+	while (h++) {
+		i++;
+		c = *h;
+		if (c == '\n' && ((p1 == '\n') || (p1 == '\r' && p2 == '\n'))) {
+			if (l > i) 
+				i++;
+			break;
+		}
+		p2 = p1;
+		p1 = c;
+	}
+	return i;
+}
+
+
 gchar * g_mime_object_get_body(const GMimeObject *object)
 {
-	gchar *s = NULL;
-        size_t i;
-	GString *t;
-	
-        s = g_mime_object_get_headers(GMIME_OBJECT(object));
-        i = strlen(s);
-        g_free(s);
+	gchar *s = NULL, *b = NULL;
+        unsigned i;
+	size_t l;
 	
 	s = g_mime_object_to_string(GMIME_OBJECT(object));
-	t = g_string_new(s);
+	i = find_end_of_header(s);
 	
-	if (t->len > i && s[i] == '\n')
-		i++;
+	b = s+i;
+	l = strlen(b);
+	memmove(s,b,l);
+	s[l] = '\0';
+	s = g_realloc(s, l+1);
 
-	g_free(s);
-	
-	t = g_string_erase(t,0,i);
-	
-	s=t->str;
-	g_string_free(t,FALSE);
-	
 	return s;
 }
 
-gchar * get_crlf_encoded_opt(gchar *string, int dots)
+gchar * get_crlf_encoded_opt(const gchar *string, int dots)
 {
 	GMimeStream *ostream, *fstream;
 	GMimeFilter *filter;
@@ -262,108 +275,6 @@ struct DbmailMessage * dbmail_message_init_with_string(struct DbmailMessage *sel
 	
 	return self;
 }
-
-// 
-// construct a new message where only sender, recipient, subject and 
-// a body are known. The body can be any kind of charset. Make sure
-// it's not pre-encoded (base64, quopri)
-//
-// TODO: support text/html
-
-struct DbmailMessage * dbmail_message_construct(struct DbmailMessage *self, 
-		const gchar *to, const gchar *from, 
-		const gchar *subject, const gchar *body)
-{
-	GMimeMessage *message;
-	GMimePart *mime_part;
-	GMimeDataWrapper *content;
-	GMimeStream *stream, *fstream;
-	GMimeContentType *mime_type;
-	GMimePartEncodingType encoding = GMIME_PART_ENCODING_DEFAULT;
-	GMimeFilter *filter = NULL;
-
-	// FIXME: this could easily be expanded to allow appending
-	// a new sub-part to an existing mime-part. But for now let's
-	// require self to be a pristine (empty) DbmailMessage.
-	g_return_val_if_fail(self->content==NULL, self);
-	
-	message = g_mime_message_new(FALSE);
-
-	// determine the optimal encoding type for the body: how would gmime
-	// encode this string. This will return either base64 or quopri.
-	if (g_mime_utils_text_is_8bit((unsigned char *)body, strlen(body)))
-		encoding = g_mime_utils_best_encoding((unsigned char *)body, strlen(body));
-
-	// set basic headers
-	g_mime_message_set_sender(message, from);
-	g_mime_message_set_subject(message, subject);
-	g_mime_message_add_recipients_from_string(message, GMIME_RECIPIENT_TYPE_TO, to);
-
-	// construct mime-part
-	mime_part = g_mime_part_new();
-	
-	// setup a stream-filter
-	stream = g_mime_stream_mem_new();
-	fstream = g_mime_stream_filter_new_with_stream(stream);
-	
-	switch(encoding) {
-		case GMIME_PART_ENCODING_BASE64:
-			filter = g_mime_filter_basic_new_type(GMIME_FILTER_BASIC_BASE64_ENC);
-			break;
-		case GMIME_PART_ENCODING_QUOTEDPRINTABLE:
-			filter = g_mime_filter_basic_new_type(GMIME_FILTER_BASIC_QP_ENC);
-			break;
-		default:
-			break;
-	}
-
-	if (filter) {
-		g_mime_stream_filter_add((GMimeStreamFilter *)fstream, filter);
-		g_object_unref(filter);
-	}
-	
-	// fill the stream and thus the mime-part
-	g_mime_stream_write_string(fstream,body);
-	content = g_mime_data_wrapper_new_with_stream(stream, encoding);
-	g_mime_part_set_content_object(mime_part, content);
-	
-	// add the correct mime-headers
-	
-	// Content-Type
-	mime_type = g_mime_content_type_new("text","plain");
-	g_mime_object_set_content_type((GMimeObject *)mime_part, mime_type);
-	// We originally tried to use g_mime_charset_best to pick a charset,
-	// but it regularly failed to choose utf-8 when utf-8 data was given to it.
-	g_mime_object_set_content_type_parameter((GMimeObject *)mime_part, "charset", "utf-8");
-
-	// Content-Transfer-Encoding
-	switch(encoding) {
-		case GMIME_PART_ENCODING_BASE64:
-			g_mime_part_set_content_header(mime_part,"Content-Transfer-Encoding", "base64");
-			break;
-		case GMIME_PART_ENCODING_QUOTEDPRINTABLE:
-			g_mime_part_set_content_header(mime_part,"Content-Transfer-Encoding", "quoted-printable");
-			break;
-		default:
-			g_mime_part_set_content_header(mime_part,"Content-Transfer-Encoding", "7bit");
-			break;
-	}
-
-	// attach the mime-part to the mime-message
-	g_mime_message_set_mime_part(message, (GMimeObject *)mime_part);
-
-	// attach the message to the DbmailMessage struct
-	self->content = (GMimeObject *)message;
-
-	// cleanup
-	g_object_unref(mime_part);
-	g_object_unref(content);
-	g_object_unref(stream);
-	g_object_unref(fstream);
-	return self;
-}
-
-
 /* \brief initialize a previously created DbmailMessage using a GMimeStream
  * \param empty DbmailMessage
  * \param stream from which to read
@@ -407,6 +318,7 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 	GMimeParser *parser;
 	gchar *buf, *from;
 	size_t t;
+	FILE *tmp;
 	gboolean firstline=TRUE;
 
 	/*
@@ -428,8 +340,12 @@ static void _set_content_from_stream(struct DbmailMessage *self, GMimeStream *st
 			
 			buf = g_new0(char, MESSAGE_MAX_LINE_SIZE);
 
+			// stream -> bstream (buffer) -> fstream (filter) -> mstream (in-memory copy)
 			bstream = g_mime_stream_buffer_new(stream,GMIME_STREAM_BUFFER_BLOCK_READ);
-			mstream = g_mime_stream_mem_new();
+//			mstream = g_mime_stream_mem_new();
+			tmp = tmpfile();
+			mstream = g_mime_stream_file_new(tmp);
+			assert(mstream);
 			fstream = g_mime_stream_filter_new_with_stream(mstream);
 			filter = g_mime_filter_crlf_new(GMIME_FILTER_CRLF_DECODE,GMIME_FILTER_CRLF_MODE_CRLF_DOTS);
 			g_mime_stream_filter_add((GMimeStreamFilter *) fstream, filter);
@@ -626,24 +542,16 @@ gchar * dbmail_message_body_to_string(const struct DbmailMessage *self)
 {
 	return g_mime_object_get_body(GMIME_OBJECT(self->content));
 }
+
 gchar * dbmail_message_hdrs_to_string(const struct DbmailMessage *self)
 {
-	gchar *h,*s;
-	GString *m, *b;
+	gchar *h;
+	unsigned i = 0;
 	
-	s = dbmail_message_to_string(self);
-	m = g_string_new(s);
-	g_free(s);
-
-	s = dbmail_message_body_to_string(self);
-	b = g_string_new(s);
-	g_free(s);
-
-	m = g_string_truncate(m,(m->len - b->len));
-	h = m->str;
-	
-	g_string_free(b,TRUE);
-	g_string_free(m,FALSE);
+	h = dbmail_message_to_string(self);
+	i = find_end_of_header(h);
+	h[i] = '\0';
+	h = g_realloc(h, strlen(h)+1);
 	
 	return h;
 }
@@ -850,30 +758,29 @@ int dbmail_message_store(struct DbmailMessage *self)
 	}
 
 	hdrs = dbmail_message_hdrs_to_string(self);
-	body = dbmail_message_body_to_string(self);
-	
 	hdrs_size = (u64_t)dbmail_message_get_hdrs_size(self, FALSE);
-	body_size = (u64_t)dbmail_message_get_body_size(self, FALSE);
-	rfcsize = (u64_t)dbmail_message_get_rfcsize(self);
-	
-	if(db_insert_message_block(hdrs, hdrs_size, self->id, &messageblk_idnr,1) < 0)
+	if(db_insert_message_block(hdrs, hdrs_size, self->id, &messageblk_idnr,1) < 0) {
+		g_free(hdrs);
 		return -1;
-	
-	TRACE(TRACE_DEBUG, "allocating [%ld] bytes of memory for readblock", READ_BLOCK_SIZE);
-	
-	/* store body in several blocks (if needed */
-	if (store_message_in_blocks(body, body_size, self->id) < 0)
-		return -1;
+	}
+	g_free(hdrs);
 
+	/* store body in several blocks (if needed */
+	body = dbmail_message_body_to_string(self);
+	body_size = (u64_t)dbmail_message_get_body_size(self, FALSE);
+	if (store_message_in_blocks(body, body_size, self->id) < 0) {
+		g_free(body);
+		return -1;
+	}
+	g_free(body);
+
+	rfcsize = (u64_t)dbmail_message_get_rfcsize(self);
 	if (db_update_message(self->id, unique_id, (hdrs_size + body_size), rfcsize) < 0) 
 		return -1;
 
 	/* store message headers */
 	if (dbmail_message_cache_headers(self) < 0)
 		return -1;
-
-	g_free(hdrs);
-	g_free(body);
 
 	return 1;
 }
@@ -1057,6 +964,7 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 		g_string_printf(q,"INSERT INTO %sheadervalue (headername_id, physmessage_id, headervalue) "
 				"VALUES (%llu,%llu,'%s')", DBPFX, id, self->physid, safe_value);
 		g_free(safe_value);
+		safe_value = NULL;
 
 		if (db_query(q->str)) {
 			TRACE(TRACE_ERROR,"insert headervalue failed");
@@ -1276,6 +1184,107 @@ void dbmail_message_cache_envelope(const struct DbmailMessage *self)
 	g_free(q);
 
 }
+
+// 
+// construct a new message where only sender, recipient, subject and 
+// a body are known. The body can be any kind of charset. Make sure
+// it's not pre-encoded (base64, quopri)
+//
+// TODO: support text/html
+
+struct DbmailMessage * dbmail_message_construct(struct DbmailMessage *self, 
+		const gchar *to, const gchar *from, 
+		const gchar *subject, const gchar *body)
+{
+	GMimeMessage *message;
+	GMimePart *mime_part;
+	GMimeDataWrapper *content;
+	GMimeStream *stream, *fstream;
+	GMimeContentType *mime_type;
+	GMimePartEncodingType encoding = GMIME_PART_ENCODING_DEFAULT;
+	GMimeFilter *filter = NULL;
+
+	// FIXME: this could easily be expanded to allow appending
+	// a new sub-part to an existing mime-part. But for now let's
+	// require self to be a pristine (empty) DbmailMessage.
+	g_return_val_if_fail(self->content==NULL, self);
+	
+	message = g_mime_message_new(FALSE);
+
+	// determine the optimal encoding type for the body: how would gmime
+	// encode this string. This will return either base64 or quopri.
+	if (g_mime_utils_text_is_8bit((unsigned char *)body, strlen(body)))
+		encoding = g_mime_utils_best_encoding((unsigned char *)body, strlen(body));
+
+	// set basic headers
+	g_mime_message_set_sender(message, from);
+	g_mime_message_set_subject(message, subject);
+	g_mime_message_add_recipients_from_string(message, GMIME_RECIPIENT_TYPE_TO, to);
+
+	// construct mime-part
+	mime_part = g_mime_part_new();
+	
+	// setup a stream-filter
+	stream = g_mime_stream_mem_new();
+	fstream = g_mime_stream_filter_new_with_stream(stream);
+	
+	switch(encoding) {
+		case GMIME_PART_ENCODING_BASE64:
+			filter = g_mime_filter_basic_new_type(GMIME_FILTER_BASIC_BASE64_ENC);
+			break;
+		case GMIME_PART_ENCODING_QUOTEDPRINTABLE:
+			filter = g_mime_filter_basic_new_type(GMIME_FILTER_BASIC_QP_ENC);
+			break;
+		default:
+			break;
+	}
+
+	if (filter) {
+		g_mime_stream_filter_add((GMimeStreamFilter *)fstream, filter);
+		g_object_unref(filter);
+	}
+	
+	// fill the stream and thus the mime-part
+	g_mime_stream_write_string(fstream,body);
+	content = g_mime_data_wrapper_new_with_stream(stream, encoding);
+	g_mime_part_set_content_object(mime_part, content);
+	
+	// add the correct mime-headers
+	
+	// Content-Type
+	mime_type = g_mime_content_type_new("text","plain");
+	g_mime_object_set_content_type((GMimeObject *)mime_part, mime_type);
+	// We originally tried to use g_mime_charset_best to pick a charset,
+	// but it regularly failed to choose utf-8 when utf-8 data was given to it.
+	g_mime_object_set_content_type_parameter((GMimeObject *)mime_part, "charset", "utf-8");
+
+	// Content-Transfer-Encoding
+	switch(encoding) {
+		case GMIME_PART_ENCODING_BASE64:
+			g_mime_part_set_content_header(mime_part,"Content-Transfer-Encoding", "base64");
+			break;
+		case GMIME_PART_ENCODING_QUOTEDPRINTABLE:
+			g_mime_part_set_content_header(mime_part,"Content-Transfer-Encoding", "quoted-printable");
+			break;
+		default:
+			g_mime_part_set_content_header(mime_part,"Content-Transfer-Encoding", "7bit");
+			break;
+	}
+
+	// attach the mime-part to the mime-message
+	g_mime_message_set_mime_part(message, (GMimeObject *)mime_part);
+
+	// attach the message to the DbmailMessage struct
+	self->content = (GMimeObject *)message;
+
+	// cleanup
+	g_object_unref(mime_part);
+	g_object_unref(content);
+	g_object_unref(stream);
+	g_object_unref(fstream);
+	return self;
+}
+
 
 /* old stuff moved here from dbmsgbuf.c */
 

@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: imap4.c 2372 2006-11-16 11:21:49Z paul $
+/* $Id: imap4.c 2394 2006-12-12 09:30:45Z paul $
  * imap4.c
  *
  * implements an IMAP 4 rev 1 server.
@@ -26,7 +26,6 @@
 
 #include "dbmail.h"
 
-#define MAX_LINESIZE (10*1024)
 #define COMMAND_SHOW_LEVEL TRACE_INFO
 
 #define THIS_MODULE "imap"
@@ -178,12 +177,6 @@ int IMAPClientHandler(clientinfo_t * ci)
 		if (!session->ci->rx || !session->ci->tx) {
 			/* if a timeout occured the streams will be closed & set to NULL */
 			TRACE(TRACE_ERROR, "timeout occurred.");
-			dbmail_imap_session_delete(session);
-			return 1;
-		}
-
-		if (!checkchars(line)) {
-			dbmail_imap_session_printf(session, "* BYE Input contains invalid characters\r\n");
 			dbmail_imap_session_delete(session);
 			return 1;
 		}
