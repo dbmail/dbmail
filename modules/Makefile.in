@@ -87,7 +87,7 @@ libpgsql_la_DEPENDENCIES =
 am__libpgsql_la_SOURCES_DIST = dbpgsql.c
 @PGSQL_TRUE@am_libpgsql_la_OBJECTS = dbpgsql.lo
 libpgsql_la_OBJECTS = $(am_libpgsql_la_OBJECTS)
-libsort_null_la_DEPENDENCIES =
+libsort_null_la_LIBADD =
 am_libsort_null_la_OBJECTS = sortnull.lo
 libsort_null_la_OBJECTS = $(am_libsort_null_la_OBJECTS)
 libsort_sieve_la_DEPENDENCIES =
@@ -202,10 +202,10 @@ SHARED_FALSE = @SHARED_FALSE@
 SHARED_TRUE = @SHARED_TRUE@
 SHELL = @SHELL@
 SIEVEINC = @SIEVEINC@
+SIEVELIB = @SIEVELIB@
 SIEVE_FALSE = @SIEVE_FALSE@
 SIEVE_TRUE = @SIEVE_TRUE@
 SORTALIB = @SORTALIB@
-SORTLIB = @SORTLIB@
 SORTLTLIB = @SORTLTLIB@
 SQLITEINC = @SQLITEINC@
 SQLITELALIB = @SQLITELALIB@
@@ -270,7 +270,7 @@ sqliteconfig = @sqliteconfig@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 INCLUDES = -I$(top_srcdir)
-AM_CFLAGS = @MYSQLINC@ @PGSQLINC@ @SQLITEINC@ @LDAPINC@ @SIEVEINC@ -fomit-frame-pointer
+AM_CFLAGS = @MYSQLINC@ @PGSQLINC@ @SQLITEINC@ @LDAPINC@ @SIEVEINC@
 @SHARED_FALSE@AM_LDFLAGS = 
 
 #AM_LDFLAGS = -Wl,--export-dynamic
@@ -292,9 +292,8 @@ noinst_LTLIBRARIES = libsort_null.la
 
 # This one is always built.
 libsort_null_la_SOURCES = sortnull.c
-libsort_null_la_LIBADD = @SORTLIB@
 @SIEVE_TRUE@libsort_sieve_la_SOURCES = sortsieve.c
-@SIEVE_TRUE@libsort_sieve_la_LIBADD = @SORTLIB@
+@SIEVE_TRUE@libsort_sieve_la_LIBADD = @SIEVELIB@
 
 # This one is always built.
 libauth_sql_la_SOURCES = authsql.c
