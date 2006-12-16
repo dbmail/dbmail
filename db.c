@@ -4759,6 +4759,9 @@ int db_usermap_resolve(clientinfo_t *ci, const char *username, char *real_userna
 	}
 
 	TRACE(TRACE_DEBUG, "bestscore [%d]", bestscore);
+	if (bestscore == 0)
+		return DM_SUCCESS; // no match at all.
+
 	if (bestscore < 0)
 		return DM_EGENERAL;
 	
