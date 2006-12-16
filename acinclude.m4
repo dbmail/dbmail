@@ -189,6 +189,11 @@ AC_ARG_WITH(sieve,[  --with-sieve=PATH	  path to libSieve base directory (e.g. /
 	[lookforsieve="$withval"],[lookforsieve="no"])
 
 
+dnl Set the default sort modules to null, as
+dnl the user may not have asked for Sieve at all.
+SORTALIB="modules/.libs/libsort_null.a"
+SORTLTLIB="modules/libsort_null.la"
+
 dnl Go looking for the Sieve headers and libraries.
 if test [ "x$lookforsieve" != "xno" ]; then
 
@@ -265,21 +270,14 @@ if test [ "x$lookforsieve" != "xno" ]; then
     if test [ "x$SIEVELIB" = "xfailed" ]; then
         AC_MSG_ERROR([Could not find libSieve library.])
     else
+        dnl Found it, set the settings.
         AC_MSG_RESULT($SIEVELIB)
+        AC_DEFINE([SIEVE], 1, [Define if Sieve sorting will be used.])
+        AC_SUBST(SIEVELIB)
+        AC_SUBST(SIEVEINC)
+        SORTALIB="modules/.libs/libsort_sieve.a"
+        SORTLTLIB="modules/libsort_sieve.la"
     fi
-fi
-
-dnl Found it, set the settings.
-if test [ -n $SIEVE_FOUND ]; then
-    AC_DEFINE([SIEVE], 1, [Define if Sieve sorting will be used.])
-    AC_SUBST(SIEVELIB)
-    AC_SUBST(SIEVEINC)
-    SORTALIB="modules/.libs/libsort_sieve.a"
-    SORTLTLIB="modules/libsort_sieve.la"
-dnl Never asked for Sieve in the first place.
-else
-    SORTALIB="modules/.libs/libsort_null.a"
-    SORTLTLIB="modules/libsort_null.la"
 fi
 ])
 
@@ -315,6 +313,10 @@ AC_ARG_WITH(auth-ldap,[  --with-auth-ldap=PATH	  deprecated, use --with-ldap],
 AC_ARG_WITH(ldap,[  --with-ldap=PATH	  path to LDAP base directory (e.g. /usr/local or /usr)],
 	[lookforldap="$withval"],[lookforldap="no"])
 
+dnl Set the default auth modules to sql, as
+dnl the user may not have asked for LDAP at all.
+AUTHALIB="modules/.libs/libauth_sql.a"
+AUTHLTLIB="modules/libauth_sql.la"
 
 dnl Go looking for the LDAP headers and libraries.
 if ( test [ "x$lookforldap" != "xno" ] || test [ "x$lookforauthldap" != "xno" ] ); then
@@ -398,20 +400,12 @@ if ( test [ "x$lookforldap" != "xno" ] || test [ "x$lookforauthldap" != "xno" ] 
         AC_MSG_ERROR([Could not find LDAP library.])
     else
         AC_MSG_RESULT($LDAPLIB)
+        AC_DEFINE([AUTHLDAP], 1, [Define if LDAP sorting will be used.])
+        AC_SUBST(LDAPLIB)
+        AC_SUBST(LDAPINC)
+        AUTHALIB="modules/.libs/libauth_ldap.a"
+        AUTHLTLIB="modules/libauth_ldap.la"
     fi
-fi
-
-dnl Found it, set the settings.
-if test [ -n $LDAP_FOUND ]; then
-    AC_DEFINE([AUTHLDAP], 1, [Define if LDAP sorting will be used.])
-    AC_SUBST(LDAPLIB)
-    AC_SUBST(LDAPINC)
-    AUTHALIB="modules/.libs/libauth_ldap.a"
-    AUTHLTLIB="modules/libauth_ldap.la"
-dnl Never asked for LDAP in the first place.
-else
-    AUTHALIB="modules/.libs/libauth_sql.a"
-    AUTHLTLIB="modules/libauth_sql.la"
 fi
 ])
 
