@@ -67,8 +67,7 @@ MODULES = dbmodule.c \
 	sortmodule.c
 
 
-# CFLAGS
-#AM_CFLAGS = -fomit-frame-pointer
+AM_CFLAGS = @SIEVEINC@ @LDAPINC@
 
 INCLUDES = -I$(top_srcdir)
 

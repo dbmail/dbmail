@@ -1,3 +1,14 @@
+2006-12-15  Aaron Stone  <aaron@serendipity.cx>
+
+	* pipe.c:
+	Fixed parse_and_escape to handle incomplete addresses (closes bug #477)
+
+2006-12-13  Aaron Stone  <aaron@serendipity.cx>
+
+	* acinclude.m4, configure.in, Makefile.am, modules/Makefile.am:
+	Updated tests for libSieve and LDAP headers and libraries (closes bug
+	#195).
+
 2006-12-12  Paul J Stevens <paul@nfg.nl>
 
 	* dm_imaputil.c, dm_imaputil.h, imap4.c, test-scripts/testsearch.imap:
