@@ -463,7 +463,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA CYGPATH_W PACKAGE VERSION ACLOCAL AUTOCONF AUTOMAKE AUTOHEADER MAKEINFO install_sh STRIP ac_ct_STRIP INSTALL_STRIP_PROGRAM mkdir_p AWK SET_MAKE am__leading_dot AMTAR am__tar am__untar MAINTAINER_MODE_TRUE MAINTAINER_MODE_FALSE MAINT SHARED_TRUE SHARED_FALSE STATIC_TRUE STATIC_FALSE mysqlconfig pgsqlconfig sqliteconfig CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT DEPDIR am__include am__quote AMDEP_TRUE AMDEP_FALSE AMDEPBACKSLASH CCDEPMODE am__fastdepCC_TRUE am__fastdepCC_FALSE glibconfig gmimeconfig CPP EGREP CHECK_CFLAGS CHECK_LIBS USE_DM_GETOPT_TRUE USE_DM_GETOPT_FALSE WITHCHECK_TRUE WITHCHECK_FALSE MYSQL_TRUE MYSQL_FALSE PGSQL_TRUE PGSQL_FALSE SQLITE_TRUE SQLITE_FALSE SIEVE_TRUE SIEVE_FALSE LDAP_TRUE LDAP_FALSE MYSQLLIB MYSQLALIB MYSQLLTLIB PGSQLLIB PGSQLALIB PGSQLLTLIB SQLITELIB SQLITELALIB SQLITELTLIB SORTLIB SORTALIB SORTLTLIB AUTHALIB AUTHLTLIB MYSQLINC PGSQLINC SQLITEINC SIEVEINC LDAPLIB LDAPINC DM_LOGDIR DM_CONFDIR DM_STATEDIR build build_cpu build_vendor build_os host host_cpu host_vendor host_os LN_S ECHO AR ac_ct_AR RANLIB ac_ct_RANLIB CXX CXXFLAGS ac_ct_CXX CXXDEPMODE am__fastdepCXX_TRUE am__fastdepCXX_FALSE CXXCPP F77 FFLAGS ac_ct_F77 LIBTOOL LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA CYGPATH_W PACKAGE VERSION ACLOCAL AUTOCONF AUTOMAKE AUTOHEADER MAKEINFO install_sh STRIP ac_ct_STRIP INSTALL_STRIP_PROGRAM mkdir_p AWK SET_MAKE am__leading_dot AMTAR am__tar am__untar MAINTAINER_MODE_TRUE MAINTAINER_MODE_FALSE MAINT SHARED_TRUE SHARED_FALSE STATIC_TRUE STATIC_FALSE mysqlconfig pgsqlconfig sqliteconfig CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT DEPDIR am__include am__quote AMDEP_TRUE AMDEP_FALSE AMDEPBACKSLASH CCDEPMODE am__fastdepCC_TRUE am__fastdepCC_FALSE LDAPLIB LDAPINC SIEVELIB SIEVEINC glibconfig gmimeconfig CPP EGREP CHECK_CFLAGS CHECK_LIBS USE_DM_GETOPT_TRUE USE_DM_GETOPT_FALSE WITHCHECK_TRUE WITHCHECK_FALSE MYSQL_TRUE MYSQL_FALSE PGSQL_TRUE PGSQL_FALSE SQLITE_TRUE SQLITE_FALSE SIEVE_TRUE SIEVE_FALSE LDAP_TRUE LDAP_FALSE MYSQLLIB MYSQLALIB MYSQLLTLIB PGSQLLIB PGSQLALIB PGSQLLTLIB SQLITELIB SQLITELALIB SQLITELTLIB SORTALIB SORTLTLIB AUTHALIB AUTHLTLIB MYSQLINC PGSQLINC SQLITEINC DM_LOGDIR DM_CONFDIR DM_STATEDIR build build_cpu build_vendor build_os host host_cpu host_vendor host_os LN_S ECHO AR ac_ct_AR RANLIB ac_ct_RANLIB CXX CXXFLAGS ac_ct_CXX CXXDEPMODE am__fastdepCXX_TRUE am__fastdepCXX_FALSE CXXCPP F77 FFLAGS ac_ct_F77 LIBTOOL LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -1045,8 +1045,9 @@ Optional Packages:
                           Uses pg_config for finding includes and libraries
   --with-sqlite           use SQLite3 as database.
                           Uses pkg-config for finding includes and libraries
-  --with-auth-ldap=PATH	  full path to ldap header directory
-  --with-sieve=PATH	  full path to libSieve header directory
+  --with-auth-ldap=PATH	  deprecated, use --with-ldap
+  --with-ldap=PATH	  path to LDAP base directory (e.g. /usr/local or /usr)
+  --with-sieve=PATH	  path to libSieve base directory (e.g. /usr/local or /usr)
   --with-gc=PREFIX        libgc PREFIX
   --with-check=PATH       prefix where check is installed default=auto
   --with-gnu-ld           assume the C compiler uses GNU ld [default=no]
@@ -1987,8 +1988,8 @@ pgsqlheaderpaths="/usr/include/pgsql /usr/include /usr/local/include/pgsql \
                   /usr/freeware/include $HOME/include $HOME/pgsql/include \
 		  /usr/local/pgsql/include /usr/include/postgresql $HOME"
 
-ldapheaderpaths="/usr/include /usr/local/include"
-sieveheaderpaths="/usr/include /usr/local/include"
+ldapprefixes="/usr /usr/local"
+sieveprefixes="/usr /usr/local"
 
 
 cat >>confdefs.h <<\_ACEOF
@@ -2343,72 +2344,6 @@ echo "$as_me: error: $SQLITEINC" >&2;}
         echo "$as_me:$LINENO: result: $SQLITELIB" >&5
 echo "${ECHO_T}$SQLITELIB" >&6
     fi
-fi
-
-
-authldapheadername="no"
-
-echo "$as_me:$LINENO: result: checking for authentication configuration" >&5
-echo "${ECHO_T}checking for authentication configuration" >&6
-
-# Check whether --with-auth-ldap or --without-auth-ldap was given.
-if test "${with_auth_ldap+set}" = set; then
-  withval="$with_auth_ldap"
-  authldapheadername="$withval"
-fi;
-AUTHALIB="modules/.libs/libauth_ldap.a"
-AUTHLTLIB="modules/libauth_ldap.la"
-
-WARN=0
-if test  "$authldapheadername" != "no" ; then
-	# --with-auth-ldap was specified
-	echo "$as_me:$LINENO: result: using LDAP authentication" >&5
-echo "${ECHO_T}using LDAP authentication" >&6
-
-cat >>confdefs.h <<\_ACEOF
-#define AUTHLDAP 1
-_ACEOF
-
-	if test  "$withval" != "yes" ; then
-		echo "$as_me:$LINENO: checking for ldap.h (user supplied)" >&5
-echo $ECHO_N "checking for ldap.h (user supplied)... $ECHO_C" >&6
-		if test  -r "$authldapheadername/ldap.h" ; then
-			echo "$as_me:$LINENO: result: $authldapheadername/ldap.h" >&5
-echo "${ECHO_T}$authldapheadername/ldap.h" >&6
-			LDAPINC="-I$authldapheadername"
-		else
-			echo "$as_me:$LINENO: result: not found" >&5
-echo "${ECHO_T}not found" >&6
-			LDAPINC=""
-			authldapheadername=""
-			{ { echo "$as_me:$LINENO: error: Unable to find ldap.h where you specified, try just --with-auth-ldap to have configure guess" >&5
-echo "$as_me: error: Unable to find ldap.h where you specified, try just --with-auth-ldap to have configure guess" >&2;}
-   { (exit 1); exit 1; }; }
-		fi
-	else
-		echo "$as_me:$LINENO: checking for ldap.h" >&5
-echo $ECHO_N "checking for ldap.h... $ECHO_C" >&6
-		for ldappath in $ldapheaderpaths; do
-			if test  -r "$ldappath/ldap.h" ; then
-				LDAPINC="-I$ldappath"
-				echo "$as_me:$LINENO: result: $ldappath/ldap.h" >&5
-echo "${ECHO_T}$ldappath/ldap.h" >&6
-				break
-			fi
-		done
-		if test  -z "$LDAPINC" ; then
-			echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6
-			{ { echo "$as_me:$LINENO: error: Unable to locate ldap.h, try specifying with --with-auth-ldap" >&5
-echo "$as_me: error: Unable to locate ldap.h, try specifying with --with-auth-ldap" >&2;}
-   { (exit 1); exit 1; }; }
-		fi
-	fi
-else
-	AUTHALIB="modules/.libs/libauth_sql.a"
-	AUTHLTLIB="modules/libauth_sql.la"
-	echo "$as_me:$LINENO: result: using SQL authentication" >&5
-echo "${ECHO_T}using SQL authentication" >&6
 fi
 
 DEPDIR="${am__leading_dot}deps"
@@ -3510,33 +3445,186 @@ fi
 
 
 
-# Look for libs needed to link to LDAP first
-if test  "$authldapheadername" != "no" ; then
-	echo "$as_me:$LINENO: checking for ldap_bind in -lldap" >&5
-echo $ECHO_N "checking for ldap_bind in -lldap... $ECHO_C" >&6
-if test "${ac_cv_lib_ldap_ldap_bind+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
+WARN=0
+
+
+# Check whether --with-auth-ldap or --without-auth-ldap was given.
+if test "${with_auth_ldap+set}" = set; then
+  withval="$with_auth_ldap"
+  lookforauthldap="$withval"
 else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lldap  $LIBS"
-cat >conftest.$ac_ext <<_ACEOF
+  lookforauthldap="no"
+fi;
+
+
+# Check whether --with-ldap or --without-ldap was given.
+if test "${with_ldap+set}" = set; then
+  withval="$with_ldap"
+  lookforldap="$withval"
+else
+  lookforldap="no"
+fi;
+
+
+if ( test  "x$lookforldap" != "xno"  || test  "x$lookforauthldap" != "xno"  ); then
+
+        if ( test  "x$lookforauthldap" != "xyes"  && test  "x$lookforauthldap" != "xno"  ); then
+        lookforldap=$lookforauthldap
+    fi
+
+        if ( test  "x$lookforldap" != "xyes"  && test  "x$lookforldap" != "xno"  ); then
+        ldapprefixes=$lookforldap
+    fi
+
+        echo "$as_me:$LINENO: checking for LDAP headers" >&5
+echo $ECHO_N "checking for LDAP headers... $ECHO_C" >&6
+    STOP_LOOKING_FOR_LDAP=""
+    while test  -z $STOP_LOOKING_FOR_LDAP ; do
+
+        		if ( test  "x$lookforldap" = "xyes"  || test  "x$lookforauthldap" = "xyes"  ); then
+
+    cat >conftest.$ac_ext <<_ACEOF
 /* confdefs.h.  */
 _ACEOF
 cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
 
-/* Override any gcc2 internal prototype to avoid an error.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-/* We use char because int might match the return type of a gcc2
-   builtin and then its argument prototype would still apply.  */
-char ldap_bind ();
+        #define NULL 0
+        #include <ldap.h>
 int
 main ()
 {
-ldap_bind ();
+
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  LDAPINC=""
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+LDAPINC="failed"
+fi
+rm -f conftest.err conftest.$ac_objext conftest.$ac_ext
+
+            if test  "x$LDAPINC" != "xfailed" ; then
+                break
+            fi
+        fi
+
+                for TEST_PATH in $ldapprefixes; do
+	    TEST_PATH="$TEST_PATH/include"
+            SAVE_CFLAGS=$CFLAGS
+            CFLAGS="$CFLAGS -I$TEST_PATH"
+
+    cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+        #define NULL 0
+        #include <ldap.h>
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  LDAPINC="-I$TEST_PATH"
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+LDAPINC="failed"
+fi
+rm -f conftest.err conftest.$ac_objext conftest.$ac_ext
+
+            CFLAGS=$SAVE_CFLAGS
+            if test  "x$LDAPINC" != "xfailed" ; then
+                break 2
+            fi
+        done
+
+        STOP_LOOKING_FOR_LDAP="done"
+    done
+
+    if test  "x$LDAPINC" = "xfailed" ; then
+        { { echo "$as_me:$LINENO: error: Could not find LDAP headers." >&5
+echo "$as_me: error: Could not find LDAP headers." >&2;}
+   { (exit 1); exit 1; }; }
+    else
+        echo "$as_me:$LINENO: result: $LDAPINC" >&5
+echo "${ECHO_T}$LDAPINC" >&6
+    fi
+
+        echo "$as_me:$LINENO: checking for LDAP libraries" >&5
+echo $ECHO_N "checking for LDAP libraries... $ECHO_C" >&6
+    STOP_LOOKING_FOR_LDAP=""
+    while test  -z $STOP_LOOKING_FOR_LDAP ; do
+
+        	        if ( test  "x$lookforldap" = "xyes"  || test  "x$lookforauthldap" = "xyes"  ); then
+
+    cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+        #define NULL 0
+        #include <ldap.h>
+int
+main ()
+{
+
   ;
   return 0;
 }
@@ -3562,191 +3650,400 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
-  ac_cv_lib_ldap_ldap_bind=yes
+  LDAPLIB="-lldap"
 else
   echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-ac_cv_lib_ldap_ldap_bind=no
+LDAPLIB="failed"
 fi
 rm -f conftest.err conftest.$ac_objext \
       conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-echo "$as_me:$LINENO: result: $ac_cv_lib_ldap_ldap_bind" >&5
-echo "${ECHO_T}$ac_cv_lib_ldap_ldap_bind" >&6
-if test $ac_cv_lib_ldap_ldap_bind = yes; then
-   LDAPLIB="-lldap"
-else
-  LDAPLIB=""
-fi
 
-	if test  -z "$LDAPLIB" ; then
-		{ { echo "$as_me:$LINENO: error:  Unable to link against ldap.  It appears you are missing the development libraries or they aren't in your linker's path " >&5
-echo "$as_me: error:  Unable to link against ldap.  It appears you are missing the development libraries or they aren't in your linker's path " >&2;}
+            if test  "x$LDAPLIB" != "xfailed" ; then
+                break
+            fi
+        fi
+
+                for TEST_PATH in $ldapprefixes; do
+	    TEST_PATH="$TEST_PATH/lib"
+            SAVE_CFLAGS=$CFLAGS
+	                CFLAGS="$CFLAGS -L$TEST_PATH $LDAPINC"
+
+    cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+        #define NULL 0
+        #include <ldap.h>
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  LDAPLIB="-L$TEST_PATH -lldap"
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+LDAPLIB="failed"
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+
+            CFLAGS=$SAVE_CFLAGS
+            if test  "x$LDAPLIB" != "xfailed" ; then
+                break 2
+            fi
+        done
+
+        STOP_LOOKING_FOR_LDAP="done"
+    done
+
+    if test  "x$LDAPLIB" = "xfailed" ; then
+        { { echo "$as_me:$LINENO: error: Could not find LDAP library." >&5
+echo "$as_me: error: Could not find LDAP library." >&2;}
    { (exit 1); exit 1; }; }
-	fi
-else
-	LDAPLIB=""
+    else
+        echo "$as_me:$LINENO: result: $LDAPLIB" >&5
+echo "${ECHO_T}$LDAPLIB" >&6
+    fi
 fi
 
+if test  -n $LDAP_FOUND ; then
 
-sieveheadername="no"
+cat >>confdefs.h <<\_ACEOF
+#define AUTHLDAP 1
+_ACEOF
 
-echo "$as_me:$LINENO: result: checking for sorting configuration" >&5
-echo "${ECHO_T}checking for sorting configuration" >&6
+
+
+    AUTHALIB="modules/.libs/libauth_ldap.a"
+    AUTHLTLIB="modules/libauth_ldap.la"
+else
+    AUTHALIB="modules/.libs/libauth_sql.a"
+    AUTHLTLIB="modules/libauth_sql.la"
+fi
+
+WARN=0
+
 
 # Check whether --with-sieve or --without-sieve was given.
 if test "${with_sieve+set}" = set; then
   withval="$with_sieve"
-  sieveheadername="$withval"
+  lookforsieve="$withval"
+else
+  lookforsieve="no"
 fi;
-SORTALIB="modules/.libs/libsort_null.a"
-SORTLTLIB="modules/libsort_null.la"
 
-WARN=0
-if test  "$sieveheadername" != "no" ; then
-  echo "$as_me:$LINENO: result: using Sieve sorting" >&5
-echo "${ECHO_T}using Sieve sorting" >&6
+
+if test  "x$lookforsieve" != "xno" ; then
+
+        if test  "x$lookforsieve" != "xyes" ; then
+        sieveprefixes=$lookforsieve
+    fi
+
+        echo "$as_me:$LINENO: checking for libSieve headers" >&5
+echo $ECHO_N "checking for libSieve headers... $ECHO_C" >&6
+    STOP_LOOKING_FOR_SIEVE=""
+    while test  -z $STOP_LOOKING_FOR_SIEVE ; do
+
+        		if test  "x$lookforsieve" = "xyes" ; then
+
+    cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+        #define NULL 0
+        #include <sieve2.h>
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  SIEVEINC=""
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+SIEVEINC="failed"
+fi
+rm -f conftest.err conftest.$ac_objext conftest.$ac_ext
+
+            if test  "x$SIEVEINC" != "xfailed" ; then
+                break
+            fi
+        fi
+
+                for TEST_PATH in $sieveprefixes; do
+	    TEST_PATH="$TEST_PATH/include"
+            SAVE_CFLAGS=$CFLAGS
+            CFLAGS="$CFLAGS -I$TEST_PATH"
+
+    cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+        #define NULL 0
+        #include <sieve2.h>
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  SIEVEINC="-I$TEST_PATH"
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+SIEVEINC="failed"
+fi
+rm -f conftest.err conftest.$ac_objext conftest.$ac_ext
+
+            CFLAGS=$SAVE_CFLAGS
+            if test  "x$SIEVEINC" != "xfailed" ; then
+                break 2
+            fi
+        done
+
+        STOP_LOOKING_FOR_SIEVE="done"
+    done
+
+    if test  "x$SIEVEINC" = "xfailed" ; then
+        { { echo "$as_me:$LINENO: error: Could not find libSieve headers." >&5
+echo "$as_me: error: Could not find libSieve headers." >&2;}
+   { (exit 1); exit 1; }; }
+    else
+        echo "$as_me:$LINENO: result: $SIEVEINC" >&5
+echo "${ECHO_T}$SIEVEINC" >&6
+    fi
+
+        echo "$as_me:$LINENO: checking for libSieve libraries" >&5
+echo $ECHO_N "checking for libSieve libraries... $ECHO_C" >&6
+    STOP_LOOKING_FOR_SIEVE=""
+    while test  -z $STOP_LOOKING_FOR_SIEVE ; do
+
+        	        if test  "x$lookforsieve" = "xyes" ; then
+
+    cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+        #define NULL 0
+        #include <sieve2.h>
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  SIEVELIB="-lsieve"
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+SIEVELIB="failed"
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+
+            if test  "x$SIEVELIB" != "xfailed" ; then
+                break
+            fi
+        fi
+
+                for TEST_PATH in $sieveprefixes; do
+	    TEST_PATH="$TEST_PATH/lib"
+            SAVE_CFLAGS=$CFLAGS
+	                CFLAGS="$CFLAGS -L$TEST_PATH $SIEVEINC"
+
+    cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+        #define NULL 0
+        #include <sieve2.h>
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  SIEVELIB="-L$TEST_PATH -lsieve"
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+SIEVELIB="failed"
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+
+            CFLAGS=$SAVE_CFLAGS
+            if test  "x$SIEVELIB" != "xfailed" ; then
+                break 2
+            fi
+        done
+
+        STOP_LOOKING_FOR_SIEVE="done"
+    done
+
+    if test  "x$SIEVELIB" = "xfailed" ; then
+        { { echo "$as_me:$LINENO: error: Could not find libSieve library." >&5
+echo "$as_me: error: Could not find libSieve library." >&2;}
+   { (exit 1); exit 1; }; }
+    else
+        echo "$as_me:$LINENO: result: $SIEVELIB" >&5
+echo "${ECHO_T}$SIEVELIB" >&6
+    fi
+fi
+
+if test  -n $SIEVE_FOUND ; then
 
 cat >>confdefs.h <<\_ACEOF
 #define SIEVE 1
 _ACEOF
 
-  # Redefine if there's actually Sieve sorting
-  SORTALIB="modules/.libs/libsort_sieve.a"
-  SORTLTLIB="modules/libsort_sieve.la"
-  if test  "$sieveheadername" != "yes" ; then
-    echo "$as_me:$LINENO: checking for sieve2.h (user supplied)" >&5
-echo $ECHO_N "checking for sieve2.h (user supplied)... $ECHO_C" >&6
-    if test  -r "$sieveheadername/sieve2.h" ; then
-        echo "$as_me:$LINENO: result: $sieveheadername/sieve2.h" >&5
-echo "${ECHO_T}$sieveheadername/sieve2.h" >&6
-        SIEVEINC="-I$sieveheadername"
-    else
-        echo "$as_me:$LINENO: result: not found" >&5
-echo "${ECHO_T}not found" >&6
-        SIEVEINC=""
-        sieveheadername=""
-        { { echo "$as_me:$LINENO: error:
-  Unable to find sieve2.h where you specified, try just --with-sieve to
-  have configure guess" >&5
-echo "$as_me: error:
-  Unable to find sieve2.h where you specified, try just --with-sieve to
-  have configure guess" >&2;}
-   { (exit 1); exit 1; }; }
-    fi
-  else
-    echo "$as_me:$LINENO: checking for sieve2.h" >&5
-echo $ECHO_N "checking for sieve2.h... $ECHO_C" >&6
-    for sievepaths in $sieveheaderpaths
-    do
-      if test  -r "$sievepaths/sieve2.h" ; then
-        SIEVEINC="-I$sievepaths"
-        echo "$as_me:$LINENO: result: $sievepaths/sieve2.h" >&5
-echo "${ECHO_T}$sievepaths/sieve2.h" >&6
-        break
-      fi
-    done
-    if test  -z "$SIEVEINC" ; then
-      echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6
-      { { echo "$as_me:$LINENO: error:
-  Unable to locate sieve2.h, try specifying with --with-sieve" >&5
-echo "$as_me: error:
-  Unable to locate sieve2.h, try specifying with --with-sieve" >&2;}
-   { (exit 1); exit 1; }; }
-    fi
-  fi
-else
-  echo "$as_me:$LINENO: result: not using any sorting" >&5
-echo "${ECHO_T}not using any sorting" >&6
-fi
 
-# Look for libs needed to link to SIEVE first
-if test  "$sieveheadername" != "no" ; then
-  echo "$as_me:$LINENO: checking for sieve2_listextensions in -lsieve" >&5
-echo $ECHO_N "checking for sieve2_listextensions in -lsieve... $ECHO_C" >&6
-if test "${ac_cv_lib_sieve_sieve2_listextensions+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lsieve  $LIBS"
-cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
 
-/* Override any gcc2 internal prototype to avoid an error.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-/* We use char because int might match the return type of a gcc2
-   builtin and then its argument prototype would still apply.  */
-char sieve2_listextensions ();
-int
-main ()
-{
-sieve2_listextensions ();
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
-  (eval $ac_link) 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } &&
-	 { ac_try='test -z "$ac_c_werror_flag"			 || test ! -s conftest.err'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; } &&
-	 { ac_try='test -s conftest$ac_exeext'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  ac_cv_lib_sieve_sieve2_listextensions=yes
+    SORTALIB="modules/.libs/libsort_sieve.a"
+    SORTLTLIB="modules/libsort_sieve.la"
 else
-  echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-ac_cv_lib_sieve_sieve2_listextensions=no
-fi
-rm -f conftest.err conftest.$ac_objext \
-      conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-echo "$as_me:$LINENO: result: $ac_cv_lib_sieve_sieve2_listextensions" >&5
-echo "${ECHO_T}$ac_cv_lib_sieve_sieve2_listextensions" >&6
-if test $ac_cv_lib_sieve_sieve2_listextensions = yes; then
-   SORTLIB="-lsieve"
-else
-  SORTLIB=""
-fi
-
-  if test  -z "$SORTLIB" ; then
-    { { echo "$as_me:$LINENO: error:
-  Unable to link against libSieve.  It appears you are missing the
-  development libraries or they aren't in your linker's path
-  " >&5
-echo "$as_me: error:
-  Unable to link against libSieve.  It appears you are missing the
-  development libraries or they aren't in your linker's path
-  " >&2;}
-   { (exit 1); exit 1; }; }
-  fi
-else
-  SORTLIB=""
+    SORTALIB="modules/.libs/libsort_null.a"
+    SORTLTLIB="modules/libsort_null.la"
 fi
 
 #Look for include files and libs needed to link
@@ -7215,7 +7512,6 @@ done
 
 
 
-
 # Check whether --enable-fast-install or --disable-fast-install was given.
 if test "${enable_fast_install+set}" = set; then
   enableval="$enable_fast_install"
@@ -7772,7 +8068,7 @@ ia64-*-hpux*)
   ;;
 *-*-irix6*)
   # Find out which ABI we are using.
-  echo '#line 7775 "configure"' > conftest.$ac_ext
+  echo '#line 8071 "configure"' > conftest.$ac_ext
   if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -8892,7 +9188,7 @@ fi
 
 
 # Provide some information about the compiler.
-echo "$as_me:8895:" \
+echo "$as_me:9191:" \
      "checking for Fortran 77 compiler version" >&5
 ac_compiler=`set X $ac_compile; echo $2`
 { (eval echo "$as_me:$LINENO: \"$ac_compiler --version </dev/null >&5\"") >&5
@@ -9953,11 +10249,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:9956: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:10252: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:9960: \$? = $ac_status" >&5
+   echo "$as_me:10256: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -10221,11 +10517,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:10224: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:10520: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:10228: \$? = $ac_status" >&5
+   echo "$as_me:10524: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -10325,11 +10621,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:10328: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:10624: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:10332: \$? = $ac_status" >&5
+   echo "$as_me:10628: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -12683,7 +12979,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 12686 "configure"
+#line 12982 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -12783,7 +13079,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 12786 "configure"
+#line 13082 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -15121,11 +15417,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:15124: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:15420: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:15128: \$? = $ac_status" >&5
+   echo "$as_me:15424: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -15225,11 +15521,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:15228: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:15524: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:15232: \$? = $ac_status" >&5
+   echo "$as_me:15528: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -16813,11 +17109,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:16816: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:17112: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:16820: \$? = $ac_status" >&5
+   echo "$as_me:17116: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -16917,11 +17213,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:16920: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:17216: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:16924: \$? = $ac_status" >&5
+   echo "$as_me:17220: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -19140,11 +19436,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:19143: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:19439: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:19147: \$? = $ac_status" >&5
+   echo "$as_me:19443: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -19408,11 +19704,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:19411: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:19707: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:19415: \$? = $ac_status" >&5
+   echo "$as_me:19711: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -19512,11 +19808,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:19515: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:19811: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:19519: \$? = $ac_status" >&5
+   echo "$as_me:19815: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -22973,6 +23269,10 @@ s,@AMDEPBACKSLASH@,$AMDEPBACKSLASH,;t t
 s,@CCDEPMODE@,$CCDEPMODE,;t t
 s,@am__fastdepCC_TRUE@,$am__fastdepCC_TRUE,;t t
 s,@am__fastdepCC_FALSE@,$am__fastdepCC_FALSE,;t t
+s,@LDAPLIB@,$LDAPLIB,;t t
+s,@LDAPINC@,$LDAPINC,;t t
+s,@SIEVELIB@,$SIEVELIB,;t t
+s,@SIEVEINC@,$SIEVEINC,;t t
 s,@glibconfig@,$glibconfig,;t t
 s,@gmimeconfig@,$gmimeconfig,;t t
 s,@CPP@,$CPP,;t t
@@ -23002,7 +23302,6 @@ s,@PGSQLLTLIB@,$PGSQLLTLIB,;t t
 s,@SQLITELIB@,$SQLITELIB,;t t
 s,@SQLITELALIB@,$SQLITELALIB,;t t
 s,@SQLITELTLIB@,$SQLITELTLIB,;t t
-s,@SORTLIB@,$SORTLIB,;t t
 s,@SORTALIB@,$SORTALIB,;t t
 s,@SORTLTLIB@,$SORTLTLIB,;t t
 s,@AUTHALIB@,$AUTHALIB,;t t
@@ -23010,9 +23309,6 @@ s,@AUTHLTLIB@,$AUTHLTLIB,;t t
 s,@MYSQLINC@,$MYSQLINC,;t t
 s,@PGSQLINC@,$PGSQLINC,;t t
 s,@SQLITEINC@,$SQLITEINC,;t t
-s,@SIEVEINC@,$SIEVEINC,;t t
-s,@LDAPLIB@,$LDAPLIB,;t t
-s,@LDAPINC@,$LDAPINC,;t t
 s,@DM_LOGDIR@,$DM_LOGDIR,;t t
 s,@DM_CONFDIR@,$DM_CONFDIR,;t t
 s,@DM_STATEDIR@,$DM_STATEDIR,;t t
@@ -23771,8 +24067,8 @@ GMIME:         $ac_gmime_libs
 MYSQL:         $MYSQLLIB
 PGSQL:         $PGSQLLIB
 SQLITE:        $SQLITELIB
-SIEVE:         $SORTLIB
-LDAP:          $LDAPLIB
+SIEVE:         $SIEVEINC $SIEVELIB
+LDAP:          $LDAPINC $LDAPLIB
 SHARED:        $enable_shared
 STATIC:        $enable_static
 CHECK:         $with_check
@@ -23788,8 +24084,8 @@ GMIME:         $ac_gmime_libs
 MYSQL:         $MYSQLLIB
 PGSQL:         $PGSQLLIB
 SQLITE:        $SQLITELIB
-SIEVE:         $SORTLIB
-LDAP:          $LDAPLIB
+SIEVE:         $SIEVEINC $SIEVELIB
+LDAP:          $LDAPINC $LDAPLIB
 SHARED:        $enable_shared
 STATIC:        $enable_static
 CHECK:         $with_check
