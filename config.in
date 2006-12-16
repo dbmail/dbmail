@@ -1,6 +1,6 @@
 /* config.in.  Generated from configure.in by autoheader.  */
 
-/* Define if LDAP authentication will be used. */
+/* Define if LDAP sorting will be used. */
 #undef AUTHLDAP
 
 /* Define to 1 if you have the <crypt.h> header file. */
