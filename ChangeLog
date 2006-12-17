@@ -1,3 +1,8 @@
+2006-12-17  Paul J Stevens <paul@nfg.nl>
+
+	* Makefile.in, config.in, configure, man/Makefile.in, modules/Makefile.in:
+	rebuild configure after changes in automake files
+
 2006-12-16  Aaron Stone  <aaron@serendipity.cx>
 
 	* acinclude.m4:
