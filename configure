@@ -6900,7 +6900,7 @@ esac
 
 
 
-if test -n "$MYSQLINC"; then
+if test -n "$MYSQLLIB"; then
   MYSQL_TRUE=
   MYSQL_FALSE='#'
 else
@@ -6910,7 +6910,7 @@ fi
 
 
 
-if test -n "$PGSQLINC"; then
+if test -n "$PGSQLLIB"; then
   PGSQL_TRUE=
   PGSQL_FALSE='#'
 else
@@ -6920,7 +6920,7 @@ fi
 
 
 
-if test -n "$SQLITEINC"; then
+if test -n "$SQLITELIB"; then
   SQLITE_TRUE=
   SQLITE_FALSE='#'
 else
@@ -6930,7 +6930,7 @@ fi
 
 
 
-if test -n "$SIEVEINC"; then
+if test -n "$SIEVELIB"; then
   SIEVE_TRUE=
   SIEVE_FALSE='#'
 else
@@ -6940,7 +6940,7 @@ fi
 
 
 
-if test -n "$LDAPINC"; then
+if test -n "$LDAPLIB"; then
   LDAP_TRUE=
   LDAP_FALSE='#'
 else
