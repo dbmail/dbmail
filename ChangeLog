@@ -1,3 +1,8 @@
+2006-12-18  Paul J Stevens <paul@nfg.nl>
+
+	* configure.in, configure:
+	cleanup AM_CONDITIONALS after acinclude.m4 changes
+
 2006-12-17  Paul J Stevens <paul@nfg.nl>
 
 	* Makefile.in, config.in, configure, man/Makefile.in, modules/Makefile.in:
