@@ -56,11 +56,6 @@ const char * db_get_sql(sql_fragment_t frag)
 		case SQL_BINARY:
 			return "";
 		break;
-		case SQL_REGEXP:
-			TRACE(TRACE_ERROR, "We deliberately don't support REGEXP operations.");
-			sqlite3_close(conn);
-			exit(255);
-		break;
 		/* some explaining:
 		 *
 		 * sqlite3 has a limited number of A x B operators: LIKE, GLOB, REGEXP.
@@ -74,6 +69,10 @@ const char * db_get_sql(sql_fragment_t frag)
 		break;
 		case SQL_INSENSITIVE_LIKE:
 			return "LIKE";
+		break;
+		case SQL_SEQ_NEXTVAL:
+		default:
+			return "NULL";
 		break;
 	}
 	return NULL;
@@ -301,6 +300,16 @@ u64_t db_insert_result(const char *sequence_identifier UNUSED)
 {
 	if (!conn) return 0;
 	return (u64_t)sqlite3_last_insert_rowid(conn);
+}
+
+u64_t db_sequence_currval(const char *sequence_identifier)
+{
+	return db_insert_result(sequence_identifier);
+}
+
+u64_t db_sequence_nextval(const char *sequence_identifier UNUSED)
+{
+	return 0; // make this trigger the use of NULL in the ensuing INSERT
 }
 
 int db_query(const char *the_query)

@@ -18,7 +18,11 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+<<<<<<< master
 /* $Id$
+=======
+/* $Id$
+>>>>>>> dbmail_2_2
  *
  * imapcommands.c
  * 
@@ -32,9 +36,6 @@
 #define _GNU_SOURCE
 #endif
 
-#ifndef MAX_LINESIZE
-#define MAX_LINESIZE 1024
-#endif
 
 #ifndef MAX_RETRIES
 #define MAX_RETRIES 12
@@ -695,7 +696,7 @@ int _ic_list(struct ImapSession *self)
 	}
 
 	/* check the reference name, should contain only accepted mailboxname chars */
-	for (i = 0, slen = strlen(self->args[0]); self->args[0][i]; i++) {
+	for (i = 0, slen = strlen(AcceptedMailboxnameChars); self->args[0][i]; i++) {
 		if (stridx(AcceptedMailboxnameChars, self->args[0][i]) == slen) {
 			/* wrong char found */
 			dbmail_imap_session_printf(self,
@@ -1143,23 +1144,16 @@ int _ic_check(struct ImapSession *self)
 int _ic_close(struct ImapSession *self)
 {
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
-	int result;
+	gboolean result;
 
 	if (!check_state_and_args(self, "CLOSE", 0, 0, IMAPCS_SELECTED))
 		return 1;	/* error, return */
 
 	/* check if the user has to right to expunge all messages from the
 	   mailbox. */
-	result = acl_has_right(&ud->mailbox, ud->userid, ACL_RIGHT_DELETE);
-	if (result < 0) {
-		dbmail_imap_session_printf(self, "* BYE Internal database error\r\n");
-		return -1;
-	}
-	/* only perform the expunge if the user has the right to do it */
-	if (result == 1)
-		if (ud->mailbox.permission == IMAPPERM_READWRITE)
-			db_expunge(ud->mailbox.uid, ud->userid, NULL,
-				   NULL);
+
+	if ((result = acl_has_right(&ud->mailbox, ud->userid, ACL_RIGHT_DELETE)))
+		db_expunge(ud->mailbox.uid, ud->userid, NULL, NULL);
 
 
 	/* ok, update state (always go to IMAPCS_AUTHENTICATED) */
@@ -1202,7 +1196,7 @@ int _ic_expunge(struct ImapSession *self)
 
 	if (!check_state_and_args(self, "EXPUNGE", 0, 0, IMAPCS_SELECTED))
 		return 1;	/* error, return */
-
+	
 	if (ud->mailbox.permission != IMAPPERM_READWRITE) {
 		dbmail_imap_session_printf(self,
 			"%s NO you do not have write permission on this folder\r\n",

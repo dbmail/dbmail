@@ -12,7 +12,7 @@ retrieved from a database.
 
 Read the INSTALL file for installation of DBMail.
 
-Read the EXTRAS file about extra features of DBMail.
+Read the README.* files about extra features of DBMail.
 
 
 Why is it useful?
@@ -52,9 +52,9 @@ DBMail is now a community effort to create a fast, effecient and scalable
 database driven mailingsystem. Both IC&S and NFG are fully behind 
 opensource and the GPL. Therefore DBMail has the GPL licence.
 
-However IC&S does provide commercial support and consultancy for this
+However NFG and IC&S do provide commercial support and consultancy for this
 product. For more information about this you can send an email to
-info@ic-s.nl.
+info@nfg.nl or info@ic-s.nl or visit http://www.dbmail.eu.
 
 ***
 Disclaimer: IC&S nor NFG are responsible for any damages resulting from use 
@@ -79,15 +79,7 @@ Check the website for further DBMail plans.
 What kind of licence is DBMail?
 ===============================
 
-DBMail is used under the GPL+ licence. 
-
-The + is that i would like to know how stuff is working out. So
-If you have DBMail running and you have like 1002919183 users, 
-i would want to know (to bragg about it ;).
-
-
-The rest of the licence is described below:
--------------------------------------------
+DBMail is used under the GPL licence. 
 
 		    GNU GENERAL PUBLIC LICENSE
 		       Version 2, June 1991

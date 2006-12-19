@@ -40,11 +40,10 @@
  * \param mboxid id of mailbox
  * \param right the right to check for
  * \return 
- *     - -1 on db error
  *     -  0 if no right
  *     -  1 if user has this right
  */
-int acl_has_right(mailbox_t *mailbox, u64_t userid, ACLRight_t right);
+gboolean acl_has_right(mailbox_t *mailbox, u64_t userid, ACLRight_t right);
 
 /**
  * \brief sets new rights to a mailbox for a user.

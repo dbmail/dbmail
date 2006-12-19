@@ -1,4 +1,8 @@
+<<<<<<< master
 # $Id$
+=======
+# $Id$
+>>>>>>> dbmail_2_2
 # Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
 #
 # This program is free software; you can redistribute it and/or 
@@ -28,8 +32,8 @@ pgsqlheaderpaths="/usr/include/pgsql /usr/include /usr/local/include/pgsql \
                   /usr/freeware/include $HOME/include $HOME/pgsql/include \
 		  /usr/local/pgsql/include /usr/include/postgresql $HOME"
 
-ldapheaderpaths="/usr/include /usr/local/include"
-sieveheaderpaths="/usr/include /usr/local/include"
+ldapprefixes="/usr /usr/local"
+sieveprefixes="/usr /usr/local"
 
 AC_DEFINE(_GNU_SOURCE,'','Defined GNU SOURCE')
 
@@ -46,10 +50,8 @@ AM_CONDITIONAL(STATIC, [ test "$enable_static" = "yes" ])
 DM_DEFINES
 DBMAIL_BOTH_SQL_CHECK
 DBMAIL_CHECK_SQL_LIBS
-DBMAIL_AUTH_CONF
-DBMAIL_CHECK_LDAP_LIBS
+DBMAIL_LDAP_CONF
 DBMAIL_SIEVE_CONF
-DBMAIL_CHECK_SIEVE_LIBS
 DBMAIL_CHECK_GLIB
 DBMAIL_CHECK_GMIME
 DBMAIL_CHECK_GC
@@ -63,11 +65,20 @@ AC_PROG_CC
 AC_COMPILE_WARNINGS
 AC_C_CONST
 AC_C_INLINE
+<<<<<<< master
 AM_CONDITIONAL(MYSQL, [test -n "$MYSQLINC"])
 AM_CONDITIONAL(PGSQL, [test -n "$PGSQLINC"])
 AM_CONDITIONAL(SQLITE, [test -n "$SQLITEINC"])
+AM_CONDITIONAL(INGRES, [test -n "$INGRESINC"])
 AM_CONDITIONAL(SIEVE, [test -n "$SIEVEINC"])
 AM_CONDITIONAL(LDAP, [test -n "$LDAPINC"])
+=======
+AM_CONDITIONAL(MYSQL, [test -n "$MYSQLLIB"])
+AM_CONDITIONAL(PGSQL, [test -n "$PGSQLLIB"])
+AM_CONDITIONAL(SQLITE, [test -n "$SQLITELIB"])
+AM_CONDITIONAL(SIEVE, [test -n "$SIEVELIB"])
+AM_CONDITIONAL(LDAP, [test -n "$LDAPLIB"])
+>>>>>>> dbmail_2_2
 AC_C_BIGENDIAN
 AC_CHECK_HEADERS(endian.h)
 AC_CHECK_HEADERS(crypt.h)
@@ -84,7 +95,16 @@ AC_SUBST(SQLITELIB)
 AC_SUBST(SQLITELALIB)
 AC_SUBST(SQLITELTLIB)
 
+<<<<<<< master
+AC_SUBST(INGRESLIB)
+AC_SUBST(INGRESLALIB)
+AC_SUBST(INGRESLTLIB)
+
 AC_SUBST(SORTLIB)
+=======
+AC_SUBST(SIEVEINC)
+AC_SUBST(SIEVELIB)
+>>>>>>> dbmail_2_2
 AC_SUBST(SORTALIB)
 AC_SUBST(SORTLTLIB)
 
@@ -94,8 +114,7 @@ AC_SUBST(AUTHLTLIB)
 AC_SUBST(MYSQLINC)
 AC_SUBST(PGSQLINC)
 AC_SUBST(SQLITEINC)
-
-AC_SUBST(SIEVEINC)
+AC_SUBST(INGRESINC)
 
 AC_SUBST(LDAPLIB)
 AC_SUBST(LDAPINC)

@@ -52,7 +52,7 @@ static int acl_get_rightsstring(u64_t userid, u64_t mboxid,
 				/*@out@*/ char *rightsstring);
 
 
-int acl_has_right(mailbox_t *mailbox, u64_t userid, ACLRight_t right)
+gboolean acl_has_right(mailbox_t *mailbox, u64_t userid, ACLRight_t right)
 {
 	u64_t anyone_userid;
 	int test;
@@ -87,10 +87,14 @@ int acl_has_right(mailbox_t *mailbox, u64_t userid, ACLRight_t right)
 	/* else check the 'anyone' user */
 	test = auth_user_exists(DBMAIL_ACL_ANYONE_USER, &anyone_userid);
 	if (test == DM_EQUERY) 
-		return DM_EQUERY;
-	if (test)
-		return db_acl_has_right(mailbox, anyone_userid, right_flag);
-	
+		return FALSE;
+	if (test) {
+		if (db_acl_has_right(mailbox, anyone_userid, right_flag))
+			return TRUE;
+		else
+			return FALSE;
+	}
+
 	return FALSE;
 }
 

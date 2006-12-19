@@ -150,6 +150,7 @@ START_TEST(test_dbmail_mailbox_open)
 	struct DbmailMailbox *mb = dbmail_mailbox_new(get_mailbox_id());
 	result = dbmail_mailbox_open(mb);
 	fail_unless(result == 0, "dbmail_mailbox_open failed");
+	dbmail_mailbox_free(mb);
 }
 END_TEST
 
@@ -355,7 +356,23 @@ START_TEST(test_dbmail_mailbox_search)
 	dbmail_mailbox_free(mb);
 	g_strfreev(array);
 
+	// 
+	idx=0;
+	sorted = 0;
+	mb = dbmail_mailbox_new(get_mailbox_id());
+	args = g_strdup("OR FROM myclient SUBJECT myclient");
+	array = g_strsplit(args," ",0);
+	g_free(args);
 	
+	dbmail_mailbox_build_imap_search(mb, array, &idx, sorted);
+	dbmail_mailbox_search(mb);
+//	found = g_tree_nnodes(mb->ids);
+//	fail_unless(found==1,"dbmail_mailbox_search failed: SEARCH UID 1");
+	
+	dbmail_mailbox_free(mb);
+	g_strfreev(array);
+
+
 }
 END_TEST
 

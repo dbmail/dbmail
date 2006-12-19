@@ -40,7 +40,6 @@ extern char *configFile;
 extern db_param_t _db_params;
 extern int quiet;
 extern int reallyquiet;
-extern char *query;
 
 u64_t useridnr = 0;
 u64_t useridnr_domain = 0;
@@ -808,7 +807,9 @@ START_TEST(test_db_imap_utf7_like)
 	for (i = 0; trythese[i] != NULL; i++) {
 		char *result = db_imap_utf7_like("name", trythese[i], "/%");
 
-		fail_unless(strcmp(result, getthese[i])==0, "Failed to make db_imap_utf7_like string for [%s]", trythese[i]);
+		fail_unless(strcmp(result, getthese[i])==0, 
+			"Possible failure to make db_imap_utf7_like string for [%s]", 
+			trythese[i]);
 
 		dm_free(result);
 	}

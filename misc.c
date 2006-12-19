@@ -30,7 +30,7 @@
 const char AcceptedMailboxnameChars[] =
     "abcdefghijklmnopqrstuvwxyz"
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    "0123456789-=/ _.&,+@()[]'";
+    "0123456789-=/ _.&,+@()[]'#";
 
 /**
  * abbreviated names of the months
@@ -2112,8 +2112,14 @@ char * imap_cleanup_address(const char *a)
 	char prev,next=0;
 	unsigned incode=0, inquote=0;
 	size_t i, l;
-	GString *s = g_string_new("");
+	GString *s;
+
+	if (!a)
+		return g_strdup("");
+	if (!a[0])
+		return g_strdup("");
 	
+	s = g_string_new("");
 	t = g_strdup(a);
 	inptr = t;
 	inptr = g_strstrip(inptr);
@@ -2130,8 +2136,7 @@ char * imap_cleanup_address(const char *a)
 	}
 
 	l = strlen(inptr);
-
-	for (i=0; i<l-1; i++) {
+	for (i = 0; i < l - 1; i++) {
 
 		next=inptr[i+1];
 

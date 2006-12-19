@@ -170,14 +170,30 @@ u64_t db_get_result_u64(unsigned row, unsigned field);
 
 /**
  * \brief return the ID generated for an AUTO_INCREMENT column
- *        by the previous column.
- * \param sequence_identifier sequence identifier
+ *        by the previous query. This entails getting a current value
+ *        of a sequence for non-mysql databases.
+ * \param seq_id sequence identifier
  * \return 
  *       - 0 if no such id (if for instance no AUTO_INCREMENT
  *          value was generated).
  *       - the id otherwise
  */
-u64_t db_insert_result(const char *sequence_identifier);
+u64_t db_insert_result(const char *seq_id);
+
+u64_t db_sequence_currval(const char *seq_id);
+
+/**
+ * \brief return the ID to be generated for an AUTO_INCREMENT column
+ *        by the current/next query. This entails popping a next value
+ *        of a sequence for non-mysql databases.
+ * \param seq_id sequence identifier
+ * \return 
+ *       - 0 if no such id (if for instance no AUTO_INCREMENT
+ *          value was generated).
+ *       - the id otherwise
+ */
+
+u64_t db_sequence_nextval(const char *seq_id);
 
 /**
  * \brief escape a string for use in query

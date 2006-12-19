@@ -1433,6 +1433,10 @@ static gboolean _merge_search(GNode *node, GTree *found)
 				g_tree_merge(a->found,b->found,IST_SUBSEARCH_OR);
 			if (a->found && found)
 				g_tree_merge(found,a->found,IST_SUBSEARCH_AND);
+
+			a->merged = TRUE;
+			b->merged = TRUE;
+
 			break;
 			
 		default:

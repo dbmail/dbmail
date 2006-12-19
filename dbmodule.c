@@ -48,8 +48,11 @@ int db_load_driver(void)
 		driver = "mysql";
 	else if (strcasecmp(_db_params.driver, "SQLITE") == 0)
 		driver = "sqlite";
+	else if (strcasecmp(_db_params.driver, "INGRES") == 0)
+		driver = "mod_ingres";
+
 	else
-		TRACE(TRACE_FATAL, "unsupported driver: %s, please choose from MySQL, PGSQL, SQLite",
+		TRACE(TRACE_FATAL, "unsupported driver: %s, please choose from MySQL, PGSQL, SQLite, Ingres",
 				_db_params.driver);
 
 	/* Try local build area, then dbmail lib paths, then system lib path. */
@@ -83,7 +86,9 @@ int db_load_driver(void)
 	||  !g_module_symbol(module, "db_disconnect",          (gpointer)&db->disconnect          )
 	||  !g_module_symbol(module, "db_check_connection",    (gpointer)&db->check_connection    )
 	||  !g_module_symbol(module, "db_query",               (gpointer)&db->query               )
-	||  !g_module_symbol(module, "db_insert_result",       (gpointer)&db->insert_result       )
+	||  !g_module_symbol(module, "db_insert_result",       (gpointer)&db->insert_result       ) // deprecated: mysql-only
+	||  !g_module_symbol(module, "db_sequence_nextval",    (gpointer)&db->sequence_nextval    )
+	||  !g_module_symbol(module, "db_sequence_currval",    (gpointer)&db->sequence_currval    )
 	||  !g_module_symbol(module, "db_num_rows",            (gpointer)&db->num_rows            )
 	||  !g_module_symbol(module, "db_num_fields",          (gpointer)&db->num_fields          )
 	||  !g_module_symbol(module, "db_get_result",          (gpointer)&db->get_result          )
@@ -125,6 +130,10 @@ int db_query(const char *the_query)
 	{ return db->query(the_query); }
 u64_t db_insert_result(const char *sequence_identifier)
 	{ return db->insert_result(sequence_identifier); }
+u64_t db_sequence_nextval(const char *sequence_identifier)
+	{ return db->sequence_nextval(sequence_identifier); }
+u64_t db_sequence_currval(const char *sequence_identifier)
+	{ return db->sequence_currval(sequence_identifier); }
 unsigned db_num_rows(void)
 	{ return db->num_rows(); }
 unsigned db_num_fields(void)

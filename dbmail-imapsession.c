@@ -27,10 +27,6 @@
 
 #include "dbmail.h"
 
-#ifndef MAX_LINESIZE
-#define MAX_LINESIZE (10*1024)
-#endif
-
 #define THIS_MODULE "imapsession"
 #define BUFLEN 2048
 #define SEND_BUF_SIZE 1024
@@ -38,10 +34,6 @@
 
 extern db_param_t _db_params;
 #define DBPFX _db_params.pfx
-
-/* for issuing queries to the backend */
-char query[DEF_QUERYSIZE];
-
 
 /* cache */
 extern cache_t cached_msg;
@@ -595,10 +587,14 @@ int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self)
 	GList *l;
 	u64_t *uid, *lo, *hi;
 	u64_t id;
+	char query[DEF_QUERYSIZE];
+	memset(query,0,DEF_QUERYSIZE);
 	
 	g_return_val_if_fail(self->fetch_ids,-1);
 
 	l = g_tree_keys(self->fetch_ids);
+
+	g_return_val_if_fail(l,-1);
 
 	l = g_list_first(l);
 	lo = (u64_t *)l->data;
@@ -1636,9 +1632,14 @@ int dbmail_imap_session_mailbox_close(struct ImapSession *self)
 	return 0;
 }
 
-int dbmail_imap_session_mailbox_select_recent(struct ImapSession *self) {
+int dbmail_imap_session_mailbox_select_recent(struct ImapSession *self) 
+{
 	unsigned i, j;
+	char query[DEF_QUERYSIZE];
+	memset(query,0,DEF_QUERYSIZE);
+
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
+
 
 	self->recent = NULL;
 	snprintf(query, DEF_QUERYSIZE,
@@ -1659,8 +1660,12 @@ int dbmail_imap_session_mailbox_select_recent(struct ImapSession *self) {
 	return g_list_length(self->recent);
 }
 
-int dbmail_imap_session_mailbox_update_recent(struct ImapSession *self) {
+int dbmail_imap_session_mailbox_update_recent(struct ImapSession *self) 
+{
 	GList *slices = NULL;
+	char query[DEF_QUERYSIZE];
+	memset(query,0,DEF_QUERYSIZE);
+
 	
 	if (self->recent == NULL)
 		return 0;

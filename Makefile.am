@@ -67,8 +67,7 @@ MODULES = dbmodule.c \
 	sortmodule.c
 
 
-# CFLAGS
-#AM_CFLAGS = -fomit-frame-pointer
+AM_CFLAGS = @SIEVEINC@ @LDAPINC@
 
 INCLUDES = -I$(top_srcdir)
 
@@ -111,7 +110,7 @@ AM_LDFLAGS = -export-dynamic -lcrypt
 libdbmail_la_SOURCES = $(COMMON) $(SERVER) $(DELIVER) $(MODULES)
 else
 libdbmail_la_SOURCES = $(COMMON) $(SERVER) $(DELIVER)
-libdbmail_la_LIBADD = @MYSQLLTLIB@ @PGSQLLTLIB@ @SQLITELTLIB@ @SORTLTLIB@ @AUTHLTLIB@
+libdbmail_la_LIBADD = @MYSQLLTLIB@ @PGSQLLTLIB@ @SQLITELTLIB@ @INGRESLTLIB@ @SORTLTLIB@ @AUTHLTLIB@
 endif
 
 libdbmail_la_LDFLAGS = $(AM_LDFLAGS)

@@ -57,9 +57,6 @@ const char * db_get_sql(sql_fragment_t frag)
 		case SQL_BINARY:
 			return "";
 		break;
-		case SQL_REGEXP:
-			return "~";
-		break;
 		case SQL_SENSITIVE_LIKE:
 			return "LIKE";
 		break;
@@ -68,6 +65,10 @@ const char * db_get_sql(sql_fragment_t frag)
 		break;
 		case SQL_ENCODE_ESCAPE:
 			return "ENCODE(%s::bytea,'escape')";
+		break;
+		case SQL_SEQ_NEXTVAL:
+		default:
+			return "";
 		break;
 	}
 	return NULL;
@@ -247,11 +248,15 @@ const char *db_get_result(unsigned row, unsigned field)
 
 u64_t db_insert_result(const char *sequence_identifier)
 {
-	char query[DEF_QUERYSIZE];
-	u64_t insert_result;
+	return db_sequence_currval(sequence_identifier);
+}
 
-	/* postgres uses the currval call on a sequence to determine
-	 * the result value of an insert query */
+u64_t db_sequence_currval(const char *sequence_identifier)
+{
+	char query[DEF_QUERYSIZE];
+	memset(query,0,DEF_QUERYSIZE);
+	u64_t seq;
+
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT currval('%s%s_seq')",_db_params.pfx, sequence_identifier);
 
@@ -260,10 +265,29 @@ u64_t db_insert_result(const char *sequence_identifier)
 		db_free_result();
 		return 0;
 	}
-	insert_result = strtoull(db_get_result(0, 0), NULL, 10);
+	seq = strtoull(db_get_result(0, 0), NULL, 10);
 	db_free_result();
-	return insert_result;
+	return seq;
 }
+
+u64_t db_sequence_nextval(const char *sequence_identifier UNUSED)
+{
+	char query[DEF_QUERYSIZE];
+	u64_t seq;
+
+	snprintf(query, DEF_QUERYSIZE,
+		 "SELECT nextval('%s%s_seq')",_db_params.pfx, sequence_identifier);
+
+	db_query(query);
+	if (db_num_rows() == 0) {
+		db_free_result();
+		return 0;
+	}
+	seq = strtoull(db_get_result(0, 0), NULL, 10);
+	db_free_result();
+	return seq;
+}
+
 
 int db_query(const char *q)
 {

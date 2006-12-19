@@ -17,7 +17,11 @@
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 INCLUDES = -I$(top_srcdir)
-AM_CFLAGS = @MYSQLINC@ @PGSQLINC@ @SQLITEINC@ @LDAPINC@ @SIEVEINC@ -fomit-frame-pointer
+<<<<<<< master
+AM_CFLAGS = @MYSQLINC@ @PGSQLINC@ @SQLITEINC@ @INGRESINC@ @LDAPINC@ @SIEVEINC@ -fomit-frame-pointer
+=======
+AM_CFLAGS = @MYSQLINC@ @PGSQLINC@ @SQLITEINC@ @LDAPINC@ @SIEVEINC@
+>>>>>>> dbmail_2_2
 
 
 
@@ -34,6 +38,7 @@ pkglibdir = $(libdir)
 pkglib_LTLIBRARIES = libmysql.la \
 	libpgsql.la \
 	libsqlite.la \
+	libmod_ingres.la \
 	libsort_sieve.la \
 	libauth_sql.la \
 	libauth_ldap.la 
@@ -56,13 +61,17 @@ libsqlite_la_SOURCES = dbsqlite.c
 libsqlite_la_LIBADD = @SQLITELIB@
 endif
 
+if INGRES
+libmod_ingres_la_SOURCES = dbingres.c
+libmod_ingres_la_LIBADD = @INGRESLIB@
+endif
+
 # This one is always built.
 libsort_null_la_SOURCES = sortnull.c
-libsort_null_la_LIBADD = @SORTLIB@
 
 if SIEVE
 libsort_sieve_la_SOURCES = sortsieve.c
-libsort_sieve_la_LIBADD = @SORTLIB@
+libsort_sieve_la_LIBADD = @SIEVELIB@
 endif
 
 # This one is always built.

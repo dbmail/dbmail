@@ -17,7 +17,11 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  *
+<<<<<<< master
  *  $Id$ 
+=======
+ *  $Id$ 
+>>>>>>> dbmail_2_2
  *
  *
  *  
@@ -114,10 +118,12 @@ END_TEST
 START_TEST(test_dbmail_message_retrieve)
 {
 	struct DbmailMessage *m, *n;
+	GString *s;
 	u64_t physid;
 
+	s = g_string_new(multipart_message);
 	m = dbmail_message_new();
-	m = dbmail_message_init_with_string(m, g_string_new(multipart_message));
+	m = dbmail_message_init_with_string(m, s);
 	dbmail_message_set_header(m, 
 			"References", 
 			"<20050326155326.1afb0377@ibook.linuks.mine.nu> <20050326181954.GB17389@khazad-dum.debian.net> <20050326193756.77747928@ibook.linuks.mine.nu> ");
@@ -132,6 +138,7 @@ START_TEST(test_dbmail_message_retrieve)
 
 	dbmail_message_free(m);
 	dbmail_message_free(n);
+	g_string_free(s,TRUE);
 
 }
 END_TEST
@@ -225,7 +232,7 @@ START_TEST(test_dbmail_message_hdrs_to_string)
         m = dbmail_message_init_with_string(m, s);
 
 	result = dbmail_message_hdrs_to_string(m);
-	fail_unless(strlen(result)==634, "dbmail_message_hdrs_to_string failed [%d]", strlen(result));
+	fail_unless(strlen(result)==634, "dbmail_message_hdrs_to_string failed [%d] != [634]\n[%s]\n", strlen(result), result);
 	
 	g_string_free(s,TRUE);
         dbmail_message_free(m);
@@ -245,7 +252,7 @@ START_TEST(test_dbmail_message_body_to_string)
 	m = dbmail_message_new();
         m = dbmail_message_init_with_string(m,s);
 	result = dbmail_message_body_to_string(m);
-	fail_unless(strlen(result)==1045, "dbmail_message_body_to_string failed");
+	fail_unless(strlen(result)==1045, "dbmail_message_body_to_string failed [%d] != [1045]\n[%s]\n", strlen(result),result);
 	
         dbmail_message_free(m);
 	g_string_free(s,TRUE);
@@ -256,7 +263,7 @@ START_TEST(test_dbmail_message_body_to_string)
         m = dbmail_message_init_with_string(m,s);
 	result = dbmail_message_body_to_string(m);
 //	printf("{%d} [%s]\n", strlen(result), result);
-	fail_unless(strlen(result)==329, "dbmail_message_body_to_string failed");
+	fail_unless(strlen(result)==329, "dbmail_message_body_to_string failed [%s]", result);
 	
         dbmail_message_free(m);
 	g_string_free(s,TRUE);
@@ -324,11 +331,15 @@ END_TEST
 
 START_TEST(test_dbmail_message_set_header)
 {
-	struct DbmailMessage *m = dbmail_message_new();
-	m = dbmail_message_init_with_string(m, g_string_new(multipart_message));
+	struct DbmailMessage *m;
+	GString *s;
+	s =  g_string_new(multipart_message);
+	m = dbmail_message_new();
+	m = dbmail_message_init_with_string(m,s);
 	dbmail_message_set_header(m, "X-Foobar","Foo Bar");
 	fail_unless(dbmail_message_get_header(m, "X-Foobar")!=NULL, "set_header failed");
 	dbmail_message_free(m);
+	g_string_free(s,TRUE);
 }
 END_TEST
 
@@ -337,11 +348,13 @@ START_TEST(test_dbmail_message_get_header)
 	char *t;
 	struct DbmailMessage *h = dbmail_message_new();
 	struct DbmailMessage *m = dbmail_message_new();
+	GString *s, *j;
 	
-	
-	m = dbmail_message_init_with_string(m, g_string_new(multipart_message));
+	s = g_string_new(multipart_message);
+	m = dbmail_message_init_with_string(m, s);
 	t = dbmail_message_hdrs_to_string(m);
-	h = dbmail_message_init_with_string(h, g_string_new(t));
+	j = g_string_new(t);
+	h = dbmail_message_init_with_string(h, j);
 	g_free(t);
 	
 	fail_unless(dbmail_message_get_header(m, "X-Foobar")==NULL, "get_header failed on full message");
@@ -352,6 +365,8 @@ START_TEST(test_dbmail_message_get_header)
 	
 	dbmail_message_free(m);
 	dbmail_message_free(h);
+	g_string_free(s,TRUE);
+	g_string_free(j,TRUE);
 
 }
 END_TEST
@@ -387,12 +402,14 @@ START_TEST(test_dbmail_message_cache_headers)
 {
 	struct DbmailMessage *m = dbmail_message_new();
 	char *s = g_new0(char,20);
-	m = dbmail_message_init_with_string(m, g_string_new(multipart_message));
+	GString *j =  g_string_new(multipart_message);
+	m = dbmail_message_init_with_string(m,j);
 	dbmail_message_set_header(m, 
 			"References", 
 			"<20050326155326.1afb0377@ibook.linuks.mine.nu> <20050326181954.GB17389@khazad-dum.debian.net> <20050326193756.77747928@ibook.linuks.mine.nu> ");
 	dbmail_message_store(m);
 	dbmail_message_free(m);
+	g_string_free(j,TRUE);
 
 	sprintf(s,"%.*s",10,"abcdefghijklmnopqrstuvwxyz");
 	fail_unless(MATCH(s,"abcdefghij"),"string truncate failed");
@@ -403,10 +420,12 @@ END_TEST
 START_TEST(test_dbmail_message_get_header_addresses)
 {
 	GList * result;
+	GString *s;
 	struct DbmailMessage *m;
 
+	s = g_string_new(multipart_message);
 	m = dbmail_message_new();
-	m = dbmail_message_init_with_string(m,g_string_new(multipart_message));
+	m = dbmail_message_init_with_string(m,s);
 	
 	result = dbmail_message_get_header_addresses(m, "Cc");
 	result = g_list_first(result);
@@ -418,16 +437,19 @@ START_TEST(test_dbmail_message_get_header_addresses)
 	g_list_foreach(result,(GFunc)g_free, NULL);
 	g_list_free(result);
 	dbmail_message_free(m);
+	g_string_free(s,TRUE);
 }
 END_TEST
 
 START_TEST(test_dbmail_message_get_header_repeated)
 {
 	GTuples *headers;
+	GString *s;
 	struct DbmailMessage *m;
 
+	s = g_string_new(multipart_message);
 	m = dbmail_message_new();
-	m = dbmail_message_init_with_string(m,g_string_new(multipart_message));
+	m = dbmail_message_init_with_string(m,s);
 	
 	headers = dbmail_message_get_header_repeated(m, "Received");
 
@@ -444,6 +466,7 @@ START_TEST(test_dbmail_message_get_header_repeated)
 	g_tuples_destroy(headers);
 
 	dbmail_message_free(m);
+	g_string_free(s,TRUE);
 }
 END_TEST
 
@@ -458,7 +481,7 @@ START_TEST(test_dbmail_message_construct)
 	"Subject: Some test\n"
 	"To: bar@foo.org\n"
 	"MIME-Version: 1.0\n"
-	"Content-Type: text/plain\n"
+	"Content-Type: text/plain; charset=utf-8\n"
 	"Content-Transfer-Encoding: base64\n"
 	"\n"
 	"CnRlc3RpbmcKCuHh4eHk");

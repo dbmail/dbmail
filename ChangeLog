@@ -1,3 +1,125 @@
+2006-12-19  Paul J Stevens <paul@nfg.nl>
+
+	* Makefile.am, acinclude.m4, configure.in, debian/rules, 
+	  modules/Makefile.am:
+	add ingres support to autotools setup
+	* acl.c, acl.h:
+	change acl_has_right from int to gboolean
+	* ChangeLog, INSTALL, README, README.smtp, db.c, debian/rules, 
+	  imapcommands.c:
+	merge doc changes by Guido
+
+2006-12-18  Paul J Stevens <paul@nfg.nl>
+
+	* configure.in, configure:
+	cleanup AM_CONDITIONALS after acinclude.m4 changes
+
+2006-12-17  Paul J Stevens <paul@nfg.nl>
+
+	* Makefile.in, config.in, configure, man/Makefile.in, modules/Makefile.in:
+	rebuild configure after changes in automake files
+
+2006-12-16  Aaron Stone  <aaron@serendipity.cx>
+
+	* acinclude.m4:
+	Fixed bug #195 fix that left AUTHLDAP and SIEVE always defined.
+
+2006-12-16  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_server.c, db.c, test-scripts/testfetch.txt:
+	fix bug #464
+	
+2006-12-15  Aaron Stone  <aaron@serendipity.cx>
+
+	* pipe.c:
+	Fixed parse_and_escape to handle incomplete addresses (closes bug #477)
+
+2006-12-13  Aaron Stone  <aaron@serendipity.cx>
+
+	* acinclude.m4, configure.in, Makefile.am, modules/Makefile.am:
+	Updated tests for libSieve and LDAP headers and libraries (closes bug #195).
+
+2006-12-12  Paul J Stevens <paul@nfg.nl>
+
+	* dm_imaputil.c, dm_imaputil.h, imap4.c, test-scripts/testsearch.imap:
+	remove redundant checkchars function from imap code (closes #473)
+
+2006-12-11  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_mailbox.c, dbmail-mailbox.c:
+	prevent excessive merging of search results in OR subsearches (closes
+	#471)
+
+2006-12-10  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_imapd.c, dbmail-imapsession.c, dbmail.h.in, dm_imaputil.c, 
+	  imap4.c, imapcommands.c:
+	cleanup MAX_LIZESIZE and set to 65k
+	* Makefile.in, aclocal.m4, buildtools/compile, buildtools/config.guess, 
+	  buildtools/config.sub, buildtools/depcomp, buildtools/install-sh, 
+	  buildtools/ltmain.sh, buildtools/missing, config.in, configure, 
+	  contrib/expirebox.sh, man/Makefile.in, man/dbmail-export.8, 
+	  man/dbmail-imapd.8, man/dbmail-lmtpd.8, man/dbmail-pop3d.8, 
+	  man/dbmail-sievecmd.8, man/dbmail-smtp.1, man/dbmail-timsieved.8, 
+	  man/dbmail-users.8, man/dbmail-util.8, man/dbmail.1, 
+	  man/dbmail.conf.5, modules/Makefile.in:
+	add files that belong in the stable branch
+	* check_dbmail_message.c, dbmail-message.c, dbmail-message.h:
+	reduce copying in message code
+	* list.c:
+	fix minor leak
+
+2006-12-08  Aaron Stone  <aaron@serendipity.cx>
+
+	* misc.c:
+	Fixed segfault on NULL or zero-length strings in imap_cleanup_address
+	(closes bug #461).
+
+2006-12-06  Aaron Stone  <aaron@serendipity.cx>
+
+	* imapcommands.c:
+	Fixed incorrect strlen in _ic_list (closes bug #467).
+	* misc.c:
+	Added # sign to AcceptedMailboxnameChars (bug #467).
+
+2006-12-05  Guido A.J. Stevens <guido@nfg.nl>
+
+	* README, INSTALL, README.smtp:
+	documentation corrections
+	* db.c:
+	comment correction, sql layout refactoring
+
+2006-12-04  Paul J Stevens <paul@nfg.nl>
+
+	* sql/mysql/create_tables.mysql, sql/mysql/migrate_from_2.0_to_2.2.mysql, 
+	  sql/postgresql/create_tables.pgsql, 
+	  sql/postgresql/migrate_from_2.0_to_2.2.pgsql, 
+	  sql/sqlite/create_tables.sqlite:
+	adding useful indexes to headername/headervalue tables
+	* db.c:
+	fix fallout from #457
+
+2006-11-27  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_db.c, check_dbmail_message.c, db.c, dbmail-imapsession.c, 
+	  dbmail-message.c, modules/dbpgsql.c:
+	remove the query global
+	* db.c:
+	fix bug #457
+	* debian/compat, debian/control, debian/dbmail-ldap.postinst, 
+	  debian/dbmail-mysql.postinst, debian/dbmail-pgsql.postinst, 
+	  debian/dbmail-sieve.config, debian/dbmail-sieve.postinst, 
+	  debian/dbmail-sieve.templates, debian/dbmail-sqlite.postinst, 
+	  debian/dbmail.dirs, debian/dbmail.examples, debian/dbmail.init, 
+	  debian/dbmail.postinst, debian/dbmail.preinst, debian/dbmail.prerm, 
+	  debian/dbmail.templates, debian/po/cs.po, debian/po/de.po, 
+	  debian/po/es.po, debian/po/fr.po, debian/po/it.po, debian/po/ja.po, 
+	  debian/po/nl.po, debian/po/pt_BR.po, debian/po/templates.pot, 
+	  debian/rules:
+	cleanup in the debian packaging
+	* dbmail.schema:
+	cleanup dbmail ldap schema
+
 2006-11-21  Paul J Stevens <paul@nfg.nl>
 
 	* sql/ingres/create_tables.sql:
