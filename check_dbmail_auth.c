@@ -61,6 +61,19 @@ void teardown(void)
 	auth_disconnect();
 }
 
+START_TEST(test_auth_validate)
+{
+	u64_t user_idnr;
+	int result;
+	
+	result = auth_validate(NULL, "testuser1", "test", &user_idnr);
+	fail_unless(result==1,"auth_validate failed [%d]", result);
+	result = auth_validate(NULL, "nosuchtestuser", "testnosuchlogin", &user_idnr);
+	fail_unless(result==0,"auth_validate failed [%d]", result);
+
+}
+END_TEST
+
 START_TEST(test_auth_change_password)
 {
 	u64_t user_idnr, user_idnr_check;
@@ -153,6 +166,7 @@ Suite *dbmail_common_suite(void)
 	suite_add_tcase(s, tc_auth);
 	
 	tcase_add_checked_fixture(tc_auth, setup, teardown);
+	tcase_add_test(tc_auth, test_auth_validate);
 	tcase_add_test(tc_auth, test_auth_change_password);
 	tcase_add_test(tc_auth, test_auth_change_password_raw);
 	
