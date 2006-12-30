@@ -19,7 +19,7 @@
 */
 
 /*
- * $Id: authldap.c 2347 2006-11-01 21:35:52Z paul $
+ * $Id: authldap.c 2405 2006-12-30 18:44:35Z paul $
  * * User authentication functions for LDAP.
  */
 #ifdef HAVE_CONFIG_H
