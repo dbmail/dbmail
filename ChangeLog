@@ -1,3 +1,14 @@
+2006-12-31  Aaron Stone  <aaron@serendipity.cx>
+
+	* modules/authldap.c, dbmail.conf, acinclude.m4:
+	Accepted ldap_initialize patch from Uemura Tetsuya.
+	* dsn.c:
+	Sub-domain catch-alls supported in the form @.domain.
+	* pipe.c:
+	If forwards fail, report a temporary SMTP error.
+	* serverchild.c:
+	Removed unused variable 'serr'.
+
 2006-12-30  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_auth.c, modules/authldap.c:
