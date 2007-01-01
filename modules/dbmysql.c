@@ -315,11 +315,11 @@ int db_do_cleanup(const char **tables, int num)
 	int result = 0;
 
 	for (i = 0; i < num; i++) {
-		snprintf(the_query, DEF_QUERYSIZE, "OPTIMIZE TABLE %s%s",
+		snprintf(the_query, DEF_QUERYSIZE, "ANALYZE TABLE %s%s",
 			 _db_params.pfx,tables[i]);
 
 		if (db_query(the_query) == DM_EQUERY) {
-			TRACE(TRACE_ERROR, "error optimizing table [%s%s]",
+			TRACE(TRACE_ERROR, "error analyzing table [%s%s]",
 			      _db_params.pfx,tables[i]);
 			result = DM_EQUERY;
 		}
