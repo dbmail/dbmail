@@ -1,3 +1,8 @@
+2007-01-01  Paul J Stevens <paul@nfg.nl>
+
+	* modules/dbmysql.c:
+	change from OPTIMIZE TABLE to ANALYZE TABLE in mysql driver during cleanup
+
 2006-12-31  Aaron Stone  <aaron@serendipity.cx>
 
 	* modules/authldap.c, dbmail.conf, acinclude.m4:
