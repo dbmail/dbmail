@@ -23,8 +23,8 @@ GMIME:         $ac_gmime_libs
 MYSQL:         $MYSQLLIB
 PGSQL:         $PGSQLLIB
 SQLITE:        $SQLITELIB
-SIEVE:         $SIEVEINC $SIEVELIB
-LDAP:          $LDAPINC $LDAPLIB
+SIEVE:         $SIEVEINC$SIEVELIB
+LDAP:          $LDAPINC$LDAPLIB
 SHARED:        $enable_shared
 STATIC:        $enable_static
 CHECK:         $with_check
@@ -181,7 +181,7 @@ AC_DEFUN([DBMAIL_CHECK_SIEVE_LIB],[
 ])
 
 dnl DBMAIL_SIEVE_CONF
-dnl check for ldap or sql authentication
+dnl check for sieve sorting
 AC_DEFUN([DBMAIL_SIEVE_CONF], [dnl
 WARN=0
 
@@ -400,7 +400,8 @@ if ( test [ "x$lookforldap" != "xno" ] || test [ "x$lookforauthldap" != "xno" ] 
         AC_MSG_ERROR([Could not find LDAP library.])
     else
         AC_MSG_RESULT($LDAPLIB)
-        AC_DEFINE([AUTHLDAP], 1, [Define if LDAP sorting will be used.])
+        AC_DEFINE([AUTHLDAP], 1, [Define if LDAP will be used.])
+        AC_SEARCH_LIBS(ldap_initialize, ldap, AC_DEFINE([HAVE_LDAP_INITIALIZE], 1, [ldap_initialize() can be used instead of ldap_init()]))
         AC_SUBST(LDAPLIB)
         AC_SUBST(LDAPINC)
         AUTHALIB="modules/.libs/libauth_ldap.a"
