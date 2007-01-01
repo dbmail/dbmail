@@ -387,9 +387,10 @@ static int address_is_domain_catchall(deliver_to_user_t *delivery)
 	}
 
 	char *my_domain = g_strdup(domain);
+	char *my_domain_dot = my_domain;
 
 	while (1) {
-		TRACE(TRACE_DEBUG, "domain [%s] checking for domain forwards", domain);
+		TRACE(TRACE_DEBUG, "domain [%s] checking for domain forwards", my_domain);
         
 		/* Checking for domain aliases */
 		domain_count = auth_check_user_ext(my_domain, delivery->userids,
@@ -401,14 +402,17 @@ static int address_is_domain_catchall(deliver_to_user_t *delivery)
 		}
 
 		/* On each loop, lop off a chunk between @ and . */
-		char *my_domain_dot = strchr(my_domain, '.');
+		my_domain_dot = strchr(my_domain_dot, '.');
 
 		if (!my_domain_dot || my_domain_dot == my_domain) {
 			/* This is the way to fail out. */
 			break;
 		}
 
-		snprintf(my_domain, strlen(domain), "@%s", my_domain_dot);
+		/* Copy everything from the next dot to one after the at-sign,
+		 * Including the trailing nul byte. */
+		int move_len = strlen(my_domain_dot);
+		memmove(my_domain + 1, my_domain_dot, move_len + 1);
 	}
 
 	TRACE(TRACE_DEBUG, "domain [%s] found total of [%d] aliases", my_domain, domain_count);
