@@ -21,7 +21,7 @@
 /*
  * serverchild.c
  *
- * $Id: serverchild.c 2376 2006-11-17 12:33:12Z paul $
+ * $Id: serverchild.c 2406 2006-12-31 21:22:22Z aaron $
  * 
  * function implementations of server children code (connection handling)
  */
@@ -216,7 +216,7 @@ pid_t CreateChild(ChildInfo_t * info)
 int select_and_accept(ChildInfo_t * info, int * clientSocket, struct sockaddr * saClient)
 {
 	fd_set rfds;
-	int ip, result, flags, serr = 0;
+	int ip, result, flags;
 	int active = 0, maxfd = 0;
 	socklen_t len;
 

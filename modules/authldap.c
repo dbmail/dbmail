@@ -19,7 +19,7 @@
 */
 
 /*
- * $Id: authldap.c 2347 2006-11-01 21:35:52Z paul $
+ * $Id: authldap.c 2406 2006-12-31 21:22:22Z aaron $
  * * User authentication functions for LDAP.
  */
 #ifdef HAVE_CONFIG_H
@@ -46,7 +46,7 @@ char **_ldap_attrs = NULL;
 char _ldap_query[AUTH_QUERY_SIZE];
 
 typedef struct _ldap_cfg {
-	field_t bind_dn, bind_pw, base_dn, port, version, scope, hostname;
+	field_t bind_dn, bind_pw, base_dn, port, uri, version, scope, hostname;
 	field_t user_objectclass, forw_objectclass;
 	field_t cn_string;
 	field_t field_uid, field_cid, min_cid, max_cid, field_nid, min_nid, max_nid;
@@ -76,6 +76,7 @@ static void __auth_get_config(void)
 	GETCONFIGVALUE("BIND_PW",		"LDAP", _ldap_cfg.bind_pw);
 	GETCONFIGVALUE("BASE_DN",		"LDAP", _ldap_cfg.base_dn);
 	GETCONFIGVALUE("PORT",			"LDAP", _ldap_cfg.port);
+	GETCONFIGVALUE("URI",			"LDAP", _ldap_cfg.uri);
 	GETCONFIGVALUE("VERSION",		"LDAP", _ldap_cfg.version);
 	GETCONFIGVALUE("HOSTNAME",		"LDAP", _ldap_cfg.hostname);
 	GETCONFIGVALUE("USER_OBJECTCLASS",	"LDAP", _ldap_cfg.user_objectclass);
@@ -152,30 +153,67 @@ static int auth_ldap_bind(void)
  */
 int auth_connect(void)
 {
-	int version;
+	int version = 0;
+#ifdef HAVE_LDAP_INITIALIZE
+	int ret;
+	char *uri;
+#endif
 
 	if (_ldap_conn != NULL) 
 		return 0;
 	
 	__auth_get_config();
-	
-	TRACE(TRACE_DEBUG, "connecting to ldap server on [%s] : [%d] version [%d]",
-		_ldap_cfg.hostname, _ldap_cfg.port_int, _ldap_cfg.version_int);
-	
-	_ldap_conn = ldap_init(
-			_ldap_cfg.hostname, 
-			_ldap_cfg.port_int);
 
 	switch (_ldap_cfg.version_int) {
-	case 2:
-		version = LDAP_VERSION2;
-		break;
 	case 3:
 		version = LDAP_VERSION3;
+		if (strlen(_ldap_cfg.uri)) {
+#ifdef HAVE_LDAP_INITIALIZE
+			TRACE(TRACE_DEBUG, 
+				"connecting to ldap server on [%s] version [%d]", 
+				_ldap_cfg.uri, _ldap_cfg.version_int);
+			if ((ret = ldap_initialize(&_ldap_conn, _ldap_cfg.uri) 
+				== LDAP_SUCCESS)) 
+				break;
+			else 
+				TRACE(TRACE_WARNING, "ldap_initialize() returned %d", ret);
+#else
+			TRACE(TRACE_WARNING, "LDAP library doesn't support ldap_initialize()."
+				" You cannot use the URI directive to specify the DSN.");
+#endif
+		}
+
+#ifdef HAVE_LDAP_INITIALIZE
+		uri = g_strdup_printf("ldap://%s:%d", _ldap_cfg.hostname, _ldap_cfg.port_int);
+
+		TRACE(TRACE_DEBUG, 
+			"connecting to ldap server on [%s] version [%d]", 
+			uri, _ldap_cfg.version_int);
+		if ((ret = ldap_initialize(&_ldap_conn, uri)) != LDAP_SUCCESS) 
+			TRACE(TRACE_FATAL, "ldap_initialize() returned [%d]", ret);
+
+		g_free(uri);
+#else
+		TRACE(TRACE_DEBUG, 
+			"connecting to ldap server on [%s] : [%d] version [%d]",
+			_ldap_cfg.hostname, _ldap_cfg.port_int, _ldap_cfg.version_int);
+		_ldap_conn = ldap_init(_ldap_cfg.hostname, _ldap_cfg.port_int);
+#endif
 		break;
+	case 2:
+		version = LDAP_VERSION2;
+		/* fall through... */
 	default:
-		TRACE(TRACE_ERROR, "Unsupported LDAP version requested [%d]. Defaulting to LDAP version 3.", _ldap_cfg.version_int);
-		version = LDAP_VERSION3;
+		if (!version) {
+			TRACE(TRACE_WARNING, "Unsupported LDAP version [%d] requested."
+				" Default to LDAP version 3.", _ldap_cfg.version_int);
+			version = LDAP_VERSION3;
+		}
+
+		TRACE(TRACE_DEBUG, 
+			"connecting to ldap server on [%s] : [%d] version [%d]",
+			_ldap_cfg.hostname, _ldap_cfg.port_int, _ldap_cfg.version_int);
+		_ldap_conn = ldap_init(_ldap_cfg.hostname, _ldap_cfg.port_int);
 		break;
 	}
 

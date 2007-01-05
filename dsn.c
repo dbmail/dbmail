@@ -1,7 +1,7 @@
 /* Delivery User Functions
  * Aaron Stone, 9 Feb 2004 */
 /*
-  $Id: dsn.c 2347 2006-11-01 21:35:52Z paul $
+  $Id: dsn.c 2407 2007-01-01 00:30:23Z aaron $
 
  Copyright (C) 2004 Aaron Stone aaron at serendipity dot cx
 
@@ -386,18 +386,44 @@ static int address_is_domain_catchall(deliver_to_user_t *delivery)
 		return 0;
 	}
 
-	TRACE(TRACE_DEBUG, "domain [%s] checking for domain forwards", domain);
+	char *my_domain = g_strdup(domain);
+	char *my_domain_dot = my_domain;
 
-	/* Checking for domain aliases */
-	domain_count = auth_check_user_ext(domain, delivery->userids,
-			delivery->forwards, 0);
-	TRACE(TRACE_DEBUG, "domain [%s] found total of [%d] aliases", domain, domain_count);
+	while (1) {
+		TRACE(TRACE_DEBUG, "domain [%s] checking for domain forwards", my_domain);
+        
+		/* Checking for domain aliases */
+		domain_count = auth_check_user_ext(my_domain, delivery->userids,
+				delivery->forwards, 0);
+        
+		if (domain_count > 0) {
+			/* This is the way to succeed out. */
+			break;
+		}
 
-	if (domain_count == 0) {
-		return 0;
+		/* On each loop, lop off a chunk between @ and . */
+		my_domain_dot = strchr(my_domain_dot, '.');
+
+		if (!my_domain_dot || my_domain_dot == my_domain) {
+			/* This is the way to fail out. */
+			break;
+		}
+
+		/* Copy everything from the next dot to one after the at-sign,
+		 * Including the trailing nul byte. */
+		int move_len = strlen(my_domain_dot);
+		memmove(my_domain + 1, my_domain_dot, move_len + 1);
 	}
 
-	return 1;
+	TRACE(TRACE_DEBUG, "domain [%s] found total of [%d] aliases", my_domain, domain_count);
+
+	g_free(my_domain);
+
+	if (domain_count > 0) {
+		return 1;
+	}
+
+	return 0;
 }
 
 static int address_is_userpart_catchall(deliver_to_user_t *delivery)
