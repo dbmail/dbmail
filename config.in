@@ -1,6 +1,6 @@
 /* config.in.  Generated from configure.in by autoheader.  */
 
-/* Define if LDAP sorting will be used. */
+/* Define if LDAP will be used. */
 #undef AUTHLDAP
 
 /* Define to 1 if you have the <crypt.h> header file. */
@@ -20,6 +20,9 @@
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
+
+/* ldap_initialize() can be used instead of ldap_init() */
+#undef HAVE_LDAP_INITIALIZE
 
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H

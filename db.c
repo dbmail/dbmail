@@ -5025,6 +5025,7 @@ int db_replycache_register(const char *to, const char *from, const char *handle)
 		return DM_EQUERY;
 	}
 	
+	memset(query,0,DEF_QUERYSIZE);
 	if (db_num_rows() > 0) {
 		snprintf(query, DEF_QUERYSIZE,
 			 "UPDATE %sreplycache SET lastseen = %s "
@@ -5040,7 +5041,6 @@ int db_replycache_register(const char *to, const char *from, const char *handle)
 	}
 	
 	db_free_result();
-	memset(query,0,DEF_QUERYSIZE);
 	
 	if (db_query(query)== -1) {
 		TRACE(TRACE_ERROR, "query failed");
