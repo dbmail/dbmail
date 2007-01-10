@@ -131,6 +131,11 @@ int dbmail_mailbox_open(struct DbmailMailbox *self)
 		self->ids = NULL;
 	}
 
+	if (self->msn) {
+		g_tree_destroy(self->msn);
+		self->msn = NULL;
+	}
+
 	self->ids = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
 	self->msn = g_tree_new_full((GCompareDataFunc)ucmp,NULL,NULL,NULL);
 		
