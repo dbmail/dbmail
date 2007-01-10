@@ -80,6 +80,11 @@ static void _imap_clientinfo_free(struct ImapSession * self)
 		g_free(self->ci);
 		self->ci = NULL;
 	}
+
+	if (self->fstream) {
+		g_object_unref(self->fstream);
+		self->fstream = NULL;
+	}
 }
 /* 
  *
@@ -170,10 +175,6 @@ void dbmail_imap_session_delete(struct ImapSession * self)
 	_imap_fetchitem_free(self);
 	_imap_clientinfo_free(self);
 	
-	if (self->fstream) {
-		g_object_unref(self->fstream);
-		self->fstream = NULL;
-	}
 	if (self->tag) {
 		g_free(self->tag);
 		self->tag = NULL;
