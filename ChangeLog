@@ -3,6 +3,8 @@
 	* pop3.c:
 	Accepted patch from bug #483 to call db_cleanup before sending OK
 	response to QUIT command.
+	* dsn.c:
+	Fix to sub-domain catch-alls.
 
 2007-01-10  Paul J Stevens <paul@nfg.nl>
 
