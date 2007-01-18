@@ -13,6 +13,8 @@
 	current year at delivery time (closes bug #475).
 	* dbmail-mailbox.c:
 	Update for the max year argument.
+	* user.c:
+	Bail out when given invalid command line args (closes bug #448).
 
 2007-01-10  Paul J Stevens <paul@nfg.nl>
 
