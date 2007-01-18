@@ -1,3 +1,9 @@
+2007-01-17  Aaron Stone  <aaron@serendipity.cx>
+
+	* pop3.c:
+	Accepted patch from bug #483 to call db_cleanup before sending OK
+	response to QUIT command.
+
 2007-01-10  Paul J Stevens <paul@nfg.nl>
 
 	* imap4.c:
@@ -19,7 +25,7 @@
 	* modules/authldap.c, dbmail.conf, acinclude.m4:
 	Accepted ldap_initialize patch from Uemura Tetsuya.
 	* dsn.c:
-	Sub-domain catch-alls supported in the form @.domain.
+	Sub-domain catch-alls supported in the form @.domain (bug #452).
 	* pipe.c:
 	If forwards fail, report a temporary SMTP error.
 	* serverchild.c:
