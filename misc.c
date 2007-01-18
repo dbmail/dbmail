@@ -2114,9 +2114,7 @@ char * imap_cleanup_address(const char *a)
 	size_t i, l;
 	GString *s;
 
-	if (!a)
-		return g_strdup("");
-	if (!a[0])
+	if (!a || !a[0])
 		return g_strdup("");
 	
 	s = g_string_new("");
