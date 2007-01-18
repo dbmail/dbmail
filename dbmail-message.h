@@ -106,7 +106,7 @@ void dbmail_message_set_envelope_recipient(struct DbmailMessage *self, const cha
 gchar * dbmail_message_get_envelope_recipient(const struct DbmailMessage *self);
 	
 void dbmail_message_set_internal_date(struct DbmailMessage *self, char *internal_date);
-gchar * dbmail_message_get_internal_date(const struct DbmailMessage *self);
+gchar * dbmail_message_get_internal_date(const struct DbmailMessage *self, int thisyear);
 	
 int dbmail_message_set_class(struct DbmailMessage *self, int klass);
 int dbmail_message_get_class(const struct DbmailMessage *self);

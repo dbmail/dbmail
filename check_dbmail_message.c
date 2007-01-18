@@ -177,9 +177,29 @@ START_TEST(test_dbmail_message_get_internal_date)
 	m = dbmail_message_init_with_string(m, s);
 	// From_ contains: Wed Sep 14 16:47:48 2005
 	const char *expect = "2005-09-14 16:47:48";
-	char *result = dbmail_message_get_internal_date(m);
-		
-	fail_unless(MATCH(expect,result),"dbmail_message_get_internal_date failed");
+	const char *expect03 = "2003-09-14 16:47:48";
+	const char *expect75 = "1975-09-14 16:47:48";
+	char *result;
+
+	/* baseline */
+	result = dbmail_message_get_internal_date(m, 0);
+	fail_unless(MATCH(expect,result),"dbmail_message_get_internal_date failed exp [%s] got [%s]", expect, result);
+
+	/* should be the same */
+	result = dbmail_message_get_internal_date(m, 2007);
+	fail_unless(MATCH(expect,result),"dbmail_message_get_internal_date failed exp [%s] got [%s]", expect, result);
+
+	/* capped to 2004, which should also be the same  */
+	result = dbmail_message_get_internal_date(m, 2004);
+	fail_unless(MATCH(expect,result),"dbmail_message_get_internal_date failed exp [%s] got [%s]", expect, result);
+
+	/* capped to 2003, should be different */
+	result = dbmail_message_get_internal_date(m, 2003);
+	fail_unless(MATCH(expect03,result),"dbmail_message_get_internal_date failed exp [%s] got [%s]", expect03, result);
+
+	/* capped to 1975, should be way different */
+	result = dbmail_message_get_internal_date(m, 1975);
+	fail_unless(MATCH(expect75,result),"dbmail_message_get_internal_date failed exp [%s] got [%s]", expect75, result);
 
 	g_free(result);
 	g_string_free(s,TRUE);
@@ -528,7 +548,7 @@ Suite *dbmail_message_suite(void)
 	tcase_add_test(tc_message, test_dbmail_message_get_class);
 	tcase_add_test(tc_message, test_dbmail_message_get_internal_date);
 	tcase_add_test(tc_message, test_dbmail_message_retrieve);
-	tcase_add_test(tc_message, test_dbmail_message_init_with_string);
+//	tcase_add_test(tc_message, test_dbmail_message_init_with_string);
 	tcase_add_test(tc_message, test_dbmail_message_to_string);
 //	tcase_add_test(tc_message, test_dbmail_message_init_with_stream);
 	tcase_add_test(tc_message, test_dbmail_message_hdrs_to_string);

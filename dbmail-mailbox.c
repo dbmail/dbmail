@@ -189,7 +189,7 @@ static size_t dump_message_to_stream(struct DbmailMessage *message, GMimeStream 
 		}
 		internet_address_list_destroy(ialist);
 		
-		d = dbmail_message_get_internal_date(message);
+		d = dbmail_message_get_internal_date(message, 0);
 		date = g_string_new(d);
 		g_free(d);
 		if (date->len < 1)

@@ -5,6 +5,14 @@
 	response to QUIT command.
 	* dsn.c:
 	Fix to sub-domain catch-alls.
+	* misc.c:
+	A really small cleanup.
+	* dbmail-message.h, dbmail-message.c, check_dbmail_message.c:
+	dbmail_message_get_internal_date takes a second argument to limit the
+	maximum year. Newly inserted messages cannot be more than 1 + the
+	current year at delivery time (closes bug #475).
+	* dbmail-mailbox.c:
+	Update for the max year argument.
 
 2007-01-10  Paul J Stevens <paul@nfg.nl>
 
