@@ -210,7 +210,8 @@ int main(int argc, char *argv[])
 			return 1;
 
 		default:
-			/*printf("unrecognized option [%c], continuing...\n",optopt); */
+			printf("unrecognized option [%c]\n", optopt); 
+			show_help = 1;
 			break;
 		}
 	}
