@@ -6,21 +6,13 @@ _Description: Use debconf to manage dbmail configuration?
  will NOT be overwritten should you later choose to re-run dpkg-reconfigure
  dbmail.
 
-Template: dbmail/smtp/DBMAIL_FROM_ADDRESS
-Type: string
-_Description: The email address where bounces come from:
- Here you must specify the address dbmail will use when sending bounce
- messages.
- .
- Example: MAILER-DAEMON@yourdomain.tld
-
-Template: dbmail/smtp/POSTMASTER
-Type: string
-_Description: Postmaster's email address:
- This should be a valid email address read by the person responsible for
- this email server.
- .
- Example: postmaster@yourdomain.tld
+Template: dbmail/dbmail/authdriver
+Type: select
+_Choices: sql, ldap
+Default: sql
+_Description: The authentication driver you wish to activate:
+ Dbmail by defauls uses SQL based authentication. But you can also use
+ LDAP instead.
 
 Template: dbmail/dbmail/postmaster
 Type: string
@@ -70,3 +62,56 @@ Type: boolean
 _Description: start the pop3 server after reboot?
  Dbmail support both imap and pop3 services. You can choose to run either
  one or both services.
+
+Template: dbmail/start_sieve
+Type: boolean
+_Description: start the timsieve server after reboot?
+ This is only needed if you want to allow users to manage their sieve scripts
+ using a compatible client such as kmail, horde/ingo or squirrelmail/avelsieve.
+
+Template: dbmail/ldap/PORT
+Type: string
+_Description: The port is your ldap server running at:
+ Please enter the port on which your ldap server is running at.
+ The default port is 389.
+
+Template: dbmail/ldap/HOSTNAME
+Type: string
+_Description: The hostname of the ldap server:
+ Please enter the hostname your ldap server is running at.
+
+Template: dbmail/ldap/BASE_DN
+Type: string
+_Description: The ldap base DN:
+ Please enter the DN where Dbmail should start searching for
+ user accounts.
+
+Template: dbmail/ldap/FIELD_UID
+Type: string
+_Description: The field which contains the user login name of the user:
+ Please enter the ldap attribute that will contain the username
+ The standard account uses uid
+
+Template: dbmail/ldap/FIELD_CID
+Type: string
+_Description: The field which contains the group id number of the user:
+ Please enter the ldap attribute that will contain the group id number
+ The standard account uses gidNumber
+
+Template: dbmail/ldap/bind_anonymous
+Type: boolean
+_Description: Bind anonymous to the ldap server?
+ Use this if your ldap does not require authentication to search 
+ the ldap tree.
+
+Template: dbmail/ldap/BIND_DN
+Type: string
+_Description: The DN to bind to the ldap server:
+ Please enter the DN, which should be used to connect to the ldap
+ server.
+
+Template: dbmail/ldap/BIND_PW
+Type: password
+_Description: The password to bind to the ldap server:
+ Please enter the password, which should be used to connect to the ldap
+ server.

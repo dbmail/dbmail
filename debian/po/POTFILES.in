@@ -1,5 +1,1 @@
 [type: gettext/rfc822deb] dbmail.templates
-[type: gettext/rfc822deb] dbmail-mysql.templates
-[type: gettext/rfc822deb] dbmail-pgsql.templates
-[type: gettext/rfc822deb] dbmail-sqlite.templates
-[type: gettext/rfc822deb] dbmail-ldap.templates

@@ -7,3 +7,8 @@ usr/sbin/dbmail-users
 usr/sbin/dbmail-util
 usr/lib/dbmail/libauth_sql.so*
 usr/lib/dbmail/libdbmail.so.*
+usr/lib/dbmail/libauth_ldap.so*
+usr/lib/dbmail/libsqlite.so*
+usr/lib/dbmail/libsort_sieve.so*
+usr/sbin/dbmail-timsieved
+usr/sbin/dbmail-sievecmd

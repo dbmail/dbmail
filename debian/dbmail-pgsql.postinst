@@ -32,25 +32,12 @@ case "$1" in
     upgrade)
     ;;
     configure)
+	    oldmask=`umask`
+	    umask 026
 
-	. /usr/share/debconf/confmodule
-	db_get dbmail/do_debconf || true; DO_DEBCONF=$RET
+	    sed -i -re "s/^driver\W*=.*\$/driver = pgsql/i" $CONFIG
 
-	if [ "$DO_DEBCONF" = "true" ]; then
-		db_get dbmail/pgsql_installed || true; PGSQL_INSTALLED=$RET
-		if [ -e $CONFIG -a "$PGSQL_INSTALLED" = "true" ]; then
-
-			oldmask=`umask`
-			umask 026
-
-			sed -i -re "s/^driver\W*=.*\$/driver = pgsql/i" $CONFIG
-
-			umask $oldmask
-		fi
-
-	fi	
-	db_stop
-	
+	    umask $oldmask
     ;;
     abort-upgrade)
     ;;
