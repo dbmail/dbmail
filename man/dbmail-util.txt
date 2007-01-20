@@ -75,4 +75,29 @@ OPTIONS
 
 include::commonopts.txt[]
 
+EXAMPLES
+--------
+
+After upgrading from DBMail 2.0, run this command to populate the cache
+tables:
+
+`    dbmail-util -by`
+
+
+To set all messages flagged \Deleted to the DELETE status, and to permanently
+purge all messages previously set to DELETE status:
+
+`    dbmail-util -dpy`
+
+
+To get a listing of the changes that would be performed for all actions:
+
+`    dbmail-util -an`
+
+
+To remove all IP log entries more than three days old:
+
+`    dbmail-util -l 72h -y`
+
+
 include::footer.txt[]

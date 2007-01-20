@@ -1,3 +1,23 @@
+2007-01-17  Aaron Stone  <aaron@serendipity.cx>
+
+	* pop3.c:
+	Accepted patch from bug #483 to call db_cleanup before sending OK
+	response to QUIT command.
+	* dsn.c:
+	Fix to sub-domain catch-alls.
+	* misc.c:
+	A really small cleanup.
+	* dbmail-message.h, dbmail-message.c, check_dbmail_message.c:
+	dbmail_message_get_internal_date takes a second argument to limit the
+	maximum year. Newly inserted messages cannot be more than 1 + the
+	current year at delivery time (closes bug #475).
+	* dbmail-mailbox.c:
+	Update for the max year argument.
+	* user.c, maintenance.c:
+	Bail out when given invalid command line args (closes bug #448).
+	* configure.in, acinclude.m4:
+	Added a test for socket libraries (closes bug #489).
+
 2007-01-10  Paul J Stevens <paul@nfg.nl>
 
 	* imap4.c:
@@ -19,7 +39,7 @@
 	* modules/authldap.c, dbmail.conf, acinclude.m4:
 	Accepted ldap_initialize patch from Uemura Tetsuya.
 	* dsn.c:
-	Sub-domain catch-alls supported in the form @.domain.
+	Sub-domain catch-alls supported in the form @.domain (bug #452).
 	* pipe.c:
 	If forwards fail, report a temporary SMTP error.
 	* serverchild.c:

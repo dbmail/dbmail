@@ -1,5 +1,5 @@
 /*
-  $Id: dbmail-message.c 2391 2006-12-10 14:49:16Z paul $
+  $Id: dbmail-message.c 2415 2007-01-18 22:32:17Z aaron $
 
   Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
 
@@ -452,7 +452,8 @@ void dbmail_message_set_internal_date(struct DbmailMessage *self, char *internal
 		self->internal_date = g_mime_utils_header_decode_date(internal_date, self->internal_date_gmtoff);
 }
 
-gchar * dbmail_message_get_internal_date(const struct DbmailMessage *self)
+/* thisyear is a workaround for some broken gmime version. */
+gchar * dbmail_message_get_internal_date(const struct DbmailMessage *self, int thisyear)
 {
 	char *res;
 	struct tm gmt;
@@ -462,6 +463,12 @@ gchar * dbmail_message_get_internal_date(const struct DbmailMessage *self)
 	res = g_new0(char, TIMESTRING_SIZE+1);
 	memset(&gmt,'\0', sizeof(struct tm));
 	gmtime_r(&self->internal_date, &gmt);
+
+	/* override if the date is not sane */
+	if (thisyear && gmt.tm_year + 1900 > thisyear + 1) {
+		gmt.tm_year = thisyear - 1900;
+	}
+
 	strftime(res, TIMESTRING_SIZE, "%Y-%m-%d %T", &gmt);
 	return res;
 }
@@ -808,8 +815,16 @@ int _message_insert(struct DbmailMessage *self,
 		return -1;
 	}
 
+	/* get the messages date, but override it if it's from the future */
+	struct timeval tv;
+	struct tm gmt;
+	int thisyear;
+	gettimeofday(&tv, NULL);
+	localtime_r(&tv.tv_sec, &gmt);
+	thisyear = gmt.tm_year + 1900;
+	internal_date = dbmail_message_get_internal_date(self, thisyear);
+
 	/* insert a new physmessage entry */
-	internal_date = dbmail_message_get_internal_date(self);
 	if (db_insert_physmessage_with_internal_date(internal_date, &physmessage_id) == -1)  {
 		g_free(internal_date);
 		return -1;

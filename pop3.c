@@ -18,7 +18,7 @@
   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: pop3.c 2356 2006-11-05 16:43:48Z aaron $
+/* $Id: pop3.c 2412 2007-01-18 20:48:52Z aaron $
  *
  * implementation for pop3 commands according to RFC 1081 */
 
@@ -177,6 +177,8 @@ int pop3_handle_connection(clientinfo_t * ci)
 
 			/* if everything went well, write down everything and do a cleanup */
 			db_update_pop(&session);
+			fprintf(ci->tx, "+OK see ya later\r\n");
+			fflush(ci->tx);
 			break;
 
 		case 1:
@@ -329,7 +331,9 @@ int pop3(clientinfo_t *ci, char *buffer, PopSession_t * session)
 	switch (cmdtype) {
 		
 	case POP3_QUIT:
-		fprintf((FILE *) stream, "+OK see ya later\r\n");
+		/* We return 0 here, and then pop3_handle_connection cleans up
+		 * the connection, commits all changes, and sends the final
+		 * "OK" message indicating that QUIT has completed. */
 		return 0;
 		
 	case POP3_USER:

@@ -1,7 +1,7 @@
 /* Delivery User Functions
  * Aaron Stone, 9 Feb 2004 */
 /*
-  $Id: dsn.c 2407 2007-01-01 00:30:23Z aaron $
+  $Id: dsn.c 2413 2007-01-18 22:04:50Z aaron $
 
  Copyright (C) 2004 Aaron Stone aaron at serendipity dot cx
 
@@ -405,8 +405,20 @@ static int address_is_domain_catchall(deliver_to_user_t *delivery)
 		my_domain_dot = strchr(my_domain_dot, '.');
 
 		if (!my_domain_dot || my_domain_dot == my_domain) {
-			/* This is the way to fail out. */
+			/* This is one way to fail out, it means we have
+			 * somethign like @foo */
 			break;
+		}
+
+		if (my_domain_dot == my_domain + 1) {
+			/* We're looking at something like @.foo.bar.qux,
+			 * and my_domain_dot is pointed at .foo.bar.qux,
+			 * so we have to look one more character ahead. */
+			my_domain_dot = strchr(my_domain_dot + 1, '.');
+			if (!my_domain_dot) {
+				/* We're looking at @. so we're done. */
+				break;
+			}
 		}
 
 		/* Copy everything from the next dot to one after the at-sign,
