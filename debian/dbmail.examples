@@ -1,1 +1,4 @@
 dbmail.conf
+dbmail.schema
+sql/sqlite/2_1_7-2_2_0.sqlite
+sql/sqlite/create_tables.sqlite
