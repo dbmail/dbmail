@@ -402,11 +402,11 @@ static int address_is_domain_catchall(deliver_to_user_t *delivery)
 		}
 
 		/* On each loop, lop off a chunk between @ and . */
-		my_domain_dot = strchr(my_domain_dot, '.');
+		my_domain_dot = strchr(my_domain, '.');
 
 		if (!my_domain_dot || my_domain_dot == my_domain) {
 			/* This is one way to fail out, it means we have
-			 * somethign like @foo */
+			 * somethign like @foo or a missing at-sign. */
 			break;
 		}
 
@@ -422,7 +422,7 @@ static int address_is_domain_catchall(deliver_to_user_t *delivery)
 		}
 
 		/* Copy everything from the next dot to one after the at-sign,
-		 * Including the trailing nul byte. */
+		 * including the trailing nul byte. */
 		int move_len = strlen(my_domain_dot);
 		memmove(my_domain + 1, my_domain_dot, move_len + 1);
 	}
