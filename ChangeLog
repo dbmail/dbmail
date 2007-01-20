@@ -1,3 +1,26 @@
+2007-01-20  Paul J Stevens <paul@nfg.nl>
+
+	* debian/control, debian/dbmail-dev.install, debian/dbmail-ldap.config, 
+	  debian/dbmail-ldap.docs, debian/dbmail-ldap.examples, 
+	  debian/dbmail-ldap.install, debian/dbmail-ldap.postinst, 
+	  debian/dbmail-ldap.templates, debian/dbmail-mysql.config, 
+	  debian/dbmail-mysql.postinst, debian/dbmail-mysql.templates, 
+	  debian/dbmail-pgsql.config, debian/dbmail-pgsql.postinst, 
+	  debian/dbmail-pgsql.templates, debian/dbmail-sieve.dirs, 
+	  debian/dbmail-sieve.docs, debian/dbmail-sieve.install, 
+	  debian/dbmail-sieve.lintian-override, debian/dbmail-sieve.manpages, 
+	  debian/dbmail-sieve.postinst, debian/dbmail-sqlite.config, 
+	  debian/dbmail-sqlite.examples, debian/dbmail-sqlite.install, 
+	  debian/dbmail-sqlite.postinst, debian/dbmail-sqlite.templates, 
+	  debian/dbmail.config, debian/dbmail.docs, debian/dbmail.examples, 
+	  debian/dbmail.init, debian/dbmail.install, debian/dbmail.manpages, 
+	  debian/dbmail.postinst, debian/dbmail.templates, 
+	  debian/po/POTFILES.in, debian/po/cs.po, debian/po/de.po, 
+	  debian/po/es.po, debian/po/fr.po, debian/po/it.po, debian/po/ja.po, 
+	  debian/po/nl.po, debian/po/pt_BR.po, debian/po/templates.pot, 
+	  debian/rules:
+	debian package reorganized
+
 2007-01-17  Aaron Stone  <aaron@serendipity.cx>
 
 	* pop3.c:
