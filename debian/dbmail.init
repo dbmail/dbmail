@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/sh
 #
 # dbmail init script for debian
 # 
@@ -51,7 +51,7 @@ service_start() {
 	[ -e $_daemon ] || return 0
 	
 	log_progress_msg "$_name"
-	start-stop-daemon --start --startas $_daemon
+	start-stop-daemon --start --exec $_daemon
 	
 	r=$?
 	if [ $r -gt 0 ]; then
@@ -103,36 +103,31 @@ service_reload() {
 case "$1" in
   start)
 	log_daemon_msg "Starting $DESC"
-	gr=0;r=0
-	if [ "$START_IMAPD" ]; then service_start "IMAPD" || let gr=$gr+$?; fi
-	if [ "$START_POP3D" ]; then service_start "POP3D" || let gr=$gr+$?; fi
-	if [ "$START_LMTPD" ]; then service_start "LMTPD" || let gr=$gr+$?; fi
-	if [ "$START_SIEVE" ]; then service_start "SIEVE" || let gr=$gr+$?; fi
-	if [ "$START_SSL" ]; then ssl_wrapper start || let gr=$gr+$?; fi
-	[ $gr -gt 0 ] && r=1
+	r=0
+	if [ "$START_IMAPD" ]; then service_start "IMAPD" || r=1; fi
+	if [ "$START_POP3D" ]; then service_start "POP3D" || r=1; fi
+	if [ "$START_LMTPD" ]; then service_start "LMTPD" || r=1; fi
+	if [ "$START_SIEVE" ]; then service_start "SIEVE" || r=1; fi
  	log_end_msg $r
 	;;
 	
   stop)
 	log_daemon_msg "Stopping $DESC"
-	gr=0;r=0
-	if [ "$START_SSL" ]; then ssl_wrapper stop || let gr=$gr+$?; fi
-	if [ "$START_IMAPD" ]; then service_stop "IMAPD" || let gr=$gr+$?; fi
-	if [ "$START_POP3D" ]; then service_stop "POP3D" || let gr=$gr+$?; fi
-	if [ "$START_LMTPD" ]; then service_stop "LMTPD" || let gr=$gr+$?; fi
-	if [ "$START_SIEVE" ]; then service_stop "SIEVE" || let gr=$gr+$?; fi
-	[ $gr -gt 0 ] && r=1
+	r=0
+	if [ "$START_IMAPD" ]; then service_stop "IMAPD" || r=1; fi
+	if [ "$START_POP3D" ]; then service_stop "POP3D" || r=1; fi
+	if [ "$START_LMTPD" ]; then service_stop "LMTPD" || r=1; fi
+	if [ "$START_SIEVE" ]; then service_stop "SIEVE" || r=1; fi
 	log_end_msg $r
 	;;
 	
   reload)
   	log_daemon_msg "Reloading $DESC"
-	gr=0;r=0
-	if [ "$START_IMAPD" ]; then service_reload "IMAPD" || let gr=$gr+$?; fi
-	if [ "$START_POP3D" ]; then service_reload "POP3D" || let gr=$gr+$?; fi
-	if [ "$START_LMTPD" ]; then service_reload "LMTPD" || let gr=$gr+$?; fi
-	if [ "$START_SIEVE" ]; then service_reload "SIEVE" || let gr=$gr+$?; fi
-	[ $gr -gt 0 ] && r=1
+	r=0
+	if [ "$START_IMAPD" ]; then service_reload "IMAPD" || r=1; fi
+	if [ "$START_POP3D" ]; then service_reload "POP3D" || r=1; fi
+	if [ "$START_LMTPD" ]; then service_reload "LMTPD" || r=1; fi
+	if [ "$START_SIEVE" ]; then service_reload "SIEVE" || r=1; fi
 	log_end_msg $r
 	;;
 	
