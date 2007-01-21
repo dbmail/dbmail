@@ -1,7 +1,18 @@
+2007-01-21  Paul J Stevens <paul@nfg.nl>
+
+	* debian/po/cs.po, debian/po/de.po, debian/po/es.po, debian/po/fr.po, 
+	  debian/po/it.po, debian/po/ja.po, debian/po/nl.po, 
+	  debian/po/pt_BR.po, debian/po/templates.pot:
+	updating PO files
+	* db.c, db.h:
+	adding db_replycache_unregister
+	* Makefile.in, config.in, configure, man/Makefile.in, modules/Makefile.in:
+	updating autoconf files
+
 2007-01-20  Aaron Stone  <aaron@serendipity.cx>
 
 	* serverparent.c:
-	Unrecognized options case the daemons to bail out with an error.
+	Unrecognized options cause the daemons to bail out with an error.
 	* Makefile.am, modules/Makefile.am:
 	Accepted patch to use pkglib_LTLIBRARIES rather than hardcoding the
 	lib paths (closes bug #492).
