@@ -1382,10 +1382,9 @@ int db_user_log_login(u64_t user_idnr);
 int db_change_mailboxsize(u64_t user_idnr, u64_t new_size);
 
 /* auto-reply cache */
-int db_replycache_register(const char *to, const char *from,
-		const char *handle);
-int db_replycache_validate(const char *to, const char *from,
-		const char *handle, int days);
+int db_replycache_register(const char *to, const char *from, const char *handle);
+int db_replycache_validate(const char *to, const char *from, const char *handle, int days);
+int db_replycache_unregister(const char *to, const char *from, const char *handle);
 
 /* get driver specific SQL snippets */
 const char * db_get_sql(sql_fragment_t frag);
