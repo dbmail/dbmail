@@ -19,7 +19,7 @@
 */
 
 /*
- * $Id: db.h 2309 2006-10-20 19:14:52Z aaron $
+ * $Id: db.h 2424 2007-01-21 18:41:53Z paul $
  *
  * dbase driver header file
  * Functions for database communication 
