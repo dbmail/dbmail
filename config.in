@@ -9,6 +9,12 @@
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #undef HAVE_DLFCN_H
 
+/* Define to 1 if you have the `dns_lookup' function. */
+#undef HAVE_DNS_LOOKUP
+
+/* Define to 1 if you have the `dn_expand' function. */
+#undef HAVE_DN_EXPAND
+
 /* Define to 1 if you have the <endian.h> header file. */
 #undef HAVE_ENDIAN_H
 

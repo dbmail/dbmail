@@ -5004,7 +5004,6 @@ int db_replycache_register(const char *to, const char *from, const char *handle)
 	char query[DEF_QUERYSIZE]; 
 	memset(query,0,DEF_QUERYSIZE);
 
-
 	escaped_to = dm_stresc(to);
 	escaped_from = dm_stresc(from);
 	escaped_handle = dm_stresc(handle);
@@ -5014,14 +5013,12 @@ int db_replycache_register(const char *to, const char *from, const char *handle)
 			"WHERE to_addr = '%s' "
 			"AND from_addr = '%s' "
 			"AND handle    = '%s' ",
-			DBPFX, to, from, handle);
-
-	dm_free(escaped_to);
-	dm_free(escaped_from);
-	dm_free(escaped_handle);
+			DBPFX, escaped_to, escaped_from, escaped_handle);
 
 	if (db_query(query) < 0) {
-		TRACE(TRACE_ERROR, "query failed");
+		dm_free(escaped_to);
+		dm_free(escaped_from);
+		dm_free(escaped_handle);
 		return DM_EQUERY;
 	}
 	
@@ -5032,24 +5029,56 @@ int db_replycache_register(const char *to, const char *from, const char *handle)
 			 "WHERE to_addr = '%s' AND from_addr = '%s' "
 			 "AND handle = '%s'",
 			 DBPFX, db_get_sql(SQL_CURRENT_TIMESTAMP),
-			 to, from, handle);
+			 escaped_to, escaped_from, escaped_handle);
 	} else {
 		snprintf(query, DEF_QUERYSIZE,
 			 "INSERT INTO %sreplycache (to_addr, from_addr, handle, lastseen) "
 			 "VALUES ('%s','%s','%s', %s)",
-			 DBPFX, to, from, handle, db_get_sql(SQL_CURRENT_TIMESTAMP));
+			 DBPFX, escaped_to, escaped_from, escaped_handle, db_get_sql(SQL_CURRENT_TIMESTAMP));
 	}
 	
 	db_free_result();
 	
-	if (db_query(query)== -1) {
-		TRACE(TRACE_ERROR, "query failed");
+	dm_free(escaped_to);
+	dm_free(escaped_from);
+	dm_free(escaped_handle);
+
+	if (db_query(query)== -1)
 		return DM_EQUERY;
-	}
 
 	return DM_SUCCESS;
 
 }
+
+int db_replycache_unregister(const char *to, const char *from, const char *handle)
+{
+	char *escaped_to, *escaped_from, *escaped_handle;
+	char query[DEF_QUERYSIZE]; 
+	memset(query,0,DEF_QUERYSIZE);
+
+	escaped_to = dm_stresc(to);
+	escaped_from = dm_stresc(from);
+	escaped_handle = dm_stresc(handle);
+
+	snprintf(query, DEF_QUERYSIZE,
+			"DELETE FROM %sreplycache "
+			"WHERE to_addr = '%s' "
+			"AND from_addr = '%s' "
+			"AND handle    = '%s' ",
+			DBPFX, escaped_to, escaped_from, escaped_handle);
+
+	dm_free(escaped_to);
+	dm_free(escaped_from);
+	dm_free(escaped_handle);
+
+	if (db_query(query) < 0)
+		return DM_EQUERY;
+	
+	db_free_result();
+	
+	return DM_SUCCESS;
+}
+
 
 /* Returns DM_SUCCESS if the (to, from) pair hasn't been seen in days.
 */
@@ -5057,11 +5086,11 @@ int db_replycache_validate(const char *to, const char *from,
 		const char *handle, int days)
 {
 	GString *tmp = g_string_new("");
-	g_string_printf(tmp, db_get_sql(SQL_REPLYCACHE_EXPIRE), days);
 	char *escaped_to, *escaped_from, *escaped_handle;
 	char query[DEF_QUERYSIZE]; 
-	memset(query,0,DEF_QUERYSIZE);
 
+	memset(query,0,DEF_QUERYSIZE);
+	g_string_printf(tmp, db_get_sql(SQL_REPLYCACHE_EXPIRE), days);
 
 	escaped_to = dm_stresc(to);
 	escaped_from = dm_stresc(from);
@@ -5071,24 +5100,20 @@ int db_replycache_validate(const char *to, const char *from,
 			"SELECT lastseen FROM %sreplycache "
 			"WHERE to_addr = '%s' AND from_addr = '%s' "
 			"AND handle = '%s' AND lastseen > (%s)",
-			DBPFX, to, from, handle, tmp->str);
+			DBPFX, escaped_to, escaped_from, escaped_handle, tmp->str);
 
 	g_string_free(tmp, TRUE);
 	dm_free(escaped_to);
 	dm_free(escaped_from);
 	dm_free(escaped_handle);
 
-	if (db_query(query) < 0) {
-		TRACE(TRACE_ERROR, "query failed");
+	if (db_query(query) < 0)
 		return DM_EQUERY;
-	}
 
-	if (db_num_rows() > 0) {
-		db_free_result();
-		return DM_EGENERAL;
-	}
-	
 	db_free_result();
+
+	if (db_num_rows() > 0)
+		return DM_EGENERAL;
 	
 	return DM_SUCCESS;			
 }
