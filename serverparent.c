@@ -121,11 +121,18 @@ int serverparent_getopt(serverConfig_t *config, const char *service, int argc, c
 			break;
 
 		default:
-			fprintf(stderr, "%s: unrecognized option [-%c]\n\n", argv[0], opt);
-			break;
+			fprintf(stderr, "%s: unrecognized option: %s\n\n", argv[0], argv[optind]);
+			return 1;
 		}
 	}
 
+	if (optind < argc) {
+		fprintf(stderr, "%s: unrecognized options: ", argv[0]);
+		while (optind < argc)
+			fprintf(stderr, "%s ", argv[optind++]);
+		fprintf(stderr, "\n\n");
+		return 1;
+	}
 
 	DoConfig(config, service);
 

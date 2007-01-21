@@ -1,3 +1,11 @@
+2007-01-20  Aaron Stone  <aaron@serendipity.cx>
+
+	* serverparent.c:
+	Unrecognized options case the daemons to bail out with an error.
+	* Makefile.am, modules/Makefile.am:
+	Accepted patch to use pkglib_LTLIBRARIES rather than hardcoding the
+	lib paths (closes bug #492).
+
 2007-01-20  Paul J Stevens <paul@nfg.nl>
 
 	* debian/control, debian/dbmail-dev.install, debian/dbmail-ldap.config, 
