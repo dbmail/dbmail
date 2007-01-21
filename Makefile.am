@@ -27,9 +27,6 @@ DM_GETOPT = dm_getopt.c
 endif
 
 
-libdir=$(prefix)/lib/dbmail
-pkglibdir = $(libdir)
-
 sbin_PROGRAMS = dbmail-smtp \
 	dbmail-pop3d \
 	dbmail-imapd \
@@ -102,7 +99,7 @@ dbmail_timsieved_LDADD = libdbmail.la
 endif
 
 
-lib_LTLIBRARIES = libdbmail.la
+pkglib_LTLIBRARIES = libdbmail.la
 
 
 if SHARED
