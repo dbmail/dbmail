@@ -28,7 +28,7 @@ LDAP:          $LDAPINC$LDAPLIB
 SHARED:        $enable_shared
 STATIC:        $enable_static
 CHECK:         $with_check
-SOCKETS:       $LIB_SOCKET
+SOCKETS:       $SOCKETLIB
 ])
 ])
 
@@ -792,25 +792,25 @@ dnl from Zephyr
 dnl $Id$
 
 dnl Hacked on by Rob Earhart to not just toss stuff in LIBS
-dnl It now puts everything required for sockets into LIB_SOCKET
+dnl It now puts everything required for sockets into SOCKETLIB
 
 AC_DEFUN([CMU_SOCKETS], [
 	save_LIBS="$LIBS"
-	LIB_SOCKET=""
+	SOCKETLIB=""
 	AC_CHECK_FUNC(connect, :,
 		AC_CHECK_LIB(nsl, gethostbyname,
-			     LIB_SOCKET="-lnsl $LIB_SOCKET")
+			     SOCKETLIB="-lnsl $SOCKETLIB")
 		AC_CHECK_LIB(socket, connect,
-			     LIB_SOCKET="-lsocket $LIB_SOCKET")
+			     SOCKETLIB="-lsocket $SOCKETLIB")
 	)
-	LIBS="$LIB_SOCKET $save_LIBS"
+	LIBS="$SOCKETLIB $save_LIBS"
 	AC_CHECK_FUNC(res_search, :,
                 AC_CHECK_LIB(resolv, res_search,
-                              LIB_SOCKET="-lresolv $LIB_SOCKET") 
+                              SOCKETLIB="-lresolv $SOCKETLIB") 
         )
-	LIBS="$LIB_SOCKET $save_LIBS"
+	LIBS="$SOCKETLIB $save_LIBS"
 	AC_CHECK_FUNCS(dn_expand dns_lookup)
 	LIBS="$save_LIBS"
-	AC_SUBST(LIB_SOCKET)
+	AC_SUBST(SOCKETLIB)
 ])
 
