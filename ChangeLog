@@ -1,17 +1,9 @@
-<<<<<<< .mine
 2007-01-23  Paul J Stevens <paul@nfg.nl>
 
 	* Makefile.in, check_dbmail.h, check_dbmail_imapd.c, misc.c, 
 	  modules/Makefile.in, test-scripts/testimap.py:
 	working on #497
 
-=======
-2007-01-20  Aaron Stone  <aaron@serendipity.cx>
-
-	* acinclude.m4, configure.in, Makefile.am:
-	Wire up the SOCKETLIB variable into the link stage (closes bug #489).
-
->>>>>>> .r2426
 2007-01-21  Paul J Stevens <paul@nfg.nl>
 
 	* debian/po/cs.po, debian/po/de.po, debian/po/es.po, debian/po/fr.po, 
@@ -30,6 +22,8 @@
 	* Makefile.am, modules/Makefile.am:
 	Accepted patch to use pkglib_LTLIBRARIES rather than hardcoding the
 	lib paths (closes bug #492).
+	* acinclude.m4, configure.in, Makefile.am:
+	Wire up the SOCKETLIB variable into the link stage (closes bug #489).
 
 2007-01-20  Paul J Stevens <paul@nfg.nl>
 
