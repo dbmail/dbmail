@@ -1826,6 +1826,8 @@ GList* dbmail_imap_append_alist_as_plist(GList *list, const InternetAddressList 
 			/* personal name */
 			if (ia->name && ia->value.addr) {
 				name = g_mime_utils_header_encode_phrase((unsigned char *)ia->name);
+				g_strdelimit(name,"\"\\",' ');
+				g_strstrip(name);
 				s = dbmail_imap_astring_as_string(name);
 				t = g_list_append_printf(t, "%s", s);
 				g_free(name);
@@ -2119,6 +2121,10 @@ char * imap_cleanup_address(const char *a)
 	
 	s = g_string_new("");
 	t = g_strdup(a);
+
+	// un-fold and collapse tabs and spaces
+	g_strdelimit(t,"\n",' ');
+	dm_pack_spaces(t);
 	inptr = t;
 	inptr = g_strstrip(inptr);
 	prev = *inptr;
