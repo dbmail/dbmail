@@ -110,7 +110,7 @@ libdbmail_la_SOURCES = $(COMMON) $(SERVER) $(DELIVER)
 libdbmail_la_LIBADD = @MYSQLLTLIB@ @PGSQLLTLIB@ @SQLITELTLIB@ @SORTLTLIB@ @AUTHLTLIB@
 endif
 
-libdbmail_la_LDFLAGS = $(AM_LDFLAGS)
+libdbmail_la_LDFLAGS = $(AM_LDFLAGS) @SOCKETLIB@
 libdbmail_la_CFLAGS = $(AM_CFLAGS)
 
 
