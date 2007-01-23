@@ -42,7 +42,7 @@ HOST,PORT = "localhost", 143
 # for stdin/stdout testing
 DAEMONBIN = "./dbmail-imapd -n -f /etc/dbmail/dbmail-test.conf"
 # with valgrind
-DAEMONBIN = "valgrind --suppressions=./contrib/dbmail.supp --leak-check=full %s" % DAEMONBIN
+#DAEMONBIN = "valgrind --suppressions=./contrib/dbmail.supp --leak-check=full %s" % DAEMONBIN
 
 
 TESTMSG={}
