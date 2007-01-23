@@ -1,3 +1,9 @@
+2007-01-23  Paul J Stevens <paul@nfg.nl>
+
+	* Makefile.in, check_dbmail.h, check_dbmail_imapd.c, misc.c, 
+	  modules/Makefile.in, test-scripts/testimap.py:
+	working on #497
+
 2007-01-21  Paul J Stevens <paul@nfg.nl>
 
 	* debian/po/cs.po, debian/po/de.po, debian/po/es.po, debian/po/fr.po, 
