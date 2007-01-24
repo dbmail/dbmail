@@ -1969,7 +1969,7 @@ char * imap_get_envelope(GMimeMessage *message)
 	GMimeObject *part;
 	GList *list = NULL;
 	char *result;
-	char *s, *t;
+	char *s = NULL, *t = NULL;
 
 	if (! GMIME_IS_MESSAGE(message))
 		return NULL;
@@ -1989,8 +1989,16 @@ char * imap_get_envelope(GMimeMessage *message)
 	
 	/* subject */
 	result = (char *)g_mime_message_get_header(message,"Subject");
+
 	if (result) {
-		t = dbmail_imap_astring_as_string(result);
+		if (g_mime_utils_text_is_8bit((unsigned char *)result, strlen(result))) {
+			s = g_mime_utils_header_encode_text((unsigned char *)result);
+			TRACE(TRACE_DEBUG,"encoding 8bit subject [%s] -> [%s]", result, s);
+			t = dbmail_imap_astring_as_string(s);
+			g_free(s);
+		} else {
+			t = dbmail_imap_astring_as_string(result);
+		}
 		list = g_list_append_printf(list,"%s", t);
 		g_free(t);
 	} else {
