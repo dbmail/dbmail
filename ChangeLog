@@ -1,3 +1,10 @@
+2007-01-24  Paul J Stevens <paul@nfg.nl>
+
+	* README:
+	minor update
+	* Makefile.in, configure, man/Makefile.in, misc.c, modules/Makefile.in:
+	do rfc2047 encoding of 8bit subjects during envelope construction
+
 2007-01-23  Paul J Stevens <paul@nfg.nl>
 
 	* Makefile.in, check_dbmail.h, check_dbmail_imapd.c, misc.c, 
