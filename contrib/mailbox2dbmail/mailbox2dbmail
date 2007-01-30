@@ -29,7 +29,8 @@ def main():
         msgnumber=1
         box = "Inbox"
         path = "/usr/sbin/dbmail-smtp"
-        opts, args = getopt.getopt(sys.argv[1:], "u:m:b:t:p:hv", ["user=","mail=","box=","path=","type=","help","version"])
+        dryrun = False
+        opts, args = getopt.getopt(sys.argv[1:], "u:m:b:t:p:dhv", ["user=","mail=","box=","path=","type=","help","version"])
         for o, a in opts:
             if o in ("-v","--version"):
                 print version
@@ -37,11 +38,14 @@ def main():
             elif o in ("-h","--help"):
                 usage()
                 sys.exit()
+            elif o in ("-d","--dryrun"): dryrun = True
             elif o in ("-u","--user"): user = a
             elif o in ("-m","--mail"): mbox = a
             elif o in ("-b","--box"): box = a
             elif o in ("-p","--path"): path = a
             elif o in ("-t","--type"): type = a
+        if dryrun:
+            print "Dry run mode"
         if not user:
             print "No user specified"
             sys.exit(1)
@@ -59,7 +63,7 @@ def main():
         elif not type:
             print "No mailbox type specified"
             sys.exit(1)
-        convert(user,mbox,box,path,msgnumber)
+        convert(user,mbox,box,path,msgnumber,dryrun)
     except getopt.GetoptError:
         usage()
         print "Error Parsing Options"
@@ -68,6 +72,7 @@ def main():
 def usage():
     print version
     print """%s 
+    -d|--dryrun
     -u|--user <user> 
     -t|--type <mbox, maildir, and mhdir> 
     -m|--mail <location of mailbox> 
@@ -75,35 +80,31 @@ def usage():
     -p <path to dbmail-smtp>
     """ %(sys.argv[0],)
     
-def convert(user,mbox,box,path,msgnumber):
+def convert(user,mbox,box,path,msgnumber,dryrun):
     try:
-     	while 1:
+        while 1:
             mailmsg = mbox.next()
             command = """%s -m "%s" -u "%s" """ %(path,box,user)
             if not mailmsg:
                 print "All Done!"
-            	sys.exit()
+                sys.exit()
             try:
-                dbmail = os.popen(command,'w')
-                dbmail.writelines(mailmsg.as_string(True))
-                dbmail.close()
-                del mailmsg
+                if not dryrun:
+                    dbmail = os.popen(command,'w')
+                    dbmail.writelines(mailmsg.as_string(True))
+                    dbmail.close()
+                    del mailmsg
                 print "Processed Message %s" %(msgnumber,)
                 msgnumber = msgnumber + 1
             except IOError:
                 print "Either box or user is invalid"
                 sys.exit(1)
         return 0    
-    except email.Errors.MessageParseError:
+    except email.Errors.MessageParseError,ValueError:
         print "Error Parsing Mail"
         sys.exit(1)
 
 if __name__ == "__main__":
     main()
-
-
-    
-
         
-            
-        
+# vim: ai ts=4 sts=4 et sw=4
