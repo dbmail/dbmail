@@ -1991,7 +1991,7 @@ char * imap_get_envelope(GMimeMessage *message)
 	result = (char *)g_mime_message_get_header(message,"Subject");
 
 	if (result) {
-		if (g_mime_utils_text_is_8bit((unsigned char *)result, strlen(result))) {
+		if (g_utf8_validate((const gchar *)result, -1, NULL) && g_mime_utils_text_is_8bit((unsigned char *)result, g_utf8_strlen(result,-1))) {
 			s = g_mime_utils_header_encode_text((unsigned char *)result);
 			TRACE(TRACE_DEBUG,"encoding 8bit subject [%s] -> [%s]", result, s);
 			t = dbmail_imap_astring_as_string(s);
