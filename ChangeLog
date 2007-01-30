@@ -1,3 +1,13 @@
+2007-01-30  Paul J Stevens <paul@nfg.nl>
+
+	* misc.c:
+	only encode subjectvalues in the envelope response if the subject is
+	both 8bit and utf8 clean
+	* dbmail-imapsession.c:
+	remove the Recent flag from the PERMANENTFLAGS response
+	* test-scripts/testbox:
+	add bogus 8bit message to testbox
+
 2007-01-24  Paul J Stevens <paul@nfg.nl>
 
 	* README:
