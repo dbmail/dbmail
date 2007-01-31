@@ -166,5 +166,6 @@ char * imap_get_logical_part(const GMimeObject *object, const char * specifier);
 char * imap_message_fetch_headers(u64_t physid, const GList *headers, gboolean not);
 
 char * imap_cleanup_address(const char *a);
-	
+char * convert_8bit_field(GMimeMessage *message,const char* str_in);
+char * convert_8bit_field_to_utf8(GMimeMessage *message,const char* str_in);
 #endif
