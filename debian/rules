@@ -57,7 +57,6 @@ include /usr/share/dpatch/dpatch.make
 
 CONFFLAGS=--prefix=/usr --mandir=\$${prefix}/share/man --sysconfdir=/etc/dbmail \
 	--localstatedir=/var/run/dbmail --with-logdir=/var/log/dbmail --infodir=\$${prefix}/share/info \
-	--libdir=/usr/lib/dbmail \
 	$(WITH_GC) $(WITH_CHECK) $(SHARED) $(STATIC) $(WITH_SIEVE) $(WITH_LDAP) $(WITH_MYSQL) $(WITH_PGSQL) $(WITH_SQLITE)
 
 build: stamps/build

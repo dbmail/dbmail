@@ -959,7 +959,7 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 	values = g_relation_select(self->headers,header,0);
 	for (i=0; i<values->len;i++) {
 		raw = (unsigned char *)g_tuples_index(values,i,1);
-
+		char *tmp_raw=NULL;
 		if (isaddr) {
 			InternetAddressList *alist;
 			gchar *t = imap_cleanup_address((const char *)raw);
@@ -969,12 +969,15 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 			value = internet_address_list_to_string(alist, TRUE);
 			internet_address_list_destroy(alist);
 
-			safe_value = dm_stresc(value);
+			tmp_raw=convert_8bit_field((GMimeMessage *)(self->content),value);
+						
+			safe_value = dm_stresc(tmp_raw);
 			g_free(value);
 		} else {
-			safe_value = dm_stresc((const char *)raw);
+			tmp_raw=convert_8bit_field((GMimeMessage *)(self->content),(const char *)raw);
+			safe_value = dm_stresc((const char *)tmp_raw);
 		}
-
+		g_free(tmp_raw);
 
 		g_string_printf(q,"INSERT INTO %sheadervalue (headername_id, physmessage_id, headervalue) "
 				"VALUES (%llu,%llu,'%s')", DBPFX, id, self->physid, safe_value);
@@ -993,7 +996,7 @@ static gboolean _header_cache(const char UNUSED *key, const char *header, gpoint
 	return FALSE;
 }
 
-static void insert_address_cache(u64_t physid, const char *field, InternetAddressList *ialist)
+static void insert_address_cache(u64_t physid, const char *field, InternetAddressList *ialist,GMimeMessage *message)
 {
 	InternetAddress *ia;
 	
@@ -1009,6 +1012,7 @@ static void insert_address_cache(u64_t physid, const char *field, InternetAddres
 		g_return_if_fail(ia != NULL);
 
 		rname = ia->name ? ia->name: "";
+		rname=convert_8bit_field(message,rname);
 		/* address fields are truncated to column width */
 		name = dm_strnesc(rname, CACHE_WIDTH_ADDR);
 		addr = dm_strnesc(ia->value.addr ? ia->value.addr : "", CACHE_WIDTH_ADDR);
@@ -1019,6 +1023,7 @@ static void insert_address_cache(u64_t physid, const char *field, InternetAddres
 		
 		g_free(name);
 		g_free(addr);
+		g_free(rname);
 		
 		if (db_query(q->str)) {
 			TRACE(TRACE_ERROR, "insert %sfield failed [%s]", field, q->str);
@@ -1060,7 +1065,7 @@ void dbmail_message_cache_tofield(const struct DbmailMessage *self)
 	list = (InternetAddressList *)g_mime_message_get_recipients((GMimeMessage *)(self->content), GMIME_RECIPIENT_TYPE_TO);
 	if (list == NULL)
 		return;
-	insert_address_cache(self->physid, "to", list);
+	insert_address_cache(self->physid, "to", list,(GMimeMessage *)(self->content));
 }
 
 void dbmail_message_cache_ccfield(const struct DbmailMessage *self)
@@ -1070,7 +1075,7 @@ void dbmail_message_cache_ccfield(const struct DbmailMessage *self)
 	list = (InternetAddressList *)g_mime_message_get_recipients((GMimeMessage *)(self->content), GMIME_RECIPIENT_TYPE_CC);
 	if (list == NULL)
 		return;
-	insert_address_cache(self->physid, "cc", list);
+	insert_address_cache(self->physid, "cc", list,(GMimeMessage *)(self->content));
 	
 }
 void dbmail_message_cache_fromfield(const struct DbmailMessage *self)
@@ -1082,7 +1087,7 @@ void dbmail_message_cache_fromfield(const struct DbmailMessage *self)
 	list = internet_address_parse_string(addr);
 	if (list == NULL)
 		return;
-	insert_address_cache(self->physid, "from", list);
+	insert_address_cache(self->physid, "from", list,(GMimeMessage *)(self->content));
 	internet_address_list_destroy(list);
 
 }
@@ -1095,7 +1100,7 @@ void dbmail_message_cache_replytofield(const struct DbmailMessage *self)
 	list = internet_address_parse_string(addr);
 	if (list == NULL)
 		return;
-	insert_address_cache(self->physid, "replyto", list);
+	insert_address_cache(self->physid, "replyto", list,(GMimeMessage *)(self->content));
 	internet_address_list_destroy(list);
 
 }
@@ -1133,11 +1138,11 @@ void dbmail_message_cache_subjectfield(const struct DbmailMessage *self)
 		return;
 	}
 
-	value = g_strdup(raw);
-
+	
+	value = convert_8bit_field(GMIME_MESSAGE(self->content), raw);
 	s = value;
 	dm_base_subject(s);
-
+	
 	insert_field_cache(self->physid, "subject", s);
 	
 	g_free(value);

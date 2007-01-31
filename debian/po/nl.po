@@ -15,7 +15,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: dbmail 1.2.5-1\n"
 "Report-Msgid-Bugs-To: paul@nfg.nl\n"
-"POT-Creation-Date: 2007-01-20 10:12+0100\n"
+"POT-Creation-Date: 2007-01-31 22:34+0100\n"
 "PO-Revision-Date: 2004-06-09 16:58+0100\n"
 "Last-Translator: Luk Claes <luk.claes@ugent.be>\n"
 "Language-Team: Debian l10n Dutch <debian-l10n-dutch@lists.debian.org>\n"
@@ -25,14 +25,14 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:3
+#: ../dbmail.templates:1001
 #, fuzzy
 msgid "Use debconf to manage dbmail configuration?"
 msgstr "Wilt u debconf gebruiken om dbmail te configureren?"
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:3
+#: ../dbmail.templates:1001
 msgid ""
 "Please confirm if you want to allow debconf to manage some parts of your "
 "dbmail configuration. Notice that changes you make to dbmail.conf by hand "
@@ -45,19 +45,19 @@ msgstr ""
 
 #. Type: select
 #. Choices
-#: ../dbmail.templates:11
+#: ../dbmail.templates:2001
 msgid "sql, ldap"
 msgstr ""
 
 #. Type: select
 #. Description
-#: ../dbmail.templates:13
+#: ../dbmail.templates:2002
 msgid "The authentication driver you wish to activate:"
 msgstr ""
 
 #. Type: select
 #. Description
-#: ../dbmail.templates:13
+#: ../dbmail.templates:2002
 msgid ""
 "Dbmail by defauls uses SQL based authentication. But you can also use LDAP "
 "instead."
@@ -65,14 +65,14 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:19
+#: ../dbmail.templates:3001
 #, fuzzy
 msgid "Postmaster's email address:"
 msgstr "Het e-mailadres van de postbeheerder."
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:19
+#: ../dbmail.templates:3001
 msgid ""
 "This should be a valid email address read by the person responsible for this "
 "email server."
@@ -82,20 +82,20 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:19
+#: ../dbmail.templates:3001
 msgid "Example: postmaster@yourdomain.tld"
 msgstr "Voorbeeld: postmaster@uwdomein.be"
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:27
+#: ../dbmail.templates:4001
 #, fuzzy
 msgid "The hostname of the sql database server:"
 msgstr "Geef de computernaam van de (my/pg)sql-databankserver."
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:27
+#: ../dbmail.templates:4001
 msgid ""
 "On this server you must create a database to hold dbmail's tables. You "
 "should grant full read/write permissions on this database to the dbmail user."
@@ -106,32 +106,32 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:34
+#: ../dbmail.templates:5001
 #, fuzzy
 msgid "The name of the database:"
 msgstr "Wat is de naam van de databank?"
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:34
+#: ../dbmail.templates:5001
 msgid "This is the name of the database that holds the dbmail tables."
 msgstr "Dit is de naam van de databank welke de dbmail-tabellen bevat."
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:34
+#: ../dbmail.templates:5001
 msgid "If you're using sqlite, this should be the path to the database file."
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:41
+#: ../dbmail.templates:6001
 msgid "The database user:"
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:41
+#: ../dbmail.templates:6001
 msgid "This is the username dbmail will use to connect to the database server."
 msgstr ""
 "Dit is de gebruikersnaam die dbmail zal gebruiken om met de databankserver "
@@ -139,14 +139,14 @@ msgstr ""
 
 #. Type: password
 #. Description
-#: ../dbmail.templates:46
+#: ../dbmail.templates:7001
 #, fuzzy
 msgid "The password for the database connection:"
 msgstr "Geef het wachtwoord voor de databank."
 
 #. Type: password
 #. Description
-#: ../dbmail.templates:46
+#: ../dbmail.templates:7001
 msgid "This is the password dbmail will use to connect to the database server."
 msgstr ""
 "Dit is het wachtwoord dat dbmail zal gebruiken om met de databankserver te "
@@ -154,14 +154,14 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:51
+#: ../dbmail.templates:8001
 #, fuzzy
 msgid "start the imap server after reboot?"
 msgstr "De POP3-server starten na het heropstarten van de computer?"
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:51
+#: ../dbmail.templates:8001
 #, fuzzy
 msgid ""
 "Dbmail supports both imap and pop3 services. You can choose to run either "
@@ -172,27 +172,27 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:57
+#: ../dbmail.templates:9001
 #, fuzzy
 msgid "start the lmtp server after reboot?"
 msgstr "De POP3-server starten na het heropstarten van de computer?"
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:57
+#: ../dbmail.templates:9001
 msgid "This is only needed when you like to feed the email to Dbmail by LMTP."
 msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:62
+#: ../dbmail.templates:10001
 #, fuzzy
 msgid "start the pop3 server after reboot?"
 msgstr "De POP3-server starten na het heropstarten van de computer?"
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:62
+#: ../dbmail.templates:10001
 #, fuzzy
 msgid ""
 "Dbmail support both imap and pop3 services. You can choose to run either one "
@@ -203,14 +203,14 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:68
+#: ../dbmail.templates:11001
 #, fuzzy
 msgid "start the timsieve server after reboot?"
 msgstr "De POP3-server starten na het heropstarten van de computer?"
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:68
+#: ../dbmail.templates:11001
 msgid ""
 "This is only needed if you want to allow users to manage their sieve scripts "
 "using a compatible client such as kmail, horde/ingo or squirrelmail/"
@@ -219,13 +219,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:74
+#: ../dbmail.templates:12001
 msgid "The port is your ldap server running at:"
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:74
+#: ../dbmail.templates:12001
 msgid ""
 "Please enter the port on which your ldap server is running at. The default "
 "port is 389."
@@ -233,40 +233,40 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:80
+#: ../dbmail.templates:13001
 #, fuzzy
 msgid "The hostname of the ldap server:"
 msgstr "Geef de computernaam van de (my/pg)sql-databankserver."
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:80
+#: ../dbmail.templates:13001
 #, fuzzy
 msgid "Please enter the hostname your ldap server is running at."
 msgstr "Geef de naam van de databankgebruiker die u wilt gebruiken."
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:85
+#: ../dbmail.templates:14001
 msgid "The ldap base DN:"
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:85
+#: ../dbmail.templates:14001
 msgid ""
 "Please enter the DN where Dbmail should start searching for user accounts."
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:91
+#: ../dbmail.templates:15001
 msgid "The field which contains the user login name of the user:"
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:91
+#: ../dbmail.templates:15001
 msgid ""
 "Please enter the ldap attribute that will contain the username The standard "
 "account uses uid"
@@ -274,13 +274,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:97
+#: ../dbmail.templates:16001
 msgid "The field which contains the group id number of the user:"
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:97
+#: ../dbmail.templates:16001
 msgid ""
 "Please enter the ldap attribute that will contain the group id number The "
 "standard account uses gidNumber"
@@ -288,13 +288,13 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:103
+#: ../dbmail.templates:17001
 msgid "Bind anonymous to the ldap server?"
 msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:103
+#: ../dbmail.templates:17001
 msgid ""
 "Use this if your ldap does not require authentication to search  the ldap "
 "tree."
@@ -302,14 +302,14 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:109
+#: ../dbmail.templates:18001
 #, fuzzy
 msgid "The DN to bind to the ldap server:"
 msgstr "Geef de computernaam van de (my/pg)sql-databankserver."
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:109
+#: ../dbmail.templates:18001
 #, fuzzy
 msgid ""
 "Please enter the DN, which should be used to connect to the ldap server."
@@ -319,14 +319,14 @@ msgstr ""
 
 #. Type: password
 #. Description
-#: ../dbmail.templates:115
+#: ../dbmail.templates:19001
 #, fuzzy
 msgid "The password to bind to the ldap server:"
 msgstr "Geef de computernaam van de (my/pg)sql-databankserver."
 
 #. Type: password
 #. Description
-#: ../dbmail.templates:115
+#: ../dbmail.templates:19001
 #, fuzzy
 msgid ""
 "Please enter the password, which should be used to connect to the ldap "
