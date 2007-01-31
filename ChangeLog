@@ -2,6 +2,8 @@
 
 	* debian/rules:
 	remove --libdir from debian configure run
+	* dbmail-message.c, misc.c, misc.h:
+	convert 8bit header values to utf8 during insertion (AntonZ)
 
 2007-01-30  Paul J Stevens <paul@nfg.nl>
 
