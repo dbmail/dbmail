@@ -1,7 +1,15 @@
+2007-02-03  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_user.c, dbmail-user.c, dbmail-user.h:
+	removing is_valid test. Validating usernames is deferred to the storage
+	layer (closes #490)
+
 2007-01-31  Paul J Stevens <paul@nfg.nl>
 
 	* debian/rules:
 	remove --libdir from debian configure run
+	* dbmail-message.c, misc.c, misc.h:
+	convert 8bit header values to utf8 during insertion (AntonZ)
 
 2007-01-30  Paul J Stevens <paul@nfg.nl>
 
