@@ -154,7 +154,6 @@ END_TEST
 //                GList * fwds_del);
 
 /* Helper functions */
-//int is_valid(const char * const str);
 //u64_t strtomaxmail(const char * const str);
 
 

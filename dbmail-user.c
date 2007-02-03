@@ -55,53 +55,38 @@ int do_add(const char * const user,
 {
 	u64_t useridnr;
 	u64_t mailbox_idnr;
-	int add_user_result, result;
-
-	if (!is_valid(user)) {
-		qerrorf("Error: invalid characters in username [%s]\n",
-		     user);
-		return -1;
-	}
+	int result;
 
 	TRACE(TRACE_DEBUG, "Adding user %s with password type %s,%llu "
 		"bytes mailbox limit and clientid %llu... ", 
 		user, enctype, maxmail, clientid);
 
-	switch (auth_user_exists(user, &useridnr))
-	{
-	case -1:
-		/* Database failure */
-		qerrorf("Failed\n\nCheck logs for details\n\n");
+	if ((result = auth_user_exists(user, &useridnr))) {
+		qerrorf("Failed: check logs for details\n");
+		return result;
+	}
+
+	if (auth_adduser(user, password, enctype, clientid, maxmail, &useridnr) < 0) {
+		qerrorf("Failed: unable to create user\n");
 		return -1;
-	default:
-		if (useridnr != 0) {
-			qprintf("Failed: user exists [%llu]\n",
-				     useridnr);
-			return -1;
-		} else {
-			/* If useridnr is 0, create the user */
-			add_user_result = auth_adduser(user, password, enctype,
-				clientid, maxmail, &useridnr);
-		}
-		break;
 	}
 
 	TRACE(TRACE_DEBUG, "Ok, user added id [%llu]\n", useridnr);
 
 	/* Add an INBOX for the user. */
-	qprintf("Adding INBOX for new user\n");
-	switch(db_createmailbox("INBOX", useridnr, &mailbox_idnr)) {
-	case -1:
-		qprintf("Failed... User is added but we failed to add "
-			     "the mailbox INBOX for this user\n");
-		result = -1;
-		break;
-	case 0:
-	default:
-		TRACE(TRACE_DEBUG, "Ok. added\n");
-		result = 0;
-		break;
-	} 
+	qprintf("Adding INBOX for new user... ");
+
+	if (db_createmailbox("INBOX", useridnr, &mailbox_idnr) < 0) {
+		qprintf("failed... removing user... ");
+		if (auth_delete_user(user))
+			qprintf("failed also.\n");
+		else
+			qprintf("done.\n");
+		return -1;
+	}
+	qprintf("ok.\n");
+
+	TRACE(TRACE_DEBUG, "Ok. INBOX created for user.\n");
 
 	if(do_aliases(useridnr, alias_add, alias_del) < 0)
 		result = -1;
@@ -116,15 +101,9 @@ int do_username(const u64_t useridnr, const char * const newuser)
 {
 	int result = 0;
 
-	if (newuser && is_valid(newuser)) {
-		if (auth_change_username(useridnr, newuser) != 0) {
-			qerrorf("Error: could not change username.\n");
-			result = -1;
-		}
-	} else {
-		qerrorf("Error: new username contains invalid characters.\n");
-		result = -1;
-	}
+	assert(newuser);
+	if ((result = auth_change_username(useridnr, newuser)))
+		qerrorf("Error: could not change username.\n");
 
 	return result;
 }
@@ -134,11 +113,9 @@ int do_password(const u64_t useridnr,
                 const char * const password, const char * const enctype)
 {
 	int result = 0;
-
-	result = auth_change_password(useridnr, password, enctype);
-	if (result != 0) {
+	
+	if ((result = auth_change_password(useridnr, password, enctype)))
 		qerrorf("Error: could not change password.\n");
-	}
 
 	return result;
 }
@@ -273,10 +250,8 @@ int do_clientid(u64_t useridnr, u64_t clientid)
 {	
 	int result = 0;
 
-	if (auth_change_clientid(useridnr, clientid) != 0) {
-		qprintf("\nWarning: could not change client id ");
-		result = -1;
-	}
+	if ((result = auth_change_clientid(useridnr, clientid)))
+		qerrorf("Warning: could not change client id\n");
 
 	return result;
 }
@@ -286,10 +261,8 @@ int do_maxmail(u64_t useridnr, u64_t maxmail)
 {
 	int result = 0;
 
-	if (auth_change_mailboxsize(useridnr, maxmail) != 0) {
+	if ((result = auth_change_mailboxsize(useridnr, maxmail)))
 		qerrorf("Error: could not change max mail size.\n");
-		result = -1;
-	}
 
 	return result;
 }
@@ -607,17 +580,6 @@ int do_empty(u64_t useridnr)
 	return result;
 }
 
-
-int is_valid(const char *str)
-{
-	int i;
-
-	for (i = 0; str[i]; i++)
-		if (strchr(ValidChars, str[i]) == NULL)
-			return 0;
-
-	return 1;
-}
 
 /*eddy
   This two function was base from "cpu" by Blake Matheny <matheny@dbaseiv.net>

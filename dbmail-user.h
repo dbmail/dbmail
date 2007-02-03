@@ -84,7 +84,6 @@ int do_forwards(const char *alias, const u64_t clientid,
                 GList * fwds_del);
 
 /* Helper functions */
-int is_valid(const char * const str);
 u64_t strtomaxmail(const char * const str);
 
 #endif
