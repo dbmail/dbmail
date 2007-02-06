@@ -3835,7 +3835,6 @@ u64_t db_first_unseen(u64_t mailbox_idnr)
 	char query[DEF_QUERYSIZE]; 
 	memset(query,0,DEF_QUERYSIZE);
 
-
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT MIN(message_idnr) FROM %smessages "
 		 "WHERE mailbox_idnr = %llu "
@@ -3844,7 +3843,7 @@ u64_t db_first_unseen(u64_t mailbox_idnr)
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "could not select messages");
-		return (u64_t) (-1);
+		return 0;
 	}
 
 	if (db_num_rows())
