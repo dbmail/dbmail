@@ -107,24 +107,8 @@ gboolean dbmail_mailbox_get_uid(struct DbmailMailbox *self)
 	return self->uid;
 }
 
-static void clear_uid_msn_map(struct DbmailMailbox *self)
-{
 
-	if (self->sorted)
-		g_list_free(self->sorted);
-
-	if (self->ids)
-		g_tree_destroy(self->ids);
-
-	if (self->msn)
-		g_tree_destroy(self->msn);
-
-	self->ids = NULL;
-	self->msn = NULL;
-	self->sorted = NULL;
-}
-
-static void uid_msn_map(u64_t *uid, struct DbmailMailbox *self)
+static void uid_msn_map(struct DbmailMailbox *self, u64_t *id)
 {
 	u64_t *msn;
 
@@ -133,28 +117,48 @@ static void uid_msn_map(u64_t *uid, struct DbmailMailbox *self)
 	msn = g_new0(u64_t,1);
 	*msn = self->rows;
 
-	g_tree_insert(self->ids,uid,msn);
-	g_tree_insert(self->msn,msn,uid);
+	g_tree_insert(self->ids,id,msn);
+	g_tree_insert(self->msn,msn,id);
 }
 	
-void dbmail_mailbox_map_uid_msn(struct DbmailMailbox *self)
+void mailbox_uid_msn_new(struct DbmailMailbox *self)
 {
-	clear_uid_msn_map(self);
+	if (self->ids)
+		g_tree_destroy(self->ids);
 
+	if (self->msn)
+		g_tree_destroy(self->msn);
+
+	self->ids = NULL;
+	self->msn = NULL;
+
+	self->ids = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
+	self->msn = g_tree_new_full((GCompareDataFunc)ucmp,NULL,NULL,NULL);
 	self->rows = 0;
 
-	self->ids = g_tree_new_full((GCompareDataFunc)ucmp,NULL,NULL,(GDestroyNotify)g_free);
-	self->msn = g_tree_new_full((GCompareDataFunc)ucmp,NULL,NULL,NULL);
 
-	self->sorted = g_list_sort(self->sorted, (GCompareFunc)ucmp);
-	g_list_foreach(self->sorted, (GFunc)uid_msn_map, self);
+}
+
+static void mailbox_build_uid_map(struct DbmailMailbox *self)
+{
+	int i, rows;
+	u64_t *id;
+
+	mailbox_uid_msn_new(self);
+
+	rows = db_num_rows();
+	for (i=0; i< rows; i++) {
+		id = g_new0(u64_t,1);
+		*id = db_get_result_u64(i,0);
+		uid_msn_map(self,id);
+	}
+	
+	TRACE(TRACE_DEBUG,"ids [%d], msn [%d]", g_tree_nnodes(self->ids), g_tree_nnodes(self->msn));
 }
 
 int dbmail_mailbox_open(struct DbmailMailbox *self)
 {
-	u64_t row,rows;
 	GString *q = g_string_new("");
-	u64_t *uid;
 
 	g_string_printf(q, "SELECT message_idnr FROM %smessages "
 		 "WHERE mailbox_idnr = %llu "
@@ -167,23 +171,10 @@ int dbmail_mailbox_open(struct DbmailMailbox *self)
 		g_string_free(q,TRUE);
 		return DM_EQUERY;
 	}
+
 	g_string_free(q,TRUE);
 
-	if ((rows  = db_num_rows()) < 1) {
-		TRACE(TRACE_INFO, "no messages in mailbox");
-		db_free_result();
-		return DM_SUCCESS;
-	}
-
-	clear_uid_msn_map(self);
-	for (row=0; row < rows; row++) {
-		uid = g_new0(u64_t,1);
-		*uid = db_get_result_u64(row,0);
-		self->sorted = g_list_prepend(self->sorted, uid);
-	}
-	self->sorted = g_list_reverse(self->sorted);
-
-	dbmail_mailbox_map_uid_msn(self);
+	mailbox_build_uid_map(self);
 
 	db_free_result();
 	return DM_SUCCESS;
@@ -560,7 +551,7 @@ static void _append_join(char *join, char *table)
 {
 	char *tmp;
 	TRACE(TRACE_DEBUG,"%s", table);
-	tmp = g_strdup_printf("LEFT JOIN %s%s ON p.id=%s%s.physmessage_id ", DBPFX, table, DBPFX, table);
+	tmp = g_strdup_printf("LEFT JOIN %s%s ON m.physmessage_id=%s%s.physmessage_id ", DBPFX, table, DBPFX, table);
 	g_strlcat(join, tmp, MAX_SEARCH_LEN);
 	g_free(tmp);
 }
@@ -1079,19 +1070,20 @@ static gboolean _do_sort(GNode *node, struct DbmailMailbox *self)
 	if (db_query(q->str) == -1)
 		return TRUE;
 
-	if (self->sorted) {
-		g_list_destroy(self->sorted);
-		self->sorted = NULL;
-	}
-	
-	rows = db_num_rows();
-	for (i=0; i< rows; i++) {
-		id = g_new0(u64_t,1);
-		*id = db_get_result_u64(i,0);
-		if (g_tree_lookup(self->ids,id))
-			self->sorted = g_list_prepend(self->sorted,id);
-	}
-	self->sorted = g_list_reverse(self->sorted);
+        if (self->sorted) {
+                g_list_destroy(self->sorted);
+                self->sorted = NULL;
+        }
+
+        rows = db_num_rows();
+        for (i=0; i< rows; i++) {
+                id = g_new0(u64_t,1);
+                *id = db_get_result_u64(i,0);
+                if (g_tree_lookup(self->ids,id))
+                        self->sorted = g_list_prepend(self->sorted,id);
+        }
+        self->sorted = g_list_reverse(self->sorted);
+
 	g_string_free(q,TRUE);
 	db_free_result();
 
