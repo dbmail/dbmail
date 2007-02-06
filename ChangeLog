@@ -1,3 +1,8 @@
+2007-02-06  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-message.c:
+	headernames in cache must be case-insentitive
+
 2007-02-03  Paul J Stevens <paul@nfg.nl>
 
 	* check_dbmail_user.c, dbmail-user.c, dbmail-user.h:
