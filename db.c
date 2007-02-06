@@ -1,4 +1,4 @@
-/* $Id: db.c 2424 2007-01-21 18:41:53Z paul $ */
+/* $Id: db.c 2432 2007-02-06 00:02:29Z aaron $ */
 /*
   Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
   Copyright (c) 2005-2006 NFG Net Facilities Group BV support@nfg.nl
@@ -22,7 +22,7 @@
 /**
  * \file db.c
  * 
- * $Id: db.c 2424 2007-01-21 18:41:53Z paul $
+ * $Id: db.c 2432 2007-02-06 00:02:29Z aaron $
  *
  * implement database functionality. This used to split out
  * between MySQL and PostgreSQL, but this is now integrated. 
@@ -2593,16 +2593,20 @@ static int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 	return DM_EGENERAL;
 }
 
-static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char * pattern, u64_t ** mailboxes, unsigned int *nr_mailboxes)
+static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char * pattern,
+			      u64_t ** mailboxes, unsigned int *nr_mailboxes)
 {
 	unsigned int i;
 	u64_t *tmp_mailboxes;
 	u64_t *all_mailboxes;
 	char** all_mailbox_names;
 	u64_t *all_mailbox_owners;
+	u64_t search_user_idnr = user_idnr;
 	unsigned n_rows;
 	char *matchname;
-	char *spattern;
+	const char *spattern;
+	char *namespace;
+	char *username;
 	char query[DEF_QUERYSIZE]; 
 	memset(query,0,DEF_QUERYSIZE);
 
@@ -2613,12 +2617,33 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 	*mailboxes = NULL;
 	*nr_mailboxes = 0;
 
-	spattern = dm_stresc(pattern);
-	if ( (! index(spattern, '%')) && (! index(spattern,'*')) )
-		matchname = g_strdup_printf("mbx.name = '%s' AND", spattern);
-	else
+	/* If the pattern begins with a #Users or #Public, pull that off and 
+	 * find the new user_idnr whose mailboxes we're searching in. */
+	spattern = mailbox_remove_namespace(pattern, &namespace, &username);
+	if (!spattern) {
+		TRACE(TRACE_MESSAGE, "invalid mailbox search pattern [%s]", pattern);
+		g_free(username);
+		return DM_SUCCESS;
+	}
+	if (username) {
+		/* Replace the value of search_user_idnr with the namespace user. */
+		if (auth_user_exists(username, &search_user_idnr) < 1) {
+			TRACE(TRACE_MESSAGE, "cannot search namespace because user [%s] does not exist", username);
+			g_free(username);
+			return DM_SUCCESS;
+		}
+	}
+	TRACE(TRACE_DEBUG, "searching namespace [%s] for user [%s] with pattern [%s]",
+		namespace, username, spattern);
+
+	/* If there's neither % nor *, don't match on mailbox name. */
+	if ( (! strchr(spattern, '%')) && (! strchr(spattern,'*')) ) {
+		char *mailbox_like = db_imap_utf7_like("mbx.name", spattern, "");
+		matchname = g_strdup_printf("%s AND", mailbox_like);
+		g_free(mailbox_like);
+	} else {
 		matchname = g_strdup("");
-	g_free(spattern);
+	}
 	
 	
 	if (only_subscribed)
@@ -2633,7 +2658,7 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 			 "OR (acl.user_id = %llu AND acl.lookup_flag = 1) "
 			 "OR (usr.userid = '%s' AND acl.lookup_flag = 1)))",
 			 DBPFX, DBPFX, DBPFX, DBPFX, matchname,
-			 user_idnr, user_idnr, user_idnr,
+			 user_idnr, search_user_idnr, user_idnr,
 			 DBMAIL_ACL_ANYONE_USER);
 	else
 		snprintf(query, DEF_QUERYSIZE,
@@ -2649,9 +2674,10 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 			 "  acl.lookup_flag = 1) OR "
 			 "(usr.userid = '%s' AND acl.lookup_flag = 1))",
 			 DBPFX, DBPFX, DBPFX, matchname,
-			 user_idnr, user_idnr, DBMAIL_ACL_ANYONE_USER);
+			 search_user_idnr, user_idnr, DBMAIL_ACL_ANYONE_USER);
 	
 	g_free(matchname);
+	g_free(username);
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "error during mailbox query");
@@ -2684,10 +2710,14 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 
 		/* add possible namespace prefix to mailbox_name */
 		mailbox_name = mailbox_add_namespace(simple_mailbox_name, owner_idnr, user_idnr);
+		TRACE(TRACE_DEBUG, "adding namespace prefix to [%s] got [%s]", simple_mailbox_name, mailbox_name);
 		if (mailbox_name) {
-			if (listex_match(pattern, mailbox_name, MAILBOX_SEPARATOR, 0)) {
+			/* Enforce match of mailbox to pattern. */
+			if (listex_match(spattern, mailbox_name, MAILBOX_SEPARATOR, 0)) {
 				tmp_mailboxes[*nr_mailboxes] = mailbox_idnr;
 				(*nr_mailboxes)++;
+			} else {
+				TRACE(TRACE_DEBUG, "mailbox [%s] doesn't match pattern [%s]", mailbox_name, spattern);
 			}
 		}
 		
