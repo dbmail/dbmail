@@ -62,19 +62,18 @@ static gboolean _node_free(GNode *node, gpointer dummy UNUSED)
 
 void dbmail_mailbox_free(struct DbmailMailbox *self)
 {
+
+	if (self->sorted)
+		g_list_destroy(self->sorted);
 	if (self->ids)
 		g_tree_destroy(self->ids);		
 	if (self->msn)
 		g_tree_destroy(self->msn);
+
 	if (self->search) {
 		g_node_traverse(g_node_get_root(self->search), G_POST_ORDER, G_TRAVERSE_ALL, -1, 
 			(GNodeTraverseFunc)_node_free, NULL);
-
 		g_node_destroy(self->search);
-	}
-	if (self->sorted) {
-		g_list_destroy(self->sorted);
-		self->sorted = NULL;
 	}
 	if (self->fi) {
 		if (self->fi->bodyfetch)
@@ -102,17 +101,60 @@ void dbmail_mailbox_set_uid(struct DbmailMailbox *self, gboolean uid)
 {
 	self->uid = uid;
 }
+
 gboolean dbmail_mailbox_get_uid(struct DbmailMailbox *self)
 {
 	return self->uid;
 }
 
+static void clear_uid_msn_map(struct DbmailMailbox *self)
+{
+
+	if (self->sorted)
+		g_list_free(self->sorted);
+
+	if (self->ids)
+		g_tree_destroy(self->ids);
+
+	if (self->msn)
+		g_tree_destroy(self->msn);
+
+	self->ids = NULL;
+	self->msn = NULL;
+	self->sorted = NULL;
+}
+
+static void uid_msn_map(u64_t *uid, struct DbmailMailbox *self)
+{
+	u64_t *msn;
+
+	self->rows++;
+
+	msn = g_new0(u64_t,1);
+	*msn = self->rows;
+
+	g_tree_insert(self->ids,uid,msn);
+	g_tree_insert(self->msn,msn,uid);
+}
+	
+void dbmail_mailbox_map_uid_msn(struct DbmailMailbox *self)
+{
+	clear_uid_msn_map(self);
+
+	self->rows = 0;
+
+	self->ids = g_tree_new_full((GCompareDataFunc)ucmp,NULL,NULL,(GDestroyNotify)g_free);
+	self->msn = g_tree_new_full((GCompareDataFunc)ucmp,NULL,NULL,NULL);
+
+	self->sorted = g_list_sort(self->sorted, (GCompareFunc)ucmp);
+	g_list_foreach(self->sorted, (GFunc)uid_msn_map, self);
+}
 
 int dbmail_mailbox_open(struct DbmailMailbox *self)
 {
 	u64_t row,rows;
 	GString *q = g_string_new("");
-	u64_t *uid, *msn;
+	u64_t *uid;
 
 	g_string_printf(q, "SELECT message_idnr FROM %smessages "
 		 "WHERE mailbox_idnr = %llu "
@@ -125,20 +167,6 @@ int dbmail_mailbox_open(struct DbmailMailbox *self)
 		g_string_free(q,TRUE);
 		return DM_EQUERY;
 	}
-
-	if (self->ids) {
-		g_tree_destroy(self->ids);
-		self->ids = NULL;
-	}
-
-	if (self->msn) {
-		g_tree_destroy(self->msn);
-		self->msn = NULL;
-	}
-
-	self->ids = g_tree_new_full((GCompareDataFunc)ucmp,NULL,(GDestroyNotify)g_free,(GDestroyNotify)g_free);
-	self->msn = g_tree_new_full((GCompareDataFunc)ucmp,NULL,NULL,NULL);
-		
 	g_string_free(q,TRUE);
 
 	if ((rows  = db_num_rows()) < 1) {
@@ -147,15 +175,16 @@ int dbmail_mailbox_open(struct DbmailMailbox *self)
 		return DM_SUCCESS;
 	}
 
+	clear_uid_msn_map(self);
 	for (row=0; row < rows; row++) {
 		uid = g_new0(u64_t,1);
-		msn = g_new0(u64_t,1);
-		*uid= db_get_result_u64(row,0);
-		*msn = row+1;
-		g_tree_insert(self->ids,uid,msn);
-		g_tree_insert(self->msn,msn,uid);
+		*uid = db_get_result_u64(row,0);
+		self->sorted = g_list_prepend(self->sorted, uid);
 	}
-	
+	self->sorted = g_list_reverse(self->sorted);
+
+	dbmail_mailbox_map_uid_msn(self);
+
 	db_free_result();
 	return DM_SUCCESS;
 }
