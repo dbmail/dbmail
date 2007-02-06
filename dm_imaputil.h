@@ -29,34 +29,15 @@
 
 #include "dbmail.h"
 
-int haystack_find(int haystacklen, char **haystack, const char *needle);
-
-int next_fetch_item(char **args, int idx, fetch_items_t * fi);
-int is_textplain(struct dm_list *hdr);
-
 size_t stridx(const char *s, char ch);
+
 int checktag(const char *s);
-int binary_search(const u64_t * array, unsigned arraysize, u64_t key, unsigned int *key_idx);
+
 void send_data(FILE * to, MEM * from, int cnt);
-
-int build_imap_search(char **search_keys, struct dm_list *sl, int *idx, int sorted);
-int perform_imap_search(unsigned int *rset, int setlen, search_key_t * sk,
-			mailbox_t * mb, int sorted, int condition);
-void free_searchlist(struct dm_list *sl);
-
-void invert_set(unsigned int *set, int setlen);
-void combine_sets(unsigned int *dest, unsigned int *sec, int setlen, int type);
-
-void build_set(unsigned int *set, unsigned int setlen, char *cset);
-void build_uid_set(unsigned int *set, unsigned int setlen, char *cset,
-		   mailbox_t * mb);
-void dumpsearch(search_key_t * sk, int level);
 
 int init_cache(void);
 void close_cache(void);
 
-
 int mime_unwrap(char *to, const char *from); 
-int sort_search(struct dm_list *searchlist);
 
 #endif

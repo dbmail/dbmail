@@ -222,8 +222,8 @@ int _ic_select(struct ImapSession *self)
 {
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	u64_t key = 0;
+	u64_t *msn = NULL;
 	int result;
-	unsigned idx = 0;
 	char *mailbox;
 	char permstring[PERMSTRING_SIZE];
 
@@ -240,15 +240,14 @@ int _ic_select(struct ImapSession *self)
 
 	/* show idx of first unseen msg (if present) */
 	if (ud->mailbox.exists) {
-		key = db_first_unseen(ud->mailbox.uid);
-		if (key == (u64_t) (-1)) {
+		if (! (key = db_first_unseen(ud->mailbox.uid))) {
 			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 			return -1;
 		}
-		if (binary_search(ud->mailbox.seq_list, ud->mailbox.exists, key, &idx) != -1)
+		if ((msn = g_tree_lookup(self->mailbox->ids, &key))) {
 			dbmail_imap_session_printf(self,
-				"* OK [UNSEEN %u] first unseen message\r\n",
-				idx + 1);
+				"* OK [UNSEEN %llu] first unseen message\r\n", *msn);
+		}
 	}
 	/* permission */
 	switch (ud->mailbox.permission) {
@@ -790,17 +789,8 @@ int _ic_status(struct ImapSession *self)
 	gchar *pstring, *astring;
 	
 	
-	/* TODO: check_state_and_args */
-	
-	if (ud->state != IMAPCS_AUTHENTICATED && ud->state != IMAPCS_SELECTED) {
-		dbmail_imap_session_printf(self, "%s BAD STATUS command received in invalid state\r\n", self->tag);
+	if (!check_state_and_args(self, "STATUS", 3, 0, IMAPCS_AUTHENTICATED))
 		return 1;
-	}
-
-	if (!self->args[0] || !self->args[1] || !self->args[2]) {
-		dbmail_imap_session_printf(self, "%s BAD missing argument(s) to STATUS\r\n", self->tag);
-		return 1;
-	}
 
 	if (strcmp(self->args[1], "(") != 0) {
 		dbmail_imap_session_printf(self, "%s BAD argument list should be parenthesed\r\n", self->tag);
@@ -1192,13 +1182,12 @@ int _ic_expunge(struct ImapSession *self)
 {
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	mailbox_t newmailbox;
-	u64_t *msgids;
+	u64_t *msgids, *msn;
 	u64_t nmsgs, i;
-	unsigned idx;
 	int result;
 
 	if (!check_state_and_args(self, "EXPUNGE", 0, 0, IMAPCS_SELECTED))
-		return 1;	/* error, return */
+		return 1; /* error, return */
 
 	if (ud->mailbox.permission != IMAPPERM_READWRITE) {
 		dbmail_imap_session_printf(self,
@@ -1213,19 +1202,17 @@ int _ic_expunge(struct ImapSession *self)
 		return -1;
 	}
 	if (result == 0) {
-		dbmail_imap_session_printf(self,
-			"%s NO you do not have delete rights on this "
-			"mailbox\r\n", self->tag);
+		dbmail_imap_session_printf(self, "%s NO you do not have delete rights on this mailbox\r\n", 
+		self->tag);
 		return 1;
 	}
 
 	/* delete messages */
 	result = db_expunge(ud->mailbox.uid, ud->userid, &msgids, &nmsgs);
 	if (result == -1) {
-		dbmail_imap_session_printf(self, "* BYE dbase/memory error\r\n");
+		dbmail_imap_session_printf(self, "* BYE db error\r\n");
 		return -1;
 	}
-
 	if (result == 1) {
 		dbmail_imap_session_printf(self, "%s OK EXPUNGE completed\r\n", self->tag);
 		return 1;
@@ -1234,10 +1221,8 @@ int _ic_expunge(struct ImapSession *self)
 	/* show expunge info */
 	for (i = 0; i < nmsgs; i++) {
 		/* find the message sequence number */
-		binary_search(ud->mailbox.seq_list, ud->mailbox.exists,
-			      msgids[i], &idx);
-
-		dbmail_imap_session_printf(self, "* %u EXPUNGE\r\n", idx + 1);	/* add one: IMAP MSN starts at 1 not zero */
+		if ((msn = g_tree_lookup(self->mailbox->ids, &(msgids[i]) )))
+			dbmail_imap_session_printf(self, "* %u EXPUNGE\r\n", *msn);	// add one: IMAP MSN starts at 1 not zero
 	}
 	
 	if (msgids)
@@ -1245,27 +1230,23 @@ int _ic_expunge(struct ImapSession *self)
 	msgids = NULL;
 
 	/* update mailbox info */
-
 	memset(&newmailbox, 0, sizeof(newmailbox));
 	newmailbox.uid = ud->mailbox.uid;
 
 	result = db_getmailbox(&newmailbox);
-
 	if (result == -1) {
-		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
+		dbmail_imap_session_printf(self, "* BYE db error\r\n");
 		dm_free(newmailbox.seq_list);
-		return -1;	/* fatal  */
+		return -1; /* fatal  */
 	}
 
 	if (newmailbox.exists != ud->mailbox.exists)
 		dbmail_imap_session_printf(self, "* %u EXISTS\r\n", newmailbox.exists);
-
 	if (newmailbox.recent != ud->mailbox.recent)
 		dbmail_imap_session_printf(self, "* %u RECENT\r\n", newmailbox.recent);
 
 	dm_free(ud->mailbox.seq_list);
-	memcpy((void *) &ud->mailbox, (void *) &newmailbox, 
-	       sizeof(newmailbox));
+	memcpy((void *) &ud->mailbox, (void *) &newmailbox, sizeof(newmailbox));
 
 	dbmail_imap_session_printf(self, "%s OK EXPUNGE completed\r\n", self->tag);
 	return 0;
@@ -1662,10 +1643,7 @@ int _ic_store(struct ImapSession *self)
 
 			if (self->use_uid) {
 				/* check if the message with this UID belongs to this mailbox */
-				if (binary_search
-				    (ud->mailbox.seq_list,
-				     ud->mailbox.exists, store_start,
-				     &fn) == -1)
+				if (! g_tree_lookup(self->mailbox->ids, &store_start))
 					continue;
 			}
 			if (ud->mailbox.permission == IMAPPERM_READWRITE) {
@@ -1727,10 +1705,7 @@ int _ic_store(struct ImapSession *self)
 					if (self->use_uid) {
 						/* check if the message with this UID belongs
 						   to this mailbox */
-						if (binary_search
-						    (ud->mailbox.seq_list,
-						     ud->mailbox.exists, i,
-						     &fn) == -1)
+						if (! g_tree_lookup(self->mailbox->ids, &i))
 							continue;
 					}
 
@@ -1916,9 +1891,7 @@ int _ic_copy(struct ImapSession *self)
 
 			if (self->use_uid) {
 				/* check if the message with this UID belongs to this mailbox */
-				if (binary_search
-				    (ud->mailbox.seq_list,
-				     ud->mailbox.exists, i, &fn) == -1)
+				if (! g_tree_lookup(self->mailbox->ids, &i))
 					continue;
 			}
 
