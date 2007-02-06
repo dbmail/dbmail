@@ -1290,6 +1290,9 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 		} else {
 			if (! (l = strtoull(sets->data,&rest,10)))
 				break;
+			if (l == 0xffffffff) // outlook
+				l = hi;
+
 			l = max(l,lo);
 			r = l;
 		}
@@ -1298,8 +1301,11 @@ GTree * dbmail_mailbox_get_set(struct DbmailMailbox *self, const char *set, gboo
 			rest++;
 			if (rest[0] == '*') 
 				r = hi;
-			else 
+			else {
 				r = strtoull(rest,NULL,10);
+				if (r == 0xffffffff) // outlook
+					r = hi;
+			}
 			
 			if (!r)
 				break;
