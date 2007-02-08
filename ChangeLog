@@ -1,8 +1,18 @@
+2007-02-08  Paul J Stevens <paul@nfg.nl>
+
+	* db.c:
+	fix bogus return value
+	* dbmail-mailbox.c, dbmail-mailbox.h, dbmailtypes.h:
+	refactor uid/msn mapper
+	* dbmail-mailbox.c:
+	use outlook quirk
+	* dm_imaputil.c, dm_imaputil.h, imapcommands.c:
+	cleanups
+
 2007-02-06  Paul J Stevens <paul@nfg.nl>
 
 	* dbmail-message.c:
 	headernames in cache must be case-insentitive
-
 
 2007-02-05  Aaron Stone  <aaron@serendipity.cx>
 

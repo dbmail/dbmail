@@ -146,10 +146,12 @@ class testImapServer(unittest.TestCase):
         """
         self.o.create('testcopy1')
         self.o.create('testcopy2')
-        self.o.append('testcopy1',"","",str(TESTMSG['strict822']))
+        for i in range(1,20):
+            self.o.append('testcopy1',"","",str(TESTMSG['strict822']))
         self.o.select('testcopy1')
         id = self.o.recent()[1][0]
         self.assertEquals(self.o.copy(id,'testcopy2'),('OK', ['COPY completed']))
+        self.assertEquals(self.o.copy('1:*','testcopy2'),('OK', ['COPY completed']))
 
     def testCreate(self):
         """ 
@@ -514,7 +516,10 @@ class testImapServer(unittest.TestCase):
         store(message_set, command, flag_list)
             Alters flag dispositions for messages in mailbox.
         """
-        #self.fail(unimplementedError)
+        self.o.select('INBOX')
+        self.assertEquals(self.o.store('1:*', '+FLAGS', '\Deleted')[0],'OK')
+        self.assertEquals(self.o.store('1:*', '-FLAGS', '\Deleted')[0],'OK')
+        self.assertRaises(self.o.error,self.o.store, '1:*', '-FLAGS', '\Recent')
         
     def testSubscribe(self):
         """
