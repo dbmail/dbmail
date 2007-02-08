@@ -36,15 +36,24 @@
 
 struct DbmailMailbox {
 	u64_t id;
-	gchar *name;
+	u64_t rows;		// total number of messages in mailbox
+	u64_t recent;
+	u64_t unseen;
 	u64_t owner_id;
 	u64_t size;
+
+	gchar *name;
+
+	GList *sorted;		// ordered list of UID values
 	GTree *ids; 		// key: uid, value: msn
 	GTree *msn; 		// key: msn, value: uid
-	gboolean uid;		// subset type
-	GList *sorted;
 	GNode *search;
+
 	fetch_items_t *fi;	// imap fetch
+
+	gboolean uid, no_select, no_inferiors, no_children;
+
+//	unsigned flags;
 };
 
 struct DbmailMailbox * dbmail_mailbox_new(u64_t id);
@@ -61,6 +70,7 @@ gboolean dbmail_mailbox_get_uid(struct DbmailMailbox *self);
 
 int dbmail_mailbox_dump(struct DbmailMailbox *self, FILE *ostream);
 
+void dbmail_mailbox_map_uid_msn(struct DbmailMailbox *self);
 void dbmail_mailbox_free(struct DbmailMailbox *self);
 
 char * dbmail_mailbox_ids_as_string(struct DbmailMailbox *self);
