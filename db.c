@@ -3982,15 +3982,7 @@ int db_get_msgflag_all(u64_t msg_idnr, u64_t mailbox_idnr, int *flags)
 	return DM_SUCCESS;
 }
 
-int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr,
-		   int *flags, int action_type)
-{
-	return db_set_msgflag_range(msg_idnr, msg_idnr, mailbox_idnr, flags, action_type);
-}
-
-	
-int db_set_msgflag_range(u64_t msg_idnr_low, u64_t msg_idnr_high,
-			 u64_t mailbox_idnr, int *flags, int action_type)
+int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, int action_type)
 {
 	size_t i;
 	size_t placed = 0;
@@ -4040,9 +4032,9 @@ int db_set_msgflag_range(u64_t msg_idnr_low, u64_t msg_idnr_high,
 	/* last character in string is comma, replace it --> strlen()-1 */
 	left = DEF_QUERYSIZE - strlen(query);
 	snprintf(&query[strlen(query) - 1], left,
-		 " WHERE message_idnr BETWEEN %llu AND %llu AND "
+		 " WHERE message_idnr = %llu AND "
 		 "status < %d AND mailbox_idnr = %llu",
-		 msg_idnr_low, msg_idnr_high, MESSAGE_STATUS_DELETE, 
+		 msg_idnr, MESSAGE_STATUS_DELETE, 
 		 mailbox_idnr);
 
 	if (db_query(query) == -1) {
