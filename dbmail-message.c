@@ -1,5 +1,5 @@
 /*
-  $Id: dbmail-message.c 2430 2007-01-31 21:57:49Z paul $
+  $Id: dbmail-message.c 2433 2007-02-06 13:31:38Z paul $
 
   Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
 
@@ -885,9 +885,13 @@ static int _header_get_id(const struct DbmailMessage *self, const char *header, 
 	u64_t tmp;
 	gpointer cacheid;
 	gchar *safe_header;
+	gchar *tmpheader;
 
-	if (! (safe_header = dm_strnesc(header,CACHE_WIDTH_NAME)))
+	// rfc822 headernames are case-insensitive
+	if (! (tmpheader = dm_strnesc(header,CACHE_WIDTH_NAME)))
 		return -1;
+	safe_header = g_ascii_strdown(tmpheader,-1);
+	g_free(tmpheader);
 
 	cacheid = g_hash_table_lookup(self->header_dict, (gconstpointer)safe_header);
 	if (cacheid) {
@@ -897,7 +901,7 @@ static int _header_get_id(const struct DbmailMessage *self, const char *header, 
 	}
 		
 	GString *q = g_string_new("");
-	g_string_printf(q, "SELECT id FROM %sheadername WHERE headername='%s'", DBPFX, safe_header);
+	g_string_printf(q, "SELECT id FROM %sheadername WHERE lower(headername)='%s'", DBPFX, safe_header);
 	if (db_query(q->str) == -1) {
 		g_string_free(q,TRUE);
 		g_free(safe_header);
