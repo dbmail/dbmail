@@ -302,9 +302,9 @@ START_TEST(test_dbmail_imap_session_fetch_get_items)
 	fail_unless(result==0, "mailbox_open failed");
 
 	dbmail_mailbox_set_uid(s->mailbox, TRUE);
-	s->fetch_ids = dbmail_mailbox_get_set(s->mailbox, "1:*", TRUE);
+	s->ids = dbmail_mailbox_get_set(s->mailbox, "1:*", TRUE);
 	
-	fail_unless(s->fetch_ids!=NULL, "get_set failed");
+	fail_unless(s->ids!=NULL, "get_set failed");
 
 	result = dbmail_imap_session_fetch_get_items(s);
 	fail_unless(result==0, "fetch_get_items failed");

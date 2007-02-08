@@ -21,12 +21,24 @@ struct ImapSession {
 	fetch_items_t *fi;
 	struct DbmailMessage *message;
 	struct DbmailMailbox *mailbox;
-	GTree *fetch_ids;
+	GTree *ids;
 	GTree *headers;
 	GTree *envelopes;
 	GList *recent;	// todo: replace with a struct DbmailMailbox
 	GTree *msginfo;
+	gpointer cmd; // command structure
 };
+
+typedef struct {
+	gboolean silent;
+	int action;
+	int flaglist[IMAP_NFLAGS];
+	int msgflags[IMAP_NFLAGS];
+} cmd_store_t;
+
+typedef struct {
+	u64_t mailbox_id;
+} cmd_copy_t;
 
 typedef int (*IMAP_COMMAND_HANDLER) (struct ImapSession *);
 
