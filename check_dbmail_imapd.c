@@ -17,11 +17,7 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  *
-<<<<<<< master
  *  $Id$ 
-=======
- *  $Id$ 
->>>>>>> dbmail_2_2
  *
  *
  *  
@@ -150,8 +146,8 @@ static clientinfo_t * ci_new(void)
 	FILE *fd = fopen("/dev/null","w");
 	ci->userData = dbmail_imap_userdata_new();
 	ci->rx = stdin;
-	//ci->tx = fd;
-	ci->tx = stderr;
+	ci->tx = fd;
+	//ci->tx = stderr;
 	return ci;
 }
 
@@ -306,9 +302,9 @@ START_TEST(test_dbmail_imap_session_fetch_get_items)
 	fail_unless(result==0, "mailbox_open failed");
 
 	dbmail_mailbox_set_uid(s->mailbox, TRUE);
-	s->fetch_ids = dbmail_mailbox_get_set(s->mailbox, "1:*", TRUE);
+	s->ids = dbmail_mailbox_get_set(s->mailbox, "1:*", TRUE);
 	
-	fail_unless(s->fetch_ids!=NULL, "get_set failed");
+	fail_unless(s->ids!=NULL, "get_set failed");
 
 	result = dbmail_imap_session_fetch_get_items(s);
 	fail_unless(result==0, "fetch_get_items failed");
@@ -373,7 +369,6 @@ START_TEST(test_imap_get_structure)
 	message = dbmail_message_new();
 	message = dbmail_message_init_with_string(message, g_string_new(simple));
 	result = imap_get_structure(GMIME_MESSAGE(message->content), 1);
-	printf("[%s]\n", result);
 	dbmail_message_free(message);
 	g_free(result);
 
@@ -384,7 +379,6 @@ START_TEST(test_imap_get_structure)
 	strncpy(expect,"((\"text\" \"html\" NIL NIL NIL \"7BIT\" 16 1 NIL (\"inline\" NIL) NIL NIL)"
 			"(\"text\" \"plain\" (\"charset\" \"us-ascii\" \"name\" \"testfile\") NIL NIL \"base64\" 432 7 NIL NIL NIL NIL)"
 			" \"mixed\" (\"boundary\" \"boundary\") NIL NIL NIL)",1024);
-//	printf("\n[%s]\n[%s]\n", expect, result);
 	fail_unless(strncasecmp(result,expect,1024)==0, "imap_get_structure failed");
 	g_free(result);
 	dbmail_message_free(message);
@@ -465,7 +459,6 @@ START_TEST(test_internet_address_parse_string)
 		input = testlist[i][0];
 		expect = testlist[i][1];
 
-		// printf("testing parse of [%s]\n looking for [%s]\n", input, expect);
 		InternetAddressList *alist;
 		GList *list = NULL;
 		char *result;
@@ -473,18 +466,18 @@ START_TEST(test_internet_address_parse_string)
 		char *t;
 		t = imap_cleanup_address(input);
 		alist = internet_address_parse_string(t);
-		g_free(t);
 		list = dbmail_imap_append_alist_as_plist(list, (const InternetAddressList *)alist);
 		result = dbmail_imap_plist_as_string(list);
 		res = strcmp(result, expect);
-		if (res == 0)
-			g_free(result); // Only free if we're not going to report an error.
+
+		fail_unless(res == 0, "dbmail_imap_append_alist_as_plist failed, expected:\n[%s]\ngot:\n[%s]\n", expect, result);
+
 		internet_address_list_destroy(alist);
 		alist = NULL;
 		g_list_foreach(list, (void *)g_free, NULL);
 		g_list_free(list);
-
-		fail_unless(res == 0, "dbmail_imap_append_alist_as_plist failed, expected [%s] got [%s]", expect, result);
+		g_free(result);
+		g_free(t);
 	}
 }
 END_TEST
@@ -514,7 +507,6 @@ START_TEST(test_imap_get_envelope)
 	message = dbmail_message_init_with_string(message, g_string_new(simple));
 	result = imap_get_envelope(GMIME_MESSAGE(message->content));
 
-	printf("[%s]\n", result);
 	dbmail_message_free(message);
 	g_free(result);
 	result = NULL;
@@ -595,6 +587,9 @@ START_TEST(test_imap_cleanup_address)
 	F("=?ISO-8859-2?Q? \"Verlag=20Dash=F6fer=20-=20DU.cz?= =?ISO-8859-2?Q?\" ?= <e-noviny@smtp.dashofer.cz>",
 	"\"=?ISO-8859-2?Q?Verlag=20Dash=F6fer=20-=20DU.cz?= =?ISO-8859-2?Q?"
 		/* Stringify here to kill the '??=' trigraph. */ "?=\" <e-noviny@smtp.dashofer.cz>");
+	F("=?ISO-8859-2?Q?=22Miroslav_=A9ulc_=28fordfrog=29=22?=\n"
+	"	<fordfrog@gentoo.org>\n", "\"=?ISO-8859-2?Q?=22Miroslav_=A9ulc_=28fordfrog=29=22?=\" <fordfrog@gentoo.org>");
+
 
 }
 END_TEST
@@ -603,9 +598,13 @@ START_TEST(test_imap_get_envelope_latin)
 {
 	char *t;
 	char *expect = g_new0(char,1024);
-	struct DbmailMessage *m = dbmail_message_new();
-	GString *s = g_string_new(encoded_message_latin);
+	struct DbmailMessage *m;
+	GString *s;
+	
 
+	/*  */
+	m = dbmail_message_new();
+	s = g_string_new(encoded_message_latin_1);
 	m = dbmail_message_init_with_string(m, s);
 	g_string_free(s,TRUE);
 	
@@ -617,6 +616,24 @@ START_TEST(test_imap_get_envelope_latin)
 
 	g_free(t);
 	dbmail_message_free(m);
+
+	/*  */
+	m = dbmail_message_new();
+	s = g_string_new(encoded_message_latin_2);
+	m = dbmail_message_init_with_string(m, s);
+	g_string_free(s,TRUE);
+	
+	t = imap_get_envelope(GMIME_MESSAGE(m->content));
+	printf("[%s]\n", t);
+	
+//	strncpy(expect,"(\"Thu, 01 Jan 1970 00:00:00 +0000\" \"=?iso-8859-1?Q?Re:_M=F3dulo_Extintores?=\" ((\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" NIL \"nobody\" \"nowhere.org\")) ((\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" NIL \"nobody\" \"nowhere.org\")) ((\"=?iso-8859-1?Q?B=BA_V._F._Z=EAzere?=\" NIL \"nobody\" \"nowhere.org\")) ((NIL NIL \"nobody\" \"foo.org\")) NIL NIL NIL NIL)",1024);
+	
+//	fail_unless(strcmp(t,expect)==0,"imap_get_envelope failed\n%s\n%s\n ", expect, t);
+
+	g_free(t);
+	dbmail_message_free(m);
+
+
 }
 END_TEST
 

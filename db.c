@@ -2705,16 +2705,20 @@ static int db_findmailbox_owner(const char *name, u64_t owner_idnr,
 	return DM_EGENERAL;
 }
 
-static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char * pattern, u64_t ** mailboxes, unsigned int *nr_mailboxes)
+static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char * pattern,
+			      u64_t ** mailboxes, unsigned int *nr_mailboxes)
 {
 	unsigned int i;
 	u64_t *tmp_mailboxes;
 	u64_t *all_mailboxes;
 	char** all_mailbox_names;
 	u64_t *all_mailbox_owners;
+	u64_t search_user_idnr = user_idnr;
 	unsigned n_rows;
 	char *matchname;
-	char *spattern;
+	const char *spattern;
+	char *namespace;
+	char *username;
 	char query[DEF_QUERYSIZE]; 
 	memset(query,0,DEF_QUERYSIZE);
 
@@ -2725,12 +2729,33 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 	*mailboxes = NULL;
 	*nr_mailboxes = 0;
 
-	spattern = dm_stresc(pattern);
-	if ( (! index(spattern, '%')) && (! index(spattern,'*')) )
-		matchname = g_strdup_printf("mbx.name = '%s' AND", spattern);
-	else
+	/* If the pattern begins with a #Users or #Public, pull that off and 
+	 * find the new user_idnr whose mailboxes we're searching in. */
+	spattern = mailbox_remove_namespace(pattern, &namespace, &username);
+	if (!spattern) {
+		TRACE(TRACE_MESSAGE, "invalid mailbox search pattern [%s]", pattern);
+		g_free(username);
+		return DM_SUCCESS;
+	}
+	if (username) {
+		/* Replace the value of search_user_idnr with the namespace user. */
+		if (auth_user_exists(username, &search_user_idnr) < 1) {
+			TRACE(TRACE_MESSAGE, "cannot search namespace because user [%s] does not exist", username);
+			g_free(username);
+			return DM_SUCCESS;
+		}
+	}
+	TRACE(TRACE_DEBUG, "searching namespace [%s] for user [%s] with pattern [%s]",
+		namespace, username, spattern);
+
+	/* If there's neither % nor *, don't match on mailbox name. */
+	if ( (! strchr(spattern, '%')) && (! strchr(spattern,'*')) ) {
+		char *mailbox_like = db_imap_utf7_like("mbx.name", spattern, "");
+		matchname = g_strdup_printf("%s AND", mailbox_like);
+		g_free(mailbox_like);
+	} else {
 		matchname = g_strdup("");
-	g_free(spattern);
+	}
 	
 	
 	if (only_subscribed)
@@ -2746,7 +2771,7 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 			 "OR (acl.user_id = %llu AND acl.lookup_flag = 1) "
 			 "OR (usr.userid = '%s' AND acl.lookup_flag = 1)))",
 			 DBPFX, DBPFX, DBPFX, DBPFX, matchname,
-			 user_idnr, user_idnr, user_idnr,
+			 user_idnr, search_user_idnr, user_idnr,
 			 DBMAIL_ACL_ANYONE_USER);
 	else
 		snprintf(query, DEF_QUERYSIZE,
@@ -2759,9 +2784,10 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 			 "OR (acl.user_id = %llu AND acl.lookup_flag = 1) "
 			 "OR (usr.userid = '%s' AND acl.lookup_flag = 1))",
 			 DBPFX, DBPFX, DBPFX, matchname,
-			 user_idnr, user_idnr, DBMAIL_ACL_ANYONE_USER);
+			 search_user_idnr, user_idnr, DBMAIL_ACL_ANYONE_USER);
 	
 	g_free(matchname);
+	g_free(username);
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "error during mailbox query");
@@ -2794,10 +2820,14 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 
 		/* add possible namespace prefix to mailbox_name */
 		mailbox_name = mailbox_add_namespace(simple_mailbox_name, owner_idnr, user_idnr);
+		TRACE(TRACE_DEBUG, "adding namespace prefix to [%s] got [%s]", simple_mailbox_name, mailbox_name);
 		if (mailbox_name) {
-			if (listex_match(pattern, mailbox_name, MAILBOX_SEPARATOR, 0)) {
+			/* Enforce match of mailbox to pattern. */
+			if (listex_match(spattern, mailbox_name, MAILBOX_SEPARATOR, 0)) {
 				tmp_mailboxes[*nr_mailboxes] = mailbox_idnr;
 				(*nr_mailboxes)++;
+			} else {
+				TRACE(TRACE_DEBUG, "mailbox [%s] doesn't match pattern [%s]", mailbox_name, spattern);
 			}
 		}
 		
@@ -3969,7 +3999,6 @@ u64_t db_first_unseen(u64_t mailbox_idnr)
 	char query[DEF_QUERYSIZE]; 
 	memset(query,0,DEF_QUERYSIZE);
 
-
 	snprintf(query, DEF_QUERYSIZE,
 		 "SELECT MIN(message_idnr) FROM %smessages "
 		 "WHERE mailbox_idnr = %llu "
@@ -3978,7 +4007,7 @@ u64_t db_first_unseen(u64_t mailbox_idnr)
 
 	if (db_query(query) == -1) {
 		TRACE(TRACE_ERROR, "could not select messages");
-		return (u64_t) (-1);
+		return 0;
 	}
 
 	if (db_num_rows())
@@ -4117,15 +4146,7 @@ int db_get_msgflag_all(u64_t msg_idnr, u64_t mailbox_idnr, int *flags)
 	return DM_SUCCESS;
 }
 
-int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr,
-		   int *flags, int action_type)
-{
-	return db_set_msgflag_range(msg_idnr, msg_idnr, mailbox_idnr, flags, action_type);
-}
-
-	
-int db_set_msgflag_range(u64_t msg_idnr_low, u64_t msg_idnr_high,
-			 u64_t mailbox_idnr, int *flags, int action_type)
+int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, int action_type)
 {
 	size_t i;
 	size_t placed = 0;
@@ -4175,9 +4196,9 @@ int db_set_msgflag_range(u64_t msg_idnr_low, u64_t msg_idnr_high,
 	/* last character in string is comma, replace it --> strlen()-1 */
 	left = DEF_QUERYSIZE - strlen(query);
 	snprintf(&query[strlen(query) - 1], left,
-		 " WHERE message_idnr BETWEEN %llu AND %llu AND "
+		 " WHERE message_idnr = %llu AND "
 		 "status < %d AND mailbox_idnr = %llu",
-		 msg_idnr_low, msg_idnr_high, MESSAGE_STATUS_DELETE, 
+		 msg_idnr, MESSAGE_STATUS_DELETE, 
 		 mailbox_idnr);
 
 	if (db_query(query) == -1) {
@@ -5145,7 +5166,6 @@ int db_replycache_register(const char *to, const char *from, const char *handle)
 	char query[DEF_QUERYSIZE]; 
 	memset(query,0,DEF_QUERYSIZE);
 
-
 	escaped_to = dm_stresc(to);
 	escaped_from = dm_stresc(from);
 	escaped_handle = dm_stresc(handle);
@@ -5155,42 +5175,72 @@ int db_replycache_register(const char *to, const char *from, const char *handle)
 			"WHERE to_addr = '%s' "
 			"AND from_addr = '%s' "
 			"AND handle    = '%s' ",
-			DBPFX, to, from, handle);
-
-	dm_free(escaped_to);
-	dm_free(escaped_from);
-	dm_free(escaped_handle);
+			DBPFX, escaped_to, escaped_from, escaped_handle);
 
 	if (db_query(query) < 0) {
-		TRACE(TRACE_ERROR, "query failed");
+		dm_free(escaped_to);
+		dm_free(escaped_from);
+		dm_free(escaped_handle);
 		return DM_EQUERY;
 	}
 	
+	memset(query,0,DEF_QUERYSIZE);
 	if (db_num_rows() > 0) {
 		snprintf(query, DEF_QUERYSIZE,
 			 "UPDATE %sreplycache SET lastseen = %s "
 			 "WHERE to_addr = '%s' AND from_addr = '%s' "
 			 "AND handle = '%s'",
 			 DBPFX, db_get_sql(SQL_CURRENT_TIMESTAMP),
-			 to, from, handle);
+			 escaped_to, escaped_from, escaped_handle);
 	} else {
 		snprintf(query, DEF_QUERYSIZE,
 			 "INSERT INTO %sreplycache (to_addr, from_addr, handle, lastseen) "
 			 "VALUES ('%s','%s','%s', %s)",
-			 DBPFX, to, from, handle, db_get_sql(SQL_CURRENT_TIMESTAMP));
+			 DBPFX, escaped_to, escaped_from, escaped_handle, db_get_sql(SQL_CURRENT_TIMESTAMP));
 	}
 	
 	db_free_result();
-	memset(query,0,DEF_QUERYSIZE);
 	
-	if (db_query(query)== -1) {
-		TRACE(TRACE_ERROR, "query failed");
+	dm_free(escaped_to);
+	dm_free(escaped_from);
+	dm_free(escaped_handle);
+
+	if (db_query(query)== -1)
 		return DM_EQUERY;
-	}
 
 	return DM_SUCCESS;
 
 }
+
+int db_replycache_unregister(const char *to, const char *from, const char *handle)
+{
+	char *escaped_to, *escaped_from, *escaped_handle;
+	char query[DEF_QUERYSIZE]; 
+	memset(query,0,DEF_QUERYSIZE);
+
+	escaped_to = dm_stresc(to);
+	escaped_from = dm_stresc(from);
+	escaped_handle = dm_stresc(handle);
+
+	snprintf(query, DEF_QUERYSIZE,
+			"DELETE FROM %sreplycache "
+			"WHERE to_addr = '%s' "
+			"AND from_addr = '%s' "
+			"AND handle    = '%s' ",
+			DBPFX, escaped_to, escaped_from, escaped_handle);
+
+	dm_free(escaped_to);
+	dm_free(escaped_from);
+	dm_free(escaped_handle);
+
+	if (db_query(query) < 0)
+		return DM_EQUERY;
+	
+	db_free_result();
+	
+	return DM_SUCCESS;
+}
+
 
 /* Returns DM_SUCCESS if the (to, from) pair hasn't been seen in days.
 */
@@ -5198,11 +5248,11 @@ int db_replycache_validate(const char *to, const char *from,
 		const char *handle, int days)
 {
 	GString *tmp = g_string_new("");
-	g_string_printf(tmp, db_get_sql(SQL_REPLYCACHE_EXPIRE), days);
 	char *escaped_to, *escaped_from, *escaped_handle;
 	char query[DEF_QUERYSIZE]; 
-	memset(query,0,DEF_QUERYSIZE);
 
+	memset(query,0,DEF_QUERYSIZE);
+	g_string_printf(tmp, db_get_sql(SQL_REPLYCACHE_EXPIRE), days);
 
 	escaped_to = dm_stresc(to);
 	escaped_from = dm_stresc(from);
@@ -5212,24 +5262,20 @@ int db_replycache_validate(const char *to, const char *from,
 			"SELECT lastseen FROM %sreplycache "
 			"WHERE to_addr = '%s' AND from_addr = '%s' "
 			"AND handle = '%s' AND lastseen > (%s)",
-			DBPFX, to, from, handle, tmp->str);
+			DBPFX, escaped_to, escaped_from, escaped_handle, tmp->str);
 
 	g_string_free(tmp, TRUE);
 	dm_free(escaped_to);
 	dm_free(escaped_from);
 	dm_free(escaped_handle);
 
-	if (db_query(query) < 0) {
-		TRACE(TRACE_ERROR, "query failed");
+	if (db_query(query) < 0)
 		return DM_EQUERY;
-	}
 
-	if (db_num_rows() > 0) {
-		db_free_result();
-		return DM_EGENERAL;
-	}
-	
 	db_free_result();
+
+	if (db_num_rows() > 0)
+		return DM_EGENERAL;
 	
 	return DM_SUCCESS;			
 }

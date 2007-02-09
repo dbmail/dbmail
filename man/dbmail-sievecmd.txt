@@ -38,7 +38,7 @@ Deactivates `scriptname` if it was active.
 
 -i scriptname file::
 Creates a script called `scriptname` by importing `file`. If `file`
-is - (dash), 'stdin' will be read.
+is - (dash) or unspecified, 'stdin' will be read.
 
 -c [scriptname]::
 Print out the named script. If no script is given, the active

@@ -80,6 +80,11 @@ static void _imap_clientinfo_free(struct ImapSession * self)
 		g_free(self->ci);
 		self->ci = NULL;
 	}
+
+	if (self->fstream) {
+		g_object_unref(self->fstream);
+		self->fstream = NULL;
+	}
 }
 /* 
  *
@@ -170,10 +175,6 @@ void dbmail_imap_session_delete(struct ImapSession * self)
 	_imap_fetchitem_free(self);
 	_imap_clientinfo_free(self);
 	
-	if (self->fstream) {
-		g_object_unref(self->fstream);
-		self->fstream = NULL;
-	}
 	if (self->tag) {
 		g_free(self->tag);
 		self->tag = NULL;
@@ -190,9 +191,9 @@ void dbmail_imap_session_delete(struct ImapSession * self)
 		g_tree_destroy(self->msginfo);
 		self->msginfo = NULL;
 	}
-	if (self->fetch_ids) {
-		g_tree_destroy(self->fetch_ids);
-		self->fetch_ids = NULL;
+	if (self->ids) {
+		g_tree_destroy(self->ids);
+		self->ids = NULL;
 	}
 	if (self->headers) {
 		g_tree_destroy(self->headers);
@@ -590,9 +591,9 @@ int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self)
 	char query[DEF_QUERYSIZE];
 	memset(query,0,DEF_QUERYSIZE);
 	
-	g_return_val_if_fail(self->fetch_ids,-1);
+	g_return_val_if_fail(self->ids,-1);
 
-	l = g_tree_keys(self->fetch_ids);
+	l = g_tree_keys(self->ids);
 
 	g_return_val_if_fail(l,-1);
 
@@ -638,7 +639,7 @@ int dbmail_imap_session_fetch_get_unparsed(struct ImapSession *self)
 
 		id = db_get_result_u64(i, IMAP_NFLAGS + 2);
 
-		if (! g_tree_lookup(self->fetch_ids,&id))
+		if (! g_tree_lookup(self->ids,&id))
 			continue;
 		
 		result = g_new0(msginfo_t,1);
@@ -687,7 +688,7 @@ static GTree * _fetch_envelopes(struct ImapSession *self)
 	u64_t id;
 	GList *l;
 
-	GTree *ids = self->fetch_ids;
+	GTree *ids = self->ids;
 	
 	l = g_tree_keys((GTree *)ids);
 	
@@ -940,7 +941,7 @@ int dbmail_imap_session_fetch_get_items(struct ImapSession *self)
 	int rows;
 	if ((rows=dbmail_imap_session_fetch_get_unparsed(self)) < 0)
 		return -1;
-	g_tree_foreach(self->fetch_ids, (GTraverseFunc) _do_fetch, self);
+	g_tree_foreach(self->ids, (GTraverseFunc) _do_fetch, self);
 	return 0;
 	
 }
@@ -978,7 +979,7 @@ static GTree * _fetch_headers(struct ImapSession *self, const GList *headers, gb
 	u64_t id;
 	GList *l;
 
-	GTree *ids = self->fetch_ids;
+	GTree *ids = self->ids;
 	
 	l = g_tree_keys((GTree *)ids);
 	
@@ -1557,8 +1558,6 @@ int dbmail_imap_session_mailbox_show_info(struct ImapSession * self)
 		list = g_list_append(list,"\\Flagged");
 	if (ud->mailbox.flags & IMAPFLAG_DRAFT)
 		list = g_list_append(list,"\\Draft");
-	if (ud->mailbox.flags & IMAPFLAG_RECENT)
-		list = g_list_append(list,"\\Recent");
 	string = g_list_join(list," ");
 	g_list_free(list);
 	dbmail_imap_session_printf(self, "* OK [PERMANENTFLAGS (%s)]\r\n", string->str);

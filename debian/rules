@@ -71,9 +71,7 @@ include /usr/share/dpatch/dpatch.make
 
 CONFFLAGS=--prefix=/usr --mandir=\$${prefix}/share/man --sysconfdir=/etc/dbmail \
 	--localstatedir=/var/run/dbmail --with-logdir=/var/log/dbmail --infodir=\$${prefix}/share/info \
-	--libdir=/usr/lib/dbmail \
-	$(WITH_GC) $(WITH_CHECK) $(SHARED) $(STATIC) $(WITH_SIEVE) $(WITH_LDAP) \
-	$(WITH_MYSQL) $(WITH_PGSQL) $(WITH_SQLITE) $(WITH_INGRES)
+	$(WITH_GC) $(WITH_CHECK) $(SHARED) $(STATIC) $(WITH_SIEVE) $(WITH_LDAP) $(WITH_MYSQL) $(WITH_PGSQL) $(WITH_SQLITE)
 
 build: stamps/build
 stamps/build: stamps patch $(PACKAGES)
@@ -101,6 +99,7 @@ clean1:
 	dh_testdir
 	-$(MAKE) distclean
 	dh_clean
+	debconf-updatepo
 	rm -rf stamps autom4te.cache || true
 
 # maintainer target
@@ -127,13 +126,6 @@ binary-common: build
 	dh_testroot
 	dh_testdir
 	dh_installdirs -a
-	## install lintian overrides
-	for file in $(CURDIR)/debian/*.lintian-override; do \
-		pkg=`basename $$file .lintian-override`; \
-		target=$(CURDIR)/debian/tmp/usr/share/lintian/overrides; \
-		mkdir -p $$target || true; \
-		install -m 644 $$file $$target/$$pkg; \
-	done
 	## reduce RPATH to minimum (libdbmail.so in /usr/lib/dbmail/)
 	for file in $(CURDIR)/debian/tmp/usr/lib/dbmail/*.so ; do \
 		chrpath -d $$file; \
@@ -150,10 +142,10 @@ binary-common: build
 	dh_installdocs -a
 	dh_installchangelogs -a
 	## update examples
+	(cd $(CURDIR) && find sql/sqlite/ -type f && cat debian/dbmail.examples) | \
+		sort|uniq>stamps/tmpfile && cat stamps/tmpfile > $(CURDIR)/debian/dbmail.examples
 	(cd $(CURDIR) && find sql/mysql/ -type f && cat debian/dbmail-mysql.examples) | \
 		sort|uniq>stamps/tmpfile && cat stamps/tmpfile > $(CURDIR)/debian/dbmail-mysql.examples
-	(cd $(CURDIR) && find sql/sqlite/ -type f && cat debian/dbmail-sqlite.examples) | \
-		sort|uniq>stamps/tmpfile && cat stamps/tmpfile > $(CURDIR)/debian/dbmail-sqlite.examples
 	(cd $(CURDIR) && find sql/postgresql/ -type f && cat debian/dbmail-pgsql.examples) | \
 		sort|uniq>stamps/tmpfile && cat stamps/tmpfile > $(CURDIR)/debian/dbmail-pgsql.examples
 	rm -f stamps/tmpfile
@@ -166,6 +158,7 @@ binary-common: build
 	dh_fixperms -a
 	dh_installdeb -a
 	dh_makeshlibs -a
+	dh_shlibdeps -a
 	dh_gencontrol -a
 	dh_md5sums -a 
 	dh_builddeb -a

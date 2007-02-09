@@ -18,11 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-<<<<<<< master
 /* $Id$
-=======
-/* $Id$
->>>>>>> dbmail_2_2
  *
  * imapcommands.c
  * 
@@ -226,8 +222,8 @@ int _ic_select(struct ImapSession *self)
 {
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	u64_t key = 0;
+	u64_t *msn = NULL;
 	int result;
-	unsigned idx = 0;
 	char *mailbox;
 	char permstring[PERMSTRING_SIZE];
 
@@ -244,15 +240,14 @@ int _ic_select(struct ImapSession *self)
 
 	/* show idx of first unseen msg (if present) */
 	if (ud->mailbox.exists) {
-		key = db_first_unseen(ud->mailbox.uid);
-		if (key == (u64_t) (-1)) {
+		if (! (key = db_first_unseen(ud->mailbox.uid))) {
 			dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
 			return -1;
 		}
-		if (binary_search(ud->mailbox.seq_list, ud->mailbox.exists, key, &idx) != -1)
+		if ((msn = g_tree_lookup(self->mailbox->ids, &key))) {
 			dbmail_imap_session_printf(self,
-				"* OK [UNSEEN %u] first unseen message\r\n",
-				idx + 1);
+				"* OK [UNSEEN %llu] first unseen message\r\n", *msn);
+		}
 	}
 	/* permission */
 	switch (ud->mailbox.permission) {
@@ -794,17 +789,8 @@ int _ic_status(struct ImapSession *self)
 	gchar *pstring, *astring;
 	
 	
-	/* TODO: check_state_and_args */
-	
-	if (ud->state != IMAPCS_AUTHENTICATED && ud->state != IMAPCS_SELECTED) {
-		dbmail_imap_session_printf(self, "%s BAD STATUS command received in invalid state\r\n", self->tag);
+	if (!check_state_and_args(self, "STATUS", 3, 0, IMAPCS_AUTHENTICATED))
 		return 1;
-	}
-
-	if (!self->args[0] || !self->args[1] || !self->args[2]) {
-		dbmail_imap_session_printf(self, "%s BAD missing argument(s) to STATUS\r\n", self->tag);
-		return 1;
-	}
 
 	if (strcmp(self->args[1], "(") != 0) {
 		dbmail_imap_session_printf(self, "%s BAD argument list should be parenthesed\r\n", self->tag);
@@ -1189,14 +1175,13 @@ int _ic_expunge(struct ImapSession *self)
 {
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
 	mailbox_t newmailbox;
-	u64_t *msgids;
+	u64_t *msgids, *msn;
 	u64_t nmsgs, i;
-	unsigned idx;
 	int result;
 
 	if (!check_state_and_args(self, "EXPUNGE", 0, 0, IMAPCS_SELECTED))
-		return 1;	/* error, return */
-	
+		return 1; /* error, return */
+
 	if (ud->mailbox.permission != IMAPPERM_READWRITE) {
 		dbmail_imap_session_printf(self,
 			"%s NO you do not have write permission on this folder\r\n",
@@ -1210,19 +1195,17 @@ int _ic_expunge(struct ImapSession *self)
 		return -1;
 	}
 	if (result == 0) {
-		dbmail_imap_session_printf(self,
-			"%s NO you do not have delete rights on this "
-			"mailbox\r\n", self->tag);
+		dbmail_imap_session_printf(self, "%s NO you do not have delete rights on this mailbox\r\n", 
+		self->tag);
 		return 1;
 	}
 
 	/* delete messages */
 	result = db_expunge(ud->mailbox.uid, ud->userid, &msgids, &nmsgs);
 	if (result == -1) {
-		dbmail_imap_session_printf(self, "* BYE dbase/memory error\r\n");
+		dbmail_imap_session_printf(self, "* BYE db error\r\n");
 		return -1;
 	}
-
 	if (result == 1) {
 		dbmail_imap_session_printf(self, "%s OK EXPUNGE completed\r\n", self->tag);
 		return 1;
@@ -1231,10 +1214,8 @@ int _ic_expunge(struct ImapSession *self)
 	/* show expunge info */
 	for (i = 0; i < nmsgs; i++) {
 		/* find the message sequence number */
-		binary_search(ud->mailbox.seq_list, ud->mailbox.exists,
-			      msgids[i], &idx);
-
-		dbmail_imap_session_printf(self, "* %u EXPUNGE\r\n", idx + 1);	/* add one: IMAP MSN starts at 1 not zero */
+		if ((msn = g_tree_lookup(self->mailbox->ids, &(msgids[i]) )))
+			dbmail_imap_session_printf(self, "* %u EXPUNGE\r\n", *msn);	// add one: IMAP MSN starts at 1 not zero
 	}
 	
 	if (msgids)
@@ -1242,27 +1223,23 @@ int _ic_expunge(struct ImapSession *self)
 	msgids = NULL;
 
 	/* update mailbox info */
-
 	memset(&newmailbox, 0, sizeof(newmailbox));
 	newmailbox.uid = ud->mailbox.uid;
 
 	result = db_getmailbox(&newmailbox);
-
 	if (result == -1) {
-		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
+		dbmail_imap_session_printf(self, "* BYE db error\r\n");
 		dm_free(newmailbox.seq_list);
-		return -1;	/* fatal  */
+		return -1; /* fatal  */
 	}
 
 	if (newmailbox.exists != ud->mailbox.exists)
 		dbmail_imap_session_printf(self, "* %u EXISTS\r\n", newmailbox.exists);
-
 	if (newmailbox.recent != ud->mailbox.recent)
 		dbmail_imap_session_printf(self, "* %u RECENT\r\n", newmailbox.recent);
 
 	dm_free(ud->mailbox.seq_list);
-	memcpy((void *) &ud->mailbox, (void *) &newmailbox, 
-	       sizeof(newmailbox));
+	memcpy((void *) &ud->mailbox, (void *) &newmailbox, sizeof(newmailbox));
 
 	dbmail_imap_session_printf(self, "%s OK EXPUNGE completed\r\n", self->tag);
 	return 0;
@@ -1432,10 +1409,15 @@ int _ic_fetch(struct ImapSession *self)
 	if (g_tree_nnodes(self->mailbox->ids) > 0) {
 
 		dbmail_mailbox_set_uid(self->mailbox,self->use_uid);
+
+		if (self->ids) {
+			g_tree_destroy(self->ids);
+			self->ids = NULL;
+		}
+	
+		self->ids = dbmail_mailbox_get_set(self->mailbox,self->args[0],self->use_uid);
 		
-		self->fetch_ids = dbmail_mailbox_get_set(self->mailbox,self->args[0],self->use_uid);
-		
-		if (g_tree_nnodes(self->fetch_ids)==0) {
+		if (g_tree_nnodes(self->ids)==0) {
 			dbmail_imap_session_printf(self, "%s BAD invalid message range specified\r\n", self->tag);
 			return DM_EGENERAL;
 		}
@@ -1464,31 +1446,54 @@ int _ic_fetch(struct ImapSession *self)
  *
  * alter message-associated data in selected mailbox
  */
+
+static gboolean _do_store(u64_t *id, gpointer UNUSED value, struct ImapSession *self)
+{
+	int j;
+	gboolean isfirstout = TRUE;
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
+	cmd_store_t *cmd = (cmd_store_t *)self->cmd;
+
+	if (ud->mailbox.permission == IMAPPERM_READWRITE) {
+		if (db_set_msgflag(*id, ud->mailbox.uid, cmd->flaglist, cmd->action) < 0) {
+			dbmail_imap_session_printf(self, "\r\n* BYE internal dbase error\r\n");
+			return TRUE;
+		}
+	}
+
+	if (cmd->silent)
+		return FALSE;
+
+	if (db_get_msgflag_all(*id, ud->mailbox.uid, cmd->msgflags) < 0) {
+		dbmail_imap_session_printf(self, "\r\n* BYE internal dbase error\r\n");
+		return TRUE;
+	}
+
+	dbmail_imap_session_printf(self, "* %llu FETCH (FLAGS (", *id);
+
+	for (j = 0, isfirstout = TRUE; j < IMAP_NFLAGS; j++) {
+		if (! cmd->msgflags[j])
+			continue;
+
+		dbmail_imap_session_printf(self, "%s%s", isfirstout ? "" : " ", imap_flag_desc_escaped [j]);
+		isfirstout = FALSE;
+	}
+
+	dbmail_imap_session_printf(self, "))\r\n");
+
+	return FALSE;
+}
+
 int _ic_store(struct ImapSession *self)
 {
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
-	char *endptr, *lastchar = NULL;
-	u64_t i, store_start, store_end, seq_max;
-	unsigned fn = 0;
-	int result, j, isfirstout = 0;
-	int be_silent = 0, action = IMAPFA_NONE;
-	int flaglist[IMAP_NFLAGS], msgflags[IMAP_NFLAGS];
-	u64_t thisnum, lo, hi;
+	cmd_store_t cmd;
+	int result, i, j;
 
-	memset(flaglist, 0, sizeof(int) * IMAP_NFLAGS);
+	memset(cmd.flaglist, 0, sizeof(int) * IMAP_NFLAGS);
 
-	if (ud->state != IMAPCS_SELECTED) {
-		dbmail_imap_session_printf(self,
-			"%s BAD STORE command received in invalid state\r\n",
-			self->tag);
+	if (!check_state_and_args (self, "STORE", 2, 0, IMAPCS_SELECTED))
 		return 1;
-	}
-
-	if (!self->args[0] || !self->args[1] || !self->args[2]) {
-		dbmail_imap_session_printf(self, "%s BAD missing argument(s) to STORE\r\n",
-			self->tag);
-		return 1;
-	}
 
 	/* multiple flags should be parenthesed */
 	if (self->args[3] && strcmp(self->args[2], "(") != 0) {
@@ -1497,28 +1502,28 @@ int _ic_store(struct ImapSession *self)
 		return 1;
 	}
 
+	cmd.silent = FALSE;
 
 	/* retrieve action type */
-	if (strcasecmp(self->args[1], "flags") == 0)
-		action = IMAPFA_REPLACE;
-	else if (strcasecmp(self->args[1], "flags.silent") == 0) {
-		action = IMAPFA_REPLACE;
-		be_silent = 1;
-	} else if (strcasecmp(self->args[1], "+flags") == 0)
-		action = IMAPFA_ADD;
-	else if (strcasecmp(self->args[1], "+flags.silent") == 0) {
-		action = IMAPFA_ADD;
-		be_silent = 1;
-	} else if (strcasecmp(self->args[1], "-flags") == 0)
-		action = IMAPFA_REMOVE;
-	else if (strcasecmp(self->args[1], "-flags.silent") == 0) {
-		action = IMAPFA_REMOVE;
-		be_silent = 1;
+	if (MATCH(self->args[1], "flags"))
+		cmd.action = IMAPFA_REPLACE;
+	else if (MATCH(self->args[1], "flags.silent")) {
+		cmd.action = IMAPFA_REPLACE;
+		cmd.silent = TRUE;
+	} else if (MATCH(self->args[1], "+flags"))
+		cmd.action = IMAPFA_ADD;
+	else if (MATCH(self->args[1], "+flags.silent")) {
+		cmd.action = IMAPFA_ADD;
+		cmd.silent = TRUE;
+	} else if (MATCH(self->args[1], "-flags"))
+		cmd.action = IMAPFA_REMOVE;
+	else if (MATCH(self->args[1], "-flags.silent")) {
+		cmd.action = IMAPFA_REMOVE;
+		cmd.silent = TRUE;
 	}
 
-	if (action == IMAPFA_NONE) {
-		dbmail_imap_session_printf(self,
-			"%s BAD invalid STORE action specified\r\n", self->tag);
+	if (cmd.action == IMAPFA_NONE) {
+		dbmail_imap_session_printf(self, "%s BAD invalid STORE action specified\r\n", self->tag);
 		return 1;
 	}
 
@@ -1526,36 +1531,37 @@ int _ic_store(struct ImapSession *self)
 	i = (strcmp(self->args[2], "(") == 0) ? 3 : 2;
 
 	for (; self->args[i] && strcmp(self->args[i], ")") != 0; i++) {
-		for (j = 0; j < IMAP_NFLAGS; j++)
-			if (strcasecmp(self->args[i], imap_flag_desc_escaped[j])
-			    == 0) {
-				flaglist[j] = 1;
+		for (j = 0; j < IMAP_NFLAGS; j++) {
+			if (MATCH(self->args[i],"\\Recent")) {
+				j = IMAP_NFLAGS;
 				break;
 			}
+				
+			if (MATCH(self->args[i], imap_flag_desc_escaped[j])) {
+				cmd.flaglist[j] = 1;
+				break;
+			}
+		}
 
 		if (j == IMAP_NFLAGS) {
-			dbmail_imap_session_printf(self,
-				"%s BAD invalid flag list to STORE command\r\n",
-				self->tag);
+			dbmail_imap_session_printf(self, "%s BAD invalid flag list to STORE command\r\n", self->tag);
 			return 1;
 		}
 	}
 
   /** check ACL's for STORE */
-	if (flaglist[IMAP_FLAG_SEEN] == 1) {
+	if (cmd.flaglist[IMAP_FLAG_SEEN] == 1) {
 		result = acl_has_right(&ud->mailbox, ud->userid, ACL_RIGHT_SEEN);
 		if (result < 0) {
 			dbmail_imap_session_printf(self, "* BYE internal database error");
 			return -1;	/* fatal */
 		}
 		if (result == 0) {
-			dbmail_imap_session_printf(self,
-				"%s NO no right to store \\SEEN flag\r\n",
-				self->tag);
+			dbmail_imap_session_printf(self, "%s NO no right to store \\SEEN flag\r\n", self->tag);
 			return 1;
 		}
 	}
-	if (flaglist[IMAP_FLAG_DELETED] == 1) {
+	if (cmd.flaglist[IMAP_FLAG_DELETED] == 1) {
 		result = acl_has_right(&ud->mailbox, ud->userid, ACL_RIGHT_DELETE);
 		if (result < 0) {
 			dbmail_imap_session_printf(self, "* BYE internal database error\r\n");
@@ -1566,211 +1572,48 @@ int _ic_store(struct ImapSession *self)
 			return 1;
 		}
 	}
-	if (flaglist[IMAP_FLAG_ANSWERED] == 1 ||
-	    flaglist[IMAP_FLAG_FLAGGED] == 1 ||
-	    flaglist[IMAP_FLAG_DRAFT] == 1 ||
-	    flaglist[IMAP_FLAG_RECENT] == 1) {
+	if (cmd.flaglist[IMAP_FLAG_ANSWERED] == 1 ||
+	    cmd.flaglist[IMAP_FLAG_FLAGGED] == 1 ||
+	    cmd.flaglist[IMAP_FLAG_DRAFT] == 1) {
 		result = acl_has_right(&ud->mailbox, ud->userid, ACL_RIGHT_WRITE);
 		if (result < 0) {
-			dbmail_imap_session_printf(self, "*BYE internal database error");
+			dbmail_imap_session_printf(self, "* BYE internal database error");
 			return -1;
 		}
 		if (result == 0) {
-			dbmail_imap_session_printf(self, "%s NO no right to store flags",
-				self->tag);
+			dbmail_imap_session_printf(self, "%s NO no right to store flags", self->tag);
 			return 1;
 		}
 	}
 	/* end of ACL checking. If we get here without returning, the user has
 	   the right to store the flags */
 
-	db_getmailbox(&ud->mailbox); // resync mailbox
-	seq_max = (self->use_uid ? (ud->mailbox.msguidnext - 1) : ud->mailbox.exists);
-	
-	/* set flags & show if needed */
-	endptr = self->args[0];
-	while (*endptr) {
-		if (endptr != self->args[0])
-			endptr++;	/* skip delimiter */
 
-		store_start = strtoull(endptr, &endptr, 10);
+	/* reopen the mailbox */
+	dbmail_mailbox_open(self->mailbox);
+
+	self->cmd = &cmd;
+
+	if (g_tree_nnodes(self->mailbox->ids) > 0) {
+
+		dbmail_mailbox_set_uid(self->mailbox,self->use_uid);
 		
-		if (store_start == 0xffffffff) // outlook's idea of '*'
-			store_start = seq_max;
-
-		if (store_start == 0 || store_start > seq_max) {
-			dbmail_imap_session_printf(self,
-				"%s BAD invalid message range specified\r\n",
-				self->tag);
-			return 1;
+		if (self->ids) {
+			g_tree_destroy(self->ids);
+			self->ids = NULL;
 		}
 
-		switch (*endptr) {
-		case ':':
-			store_end = strtoull(++endptr, &lastchar, 10);
-
-			if (store_end == 0xffffffff) // outlook's idea of '*'
-				store_end = seq_max;
-			
-			endptr = lastchar;
-
-			if (*endptr == '*') {
-				store_end = (self->use_uid ?
-					     (ud->mailbox.msguidnext -
-					      1) : ud->mailbox.exists);
-				endptr++;
-				break;
-			}
-
-			if (store_end == 0 || store_end > seq_max) {
-				dbmail_imap_session_printf(self, "%s BAD invalid message range specified\r\n",
-					self->tag);
-				return 1;
-			}
-
-			if (store_end < store_start) {
-				i = store_start;
-				store_start = store_end;
-				store_end = i;
-			}
-			break;
-
-		case ',':
-		case 0:
-			store_end = store_start;
-			break;
-
-		default:
-			dbmail_imap_session_printf(self,
-				"%s BAD invalid character in message range\r\n",
-				self->tag);
-			return 1;
+		self->ids = dbmail_mailbox_get_set(self->mailbox,self->args[0],self->use_uid);
+		
+		if (g_tree_nnodes(self->ids)==0) {
+			dbmail_imap_session_printf(self, "%s BAD invalid message range specified\r\n", self->tag);
+			return DM_EGENERAL;
 		}
 
-		if (!self->use_uid) {
-			store_start--;
-			store_end--;
-		}
+		g_tree_foreach(self->ids, (GTraverseFunc) _do_store, self);
+	}	
 
-		if (store_start == store_end) {
-			thisnum =
-			    (self->use_uid ? store_start : ud->
-			     mailbox.seq_list[store_start]);
-
-			if (self->use_uid) {
-				/* check if the message with this UID belongs to this mailbox */
-				if (binary_search
-				    (ud->mailbox.seq_list,
-				     ud->mailbox.exists, store_start,
-				     &fn) == -1)
-					continue;
-			}
-			if (ud->mailbox.permission == IMAPPERM_READWRITE) {
-				result = db_set_msgflag(thisnum, ud->mailbox.uid, flaglist, action);
-				if (result == -1) {
-					dbmail_imap_session_printf(self, "\r\n* BYE internal dbase error\r\n");
-					return -1;
-				}
-			}
-			if (!be_silent) {
-				result = db_get_msgflag_all(thisnum, ud->mailbox.uid, msgflags);
-				if (result == -1) {
-					dbmail_imap_session_printf(self, "\r\n* BYE internal dbase error\r\n");
-					return -1;
-				}
-
-				dbmail_imap_session_printf(self, "* %llu FETCH (FLAGS (",
-					self->use_uid ? (u64_t) (fn + 1) : store_start + 1);
-
-				for (j = 0, isfirstout = 1;
-				     j < IMAP_NFLAGS; j++) {
-					if (msgflags[j]) {
-						dbmail_imap_session_printf(self, "%s%s",
-							isfirstout ? "" :
-							" ",
-							imap_flag_desc_escaped
-							[j]);
-						if (isfirstout)
-							isfirstout = 0;
-					}
-				}
-
-				dbmail_imap_session_printf(self, "))\r\n");
-			}
-		} else {
-			if (!self->use_uid) {
-				/* find the msgUID's to use */
-				lo = ud->mailbox.seq_list[store_start];
-				hi = ud->mailbox.seq_list[store_end];
-
-			} else {
-				lo = store_start;
-				hi = store_end;
-			}
-
-			if (ud->mailbox.permission == IMAPPERM_READWRITE) {
-				result = db_set_msgflag_range(lo, hi, ud->mailbox.uid, flaglist, action);
-				if (result == -1) {
-					dbmail_imap_session_printf(self, "\r\n* BYE internal dbase error\r\n");
-					return -1;
-				}
-			}
-			if (!be_silent) {
-				for (i = store_start; i <= store_end; i++) {
-					thisnum =
-					    (self->use_uid ? i :
-					     ud->mailbox.seq_list[i]);
-
-					if (self->use_uid) {
-						/* check if the message with this UID belongs
-						   to this mailbox */
-						if (binary_search
-						    (ud->mailbox.seq_list,
-						     ud->mailbox.exists, i,
-						     &fn) == -1)
-							continue;
-					}
-
-					result =
-					    db_get_msgflag_all(thisnum,
-							       ud->mailbox.
-							       uid,
-							       msgflags);
-					if (result == -1) {
-						dbmail_imap_session_printf(self,
-							"\r\n* BYE internal dbase error\r\n");
-						return -1;
-					}
-
-					dbmail_imap_session_printf(self,
-						"* %llu FETCH (FLAGS (",
-						self->use_uid
-						? (u64_t) (fn + 1) : i +
-						1);
-
-					for (j = 0, isfirstout = 1;
-					     j < IMAP_NFLAGS; j++) {
-						if (msgflags[j]) {
-							dbmail_imap_session_printf(self,
-								"%s%s",
-								isfirstout
-								? "" : " ",
-								imap_flag_desc_escaped
-								[j]);
-							if (isfirstout)
-								isfirstout
-								    = 0;
-						}
-					}
-
-					dbmail_imap_session_printf(self, "))\r\n");
-				}
-			}
-		}
-	}
-
-	dbmail_imap_session_printf(self, "%s OK %sSTORE completed\r\n", self->tag,
-		self->use_uid ? "UID " : "");
+	dbmail_imap_session_printf(self, "%s OK %sSTORE completed\r\n", self->tag, self->use_uid ? "UID " : "");
 	return 0;
 }
 
@@ -1780,16 +1623,36 @@ int _ic_store(struct ImapSession *self)
  *
  * copy a message to another mailbox
  */
+
+static gboolean _do_copy(u64_t *id, gpointer UNUSED value, struct ImapSession *self)
+{
+	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
+	cmd_copy_t *cmd = (cmd_copy_t *)self->cmd;
+	u64_t newid;
+	int result;
+
+	result = db_copymsg(*id, cmd->mailbox_id, ud->userid, &newid);
+	if (result == -1) {
+		dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
+		db_rollback_transaction();
+		return TRUE;
+	}
+	if (result == -2) {
+		dbmail_imap_session_printf(self, "%s NO quotum would exceed\r\n", self->tag);
+		db_rollback_transaction();
+		return TRUE;
+	}
+	return FALSE;
+}
+
+
 int _ic_copy(struct ImapSession *self)
 {
 	imap_userdata_t *ud = (imap_userdata_t *) self->ci->userData;
-	u64_t i, copy_start, copy_end;
-	unsigned fn;
-	u64_t destmboxid, thisnum;
+	u64_t destmboxid;
 	int result;
-	u64_t new_msgid;
-	char *endptr, *lastchar = NULL;
 	mailbox_t destmbox;
+	cmd_copy_t cmd;
 	
 	bzero(&destmbox, sizeof(destmbox));
 
@@ -1832,106 +1695,35 @@ int _ic_copy(struct ImapSession *self)
 		return 1;
 	}
 
-	db_getmailbox(&ud->mailbox); // resync mailbox
-	
-	/* ok copy msgs */
-	endptr = self->args[0];
-	
+	cmd.mailbox_id = destmboxid;
+	self->cmd = &cmd;
+
+	/* reopen the mailbox */
+	dbmail_mailbox_open(self->mailbox);
+
 	if (db_begin_transaction() < 0)
 		return -1;
 	
-	while (*endptr) {
-		if (endptr != self->args[0])
-			endptr++;	/* skip delimiter */
+	if (g_tree_nnodes(self->mailbox->ids) > 0) {
 
-		copy_start = strtoull(endptr, &lastchar, 10);
-		endptr = lastchar;
-
-		if (copy_start == 0 || copy_start >
-		    (self->use_uid ? (ud->mailbox.msguidnext - 1) :
-		     ud->mailbox.exists)) {
-			dbmail_imap_session_printf(self,
-				"%s BAD invalid message range specified\r\n",
-				self->tag);
-			db_rollback_transaction();
-			return 1;
+		dbmail_mailbox_set_uid(self->mailbox,self->use_uid);
+		
+		if (self->ids) {
+			g_tree_destroy(self->ids);
+			self->ids = NULL;
 		}
 
-		switch (*endptr) {
-		case ':':
-			copy_end = strtoull(++endptr, &lastchar, 10);
-			endptr = lastchar;
-
-			if (*endptr == '*') {
-				copy_end = (self->use_uid ?
-					    (ud->mailbox.msguidnext -
-					     1) : ud->mailbox.exists);
-				endptr++;
-				break;
-			}
-
-			if (copy_end == 0 || copy_end >
-			    (self->use_uid
-			     ? (ud->mailbox.msguidnext -
-				1) : ud->mailbox.exists)) {
-				dbmail_imap_session_printf(self,
-					"%s BAD invalid message range specified\r\n",
-					self->tag);
-				db_rollback_transaction();
-				return 1;
-			}
-
-			if (copy_end < copy_start) {
-				i = copy_start;
-				copy_start = copy_end;
-				copy_end = i;
-			}
-			break;
-
-		case ',':
-		case 0:
-			copy_end = copy_start;
-			break;
-
-		default:
-			dbmail_imap_session_printf(self,
-				"%s BAD invalid character in message range\r\n",
-				self->tag);
-			db_rollback_transaction();
-			return 1;
+		self->ids = dbmail_mailbox_get_set(self->mailbox,self->args[0],self->use_uid);
+		
+		if (g_tree_nnodes(self->ids)==0) {
+			dbmail_imap_session_printf(self, "%s BAD invalid message range specified\r\n", self->tag);
+			return DM_EGENERAL;
 		}
 
-		if (!self->use_uid) {
-			copy_start--;
-			copy_end--;
-		}
+		TRACE(TRACE_DEBUG,"copy [%d] messages", g_tree_nnodes(self->ids));
 
-		for (i = copy_start; i <= copy_end; i++) {
-			thisnum =
-			    (self->use_uid ? i : ud->mailbox.
-			     seq_list[i]);
-
-			if (self->use_uid) {
-				/* check if the message with this UID belongs to this mailbox */
-				if (binary_search
-				    (ud->mailbox.seq_list,
-				     ud->mailbox.exists, i, &fn) == -1)
-					continue;
-			}
-
-			result = db_copymsg(thisnum, destmboxid, ud->userid, &new_msgid);
-			if (result == -1) {
-				dbmail_imap_session_printf(self, "* BYE internal dbase error\r\n");
-				db_rollback_transaction();
-				return -1;
-			}
-			if (result == -2) {
-				dbmail_imap_session_printf(self, "%s NO quotum would exceed\r\n", self->tag);
-				db_rollback_transaction();
-				return 1;
-			}
-		}
-	}
+		g_tree_foreach(self->ids, (GTraverseFunc) _do_copy, self);
+	}	
 
 	if (db_commit_transaction() < 0)
 		return -1;

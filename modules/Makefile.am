@@ -17,12 +17,7 @@
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 INCLUDES = -I$(top_srcdir)
-<<<<<<< master
-AM_CFLAGS = @MYSQLINC@ @PGSQLINC@ @SQLITEINC@ @INGRESINC@ @LDAPINC@ @SIEVEINC@ -fomit-frame-pointer
-=======
 AM_CFLAGS = @MYSQLINC@ @PGSQLINC@ @SQLITEINC@ @LDAPINC@ @SIEVEINC@
->>>>>>> dbmail_2_2
-
 
 
 #AM_LDFLAGS = -Wl,--export-dynamic
@@ -31,9 +26,6 @@ AM_LDFLAGS = -module
 else
 AM_LDFLAGS = 
 endif
-
-libdir = $(prefix)/lib/dbmail
-pkglibdir = $(libdir)
 
 pkglib_LTLIBRARIES = libmysql.la \
 	libpgsql.la \

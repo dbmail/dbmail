@@ -23,17 +23,13 @@ GMIME:         $ac_gmime_libs
 MYSQL:         $MYSQLLIB
 PGSQL:         $PGSQLLIB
 SQLITE:        $SQLITELIB
-<<<<<<< master
 INGRES:	       $INGRESLIB
-SIEVE:         $SORTLIB
-LDAP:          $LDAPLIB
-=======
-SIEVE:         $SIEVEINC $SIEVELIB
-LDAP:          $LDAPINC $LDAPLIB
->>>>>>> dbmail_2_2
+SIEVE:         $SIEVEINC$SIEVELIB
+LDAP:          $LDAPINC$LDAPLIB
 SHARED:        $enable_shared
 STATIC:        $enable_static
 CHECK:         $with_check
+SOCKETS:       $SOCKETLIB
 ])
 ])
 
@@ -212,7 +208,7 @@ AC_DEFUN([DBMAIL_CHECK_SIEVE_LIB],[
 ])
 
 dnl DBMAIL_SIEVE_CONF
-dnl check for ldap or sql authentication
+dnl check for sieve sorting
 AC_DEFUN([DBMAIL_SIEVE_CONF], [dnl
 WARN=0
 
@@ -431,7 +427,8 @@ if ( test [ "x$lookforldap" != "xno" ] || test [ "x$lookforauthldap" != "xno" ] 
         AC_MSG_ERROR([Could not find LDAP library.])
     else
         AC_MSG_RESULT($LDAPLIB)
-        AC_DEFINE([AUTHLDAP], 1, [Define if LDAP sorting will be used.])
+        AC_DEFINE([AUTHLDAP], 1, [Define if LDAP will be used.])
+        AC_SEARCH_LIBS(ldap_initialize, ldap, AC_DEFINE([HAVE_LDAP_INITIALIZE], 1, [ldap_initialize() can be used instead of ldap_init()]))
         AC_SUBST(LDAPLIB)
         AC_SUBST(LDAPINC)
         AUTHALIB="modules/.libs/libauth_ldap.a"
@@ -814,3 +811,32 @@ AC_DEFUN([gl_PREREQ_GETOPT],
 [
   AC_CHECK_DECLS_ONCE([getenv])
 ])
+
+dnl bsd_sockets.m4--which socket libraries do we need? 
+dnl Derrick Brashear
+dnl from Zephyr
+dnl $Id$
+
+dnl Hacked on by Rob Earhart to not just toss stuff in LIBS
+dnl It now puts everything required for sockets into SOCKETLIB
+
+AC_DEFUN([CMU_SOCKETS], [
+	save_LIBS="$LIBS"
+	SOCKETLIB=""
+	AC_CHECK_FUNC(connect, :,
+		AC_CHECK_LIB(nsl, gethostbyname,
+			     SOCKETLIB="-lnsl $SOCKETLIB")
+		AC_CHECK_LIB(socket, connect,
+			     SOCKETLIB="-lsocket $SOCKETLIB")
+	)
+	LIBS="$SOCKETLIB $save_LIBS"
+	AC_CHECK_FUNC(res_search, :,
+                AC_CHECK_LIB(resolv, res_search,
+                              SOCKETLIB="-lresolv $SOCKETLIB") 
+        )
+	LIBS="$SOCKETLIB $save_LIBS"
+	AC_CHECK_FUNCS(dn_expand dns_lookup)
+	LIBS="$save_LIBS"
+	AC_SUBST(SOCKETLIB)
+])
+

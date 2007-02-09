@@ -18,11 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-<<<<<<< master
 /* $Id$
-=======
-/* $Id$
->>>>>>> dbmail_2_2
  * imap4.c
  *
  * implements an IMAP 4 rev 1 server.
@@ -159,7 +155,9 @@ int IMAPClientHandler(clientinfo_t * ci)
 		}
 
 		if (ferror(session->ci->tx)) {
-			TRACE(TRACE_ERROR, "error [%s] on write-stream\n", strerror(errno));
+			int serr = errno;
+			TRACE(TRACE_ERROR, "error [%s] on write-stream\n", strerror(serr));
+
 			if (errno == EPIPE) {
 				dbmail_imap_session_delete(session);
 				return -1;	/* broken pipe */

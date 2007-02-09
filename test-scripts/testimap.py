@@ -16,11 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-<<<<<<< master
+
 # $Id$
-=======
-# $Id$
->>>>>>> dbmail_2_2
 
 # For a protocol trace set to 4
 DEBUG = 0
@@ -46,7 +43,7 @@ HOST,PORT = "localhost", 143
 # for stdin/stdout testing
 DAEMONBIN = "./dbmail-imapd -n -f /etc/dbmail/dbmail-test.conf"
 # with valgrind
-DAEMONBIN = "valgrind --suppressions=./contrib/dbmail.supp --leak-check=full %s" % DAEMONBIN
+#DAEMONBIN = "valgrind --suppressions=./contrib/dbmail.supp --leak-check=full %s" % DAEMONBIN
 
 
 TESTMSG={}
@@ -150,10 +147,12 @@ class testImapServer(unittest.TestCase):
         """
         self.o.create('testcopy1')
         self.o.create('testcopy2')
-        self.o.append('testcopy1',"","",str(TESTMSG['strict822']))
+        for i in range(1,20):
+            self.o.append('testcopy1',"","",str(TESTMSG['strict822']))
         self.o.select('testcopy1')
         id = self.o.recent()[1][0]
         self.assertEquals(self.o.copy(id,'testcopy2'),('OK', ['COPY completed']))
+        self.assertEquals(self.o.copy('1:*','testcopy2'),('OK', ['COPY completed']))
 
     def testCreate(self):
         """ 
@@ -518,7 +517,10 @@ class testImapServer(unittest.TestCase):
         store(message_set, command, flag_list)
             Alters flag dispositions for messages in mailbox.
         """
-        #self.fail(unimplementedError)
+        self.o.select('INBOX')
+        self.assertEquals(self.o.store('1:*', '+FLAGS', '\Deleted')[0],'OK')
+        self.assertEquals(self.o.store('1:*', '-FLAGS', '\Deleted')[0],'OK')
+        self.assertRaises(self.o.error,self.o.store, '1:*', '-FLAGS', '\Recent')
         
     def testSubscribe(self):
         """

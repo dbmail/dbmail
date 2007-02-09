@@ -276,13 +276,25 @@ char *raw_message_koi = "From: test@test\n"
 	"Привет всем\n"
 	"\n";
 
-char *encoded_message_latin = "From: =?iso-8859-1?Q?B=BA_V._F._Z=EAzere?= <nobody@nowhere.org>\n"
+char *encoded_message_latin_1 = "From: =?iso-8859-1?Q?B=BA_V._F._Z=EAzere?= <nobody@nowhere.org>\n"
 	"To: nobody@foo.org\n"
 	"Subject: =?iso-8859-1?Q?Re:_M=F3dulo_Extintores?=\n"
 	"MIME-Version: 1.0\n"
 	"Content-Type: text/plain\n"
 	"\n"
 	"test\n\n";
+
+char *encoded_message_latin_2 = "From: =?ISO-8859-2?Q?=22Miroslav_=A9ulc_=28fordfrog=29=22?=\n"
+	"	<fordfrog@gentoo.org>\n"
+	"To: gentoo-dev@lists.gentoo.org\n"
+	"Subject: =?ISO-8859-2?Q?Re=3A_=5Bgentoo-dev=5D_New_developer=3A__?=\n"
+	" =?ISO-8859-2?Q?Miroslav_=A9ulc_=28fordfrog=29?=\n"
+	"MIME-Version: 1.0\n"
+	"Content-Type: text/plain;\n"
+	"  charset=ISO-8859-2;\n"
+	"  format=flowed\n"
+	"\n"
+	"test\n";
 
 char *multipart_mixed = "Received: from RAIVO (raivo.kisise [192.168.111.49])\n"
 	"	by test.kisise (Postfix) with ESMTP id 5C4981214C\n"

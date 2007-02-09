@@ -1826,6 +1826,8 @@ GList* dbmail_imap_append_alist_as_plist(GList *list, const InternetAddressList 
 			/* personal name */
 			if (ia->name && ia->value.addr) {
 				name = g_mime_utils_header_encode_phrase((unsigned char *)ia->name);
+				g_strdelimit(name,"\"\\",' ');
+				g_strstrip(name);
 				s = dbmail_imap_astring_as_string(name);
 				t = g_list_append_printf(t, "%s", s);
 				g_free(name);
@@ -1945,10 +1947,14 @@ GList * envelope_address_part(GList *list, GMimeMessage *message, const char *he
 	const char *result;
 	char *t;
 	InternetAddressList *alist;
+	char *result_enc;
 	
 	result = g_mime_message_get_header(message,header);
+	
 	if (result) {
-		t = imap_cleanup_address(result);
+		result_enc = convert_8bit_field_to_utf8(message,result);
+		t = imap_cleanup_address(result_enc);
+		g_free(result_enc);
 		alist = internet_address_parse_string(t);
 		g_free(t);
 		list = dbmail_imap_append_alist_as_plist(list, (const InternetAddressList *)alist);
@@ -1959,7 +1965,160 @@ GList * envelope_address_part(GList *list, GMimeMessage *message, const char *he
 	}
 	return list;
 }
+
+/* convert not encoded field to utf8 */
+char * convert_8bit_field_to_utf8(GMimeMessage *message,const char* str_in)
+{
+	char * subj=NULL;
+	static iconv_t default_iconv=(iconv_t)-1;
+	static const char *default_charset=NULL;
+	const char *charset;
+	iconv_t conv_iconv;
+	field_t val;
+	GMimeObject *mess_obj=NULL;
 	
+	if (default_iconv==(iconv_t)-1){ //Init
+		GETCONFIGVALUE("DEFAULT_MSG_ENCODING", "DBMAIL", val);
+		if (val[0])
+			default_charset=val;
+		else
+			default_charset="x-unknown";// use locale charset
+		default_iconv=g_mime_iconv_open("UTF-8",default_charset);
+		if (default_iconv == (iconv_t)-1) {
+			TRACE(TRACE_DEBUG,"incorrect default encoding [%s]", default_charset);
+		}
+	}
+	
+	if (str_in==NULL)
+		return NULL;
+	if (g_utf8_validate((const gchar *)str_in, -1, NULL) || !g_mime_utils_text_is_8bit((unsigned char *)str_in, strlen(str_in))) {
+		// Conversion not needed
+		return g_strdup(str_in);
+	}
+
+	// Get message encode codepage
+	if (message)
+		mess_obj=g_mime_message_get_mime_part(message);
+	
+	if (mess_obj) {
+		if ((charset=g_mime_object_get_content_type_parameter(mess_obj,"charset"))) {
+			// codepage not set in message header use default
+		        TRACE(TRACE_DEBUG,"encoding 8bit use charset [%s]", charset);
+			
+			if ((conv_iconv=g_mime_iconv_open("UTF-8",charset))==(iconv_t)-1) {
+				TRACE(TRACE_DEBUG,"incorrect encoding [%s] base [UTF-8]", charset);
+			} else {
+				subj=g_mime_iconv_strdup(conv_iconv,str_in);
+				g_mime_iconv_close(conv_iconv);
+			}
+		}
+	}
+	if (subj==NULL) {
+		subj=g_mime_iconv_strdup(default_iconv,str_in);
+	}
+	    
+	if (subj==NULL) {
+		// On Error convertion,  replace all 8 bit symbol with '?'
+		subj=g_strdup(str_in);
+		char *p;
+		for(p=subj;*p;p++)
+		    if(*p & 0x80) *p='?';
+	}
+
+	return subj;
+}
+
+
+/* convert not encoded field to database encoding */
+char * convert_8bit_field(GMimeMessage *message,const char* str_in)
+{
+	//size_t str_in_len=strlen(str_in);
+	//char * str_out=NULL;
+	char * subj=NULL;
+	//int err_flg=1;
+	static const char * base_charset=NULL;
+	static iconv_t base_iconv=(iconv_t)-1;
+	static iconv_t default_iconv=(iconv_t)-1;
+	static const char *default_charset=NULL;
+	const char *charset;
+	iconv_t conv_iconv;
+	field_t val;
+	GMimeObject *mess_obj=NULL;
+	
+	if(base_charset==NULL){ //Init
+		GETCONFIGVALUE("ENCODING", "DBMAIL", val);
+		if(val[0]) {
+			base_charset=val;
+			//TEST
+			TRACE(TRACE_DEBUG,"Base charset [%s]", base_charset);
+			iconv_t tmp_i=g_mime_iconv_open(base_charset,"UTF-8");
+			if(tmp_i == (iconv_t)-1) {
+				base_charset=g_mime_locale_charset();
+				TRACE(TRACE_DEBUG,"Base charset test filed set to [%s]", base_charset);
+			}
+			else
+				g_mime_iconv_close(tmp_i);
+		}
+		else
+		        base_charset=g_mime_locale_charset();
+		base_charset=g_strdup(base_charset);
+		base_iconv=g_mime_iconv_open(base_charset,base_charset);
+		if (base_iconv == (iconv_t)-1)
+			TRACE(TRACE_DEBUG,"incorrect base encoding [%s]", base_charset);
+			// codepage not set in message header use default
+		GETCONFIGVALUE("DEFAULT_MSG_ENCODING", "DBMAIL", val);
+		if (val[0])
+			default_charset=val;
+		else
+			default_charset="x-unknown";// use locale charset
+		default_iconv=g_mime_iconv_open(base_charset,default_charset);
+		if (default_iconv == (iconv_t)-1) {
+			TRACE(TRACE_DEBUG,"incorrect default encoding [%s]", default_charset);
+		}
+	}
+	if (str_in==NULL)
+		return NULL;
+	
+	if (!g_mime_utils_text_is_8bit((unsigned char *)str_in, strlen(str_in))) {
+		// Conversion not needed
+		return g_strdup(str_in);
+	}
+
+	if ((subj=g_mime_iconv_strdup(base_iconv,str_in))!=NULL) {
+		// Conversion already done by header decode ? May insert to database
+		return subj;
+	}
+	
+	// Get message encode codepage 
+	if (message)
+		mess_obj=g_mime_message_get_mime_part(message);
+	if (mess_obj) {
+		if ((charset=g_mime_object_get_content_type_parameter(mess_obj,"charset"))) {
+			// codepage not set in message header use default
+		        TRACE(TRACE_DEBUG,"encoding 8bit use charset [%s]", charset);
+			
+			if ((conv_iconv=g_mime_iconv_open(base_charset,charset))==(iconv_t)-1) {
+				TRACE(TRACE_DEBUG,"incorrect encoding [%s] base [%s]", charset,base_charset);
+			} else {
+				subj=g_mime_iconv_strdup(conv_iconv,str_in);
+				g_mime_iconv_close(conv_iconv);
+			}
+		}
+	}
+	if (subj==NULL) {
+		subj=g_mime_iconv_strdup(default_iconv,str_in);
+	}
+	    
+	if (subj==NULL) {
+		// On Error convertion,  replace all 8 bit symbol with '?'
+		subj=g_strdup(str_in);
+		char *p;
+		for(p=subj;*p;p++)
+		    if(*p & 0x80) *p='?';
+	}
+
+	return subj;
+}
 
 /* envelope access point */
 char * imap_get_envelope(GMimeMessage *message)
@@ -1967,7 +2126,7 @@ char * imap_get_envelope(GMimeMessage *message)
 	GMimeObject *part;
 	GList *list = NULL;
 	char *result;
-	char *s, *t;
+	char *s = NULL, *t = NULL;
 
 	if (! GMIME_IS_MESSAGE(message))
 		return NULL;
@@ -1987,8 +2146,14 @@ char * imap_get_envelope(GMimeMessage *message)
 	
 	/* subject */
 	result = (char *)g_mime_message_get_header(message,"Subject");
+
 	if (result) {
-		t = dbmail_imap_astring_as_string(result);
+		char * subj = convert_8bit_field_to_utf8(message, result);
+		s = g_mime_utils_header_encode_text((unsigned char *)subj);
+		TRACE(TRACE_DEBUG,"encoding 8bit subject [%s] -> [%s]", subj, s);
+		t = dbmail_imap_astring_as_string(s);
+		g_free(s);
+		g_free(subj);
 		list = g_list_append_printf(list,"%s", t);
 		g_free(t);
 	} else {
@@ -2114,13 +2279,15 @@ char * imap_cleanup_address(const char *a)
 	size_t i, l;
 	GString *s;
 
-	if (!a)
-		return g_strdup("");
-	if (!a[0])
+	if (!a || !a[0])
 		return g_strdup("");
 	
 	s = g_string_new("");
 	t = g_strdup(a);
+
+	// un-fold and collapse tabs and spaces
+	g_strdelimit(t,"\n",' ');
+	dm_pack_spaces(t);
 	inptr = t;
 	inptr = g_strstrip(inptr);
 	prev = *inptr;

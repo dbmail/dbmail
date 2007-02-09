@@ -1229,27 +1229,6 @@ int db_get_msgflag_all(u64_t msg_idnr, u64_t mailbox_idnr, int *flags);
  */
 int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags,
 		   int action_type);
-/**
- * \brief set flags for a range of messages in a mailbox
- * \param msg_idnr_low beginning of range
- * \param msg_idnr_high end of range
- * \param mailbox_idnr
- * \param flags Array of IMAP_NFLAGS elements. See
- *               imapcommand.c for details.
- * \param action_type 
- *        - IMAPFA_REPLACE new set will be exactly as flags,
- *          with '1' for set, and '0' for not set.
- *        - IMAPFA_ADD set all flags which have a '1' as value
- *          in flags
- *        - IMAPFA_REMOVE clear all flags that have '1' as value
- *          in flags
- * \return 
- * 		- -1 on failure
- * 		-  0 on success
- */
-int db_set_msgflag_range(u64_t msg_idnr_low,
-			 u64_t msg_idnr_high, u64_t mailbox_idnr,
-			 int *flags, int action_type);
 
 int db_set_msgflag_recent(u64_t msg_idnr, u64_t mailbox_idnr);
 
@@ -1398,10 +1377,9 @@ int db_user_log_login(u64_t user_idnr);
 int db_change_mailboxsize(u64_t user_idnr, u64_t new_size);
 
 /* auto-reply cache */
-int db_replycache_register(const char *to, const char *from,
-		const char *handle);
-int db_replycache_validate(const char *to, const char *from,
-		const char *handle, int days);
+int db_replycache_register(const char *to, const char *from, const char *handle);
+int db_replycache_validate(const char *to, const char *from, const char *handle, int days);
+int db_replycache_unregister(const char *to, const char *from, const char *handle);
 
 /* get driver specific SQL snippets */
 const char * db_get_sql(sql_fragment_t frag);

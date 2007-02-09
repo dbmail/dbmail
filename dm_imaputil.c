@@ -80,46 +80,6 @@ int checktag(const char *s)
 	return 1;
 }
 
-
-/*
- * binary_search()
- *
- * performs a binary search on array to find key
- * array should be ascending in values
- *
- * returns -1 if not found. key_idx will hold key if found
- */
-int binary_search(const u64_t * array, unsigned arraysize, u64_t key,
-		  unsigned int *key_idx)
-{
-	unsigned low, high, mid = 1;
-
-	assert(key_idx != NULL);
-	*key_idx = 0;
-	if (arraysize == 0)
-		return -1;
-
-	low = 0;
-	high = arraysize - 1;
-
-	while (low <= high) {
-		mid = (high + low) / (unsigned) 2;
-		if (array[mid] < key)
-			low = mid + 1;
-		else if (array[mid] > key) {
-			if (mid > 0)
-				high = mid - 1;
-			else
-				break;
-		} else {
-			*key_idx = mid;
-			return 1;
-		}
-	}
-
-	return -1;		/* not found */
-}
-
 /*
  * send_data()
  *

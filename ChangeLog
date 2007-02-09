@@ -1,3 +1,159 @@
+2007-02-08  Paul J Stevens <paul@nfg.nl>
+
+	* db.c:
+	fix bogus return value
+	* dbmail-mailbox.c, dbmail-mailbox.h, dbmailtypes.h:
+	refactor uid/msn mapper
+	* dbmail-mailbox.c:
+	use outlook quirk
+	* dm_imaputil.c, dm_imaputil.h, imapcommands.c:
+	cleanups
+	* check_dbmail_imapd.c, db.c, db.h, dbmail-imapsession.c, 
+	dbmail-imapsession.h, imapcommands.c, test-scripts/testimap.py:
+	refactor _ic_copy and _ic_store
+
+2007-02-06  Paul J Stevens <paul@nfg.nl>
+
+	* dbmail-message.c:
+	headernames in cache must be case-insentitive
+
+2007-02-05  Aaron Stone  <aaron@serendipity.cx>
+
+	* db.c:
+	Strip namespace off of mailbox searches (closes bug #474).
+
+2007-02-03  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_user.c, dbmail-user.c, dbmail-user.h:
+	removing is_valid test. Validating usernames is deferred to the storage
+	layer (closes #490)
+
+2007-01-31  Paul J Stevens <paul@nfg.nl>
+
+	* debian/rules:
+	remove --libdir from debian configure run
+	* dbmail-message.c, misc.c, misc.h:
+	convert 8bit header values to utf8 during insertion (AntonZ)
+
+2007-01-30  Paul J Stevens <paul@nfg.nl>
+
+	* misc.c:
+	only encode subjectvalues in the envelope response if the subject is
+	both 8bit and utf8 clean
+	* dbmail-imapsession.c:
+	remove the Recent flag from the PERMANENTFLAGS response
+	* test-scripts/testbox:
+	add bogus 8bit message to testbox
+
+2007-01-24  Paul J Stevens <paul@nfg.nl>
+
+	* README:
+	minor update
+	* Makefile.in, configure, man/Makefile.in, misc.c, modules/Makefile.in:
+	do rfc2047 encoding of 8bit subjects during envelope construction
+
+2007-01-23  Paul J Stevens <paul@nfg.nl>
+
+	* Makefile.in, check_dbmail.h, check_dbmail_imapd.c, misc.c, 
+	  modules/Makefile.in, test-scripts/testimap.py:
+	working on #497
+
+2007-01-21  Paul J Stevens <paul@nfg.nl>
+
+	* debian/po/cs.po, debian/po/de.po, debian/po/es.po, debian/po/fr.po, 
+	  debian/po/it.po, debian/po/ja.po, debian/po/nl.po, 
+	  debian/po/pt_BR.po, debian/po/templates.pot:
+	updating PO files
+	* db.c, db.h:
+	adding db_replycache_unregister
+	* Makefile.in, config.in, configure, man/Makefile.in, modules/Makefile.in:
+	updating autoconf files
+
+2007-01-20  Aaron Stone  <aaron@serendipity.cx>
+
+	* serverparent.c:
+	Unrecognized options cause the daemons to bail out with an error.
+	* Makefile.am, modules/Makefile.am:
+	Accepted patch to use pkglib_LTLIBRARIES rather than hardcoding the
+	lib paths (closes bug #492).
+	* acinclude.m4, configure.in, Makefile.am:
+	Wire up the SOCKETLIB variable into the link stage (closes bug #489).
+
+2007-01-20  Paul J Stevens <paul@nfg.nl>
+
+	* debian/control, debian/dbmail-dev.install, debian/dbmail-ldap.config, 
+	  debian/dbmail-ldap.docs, debian/dbmail-ldap.examples, 
+	  debian/dbmail-ldap.install, debian/dbmail-ldap.postinst, 
+	  debian/dbmail-ldap.templates, debian/dbmail-mysql.config, 
+	  debian/dbmail-mysql.postinst, debian/dbmail-mysql.templates, 
+	  debian/dbmail-pgsql.config, debian/dbmail-pgsql.postinst, 
+	  debian/dbmail-pgsql.templates, debian/dbmail-sieve.dirs, 
+	  debian/dbmail-sieve.docs, debian/dbmail-sieve.install, 
+	  debian/dbmail-sieve.lintian-override, debian/dbmail-sieve.manpages, 
+	  debian/dbmail-sieve.postinst, debian/dbmail-sqlite.config, 
+	  debian/dbmail-sqlite.examples, debian/dbmail-sqlite.install, 
+	  debian/dbmail-sqlite.postinst, debian/dbmail-sqlite.templates, 
+	  debian/dbmail.config, debian/dbmail.docs, debian/dbmail.examples, 
+	  debian/dbmail.init, debian/dbmail.install, debian/dbmail.manpages, 
+	  debian/dbmail.postinst, debian/dbmail.templates, 
+	  debian/po/POTFILES.in, debian/po/cs.po, debian/po/de.po, 
+	  debian/po/es.po, debian/po/fr.po, debian/po/it.po, debian/po/ja.po, 
+	  debian/po/nl.po, debian/po/pt_BR.po, debian/po/templates.pot, 
+	  debian/rules:
+	debian package reorganized
+
+2007-01-17  Aaron Stone  <aaron@serendipity.cx>
+
+	* pop3.c:
+	Accepted patch from bug #483 to call db_cleanup before sending OK
+	response to QUIT command.
+	* dsn.c:
+	Fix to sub-domain catch-alls.
+	* misc.c:
+	A really small cleanup.
+	* dbmail-message.h, dbmail-message.c, check_dbmail_message.c:
+	dbmail_message_get_internal_date takes a second argument to limit the
+	maximum year. Newly inserted messages cannot be more than 1 + the
+	current year at delivery time (closes bug #475).
+	* dbmail-mailbox.c:
+	Update for the max year argument.
+	* user.c, maintenance.c:
+	Bail out when given invalid command line args (closes bug #448).
+	* configure.in, acinclude.m4:
+	Added a test for socket libraries (see bug #489).
+
+2007-01-10  Paul J Stevens <paul@nfg.nl>
+
+	* imap4.c:
+	fix errno race
+	* dbmail-imapsession.c:
+	fix leakage problem partially
+	* db.c:
+	fix bug in db_replycache_register
+	* config.in, configure, man/dbmail-sievecmd.8:
+	misc updates
+
+2007-01-01  Paul J Stevens <paul@nfg.nl>
+
+	* modules/dbmysql.c:
+	change from OPTIMIZE TABLE to ANALYZE TABLE in mysql driver during cleanup
+
+2006-12-31  Aaron Stone  <aaron@serendipity.cx>
+
+	* modules/authldap.c, dbmail.conf, acinclude.m4:
+	Accepted ldap_initialize patch from Uemura Tetsuya.
+	* dsn.c:
+	Sub-domain catch-alls supported in the form @.domain (bug #452).
+	* pipe.c:
+	If forwards fail, report a temporary SMTP error.
+	* serverchild.c:
+	Removed unused variable 'serr'.
+
+2006-12-30  Paul J Stevens <paul@nfg.nl>
+
+	* check_dbmail_auth.c, modules/authldap.c:
+	fix return value for invalid login (closes #481)
+
 2006-12-19  Paul J Stevens <paul@nfg.nl>
 
 	* Makefile.am, acinclude.m4, configure.in, debian/rules, 

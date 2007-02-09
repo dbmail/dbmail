@@ -1,4 +1,5 @@
 /* $Id$
+
    (c) 2000-2005 IC&S, The Netherlands
    (c) 2004-2006 NFG Net Facilities Group BV, The Netherlands
    
@@ -46,7 +47,9 @@ at IC&S, to join in developing DBMail further.
 
 In 2003 Ilja Booij joined IC&S to work on the 2.x version. During that time,
 Paul Stevens at NFG also joined the development team, initially to provide 
-debian packaging, later to take over development of the 2.1 release.
+debian packaging, later to take over development of the 2.1 release. Aaron
+Stone also deserves special thanks for initiating the LDAP driver, maintaining 
+the delivery chain and of course sieve support.
 
 DBMail is now a community effort to create a fast, effecient and scalable
 database driven mailingsystem. Both IC&S and NFG are fully behind 
@@ -67,14 +70,13 @@ with more than 25.000 useraccounts. The system is stable.
 How do i install it?
 ====================
 
-Check the INSTALL file.
-
+Check the different README files and the wiki pages on dbmail.org for detailed 
+information and howtos.
 
 Future
 ======
 
 Check the website for further DBMail plans.
-
 
 What kind of licence is DBMail?
 ===============================

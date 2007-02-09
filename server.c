@@ -1,5 +1,6 @@
 /*
   $Id$
+
  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
  Copyright (c) 2004-2006 NFG Net Facilities Group BV support@nfg.nl
 
@@ -177,7 +178,6 @@ pid_t server_daemonize(serverConfig_t *conf)
 		exit(0);
 
 	chdir("/");
-	umask(0);
 	
 	if (! (freopen(conf->log, "a", stdout))) {
 		serr = errno;
