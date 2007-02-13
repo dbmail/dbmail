@@ -66,15 +66,14 @@ static int mailbox_dump(u64_t mailbox_idnr, const char *outfile)
 	/* 
 	 * For dbmail the usual filesystem semantics don't really 
 	 * apply. Mailboxes can contain other mailboxes as well as
-	 * messages. For now however, we pretend that mailboxes that 
-	 * contain other mailboxes, never contain messages themselves, 
-	 * as is the custom in mbox country.
+	 * messages. For now however, this is solved by appending
+	 * the mailboxname with .mbox
 	 *
 	 * TODO: facilitate maildir type exports
 	 */
 	dir = g_path_get_dirname(outfile);
 	if (g_mkdir_with_parents(dir,0700)) {
-		qerrorf("can create directory [%s]\n", dir);
+		qerrorf("can't create directory [%s]\n", dir);
 		g_free(dir);
 		return 1;
 	}
@@ -267,7 +266,7 @@ int main(int argc, char *argv[])
 				outfile = ".";
 			}
 
-			dumpfile = g_strdup_printf("%s/%s", user, mailbox);
+			dumpfile = g_strdup_printf("%s/%s.mbox", user, mailbox);
 			qerrorf(" export mailbox /%s/%s -> %s/%s\n", user, mailbox, outfile, dumpfile);
 			if (mailbox_dump(mailbox_idnr, dumpfile)) {
 				g_free(dumpfile);
