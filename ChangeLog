@@ -1,3 +1,10 @@
+2007-02-26  Paul J Stevens <paul@nfg.nl>
+
+	* export.c:
+	append .mbox to mailbox-name during export
+	* pop3.c:
+	issue +OK after QUIT (closes: #513)
+
 2007-02-08  Paul J Stevens <paul@nfg.nl>
 
 	* db.c:
