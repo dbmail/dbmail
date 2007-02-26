@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: dbmail 2.2.1-1\n"
 "Report-Msgid-Bugs-To: paul@nfg.nl\n"
-"POT-Creation-Date: 2007-02-25 08:21+0100\n"
+"POT-Creation-Date: 2007-02-26 21:33+0100\n"
 "PO-Revision-Date: 2007-02-25 11:03+0100\n"
 "Last-Translator: Martin Sin <martin.sin@zshk.cz>\n"
 "Language-Team: Czech <debian-l10n-czech@lists.debian.org>\n"
@@ -85,7 +85,8 @@ msgid ""
 "the dbmail user."
 msgstr ""
 "Uveďte prosím název serveru, kde budou vytvořeny databázové tabulky dbmailu. "
-"U databáze byste měli nastavit plný přístup pro čtení/zápis uživatelem dbmail."
+"U databáze byste měli nastavit plný přístup pro čtení/zápis uživatelem "
+"dbmail."
 
 #. Type: string
 #. Description
@@ -96,7 +97,8 @@ msgstr "Jméno databáze:"
 #. Type: string
 #. Description
 #: ../dbmail.templates:5001
-msgid "Please mention the name of the database that holds the dbmail tables."
+#, fuzzy
+msgid "This is the name of the database that holds the dbmail tables."
 msgstr "Zadejte jméno databáze, která uchovává tabulky dbmailu."
 
 #. Type: string
@@ -142,9 +144,7 @@ msgstr "Spustit po restartu server IMAP?"
 
 #. Type: boolean
 #. Description
-#. Type: boolean
-#. Description
-#: ../dbmail.templates:8001 ../dbmail.templates:10001
+#: ../dbmail.templates:8001
 msgid ""
 "Dbmail supports both IMAP and POP3 services. You can choose to run either "
 "one or both services."
@@ -176,6 +176,17 @@ msgstr "Spustit po restartu server POP3?"
 
 #. Type: boolean
 #. Description
+#: ../dbmail.templates:10001
+#, fuzzy
+msgid ""
+"Dbmail support both imap and pop3 services. You can choose to run either one "
+"or both services."
+msgstr ""
+"Dbmail podporuje služby IMAP a POP3. Můžete si vybrat kteroukoliv službu, "
+"klidně i obě dvě současně."
+
+#. Type: boolean
+#. Description
 #: ../dbmail.templates:11001
 msgid "Start the timsieve server after reboot?"
 msgstr "Spustit po restartu server timsieve?"
@@ -190,9 +201,9 @@ msgid ""
 "avelsieve."
 msgstr ""
 "Server timsieve je také možné spustit hned po restartu počítače. To je "
-"potřeba spustit pouze v případě, kdy uživatelé chtějí spravovat své "
-"skripty pomocí kompatibilního klienta jako je kmail, horde/ingo nebo "
-"squirrelmail/avelsieve."
+"potřeba spustit pouze v případě, kdy uživatelé chtějí spravovat své skripty "
+"pomocí kompatibilního klienta jako je kmail, horde/ingo nebo squirrelmail/"
+"avelsieve."
 
 #. Type: string
 #. Description
@@ -206,8 +217,9 @@ msgstr "Port, na kterém běží server LDAP:"
 msgid ""
 "Please enter the port which your LDAP server is listening on. The default "
 "port is 389."
-msgstr "Zadejte prosím číslo portu na kterém poslouchá server LDAP. Výchozí "
-"hodnota je 389."
+msgstr ""
+"Zadejte prosím číslo portu na kterém poslouchá server LDAP. Výchozí hodnota "
+"je 389."
 
 #. Type: string
 #. Description
@@ -232,8 +244,7 @@ msgstr "LDAP DN:"
 #: ../dbmail.templates:14001
 msgid ""
 "Please enter the DN where Dbmail should start searching for user accounts."
-msgstr ""
-"Zadejte prosím DN, ve kterém má Dbmail začít hledat uživatelské účty."
+msgstr "Zadejte prosím DN, ve kterém má Dbmail začít hledat uživatelské účty."
 
 #. Type: string
 #. Description
@@ -244,12 +255,13 @@ msgstr "Položka s přihlašovacím jménem uživatele:"
 #. Type: string
 #. Description
 #: ../dbmail.templates:15001
+#, fuzzy
 msgid ""
 "Please enter the LDAP attribute that will contain the username. The standard "
-"account uses uid."
+"account uses uid"
 msgstr ""
-"Zadejte prosím atribut ldap obsahující uživatelské jméno. Standardní "
-"účet používá uid."
+"Zadejte prosím atribut ldap obsahující uživatelské jméno. Standardní účet "
+"používá uid."
 
 #. Type: string
 #. Description
@@ -260,9 +272,10 @@ msgstr "Položka s id číslem skupiny uživatele:"
 #. Type: string
 #. Description
 #: ../dbmail.templates:16001
+#, fuzzy
 msgid ""
-"Please enter the LDAP attribute that will contain the group id number. The "
-"standard account uses gidNumber."
+"Please enter the ldap attribute that will contain the group id number. The "
+"standard account uses gidNumber"
 msgstr ""
 "Zadejte prosím atribut LDAP, který obsahuje id číslo skupiny. Standardní "
 "účet používá gidNumber."
@@ -292,7 +305,9 @@ msgstr "DN používané pro přiřazení k serveru LDAP:"
 #. Type: string
 #. Description
 #: ../dbmail.templates:18001
-msgid "Please enter the DN which should be used to connect to the LDAP server."
+#, fuzzy
+msgid ""
+"Please enter the DN, which should be used to connect to the LDAP server."
 msgstr "Zadejte prosím DN, které je možné použít pro připojení k serveru LDAP."
 
 #. Type: password
@@ -304,18 +319,12 @@ msgstr "Heslo pro připojení k serveru LDAP:"
 #. Type: password
 #. Description
 #: ../dbmail.templates:19001
+#, fuzzy
 msgid ""
-"Please enter the password which should be used to connect to the LDAP server."
+"Please enter the password, which should be used to connect to the LDAP "
+"server."
 msgstr ""
 "Zadejte prosím heslo, které se bude používat pro připojení k serveru LDAP."
-
-#, fuzzy
-#~ msgid ""
-#~ "Dbmail support both imap and pop3 services. You can choose to run either "
-#~ "one or both services."
-#~ msgstr ""
-#~ "Dbmail podporuje služby IMAP a POP3. Můžete si vybrat kteroukoliv službu, "
-#~ "klidně i obě dvě současně."
 
 #, fuzzy
 #~ msgid "start the imap server after reboot?"

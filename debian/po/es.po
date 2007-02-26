@@ -27,7 +27,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: dbmail\n"
 "Report-Msgid-Bugs-To: paul@nfg.nl\n"
-"POT-Creation-Date: 2007-01-31 22:34+0100\n"
+"POT-Creation-Date: 2007-02-26 21:33+0100\n"
 "PO-Revision-Date: 2005-09-23 16:27+0100\n"
 "Last-Translator: César Gómez Martín <cesar.gomez@gmail.com>\n"
 "Language-Team: Debian l10n spanish <debian-l10n-spanish@lists.debian.org>\n"
@@ -60,20 +60,14 @@ msgstr ""
 "tarde deberá elegir que se ejecute «dpkg-reconfigure dbmail» de nuevo."
 
 #. Type: select
-#. Choices
+#. Description
 #: ../dbmail.templates:2001
-msgid "sql, ldap"
+msgid "Authentication driver to activate:"
 msgstr ""
 
 #. Type: select
 #. Description
-#: ../dbmail.templates:2002
-msgid "The authentication driver you wish to activate:"
-msgstr ""
-
-#. Type: select
-#. Description
-#: ../dbmail.templates:2002
+#: ../dbmail.templates:2001
 msgid ""
 "Dbmail by defauls uses SQL based authentication. But you can also use LDAP "
 "instead."
@@ -89,8 +83,9 @@ msgstr "Dirección de correo electrónico del gestor de correos."
 #. Type: string
 #. Description
 #: ../dbmail.templates:3001
+#, fuzzy
 msgid ""
-"This should be a valid email address read by the person responsible for this "
+"Please choose a valid email address read by the person responsible for this "
 "email server."
 msgstr ""
 "Esto debería ser una dirección de correo electrónico válida que lea la "
@@ -106,7 +101,7 @@ msgstr "Ejemplo: postmaster@sudominio.tld"
 #. Description
 #: ../dbmail.templates:4001
 #, fuzzy
-msgid "The hostname of the sql database server:"
+msgid "Hostname of the SQL database server:"
 msgstr ""
 "Por favor, introduzca el nombre de máquina del servidor de base de datos (my/"
 "pq)sql."
@@ -114,9 +109,11 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../dbmail.templates:4001
+#, fuzzy
 msgid ""
-"On this server you must create a database to hold dbmail's tables. You "
-"should grant full read/write permissions on this database to the dbmail user."
+"Please mention the server where a database to hold dbmail's tables will be "
+"created. You should grant full read/write permissions on this database to "
+"the dbmail user."
 msgstr ""
 "En este servidor debe crear la base de datos que contendrá las tablas de "
 "dbmail. Debería otorgar al usuario de dbmail permisos totales de lectura/"
@@ -145,13 +142,16 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../dbmail.templates:6001
-msgid "The database user:"
+msgid "Database user:"
 msgstr ""
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:6001
-msgid "This is the username dbmail will use to connect to the database server."
+#, fuzzy
+msgid ""
+"Please mention the username dbmail will use to connect to the database "
+"server."
 msgstr ""
 "Este es el nombre de usuario que dbmail usará para conectarse con el "
 "servidor de base de datos."
@@ -160,14 +160,17 @@ msgstr ""
 #. Description
 #: ../dbmail.templates:7001
 #, fuzzy
-msgid "The password for the database connection:"
+msgid "Password for the database connection:"
 msgstr ""
 "Por favor, introduzca la contraseña para la conexión con la base de datos."
 
 #. Type: password
 #. Description
 #: ../dbmail.templates:7001
-msgid "This is the password dbmail will use to connect to the database server."
+#, fuzzy
+msgid ""
+"Please mention the password dbmail will use to connect to the database "
+"server."
 msgstr ""
 "Este es la contraseña que dbmail usará para conectarse con el servidor de "
 "base de datos."
@@ -175,16 +178,15 @@ msgstr ""
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:8001
-#, fuzzy
-msgid "start the imap server after reboot?"
-msgstr "¿Desea arrancar el servidor POP3 después de reiniciar?"
+msgid "Start the IMAP server after reboot?"
+msgstr "¿Desea iniciar el servidor IMAP después de reiniciar?"
 
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:8001
 #, fuzzy
 msgid ""
-"Dbmail supports both imap and pop3 services. You can choose to run either "
+"Dbmail supports both IMAP and POP3 services. You can choose to run either "
 "one or both services."
 msgstr ""
 "Dbmail soporta ambos servicios, IMAP y POP3. Puede escoger ejecutar uno o "
@@ -194,21 +196,23 @@ msgstr ""
 #. Description
 #: ../dbmail.templates:9001
 #, fuzzy
-msgid "start the lmtp server after reboot?"
-msgstr "¿Desea arrancar el servidor POP3 después de reiniciar?"
+msgid "Start the LMTP server after reboot?"
+msgstr "¿Desea iniciar el servidor IMAP después de reiniciar?"
 
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:9001
-msgid "This is only needed when you like to feed the email to Dbmail by LMTP."
+msgid ""
+"Please choose whether the LMTP server should be started after rebooting. "
+"This is only needed when you like to feed the email to Dbmail by LMTP."
 msgstr ""
 
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:10001
 #, fuzzy
-msgid "start the pop3 server after reboot?"
-msgstr "¿Desea arrancar el servidor POP3 después de reiniciar?"
+msgid "Start the POP3 server after reboot?"
+msgstr "¿Desea iniciar el servidor IMAP después de reiniciar?"
 
 #. Type: boolean
 #. Description
@@ -225,13 +229,14 @@ msgstr ""
 #. Description
 #: ../dbmail.templates:11001
 #, fuzzy
-msgid "start the timsieve server after reboot?"
+msgid "Start the timsieve server after reboot?"
 msgstr "¿Desea arrancar el servidor POP3 después de reiniciar?"
 
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:11001
 msgid ""
+"Please choose whether the timsieve server should be started after rebooting. "
 "This is only needed if you want to allow users to manage their sieve scripts "
 "using a compatible client such as kmail, horde/ingo or squirrelmail/"
 "avelsieve."
@@ -240,22 +245,25 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../dbmail.templates:12001
-msgid "The port is your ldap server running at:"
+msgid "Port used by the LDAP server:"
 msgstr ""
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:12001
+#, fuzzy
 msgid ""
-"Please enter the port on which your ldap server is running at. The default "
+"Please enter the port which your LDAP server is listening on. The default "
 "port is 389."
 msgstr ""
+"Por favor, introduzca el nombre de usuario que desea usar para la base de "
+"datos."
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:13001
 #, fuzzy
-msgid "The hostname of the ldap server:"
+msgid "Hostname of the LDAP server:"
 msgstr ""
 "Por favor, introduzca el nombre de máquina del servidor de base de datos (my/"
 "pq)sql."
@@ -264,7 +272,7 @@ msgstr ""
 #. Description
 #: ../dbmail.templates:13001
 #, fuzzy
-msgid "Please enter the hostname your ldap server is running at."
+msgid "Please enter the name of the host your LDAP server is running at."
 msgstr ""
 "Por favor, introduzca el nombre de usuario que desea usar para la base de "
 "datos."
@@ -272,7 +280,7 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../dbmail.templates:14001
-msgid "The ldap base DN:"
+msgid "LDAP base DN:"
 msgstr ""
 
 #. Type: string
@@ -285,50 +293,50 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../dbmail.templates:15001
-msgid "The field which contains the user login name of the user:"
+msgid "Field which contains the user login name of the user:"
 msgstr ""
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:15001
 msgid ""
-"Please enter the ldap attribute that will contain the username The standard "
+"Please enter the LDAP attribute that will contain the username. The standard "
 "account uses uid"
 msgstr ""
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:16001
-msgid "The field which contains the group id number of the user:"
+msgid "Field which contains the group id number of the user:"
 msgstr ""
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:16001
 msgid ""
-"Please enter the ldap attribute that will contain the group id number The "
+"Please enter the ldap attribute that will contain the group id number. The "
 "standard account uses gidNumber"
 msgstr ""
 
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:17001
-msgid "Bind anonymous to the ldap server?"
+msgid "Use an anonymous connection to the LDAP server?"
 msgstr ""
 
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:17001
 msgid ""
-"Use this if your ldap does not require authentication to search  the ldap "
-"tree."
+"Please choose this option if the LDAP server does not require authentication "
+"to search the LDAP tree."
 msgstr ""
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:18001
 #, fuzzy
-msgid "The DN to bind to the ldap server:"
+msgid "DN used to bind to the LDAP server:"
 msgstr ""
 "Por favor, introduzca el nombre de máquina del servidor de base de datos (my/"
 "pq)sql."
@@ -338,7 +346,7 @@ msgstr ""
 #: ../dbmail.templates:18001
 #, fuzzy
 msgid ""
-"Please enter the DN, which should be used to connect to the ldap server."
+"Please enter the DN, which should be used to connect to the LDAP server."
 msgstr ""
 "Este es la contraseña que dbmail usará para conectarse con el servidor de "
 "base de datos."
@@ -347,7 +355,7 @@ msgstr ""
 #. Description
 #: ../dbmail.templates:19001
 #, fuzzy
-msgid "The password to bind to the ldap server:"
+msgid "Password to bind to the LDAP server:"
 msgstr ""
 "Por favor, introduzca el nombre de máquina del servidor de base de datos (my/"
 "pq)sql."
@@ -357,11 +365,23 @@ msgstr ""
 #: ../dbmail.templates:19001
 #, fuzzy
 msgid ""
-"Please enter the password, which should be used to connect to the ldap "
+"Please enter the password, which should be used to connect to the LDAP "
 "server."
 msgstr ""
 "Este es la contraseña que dbmail usará para conectarse con el servidor de "
 "base de datos."
+
+#, fuzzy
+#~ msgid "start the imap server after reboot?"
+#~ msgstr "¿Desea arrancar el servidor POP3 después de reiniciar?"
+
+#, fuzzy
+#~ msgid "start the lmtp server after reboot?"
+#~ msgstr "¿Desea arrancar el servidor POP3 después de reiniciar?"
+
+#, fuzzy
+#~ msgid "start the pop3 server after reboot?"
+#~ msgstr "¿Desea arrancar el servidor POP3 después de reiniciar?"
 
 #, fuzzy
 #~ msgid "The email address where bounces come from:"
@@ -434,6 +454,3 @@ msgstr ""
 #, fuzzy
 #~ msgid "Do you want to start the timsieved service after a reboot?"
 #~ msgstr "¿Desea iniciar el servicio IMAP después de reiniciar?"
-
-#~ msgid "Start the IMAP server after reboot?"
-#~ msgstr "¿Desea iniciar el servidor IMAP después de reiniciar?"
