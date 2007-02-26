@@ -196,6 +196,9 @@ int pop3_handle_connection(clientinfo_t * ci)
 			TRACE(TRACE_ERROR, "storage layer failure");
 			break;
 		}
+	} else if (done==0) { // QUIT issued before AUTH phase completed
+		fprintf(ci->tx, "+OK see ya later\r\n");
+		fflush(ci->tx);
 	} else {
 		TRACE(TRACE_ERROR, "error, incomplete session");
 	}
