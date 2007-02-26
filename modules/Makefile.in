@@ -77,6 +77,7 @@ libauth_ldap_la_DEPENDENCIES =
 am__libauth_ldap_la_SOURCES_DIST = authldap.c
 @LDAP_TRUE@am_libauth_ldap_la_OBJECTS = authldap.lo
 libauth_ldap_la_OBJECTS = $(am_libauth_ldap_la_OBJECTS)
+@LDAP_TRUE@am_libauth_ldap_la_rpath = -rpath $(pkglibdir)
 libauth_sql_la_DEPENDENCIES =
 am_libauth_sql_la_OBJECTS = authsql.lo
 libauth_sql_la_OBJECTS = $(am_libauth_sql_la_OBJECTS)
@@ -84,10 +85,12 @@ libmysql_la_DEPENDENCIES =
 am__libmysql_la_SOURCES_DIST = dbmysql.c
 @MYSQL_TRUE@am_libmysql_la_OBJECTS = dbmysql.lo
 libmysql_la_OBJECTS = $(am_libmysql_la_OBJECTS)
+@MYSQL_TRUE@am_libmysql_la_rpath = -rpath $(pkglibdir)
 libpgsql_la_DEPENDENCIES =
 am__libpgsql_la_SOURCES_DIST = dbpgsql.c
 @PGSQL_TRUE@am_libpgsql_la_OBJECTS = dbpgsql.lo
 libpgsql_la_OBJECTS = $(am_libpgsql_la_OBJECTS)
+@PGSQL_TRUE@am_libpgsql_la_rpath = -rpath $(pkglibdir)
 libsort_null_la_LIBADD =
 am_libsort_null_la_OBJECTS = sortnull.lo
 libsort_null_la_OBJECTS = $(am_libsort_null_la_OBJECTS)
@@ -95,10 +98,12 @@ libsort_sieve_la_DEPENDENCIES =
 am__libsort_sieve_la_SOURCES_DIST = sortsieve.c
 @SIEVE_TRUE@am_libsort_sieve_la_OBJECTS = sortsieve.lo
 libsort_sieve_la_OBJECTS = $(am_libsort_sieve_la_OBJECTS)
+@SIEVE_TRUE@am_libsort_sieve_la_rpath = -rpath $(pkglibdir)
 libsqlite_la_DEPENDENCIES =
 am__libsqlite_la_SOURCES_DIST = dbsqlite.c
 @SQLITE_TRUE@am_libsqlite_la_OBJECTS = dbsqlite.lo
 libsqlite_la_OBJECTS = $(am_libsqlite_la_OBJECTS)
+@SQLITE_TRUE@am_libsqlite_la_rpath = -rpath $(pkglibdir)
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/buildtools/depcomp
 am__depfiles_maybe = depfiles
@@ -158,7 +163,6 @@ EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 F77 = @F77@
 FFLAGS = @FFLAGS@
-GREP = @GREP@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
@@ -223,9 +227,12 @@ USE_DM_GETOPT_TRUE = @USE_DM_GETOPT_TRUE@
 VERSION = @VERSION@
 WITHCHECK_FALSE = @WITHCHECK_FALSE@
 WITHCHECK_TRUE = @WITHCHECK_TRUE@
+ac_ct_AR = @ac_ct_AR@
 ac_ct_CC = @ac_ct_CC@
 ac_ct_CXX = @ac_ct_CXX@
 ac_ct_F77 = @ac_ct_F77@
+ac_ct_RANLIB = @ac_ct_RANLIB@
+ac_ct_STRIP = @ac_ct_STRIP@
 am__fastdepCC_FALSE = @am__fastdepCC_FALSE@
 am__fastdepCC_TRUE = @am__fastdepCC_TRUE@
 am__fastdepCXX_FALSE = @am__fastdepCXX_FALSE@
@@ -242,9 +249,6 @@ build_cpu = @build_cpu@
 build_os = @build_os@
 build_vendor = @build_vendor@
 datadir = @datadir@
-datarootdir = @datarootdir@
-docdir = @docdir@
-dvidir = @dvidir@
 exec_prefix = @exec_prefix@
 glibconfig = @glibconfig@
 gmimeconfig = @gmimeconfig@
@@ -253,23 +257,19 @@ host_alias = @host_alias@
 host_cpu = @host_cpu@
 host_os = @host_os@
 host_vendor = @host_vendor@
-htmldir = @htmldir@
 includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
 libdir = @libdir@
 libexecdir = @libexecdir@
-localedir = @localedir@
 localstatedir = @localstatedir@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
 mysqlconfig = @mysqlconfig@
 oldincludedir = @oldincludedir@
-pdfdir = @pdfdir@
 pgsqlconfig = @pgsqlconfig@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
-psdir = @psdir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 sqliteconfig = @sqliteconfig@
@@ -281,31 +281,36 @@ AM_CFLAGS = @MYSQLINC@ @PGSQLINC@ @SQLITEINC@ @LDAPINC@ @SIEVEINC@
 
 #AM_LDFLAGS = -Wl,--export-dynamic
 @SHARED_TRUE@AM_LDFLAGS = -module
-pkglib_LTLIBRARIES = libmysql.la \
-	libpgsql.la \
-	libsqlite.la \
-	libsort_sieve.la \
-	libauth_sql.la \
-	libauth_ldap.la 
-
 noinst_LTLIBRARIES = libsort_null.la
 @MYSQL_TRUE@libmysql_la_SOURCES = dbmysql.c
 @MYSQL_TRUE@libmysql_la_LIBADD = @MYSQLLIB@
+@MYSQL_TRUE@dbmail_mysql_la = libmysql.la
 @PGSQL_TRUE@libpgsql_la_SOURCES = dbpgsql.c
 @PGSQL_TRUE@libpgsql_la_LIBADD = @PGSQLLIB@
+@PGSQL_TRUE@dbmail_pgsql_la = libpgsql.la
 @SQLITE_TRUE@libsqlite_la_SOURCES = dbsqlite.c
 @SQLITE_TRUE@libsqlite_la_LIBADD = @SQLITELIB@
+@SQLITE_TRUE@dbmail_sqlite_la = libsqlite.la
 
 # This one is always built.
 libsort_null_la_SOURCES = sortnull.c
 @SIEVE_TRUE@libsort_sieve_la_SOURCES = sortsieve.c
 @SIEVE_TRUE@libsort_sieve_la_LIBADD = @SIEVELIB@
+@SIEVE_TRUE@dbmail_sieve_la = libsort_sieve.la
 
 # This one is always built.
 libauth_sql_la_SOURCES = authsql.c
 libauth_sql_la_LIBADD = -lcrypt
 @LDAP_TRUE@libauth_ldap_la_SOURCES = authldap.c
 @LDAP_TRUE@libauth_ldap_la_LIBADD = -lcrypt @LDAPLIB@ 
+@LDAP_TRUE@dbmail_ldap_la = libauth_ldap.la
+pkglib_LTLIBRARIES = $(dbmail_mysql_la) \
+	$(dbmail_pgsql_la) \
+	$(dbmail_sqlite_la) \
+	$(dbmail_sieve_la) \
+	$(dbmail_ldap_la) \
+	libauth_sql.la
+
 all: all-am
 
 .SUFFIXES:
@@ -376,19 +381,19 @@ clean-pkglibLTLIBRARIES:
 	  rm -f "$${dir}/so_locations"; \
 	done
 libauth_ldap.la: $(libauth_ldap_la_OBJECTS) $(libauth_ldap_la_DEPENDENCIES) 
-	$(LINK) -rpath $(pkglibdir) $(libauth_ldap_la_LDFLAGS) $(libauth_ldap_la_OBJECTS) $(libauth_ldap_la_LIBADD) $(LIBS)
+	$(LINK) $(am_libauth_ldap_la_rpath) $(libauth_ldap_la_LDFLAGS) $(libauth_ldap_la_OBJECTS) $(libauth_ldap_la_LIBADD) $(LIBS)
 libauth_sql.la: $(libauth_sql_la_OBJECTS) $(libauth_sql_la_DEPENDENCIES) 
 	$(LINK) -rpath $(pkglibdir) $(libauth_sql_la_LDFLAGS) $(libauth_sql_la_OBJECTS) $(libauth_sql_la_LIBADD) $(LIBS)
 libmysql.la: $(libmysql_la_OBJECTS) $(libmysql_la_DEPENDENCIES) 
-	$(LINK) -rpath $(pkglibdir) $(libmysql_la_LDFLAGS) $(libmysql_la_OBJECTS) $(libmysql_la_LIBADD) $(LIBS)
+	$(LINK) $(am_libmysql_la_rpath) $(libmysql_la_LDFLAGS) $(libmysql_la_OBJECTS) $(libmysql_la_LIBADD) $(LIBS)
 libpgsql.la: $(libpgsql_la_OBJECTS) $(libpgsql_la_DEPENDENCIES) 
-	$(LINK) -rpath $(pkglibdir) $(libpgsql_la_LDFLAGS) $(libpgsql_la_OBJECTS) $(libpgsql_la_LIBADD) $(LIBS)
+	$(LINK) $(am_libpgsql_la_rpath) $(libpgsql_la_LDFLAGS) $(libpgsql_la_OBJECTS) $(libpgsql_la_LIBADD) $(LIBS)
 libsort_null.la: $(libsort_null_la_OBJECTS) $(libsort_null_la_DEPENDENCIES) 
 	$(LINK)  $(libsort_null_la_LDFLAGS) $(libsort_null_la_OBJECTS) $(libsort_null_la_LIBADD) $(LIBS)
 libsort_sieve.la: $(libsort_sieve_la_OBJECTS) $(libsort_sieve_la_DEPENDENCIES) 
-	$(LINK) -rpath $(pkglibdir) $(libsort_sieve_la_LDFLAGS) $(libsort_sieve_la_OBJECTS) $(libsort_sieve_la_LIBADD) $(LIBS)
+	$(LINK) $(am_libsort_sieve_la_rpath) $(libsort_sieve_la_LDFLAGS) $(libsort_sieve_la_OBJECTS) $(libsort_sieve_la_LIBADD) $(LIBS)
 libsqlite.la: $(libsqlite_la_OBJECTS) $(libsqlite_la_DEPENDENCIES) 
-	$(LINK) -rpath $(pkglibdir) $(libsqlite_la_LDFLAGS) $(libsqlite_la_OBJECTS) $(libsqlite_la_LIBADD) $(LIBS)
+	$(LINK) $(am_libsqlite_la_rpath) $(libsqlite_la_LDFLAGS) $(libsqlite_la_OBJECTS) $(libsqlite_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)

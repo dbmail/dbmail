@@ -1,5 +1,9 @@
 2007-02-26  Paul J Stevens <paul@nfg.nl>
 
+	* modules/Makefile.am, modules/Makefile.in:
+	do not build empty so files (closes: #510)
+	* dbmail.conf:
+	replace tabs with spaces (closes: #509)
 	* export.c:
 	append .mbox to mailbox-name during export
 	* pop3.c:
