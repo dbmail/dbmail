@@ -47,13 +47,13 @@ msgstr ""
 #. Choices
 #: ../dbmail.templates:2001
 msgid "sql, ldap"
-msgstr ""
+msgstr "sql, ldap"
 
 #. Type: select
 #. Description
 #: ../dbmail.templates:2002
 msgid "The authentication driver you wish to activate:"
-msgstr ""
+msgstr "Het authenticatie mechanisme dat u wilt activeren:"
 
 #. Type: select
 #. Description
@@ -62,6 +62,8 @@ msgid ""
 "Dbmail by defauls uses SQL based authentication. But you can also use LDAP "
 "instead."
 msgstr ""
+"Dbmail gebruikt standaard SQL gebaseerde authenticatie. In plaats daarvan "
+"kan ook voor LDAP worden gekozen"
 
 #. Type: string
 #. Description
@@ -122,12 +124,14 @@ msgstr "Dit is de naam van de databank welke de dbmail-tabellen bevat."
 #: ../dbmail.templates:5001
 msgid "If you're using sqlite, this should be the path to the database file."
 msgstr ""
+"Indien de sqlite driver wordt gebruikt, dient u hier de locatie van het "
+"database bestand op te geven."
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:6001
 msgid "The database user:"
-msgstr ""
+msgstr "De database gebruiker:"
 
 #. Type: string
 #. Description
@@ -182,6 +186,7 @@ msgstr "De POP3-server starten na het heropstarten van de computer?"
 #: ../dbmail.templates:9001
 msgid "This is only needed when you like to feed the email to Dbmail by LMTP."
 msgstr ""
+"Dit is alleen vereist indien u email aan Dbmail wilt voeren middels LMTP."
 
 #. Type: boolean
 #. Description
@@ -213,15 +218,18 @@ msgstr "De POP3-server starten na het heropstarten van de computer?"
 #: ../dbmail.templates:11001
 msgid ""
 "This is only needed if you want to allow users to manage their sieve scripts "
-"using a compatible client such as kmail, horde/ingo or squirrelmail/"
-"avelsieve."
+"using a compatible client such as kmail, horde/ingo or "
+"squirrelmail/avelsieve."
 msgstr ""
+"Dit is alleen vereist indien u gebruikers wilt toestaan hun sieve scripts te "
+"beheren met behulp van een compatibele client zoals kmail, horde of "
+"squirrelmail"
 
 #. Type: string
 #. Description
 #: ../dbmail.templates:12001
 msgid "The port is your ldap server running at:"
-msgstr ""
+msgstr "De poort waarop uw ldap server luistert:"
 
 #. Type: string
 #. Description
@@ -230,6 +238,7 @@ msgid ""
 "Please enter the port on which your ldap server is running at. The default "
 "port is 389."
 msgstr ""
+"Geef de poort op waarop uw ldap server luistert. De standaard poort is 389."
 
 #. Type: string
 #. Description
@@ -249,7 +258,7 @@ msgstr "Geef de naam van de databankgebruiker die u wilt gebruiken."
 #. Description
 #: ../dbmail.templates:14001
 msgid "The ldap base DN:"
-msgstr ""
+msgstr "Het ldap base DN:"
 
 #. Type: string
 #. Description
@@ -377,8 +386,8 @@ msgstr ""
 #~ "that should reside in /etc/ssl/certs/. Specify the filename here without  "
 #~ "the directory name."
 #~ msgstr ""
-#~ "Om de stunnel-SSL-wrapper te kunnen gebruiken moet er een z.g. pem-"
-#~ "bestand worden gegenereerd. Dit bestand moet vervolgens worden "
+#~ "Om de stunnel-SSL-wrapper te kunnen gebruiken moet er een z.g. "
+#~ "pem-bestand worden gegenereerd. Dit bestand moet vervolgens worden "
 #~ "geïnstalleerd in /etc/ssl/certs/. Geef hier de bestandsnaam op zonder de "
 #~ "mapnaam."
 
