@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: dbmail\n"
 "Report-Msgid-Bugs-To: paul@nfg.nl\n"
-"POT-Creation-Date: 2007-02-26 21:33+0100\n"
+"POT-Creation-Date: 2007-02-27 22:05+0100\n"
 "PO-Revision-Date: 2007-02-25 15:39+0100\n"
 "Last-Translator: Jacobo Tarrio <jtarrio@debian.org>\n"
 "Language-Team: Galician <proxecto@trasno.net>\n"
@@ -166,9 +166,10 @@ msgstr "¿Iniciar o servidor LMTP tralo reinicio?"
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:9001
+#, fuzzy
 msgid ""
 "Please choose whether the LMTP server should be started after rebooting. "
-"This is only needed when you like to feed the email to Dbmail by LMTP."
+"This is only needed if you like to feed the email to Dbmail by LMTP."
 msgstr ""
 "Indique se quere que se inicie o servidor LMTP despois de reiniciar. Só é "
 "necesario se quere pasar o email a dbmail mediante LMTP."

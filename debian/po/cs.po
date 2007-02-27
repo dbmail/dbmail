@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: dbmail 2.2.1-1\n"
 "Report-Msgid-Bugs-To: paul@nfg.nl\n"
-"POT-Creation-Date: 2007-02-26 21:33+0100\n"
+"POT-Creation-Date: 2007-02-27 22:05+0100\n"
 "PO-Revision-Date: 2007-02-25 11:03+0100\n"
 "Last-Translator: Martin Sin <martin.sin@zshk.cz>\n"
 "Language-Team: Czech <debian-l10n-czech@lists.debian.org>\n"
@@ -161,9 +161,10 @@ msgstr "Spustit po restartu server LMTP"
 #. Type: boolean
 #. Description
 #: ../dbmail.templates:9001
+#, fuzzy
 msgid ""
 "Please choose whether the LMTP server should be started after rebooting. "
-"This is only needed when you like to feed the email to Dbmail by LMTP."
+"This is only needed if you like to feed the email to Dbmail by LMTP."
 msgstr ""
 "Server LMTP je možné spustit také po restartu počítače. To je potřeba pouze "
 "v okamžiku, kdy chcete posílat emaily do Dbmail pomocí LTMP."

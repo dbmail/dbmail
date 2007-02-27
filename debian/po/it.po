@@ -15,7 +15,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: dbmail 1.1-1\n"
 "Report-Msgid-Bugs-To: paul@nfg.nl\n"
-"POT-Creation-Date: 2007-02-26 21:33+0100\n"
+"POT-Creation-Date: 2007-02-27 22:05+0100\n"
 "PO-Revision-Date: 2003-09-13 09:50+0200\n"
 "Last-Translator: Francesco Paolo Lovergine <frankie@debian.org>\n"
 "Language-Team: Italian Localization <debian-l10n-italian@lists.debian.org>\n"
@@ -186,7 +186,7 @@ msgstr "Faccio partire il server pop3 al boot?"
 #: ../dbmail.templates:9001
 msgid ""
 "Please choose whether the LMTP server should be started after rebooting. "
-"This is only needed when you like to feed the email to Dbmail by LMTP."
+"This is only needed if you like to feed the email to Dbmail by LMTP."
 msgstr ""
 
 #. Type: boolean

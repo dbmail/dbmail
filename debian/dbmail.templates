@@ -56,7 +56,7 @@ Template: dbmail/start_lmtpd
 Type: boolean
 _Description: Start the LMTP server after reboot?
  Please choose whether the LMTP server should be started after
- rebooting. This is only needed when you like to feed the email to
+ rebooting. This is only needed if you like to feed the email to
  Dbmail by LMTP.
 
 Template: dbmail/start_pop3d

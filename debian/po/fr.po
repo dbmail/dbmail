@@ -15,7 +15,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: dbmail 1.1-1\n"
 "Report-Msgid-Bugs-To: paul@nfg.nl\n"
-"POT-Creation-Date: 2007-02-26 21:33+0100\n"
+"POT-Creation-Date: 2007-02-27 22:05+0100\n"
 "PO-Revision-Date: 2003-10-02 16:44+0100\n"
 "Last-Translator: Christian Perrier <bubulle@debian.org>\n"
 "Language-Team: French <debian-l10n-french@lists.debian.org>\n"
@@ -185,7 +185,7 @@ msgstr "Faut-il lancer le serveur IMAP au démarrage ?"
 #: ../dbmail.templates:9001
 msgid ""
 "Please choose whether the LMTP server should be started after rebooting. "
-"This is only needed when you like to feed the email to Dbmail by LMTP."
+"This is only needed if you like to feed the email to Dbmail by LMTP."
 msgstr ""
 
 #. Type: boolean
