@@ -1,0 +1,370 @@
+# translation of dbmail_2.2.1-1_debconf_ru.po to Russian
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+#
+# Yuri Kozlov <kozlov.y@gmail.com>, 2007.
+msgid ""
+msgstr ""
+"Project-Id-Version: 2.2.1-1\n"
+"Report-Msgid-Bugs-To: paul@nfg.nl\n"
+"POT-Creation-Date: 2007-02-25 08:21+0100\n"
+"PO-Revision-Date: 2007-02-27 20:42+0300\n"
+"Last-Translator: Yuri Kozlov <kozlov.y@gmail.com>\n"
+"Language-Team: Russian <debian-l10n-russian@lists.debian.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: KBabel 1.11.4\n"
+"Plural-Forms:  nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:1001
+msgid "Use debconf to manage dbmail configuration?"
+msgstr "Использовать debconf для настройки dbmail?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:1001
+msgid ""
+"Please confirm if you want to allow debconf to manage some parts of your "
+"dbmail configuration. Notice that changes you make to dbmail.conf by hand "
+"will NOT be overwritten should you later choose to re-run dpkg-reconfigure "
+"dbmail."
+msgstr ""
+"Ответьте утвердительно, если хотите использовать debconf для управления "
+"некоторыми частями настройки dbmail. Заметим, что изменения в dbmail.conf "
+"сделанные вручную НЕ пропадут, если вы позже повторно запустите команду dpkg-"
+"reconfigure dbmail."
+
+#. Type: select
+#. Description
+#: ../dbmail.templates:2001
+#| msgid "The authentication driver you wish to activate:"
+msgid "Authentication driver to activate:"
+msgstr "Активируемый драйвер аутентификации:"
+
+#. Type: select
+#. Description
+#: ../dbmail.templates:2001
+msgid ""
+"Dbmail by defauls uses SQL based authentication. But you can also use LDAP "
+"instead."
+msgstr ""
+"По умолчанию Dbmail использует аутентификацию из SQL. Но вместо этого, также "
+"можно использовать LDAP."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:3001
+msgid "Postmaster's email address:"
+msgstr "Адрес электронной почты для postmaster:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:3001
+#| msgid ""
+#| "This should be a valid email address read by the person responsible for "
+#| "this email server."
+msgid ""
+"Please choose a valid email address read by the person responsible for this "
+"email server."
+msgstr ""
+"Здесь нужно указать рабочий адрес электронной почты человека, ответственного "
+"за этот почтовый сервер."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:3001
+msgid "Example: postmaster@yourdomain.tld"
+msgstr "Пример: postmaster@yourdomain.tld"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:4001
+#| msgid "The hostname of the sql database server:"
+msgid "Hostname of the SQL database server:"
+msgstr "Имя хоста с сервером баз данных SQL:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:4001
+#| msgid ""
+#| "On this server you must create a database to hold dbmail's tables. You "
+#| "should grant full read/write permissions on this database to the dbmail "
+#| "user."
+msgid ""
+"Please mention the server where a database to hold dbmail's tables will be "
+"created. You should grant full read/write permissions on this database to "
+"the dbmail user."
+msgstr ""
+"На этом сервере будет храниться база данных с таблицами dbmail. Нужно дать "
+"полные права на чтение/запись в эту базу пользователю dbmail."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:5001
+msgid "The name of the database:"
+msgstr "Имя базы данных:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:5001
+#| msgid "This is the name of the database that holds the dbmail tables."
+msgid "Please mention the name of the database that holds the dbmail tables."
+msgstr "Имя базы данных, в которой хранятся таблицы dbmail."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:5001
+msgid "If you're using sqlite, this should be the path to the database file."
+msgstr "Если вы используете sqlite, то это должен быть путь к файлу базы данных."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:6001
+#| msgid "The database user:"
+msgid "Database user:"
+msgstr "Пользователь базы данных:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:6001
+#| msgid ""
+#| "This is the username dbmail will use to connect to the database server."
+msgid ""
+"Please mention the username dbmail will use to connect to the database "
+"server."
+msgstr ""
+"Здесь указывается имя пользователя dbmail, которое будет использовано для "
+"подключения к серверу базы данных."
+
+#. Type: password
+#. Description
+#: ../dbmail.templates:7001
+#| msgid "The password for the database connection:"
+msgid "Password for the database connection:"
+msgstr "Пароль для подключения к базе данных:"
+
+#. Type: password
+#. Description
+#: ../dbmail.templates:7001
+#| msgid ""
+#| "This is the password dbmail will use to connect to the database server."
+msgid ""
+"Please mention the password dbmail will use to connect to the database "
+"server."
+msgstr ""
+"Здесь указывается пароль dbmail, который будет использоваться для "
+"подключения к серверу базы данных."
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:8001
+#| msgid "start the imap server after reboot?"
+msgid "Start the IMAP server after reboot?"
+msgstr "Запустить сервер IMAP после перезагрузки?"
+
+#. Type: boolean
+#. Description
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:8001 ../dbmail.templates:10001
+#| msgid ""
+#| "Dbmail supports both imap and pop3 services. You can choose to run either "
+#| "one or both services."
+msgid ""
+"Dbmail supports both IMAP and POP3 services. You can choose to run either "
+"one or both services."
+msgstr ""
+"Dbmail предоставляет сервисы IMAP и POP3. Вы можете выбрать, запускать их "
+"оба или только один."
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:9001
+#| msgid "start the imap server after reboot?"
+msgid "Start the LMTP server after reboot?"
+msgstr "Запустить сервер LMTP после перезагрузки?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:9001
+#| msgid ""
+#| "This is only needed when you like to feed the email to Dbmail by LMTP."
+msgid ""
+"Please choose whether the LMTP server should be started after rebooting. "
+"This is only needed when you like to feed the email to Dbmail by LMTP."
+msgstr ""
+"Укажите, нужно ли запускать сервер LMTP после перезагрузки. "
+"Это нужно, если вы хотите передавать почту в Dbmail по LMTP."
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:10001
+#| msgid "start the pop3 server after reboot?"
+msgid "Start the POP3 server after reboot?"
+msgstr "Запустить сервер POP3 после перезагрузки?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:11001
+#| msgid "start the timsieve server after reboot?"
+msgid "Start the timsieve server after reboot?"
+msgstr "Запустить сервер timsieve после перезагрузки?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:11001
+#| msgid ""
+#| "This is only needed if you want to allow users to manage their sieve "
+#| "scripts using a compatible client such as kmail, horde/ingo or "
+#| "squirrelmail/avelsieve."
+msgid ""
+"Please choose whether the timsieve server should be started after rebooting. "
+"This is only needed if you want to allow users to manage their sieve scripts "
+"using a compatible client such as kmail, horde/ingo or squirrelmail/"
+"avelsieve."
+msgstr ""
+"Укажите, нужно ли запускать сервер timsieve после перезагрузки. "
+"Это нужно, если вы хотите позволить пользователям управлять собственными "
+"сценариями-фильтрами через совместимые клиенты типа kmail, horde/ingo или "
+"squirrelmail/avelsieve."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:12001
+msgid "Port used by the LDAP server:"
+msgstr "Порт, используемый сервером LDAP:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:12001
+#| msgid ""
+#| "Please enter the port on which your ldap server is running at. The "
+#| "default port is 389."
+msgid ""
+"Please enter the port which your LDAP server is listening on. The default "
+"port is 389."
+msgstr "Введите порт, на котором запущен сервер LDAP. По умолчанию порт равен 389."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:13001
+#| msgid "The hostname of the ldap server:"
+msgid "Hostname of the LDAP server:"
+msgstr "Имя хоста сервера LDAP:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:13001
+#| msgid "Please enter the hostname your ldap server is running at."
+msgid "Please enter the name of the host your LDAP server is running at."
+msgstr "Введите имя хоста, на котором работает сервер LDAP."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:14001
+#| msgid "The ldap base DN:"
+msgid "LDAP base DN:"
+msgstr "Базовый DN в LDAP:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:14001
+msgid "Please enter the DN where Dbmail should start searching for user accounts."
+msgstr ""
+"Введите DN, с которого Dbmail должен начинать поиск учётных записей "
+"пользователей."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:15001
+#| msgid "The field which contains the user login name of the user:"
+msgid "Field which contains the user login name of the user:"
+msgstr "Поле, в котором содержится регистрационное имя пользователя (login):"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:15001
+#| msgid ""
+#| "Please enter the ldap attribute that will contain the username The "
+#| "standard account uses uid"
+msgid ""
+"Please enter the LDAP attribute that will contain the username. The standard "
+"account uses uid."
+msgstr ""
+"Введите атрибут LDAP, в котором содержится имя пользователя. Стандартная "
+"учётная запись использует uid."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:16001
+#| msgid "The field which contains the group id number of the user:"
+msgid "Field which contains the group id number of the user:"
+msgstr "Поле, в котором содержится номер id группы пользователя:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:16001
+#| msgid ""
+#| "Please enter the ldap attribute that will contain the group id number The "
+#| "standard account uses gidNumber"
+msgid ""
+"Please enter the LDAP attribute that will contain the group id number. The "
+"standard account uses gidNumber."
+msgstr ""
+"Введите атрибут LDAP, в котором содержится номер id группы. Стандартная "
+"учётная запись использует gidNumber."
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:17001
+#| msgid "Bind anonymous to the ldap server?"
+msgid "Use an anonymous connection to the LDAP server?"
+msgstr "Подключаться к серверу LDAP анонимно?"
+
+#. Type: boolean
+#. Description
+#: ../dbmail.templates:17001
+#| msgid ""
+#| "Use this if your ldap does not require authentication to search  the ldap "
+#| "tree."
+msgid ""
+"Please choose this option if the LDAP server does not require authentication "
+"to search the LDAP tree."
+msgstr ""
+"Используйте это, если ваш LDAP не требует аутентификации для поиска в дереве "
+"LDAP."
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:18001
+#| msgid "The DN to bind to the ldap server:"
+msgid "DN used to bind to the LDAP server:"
+msgstr "DN при подключении к серверу LDAP:"
+
+#. Type: string
+#. Description
+#: ../dbmail.templates:18001
+#| msgid ""
+#| "Please enter the DN, which should be used to connect to the ldap server."
+msgid "Please enter the DN which should be used to connect to the LDAP server."
+msgstr "Введите DN, который должен использоваться при подключении к серверу LDAP."
+
+#. Type: password
+#. Description
+#: ../dbmail.templates:19001
+#| msgid "The password to bind to the ldap server:"
+msgid "Password to bind to the LDAP server:"
+msgstr "Пароль для подключения к серверу LDAP:"
+
+#. Type: password
+#. Description
+#: ../dbmail.templates:19001
+#| msgid ""
+#| "Please enter the password, which should be used to connect to the ldap "
+#| "server."
+msgid "Please enter the password which should be used to connect to the LDAP server."
+msgstr "Введите пароль, который нужно использовать для подключения к серверу LDAP."
+
