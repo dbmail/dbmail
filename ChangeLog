@@ -1,3 +1,21 @@
+2007-02-28  Paul J Stevens <paul@nfg.nl>
+
+	* debian/dbmail-mysql.postinst, debian/dbmail-pgsql.postinst:
+	remove configure code from postinst, leaving the driver alone
+	* debian/dbmail.templates, debian/po/cs.po, debian/po/de.po, 
+	  debian/po/es.po, debian/po/fr.po, debian/po/gl.po, debian/po/it.po, 
+	  debian/po/ja.po, debian/po/nl.po, debian/po/pt_BR.po, 
+	  debian/po/ru.po, debian/po/templates.pot:
+	i10n updates
+	* ChangeLog, dbmail-user.c, user.c:
+	adapt aarons ui patch
+	* imap4.c:
+	avoid an errno race
+	* dbmail-user.c:
+	remove spurious output
+	* Makefile.in, aclocal.m4, configure, man/Makefile.in:
+	rebuild autoconf tools
+
 2007-02-27  Aaron Stone  <aaron@serendipity.cx>
 
 	* user.c, dbmail-user.c:
