@@ -16,7 +16,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: dbmail 1.2.9-1\n"
 "Report-Msgid-Bugs-To: paul@nfg.nl\n"
-"POT-Creation-Date: 2007-02-27 22:05+0100\n"
+"POT-Creation-Date: 2007-02-28 10:57+0100\n"
 "PO-Revision-Date: 2004-11-03 01:43+0900\n"
 "Last-Translator: Hideki Yamane <henrich@samba.gr.jp>\n"
 "Language-Team: Japanese <debian-japanese@lists.debian.org>\n"
@@ -26,14 +26,14 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:1001
+#: ../dbmail.templates:3
 #, fuzzy
 msgid "Use debconf to manage dbmail configuration?"
 msgstr "dbmail の設定に debconf を利用しますか?"
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:1001
+#: ../dbmail.templates:3
 msgid ""
 "Please confirm if you want to allow debconf to manage some parts of your "
 "dbmail configuration. Notice that changes you make to dbmail.conf by hand "
@@ -47,13 +47,13 @@ msgstr ""
 
 #. Type: select
 #. Description
-#: ../dbmail.templates:2001
+#: ../dbmail.templates:13
 msgid "Authentication driver to activate:"
 msgstr ""
 
 #. Type: select
 #. Description
-#: ../dbmail.templates:2001
+#: ../dbmail.templates:13
 msgid ""
 "Dbmail by defauls uses SQL based authentication. But you can also use LDAP "
 "instead."
@@ -61,14 +61,14 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:3001
+#: ../dbmail.templates:19
 #, fuzzy
 msgid "Postmaster's email address:"
 msgstr "postmaster のメールアドレス"
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:3001
+#: ../dbmail.templates:19
 #, fuzzy
 msgid ""
 "Please choose a valid email address read by the person responsible for this "
@@ -79,20 +79,20 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:3001
+#: ../dbmail.templates:19
 msgid "Example: postmaster@yourdomain.tld"
 msgstr "例: postmaster@yourdomain.tld"
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:4001
+#: ../dbmail.templates:27
 #, fuzzy
 msgid "Hostname of the SQL database server:"
 msgstr "(my/pg)sql データベースサーバのホスト名を入力してください。"
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:4001
+#: ../dbmail.templates:27
 #, fuzzy
 msgid ""
 "Please mention the server where a database to hold dbmail's tables will be "
@@ -105,32 +105,32 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:5001
+#: ../dbmail.templates:34
 #, fuzzy
 msgid "The name of the database:"
 msgstr "利用するデータベース名を入力してください。"
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:5001
+#: ../dbmail.templates:34
 msgid "This is the name of the database that holds the dbmail tables."
 msgstr "これは dbmail のテーブルを保持するデータベース名です。"
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:5001
+#: ../dbmail.templates:34
 msgid "If you're using sqlite, this should be the path to the database file."
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:6001
+#: ../dbmail.templates:41
 msgid "Database user:"
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:6001
+#: ../dbmail.templates:41
 #, fuzzy
 msgid ""
 "Please mention the username dbmail will use to connect to the database "
@@ -139,14 +139,14 @@ msgstr "これは dbmail がデータベースサーバに接続するのに使うユーザ名です。"
 
 #. Type: password
 #. Description
-#: ../dbmail.templates:7001
+#: ../dbmail.templates:46
 #, fuzzy
 msgid "Password for the database connection:"
 msgstr "データベース接続に利用するパスワードを入力してください。"
 
 #. Type: password
 #. Description
-#: ../dbmail.templates:7001
+#: ../dbmail.templates:46
 #, fuzzy
 msgid ""
 "Please mention the password dbmail will use to connect to the database "
@@ -155,13 +155,13 @@ msgstr "これは、dbmail がデータベースサーバに接続するのに使うパスワードです。"
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:8001
+#: ../dbmail.templates:51
 msgid "Start the IMAP server after reboot?"
 msgstr "再起動後に IMAP サーバを起動しますか?"
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:8001
+#: ../dbmail.templates:51
 #, fuzzy
 msgid ""
 "Dbmail supports both IMAP and POP3 services. You can choose to run either "
@@ -172,14 +172,14 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:9001
+#: ../dbmail.templates:57
 #, fuzzy
 msgid "Start the LMTP server after reboot?"
 msgstr "再起動後に IMAP サーバを起動しますか?"
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:9001
+#: ../dbmail.templates:57
 msgid ""
 "Please choose whether the LMTP server should be started after rebooting. "
 "This is only needed if you like to feed the email to Dbmail by LMTP."
@@ -187,14 +187,14 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:10001
+#: ../dbmail.templates:64
 #, fuzzy
 msgid "Start the POP3 server after reboot?"
 msgstr "再起動後に IMAP サーバを起動しますか?"
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:10001
+#: ../dbmail.templates:64
 #, fuzzy
 msgid ""
 "Dbmail support both imap and pop3 services. You can choose to run either one "
@@ -205,14 +205,14 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:11001
+#: ../dbmail.templates:70
 #, fuzzy
 msgid "Start the timsieve server after reboot?"
 msgstr "再起動後に POP3 サーバを起動しますか?"
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:11001
+#: ../dbmail.templates:70
 msgid ""
 "Please choose whether the timsieve server should be started after rebooting. "
 "This is only needed if you want to allow users to manage their sieve scripts "
@@ -222,13 +222,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:12001
+#: ../dbmail.templates:78
 msgid "Port used by the LDAP server:"
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:12001
+#: ../dbmail.templates:78
 #, fuzzy
 msgid ""
 "Please enter the port which your LDAP server is listening on. The default "
@@ -237,40 +237,40 @@ msgstr "利用したいデータベースユーザ名を入力してください。"
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:13001
+#: ../dbmail.templates:84
 #, fuzzy
 msgid "Hostname of the LDAP server:"
 msgstr "(my/pg)sql データベースサーバのホスト名を入力してください。"
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:13001
+#: ../dbmail.templates:84
 #, fuzzy
 msgid "Please enter the name of the host your LDAP server is running at."
 msgstr "利用したいデータベースユーザ名を入力してください。"
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:14001
+#: ../dbmail.templates:89
 msgid "LDAP base DN:"
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:14001
+#: ../dbmail.templates:89
 msgid ""
 "Please enter the DN where Dbmail should start searching for user accounts."
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:15001
+#: ../dbmail.templates:95
 msgid "Field which contains the user login name of the user:"
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:15001
+#: ../dbmail.templates:95
 msgid ""
 "Please enter the LDAP attribute that will contain the username. The standard "
 "account uses uid"
@@ -278,13 +278,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:16001
+#: ../dbmail.templates:101
 msgid "Field which contains the group id number of the user:"
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:16001
+#: ../dbmail.templates:101
 msgid ""
 "Please enter the ldap attribute that will contain the group id number. The "
 "standard account uses gidNumber"
@@ -292,13 +292,13 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:17001
+#: ../dbmail.templates:107
 msgid "Use an anonymous connection to the LDAP server?"
 msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../dbmail.templates:17001
+#: ../dbmail.templates:107
 msgid ""
 "Please choose this option if the LDAP server does not require authentication "
 "to search the LDAP tree."
@@ -306,14 +306,14 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:18001
+#: ../dbmail.templates:113
 #, fuzzy
 msgid "DN used to bind to the LDAP server:"
 msgstr "(my/pg)sql データベースサーバのホスト名を入力してください。"
 
 #. Type: string
 #. Description
-#: ../dbmail.templates:18001
+#: ../dbmail.templates:113
 #, fuzzy
 msgid ""
 "Please enter the DN, which should be used to connect to the LDAP server."
@@ -321,14 +321,14 @@ msgstr "これは、dbmail がデータベースサーバに接続するのに使うパスワードです。"
 
 #. Type: password
 #. Description
-#: ../dbmail.templates:19001
+#: ../dbmail.templates:119
 #, fuzzy
 msgid "Password to bind to the LDAP server:"
 msgstr "(my/pg)sql データベースサーバのホスト名を入力してください。"
 
 #. Type: password
 #. Description
-#: ../dbmail.templates:19001
+#: ../dbmail.templates:119
 #, fuzzy
 msgid ""
 "Please enter the password, which should be used to connect to the LDAP "
