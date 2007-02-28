@@ -52,8 +52,7 @@ int do_showhelp(void) {
 	printf("     -e user   empty all mailboxes for a user\n");
 	printf("     -l uspec  list information for matching users\n");
 	printf("     -x alias  create an external forwarding address\n");
-	printf("\n");
-	printf("Summary of options for all modes:\n");
+	printf("\nSummary of options for all modes:\n");
 	printf("     -w passwd specify user's password on the command line\n");
 	printf("     -W [file] read from a file or prompt for a user's password\n");
 	printf("     -p pwtype password type may be one of the following:\n"
@@ -70,11 +69,12 @@ int do_showhelp(void) {
 	printf("     -S alia.. removes a list of recipient aliases (wildcards supported)\n");
 	printf("     -t fwds.. adds a list of deliver-to forwards\n");
 	printf("     -T fwds.. removes a list of deliver-to forwards (wildcards supported)\n");
-	printf("\n");
-        printf("Common options for all DBMail utilities:\n");
+        printf("\nCommon options for all DBMail utilities:\n");
 	printf("     -f file   specify an alternative config file\n");
 	printf("     -q        quietly skip interactive prompts\n"
 	       "               use twice to suppress error messages\n");
+	printf("     -n        show the intended action but do not perform it, no to all\n");
+	printf("     -y        perform all proposed actions, as though yes to all\n");
 	printf("     -v        verbose details\n");
 	printf("     -V        show the version\n");
 	printf("     -h        show this help message\n");
@@ -250,14 +250,12 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'n':
-			printf("-n switch is not supported in this "
-			       "version.\n");
-			return 1;
+			no_to_all = 1;
+			break;
 
 		case 'y':
-			printf("-y switch is not supported in this "
-			       "version.\n");
-			return 1;
+			yes_to_all = 1;
+			break;
 
 		case 'q':
 			/* If we get q twice, be really quiet! */
@@ -292,11 +290,17 @@ int main(int argc, char *argv[])
 	}	
 
 	/* If nothing is happening, show the help text. */
-	if (!mode || mode_toomany || show_help) {
+	if (!mode || mode_toomany || show_help || (no_to_all && yes_to_all)) {
 		do_showhelp();
 		result = 1;
 		goto freeall;
 	}
+
+ 	/* Don't make any changes unless specifically authorized. */
+ 	if (!yes_to_all) {
+		qprintf("Choosing dry-run mode. Use -y to disable it.\n");
+		no_to_all = 1;
+ 	}
 
 	/* read the config file */
         if (config_read(configFile) == -1) {
