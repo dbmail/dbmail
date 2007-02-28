@@ -41,7 +41,6 @@ static const char ValidChars[] =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     "_.!@#$%^&*()-+=~[]{}<>:;\\/";
 
-int yes_to_all = 0;
 int no_to_all = 0;
 int verbose = 0;
 int quiet = 0; 		/* Don't be helpful. */
@@ -56,6 +55,12 @@ int do_add(const char * const user,
 	u64_t useridnr;
 	u64_t mailbox_idnr;
 	int result;
+
+	if (no_to_all) {
+		qprintf("Pretending to add user %s with password type %s, %llu bytes mailbox limit and clientid %llu\n",
+			user, enctype, maxmail, clientid);
+		return 1;
+	}
 
 	TRACE(TRACE_DEBUG, "Adding user %s with password type %s,%llu "
 		"bytes mailbox limit and clientid %llu... ", 
@@ -102,6 +107,13 @@ int do_username(const u64_t useridnr, const char * const newuser)
 	int result = 0;
 
 	assert(newuser);
+
+	if (no_to_all) {
+		qprintf("Pretending to change username of user id number [%llu] to [%s]\n",
+			useridnr, newuser);
+		return 1;
+	}
+
 	if ((result = auth_change_username(useridnr, newuser)))
 		qerrorf("Error: could not change username.\n");
 
@@ -114,6 +126,12 @@ int do_password(const u64_t useridnr,
 {
 	int result = 0;
 	
+	if (no_to_all) {
+		qprintf("Pretending to change password for user id number [%llu]\n",
+			useridnr);
+		return 1;
+	}
+
 	if ((result = auth_change_password(useridnr, password, enctype)))
 		qerrorf("Error: could not change password.\n");
 
@@ -250,6 +268,12 @@ int do_clientid(u64_t useridnr, u64_t clientid)
 {	
 	int result = 0;
 
+	if (no_to_all) {
+		qprintf("Pretending to change client for user id number [%llu] to client id number [%llu]\n",
+			useridnr, clientid);
+		return 1;
+	}
+
 	if ((result = auth_change_clientid(useridnr, clientid)))
 		qerrorf("Warning: could not change client id\n");
 
@@ -260,6 +284,12 @@ int do_clientid(u64_t useridnr, u64_t clientid)
 int do_maxmail(u64_t useridnr, u64_t maxmail)
 {
 	int result = 0;
+
+	if (no_to_all) {
+		qprintf("Pretending to change mail quota for user id number [%llu] to [%llu] bytes\n",
+			useridnr, maxmail);
+		return 1;
+	}
 
 	if ((result = auth_change_mailboxsize(useridnr, maxmail)))
 		qerrorf("Error: could not change max mail size.\n");
@@ -274,6 +304,28 @@ int do_forwards(const char * const alias, const u64_t clientid,
 	int result = 0;
 	char *forward;
 	GList *current_fwds, *matching_fwds, *matching_fwds_del;
+
+	if (no_to_all) {
+		qprintf("Pretending to remove forwards for alias [%s]\n",
+			alias);
+		if (fwds_del) {
+			fwds_del = g_list_first(fwds_del);
+			while (fwds_del) {
+				qprintf("  [%s]\n", (char *)fwds_del->data);
+				fwds_del = g_list_next(fwds_del);
+			}
+		}
+		qprintf("Pretending to add forwards for alias [%s]\n",
+			alias);
+		if (fwds_add) {
+			fwds_add = g_list_first(fwds_add);
+			while (fwds_add) {
+				qprintf("  [%s]\n", (char *)fwds_add->data);
+				fwds_add = g_list_next(fwds_add);
+			}
+		}
+		return 1;
+	}
 
 	current_fwds = auth_get_aliases_ext(alias);
 
@@ -352,6 +404,28 @@ int do_aliases(const u64_t useridnr,
 	u64_t clientid;
 	GList *current_aliases, *matching_aliases, *matching_alias_del;
 
+	if (no_to_all) {
+		qprintf("Pretending to remove aliases for user id number [%llu]\n",
+			useridnr);
+		if (alias_del) {
+			alias_del = g_list_first(alias_del);
+			while (alias_del) {
+				qprintf("  [%s]\n", (char *)alias_del->data);
+				alias_del = g_list_next(alias_del);
+			}
+		}
+		qprintf("Pretending to add aliases for user id number [%llu]\n",
+			useridnr);
+		if (alias_add) {
+			alias_add = g_list_first(alias_add);
+			while (alias_add) {
+				qprintf("  [%s]\n", (char *)alias_add->data);
+				alias_add = g_list_next(alias_add);
+			}
+		}
+		return 1;
+	}
+
 	auth_getclientid(useridnr, &clientid);
 
 	current_aliases = auth_get_user_aliases(useridnr);
@@ -429,6 +503,12 @@ int do_delete(const u64_t useridnr, const char * const name)
 {
 	int result;
 	GList *aliases = NULL;
+
+	if (no_to_all) {
+		qprintf("Pretending to delete alias [%s] for user id number [%llu]\n",
+			name, useridnr);
+		return 1;
+	}
 
 	qprintf("Deleting aliases for user [%s]...\n", name);
 	aliases = auth_get_user_aliases(useridnr);
@@ -568,14 +648,39 @@ int do_empty(u64_t useridnr)
 {
 	int result;
 
-	qprintf("Emptying mailbox...");
-	fflush(stdout);
+	if (no_to_all) {
+		u64_t *children;
+		u64_t owner_idnr;
+		unsigned nchildren, i;
+		char mailbox[IMAP_MAX_MAILBOX_NAMELEN];
 
-	result = db_empty_mailbox(useridnr);
-	if (result != 0)
-		qerrorf("Error. Please check the log.\n");
-	else
-		qprintf("Ok.\n");
+		qprintf("You've requested to delete all mailboxes owned by user number [%llu]:\n", useridnr);
+
+		db_findmailbox_by_regex(useridnr, "*", &children, &nchildren, 0);
+		for (i = 0; i < nchildren; i++) {
+			/* Given a list of mailbox id numbers, check if the
+			 * user actually owns the mailbox (because that means
+			 * it is on the hit list for deletion) and then look up
+			 * and print out the name of the mailbox. */
+			db_get_mailbox_owner(children[i], &owner_idnr);
+			if (owner_idnr == useridnr) {
+				db_getmailboxname(children[i], useridnr, mailbox);			
+				qprintf("%s\n", mailbox);
+			}
+		}
+
+		qprintf("please run again with -y to actually perform this action.\n");
+		result = 1;
+	} else {
+		qprintf("Emptying mailbox... ");
+		fflush(stdout);
+        
+		result = db_empty_mailbox(useridnr);
+		if (result != 0)
+			qerrorf("Error. Please check the log.\n");
+		else
+			qprintf("Ok.\n");
+	}
 
 	return result;
 }

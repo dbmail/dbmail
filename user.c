@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: user.c 2416 2007-01-18 22:38:04Z aaron $
+/* $Id: user.c 2438 2007-02-28 00:04:00Z aaron $
  * This is the dbmail-user program
  * It makes adding users easier 
  *
@@ -35,7 +35,6 @@ char *configFile = DEFAULT_CONFIG_FILE;
 extern db_param_t _db_params;
 
 /* UI policy */
-extern int yes_to_all;
 extern int no_to_all;
 extern int verbose;
 extern int quiet; 		/* Don't be helpful. */
@@ -52,8 +51,7 @@ int do_showhelp(void) {
 	printf("     -e user   empty all mailboxes for a user\n");
 	printf("     -l uspec  list information for matching users\n");
 	printf("     -x alias  create an external forwarding address\n");
-	printf("\n");
-	printf("Summary of options for all modes:\n");
+	printf("\nSummary of options for all modes:\n");
 	printf("     -w passwd specify user's password on the command line\n");
 	printf("     -W [file] read from a file or prompt for a user's password\n");
 	printf("     -p pwtype password type may be one of the following:\n"
@@ -70,11 +68,11 @@ int do_showhelp(void) {
 	printf("     -S alia.. removes a list of recipient aliases (wildcards supported)\n");
 	printf("     -t fwds.. adds a list of deliver-to forwards\n");
 	printf("     -T fwds.. removes a list of deliver-to forwards (wildcards supported)\n");
-	printf("\n");
-        printf("Common options for all DBMail utilities:\n");
+        printf("\nCommon options for all DBMail utilities:\n");
 	printf("     -f file   specify an alternative config file\n");
 	printf("     -q        quietly skip interactive prompts\n"
 	       "               use twice to suppress error messages\n");
+	printf("     -n        show the intended action but do not perform it\n");
 	printf("     -v        verbose details\n");
 	printf("     -V        show the version\n");
 	printf("     -h        show this help message\n");
@@ -108,7 +106,7 @@ int main(int argc, char *argv[])
 	while ((opt = getopt(argc, argv,
 		"-a:d:c:e:l::x:" /* Major modes */
 		"W::w:P::p:u:g:m:t:s:S:T:" /* Minor options */
-		"i" "f:qnyvVh" /* Common options */ )) != -1) {
+		"i" "f:qnvVh" /* Common options */ )) != -1) {
 		/* The initial "-" of optstring allows unaccompanied
 		 * options and reports them as the optarg to opt 1 (not '1') */
 		if (opt == 1)
@@ -250,14 +248,8 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'n':
-			printf("-n switch is not supported in this "
-			       "version.\n");
-			return 1;
-
-		case 'y':
-			printf("-y switch is not supported in this "
-			       "version.\n");
-			return 1;
+			no_to_all = 1;
+			break;
 
 		case 'q':
 			/* If we get q twice, be really quiet! */
@@ -275,7 +267,7 @@ int main(int argc, char *argv[])
 		case 'V':
 			/* Show the version and return non-zero. */
 			printf("\n*** DBMAIL: dbmail-users version "
-			       "$Revision: 2416 $ %s\n\n", COPYRIGHT);
+			       "$Revision: 2438 $ %s\n\n", COPYRIGHT);
 			result = 1;
 			break;
 
@@ -292,11 +284,16 @@ int main(int argc, char *argv[])
 	}	
 
 	/* If nothing is happening, show the help text. */
-	if (!mode || mode_toomany || show_help) {
+	if (!mode || mode_toomany || show_help ) {
 		do_showhelp();
 		result = 1;
 		goto freeall;
 	}
+
+ 	/* dry-run mode */
+ 	if (no_to_all) {
+		qprintf("Choosing dry-run mode.\n");
+ 	}
 
 	/* read the config file */
         if (config_read(configFile) == -1) {
