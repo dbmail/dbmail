@@ -671,9 +671,9 @@ int do_empty(u64_t useridnr)
 		}
 
 		qprintf("please run again with -y to actually perform this action.\n");
-		result = 1;
+		return 1;
 	}
-	if (yes_to_all) {
+//	if (yes_to_all) { // TODO: Require -y before taking such drastic action.
 		qprintf("Emptying mailbox... ");
 		fflush(stdout);
         
@@ -682,7 +682,7 @@ int do_empty(u64_t useridnr)
 			qerrorf("Error. Please check the log.\n");
 		else
 			qprintf("Ok.\n");
-	}
+//	}
 
 	return result;
 }

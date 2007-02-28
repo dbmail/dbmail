@@ -296,12 +296,6 @@ int main(int argc, char *argv[])
 		goto freeall;
 	}
 
- 	/* Don't make any changes unless specifically authorized. */
- 	if (!yes_to_all) {
-		qprintf("Choosing dry-run mode. Use -y to disable it.\n");
-		no_to_all = 1;
- 	}
-
 	/* read the config file */
         if (config_read(configFile) == -1) {
                 qerrorf("Failed. Unable to read config file %s\n",
