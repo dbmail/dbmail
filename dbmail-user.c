@@ -668,8 +668,6 @@ int do_empty(u64_t useridnr)
 				qprintf("%s\n", mailbox);
 			}
 		}
-
-		qprintf("please run again with -y to actually perform this action.\n");
 		result = 1;
 	} else {
 		qprintf("Emptying mailbox... ");
