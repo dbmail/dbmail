@@ -105,6 +105,7 @@ int IMAPClientHandler(clientinfo_t * ci)
 	imap_userdata_t *ud = NULL;
 	mailbox_t newmailbox;
 	int this_was_noop = 0;
+	int serr;
 	
 	struct ImapSession *session = dbmail_imap_session_new();
 	dbmail_imap_session_setClientinfo(session,ci);
@@ -146,8 +147,9 @@ int IMAPClientHandler(clientinfo_t * ci)
 		}
 
 		if (ferror(session->ci->rx)) {
-			TRACE(TRACE_ERROR, "error [%s] on read-stream\n", strerror(errno));
-			if (errno == EPIPE) {
+			serr = errno;
+			TRACE(TRACE_ERROR, "[%s] on read-stream\n", strerror(serr));
+			if (serr == EPIPE) {
 				dbmail_imap_session_delete(session);
 				return -1;	/* broken pipe */
 			} else
@@ -155,10 +157,10 @@ int IMAPClientHandler(clientinfo_t * ci)
 		}
 
 		if (ferror(session->ci->tx)) {
-			int serr = errno;
-			TRACE(TRACE_ERROR, "error [%s] on write-stream\n", strerror(serr));
+			serr = errno;
+			TRACE(TRACE_ERROR, "[%s] on write-stream\n", strerror(serr));
 
-			if (errno == EPIPE) {
+			if (serr == EPIPE) {
 				dbmail_imap_session_delete(session);
 				return -1;	/* broken pipe */
 			} else
