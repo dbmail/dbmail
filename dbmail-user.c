@@ -41,7 +41,6 @@ static const char ValidChars[] =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     "_.!@#$%^&*()-+=~[]{}<>:;\\/";
 
-int yes_to_all = 0;
 int no_to_all = 0;
 int verbose = 0;
 int quiet = 0; 		/* Don't be helpful. */
@@ -669,11 +668,8 @@ int do_empty(u64_t useridnr)
 				qprintf("%s\n", mailbox);
 			}
 		}
-
-		qprintf("please run again with -y to actually perform this action.\n");
-		return 1;
-	}
-//	if (yes_to_all) { // TODO: Require -y before taking such drastic action.
+		result = 1;
+	} else {
 		qprintf("Emptying mailbox... ");
 		fflush(stdout);
         
@@ -682,7 +678,7 @@ int do_empty(u64_t useridnr)
 			qerrorf("Error. Please check the log.\n");
 		else
 			qprintf("Ok.\n");
-//	}
+	}
 
 	return result;
 }

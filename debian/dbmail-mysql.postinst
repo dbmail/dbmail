@@ -32,10 +32,6 @@ case "$1" in
     upgrade)
     ;;
     configure)
-	    oldmask=`umask`
-	    umask 026
-	    sed -i -re "s/^driver\W*=.*\$/driver = mysql/i" $CONFIG
-	    umask $oldmask
     ;;
     abort-upgrade)
     ;;
