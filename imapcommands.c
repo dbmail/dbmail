@@ -18,7 +18,7 @@
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* $Id: imapcommands.c 2434 2007-02-08 12:52:20Z paul $
+/* $Id: imapcommands.c 2441 2007-03-01 11:35:19Z paul $
  *
  * imapcommands.c
  * 
