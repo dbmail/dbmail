@@ -2713,11 +2713,11 @@ static int mailboxes_by_regex(u64_t user_idnr, int only_subscribed, const char *
 		TRACE(TRACE_DEBUG, "adding namespace prefix to [%s] got [%s]", simple_mailbox_name, mailbox_name);
 		if (mailbox_name) {
 			/* Enforce match of mailbox to pattern. */
-			if (listex_match(spattern, mailbox_name, MAILBOX_SEPARATOR, 0)) {
+			if (listex_match(pattern, mailbox_name, MAILBOX_SEPARATOR, 0)) {
 				tmp_mailboxes[*nr_mailboxes] = mailbox_idnr;
 				(*nr_mailboxes)++;
 			} else {
-				TRACE(TRACE_DEBUG, "mailbox [%s] doesn't match pattern [%s]", mailbox_name, spattern);
+				TRACE(TRACE_DEBUG, "mailbox [%s] doesn't match pattern [%s]", mailbox_name, pattern);
 			}
 		}
 		
@@ -3866,9 +3866,10 @@ u64_t db_first_unseen(u64_t mailbox_idnr)
 	memset(query,0,DEF_QUERYSIZE);
 
 	snprintf(query, DEF_QUERYSIZE,
-		 "SELECT MIN(message_idnr) FROM %smessages "
+		 "SELECT message_idnr FROM %smessages "
 		 "WHERE mailbox_idnr = %llu "
-		 "AND status < %d AND seen_flag = 0",DBPFX,
+		 "AND status < %d AND seen_flag = 0 "
+		 "ORDER BY message_idnr LIMIT 1",DBPFX,
 		 mailbox_idnr, MESSAGE_STATUS_DELETE);
 
 	if (db_query(query) == -1) {
@@ -4021,7 +4022,7 @@ int db_set_msgflag(u64_t msg_idnr, u64_t mailbox_idnr, int *flags, int action_ty
 	memset(query,0,DEF_QUERYSIZE);
 
 
-	snprintf(query, DEF_QUERYSIZE, "UPDATE %smessages SET ",DBPFX);
+	snprintf(query, DEF_QUERYSIZE, "UPDATE %smessages SET recent_flag=0,",DBPFX);
 
 	for (i = 0; i < IMAP_NFLAGS; i++) {
 		left = DEF_QUERYSIZE - strlen(query);
